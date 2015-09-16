@@ -1,5 +1,5 @@
 # © 2015 the Massachusetts Institute of Technology
-# @author bbaren
+# @author bbaren + rsloan
 
 SOURCES := $(shell grep -v '^-' _CoqProject | tr '\n' ' ')
 COQLIBS := $(shell grep '^-' _CoqProject | tr '\n' ' ')
@@ -16,7 +16,7 @@ all: $(SOURCES)
 	@echo "done!"
 
 coquille:
-	vim -c "execute coquille#Launch($(COQLIBS))" -N
+	vim -c "execute coquille#Launch($(COQLIBS))" .
 
 clean:
 	$(RM) $(foreach f,$(SOURCES),$(call coq-generated,$(basename $f)))
