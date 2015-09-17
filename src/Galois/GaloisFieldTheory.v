@@ -12,13 +12,13 @@ Module GaloisFieldTheory (M: Modulus).
   Import M Field.
 
   (* Notations *)
-  Infix "{+}"    := GFplus   (at level 60, right associativity).
-  Infix "{-}"    := GFminus  (at level 60, right associativity).
-  Infix "{*}"    := GFmult   (at level 50, left associativity).
-  Infix "{/}"    := GFdiv    (at level 50, left associativity).
-  Infix "{^}"    := GFexp    (at level 40, left associativity).
-  Notation "{1}" := GFone.
-  Notation "{0}" := GFzero.
+  Notation "1" := GFone : GF_scope.
+  Notation "0" := GFzero : GF_scope.
+  Infix "+"    := GFplus : GF_scope.
+  Infix "-"    := GFminus : GF_scope.
+  Infix "*"    := GFmult : GF_scope.
+  Infix "/"    := GFdiv : GF_scope.
+  Infix "^"    := GFexp : GF_scope.
 
   (* Basic Properties *)
 
@@ -71,7 +71,6 @@ Module GaloisFieldTheory (M: Modulus).
   Qed.
 
   Hint Rewrite Zmod_mod modmatch_eta.
-
   (* Ring Theory*)
 
   Ltac compat := repeat intro; subst; trivial.
@@ -103,12 +102,14 @@ Module GaloisFieldTheory (M: Modulus).
 
   Add Ring GFring : GFring_theory.
 
+  Local Open Scope GF_scope.
+
   (* Power theory *)
 
-  Lemma GFexp'_doubling : forall q r0, GFexp' (r0 {*} r0) q = GFexp' r0 q {*} GFexp' r0 q.
+  Lemma GFexp'_doubling : forall q r0, GFexp' (r0 * r0) q = GFexp' r0 q * GFexp' r0 q.
   Proof.
     induction q; simpl; intuition.
-    rewrite (IHq (r0 {*} r0)); ring.
+    rewrite (IHq (r0 * r0)); ring.
   Qed.
 
   Lemma GFexp'_correct : forall r p, GFexp' r p = pow_pos GFmult r p.
@@ -120,13 +121,13 @@ Module GaloisFieldTheory (M: Modulus).
   Hint Immediate GFexp'_correct.
 
   Lemma GFexp_correct : forall r n,
-    r{^}n = pow_N {1} GFmult r n.
+    r^n = pow_N 1 GFmult r n.
   Proof.
     induction n; simpl; intuition.
   Qed.
 
   Lemma GFexp_correct' : forall r n,
-    r{^}id n = pow_N {1} GFmult r n.
+    r^id n = pow_N 1 GFmult r n.
   Proof.
     apply GFexp_correct.
   Qed.
@@ -151,24 +152,24 @@ Module GaloisFieldTheory (M: Modulus).
   Qed.
 
   Lemma GFexp'_pred' : forall x p,
-    GFexp' p (Pos.succ x) = GFexp' p x {*} p.
+    GFexp' p (Pos.succ x) = GFexp' p x * p.
   Proof.
     induction x; simpl; intuition; try ring.
     rewrite IHx; ring.
   Qed.
 
   Lemma GFexp'_pred : forall x p,
-    p <> {0}
+    p <> 0
     -> x <> 1%positive
-    -> GFexp' p x = GFexp' p (Pos.pred x) {*} p.
+    -> GFexp' p x = GFexp' p (Pos.pred x) * p.
   Proof.
     intros; rewrite <- (Pos.succ_pred x) at 1; auto using GFexp'_pred'.
   Qed.
 
   Lemma GFexp_pred : forall p x,
-    p <> {0}
+    p <> 0
     -> x <> 0%N
-    -> p{^}x = p{^}N.pred x {*} p.
+    -> p^x = p^N.pred x * p.
   Proof.
     destruct x; simpl; intuition.
     destruct (Pos.eq_dec p0 1); subst; simpl; try ring.
@@ -177,8 +178,8 @@ Module GaloisFieldTheory (M: Modulus).
   Qed.
 
   Lemma GF_multiplicative_inverse : forall p,
-    p <> {0}
-    -> GFinv p {*} p = {1}.
+    p <> 0
+    -> GFinv p * p = 1.
   Proof.
     unfold GFinv; destruct totient as [ ? [ ] ]; simpl.
     intros.
