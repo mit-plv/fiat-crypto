@@ -57,7 +57,6 @@ Module GaloisFieldTheory (M: Modulus).
   Ltac galois := intros; apply gf_eq; simpl;
                  repeat match goal with
                         | [ x : GF |- _ ] => destruct x
-                        | [ H : ex _ |- _ ] => destruct H; subst
                         end; simpl in *; autorewrite with core;
                  intuition; demod; try solve [ f_equal; intuition ].
 
