@@ -11,12 +11,10 @@ Module Modulus25519 <: Modulus.
   Definition modulus := prime25519.
 End Modulus25519.
 
-Declare Module GaloisField25519 : GaloisField Modulus25519.
-
-Declare Module GaloisTheory25519 : GaloisFieldTheory Modulus25519 GaloisField25519.
+Module GaloisTheory25519 := GaloisFieldTheory Modulus25519.
 
 Module Curve25519.
-  Import Modulus25519 GaloisField25519 GaloisTheory25519.
+  Import Modulus25519 GaloisTheory25519.Field GaloisTheory25519.
 
   (* Prove some theorems! *)
 End Curve25519.

@@ -22,7 +22,7 @@ Module Type Modulus.
   Parameter modulus: Prime.
 End Modulus.
 
-Module Type GaloisField (M: Modulus).
+Module GaloisField (M: Modulus).
   Import M.
 
   Definition GF := {x: Z | exists y, x = y mod modulus}.

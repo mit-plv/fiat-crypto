@@ -7,9 +7,9 @@ Require Export Crypto.Galois.GaloisField.
 Set Implicit Arguments.
 Unset Strict Implicits.
 
-Module Type GaloisFieldTheory (M: Modulus) (Field: GaloisField M).
-  Import M.
-  Import Field.
+Module GaloisFieldTheory (M: Modulus).
+  Module Field := GaloisField M.
+  Import M Field.
 
   (* Notations *)
   Notation "x {+} y" := (GFplus x y)   (at level 60, right associativity).
