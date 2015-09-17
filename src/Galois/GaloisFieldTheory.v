@@ -12,156 +12,147 @@ Module GaloisFieldTheory (M: Modulus).
   Import M Field.
 
   (* Notations *)
-  Notation "x {+} y" := (GFplus x y)   (at level 60, right associativity).
-  Notation "x {-} y" := (GFminus x y)  (at level 60, right associativity).
-  Notation "x {*} y" := (GFmult x y)   (at level 50, left associativity).
-  Notation "x {/} y" := (GFdiv x y)    (at level 50, left associativity).
-  Notation "x {^} y" := (GFexp x y)    (at level 40, left associativity).
-  Notation "{1}"     := GFone.
-  Notation "{0}"     := GFzero.
+  Infix "{+}"    := GFplus   (at level 60, right associativity).
+  Infix "{-}"    := GFminus  (at level 60, right associativity).
+  Infix "{*}"    := GFmult   (at level 50, left associativity).
+  Infix "{/}"    := GFdiv    (at level 50, left associativity).
+  Infix "{^}"    := GFexp    (at level 40, left associativity).
+  Notation "{1}" := GFone.
+  Notation "{0}" := GFzero.
 
   (* Basic Properties *)
 
-  Theorem GFplus_0_l: forall x : GF, {0}{+}x = x.
-    intro x. apply gf_eq. unfold GFzero, GFplus, GFToZ; simpl.
-    destruct x. destruct e. simpl. rewrite e.
-    rewrite Zmod_mod. trivial.
+  (* Fails iff the input term does some arithmetic with mod'd values. *)
+  Ltac notFancy E :=
+    match E with
+    | - (_ mod _) => idtac
+    | context[_ mod _] => fail 1
+    | _ => idtac
+    end.
+
+  Lemma Zplus_neg : forall n m, n + -m = n - m.
+  Proof.
+    auto.
   Qed.
 
-  Theorem GFplus_commutative: forall x y : GF, x{+}y = y{+}x.
-    intros x y. apply gf_eq. unfold GFzero, GFplus, GFToZ; simpl.
-    destruct x. destruct e.
-    destruct y. destruct e0.
-    simpl. rewrite Zplus_comm. rewrite e, e0. trivial.
+  (* Remove redundant [mod] operations from the conclusion. *)
+  Ltac demod :=
+    repeat match goal with
+           | [ |- context[(?x mod _ + _) mod _] ] =>
+             notFancy x; rewrite (Zplus_mod_idemp_l x)
+           | [ |- context[(_ + ?y mod _) mod _] ] =>
+             notFancy y; rewrite (Zplus_mod_idemp_r y)
+           | [ |- context[(?x mod _ - _) mod _] ] =>
+             notFancy x; rewrite (Zminus_mod_idemp_l x)
+           | [ |- context[(_ - ?y mod _) mod _] ] =>
+             notFancy y; rewrite (Zminus_mod_idemp_r _ y)
+           | [ |- context[(?x mod _ * _) mod _] ] =>
+             notFancy x; rewrite (Zmult_mod_idemp_l x)
+           | [ |- context[(_ * (?y mod _)) mod _] ] =>
+             notFancy y; rewrite (Zmult_mod_idemp_r y)
+           | _ => rewrite Zplus_neg in * || rewrite Z.sub_diag in *
+           end.
+
+  (* General big hammer for proving Galois arithmetic facts *)
+  Ltac galois := intros; apply gf_eq; simpl;
+                 repeat match goal with
+                        | [ x : GF |- _ ] => destruct x
+                        | [ H : ex _ |- _ ] => destruct H; subst
+                        end; simpl in *; autorewrite with core;
+                 intuition; demod; try solve [ f_equal; intuition ].
+
+  Lemma modmatch_eta : forall n,
+    match n with
+    | 0 => 0
+    | Z.pos y' => Z.pos y'
+    | Z.neg y' => Z.neg y'
+    end = n.
+  Proof.
+    destruct n; auto.
   Qed.
 
-  Theorem GFplus_associative: forall x y z : GF, x{+}y{+}z = (x{+}y){+}z.
-    intros x y z. apply gf_eq. unfold GFzero, GFplus, GFToZ; simpl.
-    destruct x. destruct e.
-    destruct y. destruct e0.
-    destruct z. destruct e1.
-    simpl. rewrite Zplus_mod_idemp_l, Zplus_mod_idemp_r, Zplus_assoc. trivial.
+  Hint Rewrite Zmod_mod modmatch_eta.
+
+  Theorem GFplus_0_l: forall x : GF, {0} {+} x = x.
+  Proof.
+    galois.
   Qed.
 
-  Theorem GFmult_1_l: forall x : GF, {1}{*}x = x.
-    intro x. apply gf_eq. unfold GFzero, GFmult, GFToZ; simpl.
-    destruct x. destruct e. simpl. rewrite e.
-
-    (* TODO: how do we make this automatic?
-    *        I'd like to case, but we need to keep the mod.*)
-    assert (forall z,
-      match z with
-      | 0 => 0
-      | Z.pos y' => Z.pos y'
-      | Z.neg y' => Z.neg y'
-      end = z).
-      intros; induction z; simpl; intuition.
-
-    rewrite H, Zmod_mod. trivial.
+  Theorem GFplus_commutative: forall x y : GF, x {+} y = y {+} x.
+  Proof.
+    galois.
   Qed.
 
-  Theorem GFmult_commutative: forall x y : GF, x{*}y = y{*}x.
-    intros x y. apply gf_eq. unfold GFzero, GFmult, GFToZ; simpl.
-    destruct x. destruct e.
-    destruct y. destruct e0.
-    simpl. rewrite Zmult_comm. rewrite e, e0. trivial.
+  Theorem GFplus_associative: forall x y z : GF, x {+} (y {+} z) = (x {+} y) {+} z.
+  Proof.
+    galois.
   Qed.
 
-  Theorem GFmult_associative: forall x y z : GF, x{*}(y{*}z) = x{*}y{*}z.
-    intros x y z. apply gf_eq. unfold GFzero, GFmult, GFToZ; simpl.
-    destruct x. destruct e.
-    destruct y. destruct e0.
-    destruct z. destruct e1.
-    simpl. rewrite Zmult_mod_idemp_l, Zmult_mod_idemp_r, Zmult_assoc. trivial.
+  Theorem GFmult_1_l: forall x : GF, {1} {*} x = x.
+  Proof.
+    galois.
   Qed.
 
-  Theorem GFdistributive: forall x y z : GF, (x{+}y){*}z = x{*}z{+}y{*}z.
-    intros x y z. apply gf_eq. unfold GFzero, GFmult, GFplus, GFToZ; simpl.
-    destruct x. destruct e.
-    destruct y. destruct e0.
-    destruct z. destruct e1.
-    simpl.
-    rewrite Zmult_mod_idemp_l.
-    rewrite <- Zplus_mod.
-    rewrite Z.mul_add_distr_r.
-    trivial.
+  Theorem GFmult_commutative: forall x y : GF, x {*} y = y {*} x.
+  Proof.
+    galois.
   Qed.
 
-  Theorem GFminus_opp: forall x y : GF, x{-}y = x{+}GFopp y.
-    intros x y. apply gf_eq. unfold GFzero, GFmult, GFToZ; simpl.
-    destruct x. destruct e.
-    destruct y. destruct e0.
-    simpl.
-    rewrite Zplus_mod_idemp_r.
-    trivial.
+  Theorem GFmult_associative: forall x y z : GF, x {*} (y {*} z) = (x {*} y) {*} z.
+  Proof.
+    galois.
   Qed.
 
-  Theorem GFopp_inverse: forall x : GF, x{+}GFopp x = {0}.
-    intro x. apply gf_eq. unfold GFzero, GFplus, GFToZ; simpl.
-    destruct x. destruct e. simpl. rewrite e.
-    rewrite <- Zplus_mod.
-    rewrite Z.add_opp_r.
-    rewrite Zminus_mod_idemp_r.
-    rewrite Z.sub_diag.
-    trivial.
+  Theorem GFdistributive: forall x y z : GF, (x {+} y) {*} z = x {*} z {+} y {*} z.
+  Proof.
+    galois.
+  Qed.
+
+  Theorem GFminus_opp: forall x y : GF, x {-} y = x {+} GFopp y.
+  Proof.
+    galois.
+  Qed.
+
+  Theorem GFopp_inverse: forall x : GF, x {+} GFopp x = {0}.
+  Proof.
+    galois.
   Qed.
 
   (* Ring Theory*)
 
+  Ltac compat := repeat intro; subst; trivial.
+
   Instance GFplus_compat : Proper (eq==>eq==>eq) GFplus.
-    intros (p1, p2) (q1, q2) H (r1, r2) (s1, s2) H0; intuition; simpl in *.
-    assert (p1 + r1 = q1 + s1).
-      apply exist_eq in H; apply exist_eq in H0. rewrite H, H0. trivial.
-    unfold GFplus; simpl; rewrite H1; trivial.
+  Proof.
+    compat.
   Qed.
 
   Instance GFminus_compat : Proper (eq==>eq==>eq) GFminus.
-    intros (p1, p2) (q1, q2) H (r1, r2) (s1, s2) H0; intuition; simpl in *.
-    assert (p1 - r1 = q1 - s1).
-      apply exist_eq in H; apply exist_eq in H0. rewrite H, H0. trivial.
-    unfold GFminus; simpl; rewrite H1; trivial.
+  Proof.
+    compat.
   Qed.
 
   Instance GFmult_compat : Proper (eq==>eq==>eq) GFmult.
-    intros (p1, p2) (q1, q2) H (r1, r2) (s1, s2) H0; intuition; simpl in *.
-    assert (p1 * r1 = q1 * s1).
-      apply exist_eq in H; apply exist_eq in H0. rewrite H, H0. trivial.
-    unfold GFmult; simpl; rewrite H1; trivial.
+  Proof.
+    compat.
   Qed.
 
   Instance GFopp_compat : Proper (eq==>eq) GFopp.
-    intros x y H; intuition; simpl in *.
-    unfold GFopp, GFzero, GFminus; simpl. apply exist_eq.
-    destruct x. destruct e. rewrite e in *.
-    destruct y. destruct e0. rewrite e0 in *.
-    simpl in *. apply exist_eq in H.
-
-    assert (HX := (Z.eq_dec (x0 mod modulus) 0)); destruct HX.
-    rewrite e1; rewrite H in e1; rewrite e1; simpl; intuition.
-    repeat rewrite Z_mod_nz_opp_full;
-      try repeat rewrite Zmod_mod;
-      simpl; intuition.
+  Proof.
+    compat.
   Qed.
 
   Definition GFring_theory : ring_theory GFzero GFone GFplus GFmult GFminus GFopp eq.
-    constructor.
-    exact GFplus_0_l.
-    exact GFplus_commutative.
-    exact GFplus_associative.
-    exact GFmult_1_l.
-    exact GFmult_commutative.
-    exact GFmult_associative.
-    exact GFdistributive.
-    exact GFminus_opp.
-    exact GFopp_inverse.
-  Defined.
+  Proof.
+    constructor; galois.
+  Qed.
 
   Add Ring GFring : GFring_theory.
 
   (* Power theory *)
 
-
   Lemma GFpower_theory : power_theory GFone GFmult eq id GFexp.
+  Proof.
     constructor. intros.
     induction n; simpl; intuition.
 
@@ -196,14 +187,17 @@ Module GaloisFieldTheory (M: Modulus).
   (* Field Theory*)
 
   Instance GFinv_compat : Proper (eq==>eq) GFinv.
-    unfold GFinv; simpl; intuition.
+  Proof.
+    compat.
   Qed.
 
   Instance GFdiv_compat : Proper (eq==>eq==>eq) GFdiv.
-    unfold GFdiv; simpl; intuition.
+  Proof.
+    compat.
   Qed.
 
   Definition GFfield_theory : field_theory GFzero GFone GFplus GFmult GFminus GFopp GFdiv GFinv eq.
+  Proof.
     constructor; simpl; intuition.
     exact GFring_theory.
     unfold GFone, GFzero in H; apply exist_eq in H; simpl in H; intuition.
@@ -230,4 +224,3 @@ Module GaloisFieldTheory (M: Modulus).
   Add Field GFfield : GFfield_theory.
 
 End GaloisFieldTheory.
-

@@ -1,6 +1,6 @@
 
 Require Import BinInt BinNat ZArith Znumtheory.
-Require Import ProofIrrelevance Epsilon.
+Require Import ProofIrrelevance.
 
 Section GaloisPreliminaries.
   Definition Prime := {x: Z | prime x}.
@@ -35,25 +35,29 @@ Module GaloisField (M: Modulus).
 
   (* Elementary operations *)
   Definition GFzero: GF.
-    exists 0. exists 0. trivial.
+    exists 0, 0.
+    abstract trivial.
   Defined.
 
   Definition GFone: GF.
-    exists 1. exists 1. symmetry; apply Zmod_small. intuition.
-    destruct modulus; simpl.
-    apply prime_ge_2 in p. intuition.
+    exists 1, 1.
+    abstract (symmetry; apply Zmod_small; intuition; destruct modulus; simpl;
+              apply prime_ge_2 in p; intuition).
   Defined.
 
   Definition GFplus(x y: GF): GF.
-    exists ((x + y) mod modulus). exists (x + y). trivial.
+    exists ((x + y) mod modulus), (x + y).
+    abstract trivial.
   Defined.
 
   Definition GFminus(x y: GF): GF.
-    exists ((x - y) mod modulus). exists (x - y). trivial.
+    exists ((x - y) mod modulus), (x - y).
+    abstract trivial.
   Defined.
 
   Definition GFmult(x y: GF): GF.
-    exists ((x * y) mod modulus). exists (x * y). trivial.
+    exists ((x * y) mod modulus), (x * y).
+    abstract trivial.
   Defined.
 
   Definition GFopp(x: GF): GF := GFminus GFzero x.
@@ -62,8 +66,8 @@ Module GaloisField (M: Modulus).
   Fixpoint GFexp' (x: GF) (power: positive) :=
     match power with
     | xH => x
-    | (xO power') => GFexp' (GFmult x x) power'
-    | (xI power') => GFmult x (GFexp' (GFmult x x) power')
+    | xO power' => GFexp' (GFmult x x) power'
+    | xI power' => GFmult x (GFexp' (GFmult x x) power')
     end.
 
   Definition GFexp (x: GF) (power: N): GF :=
@@ -81,7 +85,6 @@ Module GaloisField (M: Modulus).
   Admitted.
 
   Definition totient : Totient.
-    apply constructive_indefinite_description.
     exists (N.pred (Z.to_N modulus)).
     exact fermat_little_theorem.
   Defined.
@@ -94,4 +97,3 @@ Module GaloisField (M: Modulus).
   Definition GFdiv(x y: GF): GF := GFmult x (GFinv y).
 
 End GaloisField.
-
