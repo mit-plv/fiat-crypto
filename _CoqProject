@@ -4,3 +4,4 @@ src/Galois/GaloisField.v
 src/Galois/GaloisFieldTheory.v
 src/Curves/Curve25519.v
 src/Assembly/Assembly.v
+src/Tactics/VerdiTactics.v
