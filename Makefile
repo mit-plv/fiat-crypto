@@ -10,13 +10,13 @@ include .make/coq.mk
 FAST_TARGETS += check_fiat clean
 
 .DEFAULT_GOAL = all
-.PHONY: all clean coquille
+.PHONY: all deps objects clean coquille
 
-all: $(SOURCES)
-	@echo "done!"
+all: objects
 
-coquille:
-	vim -c "execute coquille#Launch($(COQLIBS))" .
+deps: $(SOURCES:%=%.d) 
+
+objects: deps $(SOURCES:%=%o)
 
 clean:
 	$(RM) $(foreach f,$(SOURCES),$(call coq-generated,$(basename $f)))

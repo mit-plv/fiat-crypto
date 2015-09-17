@@ -1,13 +1,14 @@
 
 Require Import BinInt BinNat ZArith Znumtheory.
-Require Export Morphisms Setoid Ring_theory Field_theory Field_tac.
-Require Export GaloisField.
+Require Export Coq.Classes.Morphisms Setoid.
+Require Export Ring_theory Field_theory Field_tac.
+Require Export Crypto.Galois.GaloisField.
 
 Set Implicit Arguments.
 Unset Strict Implicits.
 
-Module Type GaloisFieldTheory.
-  Declare Module Field: GaloisField.
+Module Type GaloisFieldTheory (M: Modulus) (Field: GaloisField M).
+  Import M.
   Import Field.
 
   (* Notations *)

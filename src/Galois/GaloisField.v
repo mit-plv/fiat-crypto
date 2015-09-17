@@ -2,18 +2,11 @@
 Require Import BinInt BinNat ZArith Znumtheory.
 Require Import ProofIrrelevance Epsilon.
 
-Definition Prime := {x: Z | prime x}.
+Section GaloisPreliminaries.
+  Definition Prime := {x: Z | prime x}.
 
-Module Type GaloisField.
-
-  Parameter modulus: Prime.
-
-  (* Data type definitions *)
   Definition primeToZ(x: Prime) := proj1_sig x.
   Coercion primeToZ: Prime >-> Z.
-
-  Definition GF := {x: Z | exists y, x = y mod modulus}.
-  Definition GFToZ(x: GF) := proj1_sig x.
 
   Theorem exist_eq: forall (x y: Z) P e1 e2, x = y <-> exist P x e1 = exist P y e2.
     intros. split.
@@ -23,12 +16,22 @@ Module Type GaloisField.
         rewrite H. trivial.
       simpl in H0. rewrite H0. trivial.
   Qed.
+End GaloisPreliminaries.
+
+Module Type Modulus.
+  Parameter modulus: Prime.
+End Modulus.
+
+Module Type GaloisField (M: Modulus).
+  Import M.
+
+  Definition GF := {x: Z | exists y, x = y mod modulus}.
+  Definition GFToZ(x: GF) := proj1_sig x.
+  Coercion GFToZ: GF >-> Z.
 
   Theorem gf_eq: forall (x y: GF), x = y <-> GFToZ x = GFToZ y.
     intros x y. destruct x, y. split; apply exist_eq.
   Qed.
-
-  Coercion GFToZ: GF >-> Z.
 
   (* Elementary operations *)
   Definition GFzero: GF.
