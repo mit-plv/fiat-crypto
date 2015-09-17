@@ -1,6 +1,7 @@
 
 Require Import BinInt BinNat ZArith Znumtheory.
 Require Import Eqdep_dec.
+Require Import Tactics.VerdiTactics.
 
 Section GaloisPreliminaries.
   Definition Prime := {x: Z | prime x}.
@@ -19,6 +20,17 @@ Module GaloisField (M: Modulus).
   Definition GF := {x: Z | x = x mod modulus}.
   Definition GFToZ(x: GF) := proj1_sig x.
   Coercion GFToZ: GF >-> Z.
+
+  Definition ZToGF (x: Z) : if ((0 <=? x) && (x <? modulus))%bool then GF else True.
+    break_if; [|trivial].
+    exists x.
+    destruct (Bool.andb_true_eq _ _ (eq_sym Heqb)); clear Heqb.
+    erewrite Zmod_small; [trivial|].
+    intuition.
+    - rewrite <- Z.leb_le; auto.
+    - rewrite <- Z.ltb_lt; auto.
+  Defined.
+
 
   Theorem gf_eq: forall (x y: GF), x = y <-> GFToZ x = GFToZ y.
   Proof.
