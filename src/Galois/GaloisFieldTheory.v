@@ -73,51 +73,6 @@ Module GaloisFieldTheory (M: Modulus).
 
   Hint Rewrite Zmod_mod modmatch_eta.
 
-  Theorem GFplus_0_l: forall x : GF, {0} {+} x = x.
-  Proof.
-    galois.
-  Qed.
-
-  Theorem GFplus_commutative: forall x y : GF, x {+} y = y {+} x.
-  Proof.
-    galois.
-  Qed.
-
-  Theorem GFplus_associative: forall x y z : GF, x {+} (y {+} z) = (x {+} y) {+} z.
-  Proof.
-    galois.
-  Qed.
-
-  Theorem GFmult_1_l: forall x : GF, {1} {*} x = x.
-  Proof.
-    galois.
-  Qed.
-
-  Theorem GFmult_commutative: forall x y : GF, x {*} y = y {*} x.
-  Proof.
-    galois.
-  Qed.
-
-  Theorem GFmult_associative: forall x y z : GF, x {*} (y {*} z) = (x {*} y) {*} z.
-  Proof.
-    galois.
-  Qed.
-
-  Theorem GFdistributive: forall x y z : GF, (x {+} y) {*} z = x {*} z {+} y {*} z.
-  Proof.
-    galois.
-  Qed.
-
-  Theorem GFminus_opp: forall x y : GF, x {-} y = x {+} GFopp y.
-  Proof.
-    galois.
-  Qed.
-
-  Theorem GFopp_inverse: forall x : GF, x {+} GFopp x = {0}.
-  Proof.
-    galois.
-  Qed.
-
   (* Ring Theory*)
 
   Ltac compat := repeat intro; subst; trivial.
@@ -151,37 +106,37 @@ Module GaloisFieldTheory (M: Modulus).
 
   (* Power theory *)
 
+  Lemma GFexp'_doubling : forall q r0, GFexp' (r0 {*} r0) q = GFexp' r0 q {*} GFexp' r0 q.
+  Proof.
+    induction q; simpl; intuition.
+    rewrite (IHq (r0 {*} r0)); ring.
+  Qed.
+
+  Lemma GFexp'_correct : forall r p, GFexp' r p = pow_pos GFmult r p.
+  Proof.
+    induction p; simpl; intuition;
+      rewrite GFexp'_doubling; congruence.
+  Qed.
+
+  Hint Immediate GFexp'_correct.
+
+  Lemma GFexp_correct : forall r n,
+    r{^}n = pow_N {1} GFmult r n.
+  Proof.
+    induction n; simpl; intuition.
+  Qed.
+
+  Lemma GFexp_correct' : forall r n,
+    r{^}id n = pow_N {1} GFmult r n.
+  Proof.
+    apply GFexp_correct.
+  Qed.
+
+  Hint Immediate GFexp_correct'.
+
   Lemma GFpower_theory : power_theory GFone GFmult eq id GFexp.
   Proof.
-    constructor. intros.
-    induction n; simpl; intuition.
-
-    (* Prove the doubling case, which we'll use alot *)
-    assert (forall q r0, GFexp' r0 q{*}GFexp' r0 q = GFexp' (r0{*}r0) q).
-      induction q.
-      intros. assert (Q := (IHq (r0{*}r0))).
-        unfold GFexp'; simpl; fold GFexp'.
-        rewrite <- Q. ring.
-      intros. assert (Q := (IHq (r0{*}r0))).
-        unfold GFexp'; simpl; fold GFexp'.
-        rewrite <- Q. ring.
-      intros; simpl; ring.
-
-    (* Take it case-by-case *)
-    unfold GFexp; induction p.
-
-    (* Odd case *)
-    unfold GFexp'; simpl; fold GFexp'; fold pow_pos.
-    rewrite <- (H p r).
-    rewrite <- IHp. trivial.
-
-    (* Even case *)
-    unfold GFexp'; simpl; fold GFexp'; fold pow_pos.
-    rewrite <- (H p r).
-    rewrite <- IHp. trivial.
-
-    (* Base case *)
-    simpl; intuition.
+    constructor; auto.
   Qed.
 
   (* Field Theory*)
@@ -196,31 +151,51 @@ Module GaloisFieldTheory (M: Modulus).
     compat.
   Qed.
 
+  Lemma GFexp'_pred' : forall x p,
+    GFexp' p (Pos.succ x) = GFexp' p x {*} p.
+  Proof.
+    induction x; simpl; intuition; try ring.
+    rewrite IHx; ring.
+  Qed.
+
+  Lemma GFexp'_pred : forall x p,
+    p <> {0}
+    -> x <> 1%positive
+    -> GFexp' p x = GFexp' p (Pos.pred x) {*} p.
+  Proof.
+    intros; rewrite <- (Pos.succ_pred x) at 1; auto using GFexp'_pred'.
+  Qed.
+
+  Lemma GFexp_pred : forall p x,
+    p <> {0}
+    -> x <> 0%N
+    -> p{^}x = p{^}N.pred x {*} p.
+  Proof.
+    destruct x; simpl; intuition.
+    destruct (Pos.eq_dec p0 1); subst; simpl; try ring.
+    rewrite GFexp'_pred by auto.
+    destruct p0; intuition.
+  Qed.
+
+  Lemma GF_multiplicative_inverse : forall p,
+    p <> {0}
+    -> GFinv p {*} p = {1}.
+  Proof.
+    unfold GFinv; destruct totient as [ ? [ ] ]; simpl.
+    intros.
+    rewrite <- GFexp_pred; auto using N.gt_lt, N.lt_neq.
+    intro; subst.
+    eapply N.lt_irrefl; eauto using N.gt_lt.
+  Qed.
+
+  Hint Immediate GF_multiplicative_inverse GFring_theory.
+
+  Local Hint Extern 1 False => discriminate.
+
   Definition GFfield_theory : field_theory GFzero GFone GFplus GFmult GFminus GFopp GFdiv GFinv eq.
   Proof.
-    constructor; simpl; intuition.
-    exact GFring_theory.
-    unfold GFone, GFzero in H; apply exist_eq in H; simpl in H; intuition.
-
-    (* Prove multiplicative inverses *)
-    unfold GFinv.
-    destruct totient; simpl. destruct i.
-    replace (p{^}(N.pred x){*}p) with (p{^}x); simpl; intuition.
-    apply N.gt_lt in H0; apply N.lt_neq in H0.
-    replace x with (N.succ (N.pred x)).
-      induction (N.pred x).
-      simpl. ring.
-      rewrite N.pred_succ.
-
-    (* Just the N.succ case *)
-    generalize p. induction p0; simpl in *; intuition.
-      rewrite (IHp0 (p1{*}p1)). ring.
-      ring.
-
-    (* cleanup *)
-    rewrite N.succ_pred; intuition.
-  Defined.
+    constructor; auto.
+  Qed.
 
   Add Field GFfield : GFfield_theory.
-
 End GaloisFieldTheory.
