@@ -12,6 +12,7 @@ Module GaloisFieldTheory (M: Modulus).
   Import M Field.
 
   (* Notations *)
+  Delimit Scope GF_scope with GF.
   Notation "1" := GFone : GF_scope.
   Notation "0" := GFzero : GF_scope.
   Infix "+"    := GFplus : GF_scope.
