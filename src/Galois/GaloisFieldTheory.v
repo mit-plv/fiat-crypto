@@ -9,7 +9,7 @@ Unset Strict Implicits.
 
 Module GaloisFieldTheory (M: Modulus).
   Module Field := GaloisField M.
-  Import M Field.
+  Export M Field.
 
   (* Notations *)
   Delimit Scope GF_scope with GF.
