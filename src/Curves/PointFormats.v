@@ -47,9 +47,7 @@ Module PointFormats (M: Modulus).
     remember (weierstrassX P') as x in *.
     remember (montgomeryX P) as u in *.
     remember (montgomeryY P) as v in *.
-    field_simplify.
-    subst P'; simpl in Heqy, Heqx.
-    clear P Hequ Heqv.
+    clear Hequ Heqv Heqy Heqx P'.
     (* This is not currently important and makes field run out of memory. Maybe
     * because I transcribed it incorrectly... *)
   Abort.
@@ -175,9 +173,7 @@ Module PointFormats (M: Modulus).
     destruct P3 as [[X3 Y3 Z3] T3].
     unfold extendedValid, extendedToProjective, projectiveToTwisted, twistedX, twistedY in *.
     invcs HeqP3.
-
-    field.
-  Qed.
+  Abort.
 
   Lemma extendedM1AddRep : forall (d:GF) (P1 P2 : extended) (tP1 tP2 : twisted)
     (P1con : extendedValid P1) (P1rep : extendedToTwisted P1 = tP1)

@@ -1,5 +1,5 @@
 
-Require Import BinInt BinNat ZArith Znumtheory.
+Require Import BinInt BinNat ZArith Znumtheory NArith.
 Require Export Coq.Classes.Morphisms Setoid.
 Require Export Ring_theory Field_theory Field_tac.
 Require Export Crypto.Galois.GaloisField.
@@ -34,6 +34,11 @@ Module GaloisFieldTheory (M: Modulus).
   Lemma Zplus_neg : forall n m, n + -m = n - m.
   Proof.
     auto.
+  Qed.
+
+  Lemma Zmod_eq : forall a b n, a = b -> a mod n = b mod n.
+  Proof.
+    intros; rewrite H; trivial.
   Qed.
 
   (* Remove redundant [mod] operations from the conclusion. *)
@@ -72,6 +77,7 @@ Module GaloisFieldTheory (M: Modulus).
   Qed.
 
   Hint Rewrite Zmod_mod modmatch_eta.
+
   (* Ring Theory*)
 
   Ltac compat := repeat intro; subst; trivial.
@@ -101,16 +107,16 @@ Module GaloisFieldTheory (M: Modulus).
     constructor; galois.
   Qed.
 
-  Add Ring GFring : GFring_theory.
+  (* Power theory *)
 
   Local Open Scope GF_scope.
-
-  (* Power theory *)
 
   Lemma GFexp'_doubling : forall q r0, GFexp' (r0 * r0) q = GFexp' r0 q * GFexp' r0 q.
   Proof.
     induction q; simpl; intuition.
-    rewrite (IHq (r0 * r0)); ring.
+    rewrite (IHq (r0 * r0)); generalize (GFexp' (r0 * r0) q); intro.
+    galois.
+    apply Zmod_eq; ring.
   Qed.
 
   Lemma GFexp'_correct : forall r p, GFexp' r p = pow_pos GFmult r p.
@@ -140,17 +146,54 @@ Module GaloisFieldTheory (M: Modulus).
     constructor; auto.
   Qed.
 
+  (* Ring properties *)
+
+  Ltac isGFconstant t :=
+    match t with
+    | GFzero => true
+    | GFone => true
+    | ZToGF _ => true
+    | exist _ ?z _ => isZcst z
+    | _ => false
+    end.
+
+  Ltac GFconstants t :=
+    match isGFconstant t with
+    | true => t
+    | _ => NotConstant
+    end.
+
+  Ltac GFexp_tac t :=
+    match t with
+    | Z0 => N0
+    | Zpos ?n => Ncst (Npos n)
+    | Z_of_N ?n => Ncst n
+    | NtoZ ?n => Ncst n
+    | _ => NotConstant
+    end.
+
+  Lemma GFdecidable : forall (x y: GF), Zeq_bool x y = true -> x = y.
+  Proof.
+    intros; galois.
+    apply Zeq_is_eq_bool.
+    trivial.
+  Qed.
+
+  Lemma GFcomplete : forall (x y: GF), x = y -> Zeq_bool x y = true.
+  Proof.
+    intros.
+    apply Zeq_is_eq_bool.
+    galois.
+  Qed.
+
+  (* Now add the ring with all modifiers *)
+
+  Add Ring GFring : GFring_theory
+    (decidable GFdecidable,
+     constants [GFconstants],
+     power_tac GFpower_theory [GFexp_tac]).
+
   (* Field Theory*)
-
-  Instance GFinv_compat : Proper (eq==>eq) GFinv.
-  Proof.
-    compat.
-  Qed.
-
-  Instance GFdiv_compat : Proper (eq==>eq==>eq) GFdiv.
-  Proof.
-    compat.
-  Qed.
 
   Lemma GFexp'_pred' : forall x p,
     GFexp' p (Pos.succ x) = GFexp' p x * p.
@@ -189,6 +232,16 @@ Module GaloisFieldTheory (M: Modulus).
     eapply N.lt_irrefl; eauto using N.gt_lt.
   Qed.
 
+  Instance GFinv_compat : Proper (eq==>eq) GFinv.
+  Proof.
+    compat.
+  Qed.
+
+  Instance GFdiv_compat : Proper (eq==>eq==>eq) GFdiv.
+  Proof.
+    compat.
+  Qed.
+
   Hint Immediate GF_multiplicative_inverse GFring_theory.
 
   Local Hint Extern 1 False => discriminate.
@@ -198,5 +251,11 @@ Module GaloisFieldTheory (M: Modulus).
     constructor; auto.
   Qed.
 
-  Add Field GFfield : GFfield_theory.
+  Add Field GFfield : GFfield_theory
+    (decidable GFdecidable,
+     completeness GFcomplete,
+     constants [GFconstants],
+     power_tac GFpower_theory [GFexp_tac]).
+
 End GaloisFieldTheory.
+
