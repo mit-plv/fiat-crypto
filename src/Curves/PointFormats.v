@@ -11,6 +11,7 @@ Module PointFormats (M: Modulus).
   Local Open Scope GF_scope.
   Local Notation "2" := (1+1).
   Local Notation "3" := (1+1+1).
+  Local Notation "4" := (1+1+1+1).
   Local Notation "27" := (3*3*3).
 
   (** [weierstrass] represents a point on an elliptic curve using Weierstrass
@@ -52,12 +53,52 @@ Module PointFormats (M: Modulus).
     * because I transcribed it incorrectly... *)
   Abort.
 
-  (** [montgomeryxFrac] represents a point on an elliptic curve using Montgomery x
+  (* from <http://www.hyperelliptic.org/EFD/g1p/auto-montgom.html> *)
+  Definition montgomeryAdd (B A:GF) (P1 P2:montgomery) : montgomery := 
+    let x1 := montgomeryX P1 in
+    let y1 := montgomeryY P1 in
+    let x2 := montgomeryX P2 in
+    let y2 := montgomeryY P2 in
+    mkMontgomery
+    (B*(y2-y1)^2/(x2-x1)^2-A-x1-x2)
+    ((2*x1+x2+A)*(y2-y1)/(x2-x1)-B*(y2-y1)^3/(x2-x1)^3-y1).
+  Definition montgomeryDouble (B A:GF) (P1:montgomery) : montgomery :=
+    let x1 := montgomeryX P1 in
+    let y1 := montgomeryY P1 in
+    mkMontgomery
+    (B*(3*x1^2+2*A*x1+1)^2/(2*B*y1)^2-A-x1-x1)
+    ((2*x1+x1+A)*(3*x1^2+2*A*x1+1)/(2*B*y1)-B*(3*x1^2+2*A*x1+1)^3/(2*B*y1)^3-y1).
+  Definition montgomeryNegate P := mkMontgomery (montgomeryX P) (0-montgomeryY P).
+
+  (** [montgomeryXFrac] represents a point on an elliptic curve using Montgomery x
   * coordinate stored as fraction as in
   * <http://cr.yp.to/ecdh/curve25519-20060209.pdf> appendix B. *)
   Record montgomeryXFrac := mkMontgomeryXFrac {montgomeryXFracX : GF; montgomeryXFracZ : GF}.
   Definition montgomeryToMontgomeryXFrac P := mkMontgomeryXFrac (montgomeryX P) 1.
   Definition montgomeryXFracToMontgomeryX P : GF := (montgomeryXFracX P) / (montgomeryXFracZ P).
+
+  (* from <http://www.hyperelliptic.org/EFD/g1p/auto-montgom-xz.html#ladder-mladd-1987-m>,
+   * also appears in <https://tools.ietf.org/html/draft-josefsson-tls-curve25519-06#appendix-A.1.3> *)
+  Definition montgomeryDifferentialDoubleAndAdd (a : GF)
+    (X1 : GF) (P2 P3 : montgomeryXFrac) : (montgomeryXFrac * montgomeryXFrac) :=
+      let X2 := montgomeryXFracX P2 in
+      let Z2 := montgomeryXFracZ P2 in
+      let X3 := montgomeryXFracX P3 in
+      let Z3 := montgomeryXFracZ P3 in
+      let A  := X2 + Z2 in
+      let AA := A^2 in
+      let B  := X2 - Z2 in
+      let BB := B^2 in
+      let E  := AA - BB in
+      let C  := X3 + Z3 in
+      let D  := X3 - Z3 in
+      let DA := D * A in
+      let CB := C * B in
+      let X5 := (DA + CB)^2 in
+      let Z5 := X1 * (DA - CB)^2 in
+      let X4 := AA * BB in
+      let Z4 := E * (BB + (a-2)/4 * E) in
+      (mkMontgomeryXFrac X4 Z4, mkMontgomeryXFrac X5 Z5).
 
   (** [twisted] represents a point on an elliptic curve using twisted Edwards
   * coordinates (see <https://www.hyperelliptic.org/EFD/g1p/auto-twisted.html>
