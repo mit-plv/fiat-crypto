@@ -217,8 +217,8 @@ Module PointFormats (M: Modulus).
   Abort.
 
   Lemma extendedM1AddRep : forall (d:GF) (P1 P2 : extended) (tP1 tP2 : twisted)
-    (P1con : extendedValid P1) (P1rep : extendedToTwisted P1 = tP1)
-    (P2con : extendedValid P2) (P2rep : extendedToTwisted P2 = tP2),
+    (P1con : extendedValid P1) (P1rep : extendedToTwisted P1 = tP1) (P1on : twistedOnCurve (0-1) d tP1)
+    (P2con : extendedValid P2) (P2rep : extendedToTwisted P2 = tP2) (P2on : twistedOnCurve (0-1) d tP2),
     twistedAdd (0-1) d tP1 tP2 = extendedToTwisted (extendedM1Add d P1 P2).
   Proof.
     intros.
@@ -228,17 +228,6 @@ Module PointFormats (M: Modulus).
     invcs P1rep; invcs P2rep.
 
     f_equal.
-
-    assert (T1 = X1 * Y1 / Z1).
-
-    (*
-    FIXME:
-    In nested Ltac calls to "field" and
-    "field_lookup PackField ltac:FIELD [  ] G" (expanded to
-    "field_lookup <dynamic [value]> [  ] (T1 = X1 * Y2 / Z2)"), last call failed.
-    Error: cannot find a declared field structure over "GF"
-    *)
-
-    Abort.
+  Abort.
 
 End PointFormats.
