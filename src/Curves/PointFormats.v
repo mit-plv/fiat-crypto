@@ -269,7 +269,7 @@ print(bool((((Y1 + X1) * (Y2 + X2) - (Y1 - X1) * (Y2 - X2)) *
       (* case 1 verified by hand: follows from field and completeness of edwards addition *)
       (* field should work here *)
     Abort.
-  End Twisted.
+  End Minus1Twisted.
 
   (** [weierstrass] represents a point on an elliptic curve using Weierstrass
   * coordinates (<http://cs.ucsb.edu/~koc/ccs130h/2013/EllipticHyperelliptic-CohenFrey.pdf>) definition 13.1*)
@@ -286,17 +286,6 @@ print(bool((((Y1 + X1) * (Y2 + X2) - (Y1 - X1) * (Y2 - X2)) *
     let x := montgomeryX P in
     let y := montgomeryY P in
     B*y^2 = x^3 + A*x^2 + x.
-
-  (* <https://eprint.iacr.org/2008/013.pdf> Theorem 3.2. *)
-  (* TODO: exceptional points *)
-  Definition twistedToMontfomery (a d:GF) (P : twisted) : montgomery := 
-    let x := twistedX P in
-    let y := twistedY P in
-    mkMontgomery ((1+y)/(1-y)) ((1+y)/((1-y)*x)).
-  Definition montgomeryToTwisted (B A:GF) (P : montgomery) : twisted :=
-    let X := montgomeryX P in
-    let Y := montgomeryY P in
-    mkTwisted (X/Y) ((X-1)/(X+1)).
 
   (** see <http://cs.ucsb.edu/~koc/ccs130h/2013/EllipticHyperelliptic-CohenFrey.pdf> section 13.2.3.c and <https://en.wikipedia.org/wiki/Montgomery_curve#Equivalence_with_Weierstrass_curves> *)
   Definition montgomeryToWeierstrass (B A:GF) (P : montgomery) : weierstrass :=
@@ -321,8 +310,9 @@ print(bool((((Y1 + X1) * (Y2 + X2) - (Y1 - X1) * (Y2 - X2)) *
     * because I transcribed it incorrectly... *)
   Abort.
 
+
   (* from <http://www.hyperelliptic.org/EFD/g1p/auto-montgom.html> *)
-  Definition montgomeryAdd (B A:GF) (P1 P2:montgomery) : montgomery := 
+  Definition montgomeryAddDistinct (B A:GF) (P1 P2:montgomery) : montgomery := 
     let x1 := montgomeryX P1 in
     let y1 := montgomeryY P1 in
     let x2 := montgomeryX P2 in
@@ -368,4 +358,16 @@ print(bool((((Y1 + X1) * (Y2 + X2) - (Y1 - X1) * (Y2 - X2)) *
       let Z4 := E * (BB + (a-2)/4 * E) in
       (mkMontgomeryXFrac X4 Z4, mkMontgomeryXFrac X5 Z5).
 
+  (*
+  (* <https://eprint.iacr.org/2008/013.pdf> Theorem 3.2. *)
+  (* TODO: exceptional points *)
+  Definition twistedToMontfomery (a d:GF) (P : twisted) : montgomery := 
+    let x := twistedX P in
+    let y := twistedY P in
+    mkMontgomery ((1+y)/(1-y)) ((1+y)/((1-y)*x)).
+  Definition montgomeryToTwisted (B A:GF) (P : montgomery) : twisted :=
+    let X := montgomeryX P in
+    let Y := montgomeryY P in
+    mkTwisted (X/Y) ((X-1)/(X+1)).
+   *)
 End PointFormats.
