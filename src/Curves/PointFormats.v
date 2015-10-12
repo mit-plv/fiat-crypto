@@ -35,8 +35,7 @@ Module PointFormats.
     Axiom d_nonsquare : forall not_sqrt_d, not_sqrt_d^2 <> d.
   End TwistedD.
 
-  Module Twisted (tA:TwistedA) (tD:TwistedD).
-    Import tA. Import tD.
+  Module Twisted (Import tA:TwistedA) (Import tD:TwistedD).
 
     (** [twisted] represents a point on an elliptic curve using twisted Edwards
     * coordinates (see <https://www.hyperelliptic.org/EFD/g1p/auto-twisted.html>
@@ -65,7 +64,7 @@ Module PointFormats.
     Infix "+" := twistedAdd : twisted_scope.
 
     Lemma twistedAddCompletePlus : forall (P1 P2:twisted)
-      (oc1:twistedOnCurve P2) (oc2:twistedOnCurve P2),
+      (oc1:twistedOnCurve P1) (oc2:twistedOnCurve P2),
       let x1 := twistedX P1 in
       let y1 := twistedY P1 in
       let x2 := twistedX P2 in
@@ -74,7 +73,7 @@ Module PointFormats.
       (* "Twisted Edwards Curves" <http://eprint.iacr.org/2008/013.pdf> section 6 *)
     Admitted.
     Lemma twistedAddCompleteMinus : forall (P1 P2:twisted)
-      (oc1:twistedOnCurve P2) (oc2:twistedOnCurve P2),
+      (oc1:twistedOnCurve P1) (oc2:twistedOnCurve P2),
       let x1 := twistedX P1 in
       let y1 := twistedY P1 in
       let x2 := twistedX P2 in
@@ -83,32 +82,33 @@ Module PointFormats.
       (* "Twisted Edwards Curves" <http://eprint.iacr.org/2008/013.pdf> section 6 *)
     Admitted.
 
+    Hint Unfold twistedAdd twistedOnCurve.
+
+    Ltac twisted := autounfold; intros;
+                    repeat match goal with
+                               | [ x : twisted |- _ ] => destruct x
+                           end; simpl; repeat (ring || f_equal); field.
+
     Lemma twistedAddComm : forall A B, (A+B = B+A)%twisted.
     Proof.
-      intros.
-      destruct A as [Xa Ya].
-      destruct B as [Xb Yb].
-      unfold twistedAdd.
-      simpl twistedX; simpl twistedY.
-      apply f_equal2; apply f_equal2; ring.
+      twisted.
     Qed.
 
     Lemma twistedAddAssoc : forall A B C
       (ocA:twistedOnCurve A) (ocB:twistedOnCurve B) (ocC:twistedOnCurve C),
       (A+(B+C) = (A+B)+C)%twisted.
+    Proof.
       (* uh... I don't actually know where this is proven... *)
     Admitted.
 
     Definition twisted0 := (0, 1).
     Lemma twisted0onCurve : twistedOnCurve (0, 1).
-      unfold twistedOnCurve; simpl.
-      field.
+    Proof.
+      twisted.
     Qed.
     Lemma twisted0Identity : forall P, (P + twisted0 = P)%twisted.
-      destruct P as [X Y].
-      unfold twistedAdd.
-      simpl twistedX; simpl twistedY.
-      f_equal; field.
+    Proof.
+      twisted.
     Qed.
 
     (** [projective] represents a point on an elliptic curve using projective
@@ -128,15 +128,12 @@ Module PointFormats.
       let Z := projectiveZ P in
       (X/Z, Y/Z).
 
+    Hint Unfold projectiveToTwisted twistedToProjective.
+
     Lemma twistedProjectiveInv : forall P,
       projectiveToTwisted (twistedToProjective P) = P.
     Proof.
-      intros. 
-      destruct P as [X Y].
-      unfold projectiveToTwisted, twistedToProjective.
-      simpl twistedX; simpl twistedY.
-      simpl projectiveX; simpl projectiveY; simpl projectiveZ.
-      f_equal; field.
+      twisted.
     Qed.
 
     (** [extended] represents a point on an elliptic curve using extended projective
@@ -179,23 +176,25 @@ Module PointFormats.
   End Twisted.
 
   Module Type Minus1IsSquare.
-      Axiom minusOneIsSquare : exists sqrt_a, sqrt_a^2 = (0 -1).
+    Axiom minusOneIsSquare : exists sqrt_a, sqrt_a^2 = 0 - 1.
   End Minus1IsSquare.
 
-  Module Minus1Twisted (m1s:Minus1IsSquare) (tD:TwistedD).
+  Module Minus1Twisted (m1s:Minus1IsSquare) (Import tD:TwistedD).
     Module tA.
-      Definition a : GF := 0 -1.
+      Definition a : GF := 0 - 1.
       Lemma a_square : exists sqrt_a, sqrt_a^2 = a.
+      Proof.
         apply m1s.minusOneIsSquare.
       Qed.
       Lemma a_nonzero : a <> 0.
-        unfold a.
-        intuition.
-        (* ring_simplify in H -- crashes coq*)
-      Admitted.
+      Proof.
+        discriminate.
+        (* This result happens to be trivial in the concrete modulus!
+         * We probably want a generic [0 <> 1] fact to use when we parameterize more. *)
+      Qed.
     End tA.
-    Module M := Twisted tA tD.
-    Import M. Import tA. Import tD.
+    Module Import M := Twisted tA tD.
+    Import tA.
     Local Open Scope twistedpoint.
 
     (** Second equation from <http://eprint.iacr.org/2008/522.pdf> section 3.1, also <https://www.hyperelliptic.org/EFD/g1p/auto-twisted-extended-1.html#addition-add-2008-hwcd-3> and <https://tools.ietf.org/html/draft-josefsson-eddsa-ed25519-03> *)
@@ -255,16 +254,23 @@ print(bool((((Y1 + X1) * (Y2 + X2) - (Y1 - X1) * (Y2 - X2)) *
       *)
     Admitted.
 
+    Ltac extended0 := repeat progress (autounfold; simpl); intros;
+                      repeat match goal with
+                             | [ x : twisted |- _ ] => destruct x
+                             | [ x : extended |- _ ] => destruct x
+                             | [ x : projective |- _ ] => destruct x
+                             end; simpl in *; subst.
+
+    Ltac extended := extended0; repeat (ring || f_equal)(*; field*).
+
+    Hint Unfold extendedValid extendedToTwisted projectiveToTwisted.
+
     Lemma extendedM1AddRep : forall (P1 P2 : extended) (tP1 tP2 : twisted)
       (P1con : extendedValid P1) (P1on : twistedOnCurve tP1) (P1rep : extendedToTwisted P1 = tP1)
       (P2con : extendedValid P2) (P2on : twistedOnCurve tP2) (P2rep : extendedToTwisted P2 = tP2),
       (tP1 + tP2)%twisted = extendedToTwisted (P1 + P2)%extendedM1.
     Proof.
-      intros.
-      destruct P1 as [[X1 Y1 Z1] T1]; destruct P2 as [[X2 Y2 Z2] T2].
-      repeat unfold extendedValid, twistedOnCurve, twistedAdd, extendedToTwisted, extendedToProjective, projectiveToTwisted, twistedX, twistedY, projectiveX, projectiveY, projectiveZ, extendedT, a, extendedM1Add in *.
-      subst tP1. subst tP2.
-      subst T1. subst T2.
+      extended0.
       apply f_equal2.
       (* case 1 verified by hand: follows from field and completeness of edwards addition *)
       (* field should work here *)
