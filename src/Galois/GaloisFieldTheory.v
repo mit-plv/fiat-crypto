@@ -1,5 +1,6 @@
 
 Require Import BinInt BinNat ZArith Znumtheory NArith.
+Require Import Eqdep_dec.
 Require Export Coq.Classes.Morphisms Setoid.
 Require Export Ring_theory Field_theory Field_tac.
 Require Export Crypto.Galois.GaloisField.
@@ -56,8 +57,17 @@ Module GaloisFieldTheory (M: Modulus).
              notFancy x; rewrite (Zmult_mod_idemp_l x)
            | [ |- context[(_ * (?y mod _)) mod _] ] =>
              notFancy y; rewrite (Zmult_mod_idemp_r y)
+           | [ |- context[(?x mod _) mod _] ] =>
+             notFancy x; rewrite (Zmod_mod x)
            | _ => rewrite Zplus_neg in * || rewrite Z.sub_diag in *
            end.
+
+  (* Remove exists under equals: we do this a lot *)
+  Ltac eq_remove_proofs := match goal with
+    | [ |- ?a = ?b ] =>
+      assert (Q := gf_eq a b);
+      simpl in *; apply Q; clear Q
+    end.
 
   (* General big hammer for proving Galois arithmetic facts *)
   Ltac galois := intros; apply gf_eq; simpl;
@@ -148,19 +158,32 @@ Module GaloisFieldTheory (M: Modulus).
 
   (* Ring properties *)
 
+  Ltac isModulusConstant :=
+    let hnfModulus := eval hnf in (proj1_sig modulus)
+    in match (isZcst hnfModulus) with
+    | NotConstant => NotConstant
+    | _ => match hnfModulus with
+      | Z.pos _ => true
+      | _ => false
+      end
+    end.
+
   Ltac isGFconstant t :=
     match t with
     | GFzero => true
     | GFone => true
-    | ZToGF _ => true
-    | exist _ ?z _ => isZcst z
-    | _ => false
+    | ZToGF _ => isModulusConstant
+    | exist _ ?z _ => match (isZcst z) with
+      | NotConstant => NotConstant
+      | _ => isModulusConstant
+      end
+    | _ => NotConstant
     end.
 
   Ltac GFconstants t :=
     match isGFconstant t with
-    | true => t
-    | _ => NotConstant
+    | NotConstant => NotConstant
+    | _ => t
     end.
 
   Ltac GFexp_tac t :=
@@ -186,11 +209,35 @@ Module GaloisFieldTheory (M: Modulus).
     galois.
   Qed.
 
+  (* Division Theory *)
+  Definition inject(x: Z):  GF.
+    exists (x mod modulus).
+    abstract (demod; trivial).
+  Defined.
+
+  Definition GFquotrem(a b: GF): GF * GF :=
+    match (Z.quotrem a b) with
+    | (q, r) => (inject q, inject r)
+    end.
+
+  Lemma GFdiv_theory : div_theory eq GFplus GFmult (@id _) GFquotrem.
+  Proof.
+    constructor; intros; unfold GFquotrem.
+
+    replace (Z.quotrem a b) with (Z.quot a b, Z.rem a b);
+      try (unfold Z.quot, Z.rem; rewrite <- surjective_pairing; trivial).
+
+    eq_remove_proofs; demod;
+      rewrite <- (Z.quot_rem' a b);
+      destruct a; simpl; trivial.
+  Qed.
+
   (* Now add the ring with all modifiers *)
 
   Add Ring GFring : GFring_theory
     (decidable GFdecidable,
      constants [GFconstants],
+     div GFdiv_theory,
      power_tac GFpower_theory [GFexp_tac]).
 
   (* Field Theory*)
@@ -251,11 +298,13 @@ Module GaloisFieldTheory (M: Modulus).
     constructor; auto.
   Qed.
 
-  Add Field GFfield : GFfield_theory
+  (* Add Scoped field declarations *)
+
+  Add Field GFfield_computational : GFfield_theory
     (decidable GFdecidable,
      completeness GFcomplete,
      constants [GFconstants],
+     div GFdiv_theory,
      power_tac GFpower_theory [GFexp_tac]).
 
 End GaloisFieldTheory.
-

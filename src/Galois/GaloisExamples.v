@@ -6,17 +6,22 @@ Definition two_5_1 := (two_p 5) - 1.
 Lemma two_5_1_prime : prime two_5_1.
 Admitted.
 
-Definition prime31 := exist _ two_5_1 two_5_1_prime.
-Local Notation p := two_5_1.
+Definition two_127_1 := (two_p 127) - 1.
+Lemma two_127_1_prime : prime two_127_1.
+Admitted.
 
 Module Modulus31 <: Modulus.
-  Definition modulus := prime31.
+  Definition modulus := exist _ two_5_1 two_5_1_prime.
 End Modulus31.
 
-Module Theory31 := GaloisFieldTheory Modulus31.
+Module Modulus127_1 <: Modulus.
+  Definition modulus := exist _ two_127_1 two_127_1_prime.
+End Modulus127_1.
+
 
 Module Example31.
-  Import Modulus31 Theory31 Theory31.Field.
+  Module Theory := GaloisFieldTheory Modulus31.
+  Import Modulus31 Theory Theory.Field.
   Local Open Scope GF_scope.
 
   Lemma example1: forall x y z: GF, z <> 0 -> x * (y / z) / z = x * y / (z ^ 2).
@@ -39,3 +44,25 @@ Module Example31.
 
 End Example31.
 
+Module TimesZeroTransparentTestModule.
+  Module Theory := GaloisFieldTheory Modulus127_1.
+  Import Modulus127_1 Theory Theory.Field.
+  Local Open Scope GF_scope.
+
+  Lemma timesZero : forall a, a*0 = 0.
+    intros.
+    field.
+  Qed.
+End TimesZeroTransparentTestModule.
+
+Module TimesZeroParametricTestModule (M: Modulus).
+  Module Theory := GaloisFieldTheory M.
+  Import M Theory Theory.Field.
+  Local Open Scope GF_scope.
+
+  Lemma timesZero : forall a, a*0 = 0.
+    intros.
+    field.
+    ring. (* field doesn't work but ring does :) *)
+  Qed.
+End TimesZeroParametricTestModule.

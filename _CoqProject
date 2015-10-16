@@ -6,4 +6,3 @@ src/Galois/GaloisFieldTheory.v
 src/Galois/GaloisExamples.v
 src/Curves/PointFormats.v
 src/Curves/Curve25519.v
-src/Assembly/Assembly.v
