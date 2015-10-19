@@ -6,16 +6,20 @@ COQDEP = coqdep
 
 COMPILE.v = $(COQC) -q $(COQLIBS)
 
-.PHONY: check_fiat
+.PHONY: check_fiat check_bedrock
 
 check_fiat:
 	@perl -e \
 		'if(! -d "./fiat") { print("you need to link fiat to ./fiat\n"); exit(1) }'
 
-%.vo %.glob: check_fiat %.v
+check_bedrock:
+	@perl -e \
+		'if(! -d "./bedrock") { print("you need to link bedrock to ./bedrock\n"); exit(1) }'
+
+%.vo %.glob: %.v.d
 	$(COMPILE.v) $*
 
-%.v.d: check_fiat %.v
+%.v.d: check_fiat check_bedrock %.v
 	@$(COQDEP) -I . $(COQLIBS) "$<" >"$@" \
 	  || (RV=$$?; rm -f "$@"; exit $${RV})
 

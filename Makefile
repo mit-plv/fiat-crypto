@@ -7,7 +7,7 @@ COQLIBS := $(shell grep '^-' _CoqProject | tr '\n' ' ')
 include .make/cc.mk
 include .make/coq.mk
 
-FAST_TARGETS += check_fiat clean
+FAST_TARGETS += check_fiat check_bedrock clean
 
 .DEFAULT_GOAL = all
 .PHONY: all deps objects clean coquille
