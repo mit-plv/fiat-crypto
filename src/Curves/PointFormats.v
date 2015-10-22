@@ -35,152 +35,136 @@ Module PointFormats.
     Axiom d_nonsquare : forall not_sqrt_d, not_sqrt_d^2 <> d.
   End TwistedD.
 
-  Module Twisted (Import tA:TwistedA) (Import tD:TwistedD).
+  Module CompleteTwistedEdwardsSpec (Import ta:TwistedA) (Import td:TwistedD).
+    (** Twisted Ewdwards curves with complete addition laws. References:
+    * <https://eprint.iacr.org/2008/013.pdf>
+    * <http://ed25519.cr.yp.to/ed25519-20110926.pdf>
+    * <https://eprint.iacr.org/2015/677.pdf>
+    *)
+    Record point := mkPoint {projX : GF; projY : GF}.
 
-    (** [twisted] represents a point on an elliptic curve using twisted Edwards
-    * coordinates (see <https://www.hyperelliptic.org/EFD/g1p/auto-twisted.html>
-    * <https://eprint.iacr.org/2008/013.pdf>, and <http://ed25519.cr.yp.to/ed25519-20110926.pdf>) *)
-    Record twisted := mkTwisted {twistedX : GF; twistedY : GF}.
-    Delimit Scope twistedpoint_scope with twistedpoint.
-    Notation "'(' x ',' y ')'" := (mkTwisted x y) : twistedpoint.
-    Local Open Scope twistedpoint.
-    Definition twistedOnCurve (P : twisted) : Prop :=
-      let x := twistedX P in
-      let y := twistedY P in
-      a*x^2 + y^2 = 1 + d*x^2*y^2.
-
-    (** <https://www.hyperelliptic.org/EFD/g1p/auto-twisted.html> *)
-    Definition twistedAdd (P1 P2 : twisted) : twisted :=
-      let x1 := twistedX P1 in
-      let y1 := twistedY P1 in
-      let x2 := twistedX P2 in
-      let y2 := twistedY P2 in
-      mkTwisted
+    Definition unifiedAdd (P1 P2 : point) : point :=
+      let x1 := projX P1 in
+      let y1 := projY P1 in
+      let x2 := projX P2 in
+      let y2 := projY P2 in
+      mkPoint
         ((x1*y2  +  y1*x2)/(1 + d*x1*x2*y1*y2))
         ((y1*y2 - a*x1*x2)/(1 - d*x1*x2*y1*y2))
-    .
+      .
 
-    Delimit Scope twisted_scope with twisted.
-    Infix "+" := twistedAdd : twisted_scope.
+    Definition onCurve : point -> Prop := fun P =>
+      let x := projX P in
+      let y := projY P in
+      a*x^2 + y^2 = 1 + d*x^2*y^2.
+  End CompleteTwistedEdwardsSpec.
 
-    Lemma twistedAddCompletePlus : forall (P1 P2:twisted)
-      (oc1:twistedOnCurve P1) (oc2:twistedOnCurve P2),
-      let x1 := twistedX P1 in
-      let y1 := twistedY P1 in
-      let x2 := twistedX P2 in
-      let y2 := twistedY P2 in
+  Module Type CompleteTwistedEdwardsPointFormat (ta:TwistedA) (td:TwistedD).
+    Module Spec := CompleteTwistedEdwardsSpec ta td.
+    Parameter point : Type.
+    Parameter mkPoint : forall (x y:GF), point.
+    Parameter projX : point -> GF.
+    Parameter projY : point -> GF.
+    Parameter unifiedAdd : point -> point -> point.
+
+    (* TODO: split module here? *)
+
+    Parameter rep : point -> Spec.point -> Prop.
+    Local Notation "P '~=' rP" := (rep P rP) (at level 70).
+    Axiom mkPoint_rep: forall x y, mkPoint x y ~= Spec.mkPoint x y.
+    Axiom unifiedAdd_rep: forall P Q rP rQ, Spec.onCurve rP -> Spec.onCurve rQ ->
+      P ~= rP -> Q ~= rQ -> (unifiedAdd P Q) ~= (Spec.unifiedAdd rP rQ).
+    Axiom projX_rep : forall P rP, P ~= rP -> projX P = Spec.projX rP.
+    Axiom projY_rep : forall P rP, P ~= rP -> projY P = Spec.projY rP.
+  End CompleteTwistedEdwardsPointFormat.
+
+  Module CompleteTwistedEdwardsFacts (Import ta:TwistedA) (Import td:TwistedD).
+    Module M := CompleteTwistedEdwardsSpec ta td.
+    Import M.
+    Lemma twistedAddCompletePlus : forall (P1 P2:point)
+      (oc1:onCurve P1) (oc2:onCurve P2),
+      let x1 := projX P1 in
+      let y1 := projY P1 in
+      let x2 := projX P2 in
+      let y2 := projY P2 in
       (1 + d*x1*x2*y1*y2) <> 0.
       (* "Twisted Edwards Curves" <http://eprint.iacr.org/2008/013.pdf> section 6 *)
     Admitted.
-    Lemma twistedAddCompleteMinus : forall (P1 P2:twisted)
-      (oc1:twistedOnCurve P1) (oc2:twistedOnCurve P2),
-      let x1 := twistedX P1 in
-      let y1 := twistedY P1 in
-      let x2 := twistedX P2 in
-      let y2 := twistedY P2 in
+    Lemma twistedAddCompleteMinus : forall (P1 P2:point)
+      (oc1:onCurve P1) (oc2:onCurve P2),
+      let x1 := projX P1 in
+      let y1 := projY P1 in
+      let x2 := projX P2 in
+      let y2 := projY P2 in
       (1 - d*x1*x2*y1*y2) <> 0.
       (* "Twisted Edwards Curves" <http://eprint.iacr.org/2008/013.pdf> section 6 *)
     Admitted.
 
-    Hint Unfold twistedAdd twistedOnCurve.
-
+    Hint Unfold unifiedAdd onCurve.
     Ltac twisted := autounfold; intros;
                     repeat match goal with
-                               | [ x : twisted |- _ ] => destruct x
+                               | [ x : point |- _ ] => destruct x
                            end; simpl; repeat (ring || f_equal); field.
-
-    Lemma twistedAddComm : forall A B, (A+B = B+A)%twisted.
+    Local Infix "+" := unifiedAdd.
+    Lemma twistedAddComm : forall A B, (A+B = B+A).
     Proof.
       twisted.
     Qed.
 
     Lemma twistedAddAssoc : forall A B C
-      (ocA:twistedOnCurve A) (ocB:twistedOnCurve B) (ocC:twistedOnCurve C),
-      (A+(B+C) = (A+B)+C)%twisted.
+      (ocA:onCurve A) (ocB:onCurve B) (ocC:onCurve C),
+      (A+(B+C) = (A+B)+C).
     Proof.
       (* uh... I don't actually know where this is proven... *)
     Admitted.
 
-    Definition twisted0 := (0, 1).
-    Lemma twisted0onCurve : twistedOnCurve (0, 1).
+    Local Notation "'(' x ',' y ')'" := (mkPoint x y).
+    Definition zero := (0, 1).
+    Lemma zeroOnCurve : onCurve (0, 1).
     Proof.
       twisted.
     Qed.
-    Lemma twisted0Identity : forall P, (P + twisted0 = P)%twisted.
+    Lemma zeroIsIdentity : forall P, P + zero = P.
     Proof.
       twisted.
     Qed.
+  End CompleteTwistedEdwardsFacts.
 
-    (** [projective] represents a point on an elliptic curve using projective
-    * Edwards coordinates for twisted edwards curves with a=-1 (see
-    * <https://hyperelliptic.org/EFD/g1p/auto-edwards-projective.html>
-    * <https://en.wikipedia.org/wiki/Edwards_curve#Projective_homogeneous_coordinates>) *)
-    Record projective := mkProjective {projectiveX : GF; projectiveY : GF; projectiveZ : GF}.
-    Notation "'(' X ',' Y ',' Z ')'" := (mkProjective X Y Z) : twistedpoint.
-    Definition twistedToProjective (P : twisted) : projective :=
-      let x := twistedX P in
-      let y := twistedY P in
-      (x, y, 1).
 
-    Definition projectiveToTwisted (P : projective) : twisted :=
-      let X := projectiveX P in
-      let Y := projectiveY P in
-      let Z := projectiveZ P in
-      (X/Z, Y/Z).
+  Module CompleteTwistedEdwardsSpecPointFormat (ta:TwistedA) (td:TwistedD)
+      <: (CompleteTwistedEdwardsPointFormat ta td).
+    Module Spec := CompleteTwistedEdwardsSpec ta td.
+    Definition point := Spec.point.
+    Definition mkPoint := Spec.mkPoint.
+    Definition projX := Spec.projX.
+    Definition projY := Spec.projY.
+    Definition unifiedAdd := Spec.unifiedAdd.
 
-    Hint Unfold projectiveToTwisted twistedToProjective.
-
-    Lemma twistedProjectiveInv : forall P,
-      projectiveToTwisted (twistedToProjective P) = P.
-    Proof.
-      twisted.
+    Definition rep : point -> point -> Prop := eq.
+    Local Hint Unfold rep.
+    Local Notation "P '~=' rP" := (rep P rP) (at level 70).
+    Local Ltac trivialRep := autounfold; intros; subst; auto.
+    Lemma mkPoint_rep: forall x y, mkPoint x y ~= Spec.mkPoint x y.
+      trivialRep.
     Qed.
-
-    (** [extended] represents a point on an elliptic curve using extended projective
-    * Edwards coordinates with twist a=-1 (see <https://eprint.iacr.org/2008/522.pdf>). *)
-    Record extended := mkExtended {extendedToProjective : projective; extendedT : GF}.
-    Notation "'(' X ',' Y ',' Z ',' T ')'" := (mkExtended (X, Y, Z) T) : twistedpoint.
-    Local Open Scope twistedpoint.
-    Definition extendedValid (P : extended) : Prop :=
-      let pP := extendedToProjective P in
-      let X := projectiveX pP in
-      let Y := projectiveY pP in
-      let Z := projectiveZ pP in
-      let T := extendedT P in
-      T = X*Y/Z.
-
-    Definition twistedToExtended (P : twisted) : extended :=
-      let x := twistedX P in
-      let y := twistedY P in
-      (x, y, 1, x*y).
-
-    Definition extendedToTwisted (P : extended) : twisted :=
-      projectiveToTwisted (extendedToProjective P).
-
-    Lemma twistedExtendedInv : forall P,
-      extendedToTwisted (twistedToExtended P) = P.
-    Proof.
-      apply twistedProjectiveInv.
+    Lemma unifiedAdd_rep: forall P Q rP rQ, Spec.onCurve rP -> Spec.onCurve rQ ->
+      P ~= rP -> Q ~= rQ -> (unifiedAdd P Q) ~= (Spec.unifiedAdd rP rQ).
+      trivialRep.
     Qed.
-
-    (** [precomputed] represents a point on an elliptic curve using "precomputed"
-    * Edwards coordinates, as used for fixed-base scalar multiplication
-    * (see <http://ed25519.cr.yp.to/ed25519-20110926.pdf> section 4: addition). *)
-    Record precomputed := mkPrecomputed {precomputedSum : GF;
-                                         precomputedDifference : GF;
-                                         precomputed2dxy : GF}.
-    Definition twistedToPrecomputed (d:GF) (P : twisted) : precomputed :=
-      let x := twistedX P in
-      let y := twistedY P in
-      mkPrecomputed (y+x) (y-x) (2*d*x*y).
-  End Twisted.
+    Lemma projX_rep : forall P rP, P ~= rP -> projX P = Spec.projX rP.
+      trivialRep.
+    Qed.
+    Lemma projY_rep : forall P rP, P ~= rP -> projY P = Spec.projY rP.
+      trivialRep.
+    Qed.
+  End CompleteTwistedEdwardsSpecPointFormat.
 
   Module Type Minus1IsSquare.
     Axiom minusOneIsSquare : exists sqrt_a, sqrt_a^2 = 0 - 1.
   End Minus1IsSquare.
 
-  Module Minus1Twisted (m1s:Minus1IsSquare) (Import tD:TwistedD).
-    Module tA.
+  Module Minus1Twisted (m1s:Minus1IsSquare) (Import td:TwistedD).
+    Module ta <: TwistedA.
       Definition a : GF := 0 - 1.
       Lemma a_square : exists sqrt_a, sqrt_a^2 = a.
       Proof.
@@ -192,90 +176,205 @@ Module PointFormats.
         (* This result happens to be trivial in the concrete modulus!
          * We probably want a generic [0 <> 1] fact to use when we parameterize more. *)
       Qed.
-    End tA.
-    Module Import M := Twisted tA tD.
-    Import tA.
-    Local Open Scope twistedpoint.
+    End ta.
+    Import ta.
 
-    (** Second equation from <http://eprint.iacr.org/2008/522.pdf> section 3.1, also <https://www.hyperelliptic.org/EFD/g1p/auto-twisted-extended-1.html#addition-add-2008-hwcd-3> and <https://tools.ietf.org/html/draft-josefsson-eddsa-ed25519-03> *)
-    Definition extendedM1Add (P1 P2 : extended) : extended :=
-      let k := 2 * d in
-      let pP1 := extendedToProjective P1 in
-      let X1 := projectiveX pP1 in
-      let Y1 := projectiveY pP1 in
-      let Z1 := projectiveZ pP1 in
-      let T1 := extendedT P1 in
-      let pP2 := extendedToProjective P2 in
-      let X2 := projectiveX pP2 in
-      let Y2 := projectiveY pP2 in
-      let Z2 := projectiveZ pP2 in
-      let T2 := extendedT P2 in
-      let  A := (Y1-X1)*(Y2-X2) in
-      let  B := (Y1+X1)*(Y2+X2) in
-      let  C := T1*k*T2 in
-      let  D := Z1*2*Z2 in
-      let  E := B-A in
-      let  F := D-C in
-      let  G := D+C in
-      let  H := B+A in
-      let X3 := E*F in
-      let Y3 := G*H in
-      let T3 := E*H in
-      let Z3 := F*G in
-      mkExtended (mkProjective X3 Y3 Z3) T3.
+    Module M := CompleteTwistedEdwardsSpec ta td.
 
-    Delimit Scope extendedM1_scope with extendedM1.
-    Infix "+" := extendedM1Add : extendedM1_scope.
+    Module Format <: CompleteTwistedEdwardsPointFormat ta td.
+      Module Spec := CompleteTwistedEdwardsSpec ta td.
+      (** [projective] represents a point on an elliptic curve using projective
+      * Edwards coordinates for twisted edwards curves with a=-1 (see
+      * <https://hyperelliptic.org/EFD/g1p/auto-edwards-projective.html>
+      * <https://en.wikipedia.org/wiki/Edwards_curve#Projective_homogeneous_coordinates>) *)
+      Record projective := mkProjective {projectiveX : GF; projectiveY : GF; projectiveZ : GF}.
+      Local Notation "'(' X ',' Y ',' Z ')'" := (mkProjective X Y Z).
+      Definition twistedToProjective (P : Spec.point) : projective :=
+        let x := Spec.projX P in
+        let y := Spec.projY P in
+        (x, y, 1).
 
-    Lemma extendeM1dAddCon : forall (P1 P2:extended)
-      (hv1:extendedValid P1) (hv2:extendedValid P2),
-      extendedValid (P1 + P2)%extendedM1.
-    Proof.
-      intros.
-      remember ((P1+P2)%extendedM1) as P3.
-      destruct P1 as [[X1 Y1 Z1] T1].
-      destruct P2 as [[X2 Y2 Z2] T2].
-      destruct P3 as [[X3 Y3 Z3] T3].
-      unfold extendedValid, extendedToProjective, projectiveToTwisted, twistedX, twistedY in *.
-      invcs HeqP3.
-      subst.
-      (* field. -- fails. but it works in sage:
-sage -c 'var("d X1 X2 Y1 Y2 Z1 Z2");
-print(bool((((Y1 + X1) * (Y2 + X2) - (Y1 - X1) * (Y2 - X2)) *
-((Y1 + X1) * (Y2 + X2) - (Y1 - X1) * (Y2 - X2)) ==
-((Y1 + X1) * (Y2 + X2) - (Y1 - X1) * (Y2 - X2)) *
-(2 * Z1 * Z2 - 2 * ((0 - d) / a) * (X1 * Y1 / Z1) * (X2 * Y2 / Z2)) *
-((2 * Z1 * Z2 + 2 * ((0 - d) / a) * (X1 * Y1 / Z1) * (X2 * Y2 / Z2)) *
- ((Y1 + X1) * (Y2 + X2) - (Y1 - X1) * (Y2 - X2))) /
- ((2 * Z1 * Z2 - 2 * ((0 - d) / a) * (X1 * Y1 / Z1) * (X2 * Y2 / Z2)) *
-  (2 * Z1 * Z2 + 2 * ((0 - d) / a) * (X1 * Y1 / Z1) * (X2 * Y2 / Z2))))))'
-        Outputs:
-          True
-      *)
-    Admitted.
+      Local Notation "'(' X ',' Y ')'" := (Spec.mkPoint X Y).
+      Definition projectiveToTwisted (P : projective) : Spec.point :=
+        let X := projectiveX P in
+        let Y := projectiveY P in
+        let Z := projectiveZ P in
+        (X/Z, Y/Z).
 
-    Ltac extended0 := repeat progress (autounfold; simpl); intros;
-                      repeat match goal with
-                             | [ x : twisted |- _ ] => destruct x
-                             | [ x : extended |- _ ] => destruct x
-                             | [ x : projective |- _ ] => destruct x
-                             end; simpl in *; subst.
+      Hint Unfold projectiveToTwisted twistedToProjective.
 
-    Ltac extended := extended0; repeat (ring || f_equal)(*; field*).
+      Lemma twistedProjectiveInv : forall P,
+        projectiveToTwisted (twistedToProjective P) = P.
+      Proof.
+    (* FIXME: this is copied from CompleteTwistedEdwardsFacts because I don't know how to get it to be in scope here *)
+    Ltac twisted := autounfold; intros;
+                    repeat match goal with
+                               | [ x : Spec.point |- _ ] => destruct x
+                           end; simpl; repeat (ring || f_equal); field.
+        twisted.
+      Qed.
 
-    Hint Unfold extendedValid extendedToTwisted projectiveToTwisted.
+      (** [extended] represents a point on an elliptic curve using extended projective
+      * Edwards coordinates with twist a=-1 (see <https://eprint.iacr.org/2008/522.pdf>). *)
+      Record extended := mkExtended {extendedToProjective : projective; extendedT : GF}.
+      (*Error: The kernel does not recognize yet that a parameter can be instantiated by an inductive type. Hint: you can rename the inductive type and give a definition to map the old name to the new name.*)
 
-    Lemma extendedM1AddRep : forall (P1 P2 : extended) (tP1 tP2 : twisted)
-      (P1con : extendedValid P1) (P1on : twistedOnCurve tP1) (P1rep : extendedToTwisted P1 = tP1)
-      (P2con : extendedValid P2) (P2on : twistedOnCurve tP2) (P2rep : extendedToTwisted P2 = tP2),
-      (tP1 + tP2)%twisted = extendedToTwisted (P1 + P2)%extendedM1.
-    Proof.
-      extended0.
-      apply f_equal2.
-      (* case 1 verified by hand: follows from field and completeness of edwards addition *)
-      (* field should work here *)
-    Abort.
+      Definition point := extended.
+      Local Notation "'(' X ',' Y ',' Z ',' T ')'" := (mkExtended (X, Y, Z) T).
+      Definition extendedValid (P : point) : Prop :=
+        let pP := extendedToProjective P in
+        let X := projectiveX pP in
+        let Y := projectiveY pP in
+        let Z := projectiveZ pP in
+        let T := extendedT P in
+        T = X*Y/Z.
+
+
+      Definition twistedToExtended (P : Spec.point) : point :=
+        let x := Spec.projX P in
+        let y := Spec.projY P in
+        (x, y, 1, x*y).
+      Definition mkPoint x y := twistedToExtended (x, y).
+
+      Definition extendedToTwisted (P : point) : Spec.point :=
+        projectiveToTwisted (extendedToProjective P).
+      Local Hint Unfold extendedValid twistedToExtended extendedToTwisted projectiveToTwisted Spec.unifiedAdd mkPoint.
+
+      Lemma twistedExtendedInv : forall P,
+        extendedToTwisted (twistedToExtended P) = P.
+      Proof.
+        apply twistedProjectiveInv.
+      Qed.
+
+      Lemma twistedToExtendedValid : forall (P : Spec.point), extendedValid (twistedToExtended P).
+        autounfold.
+        destruct P.
+        simpl.
+        field.
+      Qed.
+        
+      Definition rep (P:point) (rP:Spec.point) : Prop :=
+        extendedToTwisted P = rP /\ extendedValid P.
+      Lemma mkPoint_rep : forall x y, rep (mkPoint x y) (Spec.mkPoint x y).
+        split.
+        apply twistedExtendedInv.
+        apply twistedToExtendedValid.
+      Qed.
+      Local Notation "P '~=' rP" := (rep P rP) (at level 70).
+
+      Definition projX P := Spec.projX (extendedToTwisted P).
+      Definition projY P := Spec.projY (extendedToTwisted P).
+
+      Ltac rep := repeat progress (intros; autounfold; subst; auto; match goal with
+                               | [ x : rep ?a ?b |- _ ] => destruct x
+                               end).
+      Lemma projX_rep : forall P rP, P ~= rP -> projX P = Spec.projX rP.
+        rep.
+      Qed.
+      Lemma projY_rep : forall P rP, P ~= rP -> projY P = Spec.projY rP.
+        rep.
+      Qed.
+
+      (** Second equation from <http://eprint.iacr.org/2008/522.pdf> section 3.1, also <https://www.hyperelliptic.org/EFD/g1p/auto-twisted-extended-1.html#addition-add-2008-hwcd-3> and <https://tools.ietf.org/html/draft-josefsson-eddsa-ed25519-03> *)
+      Definition unifiedAdd (P1 P2 : point) : point :=
+        let k := 2 * d in
+        let pP1 := extendedToProjective P1 in
+        let X1 := projectiveX pP1 in
+        let Y1 := projectiveY pP1 in
+        let Z1 := projectiveZ pP1 in
+        let T1 := extendedT P1 in
+        let pP2 := extendedToProjective P2 in
+        let X2 := projectiveX pP2 in
+        let Y2 := projectiveY pP2 in
+        let Z2 := projectiveZ pP2 in
+        let T2 := extendedT P2 in
+        let  A := (Y1-X1)*(Y2-X2) in
+        let  B := (Y1+X1)*(Y2+X2) in
+        let  C := T1*k*T2 in
+        let  D := Z1*2*Z2 in
+        let  E := B-A in
+        let  F := D-C in
+        let  G := D+C in
+        let  H := B+A in
+        let X3 := E*F in
+        let Y3 := G*H in
+        let T3 := E*H in
+        let Z3 := F*G in
+        mkExtended (mkProjective X3 Y3 Z3) T3.
+
+      Delimit Scope extendedM1_scope with extendedM1.
+      Infix "+" := unifiedAdd : extendedM1_scope.
+
+      Lemma unifiedAddCon : forall (P1 P2:point)
+        (hv1:extendedValid P1) (hv2:extendedValid P2),
+        extendedValid (P1 + P2)%extendedM1.
+      Proof.
+        intros.
+        remember ((P1+P2)%extendedM1) as P3.
+        destruct P1 as [[X1 Y1 Z1] T1].
+        destruct P2 as [[X2 Y2 Z2] T2].
+        destruct P3 as [[X3 Y3 Z3] T3].
+        unfold extendedValid, extendedToProjective, projectiveToTwisted, Spec.projX, Spec.projY in *.
+        invcs HeqP3.
+        subst.
+        (* field. -- fails. but it works in sage:
+  sage -c 'var("d X1 X2 Y1 Y2 Z1 Z2");
+  print(bool((((Y1 + X1) * (Y2 + X2) - (Y1 - X1) * (Y2 - X2)) *
+  ((Y1 + X1) * (Y2 + X2) - (Y1 - X1) * (Y2 - X2)) ==
+  ((Y1 + X1) * (Y2 + X2) - (Y1 - X1) * (Y2 - X2)) *
+  (2 * Z1 * Z2 - 2 * ((0 - d) / a) * (X1 * Y1 / Z1) * (X2 * Y2 / Z2)) *
+  ((2 * Z1 * Z2 + 2 * ((0 - d) / a) * (X1 * Y1 / Z1) * (X2 * Y2 / Z2)) *
+   ((Y1 + X1) * (Y2 + X2) - (Y1 - X1) * (Y2 - X2))) /
+   ((2 * Z1 * Z2 - 2 * ((0 - d) / a) * (X1 * Y1 / Z1) * (X2 * Y2 / Z2)) *
+    (2 * Z1 * Z2 + 2 * ((0 - d) / a) * (X1 * Y1 / Z1) * (X2 * Y2 / Z2))))))'
+          Outputs:
+            True
+        *)
+      Admitted.
+
+      Ltac extended0 := repeat progress (autounfold; simpl); intros;
+                        repeat match goal with
+                               | [ x : Spec.point |- _ ] => destruct x
+                               | [ x : point |- _ ] => destruct x
+                               | [ x : projective |- _ ] => destruct x
+                               end; simpl in *; subst.
+
+      Ltac extended := extended0; repeat (ring || f_equal)(*; field*).
+
+      Lemma unifiedAddToTwisted : forall (P1 P2 : point) (tP1 tP2 : Spec.point)
+        (P1con : extendedValid P1) (P1on : Spec.onCurve tP1) (P1rep : extendedToTwisted P1 = tP1)
+        (P2con : extendedValid P2) (P2on : Spec.onCurve tP2) (P2rep : extendedToTwisted P2 = tP2),
+        extendedToTwisted (P1 + P2)%extendedM1 = Spec.unifiedAdd tP1 tP2.
+      Proof.
+        extended0.
+        apply f_equal2.
+        (* case 1 verified by hand: follows from field and completeness of edwards addition *)
+        (* field should work here *)
+      Admitted.
+
+      Lemma unifiedAdd_rep: forall P Q rP rQ, Spec.onCurve rP -> Spec.onCurve rQ ->
+        P ~= rP -> Q ~= rQ -> (unifiedAdd P Q) ~= (Spec.unifiedAdd rP rQ).
+        split; rep.
+        apply unifiedAddToTwisted; auto.
+        apply unifiedAddCon; auto.
+      Qed.
+    End Format.
   End Minus1Twisted.
+
+
+  (*
+  (** [precomputed] represents a point on an elliptic curve using "precomputed"
+  * Edwards coordinates, as used for fixed-base scalar multiplication
+  * (see <http://ed25519.cr.yp.to/ed25519-20110926.pdf> section 4: addition). *)
+  Record precomputed := mkPrecomputed {precomputedSum : GF;
+                                       precomputedDifference : GF;
+                                       precomputed2dxy : GF}.
+  Definition twistedToPrecomputed (d:GF) (P : twisted) : precomputed :=
+    let x := twistedX P in
+    let y := twistedY P in
+    mkPrecomputed (y+x) (y-x) (2*d*x*y).
+  *)
+
 
   (** [weierstrass] represents a point on an elliptic curve using Weierstrass
   * coordinates (<http://cs.ucsb.edu/~koc/ccs130h/2013/EllipticHyperelliptic-CohenFrey.pdf>) definition 13.1*)
