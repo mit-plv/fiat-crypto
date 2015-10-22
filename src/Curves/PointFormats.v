@@ -1,5 +1,5 @@
 
-Require Import Crypto.Galois.GaloisField Crypto.Galois.GaloisFieldTheory.
+Require Import Crypto.Galois.Galois Crypto.Galois.GaloisTheory Crypto.Galois.ComputationalGaloisField.
 Require Import Tactics.VerdiTactics.
 
 (* FIXME: remove after [field] with modulus as a parameter (34d9f8a6e6a4be439d1c56a8b999d2c21ee12a46) is fixed *)
@@ -15,9 +15,8 @@ End M.
 (** Theory of elliptic curves over prime fields for cryptographic applications,
 with focus on the curves in <https://tools.ietf.org/html/draft-ladd-safecurves-04> *)
 Module PointFormats.
-  Module Field := GaloisField M.
-  Module Theory := GaloisFieldTheory M.
-  Import M Field Theory.
+  Module F := ComputationalGaloisField M.
+  Export M F F.T.
   Local Open Scope GF_scope.
   Local Notation "2" := (1+1).
   Local Notation "3" := (1+1+1).

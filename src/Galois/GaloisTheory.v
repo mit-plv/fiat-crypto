@@ -206,10 +206,8 @@ Module GaloisTheory (M: Modulus).
 
   (* Now add the ring with all modifiers *)
 
-  Add Ring GFring : GFring_theory
-    (decidable GFdecidable,
-     div GFdiv_theory,
-     power_tac GFpower_theory [GFexp_tac]).
+  Add Ring GFring0 : GFring_theory
+    (power_tac GFpower_theory [GFexp_tac]).
 
   (* Field Theory*)
 
@@ -269,3 +267,4 @@ Module GaloisTheory (M: Modulus).
     constructor; auto.
   Qed.
 End GaloisTheory.
+

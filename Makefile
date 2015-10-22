@@ -10,13 +10,9 @@ include .make/coq.mk
 FAST_TARGETS += check_fiat check_bedrock clean
 
 .DEFAULT_GOAL = all
-.PHONY: all deps objects clean coquille
+.PHONY: clean coquille
 
-all: objects
-
-deps: $(SOURCES:%=%.d) 
-
-objects: deps $(SOURCES:%=%o)
+all: check_fiat check_bedrock $(SOURCES:%=%o)
 
 clean:
 	$(RM) $(foreach f,$(SOURCES),$(call coq-generated,$(basename $f)))

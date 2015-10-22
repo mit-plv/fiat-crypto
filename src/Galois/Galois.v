@@ -4,10 +4,7 @@ Require Import Eqdep_dec.
 Require Import Tactics.VerdiTactics.
 
 Section GaloisPreliminaries.
-  Definition SMALL_THRESH: Z := 128.
-  Definition MIN_PRIME: Z := SMALL_THRESH * SMALL_THRESH.
-
-  Definition Prime := {x: Z | prime x /\ x > MIN_PRIME}.
+  Definition Prime := {x: Z | prime x}.
 
   Definition primeToZ(x: Prime) := proj1_sig x.
   Coercion primeToZ: Prime >-> Z.
@@ -51,9 +48,9 @@ Module Galois (M: Modulus).
 
   Definition GFone: GF.
     exists 1.
-    abstract (symmetry; apply Zmod_small; intuition;
-              destruct modulus; simpl; destruct a;
-              apply prime_ge_2 in H; intuition).
+    abstract( symmetry; apply Zmod_small; intuition;
+              destruct modulus; simpl;
+              apply prime_ge_2 in p; intuition).
   Defined.
 
   Definition GFplus(x y: GF): GF.

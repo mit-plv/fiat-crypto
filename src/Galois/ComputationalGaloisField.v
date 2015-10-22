@@ -37,6 +37,12 @@ Module ComputationalGaloisField (M: Modulus).
     | _ => t
     end.
 
+  Add Ring GFring_computational : GFring_theory
+    (decidable GFdecidable,
+     constants [GFconstants],
+     div GFdiv_theory,
+     power_tac GFpower_theory [GFexp_tac]).
+
   Add Field GFfield_computational : GFfield_theory
     (decidable GFdecidable,
      completeness GFcomplete,

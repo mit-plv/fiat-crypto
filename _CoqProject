@@ -2,8 +2,9 @@
 -R fiat/src Fiat
 -R bedrock/Bedrock Bedrock
 src/Tactics/VerdiTactics.v
-src/Galois/GaloisField.v
-src/Galois/GaloisFieldTheory.v
-src/Galois/GaloisExamples.v
+src/Galois/Galois.v
+src/Galois/GaloisTheory.v
+src/Galois/AbstractGaloisField.v
+src/Galois/ComputationalGaloisField.v
 src/Curves/PointFormats.v
 src/Curves/Curve25519.v

@@ -19,7 +19,7 @@ check_bedrock:
 %.vo %.glob: %.v.d
 	$(COMPILE.v) $*
 
-%.v.d: check_fiat check_bedrock %.v
+%.v.d: %.v
 	@$(COQDEP) -I . $(COQLIBS) "$<" >"$@" \
 	  || (RV=$$?; rm -f "$@"; exit $${RV})
 
