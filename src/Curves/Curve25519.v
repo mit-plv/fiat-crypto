@@ -2,6 +2,8 @@ Require Import Zpower ZArith Znumtheory.
 Require Import Crypto.Galois.GaloisField Crypto.Galois.GaloisFieldTheory.
 Require Import Crypto.Curves.PointFormats.
 
+(*
+(* FIXME: re-enable when modulus-parametric point formats work *)
 Definition two_255_19 := (two_p 255) - 19.
 Lemma two_255_19_prime : prime two_255_19.
   (* <http://safecurves.cr.yp.to/proof/57896044618658097711785492504343953926634992332820282019728792003956564819949.html>,
@@ -16,8 +18,11 @@ Module Modulus25519 <: Modulus.
 End Modulus25519.
 
 Module Curve25519.
-  Module PointFormats25519 := PointFormats Modulus25519.
-  Import Modulus25519 PointFormats25519 PointFormats25519.Theory PointFormats25519.Field.
+  Module PointFormats25519 := PointFormats.
+  (* Import Modulus25519 PointFormats25519 PointFormats25519.Theory PointFormats25519.Field. *)
+  Import PointFormats PointFormats.Theory PointFormats.Field.
+  Import PointFormats.CompleteTwistedEdwardsSpec.
+
   Local Open Scope GF_scope.
 
   Definition A : GF := ZToGF 486662.
@@ -38,3 +43,4 @@ Module Curve25519.
   (* TODO(andreser): implement (in PointFormats) recoverX from <https://tools.ietf.org/html/draft-josefsson-eddsa-ed25519-03> *)
 End Curve25519.
 
+*)
