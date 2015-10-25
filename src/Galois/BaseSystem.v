@@ -23,12 +23,12 @@ Module BaseSystem (Import B:BaseCoefs).
   Definition decode bs u  := fold_right accumulate 0 (combine u bs).
   Hint Unfold decode accumulate.
 
-        Fixpoint add (us vs:digits) : digits :=
-                match us,vs with
-                        | u::us', v::vs' => (u+v)::(add us' vs')
-                        | _, nil => us
-                        | _, _ => vs
-                end.
+	Fixpoint add (us vs:digits) : digits :=
+		match us,vs with
+			| u::us', v::vs' => (u+v)::(add us' vs')
+			| _, nil => us
+			| _, _ => vs
+		end.
   Local Infix ".+" := add (at level 50).
 
   Lemma add_rep : forall bs us vs, decode bs (add us vs) = decode bs us + decode bs vs.
@@ -43,10 +43,10 @@ Module BaseSystem (Import B:BaseCoefs).
 
   (* mul_geomseq is a valid multiplication algorithm if b_i = b_1^i *)
   Fixpoint mul_geomseq (us vs:digits) : digits :=
-                match us,vs with
-                        | u::us', v::vs' => u*v :: map (Z.mul u) vs' .+ mul_geomseq us' vs
-                        | _, _ => nil
-                end.
+		match us,vs with
+			| u::us', v::vs' => u*v :: map (Z.mul u) vs' .+ mul_geomseq us' vs
+			| _, _ => nil
+		end.
 
   Definition mul_each u := map (Z.mul u).
   Lemma mul_each_rep : forall bs u vs, decode bs (mul_each u vs) = u * decode bs vs.
@@ -247,7 +247,7 @@ Module BaseSystem (Import B:BaseCoefs).
     rewrite mul_bi'_0_us.
     rewrite rev_involutive; auto.
   Qed.
-  
+
   Lemma mul_bi'_app : forall n x us,
     mul_bi' n (x :: us) = x * crosscoef n (length us) :: mul_bi' n us.
   Proof.
@@ -265,7 +265,6 @@ Module BaseSystem (Import B:BaseCoefs).
     } {
       induction vs; auto.
       rewrite mul_bi'_app.
-      
       apply IHus.
     }
 
@@ -279,10 +278,10 @@ Module BaseSystem (Import B:BaseCoefs).
       simpl. *)
    Admitted.
 
-  Lemma add_leading_zeroes : forall n us vs, 
+  Lemma add_leading_zeroes : forall n us vs,
     (zeros n ++ us) .+ (zeros n ++ vs) = zeros n ++ (us .+ vs).
   Admitted.
-  
+
   Lemma rev_add : forall us vs,
     rev(us .+ vs) = rev us .+ rev vs.
   Admitted.
@@ -319,10 +318,10 @@ Module BaseSystem (Import B:BaseCoefs).
 
   (* mul' is multiplication with the FIRST ARGUMENT REVERSED *)
   Fixpoint mul' (usr vs:digits) : digits :=
-                match usr with
-                        | u::usr' => 
+		match usr with
+			| u::usr' => 
             mul_each u (mul_bi (length usr') vs) .+ mul' usr' vs
-                        | _ => nil
+			| _ => nil
     end.
   Definition mul us := mul' (rev us).
   Local Infix "#*" := mul (at level 40).
