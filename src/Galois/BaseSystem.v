@@ -1,22 +1,45 @@
 Require Import List.
 Require Import ZArith.ZArith ZArith.Zdiv.
-  Require Import Omega.
+Require Import Omega.
 
-Lemma nth_error_map : forall A B (f:A->B) xs i y,
+Ltac nth_tac' := 
+  intros; simpl in *; unfold error,value in *; repeat progress (match goal with
+    | [  |- context[match nth_error ?xs ?i with Some _ => _ | None => _ end ] ] => case_eq (nth_error xs i); intros
+    | [ |- context[if lt_dec ?a ?b then _ else _] ] => destruct (lt_dec a b)
+    | [ H: context[if lt_dec ?a ?b then _ else _] |- _ ] => destruct (lt_dec a b)
+    | [ H: _ /\ _ |- _ ] => destruct H
+    | [ H: Some _ = Some _ |- _ ] => injection H; clear H; intros; subst
+    | [ H: None = Some _  |- _ ] => inversion H
+    | [ H: Some _ = None |- _ ] => inversion H
+    | [ |- Some _ = Some _ ] => apply f_equal
+  end); eauto; try (autorewrite with list in *); try omega; eauto.
+Lemma nth_error_map : forall A B (f:A->B) i xs y,
   nth_error (map f xs) i = Some y ->
   exists x, nth_error xs i = Some x /\ f x = y.
-Admitted.
+Proof.
+  induction i; destruct xs; nth_tac'.
+Qed.
 
-Lemma nth_error_seq : forall start len i,
+Lemma nth_error_seq : forall i start len,
   nth_error (seq start len) i =
   if lt_dec i len
   then Some (start + i)
   else None.
-Admitted.
+  induction i; destruct len; nth_tac'; erewrite IHi; nth_tac'.
+Qed.
 
-Lemma nth_error_length_error : forall A (xs:list A) i, nth_error xs i = None ->
+Lemma nth_error_length_error : forall A i (xs:list A), nth_error xs i = None ->
   i >= length xs.
-Admitted.
+Proof.
+  induction i; destruct xs; nth_tac'; try specialize (IHi _ H); omega.
+Qed.
+
+Ltac nth_tac := 
+  repeat progress (try nth_tac'; try (match goal with
+    | [ H: nth_error (map _ _) _ = Some _ |- _ ] => destruct (nth_error_map _ _ _ _ _ _ H); clear H
+    | [ H: nth_error (seq _ _) _ = Some _ |- _ ] => rewrite nth_error_seq in H
+    | [H: nth_error _ _ = None |- _ ] => specialize (nth_error_length_error _ _ _ H); intro; clear H
+  end)).
 
 Local Open Scope Z.
 
@@ -316,18 +339,7 @@ Module PolynomialBaseCoefs (Import P:PolynomialBaseParams) <: BaseCoefs.
     let r := (b i * b j) / b (i+j)%nat in
     b i * b j = r * b (i+j)%nat.
   Proof.
-    unfold base, nth_default.
-    intros; repeat progress (match goal with
-      | [  |- context[match nth_error ?xs ?i with Some _ => _ | None => _ end ] ] => case_eq (nth_error xs i); intros
-      | [ H: nth_error (map _ _) _ = Some _ |- _ ] => destruct (nth_error_map _ _ _ _ _ _ H); clear H
-      | [ H: _ /\ _ |- _ ] => destruct H
-      | [ H: nth_error (seq _ _) _ = Some _ |- _ ] => rewrite nth_error_seq in H
-      | [ H: context[if lt_dec ?a ?b then _ else _] |- _ ] => destruct (lt_dec a b)
-      | [ H: Some _ = Some _ |- _ ] => injection H; clear H; intros; subst
-      | [ H: None = Some _  |- _ ] => inversion H
-      | [ H: Some _ = None |- _ ] => inversion H
-      | [H: nth_error _ _ = None |- _ ] => specialize (nth_error_length_error _ _ _ H); intro; clear H
-    end); autorewrite with list in *; try omega.
+    unfold base, nth_default; nth_tac.
 
     clear.
     unfold bi.
