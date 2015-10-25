@@ -45,7 +45,11 @@ Local Open Scope Z.
 
 Lemma pos_pow_nat_pos : forall x n, 
   Z.pos x ^ Z.of_nat n > 0.
-Admitted.
+  do 2 (intros; induction n; subst; simpl in *; auto with zarith).
+  SearchAbout Pos.succ.
+  rewrite <- Pos.add_1_r, Zpower_pos_is_exp.
+  apply Zmult_gt_0_compat; auto; compute; auto.
+Qed.
 
 Module Type BaseCoefs.
   (** [BaseCoefs] represent the weights of each digit in a positional number system, with the weight of least significant digit presented first. The following requirements on the base are preconditions for using it with BaseSystem. *)
