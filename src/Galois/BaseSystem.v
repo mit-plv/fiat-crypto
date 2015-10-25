@@ -23,12 +23,12 @@ Module BaseSystem (Import B:BaseCoefs).
   Definition decode bs u  := fold_right accumulate 0 (combine u bs).
   Hint Unfold decode accumulate.
 
-	Fixpoint add (us vs:digits) : digits :=
-		match us,vs with
-			| u::us', v::vs' => (u+v)::(add us' vs')
-			| _, nil => us
-			| _, _ => vs
-		end.
+        Fixpoint add (us vs:digits) : digits :=
+                match us,vs with
+                        | u::us', v::vs' => (u+v)::(add us' vs')
+                        | _, nil => us
+                        | _, _ => vs
+                end.
   Local Infix ".+" := add (at level 50).
 
   Lemma add_rep : forall bs us vs, decode bs (add us vs) = decode bs us + decode bs vs.
@@ -43,10 +43,10 @@ Module BaseSystem (Import B:BaseCoefs).
 
   (* mul_geomseq is a valid multiplication algorithm if b_i = b_1^i *)
   Fixpoint mul_geomseq (us vs:digits) : digits :=
-		match us,vs with
-			| u::us', v::vs' => u*v :: map (Z.mul u) vs' .+ mul_geomseq us' vs
-			| _, _ => nil
-		end.
+                match us,vs with
+                        | u::us', v::vs' => u*v :: map (Z.mul u) vs' .+ mul_geomseq us' vs
+                        | _, _ => nil
+                end.
 
   Definition mul_each u := map (Z.mul u).
   Lemma mul_each_rep : forall bs u vs, decode bs (mul_each u vs) = u * decode bs vs.
@@ -69,16 +69,39 @@ Module BaseSystem (Import B:BaseCoefs).
   Qed.
 
   Lemma app_zeros_zeros : forall n m, (zeros n ++ zeros m) = zeros (n + m).
-  Admitted.
+  Proof.
+    intros; 
+    induction n; simpl; auto.
+    rewrite IHn; auto.
+  Qed.
 
   Lemma zeros_app0 : forall m, (zeros m ++ 0 :: nil) = zeros (S m).
-  Admitted.
+  Proof.
+    intros.
+    assert (0 :: nil = zeros 1) by auto.
+    rewrite H.
+    rewrite app_zeros_zeros.
+    rewrite NPeano.Nat.add_1_r; auto.
+  Qed.
 
   Lemma rev_zeros : forall n, rev (zeros n) = zeros n.
-  Admitted.
+  Proof.
+    intros.
+    induction n. {
+      unfold zeros; auto.
+    } {
+      replace (rev (zeros (S n))) with (rev (zeros n) ++ 0 :: nil) by auto.
+      rewrite IHn.
+      rewrite zeros_app0; auto.
+    }
+  Qed.
 
   Lemma app_cons_app_app : forall T xs (y:T) ys, xs ++ y :: ys = (xs ++ (y::nil)) ++ ys.
-  Admitted.
+  Proof.
+    intros.
+    rewrite app_assoc_reverse.
+    replace ((y :: nil) ++ ys) with (y :: ys); auto.
+  Qed.
 
   (* mul' is multiplication with the SECOND ARGUMENT REVERSED and OUTPUT REVERSED *)
   Fixpoint mul_bi' (i:nat) (vsr:digits) := 
@@ -178,10 +201,103 @@ Module BaseSystem (Import B:BaseCoefs).
     simpl; f_equal; auto. 
   Qed.
 
+  (* TODO: add this to preconditions for base *)
+  Lemma b0_1 : forall bs, nth_default 0 bs 0 = 1.
+  Admitted.
+
+  (* TODO: add this to preconditions for base *)
+  Lemma bn_nonzero : forall n bs, nth_default 0 bs n <> 0.
+  Admitted.
+
+  Lemma crosscoef_0_n : forall n, crosscoef 0 n = 1.
+    induction n; unfold crosscoef.
+    rewrite Z_div_mult_full.
+    apply b0_1.
+    rewrite plus_O_n.
+    rewrite b0_1; intuition.
+    simpl.
+    rewrite Z_div_mult_full.
+    apply b0_1.
+    apply bn_nonzero.
+  Qed.
+
+  Lemma mul_bi'_0_us : forall us, mul_bi' 0 us = us.
+  Proof.
+    intros.
+    induction us; simpl; auto.
+    rewrite IHus.
+    rewrite crosscoef_0_n.
+    rewrite <- Zred_factor0; auto.
+  Qed.
+
+  Lemma mul_bi'_n_nil : forall n, mul_bi' n nil = nil.
+  Proof.
+    intros.
+    unfold mul_bi; auto.
+  Qed.
+
+  Lemma add_nil_l : forall us, nil .+ us = us.
+    induction us; auto.
+  Qed.
+
+  Lemma mul_bi_0_us : forall us, mul_bi 0 us = us.
+  Proof.
+    intros.
+    unfold mul_bi; simpl.
+    rewrite mul_bi'_0_us.
+    rewrite rev_involutive; auto.
+  Qed.
+  
+  Lemma mul_bi'_app : forall n x us,
+    mul_bi' n (x :: us) = x * crosscoef n (length us) :: mul_bi' n us.
+  Proof.
+    unfold mul_bi'; auto.
+  Qed.
+
+  Lemma mul_bi'_add : forall n us vs,
+    mul_bi' n (us .+ vs) = mul_bi' n us .+ mul_bi' n vs.
+  Proof.
+    intros.
+    (* induction us. {
+      rewrite mul_bi'_n_nil.
+      rewrite add_nil_l.
+      rewrite add_nil_l; auto.
+    } {
+      induction vs; auto.
+      rewrite mul_bi'_app.
+      
+      apply IHus.
+    }
+
+    induction n. {
+      rewrite mul_bi'_0_us.
+      replace (mul_bi' 0 us) with us by (rewrite mul_bi'_0_us; auto).
+      replace (mul_bi' 0 vs) with vs by (rewrite mul_bi'_0_us; auto).
+      auto.
+    } {
+      unfold mul_bi'; simpl.
+      simpl. *)
+   Admitted.
+
+  Lemma add_leading_zeroes : forall n us vs, 
+    (zeros n ++ us) .+ (zeros n ++ vs) = zeros n ++ (us .+ vs).
+  Admitted.
+  
+  Lemma rev_add : forall us vs,
+    rev(us .+ vs) = rev us .+ rev vs.
+  Admitted.
+
   Lemma mul_bi_add : forall n us vs,
     mul_bi n (us .+ vs) = mul_bi n us .+ mul_bi n vs.
   Proof.
-  Admitted.
+    intros.
+    unfold mul_bi; simpl.
+    replace (rev (us .+ vs)) with (rev us .+ rev vs).
+    rewrite mul_bi'_add.
+    rewrite add_leading_zeroes.
+    rewrite rev_add; auto.
+    rewrite <- rev_add; auto.
+  Qed.
 
   Lemma mul_bi_rep : forall i vs, decode base (mul_bi i vs) = decode base vs * nth_default 0 base i.
     induction vs using rev_ind; intros; simpl. {
@@ -203,10 +319,10 @@ Module BaseSystem (Import B:BaseCoefs).
 
   (* mul' is multiplication with the FIRST ARGUMENT REVERSED *)
   Fixpoint mul' (usr vs:digits) : digits :=
-		match usr with
-			| u::usr' => 
+                match usr with
+                        | u::usr' => 
             mul_each u (mul_bi (length usr') vs) .+ mul' usr' vs
-			| _ => nil
+                        | _ => nil
     end.
   Definition mul us := mul' (rev us).
   Local Infix "#*" := mul (at level 40).
