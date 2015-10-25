@@ -9,7 +9,8 @@ Module Type BaseCoefs.
   Definition coefs : Type := list Z.
 
   Parameter base : coefs.
-  Axiom bs_good :
+  Axiom base_positive : forall b, In b base -> b > 0. (* nonzero would probably work too *)
+  Axiom base_good :
     forall i j,
     let b := nth_default 0 base in
     let r := (b i * b j) / b (i+j)%nat in
@@ -117,45 +118,53 @@ Module BaseSystem (Import B:BaseCoefs).
   Qed.
 
   Lemma mul_bi_single : forall m n x,
+    (n + m < length base)%nat ->
     decode base (mul_bi n (zeros m ++ x :: nil)) = nth_default 0 base m * x * nth_default 0 base n.
   Proof.
     unfold mul_bi.
-    destruct m; simpl; ssimpl_list; simpl; intros.
-    rewrite decode_single.
-    unfold crosscoef; simpl.
-    rewrite plus_0_r.
-    ring_simplify.
-    replace (nth_default 0 base n * nth_default 0 base 0) with (nth_default 0 base 0 * nth_default 0 base n) by ring.
-    SearchAbout Z.div.
-    rewrite Z_div_mult; try ring.
+    destruct m; simpl; ssimpl_list; simpl; intros. {
+      rewrite decode_single.
+      unfold crosscoef; simpl.
+      rewrite plus_0_r.
+      ring_simplify.
+      replace (nth_default 0 base n * nth_default 0 base 0) with (nth_default 0 base 0 * nth_default 0 base n) by ring.
+      SearchAbout Z.div.
+      rewrite Z_div_mult; try ring.
 
-    assert (nth_default 0 base n > 0) by admit; auto.
+      apply base_positive.
+      rewrite nth_default_eq.
+      apply nth_In.
+      rewrite plus_0_r in *.
+      auto.
+    } {
+      simpl; ssimpl_list; simpl.
+      replace (mul_bi' n (rev (zeros m) ++ 0 :: nil)) with (zeros (S m)) by admit.
+      intros; simpl; ssimpl_list; simpl.
+      rewrite length_zeros.
+      rewrite app_cons_app_app.
+      rewrite rev_zeros.
+      intros; simpl; ssimpl_list; simpl.
+      rewrite zeros_app0.
+      rewrite app_assoc.
+      rewrite app_zeros_zeros.
+      rewrite decode_single.
+      unfold crosscoef; simpl; ring_simplify.
+      rewrite NPeano.Nat.add_1_r.
+      rewrite base_good.
+      rewrite Z_div_mult.
+      rewrite <- Z.mul_assoc.
+      rewrite <- Z.mul_comm.
+      rewrite <- Z.mul_assoc.
+      rewrite <- Z.mul_assoc.
+      destruct (Z.eq_dec x 0); subst; try ring.
+      rewrite Z.mul_cancel_l by auto.
+      rewrite <- base_good.
+      ring.
 
-    intros; simpl; ssimpl_list; simpl.
-    replace (mul_bi' n (rev (zeros m) ++ 0 :: nil)) with (zeros (S m)) by admit.
-    intros; simpl; ssimpl_list; simpl.
-    rewrite length_zeros.
-    rewrite app_cons_app_app.
-    rewrite rev_zeros.
-    intros; simpl; ssimpl_list; simpl.
-    rewrite zeros_app0.
-    rewrite app_assoc.
-    rewrite app_zeros_zeros.
-    rewrite decode_single.
-    unfold crosscoef; simpl; ring_simplify.
-    rewrite NPeano.Nat.add_1_r.
-    rewrite bs_good.
-    rewrite Z_div_mult.
-    rewrite <- Z.mul_assoc.
-    rewrite <- Z.mul_comm.
-    rewrite <- Z.mul_assoc.
-    rewrite <- Z.mul_assoc.
-    destruct (Z.eq_dec x 0); subst; try ring.
-    rewrite Z.mul_cancel_l by auto.
-    rewrite <- bs_good.
-    ring.
-
-    assert (nth_default 0 base (n + S m) > 0) by admit; auto.
+      apply base_positive.
+      rewrite nth_default_eq.
+      apply nth_In; auto.
+    }
   Qed.
 
   Lemma set_higher' : forall vs x, vs++x::nil = vs .+ (zeros (length vs) ++ x :: nil).
@@ -183,17 +192,27 @@ Module BaseSystem (Import B:BaseCoefs).
   Proof.
   Admitted.
 
-  Lemma mul_bi_rep : forall i vs, decode base (mul_bi i vs) = decode base vs * nth_default 0 base i.
+  Lemma mul_bi_rep : forall i vs,
+    (i + length vs < length base)%nat ->
+    decode base (mul_bi i vs) = decode base vs * nth_default 0 base i.
+  Proof.
     induction vs using rev_ind; intros; simpl. {
       unfold mul_bi.
       ssimpl_list; rewrite zeros_rep; simpl.
       unfold decode; simpl.
       ring.
     } {
+      assert (i + length vs < length base)%nat as inbounds. {
+        rewrite app_length in *; simpl in *.
+        rewrite NPeano.Nat.add_1_r, <- plus_n_Sm in *.
+        etransitivity; eauto.
+      }
+
       rewrite set_higher.
       ring_simplify.
-      rewrite <- IHvs; clear IHvs.
-      rewrite <- mul_bi_single.
+      rewrite <- IHvs by auto; clear IHvs.
+      simpl in *.
+      rewrite <- mul_bi_single by auto.
       rewrite <- add_rep.
       rewrite <- mul_bi_add.
       rewrite set_higher'.
@@ -211,18 +230,32 @@ Module BaseSystem (Import B:BaseCoefs).
   Definition mul us := mul' (rev us).
   Local Infix "#*" := mul (at level 40).
 
-  Lemma mul'_rep : forall us vs, decode base (mul' (rev us) vs) = decode base us * decode base vs.
+  Lemma mul'_rep : forall us vs,
+    (length us + length vs <= length base)%nat ->
+    decode base (mul' (rev us) vs) = decode base us * decode base vs.
+  Proof.
     induction us using rev_ind; intros; simpl; try apply decode_nil.
+
+    assert (length us + length vs < length base)%nat as inbounds. {
+      rewrite app_length in *; simpl in *.
+      rewrite plus_comm in *.
+      rewrite NPeano.Nat.add_1_r, <- plus_n_Sm in *.
+      auto.
+    }
+
     ssimpl_list.
     rewrite add_rep.
-    rewrite IHus; clear IHus.
+    rewrite IHus by (rewrite le_trans; eauto); clear IHus.
     rewrite set_higher.
     rewrite mul_each_rep.
-    rewrite mul_bi_rep.
+    rewrite mul_bi_rep by auto.
     ring.
   Qed.
 
-  Lemma mul_rep : forall us vs, decode base (us #* vs) = decode base us * decode base vs.
-    apply mul'_rep.
+  Lemma mul_rep : forall us vs,
+    (length us + length vs <= length base)%nat ->
+    decode base (us #* vs) = decode base us * decode base vs.
+  Proof.
+    exact mul'_rep.
   Qed.
 End BaseSystem.
