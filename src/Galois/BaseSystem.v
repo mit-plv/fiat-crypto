@@ -27,6 +27,7 @@ Admitted.
 Module Type BaseCoefs.
   (** [BaseCoefs] represent the weights of each digit in a positional number system, with the weight of least significant digit presented first. The following requirements on the base are preconditions for using it with BaseSystem. *)
   Parameter base : list Z.
+  Axiom b0_1 : nth_default 0 base 0 = 1.
   Axiom base_positive : forall b, In b base -> b > 0. (* nonzero would probably work too... *)
   Axiom base_good :
     forall i j, (i+j < length base)%nat ->
@@ -294,12 +295,23 @@ End BaseSystem.
 Module Type PolynomialBaseParams.
   Parameter b1 : positive. (* the value at which the polynomial is evaluated *)
   Parameter baseLength : nat. (* 1 + degree of the polynomial *)
+  Axiom baseLengthNonzero : NPeano.ltb 0 baseLength = true.
 End PolynomialBaseParams.
 
 Module PolynomialBaseCoefs (Import P:PolynomialBaseParams) <: BaseCoefs.
   (** PolynomialBaseCoeffs generates base vectors for [BaseSystem] using the extra assumption that $b_{i+j} = b_j b_j$. *)
   Definition bi i := (Zpos b1)^(Z.of_nat i).
   Definition base := map bi (seq 0 baseLength).
+
+  Lemma b0_1 : nth_default 0 base 0 = 1.
+    unfold base, bi, nth_default.
+    case_eq baseLength; intros. {
+      assert ((0 < baseLength)%nat) by
+        (rewrite <-NPeano.ltb_lt; apply baseLengthNonzero).
+      subst; omega.
+    }
+    auto.
+  Qed.
 
   Lemma base_positive : forall b, In b base -> b > 0.
     unfold base.
@@ -342,6 +354,9 @@ End PolynomialBaseCoefs.
 Module BasePoly2Degree32Params <: PolynomialBaseParams.
   Definition b1 := 2%positive.
   Definition baseLength := 32%nat.
+  Lemma baseLengthNonzero : NPeano.ltb 0 baseLength = true.
+    compute; reflexivity.
+  Qed.
 End BasePoly2Degree32Params.
 
 Import ListNotations.
