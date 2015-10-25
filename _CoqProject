@@ -7,5 +7,6 @@ src/Galois/GaloisTheory.v
 src/Galois/AbstractGaloisField.v
 src/Galois/ComputationalGaloisField.v
 src/Galois/ZGaloisField.v
+src/Galois/BaseSystem.v
 src/Curves/PointFormats.v
 src/Curves/Curve25519.v
