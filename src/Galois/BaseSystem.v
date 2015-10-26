@@ -46,7 +46,6 @@ Local Open Scope Z.
 Lemma pos_pow_nat_pos : forall x n, 
   Z.pos x ^ Z.of_nat n > 0.
   do 2 (intros; induction n; subst; simpl in *; auto with zarith).
-  SearchAbout Pos.succ.
   rewrite <- Pos.add_1_r, Zpower_pos_is_exp.
   apply Zmult_gt_0_compat; auto; reflexivity.
 Qed.
@@ -215,7 +214,6 @@ Module BaseSystem (Import B:BaseCoefs).
       rewrite plus_0_r.
       ring_simplify.
       replace (nth_default 0 base n * nth_default 0 base 0) with (nth_default 0 base 0 * nth_default 0 base n) by ring.
-      SearchAbout Z.div.
       rewrite Z_div_mult; try ring.
 
       apply base_positive.
