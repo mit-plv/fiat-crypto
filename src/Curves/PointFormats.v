@@ -66,8 +66,6 @@ Module PointFormats.
     Parameter projY : point -> GF.
     Parameter unifiedAdd : point -> point -> point.
 
-    (* TODO: split module here? *)
-
     Parameter rep : point -> Spec.point -> Prop.
     Local Notation "P '~=' rP" := (rep P rP) (at level 70).
     Axiom mkPoint_rep: forall x y, mkPoint x y ~= Spec.mkPoint x y.
