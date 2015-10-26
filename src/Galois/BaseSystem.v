@@ -240,33 +240,54 @@ Module BaseSystem (Import B:BaseCoefs).
     simpl; f_equal; auto. 
   Qed.
 
-  (* TODO: add this to preconditions for base *)
-  Lemma b0_1 : forall bs, nth_default 0 bs 0 = 1.
+  Lemma In_base : forall n, 
+    (length base > n)%nat -> In (nth_default 0 base n) base.
   Admitted.
 
-  (* TODO: add this to preconditions for base *)
-  Lemma bn_nonzero : forall n bs, nth_default 0 bs n <> 0.
-  Admitted.
-
-  Lemma crosscoef_0_n : forall n, crosscoef 0 n = 1.
-    induction n; unfold crosscoef.
-    rewrite Z_div_mult_full.
-    apply b0_1.
-    rewrite plus_O_n.
-    rewrite b0_1; intuition.
-    simpl.
-    rewrite Z_div_mult_full.
-    apply b0_1.
-    apply bn_nonzero.
+  Lemma base_nonzero : forall n, 
+    (length base > n)%nat -> nth_default 0 base n > 0.
+  Proof.
+    intros.
+    assert (In (nth_default 0 base n) base) by (apply In_base; auto).
+    remember (nth_default 0 base n) as x in *; auto.
+    assert (In x base -> x > 0).
+    apply base_positive.
+    auto.
   Qed.
 
-  Lemma mul_bi'_0_us : forall us, mul_bi' 0 us = us.
+  Lemma crosscoef_0_n : forall n, (length base > n)%nat -> crosscoef 0 n = 1.
+  Proof.
+    induction n; unfold crosscoef.
+    rewrite Z_div_mult_full.
+    rewrite b0_1; auto.
+    rewrite plus_O_n.
+    rewrite b0_1; intuition.
+    simpl. 
+    intros.
+    rewrite Z_div_mult_full.
+    rewrite b0_1; auto.
+    assert (nth_default 0 base (S n) > 0).
+    try apply base_nonzero; apply H.
+    intuition.
+  Qed.
+
+  Lemma mul_bi'_0_us : forall us, 
+    (length base > length us)%nat -> mul_bi' 0 us = us.
   Proof.
     intros.
     induction us; simpl; auto.
+    assert (length base > length us)%nat.
+    assert (length (a :: us) > length us)%nat.
+    replace (a :: us) with ((a :: nil) ++ us) by auto.
+    rewrite app_length.
+    replace (length (a :: nil)) with 1%nat; auto.
+    intros.
+    assert ((length base > length (a :: us))%nat -> (length (a :: us) > length us)%nat -> (length base > length us)%nat) by (apply gt_trans).
+    auto.
     rewrite IHus.
     rewrite crosscoef_0_n.
     rewrite <- Zred_factor0; auto.
+    apply H0. apply H0.
   Qed.
 
   Lemma mul_bi'_n_nil : forall n, mul_bi' n nil = nil.
@@ -279,12 +300,14 @@ Module BaseSystem (Import B:BaseCoefs).
     induction us; auto.
   Qed.
 
-  Lemma mul_bi_0_us : forall us, mul_bi 0 us = us.
+  Lemma mul_bi_0_us : forall us, 
+    (length base > length us)%nat -> mul_bi 0 us = us.
   Proof.
     intros.
     unfold mul_bi; simpl.
     rewrite mul_bi'_0_us.
     rewrite rev_involutive; auto.
+    rewrite rev_length; auto.
   Qed.
 
   Lemma mul_bi'_app : forall n x us,
