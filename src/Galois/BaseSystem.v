@@ -316,29 +316,43 @@ Module BaseSystem (Import B:BaseCoefs).
     unfold mul_bi'; auto.
   Qed.
 
+
+  Lemma mul_bi'_add_zeros : forall m n a vs,
+    mul_bi' n ((a :: zeros m) .+ vs) = 
+    mul_bi' n (a :: zeros m) .+ mul_bi' n vs.
+  Proof.
+    induction m; intros.
+    simpl zeros.
+    case_eq vs; intros.
+    Focus 2.
+    simpl add.
+    simpl mul_bi'.
+  Admitted.
+
+  Lemma add_assoc : forall us vs ws, us .+ (vs .+ ws) = us .+ vs .+ ws.
+  Admitted.
+
+  Lemma app_zeros : forall a us, (a :: (zeros (length us))) .+ us = a :: us.
+  Admitted.
+
   Lemma mul_bi'_add : forall n us vs,
     mul_bi' n (us .+ vs) = mul_bi' n us .+ mul_bi' n vs.
   Proof.
     intros.
-    (* induction us. {
+    induction us. {
       rewrite mul_bi'_n_nil.
       rewrite add_nil_l.
       rewrite add_nil_l; auto.
     } {
-      induction vs; auto.
-      rewrite mul_bi'_app.
-      apply IHus.
+      rewrite <- app_zeros.
+      rewrite mul_bi'_add_zeros.
+      rewrite <- add_assoc.
+      rewrite mul_bi'_add_zeros.
+      rewrite IHus.
+      rewrite add_assoc.
+      f_equal.
     }
-
-    induction n. {
-      rewrite mul_bi'_0_us.
-      replace (mul_bi' 0 us) with us by (rewrite mul_bi'_0_us; auto).
-      replace (mul_bi' 0 vs) with vs by (rewrite mul_bi'_0_us; auto).
-      auto.
-    } {
-      unfold mul_bi'; simpl.
-      simpl. *)
-   Admitted.
+  Qed.
 
   Lemma add_leading_zeroes : forall n us vs,
     (zeros n ++ us) .+ (zeros n ++ vs) = zeros n ++ (us .+ vs).
