@@ -240,56 +240,6 @@ Module BaseSystem (Import B:BaseCoefs).
     simpl; f_equal; auto. 
   Qed.
 
-  Lemma In_base : forall n, 
-    (length base > n)%nat -> In (nth_default 0 base n) base.
-  Admitted.
-
-  Lemma base_nonzero : forall n, 
-    (length base > n)%nat -> nth_default 0 base n > 0.
-  Proof.
-    intros.
-    assert (In (nth_default 0 base n) base) by (apply In_base; auto).
-    remember (nth_default 0 base n) as x in *; auto.
-    assert (In x base -> x > 0).
-    apply base_positive.
-    auto.
-  Qed.
-
-  Lemma crosscoef_0_n : forall n, (length base > n)%nat -> crosscoef 0 n = 1.
-  Proof.
-    induction n; unfold crosscoef.
-    rewrite Z_div_mult_full.
-    rewrite b0_1; auto.
-    rewrite plus_O_n.
-    rewrite b0_1; intuition.
-    simpl. 
-    intros.
-    rewrite Z_div_mult_full.
-    rewrite b0_1; auto.
-    assert (nth_default 0 base (S n) > 0).
-    try apply base_nonzero; apply H.
-    intuition.
-  Qed.
-
-  Lemma mul_bi'_0_us : forall us, 
-    (length base > length us)%nat -> mul_bi' 0 us = us.
-  Proof.
-    intros.
-    induction us; simpl; auto.
-    assert (length base > length us)%nat.
-    assert (length (a :: us) > length us)%nat.
-    replace (a :: us) with ((a :: nil) ++ us) by auto.
-    rewrite app_length.
-    replace (length (a :: nil)) with 1%nat; auto.
-    intros.
-    assert ((length base > length (a :: us))%nat -> (length (a :: us) > length us)%nat -> (length base > length us)%nat) by (apply gt_trans).
-    auto.
-    rewrite IHus.
-    rewrite crosscoef_0_n.
-    rewrite <- Zred_factor0; auto.
-    apply H0. apply H0.
-  Qed.
-
   Lemma mul_bi'_n_nil : forall n, mul_bi' n nil = nil.
   Proof.
     intros.
@@ -300,78 +250,90 @@ Module BaseSystem (Import B:BaseCoefs).
     induction us; auto.
   Qed.
 
-  Lemma mul_bi_0_us : forall us, 
-    (length base > length us)%nat -> mul_bi 0 us = us.
-  Proof.
-    intros.
-    unfold mul_bi; simpl.
-    rewrite mul_bi'_0_us.
-    rewrite rev_involutive; auto.
-    rewrite rev_length; auto.
+  Lemma add_nil_r : forall us, us .+ nil = us.
+    induction us; auto.
   Qed.
-
-  Lemma mul_bi'_app : forall n x us,
+  
+  Lemma add_first_terms : forall us vs a b,
+    (a :: us) .+ (b :: vs) = (a + b) :: (us .+ vs).
+    auto.
+  Qed.
+ 
+  Lemma mul_bi'_cons : forall n x us,
     mul_bi' n (x :: us) = x * crosscoef n (length us) :: mul_bi' n us.
   Proof.
     unfold mul_bi'; auto.
   Qed.
 
+  Lemma add_same_length : forall us vs l, (length us = l) -> (length vs = l) ->
+    length (us .+ vs) = l.
+  Admitted.
 
-  Lemma mul_bi'_add_zeros : forall m n a vs,
-    mul_bi' n ((a :: zeros m) .+ vs) = 
-    mul_bi' n (a :: zeros m) .+ mul_bi' n vs.
+  Lemma add_app_same_length : forall us vs a b l, (length (us ++ a :: nil) = l) 
+    -> (length (vs ++ a :: nil) = l) ->
+    (us ++ a :: nil) .+ (vs ++ b :: nil) = (us .+ vs) ++ (a + b) :: nil.
+  Admitted.
+
+  Lemma mul_bi'_add : forall us n vs l, (length us = l) -> (length vs = l) ->
+    mul_bi' n (rev (us .+ vs)) = 
+    mul_bi' n (rev us) .+ mul_bi' n (rev vs).
   Proof.
-    induction m; intros.
-    simpl zeros.
-    case_eq vs; intros.
-    Focus 2.
-    simpl add.
-    simpl mul_bi'.
-  Admitted.
-
-  Lemma add_assoc : forall us vs ws, us .+ (vs .+ ws) = us .+ vs .+ ws.
-  Admitted.
-
-  Lemma app_zeros : forall a us, (a :: (zeros (length us))) .+ us = a :: us.
-  Admitted.
-
-  Lemma mul_bi'_add : forall n us vs,
-    mul_bi' n (us .+ vs) = mul_bi' n us .+ mul_bi' n vs.
-  Proof.
-    intros.
-    induction us. {
-      rewrite mul_bi'_n_nil.
+    induction us using rev_ind; intros. {
       rewrite add_nil_l.
+      rewrite mul_bi'_n_nil.
       rewrite add_nil_l; auto.
-    } {
-      rewrite <- app_zeros.
-      rewrite mul_bi'_add_zeros.
-      rewrite <- add_assoc.
-      rewrite mul_bi'_add_zeros.
-      rewrite IHus.
-      rewrite add_assoc.
-      f_equal.
-    }
-  Qed.
+   } {
+      destruct vs using rev_ind. {
+        rewrite add_nil_r.
+        rewrite mul_bi'_n_nil.
+        rewrite add_nil_r; auto.
+      } {
+        simpl in *.
+        simpl_list.
+        rewrite (add_app_same_length us vs x x0 l); auto.
+        Focus 2.
+        replace l with (length (vs ++ x0 :: nil)) by (apply H0).
+        simpl_list; simpl; auto.
+        (* end focus 2 *)
+        rewrite rev_unit.
+        rewrite mul_bi'_cons.
+        rewrite mul_bi'_cons.
+        rewrite mul_bi'_cons.
+        rewrite add_first_terms.
+        rewrite rev_length.
+        rewrite rev_length.
+        rewrite rev_length.
+        assert (length us = pred l).
+        replace l with (length (us ++ x :: nil)) by (apply H).
+        rewrite app_length; simpl; omega.
+        assert (length vs = pred l).
+        replace l with (length (vs ++ x0 :: nil)) by (apply H0).
+        rewrite app_length; simpl; omega.
+        rewrite (IHus n vs (pred l)).
+        replace (length us) with (pred l) by (apply H).
+        replace (length vs) with (pred l) by (apply H).
+        rewrite (add_same_length us vs (pred l)).
+        f_equal; ring.
+        apply H1. apply H2. apply H1. apply H2.
+       }
+     }
+     Qed.
 
   Lemma add_leading_zeroes : forall n us vs,
     (zeros n ++ us) .+ (zeros n ++ vs) = zeros n ++ (us .+ vs).
   Admitted.
-
-  Lemma rev_add : forall us vs,
-    rev(us .+ vs) = rev us .+ rev vs.
+  
+  Lemma rev_add_rev : forall us vs, (rev us) .+ (rev vs) = rev (us .+ vs).
   Admitted.
 
-  Lemma mul_bi_add : forall n us vs,
+  Lemma mul_bi_add : forall n us vs, (length us = length vs) ->
     mul_bi n (us .+ vs) = mul_bi n us .+ mul_bi n vs.
   Proof.
     intros.
     unfold mul_bi; simpl.
-    replace (rev (us .+ vs)) with (rev us .+ rev vs).
-    rewrite mul_bi'_add.
     rewrite add_leading_zeroes.
-    rewrite rev_add; auto.
-    rewrite <- rev_add; auto.
+    rewrite mul_bi'_add.
+    rewrite rev_add_rev; auto.
   Qed.
 
   Lemma mul_bi_rep : forall i vs,
@@ -442,6 +404,7 @@ Module BaseSystem (Import B:BaseCoefs).
   Proof.
     exact mul'_rep.
   Qed.
+Print Assumptions mul_rep.
 End BaseSystem.
 
 Module Type PolynomialBaseParams.
