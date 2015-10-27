@@ -158,14 +158,7 @@ Module GaloisTheory (M: Modulus).
 
   (* Ring properties *)
 
-  Ltac GFexp_tac t :=
-    match t with
-    | Z0 => N0
-    | Zpos ?n => Ncst (Npos n)
-    | Z_of_N ?n => Ncst n
-    | NtoZ ?n => Ncst n
-    | _ => NotConstant
-    end.
+  Ltac GFexp_tac t := Ncst t.
 
   Lemma GFdecidable : forall (x y: GF), Zeq_bool x y = true -> x = y.
   Proof.

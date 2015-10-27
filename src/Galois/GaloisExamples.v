@@ -1,8 +1,7 @@
 
 Require Import Zpower ZArith Znumtheory.
 Require Import Crypto.Galois.Galois Crypto.Galois.GaloisTheory.
-Require Import Crypto.Galois.ComputationalGaloisField.
-Require Import Crypto.Galois.AbstractGaloisField.
+Require Import Crypto.Galois.ZGaloisField.
 
 Definition two_5_1 := (two_p 5) - 1.
 Lemma two_5_1_prime : prime two_5_1.
@@ -21,9 +20,8 @@ Module Modulus127_1 <: Modulus.
 End Modulus127_1.
 
 Module Example31.
-  Module Field := Galois Modulus31.
-  Module Theory := ComputationalGaloisField Modulus31.
-  Import Modulus31 Theory Field.
+  Module Theory := ZGaloisField Modulus31.
+  Import Theory.
   Local Open Scope GF_scope.
 
   Lemma example1: forall x y z: GF, z <> 0 -> x * (y / z) / z = x * y / (z ^ 2).
@@ -32,13 +30,13 @@ Module Example31.
     field; trivial.
   Qed.
 
-  Lemma example2: forall x: GF, x * (ZToGF 2) = x + x.
+  Lemma example2: forall x: GF, x * (inject 2) = x + x.
   Proof.
     intros; simpl.
     field.
   Qed.
 
-  Lemma example3: forall x: GF, x ^ 2 + (ZToGF 2) * x + (ZToGF 1) = (x + (ZToGF 1)) ^ 2.
+  Lemma example3: forall x: GF, x ^ 2 + (inject 2) * x + (inject 1) = (x + (inject 1)) ^ 2.
   Proof.
     intros; simpl.
     field; trivial.
@@ -47,8 +45,8 @@ Module Example31.
 End Example31.
 
 Module TimesZeroTransparentTestModule.
-  Module Theory := ComputationalGaloisField Modulus127_1.
-  Import Modulus127_1 Theory Theory.Field.
+  Module Theory := ZGaloisField Modulus127_1.
+  Import Theory.
   Local Open Scope GF_scope.
 
   Lemma timesZero : forall a, a*0 = 0.
@@ -58,13 +56,12 @@ Module TimesZeroTransparentTestModule.
 End TimesZeroTransparentTestModule.
 
 Module TimesZeroParametricTestModule (M: Modulus).
-  Module Theory := AbstractGaloisField M.
-  Import M Theory Theory.Field.
+  Module Theory := ZGaloisField M.
+  Import Theory.
   Local Open Scope GF_scope.
 
   Lemma timesZero : forall a, a*0 = 0.
     intros.
     field.
-    ring. (* field doesn't work but ring does :) *)
   Qed.
 End TimesZeroParametricTestModule.
