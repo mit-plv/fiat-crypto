@@ -265,9 +265,36 @@ Module BaseSystem (Import B:BaseCoefs).
     unfold mul_bi'; auto.
   Qed.
 
+  Lemma cons_length : forall A (xs : list A) a, length (a :: xs) = S (length xs).
+  Proof.
+    auto.
+  Qed.
+
   Lemma add_same_length : forall us vs l, (length us = l) -> (length vs = l) ->
     length (us .+ vs) = l.
-  Admitted.
+  Proof.
+    induction us; intros. {
+      rewrite add_nil_l.
+      apply H0.
+    } {
+      destruct vs. {
+        rewrite add_nil_r; apply H.
+      } {
+        rewrite add_first_terms.
+        rewrite cons_length.
+        rewrite (IHus vs (pred l)).
+        apply NPeano.Nat.succ_pred_pos.
+        replace l with (length (a :: us)) by (apply H).
+        rewrite cons_length; simpl.
+        SearchAbout S.
+        apply gt_Sn_O.
+        replace l with (length (a :: us)) by (apply H).
+        rewrite cons_length; simpl; auto.
+        replace l with (length (z :: vs)) by (apply H).
+        rewrite cons_length; simpl; auto.
+      }
+    }
+  Qed.
 
   Lemma add_app_same_length : forall us vs a b l, (length (us ++ a :: nil) = l) 
     -> (length (vs ++ a :: nil) = l) ->
