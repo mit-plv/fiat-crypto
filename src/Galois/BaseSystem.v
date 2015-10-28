@@ -1,28 +1,55 @@
 Require Import List.
 Require Import ZArith.ZArith ZArith.Zdiv.
-  Require Import Omega.
+Require Import Omega.
 
-Lemma nth_error_map : forall A B (f:A->B) xs i y,
+Ltac nth_tac' := 
+  intros; simpl in *; unfold error,value in *; repeat progress (match goal with
+    | [  |- context[match nth_error ?xs ?i with Some _ => _ | None => _ end ] ] => case_eq (nth_error xs i); intros
+    | [ |- context[if lt_dec ?a ?b then _ else _] ] => destruct (lt_dec a b)
+    | [ H: context[if lt_dec ?a ?b then _ else _] |- _ ] => destruct (lt_dec a b)
+    | [ H: _ /\ _ |- _ ] => destruct H
+    | [ H: Some _ = Some _ |- _ ] => injection H; clear H; intros; subst
+    | [ H: None = Some _  |- _ ] => inversion H
+    | [ H: Some _ = None |- _ ] => inversion H
+    | [ |- Some _ = Some _ ] => apply f_equal
+  end); eauto; try (autorewrite with list in *); try omega; eauto.
+Lemma nth_error_map : forall A B (f:A->B) i xs y,
   nth_error (map f xs) i = Some y ->
   exists x, nth_error xs i = Some x /\ f x = y.
-Admitted.
+Proof.
+  induction i; destruct xs; nth_tac'.
+Qed.
 
-Lemma nth_error_seq : forall start len i,
+Lemma nth_error_seq : forall i start len,
   nth_error (seq start len) i =
   if lt_dec i len
   then Some (start + i)
   else None.
-Admitted.
+  induction i; destruct len; nth_tac'; erewrite IHi; nth_tac'.
+Qed.
 
-Lemma nth_error_length_error : forall A (xs:list A) i, nth_error xs i = None ->
+Lemma nth_error_length_error : forall A i (xs:list A), nth_error xs i = None ->
   i >= length xs.
-Admitted.
+Proof.
+  induction i; destruct xs; nth_tac'; try specialize (IHi _ H); omega.
+Qed.
+
+Ltac nth_tac := 
+  repeat progress (try nth_tac'; try (match goal with
+    | [ H: nth_error (map _ _) _ = Some _ |- _ ] => destruct (nth_error_map _ _ _ _ _ _ H); clear H
+    | [ H: nth_error (seq _ _) _ = Some _ |- _ ] => rewrite nth_error_seq in H
+    | [H: nth_error _ _ = None |- _ ] => specialize (nth_error_length_error _ _ _ H); intro; clear H
+  end)).
 
 Local Open Scope Z.
 
 Lemma pos_pow_nat_pos : forall x n, 
   Z.pos x ^ Z.of_nat n > 0.
-Admitted.
+  do 2 (intros; induction n; subst; simpl in *; auto with zarith).
+  SearchAbout Pos.succ.
+  rewrite <- Pos.add_1_r, Zpower_pos_is_exp.
+  apply Zmult_gt_0_compat; auto; reflexivity.
+Qed.
 
 Module Type BaseCoefs.
   (** [BaseCoefs] represent the weights of each digit in a positional number system, with the weight of least significant digit presented first. The following requirements on the base are preconditions for using it with BaseSystem. *)
@@ -40,7 +67,7 @@ Module BaseSystem (Import B:BaseCoefs).
   (** [BaseSystem] implements an constrained positional number system.
       A wide variety of bases are supported: the base coefficients are not
       required to be powers of 2, and it is NOT necessarily the case that
-      $b_{i+j} = b_j b_j$. Implementations of addition and multiplication are
+      $b_{i+j} = b_i b_j$. Implementations of addition and multiplication are
       provided, with focus on near-optimal multiplication performance on
       non-trivial but small operands: maybe 10 32-bit integers or so. This
       module does not handle carries automatically: if no restrictions are put
@@ -52,14 +79,14 @@ Module BaseSystem (Import B:BaseCoefs).
   Definition accumulate p acc := fst p * snd p + acc.
   Definition decode' bs u  := fold_right accumulate 0 (combine u bs).
   Definition decode := decode' base.
-  Hint Unfold decode' accumulate.
+  Hint Unfold accumulate.
 
-	Fixpoint add (us vs:digits) : digits :=
-		match us,vs with
-			| u::us', v::vs' => (u+v)::(add us' vs')
-			| _, nil => us
-			| _, _ => vs
-		end.
+  Fixpoint add (us vs:digits) : digits :=
+    match us,vs with
+      | u::us', v::vs' => u+v :: add us' vs'
+      | _, nil => us
+      | _, _ => vs
+    end.
   Infix ".+" := add (at level 50).
 
   Lemma add_rep : forall bs us vs, decode' bs (add us vs) = decode' bs us + decode' bs vs.
@@ -74,10 +101,10 @@ Module BaseSystem (Import B:BaseCoefs).
 
   (* mul_geomseq is a valid multiplication algorithm if b_i = b_1^i *)
   Fixpoint mul_geomseq (us vs:digits) : digits :=
-		match us,vs with
-			| u::us', v::vs' => u*v :: map (Z.mul u) vs' .+ mul_geomseq us' vs
-			| _, _ => nil
-		end.
+    match us,vs with
+      | u::us', v::vs' => u*v :: map (Z.mul u) vs' .+ mul_geomseq us' vs
+      | _, _ => nil
+    end.
 
   Definition mul_each u := map (Z.mul u).
   Lemma mul_each_rep : forall bs u vs, decode' bs (mul_each u vs) = u * decode' bs vs.
@@ -99,39 +126,36 @@ Module BaseSystem (Import B:BaseCoefs).
     induction n; simpl; auto.
   Qed.
 
-  Lemma app_zeros_zeros : forall n m, (zeros n ++ zeros m) = zeros (n + m).
+  Ltac boring :=
+    simpl; intuition;
+    repeat match goal with
+             | [ H : _ |- _ ] => rewrite H; clear H
+             | _ => progress autounfold in *
+             | _ => progress try autorewrite with core
+             | _ => progress simpl in *
+             | _ => progress intuition
+           end; ring || eauto.
+
+  Lemma app_zeros_zeros : forall n m, zeros n ++ zeros m = zeros (n + m).
   Proof.
-    intros; 
-    induction n; simpl; auto.
-    rewrite IHn; auto.
+    induction n; boring.
   Qed.
 
-  Lemma zeros_app0 : forall m, (zeros m ++ 0 :: nil) = zeros (S m).
+  Lemma zeros_app0 : forall m, zeros m ++ 0 :: nil = zeros (S m).
   Proof.
-    intros.
-    assert (0 :: nil = zeros 1) by auto.
-    rewrite H.
-    rewrite app_zeros_zeros.
-    rewrite NPeano.Nat.add_1_r; auto.
+    induction m; boring.
   Qed.
+
+  Hint Rewrite zeros_app0.
 
   Lemma rev_zeros : forall n, rev (zeros n) = zeros n.
   Proof.
-    intros.
-    induction n. {
-      unfold zeros; auto.
-    } {
-      replace (rev (zeros (S n))) with (rev (zeros n) ++ 0 :: nil) by auto.
-      rewrite IHn.
-      rewrite zeros_app0; auto.
-    }
+    induction n; boring.
   Qed.
 
   Lemma app_cons_app_app : forall T xs (y:T) ys, xs ++ y :: ys = (xs ++ (y::nil)) ++ ys.
   Proof.
-    intros.
-    rewrite app_assoc_reverse.
-    replace ((y :: nil) ++ ys) with (y :: ys); auto.
+    induction xs; boring.
   Qed.
 
   (* mul' is multiplication with the SECOND ARGUMENT REVERSED and OUTPUT REVERSED *)
@@ -143,31 +167,42 @@ Module BaseSystem (Import B:BaseCoefs).
   Definition mul_bi (i:nat) (vs:digits) : digits :=
     zeros i ++ rev (mul_bi' i (rev vs)).
 
+  Infix ".*" := mul_bi (at level 40).
+
   (*
   Definition mul_bi (i:nat) (vs:digits) : digits :=
     let mkEntry := (fun (p:(nat*Z)) => let (j, v) := p in v * crosscoef i j) in
     zeros i ++ map mkEntry (@enumerate Z vs).
   *)
 
+  Hint Unfold nth_default.
+
+  Hint Extern 1 (@eq Z _ _) => ring.
+
+  Lemma decode'_cons : forall x1 x2 xs1 xs2,
+    decode' (x1 :: xs1) (x2 :: xs2) = x1 * x2 + decode' xs1 xs2.
+  Proof.
+    unfold decode'; boring.
+  Qed.
+
+  Hint Rewrite decode'_cons.
+
   Lemma decode_single : forall n bs x,
     decode' bs (zeros n ++ x :: nil) = nth_default 0 bs n * x.
   Proof.
-    induction n; intros; simpl.
-    destruct bs; auto; unfold decode', accumulate, nth_default; simpl; ring.
-    destruct bs; simpl; auto.
-    unfold decode', accumulate, nth_default in *; simpl in *; auto.
+    induction n; destruct bs; boring.
   Qed.
 
   Lemma peel_decode : forall xs ys x y, decode' (x::xs) (y::ys) = x*y + decode' xs ys.
-    intros.
-    unfold decode', accumulate, nth_default in *; simpl in *; ring_simplify; auto.
+  Proof.
+    boring.
   Qed.
 
+  Hint Rewrite zeros_rep peel_decode.
+
   Lemma decode_highzeros : forall xs bs n, decode' bs (xs ++ zeros n) = decode' bs xs.
-    induction xs; intros; simpl; try rewrite zeros_rep; auto.
-    destruct bs; simpl; auto.
-    repeat (rewrite peel_decode).
-    rewrite IHxs; auto.
+  Proof.
+    induction xs; destruct bs; boring.
   Qed.
 
   Lemma mul_bi'_zeros : forall n m, mul_bi' n (zeros m) = zeros m.
@@ -177,7 +212,7 @@ Module BaseSystem (Import B:BaseCoefs).
 
   Lemma mul_bi_single : forall m n x,
     (n + m < length base)%nat ->
-    decode (mul_bi n (zeros m ++ x :: nil)) = nth_default 0 base m * x * nth_default 0 base n.
+    decode (n .* (zeros m ++ x :: nil)) = nth_default 0 base m * x * nth_default 0 base n.
   Proof.
     unfold mul_bi, decode.
     destruct m; simpl; ssimpl_list; simpl; intros. {
@@ -223,10 +258,9 @@ Module BaseSystem (Import B:BaseCoefs).
   Qed.
 
   Lemma set_higher' : forall vs x, vs++x::nil = vs .+ (zeros (length vs) ++ x :: nil).
-    induction vs; auto.
-    intros; simpl; rewrite IHvs; f_equal; ring.
+    induction vs; boring; f_equal; ring.
   Qed.
-  
+
   Lemma set_higher : forall bs vs x,
     decode' bs (vs++x::nil) = decode' bs vs + nth_default 0 bs (length vs) * x.
   Proof.
@@ -571,7 +605,7 @@ Module BaseSystem (Import B:BaseCoefs).
   Qed.
 
   Lemma mul_bi_add : forall n us vs,
-    mul_bi n (us .+ vs) = mul_bi n us .+ mul_bi n vs.
+    n .* (us .+ vs) = n .* us .+ n .* vs.
   Proof.
     intros.
     destruct (le_ge_dec (length us) (length vs)). {
@@ -586,7 +620,7 @@ Module BaseSystem (Import B:BaseCoefs).
 
   Lemma mul_bi_rep : forall i vs,
     (i + length vs < length base)%nat ->
-    decode (mul_bi i vs) = decode vs * nth_default 0 base i.
+    decode (i .* vs) = decode vs * nth_default 0 base i.
   Proof.
     unfold decode.
     induction vs using rev_ind; intros; simpl. {
@@ -615,10 +649,10 @@ Module BaseSystem (Import B:BaseCoefs).
 
   (* mul' is multiplication with the FIRST ARGUMENT REVERSED *)
   Fixpoint mul' (usr vs:digits) : digits :=
-		match usr with
-			| u::usr' => 
-            mul_each u (mul_bi (length usr') vs) .+ mul' usr' vs
-			| _ => nil
+    match usr with
+      | u::usr' => 
+        mul_each u (length usr' .* vs) .+ mul' usr' vs
+      | _ => nil
     end.
   Definition mul us := mul' (rev us).
   Infix "#*" := mul (at level 40).
@@ -652,7 +686,9 @@ Module BaseSystem (Import B:BaseCoefs).
   Proof.
     exact mul'_rep.
   Qed.
-Print Assumptions mul_rep.
+
+(* Print Assumptions mul_rep. *)
+
 End BaseSystem.
 
 Module Type PolynomialBaseParams.
@@ -677,6 +713,7 @@ Module PolynomialBaseCoefs (Import P:PolynomialBaseParams) <: BaseCoefs.
   Qed.
 
   Lemma base_positive : forall b, In b base -> b > 0.
+  Proof.
     unfold base.
     intros until 0; intro H.
     rewrite in_map_iff in *.
@@ -691,18 +728,7 @@ Module PolynomialBaseCoefs (Import P:PolynomialBaseParams) <: BaseCoefs.
     let r := (b i * b j) / b (i+j)%nat in
     b i * b j = r * b (i+j)%nat.
   Proof.
-    unfold base, nth_default.
-    intros; repeat progress (match goal with
-      | [  |- context[match nth_error ?xs ?i with Some _ => _ | None => _ end ] ] => case_eq (nth_error xs i); intros
-      | [ H: nth_error (map _ _) _ = Some _ |- _ ] => destruct (nth_error_map _ _ _ _ _ _ H); clear H
-      | [ H: _ /\ _ |- _ ] => destruct H
-      | [ H: nth_error (seq _ _) _ = Some _ |- _ ] => rewrite nth_error_seq in H
-      | [ H: context[if lt_dec ?a ?b then _ else _] |- _ ] => destruct (lt_dec a b)
-      | [ H: Some _ = Some _ |- _ ] => injection H; clear H; intros; subst
-      | [ H: None = Some _  |- _ ] => inversion H
-      | [ H: Some _ = None |- _ ] => inversion H
-      | [H: nth_error _ _ = None |- _ ] => specialize (nth_error_length_error _ _ _ H); intro; clear H
-    end); autorewrite with list in *; try omega.
+    unfold base, nth_default; nth_tac.
 
     clear.
     unfold bi.
@@ -730,23 +756,28 @@ Module BaseSystemExample.
   Import BasePoly2Degree32.
 
   Example three_times_two : [1;1;0] #* [0;1;0] = [0;1;1;0;0].
-    compute; reflexivity.
+  Proof.
+    reflexivity.
   Qed.
 
   (* python -c "e = lambda x: '['+''.join(reversed(bin(x)[2:])).replace('1','1;').replace('0','0;')[:-1]+']'; print(e(19259)); print(e(41781))" *)
   Definition a := [1;1;0;1;1;1;0;0;1;1;0;1;0;0;1].
   Definition b := [1;0;1;0;1;1;0;0;1;1;0;0;0;1;0;1].
   Example da : decode a = 19259.
-    compute. reflexivity.
+  Proof.
+    reflexivity.
   Qed.
   Example db : decode b = 41781.
-    compute. reflexivity.
+  Proof.
+    reflexivity.
   Qed.
   Example encoded_ab :
     a #*b =[1;1;1;2;2;4;2;2;4;5;3;3;3;6;4;2;5;3;4;3;2;1;2;2;2;0;1;1;0;1].
-    compute. reflexivity.
+  Proof.
+    reflexivity.
   Qed.
   Example dab : decode (a #* b) = 804660279.
-    compute. reflexivity.
+  Proof.
+    reflexivity.
   Qed.
 End BaseSystemExample.
