@@ -54,7 +54,6 @@ Qed.
 Module Type BaseCoefs.
   (** [BaseCoefs] represent the weights of each digit in a positional number system, with the weight of least significant digit presented first. The following requirements on the base are preconditions for using it with BaseSystem. *)
   Parameter base : list Z.
-  Axiom b0_1 : nth_default 0 base 0 = 1.
   Axiom base_positive : forall b, In b base -> b > 0. (* nonzero would probably work too... *)
   Axiom base_good :
     forall i j, (i+j < length base)%nat ->
