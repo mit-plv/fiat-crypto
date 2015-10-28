@@ -170,6 +170,11 @@ Module BaseSystem (Import B:BaseCoefs).
     rewrite IHxs; auto.
   Qed.
 
+  Lemma mul_bi'_zeros : forall n m, mul_bi' n (zeros m) = zeros m.
+    induction m; intros; auto.
+    simpl; f_equal; apply IHm.
+  Qed.
+
   Lemma mul_bi_single : forall m n x,
     (n + m < length base)%nat ->
     decode (mul_bi n (zeros m ++ x :: nil)) = nth_default 0 base m * x * nth_default 0 base n.
@@ -181,7 +186,6 @@ Module BaseSystem (Import B:BaseCoefs).
       rewrite plus_0_r.
       ring_simplify.
       replace (nth_default 0 base n * nth_default 0 base 0) with (nth_default 0 base 0 * nth_default 0 base n) by ring.
-      SearchAbout Z.div.
       rewrite Z_div_mult; try ring.
 
       apply base_positive.
@@ -191,12 +195,14 @@ Module BaseSystem (Import B:BaseCoefs).
       auto.
     } {
       simpl; ssimpl_list; simpl.
-      replace (mul_bi' n (rev (zeros m) ++ 0 :: nil)) with (zeros (S m)) by admit.
-      intros; simpl; ssimpl_list; simpl.
+      rewrite rev_zeros.
+      rewrite zeros_app0.
+      rewrite mul_bi'_zeros.
+      simpl; ssimpl_list; simpl.
       rewrite length_zeros.
       rewrite app_cons_app_app.
       rewrite rev_zeros.
-      intros; simpl; ssimpl_list; simpl.
+      simpl; ssimpl_list; simpl.
       rewrite zeros_app0.
       rewrite app_assoc.
       rewrite app_zeros_zeros.
@@ -204,7 +210,7 @@ Module BaseSystem (Import B:BaseCoefs).
       unfold crosscoef; simpl; ring_simplify.
       rewrite NPeano.Nat.add_1_r.
       rewrite base_good by auto.
-      rewrite Z_div_mult.
+      rewrite Z_div_mult by (apply base_positive; rewrite nth_default_eq; apply nth_In; auto).
       rewrite <- Z.mul_assoc.
       rewrite <- Z.mul_comm.
       rewrite <- Z.mul_assoc.
@@ -213,11 +219,7 @@ Module BaseSystem (Import B:BaseCoefs).
       rewrite Z.mul_cancel_l by auto.
       rewrite <- base_good by auto.
       ring.
-
-      apply base_positive.
-      rewrite nth_default_eq.
-      apply nth_In; auto.
-    }
+      }
   Qed.
 
   Lemma set_higher' : forall vs x, vs++x::nil = vs .+ (zeros (length vs) ++ x :: nil).
@@ -286,7 +288,6 @@ Module BaseSystem (Import B:BaseCoefs).
         apply NPeano.Nat.succ_pred_pos.
         replace l with (length (a :: us)) by (apply H).
         rewrite cons_length; simpl.
-        SearchAbout S.
         apply gt_Sn_O.
         replace l with (length (a :: us)) by (apply H).
         rewrite cons_length; simpl; auto.
@@ -296,10 +297,68 @@ Module BaseSystem (Import B:BaseCoefs).
     }
   Qed.
 
-  Lemma add_app_same_length : forall us vs a b l, (length (us ++ a :: nil) = l) 
-    -> (length (vs ++ a :: nil) = l) ->
+  Lemma length0_nil : forall A (xs : list A), length xs = 0%nat -> xs = nil.
+  Proof.
+    induction xs; intros; auto.
+    elimtype False.
+    assert (0 <> length (a :: xs))%nat.
+    rewrite cons_length.
+    apply O_S.
+    contradiction H0.
+    rewrite H; auto.
+  Qed.
+
+  Lemma add_app_same_length : forall l us vs a b, 
+    (length us = l) -> (length vs = l) ->
     (us ++ a :: nil) .+ (vs ++ b :: nil) = (us .+ vs) ++ (a + b) :: nil.
-  Admitted.
+  Proof.
+    induction l; intros. {
+      assert (us = nil) by (apply length0_nil; apply H).
+      assert (vs = nil) by (apply length0_nil; apply H0).
+      rewrite H1; rewrite app_nil_l.
+      rewrite H2; rewrite app_nil_l.
+      rewrite add_nil_l.
+      rewrite app_nil_l.
+      auto.
+    } {
+      destruct us. {
+        rewrite app_nil_l.
+        rewrite add_nil_l.
+        destruct vs. {
+          rewrite app_nil_l.
+          rewrite app_nil_l.
+          auto.
+        } {
+          elimtype False.
+          replace (length nil) with (0%nat) in H by auto.
+          assert (0 <> S l)%nat.
+          apply O_S.
+          contradiction H1.
+        }
+      } {
+        destruct vs. {
+          elimtype False.
+          replace (length nil) with (0%nat) in H0 by auto.
+          assert (0 <> S l)%nat.
+          apply O_S.
+          contradiction H1.
+        } {
+          rewrite add_first_terms.
+          rewrite <- app_comm_cons.
+          rewrite <- app_comm_cons.
+          rewrite add_first_terms.
+          rewrite <- app_comm_cons.
+          rewrite IHl; f_equal.
+          assert (length (z :: us) = S (length us)) by (apply cons_length).
+          assert (S (length us) = S l) by auto.
+          auto.
+          assert (length (z0 :: vs) = S (length vs)) by (apply cons_length).
+          assert (S (length vs) = S l) by auto.
+          auto.
+        }
+      }
+  }
+  Qed.
 
   Lemma mul_bi'_add : forall us n vs l, (length us = l) -> (length vs = l) ->
     mul_bi' n (rev (us .+ vs)) = 
@@ -317,11 +376,7 @@ Module BaseSystem (Import B:BaseCoefs).
       } {
         simpl in *.
         simpl_list.
-        rewrite (add_app_same_length us vs x x0 l); auto.
-        Focus 2.
-        replace l with (length (vs ++ x0 :: nil)) by (apply H0).
-        simpl_list; simpl; auto.
-        (* end focus 2 *)
+        rewrite (add_app_same_length (pred l) us vs x x0); auto.
         rewrite rev_unit.
         rewrite mul_bi'_cons.
         rewrite mul_bi'_cons.
@@ -342,25 +397,191 @@ Module BaseSystem (Import B:BaseCoefs).
         rewrite (add_same_length us vs (pred l)).
         f_equal; ring.
         apply H1. apply H2. apply H1. apply H2.
+        assert (length (us ++ x :: nil) = S (length us)).
+        rewrite app_length.
+        replace (length (x :: nil)) with 1%nat by auto; omega.
+        assert (S (length us) = l).
+        rewrite <- H1. apply H.
+        replace l with (S (length us)) by apply H2. auto.
+        assert (length (vs ++ x0 :: nil) = S (length vs)).
+        rewrite app_length.
+        replace (length (x0 :: nil)) with 1%nat by auto; omega.
+        assert (S (length vs) = l).
+        rewrite <- H1. apply H0.
+        replace l with (S (length vs)) by apply H2. auto.
        }
      }
      Qed.
 
-  Lemma add_leading_zeroes : forall n us vs,
-    (zeros n ++ us) .+ (zeros n ++ vs) = zeros n ++ (us .+ vs).
-  Admitted.
-  
-  Lemma rev_add_rev : forall us vs, (rev us) .+ (rev vs) = rev (us .+ vs).
-  Admitted.
+  Lemma zeros_cons0 : forall n, 0 :: zeros n = zeros (S n).
+    auto.
+  Qed.
 
-  Lemma mul_bi_add : forall n us vs, (length us = length vs) ->
+  Lemma add_leading_zeros : forall n us vs,
+    (zeros n ++ us) .+ (zeros n ++ vs) = zeros n ++ (us .+ vs).
+    induction n; intros; auto.
+    rewrite <- zeros_cons0; simpl.
+    rewrite IHn; auto.
+  Qed.
+  
+  Lemma rev_add_rev : forall us vs l, (length us = l) -> (length vs = l) ->
+    (rev us) .+ (rev vs) = rev (us .+ vs).
+  Proof.
+    induction us; intros. {
+      rewrite add_nil_l.
+      rewrite add_nil_l; auto.
+    } {
+      destruct vs. {
+        elimtype False.
+        replace (length nil) with 0%nat in H0 by auto.
+        rewrite cons_length in H.
+        assert (0 <> l)%nat by (rewrite <- H; apply O_S).
+        contradiction.
+      } {
+        rewrite add_first_terms.
+        simpl.
+        assert (length us = pred l).
+        rewrite cons_length in H.
+        rewrite <- H; auto.
+        assert (length vs = pred l).
+        rewrite cons_length in H0.
+        rewrite <- H0; auto.
+        rewrite (add_app_same_length (pred l) _ _ _ _); try (rewrite rev_length; auto).
+        rewrite (IHus vs (pred l)); auto.
+      }
+    }
+  Qed.
+
+  Lemma mul_bi'_length : forall us n, length (mul_bi' n us) = length us.
+  Proof.
+    induction us; intros; auto.
+    rewrite mul_bi'_cons.
+    rewrite cons_length.
+    rewrite cons_length.
+    replace (length (mul_bi' n us)) with (length us); auto.
+  Qed.
+
+  Lemma add_comm : forall us vs, us .+ vs = vs .+ us.
+  Proof.
+    induction us; intros. {
+      rewrite add_nil_l.
+      rewrite add_nil_r.
+      auto.
+   } {
+     destruct vs. {
+       rewrite add_nil_l.
+       rewrite add_nil_r; auto.
+     } {
+       rewrite add_first_terms.
+       rewrite add_first_terms.
+       rewrite IHus; f_equal; omega.
+    } 
+  }
+  Qed.
+
+  Lemma mul_bi_add_same_length : forall n us vs l, (length us = l) -> (length vs = l) ->
     mul_bi n (us .+ vs) = mul_bi n us .+ mul_bi n vs.
   Proof.
     intros.
     unfold mul_bi; simpl.
-    rewrite add_leading_zeroes.
-    rewrite mul_bi'_add.
-    rewrite rev_add_rev; auto.
+    rewrite add_leading_zeros.
+    rewrite (mul_bi'_add us n vs l); auto.
+    rewrite (rev_add_rev _ _ l).
+    rewrite add_comm; f_equal.
+    rewrite mul_bi'_length; rewrite rev_length.
+    apply H.
+    rewrite mul_bi'_length; rewrite rev_length.
+    apply H0.
+  Qed.
+
+  Lemma add_zeros_same_length : forall us, us .+ (zeros (length us)) = us.
+  Proof.
+    induction us; auto; simpl.
+    rewrite IHus; f_equal; ring.
+  Qed.
+
+  Lemma add_trailing_zeros : forall us vs, (length us >= length vs)%nat ->
+    us .+ vs = us .+ (vs ++ (zeros (length us - length vs))).
+  Proof.
+    induction us; intros. {
+      rewrite add_nil_l.
+      rewrite add_nil_l.
+      simpl in *.
+      assert (length vs = 0%nat) by omega.
+      simpl_list; auto.
+    } {
+      destruct vs. {
+        rewrite add_nil_r.
+        rewrite app_nil_l.
+        simpl.
+        f_equal; try ring.
+        symmetry.
+        apply add_zeros_same_length.
+      } {
+        rewrite add_first_terms; simpl.
+        f_equal.
+        apply IHus.
+        rewrite cons_length in H.
+        rewrite cons_length in H.
+        intuition.
+      }
+    }
+  Qed.
+
+  Lemma mul_bi_length : forall us n, length (mul_bi n us) = (length us + n)%nat.
+  Proof.
+    induction us; intros; simpl. {
+      unfold mul_bi; simpl; simpl_list.
+      apply length_zeros.
+    } {
+      unfold mul_bi; simpl; simpl_list.
+      rewrite length_zeros.
+      rewrite mul_bi'_length; simpl_list; simpl.
+      omega.
+    }
+  Qed.
+
+  Lemma mul_bi_trailing_zeros : forall m n us, mul_bi n us ++ zeros m = mul_bi n (us ++ zeros m).
+  Proof.
+    unfold mul_bi.
+    induction m; intros; simpl_list; auto.
+    rewrite <- zeros_app0.
+    rewrite app_assoc.
+    rewrite IHm; clear IHm.
+    simpl.
+    repeat (rewrite rev_app_distr).
+    simpl.
+    repeat (rewrite rev_zeros).
+    rewrite app_assoc.
+    auto.
+  Qed.
+
+  Lemma mul_bi_add_longer : forall n us vs, (length us >= length vs)%nat ->
+    mul_bi n (us .+ vs) = mul_bi n us .+ mul_bi n vs.
+  Proof.
+      intros.
+      rewrite add_trailing_zeros by auto.
+      rewrite (add_trailing_zeros (mul_bi n us) (mul_bi n vs)) by (repeat (rewrite mul_bi_length); omega).
+      erewrite mul_bi_add_same_length by (eauto; simpl_list; rewrite length_zeros; omega).
+      f_equal.
+      rewrite mul_bi_trailing_zeros.
+      repeat (rewrite mul_bi_length).
+      f_equal. f_equal. f_equal.
+      omega.
+  Qed.
+
+  Lemma mul_bi_add : forall n us vs,
+    mul_bi n (us .+ vs) = mul_bi n us .+ mul_bi n vs.
+  Proof.
+    intros.
+    destruct (le_ge_dec (length us) (length vs)). {
+      assert (length vs >= length us)%nat by auto.
+      rewrite add_comm.
+      replace (mul_bi n us .+ mul_bi n vs) with (mul_bi n vs .+ mul_bi n us) by (apply add_comm).
+      apply (mul_bi_add_longer n vs us); auto.
+    } {
+      apply mul_bi_add_longer; auto.
+    }
   Qed.
 
   Lemma mul_bi_rep : forall i vs,
