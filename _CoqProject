@@ -4,6 +4,7 @@
 src/Tactics/VerdiTactics.v
 src/Galois/Galois.v
 src/Galois/GaloisTheory.v
+src/Galois/GaloisExamples.v
 src/Galois/AbstractGaloisField.v
 src/Galois/ComputationalGaloisField.v
 src/Galois/ZGaloisField.v

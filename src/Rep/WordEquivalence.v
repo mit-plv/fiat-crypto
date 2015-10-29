@@ -37,13 +37,13 @@ Module GFBits (M: Modulus).
   wordEq a b := wordToN (combineAll a) = wordToN (combineAll b)
 
   Definition toZ (b: BinGF) := Z.of_N (wordToN (combineAll b)).
-  Definition toGF (b: BinGF) := ZToGF ((toZ b) mod modulus)
+  Definition toGF (b: BinGF) := inject ((toZ b) mod modulus)
 
   Definition fromZ (x: Z) := splitWords numWords (NToWord (Z.to_N x))
   Definition fromGF (x: GF) := fromZ (proj1_sig x).
 
   toZ a + toZ b = toZ (a ^+ b)
-  
+
   Lemma equivalent_GF : BinEquiv x y <-> x = toGF y.
   Admitted.
 

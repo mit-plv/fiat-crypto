@@ -1,12 +1,11 @@
 
 Require Import Bedrock.Word.
+(* Expression *)
 
 (* THEORY: if we permit operations on joined types, we can represent
  *         vector operations without searching *)
 Inductive CType: Set :=
-  | Int32: CType
-  | Int64: CType
-  | Join: CType -> CType -> CType .
+  | Words | list word
 
 Definition cTypeToWord(type: CType): Type :=
   match type with
@@ -44,6 +43,7 @@ Inductive CExpr (type: CType) :=
 
 Inductive Sub (inType: CType) (outType: CType) :=
   | CRet : Expr outType -> Sub inType outType
+  (* | Repeat *)
   | CCompose : forall medType,
            (Sub inType medType)
         -> (Sub medType outType)
