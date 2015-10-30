@@ -11,4 +11,5 @@ src/Galois/ComputationalGaloisField.v
 src/Galois/ZGaloisField.v
 src/Galois/BaseSystem.v
 src/Curves/PointFormats.v
+src/Assembly/WordBounds.v
 src/Curves/Curve25519.v
