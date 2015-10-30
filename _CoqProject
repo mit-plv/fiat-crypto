@@ -5,10 +5,10 @@ src/Tactics/VerdiTactics.v
 src/Util/ListUtil.v
 src/Galois/Galois.v
 src/Galois/GaloisTheory.v
+src/Galois/ZGaloisField.v
 src/Galois/GaloisExamples.v
 src/Galois/AbstractGaloisField.v
 src/Galois/ComputationalGaloisField.v
-src/Galois/ZGaloisField.v
 src/Galois/BaseSystem.v
 src/Curves/PointFormats.v
 src/Assembly/WordBounds.v
