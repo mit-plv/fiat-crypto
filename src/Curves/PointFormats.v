@@ -66,8 +66,6 @@ Module PointFormats.
     Parameter projY : point -> GF.
     Parameter unifiedAdd : point -> point -> point.
 
-    (* TODO: split module here? *)
-
     Parameter rep : point -> Spec.point -> Prop.
     Local Notation "P '~=' rP" := (rep P rP) (at level 70).
     Axiom mkPoint_rep: forall x y, mkPoint x y ~= Spec.mkPoint x y.
@@ -78,8 +76,8 @@ Module PointFormats.
   End CompleteTwistedEdwardsPointFormat.
 
   Module CompleteTwistedEdwardsFacts (Import ta:TwistedA) (Import td:TwistedD).
-    Module M := CompleteTwistedEdwardsSpec ta td.
-    Import M.
+    Module Import Spec := CompleteTwistedEdwardsSpec ta td.
+
     Lemma twistedAddCompletePlus : forall (P1 P2:point)
       (oc1:onCurve P1) (oc2:onCurve P2),
       let x1 := projX P1 in
@@ -131,7 +129,7 @@ Module PointFormats.
 
 
   Module CompleteTwistedEdwardsSpecPointFormat (ta:TwistedA) (td:TwistedD)
-      <: (CompleteTwistedEdwardsPointFormat ta td).
+      <: CompleteTwistedEdwardsPointFormat ta td.
     Module Spec := CompleteTwistedEdwardsSpec ta td.
     Definition point := Spec.point.
     Definition mkPoint := Spec.mkPoint.
@@ -178,16 +176,18 @@ Module PointFormats.
     End ta.
     Import ta.
 
-    Module M := CompleteTwistedEdwardsSpec ta td.
+    Module Spec := CompleteTwistedEdwardsSpec ta td.
 
     Module Format <: CompleteTwistedEdwardsPointFormat ta td.
-      Module Spec := CompleteTwistedEdwardsSpec ta td.
+      Module Import Facts := CompleteTwistedEdwardsFacts ta td.
+
       (** [projective] represents a point on an elliptic curve using projective
       * Edwards coordinates for twisted edwards curves with a=-1 (see
       * <https://hyperelliptic.org/EFD/g1p/auto-edwards-projective.html>
       * <https://en.wikipedia.org/wiki/Edwards_curve#Projective_homogeneous_coordinates>) *)
       Record projective := mkProjective {projectiveX : GF; projectiveY : GF; projectiveZ : GF}.
       Local Notation "'(' X ',' Y ',' Z ')'" := (mkProjective X Y Z).
+
       Definition twistedToProjective (P : Spec.point) : projective :=
         let x := Spec.projX P in
         let y := Spec.projY P in
@@ -205,11 +205,6 @@ Module PointFormats.
       Lemma twistedProjectiveInv : forall P,
         projectiveToTwisted (twistedToProjective P) = P.
       Proof.
-    (* FIXME: this is copied from CompleteTwistedEdwardsFacts because I don't know how to get it to be in scope here *)
-    Ltac twisted := autounfold; intros;
-                    repeat match goal with
-                               | [ x : Spec.point |- _ ] => destruct x
-                           end; simpl; repeat (ring || f_equal); field.
         twisted.
       Qed.
 
@@ -246,6 +241,7 @@ Module PointFormats.
       Qed.
 
       Lemma twistedToExtendedValid : forall (P : Spec.point), extendedValid (twistedToExtended P).
+      Proof.
         autounfold.
         destruct P.
         simpl.
@@ -255,6 +251,7 @@ Module PointFormats.
       Definition rep (P:point) (rP:Spec.point) : Prop :=
         extendedToTwisted P = rP /\ extendedValid P.
       Lemma mkPoint_rep : forall x y, rep (mkPoint x y) (Spec.mkPoint x y).
+      Proof.
         split.
         apply twistedExtendedInv.
         apply twistedToExtendedValid.
@@ -268,9 +265,11 @@ Module PointFormats.
                                | [ x : rep ?a ?b |- _ ] => destruct x
                                end).
       Lemma projX_rep : forall P rP, P ~= rP -> projX P = Spec.projX rP.
+      Proof.
         rep.
       Qed.
       Lemma projY_rep : forall P rP, P ~= rP -> projY P = Spec.projY rP.
+      Proof.
         rep.
       Qed.
 
@@ -353,10 +352,13 @@ Module PointFormats.
 
       Lemma unifiedAdd_rep: forall P Q rP rQ, Spec.onCurve rP -> Spec.onCurve rQ ->
         P ~= rP -> Q ~= rQ -> (unifiedAdd P Q) ~= (Spec.unifiedAdd rP rQ).
+      Proof.
         split; rep.
         apply unifiedAddToTwisted; auto.
         apply unifiedAddCon; auto.
       Qed.
+
+      Module Spec := Spec.
     End Format.
   End Minus1Twisted.
 

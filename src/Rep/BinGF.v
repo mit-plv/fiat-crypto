@@ -8,6 +8,8 @@ Require Import Eqdep_dec.
 Module Type BitSpec.
   Parameter wordSize: nat.
   Parameter numWords: nat.
+
+  Axiom wordSize_pos : (wordSize > 0)%nat.
 End BitSpec.
 
 Module GFBits (M: Modulus) (Spec: BitSpec).
@@ -20,45 +22,64 @@ Module GFBits (M: Modulus) (Spec: BitSpec).
 
   Definition BinGF := {lst: list (word wordSize) | length lst = numWords}.
 
-  Definition convertWordSize {a b: nat} (x: word a): a = b -> word b.
-    intro H; rewrite H in x; exact x.
+  Definition splitGt {n m} {H : (n > m)%nat} (w : word n) : word m * word (n - m).
+  Proof.
+    refine (let w' := match _ : (n = m + (n - m))%nat in _ = N return word N with
+                     | eq_refl => w
+                     end in
+            (split1 m (n - m) w', split2 m (n - m) w'));
+    abstract omega.
   Defined.
 
-  Lemma convert_invertible:
-    forall (a b: nat) (x: word a) (H1: a = b) (H2: b = a),
-      convertWordSize (convertWordSize x H1) H2 = x.
+  Fixpoint copies {A} (x : A) (n : nat) : list A :=
+    match n with
+    | O => nil
+    | S n' => x :: copies x n'
+    end.
+
+  Definition splitWords' : forall (len : nat) {sz: nat} (x: word sz), list (word wordSize).
   Proof.
-    intros; destruct H2; simpl.
-    replace H1 with (eq_refl b); simpl; intuition.
-    apply UIP_dec; exact eq_nat_dec.
+    refine (fix splitWords' (len : nat) {sz : nat} (w : word sz) {struct len} : list (word wordSize) :=
+              match len with
+              | O => nil
+              | S len' =>
+                if gt_dec sz wordSize
+                then let (w1, w2) := splitGt w in
+                     w1 :: splitWords' len' w2
+                else match _ in _ = N return list (word N) with
+                      | eq_refl => zext w (wordSize - sz) :: copies (wzero _) len'
+                     end
+              end)%nat; clear splitWords'; abstract omega.
+  Defined.
+
+  Lemma length_cast : forall A (F : A -> Type) x1 x2 (pf : x1 = x2) x xs,
+    length (match pf in _ = X return list (F X) with
+            | eq_refl => x :: xs
+            end) = S (length xs).
+  Proof.
+    destruct pf; auto.
   Qed.
 
-  Fixpoint splitWords' (sz: nat) (len: nat) (x: word sz): list (word wordSize).
-    induction len, (gt_dec sz wordSize).
+  Lemma length_copies : forall A (x : A) n, length (copies x n) = n.
+  Proof.
+    induction n; simpl; auto.
+  Qed.
 
-    - refine nil.
+  Hint Rewrite length_cast length_copies.
 
-    - refine nil.
-
-    - assert (sz = wordSize + (sz - wordSize))%nat. intuition.
-      assert (z := convertWordSize x H).
-      refine (
-        cons (split1 wordSize (sz - wordSize) z)
-             (splitWords' (sz - wordSize)%nat len
-               (split2 wordSize (sz - wordSize) z))).
-
-    - assert (sz + (wordSize - sz) = wordSize)%nat. intuition.
-      assert (z := convertWordSize (zext x (wordSize - sz)) H).
-      refine (cons z nil).
-
-  Admitted.
+  Lemma length_splitWords' : forall len sz (w : word sz), length (splitWords' len w) = len.
+  Proof.
+    induction len; simpl; intuition;
+    match goal with
+    | [ |- context[match ?E with _ => _ end] ] => destruct E
+    end; simpl; try rewrite IHlen; autorewrite with core; reflexivity.
+  Qed.    
 
   Definition splitWords {sz} (len: nat) (x: word sz):
-      {x: list (word wordSize) | length x = len}.
-    exists (splitWords' sz len x).
-
-    induction len, (gt_dec sz wordSize).
-  Admitted.
+    {x: list (word wordSize) | length x = len}.
+  Proof.
+    exists (splitWords' len x); apply length_splitWords'.
+  Defined.
 
   Definition splitGF (x: GF) :=
     splitWords numWords (NToWord (numWords * wordSize)%nat (Z.to_N (proj1_sig x))).
@@ -116,4 +137,3 @@ Module GFBits (M: Modulus) (Spec: BitSpec).
   }.
 
 End GFBits.
-
