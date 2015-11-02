@@ -1,11 +1,14 @@
 Require Import List.
 Require Import Omega.
+Require Import Arith.Peano_dec.
 
 Ltac nth_tac' := 
   intros; simpl in *; unfold error,value in *; repeat progress (match goal with
     | [  |- context[match nth_error ?xs ?i with Some _ => _ | None => _ end ] ] => case_eq (nth_error xs i); intros
-    | [ |- context[if lt_dec ?a ?b then _ else _] ] => destruct (lt_dec a b)
-    | [ H: context[if lt_dec ?a ?b then _ else _] |- _ ] => destruct (lt_dec a b)
+    | [ |- context[(if lt_dec ?a ?b then _ else _) = _] ] => destruct (lt_dec a b)
+    | [ |- context[_ = (if lt_dec ?a ?b then _ else _)] ] => destruct (lt_dec a b)
+    | [ H: context[(if lt_dec ?a ?b then _ else _) = _] |- _ ] => destruct (lt_dec a b)
+    | [ H: context[_ = (if lt_dec ?a ?b then _ else _)] |- _ ] => destruct (lt_dec a b)
     | [ H: _ /\ _ |- _ ] => destruct H
     | [ H: Some _ = Some _ |- _ ] => injection H; clear H; intros; subst
     | [ H: None = Some _  |- _ ] => inversion H
@@ -46,4 +49,36 @@ Proof.
            | [ H : _ |- _ ] => rewrite H; clear H
            | _ => progress intuition
          end; eauto.
+Qed.
+
+(* xs[n] := x *)
+Fixpoint set_nth {T} n x (xs:list T) {struct n} :=
+	match n with
+	| O => match xs with
+				 | nil => nil
+				 | x'::xs' => x::xs'
+				 end
+	| S n' =>  match xs with
+				 | nil => nil
+				 | x'::xs' => x'::set_nth n' x xs'
+				 end
+  end.
+
+Lemma nth_set_nth : forall m {T} (xs:list T) (n:nat) (x x':T),
+  nth_error (set_nth m x xs) n =
+  if eq_nat_dec n m
+  then (if lt_dec n (length xs) then Some x else None)
+  else nth_error xs n.
+Proof.
+	induction m.
+
+	destruct n, xs; auto.
+
+	intros; destruct xs, n; auto.
+	simpl; unfold error; match goal with
+		[ |- None = if ?x then None else None ] => destruct x
+	end; auto.
+
+	simpl nth_error; erewrite IHm by auto; clear IHm.
+	destruct (eq_nat_dec n m), (eq_nat_dec (S n) (S m)); nth_tac.
 Qed.
