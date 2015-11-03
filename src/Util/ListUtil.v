@@ -4,6 +4,9 @@ Require Import Arith.Peano_dec.
 
 Ltac nth_tac' := 
   intros; simpl in *; unfold error,value in *; repeat progress (match goal with
+    | [ H: ?x = Some _  |- context[match ?x with Some _ => ?a | None => ?a end ] ] => destruct x
+    | [ H: ?x = None _  |- context[match ?x with Some _ => ?a | None => ?a end ] ] => destruct x
+    | [  |- context[match ?x with Some _ => ?a | None => ?a end ] ] => destruct x
     | [  |- context[match nth_error ?xs ?i with Some _ => _ | None => _ end ] ] => case_eq (nth_error xs i); intros
     | [ |- context[(if lt_dec ?a ?b then _ else _) = _] ] => destruct (lt_dec a b)
     | [ |- context[_ = (if lt_dec ?a ?b then _ else _)] ] => destruct (lt_dec a b)
@@ -30,17 +33,31 @@ Lemma nth_error_seq : forall i start len,
   induction i; destruct len; nth_tac'; erewrite IHi; nth_tac'.
 Qed.
 
-Lemma nth_error_length_error : forall A i (xs:list A), nth_error xs i = None ->
+Lemma nth_error_error_length : forall A i (xs:list A), nth_error xs i = None ->
   i >= length xs.
 Proof.
   induction i; destruct xs; nth_tac'; try specialize (IHi _ H); omega.
 Qed.
 
+Lemma nth_error_value_length : forall A i (xs:list A) x, nth_error xs i = Some x ->
+  i < length xs.
+Proof.
+  induction i; destruct xs; nth_tac'; try specialize (IHi _ _ H); omega.
+Qed.
+
+Lemma nth_error_length_error : forall A i (xs:list A),
+  i >= length xs ->
+  nth_error xs i = None.
+Proof.
+  induction i; destruct xs; nth_tac'; rewrite IHi by omega; auto.
+Qed.
+Hint Resolve nth_error_length_error.
+
 Ltac nth_tac := 
   repeat progress (try nth_tac'; try (match goal with
     | [ H: nth_error (map _ _) _ = Some _ |- _ ] => destruct (nth_error_map _ _ _ _ _ _ H); clear H
     | [ H: nth_error (seq _ _) _ = Some _ |- _ ] => rewrite nth_error_seq in H
-    | [H: nth_error _ _ = None |- _ ] => specialize (nth_error_length_error _ _ _ H); intro; clear H
+    | [H: nth_error _ _ = None |- _ ] => specialize (nth_error_error_length _ _ _ H); intro; clear H
   end)).
 
 Lemma app_cons_app_app : forall T xs (y:T) ys, xs ++ y :: ys = (xs ++ (y::nil)) ++ ys.
@@ -81,4 +98,27 @@ Proof.
 
 	simpl nth_error; erewrite IHm by auto; clear IHm.
 	destruct (eq_nat_dec n m), (eq_nat_dec (S n) (S m)); nth_tac.
+Qed.
+
+Lemma set_nth_splice: forall {T} n x (xs:list T),
+  n < length xs ->
+  set_nth n x xs = firstn n xs ++ x :: skipn (S n) xs.
+Proof.
+  induction n; destruct xs; intros; simpl in *;
+    try rewrite IHn; auto; omega.
+Qed.
+
+Lemma combine_set_nth : forall {A B} n (x:A) xs (ys:list B),
+  combine (set_nth n x xs) ys =
+    match nth_error ys n with
+    | None => combine xs ys
+    | Some y => set_nth n (x,y) (combine xs ys)
+    end.
+Proof.
+  (* TODO(andreser): this proof can totally be automated, but requires writing ltac that vets multiple hypothesis at once *)
+  induction n, xs, ys; nth_tac; try rewrite IHn; nth_tac; 
+    try (f_equal; specialize (IHn x xs ys ); rewrite H in IHn; rewrite <- IHn);
+    try (specialize (nth_error_value_length _ _ _ _ H); omega).
+  assert (Some b0=Some b1) as HA by (rewrite <-H, <-H0; auto).
+  injection HA; intros; subst; auto.
 Qed.
