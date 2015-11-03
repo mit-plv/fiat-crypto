@@ -100,12 +100,15 @@ Proof.
 	destruct (eq_nat_dec n m), (eq_nat_dec (S n) (S m)); nth_tac.
 Qed.
 
-Lemma set_nth_splice: forall {T} n x (xs:list T),
-  n < length xs ->
-  set_nth n x xs = firstn n xs ++ x :: skipn (S n) xs.
+Lemma set_nth_equiv_splice: forall {T} n x (xs:list T),
+  set_nth n x xs = 
+  if lt_dec n (length xs)
+  then firstn n xs ++ x :: skipn (S n) xs
+  else xs.
 Proof.
   induction n; destruct xs; intros; simpl in *;
-    try rewrite IHn; auto; omega.
+    try (rewrite IHn; clear IHn); auto.
+  destruct (lt_dec n (length xs)), (lt_dec (S n) (S (length xs))); try omega; trivial.
 Qed.
 
 Lemma combine_set_nth : forall {A B} n (x:A) xs (ys:list B),
