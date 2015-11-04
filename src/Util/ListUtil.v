@@ -2,6 +2,16 @@ Require Import List.
 Require Import Omega.
 Require Import Arith.Peano_dec.
 
+Ltac boring :=
+  simpl; intuition;
+  repeat match goal with
+           | [ H : _ |- _ ] => rewrite H; clear H
+           | _ => progress autounfold in *
+           | _ => progress try autorewrite with core
+           | _ => progress simpl in *
+           | _ => progress intuition
+         end; eauto.
+
 Ltac nth_tac' := 
   intros; simpl in *; unfold error,value in *; repeat progress (match goal with
     | [ H: ?x = Some _  |- context[match ?x with Some _ => ?a | None => ?a end ] ] => destruct x
@@ -124,4 +134,10 @@ Proof.
     try (specialize (nth_error_value_length _ _ _ _ H); omega).
   assert (Some b0=Some b1) as HA by (rewrite <-H, <-H0; auto).
   injection HA; intros; subst; auto.
+Qed.
+
+Lemma combine_truncate : forall {A} (xs ys : list A),
+  combine xs ys = combine xs (firstn (length xs) ys).
+Proof.
+  induction xs; destruct ys; boring.
 Qed.

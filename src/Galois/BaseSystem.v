@@ -86,16 +86,6 @@ Module BaseSystem (Import B:BaseCoefs).
     induction n; simpl; auto.
   Qed.
 
-  Ltac boring :=
-    simpl; intuition;
-    repeat match goal with
-             | [ H : _ |- _ ] => rewrite H; clear H
-             | _ => progress autounfold in *
-             | _ => progress try autorewrite with core
-             | _ => progress simpl in *
-             | _ => progress intuition
-           end; ring || eauto.
-
   Lemma app_zeros_zeros : forall n m, zeros n ++ zeros m = zeros (n + m).
   Proof.
     induction n; boring.
