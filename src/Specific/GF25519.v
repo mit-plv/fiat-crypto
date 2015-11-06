@@ -1,4 +1,4 @@
-Require Import Galois GaloisTheory Galois.BaseSystem.
+Require Import Galois GaloisTheory Galois.BaseSystem Galois.ModularBaseSystem.
 Require Import List Util.ListUtil.
 Import ListNotations.
 Require Import ZArith.ZArith Zpower ZArith Znumtheory.
@@ -34,7 +34,7 @@ Module Modulus25519 <: Modulus.
   Definition modulus := prime25519.
 End Modulus25519.
 
-Module GF25519Base25Point5. (*TODO(jadep): "<: PseudoMersenneBaseParams Base25Point5_10limbs Modulus25519."*)
+Module GF25519Base25Point5Params <: PseudoMersenneBaseParams Base25Point5_10limbs Modulus25519.
   Import Base25Point5_10limbs.
   Import Modulus25519.
   Local Open Scope Z_scope.
@@ -75,4 +75,27 @@ Module GF25519Base25Point5. (*TODO(jadep): "<: PseudoMersenneBaseParams Base25Po
   Proof.
     rewrite Zle_is_le_bool; reflexivity.
   Qed.
-End GF25519Base25Point5.
+End GF25519Base25Point5Params.
+
+Module GF25519Base25Point5 := GFPseudoMersenneBase Base25Point5_10limbs Modulus25519 GF25519Base25Point5Params.
+
+Ltac expand_list f :=
+  assert ((length f < 100)%nat) as _ by (simpl length in *; omega);
+    repeat progress (
+    let n := fresh f in
+    destruct f as [ | n ];
+    try solve [simpl length in *; try discriminate]).
+
+Lemma GF25519Base25Point5_mul_expr_example :
+  forall (f g:list Z)
+  (Hf: length f = 10)
+  (Hg: length g = 10),
+  exists h, GF25519Base25Point5.mul f g = h.
+Proof.
+  intros.
+  expand_list f; clear Hf.
+  expand_list g; clear Hg.
+  simpl. (* does not do anything *)
+  hnf. (* does not do anything *)
+  econstructor; reflexivity.
+Qed.

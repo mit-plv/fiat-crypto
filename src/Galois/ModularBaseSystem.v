@@ -21,7 +21,7 @@ Module Type PseudoMersenneBaseParams (Import B:BaseCoefs) (Import M:Modulus).
     let r := (b i * b j)  /  (2^k * b (i+j-length base)%nat) in
               b i * b j = r * 2^k * b (i+j-length base)%nat.
 
-  Axiom b0_1 : nth_default 0 base 1 = 1.
+  Axiom b0_1 : nth_default 0 base 0 = 1.
 
   (* Probably implied by modulus_pseudomersenne. *)
   Axiom k_pos : 0 <= k.
@@ -191,5 +191,9 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     replace (map (Z.mul P.c) high) with (B.mul_each P.c high) by auto.
     rewrite B.mul_each_rep; auto.
   Qed.
+
+  Definition add := B.add.
+  Definition mul us vs := reduce (E.mul us vs).
+  Definition square x := mul x x.
 
 End GFPseudoMersenneBase.
