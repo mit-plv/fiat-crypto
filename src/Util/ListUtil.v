@@ -136,8 +136,37 @@ Proof.
   injection HA; intros; subst; auto.
 Qed.
 
-Lemma combine_truncate : forall {A} (xs ys : list A),
+Lemma combine_truncate_r : forall {A} (xs ys : list A),
   combine xs ys = combine xs (firstn (length xs) ys).
 Proof.
   induction xs; destruct ys; boring.
+Qed.
+
+Lemma combine_truncate_l : forall {A} (xs ys : list A),
+  combine xs ys = combine (firstn (length ys) xs) ys.
+Proof.
+  induction xs; destruct ys; boring.
+Qed.
+
+Lemma firstn_nil : forall {A} n, firstn n nil = @nil A.
+Proof.
+  destruct n; auto.
+Qed.
+
+Lemma skipn_nil : forall {A} n, skipn n nil = @nil A.
+Proof.
+  destruct n; auto.
+Qed.
+
+Lemma firstn_app : forall A (l l': list A), firstn (length l) (l ++ l') = l.
+Proof.
+  intros.
+  induction l; simpl; auto.
+  f_equal; auto.
+Qed.
+
+Lemma skipn_app : forall A (l l': list A), skipn (length l) (l ++ l') = l'.
+Proof.
+  intros.
+  induction l; simpl; auto.
 Qed.

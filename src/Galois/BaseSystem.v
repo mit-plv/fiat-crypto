@@ -40,7 +40,14 @@ Module BaseSystem (Import B:BaseCoefs).
   Definition decode' bs u  := fold_right accumulate 0 (combine u bs).
   Definition decode := decode' base.
   Hint Unfold accumulate.
-
+  
+  Lemma decode_truncate : forall us, decode us = decode (firstn (length base) us).
+  Proof.
+    intros.
+    unfold decode, decode'.
+    rewrite combine_truncate_l; auto.
+  Qed.
+  
   Fixpoint add (us vs:digits) : digits :=
     match us,vs with
       | u::us', v::vs' => u+v :: add us' vs'
@@ -59,6 +66,13 @@ Module BaseSystem (Import B:BaseCoefs).
     auto.
   Qed.
 
+  Lemma decode_base_nil : forall us, decode' nil us = 0.
+  Proof.
+    intros.
+    unfold decode'.
+    rewrite combine_truncate_l; auto.
+  Qed.
+
   (* mul_geomseq is a valid multiplication algorithm if b_i = b_1^i *)
   Fixpoint mul_geomseq (us vs:digits) : digits :=
     match us,vs with
@@ -72,6 +86,54 @@ Module BaseSystem (Import B:BaseCoefs).
     unfold decode', accumulate.
     induction bs; destruct vs; auto; simpl; try rewrite IHbs; ring.
   Qed.
+
+  Lemma decode'_cons : forall x1 x2 xs1 xs2,
+    decode' (x1 :: xs1) (x2 :: xs2) = x1 * x2 + decode' xs1 xs2.
+  Proof.
+    unfold decode'; boring.
+  Qed.
+
+  Hint Rewrite decode'_cons.
+
+  Lemma mul_each_base : forall us bs c, 
+      decode' bs (mul_each c us) = decode' (mul_each c bs) us.
+  Proof.
+    induction us; intros; simpl; auto.
+    destruct bs.
+    apply decode_base_nil.
+    unfold mul_each; boring.
+    replace (z * (c * a)) with (c * z * a) by ring; f_equal.
+    unfold mul_each in IHus.
+    apply IHus.
+  Qed.
+
+  Lemma base_app : forall us low high,
+      decode' (low ++ high) us = decode' low (firstn (length low) us) + decode' high (skipn (length low) us).
+  Proof.
+    induction us; intros. {
+      rewrite firstn_nil.
+      rewrite skipn_nil.
+      do 3 rewrite decode_nil; auto.
+    } {
+      destruct low; auto.
+      replace (skipn (length (z :: low)) (a :: us)) with (skipn (length (low)) (us)) by auto.
+      simpl.
+      do 2 rewrite decode'_cons.
+      rewrite IHus.
+      ring.
+    }
+  Qed.
+
+  Lemma base_mul_app : forall low c us, 
+      decode' (low ++ mul_each c low) us = decode' low (firstn (length low) us) + 
+      c * decode' low (skipn (length low) us).
+  Proof.
+    intros.
+    rewrite base_app; f_equal.
+    rewrite <- mul_each_rep.
+    symmetry; apply mul_each_base.
+  Qed.
+
 
   Definition crosscoef i j : Z := 
     let b := nth_default 0 base in
@@ -128,14 +190,6 @@ Module BaseSystem (Import B:BaseCoefs).
   Hint Unfold nth_default.
 
   Hint Extern 1 (@eq Z _ _) => ring.
-
-  Lemma decode'_cons : forall x1 x2 xs1 xs2,
-    decode' (x1 :: xs1) (x2 :: xs2) = x1 * x2 + decode' xs1 xs2.
-  Proof.
-    unfold decode'; boring.
-  Qed.
-
-  Hint Rewrite decode'_cons.
 
   Lemma decode_single : forall n bs x,
     decode' bs (zeros n ++ x :: nil) = nth_default 0 bs n * x.
