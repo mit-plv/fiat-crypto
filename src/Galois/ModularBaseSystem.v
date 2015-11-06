@@ -22,6 +22,10 @@ Module Type PseudoMersenneBaseParams (Import B:BaseCoefs) (Import M:Modulus).
               b i * b j = r * 2^k * b (i+j-length base)%nat.
 
   Axiom b0_1 : nth_default 0 base 1 = 1.
+
+  (* Probably implied by modulus_pseudomersenne. *)
+  Axiom k_pos : 0 <= k.
+
 End PseudoMersenneBaseParams.
 
 Module Type GFrep (Import M:Modulus).
@@ -58,13 +62,34 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     
     Lemma base_positive : forall b, In b base -> b > 0.
     Proof.
-    Admitted.
+      unfold base. intros.
+      rewrite in_app_iff in H.
+      destruct H. {
+        apply BC.base_positive; auto.
+      } {
+        specialize BC.base_positive.
+        induction BC.base; intros. {
+          simpl in H; intuition.
+        } {
+          simpl in H.
+          destruct H; subst.
+          replace 0 with (2 ^ P.k * 0) by auto.
+          apply (Zmult_gt_compat_l a 0 (2 ^ P.k)).
+          rewrite Z.gt_lt_iff.
+          apply Z.pow_pos_nonneg; intuition.
+          apply P.k_pos.
+          apply H0; left; auto.
+          apply IHl; auto.
+          intros. apply H0; auto. right; auto.
+        }
+      }
+    Qed.
 
     Lemma base_good :
       forall i j, (i+j < length base)%nat ->
       let b := nth_default 0 base in
       let r := (b i * b j) / b (i+j)%nat in
-      b i * b j = r * b (i+j)%nat. 
+      b i * b j = r * b (i+j)%nat.
     Admitted.
 
   End EC.
@@ -85,8 +110,8 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
   Proof.
     intros.
     unfold B.decode, B.decode', E.decode, E.decode'.
-    rewrite combine_truncate.
-    rewrite (combine_truncate us EC.base).
+    rewrite combine_truncate_r.
+    rewrite (combine_truncate_r us EC.base).
     f_equal; f_equal.
     unfold EC.base.
     rewrite (firstn_app _ _  (map (Z.mul (2 ^ P.k)) BC.base)); auto.
@@ -104,15 +129,20 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
   Qed.
 
   (* Converts from length of E.base to length of B.base by reduction modulo M.*)
-  Fixpoint reduce (us : E.digits) : B.digits :=
+  Definition reduce (us : E.digits) : B.digits :=
     let high := skipn (length BC.base) us in
     let low := firstn (length BC.base) us in
     let wrap := map (Z.mul P.c) high in
     B.add low wrap.
 
-  (* TODO: move this somewhere more appropriate/improve strategy? *)
   Lemma Prime_nonzero: forall (p : Prime), primeToZ p <> 0.
-  Admitted.
+  Proof.
+    unfold Prime. intros.
+    destruct p.
+    simpl. intro.
+    subst.
+    apply Znumtheory.not_prime_0; auto.
+  Qed.
 
   Lemma mod_mult_plus: forall a b c, (b <> 0) -> (a * b + c) mod b = c mod b.
   Proof.
@@ -140,40 +170,26 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
       (2^P.k * B.decode (skipn (length BC.base) us)).
   Proof.
     intros.
-    rewrite decode_short; try (rewrite firstn_length; rewrite Min.le_min_l; auto).
-  Admitted.
-
-  (* TODO: definition of reduce, but isn't unfolding and solving automatically. *)
-  Lemma reduce_defn : forall (us : E.digits), reduce us =
-      B.add (firstn (length BC.base) us) (map (Z.mul P.c) (skipn (length BC.base) us)).
-  Proof.
-  Admitted.
-
-  (* TODO: add in preconditions for B *)
-  Lemma base_bounds : forall us, 0 <= B.decode us < modulus.
-  Admitted.
-
-  Lemma decode_mod : forall us, B.decode us = B.decode us mod modulus.
-  Proof.
-      intros; rewrite Zmod_small; auto.
-      apply base_bounds.
+    unfold B.decode, E.decode; rewrite <- B.mul_each_rep.
+    replace B.decode' with E.decode' by auto.
+    unfold EC.base.
+    replace (map (Z.mul (2 ^ P.k)) BC.base) with (E.mul_each (2 ^ P.k) BC.base) by auto.
+    rewrite E.base_mul_app.
+    rewrite <- E.mul_each_rep; auto.
   Qed.
 
-  Lemma reduce_rep : forall us, B.decode (reduce us) = (E.decode us) mod modulus.
+  Lemma reduce_rep : forall us, B.decode (reduce us) mod modulus = (E.decode us) mod modulus.
   Proof.
     intros.
-    rewrite decode_mod.
     rewrite extended_shiftadd.
     rewrite pseudomersenne_add.
+    unfold reduce.
     remember (firstn (length BC.base) us) as low.
     remember (skipn (length BC.base) us) as high.
-    replace (reduce us) with (B.add low (map (Z.mul P.c) high)) by (rewrite reduce_defn; rewrite Heqlow; rewrite Heqhigh; auto).
     unfold B.decode.
     rewrite B.add_rep.
     replace (map (Z.mul P.c) high) with (B.mul_each P.c high) by auto.
     rewrite B.mul_each_rep; auto.
   Qed.
-
-Print Assumptions reduce_rep.
 
 End GFPseudoMersenneBase.
