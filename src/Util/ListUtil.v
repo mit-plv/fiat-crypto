@@ -118,10 +118,17 @@ Lemma combine_set_nth : forall {A B} n (x:A) xs (ys:list B),
     | Some y => set_nth n (x,y) (combine xs ys)
     end.
 Proof.
-  (* TODO(andreser): this proof can totally be automated, but requires writing ltac that vets multiple hypothesis at once *)
+  (* TODO(andreser): this proof can totally be automated, but requires writing ltac that vets multiple hypotheses at once *)
   induction n, xs, ys; nth_tac; try rewrite IHn; nth_tac; 
     try (f_equal; specialize (IHn x xs ys ); rewrite H in IHn; rewrite <- IHn);
     try (specialize (nth_error_value_length _ _ _ _ H); omega).
   assert (Some b0=Some b1) as HA by (rewrite <-H, <-H0; auto).
   injection HA; intros; subst; auto.
+Qed.
+
+Lemma nth_value_index : forall {T} i xs (x:T),
+  nth_error xs i = Some x -> In i (seq 0 (length xs)).
+Proof.
+  induction i; destruct xs; nth_tac; right.
+  rewrite <- seq_shift; apply in_map; eapply IHi; eauto.
 Qed.

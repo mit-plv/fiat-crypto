@@ -13,3 +13,4 @@ src/Galois/BaseSystem.v
 src/Curves/PointFormats.v
 src/Assembly/WordBounds.v
 src/Curves/Curve25519.v
+src/Specific/GF25519.v
