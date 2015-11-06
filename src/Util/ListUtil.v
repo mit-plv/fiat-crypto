@@ -2,6 +2,16 @@ Require Import List.
 Require Import Omega.
 Require Import Arith.Peano_dec.
 
+Ltac boring :=
+  simpl; intuition;
+  repeat match goal with
+           | [ H : _ |- _ ] => rewrite H; clear H
+           | _ => progress autounfold in *
+           | _ => progress try autorewrite with core
+           | _ => progress simpl in *
+           | _ => progress intuition
+         end; eauto.
+
 Ltac nth_tac' := 
   intros; simpl in *; unfold error,value in *; repeat progress (match goal with
     | [ H: ?x = Some _  |- context[match ?x with Some _ => ?a | None => ?a end ] ] => destruct x
@@ -131,4 +141,39 @@ Lemma nth_value_index : forall {T} i xs (x:T),
 Proof.
   induction i; destruct xs; nth_tac; right.
   rewrite <- seq_shift; apply in_map; eapply IHi; eauto.
+Qed.
+
+Lemma combine_truncate_r : forall {A} (xs ys : list A),
+  combine xs ys = combine xs (firstn (length xs) ys).
+Proof.
+  induction xs; destruct ys; boring.
+Qed.
+
+Lemma combine_truncate_l : forall {A} (xs ys : list A),
+  combine xs ys = combine (firstn (length ys) xs) ys.
+Proof.
+  induction xs; destruct ys; boring.
+Qed.
+
+Lemma firstn_nil : forall {A} n, firstn n nil = @nil A.
+Proof.
+  destruct n; auto.
+Qed.
+
+Lemma skipn_nil : forall {A} n, skipn n nil = @nil A.
+Proof.
+  destruct n; auto.
+Qed.
+
+Lemma firstn_app : forall A (l l': list A), firstn (length l) (l ++ l') = l.
+Proof.
+  intros.
+  induction l; simpl; auto.
+  f_equal; auto.
+Qed.
+
+Lemma skipn_app : forall A (l l': list A), skipn (length l) (l ++ l') = l'.
+Proof.
+  intros.
+  induction l; simpl; auto.
 Qed.
