@@ -85,32 +85,43 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
       }
     Qed.
 
+    Lemma map_nth_default_base_high : forall n, (n < (length BC.base))%nat -> 
+      nth_default 0 (map (Z.mul (2 ^ P.k)) BC.base) n =
+      (2 ^ P.k) * (nth_default 0 BC.base n).
+    Proof.
+      intros.
+      erewrite map_nth_default; auto.
+    Qed.
+
     Lemma base_good :
       forall i j, (i+j < length base)%nat ->
       let b := nth_default 0 base in
       let r := (b i * b j) / b (i+j)%nat in
       b i * b j = r * b (i+j)%nat.
     Proof.
-        (* TODO: move to listutil *)
-        Lemma nth_error_app : forall {T} n (xs ys:list T), nth_error (xs ++ ys) n =
-            if lt_dec n (length xs)
-            then nth_error xs n
-            else nth_error ys (n - length xs).
-       Proof.
-           induction n; destruct xs; destruct ys; nth_tac.
-       Admitted.
-       
-       intros.
-       subst b.
-       unfold base, nth_default.
-       repeat rewrite nth_error_app.
-       destruct (lt_dec i (length BC.base)); destruct (lt_dec j (length BC.base)).
-       nth_tac. destruct (lt_dec (i + j) (length BC.base)); try omega.
-       SearchAbout nth_error.
-        
-
-    Admitted.
-
+      intros.
+      subst b. subst r.
+      unfold base in *.
+      rewrite app_length in H; rewrite map_length in H.
+      repeat rewrite nth_default_app.
+      destruct (lt_dec i (length BC.base)); destruct (lt_dec j (length BC.base)); destruct (lt_dec (i + j) (length BC.base)); try omega.
+      {
+        (* i < length BC.base, j < length BC.base, i + j < length BC.base *)
+        apply BC.base_good; auto.
+      } {
+        (* i < length BC.base, j < length BC.base, i + j >= length BC.base *)
+        admit.
+      } {
+        (* i < length BC.base, j >= length BC.base, i + j >= length BC.base *)
+        do 2 rewrite map_nth_default_base_high by omega.
+        remember (nth_default 0 BC.base) as b.
+        remember (j - length BC.base)%nat as j'.
+        admit.
+      } {
+        (* i >= length BC.base, j < length BC.base, i + j >= length BC.base *)
+        admit.
+      }
+    Qed.
   End EC.
 
   Module E := BaseSystem EC.

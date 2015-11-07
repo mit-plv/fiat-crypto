@@ -1,6 +1,7 @@
 Require Import List.
 Require Import Omega.
 Require Import Arith.Peano_dec.
+Require Import VerdiTactics.
 
 Ltac boring :=
   simpl; intuition;
@@ -12,8 +13,14 @@ Ltac boring :=
            | _ => progress intuition
          end; eauto.
 
+Lemma nth_error_nil_error : forall {A} n, nth_error (@nil A) n = None.
+Proof.
+intros. induction n; boring.
+Qed.
+
 Ltac nth_tac' := 
   intros; simpl in *; unfold error,value in *; repeat progress (match goal with
+    | [  |- context[nth_error nil ?n] ] => rewrite nth_error_nil_error
     | [ H: ?x = Some _  |- context[match ?x with Some _ => ?a | None => ?a end ] ] => destruct x
     | [ H: ?x = None _  |- context[match ?x with Some _ => ?a | None => ?a end ] ] => destruct x
     | [  |- context[match ?x with Some _ => ?a | None => ?a end ] ] => destruct x
@@ -62,6 +69,18 @@ Proof.
   induction i; destruct xs; nth_tac'; rewrite IHi by omega; auto.
 Qed.
 Hint Resolve nth_error_length_error.
+
+Lemma map_nth_default : forall (A B : Type) (f : A -> B) n x y l,
+  (n < length l) -> nth_default y (map f l) n = f (nth_default x l n).
+Proof.
+  intros.
+  unfold nth_default.
+  erewrite map_nth_error.
+  reflexivity.
+  nth_tac'.
+  pose proof (nth_error_error_length A n l H0).
+  omega.  
+Qed.
 
 Ltac nth_tac := 
   repeat progress (try nth_tac'; try (match goal with
@@ -141,6 +160,25 @@ Lemma nth_value_index : forall {T} i xs (x:T),
 Proof.
   induction i; destruct xs; nth_tac; right.
   rewrite <- seq_shift; apply in_map; eapply IHi; eauto.
+Qed.
+
+Lemma nth_error_app : forall {T} n (xs ys:list T), nth_error (xs ++ ys) n =
+  if lt_dec n (length xs)
+  then nth_error xs n
+  else nth_error ys (n - length xs).
+Proof.
+  induction n; destruct xs; destruct ys; nth_tac.
+Admitted.
+
+Lemma nth_default_app : forall {T} n x (xs ys:list T), nth_default x (xs ++ ys) n =
+  if lt_dec n (length xs)
+  then nth_default x xs n
+  else nth_default x ys (n - length xs).
+Proof.
+  intros.
+  unfold nth_default.
+  rewrite nth_error_app.
+  destruct (lt_dec n (length xs)); auto.
 Qed.
 
 Lemma combine_truncate_r : forall {A} (xs ys : list A),
