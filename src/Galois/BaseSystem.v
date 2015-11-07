@@ -179,14 +179,6 @@ Module BaseSystem (Import B:BaseCoefs).
   Definition mul_bi (i:nat) (vs:digits) : digits :=
     zeros i ++ rev (mul_bi' i (rev vs)).
 
-  Infix ".*" := mul_bi (at level 40).
-
-  (*
-  Definition mul_bi (i:nat) (vs:digits) : digits :=
-    let mkEntry := (fun (p:(nat*Z)) => let (j, v) := p in v * crosscoef i j) in
-    zeros i ++ map mkEntry (@enumerate Z vs).
-  *)
-
   Hint Unfold nth_default.
 
   Hint Extern 1 (@eq Z _ _) => ring.
@@ -216,7 +208,7 @@ Module BaseSystem (Import B:BaseCoefs).
 
   Lemma mul_bi_single : forall m n x,
     (n + m < length base)%nat ->
-    decode (n .* (zeros m ++ x :: nil)) = nth_default 0 base m * x * nth_default 0 base n.
+    decode (mul_bi n (zeros m ++ x :: nil)) = nth_default 0 base m * x * nth_default 0 base n.
   Proof.
     unfold mul_bi, decode.
     destruct m; simpl; ssimpl_list; simpl; intros. {
@@ -609,7 +601,7 @@ Module BaseSystem (Import B:BaseCoefs).
   Qed.
 
   Lemma mul_bi_add : forall n us vs,
-    n .* (us .+ vs) = n .* us .+ n .* vs.
+    mul_bi n (us .+ vs) = (mul_bi n  us) .+ (mul_bi n vs).
   Proof.
     intros.
     destruct (le_ge_dec (length us) (length vs)). {
@@ -624,7 +616,7 @@ Module BaseSystem (Import B:BaseCoefs).
 
   Lemma mul_bi_rep : forall i vs,
     (i + length vs < length base)%nat ->
-    decode (i .* vs) = decode vs * nth_default 0 base i.
+    decode (mul_bi i vs) = decode vs * nth_default 0 base i.
   Proof.
     unfold decode.
     induction vs using rev_ind; intros; simpl. {
@@ -655,11 +647,10 @@ Module BaseSystem (Import B:BaseCoefs).
   Fixpoint mul' (usr vs:digits) : digits :=
     match usr with
       | u::usr' => 
-        mul_each u (length usr' .* vs) .+ mul' usr' vs
+        mul_each u (mul_bi (length usr') vs) .+ mul' usr' vs
       | _ => nil
     end.
   Definition mul us := mul' (rev us).
-  Infix "#*" := mul (at level 40).
 
   Lemma mul'_rep : forall us vs,
     (length us + length vs <= length base)%nat ->
@@ -686,10 +677,15 @@ Module BaseSystem (Import B:BaseCoefs).
 
   Lemma mul_rep : forall us vs,
     (length us + length vs <= length base)%nat ->
-    decode (us #* vs) = decode us * decode vs.
+    decode (mul us vs) = decode us * decode vs.
   Proof.
     exact mul'_rep.
   Qed.
+
+  Lemma mul_length: forall us vs, (~ (us = nil)) ->
+      length (mul us vs) = (length us + length vs)%nat.
+  Proof.
+  Admitted.
 
 (* Print Assumptions mul_rep. *)
 
