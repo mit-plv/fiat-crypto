@@ -164,6 +164,34 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
   Module E := BaseSystem EC.
   Module B := BaseSystem BC.
 
+  Definition T := B.digits.
+  Local Hint Unfold T.
+  Definition toGF (us : T) : GF := GF.inject (B.decode us).
+  Local Hint Unfold toGF.
+  Definition rep (us : T) (x : GF) := length us = length BC.base /\ toGF us = x.
+  Local Notation "u '~=' x" := (rep u x) (at level 70).
+  Local Hint Unfold rep.
+
+  Lemma rep_toGF : forall us x, us ~= x -> toGF us = x.
+  Proof.
+    autounfold; intuition.
+  Qed.
+
+  Definition add (us vs : T) := B.add us vs.
+  Lemma add_rep : forall u v x y, u ~= x -> v ~= y -> add u v ~= (x+y)%GF.
+  Proof.
+    autounfold; intuition. {
+      unfold add.
+      apply B.add_same_length; auto.
+    }
+    unfold toGF in *; unfold B.decode in *.
+    rewrite B.add_rep.
+    replace (inject (B.decode' BC.base u + B.decode' BC.base v))
+    with ((inject (B.decode' BC.base u)) + (inject (B.decode' BC.base v)))%GF
+    by admit. (* TODO(rsloan): inject (a + b) = inject a + inject b *)
+    subst; auto.
+  Qed.
+
   (* TODO: move to ListUtil *)
   Lemma firstn_app : forall {A} n (xs ys : list A), (n <= length xs)%nat ->
       firstn n xs = firstn n (xs ++ ys).
@@ -184,6 +212,11 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     rewrite (firstn_app _ _  (map (Z.mul (2 ^ P.k)) BC.base)); auto.
   Qed.
 
+  Lemma extended_base_length:
+      length EC.base = (length BC.base + length BC.base)%nat.
+  Proof.
+    unfold EC.base; rewrite app_length; rewrite map_length; auto.
+  Qed.
 
   Lemma mul_rep_extended : forall (us vs : B.digits),
       (length us <= length BC.base)%nat -> 
@@ -259,8 +292,57 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     rewrite B.mul_each_rep; auto.
   Qed.
 
-  Definition add := B.add.
-  Definition mul us vs := reduce (E.mul us vs).
-  Definition square x := mul x x.
+  (* TODO: move to listutil *)
+  Lemma skipn_length : forall {A} n (xs : list A),
+      length (skipn n xs) = (length xs - n)%nat.
+  Proof.
+    induction n; destruct xs; boring.
+  Qed.
+
+  Lemma reduce_length : forall us, 
+      (length us <= length EC.base)%nat ->
+      (length us >= length BC.base)%nat ->
+      length (reduce us) = length (BC.base).
+  Proof.
+    intros.
+    unfold reduce.
+    remember (map (Z.mul P.c) (skipn (length BC.base) us)) as high.
+    remember (firstn (length BC.base) us) as low.
+    assert (length low = length BC.base)
+      by (rewrite Heqlow; rewrite firstn_length; rewrite min_l; auto).
+    assert (length high <= length BC.base)%nat 
+      by (rewrite Heqhigh; rewrite map_length; rewrite skipn_length;
+      rewrite extended_base_length in H; omega).
+    rewrite B.add_trailing_zeros.
+    rewrite (B.add_same_length _ _ (length BC.base)); try apply H1; auto. {
+      rewrite app_length.
+      rewrite B.length_zeros; intuition.
+    }
+    omega.
+  Qed.
+
+  Definition mul (us vs : T) := reduce (E.mul us vs).
+  Lemma mul_rep : forall u v x y, u ~= x -> v ~= y -> mul u v ~= (x*y)%GF.
+  Proof.
+    autounfold; unfold mul; intuition; try apply reduce_length;
+    try (rewrite E.mul_length; try rewrite extended_base_length; omega).
+    unfold mul.
+    unfold toGF in *.
+    assert (forall x, inject x = inject (x mod modulus)) as Hm by admit;
+      rewrite Hm. (* TODO(rsloan)*)
+    rewrite reduce_rep.
+    rewrite E.mul_rep; try (rewrite extended_base_length; omega).
+    rewrite <-Hm.
+    assert (forall x y, inject (x*y) = inject x * inject y)%GF as Hi by admit;
+      rewrite Hi; clear Hi. (* TODO(rsloan)*)
+    subst; auto.
+    replace (E.decode u) with (B.decode u) by (apply decode_short; omega).
+    replace (E.decode v) with (B.decode v) by (apply decode_short; omega).
+    auto.
+  Qed.
+
+  Parameter square : T -> T.
+  Axiom square_rep : forall u x, u ~= x -> square u ~= (x^2)%GF.
+  (* we will want a non-trivial implementation later, currently square x = mul x x *)
 
 End GFPseudoMersenneBase.
