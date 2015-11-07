@@ -18,8 +18,8 @@ Module Type PseudoMersenneBaseParams (Import B:BaseCoefs) (Import M:Modulus).
     (j   <  length base)%nat ->
     (i+j >= length base)%nat->
     let b := nth_default 0 base in
-    let r := (b i * b j)  /  (2^k * b (i+j-length base)%nat) in
-              b i * b j = r * 2^k * b (i+j-length base)%nat.
+    let r := (b i * b j)  /   (2^k * b (i+j-length base)%nat) in
+              b i * b j = r * (2^k * b (i+j-length base)%nat).
 
   Axiom b0_1 : nth_default 0 base 0 = 1.
 
@@ -104,21 +104,30 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
       unfold base in *.
       rewrite app_length in H; rewrite map_length in H.
       repeat rewrite nth_default_app.
-      destruct (lt_dec i (length BC.base)); destruct (lt_dec j (length BC.base)); destruct (lt_dec (i + j) (length BC.base)); try omega.
-      {
-        (* i < length BC.base, j < length BC.base, i + j < length BC.base *)
+      destruct (lt_dec i (length BC.base));
+        destruct (lt_dec j (length BC.base));
+        destruct (lt_dec (i + j) (length BC.base));
+        try omega.
+      { (* i < length BC.base, j < length BC.base, i + j < length BC.base *)
         apply BC.base_good; auto.
-      } {
-        (* i < length BC.base, j < length BC.base, i + j >= length BC.base *)
-        admit.
-      } {
-        (* i < length BC.base, j >= length BC.base, i + j >= length BC.base *)
+      } { (* i < length BC.base, j < length BC.base, i + j >= length BC.base *)
+        rewrite (map_nth_default _ _ _ _ 0) by omega.
+        apply P.base_matches_modulus; omega.
+      } { (* i < length BC.base, j >= length BC.base, i + j >= length BC.base *)
         do 2 rewrite map_nth_default_base_high by omega.
-        remember (nth_default 0 BC.base) as b.
         remember (j - length BC.base)%nat as j'.
-        admit.
-      } {
-        (* i >= length BC.base, j < length BC.base, i + j >= length BC.base *)
+        replace (i + j - length BC.base)%nat with (i + j')%nat by omega.
+        remember (nth_default 0 BC.base) as b.
+        replace (b i * (2 ^ P.k * b j')) with (2 ^ P.k * (b i * b j')) by ring.
+        rewrite Zdiv_mult_cancel_l by admit.
+        replace (b i * b j' / b (i + j')%nat * (2 ^ P.k * b (i + j')%nat))
+         with  ((2 ^ P.k * (b (i + j')%nat * (b i * b j' / b (i + j')%nat)))) by ring.
+        rewrite Z.mul_cancel_l by admit.
+        replace (b (i + j')%nat * (b i * b j' / b (i + j')%nat))
+         with ((b i * b j' / b (i + j')%nat) * b (i + j')%nat) by ring.
+        subst b.
+        apply (BC.base_good i j'); omega.
+      } { (* i >= length BC.base, j < length BC.base, i + j >= length BC.base *)
         admit.
       }
     Qed.

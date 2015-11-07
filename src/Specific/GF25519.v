@@ -55,8 +55,8 @@ Module GF25519Base25Point5Params <: PseudoMersenneBaseParams Base25Point5_10limb
     (j   <  length base)%nat ->
     (i+j >= length base)%nat ->
     let b := nth_default 0 base in
-    let r := (b i * b j)  /  (2^k * b (i+j-length base)%nat) in
-              b i * b j = r * 2^k * b (i+j-length base)%nat.
+    let r := (b i * b j)  /   (2^k * b (i+j-length base)%nat) in
+              b i * b j = r * (2^k * b (i+j-length base)%nat).
   Proof.
     intros.
     assert (In i (seq 0 (length base))) by nth_tac.

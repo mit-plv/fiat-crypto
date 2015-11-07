@@ -167,8 +167,9 @@ Lemma nth_error_app : forall {T} n (xs ys:list T), nth_error (xs ++ ys) n =
   then nth_error xs n
   else nth_error ys (n - length xs).
 Proof.
-  induction n; destruct xs; destruct ys; nth_tac.
-Admitted.
+  induction n; destruct xs; nth_tac;
+    rewrite IHn; destruct (lt_dec n (length xs)); trivial; omega.
+Qed.
 
 Lemma nth_default_app : forall {T} n x (xs ys:list T), nth_default x (xs ++ ys) n =
   if lt_dec n (length xs)
