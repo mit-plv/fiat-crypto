@@ -21,7 +21,7 @@ Module Type PseudoMersenneBaseParams (Import B:BaseCoefs) (Import M:Modulus).
     let r := (b i * b j)  /  (2^k * b (i+j-length base)%nat) in
               b i * b j = r * 2^k * b (i+j-length base)%nat.
 
-  Axiom b0_1 : nth_default 0 base 1 = 1.
+  Axiom b0_1 : nth_default 0 base 0 = 1.
 
   (* Probably implied by modulus_pseudomersenne. *)
   Axiom k_pos : 0 <= k.
@@ -55,7 +55,7 @@ Module Type GFrep (Import M:Modulus).
   (* we will want a non-trivial implementation later, currently square x = mul x x *)
 End GFrep.
 
-Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBaseParams BC M) <: GFrep M.
+Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBaseParams BC M) (* TODO(jadep): "<: GFrep M" *).
   Module Import GF := GaloisTheory M.
   Module EC <: BaseCoefs.
     Definition base := BC.base ++ (map (Z.mul (2^(P.k))) BC.base).
@@ -210,5 +210,9 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     replace (map (Z.mul P.c) high) with (B.mul_each P.c high) by auto.
     rewrite B.mul_each_rep; auto.
   Qed.
+
+  Definition add := B.add.
+  Definition mul us vs := reduce (E.mul us vs).
+  Definition square x := mul x x.
 
 End GFPseudoMersenneBase.

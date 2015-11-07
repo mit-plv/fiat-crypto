@@ -10,6 +10,8 @@ src/Galois/GaloisExamples.v
 src/Galois/AbstractGaloisField.v
 src/Galois/ComputationalGaloisField.v
 src/Galois/BaseSystem.v
+src/Galois/ModularBaseSystem.v
 src/Curves/PointFormats.v
 src/Assembly/WordBounds.v
 src/Curves/Curve25519.v
+src/Specific/GF25519.v
