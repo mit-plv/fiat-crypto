@@ -90,6 +90,25 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
       let b := nth_default 0 base in
       let r := (b i * b j) / b (i+j)%nat in
       b i * b j = r * b (i+j)%nat.
+    Proof.
+        (* TODO: move to listutil *)
+        Lemma nth_error_app : forall {T} n (xs ys:list T), nth_error (xs ++ ys) n =
+            if lt_dec n (length xs)
+            then nth_error xs n
+            else nth_error ys (n - length xs).
+       Proof.
+           induction n; destruct xs; destruct ys; nth_tac.
+       Admitted.
+       
+       intros.
+       subst b.
+       unfold base, nth_default.
+       repeat rewrite nth_error_app.
+       destruct (lt_dec i (length BC.base)); destruct (lt_dec j (length BC.base)).
+       nth_tac. destruct (lt_dec (i + j) (length BC.base)); try omega.
+       SearchAbout nth_error.
+        
+
     Admitted.
 
   End EC.
