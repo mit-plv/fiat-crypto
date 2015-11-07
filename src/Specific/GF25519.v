@@ -71,7 +71,7 @@ Module GF25519Base25Point5Params <: PseudoMersenneBaseParams Base25Point5_10limb
     reflexivity.
   Qed.
 
-  Lemma k_pos : 0 <= k.
+  Lemma k_nonneg : 0 <= k.
   Proof.
     rewrite Zle_is_le_bool; reflexivity.
   Qed.

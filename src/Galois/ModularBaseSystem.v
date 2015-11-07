@@ -24,7 +24,7 @@ Module Type PseudoMersenneBaseParams (Import B:BaseCoefs) (Import M:Modulus).
   Axiom b0_1 : nth_default 0 base 0 = 1.
 
   (* Probably implied by modulus_pseudomersenne. *)
-  Axiom k_pos : 0 <= k.
+  Axiom k_nonneg : 0 <= k.
 
 End PseudoMersenneBaseParams.
 
@@ -77,12 +77,17 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
           apply (Zmult_gt_compat_l a 0 (2 ^ P.k)).
           rewrite Z.gt_lt_iff.
           apply Z.pow_pos_nonneg; intuition.
-          apply P.k_pos.
+          pose proof P.k_nonneg; omega.
           apply H0; left; auto.
           apply IHl; auto.
           intros. apply H0; auto. right; auto.
         }
       }
+    Qed.
+
+    Lemma two_k_nonzero : 2^P.k <> 0.
+      pose proof (Z.pow_eq_0 2 P.k P.k_nonneg).
+      intuition.
     Qed.
 
     Lemma map_nth_default_base_high : forall n, (n < (length BC.base))%nat -> 
@@ -91,6 +96,29 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     Proof.
       intros.
       erewrite map_nth_default; auto.
+    Qed.
+
+    Lemma base_good_over_boundary : forall
+      (i : nat)
+      (l : (i < length BC.base)%nat)
+      (j' : nat)
+      (Hj': (i + j' < length BC.base)%nat)
+      ,
+      2 ^ P.k * (nth_default 0 BC.base i * nth_default 0 BC.base j') =
+      2 ^ P.k * (nth_default 0 BC.base i * nth_default 0 BC.base j') /
+      (2 ^ P.k * nth_default 0 BC.base (i + j')) *
+      (2 ^ P.k * nth_default 0 BC.base (i + j'))
+    .
+    Proof. intros.
+      remember (nth_default 0 BC.base) as b.
+      rewrite Zdiv_mult_cancel_l by (exact two_k_nonzero).
+      replace (b i * b j' / b (i + j')%nat * (2 ^ P.k * b (i + j')%nat))
+       with  ((2 ^ P.k * (b (i + j')%nat * (b i * b j' / b (i + j')%nat)))) by ring.
+      rewrite Z.mul_cancel_l by (exact two_k_nonzero).
+      replace (b (i + j')%nat * (b i * b j' / b (i + j')%nat))
+       with ((b i * b j' / b (i + j')%nat) * b (i + j')%nat) by ring.
+      subst b.
+      apply (BC.base_good i j'); omega.
     Qed.
 
     Lemma base_good :
@@ -117,18 +145,18 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
         do 2 rewrite map_nth_default_base_high by omega.
         remember (j - length BC.base)%nat as j'.
         replace (i + j - length BC.base)%nat with (i + j')%nat by omega.
-        remember (nth_default 0 BC.base) as b.
-        replace (b i * (2 ^ P.k * b j')) with (2 ^ P.k * (b i * b j')) by ring.
-        rewrite Zdiv_mult_cancel_l by admit.
-        replace (b i * b j' / b (i + j')%nat * (2 ^ P.k * b (i + j')%nat))
-         with  ((2 ^ P.k * (b (i + j')%nat * (b i * b j' / b (i + j')%nat)))) by ring.
-        rewrite Z.mul_cancel_l by admit.
-        replace (b (i + j')%nat * (b i * b j' / b (i + j')%nat))
-         with ((b i * b j' / b (i + j')%nat) * b (i + j')%nat) by ring.
-        subst b.
-        apply (BC.base_good i j'); omega.
+        replace (nth_default 0 BC.base i * (2 ^ P.k * nth_default 0 BC.base j'))
+           with (2 ^ P.k * (nth_default 0 BC.base i * nth_default 0 BC.base j'))
+           by ring.
+        eapply base_good_over_boundary; eauto; omega.
       } { (* i >= length BC.base, j < length BC.base, i + j >= length BC.base *)
-        admit.
+        do 2 rewrite map_nth_default_base_high by omega.
+        remember (i - length BC.base)%nat as i'.
+        replace (i + j - length BC.base)%nat with (j + i')%nat by omega.
+        replace (2 ^ P.k * nth_default 0 BC.base i' * nth_default 0 BC.base j)
+           with (2 ^ P.k * (nth_default 0 BC.base j * nth_default 0 BC.base i'))
+           by ring.
+        eapply base_good_over_boundary; eauto; omega.
       }
     Qed.
   End EC.
