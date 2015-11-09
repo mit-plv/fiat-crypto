@@ -50,9 +50,6 @@ Module Type GFrep (Import M:Modulus).
   Parameter mul : T -> T -> T.
   Axiom mul_rep : forall u v x y, u ~= x -> v ~= y -> mul u v ~= (x*y)%GF.
 
-  Parameter square : T -> T.
-  Axiom square_rep : forall u x, u ~= x -> square u ~= (x^2)%GF.
-  (* we will want a non-trivial implementation later, currently square x = mul x x *)
 End GFrep.
 
 Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBaseParams BC M) (* TODO(jadep): "<: GFrep M" *).
@@ -168,7 +165,7 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
   Local Hint Unfold T.
   Definition toGF (us : T) : GF := GF.inject (B.decode us).
   Local Hint Unfold toGF.
-  Definition rep (us : T) (x : GF) := length us = length BC.base /\ toGF us = x.
+  Definition rep (us : T) (x : GF) := (length us <= length BC.base)%nat /\ toGF us = x.
   Local Notation "u '~=' x" := (rep u x) (at level 70).
   Local Hint Unfold rep.
 
@@ -182,7 +179,12 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
   Proof.
     autounfold; intuition. {
       unfold add.
-      apply B.add_same_length; auto.
+      rewrite B.add_length_le_max.
+      B.case_max. {
+        rewrite Max.max_r; omega.
+      } {
+        omega.
+      }
     }
     unfold toGF in *; unfold B.decode in *.
     rewrite B.add_rep.
@@ -192,14 +194,6 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     subst; auto.
   Qed.
 
-  (* TODO: move to ListUtil *)
-  Lemma firstn_app : forall {A} n (xs ys : list A), (n <= length xs)%nat ->
-      firstn n xs = firstn n (xs ++ ys).
-  Proof.
-    induction n; destruct xs; destruct ys; simpl_list; boring; try omega.
-    rewrite (IHn xs (a0 :: ys)) by omega; auto.
-  Qed.
-    
   Lemma decode_short : forall (us : B.digits), 
     (length us <= length BC.base)%nat -> B.decode us = E.decode us.
   Proof.
@@ -292,40 +286,45 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     rewrite B.mul_each_rep; auto.
   Qed.
 
-  (* TODO: move to listutil *)
-  Lemma skipn_length : forall {A} n (xs : list A),
-      length (skipn n xs) = (length xs - n)%nat.
-  Proof.
-    induction n; destruct xs; boring.
-  Qed.
-
   Lemma reduce_length : forall us, 
       (length us <= length EC.base)%nat ->
-      (length us >= length BC.base)%nat ->
-      length (reduce us) = length (BC.base).
+      (length (reduce us) <= length (BC.base))%nat.
   Proof.
     intros.
     unfold reduce.
     remember (map (Z.mul P.c) (skipn (length BC.base) us)) as high.
     remember (firstn (length BC.base) us) as low.
-    assert (length low = length BC.base)
-      by (rewrite Heqlow; rewrite firstn_length; rewrite min_l; auto).
+    assert (length low >= length high)%nat. {
+      subst. rewrite firstn_length.
+      rewrite map_length.
+      rewrite skipn_length.
+      destruct (le_dec (length BC.base) (length us)). {
+        rewrite Min.min_l by omega.
+        rewrite extended_base_length in H. omega.
+      } {
+        rewrite Min.min_r by omega. omega.
+      }
+    }
+    assert ((length low <= length BC.base)%nat)
+      by (rewrite Heqlow; rewrite firstn_length; apply Min.le_min_l).
     assert (length high <= length BC.base)%nat 
       by (rewrite Heqhigh; rewrite map_length; rewrite skipn_length;
       rewrite extended_base_length in H; omega).
-    rewrite B.add_trailing_zeros.
-    rewrite (B.add_same_length _ _ (length BC.base)); try apply H1; auto. {
-      rewrite app_length.
-      rewrite B.length_zeros; intuition.
-    }
-    omega.
+    rewrite B.add_trailing_zeros; auto.
+    rewrite (B.add_same_length _ _ (length low)); auto.
+    rewrite app_length.
+    rewrite B.length_zeros; intuition.
   Qed.
 
   Definition mul (us vs : T) := reduce (E.mul us vs).
   Lemma mul_rep : forall u v x y, u ~= x -> v ~= y -> mul u v ~= (x*y)%GF.
   Proof.
-    autounfold; unfold mul; intuition; try apply reduce_length;
-    try (rewrite E.mul_length; try rewrite extended_base_length; omega).
+    autounfold; unfold mul; intuition. {
+      rewrite reduce_length; try omega.
+      rewrite E.mul_length.
+      rewrite extended_base_length.
+      omega.
+    }
     unfold mul.
     unfold toGF in *.
     assert (forall x, inject x = inject (x mod modulus)) as Hm by admit;
@@ -341,8 +340,6 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     auto.
   Qed.
 
-  Parameter square : T -> T.
-  Axiom square_rep : forall u x, u ~= x -> square u ~= (x^2)%GF.
-  (* we will want a non-trivial implementation later, currently square x = mul x x *)
+  (* Still missing: subtraction, fromGF *)
 
 End GFPseudoMersenneBase.

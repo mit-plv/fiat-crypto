@@ -204,15 +204,21 @@ Proof.
   destruct n; auto.
 Qed.
 
-Lemma firstn_app : forall A (l l': list A), firstn (length l) (l ++ l') = l.
+Lemma firstn_app : forall {A} n (xs ys : list A), (n <= length xs)%nat ->
+  firstn n xs = firstn n (xs ++ ys).
 Proof.
-  intros.
-  induction l; simpl; auto.
-  f_equal; auto.
+  induction n; destruct xs; destruct ys; simpl_list; boring; try omega.
+  rewrite (IHn xs (a0 :: ys)) by omega; auto.
 Qed.
-
+    
 Lemma skipn_app : forall A (l l': list A), skipn (length l) (l ++ l') = l'.
 Proof.
   intros.
   induction l; simpl; auto.
+Qed.
+
+Lemma skipn_length : forall {A} n (xs : list A),
+  length (skipn n xs) = (length xs - n)%nat.
+Proof.
+induction n; destruct xs; boring.
 Qed.

@@ -558,6 +558,31 @@ Module BaseSystem (Import B:BaseCoefs).
     }
   Qed.
 
+  Lemma length_add_ge : forall us vs, (length us >= length vs)%nat ->
+    (length (us .+ vs) <= length us)%nat.
+  Proof.
+    intros.
+    rewrite add_trailing_zeros; auto.
+    rewrite (add_same_length _ _ (length us)); try omega.
+    rewrite app_length.
+    rewrite length_zeros.
+    omega.
+  Qed.
+
+  Lemma add_length_le_max : forall us vs,
+      (length (us .+ vs) <= max (length us) (length vs))%nat.
+  Proof.
+    intros.
+    destruct (ge_dec (length us) (length vs)). {
+      rewrite Max.max_l by omega.
+      rewrite length_add_ge; auto.
+    } {
+      rewrite add_comm.
+      rewrite Max.max_r by omega.
+      apply length_add_ge; omega.
+    }
+  Qed.
+
   Lemma mul_bi_length : forall us n, length (mul_bi n us) = (length us + n)%nat.
   Proof.
     induction us; intros; simpl. {
@@ -682,10 +707,32 @@ Module BaseSystem (Import B:BaseCoefs).
     exact mul'_rep.
   Qed.
 
-  Lemma mul_length: forall us vs, (~ (us = nil)) ->
-      length (mul us vs) = (length us + length vs)%nat.
+  Ltac case_max :=
+    match goal with [ |- context[max ?x ?y] ] =>
+        destruct (le_dec x y); try ( rewrite Max.max_l by omega
+                              || rewrite Max.max_r by omega)
+    end.
+
+  Lemma mul'_length: forall us vs,
+      (length (mul' us vs) <= length us + length vs)%nat.
   Proof.
-  Admitted.
+    induction us; intros; simpl; try omega.
+    rewrite add_length_le_max.
+    unfold mul_each; rewrite map_length; rewrite mul_bi_length.
+    case_max. {
+      rewrite Max.max_l by (rewrite plus_comm; eauto); omega.
+    } {
+      omega.
+    }
+  Qed.
+
+  Lemma mul_length: forall us vs,
+      (length (mul us vs) <= length us + length vs)%nat.
+  Proof.
+    intros; unfold mul.
+    rewrite mul'_length.
+    rewrite rev_length; omega.
+  Qed.
 
 (* Print Assumptions mul_rep. *)
 
@@ -755,7 +802,7 @@ Module BaseSystemExample.
   Module BasePoly2Degree32 := BaseSystem BasePoly2Degree32Coefs.
   Import BasePoly2Degree32.
 
-  Example three_times_two : [1;1;0] #* [0;1;0] = [0;1;1;0;0].
+  Example three_times_two : mul [1;1;0] [0;1;0] = [0;1;1;0;0].
   Proof.
     reflexivity.
   Qed.
@@ -772,11 +819,11 @@ Module BaseSystemExample.
     reflexivity.
   Qed.
   Example encoded_ab :
-    a #*b =[1;1;1;2;2;4;2;2;4;5;3;3;3;6;4;2;5;3;4;3;2;1;2;2;2;0;1;1;0;1].
+    mul a b =[1;1;1;2;2;4;2;2;4;5;3;3;3;6;4;2;5;3;4;3;2;1;2;2;2;0;1;1;0;1].
   Proof.
     reflexivity.
   Qed.
-  Example dab : decode (a #* b) = 804660279.
+  Example dab : decode (mul a b) = 804660279.
   Proof.
     reflexivity.
   Qed.
