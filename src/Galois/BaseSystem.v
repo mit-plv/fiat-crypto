@@ -44,11 +44,9 @@ Module BaseSystem (Import B:BaseCoefs).
   (* Does not carry; z becomes the lowest and only digit. *)
   Definition encode (z : Z) := z :: nil.
 
-  Lemma decode_truncate : forall us, decode us = decode (firstn (length base) us).
+  Lemma decode'_truncate : forall bs us, decode' bs us = decode' bs (firstn (length bs) us).
   Proof.
-    intros.
-    unfold decode, decode'.
-    rewrite combine_truncate_l; auto.
+    unfold decode, decode'; intros; f_equal; apply combine_truncate_l.
   Qed.
   
   Fixpoint add (us vs:digits) : digits :=
@@ -59,35 +57,29 @@ Module BaseSystem (Import B:BaseCoefs).
     end.
   Infix ".+" := add (at level 50).
 
+  Hint Extern 1 (@eq Z _ _) => ring.
+
   Lemma add_rep : forall bs us vs, decode' bs (add us vs) = decode' bs us + decode' bs vs.
   Proof.
-    unfold decode', accumulate.
-    induction bs; destruct us; destruct vs; auto; simpl; try rewrite IHbs; ring.
+    unfold decode, decode'; induction bs; destruct us; destruct vs; boring.
   Qed.
 
   Lemma decode_nil : forall bs, decode' bs nil = 0.
     auto.
   Qed.
+  Hint Rewrite decode_nil.
 
   Lemma decode_base_nil : forall us, decode' nil us = 0.
   Proof.
-    intros.
-    unfold decode'.
-    rewrite combine_truncate_l; auto.
+    intros; rewrite decode'_truncate; auto.
   Qed.
-
-  (* mul_geomseq is a valid multiplication algorithm if b_i = b_1^i *)
-  Fixpoint mul_geomseq (us vs:digits) : digits :=
-    match us,vs with
-      | u::us', v::vs' => u*v :: map (Z.mul u) vs' .+ mul_geomseq us' vs
-      | _, _ => nil
-    end.
+  Hint Rewrite decode_base_nil.
 
   Definition mul_each u := map (Z.mul u).
-  Lemma mul_each_rep : forall bs u vs, decode' bs (mul_each u vs) = u * decode' bs vs.
+  Lemma mul_each_rep : forall bs u vs,
+    decode' bs (mul_each u vs) = u * decode' bs vs.
   Proof.
-    unfold decode', accumulate.
-    induction bs; destruct vs; auto; simpl; try rewrite IHbs; ring.
+    unfold decode'; induction bs; destruct vs; boring.
   Qed.
 
   Lemma decode'_cons : forall x1 x2 xs1 xs2,
@@ -95,7 +87,6 @@ Module BaseSystem (Import B:BaseCoefs).
   Proof.
     unfold decode'; boring.
   Qed.
-
   Hint Rewrite decode'_cons.
 
   Lemma base_destruction: exists l, base = 1 :: l.
@@ -118,30 +109,16 @@ Module BaseSystem (Import B:BaseCoefs).
   Lemma mul_each_base : forall us bs c, 
       decode' bs (mul_each c us) = decode' (mul_each c bs) us.
   Proof.
-    induction us; intros; simpl; auto.
-    destruct bs.
-    apply decode_base_nil.
-    unfold mul_each; boring.
-    replace (z * (c * a)) with (c * z * a) by ring; f_equal.
-    unfold mul_each in IHus.
-    apply IHus.
+    induction us; destruct bs; boring.
   Qed.
+
+  Hint Rewrite (@firstn_nil Z).
+  Hint Rewrite (@skipn_nil Z).
 
   Lemma base_app : forall us low high,
       decode' (low ++ high) us = decode' low (firstn (length low) us) + decode' high (skipn (length low) us).
   Proof.
-    induction us; intros. {
-      rewrite firstn_nil.
-      rewrite skipn_nil.
-      do 3 rewrite decode_nil; auto.
-    } {
-      destruct low; auto.
-      replace (skipn (length (z :: low)) (a :: us)) with (skipn (length (low)) (us)) by auto.
-      simpl.
-      do 2 rewrite decode'_cons.
-      rewrite IHus.
-      ring.
-    }
+    induction us; destruct low; boring.
   Qed.
 
   Lemma base_mul_app : forall low c us, 
@@ -151,21 +128,21 @@ Module BaseSystem (Import B:BaseCoefs).
     intros.
     rewrite base_app; f_equal.
     rewrite <- mul_each_rep.
-    symmetry; apply mul_each_base.
+    rewrite mul_each_base.
+    reflexivity.
   Qed.
-
 
   Definition crosscoef i j : Z := 
     let b := nth_default 0 base in
     (b(i) * b(j)) / b(i+j)%nat.
+  Hint Unfold crosscoef.
 
   Fixpoint zeros n := match n with O => nil | S n' => 0::zeros n' end.
   Lemma zeros_rep : forall bs n, decode' bs (zeros n) = 0.
-    unfold decode', accumulate.
-    induction bs; destruct n; auto; simpl; try rewrite IHbs; ring.
+    induction bs; destruct n; boring.
   Qed.
   Lemma length_zeros : forall n, length (zeros n) = n.
-    induction n; simpl; auto.
+    induction n; boring.
   Qed.
 
   Lemma app_zeros_zeros : forall n m, zeros n ++ zeros m = zeros (n + m).
@@ -185,11 +162,6 @@ Module BaseSystem (Import B:BaseCoefs).
     induction n; boring.
   Qed.
 
-  Lemma app_cons_app_app : forall T xs (y:T) ys, xs ++ y :: ys = (xs ++ (y::nil)) ++ ys.
-  Proof.
-    induction xs; boring.
-  Qed.
-
   (* mul' is multiplication with the SECOND ARGUMENT REVERSED and OUTPUT REVERSED *)
   Fixpoint mul_bi' (i:nat) (vsr:digits) := 
     match vsr with
@@ -201,13 +173,12 @@ Module BaseSystem (Import B:BaseCoefs).
 
   Hint Unfold nth_default.
 
-  Hint Extern 1 (@eq Z _ _) => ring.
-
   Lemma decode_single : forall n bs x,
     decode' bs (zeros n ++ x :: nil) = nth_default 0 bs n * x.
   Proof.
     induction n; destruct bs; boring.
   Qed.
+  Hint Rewrite decode_single.
 
   Lemma peel_decode : forall xs ys x y, decode' (x::xs) (y::ys) = x*y + decode' xs ys.
   Proof.
@@ -222,28 +193,34 @@ Module BaseSystem (Import B:BaseCoefs).
   Qed.
 
   Lemma mul_bi'_zeros : forall n m, mul_bi' n (zeros m) = zeros m.
-    induction m; intros; auto.
-    simpl; f_equal; apply IHm.
+    induction m; boring.
   Qed.
+
+  Lemma Z_div_mul' : forall a b : Z, b <> 0 -> (b * a) / b = a.
+    intros. rewrite Z.mul_comm. apply Z.div_mul; auto.
+  Qed.
+
+  Lemma Zgt0_neq0 : forall x, x > 0 -> x <> 0.
+    boring.
+  Qed.
+
+  Lemma nth_error_base_nonzero : forall n x,
+    nth_error base n = Some x -> x <> 0.
+  Proof.
+    eauto using (@nth_error_value_In Z), Zgt0_neq0, base_positive.
+  Qed.
+
+  Hint Rewrite plus_0_r.
 
   Lemma mul_bi_single : forall m n x,
     (n + m < length base)%nat ->
     decode (mul_bi n (zeros m ++ x :: nil)) = nth_default 0 base m * x * nth_default 0 base n.
   Proof.
     unfold mul_bi, decode.
-    destruct m; simpl; ssimpl_list; simpl; intros. {
-      rewrite decode_single.
-      unfold crosscoef; simpl.
-      rewrite plus_0_r.
-      ring_simplify.
-      replace (nth_default 0 base n * nth_default 0 base 0) with (nth_default 0 base 0 * nth_default 0 base n) by ring.
-      rewrite Z_div_mult; try ring.
-
-      apply base_positive.
-      rewrite nth_default_eq.
-      apply nth_In.
-      rewrite plus_0_r in *.
-      auto.
+    destruct m; simpl; simpl_list; simpl; intros. {
+      pose proof nth_error_base_nonzero.
+      boring; destruct base; nth_tac.
+      rewrite Z_div_mul'; eauto.
     } {
       simpl; ssimpl_list; simpl.
       rewrite rev_zeros.
