@@ -115,6 +115,7 @@ Module BaseSystem (Import B:BaseCoefs).
   Definition crosscoef i j : Z := 
     let b := nth_default 0 base in
     (b(i) * b(j)) / b(i+j)%nat.
+  Hint Unfold crosscoef.
 
   Fixpoint zeros n := match n with O => nil | S n' => 0::zeros n' end.
   Lemma zeros_rep : forall bs n, decode' bs (zeros n) = 0.
@@ -141,11 +142,6 @@ Module BaseSystem (Import B:BaseCoefs).
     induction n; boring.
   Qed.
 
-  Lemma app_cons_app_app : forall T xs (y:T) ys, xs ++ y :: ys = (xs ++ (y::nil)) ++ ys.
-  Proof.
-    induction xs; boring.
-  Qed.
-
   (* mul' is multiplication with the SECOND ARGUMENT REVERSED and OUTPUT REVERSED *)
   Fixpoint mul_bi' (i:nat) (vsr:digits) := 
     match vsr with
@@ -162,6 +158,7 @@ Module BaseSystem (Import B:BaseCoefs).
   Proof.
     induction n; destruct bs; boring.
   Qed.
+  Hint Rewrite decode_single.
 
   Lemma peel_decode : forall xs ys x y, decode' (x::xs) (y::ys) = x*y + decode' xs ys.
   Proof.
@@ -179,24 +176,31 @@ Module BaseSystem (Import B:BaseCoefs).
     induction m; boring.
   Qed.
 
+  Lemma Z_div_mul' : forall a b : Z, b <> 0 -> (b * a) / b = a.
+    intros. rewrite Z.mul_comm. apply Z.div_mul; auto.
+  Qed.
+
+  Lemma Zgt0_neq0 : forall x, x > 0 -> x <> 0.
+    boring.
+  Qed.
+
+  Lemma nth_error_base_nonzero : forall n x,
+    nth_error base n = Some x -> x <> 0.
+  Proof.
+    eauto using (@nth_error_value_In Z), Zgt0_neq0, base_positive.
+  Qed.
+
+  Hint Rewrite plus_0_r.
+
   Lemma mul_bi_single : forall m n x,
     (n + m < length base)%nat ->
     decode (mul_bi n (zeros m ++ x :: nil)) = nth_default 0 base m * x * nth_default 0 base n.
   Proof.
     unfold mul_bi, decode.
-    destruct m; simpl; ssimpl_list; simpl; intros. {
-      rewrite decode_single.
-      unfold crosscoef; simpl.
-      rewrite plus_0_r.
-      ring_simplify.
-      replace (nth_default 0 base n * nth_default 0 base 0) with (nth_default 0 base 0 * nth_default 0 base n) by ring.
-      rewrite Z_div_mult; try ring.
-
-      apply base_positive.
-      rewrite nth_default_eq.
-      apply nth_In.
-      rewrite plus_0_r in *.
-      auto.
+    destruct m; simpl; simpl_list; simpl; intros. {
+      pose proof nth_error_base_nonzero.
+      boring; destruct base; nth_tac.
+      rewrite Z_div_mul'; eauto.
     } {
       simpl; ssimpl_list; simpl.
       rewrite rev_zeros.

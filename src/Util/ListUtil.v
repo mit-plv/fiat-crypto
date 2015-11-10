@@ -91,10 +91,7 @@ Ltac nth_tac :=
 
 Lemma app_cons_app_app : forall T xs (y:T) ys, xs ++ y :: ys = (xs ++ (y::nil)) ++ ys.
 Proof.
-  induction xs; simpl; repeat match goal with
-           | [ H : _ |- _ ] => rewrite H; clear H
-           | _ => progress intuition
-         end; eauto.
+	induction xs; boring.
 Qed.
 
 (* xs[n] := x *)
@@ -153,6 +150,12 @@ Proof.
     try (specialize (nth_error_value_length _ _ _ _ H); omega).
   assert (Some b0=Some b1) as HA by (rewrite <-H, <-H0; auto).
   injection HA; intros; subst; auto.
+Qed.
+
+Lemma nth_error_value_In : forall {T} n xs (x:T),
+  nth_error xs n = Some x -> In x xs.
+Proof.
+  induction n; destruct xs; nth_tac.
 Qed.
 
 Lemma nth_value_index : forall {T} i xs (x:T),
