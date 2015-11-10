@@ -1,7 +1,7 @@
 Require Import List.
 Require Import Util.ListUtil.
 Require Import ZArith.ZArith ZArith.Zdiv.
-Require Import Omega.
+Require Import Omega NPeano Arith.
 
 Local Open Scope Z.
 
@@ -101,21 +101,16 @@ Module BaseSystem (Import B:BaseCoefs).
     induction bs; destruct us; destruct vs; boring.
   Qed.
 
-  Lemma base_destruction: exists l, base = 1 :: l.
+  Lemma base_eq_1cons: base = 1 :: skipn 1 base.
   Proof.
-    assert (nth_default 0 base 0 = 1) by (apply b0_1).
-    unfold nth_default, nth_error in H.
-    case_eq base; intros; rewrite H0 in H; simpl in H; try omega.
-    rewrite H; eauto.
+    pose proof (b0_1 0) as H.
+    destruct base; compute in H; try discriminate; boring.
   Qed.
 
   Lemma encode_rep : forall z, decode (encode z) = z.
   Proof.
-    intros. unfold decode, encode.
-    assert (exists l, base = 1 :: l) by (apply base_destruction).
-    destruct H.
-    replace base with (1 :: x) by (apply H).
-    rewrite decode'_cons, decode_nil; omega.
+    pose proof base_eq_1cons.
+    unfold decode, encode; destruct z; boring.
   Qed.
 
   Lemma mul_each_base : forall us bs c, 
@@ -156,23 +151,25 @@ Module BaseSystem (Import B:BaseCoefs).
   Lemma length_zeros : forall n, length (zeros n) = n.
     induction n; boring.
   Qed.
+  Hint Rewrite length_zeros.
 
   Lemma app_zeros_zeros : forall n m, zeros n ++ zeros m = zeros (n + m).
   Proof.
     induction n; boring.
   Qed.
+  Hint Rewrite app_zeros_zeros.
 
   Lemma zeros_app0 : forall m, zeros m ++ 0 :: nil = zeros (S m).
   Proof.
     induction m; boring.
   Qed.
-
   Hint Rewrite zeros_app0.
 
   Lemma rev_zeros : forall n, rev (zeros n) = zeros n.
   Proof.
     induction n; boring.
   Qed.
+  Hint Rewrite rev_zeros.
 
   (* mul' is multiplication with the SECOND ARGUMENT REVERSED and OUTPUT REVERSED *)
   Fixpoint mul_bi' (i:nat) (vsr:digits) := 
@@ -196,7 +193,6 @@ Module BaseSystem (Import B:BaseCoefs).
   Proof.
     boring.
   Qed.
-
   Hint Rewrite zeros_rep peel_decode.
 
   Lemma decode_highzeros : forall xs bs n, decode' bs (xs ++ zeros n) = decode' bs xs.
@@ -207,6 +203,7 @@ Module BaseSystem (Import B:BaseCoefs).
   Lemma mul_bi'_zeros : forall n m, mul_bi' n (zeros m) = zeros m.
     induction m; boring.
   Qed.
+  Hint Rewrite mul_bi'_zeros.
 
   Lemma Z_div_mul' : forall a b : Z, b <> 0 -> (b * a) / b = a.
     intros. rewrite Z.mul_comm. apply Z.div_mul; auto.
@@ -234,21 +231,12 @@ Module BaseSystem (Import B:BaseCoefs).
       boring; destruct base; nth_tac.
       rewrite Z_div_mul'; eauto.
     } {
-      simpl; ssimpl_list; simpl.
-      rewrite rev_zeros.
-      rewrite zeros_app0.
-      rewrite mul_bi'_zeros.
-      simpl; ssimpl_list; simpl.
-      rewrite length_zeros.
-      rewrite app_cons_app_app.
-      rewrite rev_zeros.
-      simpl; ssimpl_list; simpl.
-      rewrite zeros_app0.
+      ssimpl_list.
+      autorewrite with core.
       rewrite app_assoc.
-      rewrite app_zeros_zeros.
-      rewrite decode_single.
+      autorewrite with core.
       unfold crosscoef; simpl; ring_simplify.
-      rewrite NPeano.Nat.add_1_r.
+      rewrite Nat.add_1_r.
       rewrite base_good by auto.
       rewrite Z_div_mult by (apply base_positive; rewrite nth_default_eq; apply nth_In; auto).
       rewrite <- Z.mul_assoc.
@@ -283,22 +271,25 @@ Module BaseSystem (Import B:BaseCoefs).
 
   Lemma mul_bi'_n_nil : forall n, mul_bi' n nil = nil.
   Proof.
-    intros.
     unfold mul_bi; auto.
   Qed.
+  Hint Rewrite mul_bi'_n_nil.
 
   Lemma add_nil_l : forall us, nil .+ us = us.
     induction us; auto.
   Qed.
+  Hint Rewrite add_nil_l.
 
   Lemma add_nil_r : forall us, us .+ nil = us.
     induction us; auto.
   Qed.
+  Hint Rewrite add_nil_r.
   
   Lemma add_first_terms : forall us vs a b,
     (a :: us) .+ (b :: vs) = (a + b) :: (us .+ vs).
     auto.
   Qed.
+  Hint Rewrite add_first_terms.
  
   Lemma mul_bi'_cons : forall n x us,
     mul_bi' n (x :: us) = x * crosscoef n (length us) :: mul_bi' n us.
@@ -314,143 +305,57 @@ Module BaseSystem (Import B:BaseCoefs).
   Lemma add_same_length : forall us vs l, (length us = l) -> (length vs = l) ->
     length (us .+ vs) = l.
   Proof.
-    induction us; intros. {
-      rewrite add_nil_l.
-      apply H0.
-    } {
-      destruct vs. {
-        rewrite add_nil_r; apply H.
-      } {
-        rewrite add_first_terms.
-        rewrite cons_length.
-        rewrite (IHus vs (pred l)).
-        apply NPeano.Nat.succ_pred_pos.
-        replace l with (length (a :: us)) by (apply H).
-        rewrite cons_length; simpl.
-        apply gt_Sn_O.
-        replace l with (length (a :: us)) by (apply H).
-        rewrite cons_length; simpl; auto.
-        replace l with (length (z :: vs)) by (apply H).
-        rewrite cons_length; simpl; auto.
-      }
-    }
+    induction us, vs; boring.
+    erewrite (IHus vs (pred l)); boring.
   Qed.
 
-  Lemma length0_nil : forall A (xs : list A), length xs = 0%nat -> xs = nil.
+  Lemma length0_nil : forall {A} (xs : list A), length xs = 0%nat -> xs = nil.
   Proof.
-    induction xs; intros; auto.
-    elimtype False.
-    assert (0 <> length (a :: xs))%nat.
-    rewrite cons_length.
-    apply O_S.
-    contradiction H0.
-    rewrite H; auto.
+    induction xs; boring; discriminate.
   Qed.
 
-  Lemma add_app_same_length : forall l us vs a b, 
+  Hint Rewrite app_nil_l.
+
+  Lemma add_snoc_same_length : forall l us vs a b, 
     (length us = l) -> (length vs = l) ->
     (us ++ a :: nil) .+ (vs ++ b :: nil) = (us .+ vs) ++ (a + b) :: nil.
   Proof.
-    induction l; intros. {
-      assert (us = nil) by (apply length0_nil; apply H).
-      assert (vs = nil) by (apply length0_nil; apply H0).
-      rewrite H1; rewrite app_nil_l.
-      rewrite H2; rewrite app_nil_l.
-      rewrite add_nil_l.
-      rewrite app_nil_l.
-      auto.
-    } {
-      destruct us. {
-        rewrite app_nil_l.
-        rewrite add_nil_l.
-        destruct vs. {
-          rewrite app_nil_l.
-          rewrite app_nil_l.
-          auto.
-        } {
-          elimtype False.
-          replace (length nil) with (0%nat) in H by auto.
-          assert (0 <> S l)%nat.
-          apply O_S.
-          contradiction H1.
-        }
-      } {
-        destruct vs. {
-          elimtype False.
-          replace (length nil) with (0%nat) in H0 by auto.
-          assert (0 <> S l)%nat.
-          apply O_S.
-          contradiction H1.
-        } {
-          rewrite add_first_terms.
-          rewrite <- app_comm_cons.
-          rewrite <- app_comm_cons.
-          rewrite add_first_terms.
-          rewrite <- app_comm_cons.
-          rewrite IHl; f_equal.
-          assert (length (z :: us) = S (length us)) by (apply cons_length).
-          assert (S (length us) = S l) by auto.
-          auto.
-          assert (length (z0 :: vs) = S (length vs)) by (apply cons_length).
-          assert (S (length vs) = S l) by auto.
-          auto.
-        }
-      }
-  }
+    induction l, us, vs; boring; discriminate.
   Qed.
 
-  Lemma mul_bi'_add : forall us n vs l, (length us = l) -> (length vs = l) ->
+  Lemma length_snoc : forall {T} xs (x:T),
+    length xs = pred (length (xs++x::nil)).
+  Proof.
+    boring; simpl_list; boring.
+  Qed.
+
+  Lemma mul_bi'_add : forall us n vs l
+    (Hlus: length us = l)
+    (Hlvs: length vs = l),
     mul_bi' n (rev (us .+ vs)) = 
     mul_bi' n (rev us) .+ mul_bi' n (rev vs).
   Proof.
-    induction us using rev_ind; intros. {
-      rewrite add_nil_l.
-      rewrite mul_bi'_n_nil.
-      rewrite add_nil_l; auto.
-   } {
-      destruct vs using rev_ind. {
-        rewrite add_nil_r.
-        rewrite mul_bi'_n_nil.
-        rewrite add_nil_r; auto.
-      } {
-        simpl in *.
-        simpl_list.
-        rewrite (add_app_same_length (pred l) us vs x x0); auto.
-        rewrite rev_unit.
-        rewrite mul_bi'_cons.
-        rewrite mul_bi'_cons.
-        rewrite mul_bi'_cons.
-        rewrite add_first_terms.
-        rewrite rev_length.
-        rewrite rev_length.
-        rewrite rev_length.
-        assert (length us = pred l).
-        replace l with (length (us ++ x :: nil)) by (apply H).
-        rewrite app_length; simpl; omega.
-        assert (length vs = pred l).
-        replace l with (length (vs ++ x0 :: nil)) by (apply H0).
-        rewrite app_length; simpl; omega.
-        rewrite (IHus n vs (pred l)).
-        replace (length us) with (pred l) by (apply H).
-        replace (length vs) with (pred l) by (apply H).
-        rewrite (add_same_length us vs (pred l)).
-        f_equal; ring.
-        apply H1. apply H2. apply H1. apply H2.
-        assert (length (us ++ x :: nil) = S (length us)).
-        rewrite app_length.
-        replace (length (x :: nil)) with 1%nat by auto; omega.
-        assert (S (length us) = l).
-        rewrite <- H1. apply H.
-        replace l with (S (length us)) by apply H2. auto.
-        assert (length (vs ++ x0 :: nil) = S (length vs)).
-        rewrite app_length.
-        replace (length (x0 :: nil)) with 1%nat by auto; omega.
-        assert (S (length vs) = l).
-        rewrite <- H1. apply H0.
-        replace l with (S (length vs)) by apply H2. auto.
-       }
-     }
-     Qed.
+    (* TODO(adamc): please help prettify this *)
+    induction us using rev_ind;
+      try solve [destruct vs; boring; congruence].
+    destruct vs using rev_ind; boring; clear IHvs; simpl_list.
+    erewrite (add_snoc_same_length (pred l) us vs _ _); simpl_list.
+    repeat rewrite mul_bi'_cons; rewrite add_first_terms; simpl_list.
+    rewrite (IHus n vs (pred l)).
+    replace (length us) with (pred l).
+    replace (length vs) with (pred l).
+    rewrite (add_same_length us vs (pred l)).
+    f_equal; ring.
+
+    erewrite length_snoc; eauto.
+    erewrite length_snoc; eauto.
+    erewrite length_snoc; eauto.
+    erewrite length_snoc; eauto.
+    erewrite length_snoc; eauto.
+    erewrite length_snoc; eauto.
+    erewrite length_snoc; eauto.
+    erewrite length_snoc; eauto.
+   Qed.
 
   Lemma zeros_cons0 : forall n, 0 :: zeros n = zeros (S n).
     auto.
@@ -458,9 +363,8 @@ Module BaseSystem (Import B:BaseCoefs).
 
   Lemma add_leading_zeros : forall n us vs,
     (zeros n ++ us) .+ (zeros n ++ vs) = zeros n ++ (us .+ vs).
-    induction n; intros; auto.
-    rewrite <- zeros_cons0; simpl.
-    rewrite IHn; auto.
+  Proof.
+    induction n; boring.
   Qed.
   
   Lemma rev_add_rev : forall us vs l, (length us = l) -> (length vs = l) ->
