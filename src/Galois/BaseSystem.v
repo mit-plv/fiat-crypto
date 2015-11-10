@@ -89,6 +89,18 @@ Module BaseSystem (Import B:BaseCoefs).
   Qed.
   Hint Rewrite decode'_cons.
 
+  Fixpoint sub (us vs:digits) : digits :=
+    match us,vs with
+      | u::us', v::vs' => u-v :: sub us' vs'
+      | _, nil => us
+      | nil, v::vs' => (0-v)::sub nil vs'
+    end.
+
+  Lemma sub_rep : forall bs us vs, decode' bs (sub us vs) = decode' bs us - decode' bs vs.
+  Proof.
+    induction bs; destruct us; destruct vs; boring.
+  Qed.
+
   Lemma base_destruction: exists l, base = 1 :: l.
   Proof.
     assert (nth_default 0 base 0 = 1) by (apply b0_1).
