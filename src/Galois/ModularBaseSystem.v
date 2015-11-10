@@ -43,14 +43,13 @@ Module Type GFrep (Import M:Modulus).
 
   Parameter sub : T -> T -> T.
   Axiom sub_rep : forall u v x y, u ~= x -> v ~= y -> sub u v ~= (x-y)%GF.
-  (* TBD: sub may need to be in BaseSystem as well *)
 
   Parameter mul : T -> T -> T.
   Axiom mul_rep : forall u v x y, u ~= x -> v ~= y -> mul u v ~= (x*y)%GF.
 
 End GFrep.
 
-Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBaseParams BC M) (* TODO(jadep): "<: GFrep M" *).
+Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBaseParams BC M) <: GFrep M.
   Module Import GF := GaloisTheory M.
   Module EC <: BaseCoefs.
     Definition base := BC.base ++ (map (Z.mul (2^(P.k))) BC.base).
@@ -210,15 +209,26 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     autounfold; intuition. {
       unfold add.
       rewrite B.add_length_le_max.
-      B.case_max. {
-        rewrite Max.max_r; omega.
-      } {
-        omega.
-      }
+      B.case_max; try rewrite Max.max_r; omega.
     }
     unfold toGF in *; unfold B.decode in *.
     rewrite B.add_rep.
     rewrite inject_distr_add.
+    subst; auto.
+  Qed.
+
+  Definition sub (us vs : T) := B.sub us vs.
+  Lemma sub_rep : forall u v x y, u ~= x -> v ~= y -> sub u v ~= (x-y)%GF.
+  Proof.
+    autounfold; intuition. {
+      (*unfold add.
+      rewrite B.add_length_le_max.
+      B.case_max; try rewrite Max.max_r; omega.*)
+      admit.
+    }
+    unfold toGF in *; unfold B.decode in *.
+    rewrite B.sub_rep.
+    rewrite inject_distr_sub.
     subst; auto.
   Qed.
 
@@ -365,7 +375,5 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     replace (E.decode v) with (B.decode v) by (apply decode_short; omega).
     auto.
   Qed.
-
-  (* Still missing: subtraction *)
 
 End GFPseudoMersenneBase.

@@ -184,6 +184,10 @@ Module GaloisTheory (M: Modulus).
       inject (m + n) = inject m + inject n.
   Admitted.
 
+  Lemma inject_distr_sub : forall (m n : Z),
+      inject (m - n) = inject m - inject n.
+  Admitted.
+
   Lemma inject_distr_mul : forall (m n : Z),
       inject (m * n) = inject m * inject n.
   Admitted.
