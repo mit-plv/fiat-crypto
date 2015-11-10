@@ -189,6 +189,21 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     autounfold; intuition.
   Qed.
 
+  Definition fromGF (x : GF) := B.encode x.
+
+  Lemma fromGF_rep : forall x : GF, fromGF x ~= x.
+  Proof.
+    intros. unfold fromGF, rep.
+    split. {
+      unfold B.encode; simpl.
+      apply EC.base_length_nonzero.
+    } {
+      unfold toGF.
+      rewrite B.encode_rep.
+      rewrite GF.inject_eq; auto.
+    }
+  Qed.
+
   Definition add (us vs : T) := B.add us vs.
   Lemma add_rep : forall u v x y, u ~= x -> v ~= y -> add u v ~= (x+y)%GF.
   Proof.
@@ -203,9 +218,7 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     }
     unfold toGF in *; unfold B.decode in *.
     rewrite B.add_rep.
-    replace (inject (B.decode' BC.base u + B.decode' BC.base v))
-    with ((inject (B.decode' BC.base u)) + (inject (B.decode' BC.base v)))%GF
-    by admit. (* TODO(rsloan): inject (a + b) = inject a + inject b *)
+    rewrite inject_distr_add.
     subst; auto.
   Qed.
 
@@ -342,19 +355,17 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     }
     unfold mul.
     unfold toGF in *.
-    assert (forall x, inject x = inject (x mod modulus)) as Hm by admit;
-      rewrite Hm. (* TODO(rsloan)*)
+    rewrite inject_mod_eq.
     rewrite reduce_rep.
     rewrite E.mul_rep; try (rewrite extended_base_length; omega).
-    rewrite <-Hm.
-    assert (forall x y, inject (x*y) = inject x * inject y)%GF as Hi by admit;
-      rewrite Hi; clear Hi. (* TODO(rsloan)*)
+    rewrite <- inject_mod_eq.
+    rewrite inject_distr_mul.
     subst; auto.
     replace (E.decode u) with (B.decode u) by (apply decode_short; omega).
     replace (E.decode v) with (B.decode v) by (apply decode_short; omega).
     auto.
   Qed.
 
-  (* Still missing: subtraction, fromGF *)
+  (* Still missing: subtraction *)
 
 End GFPseudoMersenneBase.
