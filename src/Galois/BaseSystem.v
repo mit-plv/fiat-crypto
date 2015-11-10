@@ -16,6 +16,7 @@ Module Type BaseCoefs.
   (** [BaseCoefs] represent the weights of each digit in a positional number system, with the weight of least significant digit presented first. The following requirements on the base are preconditions for using it with BaseSystem. *)
   Parameter base : list Z.
   Axiom base_positive : forall b, In b base -> b > 0. (* nonzero would probably work too... *)
+  Axiom b0_1 : forall x, nth_default x base 0 = 1.
   Axiom base_good :
     forall i j, (i+j < length base)%nat ->
     let b := nth_default 0 base in
@@ -40,7 +41,9 @@ Module BaseSystem (Import B:BaseCoefs).
   Definition decode' bs u  := fold_right accumulate 0 (combine u bs).
   Definition decode := decode' base.
   Hint Unfold accumulate.
-  
+  (* Does not carry; z becomes the lowest and only digit. *)
+  Definition encode (z : Z) := z :: nil.
+
   Lemma decode_truncate : forall us, decode us = decode (firstn (length base) us).
   Proof.
     intros.
@@ -94,6 +97,23 @@ Module BaseSystem (Import B:BaseCoefs).
   Qed.
 
   Hint Rewrite decode'_cons.
+
+  Lemma base_destruction: exists l, base = 1 :: l.
+  Proof.
+    assert (nth_default 0 base 0 = 1) by (apply b0_1).
+    unfold nth_default, nth_error in H.
+    case_eq base; intros; rewrite H0 in H; simpl in H; try omega.
+    rewrite H; eauto.
+  Qed.
+
+  Lemma encode_rep : forall z, decode (encode z) = z.
+  Proof.
+    intros. unfold decode, encode.
+    assert (exists l, base = 1 :: l) by (apply base_destruction).
+    destruct H.
+    replace base with (1 :: x) by (apply H).
+    rewrite decode'_cons, decode_nil; omega.
+  Qed.
 
   Lemma mul_each_base : forall us bs c, 
       decode' bs (mul_each c us) = decode' (mul_each c bs) us.
@@ -749,7 +769,7 @@ Module PolynomialBaseCoefs (Import P:PolynomialBaseParams) <: BaseCoefs.
   Definition bi i := (Zpos b1)^(Z.of_nat i).
   Definition base := map bi (seq 0 baseLength).
 
-  Lemma b0_1 : nth_default 0 base 0 = 1.
+  Lemma b0_1 : forall x, nth_default x base 0 = 1.
     unfold base, bi, nth_default.
     case_eq baseLength; intros. {
       assert ((0 < baseLength)%nat) by

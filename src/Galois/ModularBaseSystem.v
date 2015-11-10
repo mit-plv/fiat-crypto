@@ -21,8 +21,6 @@ Module Type PseudoMersenneBaseParams (Import B:BaseCoefs) (Import M:Modulus).
     let r := (b i * b j)  /   (2^k * b (i+j-length base)%nat) in
               b i * b j = r * (2^k * b (i+j-length base)%nat).
 
-  Axiom b0_1 : nth_default 0 base 0 = 1.
-
   (* Probably implied by modulus_pseudomersenne. *)
   Axiom k_nonneg : 0 <= k.
 
@@ -80,6 +78,23 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
           intros. apply H0; auto. right; auto.
         }
       }
+    Qed.
+
+    Lemma base_length_nonzero : (0 < length BC.base)%nat.
+    Proof.
+      assert (nth_default 0 BC.base 0 = 1) by (apply BC.b0_1).
+      unfold nth_default in H.
+      case_eq (nth_error BC.base 0); intros;
+        try (rewrite H0 in H; omega).
+      apply (nth_error_value_length _ 0 BC.base z); auto.
+    Qed.
+
+    Lemma b0_1 : forall x, nth_default x base 0 = 1.
+    Proof.
+      intros. unfold base.
+      rewrite nth_default_app.
+      assert (0 < length BC.base)%nat by (apply base_length_nonzero).
+      destruct (lt_dec 0 (length BC.base)); try apply BC.b0_1; try omega.
     Qed.
 
     Lemma two_k_nonzero : 2^P.k <> 0.
