@@ -315,6 +315,7 @@ Module BaseSystem (Import B:BaseCoefs).
   Qed.
 
   Hint Rewrite app_nil_l.
+  Hint Rewrite app_nil_r.
 
   Lemma add_snoc_same_length : forall l us vs a b, 
     (length us = l) -> (length vs = l) ->
@@ -370,185 +371,120 @@ Module BaseSystem (Import B:BaseCoefs).
   Lemma rev_add_rev : forall us vs l, (length us = l) -> (length vs = l) ->
     (rev us) .+ (rev vs) = rev (us .+ vs).
   Proof.
-    induction us; intros. {
-      rewrite add_nil_l.
-      rewrite add_nil_l; auto.
-    } {
-      destruct vs. {
-        elimtype False.
-        replace (length nil) with 0%nat in H0 by auto.
-        rewrite cons_length in H.
-        assert (0 <> l)%nat by (rewrite <- H; apply O_S).
-        contradiction.
-      } {
-        rewrite add_first_terms.
-        simpl.
-        assert (length us = pred l).
-        rewrite cons_length in H.
-        rewrite <- H; auto.
-        assert (length vs = pred l).
-        rewrite cons_length in H0.
-        rewrite <- H0; auto.
-        rewrite (add_app_same_length (pred l) _ _ _ _); try (rewrite rev_length; auto).
-        rewrite (IHus vs (pred l)); auto.
-      }
-    }
+    induction us, vs; boring; try solve [subst; discriminate].
+    rewrite (add_snoc_same_length (pred l) _ _ _ _) by (subst; simpl_list; omega).
+    rewrite (IHus vs (pred l)) by omega; auto.
   Qed.
+  Hint Rewrite rev_add_rev.
 
   Lemma mul_bi'_length : forall us n, length (mul_bi' n us) = length us.
   Proof.
-    induction us; intros; auto.
-    rewrite mul_bi'_cons.
-    rewrite cons_length.
-    rewrite cons_length.
-    replace (length (mul_bi' n us)) with (length us); auto.
+    induction us, n; boring.
   Qed.
+  Hint Rewrite mul_bi'_length.
 
   Lemma add_comm : forall us vs, us .+ vs = vs .+ us.
   Proof.
-    induction us; intros. {
-      rewrite add_nil_l.
-      rewrite add_nil_r.
-      auto.
-   } {
-     destruct vs. {
-       rewrite add_nil_l.
-       rewrite add_nil_r; auto.
-     } {
-       rewrite add_first_terms.
-       rewrite add_first_terms.
-       rewrite IHus; f_equal; omega.
-    } 
-  }
+    induction us, vs; boring; f_equal; auto.
   Qed.
 
-  Lemma mul_bi_add_same_length : forall n us vs l, (length us = l) -> (length vs = l) ->
+  Hint Rewrite rev_length.
+
+  Lemma mul_bi_add_same_length : forall n us vs l,
+    (length us = l) -> (length vs = l) ->
     mul_bi n (us .+ vs) = mul_bi n us .+ mul_bi n vs.
   Proof.
-    intros.
-    unfold mul_bi; simpl.
+    unfold mul_bi; boring.
     rewrite add_leading_zeros.
-    rewrite (mul_bi'_add us n vs l); auto.
-    rewrite (rev_add_rev _ _ l).
-    rewrite add_comm; f_equal.
-    rewrite mul_bi'_length; rewrite rev_length.
-    apply H.
-    rewrite mul_bi'_length; rewrite rev_length.
-    apply H0.
+    erewrite mul_bi'_add; boring.
+    erewrite rev_add_rev; boring.
   Qed.
 
   Lemma add_zeros_same_length : forall us, us .+ (zeros (length us)) = us.
   Proof.
-    induction us; auto; simpl.
-    rewrite IHus; f_equal; ring.
+    induction us; boring; f_equal; omega.
   Qed.
+
+  Hint Rewrite add_zeros_same_length.
+  Hint Rewrite minus_diag.
 
   Lemma add_trailing_zeros : forall us vs, (length us >= length vs)%nat ->
     us .+ vs = us .+ (vs ++ (zeros (length us - length vs))).
   Proof.
-    induction us; intros. {
-      rewrite add_nil_l.
-      rewrite add_nil_l.
-      simpl in *.
-      assert (length vs = 0%nat) by omega.
-      simpl_list; auto.
-    } {
-      destruct vs. {
-        rewrite add_nil_r.
-        rewrite app_nil_l.
-        simpl.
-        f_equal; try ring.
-        symmetry.
-        apply add_zeros_same_length.
-      } {
-        rewrite add_first_terms; simpl.
-        f_equal.
-        apply IHus.
-        rewrite cons_length in H.
-        rewrite cons_length in H.
-        intuition.
-      }
-    }
+    induction us, vs; boring; f_equal; boring.
   Qed.
 
   Lemma length_add_ge : forall us vs, (length us >= length vs)%nat ->
     (length (us .+ vs) <= length us)%nat.
   Proof.
     intros.
-    rewrite add_trailing_zeros; auto.
-    rewrite (add_same_length _ _ (length us)); try omega.
-    rewrite app_length.
-    rewrite length_zeros.
-    omega.
+    rewrite add_trailing_zeros by trivial.
+    erewrite add_same_length by (pose proof app_length; boring); omega.
   Qed.
+
+  Ltac case_max :=
+    match goal with [ |- context[max ?x ?y] ] =>
+        destruct (le_dec x y);
+        match goal with
+          | [ H : (?x <= ?y)%nat |- context[max ?x ?y] ] => rewrite Max.max_r by
+            (exact H)
+          | [ H : ~ (?x <= ?y)%nat   |- context[max ?x ?y] ] => rewrite Max.max_l by
+            (exact (le_Sn_le _ _ (not_le _ _ H)))
+        end
+    end.
 
   Lemma add_length_le_max : forall us vs,
       (length (us .+ vs) <= max (length us) (length vs))%nat.
   Proof.
-    intros.
-    destruct (ge_dec (length us) (length vs)). {
-      rewrite Max.max_l by omega.
-      rewrite length_add_ge; auto.
-    } {
-      rewrite add_comm.
-      rewrite Max.max_r by omega.
-      apply length_add_ge; omega.
-    }
+    intros; case_max; (rewrite add_comm; apply length_add_ge; omega) ||
+                                        (apply length_add_ge; omega) .
   Qed.
 
   Lemma mul_bi_length : forall us n, length (mul_bi n us) = (length us + n)%nat.
   Proof.
-    induction us; intros; simpl. {
-      unfold mul_bi; simpl; simpl_list.
-      apply length_zeros.
-    } {
-      unfold mul_bi; simpl; simpl_list.
-      rewrite length_zeros.
-      rewrite mul_bi'_length; simpl_list; simpl.
-      omega.
-    }
+    pose proof mul_bi'_length; unfold mul_bi.
+    destruct us; repeat progress (simpl_list; boring).
   Qed.
+  Hint Rewrite mul_bi_length.
 
-  Lemma mul_bi_trailing_zeros : forall m n us, mul_bi n us ++ zeros m = mul_bi n (us ++ zeros m).
+  Lemma mul_bi_trailing_zeros : forall m n us,
+    mul_bi n us ++ zeros m = mul_bi n (us ++ zeros m).
   Proof.
     unfold mul_bi.
-    induction m; intros; simpl_list; auto.
+    induction m; intros; try solve [boring].
     rewrite <- zeros_app0.
     rewrite app_assoc.
-    rewrite IHm; clear IHm.
-    simpl.
-    repeat (rewrite rev_app_distr).
-    simpl.
-    repeat (rewrite rev_zeros).
-    rewrite app_assoc.
-    auto.
+    repeat progress (boring; rewrite rev_app_distr).
   Qed.
 
-  Lemma mul_bi_add_longer : forall n us vs, (length us >= length vs)%nat ->
+  Lemma mul_bi_add_longer : forall n us vs,
+    (length us >= length vs)%nat ->
     mul_bi n (us .+ vs) = mul_bi n us .+ mul_bi n vs.
   Proof.
-      intros.
-      rewrite add_trailing_zeros by auto.
-      rewrite (add_trailing_zeros (mul_bi n us) (mul_bi n vs)) by (repeat (rewrite mul_bi_length); omega).
-      erewrite mul_bi_add_same_length by (eauto; simpl_list; rewrite length_zeros; omega).
-      f_equal.
-      rewrite mul_bi_trailing_zeros.
-      repeat (rewrite mul_bi_length).
-      f_equal. f_equal. f_equal.
-      omega.
+    boring.
+    rewrite add_trailing_zeros by auto.
+    rewrite (add_trailing_zeros (mul_bi n us) (mul_bi n vs))
+      by (repeat (rewrite mul_bi_length); omega).
+    erewrite mul_bi_add_same_length by
+      (eauto; simpl_list; rewrite length_zeros; omega).
+    rewrite mul_bi_trailing_zeros.
+    repeat (f_equal; boring).
   Qed.
 
   Lemma mul_bi_add : forall n us vs,
     mul_bi n (us .+ vs) = (mul_bi n  us) .+ (mul_bi n vs).
   Proof.
-    intros.
+    intros; pose proof mul_bi_add_longer.
     destruct (le_ge_dec (length us) (length vs)). {
-      assert (length vs >= length us)%nat by auto.
-      rewrite add_comm.
-      replace (mul_bi n us .+ mul_bi n vs) with (mul_bi n vs .+ mul_bi n us) by (apply add_comm).
-      apply (mul_bi_add_longer n vs us); auto.
+      replace (mul_bi n us .+ mul_bi n vs)
+         with (mul_bi n vs .+ mul_bi n us)
+           by (apply add_comm).
+      replace (us .+ vs)
+         with (vs .+ us)
+           by (apply add_comm).
+      boring.
     } {
-      apply mul_bi_add_longer; auto.
+      boring.
     }
   Qed.
 
@@ -557,28 +493,18 @@ Module BaseSystem (Import B:BaseCoefs).
     decode (mul_bi i vs) = decode vs * nth_default 0 base i.
   Proof.
     unfold decode.
-    induction vs using rev_ind; intros; simpl. {
-      unfold mul_bi, decode.
-      ssimpl_list; rewrite zeros_rep; simpl.
-      unfold decode'; simpl.
-      ring.
-    } {
-      assert (i + length vs < length base)%nat as inbounds. {
-        rewrite app_length in *; simpl in *.
-        rewrite NPeano.Nat.add_1_r, <- plus_n_Sm in *.
-        etransitivity; eauto.
-      }
+    induction vs using rev_ind; intros; try solve [unfold mul_bi; boring].
+    assert (i + length vs < length base)%nat by
+      (rewrite app_length in *; boring).
 
-      rewrite set_higher.
-      ring_simplify.
-      rewrite <- IHvs by auto; clear IHvs.
-      simpl in *.
-      rewrite <- mul_bi_single by auto.
-      rewrite <- add_rep.
-      rewrite <- mul_bi_add.
-      rewrite set_higher'.
-      auto.
-    }
+    rewrite set_higher.
+    ring_simplify.
+    rewrite <- IHvs by auto; clear IHvs.
+    rewrite <- mul_bi_single by auto.
+    rewrite <- add_rep.
+    rewrite <- mul_bi_add.
+    rewrite set_higher'.
+    auto.
   Qed.
 
   (* mul' is multiplication with the FIRST ARGUMENT REVERSED *)
@@ -595,22 +521,18 @@ Module BaseSystem (Import B:BaseCoefs).
     decode (mul' (rev us) vs) = decode us * decode vs.
   Proof.
     unfold decode.
-    induction us using rev_ind; intros; simpl; try apply decode_nil.
+    induction us using rev_ind; boring.
 
-    assert (length us + length vs < length base)%nat as inbounds. {
-      rewrite app_length in *; simpl in *.
-      rewrite plus_comm in *.
-      rewrite NPeano.Nat.add_1_r, <- plus_n_Sm in *.
-      auto.
-    }
+    assert (length us + length vs < length base)%nat by
+      (rewrite app_length in *; boring).
 
     ssimpl_list.
     rewrite add_rep.
-    rewrite IHus by (rewrite le_trans; eauto); clear IHus.
+    boring.
     rewrite set_higher.
     rewrite mul_each_rep.
-    rewrite mul_bi_rep by auto; unfold decode.
-    ring.
+    rewrite mul_bi_rep by auto.
+    unfold decode; ring.
   Qed.
 
   Lemma mul_rep : forall us vs,
@@ -620,23 +542,13 @@ Module BaseSystem (Import B:BaseCoefs).
     exact mul'_rep.
   Qed.
 
-  Ltac case_max :=
-    match goal with [ |- context[max ?x ?y] ] =>
-        destruct (le_dec x y); try ( rewrite Max.max_l by omega
-                              || rewrite Max.max_r by omega)
-    end.
-
   Lemma mul'_length: forall us vs,
       (length (mul' us vs) <= length us + length vs)%nat.
   Proof.
-    induction us; intros; simpl; try omega.
-    rewrite add_length_le_max.
-    unfold mul_each; rewrite map_length; rewrite mul_bi_length.
-    case_max. {
-      rewrite Max.max_l by (rewrite plus_comm; eauto); omega.
-    } {
-      omega.
-    }
+    pose proof add_length_le_max.
+    induction us; boring.
+    unfold mul_each.
+    simpl_list; case_max; boring; omega.
   Qed.
 
   Lemma mul_length: forall us vs,
