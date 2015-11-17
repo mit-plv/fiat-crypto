@@ -435,12 +435,76 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     rewrite combine_nil_r; reflexivity.
   Qed.
 
-  Lemma carry_rep_reduce : forall us u9 us' u0 x
-    (Heq: us = u0::us'++u9::nil)
+  Lemma break_list_last: forall {T} (xs:list T),
+    xs = nil \/ exists xs' y, xs = xs' ++ y :: nil.
+  Proof.
+    destruct xs using rev_ind; auto.
+    right; do 2 eexists; auto.
+  Qed.
+
+  Lemma break_list_first: forall {T} (xs:list T),
+    xs = nil \/ exists x xs', xs = x :: xs'.
+  Proof.
+    destruct xs; auto.
+    right; do 2 eexists; auto.
+  Qed.
+
+  Lemma list012 : forall {T} (xs:list T),
+    xs = nil
+    \/ (exists x, xs = x::nil)
+    \/ (exists x xs' y, xs = x::xs'++y::nil).
+  Proof.
+    destruct xs; auto.
+    right.
+    destruct xs using rev_ind. {
+      left; eexists; auto.
+    } {
+      right; repeat eexists; auto.
+    }
+  Qed.
+   
+  Lemma nil_length0 : forall {T}, length (@nil T) = 0%nat.
+  Proof.
+    auto.
+  Qed.
+
+  Lemma nth_default_cons : forall {T} (x u0 : T) us, nth_default x (u0 :: us) 0 = u0.
+  Proof.
+    auto.
+  Qed.
+
+  Lemma set_nth_cons : forall {T} (x u0 : T) us, set_nth 0 x (u0 :: us) = x :: us.
+  Proof.
+    auto.
+  Qed.
+
+  Lemma carry_rep_reduce : forall us x
     (Hl : length us = length BC.base),
     us ~= x ->
     carry (pred (length BC.base)) us ~= x.
   Proof.
+    intros.
+    pose proof list012 BC.base.
+    destruct H0. {
+      pose proof EC.base_length_nonzero.
+      rewrite H0 in H1; simpl in H1; omega.
+    } {
+      destruct H0. {
+        destruct H0; rewrite H0, length_cons, (@nil_length0 Z) in Hl.
+        pose proof list012 us as Hbrkus.
+        destruct Hbrkus; try (rewrite H1, (@nil_length0 Z) in Hl; omega).
+        destruct H1.{
+          unfold rep, toGF, B.decode, carry in *.
+          destruct H1; subst.
+          rewrite H0 in *; clear H0.
+          break_if; intuition.
+          rewrite B.decode'_cons in H1.
+          admit.
+        } {
+          do 3 destruct H1; subst; simpl in *.
+          rewrite app_length in Hl; simpl in *; omega.
+        }
+(*
     autounfold; intuition; subst. rewrite carry_length; auto; omega.
     unfold toGF, B.decode, B.decode', carry; break_if; intuition.
     pose proof EC.base_length_nonzero.
@@ -469,7 +533,7 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     rewrite firstn_combine.
     rewrite skipn_app_inleft.
     rewrite skipn_combine.
-    rewrite fold_right_app.
+    rewrite fold_right_app. *)
   Abort.
 
 
