@@ -377,170 +377,103 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     auto.
   Qed.
 
+  Definition add_to_nth n (x:Z) xs :=
+    set_nth n (x + nth_default 0 xs n) xs.
+  Hint Unfold add_to_nth.
+
+  (* i must be in the domain of BC.base *)
+  Definition cap i := 
+    if eq_nat_dec i (pred (length BC.base))
+    then (2^P.k) / nth_default 0 BC.base i
+    else nth_default 0 BC.base (S i) / nth_default 0 BC.base i.
+
   Definition carry i us :=
     let di := nth_default 0 us      i in
-    let bi := nth_default 0 BC.base i in
-    let di' := di mod bi in
-    let cr  := di  /  bi in
-    let us' := set_nth i di' us in
+    let us' := set_nth i (di mod cap i) us in
     if eq_nat_dec i (pred (length BC.base))
-    then set_nth   0   (P.c * cr + nth_default 0 us   0  ) us'  (* carry and reduce *)
-    else set_nth (S i) (      cr + nth_default 0 us (S i)) us'. (* simple carry *)
+    then add_to_nth   0   (P.c * (di / cap i)) us'
+    else add_to_nth (S i) (      (di / cap i)) us'.
 
   Lemma carry_length : forall i us,
     (length       us     <= length BC.base)%nat ->
     (length (carry i us) <= length BC.base)%nat.
   Proof.
-    unfold carry; intros; break_if; subst; repeat (rewrite length_set_nth); auto.
+    unfold carry, add_to_nth; intros; break_if; subst; repeat (rewrite length_set_nth); auto.
   Qed.
 
-  Lemma skipn_all : forall {T} n (xs:list T),
-    (n >= length xs)%nat ->
-    skipn n xs = nil.
-  Proof.
-    induction n, xs; boring; omega.
-  Qed.
-
-  Lemma fold_right_cons : forall {A B} (f:B->A->A) a b bs,
-    fold_right f a (b::bs) = f b (fold_right f a bs).
-  Proof.
-    reflexivity.
-  Qed.
-
-  Lemma length_cons : forall {T} (x:T) xs, length (x::xs) = S (length xs).
-    reflexivity.
-  Qed.
-
-  Lemma S_pred_nonzero : forall a, (a > 0 -> S (pred a) = a)%nat.
-  Proof.
-    destruct a; omega.
-  Qed.
-
-  Lemma firstn_combine : forall {A B} n (xs:list A) (ys:list B),
-    firstn n (combine xs ys) = combine (firstn n xs) (firstn n ys).
-  Proof.
-    induction n, xs, ys; boring.
-  Qed.
-
-  Lemma combine_nil_r : forall {A B} (xs:list A),
-    combine xs (@nil B) = nil.
+  Lemma fold_right_accumulate_init : forall v0 xs,
+    fold_right B.accumulate v0 xs = v0 + fold_right B.accumulate 0 xs.
   Proof.
     induction xs; boring.
   Qed.
 
-  Lemma skipn_combine : forall {A B} n (xs:list A) (ys:list B),
-    skipn n (combine xs ys) = combine (skipn n xs) (skipn n ys).
-  Proof.
-    induction n, xs, ys; boring.
-    rewrite combine_nil_r; reflexivity.
-  Qed.
-
-  Lemma break_list_last: forall {T} (xs:list T),
-    xs = nil \/ exists xs' y, xs = xs' ++ y :: nil.
-  Proof.
-    destruct xs using rev_ind; auto.
-    right; do 2 eexists; auto.
-  Qed.
-
-  Lemma break_list_first: forall {T} (xs:list T),
-    xs = nil \/ exists x xs', xs = x :: xs'.
-  Proof.
-    destruct xs; auto.
-    right; do 2 eexists; auto.
-  Qed.
-
-  Lemma list012 : forall {T} (xs:list T),
-    xs = nil
-    \/ (exists x, xs = x::nil)
-    \/ (exists x xs' y, xs = x::xs'++y::nil).
-  Proof.
-    destruct xs; auto.
-    right.
-    destruct xs using rev_ind. {
-      left; eexists; auto.
-    } {
-      right; repeat eexists; auto.
-    }
-  Qed.
-   
-  Lemma nil_length0 : forall {T}, length (@nil T) = 0%nat.
-  Proof.
-    auto.
-  Qed.
-
-  Lemma nth_default_cons : forall {T} (x u0 : T) us, nth_default x (u0 :: us) 0 = u0.
-  Proof.
-    auto.
-  Qed.
-
-  Lemma set_nth_cons : forall {T} (x u0 : T) us, set_nth 0 x (u0 :: us) = x :: us.
-  Proof.
-    auto.
-  Qed.
-
-  Lemma carry_rep_reduce : forall us x
-    (Hl : length us = length BC.base),
-    us ~= x ->
-    carry (pred (length BC.base)) us ~= x.
-  Proof.
-    intros.
-    pose proof list012 BC.base.
-    destruct H0. {
-      pose proof EC.base_length_nonzero.
-      rewrite H0 in H1; simpl in H1; omega.
-    } {
-      destruct H0. {
-        destruct H0; rewrite H0, length_cons, (@nil_length0 Z) in Hl.
-        pose proof list012 us as Hbrkus.
-        destruct Hbrkus; try (rewrite H1, (@nil_length0 Z) in Hl; omega).
-        destruct H1.{
-          unfold rep, toGF, B.decode, carry in *.
-          destruct H1; subst.
-          rewrite H0 in *; clear H0.
-          break_if; intuition.
-          rewrite B.decode'_cons in H1.
-          admit.
-        } {
-          do 3 destruct H1; subst; simpl in *.
-          rewrite app_length in Hl; simpl in *; omega.
-        }
-(*
-    autounfold; intuition; subst. rewrite carry_length; auto; omega.
-    unfold toGF, B.decode, B.decode', carry; break_if; intuition.
-    pose proof EC.base_length_nonzero.
-    repeat (rewrite combine_set_nth).
-    nth_inbounds.
-    nth_inbounds.
-    nth_inbounds; [|rewrite length_set_nth, combine_length, Min.min_l by auto; omega].
-    unfold nth_default.
-    nth_inbounds.
-    nth_inbounds.
-    nth_inbounds; [|rewrite combine_length, Min.min_l by auto; omega].
-    unfold splice_nth.
-
-    rewrite firstn0, app_nil_l.
-    assert (skipn (S (pred (length BC.base))) (combine (u0::us'++u9::nil) BC.base) = nil)
-      as Hnil; [|rewrite Hnil; clear Hnil]. {
-      rewrite skipn_all; auto.
-      rewrite combine_length, Min.min_l by auto; omega.
-    }
-    rewrite fold_right_cons.
-    rewrite B.base_eq_1cons at 1.
-    rewrite length_cons.
-    rewrite <- (pred_Sn (length (skipn 1 BC.base))).
-    rewrite skipn_length.
-    rewrite <- pred_of_minus.
-    rewrite firstn_combine.
-    rewrite skipn_app_inleft.
-    rewrite skipn_combine.
-    rewrite fold_right_app. *)
-  Abort.
-
-
   Lemma carry_rep : forall i us x
+    (Hi : (i < length BC.base)%nat)
     (Hl : length us = length BC.base),
     us ~= x ->
     carry i us ~= x.
   Proof.
-  Admitted.
+    split; [pose proof carry_length; boring|].
+    unfold rep, toGF, B.decode, B.decode', B.accumulate,
+      carry, add_to_nth, cap, nth_default in *; intros.
+    pose proof (list012 BC.base).
+    pose proof (list012 us).
+    repeat break_or_hyp;
+        break_exists; subst;
+        match goal with [H: BC.base =_ |- _] => rewrite H in * end;
+        distr_length. {
+      intuition; simpl in *.
+      destruct i; try omega.
+      subst; galois.
+      replace x0 with 1 by (pose proof B.base_eq_1cons; congruence).
+      rewrite Zdiv_1_r.
+      replace ((P.c * (x1 / (2 ^ P.k)) + x1 mod (2 ^ P.k)) * 1 + 0)
+        with (x1 mod (2 ^ P.k) + (P.c * (x1 / (2 ^ P.k))))
+        by ring.
+      rewrite <- pseudomersenne_add; f_equal; ring_simplify.
+      rewrite Z.add_comm; symmetry.
+      apply Z_div_mod_eq.
+      admit.
+    } {
+      break_if. {
+        intuition; subst x.
+        repeat (rewrite combine_set_nth).
+        nth_inbounds.
+        nth_inbounds.
+        nth_inbounds.
+        nth_inbounds.
+        nth_inbounds; [|distr_length; eapply NPeano.Nat.min_case; omega].
+        nth_inbounds; [|distr_length; eapply NPeano.Nat.min_case; omega].
+        unfold splice_nth.
+
+        rewrite firstn0, app_nil_l.
+        rewrite (skipn_all (S i)) by (distr_length; eapply NPeano.Nat.min_case; omega).
+        rewrite fold_right_cons.
+        replace x0 with 1 by (pose proof B.base_eq_1cons; congruence).
+        rewrite firstn_combine.
+        rewrite skipn_app_inleft by (distr_length; repeat (eapply NPeano.Nat.min_case); subst; omega).
+        rewrite skipn_combine.
+        rewrite fold_right_app.
+        
+        subst i; rewrite plus_comm; simpl.
+        do 2 rewrite firstn_app_sharp by omega.
+        rewrite combine_app_samelength by omega.
+        rewrite fold_right_app; simpl.
+        fold B.accumulate.
+        rewrite fold_right_accumulate_init.
+        rewrite (fold_right_accumulate_init (x5*x2+0)).
+
+        galois.
+        rewrite Zplus_assoc.
+        rewrite Zplus_assoc.
+        rewrite Zplus_mod.
+        rewrite Zplus_assoc.
+        rewrite Zplus_assoc.
+        rewrite (Zplus_mod (x3 * 1 + x5 * x2 + 0)).
+        f_equal.
+        rewrite Z.add_cancel_r.
+        rewrite <- pseudomersenne_add.
+      }
+  Abort.
+
 End GFPseudoMersenneBase.
