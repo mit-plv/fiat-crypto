@@ -126,16 +126,114 @@ Proof.
 	destruct (eq_nat_dec n m), (eq_nat_dec (S n) (S m)); nth_tac.
 Qed.
 
-Lemma set_nth_equiv_splice: forall {T} n x (xs:list T),
+Lemma length_set_nth : forall {T} i (x:T) xs, length (set_nth i x xs) = length xs.
+  induction i, xs; boring.
+Qed.
+
+Lemma nth_error_length_exists_value : forall {A} (i : nat) (xs : list A),
+  (i < length xs)%nat -> exists x, nth_error xs i = Some x.
+Proof.
+  induction i, xs; boring; try omega.
+Qed.
+
+Lemma nth_error_length_not_error : forall {A} (i : nat) (xs : list A),
+  nth_error xs i = None -> (i < length xs)%nat -> False.
+Proof.
+  intros.
+  destruct (nth_error_length_exists_value i xs); intuition; congruence.
+Qed.
+
+Lemma nth_error_value_eq_nth_default : forall {T} i xs (x d:T),
+  nth_error xs i = Some x -> forall d, nth_default d xs i = x.
+Proof.
+  unfold nth_default; boring.
+Qed.
+
+Lemma skipn0 : forall {T} (xs:list T), skipn 0 xs = xs.
+Proof.
+  auto.
+Qed.
+
+Lemma firstn0 : forall {T} (xs:list T), firstn 0 xs = nil.
+Proof.
+  auto.
+Qed.
+
+Definition splice_nth {T} n (x:T) xs := firstn n xs ++ x :: skipn (S n) xs.
+Hint Unfold splice_nth.
+
+Lemma splice_nth_equiv_set_nth : forall {T} n x (xs:list T),
+  splice_nth n x xs =
+  if lt_dec n (length xs)
+  then set_nth n x xs
+  else xs ++ x::nil.
+Proof.
+  induction n, xs; boring.
+  break_if; break_if; auto; omega.
+Qed.
+
+Lemma splice_nth_equiv_set_nth_set : forall {T} n x (xs:list T),
+  n < length xs ->
+  splice_nth n x xs = set_nth n x xs.
+Proof.
+  intros.
+  rewrite splice_nth_equiv_set_nth.
+  break_if; auto; omega.
+Qed.
+
+Lemma splice_nth_equiv_set_nth_snoc : forall {T} n x (xs:list T),
+  n >= length xs ->
+  splice_nth n x xs = xs ++ x::nil.
+Proof.
+  intros.
+  rewrite splice_nth_equiv_set_nth.
+  break_if; auto; omega.
+Qed.
+
+Lemma set_nth_equiv_splice_nth: forall {T} n x (xs:list T),
   set_nth n x xs = 
   if lt_dec n (length xs)
-  then firstn n xs ++ x :: skipn (S n) xs
+  then splice_nth n x xs
   else xs.
 Proof.
   induction n; destruct xs; intros; simpl in *;
     try (rewrite IHn; clear IHn); auto.
-  destruct (lt_dec n (length xs)), (lt_dec (S n) (S (length xs))); try omega; trivial.
+  break_if; break_if; auto; omega.
 Qed.
+
+Ltac nth_error_inbounds :=
+  match goal with
+  | [ |- context[match nth_error ?xs ?i with Some _ => _ | None => _ end ] ] =>
+    case_eq (nth_error xs i);
+    match goal with 
+      | [ |- forall _, nth_error xs i = Some _ -> _ ] =>
+          let x := fresh "x" in
+          let H := fresh "H" in
+          intros x H;
+          repeat progress erewrite H;
+          repeat progress erewrite (nth_error_value_eq_nth_default i xs x); auto
+      | [ |- nth_error xs i = None -> _ ] =>
+          let H := fresh "H" in
+          intros H;
+          destruct (nth_error_length_not_error _ _ H);
+          try omega
+    end;
+    idtac
+  end.
+
+Ltac set_nth_inbounds :=
+  match goal with
+  | [ |- context[set_nth ?i ?x ?xs] ] =>
+    rewrite (set_nth_equiv_splice_nth i x xs);
+    destruct (lt_dec i (length xs));
+    match goal with
+    | [ H : ~ (i < (length xs))%nat |- _ ] => destruct H
+    | [ H :   (i < (length xs))%nat |- _ ] => try omega
+    end;
+    idtac
+  end.
+
+Ltac nth_inbounds := nth_error_inbounds || set_nth_inbounds.
 
 Lemma combine_set_nth : forall {A B} n (x:A) xs (ys:list B),
   combine (set_nth n x xs) ys =
@@ -207,21 +305,42 @@ Proof.
   destruct n; auto.
 Qed.
 
-Lemma firstn_app : forall {A} n (xs ys : list A), (n <= length xs)%nat ->
-  firstn n xs = firstn n (xs ++ ys).
+Lemma firstn_app : forall {A} n (xs ys : list A),
+  firstn n (xs ++ ys) = firstn n xs ++ firstn (n - length xs) ys.
 Proof.
-  induction n; destruct xs; destruct ys; simpl_list; boring; try omega.
-  rewrite (IHn xs (a0 :: ys)) by omega; auto.
+  induction n, xs, ys; boring.
+Qed.
+
+Lemma skipn_app : forall {A} n (xs ys : list A),
+  skipn n (xs ++ ys) = skipn n xs ++ skipn (n - length xs) ys.
+Proof.
+  induction n, xs, ys; boring.
+Qed.
+
+Lemma firstn_app_inleft : forall {A} n (xs ys : list A), (n <= length xs)%nat ->
+  firstn n (xs ++ ys) = firstn n xs.
+Proof.
+  induction n, xs, ys; boring; try omega.
+Qed.
+
+Lemma skipn_app_inleft : forall {A} n (xs ys : list A), (n <= length xs)%nat ->
+  skipn n (xs ++ ys) = skipn n xs ++ ys.
+Proof.
+  induction n, xs, ys; boring; try omega.
 Qed.
     
-Lemma skipn_app : forall A (l l': list A), skipn (length l) (l ++ l') = l'.
+Lemma firstn_app_sharp : forall A (l l': list A), firstn (length l) (l ++ l') = l.
 Proof.
-  intros.
-  induction l; simpl; auto.
+  induction l; boring.
+Qed.
+    
+Lemma skipn_app_sharp : forall A (l l': list A), skipn (length l) (l ++ l') = l'.
+Proof.
+  induction l; boring.
 Qed.
 
 Lemma skipn_length : forall {A} n (xs : list A),
   length (skipn n xs) = (length xs - n)%nat.
 Proof.
-induction n; destruct xs; boring.
+  induction n, xs; boring.
 Qed.

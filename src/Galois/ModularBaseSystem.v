@@ -2,6 +2,7 @@ Require Import Zpower ZArith.
 Require Import List.
 Require Import Crypto.Galois.BaseSystem Crypto.Galois.GaloisTheory.
 Require Import Util.ListUtil.
+Require Import VerdiTactics.
 Open Scope Z_scope.
 
 Module Type PseudoMersenneBaseParams (Import B:BaseCoefs) (Import M:Modulus).
@@ -241,7 +242,7 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     rewrite (combine_truncate_r us EC.base).
     f_equal; f_equal.
     unfold EC.base.
-    rewrite (firstn_app _ _  (map (Z.mul (2 ^ P.k)) BC.base)); auto.
+    rewrite firstn_app_inleft; auto; omega.
   Qed.
 
   Lemma extended_base_length:
@@ -376,4 +377,106 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     auto.
   Qed.
 
+  Definition carry i us :=
+    let di := nth_default 0 us      i in
+    let bi := nth_default 0 BC.base i in
+    let di' := di mod bi in
+    let cr  := di  /  bi in
+    let us' := set_nth i di' us in
+    if eq_nat_dec i (pred (length BC.base))
+    then set_nth   0   (P.c * cr + nth_default 0 us   0  ) us'  (* carry and reduce *)
+    else set_nth (S i) (      cr + nth_default 0 us (S i)) us'. (* simple carry *)
+
+  Lemma carry_length : forall i us,
+    (length       us     <= length BC.base)%nat ->
+    (length (carry i us) <= length BC.base)%nat.
+  Proof.
+    unfold carry; intros; break_if; subst; repeat (rewrite length_set_nth); auto.
+  Qed.
+
+  Lemma skipn_all : forall {T} n (xs:list T),
+    (n >= length xs)%nat ->
+    skipn n xs = nil.
+  Proof.
+    induction n, xs; boring; omega.
+  Qed.
+
+  Lemma fold_right_cons : forall {A B} (f:B->A->A) a b bs,
+    fold_right f a (b::bs) = f b (fold_right f a bs).
+  Proof.
+    reflexivity.
+  Qed.
+
+  Lemma length_cons : forall {T} (x:T) xs, length (x::xs) = S (length xs).
+    reflexivity.
+  Qed.
+
+  Lemma S_pred_nonzero : forall a, (a > 0 -> S (pred a) = a)%nat.
+  Proof.
+    destruct a; omega.
+  Qed.
+
+  Lemma firstn_combine : forall {A B} n (xs:list A) (ys:list B),
+    firstn n (combine xs ys) = combine (firstn n xs) (firstn n ys).
+  Proof.
+    induction n, xs, ys; boring.
+  Qed.
+
+  Lemma combine_nil_r : forall {A B} (xs:list A),
+    combine xs (@nil B) = nil.
+  Proof.
+    induction xs; boring.
+  Qed.
+
+  Lemma skipn_combine : forall {A B} n (xs:list A) (ys:list B),
+    skipn n (combine xs ys) = combine (skipn n xs) (skipn n ys).
+  Proof.
+    induction n, xs, ys; boring.
+    rewrite combine_nil_r; reflexivity.
+  Qed.
+
+  Lemma carry_rep_reduce : forall us u9 us' u0 x
+    (Heq: us = u0::us'++u9::nil)
+    (Hl : length us = length BC.base),
+    us ~= x ->
+    carry (pred (length BC.base)) us ~= x.
+  Proof.
+    autounfold; intuition; subst. rewrite carry_length; auto; omega.
+    unfold toGF, B.decode, B.decode', carry; break_if; intuition.
+    pose proof EC.base_length_nonzero.
+    repeat (rewrite combine_set_nth).
+    nth_inbounds.
+    nth_inbounds.
+    nth_inbounds; [|rewrite length_set_nth, combine_length, Min.min_l by auto; omega].
+    unfold nth_default.
+    nth_inbounds.
+    nth_inbounds.
+    nth_inbounds; [|rewrite combine_length, Min.min_l by auto; omega].
+    unfold splice_nth.
+
+    rewrite firstn0, app_nil_l.
+    assert (skipn (S (pred (length BC.base))) (combine (u0::us'++u9::nil) BC.base) = nil)
+      as Hnil; [|rewrite Hnil; clear Hnil]. {
+      rewrite skipn_all; auto.
+      rewrite combine_length, Min.min_l by auto; omega.
+    }
+    rewrite fold_right_cons.
+    rewrite B.base_eq_1cons at 1.
+    rewrite length_cons.
+    rewrite <- (pred_Sn (length (skipn 1 BC.base))).
+    rewrite skipn_length.
+    rewrite <- pred_of_minus.
+    rewrite firstn_combine.
+    rewrite skipn_app_inleft.
+    rewrite skipn_combine.
+    rewrite fold_right_app.
+  Abort.
+
+
+  Lemma carry_rep : forall i us x
+    (Hl : length us = length BC.base),
+    us ~= x ->
+    carry i us ~= x.
+  Proof.
+  Admitted.
 End GFPseudoMersenneBase.

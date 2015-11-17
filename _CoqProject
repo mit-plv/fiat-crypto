@@ -2,6 +2,7 @@
 -R fiat/src Fiat
 -R bedrock/Bedrock Bedrock
 src/Tactics/VerdiTactics.v
+src/Util/CaseUtil.v
 src/Util/ListUtil.v
 src/Galois/Galois.v
 src/Galois/GaloisTheory.v
