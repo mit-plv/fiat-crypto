@@ -17,6 +17,10 @@ Module Type BaseCoefs.
   Parameter base : list Z.
   Axiom base_positive : forall b, In b base -> b > 0. (* nonzero would probably work too... *)
   Axiom b0_1 : forall x, nth_default x base 0 = 1.
+  Axiom base_succ : forall i, ((S i) < length base)%nat ->
+    let b := nth_default 0 base in
+    let r := (b (S i)  / b i) in  
+    b (S i) = r * b i.
   Axiom base_good :
     forall i j, (i+j < length base)%nat ->
     let b := nth_default 0 base in
@@ -592,6 +596,31 @@ Module PolynomialBaseCoefs (Import P:PolynomialBaseParams) <: BaseCoefs.
     destruct H; destruct H.
     subst.
     apply pos_pow_nat_pos.
+  Qed.
+
+  Lemma base_defn : forall i, (i < length base)%nat ->
+      nth_default 0 base i = bi i.
+  Proof.
+    unfold base, nth_default; nth_tac.
+  Qed.
+
+  Lemma base_succ :
+    forall i, ((S i) < length base)%nat -> 
+    let b := nth_default 0 base in
+    let r := (b (S i) / b i) in
+    b (S i) = r * b i.
+  Proof.
+    intros; subst b; subst r.
+    repeat rewrite base_defn in * by omega.
+    unfold bi.
+    replace (Z.pos b1 ^ Z.of_nat (S i)) 
+      with (Z.pos b1 * (Z.pos b1 ^ Z.of_nat i)) by
+      (rewrite Nat2Z.inj_succ; rewrite <- Z.pow_succ_r; intuition).
+    replace (Z.pos b1 * Z.pos b1 ^ Z.of_nat i / Z.pos b1 ^ Z.of_nat i)
+      with (Z.pos b1); auto.
+    rewrite Z_div_mult_full; auto.
+    apply Z.pow_nonzero; intuition.
+    pose proof (Zgt_pos_0 b1); omega.
   Qed.
 
   Lemma base_good:

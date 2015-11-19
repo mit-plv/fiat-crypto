@@ -110,6 +110,22 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
       erewrite map_nth_default; auto.
     Qed.
 
+    Lemma base_succ : forall i, ((S i) < length base)%nat ->
+    let b := nth_default 0 base in
+    let r := (b (S i)  / b i) in  
+    b (S i) = r * b i.
+    Proof.
+      intros; subst b; subst r; unfold base.
+      repeat rewrite nth_default_app.
+      do 2 break_if; try apply BC.base_succ; try omega. {
+        destruct (lt_eq_lt_dec (S i) (length BC.base)). {
+          destruct s; intuition.
+          rewrite map_nth_default_base_high. 
+        }
+        assert (length BC.base <= i)%nat by (apply lt_n_Sm_le; auto); omega.
+      }
+    Qed. 
+
     Lemma base_good_over_boundary : forall
       (i : nat)
       (l : (i < length BC.base)%nat)
@@ -417,14 +433,50 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     boring.
   Qed.
 
+  Lemma div_mul_divide: forall n m, n = (n / m) * m -> (m | n).
+  Proof.
+    intros; apply (Znumtheory.Zdivide_intro m n (n/m)); auto.
+  Qed.
 
-  Lemma base_div_2k : forall l x, BC.base = l ++ x :: nil ->
+  Lemma mul_divide_l : forall m n p, n <> 0 -> ((m * n) | p) -> (m | p).
+  Proof.
+    intros; apply (Z.mul_divide_cancel_l m p n); auto.
+    rewrite Z.mul_comm; apply Z.divide_mul_r; auto.
+  Qed.
+
+  Lemma base_divide_2k : forall x, In x BC.base -> (x | 2 ^ P.k).
+  Proof.
+    intros.
+    destruct (In_nth_error_value BC.base _ H).
+    pose proof (nth_error_value_length _ _ BC.base _ H0).
+    destruct x0. {
+      replace x with (nth_default 0 BC.base 0) by
+       (unfold nth_default; replace (nth_error BC.base 0) with (Some x); auto).
+      rewrite BC.b0_1.
+      apply Z.divide_1_l.
+    } {
+      assert (length (BC.base) - S x0 < length BC.base)%nat as A0 by (apply lt_minus; omega).
+      remember (S x0) as y.
+      assert (length BC.base - y + y >= length BC.base)%nat as A2 by omega.
+      pose proof (P.base_matches_modulus ((length BC.base) - y) y A0 H1 A2) as P0.
+      remember (length BC.base) as l.
+      replace (l - y + y - l)%nat with 0%nat in P0 by 
+        (rewrite NPeano.Nat.sub_add; try rewrite minus_diag; auto; apply lt_le_weak; subst;
+        eapply nth_error_value_length; eauto).
+      simpl in *.
+      rewrite BC.b0_1 in P0.
+      SearchAbout Z.divide.
+  Admitted.
+
+  Lemma base_tail_div_mul_2k : forall l x, BC.base = l ++ x :: nil ->
     2 ^ P.k = (2 ^ P.k / x) * x.
   Proof.
     intros.
     rewrite Z.mul_comm.
     apply Z_div_exact_full_2; apply In_app_nil in H; try (apply BC.base_positive in H; omega).
-  Admitted.
+    rewrite Z.mod_divide by (intro; subst; pose proof (BC.base_positive 0 H); omega).
+    apply base_divide_2k; auto.
+  Qed.
 
   Lemma nth_error_last : forall {T} l (x y : T),
     nth_error (l ++ x :: nil) (length l) = Some y -> y = x.
@@ -524,7 +576,7 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
           ring_simplify.
           rewrite Zplus_assoc_reverse.
           rewrite (Z.add_cancel_l _ _ x3).
-          rewrite (base_div_2k (x0 :: x1) x2) at 3; auto.
+          rewrite (base_tail_div_mul_2k (x0 :: x1) x2) at 3; auto.
           rewrite Z.mul_assoc.
           do 2 rewrite <- (Z.mul_comm x2).
           rewrite <- (Zmult_plus_distr_r).

@@ -223,6 +223,14 @@ Proof.
   induction n; destruct xs; nth_tac.
 Qed.
 
+Lemma In_nth_error_value : forall {T} xs (x:T),
+  In x xs -> exists n, nth_error xs n = Some x.
+Proof.
+  induction xs; nth_tac; break_or_hyp.
+  - exists 0; reflexivity.
+  - edestruct IHxs; eauto. exists (S x0). eauto.
+Qed.
+
 Lemma nth_value_index : forall {T} i xs (x:T),
   nth_error xs i = Some x -> In i (seq 0 (length xs)).
 Proof.
