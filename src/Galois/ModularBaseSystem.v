@@ -407,6 +407,34 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     induction xs; boring.
   Qed.
 
+  Lemma Zplus_assoc_l : forall n m p, n + m + p = (n + m) + p.
+  Proof.
+    auto.
+  Qed.
+
+  Lemma In_app_nil : forall {T} l l' (a : T), l = l' ++ a :: nil -> In a l.
+  Proof.
+    boring.
+  Qed.
+
+
+  Lemma base_div_2k : forall l x, BC.base = l ++ x :: nil ->
+    2 ^ P.k = (2 ^ P.k / x) * x.
+  Proof.
+    intros.
+    rewrite Z.mul_comm.
+    apply Z_div_exact_full_2; apply In_app_nil in H; try (apply BC.base_positive in H; omega).
+  Admitted.
+
+  Lemma nth_error_last : forall {T} l (x y : T),
+    nth_error (l ++ x :: nil) (length l) = Some y -> y = x.
+  Proof.
+    intros.
+    rewrite nth_error_app in H; break_if; try omega.
+    replace (length l - length l)%nat with 0%nat in * by omega; simpl in *.
+    unfold value in H; congruence.
+  Qed.
+
   Lemma carry_rep : forall i us x
     (Hi : (i < length BC.base)%nat)
     (Hl : length us = length BC.base),
@@ -472,7 +500,44 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
         rewrite (Zplus_mod (x3 * 1 + x5 * x2 + 0)).
         f_equal.
         rewrite Z.add_cancel_r.
-        rewrite <- pseudomersenne_add.
+        assert (x = x0) as A0 by admit.
+        assert (x = 1). {
+          replace x with (nth_default 0 BC.base 0); try apply BC.b0_1.
+          rewrite H0, A0; auto.
+        }
+        assert (x6 = x5). {
+          apply (nth_error_last (x3 :: x4)); auto.
+          replace (length (x3 :: x4)) with (length x1 + 1)%nat; auto.
+          replace (length (x3 :: x4)) with (length x4 + 1)%nat by distr_length.
+          omega.
+        }
+        assert (x7 = x2). {
+          apply (nth_error_last (x0 :: x1)); auto.
+          replace (length (x0 :: x1)) with (length x1 + 1)%nat by distr_length; auto.
+        }
+        assert (x8 = x3). {
+          replace (length x1 + 1)%nat with (S (length x1))%nat in H4 by omega.
+          simpl in H4; unfold value in *; congruence.
+        }
+        assert ((x3 * 1 + x5 * x2 + 0) =
+          x3 + (x5 mod (2 ^ P.k / x2))* x2 + (x5 / (2 ^ P.k / x2) * (2 ^ P.k))) as A1. {
+          ring_simplify.
+          rewrite Zplus_assoc_reverse.
+          rewrite (Z.add_cancel_l _ _ x3).
+          rewrite (base_div_2k (x0 :: x1) x2) at 3; auto.
+          rewrite Z.mul_assoc.
+          do 2 rewrite <- (Z.mul_comm x2).
+          rewrite <- (Zmult_plus_distr_r).
+          f_equal.
+          rewrite Zplus_comm.
+          rewrite Z.mul_comm.
+          rewrite <- Z.div_mod; auto.
+          assert (2 ^ P.k / x2 <> 0) by admit; auto.
+        }
+        rewrite A1; subst.
+        rewrite (Z.mul_comm _ (2 ^ P.k)).
+        rewrite pseudomersenne_add; subst.
+        apply Zmod_eq; ring_simplify; auto.
       }
   Abort.
 
