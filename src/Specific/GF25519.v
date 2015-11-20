@@ -71,6 +71,15 @@ Module GF25519Base25Point5Params <: PseudoMersenneBaseParams Base25Point5_10limb
     repeat break_or_hyp; try omega; vm_compute; reflexivity.
   Qed.
 
+  Lemma base_succ : forall i, ((S i) < length base)%nat -> 
+    let b := nth_default 0 base in
+    b (S i) mod b i = 0.
+  Admitted.
+
+  Lemma base_tail_matches_modulus:
+    2^k mod nth_default 0 base (pred (length base)) = 0.
+  Admitted.
+
   Lemma b0_1 : forall x, nth_default x base 0 = 1.
   Proof.
     reflexivity.

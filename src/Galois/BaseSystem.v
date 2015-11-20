@@ -17,10 +17,6 @@ Module Type BaseCoefs.
   Parameter base : list Z.
   Axiom base_positive : forall b, In b base -> b > 0. (* nonzero would probably work too... *)
   Axiom b0_1 : forall x, nth_default x base 0 = 1.
-  Axiom base_succ : forall i, ((S i) < length base)%nat ->
-    let b := nth_default 0 base in
-    let r := (b (S i)  / b i) in  
-    b (S i) = r * b i.
   Axiom base_good :
     forall i j, (i+j < length base)%nat ->
     let b := nth_default 0 base in

@@ -22,6 +22,13 @@ Module Type PseudoMersenneBaseParams (Import B:BaseCoefs) (Import M:Modulus).
     let r := (b i * b j)  /   (2^k * b (i+j-length base)%nat) in
               b i * b j = r * (2^k * b (i+j-length base)%nat).
 
+  Axiom base_succ : forall i, ((S i) < length base)%nat -> 
+    let b := nth_default 0 base in
+    b (S i) mod b i = 0.
+
+  Axiom base_tail_matches_modulus:
+    2^k mod nth_default 0 base (pred (length base)) = 0.
+
   (* Probably implied by modulus_pseudomersenne. *)
   Axiom k_nonneg : 0 <= k.
 
@@ -112,17 +119,27 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
 
     Lemma base_succ : forall i, ((S i) < length base)%nat ->
     let b := nth_default 0 base in
-    let r := (b (S i)  / b i) in  
-    b (S i) = r * b i.
+    b (S i) mod b i = 0.
     Proof.
-      intros; subst b; subst r; unfold base.
+      intros; subst b; unfold base.
       repeat rewrite nth_default_app.
-      do 2 break_if; try apply BC.base_succ; try omega. {
+      do 2 break_if; try apply P.base_succ; try omega. {
         destruct (lt_eq_lt_dec (S i) (length BC.base)). {
           destruct s; intuition.
-          rewrite map_nth_default_base_high. 
+          rewrite map_nth_default_base_high by omega.
+          replace i with (pred(length BC.base)) by omega.
+          rewrite <- Zmult_mod_idemp_l.
+          rewrite P.base_tail_matches_modulus; simpl.
+          rewrite Zmod_0_l; auto.
+        } {
+          assert (length BC.base <= i)%nat by (apply lt_n_Sm_le; auto); omega.
         }
-        assert (length BC.base <= i)%nat by (apply lt_n_Sm_le; auto); omega.
+      } {
+        unfold base in H; rewrite app_length, map_length in H.
+        repeat rewrite map_nth_default_base_high by omega.
+        rewrite Zmult_mod_distr_l.
+        rewrite <- minus_Sn_m by omega.
+        rewrite P.base_succ by omega; auto.
       }
     Qed. 
 
@@ -410,6 +427,228 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     then add_to_nth   0   (P.c * (di / cap i)) us'
     else add_to_nth (S i) (      (di / cap i)) us'.
 
+  Lemma set_nth_nil : forall {T} n (x : T), set_nth n x nil = nil.
+  Proof.
+    induction n; boring.
+  Qed.
+
+  Lemma nth_default_nil : forall {T} n (d : T), nth_default d nil n = d.
+  Proof.
+    induction n; boring.
+  Qed.
+
+  Lemma B_decode_cons : forall x us,
+    B.decode (x :: us) = x + B.decode (0 :: us).
+  Proof.
+    unfold B.decode; intros.
+    rewrite B.base_eq_1cons.
+    do 2 rewrite B.decode'_cons; ring_simplify; auto.
+  Qed.
+
+  Lemma cons_set_nth : forall {T} n (x y : T) us,
+    y :: set_nth n x us = set_nth (S n) x (y :: us).
+  Proof.
+    induction n; boring.
+  Qed.
+
+  Lemma decode'_splice : forall xs ys bs,
+    B.decode' bs (xs ++ ys) = 
+    B.decode' (firstn (length xs) bs) xs + 
+    B.decode' (skipn (length xs) bs) ys.
+  Proof.
+    induction xs; destruct ys, bs; boring.
+    unfold B.decode'.
+    rewrite combine_truncate_r.
+    ring.
+  Qed.
+
+ Lemma skipn_nth_default : forall {T} n us (d : T), (n < length us)%nat ->
+   skipn n us = nth_default d us n :: skipn (S n) us.
+ Proof.
+    induction n; destruct us; intros; nth_tac.
+    rewrite (IHn us d) at 1 by omega.
+    nth_tac.
+  Qed.
+
+  Lemma nth_default_out_of_bounds : forall {T} n us (d : T), (n >= length us)%nat ->
+    nth_default d us n = d.
+  Proof.
+    induction n; unfold nth_default; nth_tac; destruct us; nth_tac.
+    assert (n >= length us)%nat by omega.
+    pose proof (nth_error_length_error _ n us H1).
+    rewrite H0 in H2.
+    congruence.
+  Qed.
+
+  Lemma set_nth_sum : forall n x us, (n < length us)%nat ->
+    B.decode (set_nth n x us) = 
+    (x - nth_default 0 us n) * nth_default 0 BC.base n + B.decode us.
+  Proof.
+    intros.
+    unfold B.decode.
+    nth_inbounds; auto. (* TODO(andreser): nth_inbounds should do this auto*)
+    unfold splice_nth.
+    rewrite <- (firstn_skipn n us) at 4.
+    do 2 rewrite decode'_splice.
+    remember (length (firstn n us)) as n0.
+    ring_simplify.
+    remember (B.decode' (firstn n0 BC.base) (firstn n us)).
+    rewrite (skipn_nth_default n us 0) by omega.
+    rewrite firstn_length in Heqn0.
+    rewrite Min.min_l in Heqn0 by omega; subst n0.
+    destruct (le_lt_dec (length BC.base) n). {
+      rewrite nth_default_out_of_bounds by auto.
+      rewrite skipn_all by omega.
+      do 2 rewrite B.decode_base_nil.
+      ring_simplify; auto.
+    } {
+      rewrite (skipn_nth_default n BC.base 0) by omega.
+      do 2 rewrite B.decode'_cons.
+      ring_simplify; ring.
+    }
+  Qed.
+
+  Lemma add_to_nth_sum : forall n x us, (n < length us)%nat ->
+    B.decode (add_to_nth n x us) = 
+    x * nth_default 0 BC.base n + B.decode us.
+  Proof.
+    unfold add_to_nth; intros; rewrite set_nth_sum; try ring_simplify; auto.
+  Qed.
+
+  Lemma nth_default_base_positive : forall i, (i < length BC.base)%nat ->
+    nth_default 0 BC.base i > 0.
+  Proof.
+    intros.
+    pose proof (nth_error_length_exists_value _ _ H).
+    destruct H0.
+    pose proof (nth_error_value_In _ _ _ H0).
+    pose proof (BC.base_positive _ H1).
+    unfold nth_default.
+    rewrite H0; auto.
+  Qed.
+
+  Lemma gt_lt_symmetry: forall n m, n > m <-> m < n.
+  Proof.
+    intros; split; omega.
+  Qed.
+
+  Lemma base_succ_div_mult : forall i, ((S i) < length BC.base)%nat ->
+    nth_default 0 BC.base (S i) = nth_default 0 BC.base i *
+    (nth_default 0 BC.base (S i) / nth_default 0 BC.base i).
+  Proof.
+    intros.
+    apply Z_div_exact_2; try (apply nth_default_base_positive; omega).
+    apply P.base_succ; auto.
+  Qed.
+
+  Lemma positive_is_nonzero : forall x, x > 0 -> x <> 0.
+  Proof.
+    intros; omega.
+  Qed.
+  Hint Resolve positive_is_nonzero.
+
+  Lemma div_positive_gt_0 : forall a b, a > 0 -> b > 0 -> a mod b = 0 ->
+    a / b > 0.
+  Proof.
+    intros.
+    rewrite gt_lt_symmetry.
+    apply Z.div_str_pos.
+    split; intuition.
+    apply Z.divide_pos_le; try (apply Znumtheory.Zmod_divide); omega.
+  Qed.
+
+  Lemma base_length_lt_pred : (pred (length BC.base) < length BC.base)%nat.
+  Proof.
+    pose proof EC.base_length_nonzero; omega.
+  Qed.
+  Hint Resolve base_length_lt_pred.
+
+  Lemma cap_positive: forall i, (i < length BC.base)%nat -> cap i > 0.
+  Proof.
+    unfold cap; intros; break_if. {
+      apply div_positive_gt_0; try (subst; apply P.base_tail_matches_modulus). {
+        rewrite <- two_p_equiv.
+        apply two_p_gt_ZERO.
+        apply P.k_nonneg.
+      } {
+        apply nth_default_base_positive; subst; auto.
+      }
+    } {
+      apply div_positive_gt_0; try (apply P.base_succ; omega); 
+        try (apply nth_default_base_positive; omega).
+    }
+  Qed.
+
+  Lemma cap_div_mod : forall us i, (i < (pred (length BC.base)))%nat ->
+    let di := nth_default 0 us i in
+    (di - (di mod cap i)) * nth_default 0 BC.base i = 
+    (di / cap i)          * nth_default 0 BC.base (S i).
+  Proof.
+    intros.
+    rewrite (Z_div_mod_eq di (cap i)) at 1 by (apply cap_positive; omega);
+      ring_simplify.
+    unfold cap; break_if; intuition.
+    rewrite base_succ_div_mult at 4 by omega; ring.
+  Qed.
+
+  Lemma carry_decode_eq : forall i us,
+    (length us = length BC.base) ->
+    (i < (pred (length BC.base)))%nat ->
+    B.decode (carry i us) = B.decode us.
+  Proof.
+    unfold carry; intros; break_if; intuition.
+    rewrite add_to_nth_sum by (rewrite length_set_nth; omega).
+    rewrite set_nth_sum by omega.
+    rewrite <- cap_div_mod by auto; ring_simplify; auto.
+  Qed.
+
+  Lemma two_k_div_mul_last :
+     2 ^ P.k = nth_default 0 BC.base (pred (length BC.base)) *
+    (2 ^ P.k / nth_default 0 BC.base (pred (length BC.base))).
+  Proof.
+    intros.
+    pose proof P.base_tail_matches_modulus.
+    rewrite (Z_div_mod_eq (2 ^ P.k) (nth_default 0 BC.base (pred (length BC.base)))) at 1 by
+      (apply nth_default_base_positive; auto); omega.
+  Qed.
+ 
+  Lemma cap_div_mod_reduce : forall us,
+    let i  := pred (length BC.base) in
+    let di := nth_default 0 us i in
+    (di - (di mod cap i)) * nth_default 0 BC.base i =
+    (di / cap i)          * 2 ^ P.k.
+  Proof.
+    intros.
+    rewrite (Z_div_mod_eq di (cap i)) at 1 by
+      (apply cap_positive; auto); ring_simplify.
+    unfold cap; break_if; intuition.
+    rewrite Z.mul_comm, Z.mul_assoc.
+    subst i; rewrite <- two_k_div_mul_last; auto.
+  Qed.
+
+  Lemma elim_mod : forall a b, a = b -> a mod modulus = b mod modulus.
+  Proof.
+    intros; subst; auto.
+  Qed.
+
+  Lemma carry_decode_eq_reduce : forall us,
+    (length us = length BC.base) ->
+    B.decode (carry (pred (length BC.base)) us) mod modulus
+    = B.decode us mod modulus.
+  Proof.
+    unfold carry; intros; break_if; intuition.
+    pose proof EC.base_length_nonzero.
+    rewrite add_to_nth_sum by (rewrite length_set_nth; omega).
+    rewrite set_nth_sum by omega.
+    rewrite Zplus_comm; rewrite <- Z.mul_assoc.
+    rewrite <- pseudomersenne_add.
+    rewrite BC.b0_1.
+    rewrite (Z.mul_comm (2 ^ P.k)).
+    rewrite <- Zred_factor0.
+    rewrite <- cap_div_mod_reduce by auto.
+    apply elim_mod; ring_simplify; auto.
+  Qed.
+
   Lemma carry_length : forall i us,
     (length       us     <= length BC.base)%nat ->
     (length (carry i us) <= length BC.base)%nat.
@@ -417,180 +656,21 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     unfold carry, add_to_nth; intros; break_if; subst; repeat (rewrite length_set_nth); auto.
   Qed.
 
-  Lemma fold_right_accumulate_init : forall v0 xs,
-    fold_right B.accumulate v0 xs = v0 + fold_right B.accumulate 0 xs.
+  Lemma carry_rep : forall i us x,
+    (length us = length BC.base) ->
+    (i < length BC.base)%nat ->
+    us ~= x -> carry i us ~= x.
   Proof.
-    induction xs; boring.
-  Qed.
-
-  Lemma Zplus_assoc_l : forall n m p, n + m + p = (n + m) + p.
-  Proof.
-    auto.
-  Qed.
-
-  Lemma In_app_nil : forall {T} l l' (a : T), l = l' ++ a :: nil -> In a l.
-  Proof.
-    boring.
-  Qed.
-
-  Lemma div_mul_divide: forall n m, n = (n / m) * m -> (m | n).
-  Proof.
-    intros; apply (Znumtheory.Zdivide_intro m n (n/m)); auto.
-  Qed.
-
-  Lemma mul_divide_l : forall m n p, n <> 0 -> ((m * n) | p) -> (m | p).
-  Proof.
-    intros; apply (Z.mul_divide_cancel_l m p n); auto.
-    rewrite Z.mul_comm; apply Z.divide_mul_r; auto.
-  Qed.
-
-  Lemma base_divide_2k : forall x, In x BC.base -> (x | 2 ^ P.k).
-  Proof.
-    intros.
-    destruct (In_nth_error_value BC.base _ H).
-    pose proof (nth_error_value_length _ _ BC.base _ H0).
-    destruct x0. {
-      replace x with (nth_default 0 BC.base 0) by
-       (unfold nth_default; replace (nth_error BC.base 0) with (Some x); auto).
-      rewrite BC.b0_1.
-      apply Z.divide_1_l.
+    unfold rep, toGF; intros.
+    destruct H1.
+    split; try apply carry_length; auto.
+    rewrite <- H2.
+    galois.
+    destruct (eq_nat_dec i (pred (length BC.base))). {
+      subst i; apply carry_decode_eq_reduce; auto.
     } {
-      assert (length (BC.base) - S x0 < length BC.base)%nat as A0 by (apply lt_minus; omega).
-      remember (S x0) as y.
-      assert (length BC.base - y + y >= length BC.base)%nat as A2 by omega.
-      pose proof (P.base_matches_modulus ((length BC.base) - y) y A0 H1 A2) as P0.
-      remember (length BC.base) as l.
-      replace (l - y + y - l)%nat with 0%nat in P0 by 
-        (rewrite NPeano.Nat.sub_add; try rewrite minus_diag; auto; apply lt_le_weak; subst;
-        eapply nth_error_value_length; eauto).
-      simpl in *.
-      rewrite BC.b0_1 in P0.
-      SearchAbout Z.divide.
-  Admitted.
-
-  Lemma base_tail_div_mul_2k : forall l x, BC.base = l ++ x :: nil ->
-    2 ^ P.k = (2 ^ P.k / x) * x.
-  Proof.
-    intros.
-    rewrite Z.mul_comm.
-    apply Z_div_exact_full_2; apply In_app_nil in H; try (apply BC.base_positive in H; omega).
-    rewrite Z.mod_divide by (intro; subst; pose proof (BC.base_positive 0 H); omega).
-    apply base_divide_2k; auto.
+      rewrite carry_decode_eq by omega; auto.
+    }
   Qed.
-
-  Lemma nth_error_last : forall {T} l (x y : T),
-    nth_error (l ++ x :: nil) (length l) = Some y -> y = x.
-  Proof.
-    intros.
-    rewrite nth_error_app in H; break_if; try omega.
-    replace (length l - length l)%nat with 0%nat in * by omega; simpl in *.
-    unfold value in H; congruence.
-  Qed.
-
-  Lemma carry_rep : forall i us x
-    (Hi : (i < length BC.base)%nat)
-    (Hl : length us = length BC.base),
-    us ~= x ->
-    carry i us ~= x.
-  Proof.
-    split; [pose proof carry_length; boring|].
-    unfold rep, toGF, B.decode, B.decode', B.accumulate,
-      carry, add_to_nth, cap, nth_default in *; intros.
-    pose proof (list012 BC.base).
-    pose proof (list012 us).
-    repeat break_or_hyp;
-        break_exists; subst;
-        match goal with [H: BC.base =_ |- _] => rewrite H in * end;
-        distr_length. {
-      intuition; simpl in *.
-      destruct i; try omega.
-      subst; galois.
-      replace x0 with 1 by (pose proof B.base_eq_1cons; congruence).
-      rewrite Zdiv_1_r.
-      replace ((P.c * (x1 / (2 ^ P.k)) + x1 mod (2 ^ P.k)) * 1 + 0)
-        with (x1 mod (2 ^ P.k) + (P.c * (x1 / (2 ^ P.k))))
-        by ring.
-      rewrite <- pseudomersenne_add; f_equal; ring_simplify.
-      rewrite Z.add_comm; symmetry.
-      apply Z_div_mod_eq.
-      admit.
-    } {
-      break_if. {
-        intuition; subst x.
-        repeat (rewrite combine_set_nth).
-        nth_inbounds.
-        nth_inbounds.
-        nth_inbounds.
-        nth_inbounds.
-        nth_inbounds; [|distr_length; eapply NPeano.Nat.min_case; omega].
-        nth_inbounds; [|distr_length; eapply NPeano.Nat.min_case; omega].
-        unfold splice_nth.
-
-        rewrite firstn0, app_nil_l.
-        rewrite (skipn_all (S i)) by (distr_length; eapply NPeano.Nat.min_case; omega).
-        rewrite fold_right_cons.
-        replace x0 with 1 by (pose proof B.base_eq_1cons; congruence).
-        rewrite firstn_combine.
-        rewrite skipn_app_inleft by (distr_length; repeat (eapply NPeano.Nat.min_case); subst; omega).
-        rewrite skipn_combine.
-        rewrite fold_right_app.
-        
-        subst i; rewrite plus_comm; simpl.
-        do 2 rewrite firstn_app_sharp by omega.
-        rewrite combine_app_samelength by omega.
-        rewrite fold_right_app; simpl.
-        fold B.accumulate.
-        rewrite fold_right_accumulate_init.
-        rewrite (fold_right_accumulate_init (x5*x2+0)).
-
-        galois.
-        rewrite Zplus_assoc.
-        rewrite Zplus_assoc.
-        rewrite Zplus_mod.
-        rewrite Zplus_assoc.
-        rewrite Zplus_assoc.
-        rewrite (Zplus_mod (x3 * 1 + x5 * x2 + 0)).
-        f_equal.
-        rewrite Z.add_cancel_r.
-        assert (x = x0) as A0 by admit.
-        assert (x = 1). {
-          replace x with (nth_default 0 BC.base 0); try apply BC.b0_1.
-          rewrite H0, A0; auto.
-        }
-        assert (x6 = x5). {
-          apply (nth_error_last (x3 :: x4)); auto.
-          replace (length (x3 :: x4)) with (length x1 + 1)%nat; auto.
-          replace (length (x3 :: x4)) with (length x4 + 1)%nat by distr_length.
-          omega.
-        }
-        assert (x7 = x2). {
-          apply (nth_error_last (x0 :: x1)); auto.
-          replace (length (x0 :: x1)) with (length x1 + 1)%nat by distr_length; auto.
-        }
-        assert (x8 = x3). {
-          replace (length x1 + 1)%nat with (S (length x1))%nat in H4 by omega.
-          simpl in H4; unfold value in *; congruence.
-        }
-        assert ((x3 * 1 + x5 * x2 + 0) =
-          x3 + (x5 mod (2 ^ P.k / x2))* x2 + (x5 / (2 ^ P.k / x2) * (2 ^ P.k))) as A1. {
-          ring_simplify.
-          rewrite Zplus_assoc_reverse.
-          rewrite (Z.add_cancel_l _ _ x3).
-          rewrite (base_tail_div_mul_2k (x0 :: x1) x2) at 3; auto.
-          rewrite Z.mul_assoc.
-          do 2 rewrite <- (Z.mul_comm x2).
-          rewrite <- (Zmult_plus_distr_r).
-          f_equal.
-          rewrite Zplus_comm.
-          rewrite Z.mul_comm.
-          rewrite <- Z.div_mod; auto.
-          assert (2 ^ P.k / x2 <> 0) by admit; auto.
-        }
-        rewrite A1; subst.
-        rewrite (Z.mul_comm _ (2 ^ P.k)).
-        rewrite pseudomersenne_add; subst.
-        apply Zmod_eq; ring_simplify; auto.
-      }
-  Abort.
 
 End GFPseudoMersenneBase.
