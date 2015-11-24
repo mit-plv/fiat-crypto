@@ -655,6 +655,7 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
   Proof.
     unfold carry, add_to_nth; intros; break_if; subst; repeat (rewrite length_set_nth); auto.
   Qed.
+  Hint Resolve carry_length.
 
   Lemma carry_rep : forall i us x,
     (length us = length BC.base) ->
@@ -663,7 +664,7 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
   Proof.
     unfold rep, toGF; intros.
     destruct H1.
-    split; try apply carry_length; auto.
+    split; auto.
     rewrite <- H2.
     galois.
     destruct (eq_nat_dec i (pred (length BC.base))). {
@@ -671,6 +672,41 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     } {
       rewrite carry_decode_eq by omega; auto.
     }
+  Qed.
+  Hint Resolve carry_rep.
+
+  Definition carry_sequence is us := fold_right carry us is.
+
+  Lemma carry_sequence_length: forall is us,
+    (length us <= length BC.base)%nat ->
+    (length (carry_sequence is us) <= length BC.base)%nat.
+  Proof.
+    induction is; boring.
+  Qed.
+  Hint Resolve carry_sequence_length.
+
+  Lemma carry_length_exact : forall i us,
+    (length       us     = length BC.base)%nat ->
+    (length (carry i us) = length BC.base)%nat.
+  Proof.
+    unfold carry, add_to_nth; intros; break_if; subst; repeat (rewrite length_set_nth); auto.
+  Qed.
+
+  Lemma carry_sequence_length_exact: forall is us,
+    (length us = length BC.base)%nat ->
+    (length (carry_sequence is us) = length BC.base)%nat.
+  Proof.
+    induction is; boring.
+    apply carry_length_exact; auto.
+  Qed.
+  Hint Resolve carry_sequence_length_exact.
+
+  Lemma carry_sequence_rep : forall is us x,
+    (forall i, In i is -> (i < length BC.base)%nat) ->
+    (length us = length BC.base) ->
+    us ~= x -> carry_sequence is us ~= x.
+  Proof.
+    induction is; boring.
   Qed.
 
 End GFPseudoMersenneBase.
