@@ -1,16 +1,9 @@
 Require Import List.
-Require Import Util.ListUtil Util.CaseUtil.
+Require Import Util.ListUtil Util.CaseUtil Util.ZUtil.
 Require Import ZArith.ZArith ZArith.Zdiv.
 Require Import Omega NPeano Arith.
 
 Local Open Scope Z.
-
-Lemma pos_pow_nat_pos : forall x n, 
-  Z.pos x ^ Z.of_nat n > 0.
-  do 2 (intros; induction n; subst; simpl in *; auto with zarith).
-  rewrite <- Pos.add_1_r, Zpower_pos_is_exp.
-  apply Zmult_gt_0_compat; auto; reflexivity.
-Qed.
 
 Module Type BaseCoefs.
   (** [BaseCoefs] represent the weights of each digit in a positional number system, with the weight of least significant digit presented first. The following requirements on the base are preconditions for using it with BaseSystem. *)
@@ -82,12 +75,26 @@ Module BaseSystem (Import B:BaseCoefs).
     unfold decode'; induction bs; destruct vs; boring.
   Qed.
 
+  Lemma base_eq_1cons: base = 1 :: skipn 1 base.
+  Proof.
+    pose proof (b0_1 0) as H.
+    destruct base; compute in H; try discriminate; boring.
+  Qed.
+
   Lemma decode'_cons : forall x1 x2 xs1 xs2,
     decode' (x1 :: xs1) (x2 :: xs2) = x1 * x2 + decode' xs1 xs2.
   Proof.
     unfold decode'; boring.
   Qed.
   Hint Rewrite decode'_cons.
+
+  Lemma decode_cons : forall x us,
+    decode (x :: us) = x + decode (0 :: us).
+  Proof.
+    unfold decode; intros.
+    rewrite base_eq_1cons.
+    autorewrite with core; ring_simplify; auto.
+  Qed.
 
   Fixpoint sub (us vs:digits) : digits :=
     match us,vs with
@@ -99,12 +106,6 @@ Module BaseSystem (Import B:BaseCoefs).
   Lemma sub_rep : forall bs us vs, decode' bs (sub us vs) = decode' bs us - decode' bs vs.
   Proof.
     induction bs; destruct us; destruct vs; boring.
-  Qed.
-
-  Lemma base_eq_1cons: base = 1 :: skipn 1 base.
-  Proof.
-    pose proof (b0_1 0) as H.
-    destruct base; compute in H; try discriminate; boring.
   Qed.
 
   Lemma encode_rep : forall z, decode (encode z) = z.
@@ -119,6 +120,7 @@ Module BaseSystem (Import B:BaseCoefs).
     induction us; destruct bs; boring.
   Qed.
 
+  Hint Rewrite (@nth_default_nil Z).
   Hint Rewrite (@firstn_nil Z).
   Hint Rewrite (@skipn_nil Z).
 
@@ -205,14 +207,6 @@ Module BaseSystem (Import B:BaseCoefs).
   Qed.
   Hint Rewrite mul_bi'_zeros.
 
-  Lemma Z_div_mul' : forall a b : Z, b <> 0 -> (b * a) / b = a.
-    intros. rewrite Z.mul_comm. apply Z.div_mul; auto.
-  Qed.
-
-  Lemma Zgt0_neq0 : forall x, x > 0 -> x <> 0.
-    boring.
-  Qed.
-
   Lemma nth_error_base_nonzero : forall n x,
     nth_error base n = Some x -> x <> 0.
   Proof.
@@ -297,21 +291,11 @@ Module BaseSystem (Import B:BaseCoefs).
     unfold mul_bi'; auto.
   Qed.
 
-  Lemma cons_length : forall A (xs : list A) a, length (a :: xs) = S (length xs).
-  Proof.
-    auto.
-  Qed.
-
   Lemma add_same_length : forall us vs l, (length us = l) -> (length vs = l) ->
     length (us .+ vs) = l.
   Proof.
     induction us, vs; boring.
     erewrite (IHus vs (pred l)); boring.
-  Qed.
-
-  Lemma length0_nil : forall {A} (xs : list A), length xs = 0%nat -> xs = nil.
-  Proof.
-    induction xs; boring; discriminate.
   Qed.
 
   Hint Rewrite app_nil_l.
@@ -322,12 +306,6 @@ Module BaseSystem (Import B:BaseCoefs).
     (us ++ a :: nil) .+ (vs ++ b :: nil) = (us .+ vs) ++ (a + b) :: nil.
   Proof.
     induction l, us, vs; boring; discriminate.
-  Qed.
-
-  Lemma length_snoc : forall {T} xs (x:T),
-    length xs = pred (length (xs++x::nil)).
-  Proof.
-    boring; simpl_list; boring.
   Qed.
 
   Lemma mul_bi'_add : forall us n vs l
@@ -421,17 +399,6 @@ Module BaseSystem (Import B:BaseCoefs).
     rewrite add_trailing_zeros by trivial.
     erewrite add_same_length by (pose proof app_length; boring); omega.
   Qed.
-
-  Ltac case_max :=
-    match goal with [ |- context[max ?x ?y] ] =>
-        destruct (le_dec x y);
-        match goal with
-          | [ H : (?x <= ?y)%nat |- context[max ?x ?y] ] => rewrite Max.max_r by
-            (exact H)
-          | [ H : ~ (?x <= ?y)%nat   |- context[max ?x ?y] ] => rewrite Max.max_l by
-            (exact (le_Sn_le _ _ (not_le _ _ H)))
-        end
-    end.
 
   Lemma add_length_le_max : forall us vs,
       (length (us .+ vs) <= max (length us) (length vs))%nat.

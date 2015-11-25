@@ -1,9 +1,9 @@
 Require Import Zpower ZArith.
 Require Import List.
 Require Import Crypto.Galois.BaseSystem Crypto.Galois.GaloisTheory.
-Require Import Util.ListUtil.
+Require Import Util.ListUtil Util.CaseUtil Util.ZUtil.
 Require Import VerdiTactics.
-Open Scope Z_scope.
+Local Open Scope Z_scope.
 
 Module Type PseudoMersenneBaseParams (Import B:BaseCoefs) (Import M:Modulus).
   (* TODO: do we actually want B and M "up there" in the type parameters? I was
@@ -243,7 +243,7 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     autounfold; intuition. {
       unfold add.
       rewrite B.add_length_le_max.
-      B.case_max; try rewrite Max.max_r; omega.
+      case_max; try rewrite Max.max_r; omega.
     }
     unfold toGF in *; unfold B.decode in *.
     rewrite B.add_rep.
@@ -310,12 +310,9 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     apply Znumtheory.not_prime_0; auto.
   Qed.
 
-  Lemma mod_mult_plus: forall a b c, (b <> 0) -> (a * b + c) mod b = c mod b.
-  Proof.
-    intros.
-    rewrite Zplus_mod.
-    rewrite Z.mod_mul; auto; simpl.
-    rewrite Zmod_mod; auto.
+  Lemma two_k_nonzero : 2^P.k <> 0.
+    pose proof (Z.pow_eq_0 2 P.k P.k_nonneg).
+    intuition.
   Qed.
 
   (* a = r + s(2^k) = r + s(2^k - c + c) = r + s(2^k - c) + cs = r + cs *) 
@@ -427,30 +424,6 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     then add_to_nth   0   (P.c * (di / cap i)) us'
     else add_to_nth (S i) (      (di / cap i)) us'.
 
-  Lemma set_nth_nil : forall {T} n (x : T), set_nth n x nil = nil.
-  Proof.
-    induction n; boring.
-  Qed.
-
-  Lemma nth_default_nil : forall {T} n (d : T), nth_default d nil n = d.
-  Proof.
-    induction n; boring.
-  Qed.
-
-  Lemma B_decode_cons : forall x us,
-    B.decode (x :: us) = x + B.decode (0 :: us).
-  Proof.
-    unfold B.decode; intros.
-    rewrite B.base_eq_1cons.
-    do 2 rewrite B.decode'_cons; ring_simplify; auto.
-  Qed.
-
-  Lemma cons_set_nth : forall {T} n (x y : T) us,
-    y :: set_nth n x us = set_nth (S n) x (y :: us).
-  Proof.
-    induction n; boring.
-  Qed.
-
   Lemma decode'_splice : forall xs ys bs,
     B.decode' bs (xs ++ ys) = 
     B.decode' (firstn (length xs) bs) xs + 
@@ -460,24 +433,6 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     unfold B.decode'.
     rewrite combine_truncate_r.
     ring.
-  Qed.
-
- Lemma skipn_nth_default : forall {T} n us (d : T), (n < length us)%nat ->
-   skipn n us = nth_default d us n :: skipn (S n) us.
- Proof.
-    induction n; destruct us; intros; nth_tac.
-    rewrite (IHn us d) at 1 by omega.
-    nth_tac.
-  Qed.
-
-  Lemma nth_default_out_of_bounds : forall {T} n us (d : T), (n >= length us)%nat ->
-    nth_default d us n = d.
-  Proof.
-    induction n; unfold nth_default; nth_tac; destruct us; nth_tac.
-    assert (n >= length us)%nat by omega.
-    pose proof (nth_error_length_error _ n us H1).
-    rewrite H0 in H2.
-    congruence.
   Qed.
 
   Lemma set_nth_sum : forall n x us, (n < length us)%nat ->
@@ -527,11 +482,6 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     rewrite H0; auto.
   Qed.
 
-  Lemma gt_lt_symmetry: forall n m, n > m <-> m < n.
-  Proof.
-    intros; split; omega.
-  Qed.
-
   Lemma base_succ_div_mult : forall i, ((S i) < length BC.base)%nat ->
     nth_default 0 BC.base (S i) = nth_default 0 BC.base i *
     (nth_default 0 BC.base (S i) / nth_default 0 BC.base i).
@@ -539,22 +489,6 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     intros.
     apply Z_div_exact_2; try (apply nth_default_base_positive; omega).
     apply P.base_succ; auto.
-  Qed.
-
-  Lemma positive_is_nonzero : forall x, x > 0 -> x <> 0.
-  Proof.
-    intros; omega.
-  Qed.
-  Hint Resolve positive_is_nonzero.
-
-  Lemma div_positive_gt_0 : forall a b, a > 0 -> b > 0 -> a mod b = 0 ->
-    a / b > 0.
-  Proof.
-    intros.
-    rewrite gt_lt_symmetry.
-    apply Z.div_str_pos.
-    split; intuition.
-    apply Z.divide_pos_le; try (apply Znumtheory.Zmod_divide); omega.
   Qed.
 
   Lemma base_length_lt_pred : (pred (length BC.base) < length BC.base)%nat.
@@ -626,11 +560,6 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     subst i; rewrite <- two_k_div_mul_last; auto.
   Qed.
 
-  Lemma elim_mod : forall a b, a = b -> a mod modulus = b mod modulus.
-  Proof.
-    intros; subst; auto.
-  Qed.
-
   Lemma carry_decode_eq_reduce : forall us,
     (length us = length BC.base) ->
     B.decode (carry (pred (length BC.base)) us) mod modulus
@@ -645,8 +574,7 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     rewrite BC.b0_1.
     rewrite (Z.mul_comm (2 ^ P.k)).
     rewrite <- Zred_factor0.
-    rewrite <- cap_div_mod_reduce by auto.
-    apply elim_mod; ring_simplify; auto.
+    rewrite <- cap_div_mod_reduce by auto; auto.
   Qed.
 
   Lemma carry_length : forall i us,

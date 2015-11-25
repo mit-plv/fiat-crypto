@@ -4,6 +4,7 @@
 src/Tactics/VerdiTactics.v
 src/Util/CaseUtil.v
 src/Util/ListUtil.v
+src/Util/ZUtil.v
 src/Galois/Galois.v
 src/Galois/GaloisTheory.v
 src/Galois/ZGaloisField.v

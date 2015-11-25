@@ -360,6 +360,22 @@ Proof.
   destruct a; omega.
 Qed.
 
+Lemma cons_length : forall A (xs : list A) a, length (a :: xs) = S (length xs).
+Proof.
+  auto.
+Qed.
+
+Lemma length0_nil : forall {A} (xs : list A), length xs = 0%nat -> xs = nil.
+Proof.
+  induction xs; boring; discriminate.
+Qed.
+
+Lemma length_snoc : forall {T} xs (x:T),
+  length xs = pred (length (xs++x::nil)).
+Proof.
+  boring; simpl_list; boring.
+Qed.
+
 Lemma firstn_combine : forall {A B} n (xs:list A) (ys:list B),
   firstn n (combine xs ys) = combine (firstn n xs) (firstn n ys).
 Proof.
@@ -441,6 +457,40 @@ Hint Rewrite
   : distr_length.
 Ltac distr_length := autorewrite with distr_length in *;
   try solve [simpl in *; omega].
+
+Lemma cons_set_nth : forall {T} n (x y : T) us,
+  y :: set_nth n x us = set_nth (S n) x (y :: us).
+Proof.
+  induction n; boring.
+Qed.
+
+Lemma set_nth_nil : forall {T} n (x : T), set_nth n x nil = nil.
+Proof.
+  induction n; boring.
+Qed.
+
+Lemma nth_default_nil : forall {T} n (d : T), nth_default d nil n = d.
+Proof.
+  induction n; boring.
+Qed.
+
+Lemma skipn_nth_default : forall {T} n us (d : T), (n < length us)%nat ->
+ skipn n us = nth_default d us n :: skipn (S n) us.
+Proof.
+  induction n; destruct us; intros; nth_tac.
+  rewrite (IHn us d) at 1 by omega.
+  nth_tac.
+Qed.
+
+Lemma nth_default_out_of_bounds : forall {T} n us (d : T), (n >= length us)%nat ->
+  nth_default d us n = d.
+Proof.
+  induction n; unfold nth_default; nth_tac; destruct us; nth_tac.
+  assert (n >= length us)%nat by omega.
+  pose proof (nth_error_length_error _ n us H1).
+  rewrite H0 in H2.
+  congruence.
+Qed.
 
 Ltac nth_error_inbounds :=
   match goal with
