@@ -417,12 +417,20 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     then (2^P.k) / nth_default 0 BC.base i
     else nth_default 0 BC.base (S i) / nth_default 0 BC.base i.
 
-  Definition carry i us :=
+  Definition carry_simple i := fun us =>
     let di := nth_default 0 us      i in
     let us' := set_nth i (di mod cap i) us in
+    add_to_nth (S i) (      (di / cap i)) us'.
+
+  Definition carry_and_reduce i := fun us =>
+    let di := nth_default 0 us      i in
+    let us' := set_nth i (di mod cap i) us in
+    add_to_nth   0   (P.c * (di / cap i)) us'.
+
+  Definition carry i : B.digits -> B.digits := 
     if eq_nat_dec i (pred (length BC.base))
-    then add_to_nth   0   (P.c * (di / cap i)) us'
-    else add_to_nth (S i) (      (di / cap i)) us'.
+    then carry_and_reduce i
+    else carry_simple i.
 
   Lemma decode'_splice : forall xs ys bs,
     B.decode' bs (xs ++ ys) = 
@@ -525,12 +533,12 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     rewrite base_succ_div_mult at 4 by omega; ring.
   Qed.
 
-  Lemma carry_decode_eq : forall i us,
+  Lemma carry_simple_decode_eq : forall i us,
     (length us = length BC.base) ->
     (i < (pred (length BC.base)))%nat ->
-    B.decode (carry i us) = B.decode us.
+    B.decode (carry_simple i us) = B.decode us.
   Proof.
-    unfold carry; intros; break_if; intuition.
+    unfold carry_simple. intros.
     rewrite add_to_nth_sum by (rewrite length_set_nth; omega).
     rewrite set_nth_sum by omega.
     rewrite <- cap_div_mod by auto; ring_simplify; auto.
@@ -562,10 +570,10 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
 
   Lemma carry_decode_eq_reduce : forall us,
     (length us = length BC.base) ->
-    B.decode (carry (pred (length BC.base)) us) mod modulus
+    B.decode (carry_and_reduce (pred (length BC.base)) us) mod modulus
     = B.decode us mod modulus.
   Proof.
-    unfold carry; intros; break_if; intuition.
+    unfold carry_and_reduce; intros.
     pose proof EC.base_length_nonzero.
     rewrite add_to_nth_sum by (rewrite length_set_nth; omega).
     rewrite set_nth_sum by omega.
@@ -581,7 +589,8 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     (length       us     <= length BC.base)%nat ->
     (length (carry i us) <= length BC.base)%nat.
   Proof.
-    unfold carry, add_to_nth; intros; break_if; subst; repeat (rewrite length_set_nth); auto.
+    unfold carry, carry_simple, carry_and_reduce, add_to_nth.
+    intros; break_if; subst; repeat (rewrite length_set_nth); auto.
   Qed.
   Hint Resolve carry_length.
 
@@ -590,19 +599,13 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     (i < length BC.base)%nat ->
     us ~= x -> carry i us ~= x.
   Proof.
-    unfold rep, toGF; intros.
-    destruct H1.
-    split; auto.
-    rewrite <- H2.
-    galois.
-    destruct (eq_nat_dec i (pred (length BC.base))). {
-      subst i; apply carry_decode_eq_reduce; auto.
-    } {
-      rewrite carry_decode_eq by omega; auto.
-    }
+    pose carry_length. pose carry_decode_eq_reduce. pose carry_simple_decode_eq.
+    unfold rep, toGF, carry in *; intros.
+    intuition; break_if; subst; galois; boring.
   Qed.
   Hint Resolve carry_rep.
 
+  (* FIXME: is should be reversed to match notation in papers *)
   Definition carry_sequence is us := fold_right carry us is.
 
   Lemma carry_sequence_length: forall is us,
@@ -617,7 +620,8 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     (length       us     = length BC.base)%nat ->
     (length (carry i us) = length BC.base)%nat.
   Proof.
-    unfold carry, add_to_nth; intros; break_if; subst; repeat (rewrite length_set_nth); auto.
+    unfold carry, carry_simple, carry_and_reduce, add_to_nth.
+    intros; break_if; subst; repeat (rewrite length_set_nth); auto.
   Qed.
 
   Lemma carry_sequence_length_exact: forall is us,
