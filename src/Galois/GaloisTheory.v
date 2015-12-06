@@ -182,21 +182,31 @@ Module GaloisTheory (M: Modulus).
 
   Lemma inject_distr_add : forall (m n : Z),
       inject (m + n) = inject m + inject n.
-  Admitted.
+  Proof.
+    galois.
+  Qed.
 
   Lemma inject_distr_sub : forall (m n : Z),
       inject (m - n) = inject m - inject n.
-  Admitted.
+  Proof.
+    galois.
+  Qed.
 
   Lemma inject_distr_mul : forall (m n : Z),
       inject (m * n) = inject m * inject n.
-  Admitted.
+  Proof.
+    galois.
+  Qed.
 
   Lemma inject_eq : forall (x : GF), inject x = x.
-  Admitted.
+  Proof.
+    galois.
+  Qed.
 
   Lemma inject_mod_eq : forall x, inject x = inject (x mod modulus).
-  Admitted.
+  Proof.
+    galois.
+  Qed.
 
   Definition GFquotrem(a b: GF): GF * GF :=
     match (Z.quotrem a b) with
