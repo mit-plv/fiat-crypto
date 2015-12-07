@@ -9,15 +9,36 @@ Local Open Scope Z_scope.
 
 Module Type GFEncoding (Import M : Modulus).
   Module Import GF := GaloisTheory M.
-  Definition T := GF.
-  Definition U := word.
   Parameter b : nat.
-  Parameter decode : word (b - 1) -> T.
-  Parameter encode : T -> word (b - 1).
+  Parameter decode : word (b - 1) -> GF.
+  Parameter encode : GF -> word (b - 1).
   Axiom consistent : forall x, decode(encode x) = x.
 End GFEncoding.
 
-Module Type EdDSAParams (Import Q : Modulus) (Import Enc : GFEncoding Q).
+Module Type PointFormatsSpec (Import Q : Modulus).
+  Module Import GT := GaloisTheory Q.
+
+  Parameter a : GF.
+  Axiom a_square: exists x, (x * x = a)%GF.
+
+  Parameter d : GF.
+  Axiom d_not_square : forall x, ((x * x = d)%GF -> False).
+
+  Record point := mkPoint{x : GF; y : GF}.
+  Parameter id : point.
+
+  Parameter onCurve : point -> Prop.
+
+  Parameter scalar_mul : GF -> point -> point.
+  Axiom scalar_mul_onCurve : forall x P, onCurve P -> onCurve (scalar_mul x P).
+
+  Parameter add : point -> point -> point.
+  Axiom add_onCurve : forall P Q, onCurve P -> onCurve Q -> onCurve (add P Q).
+  Axiom add_id : forall P, add P id = P.
+
+End PointFormatsSpec.
+
+Module Type EdDSAParams (Import Q : Modulus) (Import Enc : GFEncoding Q) (PF : PointFormatsSpec Q).
   (* Spec from https://eprint.iacr.org/2015/677.pdf *)
 
   (*
@@ -44,7 +65,7 @@ Module Type EdDSAParams (Import Q : Modulus) (Import Enc : GFEncoding Q).
   * Conservative hash functions are recommended and do not have much
   *   impact on the total cost of EdDSA.
   *)
-  Parameter H : list (word 8) -> word (2 * b).
+  Parameter H : forall n, word n -> word (2 * b).
 
   (*
   * An integer c \in {2, 3}. Secret EdDSA scalars are multiples of 2c.
@@ -75,16 +96,14 @@ Module Type EdDSAParams (Import Q : Modulus) (Import Enc : GFEncoding Q).
   * The original specification of EdDSA did not include this parameter:
   *   it implicitly took a = −1 (and required q mod 4 = 1).
   *)
-  Parameter a : GF.
-  Axiom a_square: exists x, (x * x = a)%GF.
+  Definition a := PF.a.
 
   (*
   * A non-square element d of Fq.
   * The exact choice of d (together with a and q) is important for security,
   *   and is the main topic considered in “curve selection”.
   *)
-  Parameter d : GF.
-  Axiom d_not_square : forall x, ((x * x = d)%GF -> False).
+  Definition d := PF.d.
 
   (*
   *  An element B \neq (0, 1) of the set
@@ -92,9 +111,9 @@ Module Type EdDSAParams (Import Q : Modulus) (Import Enc : GFEncoding Q).
   *  This set forms a group with neutral element 0 = (0, 1) under the
   *    twisted Edwards addition law.
   *)
-  Parameter Bx By : GF.
-  Axiom B_valid : ((a * (Bx^2)) + (By^2) = (1 + (d * (Bx^2) * (By^2))))%GF.
-  Axiom B_not_identity : Bx = GFone /\ By = GFzero -> False.
+  Parameter B : PF.point.
+  Axiom B_valid : PF.onCurve B.
+  Axiom B_not_identity : B = PF.id -> False.
 
   (*
   * An odd prime l such that lB = 0 and (2^c)l = #E.
@@ -115,6 +134,26 @@ Module Type EdDSAParams (Import Q : Modulus) (Import Enc : GFEncoding Q).
   * The original specification of EdDSA did not include this parameter:
   *   it implicitly took H0 as the identity function.
   *)
-  Parameter H' : list (word 8) -> list (word 8).
+  Parameter H'_out_len : nat -> nat.
+  Parameter H' : forall n, word n -> word (H'_out_len n).
 
 End EdDSAParams.
+
+Module Type EdDSA (Q : Modulus) (Import Enc : GFEncoding Q) (Import PF : PointFormatsSpec Q) (Import P : EdDSAParams Q Enc PF).
+  Import Enc.GF.
+  Parameter encode_point : point -> word b.
+  Parameter decode_point : word b -> point.
+
+  Module Type Key.
+    Parameter secret : word b.
+    Definition whdZ {n} (w : word (S n)) := if (whd w) then 1 else 0.
+    Fixpoint word_sum (n : nat) (coef : nat -> Z) : word n -> Z :=
+      match n with
+        | 0%nat => fun w => 0
+        | S n' => fun w => (word_sum n' (fun i => coef (S i)) (wtl w)) + ((coef n') * whdZ w)
+      end.
+    Definition s := two_power_nat n + word_sum b two_power_nat secret.
+    Definition public := H b (encode_point (scalar_mul (inject s) B)).
+  End Key.
+
+End EdDSA.
