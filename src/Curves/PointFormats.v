@@ -2,19 +2,21 @@
 Require Import Crypto.Galois.Galois Crypto.Galois.GaloisTheory Crypto.Galois.ComputationalGaloisField.
 Require Import Tactics.VerdiTactics.
 
-Module Type TwistedEdwardsParams (Import M : Modulus).
-    Module Export GT := GaloisTheory M.
-    Open Scope GF_scope.
-    Definition twistedA := { a : GF | a <> 0 /\ exists sqrt_a, sqrt_a^2 = a }.
-    Definition twistedD := { d : GF | forall not_sqrt_d, not_sqrt_d^2 <> d }.
+Module TwistedEdwardsDefs (Import M : Modulus).
+  Module Export GT := GaloisTheory M.
+  Open Scope GF_scope.
+  Definition twistedA := { a : GF | a <> 0 /\ exists sqrt_a, sqrt_a^2 = a }.
+  Definition twistedD := { d : GF | forall not_sqrt_d, not_sqrt_d^2 <> d }.
+  Definition twistedAToGF (a : twistedA) := proj1_sig a.
+  Coercion twistedAToGF : twistedA >-> GF.
+  Definition twistedDToGF (d : twistedD) := proj1_sig d.
+  Coercion twistedDToGF : twistedD >-> GF.
+End TwistedEdwardsDefs.
 
-    Parameter a : twistedA.
-    Parameter d : twistedD.
-
-    Definition twistedAToGF (a : twistedA) := proj1_sig a.
-    Coercion twistedAToGF : twistedA >-> GF.
-    Definition twistedDToGF (d : twistedD) := proj1_sig d.
-    Coercion twistedDToGF : twistedD >-> GF.
+Module Type TwistedEdwardsParams (M : Modulus).
+  Module Export D := TwistedEdwardsDefs M.
+  Parameter a : twistedA.
+  Parameter d : twistedD.
 End TwistedEdwardsParams.
 
 Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParams M).
@@ -111,21 +113,12 @@ End CompleteTwistedEdwardsFacts.
 
 Module Minus1Twisted (Import M : Modulus).
   Module Minus1Params <: TwistedEdwardsParams M.
-    Module Export GT := GaloisTheory M.
-    Open Scope GF_scope.
+    Module Export D := TwistedEdwardsDefs M.
     Definition isSquareAndNonzero (a : GF) :=  a <> 0 /\ exists sqrt_a, sqrt_a^2 = a.
-    Definition twistedA := { a : GF | isSquareAndNonzero a }.
-    Definition twistedD := { d : GF | forall not_sqrt_d, not_sqrt_d^2 <> d }.
-
     Axiom minusOneIsSquareAndNonzero : isSquareAndNonzero (0 - 1).
     Definition a : twistedA := exist _ _ minusOneIsSquareAndNonzero.
 
     Parameter d : twistedD.
-
-    Definition twistedAToGF (a : twistedA) := proj1_sig a.
-    Coercion twistedAToGF : twistedA >-> GF.
-    Definition twistedDToGF (d : twistedD) := proj1_sig d.
-    Coercion twistedDToGF : twistedD >-> GF.
   End Minus1Params.
   Import Minus1Params.
 
