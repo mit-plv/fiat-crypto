@@ -134,46 +134,16 @@ Section GF25519Base25Point5Formula.
   Import GF.
 
   Lemma GF25519Base25Point5_mul_reduce_formula :
-    forall f g
-      f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 
-      g0 g1 g2 g3 g4 g5 g6 g7 g8 g9
-    (Hf: rep [f0;f1;f2;f3;f4;f5;f6;f7;f8;f9] f)
-    (Hg: rep [g0;g1;g2;g3;g4;g5;g6;g7;g8;g9] g),
-      let h0 := (f0*g0 + 38*f9*g1 + 19*f8*g2 + 38*f7*g3 + 19*f6*g4 + 38*f5*g5 + 19*f4*g6 + 38*f3*g7 + 19*f2*g8 + 38*f1*g9) in
-      let h1 := (f1*g0 + f0*g1    + 19*f9*g2 + 19*f8*g3 + 19*f7*g4 + 19*f6*g5 + 19*f5*g6 + 19*f4*g7 + 19*f3*g8 + 19*f2*g9) in
-      let h2 := (f2*g0 + 2*f1*g1  + f0*g2    + 38*f9*g3 + 19*f8*g4 + 38*f7*g5 + 19*f6*g6 + 38*f5*g7 + 19*f4*g8 + 38*f3*g9) in
-      let h3 := (f3*g0 + f2*g1    + f1*g2    + f0*g3    + 19*f9*g4 + 19*f8*g5 + 19*f7*g6 + 19*f6*g7 + 19*f5*g8 + 19*f4*g9) in
-      let h4 := (f4*g0 + 2*f3*g1  + f2*g2    + 2*f1*g3  + f0*g4    + 38*f9*g5 + 19*f8*g6 + 38*f7*g7 + 19*f6*g8 + 38*f5*g9) in
-      let h5 := (f5*g0 + f4*g1    + f3*g2    + f2*g3    + f1*g4    + f0*g5    + 19*f9*g6 + 19*f8*g7 + 19*f7*g8 + 19*f6*g9) in
-      let h6 := (f6*g0 + 2*f5*g1  + f4*g2    + 2*f3*g3  + f2*g4    + 2*f1*g5  + f0*g6    + 38*f9*g7 + 19*f8*g8 + 38*f7*g9) in
-      let h7 := (f7*g0 + f6*g1    + f5*g2    + f4*g3    + f3*g4    + f2*g5    + f1*g6    + f0*g7    + 19*f9*g8 + 19*f8*g9) in
-      let h8 := (f8*g0 + 2*f7*g1  + f6*g2    + 2*f5*g3  + f4*g4    + 2*f3*g5  + f2*g6    + 2*f1*g7  + f0*g8    + 38*f9*g9) in
-      let h9 := (f9*g0 + f8*g1    + f7*g2    + f6*g3    + f5*g4    + f4*g5    + f3*g6    + f2*g7    + f1*g8    + f0*g9)    in
-      let h0c := Z.land h0 67108863 in
-      let h1c := (Z.shiftr h0 26 + h1)%Z in
-      let h2c := (Z.shiftr h1c 25 + h2)%Z in
-      let h3c := (Z.shiftr h2c 26 + h3)%Z in
-      let h4c := (Z.shiftr h3c 25 + h4)%Z in
-      let h5c := (Z.shiftr h4c 26 + h5)%Z in
-      let h6c := (Z.shiftr h5c 25 + h6)%Z in
-      let h7c := (Z.shiftr h6c 26 + h7)%Z in
-      let h8c := (Z.shiftr h7c 25 + h8)%Z in
-      let h9c := (Z.shiftr h8c 26 + h9)%Z in
-      let r0' := (19 * Z.shiftr h9c 25 + h0c)%Z in
-      let r0 := Z.land r0' 67108863 in
-      let r1' := Z.land h1c 33554431 in
-      let r1 := (Z.shiftr r0' 26 + r1')%Z in
-      let r2 := Z.land h2c 67108863 in
-      let r3 := Z.land h3c 33554431 in
-      let r4 := Z.land h4c 67108863 in
-      let r5 := Z.land h5c 33554431 in
-      let r6 := Z.land h6c 67108863 in
-      let r8 := Z.land h8c 67108863 in
-      let r7 := Z.land h7c 33554431 in
-      let r9 := Z.land h9c 33554431 in
-    rep [r0;r1;r2;r3;r4;r5;r6;r7;r8;r9] (f*g)%GF.
+    forall f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 
+      g0 g1 g2 g3 g4 g5 g6 g7 g8 g9,
+      {ls | forall f g, rep [f0;f1;f2;f3;f4;f5;f6;f7;f8;f9] f
+                        -> rep [g0;g1;g2;g3;g4;g5;g6;g7;g8;g9] g
+                        -> rep ls (f*g)%GF}.
   Proof.
     intros.
+    eexists.
+    intros f g Hf Hg.
+
     pose proof (mul_rep _ _  _ _ Hf Hg) as HmulRef.
     remember (GF25519Base25Point5.mul [f0;f1;f2;f3;f4;f5;f6;f7;f8;f9] [g0;g1;g2;g3;g4;g5;g6;g7;g8;g9]) as h.
     unfold
@@ -306,12 +276,70 @@ Section GF25519Base25Point5Formula.
     remember (Z.ones 26) as m26 in *. compute in Heqm26. subst m26.
     unfold GF25519Base25Point5Params.c in *.
 
-    replace ([r0; r1; r2; r3; r4; r5; r6; r7; r8; r9]) with r; unfold rep; auto; subst r.
+    (* This tactic takes in [r], a variable that we want to use to instantiate an existential.
+     * We find one other variable mentioned in [r], with its own equality in the hypotheses.
+     * That equality is then switched into a [let] in [r]'s defining equation. *)
+    Ltac letify r :=
+      match goal with
+      | [ H : ?x = ?e |- _ ] =>
+        is_var x;
+        match goal with
+        | [ H' : r = _ |- _ ] =>
+          pattern x in H';
+            match type of H' with
+            | (fun z => r = @?e' z) x =>
+              let H'' := fresh "H" in assert (H'' : r = let x := e in e' x) by congruence;
+                clear H'; subst x; rename H'' into H'; cbv beta in H'
+            end
+        end
+      end.
 
-    Ltac rsubstBoth := repeat (match goal with [ |- ?a = ?b] =>  subst a; subst b; repeat progress f_equal || reflexivity end).
-    Ltac t := f_equal; [abstract rsubstBoth|try t].
-    t.
-    f_equal.
-    rsubstBoth.
-  Qed.
+    (* To instantiate an existential, give a variable with a defining equation to this tactic.
+     * We instantiate with a [let]-ified version of that equation. *)
+    Ltac existsFromEquations r := repeat letify r;
+                                 match goal with
+                                 | [ _ : r = ?e |- context[?u] ] => unify u e
+                                 end.
+
+    clear HmulRef Hh Hf Hg.
+    existsFromEquations r.
+    split; auto; congruence.
+
+    (* Here's the tactic code I added at this point at the end of the old version.
+     * Erase after reading, since it isn't needed anymore.
+
+    replace ([r0; r1; r2; r3; r4; r5; r6; r7; r8; r9]) with r; unfold rep; auto.
+
+    subst r.
+
+    Ltac rsubstBoth := repeat (match goal with [ |- ?a = ?b] => subst a; subst b; repeat progress f_equal || reflexivity end).
+    Ltac t := f_equal; abstract rsubstBoth || (try t).
+
+    Time t.
+    
+
+    (* But there's a nicer way! *)
+    Undo 2.
+
+    (* This tactic finds an [x := e] hypothesis and adds a matching [x = e] hypothesis. *)
+    Ltac letToEquality :=
+      match goal with
+      | [ x := ?e |- _ ] =>
+        match goal with
+        | [ _ : x = e |- _ ] => fail 1 (* To avoid infinite loop, make sure we didn't already do this one! *)
+        | _ => assert (x = e) by reflexivity
+        end
+      end.
+
+    (* Repeated introduction of those equalities enables [congruence] to solve the goal. *)
+    Ltac smarter_congruence := repeat letToEquality; congruence.
+
+    Time smarter_congruence.*)
+  Defined.
 End GF25519Base25Point5Formula.
+
+Extraction "/tmp/test.ml" GF25519Base25Point5_mul_reduce_formula.
+(* It's easy enough to use extraction to get the proper nice-looking formula.
+ * More Ltac acrobatics will be needed to get out that formula for further use in Coq.
+ * The easiest fix will be to make the proof script above fully automated,
+ * using [abstract] to contain the proof part. *)
