@@ -7,25 +7,15 @@ Require Import Util.ListUtil Util.CaseUtil Util.ZUtil.
 Require Import VerdiTactics.
 Local Open Scope Z_scope.
 
-Module Type GFEncoding (Import M : Modulus).
-  Module Import GF := GaloisTheory M.
-  Parameter b : nat.
-  Parameter decode : word (b - 1) -> GF.
-  Parameter encode : GF -> word (b - 1).
-  Axiom consistent : forall x, decode(encode x) = x.
-End GFEncoding.
-
 Module Type PointFormatsSpec (Import Q : Modulus).
   Module Import GT := GaloisTheory Q.
 
   Parameter a : GF.
-  Axiom a_square: exists x, (x * x = a)%GF.
 
   Parameter d : GF.
-  Axiom d_not_square : forall x, ((x * x = d)%GF -> False).
 
   Record point := mkPoint{x : GF; y : GF}.
-  Parameter id : point.
+  Definition id := (mkPoint 0 1)%GF.
 
   Parameter onCurve : point -> Prop.
 
@@ -35,10 +25,9 @@ Module Type PointFormatsSpec (Import Q : Modulus).
   Parameter add : point -> point -> point.
   Axiom add_onCurve : forall P Q, onCurve P -> onCurve Q -> onCurve (add P Q).
   Axiom add_id : forall P, add P id = P.
-
 End PointFormatsSpec.
 
-Module Type EdDSAParams (Import Q : Modulus) (Import Enc : GFEncoding Q) (PF : PointFormatsSpec Q).
+Module Type EdDSAParams.
   (* Spec from https://eprint.iacr.org/2015/677.pdf *)
 
   (*
@@ -47,25 +36,33 @@ Module Type EdDSAParams (Import Q : Modulus) (Import Enc : GFEncoding Q) (PF : P
   *   since the size of q constrains the size of l below.
   * There are additional security concerns when q is not chosen to be prime.
   *)
-  Definition q := modulus.
+  Parameter q : Prime.
   Axiom q_odd : Z.odd q = true.
+
+  Module Modulus_q <: Modulus.
+    Definition modulus := q.
+  End Modulus_q.
+  Module Import GF := GaloisTheory Modulus_q.
 
   (*
   * An integer b with 2^(b − 1) > q.
   * EdDSA public keys have exactly b bits,
   *   and EdDSA signatures have exactly 2b bits.
   *)
+  Parameter b : nat.
   Axiom b_valid : 2^((Z.of_nat b) - 1) > q.
 
   (* A (b − 1)-bit encoding of elements of the finite field Fq. *)
-  Import Enc.GF.
+  Parameter decode : word (b - 1) -> GF.
+  Parameter encode : GF -> word (b - 1).
+  Axiom consistent : forall x, decode( encode x) = x.
 
   (*
   * A cryptographic hash function H producing 2b-bit output.
   * Conservative hash functions are recommended and do not have much
   *   impact on the total cost of EdDSA.
   *)
-  Parameter H : forall n, word n -> word (2 * b).
+  Parameter H : forall n, word n -> word (b + b).
 
   (*
   * An integer c \in {2, 3}. Secret EdDSA scalars are multiples of 2c.
@@ -96,14 +93,17 @@ Module Type EdDSAParams (Import Q : Modulus) (Import Enc : GFEncoding Q) (PF : P
   * The original specification of EdDSA did not include this parameter:
   *   it implicitly took a = −1 (and required q mod 4 = 1).
   *)
-  Definition a := PF.a.
+  Parameter a : GF.
+  Axiom a_nonzero : a <> 0%GF.
+  Axiom a_square: exists x, (x * x = a)%GF.
 
   (*
   * A non-square element d of Fq.
   * The exact choice of d (together with a and q) is important for security,
   *   and is the main topic considered in “curve selection”.
   *)
-  Definition d := PF.d.
+  Definition d : GF := PF.d.
+  Axiom d_not_square : forall x, ((x * x = d)%GF -> False).
 
   (*
   *  An element B \neq (0, 1) of the set
@@ -111,6 +111,7 @@ Module Type EdDSAParams (Import Q : Modulus) (Import Enc : GFEncoding Q) (PF : P
   *  This set forms a group with neutral element 0 = (0, 1) under the
   *    twisted Edwards addition law.
   *)
+  Declare Module PF : PointFormatsSpec Modulus_q.
   Parameter B : PF.point.
   Axiom B_valid : PF.onCurve B.
   Axiom B_not_identity : B = PF.id -> False.
@@ -139,21 +140,36 @@ Module Type EdDSAParams (Import Q : Modulus) (Import Enc : GFEncoding Q) (PF : P
 
 End EdDSAParams.
 
-Module Type EdDSA (Q : Modulus) (Import Enc : GFEncoding Q) (Import PF : PointFormatsSpec Q) (Import P : EdDSAParams Q Enc PF).
-  Import Enc.GF.
+Module Type EdDSA (Import P : EdDSAParams).
+  Import P.PF P.GF.
   Parameter encode_point : point -> word b.
   Parameter decode_point : word b -> point.
-
-  Module Type Key.
-    Parameter secret : word b.
-    Definition whdZ {n} (w : word (S n)) := if (whd w) then 1 else 0.
-    Fixpoint word_sum (n : nat) (coef : nat -> Z) : word n -> Z :=
-      match n with
-        | 0%nat => fun w => 0
-        | S n' => fun w => (word_sum n' (fun i => coef (S i)) (wtl w)) + ((coef n') * whdZ w)
-      end.
-    Definition s := two_power_nat n + word_sum b two_power_nat secret.
-    Definition public := H b (encode_point (scalar_mul (inject s) B)).
-  End Key.
-
+  Record secret.
+  Parameter public : secret -> word b.
+  Parameter signature : secret -> forall n, word n -> word (b + b).
 End EdDSA.
+
+Module EdDSAImpl (Import P : EdDSAParams) <: EdDSA P.
+  Import P.PF P.GF.
+  Definition encode_point (p : point) := wzero b. (* TODO *)
+
+  Definition decode_point (w : word b) := id.  (* TODO *)
+
+  (* Utilities for words -- TODO : move *)
+  Definition leading_ones n := natToWord b (wordToNat (wone n)).
+  Definition c_to_n_window := wxor (leading_ones c) (leading_ones n).
+
+  (* Precompute s and the high half of H(k) *)
+  Record secret := mkSecret{
+    key : word b;
+    s : Z;
+    hash_high : word b;
+    s_def : s =  wordToZ (wand c_to_n_window key);
+    hash_high_def : hash_high = split2 b b (H b key)
+  }.
+
+  Definition public (sk : secret) := H b (encode_point (scalar_mul (inject (s sk)) B)).
+
+  Definition signature (sk : secret) n (w : word n) := wzero (b + b).
+
+End EdDSAImpl.

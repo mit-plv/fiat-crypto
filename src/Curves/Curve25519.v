@@ -3,14 +3,14 @@ Require Import Crypto.Galois.Galois Crypto.Galois.GaloisTheory Crypto.Galois.Com
 Require Import Crypto.Curves.PointFormats.
 
 Module Curve25519.
-  Module PF := PointFormats.
-  Import PF.
+  Import M.
+  Module Import GT := GaloisTheory M.
   Local Open Scope GF_scope.
 
   Definition A : GF := ZToGF 486662.
   Definition d : GF := ((0 -ZToGF 121665) / (ZToGF 121666))%GF.
 
-  Definition montgomeryOnCurve25519 := montgomeryOnCurve 1 A.
+  (* Definition montgomeryOnCurve25519 := montgomeryOnCurve 1 A. *)
 
   (* Module-izing Twisted was a breaking change
   Definition m1TwistedOnCurve25519 := twistedOnCurve (0 -1) d.
