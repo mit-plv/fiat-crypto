@@ -5,8 +5,10 @@ Require Import Tactics.VerdiTactics.
 Module TwistedEdwardsDefs (Import M : Modulus).
   Module Export GT := GaloisTheory M.
   Open Scope GF_scope.
-  Definition twistedA := { a : GF | a <> 0 /\ exists sqrt_a, sqrt_a^2 = a }.
-  Definition twistedD := { d : GF | forall not_sqrt_d, not_sqrt_d^2 <> d }.
+  Definition isSquareAndNonzero (a : GF) :=  a <> 0 /\ exists sqrt_a, sqrt_a^2 = a.
+  Definition isNonSquare (d : GF) :=  forall not_sqrt_d, not_sqrt_d^2 <> d.
+  Definition twistedA := { a : GF | isSquareAndNonzero a }.
+  Definition twistedD := { d : GF | isNonSquare d }.
   Definition twistedAToGF (a : twistedA) := proj1_sig a.
   Coercion twistedAToGF : twistedA >-> GF.
   Definition twistedDToGF (d : twistedD) := proj1_sig d.
@@ -61,7 +63,7 @@ Module Type CompleteTwistedEdwardsPointFormat (M : Modulus) (Import P : TwistedE
 End CompleteTwistedEdwardsPointFormat.
 
 Module CompleteTwistedEdwardsFacts (M : Modulus) (Import P : TwistedEdwardsParams M).
-  Module Import Curve := CompleteTwistedEdwardsCurve M P.
+  Module Export Curve := CompleteTwistedEdwardsCurve M P.
   Lemma twistedAddCompletePlus : forall (P1 P2:point)
     (oc1:onCurve P1) (oc2:onCurve P2),
     let x1 := projX P1 in
@@ -114,10 +116,8 @@ End CompleteTwistedEdwardsFacts.
 Module Minus1Twisted (Import M : Modulus).
   Module Minus1Params <: TwistedEdwardsParams M.
     Module Export D := TwistedEdwardsDefs M.
-    Definition isSquareAndNonzero (a : GF) :=  a <> 0 /\ exists sqrt_a, sqrt_a^2 = a.
     Axiom minusOneIsSquareAndNonzero : isSquareAndNonzero (0 - 1).
     Definition a : twistedA := exist _ _ minusOneIsSquareAndNonzero.
-
     Parameter d : twistedD.
   End Minus1Params.
   Import Minus1Params.

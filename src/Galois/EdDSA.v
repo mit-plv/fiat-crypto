@@ -7,26 +7,6 @@ Require Import Util.ListUtil Util.CaseUtil Util.ZUtil.
 Require Import VerdiTactics.
 Local Open Scope Z_scope.
 
-Module Type PointFormatsSpec (Import Q : Modulus).
-  Module Import GT := GaloisTheory Q.
-
-  Parameter a : GF.
-
-  Parameter d : GF.
-
-  Record point := mkPoint{x : GF; y : GF}.
-  Definition id := (mkPoint 0 1)%GF.
-
-  Parameter onCurve : point -> Prop.
-
-  Parameter scalar_mul : GF -> point -> point.
-  Axiom scalar_mul_onCurve : forall x P, onCurve P -> onCurve (scalar_mul x P).
-
-  Parameter add : point -> point -> point.
-  Axiom add_onCurve : forall P Q, onCurve P -> onCurve Q -> onCurve (add P Q).
-  Axiom add_id : forall P, add P id = P.
-End PointFormatsSpec.
-
 Module Type EdDSAParams.
   (* Spec from https://eprint.iacr.org/2015/677.pdf *)
 
@@ -42,7 +22,7 @@ Module Type EdDSAParams.
   Module Modulus_q <: Modulus.
     Definition modulus := q.
   End Modulus_q.
-  Module Import GF := GaloisTheory Modulus_q.
+  Module Import Defs := TwistedEdwardsDefs Modulus_q.
 
   (*
   * An integer b with 2^(b − 1) > q.
@@ -93,17 +73,22 @@ Module Type EdDSAParams.
   * The original specification of EdDSA did not include this parameter:
   *   it implicitly took a = −1 (and required q mod 4 = 1).
   *)
-  Parameter a : GF.
-  Axiom a_nonzero : a <> 0%GF.
-  Axiom a_square: exists x, (x * x = a)%GF.
+  Parameter a : twistedA.
 
   (*
   * A non-square element d of Fq.
   * The exact choice of d (together with a and q) is important for security,
   *   and is the main topic considered in “curve selection”.
   *)
-  Definition d : GF := PF.d.
-  Axiom d_not_square : forall x, ((x * x = d)%GF -> False).
+  Parameter d : twistedD.
+
+  Module Parameters <: TwistedEdwardsParams Modulus_q.
+    Definition a := a.
+    Definition d := d.
+    Module D := Defs.
+  End Parameters.
+
+  Module Export Facts := CompleteTwistedEdwardsFacts Modulus_q Parameters.
 
   (*
   *  An element B \neq (0, 1) of the set
@@ -111,10 +96,9 @@ Module Type EdDSAParams.
   *  This set forms a group with neutral element 0 = (0, 1) under the
   *    twisted Edwards addition law.
   *)
-  Declare Module PF : PointFormatsSpec Modulus_q.
-  Parameter B : PF.point.
-  Axiom B_valid : PF.onCurve B.
-  Axiom B_not_identity : B = PF.id -> False.
+  Parameter B : point.
+  Axiom B_valid : onCurve B.
+  Axiom B_not_identity : B = zero -> False.
 
   (*
   * An odd prime l such that lB = 0 and (2^c)l = #E.
@@ -141,24 +125,19 @@ Module Type EdDSAParams.
 End EdDSAParams.
 
 Module Type EdDSA (Import P : EdDSAParams).
-  Import P.PF P.GF.
   Parameter encode_point : point -> word b.
   Parameter decode_point : word b -> point.
-  Record secret.
+  Parameter secret : Type.
   Parameter public : secret -> word b.
   Parameter signature : secret -> forall n, word n -> word (b + b).
 End EdDSA.
 
 Module EdDSAImpl (Import P : EdDSAParams) <: EdDSA P.
-  Import P.PF P.GF.
   Definition encode_point (p : point) := wzero b. (* TODO *)
+  Definition decode_point (w : word b) := zero.  (* TODO *)
 
-  Definition decode_point (w : word b) := id.  (* TODO *)
-
-  (* Utilities for words -- TODO : move *)
   Definition leading_ones n := natToWord b (wordToNat (wone n)).
   Definition c_to_n_window := wxor (leading_ones c) (leading_ones n).
-
   (* Precompute s and the high half of H(k) *)
   Record secret := mkSecret{
     key : word b;
@@ -168,7 +147,8 @@ Module EdDSAImpl (Import P : EdDSAParams) <: EdDSA P.
     hash_high_def : hash_high = split2 b b (H b key)
   }.
 
-  Definition public (sk : secret) := H b (encode_point (scalar_mul (inject (s sk)) B)).
+  (* Needs scalar multiplication:
+  * Definition public (sk : secret) := H b (encode_point (scalar_mul (inject (s sk)) B)). *)
 
   Definition signature (sk : secret) n (w : word n) := wzero (b + b).
 
