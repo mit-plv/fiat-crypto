@@ -2,23 +2,18 @@
 Require Import Crypto.Galois.Galois Crypto.Galois.GaloisTheory Crypto.Galois.ComputationalGaloisField.
 Require Import Tactics.VerdiTactics.
 
-Module TwistedEdwardsDefs (Import M : Modulus).
+Module TwistedEdwardsDefs (M : Modulus).
   Module Export GT := GaloisTheory M.
   Open Scope GF_scope.
-  Definition isSquareAndNonzero (a : GF) :=  a <> 0 /\ exists sqrt_a, sqrt_a^2 = a.
-  Definition isNonSquare (d : GF) :=  forall not_sqrt_d, not_sqrt_d^2 <> d.
-  Definition twistedA := { a : GF | isSquareAndNonzero a }.
-  Definition twistedD := { d : GF | isNonSquare d }.
-  Definition twistedAToGF (a : twistedA) := proj1_sig a.
-  Coercion twistedAToGF : twistedA >-> GF.
-  Definition twistedDToGF (d : twistedD) := proj1_sig d.
-  Coercion twistedDToGF : twistedD >-> GF.
 End TwistedEdwardsDefs.
 
 Module Type TwistedEdwardsParams (M : Modulus).
-  Module Export D := TwistedEdwardsDefs M.
-  Parameter a : twistedA.
-  Parameter d : twistedD.
+  Module Export Defs := TwistedEdwardsDefs M.
+  Parameter a : GF.
+  Axiom a_nonzero : a <> 0.
+  Axiom a_square : exists x, x * x = a.
+  Parameter d : GF.
+  Axiom d_nonsquare : forall x, x * x <> d.
 End TwistedEdwardsParams.
 
 Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParams M).
@@ -28,7 +23,8 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
   * <https://eprint.iacr.org/2015/677.pdf>
   *)
   Record point := mkPoint {projX : GF; projY : GF}.
-
+  Notation "'(' x ',' y ')'" := (mkPoint x y). 
+  Definition zero := (0, 1).
   Definition unifiedAdd (P1 P2 : point) : point :=
     let x1 := projX P1 in
     let y1 := projY P1 in
@@ -43,6 +39,20 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
     let x := projX P in
     let y := projY P in
     a*x^2 + y^2 = 1 + d*x^2*y^2.
+  
+  Local Infix "+" := unifiedAdd.
+
+  (* Naive implementation *)
+  Fixpoint scalarMultSpec (n:nat) (P : point) : point :=
+    match n with 
+    | O => zero
+    | S n' => P + scalarMultSpec n' P
+    end
+  .
+
+  (* TODO: non-naive *)
+  Definition scalarMult := scalarMultSpec.
+  
 End CompleteTwistedEdwardsCurve.
 
 Module Type CompleteTwistedEdwardsPointFormat (M : Modulus) (Import P : TwistedEdwardsParams M).
@@ -63,7 +73,7 @@ Module Type CompleteTwistedEdwardsPointFormat (M : Modulus) (Import P : TwistedE
 End CompleteTwistedEdwardsPointFormat.
 
 Module CompleteTwistedEdwardsFacts (M : Modulus) (Import P : TwistedEdwardsParams M).
-  Module Export Curve := CompleteTwistedEdwardsCurve M P.
+  Module Import Curve := CompleteTwistedEdwardsCurve M P.
   Lemma twistedAddCompletePlus : forall (P1 P2:point)
     (oc1:onCurve P1) (oc2:onCurve P2),
     let x1 := projX P1 in
@@ -101,8 +111,6 @@ Module CompleteTwistedEdwardsFacts (M : Modulus) (Import P : TwistedEdwardsParam
     (* uh... I don't actually know where this is proven... *)
   Admitted.
 
-  Local Notation "'(' x ',' y ')'" := (mkPoint x y).
-  Definition zero := (0, 1).
   Lemma zeroOnCurve : onCurve (0, 1).
   Proof.
     twisted.
@@ -111,21 +119,24 @@ Module CompleteTwistedEdwardsFacts (M : Modulus) (Import P : TwistedEdwardsParam
   Proof.
     admit.
   Qed.
+
 End CompleteTwistedEdwardsFacts.
 
-Module Minus1Twisted (Import M : Modulus).
-  Module Minus1Params <: TwistedEdwardsParams M.
-    Module Export D := TwistedEdwardsDefs M.
-    Axiom minusOneIsSquareAndNonzero : isSquareAndNonzero (0 - 1).
-    Definition a : twistedA := exist _ _ minusOneIsSquareAndNonzero.
-    Parameter d : twistedD.
-  End Minus1Params.
-  Import Minus1Params.
+Module Type Minus1Params (Import M : Modulus) <: TwistedEdwardsParams M.
+  Module Export Defs := TwistedEdwardsDefs M.
+  Open Scope GF_scope.
+  Definition a := 0 - 1.
+  Axiom a_nonzero : a <> 0.
+  Axiom a_square : exists x, x * x = a.
+  Parameter d : GF.
+  Axiom d_nonsquare : forall x, x * x <> d.
+End Minus1Params.
 
-  Module Import Curve := CompleteTwistedEdwardsCurve M Minus1Params.
+Module Minus1Twisted (M : Modulus) (Import P : Minus1Params M).
+  Module Import Curve := CompleteTwistedEdwardsCurve M P.
 
-  Module Minus1Format <: CompleteTwistedEdwardsPointFormat M Minus1Params.
-    Module Import Facts := CompleteTwistedEdwardsFacts M Minus1Params.
+  Module Minus1Format <: CompleteTwistedEdwardsPointFormat M P.
+    Module Import Facts := CompleteTwistedEdwardsFacts M P.
     (** [projective] represents a point on an elliptic curve using projective
     * Edwards coordinates for twisted edwards curves with a=-1 (see
     * <https://hyperelliptic.org/EFD/g1p/auto-edwards-projective.html>

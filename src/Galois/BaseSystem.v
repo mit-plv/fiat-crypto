@@ -39,7 +39,7 @@ Module BaseSystem (Import B:BaseCoefs).
 
   Lemma decode'_truncate : forall bs us, decode' bs us = decode' bs (firstn (length bs) us).
   Proof.
-    unfold decode, decode'; intros; f_equal; apply combine_truncate_l.
+    unfold decode'; intros; f_equal; apply combine_truncate_l.
   Qed.
   
   Fixpoint add (us vs:digits) : digits :=
