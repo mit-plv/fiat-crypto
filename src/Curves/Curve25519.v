@@ -2,14 +2,36 @@ Require Import Zpower ZArith Znumtheory.
 Require Import Crypto.Galois.Galois Crypto.Galois.GaloisTheory Crypto.Galois.ComputationalGaloisField.
 Require Import Crypto.Curves.PointFormats.
 
-Module Curve25519.
-  Import M.
-  Module Import GT := GaloisTheory M.
-  Local Open Scope GF_scope.
+Definition two_255_19 := 2^255 - 19. (* <http://safecurves.cr.yp.to/primeproofs.html> *)
+Fact two_255_19_prime : prime two_255_19. Admitted.
+Module Modulus25519 <: Modulus.
+  Definition modulus := exist _ two_255_19 two_255_19_prime.
+End Modulus25519.
 
-  Definition A : GF := ZToGF 486662.
-  Definition d : GF := ((0 -ZToGF 121665) / (ZToGF 121666))%GF.
+Module Curve25519Params <: TwistedEdwardsParams Modulus25519 <: Minus1Params Modulus25519.
+  Module Import GFDefs := GaloisDefs Modulus25519.
+  Coercion inject : Z >-> GF.
 
+  Definition a : GF := -1.
+  Definition d : GF := -121665 / 121666.
+
+  Lemma a_nonzero : a <> 0.
+  Proof.
+    discriminate.
+  Qed.
+
+  Lemma a_square : exists x, x * x = a.
+  Proof.
+    unfold a.
+    exists 19681161376707505956807079304988542015446066515923890162744021073123829784752.
+    (* vm_compute runs out of memory. *) 
+  Admitted.
+
+  Lemma  d_nonsquare : forall x, x * x <> d.
+    (* <https://en.wikipedia.org/wiki/Euler%27s_criterion> *)
+  Admitted.
+
+  Definition A : GF := 486662.
   (* Definition montgomeryOnCurve25519 := montgomeryOnCurve 1 A. *)
 
   (* Module-izing Twisted was a breaking change
@@ -24,7 +46,8 @@ Module Curve25519.
 
   *)
 
-  Definition basepointY := ZToGF 4 / ZToGF 5.
-  (* TODO(andreser): implement (in PointFormats) recoverX from <https://tools.ietf.org/html/draft-josefsson-eddsa-ed25519-03> *)
-End Curve25519.
+  Definition basepointY := 4 / 5.
+End Curve25519Params.
 
+Module Edwards25519 := CompleteTwistedEdwardsCurve Modulus25519 Curve25519Params.
+Module Edwards25519Minus1Twisted := Minus1Format Modulus25519 Curve25519Params.

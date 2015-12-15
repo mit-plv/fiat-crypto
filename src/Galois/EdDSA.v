@@ -5,12 +5,25 @@ Require Import Crypto.Galois.BaseSystem Crypto.Galois.GaloisTheory.
 Require Import Util.ListUtil Util.CaseUtil Util.ZUtil.
 Require Import VerdiTactics.
 
+(* TODO : where should this be? *)
+Definition wfirstn {m} {n} (w : word m) (H : (n <= m)%nat) : word n.
+  replace m with (n + (m - n))%nat in * by (symmetry; apply le_plus_minus; apply H)
+.
+  exact (split1 n (m - n) w).
+Defined.
+
+Lemma wtl_WS : forall b {n} (w : word n), wtl (WS b w) = w.
+Proof.
+  auto.
+Qed.
+
 Class Encoding (T B:Type) := {
   enc : T -> B ;
   dec : B -> option T ;
   encoding_valid : forall x, dec (enc x) = Some x  
 }.
 Notation "'encoding' 'of' T 'as' B" := (Encoding T B) (at level 50).
+
 
 (* Spec from <https://eprint.iacr.org/2015/677.pdf> *)
 Module Type EdDSAParams.
@@ -27,7 +40,7 @@ Module Type EdDSAParams.
   Module Modulus_q <: Modulus.
     Definition modulus := q.
   End Modulus_q.
-  Module Export CurveDefs := TwistedEdwardsDefs Modulus_q.
+  Module Export GFDefs := GaloisDefs Modulus_q.
 
   Parameter b : nat.
   Axiom b_valid : 2^(b - 1) > q.
@@ -74,7 +87,7 @@ Module Type EdDSAParams.
   *  This set forms a group with neutral element 0 = (0, 1) under the
   *    twisted Edwards addition law. *)
   Module CurveParameters <: TwistedEdwardsParams Modulus_q.
-    Module Defs := CurveDefs.
+    Module GFDefs := GFDefs.
     Definition a : GF := a.
     Definition a_nonzero := a_nonzero.
     Definition a_square := a_square.
@@ -85,7 +98,6 @@ Module Type EdDSAParams.
 
   Parameter B : point. (* element of E *)
   Axiom B_not_identity : B <> zero.
-  Axiom B_valid : onCurve B.
 
   (*
   * An odd prime l such that lB = 0 and (2^c)l = #E.
@@ -110,20 +122,7 @@ Module Type EdDSAParams.
   *)
   Parameter H'_out_len : nat -> nat.
   Parameter H' : forall {n}, word n -> word (H'_out_len n).
-
 End EdDSAParams.
-
-(* TODO : where should this be? *)
-Definition wfirstn {m} {n} (w : word m) (H : (n <= m)%nat) : word n.
-  replace m with (n + (m - n))%nat in * by (symmetry; apply le_plus_minus; apply H)
-.
-  exact (split1 n (m - n) w).
-Defined.
-
-Lemma wtl_WS : forall b {n} (w : word n), wtl (WS b w) = w.
-Proof.
-  auto.
-Qed.
 
 Module EdDSADefs (Import P : EdDSAParams).
   Infix "++" := combine.
@@ -156,13 +155,13 @@ End EdDSADefs.
 Module Type EdDSA (Import P : EdDSAParams).
   Module Import Spec := EdDSADefs P.
 
-  (* FIXME: make [point] represent points on the curve *)
   Parameter PointEncoding : encoding of point as word b.
   Axiom encode_point_spec : forall P, enc P = encode_point_ref P.
 
   Parameter public : secretkey -> publickey.
   Axiom public_spec : forall sk, public sk = enc ((curveKey sk) * B).
 
+  (* TODO: use GF for both GF(q) and GF(l) *)
   Parameter sign : publickey -> secretkey -> forall {n}, word n -> signature.
   Axiom sign_spec : forall A_ sk {n} (M : word n), sign A_ sk M = 
     let r := wordToNat (H (randKey sk  ++ M)) in
@@ -170,18 +169,14 @@ Module Type EdDSA (Import P : EdDSAParams).
     let S := (r + curveKey sk * wordToNat (H (enc R ++ A_ ++ M)))%nat mod (Z.to_nat l) in
     enc R ++ natToWord b S.
 
-  Parameter verify : publickey -> signature -> forall {n}, word n -> bool.
-  Axiom verify_spec : forall A_ sig {n} (M : word n), verify A_ sig M = true <->
+  Parameter verify : publickey -> forall {n}, word n -> signature -> bool.
+  Axiom verify_spec : forall A_ sig {n} (M : word n), verify A_ M sig  = true <-> (
     let R_ := split1 b b sig in
     let S_ := split2 b b sig in
     let S := wordToNat S_ in
-    match dec A_ with
-    | None => False
-    | Some A => match dec R_ with
-                | None => False
-                | Some R => S * B = R + (wordToNat (H (R_ ++ A_ ++ M )) * A)
-                end
-    end.
+    exists A, dec A_ = Some A /\
+    exists R, dec R_ = Some R /\
+    S * B = R + (wordToNat (H (R_ ++ A_ ++ M )) * A) ).
 End EdDSA.
 
 Module EdDSAFacts (Import P : EdDSAParams) (Import Impl : EdDSA P).
@@ -216,23 +211,16 @@ Module EdDSAFacts (Import P : EdDSAParams) (Import Impl : EdDSA P).
   Lemma l_gt_zero : (Z.to_nat l <> 0)%nat.
   Admitted.
 
-  (* TODO : move to TwistedEdwardsFacts *)
-  Lemma scalarMultOnCurve : forall n P, onCurve P -> onCurve (n * P).
-  Proof.
-    intros; induction n0; boring.
-  Admitted.
-  Hint Resolve scalarMultOnCurve.
-
   (* TODO : move somewhere else (EdDSAFacts?) *)
   Lemma verify_valid_passes : forall sk {n} (M : word n),
-    verify (public sk) (sign (public sk) sk M) M = true.
+    verify (public sk) M (sign (public sk) sk M) = true.
   Proof.
     intros; rewrite verify_spec.
     intros; subst R_.
     rewrite decode_sign_split1.
     rewrite public_spec.
-    rewrite encoding_valid by auto.
-    rewrite encoding_valid by auto.
+    exists (curveKey sk * B); intuition; [apply encoding_valid|].
+    exists (wordToNat (H (randKey sk ++ M)) * B); intuition; [apply encoding_valid|].
     subst S S_.
     rewrite decode_sign_split2.
     remember (wordToNat (H (randKey sk ++ M))) as r.
