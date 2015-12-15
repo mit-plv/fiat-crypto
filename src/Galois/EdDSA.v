@@ -1,117 +1,91 @@
-Require Import ZArith.
+Require Import ZArith NPeano.
 Require Import Bedrock.Word.
 Require Import Crypto.Curves.PointFormats.
 Require Import Crypto.Galois.BaseSystem Crypto.Galois.GaloisTheory.
 Require Import Util.ListUtil Util.CaseUtil Util.ZUtil.
 Require Import VerdiTactics.
-Local Open Scope Z_scope.
 
+Class Encoding (T B:Type) := {
+  enc : T -> B ;
+  dec : B -> option T ;
+  encoding_valid : forall x, dec (enc x) = Some x  
+}.
+Notation "'encoding' 'of' T 'as' B" := (Encoding T B) (at level 50).
+
+(* Spec from <https://eprint.iacr.org/2015/677.pdf> *)
 Module Type EdDSAParams.
-  (* Spec from https://eprint.iacr.org/2015/677.pdf *)
+  Open Scope Z_scope.
+  Coercion Z.of_nat : nat >-> Z.
+  Coercion Z.to_nat : Z >-> nat.
 
-  (*
-  * An odd prime power q.
-  * Choosing q sufficiently large is important for security,
-  *   since the size of q constrains the size of l below.
-  * There are additional security concerns when q is not chosen to be prime.
-  *)
   Parameter q : Prime.
   Axiom q_odd : q > 2.
+  (* Choosing q sufficiently large is important for security, since the size of
+  * q constrains the size of l below. *)
 
+  (* GF is the finite field of integers modulo q *)
   Module Modulus_q <: Modulus.
     Definition modulus := q.
   End Modulus_q.
   Module Export CurveDefs := TwistedEdwardsDefs Modulus_q.
 
-  (*
-  * An integer b with 2^(b − 1) > q.
-  * EdDSA public keys have exactly b bits,
-  *   and EdDSA signatures have exactly 2b bits.
-  *)
-  (* Note: the parameter pred_b is (b - 1) to make proofs about the (b-1)-bit
-  * encoding easier *)
   Parameter b : nat.
-  Coercion Z.of_nat : nat >-> Z.
   Axiom b_valid : 2^(b - 1) > q.
-  Definition secretkey : Type := word b.
-  Definition publickey : Type := word b.
-  Definition signature : Type := word (b + b).
+  Notation secretkey := (word b) (only parsing).
+  Notation publickey := (word b) (only parsing).
+  Notation signature := (word (b + b)) (only parsing).
 
-  (* A (b − 1)-bit encoding of elements of the finite field Fq. *)
-  Parameter decode_scalar : word (b - 1) -> GF.
-  Parameter encode_scalar : GF -> word (b - 1).
-  Axiom decode_encode_scalar_consistent : forall x, decode_scalar (encode_scalar x) = x.
-  Axiom encode_decode_scalar_consistent : forall x, encode_scalar (decode_scalar x) = x.
+  Parameter GFEncoding : encoding of GF as word (b-1).
 
-  (*
-  * A cryptographic hash function H producing 2b-bit output.
-  * Conservative hash functions are recommended and do not have much
-  *   impact on the total cost of EdDSA.
-  *)
   Parameter H : forall {n}, word n -> word (b + b).
+  (* A cryptographic hash function. Conservative hash functions are recommended
+  * and do not have much impact on the total cost of EdDSA. *)
 
-  (*
-  * An integer c \in {2, 3}. Secret EdDSA scalars are multiples of 2c.
-  * The original specification of EdDSA did not include this parameter:
-  *   it implicitly took c = 3.
-  *)
   Parameter c : nat.
-  Axiom c_valid : (c = 2)%nat \/ (c = 3)%nat.
+  Axiom c_valid : (c = 2 \/ c = 3)%nat.
+  (* Secret EdDSA scalars are multiples of 2^c. The original specification of
+  *  EdDSA did not include this parameter: it implicitly took c = 3. *)
 
-  (*
-  * An integer n with c \leq n \leq b.
-  * Secret EdDSA scalars have exactly n + 1 bits, with the top bit
+  Parameter n : nat.
+  Axiom n_ge_c : (n >= c)%nat.
+  Axiom n_le_b : (n <= b)%nat.
+  (* Secret EdDSA scalars have exactly n + 1 bits, with the top bit
   *   (the 2n position) always set and the bottom c bits always cleared.
   * The original specification of EdDSA did not include this parameter:
   *   it implicitly took n = b−2.
   * Choosing n sufficiently large is important for security:
   *   standard “kangaroo” attacks use approximately 1.36\sqrt(2n−c) additions
-  *   on average to determine an EdDSA secret key from an EdDSA public key.
-  *)
-  Parameter n : nat.
-  Axiom n_ge_c : n >= c.
-  Axiom n_le_b : (n <= b)%nat.
+  *   on average to determine an EdDSA secret key from an EdDSA public key *)
 
-  (*
-  * A nonzero square element a of Fq.
-  * The usual recommendation for best performance is a = −1 if q mod 4 = 1,
-  *   and a = 1 if q mod 4 = 3.
-  * The original specification of EdDSA did not include this parameter:
-  *   it implicitly took a = −1 (and required q mod 4 = 1).
-  *)
   Parameter a : GF.
   Axiom a_nonzero : a <> 0%GF.
-  Axiom a_square : exists x, x * x = a.
+  Axiom a_square : exists x, x^2 = a.
+  (* The usual recommendation for best performance is a = −1 if q mod 4 = 1,
+  *   and a = 1 if q mod 4 = 3.
+  * The original specification of EdDSA did not include this parameter:
+  *   it implicitly took a = −1 (and required q mod 4 = 1). *)
 
-  (*
-  * A non-square element d of Fq.
-  * The exact choice of d (together with a and q) is important for security,
-  *   and is the main topic considered in “curve selection”.
-  *)
   Parameter d : GF.
-  Axiom d_nonsquare : forall x, x * x <> d.
+  Axiom d_nonsquare : forall x, x^2 <> d.
+  (* The exact choice of d (together with a and q) is important for security,
+  *   and is the main topic considered in “curve selection”. *)
 
-  Module Parameters <: TwistedEdwardsParams Modulus_q.
+  (* E = {(x, y) \in Fq x Fq : ax^2 + y^2 = 1 + dx^2y^2}.
+  *  This set forms a group with neutral element 0 = (0, 1) under the
+  *    twisted Edwards addition law. *)
+  Module CurveParameters <: TwistedEdwardsParams Modulus_q.
     Module Defs := CurveDefs.
     Definition a : GF := a.
     Definition a_nonzero := a_nonzero.
     Definition a_square := a_square.
     Definition d := d.
     Definition d_nonsquare := d_nonsquare.
-  End Parameters.
+  End CurveParameters.
+  Module Export Curve := CompleteTwistedEdwardsCurve Modulus_q CurveParameters.
 
-  Module Export Curve := CompleteTwistedEdwardsCurve Modulus_q Parameters.
-
-  (*
-  *  An element B \neq (0, 1) of the set
-  *    E = {(x, y) \in Fq x Fq : ax^2 + y^2 = 1 + dx^2y^2}.
-  *  This set forms a group with neutral element 0 = (0, 1) under the
-  *    twisted Edwards addition law.
-  *)
-  Parameter B : point.
+  Parameter B : point. (* element of E *)
   Axiom B_not_identity : B <> zero.
   Axiom B_valid : onCurve B.
-  Hint Resolve B_valid.
 
   (*
   * An odd prime l such that lB = 0 and (2^c)l = #E.
@@ -123,6 +97,7 @@ Module Type EdDSAParams.
   *)
   Parameter l : Prime.
   Axiom l_odd : l > 2.
+  Axiom l_order_B : scalarMult l B = zero.
   (* TODO: (2^c)l = #E *)
 
   (*
@@ -150,78 +125,81 @@ Proof.
   auto.
 Qed.
 
-Module Type EdDSA (Import P : EdDSAParams).
-  Local Infix "++" := combine.
-  Local Infix "*" := scalarMult.
-  Local Infix "+" := unifiedAdd.
+Module EdDSADefs (Import P : EdDSAParams).
+  Infix "++" := combine.
+  Infix "*" := scalarMult.
+  Infix "+" := unifiedAdd.
+  Infix "mod" := modulo.
 
-  (* From [https://eprint.iacr.org/2015/677.pdf]: x is negative if the 
+  (* From <https://eprint.iacr.org/2015/677.pdf>: x is negative if the 
   * (b − 1)-bit encoding of x is lexicographically larger than the 
   * (b − 1)-bit encoding of −x *)
-  Definition sign_bit x : word 1 := 
-    match (wordToNat (encode_scalar x) ?= wordToNat (encode_scalar (GFopp x)))%nat with
-    | Gt => wone 1
-    | _ => wzero 1
-    end.
+  Definition is_negative x : word 1 := 
+    if wlt_dec (enc (0 - x)) (enc x) then wone 1 else wzero 1.
 
-  (* TODO: move eventually *)
   Lemma b_gt_0 : b > 0.
   Proof.
     pose proof b_valid.
     pose proof q_odd.
     destruct b; boring.
   Qed.
-  
-  Parameter encode_point : point -> word b.
-  Definition encode_point_ref (P : point) : word b.
+
+  Definition encode_point_ref (P:point) : word b.
     replace b with (b - 1 + 1)%nat by abstract (pose proof b_gt_0; omega).
-    apply (combine (encode_scalar (projY P)) (sign_bit (projX P))).
+    exact (combine (enc (projY P)) (is_negative (projX P))).
   Defined.
-  Axiom encode_point_spec : forall P, encode_point P = encode_point_ref P.
-  Parameter decode_point : word b -> option point.
-  Axiom decode_point_spec : forall P, onCurve P ->
-    decode_point (encode_point P) = Some P.
 
-  Definition s (sk : secretkey) :=
-    let N := wordToNat (wfirstn sk n_le_b) in
-    ((N - (NPeano.modulo N (pow2 c))) * pow2 c)%nat.
+  Definition curveKey sk := (let N := wordToNat (wfirstn sk n_le_b) in N - (N mod 2^c))%nat.
+  Definition  randKey (sk:secretkey) := split2 b b (H sk).
+End EdDSADefs.
+  
+Module Type EdDSA (Import P : EdDSAParams).
+  Module Import Spec := EdDSADefs P.
+
+  (* FIXME: make [point] represent points on the curve *)
+  Parameter PointEncoding : encoding of point as word b.
+  Axiom encode_point_spec : forall P, enc P = encode_point_ref P.
+
   Parameter public : secretkey -> publickey.
-  Axiom public_spec : forall sk, public sk = encode_point ((s sk) * B).
+  Axiom public_spec : forall sk, public sk = enc ((curveKey sk) * B).
 
-  Parameter sign : secretkey -> forall {n}, word n -> signature.
-  Axiom sign_spec : forall sk {n} (M : word n), sign sk M = 
-    let r := wordToNat (H ((split2 b b (H sk)) ++ M)) in
+  Parameter sign : publickey -> secretkey -> forall {n}, word n -> signature.
+  Axiom sign_spec : forall A_ sk {n} (M : word n), sign A_ sk M = 
+    let r := wordToNat (H (randKey sk  ++ M)) in
     let R := r * B in
-    let S := NPeano.modulo (r + ((s sk) * wordToNat (H ((encode_point R) ++ (public sk) ++ M))))%nat (Z.to_nat l) in
-    (encode_point R) ++ (natToWord b S).
+    let S := (r + curveKey sk * wordToNat (H (enc R ++ A_ ++ M)))%nat mod (Z.to_nat l) in
+    enc R ++ natToWord b S.
 
   Parameter verify : publickey -> signature -> forall {n}, word n -> bool.
   Axiom verify_spec : forall A_ sig {n} (M : word n), verify A_ sig M = true <->
     let R_ := split1 b b sig in
     let S_ := split2 b b sig in
     let S := wordToNat S_ in
-    match (decode_point A_) with
+    match dec A_ with
     | None => False
-    | Some A => match (decode_point R_) with
+    | Some A => match dec R_ with
                 | None => False
                 | Some R => S * B = R + (wordToNat (H (R_ ++ A_ ++ M )) * A)
                 end
     end.
+End EdDSA.
 
+Module EdDSAFacts (Import P : EdDSAParams) (Import Impl : EdDSA P).
+  Import Impl.Spec.
   (* for signature (R_, S_), R_ = encode_point (r * B) *) 
-  Lemma decode_sign_split1 : forall (sk : secretkey) {n} (M : word n),
-    split1 b b (sign sk M) = encode_point ((wordToNat (H ((split2 b b (H sk)) ++ M))) * B).
+  Lemma decode_sign_split1 : forall A_ sk {n} (M : word n),
+    split1 b b (sign A_ sk M) = enc ((wordToNat (H (randKey sk ++ M))) * B).
   Proof.
-    intros. pose proof (sign_spec sk M).
+    intros. pose proof (sign_spec A_ sk M).
     simpl in H0. rewrite H0; clear H0.
     apply split1_combine.
   Qed.
   
   (* for signature (R_, S_), S_ = encode_scalar (r + H(R_, A_, M)s) *) 
-  Lemma decode_sign_split2 : forall (sk : secretkey) {n} (M : word n),
-    split2 b b (sign sk M) =
-    let r := wordToNat (H ((split2 b b (H sk)) ++ M)) in
-    natToWord b (NPeano.modulo (r + ((s sk) * wordToNat (H ((encode_point (r * B)) ++ (public sk) ++ M)))) (Z.to_nat l)).
+  Lemma decode_sign_split2 : forall sk {n} (M : word n),
+    split2 b b (sign (public sk) sk M) =
+    let r := wordToNat (H (randKey sk ++ M)) in
+    natToWord b (NPeano.modulo (r + ((curveKey sk) * wordToNat (H ((enc (r * B)) ++ (public sk) ++ M)))) (Z.to_nat l)).
   Proof.
     intros. rewrite sign_spec; simpl.
     rewrite split2_combine.
@@ -247,32 +225,32 @@ Module Type EdDSA (Import P : EdDSAParams).
 
   (* TODO : move somewhere else (EdDSAFacts?) *)
   Lemma verify_valid_passes : forall sk {n} (M : word n),
-    verify (public sk) (sign sk M) M = true.
+    verify (public sk) (sign (public sk) sk M) M = true.
   Proof.
     intros; rewrite verify_spec.
     intros; subst R_.
     rewrite decode_sign_split1.
     rewrite public_spec.
-    rewrite decode_point_spec by auto.
-    rewrite decode_point_spec by auto.
+    rewrite encoding_valid by auto.
+    rewrite encoding_valid by auto.
     subst S S_.
-    rewrite decode_sign_split2; simpl.
-    remember (wordToNat (H (split2 b b (H sk) ++ M))) as r.
+    rewrite decode_sign_split2.
+    remember (wordToNat (H (randKey sk ++ M))) as r.
     rewrite public_spec.
+    cbv zeta.
     remember (wordToNat
-      (H (encode_point (r * B) ++ encode_point (s sk * B) ++ M))).
-    assert (N.of_nat (NPeano.modulo (r + s sk * n1) (Z.to_nat l)) < Npow2 b)%N. {
-      remember (r + s sk * n1)%nat.
-      pose proof (NPeano.Nat.mod_upper_bound n2 (Z.to_nat l) l_gt_zero).
+      (H (enc (r * B) ++ enc (curveKey sk * B) ++ M))) as c; simpl in Heqc.
+    assert (N.of_nat (NPeano.modulo (r + curveKey sk * c) (Z.to_nat l)) < Npow2 b)%N as Hlt. {
+      remember (r + curveKey sk * c)%nat as t.
+      pose proof (NPeano.Nat.mod_upper_bound t (Z.to_nat l) l_gt_zero).
       pose proof l_bound.
       pose proof (lt_trans _ (Z.to_nat l) (pow2 b) H0 H1).
       clear H0 H1.
       apply Nomega.Nlt_in.
       rewrite Nnat.Nat2N.id, Npow2_nat; auto.
     }
-    rewrite (wordToNat_natToWord_idempotent b 
-      (NPeano.modulo (r + s sk * n1) (Z.to_nat l)) H0); clear H0.
+    rewrite wordToNat_natToWord_idempotent by auto.
     rewrite verification_principle.
-  Admitted. (* relies on group properties, e.g. distributivity, exp *)
-
-End EdDSA.
+    admit. (* relies on group properties, e.g. distributivity, exp *)
+  Qed.
+End EdDSAFacts.
