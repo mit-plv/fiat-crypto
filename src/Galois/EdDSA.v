@@ -115,8 +115,8 @@ Module Type EdDSAParams.
   Parameter H'_out_len : nat -> nat.
   Parameter H' : forall {n}, word n -> word (H'_out_len n).
 
-  Parameter GFEncoding : encoding of GF as word (b-1).
-  Parameter ScEncoding : encoding of {s:Z | s = s mod l} as word (b-1).
+  Parameter FqEncoding : encoding of GF as word (b-1).
+  Parameter FlEncoding : encoding of {s:Z | s = s mod l} as word (b-1).
   Parameter PointEncoding : encoding of point as word b.
 End EdDSAParams.
   
