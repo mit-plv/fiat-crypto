@@ -12,18 +12,12 @@ Definition wfirstn {m} {n} (w : word m) (H : (n <= m)%nat) : word n.
   exact (split1 n (m - n) w).
 Defined.
 
-Lemma wtl_WS : forall b {n} (w : word n), wtl (WS b w) = w.
-Proof.
-  auto.
-Qed.
-
 Class Encoding (T B:Type) := {
   enc : T -> B ;
   dec : B -> option T ;
   encoding_valid : forall x, dec (enc x) = Some x  
 }.
 Notation "'encoding' 'of' T 'as' B" := (Encoding T B) (at level 50).
-
 
 (* Spec from <https://eprint.iacr.org/2015/677.pdf> *)
 Module Type EdDSAParams.
@@ -47,8 +41,6 @@ Module Type EdDSAParams.
   Notation secretkey := (word b) (only parsing).
   Notation publickey := (word b) (only parsing).
   Notation signature := (word (b + b)) (only parsing).
-
-  Parameter GFEncoding : encoding of GF as word (b-1).
 
   Parameter H : forall {n}, word n -> word (b + b).
   (* A cryptographic hash function. Conservative hash functions are recommended
@@ -122,41 +114,20 @@ Module Type EdDSAParams.
   *)
   Parameter H'_out_len : nat -> nat.
   Parameter H' : forall {n}, word n -> word (H'_out_len n).
-End EdDSAParams.
 
-Module EdDSADefs (Import P : EdDSAParams).
+  Parameter GFEncoding : encoding of GF as word (b-1).
+  Parameter ScEncoding : encoding of {s:Z | s = s mod l} as word (b-1).
+  Parameter PointEncoding : encoding of point as word b.
+End EdDSAParams.
+  
+Module Type EdDSA (Import P : EdDSAParams).
   Infix "++" := combine.
   Infix "*" := scalarMult.
   Infix "+" := unifiedAdd.
   Infix "mod" := modulo.
 
-  (* From <https://eprint.iacr.org/2015/677.pdf>: x is negative if the 
-  * (b − 1)-bit encoding of x is lexicographically larger than the 
-  * (b − 1)-bit encoding of −x *)
-  Definition is_negative x : word 1 := 
-    if wlt_dec (enc (0 - x)) (enc x) then wone 1 else wzero 1.
-
-  Lemma b_gt_0 : b > 0.
-  Proof.
-    pose proof b_valid.
-    pose proof q_odd.
-    destruct b; boring.
-  Qed.
-
-  Definition encode_point_ref (P:point) : word b.
-    replace b with (b - 1 + 1)%nat by abstract (pose proof b_gt_0; omega).
-    exact (combine (enc (projY P)) (is_negative (projX P))).
-  Defined.
-
   Definition curveKey sk := (let N := wordToNat (wfirstn sk n_le_b) in N - (N mod 2^c))%nat.
   Definition  randKey (sk:secretkey) := split2 b b (H sk).
-End EdDSADefs.
-  
-Module Type EdDSA (Import P : EdDSAParams).
-  Module Import Spec := EdDSADefs P.
-
-  Parameter PointEncoding : encoding of point as word b.
-  Axiom encode_point_spec : forall P, enc P = encode_point_ref P.
 
   Parameter public : secretkey -> publickey.
   Axiom public_spec : forall sk, public sk = enc ((curveKey sk) * B).
@@ -180,7 +151,6 @@ Module Type EdDSA (Import P : EdDSAParams).
 End EdDSA.
 
 Module EdDSAFacts (Import P : EdDSAParams) (Import Impl : EdDSA P).
-  Import Impl.Spec.
   (* for signature (R_, S_), R_ = encode_point (r * B) *) 
   Lemma decode_sign_split1 : forall A_ sk {n} (M : word n),
     split1 b b (sign A_ sk M) = enc ((wordToNat (H (randKey sk ++ M))) * B).
