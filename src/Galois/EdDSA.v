@@ -22,8 +22,8 @@ Notation "'encoding' 'of' T 'as' B" := (Encoding T B) (at level 50).
 (* Spec from <https://eprint.iacr.org/2015/677.pdf> *)
 Module Type EdDSAParams.
   Open Scope Z_scope.
-  Coercion Z.of_nat : nat >-> Z.
-  Coercion Z.to_nat : Z >-> nat.
+  Local Coercion Z.of_nat : nat >-> Z.
+  Local Coercion Z.to_nat : Z >-> nat.
 
   Parameter q : Prime.
   Axiom q_odd : q > 2.
@@ -86,8 +86,8 @@ Module Type EdDSAParams.
     Definition d := d.
     Definition d_nonsquare := d_nonsquare.
   End CurveParameters.
-  Module Export Curve := CompleteTwistedEdwardsCurve Modulus_q CurveParameters.
-
+  Module Export Facts := CompleteTwistedEdwardsFacts Modulus_q CurveParameters.
+  Module Export Curve := Facts.Curve.
   Parameter B : point. (* element of E *)
   Axiom B_not_identity : B <> zero.
 
@@ -116,18 +116,35 @@ Module Type EdDSAParams.
   Parameter H' : forall {n}, word n -> word (H'_out_len n).
 
   Parameter FqEncoding : encoding of GF as word (b-1).
-  Parameter FlEncoding : encoding of {s:Z | s = s mod l} as word (b-1).
+  Parameter FlEncoding : encoding of {s:nat | s = (s mod (Z.to_nat l))%nat} as word b.
   Parameter PointEncoding : encoding of point as word b.
-End EdDSAParams.
   
+End EdDSAParams.
+
+Definition modularZ (m z : Z) : {s : Z | s = (s mod m)%Z}.
+  exists (z mod m)%Z.
+  symmetry; apply (Zmod_mod z m).
+Defined.
+
+Definition modularNat (l : Z) (l_odd : (l > 2)%Z) (n : nat) : {s : nat | s = s mod (Z.to_nat l)}.
+  exists (n mod (Z.to_nat l)).
+  symmetry; apply (Nat.mod_mod n (Z.to_nat l)); auto.
+  assert (l > 0)%Z by omega.
+  intuition.
+  replace 0 with (Z.to_nat 0%Z) in H0 by auto.
+  assert (l = 0)%Z.
+  rewrite (Z2Nat.inj l 0%Z) by omega; auto.
+  omega.
+Defined.
+
 Module Type EdDSA (Import P : EdDSAParams).
   Infix "++" := combine.
   Infix "*" := scalarMult.
   Infix "+" := unifiedAdd.
-  Infix "mod" := modulo.
 
   Definition curveKey sk := (let N := wordToNat (wfirstn sk n_le_b) in N - (N mod 2^c))%nat.
   Definition  randKey (sk:secretkey) := split2 b b (H sk).
+  Definition modL := modularNat l l_odd.
 
   Parameter public : secretkey -> publickey.
   Axiom public_spec : forall sk, public sk = enc ((curveKey sk) * B).
@@ -135,19 +152,20 @@ Module Type EdDSA (Import P : EdDSAParams).
   (* TODO: use GF for both GF(q) and GF(l) *)
   Parameter sign : publickey -> secretkey -> forall {n}, word n -> signature.
   Axiom sign_spec : forall A_ sk {n} (M : word n), sign A_ sk M = 
-    let r := wordToNat (H (randKey sk  ++ M)) in
+    let r := wordToNat (H (randKey sk ++ M)) in
     let R := r * B in
-    let S := (r + curveKey sk * wordToNat (H (enc R ++ A_ ++ M)))%nat mod (Z.to_nat l) in
-    enc R ++ natToWord b S.
+    let c := wordToNat (H ((enc R) ++ (public sk) ++ M)) in
+    let S := (r + ((curveKey sk) * c))%nat in
+    enc R ++ enc (modL S).
 
   Parameter verify : publickey -> forall {n}, word n -> signature -> bool.
   Axiom verify_spec : forall A_ sig {n} (M : word n), verify A_ M sig  = true <-> (
     let R_ := split1 b b sig in
     let S_ := split2 b b sig in
-    let S := wordToNat S_ in
     exists A, dec A_ = Some A /\
     exists R, dec R_ = Some R /\
-    S * B = R + (wordToNat (H (R_ ++ A_ ++ M )) * A) ).
+    exists S : {s:nat | s = (s mod (Z.to_nat l))%nat}, dec S_ = Some S /\
+    (proj1_sig S) * B = R + (wordToNat (H (R_ ++ A_ ++ M )) * A) ).
 End EdDSA.
 
 Module EdDSAFacts (Import P : EdDSAParams) (Import Impl : EdDSA P).
@@ -159,56 +177,107 @@ Module EdDSAFacts (Import P : EdDSAParams) (Import Impl : EdDSA P).
     simpl in H0. rewrite H0; clear H0.
     apply split1_combine.
   Qed.
-  
+
+  Lemma l_nonzero_nat : Z.to_nat l <> 0%nat.
+  Proof.
+    pose proof l_odd.
+    destruct l; destruct x; boring.
+    assert (p0 > 2)%positive by auto.
+    rewrite Pos2Nat.inj_gt in H2.
+    omega.
+    pose proof (Zlt_neg_0 p0); omega.
+  Qed.
+
   (* for signature (R_, S_), S_ = encode_scalar (r + H(R_, A_, M)s) *) 
   Lemma decode_sign_split2 : forall sk {n} (M : word n),
     split2 b b (sign (public sk) sk M) =
     let r := wordToNat (H (randKey sk ++ M)) in
-    natToWord b (NPeano.modulo (r + ((curveKey sk) * wordToNat (H ((enc (r * B)) ++ (public sk) ++ M)))) (Z.to_nat l)).
+    let R' := r * B in
+    let c' := wordToNat (H ((enc R') ++ (public sk) ++ M)) in
+    let S' := (r + ((curveKey sk) * c'))%nat in
+    enc (modL S').
   Proof.
     intros. rewrite sign_spec; simpl.
     rewrite split2_combine.
     f_equal.
   Qed.
 
-  Lemma verification_principle : forall n,
-    NPeano.modulo n (Z.to_nat l) * B = n * B.
-  Admitted.
+  Lemma scalarMult_distr : forall n m, (n + m) * B = Curve.unifiedAdd (n * B) (m * B).
+  Proof.
+    intros; induction n0. {
+      rewrite plus_O_n.
+      unfold scalarMult at 2.
+      rewrite (twistedAddComm zero (m * B)).
+      rewrite zeroIsIdentity; auto.
+    } {
+      rewrite plus_Sn_m. simpl.
+      rewrite IHn0.
+      rewrite twistedAddAssoc; auto.
+    }
+  Qed.
 
-  Lemma l_bound : (Z.to_nat l < pow2 b)%nat.
-  Admitted.
+  Lemma scalarMult_assoc : forall (n0 m : nat), n0 * (m * B) = (n0 * m) * B.
+  Proof.
+    intros; induction n0; simpl; auto.
+    rewrite IHn0.
+    rewrite scalarMult_distr; reflexivity.
+  Qed.
 
-  Lemma l_gt_zero : (Z.to_nat l <> 0)%nat.
-  Admitted.
+  Lemma scalarMult_zero : forall m, m * zero = zero.
+  Proof.
+    induction m; auto.
+    unfold scalarMult at 1.
+    fold scalarMult; rewrite IHm.
+    rewrite zeroIsIdentity; auto.
+  Qed.
+
+  Lemma scalarMult_mod_l : forall n, (n mod (Z.to_nat l)) * B = n * B.
+  Proof.
+    intros.
+    rewrite (div_mod n0 (Z.to_nat l)) at 2 by apply l_nonzero_nat.
+    rewrite scalarMult_distr.
+    rewrite mult_comm.
+    rewrite <- scalarMult_assoc.
+    replace ((Z.to_nat l) * B) with zero by (symmetry; apply l_order_B).
+    rewrite scalarMult_zero.
+    rewrite twistedAddComm.
+    rewrite zeroIsIdentity; reflexivity.
+  Qed.
+
+  Lemma wordToNat_posToWord_Ztopos : forall sz z,
+    (0 < z) ->
+    (N.pos (Z.to_pos z) < Npow2 sz)%N ->
+    wordToNat (posToWord sz (Z.to_pos z)) = Z.to_nat z.
+  Proof.
+    intros.
+    rewrite posToWord_nat.
+    rewrite wordToNat_natToWord_idempotent by (rewrite positive_nat_N; auto).
+    rewrite (Nat2Z.inj _ (Z.to_nat z)); auto.
+    rewrite positive_nat_Z.
+    rewrite Z2Pos.id by auto.
+    rewrite Z2Nat.id by omega; reflexivity.
+  Qed.
 
   (* TODO : move somewhere else (EdDSAFacts?) *)
   Lemma verify_valid_passes : forall sk {n} (M : word n),
     verify (public sk) M (sign (public sk) sk M) = true.
   Proof.
     intros; rewrite verify_spec.
-    intros; subst R_.
+    intros; subst R_ S_.
     rewrite decode_sign_split1.
-    rewrite public_spec.
-    exists (curveKey sk * B); intuition; [apply encoding_valid|].
-    exists (wordToNat (H (randKey sk ++ M)) * B); intuition; [apply encoding_valid|].
-    subst S S_.
     rewrite decode_sign_split2.
-    remember (wordToNat (H (randKey sk ++ M))) as r.
     rewrite public_spec.
+    remember (wordToNat (H (randKey sk ++ M))) as r.
+    do 3 (eexists; intuition; [apply encoding_valid|]).
     cbv zeta.
-    remember (wordToNat
+    remember ( wordToNat
       (H (enc (r * B) ++ enc (curveKey sk * B) ++ M))) as c; simpl in Heqc.
-    assert (N.of_nat (NPeano.modulo (r + curveKey sk * c) (Z.to_nat l)) < Npow2 b)%N as Hlt. {
-      remember (r + curveKey sk * c)%nat as t.
-      pose proof (NPeano.Nat.mod_upper_bound t (Z.to_nat l) l_gt_zero).
-      pose proof l_bound.
-      pose proof (lt_trans _ (Z.to_nat l) (pow2 b) H0 H1).
-      clear H0 H1.
-      apply Nomega.Nlt_in.
-      rewrite Nnat.Nat2N.id, Npow2_nat; auto.
-    }
-    rewrite wordToNat_natToWord_idempotent by auto.
-    rewrite verification_principle.
-    admit. (* relies on group properties, e.g. distributivity, exp *)
+    simpl.
+    rewrite scalarMult_mod_l.
+    rewrite scalarMult_distr.
+    f_equal.
+    rewrite scalarMult_assoc.
+    rewrite mult_comm; f_equal.
   Qed.
+
 End EdDSAFacts.
