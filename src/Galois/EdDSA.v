@@ -99,8 +99,9 @@ Module Type EdDSAParams.
   *   attacks use approximately 0.886√l additions on average to determine an
   *   EdDSA secret key from an EdDSA public key.
   *)
-  Parameter l : Prime.
-  Axiom l_odd : l > 2.
+  Parameter l : nat.
+  Axiom l_prime : Znumtheory.prime l.
+  Axiom l_odd : (l > 2)%nat.
   Axiom l_order_B : scalarMult l B = zero.
   (* TODO: (2^c)l = #E *)
 
@@ -116,25 +117,14 @@ Module Type EdDSAParams.
   Parameter H' : forall {n}, word n -> word (H'_out_len n).
 
   Parameter FqEncoding : encoding of GF as word (b-1).
-  Parameter FlEncoding : encoding of {s:nat | s = (s mod (Z.to_nat l))%nat} as word b.
+  Parameter FlEncoding : encoding of {s:nat | s = (s mod l)%nat} as word b.
   Parameter PointEncoding : encoding of point as word b.
   
 End EdDSAParams.
 
-Definition modularZ (m z : Z) : {s : Z | s = (s mod m)%Z}.
-  exists (z mod m)%Z.
-  symmetry; apply (Zmod_mod z m).
-Defined.
-
-Definition modularNat (l : Z) (l_odd : (l > 2)%Z) (n : nat) : {s : nat | s = s mod (Z.to_nat l)}.
-  exists (n mod (Z.to_nat l)).
-  symmetry; apply (Nat.mod_mod n (Z.to_nat l)); auto.
-  assert (l > 0)%Z by omega.
-  intuition.
-  replace 0 with (Z.to_nat 0%Z) in H0 by auto.
-  assert (l = 0)%Z.
-  rewrite (Z2Nat.inj l 0%Z) by omega; auto.
-  omega.
+Definition modularNat (l : nat) (l_odd : (l > 2)%nat) (n : nat) : {s : nat | s = s mod l}.
+  exists (n mod l).
+  symmetry; apply (Nat.mod_mod n l); omega.
 Defined.
 
 Module Type EdDSA (Import P : EdDSAParams).
@@ -154,8 +144,9 @@ Module Type EdDSA (Import P : EdDSAParams).
   Axiom sign_spec : forall A_ sk {n} (M : word n), sign A_ sk M = 
     let r := wordToNat (H (randKey sk ++ M)) in
     let R := r * B in
+    let s := curveKey sk in
     let c := wordToNat (H ((enc R) ++ (public sk) ++ M)) in
-    let S := (r + ((curveKey sk) * c))%nat in
+    let S := (r + (c * s))%nat in
     enc R ++ enc (modL S).
 
   Parameter verify : publickey -> forall {n}, word n -> signature -> bool.
@@ -164,7 +155,7 @@ Module Type EdDSA (Import P : EdDSAParams).
     let S_ := split2 b b sig in
     exists A, dec A_ = Some A /\
     exists R, dec R_ = Some R /\
-    exists S : {s:nat | s = (s mod (Z.to_nat l))%nat}, dec S_ = Some S /\
+    exists S : {s:nat | s = (s mod l)%nat}, dec S_ = Some S /\
     (proj1_sig S) * B = R + (wordToNat (H (R_ ++ A_ ++ M )) * A) ).
 End EdDSA.
 
@@ -177,30 +168,22 @@ Module EdDSAFacts (Import P : EdDSAParams) (Import Impl : EdDSA P).
     simpl in H0. rewrite H0; clear H0.
     apply split1_combine.
   Qed.
-
-  Lemma l_nonzero_nat : Z.to_nat l <> 0%nat.
-  Proof.
-    pose proof l_odd.
-    destruct l; destruct x; boring.
-    assert (p0 > 2)%positive by auto.
-    rewrite Pos2Nat.inj_gt in H2.
-    omega.
-    pose proof (Zlt_neg_0 p0); omega.
-  Qed.
+  Hint Rewrite decode_sign_split1.
 
   (* for signature (R_, S_), S_ = encode_scalar (r + H(R_, A_, M)s) *) 
   Lemma decode_sign_split2 : forall sk {n} (M : word n),
     split2 b b (sign (public sk) sk M) =
     let r := wordToNat (H (randKey sk ++ M)) in
-    let R' := r * B in
-    let c' := wordToNat (H ((enc R') ++ (public sk) ++ M)) in
-    let S' := (r + ((curveKey sk) * c'))%nat in
-    enc (modL S').
+    let R := r * B in
+    let s := curveKey sk in
+    let c := wordToNat (H ((enc R) ++ (public sk) ++ M)) in
+    let S := (r + (c * s))%nat in
+    enc (modL S).
   Proof.
     intros. rewrite sign_spec; simpl.
-    rewrite split2_combine.
-    f_equal.
+    rewrite split2_combine; f_equal.
   Qed.
+  Hint Rewrite decode_sign_split2.
 
   Lemma scalarMult_distr : forall n m, (n + m) * B = Curve.unifiedAdd (n * B) (m * B).
   Proof.
@@ -215,69 +198,45 @@ Module EdDSAFacts (Import P : EdDSAParams) (Import Impl : EdDSA P).
       rewrite twistedAddAssoc; auto.
     }
   Qed.
+  Hint Resolve scalarMult_distr.
 
   Lemma scalarMult_assoc : forall (n0 m : nat), n0 * (m * B) = (n0 * m) * B.
   Proof.
-    intros; induction n0; simpl; auto.
-    rewrite IHn0.
-    rewrite scalarMult_distr; reflexivity.
+    intros; induction n0; boring.
   Qed.
+  Hint Resolve scalarMult_assoc.
 
+  Hint Resolve zeroIsIdentity.
   Lemma scalarMult_zero : forall m, m * zero = zero.
   Proof.
-    induction m; auto.
-    unfold scalarMult at 1.
-    fold scalarMult; rewrite IHm.
-    rewrite zeroIsIdentity; auto.
+    unfold scalarMult; induction m; try rewrite IHm; auto.
   Qed.
+  Hint Rewrite scalarMult_zero.
+  Hint Rewrite l_order_B.
 
-  Lemma scalarMult_mod_l : forall n, (n mod (Z.to_nat l)) * B = n * B.
+  Lemma scalarMult_mod_l : forall n, (n mod l)%nat * B = n * B.
   Proof.
     intros.
-    rewrite (div_mod n0 (Z.to_nat l)) at 2 by apply l_nonzero_nat.
-    rewrite scalarMult_distr.
+    rewrite (div_mod n0 l) at 2 by (pose proof l_odd; omega).
     rewrite mult_comm.
+    rewrite scalarMult_distr.
     rewrite <- scalarMult_assoc.
-    replace ((Z.to_nat l) * B) with zero by (symmetry; apply l_order_B).
-    rewrite scalarMult_zero.
-    rewrite twistedAddComm.
-    rewrite zeroIsIdentity; reflexivity.
+    autorewrite with core.
+    rewrite twistedAddComm; auto.
   Qed.
 
-  Lemma wordToNat_posToWord_Ztopos : forall sz z,
-    (0 < z) ->
-    (N.pos (Z.to_pos z) < Npow2 sz)%N ->
-    wordToNat (posToWord sz (Z.to_pos z)) = Z.to_nat z.
-  Proof.
-    intros.
-    rewrite posToWord_nat.
-    rewrite wordToNat_natToWord_idempotent by (rewrite positive_nat_N; auto).
-    rewrite (Nat2Z.inj _ (Z.to_nat z)); auto.
-    rewrite positive_nat_Z.
-    rewrite Z2Pos.id by auto.
-    rewrite Z2Nat.id by omega; reflexivity.
-  Qed.
-
-  (* TODO : move somewhere else (EdDSAFacts?) *)
   Lemma verify_valid_passes : forall sk {n} (M : word n),
     verify (public sk) M (sign (public sk) sk M) = true.
   Proof.
     intros; rewrite verify_spec.
-    intros; subst R_ S_.
-    rewrite decode_sign_split1.
-    rewrite decode_sign_split2.
-    rewrite public_spec.
-    remember (wordToNat (H (randKey sk ++ M))) as r.
-    do 3 (eexists; intuition; [apply encoding_valid|]).
     cbv zeta.
-    remember ( wordToNat
-      (H (enc (r * B) ++ enc (curveKey sk * B) ++ M))) as c; simpl in Heqc.
-    simpl.
+    autorewrite with core.
+    rewrite public_spec.
+    do 3 (eexists; intuition; [apply encoding_valid|]).
+    simpl proj1_sig.
     rewrite scalarMult_mod_l.
     rewrite scalarMult_distr.
-    f_equal.
-    rewrite scalarMult_assoc.
-    rewrite mult_comm; f_equal.
+    f_equal; auto.
   Qed.
 
 End EdDSAFacts.
