@@ -5,9 +5,11 @@ Require Import Crypto.Galois.BaseSystem Crypto.Galois.GaloisTheory.
 Require Import Util.ListUtil Util.CaseUtil Util.ZUtil.
 Require Import VerdiTactics.
 
+Open Scope nat_scope.
+
 (* TODO : where should this be? *)
-Definition wfirstn {m} {n} (w : word m) (H : (n <= m)%nat) : word n.
-  replace m with (n + (m - n))%nat in * by (symmetry; apply le_plus_minus; apply H)
+Definition wfirstn {m} {n} (w : word m) (H : n <= m) : word n.
+  replace m with (n + (m - n)) in * by (symmetry; apply le_plus_minus; apply H)
 .
   exact (split1 n (m - n) w).
 Defined.
@@ -21,8 +23,6 @@ Notation "'encoding' 'of' T 'as' B" := (Encoding T B) (at level 50).
 
 (* Spec from <https://eprint.iacr.org/2015/677.pdf> *)
 Module Type EdDSAParams.
-  Open Scope Z_scope.
-  Local Coercion Z.of_nat : nat >-> Z.
   Local Coercion Z.to_nat : Z >-> nat.
 
   Parameter q : Prime.
@@ -47,13 +47,13 @@ Module Type EdDSAParams.
   * and do not have much impact on the total cost of EdDSA. *)
 
   Parameter c : nat.
-  Axiom c_valid : (c = 2 \/ c = 3)%nat.
+  Axiom c_valid : c = 2 \/ c = 3.
   (* Secret EdDSA scalars are multiples of 2^c. The original specification of
   *  EdDSA did not include this parameter: it implicitly took c = 3. *)
 
   Parameter n : nat.
-  Axiom n_ge_c : (n >= c)%nat.
-  Axiom n_le_b : (n <= b)%nat.
+  Axiom n_ge_c : n >= c.
+  Axiom n_le_b : n <= b.
   (* Secret EdDSA scalars have exactly n + 1 bits, with the top bit
   *   (the 2n position) always set and the bottom c bits always cleared.
   * The original specification of EdDSA did not include this parameter:
@@ -100,8 +100,8 @@ Module Type EdDSAParams.
   *   EdDSA secret key from an EdDSA public key.
   *)
   Parameter l : nat.
-  Axiom l_prime : Znumtheory.prime l.
-  Axiom l_odd : (l > 2)%nat.
+  Axiom l_prime : Znumtheory.prime (Z.of_nat l).
+  Axiom l_odd : l > 2.
   Axiom l_order_B : scalarMult l B = zero.
   (* TODO: (2^c)l = #E *)
 
@@ -117,12 +117,12 @@ Module Type EdDSAParams.
   Parameter H' : forall {n}, word n -> word (H'_out_len n).
 
   Parameter FqEncoding : encoding of GF as word (b-1).
-  Parameter FlEncoding : encoding of {s:nat | s = (s mod l)%nat} as word b.
+  Parameter FlEncoding : encoding of {s:nat | s = s mod l} as word b.
   Parameter PointEncoding : encoding of point as word b.
   
 End EdDSAParams.
 
-Definition modularNat (l : nat) (l_odd : (l > 2)%nat) (n : nat) : {s : nat | s = s mod l}.
+Definition modularNat (l : nat) (l_odd : l > 2) (n : nat) : {s : nat | s = s mod l}.
   exists (n mod l).
   symmetry; apply (Nat.mod_mod n l); omega.
 Defined.
@@ -131,8 +131,10 @@ Module Type EdDSA (Import P : EdDSAParams).
   Infix "++" := combine.
   Infix "*" := scalarMult.
   Infix "+" := unifiedAdd.
+  Coercion wordToNat : word >-> nat.
 
-  Definition curveKey sk := (let N := wordToNat (wfirstn sk n_le_b) in N - (N mod 2^c))%nat.
+  Definition curveKey sk := let N := wfirstn sk n_le_b in
+    (N - (N mod pow2 c) + pow2 n)%nat.
   Definition  randKey (sk:secretkey) := split2 b b (H sk).
   Definition modL := modularNat l l_odd.
 
@@ -142,11 +144,10 @@ Module Type EdDSA (Import P : EdDSAParams).
   (* TODO: use GF for both GF(q) and GF(l) *)
   Parameter sign : publickey -> secretkey -> forall {n}, word n -> signature.
   Axiom sign_spec : forall A_ sk {n} (M : word n), sign A_ sk M = 
-    let r := wordToNat (H (randKey sk ++ M)) in
+    let r := H (randKey sk ++ M) in
     let R := r * B in
     let s := curveKey sk in
-    let c := wordToNat (H ((enc R) ++ (public sk) ++ M)) in
-    let S := (r + (c * s))%nat in
+    let S := (r + (H ((enc R) ++ (public sk) ++ M) * s))%nat in
     enc R ++ enc (modL S).
 
   Parameter verify : publickey -> forall {n}, word n -> signature -> bool.
@@ -155,7 +156,7 @@ Module Type EdDSA (Import P : EdDSAParams).
     let S_ := split2 b b sig in
     exists A, dec A_ = Some A /\
     exists R, dec R_ = Some R /\
-    exists S : {s:nat | s = (s mod l)%nat}, dec S_ = Some S /\
+    exists S : {s:nat | s = s mod l}, dec S_ = Some S /\
     (proj1_sig S) * B = R + (wordToNat (H (R_ ++ A_ ++ M )) * A) ).
 End EdDSA.
 
@@ -173,11 +174,10 @@ Module EdDSAFacts (Import P : EdDSAParams) (Import Impl : EdDSA P).
   (* for signature (R_, S_), S_ = encode_scalar (r + H(R_, A_, M)s) *) 
   Lemma decode_sign_split2 : forall sk {n} (M : word n),
     split2 b b (sign (public sk) sk M) =
-    let r := wordToNat (H (randKey sk ++ M)) in
+    let r := H (randKey sk ++ M) in
     let R := r * B in
     let s := curveKey sk in
-    let c := wordToNat (H ((enc R) ++ (public sk) ++ M)) in
-    let S := (r + (c * s))%nat in
+    let S := (r + (H ((enc R) ++ (public sk) ++ M) * s))%nat in
     enc (modL S).
   Proof.
     intros. rewrite sign_spec; simpl.
@@ -202,7 +202,9 @@ Module EdDSAFacts (Import P : EdDSAParams) (Import Impl : EdDSA P).
 
   Lemma scalarMult_assoc : forall (n0 m : nat), n0 * (m * B) = (n0 * m) * B.
   Proof.
-    intros; induction n0; boring.
+    intros; induction n0; simpl scalarMult; auto.
+    rewrite scalarMult_distr.
+    rewrite IHn0; reflexivity.
   Qed.
   Hint Resolve scalarMult_assoc.
 
@@ -214,7 +216,7 @@ Module EdDSAFacts (Import P : EdDSAParams) (Import Impl : EdDSA P).
   Hint Rewrite scalarMult_zero.
   Hint Rewrite l_order_B.
 
-  Lemma scalarMult_mod_l : forall n, (n mod l)%nat * B = n * B.
+  Lemma scalarMult_mod_l : forall n, (n mod l) * B = n * B.
   Proof.
     intros.
     rewrite (div_mod n0 l) at 2 by (pose proof l_odd; omega).

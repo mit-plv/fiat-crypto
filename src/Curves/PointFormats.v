@@ -1,6 +1,7 @@
 Require Import Crypto.Galois.Galois Crypto.Galois.GaloisTheory Crypto.Galois.ComputationalGaloisField.
 Require Import Tactics.VerdiTactics.
 Require Import Logic.Eqdep_dec.
+Require Import BinNums NArith.
 
 Module GaloisDefs (M : Modulus).
   Module Export GT := GaloisTheory M.
@@ -59,6 +60,20 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
     | S n' => P + scalarMult n' P
     end
   .
+
+  Fixpoint doubleAndAdd' (p : positive) (P : point) : point :=
+    match p with
+    | 1%positive => P
+    | xO q => doubleAndAdd' q (P + P)
+    | xI q => P + doubleAndAdd' q (P + P)
+    end.
+
+  Definition doubleAndAdd (n : nat) (P : point) : point :=
+    match N.of_nat n with
+    | N0 => zero
+    | Npos p => doubleAndAdd' p P
+    end.
+
 End CompleteTwistedEdwardsCurve.
 
 
@@ -127,7 +142,39 @@ Module CompleteTwistedEdwardsFacts (M : Modulus) (Import P : TwistedEdwardsParam
     twisted.
     (* the denominators are 1 and numerators are equal *)
   Admitted.
+  Hint Resolve zeroIsIdentity.
 
+  Lemma scalarMult_double : forall n P, scalarMult (n * 2) P = scalarMult n (P + P).
+  Proof.
+    induction n; intros; simpl; auto.
+    rewrite twistedAddAssoc.
+    f_equal; auto.
+  Qed.
+
+  Lemma doubleAndAdd'_spec :
+    forall p P, scalarMult (Pos.to_nat p) P = doubleAndAdd' p P.
+  Proof.
+    induction p; intros; simpl; auto. {
+      f_equal.
+      rewrite Pnat.Pmult_nat_mult.
+      rewrite scalarMult_double.
+      apply IHp.
+    } {
+      rewrite Pnat.Pos2Nat.inj_xO.
+      rewrite Mult.mult_comm.
+      rewrite scalarMult_double.
+      apply IHp.
+    }
+  Qed.
+
+  Lemma doubleAndAdd_spec :
+    forall n P, scalarMult n P = doubleAndAdd n P.
+  Proof.
+    destruct n; auto; intros.
+    unfold doubleAndAdd; simpl.
+    rewrite <- doubleAndAdd'_spec.
+    rewrite Pnat.SuccNat2Pos.id_succ; auto.
+  Qed.
 End CompleteTwistedEdwardsFacts.
 
 Module Type Minus1Params (Import M : Modulus) <: TwistedEdwardsParams M.
