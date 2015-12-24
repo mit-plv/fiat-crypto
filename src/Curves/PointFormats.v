@@ -91,15 +91,21 @@ Proof.
 Qed.
 
 Lemma pos_size_gt0 : forall p, 0 < Pos.size_nat p.
-Admitted.
+Proof.
+  intros; case_eq p; intros; simpl; auto; try apply Lt.lt_0_Sn.
+Qed.
 Hint Resolve pos_size_gt0.
 
 Lemma test_low_bit_xI : forall p, testbit_rev p~1 (Pos.size_nat p~1) = true.
-Admitted.
+Proof.
+  unfold testbit_rev; intros; rewrite Minus.minus_diag; auto.
+Qed.
 Hint Resolve test_low_bit_xI.
 
 Lemma test_low_bit_xO : forall p, testbit_rev p~0 (Pos.size_nat p~0) = false.
-Admitted.
+Proof.
+  unfold testbit_rev; intros; rewrite Minus.minus_diag; auto.
+Qed.
 Hint Resolve test_low_bit_xO.
 
 Ltac low_bit := match goal with
@@ -243,11 +249,6 @@ Module CompleteTwistedEdwardsFacts (M : Modulus) (Import P : TwistedEdwardsParam
     (* http://math.rice.edu/~friedl/papers/AAELLIPTIC.PDF *)
   Admitted.
 
-  Lemma zeroIsIdentity : forall P, P + zero = P.
-  Proof.
-    twisted.
-    (* the denominators are 1 and numerators are equal *)
-  Admitted.
   Hint Resolve zeroIsIdentity.
 
   Lemma scalarMult_double : forall n P, scalarMult (n + n) P = scalarMult n (P + P).
@@ -269,18 +270,32 @@ Module CompleteTwistedEdwardsFacts (M : Modulus) (Import P : TwistedEdwardsParam
     auto.
   Qed.
 
-  Lemma append1_gt1 : forall p, (1 <> p~1)%positive.
+  Lemma xO_neq1 : forall p, (1 < p~0)%positive.
   Proof.
-  Admitted.
+    induction p; simpl; auto.
+    replace 2%positive with (Pos.succ 1) by auto.
+    apply Pos.lt_succ_diag_r.
+  Qed.
+
+  Lemma xI_neq1 : forall p, (1 < p~1)%positive.
+  Proof.
+    induction p; simpl; auto.
+    replace 3%positive with (Pos.succ (Pos.succ 1)) by auto.
+    pose proof (Pos.lt_succ_diag_r (Pos.succ 1)).
+    pose proof (Pos.lt_succ_diag_r 1).
+    apply (Pos.lt_trans _ _ _ H0 H).
+  Qed.
 
   Lemma xI_is_succ : forall n p
     (H : Pos.of_succ_nat n = p~1%positive),
-    (Pos.to_nat p * 2)%nat = n.
+    (Pos.to_nat (2 * p))%nat = n.
   Proof.
     induction n; intros; simpl in *; auto. {
-      pose proof (append1_gt1 p); intuition.
+      pose proof (xI_neq1 p).
+      rewrite H in H0.
+      pose proof (Pos.lt_irrefl p~1).
+      intuition.
     } {
-      SearchAbout Pos.succ.
       rewrite Pos.xI_succ_xO in H.
       pose proof (Pos.succ_inj _ _ H); clear H.
       rewrite Pos.of_nat_succ in H0.
@@ -288,7 +303,29 @@ Module CompleteTwistedEdwardsFacts (M : Modulus) (Import P : TwistedEdwardsParam
       rewrite Pnat.Pos2Nat.inj_xO in H0.
       rewrite Pnat.Nat2Pos.id in H0 by apply NPeano.Nat.neq_succ_0.
       rewrite H0.
-      apply NPeano.Nat.mul_comm.
+      apply Pnat.Pos2Nat.inj_xO.
+    }
+  Qed.
+
+  Lemma xO_is_succ : forall n p
+    (H : Pos.of_succ_nat n = p~0%positive),
+    Pos.to_nat (Pos.pred_double p) = n.
+  Proof.
+    induction n; intros; simpl; auto. {
+      pose proof (xO_neq1 p).
+      simpl in H; rewrite H in H0.
+      pose proof (Pos.lt_irrefl p~0).
+      intuition.
+    } {
+      rewrite Pos.pred_double_spec.
+      rewrite <- Pnat.Pos2Nat.inj_iff in H.
+      rewrite Pnat.Pos2Nat.inj_xO in H.
+      rewrite Pnat.SuccNat2Pos.id_succ in H.
+      rewrite Pnat.Pos2Nat.inj_pred by apply xO_neq1.
+      rewrite <- NPeano.Nat.succ_inj_wd.
+      rewrite Pnat.Pos2Nat.inj_xO.
+      rewrite <-  H.
+      auto.
     }
   Qed.
 
@@ -296,7 +333,9 @@ Module CompleteTwistedEdwardsFacts (M : Modulus) (Import P : TwistedEdwardsParam
     Pos.iter_op unifiedAdd p P = doubleAndAdd (Pos.to_nat p) P.
   Proof.
     unfold doubleAndAdd; intros; simpl.
-  Admitted.
+    rewrite Znat.positive_nat_N.
+    rewrite iter_op_spec; auto.
+  Qed.
 
   Lemma doubleAndAdd_spec :
     forall n P, scalarMult n P = doubleAndAdd n P.
@@ -308,23 +347,20 @@ Module CompleteTwistedEdwardsFacts (M : Modulus) (Import P : TwistedEdwardsParam
     case_eq (Pos.of_succ_nat n); intros. {
       simpl. f_equal.
       fold (Pos.iter_op unifiedAdd p (P + P)).
-      assert (N.of_nat n = N.pos (2 * p)).
-      pose proof (xI_is_succ n p H).
-      admit. (* TODO *)
       rewrite IHn.
       unfold doubleAndAdd.
-      rewrite H0; simpl.
+      rewrite <- (xI_is_succ n p) by apply H.
+      rewrite Znat.positive_nat_N; simpl.
       rewrite test_low_bit_xO by auto.
       rewrite iter_op_xO by auto.
       rewrite iter_op_spec.
       reflexivity.
     } {
       fold (Pos.iter_op unifiedAdd p (P + P)).
-      assert (N.of_nat n = (N.pos (Pos.pred (2 * p)))).
-      admit. (* TODO *)
       rewrite IHn.
       unfold doubleAndAdd.
-      rewrite H0; simpl.
+      rewrite <- (xO_is_succ n p) by apply H.
+      rewrite Znat.positive_nat_N; simpl.
       rewrite iter_op_spec.
       rewrite <- (Pos.iter_op_succ _ _ twistedAddAssoc _ _).
       rewrite Pos.succ_pred_double.
@@ -338,6 +374,7 @@ Module CompleteTwistedEdwardsFacts (M : Modulus) (Import P : TwistedEdwardsParam
       auto.
     }
   Qed.
+
 End CompleteTwistedEdwardsFacts.
 
 Module Type Minus1Params (Import M : Modulus) <: TwistedEdwardsParams M.
