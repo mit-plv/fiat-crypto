@@ -17,6 +17,113 @@ Module Type TwistedEdwardsParams (M : Modulus).
   Axiom d_nonsquare : forall x, x * x <> d.
 End TwistedEdwardsParams.
 
+Class OpWithZero (A : Type) := {
+  op : A -> A -> A;
+  zero : A;
+  zero_id : forall x : A, op x zero = x
+}.
+
+Definition testbit_rev p i := Pos.testbit_nat p (Pos.size_nat p - i).
+
+(* TODO: decide if this should go here or somewhere else (util?) *)
+(* implements Pos.iter_op only using testbit, not destructing the positive *)
+Definition iter_op  {A} (OpWZ : OpWithZero A) :=
+  fix iter (p : positive) (i : nat) (a : A) : A :=
+    match i with
+    | O => zero
+    | S i' => if testbit_rev p i
+              then op a (iter p i' (op a a))
+              else iter p i' (op a a)
+    end.
+
+Lemma testbit_rev_xI : forall p i,
+  (i <= Pos.size_nat p) ->
+  testbit_rev p~1 i = testbit_rev p i.
+Proof.
+  unfold testbit_rev; intros.
+  replace (Pos.size_nat p~1) with (S (Pos.size_nat p)) by auto.
+  rewrite NPeano.Nat.sub_succ_l by omega.
+  auto.
+Qed.
+
+Lemma testbit_rev_xO : forall p i,
+  (i <= Pos.size_nat p) ->
+  testbit_rev p~0 i = testbit_rev p i.
+Proof.
+  unfold testbit_rev; intros.
+  replace (Pos.size_nat p~0) with (S (Pos.size_nat p)) by auto.
+  rewrite NPeano.Nat.sub_succ_l by omega.
+  auto.
+Qed.
+
+Lemma iter_op_xI : forall {A} p i OpWZ (a : A),
+  (i <= Pos.size_nat p) -> (0 < i) ->
+  iter_op OpWZ p~1 i a = iter_op OpWZ p i a.
+Proof.
+  induction i; intros; [pose proof (Gt.gt_irrefl 0); intuition|].
+  unfold iter_op.
+  fold (iter_op OpWZ p~1 i (op a a) ).
+  fold (iter_op OpWZ p i (op a a) ).
+  rewrite testbit_rev_xI by omega; simpl.
+  case_eq i; intros; auto.
+  replace (S n) with i by auto.
+  assert (i <= Pos.size_nat p) as hi_bound by omega.
+  assert (0 < i) as lo_bound by (pose proof Gt.gt_Sn_O; omega).
+  rewrite (IHi _ _ hi_bound lo_bound).
+  reflexivity.
+Qed.
+
+Lemma iter_op_xO : forall {A} p i OpWZ (a : A),
+  (i <= Pos.size_nat p) -> (0 < i) ->
+  iter_op OpWZ p~0 i a = iter_op OpWZ p i a.
+Proof.
+  induction i; intros; [pose proof (Gt.gt_irrefl 0); intuition|].
+  unfold iter_op.
+  fold (iter_op OpWZ p~0 i (op a a) ).
+  fold (iter_op OpWZ p i (op a a) ).
+  rewrite testbit_rev_xO by omega; simpl.
+  case_eq i; intros; auto.
+  replace (S n) with i by auto.
+  assert (i <= Pos.size_nat p) as hi_bound by omega.
+  assert (0 < i) as lo_bound by (pose proof Gt.gt_Sn_O; omega).
+  rewrite (IHi _ _ hi_bound lo_bound).
+  reflexivity.
+Qed.
+
+Lemma pos_size_gt0 : forall p, 0 < Pos.size_nat p.
+Admitted.
+Hint Resolve pos_size_gt0.
+
+Lemma test_low_bit_xI : forall p, testbit_rev p~1 (Pos.size_nat p~1) = true.
+Admitted.
+Hint Resolve test_low_bit_xI.
+
+Lemma test_low_bit_xO : forall p, testbit_rev p~0 (Pos.size_nat p~0) = false.
+Admitted.
+Hint Resolve test_low_bit_xO.
+
+Ltac low_bit := match goal with
+| H : testbit_rev ?p~1 (S (Pos.size_nat ?p)) = false |- _ =>
+    pose proof (test_low_bit_xI p); simpl in *; congruence
+| H : testbit_rev ?p~0 (S (Pos.size_nat ?p)) = true |- _ =>
+    pose proof (test_low_bit_xO p); simpl in *; congruence
+| _ => idtac
+end.
+
+Lemma iter_op_spec : forall p {A} OpWZ (a : A),
+  iter_op OpWZ p (Pos.size_nat p) a = Pos.iter_op op p a.
+Proof.
+  induction p; intros; simpl; try apply zero_id. {
+    break_if; low_bit.
+    rewrite iter_op_xI by (try apply pos_size_gt0; auto).
+    rewrite IHp; reflexivity.
+  } {
+    break_if; low_bit.
+    rewrite iter_op_xO by (try apply pos_size_gt0; auto).
+    rewrite IHp; reflexivity.
+  }
+Qed.
+
 Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParams M).
   (** Twisted Ewdwards curves with complete addition laws. References:
   * <https://eprint.iacr.org/2008/013.pdf>
@@ -54,24 +161,23 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
   Defined.
   Local Infix "+" := unifiedAdd.
 
+  Lemma zeroIsIdentity : forall P, P + zero = P.
+  Admitted.
+
+  Definition unifiedAddWZ : OpWithZero point :=
+    Build_OpWithZero point unifiedAdd zero zeroIsIdentity.
+
   Fixpoint scalarMult (n:nat) (P : point) : point :=
-    match n with 
+    match n with
     | O => zero
     | S n' => P + scalarMult n' P
     end
   .
 
-  Fixpoint doubleAndAdd' (p : positive) (P : point) : point :=
-    match p with
-    | 1%positive => P
-    | xO q => doubleAndAdd' q (P + P)
-    | xI q => P + doubleAndAdd' q (P + P)
-    end.
-
   Definition doubleAndAdd (n : nat) (P : point) : point :=
     match N.of_nat n with
-    | N0 => zero
-    | Npos p => doubleAndAdd' p P
+    | 0%N => zero
+    | N.pos p => iter_op unifiedAddWZ p (Pos.size_nat p) P
     end.
 
 End CompleteTwistedEdwardsCurve.
@@ -144,36 +250,93 @@ Module CompleteTwistedEdwardsFacts (M : Modulus) (Import P : TwistedEdwardsParam
   Admitted.
   Hint Resolve zeroIsIdentity.
 
-  Lemma scalarMult_double : forall n P, scalarMult (n * 2) P = scalarMult n (P + P).
+  Lemma scalarMult_double : forall n P, scalarMult (n + n) P = scalarMult n (P + P).
   Proof.
-    induction n; intros; simpl; auto.
+    intros.
+    replace (n + n)%nat with (n * 2)%nat by omega.
+    induction n; simpl; auto.
     rewrite twistedAddAssoc.
     f_equal; auto.
   Qed.
 
-  Lemma doubleAndAdd'_spec :
-    forall p P, scalarMult (Pos.to_nat p) P = doubleAndAdd' p P.
+  Lemma iter_op_double : forall p P,
+    Pos.iter_op unifiedAdd (p + p) P = Pos.iter_op unifiedAdd p (P + P).
   Proof.
-    induction p; intros; simpl; auto. {
-      f_equal.
-      rewrite Pnat.Pmult_nat_mult.
-      rewrite scalarMult_double.
-      apply IHp.
+    (* TODO: use scalarMult_assoc instead of induction. *)
+    intros.
+    rewrite Pos.add_diag.
+    unfold Pos.iter_op; simpl.
+    auto.
+  Qed.
+
+  Lemma append1_gt1 : forall p, (1 <> p~1)%positive.
+  Proof.
+  Admitted.
+
+  Lemma xI_is_succ : forall n p
+    (H : Pos.of_succ_nat n = p~1%positive),
+    (Pos.to_nat p * 2)%nat = n.
+  Proof.
+    induction n; intros; simpl in *; auto. {
+      pose proof (append1_gt1 p); intuition.
     } {
-      rewrite Pnat.Pos2Nat.inj_xO.
-      rewrite Mult.mult_comm.
-      rewrite scalarMult_double.
-      apply IHp.
+      SearchAbout Pos.succ.
+      rewrite Pos.xI_succ_xO in H.
+      pose proof (Pos.succ_inj _ _ H); clear H.
+      rewrite Pos.of_nat_succ in H0.
+      rewrite <- Pnat.Pos2Nat.inj_iff in H0.
+      rewrite Pnat.Pos2Nat.inj_xO in H0.
+      rewrite Pnat.Nat2Pos.id in H0 by apply NPeano.Nat.neq_succ_0.
+      rewrite H0.
+      apply NPeano.Nat.mul_comm.
     }
   Qed.
+
+  Lemma doubleAndAdd_iterop : forall p P,
+    Pos.iter_op unifiedAdd p P = doubleAndAdd (Pos.to_nat p) P.
+  Proof.
+    unfold doubleAndAdd; intros; simpl.
+  Admitted.
 
   Lemma doubleAndAdd_spec :
     forall n P, scalarMult n P = doubleAndAdd n P.
   Proof.
-    destruct n; auto; intros.
-    unfold doubleAndAdd; simpl.
-    rewrite <- doubleAndAdd'_spec.
-    rewrite Pnat.SuccNat2Pos.id_succ; auto.
+    induction n; auto; intros.
+    unfold doubleAndAdd.
+    simpl; rewrite iter_op_spec.
+    unfold Pos.iter_op; simpl.
+    case_eq (Pos.of_succ_nat n); intros. {
+      simpl. f_equal.
+      fold (Pos.iter_op unifiedAdd p (P + P)).
+      assert (N.of_nat n = N.pos (2 * p)).
+      pose proof (xI_is_succ n p H).
+      admit. (* TODO *)
+      rewrite IHn.
+      unfold doubleAndAdd.
+      rewrite H0; simpl.
+      rewrite test_low_bit_xO by auto.
+      rewrite iter_op_xO by auto.
+      rewrite iter_op_spec.
+      reflexivity.
+    } {
+      fold (Pos.iter_op unifiedAdd p (P + P)).
+      assert (N.of_nat n = (N.pos (Pos.pred (2 * p)))).
+      admit. (* TODO *)
+      rewrite IHn.
+      unfold doubleAndAdd.
+      rewrite H0; simpl.
+      rewrite iter_op_spec.
+      rewrite <- (Pos.iter_op_succ _ _ twistedAddAssoc _ _).
+      rewrite Pos.succ_pred_double.
+      rewrite <- Pos.add_diag.
+      apply iter_op_double.
+    } {
+      rewrite <- Pnat.Pos2Nat.inj_iff in H.
+      rewrite Pnat.SuccNat2Pos.id_succ in H.
+      rewrite Pnat.Pos2Nat.inj_1 in H.
+      assert (n = 0)%nat by omega; subst.
+      auto.
+    }
   Qed.
 End CompleteTwistedEdwardsFacts.
 
