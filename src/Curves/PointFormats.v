@@ -25,9 +25,13 @@ Definition iter_op  {A} (op : A -> A -> A) (zero : A) :=
   fix iter (p : positive) (i : nat) (a : A) : A :=
     match i with
     | O => zero
-    | S i' => if testbit_rev p i
+    | S i' =>
+        match Compare_dec.le_dec i (Pos.size_nat p) with
+        | left _ => if testbit_rev p i
               then op a (iter p i' (op a a))
               else iter p i' (op a a)
+        | right _ => iter p i' a
+        end
     end.
 
 Lemma testbit_rev_xI : forall p i,
@@ -58,7 +62,12 @@ Proof.
   unfold iter_op.
   fold (iter_op op z p~1 i (op a a) ).
   fold (iter_op op z p i (op a a) ).
-  rewrite testbit_rev_xI by omega; simpl.
+  fold (iter_op op z p i a ).
+  fold (iter_op op z p~1 i a ).
+  assert (S i <= Pos.size_nat p~1) by (simpl; omega).
+  destruct (Compare_dec.le_dec (S i) (Pos.size_nat p~1)); intuition; clear l.
+  destruct (Compare_dec.le_dec (S i) (Pos.size_nat p)); intuition; clear l.
+  rewrite testbit_rev_xI by omega.
   case_eq i; intros; auto.
   replace (S n) with i by auto.
   assert (i <= Pos.size_nat p) as hi_bound by omega.
@@ -75,7 +84,12 @@ Proof.
   unfold iter_op.
   fold (iter_op op z p~0 i (op a a) ).
   fold (iter_op op z p i (op a a) ).
-  rewrite testbit_rev_xO by omega; simpl.
+  fold (iter_op op z p i a ).
+  fold (iter_op op z p~0 i a ).
+  assert (S i <= Pos.size_nat p~0) by (simpl; omega).
+  destruct (Compare_dec.le_dec (S i) (Pos.size_nat p~0)); intuition; clear l.
+  destruct (Compare_dec.le_dec (S i) (Pos.size_nat p)); intuition; clear l.
+  rewrite testbit_rev_xO by omega.
   case_eq i; intros; auto.
   replace (S n) with i by auto.
   assert (i <= Pos.size_nat p) as hi_bound by omega.
@@ -110,18 +124,33 @@ Ltac low_bit := match goal with
 | _ => idtac
 end.
 
-Lemma iter_op_spec : forall p {A} op z (a : A) (zero_id : forall x : A, op x z = x),
+Lemma iter_op_spec_exact : forall p {A} op z (a : A) (zero_id : forall x : A, op x z = x),
   iter_op op z p (Pos.size_nat p) a = Pos.iter_op op p a.
 Proof.
   induction p; intros; simpl; try apply zero_id. {
+    destruct (Compare_dec.le_dec _ _); try omega.
     break_if; low_bit.
     rewrite iter_op_xI by (try apply pos_size_gt0; auto).
     rewrite IHp; auto.
   } {
+    destruct (Compare_dec.le_dec _ _); try omega.
     break_if; low_bit.
     rewrite iter_op_xO by (try apply pos_size_gt0; auto).
     rewrite IHp; auto.
   }
+Qed.
+
+Lemma iter_op_spec : forall p n {A} op z (a : A) (zero_id : forall x : A, op x z = x),
+  (Pos.size_nat p <= n) ->
+  iter_op op z p n a = Pos.iter_op op p a.
+Proof.
+  intros; induction n; [pose proof (pos_size_gt0 p); omega |].
+  apply Lt.le_lt_or_eq in H.
+  destruct H; try (rewrite <- H; apply iter_op_spec_exact; auto).
+  simpl.
+  destruct (Compare_dec.le_dec (S n) (Pos.size_nat p)); try omega.
+  apply Lt.lt_n_Sm_le in H.
+  apply IHn; auto.
 Qed.
 
 Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParams M).
@@ -343,6 +372,7 @@ Module CompleteTwistedEdwardsFacts (M : Modulus) (Import P : TwistedEdwardsParam
       rewrite test_low_bit_xO by auto.
       rewrite iter_op_xO by auto.
       rewrite iter_op_spec by auto.
+      destruct (Compare_dec.le_dec _ _); try omega.
       reflexivity.
     } {
       fold (Pos.iter_op unifiedAdd p (P + P)).
