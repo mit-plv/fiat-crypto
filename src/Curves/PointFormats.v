@@ -17,85 +17,71 @@ Module Type TwistedEdwardsParams (M : Modulus).
   Axiom d_nonsquare : forall x, x * x <> d.
 End TwistedEdwardsParams.
 
-Definition testbit_rev p i := Pos.testbit_nat p (Pos.size_nat p - i).
+Definition testbit_rev p i b := Pos.testbit_nat p (b - i).
 
 (* TODO: decide if this should go here or somewhere else (util?) *)
 (* implements Pos.iter_op only using testbit, not destructing the positive *)
-Definition iter_op  {A} (op : A -> A -> A) (zero : A) :=
+Definition iter_op  {A} (op : A -> A -> A) (zero : A) (bound : nat) :=
   fix iter (p : positive) (i : nat) (a : A) : A :=
     match i with
     | O => zero
-    | S i' =>
-        match Compare_dec.le_dec i (Pos.size_nat p) with
-        | left _ => if testbit_rev p i
+    | S i' => if testbit_rev p i bound
               then op a (iter p i' (op a a))
               else iter p i' (op a a)
-        | right _ => iter p i' a
-        end
     end.
 
-Lemma testbit_rev_xI : forall p i,
-  (i <= Pos.size_nat p) ->
-  testbit_rev p~1 i = testbit_rev p i.
+Lemma testbit_rev_xI : forall p i b, (i < S b) ->
+  testbit_rev p~1 i (S b) = testbit_rev p i b.
 Proof.
   unfold testbit_rev; intros.
-  replace (Pos.size_nat p~1) with (S (Pos.size_nat p)) by auto.
-  rewrite NPeano.Nat.sub_succ_l by omega.
-  auto.
+  replace (S b - i) with (S (b - i)) by omega.
+  case_eq (b - S i); intros; simpl; auto.
 Qed.
 
-Lemma testbit_rev_xO : forall p i,
-  (i <= Pos.size_nat p) ->
-  testbit_rev p~0 i = testbit_rev p i.
+Lemma testbit_rev_xO : forall p i b, (i < S b) ->
+  testbit_rev p~0 i (S b) = testbit_rev p i b.
 Proof.
   unfold testbit_rev; intros.
-  replace (Pos.size_nat p~0) with (S (Pos.size_nat p)) by auto.
-  rewrite NPeano.Nat.sub_succ_l by omega.
-  auto.
+  replace (S b - i) with (S (b - i)) by omega.
+  case_eq (b - S i); intros; simpl; auto.
 Qed.
 
-Lemma iter_op_xI : forall {A} p i op z (a : A),
-  (i <= Pos.size_nat p) -> (0 < i) ->
-  iter_op op z p~1 i a = iter_op op z p i a.
+Lemma testbit_rev_1 : forall i b, (i < S b) ->
+  testbit_rev 1%positive i (S b) = false.
 Proof.
-  induction i; intros; [pose proof (Gt.gt_irrefl 0); intuition|].
-  unfold iter_op.
-  fold (iter_op op z p~1 i (op a a) ).
-  fold (iter_op op z p i (op a a) ).
-  fold (iter_op op z p i a ).
-  fold (iter_op op z p~1 i a ).
-  assert (S i <= Pos.size_nat p~1) by (simpl; omega).
-  destruct (Compare_dec.le_dec (S i) (Pos.size_nat p~1)); intuition; clear l.
-  destruct (Compare_dec.le_dec (S i) (Pos.size_nat p)); intuition; clear l.
-  rewrite testbit_rev_xI by omega.
-  case_eq i; intros; auto.
-  replace (S n) with i by auto.
-  assert (i <= Pos.size_nat p) as hi_bound by omega.
-  assert (0 < i) as lo_bound by (pose proof Gt.gt_Sn_O; omega).
-  rewrite (IHi _ _ _ hi_bound lo_bound).
-  reflexivity.
+  unfold testbit_rev; intros.
+  replace (S b - i) with (S (b - i)) by omega.
+  case_eq (b - S i); intros; simpl; auto.
 Qed.
 
-Lemma iter_op_xO : forall {A} p i op z (a : A),
-  (i <= Pos.size_nat p) -> (0 < i) ->
-  iter_op op z p~0 i a = iter_op op z p i a.
+Lemma iter_op_xI : forall {A} p i op z b (a : A), (i < S b) ->
+  iter_op op z (S b) p~1 i a = iter_op op z b p i a.
 Proof.
-  induction i; intros; [pose proof (Gt.gt_irrefl 0); intuition|].
-  unfold iter_op.
-  fold (iter_op op z p~0 i (op a a) ).
-  fold (iter_op op z p i (op a a) ).
-  fold (iter_op op z p i a ).
-  fold (iter_op op z p~0 i a ).
-  assert (S i <= Pos.size_nat p~0) by (simpl; omega).
-  destruct (Compare_dec.le_dec (S i) (Pos.size_nat p~0)); intuition; clear l.
-  destruct (Compare_dec.le_dec (S i) (Pos.size_nat p)); intuition; clear l.
-  rewrite testbit_rev_xO by omega.
+  induction i; intros; [pose proof (Gt.gt_irrefl 0); intuition | ].
+  simpl; rewrite testbit_rev_xI by omega.
   case_eq i; intros; auto.
-  replace (S n) with i by auto.
-  assert (i <= Pos.size_nat p) as hi_bound by omega.
-  assert (0 < i) as lo_bound by (pose proof Gt.gt_Sn_O; omega).
-  rewrite (IHi _ _ _ hi_bound lo_bound).
-  reflexivity.
+  rewrite <- H0; simpl.
+  rewrite IHi by omega; auto.
+Qed.
+
+Lemma iter_op_xO : forall {A} p i op z b (a : A), (i < S b) ->
+  iter_op op z (S b) p~0 i a = iter_op op z b p i a.
+Proof.
+  induction i; intros; [pose proof (Gt.gt_irrefl 0); intuition | ].
+  simpl; rewrite testbit_rev_xO by omega.
+  case_eq i; intros; auto.
+  rewrite <- H0; simpl.
+  rewrite IHi by omega; auto.
+Qed.
+
+Lemma iter_op_1 : forall {A} i op z b (a : A), (i < S b) ->
+  iter_op op z (S b) 1%positive i a = z.
+Proof.
+  induction i; intros; [pose proof (Gt.gt_irrefl 0); intuition | ].
+  simpl; rewrite testbit_rev_1 by omega.
+  case_eq i; intros; auto.
+  rewrite <- H0; simpl.
+  rewrite IHi by omega; auto.
 Qed.
 
 Lemma pos_size_gt0 : forall p, 0 < Pos.size_nat p.
@@ -104,53 +90,33 @@ Proof.
 Qed.
 Hint Resolve pos_size_gt0.
 
-Lemma test_low_bit_xI : forall p, testbit_rev p~1 (Pos.size_nat p~1) = true.
+Lemma test_low_bit_xI : forall p b, testbit_rev p~1 b b = true.
 Proof.
   unfold testbit_rev; intros; rewrite Minus.minus_diag; auto.
 Qed.
-Hint Resolve test_low_bit_xI.
 
-Lemma test_low_bit_xO : forall p, testbit_rev p~0 (Pos.size_nat p~0) = false.
+Lemma test_low_bit_xO : forall p b, testbit_rev p~0 b b = false.
 Proof.
   unfold testbit_rev; intros; rewrite Minus.minus_diag; auto.
 Qed.
-Hint Resolve test_low_bit_xO.
+
+Lemma test_low_bit_1 : forall b, testbit_rev 1%positive b b = true.
+Proof.
+  unfold testbit_rev; intros; rewrite Minus.minus_diag; auto.
+Qed.
 
 Ltac low_bit := match goal with
-| H : testbit_rev ?p~1 (S (Pos.size_nat ?p)) = false |- _ =>
-    pose proof (test_low_bit_xI p); simpl in *; congruence
-| H : testbit_rev ?p~0 (S (Pos.size_nat ?p)) = true |- _ =>
-    pose proof (test_low_bit_xO p); simpl in *; congruence
-| _ => idtac
-end.
+| [ |- context[testbit_rev ?p~1 ?b ?b] ] => rewrite test_low_bit_xI; f_equal; rewrite iter_op_xI
+| [ |- context[testbit_rev ?p~0 ?b ?b] ] => rewrite test_low_bit_xO; rewrite iter_op_xO
+| [ |- context[testbit_rev 1%positive ?b ?b] ] => rewrite test_low_bit_1; rewrite iter_op_1 
+end; auto.
 
-Lemma iter_op_spec_exact : forall p {A} op z (a : A) (zero_id : forall x : A, op x z = x),
-  iter_op op z p (Pos.size_nat p) a = Pos.iter_op op p a.
+Lemma iter_op_spec : forall b p {A} op z (a : A) (zero_id : forall x : A, op x z = x), (Pos.size_nat p <= b) ->
+  iter_op op z b p b a = Pos.iter_op op p a.
 Proof.
-  induction p; intros; simpl; try apply zero_id. {
-    destruct (Compare_dec.le_dec _ _); try omega.
-    break_if; low_bit.
-    rewrite iter_op_xI by (try apply pos_size_gt0; auto).
-    rewrite IHp; auto.
-  } {
-    destruct (Compare_dec.le_dec _ _); try omega.
-    break_if; low_bit.
-    rewrite iter_op_xO by (try apply pos_size_gt0; auto).
-    rewrite IHp; auto.
-  }
-Qed.
-
-Lemma iter_op_spec : forall p n {A} op z (a : A) (zero_id : forall x : A, op x z = x),
-  (Pos.size_nat p <= n) ->
-  iter_op op z p n a = Pos.iter_op op p a.
-Proof.
-  intros; induction n; [pose proof (pos_size_gt0 p); omega |].
-  apply Lt.le_lt_or_eq in H.
-  destruct H; try (rewrite <- H; apply iter_op_spec_exact; auto).
-  simpl.
-  destruct (Compare_dec.le_dec (S n) (Pos.size_nat p)); try omega.
-  apply Lt.lt_n_Sm_le in H.
-  apply IHn; auto.
+  induction b; intros; [pose proof (pos_size_gt0 p); omega |].
+  case_eq p; intros; simpl; low_bit; apply IHb;
+    rewrite H0 in *; simpl in H; apply Le.le_S_n in H; auto.
 Qed.
 
 Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParams M).
@@ -197,10 +163,10 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
     end
   .
 
-  Definition doubleAndAdd (n : nat) (P : point) : point :=
+  Definition doubleAndAdd (b n : nat) (P : point) : point :=
     match N.of_nat n with
     | 0%N => zero
-    | N.pos p => iter_op unifiedAdd zero p (Pos.size_nat p) P
+    | N.pos p => iter_op unifiedAdd zero b p b P
     end.
 
 End CompleteTwistedEdwardsCurve.
@@ -347,48 +313,49 @@ Module CompleteTwistedEdwardsFacts (M : Modulus) (Import P : TwistedEdwardsParam
     }
   Qed.
 
-  Lemma doubleAndAdd_iterop : forall p P,
-    Pos.iter_op unifiedAdd p P = doubleAndAdd (Pos.to_nat p) P.
+  Lemma size_of_succ : forall n,
+    Pos.size_nat (Pos.of_nat n) <= Pos.size_nat (Pos.of_nat (S n)).
   Proof.
-    unfold doubleAndAdd; intros; simpl.
-    rewrite Znat.positive_nat_N.
-    rewrite iter_op_spec; auto.
+    intros; induction n; [simpl; auto|].
+    apply Pos.size_nat_monotone.
+    apply Pos.lt_succ_diag_r.
   Qed.
 
-  Lemma doubleAndAdd_spec :
-    forall n P, scalarMult n P = doubleAndAdd n P.
+  Lemma doubleAndAdd_spec : forall n b P, (Pos.size_nat (Pos.of_nat n) <= b) ->
+    scalarMult n P = doubleAndAdd b n P.
   Proof.
     induction n; auto; intros.
-    unfold doubleAndAdd.
-    simpl; rewrite iter_op_spec by auto.
-    unfold Pos.iter_op; simpl.
-    case_eq (Pos.of_succ_nat n); intros. {
-      simpl. f_equal.
-      fold (Pos.iter_op unifiedAdd p (P + P)).
-      rewrite IHn.
+    unfold doubleAndAdd; simpl.
+    rewrite Pos.of_nat_succ.
+    rewrite iter_op_spec by auto.
+    case_eq (Pos.of_nat (S n)); intros. {
+      simpl; f_equal.
+      rewrite (IHn b) by (pose proof (size_of_succ n); omega).
       unfold doubleAndAdd.
-      rewrite <- (xI_is_succ n p) by apply H.
+      rewrite H0 in H.
+      rewrite <- Pos.of_nat_succ in H0.
+      rewrite <- (xI_is_succ n p) by apply H0.
       rewrite Znat.positive_nat_N; simpl.
-      rewrite test_low_bit_xO by auto.
-      rewrite iter_op_xO by auto.
-      rewrite iter_op_spec by auto.
-      destruct (Compare_dec.le_dec _ _); try omega.
-      reflexivity.
+      rewrite iter_op_spec; auto.
     } {
-      fold (Pos.iter_op unifiedAdd p (P + P)).
-      rewrite IHn.
+      simpl; f_equal.
+      rewrite (IHn b) by (pose proof (size_of_succ n); omega).
       unfold doubleAndAdd.
-      rewrite <- (xO_is_succ n p) by apply H.
+      rewrite <- (xO_is_succ n p) by (rewrite Pos.of_nat_succ; auto).
       rewrite Znat.positive_nat_N; simpl.
-      rewrite iter_op_spec by auto.
-      rewrite <- (Pos.iter_op_succ _ _ twistedAddAssoc _ _).
-      rewrite Pos.succ_pred_double.
-      rewrite <- Pos.add_diag.
-      apply iter_op_double.
+      rewrite <- Pos.succ_pred_double in H0.
+      rewrite H0 in H.
+      rewrite iter_op_spec by
+        (try (pose proof (Pos.lt_succ_diag_r (Pos.pred_double p));
+        apply Pos.size_nat_monotone in H1; omega); auto).
+      rewrite <- iter_op_double.
+      rewrite Pos.add_diag.
+      rewrite <- Pos.succ_pred_double.
+      rewrite Pos.iter_op_succ by apply twistedAddAssoc; auto.
     } {
-      rewrite <- Pnat.Pos2Nat.inj_iff in H.
-      rewrite Pnat.SuccNat2Pos.id_succ in H.
-      rewrite Pnat.Pos2Nat.inj_1 in H.
+      rewrite <- Pnat.Pos2Nat.inj_iff in H0.
+      rewrite Pnat.Nat2Pos.id in H0 by auto.
+      rewrite Pnat.Pos2Nat.inj_1 in H0.
       assert (n = 0)%nat by omega; subst.
       auto.
     }
