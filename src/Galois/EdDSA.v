@@ -7,11 +7,13 @@ Require Import VerdiTactics.
 
 Open Scope nat_scope.
 
+Local Coercion Z.to_nat : Z >-> nat.
+
 (* TODO : where should this be? *)
 Definition wfirstn {m} {n} (w : word m) (H : n <= m) : word n.
-  replace m with (n + (m - n)) in * by (symmetry; apply le_plus_minus; apply H)
-.
-  exact (split1 n (m - n) w).
+  refine (split1 n (m - n) (match _ in _ = N return word N with
+                            | eq_refl => w
+                            end)); abstract omega.
 Defined.
 
 Class Encoding (T B:Type) := {
@@ -23,12 +25,10 @@ Notation "'encoding' 'of' T 'as' B" := (Encoding T B) (at level 50).
 
 (* Spec from <https://eprint.iacr.org/2015/677.pdf> *)
 Module Type EdDSAParams.
-  Local Coercion Z.to_nat : Z >-> nat.
-
   Parameter q : Prime.
   Axiom q_odd : q > 2.
   (* Choosing q sufficiently large is important for security, since the size of
-  * q constrains the size of l below. *)
+   * q constrains the size of l below. *)
 
   (* GF is the finite field of integers modulo q *)
   Module Modulus_q <: Modulus.
@@ -44,40 +44,40 @@ Module Type EdDSAParams.
 
   Parameter H : forall {n}, word n -> word (b + b).
   (* A cryptographic hash function. Conservative hash functions are recommended
-  * and do not have much impact on the total cost of EdDSA. *)
+   * and do not have much impact on the total cost of EdDSA. *)
 
   Parameter c : nat.
   Axiom c_valid : c = 2 \/ c = 3.
   (* Secret EdDSA scalars are multiples of 2^c. The original specification of
-  *  EdDSA did not include this parameter: it implicitly took c = 3. *)
+   * EdDSA did not include this parameter: it implicitly took c = 3. *)
 
   Parameter n : nat.
   Axiom n_ge_c : n >= c.
   Axiom n_le_b : n <= b.
   (* Secret EdDSA scalars have exactly n + 1 bits, with the top bit
-  *   (the 2n position) always set and the bottom c bits always cleared.
-  * The original specification of EdDSA did not include this parameter:
-  *   it implicitly took n = b−2.
-  * Choosing n sufficiently large is important for security:
-  *   standard “kangaroo” attacks use approximately 1.36\sqrt(2n−c) additions
-  *   on average to determine an EdDSA secret key from an EdDSA public key *)
+   *   (the 2n position) always set and the bottom c bits always cleared.
+   * The original specification of EdDSA did not include this parameter:
+   *   it implicitly took n = b−2.
+   * Choosing n sufficiently large is important for security:
+   *   standard “kangaroo” attacks use approximately 1.36\sqrt(2n−c) additions
+   *   on average to determine an EdDSA secret key from an EdDSA public key *)
 
   Parameter a : GF.
   Axiom a_nonzero : a <> 0%GF.
   Axiom a_square : exists x, x^2 = a.
   (* The usual recommendation for best performance is a = −1 if q mod 4 = 1,
-  *   and a = 1 if q mod 4 = 3.
-  * The original specification of EdDSA did not include this parameter:
-  *   it implicitly took a = −1 (and required q mod 4 = 1). *)
+   *   and a = 1 if q mod 4 = 3.
+   * The original specification of EdDSA did not include this parameter:
+   *   it implicitly took a = −1 (and required q mod 4 = 1). *)
 
   Parameter d : GF.
   Axiom d_nonsquare : forall x, x^2 <> d.
   (* The exact choice of d (together with a and q) is important for security,
-  *   and is the main topic considered in “curve selection”. *)
+   *   and is the main topic considered in “curve selection”. *)
 
   (* E = {(x, y) \in Fq x Fq : ax^2 + y^2 = 1 + dx^2y^2}.
-  *  This set forms a group with neutral element 0 = (0, 1) under the
-  *    twisted Edwards addition law. *)
+   * This set forms a group with neutral element 0 = (0, 1) under the
+   *   twisted Edwards addition law. *)
   Module CurveParameters <: TwistedEdwardsParams Modulus_q.
     Module GFDefs := GFDefs.
     Definition a : GF := a.
@@ -92,27 +92,26 @@ Module Type EdDSAParams.
   Axiom B_not_identity : B <> zero.
 
   (*
-  * An odd prime l such that lB = 0 and (2^c)l = #E.
-  * The number #E is part of the standard data provided for an elliptic
-  *   curve E.
-  * Choosing l sufficiently large is important for security: standard “rho”
-  *   attacks use approximately 0.886√l additions on average to determine an
-  *   EdDSA secret key from an EdDSA public key.
-  *)
-  Parameter l : nat.
-  Axiom l_prime : Znumtheory.prime (Z.of_nat l).
+   * An odd prime l such that lB = 0 and (2^c)l = #E.
+   * The number #E is part of the standard data provided for an elliptic
+   *   curve E.
+   * Choosing l sufficiently large is important for security: standard “rho”
+   *   attacks use approximately 0.886√l additions on average to determine an
+   *   EdDSA secret key from an EdDSA public key.
+   *)
+  Parameter l : Prime.
   Axiom l_odd : l > 2.
   Axiom l_order_B : scalarMult l B = zero.
   (* TODO: (2^c)l = #E *)
 
   (*
-  * A “prehash” function H'.
-  * PureEdDSA means EdDSA where H0 is the identity function, i.e. H'(M) = M.
-  * HashEdDSA means EdDSA where H0 generates a short output, no matter how
-  *   long the message is; for example, H'(M) = SHA-512(M).
-  * The original specification of EdDSA did not include this parameter:
-  *   it implicitly took H0 as the identity function.
-  *)
+   * A “prehash” function H'.
+   * PureEdDSA means EdDSA where H' is the identity function, i.e. H'(M) = M.
+   * HashEdDSA means EdDSA where H' generates a short output, no matter how
+   *   long the message is; for example, H'(M) = SHA-512(M).
+   * The original specification of EdDSA did not include this parameter:
+   *   it implicitly took H0 as the identity function.
+   *)
   Parameter H'_out_len : nat -> nat.
   Parameter H' : forall {n}, word n -> word (H'_out_len n).
 
@@ -122,9 +121,17 @@ Module Type EdDSAParams.
   
 End EdDSAParams.
 
+Hint Rewrite Nat.mod_mod using omega.
+
+Ltac arith' := intros; autorewrite with core; try (omega || congruence).
+
+Ltac arith := arith';
+             repeat match goal with
+                    | [ H : _ |- _ ] => rewrite H; arith'
+                    end.
+
 Definition modularNat (l : nat) (l_odd : l > 2) (n : nat) : {s : nat | s = s mod l}.
-  exists (n mod l).
-  symmetry; apply (Nat.mod_mod n l); omega.
+  exists (n mod l); abstract arith.
 Defined.
 
 Module Type EdDSA (Import P : EdDSAParams).
@@ -135,11 +142,11 @@ Module Type EdDSA (Import P : EdDSAParams).
 
   Definition curveKey sk := let N := wfirstn sk n_le_b in
     (N - (N mod pow2 c) + pow2 n)%nat.
-  Definition  randKey (sk:secretkey) := split2 b b (H sk).
+  Definition randKey (sk:secretkey) := split2 b b (H sk).
   Definition modL := modularNat l l_odd.
 
   Parameter public : secretkey -> publickey.
-  Axiom public_spec : forall sk, public sk = enc ((curveKey sk) * B).
+  Axiom public_spec : forall sk, public sk = enc (curveKey sk * B).
 
   (* TODO: use GF for both GF(q) and GF(l) *)
   Parameter sign : publickey -> secretkey -> forall {n}, word n -> signature.
@@ -147,7 +154,7 @@ Module Type EdDSA (Import P : EdDSAParams).
     let r := H (randKey sk ++ M) in
     let R := r * B in
     let s := curveKey sk in
-    let S := (r + (H ((enc R) ++ (public sk) ++ M) * s))%nat in
+    let S := (r + H (enc R ++ public sk ++ M) * s)%nat in
     enc R ++ enc (modL S).
 
   Parameter verify : publickey -> forall {n}, word n -> signature -> bool.
@@ -157,17 +164,17 @@ Module Type EdDSA (Import P : EdDSAParams).
     exists A, dec A_ = Some A /\
     exists R, dec R_ = Some R /\
     exists S : {s:nat | s = s mod l}, dec S_ = Some S /\
-    (proj1_sig S) * B = R + (wordToNat (H (R_ ++ A_ ++ M )) * A) ).
+    proj1_sig S * B = R + wordToNat (H (R_ ++ A_ ++ M)) * A).
 End EdDSA.
 
 Module EdDSAFacts (Import P : EdDSAParams) (Import Impl : EdDSA P).
+  Hint Rewrite sign_spec split1_combine split2_combine.
+
   (* for signature (R_, S_), R_ = encode_point (r * B) *) 
   Lemma decode_sign_split1 : forall A_ sk {n} (M : word n),
-    split1 b b (sign A_ sk M) = enc ((wordToNat (H (randKey sk ++ M))) * B).
+    split1 b b (sign A_ sk M) = enc (wordToNat (H (randKey sk ++ M)) * B).
   Proof.
-    intros. pose proof (sign_spec A_ sk M).
-    simpl in H0. rewrite H0; clear H0.
-    apply split1_combine.
+    arith.
   Qed.
   Hint Rewrite decode_sign_split1.
 
@@ -180,65 +187,76 @@ Module EdDSAFacts (Import P : EdDSAParams) (Import Impl : EdDSA P).
     let S := (r + (H ((enc R) ++ (public sk) ++ M) * s))%nat in
     enc (modL S).
   Proof.
-    intros. rewrite sign_spec; simpl.
-    rewrite split2_combine; f_equal.
+    arith.
   Qed.
   Hint Rewrite decode_sign_split2.
 
-  Lemma scalarMult_distr : forall n m, (n + m) * B = Curve.unifiedAdd (n * B) (m * B).
+  Lemma zero_times : forall n, 0 * n = zero.
   Proof.
-    intros; induction n0. {
-      rewrite plus_O_n.
-      unfold scalarMult at 2.
-      rewrite (twistedAddComm zero (m * B)).
-      rewrite zeroIsIdentity; auto.
-    } {
-      rewrite plus_Sn_m. simpl.
-      rewrite IHn0.
-      rewrite twistedAddAssoc; auto.
-    }
+    auto.
   Qed.
-  Hint Resolve scalarMult_distr.
+
+  Lemma zero_plus : forall n, zero + n = n.
+  Proof.
+    intros; rewrite twistedAddComm; apply zeroIsIdentity.
+  Qed.
+
+  Lemma times_S : forall n m, S n * m = m + n * m.
+  Proof.
+    auto.
+  Qed.
+
+  Lemma times_S_nat : forall n m, (S n * m = m + n * m)%nat.
+  Proof.
+    auto.
+  Qed.
+
+  Hint Rewrite plus_O_n plus_Sn_m times_S times_S_nat.
+  Hint Rewrite zeroIsIdentity zero_times zero_plus twistedAddAssoc.
+
+  Lemma scalarMult_distr : forall n0 m, (n0 + m) * B = Curve.unifiedAdd (n0 * B) (m * B).
+  Proof.
+    induction n0; arith.
+  Qed.
+  Hint Rewrite scalarMult_distr.
 
   Lemma scalarMult_assoc : forall (n0 m : nat), n0 * (m * B) = (n0 * m) * B.
   Proof.
-    intros; induction n0; simpl scalarMult; auto.
-    rewrite scalarMult_distr.
-    rewrite IHn0; reflexivity.
+    induction n0; arith.
   Qed.
-  Hint Resolve scalarMult_assoc.
+  Hint Rewrite scalarMult_assoc.
 
-  Hint Resolve zeroIsIdentity.
   Lemma scalarMult_zero : forall m, m * zero = zero.
   Proof.
-    unfold scalarMult; induction m; try rewrite IHm; auto.
+    induction m; arith.
   Qed.
   Hint Rewrite scalarMult_zero.
   Hint Rewrite l_order_B.
 
-  Lemma scalarMult_mod_l : forall n, (n mod l) * B = n * B.
+  Lemma l_order_B' : forall x, l * x * B = zero.
+  Proof.
+    intros; rewrite mult_comm; rewrite <- scalarMult_assoc; arith.
+  Qed.
+
+  Hint Rewrite l_order_B'.
+
+  Lemma scalarMult_mod_l : forall n0, n0 mod l * B = n0 * B.
   Proof.
     intros.
-    rewrite (div_mod n0 l) at 2 by (pose proof l_odd; omega).
-    rewrite mult_comm.
-    rewrite scalarMult_distr.
-    rewrite <- scalarMult_assoc.
-    autorewrite with core.
-    rewrite twistedAddComm; auto.
+    rewrite (div_mod n0 l) at 2 by (generalize l_odd; omega).
+    arith.
   Qed.
+  Hint Rewrite scalarMult_mod_l.
+
+  Hint Rewrite verify_spec public_spec.
+
+  Hint Resolve @encoding_valid.
 
   Lemma verify_valid_passes : forall sk {n} (M : word n),
     verify (public sk) M (sign (public sk) sk M) = true.
   Proof.
-    intros; rewrite verify_spec.
-    cbv zeta.
-    autorewrite with core.
-    rewrite public_spec.
-    do 3 (eexists; intuition; [apply encoding_valid|]).
-    simpl proj1_sig.
-    rewrite scalarMult_mod_l.
-    rewrite scalarMult_distr.
-    f_equal; auto.
+    arith; simpl.
+    repeat eexists; eauto; simpl; arith.
   Qed.
 
 End EdDSAFacts.
