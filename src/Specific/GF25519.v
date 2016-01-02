@@ -102,13 +102,6 @@ End GF25519Base25Point5Params.
 
 Module GF25519Base25Point5 := GFPseudoMersenneBase Base25Point5_10limbs Modulus25519 GF25519Base25Point5Params.
 
-Ltac expand_list f :=
-  assert ((length f < 100)%nat) as _ by (simpl length in *; omega);
-    repeat progress (
-    let n := fresh f in
-    destruct f as [ | n ];
-    try solve [simpl length in *; try discriminate]).
-
 (* TODO: move to ListUtil *)
 Lemma cons_eq_head : forall {T} (x y:T) xs ys, x::xs = y::ys -> x=y.
 Proof.
@@ -118,6 +111,18 @@ Lemma cons_eq_tail : forall {T} (x y:T) xs ys, x::xs = y::ys -> xs=ys.
 Proof.
   intros; solve_by_inversion.
 Qed.
+
+Ltac measure_length ls :=
+  pose proof (eq_refl (length ls)) as Hlen;
+  match goal with [H: ls = ?lsdef |- _ ] => rewrite H in Hlen at 2 end;
+  simpl in Hlen.
+
+Ltac expand_list f :=
+  assert ((length f < 100)%nat) as _ by (simpl length in *; omega);
+    repeat progress (
+    let n := fresh f in
+    destruct f as [ | n ];
+    try solve [simpl length in *; try discriminate]).
 
 Ltac expand_list_equalities := repeat match goal with
   | [H: (?x::?xs = ?y::?ys) |- _ ] =>
@@ -146,89 +151,44 @@ Section GF25519Base25Point5Formula.
 
     pose proof (mul_rep _ _  _ _ Hf Hg) as HmulRef.
     remember (GF25519Base25Point5.mul [f0;f1;f2;f3;f4;f5;f6;f7;f8;f9] [g0;g1;g2;g3;g4;g5;g6;g7;g8;g9]) as h.
-    unfold
-      GF25519Base25Point5.mul,
-      GF25519Base25Point5.B.add,
-      GF25519Base25Point5.E.mul,
-      GF25519Base25Point5.E.mul',
-      GF25519Base25Point5.E.mul_bi,
-      GF25519Base25Point5.E.mul_bi',
-      GF25519Base25Point5.E.mul_each,
-      GF25519Base25Point5.E.add,
-      GF25519Base25Point5.B.digits,
-      GF25519Base25Point5.E.digits,
-      Base25Point5_10limbs.base,
-      GF25519Base25Point5.E.crosscoef,
-      nth_default
-    in Heqh; simpl in Heqh.
+    cbv [plus
+         seq rev app length map fold_right fold_left skipn firstn nth_default nth_error value error
+         Base25Point5_10limbs.base GF25519Base25Point5Params.k GF25519Base25Point5Params.c
+         mul reduce
+         B.add
+         E.add E.mul E.mul' E.mul_each E.mul_bi E.mul_bi' E.crosscoef E.zeros
+         EC.base] in *.
+    simpl two_p in *.
 
-    unfold
-      two_power_pos,
-      shift_pos
-    in Heqh; simpl in Heqh.
-
-    (* evaluate row-column crossing coefficients for variable base multiplication *)
-    (* unfoldZ.div in Heqh; simpl in Heqh. *) (* THIS TAKES TOO LONG *)
-    repeat rewrite Z_div_same_full in Heqh by (abstract (apply Zeq_bool_neq; reflexivity)).
-    repeat match goal with [ Heqh : context[ (?a / ?b)%Z ]  |- _ ] =>
-      replace (a / b)%Z with 2%Z in Heqh by
-        (abstract (symmetry; erewrite <- Z.div_unique_exact; try apply Zeq_bool_neq; reflexivity))
-    end.
-
+    Ltac acfo := abstract (clear; firstorder).
     Hint Rewrite
+      two_power_pos_equiv
       Z.mul_0_l
       Z.mul_0_r
       Z.mul_1_l
       Z.mul_1_r
       Z.add_0_l
       Z.add_0_r
+      Zdiv_1_r
       : Z_identities.
-    autorewrite with Z_identities in Heqh.
+    Hint Rewrite <- Zpower_exp using acfo : Z_identities.
+    Hint Rewrite <- Z.pow_sub_r using acfo : Z_identities. (* division is too slow to even compute once, simplify it away*)
+    autorewrite with Z_identities in *.
 
-    (* inline explicit formulas for modular reduction *)
-    cbv beta iota zeta delta [GF25519Base25Point5.reduce Base25Point5_10limbs.base] in Heqh.
-    remember GF25519Base25Point5Params.c as c in Heqh; unfold GF25519Base25Point5Params.c in Heqc.
-    simpl in Heqh.
+    simpl Z.pow in *. cbv [Z.pow_pos Pos.iter] in *. (* compute the exponents that no longer need division *)
+    autorewrite with Z_identities in *.
 
-    (* prettify resulting modular multiplication expression *)
-    repeat rewrite (Z.mul_add_distr_l c) in Heqh.
-    repeat rewrite (Z.mul_assoc _ _ 2) in Heqh.
-    repeat rewrite (Z.mul_comm _ 2) in Heqh.
-    repeat rewrite (Z.mul_assoc 2 c) in Heqh.
-    remember (2 * c)%Z as TwoC in Heqh; subst c; simpl in HeqTwoC; subst TwoC. (* perform operations on constants *)
-    repeat rewrite Z.add_assoc in Heqh.
-    repeat rewrite Z.mul_assoc in Heqh.
-    assert (Hhl: length h = 10%nat) by (subst h; reflexivity); expand_list h; clear Hhl.
-    expand_list_equalities.
+    (* remove redundant parentheses *)
+    repeat rewrite Z.add_assoc in *.
+    repeat rewrite Z.mul_assoc in *.
+    (* one equation per limb *)
+    measure_length h; expand_list h; expand_list_equalities.
     (* pretty-print: sh -c "tr -d '\n' | tr 'Z' '\n' | tr -d \% | sed 's:\s\s*\*\s\s*:\*:g' | column -o' ' -t" *)
-    (* output:
-      h0 = (f0*g0 + 38*f9*g1 + 19*f8*g2 + 38*f7*g3 + 19*f6*g4 + 38*f5*g5 + 19*f4*g6 + 38*f3*g7 + 19*f2*g8 + 38*f1*g9)
-      h1 = (f1*g0 + f0*g1    + 19*f9*g2 + 19*f8*g3 + 19*f7*g4 + 19*f6*g5 + 19*f5*g6 + 19*f4*g7 + 19*f3*g8 + 19*f2*g9)
-      h2 = (f2*g0 + 2*f1*g1  + f0*g2    + 38*f9*g3 + 19*f8*g4 + 38*f7*g5 + 19*f6*g6 + 38*f5*g7 + 19*f4*g8 + 38*f3*g9)
-      h3 = (f3*g0 + f2*g1    + f1*g2    + f0*g3    + 19*f9*g4 + 19*f8*g5 + 19*f7*g6 + 19*f6*g7 + 19*f5*g8 + 19*f4*g9)
-      h4 = (f4*g0 + 2*f3*g1  + f2*g2    + 2*f1*g3  + f0*g4    + 38*f9*g5 + 19*f8*g6 + 38*f7*g7 + 19*f6*g8 + 38*f5*g9)
-      h5 = (f5*g0 + f4*g1    + f3*g2    + f2*g3    + f1*g4    + f0*g5    + 19*f9*g6 + 19*f8*g7 + 19*f7*g8 + 19*f6*g9)
-      h6 = (f6*g0 + 2*f5*g1  + f4*g2    + 2*f3*g3  + f2*g4    + 2*f1*g5  + f0*g6    + 38*f9*g7 + 19*f8*g8 + 38*f7*g9)
-      h7 = (f7*g0 + f6*g1    + f5*g2    + f4*g3    + f3*g4    + f2*g5    + f1*g6    + f0*g7    + 19*f9*g8 + 19*f8*g9)
-      h8 = (f8*g0 + 2*f7*g1  + f6*g2    + 2*f5*g3  + f4*g4    + 2*f3*g5  + f2*g6    + 2*f1*g7  + f0*g8    + 38*f9*g9)
-      h9 = (f9*g0 + f8*g1    + f7*g2    + f6*g3    + f5*g4    + f4*g5    + f3*g6    + f2*g7    + f1*g8    + f0*g9)
-    *)
-    
-    (* prove equivalence of multiplication to the stated *)
-    assert (rep [h0; h1; h2; h3; h4; h5; h6; h7; h8; h9] (f * g)%GF) as Hh. {
-      subst h0. subst h1. subst h2. subst h3. subst h4. subst h5. subst h6. subst h7. subst h8. subst h9.
-      repeat match goal with [H: _ = _ |- _ ] =>
-          rewrite <- H; clear H
-      end.
-      assumption.
-    }
 
     (* --- carry phase --- *)
     remember (rev [0;1;2;3;4;5;6;7;8;9;0])%nat as is; simpl in Heqis.
-    destruct (fun pf pf2 => carry_sequence_rep is _ _ pf pf2 Hh). {
-      subst is. clear. intros. simpl in *. firstorder.
-    } {
-      reflexivity.
+    destruct (fun pf pf2 => carry_sequence_rep is _ _ pf pf2 HmulRef); auto. {
+      subst is; clear. intros. simpl in *. repeat break_or_hyp; firstorder.
     }
     remember (carry_sequence is [h0; h1; h2; h3; h4; h5; h6; h7; h8; h9]) as r; subst is.
 
@@ -264,10 +224,6 @@ Section GF25519Base25Point5Formula.
     rewrite Zdiv_1_r in *.
 
     (* replace division and Z.modulo with bit operations *)
-    remember (2 ^ 25)%Z as t25 in *.
-    remember (2 ^ 26)%Z as t26 in *.
-    repeat match goal with [H1: ?a = ?b, H2: ?b = ?c |- _ ] => subst a end.
-    subst t25. subst t26.
     rewrite <- Z.land_ones in * by (abstract (clear; firstorder)).
     rewrite <- Z.shiftr_div_pow2 in * by (abstract (clear; firstorder)).
 
@@ -304,37 +260,6 @@ Section GF25519Base25Point5Formula.
     clear HmulRef Hh Hf Hg.
     existsFromEquations r.
     split; auto; congruence.
-
-    (* Here's the tactic code I added at this point at the end of the old version.
-     * Erase after reading, since it isn't needed anymore.
-
-    replace ([r0; r1; r2; r3; r4; r5; r6; r7; r8; r9]) with r; unfold rep; auto.
-
-    subst r.
-
-    Ltac rsubstBoth := repeat (match goal with [ |- ?a = ?b] => subst a; subst b; repeat progress f_equal || reflexivity end).
-    Ltac t := f_equal; abstract rsubstBoth || (try t).
-
-    Time t.
-    
-
-    (* But there's a nicer way! *)
-    Undo 2.
-
-    (* This tactic finds an [x := e] hypothesis and adds a matching [x = e] hypothesis. *)
-    Ltac letToEquality :=
-      match goal with
-      | [ x := ?e |- _ ] =>
-        match goal with
-        | [ _ : x = e |- _ ] => fail 1 (* To avoid infinite loop, make sure we didn't already do this one! *)
-        | _ => assert (x = e) by reflexivity
-        end
-      end.
-
-    (* Repeated introduction of those equalities enables [congruence] to solve the goal. *)
-    Ltac smarter_congruence := repeat letToEquality; congruence.
-
-    Time smarter_congruence.*)
   Defined.
 End GF25519Base25Point5Formula.
 
