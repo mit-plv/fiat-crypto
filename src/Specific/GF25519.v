@@ -86,7 +86,7 @@ Module GF25519Base25Point5Params <: PseudoMersenneBaseParams Base25Point5_10limb
   Lemma base_tail_matches_modulus:
     2^k mod nth_default 0 base (pred (length base)) = 0.
   Proof.
-    nth_tac.
+    reflexivity.
   Qed.
 
   Lemma b0_1 : forall x, nth_default x base 0 = 1.
@@ -112,17 +112,14 @@ Proof.
   intros; solve_by_inversion.
 Qed.
 
-Ltac measure_length ls :=
-  pose proof (eq_refl (length ls)) as Hlen;
-  match goal with [H: ls = ?lsdef |- _ ] => rewrite H in Hlen at 2 end;
-  simpl in Hlen.
-
-Ltac expand_list f :=
-  assert ((length f < 100)%nat) as _ by (simpl length in *; omega);
-    repeat progress (
-    let n := fresh f in
-    destruct f as [ | n ];
-    try solve [simpl length in *; try discriminate]).
+Ltac expand_list ls :=
+  let Hlen := fresh "Hlen" in
+  match goal with [H: ls = ?lsdef |- _ ] =>
+      assert (Hlen:length ls=length lsdef) by (f_equal; exact H)
+  end;
+  simpl in Hlen;
+  repeat progress (let n:=fresh ls in destruct ls as [|n ]; try solve [revert Hlen; clear; discriminate]);
+  clear Hlen.
 
 Ltac expand_list_equalities := repeat match goal with
   | [H: (?x::?xs = ?y::?ys) |- _ ] =>
@@ -133,8 +130,33 @@ Ltac expand_list_equalities := repeat match goal with
   | [H:?x = ?x|-_] => clear H
 end.
 
+
+(* This tactic takes in [r], a variable that we want to use to instantiate an existential.
+ * We find one other variable mentioned in [r], with its own equality in the hypotheses.
+ * That equality is then switched into a [let] in [r]'s defining equation. *)
+Ltac letify r :=
+  match goal with
+  | [ H : ?x = ?e |- _ ] =>
+    is_var x;
+    match goal with
+    | [ H' : r = _ |- _ ] =>
+      pattern x in H';
+        match type of H' with
+        | (fun z => r = @?e' z) x =>
+          let H'' := fresh "H" in assert (H'' : r = let x := e in e' x) by congruence;
+            clear H'; subst x; rename H'' into H'; cbv beta in H'
+        end
+    end
+  end.
+
+(* To instantiate an existential, give a variable with a defining equation to this tactic.
+ * We instantiate with a [let]-ified version of that equation. *)
+Ltac existsFromEquations r := repeat letify r;
+                             match goal with
+                             | [ _ : r = ?e |- context[?u] ] => unify u e
+                             end.
+
 Section GF25519Base25Point5Formula.
-  Local Open Scope Z_scope.
   Import GF25519Base25Point5.
   Import GF.
 
@@ -145,122 +167,84 @@ Section GF25519Base25Point5Formula.
                         -> rep [g0;g1;g2;g3;g4;g5;g6;g7;g8;g9] g
                         -> rep ls (f*g)%GF}.
   Proof.
-    intros.
-    eexists.
-    intros f g Hf Hg.
 
-    pose proof (mul_rep _ _  _ _ Hf Hg) as HmulRef.
-    remember (GF25519Base25Point5.mul [f0;f1;f2;f3;f4;f5;f6;f7;f8;f9] [g0;g1;g2;g3;g4;g5;g6;g7;g8;g9]) as h.
-    cbv [plus
-         seq rev app length map fold_right fold_left skipn firstn nth_default nth_error value error
-         Base25Point5_10limbs.base GF25519Base25Point5Params.k GF25519Base25Point5Params.c
-         mul reduce
-         B.add
-         E.add E.mul E.mul' E.mul_each E.mul_bi E.mul_bi' E.crosscoef E.zeros
-         EC.base] in *.
-    simpl two_p in *.
-
-    Ltac acfo := abstract (clear; firstorder).
     Hint Rewrite
-      two_power_pos_equiv
       Z.mul_0_l
       Z.mul_0_r
       Z.mul_1_l
       Z.mul_1_r
       Z.add_0_l
       Z.add_0_r
-      Zdiv_1_r
+      Z.add_assoc
+      Z.mul_assoc
       : Z_identities.
-    Hint Rewrite <- Zpower_exp using acfo : Z_identities.
-    Hint Rewrite <- Z.pow_sub_r using acfo : Z_identities. (* division is too slow to even compute once, simplify it away*)
-    autorewrite with Z_identities in *.
 
-    simpl Z.pow in *. cbv [Z.pow_pos Pos.iter] in *. (* compute the exponents that no longer need division *)
-    autorewrite with Z_identities in *.
+    Ltac deriveModularMultiplicationWithCarries carryscript :=
+    let h := fresh "h" in
+    let fg := fresh "fg" in
+    let Hfg := fresh "Hfg" in
+    repeat match goal with
+    | [ |- { _ | forall f g, rep ?fs f -> rep ?gs g -> rep _ ?ret } ] =>
+        remember (carry_sequence carryscript (mul fs gs)) as fg;
+        assert (forall f g, rep fs f -> rep gs g -> rep fg ret) as Hfg
+    | [ H: In ?x carryscript |- ?x < ?bound ] => abstract (revert H; clear; cbv; intros; repeat break_or_hyp; intuition)
+    | [ Heqfg: fg = carry_sequence _ (mul _ _) |- { _ | forall f g, rep ?fs f -> rep ?gs g -> rep _ ?ret } ] =>
+        (* expand bignum multiplication *)
+        cbv [plus
+          seq rev app length map fold_right fold_left skipn firstn nth_default nth_error value error
+          mul reduce B.add Base25Point5_10limbs.base GF25519Base25Point5Params.c
+          E.add E.mul E.mul' E.mul_each E.mul_bi E.mul_bi' E.zeros EC.base] in Heqfg;
+        repeat match goal with [H:context[E.crosscoef ?a ?b] |- _ ] => (* do this early for speed *)
+            let c := fresh "c" in set (c := E.crosscoef a b) in H; compute in c; subst c end;
+        autorewrite with Z_identities in Heqfg;
+        (* speparate out carries *)
+        match goal with [ Heqfg: fg = carry_sequence _ ?hdef |- _ ] => remember hdef as h end;
+        (* one equation per limb *)
+        expand_list h; expand_list_equalities;
+        (* expand carry *)
+        cbv [GF25519Base25Point5.carry_sequence fold_right rev app] in Heqfg
+    | [H1: ?a = ?b, H2: ?b = ?c |- _ ] => subst a
+    | [Hfg: context[carry ?i (?x::?xs)] |- _ ] => (* simplify carry *)
+        let cr := fresh "cr" in
+        idtac i x xs;
+        remember (carry i (x::xs)) as cr in Hfg;
+        match goal with [ Heq : cr = ?crdef |- _ ] =>
+            cbv [carry carry_simple carry_and_reduce] in Heq;
+            simpl eq_nat_dec in Heq; cbv iota beta in Heq;
+            cbv [set_nth nth_default nth_error value add_to_nth] in Heq;
+            expand_list cr; expand_list_equalities
+        end
+    | [H: context[cap ?i] |- _ ] => let c := fresh "c" in remember (cap i) as c in H;
+        match goal with [Heqc: c = cap i |- _ ] =>
+            unfold cap, Base25Point5_10limbs.base in Heqc;
+            simpl eq_nat_dec in Heqc;
+            cbv [nth_default nth_error value error] in Heqc;
+            simpl map in Heqc;
+            cbv [GF25519Base25Point5Params.k] in Heqc
+        end;
+        subst c;
+        repeat rewrite Zdiv_1_r in H;
+        repeat rewrite two_power_pos_equiv in H;
+        repeat rewrite <- Z.pow_sub_r in H by (abstract (clear; firstorder));
+        repeat rewrite <- Z.land_ones in H by (abstract (apply Z.leb_le; reflexivity));
+        repeat rewrite <- Z.shiftr_div_pow2 in H by (abstract (apply Z.leb_le; reflexivity));
+        simpl Z.sub in H;
+        unfold  GF25519Base25Point5Params.c in H
+    | [H: context[Z.ones ?l] |- _ ] =>
+            (* postponing this to the main loop makes the autorewrite slow *)
+          let c := fresh "c" in set (c := Z.ones l) in H; compute in c; subst c
+    | [ |- _ ] => subst fg; apply carry_sequence_rep, mul_rep
+    | [ |- _ ] => abstract (solve [auto])
+    | [ |- _ ] => progress intros
+    end.
+    Time deriveModularMultiplicationWithCarries (rev [0;1;2;3;4;5;6;7;8;9;0]).
 
-    (* remove redundant parentheses *)
-    repeat rewrite Z.add_assoc in *.
-    repeat rewrite Z.mul_assoc in *.
-    (* one equation per limb *)
-    measure_length h; expand_list h; expand_list_equalities.
     (* pretty-print: sh -c "tr -d '\n' | tr 'Z' '\n' | tr -d \% | sed 's:\s\s*\*\s\s*:\*:g' | column -o' ' -t" *)
 
-    (* --- carry phase --- *)
-    remember (rev [0;1;2;3;4;5;6;7;8;9;0])%nat as is; simpl in Heqis.
-    destruct (fun pf pf2 => carry_sequence_rep is _ _ pf pf2 HmulRef); auto. {
-      subst is; clear. intros. simpl in *. repeat break_or_hyp; firstorder.
-    }
-    remember (carry_sequence is [h0; h1; h2; h3; h4; h5; h6; h7; h8; h9]) as r; subst is.
-
-    (* unroll the carry loop, create a separate variable for each of the 10 list elements *)
-    cbv [GF25519Base25Point5.carry_sequence fold_right rev app] in Heqr.
-    repeat match goal with
-    | [H1: ?a = ?b, H2: ?b = ?c |- _ ] => subst a
-    | [H: context[GF25519Base25Point5.carry ?i (?x::?xs)] |- _ ] =>
-        let cr := fresh "cr" in
-        remember (GF25519Base25Point5.carry i (x::xs)) as cr;
-        match goal with [ Heq : cr = ?crdef |- _ ] =>
-            cbv [GF25519Base25Point5.carry GF25519Base25Point5.carry_simple GF25519Base25Point5.carry_and_reduce] in Heq;
-            simpl eq_nat_dec in Heq; cbv iota beta in Heq;
-            cbv [set_nth nth_default nth_error value GF25519Base25Point5.add_to_nth] in Heq;
-            let Heql := fresh "Heql" in
-              assert (length cr = length crdef) as Heql by (subst cr; reflexivity);
-              simpl length in Heql; expand_list cr; clear Heql;
-            expand_list_equalities
-        end
-    end.
-
-    (* compute the human-meaningful froms of constants used during carrying *)
-    cbv [GF25519Base25Point5.cap Base25Point5_10limbs.base GF25519Base25Point5Params.k] in *.
-    simpl eq_nat_dec in *; cbv iota in *.
-    repeat match goal with
-    | [H: _ |- _ ] =>
-      rewrite (map_nth_default _ _ _ _ 0%nat 0%Z) in H by (abstract (clear; rewrite seq_length; firstorder))
-    end.
-    simpl two_p in *.
-    repeat rewrite two_power_pos_equiv in *.
-    repeat rewrite <- Z.pow_sub_r in * by (abstract (clear; firstorder)).
-    simpl Z.sub in *;
-    rewrite Zdiv_1_r in *.
-
-    (* replace division and Z.modulo with bit operations *)
-    rewrite <- Z.land_ones in * by (abstract (clear; firstorder)).
-    rewrite <- Z.shiftr_div_pow2 in * by (abstract (clear; firstorder)).
-
-    (* evaluate the constant arguments to bit operations *)
-    remember (Z.ones 25) as m25 in *. compute in Heqm25. subst m25.
-    remember (Z.ones 26) as m26 in *. compute in Heqm26. subst m26.
-    unfold GF25519Base25Point5Params.c in *.
-
-    (* This tactic takes in [r], a variable that we want to use to instantiate an existential.
-     * We find one other variable mentioned in [r], with its own equality in the hypotheses.
-     * That equality is then switched into a [let] in [r]'s defining equation. *)
-    Ltac letify r :=
-      match goal with
-      | [ H : ?x = ?e |- _ ] =>
-        is_var x;
-        match goal with
-        | [ H' : r = _ |- _ ] =>
-          pattern x in H';
-            match type of H' with
-            | (fun z => r = @?e' z) x =>
-              let H'' := fresh "H" in assert (H'' : r = let x := e in e' x) by congruence;
-                clear H'; subst x; rename H'' into H'; cbv beta in H'
-            end
-        end
-      end.
-
-    (* To instantiate an existential, give a variable with a defining equation to this tactic.
-     * We instantiate with a [let]-ified version of that equation. *)
-    Ltac existsFromEquations r := repeat letify r;
-                                 match goal with
-                                 | [ _ : r = ?e |- context[?u] ] => unify u e
-                                 end.
-
-    clear HmulRef Hh Hf Hg.
-    existsFromEquations r.
-    split; auto; congruence.
-  Defined.
+    eexists.
+    existsFromEquations fg.
+    subst; auto.
+  Time Defined.
 End GF25519Base25Point5Formula.
 
 Extraction "/tmp/test.ml" GF25519Base25Point5_mul_reduce_formula.
@@ -268,3 +252,6 @@ Extraction "/tmp/test.ml" GF25519Base25Point5_mul_reduce_formula.
  * More Ltac acrobatics will be needed to get out that formula for further use in Coq.
  * The easiest fix will be to make the proof script above fully automated,
  * using [abstract] to contain the proof part. *)
+
+
+
