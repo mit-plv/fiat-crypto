@@ -1,5 +1,7 @@
 Require Import Zpower Znumtheory ZArith.ZArith ZArith.Zdiv.
 Require Import Omega NPeano Arith.
+Require Import Crypto.Util.NatUtil.
+Require Import Bedrock.Word.
 Local Open Scope Z.
 
 Lemma gt_lt_symmetry: forall n m, n > m <-> m < n.
@@ -49,4 +51,16 @@ Qed.
 
 Lemma Zgt0_neq0 : forall x, x > 0 -> x <> 0.
   intuition.
+Qed.
+
+Lemma Zpow_pow2 : forall n, (pow2 n)%nat = Z.to_nat (2 ^ (Z.of_nat n)).
+Proof.
+  induction n; intros; auto.
+  simpl pow2.
+  rewrite Nat2Z.inj_succ.
+  rewrite Z.pow_succ_r by apply Zle_0_nat.
+  rewrite untimes2.
+  rewrite Z2Nat.inj_mul by (try apply Z.pow_nonneg; omega).
+  rewrite <- IHn.
+  auto.
 Qed.
