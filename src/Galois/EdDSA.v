@@ -5,8 +5,7 @@ Require Import Crypto.Galois.BaseSystem Crypto.Galois.GaloisTheory.
 Require Import Util.ListUtil Util.CaseUtil Util.ZUtil.
 Require Import VerdiTactics.
 
-Open Scope nat_scope.
-
+Local Open Scope nat_scope.
 Local Coercion Z.to_nat : Z >-> nat.
 
 (* TODO : where should this be? *)
@@ -27,6 +26,7 @@ Notation "'encoding' 'of' T 'as' B" := (Encoding T B) (at level 50).
 Module Type EdDSAParams.
   Parameter q : Prime.
   Axiom q_odd : q > 2.
+
   (* Choosing q sufficiently large is important for security, since the size of
    * q constrains the size of l below. *)
 
@@ -34,10 +34,9 @@ Module Type EdDSAParams.
   Module Modulus_q <: Modulus.
     Definition modulus := q.
   End Modulus_q.
-  Module Export GFDefs := GaloisDefs Modulus_q.
 
   Parameter b : nat.
-  Axiom b_valid : 2^(b - 1) > q.
+  Axiom b_valid : (2^(Z.of_nat b - 1) > q)%Z.
   Notation secretkey := (word b) (only parsing).
   Notation publickey := (word b) (only parsing).
   Notation signature := (word (b + b)) (only parsing).
@@ -54,6 +53,10 @@ Module Type EdDSAParams.
   Parameter n : nat.
   Axiom n_ge_c : n >= c.
   Axiom n_le_b : n <= b.
+
+  Module Import GFDefs := GaloisDefs Modulus_q.
+  Local Open Scope GF_scope.
+
   (* Secret EdDSA scalars have exactly n + 1 bits, with the top bit
    *   (the 2n position) always set and the bottom c bits always cleared.
    * The original specification of EdDSA did not include this parameter:
@@ -64,7 +67,7 @@ Module Type EdDSAParams.
 
   Parameter a : GF.
   Axiom a_nonzero : a <> 0%GF.
-  Axiom a_square : exists x, x^2 = a.
+  Axiom a_square : exists x, x * x = a.
   (* The usual recommendation for best performance is a = −1 if q mod 4 = 1,
    *   and a = 1 if q mod 4 = 3.
    * The original specification of EdDSA did not include this parameter:
@@ -100,7 +103,7 @@ Module Type EdDSAParams.
    *   EdDSA secret key from an EdDSA public key.
    *)
   Parameter l : Prime.
-  Axiom l_odd : l > 2.
+  Axiom l_odd : (l > 2)%nat.
   Axiom l_order_B : scalarMult l B = zero.
   (* TODO: (2^c)l = #E *)
 
@@ -116,7 +119,7 @@ Module Type EdDSAParams.
   Parameter H' : forall {n}, word n -> word (H'_out_len n).
 
   Parameter FqEncoding : encoding of GF as word (b-1).
-  Parameter FlEncoding : encoding of {s:nat | s = s mod l} as word b.
+  Parameter FlEncoding : encoding of {s:nat | s mod l = s} as word b.
   Parameter PointEncoding : encoding of point as word b.
   
 End EdDSAParams.
@@ -130,7 +133,7 @@ Ltac arith := arith';
                     | [ H : _ |- _ ] => rewrite H; arith'
                     end.
 
-Definition modularNat (l : nat) (l_odd : l > 2) (n : nat) : {s : nat | s = s mod l}.
+Definition modularNat (l : nat) (l_odd : l > 2) (n : nat) : {s : nat | s mod l = s}.
   exists (n mod l); abstract arith.
 Defined.
 
@@ -163,7 +166,7 @@ Module Type EdDSA (Import P : EdDSAParams).
     let S_ := split2 b b sig in
     exists A, dec A_ = Some A /\
     exists R, dec R_ = Some R /\
-    exists S : {s:nat | s = s mod l}, dec S_ = Some S /\
+    exists S : {s:nat | s mod l = s}, dec S_ = Some S /\
     proj1_sig S * B = R + wordToNat (H (R_ ++ A_ ++ M)) * A).
 End EdDSA.
 

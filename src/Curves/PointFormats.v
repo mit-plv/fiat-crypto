@@ -5,11 +5,11 @@ Require Import BinNums NArith.
 
 Module GaloisDefs (M : Modulus).
   Module Export GT := GaloisTheory M.
-  Open Scope GF_scope.
 End GaloisDefs.
 
 Module Type TwistedEdwardsParams (M : Modulus).
   Module Export GFDefs := GaloisDefs M.
+  Local Open Scope GF_scope.
   Parameter a : GF.
   Axiom a_nonzero : a <> 0.
   Axiom a_square : exists x, x * x = a.
@@ -54,7 +54,7 @@ Proof.
   case_eq (b - S i); intros; simpl; auto.
 Qed.
 
-Lemma iter_op_xI : forall {A} p i op z b (a : A), (i < S b) ->
+Lemma iter_op_step_xI : forall {A} p i op z b (a : A), (i < S b) ->
   iter_op op z (S b) p~1 i a = iter_op op z b p i a.
 Proof.
   induction i; intros; [pose proof (Gt.gt_irrefl 0); intuition | ].
@@ -64,7 +64,7 @@ Proof.
   rewrite IHi by omega; auto.
 Qed.
 
-Lemma iter_op_xO : forall {A} p i op z b (a : A), (i < S b) ->
+Lemma iter_op_step_xO : forall {A} p i op z b (a : A), (i < S b) ->
   iter_op op z (S b) p~0 i a = iter_op op z b p i a.
 Proof.
   induction i; intros; [pose proof (Gt.gt_irrefl 0); intuition | ].
@@ -74,7 +74,7 @@ Proof.
   rewrite IHi by omega; auto.
 Qed.
 
-Lemma iter_op_1 : forall {A} i op z b (a : A), (i < S b) ->
+Lemma iter_op_step_1 : forall {A} i op z b (a : A), (i < S b) ->
   iter_op op z (S b) 1%positive i a = z.
 Proof.
   induction i; intros; [pose proof (Gt.gt_irrefl 0); intuition | ].
@@ -90,36 +90,23 @@ Proof.
 Qed.
 Hint Resolve pos_size_gt0.
 
-Lemma test_low_bit_xI : forall p b, testbit_rev p~1 b b = true.
-Proof.
-  unfold testbit_rev; intros; rewrite Minus.minus_diag; auto.
-Qed.
-
-Lemma test_low_bit_xO : forall p b, testbit_rev p~0 b b = false.
-Proof.
-  unfold testbit_rev; intros; rewrite Minus.minus_diag; auto.
-Qed.
-
-Lemma test_low_bit_1 : forall b, testbit_rev 1%positive b b = true.
-Proof.
-  unfold testbit_rev; intros; rewrite Minus.minus_diag; auto.
-Qed.
-
-Ltac low_bit := match goal with
-| [ |- context[testbit_rev ?p~1 ?b ?b] ] => rewrite test_low_bit_xI; f_equal; rewrite iter_op_xI
-| [ |- context[testbit_rev ?p~0 ?b ?b] ] => rewrite test_low_bit_xO; rewrite iter_op_xO
-| [ |- context[testbit_rev 1%positive ?b ?b] ] => rewrite test_low_bit_1; rewrite iter_op_1 
+Ltac iter_op_step := match goal with
+| [ |- context[iter_op ?op ?z ?b ?p~1 ?i ?a] ] => rewrite iter_op_step_xI
+| [ |- context[iter_op ?op ?z ?b ?p~0 ?i ?a] ] => rewrite iter_op_step_xO
+| [ |- context[iter_op ?op ?z ?b 1%positive ?i ?a] ] => rewrite iter_op_step_1
 end; auto.
 
 Lemma iter_op_spec : forall b p {A} op z (a : A) (zero_id : forall x : A, op x z = x), (Pos.size_nat p <= b) ->
   iter_op op z b p b a = Pos.iter_op op p a.
 Proof.
   induction b; intros; [pose proof (pos_size_gt0 p); omega |].
-  case_eq p; intros; simpl; low_bit; apply IHb;
-    rewrite H0 in *; simpl in H; apply Le.le_S_n in H; auto.
+  simpl; unfold testbit_rev; rewrite Minus.minus_diag.
+  case_eq p; intros; simpl; iter_op_step; simpl; 
+  rewrite IHb; rewrite H0 in *; simpl in H; apply Le.le_S_n in H; auto.
 Qed.
 
 Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParams M).
+  Local Open Scope GF_scope.
   (** Twisted Ewdwards curves with complete addition laws. References:
   * <https://eprint.iacr.org/2008/013.pdf>
   * <http://ed25519.cr.yp.to/ed25519-20110926.pdf>
@@ -173,6 +160,7 @@ End CompleteTwistedEdwardsCurve.
 
 
 Module Type CompleteTwistedEdwardsPointFormat (M : Modulus) (Import P : TwistedEdwardsParams M).
+  Local Open Scope GF_scope.
   Module Curve := CompleteTwistedEdwardsCurve M P.
   Parameter point : Type.
   Parameter encode : (GF*GF) -> point.
@@ -189,6 +177,7 @@ Module Type CompleteTwistedEdwardsPointFormat (M : Modulus) (Import P : TwistedE
 End CompleteTwistedEdwardsPointFormat.
 
 Module CompleteTwistedEdwardsFacts (M : Modulus) (Import P : TwistedEdwardsParams M).
+  Local Open Scope GF_scope.
   Module Import Curve := CompleteTwistedEdwardsCurve M P.
   Lemma twistedAddCompletePlus : forall (P1 P2:point),
     let '(x1, y1) := proj1_sig P1 in
@@ -365,7 +354,7 @@ End CompleteTwistedEdwardsFacts.
 
 Module Type Minus1Params (Import M : Modulus) <: TwistedEdwardsParams M.
   Module Export GFDefs := GaloisDefs M.
-  Open Scope GF_scope.
+  Local Open Scope GF_scope.
   Definition a := inject (- 1).
   Axiom a_nonzero : a <> 0.
   Axiom a_square : exists x, x * x = a.
@@ -374,6 +363,7 @@ Module Type Minus1Params (Import M : Modulus) <: TwistedEdwardsParams M.
 End Minus1Params.
 
 Module Minus1Format (M : Modulus) (Import P : Minus1Params M) <: CompleteTwistedEdwardsPointFormat M P.
+  Local Open Scope GF_scope.
   Module Import Facts := CompleteTwistedEdwardsFacts M P.
   Module Import Curve := Facts.Curve.
   (** [projective] represents a point on an elliptic curve using projective

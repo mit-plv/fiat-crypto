@@ -10,6 +10,7 @@ End Modulus25519.
 
 Module Curve25519Params <: TwistedEdwardsParams Modulus25519 <: Minus1Params Modulus25519.
   Module Import GFDefs := GaloisDefs Modulus25519.
+  Local Open Scope GF_scope.
   Coercion inject : Z >-> GF.
 
   Definition a : GF := -1.
