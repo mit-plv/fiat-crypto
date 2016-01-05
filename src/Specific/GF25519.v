@@ -304,37 +304,6 @@ Section GF25519Base25Point5Formula.
     clear HmulRef Hh Hf Hg.
     existsFromEquations r.
     split; auto; congruence.
-
-    (* Here's the tactic code I added at this point at the end of the old version.
-     * Erase after reading, since it isn't needed anymore.
-
-    replace ([r0; r1; r2; r3; r4; r5; r6; r7; r8; r9]) with r; unfold rep; auto.
-
-    subst r.
-
-    Ltac rsubstBoth := repeat (match goal with [ |- ?a = ?b] => subst a; subst b; repeat progress f_equal || reflexivity end).
-    Ltac t := f_equal; abstract rsubstBoth || (try t).
-
-    Time t.
-    
-
-    (* But there's a nicer way! *)
-    Undo 2.
-
-    (* This tactic finds an [x := e] hypothesis and adds a matching [x = e] hypothesis. *)
-    Ltac letToEquality :=
-      match goal with
-      | [ x := ?e |- _ ] =>
-        match goal with
-        | [ _ : x = e |- _ ] => fail 1 (* To avoid infinite loop, make sure we didn't already do this one! *)
-        | _ => assert (x = e) by reflexivity
-        end
-      end.
-
-    (* Repeated introduction of those equalities enables [congruence] to solve the goal. *)
-    Ltac smarter_congruence := repeat letToEquality; congruence.
-
-    Time smarter_congruence.*)
   Defined.
 End GF25519Base25Point5Formula.
 
