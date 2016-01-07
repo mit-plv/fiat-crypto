@@ -1,4 +1,4 @@
-Require Import Crypto.Galois.Galois Crypto.Galois.GaloisTheory Crypto.Galois.ComputationalGaloisField.
+Require Import Crypto.Galois.Galois Crypto.Galois.GaloisTheory Crypto.Galois.ZGaloisField.
 Require Import Tactics.VerdiTactics.
 Require Import Logic.Eqdep_dec.
 Require Import BinNums NArith.
@@ -8,7 +8,7 @@ Module GaloisDefs (M : Modulus).
 End GaloisDefs.
 
 Module Type TwistedEdwardsParams (M : Modulus).
-  Module Export GFDefs := GaloisDefs M.
+  Module Export GFDefs := ZGaloisField M.
   Local Open Scope GF_scope.
   Parameter a : GF.
   Axiom a_nonzero : a <> 0.
@@ -125,7 +125,7 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
   Hint Unfold onCurve mkPoint.
 
   Definition zero : point. exists (0, 1).
-    abstract (unfold onCurve; ring).
+    abstract (unfold onCurve; field).
   Defined.
 
   Definition unifiedAdd' (P1' P2' : (GF*GF)) :=
@@ -138,8 +138,28 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
     let 'exist P2' pf2 := P2 in
     mkPoint (unifiedAdd' P1' P2') _).
   Proof.
-    destruct P1' as [x1 y1], P2' as [x2 y2]; unfold unifiedAdd', onCurve.
-    admit. (* field will likely work here, but I have not done this by hand *)
+    (* https://eprint.iacr.org/2007/286.pdf Theorem 3.1, c=1 and an extra a in front of x^2 *) 
+    destruct P1' as [x1 y1], P2' as [x2 y2].
+    remember (unifiedAdd' (x1, y1) (x2, y2)) as P3.
+    destruct P3 as [x3 y3]. injection HeqP3; clear HeqP3; intros.
+    unfold unifiedAdd', onCurve in *.
+
+    Ltac rewriteAny := match goal with [H: _ = _ |- _ ] => rewrite H end.
+    Ltac t x1 y1 x2 y2 :=
+      assert ((a*x2^2 + y2^2)*d*x1^2*y1^2 = (1 + d*x2^2*y2^2) * d*x1^2*y1^2) by (rewriteAny; auto);
+      assert (a*x1^2 + y1^2 - (a*x2^2 + y2^2)*d*x1^2*y1^2 = 1 - d^2*x1^2*x2^2*y1^2*y2^2) by (repeat rewriteAny; field).
+    t x1 y1 x2 y2.
+    t x2 y2 x1 y1.
+
+    remember ((a*x1^2 + y1^2 - (a*x2^2+y2^2)*d*x1^2*y1^2)*(a*x2^2 + y2^2 - (a*x1^2 + y1^2)*d*x2^2*y2^2)) as T.
+    assert (T = (1 - d^2*x1^2*x2^2*y1^2*y2^2)^2) by (repeat rewriteAny; field).
+    assert (T = (a * ((x1 * y2 + y1 * x2) * (1 - d * x1 * x2 * y1 * y2)) ^ 2 +(
+    (y1 * y2 - a * x1 * x2) * (1 + d * x1 * x2 * y1 * y2)) ^ 2 -d * ((x1 *
+     y2 + y1 * x2)* (y1 * y2 - a * x1 * x2))^2)) by (subst; field).
+
+    replace 1 with (a*x3^2 + y3^2 -d*x3^2*y3^2); [field|]; subst x3 y3.
+    (* change all fractions to a common denominator and merge. That fraction will be T/T based on the hypotheses. Which is 1. *)
+    admit.
   Defined.
   Local Infix "+" := unifiedAdd.
 
@@ -220,6 +240,10 @@ Module CompleteTwistedEdwardsFacts (M : Modulus) (Import P : TwistedEdwardsParam
   Proof.
     (* http://math.rice.edu/~friedl/papers/AAELLIPTIC.PDF *)
   Admitted.
+
+  Lemma zeroIsIdentity' : forall P, unifiedAdd' P  zero = P.
+  Admitted.
+  Hint Resolve zeroIsIdentity.
 
   Lemma zeroIsIdentity : forall P, P + zero = P.
   Admitted.
