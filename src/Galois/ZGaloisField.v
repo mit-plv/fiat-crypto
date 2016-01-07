@@ -1,7 +1,7 @@
-
 Require Import BinInt BinNat ZArith Znumtheory.
 Require Import BoolEq Field_theory.
 Require Import Galois GaloisTheory.
+Require Import Tactics.VerdiTactics.
 
 Module ZGaloisField (M: Modulus).
   Module G := Galois M.
@@ -52,11 +52,20 @@ Module ZGaloisField (M: Modulus).
       apply prime_ge_2 in p; intuition.
   Qed.
 
+  Lemma exist_neq: forall A (P: A -> Prop) x y Px Py, x <> y -> exist P x Px <> exist P y Py.
+  Proof.
+    intuition; solve_by_inversion.
+  Qed.
+
   Ltac GFpreprocess :=
     repeat rewrite injectZeroIsGFZero;
     repeat rewrite injectOneIsGFOne.
 
   Ltac GFpostprocess :=
+    repeat split;
+		repeat match goal with [ |- context[exist ?a ?b (inject_subproof ?x)] ] =>
+			replace (exist a b (inject_subproof x)) with (inject x%Z) by reflexivity
+		end;
     repeat rewrite <- injectZeroIsGFZero;
     repeat rewrite <- injectOneIsGFOne.
 
@@ -79,6 +88,4 @@ Module ZGaloisField (M: Modulus).
      constants [GFconstant],
      div GFmorph_div_theory,
      power_tac GFpower_theory [GFexp_tac]). 
-
 End ZGaloisField.
-

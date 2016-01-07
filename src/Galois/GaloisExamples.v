@@ -42,6 +42,12 @@ Module Example31.
     field; trivial.
   Qed.
 
+  Lemma example4: forall x: GF, x/(inject 1) = x.
+  Proof.
+    intros; field.
+    discriminate.
+  Qed.
+
 End Example31.
 
 Module TimesZeroTransparentTestModule.
