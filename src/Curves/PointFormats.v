@@ -133,34 +133,56 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
     let '(x2, y2) := P2' in
     (((x1*y2  +  y1*x2)/(1 + d*x1*x2*y1*y2)) , ((y1*y2 - a*x1*x2)/(1 - d*x1*x2*y1*y2))).
 
-  Definition unifiedAdd (P1 P2 : point) : point. refine (
-    let 'exist P1' pf1 := P1 in
-    let 'exist P2' pf2 := P2 in
-    mkPoint (unifiedAdd' P1' P2') _).
+  Lemma unifiedAdd'_onCurve x1 y1 x2 y2 x3 y3
+    (H: (x3, y3) = unifiedAdd' (x1, y1) (x2, y2)) :
+    onCurve (x1,y1) -> onCurve (x2, y2) -> onCurve (x3, y3).
   Proof.
-    (* https://eprint.iacr.org/2007/286.pdf Theorem 3.1, c=1 and an extra a in front of x^2 *) 
-    destruct P1' as [x1 y1], P2' as [x2 y2].
-    remember (unifiedAdd' (x1, y1) (x2, y2)) as P3.
-    destruct P3 as [x3 y3]. injection HeqP3; clear HeqP3; intros.
-    unfold unifiedAdd', onCurve in *.
+    (* https://eprint.iacr.org/2007/286.pdf Theorem 3.1;
+      * c=1 and an extra a in front of x^2 *) 
+    unfold unifiedAdd', onCurve in *; injection H; clear H; intros.
 
     Ltac rewriteAny := match goal with [H: _ = _ |- _ ] => rewrite H end.
+
     Ltac t x1 y1 x2 y2 :=
-      assert ((a*x2^2 + y2^2)*d*x1^2*y1^2 = (1 + d*x2^2*y2^2) * d*x1^2*y1^2) by (rewriteAny; auto);
-      assert (a*x1^2 + y1^2 - (a*x2^2 + y2^2)*d*x1^2*y1^2 = 1 - d^2*x1^2*x2^2*y1^2*y2^2) by (repeat rewriteAny; field).
+      assert ((a*x2^2 + y2^2)*d*x1^2*y1^2
+             = (1 + d*x2^2*y2^2) * d*x1^2*y1^2) by (rewriteAny; auto);
+      assert (a*x1^2 + y1^2 - (a*x2^2 + y2^2)*d*x1^2*y1^2
+             = 1 - d^2*x1^2*x2^2*y1^2*y2^2) by (repeat rewriteAny; field).
     t x1 y1 x2 y2.
     t x2 y2 x1 y1.
 
-    remember ((a*x1^2 + y1^2 - (a*x2^2+y2^2)*d*x1^2*y1^2)*(a*x2^2 + y2^2 - (a*x1^2 + y1^2)*d*x2^2*y2^2)) as T.
-    assert (T = (1 - d^2*x1^2*x2^2*y1^2*y2^2)^2) by (repeat rewriteAny; field).
-    assert (T = (a * ((x1 * y2 + y1 * x2) * (1 - d * x1 * x2 * y1 * y2)) ^ 2 +(
+    remember ((a*x1^2 + y1^2 - (a*x2^2+y2^2)*d*x1^2*y1^2)*(a*x2^2 + y2^2 -
+      (a*x1^2 + y1^2)*d*x2^2*y2^2)) as T.
+    assert (HT1: T = (1 - d^2*x1^2*x2^2*y1^2*y2^2)^2) by (repeat rewriteAny; field).
+    assert (HT2: T = (a * ((x1 * y2 + y1 * x2) * (1 - d * x1 * x2 * y1 * y2)) ^ 2 +(
     (y1 * y2 - a * x1 * x2) * (1 + d * x1 * x2 * y1 * y2)) ^ 2 -d * ((x1 *
      y2 + y1 * x2)* (y1 * y2 - a * x1 * x2))^2)) by (subst; field).
 
     replace 1 with (a*x3^2 + y3^2 -d*x3^2*y3^2); [field|]; subst x3 y3.
-    (* change all fractions to a common denominator and merge. That fraction will be T/T based on the hypotheses. Which is 1. *)
-    admit.
-  Defined.
+
+    match goal with [ |- ?x = 1 ] => replace x with
+    ((a * ((x1 * y2 + y1 * x2) * (1 - d * x1 * x2 * y1 * y2)) ^ 2 +
+     ((y1 * y2 - a * x1 * x2) * (1 + d * x1 * x2 * y1 * y2)) ^ 2 -
+      d*((x1 * y2 + y1 * x2) * (y1 * y2 - a * x1 * x2)) ^ 2)/
+    ((1-d^2*x1^2*x2^2*y1^2*y2^2)^2)) end; try field.
+
+    rewrite <-HT1, <-HT2; field; rewrite HT1.
+
+    (* denominators are not zero, I promise *)
+  Admitted.
+
+  Lemma unifiedAdd'_onCurve' : forall P1 P2, onCurve P1 -> onCurve P2 ->
+    onCurve (unifiedAdd' P1 P2).
+  Proof.
+    intros; destruct P1, P2.
+    remember (unifiedAdd' (g, g0) (g1, g2)) as p; destruct p.
+    eapply unifiedAdd'_onCurve; eauto.
+  Qed.
+
+  Definition unifiedAdd (P1 P2 : point) : point :=
+    let 'exist P1' pf1 := P1 in
+    let 'exist P2' pf2 := P2 in
+    mkPoint (unifiedAdd' P1' P2') (unifiedAdd'_onCurve' _ _ pf1 pf2).
   Local Infix "+" := unifiedAdd.
 
   Fixpoint scalarMult (n:nat) (P : point) : point :=
