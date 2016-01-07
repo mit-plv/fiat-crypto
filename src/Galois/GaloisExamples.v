@@ -24,6 +24,22 @@ Module Example31.
   Import Theory.
   Local Open Scope GF_scope.
 
+  Lemma exist_neq: forall A (P: A -> Prop) x y Px Py, x <> y -> exist P x Px <> exist P y Py.
+  Proof.
+    intuition.
+    inversion H0.
+    auto.
+  Qed.
+
+  Lemma fail: forall x: GF, x/1 = x.
+  Proof.
+    intros; simpl.
+    GFpreprocess. field.
+    GFpreprocess.
+    unfold inject. apply exist_neq. simpl.
+    (* TODO: finish this proof and stick a fully automated version of it into ZGaloisField.GFpostprocess *)
+  Admitted.
+
   Lemma example1: forall x y z: GF, z <> 0 -> x * (y / z) / z = x * y / (z ^ 2).
   Proof.
     intros; simpl.
