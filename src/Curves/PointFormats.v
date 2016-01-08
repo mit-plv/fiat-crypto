@@ -134,17 +134,46 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
   (* https://eprint.iacr.org/2007/286.pdf Theorem 3.3 *)
   (* c=1 and an extra a in front of x^2 *) 
 
-  Lemma onCurveDenominatorOk' x1 y1 x2 y2 :
+  Lemma root_zero : forall x p, x^p = 0 -> x = 0.
+  Admitted.
+  Lemma root_nonzero : forall x p, x^p <> 0 -> x <> 0.
+  Admitted.
+  Lemma mul_nonzero_l : forall a b, a*b <> 0 -> a <> 0.
+  Admitted.
+  Lemma mul_nonzero_r : forall a b, a*b <> 0 -> b <> 0.
+  Admitted.
+  Lemma mul_nonzero_nonzero : forall a b, a <> 0 -> b <> 0 -> a*b <> 0.
+  Admitted.
+  Lemma mul_zero_why : forall a b, a*b = 0 -> a = 0 \/ b = 0.
+  Admitted.
+  Definition GF_eq_dec : forall x y : GF, {x = y} + {x <> y}.
+  Admitted.
+
+  Ltac whatsNotZero :=
+    repeat match goal with
+    | [H: ?lhs = ?rhs |- _ ] =>
+        match goal with [Ha: lhs <> 0 |- _ ] => fail 1 | _ => idtac end;
+        assert (lhs <> 0) by (rewrite H; auto)
+    | [H: ?lhs = ?rhs |- _ ] =>
+        match goal with [Ha: rhs <> 0 |- _ ] => fail 1 | _ => idtac end;
+        assert (rhs <> 0) by (rewrite H; auto)
+    | [H: (?a^?p)%GF <> 0 |- _ ] =>
+        match goal with [Ha: a <> 0 |- _ ] => fail 1 | _ => idtac end;
+        assert (a <> 0) by (eapply root_nonzero; eauto)
+    | [H: (?a*?b)%GF <> 0 |- _ ] =>
+        match goal with [Ha: a <> 0 |- _ ] => fail 1 | _ => idtac end;
+        assert (a <> 0) by (eapply mul_nonzero_l; eauto)
+    | [H: (?a*?b)%GF <> 0 |- _ ] =>
+        match goal with [Ha: b <> 0 |- _ ] => fail 1 | _ => idtac end;
+        assert (b <> 0) by (eapply mul_nonzero_r; eauto)
+    end.
+
+  Lemma edwardsAddComplete' x1 y1 x2 y2 :
     onCurve (x1,y1) ->
     onCurve (x2, y2) ->
     (d*x1*x2*y1*y2)^2 <> 1.
   Proof.
-    unfold onCurve; intros. intro.
-    (* TODO: lemma+tactic to inspect a*b*c*d*e<>0 *)
-    case_eq_GF x1 0%GF; [admit|].
-    case_eq_GF y1 0%GF; [admit|].
-    case_eq_GF x2 0%GF; [admit|].
-    case_eq_GF y2 0%GF; [admit|].
+    unfold onCurve; intuition; whatsNotZero.
 
     (* Furthermore... *)
     pose proof  (eq_refl (d*x1^2*y1^2*(a*x2^2 + y2^2))) as Heqt.
@@ -162,8 +191,12 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
     - destruct H4.
       assert (Hc: (sqrt_a * x2 + y2) + (sqrt_a * x2 - y2) = 0) by (repeat rewriteAny; field).
       replace (sqrt_a * x2 + y2 + (sqrt_a * x2 - y2)) with (inject 2 * sqrt_a * x2) in Hc by field.
-      (* TODO: lemma+tactic to inspect a*b*c*d*e=0 *)
-      admit.
+
+      (* contradiction: product of nonzero things is zero *)
+      destruct (mul_zero_why _ _ Hc) as [Hcc|Hcc]; try (subst; field).
+      destruct (mul_zero_why _ _ Hcc) as [Hccc|Hccc].
+      + destruct char_gt_2; rewrite <- Hccc; field.
+      + destruct a_nonzero; rewrite <-a_square, Hccc; field.
 
     - rewrite <- a_square in *.
       assert ((sqrt_a*x1 - d * x1 * x2 * y1 * y2*y1)^2 = (sqrt_a^2)*x1^2 + (d * x1 * x2 * y1 * y2)^2*y1^2 - d * x1 * x2 * y1 * y2*sqrt_a*(inject 2)*x1*y1) as Heqw by field.
@@ -204,28 +237,28 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
       edestruct d_nonsquare; eauto.
   Qed.
   
-  Lemma onCurveDenominatorOkPlus x1 y1 x2 y2 :
+  Lemma edwardsAddCompletePlus x1 y1 x2 y2 :
     onCurve (x1,y1) ->
     onCurve (x2, y2) ->
     (1 + d*x1*x2*y1*y2) <> 0.
   Proof.
     unfold onCurve; intros; case_eq_GF (d*x1*x2*y1*y2) (0-1)%GF.
-    - assert ((d*x1*x2*y1*y2)^2 = 1) by (rewriteAny; field). destruct (onCurveDenominatorOk' x1 y1 x2 y2); auto.
+    - assert ((d*x1*x2*y1*y2)^2 = 1) by (rewriteAny; field). destruct (edwardsAddComplete' x1 y1 x2 y2); auto.
     - replace (d * x1 * x2 * y1 * y2) with (1+d * x1 * x2 * y1 * y2-1) in H1 by field.
       intro; rewrite H2 in H1; intuition.
   Qed.
   
-  Lemma onCurveDenominatorOkMinus x1 y1 x2 y2 :
+  Lemma edwardsAddCompletePlusMinus x1 y1 x2 y2 :
     onCurve (x1,y1) ->
     onCurve (x2, y2) ->
     (1 - d*x1*x2*y1*y2) <> 0.
   Proof.
     unfold onCurve; intros; case_eq_GF (d*x1*x2*y1*y2) (1)%GF.
-    - assert ((d*x1*x2*y1*y2)^2 = 1) by (rewriteAny; field). destruct (onCurveDenominatorOk' x1 y1 x2 y2); auto.
+    - assert ((d*x1*x2*y1*y2)^2 = 1) by (rewriteAny; field). destruct (edwardsAddComplete' x1 y1 x2 y2); auto.
     - replace (d * x1 * x2 * y1 * y2) with ((1-(1-d * x1 * x2 * y1 * y2))) in H1 by field.
       intro; rewrite H2 in H1; apply H1; field.
   Qed.
-  Hint Resolve onCurveDenominatorOkPlus onCurveDenominatorOkMinus.
+  Hint Resolve edwardsAddCompletePlus edwardsAddCompletePlusMinus.
 
   Definition projX (P:point) := fst (proj1_sig P).
   Definition projY (P:point) := snd (proj1_sig P).
@@ -280,12 +313,12 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
     - replace ((1 - d ^ 2 * x1 ^ 2 * x2 ^ 2 * y1 ^ 2 * y2 ^ 2))
          with ((1 - d*x1*x2*y1*y2)*(1 + d*x1*x2*y1*y2))
            by field; simpl.
-      admit.
+      repeat apply mul_nonzero_nonzero; auto.
 
     - replace (1 - (d * x1 * x2 * y1 * y2) ^ 2)
          with ((1 - d*x1*x2*y1*y2)*(1 + d*x1*x2*y1*y2))
            by field.
-      admit.
+      repeat apply mul_nonzero_nonzero; auto.
   Qed.
 
   Lemma unifiedAdd'_onCurve' : forall P1 P2, onCurve P1 -> onCurve P2 ->
@@ -338,18 +371,6 @@ End CompleteTwistedEdwardsPointFormat.
 Module CompleteTwistedEdwardsFacts (M : Modulus) (Import P : TwistedEdwardsParams M).
   Local Open Scope GF_scope.
   Module Import Curve := CompleteTwistedEdwardsCurve M P.
-  Lemma twistedAddCompletePlus : forall (P1 P2:point),
-    let '(x1, y1) := proj1_sig P1 in
-    let '(x2, y2) := proj1_sig P2 in
-    (1 + d*x1*x2*y1*y2) <> 0.
-    (* "Twisted Edwards Curves" <http://eprint.iacr.org/2008/013.pdf> section 6 *)
-  Admitted.
-  Lemma twistedAddCompleteMinus : forall (P1 P2:point),
-    let '(x1, y1) := proj1_sig P1 in
-    let '(x2, y2) := proj1_sig P2 in
-    (1 - d*x1*x2*y1*y2) <> 0.
-    (* "Twisted Edwards Curves" <http://eprint.iacr.org/2008/013.pdf> section 6 *)
-  Admitted.
 
   Lemma point_eq : forall x1 x2 y1 y2,
     x1 = x2 -> y1 = y2 ->
@@ -358,7 +379,7 @@ Module CompleteTwistedEdwardsFacts (M : Modulus) (Import P : TwistedEdwardsParam
   Proof.
     intros; subst; f_equal.
     apply (UIP_dec). (* this is a hack. We actually don't care about the equality of the proofs. However, we *can* prove it, and knowing it lets us use the universal equality instead of a type-specific equivalence, which makes many things nicer. *)
-    admit. (* GF_eq_dec *)
+    apply GF_eq_dec.
   Qed.
   Hint Resolve point_eq.
 
@@ -381,8 +402,7 @@ Module CompleteTwistedEdwardsFacts (M : Modulus) (Import P : TwistedEdwardsParam
   Admitted.
 
   Lemma zeroIsIdentity' : forall P, unifiedAdd' P (proj1_sig zero) = P.
-    unfold unifiedAdd', zero; simpl; intros; break_let; f_equal; field;
-    assert (1 <> 0) by admit; auto.
+    unfold unifiedAdd', zero; simpl; intros; break_let; f_equal; field; auto.
   Qed.
 
   Lemma zeroIsIdentity : forall P, P + zero = P.
@@ -550,14 +570,13 @@ Module Minus1Format (M : Modulus) (Import P : Minus1Params M) <: CompleteTwisted
 
   Lemma GFdiv_1 : forall x, x/1 = x.
   Proof.
-    intros; field.
-    assert (1 <> 0) by admit; auto.
+    intros; field; auto.
   Qed.
   Hint Resolve GFdiv_1.
 
   Lemma twistedProjectiveInv P : projectiveToTwisted (twistedToProjective P) = P.
   Proof.
-    twisted; eapply GFdiv_1.
+    twisted; eauto.
   Qed.
 
   (** [extended] represents a point on an elliptic curve using extended projective

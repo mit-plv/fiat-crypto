@@ -53,6 +53,13 @@ Module Galois (M: Modulus).
               apply prime_ge_2 in p; intuition).
   Defined.
 
+  Lemma GFone_nonzero : GFone <> GFzero.
+  Proof.
+    unfold GFone, GFzero.
+    intuition; solve_by_inversion.
+  Qed.
+  Hint Resolve GFone_nonzero.
+
   Definition GFplus(x y: GF): GF.
     exists ((x + y) mod modulus);
     abstract (rewrite Zmod_mod; trivial).
