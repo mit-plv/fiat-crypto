@@ -3,16 +3,14 @@ Require Import Tactics.VerdiTactics.
 Require Import Logic.Eqdep_dec.
 Require Import BinNums NArith.
 
-Module GaloisDefs (M : Modulus).
-  Module Export GT := GaloisTheory M.
-End GaloisDefs.
-
 Module Type TwistedEdwardsParams (M : Modulus).
   Module Export GFDefs := ZGaloisField M.
   Local Open Scope GF_scope.
+  Axiom char_gt_2 : (1+1) <> 0.
   Parameter a : GF.
   Axiom a_nonzero : a <> 0.
-  Axiom a_square : exists x, x * x = a.
+  Parameter sqrt_a : GF.
+  Axiom a_square : sqrt_a^2 = a.
   Parameter d : GF.
   Axiom d_nonsquare : forall x, x * x <> d.
 End TwistedEdwardsParams.
@@ -116,6 +114,119 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
   Definition point := { P | onCurve P}.
   Definition mkPoint := exist onCurve.
 
+  Lemma GFdecidable_neq : forall x y : GF, Zbool.Zeq_bool x y = false -> x <> y.
+  Proof.
+    intros. intro. rewrite GFcomplete in H; intuition.
+  Qed.
+
+  Ltac case_eq_GF a b :=
+    case_eq (Zbool.Zeq_bool a b); intro Hx;
+    match type of Hx with
+    | Zbool.Zeq_bool (GFToZ a) (GFToZ b) = true =>
+        pose proof (GFdecidable a b Hx)
+    | Zbool.Zeq_bool (GFToZ a) (GFToZ b) = false =>
+        pose proof (GFdecidable_neq a b Hx)
+    end; clear Hx.
+
+  Ltac rewriteAny := match goal with [H: _ = _ |- _ ] => rewrite H end.
+  Ltac rewriteLeftAny := match goal with [H: _ = _ |- _ ] => rewrite <- H end.
+
+  (* https://eprint.iacr.org/2007/286.pdf Theorem 3.3 *)
+  (* c=1 and an extra a in front of x^2 *) 
+
+  Lemma onCurveDenominatorOk' x1 y1 x2 y2 :
+    onCurve (x1,y1) ->
+    onCurve (x2, y2) ->
+    (d*x1*x2*y1*y2)^2 <> 1.
+  Proof.
+    unfold onCurve; intros. intro.
+    (* TODO: lemma+tactic to inspect a*b*c*d*e<>0 *)
+    case_eq_GF x1 0%GF; [admit|].
+    case_eq_GF y1 0%GF; [admit|].
+    case_eq_GF x2 0%GF; [admit|].
+    case_eq_GF y2 0%GF; [admit|].
+
+    (* Furthermore... *)
+    pose proof  (eq_refl (d*x1^2*y1^2*(a*x2^2 + y2^2))) as Heqt.
+    rewrite H0 in Heqt at 2.
+    replace (d * x1 ^ 2 * y1 ^ 2 * (1 + d * x2 ^ 2 * y2 ^ 2))
+       with (d*x1^2*y1^2 + (d*x1*x2*y1*y2)^2) in Heqt by field.
+    rewrite H1 in Heqt.
+    replace (d * x1 ^ 2 * y1 ^ 2 + 1) with (1 + d * x1 ^ 2 * y1 ^ 2) in Heqt by field.
+    rewrite <-H in Heqt.
+
+    (* main equation *)
+    case_eq_GF (sqrt_a*x2 + y2) 0%GF.
+    case_eq_GF (sqrt_a*x2 - y2) 0%GF.
+
+    - destruct H4.
+      assert (Hc: (sqrt_a * x2 + y2) + (sqrt_a * x2 - y2) = 0) by (repeat rewriteAny; field).
+      replace (sqrt_a * x2 + y2 + (sqrt_a * x2 - y2)) with (inject 2 * sqrt_a * x2) in Hc by field.
+      (* TODO: lemma+tactic to inspect a*b*c*d*e=0 *)
+      admit.
+
+    - rewrite <- a_square in *.
+      assert ((sqrt_a*x1 - d * x1 * x2 * y1 * y2*y1)^2 = (sqrt_a^2)*x1^2 + (d * x1 * x2 * y1 * y2)^2*y1^2 - d * x1 * x2 * y1 * y2*sqrt_a*(inject 2)*x1*y1) as Heqw by field.
+      rewrite H1 in Heqw.
+      replace (1 * y1^2) with (y1^2) in Heqw by field.
+      rewrite <- Heqt in Heqw.
+      replace (d * x1^2    *  y1^2    * (sqrt_a * sqrt_a * x2 ^ 2 + y2 ^ 2) +
+               d * x1 * x2 *  y1  * y2 * sqrt_a * inject 2 * x1 * y1)
+         with (d * (x1 * y1 * (sqrt_a * x2 + y2))^2)
+           in Heqw by field.
+      assert (d = (sqrt_a * x1 - d * x1 * x2 * y1 * y2 * y1)^2 / (x1 * y1 * (sqrt_a * x2 - y2)) ^ 2)
+        by (rewriteAny; field; auto).
+
+      (* FIXME: field fails if I remove this remember *)
+      remember (sqrt_a * x1 - d * x1 * x2 * y1 * y2 * y1) as p.
+      assert (d = (p/(x1 * y1 * (sqrt_a * x2 - y2)))^2) by (rewriteAny; field; auto).
+      subst p.
+
+      edestruct d_nonsquare; eauto.
+
+    - rewrite <- a_square in *.
+      assert ((sqrt_a*x1 + d * x1 * x2 * y1 * y2*y1)^2 = (sqrt_a^2)*x1^2 + (d * x1 * x2 * y1 * y2)^2*y1^2 + d * x1 * x2 * y1 * y2*sqrt_a*(inject 2)*x1*y1) as Heqw by field.
+      rewrite H1 in Heqw.
+      replace (1 * y1^2) with (y1^2) in Heqw by field.
+      rewrite <- Heqt in Heqw.
+      replace (d * x1^2    *  y1^2    * (sqrt_a * sqrt_a * x2 ^ 2 + y2 ^ 2) +
+               d * x1 * x2 *  y1  * y2 * sqrt_a * inject 2 * x1 * y1)
+         with (d * (x1 * y1 * (sqrt_a * x2 + y2))^2)
+           in Heqw by field.
+      assert (d = (sqrt_a * x1 + d * x1 * x2 * y1 * y2 * y1)^2 / (x1 * y1 * (sqrt_a * x2 + y2)) ^ 2)
+        by (rewriteAny; field; auto).
+
+      (* FIXME: field fails if I remove this remember *)
+      remember (sqrt_a * x1 + d * x1 * x2 * y1 * y2 * y1) as p.
+      assert (d = (p/(x1 * y1 * (sqrt_a * x2 + y2)))^2) by (rewriteAny; field; auto).
+      subst p.
+
+      edestruct d_nonsquare; eauto.
+  Qed.
+  
+  Lemma onCurveDenominatorOkPlus x1 y1 x2 y2 :
+    onCurve (x1,y1) ->
+    onCurve (x2, y2) ->
+    (1 + d*x1*x2*y1*y2) <> 0.
+  Proof.
+    unfold onCurve; intros; case_eq_GF (d*x1*x2*y1*y2) (0-1)%GF.
+    - assert ((d*x1*x2*y1*y2)^2 = 1) by (rewriteAny; field). destruct (onCurveDenominatorOk' x1 y1 x2 y2); auto.
+    - replace (d * x1 * x2 * y1 * y2) with (1+d * x1 * x2 * y1 * y2-1) in H1 by field.
+      intro; rewrite H2 in H1; intuition.
+  Qed.
+  
+  Lemma onCurveDenominatorOkMinus x1 y1 x2 y2 :
+    onCurve (x1,y1) ->
+    onCurve (x2, y2) ->
+    (1 - d*x1*x2*y1*y2) <> 0.
+  Proof.
+    unfold onCurve; intros; case_eq_GF (d*x1*x2*y1*y2) (1)%GF.
+    - assert ((d*x1*x2*y1*y2)^2 = 1) by (rewriteAny; field). destruct (onCurveDenominatorOk' x1 y1 x2 y2); auto.
+    - replace (d * x1 * x2 * y1 * y2) with ((1-(1-d * x1 * x2 * y1 * y2))) in H1 by field.
+      intro; rewrite H2 in H1; apply H1; field.
+  Qed.
+  Hint Resolve onCurveDenominatorOkPlus onCurveDenominatorOkMinus.
+
   Definition projX (P:point) := fst (proj1_sig P).
   Definition projY (P:point) := snd (proj1_sig P).
 
@@ -141,8 +252,6 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
       * c=1 and an extra a in front of x^2 *) 
     unfold unifiedAdd', onCurve in *; injection H; clear H; intros.
 
-    Ltac rewriteAny := match goal with [H: _ = _ |- _ ] => rewrite H end.
-
     Ltac t x1 y1 x2 y2 :=
       assert ((a*x2^2 + y2^2)*d*x1^2*y1^2
              = (1 + d*x2^2*y2^2) * d*x1^2*y1^2) by (rewriteAny; auto);
@@ -164,12 +273,20 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
     ((a * ((x1 * y2 + y1 * x2) * (1 - d * x1 * x2 * y1 * y2)) ^ 2 +
      ((y1 * y2 - a * x1 * x2) * (1 + d * x1 * x2 * y1 * y2)) ^ 2 -
       d*((x1 * y2 + y1 * x2) * (y1 * y2 - a * x1 * x2)) ^ 2)/
-    ((1-d^2*x1^2*x2^2*y1^2*y2^2)^2)) end; try field.
+    ((1-d^2*x1^2*x2^2*y1^2*y2^2)^2)) end; try field; auto.
 
     rewrite <-HT1, <-HT2; field; rewrite HT1.
 
-    (* denominators are not zero, I promise *)
-  Admitted.
+    - replace ((1 - d ^ 2 * x1 ^ 2 * x2 ^ 2 * y1 ^ 2 * y2 ^ 2))
+         with ((1 - d*x1*x2*y1*y2)*(1 + d*x1*x2*y1*y2))
+           by field; simpl.
+      admit.
+
+    - replace (1 - (d * x1 * x2 * y1 * y2) ^ 2)
+         with ((1 - d*x1*x2*y1*y2)*(1 + d*x1*x2*y1*y2))
+           by field.
+      admit.
+  Qed.
 
   Lemma unifiedAdd'_onCurve' : forall P1 P2, onCurve P1 -> onCurve P2 ->
     onCurve (unifiedAdd' P1 P2).
@@ -263,11 +380,13 @@ Module CompleteTwistedEdwardsFacts (M : Modulus) (Import P : TwistedEdwardsParam
     (* http://math.rice.edu/~friedl/papers/AAELLIPTIC.PDF *)
   Admitted.
 
-  Lemma zeroIsIdentity' : forall P, unifiedAdd' P  zero = P.
-  Admitted.
-  Hint Resolve zeroIsIdentity.
+  Lemma zeroIsIdentity' : forall P, unifiedAdd' P (proj1_sig zero) = P.
+    unfold unifiedAdd', zero; simpl; intros; break_let; f_equal; field;
+    assert (1 <> 0) by admit; auto.
+  Qed.
 
   Lemma zeroIsIdentity : forall P, P + zero = P.
+    (* Should follow from zeroIsIdentity', but dependent types... *)
   Admitted.
   Hint Resolve zeroIsIdentity.
 
@@ -399,11 +518,13 @@ Module CompleteTwistedEdwardsFacts (M : Modulus) (Import P : TwistedEdwardsParam
 End CompleteTwistedEdwardsFacts.
 
 Module Type Minus1Params (Import M : Modulus) <: TwistedEdwardsParams M.
-  Module Export GFDefs := GaloisDefs M.
+  Module Export GFDefs := ZGaloisField M.
   Local Open Scope GF_scope.
+  Axiom char_gt_2 : (1+1) <> 0.
   Definition a := inject (- 1).
   Axiom a_nonzero : a <> 0.
-  Axiom a_square : exists x, x * x = a.
+  Parameter sqrt_a : GF.
+  Axiom a_square : sqrt_a^2 = a.
   Parameter d : GF.
   Axiom d_nonsquare : forall x, x * x <> d.
 End Minus1Params.
@@ -428,7 +549,10 @@ Module Minus1Format (M : Modulus) (Import P : Minus1Params M) <: CompleteTwisted
   Hint Unfold projectiveToTwisted twistedToProjective.
 
   Lemma GFdiv_1 : forall x, x/1 = x.
-  Admitted.
+  Proof.
+    intros; field.
+    assert (1 <> 0) by admit; auto.
+  Qed.
   Hint Resolve GFdiv_1.
 
   Lemma twistedProjectiveInv P : projectiveToTwisted (twistedToProjective P) = P.
@@ -536,19 +660,8 @@ Module Minus1Format (M : Modulus) (Import P : Minus1Params M) <: CompleteTwisted
     unfold extendedValid, extendedToProjective, projectiveToTwisted in *.
     invcs HeqP3.
     subst.
-    (* field. -- fails. but it works in sage:
-sage -c 'var("d X1 X2 Y1 Y2 Z1 Z2");
-print(bool((((Y1 + X1) * (Y2 + X2) - (Y1 - X1) * (Y2 - X2)) *
-((Y1 + X1) * (Y2 + X2) - (Y1 - X1) * (Y2 - X2)) ==
-((Y1 + X1) * (Y2 + X2) - (Y1 - X1) * (Y2 - X2)) *
-(2 * Z1 * Z2 - 2 * ((0 - d) / a) * (X1 * Y1 / Z1) * (X2 * Y2 / Z2)) *
-((2 * Z1 * Z2 + 2 * ((0 - d) / a) * (X1 * Y1 / Z1) * (X2 * Y2 / Z2)) *
-((Y1 + X1) * (Y2 + X2) - (Y1 - X1) * (Y2 - X2))) /
-((2 * Z1 * Z2 - 2 * ((0 - d) / a) * (X1 * Y1 / Z1) * (X2 * Y2 / Z2)) *
-(2 * Z1 * Z2 + 2 * ((0 - d) / a) * (X1 * Y1 / Z1) * (X2 * Y2 / Z2))))))'
-      Outputs:
-        True
-    *)
+    field.
+    (* TODO: prove that denominators are nonzero *)
   Admitted.
 
   Ltac extended0 := repeat progress (autounfold; simpl); intros;
