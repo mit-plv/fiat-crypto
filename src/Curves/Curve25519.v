@@ -1,5 +1,5 @@
 Require Import Zpower ZArith Znumtheory.
-Require Import Crypto.Galois.Galois Crypto.Galois.GaloisTheory Crypto.Galois.ComputationalGaloisField.
+Require Import Crypto.Galois.GaloisField.
 Require Import Crypto.Curves.PointFormats.
 
 Definition two_255_19 := 2^255 - 19. (* <http://safecurves.cr.yp.to/primeproofs.html> *)
@@ -9,9 +9,8 @@ Module Modulus25519 <: Modulus.
 End Modulus25519.
 
 Module Curve25519Params <: TwistedEdwardsParams Modulus25519 <: Minus1Params Modulus25519.
-  Module Import GFDefs := GaloisDefs Modulus25519.
+  Module Import GFDefs := GaloisField Modulus25519.
   Local Open Scope GF_scope.
-  Coercion inject : Z >-> GF.
 
   Definition a : GF := -1.
   Definition d : GF := -121665 / 121666.
@@ -21,10 +20,10 @@ Module Curve25519Params <: TwistedEdwardsParams Modulus25519 <: Minus1Params Mod
     discriminate.
   Qed.
 
-  Lemma a_square : exists x, x * x = a.
+  Definition sqrt_a: GF := 19681161376707505956807079304988542015446066515923890162744021073123829784752.
+
+  Lemma a_square : sqrt_a^2 = a.
   Proof.
-    unfold a.
-    exists 19681161376707505956807079304988542015446066515923890162744021073123829784752.
     (* vm_compute runs out of memory. *) 
   Admitted.
 
@@ -48,6 +47,9 @@ Module Curve25519Params <: TwistedEdwardsParams Modulus25519 <: Minus1Params Mod
   *)
 
   Definition basepointY := 4 / 5.
+
+  Definition char_gt_2: (1+1) <> 0.
+  Admitted.
 End Curve25519Params.
 
 Module Edwards25519 := CompleteTwistedEdwardsCurve Modulus25519 Curve25519Params.

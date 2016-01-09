@@ -1,3 +1,6 @@
 bedrock
 fiat
 *~
+*.vo
+*.d
+Makefile.coq

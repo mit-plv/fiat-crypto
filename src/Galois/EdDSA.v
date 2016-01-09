@@ -1,7 +1,7 @@
 Require Import ZArith NPeano.
 Require Import Bedrock.Word.
 Require Import Crypto.Curves.PointFormats.
-Require Import Crypto.Galois.BaseSystem Crypto.Galois.GaloisTheory.
+Require Import Crypto.Galois.BaseSystem Crypto.Galois.GaloisField.
 Require Import Util.ListUtil Util.CaseUtil Util.ZUtil.
 Require Import VerdiTactics.
 
@@ -54,7 +54,7 @@ Module Type EdDSAParams.
   Axiom n_ge_c : n >= c.
   Axiom n_le_b : n <= b.
 
-  Module Import GFDefs := GaloisDefs Modulus_q.
+  Module Import GFDefs := GaloisField Modulus_q.
   Local Open Scope GF_scope.
 
   (* Secret EdDSA scalars have exactly n + 1 bits, with the top bit
@@ -66,8 +66,9 @@ Module Type EdDSAParams.
    *   on average to determine an EdDSA secret key from an EdDSA public key *)
 
   Parameter a : GF.
+  Parameter sqrt_a : GF.
   Axiom a_nonzero : a <> 0%GF.
-  Axiom a_square : exists x, x * x = a.
+  Axiom a_square : sqrt_a^2 = a.
   (* The usual recommendation for best performance is a = −1 if q mod 4 = 1,
    *   and a = 1 if q mod 4 = 3.
    * The original specification of EdDSA did not include this parameter:
@@ -81,11 +82,17 @@ Module Type EdDSAParams.
   (* E = {(x, y) \in Fq x Fq : ax^2 + y^2 = 1 + dx^2y^2}.
    * This set forms a group with neutral element 0 = (0, 1) under the
    *   twisted Edwards addition law. *)
+
+  (* We have an odd prime *)
+  Axiom char_gt_2: 1+1 <> 0.
+
   Module CurveParameters <: TwistedEdwardsParams Modulus_q.
     Module GFDefs := GFDefs.
     Definition a : GF := a.
     Definition a_nonzero := a_nonzero.
     Definition a_square := a_square.
+    Definition char_gt_2 := char_gt_2.
+    Definition sqrt_a := sqrt_a.
     Definition d := d.
     Definition d_nonsquare := d_nonsquare.
   End CurveParameters.

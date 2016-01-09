@@ -1,10 +1,10 @@
-Require Import Crypto.Galois.Galois Crypto.Galois.GaloisTheory Crypto.Galois.ZGaloisField.
+Require Import Crypto.Galois.GaloisTheory Crypto.Galois.GaloisField.
 Require Import Tactics.VerdiTactics.
 Require Import Logic.Eqdep_dec.
 Require Import BinNums NArith.
 
 Module Type TwistedEdwardsParams (M : Modulus).
-  Module Export GFDefs := ZGaloisField M.
+  Module Export GFDefs := GaloisField M.
   Local Open Scope GF_scope.
   Axiom char_gt_2 : (1+1) <> 0.
   Parameter a : GF.
@@ -538,7 +538,7 @@ Module CompleteTwistedEdwardsFacts (M : Modulus) (Import P : TwistedEdwardsParam
 End CompleteTwistedEdwardsFacts.
 
 Module Type Minus1Params (Import M : Modulus) <: TwistedEdwardsParams M.
-  Module Export GFDefs := ZGaloisField M.
+  Module Export GFDefs := GaloisField M.
   Local Open Scope GF_scope.
   Axiom char_gt_2 : (1+1) <> 0.
   Definition a := inject (- 1).

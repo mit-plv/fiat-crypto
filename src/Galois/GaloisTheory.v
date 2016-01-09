@@ -8,21 +8,14 @@ Require Export Crypto.Galois.Galois.
 Set Implicit Arguments.
 Unset Strict Implicits.
 
+(* This file is for all the lemmas we need to construct a ring,
+ * field, power, and division theory on a Galois Field.
+ *)
 Module GaloisTheory (M: Modulus).
   Module G := Galois M.
   Export M G.
 
-  (* Notations *)
-  Delimit Scope GF_scope with GF.
-  Notation "1" := GFone : GF_scope.
-  Notation "0" := GFzero : GF_scope.
-  Infix "+"    := GFplus : GF_scope.
-  Infix "-"    := GFminus : GF_scope.
-  Infix "*"    := GFmult : GF_scope.
-  Infix "/"    := GFdiv : GF_scope.
-  Infix "^"    := GFexp : GF_scope.
-
-  (* Basic Properties *)
+  (***** Preliminary Tactics *****)
 
   (* Fails iff the input term does some arithmetic with mod'd values. *)
   Ltac notFancy E :=
@@ -76,6 +69,7 @@ Module GaloisTheory (M: Modulus).
                         end; simpl in *; autorewrite with core;
                  intuition; demod; try solve [ f_equal; intuition ].
 
+  (* Automatically unfold the definition of Z *)
   Lemma modmatch_eta : forall n,
     match n with
     | 0 => 0
@@ -88,9 +82,10 @@ Module GaloisTheory (M: Modulus).
 
   Hint Rewrite Zmod_mod modmatch_eta.
 
-  (* Ring Theory*)
-
+  (* Substitution to prove all Compats *)
   Ltac compat := repeat intro; subst; trivial.
+
+  (***** Ring Theory *****)
 
   Instance GFplus_compat : Proper (eq==>eq==>eq) GFplus.
   Proof.
@@ -117,10 +112,11 @@ Module GaloisTheory (M: Modulus).
     constructor; galois.
   Qed.
 
-  (* Power theory *)
+  (***** Power theory *****)
 
   Local Open Scope GF_scope.
 
+  (* Separate two of the same base *)
   Lemma GFexp'_doubling : forall q r0, GFexp' (r0 * r0) q = GFexp' r0 q * GFexp' r0 q.
   Proof.
     induction q; simpl; intuition.
@@ -129,6 +125,7 @@ Module GaloisTheory (M: Modulus).
     apply Zmod_eq; ring.
   Qed.
 
+  (* Equivalence with pow_pos for subroutine of GFexp *)
   Lemma GFexp'_correct : forall r p, GFexp' r p = pow_pos GFmult r p.
   Proof.
     induction p; simpl; intuition;
@@ -137,12 +134,14 @@ Module GaloisTheory (M: Modulus).
 
   Hint Immediate GFexp'_correct.
 
+  (* Equivalence with pow_pos for GFexp *)
   Lemma GFexp_correct : forall r n,
     r^n = pow_N 1 GFmult r n.
   Proof.
     induction n; simpl; intuition.
   Qed.
 
+  (* Equivalence with pow_pos for GFexp with identity (a utility lemma) *)
   Lemma GFexp_correct' : forall r n,
     r^id n = pow_N 1 GFmult r n.
   Proof.
@@ -156,10 +155,11 @@ Module GaloisTheory (M: Modulus).
     constructor; auto.
   Qed.
 
-  (* Ring properties *)
+  (***** Additional tricks for Ring *****)
 
   Ltac GFexp_tac t := Ncst t.
 
+  (* Decideability *)
   Lemma GFdecidable : forall (x y: GF), Zeq_bool x y = true -> x = y.
   Proof.
     intros; galois.
@@ -167,6 +167,7 @@ Module GaloisTheory (M: Modulus).
     trivial.
   Qed.
 
+  (* Completeness *)
   Lemma GFcomplete : forall (x y: GF), x = y -> Zeq_bool x y = true.
   Proof.
     intros.
@@ -174,39 +175,44 @@ Module GaloisTheory (M: Modulus).
     galois.
   Qed.
 
-  (* Division Theory *)
-  Definition inject(x: Z):  GF.
-    exists (x mod modulus).
-    abstract (demod; trivial).
-  Defined.
+  (***** Division Theory *****)
 
+  (* Compatibility between inject and addition *)
   Lemma inject_distr_add : forall (m n : Z),
       inject (m + n) = inject m + inject n.
   Proof.
     galois.
   Qed.
 
+  (* Compatibility between inject and subtraction *)
   Lemma inject_distr_sub : forall (m n : Z),
       inject (m - n) = inject m - inject n.
   Proof.
     galois.
   Qed.
 
+  (* Compatibility between inject and multiplication *)
   Lemma inject_distr_mul : forall (m n : Z),
       inject (m * n) = inject m * inject n.
   Proof.
     galois.
   Qed.
 
+  (* Compatibility between inject and GFtoZ *)
   Lemma inject_eq : forall (x : GF), inject x = x.
   Proof.
     galois.
   Qed.
 
+  (* Compatibility between inject and mod *)
   Lemma inject_mod_eq : forall x, inject x = inject (x mod modulus).
   Proof.
     galois.
   Qed.
+
+  (* The main division theory:
+   * equivalence between division and quotrem (euclidean division)
+   *)
 
   Definition GFquotrem(a b: GF): GF * GF :=
     match (Z.quotrem a b) with
@@ -225,13 +231,13 @@ Module GaloisTheory (M: Modulus).
       destruct a; simpl; trivial.
   Qed.
 
-  (* Now add the ring with all modifiers *)
+  (***** Field Theory *****)
 
+  (* First, add the modifiers to our ring *)
   Add Ring GFring0 : GFring_theory
     (power_tac GFpower_theory [GFexp_tac]).
 
-  (* Field Theory*)
-
+  (* Utility lemmas for multiplicative inverses *)
   Lemma GFexp'_pred' : forall x p,
     GFexp' p (Pos.succ x) = GFexp' p x * p.
   Proof.
@@ -258,6 +264,7 @@ Module GaloisTheory (M: Modulus).
     destruct p0; intuition.
   Qed.
 
+  (* Show that GFinv actually defines multiplicative inverses *)
   Lemma GF_multiplicative_inverse : forall p,
     p <> 0
     -> GFinv p * p = 1.
@@ -269,11 +276,13 @@ Module GaloisTheory (M: Modulus).
     eapply N.lt_irrefl; eauto using N.gt_lt.
   Qed.
 
+  (* Compatibility of inverses and equality *)
   Instance GFinv_compat : Proper (eq==>eq) GFinv.
   Proof.
     compat.
   Qed.
 
+  (* Compatibility of division and equality *)
   Instance GFdiv_compat : Proper (eq==>eq==>eq) GFdiv.
   Proof.
     compat.
@@ -283,9 +292,11 @@ Module GaloisTheory (M: Modulus).
 
   Local Hint Extern 1 False => discriminate.
 
+  (* Add an abstract field (without modifiers) *)
   Definition GFfield_theory : field_theory GFzero GFone GFplus GFmult GFminus GFopp GFdiv GFinv eq.
   Proof.
     constructor; auto.
   Qed.
+
 End GaloisTheory.
 

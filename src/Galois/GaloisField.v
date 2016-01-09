@@ -1,13 +1,27 @@
 Require Import BinInt BinNat ZArith Znumtheory.
 Require Import BoolEq Field_theory.
-Require Import Galois GaloisTheory.
-Require Import Tactics.VerdiTactics.
+Require Export Crypto.Galois.Galois Crypto.Galois.GaloisTheory.
+Require Import Crypto.Tactics.VerdiTactics.
 
-Module ZGaloisField (M: Modulus).
+(* This file is for the actual field tactics and some specialized
+ * morphisms that help field operate.
+ *
+ * When you want a Galois Field, this is the /only module/ you
+ * should import, because it automatically pulls in everything
+ * from Galois and the Modulus.
+ *)
+Module GaloisField (M: Modulus).
   Module G := Galois M.
   Module T := GaloisTheory M.
   Export M G T.
 
+  (* Define a "ring morphism" between GF and Z, i.e. an equivalence
+   * between 'inject (ZFunction (X))' and 'GFFunction (inject (X))'.
+   *
+   * Doing this allows us to do our coefficient manipulations in Z
+   * rather than GF, because we know it's equivalent to inject the
+   * result afterward.
+   *)
   Lemma GFring_morph:
       ring_morph GFzero GFone GFplus GFmult GFminus GFopp eq
                  0%Z    1%Z   Zplus  Zmult  Zminus  Zopp  Zeq_bool
@@ -26,6 +40,7 @@ Module ZGaloisField (M: Modulus).
       symmetry; apply Zeq_bool_eq; trivial.
   Qed.
 
+  (* Redefine our division theory under the ring morphism *)
   Lemma GFmorph_div_theory: 
       div_theory eq Zplus Zmult inject Z.quotrem.
   Proof.
@@ -38,6 +53,7 @@ Module ZGaloisField (M: Modulus).
       destruct a; simpl; trivial.
   Qed.
 
+  (* Some simple utility lemmas *)
   Lemma injectZeroIsGFZero :
     GFzero = inject 0.
   Proof.
@@ -57,10 +73,18 @@ Module ZGaloisField (M: Modulus).
     intuition; solve_by_inversion.
   Qed.
 
+  (* Change all GFones to (inject 1) and GFzeros to (inject 0) so that
+   * we can use our ring morphism to simplify them
+   *)
   Ltac GFpreprocess :=
     repeat rewrite injectZeroIsGFZero;
     repeat rewrite injectOneIsGFOne.
 
+  (* Split up the equation (because field likes /\, then
+   * change back all of our GFones and GFzeros.
+   *
+   * TODO (adamc): what causes it to generate these subproofs?
+   *)
   Ltac GFpostprocess :=
     repeat split;
 		repeat match goal with [ |- context[exist ?a ?b (inject_subproof ?x)] ] =>
@@ -69,18 +93,21 @@ Module ZGaloisField (M: Modulus).
     repeat rewrite <- injectZeroIsGFZero;
     repeat rewrite <- injectOneIsGFOne.
 
+  (* Tactic to passively convert from GF to Z in special circumstances *)
   Ltac GFconstant t :=
     match t with
     | inject ?x => x
     | _ => NotConstant
     end.
 
+  (* Add our ring with all the fixin's *)
   Add Ring GFring_Z : GFring_theory
     (morphism GFring_morph,
      constants [GFconstant],
      div GFmorph_div_theory,
-     power_tac GFpower_theory [GFexp_tac]).
+     power_tac GFpower_theory [GFexp_tac]). 
 
+  (* Add our field with all the fixin's *)
   Add Field GFfield_Z : GFfield_theory
     (morphism GFring_morph,
      preprocess [GFpreprocess],
@@ -88,4 +115,5 @@ Module ZGaloisField (M: Modulus).
      constants [GFconstant],
      div GFmorph_div_theory,
      power_tac GFpower_theory [GFexp_tac]). 
-End ZGaloisField.
+
+End GaloisField.
