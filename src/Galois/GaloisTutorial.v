@@ -53,6 +53,31 @@ Module Example31.
     field; trivial.
   Qed.
 
+  (* In general, the rule I've been using is:
+
+     - If our goal looks like x = y:
+
+        + If we need to use assumptions to prove the goal, then before
+          we apply field,
+
+          * Perform all relevant substitutions (especially subst)
+
+          * If we have something more complex, we're probably going
+            to have to performe some sequence of "replace X with Y"
+            and solve out the subgoals manually before we can use
+            field.
+
+        + Else, just use field directly
+
+     - If we just want to simplify terms and put them into a canonical
+       form, then field_simplify or ring_simplify should do the trick.
+       Note, however, that the canonical form has lots of annoying "/1"s
+
+     - Otherwise, do a "replace X with Y" to generate an equality
+       so that we can use field in the above case
+
+     *)
+
 End Example31.
 
 (* Notice that the field tactics work whether we know what the modulus is *)
