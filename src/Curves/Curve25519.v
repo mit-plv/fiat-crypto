@@ -24,10 +24,20 @@ Module Curve25519Params <: TwistedEdwardsParams Modulus25519 <: Minus1Params Mod
 
   Lemma a_square : sqrt_a^2 = a.
   Proof.
-    (* vm_compute runs out of memory. *) 
+    (* An example of how to use ring properly *)
+    replace (sqrt_a ^ 2) with (sqrt_a * sqrt_a) by ring.
+    assert ((inject ((GFToZ sqrt_a) * (GFToZ sqrt_a)))%Z = a).
+
+    - apply gf_eq.
+      (* vm_compute runs out of memory. *) 
+      admit.
+
+    - rewrite inject_distr_mul in H.
+      intuition.
+ 
   Admitted.
 
-  Lemma  d_nonsquare : forall x, x * x <> d.
+  Lemma d_nonsquare : forall x, x * x <> d.
     (* <https://en.wikipedia.org/wiki/Euler%27s_criterion> *)
   Admitted.
 
@@ -48,6 +58,7 @@ Module Curve25519Params <: TwistedEdwardsParams Modulus25519 <: Minus1Params Mod
 
   Definition basepointY := 4 / 5.
 
+  (* True iff this prime is odd *)
   Definition char_gt_2: (1+1) <> 0.
   Admitted.
 End Curve25519Params.

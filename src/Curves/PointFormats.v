@@ -1,7 +1,7 @@
 Require Import Crypto.Galois.GaloisTheory Crypto.Galois.GaloisField.
-Require Import Tactics.VerdiTactics.
-Require Import Logic.Eqdep_dec.
-Require Import BinNums NArith.
+Require Import Crypto.Tactics.VerdiTactics.
+Require Import Logic Logic.Eqdep_dec.
+Require Import BinNums NArith Nnat ZArith.
 
 Module Type TwistedEdwardsParams (M : Modulus).
   Module Export GFDefs := GaloisField M.
@@ -105,7 +105,7 @@ Qed.
 
 Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParams M).
   Local Open Scope GF_scope.
-  (** Twisted Ewdwards curves with complete addition laws. References:
+  (** Twisted Edwards curves with complete addition laws. References:
   * <https://eprint.iacr.org/2008/013.pdf>
   * <http://ed25519.cr.yp.to/ed25519-20110926.pdf>
   * <https://eprint.iacr.org/2015/677.pdf>
@@ -134,20 +134,102 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
   (* https://eprint.iacr.org/2007/286.pdf Theorem 3.3 *)
   (* c=1 and an extra a in front of x^2 *) 
 
-  Lemma root_zero : forall x p, x^p = 0 -> x = 0.
-  Admitted.
-  Lemma root_nonzero : forall x p, x^p <> 0 -> x <> 0.
-  Admitted.
+  (* NOTE: these should serve as an example for using field *)
+
   Lemma mul_nonzero_l : forall a b, a*b <> 0 -> a <> 0.
-  Admitted.
+    intros; intuition; subst.
+    assert (0 * b = 0) by field; intuition.
+  Qed.
+
   Lemma mul_nonzero_r : forall a b, a*b <> 0 -> b <> 0.
-  Admitted.
-  Lemma mul_nonzero_nonzero : forall a b, a <> 0 -> b <> 0 -> a*b <> 0.
-  Admitted.
-  Lemma mul_zero_why : forall a b, a*b = 0 -> a = 0 \/ b = 0.
-  Admitted.
+    intros; intuition; subst.
+    assert (a0 * 0 = 0) by field; intuition.
+  Qed.
+
   Definition GF_eq_dec : forall x y : GF, {x = y} + {x <> y}.
-  Admitted.
+    intros.
+    assert (H := Z.eq_dec (inject x) (inject y)).
+
+    destruct H.
+    
+    - left; galois; intuition.
+
+    - right; intuition.
+      rewrite H in n.
+      assert (y = y); intuition.
+  Qed.
+
+  Lemma mul_zero_why : forall a b, a*b = 0 -> a = 0 \/ b = 0.
+    intros.
+    assert (Z := GF_eq_dec a0 0); destruct Z.
+
+    - left; intuition.
+
+    - assert (a0 * b / a0 = 0) by
+        ( rewrite H; field; intuition ).
+
+      field_simplify in H0.
+      replace (b/1) with b in H0 by (field; intuition).
+      right; intuition.
+      apply n in H0; intuition.
+  Qed.
+
+  Lemma mul_nonzero_nonzero : forall a b, a <> 0 -> b <> 0 -> a*b <> 0.
+    intros; intuition; subst.
+    apply mul_zero_why in H1.
+    destruct H1; subst; intuition.
+  Qed.
+
+  Lemma root_zero : forall (x: GF) (p: N), x^p = 0 -> x = 0.
+    intros.
+
+    induction p; inversion H.
+
+    revert H H1; generalize x; induction p; intros.
+
+    - simpl in H; apply mul_zero_why in H; destruct H; intuition.
+
+      + subst; intuition.
+
+      + apply IHp in H.
+        rewrite H1.
+        simpl in H1.
+        apply mul_zero_why in H1; destruct H1; intuition.
+        rewrite H0 in H.
+        apply mul_zero_why in H; destruct H; intuition.
+
+        simpl; intuition.
+
+    - simpl in H1; apply IHp in H1; simpl; intuition.
+      simpl in H; rewrite H in H1; rewrite H.
+      apply mul_zero_why in H1; destruct H1; intuition.
+
+    - simpl in H; subst; intuition.
+
+  Qed.
+
+  Lemma root_nonzero : forall x p, x^p <> 0 -> (p <> 0)%N -> x <> 0.
+    intros; intuition.
+
+    induction p.
+
+    - apply H; intuition.
+
+    - apply H.
+      rewrite H1 in *.
+      induction p.
+
+      + simpl.
+        field.
+
+      + simpl in *.
+        replace (0 * 0) with 0 in * by field.
+        apply IHp; intuition.
+        induction p; inversion H2.
+
+      + simpl; intuition.
+
+  Qed.
 
   Ltac whatsNotZero :=
     repeat match goal with
@@ -173,6 +255,10 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
     onCurve (x2, y2) ->
     (d*x1*x2*y1*y2)^2 <> 1.
   Proof.
+    (* TODO: this proof was made inconsistent by an actually
+             correct version of root_nonzero. This adds the necessary
+             hypothesis*)
+    assert (2 <> 0)%N as Z by (intuition; inversion H).
     unfold onCurve; intuition; whatsNotZero.
 
     (* Furthermore... *)
@@ -207,8 +293,8 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
                d * x1 * x2 *  y1  * y2 * sqrt_a * inject 2 * x1 * y1)
          with (d * (x1 * y1 * (sqrt_a * x2 + y2))^2)
            in Heqw by field.
-      assert (d = (sqrt_a * x1 - d * x1 * x2 * y1 * y2 * y1)^2 / (x1 * y1 * (sqrt_a * x2 - y2)) ^ 2)
-        by (rewriteAny; field; auto).
+      assert (d = (sqrt_a * x1 - d * x1 * x2 * y1 * y2 * y1)^2 / (x1 * y1 *
+      (sqrt_a * x2 - y2)) ^ 2) by (rewriteAny; field; auto).
 
       (* FIXME: field fails if I remove this remember *)
       remember (sqrt_a * x1 - d * x1 * x2 * y1 * y2 * y1) as p.
@@ -263,8 +349,8 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
   Definition projX (P:point) := fst (proj1_sig P).
   Definition projY (P:point) := snd (proj1_sig P).
 
-  Definition checkOnCurve x y : if Zbool.Zeq_bool (a*x^2 + y^2) (1 + d*x^2*y^2) then point else True.
-    break_if. exists (x, y). exact (GFdecidable  _ _ Heqb). trivial.
+  Definition checkOnCurve (x y: GF) : if Zbool.Zeq_bool (a*x^2 + y^2)%GF (1 + d*x^2*y^2)%GF then point else True.
+    break_if; trivial. exists (x, y). apply GFdecidable. exact Heqb.
   Defined.
   Hint Unfold onCurve mkPoint.
 

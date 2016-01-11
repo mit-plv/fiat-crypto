@@ -1,7 +1,7 @@
 Require Import Zpower ZArith.
 Require Import List.
 Require Import Crypto.Galois.BaseSystem Crypto.Galois.GaloisField.
-Require Import Util.ListUtil Util.CaseUtil Util.ZUtil.
+Require Import Crypto.Util.ListUtil Crypto.Util.CaseUtil Crypto.Util.ZUtil.
 Require Import VerdiTactics.
 Local Open Scope Z_scope.
 
