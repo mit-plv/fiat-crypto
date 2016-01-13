@@ -20,3 +20,4 @@ src/Galois/EdDSA.v
 src/Assembly/WordBounds.v
 src/Curves/Curve25519.v
 src/Specific/GF25519.v
+src/Specific/EdDSA25519.v
