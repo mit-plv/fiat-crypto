@@ -524,3 +524,12 @@ Ltac set_nth_inbounds :=
   end.
 
 Ltac nth_inbounds := nth_error_inbounds || set_nth_inbounds.
+
+Lemma cons_eq_head : forall {T} (x y:T) xs ys, x::xs = y::ys -> x=y.
+Proof.
+  intros; solve_by_inversion.
+Qed.
+Lemma cons_eq_tail : forall {T} (x y:T) xs ys, x::xs = y::ys -> xs=ys.
+Proof.
+  intros; solve_by_inversion.
+Qed.

@@ -1,5 +1,6 @@
 Require Import Zpower ZArith Znumtheory.
 Require Import Crypto.Galois.Galois Crypto.Galois.GaloisTheory Crypto.Galois.ComputationalGaloisField.
+Require Import Crypto.Galois.ZGaloisField.
 Require Import Crypto.Curves.PointFormats.
 
 Definition two_255_19 := 2^255 - 19. (* <http://safecurves.cr.yp.to/primeproofs.html> *)
@@ -9,7 +10,11 @@ Module Modulus25519 <: Modulus.
 End Modulus25519.
 
 Module Curve25519Params <: TwistedEdwardsParams Modulus25519 <: Minus1Params Modulus25519.
-  Module Import GFDefs := GaloisDefs Modulus25519.
+  Module Import GFDefs := ZGaloisField Modulus25519.
+
+  Lemma char_gt_2 : inject 2 <> 0%GF.
+  Admitted.
+
   Local Open Scope GF_scope.
   Coercion inject : Z >-> GF.
 

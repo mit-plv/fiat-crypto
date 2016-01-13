@@ -1,7 +1,7 @@
 Require Import ZArith NPeano.
 Require Import Bedrock.Word.
 Require Import Crypto.Curves.PointFormats.
-Require Import Crypto.Galois.BaseSystem Crypto.Galois.GaloisTheory.
+Require Import Crypto.Galois.BaseSystem Crypto.Galois.ZGaloisField Crypto.Galois.GaloisTheory.
 Require Import Util.ListUtil Util.CaseUtil Util.ZUtil.
 Require Import VerdiTactics.
 
@@ -54,7 +54,7 @@ Module Type EdDSAParams.
   Axiom n_ge_c : n >= c.
   Axiom n_le_b : n <= b.
 
-  Module Import GFDefs := GaloisDefs Modulus_q.
+  Module Import GFDefs := ZGaloisField Modulus_q.
   Local Open Scope GF_scope.
 
   (* Secret EdDSA scalars have exactly n + 1 bits, with the top bit
@@ -83,6 +83,8 @@ Module Type EdDSAParams.
    *   twisted Edwards addition law. *)
   Module CurveParameters <: TwistedEdwardsParams Modulus_q.
     Module GFDefs := GFDefs.
+    Definition char_gt_2 : inject 2 <> 0.
+    Admitted. (* follows from q_odd *)
     Definition a : GF := a.
     Definition a_nonzero := a_nonzero.
     Definition a_square := a_square.

@@ -42,7 +42,7 @@ Section Fq.
 
   Axiom inv : Fq -> Fq.
   Axiom inv_spec : forall a, inv a * a = one.
-  Definition div a b := add a (inv b).
+  Definition div a b := mul a (inv b).
   Infix "/" := div.
 
   Fixpoint replicate {T} n (x:T) : list T := match n with O => nil | S n' => x::replicate n' x end.
