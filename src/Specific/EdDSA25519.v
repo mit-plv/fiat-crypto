@@ -95,7 +95,7 @@ Module EdDSA25519_Params <: EdDSAParams.
   Qed.
 
   Lemma square_mod_GF : forall (a x : Z),
-    (0 <= x < q /\ x * x mod q = a)%Z ->
+    (x * x mod q = a)%Z ->
     (inject x * inject x = inject a)%GF.
   Proof.
     intros.
@@ -103,7 +103,7 @@ Module EdDSA25519_Params <: EdDSAParams.
     rewrite <- inject_distr_mul.
     rewrite inject_mod_eq.
     replace modulus with q by auto.
-    rewrite H1; reflexivity.
+    reflexivity.
   Qed.
 
   Lemma a_square_old : exists x, (x * x = a)%GF.

@@ -179,6 +179,7 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
     apply mul_zero_why in H1.
     destruct H1; subst; intuition.
   Qed.
+  Hint Resolve mul_nonzero_nonzero.
 
   Lemma root_zero : forall (x: GF) (p: N), x^p = 0 -> x = 0.
     intros.
@@ -241,7 +242,10 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
         assert (rhs <> 0) by (rewrite H; auto)
     | [H: (?a^?p)%GF <> 0 |- _ ] =>
         match goal with [Ha: a <> 0 |- _ ] => fail 1 | _ => idtac end;
-        assert (a <> 0) by (eapply root_nonzero; eauto)
+        let Y:=fresh in let Z:=fresh in try (
+          assert (p <> 0%N) as Z by (intro Y; inversion Y);
+          assert (a <> 0) by (eapply root_nonzero; eauto);
+          clear Z)
     | [H: (?a*?b)%GF <> 0 |- _ ] =>
         match goal with [Ha: a <> 0 |- _ ] => fail 1 | _ => idtac end;
         assert (a <> 0) by (eapply mul_nonzero_l; eauto)
@@ -258,11 +262,14 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
     (* TODO: this proof was made inconsistent by an actually
              correct version of root_nonzero. This adds the necessary
              hypothesis*)
-    assert (2 <> 0)%N as Z by (intuition; inversion H).
     unfold onCurve; intuition; whatsNotZero.
 
+    pose proof char_gt_2. pose proof a_nonzero as Ha_nonzero. 
+    destruct a_square as [sqrt_a a_square].
+    rewrite a_square in Ha_nonzero.
+
     (* Furthermore... *)
-    pose proof  (eq_refl (d*x1^2*y1^2*(a*x2^2 + y2^2))) as Heqt.
+    pose proof (eq_refl (d*x1^2*y1^2*(sqrt_a^2*x2^2 + y2^2))) as Heqt.
     rewrite H0 in Heqt at 2.
     replace (d * x1 ^ 2 * y1 ^ 2 * (1 + d * x2 ^ 2 * y2 ^ 2))
        with (d*x1^2*y1^2 + (d*x1*x2*y1*y2)^2) in Heqt by field.
@@ -270,59 +277,36 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
     replace (d * x1 ^ 2 * y1 ^ 2 + 1) with (1 + d * x1 ^ 2 * y1 ^ 2) in Heqt by field.
     rewrite <-H in Heqt.
 
-    (* main equation *)
-    case_eq_GF (sqrt_a*x2 + y2) 0%GF.
-    case_eq_GF (sqrt_a*x2 - y2) 0%GF.
+    (* main equation for both potentially nonzero denominators *)
+    case_eq_GF (sqrt_a*x2 + y2) 0; case_eq_GF (sqrt_a*x2 - y2) 0;
+      try match goal with [H: ?f (sqrt_a * x2)  y2 <> 0 |- _ ] =>
+        assert ((f (sqrt_a*x1) (d * x1 * x2 * y1 * y2*y1))^2 =
+                 f ((sqrt_a^2)*x1^2 + (d * x1 * x2 * y1 * y2)^2*y1^2)
+                   (d * x1 * x2 * y1 * y2*sqrt_a*(inject 2)*x1*y1)) as Heqw1 by field;
+        rewrite H1 in *;
+        replace (1 * y1^2) with (y1^2) in * by field;
+        rewrite <- Heqt in *;
+        assert (d = (f (sqrt_a * x1) (d * x1 * x2 * y1 * y2 * y1))^2 /
+                                 (x1 * y1 * (f (sqrt_a * x2)  y2))^2)
+                                 by (rewriteAny; field; auto);
+        match goal with [H: d = (?n^2)/(?l^2) |- _ ] =>
+            destruct (d_nonsquare (n/l)); (remember n; rewriteAny; field; auto)
+        end
+      end.
 
-    - destruct H4.
-      assert (Hc: (sqrt_a * x2 + y2) + (sqrt_a * x2 - y2) = 0) by (repeat rewriteAny; field).
-      replace (sqrt_a * x2 + y2 + (sqrt_a * x2 - y2)) with (inject 2 * sqrt_a * x2) in Hc by field.
+    assert (Hc: (sqrt_a * x2 + y2) + (sqrt_a * x2 - y2) = 0) by (repeat rewriteAny; field).
 
-      (* contradiction: product of nonzero things is zero *)
-      destruct (mul_zero_why _ _ Hc) as [Hcc|Hcc]; try (subst; field).
-      destruct (mul_zero_why _ _ Hcc) as [Hccc|Hccc].
-      + destruct char_gt_2; rewrite <- Hccc; field.
-      + destruct a_nonzero; rewrite <-a_square, Hccc; field.
+    rewrite a_square in *.
+    replace (sqrt_a * x2 + y2 + (sqrt_a * x2 - y2)) with (inject 2 * sqrt_a * x2) in Hc by field.
 
-    - rewrite <- a_square in *.
-      assert ((sqrt_a*x1 - d * x1 * x2 * y1 * y2*y1)^2 = (sqrt_a^2)*x1^2 + (d * x1 * x2 * y1 * y2)^2*y1^2 - d * x1 * x2 * y1 * y2*sqrt_a*(inject 2)*x1*y1) as Heqw by field.
-      rewrite H1 in Heqw.
-      replace (1 * y1^2) with (y1^2) in Heqw by field.
-      rewrite <- Heqt in Heqw.
-      replace (d * x1^2    *  y1^2    * (sqrt_a * sqrt_a * x2 ^ 2 + y2 ^ 2) +
-               d * x1 * x2 *  y1  * y2 * sqrt_a * inject 2 * x1 * y1)
-         with (d * (x1 * y1 * (sqrt_a * x2 + y2))^2)
-           in Heqw by field.
-      assert (d = (sqrt_a * x1 - d * x1 * x2 * y1 * y2 * y1)^2 / (x1 * y1 *
-      (sqrt_a * x2 - y2)) ^ 2) by (rewriteAny; field; auto).
+    (* contradiction: product of nonzero things is zero *)
+    destruct (mul_zero_why _ _ Hc) as [Hcc|Hcc]; try solve [subst; intuition].
+    destruct (mul_zero_why _ _ Hcc) as [Hccc|Hccc]; subst; intuition; apply Ha_nonzero.
 
-      (* FIXME: field fails if I remove this remember *)
-      remember (sqrt_a * x1 - d * x1 * x2 * y1 * y2 * y1) as p.
-      assert (d = (p/(x1 * y1 * (sqrt_a * x2 - y2)))^2) by (rewriteAny; field; auto).
-      subst p.
+    + replace (inject 2%Z) with (1+1) in Hccc by field; intuition.
 
-      edestruct d_nonsquare; eauto.
-
-    - rewrite <- a_square in *.
-      assert ((sqrt_a*x1 + d * x1 * x2 * y1 * y2*y1)^2 = (sqrt_a^2)*x1^2 + (d * x1 * x2 * y1 * y2)^2*y1^2 + d * x1 * x2 * y1 * y2*sqrt_a*(inject 2)*x1*y1) as Heqw by field.
-      rewrite H1 in Heqw.
-      replace (1 * y1^2) with (y1^2) in Heqw by field.
-      rewrite <- Heqt in Heqw.
-      replace (d * x1^2    *  y1^2    * (sqrt_a * sqrt_a * x2 ^ 2 + y2 ^ 2) +
-               d * x1 * x2 *  y1  * y2 * sqrt_a * inject 2 * x1 * y1)
-         with (d * (x1 * y1 * (sqrt_a * x2 + y2))^2)
-           in Heqw by field.
-      assert (d = (sqrt_a * x1 + d * x1 * x2 * y1 * y2 * y1)^2 / (x1 * y1 * (sqrt_a * x2 + y2)) ^ 2)
-        by (rewriteAny; field; auto).
-
-      (* FIXME: field fails if I remove this remember *)
-      remember (sqrt_a * x1 + d * x1 * x2 * y1 * y2 * y1) as p.
-      assert (d = (p/(x1 * y1 * (sqrt_a * x2 + y2)))^2) by (rewriteAny; field; auto).
-      subst p.
-
-      edestruct d_nonsquare; eauto.
+    + rewrite <- a_square; simpl; rewrite Hccc; field.
   Qed.
-  
   Lemma edwardsAddCompletePlus x1 y1 x2 y2 :
     onCurve (x1,y1) ->
     onCurve (x2, y2) ->
@@ -369,6 +353,7 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
   Proof.
     (* https://eprint.iacr.org/2007/286.pdf Theorem 3.1;
       * c=1 and an extra a in front of x^2 *) 
+
     unfold unifiedAdd', onCurve in *; injection H; clear H; intros.
 
     Ltac t x1 y1 x2 y2 :=
@@ -376,8 +361,7 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
              = (1 + d*x2^2*y2^2) * d*x1^2*y1^2) by (rewriteAny; auto);
       assert (a*x1^2 + y1^2 - (a*x2^2 + y2^2)*d*x1^2*y1^2
              = 1 - d^2*x1^2*x2^2*y1^2*y2^2) by (repeat rewriteAny; field).
-    t x1 y1 x2 y2.
-    t x2 y2 x1 y1.
+    t x1 y1 x2 y2; t x2 y2 x1 y1.
 
     remember ((a*x1^2 + y1^2 - (a*x2^2+y2^2)*d*x1^2*y1^2)*(a*x2^2 + y2^2 -
       (a*x1^2 + y1^2)*d*x2^2*y2^2)) as T.
@@ -385,7 +369,6 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
     assert (HT2: T = (a * ((x1 * y2 + y1 * x2) * (1 - d * x1 * x2 * y1 * y2)) ^ 2 +(
     (y1 * y2 - a * x1 * x2) * (1 + d * x1 * x2 * y1 * y2)) ^ 2 -d * ((x1 *
      y2 + y1 * x2)* (y1 * y2 - a * x1 * x2))^2)) by (subst; field).
-
     replace 1 with (a*x3^2 + y3^2 -d*x3^2*y3^2); [field|]; subst x3 y3.
 
     match goal with [ |- ?x = 1 ] => replace x with
@@ -393,18 +376,13 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
      ((y1 * y2 - a * x1 * x2) * (1 + d * x1 * x2 * y1 * y2)) ^ 2 -
       d*((x1 * y2 + y1 * x2) * (y1 * y2 - a * x1 * x2)) ^ 2)/
     ((1-d^2*x1^2*x2^2*y1^2*y2^2)^2)) end; try field; auto.
-
-    rewrite <-HT1, <-HT2; field; rewrite HT1.
-
-    - replace ((1 - d ^ 2 * x1 ^ 2 * x2 ^ 2 * y1 ^ 2 * y2 ^ 2))
+    - rewrite <-HT1, <-HT2; field; rewrite HT1.
+      replace ((1 - d ^ 2 * x1 ^ 2 * x2 ^ 2 * y1 ^ 2 * y2 ^ 2))
          with ((1 - d*x1*x2*y1*y2)*(1 + d*x1*x2*y1*y2))
-           by field; simpl.
-      repeat apply mul_nonzero_nonzero; auto.
-
+           by field; simpl; auto.
     - replace (1 - (d * x1 * x2 * y1 * y2) ^ 2)
          with ((1 - d*x1*x2*y1*y2)*(1 + d*x1*x2*y1*y2))
-           by field.
-      repeat apply mul_nonzero_nonzero; auto.
+           by field; auto.
   Qed.
 
   Lemma unifiedAdd'_onCurve' : forall P1 P2, onCurve P1 -> onCurve P2 ->
@@ -672,13 +650,7 @@ Module Minus1Format (M : Modulus) (Import P : Minus1Params M) <: CompleteTwisted
   Definition point := extended.
   Local Notation "'(' X ',' Y ',' Z ',' T ')'" := (mkExtended (X, Y, Z) T).
   Definition extendedValid (P : point) : Prop :=
-    let pP := extendedToProjective P in
-    let X := projectiveX pP in
-    let Y := projectiveY pP in
-    let Z := projectiveZ pP in
-    let T := extendedT P in
-    T = X*Y/Z.
-
+    let '(X, Y, Z, T) := P in T = X*Y/Z.
 
   Definition twistedToExtended (P : (GF*GF)) : point :=
     let '(x, y) := P in (x, y, 1, x*y).
@@ -725,21 +697,12 @@ Module Minus1Format (M : Modulus) (Import P : Minus1Params M) <: CompleteTwisted
   Local Notation "2" := (1+1).
   (** Second equation from <http://eprint.iacr.org/2008/522.pdf> section 3.1, also <https://www.hyperelliptic.org/EFD/g1p/auto-twisted-extended-1.html#addition-add-2008-hwcd-3> and <https://tools.ietf.org/html/draft-josefsson-eddsa-ed25519-03> *)
   Definition unifiedAdd (P1 P2 : point) : point :=
-    let k := 2 * d in
-    let pP1 := extendedToProjective P1 in
-    let X1 := projectiveX pP1 in
-    let Y1 := projectiveY pP1 in
-    let Z1 := projectiveZ pP1 in
-    let T1 := extendedT P1 in
-    let pP2 := extendedToProjective P2 in
-    let X2 := projectiveX pP2 in
-    let Y2 := projectiveY pP2 in
-    let Z2 := projectiveZ pP2 in
-    let T2 := extendedT P2 in
+    let '(X1, Y1, Z1, T1) := P1 in
+    let '(X2, Y2, Z2, T2) := P2 in
     let  A := (Y1-X1)*(Y2-X2) in
     let  B := (Y1+X1)*(Y2+X2) in
-    let  C := T1*k*T2 in
-    let  D := Z1*2*Z2 in
+    let  C := T1*2*d*T2 in
+    let  D := Z1*2  *Z2 in
     let  E := B-A in
     let  F := D-C in
     let  G := D+C in
@@ -762,9 +725,7 @@ Module Minus1Format (M : Modulus) (Import P : Minus1Params M) <: CompleteTwisted
     destruct P1 as [[X1 Y1 Z1] T1].
     destruct P2 as [[X2 Y2 Z2] T2].
     destruct P3 as [[X3 Y3 Z3] T3].
-    unfold extendedValid, extendedToProjective, projectiveToTwisted in *.
     invcs HeqP3.
-    subst.
     field.
     (* TODO: prove that denominators are nonzero *)
   Admitted.
