@@ -1,7 +1,7 @@
 Require Import Zpower ZArith.
 Require Import List.
-Require Import Crypto.Galois.BaseSystem Crypto.Galois.GaloisTheory.
-Require Import Util.ListUtil Util.CaseUtil Util.ZUtil.
+Require Import Crypto.Galois.BaseSystem Crypto.Galois.GaloisField.
+Require Import Crypto.Util.ListUtil Crypto.Util.CaseUtil Crypto.Util.ZUtil.
 Require Import VerdiTactics.
 Local Open Scope Z_scope.
 
@@ -35,8 +35,9 @@ Module Type PseudoMersenneBaseParams (Import B:BaseCoefs) (Import M:Modulus).
 End PseudoMersenneBaseParams.
 
 Module Type GFrep (Import M:Modulus).
-  Module Import GF := GaloisTheory M.
-  (* TODO: could GF notation be in Galois, not GaloisTheory *)
+  Module Field := GaloisField M.
+  Import Field.
+
   Parameter T : Type.
   Parameter fromGF : GF -> T.
   Parameter toGF : T -> GF.
@@ -58,7 +59,9 @@ Module Type GFrep (Import M:Modulus).
 End GFrep.
 
 Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBaseParams BC M) <: GFrep M.
-  Module Import GF := GaloisTheory M.
+  Module Field := GaloisField M.
+  Import Field. 
+
   Module EC <: BaseCoefs.
     Definition base := BC.base ++ (map (Z.mul (2^(P.k))) BC.base).
     
@@ -211,7 +214,7 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
 
   Definition T := B.digits.
   Local Hint Unfold T.
-  Definition toGF (us : T) : GF := GF.inject (B.decode us).
+  Definition toGF (us : T) : GF := inject (B.decode us).
   Local Hint Unfold toGF.
   Definition rep (us : T) (x : GF) := (length us <= length BC.base)%nat /\ toGF us = x.
   Local Notation "u '~=' x" := (rep u x) (at level 70).
@@ -233,7 +236,7 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     } {
       unfold toGF.
       rewrite B.encode_rep.
-      rewrite GF.inject_eq; auto.
+      rewrite inject_eq; auto.
     }
   Qed.
 

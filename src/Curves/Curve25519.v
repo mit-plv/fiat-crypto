@@ -1,6 +1,5 @@
 Require Import Zpower ZArith Znumtheory.
-Require Import Crypto.Galois.Galois Crypto.Galois.GaloisTheory Crypto.Galois.ComputationalGaloisField.
-Require Import Crypto.Galois.ZGaloisField.
+Require Import Crypto.Galois.GaloisField.
 Require Import Crypto.Curves.PointFormats.
 
 Definition two_255_19 := 2^255 - 19. (* <http://safecurves.cr.yp.to/primeproofs.html> *)
@@ -10,13 +9,9 @@ Module Modulus25519 <: Modulus.
 End Modulus25519.
 
 Module Curve25519Params <: TwistedEdwardsParams Modulus25519 <: Minus1Params Modulus25519.
-  Module Import GFDefs := ZGaloisField Modulus25519.
-
-  Lemma char_gt_2 : inject 2 <> 0%GF.
-  Admitted.
+  Module Import GFDefs := GaloisField Modulus25519.
 
   Local Open Scope GF_scope.
-  Coercion inject : Z >-> GF.
 
   Definition a : GF := -1.
   Definition d : GF := -121665 / 121666.
@@ -26,14 +21,24 @@ Module Curve25519Params <: TwistedEdwardsParams Modulus25519 <: Minus1Params Mod
     discriminate.
   Qed.
 
-  Lemma a_square : exists x, x * x = a.
+  Definition sqrt_a: GF := 19681161376707505956807079304988542015446066515923890162744021073123829784752.
+
+  Lemma a_square : sqrt_a^2 = a.
   Proof.
-    unfold a.
-    exists 19681161376707505956807079304988542015446066515923890162744021073123829784752.
-    (* vm_compute runs out of memory. *) 
+    (* An example of how to use ring properly *)
+    replace (sqrt_a ^ 2) with (sqrt_a * sqrt_a) by ring.
+    assert ((inject ((GFToZ sqrt_a) * (GFToZ sqrt_a)))%Z = a).
+
+    - apply gf_eq.
+      (* vm_compute runs out of memory. *) 
+      admit.
+
+    - rewrite inject_distr_mul in H.
+      intuition.
+ 
   Admitted.
 
-  Lemma  d_nonsquare : forall x, x * x <> d.
+  Lemma d_nonsquare : forall x, x * x <> d.
     (* <https://en.wikipedia.org/wiki/Euler%27s_criterion> *)
   Admitted.
 
@@ -53,6 +58,10 @@ Module Curve25519Params <: TwistedEdwardsParams Modulus25519 <: Minus1Params Mod
   *)
 
   Definition basepointY := 4 / 5.
+
+  (* True iff this prime is odd *)
+  Definition char_gt_2: (1+1) <> 0.
+  Admitted.
 End Curve25519Params.
 
 Module Edwards25519 := CompleteTwistedEdwardsCurve Modulus25519 Curve25519Params.

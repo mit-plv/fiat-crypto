@@ -139,7 +139,7 @@ end.
 
 Section GF25519Base25Point5Formula.
   Import GF25519Base25Point5.
-  Import GF.
+  Import Field.
 
   Hint Rewrite
     Z.mul_0_l

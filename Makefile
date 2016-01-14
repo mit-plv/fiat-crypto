@@ -1,19 +1,25 @@
-# © 2015 the Massachusetts Institute of Technology
-# @author bbaren + rsloan
+COQ_ARGS := -R fiat/src Fiat -R bedrock/Bedrock Bedrock
+MOD_NAME := Crypto
+SRC_DIR  := src
+MODULES  := Curves Galois Rep Specific Tactics Util
 
-SOURCES := $(shell grep -v '^-' _CoqProject | tr '\n' ' ')
-COQLIBS := $(shell grep '^-' _CoqProject | tr '\n' ' ')
+VS       := $(MODULES:%=src/%/*.v)
 
-include .make/cc.mk
-include .make/coq.mk
+.PHONY: coq clean install
+.DEFAULT_GOAL: coq
 
-FAST_TARGETS += check_fiat check_bedrock clean
+coq: Makefile.coq
+	$(MAKE) -f Makefile.coq
 
-.DEFAULT_GOAL = all
-.PHONY: clean coquille
+Makefile.coq: Makefile $(VS)
+	coq_makefile -R $(SRC_DIR) $(MOD_NAME) $(COQ_ARGS) $(VS) -o Makefile.coq
 
-all: check_fiat check_bedrock $(SOURCES:%=%o)
+clean: Makefile.coq
+	$(MAKE) -f Makefile.coq clean
+	rm -f Makefile.coq
 
-clean:
-	$(RM) $(foreach f,$(SOURCES),$(call coq-generated,$(basename $f)))
+install: coq
+	ln -sfL $(shell pwd)/src $(shell coqtop -where)/user-contrib/Crypto
+	ln -sfL $(shell pwd)/fiat/src $(shell coqtop -where)/user-contrib/Fiat
+	ln -sfL $(shell pwd)/bedrock/Bedrock $(shell coqtop -where)/user-contrib/Bedrock
 

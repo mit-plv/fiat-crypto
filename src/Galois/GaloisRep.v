@@ -1,5 +1,6 @@
 
 
-Module Type GaloisRep ().
+Module Type GaloisRep .
 
 End GaloisRep.
+

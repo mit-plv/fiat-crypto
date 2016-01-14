@@ -1,6 +1,6 @@
 Require Import ZArith.ZArith Zpower ZArith Znumtheory.
 Require Import NPeano.
-Require Import Galois.EdDSA Galois GaloisTheory.
+Require Import Crypto.Galois.EdDSA Crypto.Galois.GaloisField.
 Require Import Crypto.Curves.PointFormats.
 Require Import Crypto.Util.NatUtil Crypto.Util.ZUtil Crypto.Util.NumTheoryUtil.
 Require Import Bedrock.Word.
@@ -65,7 +65,8 @@ Module EdDSA25519_Params <: EdDSAParams.
     unfold n, b; omega.
   Qed.
 
-  Module Import GFDefs := GaloisDefs Modulus_q.
+  Module GFDefs := GaloisField Modulus_q.
+  Import GFDefs.
   Local Open Scope GF_scope.
 
   Definition a := GFopp 1%GF.
@@ -105,7 +106,7 @@ Module EdDSA25519_Params <: EdDSAParams.
     reflexivity.
   Qed.
 
-  Lemma a_square : exists x, (x * x = a)%GF.
+  Lemma a_square_old : exists x, (x * x = a)%GF.
   Proof.
     intros.
     pose proof (minus1_square_1mod4 q (proj2_sig q) q_1mod4).
@@ -119,15 +120,20 @@ Module EdDSA25519_Params <: EdDSAParams.
   
   (* TODO *)
   Parameter d : GF.
+  Parameter sqrt_a : GF.
   Axiom d_nonsquare : forall x, x^2 <> d.
+  Axiom a_square: (sqrt_a^2 = a)%GF.
+  Axiom char_gt_2: (1+1 <> 0)%GF.
 
   Module CurveParameters <: TwistedEdwardsParams Modulus_q.
     Module GFDefs := GFDefs.
     Definition a : GF := a.
+    Definition sqrt_a := sqrt_a.
     Definition a_nonzero := a_nonzero.
     Definition a_square := a_square.
     Definition d := d.
     Definition d_nonsquare := d_nonsquare.
+    Definition char_gt_2 := char_gt_2.
   End CurveParameters.
   Module Facts := CompleteTwistedEdwardsFacts Modulus_q CurveParameters.
   Module Import Curve := Facts.Curve.

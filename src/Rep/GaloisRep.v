@@ -1,14 +1,14 @@
 
 Require Export Crypto.Galois.Galois Crypto.Galois.GaloisTheory.
-Require Import Crypto.Galois.AbstractGaloisField.
+Require Import Crypto.Galois.GaloisField.
 
 Module GaloisRep (M: Modulus).
   Module G := Galois M.
-  Module F := AbstractGaloisField M.
+  Module F := GaloisField M.
   Import M G F.
   Local Open Scope GF_scope.
 
-  Definition GFSig : ADTSig :=
+  (* Definition GFSig : ADTSig :=
     ADTsignature {
         Constructor "FromGF"
                : GF -> rep,
@@ -22,5 +22,5 @@ Module GaloisRep (M: Modulus).
                : rep x rep -> rep,
         Method "Div"
                : rep x rep -> rep
-      }.
+      }. *)
 End GaloisRep.
