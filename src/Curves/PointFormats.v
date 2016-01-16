@@ -318,7 +318,7 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
       intro; rewrite H2 in H1; intuition.
   Qed.
   
-  Lemma edwardsAddCompletePlusMinus x1 y1 x2 y2 :
+  Lemma edwardsAddCompleteMinus x1 y1 x2 y2 :
     onCurve (x1,y1) ->
     onCurve (x2, y2) ->
     (1 - d*x1*x2*y1*y2) <> 0.
@@ -328,7 +328,7 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
     - replace (d * x1 * x2 * y1 * y2) with ((1-(1-d * x1 * x2 * y1 * y2))) in H1 by field.
       intro; rewrite H2 in H1; apply H1; field.
   Qed.
-  Hint Resolve edwardsAddCompletePlus edwardsAddCompletePlusMinus.
+  Hint Resolve edwardsAddCompletePlus edwardsAddCompleteMinus.
 
   Definition projX (P:point) := fst (proj1_sig P).
   Definition projY (P:point) := snd (proj1_sig P).
@@ -336,7 +336,7 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
   Definition checkOnCurve (x y: GF) : if Zbool.Zeq_bool (a*x^2 + y^2)%GF (1 + d*x^2*y^2)%GF then point else True.
     break_if; trivial. exists (x, y). apply GFdecidable. exact Heqb.
   Defined.
-  Hint Unfold onCurve mkPoint.
+  Local Hint Unfold onCurve mkPoint.
 
   Definition zero : point. exists (0, 1).
     abstract (unfold onCurve; field).
@@ -447,7 +447,7 @@ Module CompleteTwistedEdwardsFacts (M : Modulus) (Import P : TwistedEdwardsParam
   Qed.
   Hint Resolve point_eq.
 
-  Hint Unfold unifiedAdd onCurve.
+  Local Hint Unfold unifiedAdd onCurve mkPoint.
   Ltac twisted := autounfold; intros;
                   repeat (match goal with
                              | [ x : point |- _ ] => destruct x; unfold onCurve in *
@@ -613,86 +613,71 @@ Module Type Minus1Params (Import M : Modulus) <: TwistedEdwardsParams M.
   Axiom d_nonsquare : forall x, x * x <> d.
 End Minus1Params.
 
-Module Minus1Format (M : Modulus) (Import P : Minus1Params M) <: CompleteTwistedEdwardsPointFormat M P.
+Module ExtendedM1 (M : Modulus) (Import P : Minus1Params M) <: CompleteTwistedEdwardsPointFormat M P.
+  Local Hint Unfold a.
   Local Open Scope GF_scope.
   Module Import Facts := CompleteTwistedEdwardsFacts M P.
   Module Import Curve := Facts.Curve.
-  (** [projective] represents a point on an elliptic curve using projective
-  * Edwards coordinates for twisted edwards curves with a=-1 (see
-  * <https://hyperelliptic.org/EFD/g1p/auto-edwards-projective.html>
-  * <https://en.wikipedia.org/wiki/Edwards_curve#Projective_homogeneous_coordinates>) *)
-  Record projective := mkProjective {projectiveX : GF; projectiveY : GF; projectiveZ : GF}.
-  Local Notation "'(' X ',' Y ',' Z ')'" := (mkProjective X Y Z).
 
-  Definition twistedToProjective (P : (GF*GF)) : projective :=
-    let '(x, y) := P in (x, y, 1).
-
-  Definition projectiveToTwisted (P : projective) : GF * GF :=
-    let 'mkProjective X Y Z := P in
-    pair (X/Z) (Y/Z).
-  Hint Unfold projectiveToTwisted twistedToProjective.
-
+  (* TODO: move to wherever GF theorems are *)
   Lemma GFdiv_1 : forall x, x/1 = x.
   Proof.
     intros; field; auto.
   Qed.
   Hint Resolve GFdiv_1.
 
-  Lemma twistedProjectiveInv P : projectiveToTwisted (twistedToProjective P) = P.
-  Proof.
-    twisted; eauto.
-  Qed.
-
   (** [extended] represents a point on an elliptic curve using extended projective
   * Edwards coordinates with twist a=-1 (see <https://eprint.iacr.org/2008/522.pdf>). *)
-  Record extended := mkExtended {extendedToProjective : projective; extendedT : GF}.
-
+  Record extended := mkExtended {extendedX : GF;
+                                 extendedY : GF;
+                                 extendedZ : GF;
+                                 extendedT : GF}.
+  Local Notation "'(' X ',' Y ',' Z ',' T ')'" := (mkExtended X Y Z T).
   Definition point := extended.
-  Local Notation "'(' X ',' Y ',' Z ',' T ')'" := (mkExtended (X, Y, Z) T).
-  Definition extendedValid (P : point) : Prop :=
-    let '(X, Y, Z, T) := P in T = X*Y/Z.
 
-  Definition twistedToExtended (P : (GF*GF)) : point :=
+  Definition encode (P : (GF*GF)) : point :=
     let '(x, y) := P in (x, y, 1, x*y).
-  Definition encode P := let '(x, y) := P in twistedToExtended (x, y).
-
-  Definition decode (P : point) :=
-    projectiveToTwisted (extendedToProjective P).
-  Local Hint Unfold extendedValid twistedToExtended decode projectiveToTwisted Curve.unifiedAdd'.
-
-  Lemma twistedExtendedInv : forall P,
-    decode (twistedToExtended P) = P.
-  Proof.
-    twisted; eapply GFdiv_1.
-  Qed.
-
-  Lemma twistedToExtendedValid : forall P, extendedValid (twistedToExtended P).
-  Proof.
-    autounfold.
-    destruct P.
-    simpl.
-    rewrite GFdiv_1; reflexivity.
-  Qed.
-
+  Definition decode (P : point) : GF * GF :=
+    let '(X, Y, Z, T) := P in ((X/Z), (Y/Z)).
   Definition rep (P:point) (rP:(GF*GF)) : Prop :=
-    decode P = rP /\ extendedValid P.
+    let '(X, Y, Z, T) := P in
+    decode P = rP /\
+    Z <> 0 /\
+    T = X*Y/Z.
+  Local Hint Unfold encode decode rep.
   Local Notation "P '~=' rP" := (rep P rP) (at level 70).
-  Ltac rep := repeat progress (intros; autounfold; subst; auto; match goal with
-                           | [ x : rep ?a ?b |- _ ] => destruct x
-                           end).
+
+  Ltac extended_tac :=
+    repeat progress (autounfold; intros);
+    repeat match goal with
+      | [ p : (GF*GF)%type |- _ ] =>
+          let x := fresh "x" in
+          let y := fresh "y" in
+          destruct p as [x y]
+      | [ p : point |- _ ] =>
+          let X := fresh "X" in
+          let Y := fresh "Y" in
+          let Z := fresh "Z" in
+          let T := fresh "T" in
+          destruct p as [X Y Z T]
+      | [ H: _ /\ _ |- _ ] => destruct H
+      | [ |- _ /\ _ ] => split
+      | [ H: @eq (GF * GF)%type _ _ |- _ ] => invcs H
+      | [ H: @eq GF ?x _ |- _ ] => isVar x; rewrite H; clear H
+      | [ |- @eq (GF * GF)%type _ _] => apply f_equal2
+      | [ |- @eq GF _ _] => field
+      | [ |- _ ] => progress eauto
+  end.
 
   Lemma encode_rep : forall P, encode P ~= P.
   Proof.
-    split.
-    apply twistedExtendedInv.
-    apply twistedToExtendedValid.
+    extended_tac.
   Qed.
 
   Lemma decode_rep : forall P rP, P ~= rP -> decode P = rP.
   Proof.
-    rep.
+    extended_tac.
   Qed.
-
 
   Local Notation "2" := (1+1).
   (** Second equation from <http://eprint.iacr.org/2008/522.pdf> section 3.1, also <https://www.hyperelliptic.org/EFD/g1p/auto-twisted-extended-1.html#addition-add-2008-hwcd-3> and <https://tools.ietf.org/html/draft-josefsson-eddsa-ed25519-03> *)
@@ -711,52 +696,51 @@ Module Minus1Format (M : Modulus) (Import P : Minus1Params M) <: CompleteTwisted
     let Y3 := G*H in
     let T3 := E*H in
     let Z3 := F*G in
-    mkExtended (mkProjective X3 Y3 Z3) T3.
+    (X3, Y3, Z3, T3).
+  Local Hint Unfold unifiedAdd.
 
   Delimit Scope extendedM1_scope with extendedM1.
   Infix "+" := unifiedAdd : extendedM1_scope.
 
-  Lemma unifiedAddCon : forall (P1 P2:point)
-    (hv1:extendedValid P1) (hv2:extendedValid P2),
-    extendedValid (P1 + P2)%extendedM1.
-  Proof.
-    intros.
-    remember ((P1+P2)%extendedM1) as P3.
-    destruct P1 as [[X1 Y1 Z1] T1].
-    destruct P2 as [[X2 Y2 Z2] T2].
-    destruct P3 as [[X3 Y3 Z3] T3].
-    invcs HeqP3.
-    field.
-    (* TODO: prove that denominators are nonzero *)
+  Lemma char_gt_2 : 2 <> 0.
   Admitted.
+  Hint Resolve char_gt_2.
 
-  Ltac extended0 := repeat progress (autounfold; simpl); intros;
-                    repeat match goal with
-                           | [ x : Curve.point |- _ ] => destruct x
-                           | [ x : point |- _ ] => destruct x
-                           | [ x : projective |- _ ] => destruct x
-                           end; simpl in *; subst.
-
-  Ltac extended := extended0; repeat (ring || f_equal)(*; field*).
-
-  Lemma unifiedAddToTwisted : forall (P1 P2 : point) tP1 tP2
-    (P1con : extendedValid P1) (P1on : Curve.onCurve tP1) (P1rep : decode P1 = tP1)
-    (P2con : extendedValid P2) (P2on : Curve.onCurve tP2) (P2rep : decode P2 = tP2),
-    decode (P1 + P2)%extendedM1 = Curve.unifiedAdd' tP1 tP2.
-  Proof.
-    extended0.
-    apply f_equal2.
-    (* case 1 verified by hand: follows from field and completeness of edwards addition *)
-  Admitted.
-
+  Local Hint Unfold unifiedAdd'.
   Lemma unifiedAdd_rep: forall P Q rP rQ, Curve.onCurve rP -> Curve.onCurve rQ ->
     P ~= rP -> Q ~= rQ -> (unifiedAdd P Q) ~= (Curve.unifiedAdd' rP rQ).
   Proof.
-    split; rep.
-    apply unifiedAddToTwisted; auto.
-    apply unifiedAddCon; auto.
+    extended_tac;
+      pose proof (edwardsAddCompletePlus _ _ _ _ H0 H) as Hp;
+      pose proof (edwardsAddCompleteMinus _ _ _ _ H0 H) as Hm.
+
+    (* If we we had reasoning modulo associativity and commutativity,
+    *  the following tactic would probably solve all 10 goals here:
+    repeat match goal with [H1: @eq GF _ _, H2: @eq GF _ _ |- _ ] =>
+      let H := fresh "H" in ( 
+        pose proof (edwardsAddCompletePlus _ _ _ _ H1 H2) as H;
+        match type of H with ?xs <> 0 => ac_rewrite (eq_refl xs) end
+      ) || (
+        pose proof (edwardsAddCompleteMinus _ _ _ _ H1 H2) as Hm;
+        match type of H with ?xs <> 0 => ac_rewrite (eq_refl xs) end
+      ); repeat apply mul_nonzero_nonzero; auto 10
+    end.
+    *)
+
+    - replace (Z0 * Z * Z0 * Z + d * X0 * X * Y0 * Y) with (Z*Z*Z0*Z0* (1 + d * (X / Z) * (X0 / Z0) * (Y / Z) * (Y0 / Z0))) by (field; auto); auto 10.
+    - replace (Z0 * inject 2 * Z * (Z0 * Z) + X0 * Y0 * inject 2 * d * (X * Y)) with (2*Z*Z*Z0*Z0* (1 + d * (X / Z) * (X0 / Z0) * (Y / Z) * (Y0 / Z0))) by (field; auto); auto 10.
+    - replace (Z0 * inject 2 * Z * (Z0 * Z) - X0 * Y0 * inject 2 * d * (X * Y)) with (2*Z*Z*Z0*Z0* (1 - d * (X / Z) * (X0 / Z0) * (Y / Z) * (Y0 / Z0))) by (field; auto); auto 10.
+    - replace (Z0 * Z * Z0 * Z - d * X0 * X * Y0 * Y) with (Z*Z*Z0*Z0* (1 - d * (X / Z) * (X0 / Z0) * (Y / Z) * (Y0 / Z0))) by (field; auto); auto 10.
+    - replace (Z0 * inject 2 * Z * (Z0 * Z) + X0 * Y0 * inject 2 * d * (X * Y)) with (2*Z*Z*Z0*Z0* (1 + d * (X / Z) * (X0 / Z0) * (Y / Z) * (Y0 / Z0))) by (field; auto); auto 10.
+    - replace (Z0 * inject 2 * Z * (Z0 * Z) - X0 * Y0 * inject 2 * d * (X * Y)) with (2*Z*Z*Z0*Z0* (1 - d * (X / Z) * (X0 / Z0) * (Y / Z) * (Y0 / Z0))) by (field; auto); auto 10.
+    - replace (Z0 * Z * Z0 * Z - d * X0 * X * Y0 * Y) with (Z*Z*Z0*Z0* (1 - d * (X / Z) * (X0 / Z0) * (Y / Z) * (Y0 / Z0))) by (field; auto).
+    repeat apply mul_nonzero_nonzero.
+      + replace (Z0 * 2 * Z - X0 * Y0 / Z0 * 2 * d * (X * Y / Z)) with (2*Z*Z0* (1 - d * (X / Z) * (X0 / Z0) * (Y / Z) * (Y0 / Z0))) by (field; auto); auto 10.
+      + replace (Z0 * 2 * Z + X0 * Y0 / Z0 * 2 * d * (X * Y / Z)) with (2*Z*Z0* (1 + d * (X / Z) * (X0 / Z0) * (Y / Z) * (Y0 / Z0))) by (field; auto); auto 10.
+    - replace (Z0 * inject 2 * Z * (Z0 * Z) + X0 * Y0 * inject 2 * d * (X * Y)) with (2*Z*Z*Z0*Z0* (1 + d * (X / Z) * (X0 / Z0) * (Y / Z) * (Y0 / Z0))) by (field; auto); auto 10.
+    - replace (Z0 * inject 2 * Z * (Z0 * Z) - X0 * Y0 * inject 2 * d * (X * Y)) with (2*Z*Z*Z0*Z0* (1 - d * (X / Z) * (X0 / Z0) * (Y / Z) * (Y0 / Z0))) by (field; auto); auto 10.
   Qed.
-End Minus1Format.
+End ExtendedM1.
 
 
 (*
