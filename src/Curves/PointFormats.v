@@ -412,6 +412,7 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
     | N.pos p => iter_op unifiedAdd zero b p b P
     end.
 
+  Hint Resolve char_gt_2.
 End CompleteTwistedEdwardsCurve.
 
 
@@ -701,10 +702,6 @@ Module ExtendedM1 (M : Modulus) (Import P : Minus1Params M) <: CompleteTwistedEd
 
   Delimit Scope extendedM1_scope with extendedM1.
   Infix "+" := unifiedAdd : extendedM1_scope.
-
-  Lemma char_gt_2 : 2 <> 0.
-  Admitted.
-  Hint Resolve char_gt_2.
 
   Local Hint Unfold unifiedAdd'.
   Lemma unifiedAdd_rep: forall P Q rP rQ, Curve.onCurve rP -> Curve.onCurve rQ ->
