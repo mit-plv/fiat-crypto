@@ -1,11 +1,11 @@
-Synthesizing Correct-by-Construction Assembly for Cryptographic Primitives in Fiat
+Synthesizing Correct-by-Construction Assembly for Cryptographic Primitives
 -----
 
 ... which would make a good paper title.
 
 To build:
 
-    ln -s <FIAT_DIR> fiat
-    (cd fiat && make fiat-core)
+    git clone git@github.mit.edu:plv/bedrock.git
+    ( cd bedrock && $(MAKE) Bedrock/Word.vo )
     make
 

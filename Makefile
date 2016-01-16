@@ -1,4 +1,4 @@
-COQ_ARGS := -R fiat/src Fiat -R bedrock/Bedrock Bedrock
+COQ_ARGS := -R bedrock/Bedrock Bedrock
 MOD_NAME := Crypto
 SRC_DIR  := src
 MODULES  := Curves Galois Rep Specific Tactics Util
@@ -20,6 +20,5 @@ clean: Makefile.coq
 
 install: coq
 	ln -sfL $(shell pwd)/src $(shell coqtop -where)/user-contrib/Crypto
-	ln -sfL $(shell pwd)/fiat/src $(shell coqtop -where)/user-contrib/Fiat
 	ln -sfL $(shell pwd)/bedrock/Bedrock $(shell coqtop -where)/user-contrib/Bedrock
 
