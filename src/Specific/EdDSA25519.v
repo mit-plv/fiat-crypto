@@ -9,12 +9,13 @@ Require Import Decidable.
 Require Import Omega.
 
 Module Modulus25519 <: Modulus.
-  Local Open Scope Z_scope.
   Definition two_255_19 := two_p 255 - 19.
   Lemma two_255_19_prime : prime two_255_19. Admitted.
   Definition prime25519 := exist _ two_255_19 two_255_19_prime.
   Definition modulus := prime25519.
 End Modulus25519.
+
+Lemma prime_l : prime (252 + 27742317777372353535851937790883648493). Admitted.
 
 Local Open Scope nat_scope.
 
@@ -22,12 +23,9 @@ Module EdDSA25519_Params <: EdDSAParams.
   Definition q : Prime := Modulus25519.modulus.
   Ltac prime_bound := pose proof (prime_ge_2 q (proj2_sig q)); try omega.
 
-  Lemma q_odd : Z.to_nat q > 2.
+  Lemma q_odd : (primeToZ q > 2)%Z.
   Proof.
-    assert (q >= 0)%Z by (cbv; congruence).
-    assert (q > 2)%Z by (simpl; cbv; auto).
-    rewrite Nat2Z.inj_gt.
-    rewrite Z2Nat.id by omega; auto.
+    cbv; congruence.
   Qed.
 
   Module Modulus_q := Modulus25519.
@@ -119,31 +117,27 @@ Module EdDSA25519_Params <: EdDSAParams.
   Qed.
   
   (* TODO *)
-  Parameter d : GF.
-  Parameter sqrt_a : GF.
+  Definition d : GF := (-121665 / 121666)%Z.
   Axiom d_nonsquare : forall x, x^2 <> d.
-  Axiom a_square: (sqrt_a^2 = a)%GF.
-  Axiom char_gt_2: (1+1 <> 0)%GF.
+  Axiom a_square: exists sqrt_a, (sqrt_a^2 = a)%GF.
 
   Module CurveParameters <: TwistedEdwardsParams Modulus_q.
     Module GFDefs := GFDefs.
+    Definition modulus_odd : (primeToZ Modulus_q.modulus > 2)%Z := q_odd.
     Definition a : GF := a.
-    Definition sqrt_a := sqrt_a.
     Definition a_nonzero := a_nonzero.
     Definition a_square := a_square.
     Definition d := d.
     Definition d_nonsquare := d_nonsquare.
-    Definition char_gt_2 := char_gt_2.
   End CurveParameters.
   Module Facts := CompleteTwistedEdwardsFacts Modulus_q CurveParameters.
   Module Import Curve := Facts.Curve.
 
-  (* TODO *)
+  (* TODO: B = decodePoint (y=4/5, x="positive") *)
   Parameter B : point.
   Axiom B_not_identity : B <> zero.
 
-  (* TODO *)
-  Parameter l : Prime.
+  Definition l : Prime := exist _ (252 + 27742317777372353535851937790883648493)%Z prime_l.
   Axiom l_odd : (Z.to_nat l > 2)%nat.
   Axiom l_order_B : (scalarMult (Z.to_nat l) B) = zero.
 
@@ -197,6 +191,7 @@ Module EdDSA25519_Params <: EdDSAParams.
     end.
   Lemma Fl_encoding_valid : forall x, Fl_dec (Fl_enc x) = Some x.
   Proof.
+    Opaque l.
     unfold Fl_enc, Fl_dec; intros.
     assert (proj1_sig x < (Z.to_nat l)). {
       destruct x; simpl.
@@ -210,6 +205,7 @@ Module EdDSA25519_Params <: EdDSAParams.
     do 2 (simpl in *; f_equal).
     apply Eqdep_dec.UIP_dec.
     apply eq_nat_dec.
+    Transparent l.
   Qed.
   Definition FlEncoding :=
     Build_Encoding {s:nat | s mod (Z.to_nat l) = s} (word b) Fl_enc Fl_dec Fl_encoding_valid.

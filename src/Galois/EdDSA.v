@@ -25,7 +25,7 @@ Notation "'encoding' 'of' T 'as' B" := (Encoding T B) (at level 50).
 (* Spec from <https://eprint.iacr.org/2015/677.pdf> *)
 Module Type EdDSAParams.
   Parameter q : Prime.
-  Axiom q_odd : q > 2.
+  Axiom q_odd : (q > 2)%Z.
 
   (* Choosing q sufficiently large is important for security, since the size of
    * q constrains the size of l below. *)
@@ -66,9 +66,8 @@ Module Type EdDSAParams.
    *   on average to determine an EdDSA secret key from an EdDSA public key *)
 
   Parameter a : GF.
-  Parameter sqrt_a : GF.
   Axiom a_nonzero : a <> 0%GF.
-  Axiom a_square : sqrt_a^2 = a.
+  Axiom a_square : exists sqrt_a, sqrt_a^2 = a.
   (* The usual recommendation for best performance is a = −1 if q mod 4 = 1,
    *   and a = 1 if q mod 4 = 3.
    * The original specification of EdDSA did not include this parameter:
@@ -83,16 +82,12 @@ Module Type EdDSAParams.
    * This set forms a group with neutral element 0 = (0, 1) under the
    *   twisted Edwards addition law. *)
 
-  (* We have an odd prime *)
-  Axiom char_gt_2: 1+1 <> 0.
-
   Module CurveParameters <: TwistedEdwardsParams Modulus_q.
     Module GFDefs := GFDefs.
+    Definition modulus_odd : (Modulus_q.modulus > 2)%Z := q_odd.
     Definition a : GF := a.
     Definition a_nonzero := a_nonzero.
     Definition a_square := a_square.
-    Definition char_gt_2 := char_gt_2.
-    Definition sqrt_a := sqrt_a.
     Definition d := d.
     Definition d_nonsquare := d_nonsquare.
   End CurveParameters.

@@ -5,12 +5,11 @@ Require Import BinNums NArith Nnat ZArith.
 
 Module Type TwistedEdwardsParams (M : Modulus).
   Module Export GFDefs := GaloisField M.
+  Axiom modulus_odd : (primeToZ M.modulus > 2)%Z.
   Local Open Scope GF_scope.
-  Axiom char_gt_2 : (1+1) <> 0.
   Parameter a : GF.
   Axiom a_nonzero : a <> 0.
-  Parameter sqrt_a : GF.
-  Axiom a_square : sqrt_a^2 = a.
+  Axiom a_square : exists sqrt_a, sqrt_a^2 = a.
   Parameter d : GF.
   Axiom d_nonsquare : forall x, x * x <> d.
 End TwistedEdwardsParams.
@@ -232,6 +231,12 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
 
   Qed.
 
+  Lemma char_gt_2 : inject 2 <> 0.
+    intro H; inversion H; clear H.
+    pose proof modulus_odd.
+    rewrite Zmod_small in H1; intuition; auto; omega.
+  Qed.
+
   Ltac whatsNotZero :=
     repeat match goal with
     | [H: ?lhs = ?rhs |- _ ] =>
@@ -266,7 +271,7 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
 
     pose proof char_gt_2. pose proof a_nonzero as Ha_nonzero. 
     destruct a_square as [sqrt_a a_square].
-    rewrite a_square in Ha_nonzero.
+    rewrite <-a_square in *.
 
     (* Furthermore... *)
     pose proof (eq_refl (d*x1^2*y1^2*(sqrt_a^2*x2^2 + y2^2))) as Heqt.
@@ -296,16 +301,12 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
 
     assert (Hc: (sqrt_a * x2 + y2) + (sqrt_a * x2 - y2) = 0) by (repeat rewriteAny; field).
 
-    rewrite a_square in *.
     replace (sqrt_a * x2 + y2 + (sqrt_a * x2 - y2)) with (inject 2 * sqrt_a * x2) in Hc by field.
 
     (* contradiction: product of nonzero things is zero *)
-    destruct (mul_zero_why _ _ Hc) as [Hcc|Hcc]; try solve [subst; intuition].
-    destruct (mul_zero_why _ _ Hcc) as [Hccc|Hccc]; subst; intuition; apply Ha_nonzero.
-
-    + replace (inject 2%Z) with (1+1) in Hccc by field; intuition.
-
-    + rewrite <- a_square; simpl; rewrite Hccc; field.
+    destruct (mul_zero_why _ _ Hc) as [Hcc|Hcc]; subst; intuition.
+    destruct (mul_zero_why _ _ Hcc) as [Hccc|Hccc]; subst; intuition.
+    apply Ha_nonzero; field.
   Qed.
   Lemma edwardsAddCompletePlus x1 y1 x2 y2 :
     onCurve (x1,y1) ->
@@ -604,12 +605,12 @@ End CompleteTwistedEdwardsFacts.
 
 Module Type Minus1Params (Import M : Modulus) <: TwistedEdwardsParams M.
   Module Export GFDefs := GaloisField M.
+  Axiom modulus_odd : (primeToZ M.modulus > 2)%Z.
   Local Open Scope GF_scope.
-  Axiom char_gt_2 : (1+1) <> 0.
+  Axiom char_gt_2 : inject 2 <> 0.
   Definition a := inject (- 1).
   Axiom a_nonzero : a <> 0.
-  Parameter sqrt_a : GF.
-  Axiom a_square : sqrt_a^2 = a.
+  Axiom a_square : exists sqrt_a, sqrt_a^2 = a.
   Parameter d : GF.
   Axiom d_nonsquare : forall x, x * x <> d.
 End Minus1Params.
@@ -680,7 +681,7 @@ Module ExtendedM1 (M : Modulus) (Import P : Minus1Params M) <: CompleteTwistedEd
     extended_tac.
   Qed.
 
-  Local Notation "2" := (1+1).
+  Local Notation "2" := (inject 2).
   (** Second equation from <http://eprint.iacr.org/2008/522.pdf> section 3.1, also <https://www.hyperelliptic.org/EFD/g1p/auto-twisted-extended-1.html#addition-add-2008-hwcd-3> and <https://tools.ietf.org/html/draft-josefsson-eddsa-ed25519-03> *)
   Definition unifiedAdd (P1 P2 : point) : point :=
     let '(X1, Y1, Z1, T1) := P1 in
