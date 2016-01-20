@@ -1,6 +1,7 @@
 Require Import Zpower Znumtheory ZArith.ZArith ZArith.Zdiv.
 Require Import Omega NPeano Arith.
 Require Import Crypto.Util.NatUtil Crypto.Util.ZUtil.
+Require Import Coqprime.Zp.
 Require Import VerdiTactics.
 Local Open Scope Z.
 
@@ -95,7 +96,7 @@ Proof.
   rewrite H1 in H6.
   auto.
 Qed.
-
+(*
 Fixpoint order_mod' y p i r :=
   match i with
   | O => r
@@ -241,12 +242,13 @@ Proof.
   auto.
 Qed.
 
-Lemma order_mod_divide : forall x y p (prime_p : prime p), 1 <= x ->
+Lemma order_mod_divide : forall x y p (prime_p : prime p), 0 <= x ->
   y ^ x mod p = 1 -> (order_mod y p | x).
 Proof.
   intros.
   pose proof (order_mod_bounds y p prime_p).
-  apply pow_mod_order in H0; auto.
+  destruct (Z.eq_dec x 0); [subst; apply Z.divide_0_r|].
+  apply pow_mod_order in H0; (omega || auto).
   assert (0 < order_mod y p) by omega.
   apply (Z.mod_pos_bound x _) in H2.
   pose proof (Z.nonpos_pos_cases (x mod order_mod y p)).
@@ -260,14 +262,77 @@ Proof.
   }
 Qed.
 
-Lemma primitive_root_prime : forall p (prime_p : prime p),
-  exists y, 1 <= y <= p - 1 /\ order_mod y p = p - 1.
+Lemma e_order_order_mod : forall y p (prime_p : prime p) (lt_1_p : 1 < p),
+  EGroup.e_order Z.eq_dec y (ZPGroup p lt_1_p) = FGroup.g_order (ZPGroup p lt_1_p)
+  -> order_mod y p = p - 1.
 Proof.
 Admitted.
+*)
 
-Lemma exists_primitive_root_power : forall x y p (prime_p : prime p),
-  order_mod y p = p - 1 -> exists j, 1 <= j <= p - 1 /\ y ^ j mod p = x mod p.
-Admitted.
+Lemma in_ZPGroup_range (n : Z) (n_pos : 1 < n) (p : Z) :
+  List.In p (FGroup.s (ZPGroup n n_pos)) -> 1 <= p < n.
+Proof.
+unfold ZPGroup; simpl; intros Hin.
+pose proof (IGroup.isupport_incl Z (pmult n) (mkZp n) 1 Z.eq_dec).
+unfold List.incl in *.
+specialize (H p Hin).
+apply in_mkZp in H; auto.
+destruct (Z.eq_dec p 0); try subst.
+apply IGroup.isupport_is_inv_true in Hin.
+rewrite rel_prime_is_inv in Hin by auto.
+pose proof (not_rel_prime_0 n n_pos).
+destruct (rel_prime_dec 0 n) in Hin; try congruence.
+omega.
+Qed.
+
+Lemma generator_subgroup_is_group p (lt_1_p : 1 < p): forall y,
+  (List.In y (FGroup.s (ZPGroup p lt_1_p))
+  /\ EGroup.e_order Z.eq_dec y (ZPGroup p lt_1_p) = FGroup.g_order (ZPGroup p lt_1_p))
+  -> forall a, List.In a (FGroup.s (ZPGroup p lt_1_p)) ->
+  List.In a (EGroup.support Z.eq_dec y (ZPGroup p lt_1_p)).
+Proof.
+  intros.
+  destruct H as [in_ZPGroup_y y_order].
+  pose proof (EGroup.support_incl_G Z Z.eq_dec (pmult p) y (ZPGroup p lt_1_p) in_ZPGroup_y).
+  eapply Permutation.permutation_in; [|eauto].
+  apply Permutation.permutation_sym.
+  eapply UList.ulist_eq_permutation; try apply EGroup.support_ulist; eauto.
+  unfold EGroup.e_order, FGroup.g_order in y_order.
+  apply Nat2Z.inj in y_order.
+  auto.
+Qed.
+
+Lemma exists_primitive_root_power : forall p (prime_p : prime p) (lt_1_p : 1 < p)
+  (p_odd : p <> 2) (* This is provable for p = 2, but we are lazy. *), 
+  (exists y, List.In y (FGroup.s (ZPGroup p lt_1_p))
+  /\ EGroup.e_order Z.eq_dec y (ZPGroup p lt_1_p) = FGroup.g_order (ZPGroup p lt_1_p)
+  /\ (forall x (x_range : 1 <= x <= p - 1), exists j, 0 <= j <= p - 1 /\ y ^ j mod p = x)).
+Proof.
+  intros.
+  destruct (Zp_cyclic p lt_1_p prime_p) as [y [y_in_ZPGroup y_order]].
+  exists y; repeat split; auto.
+  intros x x_range.
+  pose proof (in_ZPGroup_range p lt_1_p y y_in_ZPGroup) as y_range1.
+  assert (0 <= y < p) as y_range0 by omega. 
+  pose proof (rel_prime_le_prime y p prime_p y_range1) as rel_prime_y_p.
+  pose proof (in_ZPGroup p lt_1_p y rel_prime_y_p y_range0) as in_ZPGroup_y.
+  destruct (EGroup.support_gpow Z Z.eq_dec (pmult p) y (ZPGroup p lt_1_p) in_ZPGroup_y x) as [k [k_range gpow_y_k]].
+  assert (rel_prime x p) by (apply rel_prime_le_prime; (omega || auto)).
+  assert (List.In x (FGroup.s (ZPGroup p lt_1_p))).
+  apply in_ZPGroup; (omega || auto).
+  apply generator_subgroup_is_group; eauto.
+  exists k; split. {
+    split; try omega.
+    unfold EGroup.e_order in y_order.
+    rewrite y_order in k_range.
+    rewrite <- phi_is_order in k_range.
+    rewrite Euler.prime_phi_n_minus_1 in k_range; (omega || auto).
+  }
+  assert (y mod p = y) as y_small by (apply Z.mod_small; omega).
+  rewrite <- y_small in gpow_y_k.
+  rewrite <- (Zpower_mod_is_gpow y k p lt_1_p) in gpow_y_k by (omega || auto).
+  auto.
+Qed.
 
 Lemma pred_odd : forall x, ~ (2 | x) -> (2 | x - 1).
 Proof.
@@ -338,32 +403,40 @@ Proof.
   eapply Zdivide_intro; eauto.
 Qed.
 
+Ltac ereplace x := match type of x with ?t =>
+  let e := fresh "e" in evar (e:t); replace x with e; subst e end.
+
 Lemma euler_criterion : forall (a x p : Z) (prime_p : prime p)
-  (p_odd : p <> 2), x * 2 + 1 = p -> a ^ x mod p = 1 ->
-  exists b : Z, b * b mod p = a mod p.
+  (p_odd : p <> 2) (a_range : 1 <= a <= p - 1) (x_div2_minus1p : x * 2 + 1 = p)
+  (pow_a_x : a ^ x mod p = 1), exists b : Z, b * b mod p = a mod p.
 Proof.
   intros.
-  destruct (primitive_root_prime p prime_p).
-  intuition.
-  pose proof (exists_primitive_root_power a x0 p prime_p H3).
-  destruct H2.
-  rewrite mod_pow in H0 by prime_bound.
-  intuition.
-  rewrite <- H6 in H0.
-  rewrite <- mod_pow in H0 by prime_bound.
-  rewrite <- Z.pow_mul_r in H0 by omega.
-  assert (p - 1 | x1 * x). {
-    rewrite <- H3.
-    apply order_mod_divide; auto.
-    assert (0 < x1 * x) by (apply Z.mul_pos_pos; omega).
-    omega.
+  assert (1 < p) as lt_1_p by prime_bound.
+  destruct (exists_primitive_root_power p prime_p lt_1_p) as [y [in_ZPGroup_y [y_order gpow_y]]]; auto.
+  destruct (gpow_y a a_range) as [j [j_range pow_y_j]].
+  rewrite mod_pow in pow_a_x by prime_bound.
+  replace a with (a mod p) in pow_y_j by (apply Z.mod_small; omega).
+  rewrite <- pow_y_j in pow_a_x.
+  rewrite <- mod_pow in pow_a_x by prime_bound.
+  rewrite <- Z.pow_mul_r in pow_a_x by omega.
+  assert (p - 1 | j * x) as divide_mul_j_x. {
+    rewrite <- phi_is_order in y_order.
+    rewrite Euler.prime_phi_n_minus_1 in y_order by auto.
+    ereplace (p-1); try eapply EGroup.e_order_divide_gpow; eauto with zarith.
+    simpl.
+    apply in_ZPGroup_range in in_ZPGroup_y.
+    replace y with (y mod p) by (apply Z.mod_small; omega).
+    erewrite <- Zpower_mod_is_gpow; eauto.
+    apply rel_prime_le_prime; (omega || auto).
+    apply Z.mul_nonneg_nonneg; intuition; omega.
   }
-  exists (x0 ^ (x1 / 2)).
+  exists (y ^ (j / 2)).
   rewrite <- Z.pow_add_r by (apply Z.div_pos; omega).
   rewrite <- Z_div_plus by omega.
   rewrite Z.mul_comm.
-  rewrite (prime_minus1_div2_exact x p) in H5; auto.
-  apply (divide_mul_div _ x1 2) in H5; try (apply prime_pred_divide2 || prime_bound); auto.
+  rewrite (prime_minus1_div2_exact x p) in divide_mul_j_x; auto.
+  apply (divide_mul_div _ j 2) in divide_mul_j_x;
+    try (apply prime_pred_divide2 || prime_bound); auto.
   rewrite <- Zdivide_Zdiv_eq by (auto || omega).
   rewrite Zplus_diag_eq_mult_2.
   rewrite Z_div_mult by omega; auto.
@@ -428,7 +501,7 @@ Proof.
   replace (p - 1) with ((p - 1) mod p) by (apply Zmod_small; omega).
   assert (p <> 2) as neq_p_2 by intuition.
   apply (euler_criterion (p - 1) (p / 2) p prime_p);
-    [ auto |  | apply minus1_even_pow; (omega || auto); apply Z_div_pos; omega].
+    [ auto | omega | | apply minus1_even_pow; (omega || auto); apply Z_div_pos; omega].
   pose proof (prime_odd p prime_p neq_p_2).
   rewrite <- Zdiv2_div.
   rewrite Zodd_div2; (ring || auto).
