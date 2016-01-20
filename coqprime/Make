@@ -1,0 +1,52 @@
+-R Tactic Coqprime
+-R N Coqprime
+-R List Coqprime
+-R Z Coqprime
+-R PrimalityTest Coqprime
+-R elliptic Coqprime
+-R num Coqprime
+-R examples Coqprime
+
+Tactic/Tactic.v
+N/NatAux.v
+List/Iterator.v
+List/ListAux.v
+List/Permutation.v
+List/UList.v
+List/ZProgression.v
+Z/Pmod.v 
+Z/ZCAux.v
+Z/Zmod.v
+Z/Ppow.v
+Z/ZCmisc.v
+Z/ZSum.v
+PrimalityTest/Cyclic.v
+PrimalityTest/EGroup.v
+PrimalityTest/Euler.v
+PrimalityTest/FGroup.v
+PrimalityTest/IGroup.v
+PrimalityTest/Lagrange.v
+PrimalityTest/LucasLehmer.v
+PrimalityTest/Pepin.v
+PrimalityTest/PGroup.v
+PrimalityTest/PocklingtonCertificat.v
+PrimalityTest/Pocklington.v
+PrimalityTest/Proth.v
+PrimalityTest/Root.v
+PrimalityTest/Zp.v
+elliptic/GZnZ.v
+elliptic/SMain.v
+elliptic/ZEll.v
+num/Bits.v
+num/Lucas.v
+num/NEll.v
+num/MEll.v
+num/Mod_op.v
+num/Pock.v
+num/montgomery.v
+num/W.v
+examples/BasePrimes.v
+examples/PocklingtonRefl.v
+
+
+
