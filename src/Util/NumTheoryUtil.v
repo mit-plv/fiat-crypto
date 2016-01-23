@@ -46,7 +46,6 @@ Hypothesis prime_p : prime p.
 Hypothesis neq_p_2 : p <> 2. (* Euler's Criterion is also provable with p = 2, but we do not need it and are lazy.*)
 Hypothesis x_id : x * 2 + 1 = p.
 
-
 Lemma lt_1_p : 1 < p. Proof. prime_bound. Qed.
 Lemma x_pos: 0 < x. Proof. prime_bound. Qed.
 Lemma x_nonneg: 0 <= x. Proof. prime_bound. Qed.
@@ -82,7 +81,18 @@ Qed.
 Lemma fermat_little: forall a (a_nonzero : a mod p <> 0),
   a ^ (p - 1) mod p = 1.
 Proof.
-Admitted.
+  intros.
+  assert (rel_prime a p). {
+    apply rel_prime_mod_rev; prime_bound.
+    assert (0 < p) as p_pos by prime_bound.
+    apply rel_prime_le_prime; auto; pose proof (Z.mod_pos_bound a p p_pos).
+    omega.
+  }
+  rewrite (Zpower_mod_is_gpow _ _ _ lt_1_p) by (auto || prime_bound).
+  rewrite <- mod_p_order.
+  apply EGroup.fermat_gen; try apply Z.eq_dec.
+  apply in_mod_ZPGroup; auto.
+Qed.
 
 Lemma squared_fermat_little: forall a (a_nonzero : a mod p <> 0),
   (a * a) ^ x mod p = 1.
