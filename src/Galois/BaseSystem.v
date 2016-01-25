@@ -407,6 +407,18 @@ Module BaseSystem (Import B:BaseCoefs).
                                         (apply length_add_ge; omega) .
   Qed.
 
+  Lemma sub_nil_length: forall us : digits, length (sub nil us) = length us.
+  Proof.
+     induction us; boring.
+  Qed.
+
+  Lemma sub_length_le_max : forall us vs,
+      (length (sub us vs) <= max (length us) (length vs))%nat.
+  Proof.
+    induction us, vs; boring.
+    rewrite sub_nil_length; auto.
+  Qed.
+
   Lemma mul_bi_length : forall us n, length (mul_bi n us) = (length us + n)%nat.
   Proof.
     pose proof mul_bi'_length; unfold mul_bi.
