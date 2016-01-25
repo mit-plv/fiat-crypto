@@ -258,10 +258,8 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
   Lemma sub_rep : forall u v x y, u ~= x -> v ~= y -> sub u v ~= (x-y)%GF.
   Proof.
     autounfold; intuition. {
-      (*unfold add.
-      rewrite B.add_length_le_max.
-      B.case_max; try rewrite Max.max_r; omega.*)
-      admit.
+      rewrite B.sub_length_le_max.
+      case_max; try rewrite Max.max_r; omega.
     }
     unfold toGF in *; unfold B.decode in *.
     rewrite B.sub_rep.
