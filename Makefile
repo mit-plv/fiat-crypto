@@ -8,11 +8,11 @@ VS       := $(MODULES:%=src/%/*.v)
 .PHONY: coq clean install coqprime
 .DEFAULT_GOAL: coq
 
+coq: coqprime Makefile.coq
+	$(MAKE) -f Makefile.coq
+
 coqprime:
 	$(MAKE) -C coqprime
-
-coq: Makefile.coq coqprime
-	$(MAKE) -f Makefile.coq
 
 Makefile.coq: Makefile $(VS)
 	coq_makefile -R $(SRC_DIR) $(MOD_NAME) $(COQ_ARGS) $(VS) -o Makefile.coq
