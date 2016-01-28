@@ -5,10 +5,13 @@ MODULES  := Curves Galois Rep Specific Tactics Util
 
 VS       := $(MODULES:%=src/%/*.v)
 
-.PHONY: coq clean install
+.PHONY: coq clean install coqprime
 .DEFAULT_GOAL: coq
 
-coq: Makefile.coq
+coqprime:
+	$(MAKE) -C coqprime
+
+coq: Makefile.coq coqprime
 	$(MAKE) -f Makefile.coq
 
 Makefile.coq: Makefile $(VS)

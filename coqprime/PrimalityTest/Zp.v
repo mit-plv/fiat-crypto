@@ -15,7 +15,7 @@
     Definition: ZpGroup              
  **********************************************************************)
 Require Import ZArith Znumtheory Zpow_facts.
-Require Import Tactic.
+Require Import Coqprime.Tactic.
 Require Import Wf_nat.
 Require Import UList.
 Require Import FGroup.
