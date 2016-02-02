@@ -105,7 +105,7 @@ Proof.
   apply fermat_little; auto.
 Qed.
 
-Lemma euler_criterion_reverse : forall a (a_nonzero : a mod p <> 0),
+Lemma euler_criterion_square_reverse : forall a (a_nonzero : a mod p <> 0),
   (exists b, b * b mod p = a mod p) -> (a ^ x mod p = 1).
 Proof.
   intros ? ? a_square.
@@ -153,8 +153,8 @@ Qed.
 Ltac ereplace x := match type of x with ?t =>
   let e := fresh "e" in evar (e:t); replace x with e; subst e end.
 
-Lemma euler_criterion : forall a (a_range : 1 <= a <= p - 1)
-  (pow_a_x : a ^ x mod p = 1), exists b : Z, b * b mod p = a mod p.
+Lemma euler_criterion_square : forall a (a_range : 1 <= a <= p - 1)
+  (pow_a_x : a ^ x mod p = 1), exists b, b * b mod p = a mod p.
 Proof.
   intros.
   destruct (exists_primitive_root_power) as [y [in_ZPGroup_y [y_order gpow_y]]]; auto.
@@ -187,6 +187,24 @@ Proof.
   rewrite Z_div_mult by omega; auto.
   apply divide2_even_iff.
   apply prime_pred_even.
+Qed.
+
+Lemma euler_criterion : forall a (a_range : 1 <= a <= p - 1),
+  (a ^ x mod p = 1) <-> exists b, b * b mod p = a mod p.
+Proof.
+  intros; split. {
+    exact (euler_criterion_square _ a_range).
+  } {
+    apply euler_criterion_square_reverse; auto.
+    replace (a mod p) with a by (symmetry; apply Zmod_small; omega).
+    omega.
+  }
+Qed.
+
+Lemma euler_criterion_nonsquare : forall a (a_range : 1 <= a <= p - 1),
+  (a ^ x mod p <> 1) <-> ~ (exists b, b * b mod p = a mod p).
+Proof.
+  split; intros A B; apply (euler_criterion a a_range) in B; congruence.
 Qed.
 
 End EulerCriterion.
@@ -245,6 +263,15 @@ Proof.
   omega.
 Qed.
 
+Lemma div2_p_1mod4 : forall (p : Z) (prime_p : prime p) (neq_p_2: p <> 2),
+  (p / 2) * 2 + 1 = p.
+Proof.
+  intros.
+  destruct (prime_odd_or_2 p prime_p); intuition.
+  rewrite <- Zdiv2_div.
+  pose proof (Zdiv2_odd_eqn p); break_if; congruence || omega.
+Qed.
+
 Lemma minus1_square_1mod4 : forall (p : Z) (prime_p : prime p),
   (p mod 4 = 1)%Z -> exists b : Z, (b * b mod p = p - 1)%Z.
 Proof.
@@ -253,9 +280,7 @@ Proof.
   assert (p <> 2) as neq_p_2 by (apply prime_1mod4_neq2; auto).
   apply (euler_criterion (p / 2) p prime_p).
   + auto.
-  + destruct (prime_odd_or_2 p prime_p); intuition.
-    rewrite <- Zdiv2_div.
-    pose proof (Zdiv2_odd_eqn p); break_if; congruence || omega.
+  + apply div2_p_1mod4; auto.
   + prime_bound.
   + apply minus1_even_pow; [apply divide2_1mod4 | | apply Z_div_pos]; prime_bound.
 Qed.

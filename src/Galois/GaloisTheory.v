@@ -298,5 +298,90 @@ Module GaloisTheory (M: Modulus).
     constructor; auto.
   Qed.
 
-End GaloisTheory.
+  Ltac modulus_bound :=
+    pose proof (prime_ge_2 (primeToZ modulus) (proj2_sig modulus)); omega.
 
+  Lemma GFexp_Zpow : forall (a : GF) (a_nonzero : a <> 0)
+    (k : Z) (k_nonneg : (0 <= k)%Z),
+    a ^ (Z.to_N k) = ((GFToZ a) ^ k)%Z.
+  Proof.
+    intros a a_nonzero.
+    apply natlike_ind; [ galois; symmetry; apply Z.mod_small; modulus_bound | ].
+    intros k k_nonneg IHk.
+    rewrite Z2N.inj_succ by auto.
+    rewrite GFexp_pred by (auto; apply N.neq_succ_0).
+    rewrite N.pred_succ.
+    rewrite IHk.
+    rewrite Z.pow_succ_r by auto.
+    galois.
+  Qed.
+
+  Lemma GFToZ_inject : forall x, GFToZ (inject x) = (x mod primeToZ modulus)%Z.
+  Proof.
+    intros; unfold GFToZ, proj1_sig, inject; reflexivity.
+  Qed.
+
+  Lemma GF_Zmod : forall x, ((GFToZ x) mod primeToZ modulus = GFToZ x)%Z.
+  Proof.
+    intros.
+    pose proof (inject_eq x) as inject_eq_x.
+    apply gf_eq in inject_eq_x.
+    rewrite <- inject_eq_x.
+    rewrite inject_mod_eq.
+    rewrite GFToZ_inject.
+    apply Z.mod_mod.
+    modulus_bound.
+  Qed.
+
+  Lemma square_Zmod_GF : forall (a : GF) (a_nonzero : a <> 0),
+    (exists b : Z, ((b * b) mod modulus)%Z = (a mod modulus)%Z) <-> (exists b, b * b = a).
+  Proof.
+    split; intros A; destruct A as [b b_id]. {
+      exists (inject b).
+      galois.
+    } {
+      exists (GFToZ b).
+      rewrite GF_Zmod.
+      rewrite <- b_id.
+      rewrite <- (inject_eq b) at 3 4.
+      rewrite <- inject_distr_mul.
+      rewrite GFToZ_inject.
+      auto.
+    }
+  Qed.
+
+  Lemma GFexp_0 : forall e : N, e <> 0%N -> 0 ^ e = 0.
+  Proof.
+  Admitted.
+
+  Lemma nonzero_Zmod_GF : forall a,
+    (inject a <> 0) <-> (a mod primeToZ modulus <> 0)%Z.
+  Proof.
+    split; intros A B; unfold not in A. {
+      rewrite inject_mod_eq in A.
+      rewrite B in A.
+      apply A.
+      apply gf_eq.
+      rewrite GFToZ_inject.
+      rewrite Z.mod_0_l by modulus_bound.
+      auto.
+    } {
+      apply A.
+      apply gf_eq in B.
+      rewrite GFToZ_inject in B.
+      auto.
+    }
+  Qed.
+
+  Lemma nonzero_range : forall (a : GF), (a <> 0) -> (1 <= a <= primeToZ modulus - 1)%Z.
+  Proof.
+    intros a a_nonzero.
+    assert (a mod primeToZ modulus <> 0)%Z by (apply nonzero_Zmod_GF; rewrite inject_eq; auto).
+    replace (GFToZ a) with (a mod primeToZ modulus)%Z by (symmetry; apply (proj2_sig a)).
+    assert (0 < primeToZ modulus)%Z as modulus_pos by
+      (pose proof (prime_ge_2 (primeToZ modulus) (proj2_sig modulus)); omega).
+    pose proof (Z.mod_pos_bound a (primeToZ modulus) modulus_pos).
+   omega.
+  Qed.
+
+End GaloisTheory.
