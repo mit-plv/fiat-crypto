@@ -3,4 +3,6 @@ fiat
 *~
 *.vo
 *.d
+*.glob
 Makefile.coq
+Makefile.bak
