@@ -1,0 +1,21 @@
+-R src Crypto
+src/Curves/PointFormats.v
+src/Curves/ScalarMult.v
+src/Galois/BaseSystem.v
+src/Galois/EdDSA.v
+src/Galois/Galois.v
+src/Galois/GaloisField.v
+src/Galois/GaloisRep.v
+src/Galois/GaloisTheory.v
+src/Galois/GaloisTutorial.v
+src/Galois/ModularBaseSystem.v
+src/Rep/ECRep.v
+src/Rep/GaloisRep.v
+src/Specific/EdDSA25519.v
+src/Specific/GF25519.v
+src/Tactics/VerdiTactics.v
+src/Util/CaseUtil.v
+src/Util/ListUtil.v
+src/Util/NatUtil.v
+src/Util/NumTheoryUtil.v
+src/Util/ZUtil.v
