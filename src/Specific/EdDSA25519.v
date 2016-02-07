@@ -46,7 +46,7 @@ Module EdDSA25519_Params <: EdDSAParams.
 
   (* TODO *)
   Parameter H : forall {n}, word n -> word (b + b).
-  
+
   Definition c := 3.
   Lemma c_valid : c = 2 \/ c = 3.
   Proof.
@@ -66,6 +66,85 @@ Module EdDSA25519_Params <: EdDSAParams.
   Module GFDefs := GaloisField Modulus_q.
   Import GFDefs.
   Local Open Scope GF_scope.
+
+  Definition div2_q := (q / 2)%Z. (* = (p - 1) / 2 *)
+  Lemma gt_div2_q_zero : (div2_q > 0)%Z.
+  Proof.
+    unfold div2_q.
+    replace (GFToZ 0) with 0%Z by auto.
+    assert (0 < 2 <= primeToZ q)%Z by (pose proof q_odd; omega).
+    pose proof (Z.div_str_pos (primeToZ q) 2 H0).
+    omega.
+  Qed.
+
+  Lemma euler_criterion_GF : forall (a : GF) (a_nonzero : a <> 0),
+    (a ^ (Z.to_N div2_q) = 1) <-> (exists b, b * b = a).
+  Proof.
+    assert (prime q) by apply Modulus25519.two_255_19_prime.
+    assert (primeToZ q <> 2)%Z by (pose proof q_odd; omega).
+    assert (primeToZ q <> 0)%Z by (pose proof q_odd; omega).
+    split; intros A. {
+      apply square_Zmod_GF; auto.
+      eapply euler_criterion.
+      + auto.
+      + pose proof q_odd; unfold q in *; omega.
+      + apply div2_p_1mod4; auto.
+      + apply nonzero_range; auto.
+      + unfold div2_q in A.
+        rewrite GFexp_Zpow in A by (auto || apply Z_div_pos; prime_bound).
+        rewrite inject_mod_eq in A.
+        apply gf_eq in A.
+        replace (GFToZ 1) with 1%Z in A by auto.
+        rewrite GFToZ_inject in A.
+        rewrite Z.mod_mod in A by auto.
+        exact A.
+    } {
+      rewrite GFexp_Zpow by first [unfold div2_q; apply Z.div_pos; pose proof q_odd; omega | auto].
+      apply gf_eq.
+      replace (GFToZ 1) with 1%Z by auto.
+      rewrite GFToZ_inject.
+      apply euler_criterion; auto.
+      + apply nonzero_range; auto.
+      + apply square_Zmod_GF; auto.
+    }
+  Qed.
+
+  Lemma euler_criterion_if : forall (a : GF),
+    if (orb (Zeq_bool (a ^ (Z.to_N div2_q))%GF 1) (Zeq_bool a 0))
+    then (exists b, b * b = a) else (forall b, b * b <> a).
+  Proof.
+    intros.
+    unfold orb. do 2 break_if; try congruence. {
+      assert (a <> 0). {
+        intro eq_a_0.
+        replace 1%Z with (GFToZ 1) in Heqb1 by auto.
+        apply GFdecidable in Heqb1; auto.
+        rewrite eq_a_0 in Heqb1.
+        rewrite GFexp_0 in Heqb1; auto.
+        replace 0%N with (Z.to_N 0%Z) by auto.
+        rewrite <- (Z2N.inj_lt 0 div2_q); (omega || pose proof gt_div2_q_zero; omega).
+      }
+      apply euler_criterion_GF; auto.
+      apply GFdecidable; auto.
+    } {
+      exists 0.
+      replace (0 * 0)%GF with 0%GF by field.
+      replace 0%Z with (GFToZ 0) in Heqb0 by auto.
+      apply GFdecidable in Heqb0; auto.
+    } {
+      intros b b_id.
+      assert (a <> 0). {
+        intro eq_a_0.
+        replace 0%Z with (GFToZ 0) in Heqb0 by auto.
+        apply GFcomplete in eq_a_0.
+        congruence.
+      }
+      assert (Zeq_bool (GFToZ (a ^ Z.to_N div2_q)) 1 = true); try congruence. {
+        replace 1%Z with (GFToZ 1) by auto; apply GFcomplete.
+        apply euler_criterion_GF; eauto.
+      }
+   }
+  Qed.
 
   Definition a := GFopp 1%GF.
   Lemma a_nonzero : a <> 0%GF.
@@ -92,34 +171,26 @@ Module EdDSA25519_Params <: EdDSAParams.
     auto.
   Qed.
 
-  Lemma square_mod_GF : forall (a x : Z),
-    (x * x mod q = a)%Z ->
-    (inject x * inject x = inject a)%GF.
-  Proof.
-    intros.
-    destruct H0.
-    rewrite <- inject_distr_mul.
-    rewrite inject_mod_eq.
-    replace modulus with q by auto.
-    reflexivity.
-  Qed.
-
-  Lemma a_square_old : exists x, (x * x = a)%GF.
+  Lemma a_square : exists sqrt_a, (sqrt_a^2 = a)%GF.
   Proof.
     intros.
     pose proof (minus1_square_1mod4 q (proj2_sig q) q_1mod4).
     destruct H0.
-    pose proof (square_mod_GF (q - 1)%Z x H0).
+    apply square_Zmod_GF; try apply a_nonzero.
     exists (inject x).
+    rewrite GFToZ_inject.
+    rewrite <- Zmult_mod.
+    rewrite GF_Zmod.
     unfold a.
     replace (GFopp 1) with (inject (q - 1)) by galois.
     auto.
   Qed.
-  
+
   (* TODO *)
-  Definition d : GF := (-121665 / 121666)%Z.
+  (* d = ((-121665)%Z / 121666%Z)%GF.*)
+  Definition d : GF := 37095705934669439343138083508754565189542113879843219016388785533085940283555%Z.
   Axiom d_nonsquare : forall x, x^2 <> d.
-  Axiom a_square: exists sqrt_a, (sqrt_a^2 = a)%GF.
+  (* Definition d_nonsquare : (forall x, x^2 <> d) := euler_criterion_if d. <-- currently not computable in reasonable time *)
 
   Module CurveParameters <: TwistedEdwardsParams Modulus_q.
     Module GFDefs := GFDefs.
@@ -138,25 +209,24 @@ Module EdDSA25519_Params <: EdDSAParams.
   Axiom B_not_identity : B <> zero.
 
   Definition l : Prime := exist _ (252 + 27742317777372353535851937790883648493)%Z prime_l.
-  Axiom l_odd : (Z.to_nat l > 2)%nat.
+  Lemma l_odd : (Z.to_nat l > 2)%nat.
+  Proof.
+    unfold l, primeToZ, proj1_sig.
+    rewrite Z2Nat.inj_add; try omega.
+    apply lt_plus_trans.
+    compute; omega.
+  Qed.
   Axiom l_order_B : (scalarMult (Z.to_nat l) B) = zero.
 
   (* H' is the identity function. *)
   Definition H'_out_len (n : nat) := n.
   Definition H' {n} (w : word n) := w.
 
-  Lemma l_bound : Z.to_nat l < pow2 b. (* TODO *)
-  Admitted.
-
-  Lemma GF_mod_bound : forall (x : GF), (0 <= x < q)%Z.
+  Lemma l_bound : Z.to_nat l < pow2 b.
   Proof.
-    intros.
-    assert (0 < q)%Z by (prime_bound; omega).
-    pose proof (Z.mod_pos_bound x q H0).
-    rewrite <- (inject_eq x).
-    replace q with modulus in * by auto.
-    unfold GFToZ, inject in *.
-    auto.
+    rewrite Zpow_pow2.
+    rewrite <- Z2Nat.inj_lt by first [unfold l, primeToZ, proj1_sig; omega | compute; congruence].
+    reflexivity.
   Qed.
 
   Definition Fq_enc (x : GF) : word (b - 1) := natToWord (b - 1) (Z.to_nat x).
@@ -176,6 +246,8 @@ Module EdDSA25519_Params <: EdDSAParams.
       replace (pow2 (b - 1)) with (Z.to_nat (2 ^ (Z.of_nat b - 1))%Z) by (rewrite Zpow_pow2; auto).
       pose proof (GF_mod_bound x).
       pose proof b_valid.
+      pose proof q_odd.
+      replace modulus with q in * by reflexivity.
       apply Z2Nat.inj_lt; try omega.
     }
   Qed.
@@ -209,7 +281,315 @@ Module EdDSA25519_Params <: EdDSAParams.
   Qed.
   Definition FlEncoding :=
     Build_Encoding {s:nat | s mod (Z.to_nat l) = s} (word b) Fl_enc Fl_dec Fl_encoding_valid.
+
+  Check (Build_Encoding point (word b)).
+
+  (* square root mod q relies on the fact that q is 5 mod 8 *)
+  Definition sqrt_mod_q (a : GF) := 
+    (match (GF_eq_dec (a ^ Z.to_N (q / 4)%Z) 1) with
+    | left A => 1
+    | right A => inject 2 ^ Z.to_N (2 * (q / 8) + 1)
+    end) * a ^ Z.to_N ((q / 8) + 1).
+
+  Lemma q_5mod8 : (q mod 8 = 5)%Z.
+  Proof.
+    simpl.
+    unfold two_255_19.
+    rewrite Zminus_mod.
+    auto.
+  Qed.
+
+  (* TODO : move to ZUtil *)
+  Lemma mod2_one_or_zero : forall x, (x mod 2 = 1)%Z \/ (x mod 2 = 0)%Z.
+  Proof.
+    intros.
+    pose proof (Zmod_even x) as mod_even.
+    case_eq (Z.even x); intro x_even; rewrite x_even in mod_even; auto.
+  Qed.
+
+  Lemma sqrt_mod_q_valid : forall x, (sqrt_mod_q x) ^ 2 = x.
+  Proof.
+    intro.
+    destruct (GF_eq_dec x 0). {
+      subst.
+      unfold sqrt_mod_q; intros.
+      rewrite GFexp_0.
+        + break_if; [pose proof GFone_nonzero; symmetry in e; congruence | ].
+          rewrite GFexp_0.
+            - field.
+            - rewrite Z.add_1_r.
+              rewrite Z2N.inj_succ by (apply Z.div_pos; pose proof q_odd; omega).
+              apply N.lt_0_succ.
+        + rewrite <- Z2N.inj_0.
+          rewrite <- Z2N.inj_lt; (try apply Z.div_pos; pose proof q_odd; try omega).
+          assert (5 <= q)%Z by (rewrite <- q_5mod8; apply Z.mod_le; omega).
+          apply Z.div_str_pos; omega.
+    } {
+      assert (8 > 0)%Z as gt_8_0 by omega.
+      pose proof (Z_div_mod_eq q 8 gt_8_0) as q_div_mod.
+      rewrite q_5mod8 in q_div_mod.
+      unfold sqrt_mod_q; intros.
+      ring_simplify. 
+      replace ((x ^ Z.to_N (primeToZ q / 8 + 1)) ^ 2)
+          with (x ^ Z.to_N (2 * (primeToZ q / 8 + 1))) by admit. (* TODO(rsloan): can field do this? *)
+      assert (2 * (q / 8) = q / 4 - 1)%Z as subproof. {
+        replace 8%Z with (4 * 2)%Z by ring.
+        rewrite <- Z.div_div by omega.
+        remember (q / 4)%Z as k.
+        rewrite (Z_div_mod_eq k 2) at 2 by omega.
+        replace (k mod 2)%Z with 1%Z; auto.
+         rewrite q_div_mod in Heqk.
+         replace (8 * (q / 8))%Z with ((2 * (q / 8)) * 4)%Z in Heqk by auto.
+         rewrite Z_div_plus_full_l in Heqk by auto.
+         replace (5 / 4)%Z with 1%Z in Heqk by reflexivity.
+         rewrite Heqk.
+         rewrite Z.mul_comm.
+         rewrite mod_mult_plus; auto.
+      }
+      replace (2 * (q / 8 + 1))%Z with (2 * (q / 8) + 2)%Z by ring.
+      rewrite subproof.
+      replace (q / 4 - 1 + 2)%Z with (Z.succ (q / 4)) by ring.
+      rewrite Z2N.inj_succ by first
+        [apply N.neq_succ_0 | apply Z.div_pos; pose proof q_odd; omega].
+      break_if; rewrite (GFexp_pred x) by apply N.neq_succ_0; rewrite N.pred_succ. {
+      rewrite e.
+      field.
+    } {
+      admit. (* TODO: need proof that a ^ 2 = 1 -> a <> 1 -> a = - 1 *)
+    }
+  }
+  Qed.
+
+  Definition solve_for_x (y : GF) := sqrt_mod_q ( (y ^ 2 - 1) / (d * (y ^ 2) - a)).
+
+  Lemma d_y2_a_nonzero : forall y, d * y ^ 2 - a <> 0.
+    intros ? eq_zero.
+    symmetry in eq_zero.
+    apply GF_minus_plus in eq_zero.
+    replace (0 + a) with a in eq_zero by field.
+    destruct a_square as [sqrt_a a_square].
+    rewrite <- a_square in eq_zero.
+    destruct (GF_eq_dec y 0). {
+      subst.
+      rewrite a_square in eq_zero.
+      replace (d * 0 ^ 2) with 0 in eq_zero by field.
+      pose proof a_nonzero; auto.
+    } {
+      apply GF_square_mul in eq_zero; auto.
+      destruct eq_zero as [sqrt_d d_square].
+      pose proof (d_nonsquare sqrt_d).
+      auto.
+    }
+  Qed.
   
-  (* TODO *)
-  Parameter PointEncoding : encoding of point as word b.
+  Lemma a_d_y2_nonzero : forall y, a - d * y ^ 2 <> 0.
+  Proof.
+    intros y eq_zero.
+    symmetry in eq_zero.
+    apply GF_minus_plus in eq_zero.
+    replace (0 + d * y ^ 2) with (d * y ^ 2) in eq_zero by field.
+    replace a with (0 + a) in eq_zero by field.
+    symmetry in eq_zero.
+    apply GF_minus_plus in eq_zero.
+    pose proof (d_y2_a_nonzero y).
+    auto.
+  Qed.
+
+  Lemma onCurve_solve_x2 : forall x y, onCurve (x, y) -> x ^ 2 = (y ^ 2 - 1) / (d * (y ^ 2) - a).
+  Proof.
+    intros ? ? onCurve_x_y.
+    unfold onCurve, CurveParameters.d, CurveParameters.a in onCurve_x_y.
+    apply GF_minus_plus in onCurve_x_y.
+    symmetry in onCurve_x_y.
+    replace (1 + d * x ^ 2 * y ^ 2 - y ^ 2) with (1 - y ^ 2 + d * x ^ 2 * y ^ 2)
+      in onCurve_x_y by ring.
+    apply GF_minus_plus in onCurve_x_y.
+    replace (a * x ^ 2 - d * x ^ 2 * y ^ 2) with (x ^ 2 * (a - d * y ^ 2)) in onCurve_x_y by ring.
+    replace ((y ^ 2 - 1) / (d * y ^ 2 - a)) with ((1 - y ^ 2) / (a - d * y ^ 2))
+      by (field; [ apply d_y2_a_nonzero | apply a_d_y2_nonzero ]).
+    rewrite onCurve_x_y.
+    unfold GFdiv.
+    field.
+    apply a_d_y2_nonzero.
+  Qed.
+
+  Lemma solve_for_x_onCurve (y : GF): onCurve (solve_for_x y, y).
+  Proof.
+    unfold onCurve, solve_for_x, CurveParameters.d, CurveParameters.a.
+    rewrite sqrt_mod_q_valid.
+    field; apply d_y2_a_nonzero.
+  Qed.
+
+  Lemma solve_for_x_onCurve_GFopp (y : GF) : onCurve (GFopp (solve_for_x y), y).
+  Proof.
+    pose proof (solve_for_x_onCurve y) as x_onCurve.
+    unfold onCurve in *.
+    replace (solve_for_x y ^ 2) with ((GFopp (solve_for_x y)) ^ 2) in x_onCurve by field.
+    auto.
+  Qed.
+
+  Lemma point_onCurve : forall p, onCurve (projX p, projY p).
+  Proof.
+    intro.
+    replace (projX p, projY p) with (proj1_sig p)
+      by (unfold projX, projY; apply surjective_pairing).
+    apply (proj2_sig p).
+  Qed.
+
+  Lemma GFopp_x_point : forall p p', projY p = projY p' ->
+    projX p = projX p' \/ projX p = GFopp (projX p').
+  Proof.
+    intros ?  ? projY_eq.
+    pose proof (point_onCurve p) as onCurve_p.
+    pose proof (point_onCurve p') as onCurve_p'.
+    apply sqrt_solutions.
+    rewrite projY_eq in *.
+    unfold solve_for_x, onCurve, CurveParameters.a, CurveParameters.d in *.
+    apply onCurve_solve_x2 in onCurve_p.
+    apply onCurve_solve_x2 in onCurve_p'.
+    rewrite <- onCurve_p in onCurve_p'; auto.
+  Qed.
+
+  Lemma GFopp_solve_for_x : forall p,
+    solve_for_x (projY p) = projX p \/ solve_for_x (projY p) = GFopp (projX p).
+  Proof.
+    intros.
+    pose proof (point_onCurve p).
+    remember (mkPoint (solve_for_x (projY p), projY p) (solve_for_x_onCurve (projY p))) as q1.
+    replace (solve_for_x (projY p)) with (projX q1) by (rewrite Heqq1; auto).
+    apply GFopp_x_point.
+    rewrite Heqq1; auto.
+  Qed.
+
+  Definition sign_bit (x : GF) := (wordToN (Fq_enc (GFopp x)) <? wordToN (Fq_enc x))%N.
+  Definition point_enc (p : point) : word b := WS (sign_bit (projX p)) (Fq_enc (projY p)).
+  Definition point_dec (w : word (S (b - 1))) : option point :=
+    match (Fq_dec (wtl w)) with
+    | None => None
+    | Some y => match (Bool.eqb (whd w) (sign_bit (solve_for_x y))) with
+                | true  => value (mkPoint (solve_for_x y, y) (solve_for_x_onCurve y))
+                | false => value (mkPoint (GFopp (solve_for_x y), y) (solve_for_x_onCurve_GFopp y))
+                end
+    end.
+
+
+  Definition value_or_default {T} (opt : option T) d := match opt with
+    | Some x => x
+    | None => d
+    end.
+
+  Lemma value_or_default_inj : forall {T} (x y d : T),
+    value_or_default (Some x) d = value_or_default (Some y) d -> x = y.
+  Proof.
+    unfold value_or_default; auto.
+  Qed.
+
+  Lemma Fq_enc_inj : forall x y, Fq_enc x = Fq_enc y -> x = y.
+  Proof.
+    intros ? ? enc_eq.
+    pose proof (Fq_encoding_valid x) as enc_valid_x.
+    rewrite enc_eq in enc_valid_x.
+    pose proof (Fq_encoding_valid y) as enc_valid_y.
+    rewrite enc_valid_x in enc_valid_y.
+    apply value_or_default_inj with (d := 0).
+    rewrite enc_valid_y; auto.
+  Qed.
+
+  Lemma sign_bit_GFopp_negb : forall x, sign_bit x = negb (sign_bit (GFopp x)) \/ x = GFopp x.
+  Proof.
+    intros.
+    destruct (GF_eq_dec x (GFopp x)); auto.
+    left.
+    unfold sign_bit.
+    rewrite GFopp_involutive.
+    rewrite N.ltb_antisym.
+    case_eq (wordToN (Fq_enc x) <=? wordToN (Fq_enc (GFopp x)))%N; intro A.
+    + apply N.leb_le in A.
+      apply N.lt_eq_cases in A.
+      destruct A as [A | A].
+      - apply N.ltb_lt in A.
+        rewrite A; auto.
+      - apply wordToN_inj in A.
+        apply Fq_enc_inj in A.
+        congruence.
+   + apply N.leb_gt in A.
+     rewrite N.ltb_antisym.
+     apply N.lt_le_incl in A.
+     apply N.leb_le in A.
+     rewrite A.
+     auto.
+  Qed.
+
+  Lemma point_mkPoint : forall p, p = mkPoint (proj1_sig p) (proj2_sig p).
+  Proof.
+    intros; destruct p; auto.
+  Qed.
+
+  Lemma onCurve_proof_eq : forall x y (P : onCurve x) (Q : onCurve y) (xyeq: x = y),
+    match xyeq in (_ = y') return onCurve y' with
+    | eq_refl => P
+    end = Q.
+  Proof.
+    intros; subst.
+    intros; unfold onCurve in *.
+    break_let.
+    apply Eqdep_dec.UIP_dec.
+    exact GF_eq_dec.
+  Qed.
+
+  Lemma two_arg_eq : forall {A B} C (f : forall a: A, B a -> C) x1 y1 x2 y2 (xeq: x1 = x2),
+    match xeq in (_ = x) return (B x) with
+    | eq_refl => y1
+    end = y2 -> f x1 y1 = f x2 y2.
+  Proof.
+    intros; subst; reflexivity.
+  Qed.
+
+  Lemma point_destruct : forall p P, mkPoint (projX p, projY p) P = p.
+  Proof.
+    intros; rewrite point_mkPoint.
+    assert ((projX p, projY p) = proj1_sig p) by
+      (unfold projX, projY; simpl; symmetry; apply surjective_pairing).
+    apply two_arg_eq with (xeq := H0).
+    apply onCurve_proof_eq.
+  Qed.
+
+  (* There are currently two copies of mkPoint in scope. I would like to use Facts.point_eq
+     here, but it is proven for Facts.Curve.mkPoint, not mkPoint. These are equivalent, but
+     I have so far not managed to unify them. *)
+  Lemma point_eq_copy : forall x1 x2 y1 y2, x1 = x2 -> y1 = y2 ->
+    forall p1 p2, mkPoint (x1, y1) p1 = mkPoint (x2, y2) p2.
+  Admitted.
+
+  Lemma point_encoding_valid : forall p, point_dec (point_enc p) = Some p.
+  Proof.
+    intros.
+    unfold point_dec, point_enc, wtl, whd.
+    rewrite Fq_encoding_valid.
+    break_if; unfold value; f_equal. {
+      remember (mkPoint (solve_for_x (projY p), projY p) (solve_for_x_onCurve (projY p))).
+      rewrite <- (point_destruct _ (point_onCurve p)).
+      subst.
+      apply point_eq_copy; auto.
+      destruct (GFopp_solve_for_x p) as [? | A]; auto.
+      rewrite A in Heqb0.
+      pose proof (sign_bit_GFopp_negb (projX p)) as sign_bit_opp.
+      destruct sign_bit_opp as [sign_bit_opp | opp_eq ]; [ | rewrite opp_eq; auto ].
+      rewrite Bool.eqb_true_iff in Heqb0.
+      rewrite Heqb0 in sign_bit_opp.
+      symmetry in sign_bit_opp.
+      apply Bool.no_fixpoint_negb in sign_bit_opp.
+      contradiction.
+    } {
+      remember (mkPoint (GFopp (solve_for_x (projY p)), projY p) (solve_for_x_onCurve_GFopp (projY p))).
+      rewrite <- (point_destruct _ (point_onCurve p)).
+      subst.
+      apply point_eq_copy; auto.
+      destruct (GFopp_solve_for_x p) as [A | A]; try apply GFopp_swap; auto; 
+        rewrite A in Heqb0; apply Bool.eqb_false_iff in Heqb0; congruence.
+    }
+  Qed.
+
+  Definition PointEncoding := Build_Encoding point (word b) point_enc point_dec point_encoding_valid.
+
 End EdDSA25519_Params.

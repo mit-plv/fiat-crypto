@@ -14,7 +14,7 @@ Require Import ZCAux.
 Require Import W.
 Require Import Mod_op.
 Require Import LucasLehmer.
-Require Import Bits.
+Require Import Coqprime.Bits.
 Import CyclicAxioms DoubleType DoubleBase.
 
 Open Scope Z_scope. 

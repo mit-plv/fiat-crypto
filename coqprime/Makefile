@@ -39,18 +39,12 @@ $(call includecmdwithout@,$(COQBIN)coqtop -config)
 #                        #
 ##########################
 
-COQLIBS?= -R examples Coqprime\
-  -R num Coqprime\
-  -R elliptic Coqprime\
-  -R PrimalityTest Coqprime\
+COQLIBS?= -R PrimalityTest Coqprime\
   -R Z Coqprime\
   -R List Coqprime\
   -R N Coqprime\
   -R Tactic Coqprime
-COQDOCLIBS?=-R examples Coqprime\
-  -R num Coqprime\
-  -R elliptic Coqprime\
-  -R PrimalityTest Coqprime\
+COQDOCLIBS?= -R PrimalityTest Coqprime\
   -R Z Coqprime\
   -R List Coqprime\
   -R N Coqprime\
@@ -94,20 +88,11 @@ endif
 #                    #
 ######################
 
-VFILES:=examples/PocklingtonRefl.v\
-  examples/BasePrimes.v\
-  num/W.v\
-  num/montgomery.v\
-  num/Pock.v\
-  num/Mod_op.v\
-  num/MEll.v\
-  num/NEll.v\
-  num/Lucas.v\
-  num/Bits.v\
-  elliptic/ZEll.v\
-  elliptic/SMain.v\
-  elliptic/GZnZ.v\
-  PrimalityTest/Zp.v\
+# TODO (andres): 
+#   This repo is incomplete and can't build the things in num/
+#   or examples/ or elliptic/. Do we need those?
+
+VFILES := PrimalityTest/Zp.v\
   PrimalityTest/Root.v\
   PrimalityTest/Proth.v\
   PrimalityTest/Pocklington.v\
@@ -123,8 +108,6 @@ VFILES:=examples/PocklingtonRefl.v\
   PrimalityTest/Cyclic.v\
   Z/ZSum.v\
   Z/ZCmisc.v\
-  Z/Ppow.v\
-  Z/Zmod.v\
   Z/ZCAux.v\
   Z/Pmod.v\
   List/ZProgression.v\
@@ -139,8 +122,8 @@ VFILES:=examples/PocklingtonRefl.v\
 .SECONDARY: $(addsuffix .d,$(VFILES))
 
 VOFILES:=$(VFILES:.v=.vo)
-VOFILES1=$(patsubst examples/%,%,$(filter examples/%,$(VOFILES)))
-VOFILES2=$(patsubst num/%,%,$(filter num/%,$(VOFILES)))
+# VOFILES1=$(patsubst examples/%,%,$(filter examples/%,$(VOFILES)))
+# VOFILES2=$(patsubst num/%,%,$(filter num/%,$(VOFILES)))
 VOFILES3=$(patsubst elliptic/%,%,$(filter elliptic/%,$(VOFILES)))
 VOFILES4=$(patsubst PrimalityTest/%,%,$(filter PrimalityTest/%,$(VOFILES)))
 VOFILES5=$(patsubst Z/%,%,$(filter Z/%,$(VOFILES)))
@@ -216,14 +199,6 @@ userinstall:
 	+$(MAKE) USERINSTALL=true install
 
 install:
-	cd "examples"; for i in $(VOFILES1); do \
-	 install -d "`dirname "$(DSTROOT)"$(COQLIBINSTALL)/Coqprime/$$i`"; \
-	 install -m 0644 $$i "$(DSTROOT)"$(COQLIBINSTALL)/Coqprime/$$i; \
-	done
-	cd "num"; for i in $(VOFILES2); do \
-	 install -d "`dirname "$(DSTROOT)"$(COQLIBINSTALL)/Coqprime/$$i`"; \
-	 install -m 0644 $$i "$(DSTROOT)"$(COQLIBINSTALL)/Coqprime/$$i; \
-	done
 	cd "elliptic"; for i in $(VOFILES3); do \
 	 install -d "`dirname "$(DSTROOT)"$(COQLIBINSTALL)/Coqprime/$$i`"; \
 	 install -m 0644 $$i "$(DSTROOT)"$(COQLIBINSTALL)/Coqprime/$$i; \

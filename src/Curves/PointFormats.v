@@ -135,50 +135,7 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
 
   (* NOTE: these should serve as an example for using field *)
 
-  Lemma mul_nonzero_l : forall a b, a*b <> 0 -> a <> 0.
-    intros; intuition; subst.
-    assert (0 * b = 0) by field; intuition.
-  Qed.
 
-  Lemma mul_nonzero_r : forall a b, a*b <> 0 -> b <> 0.
-    intros; intuition; subst.
-    assert (a0 * 0 = 0) by field; intuition.
-  Qed.
-
-  Definition GF_eq_dec : forall x y : GF, {x = y} + {x <> y}.
-    intros.
-    assert (H := Z.eq_dec (inject x) (inject y)).
-
-    destruct H.
-    
-    - left; galois; intuition.
-
-    - right; intuition.
-      rewrite H in n.
-      assert (y = y); intuition.
-  Qed.
-
-  Lemma mul_zero_why : forall a b, a*b = 0 -> a = 0 \/ b = 0.
-    intros.
-    assert (Z := GF_eq_dec a0 0); destruct Z.
-
-    - left; intuition.
-
-    - assert (a0 * b / a0 = 0) by
-        ( rewrite H; field; intuition ).
-
-      field_simplify in H0.
-      replace (b/1) with b in H0 by (field; intuition).
-      right; intuition.
-      apply n in H0; intuition.
-  Qed.
-
-  Lemma mul_nonzero_nonzero : forall a b, a <> 0 -> b <> 0 -> a*b <> 0.
-    intros; intuition; subst.
-    apply mul_zero_why in H1.
-    destruct H1; subst; intuition.
-  Qed.
-  Hint Resolve mul_nonzero_nonzero.
 
   Lemma root_zero : forall (x: GF) (p: N), x^p = 0 -> x = 0.
     intros.
