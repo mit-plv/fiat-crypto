@@ -246,22 +246,20 @@ Module GaloisTheory (M: Modulus).
   Qed.
 
   Lemma GFexp'_pred : forall x p,
-    p <> 0
-    -> x <> 1%positive
+    x <> 1%positive
     -> GFexp' p x = GFexp' p (Pos.pred x) * p.
   Proof.
     intros; rewrite <- (Pos.succ_pred x) at 1; auto using GFexp'_pred'.
   Qed.
 
-  Lemma GFexp_pred : forall p x,
-    p <> 0
-    -> x <> 0%N
+  Lemma GFexp_pred : forall x p,
+    x <> 0%N
     -> p^x = p^N.pred x * p.
   Proof.
     destruct x; simpl; intuition.
-    destruct (Pos.eq_dec p0 1); subst; simpl; try ring.
+    destruct (Pos.eq_dec p 1); subst; simpl; try ring.
     rewrite GFexp'_pred by auto.
-    destruct p0; intuition.
+    destruct p; intuition.
   Qed.
 
   (* Show that GFinv actually defines multiplicative inverses *)
@@ -301,11 +299,16 @@ Module GaloisTheory (M: Modulus).
   Ltac modulus_bound :=
     pose proof (prime_ge_2 (primeToZ modulus) (proj2_sig modulus)); omega.
 
-  Lemma GFexp_Zpow : forall (a : GF) (a_nonzero : a <> 0)
+  Lemma GFToZ_inject : forall x, GFToZ (inject x) = (x mod primeToZ modulus)%Z.
+  Proof.
+    intros; unfold GFToZ, proj1_sig, inject; reflexivity.
+  Qed.
+
+  Lemma GFexp_Zpow : forall (a : GF)
     (k : Z) (k_nonneg : (0 <= k)%Z),
     a ^ (Z.to_N k) = ((GFToZ a) ^ k)%Z.
   Proof.
-    intros a a_nonzero.
+    intro a.
     apply natlike_ind; [ galois; symmetry; apply Z.mod_small; modulus_bound | ].
     intros k k_nonneg IHk.
     rewrite Z2N.inj_succ by auto.
@@ -314,11 +317,6 @@ Module GaloisTheory (M: Modulus).
     rewrite IHk.
     rewrite Z.pow_succ_r by auto.
     galois.
-  Qed.
-
-  Lemma GFToZ_inject : forall x, GFToZ (inject x) = (x mod primeToZ modulus)%Z.
-  Proof.
-    intros; unfold GFToZ, proj1_sig, inject; reflexivity.
   Qed.
 
   Lemma GF_Zmod : forall x, ((GFToZ x) mod primeToZ modulus = GFToZ x)%Z.
@@ -350,9 +348,32 @@ Module GaloisTheory (M: Modulus).
     }
   Qed.
 
-  Lemma GFexp_0 : forall e : N, e <> 0%N -> 0 ^ e = 0.
+  Lemma inject_Zmod : forall x y, inject x = inject y <-> (x mod primeToZ modulus = y mod primeToZ modulus)%Z.
   Proof.
-  Admitted.
+    split; intros A.
+    + apply gf_eq in A.
+      do 2 rewrite GFToZ_inject in A; auto.
+    + rewrite (inject_mod_eq x).
+      rewrite (inject_mod_eq y).
+      rewrite A; auto.
+  Qed.
+
+  Lemma GFexp_0 : forall e : N, (0 < e)%N -> 0 ^ e = 0.
+  Proof.
+    intros.
+    replace e with (Z.to_N (Z.of_N e)) by apply N2Z.id.
+    replace e with (N.succ (N.pred e)) by (apply N.succ_pred_pos; auto).
+    rewrite N2Z.inj_succ.
+    apply natlike_ind with (x := Z.of_N (N.pred e)); try reflexivity.
+    + intros x x_pos IHx.
+      rewrite Z2N.inj_succ by omega.
+      rewrite GFexp_pred by apply N.neq_succ_0. 
+      rewrite N.pred_succ.
+      rewrite IHx; ring.
+    + replace 0%Z with (Z.of_N 0%N) by auto.
+      rewrite <- N2Z.inj_le.
+      apply N.lt_le_pred; auto.
+  Qed.
 
   Lemma nonzero_Zmod_GF : forall a,
     (inject a <> 0) <-> (a mod primeToZ modulus <> 0)%Z.
@@ -383,5 +404,21 @@ Module GaloisTheory (M: Modulus).
     pose proof (Z.mod_pos_bound a (primeToZ modulus) modulus_pos).
    omega.
   Qed.
+
+  Lemma GF_mod_bound : forall (x : GF), (0 <= x < modulus)%Z.
+  Proof.
+    intros.
+    assert (0 < modulus)%Z as gt_0_modulus by modulus_bound.
+    pose proof (Z.mod_pos_bound x modulus gt_0_modulus).
+    rewrite <- (inject_eq x).
+    unfold GFToZ, inject in *.
+    auto.
+  Qed.
+
+  Lemma GF_minus_plus : forall x y z, x + y = z <-> x = z - y.
+  Proof.
+    split; intros A; [ symmetry in A | ]; rewrite A; ring.
+  Qed.
+
 
 End GaloisTheory.

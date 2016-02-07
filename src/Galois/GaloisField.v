@@ -116,4 +116,128 @@ Module GaloisField (M: Modulus).
      div GFmorph_div_theory,
      power_tac GFpower_theory [GFexp_tac]). 
 
+  Local Open Scope GF_scope.
+
+  Lemma GF_mul_eq : forall x y z, z <> 0 -> x * z = y * z -> x = y.
+  Proof.
+    intros ? ? ? z_nonzero mul_z_eq.
+    replace x with (x * 1) by field.
+    rewrite <- (GF_multiplicative_inverse z_nonzero).
+    replace (x * (GFinv z * z)) with ((x * z) * GFinv z) by ring.
+    rewrite mul_z_eq.
+    replace (y * z * GFinv z) with (y * (GFinv z * z)) by ring.
+    rewrite GF_multiplicative_inverse; auto; field.
+  Qed.
+
+  Lemma GF_mul_0_l : forall x, 0 * x = 0.
+  Proof.
+    intros; field.
+  Qed.
+
+  Lemma GF_mul_0_r : forall x, x * 0 = 0.
+  Proof.
+    intros; field.
+  Qed.
+
+  Definition GF_eq_dec : forall x y : GF, {x = y} + {x <> y}.
+    intros.
+    assert (H := Z.eq_dec (inject x) (inject y)).
+
+    destruct H.
+    
+    - left; galois; intuition.
+
+    - right; intuition.
+      rewrite H in n.
+      assert (y = y); intuition.
+  Qed.
+
+    Lemma mul_nonzero_l : forall a b, a*b <> 0 -> a <> 0.
+    intros; intuition; subst.
+    assert (0 * b = 0) by field; intuition.
+  Qed.
+
+  Lemma mul_nonzero_r : forall a b, a*b <> 0 -> b <> 0.
+    intros; intuition; subst.
+    assert (a * 0 = 0) by field; intuition.
+  Qed.
+
+  Lemma mul_zero_why : forall a b, a*b = 0 -> a = 0 \/ b = 0.
+    intros.
+    assert (Z := GF_eq_dec a 0); destruct Z.
+
+    - left; intuition.
+
+    - assert (a * b / a = 0) by
+        ( rewrite H; field; intuition ).
+
+      field_simplify in H0.
+      replace (b/1) with b in H0 by (field; intuition).
+      right; intuition.
+      apply n in H0; intuition.
+  Qed.
+
+  Lemma mul_nonzero_nonzero : forall a b, a <> 0 -> b <> 0 -> a*b <> 0.
+    intros; intuition; subst.
+    apply mul_zero_why in H1.
+    destruct H1; subst; intuition.
+  Qed.
+  Hint Resolve mul_nonzero_nonzero.
+
+  Lemma GFexp_distr_mul : forall x y z, (0 <= z)%N ->
+    (x ^ z) * (y ^ z) = (x * y) ^ z.
+  Proof.
+    intros.
+    replace z with (Z.to_N (Z.of_N z)) by apply N2Z.id.
+    apply natlike_ind with (x := Z.of_N z); simpl; [ field | | 
+      replace 0%Z with (Z.of_N 0%N) by auto; apply N2Z.inj_le; auto].
+    intros z' z'_nonneg IHz'.
+    rewrite Z2N.inj_succ by auto.
+    rewrite (GFexp_pred x) by apply N.neq_succ_0.
+    rewrite (GFexp_pred y) by apply N.neq_succ_0.
+    rewrite (GFexp_pred (x * y)) by apply N.neq_succ_0.
+    rewrite N.pred_succ.
+    rewrite <- IHz'.
+    field.
+  Qed.
+
+  Lemma GF_square_mul : forall x y z, (y <> 0) ->
+    x ^ 2 = z * y ^ 2 -> exists sqrt_z, sqrt_z ^ 2 = z.
+  Proof.
+    intros ? ? ? y_nonzero A.
+    exists (x / y).
+    assert ((x / y) ^ 2 = x ^ 2 / y ^ 2) as square_distr_div. {
+      unfold GFdiv, GFexp, GFexp'.
+      replace (GFinv (y * y)) with (GFinv y * GFinv y); try ring.
+      unfold GFinv.
+      destruct (N.eq_dec (N.pred (totientToN totient)) 0) as [ eq_zero | neq_zero ];
+        [ rewrite eq_zero | rewrite GFexp_distr_mul ]; try field.
+      simpl.
+      do 2 rewrite <- Z2N.inj_pred.
+      replace 0%N with (Z.to_N 0%Z) by auto.
+      apply Z2N.inj_le; modulus_bound.
+    }
+    assert (y ^ 2 <> 0) as y2_nonzero by (apply mul_nonzero_nonzero; auto).
+    rewrite (GF_mul_eq _ z (y ^ 2)); auto.
+    unfold GFdiv.
+    rewrite <- A.
+    field; auto.
+  Qed.
+
+  Lemma sqrt_solutions : forall x y, y ^ 2 = x ^ 2 -> y = x \/ y = GFopp x.
+  Proof.
+    intros.
+    (* TODO(jadep) *)
+  Admitted.
+
+  Lemma GFopp_swap : forall x y, GFopp x = y <-> x = GFopp y.
+  Proof.
+    split; intro; subst; field.
+  Qed.
+
+  Lemma GFopp_involutive : forall x, GFopp (GFopp x) = x.
+  Proof.
+    intros; field.
+  Qed.
+
 End GaloisField.
