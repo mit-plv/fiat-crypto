@@ -95,156 +95,38 @@ Module GF25519Base25Point5Params <: PseudoMersenneBaseParams Base25Point5_10limb
   Proof.
     rewrite Zle_is_le_bool; auto.
   Qed.
+
+  Lemma base_range : forall i, 0 <= nth_default 0 log_base i <= k.
+  Proof.
+    intros i.
+    destruct (lt_dec i (length log_base)) as [H|H].
+    { repeat (destruct i as [|i]; [cbv; intuition; discriminate|simpl in H; try omega]). }
+    { rewrite nth_default_eq, nth_overflow by omega. cbv. intuition; discriminate. }
+  Qed.
+
+  Lemma base_monotonic: forall i : nat, (i < pred (length log_base))%nat ->
+      (0 <= nth_default 0 log_base i <= nth_default 0 log_base (S i)).
+  Proof.
+  intros i H.
+  repeat (destruct i; [cbv; intuition; congruence|]); 
+      contradict H; cbv; firstorder.
+  Qed.      
 End GF25519Base25Point5Params.
 
 Module GF25519Base25Point5 := GFPseudoMersenneBase Base25Point5_10limbs Modulus25519 GF25519Base25Point5Params.
 
-Ltac expand_list ls :=
-  let Hlen := fresh "Hlen" in
-  match goal with [H: ls = ?lsdef |- _ ] =>
-      assert (Hlen:length ls=length lsdef) by (f_equal; exact H)
-  end;
-  simpl in Hlen;
-  repeat progress (let n:=fresh ls in destruct ls as [|n ]; try solve [revert Hlen; clear; discriminate]);
-  clear Hlen.
-
-Ltac letify r :=
-  match goal with
-  | [ H' : r = _ |- _ ] =>
-    match goal with
-    | [ H : ?x = ?e |- _ ] =>
-      is_var x;
-      match goal with (* only letify equations that appear nowhere other than r *)
-      | _ => clear H H' x; fail 1
-      | _ => fail 2
-      end || idtac;
-      pattern x in H';
-      match type of H' with
-      | (fun z => r = @?e' z) x =>
-        let H'' := fresh "H" in
-        assert (H'' : r = let x := e in e' x) by
-          (* congruence is slower for every subsequent letify *)
-          (rewrite H'; subst x; reflexivity);
-        clear H'; subst x; rename H'' into H'; cbv beta in H'
-      end
-    end
-  end.
-
-Ltac expand_list_equalities := repeat match goal with
-  | [H: (?x::?xs = ?y::?ys) |- _ ] =>
-      let eq_head := fresh "Heq" x in
-      assert (x = y) as eq_head by (eauto using cons_eq_head);
-      assert (xs = ys) by (eauto using cons_eq_tail);
-      clear H
-  | [H:?x = ?x|-_] => clear H
-end.
-
 Section GF25519Base25Point5Formula.
-  Import GF25519Base25Point5.
+  Import GF25519Base25Point5 Base25Point5_10limbs GF25519Base25Point5 GF25519Base25Point5Params.
   Import Field.
 
-  Hint Rewrite
-    Z.mul_0_l
-    Z.mul_0_r
-    Z.mul_1_l
-    Z.mul_1_r
-    Z.add_0_l
-    Z.add_0_r
-    Z.add_assoc
-    Z.mul_assoc
-    : Z_identities.
+Definition Z_add_opt := Eval compute in Z.add.
+Definition Z_sub_opt := Eval compute in Z.sub.
+Definition Z_mul_opt := Eval compute in Z.mul.
+Definition Z_div_opt := Eval compute in Z.div.
+Definition Z_pow_opt := Eval compute in Z.pow.
 
-  Ltac deriveModularMultiplicationWithCarries carryscript :=
-  let h := fresh "h" in
-  let fg := fresh "fg" in
-  let Hfg := fresh "Hfg" in
-  intros;
-  repeat match goal with
-  | [ Hf: rep ?fs ?f, Hg: rep ?gs ?g |- rep _ ?ret ] =>
-      remember (carry_sequence carryscript (mul fs gs)) as fg;
-      assert (rep fg ret) as Hfg; [subst fg; apply carry_sequence_rep, mul_rep; eauto|]
-  | [ H: In ?x carryscript |- ?x < ?bound ] => abstract (revert H; clear; cbv; intros; repeat break_or_hyp; intuition)
-  | [ Heqfg: fg = carry_sequence _ (mul _ _) |- rep _ ?ret ] =>
-      (* expand bignum multiplication *)
-      cbv [plus
-        seq rev app length map fold_right fold_left skipn firstn nth_default nth_error value error
-        mul reduce B.add Base25Point5_10limbs.base GF25519Base25Point5Params.c
-        E.add E.mul E.mul' E.mul_each E.mul_bi E.mul_bi' E.zeros EC.base] in Heqfg;
-      repeat match goal with [H:context[E.crosscoef ?a ?b] |- _ ] => (* do this early for speed *)
-          let c := fresh "c" in set (c := E.crosscoef a b) in H; compute in c; subst c end;
-      autorewrite with Z_identities in Heqfg;
-      (* speparate out carries *)
-      match type of Heqfg with fg = carry_sequence _ ?hdef => remember hdef as h end;
-      (* one equation per limb *)
-      expand_list h; expand_list_equalities;
-      (* expand carry *)
-      cbv [GF25519Base25Point5.carry_sequence fold_right rev app] in Heqfg
-  | [H1: ?a = ?b, H2: ?b = ?c |- _ ] => subst a
-  | [Hfg: context[carry ?i (?x::?xs)] |- _ ] => (* simplify carry *)
-      let cr := fresh "cr" in
-      remember (carry i (x::xs)) as cr in Hfg;
-      match goal with [ Heq : cr = ?crdef |- _ ] =>
-          (* is there any simpler way to do this? *)
-          cbv [carry carry_simple carry_and_reduce] in Heq;
-          simpl eq_nat_dec in Heq; cbv iota beta in Heq;
-          cbv [set_nth nth_default nth_error value add_to_nth] in Heq;
-          expand_list cr; expand_list_equalities
-      end
-  | [H: context[cap ?i] |- _ ] => let c := fresh "c" in remember (cap i) as c in H;
-      match goal with [Heqc: c = cap i |- _ ] =>
-          (* is there any simpler way to do this? *)
-          unfold cap, Base25Point5_10limbs.base in Heqc;
-          simpl eq_nat_dec in Heqc;
-          cbv [nth_default nth_error value error] in Heqc;
-          simpl map in Heqc;
-          cbv [GF25519Base25Point5Params.k] in Heqc
-      end;
-      subst c;
-      repeat rewrite Zdiv_1_r in H;
-      repeat rewrite two_power_pos_equiv in H;
-      repeat rewrite <- Z.pow_sub_r in H by (abstract (clear; firstorder));
-      repeat rewrite <- Z.land_ones in H by (abstract (apply Z.leb_le; reflexivity));
-      repeat rewrite <- Z.shiftr_div_pow2 in H by (abstract (apply Z.leb_le; reflexivity));
-      simpl Z.sub in H;
-      unfold  GF25519Base25Point5Params.c in H
-  | [H: context[Z.ones ?l] |- _ ] =>
-          (* postponing this to the main loop makes the autorewrite slow *)
-        let c := fresh "c" in set (c := Z.ones l) in H; compute in c; subst c
-  | [ |- _ ] => abstract (solve [auto])
-  | [ |- _ ] => progress intros
-  end.
-
-  Lemma GF25519Base25Point5_mul_reduce_formula :
-    forall f0 f1 f2 f3 f4 f5 f6 f7 f8 f9
-      g0 g1 g2 g3 g4 g5 g6 g7 g8 g9,
-      {ls | forall f g, rep [f0;f1;f2;f3;f4;f5;f6;f7;f8;f9] f
-                        -> rep [g0;g1;g2;g3;g4;g5;g6;g7;g8;g9] g
-                        -> rep ls (f*g)%GF}.
-  Proof.
-
-    eexists.
-
-    let carryscript := constr:(rev [0;1;2;3;4;5;6;7;8;9;0]) in
-    let h := fresh "h" in
-  let fg := fresh "fg" in
-  let Hfg := fresh "Hfg" in
-  intros;
-  lazymatch goal with
-  | [ Hf: rep ?fs ?f, Hg: rep ?gs ?g |- rep _ ?ret ] =>
-      remember (carry_sequence carryscript (mul fs gs)) as fg;
-      assert (rep fg ret) as Hfg; [subst fg; apply carry_sequence_rep, mul_rep; eauto|]
-  end.
-    intros.
-  let carryscript := constr:(rev [0;1;2;3;4;5;6;7;8;9;0]) in
-  match goal with
-  | [ H: In ?x carryscript |- ?x < ?bound ] => abstract (revert H; clear; cbv; intros; repeat break_or_hyp; intuition)
-end.
-Print mul.
-Print E.mul'.
-Print E.crosscoef.
-Print E.mul'.
-
-Print E.mul_bi'.
+Definition nth_default_opt {A} := Eval compute in @nth_default A.
+Definition map_opt {A B} := Eval compute in @map A B.
 
 Ltac opt_step :=
   match goal with
@@ -252,8 +134,6 @@ Ltac opt_step :=
     => refine (_ : match e with nil => _ | _ => _ end = _);
        destruct e
   end.
-
-Definition nth_default_opt {A} := Eval compute in @nth_default A.
 
 Definition E_mul_bi'_step
            (mul_bi' : nat -> E.digits -> list Z)
@@ -264,9 +144,6 @@ Definition E_mul_bi'_step
      | v :: vsr' => (v * E.crosscoef i (length vsr'))%Z :: mul_bi' i vsr'
      end.
 
-Definition Z_div_opt := Eval compute in Z.div.
-Definition Z_mul_opt := Eval compute in Z.mul.
-
 Definition E_mul_bi'_opt_step_sig
            (mul_bi' : nat -> E.digits -> list Z)
            (i : nat) (vsr : E.digits)
@@ -276,12 +153,12 @@ Proof.
   cbv [E_mul_bi'_step].
   opt_step.
   { reflexivity. }
-  { cbv [E.crosscoef].
+  { cbv [E.crosscoef EC.base Base25Point5_10limbs.base].
     change Z.div with Z_div_opt.
-    change Z.mul with Z_mul_opt at 2.
-    let c := (eval compute in EC.base) in
-    change EC.base with c.
+    change Z.pow with Z_pow_opt.
+    change Z.mul with Z_mul_opt at 2 3 4 5.
     change @nth_default with @nth_default_opt.
+    change @map with @map_opt.
     reflexivity. }
 Defined.
 
@@ -303,15 +180,16 @@ Definition E_mul_bi'_opt_correct
 Proof.
   revert i; induction vsr as [|vsr vsrs IHvsr]; intros.
   { reflexivity. }
-  { simpl.
+  { simpl E.mul_bi'.
     rewrite <- IHvsr; clear IHvsr.
+    unfold E_mul_bi'_opt, E_mul_bi'_opt_step.
     apply f_equal2; [ | reflexivity ].
-    cbv [E.crosscoef].
-    change Z_div_opt with Z.div.
-    change Z_mul_opt with Z.mul.
-    let c := (eval compute in EC.base) in
-    change EC.base with c.
+    cbv [E.crosscoef EC.base Base25Point5_10limbs.base].
+    change Z.div with Z_div_opt.
+    change Z.pow with Z_pow_opt.
+    change Z.mul with Z_mul_opt at 2.
     change @nth_default with @nth_default_opt.
+    change @map with @map_opt.
     reflexivity. }
 Qed.
 
@@ -382,22 +260,6 @@ Definition mul_opt_correct us vs
   : mul_opt us vs = mul us vs
   := proj2_sig (mul_opt_sig us vs).
 
-rewrite <- mul_opt_correct in Heqfg.
-Set Printing Depth 1000000.
-let carryscript := constr:(rev [0;1;2;3;4;5;6;7;8;9;0]) in
-match goal with
-| [ Heqfg: fg = carry_sequence _ (mul_opt _ _) |- rep _ ?ret ] =>
-      (* expand bignum multiplication *)
-      cbv [plus
-        seq rev app length map fold_right fold_left skipn firstn nth_default nth_error value error
-        mul reduce B.add Base25Point5_10limbs.base GF25519Base25Point5Params.c
-        E.add E.mul E.mul' E.mul_each E.mul_bi E.mul_bi' E.zeros EC.base mul_opt length E_mul'_opt E_mul'_opt_step plus E_mul_bi'_opt E_mul_bi'_opt_step nth_default_opt Z_div_opt Z_mul_opt Base25Point5_10limbs.log_base] in Heqfg;
-        autorewrite with Z_identities in Heqfg
-end.
-
-
-Print carry.
-
 Lemma beq_nat_eq_nat_dec {R} (x y : nat) (a b : R)
   : (if EqNat.beq_nat x y then a else b) = (if eq_nat_dec x y then a else b).
 Proof.
@@ -406,7 +268,7 @@ Proof.
     | rewrite (proj2 (@beq_nat_false_iff _ _) H); reflexivity ].
 Qed.
 
-Lemma pull_app_if_bool {A B} (b : bool) (f g : A -> B) (x : A)
+Lemma pull_app_if_sumbool {A B X Y} (b : sumbool X Y) (f g : A -> B) (x : A)
   : (if b then f x else g x) = (if b then f else g) x.
 Proof.
   destruct b; reflexivity.
@@ -419,139 +281,96 @@ Proof.
   nth_tac.
 Qed.
 
-Definition Z_pow_opt := Eval compute in Z.pow.
-Definition Z_sub_opt := Eval compute in Z.sub.
-Definition map_opt {A B} := Eval compute in @map A B.
-Definition cap_opt_sig
+Definition log_cap_opt_sig
            (i : nat)
-  : { z : Z | z = cap i }.
+  : { z : Z | i < length (Base25Point5_10limbs.log_base) -> (2^z)%Z = cap i }.
 Proof.
   eexists.
   cbv [cap Base25Point5_10limbs.base].
-  rewrite <- beq_nat_eq_nat_dec.
-Local Arguments beq_nat !_ !_.
-Local Arguments Compare_dec.leb !_ !_.
-Lemma beq_to_leb_specialized i ls k
-  : (if beq_nat i (pred (length ls))
-     then k / nth_default 0 ls i
-     else nth_default 0 ls (S i) / nth_default 0 ls i)%Z
-    = (if Compare_dec.leb (pred (length ls)) i
-       then k / nth_default 0 ls i
-       else nth_default 0 ls (S i) / nth_default 0 ls i)%Z.
-Proof.
-  destruct ls as [|? ls]; destruct i as [|i]; simpl; try reflexivity.
-  { unfold nth_default; simpl.
-    rewrite !Zdiv_0_r; reflexivity. }
-  { destruct ls as [|? ls]; simpl; reflexivity. }
-  { destruct (beq_nat (S i) (length ls)) eqn:H';
-    [ apply beq_nat_true in H'
-    | apply beq_nat_false in H' ].
-    { destruct ls; simpl in *; [ congruence | inversion H'; clear H'; subst ].
-      rewrite leb_correct by reflexivity.
-      reflexivity. }
-    { generalize dependent (S i); clear i; intro i; intros;
-      destruct (Compare_dec.leb (length ls) i) eqn:H;
-        [ apply leb_complete in H
-        | apply leb_complete_conv in H ].
-      { rewrite !nth_default_out_of_bounds by (simpl; omega).
-        rewrite !Zdiv_0_r; reflexivity. }
-      { reflexivity. } } }
-Qed.
-  rewrite beq_to_leb_specialized.
-  match goal with
-  | [ |- _ = if _ then ?f (nth_default ?d ?ls ?i) else _ ]
-    => rewrite <- (map_nth_default_always f i d ls)
-  end.
-  rewrite map_map, Zdiv_0_r.
+  intros.
+  rewrite map_length in *.
+  About map_nth_default.
+  erewrite map_nth_default; [|assumption].
+  instantiate (2 := 0%Z).
   (** For the division of maps of (2 ^ _) over lists, replace it with 2 ^ (_ - _) *)
+  
   lazymatch goal with
-  | [ |- _ = (if Compare_dec.leb ?a ?b then ?c else (nth_default 0 (map (fun x => 2 ^ x) ?ls) ?i / nth_default 0 (map (fun x => 2 ^ x) ?ls) ?j)%Z) ]
-    => transitivity (if Compare_dec.leb a b then c else 2 ^ (nth_default 0 ls i - nth_default 0 ls j))%Z;
-         [
-         | let H := fresh in
-           destruct (Compare_dec.leb a b) eqn:H;
-           [ apply leb_complete in H; reflexivity
-           | apply leb_complete_conv in H;
-             rewrite map_length in H;
-             let f := constr:(fun x => 2 ^ x)%Z in
-             rewrite (map_nth_default _ _ f i 0%Z 0%Z ls), (map_nth_default _ _ f j 0%Z 0%Z ls) by omega ] ]
+  | [ |- _ = (if eq_nat_dec ?a ?b then (2^?x/2^?y)%Z else (nth_default 0 (map (fun x => (2^x)%Z) ?ls) ?si / 2^?d)%Z)  ]
+    => transitivity (2^if eq_nat_dec a b then (x-y)%Z else nth_default 0 ls si - d)%Z;
+        [ apply f_equal | break_if ]
   end.
+  
   Focus 2.
-  { (** TODO: need sortedness for side conditions *)
-    rewrite <- Z.pow_sub_r; [ reflexivity | .. ].
+  apply Z.pow_sub_r; [clear;firstorder|apply base_range].
+  Focus 2.
+  erewrite map_nth_default by (omega); instantiate (1 := 0%Z).
+  rewrite <- Z.pow_sub_r; [ reflexivity | .. ].
     { clear; abstract firstorder. }
-    { unfold Base25Point5_10limbs.log_base, nth_default;
-      do 11 (simpl; try (clear i; clear; abstract firstorder);
-             try destruct i as [|i]; simpl);
-      try (clear; abstract firstorder).
-      simpl in *.
-      exfalso; omega. } }
+    { apply base_monotonic. omega. }
   Unfocus.
-  (** To do this with the other case, you'd need to know that every element of log_base <= GF25519Base25Point5Params.k, or something like that.  Here's the starter code: *)
-  lazymatch goal with
-  | [ |- _ = (if Compare_dec.leb ?a ?b then nth_default 0%Z (map ?f ?ls) ?i else ?c) ]
-    => etransitivity;
-         [
-         | refine (_ : (if Compare_dec.leb a b then nth_default 0%Z (map _ ls) i else c) = _);
-           instantiate (* propogate evar instantiations between goals *);
-           let H := fresh in
-           destruct (Compare_dec.leb a b) eqn:H;
-           [ apply leb_complete in H; apply f_equal2; [ | reflexivity ]
-           | reflexivity ] ]
-  end.
-  Focus 2.
-  { (** Here, you'd use a lemma that says [(forall x, In x ls -> f x = g x) -> map f ls = map g ls] *)
-    (** Then, you'd rewrite with [Z.pow_sub_r] using the condition mentioned above.  For now, we just use [change] and [reflexivity] instead. *)
-    change Z.div with Z_div_opt.
-    change Z.pow with Z_pow_opt.
-    reflexivity. }
-  Unfocus.
-  change Z.pow with Z_pow_opt at 1.
+  rewrite <-beq_nat_eq_nat_dec.
   change Z.sub with Z_sub_opt.
   change @nth_default with @nth_default_opt.
   change @map with @map_opt.
   reflexivity.
 Defined.
 
-Definition cap_opt (i : nat)
-  := Eval cbv [proj1_sig cap_opt_sig] in proj1_sig (cap_opt_sig i).
+Definition log_cap_opt (i : nat)
+  := Eval cbv [proj1_sig log_cap_opt_sig] in proj1_sig (log_cap_opt_sig i).
 
-Definition cap_opt_correct (i : nat)
-  : cap_opt i = cap i
-  := proj2_sig (cap_opt_sig i).
+Definition log_cap_opt_correct (i : nat)
+  : i < length Base25Point5_10limbs.log_base -> (2^log_cap_opt i = cap i)%Z
+  := proj2_sig (log_cap_opt_sig i).
 
 Definition carry_opt_sig
            (i : nat) (b : B.digits)
-  : { d : B.digits | d = carry i b }.
+  : { d : B.digits | i < length Base25Point5_10limbs.log_base -> d = carry i b }.
 Proof.
-  eexists.
+  eexists ; intros.
   cbv [carry].
-  rewrite <- beq_nat_eq_nat_dec, <- pull_app_if_bool.
+  rewrite <- pull_app_if_sumbool.
   cbv beta delta [carry_and_reduce carry_simple add_to_nth Base25Point5_10limbs.base].
+  rewrite map_length.
+  repeat lazymatch goal with
+         | [ |- context[cap ?i] ]
+           => replace (cap i) with (2^log_cap_opt i)%Z by (apply log_cap_opt_correct; assumption)
+  end.
+  lazymatch goal with
+  | [ |- _ = (if ?br then ?c else ?d) ]
+    => let x := fresh "x" in let y := fresh "y" in evar (x:B.digits); evar (y:B.digits); transitivity (if br then x else y); subst x; subst y
+  end.
+  Focus 2.
+  cbv zeta.
+  break_if;
+    rewrite <- Z.land_ones, <- Z.shiftr_div_pow2 by (
+        pose proof (base_range i); pose proof (base_monotonic i);
+        change @nth_default with @nth_default_opt in *;
+        cbv beta delta [log_cap_opt]; rewrite beq_nat_eq_nat_dec; break_if; change Z_sub_opt with Z.sub; omega);
+    reflexivity.
   change @nth_default with @nth_default_opt.
   change @map with @map_opt.
-  repeat match goal with
-         | [ |- context[cap ?i] ]
-           => replace (cap i) with (cap_opt i) by (rewrite cap_opt_correct; reflexivity)
-         end.
+  rewrite <- @beq_nat_eq_nat_dec.
   reflexivity.
 Defined.
 
 Definition carry_opt i b
   := Eval cbv beta iota delta [proj1_sig carry_opt_sig] in proj1_sig (carry_opt_sig i b).
 
-Definition carry_opt_correct i b : carry_opt i b = carry i b := proj2_sig (carry_opt_sig i b).
+Definition carry_opt_correct i b : i < length Base25Point5_10limbs.log_base -> carry_opt i b = carry i b := proj2_sig (carry_opt_sig i b).
 
 Definition carry_sequence_opt_sig (is : list nat) (us : B.digits)
-  : { b : B.digits | b = carry_sequence is us }.
+  : { b : B.digits | (forall i, In i is -> i < length Base25Point5_10limbs.log_base) -> b = carry_sequence is us }.
 Proof.
-  eexists.
+  eexists. intros H.
   cbv [carry_sequence].
   transitivity (fold_right carry_opt us is).
   Focus 2.
   { induction is; [ reflexivity | ].
     simpl; rewrite IHis, carry_opt_correct.
-    reflexivity. }
+    - reflexivity.
+    - apply H; apply in_eq.
+    - intros. apply H. right. auto.
+    }
   Unfocus.
   reflexivity.
 Defined.
@@ -560,7 +379,7 @@ Definition carry_sequence_opt is us := Eval cbv [proj1_sig carry_sequence_opt_si
                                         proj1_sig (carry_sequence_opt_sig is us).
 
 Definition carry_sequence_opt_correct is us
-  : carry_sequence_opt is us = carry_sequence is us
+  : (forall i, In i is -> i < length Base25Point5_10limbs.log_base) -> carry_sequence_opt is us = carry_sequence is us
   := proj2_sig (carry_sequence_opt_sig is us).
 
 Definition Let_In {A P} (x : A) (f : forall y : A, P y)
@@ -571,43 +390,61 @@ Definition carry_opt_cps_sig
            (i : nat)
            (f : B.digits -> T)
            (b : B.digits)
-  : { d : T | d = f (carry i b) }.
+  : { d : T |  i < length Base25Point5_10limbs.log_base -> d = f (carry i b) }.
 Proof.
-  eexists.
-  rewrite <- carry_opt_correct.
+  eexists. intros H.
+  rewrite <- carry_opt_correct by assumption.
   cbv beta iota delta [carry_opt].
-  lazymatch goal with
-  | [ |- ?LHS = ?f (if ?b
-                    then let di := ?dv in @?A di
-                    else let di := ?dv in @?B di) ]
-    => change (LHS = Let_In dv (fun di => f (if b then A di else B di)))
+  (* TODO: how to match the goal here? Alternatively, rewrite under let binders in carry_opt_sig and remove cbv zeta and restore original match from jgross's commit *)
+  lazymatch goal with [ |- ?LHS = _ ] =>
+  change (LHS = Let_In (nth_default_opt 0%Z b i) (fun di => (f (if beq_nat i (pred (length Base25Point5_10limbs.log_base))
+      then
+       set_nth 0
+         (c *
+          Z.shiftr (di) (log_cap_opt i) +
+          nth_default_opt 0
+            (set_nth i (Z.land di (Z.ones (log_cap_opt i)))
+               b) 0)%Z
+         (set_nth i (Z.land (nth_default_opt 0%Z b i) (Z.ones (log_cap_opt i))) b)
+      else
+       set_nth (S i)
+         (Z.shiftr (di) (log_cap_opt i) +
+          nth_default_opt 0
+            (set_nth i (Z.land (di) (Z.ones (log_cap_opt i)))
+               b) (S i))%Z
+         (set_nth i (Z.land (nth_default_opt 0%Z b i) (Z.ones (log_cap_opt i))) b)))))
   end.
-  cbv beta.
   reflexivity.
 Defined.
 
 Definition carry_opt_cps {T} i f b
   := Eval cbv beta iota delta [proj1_sig carry_opt_cps_sig] in proj1_sig (@carry_opt_cps_sig T i f b).
 
-Definition carry_opt_cps_correct {T} i f b : @carry_opt_cps T i f b = f (carry i b)
+Definition carry_opt_cps_correct {T} i f b :
+  i < length Base25Point5_10limbs.log_base ->
+  @carry_opt_cps T i f b = f (carry i b)
   := proj2_sig (carry_opt_cps_sig i f b).
 
 Definition carry_sequence_opt_cps_sig (is : list nat) (us : B.digits)
-  : { b : B.digits | b = carry_sequence is us }.
+  : { b : B.digits | (forall i, In i is -> i < length Base25Point5_10limbs.log_base) -> b = carry_sequence is us }.
 Proof.
   eexists.
   cbv [carry_sequence].
   transitivity (fold_right carry_opt_cps id (List.rev is) us).
   Focus 2.
-  { remember (rev is) as ris eqn:Heq.
+  { 
+    assert (forall i, In i (rev is) -> i < length Base25Point5_10limbs.log_base) as Hr. {
+      subst. intros. rewrite <- in_rev in *. auto. }
+    remember (rev is) as ris eqn:Heq.
     rewrite <- (rev_involutive is), <- Heq.
-    clear Heq is.
+    clear H Heq is.
     rewrite fold_left_rev_right.
     revert us; induction ris; [ reflexivity | ]; intros.
     { simpl.
-      rewrite <- IHris; clear IHris.
-      rewrite carry_opt_cps_correct.
-      reflexivity. } }
+      rewrite <- IHris; clear IHris; [|intros; apply Hr; right; assumption].
+      rewrite carry_opt_cps_correct; [reflexivity|].
+      apply Hr; left; reflexivity.
+      } }
   Unfocus.
   reflexivity.
 Defined.
@@ -616,110 +453,75 @@ Definition carry_sequence_opt_cps is us := Eval cbv [proj1_sig carry_sequence_op
                                             proj1_sig (carry_sequence_opt_cps_sig is us).
 
 Definition carry_sequence_opt_cps_correct is us
-  : carry_sequence_opt_cps is us = carry_sequence is us
+  : (forall i, In i is -> i < length Base25Point5_10limbs.log_base) -> carry_sequence_opt_cps is us = carry_sequence is us
   := proj2_sig (carry_sequence_opt_cps_sig is us).
-(*match goal with [ Heqfg: fg = carry_sequence _ ?hdef |- _ ] => remember hdef as h end;
-  (* one equation per limb *)
-  expand_list h; expand_list_equalities.
-      cbv [GF25519Base25Point5.carry_sequence fold_right rev app] in Heqfg.*)
 
-rewrite <- carry_sequence_opt_cps_correct in Heqfg.
-cbv beta iota delta [carry_sequence_opt_cps fold_right List.rev List.app] in Heqfg.
-cbv [carry_opt_cps Compare_dec.leb beq_nat pred length Base25Point5_10limbs.log_base nth_default_opt set_nth cap_opt Z_div_opt Z_div_opt Z_pow_opt Z_sub_opt GF25519Base25Point5Params.k GF25519Base25Point5Params.c id map_opt] in Heqfg.
-
-
-(*** HERE *)
-
-unfold carry_opt_cps at 1 in Heqfg.
-cbv [Compare_dec.leb beq_nat pred length Base25Point5_10limbs.log_base nth_default_opt set_nth Z_div_opt Z_div_opt Z_pow_opt Z_sub_opt GF25519Base25Point5Params.k GF25519Base25Point5Params.c id map_opt] in Heqfg.
-cbv [cap_opt pred length Base25Point5_10limbs.log_base map_opt nth_default_opt] in Heqfg.
-cbv beta iota delta [Let_In] in Heqfg.
-
-
-      subst c;
-      repeat rewrite Zdiv_1_r in H;
-      repeat rewrite two_power_pos_equiv in H;
-      repeat rewrite <- Z.pow_sub_r in H by (abstract (clear; firstorder));
-      repeat rewrite <- Z.land_ones in H by (abstract (apply Z.leb_le; reflexivity));
-      repeat rewrite <- Z.shiftr_div_pow2 in H by (abstract (apply Z.leb_le; reflexivity));
-      simpl Z.sub in H;
-      unfold  GF25519Base25Point5Params.c in H
-  | [H: context[Z.ones ?l] |- _ ] =>
-          (* postponing this to the main loop makes the autorewrite slow *)
-        let c := fresh "c" in set (c := Z.ones l) in H; compute in c; subst c
-  | [ |- _ ] => abstract (solve [auto])
-  | [ |- _ ] => progress intros
-
-
-unfold carry_opt_cps at 1 in Heqfg.
-cbv [beq_nat pred length Base25Point5_10limbs.base nth_default_opt set_nth cap_opt Z_div_opt Z_pow_opt GF25519Base25Point5Params.k] in Heqfg.
-
-Print cap.
-  Print set_nth.
-  Print carry_and_reduce.
-  cbv [Base25Point5_10limbs.base].
-  Focus 2.
-  SearchAbout beq_nat.
-
-
-
-  SearchAbout EqNat.beq_nat.
-
-
-
-
-Print carry_sequence.
-
-Print fold_right.
-Definition fold_right_let {A B} (f : B -> A -> A) (a0 : A)
-  := fix fold_right_let (l : list B) : A :=
-       match l with
-       | nil => a0
-       | b :: t => Let_In b (fun b' => f b (fold_right_let t))
-       end.
-
-Definition fold_right_let_correct
-  : @fold_right_let = @fold_right.
+Lemma mul_opt_rep:
+  forall (u v : T) (x y : GF), rep u x -> rep v y -> rep (mul_opt u v) (x * y)%GF.
 Proof.
-  cbv [fold_right_let fold_right Let_In].
-  reflexivity.
+  intros.
+  rewrite mul_opt_correct.
+  auto using mul_rep.
 Qed.
 
-cbv [carry_sequence fold_right] in Heqfg.
-Print carry.
-
-rewrite <- fold_right_let_correct in Heqfg.
-cbv [fold_right_let] in Heqfg.
-cbv beta delta [Let_In] in Heqfg.
-change @fold_right with @fold_right_let in Heqfg.
-
-Definition carry_sequence_opt_sig
-           (is : list nat) (us : B.digits)
-  : { b : B.digits | b = carry_sequence is us }.
+Lemma carry_sequence_opt_cps_rep
+     : forall (is : list nat) (us : list Z) (x : GF),
+       (forall i : nat, In i is -> i < length Base25Point5_10limbs.base) ->
+       length us = length Base25Point5_10limbs.base ->
+       rep us x -> rep (carry_sequence_opt_cps is us) x.
 Proof.
-  eexists.
-  cbv [carry_sequence].
+  intros.
+  rewrite carry_sequence_opt_cps_correct by assumption.
+  apply carry_sequence_rep; assumption.
+Qed.
 
+Definition carry_mul_opt 
+           (is : list nat)
+           (us vs : list Z)
+           : list Z
+  := Eval cbv [B.add
+    E.add E.mul E.mul' E.mul_bi E.mul_bi' E.mul_each E.zeros EC.base E_mul'_opt
+    E_mul'_opt_step E_mul_bi'_opt E_mul_bi'_opt_step
+    List.app List.rev Z_div_opt Z_mul_opt Z_pow_opt
+    Z_sub_opt app beq_nat log_cap_opt carry_opt_cps carry_sequence_opt_cps error firstn
+    fold_left fold_right id length map map_opt mul mul_opt nth_default nth_default_opt
+    nth_error plus pred reduce rev seq set_nth skipn value base] in 
+    carry_sequence_opt_cps is (mul_opt us vs).
 
-Print Z.mul.
-Print Z.div.
-      repeat match goal with [H:context[E.crosscoef ?a ?b] |- _ ] => (* do this early for speed *)
-          let c := fresh "c" in set (c := E.crosscoef a b) in H; compute in c; subst c end;
-      autorewrite with Z_identities in Heqfg;
-      (* speparate out carries *)
-      match type of Heqfg with fg = carry_sequence _ ?hdef => remember hdef as h end;
-      (* one equation per limb *)
-      expand_list h; expand_list_equalities;
-      (* expand carry *)
-      cbv [GF25519Base25Point5.carry_sequence fold_right rev app] in Heqfg
-  end.
+Lemma carry_mul_opt_correct
+  : forall (is : list nat) (us vs : list Z) (x  y: GF),
+    rep us x -> rep vs y ->
+    (forall i : nat, In i is -> i < length Base25Point5_10limbs.base) ->
+    length (mul_opt us vs) = length base ->
+    rep (carry_mul_opt is us vs) (x*y)%GF.
+Proof.
+  intros is us vs x y; intros.
+  change (carry_mul_opt _ _ _) with (carry_sequence_opt_cps is (mul_opt us vs)).
+  apply carry_sequence_opt_cps_rep, mul_opt_rep; auto.
+Qed.
+  
 
+  Lemma GF25519Base25Point5_mul_reduce_formula :
+    forall f0 f1 f2 f3 f4 f5 f6 f7 f8 f9
+      g0 g1 g2 g3 g4 g5 g6 g7 g8 g9,
+      {ls | forall f g, rep [f0;f1;f2;f3;f4;f5;f6;f7;f8;f9] f
+                        -> rep [g0;g1;g2;g3;g4;g5;g6;g7;g8;g9] g
+                        -> rep ls (f*g)%GF}.
+  Proof.
+    eexists.
+    intros f g Hf Hg.
 
+    pose proof (carry_mul_opt_correct [0;9;8;7;6;5;4;3;2;1;0]_ _ _ _ Hf Hg) as Hfg.
+    forward Hfg; [abstract (clear; cbv; intros; repeat break_or_hyp; intuition)|].
+    specialize (Hfg H); clear H.
+    forward Hfg; [exact eq_refl|].
+    specialize (Hfg H); clear H.
 
-    Time deriveModularMultiplicationWithCarries (rev [0;1;2;3;4;5;6;7;8;9;0]).
-    (* pretty-print: sh -c "tr -d '\n' | tr 'Z' '\n' | tr -d \% | sed 's:\s\s*\*\s\s*:\*:g' | column -o' ' -t" *)
-
-    Time repeat letify fg; subst fg; eauto.
+    cbv [log_base map k c carry_mul_opt] in Hfg.
+    cbv beta iota delta [Let_In] in Hfg.
+    rewrite ?Z.mul_0_l, ?Z.mul_0_r, ?Z.mul_1_l, ?Z.mul_1_r, ?Z.add_0_l, ?Z.add_0_r in Hfg.
+    rewrite ?Z.mul_assoc, ?Z.add_assoc in Hfg.
+    exact Hfg.
   Time Defined.
 End GF25519Base25Point5Formula.
 
