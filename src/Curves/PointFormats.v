@@ -221,9 +221,6 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
     onCurve (x2, y2) ->
     (d*x1*x2*y1*y2)^2 <> 1.
   Proof.
-    (* TODO: this proof was made inconsistent by an actually
-             correct version of root_nonzero. This adds the necessary
-             hypothesis*)
     unfold onCurve; intuition; whatsNotZero.
 
     pose proof char_gt_2. pose proof a_nonzero as Ha_nonzero. 
@@ -296,7 +293,7 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
   Defined.
   Local Hint Unfold onCurve mkPoint.
 
-  Definition zero : point. exists (0, 1).
+  Definition zero : point. refine (mkPoint (0, 1) _).
     abstract (unfold onCurve; field).
   Defined.
 
@@ -356,6 +353,7 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
     let 'exist P2' pf2 := P2 in
     mkPoint (unifiedAdd' P1' P2') (unifiedAdd'_onCurve' _ _ pf1 pf2).
   Local Infix "+" := unifiedAdd.
+  SearchAbout Pos.iter_op.
 
   Fixpoint scalarMult (n:nat) (P : point) : point :=
     match n with
@@ -429,8 +427,12 @@ Module CompleteTwistedEdwardsFacts (M : Modulus) (Import P : TwistedEdwardsParam
   Qed.
 
   Lemma zeroIsIdentity : forall P, P + zero = P.
-    (* Should follow from zeroIsIdentity', but dependent types... *)
-  Admitted.
+  Proof.
+    unfold zero, unifiedAdd.
+    destruct P as [[x y] pf].
+    simpl.
+    apply point_eq; field; auto.
+  Qed.
   Hint Resolve zeroIsIdentity.
 
   Lemma scalarMult_double : forall n P, scalarMult (n + n) P = scalarMult n (P + P).
@@ -676,7 +678,7 @@ Module ExtendedM1 (M : Modulus) (Import P : Minus1Params M) <: CompleteTwistedEd
         pose proof (edwardsAddCompletePlus _ _ _ _ H1 H2) as H;
         match type of H with ?xs <> 0 => ac_rewrite (eq_refl xs) end
       ) || (
-        pose proof (edwardsAddCompleteMinus _ _ _ _ H1 H2) as Hm;
+        pose proof (edwardsAddCompleteMinus _ _ _ _ H1 H2) as H;
         match type of H with ?xs <> 0 => ac_rewrite (eq_refl xs) end
       ); repeat apply mul_nonzero_nonzero; auto 10
     end.
