@@ -353,7 +353,6 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
     let 'exist P2' pf2 := P2 in
     mkPoint (unifiedAdd' P1' P2') (unifiedAdd'_onCurve' _ _ pf1 pf2).
   Local Infix "+" := unifiedAdd.
-  SearchAbout Pos.iter_op.
 
   Fixpoint scalarMult (n:nat) (P : point) : point :=
     match n with

@@ -282,8 +282,6 @@ Module EdDSA25519_Params <: EdDSAParams.
   Definition FlEncoding :=
     Build_Encoding {s:nat | s mod (Z.to_nat l) = s} (word b) Fl_enc Fl_dec Fl_encoding_valid.
 
-  Check (Build_Encoding point (word b)).
-
   (* square root mod q relies on the fact that q is 5 mod 8 *)
   Definition sqrt_mod_q (a : GF) := 
     (match (GF_eq_dec (a ^ Z.to_N (q / 4)%Z) 1) with
