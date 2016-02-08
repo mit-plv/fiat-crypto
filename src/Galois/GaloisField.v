@@ -68,6 +68,18 @@ Module GaloisField (M: Modulus).
       apply prime_ge_2 in p; intuition.
   Qed.
 
+  Lemma divOneIsX :
+    forall (x: GF), (x / 1)%GF = x.
+  Proof.
+    intros; unfold GFdiv.
+
+    replace (GFinv 1)%GF with 1%GF by (
+      replace (GFinv 1)%GF with (GFinv 1 * 1)%GF by ring;
+      rewrite GF_multiplicative_inverse; intuition).
+
+    ring.
+  Qed.
+
   Lemma exist_neq: forall A (P: A -> Prop) x y Px Py, x <> y -> exist P x Px <> exist P y Py.
   Proof.
     intuition; solve_by_inversion.
@@ -87,11 +99,15 @@ Module GaloisField (M: Modulus).
    *)
   Ltac GFpostprocess :=
     repeat split;
-		repeat match goal with [ |- context[exist ?a ?b (inject_subproof ?x)] ] =>
-			replace (exist a b (inject_subproof x)) with (inject x%Z) by reflexivity
-		end;
+
+    repeat match goal with
+    | [ |- context[exist ?a ?b (inject_subproof ?x)] ] =>
+      replace (exist a b (inject_subproof x)) with (inject x%Z) by reflexivity
+    end;
+
     repeat rewrite <- injectZeroIsGFZero;
-    repeat rewrite <- injectOneIsGFOne.
+    repeat rewrite <- injectOneIsGFOne;
+    repeat rewrite divOneIsX.
 
   (* Tactic to passively convert from GF to Z in special circumstances *)
   Ltac GFconstant t :=
