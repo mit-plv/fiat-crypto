@@ -1,17 +1,26 @@
 Require Import BinInt Znumtheory VerdiTactics.
 
 Require Import Crypto.Spec.ModularArithmetic.
+Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
 Local Open Scope F_scope.
   
 Section Pre.
-  Context {p : BinInt.Z}.
-  Context {a : F p}.
-  Context {d : F p}.
-  Context {modulus_prime : Znumtheory.prime p}.
-  Context {modulus_lt_2 : 2 < p}.
+  Context {q : BinInt.Z}.
+  Context {a : F q}.
+  Context {d : F q}.
+  Context {prime_q : Znumtheory.prime q}.
+  Context {two_lt_q : 2 < q}.
   Context {a_nonzero : a <> 0}.
   Context {a_square : exists sqrt_a, sqrt_a^2 = a}.
   Context {d_nonsquare : forall x, x^2 <> d}.
+
+  Add Field Ffield_Z : (@Ffield_theory q _)
+    (morphism (@Fring_morph q),
+     preprocess [Fpreprocess],
+     postprocess [Fpostprocess],
+     constants [Fconstant],
+     div (@Fmorph_div_theory q),
+     power_tac (@Fpower_theory q) [Fexp_tac]). 
   
   (* the canonical definitions are in Spec *)
   Local Notation onCurve P := (let '(x, y) := P in a*x^2 + y^2 = 1 + d*x^2*y^2).
@@ -21,10 +30,10 @@ Section Pre.
     (((x1*y2  +  y1*x2)/(1 + d*x1*x2*y1*y2)) , ((y1*y2 - a*x1*x2)/(1 - d*x1*x2*y1*y2)))
   ).
   
-  Lemma char_gt_2 : ZToField 2 <> (0: F p).
+  Lemma char_gt_2 : ZToField 2 <> (0: F q).
     intro; find_injection.
-    pose proof modulus_lt_2.
-    rewrite (Z.mod_small 2 p), Z.mod_0_l in *; omega.
+    pose proof two_lt_q.
+    rewrite (Z.mod_small 2 q), Z.mod_0_l in *; omega.
   Qed.
   
   (*

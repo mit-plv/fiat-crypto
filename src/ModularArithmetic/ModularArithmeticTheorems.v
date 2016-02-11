@@ -309,38 +309,25 @@ Section RingModuloPre.
     Fdefn.
   Qed.
 End RingModuloPre.
+  
+Ltac Fconstant t := match t with @ZToField _ ?x => x | _ => NotConstant end.
+Ltac Fexp_tac t := Ncst t.
+Ltac Fpreprocess := rewrite <-?ZToField_0, ?ZToField_1.
+Ltac Fpostprocess := repeat split;
+  repeat match goal with [ |- context[exist ?a ?b (Pre.Z_mod_mod ?x ?q)] ] =>
+    change (exist a b (Pre.Z_mod_mod x)) with (@ZToField q x%Z) end;
+  rewrite ?ZToField_0, ?ZToField_1.
 
 Module Type Modulus.
   Parameter modulus : Z.
 End Modulus.
 
+(* Example of how to instantiate the ring tactic *)
 Module RingModulo (Export M : Modulus).
-  (* Add our ring with all the fixin's *)
   Definition ring_theory_modulo := @Fring_theory modulus.
   Definition ring_morph_modulo := @Fring_morph modulus.
   Definition morph_div_theory_modulo := @Fmorph_div_theory modulus.
   Definition power_theory_modulo := @Fpower_theory modulus.
-
-  Ltac Fexp_tac t := Ncst t.
-
-  (* Expose the carrier in constants so field can simplify them *)
-  Ltac Fpreprocess := rewrite <-?ZToField_0, ?ZToField_1.
-
-  (* Split up the equation (because field likes /\, then
-   * change back all of our GFones and GFzeros. *)
-  Ltac Fpostprocess :=
-    repeat split;
-		repeat match goal with [ |- context[exist ?a ?b (Pre.Z_mod_mod ?x ?q)] ] =>
-			replace (exist a b (Pre.Z_mod_mod x)) with (@ZToField q x%Z) by reflexivity
-		end;
-    rewrite ?ZToField_0, ?ZToField_1.
-
-  (* Tactic to passively convert from GF to Z in special circumstances *)
-  Ltac Fconstant t :=
-    match t with
-    | @ZToField _ ?x => x
-    | _ => NotConstant
-    end.
   
   Add Ring GFring_Z : ring_theory_modulo
     (morphism ring_morph_modulo,
@@ -348,3 +335,58 @@ Module RingModulo (Export M : Modulus).
      div morph_div_theory_modulo,
      power_tac power_theory_modulo [Fexp_tac]). 
 End RingModulo.
+
+Section VariousModulo.
+  Context {m:Z}.
+  
+  Add Ring GFring_Z : (@Fring_theory m)
+    (morphism (@Fring_morph m),
+     constants [Fconstant],
+     div (@Fmorph_div_theory m),
+     power_tac (@Fpower_theory m) [Fexp_tac]). 
+
+  Lemma F_mul_0_l : forall x : F m, 0 * x = 0.
+  Proof.
+    intros; ring.
+  Qed.
+  
+  Lemma F_mul_0_r : forall x : F m, x * 0 = 0.
+  Proof.
+    intros; ring.
+  Qed.
+  
+  Lemma F_mul_nonzero_l : forall a b : F m, a*b <> 0 -> a <> 0.
+    intros; intuition; subst.
+    assert (0 * b = 0) by ring; intuition.
+  Qed.
+  
+  Lemma F_mul_nonzero_r : forall a b : F m, a*b <> 0 -> b <> 0.
+    intros; intuition; subst.
+    assert (a * 0 = 0) by ring; intuition.
+  Qed.
+  
+  Lemma F_pow_distr_mul : forall (x y:F m) z, (0 <= z)%N ->
+    (x ^ z) * (y ^ z) = (x * y) ^ z.
+  Proof.
+    intros.
+    replace z with (Z.to_N (Z.of_N z)) by apply N2Z.id.
+    apply natlike_ind with (x := Z.of_N z); simpl; [ ring | | 
+      replace 0%Z with (Z.of_N 0%N) by auto; apply N2Z.inj_le; auto].
+    intros z' z'_nonneg IHz'.
+    rewrite Z2N.inj_succ by auto.
+    rewrite <-N.add_1_l.
+    rewrite !(proj2 (@F_pow_spec m _) _).
+    rewrite <- IHz'.
+    ring.
+  Qed.
+  
+  Lemma F_opp_swap : forall x y : F m, opp x = y <-> x = opp y.
+  Proof.
+    split; intro; subst; ring.
+  Qed.
+
+  Lemma F_opp_involutive : forall x : F m, opp (opp x) = x.
+  Proof.
+    intros; ring.
+  Qed.
+End VariousModulo.
