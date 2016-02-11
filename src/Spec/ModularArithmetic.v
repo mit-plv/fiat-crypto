@@ -1,4 +1,4 @@
-Require Znumtheory BinInt BinNums.
+Require Znumtheory BinNums.
 
 Require Crypto.ModularArithmetic.Pre.
 
@@ -19,29 +19,32 @@ Infix "mod" := BinInt.Z.modulo (at level 40, no associativity) : Z_scope.
 Local Open Scope Z_scope.
 
 Definition F (modulus : BinInt.Z) := { z : BinInt.Z | z = z mod modulus }.
+Coercion FieldToZ {m} (a:F m) : BinNums.Z := proj1_sig a.
+
 Section FieldOperations.
   Context {m : BinInt.Z}.
 
-  Let Fm := F m. (* TODO: if inlined, coercions say "anomaly please report" *)
-  Coercion ZToField (a:BinInt.Z) : Fm := exist _ (a mod m) (Pre.Z_mod_mod a m).
-  Coercion FieldToZ (a:Fm) : BinInt.Z := proj1_sig a.
-
+  Let Fm := F m. (* Note: if inlined, coercions say "anomaly please report" *)
+  Coercion unfoldFm (a:Fm) : F m := a.
+  Coercion ZToField (a:BinNums.Z) : Fm := exist _ (a mod m) (Pre.Z_mod_mod a m).
+  
   Definition add (a b:Fm) : Fm := ZToField (a + b).
   Definition mul (a b:Fm) : Fm := ZToField (a * b).
 
   Parameter opp : Fm -> Fm. 
-  Axiom F_opp_spec : forall (a:Fm), add a (opp a) = 0 /\ opp a = opp a mod m.
+  Axiom F_opp_spec : forall (a:Fm), add a (opp a) = 0.
   Definition sub (a b:Fm) : Fm := add a (opp b).
 
   Parameter inv : Fm -> Fm. 
-  Axiom F_inv_spec : forall (a:Fm), mul a (inv a) = 1 /\ inv 0 = 0 /\ inv a = inv a mod m.
+  Axiom F_inv_spec : Znumtheory.prime m -> forall (a:Fm), mul a (inv a) = 1 /\ inv 0 = 0.
   Definition div (a b:Fm) : Fm := mul a (inv b).
 
   Parameter pow : Fm -> BinNums.N ->  Fm. 
-  Axiom F_pow_spec : forall a, pow a 0%N = 1 /\ forall x y, pow a (x + y)%N = pow a x * pow a y.
+  Axiom F_pow_spec : forall a, pow a 0%N = 1 /\ forall x, pow a (1 + x)%N = mul a (pow a x).
 End FieldOperations.
 
 Delimit Scope F_scope with F.
+Arguments F _%Z.
 Arguments ZToField {_} _%Z : simpl never.
 Arguments add {_} _%F _%F : simpl never.
 Arguments mul {_} _%F _%F : simpl never.

@@ -6,17 +6,18 @@ Require Import Crypto.Spec.ModularArithmetic.
 Local Open Scope F_scope.
 
 Class TwistedEdwardsParams := {
-  p : BinInt.Z;
-  a : F p;
-  d : F p;
-  modulus_prime : Znumtheory.prime p;
+  q : BinInt.Z;
+  a : F q;
+  d : F q;
+  modulus_prime : Znumtheory.prime q;
   a_nonzero : a <> 0;
   a_square : exists sqrt_a, sqrt_a^2 = a;
   d_nonsquare : forall x, x^2 <> d
 }.
 
 Section TwistedEdwardsCurves.
-  Context `{prm:TwistedEdwardsParams}.
+  Context {prm:TwistedEdwardsParams}.
+
   (* Twisted Edwards curves with complete addition laws. References:
   * <https://eprint.iacr.org/2008/013.pdf>
   * <http://ed25519.cr.yp.to/ed25519-20110926.pdf>
@@ -24,9 +25,7 @@ Section TwistedEdwardsCurves.
   *)
   Definition onCurve P := let '(x,y) := P in a*x^2 + y^2 = 1 + d*x^2*y^2.
   Definition point := { P | onCurve P}.
-  Definition mkPoint xy proof : point := exist onCurve xy proof.
-  Definition projX (P:point) : F p := fst (proj1_sig P).
-  Definition projY (P:point) : F p:= snd (proj1_sig P).
+  Definition mkPoint (xy:F q * F q) (pf:onCurve xy) : point := exist onCurve xy pf.
 
   Definition zero : point := mkPoint (0, 1) Pre.zeroOnCurve.
   
