@@ -1,4 +1,5 @@
 -R src Crypto
+src/CompleteEwardsCurve/Pre.v
 src/Curves/PointFormats.v
 src/Curves/ScalarMult.v
 src/Galois/BaseSystem.v
@@ -9,8 +10,15 @@ src/Galois/GaloisRep.v
 src/Galois/GaloisTheory.v
 src/Galois/GaloisTutorial.v
 src/Galois/ModularBaseSystem.v
+src/Galois/ModularBaseSystem.v
+src/ModularArithmetic/ModularArithmeticTheorems.v
+src/ModularArithmetic/Pre.v
+src/ModularArithmetic/PrimeFieldTheorems.v
+src/ModularArithmetic/Tutorial.v
 src/Rep/ECRep.v
 src/Rep/GaloisRep.v
+src/Spec/CompleteEwardsCurve.v
+src/Spec/ModularArithmetic.v
 src/Specific/EdDSA25519.v
 src/Specific/GF25519.v
 src/Tactics/VerdiTactics.v
