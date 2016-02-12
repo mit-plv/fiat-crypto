@@ -35,58 +35,59 @@ Section Pre.
     pose proof two_lt_q.
     rewrite (Z.mod_small 2 q), Z.mod_0_l in *; omega.
   Qed.
+
+  Ltac rewriteAny := match goal with [H: _ = _ |- _ ] => rewrite H end.
+  Ltac rewriteLeftAny := match goal with [H: _ = _ |- _ ] => rewrite <- H end.
   
-  (*
   Ltac whatsNotZero :=
     repeat match goal with
     | [H: ?lhs = ?rhs |- _ ] =>
         match goal with [Ha: lhs <> 0 |- _ ] => fail 1 | _ => idtac end;
-        assert (lhs <> 0) by (rewrite H; auto)
+        assert (lhs <> 0) by (rewrite H; auto using Fq_1_neq_0)
     | [H: ?lhs = ?rhs |- _ ] =>
         match goal with [Ha: rhs <> 0 |- _ ] => fail 1 | _ => idtac end;
-        assert (rhs <> 0) by (rewrite H; auto)
+        assert (rhs <> 0) by (rewrite H; auto using Fq_1_neq_0)
     | [H: (?a^?p)%F <> 0 |- _ ] =>
         match goal with [Ha: a <> 0 |- _ ] => fail 1 | _ => idtac end;
         let Y:=fresh in let Z:=fresh in try (
           assert (p <> 0%N) as Z by (intro Y; inversion Y);
-          assert (a <> 0) by (eapply root_nonzero; eauto);
+          assert (a <> 0) by (eapply Fq_root_nonzero; eauto using Fq_1_neq_0);
           clear Z)
     | [H: (?a*?b)%F <> 0 |- _ ] =>
         match goal with [Ha: a <> 0 |- _ ] => fail 1 | _ => idtac end;
-        assert (a <> 0) by (eapply mul_nonzero_l; eauto)
+        assert (a <> 0) by (eapply F_mul_nonzero_l; eauto using Fq_1_neq_0)
     | [H: (?a*?b)%F <> 0 |- _ ] =>
         match goal with [Ha: b <> 0 |- _ ] => fail 1 | _ => idtac end;
-        assert (b <> 0) by (eapply mul_nonzero_r; eauto)
+        assert (b <> 0) by (eapply F_mul_nonzero_r; eauto using Fq_1_neq_0)
     end.
-  *)
-  
+
   Lemma edwardsAddComplete' x1 y1 x2 y2 :
     onCurve (x1, y1) ->
     onCurve (x2, y2) ->
     (d*x1*x2*y1*y2)^2 <> 1.
-  Proof. (*
-    intuition; whatsNotZero.
+  Proof.
+    intros Hc1 Hc2 Hcontra; simpl in Hc1, Hc2; whatsNotZero.
   
     pose proof char_gt_2. pose proof a_nonzero as Ha_nonzero. 
-    destruct a_square as [sqrt_a a_square].
-    rewrite <-a_square in *.
+    destruct a_square as [sqrt_a a_square'].
+    rewrite <-a_square' in *.
   
     (* Furthermore... *)
     pose proof (eq_refl (d*x1^2*y1^2*(sqrt_a^2*x2^2 + y2^2))) as Heqt.
-    rewrite H0 in Heqt at 2.
+    rewrite Hc2 in Heqt at 2.
     replace (d * x1 ^ 2 * y1 ^ 2 * (1 + d * x2 ^ 2 * y2 ^ 2))
        with (d*x1^2*y1^2 + (d*x1*x2*y1*y2)^2) in Heqt by field.
-    rewrite H1 in Heqt.
+    rewrite Hcontra in Heqt.
     replace (d * x1 ^ 2 * y1 ^ 2 + 1) with (1 + d * x1 ^ 2 * y1 ^ 2) in Heqt by field.
-    rewrite <-H in Heqt.
+    rewrite <-Hc1 in Heqt.
   
     (* main equation for both potentially nonzero denominators *)
-    case_eq_GF (sqrt_a*x2 + y2) 0; case_eq_GF (sqrt_a*x2 - y2) 0;
-      try match goal with [H: ?f (sqrt_a * x2)  y2 <> 0 |- _ ] =>
+    destruct (F_eq_dec (sqrt_a*x2 + y2) 0); destruct (F_eq_dec (sqrt_a*x2 - y2) 0);
+      try lazymatch goal with [H: ?f (sqrt_a * x2)  y2 <> 0 |- _ ] =>
         assert ((f (sqrt_a*x1) (d * x1 * x2 * y1 * y2*y1))^2 =
                  f ((sqrt_a^2)*x1^2 + (d * x1 * x2 * y1 * y2)^2*y1^2)
-                   (d * x1 * x2 * y1 * y2*sqrt_a*(inject 2)*x1*y1)) as Heqw1 by field;
-        rewrite H1 in *;
+                   (d * x1 * x2 * y1 * y2*sqrt_a*(ZToField 2)*x1*y1)) as Heqw1 by field;
+        rewrite Hcontra in Heqw1;
         replace (1 * y1^2) with (y1^2) in * by field;
         rewrite <- Heqt in *;
         assert (d = (f (sqrt_a * x1) (d * x1 * x2 * y1 * y2 * y1))^2 /
@@ -99,45 +100,45 @@ Section Pre.
   
     assert (Hc: (sqrt_a * x2 + y2) + (sqrt_a * x2 - y2) = 0) by (repeat rewriteAny; field).
   
-    replace (sqrt_a * x2 + y2 + (sqrt_a * x2 - y2)) with (inject 2 * sqrt_a * x2) in Hc by field.
+    replace (sqrt_a * x2 + y2 + (sqrt_a * x2 - y2)) with (ZToField 2 * sqrt_a * x2) in Hc by field.
   
     (* contradiction: product of nonzero things is zero *)
-    destruct (mul_zero_why _ _ Hc) as [Hcc|Hcc]; subst; intuition.
-    destruct (mul_zero_why _ _ Hcc) as [Hccc|Hccc]; subst; intuition.
+    destruct (Fq_mul_zero_why _ _ Hc) as [Hcc|Hcc]; subst; intuition.
+    destruct (Fq_mul_zero_why _ _ Hcc) as [Hccc|Hccc]; subst; intuition.
     apply Ha_nonzero; field.
-  Qed
-  *) Admitted.
+  Qed.
+
   Lemma edwardsAddCompletePlus x1 y1 x2 y2 :
     onCurve (x1, y1) ->
     onCurve (x2, y2) ->
     (1 + d*x1*x2*y1*y2) <> 0.
-  Proof. (*
-    intros; case_eq_GF (d*x1*x2*y1*y2) (0-1)%GF.
+  Proof.
+    intros Hc1 Hc2; simpl in Hc1, Hc2.
+    intros; destruct (F_eq_dec (d*x1*x2*y1*y2) (0-1)) as [H|H].
     - assert ((d*x1*x2*y1*y2)^2 = 1) by (rewriteAny; field). destruct (edwardsAddComplete' x1 y1 x2 y2); auto.
-    - replace (d * x1 * x2 * y1 * y2) with (1+d * x1 * x2 * y1 * y2-1) in H1 by field.
-      intro; rewrite H2 in H1; intuition.
+    - replace (d * x1 * x2 * y1 * y2) with (1+d * x1 * x2 * y1 * y2-1) in H by field.
+      intro Hz; rewrite Hz in H; intuition.
   Qed.
-  *) Admitted.
   
   Lemma edwardsAddCompleteMinus x1 y1 x2 y2 :
     onCurve (x1, y1) ->
     onCurve (x2, y2) ->
     (1 - d*x1*x2*y1*y2) <> 0.
-  Proof. (*
-    unfold onCurve; intros; case_eq_GF (d*x1*x2*y1*y2) (1)%GF.
+  Proof.
+    intros Hc1 Hc2. destruct (F_eq_dec (d*x1*x2*y1*y2) 1) as [H|H].
     - assert ((d*x1*x2*y1*y2)^2 = 1) by (rewriteAny; field). destruct (edwardsAddComplete' x1 y1 x2 y2); auto.
-    - replace (d * x1 * x2 * y1 * y2) with ((1-(1-d * x1 * x2 * y1 * y2))) in H1 by field.
-      intro; rewrite H2 in H1; apply H1; field.
+    - replace (d * x1 * x2 * y1 * y2) with ((1-(1-d * x1 * x2 * y1 * y2))) in H by field.
+      intro Hz; rewrite Hz in H; apply H; field.
   Qed.
-  *) Admitted.
   
   Definition zeroOnCurve : onCurve (0, 1).
-  Admitted. (* field. *)
+    simpl. field.
+  Qed.
   
   Lemma unifiedAdd'_onCurve' x1 y1 x2 y2 x3 y3
     (H: (x3, y3) = unifiedAdd' (x1, y1) (x2, y2)) :
     onCurve (x1, y1) -> onCurve (x2, y2) -> onCurve (x3, y3).
-  Proof. (*
+  Proof.
     (* https://eprint.iacr.org/2007/286.pdf Theorem 3.1;
       * c=1 and an extra a in front of x^2 *) 
   
@@ -156,7 +157,7 @@ Section Pre.
     assert (HT2: T = (a * ((x1 * y2 + y1 * x2) * (1 - d * x1 * x2 * y1 * y2)) ^ 2 +(
     (y1 * y2 - a * x1 * x2) * (1 + d * x1 * x2 * y1 * y2)) ^ 2 -d * ((x1 *
      y2 + y1 * x2)* (y1 * y2 - a * x1 * x2))^2)) by (subst; field).
-    replace 1 with (a*x3^2 + y3^2 -d*x3^2*y3^2); [field|]; subst x3 y3.
+    replace (1:F q) with (a*x3^2 + y3^2 -d*x3^2*y3^2); [field|]; subst x3 y3.
   
     match goal with [ |- ?x = 1 ] => replace x with
     ((a * ((x1 * y2 + y1 * x2) * (1 - d * x1 * x2 * y1 * y2)) ^ 2 +
@@ -166,7 +167,10 @@ Section Pre.
     - rewrite <-HT1, <-HT2; field; rewrite HT1.
       replace ((1 - d ^ 2 * x1 ^ 2 * x2 ^ 2 * y1 ^ 2 * y2 ^ 2))
          with ((1 - d*x1*x2*y1*y2)*(1 + d*x1*x2*y1*y2))
-           by field; simpl; auto.
+        by field; simpl.
+      SearchAbout pow 0.
+      eauto using F_mul_nonzero_l, F_mul_nonzero_r.
+      SearchAbout pow 0.
     - replace (1 - (d * x1 * x2 * y1 * y2) ^ 2)
          with ((1 - d*x1*x2*y1*y2)*(1 + d*x1*x2*y1*y2))
            by field; auto.

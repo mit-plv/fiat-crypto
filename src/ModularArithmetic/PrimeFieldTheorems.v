@@ -93,7 +93,7 @@ Section VariousModPrime.
   Qed.
   Hint Resolve Fq_mul_nonzero_nonzero.
   
-  Lemma F_square_mul : forall x y z : F q, (y <> 0) ->
+  Lemma Fq_square_mul : forall x y z : F q, (y <> 0) ->
     x ^ 2 = z * y ^ 2 -> exists sqrt_z, sqrt_z ^ 2 = z.
   Proof.
     intros ? ? ? y_nonzero A.
@@ -106,6 +106,32 @@ Section VariousModPrime.
     rewrite (Fq_mul_eq _ z (y ^ 2)); auto.
     rewrite <- A.
     field; trivial.
+  Qed.
+
+  Lemma Fq_root_zero : forall (x: F q) (p: N), x^p = 0 -> x = 0.
+    induction p using N.peano_ind;
+    rewrite <-?N.add_1_l, ?(proj2 (@F_pow_spec q _) _), ?(proj1 (@F_pow_spec q _)).
+    - intros; destruct Fq_1_neq_0; auto.
+    - intro H; destruct (Fq_mul_zero_why x (x^p) H); auto.
+  Qed.
+
+  Lemma Fq_root_nonzero : forall (x:F q) p, x^p <> 0 -> (p <> 0)%N -> x <> 0.
+    induction p using N.peano_ind;
+    rewrite <-?N.add_1_l, ?(proj2 (@F_pow_spec q _) _), ?(proj1 (@F_pow_spec q _)).
+    - intuition.
+    - destruct (N.eq_dec p 0); intro H; intros; subst.
+      + rewrite (proj1 (@F_pow_spec q _)) in H; replace (x*1) with (x) in H by ring; trivial.
+      + apply IHp; auto. intro Hz; rewrite Hz in *. apply H, F_mul_0_r.
+  Qed.
+
+  Lemma Fq_pow_nonzero : forall (x : F q) p, x <> 0 -> x^p <> 0.
+  Proof.
+    induction p using N.peano_ind;
+    rewrite <-?N.add_1_l, ?(proj2 (@F_pow_spec q _) _), ?(proj1 (@F_pow_spec q _)).
+    - intuition. auto using Fq_1_neq_0.
+    - intros H Hc. destruct (Fq_mul_zero_why _ _ Hc).
+      + intuition.
+      + apply IHp; auto.
   Qed.
   
   Lemma sqrt_solutions : forall x y : F q, y ^ 2 = x ^ 2 -> y = x \/ y = opp x.
