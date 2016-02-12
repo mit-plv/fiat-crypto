@@ -110,6 +110,22 @@ Module TimesZeroParametricTestModule (M: PrimeModulus).
     intros.
     field; try exact Fq_1_neq_0.
   Qed.
-    
+
+  Lemma biggerFraction : forall XP YP ZP TP XQ YQ ZQ TQ d : F modulus, 
+   ZQ <> 0 ->
+   ZP <> 0 ->
+   ZP * ZQ * ZP * ZQ + d * XP * XQ * YP * YQ <> 0 ->
+   ZP * ZToField 2 * ZQ * (ZP * ZQ) + XP * YP * ZToField 2 * d * (XQ * YQ) <> 0 ->
+   ZP * ZToField 2 * ZQ * (ZP * ZQ) - XP * YP * ZToField 2 * d * (XQ * YQ) <> 0 ->
+
+   ((YP + XP) * (YQ + XQ) - (YP - XP) * (YQ - XQ)) *
+   (ZP * ZToField 2 * ZQ - XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ)) /
+   ((ZP * ZToField 2 * ZQ - XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ)) *
+    (ZP * ZToField 2 * ZQ + XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ))) =
+   (XP / ZP * (YQ / ZQ) + YP / ZP * (XQ / ZQ)) / (1 + d * (XP / ZP) * (XQ / ZQ) * (YP / ZP) * (YQ / ZQ)).
+  Proof.
+    intros.
+    field; assumption.
+  Qed.
 End TimesZeroParametricTestModule.
 
