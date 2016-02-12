@@ -56,7 +56,7 @@ Section VariousModPrime.
   Add Field Ffield_Z : (@Ffield_theory q _)
     (morphism (@Fring_morph q),
      preprocess [Fpreprocess],
-     postprocess [Fpostprocess],
+     postprocess [Fpostprocess; try exact Fq_1_neq_0; try assumption],
      constants [Fconstant],
      div (@Fmorph_div_theory q),
      power_tac (@Fpower_theory q) [Fexp_tac]). 
@@ -132,6 +132,11 @@ Section VariousModPrime.
     - intros H Hc. destruct (Fq_mul_zero_why _ _ Hc).
       + intuition.
       + apply IHp; auto.
+  Qed.
+
+  Lemma F_div_1_r : forall x : F q, (x/1)%F = x.
+  Proof.
+    intros; field. (* TODO: Warning: Collision between bound variables ... *)
   Qed.
   
   Lemma sqrt_solutions : forall x y : F q, y ^ 2 = x ^ 2 -> y = x \/ y = opp x.
