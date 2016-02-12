@@ -24,19 +24,19 @@ Section CompleteEdwardsCurveTheorems.
   Qed.
   Hint Resolve point_eq.
 
-  Ltac Edefn := unfold unifiedAdd, zero; intros;
+  Ltac Edefn := unfold unifiedAdd, unifiedAdd', zero; intros;
                   repeat match goal with
                          | [ p : point |- _ ] =>
                            let x := fresh "x" p in
                            let y := fresh "y" p in
                            let pf := fresh "pf" p in
                            destruct p as [[x y] pf]; unfold onCurve in pf
-                  | _ => eapply point_eq, f_equal2
+                  | _ => eapply point_eq, (f_equal2 pair)
                   | _ => eapply point_eq
   end.
   Lemma twistedAddComm : forall A B, (A+B = B+A)%E.
   Proof.
-    Edefn; f_equal; field.
+    Edefn; apply f_equal2; ring.
   Qed.
 
   Lemma twistedAddAssoc : forall A B C, A+(B+C) = (A+B)+C.
