@@ -389,4 +389,34 @@ Section VariousModulo.
   Proof.
     intros; ring.
   Qed.
+
+  Lemma F_add_0_r : forall x : F m, (x + 0)%F = x.
+  Proof.
+    intros; ring.
+  Qed.
+
+  Lemma F_add_0_l : forall x : F m, (0 + x)%F = x.
+  Proof.
+    intros; ring.
+  Qed.
+
+  Lemma F_sub_0_r : forall x : F m, (x - 0)%F = x.
+  Proof.
+    intros; ring.
+  Qed.
+
+  Lemma F_sub_0_l : forall x : F m, (0 - x)%F = opp x.
+  Proof.
+    intros; ring.
+  Qed.
+
+  Lemma F_mul_1_r : forall x : F m, (x * 1)%F = x.
+  Proof.
+    intros; ring.
+  Qed.
+
+  Lemma F_mul_1_l : forall x : F m, (1 * x)%F = x.
+  Proof.
+    intros; ring.
+  Qed.
 End VariousModulo.

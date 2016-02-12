@@ -1,6 +1,6 @@
 Require BinInt Znumtheory.
 
-Require Crypto.CompleteEwardsCurve.Pre.
+Require Crypto.CompleteEdwardsCurve.Pre.
 
 Require Import Crypto.Spec.ModularArithmetic.
 Local Open Scope F_scope.
@@ -9,10 +9,11 @@ Class TwistedEdwardsParams := {
   q : BinInt.Z;
   a : F q;
   d : F q;
-  modulus_prime : Znumtheory.prime q;
-  a_nonzero : a <> 0;
-  a_square : exists sqrt_a, sqrt_a^2 = a;
-  d_nonsquare : forall x, x^2 <> d
+  prime_q : Znumtheory.prime q;
+  two_lt_q : BinInt.Z.lt 2 q;
+  nonzero_a : a <> 0;
+  square_a : exists sqrt_a, sqrt_a^2 = a;
+  nonsquare_d : forall x, x^2 <> d
 }.
 
 Section TwistedEdwardsCurves.
@@ -27,7 +28,7 @@ Section TwistedEdwardsCurves.
   Definition point := { P | onCurve P}.
   Definition mkPoint (xy:F q * F q) (pf:onCurve xy) : point := exist onCurve xy pf.
 
-  Definition zero : point := mkPoint (0, 1) Pre.zeroOnCurve.
+  Definition zero : point := mkPoint (0, 1) (@Pre.zeroOnCurve _ _ _ prime_q).
   
   (* NOTE: the two matches on P1 can probably be merged, not sure whether good idea... *)
   Definition unifiedAdd (P1 P2 : point) : point :=
@@ -37,12 +38,15 @@ Section TwistedEdwardsCurves.
       ( let '(x1, y1) := P1' in
         let '(x2, y2) := P2' in
         (((x1*y2  +  y1*x2)/(1 + d*x1*x2*y1*y2)) , ((y1*y2 - a*x1*x2)/(1 - d*x1*x2*y1*y2))))
-      (Pre.unifiedAdd'_onCurve _ _ pf1 pf2).
-  Local Infix "+" := unifiedAdd.
+      (@Pre.unifiedAdd'_onCurve _ _ _ prime_q two_lt_q nonzero_a square_a nonsquare_d _ _ pf1 pf2).
 
   Fixpoint scalarMult (n:nat) (P : point) : point :=
     match n with
     | O => zero
-    | S n' => P + scalarMult n' P
+    | S n' => unifiedAdd P (scalarMult n' P)
     end.
 End TwistedEdwardsCurves.
+
+Delimit Scope E_scope with E.
+Infix "+" := unifiedAdd : E_scope.
+Infix "*" := scalarMult : E_scope.

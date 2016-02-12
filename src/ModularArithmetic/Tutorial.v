@@ -104,5 +104,12 @@ Module TimesZeroParametricTestModule (M: PrimeModulus).
     intros.
     field.
   Qed.
+
+  Lemma realisticFraction : forall x y d : F modulus, (x * 1 + y * 0) / (1 + d * x * 0 * y * 1) = x.
+  Proof.
+    intros.
+    field; try exact Fq_1_neq_0.
+  Qed.
+    
 End TimesZeroParametricTestModule.
 
