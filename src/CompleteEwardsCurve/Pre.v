@@ -163,19 +163,18 @@ Section Pre.
     ((a * ((x1 * y2 + y1 * x2) * (1 - d * x1 * x2 * y1 * y2)) ^ 2 +
      ((y1 * y2 - a * x1 * x2) * (1 + d * x1 * x2 * y1 * y2)) ^ 2 -
       d*((x1 * y2 + y1 * x2) * (y1 * y2 - a * x1 * x2)) ^ 2)/
-    ((1-d^2*x1^2*x2^2*y1^2*y2^2)^2)) end; try field; auto.
+    ((1-d^2*x1^2*x2^2*y1^2*y2^2)^2)) end.
     - rewrite <-HT1, <-HT2; field; rewrite HT1.
       replace ((1 - d ^ 2 * x1 ^ 2 * x2 ^ 2 * y1 ^ 2 * y2 ^ 2))
+      with ((1 - d*x1*x2*y1*y2)*(1 + d*x1*x2*y1*y2)) by field.
+      auto using Fq_pow_nonzero, Fq_mul_nonzero_nonzero,
+        edwardsAddCompleteMinus, edwardsAddCompletePlus.
+    - field; replace (1 - (d * x1 * x2 * y1 * y2) ^ 2)
          with ((1 - d*x1*x2*y1*y2)*(1 + d*x1*x2*y1*y2))
-        by field; simpl.
-      SearchAbout pow 0.
-      eauto using F_mul_nonzero_l, F_mul_nonzero_r.
-      SearchAbout pow 0.
-    - replace (1 - (d * x1 * x2 * y1 * y2) ^ 2)
-         with ((1 - d*x1*x2*y1*y2)*(1 + d*x1*x2*y1*y2))
-           by field; auto.
+           by field;
+      auto using Fq_pow_nonzero, Fq_mul_nonzero_nonzero,
+        edwardsAddCompleteMinus, edwardsAddCompletePlus.
   Qed.
-  *) Admitted.
   
   Lemma unifiedAdd'_onCurve : forall P1 P2, onCurve P1 -> onCurve P2 ->
     onCurve (unifiedAdd' P1 P2).

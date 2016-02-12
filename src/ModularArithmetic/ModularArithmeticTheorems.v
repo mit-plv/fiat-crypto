@@ -315,7 +315,7 @@ Ltac Fexp_tac t := Ncst t.
 Ltac Fpreprocess := rewrite <-?ZToField_0, ?ZToField_1.
 Ltac Fpostprocess := repeat split;
   repeat match goal with [ |- context[exist ?a ?b (Pre.Z_mod_mod ?x ?q)] ] =>
-    change (exist a b (Pre.Z_mod_mod x)) with (@ZToField q x%Z) end;
+    change (exist a b (Pre.Z_mod_mod x q)) with (@ZToField q x%Z) end;
   rewrite ?ZToField_0, ?ZToField_1.
 
 Module Type Modulus.
