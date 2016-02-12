@@ -1,5 +1,5 @@
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
-Require Import Crypto.CompleteEdwardsCurve.Pre.
+Require Import Crypto.Spec.CompleteEdwardsCurve.
 
 Section ExtendedCoordinates.
   Local Open Scope F_scope.
