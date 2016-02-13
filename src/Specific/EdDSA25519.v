@@ -594,7 +594,8 @@ Module EdDSA25519_Params <: EdDSAParams.
      I have so far not managed to unify them. *)
   Lemma point_eq_copy : forall x1 x2 y1 y2, x1 = x2 -> y1 = y2 ->
     forall p1 p2, mkPoint (x1, y1) p1 = mkPoint (x2, y2) p2.
-  Admitted.
+    apply Facts.point_eq.
+  Qed.
 
   Lemma point_encoding_valid : forall p, point_dec (point_enc p) = Some p.
   Proof.

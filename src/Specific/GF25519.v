@@ -289,7 +289,6 @@ Proof.
   cbv [cap Base25Point5_10limbs.base].
   intros.
   rewrite map_length in *.
-  About map_nth_default.
   erewrite map_nth_default; [|assumption].
   instantiate (2 := 0%Z).
   (** For the division of maps of (2 ^ _) over lists, replace it with 2 ^ (_ - _) *)

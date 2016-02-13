@@ -137,56 +137,8 @@ Module CompleteTwistedEdwardsCurve (M : Modulus) (Import P : TwistedEdwardsParam
 
 
 
-  Lemma root_zero : forall (x: GF) (p: N), x^p = 0 -> x = 0.
-    intros.
-
-    induction p; inversion H.
-
-    revert H H1; generalize x; induction p; intros.
-
-    - simpl in H; apply mul_zero_why in H; destruct H; intuition.
-
-      + subst; intuition.
-
-      + apply IHp in H.
-        rewrite H1.
-        simpl in H1.
-        apply mul_zero_why in H1; destruct H1; intuition.
-        rewrite H0 in H.
-        apply mul_zero_why in H; destruct H; intuition.
-
-        simpl; intuition.
-
-    - simpl in H1; apply IHp in H1; simpl; intuition.
-      simpl in H; rewrite H in H1; rewrite H.
-      apply mul_zero_why in H1; destruct H1; intuition.
-
-    - simpl in H; subst; intuition.
-
-  Qed.
-
-  Lemma root_nonzero : forall x p, x^p <> 0 -> (p <> 0)%N -> x <> 0.
-    intros; intuition.
-
-    induction p.
-
-    - apply H; intuition.
-
-    - apply H.
-      rewrite H1 in *.
-      induction p.
-
-      + simpl.
-        field.
-
-      + simpl in *.
-        replace (0 * 0) with 0 in * by field.
-        apply IHp; intuition.
-        induction p; inversion H2.
-
-      + simpl; intuition.
-
-  Qed.
+  Lemma root_zero : forall (x: GF) (p: N), x^p = 0 -> x = 0. Admitted.
+  Lemma root_nonzero : forall x p, x^p <> 0 -> (p <> 0)%N -> x <> 0. Admitted.
 
   Lemma char_gt_2 : inject 2 <> 0.
     intro H; inversion H; clear H.
