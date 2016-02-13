@@ -31,8 +31,8 @@ Section FieldOperations.
   Definition add (a b:Fm) : Fm := ZToField (a + b).
   Definition mul (a b:Fm) : Fm := ZToField (a * b).
 
-  Parameter opp : Fm -> Fm. 
-  Axiom F_opp_spec : forall (a:Fm), add a (opp a) = 0.
+  Definition opp_with_spec : { opp | forall x, add x (opp x) = 0 } := Pre.opp_impl.
+  Definition opp : F m -> F m := Eval hnf in proj1_sig opp_with_spec.
   Definition sub (a b:Fm) : Fm := add a (opp b).
 
   Parameter inv : Fm -> Fm. 

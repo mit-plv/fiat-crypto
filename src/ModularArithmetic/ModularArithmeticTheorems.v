@@ -6,6 +6,13 @@ Require Import BinInt Zdiv Znumtheory NArith. (* import Zdiv before Znumtheory *
 Require Import Coq.Classes.Morphisms Setoid.
 Require Export Ring_theory Field_theory Field_tac.
 
+Lemma F_opp_spec : forall {m} (a:F m), add a (opp a) = ZToField 0.
+  intros m a.
+  pose (@opp_with_spec m) as H.
+  change (@opp m) with (proj1_sig H). 
+  destruct H; eauto.
+Qed.
+
 Theorem F_eq: forall {m} (x y : F m), x = y <-> FieldToZ x = FieldToZ y.
 Proof.
   destruct x, y; intuition; simpl in *; try congruence.
@@ -173,14 +180,23 @@ Section FandZ.
     intros.
     pose proof (FieldToZ_opp' x) as H; rewrite mod_FieldToZ in H; trivial.
   Qed.
+  
+  Lemma sub_intersperse_modulus : forall x y, ((x - y) mod m = (x + (m - y)) mod m)%Z.
+  Proof.
+    intros.
+    replace (x + (m - y))%Z with (m+(x-y))%Z by omega.
+    rewrite Zplus_mod.
+    rewrite Z_mod_same_full; simpl Z.add.
+    rewrite Zmod_mod.
+    reflexivity.
+  Qed.
 
   (* Compatibility between inject and subtraction *)
   Lemma ZToField_sub : forall (x y : Z),
       @ZToField m (x - y) = ZToField x - ZToField y.
   Proof.
-    repeat progress Fdefn.
-    rewrite Zplus_mod, FieldToZ_opp', FieldToZ_ZToField.
-    demod; reflexivity.
+    Fdefn.
+    apply sub_intersperse_modulus.
   Qed.
 
   (* Compatibility between inject and multiplication *)
@@ -286,8 +302,8 @@ Section RingModuloPre.
     constructor; intros; try Fdefn; unfold id, unfoldFm;
       try (apply gf_eq; simpl; intuition).
 
-    - rewrite FieldToZ_opp, FieldToZ_ZToField; demod; trivial.
-    - rewrite FieldToZ_opp, FieldToZ_ZToField, Z_mod_opp; trivial.
+    - apply sub_intersperse_modulus.
+    - rewrite Zminus_mod, Z_mod_same_full; simpl. apply Z_mod_opp.
     - rewrite (proj1 (Z.eqb_eq x y)); trivial.
   Qed.
 
