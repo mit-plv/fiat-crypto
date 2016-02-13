@@ -39,7 +39,7 @@ Section CompleteEdwardsCurveTheorems.
     Edefn; apply f_equal2; ring.
   Qed.
 
-  Lemma twistedAddAssoc : forall A B C, A+(B+C) = (A+B)+C.
+  Lemma twistedAddAssoc : forall A B C, (A+(B+C) = (A+B)+C)%E.
   Proof.
     (* http://math.rice.edu/~friedl/papers/AAELLIPTIC.PDF *)
   Admitted.
