@@ -4,22 +4,19 @@ Require Import Crypto.Spec.CompleteEdwardsCurve.
 Section ExtendedCoordinates.
   Local Open Scope F_scope.
 
-  (* 
-  Context {prm:TwistedEdwardsParams}.                 (* DOESN'T WORK   *)
-  *)
-  Context {q:BinInt.Z} {prime_q:Znumtheory.prime q}.  (* WORKS OKAY-ish *)
+  Context {prm:TwistedEdwardsParams}.
+  Context {p:BinInt.Z} {p_eq_q:p = q}.
+  Lemma prime_p : Znumtheory.prime p.
+    rewrite p_eq_q; exact prime_q.
+  Qed.
 
-  Check q : BinInt.Z.
-  Check prime_q : Znumtheory.prime q.
-  Existing Instance prime_q.
-
-  Add Field Ffield_Z : (@Ffield_theory q _)
-    (morphism (@Fring_morph q),
+  Add Field Ffield_Z : (@Ffield_theory p prime_p)
+    (morphism (@Fring_morph p),
      preprocess [Fpreprocess],
      postprocess [Fpostprocess],
      constants [Fconstant],
-     div (@Fmorph_div_theory q),
-     power_tac (@Fpower_theory q) [Fexp_tac]). 
+     div (@Fmorph_div_theory p),
+     power_tac (@Fpower_theory p) [Fexp_tac]). 
 
   Lemma biggerFraction : forall XP YP ZP XQ YQ ZQ d : F q, 
    ZQ <> 0 ->
@@ -34,7 +31,8 @@ Section ExtendedCoordinates.
     (ZP * ZToField 2 * ZQ + XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ))) =
    (XP / ZP * (YQ / ZQ) + YP / ZP * (XQ / ZQ)) / (1 + d * (XP / ZP) * (XQ / ZQ) * (YP / ZP) * (YQ / ZQ)).
   Proof.
+    rewrite <-p_eq_q.
     intros.
-    field; assumption.
+    abstract (field; assumption).
   Qed.
 End ExtendedCoordinates.
