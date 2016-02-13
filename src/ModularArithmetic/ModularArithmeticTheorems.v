@@ -6,6 +6,14 @@ Require Import BinInt Zdiv Znumtheory NArith. (* import Zdiv before Znumtheory *
 Require Import Coq.Classes.Morphisms Setoid.
 Require Export Ring_theory Field_theory Field_tac.
 
+Theorem F_eq: forall {m} (x y : F m), x = y <-> FieldToZ x = FieldToZ y.
+Proof.
+  destruct x, y; intuition; simpl in *; try congruence.
+  subst_max.
+  f_equal.
+  eapply UIP_dec, Z.eq_dec.
+Qed.
+
 Lemma F_opp_spec : forall {m} (a:F m), add a (opp a) = ZToField 0.
   intros m a.
   pose (@opp_with_spec m) as H.
@@ -13,12 +21,13 @@ Lemma F_opp_spec : forall {m} (a:F m), add a (opp a) = ZToField 0.
   destruct H; eauto.
 Qed.
 
-Theorem F_eq: forall {m} (x y : F m), x = y <-> FieldToZ x = FieldToZ y.
+Lemma F_pow_spec : forall {m} (a:F m),
+    pow a 0%N = 1%F /\ forall x, pow a (1 + x)%N = mul a (pow a x).
 Proof.
-  destruct x, y; intuition; simpl in *; try congruence.
-  subst_max.
-  f_equal.
-  eapply UIP_dec, Z.eq_dec.
+  intros m a.
+  pose (@pow_with_spec m) as H.
+  change (@pow m) with (proj1_sig H). 
+  destruct H; eauto.
 Qed.
 
 (* Fails iff the input term does some arithmetic with mod'd values. *)
@@ -165,7 +174,16 @@ Section FandZ.
 
   Lemma mod_plus_zero_subproof a b : 0 mod m = (a + b) mod m ->
                                      b mod m =  (- a)  mod m.
-  Admitted.
+  Proof.
+    rewrite <-Z.sub_0_l; intros.
+    replace (0-a)%Z with (b-(a + b))%Z by omega.
+    rewrite Zminus_mod.
+    rewrite <- H.
+    rewrite Zmod_0_l.
+    replace (b mod m - 0)%Z with (b mod m) by omega.
+    rewrite Zmod_mod.
+    reflexivity.
+  Qed.
 
   Lemma FieldToZ_opp' : forall x, FieldToZ (@opp m x) mod m = -x mod m.
   Proof.
@@ -260,15 +278,36 @@ Section RingModuloPre.
     constructor; Fdefn.
   Qed.
 
-  Lemma pow_pow_N (x : F m) : forall (n : N), (x ^ id n)%F = pow_N 1%F mul x n.
+  Lemma F_mul_1_r:
+    forall x : F m, x * 1 = x.
   Proof.
-    destruct (F_pow_spec x) as [HO HS].
-  Admitted.
+    Fdefn; rewrite Z.mul_1_r; auto.
+  Qed.
+    
+  Lemma F_mul_assoc:
+    forall x y z : F m, x * (y * z) = x * y * z.
+  Proof.
+    Fdefn.
+  Qed.  
+
+  Lemma F_pow_pow_N (x : F m) : forall (n : N), (x ^ id n)%F = pow_N 1%F mul x n.
+  Proof.
+    destruct (F_pow_spec x) as [HO HS]; intros.
+    destruct n; auto; unfold id.
+    rewrite Pre.N_pos_1plus at 1.
+    rewrite HS.
+    simpl.
+    induction p using Pos.peano_ind.
+    - simpl. rewrite HO; apply F_mul_1_r.
+    - rewrite (@pow_pos_succ (F m) (@mul m) eq _ _ F_mul_assoc x).
+      rewrite <-IHp, Pos.pred_N_succ, Pre.N_pos_1plus, HS.
+      f_equal.
+  Qed.
 
   (***** Power theory *****)
   Lemma Fpower_theory : power_theory 1%F (@mul m) eq id (@pow m).
   Proof.
-    constructor; apply pow_pow_N.
+    constructor; apply F_pow_pow_N.
   Qed.
 
   (***** Division Theory *****)
@@ -284,8 +323,16 @@ Section RingModuloPre.
     Fdefn; rewrite <-Z.quot_rem'; trivial.
   Qed.
 
+  Lemma Z_opp_opp : forall x : Z, (-(-x)) = x.
+    destruct x; auto.
+  Qed.
+
   Lemma Z_mod_opp : forall x m, (- x) mod m = (- (x mod m)) mod m.
-  Admitted.
+    intros.
+    apply Pre.mod_opp_equiv.
+    rewrite Z_opp_opp.
+    demod; auto.
+  Qed.
 
   (* Define a "ring morphism" between GF and Z, i.e. an equivalence
    * between 'inject (ZFunction (X))' and 'GFFunction (inject (X))'.
@@ -422,11 +469,6 @@ Section VariousModulo.
   Qed.
 
   Lemma F_sub_0_l : forall x : F m, (0 - x)%F = opp x.
-  Proof.
-    intros; ring.
-  Qed.
-
-  Lemma F_mul_1_r : forall x : F m, (x * 1)%F = x.
   Proof.
     intros; ring.
   Qed.
