@@ -31,16 +31,25 @@ Section FieldOperations.
   Definition add (a b:Fm) : Fm := ZToField (a + b).
   Definition mul (a b:Fm) : Fm := ZToField (a * b).
 
-  Definition opp_with_spec : { opp | forall x, add x (opp x) = 0 } := Pre.opp_impl.
+  Definition opp_with_spec : { opp : Fm -> Fm
+                             | forall x, add x (opp x) = 0
+                             } := Pre.opp_impl.
   Definition opp : F m -> F m := Eval hnf in proj1_sig opp_with_spec.
   Definition sub (a b:Fm) : Fm := add a (opp b).
 
-  Parameter inv : Fm -> Fm. 
-  Axiom F_inv_spec : Znumtheory.prime m -> forall (a:Fm), mul a (inv a) = 1 /\ inv 0 = 0.
+  Definition inv_with_spec : { inv : Fm -> Fm
+                             | inv 0 = 0
+                             /\ ( Znumtheory.prime m ->
+                                 forall (a:Fm), a <> 0 -> mul a (inv a) = 1 )
+                             } := Pre.inv_impl.
+  Definition inv : F m -> F m := Eval hnf in proj1_sig inv_with_spec.
   Definition div (a b:Fm) : Fm := mul a (inv b).
 
-  Parameter pow : Fm -> BinNums.N ->  Fm. 
-  Axiom F_pow_spec : forall a, pow a 0%N = 1 /\ forall x, pow a (1 + x)%N = mul a (pow a x).
+  Definition pow_with_spec : { pow : Fm -> BinNums.N -> Fm
+                             | forall a, pow a 0%N = 1
+                             /\ forall x, pow a (1 + x)%N = mul a (pow a x)
+                             } := Pre.pow_impl.
+  Definition pow : F m -> BinNums.N -> F m := Eval hnf in proj1_sig pow_with_spec.
 End FieldOperations.
 
 Delimit Scope F_scope with F.

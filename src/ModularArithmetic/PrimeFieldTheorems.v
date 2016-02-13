@@ -8,6 +8,15 @@ Require Import Eqdep_dec.
 
 Existing Class prime.
 
+Lemma F_inv_spec : forall {m}, inv 0%F = (0%F : F m)
+      /\ (prime m -> forall a0 : F m, a0 <> 0%F -> (a0 * inv a0)%F = 1%F).
+Proof.
+  intros m.
+  pose (@inv_with_spec m) as H.
+  change (@inv m) with (proj1_sig H).
+  destruct H; eauto.
+Qed.
+
 Section FieldModuloPre.
   Context {q:Z} {prime_q:prime q}.
   Local Open Scope F_scope.
@@ -18,10 +27,17 @@ Section FieldModuloPre.
     rewrite F_eq, !FieldToZ_ZToField, !Zmod_small by omega; congruence.
   Qed.
 
-  Lemma F_mul_inv_l : forall x : F q, inv x * x = 1.
+  Lemma F_mul_inv_r : forall x : F q, x <> 0 -> x * inv x = 1.
   Proof.
     intros.
-    rewrite <-(proj1 (F_inv_spec _ x)).
+    edestruct @F_inv_spec; eauto.
+  Qed.
+
+  Lemma F_mul_inv_l : forall x : F q, x <> 0 -> inv x * x = 1.
+  Proof.
+    intros.
+    edestruct @F_inv_spec as [Ha Hb]; eauto.
+    erewrite <-Hb; eauto.
     Fdefn.
   Qed.
 
@@ -67,7 +83,7 @@ Section VariousModPrime.
     assert (x * z * inv z = y * z * inv z) as H by (rewrite mul_z_eq; reflexivity).
     replace (x * z * inv z) with (x * (z * inv z)) in H by (field; trivial).
     replace (y * z * inv z) with (y * (z * inv z)) in H by (field; trivial).
-    rewrite (proj1 (@F_inv_spec q _ _)) in H.
+    rewrite F_mul_inv_r in H by assumption.
     replace (x * 1) with x in H by field.
     replace (y * 1) with y in H by field.
     trivial.
