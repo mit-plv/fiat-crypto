@@ -1,4 +1,5 @@
-Require Import Galois GaloisTheory Galois.BaseSystem Galois.ModularBaseSystem.
+Require Import ModularArithmetic.PrimeFieldTheorems.
+Require Import Galois.BaseSystem Galois.ModularBaseSystem.
 Require Import List Util.ListUtil.
 Import ListNotations.
 Require Import ZArith.ZArith Zpower ZArith Znumtheory.
@@ -38,15 +39,13 @@ Module Base25Point5_10limbs <: BaseCoefs.
   Qed.
 End Base25Point5_10limbs.
 
-Module Modulus25519 <: Modulus.
+Module Modulus25519 <: PrimeModulus.
   Local Open Scope Z_scope.
-  Definition two_255_19 := two_p 255 - 19.
-  Lemma two_255_19_prime : prime two_255_19. Admitted.
-  Definition prime25519 := exist _ two_255_19 two_255_19_prime.
-  Definition modulus := prime25519.
+  Definition modulus : Z := 2^255 - 19.
+  Lemma prime_modulus : prime modulus. Admitted.
 End Modulus25519.
 
-Module GF25519Base25Point5Params <: PseudoMersenneBaseParams Base25Point5_10limbs Modulus25519.
+Module F25519Base25Point5Params <: PseudoMersenneBaseParams Base25Point5_10limbs Modulus25519.
   Import Base25Point5_10limbs.
   Import Modulus25519.
   Local Open Scope Z_scope.
@@ -56,7 +55,7 @@ Module GF25519Base25Point5Params <: PseudoMersenneBaseParams Base25Point5_10limb
   Definition k := 255.
   Definition c := 19.
   Lemma modulus_pseudomersenne :
-    primeToZ modulus = 2^k - c.
+    modulus = 2^k - c.
   Proof.
     auto.
   Qed.
@@ -111,13 +110,12 @@ Module GF25519Base25Point5Params <: PseudoMersenneBaseParams Base25Point5_10limb
   repeat (destruct i; [cbv; intuition; congruence|]); 
       contradict H; cbv; firstorder.
   Qed.      
-End GF25519Base25Point5Params.
+End F25519Base25Point5Params.
 
-Module GF25519Base25Point5 := GFPseudoMersenneBase Base25Point5_10limbs Modulus25519 GF25519Base25Point5Params.
+Module F25519Base25Point5 := PseudoMersenneBase Base25Point5_10limbs Modulus25519 F25519Base25Point5Params.
 
-Section GF25519Base25Point5Formula.
-  Import GF25519Base25Point5 Base25Point5_10limbs GF25519Base25Point5 GF25519Base25Point5Params.
-  Import Field.
+Section F25519Base25Point5Formula.
+  Import F25519Base25Point5 Base25Point5_10limbs F25519Base25Point5 F25519Base25Point5Params.
 
 Definition Z_add_opt := Eval compute in Z.add.
 Definition Z_sub_opt := Eval compute in Z.sub.
@@ -456,7 +454,7 @@ Definition carry_sequence_opt_cps_correct is us
   := proj2_sig (carry_sequence_opt_cps_sig is us).
 
 Lemma mul_opt_rep:
-  forall (u v : T) (x y : GF), rep u x -> rep v y -> rep (mul_opt u v) (x * y)%GF.
+  forall (u v : T) (x y : F Modulus25519.modulus), rep u x -> rep v y -> rep (mul_opt u v) (x * y)%F.
 Proof.
   intros.
   rewrite mul_opt_correct.
@@ -464,7 +462,7 @@ Proof.
 Qed.
 
 Lemma carry_sequence_opt_cps_rep
-     : forall (is : list nat) (us : list Z) (x : GF),
+     : forall (is : list nat) (us : list Z) (x : F Modulus25519.modulus),
        (forall i : nat, In i is -> i < length Base25Point5_10limbs.base) ->
        length us = length Base25Point5_10limbs.base ->
        rep us x -> rep (carry_sequence_opt_cps is us) x.
@@ -488,11 +486,11 @@ Definition carry_mul_opt
     carry_sequence_opt_cps is (mul_opt us vs).
 
 Lemma carry_mul_opt_correct
-  : forall (is : list nat) (us vs : list Z) (x  y: GF),
+  : forall (is : list nat) (us vs : list Z) (x  y: F Modulus25519.modulus),
     rep us x -> rep vs y ->
     (forall i : nat, In i is -> i < length Base25Point5_10limbs.base) ->
     length (mul_opt us vs) = length base ->
-    rep (carry_mul_opt is us vs) (x*y)%GF.
+    rep (carry_mul_opt is us vs) (x*y)%F.
 Proof.
   intros is us vs x y; intros.
   change (carry_mul_opt _ _ _) with (carry_sequence_opt_cps is (mul_opt us vs)).
@@ -505,7 +503,7 @@ Qed.
       g0 g1 g2 g3 g4 g5 g6 g7 g8 g9,
       {ls | forall f g, rep [f0;f1;f2;f3;f4;f5;f6;f7;f8;f9] f
                         -> rep [g0;g1;g2;g3;g4;g5;g6;g7;g8;g9] g
-                        -> rep ls (f*g)%GF}.
+                        -> rep ls (f*g)%F}.
   Proof.
     eexists.
     intros f g Hf Hg.
@@ -522,7 +520,7 @@ Qed.
     rewrite ?Z.mul_assoc, ?Z.add_assoc in Hfg.
     exact Hfg.
   Time Defined.
-End GF25519Base25Point5Formula.
+End F25519Base25Point5Formula.
 
 Extraction "/tmp/test.ml" GF25519Base25Point5_mul_reduce_formula.
 (* It's easy enough to use extraction to get the proper nice-looking formula.

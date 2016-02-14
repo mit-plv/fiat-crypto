@@ -1,17 +1,15 @@
 Require Import Zpower ZArith.
 Require Import List.
-Require Import Crypto.Galois.BaseSystem Crypto.Galois.GaloisField.
 Require Import Crypto.Util.ListUtil Crypto.Util.CaseUtil Crypto.Util.ZUtil.
+Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
+Require Import Crypto.Galois.BaseSystem.
 Require Import VerdiTactics.
 Local Open Scope Z_scope.
 
 Module Type PseudoMersenneBaseParams (Import B:BaseCoefs) (Import M:Modulus).
-  (* TODO: do we actually want B and M "up there" in the type parameters? I was
-  * imagining writing something like "Paramter Module M : Modulus". *)
-
   Parameter k : Z.
   Parameter c : Z.
-  Axiom modulus_pseudomersenne : primeToZ modulus = 2^k - c.
+  Axiom modulus_pseudomersenne : modulus = 2^k - c.
 
   Axiom base_matches_modulus :
     forall i j,
@@ -34,34 +32,27 @@ Module Type PseudoMersenneBaseParams (Import B:BaseCoefs) (Import M:Modulus).
 
 End PseudoMersenneBaseParams.
 
-Module Type GFrep (Import M:Modulus).
-  Module Field := GaloisField M.
-  Import Field.
-
+Module Type RepZMod (Import M:Modulus).
   Parameter T : Type.
-  Parameter fromGF : GF -> T.
-  Parameter toGF : T -> GF.
+  Parameter encode : F modulus -> T.
+  Parameter decode : T -> F modulus.
 
-  Parameter rep : T -> GF -> Prop.
+  Parameter rep : T -> F modulus -> Prop.
   Local Notation "u '~=' x" := (rep u x) (at level 70).
-  Axiom fromGF_rep : forall x, fromGF x ~= x.
-  Axiom rep_toGF : forall u x, u ~= x -> toGF u = x.
+  Axiom encode_rep : forall x, encode x ~= x.
+  Axiom rep_decode : forall u x, u ~= x -> decode u = x.
 
   Parameter add : T -> T -> T.
-  Axiom add_rep : forall u v x y, u ~= x -> v ~= y -> add u v ~= (x+y)%GF.
+  Axiom add_rep : forall u v x y, u ~= x -> v ~= y -> add u v ~= (x+y)%F.
 
   Parameter sub : T -> T -> T.
-  Axiom sub_rep : forall u v x y, u ~= x -> v ~= y -> sub u v ~= (x-y)%GF.
+  Axiom sub_rep : forall u v x y, u ~= x -> v ~= y -> sub u v ~= (x-y)%F.
 
   Parameter mul : T -> T -> T.
-  Axiom mul_rep : forall u v x y, u ~= x -> v ~= y -> mul u v ~= (x*y)%GF.
+  Axiom mul_rep : forall u v x y, u ~= x -> v ~= y -> mul u v ~= (x*y)%F.
+End RepZMod.
 
-End GFrep.
-
-Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBaseParams BC M) <: GFrep M.
-  Module Field := GaloisField M.
-  Import Field. 
-
+Module PseudoMersenneBase (BC:BaseCoefs) (Import M:PrimeModulus) (P:PseudoMersenneBaseParams BC M) <: RepZMod M.
   Module EC <: BaseCoefs.
     Definition base := BC.base ++ (map (Z.mul (2^(P.k))) BC.base).
     
@@ -214,56 +205,56 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
 
   Definition T := B.digits.
   Local Hint Unfold T.
-  Definition toGF (us : T) : GF := inject (B.decode us).
-  Local Hint Unfold toGF.
-  Definition rep (us : T) (x : GF) := (length us <= length BC.base)%nat /\ toGF us = x.
+  Definition decode (us : T) : F modulus := ZToField (B.decode us).
+  Local Hint Unfold decode.
+  Definition rep (us : T) (x : F modulus) := (length us <= length BC.base)%nat /\ decode us = x.
   Local Notation "u '~=' x" := (rep u x) (at level 70).
   Local Hint Unfold rep.
 
-  Lemma rep_toGF : forall us x, us ~= x -> toGF us = x.
+  Lemma rep_decode : forall us x, us ~= x -> decode us = x.
   Proof.
     autounfold; intuition.
   Qed.
 
-  Definition fromGF (x : GF) := B.encode x.
+  Definition encode (x : F modulus) := B.encode x.
 
-  Lemma fromGF_rep : forall x : GF, fromGF x ~= x.
+  Lemma encode_rep : forall x : F modulus, encode x ~= x.
   Proof.
-    intros. unfold fromGF, rep.
+    intros. unfold encode, rep.
     split. {
       unfold B.encode; simpl.
       apply EC.base_length_nonzero.
     } {
-      unfold toGF.
+      unfold decode.
       rewrite B.encode_rep.
-      rewrite inject_eq; auto.
+      apply ZToField_idempotent. (* TODO: rename this lemma *)
     }
   Qed.
 
   Definition add (us vs : T) := B.add us vs.
-  Lemma add_rep : forall u v x y, u ~= x -> v ~= y -> add u v ~= (x+y)%GF.
+  Lemma add_rep : forall u v x y, u ~= x -> v ~= y -> add u v ~= (x+y)%F.
   Proof.
     autounfold; intuition. {
       unfold add.
       rewrite B.add_length_le_max.
       case_max; try rewrite Max.max_r; omega.
     }
-    unfold toGF in *; unfold B.decode in *.
+    unfold decode in *; unfold B.decode in *.
     rewrite B.add_rep.
-    rewrite inject_distr_add.
+    rewrite ZToField_add.
     subst; auto.
   Qed.
 
   Definition sub (us vs : T) := B.sub us vs.
-  Lemma sub_rep : forall u v x y, u ~= x -> v ~= y -> sub u v ~= (x-y)%GF.
+  Lemma sub_rep : forall u v x y, u ~= x -> v ~= y -> sub u v ~= (x-y)%F.
   Proof.
     autounfold; intuition. {
       rewrite B.sub_length_le_max.
       case_max; try rewrite Max.max_r; omega.
     }
-    unfold toGF in *; unfold B.decode in *.
+    unfold decode in *; unfold B.decode in *.
     rewrite B.sub_rep.
-    rewrite inject_distr_sub.
+    rewrite ZToField_sub.
     subst; auto.
   Qed.
 
@@ -302,18 +293,13 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     let wrap := map (Z.mul P.c) high in
     B.add low wrap.
 
-  Lemma Prime_nonzero: forall (p : Prime), primeToZ p <> 0.
-  Proof.
-    unfold Prime. intros.
-    destruct p.
-    simpl. intro.
-    subst.
-    apply Znumtheory.not_prime_0; auto.
-  Qed.
-
   Lemma two_k_nonzero : 2^P.k <> 0.
     pose proof (Z.pow_eq_0 2 P.k P.k_nonneg).
     intuition.
+  Qed.
+
+  Lemma modulus_nonzero : modulus <> 0.
+    pose proof (Znumtheory.prime_ge_2 _ prime_modulus); omega.
   Qed.
 
   (* a = r + s(2^k) = r + s(2^k - c + c) = r + s(2^k - c) + cs = r + cs *) 
@@ -325,7 +311,7 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     rewrite Zplus_mod.
     rewrite <- P.modulus_pseudomersenne.
     rewrite Z.mul_comm.
-    rewrite mod_mult_plus; try apply Prime_nonzero.
+    rewrite mod_mult_plus; auto using modulus_nonzero.
     rewrite <- Zplus_mod; auto.
   Qed.
 
@@ -387,7 +373,7 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
   Qed.
 
   Definition mul (us vs : T) := reduce (E.mul us vs).
-  Lemma mul_rep : forall u v x y, u ~= x -> v ~= y -> mul u v ~= (x*y)%GF.
+  Lemma mul_rep : forall u v x y, u ~= x -> v ~= y -> mul u v ~= (x*y)%F.
   Proof.
     autounfold; unfold mul; intuition. {
       rewrite reduce_length; try omega.
@@ -395,17 +381,12 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
       rewrite extended_base_length.
       omega.
     }
-    unfold mul.
-    unfold toGF in *.
-    rewrite inject_mod_eq.
-    rewrite reduce_rep.
+    rewrite ZToField_mod, reduce_rep, <-ZToField_mod.
     rewrite E.mul_rep; try (rewrite extended_base_length; omega).
-    rewrite <- inject_mod_eq.
-    rewrite inject_distr_mul.
     subst; auto.
     replace (E.decode u) with (B.decode u) by (apply decode_short; omega).
     replace (E.decode v) with (B.decode v) by (apply decode_short; omega).
-    auto.
+    apply ZToField_mul.
   Qed.
 
   Definition add_to_nth n (x:Z) xs :=
@@ -601,12 +582,12 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
     us ~= x -> carry i us ~= x.
   Proof.
     pose carry_length. pose carry_decode_eq_reduce. pose carry_simple_decode_eq.
-    unfold rep, toGF, carry in *; intros.
-    intuition; break_if; subst; galois; boring.
+    unfold rep, decode, carry in *; intros.
+    intuition; break_if; subst; eauto;
+    apply F_eq; simpl; intuition.
   Qed.
   Hint Resolve carry_rep.
 
-  (* FIXME: is should be reversed to match notation in papers *)
   Definition carry_sequence is us := fold_right carry us is.
 
   Lemma carry_sequence_length: forall is us,
@@ -641,5 +622,4 @@ Module GFPseudoMersenneBase (BC:BaseCoefs) (M:Modulus) (P:PseudoMersenneBasePara
   Proof.
     induction is; boring.
   Qed.
-
-End GFPseudoMersenneBase.
+End PseudoMersenneBase.
