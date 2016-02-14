@@ -19,33 +19,33 @@ Infix "mod" := BinInt.Z.modulo (at level 40, no associativity) : Z_scope.
 Local Open Scope Z_scope.
 
 Definition F (modulus : BinInt.Z) := { z : BinInt.Z | z = z mod modulus }.
+Definition ZToField {m} (a:BinNums.Z) : F m := exist _ (a mod m) (Pre.Z_mod_mod a m).
 Coercion FieldToZ {m} (a:F m) : BinNums.Z := proj1_sig a.
 
 Section FieldOperations.
   Context {m : BinInt.Z}.
 
-  Let Fm := F m. (* Note: if inlined, coercions say "anomaly please report" *)
-  Coercion unfoldFm (a:Fm) : F m := a.
-  Coercion ZToField (a:BinNums.Z) : Fm := exist _ (a mod m) (Pre.Z_mod_mod a m).
+  (* Coercion without Context {m} --> non-uniform inheritance --> Anomalies *)
+  Local Coercion ZToFm := ZToField : BinNums.Z -> F m.
   
-  Definition add (a b:Fm) : Fm := ZToField (a + b).
-  Definition mul (a b:Fm) : Fm := ZToField (a * b).
+  Definition add (a b:F m) : F m := ZToField (a + b).
+  Definition mul (a b:F m) : F m := ZToField (a * b).
 
-  Definition opp_with_spec : { opp : Fm -> Fm
+  Definition opp_with_spec : { opp : F m -> F m
                              | forall x, add x (opp x) = 0
                              } := Pre.opp_impl.
   Definition opp : F m -> F m := Eval hnf in proj1_sig opp_with_spec.
-  Definition sub (a b:Fm) : Fm := add a (opp b).
+  Definition sub (a b:F m) : F m := add a (opp b).
 
-  Definition inv_with_spec : { inv : Fm -> Fm
+  Definition inv_with_spec : { inv : F m -> F m
                              | inv 0 = 0
                              /\ ( Znumtheory.prime m ->
-                                 forall (a:Fm), a <> 0 -> mul a (inv a) = 1 )
+                                 forall (a:F m), a <> 0 -> mul a (inv a) = 1 )
                              } := Pre.inv_impl.
   Definition inv : F m -> F m := Eval hnf in proj1_sig inv_with_spec.
-  Definition div (a b:Fm) : Fm := mul a (inv b).
+  Definition div (a b:F m) : F m := mul a (inv b).
 
-  Definition pow_with_spec : { pow : Fm -> BinNums.N -> Fm
+  Definition pow_with_spec : { pow : F m -> BinNums.N -> F m
                              | forall a, pow a 0%N = 1
                              /\ forall x, pow a (1 + x)%N = mul a (pow a x)
                              } := Pre.pow_impl.
