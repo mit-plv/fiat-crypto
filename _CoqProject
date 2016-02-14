@@ -1,8 +1,9 @@
 -R src Crypto
-src/CompleteEdwardsCurve/Pre.v
 src/CompleteEdwardsCurve/CompleteEdwardsCurveTheorems.v
+src/CompleteEdwardsCurve/Pre.v
 src/Curves/PointFormats.v
 src/Curves/ScalarMult.v
+src/EdDSAProofs.v
 src/Galois/BaseSystem.v
 src/Galois/EdDSA.v
 src/Galois/Galois.v
@@ -19,6 +20,7 @@ src/ModularArithmetic/Tutorial.v
 src/Rep/ECRep.v
 src/Rep/GaloisRep.v
 src/Spec/CompleteEdwardsCurve.v
+src/Spec/EdDSA.v
 src/Spec/ModularArithmetic.v
 src/Specific/EdDSA25519.v
 src/Specific/GF25519.v
