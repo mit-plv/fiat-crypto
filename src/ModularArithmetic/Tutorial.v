@@ -1,6 +1,65 @@
 Require Import BinInt Zpower ZArith Znumtheory.
 Require Import Spec.ModularArithmetic ModularArithmetic.PrimeFieldTheorems.
 
+
+(* Example for modular arithmetic with a concrete modulus in a section *)
+Section Mod24.
+  (* Set notations + - * / refer to F operations *)
+  Local Open Scope F_scope.
+
+  (* Specify modulus *)
+  Let q := 24.
+  
+  (* Boilerplate for letting Z numbers be interpreted as field elements *)
+  Local Coercion ZToFq := ZToField : BinNums.Z -> F q. Hint Unfold ZToFq.
+
+  (* Boilerplate for [ring]. Similar boilerplate works for [field] if
+  the modulus is prime . *)
+  Add Ring Ffield_q : (@Fring_theory q)
+    (morphism (@Fring_morph q),
+     preprocess [unfold ZToFq; Fpreprocess],
+     postprocess [Fpostprocess; try exact Fq_1_neq_0; try assumption],
+     constants [Fconstant],
+     div (@Fmorph_div_theory q),
+     power_tac (@Fpower_theory q) [Fexp_tac]). 
+
+  Lemma sumOfSquares : forall a b: F q, (a+b)^2 = a^2 + ZToField 2*a*b + b^2.
+  Proof.
+    intros.
+    ring.
+  Qed.
+End Mod24.
+
+(* Example for modular arithmetic with an abstract modulus in a section *)
+Section Modq.
+  Context {q:Z} {prime_q:prime q}.
+  Existing Instance prime_q.
+
+  (* Set notations + - * / refer to F operations *)
+  Local Open Scope F_scope.
+  
+  (* Boilerplate for letting Z numbers be interpreted as field elements *)
+  Local Coercion ZToFq := ZToField : BinNums.Z -> F q. Hint Unfold ZToFq.
+
+  (* Boilerplate for [field]. Similar boilerplate works for [ring] if
+  the modulus is not prime . *)
+  Add Field Ffield_q' : (@Ffield_theory q _)
+    (morphism (@Fring_morph q),
+     preprocess [unfold ZToFq; Fpreprocess],
+     postprocess [Fpostprocess; try exact Fq_1_neq_0; try assumption],
+     constants [Fconstant],
+     div (@Fmorph_div_theory q),
+     power_tac (@Fpower_theory q) [Fexp_tac]). 
+
+  Lemma sumOfSquares' : forall a b: F q, (a+b)^2 = a^2 + ZToField 2*a*b + b^2.
+  Proof.
+    intros.
+    field.
+  Qed.
+End Modq.
+
+(*** The old way: Modules ***)
+
 Module Modulus31 <: PrimeModulus.
   Definition modulus := 2^5 - 1.
   Lemma prime_modulus : prime modulus.

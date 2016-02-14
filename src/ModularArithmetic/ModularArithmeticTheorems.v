@@ -6,29 +6,34 @@ Require Import BinInt Zdiv Znumtheory NArith. (* import Zdiv before Znumtheory *
 Require Import Coq.Classes.Morphisms Setoid.
 Require Export Ring_theory Field_theory Field_tac.
 
-Theorem F_eq: forall {m} (x y : F m), x = y <-> FieldToZ x = FieldToZ y.
-Proof.
-  destruct x, y; intuition; simpl in *; try congruence.
-  subst_max.
-  f_equal.
-  eapply UIP_dec, Z.eq_dec.
-Qed.
+Section ModularArithmeticPreliminaries.
+  Context {m:Z}.
+  Local Coercion ZToFm := ZToField : BinNums.Z -> F m. Hint Unfold ZToFm.
 
-Lemma F_opp_spec : forall {m} (a:F m), add a (opp a) = ZToField 0.
-  intros m a.
-  pose (@opp_with_spec m) as H.
-  change (@opp m) with (proj1_sig H). 
-  destruct H; eauto.
-Qed.
-
-Lemma F_pow_spec : forall {m} (a:F m),
-    pow a 0%N = 1%F /\ forall x, pow a (1 + x)%N = mul a (pow a x).
-Proof.
-  intros m a.
-  pose (@pow_with_spec m) as H.
-  change (@pow m) with (proj1_sig H). 
-  destruct H; eauto.
-Qed.
+  Theorem F_eq: forall (x y : F m), x = y <-> FieldToZ x = FieldToZ y.
+  Proof.
+    destruct x, y; intuition; simpl in *; try congruence.
+    subst_max.
+    f_equal.
+    eapply UIP_dec, Z.eq_dec.
+  Qed.
+  
+  Lemma F_opp_spec : forall (a:F m), add a (opp a) = 0.
+    intros a.
+    pose (@opp_with_spec m) as H.
+    change (@opp m) with (proj1_sig H). 
+    destruct H; eauto.
+  Qed.
+  
+  Lemma F_pow_spec : forall (a:F m),
+      pow a 0%N = 1%F /\ forall x, pow a (1 + x)%N = mul a (pow a x).
+  Proof.
+    intros a.
+    pose (@pow_with_spec m) as H.
+    change (@pow m) with (proj1_sig H). 
+    destruct H; eauto.
+  Qed.
+End ModularArithmeticPreliminaries.
 
 (* Fails iff the input term does some arithmetic with mod'd values. *)
 Ltac notFancy E :=
@@ -77,7 +82,6 @@ end.
             
 Ltac Fdefn :=
   intros;
-  unfold unfoldFm;
   rewrite ?F_opp_spec;
   repeat match goal with [ x : F _ |- _ ] => destruct x end;
   try eq_remove_proofs;
@@ -239,6 +243,7 @@ End FandZ.
 
 Section RingModuloPre.
   Context {m:Z}.
+  Local Coercion ZToFm := ZToField : Z -> F m. Hint Unfold ZToFm.
   (* Substitution to prove all Compats *)
   Ltac compat := repeat intro; subst; trivial.
 
@@ -311,8 +316,8 @@ Section RingModuloPre.
   Qed.
 
   (***** Division Theory *****)
-  Definition Fquotrem(a b: F m): F m * F m :=
-    let '(q, r) := (Z.quotrem a b) in (ZToField q, ZToField r).
+  Definition Fquotrem(a b: F m): F m * F m := 
+    let '(q, r) := (Z.quotrem a b) in (q : F m, r : F m).
   Lemma Fdiv_theory : div_theory eq (@add m) (@mul m) (@id _) Fquotrem.
   Proof.
     constructor; intros; unfold Fquotrem, id.
@@ -346,7 +351,7 @@ Section RingModuloPre.
                  0%Z 1%Z Z.add    Z.mul    Z.sub    Z.opp  Z.eqb
                  (@ZToField m).
   Proof.
-    constructor; intros; try Fdefn; unfold id, unfoldFm;
+    constructor; intros; try Fdefn; unfold id;
       try (apply gf_eq; simpl; intuition).
 
     - apply sub_intersperse_modulus.
