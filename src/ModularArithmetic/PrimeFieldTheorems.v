@@ -198,25 +198,6 @@ Section VariousModPrime.
     intros; field. (* TODO: Warning: Collision between bound variables ... *)
   Qed.
 
-  Lemma FieldToZ_range : forall x : F q, (0 <= x < q)%Z.
-  Proof.
-    intros.
-    rewrite <- mod_FieldToZ.
-    apply Z.mod_pos_bound.
-    prime_bound.
-  Qed.
-
-  Lemma FieldToZ_nonzero_range : forall x : F q, (x <> 0) ->
-    (1 <= x < q)%Z.
-  Proof.
-    intros.
-    pose proof (FieldToZ_range x).
-    unfold not in *.
-    rewrite F_eq in H.
-    replace (FieldToZ 0) with 0%Z in H by auto.
-    omega.
-  Qed.
-
   Lemma euler_criterion_F : forall (a : F q) (q_odd : 2 < q) (a_nonzero : a <> 0),
     (a ^ (Z.to_N (q / 2)) = 1) <-> isSquare a.
   Proof.

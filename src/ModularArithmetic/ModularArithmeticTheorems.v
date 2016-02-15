@@ -258,6 +258,7 @@ Section FandZ.
   Proof.
     Fdefn.
   Qed.
+  Definition ZToField_FieldToZ := ZToField_idempotent. (* alias *)
 
   (* Compatibility between inject and mod *)
   Lemma ZToField_mod : forall x, @ZToField m x = ZToField (x mod m).
@@ -596,8 +597,27 @@ Section VariousModulo.
       replace (Z.of_N 2) with 2%Z by auto.
       rewrite Z.pow_2_r.
       rewrite sqrt_a_id.
-      apply ZToField_idempotent.
+      apply ZToField_FieldToZ.
     }
+  Qed.
+
+  Lemma FieldToZ_range : forall x : F m, 0 < m -> 0 <= x < m.
+  Proof.
+    intros.
+    rewrite <- mod_FieldToZ.
+    apply Z.mod_pos_bound.
+    omega.
+  Qed.
+
+  Lemma FieldToZ_nonzero_range : forall x : F m, (x <> 0) -> 0 < m ->
+    (1 <= x < m)%Z.
+  Proof.
+    intros.
+    pose proof (FieldToZ_range x).
+    unfold not in *.
+    rewrite F_eq in H.
+    replace (FieldToZ 0) with 0%Z in H by auto.
+    omega.
   Qed.
 
 End VariousModulo.
