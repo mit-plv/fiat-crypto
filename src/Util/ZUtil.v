@@ -154,6 +154,39 @@ Proof.
   pose proof (prime_ge_2 p prime_p); omega.
 Qed.
 
+Lemma mul_div_eq : (forall a m, m > 0 -> m * (a / m) = (a - a mod m))%Z.
+Proof.
+  intros.
+  rewrite (Z_div_mod_eq a m) at 2 by auto.
+  ring.
+Qed.
+
 Ltac prime_bound := match goal with
 | [ H : prime ?p |- _ ] => pose proof (prime_ge_2 p H); try omega
 end.
+
+Lemma Zlt_minus_lt_0 : forall n m, m < n -> 0 < n - m.
+Proof.
+  intros; omega.
+Qed.
+
+(* prove that known nonnegative numbers are nonnegative *)
+Ltac zero_bounds' :=
+  repeat match goal with
+  | [ |- 0 <= _ + _] => apply Z.add_nonneg_nonneg
+  | [ |- 0 <= _ - _] => apply Zle_minus_le_0
+  | [ |- 0 <= _ * _] => apply Z.mul_nonneg_nonneg
+  | [ |- 0 <= _ / _] => apply Z.div_pos
+  | [ |- 0 < _ + _] => apply Z.add_pos_nonneg
+  (* TODO : this apply is not good: it can make a true goal false. Actually,
+  * we would want this tactic to explore two branches:
+  * - apply Z.add_pos_nonneg and continue
+  * - apply Z.add_nonneg_pos and continue
+  * Keep whichever one solves all subgoals. If neither does, don't apply. *)
+
+  | [ |- 0 < _ - _] => apply Zlt_minus_lt_0
+  | [ |- 0 < _ * _] => apply Z.lt_0_mul; left; split
+  | [ |- 0 < _ / _] => apply Z.div_str_pos
+  end; try omega; try prime_bound; auto.
+
+Ltac zero_bounds := try omega; try prime_bound; zero_bounds'.
