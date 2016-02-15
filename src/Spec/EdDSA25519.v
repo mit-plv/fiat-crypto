@@ -1,5 +1,6 @@
 Require Import ZArith.ZArith Zpower ZArith Znumtheory.
 Require Import NPeano NArith.
+Require Import Crypto.Spec.Encoding.
 Require Import Crypto.Spec.EdDSA.
 Require Import Crypto.Spec.CompleteEdwardsCurve Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems Crypto.ModularArithmetic.ModularArithmeticTheorems.
@@ -60,58 +61,72 @@ Instance TEParams : TwistedEdwardsParams := {
   nonsquare_d := nonsquare_d
 }.
 
-  Lemma two_power_nat_Z2Nat : forall n, Z.to_nat (two_power_nat n) = 2 ^ n.
-  Admitted.
+Lemma two_power_nat_Z2Nat : forall n, Z.to_nat (two_power_nat n) = 2 ^ n.
+Admitted.
 
-  Definition b := 256.
-  Lemma b_valid : (2 ^ (b - 1) > Z.to_nat CompleteEdwardsCurve.q)%nat.
-  Proof.
-    replace (CompleteEdwardsCurve.q) with q by reflexivity.
-    unfold q, gt.
-    replace (2 ^ (b - 1)) with (Z.to_nat (2 ^ (Z.of_nat (b - 1))))
-      by (rewrite <- two_power_nat_equiv; apply two_power_nat_Z2Nat).
-    rewrite <- Z2Nat.inj_lt; compute; congruence.
-  Qed.
+Definition b := 256.
+Lemma b_valid : (2 ^ (b - 1) > Z.to_nat CompleteEdwardsCurve.q)%nat.
+Proof.
+  replace (CompleteEdwardsCurve.q) with q by reflexivity.
+  unfold q, gt.
+  replace (2 ^ (b - 1)) with (Z.to_nat (2 ^ (Z.of_nat (b - 1))))
+    by (rewrite <- two_power_nat_equiv; apply two_power_nat_Z2Nat).
+  rewrite <- Z2Nat.inj_lt; compute; congruence.
+Qed.
 
-  Definition c := 3.
-  Lemma c_valid : c = 2 \/ c = 3.
-  Proof.
-    right; auto.
-  Qed.
+Definition c := 3.
+Lemma c_valid : c = 2 \/ c = 3.
+Proof.
+  right; auto.
+Qed.
 
-  Definition n := b - 2.
-  Lemma n_ge_c : n >= c.
-  Proof.
-    unfold n, c, b; omega.
-  Qed.
-  Lemma n_le_b : n <= b.
-  Proof.
-    unfold n, b; omega.
-  Qed.
+Definition n := b - 2.
+Lemma n_ge_c : n >= c.
+Proof.
+  unfold n, c, b; omega.
+Qed.
+Lemma n_le_b : n <= b.
+Proof.
+  unfold n, b; omega.
+Qed.
 
-  Definition l : nat := Z.to_nat (252 + 27742317777372353535851937790883648493)%Z.
-  Lemma prime_l : prime (Z.of_nat l). Admitted.
-  Lemma l_odd : l > 2.
-  Proof.
-    unfold l, proj1_sig.
-    rewrite Z2Nat.inj_add; try omega.
-    apply lt_plus_trans.
-    compute; omega.
-  Qed.
-  Lemma l_bound : l < pow2 b.
-  Proof.
-    rewrite Zpow_pow2.
-    unfold l.
-    rewrite <- Z2Nat.inj_lt; compute; congruence.
-  Qed.
+Definition l : nat := Z.to_nat (252 + 27742317777372353535851937790883648493)%Z.
+Lemma prime_l : prime (Z.of_nat l). Admitted.
+Lemma l_odd : l > 2.
+Proof.
+  unfold l, proj1_sig.
+  rewrite Z2Nat.inj_add; try omega.
+  apply lt_plus_trans.
+  compute; omega.
+Qed.
+Lemma l_bound : l < pow2 b.
+Proof.
+  rewrite Zpow_pow2.
+  unfold l.
+  rewrite <- Z2Nat.inj_lt; compute; congruence.
+Qed.
 
-  Definition H : forall n : nat, word n -> word (b + b). Admitted.
-  Definition B : point. Admitted. (* TODO: B = decodePoint (y=4/5, x="positive") *)
-  Definition B_nonzero : B <> zero. Admitted.
-  Definition l_order_B : scalarMult l B = zero. Admitted.
-  Definition FqEncoding : encoding of F q as word (b - 1). Admitted.
-  Definition FlEncoding : encoding of F (Z.of_nat l) as word b. Admitted.
-  Definition PointEncoding : encoding of point as word b. Admitted.
+Lemma q_pos : (0 < q)%Z. q_bound. Qed.
+Definition FqEncoding : encoding of (F q) as word (b-1) :=
+  @modular_word_encoding q (b - 1) q_pos b_valid.
+
+Check @modular_word_encoding.
+Lemma l_pos : (0 < Z.of_nat l)%Z. pose proof prime_l; prime_bound. Qed.
+(* form of l_bound needed for FlEncoding *)
+Lemma l_bound_encoding : Z.to_nat (Z.of_nat l) < 2 ^ b.
+Proof.
+  rewrite Nat2Z.id.
+  rewrite <- pow2_id.
+  exact l_bound.
+Qed.
+Definition FlEncoding : encoding of F (Z.of_nat l) as word b :=
+  @modular_word_encoding (Z.of_nat l) b l_pos l_bound_encoding.
+
+Definition H : forall n : nat, word n -> word (b + b). Admitted.
+Definition B : point. Admitted. (* TODO: B = decodePoint (y=4/5, x="positive") *)
+Definition B_nonzero : B <> zero. Admitted.
+Definition l_order_B : scalarMult l B = zero. Admitted.
+Definition PointEncoding : encoding of point as word b. Admitted.
 
 Instance x : EdDSAParams := {
   E := TEParams;
@@ -134,4 +149,3 @@ Instance x : EdDSAParams := {
   l_odd := l_odd;
   l_order_B := l_order_B
 }.
-
