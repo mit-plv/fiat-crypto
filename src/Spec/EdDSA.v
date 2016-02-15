@@ -1,3 +1,4 @@
+Require Import Crypto.Spec.Encoding.
 Require Import Crypto.Spec.ModularArithmetic.
 Require Import Crypto.Spec.CompleteEdwardsCurve.
 
@@ -12,13 +13,6 @@ Definition wfirstn n {m} (w : Word.word m) {H : n <= m} : Word.word n.
                             end)); abstract omega. Defined.
 
 Coercion Word.wordToNat : Word.word >-> nat.
-
-Class Encoding (T B:Type) := {
-  enc : T -> B ;
-  dec : B -> option T ;
-  encoding_valid : forall x, dec (enc x) = Some x  
-}.
-Notation "'encoding' 'of' T 'as' B" := (Encoding T B) (at level 50).
 
 Infix "^" := NPeano.pow.
 Infix "mod" := NPeano.modulo.
