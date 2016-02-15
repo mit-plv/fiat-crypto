@@ -15,7 +15,7 @@ Section Mod24.
 
   (* Boilerplate for [ring]. Similar boilerplate works for [field] if
   the modulus is prime . *)
-  Add Ring Ffield_q : (@Fring_theory q)
+  Add Ring Fring_q : (@Fring_theory q)
     (morphism (@Fring_morph q),
      preprocess [unfold ZToFq; Fpreprocess],
      postprocess [Fpostprocess; try exact Fq_1_neq_0; try assumption],
