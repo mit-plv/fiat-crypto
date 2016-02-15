@@ -25,6 +25,7 @@ src/Rep/GaloisRep.v
 src/Spec/CompleteEdwardsCurve.v
 src/Spec/EdDSA.v
 src/Spec/EdDSA25519.v
+src/Spec/Encoding.v
 src/Spec/ModularArithmetic.v
 src/Specific/EdDSA25519.v
 src/Specific/GF25519.v
