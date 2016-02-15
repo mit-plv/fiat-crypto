@@ -89,13 +89,15 @@ Module EdDSA25519_Params <: EdDSAParams.
       + auto.
       + pose proof q_odd; unfold q in *; omega.
       + apply div2_p_1mod4; auto.
-      + apply nonzero_range; auto.
+      + rewrite GF_Zmod.
+        apply nonzero_range; auto.
       + rewrite GFexp_Zpow in A by (auto || apply Z_div_pos; prime_bound).
         rewrite inject_mod_eq in A.
         apply gf_eq in A.
         replace (GFToZ 1) with 1%Z in A by auto.
         rewrite GFToZ_inject in A.
         rewrite Z.mod_mod in A by auto.
+        rewrite GF_Zmod.
         exact A.
     } {
       rewrite GFexp_Zpow by first [apply Z.div_pos; pose proof q_odd; omega | auto].
@@ -104,7 +106,8 @@ Module EdDSA25519_Params <: EdDSAParams.
       rewrite GFToZ_inject.
       apply euler_criterion; auto.
       + apply nonzero_range; auto.
-      + apply square_Zmod_GF; auto.
+      + rewrite <- GF_Zmod.
+        apply square_Zmod_GF; auto.
     }
   Qed.
 
