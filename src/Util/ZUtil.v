@@ -65,6 +65,17 @@ Proof.
   auto.
 Qed.
 
+Lemma pow_Z2N_Zpow : forall a n, 0 <= a ->
+  ((Z.to_nat a) ^ n = Z.to_nat (a ^ Z.of_nat n)%Z)%nat.
+Proof.
+  intros; induction n; try reflexivity.
+  rewrite Nat2Z.inj_succ.
+  rewrite pow_succ_r by apply le_0_n.
+  rewrite Z.pow_succ_r by apply Zle_0_nat.
+  rewrite IHn.
+  rewrite Z2Nat.inj_mul; auto using Z.pow_nonneg.
+Qed.
+
 Lemma mod_exp_0 : forall a x m, x > 0 -> m > 1 -> a mod m = 0 ->
   a ^ x mod m = 0.
 Proof.

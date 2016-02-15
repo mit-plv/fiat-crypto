@@ -1,4 +1,7 @@
 Require Import NPeano Omega.
+Require Import Bedrock.Word.
+
+Local Open Scope nat_scope.
 
 Lemma div_minus : forall a b, b <> 0 -> (a + b) / b = a / b + 1.
 Proof.
@@ -53,4 +56,9 @@ Proof.
     rewrite <- Nnat.Nat2N.inj_compare.
     rewrite <- nat_compare_lt; auto.
   }
+Qed.
+
+Lemma pow2_id : forall n, pow2 n = 2 ^ n.
+Proof.
+  induction n; intros; simpl; auto.
 Qed.
