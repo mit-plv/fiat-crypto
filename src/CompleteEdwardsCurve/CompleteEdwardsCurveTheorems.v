@@ -55,7 +55,6 @@ Section CompleteEdwardsCurveTheorems.
     pose proof prime_q.
     destruct square_a as [sqrt_a sqrt_a_id].
     rewrite <- sqrt_a_id in eq_zero.
-    Check Fq_square_mul_sub.
     destruct (Fq_square_mul_sub _ _ _ eq_zero) as [ [sqrt_d sqrt_d_id] | a_zero].
     + pose proof (nonsquare_d sqrt_d); auto.
     + subst.
