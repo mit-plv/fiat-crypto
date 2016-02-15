@@ -49,4 +49,41 @@ Section CompleteEdwardsCurveTheorems.
     Edefn; repeat rewrite ?F_add_0_r, ?F_add_0_l, ?F_sub_0_l, ?F_sub_0_r,
            ?F_mul_0_r, ?F_mul_0_l, ?F_mul_1_l, ?F_mul_1_r, ?F_div_1_r; exact eq_refl.
   Qed.
+
+  Lemma d_y2_a_nonzero : (forall y, 0 <> d * y ^ 2 - a)%F.
+    intros ? eq_zero.
+    pose proof prime_q.
+    destruct square_a as [sqrt_a sqrt_a_id].
+    rewrite <- sqrt_a_id in eq_zero.
+    Check Fq_square_mul_sub.
+    destruct (Fq_square_mul_sub _ _ _ eq_zero) as [ [sqrt_d sqrt_d_id] | a_zero].
+    + pose proof (nonsquare_d sqrt_d); auto.
+    + subst.
+      rewrite Fq_pow_zero in sqrt_a_id by congruence.
+      auto using nonzero_a.
+  Qed.
+  
+  Lemma a_d_y2_nonzero : (forall y, a - d * y ^ 2 <> 0)%F.
+  Proof.
+    intros y eq_zero.
+    pose proof prime_q.
+    eapply F_minus_swap in eq_zero.
+    eauto using (d_y2_a_nonzero y).
+  Qed.
+
+  (* solve for x ^ 2 *)
+  Lemma onCurve_solve_x2 : (forall x y, onCurve (x, y) ->
+    x ^ 2 = (y ^ 2 - 1) / (d * (y ^ 2) - a))%F.
+  Proof.
+    intros ? ? onCurve_x_y.
+    pose proof prime_q.
+    unfold onCurve in onCurve_x_y.
+    eapply F_div_mul; auto using (d_y2_a_nonzero y).
+    replace (x ^ 2 * (d * y ^ 2 - a))%F with ((d * x ^ 2 * y ^ 2) - (a * x ^ 2))%F by ring.
+    rewrite F_sub_add_swap.
+    replace (y ^ 2 + a * x ^ 2)%F with (a * x ^ 2 + y ^ 2)%F by ring.
+    rewrite onCurve_x_y.
+    ring.
+  Qed.
+
 End CompleteEdwardsCurveTheorems.
