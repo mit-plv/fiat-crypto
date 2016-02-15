@@ -2,7 +2,7 @@ Require Import Zpower ZArith.
 Require Import List.
 Require Import Crypto.Util.ListUtil Crypto.Util.CaseUtil Crypto.Util.ZUtil.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
-Require Import Crypto.Galois.BaseSystem.
+Require Import Crypto.BaseSystem.
 Require Import VerdiTactics.
 Local Open Scope Z_scope.
 
