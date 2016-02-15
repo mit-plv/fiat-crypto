@@ -140,7 +140,6 @@ Section FEquality.
 End FEquality.
 
 Section FandZ.
-  Local Set Printing Coercions.
   Context {m:Z}.
 
   Lemma ZToField_small_nonzero : forall z, (0 < z < m)%Z -> ZToField z <> (0:F m).
@@ -174,6 +173,32 @@ Section FandZ.
       FieldToZ (x + y) = ((FieldToZ x + FieldToZ y) mod m)%Z.
   Proof.
     Fdefn.
+  Qed.
+
+  Lemma FieldToZ_mul : forall x y : F m,
+      FieldToZ (x * y) = ((FieldToZ x * FieldToZ y) mod m)%Z.
+  Proof.
+    Fdefn.
+  Qed.
+
+  Lemma FieldToZ_pow : forall (x : F m) n, m <> 0%Z ->
+    (FieldToZ x ^ Z.of_N n mod m = FieldToZ (x ^ n)%F)%Z.
+  Proof.
+    intros.
+    induction n using N.peano_ind;
+      destruct (F_pow_spec x) as [pow_0 pow_succ] . {
+      rewrite pow_0.
+      rewrite Z.pow_0_r; auto.
+    } {
+      rewrite N2Z.inj_succ.
+      rewrite Z.pow_succ_r by apply N2Z.is_nonneg.
+      rewrite <- N.add_1_l.
+      rewrite pow_succ.
+      rewrite Z.mul_mod by auto.
+      rewrite IHn.
+      rewrite mod_FieldToZ.
+      apply FieldToZ_mul; auto.
+    }
   Qed.
 
   Lemma mod_plus_zero_subproof a b : 0 mod m = (a + b) mod m ->
@@ -238,6 +263,25 @@ Section FandZ.
   Lemma ZToField_mod : forall x, @ZToField m x = ZToField (x mod m).
   Proof.
     Fdefn.
+  Qed.
+ 
+  (* Compatibility between inject and pow *)
+  Lemma ZToField_pow : forall x n,
+    @ZToField m x ^ n = ZToField (x ^ (Z.of_N n) mod m).
+  Proof.
+    intros.
+    induction n using N.peano_ind;
+      destruct (F_pow_spec (@ZToField m x)) as [pow_0 pow_succ] . {
+      rewrite pow_0.
+      Fdefn.
+    } {
+      rewrite N2Z.inj_succ.
+      rewrite Z.pow_succ_r by apply N2Z.is_nonneg.
+      rewrite <- N.add_1_l.
+      rewrite pow_succ.
+      rewrite IHn.
+      Fdefn.
+    }
   Qed.
 End FandZ.
 
@@ -482,4 +526,78 @@ Section VariousModulo.
   Proof.
     intros; ring.
   Qed.
+
+  Lemma F_ZToField_m : ZToField m = @ZToField m 0.
+  Proof.
+    Fdefn.
+    rewrite Zmod_0_l.
+    apply Z_mod_same_full.
+  Qed.
+
+  Lemma F_sub_m_l : forall x : F m, opp x = ZToField m - x.
+  Proof.
+    rewrite F_ZToField_m.
+    symmetry.
+    apply F_sub_0_l.
+  Qed.
+
+  Lemma opp_ZToField : forall x : Z, opp (ZToField x) = @ZToField m (m - x).
+  Proof.
+    Fdefn.
+  Qed.
+
+  Lemma F_pow_add : forall (x : F m) k j, x ^ j * x ^ k = x ^ (j + k).
+  Proof.
+    intros.
+    destruct (F_pow_spec x) as [exp_zero exp_succ].
+    induction j using N.peano_ind.
+    + rewrite exp_zero.
+      ring_simplify; eauto.
+    +
+    rewrite N.add_succ_l.
+    do 2 rewrite <- N.add_1_l.
+    do 2 rewrite exp_succ by apply N.neq_succ_0.
+    rewrite <- IHj.
+    ring.
+  Qed.
+
+  Lemma F_pow_compose : forall (x : F m) k j, (x ^ j) ^ k = x ^ (k * j).
+  Proof.
+    intros.
+    induction k using N.peano_ind; [rewrite Nmult_0_l; ring | ].
+    rewrite Nmult_Sn_m.
+    rewrite <- F_pow_add.
+    rewrite <- IHk.
+    rewrite <- N.add_1_l.
+    rewrite (proj2 (F_pow_spec _)).
+    ring.
+  Qed.
+
+  Lemma F_sub_add_swap : forall w x y z : F m, w - x = y - z <-> w + z = y + x.
+  Proof.
+    split; intro A;
+      [ replace w with (w - x + x) by ring
+      | replace w with (w + z - z) by ring ]; rewrite A; ring. 
+  Qed.
+
+  Definition isSquare (x : F m) := exists sqrt_x, sqrt_x ^ 2 = x.
+
+  Lemma square_Zmod_F : forall (a : F m), isSquare a <->
+    (exists b : Z, ((b * b) mod m)%Z = a).
+  Proof.
+    split; intro A; destruct A as [sqrt_a sqrt_a_id]. {
+      exists sqrt_a.
+      rewrite <- FieldToZ_mul.
+      apply F_eq.
+      ring_simplify; auto.
+    } {
+      exists (ZToField sqrt_a).
+      rewrite ZToField_pow.
+      replace (Z.of_N 2) with 2%Z by auto.
+      rewrite Z.pow_2_r.
+      rewrite sqrt_a_id.
+      apply ZToField_idempotent.
+    }
+  Qed.
+
 End VariousModulo.
