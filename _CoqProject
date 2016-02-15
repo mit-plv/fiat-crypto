@@ -1,5 +1,6 @@
 -R src Crypto
 src/CompleteEdwardsCurve/CompleteEdwardsCurveTheorems.v
+src/CompleteEdwardsCurve/ExtendedCoordinates.v
 src/CompleteEdwardsCurve/Pre.v
 src/Curves/PointFormats.v
 src/Curves/ScalarMult.v
