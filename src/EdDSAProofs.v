@@ -1,4 +1,4 @@
-Require Import Crypto.Spec.EdDSA.
+Require Import Crypto.Spec.EdDSA Crypto.Spec.Encoding.
 Require Import NPeano.
 Require Import Bedrock.Word.
 Require Import Znumtheory BinInt ZArith.
