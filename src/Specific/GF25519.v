@@ -1,5 +1,5 @@
 Require Import ModularArithmetic.PrimeFieldTheorems.
-Require Import Galois.BaseSystem Galois.ModularBaseSystem.
+Require Import BaseSystem ModularBaseSystem.
 Require Import List Util.ListUtil.
 Import ListNotations.
 Require Import ZArith.ZArith Zpower ZArith Znumtheory.
