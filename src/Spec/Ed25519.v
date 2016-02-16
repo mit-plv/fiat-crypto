@@ -99,28 +99,22 @@ Proof.
   apply lt_plus_trans.
   compute; omega.
 Qed.
-Lemma l_bound : l < pow2 b.
-Proof.
-  rewrite Zpow_pow2.
-  unfold l.
-  rewrite <- Z2Nat.inj_lt; compute; congruence.
-Qed.
 
 Lemma q_pos : (0 < q)%Z. q_bound. Qed.
 Definition FqEncoding : encoding of (F q) as word (b-1) :=
   @modular_word_encoding q (b - 1) q_pos b_valid.
 
-Check @modular_word_encoding.
 Lemma l_pos : (0 < Z.of_nat l)%Z. pose proof prime_l; prime_bound. Qed.
-(* form of l_bound needed for FlEncoding *)
-Lemma l_bound_encoding : Z.to_nat (Z.of_nat l) < 2 ^ b.
+Lemma l_bound : Z.to_nat (Z.of_nat l) < 2 ^ b.
 Proof.
   rewrite Nat2Z.id.
   rewrite <- pow2_id.
-  exact l_bound.
+  rewrite Zpow_pow2.
+  unfold l.
+  apply Z2Nat.inj_lt; compute; congruence.
 Qed.
 Definition FlEncoding : encoding of F (Z.of_nat l) as word b :=
-  @modular_word_encoding (Z.of_nat l) b l_pos l_bound_encoding.
+  @modular_word_encoding (Z.of_nat l) b l_pos l_bound.
 
 Definition H : forall n : nat, word n -> word (b + b). Admitted.
 Definition B : point. Admitted. (* TODO: B = decodePoint (y=4/5, x="positive") *)
