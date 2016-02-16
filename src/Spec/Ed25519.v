@@ -4,7 +4,6 @@ Require Import Crypto.Spec.Encoding Crypto.Spec.PointEncoding.
 Require Import Crypto.Spec.EdDSA.
 Require Import Crypto.Spec.CompleteEdwardsCurve Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems Crypto.ModularArithmetic.ModularArithmeticTheorems.
-Require Import Crypto.Curves.PointFormats.
 Require Import Crypto.Util.NatUtil Crypto.Util.ZUtil Crypto.Util.NumTheoryUtil.
 Require Import Bedrock.Word.
 Require Import VerdiTactics.

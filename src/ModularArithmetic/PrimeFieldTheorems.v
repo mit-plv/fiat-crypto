@@ -197,6 +197,24 @@ Section VariousModPrime.
   Proof.
     intros; field. (* TODO: Warning: Collision between bound variables ... *)
   Qed.
+ 
+  Lemma F_eq_opp_zero : forall x : F q, 2 < q -> (x = opp x <-> x = 0).
+  Proof.
+    split; intro A.
+    + pose proof (F_opp_spec x) as opp_spec.
+      rewrite <- A in opp_spec.
+      replace (x + x) with (ZToField 2 * x) in opp_spec by ring.
+      apply Fq_mul_zero_why in opp_spec.
+      destruct opp_spec as [eq_2_0 | ?]; auto.
+      apply F_eq in eq_2_0.
+      rewrite FieldToZ_ZToField in eq_2_0.
+      replace (FieldToZ 0) with 0%Z in eq_2_0 by auto.
+      replace (2 mod q) with 2 in eq_2_0; try discriminate.
+      symmetry; apply Z.mod_small; omega.
+    + subst.
+      rewrite <- (F_opp_spec 0) at 1.
+      ring.
+  Qed.
 
   Lemma euler_criterion_F : forall (a : F q) (q_odd : 2 < q) (a_nonzero : a <> 0),
     (a ^ (Z.to_N (q / 2)) = 1) <-> isSquare a.
