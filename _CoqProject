@@ -13,7 +13,6 @@ src/ModularArithmetic/PrimeFieldTheorems.v
 src/ModularArithmetic/Tutorial.v
 src/Spec/CompleteEdwardsCurve.v
 src/Spec/EdDSA.v
-src/Spec/EdDSA25519.v
 src/Spec/Ed25519.v
 src/Spec/Encoding.v
 src/Spec/ModularArithmetic.v
