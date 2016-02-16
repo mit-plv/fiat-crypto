@@ -50,6 +50,9 @@ Section CompleteEdwardsCurveTheorems.
            ?F_mul_0_r, ?F_mul_0_l, ?F_mul_1_l, ?F_mul_1_r, ?F_div_1_r; exact eq_refl.
   Qed.
 
+  (* solve for x ^ 2 *)
+  Definition solve_for_x2 (y : F q) := ((y ^ 2 - 1) / (d * (y ^ 2) - a))%F.
+
   Lemma d_y2_a_nonzero : (forall y, 0 <> d * y ^ 2 - a)%F.
     intros ? eq_zero.
     pose proof prime_q.
@@ -61,7 +64,7 @@ Section CompleteEdwardsCurveTheorems.
       rewrite Fq_pow_zero in sqrt_a_id by congruence.
       auto using nonzero_a.
   Qed.
-  
+
   Lemma a_d_y2_nonzero : (forall y, a - d * y ^ 2 <> 0)%F.
   Proof.
     intros y eq_zero.
@@ -70,18 +73,48 @@ Section CompleteEdwardsCurveTheorems.
     eauto using (d_y2_a_nonzero y).
   Qed.
 
-  (* solve for x ^ 2 *)
-  Lemma onCurve_solve_x2 : (forall x y, onCurve (x, y) ->
-    x ^ 2 = (y ^ 2 - 1) / (d * (y ^ 2) - a))%F.
+  Lemma solve_correct : forall x y, onCurve (x, y) <->
+    (x ^ 2 = solve_for_x2 y)%F.
   Proof.
-    intros ? ? onCurve_x_y.
-    pose proof prime_q.
-    unfold onCurve in onCurve_x_y.
-    eapply F_div_mul; auto using (d_y2_a_nonzero y).
-    replace (x ^ 2 * (d * y ^ 2 - a))%F with ((d * x ^ 2 * y ^ 2) - (a * x ^ 2))%F by ring.
-    rewrite F_sub_add_swap.
-    replace (y ^ 2 + a * x ^ 2)%F with (a * x ^ 2 + y ^ 2)%F by ring.
-    rewrite onCurve_x_y.
+    split.
+    + intro onCurve_x_y.
+      pose proof prime_q.
+      unfold onCurve in onCurve_x_y.
+      eapply F_div_mul; auto using (d_y2_a_nonzero y).
+      replace (x ^ 2 * (d * y ^ 2 - a))%F with ((d * x ^ 2 * y ^ 2) - (a * x ^ 2))%F by ring.
+      rewrite F_sub_add_swap.
+      replace (y ^ 2 + a * x ^ 2)%F with (a * x ^ 2 + y ^ 2)%F by ring.
+      rewrite onCurve_x_y.
+      ring.
+    + intro x2_eq.
+      unfold onCurve, solve_for_x2 in *.
+      rewrite x2_eq.
+      field.
+      auto using d_y2_a_nonzero.
+  Qed.
+
+  (* TODO : move to ModularArithmeticTheorems? *)
+  Definition sqrt_valid (a : F q) := ((sqrt_mod_q a) ^ 2 = a)%F.
+
+  Lemma solve_sqrt_valid : forall (p : point),
+    sqrt_valid (solve_for_x2 (snd (proj1_sig p))).
+  Admitted.
+
+  Lemma solve_onCurve: forall (y : F q), sqrt_valid (solve_for_x2 y) ->
+    onCurve (sqrt_mod_q (solve_for_x2 y), y).
+  Proof.
+    intros.
+    unfold sqrt_valid in *.
+    apply solve_correct; auto.
+  Qed.
+
+  Lemma solve_opp_onCurve: forall (y : F q), sqrt_valid (solve_for_x2 y) ->
+    onCurve (opp (sqrt_mod_q (solve_for_x2 y)), y).
+  Proof.
+    intros y sqrt_valid_x2.
+    unfold sqrt_valid in *.
+    apply solve_correct.
+    rewrite <- sqrt_valid_x2 at 2.
     ring.
   Qed.
 
