@@ -1,6 +1,6 @@
 Require Import ZArith.ZArith Zpower ZArith Znumtheory.
 Require Import NPeano NArith.
-Require Import Crypto.Spec.Encoding.
+Require Import Crypto.Spec.Encoding Crypto.Spec.PointEncoding.
 Require Import Crypto.Spec.EdDSA.
 Require Import Crypto.Spec.CompleteEdwardsCurve Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems Crypto.ModularArithmetic.ModularArithmeticTheorems.
@@ -116,11 +116,12 @@ Qed.
 Definition FlEncoding : encoding of F (Z.of_nat l) as word b :=
   @modular_word_encoding (Z.of_nat l) b l_pos l_bound.
 
+Definition PointEncoding := @point_encoding TEParams (b - 1) FqEncoding.
+
 Definition H : forall n : nat, word n -> word (b + b). Admitted.
 Definition B : point. Admitted. (* TODO: B = decodePoint (y=4/5, x="positive") *)
 Definition B_nonzero : B <> zero. Admitted.
 Definition l_order_B : scalarMult l B = zero. Admitted.
-Definition PointEncoding : encoding of point as word b. Admitted.
 
 Instance x : EdDSAParams := {
   E := TEParams;

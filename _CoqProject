@@ -16,6 +16,7 @@ src/Spec/EdDSA.v
 src/Spec/Ed25519.v
 src/Spec/Encoding.v
 src/Spec/ModularArithmetic.v
+src/Spec/PointEncoding.v
 src/Specific/GF25519.v
 src/Tactics/VerdiTactics.v
 src/Util/CaseUtil.v
