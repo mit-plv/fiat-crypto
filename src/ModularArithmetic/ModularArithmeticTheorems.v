@@ -512,6 +512,20 @@ Section VariousModulo.
   Proof.
     intros; ring.
   Qed.
+  
+  Lemma F_add_reg_r : forall x y z : F m, y + x = z + x -> y = z.
+  Proof.
+    intros ? ? ? A.
+    replace y with (y + x - x) by ring.
+    rewrite A; ring.
+  Qed.
+
+  Lemma F_add_reg_l : forall x y z : F m, x + y = x + z -> y = z.
+  Proof.
+    intros ? ? ? A.
+    replace y with (x + y - x) by ring.
+    rewrite A; ring.
+  Qed.
 
   Lemma F_sub_0_r : forall x : F m, (x - 0)%F = x.
   Proof.
