@@ -115,7 +115,10 @@ Qed.
 Definition FlEncoding : encoding of F (Z.of_nat l) as word b :=
   @modular_word_encoding (Z.of_nat l) b l_pos l_bound.
 
-Definition PointEncoding := @point_encoding TEParams (b - 1) FqEncoding.
+Lemma q_5mod8 : (q mod 8 = 5)%Z. cbv; reflexivity. Qed.
+(* Admitting until field exponentiation can compute this in reasonable time *)
+Lemma sqrt_minus1_valid : ((@ZToField q 2 ^ Z.to_N (CompleteEdwardsCurve.q / 4)) ^ 2 = opp 1)%F. Admitted.
+Definition PointEncoding := @point_encoding TEParams (b - 1) FqEncoding q_5mod8 sqrt_minus1_valid.
 
 Definition H : forall n : nat, word n -> word (b + b). Admitted.
 Definition B : point. Admitted. (* TODO: B = decodePoint (y=4/5, x="positive") *)
