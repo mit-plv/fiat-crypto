@@ -45,6 +45,29 @@ Section BoundedWord.
 
   Hint Rewrite wordToN_nat Nat2N.inj_add N2Nat.inj_add Nat2N.inj_mul N2Nat.inj_mul Npow2_nat : N.
 
+  Theorem constant_bound_N : forall k,
+    NToWord n k <= k.
+  Proof.
+    preomega.
+    rewrite NToWord_nat.
+    destruct (le_lt_dec (pow2 n) (N.to_nat k)).
+
+    specialize (wordToNat_bound (natToWord n (N.to_nat k))); nomega.
+
+    rewrite wordToNat_natToWord_idempotent; nomega.
+  Qed.
+
+  Theorem constant_bound_nat : forall k,
+    natToWord n k <= N.of_nat k.
+  Proof.
+    preomega.
+    destruct (le_lt_dec (pow2 n) k).
+
+    specialize (wordToNat_bound (natToWord n k)); nomega.
+
+    rewrite wordToNat_natToWord_idempotent; nomega.
+  Qed.
+
   Theorem wplus_bound : forall (w1 w2 : word n) b1 b2,
     w1 <= b1
     -> w2 <= b2
@@ -80,7 +103,10 @@ Section BoundedWord.
     apply Mult.mult_le_compat; nomega.
   Qed.
 
-  Lemma example_bound_simpl: forall (w1 w2 w3 w4 : word n) b1 b2 b3 b4,
+  Ltac word_bound := repeat (eassumption || apply wplus_bound || apply wmult_bound
+                             || apply constant_bound_N || apply constant_bound_nat).
+
+  Lemma example1 : forall (w1 w2 w3 w4 : word n) b1 b2 b3 b4,
     w1 <= b1
     -> w2 <= b2
     -> w3 <= b3
@@ -88,11 +114,43 @@ Section BoundedWord.
     -> { b | w1 ^+ (w2 ^* w3) ^* w4 <= b }.    
   Proof.
     eexists.
-    repeat (eassumption || apply wplus_bound || apply wmult_bound).
+    word_bound.
   Defined.
 
   Eval simpl in fun (w1 w2 w3 w4 : word n) (b1 b2 b3 b4 : N)
                     (H1 : w1 <= b1) (H2 : w2 <= b2) (H3 : w3 <= b3) (H4 : w4 <= b4) =>
-                  projT1 (example_bound_simpl H1 H2 H3 H4).
+                  projT1 (example1 H1 H2 H3 H4).
+
+  Notation "$" := (natToWord _).
+
+  Lemma example2 : forall (w1 w2 w3 w4 : word n) b1 b2 b3 b4,
+    w1 <= b1
+    -> w2 <= b2
+    -> w3 <= b3
+    -> w4 <= b4
+    -> { b | w1 ^+ (w2 ^* $7 ^* w3) ^* w4 ^+ $8 ^+ w2 <= b }.
+  Proof.
+    eexists.
+    word_bound.
+  Defined.
+
+  Eval simpl in fun (w1 w2 w3 w4 : word n) (b1 b2 b3 b4 : N)
+                    (H1 : w1 <= b1) (H2 : w2 <= b2) (H3 : w3 <= b3) (H4 : w4 <= b4) =>
+                  projT1 (example2 H1 H2 H3 H4).
+
+  Lemma example3 : forall (w1 w2 w3 w4 : word n),
+    w1 <= Npow2 3
+    -> w2 <= Npow2 4
+    -> w3 <= Npow2 8
+    -> w4 <= Npow2 16
+    -> { b | w1 ^+ (w2 ^* $7 ^* w3) ^* w4 ^+ $8 ^+ w2 <= b }.
+  Proof.
+    eexists.
+    word_bound.
+  Defined.
+
+  Eval simpl in fun (w1 w2 w3 w4 : word n)
+                    (H1 : w1 <= _) (H2 : w2 <= _) (H3 : w3 <= _) (H4 : w4 <= _) =>
+                  projT1 (example3 H1 H2 H3 H4).
 
 End BoundedWord.
