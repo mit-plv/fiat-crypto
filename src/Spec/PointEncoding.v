@@ -21,6 +21,39 @@ Section PointEncoding.
      div (@Fmorph_div_theory q),
      power_tac (@Fpower_theory q) [Fexp_tac]).
 
+  Definition sqrt_valid (a : F q) := ((sqrt_mod_q a) ^ 2 = a)%F.
+
+  Lemma solve_sqrt_valid : forall (p : point),
+    sqrt_valid (solve_for_x2 (snd (proj1_sig p))).
+  Proof.
+    intros.
+    destruct p as [[x y] onCurve_xy]; simpl.
+    rewrite (solve_correct x y) in onCurve_xy.
+    rewrite <- onCurve_xy.
+    unfold sqrt_valid.
+    eapply sqrt_mod_q_valid; eauto.
+    unfold isSquare; eauto.
+    Grab Existential Variables. eauto.
+  Qed.
+
+  Lemma solve_onCurve: forall (y : F q), sqrt_valid (solve_for_x2 y) ->
+    onCurve (sqrt_mod_q (solve_for_x2 y), y).
+  Proof.
+    intros.
+    unfold sqrt_valid in *.
+    apply solve_correct; auto.
+  Qed.
+
+  Lemma solve_opp_onCurve: forall (y : F q), sqrt_valid (solve_for_x2 y) ->
+    onCurve (opp (sqrt_mod_q (solve_for_x2 y)), y).
+  Proof.
+    intros y sqrt_valid_x2.
+    unfold sqrt_valid in *.
+    apply solve_correct.
+    rewrite <- sqrt_valid_x2 at 2.
+    ring.
+  Qed.
+
 Definition sign_bit (x : F q) := (wordToN (enc (opp x)) <? wordToN (enc x))%N.
 Definition point_enc (p : point) : word (S sz) := let '(x,y) := proj1_sig p in
   WS (sign_bit x) (enc y).

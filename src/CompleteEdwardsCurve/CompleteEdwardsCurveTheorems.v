@@ -93,29 +93,4 @@ Section CompleteEdwardsCurveTheorems.
       auto using d_y2_a_nonzero.
   Qed.
 
-  (* TODO : move to ModularArithmeticTheorems? *)
-  Definition sqrt_valid (a : F q) := ((sqrt_mod_q a) ^ 2 = a)%F.
-
-  Lemma solve_sqrt_valid : forall (p : point),
-    sqrt_valid (solve_for_x2 (snd (proj1_sig p))).
-  Admitted.
-
-  Lemma solve_onCurve: forall (y : F q), sqrt_valid (solve_for_x2 y) ->
-    onCurve (sqrt_mod_q (solve_for_x2 y), y).
-  Proof.
-    intros.
-    unfold sqrt_valid in *.
-    apply solve_correct; auto.
-  Qed.
-
-  Lemma solve_opp_onCurve: forall (y : F q), sqrt_valid (solve_for_x2 y) ->
-    onCurve (opp (sqrt_mod_q (solve_for_x2 y)), y).
-  Proof.
-    intros y sqrt_valid_x2.
-    unfold sqrt_valid in *.
-    apply solve_correct.
-    rewrite <- sqrt_valid_x2 at 2.
-    ring.
-  Qed.
-
 End CompleteEdwardsCurveTheorems.

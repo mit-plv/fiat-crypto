@@ -197,7 +197,7 @@ Section VariousModPrime.
   Proof.
     intros; field. (* TODO: Warning: Collision between bound variables ... *)
   Qed.
- 
+
   Lemma F_eq_opp_zero : forall x : F q, 2 < q -> (x = opp x <-> x = 0).
   Proof.
     split; intro A.
