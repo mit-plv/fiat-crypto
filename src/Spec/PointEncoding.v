@@ -172,6 +172,4 @@ Instance point_encoding : encoding of point as (word (S sz)) := {
   encoding_valid := point_encoding_valid
 }.
 
-Print Assumptions point_encoding.
-
 End PointEncoding.
