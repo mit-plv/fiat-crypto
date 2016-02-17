@@ -261,9 +261,18 @@ Section VariousModPrime.
 
   Lemma sqrt_solutions : forall x y : F q, y ^ 2 = x ^ 2 -> y = x \/ y = opp x.
   Proof.
-    intros.
-    (* TODO(jadep) *)
-  Admitted.
+    intros ? ? squares_eq.
+    remember (y - x) as z.
+    replace y with (x + z) in * by (rewrite Heqz; ring).
+    replace (x ^ 2) with (0 + x ^ 2) in squares_eq by ring.
+    replace ((x + z) ^ 2) with (z * (x + (x + z)) + x ^ 2) in squares_eq by ring.
+    apply F_add_reg_r in squares_eq.
+    apply Fq_mul_zero_why in squares_eq.
+    destruct squares_eq as [? | z_2x_0]; [ left; subst; ring | right ].
+    pose proof (F_opp_spec x) as opp_spec.
+    rewrite <- z_2x_0 in opp_spec.
+    apply F_add_reg_l in opp_spec; auto.
+  Qed.
   
 End VariousModPrime.
 
@@ -357,4 +366,5 @@ Section SquareRootsPrime5Mod8.
     rewrite eq_b2_oppx.
     field.
   Qed.
+
 End SquareRootsPrime5Mod8.
