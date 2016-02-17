@@ -23,7 +23,7 @@ Section Mod24.
      div (@Fmorph_div_theory q),
      power_tac (@Fpower_theory q) [Fexp_tac]). 
 
-  Lemma sumOfSquares : forall a b: F q, (a+b)^2 = a^2 + ZToField 2*a*b + b^2.
+  Lemma sumOfSquares : forall a b: F q, (a+b)^2 = a^2 + 2*a*b + b^2.
   Proof.
     intros.
     ring.
@@ -51,7 +51,7 @@ Section Modq.
      div (@Fmorph_div_theory q),
      power_tac (@Fpower_theory q) [Fexp_tac]). 
 
-  Lemma sumOfSquares' : forall a b: F q, (a+b)^2 = a^2 + ZToField 2*a*b + b^2.
+  Lemma sumOfSquares' : forall a b c: F q, c <> 0 -> ((a+b)/c)^2 = a^2/c^2 + ZToField 2*(a/c)*(b/c) + b^2/c^2.
   Proof.
     intros.
     field.
