@@ -1,11 +1,11 @@
+COQ_ARGS := -R coqprime/Tactic Coqprime -R coqprime/N Coqprime -R coqprime/Z Coqprime -R coqprime/List Coqprime -R coqprime/PrimalityTest Coqprime
 MOD_NAME := Crypto
 SRC_DIR  := src
+MODULES  := Curves Galois Rep Specific Tactics Util
+VS       := $(MODULES:%=src/%/*.v)
 
-.PHONY: coq clean install coqprime update-_CoqProject
-.DEFAULT_GOAL := coq
-
-update-_CoqProject::
-	(echo '-R $(SRC_DIR) $(MOD_NAME)'; git ls-files src/*.v) > _CoqProject
+.PHONY: coq clean install coqprime
+.DEFAULT_GOAL: coq
 
 coq: coqprime Makefile.coq
 	$(MAKE) -f Makefile.coq
@@ -13,13 +13,14 @@ coq: coqprime Makefile.coq
 coqprime:
 	$(MAKE) -C coqprime
 
-Makefile.coq: Makefile _CoqProject
-	coq_makefile -f _CoqProject -o Makefile.coq
+Makefile.coq: Makefile $(VS)
+	coq_makefile -R $(SRC_DIR) $(MOD_NAME) $(COQ_ARGS) $(VS) -o Makefile.coq
 
 clean: Makefile.coq
 	$(MAKE) -f Makefile.coq clean
 	rm -f Makefile.coq
 
-install: coq Makefile.coq
-	$(MAKE) -f Makefile.coq install
-	$(MAKE) -C coqprime install
+install: coq
+	ln -sfL $(shell pwd)/src $(shell coqtop -where)/user-contrib/Crypto
+	ln -sfL $(shell pwd)/bedrock/Bedrock $(shell coqtop -where)/user-contrib/Bedrock
+
