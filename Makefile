@@ -1,8 +1,7 @@
-COQ_ARGS := -R bedrock/Bedrock Bedrock -R coqprime/Tactic Coqprime -R coqprime/N Coqprime -R coqprime/Z Coqprime -R coqprime/List Coqprime -R coqprime/PrimalityTest Coqprime
+COQ_ARGS := -R coqprime/Tactic Coqprime -R coqprime/N Coqprime -R coqprime/Z Coqprime -R coqprime/List Coqprime -R coqprime/PrimalityTest Coqprime
 MOD_NAME := Crypto
 SRC_DIR  := src
 MODULES  := Curves Galois Rep Specific Tactics Util
-
 VS       := $(MODULES:%=src/%/*.v)
 
 .PHONY: coq clean install coqprime
