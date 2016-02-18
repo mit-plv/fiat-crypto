@@ -44,8 +44,8 @@ Definition opp_impl:
 Defined.
 
 Definition mulmod m := fun a b => a * b mod m.
-Definition pow_impl_pos m := Pos.iter_op (mulmod m).
-Definition pow_impl_N m a x := match x with N0 => 1 mod m | Npos p => @pow_impl_pos m p a end.
+Definition powmod_pos m := Pos.iter_op (mulmod m).
+Definition powmod m a x := match x with N0 => 1 mod m | Npos p => powmod_pos m p (a mod m) end.
   
 Lemma mulmod_assoc:
   forall m x y z : Z, mulmod m x (mulmod m y z) = mulmod m (mulmod m x y) z.
@@ -55,20 +55,20 @@ Proof.
   apply Z.mul_assoc.
 Qed.
 
-Lemma pow_impl_N_correct:
+Lemma powmod_1plus:
       forall m a : Z,
-        a = a mod m ->
-        forall x : N, pow_impl_N m a (1 + x) = (a * (pow_impl_N m a x mod m)) mod m.
+        forall x : N, powmod m a (1 + x) = (a * (powmod m a x mod m)) mod m.
 Proof.
-  intros m a pfa x.
+  intros m a x.
   rewrite N.add_1_l.
-  cbv beta delta [pow_impl_N N.succ].
-  destruct x; [simpl; rewrite ?Zdiv.Zmult_mod_idemp_r, Z.mul_1_r; auto|].
-  unfold pow_impl_pos.
+  cbv beta delta [powmod N.succ].
+  destruct x. simpl; rewrite ?Zdiv.Zmult_mod_idemp_r, Z.mul_1_r; auto.
+  unfold powmod_pos.
   rewrite Pos.iter_op_succ by (apply mulmod_assoc).
   unfold mulmod.
   rewrite ?Zdiv.Zmult_mod_idemp_l, ?Zdiv.Zmult_mod_idemp_r; f_equal.
 Qed.
+
 
 Lemma N_pos_1plus : forall p, (N.pos p = 1 + (N.pred (N.pos p)))%N.
   intros.
@@ -79,14 +79,26 @@ Lemma N_pos_1plus : forall p, (N.pos p = 1 + (N.pred (N.pos p)))%N.
   discriminate.
 Qed.
 
+Lemma powmod_Zpow_mod : forall m a n, powmod m a n = (a^Z.of_N n) mod m.
+Proof.
+  induction n using N.peano_ind; [auto|].
+  rewrite <-N.add_1_l.
+  rewrite powmod_1plus.
+  rewrite IHn.
+  rewrite Zmod_mod.
+  rewrite N.add_1_l.
+  rewrite N2Z.inj_succ.
+  rewrite Z.pow_succ_r by (apply N2Z.is_nonneg).
+  rewrite ?Zdiv.Zmult_mod_idemp_l, ?Zdiv.Zmult_mod_idemp_r; f_equal.
+Qed.
+
 Definition pow_impl_sig {m} : {z : Z | z = z mod m} -> N -> {z : Z | z = z mod m}.
   intros a x.
-  exists (pow_impl_N m (proj1_sig a) x).
+  exists (powmod m (proj1_sig a) x).
   destruct x; [simpl; rewrite Zmod_mod; reflexivity|].
   rewrite N_pos_1plus.
-  rewrite pow_impl_N_correct.
-  - rewrite Zmod_mod; reflexivity.
-  - destruct a; auto.
+  rewrite powmod_1plus.
+  rewrite Zmod_mod; reflexivity.
 Defined.
 
 Definition pow_impl:
@@ -105,9 +117,8 @@ Definition pow_impl:
   intros m. exists pow_impl_sig.
   split; [eauto using exist_reduced_eq|]; intros.
   apply exist_reduced_eq.
-  rewrite pow_impl_N_correct.
+  rewrite powmod_1plus.
   rewrite ?Zdiv.Zmult_mod_idemp_l, ?Zdiv.Zmult_mod_idemp_r; f_equal.
-  destruct a; auto.
 Qed.
 
 Lemma mul_mod_modulus_r : forall x m, (x*m) mod m = 0.
