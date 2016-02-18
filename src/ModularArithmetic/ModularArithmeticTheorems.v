@@ -1,4 +1,5 @@
-Require Import Spec.ModularArithmetic.
+Require Import Crypto.Spec.ModularArithmetic.
+Require Import Crypto.ModularArithmetic.Pre.
 
 Require Import Eqdep_dec.
 Require Import Tactics.VerdiTactics.
@@ -181,7 +182,7 @@ Section FandZ.
     Fdefn.
   Qed.
 
-  Lemma FieldToZ_pow : forall (x : F m) n, m <> 0%Z ->
+  Lemma FieldToZ_pow_Zpow_mod : forall (x : F m) n,
     (FieldToZ x ^ Z.of_N n mod m = FieldToZ (x ^ n)%F)%Z.
   Proof.
     intros.
@@ -194,11 +195,18 @@ Section FandZ.
       rewrite Z.pow_succ_r by apply N2Z.is_nonneg.
       rewrite <- N.add_1_l.
       rewrite pow_succ.
-      rewrite Z.mul_mod by auto.
+      rewrite <- Zmult_mod_idemp_r.
       rewrite IHn.
-      rewrite mod_FieldToZ.
-      apply FieldToZ_mul; auto.
+      apply FieldToZ_mul.
     }
+  Qed.
+
+  Lemma FieldToZ_pow_efficient : forall (x : F m) n, FieldToZ (x^n) = powmod m (FieldToZ x) n.
+  Proof.
+    intros.
+    rewrite powmod_Zpow_mod.
+    rewrite <-FieldToZ_pow_Zpow_mod.
+    reflexivity.
   Qed.
 
   Lemma mod_plus_zero_subproof a b : 0 mod m = (a + b) mod m ->

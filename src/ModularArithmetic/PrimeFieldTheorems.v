@@ -227,13 +227,13 @@ Section VariousModPrime.
       + pose proof (FieldToZ_nonzero_range a a_nonzero); omega.
       + replace (q / 2)%Z with (Z.of_N (Z.to_N (q / 2)))
           by (apply Z2N.id; apply Z.div_pos; prime_bound).
-        rewrite FieldToZ_pow by omega.
+        rewrite FieldToZ_pow_Zpow_mod by omega.
         rewrite A.
         replace (FieldToZ 1) with (1 mod q) by auto.
         apply Z.mod_1_l; omega.
     } {
       apply F_eq.
-      rewrite <- FieldToZ_pow by omega.
+      rewrite <- FieldToZ_pow_Zpow_mod by omega.
       rewrite Z2N.id by (apply Z.div_pos; omega).
       replace (FieldToZ 1) with 1%Z
         by (rewrite FieldToZ_ZToField at 1; symmetry; apply Zmod_1_l; omega).
