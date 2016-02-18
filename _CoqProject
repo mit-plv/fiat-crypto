@@ -1,0 +1,27 @@
+-R src Crypto
+src/BaseSystem.v
+src/BoundedIterOp.v
+src/CompleteEdwardsCurve/CompleteEdwardsCurveTheorems.v
+src/CompleteEdwardsCurve/DoubleAndAdd.v
+src/CompleteEdwardsCurve/ExtendedCoordinates.v
+src/CompleteEdwardsCurve/Pre.v
+src/EdDSAProofs.v
+src/Encoding/EncodingTheorems.v
+src/ModularArithmetic/ModularArithmeticTheorems.v
+src/ModularArithmetic/ModularBaseSystem.v
+src/ModularArithmetic/Pre.v
+src/ModularArithmetic/PrimeFieldTheorems.v
+src/ModularArithmetic/Tutorial.v
+src/Spec/CompleteEdwardsCurve.v
+src/Spec/EdDSA.v
+src/Spec/Ed25519.v
+src/Spec/Encoding.v
+src/Spec/ModularArithmetic.v
+src/Spec/PointEncoding.v
+src/Specific/GF25519.v
+src/Tactics/VerdiTactics.v
+src/Util/CaseUtil.v
+src/Util/ListUtil.v
+src/Util/NatUtil.v
+src/Util/NumTheoryUtil.v
+src/Util/ZUtil.v
