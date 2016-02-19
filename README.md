@@ -7,5 +7,6 @@ To build:
 
 	git clone git@github.mit.edu:plv/bedrock.git
 	( cd bedrock && make Bedrock/Word.vo )
-	( cd coqprime && make PrimalityTest/Zp.vo PrimalityTest/PocklingtonCertificat.vo )
+	( cd coqprime && make )
+	export COQPATH="$(pwd)/bedrock:$(pwd)/coqprime${COQPATH:+:}$COQPATH"
 	make
