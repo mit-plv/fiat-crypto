@@ -1,4 +1,26 @@
 -R src Crypto
+<<<<<<< HEAD
+src/Assembly/Asm.v
+src/Assembly/AsmDSL.v
+src/Assembly/BoundedWord.v
+src/Assembly/Computation.v
+src/Assembly/DSL.v
+src/Assembly/WordBounds.v
+src/Curves/PointFormats.v
+src/Curves/ScalarMult.v
+src/Galois/BaseSystem.v
+src/Galois/EdDSA.v
+src/Galois/Galois.v
+src/Galois/GaloisField.v
+src/Galois/GaloisRep.v
+src/Galois/GaloisTheory.v
+src/Galois/GaloisTutorial.v
+src/Galois/ModularBaseSystem.v
+src/Rep/ECRep.v
+src/Rep/GaloisRep.v
+src/Scratch/fermat.v
+src/Specific/EdDSA25519.v
+=======
 src/BaseSystem.v
 src/BoundedIterOp.v
 src/CompleteEdwardsCurve/CompleteEdwardsCurveTheorems.v
@@ -18,6 +40,7 @@ src/Spec/Ed25519.v
 src/Spec/Encoding.v
 src/Spec/ModularArithmetic.v
 src/Spec/PointEncoding.v
+>>>>>>> 56fa6655b07e8992677805e4f89e131c221755a6
 src/Specific/GF25519.v
 src/Tactics/VerdiTactics.v
 src/Util/CaseUtil.v
