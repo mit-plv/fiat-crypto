@@ -292,6 +292,18 @@ Section FandZ.
       Fdefn.
     }
   Qed.
+
+  Lemma ZToField_eqmod : forall x y : Z, x mod m = y mod m -> ZToField x = @ZToField m y.
+    Fdefn.
+  Qed.
+
+  Lemma FieldToZ_nonzero:
+    forall x0 : F m, x0 <> 0 -> FieldToZ x0 <> 0%Z.
+  Proof.
+    intros x0 Hnz Hz.
+    rewrite <- Hz, ZToField_FieldToZ in Hnz; auto.
+  Qed.
+
 End FandZ.
 
 Section RingModuloPre.
@@ -642,4 +654,15 @@ Section VariousModulo.
     omega.
   Qed.
 
+  Lemma F_mul_comm : forall x y : F m, x*y = y*x.
+    intros; ring.
+  Qed.
+
+  Lemma Fq_sub_eq : forall x y a b : F m, a = b -> x-a = y-b -> x = y.
+  Proof.
+    intros x y a b Hab Hxayb; subst.
+    replace x with ((x - b) + b) by ring.
+    replace y with ((y - b) + b) by ring.
+    rewrite Hxayb; ring.
+  Qed.
 End VariousModulo.

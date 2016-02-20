@@ -1,6 +1,8 @@
 Require Export Spec.ModularArithmetic ModularArithmetic.ModularArithmeticTheorems.
 Require Export Ring_theory Field_theory Field_tac.
 
+Require Import Crypto.ModularArithmetic.Pre.
+Require Import Util.NumTheoryUtil.
 Require Import Tactics.VerdiTactics.
 Require Import Coq.Classes.Morphisms Setoid.
 Require Import BinInt BinNat ZArith Znumtheory NArith. (* import Zdiv before Znumtheory *)
@@ -89,7 +91,54 @@ Section VariousModPrime.
     replace (y * 1) with y in H by field.
     trivial.
   Qed.
-  
+
+  Lemma Fq_mul_eq_l : forall x y z : F q, z <> 0 -> z * x = z * y -> x = y.
+  Proof.
+    intros ? ? ? Hz Heq.
+    apply (Fq_mul_eq _ _ z); auto.
+    apply (Fq_sub_eq _ _ _ _ Heq); ring.
+  Qed.
+
+  Lemma Fq_inv_unique' : forall
+      inv1 (inv1ok: inv1 0 = 0 /\ forall x : F q, x <> 0 ->  x * inv1 x = 1)
+      inv2 (inv2ok: inv2 0 = 0 /\ forall x : F q, x <> 0 ->  x * inv2 x = 1),
+      forall x, inv1 x = inv2 x.
+  Proof.
+    intros inv1 [inv1_0 inv1_x] inv2 [inv2_0 inv2_x] x.
+    destruct (F_eq_dec x 0) as [H|H]; [congruence|].
+    apply (Fq_mul_eq_l _ _ x H). rewrite inv1_x, inv2_x; trivial.
+  Qed.
+
+  Lemma Fq_inv_unique : forall
+      inv' (inv'ok: inv' 0 = 0 /\ forall x : F q, x <> 0 -> x * inv' x = 1),
+      forall x, inv x = inv' x.
+  Proof.
+    intros ? [? ?] ?.
+    pose proof (@F_inv_spec q) as [? ?].
+    eauto using Fq_inv_unique'.
+  Qed.
+
+  Let inv_fermat_powmod (x:Z) : Z := powmod q x (Z.to_N (q-2)).
+  Lemma FieldToZ_inv_efficient : 2 < q ->
+                                 forall x : F q, FieldToZ (inv x) = inv_fermat_powmod x.
+  Proof.
+    intros.
+    rewrite (fun pf => Fq_inv_unique (fun x : F q => ZToField (inv_fermat_powmod (FieldToZ x))) pf);
+    subst inv_fermat_powmod; intuition; rewrite powmod_Zpow_mod;
+    replace (Z.of_N (Z.to_N (q - 2))) with (q-2)%Z by (rewrite Z2N.id ; omega).
+    - (* inv in range *) rewrite FieldToZ_ZToField, Zmod_mod; reflexivity.
+    - (* inv 0 *) replace (FieldToZ 0) with 0%Z by auto.
+      rewrite Z.pow_0_l by omega.
+      rewrite Zmod_0_l; trivial.
+    - (* inv nonzero *) rewrite <- (fermat_inv q _ x0) by
+        (rewrite mod_FieldToZ; eauto using FieldToZ_nonzero).
+      rewrite <-(ZToField_FieldToZ x0).
+      rewrite <-ZToField_mul.
+      rewrite ZToField_FieldToZ.
+      apply ZToField_eqmod.
+      demod; reflexivity.
+  Qed.
+ 
   Lemma Fq_mul_zero_why : forall a b : F q, a*b = 0 -> a = 0 \/ b = 0.
     intros.
     assert (Z := F_eq_dec a 0); destruct Z.
@@ -273,7 +322,6 @@ Section VariousModPrime.
     rewrite <- z_2x_0 in opp_spec.
     apply F_add_reg_l in opp_spec; auto.
   Qed.
-  
 End VariousModPrime.
 
 Section SquareRootsPrime5Mod8.
