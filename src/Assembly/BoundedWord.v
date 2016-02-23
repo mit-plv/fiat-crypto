@@ -10,7 +10,7 @@ Section BoundedWord.
 
   Open Scope Bounded_scope.
 
-  Variable n: nat.
+  Context {n: nat}.
 
   (* Word Operations *)
 
@@ -122,6 +122,12 @@ Section BoundedWord.
     specialize (wordToNat_bound (natToWord n k)); nomega.
 
     rewrite wordToNat_natToWord_idempotent; nomega.
+  Qed.
+
+  Lemma let_bound : forall (x: word n) (f: word n -> word n) xb fb, x <= xb
+    -> (forall x', x' <= xb -> f x' <= fb)
+    -> (let k := x in f k) <= fb.
+    eauto.
   Qed.
 
   Theorem wplus_bound : forall (w1 w2 : word n) b1 b2,
@@ -248,41 +254,50 @@ Section MulmodExamples.
   Notation "A <= B" := (wordLeN A B) (at level 70).
   Notation "$" := (natToWord _).
 
-  Ltac word_bound :=
-    repeat (
-       eassumption
-       || apply (wplus_bound 32)
-       || apply (wmult_bound 32)
-       || apply (mask_update_bound 32)
-       || apply (mask_bound 32)
-       || apply (shiftr_bound 32)
-       || apply (constant_bound_N 32)
-       || apply (constant_bound_nat 32)
-       || apply (word_size_bound 32)
-      ).
+  Lemma mask_wand : forall (n: nat) (x: word n) m b,
+    mask (N.to_nat m) x <= b
+    -> x ^& (@NToWord n (N.ones m)) <= b.
+  Proof.
+  Admitted.
 
-  Lemma example_and : forall x : word 32, wand x (NToWord 32 (N.ones 10)) <= 1023.
+  Ltac word_bound_step :=
+    idtac; match goal with
+    | [ H: ?x <= _ |- ?x <= _] => eexact H
+    | [|- (let x := ?y in @?z x) <= ?b ] => refine (@let_bound _ y z _ b _ _); [ | intros ? ? ]
+    | [|- (let x := ?y in (?a <= ?b)) ] => change ((let x := y in a) <= b)
+    | [|- (let x := ?y in (?a <= @?b x)) ] => change ((let x := y in a) <= b y); cbv beta
+    | [|- mask _ _ <= _] => apply mask_bound
+    | [|- _ ^+ _ <= _] => apply wplus_bound
+    | [|- _ ^* _ <= _] => apply wmult_bound
+    | [|- shiftr _ _ <= _] => apply shiftr_bound
+    | [|- $ _ <= _] => apply constant_bound_nat
+    | [|- NToWord _ _ <= _] => apply constant_bound_N
+    | [|- _ <= Npow2 _ - 1] => apply word_size_bound 
+    | [|- _ ^& (@NToWord _ (N.ones _)) <= _] => apply mask_wand
+    end.
+
+  Ltac word_bound := repeat word_bound_step.
+
+  Ltac word_bound_danger :=
+    word_bound; try eassumption; try apply word_size_bound.
+ 
+  Lemma example_and : forall x : word 32,
+      wand x (NToWord 32 (N.ones 10)) <= 1023.
     intros.
-    replace (wand x (NToWord 32 (N.ones 10))) with (mask 32 10 x) by admit.
+    replace (wand x (NToWord 32 (N.ones 10))) with (mask 10 x) by admit.
     word_bound.
   Qed.
     
-  Lemma example_shiftr : forall x : word 32, shiftr 32 x 30 <= 3.
+  Lemma example_shiftr : forall x : word 32, shiftr x 30 <= 3.
     intros.
     replace 3%N with (N.shiftr (Npow2 32 - 1) (N.of_nat 30)) by (simpl; intuition).
-
-    (* word_bound works but it's slow *)
-    apply (shiftr_bound 32).
-    apply (word_size_bound 32).
+    word_bound.
   Qed.
 
-  Lemma example_shiftr2 : forall x : word 32, x <= 1023 -> shiftr 32 x 5 <= 31.
+  Lemma example_shiftr2 : forall x : word 32, x <= 1023 -> shiftr x 5 <= 31.
     intros.
     replace 31%N with (N.shiftr 1023%N 5%N) by (simpl; intuition).
-
-    (* word_bound works but it's slow *)
-    apply (shiftr_bound 32).
-    eassumption.
+    word_bound.
   Qed.
     
   Variable f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 : word 32.
@@ -305,6 +320,7 @@ Section MulmodExamples.
   Hypothesis Hg5 : g5 <= 2^25.
   Hypothesis Hg6 : g6 <= 2^26.
   Hypothesis Hg7 : g7 <= 2^25.
+
   Hypothesis Hg8 : g8 <= 2^26.
   Hypothesis Hg9 : g9 <= 2^25.
     
@@ -322,7 +338,7 @@ Section MulmodExamples.
       { b | shiftr (f0 ^* g0 ^+  $19 ^* (f9 ^* g1 ^* $2 ^+ f8 ^* g2 ^+ f7 ^* g3 ^* $2 ^+ f6 ^* g4 ^+ f5 ^* g5 ^* $2 ^+ f4 ^* g6 ^+ f3 ^* g7 ^* $2 ^+ f2 ^* g8 ^+  f1 ^* g9 ^* $2)) 26 <= b}.
     eexists.
     word_bound.
-  Qed.
+  Defined.
 
   Lemma example_mulmod_u_fg1 :  { b |
         (let y : word 32 := (* the type declarations on the let-s make type inference not take forever *)
@@ -380,7 +396,12 @@ Section MulmodExamples.
               $19 ^* (f9 ^* g2 ^+ f8 ^* g3 ^+ f7 ^* g4 ^+ f6 ^* g5 ^+ f5 ^* g6 ^+ f4 ^* g7 ^+ f3 ^* g8 ^+ f2 ^* g9)))
             (@NToWord 32 (N.ones 26%N))) in
          fg1) <= b }.
-  Abort.
+  Proof.
+    eexists.
+    word_bound.
+  Defined.
+
+  Eval compute in proj1_sig example_mulmod_u_fg1.
 
   Require Import ZArith.
   Variable shiftra : forall {l}, word l -> nat -> word l. (* "arithmetic" aka "signed" bitshift *)
