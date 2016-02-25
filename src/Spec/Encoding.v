@@ -4,6 +4,7 @@ Require Import Crypto.ModularArithmetic.PrimeFieldTheorems Crypto.ModularArithme
 Require Import Bedrock.Word.
 Require Import VerdiTactics.
 Require Import Crypto.Util.NatUtil.
+Require Import Crypto.Util.WordUtil.
 
 Class Encoding (T B:Type) := {
   enc : T -> B ;
@@ -33,7 +34,7 @@ Section ModularWordEncoding.
     rewrite <- Nnat.N2Nat.id.
     rewrite Npow2_nat.
     apply (Nat2N_inj_lt (Z.to_nat x) (pow2 sz)).
-    rewrite ZUtil.Zpow_pow2.
+    rewrite Zpow_pow2.
     destruct x_range as [x_low x_high].
     apply Z2Nat.inj_lt in x_high; try omega.
     rewrite <- ZUtil.pow_Z2N_Zpow by omega.
