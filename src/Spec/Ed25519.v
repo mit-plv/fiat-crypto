@@ -4,7 +4,7 @@ Require Import Crypto.Spec.Encoding Crypto.Spec.PointEncoding.
 Require Import Crypto.Spec.EdDSA.
 Require Import Crypto.Spec.CompleteEdwardsCurve Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems Crypto.ModularArithmetic.ModularArithmeticTheorems.
-Require Import Crypto.Util.NatUtil Crypto.Util.ZUtil Crypto.Util.NumTheoryUtil.
+Require Import Crypto.Util.NatUtil Crypto.Util.ZUtil Crypto.Util.WordUtil Crypto.Util.NumTheoryUtil.
 Require Import Bedrock.Word.
 Require Import VerdiTactics.
 Require Import Decidable.
@@ -150,7 +150,7 @@ Instance x : EdDSAParams := {
   FqEncoding := FqEncoding;
   FlEncoding := FlEncoding;
   PointEncoding := PointEncoding;
- 
+
   b_valid := b_valid;
   c_valid := c_valid;
   n_ge_c := n_ge_c;
