@@ -52,11 +52,9 @@ Qed.
 Theorem ulist_app_inv:
  forall l1 l2 (a : A), ulist (l1 ++ l2) -> In a l1 -> In a l2 ->  False.
 intros l1; elim l1; simpl; auto.
-intros a l H l2 a0 H0 [H1|H1] H2.
-inversion H0 as [|a1 l0 H3 H4 H5]; auto.
-case H4; rewrite H1; auto with datatypes.
-apply (H l2 a0); auto.
-apply ulist_inv with ( 1 := H0 ); auto.
+intros a l H l2 a0 H0 [H1|H1] H2;
+inversion H0 as [|a1 l0 H3 H4 H5]; clear H0; auto;
+  subst; eauto using ulist_inv with datatypes.
 Qed.
 (* Iinversion theorem the appended list *)
 
