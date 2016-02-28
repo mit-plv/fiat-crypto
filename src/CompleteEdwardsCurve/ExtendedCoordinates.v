@@ -1,94 +1,25 @@
 Require Import Crypto.CompleteEdwardsCurve.Pre.
 Require Import Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
+Require Import Crypto.ModularArithmetic.FField.
 Require Import Crypto.Tactics.VerdiTactics.
 Local Open Scope F_scope.
 
-Section ExtendedCoordinatesFieldProofs.
-  (* If [field] worked on (F q) when Definition q := someProj someRecord, we
-     could inline this proof into unifiedAdd_repM1 *)
-  Context p (prime_p : Znumtheory.prime p) (two_lt_p : BinInt.Z.lt 2 p).
-  Existing Instance prime_p.
-
-  Add Field GFfield_Z : (@Ffield_theory p _)
-    (morphism (@Fring_morph p),
-     preprocess [Fpreprocess],
-     postprocess [Fpostprocess],
-     constants [Fconstant],
-     div (@Fmorph_div_theory p),
-     power_tac (@Fpower_theory p) [Fexp_tac]). 
-  
-  Lemma unifiedAdd_repM1_fieldproof:
-  forall (d XP YP ZP XQ YQ ZQ : F p)
-  (HZP : ZP <> 0)
-  (HZQ : ZQ <> 0)
-  (HoRp : forall x1 y1 x2 y2 : F p,
-    opp 1 * x1 ^ 2 + y1 ^ 2 = 1 + d * x1 ^ 2 * y1 ^ 2 ->
-    opp 1 * x2 ^ 2 + y2 ^ 2 = 1 + d * x2 ^ 2 * y2 ^ 2 ->
-    1 + d * x1 * x2 * y1 * y2 <> 0)
-  (HoRm : forall x1 y1 x2 y2 : F p,
-    opp 1 * x1 ^ 2 + y1 ^ 2 = 1 + d * x1 ^ 2 * y1 ^ 2 ->
-    opp 1 * x2 ^ 2 + y2 ^ 2 = 1 + d * x2 ^ 2 * y2 ^ 2 ->
-    1 - d * x1 * x2 * y1 * y2 <> 0)
-  (HoQ: opp 1 * (XQ / ZQ) ^ 2 + (YQ / ZQ) ^ 2 = 1 + d * (XQ / ZQ) ^ 2 * (YQ / ZQ) ^ 2)
-  (HoP : opp 1 * (XP / ZP) ^ 2 + (YP / ZP) ^ 2 = 1 + d * (XP / ZP) ^ 2 * (YP / ZP) ^ 2),
-      (((YP + XP) * (YQ + XQ) - (YP - XP) * (YQ - XQ)) *
-      (ZP * ZToField 2 * ZQ - XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ)) /
-                                                                              ((ZP * ZToField 2 * ZQ - XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ)) *
-                                                                              (ZP * ZToField 2 * ZQ + XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ))),
-      (ZP * ZToField 2 * ZQ + XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ)) *
-      ((YP + XP) * (YQ + XQ) + (YP - XP) * (YQ - XQ)) /
-                                                      ((ZP * ZToField 2 * ZQ - XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ)) *
-                                                      (ZP * ZToField 2 * ZQ + XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ)))) =
-      ((XP / ZP * (YQ / ZQ) + YP / ZP * (XQ / ZQ)) /
-                                                  (1 + d * (XP / ZP) * (XQ / ZQ) * (YP / ZP) * (YQ / ZQ)),
-      (YP / ZP * (YQ / ZQ) - opp 1 * (XP / ZP) * (XQ / ZQ)) /
-                                                              (1 - d * (XP / ZP) * (XQ / ZQ) * (YP / ZP) * (YQ / ZQ))) /\
-      ((ZP * ZToField 2 * ZQ - XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ)) *
-      (ZP * ZToField 2 * ZQ + XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ)) = 0 ->
-      False) /\
-      ((YP + XP) * (YQ + XQ) - (YP - XP) * (YQ - XQ)) *
-      ((YP + XP) * (YQ + XQ) + (YP - XP) * (YQ - XQ)) =
-      ((YP + XP) * (YQ + XQ) - (YP - XP) * (YQ - XQ)) *
-      (ZP * ZToField 2 * ZQ - XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ)) *
-      ((ZP * ZToField 2 * ZQ + XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ)) *
-      ((YP + XP) * (YQ + XQ) + (YP - XP) * (YQ - XQ))) /
-                                                      ((ZP * ZToField 2 * ZQ - XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ)) *
-                                                          (ZP * ZToField 2 * ZQ + XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ))).
-  Proof.
-    intros; repeat split; try apply (f_equal2 pair); try field; auto.
-
-    Ltac tnz := eauto 10 using Fq_mul_nonzero_nonzero, (@char_gt_2 p two_lt_p).
-    (* If we we had reasoning modulo associativity and commutativity,
-    *  the following tactic would probably solve all 10 goals here:
-    repeat match goal with [H1: @eq (F p) _ _, H2: @eq (F p) _ _ |- _ ] =>
-      let H := fresh "H" in ( 
-        pose proof (edwardsAddCompletePlus _ _ _ _ H1 H2) as H;
-        match type of H with ?xs <> 0 => ac_rewrite (eq_refl xs) end
-      ) || (
-        pose proof (edwardsAddCompleteMinus _ _ _ _ H1 H2) as H;
-        match type of H with ?xs <> 0 => ac_rewrite (eq_refl xs) end
-      ); tnz
-    end. *)
-
-      - replace (ZP * ZQ * ZP * ZQ + d * XP * XQ * YP * YQ) with (ZQ*ZQ*ZP*ZP* (1 + d * (XQ / ZQ) * (XP / ZP) * (YQ / ZQ) * (YP / ZP))) by (field; tnz); tnz.
-      - replace (ZP * ZToField 2 * ZQ * (ZP * ZQ)  + XP * YP * ZToField 2 * d * (XQ * YQ)) with (ZToField 2*ZQ*ZQ*ZP*ZP* (1 + d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
-      - replace (ZP * ZToField 2 * ZQ * (ZP * ZQ)  - XP * YP * ZToField 2 * d * (XQ * YQ)) with (ZToField 2*ZQ*ZQ*ZP*ZP* (1 - d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
-      - replace (ZP * ZQ * ZP * ZQ - d * XP * XQ * YP * YQ) with (ZQ*ZQ*ZP*ZP* (1 - d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
-      - replace (ZP * ZToField 2 * ZQ * (ZP * ZQ)  + XP * YP * ZToField 2 * d * (XQ * YQ)) with (ZToField 2*ZQ*ZQ*ZP*ZP* (1 + d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
-      - replace (ZP * ZToField 2 * ZQ * (ZP * ZQ)  - XP * YP * ZToField 2 * d * (XQ * YQ)) with (ZToField 2*ZQ*ZQ*ZP*ZP* (1 - d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
-      - replace (ZP * ZQ * ZP * ZQ - d * XP * XQ * YP * YQ) with (ZQ*ZQ*ZP*ZP* (1 - d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz).
-      repeat apply Fq_mul_nonzero_nonzero.
-        + replace (ZP * ZToField 2 * ZQ - XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ) ) with (ZToField 2*ZQ*ZP* (1 - d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
-        + replace (ZP * ZToField 2 * ZQ + XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ) ) with (ZToField 2*ZQ*ZP* (1 + d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
-      - replace (ZP * ZToField 2 * ZQ * (ZP * ZQ)  + XP * YP * ZToField 2 * d * (XQ * YQ)) with (ZToField 2*ZQ*ZQ*ZP*ZP* (1 + d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
-      - replace (ZP * ZToField 2 * ZQ * (ZP * ZQ)  - XP * YP * ZToField 2 * d * (XQ * YQ)) with (ZToField 2*ZQ*ZQ*ZP*ZP* (1 - d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
-    Qed.
-End ExtendedCoordinatesFieldProofs.
-
 Section ExtendedCoordinates.
   Context {prm:TwistedEdwardsParams}.
+  Local Opaque q a d prime_q two_lt_q nonzero_a square_a nonsquare_d. (* [F_field] calls [compute] *)
   Existing Instance prime_q.
+
+  Add Field Ffield_p' : (@Ffield_theory q _)
+    (morphism (@Fring_morph q),
+     preprocess [Fpreprocess],
+     postprocess [Fpostprocess; try exact Fq_1_neq_0; try assumption],
+     constants [Fconstant],
+     div (@Fmorph_div_theory q),
+     power_tac (@Fpower_theory q) [Fexp_tac]). 
+
+  Add Field Ffield_notConstant : (OpaqueFieldTheory q)
+    (constants [notConstant]). 
 
   (** [extended] represents a point on an elliptic curve using extended projective
   * Edwards coordinates with twist a=-1 (see <https://eprint.iacr.org/2008/522.pdf>). *)
@@ -174,10 +105,36 @@ Section ExtendedCoordinates.
       P ~= rP -> Q ~= rQ -> (unifiedAddM1 P Q) ~= (unifiedAdd' rP rQ).
     Proof.
       intros P Q rP rQ HoP HoQ HrP HrQ.
-      pose proof (@edwardsAddCompletePlus _ _ _ _ two_lt_q nonzero_a square_a nonsquare_d) as HoRp; simpl in HoRp.
-      pose proof (@edwardsAddCompleteMinus _ _ _ _ two_lt_q nonzero_a square_a nonsquare_d) as HoRm; simpl in HoRm.
-      unfoldExtended; rewrite a_eq_minus1 in *.
-      apply unifiedAdd_repM1_fieldproof; auto using prime_q, two_lt_q.
+      pose proof (@edwardsAddCompletePlus _ _ _ _ two_lt_q nonzero_a square_a nonsquare_d).
+      pose proof (@edwardsAddCompleteMinus _ _ _ _ two_lt_q nonzero_a square_a nonsquare_d).
+      unfoldExtended; rewrite a_eq_minus1 in *; simpl in *.
+        repeat split; repeat apply (f_equal2 pair); try F_field; repeat split; auto;
+        repeat rewrite ?F_add_0_r, ?F_add_0_l, ?F_sub_0_l, ?F_sub_0_r,
+           ?F_mul_0_r, ?F_mul_0_l, ?F_mul_1_l, ?F_mul_1_r, ?F_div_1_r.
+
+    Ltac tnz := repeat apply Fq_mul_nonzero_nonzero; auto using (@char_gt_2 q two_lt_q).
+    (* If we we had reasoning modulo associativity and commutativity,
+    *  the following tactic would probably solve all remaining goals here:
+    repeat match goal with [H1: @eq (F p) _ _, H2: @eq (F p) _ _ |- _ ] =>
+      let H := fresh "H" in ( 
+        pose proof (edwardsAddCompletePlus _ _ _ _ H1 H2) as H;
+        match type of H with ?xs <> 0 => ac_rewrite (eq_refl xs) end
+      ) || (
+        pose proof (edwardsAddCompleteMinus _ _ _ _ H1 H2) as H;
+        match type of H with ?xs <> 0 => ac_rewrite (eq_refl xs) end
+      ); tnz
+    end. *)
+
+      - replace (ZP * ZQ * ZP * ZQ + d * XP * XQ * YP * YQ) with (ZQ*ZQ*ZP*ZP* (1 + d * (XQ / ZQ) * (XP / ZP) * (YQ / ZQ) * (YP / ZP))) by (field; tnz); tnz.
+      - replace (ZP * ZToField 2 * ZQ * (ZP * ZQ)  + XP * YP * ZToField 2 * d * (XQ * YQ)) with (ZToField 2*ZQ*ZQ*ZP*ZP* (1 + d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
+      - replace (ZP * ZToField 2 * ZQ * (ZP * ZQ)  - XP * YP * ZToField 2 * d * (XQ * YQ)) with (ZToField 2*ZQ*ZQ*ZP*ZP* (1 - d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
+      - replace (ZP * ZQ * ZP * ZQ - d * XP * XQ * YP * YQ) with (ZQ*ZQ*ZP*ZP* (1 - d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
+      - replace (ZP * ZToField 2 * ZQ * (ZP * ZQ)  + XP * YP * ZToField 2 * d * (XQ * YQ)) with (ZToField 2*ZQ*ZQ*ZP*ZP* (1 + d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
+      - replace (ZP * ZToField 2 * ZQ * (ZP * ZQ)  - XP * YP * ZToField 2 * d * (XQ * YQ)) with (ZToField 2*ZQ*ZQ*ZP*ZP* (1 - d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
+      - replace (ZP * ZToField 2 * ZQ - XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ) ) with (ZToField 2*ZQ*ZP* (1 - d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
+        replace (ZP * ZToField 2 * ZQ + XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ) ) with (ZToField 2*ZQ*ZP* (1 + d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
+      - replace (ZP * ZToField 2 * ZQ * (ZP * ZQ)  + XP * YP * ZToField 2 * d * (XQ * YQ)) with (ZToField 2*ZQ*ZQ*ZP*ZP* (1 + d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
+      - replace (ZP * ZToField 2 * ZQ * (ZP * ZQ)  - XP * YP * ZToField 2 * d * (XQ * YQ)) with (ZToField 2*ZQ*ZQ*ZP*ZP* (1 - d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
     Qed.
   End TwistMinus1.
 End ExtendedCoordinates.
