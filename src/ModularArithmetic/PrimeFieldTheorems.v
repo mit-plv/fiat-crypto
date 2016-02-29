@@ -1,6 +1,7 @@
 Require Export Spec.ModularArithmetic ModularArithmetic.ModularArithmeticTheorems.
 Require Export Ring_theory Field_theory Field_tac.
 
+Require Import Nsatz.
 Require Import Crypto.ModularArithmetic.Pre.
 Require Import Util.NumTheoryUtil.
 Require Import Tactics.VerdiTactics.
@@ -321,6 +322,25 @@ Section VariousModPrime.
     pose proof (F_opp_spec x) as opp_spec.
     rewrite <- z_2x_0 in opp_spec.
     apply F_add_reg_l in opp_spec; auto.
+  Qed.
+
+  Instance Fq_Ring_ops : @Ring_ops (F q) 0 1 add mul sub opp eq.
+  Instance Fq_Ring: @Ring (F q) 0 1 add mul sub opp eq Fq_Ring_ops.
+  Proof.
+    econstructor; eauto with typeclass_instances;
+      unfold R2, equality, eq_notation, addition, add_notation, one, one_notation,
+      multiplication, mul_notation, zero, zero_notation, subtraction,
+      sub_notation, opposite, opp_notation; intros; ring.
+    Qed.
+
+  Instance Fq_Cring: @Cring (F q) 0 1 add mul sub opp eq Fq_Ring_ops Fq_Ring.
+  Proof.
+    repeat intro. apply F_mul_comm.
+  Qed.
+
+  Instance Fq_Integral_domain : @Integral_domain (F q) 0 1 add mul sub opp eq Fq_Ring_ops Fq_Ring Fq_Cring.
+  Proof.
+    econstructor; eauto using Fq_mul_zero_why, Fq_1_neq_0.
   Qed.
 End VariousModPrime.
 
