@@ -581,6 +581,16 @@ Section VariousModulo.
     Fdefn.
   Qed.
 
+  Lemma F_pow_2_r : forall x : F m, x^2 = x*x.
+  Proof.
+    intros. ring.
+  Qed.
+
+  Lemma F_pow_3_r : forall x : F m, x^3 = x*x*x.
+  Proof.
+    intros. ring.
+  Qed.
+
   Lemma F_pow_add : forall (x : F m) k j, x ^ j * x ^ k = x ^ (j + k).
   Proof.
     intros.

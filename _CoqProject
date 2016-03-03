@@ -8,6 +8,7 @@ src/CompleteEdwardsCurve/ExtendedCoordinates.v
 src/CompleteEdwardsCurve/Pre.v
 src/Encoding/EncodingTheorems.v
 src/ModularArithmetic/FField.v
+src/ModularArithmetic/FNsatz.v
 src/ModularArithmetic/ModularArithmeticTheorems.v
 src/ModularArithmetic/ModularBaseSystem.v
 src/ModularArithmetic/Pre.v
