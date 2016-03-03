@@ -100,7 +100,7 @@ Proof.
   pose proof (prime_ge_2 _ prime_p).
   rewrite Zmult_mod_idemp_r.
   replace (a * a ^ (p - 2)) with (a^(p-1)).
-    2:replace a with (a^1) at 2 by ring.
+    2:replace (a * a ^ (p - 2)) with (a^1 * a ^ (p - 2)) by ring.
     2:rewrite <-Zpower_exp; try f_equal; omega.
   auto using fermat_little.
 Qed.
