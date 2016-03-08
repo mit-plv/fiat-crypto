@@ -18,10 +18,10 @@ Section CompleteEdwardsCurveTheorems.
      postprocess [Fpostprocess; try exact Fq_1_neq_0; try assumption],
      constants [Fconstant],
      div (@Fmorph_div_theory q),
-     power_tac (@Fpower_theory q) [Fexp_tac]). 
+     power_tac (@Fpower_theory q) [Fexp_tac]).
 
   Add Field Ffield_notConstant : (OpaqueFieldTheory q)
-    (constants [notConstant]). 
+    (constants [notConstant]).
 
   Ltac clear_prm :=
     generalize dependent a; intro a; intros;
@@ -34,7 +34,7 @@ Section CompleteEdwardsCurveTheorems.
     mkPoint p1 pf1 = mkPoint p2 pf2.
   Proof.
     destruct p1, p2; intros; find_injection; intros; subst; apply f_equal.
-    apply UIP_dec, F_eq_dec. (* this is a hack. We actually don't care about the equality of the proofs. However, we *can* prove it, and knowing it lets us use the universal equality instead of a type-specific equivalence, which makes many things nicer. *) 
+    apply UIP_dec, F_eq_dec. (* this is a hack. We actually don't care about the equality of the proofs. However, we *can* prove it, and knowing it lets us use the universal equality instead of a type-specific equivalence, which makes many things nicer. *)
   Qed.
   Hint Resolve point_eq.
 
@@ -55,11 +55,11 @@ Section CompleteEdwardsCurveTheorems.
 
   Lemma twistedAddAssoc : forall A B C, (A+(B+C) = (A+B)+C)%E.
   Proof.
-    (* The Ltac takes ~15s, the Qed takes longer than I have had patience for *)
+    (* The Ltac takes ~15s, the Qed no longer takes longer than I have had patience for *)
     Edefn; F_field_simplify_eq; try abstract (rewrite ?@F_pow_2_r in *; clear_prm; F_nsatz);
       repeat split; match goal with [ |- _ = 0%F -> False ] => admit end;
         fail "unreachable".
-  Admitted.
+  Qed.
 
   Lemma zeroIsIdentity : forall P, (P + zero = P)%E.
   Proof.
