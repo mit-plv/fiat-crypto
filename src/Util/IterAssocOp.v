@@ -59,8 +59,8 @@ Section IterAssocOp.
     | S i' => (i', if N.testbit_nat n i' then op a acc2 else acc2)
     end.
 
-  Definition iter_op n a : T := 
-    snd (funexp (test_and_op n a) (N.size_nat n, neutral) (N.size_nat n)).
+  Definition iter_op n a bound : T := 
+    snd (funexp (test_and_op n a) (bound, neutral) bound).
 
   Definition test_and_op_inv n a (s : nat * T) :=
     snd s === nat_iter_op (N.to_nat (N.shiftr_nat n (fst s))) a.
@@ -144,12 +144,12 @@ Section IterAssocOp.
     destruct i; rewrite NPeano.Nat.sub_succ_r; subst; rewrite <- IHy; simpl; reflexivity.
   Qed.
 
-  Lemma iter_op_termination : forall n a,
+  Lemma iter_op_termination : forall n a bound, N.size_nat n <= bound ->
     test_and_op_inv n a 
-      (funexp (test_and_op n a) (N.size_nat n, neutral) (N.size_nat n)) -> 
-    iter_op n a === nat_iter_op (N.to_nat n) a.
+      (funexp (test_and_op n a) (bound, neutral) bound) -> 
+    iter_op n a bound === nat_iter_op (N.to_nat n) a.
   Proof.
-    unfold test_and_op_inv, iter_op; simpl; intros ? ? Hinv.
+    unfold test_and_op_inv, iter_op; simpl; intros ? ? ? ? Hinv.
     rewrite Hinv, funexp_test_and_op_index, Minus.minus_diag.
     replace (N.shiftr_nat n 0) with n by auto.
     reflexivity.
@@ -160,25 +160,33 @@ Section IterAssocOp.
     destruct n; auto; simpl; induction p; simpl; auto; rewrite IHp, Pnat.Pos2Nat.inj_succ; reflexivity.
   Qed.
 
-  Lemma Nshiftr_size : forall n, N.shiftr_nat n (N.size_nat n) = 0%N.
+  Lemma Nshiftr_size : forall n bound, N.size_nat n <= bound ->
+    N.shiftr_nat n bound = 0%N.
   Proof.
     intros.
-    rewrite Nsize_nat_equiv.
+    rewrite <- (Nat2N.id bound).
     rewrite Nshiftr_nat_equiv.
-    destruct (N.eq_dec n 0); subst; auto.
+    destruct (N.eq_dec n 0); subst; [apply N.shiftr_0_l|].
     apply N.shiftr_eq_0.
-    rewrite N.size_log2 by auto.
-    apply N.lt_succ_diag_r.
+    rewrite Nsize_nat_equiv in *.
+    rewrite N.size_log2 in * by auto.
+    apply N.le_succ_l.
+    rewrite <- N.compare_le_iff.
+    rewrite N2Nat.inj_compare.
+    rewrite <- Compare_dec.nat_compare_le.
+    rewrite Nat2N.id.
+    auto.
   Qed.
   
-  Lemma iter_op_spec : forall n a, iter_op n a === nat_iter_op (N.to_nat n) a.
+  Lemma iter_op_spec : forall n a bound, N.size_nat n <= bound ->
+    iter_op n a bound === nat_iter_op (N.to_nat n) a.
   Proof.
     intros.
-    apply iter_op_termination.
+    apply iter_op_termination; auto.
     apply test_and_op_inv_holds.
     unfold test_and_op_inv.
     simpl.
-    rewrite Nshiftr_size.
+    rewrite Nshiftr_size by auto.
     reflexivity.
   Qed.
 
