@@ -1,5 +1,5 @@
-Require Import Zpower Znumtheory ZArith.ZArith ZArith.Zdiv.
-Require Import Omega NPeano Arith.
+Require Import Coq.ZArith.Zpower Coq.ZArith.Znumtheory Coq.ZArith.ZArith Coq.ZArith.Zdiv.
+Require Import Coq.omega.Omega Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
 Require Import Crypto.Util.NatUtil.
 Local Open Scope Z.
 

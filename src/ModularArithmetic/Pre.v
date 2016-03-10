@@ -1,6 +1,6 @@
-Require Import BinInt BinNat BinNums Zdiv Znumtheory.
-Require Import Eqdep_dec.
-Require Import EqdepFacts.
+Require Import Coq.ZArith.BinInt Coq.NArith.BinNat Coq.Numbers.BinNums Coq.ZArith.Zdiv Coq.ZArith.Znumtheory.
+Require Import Coq.Logic.Eqdep_dec.
+Require Import Coq.Logic.EqdepFacts.
 Require Import Crypto.Tactics.VerdiTactics.
 
 Lemma Z_mod_mod x m : x mod m = (x mod m) mod m.

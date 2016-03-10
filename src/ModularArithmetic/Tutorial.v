@@ -1,5 +1,5 @@
-Require Import BinInt Zpower ZArith Znumtheory.
-Require Import Spec.ModularArithmetic ModularArithmetic.PrimeFieldTheorems.
+Require Import Coq.ZArith.BinInt Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.ZArith.Znumtheory.
+Require Import Crypto.Spec.ModularArithmetic Crypto.ModularArithmetic.PrimeFieldTheorems.
 
 
 (* Example for modular arithmetic with a concrete modulus in a section *)

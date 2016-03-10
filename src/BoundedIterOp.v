@@ -1,5 +1,5 @@
 Require Import Crypto.Tactics.VerdiTactics.
-Require Import BinNums NArith Nnat ZArith.
+Require Import Coq.Numbers.BinNums Coq.NArith.NArith Coq.NArith.Nnat Coq.ZArith.ZArith.
 
 Definition testbit_rev p i bound := Pos.testbit_nat p (bound - i).
 

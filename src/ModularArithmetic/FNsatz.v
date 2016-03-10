@@ -1,6 +1,6 @@
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
 Require Export Crypto.ModularArithmetic.FField.
-Require Import Nsatz.
+Require Import Coq.nsatz.Nsatz.
 
 Ltac FqAsIntegralDomain :=
   lazymatch goal with [H:Znumtheory.prime ?q |- _ ] =>

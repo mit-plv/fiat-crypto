@@ -1,4 +1,4 @@
-Require Import BinInt Znumtheory VerdiTactics.
+Require Import Coq.ZArith.BinInt Coq.ZArith.Znumtheory Crypto.Tactics.VerdiTactics.
 
 Require Import Crypto.Spec.ModularArithmetic.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.

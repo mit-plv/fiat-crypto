@@ -4,8 +4,8 @@ Require Import Crypto.Spec.CompleteEdwardsCurve.
 
 Require Import Crypto.Util.WordUtil.
 Require Bedrock.Word.
-Require Znumtheory BinInt.
-Require NPeano.
+Require Coq.ZArith.Znumtheory Coq.ZArith.BinInt.
+Require Coq.Numbers.Natural.Peano.NPeano.
 
 Coercion Word.wordToNat : Word.word >-> nat.
 

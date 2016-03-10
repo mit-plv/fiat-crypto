@@ -1,5 +1,5 @@
-Require Import NPeano.
-Require Import ZArith.ZArith.
+Require Import Coq.Numbers.Natural.Peano.NPeano.
+Require Import Coq.ZArith.ZArith.
 Require Import Bedrock.Word.
 
 Local Open Scope nat_scope.

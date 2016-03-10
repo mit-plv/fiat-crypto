@@ -1,4 +1,4 @@
-Require Import Arith.
+Require Import Coq.Arith.Arith.
 
 Ltac case_max :=
   match goal with [ |- context[max ?x ?y] ] =>

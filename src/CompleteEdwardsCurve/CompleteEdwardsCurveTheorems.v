@@ -4,7 +4,7 @@ Require Import Crypto.ModularArithmetic.FField.
 Require Import Crypto.ModularArithmetic.FNsatz.
 Require Import Crypto.CompleteEdwardsCurve.Pre.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
-Require Import Eqdep_dec.
+Require Import Coq.Logic.Eqdep_dec.
 Require Import Crypto.Tactics.VerdiTactics.
 
 Section CompleteEdwardsCurveTheorems.
