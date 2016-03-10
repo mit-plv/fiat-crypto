@@ -1,8 +1,8 @@
-Require Import ZArith.ZArith Zpower ZArith.
-Require Import NPeano.
+Require Import Coq.ZArith.ZArith Coq.ZArith.Zpower Coq.ZArith.ZArith.
+Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems Crypto.ModularArithmetic.ModularArithmeticTheorems.
 Require Import Bedrock.Word.
-Require Import VerdiTactics.
+Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.WordUtil.
 

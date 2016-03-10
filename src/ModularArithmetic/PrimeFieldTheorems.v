@@ -1,13 +1,13 @@
-Require Export Spec.ModularArithmetic ModularArithmetic.ModularArithmeticTheorems.
-Require Export Ring_theory Field_theory Field_tac.
+Require Export Crypto.Spec.ModularArithmetic Crypto.ModularArithmetic.ModularArithmeticTheorems.
+Require Export Coq.setoid_ring.Ring_theory Coq.setoid_ring.Field_theory Coq.setoid_ring.Field_tac.
 
-Require Import Nsatz.
+Require Import Coq.nsatz.Nsatz.
 Require Import Crypto.ModularArithmetic.Pre.
-Require Import Util.NumTheoryUtil.
-Require Import Tactics.VerdiTactics.
-Require Import Coq.Classes.Morphisms Setoid.
-Require Import BinInt BinNat ZArith Znumtheory NArith. (* import Zdiv before Znumtheory *)
-Require Import Eqdep_dec.
+Require Import Crypto.Util.NumTheoryUtil.
+Require Import Crypto.Tactics.VerdiTactics.
+Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
+Require Import Coq.ZArith.BinInt Coq.NArith.BinNat Coq.ZArith.ZArith Coq.ZArith.Znumtheory Coq.NArith.NArith. (* import Zdiv before Znumtheory *)
+Require Import Coq.Logic.Eqdep_dec.
 Require Import Crypto.Util.NumTheoryUtil Crypto.Util.ZUtil.
 
 Existing Class prime.

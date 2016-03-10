@@ -1,10 +1,10 @@
-Require Import ModularArithmetic.PrimeFieldTheorems.
-Require Import BaseSystem ModularBaseSystem.
-Require Import List Util.ListUtil.
+Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
+Require Import Crypto.BaseSystem Crypto.ModularArithmetic.ModularBaseSystem.
+Require Import Coq.Lists.List Crypto.Util.ListUtil.
 Import ListNotations.
-Require Import ZArith.ZArith Zpower ZArith Znumtheory.
-Require Import QArith.QArith QArith.Qround.
-Require Import VerdiTactics.
+Require Import Coq.ZArith.ZArith Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.ZArith.Znumtheory.
+Require Import Coq.QArith.QArith Coq.QArith.Qround.
+Require Import Crypto.Tactics.VerdiTactics.
 Close Scope Q.
 
 Ltac twoIndices i j base :=

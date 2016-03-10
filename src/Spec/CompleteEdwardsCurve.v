@@ -1,4 +1,4 @@
-Require BinInt Znumtheory.
+Require Coq.ZArith.BinInt Coq.ZArith.Znumtheory.
 
 Require Crypto.CompleteEdwardsCurve.Pre.
 

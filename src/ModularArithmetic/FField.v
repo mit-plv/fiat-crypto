@@ -1,5 +1,5 @@
 Require Export Crypto.Spec.ModularArithmetic.
-Require Export Field.
+Require Export Coq.setoid_ring.Field.
 
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
 

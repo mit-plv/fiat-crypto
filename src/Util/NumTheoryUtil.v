@@ -1,8 +1,8 @@
-Require Import Zpower Znumtheory ZArith.ZArith ZArith.Zdiv.
-Require Import Omega NPeano Arith.
+Require Import Coq.ZArith.Zpower Coq.ZArith.Znumtheory Coq.ZArith.ZArith Coq.ZArith.Zdiv.
+Require Import Coq.omega.Omega Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
 Require Import Crypto.Util.NatUtil Crypto.Util.ZUtil.
 Require Import Coqprime.Zp.
-Require Import VerdiTactics.
+Require Import Crypto.Tactics.VerdiTactics.
 Local Open Scope Z.
 
 (* TODO: move somewhere else for lemmas about Coqprime? *)

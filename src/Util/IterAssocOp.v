@@ -1,5 +1,5 @@
 Require Import Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Classes.Equivalence.
-Require Import NArith BinPosDef.
+Require Import Coq.NArith.NArith Coq.PArith.BinPosDef.
 Local Open Scope equiv_scope.
 
 Generalizable All Variables.

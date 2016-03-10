@@ -1,11 +1,11 @@
-Require Import ZArith.ZArith Zpower ZArith Znumtheory.
-Require Import NPeano NArith.
+Require Import Coq.ZArith.ZArith Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.ZArith.Znumtheory.
+Require Import Coq.Numbers.Natural.Peano.NPeano Coq.NArith.NArith.
 Require Import Crypto.Spec.Encoding Crypto.Encoding.EncodingTheorems.
 Require Import Crypto.Spec.CompleteEdwardsCurve Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems Crypto.ModularArithmetic.ModularArithmeticTheorems.
 Require Import Crypto.Util.NatUtil Crypto.Util.ZUtil Crypto.Util.NumTheoryUtil.
 Require Import Bedrock.Word.
-Require Import VerdiTactics.
+Require Import Crypto.Tactics.VerdiTactics.
 
 Local Open Scope F_scope.
 

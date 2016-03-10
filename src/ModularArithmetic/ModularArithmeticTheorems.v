@@ -1,11 +1,11 @@
 Require Import Crypto.Spec.ModularArithmetic.
 Require Import Crypto.ModularArithmetic.Pre.
 
-Require Import Eqdep_dec.
-Require Import Tactics.VerdiTactics.
-Require Import BinInt Zdiv Znumtheory NArith. (* import Zdiv before Znumtheory *)
-Require Import Coq.Classes.Morphisms Setoid.
-Require Export Ring_theory Field_theory Field_tac.
+Require Import Coq.Logic.Eqdep_dec.
+Require Import Crypto.Tactics.VerdiTactics.
+Require Import Coq.ZArith.BinInt Coq.ZArith.Zdiv Coq.ZArith.Znumtheory Coq.NArith.NArith. (* import Zdiv before Znumtheory *)
+Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
+Require Export Coq.setoid_ring.Ring_theory Coq.setoid_ring.Field_theory Coq.setoid_ring.Field_tac.
 
 Section ModularArithmeticPreliminaries.
   Context {m:Z}.
