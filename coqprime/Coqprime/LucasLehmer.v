@@ -13,17 +13,17 @@
                                                                  
     Definition: LucasLehmer              
   **********************************************************************)
-Require Import ZArith.
-Require Import ZCAux.
-Require Import Tactic.
-Require Import Wf_nat.
-Require Import NatAux.
-Require Import UList.
-Require Import ListAux.
-Require Import FGroup.
-Require Import EGroup.
-Require Import PGroup.
-Require Import IGroup.
+Require Import Coq.ZArith.ZArith.
+Require Import Coqprime.ZCAux.
+Require Import Coqprime.Tactic.
+Require Import Coq.Arith.Wf_nat.
+Require Import Coqprime.NatAux.
+Require Import Coqprime.UList.
+Require Import Coqprime.ListAux.
+Require Import Coqprime.FGroup.
+Require Import Coqprime.EGroup.
+Require Import Coqprime.PGroup.
+Require Import Coqprime.IGroup.
 
 Open Scope Z_scope.
 

@@ -6,14 +6,14 @@
 (*    Benjamin.Gregoire@inria.fr Laurent.Thery@inria.fr      *)
 (*************************************************************)
 
-Require Import List.
-Require Import ZArith.
-Require Import Zorder.
-Require Import ZCAux.
-Require Import LucasLehmer.
-Require Import Pocklington.
-Require Import ZCmisc.
-Require Import Pmod.
+Require Import Coq.Lists.List.
+Require Import Coq.ZArith.ZArith.
+Require Import Coq.ZArith.Zorder.
+Require Import Coqprime.ZCAux.
+Require Import Coqprime.LucasLehmer.
+Require Import Coqprime.Pocklington.
+Require Import Coqprime.ZCmisc.
+Require Import Coqprime.Pmod.
 
 Definition dec_prime := list (positive * positive).
 
