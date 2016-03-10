@@ -6,9 +6,9 @@
 (*    Benjamin.Gregoire@inria.fr Laurent.Thery@inria.fr      *)
 (*************************************************************)
 
-Require Export List.
-Require Export Permutation.
-Require Import Arith.
+Require Export Coq.Lists.List.
+Require Export Coqprime.Permutation.
+Require Import Coq.Arith.Arith.
  
 Section Iterator.
 Variables A B : Set.

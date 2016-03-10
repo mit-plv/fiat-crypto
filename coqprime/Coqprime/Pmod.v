@@ -6,8 +6,8 @@
 (*    Benjamin.Gregoire@inria.fr Laurent.Thery@inria.fr      *)
 (*************************************************************)
 
-Require Export ZArith.
-Require Export ZCmisc.
+Require Export Coq.ZArith.ZArith.
+Require Export Coqprime.ZCmisc.
 
 Open Local Scope positive_scope.
 
@@ -392,7 +392,7 @@ Lemma gcd_log2_mod0 :
 Proof. intros a b c H;destruct c;simpl;rewrite H;trivial. Qed.
 
 
-Require Import Zwf.
+Require Import Coq.ZArith.Zwf.
 
 Lemma Zwf_pos : well_founded (fun x y => Zpos x < Zpos y).
 Proof.
@@ -510,8 +510,8 @@ Proof.
  destruct (gcd_log2 b r r);intros;trivial. 
 Qed.
 
-Require Import ZArith.
-Require Import Znumtheory.
+Require Import Coq.ZArith.ZArith.
+Require Import Coq.ZArith.Znumtheory.
 
 Hint Rewrite  Zpos_mult times_Zmult square_Zmult Psucc_Zplus: zmisc.
 
