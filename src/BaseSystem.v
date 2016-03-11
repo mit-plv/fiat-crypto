@@ -5,19 +5,18 @@ Require Import Omega NPeano Arith.
 
 Local Open Scope Z.
 
-Module Type BaseCoefs.
-  (** [BaseCoefs] represent the weights of each digit in a positional number system, with the weight of least significant digit presented first. The following requirements on the base are preconditions for using it with BaseSystem. *)
-  Parameter base : list Z.
-  Axiom base_positive : forall b, In b base -> b > 0. (* nonzero would probably work too... *)
-  Axiom b0_1 : forall x, nth_default x base 0 = 1.
-  Axiom base_good :
+Class BaseVector (base : list Z):= {
+  base_positive : forall b, In b base -> b > 0; (* nonzero would probably work too... *)
+  b0_1 : forall x, nth_default x base 0 = 1;
+  base_good :
     forall i j, (i+j < length base)%nat ->
     let b := nth_default 0 base in
     let r := (b i * b j) / b (i+j)%nat in
-    b i * b j = r * b (i+j)%nat.
-End BaseCoefs.
+    b i * b j = r * b (i+j)%nat
+}.
 
-Module BaseSystem (Import B:BaseCoefs).
+Section BaseSystem.
+  Context (base : list Z) (base_vector : BaseVector base).
   (** [BaseSystem] implements an constrained positional number system.
       A wide variety of bases are supported: the base coefficients are not
       required to be powers of 2, and it is NOT necessarily the case that
@@ -221,9 +220,15 @@ Module BaseSystem (Import B:BaseCoefs).
   Proof.
     unfold mul_bi, decode.
     destruct m; simpl; simpl_list; simpl; intros. {
-      pose proof nth_error_base_nonzero.
-      boring; destruct base; nth_tac.
+      pose proof nth_error_base_nonzero as nth_nonzero.
+      case_eq base; [intros; boring | intros z l base_eq].
+      specialize (b0_1 0); intro b0_1'.
+      rewrite base_eq in *.
+      rewrite nth_default_cons in b0_1'.
+      rewrite b0_1' in *.
+      boring; nth_tac.
       rewrite Z_div_mul'; eauto.
+      destruct x; ring.
     } {
       ssimpl_list.
       autorewrite with core.
@@ -542,19 +547,14 @@ Module BaseSystem (Import B:BaseCoefs).
 
 End BaseSystem.
 
-Module Type PolynomialBaseParams.
-  Parameter b1 : positive. (* the value at which the polynomial is evaluated *)
-  Parameter baseLength : nat. (* 1 + degree of the polynomial *)
-  Axiom baseLengthNonzero : NPeano.ltb 0 baseLength = true.
-End PolynomialBaseParams.
-
-Module PolynomialBaseCoefs (Import P:PolynomialBaseParams) <: BaseCoefs.
-  (** PolynomialBaseCoeffs generates base vectors for [BaseSystem] using the extra assumption that $b_{i+j} = b_j b_j$. *)
+Section PolynomialBaseCoefs.
+  Context (b1 : positive) (baseLength : nat) (baseLengthNonzero : NPeano.ltb 0 baseLength = true).
+  (** PolynomialBaseCoefs generates base vectors for [BaseSystem]. *)
   Definition bi i := (Zpos b1)^(Z.of_nat i).
-  Definition base := map bi (seq 0 baseLength).
+  Definition poly_base := map bi (seq 0 baseLength).
 
-  Lemma b0_1 : forall x, nth_default x base 0 = 1.
-    unfold base, bi, nth_default.
+  Lemma poly_b0_1 : forall x, nth_default x poly_base 0 = 1.
+    unfold poly_base, bi, nth_default.
     case_eq baseLength; intros. {
       assert ((0 < baseLength)%nat) by
         (rewrite <-NPeano.ltb_lt; apply baseLengthNonzero).
@@ -563,9 +563,9 @@ Module PolynomialBaseCoefs (Import P:PolynomialBaseParams) <: BaseCoefs.
     auto.
   Qed.
 
-  Lemma base_positive : forall b, In b base -> b > 0.
+  Lemma poly_base_positive : forall b, In b poly_base -> b > 0.
   Proof.
-    unfold base.
+    unfold poly_base.
     intros until 0; intro H.
     rewrite in_map_iff in *.
     destruct H; destruct H.
@@ -573,20 +573,20 @@ Module PolynomialBaseCoefs (Import P:PolynomialBaseParams) <: BaseCoefs.
     apply pos_pow_nat_pos.
   Qed.
 
-  Lemma base_defn : forall i, (i < length base)%nat ->
-      nth_default 0 base i = bi i.
+  Lemma poly_base_defn : forall i, (i < length poly_base)%nat ->
+      nth_default 0 poly_base i = bi i.
   Proof.
-    unfold base, nth_default; nth_tac.
+    unfold poly_base, nth_default; nth_tac.
   Qed.
 
-  Lemma base_succ :
-    forall i, ((S i) < length base)%nat -> 
-    let b := nth_default 0 base in
+  Lemma poly_base_succ :
+    forall i, ((S i) < length poly_base)%nat -> 
+    let b := nth_default 0 poly_base in
     let r := (b (S i) / b i) in
     b (S i) = r * b i.
   Proof.
     intros; subst b; subst r.
-    repeat rewrite base_defn in * by omega.
+    repeat rewrite poly_base_defn in * by omega.
     unfold bi.
     replace (Z.pos b1 ^ Z.of_nat (S i)) 
       with (Z.pos b1 * (Z.pos b1 ^ Z.of_nat i)) by
@@ -598,13 +598,13 @@ Module PolynomialBaseCoefs (Import P:PolynomialBaseParams) <: BaseCoefs.
     pose proof (Zgt_pos_0 b1); omega.
   Qed.
 
-  Lemma base_good:
-    forall i j, (i + j < length base)%nat ->
-    let b := nth_default 0 base in
+  Lemma poly_base_good:
+    forall i j, (i + j < length poly_base)%nat ->
+    let b := nth_default 0 poly_base in
     let r := (b i * b j) / b (i+j)%nat in
     b i * b j = r * b (i+j)%nat.
   Proof.
-    unfold base, nth_default; nth_tac.
+    unfold poly_base, nth_default; nth_tac.
 
     clear.
     unfold bi.
@@ -614,24 +614,27 @@ Module PolynomialBaseCoefs (Import P:PolynomialBaseParams) <: BaseCoefs.
     rewrite <- Z.neq_mul_0.
     split; apply Z.pow_nonzero; try apply Zle_0_nat; try solve [intro H; inversion H].
   Qed.
+
+  Print BaseVector.
+  Instance PolyBaseVector : BaseVector poly_base := {
+    base_positive := poly_base_positive;
+    b0_1 := poly_b0_1;
+    base_good := poly_base_good
+  }.
+
 End PolynomialBaseCoefs.
 
-Module BasePoly2Degree32Params <: PolynomialBaseParams.
-  Definition b1 := 2%positive.
+Import ListNotations.
+
+Section BaseSystemExample.
   Definition baseLength := 32%nat.
   Lemma baseLengthNonzero : NPeano.ltb 0 baseLength = true.
     compute; reflexivity.
   Qed.
-End BasePoly2Degree32Params.
+  Definition base2 := poly_base 2 baseLength.
 
-Import ListNotations.
-
-Module BaseSystemExample.
-  Module BasePoly2Degree32Coefs := PolynomialBaseCoefs BasePoly2Degree32Params.
-  Module BasePoly2Degree32 := BaseSystem BasePoly2Degree32Coefs.
-  Import BasePoly2Degree32.
-
-  Example three_times_two : mul [1;1;0] [0;1;0] = [0;1;1;0;0].
+  About mul.
+  Example three_times_two : @mul base2 [1;1;0] [0;1;0] = [0;1;1;0;0].
   Proof.
     reflexivity.
   Qed.
@@ -639,20 +642,20 @@ Module BaseSystemExample.
   (* python -c "e = lambda x: '['+''.join(reversed(bin(x)[2:])).replace('1','1;').replace('0','0;')[:-1]+']'; print(e(19259)); print(e(41781))" *)
   Definition a := [1;1;0;1;1;1;0;0;1;1;0;1;0;0;1].
   Definition b := [1;0;1;0;1;1;0;0;1;1;0;0;0;1;0;1].
-  Example da : decode a = 19259.
+  Example da : decode base2 a = 19259.
   Proof.
     reflexivity.
   Qed.
-  Example db : decode b = 41781.
+  Example db : decode base2 b = 41781.
   Proof.
     reflexivity.
   Qed.
   Example encoded_ab :
-    mul a b =[1;1;1;2;2;4;2;2;4;5;3;3;3;6;4;2;5;3;4;3;2;1;2;2;2;0;1;1;0;1].
+    mul base2 a b =[1;1;1;2;2;4;2;2;4;5;3;3;3;6;4;2;5;3;4;3;2;1;2;2;2;0;1;1;0;1].
   Proof.
     reflexivity.
   Qed.
-  Example dab : decode (mul a b) = 804660279.
+  Example dab : decode base2 (mul base2 a b) = 804660279.
   Proof.
     reflexivity.
   Qed.
