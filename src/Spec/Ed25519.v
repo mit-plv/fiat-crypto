@@ -43,11 +43,26 @@ Proof.
   rewrite Z.mod_small; q_bound.
 Qed.
 
-(* TODO *)
-(* d = .*)
+Hint Rewrite
+ @FieldToZ_add
+ @FieldToZ_mul
+ @FieldToZ_opp
+ @FieldToZ_inv_efficient
+ @FieldToZ_pow_efficient
+ @FieldToZ_ZToField
+ @Zmod_mod
+ : ZToField.
+
 Definition d : F q := (opp (ZToField 121665) / (ZToField 121666))%F.
-Lemma nonsquare_d : forall x, (x^2 <> d)%F. Admitted.
-(* Definition nonsquare_d : (forall x, x^2 <> d) := euler_criterion_if d. <-- currently not computable in reasonable time *)
+Lemma nonsquare_d : forall x, (x^2 <> d)%F.
+  pose proof @euler_criterion_if q prime_q d two_lt_q.
+  match goal with
+    [H: if ?b then ?x else ?y |- ?y ] => replace b with false in H; [exact H|clear H]
+  end.
+  unfold d, div. autorewrite with ZToField; [|eauto using prime_q, two_lt_q..].
+  vm_compute. (* 10s *)
+  exact eq_refl.
+Qed. (* 10s *)
 
 Instance TEParams : TwistedEdwardsParams := {
   q := q;
@@ -116,13 +131,6 @@ Definition FlEncoding : encoding of F (Z.of_nat l) as word b :=
   @modular_word_encoding (Z.of_nat l) b l_pos l_bound.
 
 Lemma q_5mod8 : (q mod 8 = 5)%Z. cbv; reflexivity. Qed.
-
-Hint Rewrite
- @FieldToZ_pow_efficient
- @FieldToZ_ZToField
- @FieldToZ_opp
- @FieldToZ_ZToField : ZToField
- .
 
 Lemma sqrt_minus1_valid : ((@ZToField q 2 ^ Z.to_N (q / 4)) ^ 2 = opp 1)%F.
 Proof.
