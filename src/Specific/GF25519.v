@@ -1,11 +1,53 @@
-Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
-Require Import Crypto.BaseSystem Crypto.ModularArithmetic.ModularBaseSystem.
-Require Import Coq.Lists.List Crypto.Util.ListUtil.
+Require Import ModularArithmetic.PrimeFieldTheorems.
+Require Import ModularArithmetic.PseudoMersenneBaseRep.
+Require Import ModularArithmetic.PseudoMersenneBaseParams.
+Require Import BaseSystem ModularBaseSystem.
+Require Import List Util.ListUtil.
 Import ListNotations.
-Require Import Coq.ZArith.ZArith Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.ZArith.Znumtheory.
-Require Import Coq.QArith.QArith Coq.QArith.Qround.
-Require Import Crypto.Tactics.VerdiTactics.
+Require Import ZArith.ZArith Zpower ZArith Znumtheory.
+Require Import QArith.QArith QArith.Qround.
+Require Import VerdiTactics.
 Close Scope Q.
+Local Open Scope Z.
+
+Definition modulus : Z := 2^255 - 19.
+Lemma prime_modulus : prime modulus. Admitted.
+
+(* Begin proofs to construct PseudoMersenneBaseParams instance. *)
+
+Definition limb_widths : list Z := [26;25;26;25;26;25;26;25;26;25].
+
+(* TODO : move to ListUtil *)
+Lemma fold_right_and_True_forall_In_iff : forall {T} (l : list T) (P : T -> Prop),
+  (forall x, In x l -> P x) <-> fold_right and True (map P l).
+Proof.
+  induction l; intros; simpl; try tauto.
+  rewrite <- IHl.
+  intuition (subst; auto).
+Qed.
+
+Ltac brute_force_indices := intros; unfold sum_firstn, limb_widths; simpl in *;
+  repeat match goal with
+  | _ => progress simpl in *
+  | _ => reflexivity
+  | [H : (S _ < S _)%nat |- _ ] => apply lt_S_n in H
+  | [H : (?x + _ < _)%nat |- _ ] => is_var x; destruct x
+  | [H : (?x < _)%nat |- _ ] => is_var x; destruct x
+  | _ => omega
+  end.
+
+Instance params : PseudoMersenneBaseParams modulus := { limb_widths := limb_widths }.
+Proof.
+  + apply fold_right_and_True_forall_In_iff.
+    simpl.
+    repeat (split; [omega |]); auto.
+  + unfold limb_widths; congruence.
+  + brute_force_indices.
+  + compute; eauto.
+  + unfold modulus; eauto.
+  + apply prime_modulus.
+  + brute_force_indices.
+Qed.
 
 Ltac twoIndices i j base :=
     intros;
@@ -14,103 +56,6 @@ Ltac twoIndices i j base :=
     repeat match goal with [ x := _ |- _ ] => subst x end;
     simpl in *; repeat break_or_hyp; try omega; vm_compute; reflexivity.
 
-Module Base25Point5_10limbs <: BaseCoefs.
-  Local Open Scope Z_scope.
-  Definition log_base := Eval compute in map (fun i => (Qceiling (Z_of_nat i *255 # 10))) (seq 0 10).
-  Definition base := map (fun x => 2 ^ x) log_base.
-
-  Lemma base_positive : forall b, In b base -> b > 0.
-  Proof.
-    compute; intuition; subst; intuition.
-  Qed.
-
-  Lemma b0_1 : forall x, nth_default x base 0 = 1.
-  Proof.
-    auto.
-  Qed.
-
-  Lemma base_good :
-    forall i j, (i+j < length base)%nat ->
-    let b := nth_default 0 base in
-    let r := (b i * b j) / b (i+j)%nat in
-    b i * b j = r * b (i+j)%nat.
-  Proof.
-    twoIndices i j base.
-  Qed.
-End Base25Point5_10limbs.
-
-Module Modulus25519 <: PrimeModulus.
-  Local Open Scope Z_scope.
-  Definition modulus : Z := 2^255 - 19.
-  Lemma prime_modulus : prime modulus. Admitted.
-End Modulus25519.
-
-Module F25519Base25Point5Params <: PseudoMersenneBaseParams Base25Point5_10limbs Modulus25519.
-  Import Base25Point5_10limbs.
-  Import Modulus25519.
-  Local Open Scope Z_scope.
-  (* TODO: do we actually want B and M "up there" in the type parameters? I was
-  * imagining writing something like "Paramter Module M : Modulus". *)
-
-  Definition k := 255.
-  Definition c := 19.
-  Lemma modulus_pseudomersenne :
-    modulus = 2^k - c.
-  Proof.
-    auto.
-  Qed.
-
-  Lemma base_matches_modulus :
-    forall i j,
-    (i   <  length base)%nat ->
-    (j   <  length base)%nat ->
-    (i+j >= length base)%nat ->
-    let b := nth_default 0 base in
-    let r := (b i * b j)  /   (2^k * b (i+j-length base)%nat) in
-              b i * b j = r * (2^k * b (i+j-length base)%nat).
-  Proof.
-    twoIndices i j base.
-  Qed.
-
-  Lemma base_succ : forall i, ((S i) < length base)%nat ->
-    let b := nth_default 0 base in
-    b (S i) mod b i = 0.
-  Proof.
-    intros; twoIndices i (S i) base.
-  Qed.
-
-  Lemma base_tail_matches_modulus:
-    2^k mod nth_default 0 base (pred (length base)) = 0.
-  Proof.
-    auto.
-  Qed.
-
-  Lemma b0_1 : forall x, nth_default x base 0 = 1.
-  Proof.
-    auto.
-  Qed.
-
-  Lemma k_nonneg : 0 <= k.
-  Proof.
-    rewrite Zle_is_le_bool; auto.
-  Qed.
-
-  Lemma base_range : forall i, 0 <= nth_default 0 log_base i <= k.
-  Proof.
-    intros i.
-    destruct (lt_dec i (length log_base)) as [H|H].
-    { repeat (destruct i as [|i]; [cbv; intuition; discriminate|simpl in H; try omega]). }
-    { rewrite nth_default_eq, nth_overflow by omega. cbv. intuition; discriminate. }
-  Qed.
-
-  Lemma base_monotonic: forall i : nat, (i < pred (length log_base))%nat ->
-      (0 <= nth_default 0 log_base i <= nth_default 0 log_base (S i)).
-  Proof.
-  intros i H.
-  repeat (destruct i; [cbv; intuition; congruence|]); 
-      contradict H; cbv; firstorder.
-  Qed.      
-End F25519Base25Point5Params.
 
 Module F25519Base25Point5 := PseudoMersenneBase Base25Point5_10limbs Modulus25519 F25519Base25Point5Params.
 
