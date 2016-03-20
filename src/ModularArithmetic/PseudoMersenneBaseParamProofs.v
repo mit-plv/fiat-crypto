@@ -268,7 +268,7 @@ Section PseudoMersenneBaseParamProofs.
      rewrite <- base_length; assumption.
    Qed.
 
-  Instance bv : BaseSystem.BaseVector base := {
+  Global Instance bv : BaseSystem.BaseVector base := {
     base_positive := base_positive;
     b0_1 := b0_1;
     base_good := base_good

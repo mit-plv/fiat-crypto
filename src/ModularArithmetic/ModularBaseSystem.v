@@ -7,7 +7,6 @@ Local Open Scope Z_scope.
 
 Section PseudoMersenneBase.
   Context `{prm :PseudoMersenneBaseParams}.
-  Existing Instance bv.
   
   Definition decode (us : digits) : F modulus := ZToField (BaseSystem.decode base us).
   

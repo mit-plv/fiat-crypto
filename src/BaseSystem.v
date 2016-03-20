@@ -85,6 +85,7 @@ Section BaseSystem.
 
 End BaseSystem.
 
+(* Example : polynomial base system *)
 Section PolynomialBaseCoefs.
   Context (b1 : positive) (baseLength : nat) (baseLengthNonzero : NPeano.ltb 0 baseLength = true).
   (** PolynomialBaseCoefs generates base vectors for [BaseSystem]. *)

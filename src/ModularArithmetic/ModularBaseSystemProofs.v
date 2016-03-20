@@ -9,7 +9,6 @@ Local Open Scope Z_scope.
 
 Section PseudoMersenneProofs.
   Context `{prm :PseudoMersenneBaseParams}.
-  Existing Instance bv.
 
   Local Hint Unfold decode.
   Local Notation "u '~=' x" := (rep u x) (at level 70).
@@ -251,7 +250,6 @@ End PseudoMersenneProofs.
 
 Section CarryProofs.
   Context `{prm : PseudoMersenneBaseParams}.
-  Existing Instance bv.
   Local Notation "u '~=' x" := (rep u x) (at level 70).
   Hint Unfold log_cap.
   

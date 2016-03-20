@@ -14,6 +14,7 @@ Class PseudoMersenneBaseParams (modulus : Z) := {
     sum_firstn limb_widths i + sum_firstn limb_widths j;
   k : Z;
   c : Z;
+  k_matches_limb_widths : sum_firstn limb_widths (length limb_widths) = k;
   modulus_pseudomersenne : modulus = 2^k - c;
   prime_modulus : Znumtheory.prime modulus;
   limb_widths_match_modulus : forall i j,
@@ -21,6 +22,5 @@ Class PseudoMersenneBaseParams (modulus : Z) := {
     (j < length limb_widths)%nat ->
     (i + j >= length limb_widths)%nat ->
     let w_sum := sum_firstn limb_widths in
-    k + w_sum (i + j - length limb_widths)%nat <= w_sum i + w_sum j;
-  k_matches_limb_widths : sum_firstn limb_widths (length limb_widths) = k
+    k + w_sum (i + j - length limb_widths)%nat <= w_sum i + w_sum j
 }.

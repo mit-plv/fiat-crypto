@@ -9,7 +9,6 @@ Local Open Scope Z_scope.
 
 Section ExtendedBaseVector.
   Context `{prm : PseudoMersenneBaseParams}.
-  Existing Instance bv.
 
   (* This section defines a new BaseVector that has double the length of the BaseVector
   * used to construct [params]. The coefficients of the new vector are as follows:
