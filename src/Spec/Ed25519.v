@@ -64,7 +64,7 @@ Lemma nonsquare_d : forall x, (x^2 <> d)%F.
   exact eq_refl.
 Qed. (* 10s *)
 
-Instance TEParams : TwistedEdwardsParams := {
+Instance curve25519params : TwistedEdwardsParams := {
   q := q;
   prime_q := prime_q;
   two_lt_q := two_lt_q;
@@ -140,15 +140,15 @@ Proof.
   reflexivity.
 Qed.
 
-Definition PointEncoding := @point_encoding TEParams (b - 1) FqEncoding q_5mod8 sqrt_minus1_valid.
+Definition PointEncoding := @point_encoding curve25519params (b - 1) FqEncoding q_5mod8 sqrt_minus1_valid.
 
 Definition H : forall n : nat, word n -> word (b + b). Admitted.
 Definition B : point. Admitted. (* TODO: B = decodePoint (y=4/5, x="positive") *)
 Definition B_nonzero : B <> zero. Admitted.
 Definition l_order_B : scalarMult l B = zero. Admitted.
 
-Instance x : EdDSAParams := {
-  E := TEParams;
+Local Instance ed25519params : EdDSAParams := {
+  E := curve25519params;
   b := b;
   H := H;
   c := c;
@@ -168,3 +168,7 @@ Instance x : EdDSAParams := {
   l_odd := l_odd;
   l_order_B := l_order_B
 }.
+
+Definition ed25519_verify
+  : forall (pubkey:word b) (len:nat) (msg:word len) (sig:word (b+b)), bool
+  := @verify ed25519params.
