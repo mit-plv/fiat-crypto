@@ -46,8 +46,11 @@ Section TwistedEdwardsCurves.
     | O => zero
     | S n' => unifiedAdd P (scalarMult n' P)
     end.
+
+  Axiom point_eq_dec : forall P Q : point, {P = Q} + {P <> Q}.
 End TwistedEdwardsCurves.
 
 Delimit Scope E_scope with E.
 Infix "+" := unifiedAdd : E_scope.
 Infix "*" := scalarMult : E_scope.
+Infix "==" := point_eq_dec (no associativity, at level 70) : E_scope.
