@@ -14,6 +14,7 @@ Infix "mod" := NPeano.modulo.
 Infix "++" := Word.combine.
 
 Section EdDSAParams.
+
   Class EdDSAParams := { (* <https://eprint.iacr.org/2015/677.pdf> *)
     E : TwistedEdwardsParams; (* underlying elliptic curve *)
 
@@ -70,8 +71,6 @@ Section EdDSA.
                               (r + H (enc R ++ public sk ++ M) * s)) in
         enc R ++ enc S.
 
-  Axiom point_eq_dec : forall P Q : point, {P = Q} + {P <> Q}.
-  Infix "==" := point_eq_dec (no associativity, at level 70) : E_scope.
   Definition verify (A_:publickey) {n:nat} (M : Word.word n) (sig:signature) : bool :=
     let R_ := Word.split1 b b sig in
     let S_ := Word.split2 b b sig in
