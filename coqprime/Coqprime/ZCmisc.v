@@ -6,7 +6,7 @@
 (*    Benjamin.Gregoire@inria.fr Laurent.Thery@inria.fr      *)
 (*************************************************************)
 
-Require Export ZArith.
+Require Export Coq.ZArith.ZArith.
 Open Local Scope Z_scope.
 
 Coercion Zpos : positive >-> Z.

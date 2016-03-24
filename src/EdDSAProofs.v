@@ -1,11 +1,11 @@
 Require Import Crypto.Spec.EdDSA Crypto.Spec.Encoding.
-Require Import NPeano.
+Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Bedrock.Word.
-Require Import Znumtheory BinInt ZArith.
+Require Import Coq.ZArith.Znumtheory Coq.ZArith.BinInt Coq.ZArith.ZArith.
 Require Import Crypto.Spec.CompleteEdwardsCurve Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems Crypto.ModularArithmetic.ModularArithmeticTheorems.
-Require Import Util.ListUtil Util.CaseUtil Util.ZUtil.
-Require Import VerdiTactics.
+Require Import Crypto.Util.ListUtil Crypto.Util.CaseUtil Crypto.Util.ZUtil.
+Require Import Crypto.Tactics.VerdiTactics.
 Local Open Scope nat_scope.
 
 Section EdDSAProofs.

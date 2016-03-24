@@ -1,7 +1,6 @@
-Require Import Zpower Znumtheory ZArith.ZArith ZArith.Zdiv.
-Require Import Omega NPeano Arith.
+Require Import Coq.ZArith.Zpower Coq.ZArith.Znumtheory Coq.ZArith.ZArith Coq.ZArith.Zdiv.
+Require Import Coq.omega.Omega Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
 Require Import Crypto.Util.NatUtil.
-Require Import Bedrock.Word.
 Local Open Scope Z.
 
 Lemma gt_lt_symmetry: forall n m, n > m <-> m < n.
@@ -38,7 +37,7 @@ Proof.
   rewrite Zmod_mod; auto.
 Qed.
 
-Lemma pos_pow_nat_pos : forall x n, 
+Lemma pos_pow_nat_pos : forall x n,
   Z.pos x ^ Z.of_nat n > 0.
   do 2 (intros; induction n; subst; simpl in *; auto with zarith).
   rewrite <- Pos.add_1_r, Zpower_pos_is_exp.
@@ -51,18 +50,6 @@ Qed.
 
 Lemma Zgt0_neq0 : forall x, x > 0 -> x <> 0.
   intuition.
-Qed.
-
-Lemma Zpow_pow2 : forall n, (pow2 n)%nat = Z.to_nat (2 ^ (Z.of_nat n)).
-Proof.
-  induction n; intros; auto.
-  simpl pow2.
-  rewrite Nat2Z.inj_succ.
-  rewrite Z.pow_succ_r by apply Zle_0_nat.
-  rewrite untimes2.
-  rewrite Z2Nat.inj_mul by (try apply Z.pow_nonneg; omega).
-  rewrite <- IHn.
-  auto.
 Qed.
 
 Lemma pow_Z2N_Zpow : forall a n, 0 <= a ->

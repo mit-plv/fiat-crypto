@@ -1,94 +1,28 @@
 Require Import Crypto.CompleteEdwardsCurve.Pre.
 Require Import Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
+Require Import Crypto.ModularArithmetic.FField.
 Require Import Crypto.Tactics.VerdiTactics.
+Require Import Util.IterAssocOp BinNat NArith. 
+Require Import Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Classes.Equivalence.
+Local Open Scope equiv_scope.
 Local Open Scope F_scope.
-
-Section ExtendedCoordinatesFieldProofs.
-  (* If [field] worked on (F q) when Definition q := someProj someRecord, we
-     could inline this proof into unifiedAdd_repM1 *)
-  Context p (prime_p : Znumtheory.prime p) (two_lt_p : BinInt.Z.lt 2 p).
-  Existing Instance prime_p.
-
-  Add Field GFfield_Z : (@Ffield_theory p _)
-    (morphism (@Fring_morph p),
-     preprocess [Fpreprocess],
-     postprocess [Fpostprocess],
-     constants [Fconstant],
-     div (@Fmorph_div_theory p),
-     power_tac (@Fpower_theory p) [Fexp_tac]). 
-  
-  Lemma unifiedAdd_repM1_fieldproof:
-  forall (d XP YP ZP XQ YQ ZQ : F p)
-  (HZP : ZP <> 0)
-  (HZQ : ZQ <> 0)
-  (HoRp : forall x1 y1 x2 y2 : F p,
-    opp 1 * x1 ^ 2 + y1 ^ 2 = 1 + d * x1 ^ 2 * y1 ^ 2 ->
-    opp 1 * x2 ^ 2 + y2 ^ 2 = 1 + d * x2 ^ 2 * y2 ^ 2 ->
-    1 + d * x1 * x2 * y1 * y2 <> 0)
-  (HoRm : forall x1 y1 x2 y2 : F p,
-    opp 1 * x1 ^ 2 + y1 ^ 2 = 1 + d * x1 ^ 2 * y1 ^ 2 ->
-    opp 1 * x2 ^ 2 + y2 ^ 2 = 1 + d * x2 ^ 2 * y2 ^ 2 ->
-    1 - d * x1 * x2 * y1 * y2 <> 0)
-  (HoQ: opp 1 * (XQ / ZQ) ^ 2 + (YQ / ZQ) ^ 2 = 1 + d * (XQ / ZQ) ^ 2 * (YQ / ZQ) ^ 2)
-  (HoP : opp 1 * (XP / ZP) ^ 2 + (YP / ZP) ^ 2 = 1 + d * (XP / ZP) ^ 2 * (YP / ZP) ^ 2),
-      (((YP + XP) * (YQ + XQ) - (YP - XP) * (YQ - XQ)) *
-      (ZP * ZToField 2 * ZQ - XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ)) /
-                                                                              ((ZP * ZToField 2 * ZQ - XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ)) *
-                                                                              (ZP * ZToField 2 * ZQ + XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ))),
-      (ZP * ZToField 2 * ZQ + XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ)) *
-      ((YP + XP) * (YQ + XQ) + (YP - XP) * (YQ - XQ)) /
-                                                      ((ZP * ZToField 2 * ZQ - XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ)) *
-                                                      (ZP * ZToField 2 * ZQ + XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ)))) =
-      ((XP / ZP * (YQ / ZQ) + YP / ZP * (XQ / ZQ)) /
-                                                  (1 + d * (XP / ZP) * (XQ / ZQ) * (YP / ZP) * (YQ / ZQ)),
-      (YP / ZP * (YQ / ZQ) - opp 1 * (XP / ZP) * (XQ / ZQ)) /
-                                                              (1 - d * (XP / ZP) * (XQ / ZQ) * (YP / ZP) * (YQ / ZQ))) /\
-      ((ZP * ZToField 2 * ZQ - XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ)) *
-      (ZP * ZToField 2 * ZQ + XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ)) = 0 ->
-      False) /\
-      ((YP + XP) * (YQ + XQ) - (YP - XP) * (YQ - XQ)) *
-      ((YP + XP) * (YQ + XQ) + (YP - XP) * (YQ - XQ)) =
-      ((YP + XP) * (YQ + XQ) - (YP - XP) * (YQ - XQ)) *
-      (ZP * ZToField 2 * ZQ - XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ)) *
-      ((ZP * ZToField 2 * ZQ + XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ)) *
-      ((YP + XP) * (YQ + XQ) + (YP - XP) * (YQ - XQ))) /
-                                                      ((ZP * ZToField 2 * ZQ - XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ)) *
-                                                          (ZP * ZToField 2 * ZQ + XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ))).
-  Proof.
-    intros; repeat split; try apply (f_equal2 pair); try field; auto.
-
-    Ltac tnz := eauto 10 using Fq_mul_nonzero_nonzero, (@char_gt_2 p two_lt_p).
-    (* If we we had reasoning modulo associativity and commutativity,
-    *  the following tactic would probably solve all 10 goals here:
-    repeat match goal with [H1: @eq (F p) _ _, H2: @eq (F p) _ _ |- _ ] =>
-      let H := fresh "H" in ( 
-        pose proof (edwardsAddCompletePlus _ _ _ _ H1 H2) as H;
-        match type of H with ?xs <> 0 => ac_rewrite (eq_refl xs) end
-      ) || (
-        pose proof (edwardsAddCompleteMinus _ _ _ _ H1 H2) as H;
-        match type of H with ?xs <> 0 => ac_rewrite (eq_refl xs) end
-      ); tnz
-    end. *)
-
-      - replace (ZP * ZQ * ZP * ZQ + d * XP * XQ * YP * YQ) with (ZQ*ZQ*ZP*ZP* (1 + d * (XQ / ZQ) * (XP / ZP) * (YQ / ZQ) * (YP / ZP))) by (field; tnz); tnz.
-      - replace (ZP * ZToField 2 * ZQ * (ZP * ZQ)  + XP * YP * ZToField 2 * d * (XQ * YQ)) with (ZToField 2*ZQ*ZQ*ZP*ZP* (1 + d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
-      - replace (ZP * ZToField 2 * ZQ * (ZP * ZQ)  - XP * YP * ZToField 2 * d * (XQ * YQ)) with (ZToField 2*ZQ*ZQ*ZP*ZP* (1 - d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
-      - replace (ZP * ZQ * ZP * ZQ - d * XP * XQ * YP * YQ) with (ZQ*ZQ*ZP*ZP* (1 - d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
-      - replace (ZP * ZToField 2 * ZQ * (ZP * ZQ)  + XP * YP * ZToField 2 * d * (XQ * YQ)) with (ZToField 2*ZQ*ZQ*ZP*ZP* (1 + d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
-      - replace (ZP * ZToField 2 * ZQ * (ZP * ZQ)  - XP * YP * ZToField 2 * d * (XQ * YQ)) with (ZToField 2*ZQ*ZQ*ZP*ZP* (1 - d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
-      - replace (ZP * ZQ * ZP * ZQ - d * XP * XQ * YP * YQ) with (ZQ*ZQ*ZP*ZP* (1 - d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz).
-      repeat apply Fq_mul_nonzero_nonzero.
-        + replace (ZP * ZToField 2 * ZQ - XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ) ) with (ZToField 2*ZQ*ZP* (1 - d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
-        + replace (ZP * ZToField 2 * ZQ + XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ) ) with (ZToField 2*ZQ*ZP* (1 + d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
-      - replace (ZP * ZToField 2 * ZQ * (ZP * ZQ)  + XP * YP * ZToField 2 * d * (XQ * YQ)) with (ZToField 2*ZQ*ZQ*ZP*ZP* (1 + d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
-      - replace (ZP * ZToField 2 * ZQ * (ZP * ZQ)  - XP * YP * ZToField 2 * d * (XQ * YQ)) with (ZToField 2*ZQ*ZQ*ZP*ZP* (1 - d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
-    Qed.
-End ExtendedCoordinatesFieldProofs.
 
 Section ExtendedCoordinates.
   Context {prm:TwistedEdwardsParams}.
+  Local Opaque q a d prime_q two_lt_q nonzero_a square_a nonsquare_d. (* [F_field] calls [compute] *)
   Existing Instance prime_q.
+
+  Add Field Ffield_p' : (@Ffield_theory q _)
+    (morphism (@Fring_morph q),
+     preprocess [Fpreprocess],
+     postprocess [Fpostprocess; try exact Fq_1_neq_0; try assumption],
+     constants [Fconstant],
+     div (@Fmorph_div_theory q),
+     power_tac (@Fpower_theory q) [Fexp_tac]). 
+
+  Add Field Ffield_notConstant : (OpaqueFieldTheory q)
+    (constants [notConstant]). 
 
   (** [extended] represents a point on an elliptic curve using extended projective
   * Edwards coordinates with twist a=-1 (see <https://eprint.iacr.org/2008/522.pdf>). *)
@@ -149,10 +83,43 @@ Section ExtendedCoordinates.
     solveExtended.
   Qed.
 
+  Definition extendedPoint := { P:extended | rep P (extendedToTwisted P) /\ onCurve (extendedToTwisted P) }.
+
+  Program Definition mkExtendedPoint : point -> extendedPoint := twistedToExtended.
+  Next Obligation.
+    destruct x; erewrite extendedToTwisted_rep; eauto using twistedToExtended_rep.
+  Qed.
+
+  Program Definition unExtendedPoint : extendedPoint -> point := extendedToTwisted.
+  Next Obligation.
+    destruct x; simpl; intuition.
+  Qed.
+
+  Definition extendedPoint_eq P Q := unExtendedPoint P = unExtendedPoint Q.
+  Global Instance Equivalence_extendedPoint_eq : Equivalence extendedPoint_eq.
+  Proof.
+    repeat (econstructor || intro); unfold extendedPoint_eq in *; congruence.
+  Qed.
+
+  Lemma unExtendedPoint_mkExtendedPoint : forall P, unExtendedPoint (mkExtendedPoint P) = P.
+  Proof.
+    destruct P; eapply point_eq; simpl; erewrite extendedToTwisted_rep; eauto using twistedToExtended_rep.
+  Qed.
+
+  Global Instance Proper_mkExtendedPoint : Proper (eq==>equiv) mkExtendedPoint.
+  Proof.
+    repeat (econstructor || intro); unfold extendedPoint_eq in *; congruence.
+  Qed.
+
+  Global Instance Proper_unExtendedPoint : Proper (equiv==>eq) unExtendedPoint.
+  Proof.
+    repeat (econstructor || intro); unfold extendedPoint_eq in *; congruence.
+  Qed.
+
   Section TwistMinus1.
     Context (a_eq_minus1 : a = opp 1).
     (** Second equation from <http://eprint.iacr.org/2008/522.pdf> section 3.1, also <https://www.hyperelliptic.org/EFD/g1p/auto-twisted-extended-1.html#addition-add-2008-hwcd-3> and <https://tools.ietf.org/html/draft-josefsson-eddsa-ed25519-03> *)
-    Definition unifiedAddM1 (P1 P2 : extended) : extended :=
+    Definition unifiedAddM1' (P1 P2 : extended) : extended :=
       let '(X1, Y1, Z1, T1) := P1 in
       let '(X2, Y2, Z2, T2) := P2 in
       let  A := (Y1-X1)*(Y2-X2) in
@@ -170,14 +137,98 @@ Section ExtendedCoordinates.
       (X3, Y3, Z3, T3).
     Local Hint Unfold unifiedAdd.
 
-    Lemma unifiedAdd_repM1: forall P Q rP rQ, onCurve rP -> onCurve rQ ->
-      P ~= rP -> Q ~= rQ -> (unifiedAddM1 P Q) ~= (unifiedAdd' rP rQ).
+    Lemma unifiedAddM1'_rep: forall P Q rP rQ, onCurve rP -> onCurve rQ ->
+      P ~= rP -> Q ~= rQ -> (unifiedAddM1' P Q) ~= (unifiedAdd' rP rQ).
     Proof.
       intros P Q rP rQ HoP HoQ HrP HrQ.
-      pose proof (@edwardsAddCompletePlus _ _ _ _ two_lt_q nonzero_a square_a nonsquare_d) as HoRp; simpl in HoRp.
-      pose proof (@edwardsAddCompleteMinus _ _ _ _ two_lt_q nonzero_a square_a nonsquare_d) as HoRm; simpl in HoRm.
-      unfoldExtended; rewrite a_eq_minus1 in *.
-      apply unifiedAdd_repM1_fieldproof; auto using prime_q, two_lt_q.
+      pose proof (@edwardsAddCompletePlus _ _ _ _ two_lt_q nonzero_a square_a nonsquare_d).
+      pose proof (@edwardsAddCompleteMinus _ _ _ _ two_lt_q nonzero_a square_a nonsquare_d).
+      unfoldExtended; rewrite a_eq_minus1 in *; simpl in *.
+        repeat split; repeat apply (f_equal2 pair); try F_field; repeat split; auto;
+        repeat rewrite ?F_add_0_r, ?F_add_0_l, ?F_sub_0_l, ?F_sub_0_r,
+           ?F_mul_0_r, ?F_mul_0_l, ?F_mul_1_l, ?F_mul_1_r, ?F_div_1_r.
+
+    Ltac tnz := repeat apply Fq_mul_nonzero_nonzero; auto using (@char_gt_2 q two_lt_q).
+    (* If we we had reasoning modulo associativity and commutativity,
+    *  the following tactic would probably solve all remaining goals here:
+    repeat match goal with [H1: @eq (F p) _ _, H2: @eq (F p) _ _ |- _ ] =>
+      let H := fresh "H" in ( 
+        pose proof (edwardsAddCompletePlus _ _ _ _ H1 H2) as H;
+        match type of H with ?xs <> 0 => ac_rewrite (eq_refl xs) end
+      ) || (
+        pose proof (edwardsAddCompleteMinus _ _ _ _ H1 H2) as H;
+        match type of H with ?xs <> 0 => ac_rewrite (eq_refl xs) end
+      ); tnz
+    end. *)
+
+      - replace (ZP * ZQ * ZP * ZQ + d * XP * XQ * YP * YQ) with (ZQ*ZQ*ZP*ZP* (1 + d * (XQ / ZQ) * (XP / ZP) * (YQ / ZQ) * (YP / ZP))) by (field; tnz); tnz.
+      - replace (ZP * ZToField 2 * ZQ * (ZP * ZQ)  + XP * YP * ZToField 2 * d * (XQ * YQ)) with (ZToField 2*ZQ*ZQ*ZP*ZP* (1 + d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
+      - replace (ZP * ZToField 2 * ZQ * (ZP * ZQ)  - XP * YP * ZToField 2 * d * (XQ * YQ)) with (ZToField 2*ZQ*ZQ*ZP*ZP* (1 - d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
+      - replace (ZP * ZQ * ZP * ZQ - d * XP * XQ * YP * YQ) with (ZQ*ZQ*ZP*ZP* (1 - d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
+      - replace (ZP * ZToField 2 * ZQ * (ZP * ZQ)  + XP * YP * ZToField 2 * d * (XQ * YQ)) with (ZToField 2*ZQ*ZQ*ZP*ZP* (1 + d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
+      - replace (ZP * ZToField 2 * ZQ * (ZP * ZQ)  - XP * YP * ZToField 2 * d * (XQ * YQ)) with (ZToField 2*ZQ*ZQ*ZP*ZP* (1 - d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
+      - replace (ZP * ZToField 2 * ZQ - XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ) ) with (ZToField 2*ZQ*ZP* (1 - d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
+        replace (ZP * ZToField 2 * ZQ + XP * YP / ZP * ZToField 2 * d * (XQ * YQ / ZQ) ) with (ZToField 2*ZQ*ZP* (1 + d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
+      - replace (ZP * ZToField 2 * ZQ * (ZP * ZQ)  + XP * YP * ZToField 2 * d * (XQ * YQ)) with (ZToField 2*ZQ*ZQ*ZP*ZP* (1 + d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
+      - replace (ZP * ZToField 2 * ZQ * (ZP * ZQ)  - XP * YP * ZToField 2 * d * (XQ * YQ)) with (ZToField 2*ZQ*ZQ*ZP*ZP* (1 - d * (XQ / ZQ)  * (XP / ZP) * (YQ / ZQ)  * (YP / ZP))) by (field; tnz); tnz.
     Qed.
+
+    Lemma unifiedAdd'_onCurve : forall P Q, onCurve P -> onCurve Q -> onCurve (unifiedAdd' P Q).
+    Proof.
+      intros; pose proof (proj2_sig (unifiedAdd (mkPoint _ H) (mkPoint _ H0))); eauto.
+    Qed.
+
+    Program Definition unifiedAddM1 : extendedPoint -> extendedPoint -> extendedPoint := unifiedAddM1'.
+    Next Obligation.
+      destruct x, x0; simpl; intuition.
+      - erewrite extendedToTwisted_rep; eauto using unifiedAddM1'_rep.
+      - erewrite extendedToTwisted_rep.
+        (* It would be nice if I could use eauto here, but it gets evars wrong :( *)
+        2: eapply unifiedAddM1'_rep. 5:apply H1. 4:apply H. 3:auto. 2:auto.
+        eauto using unifiedAdd'_onCurve.
+    Qed.
+
+    Lemma unifiedAddM1_rep : forall P Q, unifiedAdd (unExtendedPoint P) (unExtendedPoint Q) = unExtendedPoint (unifiedAddM1 P Q).
+    Proof.
+      destruct P, Q; unfold unExtendedPoint, unifiedAdd, unifiedAddM1; eapply point_eq; simpl in *; intuition.
+      pose proof (unifiedAddM1'_rep x x0 (extendedToTwisted x) (extendedToTwisted x0));
+        destruct (unifiedAddM1' x x0);
+        unfold rep in *; intuition.
+    Qed.
+
+    Global Instance Proper_unifiedAddM1 : Proper (equiv==>equiv==>equiv) unifiedAddM1.
+    Proof.
+      repeat (econstructor || intro).
+      repeat match goal with [H: _ === _ |- _ ] => inversion H; clear H end; unfold equiv, extendedPoint_eq.
+      rewrite <-!unifiedAddM1_rep.
+      destruct x, y, x0, y0; simpl in *; eapply point_eq; congruence.
+    Qed.
+
+    Lemma unifiedAddM1_0_r : forall P, unifiedAddM1 P (mkExtendedPoint zero) === P.
+      unfold equiv, extendedPoint_eq; intros.
+      rewrite <-!unifiedAddM1_rep, unExtendedPoint_mkExtendedPoint, zeroIsIdentity; auto.
+    Qed.
+
+    Lemma unifiedAddM1_0_l : forall P, unifiedAddM1 (mkExtendedPoint zero) P === P.
+      unfold equiv, extendedPoint_eq; intros.
+      rewrite <-!unifiedAddM1_rep, twistedAddComm, unExtendedPoint_mkExtendedPoint, zeroIsIdentity; auto.
+    Qed.
+
+    Lemma unifiedAddM1_assoc : forall a b c, unifiedAddM1 a (unifiedAddM1 b c) === unifiedAddM1 (unifiedAddM1 a b) c.
+    Proof.
+      unfold equiv, extendedPoint_eq; intros.
+      rewrite <-!unifiedAddM1_rep, twistedAddAssoc; auto.
+    Qed.
+    
+    Definition scalarMultM1 := iter_op unifiedAddM1 (mkExtendedPoint zero).
+    Definition scalarMultM1_spec := iter_op_spec unifiedAddM1 unifiedAddM1_assoc (mkExtendedPoint zero) unifiedAddM1_0_l.
+    Lemma scalarMultM1_rep : forall n P, unExtendedPoint (scalarMultM1 (N.of_nat n) P) = scalarMult n (unExtendedPoint P).
+      intros; rewrite scalarMultM1_spec, Nat2N.id.
+      induction n; [simpl; rewrite !unExtendedPoint_mkExtendedPoint; reflexivity|].
+      unfold scalarMult; fold scalarMult.
+      rewrite <-IHn, unifiedAddM1_rep; auto.
+    Qed.
+
   End TwistMinus1.
+
 End ExtendedCoordinates.

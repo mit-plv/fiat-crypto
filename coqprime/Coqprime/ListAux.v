@@ -11,11 +11,11 @@
                                                                                                           
      Auxillary functions & Theorems                                              
   **********************************************************************)
-Require Export List.
-Require Export Arith.
-Require Export Tactic.
-Require Import Inverse_Image.
-Require Import Wf_nat.
+Require Export Coq.Lists.List.
+Require Export Coq.Arith.Arith.
+Require Export Coqprime.Tactic.
+Require Import Coq.Wellfounded.Inverse_Image.
+Require Import Coq.Arith.Wf_nat.
 
 (************************************** 
    Some properties on list operators: app, map,...

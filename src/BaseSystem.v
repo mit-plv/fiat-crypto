@@ -1,7 +1,7 @@
-Require Import List.
-Require Import Util.ListUtil Util.CaseUtil Util.ZUtil.
-Require Import ZArith.ZArith ZArith.Zdiv.
-Require Import Omega NPeano Arith.
+Require Import Coq.Lists.List.
+Require Import Crypto.Util.ListUtil Crypto.Util.CaseUtil Crypto.Util.ZUtil.
+Require Import Coq.ZArith.ZArith Coq.ZArith.Zdiv.
+Require Import Coq.omega.Omega Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
 
 Local Open Scope Z.
 

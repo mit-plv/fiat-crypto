@@ -1,11 +1,11 @@
 Require Import Crypto.Spec.ModularArithmetic.
 Require Import Crypto.ModularArithmetic.Pre.
 
-Require Import Eqdep_dec.
-Require Import Tactics.VerdiTactics.
-Require Import BinInt Zdiv Znumtheory NArith. (* import Zdiv before Znumtheory *)
-Require Import Coq.Classes.Morphisms Setoid.
-Require Export Ring_theory Field_theory Field_tac.
+Require Import Coq.Logic.Eqdep_dec.
+Require Import Crypto.Tactics.VerdiTactics.
+Require Import Coq.ZArith.BinInt Coq.ZArith.Zdiv Coq.ZArith.Znumtheory Coq.NArith.NArith. (* import Zdiv before Znumtheory *)
+Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
+Require Export Coq.setoid_ring.Ring_theory Coq.setoid_ring.Field_theory Coq.setoid_ring.Field_tac.
 
 Section ModularArithmeticPreliminaries.
   Context {m:Z}.
@@ -292,6 +292,18 @@ Section FandZ.
       Fdefn.
     }
   Qed.
+
+  Lemma ZToField_eqmod : forall x y : Z, x mod m = y mod m -> ZToField x = @ZToField m y.
+    Fdefn.
+  Qed.
+
+  Lemma FieldToZ_nonzero:
+    forall x0 : F m, x0 <> 0 -> FieldToZ x0 <> 0%Z.
+  Proof.
+    intros x0 Hnz Hz.
+    rewrite <- Hz, ZToField_FieldToZ in Hnz; auto.
+  Qed.
+
 End FandZ.
 
 Section RingModuloPre.
@@ -569,6 +581,16 @@ Section VariousModulo.
     Fdefn.
   Qed.
 
+  Lemma F_pow_2_r : forall x : F m, x^2 = x*x.
+  Proof.
+    intros. ring.
+  Qed.
+
+  Lemma F_pow_3_r : forall x : F m, x^3 = x*x*x.
+  Proof.
+    intros. ring.
+  Qed.
+
   Lemma F_pow_add : forall (x : F m) k j, x ^ j * x ^ k = x ^ (j + k).
   Proof.
     intros.
@@ -642,4 +664,15 @@ Section VariousModulo.
     omega.
   Qed.
 
+  Lemma F_mul_comm : forall x y : F m, x*y = y*x.
+    intros; ring.
+  Qed.
+
+  Lemma Fq_sub_eq : forall x y a b : F m, a = b -> x-a = y-b -> x = y.
+  Proof.
+    intros x y a b Hab Hxayb; subst.
+    replace x with ((x - b) + b) by ring.
+    replace y with ((y - b) + b) by ring.
+    rewrite Hxayb; ring.
+  Qed.
 End VariousModulo.

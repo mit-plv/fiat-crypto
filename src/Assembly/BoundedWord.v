@@ -276,7 +276,16 @@ Section MulmodExamples.
     | [|- _ ^& (@NToWord _ (N.ones _)) <= _] => apply mask_wand
     end.
 
-  Ltac word_bound := repeat word_bound_step.
+  Ltac simpl_hyps :=
+    match goal with
+    | [ H: ?x <= _ |- context[?x]] =>
+      unfold Npow, Pos.pow, Npow2, N.shiftr in H;
+      simpl in H
+    | [ H: _ |- _ ] => clear H
+    | _ => idtac
+    end.
+
+  Ltac word_bound := repeat (word_bound_step; simpl_hyps).
 
   Ltac word_bound_danger :=
     word_bound; try eassumption; try apply word_size_bound.
@@ -287,7 +296,7 @@ Section MulmodExamples.
     replace (wand x (NToWord 32 (N.ones 10))) with (mask 10 x) by admit.
     word_bound.
   Qed.
-    
+ 
   Lemma example_shiftr : forall x : word 32, shiftr x 30 <= 3.
     intros.
     replace 3%N with (N.shiftr (Npow2 32 - 1) (N.of_nat 30)) by (simpl; intuition).
@@ -398,10 +407,8 @@ Section MulmodExamples.
          fg1) <= b }.
   Proof.
     eexists.
-    word_bound.
+    Time word_bound.
   Defined.
-
-  Eval compute in proj1_sig example_mulmod_u_fg1.
 
   Require Import ZArith.
   Variable shiftra : forall {l}, word l -> nat -> word l. (* "arithmetic" aka "signed" bitshift *)

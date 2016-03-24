@@ -1,10 +1,13 @@
-Require Export Spec.ModularArithmetic ModularArithmetic.ModularArithmeticTheorems.
-Require Export Ring_theory Field_theory Field_tac.
+Require Export Crypto.Spec.ModularArithmetic Crypto.ModularArithmetic.ModularArithmeticTheorems.
+Require Export Coq.setoid_ring.Ring_theory Coq.setoid_ring.Field_theory Coq.setoid_ring.Field_tac.
 
-Require Import Tactics.VerdiTactics.
-Require Import Coq.Classes.Morphisms Setoid.
-Require Import BinInt BinNat ZArith Znumtheory NArith. (* import Zdiv before Znumtheory *)
-Require Import Eqdep_dec.
+Require Import Coq.nsatz.Nsatz.
+Require Import Crypto.ModularArithmetic.Pre.
+Require Import Crypto.Util.NumTheoryUtil.
+Require Import Crypto.Tactics.VerdiTactics.
+Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
+Require Import Coq.ZArith.BinInt Coq.NArith.BinNat Coq.ZArith.ZArith Coq.ZArith.Znumtheory Coq.NArith.NArith. (* import Zdiv before Znumtheory *)
+Require Import Coq.Logic.Eqdep_dec.
 Require Import Crypto.Util.NumTheoryUtil Crypto.Util.ZUtil.
 
 Existing Class prime.
@@ -89,7 +92,54 @@ Section VariousModPrime.
     replace (y * 1) with y in H by field.
     trivial.
   Qed.
-  
+
+  Lemma Fq_mul_eq_l : forall x y z : F q, z <> 0 -> z * x = z * y -> x = y.
+  Proof.
+    intros ? ? ? Hz Heq.
+    apply (Fq_mul_eq _ _ z); auto.
+    apply (Fq_sub_eq _ _ _ _ Heq); ring.
+  Qed.
+
+  Lemma Fq_inv_unique' : forall
+      inv1 (inv1ok: inv1 0 = 0 /\ forall x : F q, x <> 0 ->  x * inv1 x = 1)
+      inv2 (inv2ok: inv2 0 = 0 /\ forall x : F q, x <> 0 ->  x * inv2 x = 1),
+      forall x, inv1 x = inv2 x.
+  Proof.
+    intros inv1 [inv1_0 inv1_x] inv2 [inv2_0 inv2_x] x.
+    destruct (F_eq_dec x 0) as [H|H]; [congruence|].
+    apply (Fq_mul_eq_l _ _ x H). rewrite inv1_x, inv2_x; trivial.
+  Qed.
+
+  Lemma Fq_inv_unique : forall
+      inv' (inv'ok: inv' 0 = 0 /\ forall x : F q, x <> 0 -> x * inv' x = 1),
+      forall x, inv x = inv' x.
+  Proof.
+    intros ? [? ?] ?.
+    pose proof (@F_inv_spec q) as [? ?].
+    eauto using Fq_inv_unique'.
+  Qed.
+
+  Let inv_fermat_powmod (x:Z) : Z := powmod q x (Z.to_N (q-2)).
+  Lemma FieldToZ_inv_efficient : 2 < q ->
+                                 forall x : F q, FieldToZ (inv x) = inv_fermat_powmod x.
+  Proof.
+    intros.
+    rewrite (fun pf => Fq_inv_unique (fun x : F q => ZToField (inv_fermat_powmod (FieldToZ x))) pf);
+    subst inv_fermat_powmod; intuition; rewrite powmod_Zpow_mod;
+    replace (Z.of_N (Z.to_N (q - 2))) with (q-2)%Z by (rewrite Z2N.id ; omega).
+    - (* inv in range *) rewrite FieldToZ_ZToField, Zmod_mod; reflexivity.
+    - (* inv 0 *) replace (FieldToZ 0) with 0%Z by auto.
+      rewrite Z.pow_0_l by omega.
+      rewrite Zmod_0_l; trivial.
+    - (* inv nonzero *) rewrite <- (fermat_inv q _ x0) by
+        (rewrite mod_FieldToZ; eauto using FieldToZ_nonzero).
+      rewrite <-(ZToField_FieldToZ x0).
+      rewrite <-ZToField_mul.
+      rewrite ZToField_FieldToZ.
+      apply ZToField_eqmod.
+      demod; reflexivity.
+  Qed.
+ 
   Lemma Fq_mul_zero_why : forall a b : F q, a*b = 0 -> a = 0 \/ b = 0.
     intros.
     assert (Z := F_eq_dec a 0); destruct Z.
@@ -244,7 +294,7 @@ Section VariousModPrime.
     }
   Qed.
 
-  Lemma euler_criterion_if : forall (a : F q) (q_odd : 2 < q),
+  Lemma euler_criterion_if' : forall (a : F q) (q_odd : 2 < q),
     if (orb (F_eqb a 0) (F_eqb (a ^ (Z.to_N (q / 2))) 1))
     then (isSquare a) else (forall b, b ^ 2 <> a).
   Proof.
@@ -257,6 +307,16 @@ Section VariousModPrime.
       apply F_eqb_neq in Heqb.
       assert (isSquare a) as a_square by (eexists; eauto).
       apply euler_criterion_F in a_square; auto.
+  Qed.
+
+  Lemma euler_criterion_if : forall (a : F q) (q_odd : 2 < q),
+    if (a =? 0) || (powmod q a (Z.to_N (q / 2)) =? 1)
+    then (isSquare a) else (forall b, b ^ 2 <> a).
+  Proof.
+    intros.
+    pose proof (euler_criterion_if' a q_odd) as H.
+    unfold F_eqb in *; simpl in *.
+    rewrite !Zmod_small, !@FieldToZ_pow_efficient in H by omega; eauto.
   Qed.
 
   Lemma sqrt_solutions : forall x y : F q, y ^ 2 = x ^ 2 -> y = x \/ y = opp x.
@@ -273,7 +333,25 @@ Section VariousModPrime.
     rewrite <- z_2x_0 in opp_spec.
     apply F_add_reg_l in opp_spec; auto.
   Qed.
-  
+
+  Global Instance Fq_Ring_ops : @Ring_ops (F q) 0 1 add mul sub opp eq.
+  Global Instance Fq_Ring: @Ring (F q) 0 1 add mul sub opp eq Fq_Ring_ops.
+  Proof.
+    econstructor; eauto with typeclass_instances;
+      unfold R2, equality, eq_notation, addition, add_notation, one, one_notation,
+      multiplication, mul_notation, zero, zero_notation, subtraction,
+      sub_notation, opposite, opp_notation; intros; ring.
+    Qed.
+
+  Global Instance Fq_Cring: @Cring (F q) 0 1 add mul sub opp eq Fq_Ring_ops Fq_Ring.
+  Proof.
+    repeat intro. apply F_mul_comm.
+  Qed.
+
+  Global Instance Fq_Integral_domain : @Integral_domain (F q) 0 1 add mul sub opp eq Fq_Ring_ops Fq_Ring Fq_Cring.
+  Proof.
+    econstructor; eauto using Fq_mul_zero_why, Fq_1_neq_0.
+  Qed.
 End VariousModPrime.
 
 Section SquareRootsPrime5Mod8.
