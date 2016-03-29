@@ -4,7 +4,7 @@ Require Import Bedrock.Word.
 Require Import ZArith NArith NPeano.
 Require Import Coq.Structures.OrderedTypeEx.
 
-Require Export FMapAVL FMapList.
+Require Import FMapAVL FMapList.
 
 Module NatM := FMapAVL.Make(Nat_as_OT).
 Definition DefMap: Type := NatM.t N.

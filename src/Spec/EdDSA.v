@@ -74,9 +74,9 @@ Section EdDSA.
   Definition verify (A_:publickey) {n:nat} (M : Word.word n) (sig:signature) : bool :=
     let R_ := Word.split1 b b sig in
     let S_ := Word.split2 b b sig in
+    match dec S_ : option (F (BinInt.Z.of_nat l)) with None => false | Some S' =>
     match dec A_ : option point with None => false | Some A =>
     match dec R_ : option point with None => false | Some R =>
-    match dec S_ : option (F (BinInt.Z.of_nat l)) with None => false | Some S' =>
     if BinInt.Z.to_nat (FieldToZ S') * B == R + (H (R_ ++ A_ ++ M)) * A
     then true else false
     end

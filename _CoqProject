@@ -30,3 +30,4 @@ src/Util/NatUtil.v
 src/Util/NumTheoryUtil.v
 src/Util/WordUtil.v
 src/Util/ZUtil.v
+src/Assembly/Qhasm.v
