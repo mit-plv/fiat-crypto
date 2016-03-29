@@ -1,6 +1,5 @@
 
 
-
 (*
 - Define an evaluation function over the QH type, which can be terribly inefficient. This function will be parametrized in the following way:  
   
