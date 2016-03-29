@@ -57,6 +57,18 @@ Section PointEncoding.
 Definition sign_bit (x : F q) := (wordToN (enc (opp x)) <? wordToN (enc x))%N.
 Definition point_enc (p : point) : word (S sz) := let '(x,y) := proj1_sig p in
   WS (sign_bit x) (enc y).
+Definition point_dec_coordinates (w : word (S sz)) : option (F q * F q) :=
+  match dec (wtl w) with
+  | None => None
+  | Some y => let x2 := solve_for_x2 y in
+      let x := sqrt_mod_q x2 in
+      if F_eq_dec (x ^ 2) x2
+      then if Bool.eqb (whd w) (sign_bit x)
+           then Some (x, y)
+           else Some (opp x, y)
+      else None
+  end.
+
 Definition point_dec (w : word (S sz)) : option point :=
   match dec (wtl w) with
   | None => None
@@ -69,6 +81,15 @@ Definition point_dec (w : word (S sz)) : option point :=
                    else Some (mkPoint (opp x, y) (solve_opp_onCurve y EQ))
       end
   end.
+
+Lemma point_dec_coordinates_correct w
+  : option_map (@proj1_sig _ _) (point_dec w) = point_dec_coordinates w.
+Proof.
+  unfold point_dec, point_dec_coordinates.
+  edestruct dec; [ | reflexivity ].
+  edestruct @F_eq_dec; [ | reflexivity ].
+  edestruct @Bool.eqb; reflexivity.
+Qed.
 
 Lemma y_decode : forall p, dec (wtl (point_enc p)) = Some (snd (proj1_sig p)).
 Proof.
