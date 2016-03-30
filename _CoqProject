@@ -30,4 +30,14 @@ src/Util/NatUtil.v
 src/Util/NumTheoryUtil.v
 src/Util/WordUtil.v
 src/Util/ZUtil.v
+src/Assembly/AlmostConversion.v
+src/Assembly/AlmostQhasm.v
+src/Assembly/BoundedWord.v
+src/Assembly/Conversion.v
+src/Assembly/GallinaConversion.v
+src/Assembly/Language.v
 src/Assembly/Qhasm.v
+src/Assembly/QhasmCommon.v
+src/Assembly/QhasmEvalCommon.v
+src/Assembly/QhasmUtil.v
+src/Assembly/StringConversion.v
