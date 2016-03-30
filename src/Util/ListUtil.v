@@ -1,7 +1,7 @@
-Require Import List.
-Require Import Omega.
-Require Import Arith.Peano_dec.
-Require Import VerdiTactics.
+Require Import Coq.Lists.List.
+Require Import Coq.omega.Omega.
+Require Import Coq.Arith.Peano_dec.
+Require Import Crypto.Tactics.VerdiTactics.
 
 Ltac boring :=
   simpl; intuition;

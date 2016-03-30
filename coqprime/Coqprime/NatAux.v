@@ -11,7 +11,7 @@
                                                                                                           
      Auxillary functions & Theorems                                              
  **********************************************************************)
-Require Export Arith.
+Require Export Coq.Arith.Arith.
 
 (**************************************
   Some properties of minus

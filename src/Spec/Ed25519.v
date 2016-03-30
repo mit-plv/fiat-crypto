@@ -1,14 +1,14 @@
-Require Import ZArith.ZArith Zpower ZArith Znumtheory.
-Require Import NPeano NArith.
+Require Import Coq.ZArith.ZArith Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.ZArith.Znumtheory.
+Require Import Coq.Numbers.Natural.Peano.NPeano Coq.NArith.NArith.
 Require Import Crypto.Spec.Encoding Crypto.Spec.PointEncoding.
 Require Import Crypto.Spec.EdDSA.
 Require Import Crypto.Spec.CompleteEdwardsCurve Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems Crypto.ModularArithmetic.ModularArithmeticTheorems.
 Require Import Crypto.Util.NatUtil Crypto.Util.ZUtil Crypto.Util.WordUtil Crypto.Util.NumTheoryUtil.
 Require Import Bedrock.Word.
-Require Import VerdiTactics.
-Require Import Decidable.
-Require Import Omega.
+Require Import Crypto.Tactics.VerdiTactics.
+Require Import Coq.Logic.Decidable.
+Require Import Coq.omega.Omega.
 
 Local Open Scope nat_scope.
 Definition q : Z := (2 ^ 255 - 19)%Z.
@@ -43,13 +43,28 @@ Proof.
   rewrite Z.mod_small; q_bound.
 Qed.
 
-(* TODO *)
-(* d = .*)
-Definition d : F q := (opp (ZToField 121665) / (ZToField 121666))%F.
-Lemma nonsquare_d : forall x, (x^2 <> d)%F. Admitted.
-(* Definition nonsquare_d : (forall x, x^2 <> d) := euler_criterion_if d. <-- currently not computable in reasonable time *)
+Hint Rewrite
+ @FieldToZ_add
+ @FieldToZ_mul
+ @FieldToZ_opp
+ @FieldToZ_inv_efficient
+ @FieldToZ_pow_efficient
+ @FieldToZ_ZToField
+ @Zmod_mod
+ : ZToField.
 
-Instance TEParams : TwistedEdwardsParams := {
+Definition d : F q := (opp (ZToField 121665) / (ZToField 121666))%F.
+Lemma nonsquare_d : forall x, (x^2 <> d)%F.
+  pose proof @euler_criterion_if q prime_q d two_lt_q.
+  match goal with
+    [H: if ?b then ?x else ?y |- ?y ] => replace b with false in H; [exact H|clear H]
+  end.
+  unfold d, div. autorewrite with ZToField; [|eauto using prime_q, two_lt_q..].
+  vm_compute. (* 10s *)
+  exact eq_refl.
+Qed. (* 10s *)
+
+Instance curve25519params : TwistedEdwardsParams := {
   q := q;
   prime_q := prime_q;
   two_lt_q := two_lt_q;
@@ -117,13 +132,6 @@ Definition FlEncoding : encoding of F (Z.of_nat l) as word b :=
 
 Lemma q_5mod8 : (q mod 8 = 5)%Z. cbv; reflexivity. Qed.
 
-Hint Rewrite
- @FieldToZ_pow_efficient
- @FieldToZ_ZToField
- @FieldToZ_opp
- @FieldToZ_ZToField : ZToField
- .
-
 Lemma sqrt_minus1_valid : ((@ZToField q 2 ^ Z.to_N (q / 4)) ^ 2 = opp 1)%F.
 Proof.
   apply F_eq.
@@ -132,15 +140,15 @@ Proof.
   reflexivity.
 Qed.
 
-Definition PointEncoding := @point_encoding TEParams (b - 1) FqEncoding q_5mod8 sqrt_minus1_valid.
+Definition PointEncoding := @point_encoding curve25519params (b - 1) FqEncoding q_5mod8 sqrt_minus1_valid.
 
 Definition H : forall n : nat, word n -> word (b + b). Admitted.
 Definition B : point. Admitted. (* TODO: B = decodePoint (y=4/5, x="positive") *)
 Definition B_nonzero : B <> zero. Admitted.
 Definition l_order_B : scalarMult l B = zero. Admitted.
 
-Instance x : EdDSAParams := {
-  E := TEParams;
+Local Instance ed25519params : EdDSAParams := {
+  E := curve25519params;
   b := b;
   H := H;
   c := c;
@@ -160,3 +168,7 @@ Instance x : EdDSAParams := {
   l_odd := l_odd;
   l_order_B := l_order_B
 }.
+
+Definition ed25519_verify
+  : forall (pubkey:word b) (len:nat) (msg:word len) (sig:word (b+b)), bool
+  := @verify ed25519params.

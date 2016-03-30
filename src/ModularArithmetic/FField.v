@@ -1,5 +1,5 @@
 Require Export Crypto.Spec.ModularArithmetic.
-Require Export Field.
+Require Export Coq.setoid_ring.Field.
 
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
 
@@ -14,6 +14,10 @@ Definition Opaquediv {p} : OpaqueF p -> OpaqueF p -> OpaqueF p := @div p.
 Definition Opaqueopp {p} : OpaqueF p -> OpaqueF p := @opp p.
 Definition Opaqueinv {p} : OpaqueF p -> OpaqueF p := @inv p.
 Definition OpaqueZToField {p} : BinInt.Z -> OpaqueF p := @ZToField p.
+Definition Opaqueadd_correct {p} : @Opaqueadd p = @add p := eq_refl.
+Definition Opaquesub_correct {p} : @Opaquesub p = @sub p := eq_refl.
+Definition Opaquemul_correct {p} : @Opaquemul p = @mul p := eq_refl.
+Definition Opaquediv_correct {p} : @Opaquediv p = @div p := eq_refl.
 Global Opaque F OpaqueZmodulo Opaqueadd Opaquemul Opaquesub Opaquediv Opaqueopp Opaqueinv OpaqueZToField.
 
 Definition OpaqueFieldTheory p {prime_p} : @field_theory (OpaqueF p) (OpaqueZToField 0%Z) (OpaqueZToField 1%Z) Opaqueadd Opaquemul Opaquesub Opaqueopp Opaquediv Opaqueinv eq := Eval hnf in @Ffield_theory p prime_p.
@@ -26,7 +30,7 @@ Ltac FIELD_SIMPL_idtac FLD lH rl :=
   get_FldPost FLD ().
 Ltac field_simplify_eq_idtac := let G := Get_goal in field_lookup (PackField FIELD_SIMPL_idtac) [] G.
 
-Ltac F_to_Opaque := 
+Ltac F_to_Opaque :=
   change F with OpaqueF in *;
   change BinInt.Z.modulo with OpaqueZmodulo in *;
   change @add with @Opaqueadd in *;
@@ -41,13 +45,10 @@ Ltac F_from_Opaque p :=
   change OpaqueF with F in *;
   change (@sig BinNums.Z (fun z : BinNums.Z => @eq BinNums.Z z (BinInt.Z.modulo z p))) with (F p) in *;
   change OpaqueZmodulo with BinInt.Z.modulo in *;
-  change @Opaqueadd with @add in *;
-  change @Opaquemul with @mul in *;
-  change @Opaquesub with @sub in *;
-  change @Opaquediv with @div in *;
   change @Opaqueopp with @opp in *;
   change @Opaqueinv with @inv in *;
-  change @OpaqueZToField with @ZToField in *.
+  change @OpaqueZToField with @ZToField in *;
+  rewrite ?@Opaqueadd_correct, ?@Opaquesub_correct, ?@Opaquemul_correct, ?@Opaquediv_correct in *.
 
 Ltac F_field_simplify_eq :=
   lazymatch goal with |- @eq (F ?p) _ _ =>

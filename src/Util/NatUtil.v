@@ -1,4 +1,4 @@
-Require Import NPeano Omega.
+Require Import Coq.Numbers.Natural.Peano.NPeano Coq.omega.Omega.
 
 Local Open Scope nat_scope.
 

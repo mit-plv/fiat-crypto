@@ -9,12 +9,12 @@
 (***********************************************************************
     Summation.v from Z to Z
  *********************************************************************)
-Require Import Arith.
-Require Import ArithRing.
-Require Import ListAux.
-Require Import ZArith.
-Require Import Iterator.
-Require Import ZProgression.
+Require Import Coq.Arith.Arith.
+Require Import Coq.setoid_ring.ArithRing.
+Require Import Coqprime.ListAux.
+Require Import Coq.ZArith.ZArith.
+Require Import Coqprime.Iterator.
+Require Import Coqprime.ZProgression.
 
 
 Open Scope Z_scope.

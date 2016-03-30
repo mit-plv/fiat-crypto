@@ -1,7 +1,7 @@
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.Spec.CompleteEdwardsCurve Crypto.BoundedIterOp.
 Require Import Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
-Require Import BinNums NArith Nnat ZArith.
+Require Import Coq.Numbers.BinNums Coq.NArith.NArith Coq.NArith.Nnat Coq.ZArith.ZArith.
 
 Section EdwardsDoubleAndAdd.
   Context {prm:TwistedEdwardsParams}.

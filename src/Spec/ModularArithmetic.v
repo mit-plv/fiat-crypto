@@ -1,4 +1,4 @@
-Require Znumtheory BinNums.
+Require Coq.ZArith.Znumtheory Coq.Numbers.BinNums.
 
 Require Crypto.ModularArithmetic.Pre.
 
