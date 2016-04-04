@@ -1,16 +1,34 @@
-Require Export String List.
+Require Export String List Logic.
 Require Export Bedrock.Word.
 
 Require Import ZArith NArith NPeano.
 Require Import Coq.Structures.OrderedTypeEx.
 Require Import FMapAVL FMapList.
+Require Import JMeq.
 
 Require Import QhasmUtil.
+
+Import ListNotations.
 
 Module NatM := FMapAVL.Make(Nat_as_OT).
 Definition DefMap: Type := NatM.t N.
 Definition StateMap: Type := NatM.t DefMap.
 Definition LabelMap: Type := NatM.t nat.
+
+(* Sugar *)
+
+Definition W := word 32.
+
+Definition convert {A B: Type} (x: A) (H: A = B): B :=
+ eq_rect A (fun B0 : Type => B0) x B H.
+
+Ltac create X Y :=
+  let H := fresh in (
+    assert (exists X, X = Y) as H
+      by (exists Y; abstract intuition);
+    destruct H).
+
+Local Obligation Tactic := abstract (Tactics.program_simpl; intuition).
 
 (* A formalization of x86 qhasm *)
 
@@ -32,7 +50,9 @@ Inductive Reg: nat -> Set :=
 Inductive Stack: nat -> Set :=
   | stack32: nat -> Stack 32
   | stack64: nat -> Stack 64
-  | stack128: nat -> Stack 128.
+  | stack128: nat -> Stack 128
+  | stack256: nat -> Stack 256
+  | stack512: nat -> Stack 512.
 
 (* Assignments *)
 Inductive Assignment : Set :=
@@ -114,44 +134,200 @@ Hint Constructors Conditional.
 (* Machine State *)
 
 Inductive State :=
-| fullState (regState: StateMap) (stackState: StateMap): State.
+| fullState (regState: StateMap) (stackState: DefMap): State.
 
-Definition getReg {n} (reg: Reg n) (state: State): option (word n).
-  destruct state; inversion reg as [L H | L H | L H | L H];
-    destruct (NatM.find n regState) as [map |];
-    first [ destruct (NatM.find L map) as [n0 |] | exact None ];
-    first [ rewrite H; exact (Some (NToWord n n0)) | exact None ].
+(* Reg, Stack, Const Utilities *)
+
+Definition getRegWords {n} (x: Reg n) :=
+  match x with
+  | reg32 loc => 1
+  | reg3232 loc => 2
+  | reg6464 loc => 4
+  | reg80 loc => 2
+  end.
+
+Definition getStackWords {n} (x: Stack n) :=
+  match x with
+  | stack32 loc => 1
+  | stack64 loc => 2
+  | stack128 loc => 4
+  | stack256 loc => 8
+  | stack512 loc => 16
+  end.
+
+Definition getRegIndex {n} (x: Reg n): nat :=
+  match x with
+  | reg32 loc => loc
+  | reg3232 loc => loc
+  | reg6464 loc => loc
+  | reg80 loc => loc
+  end.
+
+Definition getStackIndex {n} (x: Stack n): nat :=
+  match x with
+  | stack32 loc => loc
+  | stack64 loc => loc
+  | stack128 loc => loc
+  | stack256 loc => loc
+  | stack512 loc => loc
+  end.
+
+(* State Manipulations *)
+
+Definition getReg {n} (reg: Reg n) (state: State): option (word n) :=
+  match state with
+  | fullState regState stackState =>
+    match (NatM.find n regState) with
+      | Some map =>
+        match (NatM.find (getRegIndex reg) map) with
+        | Some m => Some (NToWord n m)
+        | _ => None
+        end
+      | None => None
+    end
+  end.
+
+Definition setReg {n} (reg: Reg n) (value: word n) (state: State): option State :=
+  match state with
+  | fullState regState stackState =>
+    match (NatM.find n regState) with
+      | Some map =>
+        Some (fullState
+          (NatM.add n (NatM.add (getRegIndex reg) (wordToN value) map)
+            regState) stackState)
+      | None => None
+    end
+  end.
+
+(* Per-word Stack Operations *)
+Definition getStack32 (entry: Stack 32) (state: State): option (word 32) :=
+  match state with
+  | fullState regState stackState =>
+    match entry with
+    | stack32 loc =>
+      match (NatM.find loc stackState) with
+      | Some n => Some (NToWord 32 n)
+      | _ => None
+      end
+    end
+  end.
+
+Definition setStack32 (entry: Stack 32) (value: word 32) (state: State): option State :=
+  match state with
+  | fullState regState stackState =>
+    match entry with
+    | stack32 loc =>
+      (Some (fullState regState
+                       (NatM.add loc (wordToN value) stackState)))
+    end
+  end.
+
+Notation "'cast' e" := (convert e _) (at level 20).
+
+(* Iterating Stack Operations *)
+Lemma getStackWords_spec: forall {n} (x: Stack n), n = 32 * (getStackWords x).
+Proof. intros; destruct x; simpl; intuition. Qed.
+
+Definition segmentStackWord {n} (x: Stack n) (w: word n): word (32 * (getStackWords x)).
+  intros; destruct x; simpl; intuition.
 Defined.
 
-Definition setReg {n} (reg: Reg n) (value: word n) (state: State): State.
-  inversion state; inversion reg as [L H | L H | L H | L H];
-    destruct (NatM.find n regState) as [map |];
-    first [
-       exact
-         (fullState
-           (NatM.add n
-             (NatM.add L (wordToN value) map) regState)
-             stackState)
-     | exact state ].
+Definition desegmentStackWord {n} (x: Stack n) (w: word (32 * (getStackWords x))): word n.
+  intros; destruct x; simpl; intuition.
 Defined.
 
-Definition getStack {n} (entry: Stack n) (state: State): option (word n).
-  destruct state; inversion entry as [L H | L H | L H];
-    destruct (NatM.find n stackState) as [map |];
-    first [ destruct (NatM.find L map) as [n0 |] | exact None ];
-    first [ rewrite H; exact (Some (NToWord n n0)) | exact None ].
+Definition getWords' {n} (st: (list (word 32)) * word (32 * n)) :
+    if (Nat.eq_dec n O)
+    then (list (word 32))
+    else (list (word 32)) * word (32 * (n - 1)).
+
+  destruct (Nat.eq_dec n 0) as [H | H];
+    destruct st as [lst w].
+
+  - refine lst.
+
+  - refine (cons (split1 32 (32 * (n - 1)) (cast w)) lst,
+           (split2 32 (32 * (n - 1)) (cast w))); intuition.
+
 Defined.
 
-Definition setStack {n} (entry: Stack n) (value: word n) (state: State): State.
-  inversion state; inversion entry as [L H | L H | L H];
-    destruct (NatM.find n stackState) as [map |];
-    first [
-       exact
-         (fullState regState
-           (NatM.add n
-             (NatM.add L (wordToN value) map) regState))
-     | exact state ].
+Program Fixpoint getWords'_iter (n: nat) (st: (list (word 32)) * word (32 * n)): list (word 32) :=
+  match n with
+  | O => fst st
+  | (S m) => getWords'_iter m (cast (getWords' st))
+  end.
+Admit Obligations. (* TODO (rsloan): remove admit, shouldn't be hard *)
+
+Definition getWords {len} (wd: word (32 * len)): list (word 32) :=
+  getWords'_iter len ([], wd).
+
+Definition joinWordOpts_expandTerm {n} (w: word (32 + 32 * n)): word (32 * S n).
+  replace (32 * S n) with (32 + 32 * n) by abstract intuition; assumption.
+Defined.
+
+Fixpoint joinWordOpts (wds: list (option (word 32))): option word :=
+  match wds with
+  | nil => None
+  | (cons wo wos) =>
+    match wo with
+    | None => None
+    | Some w =>
+      match (joinWordOpts wos) with
+      | None => None
+      | (Some joined) =>
+        match joined with
+        | anyWord joinedLen joinedWord =>
+            Some (anyWord (S joinedLen) (joinWordOpts_expandTerm (combine w joinedWord)))
+        end
+      end
+    end
+  end.
+
+Definition setStack {n} (entry: Stack n) (value: word n) (state: State) : option State :=
+  (fix setStack_iter (wds: list (word 32)) (nextLoc: nat) (state: State) :=
+     match wds with
+     | [] => Some state
+     | w :: ws =>
+       match (setStack32 (stack32 nextLoc) w state) with 
+       | Some st' => setStack_iter ws (S nextLoc) st'
+       | None => None
+       end
+     end) (getWords (segmentStackWord entry value)) (getStackIndex entry) state.
+
+Fixpoint getStack_iter (rem: nat) (loc: nat) (state: State): list (option (word 32)) :=
+  match rem with
+  | O => []
+  | (S rem') =>
+    (getStack32 (stack32 loc) state) ::
+      (getStack_iter rem' (loc + 32) state)
+  end.
+
+Obligation Tactic := abstract (unfold Datatypes.length; intuition).
+Fixpoint getStack {n} (entry: Stack n) (state: State) : option (word n).
+  refine (
+    let m := getStackWords entry in
+    let i := getStackIndex entry in
+    let wos := (getStack_iter m i state) in
+    let joined := (joinWordOpts wos) in
+    option_map (fun a => cast a) joined
+  ); intuition.
+
+  replace (Datatypes.length _) with (getStackWords entry); intuition.
+  unfold wds.
+  induction (getStackWords entry); simpl; intuition.
+  destruct entry.
+
+  simpl; intuition.
 Defined.
 
 Definition emptyState: State :=
   fullState (NatM.empty DefMap) (NatM.empty DefMap).
+
+(* For register allocation checking *)
+Definition regCount (base: nat): nat :=
+  match base with
+  | 32 => 7   | 64 => 8
+  | 128 => 8  | 80 => 8
+  | _ => 0
+  end.
+
