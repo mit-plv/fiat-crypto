@@ -37,6 +37,7 @@ src/Assembly/Conversion.v
 src/Assembly/GallinaConversion.v
 src/Assembly/Language.v
 src/Assembly/Qhasm.v
+src/Assembly/State.v
 src/Assembly/QhasmCommon.v
 src/Assembly/QhasmEvalCommon.v
 src/Assembly/QhasmUtil.v
