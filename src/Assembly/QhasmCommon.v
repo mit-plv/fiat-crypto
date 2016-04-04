@@ -28,7 +28,7 @@ Ltac create X Y :=
       by (exists Y; abstract intuition);
     destruct H).
 
-Local Obligation Tactic := abstract (Tactics.program_simpl; intuition).
+Obligation Tactic := abstract intuition.
 
 (* A formalization of x86 qhasm *)
 
@@ -236,27 +236,30 @@ Definition desegmentStackWord {n} (x: Stack n) (w: word (32 * (getStackWords x))
   intros; destruct x; simpl; intuition.
 Defined.
 
+Inductive Either A B := | xleft: A -> Either A B | xright: B -> Either A B.
+
 Definition getWords' {n} (st: (list (word 32)) * word (32 * n)) :
-    if (Nat.eq_dec n O)
-    then (list (word 32))
-    else (list (word 32)) * word (32 * (n - 1)).
+    Either (list (word 32)) ((list (word 32)) * word (32 * (n - 1))).
 
   destruct (Nat.eq_dec n 0) as [H | H];
     destruct st as [lst w].
 
-  - refine lst.
+  - refine (xleft _ _ lst).
 
-  - refine (cons (split1 32 (32 * (n - 1)) (cast w)) lst,
-           (split2 32 (32 * (n - 1)) (cast w))); intuition.
-
+  - refine (xright _ _
+             (cons (split1 32 (32 * (n - 1)) (cast w)) lst,
+             (split2 32 (32 * (n - 1)) (cast w)))); intuition.
 Defined.
 
 Program Fixpoint getWords'_iter (n: nat) (st: (list (word 32)) * word (32 * n)): list (word 32) :=
   match n with
   | O => fst st
-  | (S m) => getWords'_iter m (cast (getWords' st))
+  | S m =>
+    match (getWords' st) with
+    | xleft lst => lst
+    | xright st => cast (getWords'_iter m st)
+    end
   end.
-Admit Obligations. (* TODO (rsloan): remove admit, shouldn't be hard *)
 
 Definition getWords {len} (wd: word (32 * len)): list (word 32) :=
   getWords'_iter len ([], wd).
@@ -265,23 +268,31 @@ Definition joinWordOpts_expandTerm {n} (w: word (32 + 32 * n)): word (32 * S n).
   replace (32 * S n) with (32 + 32 * n) by abstract intuition; assumption.
 Defined.
 
-Fixpoint joinWordOpts (wds: list (option (word 32))): option word :=
-  match wds with
-  | nil => None
-  | (cons wo wos) =>
-    match wo with
-    | None => None
-    | Some w =>
-      match (joinWordOpts wos) with
-      | None => None
-      | (Some joined) =>
-        match joined with
-        | anyWord joinedLen joinedWord =>
-            Some (anyWord (S joinedLen) (joinWordOpts_expandTerm (combine w joinedWord)))
+Fixpoint joinWordOpts (wds: list (option (word 32))) (len: nat): option (word (32 * (length wds))).
+  refine match len with
+  | O => None
+  | S len' =>
+    match wds with
+    | nil => None
+    | (cons wo wos) =>
+        match wo with
+        | None => None
+        | Some w =>
+          let f := fun x =>
+            match x with 
+            | None => None
+            | (Some joined) => Some (cast (combine w joined))
+            end in
+
+          f (joinWordOpts wos len')
         end
-      end
     end
-  end.
+  end; 
+    try replace (Datatypes.length (wo :: wos))
+           with (1 + (Datatypes.length wos))
+             by abstract intuition;
+    intuition.
+Defined.
 
 Definition setStack {n} (entry: Stack n) (value: word n) (state: State) : option State :=
   (fix setStack_iter (wds: list (word 32)) (nextLoc: nat) (state: State) :=
@@ -302,7 +313,6 @@ Fixpoint getStack_iter (rem: nat) (loc: nat) (state: State): list (option (word 
       (getStack_iter rem' (loc + 32) state)
   end.
 
-Obligation Tactic := abstract (unfold Datatypes.length; intuition).
 Fixpoint getStack {n} (entry: Stack n) (state: State) : option (word n).
   refine (
     let m := getStackWords entry in
