@@ -4,6 +4,7 @@ Require Import List.
 
 Module AlmostQhasm <: Language.
   Import ListNotations.
+  Import State.
 
   (* A constant upper-bound on the number of operations we run *)
   Definition maxOps: nat := 1000.
@@ -44,8 +45,8 @@ Module AlmostQhasm <: Language.
       | (Some st') => eval b st'
       | _ => None
       end
-    | AAssign a => Some (evalAssignment a state)
-    | AOp a => Some (evalOperation a state)
+    | AAssign a => evalAssignment a state
+    | AOp a => evalOperation a state
     | ACond c a b =>
       if (evalCond c state)
       then eval a state

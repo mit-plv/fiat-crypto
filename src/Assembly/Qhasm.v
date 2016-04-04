@@ -4,6 +4,7 @@ Require Import List NPeano.
 
 Module Qhasm <: Language.
   Import ListNotations.
+  Import State.
 
   (* A constant upper-bound on the number of operations we run *)
   Definition maxOps: nat := 1000.
@@ -45,20 +46,26 @@ Module Qhasm <: Language.
           match stmt with
           | QAssign a => (evalAssignment a state, None)
           | QOp o => (evalOperation o state, None)
-          | QLabel l => (state, None)
+          | QLabel l => (Some state, None)
           | QJmp c l =>
             if (evalCond c state)
-            then (state, Some l)
-            else (state, None)
+            then (Some state, Some l)
+            else (Some state, None)
           end
         in
           match jmp with
           | None =>
             if (Nat.eq_dec loc maxLoc)
-            then Some nextState
-            else eval' prog nextState (S loc) h labelMap maxLoc
+            then nextState
+            else match nextState with
+              | Some st' => eval' prog st' (S loc) h labelMap maxLoc
+              | _ => None
+              end
           | Some nextLoc =>
-            eval' prog nextState nextLoc h labelMap nextLoc
+            match nextState with
+            | Some st' => eval' prog st' nextLoc h labelMap maxLoc
+            | _ => None
+            end
           end
       | None => None
       end
