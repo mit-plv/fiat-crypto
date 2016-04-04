@@ -82,10 +82,10 @@ Definition evalOperation (o: Operation) (state: State): option State :=
     | Some v0 =>
       match c with
       | const32 v1 => setReg r (evalBinOp b v0 v1) state
-      | _ => None
       end
     | None => None
     end
+
   | OpReg32Reg32 b r0 r1 =>
     match (getReg r0 state) with
     | Some v0 =>
@@ -95,6 +95,7 @@ Definition evalOperation (o: Operation) (state: State): option State :=
       end
     | None => None
     end
+
   | RotReg32 b r m =>
     match (getReg r state) with
     | Some v0 => setReg r (evalRotOp b v0 m) state
@@ -106,10 +107,10 @@ Definition evalOperation (o: Operation) (state: State): option State :=
     | Some v0 =>
       match c with
       | const64 v1 => setReg r (evalBinOp b v0 v1) state
-      | _ => None
       end
     | None => None
     end
+
   | OpReg64Reg64 b r0 r1 =>
     match (getReg r0 state) with
     | Some v0 =>
@@ -120,25 +121,9 @@ Definition evalOperation (o: Operation) (state: State): option State :=
     | None => None
     end
 
-  | OpReg128Constant b r c =>
-    match (getReg r state) with
-    | Some v0 =>
-      match c with
-      | const128 v1 => setReg r (evalBinOp b v0 v1) state
-      | _ => None
-      end
-    | None => None
-    end
-  | OpReg128Reg128 b r0 r1 =>
-    match (getReg r0 state) with
-    | Some v0 =>
-      match (getReg r1 state) with
-      | Some v1 => setReg r0 (evalBinOp b v0 v1) state
-      | _ => None
-      end
-    | None => None
-    end
-  end.
+  (* Don't implement the 128-wide ops yet:
+     I think x86 doesn't do them like this *)
+  | _ => None end.
 
 Definition evalAssignment (a: Assignment) (state: State): option State :=
   match a with
@@ -151,6 +136,7 @@ Definition evalAssignment (a: Assignment) (state: State): option State :=
       end
     | None => None
     end
+
   | Assign32Stack16 r s i =>
     match (getReg r state) with
     | Some v0 =>
@@ -329,7 +315,6 @@ Definition evalAssignment (a: Assignment) (state: State): option State :=
     | Some v0 =>
       match c with
       | const32 v1 => setReg r v1 state
-      | _ => None
       end
     | None => None
     end
