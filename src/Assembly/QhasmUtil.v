@@ -1,44 +1,59 @@
 
 Require Import ZArith NArith NPeano.
+Require Import QhasmCommon.
 Require Export Bedrock.Word.
 
-Definition Label := nat.
-Definition Index (limit: nat) := {x: nat | (x < limit)%nat}.
-Definition Invert := bool.
+Module Util.
 
-Definition indexToNat {lim: nat} (i: Index lim): nat := proj1_sig i.
-Coercion indexToNat : Index >-> nat.
+    Inductive Either A B := | xleft: A -> Either A B | xright: B -> Either A B.
 
-(* Magical Bitwise Manipulations *)
+    Definition indexToNat {lim: nat} (i: Index lim): nat := proj1_sig i.
+    Coercion indexToNat : Index >-> nat.
 
-(* Force w to be m bits long, by truncation or zero-extension *)
-Definition trunc {n} (m: nat) (w: word n): word m.
-  destruct (lt_eq_lt_dec n m) as [s|s]; try destruct s as [s|s].
+    (* Magical Bitwise Manipulations *)
 
-  - replace m with (n + (m - n)) by abstract intuition.
-    refine (zext w (m - n)).
+    (* Force w to be m bits long, by truncation or zero-extension *)
+    Definition trunc {n} (m: nat) (w: word n): word m.
+    destruct (lt_eq_lt_dec n m) as [s|s]; try destruct s as [s|s].
 
-  - rewrite <- s; assumption.
+    - replace m with (n + (m - n)) by abstract intuition.
+        refine (zext w (m - n)).
 
-  - replace n with (m + (n - m)) in w by abstract intuition.
-    refine (split1 m (n-m) w).
-Defined.
+    - rewrite <- s; assumption.
 
-(* Get the index-th m-bit block of w *)
-Definition getIndex {n} (w: word n) (m index: nat): word m.
-  replace n with
-    ((min n (m * index)) + (n - (min n (m * index))))%nat
-    in w by abstract (
-      assert ((min n (m * index)) <= n)%nat
-        by apply Nat.le_min_l;
-      intuition).
+    - replace n with (m + (n - m)) in w by abstract intuition.
+        refine (split1 m (n-m) w).
+    Defined.
 
-  refine
-    (trunc m
-      (split2 (min n (m * index)) (n - min n (m * index)) w)).
-Defined.
+    (* Get the index-th m-bit block of w *)
+    Definition getIndex {n} (w: word n) (m index: nat): word m.
+      replace n with
+        ((min n (m * index)) + (n - (min n (m * index))))%nat
+        in w by abstract (
+        assert ((min n (m * index)) <= n)%nat
+            by apply Nat.le_min_l;
+        intuition).
 
-(* set the index-th m-bit block of w to s *)
-Definition setInPlace {n m} (w: word n) (s: word m) (index: nat): word n :=
-  w ^& (wnot (trunc n (combine (wones m) (wzero (index * m)%nat))))
-    ^| (trunc n (combine s (wzero (index * m)%nat))).
+      refine
+        (trunc m
+        (split2 (min n (m * index)) (n - min n (m * index)) w)).
+    Defined.
+
+    (* set the index-th m-bit block of w to s *)
+    Definition setInPlace {n m} (w: word n) (s: word m) (index: nat): word n :=
+      (w ^& (wnot (trunc n (combine (wones m) (wzero (index * m)%nat)))))
+         ^| (trunc n (combine s (wzero (index * m)%nat))).
+
+    (* Iterating Stack Operations *)
+    Lemma getStackWords_spec: forall {n} (x: Stack n), n = 32 * (getStackWords x).
+    Proof. intros; destruct x; simpl; intuition. Qed.
+
+    Definition segmentStackWord {n} (x: Stack n) (w: word n): word (32 * (getStackWords x)).
+    intros; destruct x; simpl; intuition.
+    Defined.
+
+    Definition desegmentStackWord {n} (x: Stack n) (w: word (32 * (getStackWords x))): word n.
+    intros; destruct x; simpl; intuition.
+    Defined.
+
+ End Util.
