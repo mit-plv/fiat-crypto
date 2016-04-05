@@ -109,53 +109,106 @@ Module State.
       intuition.
     Defined.
 
-    Program Fixpoint getWords'_iter (n: nat) (st: (list (word 32)) * word (32 * n)): list (word 32) :=
-      match n with
-      | O => fst st
-      | S m =>
-        match (getWords' st) with
-        | xleft lst => lst
-        | xright st => cast (getWords'_iter m st)
-        end
-      end.
-
-    Definition getWords {len} (wd: word (32 * len)): list (word 32) :=
-      getWords'_iter len ([], wd).
-
-    Definition joinWordOpts_expandTerm {n} (w: word (32 + 32 * n)): word (32 * S n).
-      replace (32 * S n) with (32 + 32 * n) by abstract intuition; assumption.
-    Defined.
-
-    Fixpoint joinWordOpts'
-            (len: nat)
-            (rem: nat)
-            (wds: list (option (word 32)))
-            (cont: word (32 * (len - rem)))
-        : (rem <= len)%nat -> (length wds = rem) -> option (word (32 * len)).
-
-      refine (fun remCorrect wdsCorrect =>
-      match rem as r return r = rem -> _ with
-      | O => always Some (cast cont)
-      | (S rem') => always
-        match wds as l return l = wds -> _ with
-        | nil => always None
-        | (cons wo wos) => always
-            match wo with
-            | None => None
-            | Some w => (joinWordOpts' len rem' wos (cast (combine w cont)) _ _)
+    Section GetWords.
+      Program Fixpoint getWords'_iter (n: nat) (st: (list (word 32)) * word (32 * n)): list (word 32) :=
+        match n with
+        | O => fst st
+        | S m =>
+            match (getWords' st) with
+            | xleft lst => lst
+            | xright st => cast (getWords'_iter m st)
             end
-        end (eq_refl wds)
-      end (eq_refl rem)); intuition.
+        end.
 
-      rewrite <- _H in wdsCorrect; rewrite <- _H0 in *;
-        replace (length (wo::wos)) with (1 + length wos) in wdsCorrect by abstract intuition;
-        intuition.
+      Definition getWords {len} (wd: word (32 * len)): list (word 32) :=
+        getWords'_iter len ([], wd).
+    End GetWords.
 
-    Admitted.
+    Section JoinWords.
 
-    Definition joinWordOpts (wds: list (option (word 32))): option (word (32 * (length wds))).
-      refine (joinWordOpts' (length wds) (length wds) wds (cast (wzero 0)) _ _); intuition.
-    Defined.
+        Inductive Any (U: nat -> Type) (lim: nat) := | any: forall n, (n <= lim)%nat -> U n -> Any U lim.
+
+        Definition getAnySize {U lim} (a: Any U lim) :=
+          match a as a' return a = a' -> _ with
+          | any n p v => fun _ => n
+          end (eq_refl a).
+
+        Lemma lim_prop: forall (n lim: nat), (n <= lim)%nat -> ((n - 1) <= lim)%nat.
+        Proof. intros; intuition. Qed.
+
+        Lemma zero_prop: forall (n m: nat), n = S m -> n <> 0.
+        Proof. intros; intuition. Qed.
+
+        Fixpoint anyExp {U: nat -> Type}
+            {lim: nat}
+            (f: forall n, (n <> 0)%nat -> (n <= lim)%nat -> U n -> U (n - 1))
+            (rem: nat)
+            (cur: Any U lim): option {a: Any U lim | getAnySize a = 0}.
+
+          refine match rem with
+          | O => None
+          | S rem' =>
+            match cur as c' return cur = c' -> _ with
+            | any n p v => always
+              match (Nat.eq_dec n 0) with
+              | left peq => Some (lift cur)
+              | right pneq =>
+                anyExp U lim f rem' (any U lim (n - 1) (lim_prop n lim p) (f n pneq p v))
+              end
+            end (eq_refl cur)
+          end.
+
+          subst; unfold getAnySize; intuition.
+
+        Defined.
+
+        Definition JoinWordType (len: nat): nat -> Type := fun n => option (word (32 * (len - n))).
+
+        Definition joinWordUpdate (len: nat) (wds: list (option (word 32))):
+            forall n, (n <> 0)%nat -> (n <= len)%nat -> JoinWordType len n -> JoinWordType len (n - 1).
+
+          intros n H0 Hlen v; unfold JoinWordType in v.
+          refine match v with
+            | Some cur =>
+              match (nth_error wds n) with
+              | Some (Some w) => Some (cast (combine w cur))
+              | _ => None
+              end
+            | _ => None
+            end.
+
+          abstract (replace (32 + 32 * (len - n)) with (32 * (len - (n - 1))); intuition).
+        Defined.
+
+        Definition joinWordOpts (wds: list (option (word 32))): option (word (32 * (length wds))).
+          refine (
+            let len := (length wds) in
+            let start := (any (JoinWordType len) len len _ (cast (Some (wzero 0)))) in
+            let aopt := anyExp (cast (joinWordUpdate len wds)) (length wds) start in
+            match aopt as aopt' return aopt = aopt' -> _ with
+            | Some a => always
+              match (proj1_sig a) as a' return (proj1_sig a) = a' -> _ with
+              | any n p v => always (cast v)
+              end (eq_refl (proj1_sig a))
+            | _ => always None
+            end (eq_refl aopt)
+          ); try abstract intuition.
+
+          - abstract ( unfold JoinWordType; replace (32 * (len-len)) with 0; intuition).
+
+          - destruct a; simpl in _H0; destruct x, aopt.
+
+            + abstract (
+                destruct s; unfold getAnySize in e; simpl in e; subst;
+                inversion _H0;
+                unfold JoinWordType;
+                replace (len - 0) with len by intuition;
+                unfold len; intuition ).
+
+            + inversion _H.
+        Defined.
+
+    End JoinWords.
 
     (* Stack Manipulations *)
 
@@ -182,7 +235,7 @@ Module State.
       rewrite IHrem; intuition.
     Qed.
 
-    Fixpoint getStack {n} (entry: Stack n) (state: State) : option (word n).
+    Definition getStack {n} (entry: Stack n) (state: State) : option (word n).
 
       refine (
         let m := getStackWords entry in
@@ -200,7 +253,7 @@ Module State.
         rewrite getStack_iter_length;
         destruct entry; simpl; intuition).
 
-    Admitted.
+    Defined.
 
     Definition setStack {n} (entry: Stack n) (value: word n) (state: State) : option State :=
       (fix setStack_iter (wds: list (word 32)) (nextLoc: nat) (state: State) :=
