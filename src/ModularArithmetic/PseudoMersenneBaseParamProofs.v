@@ -121,7 +121,6 @@ Section PseudoMersenneBaseParamProofs.
 
   Lemma k_nonneg : 0 <= k.
   Proof.
-    rewrite <- k_matches_limb_widths.
     apply sum_firstn_limb_widths_nonneg.
   Qed.
 
