@@ -2,6 +2,8 @@ Require Import Bedrock.Word.
 Require Import Crypto.Spec.Ed25519.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import BinNat BinInt NArith Crypto.Spec.ModularArithmetic.
+Require Import ModularArithmetic.ModularArithmeticTheorems.
+Require Import ModularArithmetic.PrimeFieldTheorems.
 Require Import Crypto.Spec.CompleteEdwardsCurve.
 Require Import Crypto.Spec.Encoding Crypto.Spec.PointEncoding.
 Require Import Crypto.CompleteEdwardsCurve.ExtendedCoordinates.
@@ -87,6 +89,7 @@ Local Existing Instance Ed25519.FlEncoding.
 Axiom decode_scalar_correct : forall x, decode_scalar x = option_map (fun x : F (Z.of_nat Ed25519.l) => Z.to_N x) (dec x).
 
 Local Infix "==?" := point_eqb (at level 70) : E_scope.
+Local Infix "==?" := ModularArithmeticTheorems.F_eq_dec (at level 70) : F_scope.
 
 Axiom negate : point -> point.
 Definition point_sub P Q := (P + negate Q)%E.
@@ -245,11 +248,107 @@ Proof.
     reflexivity. }
   Unfocus.
 
-  (*
-  cbv iota zeta delta [test_and_op].
-  Local Arguments funexp {_} _ {_} {_}. (* do not display the initializer and iteration bound for now *)
+  Set Printing Depth 1000000.
+  Local Notation "'(' X ',' Y ',' Z ',' T ')'" := (mkExtended X Y Z T).
+  Local Notation "2" := (ZToField 2) : F_scope.
 
-  Axiom rep : forall {m}, list Z -> F m -> Prop.
-  Axiom decode_point_limbs : word (S (b-1)) -> option (list Z * list Z).
-  Axiom point_dec_rep : forall P_ P lx ly, dec P_ = Some P -> decode_point_limbs P_ = Some (lx, ly) -> rep lx (fst (proj1_sig P)) /\ rep ly (fst (proj1_sig P)).*)
+  cbv iota beta delta [point_dec_coordinates sign_bit dec FqEncoding modular_word_encoding CompleteEdwardsCurveTheorems.solve_for_x2 sqrt_mod_q].
+
+  Axiom FRep : Type.
+  Axiom F2rep : F Ed25519.q -> FRep.
+  Axiom rep2F : FRep -> F Ed25519.q.
+  Axiom rep2F_F2rep : forall x, x = rep2F (F2rep x).
+  Axiom wire2rep_F : word (b-1) -> option FRep.
+  Axiom wire2rep_F_correct : forall x, Fm_dec x = option_map rep2F (wire2rep_F x).
+  rewrite wire2rep_F_correct.
+
+  etransitivity.
+  Focus 2. {
+    do 1 (eapply option_rect_Proper_nd; [|reflexivity..]). cbv beta delta [pointwise_relation]. intro.
+    etransitivity.
+    Focus 2.
+    { apply f_equal.
+      lazymatch goal with
+      | [ |- _ = ?term :> ?T ]
+        => lazymatch term with (match ?a with None => ?N | Some x => @?S x end)
+          => let term' := constr:((option_rect (fun _ => T) S N) a) in
+            replace term with term' by reflexivity
+            end
+      end.
+  reflexivity. } Unfocus. reflexivity. } Unfocus.
+  rewrite <-!(option_rect_option_map rep2F).
+
+  etransitivity.
+  Focus 2. {
+    do 1 (eapply option_rect_Proper_nd; [|reflexivity..]). cbv beta delta [pointwise_relation]. intro.
+
+    unfold option_rect at 1.
+    cbv beta iota delta [q d CompleteEdwardsCurve.a enc].
+    let RHS' := constr:(
+     @option_rect FRep (fun _ : option FRep => bool)
+       (fun x : FRep =>
+        let x2 := ((rep2F x ^ 2 - 1) / (Ed25519.d * rep2F x ^ 2 - Ed25519.a))%F in
+        let x0 :=
+          let b := (x2 ^ Z.to_N (Ed25519.q / 8 + 1))%F in
+          if (b ^ 2 ==? x2)%F then b else (@sqrt_minus1 Ed25519.q * b)%F in
+        if (x0 ^ 2 ==? x2)%F
+        then
+         let p :=
+           (if Bool.eqb (@whd (b - 1) pk)
+                 (@wordToN (b - 1) (@Fm_enc Ed25519.q (b - 1) (@opp Ed25519.q x0)) <?
+                  @wordToN (b - 1) (@Fm_enc Ed25519.q (b - 1) x0))%N
+            then x0
+            else @opp Ed25519.q x0, rep2F x) in
+       @weqb (S (b - 1)) (sig [:b])
+         (enc'
+            (@extendedToTwisted curve25519params
+               (@unifiedAddM1' curve25519params
+                  (@iter_op (@extended curve25519params) 
+                     (@unifiedAddM1' curve25519params) 
+                     (@twistedToExtended curve25519params (0%F, 1%F)) a
+                     (@twistedToExtended curve25519params Bc))
+                  (negateExtendedc
+                     (@iter_op (@extended curve25519params) 
+                        (@unifiedAddM1' curve25519params) 
+                        (@twistedToExtended curve25519params (0%F, 1%F))
+                        (@wordToN (b + b) (@H (b + (b + l)) (sig [:b] ++ pk ++ msg)))
+                        (twistedToExtended p))))))
+        else false) false
+       (wire2rep_F (@wtl (b - 1) pk))
+                )
+    in match goal with [ |- _ = ?RHS] => replace RHS with RHS' end.
+    reflexivity.
+    {
+      unfold option_rect.
+      repeat progress match goal with [ |- context [match ?x with _ => _ end] ] => destruct x; trivial end.
+    }
+  } Unfocus.
+  
+  Axiom FRepMul : FRep -> FRep -> FRep.
+  Axiom FRepMul_correct : forall x y, (rep2F x * rep2F y)%F = rep2F (FRepMul x y).
+  
+  Axiom FRepAdd : FRep -> FRep -> FRep.
+  Axiom FRepAdd_correct : forall x y, (rep2F x + rep2F y)%F = rep2F (FRepAdd x y).
+  
+  Axiom FRepSub : FRep -> FRep -> FRep.
+  Axiom FRepSub_correct : forall x y, (rep2F x - rep2F y)%F = rep2F (FRepSub x y).
+
+  Lemma unfoldDiv : forall {m} (x y:F m), (x/y = x * inv y)%F. Proof. unfold div. congruence. Qed.
+
+  etransitivity.
+  Focus 2. {
+    do 1 (eapply option_rect_Proper_nd; [|reflexivity..]). cbv beta delta [pointwise_relation]. intro.
+    do 1 (eapply option_rect_Proper_nd; [|reflexivity..]). cbv beta delta [pointwise_relation]. intro.
+    rewrite !F_pow_2_r.
+    rewrite !unfoldDiv.
+    rewrite (rep2F_F2rep Ed25519.d), (rep2F_F2rep Ed25519.a), (rep2F_F2rep 1%F).
+    rewrite !FRepMul_correct.
+    rewrite !FRepSub_correct.
+    rewrite F_pow_2_r.
+    
+  cbv beta delta [twistedToExtended].
+  
+  cbv beta iota delta
+      [iter_op test_and_op unifiedAddM1' extendedToTwisted twistedToExtended enc' snd
+       point_dec_coordinates PrimeFieldTheorems.sqrt_mod_q 
 Admitted.

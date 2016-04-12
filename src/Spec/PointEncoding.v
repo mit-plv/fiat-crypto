@@ -63,9 +63,9 @@ Definition point_dec_coordinates (w : word (S sz)) : option (F q * F q) :=
   | Some y => let x2 := solve_for_x2 y in
       let x := sqrt_mod_q x2 in
       if F_eq_dec (x ^ 2) x2
-      then if Bool.eqb (whd w) (sign_bit x)
-           then Some (x, y)
-           else Some (opp x, y)
+      then
+        let p := (if Bool.eqb (whd w) (sign_bit x) then x else opp x, y) in
+        Some p
       else None
   end.
 

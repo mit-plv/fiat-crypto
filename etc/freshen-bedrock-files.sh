@@ -42,10 +42,10 @@ for VFILE in $FILES; do
         break
       fi
     done
-  )
     if [ -z "$FOUND" ]; then
       echo "WARNING: Could not find $VOFILE, which $VFILE depends on"
     fi
+   )
   done
 done
 
