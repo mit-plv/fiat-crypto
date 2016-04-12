@@ -44,8 +44,6 @@ Proof.
   + abstract (apply fold_right_and_True_forall_In_iff; simpl; repeat (split; [omega |]); auto).
   + abstract (unfold limb_widths; congruence).
   + abstract brute_force_indices.
-  + cbv; reflexivity.
-  + unfold modulus; reflexivity.
   + abstract apply prime_modulus.
   + abstract brute_force_indices.
 Defined.
@@ -66,6 +64,10 @@ Definition Z_pow_opt := Eval compute in Z.pow.
 Definition nth_default_opt {A} := Eval compute in @nth_default A.
 Definition set_nth_opt {A} := Eval compute in @set_nth A.
 Definition map_opt {A B} := Eval compute in @map A B.
+Definition base_from_limb_widths_opt := Eval compute in base_from_limb_widths.
+Definition k_opt := Eval compute in k.
+Definition c_opt := Eval compute in c.
+
 
 Ltac opt_step :=
   match goal with
@@ -94,6 +96,7 @@ Proof.
   { reflexivity. }
   { cbv [crosscoef ext_base base].
     change Z.div with Z_div_opt.
+    change Z.mul with Z_mul_opt at 2.
     change @nth_default with @nth_default_opt.
     reflexivity. }
 Defined.
@@ -122,7 +125,7 @@ Proof.
     apply f_equal2; [ | reflexivity ].
     cbv [crosscoef ext_base base].
     change Z.div with Z_div_opt.
-    change Z.mul with Z_mul_opt at 2 4.
+    change Z.mul with Z_mul_opt at 2.
     change @nth_default with @nth_default_opt.
     reflexivity. }
 Qed.
@@ -135,6 +138,10 @@ Definition mul'_step
      | [] => []
      | u :: usr' => add (mul_each u (mul_bi bs (length usr') vs)) (mul' usr' vs bs)
      end.
+
+Lemma map_zeros : forall a n l,
+  map (Z.mul a) (zeros n ++ l) = zeros n ++ map (Z.mul a) l.
+Admitted.
 
 Definition mul'_opt_step_sig
            (mul' : digits -> digits -> list Z -> digits)
@@ -151,7 +158,9 @@ Proof.
   { reflexivity. }
   { cbv [mul_each mul_bi].
     rewrite <- mul_bi'_opt_correct.
+    rewrite map_zeros.
     change @map with @map_opt.
+    cbv [zeros].
     reflexivity. }
 Defined.
 
@@ -176,8 +185,30 @@ Proof.
     rewrite <- IHusr; clear IHusr.
     apply f_equal2; [ | reflexivity ].
     cbv [mul_each mul_bi].
+    rewrite map_zeros.
     rewrite <- mul_bi'_opt_correct.
     reflexivity. }
+Qed.
+
+Definition Z_shiftl_by n a := Z.shiftl a n.
+Definition Z_shiftl_by_opt := Eval compute in Z_shiftl_by.
+
+Lemma Z_shiftl_by_mul_pow2 : forall n a, 0 <= n -> Z.mul (2 ^ n) a = Z_shiftl_by n a.
+Proof.
+  intros.
+  unfold Z_shiftl_by.
+  rewrite Z.shiftl_mul_pow2 by assumption.
+  apply Z.mul_comm.
+Qed.
+
+Lemma map_shiftl : forall n l, 0 <= n -> map (Z.mul (2 ^ n)) l = map (Z_shiftl_by n) l.
+Proof.
+  intros; induction l; auto using Z_shiftl_by_mul_pow2.
+  simpl.
+  rewrite IHl.
+  f_equal.
+  apply Z_shiftl_by_mul_pow2.
+  assumption.
 Qed.
 
 Definition mul_opt_sig (us vs : T) : { b : digits | b = mul us vs }.
@@ -185,7 +216,12 @@ Proof.
   eexists.
   cbv [BaseSystem.mul mul mul_each mul_bi mul_bi' zeros ext_base reduce].
   rewrite <- mul'_opt_correct.
+  cbv [base PseudoMersenneBaseParams.limb_widths].
+  rewrite map_shiftl by apply k_nonneg.
+  change k with k_opt.
   change @map with @map_opt.
+  change base_from_limb_widths with base_from_limb_widths_opt.  
+  change @Z_shiftl_by with @Z_shiftl_by_opt.
   reflexivity.
 Defined.
 
@@ -266,8 +302,10 @@ Proof.
   eexists ; intros.
   cbv [carry].
   rewrite <- pull_app_if_sumbool.
-  cbv beta delta [carry carry_and_reduce carry_simple add_to_nth log_cap pow2_mod Z.ones Z.pred].
-  cbv beta iota zeta delta [base PseudoMersenneBaseParams.limb_widths].
+  cbv beta delta
+    [carry carry_and_reduce carry_simple add_to_nth log_cap
+     pow2_mod Z.ones Z.pred base
+     PseudoMersenneBaseParams.limb_widths].
   change @nth_default with @nth_default_opt in *.
   change @set_nth with @set_nth_opt in *.
   lazymatch goal with
@@ -279,17 +317,13 @@ Proof.
   break_if; reflexivity.
 
   change @nth_default with @nth_default_opt.
+  change c with c_opt.
   change @set_nth with @set_nth_opt.
   change @map with @map_opt.
   rewrite <- @beq_nat_eq_nat_dec.
+  change base_from_limb_widths with base_from_limb_widths_opt.
   reflexivity.
 Defined.
-
-Print carry_opt_sig.
-Definition f := [2;3].
-Definition g := [7;5].
-Compute (mul f g).
-Compute (mul_opt f g).
 
 
 Definition carry_opt i b
@@ -405,18 +439,9 @@ Definition carry_mul_opt
            (is : list nat)
            (us vs : list Z)
            : list Z
-  := Eval cbv [
-    add mul BaseSystem.mul mul' mul_bi mul_bi' mul_each zeros ext_base mul'_opt
-    mul'_opt_step mul_bi'_opt mul_bi'_opt_step
-    List.app List.rev Z_div_opt Z_mul_opt Z_pow_opt set_nth_opt
-    Z_sub_opt app beq_nat carry_opt_cps carry_sequence_opt_cps error firstn
-    base_from_limb_widths PseudoMersenneBaseParams.limb_widths pow2_mod two_p sum_firstn two_power_pos
-    fold_left fold_right id length map map_opt mul mul_opt nth_default nth_default_opt shift_pos Pos.iter
-    nth_error plus pred reduce rev seq set_nth skipn value base] in 
-    carry_sequence_opt_cps is (mul_opt us vs).
+  := carry_sequence_opt_cps is (mul_opt us vs).
 
-Definition test := Eval cbv delta [carry_mul_opt] in (carry_mul_opt [0%nat] [1] [2]).
-Extraction "/tmp/test.ml" test.
+
 
 Lemma carry_mul_opt_correct
   : forall (is : list nat) (us vs : list Z) (x  y: F modulus),
@@ -429,7 +454,8 @@ Proof.
   change (carry_mul_opt _ _ _) with (carry_sequence_opt_cps is (mul_opt us vs)).
   apply carry_sequence_opt_cps_rep, mul_opt_rep; auto.
 Qed.
-  
+
+
 Local Open Scope nat_scope.
   Lemma GF25519Base25Point5_mul_reduce_formula :
     forall f0 f1 f2 f3 f4 f5 f6 f7 f8 f9
@@ -446,20 +472,54 @@ Local Open Scope nat_scope.
     specialize (Hfg H); clear H.
     forward Hfg; [exact eq_refl|].
     specialize (Hfg H); clear H.
-    
-    assert (exists p p0, rep [p0] p) as Hp by admit.
-    destruct Hp as [p [p0 Hp]].
-    assert (exists p p0, rep [p0] p) as Hq by admit.
-    destruct Hq as [q [q0 Hq]].
-    assert (rep (carry_mul_opt [0] [p0] [q0]) (p*q)%F) as Hpq by admit.
-    Timeout 5 cbv [carry_mul_opt] in Hpq.
-    Set Printing Depth 2.
-    cbv - [Z.mul Z.add Z.shiftr Z.land Let_In] in Hfg.
-    rewrite ?Z.mul_0_l, ?Z.mul_0_r, ?Z.mul_1_l, ?Z.mul_1_r, ?Z.add_0_l, ?Z.add_0_r in Hfg.
-    rewrite ?Z.mul_assoc, ?Z.add_assoc in Hfg.
-    exact Hfg.
+
+  set (p := params25519) in Hfg at 1.
+  change (params25519) with p at 1.
+  set (fg := (f * g)%F) in Hfg |- * .
+
+Opaque Z.shiftl
+Pos.iter
+Z.div2
+Pos.div2
+Pos.div2_up
+Pos.succ
+Z.land
+Z.of_N
+Pos.land
+N.ldiff
+Pos.pred_N
+Pos.pred_double
+Z.opp Z.mul Pos.mul Let_In digits Z.add Pos.add Z.pos_sub.
+
+Time let T := match type of Hfg with @rep _ _ ?T _ => T end in
+let T' := (eval cbv [
+     carry_mul_opt
+     mul_opt mul'_opt firstn skipn map_opt
+     limb_widths base_from_limb_widths_opt 
+     k_opt Z_shiftl_by_opt
+     length rev app c zeros
+     mul'_opt_step mul_bi'_opt add
+     mul_bi'_opt_step
+     nth_default_opt nth_error plus
+     Z_div_opt Z_mul_opt
+     params25519
+
+
+     carry_sequence_opt_cps carry_opt_cps fold_right
+     List.app List.rev length
+     base limb_widths base_from_limb_widths_opt
+     nth_default_opt set_nth_opt pred beq_nat id c_opt
+     Z.shiftr
+   ] in T) in
+replace T with T' in Hfg.  
+Time 2:abstract ( clear;
+  compute; reflexivity).
+  change (Z.shiftl 1 26 + -1)%Z with 67108863%Z in Hfg.
+  change (Z.shiftl 1 25 + -1)%Z with 33554431%Z in Hfg.
+  repeat rewrite ?Z.mul_1_r, ?Z.add_0_l, ?Z.add_assoc, ?Z.mul_assoc in Hfg.
+
+  exact Hfg.
   Time Defined.
-End F25519Base25Point5Formula.
 
 Extraction "/tmp/test.ml" GF25519Base25Point5_mul_reduce_formula.
 (* It's easy enough to use extraction to get the proper nice-looking formula.
