@@ -94,7 +94,9 @@ Section PseudoMersenneProofs.
     replace (2^k) with ((2^k - c) + c) by ring.
     rewrite Z.mul_add_distr_r.
     rewrite Zplus_mod.
-    rewrite <- modulus_pseudomersenne.
+    unfold c.
+    rewrite Z.sub_sub_distr, Z.sub_diag.
+    simpl.
     rewrite Z.mul_comm.
     rewrite mod_mult_plus; auto using modulus_nonzero.
     rewrite <- Zplus_mod; auto.
@@ -379,7 +381,7 @@ Section CarryProofs.
       rewrite Z.mul_comm.
       rewrite Z.mul_assoc.
       rewrite <- Z.pow_add_r by (apply log_cap_nonneg || apply sum_firstn_limb_widths_nonneg).
-      rewrite <- k_matches_limb_widths.
+      unfold k.
       replace (length limb_widths) with (S (pred (length base))) by
         (subst; rewrite <- base_length; apply NPeano.Nat.succ_pred; omega).
       rewrite sum_firstn_succ with (x:= log_cap (pred (length base))) by
