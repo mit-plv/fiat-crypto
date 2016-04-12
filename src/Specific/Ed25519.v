@@ -344,11 +344,12 @@ Proof.
     rewrite (rep2F_F2rep Ed25519.d), (rep2F_F2rep Ed25519.a), (rep2F_F2rep 1%F).
     rewrite !FRepMul_correct.
     rewrite !FRepSub_correct.
+    cbv zeta.
     rewrite F_pow_2_r.
     
   cbv beta delta [twistedToExtended].
   
   cbv beta iota delta
       [iter_op test_and_op unifiedAddM1' extendedToTwisted twistedToExtended enc' snd
-       point_dec_coordinates PrimeFieldTheorems.sqrt_mod_q 
+       point_dec_coordinates PrimeFieldTheorems.sqrt_mod_q ].
 Admitted.
