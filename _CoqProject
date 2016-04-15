@@ -1,7 +1,6 @@
 -R src Crypto
 src/BaseSystem.v
 src/BaseSystemProofs.v
-src/BoundedIterOp.v
 src/EdDSAProofs.v
 src/CompleteEdwardsCurve/CompleteEdwardsCurveTheorems.v
 src/CompleteEdwardsCurve/DoubleAndAdd.v
