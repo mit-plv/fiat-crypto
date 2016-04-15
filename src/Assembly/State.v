@@ -26,7 +26,7 @@ Module State.
     (* Sugar and Tactics *)
 
     Definition convert {A B: Type} (x: A) (H: A = B): B :=
-    eq_rect A (fun B0 : Type => B0) x B H.
+      eq_rect A (fun B0 : Type => B0) x B H.
 
     Notation "'always' A" := (fun _ => A) (at level 90) : state_scope.
     Notation "'cast' e" := (convert e _) (at level 20) : state_scope.
@@ -38,15 +38,15 @@ Module State.
     (* The Big Definition *)
 
     Inductive State :=
-      | fullState (regState: StateMap) (stackState: DefMap): State.
+      | fullState (regState: StateMap) (stackState: DefMap) (carryBit: CarryState): State.
 
-    Definition emptyState: State := fullState (NatM.empty DefMap) (NatM.empty N).
+    Definition emptyState: State := fullState (NatM.empty DefMap) (NatM.empty N) None.
 
     (* Register State Manipulations *)
 
     Definition getReg {n} (reg: Reg n) (state: State): option (word n) :=
       match state with
-      | fullState regState stackState =>
+      | fullState regState stackState _ =>
         match (NatM.find n regState) with
         | Some map =>
             match (NatM.find (getRegIndex reg) map) with
@@ -59,21 +59,36 @@ Module State.
 
     Definition setReg {n} (reg: Reg n) (value: word n) (state: State): option State :=
       match state with
-      | fullState regState stackState =>
+      | fullState regState stackState carryState =>
         match (NatM.find n regState) with
         | Some map =>
             Some (fullState
                     (NatM.add n (NatM.add (getRegIndex reg) (wordToN value) map) regState)
-                    stackState)
+                    stackState
+                    carryState)
         | None => None
         end
       end.
+
+    (* Carry State Manipulations *)
+
+    Definition getCarry {n} (reg: Reg n) (state: State): CarryState :=
+      match state with
+      | fullState _ _ b => b
+      end.
+
+    Definition setCarry (value: bool) (state: State): State :=
+      match state with
+      | fullState regState stackState carryState =>
+        fullState regState stackState (Some value)
+      end.
+
 
     (* Per-word Stack Operations *)
 
     Definition getStack32 (entry: Stack 32) (state: State): option (word 32) :=
       match state with
-      | fullState regState stackState =>
+      | fullState regState stackState _ =>
         match entry with
         | stack32 loc =>
           match (NatM.find loc stackState) with
@@ -85,11 +100,13 @@ Module State.
 
     Definition setStack32 (entry: Stack 32) (value: word 32) (state: State): option State :=
     match state with
-    | fullState regState stackState =>
+    | fullState regState stackState carryState =>
         match entry with
         | stack32 loc =>
-        (Some (fullState regState
-              (NatM.add loc (wordToN value) stackState)))
+          (Some (fullState
+                   regState
+                   (NatM.add loc (wordToN value) stackState)
+                   carryState))
         end
     end.
 

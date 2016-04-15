@@ -1,4 +1,4 @@
-Require Export String List NPeano.
+Require Export String List NPeano NArith.
 Require Export Bedrock.Word.
 
 (* A formalization of x86 qhasm *)
@@ -9,16 +9,53 @@ Definition Invert := bool.
 (* A constant upper-bound on the number of operations we run *)
 Definition maxOps: nat := 1000.
 
-(* Datatypes *)
-Inductive Const: nat -> Set :=
-  | const32: word 32 -> Const 32
-  | const64: word 64 -> Const 64
-  | const128: word 128 -> Const 128.
+(* Float Datatype *)
 
-Inductive Reg: nat -> Set :=
-  | reg32: nat -> Reg 32.
+Record Float (n: nat) (fractionBits: nat) := mkFloat {
+  FloatType: Set;
 
-Inductive Stack: nat -> Set :=
+  wordToFloat: word fractionBits -> FloatType;
+  floatToWord: FloatType -> word fractionBits;
+
+  floatPlus: FloatType -> FloatType -> FloatType;
+  floatMult: FloatType -> FloatType -> FloatType;
+
+  floatPlus_wordToFloat : forall n m,
+      (wordToN n < (Npow2 (fractionBits - 1)))%N ->
+      (wordToN m < (Npow2 (fractionBits - 1)))%N ->
+      floatPlus (wordToFloat n) (wordToFloat m)
+        = wordToFloat (wplus n m);
+
+  floatMult_wordToFloat : forall n m,
+      (wordToN n < (Npow2 (fractionBits / 2)%nat))%N ->
+      (wordToN m < (Npow2 (fractionBits / 2)%nat))%N ->
+      floatMult (wordToFloat n) (wordToFloat m)
+        = wordToFloat (wmult n m);
+
+  wordToFloat_spec : forall x, 
+      floatToWord (wordToFloat x) = x
+}.
+
+Parameter Float32: Float 32 23.
+
+Parameter Float64: Float 64 53.
+
+(* Asm Types *)
+Inductive IConst: nat -> Type :=
+  | constInt32: word 32 -> IConst 32.
+
+Inductive FConst: nat -> Type :=
+  | constFloat32: forall b, Float 32 b -> FConst 32
+  | constFloat64: forall b, Float 64 b -> FConst 64.
+
+Inductive IReg: nat -> Type :=
+  | regInt32: nat -> IReg 32.
+
+Inductive FReg: nat -> Type :=
+  | regFloat32: nat -> FReg 32
+  | regFloat64: nat -> FReg 64.
+
+Inductive Stack: nat -> Type :=
   | stack32: nat -> Stack 32
   | stack64: nat -> Stack 64
   | stack128: nat -> Stack 128.
@@ -26,66 +63,74 @@ Inductive Stack: nat -> Set :=
 Definition CarryState := option bool.
 
 (* Assignments *)
-Inductive Assignment : Set :=
-  | AStack: forall n, Reg n -> Stack n -> Assignment
-  | AReg: forall n, Reg n -> Reg n -> Assignment
-  | AIndex: forall n m, Reg n -> Reg m -> Index (n/m)%nat -> Assignment
-  | AConst: forall n, Reg n -> Const n -> Assignment
-  | APtr: forall n, Reg 32 -> Stack n -> Assignment.
+Inductive Assignment : Type :=
+  | AStackInt: forall n, IReg n -> Stack n -> Assignment
+  | AStackFloat: forall n, FReg n -> Stack n -> Assignment
+
+  | ARegInt: forall n, IReg n -> IReg n -> Assignment
+  | ARegFloat: forall n, FReg n -> FReg n -> Assignment
+
+  | AConstInt: forall n, IReg n -> IConst n -> Assignment
+  | AConstFloat: forall n, FReg n -> FConst n -> Assignment
+
+  | AIndex: forall n m, IReg n -> IReg m -> Index (n/m)%nat -> Assignment
+  | APtr: forall n, IReg 32 -> Stack n -> Assignment.
 
 Hint Constructors Assignment.
 
 (* Operations *)
 
-Inductive QOp :=
-  | QPlus: QOp | QMinus: QOp | QIMult: QOp
-  | QXor: QOp | QAnd: QOp | QOr: QOp.
+Inductive IntOp :=
+  | IPlus: IntOp | IMinus: IntOp
+  | IXor: IntOp  | IAnd: IntOp | IOr: IntOp.
 
-Inductive QFixedOp :=
-  | QMult: QFixedOp | UDiv: QFixedOp.
+Inductive FloatOp :=
+  | FPlus: FloatOp | FMinus: FloatOp
+  | FXor: FloatOp | FAnd: FloatOp | FOr: FloatOp
+  | FMult: FloatOp | FDiv: FloatOp.
 
-Inductive QRotOp :=
-  | Shl: QRotOp | Shr: QRotOp | QRotl: QRotOp | QRotr: QRotOp.
+Inductive RotOp :=
+  | Shl: RotOp | Shr: RotOp | Rotl: RotOp | Rotr: RotOp.
 
 Inductive Operation :=
-  | OpConst: QOp -> Reg 32 -> Const 32 -> Operation
-  | OpReg: QOp -> Reg 32 -> Reg 32 -> Operation
-  | OpFixedConst: QFixedOp -> Reg 32 -> Const 32 -> Operation
-  | OpFixedReg: QFixedOp -> Reg 32 -> Reg 32 -> Operation
-  | OpRot: QRotOp -> Reg 32 -> Index 32 -> Operation.
+  | IOpConst: IntOp -> IReg 32 -> IConst 32 -> Operation
+  | IOpReg: IntOp -> IReg 32 -> IReg 32 -> Operation
+
+  | FOpConst32: FloatOp -> FReg 32 -> FConst 32 -> Operation
+  | FOpReg32: FloatOp -> FReg 32 -> FReg 32 -> Operation
+
+  | FOpConst64: FloatOp -> FReg 64 -> FConst 64 -> Operation
+  | FOpReg64: FloatOp -> FReg 64 -> FReg 64 -> Operation
+
+  | OpRot: RotOp -> IReg 32 -> Index 32 -> Operation.
 
 Hint Constructors Operation.
 
 (* Control Flow *)
 
 Inductive TestOp :=
-  | TEq: TestOp
-  | TLt: TestOp
-  | TUnsignedLt: TestOp
-  | TGt: TestOp
-  | TUnsignedGt: TestOp.
+  | TEq: TestOp   | TLt: TestOp  | TLe: TestOp
+  | TGt: TestOp   | TGe: TestOp.
 
 Inductive Conditional :=
   | TestTrue: Conditional
   | TestFalse: Conditional
-  | TestReg32Reg32: TestOp -> Invert -> Reg 32 -> Reg 32 -> Conditional
-  | TestReg32Const: TestOp -> Invert -> Reg 32 -> Const 32 -> Conditional.
-
-Definition invertConditional (c: Conditional): Conditional :=
-  match c with
-  | TestTrue => TestFalse
-  | TestFalse => TestTrue
-  | TestReg32Reg32 o i r0 r1 => TestReg32Reg32 o (negb i) r0 r1
-  | TestReg32Const o i r c => TestReg32Const o (negb i) r c
-  end.
+  | TestInt: forall n, TestOp -> IReg n -> IReg n -> Conditional
+  | TestFloat: forall n, TestOp -> FReg n -> FReg n -> Conditional.
 
 Hint Constructors Conditional.
 
 (* Reg, Stack, Const Utilities *)
 
-Definition getRegWords {n} (x: Reg n) :=
+Definition getIRegWords {n} (x: IReg n) :=
   match x with
-  | reg32 loc => 1
+  | regInt32 loc => 1
+  end.
+
+Definition getFRegWords {n} (x: FReg n) :=
+  match x with
+  | regFloat32 loc => 1
+  | regFloat64 loc => 2
   end.
 
 Definition getStackWords {n} (x: Stack n) :=
@@ -95,11 +140,15 @@ Definition getStackWords {n} (x: Stack n) :=
   | stack128 loc => 4
   end.
 
-Definition getRegIndex {n} (x: Reg n): nat :=
+Definition getIRegIndex {n} (x: IReg n): nat :=
   match x with
-  | reg32 loc => loc
-  | reg3232 loc => loc
-  | reg6464 loc => loc
+  | regInt32 loc => loc
+  end.
+
+Definition getFRegIndex {n} (x: FReg n): nat :=
+  match x with
+  | regFloat32 loc => loc
+  | regFloat64 loc => loc
   end.
 
 Definition getStackIndex {n} (x: Stack n): nat :=
@@ -110,10 +159,15 @@ Definition getStackIndex {n} (x: Stack n): nat :=
   end.
 
 (* For register allocation checking *)
-Definition regCount (base: nat): nat :=
+Definition intRegCount (base: nat): nat :=
   match base with
-  | 32 => 7   | 64 => 8
-  | 128 => 8  | 80 => 8
+  | 32 => 7
   | _ => 0
   end.
 
+Definition floatRegCount (base: nat): nat :=
+  match base with
+  | 32 => 8
+  | 64 => 8
+  | _ => 0
+  end.
