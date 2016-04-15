@@ -1,6 +1,5 @@
 Require Export Language Conversion.
-Require Export Qhasm.
-Require Import QhasmCommon QhasmEvalCommon QhasmUtil.
+Require Import QhasmCommon QhasmEvalCommon QhasmUtil Qhasm.
 Require Export String Ascii.
 Require Import NArith NPeano.
 Require Export Bedrock.Word.
@@ -53,81 +52,56 @@ Module StringConversion <: Conversion Qhasm QhasmString.
 
   Section Elements.
     Local Open Scope string_scope.
+    Import Util.
 
     Definition nameSuffix (n: nat): string := 
       (nToHex (N.of_nat n)).
 
-    Definition wordToString {n} (w: word n): string := 
+    Coercion wordToString {n} (w: word n): string := 
       "0x" ++ (nToHex (wordToN w)).
 
-    Coercion wordToString : word >-> string.
-
-    Definition constToString {n} (c: Const n): string :=
+    Coercion constToString {n} (c: Const n): string :=
       match c with
       | const32 w => "0x" ++ w
       | const64 w => "0x" ++ w
       | const128 w => "0x" ++ w
       end.
 
-    Coercion constToString : Const >-> string.
-
-    Definition indexToString {n} (i: Index n): string :=
+    Coercion indexToString {n} (i: Index n): string :=
       "0x" ++ (nToHex (N.of_nat i)).
 
-    Coercion indexToString : Index >-> string.
-
-    Definition regToString {n} (r: Reg n): option string :=
-      Some match r with
+    Coercion regToString {n} (r: Reg n): string :=
+      match r with
       | reg32 n => "ex" ++ (nameSuffix n)
       | reg3232 n => "mm" ++ (nameSuffix n)
       | reg6464 n => "xmm" ++ (nameSuffix n)
       | reg80 n => "st" ++ (nameSuffix n)
       end.
 
-    Definition stackToString {n} (s: Stack n): option string :=
-      Some match s with
+    Coercion stackToString {n} (s: Stack n): string :=
+      match s with
       | stack32 n => "word" ++ (nameSuffix n)
       | stack64 n => "double" ++ (nameSuffix n)
       | stack128 n => "quad" ++ (nameSuffix n)
+      | stack256 n => "stack256n" ++ (nameSuffix n)
+      | stack512 n => "stack512n" ++ (nameSuffix n)
       end.
+
+    Coercion stringToSome (x: string): option string := Some x.
 
     Definition stackLocation {n} (s: Stack n): word 32 :=
       combine (natToWord 8 n) (natToWord 24 n).
 
     Definition assignmentToString (a: Assignment): option string :=
       match a with
-      | Assign32Stack32 r s =>
-        match (regToString r, stackToString s) with
-        | (Some s0, Some s1) => s0 ++ " = " ++ s1
-        | _ => None
-        end.
-      | Assign32Stack16 r s i => r0 ++ " = " ++ r1
-      | Assign32Stack8 r s i =>
-      | Assign32Stack64 r s i =>
-      | Assign32Stack128 r s i =>
 
-      | Assign32Reg32 r0 r1 => r0 ++ " = " ++ r1 
-      | Assign32Reg16 r0 r1 i =>
-      | Assign32Reg8 r0 r1 i =>
-      | Assign32Reg64 r0 r1 i =>
-      | Assign32Reg128 r0 r1 i =>
+      (* r = s *)
+      | Assign32Stack32 r s => r ++ " = " ++ s
 
-      | Assign3232Stack32 r i s =>
-      | Assign3232Stack64 r s =>
-      | Assign3232Stack128 r s i =>
-
-      | Assign3232Reg32 r0 i r1 =>
-      | Assign3232Reg64 r0 r1 =>
-      | Assign3232Reg128 r0 r1 i =>
-
-      | Assign6464Reg32 r0 i r1 =>
-      | Assign6464Reg64 r0 i r1 =>
-      | Assign6464Reg128 r0 r1 =>
-
-      | AssignConstant r c =>
+      | _ => None
       end.
 
-    Definition binOpToString (b: BinOp): string :=
+    Coercion binOpToString (b: BinOp): string :=
       match b with
       | Plus => "+"
       | Minus => "-"
@@ -138,7 +112,7 @@ Module StringConversion <: Conversion Qhasm QhasmString.
       | Or => "|"
       end.
 
-    Definition rotOpToString (r: RotOp): string :=
+    Coercion rotOpToString (r: RotOp): string :=
       match r with
       | Shl => "<<"
       | Shr => ">>"
@@ -146,41 +120,37 @@ Module StringConversion <: Conversion Qhasm QhasmString.
       | Rotr => ">>>"
       end.
 
-    Definition operationToString (o: Operation): string :=
+    Definition operationToString (o: Operation): option string :=
       match o with
       | OpReg32Constant b r c =>
-        (regToString r) ++ " " ++ (binOpToString b) ++ "= " ++ (constToString c)
+        r ++ " " ++ b ++ "= " ++ c
       | OpReg32Reg32 b r0 r1 =>
-        (regToString r0) ++ " " ++ (binOpToString b) ++ "= " ++ (constToString r1)
+        r0 ++ " " ++ b ++ "= " ++ r1
       | RotReg32 o r i =>
-        (regToString r) ++ " " ++ (rotOpToString o) ++ "= " ++ (constToString i)
-
+        r ++ " " ++ o ++ "= " ++ i
       | OpReg64Constant b r c =>
-        (regToString r) ++ " " ++ (binOpToString b) ++ "= " ++ (constToString c)
+        r ++ " " ++ b ++ "= " ++ c
       | OpReg64Reg64 b r0 r1 =>
-        (regToString r) ++ " " ++ (binOpToString b) ++ "= " ++ (constToString c)
-
-      | OpReg128Constant b r c =>
-        (regToString r) ++ " " ++ (binOpToString b) ++ "= " ++ (constToString c)
-      | OpReg128Reg128 b r0 r1 =>
-        (regToString r) ++ " " ++ (binOpToString b) ++ "= " ++ (constToString c)
+        r0 ++ " " ++ b ++ "= " ++ r1
+      | _ => None
       end.
 
-    Definition testOpToString (t: TestOp): string :=
+    Coercion testOpToString (t: TestOp): string :=
       match t with
-      | TEq =>
-      | TLt =>
-      | TUnsignedLt =>
-      | TGt =>
-      | TUnsignedGt =>
+      | TEq => "="
+      | TLt => "<"
+      | TUnsignedLt => "unsigned<"
+      | TGt => ">"
+      | TUnsignedGt => "unsigned>"
       end.
 
     Definition conditionalToString (c: Conditional): string :=
+      let f := fun (i: bool) => if i then "!" else "" in
       match c with
-      | TestTrue =>
-      | TestFalse =>
-      | TestReg32Reg32 o i r0 r1 =>
-      | TestReg32Const o i r c =>
+      | TestTrue => ""
+      | TestFalse => ""
+      | TestReg32Reg32 o i r0 r1 => (f i) ++ o ++ "?" ++ r0 ++ " " ++ r1
+      | TestReg32Const o i r c =>(f i) ++ o ++ "?" ++ r ++ " " ++ c
       end.
 
   End Elements.
@@ -188,9 +158,9 @@ Module StringConversion <: Conversion Qhasm QhasmString.
   Section Parsing.
 
     Inductive Entry :=
-      | regEntry: forall n, Reg n => Entry
-      | stackEntry: forall n, Stack n => Entry
-      | constEntry: forall n, Const n => Entry.
+      | regEntry: forall n, Reg n -> Entry
+      | stackEntry: forall n, Stack n -> Entry
+      | constEntry: forall n, Const n -> Entry.
 
     Definition allRegs (prog: Qhasm.Program): list Entry := [(* TODO *)]
 
