@@ -13,7 +13,7 @@ Local Infix "++" := Word.combine.
 Local Notation " a '[:' i ']' " := (Word.split1 i _ a) (at level 40).
 Local Notation " a '[' i ':]' " := (Word.split2 i _ a) (at level 40).
 Local Arguments H {_} _.
-Local Arguments scalarMultM1 {_} {_} _ _.
+Local Arguments scalarMultM1 {_} {_} _ _ _.
 Local Arguments unifiedAddM1 {_} {_} _ _.
 
 Local Ltac set_evars :=
@@ -32,9 +32,10 @@ Proof.
   revert x; induction n as [|n IHn]; simpl; congruence.
 Qed.
 
-Lemma iter_op_proj {T T'} (proj : T -> T') (op : T -> T -> T) (op' : T' -> T' -> T') x y z
+Lemma iter_op_proj {T T' S} (proj : T -> T') (op : T -> T -> T) (op' : T' -> T' -> T') x y z
+      (testbit : S -> nat -> bool) (bound : nat)
       (op_proj : forall a b, proj (op a b) = op' (proj a) (proj b))
-  : proj (iter_op op x y z) = iter_op op' (proj x) y (proj z).
+  : proj (iter_op op x testbit y z bound) = iter_op op' (proj x) testbit y (proj z) bound.
 Proof.
   unfold iter_op.
   simpl.
@@ -208,8 +209,8 @@ Proof.
   { do 2 (eapply option_rect_Proper_nd; [intro|reflexivity..]).
     set_evars.
     repeat match goal with
-           | [ |- appcontext[@proj1_sig ?A ?P (@iter_op ?T ?f ?x ?y ?z)] ]
-             => erewrite (@iter_op_proj T A (@proj1_sig _ _)) by reflexivity
+           | [ |- appcontext[@proj1_sig ?A ?P (@iter_op ?T ?f ?neutral ?T' ?testbit ?exp ?base ?bound)] ]
+             => erewrite (@iter_op_proj T _ _ (@proj1_sig _ _)) by reflexivity 
            end.
     subst_evars.
     reflexivity. }
@@ -305,14 +306,17 @@ Proof.
                (@unifiedAddM1' curve25519params
                   (@iter_op (@extended curve25519params) 
                      (@unifiedAddM1' curve25519params) 
-                     (@twistedToExtended curve25519params (0%F, 1%F)) a
-                     (@twistedToExtended curve25519params Bc))
+                     (@twistedToExtended curve25519params (0%F, 1%F)) 
+                     N N.testbit_nat
+                     a
+                     (@twistedToExtended curve25519params Bc) (N.size_nat a))
                   (negateExtendedc
                      (@iter_op (@extended curve25519params) 
                         (@unifiedAddM1' curve25519params) 
                         (@twistedToExtended curve25519params (0%F, 1%F))
+                        N N.testbit_nat
                         (@wordToN (b + b) (@H (b + (b + l)) (sig [:b] ++ pk ++ msg)))
-                        (twistedToExtended p))))))
+                        (twistedToExtended p) (N.size_nat (@wordToN (b + b) (@H (b + (b + l)) (sig [:b] ++ pk ++ msg)))))))))
         else false) false
        (wire2rep_F (@wtl (b - 1) pk))
                 )
