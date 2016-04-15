@@ -38,18 +38,21 @@ Module State.
     (* The Big Definition *)
 
     Inductive State :=
-      | fullState (regState: StateMap) (stackState: DefMap) (carryBit: CarryState): State.
+    | fullState (intRegState: StateMap)
+                (floatRegState: StateMap)
+                (stackState: DefMap)
+                (carryBit: CarryState): State.
 
-    Definition emptyState: State := fullState (NatM.empty DefMap) (NatM.empty N) None.
+    Definition emptyState: State := fullState (NatM.empty DefMap) (NatM.empty DefMap) (NatM.empty N) None.
 
     (* Register State Manipulations *)
 
-    Definition getReg {n} (reg: Reg n) (state: State): option (word n) :=
+    Definition getIntReg {n} (reg: IReg n) (state: State): option (word n) :=
       match state with
-      | fullState regState stackState _ =>
-        match (NatM.find n regState) with
+      | fullState intRegState _ _ _ =>
+        match (NatM.find n intRegState) with
         | Some map =>
-            match (NatM.find (getRegIndex reg) map) with
+            match (NatM.find (getIRegIndex reg) map) with
             | Some m => Some (NToWord n m)
             | _ => None
             end
@@ -57,30 +60,67 @@ Module State.
         end
       end.
 
-    Definition setReg {n} (reg: Reg n) (value: word n) (state: State): option State :=
+    Definition setIntReg {n} (reg: IReg n) (value: word n) (state: State): option State :=
       match state with
-      | fullState regState stackState carryState =>
-        match (NatM.find n regState) with
+      | fullState intRegState floatRegState stackState carryState =>
+        match (NatM.find n intRegState) with
         | Some map =>
             Some (fullState
-                    (NatM.add n (NatM.add (getRegIndex reg) (wordToN value) map) regState)
+                    (NatM.add n (NatM.add (getIRegIndex reg) (wordToN value) map) intRegState)
+                    floatRegState
                     stackState
                     carryState)
         | None => None
         end
       end.
 
+    Definition getFloatReg {n} (reg: FReg n) (state: State):
+        option (word (getFractionalBits reg)).
+      refine match state with
+      | fullState _ floatRegState _ _ =>
+        match (NatM.find n floatRegState) with
+        | Some map =>
+          match (NatM.find (getFRegIndex reg) map) with
+          | Some m =>
+            let f := getFloatInstance reg in
+            let b := getFractionalBits reg in
+            Some (floatToWord n b f (deserialize n b f m))
+          | _ => None
+          end
+        | None => None
+        end
+      end; abstract (unfold getFractionalBits, f, b; destruct reg; simpl; intuition).
+    Defined.
+
+    Definition setFloatReg {n} (reg: FReg n) (value: word (getFractionalBits reg)) (state: State): option State.
+      refine match state with
+      | fullState intRegState floatRegState stackState carryState =>
+        match (NatM.find n floatRegState) with
+        | Some map =>
+            let f := getFloatInstance reg in
+            let b := getFractionalBits reg in
+            Some (fullState
+              intRegState
+              (NatM.add n (NatM.add (getFRegIndex reg)
+                 (serialize n b f (wordToFloat n b f value)) map) floatRegState)
+              stackState
+              carryState)
+        | None => None
+        end
+      end; abstract (unfold getFractionalBits, f, b; destruct reg; simpl; intuition).
+    Defined.
+
     (* Carry State Manipulations *)
 
-    Definition getCarry {n} (reg: Reg n) (state: State): CarryState :=
+    Definition getCarry (state: State): CarryState :=
       match state with
-      | fullState _ _ b => b
+      | fullState _ _ _ b => b
       end.
 
     Definition setCarry (value: bool) (state: State): State :=
       match state with
-      | fullState regState stackState carryState =>
-        fullState regState stackState (Some value)
+      | fullState intRegState floatRegState stackState carryState =>
+        fullState intRegState floatRegState stackState (Some value)
       end.
 
 
@@ -88,7 +128,7 @@ Module State.
 
     Definition getStack32 (entry: Stack 32) (state: State): option (word 32) :=
       match state with
-      | fullState regState stackState _ =>
+      | fullState _ _ stackState _ =>
         match entry with
         | stack32 loc =>
           match (NatM.find loc stackState) with
@@ -100,11 +140,10 @@ Module State.
 
     Definition setStack32 (entry: Stack 32) (value: word 32) (state: State): option State :=
     match state with
-    | fullState regState stackState carryState =>
+    | fullState intRegState floatRegState stackState carryState =>
         match entry with
         | stack32 loc =>
-          (Some (fullState
-                   regState
+          (Some (fullState intRegState floatRegState
                    (NatM.add loc (wordToN value) stackState)
                    carryState))
         end

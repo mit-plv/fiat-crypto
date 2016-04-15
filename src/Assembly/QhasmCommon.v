@@ -11,14 +11,21 @@ Definition maxOps: nat := 1000.
 
 (* Float Datatype *)
 
-Record Float (n: nat) (fractionBits: nat) := mkFloat {
+Record Float (floatBits: nat) (fractionBits: nat) := mkFloat {
   FloatType: Set;
 
   wordToFloat: word fractionBits -> FloatType;
   floatToWord: FloatType -> word fractionBits;
 
+  wordToFloat_spec : forall x, floatToWord (wordToFloat x) = x;
+
+  serialize: FloatType -> N;
+  deserialize: N -> FloatType;
+
+  serialize_spec1 : forall x, serialize (deserialize x) = x;
+  serialize_spec2 : forall x, deserialize (serialize x) = x;
+
   floatPlus: FloatType -> FloatType -> FloatType;
-  floatMult: FloatType -> FloatType -> FloatType;
 
   floatPlus_wordToFloat : forall n m,
       (wordToN n < (Npow2 (fractionBits - 1)))%N ->
@@ -26,27 +33,26 @@ Record Float (n: nat) (fractionBits: nat) := mkFloat {
       floatPlus (wordToFloat n) (wordToFloat m)
         = wordToFloat (wplus n m);
 
+  floatMult: FloatType -> FloatType -> FloatType;
+
   floatMult_wordToFloat : forall n m,
       (wordToN n < (Npow2 (fractionBits / 2)%nat))%N ->
       (wordToN m < (Npow2 (fractionBits / 2)%nat))%N ->
       floatMult (wordToFloat n) (wordToFloat m)
-        = wordToFloat (wmult n m);
-
-  wordToFloat_spec : forall x, 
-      floatToWord (wordToFloat x) = x
+        = wordToFloat (wmult n m)
 }.
 
 Parameter Float32: Float 32 23.
 
-Parameter Float64: Float 64 53.
+Parameter Float64: Float 64 52.
 
 (* Asm Types *)
 Inductive IConst: nat -> Type :=
   | constInt32: word 32 -> IConst 32.
 
 Inductive FConst: nat -> Type :=
-  | constFloat32: forall b, Float 32 b -> FConst 32
-  | constFloat64: forall b, Float 64 b -> FConst 64.
+  | constFloat32: (FloatType _ _ Float32) -> FConst 32
+  | constFloat64: (FloatType _ _ Float64) -> FConst 64.
 
 Inductive IReg: nat -> Type :=
   | regInt32: nat -> IReg 32.
