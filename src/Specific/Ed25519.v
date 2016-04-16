@@ -450,6 +450,13 @@ Proof.
     subst_evars.
     eapply Let_In_Proper_nd; [reflexivity|cbv beta delta [pointwise_relation]; intro].
 
+    set_evars; erewrite (f_equal2 (@weqb b)); subst_evars; [|reflexivity|symmetry]. Focus 2. {
+      unfold twistedToExtended at 1 3 4.
+      rewrite F_mul_0_l.
+      unfold curve25519params, q. (* TODO: do we really wanna do it here? *)
+      rewrite (rep2F_F2rep 0%F).
+      rewrite (rep2F_F2rep 1%F).
+      rewrite FRepMul_correct.
     (*
     cbv beta iota delta
       [iter_op test_and_op unifiedAddM1' extendedToTwisted twistedToExtended enc' snd
