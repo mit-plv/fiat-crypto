@@ -6,26 +6,37 @@ Definition Label := nat.
 Definition Index (limit: nat) := {x: nat | (x < limit)%nat}.
 Definition Invert := bool.
 
-(* A constant upper-bound on the number of operations we run *)
-Definition maxOps: nat := 1000.
+(* Sugar and Tactics *)
+
+Definition convert {A B: Type} (x: A) (H: A = B): B :=
+  eq_rect A (fun B0 : Type => B0) x B H.
+
+Notation "'always' A" := (fun _ => A) (at level 90) : state_scope.
+Notation "'cast' e" := (convert e _) (at level 20) : state_scope.
+Notation "'lift' e" := (exist _ e _) (at level 20) : state_scope.
+Notation "'contra'" := (False_rec _ _) : state_scope.
+
+Obligation Tactic := abstract intuition.
 
 (* Float Datatype *)
 
 Record Float (floatBits: nat) (fractionBits: nat) := mkFloat {
-  FloatType: Set;
+  validFloat: word floatBits -> Prop;
 
-  wordToFloat: word fractionBits -> FloatType;
-  floatToWord: FloatType -> word fractionBits;
+  wordToFloat: word fractionBits -> {w: word floatBits | validFloat w};
+  floatToWord: {w: word floatBits | validFloat w} -> word fractionBits;
 
   wordToFloat_spec : forall x, floatToWord (wordToFloat x) = x;
 
-  serialize: FloatType -> N;
-  deserialize: N -> FloatType;
+  serialize: {w: word floatBits | validFloat w} -> N;
+  deserialize: N -> {w: word floatBits | validFloat w};
 
   serialize_spec1 : forall x, serialize (deserialize x) = x;
   serialize_spec2 : forall x, deserialize (serialize x) = x;
 
-  floatPlus: FloatType -> FloatType -> FloatType;
+  floatPlus: {w: word floatBits | validFloat w}
+          ->  {w: word floatBits | validFloat w}
+          ->  {w: word floatBits | validFloat w};
 
   floatPlus_wordToFloat : forall n m,
       (wordToN n < (Npow2 (fractionBits - 1)))%N ->
@@ -33,13 +44,22 @@ Record Float (floatBits: nat) (fractionBits: nat) := mkFloat {
       floatPlus (wordToFloat n) (wordToFloat m)
         = wordToFloat (wplus n m);
 
-  floatMult: FloatType -> FloatType -> FloatType;
+  floatMult: {w: word floatBits | validFloat w}
+          ->  {w: word floatBits | validFloat w}
+          ->  {w: word floatBits | validFloat w};
 
   floatMult_wordToFloat : forall n m,
       (wordToN n < (Npow2 (fractionBits / 2)%nat))%N ->
       (wordToN m < (Npow2 (fractionBits / 2)%nat))%N ->
       floatMult (wordToFloat n) (wordToFloat m)
-        = wordToFloat (wmult n m)
+        = wordToFloat (wmult n m);
+
+  floatAnd:  {w: word floatBits | validFloat w}
+          ->  {w: word floatBits | validFloat w}
+          ->  {w: word floatBits | validFloat w};
+
+  floatAnd_wordToFloat : forall n m,
+    floatAnd (wordToFloat n) (wordToFloat m) = wordToFloat (wand n m)
 }.
 
 Parameter Float32: Float 32 23.
@@ -51,8 +71,8 @@ Inductive IConst: nat -> Type :=
   | constInt32: word 32 -> IConst 32.
 
 Inductive FConst: nat -> Type :=
-  | constFloat32: (FloatType _ _ Float32) -> FConst 32
-  | constFloat64: (FloatType _ _ Float64) -> FConst 64.
+  | constFloat32: {w: word 32 | validFloat _ _ Float32 w} -> FConst 32
+  | constFloat64: {w: word 64 | validFloat _ _ Float64 w} -> FConst 64.
 
 Inductive IReg: nat -> Type :=
   | regInt32: nat -> IReg 32.
@@ -91,12 +111,10 @@ Inductive IntOp :=
   | IXor: IntOp  | IAnd: IntOp | IOr: IntOp.
 
 Inductive FloatOp :=
-  | FPlus: FloatOp | FMinus: FloatOp
-  | FXor: FloatOp | FAnd: FloatOp | FOr: FloatOp
-  | FMult: FloatOp | FDiv: FloatOp.
+  | FPlus: FloatOp | FMult: FloatOp | FAnd: FloatOp.
 
 Inductive RotOp :=
-  | Shl: RotOp | Shr: RotOp | Rotl: RotOp | Rotr: RotOp.
+  | Shl: RotOp | Shr: RotOp.
 
 Inductive Operation :=
   | IOpConst: IntOp -> IReg 32 -> IConst 32 -> Operation

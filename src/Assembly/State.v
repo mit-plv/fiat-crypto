@@ -23,18 +23,6 @@ Module State.
     Delimit Scope state_scope with state.
     Local Open Scope state_scope.
 
-    (* Sugar and Tactics *)
-
-    Definition convert {A B: Type} (x: A) (H: A = B): B :=
-      eq_rect A (fun B0 : Type => B0) x B H.
-
-    Notation "'always' A" := (fun _ => A) (at level 90) : state_scope.
-    Notation "'cast' e" := (convert e _) (at level 20) : state_scope.
-    Notation "'lift' e" := (exist _ e _) (at level 20) : state_scope.
-    Notation "'contra'" := (False_rec _ _) : state_scope.
-
-    Obligation Tactic := abstract intuition.
-
     (* The Big Definition *)
 
     Inductive State :=

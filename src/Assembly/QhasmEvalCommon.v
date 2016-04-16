@@ -1,129 +1,149 @@
 Require Export QhasmCommon QhasmUtil State.
-Require Export ZArith.
+Require Export ZArith Sumbool.
 Require Export Bedrock.Word.
 
 Import State.
 Import Util.
 
-Definition evalTest {n} (o: TestOp) (invert: bool) (a b: word n): bool :=
-  xorb invert
+Definition evalTest {n} (o: TestOp) (a b: word n): bool :=
+  let c := (N.compare (wordToN a) (wordToN b)) in
+
+  let eqBit := match c with | Eq => true | _ => false end in
+  let ltBit := match c with | Lt => true | _ => false end in
+  let gtBit := match c with | Gt => true | _ => false end in
+
   match o with
-  | TEq => weqb a b
-  | TLt =>
-    match (Z.compare (wordToZ a) (wordToZ b)) with
-    | Lt => true
-    | _ => false
-    end
-  | TUnsignedLt =>
-    match (N.compare (wordToN a) (wordToN b)) with
-    | Lt => true
-    | _ => false
-    end
-  | TGt =>
-    match (Z.compare (wordToZ a) (wordToZ b)) with
-    | Gt => true
-    | _ => false
-    end
-  | TUnsignedGt =>
-    match (N.compare (wordToN a) (wordToN b)) with
-    | Gt => true
-    | _ => false
-    end
+  | TEq => eqBit
+  | TLt => ltBit
+  | TLe => orb (eqBit) (ltBit)
+  | TGt => gtBit
+  | TGe => orb (eqBit) (gtBit)
   end.
 
-Definition evalCond (c: Conditional) (state: State): option bool :=
-  match c with
+Definition evalCond (c: Conditional) (state: State): option bool.
+  refine match c with
   | TestTrue => Some true
   | TestFalse => Some false
-  | TestReg32Reg32 o i r0 r1 =>
-    match (getReg r0 state) with
-    | Some v0 =>
-      match (getReg r0 state) with
-      | Some v1 => Some (evalTest o i v0 v1)
+  | TestInt n t a b => 
+    match (getIntReg a state) with
+    | Some va =>
+      match (getIntReg b state) with
+      | Some vb => Some (evalTest t va vb)
       | _ => None
       end
     | _ => None
     end
-  | TestReg32Const o i r x =>
-    match (getReg r state) with
-    | Some v0 =>
-      match x with
-      | const32 v1 => Some (evalTest o i v0 v1)
+
+  | TestFloat n t a b =>
+    let aOpt := (getFloatReg a state) in
+    let bOpt := convert (getFloatReg a state) _ in
+
+    match aOpt with
+    | Some va =>
+      match bOpt with
+      | Some vb => Some (evalTest t va vb)
+      | _ => None
       end
     | _ => None
     end
-  end.
+  end; abstract (
+    inversion a; inversion b;
+    unfold aOpt, getFractionalBits;
+    simpl; intuition).
+Defined.
 
-Definition evalBinOp {n} (o: BinOp) (a b: word n): word n :=
+Definition evalOperation (o: Operation) (state: State): option State.
+  refine (
+  let evalIOp := fun (io: IntOp) (x y: word 32) =>
+    match io with
+    | IPlus => wplus x y
+    | IMinus => wminus x y
+    | IXor => wxor x y
+    | IAnd => wand x y
+    | IOr => wor x y
+    end in
+
+  let evalFOp := fun {b} (fo: FloatOp) (x y: word b) =>
+    match fo with
+    | FAnd => wand x y
+    | FPlus => wplus x y
+    | FMult => wmult x y
+    end in
+
+  let evalRotOp := fun (ro: RotOp) (x: word 32) (n: nat) =>
+    match ro with
+    | Shl => NToWord 32 (N.shiftl_nat (wordToN x) n)
+    | Shr => NToWord 32 (N.shiftr_nat (wordToN x) n)
+    end in
+
   match o with
-  | Plus => wplus a b
-  | Minus => wminus a b
-  | Mult => wmult a b
-  | Div => NToWord n ((wordToN a) / (wordToN b))%N
-  | Or => wor a b
-  | Xor => wxor a b
-  | And => wand a b
-  end.
-
-Definition evalRotOp {n} (o: RotOp) (a: word n) (m: nat): word n :=
-  match o with
-  | Shl => NToWord n (N.shiftl_nat (wordToN a) m)
-  | Shr => NToWord n (N.shiftr_nat (wordToN a) m)
-
-  (* TODO (rsloan): not actually rotate operations *)
-  | Rotl => NToWord n (N.shiftl_nat (wordToN a) m)
-  | Rotr => NToWord n (N.shiftr_nat (wordToN a) m)
-  end.
-
-Definition evalOperation (o: Operation) (state: State): option State :=
-  match o with
-  | OpReg32Constant b r c =>
-    match (getReg r state) with
-    | Some v0 =>
+  | IOpConst o r c =>
+    match (getIntReg r state) with
+    | Some va =>
       match c with
-      | const32 v1 => setReg r (evalBinOp b v0 v1) state
+      | constInt32 vb => setIntReg r (evalIOp o va vb) state
       end
     | None => None
     end
 
-  | OpReg32Reg32 b r0 r1 =>
-    match (getReg r0 state) with
-    | Some v0 =>
-      match (getReg r1 state) with
-      | Some v1 => setReg r0 (evalBinOp b v0 v1) state
+  | IOpReg o a b =>
+    match (getIntReg a state) with
+    | Some va =>
+      match (getIntReg b state) with
+      | Some vb => setIntReg a (evalIOp o va vb) state
       | _ => None
       end
     | None => None
     end
 
-  | RotReg32 b r m =>
-    match (getReg r state) with
-    | Some v0 => setReg r (evalRotOp b v0 m) state
-    | None => None
-    end
-
-  | OpReg64Constant b r c =>
-    match (getReg r state) with
-    | Some v0 =>
+  | FOpConst32 o r c =>
+    match (getFloatReg r state) with
+    | Some va =>
       match c with
-      | const64 v1 => setReg r (evalBinOp b v0 v1) state
+      | constFloat32 vb => setFloatReg r (evalFOp o va (convert vb _)) state
       end
     | None => None
     end
 
-  | OpReg64Reg64 b r0 r1 =>
-    match (getReg r0 state) with
-    | Some v0 =>
-      match (getReg r1 state) with
-      | Some v1 => setReg r0 (evalBinOp b v0 v1) state
+  | FOpReg32 o a b =>
+    match (getFloatReg a state) with
+    | Some va =>
+      match (getFloatReg b state) with
+      | Some vb => setFloatReg a (evalFOp o va (convert vb _)) state
       | _ => None
       end
     | None => None
     end
 
-  (* Don't implement the 128-wide ops yet:
-     I think x86 doesn't do them like this *)
-  | _ => None end.
+  | FOpConst64 o r c =>
+    match (getFloatReg r state) with
+    | Some va =>
+      match c with
+      | constFloat64 vb => setFloatReg r (evalFOp o va (convert vb _)) state
+      end
+    | None => None
+    end
+
+  | FOpReg64 o a b =>
+    match (getFloatReg a state) with
+    | Some va =>
+      match (getFloatReg b state) with
+      | Some vb => setFloatReg a (evalFOp o va (convert vb _)) state
+      | _ => None
+      end
+    | None => None
+    end
+
+  | OpRot o r i =>
+   match (getIntReg r state) with
+    | Some va => setIntReg r (evalRotOp o va i) state
+    | None => None
+    end
+  end);
+    unfold evalIOp, evalFOp, evalRotOp, getFractionalBits;
+    simpl; intuition.
+  (* TODO *)
+Defined.
 
 Definition evalAssignment (a: Assignment) (state: State): option State :=
   match a with
