@@ -60,8 +60,9 @@ Qed.
 Axiom point_eqb : forall {prm : TwistedEdwardsParams}, point -> point -> bool.
 Axiom point_eqb_correct : forall P Q, point_eqb P Q = if point_eq_dec P Q then true else false.
 
-Axiom Bc : F q * F q.
-Axiom B_proj : proj1_sig B = Bc.
+Axiom xB : F q.
+Axiom yB : F q.
+Axiom B_proj : proj1_sig B = (xB, yB).
 
 Require Import Coq.Setoids.Setoid.
 Require Import Coq.Classes.Morphisms.
@@ -451,12 +452,25 @@ Proof.
     eapply Let_In_Proper_nd; [reflexivity|cbv beta delta [pointwise_relation]; intro].
 
     set_evars; erewrite (f_equal2 (@weqb b)); subst_evars; [|reflexivity|symmetry]. Focus 2. {
-      unfold twistedToExtended at 1 3 4.
+      unfold twistedToExtended.
       rewrite F_mul_0_l.
       unfold curve25519params, q. (* TODO: do we really wanna do it here? *)
       rewrite (rep2F_F2rep 0%F).
       rewrite (rep2F_F2rep 1%F).
-      rewrite FRepMul_correct.
+      rewrite (rep2F_F2rep xB%F).
+      rewrite (rep2F_F2rep yB%F).
+      rewrite !FRepMul_correct.
+      Definition rep2E (r:FRep * FRep * FRep * FRep) : extended :=
+        match r with (((x, y), z), t) => mkExtended (rep2F x) (rep2F y) (rep2F z) (rep2F t) end.
+      repeat match goal with |- appcontext [ ?E ] =>
+                      match E with (rep2F ?x, rep2F ?y, rep2F ?z, rep2F ?t) =>
+                                   change E with (rep2E (((x, y), z), t))
+                      end
+      end.
+      erewrite <- (fun op x y z => iter_op_proj rep2E op unifiedAddM1' x y z N.testbit_nat).
+      erewrite <- (fun op x y z => iter_op_proj rep2E op unifiedAddM1' x y z N.testbit_nat).
+      2:exfalso; admit.
+      2:exfalso; admit.
     (*
     cbv beta iota delta
       [iter_op test_and_op unifiedAddM1' extendedToTwisted twistedToExtended enc' snd
