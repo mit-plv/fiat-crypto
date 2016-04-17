@@ -498,7 +498,18 @@ Proof.
       rewrite <-unifiedAddM1Rep_correct.
       
       
-      (* cbv iota beta delta [extendedToTwisted rep2E]. *)
+      etransitivity. Focus 2. {
+        apply f_equal.
+        Definition rep2T (P:FRep * FRep) := (rep2F (fst P), rep2F (snd P)).
+        Definition erep2trep (P:FRep * FRep * FRep * FRep) := Let_In P (fun P => Let_In (FRepInv (snd (fst P))) (fun iZ => (FRepMul (fst (fst (fst P))) iZ, FRepMul (snd (fst (fst P))) iZ))).
+        Lemma erep2trep_correct : forall P, rep2T (erep2trep P) = extendedToTwisted (rep2E P).
+        Proof.
+          unfold rep2T, rep2E, erep2trep, extendedToTwisted; destruct P as [[[]]]; simpl.
+          rewrite !unfoldDiv, <-!FRepMul_correct, <-FRepInv_correct. reflexivity.
+        Qed.
+        rewrite <-erep2trep_correct; cbv beta delta [erep2trep].
+        reflexivity. } Unfocus.
+        
     reflexivity. } Unfocus.
     (*
     cbv beta iota delta
