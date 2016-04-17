@@ -118,224 +118,53 @@ Definition evalOperation (o: Operation) (state: State): option State.
   end); abstract intuition.
 Defined.
 
+Definition getIConst {n} (c: IConst n): word n :=
+  match c with
+  | constInt32 v => v
+  end.
+
+Definition getFConst {n} (c: FConst n): word n :=
+  match c with
+  | constFloat32 v => v
+  | constFloat64 v => v
+  end.
+
 Definition evalAssignment (a: Assignment) (state: State): option State :=
   let liftOpt := fun {A B} (f: A -> option B) (xo: option A) =>
-    match x with
+    match xo with
     | (Some x') => f x'
     | _ => None
     end in
 
   match a with
-  | AStackInt n r s =>
-    liftOpt (fun x y => setIntReg r x state)
-      (match c with | constInt32 v => Some v end)
+  | ARegStackInt n r s =>
+    liftOpt (fun x => setIntReg r x state) (getStack s state)
 
-  | AStackFloat n r s =>
+  | ARegStackFloat n r s =>
+    liftOpt (fun x => setFloatReg r x state) (getStack s state)
 
-  | ARegInt n a b =>
+  | AStackRegInt n s r =>
+    liftOpt (fun x => setStack s x state) (getIntReg r state)
 
-  | ARegFloat n a b =>
+  | AStackRegFloat n s r =>
+    liftOpt (fun x => setStack s x state) (getFloatReg r state)
 
-  | AConstInt n r c =>
+  | ARegRegInt n a b =>
+    liftOpt (fun x => setIntReg a x state) (getIntReg b state)
 
-  | AConstFloat n r c =>
+  | ARegRegFloat n a b =>
+    liftOpt (fun x => setFloatReg a x state) (getFloatReg b state)
 
-  | AIndex n m i =>
+  | AConstInt n r c => setIntReg r (getIConst c) state
+
+  | AConstFloat n r c => setFloatReg r (getFConst c) state
+
+  | AIndex n m a b i =>
+    match (getIntReg b state) with
+    | Some v => setIntReg a (trunc n (getIndex v m i)) state
+    | _ => None
+    end
 
   | APtr n r s =>
-
+    setIntReg r (NToWord 32 (N.of_nat (getStackIndex s))) state 
   end.
-
-  | Assign32Stack32 r s =>
-    match (getReg r state) with
-    | Some v0 =>
-      match (getStack s state) with
-      | Some v1 => setReg r v1 state
-      | _ => None
-      end
-    | None => None
-    end
-
-  | Assign32Stack16 r s i =>
-    match (getReg r state) with
-    | Some v0 =>
-      match (getStack s state) with
-      | Some v1 => setReg r (trunc 32 (getIndex v1 16 i)) state
-      | _ => None
-      end
-    | None => None
-    end
-  | Assign32Stack8 r s i =>
-    match (getReg r state) with
-    | Some v0 =>
-      match (getStack s state) with
-      | Some v1 => setReg r (trunc 32 (getIndex v1 8 i)) state
-      | _ => None
-      end
-    | None => None
-    end
-  | Assign32Stack64 r s i =>
-    match (getReg r state) with
-    | Some v0 =>
-      match (getStack s state) with
-      | Some v1 => setReg r (getIndex v1 32 i) state
-      | _ => None
-      end
-    | None => None
-    end
-  | Assign32Stack128 r s i =>
-    match (getReg r state) with
-    | Some v0 =>
-      match (getStack s state) with
-      | Some v1 => setReg r (getIndex v1 32 i) state
-      | _ => None
-      end
-    | None => None
-    end
-
-  | Assign32Reg32 r0 r1 =>
-    match (getReg r0 state) with
-    | Some v0 =>
-      match (getReg r1 state) with
-      | Some v1 => setReg r0 v1 state
-      | _ => None
-      end
-    | None => None
-    end
-  | Assign32Reg16 r0 r1 i =>
-    match (getReg r0 state) with
-    | Some v0 =>
-      match (getReg r1 state) with
-      | Some v1 => setReg r0 (trunc 32 (getIndex v1 16 i)) state
-      | _ => None
-      end
-    | None => None
-    end
-  | Assign32Reg8 r0 r1 i =>
-    match (getReg r0 state) with
-    | Some v0 =>
-      match (getReg r1 state) with
-      | Some v1 => setReg r0 (trunc 32 (getIndex v1 8 i)) state
-      | _ => None
-      end
-    | None => None
-    end
-  | Assign32Reg64 r0 r1 i =>
-    match (getReg r0 state) with
-    | Some v0 =>
-      match (getReg r1 state) with
-      | Some v1 => setReg r0 (getIndex v1 32 i) state
-      | _ => None
-      end
-    | None => None
-    end
-  | Assign32Reg128 r0 r1 i =>
-    match (getReg r0 state) with
-    | Some v0 =>
-      match (getReg r1 state) with
-      | Some v1 => setReg r0 (getIndex v1 32 i) state
-      | _ => None
-      end
-    | None => None
-    end
-
-  | Assign3232Stack32 r0 i s =>
-    match (getReg r0 state) with
-    | Some v0 =>
-      match (getStack s state) with
-      | Some v1 => setReg r0 (setInPlace v0 v1 i) state
-      | _ => None
-      end
-    | None => None
-    end
-
-  | Assign3232Stack64 r s =>
-    match (getReg r state) with
-    | Some v0 =>
-      match (getStack s state) with
-      | Some v1 => setReg r v1 state
-      | _ => None
-      end
-    | None => None
-    end
-
-  | Assign3232Stack128 r s i =>
-    match (getReg r state) with
-    | Some v0 =>
-      match (getStack s state) with
-      | Some v1 => setReg r (getIndex v1 64 i) state
-      | _ => None
-      end
-    | None => None
-    end
-
-  | Assign3232Reg32 r0 i r1 =>
-    match (getReg r0 state) with
-    | Some v0 =>
-      match (getReg r1 state) with
-      | Some v1 => setReg r0 (setInPlace v0 v1 i) state
-      | _ => None
-      end
-    | None => None
-    end
-
-  | Assign3232Reg64 r0 r1 =>
-    match (getReg r0 state) with
-    | Some v0 =>
-      match (getReg r1 state) with
-      | Some v1 => setReg r0 v1 state
-      | _ => None
-      end
-    | None => None
-    end
-
-  | Assign3232Reg128 r0 r1 i =>
-    match (getReg r0 state) with
-    | Some v0 =>
-      match (getReg r1 state) with
-      | Some v1 => setReg r0 (getIndex v1 64 i) state
-      | _ => None
-      end
-    | None => None
-    end
-
-  | Assign6464Reg32 r0 i r1 =>
-    match (getReg r0 state) with
-    | Some v0 =>
-      match (getReg r1 state) with
-      | Some v1 => setReg r0 (setInPlace v0 v1 i) state
-      | _ => None
-      end
-    | None => None
-    end
-
-  | Assign6464Reg64 r0 i r1 =>
-    match (getReg r0 state) with
-    | Some v0 =>
-      match (getReg r1 state) with
-      | Some v1 => setReg r0 (setInPlace v0 v1 i) state
-      | _ => None
-      end
-    | None => None
-    end
-
-  | Assign6464Reg128 r0 r1 =>
-    match (getReg r0 state) with
-    | Some v0 =>
-      match (getReg r1 state) with
-      | Some v1 => setReg r0 v1 state
-      | _ => None
-      end
-    | None => None
-    end
-
-  | AssignConstant r c =>
-    match (getReg r state) with
-    | Some v0 =>
-      match c with
-      | const32 v1 => setReg r v1 state
-      end
-    | None => None
-    end
-  end.
-
