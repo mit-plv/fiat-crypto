@@ -85,14 +85,16 @@ Definition evalOperation (o: Operation) (state: State): option State.
   match o with
   | IOpConst o r c =>
     liftOpt (fun x y => setIntReg r (evalIOp o x y) state)
-      (getIntReg r state) (match c with | constInt32 v => Some v end)
+      (getIntReg r state)
+      (match c with | constInt32 v => Some v end)
 
   | IOpReg o a b =>
     liftOpt (fun x y => setIntReg a (evalIOp o x y) state)
       (getIntReg a state) (getIntReg b state)
 
   | FOpConst32 o r c =>
-    liftOpt (fun x y => setFloatReg r (evalFOp o x y) state) (getFloatReg r state)
+    liftOpt (fun x y => setFloatReg r (evalFOp o x y) state)
+      (getFloatReg r state)
       (match c with | constFloat32 v => Some (convert v _) end)
 
   | FOpReg32 o a b =>
@@ -100,7 +102,8 @@ Definition evalOperation (o: Operation) (state: State): option State.
       (getFloatReg a state) (convert (getFloatReg b state) _)
 
   | FOpConst64 o r c =>
-    liftOpt (fun x y => setFloatReg r (evalFOp o x y) state) (getFloatReg r state)
+    liftOpt (fun x y => setFloatReg r (evalFOp o x y) state)
+      (getFloatReg r state)
       (match c with | constFloat64 v => Some (convert v _) end)
 
   | FOpReg64 o a b =>
@@ -116,7 +119,33 @@ Definition evalOperation (o: Operation) (state: State): option State.
 Defined.
 
 Definition evalAssignment (a: Assignment) (state: State): option State :=
+  let liftOpt := fun {A B} (f: A -> option B) (xo: option A) =>
+    match x with
+    | (Some x') => f x'
+    | _ => None
+    end in
+
   match a with
+  | AStackInt n r s =>
+    liftOpt (fun x y => setIntReg r x state)
+      (match c with | constInt32 v => Some v end)
+
+  | AStackFloat n r s =>
+
+  | ARegInt n a b =>
+
+  | ARegFloat n a b =>
+
+  | AConstInt n r c =>
+
+  | AConstFloat n r c =>
+
+  | AIndex n m i =>
+
+  | APtr n r s =>
+
+  end.
+
   | Assign32Stack32 r s =>
     match (getReg r state) with
     | Some v0 =>

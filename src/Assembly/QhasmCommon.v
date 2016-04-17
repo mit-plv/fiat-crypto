@@ -71,8 +71,8 @@ Inductive IConst: nat -> Type :=
   | constInt32: word 32 -> IConst 32.
 
 Inductive FConst: nat -> Type :=
-  | constFloat32: word 23 -> FConst 32
-  | constFloat64: word 52 -> FConst 64.
+  | constFloat32: word 32 -> FConst 32
+  | constFloat64: word 64 -> FConst 64.
 
 Inductive IReg: nat -> Type :=
   | regInt32: nat -> IReg 32.
@@ -90,11 +90,14 @@ Definition CarryState := option bool.
 
 (* Assignments *)
 Inductive Assignment : Type :=
-  | AStackInt: forall n, IReg n -> Stack n -> Assignment
-  | AStackFloat: forall n, FReg n -> Stack n -> Assignment
+  | ARegStackInt: forall n, IReg n -> Stack n -> Assignment
+  | ARegStackFloat: forall n, FReg n -> Stack n -> Assignment
 
-  | ARegInt: forall n, IReg n -> IReg n -> Assignment
-  | ARegFloat: forall n, FReg n -> FReg n -> Assignment
+  | AStackRegInt: forall n, Stack n -> IReg n -> Assignment
+  | AStackRegFloat: forall n, Stack n -> FReg n -> Assignment
+
+  | ARegRegInt: forall n, IReg n -> IReg n -> Assignment
+  | ARegRegFloat: forall n, FReg n -> FReg n -> Assignment
 
   | AConstInt: forall n, IReg n -> IConst n -> Assignment
   | AConstFloat: forall n, FReg n -> FConst n -> Assignment

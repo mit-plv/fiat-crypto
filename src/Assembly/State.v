@@ -62,41 +62,32 @@ Module State.
         end
       end.
 
-    Definition getFloatReg {n} (reg: FReg n) (state: State):
-        option (word (getFractionalBits reg)).
-      refine match state with
+    Definition getFloatReg {n} (reg: FReg n) (state: State): option (word n) :=
+      match state with
       | fullState _ floatRegState _ _ =>
         match (NatM.find n floatRegState) with
         | Some map =>
           match (NatM.find (getFRegIndex reg) map) with
-          | Some m =>
-            let f := getFloatInstance reg in
-            let b := getFractionalBits reg in
-            Some (floatToWord n b f (deserialize n b f m))
-          | _ => None
+          | Some v => Some (NToWord n v)
+          | None => None
           end
         | None => None
         end
-      end; abstract (unfold getFractionalBits, f, b; destruct reg; simpl; intuition).
-    Defined.
+      end.
 
-    Definition setFloatReg {n} (reg: FReg n) (value: word (getFractionalBits reg)) (state: State): option State.
-      refine match state with
+    Definition setFloatReg {n} (reg: FReg n) (value: word n) (state: State): option State :=
+      match state with
       | fullState intRegState floatRegState stackState carryState =>
         match (NatM.find n floatRegState) with
         | Some map =>
-            let f := getFloatInstance reg in
-            let b := getFractionalBits reg in
             Some (fullState
               intRegState
-              (NatM.add n (NatM.add (getFRegIndex reg)
-                 (serialize n b f (wordToFloat n b f value)) map) floatRegState)
+              (NatM.add n (NatM.add (getFRegIndex reg) (wordToN value) map) floatRegState)
               stackState
               carryState)
         | None => None
         end
-      end; abstract (unfold getFractionalBits, f, b; destruct reg; simpl; intuition).
-    Defined.
+      end.
 
     (* Carry State Manipulations *)
 

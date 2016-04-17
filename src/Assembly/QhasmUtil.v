@@ -10,14 +10,11 @@ Module Util.
     Definition indexToNat {lim: nat} (i: Index lim): nat := proj1_sig i.
     Coercion indexToNat : Index >-> nat.
 
-    (* Float Manipulations*)
+    (* Float Manipulations *)
 
     Definition getFractionalBits {n} (reg: FReg n): nat :=
-      match n with
-      | 32 => 23
-      | 64 => 52
-      | _ => 0
-      end.
+      if (Nat.eq_dec n 32) then 23 else
+      if (Nat.eq_dec n 64) then 52 else 0.
 
     Definition getFloatInstance {n} (reg: FReg n): Float n (getFractionalBits reg).
       refine match reg with
