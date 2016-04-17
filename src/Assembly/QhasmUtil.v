@@ -13,9 +13,10 @@ Module Util.
     (* Float Manipulations*)
 
     Definition getFractionalBits {n} (reg: FReg n): nat :=
-      match reg with
-      | regFloat32 _ => 23
-      | regFloat64 _ => 52
+      match n with
+      | 32 => 23
+      | 64 => 52
+      | _ => 0
       end.
 
     Definition getFloatInstance {n} (reg: FReg n): Float n (getFractionalBits reg).

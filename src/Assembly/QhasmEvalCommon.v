@@ -54,7 +54,7 @@ Defined.
 
 Definition evalOperation (o: Operation) (state: State): option State.
   refine (
-  let evalIOp := fun (io: IntOp) (x y: word 32) =>
+  let evalIOp := fun {b} (io: IntOp) (x y: word b) =>
     match io with
     | IPlus => wplus x y
     | IMinus => wminus x y
@@ -70,10 +70,10 @@ Definition evalOperation (o: Operation) (state: State): option State.
     | FMult => wmult x y
     end in
 
-  let evalRotOp := fun (ro: RotOp) (x: word 32) (n: nat) =>
+  let evalRotOp := fun {b} (ro: RotOp) (x: word b) (n: nat) =>
     match ro with
-    | Shl => NToWord 32 (N.shiftl_nat (wordToN x) n)
-    | Shr => NToWord 32 (N.shiftr_nat (wordToN x) n)
+    | Shl => NToWord b (N.shiftl_nat (wordToN x) n)
+    | Shr => NToWord b (N.shiftr_nat (wordToN x) n)
     end in
 
   let liftOpt := fun {A B C} (f: A -> B -> option C) (xo: option A) (yo: option B) =>
@@ -93,15 +93,15 @@ Definition evalOperation (o: Operation) (state: State): option State.
 
   | FOpConst32 o r c =>
     liftOpt (fun x y => setFloatReg r (evalFOp o x y) state) (getFloatReg r state)
-      (convert (match c with | constFloat32 v => Some v | _ => None end) _)
+      (match c with | constFloat32 v => Some (convert v _) end)
 
   | FOpReg32 o a b =>
     liftOpt (fun x y => setFloatReg a (evalFOp o x y) state)
       (getFloatReg a state) (convert (getFloatReg b state) _)
 
   | FOpConst64 o r c =>
-    liftOpt (fun x y => setFloatReg r (evalFOp o x y) state)
-      (getFloatReg r state) (match c with | constFloat64 v => Some v | _ => None end)
+    liftOpt (fun x y => setFloatReg r (evalFOp o x y) state) (getFloatReg r state)
+      (match c with | constFloat64 v => Some (convert v _) end)
 
   | FOpReg64 o a b =>
     liftOpt (fun x y => setFloatReg a (evalFOp o x y) state)
@@ -112,14 +112,7 @@ Definition evalOperation (o: Operation) (state: State): option State.
     | Some va => setIntReg r (evalRotOp o va i) state
     | None => None
     end
-  end); unfold evalIOp, evalFOp, evalRotOp, getFractionalBits.
-
-  elim r.
-  destruct r.
-
-    try destruct r; try destruct c; try destruct a; try destruct b; simpl;
-    intuition.
-  (* TODO *)
+  end); abstract intuition.
 Defined.
 
 Definition evalAssignment (a: Assignment) (state: State): option State :=
