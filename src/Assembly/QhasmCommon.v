@@ -71,8 +71,8 @@ Inductive IConst: nat -> Type :=
   | constInt32: word 32 -> IConst 32.
 
 Inductive FConst: nat -> Type :=
-  | constFloat32: {w: word 32 | validFloat _ _ Float32 w} -> FConst 32
-  | constFloat64: {w: word 64 | validFloat _ _ Float64 w} -> FConst 64.
+  | constFloat32: word 23 -> FConst 32
+  | constFloat64: word 52 -> FConst 64.
 
 Inductive IReg: nat -> Type :=
   | regInt32: nat -> IReg 32.

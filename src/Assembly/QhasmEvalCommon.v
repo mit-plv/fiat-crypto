@@ -76,72 +76,49 @@ Definition evalOperation (o: Operation) (state: State): option State.
     | Shr => NToWord 32 (N.shiftr_nat (wordToN x) n)
     end in
 
+  let liftOpt := fun {A B C} (f: A -> B -> option C) (xo: option A) (yo: option B) =>
+    match (xo, yo) with
+    | (Some x, Some y) => f x y
+    | _ => None
+    end in
+
   match o with
   | IOpConst o r c =>
-    match (getIntReg r state) with
-    | Some va =>
-      match c with
-      | constInt32 vb => setIntReg r (evalIOp o va vb) state
-      end
-    | None => None
-    end
+    liftOpt (fun x y => setIntReg r (evalIOp o x y) state)
+      (getIntReg r state) (match c with | constInt32 v => Some v end)
 
   | IOpReg o a b =>
-    match (getIntReg a state) with
-    | Some va =>
-      match (getIntReg b state) with
-      | Some vb => setIntReg a (evalIOp o va vb) state
-      | _ => None
-      end
-    | None => None
-    end
+    liftOpt (fun x y => setIntReg a (evalIOp o x y) state)
+      (getIntReg a state) (getIntReg b state)
 
   | FOpConst32 o r c =>
-    match (getFloatReg r state) with
-    | Some va =>
-      match c with
-      | constFloat32 vb => setFloatReg r (evalFOp o va (convert vb _)) state
-      end
-    | None => None
-    end
+    liftOpt (fun x y => setFloatReg r (evalFOp o x y) state) (getFloatReg r state)
+      (convert (match c with | constFloat32 v => Some v | _ => None end) _)
 
   | FOpReg32 o a b =>
-    match (getFloatReg a state) with
-    | Some va =>
-      match (getFloatReg b state) with
-      | Some vb => setFloatReg a (evalFOp o va (convert vb _)) state
-      | _ => None
-      end
-    | None => None
-    end
+    liftOpt (fun x y => setFloatReg a (evalFOp o x y) state)
+      (getFloatReg a state) (convert (getFloatReg b state) _)
 
   | FOpConst64 o r c =>
-    match (getFloatReg r state) with
-    | Some va =>
-      match c with
-      | constFloat64 vb => setFloatReg r (evalFOp o va (convert vb _)) state
-      end
-    | None => None
-    end
+    liftOpt (fun x y => setFloatReg r (evalFOp o x y) state)
+      (getFloatReg r state) (match c with | constFloat64 v => Some v | _ => None end)
 
   | FOpReg64 o a b =>
-    match (getFloatReg a state) with
-    | Some va =>
-      match (getFloatReg b state) with
-      | Some vb => setFloatReg a (evalFOp o va (convert vb _)) state
-      | _ => None
-      end
-    | None => None
-    end
+    liftOpt (fun x y => setFloatReg a (evalFOp o x y) state)
+      (getFloatReg a state) (convert (getFloatReg b state) _)
 
   | OpRot o r i =>
    match (getIntReg r state) with
     | Some va => setIntReg r (evalRotOp o va i) state
     | None => None
     end
-  end);
-    unfold evalIOp, evalFOp, evalRotOp, getFractionalBits;
-    simpl; intuition.
+  end); unfold evalIOp, evalFOp, evalRotOp, getFractionalBits.
+
+  elim r.
+  destruct r.
+
+    try destruct r; try destruct c; try destruct a; try destruct b; simpl;
+    intuition.
   (* TODO *)
 Defined.
 
