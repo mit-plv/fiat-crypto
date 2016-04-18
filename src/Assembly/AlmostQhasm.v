@@ -24,35 +24,36 @@ Module AlmostQhasm <: Language.
 
   Definition Program := AlmostProgram.
 
-  (* Only execute while loops a fixed number of times.
-     TODO (rsloan): can we do any better? *)
+  Inductive AlmostEval: AlmostProgram -> State -> State -> Prop :=
+    | AESkip: forall s, AlmostEval ASkip s s
+    | AESeq: forall p p' s s' s'',
+        AlmostEval p s s'
+      -> AlmostEval p' s' s''
+      -> AlmostEval (ASeq p p') s s''
+    | AEAssign a: forall s s',
+        evalAssignment a s = Some s'
+      -> AlmostEval (AAssign a) s s'
+    | AEOp: forall s s' a,
+        evalOperation a s = Some s'
+      -> AlmostEval (AOp a) s s'
+    | AECondFalse: forall c a b s s',
+        evalCond c s = Some false
+      -> AlmostEval b s s'
+      -> AlmostEval (ACond c a b) s s'
+    | AECondTrue: forall c a b s s',
+        evalCond c s = Some true
+      -> AlmostEval a s s'
+      -> AlmostEval (ACond c a b) s s'
+    | AEWhileRun: forall c a s s' s'',
+        evalCond c s = Some true
+      -> AlmostEval a s s'
+      -> AlmostEval (AWhile c a) s' s''
+      -> AlmostEval (AWhile c a) s s''
+    | AEWhileSkip: forall c a s,
+        evalCond c s = Some false
+      -> AlmostEval (AWhile c a) s s.
 
-  (* TODO: make this inductive *)
-  Fixpoint almostEvalWhile (cond: Conditional) (prog: Program) (state: State) (horizon: nat): option State :=
-    match horizon with
-    | (S m) =>
-      if (evalCond cond state)
-      then almostEvalWhile cond prog state m
-      else Some state
-    | O => None
-    end.
-
-  Fixpoint eval (prog: Program) (state: State): option State :=
-    match prog with
-    | ASkip => Some state
-    | ASeq a b =>
-      match (eval a state) with
-      | (Some st') => eval b st'
-      | _ => None
-      end
-    | AAssign a => evalAssignment a state
-    | AOp a => evalOperation a state
-    | ACond c a b =>
-      if (evalCond c state)
-      then eval a state
-      else eval b state
-    | AWhile c a => almostEvalWhile c a state maxOps
-    end.
+  Definition evaluatesTo := AlmostEval.
 
   (* world peace *)
 End AlmostQhasm.

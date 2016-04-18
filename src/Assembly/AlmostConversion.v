@@ -16,36 +16,31 @@ Module AlmostConversion <: Conversion AlmostQhasm Qhasm.
     | AAssign a => [ QAssign a ]
     | AOp a => [ QOp a ]
     | ACond c a b =>
-      let els := N.to_nat (N.shiftl 1 label0) in
-      let finish := S els in
-      [QJmp (invertConditional c) els] ++
-      (almostToQhasm' a label1) ++
-      [QJmp TestTrue finish] ++
-      [QLabel els] ++
+      let tru := N.to_nat (N.shiftl 1 label0) in
+      let finish := S tru in
+      [QJmp c tru] ++
       (almostToQhasm' b label1) ++
+      [QJmp TestTrue finish] ++
+      [QLabel tru] ++
+      (almostToQhasm' a label1) ++
       [QLabel finish]
     | AWhile c a =>
       let start := N.to_nat (N.shiftl 1 label0) in
-      let finish := S start in
-      [ QJmp (invertConditional c) finish ;
+      let test := S start in
+      [ QJmp TestTrue test ;
         QLabel start ] ++
         (almostToQhasm' a label1) ++
-      [ QJmp c start;
-        QLabel finish ]
+      [ QLabel test;
+        QJmp c start ]
     end.
 
   Definition convertProgram (prog: AlmostQhasm.Program) := Some (almostToQhasm' prog 0%N).
   Definition convertState (st: Qhasm.State): option AlmostQhasm.State := Some st.
 
-  Lemma convert_spec: forall st' prog,
-    match ((convertProgram prog), (convertState st')) with
-    | (Some prog', Some st) =>
-      match (Qhasm.eval prog' st') with
-      | Some st'' => AlmostQhasm.eval prog st = (convertState st'')
-      | _ => True
-      end
-    | _ => True
-    end.
+  Lemma convert_spec:  forall a a' b b' prog prog',
+    convertProgram prog = Some prog' ->
+    convertState a = Some a' -> convertState b = Some b' ->
+    Qhasm.evaluatesTo prog' a b <-> AlmostQhasm.evaluatesTo prog a' b'.
   Admitted.
 
 End AlmostConversion.

@@ -37,43 +37,36 @@ Module Qhasm <: Language.
   Definition getLabelMap (prog: Program): LabelMap :=
     getLabelMap' prog (NatM.empty nat) O.
 
-  Fixpoint eval' (prog: Program) (state: State) (loc: nat) (horizon: nat) (labelMap: LabelMap) (maxLoc: nat): option State :=
-    match horizon with
-    | (S h) =>
-      match (nth_error prog loc) with
-      | Some stmt =>
-        let (nextState, jmp) :=
-          match stmt with
-          | QAssign a => (evalAssignment a state, None)
-          | QOp o => (evalOperation o state, None)
-          | QLabel l => (Some state, None)
-          | QJmp c l =>
-            if (evalCond c state)
-            then (Some state, Some l)
-            else (Some state, None)
-          end
-        in
-          match jmp with
-          | None =>
-            if (Nat.eq_dec loc maxLoc)
-            then nextState
-            else match nextState with
-              | Some st' => eval' prog st' (S loc) h labelMap maxLoc
-              | _ => None
-              end
-          | Some nextLoc =>
-            match nextState with
-            | Some st' => eval' prog st' nextLoc h labelMap maxLoc
-            | _ => None
-            end
-          end
-      | None => None
-      end
-    | O => None
-    end.
+  Inductive QhasmEval: nat -> Program -> LabelMap -> State -> State -> Prop :=
+    | QEOver: forall p n m s, (n > (length p))%nat -> QhasmEval n p m s s
+    | QEZero: forall p s m, QhasmEval O p m s s
+    | QEAssign: forall n p m a s s' s'',
+        (nth_error p n) = Some (QAssign a)
+      -> evalAssignment a s = Some s'
+      -> QhasmEval (S n) p m s' s''
+      -> QhasmEval n p m s s''
+    | QEOp: forall n p m a s s' s'',
+        (nth_error p n) = Some (QOp a)
+      -> evalOperation a s = Some s'
+      -> QhasmEval (S n) p m s' s''
+      -> QhasmEval n p m s s''
+    | QEJmpTrue: forall (n loc next: nat) p m c l s s',
+        (nth_error p n) = Some (QJmp c l)
+      -> evalCond c s = Some true
+      -> NatM.find l m = Some loc
+      -> QhasmEval loc p m s s'
+      -> QhasmEval n p m s s'
+    | QEJmpFalse: forall (n loc next: nat) p m c l s s',
+        (nth_error p n) = Some (QJmp c l)
+      -> evalCond c s = Some false
+      -> QhasmEval (S n) p m s s'
+      -> QhasmEval n p m s s'
+    | QELabel: forall n p m l s s',
+        (nth_error p n) = Some (QLabel l)
+      -> QhasmEval (S n) p m s s'
+      -> QhasmEval n p m s s'.
 
-  Definition eval (prog: Program) (state: State): option State :=
-    eval' prog state O maxOps (getLabelMap prog) ((length prog) - 1).
+  Definition evaluatesTo := fun p => QhasmEval O p (getLabelMap p).
 
   (* world peace *)
 End Qhasm.

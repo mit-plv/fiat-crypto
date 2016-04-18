@@ -6,14 +6,9 @@ Module Type Conversion (A B: Language).
   Parameter convertProgram: A.Program -> option B.Program.
   Parameter convertState: B.State -> option A.State.
 
-  Axiom convert_spec: forall st' prog,
-    match ((convertProgram prog), (convertState st')) with
-    | (Some prog', Some st) =>
-      match (B.eval prog' st') with
-      | Some st'' => A.eval prog st = (convertState st'')
-      | _ => True
-      end
-    | _ => True
-    end.
+  Axiom convert_spec: forall a a' b b' prog prog',
+    convertProgram prog = Some prog' ->
+    convertState a = Some a' -> convertState b = Some b' ->
+    B.evaluatesTo prog' a b <-> A.evaluatesTo prog a' b'.
 
 End Conversion.
