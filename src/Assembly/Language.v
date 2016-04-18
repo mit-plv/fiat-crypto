@@ -3,5 +3,5 @@ Module Type Language.
   Parameter Program: Type.
   Parameter State: Type.
 
-  Parameter eval: Program -> State -> option State.
+  Parameter evaluatesTo: Program -> State -> State -> Prop.
 End Language.
