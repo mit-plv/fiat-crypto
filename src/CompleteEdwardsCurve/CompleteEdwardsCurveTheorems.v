@@ -57,8 +57,26 @@ Section CompleteEdwardsCurveTheorems.
   Proof.
     (* The Ltac takes ~15s, the Qed no longer takes longer than I have had patience for *)
     Edefn; F_field_simplify_eq; try abstract (rewrite ?@F_pow_2_r in *; clear_prm; F_nsatz);
-      repeat split; match goal with [ |- _ = 0%F -> False ] => admit end;
-        fail "unreachable".
+      pose proof (@edwardsAddCompletePlus _ _ _ _ two_lt_q nonzero_a square_a nonsquare_d);
+      pose proof (@edwardsAddCompleteMinus _ _ _ _ two_lt_q nonzero_a square_a nonsquare_d);
+      cbv beta iota in *;
+      repeat split.
+    { field_nonzero idtac. }
+    { field_nonzero idtac. }
+    2: field_nonzero idtac.
+    2: field_nonzero idtac.
+    3: field_nonzero idtac.
+    3: field_nonzero idtac.
+    4: field_nonzero idtac.
+    4: field_nonzero idtac.
+    4:field_nonzero idtac.
+    3:field_nonzero idtac.
+    2:field_nonzero idtac.
+    1:field_nonzero idtac.
+    admit.
+    admit.
+    admit.
+    admit.
   Qed.
 
   Lemma zeroIsIdentity : forall P, (P + zero = P)%E.
