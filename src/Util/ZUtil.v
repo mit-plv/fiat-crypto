@@ -168,6 +168,82 @@ Proof.
   intros; omega.
 Qed.
 
+
+Lemma Z_testbit_low : forall n x i, (0 <= i < n) ->
+  Z.testbit x i = Z.testbit (Z.land x (Z.ones n)) i.
+Proof.
+  intros.
+  rewrite Z.land_ones by omega.
+  symmetry.
+  apply Z.mod_pow2_bits_low.
+  omega.
+Qed.
+
+
+Lemma Z_testbit_shiftl : forall i, (0 <= i) -> forall a b n, (i < n) ->
+  Z.testbit (a + Z.shiftl b n) i = Z.testbit a i.
+Proof.
+  intros.
+  erewrite Z_testbit_low; eauto.
+  rewrite Z.land_ones, Z.shiftl_mul_pow2 by omega.
+  rewrite Z.mod_add by (pose proof (Z.pow_pos_nonneg 2 n); omega).
+  auto using Z.mod_pow2_bits_low.
+Qed.
+
+SearchAbout Z.testbit.
+
+Lemma Z_mod_div_eq0 : forall a b, 0 < b -> (a mod b) / b = 0.
+Proof.
+  intros.
+  apply Z.div_small.
+  auto using Z.mod_pos_bound.
+Qed.
+
+Lemma Z_shiftr_add_land : forall n m a b, (n <= m)%nat ->
+  Z.shiftr ((Z.land a (Z.ones (Z.of_nat n))) + (Z.shiftl b (Z.of_nat n))) (Z.of_nat m) = Z.shiftr b (Z.of_nat (m - n)).
+Proof.
+  intros.
+  rewrite Z.land_ones by apply Nat2Z.is_nonneg.
+  rewrite !Z.shiftr_div_pow2 by apply Nat2Z.is_nonneg.
+  rewrite Z.shiftl_mul_pow2 by apply Nat2Z.is_nonneg.
+  rewrite (le_plus_minus n m) at 1 by assumption.
+  rewrite Nat2Z.inj_add.
+  rewrite Z.pow_add_r by apply Nat2Z.is_nonneg.
+  rewrite <- Z.div_div by first 
+    [ pose proof (Z.pow_pos_nonneg 2 (Z.of_nat n)); omega
+    | apply Z.pow_pos_nonneg; omega ].
+  rewrite Z.div_add by (pose proof (Z.pow_pos_nonneg 2 (Z.of_nat n)); omega).
+  rewrite Z_mod_div_eq0 by (pose proof (Z.pow_pos_nonneg 2 (Z.of_nat n)); omega); auto.
+Qed.
+
+Lemma Z_land_add_land : forall n m a b, (m <= n)%nat ->
+  Z.land ((Z.land a (Z.ones (Z.of_nat n))) + (Z.shiftl b (Z.of_nat n))) (Z.ones (Z.of_nat m)) = Z.land a (Z.ones (Z.of_nat m)).
+Proof.
+  intros.
+  rewrite !Z.land_ones by apply Nat2Z.is_nonneg.
+  rewrite Z.shiftl_mul_pow2 by apply Nat2Z.is_nonneg.
+  replace (b * 2 ^ Z.of_nat n) with
+    ((b * 2 ^ Z.of_nat (n - m)) * 2 ^ Z.of_nat m) by
+    (rewrite (le_plus_minus m n) at 2; try assumption;
+     rewrite Nat2Z.inj_add, Z.pow_add_r by apply Nat2Z.is_nonneg; ring).
+  rewrite Z.mod_add by (pose proof (Z.pow_pos_nonneg 2 (Z.of_nat m)); omega).
+  SearchAbout ((_ mod _) mod _).
+  symmetry. apply Znumtheory.Zmod_div_mod; try (apply Z.pow_pos_nonneg; omega).
+  rewrite (le_plus_minus m n) by assumption.
+  rewrite Nat2Z.inj_add, Z.pow_add_r by apply Nat2Z.is_nonneg.
+  apply Z.divide_factor_l.
+Qed.
+
+
+Lemma Z_pow_gt0 : forall a, 0 < a -> forall b, 0 <= b -> 0 < a ^ b.
+Proof.
+  intros until 1.
+  apply natlike_ind; try (simpl; omega).
+  intros.
+  rewrite Z.pow_succ_r by assumption.
+  apply Z.mul_pos_pos; assumption.
+Qed.
+
 (* prove that known nonnegative numbers are nonnegative *)
 Ltac zero_bounds' :=
   repeat match goal with
