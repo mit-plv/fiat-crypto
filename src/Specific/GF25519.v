@@ -17,32 +17,13 @@ Lemma prime_modulus : prime modulus. Admitted.
 
 Definition limb_widths : list Z := [26;25;26;25;26;25;26;25;26;25].
 
-(* TODO : move to ListUtil *)
-Lemma fold_right_and_True_forall_In_iff : forall {T} (l : list T) (P : T -> Prop),
-  (forall x, In x l -> P x) <-> fold_right and True (map P l).
-Proof.
-  induction l; intros; simpl; try tauto.
-  rewrite <- IHl.
-  intuition (subst; auto).
-Qed.
-
-Ltac brute_force_indices := intros; unfold sum_firstn, limb_widths; simpl in *;
-  repeat match goal with
-  | _ => progress simpl in *
-  | _ => reflexivity
-  | [H : (S _ < S _)%nat |- _ ] => apply lt_S_n in H
-  | [H : (?x + _ < _)%nat |- _ ] => is_var x; destruct x
-  | [H : (?x < _)%nat |- _ ] => is_var x; destruct x
-  | _ => omega
-  end.
-
 Instance params25519 : PseudoMersenneBaseParams modulus := { limb_widths := limb_widths }.
 Proof.
   + abstract (apply fold_right_and_True_forall_In_iff; simpl; repeat (split; [omega |]); auto).
   + abstract (unfold limb_widths; congruence).
-  + abstract brute_force_indices.
+  + abstract brute_force_indices limb_widths.
   + abstract apply prime_modulus.
-  + abstract brute_force_indices.
+  + abstract brute_force_indices limb_widths.
 Defined.
 
 (* END PseudoMersenneBaseParams instance construction. *)
@@ -73,38 +54,12 @@ Proof.
   change (params25519) with p at 1.
   set (fg := (f * g)%F) in Hfg |- * .
 
-  Opaque Z.shiftl
-  Pos.iter
-  Z.div2
-  Pos.div2
-  Pos.div2_up
-  Pos.succ
-  Z.land
-  Z.of_N
-  Pos.land
-  N.ldiff
-  Pos.pred_N
-  Pos.pred_double
-  Z.opp Z.mul Pos.mul Let_In digits Z.add Pos.add Z.pos_sub.
-cbv [
-     carry_mul_opt
+  Opaque Z.shiftl Pos.iter Z.div2 Pos.div2 Pos.div2_up Pos.succ Z.land
+    Z.of_N Pos.land N.ldiff Pos.pred_N Pos.pred_double Z.opp Z.mul Pos.mul
+    Let_In digits Z.add Pos.add Z.pos_sub.
 
-     mul_opt mul'_opt firstn skipn map_opt
-     limb_widths base_from_limb_widths_opt 
-     k_ c_ Z_shiftl_by_opt
-     length rev app zeros
-     mul'_opt_step mul_bi'_opt add
-     mul_bi'_opt_step
-     nth_default_opt nth_error plus
-     Z_div_opt Z_mul_opt
-     params25519
+  cbv -[fg rep] in Hfg.
 
-     carry_sequence_opt_cps carry_opt_cps fold_right
-     List.app List.rev length
-     base limb_widths base_from_limb_widths_opt
-     nth_default_opt set_nth_opt pred beq_nat id
-     Z.shiftr
-   ] in Hfg.
   change (Z.shiftl 1 26 + -1)%Z with 67108863%Z in Hfg.
   change (Z.shiftl 1 25 + -1)%Z with 33554431%Z in Hfg.
   repeat rewrite ?Z.mul_1_r, ?Z.add_0_l, ?Z.add_assoc, ?Z.mul_assoc in Hfg.
@@ -118,7 +73,7 @@ Extraction "/tmp/test.ml" GF25519Base25Point5_mul_reduce_formula.
  * The easiest fix will be to make the proof script above fully automated,
  * using [abstract] to contain the proof part. *)
 
-Lemma GF25519Base25Point5_add_reduce_formula :
+Lemma GF25519Base25Point5_add_formula :
   forall f0 f1 f2 f3 f4 f5 f6 f7 f8 f9
     g0 g1 g2 g3 g4 g5 g6 g7 g8 g9,
     {ls | forall f g, rep [f0;f1;f2;f3;f4;f5;f6;f7;f8;f9] f
@@ -127,24 +82,13 @@ Lemma GF25519Base25Point5_add_reduce_formula :
 Proof.
   eexists.
   intros f g Hf Hg.
-  pose proof (carry_add_opt_correct c_ c_subst [0;9;8;7;6;5;4;3;2;1;0]_ _ _ _ Hf Hg) as Hfg.
-  forward Hfg; [abstract (clear; cbv; intros; repeat break_or_hyp; intuition)|].
-  specialize (Hfg H); clear H.
-  forward Hfg; [exact eq_refl|].
-  specialize (Hfg H); clear H.
+  pose proof (add_opt_rep _ _ _ _ Hf Hg) as Hfg.
 
   set (p := params25519) in Hfg at 1.
   change (params25519) with p at 1.
   set (fg := (f + g)%F) in Hfg |- * .
 
-  cbv [
-     carry_sequence_opt_cps carry_opt_cps fold_right
-     carry_add_opt add_opt c_
-     nth_default_opt set_nth_opt nth_error set_nth
-     limb_widths params25519 base_from_limb_widths_opt
-     List.app List.rev pred length
-     beq_nat
-   ] in Hfg.
+  cbv -[fg rep] in Hfg.
   change (Z.shiftl 1 26 + -1)%Z with 67108863%Z in Hfg.
   change (Z.shiftl 1 25 + -1)%Z with 33554431%Z in Hfg.
   exact Hfg.

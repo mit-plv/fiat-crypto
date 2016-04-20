@@ -34,6 +34,16 @@ Ltac opt_step :=
        destruct e
   end.
 
+Ltac brute_force_indices limb_widths := intros; unfold sum_firstn, limb_widths; simpl in *;
+  repeat match goal with
+  | _ => progress simpl in *
+  | _ => reflexivity
+  | [H : (S _ < S _)%nat |- _ ] => apply lt_S_n in H
+  | [H : (?x + _ < _)%nat |- _ ] => is_var x; destruct x
+  | [H : (?x < _)%nat |- _ ] => is_var x; destruct x
+  | _ => omega
+  end.
+
 Definition Let_In {A P} (x : A) (f : forall y : A, P y)
   := let y := x in f y.
 
@@ -173,9 +183,7 @@ Section Carries.
 End Carries.
 
 Section Addition.
-  Context `{prm : PseudoMersenneBaseParams}
-    (* allows caller to precompute k and c *)
-    (k_ c_ : Z) (k_subst : k = k_) (c_subst : c = c_).
+  Context `{prm : PseudoMersenneBaseParams}.
 
   Definition add_opt_sig (us vs : T) : { b : digits | b = add us vs }.
   Proof.
@@ -197,24 +205,6 @@ Section Addition.
     intros.
     rewrite add_opt_correct.
     auto using add_rep.
-  Qed.
-
-  Definition carry_add_opt 
-             (is : list nat)
-             (us vs : list Z)
-             : list Z
-    := carry_sequence_opt_cps c_ is (add_opt us vs).
-
-  Lemma carry_add_opt_correct
-    : forall (is : list nat) (us vs : list Z) (x  y: F modulus),
-      rep us x -> rep vs y ->
-      (forall i : nat, In i is -> i < length base)%nat ->
-      length (add_opt us vs) = length base ->
-      rep (carry_add_opt is us vs) (x+y)%F.
-  Proof.
-    intros is us vs x y; intros.
-    change (carry_add_opt _ _ _) with (carry_sequence_opt_cps c_ is (add_opt us vs)).
-    apply carry_sequence_opt_cps_rep, add_opt_rep; auto.
   Qed.
 
 End Addition.
