@@ -433,6 +433,12 @@ Proof.
   auto.
 Qed.
 
+Lemma nth_default_cons_S : forall {A} us (u0 : A) n d,
+  nth_default d (u0 :: us) (S n) = nth_default d us n.
+Proof.
+  boring.
+Qed.
+
 Lemma set_nth_cons : forall {T} (x u0 : T) us, set_nth 0 x (u0 :: us) = x :: us.
 Proof.
   auto.
