@@ -10,3 +10,9 @@ Ltac case_max :=
           (exact (le_Sn_le _ _ (not_le _ _ H)))
       end
   end.
+
+Lemma pull_app_if_sumbool {A B X Y} (b : sumbool X Y) (f g : A -> B) (x : A)
+  : (if b then f x else g x) = (if b then f else g) x.
+Proof.
+  destruct b; reflexivity.
+Qed.

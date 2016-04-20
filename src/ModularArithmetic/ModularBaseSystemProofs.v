@@ -268,49 +268,6 @@ Section CarryProofs.
     apply limb_widths_nonneg.
     eapply nth_error_value_In; eauto.
   Qed.
-
-  (* TODO : move to ZUtil *)
-  Lemma div_pow2succ : forall n x, (0 <= x) ->
-    n / 2 ^ Z.succ x = Z.div2 (n / 2 ^ x).
-  Proof.
-    intros.
-    rewrite Z.pow_succ_r, Z.mul_comm by auto.
-    rewrite <- Z.div_div by (try apply Z.pow_nonzero; omega).
-    rewrite Zdiv2_div.
-    reflexivity.
-  Qed.
-
-  (* TODO: move to ZUtil *)
-  Lemma shiftr_succ : forall n x,
-    Z.shiftr n (Z.succ x) = Z.shiftr (Z.shiftr n x) 1.
-  Proof.
-    intros.
-    rewrite Z.shiftr_shiftr by omega.
-    reflexivity.
-  Qed.
-
-  (* TODO : move to ZUtil *)
-  Lemma shiftr_div : forall n i, (0 <= i) -> Z.shiftr n i = n / (2 ^ i).
-  Proof.
-    intro.
-    apply natlike_ind; intros; [boring|].
-    rewrite div_pow2succ by auto.
-    rewrite shiftr_succ.
-    unfold Z.shiftr.
-    simpl; f_equal.
-    auto.
-  Qed.
-
-  (* TODO : move to ListUtil *)
-  Lemma nth_error_Some_nth_default : forall {T} i x (l : list T), (i < length l)%nat ->
-    nth_error l i = Some (nth_default x l i).
-  Proof.
-    intros ? ? ? ? i_lt_length.
-    destruct (nth_error_length_exists_value _ _ i_lt_length) as [k nth_err_k].
-    unfold nth_default.
-    rewrite nth_err_k.
-    reflexivity.
-  Qed.
     
   Lemma nth_default_base_succ : forall i, (S i < length base)%nat ->
     nth_default 0 base (S i) = 2 ^ log_cap i * nth_default 0 base i.
@@ -338,7 +295,7 @@ Section CarryProofs.
     rewrite set_nth_sum by omega.
     unfold pow2_mod.
     rewrite Z.land_ones by apply log_cap_nonneg.
-    rewrite shiftr_div by apply log_cap_nonneg.
+    rewrite Z.shiftr_div_pow2 by apply log_cap_nonneg.
     rewrite nth_default_base_succ by omega.
     rewrite Z.mul_assoc.
     rewrite (Z.mul_comm _ (2 ^ log_cap i)).

@@ -1,6 +1,7 @@
 Require Import Coq.ZArith.Zpower Coq.ZArith.Znumtheory Coq.ZArith.ZArith Coq.ZArith.Zdiv.
 Require Import Coq.omega.Omega Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
 Require Import Crypto.Util.NatUtil.
+Require Import Coq.Lists.List.
 Local Open Scope Z.
 
 Lemma gt_lt_symmetry: forall n m, n > m <-> m < n.
@@ -190,8 +191,6 @@ Proof.
   auto using Z.mod_pow2_bits_low.
 Qed.
 
-SearchAbout Z.testbit.
-
 Lemma Z_mod_div_eq0 : forall a b, 0 < b -> (a mod b) / b = 0.
 Proof.
   intros.
@@ -227,13 +226,11 @@ Proof.
     (rewrite (le_plus_minus m n) at 2; try assumption;
      rewrite Nat2Z.inj_add, Z.pow_add_r by apply Nat2Z.is_nonneg; ring).
   rewrite Z.mod_add by (pose proof (Z.pow_pos_nonneg 2 (Z.of_nat m)); omega).
-  SearchAbout ((_ mod _) mod _).
   symmetry. apply Znumtheory.Zmod_div_mod; try (apply Z.pow_pos_nonneg; omega).
   rewrite (le_plus_minus m n) by assumption.
   rewrite Nat2Z.inj_add, Z.pow_add_r by apply Nat2Z.is_nonneg.
   apply Z.divide_factor_l.
 Qed.
-
 
 Lemma Z_pow_gt0 : forall a, 0 < a -> forall b, 0 <= b -> 0 < a ^ b.
 Proof.
@@ -242,6 +239,45 @@ Proof.
   intros.
   rewrite Z.pow_succ_r by assumption.
   apply Z.mul_pos_pos; assumption.
+Qed.
+
+Lemma div_pow2succ : forall n x, (0 <= x) ->
+  n / 2 ^ Z.succ x = Z.div2 (n / 2 ^ x).
+Proof.
+  intros.
+  rewrite Z.pow_succ_r, Z.mul_comm by auto.
+  rewrite <- Z.div_div by (try apply Z.pow_nonzero; omega).
+  rewrite Zdiv2_div.
+  reflexivity.
+Qed.
+
+Lemma shiftr_succ : forall n x,
+  Z.shiftr n (Z.succ x) = Z.shiftr (Z.shiftr n x) 1.
+Proof.
+  intros.
+  rewrite Z.shiftr_shiftr by omega.
+  reflexivity.
+Qed.
+
+
+Definition Z_shiftl_by n a := Z.shiftl a n.
+
+Lemma Z_shiftl_by_mul_pow2 : forall n a, 0 <= n -> Z.mul (2 ^ n) a = Z_shiftl_by n a.
+Proof.
+  intros.
+  unfold Z_shiftl_by.
+  rewrite Z.shiftl_mul_pow2 by assumption.
+  apply Z.mul_comm.
+Qed.
+
+Lemma map_shiftl : forall n l, 0 <= n -> map (Z.mul (2 ^ n)) l = map (Z_shiftl_by n) l.
+Proof.
+  intros; induction l; auto using Z_shiftl_by_mul_pow2.
+  simpl.
+  rewrite IHl.
+  f_equal.
+  apply Z_shiftl_by_mul_pow2.
+  assumption.
 Qed.
 
 (* prove that known nonnegative numbers are nonnegative *)
