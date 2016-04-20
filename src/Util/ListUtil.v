@@ -556,3 +556,11 @@ Proof.
   revert n; induction l; simpl; intro n; destruct n; [ try reflexivity.. ].
   nth_tac.
 Qed.
+
+Lemma fold_right_and_True_forall_In_iff : forall {T} (l : list T) (P : T -> Prop),
+  (forall x, In x l -> P x) <-> fold_right and True (map P l).
+Proof.
+  induction l; intros; simpl; try tauto.
+  rewrite <- IHl.
+  intuition (subst; auto).
+Qed. 
