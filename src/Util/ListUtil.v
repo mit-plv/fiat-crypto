@@ -439,6 +439,16 @@ Proof.
   boring.
 Qed.
 
+Lemma nth_error_Some_nth_default : forall {T} i x (l : list T), (i < length l)%nat ->
+  nth_error l i = Some (nth_default x l i).
+Proof.
+  intros ? ? ? ? i_lt_length.
+  destruct (nth_error_length_exists_value _ _ i_lt_length) as [k nth_err_k].
+  unfold nth_default.
+  rewrite nth_err_k.
+  reflexivity.
+Qed.
+
 Lemma set_nth_cons : forall {T} (x u0 : T) us, set_nth 0 x (u0 :: us) = x :: us.
 Proof.
   auto.
@@ -538,4 +548,11 @@ Qed.
 Lemma cons_eq_tail : forall {T} (x y:T) xs ys, x::xs = y::ys -> xs=ys.
 Proof.
   intros; solve_by_inversion.
+Qed.
+
+Lemma map_nth_default_always {A B} (f : A -> B) (n : nat) (x : A) (l : list A)
+  : nth_default (f x) (map f l) n = f (nth_default x l n).
+Proof.
+  revert n; induction l; simpl; intro n; destruct n; [ try reflexivity.. ].
+  nth_tac.
 Qed.
