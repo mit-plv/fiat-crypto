@@ -483,3 +483,74 @@ Extraction "/tmp/test.ml" GF25519Base25Point5_mul_reduce_formula.
  * The easiest fix will be to make the proof script above fully automated,
  * using [abstract] to contain the proof part. *)
 
+Definition add_opt_sig (us vs : T) : { b : digits | b = add us vs }.
+Proof.
+  eexists.
+  cbv [BaseSystem.add].
+  reflexivity.
+Defined.
+
+Definition add_opt (us vs : T) : digits
+  := Eval cbv [proj1_sig add_opt_sig] in proj1_sig (add_opt_sig us vs).
+
+Definition add_opt_correct us vs
+  : add_opt us vs = add us vs
+  := proj2_sig (add_opt_sig us vs).
+
+Lemma add_opt_rep:
+  forall (u v : T) (x y : F modulus), rep u x -> rep v y -> rep (add_opt u v) (x + y)%F.
+Proof.
+  intros.
+  rewrite add_opt_correct.
+  auto using add_rep.
+Qed.
+
+Definition carry_add_opt 
+           (is : list nat)
+           (us vs : list Z)
+           : list Z
+  := carry_sequence_opt_cps is (add_opt us vs).
+
+Lemma carry_add_opt_correct
+  : forall (is : list nat) (us vs : list Z) (x  y: F modulus),
+    rep us x -> rep vs y ->
+    (forall i : nat, In i is -> i < length base)%nat ->
+    length (add_opt us vs) = length base ->
+    rep (carry_add_opt is us vs) (x+y)%F.
+Proof.
+  intros is us vs x y; intros.
+  change (carry_add_opt _ _ _) with (carry_sequence_opt_cps is (add_opt us vs)).
+  apply carry_sequence_opt_cps_rep, add_opt_rep; auto.
+Qed.
+
+Lemma GF25519Base25Point5_add_reduce_formula :
+  forall f0 f1 f2 f3 f4 f5 f6 f7 f8 f9
+    g0 g1 g2 g3 g4 g5 g6 g7 g8 g9,
+    {ls | forall f g, rep [f0;f1;f2;f3;f4;f5;f6;f7;f8;f9] f
+                   -> rep [g0;g1;g2;g3;g4;g5;g6;g7;g8;g9] g
+                   -> rep ls (f + g)%F}.
+Proof.
+  eexists.
+  intros f g Hf Hg.
+  pose proof (carry_add_opt_correct [0;9;8;7;6;5;4;3;2;1;0]_ _ _ _ Hf Hg) as Hfg.
+  forward Hfg; [abstract (clear; cbv; intros; repeat break_or_hyp; intuition)|].
+  specialize (Hfg H); clear H.
+  forward Hfg; [exact eq_refl|].
+  specialize (Hfg H); clear H.
+
+  set (p := params25519) in Hfg at 1.
+  change (params25519) with p at 1.
+  set (fg := (f + g)%F) in Hfg |- * .
+
+  cbv [
+     carry_sequence_opt_cps carry_opt_cps fold_right
+     carry_add_opt add_opt
+     nth_default_opt set_nth_opt nth_error set_nth
+     limb_widths params25519 base_from_limb_widths_opt
+     List.app List.rev pred length
+     beq_nat
+   ] in Hfg.
+  change (Z.shiftl 1 26 + -1)%Z with 67108863%Z in Hfg.
+  change (Z.shiftl 1 25 + -1)%Z with 33554431%Z in Hfg.
+  exact Hfg.
+Defined.
