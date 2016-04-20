@@ -12,6 +12,7 @@ src/ModularArithmetic/FField.v
 src/ModularArithmetic/FNsatz.v
 src/ModularArithmetic/ModularArithmeticTheorems.v
 src/ModularArithmetic/ModularBaseSystem.v
+src/ModularArithmetic/ModularBaseSystemOpt.v
 src/ModularArithmetic/ModularBaseSystemProofs.v
 src/ModularArithmetic/Pre.v
 src/ModularArithmetic/PrimeFieldTheorems.v
