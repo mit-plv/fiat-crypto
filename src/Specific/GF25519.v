@@ -253,48 +253,6 @@ Proof.
   nth_tac.
 Qed.
 
-(*
-Definition log_cap_opt_sig
-           (i : nat)
-  : { z : Z | i < length (Base25Point5_10limbs.log_base) -> (2^z)%Z = cap i }.
-Proof.
-  eexists.
-  cbv [cap base].
-  intros.
-  rewrite map_length in *.
-  erewrite map_nth_default; [|assumption].
-  instantiate (2 := 0%Z).
-  (** For the division of maps of (2 ^ _) over lists, replace it with 2 ^ (_ - _) *)
-  
-  lazymatch goal with
-  | [ |- _ = (if eq_nat_dec ?a ?b then (2^?x/2^?y)%Z else (nth_default 0 (map (fun x => (2^x)%Z) ?ls) ?si / 2^?d)%Z)  ]
-    => transitivity (2^if eq_nat_dec a b then (x-y)%Z else nth_default 0 ls si - d)%Z;
-        [ apply f_equal | break_if ]
-  end.
-  
-  Focus 2.
-  apply Z.pow_sub_r; [clear;firstorder|apply base_range].
-  Focus 2.
-  erewrite map_nth_default by (omega); instantiate (1 := 0%Z).
-  rewrite <- Z.pow_sub_r; [ reflexivity | .. ].
-    { clear; abstract firstorder. }
-    { apply base_monotonic. omega. }
-  Unfocus.
-  rewrite <-beq_nat_eq_nat_dec.
-  change Z.sub with Z_sub_opt.
-  change @nth_default with @nth_default_opt.
-  change @map with @map_opt.
-  reflexivity.
-Defined.
-
-Definition log_cap_opt (i : nat)
-  := Eval cbv [proj1_sig log_cap_opt_sig] in proj1_sig (log_cap_opt_sig i).
-
-Definition log_cap_opt_correct (i : nat)
-  : i < length Base25Point5_10limbs.log_base -> (2^log_cap_opt i = cap i)%Z
-  := proj2_sig (log_cap_opt_sig i).
-*)
-
 Definition carry_opt_sig
            (i : nat) (b : digits)
   : { d : digits | (i < length limb_widths)%nat -> d = carry i b }.
@@ -328,8 +286,6 @@ Defined.
 
 Definition carry_opt i b
   := Eval cbv beta iota delta [proj1_sig carry_opt_sig] in proj1_sig (carry_opt_sig i b).
-
-
 
 Definition carry_opt_correct i b : (i < length base)%nat -> carry_opt i b = carry i b := proj2_sig (carry_opt_sig i b).
 
@@ -457,42 +413,42 @@ Qed.
 
 
 Local Open Scope nat_scope.
-  Lemma GF25519Base25Point5_mul_reduce_formula :
-    forall f0 f1 f2 f3 f4 f5 f6 f7 f8 f9
-      g0 g1 g2 g3 g4 g5 g6 g7 g8 g9,
-      {ls | forall f g, rep [f0;f1;f2;f3;f4;f5;f6;f7;f8;f9] f
-                        -> rep [g0;g1;g2;g3;g4;g5;g6;g7;g8;g9] g
-                        -> rep ls (f*g)%F}.
-  Proof.
-    eexists.
-    intros f g Hf Hg.
+Lemma GF25519Base25Point5_mul_reduce_formula :
+  forall f0 f1 f2 f3 f4 f5 f6 f7 f8 f9
+    g0 g1 g2 g3 g4 g5 g6 g7 g8 g9,
+    {ls | forall f g, rep [f0;f1;f2;f3;f4;f5;f6;f7;f8;f9] f
+                      -> rep [g0;g1;g2;g3;g4;g5;g6;g7;g8;g9] g
+                      -> rep ls (f*g)%F}.
+Proof.
+  eexists.
+  intros f g Hf Hg.
 
-    pose proof (carry_mul_opt_correct [0;9;8;7;6;5;4;3;2;1;0]_ _ _ _ Hf Hg) as Hfg.
-    forward Hfg; [abstract (clear; cbv; intros; repeat break_or_hyp; intuition)|].
-    specialize (Hfg H); clear H.
-    forward Hfg; [exact eq_refl|].
-    specialize (Hfg H); clear H.
+  pose proof (carry_mul_opt_correct [0;9;8;7;6;5;4;3;2;1;0]_ _ _ _ Hf Hg) as Hfg.
+  forward Hfg; [abstract (clear; cbv; intros; repeat break_or_hyp; intuition)|].
+  specialize (Hfg H); clear H.
+  forward Hfg; [exact eq_refl|].
+  specialize (Hfg H); clear H.
 
   set (p := params25519) in Hfg at 1.
   change (params25519) with p at 1.
   set (fg := (f * g)%F) in Hfg |- * .
 
-Opaque Z.shiftl
-Pos.iter
-Z.div2
-Pos.div2
-Pos.div2_up
-Pos.succ
-Z.land
-Z.of_N
-Pos.land
-N.ldiff
-Pos.pred_N
-Pos.pred_double
-Z.opp Z.mul Pos.mul Let_In digits Z.add Pos.add Z.pos_sub.
+  Opaque Z.shiftl
+  Pos.iter
+  Z.div2
+  Pos.div2
+  Pos.div2_up
+  Pos.succ
+  Z.land
+  Z.of_N
+  Pos.land
+  N.ldiff
+  Pos.pred_N
+  Pos.pred_double
+  Z.opp Z.mul Pos.mul Let_In digits Z.add Pos.add Z.pos_sub.
 
-Time let T := match type of Hfg with @rep _ _ ?T _ => T end in
-let T' := (eval cbv [
+  Time let T := match type of Hfg with @rep _ _ ?T _ => T end in
+  let T' := (eval cbv [
      carry_mul_opt
      mul_opt mul'_opt firstn skipn map_opt
      limb_widths base_from_limb_widths_opt 
@@ -511,18 +467,19 @@ let T' := (eval cbv [
      nth_default_opt set_nth_opt pred beq_nat id c_opt
      Z.shiftr
    ] in T) in
-replace T with T' in Hfg.  
-Time 2:abstract ( clear;
-  compute; reflexivity).
+  replace T with T' in Hfg.  
+  Time 2:abstract ( clear;
+    compute; reflexivity).
   change (Z.shiftl 1 26 + -1)%Z with 67108863%Z in Hfg.
   change (Z.shiftl 1 25 + -1)%Z with 33554431%Z in Hfg.
   repeat rewrite ?Z.mul_1_r, ?Z.add_0_l, ?Z.add_assoc, ?Z.mul_assoc in Hfg.
 
   exact Hfg.
-  Time Defined.
+Time Defined.
 
 Extraction "/tmp/test.ml" GF25519Base25Point5_mul_reduce_formula.
 (* It's easy enough to use extraction to get the proper nice-looking formula.
  * More Ltac acrobatics will be needed to get out that formula for further use in Coq.
  * The easiest fix will be to make the proof script above fully automated,
  * using [abstract] to contain the proof part. *)
+
