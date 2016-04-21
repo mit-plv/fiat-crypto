@@ -53,6 +53,21 @@ Section CompleteEdwardsCurveTheorems.
     Edefn; apply (f_equal2 div); ring.
   Qed.
 
+  Ltac unifiedAdd_nonzero := match goal with
+  | [ |- (?op 1 (d * _ * _ * _ * _ *
+    inv (1 - d * ?xA * ?xB * ?yA * ?yB) * inv (1 + d * ?xA * ?xB * ?yA * ?yB)))%F <> 0%F]
+    => let Hadd := fresh "Hadd" in
+     pose proof (@unifiedAdd'_onCurve _ _ _ _ two_lt_q nonzero_a square_a nonsquare_d (xA, yA) (xB, yB)) as Hadd;
+     simpl in Hadd;
+     match goal with
+     | [H : (1 - d * ?xC * xB * ?yC * yB)%F <> 0%F |- (?op 1 ?other)%F <> 0%F] =>
+       replace other with
+        (d * xC * ((xA * yB + yA * xB) / (1 + d * xA * xB * yA * yB)) 
+        * yC * ((yA * yB - a * xA * xB) / (1 - d * xA * xB * yA * yB)))%F by (subst; unfold div; ring);
+        auto
+    end
+  end.
+
   Lemma twistedAddAssoc : forall A B C, (A+(B+C) = (A+B)+C)%E.
   Proof.
     (* The Ltac takes ~15s, the Qed no longer takes longer than I have had patience for *)
@@ -60,23 +75,7 @@ Section CompleteEdwardsCurveTheorems.
       pose proof (@edwardsAddCompletePlus _ _ _ _ two_lt_q nonzero_a square_a nonsquare_d);
       pose proof (@edwardsAddCompleteMinus _ _ _ _ two_lt_q nonzero_a square_a nonsquare_d);
       cbv beta iota in *;
-      repeat split.
-    { field_nonzero idtac. }
-    { field_nonzero idtac. }
-    2: field_nonzero idtac.
-    2: field_nonzero idtac.
-    3: field_nonzero idtac.
-    3: field_nonzero idtac.
-    4: field_nonzero idtac.
-    4: field_nonzero idtac.
-    4:field_nonzero idtac.
-    3:field_nonzero idtac.
-    2:field_nonzero idtac.
-    1:field_nonzero idtac.
-    admit.
-    admit.
-    admit.
-    admit.
+      repeat split; field_nonzero idtac; unifiedAdd_nonzero.
   Qed.
 
   Lemma zeroIsIdentity : forall P, (P + zero = P)%E.
