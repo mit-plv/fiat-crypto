@@ -33,6 +33,14 @@ Section MultiBoundedWord.
     match goal with
     | [ H: T <= _ |- _] => idtac
     | _ =>
+      is_var T;
+      let T' := (eval cbv delta [T] in T) in multi_recurse T';
+      match goal with
+      | [ H : T' <= ?x |- _ ] =>
+        pose proof (H : T <= x)
+      end
+
+    | _ =>
       match T with
       | ?W1 ^+ ?W2 =>
         multi_recurse W1; multi_recurse W2;
@@ -54,11 +62,8 @@ Section MultiBoundedWord.
         end
 
       | NToWord n ?k => pose proof (@constant_bound_N n k)
-
       | natToWord n ?k <= _ => pose proof (@constant_bound_nat n k)
-
       | ($ ?k) => pose proof (@constant_bound_nat n k)
-
       | _ => pose proof (@word_size_bound n T)
       end
     end.
@@ -70,10 +75,11 @@ Section MultiBoundedWord.
   Ltac multi_bound :=
     match goal with
     | [|- let A := ?B in _] =>
-      multi_recurse B; intro; unfold A; multi_bound
+      multi_recurse B; intro; multi_bound
     | [|- (let A := _ in _) <= _] =>
       apply unwrap_let; multi_bound
-    | [|- ?W <= _ ] => multi_recurse W
+    | [|- ?W <= _ ] =>
+      multi_recurse W
     end.
 
   (* Examples *)
