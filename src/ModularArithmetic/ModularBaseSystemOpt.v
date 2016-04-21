@@ -20,6 +20,8 @@ Definition Z_sub_opt := Eval compute in Z.sub.
 Definition Z_mul_opt := Eval compute in Z.mul.
 Definition Z_div_opt := Eval compute in Z.div.
 Definition Z_pow_opt := Eval compute in Z.pow.
+Definition Z_opp_opt := Eval compute in Z.opp.
+Definition Z_shiftl_opt := Eval compute in Z.shiftl.
 Definition Z_shiftl_by_opt := Eval compute in Z_shiftl_by.
 
 Definition nth_default_opt {A} := Eval compute in @nth_default A.
@@ -27,6 +29,10 @@ Definition set_nth_opt {A} := Eval compute in @set_nth A.
 Definition map_opt {A B} := Eval compute in @map A B.
 Definition base_from_limb_widths_opt := Eval compute in base_from_limb_widths.
 
+Definition Let_In {A P} (x : A) (f : forall y : A, P y)
+  := let y := x in f y.
+
+(* Some automation that comes in handy when constructing base parameters *)
 Ltac opt_step :=
   match goal with
   | [ |- _ = match ?e with nil => _ | _ => _ end :> ?T ]
@@ -44,8 +50,47 @@ Ltac brute_force_indices limb_widths := intros; unfold sum_firstn, limb_widths; 
   | _ => omega
   end.
 
-Definition Let_In {A P} (x : A) (f : forall y : A, P y)
-  := let y := x in f y.
+
+Definition limb_widths_from_len len k := Eval compute in
+  (fix loop i prev :=
+    match i with
+    | O => nil
+    | S i' => let x := (if (Z.eq_dec ((k * Z.of_nat (len - i + 1)) mod (Z.of_nat len)) 0)
+                        then (k * Z.of_nat (len - i + 1)) / Z.of_nat len
+                        else (k * Z.of_nat (len - i + 1)) / Z.of_nat len + 1)in
+      x - prev:: (loop i' x)
+    end) len 0.
+
+Ltac construct_params prime_modulus len k :=
+  let lw := fresh "lw" in set (lw := limb_widths_from_len len k);
+  cbv in lw;
+  eapply Build_PseudoMersenneBaseParams with (limb_widths := lw);
+  [ abstract (apply fold_right_and_True_forall_In_iff; simpl; repeat (split; [omega |]); auto)
+  | abstract (unfold limb_widths; cbv; congruence)
+  | abstract brute_force_indices lw
+  | abstract apply prime_modulus
+  | abstract brute_force_indices lw].
+
+Ltac subst_precondition := match goal with
+  | [H : ?P, H' : ?P -> _ |- _] => specialize (H' H); clear H
+end.
+
+Ltac kill_precondition H := 
+  forward H; [abstract (try exact eq_refl; clear; cbv; intros; repeat break_or_hyp; intuition)|];
+  subst_precondition.
+
+Ltac compute_formula :=
+  match goal with
+  | [H : _ -> _ -> rep _ ?result |- rep _ ?result] => kill_precondition H; compute_formula
+  | [H : _ -> rep _ ?result |- rep _ ?result] => kill_precondition H; compute_formula
+  | [H : @rep ?M ?P _ ?result |- @rep ?M ?P _ ?result] =>
+    let m := fresh "m" in set (m := M) in H at 1; change M with m at 1;
+    let p := fresh "p" in set (p := P) in H at 1; change P with p at 1;
+    let r := fresh "r" in set (r := result) in H |- *;
+    cbv -[m p r rep] in H;
+    repeat rewrite ?Z.mul_1_r, ?Z.add_0_l, ?Z.add_assoc, ?Z.mul_assoc in H;
+    exact H
+  end.
 
 Section Carries.
   Context `{prm : PseudoMersenneBaseParams}
@@ -69,9 +114,8 @@ Section Carries.
     | [ |- _ = (if ?br then ?c else ?d) ]
       => let x := fresh "x" in let y := fresh "y" in evar (x:digits); evar (y:digits); transitivity (if br then x else y); subst x; subst y
     end.
-    Focus 2.
-    cbv zeta.
-    break_if; reflexivity.
+    2:cbv zeta.
+    2:break_if; reflexivity.
 
     change @nth_default with @nth_default_opt.
     rewrite c_subst.
@@ -126,6 +170,9 @@ Section Carries.
     let RHS := match goal with |- ?LHS = ?RHS => RHS end in
     let RHSf := match (eval pattern (nth_default_opt 0%Z b i) in RHS) with ?RHSf _ => RHSf end in
     change (LHS = Let_In (nth_default_opt 0%Z b i) RHSf).
+    change Z.shiftl with Z_shiftl_opt.
+    change (-1) with (Z_opp_opt 1).
+    change Z.add with Z_add_opt at 8 12 20 24.
     reflexivity.
   Defined.
 
