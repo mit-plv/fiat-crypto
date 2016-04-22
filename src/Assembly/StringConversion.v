@@ -289,10 +289,13 @@ Module StringConversion <: Conversion Qhasm QhasmString.
       | nil => nil
       end.
 
-    Definition flatMap {A B} (lst: list A) (f: A -> option B): list B :=
+    Definition flatMapOpt {A B} (lst: list A) (f: A -> option B): list B :=
       fold_left
         (fun lst a => match (f a) with | Some x => cons x lst | _ => lst end)
         lst [].
+
+    Definition flatMapList {A B} (lst: list A) (f: A -> list B): list B :=
+      fold_left (fun lst a => lst ++ (f a)) lst [].
 
     Fixpoint dedup (l : list Entry) : list Entry :=
       match l with
@@ -304,25 +307,145 @@ Module StringConversion <: Conversion Qhasm QhasmString.
       end.
 
     Definition everyIReg32 (lst: list Entry): list (IReg 32) :=
-      flatMap (dedup lst) (fun e =>
+      flatMapOpt (dedup lst) (fun e =>
         match e with | intEntry 32 r => Some r | _ => None end).
 
     Definition everyFReg32 (lst: list Entry): list (FReg 32) :=
-      flatMap (dedup lst) (fun e =>
+      flatMapOpt (dedup lst) (fun e =>
         match e with | floatEntry 32 r => Some r | _ => None end).
 
     Definition everyFReg64 (lst: list Entry): list (FReg 64) :=
-      flatMap (dedup lst) (fun e =>
+      flatMapOpt (dedup lst) (fun e =>
         match e with | floatEntry 64 r => Some r | _ => None end).
 
     Definition everyStack (n: nat) (lst: list Entry): list (Stack n).
-      refine (flatMap (dedup lst) (fun e =>
+      refine (flatMapOpt (dedup lst) (fun e =>
         match e with
         | stackEntry n' r =>
           if (Nat.eq_dec n n') then Some (convert r _) else None
         | _ => None
         end)); subst; abstract intuition.
     Defined.
+
+    Fixpoint getUsedBeforeInit' (prog: list QhasmStatement) (init: list Entry): list Entry :=
+      let f := fun rs => filter (fun x => proj1_sig (bool_of_sumbool (in_dec entry_dec x init))) rs in
+      match prog with
+      | [] => []
+      | cons p ps =>
+        let requiredCommaUsed := match p with
+        | QAssign a =>
+          match a with
+          | ARegStackInt n r s =>
+            let re := intEntry n r in
+            let se := stackEntry n s in
+            ([se], [re; se])
+
+          | ARegStackFloat n r s =>
+            let re := floatEntry n r in
+            let se := stackEntry n s in
+            ([se], [re; se])
+
+          | AStackRegInt n s r =>
+            let re := intEntry n r in
+            let se := stackEntry n s in
+            ([re], [re; se])
+
+          | AStackRegFloat n s r =>
+            let re := floatEntry n r in
+            let se := stackEntry n s in
+            ([re], [re; se])
+
+          | ARegRegInt n a b =>
+            let ae := intEntry n a in
+            let be := intEntry n b in
+            ([be], [ae; be])
+
+          | ARegRegFloat n a b =>
+            let ae := floatEntry n a in
+            let be := floatEntry n b in
+            ([be], [ae; be])
+
+          | AConstInt n r c =>
+            let re := intEntry n r in
+            ([], [re])
+
+          | AConstFloat n r c =>
+            let re := floatEntry n r in
+            ([], [re])
+
+          | AIndex n m a b i =>
+            let ae := intEntry n a in
+            let be := intEntry m b in
+            ([be], [ae; be])
+
+          | APtr n r s =>
+            let re := intEntry 32 r in
+            let se := stackEntry n s in
+            ([se], [re; se])
+          end
+        | QOp o =>
+          match o with
+          | IOpConst o r c =>
+            let re := intEntry 32 r in
+            ([re], [re])
+
+          | IOpReg o a b =>
+            let ae := intEntry 32 a in
+            let be := intEntry 32 b in
+            ([ae; be], [ae; be])
+
+          | FOpConst32 o r c =>
+            let re := floatEntry 32 r in
+            ([re], [re])
+
+          | FOpReg32 o a b =>
+            let ae := floatEntry 32 a in
+            let be := floatEntry 32 b in
+            ([ae; be], [ae; be])
+
+          | FOpConst64 o r c =>
+            let re := floatEntry 64 r in
+            ([re], [re])
+
+          | FOpReg64 o a b =>
+            let ae := floatEntry 64 a in
+            let be := floatEntry 64 b in
+            ([ae; be], [ae; be])
+
+          | OpRot o r i =>
+            let re := intEntry 32 r in
+            ([re], [re])
+          end
+        | QJmp c _ =>
+          match c with
+          | TestInt n o a b =>
+            let ae := intEntry n a in
+            let be := intEntry n b in
+            ([ae; be], [])
+
+          | TestFloat n o a b =>
+            let ae := floatEntry n a in
+            let be := floatEntry n b in
+            ([ae; be], [])
+
+          | _ => ([], [])
+          end
+        | QLabel _ => ([], [])
+        end in
+        match requiredCommaUsed with
+        | (r, u) =>
+          ((f r) ++ (getUsedBeforeInit' ps ((f u) ++ init)))
+        end
+      end.
+
+    Definition getUsedBeforeInit (prog: list QhasmStatement) := getUsedBeforeInit' prog [].
+
+    Definition entryToString (e: Entry) :=
+      match e with
+      | intEntry n i => intRegToString i
+      | floatEntry n f => floatRegToString f
+      | stackEntry n s => stackToString s
+      end.
   End Parsing.
 
   (* Macroscopic Conversion Methods *)
@@ -332,7 +455,7 @@ Module StringConversion <: Conversion Qhasm QhasmString.
     | None => []
     end.
 
-  Definition convertStatement (statement: Qhasm.QhasmStatement): list string :=
+  Definition convertStatement (statement: QhasmStatement): list string :=
     match statement with
     | QAssign a => optionToList (assignmentToString a)
     | QOp o => optionToList (operationToString o)
@@ -345,17 +468,54 @@ Module StringConversion <: Conversion Qhasm QhasmString.
     | QLabel l => [("lbl" ++ l ++ ": ")%string]
     end.
 
-  Definition convertProgramPrologue (prog: Qhasm.Program): list string :=
-    [EmptyString].
+  Definition convertProgram (prog: Qhasm.Program): string :=
+    let es := (entries prog) in
 
-  Definition convertProgramEpilogue (prog: Qhasm.Program): list string :=
-    [EmptyString].
+    let ireg32s :=
+        (map (fun x => "int32 " ++ (intRegToString x))%string
+             (everyIReg32 es)) in
+    let freg32s :=
+        (map (fun x => "float32 " ++ (floatRegToString x))%string
+             (everyFReg32 es)) in
+    let freg64s :=
+        (map (fun x => "float64 " ++ (floatRegToString x))%string
+             (everyFReg64 es)) in
 
-  Definition convertProgram (prog: Qhasm.Program): option string :=
-    None.
+    let stack32s :=
+        (map (fun x => "stack32 " ++ (stackToString x))%string
+             (everyStack 32 es)) in
+    let stack64s := 
+        (map (fun x => "stack64 " ++ (stackToString x))%string
+             (everyStack 64 es)) in
+    let stack128s := 
+        (map (fun x => "stack128 " ++ (stackToString x))%string
+             (everyStack 128 es)) in
+
+    let inputs :=
+        (map (fun x => "input " ++ (entryToString x))%string
+             (getUsedBeforeInit prog)) in
+
+    let stmts := (flatMapList prog convertStatement) in
+
+    let enter := [("enter prog")%string] in
+    let leave := [("leave")%string] in
+
+    let blank := [EmptyString] in
+
+    fold_left (fun x y => (x ++ "\n" ++ y)%string)
+      (ireg32s ++ blank ++
+       freg32s ++ blank ++
+       freg64s ++ blank ++
+       stack32s ++ blank ++
+       stack64s ++ blank ++
+       stack128s ++ blank ++
+       inputs ++ blank ++ blank ++
+       enter ++ blank ++
+       stmts ++ blank ++ blank ++
+       leave) EmptyString.
 
   Lemma convert_spec: forall a a' b b' prog prog',
-    convertProgram prog = Some prog' ->
+    convertProgram prog = prog' ->
     convertState a = Some a' -> convertState b = Some b' ->
     QhasmString.evaluatesTo prog' a b <-> Qhasm.evaluatesTo prog a' b'.
   Admitted.
