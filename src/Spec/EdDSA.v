@@ -6,6 +6,7 @@ Require Import Crypto.Util.WordUtil.
 Require Bedrock.Word.
 Require Coq.ZArith.Znumtheory Coq.ZArith.BinInt.
 Require Coq.Numbers.Natural.Peano.NPeano.
+Require Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
 
 Coercion Word.wordToNat : Word.word >-> nat.
 
@@ -54,6 +55,8 @@ Section EdDSA.
   Notation secretkey := (Word.word b) (only parsing).
   Notation publickey := (Word.word b) (only parsing).
   Notation signature := (Word.word (b + b)) (only parsing).
+  Let point_eq_dec : forall P Q, {P = Q} + {P <> Q} := CompleteEdwardsCurveTheorems.point_eq_dec.
+  Local Infix "==" := point_eq_dec (at level 70) : E_scope .
 
   (* TODO: proofread curveKey and definition of n *)
   Definition curveKey (sk:secretkey) : nat :=

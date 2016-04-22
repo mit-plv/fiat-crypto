@@ -7,6 +7,7 @@ Require Import ModularArithmetic.PrimeFieldTheorems.
 Require Import Crypto.Spec.CompleteEdwardsCurve.
 Require Import Crypto.Spec.Encoding Crypto.Spec.PointEncoding.
 Require Import Crypto.CompleteEdwardsCurve.ExtendedCoordinates.
+Require Import Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
 Require Import Crypto.Util.IterAssocOp.
 
 Local Infix "++" := Word.combine.
@@ -56,9 +57,6 @@ Proof.
            | _ => rewrite op_proj
            end. }
 Qed.
-
-Axiom point_eqb : forall {prm : TwistedEdwardsParams}, point -> point -> bool.
-Axiom point_eqb_correct : forall P Q, point_eqb P Q = if point_eq_dec P Q then true else false.
 
 Axiom xB : F q.
 Axiom yB : F q.
