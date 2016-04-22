@@ -30,13 +30,76 @@ Section CompleteEdwardsCurveTheorems.
     generalize dependent q; intro q; intros;
     clear prm.
 
+  Lemma point_eq' : forall xy1 xy2 pf1 pf2,
+    xy1 = xy2 -> exist onCurve xy1 pf1 = exist onCurve xy2 pf2.
+  Proof.
+    destruct xy1, xy2; intros; find_injection; intros; subst. apply f_equal.
+    apply UIP_dec, F_eq_dec. (* this is a hack. We actually don't care about the equality of the proofs. However, we *can* prove it, and knowing it lets us use the universal equality instead of a type-specific equivalence, which makes many things nicer. *)
+  Qed.
+
   Lemma point_eq : forall p1 p2, p1 = p2 -> forall pf1 pf2,
     mkPoint p1 pf1 = mkPoint p2 pf2.
   Proof.
-    destruct p1, p2; intros; find_injection; intros; subst; apply f_equal.
-    apply UIP_dec, F_eq_dec. (* this is a hack. We actually don't care about the equality of the proofs. However, we *can* prove it, and knowing it lets us use the universal equality instead of a type-specific equivalence, which makes many things nicer. *)
+    eauto using point_eq'.
   Qed.
-  Hint Resolve point_eq.
+  Hint Resolve point_eq' point_eq.
+
+  Definition point_eqb (p1 p2:point) : bool := andb
+      (F_eqb (fst (proj1_sig p1)) (fst (proj1_sig p2)))
+      (F_eqb (snd (proj1_sig p1)) (snd (proj1_sig p2))).
+
+  Local Ltac t :=
+    unfold point_eqb;
+      repeat match goal with
+      | _ => progress intros
+      | _ => progress simpl in *
+      | _ => progress subst
+      | [P:point |- _ ] => destruct P
+      | [x: (F q * F q)%type |- _ ] => destruct x
+      | [H: _ /\ _ |- _ ] => destruct H
+      | [H: _ |- _ ] => rewrite Bool.andb_true_iff in H
+      | [H: _ |- _ ] => apply F_eqb_eq in H
+      | _ => rewrite F_eqb_refl
+      end; eauto.
+
+  Lemma point_eqb_sound : forall p1 p2, point_eqb p1 p2 = true -> p1 = p2.
+  Proof.
+    t.
+  Qed.
+
+  Lemma point_eqb_complete : forall p1 p2, p1 = p2 -> point_eqb p1 p2 = true.
+  Proof.
+    t.
+  Qed.
+
+  Lemma point_eqb_neq : forall p1 p2, point_eqb p1 p2 = false -> p1 <> p2.
+  Proof.
+    intros. destruct (point_eqb p1 p2) eqn:Hneq; intuition.
+    apply point_eqb_complete in H0; congruence.
+  Qed.
+
+  Lemma point_eqb_neq_complete : forall p1 p2, p1 <> p2 -> point_eqb p1 p2 = false.
+  Proof.
+    intros. destruct (point_eqb p1 p2) eqn:Hneq; intuition.
+    apply point_eqb_sound in Hneq. congruence.
+  Qed.
+
+  Lemma point_eqb_refl : forall p, point_eqb p p = true.
+  Proof.
+    t.
+  Qed.
+
+  Definition point_eq_dec (p1 p2:point) : {p1 = p2} + {p1 <> p2}.
+    destruct (point_eqb p1 p2) eqn:H; match goal with
+                                      | [ H: _ |- _ ] => apply point_eqb_sound in H
+                                      | [ H: _ |- _ ] => apply point_eqb_neq in H
+                                      end; eauto.
+  Qed.
+
+  Lemma point_eqb_correct : forall p1 p2, point_eqb p1 p2 = if point_eq_dec p1 p2 then true else false.
+  Proof.
+    intros. destruct (point_eq_dec p1 p2); eauto using point_eqb_complete, point_eqb_neq_complete.
+  Qed.
 
   Ltac Edefn := unfold unifiedAdd, unifiedAdd', zero; intros;
                   repeat match goal with
