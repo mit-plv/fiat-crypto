@@ -1,10 +1,9 @@
-Require Import QhasmEvalCommon.
+Require Import QhasmEvalCommon QhasmUtil.
 Require Import Language.
 Require Import List.
 
 Module Pseudo <: Language.
-  Import ListNotations.
-  Import State.
+  Import ListNotations State Util.
 
   (* Program Types *)
   Definition State := list (word 32).
@@ -19,92 +18,71 @@ Module Pseudo <: Language.
   Inductive WShiftOp: Set :=
     | Wshl: WShiftOp   | Wshr: WShiftOp.
 
-  Inductive Pseudo: nat -> Set :=
-    | PUnit: forall n, Pseudo n
+  (* WAST: function from all variables to a single (word 32) *)
+  (* Pseudo: function from inputs to outputs to a single (word 32) *)
+  Inductive Pseudo: nat -> nat -> Set :=
+    | PVar: forall n, Index n -> Pseudo n 1
+    | PConst: forall n, word 32 -> Pseudo n 1
 
-    | PVar: forall n, nat -> Pseudo n
-    | PLet: forall n m, nat -> Pseudo n -> Pseudo m -> Pseudo m
+    | PBin: forall n m, WBinOp -> Pseudo n m -> Pseudo n m -> Pseudo n m
+    | PNat: forall n, nat -> Pseudo n 1
+    | PShift: forall n, WShiftOp -> Pseudo n 1 -> nat -> Pseudo n 1
 
-    | PCombine: forall n m, Pseudo n -> Pseudo m -> Pseudo (n + m)
-    | PLeft: forall n m, Pseudo (n + m) -> Pseudo n
-    | PRight: forall n m, Pseudo (n + m) -> Pseudo m
+    | PLet: forall n k m, Pseudo n k -> Pseudo (n + k) m -> Pseudo n m
+    | PComp: forall n k m, Pseudo n k -> Pseudo k m -> Pseudo n m
+    | PComb: forall n a b, Pseudo n a -> Pseudo n b -> Pseudo n (a + b)
 
-    | PBinOp: WBinOp -> Pseudo 1 -> Pseudo 1 -> Pseudo 1
-    | PNatOp: WNatOp -> nat -> Pseudo 1
-    | PShiftOp: WShiftOp -> Pseudo 1 -> nat -> Pseudo 1
-
-    | PIf: forall n, TestOp -> Pseudo 1 -> Pseudo 1 ->
-           Pseudo n -> Pseudo n -> Pseudo n
-
-    | PFunExp: forall n, nat -> Pseudo n -> Pseudo n -> nat -> Pseudo n.
+    | PIf: forall n m, TestOp -> Index n -> Index n -> Pseudo n m -> Pseudo n m -> Pseudo n m
+    | PFunExp: forall n k, nat -> Pseudo n k -> Pseudo (n + k) n -> nat -> Pseudo n n.
 
   Hint Constructors Pseudo.
 
   Definition Program := Pseudo.
 
-  Coercion unsum {A B} (x: sumbool A B): bool := proj1_sig (bool_of_sumbool x).
+  Definition applyBin (op: WBinOp) (a b: list (word 32)): option (list (word 32))
+    match op with
+    | Wplus => None
+    | Wmult => None
+    | Wminus => None
+    | Wand => None
+    end.
 
-  Fixpoint substitute {n m} (var: nat) (value: Pseudo n) (prog: Pseudo m): Pseudo m.
-    refine (match prog as prog' in Pseudo m return prog = prog' -> _ with
-      | PVar n' v => fun _ =>
-      if (andb (Nat.eq_dec n n') (Nat.eq_dec v var))
-      then (convert value _)
-      else prog
-    | _ => fun _ => prog
-    end (eq_refl prog)).
+  Inductive applyNat (op: WNatOp) (n v: nat): option (list (word 32)) :=
+    match op with
+    | Wones => None
+    | Wzeros => None
+    end.
 
-    | PLet n' m' v x p => fun _ =>
-      let x' := substitute _ _ var value x in
-      let p' := substitute _ _ var value p in
+  Inductive applyShift (op: WShiftOp) (v: word 32): option (list (word 32)) :=
+    match op with
+    | Wshl => None
+    | Wshr => None
+    end.
 
-      if (andb (Nat.eq_dec n n') (Nat.eq_dec v var))
-      then prog
-      else (convert (PLet n' m' v x' p') _)
+  Inductive PseudoEval: forall n m, Pseudo n m -> State -> State -> Prop :=
+    | PEVar: forall s n (i: Index n) w,
+        nth_error s i = Some w
+      -> PseudoEval n 1 (PVar n i) s [w]
 
-    | PCombine n' m' p0 p1 => fun _ =>
-      let p0' := substitute _ _ var value p0 in
-      let p1' := substitute _ _ var value p1 in
-      (convert (PCombine n' m' p0' p1') _)
+    | PEConst: forall n s w,
+        PseudoEval n 1 (PConst n w) s [w]
 
-    | PLeft n' m' p => fun _ =>
-      let p' := substitute _ _ var value p in
-      (convert (PLeft n' m' p') _)
+    | PEBin: forall n m, WBinOp -> Pseudo n m -> Pseudo n m -> Pseudo n m
+        PseudoEval n m a s sa
+      -> PseudoEval n m b s sb
+      -> PseudoEval n m (PEBin n m op a b) s (applyBin op sa sb)
+.
+    | PENat: forall n, nat -> Pseudo n 1
+    | PEShift: forall n, WShiftOp -> Pseudo n 1 -> nat -> Pseudo n 1
 
-    | PRight n' m' p => fun _ =>
-      let p' := substitute _ _ var value p in
-      (convert (PRight n' m' p') _)
+    | PELet: forall n m, Pseudo n k -> Pseudo (n + k) m -> Pseudo n m
+    | PEComp: forall n k m, Pseudo n k -> Pseudo k m -> Pseudo n m
+    | PEComb: forall n a b, Pseudo n a -> Pseudo n b -> Pseudo n (a + b)
 
-    | PUnit n' => fun _ => prog
+    | PEIf: forall n m, TestOp -> Index n -> Index n -> Pseudo n m -> Pseudo n m -> Pseudo n m
+    | PEFunExp: forall n k, nat -> Pseudo n k -> Pseudo (n + k) n -> nat -> Pseudo n n
+  .
 
-    | PBinOp o a b => fun _ =>
-      let a' := substitute _ _ var value a in
-      let b' := substitute _ _ var value b in
-      (convert (PBinOp o a' b') _)
-
-    | PNatOp o x => fun _ => prog
-
-    | PShiftOp o x s => fun _ =>
-      let x' := substitute _ _ var value x in
-      (convert (PShiftOp o x' s) _)
-
-    | PIf n' o a b pTrue pFalse => fun _ =>
-      let a' := substitute _ _ var value a in
-      let b' := substitute _ _ var value b in
-      let pTrue' := substitute _ _ var value pTrue in
-      let pFalse' := substitute _ _ var value pFalse in
-      (convert (PIf n' o a' b' pTrue' pFalse') _)
-
-    | PFunExp n' v x p e => fun _ =>
-      let x' := substitute _ _ var value x in
-      let p' := substitute _ _ var value p in
-
-      if (andb (Nat.eq_dec n n') (Nat.eq_dec v var))
-      then prog
-      else (convert (PFunExp n' v x' p' e) _)
-    end (eq_refl prog)).
-  Defined.
-
-  Inductive PseudoEval: forall n, Pseudo n -> State -> State -> Prop :=
     | PELet: forall n v x p p' s s',
          substitute v x p = Some p'
        -> PseudoEval n p' s s'
