@@ -39,7 +39,7 @@ Module Pseudo <: Language.
 
   Definition Program := Pseudo.
 
-  Definition applyBin (op: WBinOp) (a b: list (word 32)): option (list (word 32))
+  Definition applyBin (op: WBinOp) (a b: list (word 32)): option (list (word 32)) :=
     match op with
     | Wplus => None
     | Wmult => None
@@ -47,13 +47,13 @@ Module Pseudo <: Language.
     | Wand => None
     end.
 
-  Inductive applyNat (op: WNatOp) (n v: nat): option (list (word 32)) :=
+  Definition applyNat (op: WNatOp) (v: nat): option (list (word 32)) :=
     match op with
     | Wones => None
     | Wzeros => None
     end.
 
-  Inductive applyShift (op: WShiftOp) (v: word 32): option (list (word 32)) :=
+  Definition applyShift (op: WShiftOp) (v: word 32): option (list (word 32)) :=
     match op with
     | Wshl => None
     | Wshr => None
@@ -67,13 +67,19 @@ Module Pseudo <: Language.
     | PEConst: forall n s w,
         PseudoEval n 1 (PConst n w) s [w]
 
-    | PEBin: forall n m, WBinOp -> Pseudo n m -> Pseudo n m -> Pseudo n m
-        PseudoEval n m a s sa
+    | PEBin: forall n m a b s sa sb s' op,
+        applyBin op sa sb = Some s'
+      -> PseudoEval n m a s sa
       -> PseudoEval n m b s sb
-      -> PseudoEval n m (PEBin n m op a b) s (applyBin op sa sb)
-.
-    | PENat: forall n, nat -> Pseudo n 1
+      -> PseudoEval n m (PBin n m op a b) s s'
+
+    | PENat: forall n op v s s',
+        applyNat op v s'
+      -> PseudoEval n (PNat n v) s s'
+
     | PEShift: forall n, WShiftOp -> Pseudo n 1 -> nat -> Pseudo n 1
+
+.
 
     | PELet: forall n m, Pseudo n k -> Pseudo (n + k) m -> Pseudo n m
     | PEComp: forall n k m, Pseudo n k -> Pseudo k m -> Pseudo n m
