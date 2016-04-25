@@ -249,6 +249,16 @@ Section VariousModPrime.
     intros; field. (* TODO: Warning: Collision between bound variables ... *)
   Qed.
 
+  Lemma F_inv_0 : inv 0 = (0 : F q).
+  Proof.
+    destruct (@F_inv_spec q); auto.
+  Qed.
+
+  Lemma F_div_opp_1 : forall x y : F q, (opp x / y = opp (x / y))%F.
+  Proof.
+    intros; destruct (F_eq_dec y 0); [subst;unfold div;rewrite !F_inv_0|]; field.
+  Qed.
+
   Lemma F_eq_opp_zero : forall x : F q, 2 < q -> (x = opp x <-> x = 0).
   Proof.
     split; intro A.
