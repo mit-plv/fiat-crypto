@@ -513,6 +513,11 @@ Section VariousModulo.
     ring.
   Qed.
   
+  Lemma F_opp_0 : opp (0 : F m) = 0%F.
+  Proof.
+    intros; ring.
+  Qed.
+
   Lemma F_opp_swap : forall x y : F m, opp x = y <-> x = opp y.
   Proof.
     split; intro; subst; ring.
@@ -520,6 +525,23 @@ Section VariousModulo.
 
   Lemma F_opp_involutive : forall x : F m, opp (opp x) = x.
   Proof.
+    intros; ring.
+  Qed.
+
+  Lemma F_square_opp : forall x : F m, (opp x ^ 2 = x ^ 2)%F.
+  Proof.
+    intros; ring.
+  Qed.
+
+  Lemma F_mul_opp_r : forall x y : F m, (x * opp y = opp (x * y))%F.
+    intros; ring.
+  Qed.
+
+  Lemma F_mul_opp_l : forall x y : F m, (opp x * y = opp (x * y))%F.
+    intros; ring.
+  Qed.
+
+  Lemma F_mul_opp_both : forall x y : F m, (opp x * opp y = x * y)%F.
     intros; ring.
   Qed.
 
