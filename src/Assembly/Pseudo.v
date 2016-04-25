@@ -33,7 +33,7 @@ Module Pseudo <: Language.
     | PComb: forall n a b, Pseudo n a -> Pseudo n b -> Pseudo n (a + b)
 
     | PIf: forall n m, TestOp -> Index n -> Index n -> Pseudo n m -> Pseudo n m -> Pseudo n m
-    | PFunExp: forall n k, nat -> Pseudo n k -> Pseudo (n + k) n -> nat -> Pseudo n n.
+    | PFunExp: forall n, Pseudo n n -> nat -> Pseudo n n.
 
   Hint Constructors Pseudo.
 
@@ -53,7 +53,7 @@ Module Pseudo <: Language.
     | Wzeros => None
     end.
 
-  Definition applyShift (op: WShiftOp) (v: word 32): option (list (word 32)) :=
+  Definition applyShift (op: WShiftOp) (v: word 32) (n: nat): option (list (word 32)) :=
     match op with
     | Wshl => None
     | Wshr => None
@@ -74,68 +74,51 @@ Module Pseudo <: Language.
       -> PseudoEval n m (PBin n m op a b) s s'
 
     | PENat: forall n op v s s',
-        applyNat op v s'
-      -> PseudoEval n (PNat n v) s s'
+        applyNat op v = Some s'
+      -> PseudoEval n 1 (PNat n v) s s'
 
-    | PEShift: forall n, WShiftOp -> Pseudo n 1 -> nat -> Pseudo n 1
+    | PEShift: forall n m a s s' w op,
+        applyShift op w m = Some s'
+      -> PseudoEval n 1 a s [w]
+      -> PseudoEval n 1 (PShift n op a m) s s'
 
-.
+    | PELet: forall n m k s x s' a b,
+        PseudoEval n k a s x
+      -> PseudoEval (n + k) m b (s ++ x) s'
+      -> PseudoEval n m (PLet n k m a b) s s'
 
-    | PELet: forall n m, Pseudo n k -> Pseudo (n + k) m -> Pseudo n m
-    | PEComp: forall n k m, Pseudo n k -> Pseudo k m -> Pseudo n m
-    | PEComb: forall n a b, Pseudo n a -> Pseudo n b -> Pseudo n (a + b)
+    | PEComp: forall n k m s s' s'' a b,
+        PseudoEval n k a s s'
+      -> PseudoEval k m b s' s''
+      -> PseudoEval n m (PComp n k m a b) s s''
 
-    | PEIf: forall n m, TestOp -> Index n -> Index n -> Pseudo n m -> Pseudo n m -> Pseudo n m
-    | PEFunExp: forall n k, nat -> Pseudo n k -> Pseudo (n + k) n -> nat -> Pseudo n n
-  .
+    | PEComb: forall n a b x y s sx sy,
+        PseudoEval n a x s sx
+      -> PseudoEval n b y s sy
+      -> PseudoEval n (a + b) (PComb n a b x y) s (sx ++ sy)
 
-    | PELet: forall n v x p p' s s',
-         substitute v x p = Some p'
-       -> PseudoEval n p' s s'
-       -> PseudoEval n (PLet n v x p) s s'
+    | PEIfTrue: forall n m t x y s sx wx wy (i0 i1: Index n),
+        nth_error s i0 = Some wx
+      -> evalTest t wx wy = true
+      -> PseudoEval n m x s sx
+      -> PseudoEval n m (PIf n m t i0 i1 x y) s sx
 
-    | PECombine: forall n m, Pseudo n -> Pseudo m -> Pseudo (n + m)
-    | PELeft: forall n m, Pseudo (n + m) -> Pseudo n
-    | PERight: forall n m, Pseudo (n + m) -> Pseudo m
+    | PEIfFalse: forall n m t x y s sy wx wy (i0 i1: Index n),
+        nth_error s i1 = Some wy
+      -> evalTest t wx wy = false
+      -> PseudoEval n m y s sy
+      -> PseudoEval n m (PIf n m t i0 i1 x y) s sy
 
-    | PEUnit: forall n, Pseudo n -> Pseudo n
-    | PEBinOp: WBinOp -> Pseudo 1 -> Pseudo 1 -> Pseudo 1
-    | PENatOp: WNatOp -> nat -> Pseudo 1
-    | PEShiftOp: WShiftOp -> Pseudo 1 -> nat -> Pseudo 1
+    | PEFunExpO: forall n f s,
+        PseudoEval n n (PFunExp n f O) s s
 
-    | PEIf: forall n, TestOp -> Pseudo 1 -> Pseudo 1 ->
-           Pseudo n -> Pseudo n -> Pseudo n
+    | PEFunExpS: forall n f s s' s'' e e',
+        e = S e'
+      -> PseudoEval n n f s s'
+      -> PseudoEval n n (PFunExp n f e') s' s''
+      -> PseudoEval n n (PFunExp n f e) s s''.
 
-    | PEFunExp: forall n, nat -> Pseudo n -> Pseudo n -> nat -> Pseudo n.
-
-    | AESeq: forall p p' s s' s'',
-        AlmostEval p s s'
-      -> AlmostEval p' s' s''
-      -> AlmostEval (ASeq p p') s s''
-    | AEAssign a: forall s s',
-        evalAssignment a s = Some s'
-      -> AlmostEval (AAssign a) s s'
-    | AEOp: forall s s' a,
-        evalOperation a s = Some s'
-      -> AlmostEval (AOp a) s s'
-    | AECondFalse: forall c a b s s',
-        evalCond c s = Some false
-      -> AlmostEval b s s'
-      -> AlmostEval (ACond c a b) s s'
-    | AECondTrue: forall c a b s s',
-        evalCond c s = Some true
-      -> AlmostEval a s s'
-      -> AlmostEval (ACond c a b) s s'
-    | AEWhileRun: forall c a s s' s'',
-        evalCond c s = Some true
-      -> AlmostEval a s s'
-      -> AlmostEval (AWhile c a) s' s''
-      -> AlmostEval (AWhile c a) s s''
-    | AEWhileSkip: forall c a s,
-        evalCond c s = Some false
-      -> AlmostEval (AWhile c a) s s.
-
-  Definition evaluatesTo := AlmostEval.
+  Definition evaluatesTo := PseudoEval.
 
   (* world peace *)
 End AlmostQhasm.
