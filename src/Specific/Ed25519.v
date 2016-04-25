@@ -5,7 +5,8 @@ Require Import BinNat BinInt NArith Crypto.Spec.ModularArithmetic.
 Require Import ModularArithmetic.ModularArithmeticTheorems.
 Require Import ModularArithmetic.PrimeFieldTheorems.
 Require Import Crypto.Spec.CompleteEdwardsCurve.
-Require Import Crypto.Spec.Encoding Crypto.Spec.PointEncoding.
+Require Import Crypto.Encoding.PointEncodingPre.
+Require Import Crypto.Spec.Encoding Crypto.Spec.ModularWordEncoding Crypto.Spec.PointEncoding.
 Require Import Crypto.CompleteEdwardsCurve.ExtendedCoordinates.
 Require Import Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
 Require Import Crypto.Util.IterAssocOp.
@@ -465,8 +466,6 @@ Proof.
 
     set_evars.
     rewrite !FRepOpp_correct.
-    rewrite <-!enc_rep2F_correct.
-    rewrite <-wltu_correct.
     rewrite (if_map rep2F).
     lazymatch goal with
       |- ?e = Let_In (rep2F ?x, rep2F ?y) (fun p => @?r p) =>

@@ -1,6 +1,6 @@
 Require Import Coq.ZArith.ZArith Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.ZArith.Znumtheory.
 Require Import Coq.Numbers.Natural.Peano.NPeano Coq.NArith.NArith.
-Require Import Crypto.Spec.Encoding Crypto.Spec.PointEncoding.
+Require Import Crypto.Spec.PointEncoding Crypto.Spec.ModularWordEncoding.
 Require Import Crypto.Spec.EdDSA.
 Require Import Crypto.Spec.CompleteEdwardsCurve Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems Crypto.ModularArithmetic.ModularArithmeticTheorems.
@@ -114,6 +114,8 @@ Proof.
   compute; omega.
 Qed.
 
+Require Import Crypto.Spec.Encoding.
+
 Lemma q_pos : (0 < q)%Z. q_bound. Qed.
 Definition FqEncoding : encoding of (F q) as word (b-1) :=
   @modular_word_encoding q (b - 1) q_pos b_valid.
@@ -140,7 +142,7 @@ Proof.
   reflexivity.
 Qed.
 
-Definition PointEncoding := @point_encoding curve25519params (b - 1) FqEncoding q_5mod8 sqrt_minus1_valid.
+Definition PointEncoding := @point_encoding curve25519params (b - 1) FqEncoding.
 
 Definition H : forall n : nat, word n -> word (b + b). Admitted.
 Definition B : point. Admitted. (* TODO: B = decodePoint (y=4/5, x="positive") *)
