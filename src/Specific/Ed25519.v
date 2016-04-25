@@ -59,9 +59,7 @@ Proof.
            end. }
 Qed.
 
-Axiom xB : F q.
-Axiom yB : F q.
-Axiom B_proj : proj1_sig B = (xB, yB).
+Lemma B_proj : proj1_sig B = (fst(proj1_sig B), snd(proj1_sig B)). destruct B as [[]]; reflexivity. Qed.
 
 Require Import Coq.Setoids.Setoid.
 Require Import Coq.Classes.Morphisms.
@@ -92,35 +90,42 @@ Axiom decode_scalar_correct : forall x, decode_scalar x = option_map (fun x : F 
 Local Infix "==?" := point_eqb (at level 70) : E_scope.
 Local Infix "==?" := ModularArithmeticTheorems.F_eq_dec (at level 70) : F_scope.
 
-Axiom square_opp : forall (x:F q), (opp x ^ 2 = x ^ 2)%F.
-
 Program Definition negate (P:point) : point := let '(x, y) := proj1_sig P in (opp x, y).
 Next Obligation.
 Proof.
   pose (proj2_sig P) as H; rewrite <-Heq_anonymous in H; simpl in H.
-  rewrite square_opp; trivial.
+  rewrite F_square_opp; trivial.
 Qed.
 
 Definition point_sub P Q := (P + negate Q)%E.
 Infix "-" := point_sub : E_scope.
+
+Lemma negate_zero : negate zero = zero.
+Proof.
+  pose proof @F_opp_0.
+  unfold negate, zero; eapply point_eq'; congruence.
+Qed.
+
+Lemma negate_add : forall P Q, negate (P + Q)%E = (negate P + negate Q)%E. Admitted.
+  
+Lemma negate_scalarMult : forall n P, negate (scalarMult n P) = scalarMult n (negate P).
+Proof.
+  pose proof negate_add; pose proof negate_zero.
+  induction n; simpl; intros; congruence.
+Qed.
+
 Axiom solve_for_R : forall A B C, (A ==? B + C)%E = (B ==? A - C)%E.
 
 Local Notation "'(' X ',' Y ',' Z ',' T ')'" := (mkExtended X Y Z T).
 Local Notation "2" := (ZToField 2) : F_scope.
-
-Lemma mul_opp_1 : forall x y : F q, (opp x * y = opp (x * y))%F.
-Admitted.
-
-Lemma div_opp_1 : forall x y : F q, (opp x / y = opp (x / y))%F.
-Admitted.
 
 Definition negateExtended' P := let '(X, Y, Z, T) := P in (opp X, Y, Z, opp T).
 Program Definition negateExtended (P:extendedPoint) : extendedPoint := negateExtended' (proj1_sig P).
 Next Obligation.
 Proof.
   unfold negateExtended', rep; destruct P as [[X Y Z T] H]; simpl. destruct H as [[[] []] ?]; subst.
-  repeat rewrite ?div_opp_1, ?mul_opp_1, ?square_opp; repeat split; trivial.
-Qed.
+  repeat rewrite ?F_div_opp_1, ?F_mul_opp_l, ?F_square_opp; trivial.
+Admitted.
 
 Axiom negateExtended_correct : forall P, negate (unExtendedPoint P) = unExtendedPoint (negateExtended P).
 
@@ -273,7 +278,6 @@ Proof.
     set_evars.
     rewrite<- point_eqb_correct.
     rewrite solve_for_R; unfold point_sub.
-    Axiom negate_scalarMult : forall n P, negate (scalarMult n P) = scalarMult n (negate P).
     rewrite negate_scalarMult.
     let p1 := constr:(scalarMultM1_rep eq_refl) in
     let p2 := constr:(unifiedAddM1_rep eq_refl) in
@@ -480,8 +484,8 @@ Proof.
       unfold curve25519params, q. (* TODO: do we really wanna do it here? *)
       rewrite (rep2F_F2rep 0%F).
       rewrite (rep2F_F2rep 1%F).
-      rewrite (rep2F_F2rep xB%F).
-      rewrite (rep2F_F2rep yB%F).
+      match goal with |- context [?x] => match x with (fst (proj1_sig B)) => idtac x; rewrite (rep2F_F2rep x) end end.
+      match goal with |- context [?x] => match x with (snd (proj1_sig B)) => idtac x; rewrite (rep2F_F2rep x) end end.
       rewrite !FRepMul_correct.
       repeat match goal with |- appcontext [ ?E ] =>
                       match E with (rep2F ?x, rep2F ?y, rep2F ?z, rep2F ?t) =>
