@@ -102,15 +102,37 @@ Qed.
 
 Definition point_sub P Q := (P + negate Q)%E.
 Infix "-" := point_sub : E_scope.
+
+Lemma opp0 m : opp (0 : F m) = 0%F.
+Proof.
+  Fdefn; rewrite Zdiv.Zminus_mod, !Zdiv.Z_mod_same_full, !Zdiv.Zmod_0_l; eauto. (* TODO: ring? *)
+Qed.
+
+Lemma negate_zero : negate zero = zero.
+Proof.
+  pose proof opp0.
+  unfold negate, zero; eapply point_eq'; congruence.
+Qed.
+
+Lemma negate_add : forall P Q, negate (P + Q)%E = (negate P + negate Q)%E. Admitted.
+  
+Lemma negate_scalarMult : forall n P, negate (scalarMult n P) = scalarMult n (negate P).
+Proof.
+  pose proof negate_add; pose proof negate_zero.
+  induction n; simpl; intros; congruence.
+Qed.
+
 Axiom solve_for_R : forall A B C, (A ==? B + C)%E = (B ==? A - C)%E.
 
 Local Notation "'(' X ',' Y ',' Z ',' T ')'" := (mkExtended X Y Z T).
 Local Notation "2" := (ZToField 2) : F_scope.
 
 Lemma mul_opp_1 : forall x y : F q, (opp x * y = opp (x * y))%F.
+  (* field *)
 Admitted.
 
 Lemma div_opp_1 : forall x y : F q, (opp x / y = opp (x / y))%F.
+  (* field *)
 Admitted.
 
 Definition negateExtended' P := let '(X, Y, Z, T) := P in (opp X, Y, Z, opp T).
@@ -272,7 +294,6 @@ Proof.
     set_evars.
     rewrite<- point_eqb_correct.
     rewrite solve_for_R; unfold point_sub.
-    Axiom negate_scalarMult : forall n P, negate (scalarMult n P) = scalarMult n (negate P).
     rewrite negate_scalarMult.
     let p1 := constr:(scalarMultM1_rep eq_refl) in
     let p2 := constr:(unifiedAddM1_rep eq_refl) in
