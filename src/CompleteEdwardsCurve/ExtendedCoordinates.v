@@ -217,4 +217,17 @@ Section ExtendedCoordinates.
 
   End TwistMinus1.
 
+  Definition negateExtended' P := let '(X, Y, Z, T) := P in (opp X, Y, Z, opp T).
+  Program Definition negateExtended (P:extendedPoint) : extendedPoint := negateExtended' (proj1_sig P).
+  Next Obligation.
+  Proof.
+    unfold negateExtended', rep; destruct P as [[X Y Z T] H]; simpl. destruct H as [[[] []] ?]; subst.
+    repeat rewrite ?F_div_opp_1, ?F_mul_opp_l, ?F_square_opp; repeat split; trivial.
+  Qed.
+  
+  Lemma negateExtended_correct : forall P, E.opp (unExtendedPoint P) = unExtendedPoint (negateExtended P).
+  Proof.
+    unfold E.opp, unExtendedPoint, negateExtended; destruct P as [[]]; simpl; intros.
+    eapply E.point_eq; repeat rewrite ?F_div_opp_1, ?F_mul_opp_l, ?F_square_opp; trivial.
+  Qed.
 End ExtendedCoordinates.

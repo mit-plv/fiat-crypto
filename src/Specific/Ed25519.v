@@ -90,20 +90,24 @@ Axiom decode_scalar_correct : forall x, decode_scalar x = option_map (fun x : F 
 Local Infix "==?" := E.point_eqb (at level 70) : E_scope.
 Local Infix "==?" := ModularArithmeticTheorems.F_eq_dec (at level 70) : F_scope.
 
-Axiom solve_for_R : forall A B C, (A ==? B + C)%E = (B ==? A - C)%E.
+Lemma solve_for_R_eq : forall A B C, (A = B + C <-> B = A - C)%E.
+Proof.
+  intros; split; intros; subst; unfold E.sub;
+    rewrite <-E.add_assoc, ?E.add_opp_r, ?E.add_opp_l, E.add_0_r; reflexivity.
+Qed.
+
+Lemma solve_for_R : forall A B C, (A ==? B + C)%E = (B ==? A - C)%E.
+Proof.
+  intros.
+  repeat match goal with |- context [(?P ==? ?Q)%E] =>
+                      let H := fresh "H" in
+                      destruct (E.point_eq_dec P Q) as [H|H];
+                        (rewrite (E.point_eqb_complete _ _ H) || rewrite (E.point_eqb_neq_complete _ _ H))
+  end; rewrite solve_for_R_eq in H; congruence.
+Qed.
 
 Local Notation "'(' X ',' Y ',' Z ',' T ')'" := (mkExtended X Y Z T).
 Local Notation "2" := (ZToField 2) : F_scope.
-
-Definition negateExtended' P := let '(X, Y, Z, T) := P in (opp X, Y, Z, opp T).
-Program Definition negateExtended (P:extendedPoint) : extendedPoint := negateExtended' (proj1_sig P).
-Next Obligation.
-Proof.
-  unfold negateExtended', rep; destruct P as [[X Y Z T] H]; simpl. destruct H as [[[] []] ?]; subst.
-  repeat rewrite ?F_div_opp_1, ?F_mul_opp_l, ?F_square_opp; trivial.
-Admitted.
-
-Axiom negateExtended_correct : forall P, E.opp (unExtendedPoint P) = unExtendedPoint (negateExtended P).
 
 Local Existing Instance PointEncoding.
 Axiom decode_point_eq : forall (P_ Q_ : word (S (b-1))) (P Q:E.point), dec P_ = Some P -> dec Q_ = Some Q -> weqb P_ Q_ = (P ==? Q)%E.
@@ -468,9 +472,10 @@ Proof.
                                    change E with (rep2E (((x, y), z), t))
                       end
       end.
-      lazymatch goal with |- context [negateExtended' (rep2E ?E)] =>
-                          replace (negateExtended' (rep2E E)) with (rep2E (((((FRepOpp (fst (fst (fst E)))), (snd (fst (fst E)))), (snd (fst E))), (FRepOpp (snd E))))) by (simpl; rewrite !FRepOpp_correct; reflexivity)
-      end; simpl fst; simpl snd. (* we actually only want to simpl in the with clause *)
+      lazymatch goal with |- context [?X] =>
+                          lazymatch X with negateExtended' (rep2E ?E) =>
+                          replace X with (rep2E (((((FRepOpp (fst (fst (fst E)))), (snd (fst (fst E)))), (snd (fst E))), (FRepOpp (snd E))))) by (simpl; rewrite !FRepOpp_correct; reflexivity)
+      end end; simpl fst; simpl snd. (* we actually only want to simpl in the with clause *)
       do 2 erewrite <- (fun x y z => iter_op_proj rep2E unifiedAddM1Rep unifiedAddM1' x y z N.testbit_nat) by apply unifiedAddM1Rep_correct.
       rewrite <-unifiedAddM1Rep_correct.
       
