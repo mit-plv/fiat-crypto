@@ -87,32 +87,8 @@ Axiom decode_scalar : word b -> option N.
 Local Existing Instance Ed25519.FlEncoding.
 Axiom decode_scalar_correct : forall x, decode_scalar x = option_map (fun x : F (Z.of_nat Ed25519.l) => Z.to_N x) (dec x).
 
-Local Infix "==?" := point_eqb (at level 70) : E_scope.
+Local Infix "==?" := E.point_eqb (at level 70) : E_scope.
 Local Infix "==?" := ModularArithmeticTheorems.F_eq_dec (at level 70) : F_scope.
-
-Program Definition negate (P:point) : point := let '(x, y) := proj1_sig P in (opp x, y).
-Next Obligation.
-Proof.
-  pose (proj2_sig P) as H; rewrite <-Heq_anonymous in H; simpl in H.
-  rewrite F_square_opp; trivial.
-Qed.
-
-Definition point_sub P Q := (P + negate Q)%E.
-Infix "-" := point_sub : E_scope.
-
-Lemma negate_zero : negate zero = zero.
-Proof.
-  pose proof @F_opp_0.
-  unfold negate, zero; eapply point_eq'; congruence.
-Qed.
-
-Lemma negate_add : forall P Q, negate (P + Q)%E = (negate P + negate Q)%E. Admitted.
-  
-Lemma negate_scalarMult : forall n P, negate (scalarMult n P) = scalarMult n (negate P).
-Proof.
-  pose proof negate_add; pose proof negate_zero.
-  induction n; simpl; intros; congruence.
-Qed.
 
 Axiom solve_for_R : forall A B C, (A ==? B + C)%E = (B ==? A - C)%E.
 
@@ -127,13 +103,13 @@ Proof.
   repeat rewrite ?F_div_opp_1, ?F_mul_opp_l, ?F_square_opp; trivial.
 Admitted.
 
-Axiom negateExtended_correct : forall P, negate (unExtendedPoint P) = unExtendedPoint (negateExtended P).
+Axiom negateExtended_correct : forall P, E.opp (unExtendedPoint P) = unExtendedPoint (negateExtended P).
 
 Local Existing Instance PointEncoding.
-Axiom decode_point_eq : forall (P_ Q_ : word (S (b-1))) (P Q:point), dec P_ = Some P -> dec Q_ = Some Q -> weqb P_ Q_ = (P ==? Q)%E.
+Axiom decode_point_eq : forall (P_ Q_ : word (S (b-1))) (P Q:E.point), dec P_ = Some P -> dec Q_ = Some Q -> weqb P_ Q_ = (P ==? Q)%E.
 
-Lemma decode_test_encode_test : forall S_ X, option_rect (fun _ : option point => bool)
- (fun S : point => (S ==? X)%E) false (dec S_) = weqb S_ (enc X).
+Lemma decode_test_encode_test : forall S_ X, option_rect (fun _ : option E.point => bool)
+ (fun S : E.point => (S ==? X)%E) false (dec S_) = weqb S_ (enc X).
 Proof.
   intros.
   destruct (dec S_) eqn:H.
@@ -146,13 +122,13 @@ Qed.
 Definition enc' : F q * F q -> word (S (b - 1)).
 Proof.
   intro x.
-  let enc' := (eval hnf in (@enc (@point curve25519params) _ _)) in
+  let enc' := (eval hnf in (@enc (@E.point curve25519params) _ _)) in
   match (eval cbv [proj1_sig] in (fun pf => enc' (exist _ x pf))) with
   | (fun _ => ?enc') => exact enc'
   end.
 Defined.
 
-Definition enc'_correct : @enc (@point curve25519params) _ _ = (fun x => enc' (proj1_sig x))
+Definition enc'_correct : @enc (@E.point curve25519params) _ _ = (fun x => enc' (proj1_sig x))
   := eq_refl.
 
     Definition Let_In {A P} (x : A) (f : forall a : A, P a) : P x := let y := x in f y.
@@ -276,13 +252,13 @@ Proof.
                [ reflexivity | .. ]
            end.
     set_evars.
-    rewrite<- point_eqb_correct.
-    rewrite solve_for_R; unfold point_sub.
-    rewrite negate_scalarMult.
+    rewrite<- E.point_eqb_correct.
+    rewrite solve_for_R; unfold E.sub.
+    rewrite E.opp_mul.
     let p1 := constr:(scalarMultM1_rep eq_refl) in
     let p2 := constr:(unifiedAddM1_rep eq_refl) in
     repeat match goal with
-           | |- context [(_ * negate ?P)%E] =>
+           | |- context [(_ * E.opp ?P)%E] =>
               rewrite <-(unExtendedPoint_mkExtendedPoint P);
               rewrite negateExtended_correct;
               rewrite <-p1
@@ -336,7 +312,7 @@ Proof.
     reflexivity. }
   Unfocus.
 
-  cbv [mkExtendedPoint zero mkPoint].
+  cbv [mkExtendedPoint E.zero].
   unfold proj1_sig at 1 2 3 5 6 7 8.
   rewrite B_proj.
 
@@ -369,7 +345,7 @@ Proof.
     reflexivity. }
   Unfocus.
 
-  cbv iota beta delta [point_dec_coordinates sign_bit dec FqEncoding modular_word_encoding CompleteEdwardsCurveTheorems.solve_for_x2 sqrt_mod_q].
+  cbv iota beta delta [point_dec_coordinates sign_bit dec FqEncoding modular_word_encoding E.solve_for_x2 sqrt_mod_q].
 
   etransitivity.
   Focus 2. {
@@ -484,8 +460,8 @@ Proof.
       unfold curve25519params, q. (* TODO: do we really wanna do it here? *)
       rewrite (rep2F_F2rep 0%F).
       rewrite (rep2F_F2rep 1%F).
-      match goal with |- context [?x] => match x with (fst (proj1_sig B)) => idtac x; rewrite (rep2F_F2rep x) end end.
-      match goal with |- context [?x] => match x with (snd (proj1_sig B)) => idtac x; rewrite (rep2F_F2rep x) end end.
+      match goal with |- context [?x] => match x with (fst (proj1_sig B)) => rewrite (rep2F_F2rep x) end end.
+      match goal with |- context [?x] => match x with (snd (proj1_sig B)) => rewrite (rep2F_F2rep x) end end.
       rewrite !FRepMul_correct.
       repeat match goal with |- appcontext [ ?E ] =>
                       match E with (rep2F ?x, rep2F ?y, rep2F ?z, rep2F ?t) =>

@@ -45,7 +45,7 @@ Section ExtendedCoordinates.
   Local Notation "P '~=' rP" := (rep P rP) (at level 70).
 
   Ltac unfoldExtended :=
-    repeat progress (autounfold; unfold onCurve, unifiedAdd, unifiedAdd', rep in *; intros);
+    repeat progress (autounfold; unfold E.onCurve, E.add, E.add', rep in *; intros);
     repeat match goal with
       | [ p : (F q*F q)%type |- _ ] =>
           let x := fresh "x" p in
@@ -83,14 +83,14 @@ Section ExtendedCoordinates.
     solveExtended.
   Qed.
 
-  Definition extendedPoint := { P:extended | rep P (extendedToTwisted P) /\ onCurve (extendedToTwisted P) }.
+  Definition extendedPoint := { P:extended | rep P (extendedToTwisted P) /\ E.onCurve (extendedToTwisted P) }.
 
-  Program Definition mkExtendedPoint : point -> extendedPoint := twistedToExtended.
+  Program Definition mkExtendedPoint : E.point -> extendedPoint := twistedToExtended.
   Next Obligation.
     destruct x; erewrite extendedToTwisted_rep; eauto using twistedToExtended_rep.
   Qed.
 
-  Program Definition unExtendedPoint : extendedPoint -> point := extendedToTwisted.
+  Program Definition unExtendedPoint : extendedPoint -> E.point := extendedToTwisted.
   Next Obligation.
     destruct x; simpl; intuition.
   Qed.
@@ -103,7 +103,7 @@ Section ExtendedCoordinates.
 
   Lemma unExtendedPoint_mkExtendedPoint : forall P, unExtendedPoint (mkExtendedPoint P) = P.
   Proof.
-    destruct P; eapply point_eq; simpl; erewrite extendedToTwisted_rep; eauto using twistedToExtended_rep.
+    destruct P; eapply E.point_eq; simpl; erewrite extendedToTwisted_rep; eauto using twistedToExtended_rep.
   Qed.
 
   Global Instance Proper_mkExtendedPoint : Proper (eq==>equiv) mkExtendedPoint.
@@ -135,12 +135,12 @@ Section ExtendedCoordinates.
       let T3 := E*H in
       let Z3 := F*G in
       (X3, Y3, Z3, T3).
-    Local Hint Unfold unifiedAdd.
+    Local Hint Unfold E.add.
 
     Local Ltac tnz := repeat apply Fq_mul_nonzero_nonzero; auto using (@char_gt_2 q two_lt_q).
 
-    Lemma unifiedAddM1'_rep: forall P Q rP rQ, onCurve rP -> onCurve rQ ->
-      P ~= rP -> Q ~= rQ -> (unifiedAddM1' P Q) ~= (unifiedAdd' rP rQ).
+    Lemma unifiedAddM1'_rep: forall P Q rP rQ, E.onCurve rP -> E.onCurve rQ ->
+      P ~= rP -> Q ~= rQ -> (unifiedAddM1' P Q) ~= (E.add' rP rQ).
     Proof.
       intros P Q rP rQ HoP HoQ HrP HrQ.
       pose proof (@edwardsAddCompletePlus _ _ _ _ two_lt_q nonzero_a square_a nonsquare_d).
@@ -152,9 +152,9 @@ Section ExtendedCoordinates.
         field_nonzero tnz.
     Qed.
 
-    Lemma unifiedAdd'_onCurve : forall P Q, onCurve P -> onCurve Q -> onCurve (unifiedAdd' P Q).
+    Lemma unifiedAdd'_onCurve : forall P Q, E.onCurve P -> E.onCurve Q -> E.onCurve (E.add' P Q).
     Proof.
-      intros; pose proof (proj2_sig (unifiedAdd (mkPoint _ H) (mkPoint _ H0))); eauto.
+      intros; pose proof (proj2_sig (E.add (exist _ _ H) (exist _ _ H0))); eauto.
     Qed.
 
     Program Definition unifiedAddM1 : extendedPoint -> extendedPoint -> extendedPoint := unifiedAddM1'.
@@ -167,9 +167,9 @@ Section ExtendedCoordinates.
         eauto using unifiedAdd'_onCurve.
     Qed.
 
-    Lemma unifiedAddM1_rep : forall P Q, unifiedAdd (unExtendedPoint P) (unExtendedPoint Q) = unExtendedPoint (unifiedAddM1 P Q).
+    Lemma unifiedAddM1_rep : forall P Q, E.add (unExtendedPoint P) (unExtendedPoint Q) = unExtendedPoint (unifiedAddM1 P Q).
     Proof.
-      destruct P, Q; unfold unExtendedPoint, unifiedAdd, unifiedAddM1; eapply point_eq; simpl in *; intuition.
+      destruct P, Q; unfold unExtendedPoint, E.add, unifiedAddM1; eapply E.point_eq; simpl in *; intuition.
       pose proof (unifiedAddM1'_rep x x0 (extendedToTwisted x) (extendedToTwisted x0));
         destruct (unifiedAddM1' x x0);
         unfold rep in *; intuition.
@@ -180,23 +180,23 @@ Section ExtendedCoordinates.
       repeat (econstructor || intro).
       repeat match goal with [H: _ === _ |- _ ] => inversion H; clear H end; unfold equiv, extendedPoint_eq.
       rewrite <-!unifiedAddM1_rep.
-      destruct x, y, x0, y0; simpl in *; eapply point_eq; congruence.
+      destruct x, y, x0, y0; simpl in *; eapply E.point_eq; congruence.
     Qed.
 
-    Lemma unifiedAddM1_0_r : forall P, unifiedAddM1 P (mkExtendedPoint zero) === P.
+    Lemma unifiedAddM1_0_r : forall P, unifiedAddM1 P (mkExtendedPoint E.zero) === P.
       unfold equiv, extendedPoint_eq; intros.
-      rewrite <-!unifiedAddM1_rep, unExtendedPoint_mkExtendedPoint, zeroIsIdentity; auto.
+      rewrite <-!unifiedAddM1_rep, unExtendedPoint_mkExtendedPoint, E.add_0_r; auto.
     Qed.
 
-    Lemma unifiedAddM1_0_l : forall P, unifiedAddM1 (mkExtendedPoint zero) P === P.
+    Lemma unifiedAddM1_0_l : forall P, unifiedAddM1 (mkExtendedPoint E.zero) P === P.
       unfold equiv, extendedPoint_eq; intros.
-      rewrite <-!unifiedAddM1_rep, twistedAddComm, unExtendedPoint_mkExtendedPoint, zeroIsIdentity; auto.
+      rewrite <-!unifiedAddM1_rep, E.add_comm, unExtendedPoint_mkExtendedPoint, E.add_0_r; auto.
     Qed.
 
     Lemma unifiedAddM1_assoc : forall a b c, unifiedAddM1 a (unifiedAddM1 b c) === unifiedAddM1 (unifiedAddM1 a b) c.
     Proof.
       unfold equiv, extendedPoint_eq; intros.
-      rewrite <-!unifiedAddM1_rep, twistedAddAssoc; auto.
+      rewrite <-!unifiedAddM1_rep, E.add_assoc; auto.
     Qed.
 
     Lemma testbit_conversion_identity : forall x i, N.testbit_nat x i = N.testbit_nat ((fun a => a) x) i.
@@ -204,14 +204,14 @@ Section ExtendedCoordinates.
       trivial.
     Qed.
 
-    Definition scalarMultM1 := iter_op unifiedAddM1 (mkExtendedPoint zero) N.testbit_nat.
+    Definition scalarMultM1 := iter_op unifiedAddM1 (mkExtendedPoint E.zero) N.testbit_nat.
     Definition scalarMultM1_spec :=
-      iter_op_spec unifiedAddM1 unifiedAddM1_assoc (mkExtendedPoint zero) unifiedAddM1_0_l
+      iter_op_spec unifiedAddM1 unifiedAddM1_assoc (mkExtendedPoint E.zero) unifiedAddM1_0_l
         N.testbit_nat (fun x => x) testbit_conversion_identity.
-    Lemma scalarMultM1_rep : forall n P, unExtendedPoint (scalarMultM1 (N.of_nat n) P (N.size_nat (N.of_nat n))) = scalarMult n (unExtendedPoint P).
+    Lemma scalarMultM1_rep : forall n P, unExtendedPoint (scalarMultM1 (N.of_nat n) P (N.size_nat (N.of_nat n))) = E.mul n (unExtendedPoint P).
       intros; rewrite scalarMultM1_spec, Nat2N.id; auto.
       induction n; [simpl; rewrite !unExtendedPoint_mkExtendedPoint; reflexivity|].
-      unfold scalarMult; fold scalarMult.
+      unfold E.mul; fold E.mul.
       rewrite <-IHn, unifiedAddM1_rep; auto.
     Qed.
 

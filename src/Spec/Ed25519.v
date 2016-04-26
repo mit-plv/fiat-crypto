@@ -145,9 +145,9 @@ Qed.
 Definition PointEncoding := @point_encoding curve25519params (b - 1) FqEncoding.
 
 Definition H : forall n : nat, word n -> word (b + b). Admitted.
-Definition B : point. Admitted. (* TODO: B = decodePoint (y=4/5, x="positive") *)
-Definition B_nonzero : B <> zero. Admitted.
-Definition l_order_B : scalarMult l B = zero. Admitted.
+Definition B : E.point. Admitted. (* TODO: B = decodePoint (y=4/5, x="positive") *)
+Definition B_nonzero : B <> E.zero. Admitted.
+Definition l_order_B : (l * B)%E = E.zero. Admitted.
 
 Local Instance ed25519params : EdDSAParams := {
   E := curve25519params;
