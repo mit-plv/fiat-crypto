@@ -37,7 +37,7 @@ Section EdDSAProofs.
   Lemma decode_sign_split2 : forall sk {n} (M : word n),
     split2 b b (sign (public sk) sk M) =
     let r : nat := H (prngKey sk ++ M) in (* secret nonce *)
-    let R : point := (r * B)%E in (* commitment to nonce *)
+    let R : E.point := (r * B)%E in (* commitment to nonce *)
     let s : nat := curveKey sk in (* secret scalar *)
     let S : F (Z.of_nat l) := ZToField (Z.of_nat (r + H (enc R ++ public sk ++ M) * s)) in
         enc S.
@@ -46,62 +46,21 @@ Section EdDSAProofs.
   Qed.
   Hint Rewrite decode_sign_split2.
 
-  Lemma zero_times : forall P, (0 * P = zero)%E.
-  Proof.
-    auto.
-  Qed.
-
-  Lemma zero_plus : forall P, (zero + P = P)%E.
-  Proof.
-    intros; rewrite twistedAddComm; apply zeroIsIdentity.
-  Qed.
-
-  Lemma times_S : forall n m, S n * m = m + n * m.
-  Proof.
-    auto.
-  Qed.
-
-  Lemma times_S_nat : forall n m, (S n * m = m + n * m)%nat.
-  Proof.
-    auto.
-  Qed.
-
-  Hint Rewrite plus_O_n plus_Sn_m times_S times_S_nat.
-  Hint Rewrite zeroIsIdentity zero_times zero_plus twistedAddAssoc.
-
-  Lemma scalarMult_distr : forall n0 m, ((n0 + m)%nat * B)%E = unifiedAdd (n0 * B)%E (m * B)%E.
-  Proof.
-    unfold scalarMult; induction n0; arith. 
-  Qed.
-  Hint Rewrite scalarMult_distr.
-
-  Lemma scalarMult_assoc : forall (n0 m : nat), (n0 * (m * B) = (n0 * m)%nat * B)%E.
-  Proof.
-    induction n0; arith; simpl; arith.
-  Qed.
-  Hint Rewrite scalarMult_assoc.
-
-  Lemma scalarMult_zero : forall m, (m * zero = zero)%E.
-  Proof.
-    unfold scalarMult; induction m; arith.
-  Qed.
-  Hint Rewrite scalarMult_zero.
+  Hint Rewrite E.add_0_r E.add_0_l E.add_assoc.
+  Hint Rewrite E.mul_assoc E.mul_add_l E.mul_0_l E.mul_zero_r.
+  Hint Rewrite plus_O_n plus_Sn_m mult_0_l mult_succ_l.
   Hint Rewrite l_order_B.
-
-  Lemma l_order_B' : forall x, (l * x * B = zero)%E.
+  Lemma l_order_B' : forall x, (l * x * B = E.zero)%E.
   Proof.
-    intros; rewrite Mult.mult_comm. rewrite <- scalarMult_assoc. arith.
-  Qed.
-
-  Hint Rewrite l_order_B'.
+    intros; rewrite Mult.mult_comm. rewrite <- E.mul_assoc. arith.
+  Qed. Hint Rewrite l_order_B'.
 
   Lemma scalarMult_mod_l : forall n0, (n0 mod l * B = n0 * B)%E.
   Proof.
     intros.
     rewrite (div_mod n0 l) at 2 by (generalize l_odd; omega).
     arith.
-  Qed.
-  Hint Rewrite scalarMult_mod_l.
+  Qed. Hint Rewrite scalarMult_mod_l.
 
   Hint Rewrite @encoding_valid.
   Hint Rewrite @FieldToZ_ZToField.

@@ -27,12 +27,12 @@ Section PointEncoding.
 
   Definition sqrt_valid (a : F q) := ((sqrt_mod_q a) ^ 2 = a)%F.
 
-  Lemma solve_sqrt_valid : forall p, onCurve p ->
-    sqrt_valid (solve_for_x2 (snd p)).
+  Lemma solve_sqrt_valid : forall p, E.onCurve p ->
+    sqrt_valid (E.solve_for_x2 (snd p)).
   Proof.
     intros ? onCurve_xy.
     destruct p as [x y]; simpl.
-    rewrite (solve_correct x y) in onCurve_xy.
+    rewrite (E.solve_correct x y) in onCurve_xy.
     rewrite <- onCurve_xy.
     unfold sqrt_valid.
     eapply sqrt_mod_q_valid; eauto.
@@ -40,20 +40,20 @@ Section PointEncoding.
     Grab Existential Variables. eauto.
   Qed.
 
-  Lemma solve_onCurve: forall (y : F q), sqrt_valid (solve_for_x2 y) ->
-    onCurve (sqrt_mod_q (solve_for_x2 y), y).
+  Lemma solve_onCurve: forall (y : F q), sqrt_valid (E.solve_for_x2 y) ->
+    E.onCurve (sqrt_mod_q (E.solve_for_x2 y), y).
   Proof.
     intros.
     unfold sqrt_valid in *.
-    apply solve_correct; auto.
+    apply E.solve_correct; auto.
   Qed.
 
-  Lemma solve_opp_onCurve: forall (y : F q), sqrt_valid (solve_for_x2 y) ->
-    onCurve (opp (sqrt_mod_q (solve_for_x2 y)), y).
+  Lemma solve_opp_onCurve: forall (y : F q), sqrt_valid (E.solve_for_x2 y) ->
+    E.onCurve (opp (sqrt_mod_q (E.solve_for_x2 y)), y).
   Proof.
     intros y sqrt_valid_x2.
     unfold sqrt_valid in *.
-    apply solve_correct.
+    apply E.solve_correct.
     rewrite <- sqrt_valid_x2 at 2.
     ring.
   Qed.
@@ -67,13 +67,13 @@ Section PointEncoding.
   Definition point_enc_coordinates (p : (F q * F q)) : Word.word (S sz) := let '(x,y) := p in
     Word.WS (sign_bit x) (enc y).
 
-  Let point_enc (p : CompleteEdwardsCurve.point) : Word.word (S sz) := let '(x,y) := proj1_sig p in
+  Let point_enc (p : E.point) : Word.word (S sz) := let '(x,y) := proj1_sig p in
     Word.WS (sign_bit x) (enc y).
 
   Definition point_dec_coordinates (sign_bit : F q -> bool) (w : Word.word (S sz)) : option (F q * F q) :=
     match dec (Word.wtl w) with
     | None => None
-    | Some y => let x2 := solve_for_x2 y in
+    | Some y => let x2 := E.solve_for_x2 y in
         let x := sqrt_mod_q x2 in
         if F_eq_dec (x ^ 2) x2
         then
@@ -86,7 +86,7 @@ Section PointEncoding.
 
   Ltac inversion_Some_eq := match goal with [H: Some ?x = Some ?y |- _] => inversion H; subst end.
 
-  Lemma point_dec_coordinates_onCurve : forall w p, point_dec_coordinates sign_bit w = Some p -> onCurve p.
+  Lemma point_dec_coordinates_onCurve : forall w p, point_dec_coordinates sign_bit w = Some p -> E.onCurve p.
   Proof.
     unfold point_dec_coordinates; intros.
     edestruct dec; [ | congruence].
@@ -108,13 +108,13 @@ Section PointEncoding.
   Admitted.
 
 
-  Definition point_dec' w p : option point :=
+  Definition point_dec' w p : option E.point :=
     match (option_eq_dec (point_dec_coordinates sign_bit w) (Some p)) with
-      | left EQ => Some (mkPoint p (point_dec_coordinates_onCurve w p EQ))
+      | left EQ => Some (exist _ p (point_dec_coordinates_onCurve w p EQ))
       | right _ => None (* this case is never reached *)
     end.
 
-  Definition point_dec (w : word (S sz)) : option point :=
+  Definition point_dec (w : word (S sz)) : option E.point :=
     match (point_dec_coordinates sign_bit w) with
     | Some p => point_dec' w p
     | None => None
@@ -192,7 +192,7 @@ Section PointEncoding.
     rewrite (shatter_word w).
     f_equal; rewrite dec_Some in *;
       do 2 (break_if; try congruence); inversion coord_dec_Some; subst.
-    + destruct (F_eq_dec (sqrt_mod_q (solve_for_x2 f1)) 0%F) as [sqrt_0 | ?].
+    + destruct (F_eq_dec (sqrt_mod_q (E.solve_for_x2 f1)) 0%F) as [sqrt_0 | ?].
       - rewrite sqrt_0 in *.
         apply sqrt_mod_q_0 in sqrt_0.
         rewrite sqrt_0 in *.
@@ -268,12 +268,12 @@ Proof.
   congruence.
 Qed.
 
-Lemma sign_bit_match : forall x x' y : F q, onCurve (x, y) -> onCurve (x', y) ->
+Lemma sign_bit_match : forall x x' y : F q, E.onCurve (x, y) -> E.onCurve (x', y) ->
   sign_bit x = sign_bit x' -> x = x'.
 Proof.
   intros ? ? ? onCurve_x onCurve_x' sign_match.
-  apply solve_correct in onCurve_x.
-  apply solve_correct in onCurve_x'.
+  apply E.solve_correct in onCurve_x.
+  apply E.solve_correct in onCurve_x'.
   destruct (F_eq_dec x' 0).
   + subst.
     rewrite Fq_pow_zero in onCurve_x' by congruence.
@@ -287,7 +287,7 @@ Qed.
 Lemma blah : forall x y, (F_eqb (sqrt_mod_q (solve_for_x2 y)) 0 && sign_bit x)%bool = true.
 *)
 
-Lemma point_encoding_coordinates_valid : forall p, onCurve p ->
+Lemma point_encoding_coordinates_valid : forall p, E.onCurve p ->
    point_dec_coordinates sign_bit (point_enc_coordinates p) = Some p.
 Proof.
   intros p onCurve_p.
@@ -297,9 +297,9 @@ Proof.
   unfold sqrt_valid in *.
   destruct p as [x y].
   simpl in *.
-  destruct (F_eq_dec ((sqrt_mod_q (solve_for_x2 y)) ^ 2) (solve_for_x2 y)); intuition.
+  destruct (F_eq_dec ((sqrt_mod_q (E.solve_for_x2 y)) ^ 2) (E.solve_for_x2 y)); intuition.
   break_if; f_equal.
-  + case_eq (F_eqb (sqrt_mod_q (solve_for_x2 y)) 0); intros eqb_0.
+  + case_eq (F_eqb (sqrt_mod_q (E.solve_for_x2 y)) 0); intros eqb_0.
 (*
     SearchAbout F_eqb.
 
@@ -333,7 +333,7 @@ Proof.
   break_match.
   + f_equal.
     destruct p.
-    apply point_eq.
+    apply E.point_eq.
     reflexivity.
   + rewrite point_encoding_coordinates_valid in n by apply (proj2_sig p).
     congruence.
