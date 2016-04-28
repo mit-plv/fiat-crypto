@@ -102,7 +102,7 @@ Inductive Assignment : Type :=
   | AConstInt: forall n, IReg n -> IConst n -> Assignment
   | AConstFloat: forall n, FReg n -> FConst n -> Assignment
 
-  | AIndex: forall n m, IReg n -> IReg m -> Index (n/m)%nat -> Assignment
+  | AIndex: forall n m, IReg n -> Stack m -> Index (m/n)%nat -> Assignment
   | APtr: forall n, IReg 32 -> Stack n -> Assignment.
 
 Hint Constructors Assignment.

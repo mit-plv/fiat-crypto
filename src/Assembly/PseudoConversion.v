@@ -1,60 +1,46 @@
 
-Require Export Language Conversion.
-Require Export AlmostQhasm QhasmCommon.
+Require Export Language Conversion QhasmCommon.
+Require Export AlmostQhasm Pseudo State.
 Require Export Bedrock.Word.
 Require Export List.
 Require Vector.
 
-Module Type GallinaFunction <: Language.
-  Parameter len: nat.
-  Definition Vec := Vector.t (word 32) len.
-
-  Definition Program := Vec -> Vec.
-  Definition State := Vec.
-
-  Definition eval (p: Program) (s: Vec) := Some (p s).
-End GallinaFunction.
-
-Module GallinaConversion (S: GallinaFunction) <: Conversion S AlmostQhasm.
-  Import QhasmCommon AlmostQhasm.
+Module PseudoConversion <: Conversion Pseudo AlmostQhasm.
+  Import QhasmCommon AlmostQhasm Pseudo State.
   Import ListNotations.
-  Import S.
 
-  Fixpoint convertState' (st: AlmostQhasm.State) (rem: nat): list (word 32) :=
-    match rem with
-    | O => []
-    | S m =>
-      match (getStack (stack32 rem) st) with
-      | Some e => e
-      | None => (wzero 32) 
-      end :: (convertState' st m)
+  Definition convertState (st: AlmostQhasm.State): Pseudo.State :=
+    match st with
+    | fullState _ _ stackState _ =>
+      map (fun x => NToWord 32 (snd x)) (NatM.elements stackState)
     end.
 
-  Lemma convertState'_len: forall st rem, length (convertState' st rem) = rem.
-  Proof.
-    intros; induction rem; simpl; intuition.
-  Qed.
+  Fixpoint convertProgram' (prog: Pseudo): option AlmostQhasm.Program :=
+    match prog with
+    | PVar n i =>
+      (AAssign 
+    | PConst n c =>
+      (AAssign 
 
-  Definition convertState (st: AlmostQhasm.State): option S.State.
-    unfold State, Vec.
-    replace len with (length (convertState' st len))
-      by abstract (apply convertState'_len).
-    refine (Some (Vector.of_list (convertState' st len))).
-  Defined.
+    (* TODO (rsloan) *)
+    | PBin n m o a b => None
+    | PNat n o v => None
+    | PShift n o a x => None
 
-  (* TODO (rsloan): implement conversion *)
-  Definition convertProgram (prog: S.Program): option AlmostQhasm.Program :=
-    Some ASkip.
+    | PLet n k m f g => None
+    | PComp n k m f g => None
+    | PComb n a b f g => None
 
-  Lemma convert_spec: forall st' prog,
-    match ((convertProgram prog), (convertState st')) with
-    | (Some prog', Some st) =>
-      match (AlmostQhasm.eval prog' st') with
-      | Some st'' => S.eval prog st = (convertState st'')
-      | _ => True
-      end
-    | _ => True
+    | PIf n m o i0 i1 l r => None
+    | PFunExp n f e => None
     end.
+
+  convertProgram (prog: S.Program): option AlmostQhasm.Program :=
+
+  Lemma convert_spec:  forall a a' b b' prog prog',
+    convertProgram prog = Some prog' ->
+    convertState a = Some a' -> convertState b = Some b' ->
+    AlmostQhasm.evaluatesTo prog' a b <-> Pseudo.evaluatesTo prog a' b'.
   Admitted.
 
 End GallinaConversion.
