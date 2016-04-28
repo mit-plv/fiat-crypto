@@ -33,10 +33,10 @@ Section PointEncoding.
   Definition point_dec := Eval hnf in (proj1_sig point_dec_with_spec).
 
    Definition point_encoding_valid : forall p : E.point, point_dec (point_enc p) = Some p :=
-     @PointEncodingPre.point_encoding_valid _ _ sz_nonzero bound_check q_5mod8 sqrt_minus1_valid _ _ sign_bit_zero sign_bit_opp.
+     @PointEncodingPre.point_encoding_valid _ _ q_5mod8 sqrt_minus1_valid _ _ sign_bit_zero sign_bit_opp.
 
    Definition point_encoding_canonical : forall x_enc x, point_dec x_enc = Some x -> point_enc x = x_enc :=
-     PointEncodingPre.point_encoding_canonical . 
+     PointEncodingPre.point_encoding_canonical.
 
   Instance point_encoding : encoding of E.point as (Word.word (S sz)) := {
     enc := point_enc;

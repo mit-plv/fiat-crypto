@@ -178,20 +178,6 @@ Section PseudoMersenneProofs.
     }
   Qed.
 
-  (* TODO: move to BaseSystemProofs *)
-  Lemma decode'_splice : forall xs ys bs,
-    BaseSystem.decode' bs (xs ++ ys) = 
-    BaseSystem.decode' (firstn (length xs) bs) xs + 
-    BaseSystem.decode'  (skipn (length xs) bs) ys.
-  Proof.
-    unfold BaseSystem.decode'.
-    induction xs; destruct ys, bs; boring.
-    + rewrite combine_truncate_r.
-      do 2 rewrite Z.add_0_r; auto.
-    + unfold BaseSystem.accumulate.
-      apply Z.add_assoc.
-  Qed.
-
   Lemma set_nth_sum : forall n x us, (n < length us)%nat ->
     BaseSystem.decode base (set_nth n x us) = 
     (x - nth_default 0 us n) * nth_default 0 base n + BaseSystem.decode base us.

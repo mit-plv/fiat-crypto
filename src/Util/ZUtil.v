@@ -280,6 +280,23 @@ Proof.
   assumption.
 Qed.
 
+Lemma Z_odd_mod : forall a b, (b <> 0)%Z ->
+  Z.odd (a mod b) = if Z.odd b then xorb (Z.odd a) (Z.odd (a / b)) else Z.odd a.
+Proof.
+  intros.
+  rewrite Zmod_eq_full by assumption.
+  rewrite <-Z.add_opp_r, Z.odd_add, Z.odd_opp, Z.odd_mul.
+  case_eq (Z.odd b); intros; rewrite ?Bool.andb_true_r, ?Bool.andb_false_r; auto using Bool.xorb_false_r.
+Qed.
+
+Lemma mod_same_pow : forall a b c, 0 <= c <= b -> a ^ b mod a ^ c = 0.
+Proof.
+  intros.
+  replace b with (b - c + c) by ring.
+  rewrite Z.pow_add_r by omega.
+  apply Z_mod_mult.
+Qed.
+
 (* prove that known nonnegative numbers are nonnegative *)
 Ltac zero_bounds' :=
   repeat match goal with

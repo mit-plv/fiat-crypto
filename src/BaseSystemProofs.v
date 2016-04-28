@@ -17,6 +17,18 @@ Section BaseSystemProofs.
     unfold decode'; intros; f_equal; apply combine_truncate_l.
   Qed.
 
+  Lemma decode'_splice : forall xs ys bs,
+    decode' bs (xs ++ ys) = 
+    decode' (firstn (length xs) bs) xs + decode'  (skipn (length xs) bs) ys.
+  Proof.
+    unfold decode'.
+    induction xs; destruct ys, bs; boring.
+    + rewrite combine_truncate_r.
+      do 2 rewrite Z.add_0_r; auto.
+    + unfold accumulate.
+      apply Z.add_assoc.
+  Qed.
+
   Lemma add_rep : forall bs us vs, decode' bs (add us vs) = decode' bs us + decode' bs vs.
   Proof.
     unfold decode', accumulate; induction bs; destruct us, vs; boring; ring.
@@ -486,5 +498,6 @@ Section BaseSystemProofs.
     rewrite mul'_length.
     rewrite rev_length; omega.
   Qed.
+
 
 End BaseSystemProofs.

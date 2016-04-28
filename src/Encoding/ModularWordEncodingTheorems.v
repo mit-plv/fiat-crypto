@@ -1,10 +1,11 @@
 Require Import Coq.ZArith.ZArith Coq.ZArith.Znumtheory.
 Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
-Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
+Require Import Crypto.ModularArithmetic.PrimeFieldTheorems Crypto.ModularArithmetic.ModularArithmeticTheorems.
 Require Import Bedrock.Word.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.Spec.Encoding.
+Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Spec.ModularWordEncoding.
 
 
@@ -45,29 +46,6 @@ Section SignBit.
   Lemma sign_bit_zero : sign_bit 0 = false.
   Proof.
     rewrite sign_bit_parity; auto.
-  Qed.
-
-  (* TODO : move to ZUtil *)
-  Lemma Z_odd_mod : forall a b, (b <> 0)%Z ->
-    Z.odd (a mod b) = if Z.odd b then xorb (Z.odd a) (Z.odd (a / b)) else Z.odd a.
-  Proof.
-    intros.
-    rewrite Zmod_eq_full by assumption.
-    rewrite <-Z.add_opp_r, Z.odd_add, Z.odd_opp, Z.odd_mul.
-    break_if; rewrite ?Bool.andb_true_r, ?Bool.andb_false_r; auto using Bool.xorb_false_r.
-  Qed.
-
-  (* TODO : move to ModularArithmeticTheorems *)
-  Lemma F_FieldToZ_add_opp : forall x : F m, x <> 0 -> (FieldToZ x + FieldToZ (opp x) = m)%Z.
-  Proof.
-    intros.
-    rewrite FieldToZ_opp.
-    rewrite Z_mod_nz_opp_full, mod_FieldToZ; try omega.
-    rewrite mod_FieldToZ.
-    replace 0%Z with (@FieldToZ m 0) by auto.
-    intro false_eq.
-    rewrite <-F_eq in false_eq.
-    congruence.
   Qed.
 
   Lemma sign_bit_opp : forall (x : F m), x <> 0 -> negb (sign_bit x) = sign_bit (opp x).
