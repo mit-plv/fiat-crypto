@@ -25,7 +25,7 @@ Module Pseudo <: Language.
     | PConst: forall n, word 32 -> Pseudo n 1
 
     | PBin: forall n m, WBinOp -> Pseudo n m -> Pseudo n m -> Pseudo n m
-    | PNat: forall n, nat -> Pseudo n 1
+    | PNat: forall n, WNatOp -> nat -> Pseudo n 1
     | PShift: forall n, WShiftOp -> Pseudo n 1 -> nat -> Pseudo n 1
 
     | PLet: forall n k m, Pseudo n k -> Pseudo (n + k) m -> Pseudo n m
@@ -37,7 +37,10 @@ Module Pseudo <: Language.
 
   Hint Constructors Pseudo.
 
-  Definition Program := Pseudo.
+  Parameter nIn: nat.
+  Parameter nOut: nat.
+
+  Definition Program := Pseudo nIn nOut.
 
   Definition applyBin (op: WBinOp) (a b: list (word 32)): option (list (word 32)) :=
     match op with
@@ -75,7 +78,7 @@ Module Pseudo <: Language.
 
     | PENat: forall n op v s s',
         applyNat op v = Some s'
-      -> PseudoEval n 1 (PNat n v) s s'
+      -> PseudoEval n 1 (PNat n op v) s s'
 
     | PEShift: forall n m a s s' w op,
         applyShift op w m = Some s'
@@ -118,7 +121,7 @@ Module Pseudo <: Language.
       -> PseudoEval n n (PFunExp n f e') s' s''
       -> PseudoEval n n (PFunExp n f e) s s''.
 
-  Definition evaluatesTo := PseudoEval.
+  Definition evaluatesTo := PseudoEval nIn nOut.
 
   (* world peace *)
-End AlmostQhasm.
+End Pseudo.
