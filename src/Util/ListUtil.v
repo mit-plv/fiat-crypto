@@ -563,4 +563,22 @@ Proof.
   induction l; intros; simpl; try tauto.
   rewrite <- IHl.
   intuition (subst; auto).
-Qed. 
+Qed.
+
+Lemma fold_right_invariant : forall {A} P (f: A -> A -> A) l x,
+  P x -> (forall y, In y l -> forall z, P z -> P (f y z)) ->
+  P (fold_right f x l).
+Proof.
+  induction l; intros ? ? step; auto.
+  simpl.
+  apply step; try apply in_eq.
+  apply IHl; auto.
+  intros y in_y_l.
+  apply (in_cons a) in in_y_l.
+  auto.
+Qed.
+
+Lemma In_firstn : forall {T} n l (x : T), In x (firstn n l) -> In x l.
+Proof.
+  induction n; destruct l; boring.
+Qed.

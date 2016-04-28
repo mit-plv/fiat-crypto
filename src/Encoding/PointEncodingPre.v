@@ -118,28 +118,6 @@ Section PointEncoding.
     | None => None
     end.
 
-  (* TODO : move *)
-  Lemma sqrt_mod_q_0 : forall x : F q, sqrt_mod_q x = 0 -> x = 0.
-  Proof.
-    unfold sqrt_mod_q; intros.
-    break_if.
-    - match goal with [ H : ?sqrt_x ^ 2 = x, H' : ?sqrt_x = 0 |- _ ] => rewrite <-H, H' end.
-      ring.
-    - match goal with
-      | [H : sqrt_minus1 * _ = 0 |- _ ]=>
-         apply Fq_mul_zero_why in H; destruct H as [sqrt_minus1_zero | ? ];
-         [ | eapply Fq_root_zero; eauto ]
-      end.
-      unfold sqrt_minus1 in sqrt_minus1_zero.
-      rewrite sqrt_minus1_zero in sqrt_minus1_valid.
-      exfalso.
-      pose proof (@F_opp_spec q 1) as opp_spec_1.
-      rewrite <-sqrt_minus1_valid in opp_spec_1.
-      assert (((1 + 0 ^ 2) : F q) = (1 : F q)) as ring_subst by ring.
-      rewrite ring_subst in *.
-      apply Fq_1_neq_0; assumption.
-  Qed.
-
   Lemma point_coordinates_encoding_canonical : forall w p,
     point_dec_coordinates sign_bit w = Some p -> point_enc_coordinates p = w.
   Proof.
@@ -151,7 +129,7 @@ Section PointEncoding.
       do 2 (break_if; try congruence); inversion coord_dec_Some; subst.
     + destruct (F_eq_dec (sqrt_mod_q (E.solve_for_x2 f1)) 0%F) as [sqrt_0 | ?].
       - rewrite sqrt_0 in *.
-        apply sqrt_mod_q_0 in sqrt_0.
+        apply sqrt_mod_q_root_0 in sqrt_0; try assumption.
         rewrite sqrt_0 in *.
         break_if; [symmetry; auto using Bool.eqb_prop | ].
         rewrite sign_bit_zero in *.
@@ -195,19 +173,6 @@ Proof.
   exact (encoding_valid y).
 Qed.
 
-(*
-Lemma wordToN_enc_neq_opp : forall x, x <> 0 -> (wordToN (enc (opp x)) <> wordToN (enc x))%N.
-Proof.
-  intros x x_nonzero.
-  intro false_eq.
-  apply x_nonzero.
-  apply F_eq_opp_zero; try apply two_lt_q.
-  apply wordToN_inj in false_eq.
-  apply encoding_inj in false_eq.
-  auto.
-Qed.
-*)
-
 Lemma sign_bit_opp_eq_iff : forall x y, y <> 0 ->
   (sign_bit x <> sign_bit y <-> sign_bit x = sign_bit (opp y)).
 Proof.
@@ -242,25 +207,6 @@ Proof.
     reflexivity.
 Qed.
 
-(* TODO : move *)
-Lemma sqrt_mod_q_of_0 : @sqrt_mod_q q 0 = 0.
-Proof.
-  unfold sqrt_mod_q.
-  rewrite !Fq_pow_zero.
-  break_if; ring.
-
-  congruence.
-  intro false_eq.
-  SearchAbout Z.to_N.
-  rewrite <-(N2Z.id 0) in false_eq.
-  rewrite N2Z.inj_0 in false_eq.
-  pose proof (prime_ge_2 q prime_q).
-  apply Z2N.inj in false_eq; zero_bounds.
-  assert (0 < q / 8 + 1)%Z.
-  apply Z.add_nonneg_pos; zero_bounds.
-  omega.
-Qed.
-
 Lemma point_encoding_coordinates_valid : forall p, E.onCurve p ->
    point_dec_coordinates sign_bit (point_enc_coordinates p) = Some p.
 Proof.
@@ -277,7 +223,7 @@ Proof.
     rewrite !Fq_pow_zero, sqrt_mod_q_of_0, Fq_pow_zero by congruence.
     rewrite if_F_eq_dec_if_F_eqb, sign_bit_zero. 
     reflexivity.
-  + assert (sqrt_mod_q (x ^ 2) <> 0) by (intro false_eq; apply sqrt_mod_q_0 in false_eq;
+  + assert (sqrt_mod_q (x ^ 2) <> 0) by (intro false_eq; apply sqrt_mod_q_root_0 in false_eq; try assumption;
       apply Fq_root_zero in false_eq; rewrite false_eq, F_eqb_refl in eqb_x_0; congruence).
     replace (F_eqb (sqrt_mod_q (x ^ 2)) 0) with false by (symmetry;
         apply F_eqb_neq_complete; assumption).

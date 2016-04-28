@@ -89,26 +89,6 @@ Section PseudoMersenneBaseParamProofs.
       - rewrite IHl by auto; ring.
   Qed.
 
-  (* TODO : move to LsitUtil *)
-  Lemma fold_right_invariant : forall {A} P (f: A -> A -> A) l x,
-    P x -> (forall y, In y l -> forall z, P z -> P (f y z)) ->
-    P (fold_right f x l).
-  Proof.
-    induction l; intros ? ? step; auto.
-    simpl.
-    apply step; try apply in_eq.
-    apply IHl; auto.
-    intros y in_y_l.
-    apply (in_cons a) in in_y_l.
-    auto.
-  Qed.
-
-  (* TODO : move to ListUtil *)
-  Lemma In_firstn : forall {T} n l (x : T), In x (firstn n l) -> In x l.
-  Proof.
-    induction n; destruct l; boring.
-  Qed.
-
   Lemma sum_firstn_limb_widths_nonneg : forall n, 0 <= sum_firstn limb_widths n.
   Proof.
     unfold sum_firstn; intros.
@@ -162,16 +142,6 @@ Section PseudoMersenneBaseParamProofs.
     rewrite nth_error_base in nth_err_x by assumption.
     rewrite two_p_correct in nth_err_x.
     congruence.
-  Qed.
- 
-
-  (* TODO : move to ZUtil *)
-  Lemma mod_same_pow : forall a b c, 0 <= c <= b -> a ^ b mod a ^ c = 0.
-  Proof.
-    intros.
-    replace b with (b - c + c) by ring.
-    rewrite Z.pow_add_r by omega.
-    apply Z_mod_mult.
   Qed.
 
   Lemma base_matches_modulus: forall i j,

@@ -697,4 +697,17 @@ Section VariousModulo.
     replace y with ((y - b) + b) by ring.
     rewrite Hxayb; ring.
   Qed.
+
+  Lemma F_FieldToZ_add_opp : forall x : F m, x <> 0 -> (FieldToZ x + FieldToZ (opp x) = m)%Z.
+  Proof.
+    intros.
+    rewrite FieldToZ_opp.
+    rewrite Z_mod_nz_opp_full, mod_FieldToZ; try omega.
+    rewrite mod_FieldToZ.
+    replace 0%Z with (@FieldToZ m 0) by auto.
+    intro false_eq.
+    rewrite <-F_eq in false_eq.
+    congruence.
+  Qed.
+
 End VariousModulo.

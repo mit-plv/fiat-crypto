@@ -472,6 +472,44 @@ Section SquareRootsPrime5Mod8.
     field.
   Qed.
 
+  Lemma sqrt_mod_q_of_0 : sqrt_mod_q 0 = 0.
+  Proof.
+    unfold sqrt_mod_q.
+    rewrite !Fq_pow_zero.
+    break_if; ring.
+
+    congruence.
+    intro false_eq.
+    rewrite <-(N2Z.id 0) in false_eq.
+    rewrite N2Z.inj_0 in false_eq.
+    pose proof (prime_ge_2 q prime_q).
+    apply Z2N.inj in false_eq; zero_bounds.
+    assert (0 < q / 8 + 1)%Z.
+    apply Z.add_nonneg_pos; zero_bounds.
+    omega.
+  Qed.
+
+  Lemma sqrt_mod_q_root_0 : forall x : F q, sqrt_mod_q x = 0 -> x = 0.
+  Proof.
+    unfold sqrt_mod_q; intros.
+    break_if.
+    - match goal with [ H : ?sqrt_x ^ 2 = x, H' : ?sqrt_x = 0 |- _ ] => rewrite <-H, H' end.
+      ring.
+    - match goal with
+      | [H : sqrt_minus1 * _ = 0 |- _ ]=>
+         apply Fq_mul_zero_why in H; destruct H as [sqrt_minus1_zero | ? ];
+         [ | eapply Fq_root_zero; eauto ]
+      end.
+      unfold sqrt_minus1 in sqrt_minus1_zero.
+      rewrite sqrt_minus1_zero in sqrt_minus1_valid.
+      exfalso.
+      pose proof (@F_opp_spec q 1) as opp_spec_1.
+      rewrite <-sqrt_minus1_valid in opp_spec_1.
+      assert (((1 + 0 ^ 2) : F q) = (1 : F q)) as ring_subst by ring.
+      rewrite ring_subst in *.
+      apply Fq_1_neq_0; assumption.
+  Qed.
+
 End SquareRootsPrime5Mod8.
 
 Local Open Scope F_scope.
