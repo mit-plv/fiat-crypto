@@ -5,16 +5,21 @@ Require Import Crypto.Encoding.EncodingTheorems.
 Require Import Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
 Require Import Bedrock.Word.
+Require Import Crypto.Encoding.ModularWordEncodingTheorems.
 Require Import Crypto.Tactics.VerdiTactics.
+Require Import Crypto.Util.ZUtil.
 
-Require Import Crypto.Spec.Encoding Crypto.Spec.ModularArithmetic.
+Require Import Crypto.Spec.Encoding Crypto.Spec.ModularWordEncoding Crypto.Spec.ModularArithmetic.
 
 Local Open Scope F_scope.
 
 Section PointEncoding.
   Context {prm: TwistedEdwardsParams} {sz : nat} {sz_nonzero : (0 < sz)%nat}
-   {FqEncoding : encoding of F q as word sz} {q_5mod8 : (q mod 8 = 5)%Z}
-   {sqrt_minus1_valid : (@ZToField q 2 ^ Z.to_N (q / 4)) ^ 2 = opp 1}.
+   {bound_check : (Z.to_nat q < 2 ^ sz)%nat} {q_5mod8 : (q mod 8 = 5)%Z}
+   {sqrt_minus1_valid : (@ZToField q 2 ^ Z.to_N (q / 4)) ^ 2 = opp 1}
+   {FqEncoding : encoding of (F q) as (word sz)}
+   {sign_bit : F q -> bool} {sign_bit_zero : sign_bit 0 = false}
+   {sign_bit_opp : forall x, x <> 0 -> negb (sign_bit x) = sign_bit (opp x)}.
   Existing Instance prime_q.
 
   Add Field Ffield : (@Ffield_theory q _)
@@ -58,12 +63,6 @@ Section PointEncoding.
     ring.
   Qed.
 
-  Let sign_bit (x : F CompleteEdwardsCurve.q) :=
-    match (enc x) with
-      | Word.WO => false
-      | Word.WS b _ w' => b
-    end.
-
   Definition point_enc_coordinates (p : (F q * F q)) : Word.word (S sz) := let '(x,y) := p in
     Word.WS (sign_bit x) (enc y).
 
@@ -94,22 +93,21 @@ Section PointEncoding.
     break_if; [ congruence | ]. 
     break_if; inversion_Some_eq; auto using solve_onCurve, solve_opp_onCurve.
   Qed.
-(*
-  Definition point_dec (w : word (S sz)) : option point.
-    case_eq (point_dec_coordinates w); intros; [ | apply None].
-    apply Some.
-    eapply mkPoint.
-    eapply point_dec_coordinates_onCurve; eauto.
-  Defined.
-*)
-  Lemma option_eq_dec : forall {A} (x y : option A), {x = y} + {x <> y}.
+
+  Lemma prod_eq_dec : forall {A} (A_eq_dec : forall a a' : A, {a = a'} + {a <> a'})
+   (x y : (A * A)), {x = y} + {x <> y}.
   Proof.
     decide equality.
-  Admitted.
+  Qed.
 
+  Lemma option_eq_dec : forall {A} (A_eq_dec : forall a a' : A, {a = a'} + {a <> a'})
+   (x y : option A), {x = y} + {x <> y}.
+  Proof.
+    decide equality.
+  Qed.
 
   Definition point_dec' w p : option E.point :=
-    match (option_eq_dec (point_dec_coordinates sign_bit w) (Some p)) with
+    match (option_eq_dec (prod_eq_dec F_eq_dec) (point_dec_coordinates sign_bit w) (Some p)) with
       | left EQ => Some (exist _ p (point_dec_coordinates_onCurve w p EQ))
       | right _ => None (* this case is never reached *)
     end.
@@ -119,38 +117,6 @@ Section PointEncoding.
     | Some p => point_dec' w p
     | None => None
     end.
-
-  Lemma enc_first_bit_opp : forall (x : F q), x <> 0 ->
-    match enc x with
-    | WO => True
-    | WS b n w => match enc (opp x) with
-                  | WO => False
-                  | WS b' _ _ => b' = negb b
-                  end
-    end.
-  Proof.
-  Admitted.
-
-  Lemma first_bit_zero : match enc 0 with
-    | WO => False
-    | WS b _ _ => b = false
-    end.
-  Admitted.
-
-  Lemma sign_bit_opp_negb : forall x, x <> 0 -> negb (sign_bit x) = sign_bit (opp x).
-  Proof.
-    intros x x_nonzero.
-    unfold sign_bit.
-    pose proof (enc_first_bit_opp x x_nonzero).
-    pose proof (shatter_word (enc x)) as shatter_enc_x.
-    pose proof (shatter_word (enc (opp x))) as shatter_enc_opp.
-    destruct sz; try omega.
-    rewrite shatter_enc_x, shatter_enc_opp in *.
-    auto.
-  Qed.
-
-  Lemma Fq_encoding_canonical : forall w (n : F q), dec w = Some n -> enc n = w.
-  Admitted.
 
   (* TODO : move *)
   Lemma sqrt_mod_q_0 : forall x : F q, sqrt_mod_q x = 0 -> x = 0.
@@ -173,15 +139,6 @@ Section PointEncoding.
       rewrite ring_subst in *.
       apply Fq_1_neq_0; assumption.
   Qed.
-    
-  Lemma sign_bit_zero : sign_bit 0 = false.
-  Proof.
-    unfold sign_bit.
-    pose proof first_bit_zero.
-    destruct sz; try omega.
-    pose proof (shatter_word (enc 0)) as shatter_enc0.
-    simpl in shatter_enc0; rewrite shatter_enc0 in *; assumption.
-  Qed.
 
   Lemma point_coordinates_encoding_canonical : forall w p,
     point_dec_coordinates sign_bit w = Some p -> point_enc_coordinates p = w.
@@ -202,10 +159,10 @@ Section PointEncoding.
         discriminate.
       - break_if.
         symmetry; auto using Bool.eqb_prop.
-        rewrite <- sign_bit_opp_negb by auto.
+        rewrite <- sign_bit_opp by assumption.
         destruct (whd w); inversion Heqb0; break_if; auto.
     + inversion coord_dec_Some; subst.
-      auto using Fq_encoding_canonical.
+      auto using encoding_canonical.
 Qed.
 
   Lemma point_encoding_canonical : forall w x, point_dec w = Some x -> point_enc x = w.
@@ -238,7 +195,7 @@ Proof.
   exact (encoding_valid y).
 Qed.
 
-
+(*
 Lemma wordToN_enc_neq_opp : forall x, x <> 0 -> (wordToN (enc (opp x)) <> wordToN (enc x))%N.
 Proof.
   intros x x_nonzero.
@@ -249,12 +206,13 @@ Proof.
   apply encoding_inj in false_eq.
   auto.
 Qed.
+*)
 
-Lemma sign_bit_opp : forall x y, y <> 0 ->
+Lemma sign_bit_opp_eq_iff : forall x y, y <> 0 ->
   (sign_bit x <> sign_bit y <-> sign_bit x = sign_bit (opp y)).
 Proof.
   split; intro sign_mismatch; case_eq (sign_bit x); case_eq (sign_bit y);
-    try congruence; intros y_sign x_sign; rewrite <- sign_bit_opp_negb in * by auto;
+    try congruence; intros y_sign x_sign; rewrite <- sign_bit_opp in * by auto;
     rewrite y_sign, x_sign in *; reflexivity || discriminate.
 Qed.
 
@@ -264,7 +222,7 @@ Proof.
   intros ? ? y_nonzero squares_eq sign_match.
   destruct (sqrt_solutions _ _ squares_eq) as [? | eq_opp]; auto.
   assert (sign_bit x = sign_bit (opp y)) as sign_mismatch by (f_equal; auto).
-  apply sign_bit_opp in sign_mismatch; auto.
+  apply sign_bit_opp_eq_iff in sign_mismatch; auto.
   congruence.
 Qed.
 
@@ -283,9 +241,25 @@ Proof.
     rewrite onCurve_x, onCurve_x'.
     reflexivity.
 Qed.
-(*
-Lemma blah : forall x y, (F_eqb (sqrt_mod_q (solve_for_x2 y)) 0 && sign_bit x)%bool = true.
-*)
+
+(* TODO : move *)
+Lemma sqrt_mod_q_of_0 : @sqrt_mod_q q 0 = 0.
+Proof.
+  unfold sqrt_mod_q.
+  rewrite !Fq_pow_zero.
+  break_if; ring.
+
+  congruence.
+  intro false_eq.
+  SearchAbout Z.to_N.
+  rewrite <-(N2Z.id 0) in false_eq.
+  rewrite N2Z.inj_0 in false_eq.
+  pose proof (prime_ge_2 q prime_q).
+  apply Z2N.inj in false_eq; zero_bounds.
+  assert (0 < q / 8 + 1)%Z.
+  apply Z.add_nonneg_pos; zero_bounds.
+  omega.
+Qed.
 
 Lemma point_encoding_coordinates_valid : forall p, E.onCurve p ->
    point_dec_coordinates sign_bit (point_enc_coordinates p) = Some p.
@@ -294,37 +268,40 @@ Proof.
   unfold point_dec_coordinates.
   rewrite y_decode.
   pose proof (solve_sqrt_valid p onCurve_p) as solve_sqrt_valid_p.
-  unfold sqrt_valid in *.
   destruct p as [x y].
-  simpl in *.
-  destruct (F_eq_dec ((sqrt_mod_q (E.solve_for_x2 y)) ^ 2) (E.solve_for_x2 y)); intuition.
-  break_if; f_equal.
-  + case_eq (F_eqb (sqrt_mod_q (E.solve_for_x2 y)) 0); intros eqb_0.
-(*
-    SearchAbout F_eqb.
-
- [ | simpl in *; congruence].
-    
-
-
-    rewrite Bool.eqb_true_iff in Heqb.
-    pose proof (solve_onCurve y solve_sqrt_valid_p).
-    f_equal.
-    apply (sign_bit_match _ _ y); auto.
-  + rewrite Bool.eqb_false_iff in Heqb.
-    pose proof (solve_opp_onCurve y solve_sqrt_valid_p).
-    f_equal.
-    apply sign_bit_opp in Heqb.
-    apply (sign_bit_match _ _ y); auto.
-    intro eq_zero.
-    apply solve_correct in onCurve_p.
-    rewrite eq_zero in *.
-    rewrite Fq_pow_zero in solve_sqrt_valid_p by congruence.
-    rewrite <- solve_sqrt_valid_p in onCurve_p.
-    apply Fq_root_zero in onCurve_p.
-    rewrite onCurve_p in Heqb; auto.
-*)
-Admitted.
+  unfold sqrt_valid in *.
+  simpl.
+  replace (E.solve_for_x2 y) with (x ^ 2 : F q) in * by (apply E.solve_correct; assumption).
+  case_eq (F_eqb x 0); intro eqb_x_0.
+  + apply F_eqb_eq in eqb_x_0; rewrite eqb_x_0 in *.
+    rewrite !Fq_pow_zero, sqrt_mod_q_of_0, Fq_pow_zero by congruence.
+    rewrite if_F_eq_dec_if_F_eqb, sign_bit_zero. 
+    reflexivity.
+  + assert (sqrt_mod_q (x ^ 2) <> 0) by (intro false_eq; apply sqrt_mod_q_0 in false_eq;
+      apply Fq_root_zero in false_eq; rewrite false_eq, F_eqb_refl in eqb_x_0; congruence).
+    replace (F_eqb (sqrt_mod_q (x ^ 2)) 0) with false by (symmetry;
+        apply F_eqb_neq_complete; assumption).
+    break_if.
+    - simpl.
+      f_equal.
+      break_if.
+      * rewrite Bool.eqb_true_iff in Heqb.
+        pose proof (solve_onCurve y solve_sqrt_valid_p).
+        f_equal.
+        apply (sign_bit_match _ _ y); auto.
+        apply E.solve_correct in onCurve_p; rewrite onCurve_p in *.
+        assumption.
+      * rewrite Bool.eqb_false_iff in Heqb.
+        pose proof (solve_opp_onCurve y solve_sqrt_valid_p).
+        f_equal.
+        apply sign_bit_opp_eq_iff in Heqb; try assumption.
+        apply (sign_bit_match _ _ y); auto.
+        apply E.solve_correct in onCurve_p.
+        rewrite onCurve_p; auto.
+   - simpl in solve_sqrt_valid_p.
+     replace (E.solve_for_x2 y) with (x ^ 2 : F q) in * by (apply E.solve_correct; assumption).
+     congruence.
+Qed.
 
 Lemma point_dec'_valid : forall p,
   point_dec' (point_enc_coordinates (proj1_sig p)) (proj1_sig p) = Some p.

@@ -25,7 +25,10 @@ Section ModularWordEncoding.
   Instance modular_word_encoding : encoding of F m as word sz := {
     enc := Fm_enc;
     dec := Fm_dec;
-    encoding_valid := @ModularWordEncodingPre.Fm_encoding_valid m sz m_pos bound_check
+    encoding_valid :=
+      @ModularWordEncodingPre.Fm_encoding_valid m sz m_pos bound_check;
+    encoding_canonical :=
+      @ModularWordEncodingPre.Fm_encoding_canonical m sz bound_check
   }.
 
 End ModularWordEncoding.

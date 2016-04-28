@@ -38,16 +38,42 @@ Section ModularWordEncodingPre.
     omega.
   Qed.
 
+  (* TODO: move to WordUtil *)
+  Lemma wordToN_NToWord_idempotent : forall sz n, (n < Npow2 sz)%N ->
+    wordToN (NToWord sz n) = n.
+  Proof.
+    intros.
+    rewrite wordToN_nat, NToWord_nat.
+    rewrite wordToNat_natToWord_idempotent; rewrite Nnat.N2Nat.id; auto.
+  Qed.
+
+  (* TODO: move to WordUtil *)
+  Lemma NToWord_wordToN : forall sz w, NToWord sz (wordToN w) = w.
+  Proof.
+    intros.
+    rewrite wordToN_nat, NToWord_nat, Nnat.Nat2N.id.
+    apply natToWord_wordToNat.
+  Qed.
+
   Lemma Fm_encoding_valid : forall x, Fm_dec (Fm_enc x) = Some x.
   Proof.
     unfold Fm_dec, Fm_enc; intros.
     pose proof (FieldToZ_range x m_pos).
-    rewrite wordToN_nat, NToWord_nat.
-    rewrite wordToNat_natToWord_idempotent by
-      (rewrite Nnat.N2Nat.id; apply bound_check_N).
-    rewrite Nnat.N2Nat.id, Z2N.id by omega.
+    rewrite wordToN_NToWord_idempotent by apply bound_check_N.
+    rewrite Z2N.id by omega.
     rewrite ZToField_idempotent.
     break_if; auto; omega.
+  Qed.
+
+  Lemma Fm_encoding_canonical : forall w x, Fm_dec w = Some x -> Fm_enc x = w.
+  Proof.
+    unfold Fm_dec, Fm_enc; intros ? ? dec_Some.
+    break_if; [ | congruence ].
+    inversion dec_Some.
+    rewrite FieldToZ_ZToField.
+    rewrite Z.mod_small by (pose proof (N2Z.is_nonneg (wordToN w)); try omega).
+    rewrite N2Z.id.
+    apply NToWord_wordToN.
   Qed.
 
 End ModularWordEncodingPre.

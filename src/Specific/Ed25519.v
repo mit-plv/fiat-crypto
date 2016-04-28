@@ -123,7 +123,7 @@ Proof.
     apply weqb_true_iff in Heqb. subst. rewrite encoding_valid in H; discriminate. }
 Qed.
 
-Definition enc' : F q * F q -> word (S (b - 1)).
+Definition enc' : F q * F q -> word b.
 Proof.
   intro x.
   let enc' := (eval hnf in (@enc (@E.point curve25519params) _ _)) in
@@ -296,7 +296,7 @@ Proof.
   { do 2 (eapply option_rect_Proper_nd; [intro|reflexivity..]).
     symmetry; apply decode_test_encode_test.
   } Unfocus.
-
+  
   rewrite enc'_correct.
   cbv [unExtendedPoint unifiedAddM1 negateExtended scalarMultM1].
   (* Why does this take too long?
@@ -349,7 +349,7 @@ Proof.
     reflexivity. }
   Unfocus.
 
-  cbv iota beta delta [point_dec_coordinates sign_bit dec FqEncoding modular_word_encoding E.solve_for_x2 sqrt_mod_q].
+  cbv iota beta delta [point_dec_coordinates ModularWordEncodingTheorems.sign_bit dec FqEncoding modular_word_encoding E.solve_for_x2 sqrt_mod_q].
 
   etransitivity.
   Focus 2. {
