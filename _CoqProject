@@ -8,6 +8,7 @@ src/CompleteEdwardsCurve/ExtendedCoordinates.v
 src/CompleteEdwardsCurve/Pre.v
 src/Encoding/EncodingTheorems.v
 src/Encoding/ModularWordEncodingPre.v
+src/Encoding/ModularWordEncodingTheorems.v
 src/Encoding/PointEncodingPre.v
 src/ModularArithmetic/ExtendedBaseVector.v
 src/ModularArithmetic/FField.v
