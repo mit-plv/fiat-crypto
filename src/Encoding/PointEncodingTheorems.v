@@ -1,7 +1,7 @@
 
 Section PointEncoding.
   Context {prm: CompleteEdwardsCurve.TwistedEdwardsParams} {sz : nat}
-   {FqEncoding : encoding of ModularArithmetic.F (CompleteEdwardsCurve.q) as Word.word sz}
+   {FqEncoding : canonical encoding of ModularArithmetic.F (CompleteEdwardsCurve.q) as Word.word sz}
    {q_5mod8 : (CompleteEdwardsCurve.q mod 8 = 5)%Z}
    {sqrt_minus1_valid : (@ZToField CompleteEdwardsCurve.q 2 ^ BinInt.Z.to_N (CompleteEdwardsCurve.q / 4)) ^ 2 = opp 1}.
   Existing Instance CompleteEdwardsCurve.prime_q.
@@ -180,7 +180,7 @@ Proof.
     rewrite onCurve_p in Heqb; auto.
 Qed.
 
-Instance point_encoding : encoding of point as (word (S sz)) := {
+Instance point_encoding : canonical encoding of point as (word (S sz)) := {
   enc := point_enc;
   dec := point_dec;
   encoding_valid := point_encoding_valid

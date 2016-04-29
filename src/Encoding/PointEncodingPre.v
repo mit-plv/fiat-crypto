@@ -17,7 +17,7 @@ Section PointEncoding.
   Context {prm: TwistedEdwardsParams} {sz : nat} {sz_nonzero : (0 < sz)%nat}
    {bound_check : (Z.to_nat q < 2 ^ sz)%nat} {q_5mod8 : (q mod 8 = 5)%Z}
    {sqrt_minus1_valid : (@ZToField q 2 ^ Z.to_N (q / 4)) ^ 2 = opp 1}
-   {FqEncoding : encoding of (F q) as (word sz)}
+   {FqEncoding : canonical encoding of (F q) as (word sz)}
    {sign_bit : F q -> bool} {sign_bit_zero : sign_bit 0 = false}
    {sign_bit_opp : forall x, x <> 0 -> negb (sign_bit x) = sign_bit (opp x)}.
   Existing Instance prime_q.

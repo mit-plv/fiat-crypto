@@ -17,7 +17,7 @@ Section PointEncoding.
   Context {prm: TwistedEdwardsParams} {sz : nat} {sz_nonzero : (0 < sz)%nat}
    {bound_check : (BinInt.Z.to_nat q < NPeano.Nat.pow 2 sz)%nat} {q_5mod8 : (q mod 8 = 5)%Z}
    {sqrt_minus1_valid : (@ZToField q 2 ^ BinInt.Z.to_N (q / 4)) ^ 2 = opp 1}
-   {FqEncoding : encoding of (F q) as (Word.word sz)}
+   {FqEncoding : canonical encoding of (F q) as (Word.word sz)}
    {sign_bit : F q -> bool} {sign_bit_zero : sign_bit 0 = false}
    {sign_bit_opp : forall x, x <> 0 -> negb (sign_bit x) = sign_bit (opp x)}.
   Existing Instance prime_q.
@@ -38,7 +38,7 @@ Section PointEncoding.
    Definition point_encoding_canonical : forall x_enc x, point_dec x_enc = Some x -> point_enc x = x_enc :=
      PointEncodingPre.point_encoding_canonical.
 
-  Instance point_encoding : encoding of E.point as (Word.word (S sz)) := {
+  Instance point_encoding : canonical encoding of E.point as (Word.word (S sz)) := {
     enc := point_enc;
     dec := point_dec;
     encoding_valid := point_encoding_valid;

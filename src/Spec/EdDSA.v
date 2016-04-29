@@ -21,8 +21,8 @@ Section EdDSAParams.
 
     b : nat; (* public keys are k bits, signatures are 2*k bits *)
     b_valid : 2^(b - 1) > BinInt.Z.to_nat q;
-    FqEncoding : encoding of F q as Word.word (b-1);
-    PointEncoding : encoding of E.point as Word.word b;
+    FqEncoding : canonical encoding of F q as Word.word (b-1);
+    PointEncoding : canonical encoding of E.point as Word.word b;
 
     H : forall {n}, Word.word n -> Word.word (b + b); (* main hash function *)
 
@@ -40,7 +40,7 @@ Section EdDSAParams.
     l_prime : Znumtheory.prime (BinInt.Z.of_nat l);
     l_odd : l > 2;
     l_order_B : (l*B)%E = E.zero;
-    FlEncoding : encoding of F (BinInt.Z.of_nat l) as Word.word b
+    FlEncoding : canonical encoding of F (BinInt.Z.of_nat l) as Word.word b
   }.
 End EdDSAParams.
 
