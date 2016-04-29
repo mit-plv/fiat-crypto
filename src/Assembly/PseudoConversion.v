@@ -5,14 +5,14 @@ Require Export Bedrock.Word.
 Require Export List.
 Require Vector.
 
-Module PseudoConversion <: Conversion Pseudo AlmostQhasm.
-  Import QhasmCommon AlmostQhasm Pseudo State.
+Module PseudoConversion (P: Pseudo) <: Conversion P AlmostQhasm.
+  Import QhasmCommon AlmostQhasm P State.
   Import ListNotations.
 
-  Definition convertState (st: AlmostQhasm.State): Pseudo.State :=
+  Definition convertState (st: AlmostQhasm.State): P.State :=
     match st with
     | fullState _ _ stackState _ =>
-      map (fun x => NToWord 32 (snd x)) (NatM.elements stackState)
+      map (fun x => NToWord width (snd x)) (NatM.elements stackState)
     end.
 
   Fixpoint convertProgram' (prog: Pseudo): option AlmostQhasm.Program :=
