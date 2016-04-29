@@ -143,11 +143,9 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma b_minus1_nonzero : 0 < b - 1. Proof. cbv. omega. Qed.
-
 Definition PointEncoding : encoding of E.point as (word b) :=
-  (@point_encoding curve25519params (b - 1) q_5mod8 sqrt_minus1_valid FqEncoding
-  (@sign_bit _ prime_q two_lt_q (b - 1) b_valid) sign_bit_zero sign_bit_opp).
+  (@point_encoding curve25519params (b - 1) q_5mod8 sqrt_minus1_valid FqEncoding sign_bit
+  (@sign_bit_zero _ prime_q two_lt_q _ b_valid) (@sign_bit_opp _ prime_q two_lt_q _ b_valid)).
 
 Definition H : forall n : nat, word n -> word (b + b). Admitted.
 Definition B : E.point. Admitted. (* TODO: B = decodePoint (y=4/5, x="positive") *)

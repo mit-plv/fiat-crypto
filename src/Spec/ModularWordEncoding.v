@@ -22,6 +22,12 @@ Section ModularWordEncoding.
       else None
   .
 
+  Definition sign_bit (x : F m) :=
+  match (Fm_enc x) with
+    | Word.WO => false
+    | Word.WS b _ w' => b
+  end.
+
   Instance modular_word_encoding : encoding of F m as word sz := {
     enc := Fm_enc;
     dec := Fm_dec;
