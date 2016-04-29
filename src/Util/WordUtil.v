@@ -46,6 +46,15 @@ Proof.
   rewrite pow2_id; assumption.
 Qed.
 
+Lemma weqb_false_iff : forall sz (x y : word sz), weqb x y = false <-> x <> y.
+Proof.
+  split; intros.
+  + intro eq_xy; apply weqb_true_iff in eq_xy; congruence.
+  + case_eq (weqb x y); intros weqb_xy; auto.
+    apply weqb_true_iff in weqb_xy.
+    congruence.
+Qed.
+
 Definition wfirstn n {m} (w : Word.word m) {H : n <= m} : Word.word n.
   refine (Word.split1 n (m - n) (match _ in _ = N return Word.word N with
                             | eq_refl => w

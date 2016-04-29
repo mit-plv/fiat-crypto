@@ -9,7 +9,7 @@ Require Import Crypto.Encoding.PointEncodingPre.
 Require Import Crypto.Spec.Encoding Crypto.Spec.ModularWordEncoding Crypto.Spec.PointEncoding.
 Require Import Crypto.CompleteEdwardsCurve.ExtendedCoordinates.
 Require Import Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
-Require Import Crypto.Util.IterAssocOp.
+Require Import Crypto.Util.IterAssocOp Crypto.Util.WordUtil.
 
 Local Infix "++" := Word.combine.
 Local Notation " a '[:' i ']' " := (Word.split1 i _ a) (at level 40).
@@ -110,7 +110,17 @@ Local Notation "'(' X ',' Y ',' Z ',' T ')'" := (mkExtended X Y Z T).
 Local Notation "2" := (ZToField 2) : F_scope.
 
 Local Existing Instance PointEncoding.
-Axiom decode_point_eq : forall (P_ Q_ : word (S (b-1))) (P Q:E.point), dec P_ = Some P -> dec Q_ = Some Q -> weqb P_ Q_ = (P ==? Q)%E.
+Lemma decode_point_eq : forall (P_ Q_ : word (S (b-1))) (P Q:E.point),
+  dec P_ = Some P ->
+  dec Q_ = Some Q ->
+  weqb P_ Q_ = (P ==? Q)%E.
+Proof.
+  intros.
+  replace P_ with (enc P) in * by (auto using encoding_canonical).
+  replace Q_ with (enc Q) in * by (auto using encoding_canonical).
+  rewrite E.point_eqb_correct.
+  edestruct E.point_eq_dec; (apply weqb_true_iff || apply weqb_false_iff); congruence.
+Qed.
 
 Lemma decode_test_encode_test : forall S_ X, option_rect (fun _ : option E.point => bool)
  (fun S : E.point => (S ==? X)%E) false (dec S_) = weqb S_ (enc X).
