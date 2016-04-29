@@ -1,7 +1,7 @@
 Require Import Crypto.Spec.Encoding.
 
 Section EncodingTheorems.
-  Context {A B : Type} {E : encoding of A as B}.
+  Context {A B : Type} {E : canonical encoding of A as B}.
   
   Lemma encoding_inj : forall x y, enc x = enc y -> x = y.
   Proof.

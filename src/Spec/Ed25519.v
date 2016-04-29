@@ -118,7 +118,7 @@ Qed.
 Require Import Crypto.Spec.Encoding.
 
 Lemma q_pos : (0 < q)%Z. q_bound. Qed.
-Definition FqEncoding : encoding of (F q) as word (b-1) :=
+Definition FqEncoding : canonical encoding of (F q) as word (b-1) :=
   @modular_word_encoding q (b - 1) q_pos b_valid.
 
 Lemma l_pos : (0 < Z.of_nat l)%Z. pose proof prime_l; prime_bound. Qed.
@@ -130,7 +130,7 @@ Proof.
   unfold l.
   apply Z2Nat.inj_lt; compute; congruence.
 Qed.
-Definition FlEncoding : encoding of F (Z.of_nat l) as word b :=
+Definition FlEncoding : canonical encoding of F (Z.of_nat l) as word b :=
   @modular_word_encoding (Z.of_nat l) b l_pos l_bound.
 
 Lemma q_5mod8 : (q mod 8 = 5)%Z. cbv; reflexivity. Qed.
@@ -143,7 +143,7 @@ Proof.
   reflexivity.
 Qed.
 
-Definition PointEncoding : encoding of E.point as (word b) :=
+Definition PointEncoding : canonical encoding of E.point as (word b) :=
   (@point_encoding curve25519params (b - 1) q_5mod8 sqrt_minus1_valid FqEncoding sign_bit
   (@sign_bit_zero _ prime_q two_lt_q _ b_valid) (@sign_bit_opp _ prime_q two_lt_q _ b_valid)).
 
