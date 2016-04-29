@@ -359,7 +359,7 @@ Proof.
     reflexivity. }
   Unfocus.
 
-  cbv iota beta delta [point_dec_coordinates ModularWordEncodingTheorems.sign_bit dec FqEncoding modular_word_encoding E.solve_for_x2 sqrt_mod_q].
+  cbv iota beta delta [point_dec_coordinates sign_bit dec FqEncoding modular_word_encoding E.solve_for_x2 sqrt_mod_q].
 
   etransitivity.
   Focus 2. {
