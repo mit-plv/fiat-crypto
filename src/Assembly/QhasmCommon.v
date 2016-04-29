@@ -18,68 +18,14 @@ Notation "'contra'" := (False_rec _ _) : state_scope.
 
 Obligation Tactic := abstract intuition.
 
-(* Float Datatype *)
-
-Record Float (floatBits: nat) (fractionBits: nat) := mkFloat {
-  validFloat: word floatBits -> Prop;
-
-  wordToFloat: word fractionBits -> {w: word floatBits | validFloat w};
-  floatToWord: {w: word floatBits | validFloat w} -> word fractionBits;
-
-  wordToFloat_spec : forall x, floatToWord (wordToFloat x) = x;
-
-  serialize: {w: word floatBits | validFloat w} -> N;
-  deserialize: N -> {w: word floatBits | validFloat w};
-
-  serialize_spec1 : forall x, serialize (deserialize x) = x;
-  serialize_spec2 : forall x, deserialize (serialize x) = x;
-
-  floatPlus: {w: word floatBits | validFloat w}
-          ->  {w: word floatBits | validFloat w}
-          ->  {w: word floatBits | validFloat w};
-
-  floatPlus_wordToFloat : forall n m,
-      (wordToN n < (Npow2 (fractionBits - 1)))%N ->
-      (wordToN m < (Npow2 (fractionBits - 1)))%N ->
-      floatPlus (wordToFloat n) (wordToFloat m)
-        = wordToFloat (wplus n m);
-
-  floatMult: {w: word floatBits | validFloat w}
-          ->  {w: word floatBits | validFloat w}
-          ->  {w: word floatBits | validFloat w};
-
-  floatMult_wordToFloat : forall n m,
-      (wordToN n < (Npow2 (fractionBits / 2)%nat))%N ->
-      (wordToN m < (Npow2 (fractionBits / 2)%nat))%N ->
-      floatMult (wordToFloat n) (wordToFloat m)
-        = wordToFloat (wmult n m);
-
-  floatAnd:  {w: word floatBits | validFloat w}
-          ->  {w: word floatBits | validFloat w}
-          ->  {w: word floatBits | validFloat w};
-
-  floatAnd_wordToFloat : forall n m,
-    floatAnd (wordToFloat n) (wordToFloat m) = wordToFloat (wand n m)
-}.
-
-Parameter Float32: Float 32 23.
-
-Parameter Float64: Float 64 52.
-
 (* Asm Types *)
 Inductive IConst: nat -> Type :=
-  | constInt32: word 32 -> IConst 32.
-
-Inductive FConst: nat -> Type :=
-  | constFloat32: word 32 -> FConst 32
-  | constFloat64: word 64 -> FConst 64.
+  | constInt32: word 32 -> IConst 32
+  | constInt64: word 64 -> IConst 64.
 
 Inductive IReg: nat -> Type :=
-  | regInt32: nat -> IReg 32.
-
-Inductive FReg: nat -> Type :=
-  | regFloat32: nat -> FReg 32
-  | regFloat64: nat -> FReg 64.
+  | regInt32: nat -> IReg 32
+  | regInt64: nat -> IReg 64.
 
 Inductive Stack: nat -> Type :=
   | stack32: nat -> Stack 32
@@ -91,17 +37,9 @@ Definition CarryState := option bool.
 (* Assignments *)
 Inductive Assignment : Type :=
   | ARegStackInt: forall n, IReg n -> Stack n -> Assignment
-  | ARegStackFloat: forall n, FReg n -> Stack n -> Assignment
-
   | AStackRegInt: forall n, Stack n -> IReg n -> Assignment
-  | AStackRegFloat: forall n, Stack n -> FReg n -> Assignment
-
   | ARegRegInt: forall n, IReg n -> IReg n -> Assignment
-  | ARegRegFloat: forall n, FReg n -> FReg n -> Assignment
-
   | AConstInt: forall n, IReg n -> IConst n -> Assignment
-  | AConstFloat: forall n, FReg n -> FConst n -> Assignment
-
   | AIndex: forall n m, IReg n -> Stack m -> Index (m/n)%nat -> Assignment
   | APtr: forall n, IReg 32 -> Stack n -> Assignment.
 
@@ -113,23 +51,13 @@ Inductive IntOp :=
   | IPlus: IntOp | IMinus: IntOp
   | IXor: IntOp  | IAnd: IntOp | IOr: IntOp.
 
-Inductive FloatOp :=
-  | FPlus: FloatOp | FMult: FloatOp | FAnd: FloatOp.
-
 Inductive RotOp :=
   | Shl: RotOp | Shr: RotOp.
 
 Inductive Operation :=
-  | IOpConst: IntOp -> IReg 32 -> IConst 32 -> Operation
-  | IOpReg: IntOp -> IReg 32 -> IReg 32 -> Operation
-
-  | FOpConst32: FloatOp -> FReg 32 -> FConst 32 -> Operation
-  | FOpReg32: FloatOp -> FReg 32 -> FReg 32 -> Operation
-
-  | FOpConst64: FloatOp -> FReg 64 -> FConst 64 -> Operation
-  | FOpReg64: FloatOp -> FReg 64 -> FReg 64 -> Operation
-
-  | OpRot: RotOp -> IReg 32 -> Index 32 -> Operation.
+  | IOpConst: forall n, IntOp -> IReg n -> IConst n -> Operation
+  | IOpReg: forall n, IntOp -> IReg n -> IReg n -> Operation
+  | OpRot: forall n, RotOp -> IReg n -> Index n -> Operation.
 
 Hint Constructors Operation.
 
@@ -142,8 +70,7 @@ Inductive TestOp :=
 Inductive Conditional :=
   | TestTrue: Conditional
   | TestFalse: Conditional
-  | TestInt: forall n, TestOp -> IReg n -> IReg n -> Conditional
-  | TestFloat: forall n, TestOp -> FReg n -> FReg n -> Conditional.
+  | TestInt: forall n, TestOp -> IReg n -> IReg n -> Conditional.
 
 Hint Constructors Conditional.
 
@@ -152,12 +79,7 @@ Hint Constructors Conditional.
 Definition getIRegWords {n} (x: IReg n) :=
   match x with
   | regInt32 loc => 1
-  end.
-
-Definition getFRegWords {n} (x: FReg n) :=
-  match x with
-  | regFloat32 loc => 1
-  | regFloat64 loc => 2
+  | regInt64 loc => 2
   end.
 
 Definition getStackWords {n} (x: Stack n) :=
@@ -170,12 +92,7 @@ Definition getStackWords {n} (x: Stack n) :=
 Definition getIRegIndex {n} (x: IReg n): nat :=
   match x with
   | regInt32 loc => loc
-  end.
-
-Definition getFRegIndex {n} (x: FReg n): nat :=
-  match x with
-  | regFloat32 loc => loc
-  | regFloat64 loc => loc
+  | regInt64 loc => loc
   end.
 
 Definition getStackIndex {n} (x: Stack n): nat :=
@@ -189,12 +106,6 @@ Definition getStackIndex {n} (x: Stack n): nat :=
 Definition intRegCount (base: nat): nat :=
   match base with
   | 32 => 7
-  | _ => 0
-  end.
-
-Definition floatRegCount (base: nat): nat :=
-  match base with
-  | 32 => 8
   | 64 => 8
   | _ => 0
   end.

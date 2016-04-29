@@ -2,11 +2,38 @@ Require Import QhasmEvalCommon QhasmUtil.
 Require Import Language.
 Require Import List.
 
-Module Pseudo <: Language.
+Module Type Pseudo <: Language.
   Import ListNotations State Util.
 
+  (* Input/output specification *)
+  Parameter width: nat.
+  Parameter vars: nat.
+
+  Definition const: Type := word width.
+
+  (* Qhasm primitives we'll use *)
+  Parameter izero: IConst width.
+  
+  Definition ireg: nat -> IReg width :=
+    match izero with
+    | constInt32 _ => regInt32
+    | constInt64 _ => regInt64
+    end.
+
+  Definition iconst: word width -> IConst width :=
+    match izero with
+    | constInt32 _ => constInt32
+    | constInt64 _ => constInt64
+    end.
+
+  Definition stack: nat -> Stack width :=
+    match izero with
+    | constInt32 _ => stack32
+    | constInt64 _ => fun x => stack64 (2 * x)
+    end.
+
   (* Program Types *)
-  Definition State := list (word 32).
+  Definition State := list const.
 
   Inductive WBinOp: Set :=
     | Wplus: WBinOp    | Wmult: WBinOp
@@ -18,11 +45,9 @@ Module Pseudo <: Language.
   Inductive WShiftOp: Set :=
     | Wshl: WShiftOp   | Wshr: WShiftOp.
 
-  (* WAST: function from all variables to a single (word 32) *)
-  (* Pseudo: function from inputs to outputs to a single (word 32) *)
-  Inductive Pseudo: nat -> nat -> Set :=
+  Inductive Pseudo: nat -> nat -> Type :=
     | PVar: forall n, Index n -> Pseudo n 1
-    | PConst: forall n, word 32 -> Pseudo n 1
+    | PConst: forall n, const -> Pseudo n 1
 
     | PBin: forall n m, WBinOp -> Pseudo n m -> Pseudo n m -> Pseudo n m
     | PNat: forall n, WNatOp -> nat -> Pseudo n 1
@@ -37,12 +62,9 @@ Module Pseudo <: Language.
 
   Hint Constructors Pseudo.
 
-  Parameter nIn: nat.
-  Parameter nOut: nat.
+  Definition Program := Pseudo vars vars.
 
-  Definition Program := Pseudo nIn nOut.
-
-  Definition applyBin (op: WBinOp) (a b: list (word 32)): option (list (word 32)) :=
+  Definition applyBin (op: WBinOp) (a b: list const): option (list const) :=
     match op with
     | Wplus => None
     | Wmult => None
@@ -50,13 +72,13 @@ Module Pseudo <: Language.
     | Wand => None
     end.
 
-  Definition applyNat (op: WNatOp) (v: nat): option (list (word 32)) :=
+  Definition applyNat (op: WNatOp) (v: nat): option (list const) :=
     match op with
     | Wones => None
     | Wzeros => None
     end.
 
-  Definition applyShift (op: WShiftOp) (v: word 32) (n: nat): option (list (word 32)) :=
+  Definition applyShift (op: WShiftOp) (v: const) (n: nat): option (list const) :=
     match op with
     | Wshl => None
     | Wshr => None
@@ -121,7 +143,7 @@ Module Pseudo <: Language.
       -> PseudoEval n n (PFunExp n f e') s' s''
       -> PseudoEval n n (PFunExp n f e) s s''.
 
-  Definition evaluatesTo := PseudoEval nIn nOut.
+  Definition evaluatesTo := PseudoEval vars vars.
 
   (* world peace *)
 End Pseudo.
