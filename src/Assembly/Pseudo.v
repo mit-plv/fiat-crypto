@@ -2,34 +2,41 @@ Require Import QhasmEvalCommon QhasmUtil.
 Require Import Language.
 Require Import List.
 
-Module Type Pseudo <: Language.
-  Import ListNotations State Util.
-
-  (* Input/output specification *)
+Module Type PseudoMachine.
   Parameter width: nat.
   Parameter vars: nat.
+  Parameter width_spec: ISize width.
+End PseudoMachine.
+
+Module Pseudo (M: PseudoMachine) <: Language.
+  Import ListNotations State Util M.
 
   Definition const: Type := word width.
 
-  (* Qhasm primitives we'll use *)
-  Parameter izero: IConst width.
-  
-  Definition ireg: nat -> IReg width :=
-    match izero with
-    | constInt32 _ => regInt32
-    | constInt64 _ => regInt64
+  Definition width_dec: {width = 32} + {width = 64}.
+    destruct width_spec.
+    - left; abstract intuition.
+    - right; abstract intuition.
+  Defined.
+
+  Definition ireg (x: nat): IReg width :=
+    match width_spec with
+    | I32 => regInt32 x
+    | I64 => regInt64 x
     end.
 
-  Definition iconst: word width -> IConst width :=
-    match izero with
-    | constInt32 _ => constInt32
-    | constInt64 _ => constInt64
-    end.
+  Definition iconst (x: word width): IConst width.
+    refine (
+      if width_dec
+      then (convert constInt32 _) x
+      else (convert constInt64 _) x);
+    abstract (rewrite _H; intuition).
+  Defined.
 
-  Definition stack: nat -> Stack width :=
-    match izero with
-    | constInt32 _ => stack32
-    | constInt64 _ => fun x => stack64 (2 * x)
+  Definition stack (x: nat): Stack width :=
+    match width_spec with
+    | I32 => stack32 x
+    | I64 => stack64 (2 * x)
     end.
 
   (* Program Types *)
@@ -49,7 +56,7 @@ Module Type Pseudo <: Language.
     | PVar: forall n, Index n -> Pseudo n 1
     | PConst: forall n, const -> Pseudo n 1
 
-    | PBin: forall n m, WBinOp -> Pseudo n m -> Pseudo n m -> Pseudo n m
+    | PBin: forall n, WBinOp -> Pseudo n 1 -> Pseudo n 1 -> Pseudo n 1
     | PNat: forall n, WNatOp -> nat -> Pseudo n 1
     | PShift: forall n, WShiftOp -> Pseudo n 1 -> nat -> Pseudo n 1
 
@@ -64,25 +71,35 @@ Module Type Pseudo <: Language.
 
   Definition Program := Pseudo vars vars.
 
-  Definition applyBin (op: WBinOp) (a b: list const): option (list const) :=
+  Definition applyBin (op: WBinOp) (a b: word width): option (list const) :=
     match op with
-    | Wplus => None
-    | Wmult => None
-    | Wminus => None
-    | Wand => None
+    | Wplus => Some [(wplus a b)]
+    | Wmult => Some [(wmult a b)]
+    | Wminus => Some [(wminus a b)]
+    | Wand => Some [(wand a b)]
     end.
 
-  Definition applyNat (op: WNatOp) (v: nat): option (list const) :=
-    match op with
-    | Wones => None
-    | Wzeros => None
-    end.
+  Definition applyNat (op: WNatOp) (v: Index width): option (list const).
+    refine match op with
+    | Wones => Some [convert (zext (wones v) (width - v)) _]
+    | Wzeros => Some [wzero width]
+    end; abstract (
+      destruct v; simpl;
+      replace (x + (width - x)) with width;
+      intuition ).
+  Defined.
 
-  Definition applyShift (op: WShiftOp) (v: const) (n: nat): option (list const) :=
-    match op with
-    | Wshl => None
-    | Wshr => None
-    end.
+  Definition applyShift (op: WShiftOp) (v: const) (n: Index width): option (list const).
+    refine match op with
+    | Wshl => Some [convert (Word.combine (wzero n) (split1 (width - n) n (convert v _))) _]
+    | Wshr => Some [convert (Word.combine (split2 n (width - n) (convert v _)) (wzero n)) _]
+    end; abstract (
+      unfold const;
+      destruct n; simpl;
+      replace (width - x + x) with width;
+      replace (x + (width - x)) with width;
+      intuition ).
+  Defined.
 
   Inductive PseudoEval: forall n m, Pseudo n m -> State -> State -> Prop :=
     | PEVar: forall s n (i: Index n) w,
@@ -92,11 +109,11 @@ Module Type Pseudo <: Language.
     | PEConst: forall n s w,
         PseudoEval n 1 (PConst n w) s [w]
 
-    | PEBin: forall n m a b s sa sb s' op,
+    | PEBin: forall n a b s sa sb s' op,
         applyBin op sa sb = Some s'
-      -> PseudoEval n m a s sa
-      -> PseudoEval n m b s sb
-      -> PseudoEval n m (PBin n m op a b) s s'
+      -> PseudoEval n 1 a s [sa]
+      -> PseudoEval n 1 b s [sb]
+      -> PseudoEval n 1 (PBin n op a b) s s'
 
     | PENat: forall n op v s s',
         applyNat op v = Some s'
@@ -147,3 +164,18 @@ Module Type Pseudo <: Language.
 
   (* world peace *)
 End Pseudo.
+
+Module PseudoUnary32 <: PseudoMachine.
+  Definition width := 32.
+  Definition vars := 1.
+  Definition width_spec := I32.
+  Definition const: Type := word width.
+End PseudoUnary32.
+
+Module PseudoUnary64 <: PseudoMachine.
+  Definition width := 64.
+  Definition vars := 1.
+  Definition width_spec := I64.
+  Definition const: Type := word width.
+End PseudoUnary64.
+ 

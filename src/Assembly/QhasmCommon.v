@@ -19,6 +19,10 @@ Notation "'contra'" := (False_rec _ _) : state_scope.
 Obligation Tactic := abstract intuition.
 
 (* Asm Types *)
+Inductive ISize: nat -> Type :=
+  | I32: ISize 32
+  | I64: ISize 64.
+
 Inductive IConst: nat -> Type :=
   | constInt32: word 32 -> IConst 32
   | constInt64: word 64 -> IConst 64.
@@ -87,6 +91,12 @@ Definition getStackWords {n} (x: Stack n) :=
   | stack32 loc => 1
   | stack64 loc => 2
   | stack128 loc => 4
+  end.
+
+Definition getIConstValue {n} (x: IConst n): nat :=
+  match x with
+  | constInt32 v => wordToNat v
+  | constInt64 v => wordToNat v
   end.
 
 Definition getIRegIndex {n} (x: IReg n): nat :=
