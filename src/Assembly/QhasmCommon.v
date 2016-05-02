@@ -19,6 +19,10 @@ Notation "'contra'" := (False_rec _ _) : state_scope.
 Obligation Tactic := abstract intuition.
 
 (* Asm Types *)
+Inductive ISize: nat -> Type :=
+  | I32: ISize 32
+  | I64: ISize 64.
+
 Inductive IConst: nat -> Type :=
   | constInt32: word 32 -> IConst 32
   | constInt64: word 64 -> IConst 64.

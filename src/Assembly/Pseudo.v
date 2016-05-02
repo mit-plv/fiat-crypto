@@ -5,7 +5,7 @@ Require Import List.
 Module Type PseudoMachine.
   Parameter width: nat.
   Parameter vars: nat.
-  Parameter izero: IConst width.
+  Parameter width_spec: ISize width.
 End PseudoMachine.
 
 Module Pseudo (M: PseudoMachine) <: Language.
@@ -13,22 +13,30 @@ Module Pseudo (M: PseudoMachine) <: Language.
 
   Definition const: Type := word width.
 
-  Definition ireg: nat -> IReg width :=
-    match izero with
-    | constInt32 _ => regInt32
-    | constInt64 _ => regInt64
+  Definition width_dec: {width = 32} + {width = 64}.
+    destruct width_spec.
+    - left; abstract intuition.
+    - right; abstract intuition.
+  Defined.
+
+  Definition ireg (x: nat): IReg width :=
+    match width_spec with
+    | I32 => regInt32 x
+    | I64 => regInt64 x
     end.
 
-  Definition iconst: word width -> IConst width :=
-    match izero with
-    | constInt32 _ => constInt32
-    | constInt64 _ => constInt64
-    end.
+  Definition iconst (x: word width): IConst width.
+    refine (
+      if width_dec
+      then (convert constInt32 _) x
+      else (convert constInt64 _) x);
+    abstract (rewrite _H; intuition).
+  Defined.
 
-  Definition stack: nat -> Stack width :=
-    match izero with
-    | constInt32 _ => stack32
-    | constInt64 _ => fun x => stack64 (2 * x)
+  Definition stack (x: nat): Stack width :=
+    match width_spec with
+    | I32 => stack32 x
+    | I64 => stack64 (2 * x)
     end.
 
   (* Program Types *)
@@ -150,14 +158,14 @@ End Pseudo.
 Module PseudoUnary32 <: PseudoMachine.
   Definition width := 32.
   Definition vars := 1.
-  Definition izero := constInt32 (wzero 32).
+  Definition width_spec := I32.
   Definition const: Type := word width.
 End PseudoUnary32.
 
 Module PseudoUnary64 <: PseudoMachine.
   Definition width := 64.
   Definition vars := 1.
-  Definition izero := constInt64 (wzero 64).
+  Definition width_spec := I64.
   Definition const: Type := word width.
 End PseudoUnary64.
  
