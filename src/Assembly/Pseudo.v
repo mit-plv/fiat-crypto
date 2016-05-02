@@ -2,18 +2,17 @@ Require Import QhasmEvalCommon QhasmUtil.
 Require Import Language.
 Require Import List.
 
-Module Type Pseudo <: Language.
-  Import ListNotations State Util.
-
-  (* Input/output specification *)
+Module Type PseudoMachine.
   Parameter width: nat.
   Parameter vars: nat.
+  Parameter izero: IConst width.
+End PseudoMachine.
+
+Module Pseudo (M: PseudoMachine) <: Language.
+  Import ListNotations State Util M.
 
   Definition const: Type := word width.
 
-  (* Qhasm primitives we'll use *)
-  Parameter izero: IConst width.
-  
   Definition ireg: nat -> IReg width :=
     match izero with
     | constInt32 _ => regInt32
@@ -147,3 +146,18 @@ Module Type Pseudo <: Language.
 
   (* world peace *)
 End Pseudo.
+
+Module PseudoUnary32 <: PseudoMachine.
+  Definition width := 32.
+  Definition vars := 1.
+  Definition izero := constInt32 (wzero 32).
+  Definition const: Type := word width.
+End PseudoUnary32.
+
+Module PseudoUnary64 <: PseudoMachine.
+  Definition width := 64.
+  Definition vars := 1.
+  Definition izero := constInt64 (wzero 64).
+  Definition const: Type := word width.
+End PseudoUnary64.
+ 
