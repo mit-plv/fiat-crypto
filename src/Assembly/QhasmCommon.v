@@ -93,6 +93,12 @@ Definition getStackWords {n} (x: Stack n) :=
   | stack128 loc => 4
   end.
 
+Definition getIConstValue {n} (x: IConst n): nat :=
+  match x with
+  | constInt32 v => wordToNat v
+  | constInt64 v => wordToNat v
+  end.
+
 Definition getIRegIndex {n} (x: IReg n): nat :=
   match x with
   | regInt32 loc => loc
