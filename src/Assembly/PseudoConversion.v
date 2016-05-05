@@ -25,14 +25,14 @@ Module PseudoConversion (M: PseudoMachine).
     Import P M.
 
     Definition activeRegisters := 5.
-    Definition r0 := ireg 5.
+    Definition r0 := ireg 5. (* Invariant: these are never used in a Mapping *)
     Definition r1 := ireg 6.
 
-    Definition convertState (st: AlmostQhasm.State): P.State :=
+    Definition convertState (st: AlmostQhasm.State): option P.State :=
       match st with
       | fullState _ stackState _ =>
-        take vars (map (fun x => NToWord width (snd x))
-                       (NatM.elements stackState))
+        Some (take vars (map (fun x => NToWord width (snd x))
+                       (NatM.elements stackState)))
       end.
 
     Definition dec_lt (a b: nat): {(a < b)%nat} + {(a >= b)%nat}.
@@ -157,16 +157,18 @@ Module PseudoConversion (M: PseudoMachine).
               (AOp (IOpReg width iop ra r0)),
          regM ra va pa)
 
-      | (stackM ra va _, stackM rb vb _) =>
+      | (stackM ra va pa, stackM rb vb _) =>
         (ASeq (AAssign (ARegStackInt width r1 ra))
           (ASeq (AAssign (ARegStackInt width r0 rb))
-            (AOp (IOpReg width iop r1 r0))),
-         regM r1 (getIRegIndex r1) eq_refl)
+            (ASeq (AOp (IOpReg width iop r1 r0))
+              (AAssign (AStackRegInt width ra r1)))),
+         stackM ra va pa)
 
-      | (stackM ra va _, constM rb vb _) =>
-        (ASeq (AAssign (ARegStackInt width r1 ra))
-          (AOp (IOpConst width iop r1 rb)),
-         regM r1 (getIRegIndex r1) eq_refl)
+      | (stackM ra va pa, constM rb vb _) =>
+        (ASeq (AAssign (ARegStackInt width r0 ra))
+          (ASeq (AOp (IOpConst width iop r0 rb))
+            (AAssign (AStackRegInt width ra r0))),
+         stackM ra va pa)
 
       | (constM ra va _, constM rb vb _) =>
         (ASkip,
@@ -187,8 +189,10 @@ Module PseudoConversion (M: PseudoMachine).
       | regM r v _ =>
         (AOp (OpRot width qop r n), regM r (getIRegIndex r) eq_refl)
       | stackM r v _ =>
-        (ASeq (AAssign (ARegStackInt width r1 r)) (AOp (OpRot width qop r1 n)),
-         regM r1 (getIRegIndex r1) eq_refl)
+        (ASeq (AAssign (ARegStackInt width r0 r))
+          (ASeq (AOp (OpRot width qop r0 n))
+            (AAssign (AStackRegInt width r r0))),
+         m)
       | constM r v _ =>
         (ASkip, wordToConstM
           match qop with
@@ -200,9 +204,8 @@ Module PseudoConversion (M: PseudoMachine).
     Fixpoint convertProgram' {n m}
              (prog: Pseudo n m)
              (mapping: list Mapping)
-             (avoid: list Mapping)
-             (ret: nat):
-        option (AlmostQhasm.Program * list nat) :=
+             (avoid: list Mapping):
+        option (AlmostQhasm.Program * list Mapping) :=
 
       let option_map' := fun x f => option_map f x in
       let otup_map := fun x f =>
@@ -220,40 +223,86 @@ Module PseudoConversion (M: PseudoMachine).
         option_map' (nth_error mapping n) (fun v => (ASkip, [v]))
 
       | PConst n c =>
-        (ASkip, [constM (iconst c) (getIConstValue (iconst c)) eq_refl])
+        Some (ASkip, [constM (iconst c) (getIConstValue (iconst c)) eq_refl])
 
       | PBin n o a b =>
-        let ret' := (ret + 1) mod activeRegisters in
-        let tmp0 := freshMapping (avoid ++ mapping) n in
-        let tmp1 := freshMapping (avoid ++ mapping ++ tmp0) m in
+        otup_map (convertProgram' a mapping avoid) (fun aprog amap =>
+          let tmp := freshMapping (avoid ++ mapping ++ amap) n in
+          let mov := moveMapping mapping tmp in
 
-        otup_map (convertProgram' a mapping avoid ret) (fun aprog amap =>
-          otup_map (convertProgram' b mapping avoid ret') (fun bprog bmap =>
-            let m0 := moveMapping mapping tmp0 in
-            let m1 := moveMapping bmap tmp1 in
-
+          otup_map (convertProgram' b tmp (avoid ++ amap)) (fun bprog bmap =>
             match (amap, bmap) with
-            | ([av], [bv]) =>
-              let oper := binProg m o av bv r1 in
-              Some (ASeq m0 (ASeq bprog (ASeq m1 (ASeq aprog oper))), amap)
+            | ([av], [bv]) => let oper := binProg o av bv in
+
+              Some (ASeq mov (ASeq bprog (ASeq aprog (fst oper))), [snd oper])
 
             | _ => None
             end))
 
-      | PNat n o v => None
+      | PNat n o v =>
+        match (applyNat o v) with
+        | Some [c] => let ic := iconst c in
 
-      | PShift n o a x => None
+          Some (ASkip, [constM ic (getIConstValue ic) eq_refl])
 
-      | PLet n k m f g => None
+        | _ => None
+        end
 
-      | PComp n k m f g => None
+      | PShift n o a x =>
+        otup_map (convertProgram' a mapping avoid) (fun aprog amap =>
+          match amap with
+          | [av] => let oper := shiftProg o av x in
 
-      | PComb n a b f g => None
+            Some (ASeq aprog (fst oper), [snd oper])
 
-      | PIf n m o i0 i1 l r => None
+          | _ => None
+          end)
 
-      | PFunExp n f e => None
+      | PLet n k m f g =>
+        otup_map (convertProgram' f mapping avoid) (fun fprog fmap =>
+          otup_map (convertProgram' g (mapping ++ fmap) avoid) (fun gprog gmap =>
+            Some (ASeq fprog gprog, gmap)))
 
+      | PComp n k m f g =>
+        otup_map (convertProgram' f mapping avoid) (fun fprog fmap =>
+          otup_map (convertProgram' g fmap avoid) (fun gprog gmap =>
+            Some (ASeq fprog gprog, gmap)))
+
+      | PComb n a b f g =>
+        otup_map (convertProgram' f mapping avoid) (fun fprog fmap =>
+          otup_map (convertProgram' g (mapping ++ fmap) avoid) (fun gprog gmap =>
+            Some (ASeq fprog gprog, fmap ++ gmap)))
+
+      | PIf n m o i0 i1 l r =>
+        otup_map (convertProgram' l mapping avoid) (fun lprog lmap =>
+          otup_map (convertProgram' r mapping avoid) (fun rprog rmap =>
+            match (nth_error mapping i0, nth_error mapping i1) with
+            | (Some (regM a _ _), Some (regM b _ _)) =>
+              Some (ACond (TestInt width o a b) lprog (ASeq rprog (moveMapping rmap lmap)), lmap)
+            | _ => None
+            end))
+
+      | PFunExp n f e =>
+        otup_map (convertProgram' f mapping avoid) (fun fprog fmap =>
+          let mov := moveMapping mapping fmap in
+
+          match (freshMapping (avoid ++ fmap) 1) with
+          | [regM rc _ _] => 
+            Some (ASeq mov
+              (ASeq (AAssign (AConstInt width rc (iconst (natToWord width e))))
+                (AWhile (TestInt width TGt rc r0)
+                  (ASeq fprog
+                    (ASeq (AAssign (AConstInt width r0 (iconst (wzero width))))
+                      (AOp (IOpConst width IMinus rc (iconst (natToWord width 1)))))))), fmap)
+          | [stackM sc _ _] => None
+          | _ => None
+          end)
+      end.
+
+    Definition convertProgram (prog: Pseudo vars vars): option AlmostQhasm.Program :=
+      match (convertProgram' prog (freshMapping [] vars) []) with
+      | Some (prog', _) => Some prog'
+      | _ => None
       end.
 
     Lemma convert_spec:  forall a a' b b' prog prog',
@@ -263,4 +312,4 @@ Module PseudoConversion (M: PseudoMachine).
     Admitted.
 
   End Conv.
-End PseudoConversions.
+End PseudoConversion.

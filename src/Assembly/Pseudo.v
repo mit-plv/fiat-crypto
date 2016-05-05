@@ -43,7 +43,7 @@ Module Pseudo (M: PseudoMachine) <: Language.
   Definition State := list const.
 
   Inductive WBinOp: Set :=
-    | Wplus: WBinOp    | Wmult: WBinOp
+    | Wplus: WBinOp
     | Wminus: WBinOp   | Wand: WBinOp.
 
   Inductive WNatOp: Set :=
@@ -57,8 +57,8 @@ Module Pseudo (M: PseudoMachine) <: Language.
     | PConst: forall n, const -> Pseudo n 1
 
     | PBin: forall n, WBinOp -> Pseudo n 1 -> Pseudo n 1 -> Pseudo n 1
-    | PNat: forall n, WNatOp -> nat -> Pseudo n 1
-    | PShift: forall n, WShiftOp -> Pseudo n 1 -> nat -> Pseudo n 1
+    | PNat: forall n, WNatOp -> Index width -> Pseudo n 1
+    | PShift: forall n, WShiftOp -> Pseudo n 1 -> Index width -> Pseudo n 1
 
     | PLet: forall n k m, Pseudo n k -> Pseudo (n + k) m -> Pseudo n m
     | PComp: forall n k m, Pseudo n k -> Pseudo k m -> Pseudo n m
@@ -74,7 +74,6 @@ Module Pseudo (M: PseudoMachine) <: Language.
   Definition applyBin (op: WBinOp) (a b: word width): option (list const) :=
     match op with
     | Wplus => Some [(wplus a b)]
-    | Wmult => Some [(wmult a b)]
     | Wminus => Some [(wminus a b)]
     | Wand => Some [(wand a b)]
     end.
