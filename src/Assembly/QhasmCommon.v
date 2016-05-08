@@ -55,12 +55,16 @@ Inductive IntOp :=
   | IPlus: IntOp | IMinus: IntOp
   | IXor: IntOp  | IAnd: IntOp | IOr: IntOp.
 
+Inductive DualOp :=
+  | IMult: DualOp.
+
 Inductive RotOp :=
   | Shl: RotOp | Shr: RotOp.
 
 Inductive Operation :=
   | IOpConst: forall n, IntOp -> IReg n -> IConst n -> Operation
   | IOpReg: forall n, IntOp -> IReg n -> IReg n -> Operation
+  | DOpReg: forall n, DualOp -> IReg n -> IReg n -> option (IReg n) -> Operation
   | OpRot: forall n, RotOp -> IReg n -> Index n -> Operation.
 
 Hint Constructors Operation.
