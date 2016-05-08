@@ -43,8 +43,10 @@ Module Pseudo (M: PseudoMachine) <: Language.
   Definition State := list const.
 
   Inductive WBinOp: Set :=
-    | Wplus: WBinOp
-    | Wminus: WBinOp   | Wand: WBinOp.
+    | Wplus: WBinOp    | Wminus: WBinOp   | Wand: WBinOp.
+
+  Inductive WDualOp: Set :=
+    | Wmult: WDualOp.
 
   Inductive WNatOp: Set :=
     | Wones: WNatOp    | Wzeros: WNatOp.
@@ -58,6 +60,7 @@ Module Pseudo (M: PseudoMachine) <: Language.
 
     | PBin: forall n, WBinOp -> Pseudo n 1 -> Pseudo n 1 -> Pseudo n 1
     | PNat: forall n, WNatOp -> Index width -> Pseudo n 1
+    | PDual: forall n, WDualOp -> Pseudo n 1 -> Pseudo n 1 -> Pseudo n 2
     | PShift: forall n, WShiftOp -> Pseudo n 1 -> Index width -> Pseudo n 1
 
     | PLet: forall n k m, Pseudo n k -> Pseudo (n + k) m -> Pseudo n m
@@ -71,27 +74,35 @@ Module Pseudo (M: PseudoMachine) <: Language.
 
   Definition Program := Pseudo vars vars.
 
-  Definition applyBin (op: WBinOp) (a b: word width): option (list const) :=
+  Definition applyBin (op: WBinOp) (a b: word width): const :=
     match op with
-    | Wplus => Some [(wplus a b)]
-    | Wminus => Some [(wminus a b)]
-    | Wand => Some [(wand a b)]
+    | Wplus => wplus a b
+    | Wminus => wminus a b
+    | Wand => wand a b
     end.
 
-  Definition applyNat (op: WNatOp) (v: Index width): option (list const).
+  Definition applyDual (op: WDualOp) (a b: word width): list const :=
+    match op with
+    | Wmult =>
+      let wres := natToWord (width + width)
+        (N.to_nat ((wordToN a) * (wordToN b))) in
+      [split1 _ _ wres; split2 _ _ wres]
+    end.
+
+  Definition applyNat (op: WNatOp) (v: Index width): const.
     refine match op with
-    | Wones => Some [convert (zext (wones v) (width - v)) _]
-    | Wzeros => Some [wzero width]
+    | Wones => convert (zext (wones v) (width - v)) _
+    | Wzeros => wzero width
     end; abstract (
       destruct v; simpl;
       replace (x + (width - x)) with width;
       intuition ).
   Defined.
 
-  Definition applyShift (op: WShiftOp) (v: const) (n: Index width): option (list const).
+  Definition applyShift (op: WShiftOp) (v: const) (n: Index width): const.
     refine match op with
-    | Wshl => Some [convert (Word.combine (wzero n) (split1 (width - n) n (convert v _))) _]
-    | Wshr => Some [convert (Word.combine (split2 n (width - n) (convert v _)) (wzero n)) _]
+    | Wshl => convert (Word.combine (wzero n) (split1 (width - n) n (convert v _))) _
+    | Wshr => convert (Word.combine (split2 n (width - n) (convert v _)) (wzero n)) _
     end; abstract (
       unfold const;
       destruct n; simpl;
@@ -100,66 +111,78 @@ Module Pseudo (M: PseudoMachine) <: Language.
       intuition ).
   Defined.
 
-  Inductive PseudoEval: forall n m, Pseudo n m -> State -> State -> Prop :=
-    | PEVar: forall s n (i: Index n) w,
-        nth_error s i = Some w
-      -> PseudoEval n 1 (PVar n i) s [w]
+  Fixpoint pseudoEval {n m} (prog: Pseudo n m) (st: State): option State :=
+    let option_map' := fun {A B: Type} (x: option A) (f: A -> option B) =>
+      match x with
+      | Some x' =>
+        match (f x') with
+        | Some res => Some res
+        | None => None
+        end
+      | _ => None
+      end in
 
-    | PEConst: forall n s w,
-        PseudoEval n 1 (PConst n w) s [w]
+    match prog with
+    | PVar n i => option_map' (nth_error st i) (fun x => Some [x])
+    | PConst n c => Some ([c])
+    | PNat n o i => Some [applyNat o i]
 
-    | PEBin: forall n a b s sa sb s' op,
-        applyBin op sa sb = Some s'
-      -> PseudoEval n 1 a s [sa]
-      -> PseudoEval n 1 b s [sb]
-      -> PseudoEval n 1 (PBin n op a b) s s'
+    | PBin n o a b =>
+      option_map' (pseudoEval a st) (fun sa =>
+        option_map' (pseudoEval b st) (fun sb =>
+          match (sa, sb) with
+          | ([wa], [wb]) => Some [applyBin o wa wb]
+          | _ => None
+          end ))
 
-    | PENat: forall n op v s s',
-        applyNat op v = Some s'
-      -> PseudoEval n 1 (PNat n op v) s s'
+    | PDual n o a b =>
+      option_map' (pseudoEval a st) (fun sa =>
+        option_map' (pseudoEval b st) (fun sb =>
+          match (sa, sb) with
+          | ([wa], [wb]) => Some (applyDual o wa wb)
+          | _ => None
+          end ))
 
-    | PEShift: forall n m a s s' w op,
-        applyShift op w m = Some s'
-      -> PseudoEval n 1 a s [w]
-      -> PseudoEval n 1 (PShift n op a m) s s'
+    | PShift n o x y =>
+      option_map' (pseudoEval x st) (fun sx =>
+        match sx with
+        | [wx] => Some [applyShift o wx y]
+        | _ => None
+        end )
 
-    | PELet: forall n m k s x s' a b,
-        PseudoEval n k a s x
-      -> PseudoEval (n + k) m b (s ++ x) s'
-      -> PseudoEval n m (PLet n k m a b) s s'
+    | PLet n k m f g =>
+      option_map' (pseudoEval f st) (fun sf =>
+        option_map' (pseudoEval g (st ++ sf))
+          (fun sg => Some sg))
 
-    | PEComp: forall n k m s s' s'' a b,
-        PseudoEval n k a s s'
-      -> PseudoEval k m b s' s''
-      -> PseudoEval n m (PComp n k m a b) s s''
+    | PComp n k m f g => 
+      option_map' (pseudoEval f st) (fun sf =>
+        option_map' (pseudoEval g sf)
+          (fun sg => Some sg))
 
-    | PEComb: forall n a b x y s sx sy,
-        PseudoEval n a x s sx
-      -> PseudoEval n b y s sy
-      -> PseudoEval n (a + b) (PComb n a b x y) s (sx ++ sy)
+    | PComb n a b f g =>
+      option_map' (pseudoEval f st) (fun sf =>
+        option_map' (pseudoEval g st) (fun sg =>
+          Some (sf ++ sg)))
 
-    | PEIfTrue: forall n m t x y s sx wx wy (i0 i1: Index n),
-        nth_error s i0 = Some wx
-      -> evalTest t wx wy = true
-      -> PseudoEval n m x s sx
-      -> PseudoEval n m (PIf n m t i0 i1 x y) s sx
+    | PIf n m t i0 i1 l r =>
+      option_map' (nth_error st i0) (fun v0 =>
+        option_map' (nth_error st i1) (fun v1 =>
+          if (evalTest t v0 v1)
+          then pseudoEval l st
+          else pseudoEval r st ))
 
-    | PEIfFalse: forall n m t x y s sy wx wy (i0 i1: Index n),
-        nth_error s i1 = Some wy
-      -> evalTest t wx wy = false
-      -> PseudoEval n m y s sy
-      -> PseudoEval n m (PIf n m t i0 i1 x y) s sy
+    | PFunExp n p e =>
+      (fix funexpseudo (e': nat) (st': State) := 
+        match e' with
+        | O => Some st'
+        | S e'' =>
+          option_map' (pseudoEval p st') (fun st'' =>
+            funexpseudo e'' st'')
+        end) e st
+    end.
 
-    | PEFunExpO: forall n f s,
-        PseudoEval n n (PFunExp n f O) s s
-
-    | PEFunExpS: forall n f s s' s'' e e',
-        e = S e'
-      -> PseudoEval n n f s s'
-      -> PseudoEval n n (PFunExp n f e') s' s''
-      -> PseudoEval n n (PFunExp n f e) s s''.
-
-  Definition evaluatesTo := PseudoEval vars vars.
+  Definition evaluatesTo := fun (p: Program) (st st': State) => (pseudoEval p st = Some st').
 
   (* world peace *)
 End Pseudo.

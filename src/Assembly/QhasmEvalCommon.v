@@ -51,6 +51,13 @@ Definition evalOperation (o: Operation) (state: State): option State :=
     | Shr => NToWord b (N.shiftr_nat (wordToN x) n)
     end in
 
+  let evalDualOp := fun {b} (duo: DualOp) (x y: word b) =>
+    match duo with
+    | IMult =>
+      let wres := natToWord (b + b) (N.to_nat ((wordToN x) * (wordToN y))) in
+      (split1 b b wres, split2 b b wres)
+    end in
+
   let liftOpt := fun {A B C} (f: A -> B -> option C) (xo: option A) (yo: option B) =>
     match (xo, yo) with
     | (Some x, Some y) => f x y
@@ -65,6 +72,21 @@ Definition evalOperation (o: Operation) (state: State): option State :=
 
   | IOpReg n o a b =>
     liftOpt (fun x y => setIntReg a (evalIOp o x y) state)
+      (getIntReg a state) (getIntReg b state)
+
+  | DOpReg n o a b h =>
+    liftOpt (fun x y =>
+        match (evalDualOp o x y) with
+        | (lw, hw) =>
+          match (setIntReg a lw state) with
+          | Some st' =>
+            match h with
+            | Some hr => setIntReg hr hw st'
+            | _ => Some st'
+            end
+          | None => None
+          end
+        end)
       (getIntReg a state) (getIntReg b state)
 
   | OpRot n o r i =>
