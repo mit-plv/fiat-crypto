@@ -23,7 +23,14 @@ Class RepZMod (modulus : Z) := {
   mul_rep : forall u v x y, rep u x -> rep v y -> rep (mul u v) (x*y)%F
 }.
 
-Instance PseudoMersenneBase m (prm : PseudoMersenneBaseParams m) : RepZMod m := {
+Class SubtractionCoefficient (m : Z) (prm : PseudoMersenneBaseParams m) := {
+  coeff : BaseSystem.digits;
+  coeff_length : (length coeff <= length PseudoMersenneBaseParamProofs.base)%nat;
+  coeff_mod: (BaseSystem.decode PseudoMersenneBaseParamProofs.base coeff) mod m = 0
+}.
+
+Instance PseudoMersenneBase m (prm : PseudoMersenneBaseParams m) (sc : SubtractionCoefficient m prm)
+: RepZMod m := {
   T := list Z;
   encode := ModularBaseSystem.encode;
   decode := ModularBaseSystem.decode;
@@ -35,8 +42,8 @@ Instance PseudoMersenneBase m (prm : PseudoMersenneBaseParams m) : RepZMod m := 
   add := BaseSystem.add;
   add_rep := ModularBaseSystemProofs.add_rep;
 
-  sub := BaseSystem.sub;
-  sub_rep := ModularBaseSystemProofs.sub_rep;
+  sub := ModularBaseSystem.sub coeff coeff_mod;
+  sub_rep := ModularBaseSystemProofs.sub_rep coeff coeff_mod coeff_length;
 
   mul := ModularBaseSystem.mul;
   mul_rep := ModularBaseSystemProofs.mul_rep

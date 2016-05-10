@@ -48,15 +48,20 @@ Section PseudoMersenneProofs.
     subst; auto.
   Qed.
 
-  Lemma sub_rep : forall u v x y, u ~= x -> v ~= y -> BaseSystem.sub u v ~= (x-y)%F.
+  Lemma sub_rep : forall c c_0modq, (length c <= length base)%nat ->
+    forall u v x y, u ~= x -> v ~= y -> 
+    ModularBaseSystem.sub c c_0modq u v ~= (x-y)%F.
   Proof.
-    autounfold; intuition. {
+    autounfold; unfold ModularBaseSystem.sub; intuition. {
       rewrite sub_length_le_max.
+      case_max; try rewrite Max.max_r; try omega.
+      rewrite add_length_le_max.
       case_max; try rewrite Max.max_r; omega.
     }
     unfold decode in *; unfold BaseSystem.decode in *.
-    rewrite sub_rep.
-    rewrite ZToField_sub.
+    rewrite BaseSystemProofs.sub_rep, BaseSystemProofs.add_rep.
+    rewrite ZToField_sub, ZToField_add, ZToField_mod.
+    rewrite c_0modq, F_add_0_l.
     subst; auto.
   Qed.
 

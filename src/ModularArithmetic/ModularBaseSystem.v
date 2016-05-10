@@ -29,6 +29,9 @@ Section PseudoMersenneBase.
 
   Definition mul (us vs : digits) := reduce (BaseSystem.mul ext_base us vs).
 
+  Definition sub (xs : digits) (xs_0_mod : (BaseSystem.decode base xs) mod modulus = 0) (us vs : digits) :=
+      BaseSystem.sub (add xs us) vs.
+
 End PseudoMersenneBase.
 
 Section CarryBasePow2.

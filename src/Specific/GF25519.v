@@ -2,6 +2,7 @@ Require Import Crypto.ModularArithmetic.ModularBaseSystem.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemOpt.
 Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParams.
 Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParamProofs.
+Require Import Crypto.ModularArithmetic.PseudoMersenneBaseRep.
 Require Import Coq.Lists.List Crypto.Util.ListUtil.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
 Require Import Crypto.Tactics.VerdiTactics.
@@ -17,6 +18,12 @@ Lemma prime_modulus : prime modulus. Admitted.
 
 Instance params25519 : PseudoMersenneBaseParams modulus.
   construct_params prime_modulus 10%nat 255.
+Defined.
+
+Definition mul2modulus := Eval compute in (construct_mul2modulus params25519).
+
+Instance subCoeff : SubtractionCoefficient modulus params25519.
+  apply Build_SubtractionCoefficient with (coeff := mul2modulus); cbv; auto.
 Defined.
 
 (* END PseudoMersenneBaseParams instance construction. *)
@@ -60,5 +67,18 @@ Proof.
   eexists.
   intros f g Hf Hg.
   pose proof (add_opt_rep _ _ _ _ Hf Hg) as Hfg.
+  compute_formula.
+Defined.
+
+Lemma GF25519Base25Point5_sub_formula :
+  forall f0 f1 f2 f3 f4 f5 f6 f7 f8 f9
+    g0 g1 g2 g3 g4 g5 g6 g7 g8 g9,
+    {ls | forall f g, rep [f0;f1;f2;f3;f4;f5;f6;f7;f8;f9] f
+                   -> rep [g0;g1;g2;g3;g4;g5;g6;g7;g8;g9] g
+                   -> rep ls (f - g)%F}.
+Proof.
+  eexists.
+  intros f g Hf Hg.
+  pose proof (sub_opt_rep _ _ _ _ Hf Hg) as Hfg.
   compute_formula.
 Defined.
