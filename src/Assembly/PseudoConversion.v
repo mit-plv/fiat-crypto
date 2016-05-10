@@ -24,9 +24,10 @@ Module PseudoConversion (M: PseudoMachine).
   Module Conv <: Conversion P AlmostQhasm.
     Import P M.
 
-    Definition activeRegisters := 5.
-    Definition r0 := ireg 5. (* Invariant: these are never used in a Mapping *)
-    Definition r1 := ireg 6.
+    Definition activeRegisters := 4.
+    Definition r0 := ireg 4. (* Invariant: these are never used in a Mapping *)
+    Definition r1 := ireg 5.
+    Definition r2 := ireg 6.
 
     Definition convertState (st: AlmostQhasm.State): option P.State :=
       match st with
@@ -50,6 +51,18 @@ Module PseudoConversion (M: PseudoMachine).
       | stackM: forall (r: Stack width) (v: nat), v = getStackIndex r -> Mapping
       | constM: forall (r: IConst width) (v: nat), v = getIConstValue r -> Mapping.
 
+    Definition wordToM (w: word width) :=
+      constM (iconst w) (getIConstValue (iconst w)) eq_refl.
+
+    Definition regToM (r: IReg width) :=
+      regM r (getIRegIndex r) eq_refl.
+
+    Definition stackToM (s: Stack width) :=
+      stackM s (getStackIndex s) eq_refl.
+
+    Definition constToM (c: IConst width) :=
+      constM c (getIConstValue c) eq_refl.
+
     Definition mapping_dec (a b: Mapping): {a = b} + {a <> b}.
       refine (match (a, b) as p' return (a, b) = p' -> _ with
       | (regM x v _, regM y v' _) => fun _ => 
@@ -65,16 +78,18 @@ Module PseudoConversion (M: PseudoMachine).
       end (eq_refl (a, b))); admit. (* TODO (rsloan): prove *)
     Defined.
 
-    Definition freshMapping (cur: list Mapping) (len: nat): list Mapping :=
-      let used := (fix g (lst: list Mapping) :=
-        match lst with
-        | nil => []
-        | cons c cs =>
-          match c with
-          | stackM _ v _ => cons v (g cs)
-          | _ => g cs
-          end
-        end) cur in
+    Fixpoint usedStackEntries (lst: list Mapping): list nat :=
+      match lst with
+      | nil => []
+      | cons c cs =>
+        match c with
+        | stackM _ v _ => cons v (usedStackEntries cs)
+        | _ => usedStackEntries cs
+        end
+      end.
+
+    Definition getFreshStack (cur: list Mapping) (len: nat): list (Stack width) :=
+      let used := usedStackEntries cur in
 
       let open := fun x =>
         negb (proj1_sig (bool_of_sumbool (in_dec Nat.eq_dec x used))) in
@@ -89,13 +104,17 @@ Module PseudoConversion (M: PseudoMachine).
           | O => []
           | S rem' =>
             let loc := (maxStack - bound) in
-            let s := stack loc in
 
             if (open loc)
-            then cons (stackM s (getStackIndex s) eq_refl) (gen rem' bound')
+            then cons (stack loc) (gen rem' bound')
             else gen rem bound'
           end
         end) len maxStack.
+
+    Definition freshMapping (cur: list Mapping) (len: nat): list Mapping :=
+      map (fun s => stackToM s) (getFreshStack cur len).
+
+    Definition getS (lst: list (Stack width)) (n: nat) := nth n lst (stack 0).
 
     Fixpoint moveMapping (a b: list Mapping): AlmostQhasm.Program :=
       match (a, b) with
@@ -130,76 +149,59 @@ Module PseudoConversion (M: PseudoMachine).
       | _ => ASkip
       end.
 
-    Definition wordToConstM (w: word width) :=
-      constM (iconst w) (getIConstValue (iconst w)) eq_refl.
+    Definition wrapM (m: Mapping) (freeR: IReg width) (freeS: Stack width)
+               (inside: IReg width -> (AlmostQhasm.Program * Mapping)):
+        (AlmostQhasm.Program * Mapping) :=
 
-    (* Invariant: never return r0 or r1 in our mapping *)
-    Definition binProg (op: WBinOp) (a b: Mapping):
-        AlmostQhasm.Program * Mapping :=
-      let iop :=
-        match op with
-        | Wplus => IPlus
-        | Wminus => IMinus
-        | _ => IAnd
-        end in
+      match m with
+      | regM r v _ => inside r
+      | stackM s v _ =>
+        let p := (inside freeR) in
 
-      match (a, b) with
-      | (regM ra va pa, regM rb vb _) =>
-        (AOp (IOpReg width iop ra rb), regM ra va pa)
+        if (mapping_dec (snd p) (regToM freeR))
+        then (ASeq (AAssign (ARegStackInt width freeR s))
+               (ASeq (fst p)
+               (AAssign (AStackRegInt width s freeR))), m)
+        else (ASeq (AAssign (ARegStackInt width freeR s)) (fst p), (snd p))
 
-      | (stackM ra va _, regM rb vb pb) =>
-        (ASeq (AAssign (ARegStackInt width r0 ra))
-              (AOp (IOpReg width iop rb r0)),
-         regM rb vb pb) (* Assumption: commutativity forall IntOp *)
+      | constM r v _ =>
+        let p := (inside freeR) in
 
-      | (regM ra va pa, stackM rb vb _) =>
-        (ASeq (AAssign (ARegStackInt width r0 rb))
-              (AOp (IOpReg width iop ra r0)),
-         regM ra va pa)
+        if (mapping_dec (snd p) (regToM freeR))
+        then (ASeq (AAssign (ARegStackInt width freeR freeS))
+               (ASeq (fst p)
+                     (AAssign (AStackRegInt width freeS freeR))),
+              stackToM freeS)
+        else (ASeq (AAssign (ARegStackInt width freeR freeS)) (fst p), (snd p))
 
-      | (stackM ra va pa, stackM rb vb _) =>
-        (ASeq (AAssign (ARegStackInt width r1 ra))
-          (ASeq (AAssign (ARegStackInt width r0 rb))
-            (ASeq (AOp (IOpReg width iop r1 r0))
-              (AAssign (AStackRegInt width ra r1)))),
-         stackM ra va pa)
-
-      | (stackM ra va pa, constM rb vb _) =>
-        (ASeq (AAssign (ARegStackInt width r0 ra))
-          (ASeq (AOp (IOpConst width iop r0 rb))
-            (AAssign (AStackRegInt width ra r0))),
-         stackM ra va pa)
-
-      | (constM ra va _, constM rb vb _) =>
-        (ASkip,
-          let v := match iop with
-            | IPlus => wplus
-            | IMinus => wminus
-            | _ => wand
-            end width (natToWord width va) (natToWord width vb)
-          in constM (iconst v) (getIConstValue (iconst v)) eq_refl)
-
-      | _ => (ASkip, wordToConstM (wzero width))
       end.
 
-    Definition shiftProg (op: WShiftOp) (m: Mapping) (n: Index width):
+    Definition binProg (op: WBinOp) (a b: Mapping) (avoid: list Mapping):
+        AlmostQhasm.Program * Mapping :=
+      let iop := match op with | Wplus => IPlus | Wminus => IMinus | _ => IAnd end in
+      let sl := getFreshStack avoid 2 in
+      
+      wrapM a r0 (getS sl 0) (fun ra =>
+        wrapM b r1 (getS sl 1) (fun rb =>
+          (AOp (IOpReg width iop ra rb), regToM ra))).
+
+    Definition dualProg (op: WDualOp) (a b x: Mapping) (avoid: list Mapping):
+        AlmostQhasm.Program * Mapping :=
+      let dop := match op with | Wmult => IMult end in
+      let sl := getFreshStack avoid 3 in
+
+      wrapM a r0 (getS sl 0) (fun ra =>
+        wrapM b r1 (getS sl 1) (fun rb =>
+          wrapM x r2 (getS sl 2) (fun rx =>
+            (AOp (DOpReg width dop ra rb (Some rx)), regToM ra)))).
+
+    Definition shiftProg (op: WShiftOp) (m: Mapping) (n: Index width) (avoid: list Mapping):
         AlmostQhasm.Program * Mapping :=
       let qop := match op with | Wshl => Shl | Wshr => Shr end in
-      match m with
-      | regM r v _ =>
-        (AOp (OpRot width qop r n), regM r (getIRegIndex r) eq_refl)
-      | stackM r v _ =>
-        (ASeq (AAssign (ARegStackInt width r0 r))
-          (ASeq (AOp (OpRot width qop r0 n))
-            (AAssign (AStackRegInt width r r0))),
-         m)
-      | constM r v _ =>
-        (ASkip, wordToConstM
-          match qop with
-          | Shl => NToWord width (N.shiftl_nat (N.of_nat v) n)
-          | Shr => NToWord width (N.shiftr_nat (N.of_nat v) n)
-          end)
-      end.
+      let sl := getFreshStack avoid 1 in
+
+      wrapM m r0 (getS sl 0) (fun ra =>
+        (AOp (OpRot width qop ra n), regToM ra)).
 
     Fixpoint convertProgram' {n m}
              (prog: Pseudo n m)
@@ -223,7 +225,7 @@ Module PseudoConversion (M: PseudoMachine).
         option_map' (nth_error mapping n) (fun v => (ASkip, [v]))
 
       | PConst n c =>
-        Some (ASkip, [constM (iconst c) (getIConstValue (iconst c)) eq_refl])
+        Some (ASkip, [wordToM c])
 
       | PBin n o a b =>
         otup_map (convertProgram' a mapping avoid) (fun aprog amap =>
@@ -232,26 +234,40 @@ Module PseudoConversion (M: PseudoMachine).
 
           otup_map (convertProgram' b tmp (avoid ++ amap)) (fun bprog bmap =>
             match (amap, bmap) with
-            | ([av], [bv]) => let oper := binProg o av bv in
+            | ([av], [bv]) =>
+              let oper := binProg o av bv (avoid ++ mapping ++ amap ++ bmap) in
 
               Some (ASeq mov (ASeq bprog (ASeq aprog (fst oper))), [snd oper])
 
             | _ => None
             end))
 
+      | PDual n o a b =>
+        otup_map (convertProgram' a mapping avoid) (fun aprog amap =>
+          let tmpb := freshMapping (avoid ++ mapping ++ amap) n in
+          let movb := moveMapping mapping tmpb in
+
+          otup_map (convertProgram' b tmpb (avoid ++ amap)) (fun bprog bmap =>
+            let xs := getFreshStack (avoid ++ mapping ++ amap ++ bmap) 1 in
+
+            match (amap, bmap) with
+            | ([av], [bv]) =>
+              let x := stackToM (getS xs 0) in
+              let oper := dualProg o av bv x (avoid ++ mapping ++ amap ++ bmap) in
+
+              Some (ASeq movb (ASeq bprog
+                (ASeq aprog (fst oper))), [snd oper; x])
+
+            | _ => None
+            end))
+
       | PNat n o v =>
-        match (applyNat o v) with
-        | Some [c] => let ic := iconst c in
-
-          Some (ASkip, [constM ic (getIConstValue ic) eq_refl])
-
-        | _ => None
-        end
+        Some (ASkip, [constToM (iconst (applyNat o v))])
 
       | PShift n o a x =>
         otup_map (convertProgram' a mapping avoid) (fun aprog amap =>
           match amap with
-          | [av] => let oper := shiftProg o av x in
+          | [av] => let oper := shiftProg o av x (mapping ++ avoid ++ amap) in
 
             Some (ASeq aprog (fst oper), [snd oper])
 
