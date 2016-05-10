@@ -125,19 +125,19 @@ Section MulmodExamples.
   Lemma example_and : forall x : word 32, wand x (NToWord 32 (N.ones 10)) <= 1023.
     intros.
     replace (wand x (NToWord 32 (N.ones 10))) with (mask 10 x) by admit.
-    multi_recurse x.
+    multi_bound; simpl in *; eassumption.
   Qed.
 
   Lemma example_shiftr : forall x : word 32, shiftr x 30 <= 3.
     intros.
     replace 3%N with (N.shiftr (Npow2 32 - 1) (N.of_nat 30)) by (simpl; intuition).
-    word_bound.
+    multi_bound; simpl in *; eassumption.
   Qed.
 
   Lemma example_shiftr2 : forall x : word 32, x <= 1023 -> shiftr x 5 <= 31.
     intros.
     replace 31%N with (N.shiftr 1023%N 5%N) by (simpl; intuition).
-    word_bound.
+    multi_bound; simpl in *; eassumption.
   Qed.
 
   Variable f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 : word 32.
@@ -165,18 +165,18 @@ Section MulmodExamples.
 
   Lemma example_mulmod_s_ppt : { b | f0 ^* g0  <= b}.
     eexists.
-    word_bound.
+    multi_bound; simpl in *; eassumption.
   Defined.
 
   Lemma example_mulmod_s_pp :  { b | f0 ^* g0 ^+ $19 ^* (f9 ^* g1 ^* $2 ^+ f8 ^* g2 ^+ f7 ^* g3 ^* $2 ^+ f6 ^* g4 ^+ f5 ^* g5 ^* $2 ^+ f4 ^* g6 ^+ f3 ^* g7 ^* $2 ^+ f2 ^* g8 ^+  f1 ^* g9 ^* $2) <= b}.
     eexists.
-    word_bound.
+    multi_bound; simpl in *; eassumption.
   Defined.
 
   Lemma example_mulmod_s_pp_shiftr :
     { b | shiftr (f0 ^* g0 ^+  $19 ^* (f9 ^* g1 ^* $2 ^+ f8 ^* g2 ^+ f7 ^* g3 ^* $2 ^+ f6 ^* g4 ^+ f5 ^* g5 ^* $2 ^+ f4 ^* g6 ^+ f3 ^* g7 ^* $2 ^+ f2 ^* g8 ^+  f1 ^* g9 ^* $2)) 26 <= b}.
     eexists.
-    word_bound.
+    multi_bound; simpl in *; eassumption.
   Defined.
 
   Lemma example_mulmod_u_fg1 :  { b |
