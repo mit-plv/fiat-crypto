@@ -71,6 +71,13 @@ Ltac construct_params prime_modulus len k :=
   | abstract apply prime_modulus
   | abstract brute_force_indices lw].
 
+Definition construct_mul2modulus {m} (prm : PseudoMersenneBaseParams m) : digits :=  
+  match limb_widths with
+  | nil => nil
+  | x :: tail =>
+      2 ^ (x + 1) - (2 * c) :: map (fun w => 2 ^ (w + 1) - 2) tail
+  end.
+
 Ltac subst_precondition := match goal with
   | [H : ?P, H' : ?P -> _ |- _] => specialize (H' H); clear H
 end.
@@ -81,13 +88,13 @@ Ltac kill_precondition H :=
 
 Ltac compute_formula :=
   match goal with
-  | [H : _ -> _ -> rep _ ?result |- rep _ ?result] => kill_precondition H; compute_formula
-  | [H : _ -> rep _ ?result |- rep _ ?result] => kill_precondition H; compute_formula
-  | [H : @rep ?M ?P _ ?result |- @rep ?M ?P _ ?result] =>
+  | [H : _ -> _ -> PseudoMersenneBaseRep.rep _ ?result |- PseudoMersenneBaseRep.rep _ ?result] => kill_precondition H; compute_formula
+  | [H : _ -> PseudoMersenneBaseRep.rep _ ?result |- PseudoMersenneBaseRep.rep _ ?result] => kill_precondition H; compute_formula
+  | [H : @PseudoMersenneBaseRep.rep ?M ?P _ ?result |- @PseudoMersenneBaseRep.rep ?M ?P _ ?result] =>
     let m := fresh "m" in set (m := M) in H at 1; change M with m at 1;
     let p := fresh "p" in set (p := P) in H at 1; change P with p at 1;
     let r := fresh "r" in set (r := result) in H |- *;
-    cbv -[m p r rep] in H;
+    cbv -[m p r PseudoMersenneBaseRep.rep] in H;
     repeat rewrite ?Z.mul_1_r, ?Z.add_0_l, ?Z.add_assoc, ?Z.mul_assoc in H;
     exact H
   end.
@@ -230,7 +237,7 @@ Section Carries.
 End Carries.
 
 Section Addition.
-  Context `{prm : PseudoMersenneBaseParams}.
+  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient modulus prm}.
 
   Definition add_opt_sig (us vs : T) : { b : digits | b = add us vs }.
   Proof.
@@ -246,18 +253,48 @@ Section Addition.
     : add_opt us vs = add us vs
     := proj2_sig (add_opt_sig us vs).
 
-  Lemma add_opt_rep:
-    forall (u v : T) (x y : F modulus), rep u x -> rep v y -> rep (add_opt u v) (x + y)%F.
+  Lemma add_opt_rep: forall (u v : T) (x y : F modulus),
+    PseudoMersenneBaseRep.rep u x -> PseudoMersenneBaseRep.rep v y ->
+    PseudoMersenneBaseRep.rep (add_opt u v) (x + y)%F.
   Proof.
     intros.
     rewrite add_opt_correct.
-    auto using add_rep.
+    auto using PseudoMersenneBaseRep.add_rep.
   Qed.
 
 End Addition.
 
+Section Subtraction.
+  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient modulus prm}.
+
+  Definition sub_opt_sig (us vs : T) : { b : digits | b = sub coeff coeff_mod us vs }.
+  Proof.
+    eexists.
+    cbv [BaseSystem.add ModularBaseSystem.sub BaseSystem.sub].
+    reflexivity.
+  Defined.
+
+  Definition sub_opt (us vs : T) : digits
+    := Eval cbv [proj1_sig sub_opt_sig] in proj1_sig (sub_opt_sig us vs).
+
+  Definition sub_opt_correct us vs
+    : sub_opt us vs = sub coeff coeff_mod us vs
+    := proj2_sig (sub_opt_sig us vs).
+
+  Lemma sub_opt_rep: forall (u v : T) (x y : F modulus),
+    PseudoMersenneBaseRep.rep u x -> PseudoMersenneBaseRep.rep v y ->
+    PseudoMersenneBaseRep.rep (sub_opt u v) (x - y)%F.
+  Proof.
+    intros.
+    rewrite sub_opt_correct.
+    change (sub coeff coeff_mod) with PseudoMersenneBaseRep.sub.
+    apply PseudoMersenneBaseRep.sub_rep; auto using coeff_length.
+  Qed.
+
+End Subtraction.
+
 Section Multiplication.
-  Context `{prm : PseudoMersenneBaseParams}
+  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient modulus prm}
     (* allows caller to precompute k and c *)
     (k_ c_ : Z) (k_subst : k = k_) (c_subst : c = c_).
   Definition mul_bi'_step
@@ -397,11 +434,13 @@ Section Multiplication.
     := proj2_sig (mul_opt_sig us vs).
 
   Lemma mul_opt_rep:
-    forall (u v : T) (x y : F modulus), rep u x -> rep v y -> rep (mul_opt u v) (x * y)%F.
+    forall (u v : T) (x y : F modulus), PseudoMersenneBaseRep.rep u x -> PseudoMersenneBaseRep.rep v y ->
+    PseudoMersenneBaseRep.rep (mul_opt u v) (x * y)%F.
   Proof.
     intros.
     rewrite mul_opt_correct.
-    auto using mul_rep.
+    change mul with PseudoMersenneBaseRep.mul.
+    auto using PseudoMersenneBaseRep.mul_rep.
   Qed.
 
   Definition carry_mul_opt 
@@ -412,10 +451,10 @@ Section Multiplication.
 
   Lemma carry_mul_opt_correct
     : forall (is : list nat) (us vs : list Z) (x  y: F modulus),
-      rep us x -> rep vs y ->
+      PseudoMersenneBaseRep.rep us x -> PseudoMersenneBaseRep.rep vs y ->
       (forall i : nat, In i is -> i < length base)%nat ->
       length (mul_opt us vs) = length base ->
-      rep (carry_mul_opt is us vs) (x*y)%F.
+      PseudoMersenneBaseRep.rep (carry_mul_opt is us vs) (x*y)%F.
   Proof.
     intros is us vs x y; intros.
     change (carry_mul_opt _ _ _) with (carry_sequence_opt_cps c_ is (mul_opt us vs)).
