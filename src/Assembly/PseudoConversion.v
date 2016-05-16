@@ -222,7 +222,7 @@ Module PseudoConversion (M: PseudoMachine).
  
       match prog with
       | PVar n i =>
-        option_map' (nth_error mapping n) (fun v => (ASkip, [v]))
+        option_map' (nth_error mapping i) (fun v => (ASkip, [v]))
 
       | PConst n c =>
         Some (ASkip, [wordToM c])
