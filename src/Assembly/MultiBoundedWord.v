@@ -237,7 +237,7 @@ Section MulmodExamples.
         fg1) <= b }.
   Proof.
     eexists.
-    (* Time word_bound. *) (* <- It works, but don't do this in the build! *)
+    multi_bound; simpl in *; eassumption.
   Abort.
 
 End MulmodExamples.
