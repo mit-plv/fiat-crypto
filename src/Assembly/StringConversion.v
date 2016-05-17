@@ -89,13 +89,14 @@ Module StringConversion <: Conversion Qhasm QhasmString.
       combine (natToWord 8 n) (natToWord 24 n).
 
     Definition assignmentToString (a: Assignment): option string :=
+      let f := fun x => if (Nat.eq_dec x 32) then "32" else "64" in
       match a with
-      | ARegStackInt n r s => r ++ " = *(int" ++ n ++ " *)" ++ s
-      | AStackRegInt n s r => "*(int" ++ n ++ " *) " ++ s ++ " = " ++ r
+      | ARegStackInt n r s => r ++ " = *(int" ++ f n ++ " *)" ++ s
+      | AStackRegInt n s r => "*(int" ++ f n ++ " *) " ++ s ++ " = " ++ r
       | ARegRegInt n a b => a ++ " = " ++ b
       | AConstInt n r c => r ++ " = " ++ c
       | AIndex n m a b i =>
-        a ++ " = *(int" ++ n ++ " *) (" ++ b ++ " + " ++ (m/n) ++ ")"
+        a ++ " = *(int" ++ f n ++ " *) (" ++ b ++ " + " ++ (m/n) ++ ")"
       | APtr n r s => r ++ " = " ++ s
       end.
 
@@ -291,7 +292,7 @@ Module StringConversion <: Conversion Qhasm QhasmString.
         | stackEntry n' r =>
           if (Nat.eq_dec n n') then Some (convert r _) else None
         | _ => None
-        end)); subst; abstract intuition.
+        end)); subst; reflexivity.
     Defined.
 
     Fixpoint getUsedBeforeInit' (prog: list QhasmStatement) (init: list Entry): list Entry :=
@@ -433,8 +434,9 @@ Module StringConversion <: Conversion Qhasm QhasmString.
     let leave := [("leave")%string] in
 
     let blank := [EmptyString] in
+    let newline := String (ascii_of_nat 10) EmptyString in
 
-    Some (fold_left (fun x y => (x ++ "\n" ++ y)%string)
+    Some (fold_left (fun x y => (x ++ newline ++ y)%string)
       (ireg32s ++ blank ++
        ireg64s ++ blank ++
        stack32s ++ blank ++
