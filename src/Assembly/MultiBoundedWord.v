@@ -23,12 +23,12 @@ Ltac multi_apply2 A B L :=
   | [ H1: A <= ?b1, H2: B <= ?b2 |- _] => pose proof (L A B b1 b2 H1 H2)
   end.
 
-Ltac multi_recurse T :=
+Ltac multi_recurse n T :=
   match goal with
   | [ H: T <= _ |- _] => idtac
   | _ =>
     is_var T;
-    let T' := (eval cbv delta [T] in T) in multi_recurse T';
+    let T' := (eval cbv delta [T] in T) in multi_recurse n T';
     match goal with
     | [ H : T' <= ?x |- _ ] =>
     pose proof (H : T <= x)
@@ -37,32 +37,32 @@ Ltac multi_recurse T :=
   | _ =>
     match T with
     | ?W1 ^+ ?W2 =>
-      multi_recurse W1; multi_recurse W2;
-      multi_apply2 W1 W2 (@wplus_bound _)
+      multi_recurse n W1; multi_recurse n W2;
+      multi_apply2 W1 W2 (@wplus_bound n)
 
     | ?W1 ^* ?W2 =>
-      multi_recurse W1; multi_recurse W2;
-      multi_apply2 W1 W2 (@wmult_bound _)
+      multi_recurse n W1; multi_recurse n W2;
+      multi_apply2 W1 W2 (@wmult_bound n)
 
     | mask ?m ?w =>
-      multi_recurse w;
-      multi_apply1 w (fun b => @mask_update_bound _ w b)
+      multi_recurse n w;
+      multi_apply1 w (fun b => @mask_update_bound n w b)
 
     | mask ?m ?w =>
-      multi_recurse w;
-      pose proof (@mask_bound _ w m)
+      multi_recurse n w;
+      pose proof (@mask_bound n w m)
 
     | shiftr ?w ?bits =>
-      multi_recurse w;
+      multi_recurse n w;
       match goal with
       | [ H: w <= ?b |- _] =>
-        pose proof (@shiftr_bound _ w b bits H)
+        pose proof (@shiftr_bound n w b bits H)
       end
 
-    | NToWord ?n ?k => pose proof (@constant_bound_N n k)
-    | natToWord ?n ?k => pose proof (@constant_bound_nat n k)
-    | ($ ?k) => pose proof (@constant_bound_nat _ k)
-    | _ => pose proof (@word_size_bound _ T)
+    | NToWord _ ?k => pose proof (@constant_bound_N n k)
+    | natToWord _ ?k => pose proof (@constant_bound_nat n k)
+    | ($ ?k) => pose proof (@constant_bound_nat n k)
+    | _ => pose proof (@word_size_bound n T)
     end
   end.
 
@@ -70,14 +70,14 @@ Lemma unwrap_let: forall {n} (y: word n) (f: word n -> word n) (b: N),
     (let x := y in f x) <= b <-> let x := y in (f x <= b).
 Proof. intuition. Qed.
 
-Ltac multi_bound :=
+Ltac multi_bound n :=
   match goal with
   | [|- let A := ?B in _] =>
-    multi_recurse B; intro; multi_bound
+    multi_recurse n B; intro; multi_bound n
   | [|- (let A := _ in _) <= _] =>
-    apply unwrap_let; multi_bound
+    apply unwrap_let; multi_bound n
   | [|- ?W <= _ ] =>
-    multi_recurse W
+    multi_recurse n W
   end.
 
 (* Examples *)
@@ -89,7 +89,7 @@ Lemma example1 : forall {n} (w1 w2 w3 w4 : word n) b1 b2 b3 b4,
     -> { b | let w5 := w2 ^* w3 in w1 ^+ w5 ^* w4 <= b }.    
 Proof.
   eexists.
-  multi_bound.
+  multi_bound n.
   eassumption.
 Defined.
 
@@ -101,7 +101,7 @@ Lemma example2 : forall {n} (w1 w2 w3 w4 : word n) b1 b2 b3 b4,
     -> { b | (let w5 := (w2 ^* $7 ^* w3) in w1 ^+ w5 ^* w4 ^+ $8 ^+ w2) <= b }.
 Proof.
   eexists.
-  multi_bound.
+  multi_bound n.
   eassumption.
 Defined.
 
@@ -113,7 +113,7 @@ Lemma example3 : forall {n} (w1 w2 w3 w4 : word n),
     -> { b | w1 ^+ (w2 ^* $7 ^* w3) ^* w4 ^+ $8 ^+ w2 <= b }.
 Proof.
   eexists.
-  multi_bound.
+  multi_bound n.
   eassumption.
 Defined.
 
@@ -125,19 +125,19 @@ Section MulmodExamples.
   Lemma example_and : forall x : word 32, wand x (NToWord 32 (N.ones 10)) <= 1023.
     intros.
     replace (wand x (NToWord 32 (N.ones 10))) with (mask 10 x) by admit.
-    multi_bound; simpl in *; eassumption.
+    multi_bound 32; eassumption.
   Qed.
 
   Lemma example_shiftr : forall x : word 32, shiftr x 30 <= 3.
     intros.
     replace 3%N with (N.shiftr (Npow2 32 - 1) (N.of_nat 30)) by (simpl; intuition).
-    multi_bound; simpl in *; eassumption.
+    multi_bound 32; eassumption.
   Qed.
 
   Lemma example_shiftr2 : forall x : word 32, x <= 1023 -> shiftr x 5 <= 31.
     intros.
     replace 31%N with (N.shiftr 1023%N 5%N) by (simpl; intuition).
-    multi_bound; simpl in *; eassumption.
+    multi_bound 32; eassumption.
   Qed.
 
   Variable f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 : word 32.
@@ -165,18 +165,18 @@ Section MulmodExamples.
 
   Lemma example_mulmod_s_ppt : { b | f0 ^* g0  <= b}.
     eexists.
-    multi_bound; simpl in *; eassumption.
+    multi_bound 32; eassumption.
   Defined.
 
   Lemma example_mulmod_s_pp :  { b | f0 ^* g0 ^+ $19 ^* (f9 ^* g1 ^* $2 ^+ f8 ^* g2 ^+ f7 ^* g3 ^* $2 ^+ f6 ^* g4 ^+ f5 ^* g5 ^* $2 ^+ f4 ^* g6 ^+ f3 ^* g7 ^* $2 ^+ f2 ^* g8 ^+  f1 ^* g9 ^* $2) <= b}.
     eexists.
-    multi_bound; simpl in *; eassumption.
+    multi_bound 32; eassumption.
   Defined.
 
   Lemma example_mulmod_s_pp_shiftr :
     { b | shiftr (f0 ^* g0 ^+  $19 ^* (f9 ^* g1 ^* $2 ^+ f8 ^* g2 ^+ f7 ^* g3 ^* $2 ^+ f6 ^* g4 ^+ f5 ^* g5 ^* $2 ^+ f4 ^* g6 ^+ f3 ^* g7 ^* $2 ^+ f2 ^* g8 ^+  f1 ^* g9 ^* $2)) 26 <= b}.
     eexists.
-    multi_bound; simpl in *; eassumption.
+    multi_bound 32; eassumption.
   Defined.
 
   Lemma example_mulmod_u_fg1 :  { b |
@@ -236,8 +236,9 @@ Section MulmodExamples.
             (@NToWord 32 (N.ones 26%N))) in
         fg1) <= b }.
   Proof.
-    eexists.
-    multi_bound; simpl in *; eassumption.
-  Abort.
+    eexists; multi_bound 32; eassumption.
+  Defined.
+
+  (* Eval simpl in (proj1_sig example_mulmod_u_fg1). *)
 
 End MulmodExamples.
