@@ -64,23 +64,13 @@ Module StringConversion <: Conversion Qhasm QhasmString.
     Coercion intConstToString {n} (c: IConst n): string :=
       match c with
       | constInt32 w => "0x" ++ w
-      end.
-
-    Coercion floatConstToString {n} (c: FConst n): string :=
-      match c with
-      | constFloat32 w => "0x" ++ w
-      | constFloat64 w => "0x" ++ w
+      | constInt64 w => "0x" ++ w
       end.
 
     Coercion intRegToString {n} (r: IReg n): string :=
       match r with
       | regInt32 n => "w" ++ (nameSuffix n)
-      end.
-
-    Coercion floatRegToString {n} (r: FReg n): string :=
-      match r with
-      | regFloat32 n => "sf" ++ (nameSuffix n)
-      | regFloat64 n => "lf" ++ (nameSuffix n)
+      | regInt64 n => "w" ++ (nameSuffix n)
       end.
 
     Coercion natToString (n: nat): string :=
@@ -101,13 +91,9 @@ Module StringConversion <: Conversion Qhasm QhasmString.
     Definition assignmentToString (a: Assignment): option string :=
       match a with
       | ARegStackInt n r s => r ++ " = *(int" ++ n ++ " *)" ++ s
-      | ARegStackFloat n r s => r ++ " = *(float" ++ n ++ " *)" ++ s
       | AStackRegInt n s r => "*(int" ++ n ++ " *) " ++ s ++ " = " ++ r
-      | AStackRegFloat n s r => "*(float" ++ n ++ " *) " ++ s ++ " = " ++ r
       | ARegRegInt n a b => a ++ " = " ++ b
-      | ARegRegFloat n a b => a ++ " = " ++ b
       | AConstInt n r c => r ++ " = " ++ c
-      | AConstFloat n r c => r ++ " = " ++ c
       | AIndex n m a b i =>
         a ++ " = *(int" ++ n ++ " *) (" ++ b ++ " + " ++ (m/n) ++ ")"
       | APtr n r s => r ++ " = " ++ s
@@ -122,13 +108,11 @@ Module StringConversion <: Conversion Qhasm QhasmString.
       | IOr => "|"
       end.
 
-    Coercion floatOpToString (b: FloatOp): string :=
+    Coercion dualOpToString (b: DualOp): string :=
       match b with
-      | FPlus => "+"
-      | FMult => "*"
-      | FAnd => "&"
+      | IMult => "*"
       end.
-
+ 
     Coercion rotOpToString (r: RotOp): string :=
       match r with
       | Shl => "<<"
@@ -137,19 +121,17 @@ Module StringConversion <: Conversion Qhasm QhasmString.
  
     Definition operationToString (op: Operation): option string :=
       match op with
-      | IOpConst o r c => 
+      | IOpConst n o r c => 
         r ++ " " ++ o ++ "= " ++ c
-      | IOpReg o a b =>
+      | IOpReg n o a b =>
         a ++ " " ++ o ++ "= " ++ b
-      | FOpConst32 o r c =>
-        r ++ " " ++ o ++ "= " ++ c
-      | FOpReg32 o a b =>
-        a ++ " " ++ o ++ "= " ++ b
-      | FOpConst64 o r c =>
-        r ++ " " ++ o ++ "= " ++ c
-      | FOpReg64 o a b =>
-        a ++ " " ++ o ++ "= " ++ b
-      | OpRot o r i =>
+      | DOpReg n o a b x =>
+        match x with
+        | Some r =>
+          "inline " ++ r ++ " " ++ a ++ " " ++ o ++ "= " ++ b
+        | None => a ++ " " ++ o ++ "= " ++ b
+        end
+      | OpRot n o r i =>
         r ++ " " ++ o ++ "= " ++ i
       end.
 
@@ -173,13 +155,6 @@ Module StringConversion <: Conversion Qhasm QhasmString.
         | (false, s) =>
           ("!" ++ s ++ "? " ++ a ++ " - " ++ b, "!" ++ s)
         end
-      | TestFloat n o a b =>
-        match (testOpToString o) with
-        | (true, s) =>
-          (s ++ "? " ++ a ++ " - " ++ b, s)
-        | (false, s) =>
-          ("!" ++ s ++ "? " ++ a ++ " - " ++ b, "!" ++ s)
-        end
       end.
 
   End Elements.
@@ -187,24 +162,22 @@ Module StringConversion <: Conversion Qhasm QhasmString.
   Section Parsing.
     Inductive Entry :=
       | intEntry: forall n, IReg n -> Entry
-      | floatEntry: forall n, FReg n -> Entry
       | stackEntry: forall n, Stack n -> Entry.
 
     Definition entryId (x: Entry): nat * nat * nat :=
       match x with
       | intEntry n (regInt32 v) => (0, n, v)
-      | floatEntry n (regFloat32 v) => (1, n, v)
-      | floatEntry n (regFloat64 v) => (2, n, v)
-      | stackEntry n (stack32 v) => (3, n, v)
-      | stackEntry n (stack64 v) => (4, n, v)
-      | stackEntry n (stack128 v) => (5, n, v)
+      | intEntry n (regInt64 v) => (1, n, v)
+      | stackEntry n (stack32 v) => (2, n, v)
+      | stackEntry n (stack64 v) => (3, n, v)
+      | stackEntry n (stack128 v) => (4, n, v)
       end.
 
     Lemma id_equal: forall {x y}, x = y <-> entryId x = entryId y.
     Proof.
       intros; split; intros;
-        destruct x as [nx x | nx x | nx x];
-        destruct y as [ny y | ny y | ny y];
+        destruct x as [nx x | nx x];
+        destruct y as [ny y | ny y];
         try rewrite H;
 
         destruct x, y; subst;
@@ -258,30 +231,28 @@ Module StringConversion <: Conversion Qhasm QhasmString.
         | QAssign a =>
           match a with
           | ARegStackInt n r s => [intEntry n r; stackEntry n s]
-          | ARegStackFloat n r s => [floatEntry n r; stackEntry n s]
           | AStackRegInt n s r => [intEntry n r; stackEntry n s]
-          | AStackRegFloat n s r => [floatEntry n r; stackEntry n s]
           | ARegRegInt n a b => [intEntry n a; intEntry n b]
-          | ARegRegFloat n a b => [floatEntry n a; floatEntry n b]
           | AConstInt n r c => [intEntry n r]
-          | AConstFloat n r c => [floatEntry n r]
-          | AIndex n m a b i => [intEntry n a; intEntry m b]
+          | AIndex n m a b i => [intEntry n a; stackEntry m b]
           | APtr n r s => [intEntry 32 r; stackEntry n s]
           end
         | QOp o =>
           match o with
-          | IOpConst o r c => [intEntry 32 r]
-          | IOpReg o a b => [intEntry 32 a; intEntry 32 b]
-          | FOpConst32 o r c => [floatEntry 32 r]
-          | FOpReg32 o a b => [floatEntry 32 a; floatEntry 32 b]
-          | FOpConst64 o r c => [floatEntry 64 r]
-          | FOpReg64 o a b => [floatEntry 64 a; floatEntry 64 b]
-          | OpRot o r i => [intEntry 32 r]
+          | IOpConst n o r c => [intEntry n r]
+          | IOpReg n o a b => [intEntry n a; intEntry n b]
+          | DOpReg n o a b x =>
+            match x with
+            | Some r =>
+              [intEntry n a; intEntry n b; intEntry n r]
+            | None =>
+              [intEntry n a; intEntry n b]
+            end
+          | OpRot n o r i => [intEntry n r]
           end
         | QJmp c _ =>
           match c with
           | TestInt n o a b => [intEntry n a; intEntry n b]
-          | TestFloat n o a b => [floatEntry n a; floatEntry n b]
           | _ => []
           end
         | QLabel _ => []
@@ -310,13 +281,9 @@ Module StringConversion <: Conversion Qhasm QhasmString.
       flatMapOpt (dedup lst) (fun e =>
         match e with | intEntry 32 r => Some r | _ => None end).
 
-    Definition everyFReg32 (lst: list Entry): list (FReg 32) :=
+    Definition everyIReg64 (lst: list Entry): list (IReg 64) :=
       flatMapOpt (dedup lst) (fun e =>
-        match e with | floatEntry 32 r => Some r | _ => None end).
-
-    Definition everyFReg64 (lst: list Entry): list (FReg 64) :=
-      flatMapOpt (dedup lst) (fun e =>
-        match e with | floatEntry 64 r => Some r | _ => None end).
+        match e with | intEntry 64 r => Some r | _ => None end).
 
     Definition everyStack (n: nat) (lst: list Entry): list (Stack n).
       refine (flatMapOpt (dedup lst) (fun e =>
@@ -340,18 +307,8 @@ Module StringConversion <: Conversion Qhasm QhasmString.
             let se := stackEntry n s in
             ([se], [re; se])
 
-          | ARegStackFloat n r s =>
-            let re := floatEntry n r in
-            let se := stackEntry n s in
-            ([se], [re; se])
-
           | AStackRegInt n s r =>
             let re := intEntry n r in
-            let se := stackEntry n s in
-            ([re], [re; se])
-
-          | AStackRegFloat n s r =>
-            let re := floatEntry n r in
             let se := stackEntry n s in
             ([re], [re; se])
 
@@ -360,22 +317,13 @@ Module StringConversion <: Conversion Qhasm QhasmString.
             let be := intEntry n b in
             ([be], [ae; be])
 
-          | ARegRegFloat n a b =>
-            let ae := floatEntry n a in
-            let be := floatEntry n b in
-            ([be], [ae; be])
-
           | AConstInt n r c =>
             let re := intEntry n r in
             ([], [re])
 
-          | AConstFloat n r c =>
-            let re := floatEntry n r in
-            ([], [re])
-
           | AIndex n m a b i =>
             let ae := intEntry n a in
-            let be := intEntry m b in
+            let be := stackEntry m b in
             ([be], [ae; be])
 
           | APtr n r s =>
@@ -385,35 +333,28 @@ Module StringConversion <: Conversion Qhasm QhasmString.
           end
         | QOp o =>
           match o with
-          | IOpConst o r c =>
-            let re := intEntry 32 r in
+          | IOpConst n o r c =>
+            let re := intEntry n r in
             ([re], [re])
 
-          | IOpReg o a b =>
-            let ae := intEntry 32 a in
-            let be := intEntry 32 b in
+          | IOpReg n o a b =>
+            let ae := intEntry n a in
+            let be := intEntry n b in
             ([ae; be], [ae; be])
 
-          | FOpConst32 o r c =>
-            let re := floatEntry 32 r in
-            ([re], [re])
+          | DOpReg n o a b x =>
+            let ae := intEntry n a in
+            let be := intEntry n b in
 
-          | FOpReg32 o a b =>
-            let ae := floatEntry 32 a in
-            let be := floatEntry 32 b in
-            ([ae; be], [ae; be])
+            match x with
+            | Some r =>
+              let xe := intEntry n r in
+              ([ae; be], [ae; be; xe])
+            | None => ([ae; be], [ae; be])
+            end
 
-          | FOpConst64 o r c =>
-            let re := floatEntry 64 r in
-            ([re], [re])
-
-          | FOpReg64 o a b =>
-            let ae := floatEntry 64 a in
-            let be := floatEntry 64 b in
-            ([ae; be], [ae; be])
-
-          | OpRot o r i =>
-            let re := intEntry 32 r in
+          | OpRot n o r i =>
+            let re := intEntry n r in
             ([re], [re])
           end
         | QJmp c _ =>
@@ -421,11 +362,6 @@ Module StringConversion <: Conversion Qhasm QhasmString.
           | TestInt n o a b =>
             let ae := intEntry n a in
             let be := intEntry n b in
-            ([ae; be], [])
-
-          | TestFloat n o a b =>
-            let ae := floatEntry n a in
-            let be := floatEntry n b in
             ([ae; be], [])
 
           | _ => ([], [])
@@ -443,7 +379,6 @@ Module StringConversion <: Conversion Qhasm QhasmString.
     Definition entryToString (e: Entry) :=
       match e with
       | intEntry n i => intRegToString i
-      | floatEntry n f => floatRegToString f
       | stackEntry n s => stackToString s
       end.
   End Parsing.
@@ -468,18 +403,15 @@ Module StringConversion <: Conversion Qhasm QhasmString.
     | QLabel l => [("lbl" ++ l ++ ": ")%string]
     end.
 
-  Definition convertProgram (prog: Qhasm.Program): string :=
+  Definition convertProgram (prog: Qhasm.Program): option string :=
     let es := (entries prog) in
 
     let ireg32s :=
         (map (fun x => "int32 " ++ (intRegToString x))%string
              (everyIReg32 es)) in
-    let freg32s :=
-        (map (fun x => "float32 " ++ (floatRegToString x))%string
-             (everyFReg32 es)) in
-    let freg64s :=
-        (map (fun x => "float64 " ++ (floatRegToString x))%string
-             (everyFReg64 es)) in
+    let ireg64s :=
+        (map (fun x => "int64 " ++ (intRegToString x))%string
+             (everyIReg64 es)) in
 
     let stack32s :=
         (map (fun x => "stack32 " ++ (stackToString x))%string
@@ -502,20 +434,19 @@ Module StringConversion <: Conversion Qhasm QhasmString.
 
     let blank := [EmptyString] in
 
-    fold_left (fun x y => (x ++ "\n" ++ y)%string)
+    Some (fold_left (fun x y => (x ++ "\n" ++ y)%string)
       (ireg32s ++ blank ++
-       freg32s ++ blank ++
-       freg64s ++ blank ++
+       ireg64s ++ blank ++
        stack32s ++ blank ++
        stack64s ++ blank ++
        stack128s ++ blank ++
        inputs ++ blank ++ blank ++
        enter ++ blank ++
        stmts ++ blank ++ blank ++
-       leave) EmptyString.
+       leave) EmptyString).
 
   Lemma convert_spec: forall a a' b b' prog prog',
-    convertProgram prog = prog' ->
+    convertProgram prog = Some prog' ->
     convertState a = Some a' -> convertState b = Some b' ->
     QhasmString.evaluatesTo prog' a b <-> Qhasm.evaluatesTo prog a' b'.
   Admitted.
