@@ -6,105 +6,53 @@ Require Export MultiBoundedWord QhasmCommon.
 
 Import ListNotations.
 
-(* The base type of an n-vector of words *)
-Inductive wvec: nat -> nat -> Type :=
-  | VO: forall {n}, wvec n O
-  | VS: forall {n k}, word n -> wvec n k -> wvec n (S k).
+(* Tuple Manipulations *)
 
-Definition vgets {n k} (v: wvec n (S k)): (word n) * (wvec n k).
-  inversion v as [| n' k' w v']; refine (w, v').
+Fixpoint Tuple (T: Type) (n: nat): Type :=
+  match n with
+  | O => T
+  | S m => (T * (Tuple T m))%type
+  end.
+
+Definition just {T} (x: T): Tuple T O := x.
+
+Definition cross {T n} (x: T) (tup: Tuple T n): Tuple T (S n) := (x, tup).
+
+Definition getLen {T n} (tup: Tuple T n) := (S n).
+
+Fixpoint tget' {T n} (tup: Tuple T n) (x: nat): T.
+  induction x, n; try exact tup.
+
+  exact (fst tup).
+  exact (tget' _ _ (snd tup) x).
 Defined.
 
-Definition vfunO {n} {T} (f: word n -> T): wvec n 1 -> T :=
-  fun v => f (fst (vgets v)).
+Definition tget {T n} (tup: Tuple T n) (x: nat): T :=
+  tget' tup (n - x).
 
-Definition vfunS {n k} {T} (f: wvec n k -> word n -> T): wvec n (S k) -> T :=
-  fun v => match (vgets v) with | (w, v') => f v' w end.
+Lemma tget_inc: forall {T k} (x: nat) (v: T) (tup: Tuple T k),
+    (x <= k)%nat -> tget tup x = tget (cross v tup) x.
+Proof.
+  intros; unfold cross, tget.
+  replace (S k - x) with (S (k - x)) by intuition.
+  unfold tget'; simpl; intuition.
+Qed.
 
-(* The base type of an n-vector of bounded Ns *)
-Inductive nvec: nat -> list N -> Type :=
-  | NO: nvec O nil
-  | NS: forall {k bs} b x, N.le x b -> nvec k bs -> nvec (S k) (cons b bs).
+Ltac tupleize n :=
+  repeat match goal with
+  | [T: Tuple _ ?k, w: word n |- _] => let H := fresh in
+    replace w with (tget (cross w T) (S k)) by (simpl; intuition);
 
-Definition ngets {k b bs} (v: nvec (S k) (cons b bs)): N * N * (nvec k bs).
-  inversion v as [| k' bs' b' x p v']; refine (x, b', v').
-Defined.
+      assert (forall m, (m <= k)%nat -> tget T m = tget (cross w T) m) as H
+        by (intros; apply tget_inc; intuition);
+      repeat rewrite H by intuition;
 
-Definition nfunO {T b} (f: {x: N | N.le x b} -> T): nvec 1 [b] -> T.
-  intro v; inversion v as [| k' bs' b' x p v']; refine (f (exist _ x p)).
-Defined.
+      generalize (cross w T); clear w T H; intro T
 
-Definition nfunS {T k b bs} (f: nvec k bs -> {x: N | N.le x b} -> T):
-    nvec (S k) (cons b bs) -> T.
-  intro v; inversion v as [| k' bs' b' x p v']; refine (f v' (exist _ x p)).
-Defined.
+  | [w: word n |- _] =>
+    replace w with (tget (just w) O) by (simpl; intuition);
+      generalize (just w); clear w; let T := fresh in intro T
+  end.
 
 (* Conversion from nvec functions to wvec functions *)
-Inductive nweq: forall {n k bs}, nvec k bs -> wvec n k -> Prop :=
-  | nweqO: forall {n}, nweq NO (@VO n)
-  | nweqS: forall {n b k bs' x p}
-             (nv: nvec k bs') (wv: wvec n k),
-      nweq nv wv -> nweq (NS b x p nv) (VS (NToWord n x) wv).
 
-(* new word operations *)
-Definition dmult {n} (a b: word n): (word n) * (word n) :=
-  let d := NToWord (n + n) ((wordToN a) * (wordToN b))%N in
-  (split1 n n d, split2 n n d).
-
-Definition addWithCarry {n} (a b: word n): (word n) * bool :=
-  let r := NToWord (S n) ((wordToN a) + (wordToN b))%N in
-  (wtl r, whd r).
-
-(* N to word lemmas *)
-Lemma nw_plus: forall n x y,
-    (n >= 1)%nat
-  -> (x <= Npow2 (pred n))%N
-  -> (y <= Npow2 (pred n))%N
-  -> NToWord n (x + y)%N = (NToWord n x) ^+ (NToWord n y).
-Admitted.
-
-Lemma nw_awc: forall n x y,
-    (n >= 1)%nat
-  -> (x <= Npow2 (pred n))%N
-  -> (y <= Npow2 (pred n))%N
-  -> NToWord n (x + y)%N = fst (addWithCarry (NToWord n x) (NToWord n y)).
-Admitted.
-
-Lemma nw_dmult: forall n x y,
-    (n >= 2)%nat
-  -> (x <= Npow2 (n / 2)%nat)%N
-  -> (y <= Npow2 (n / 2)%nat)%N
-  -> NToWord n (x * y)%N = snd (dmult (NToWord n x) (NToWord n y)).
-Admitted.
-
-Lemma nw_mult: forall n x y,
-    (n >= 2)%nat
-  -> (x <= Npow2 (n / 2)%nat)%N
-  -> (y <= Npow2 (n / 2)%nat)%N
-  -> NToWord n (x * y)%N = wmult (NToWord n x) (NToWord n y).
-Admitted.
-
-Definition nwadd {T b} (f: forall x, N.le x b -> T): {x | N.le x b} -> T :=
-  nweq na wa ->
-  nweq nb wb ->
-  nweq na wb
-  fun s => (f (proj1_sig s) (proj2_sig s)).
-
-(* Full Conversion example: steps are
-    - Function over {x: N | N.le x b}.
-    - Function over nvec.
-    - Function over wvec.
-    - Pseudo
- *)
-
-Lemma nexample: forall b0 b1,
-  (forall x0 x1, N.le x0 b0 -> N.le x1 b1 -> N) ->
-  (nvec 2 [b0; b1] -> N).
-Proof.
-  intros b0 b1 f.
-  apply nfunS; repeat apply (@nfunS ({x: N | N.le x _} -> N)).
-  intros z s1 s0;
-    destruct s0 as [s0x s0p];
-    destruct s1 as [s1x s1p].
-  refine (f s0x s1x s0p s1p).
-Defined.

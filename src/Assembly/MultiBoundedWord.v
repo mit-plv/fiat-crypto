@@ -52,6 +52,13 @@ Ltac multi_recurse n T :=
       multi_recurse n w;
       pose proof (@mask_bound n w m)
 
+    | ?x ^& (@NToWord _ (N.ones ?m)) =>
+      multi_recurse n (mask (N.to_nat m) x);
+      match goal with
+      | [ H: (mask (N.to_nat m) x) <= ?b |- _] =>
+        pose proof (@mask_wand n x m b H)
+      end
+
     | shiftr ?w ?bits =>
       multi_recurse n w;
       match goal with
@@ -180,7 +187,7 @@ Section MulmodExamples.
   Defined.
 
   Lemma example_mulmod_u_fg1 :  { b |
-        (let y : word 32 := (* the type declarations on the let-s make type inference not take forever *)
+      (let y : word 32 := 
         (f0 ^* g0 ^+
             $19 ^*
             (f9 ^* g1 ^* $2 ^+ f8 ^* g2 ^+ f7 ^* g3 ^* $2 ^+ f6 ^* g4 ^+ f5 ^* g5 ^* $2 ^+ f4 ^* g6 ^+ f3 ^* g7 ^* $2 ^+ f2 ^* g8 ^+
@@ -237,8 +244,9 @@ Section MulmodExamples.
         fg1) <= b }.
   Proof.
     eexists; multi_bound 32; eassumption.
+
   Defined.
 
-  (* Eval simpl in (proj1_sig example_mulmod_u_fg1). *)
+  Eval simpl in (proj1_sig example_mulmod_u_fg1).
 
 End MulmodExamples.
