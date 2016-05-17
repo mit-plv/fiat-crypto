@@ -5,18 +5,17 @@ Require Import PseudoConversion AlmostConversion StringConversion.
 Module P64 := Pseudo PseudoUnary64.
 Module C64 := PseudoConversion PseudoUnary64.
 
-Import P64.
+Import C64.P.
 
-Definition prog0: P64.Pseudo 1 1.
-  refine (P64.PBin 1 P64.Wplus
-      (P64.PVar 1 (exist _ 0 _))
-      (P64.PConst 1 (natToWord _ 1)));
+Definition prog0: Pseudo 1 1.
+  refine (PBin _ Wplus
+      (PVar 1 (exist _ 0 _))
+      (PConst _ (natToWord _ 1)));
     abstract intuition.
 Defined.
 
-Definition prog1: option AlmostQhasm.Program.
-  refine (C64.Conv.convertProgram (convert prog0 _)); admit.
-Defined.
+Definition prog1: option AlmostQhasm.Program :=
+  C64.Conv.convertProgram prog0.
 
 Definition prog2: option Qhasm.Program :=
   match prog1 with
@@ -30,8 +29,5 @@ Definition prog3: option string :=
   | None => None
   end.
 
-Eval vm_compute in prog3.
-
-
-
+Eval compute in prog3.
 

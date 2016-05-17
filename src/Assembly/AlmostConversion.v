@@ -7,8 +7,8 @@ Module AlmostConversion <: Conversion AlmostQhasm Qhasm.
   Import ListNotations.
 
   Fixpoint almostToQhasm' (prog: AlmostProgram) (startLabel: N): Qhasm.Program :=
-    let label0 := N.shiftl 1 startLabel in
-    let label1 := N.succ label0 in
+    let label0 := (startLabel * 2)%N in
+    let label1 := (label0 + 1)%N in
 
     match prog with
     | ASkip => []
