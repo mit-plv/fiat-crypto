@@ -225,24 +225,56 @@ Lemma unfoldDiv : forall {m} (x y:F m), (x/y = x * inv y)%F. Proof. unfold div. 
 Definition rep2E (r:FRep * FRep * FRep * FRep) : extended :=
   match r with (((x, y), z), t) => mkExtended (rep2F x) (rep2F y) (rep2F z) (rep2F t) end.
 
-Lemma unifiedAddM1Rep_sig : forall a b : FRep * FRep * FRep * FRep, { unifiedAddM1Rep | rep2E unifiedAddM1Rep = unifiedAddM1' (rep2E a) (rep2E b) }.
-Proof.
-  unfold rep2E. cbv beta delta [unifiedAddM1'].
-  eexists; instantiate (1 := (((_,_), _), _)).
-Admitted.
-Definition unifiedAddM1Rep (a b:FRep * FRep * FRep * FRep) : FRep * FRep * FRep * FRep := Eval hnf in proj1_sig (unifiedAddM1Rep_sig a b).
-Definition unifiedAddM1Rep_correct a b : rep2E (unifiedAddM1Rep a b) = unifiedAddM1' (rep2E a) (rep2E b)  := Eval hnf in proj2_sig (unifiedAddM1Rep_sig a b).
-
 Lemma if_map : forall {T U} (f:T->U) (b:bool) (x y:T), (if b then f x else f y) = f (if b then x else y).
 Proof.
   destruct b; trivial.
 Qed.
+
+Create HintDb FRepOperations discriminated.
+Hint Rewrite FRepMul_correct FRepAdd_correct FRepSub_correct FRepInv_correct FSRepPow_correct FRepOpp_correct : FRepOperations.
 
 Local Ltac Let_In_rep2F :=
   match goal with
   | [ |- appcontext G[Let_In (rep2F ?x) ?f] ]
     => change (Let_In (rep2F x) f) with (Let_In x (fun y => f (rep2F y))); cbv beta
   end.
+
+Lemma unifiedAddM1Rep_sig : forall a b : FRep * FRep * FRep * FRep, { unifiedAddM1Rep | rep2E unifiedAddM1Rep = unifiedAddM1' (rep2E a) (rep2E b) }.
+Proof.
+  destruct a as [[[]]]; destruct b as [[[]]].
+  eexists.
+  lazymatch goal with |- ?LHS = ?RHS :> ?T =>
+                  evar (e:T); replace LHS with e; [subst e|]
+  end.
+  unfold rep2E. cbv beta delta [unifiedAddM1'].
+  pose proof (rep2F_F2rep twice_d) as H; rewrite H; clear H. (* XXX: this is a hack -- rewrite misresolves typeclasses? *)
+   
+  { etransitivity; [|replace_let_in_with_Let_In; reflexivity].
+    repeat (
+      autorewrite with FRepOperations;
+      Let_In_rep2F;
+      eapply Let_In_Proper_nd; [reflexivity|cbv beta delta [Proper respectful pointwise_relation]; intro]).
+      lazymatch goal with |- ?LHS = (rep2F ?x, rep2F ?y, rep2F ?z, rep2F ?t) =>
+                          change (LHS = (rep2E (((x, y), z), t)))
+      end.
+      reflexivity. }
+
+  subst e.
+  reflexivity. (* FIXME: do not simpl the goal here, we want to keep the Let_In common subexpressions *)
+Defined.
+
+(*Eval simpl in (fun x1 y1 z1 t1 x2 y2 z2 t2 => proj1_sig (unifiedAddM1Rep_sig (((x1, y1), z1), t1) (((x2, y2), z2), t2))). (* TODO: remove after debugging the fixme three lines above *) *)
+
+Definition unifiedAddM1Rep (a b:FRep * FRep * FRep * FRep) : FRep * FRep * FRep * FRep := Eval hnf in proj1_sig (unifiedAddM1Rep_sig a b).
+Definition unifiedAddM1Rep_correct a b : rep2E (unifiedAddM1Rep a b) = unifiedAddM1' (rep2E a) (rep2E b)  := Eval hnf in proj2_sig (unifiedAddM1Rep_sig a b).
+
+Definition rep2T (P:FRep * FRep) := (rep2F (fst P), rep2F (snd P)).
+Definition erep2trep (P:FRep * FRep * FRep * FRep) := Let_In P (fun P => Let_In (FRepInv (snd (fst P))) (fun iZ => (FRepMul (fst (fst (fst P))) iZ, FRepMul (snd (fst (fst P))) iZ))).
+Lemma erep2trep_correct : forall P, rep2T (erep2trep P) = extendedToTwisted (rep2E P).
+Proof.
+  unfold rep2T, rep2E, erep2trep, extendedToTwisted; destruct P as [[[]]]; simpl.
+  rewrite !unfoldDiv, <-!FRepMul_correct, <-FRepInv_correct. reflexivity.
+Qed.
 
 Lemma sharper_verify : forall pk l msg sig, { verify | verify = ed25519_verify pk l msg sig}.
 Proof.
@@ -492,21 +524,15 @@ Proof.
       
       etransitivity. Focus 2. {
         apply f_equal.
-        Definition rep2T (P:FRep * FRep) := (rep2F (fst P), rep2F (snd P)).
-        Definition erep2trep (P:FRep * FRep * FRep * FRep) := Let_In P (fun P => Let_In (FRepInv (snd (fst P))) (fun iZ => (FRepMul (fst (fst (fst P))) iZ, FRepMul (snd (fst (fst P))) iZ))).
-        Lemma erep2trep_correct : forall P, rep2T (erep2trep P) = extendedToTwisted (rep2E P).
-        Proof.
-          unfold rep2T, rep2E, erep2trep, extendedToTwisted; destruct P as [[[]]]; simpl.
-          rewrite !unfoldDiv, <-!FRepMul_correct, <-FRepInv_correct. reflexivity.
-        Qed.
         rewrite <-erep2trep_correct; cbv beta delta [erep2trep].
         reflexivity. } Unfocus.
         
-    reflexivity. } Unfocus.
+      reflexivity. } Unfocus.
     (*
     cbv beta iota delta
       [iter_op test_and_op unifiedAddM1' extendedToTwisted twistedToExtended enc' snd
        point_dec_coordinates PrimeFieldTheorems.sqrt_mod_q].
     *)
+    reflexivity. } Unfocus.
   reflexivity.
 Admitted.
