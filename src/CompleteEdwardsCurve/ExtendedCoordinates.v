@@ -116,6 +116,8 @@ Section ExtendedCoordinates.
     repeat (econstructor || intro); unfold extendedPoint_eq in *; congruence.
   Qed.
 
+  Definition twice_d := d + d.
+
   Section TwistMinus1.
     Context (a_eq_minus1 : a = opp 1).
     (** Second equation from <http://eprint.iacr.org/2008/522.pdf> section 3.1, also <https://www.hyperelliptic.org/EFD/g1p/auto-twisted-extended-1.html#addition-add-2008-hwcd-3> and <https://tools.ietf.org/html/draft-josefsson-eddsa-ed25519-03> *)
@@ -124,8 +126,8 @@ Section ExtendedCoordinates.
       let '(X2, Y2, Z2, T2) := P2 in
       let  A := (Y1-X1)*(Y2-X2) in
       let  B := (Y1+X1)*(Y2+X2) in
-      let  C := T1*ZToField 2*d*T2 in
-      let  D := Z1*ZToField 2  *Z2 in
+      let  C := T1*twice_d*T2 in
+      let  D := Z1*(Z2+Z2) in
       let  E := B-A in
       let  F := D-C in
       let  G := D+C in
@@ -139,13 +141,17 @@ Section ExtendedCoordinates.
 
     Local Ltac tnz := repeat apply Fq_mul_nonzero_nonzero; auto using (@char_gt_2 q two_lt_q).
 
+    Lemma F_mul_2_l : forall x : F q, ZToField 2 * x = x + x.
+      intros. ring.
+    Qed.
+
     Lemma unifiedAddM1'_rep: forall P Q rP rQ, E.onCurve rP -> E.onCurve rQ ->
       P ~= rP -> Q ~= rQ -> (unifiedAddM1' P Q) ~= (E.add' rP rQ).
     Proof.
       intros P Q rP rQ HoP HoQ HrP HrQ.
       pose proof (@edwardsAddCompletePlus _ _ _ _ two_lt_q nonzero_a square_a nonsquare_d).
       pose proof (@edwardsAddCompleteMinus _ _ _ _ two_lt_q nonzero_a square_a nonsquare_d).
-      unfoldExtended; rewrite a_eq_minus1 in *; simpl in *.
+      unfoldExtended; unfold twice_d; rewrite a_eq_minus1 in *; simpl in *. repeat rewrite <-F_mul_2_l.
         repeat split; repeat apply (f_equal2 pair); try F_field; repeat split; auto;
         repeat rewrite ?F_add_0_r, ?F_add_0_l, ?F_sub_0_l, ?F_sub_0_r,
            ?F_mul_0_r, ?F_mul_0_l, ?F_mul_1_l, ?F_mul_1_r, ?F_div_1_r;
