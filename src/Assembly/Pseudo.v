@@ -58,10 +58,10 @@ Module Pseudo (M: PseudoMachine) <: Language.
     | PVar: forall n, Index n -> Pseudo n 1
     | PConst: forall n, const -> Pseudo n 1
 
-    | PBin: forall n, WBinOp -> Pseudo n 1 -> Pseudo n 1 -> Pseudo n 1
+    | PBin: forall n, WBinOp -> Pseudo n 2 -> Pseudo n 1
     | PNat: forall n, WNatOp -> Index width -> Pseudo n 1
-    | PDual: forall n, WDualOp -> Pseudo n 1 -> Pseudo n 1 -> Pseudo n 2
-    | PShift: forall n, WShiftOp -> Pseudo n 1 -> Index width -> Pseudo n 1
+    | PDual: forall n, WDualOp -> Pseudo n 2 -> Pseudo n 2
+    | PShift: forall n, WShiftOp -> Index width -> Pseudo n 1 -> Pseudo n 1
 
     | PLet: forall n k m, Pseudo n k -> Pseudo (n + k) m -> Pseudo n m
     | PComp: forall n k m, Pseudo n k -> Pseudo k m -> Pseudo n m
