@@ -1,35 +1,41 @@
 
-Require Import Pseudo Qhasm AlmostQhasm Conversion Language.
-Require Import PseudoConversion AlmostConversion StringConversion.
+Require Import Pseudo Qhasm AlmostQhasm Medial Conversion Language.
+Require Import PseudoMedialConversion AlmostConversion StringConversion.
 
 Extraction Language Ocaml.
 Require Import ExtrOcamlString ExtrOcamlBasic.
 Require Import Coq.Strings.String.
 
 Module Progs.
-  Module P64 := Pseudo PseudoUnary64.
-  Module C64 := PseudoConversion PseudoUnary64.
+  Module Arch := PseudoUnary64.
+  Module C64 := PseudoMedialConversion Arch.
 
   Import C64.P.
 
-  Definition prog0: Pseudo 1 1.
-    refine (PBin _ Wplus
+  Definition prog0: C64.P.Program.
+    refine
+      (PBin _ IPlus (PComb _ _ _
         (PVar 1 (exist _ 0 _))
-        (PConst _ (natToWord _ 1)));
-        abstract intuition.
+        (PConst _ (natToWord _ 1)))); abstract intuition.
   Defined.
 
-  Definition prog1: option AlmostQhasm.Program :=
-    C64.Conv.convertProgram prog0.
+  Definition prog1: option C64.M.Program :=
+    C64.PseudoConversion.convertProgram prog0.
 
-  Definition prog2: option Qhasm.Program :=
+  Definition prog2: option AlmostQhasm.Program :=
     match prog1 with
+    | Some p => C64.MedialConversion.convertProgram p
+    | None => None
+    end.
+
+  Definition prog3: option Qhasm.Program :=
+    match prog2 with
     | Some p => AlmostConversion.convertProgram p
     | None => None
     end.
 
-  Definition prog3: string :=
-    match prog2 with
+  Definition prog4: string :=
+    match prog3 with
     | Some p =>
         match (StringConversion.convertProgram p) with
         | Some s => s
@@ -39,7 +45,7 @@ Module Progs.
     end.
 
   Definition result: string.
-    let res := eval vm_compute in prog3 in exact res.
+    let res := eval vm_compute in prog4 in exact res.
   Defined.
 
   Open Scope string_scope.

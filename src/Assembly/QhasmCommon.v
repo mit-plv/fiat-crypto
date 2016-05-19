@@ -4,7 +4,6 @@ Require Export Bedrock.Word.
 (* A formalization of x86 qhasm *)
 Definition Label := nat.
 Definition Index (limit: nat) := {x: nat | (x < limit)%nat}.
-Definition Invert := bool.
 
 (* Sugar and Tactics *)
 
