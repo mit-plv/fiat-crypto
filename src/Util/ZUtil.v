@@ -297,6 +297,94 @@ Proof.
   apply Z_mod_mult.
 Qed.
 
+  Lemma Z_ones_succ : forall x, (0 <= x) ->
+    Z.ones (Z.succ x) = 2 ^ x + Z.ones x.
+  Proof.
+    unfold Z.ones; intros.
+    rewrite !Z.shiftl_1_l.
+    rewrite Z.add_pred_r.
+    apply Z.succ_inj.
+    rewrite !Z.succ_pred.
+    rewrite Z.pow_succ_r; omega.
+  Qed.
+
+  Lemma Z_div_floor : forall a b c, 0 < b -> a < b * (Z.succ c) -> a / b <= c.
+  Proof.
+    intros.
+    apply Z.lt_succ_r.
+    apply Z.div_lt_upper_bound; try omega.
+  Qed.
+
+  Lemma Z_shiftr_1_r_le : forall a b, a <= b ->
+    Z.shiftr a 1 <= Z.shiftr b 1.
+  Proof.
+    intros.
+    rewrite !Z.shiftr_div_pow2, Z.pow_1_r by omega.
+    apply Z.div_le_mono; omega.
+  Qed.
+
+  Lemma Z_ones_pred : forall i, 0 < i -> Z.ones (Z.pred i) = Z.shiftr (Z.ones i) 1.
+  Proof.
+    induction i; [ | | pose proof (Pos2Z.neg_is_neg p) ]; try omega.
+    intros.
+    unfold Z.ones.
+    rewrite !Z.shiftl_1_l, Z.shiftr_div_pow2, <-!Z.sub_1_r, Z.pow_1_r, <-!Z.add_opp_r by omega.
+    replace (2 ^ (Z.pos p)) with (2 ^ (Z.pos p - 1)* 2).
+    rewrite Z.div_add_l by omega.
+    reflexivity.
+    replace 2 with (2 ^ 1) at 2 by auto.
+    rewrite <-Z.pow_add_r by (pose proof (Pos2Z.is_pos p); omega).
+    f_equal. omega.
+  Qed.
+
+  Lemma Z_shiftr_ones' : forall a n, 0 <= a < 2 ^ n -> forall i, (0 <= i) ->
+    Z.shiftr a i <= Z.ones (n - i) \/ n <= i.
+  Proof.
+    intros until 1.
+    apply natlike_ind.
+    + unfold Z.ones.
+      rewrite Z.shiftr_0_r, Z.shiftl_1_l, Z.sub_0_r.
+      omega.
+    + intros. 
+      destruct (Z_lt_le_dec x n); try omega.
+      intuition.
+      left.
+      rewrite shiftr_succ.
+      replace (n - Z.succ x) with (Z.pred (n - x)) by omega.
+      rewrite Z_ones_pred by omega.
+      apply Z_shiftr_1_r_le.
+      assumption.
+  Qed.
+
+  Lemma Z_shiftr_ones : forall a n i, 0 <= a < 2 ^ n -> (0 <= i) -> (i <= n) ->
+    Z.shiftr a i <= Z.ones (n - i) .
+  Proof.
+    intros a n i G G0 G1.
+    destruct (Z_le_lt_eq_dec i n G1). 
+    + destruct (Z_shiftr_ones' a n G i G0); omega.
+    + subst; rewrite Z.sub_diag.
+      destruct (Z_eq_dec a 0).
+      - subst; rewrite Z.shiftr_0_l; reflexivity.
+      - rewrite Z.shiftr_eq_0; try omega; try reflexivity.
+        apply Z.log2_lt_pow2; omega.
+  Qed.
+
+  Lemma Z_shiftr_upper_bound : forall a n, 0 <= n -> 0 <= a <= 2 ^ n -> Z.shiftr a n <= 1.
+  Proof.
+    intros a ? ? [a_nonneg a_upper_bound].
+    apply Z_le_lt_eq_dec in a_upper_bound.
+    destruct a_upper_bound.
+    + destruct (Z_eq_dec 0 a).
+      - subst; rewrite Z.shiftr_0_l; omega.
+      - rewrite Z.shiftr_eq_0; auto; try omega.
+        apply Z.log2_lt_pow2; auto; omega.
+    + subst.
+      rewrite Z.shiftr_div_pow2 by assumption.
+      rewrite Z.div_same; try omega.
+      assert (0 < 2 ^ n) by (apply Z.pow_pos_nonneg; omega).
+      omega.
+  Qed.
+
 (* prove that known nonnegative numbers are nonnegative *)
 Ltac zero_bounds' :=
   repeat match goal with
@@ -317,3 +405,14 @@ Ltac zero_bounds' :=
   end; try omega; try prime_bound; auto.
 
 Ltac zero_bounds := try omega; try prime_bound; zero_bounds'.
+
+  Lemma Z_ones_nonneg : forall i, (0 <= i) -> 0 <= Z.ones i.
+  Proof.
+    apply natlike_ind.
+    + unfold Z.ones. simpl; omega.
+    + intros.
+      rewrite Z_ones_succ by assumption.
+      zero_bounds.
+      apply Z.pow_nonneg; omega.
+  Qed.
+
