@@ -127,28 +127,26 @@ Module Pseudo (M: PseudoMachine) <: Language.
     | PConst n c => Some ([c])
     | PNat n o i => Some [applyNat o i]
 
-    | PBin n o a b =>
-      option_map' (pseudoEval a st) (fun sa =>
-        option_map' (pseudoEval b st) (fun sb =>
-          match (sa, sb) with
-          | ([wa], [wb]) => Some [applyBin o wa wb]
-          | _ => None
-          end ))
+    | PBin n o p =>
+      option_map' (pseudoEval p st) (fun sp =>
+        match sp with
+        | [wa; wb] => Some [applyBin o wa wb]
+        | _ => None
+        end)
 
-    | PDual n o a b =>
-      option_map' (pseudoEval a st) (fun sa =>
-        option_map' (pseudoEval b st) (fun sb =>
-          match (sa, sb) with
-          | ([wa], [wb]) => Some (applyDual o wa wb)
-          | _ => None
-          end ))
+    | PDual n o p =>
+      option_map' (pseudoEval p st) (fun sp =>
+        match sp with
+        | [wa; wb] => Some (applyDual o wa wb)
+        | _ => None
+        end)
 
-    | PShift n o x y =>
+    | PShift n o a x =>
       option_map' (pseudoEval x st) (fun sx =>
         match sx with
-        | [wx] => Some [applyShift o wx y]
+        | [wx] => Some [applyShift o wx a]
         | _ => None
-        end )
+        end)
 
     | PLet n k m f g =>
       option_map' (pseudoEval f st) (fun sf =>

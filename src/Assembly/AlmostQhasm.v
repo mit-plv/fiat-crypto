@@ -6,9 +6,6 @@ Module AlmostQhasm <: Language.
   Import ListNotations.
   Import State.
 
-  (* A constant upper-bound on the number of operations we run *)
-  Definition maxOps: nat := 1000.
-
   (* Program Types *)
   Definition State := State.
 

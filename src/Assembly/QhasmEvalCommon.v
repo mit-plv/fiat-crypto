@@ -35,29 +35,29 @@ Definition evalCond (c: Conditional) (state: State): option bool :=
     end
   end.
 
+Definition evalIOp {b} (io: IntOp) (x y: word b) :=
+  match io with
+  | IPlus => wplus x y
+  | IMinus => wminus x y
+  | IXor => wxor x y
+  | IAnd => wand x y
+  | IOr => wor x y
+  end.
+
+Definition evalRotOp {b} (ro: RotOp) (x: word b) (n: nat) :=
+  match ro with
+  | Shl => NToWord b (N.shiftl_nat (wordToN x) n)
+  | Shr => NToWord b (N.shiftr_nat (wordToN x) n)
+  end.
+
+Definition evalDualOp {b} (duo: DualOp) (x y: word b) :=
+  match duo with
+  | IMult =>
+    let wres := natToWord (b + b) (N.to_nat ((wordToN x) * (wordToN y))) in
+    (split1 b b wres, split2 b b wres)
+  end.
+
 Definition evalOperation (o: Operation) (state: State): option State :=
-  let evalIOp := fun {b} (io: IntOp) (x y: word b) =>
-    match io with
-    | IPlus => wplus x y
-    | IMinus => wminus x y
-    | IXor => wxor x y
-    | IAnd => wand x y
-    | IOr => wor x y
-    end in
-
-  let evalRotOp := fun {b} (ro: RotOp) (x: word b) (n: nat) =>
-    match ro with
-    | Shl => NToWord b (N.shiftl_nat (wordToN x) n)
-    | Shr => NToWord b (N.shiftr_nat (wordToN x) n)
-    end in
-
-  let evalDualOp := fun {b} (duo: DualOp) (x y: word b) =>
-    match duo with
-    | IMult =>
-      let wres := natToWord (b + b) (N.to_nat ((wordToN x) * (wordToN y))) in
-      (split1 b b wres, split2 b b wres)
-    end in
-
   let liftOpt := fun {A B C} (f: A -> B -> option C) (xo: option A) (yo: option B) =>
     match (xo, yo) with
     | (Some x, Some y) => f x y
