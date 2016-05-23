@@ -1,15 +1,19 @@
 
 Require Export Language Conversion QhasmCommon QhasmUtil.
-Require Export AlmostQhasm Pseudo State.
+Require Export Pseudo Medial AlmostQhasm State.
 Require Export Bedrock.Word NArith NPeano.
 Require Export List Sumbool.
 Require Vector.
 
-Module PseudoConversion (M: PseudoMachine).
+Module Allocator (Arch: PseudoMachine).
+End Allocator.
+
+Module MedialConversion (Arch: PseudoMachine).
   Import QhasmCommon AlmostQhasm State Util.
   Import ListNotations.
 
-  Module P := Pseudo M.
+  Module M := Medial Arch.
+  Module A := Allocator Arch.
 
   Fixpoint take {A} (n: nat) (lst: list A) :=
     match n with
@@ -21,15 +25,25 @@ Module PseudoConversion (M: PseudoMachine).
       end
     end.
 
-  Module Conv <: Conversion P AlmostQhasm.
-    Import P M.
+  Module Conv <: Conversion M AlmostQhasm.
+    Import M A Arch.
 
-    Definition activeRegisters := 4.
-    Definition r0 := ireg 4. (* Invariant: these are never used in a Mapping *)
-    Definition r1 := ireg 5.
-    Definition r2 := ireg 6.
+    Fixpoint maxIndex (prog: M.Program): nat :=
+      match prog with
+      | MSkip => O
+      | MSeq f g => max (maxIndex f) (maxIndex g)
+      | MAssign (MAVar a b) => max a b
+      | MAssign (MAConst a _) => a
+      | MOp (MIOpConst io a c) => a
+      | MOp (MIOpReg io a b) => max a b
+      | MOp (MDOpReg duo a b (Some x)) => max a (max b x)
+      | MOp (MDOpReg duo a b None) => max a b
+      | MOp (MOpRot _ a _) => a
+      | MCond _ f g => max (maxIndex f) (maxIndex g)
+      | MFunexp e f => maxIndex f
+      end.
 
-    Definition convertState (st: AlmostQhasm.State): option P.State :=
+    Definition convertState (st: AlmostQhasm.State): option M.State :=
       match st with
       | fullState _ stackState _ =>
         Some (take vars (map (fun x => NToWord width (snd x))

@@ -30,61 +30,98 @@ Module PseudoConversion (Arch: PseudoMachine).
     Definition omap {A B} (x: option A) (f: A -> option B) :=
         match x with | Some y => f y | _ => None end.
 
-    Notation "A <- X ; B" := (omap X (fun A => B)) (at level 70).
+    Notation "A <- X ; B" := (omap X (fun A => B)) (at level 70, right associativity).
 
-    Fixpoint convertProgram' {n m} (prog: Pseudo n m) (mapping: list nat) (start: nat):
-        option (Medial * (list nat)) :=
-      let nextStart := start * 2 in
-      let nextStart' := nextStart + 1 in
+    Fixpoint range (start len: nat): list nat :=
+      match len with
+      | O => []
+      | S len' => start :: (range (S start) len')
+      end.
+
+    Fixpoint list_split {A} (n: nat) (lst: list A): (list A) * (list A) :=
+      match n with
+      | O => ([], lst)
+      | S m =>
+        match lst with
+        | [] => ([], [])
+        | l :: ls =>
+          match list_split m ls with
+          | (a, b) => (cons l a, b)
+          end
+        end
+      end.
+
+    Fixpoint convertProgram' {n m}
+          (prog: Pseudo n m) (inMap outMap: list nat) (start: nat):
+        option (Medial * nat) :=
 
       match prog with
-      | PVar n i => v <- nth_error mapping i; Some (MSkip, [v])
-      | PConst n c => Some (MAssign (MAConst start c), [start])
+      | PVar n i =>
+        min <- nth_error inMap i;
+        mout <- nth_error outMap 0;
+
+        if (Nat.eq_dec min mout)
+        then Some (MSkip, start)
+        else Some ((MAssign (MAVar mout min)), start)
+
+      | PConst n c =>
+        mout <- nth_error outMap 0;
+        Some (MAssign (MAConst mout c), start)
+
       | PBin n o p =>
-        t <- convertProgram' p mapping start;
+        t <- convertProgram' p inMap (outMap ++ [start]) (S start);
+        a <- nth_error outMap 0;
 
-        match (snd t) with
-        | [l; r] => Some (MSeq (fst t) (MOp (MIOpReg o l r)), [l])
-        | _ => None
-        end
+        Some (MSeq (fst t) (MOp (MIOpReg o a start)), (snd t))
 
-      | PDual n o p => 
-        t <- convertProgram' p mapping nextStart;
+      | PDual n o p =>
+        match outMap with
+        | [a; b] =>
+          x <- nth_error inMap 1;
+          t <- convertProgram' p inMap [a; x] start;
+          Some (MSeq (fst t) (MOp (MDOpReg o a b (Some x))), snd t)
 
-        match (snd t) with
-        | [l; r] => Some (MSeq (fst t) (MOp (MDOpReg o l r (Some start))), [l; start])
         | _ => None
         end
 
       | PShift n o a x =>
-        t <- convertProgram' x mapping (S start);
-
-        match (snd t) with
-        | [v] => Some (MSeq (fst t) (MOp (MOpRot o v a)), [v])
-        | _ => None
-        end
+        t <- convertProgram' x inMap outMap start;
+        b <- nth_error outMap 0;
+        Some (MSeq (fst t) (MOp (MOpRot o b a)), snd t)
 
       | PLet n k m f g =>
-        ft <- convertProgram' f mapping nextStart;
-        gt <- convertProgram' g (mapping ++ (snd ft)) nextStart';
+        let medMap := range start k in
+        ft <- convertProgram' f inMap medMap (start + k);
+        gt <- convertProgram' g (inMap ++ medMap) outMap (snd ft);
         Some (MSeq (fst ft) (fst gt), (snd gt))
 
       | PComp n k m f g =>
-        ft <- convertProgram' f mapping nextStart;
-        gt <- convertProgram' g (snd ft) nextStart';
+        let medMap := range start k in
+        ft <- convertProgram' f inMap medMap (start + k);
+        gt <- convertProgram' g medMap outMap (snd ft);
         Some (MSeq (fst ft) (fst gt), (snd gt))
 
       | PComb n a b f g => 
-        ft <- convertProgram' f mapping nextStart;
-        gt <- convertProgram' f mapping nextStart';
-        Some (MSeq (fst ft) (fst gt)), (snd ft) ++ (snd gt))
-
-      | _ => None
-      end.
+        let outt := list_split a outMap in
+        ft <- convertProgram' f inMap (fst outt) start;
+        gt <- convertProgram' g inMap (snd outt) (snd ft);
+        Some (MSeq (fst ft) (fst gt), snd gt)
 
       | PIf n m o i0 i1 l r => 
+        lt <- convertProgram' l inMap outMap start;
+        rt <- convertProgram' r inMap outMap start;
+        c0 <- nth_error inMap i0;
+        c1 <- nth_error inMap i1;
+        Some (MCond (MC o c0 c1) (fst lt) (fst rt), (max (snd rt) (snd lt)))
+
       | PFunExp n f e => 
+        ft <- convertProgram' f inMap outMap start;
+        Some (MFunexp e (fst ft), (snd ft))
       end.
+
+    Definition convertProgram (prog: Pseudo vars vars): option Medial :=
+      let m := range O vars in
+      option_map (@fst Medial nat) (convertProgram' prog m m vars).
 
     Lemma convert_spec:  forall a a' b b' prog prog',
       convertProgram prog = Some prog' ->
