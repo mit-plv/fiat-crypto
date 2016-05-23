@@ -42,26 +42,13 @@ Module Pseudo (M: PseudoMachine) <: Language.
   (* Program Types *)
   Definition State := list const.
 
-  Inductive WBinOp: Set :=
-    | Wplus: WBinOp    | Wminus: WBinOp   | Wand: WBinOp.
-
-  Inductive WDualOp: Set :=
-    | Wmult: WDualOp.
-
-  Inductive WNatOp: Set :=
-    | Wones: WNatOp    | Wzeros: WNatOp.
-
-  Inductive WShiftOp: Set :=
-    | Wshl: WShiftOp   | Wshr: WShiftOp.
-
   Inductive Pseudo: nat -> nat -> Type :=
     | PVar: forall n, Index n -> Pseudo n 1
     | PConst: forall n, const -> Pseudo n 1
 
-    | PBin: forall n, WBinOp -> Pseudo n 2 -> Pseudo n 1
-    | PNat: forall n, WNatOp -> Index width -> Pseudo n 1
-    | PDual: forall n, WDualOp -> Pseudo n 2 -> Pseudo n 2
-    | PShift: forall n, WShiftOp -> Index width -> Pseudo n 1 -> Pseudo n 1
+    | PBin: forall n, IntOp -> Pseudo n 2 -> Pseudo n 1
+    | PDual: forall n, DualOp -> Pseudo n 2 -> Pseudo n 2
+    | PShift: forall n, RotOp -> Index width -> Pseudo n 1 -> Pseudo n 1
 
     | PLet: forall n k m, Pseudo n k -> Pseudo (n + k) m -> Pseudo n m
     | PComp: forall n k m, Pseudo n k -> Pseudo k m -> Pseudo n m
@@ -74,14 +61,16 @@ Module Pseudo (M: PseudoMachine) <: Language.
 
   Definition Program := Pseudo vars vars.
 
-  Definition applyBin (op: WBinOp) (a b: word width): const :=
+  Definition applyBin (op: IntOp) (a b: word width): const :=
     match op with
-    | Wplus => wplus a b
-    | Wminus => wminus a b
-    | Wand => wand a b
+    | IPlus => wplus a b
+    | IMinus => wminus a b
+    | IAnd => wand a b
+    | IXor => wxor a b
+    | IOr => wor a b
     end.
 
-  Definition applyDual (op: WDualOp) (a b: word width): list const :=
+  Definition applyDual (op: DualOp) (a b: word width): list const :=
     match op with
     | Wmult =>
       let wres := natToWord (width + width)
@@ -89,20 +78,10 @@ Module Pseudo (M: PseudoMachine) <: Language.
       [split1 _ _ wres; split2 _ _ wres]
     end.
 
-  Definition applyNat (op: WNatOp) (v: Index width): const.
+  Definition applyShift (op: RotOp) (v: const) (n: Index width): const.
     refine match op with
-    | Wones => convert (zext (wones v) (width - v)) _
-    | Wzeros => wzero width
-    end; abstract (
-      destruct v; simpl;
-      replace (x + (width - x)) with width;
-      intuition ).
-  Defined.
-
-  Definition applyShift (op: WShiftOp) (v: const) (n: Index width): const.
-    refine match op with
-    | Wshl => convert (Word.combine (wzero n) (split1 (width - n) n (convert v _))) _
-    | Wshr => convert (Word.combine (split2 n (width - n) (convert v _)) (wzero n)) _
+    | Shl => convert (Word.combine (wzero n) (split1 (width - n) n (convert v _))) _
+    | Shr => convert (Word.combine (split2 n (width - n) (convert v _)) (wzero n)) _
     end; abstract (
       unfold const;
       destruct n; simpl;
@@ -125,7 +104,6 @@ Module Pseudo (M: PseudoMachine) <: Language.
     match prog with
     | PVar n i => option_map' (nth_error st i) (fun x => Some [x])
     | PConst n c => Some ([c])
-    | PNat n o i => Some [applyNat o i]
 
     | PBin n o p =>
       option_map' (pseudoEval p st) (fun sp =>

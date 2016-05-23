@@ -27,19 +27,63 @@ Module PseudoConversion (Arch: PseudoMachine).
       then Some res
       else None.
 
-    Definition convertProgram (prog: Pseudo vars vars): option M.Program :=
+    Definition omap {A B} (x: option A) (f: A -> option B) :=
+        match x with | Some y => f y | _ => None end.
+
+    Notation "A <- X ; B" := (omap X (fun A => B)) (at level 70).
+
+    Fixpoint convertProgram' {n m} (prog: Pseudo n m) (mapping: list nat) (start: nat):
+        option (Medial * (list nat)) :=
+      let nextStart := start * 2 in
+      let nextStart' := nextStart + 1 in
+
       match prog with
-      | PVar n i => MAssign (MAVar 0 i)
-      | PConst n c =>
+      | PVar n i => v <- nth_error mapping i; Some (MSkip, [v])
+      | PConst n c => Some (MAssign (MAConst start c), [start])
       | PBin n o p =>
-      | PDual n o p =>
-      | PNat n o v =>
+        t <- convertProgram' p mapping start;
+
+        match (snd t) with
+        | [l; r] => Some (MSeq (fst t) (MOp (MIOpReg o l r)), [l])
+        | _ => None
+        end
+
+      | PDual n o p => 
+        t <- convertProgram' p mapping nextStart;
+
+        match (snd t) with
+        | [l; r] => Some (MSeq (fst t) (MOp (MDOpReg o l r (Some start))), [l; start])
+        | _ => None
+        end
+
       | PShift n o a x =>
+        t <- convertProgram' x mapping (S start);
+
+        match (snd t) with
+        | [v] => Some (MSeq (fst t) (MOp (MOpRot o v a)), [v])
+        | _ => None
+        end
+
       | PLet n k m f g =>
+        ft <- convertProgram' f mapping nextStart;
+        gt <- convertProgram' g (mapping ++ (snd ft)) nextStart';
+        Some (MSeq (fst ft) (fst gt), (snd gt))
+
       | PComp n k m f g =>
-      | PComb n a b f g =>
-      | PIf n m o i0 i1 l r =>
-      | PFunExp n f e =>
+        ft <- convertProgram' f mapping nextStart;
+        gt <- convertProgram' g (snd ft) nextStart';
+        Some (MSeq (fst ft) (fst gt), (snd gt))
+
+      | PComb n a b f g => 
+        ft <- convertProgram' f mapping nextStart;
+        gt <- convertProgram' f mapping nextStart';
+        Some (MSeq (fst ft) (fst gt)), (snd ft) ++ (snd gt))
+
+      | _ => None
+      end.
+
+      | PIf n m o i0 i1 l r => 
+      | PFunExp n f e => 
       end.
 
     Lemma convert_spec:  forall a a' b b' prog prog',
