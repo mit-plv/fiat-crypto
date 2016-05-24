@@ -145,44 +145,44 @@ Defined.
 Definition enc'_correct : @enc (@E.point curve25519params) _ _ = (fun x => enc' (proj1_sig x))
   := eq_refl.
 
-    Definition Let_In {A P} (x : A) (f : forall a : A, P a) : P x := let y := x in f y.
-    Global Instance Let_In_Proper_nd {A P}
-      : Proper (eq ==> pointwise_relation _ eq ==> eq) (@Let_In A (fun _ => P)).
-    Proof.
-      lazy; intros; congruence.
-    Qed.
-    Lemma option_rect_function {A B C S' N' v} f
-      : f (option_rect (fun _ : option A => option B) S' N' v)
-        = option_rect (fun _ : option A => C) (fun x => f (S' x)) (f N') v.
-    Proof. destruct v; reflexivity. Qed.
-    Local Ltac commute_option_rect_Let_In := (* pull let binders out side of option_rect pattern matching *)
-      idtac;
-      lazymatch goal with
-      | [ |- ?LHS = option_rect ?P ?S ?N (Let_In ?x ?f) ]
-        => (* we want to just do a [change] here, but unification is stupid, so we have to tell it what to unfold in what order *)
-        cut (LHS = Let_In x (fun y => option_rect P S N (f y))); cbv beta;
-        [ set_evars;
-          let H := fresh in
-          intro H;
-          rewrite H;
-          clear;
-          abstract (cbv [Let_In]; reflexivity)
-        | ]
-      end.
-    Local Ltac replace_let_in_with_Let_In :=
-      repeat match goal with
-             | [ |- context G[let x := ?y in @?z x] ]
-               => let G' := context G[Let_In y z] in change G'
-             | [ |- _ = Let_In _ _ ]
-               => apply Let_In_Proper_nd; [ reflexivity | cbv beta delta [pointwise_relation]; intro ]
-             end.
-    Local Ltac simpl_option_rect := (* deal with [option_rect _ _ _ None] and [option_rect _ _ _ (Some _)] *)
-      repeat match goal with
-             | [ |- context[option_rect ?P ?S ?N None] ]
-               => change (option_rect P S N None) with N
-             | [ |- context[option_rect ?P ?S ?N (Some ?x) ] ]
-               => change (option_rect P S N (Some x)) with (S x); cbv beta
-             end.
+Definition Let_In {A P} (x : A) (f : forall a : A, P a) : P x := let y := x in f y.
+Global Instance Let_In_Proper_nd {A P}
+  : Proper (eq ==> pointwise_relation _ eq ==> eq) (@Let_In A (fun _ => P)).
+Proof.
+  lazy; intros; congruence.
+Qed.
+Lemma option_rect_function {A B C S' N' v} f
+  : f (option_rect (fun _ : option A => option B) S' N' v)
+    = option_rect (fun _ : option A => C) (fun x => f (S' x)) (f N') v.
+Proof. destruct v; reflexivity. Qed.
+Local Ltac commute_option_rect_Let_In := (* pull let binders out side of option_rect pattern matching *)
+  idtac;
+  lazymatch goal with
+  | [ |- ?LHS = option_rect ?P ?S ?N (Let_In ?x ?f) ]
+    => (* we want to just do a [change] here, but unification is stupid, so we have to tell it what to unfold in what order *)
+    cut (LHS = Let_In x (fun y => option_rect P S N (f y))); cbv beta;
+    [ set_evars;
+      let H := fresh in
+      intro H;
+      rewrite H;
+      clear;
+      abstract (cbv [Let_In]; reflexivity)
+    | ]
+  end.
+Local Ltac replace_let_in_with_Let_In :=
+  repeat match goal with
+         | [ |- context G[let x := ?y in @?z x] ]
+           => let G' := context G[Let_In y z] in change G'
+         | [ |- _ = Let_In _ _ ]
+           => apply Let_In_Proper_nd; [ reflexivity | cbv beta delta [pointwise_relation]; intro ]
+         end.
+Local Ltac simpl_option_rect := (* deal with [option_rect _ _ _ None] and [option_rect _ _ _ (Some _)] *)
+  repeat match goal with
+         | [ |- context[option_rect ?P ?S ?N None] ]
+           => change (option_rect P S N None) with N
+         | [ |- context[option_rect ?P ?S ?N (Some ?x) ] ]
+           => change (option_rect P S N (Some x)) with (S x); cbv beta
+         end.
 
 Section Ed25519Frep.
   Generalizable All Variables.
