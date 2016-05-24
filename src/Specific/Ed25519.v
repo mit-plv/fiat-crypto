@@ -228,6 +228,10 @@ Section Ed25519Frep.
   Create HintDb FRepOperations discriminated.
   Hint Rewrite FRepMul_correct FRepAdd_correct FRepSub_correct FRepInv_correct FSRepPow_correct FRepOpp_correct : FRepOperations.
 
+  Create HintDb EdDSA_opts discriminated.
+  Hint Rewrite FRepMul_correct FRepAdd_correct FRepSub_correct FRepInv_correct FSRepPow_correct FRepOpp_correct : EdDSA_opts.
+
+
   Local Ltac Let_In_unRep :=
     match goal with
     | [ |- appcontext G[Let_In (unRep ?x) ?f] ]
@@ -313,6 +317,34 @@ Section Ed25519Frep.
 
 
   Local Existing Instance eq_Reflexive. (* To get some of the [setoid_rewrite]s below to work, we need to infer [Reflexive eq] before [Reflexive Equivalence.equiv] *)
+
+  (* TODO: move me *)
+  Lemma fold_rep2E x y z t
+    : (rep2F x, rep2F y, rep2F z, rep2F t) = rep2E (((x, y), z), t).
+  Proof. reflexivity. Qed.
+  Lemma commute_negateExtended'_rep2E x y z t
+    : negateExtended' (rep2E (((x, y), z), t))
+      = rep2E (((FRepOpp x, y), z), FRepOpp t).
+  Proof. simpl; autorewrite with FRepOperations; reflexivity. Qed.
+  Lemma fold_rep2E_ffff x y z t
+    : (x, y, z, t) = rep2E (((toRep x, toRep y), toRep z), toRep t).
+  Proof. simpl; rewrite !rcFOK; reflexivity. Qed.
+  Lemma fold_rep2E_rrfr x y z t
+    : (rep2F x, rep2F y, z, rep2F t) = rep2E (((x, y), toRep z), t).
+  Proof. simpl; rewrite !rcFOK; reflexivity. Qed.
+  Lemma fold_rep2E_0fff y z t
+    : (0%F, y, z, t) = rep2E (((toRep 0%F, toRep y), toRep z), toRep t).
+  Proof. apply fold_rep2E_ffff. Qed.
+  Lemma fold_rep2E_ff1f x y t
+    : (x, y, 1%F, t) = rep2E (((toRep x, toRep y), toRep 1%F), toRep t).
+  Proof. apply fold_rep2E_ffff. Qed.
+  Lemma commute_negateExtended'_rep2E_rrfr x y z t
+    : negateExtended' (unRep x, unRep y, z, unRep t)
+      = rep2E (((FRepOpp x, y), toRep z), FRepOpp t).
+  Proof. rewrite <- commute_negateExtended'_rep2E; simpl; rewrite !rcFOK; reflexivity. Qed.
+
+  Hint Rewrite @F_mul_0_l commute_negateExtended'_rep2E_rrfr fold_rep2E_0fff (@fold_rep2E_ff1f (fst (proj1_sig B))) : EdDSA_opts.
+  Hint Rewrite <- unifiedAddM1Rep_correct erep2trep_correct (fun x y z bound => iter_op_proj rep2E unifiedAddM1Rep unifiedAddM1' x y z N.testbit_nat bound unifiedAddM1Rep_correct) : EdDSA_opts.
 
   Lemma sharper_verify : forall pk l msg sig, { verify | verify = ed25519_verify pk l msg sig}.
   Proof.
@@ -534,29 +566,9 @@ Section Ed25519Frep.
       subst_evars.
       eapply Let_In_Proper_nd; [reflexivity|cbv beta delta [pointwise_relation]; intro].
 
-      set_evars; erewrite (f_equal2 (@weqb b)); subst_evars; [|reflexivity|symmetry]. Focus 2. {
-        unfold twistedToExtended.
-        rewrite F_mul_0_l.
-        setoid_rewrite <- (rcFOK 0%F). (* setoid_rewrite, to bypass needing to unfold things *)
-        setoid_rewrite <-(rcFOK 1%F).
-        match goal with |- context [?x] => match x with (fst (proj1_sig B)) => rewrite <-(rcFOK x) end end.
-        match goal with |- context [?x] => match x with (snd (proj1_sig B)) => rewrite <-(rcFOK x) end end.
-        autorewrite with FRepOperations. (* breaks reflexivity; use [reflexivity_when_unification_is_stupid_about_evars] instead *)
-
-        repeat match goal with |- appcontext [ ?E ] =>
-                               match E with (rep2F ?x, rep2F ?y, rep2F ?z, rep2F ?t) =>
-                                            change E with (rep2E (((x, y), z), t))
-                               end
-               end.
-        lazymatch goal with |- context [?X] =>
-                            lazymatch X with negateExtended' (rep2E ?E) =>
-                                             replace X with (rep2E (((((FRepOpp (fst (fst (fst E)))), (snd (fst (fst E)))), (snd (fst E))), (FRepOpp (snd E))))) by (simpl; autorewrite with FRepOperations; reflexivity)
-                            end end; simpl fst; simpl snd. (* we actually only want to simpl in the with clause *)
-        do 2 erewrite <- (fun x y z => iter_op_proj rep2E unifiedAddM1Rep unifiedAddM1' x y z N.testbit_nat) by apply unifiedAddM1Rep_correct.
-        rewrite <-unifiedAddM1Rep_correct, <-erep2trep_correct; cbv beta delta [erep2trep].
-
-        reflexivity_when_unification_is_stupid_about_evars.
-      } Unfocus.
+      unfold twistedToExtended.
+      autorewrite with EdDSA_opts.
+      progress cbv beta delta [erep2trep].
 
       reflexivity. } Unfocus.
     reflexivity.
