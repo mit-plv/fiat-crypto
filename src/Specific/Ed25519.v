@@ -195,12 +195,6 @@ Section Ed25519Frep.
   Local Notation rep2S := (unRep : SRep -> N).
   Local Notation S2Rep := (toRep : N -> SRep).
 
-  Axiom FRepInv : FRep -> FRep.
-  Axiom FRepInv_correct : forall x, inv (rep2F x)%F = rep2F (FRepInv x).
-
-  Axiom FSRepPow : FRep -> SRep -> FRep.
-  Axiom FSRepPow_correct : forall x n, (rep2F x ^ rep2S n)%F = rep2F (FSRepPow x n).
-
   Axiom FRepOpp : FRep -> FRep.
   Axiom FRepOpp_correct : forall x, opp (rep2F x) = rep2F (FRepOpp x).
 
@@ -214,6 +208,29 @@ Section Ed25519Frep.
 
   Axiom FRep2wire : FRep -> word (b-1).
   Axiom FRep2wire_correct : forall x, FRep2wire x = @enc _ _ FqEncoding (rep2F x).
+
+  Axiom SRep_testbit : SRep -> nat -> bool.
+  Axiom SRep_testbit_correct : forall (x0 : SRep) (i : nat), SRep_testbit x0 i = N.testbit_nat (unRep x0) i.
+
+  Definition FSRepPow x n := iter_op FRepMul (toRep 1%F) SRep_testbit n x 255.
+  Lemma FSRepPow_correct : forall x n, (N.size_nat (unRep n) <= 255)%nat -> (unRep x ^ unRep n)%F = unRep (FSRepPow x n).
+  Proof. (* this proof derives the required formula, which I copy-pasted above to be able to reference it without the length precondition *)
+    unfold FSRepPow; intros.
+    erewrite <-pow_nat_iter_op_correct by auto.
+    erewrite <-(fun x => iter_op_spec (scalar := SRep) (mul (m:=Ed25519.q)) F_mul_assoc _ F_mul_1_l _ unRep SRep_testbit_correct n x 255%nat) by auto.
+    rewrite <-(rcFOK 1%F) at 1.
+    erewrite <-iter_op_proj by auto.
+    reflexivity.
+  Qed.
+
+  Definition FRepInv x : FRep := FSRepPow x (S2Rep (Z.to_N (Ed25519.q - 2))).
+  Lemma FRepInv_correct : forall x, inv (rep2F x)%F = rep2F (FRepInv x).
+    unfold FRepInv; intros.
+    rewrite <-FSRepPow_correct; rewrite rcSOK; try reflexivity.
+    pose proof @Fq_inv_fermat_correct as H; unfold inv_fermat in H; rewrite H by
+        auto using Ed25519.prime_q, Ed25519.two_lt_q.
+    reflexivity.
+  Qed.
 
   Lemma unfoldDiv : forall {m} (x y:F m), (x/y = x * inv y)%F. Proof. unfold div. congruence. Qed.
 
@@ -531,10 +548,7 @@ Section Ed25519Frep.
       (Let_In_unRep).
       eapply Let_In_Proper_nd; [reflexivity|cbv beta delta [pointwise_relation]; intro].
       etransitivity. Focus 2. eapply Let_In_Proper_nd; [|cbv beta delta [pointwise_relation]; intro;reflexivity]. {
-        (* TODO:
-           rewrite <-pow_nat_iter_op_correct.
-           erewrite <-iter_op_spec. *)
-        rewrite FSRepPow_correct.
+        rewrite FSRepPow_correct by (rewrite rcSOK; cbv; omega).
         (Let_In_unRep).
         etransitivity. Focus 2. eapply Let_In_Proper_nd; [reflexivity|cbv beta delta [pointwise_relation]; intro]. {
           set_evars.
