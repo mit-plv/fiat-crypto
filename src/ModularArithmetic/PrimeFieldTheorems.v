@@ -184,7 +184,7 @@ Section VariousModPrime.
     intros.
     erewrite (Fq_inv_unique inv_fermat); trivial; split; intros; unfold inv_fermat.
     { replace 2%N with (Z.to_N (Z.of_N 2))%N by auto.
-      rewrite Fq_pow_zero. admit. intro.
+      rewrite Fq_pow_zero. reflexivity. intro.
       assert (Z.of_N (Z.to_N (q-2)) = 0%Z) by (rewrite H0; eauto); rewrite Z2N.id in *; omega. }
     { clear x. rename x0 into x. pose proof (fermat_inv _ _ x) as Hf; forward Hf.
       { pose proof @ZToField_FieldToZ; pose proof @ZToField_mod; congruence. }
