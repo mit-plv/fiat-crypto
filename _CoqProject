@@ -2,6 +2,8 @@
 src/BaseSystem.v
 src/BaseSystemProofs.v
 src/EdDSAProofs.v
+src/Rep.v
+src/Testbit.v
 src/CompleteEdwardsCurve/CompleteEdwardsCurveTheorems.v
 src/CompleteEdwardsCurve/DoubleAndAdd.v
 src/CompleteEdwardsCurve/ExtendedCoordinates.v
@@ -10,6 +12,7 @@ src/Encoding/EncodingTheorems.v
 src/Encoding/ModularWordEncodingPre.v
 src/Encoding/ModularWordEncodingTheorems.v
 src/Encoding/PointEncodingPre.v
+src/Encoding/PointEncodingTheorems.v
 src/ModularArithmetic/ExtendedBaseVector.v
 src/ModularArithmetic/FField.v
 src/ModularArithmetic/FNsatz.v
@@ -31,10 +34,9 @@ src/Spec/ModularArithmetic.v
 src/Spec/ModularWordEncoding.v
 src/Spec/PointEncoding.v
 src/Specific/Ed25519.v
-src/Specific/GF25519.v
 src/Specific/GF1305.v
+src/Specific/GF25519.v
 src/Tactics/VerdiTactics.v
-src/Testbit.v
 src/Util/CaseUtil.v
 src/Util/IterAssocOp.v
 src/Util/ListUtil.v
