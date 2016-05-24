@@ -311,6 +311,9 @@ Section Ed25519Frep.
     := repeat first [ reflexivity
                     | apply f_equal ].
 
+
+  Local Existing Instance eq_Reflexive. (* To get some of the [setoid_rewrite]s below to work, we need to infer [Reflexive eq] before [Reflexive Equivalence.equiv] *)
+
   Lemma sharper_verify : forall pk l msg sig, { verify | verify = ed25519_verify pk l msg sig}.
   Proof.
     eexists; intros.
@@ -534,9 +537,8 @@ Section Ed25519Frep.
       set_evars; erewrite (f_equal2 (@weqb b)); subst_evars; [|reflexivity|symmetry]. Focus 2. {
         unfold twistedToExtended.
         rewrite F_mul_0_l.
-        unfold curve25519params, q. (* TODO: do we really wanna do it here? *)
-        rewrite <-(rcFOK 0%F).
-        rewrite <-(rcFOK 1%F).
+        setoid_rewrite <- (rcFOK 0%F). (* setoid_rewrite, to bypass needing to unfold things *)
+        setoid_rewrite <-(rcFOK 1%F).
         match goal with |- context [?x] => match x with (fst (proj1_sig B)) => rewrite <-(rcFOK x) end end.
         match goal with |- context [?x] => match x with (snd (proj1_sig B)) => rewrite <-(rcFOK x) end end.
         autorewrite with FRepOperations. (* breaks reflexivity; use [reflexivity_when_unification_is_stupid_about_evars] instead *)
