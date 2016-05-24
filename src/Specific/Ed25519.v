@@ -168,7 +168,7 @@ Definition enc'_correct : @enc (@E.point curve25519params) _ _ = (fun x => enc' 
           clear;
           abstract (cbv [Let_In]; reflexivity)
         | ]
-      end. 
+      end.
     Local Ltac replace_let_in_with_Let_In :=
       repeat match goal with
              | [ |- context G[let x := ?y in @?z x] ]
@@ -197,10 +197,10 @@ Section Ed25519Frep.
 
   Axiom FRepInv : FRep -> FRep.
   Axiom FRepInv_correct : forall x, inv (rep2F x)%F = rep2F (FRepInv x).
-  
+
   Axiom FSRepPow : FRep -> SRep -> FRep.
   Axiom FSRepPow_correct : forall x n, (rep2F x ^ rep2S n)%F = rep2F (FSRepPow x n).
-  
+
   Axiom FRepOpp : FRep -> FRep.
   Axiom FRepOpp_correct : forall x, opp (rep2F x) = rep2F (FRepOpp x).
 
@@ -214,26 +214,34 @@ Section Ed25519Frep.
 
   Axiom FRep2wire : FRep -> word (b-1).
   Axiom FRep2wire_correct : forall x, FRep2wire x = @enc _ _ FqEncoding (rep2F x).
-  
+
   Lemma unfoldDiv : forall {m} (x y:F m), (x/y = x * inv y)%F. Proof. unfold div. congruence. Qed.
-  
+
   Definition rep2E (r:FRep * FRep * FRep * FRep) : extended :=
     match r with (((x, y), z), t) => mkExtended (rep2F x) (rep2F y) (rep2F z) (rep2F t) end.
-  
+
   Lemma if_map : forall {T U} (f:T->U) (b:bool) (x y:T), (if b then f x else f y) = f (if b then x else y).
   Proof.
     destruct b; trivial.
   Qed.
-  
+
   Create HintDb FRepOperations discriminated.
   Hint Rewrite FRepMul_correct FRepAdd_correct FRepSub_correct FRepInv_correct FSRepPow_correct FRepOpp_correct : FRepOperations.
-  
+
   Local Ltac Let_In_unRep :=
     match goal with
     | [ |- appcontext G[Let_In (unRep ?x) ?f] ]
       => change (Let_In (unRep x) f) with (Let_In x (fun y => f (unRep y))); cbv beta
     end.
-  
+
+
+  (** TODO: Move me *)
+  Lemma pull_Let_In {B C} (f : B -> C) A (v : A) (b : A -> B)
+    : Let_In v (fun v' => f (b v')) = f (Let_In v b).
+  Proof.
+    reflexivity.
+  Qed.
+
   Lemma unifiedAddM1Rep_sig : forall a b : FRep * FRep * FRep * FRep, { unifiedAddM1Rep | rep2E unifiedAddM1Rep = unifiedAddM1' (rep2E a) (rep2E b) }.
   Proof.
     destruct a as [[[]]]; destruct b as [[[]]].
@@ -243,7 +251,7 @@ Section Ed25519Frep.
     end.
     unfold rep2E. cbv beta delta [unifiedAddM1'].
     pose proof (rcFOK twice_d) as H; rewrite <-H; clear H. (* XXX: this is a hack -- rewrite misresolves typeclasses? *)
-     
+
     { etransitivity; [|replace_let_in_with_Let_In; reflexivity].
       repeat (
         autorewrite with FRepOperations;
@@ -253,16 +261,17 @@ Section Ed25519Frep.
                             change (LHS = (rep2E (((x, y), z), t)))
         end.
         reflexivity. }
-  
+
     subst e.
-    reflexivity. (* FIXME: do not simpl the goal here, we want to keep the Let_In common subexpressions *)
+    Local Opaque Let_In.
+    repeat setoid_rewrite (pull_Let_In rep2E).
+    Local Transparent Let_In.
+    reflexivity.
   Defined.
-  
-  (*Eval simpl in (fun x1 y1 z1 t1 x2 y2 z2 t2 => proj1_sig (unifiedAddM1Rep_sig (((x1, y1), z1), t1) (((x2, y2), z2), t2))). (* TODO: remove after debugging the fixme three lines above *) *)
-  
+
   Definition unifiedAddM1Rep (a b:FRep * FRep * FRep * FRep) : FRep * FRep * FRep * FRep := Eval hnf in proj1_sig (unifiedAddM1Rep_sig a b).
   Definition unifiedAddM1Rep_correct a b : rep2E (unifiedAddM1Rep a b) = unifiedAddM1' (rep2E a) (rep2E b)  := Eval hnf in proj2_sig (unifiedAddM1Rep_sig a b).
-  
+
   Definition rep2T (P:FRep * FRep) := (rep2F (fst P), rep2F (snd P)).
   Definition erep2trep (P:FRep * FRep * FRep * FRep) := Let_In P (fun P => Let_In (FRepInv (snd (fst P))) (fun iZ => (FRepMul (fst (fst (fst P))) iZ, FRepMul (snd (fst (fst P))) iZ))).
   Lemma erep2trep_correct : forall P, rep2T (erep2trep P) = extendedToTwisted (rep2E P).
@@ -270,7 +279,38 @@ Section Ed25519Frep.
     unfold rep2T, rep2E, erep2trep, extendedToTwisted; destruct P as [[[]]]; simpl.
     rewrite !unfoldDiv, <-!FRepMul_correct, <-FRepInv_correct. reflexivity.
   Qed.
-  
+
+  (** TODO: possibly move me, remove local *)
+  Local Ltac replace_option_match_with_option_rect :=
+    idtac;
+    lazymatch goal with
+    | [ |- _ = ?RHS :> ?T ]
+      => lazymatch RHS with
+         | match ?a with None => ?N | Some x => @?S x end
+           => replace RHS with (option_rect (fun _ => T) S N a) by (destruct a; reflexivity)
+         end
+    end.
+
+  (** TODO: Move me, remove Local *)
+  Definition proj1_sig_unmatched {A P} := @proj1_sig A P.
+  Definition proj1_sig_nounfold {A P} := @proj1_sig A P.
+  Definition proj1_sig_unfold {A P} := Eval cbv [proj1_sig] in @proj1_sig A P.
+  Local Ltac unfold_proj1_sig_exist :=
+  (** Change the first [proj1_sig] into [proj1_sig_unmatched]; if it's applied to [exist], mark it as unfoldable, otherwise mark it as not unfoldable.  Then repeat.  Finally, unfold. *)
+    repeat (change @proj1_sig with @proj1_sig_unmatched at 1;
+            match goal with
+            | [ |- context[proj1_sig_unmatched (exist _ _ _)] ]
+              => change @proj1_sig_unmatched with @proj1_sig_unfold
+            | _ => change @proj1_sig_unmatched with @proj1_sig_nounfold
+            end);
+    (* [proj1_sig_nounfold] is a thin wrapper around [proj1_sig]; unfolding it restores [proj1_sig].  Unfolding [proj1_sig_nounfold] exposes the pattern match, which is reduced by ι. *)
+    cbv [proj1_sig_nounfold proj1_sig_unfold].
+
+  (** TODO: possibly move me, remove Local *)
+  Local Ltac reflexivity_when_unification_is_stupid_about_evars
+    := repeat first [ reflexivity
+                    | apply f_equal ].
+
   Lemma sharper_verify : forall pk l msg sig, { verify | verify = ed25519_verify pk l msg sig}.
   Proof.
     eexists; intros.
@@ -278,19 +318,14 @@ Section Ed25519Frep.
                         ed25519params curve25519params
                         EdDSA.E EdDSA.B EdDSA.b EdDSA.l EdDSA.H
                         EdDSA.PointEncoding EdDSA.FlEncoding EdDSA.FqEncoding].
-  
+
     etransitivity.
     Focus 2.
     { repeat match goal with
              | [ |- ?x = ?x ] => reflexivity
-             | [ |- _ = match ?a with None => ?N | Some x => @?S x end :> ?T ]
-               => etransitivity;
-                 [
-                 | refine (_ : option_rect (fun _ => T) _ N a = _);
-                   let S' := match goal with |- option_rect _ ?S' _ _ = _ => S' end in
-                   refine (option_rect (fun a' => option_rect (fun _ => T) S' N a' = match a' with None => N | Some x => S x end)
-                                       (fun x => _) _ a); intros; simpl @option_rect ];
-                 [ reflexivity | .. ]
+             | _ => replace_option_match_with_option_rect
+             | [ |- _ = option_rect _ _ _ _ ]
+               => eapply option_rect_Proper_nd; [ intro | reflexivity.. ]
              end.
       set_evars.
       rewrite<- E.point_eqb_correct.
@@ -300,63 +335,60 @@ Section Ed25519Frep.
       let p2 := constr:(unifiedAddM1_rep eq_refl) in
       repeat match goal with
              | |- context [(_ * E.opp ?P)%E] =>
-                rewrite <-(unExtendedPoint_mkExtendedPoint P);
-                rewrite negateExtended_correct;
-                rewrite <-p1
+               rewrite <-(unExtendedPoint_mkExtendedPoint P);
+                 rewrite negateExtended_correct;
+                 rewrite <-p1
              | |- context [(_ * ?P)%E] =>
-                rewrite <-(unExtendedPoint_mkExtendedPoint P);
-                rewrite <-p1
+               rewrite <-(unExtendedPoint_mkExtendedPoint P);
+                 rewrite <-p1
              | _ => rewrite p2
              end;
         rewrite ?Znat.Z_nat_N, <-?Word.wordToN_nat;
         subst_evars;
         reflexivity.
-      } Unfocus.
-  
+    } Unfocus.
+
     etransitivity.
     Focus 2.
     { lazymatch goal with |- _ = option_rect _ _ ?false ?dec =>
-                      symmetry; etransitivity; [|eapply (option_rect_option_map (fun (x:F _) => Z.to_N x) _ false dec)]
+                          symmetry; etransitivity; [|eapply (option_rect_option_map (fun (x:F _) => Z.to_N x) _ false dec)]
       end.
       eapply option_rect_Proper_nd; [intro|reflexivity..].
       match goal with
       | [ |- ?RHS = ?e ?v ]
         => let RHS' := (match eval pattern v in RHS with ?RHS' _ => RHS' end) in
-          unify e RHS'
+           unify e RHS'
       end.
       reflexivity.
     } Unfocus.
     rewrite <-decode_scalar_correct.
-  
+
     etransitivity.
     Focus 2.
     { do 2 (eapply option_rect_Proper_nd; [intro|reflexivity..]).
       symmetry; apply decode_test_encode_test.
     } Unfocus.
-    
+
     rewrite enc'_correct.
     cbv [unExtendedPoint unifiedAddM1 negateExtended scalarMultM1].
-    (* Why does this take too long?
-    lazymatch goal with |- context [ proj1_sig ?x ] =>
-                    fail 5
-    end. *)
-    unfold proj1_sig at 1 2.
+    unfold_proj1_sig_exist.
+
     etransitivity.
     Focus 2.
     { do 2 (eapply option_rect_Proper_nd; [intro|reflexivity..]).
       set_evars.
       repeat match goal with
              | [ |- appcontext[@proj1_sig ?A ?P (@iter_op ?T ?f ?neutral ?T' ?testbit ?exp ?base ?bound)] ]
-               => erewrite (@iter_op_proj T _ _ (@proj1_sig _ _)) by reflexivity 
+               => erewrite (@iter_op_proj T _ _ (@proj1_sig _ _)) by reflexivity
              end.
       subst_evars.
       reflexivity. }
     Unfocus.
-  
+
     cbv [mkExtendedPoint E.zero].
-    unfold proj1_sig at 1 2 3 5 6 7 8.
+    unfold_proj1_sig_exist.
     rewrite B_proj.
-  
+
     etransitivity.
     Focus 2.
     { do 1 (eapply option_rect_Proper_nd; [intro|reflexivity..]).
@@ -368,11 +400,11 @@ Section Ed25519Frep.
       match goal with
       | [ |- ?RHS = ?e ?v ]
         => let RHS' := (match eval pattern v in RHS with ?RHS' _ => RHS' end) in
-          unify e RHS'
+           unify e RHS'
       end.
       reflexivity.
     } Unfocus.
-  
+
     cbv [dec PointEncoding point_encoding].
     etransitivity.
     Focus 2.
@@ -385,9 +417,9 @@ Section Ed25519Frep.
       Unfocus.
       reflexivity. }
     Unfocus.
-  
+
     cbv iota beta delta [point_dec_coordinates sign_bit dec FqEncoding modular_word_encoding E.solve_for_x2 sqrt_mod_q].
-  
+
     etransitivity.
     Focus 2. {
       do 1 (eapply option_rect_Proper_nd; [|reflexivity..]). cbv beta delta [pointwise_relation]. intro.
@@ -397,12 +429,12 @@ Section Ed25519Frep.
         lazymatch goal with
         | [ |- _ = ?term :> ?T ]
           => lazymatch term with (match ?a with None => ?N | Some x => @?S x end)
-            => let term' := constr:((option_rect (fun _ => T) S N) a) in
-              replace term with term' by reflexivity
-              end
+                                 => let term' := constr:((option_rect (fun _ => T) S N) a) in
+                                    replace term with term' by reflexivity
+             end
         end.
-    reflexivity. } Unfocus. reflexivity. } Unfocus.
-  
+        reflexivity. } Unfocus. reflexivity. } Unfocus.
+
     etransitivity.
     Focus 2. {
       do 1 (eapply option_rect_Proper_nd; [cbv beta delta [pointwise_relation]; intro|reflexivity..]).
@@ -411,7 +443,7 @@ Section Ed25519Frep.
       replace_let_in_with_Let_In.
       reflexivity.
     } Unfocus.
-  
+
     etransitivity.
     Focus 2. {
       do 1 (eapply option_rect_Proper_nd; [cbv beta delta [pointwise_relation]; intro|reflexivity..]).
@@ -427,8 +459,8 @@ Section Ed25519Frep.
                => apply Let_In_Proper_nd; [ reflexivity | cbv beta delta [pointwise_relation]; intro ]
              | [ |- ?LHS = option_rect ?P ?S ?N (if ?b then ?t else ?f) ]
                => transitivity (if b then option_rect P S N t else option_rect P S N f);
-                   [
-                   | destruct b; reflexivity ]
+                    [
+                    | destruct b; reflexivity ]
              | [ |- _ = if ?b then ?t else ?f ]
                => apply (f_equal2 (fun x y => if b then x else y))
              | [ |- _ = false ] => reflexivity
@@ -436,11 +468,11 @@ Section Ed25519Frep.
              end.
       reflexivity.
     } Unfocus.
-  
+
     cbv iota beta delta [q d a].
 
     rewrite wire2FRep_correct.
-  
+
     etransitivity.
     Focus 2. {
       eapply option_rect_Proper_nd; [|reflexivity..]. cbv beta delta [pointwise_relation]. intro.
@@ -455,15 +487,15 @@ Section Ed25519Frep.
       rewrite !unfoldDiv.
       rewrite !FRepInv_correct.
       rewrite !FRepMul_correct.
-      Let_In_unRep.
-      rewrite <-(rcSOK (Z.to_N (Ed25519.q / 8 + 1))).
+      (Let_In_unRep).
+      rewrite <- (rcSOK (Z.to_N (Ed25519.q / 8 + 1))).
       eapply Let_In_Proper_nd; [reflexivity|cbv beta delta [pointwise_relation]; intro].
       etransitivity. Focus 2. eapply Let_In_Proper_nd; [|cbv beta delta [pointwise_relation]; intro;reflexivity]. {
         (* TODO:
            rewrite <-pow_nat_iter_op_correct.
            erewrite <-iter_op_spec. *)
         rewrite FSRepPow_correct.
-        Let_In_unRep.
+        (Let_In_unRep).
         etransitivity. Focus 2. eapply Let_In_Proper_nd; [reflexivity|cbv beta delta [pointwise_relation]; intro]. {
           set_evars.
           rewrite !F_pow_2_r.
@@ -478,7 +510,7 @@ Section Ed25519Frep.
           reflexivity. } Unfocus.
         match goal with |- ?e = Let_In ?xval (fun x => rep2F (@?f x)) => change (e = rep2F (Let_In xval f)) end.
         reflexivity. } Unfocus.
-      Let_In_unRep.
+      (Let_In_unRep).
       eapply Let_In_Proper_nd; [reflexivity|cbv beta delta [pointwise_relation]; intro].
       set_evars.
       rewrite !F_pow_2_r.
@@ -488,17 +520,17 @@ Section Ed25519Frep.
       rewrite <-!FRep2wire_correct.
       subst_evars.
       lazymatch goal with  |- _ = if ?b then ?t else ?f => apply (f_equal2 (fun x y => if b then x else y)) end; [|reflexivity].
-  
+
       set_evars.
       rewrite !FRepOpp_correct.
       rewrite (if_map rep2F).
       lazymatch goal with
         |- ?e = Let_In (rep2F ?x, rep2F ?y) (fun p => @?r p) =>
-          change (e = Let_In (x, y) (fun p => r (rep2F (fst p), rep2F (snd p)))); cbv beta zeta
+        change (e = Let_In (x, y) (fun p => r (rep2F (fst p), rep2F (snd p)))); cbv beta zeta
       end.
       subst_evars.
       eapply Let_In_Proper_nd; [reflexivity|cbv beta delta [pointwise_relation]; intro].
-  
+
       set_evars; erewrite (f_equal2 (@weqb b)); subst_evars; [|reflexivity|symmetry]. Focus 2. {
         unfold twistedToExtended.
         rewrite F_mul_0_l.
@@ -507,29 +539,24 @@ Section Ed25519Frep.
         rewrite <-(rcFOK 1%F).
         match goal with |- context [?x] => match x with (fst (proj1_sig B)) => rewrite <-(rcFOK x) end end.
         match goal with |- context [?x] => match x with (snd (proj1_sig B)) => rewrite <-(rcFOK x) end end.
-        autorewrite with FRepOperations. (* breaks reflexivity *)
+        autorewrite with FRepOperations. (* breaks reflexivity; use [reflexivity_when_unification_is_stupid_about_evars] instead *)
+
         repeat match goal with |- appcontext [ ?E ] =>
-                        match E with (rep2F ?x, rep2F ?y, rep2F ?z, rep2F ?t) =>
-                                     change E with (rep2E (((x, y), z), t))
-                        end
-        end.
+                               match E with (rep2F ?x, rep2F ?y, rep2F ?z, rep2F ?t) =>
+                                            change E with (rep2E (((x, y), z), t))
+                               end
+               end.
         lazymatch goal with |- context [?X] =>
                             lazymatch X with negateExtended' (rep2E ?E) =>
-                            replace X with (rep2E (((((FRepOpp (fst (fst (fst E)))), (snd (fst (fst E)))), (snd (fst E))), (FRepOpp (snd E))))) by (simpl; autorewrite with FRepOperations; reflexivity)
-        end end; simpl fst; simpl snd. (* we actually only want to simpl in the with clause *)
+                                             replace X with (rep2E (((((FRepOpp (fst (fst (fst E)))), (snd (fst (fst E)))), (snd (fst E))), (FRepOpp (snd E))))) by (simpl; autorewrite with FRepOperations; reflexivity)
+                            end end; simpl fst; simpl snd. (* we actually only want to simpl in the with clause *)
         do 2 erewrite <- (fun x y z => iter_op_proj rep2E unifiedAddM1Rep unifiedAddM1' x y z N.testbit_nat) by apply unifiedAddM1Rep_correct.
         rewrite <-unifiedAddM1Rep_correct, <-erep2trep_correct; cbv beta delta [erep2trep].
 
-        (*
-        reflexivity. } Unfocus.
-      (*
-      cbv beta iota delta
-        [iter_op test_and_op unifiedAddM1' extendedToTwisted twistedToExtended enc' snd
-         point_dec_coordinates PrimeFieldTheorems.sqrt_mod_q].
-      *)
+        reflexivity_when_unification_is_stupid_about_evars.
+      } Unfocus.
+
       reflexivity. } Unfocus.
     reflexivity.
-*)
-  Admitted.
-
+  Defined.
 End Ed25519Frep.
