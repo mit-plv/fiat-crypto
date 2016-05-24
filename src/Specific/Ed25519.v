@@ -225,13 +225,6 @@ Section Ed25519Frep.
     destruct b; trivial.
   Qed.
 
-  Create HintDb FRepOperations discriminated.
-  Hint Rewrite FRepMul_correct FRepAdd_correct FRepSub_correct FRepInv_correct FSRepPow_correct FRepOpp_correct : FRepOperations.
-
-  Create HintDb EdDSA_opts discriminated.
-  Hint Rewrite FRepMul_correct FRepAdd_correct FRepSub_correct FRepInv_correct FSRepPow_correct FRepOpp_correct : EdDSA_opts.
-
-
   Local Ltac Let_In_unRep :=
     match goal with
     | [ |- appcontext G[Let_In (unRep ?x) ?f] ]
@@ -245,6 +238,22 @@ Section Ed25519Frep.
   Proof.
     reflexivity.
   Qed.
+
+  Lemma Let_app_In {A B T} (g:A->B) (f:B->T) (x:A) :
+      @Let_In _ (fun _ => T) (g x) f =
+      @Let_In _ (fun _ => T) x (fun p => f (g x)).
+  Proof. reflexivity. Qed.
+
+  Lemma Let_app2_In {A B C D T} (g1:A->C) (g2:B->D) (f:C*D->T) (x:A) (y:B) :
+      @Let_In _ (fun _ => T) (g1 x, g2 y) f =
+      @Let_In _ (fun _ => T) (x, y) (fun p => f ((g1 (fst p), g2 (snd p)))).
+  Proof. reflexivity. Qed.
+
+  Create HintDb FRepOperations discriminated.
+  Hint Rewrite FRepMul_correct FRepAdd_correct FRepSub_correct FRepInv_correct FSRepPow_correct FRepOpp_correct : FRepOperations.
+
+  Create HintDb EdDSA_opts discriminated.
+  Hint Rewrite FRepMul_correct FRepAdd_correct FRepSub_correct FRepInv_correct FSRepPow_correct FRepOpp_correct : EdDSA_opts.
 
   Lemma unifiedAddM1Rep_sig : forall a b : FRep * FRep * FRep * FRep, { unifiedAddM1Rep | rep2E unifiedAddM1Rep = unifiedAddM1' (rep2E a) (rep2E b) }.
   Proof.
@@ -343,8 +352,8 @@ Section Ed25519Frep.
       = rep2E (((FRepOpp x, y), toRep z), FRepOpp t).
   Proof. rewrite <- commute_negateExtended'_rep2E; simpl; rewrite !rcFOK; reflexivity. Qed.
 
-  Hint Rewrite @F_mul_0_l commute_negateExtended'_rep2E_rrfr fold_rep2E_0fff (@fold_rep2E_ff1f (fst (proj1_sig B))) : EdDSA_opts.
-  Hint Rewrite <- unifiedAddM1Rep_correct erep2trep_correct (fun x y z bound => iter_op_proj rep2E unifiedAddM1Rep unifiedAddM1' x y z N.testbit_nat bound unifiedAddM1Rep_correct) : EdDSA_opts.
+  Hint Rewrite @F_mul_0_l commute_negateExtended'_rep2E_rrfr fold_rep2E_0fff (@fold_rep2E_ff1f (fst (proj1_sig B))) @if_F_eq_dec_if_F_eqb compare_enc (if_map unRep) (fun T => Let_app2_In (T := T) unRep unRep) @F_pow_2_r @unfoldDiv : EdDSA_opts.
+  Hint Rewrite <- unifiedAddM1Rep_correct erep2trep_correct (fun x y z bound => iter_op_proj rep2E unifiedAddM1Rep unifiedAddM1' x y z N.testbit_nat bound unifiedAddM1Rep_correct) FRep2wire_correct: EdDSA_opts.
 
   Lemma sharper_verify : forall pk l msg sig, { verify | verify = ed25519_verify pk l msg sig}.
   Proof.
@@ -513,17 +522,13 @@ Section Ed25519Frep.
       eapply option_rect_Proper_nd; [|reflexivity..]. cbv beta delta [pointwise_relation]. intro.
       rewrite <-!(option_rect_option_map rep2F).
       eapply option_rect_Proper_nd; [|reflexivity..]. cbv beta delta [pointwise_relation]. intro.
-      rewrite !F_pow_2_r.
+      autorewrite with EdDSA_opts.
       rewrite <-(rcFOK 1%F).
       pattern Ed25519.d at 1. rewrite <-(rcFOK Ed25519.d) at 1.
       pattern Ed25519.a at 1. rewrite <-(rcFOK Ed25519.a) at 1.
-      rewrite !FRepMul_correct.
-      rewrite !FRepSub_correct.
-      rewrite !unfoldDiv.
-      rewrite !FRepInv_correct.
-      rewrite !FRepMul_correct.
-      (Let_In_unRep).
       rewrite <- (rcSOK (Z.to_N (Ed25519.q / 8 + 1))).
+      autorewrite with EdDSA_opts.
+      (Let_In_unRep).
       eapply Let_In_Proper_nd; [reflexivity|cbv beta delta [pointwise_relation]; intro].
       etransitivity. Focus 2. eapply Let_In_Proper_nd; [|cbv beta delta [pointwise_relation]; intro;reflexivity]. {
         (* TODO:
@@ -533,43 +538,29 @@ Section Ed25519Frep.
         (Let_In_unRep).
         etransitivity. Focus 2. eapply Let_In_Proper_nd; [reflexivity|cbv beta delta [pointwise_relation]; intro]. {
           set_evars.
-          rewrite !F_pow_2_r.
-          rewrite !FRepMul_correct.
-          rewrite if_F_eq_dec_if_F_eqb.
-          rewrite compare_enc.
-          rewrite <-!FRep2wire_correct.
           rewrite <-(rcFOK sqrt_minus1).
-          rewrite !FRepMul_correct.
-          rewrite (if_map rep2F).
+          autorewrite with EdDSA_opts.
           subst_evars.
           reflexivity. } Unfocus.
-        match goal with |- ?e = Let_In ?xval (fun x => rep2F (@?f x)) => change (e = rep2F (Let_In xval f)) end.
+        rewrite pull_Let_In.
         reflexivity. } Unfocus.
-      (Let_In_unRep).
-      eapply Let_In_Proper_nd; [reflexivity|cbv beta delta [pointwise_relation]; intro].
       set_evars.
-      rewrite !F_pow_2_r.
-      rewrite !FRepMul_correct.
-      rewrite if_F_eq_dec_if_F_eqb.
-      rewrite compare_enc.
-      rewrite <-!FRep2wire_correct.
+      (Let_In_unRep).
+
+      subst_evars. eapply Let_In_Proper_nd; [reflexivity|cbv beta delta [pointwise_relation]; intro]. set_evars.
+
+      autorewrite with EdDSA_opts.
+
       subst_evars.
       lazymatch goal with  |- _ = if ?b then ?t else ?f => apply (f_equal2 (fun x y => if b then x else y)) end; [|reflexivity].
-
-      set_evars.
-      rewrite !FRepOpp_correct.
-      rewrite (if_map rep2F).
-      lazymatch goal with
-        |- ?e = Let_In (rep2F ?x, rep2F ?y) (fun p => @?r p) =>
-        change (e = Let_In (x, y) (fun p => r (rep2F (fst p), rep2F (snd p)))); cbv beta zeta
-      end.
-      subst_evars.
       eapply Let_In_Proper_nd; [reflexivity|cbv beta delta [pointwise_relation]; intro].
+      set_evars.
 
       unfold twistedToExtended.
       autorewrite with EdDSA_opts.
       progress cbv beta delta [erep2trep].
 
+      subst_evars.
       reflexivity. } Unfocus.
     reflexivity.
   Defined.
