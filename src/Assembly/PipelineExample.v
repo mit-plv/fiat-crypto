@@ -12,6 +12,12 @@ Module Progs.
 
   Import C64.P.
 
+  Definition omap {A B} (f: A -> option B) (x: option A): option B :=
+    match x with
+    | Some v => f v
+    | None => None
+    end.
+
   Definition prog0: C64.P.Program.
     refine
       (PBin _ IPlus (PComb _ _ _
@@ -23,28 +29,15 @@ Module Progs.
     C64.PseudoConversion.convertProgram prog0.
 
   Definition prog2: option AlmostQhasm.Program :=
-    match prog1 with
-    | Some p => C64.MedialConversion.convertProgram p
-    | None => None
-    end.
+    omap C64.MedialConversion.convertProgram prog1.
 
   Definition prog3: option Qhasm.Program :=
-    match prog2 with
-    | Some p => AlmostConversion.convertProgram p
-    | None => None
-    end.
+    omap AlmostConversion.convertProgram prog2.
 
-  Definition prog4: string :=
-    match prog3 with
-    | Some p =>
-        match (StringConversion.convertProgram p) with
-        | Some s => s
-        | None => EmptyString
-        end
-    | None => EmptyString
-    end.
+  Definition prog4: option string :=
+    omap StringConversion.convertProgram prog3.
 
-  Definition result: string.
+  Definition result: option string.
     let res := eval vm_compute in prog4 in exact res.
   Defined.
 
