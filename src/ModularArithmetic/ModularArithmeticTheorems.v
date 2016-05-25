@@ -6,6 +6,7 @@ Require Import Crypto.Tactics.VerdiTactics.
 Require Import Coq.ZArith.BinInt Coq.ZArith.Zdiv Coq.ZArith.Znumtheory Coq.NArith.NArith. (* import Zdiv before Znumtheory *)
 Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
 Require Export Coq.setoid_ring.Ring_theory Coq.setoid_ring.Field_theory Coq.setoid_ring.Field_tac.
+Require Export Crypto.Util.IterAssocOp.
 
 Section ModularArithmeticPreliminaries.
   Context {m:Z}.
@@ -209,6 +210,14 @@ Section FandZ.
     reflexivity.
   Qed.
 
+  Lemma pow_nat_iter_op_correct: forall (x:F m) n, (nat_iter_op mul 1) (N.to_nat n) x = x^n.
+  Proof.
+    induction n using N.peano_ind;
+      destruct (F_pow_spec x) as [pow_0 pow_succ];
+      rewrite ?N2Nat.inj_succ, ?pow_0, <-?N.add_1_l, ?pow_succ;
+      simpl; congruence.
+  Qed.
+  
   Lemma mod_plus_zero_subproof a b : 0 mod m = (a + b) mod m ->
                                      b mod m =  (- a)  mod m.
   Proof.

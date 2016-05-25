@@ -120,27 +120,6 @@ Section VariousModPrime.
     eauto using Fq_inv_unique'.
   Qed.
 
-  Let inv_fermat_powmod (x:Z) : Z := powmod q x (Z.to_N (q-2)).
-  Lemma FieldToZ_inv_efficient : 2 < q ->
-                                 forall x : F q, FieldToZ (inv x) = inv_fermat_powmod x.
-  Proof.
-    intros.
-    rewrite (fun pf => Fq_inv_unique (fun x : F q => ZToField (inv_fermat_powmod (FieldToZ x))) pf);
-    subst inv_fermat_powmod; intuition; rewrite powmod_Zpow_mod;
-    replace (Z.of_N (Z.to_N (q - 2))) with (q-2)%Z by (rewrite Z2N.id ; omega).
-    - (* inv in range *) rewrite FieldToZ_ZToField, Zmod_mod; reflexivity.
-    - (* inv 0 *) replace (FieldToZ 0) with 0%Z by auto.
-      rewrite Z.pow_0_l by omega.
-      rewrite Zmod_0_l; trivial.
-    - (* inv nonzero *) rewrite <- (fermat_inv q _ x0) by
-        (rewrite mod_FieldToZ; eauto using FieldToZ_nonzero).
-      rewrite <-(ZToField_FieldToZ x0).
-      rewrite <-ZToField_mul.
-      rewrite ZToField_FieldToZ.
-      apply ZToField_eqmod.
-      demod; reflexivity.
-  Qed.
-
   Lemma Fq_mul_zero_why : forall a b : F q, a*b = 0 -> a = 0 \/ b = 0.
     intros.
     assert (Z := F_eq_dec a 0); destruct Z.
@@ -192,6 +171,43 @@ Section VariousModPrime.
     - intros H Hc. destruct (Fq_mul_zero_why _ _ Hc).
       + intuition.
       + apply IHp; auto.
+  Qed.
+
+  Lemma F_inv_0 : inv 0 = (0 : F q).
+  Proof.
+    destruct (@F_inv_spec q); auto.
+  Qed.
+
+  Definition inv_fermat (x:F q) : F q := x ^ Z.to_N (q - 2)%Z.
+  Lemma Fq_inv_fermat: 2 < q -> forall x : F q, inv x = x ^ Z.to_N (q - 2)%Z.
+  Proof.
+    intros.
+    erewrite (Fq_inv_unique inv_fermat); trivial; split; intros; unfold inv_fermat.
+    { replace 2%N with (Z.to_N (Z.of_N 2))%N by auto.
+      rewrite Fq_pow_zero. reflexivity. intro.
+      assert (Z.of_N (Z.to_N (q-2)) = 0%Z) by (rewrite H0; eauto); rewrite Z2N.id in *; omega. }
+    { clear x. rename x0 into x. pose proof (fermat_inv _ _ x) as Hf; forward Hf.
+      { pose proof @ZToField_FieldToZ; pose proof @ZToField_mod; congruence. }
+      specialize (Hf H1); clear H1.
+      rewrite <-(ZToField_FieldToZ x).
+      rewrite ZToField_pow.
+      replace (Z.of_N (Z.to_N (q - 2))) with (q-2)%Z by (rewrite Z2N.id ; omega).
+      rewrite <-ZToField_mul.
+      apply ZToField_eqmod.
+      rewrite Hf, Zmod_small by omega; reflexivity.
+    }
+  Qed.
+  Lemma Fq_inv_fermat_correct : 2 < q -> forall x : F q, inv_fermat x = inv x.
+  Proof.
+    unfold inv_fermat; intros. rewrite Fq_inv_fermat; auto.
+  Qed.
+
+  Let inv_fermat_powmod (x:Z) : Z := powmod q x (Z.to_N (q-2)).
+  Lemma FieldToZ_inv_efficient : 2 < q ->
+                                 forall x : F q, FieldToZ (inv x) = inv_fermat_powmod x.
+  Proof.
+    unfold inv_fermat_powmod; intros.
+    rewrite Fq_inv_fermat, powmod_Zpow_mod, <-FieldToZ_pow_Zpow_mod; auto.
   Qed.
 
   Lemma F_minus_swap : forall x y : F q, x - y = 0 -> y - x = 0.
@@ -247,11 +263,6 @@ Section VariousModPrime.
   Lemma F_div_1_r : forall x : F q, (x/1)%F = x.
   Proof.
     intros; field. (* TODO: Warning: Collision between bound variables ... *)
-  Qed.
-
-  Lemma F_inv_0 : inv 0 = (0 : F q).
-  Proof.
-    destruct (@F_inv_spec q); auto.
   Qed.
 
   Lemma F_div_opp_1 : forall x y : F q, (opp x / y = opp (x / y))%F.

@@ -5,12 +5,12 @@ Local Open Scope equiv_scope.
 Generalizable All Variables.
 Section IterAssocOp.
   Context `{Equivalence T}
+          {scalar : Type}
           (op:T->T->T) {op_proper:Proper (equiv==>equiv==>equiv) op}
           (assoc: forall a b c, op a (op b c) === op (op a b) c)
           (neutral:T)
           (neutral_l : forall a, op neutral a === a)
           (neutral_r : forall a, op a neutral === a)
-          {scalar : Type}
           (testbit : scalar -> nat -> bool)
           (scToN : scalar -> N)
           (testbit_spec : forall x i, testbit x i = N.testbit_nat (scToN x) i).
@@ -63,7 +63,7 @@ Section IterAssocOp.
     | S i' => (i', if testbit sc i' then op a acc2 else acc2)
     end.
 
-  Definition iter_op sc a bound : T := 
+  Definition iter_op sc a bound : T :=
     snd (funexp (test_and_op sc a) (bound, neutral) bound).
 
   Definition test_and_op_inv sc a (s : nat * T) :=
@@ -152,8 +152,8 @@ Section IterAssocOp.
 
   Lemma iter_op_termination : forall sc a bound,
     N.size_nat (scToN sc) <= bound ->
-    test_and_op_inv sc a 
-      (funexp (test_and_op sc a) (bound, neutral) bound) -> 
+    test_and_op_inv sc a
+      (funexp (test_and_op sc a) (bound, neutral) bound) ->
     iter_op sc a bound === nat_iter_op (N.to_nat (scToN sc)) a.
   Proof.
     unfold test_and_op_inv, iter_op; simpl; intros ? ? ? ? Hinv.
@@ -183,7 +183,7 @@ Section IterAssocOp.
     rewrite Nat2N.id.
     auto.
   Qed.
-  
+
   Lemma iter_op_spec : forall sc a bound, N.size_nat (scToN sc) <= bound ->
     iter_op sc a bound === nat_iter_op (N.to_nat (scToN sc)) a.
   Proof.
