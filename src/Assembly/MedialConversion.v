@@ -5,15 +5,11 @@ Require Export Bedrock.Word NArith NPeano.
 Require Export List Sumbool.
 Require Vector.
 
-Module Allocator (Arch: PseudoMachine).
-End Allocator.
-
 Module MedialConversion (Arch: PseudoMachine).
   Import QhasmCommon AlmostQhasm State Util.
   Import ListNotations.
 
   Module M := Medial Arch.
-  Module A := Allocator Arch.
 
   Fixpoint take {A} (n: nat) (lst: list A) :=
     match n with
@@ -26,7 +22,33 @@ Module MedialConversion (Arch: PseudoMachine).
     end.
 
   Module Conv <: Conversion M AlmostQhasm.
-    Import M A Arch.
+    Import M Arch.
+
+    Definition width_dec: {width = 32} + {width = 64}.
+      destruct width_spec.
+      - left; abstract intuition.
+      - right; abstract intuition.
+    Defined.
+
+    Definition ireg (x: nat): IReg width :=
+      match width_spec with
+      | I32 => regInt32 x
+      | I64 => regInt64 x
+      end.
+
+    Definition iconst (x: word width): IConst width.
+      refine (
+        if width_dec
+        then (convert constInt32 _) x
+        else (convert constInt64 _) x);
+      abstract (rewrite _H; intuition).
+    Defined.
+
+    Definition stack (x: nat): Stack width :=
+      match width_spec with
+      | I32 => stack32 x
+      | I64 => stack64 (2 * x)
+      end.
 
     Fixpoint maxIndex (prog: M.Program): nat :=
       match prog with
@@ -43,12 +65,22 @@ Module MedialConversion (Arch: PseudoMachine).
       | MFunexp e f => maxIndex f
       end.
 
-    Definition convertState (st: AlmostQhasm.State): option M.State :=
-      match st with
-      | fullState _ stackState _ =>
-        Some (take vars (map (fun x => NToWord width (snd x))
-                       (NatM.elements stackState)))
-      end.
+    Fixpoint convertState (st: AlmostQhasm.State): option M.State :=
+      let try_cons := fun (k: nat) (x: option N) (m: DefMap) =>
+        match x with | Some x' => NatM.add k x' m | _ => m end in
+
+      let get (n: nat): option N :=
+        match (getIntReg (ireg n) st, getStack (stack n) st) with
+        | (Some v, _) => Some (wordToN v)
+        | (_, Some v) => Some (wordToN v)
+        | _ => None
+        end in
+
+      Some (
+        (fix cs' (n: nat) :=
+         try_cons n (get n)
+           (match n with | O => NatM.empty N | S m => cs' m end))
+         vars).
 
     Definition dec_lt (a b: nat): {(a < b)%nat} + {(a >= b)%nat}.
       assert ({(a <? b)%nat = true} + {(a <? b)%nat <> true})
@@ -125,11 +157,6 @@ Module MedialConversion (Arch: PseudoMachine).
           end
         end) len maxStack.
 
-    Definition freshMapping (cur: list Mapping) (len: nat): list Mapping :=
-      map (fun s => stackToM s) (getFreshStack cur len).
-
-    Definition getS (lst: list (Stack width)) (n: nat) := nth n lst (stack 0).
-
     Fixpoint moveMapping (a b: list Mapping): AlmostQhasm.Program :=
       match (a, b) with
       | (cons ahd atl, cons bhd btl) =>
@@ -190,8 +217,8 @@ Module MedialConversion (Arch: PseudoMachine).
 
       end.
 
-    Definition binProg (op: WBinOp) (a b: Mapping) (avoid: list Mapping):
-        AlmostQhasm.Program * Mapping :=
+    Definition binProg (op: WBinOp) (a b: Mapping):
+        option AlmostQhasm.Program :=
       let iop := match op with | Wplus => IPlus | Wminus => IMinus | _ => IAnd end in
       let sl := getFreshStack avoid 2 in
       

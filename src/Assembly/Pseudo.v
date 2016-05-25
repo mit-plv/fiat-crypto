@@ -13,32 +13,6 @@ Module Pseudo (M: PseudoMachine) <: Language.
 
   Definition const: Type := word width.
 
-  Definition width_dec: {width = 32} + {width = 64}.
-    destruct width_spec.
-    - left; abstract intuition.
-    - right; abstract intuition.
-  Defined.
-
-  Definition ireg (x: nat): IReg width :=
-    match width_spec with
-    | I32 => regInt32 x
-    | I64 => regInt64 x
-    end.
-
-  Definition iconst (x: word width): IConst width.
-    refine (
-      if width_dec
-      then (convert constInt32 _) x
-      else (convert constInt64 _) x);
-    abstract (rewrite _H; intuition).
-  Defined.
-
-  Definition stack (x: nat): Stack width :=
-    match width_spec with
-    | I32 => stack32 x
-    | I64 => stack64 (2 * x)
-    end.
-
   (* Program Types *)
   Definition State := list const.
 
@@ -51,7 +25,6 @@ Module Pseudo (M: PseudoMachine) <: Language.
     | PShift: forall n, RotOp -> Index width -> Pseudo n 1 -> Pseudo n 1
 
     | PLet: forall n k m, Pseudo n k -> Pseudo (n + k) m -> Pseudo n m
-    | PComp: forall n k m, Pseudo n k -> Pseudo k m -> Pseudo n m
     | PComb: forall n a b, Pseudo n a -> Pseudo n b -> Pseudo n (a + b)
 
     | PIf: forall n m, TestOp -> Index n -> Index n -> Pseudo n m -> Pseudo n m -> Pseudo n m
@@ -129,11 +102,6 @@ Module Pseudo (M: PseudoMachine) <: Language.
     | PLet n k m f g =>
       option_map' (pseudoEval f st) (fun sf =>
         option_map' (pseudoEval g (st ++ sf))
-          (fun sg => Some sg))
-
-    | PComp n k m f g => 
-      option_map' (pseudoEval f st) (fun sf =>
-        option_map' (pseudoEval g sf)
           (fun sg => Some sg))
 
     | PComb n a b f g =>
