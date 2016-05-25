@@ -1,72 +1,79 @@
 Require Export String List NPeano NArith.
 Require Export Bedrock.Word.
 
-(* A formalization of x86 qhasm *)
+(* Utilities *)
 Definition Label := nat.
-Definition Index (limit: nat) := {x: nat | (x < limit)%nat}.
 
-(* Sugar and Tactics *)
+Definition Index (limit: nat) := {x: nat | (x < limit)%nat}.
+Coercion indexToNat {lim: nat} (i: Index lim): nat := proj1_sig i.
+
+Inductive Either A B :=
+  | xleft: A -> Either A B
+  | xright: B -> Either A B.
 
 Definition convert {A B: Type} (x: A) (H: A = B): B :=
   eq_rect A (fun B0 : Type => B0) x B H.
 
-Notation "'always' A" := (fun _ => A) (at level 90) : state_scope.
-Notation "'cast' e" := (convert e _) (at level 20) : state_scope.
-Notation "'lift' e" := (exist _ e _) (at level 20) : state_scope.
-Notation "'contra'" := (False_rec _ _) : state_scope.
-
-Obligation Tactic := abstract intuition.
-
 (* Asm Types *)
-Inductive ISize: nat -> Type :=
-  | I32: ISize 32
-  | I64: ISize 64.
+Inductive Width: nat -> Type := | W32: Width 32 | W64: Width 64.
 
-Inductive IConst: nat -> Type :=
-  | constInt32: word 32 -> IConst 32
-  | constInt64: word 64 -> IConst 64.
+(* A constant value *)
+Inductive Const: nat -> Type :=
+  | const: forall {n}, Width n -> word n -> Const n.
 
-Inductive IReg: nat -> Type :=
-  | regInt32: nat -> IReg 32
-  | regInt64: nat -> IReg 64.
+(* A variable in any register *)
+Inductive Reg: nat -> Type :=
+  | reg: forall {n}, Width n -> nat -> Reg n.
 
+(* A variable on the stack. We should use this sparingly. *)
 Inductive Stack: nat -> Type :=
-  | stack32: nat -> Stack 32
-  | stack64: nat -> Stack 64
-  | stack128: nat -> Stack 128.
+  | stack: forall {n}, Width n -> nat -> Stack n.
 
-Definition CarryState := option bool.
+(* A pointer to a memory block. Called as:
+     mem width index length
+   where length is in words of size width.
+
+   All Mem pointers will be declared as Stack arguments in the
+   resulting qhasm output *)
+Inductive Mem: nat -> nat -> Type :=
+  | mem: forall {n m}, Width n -> nat -> Mem n m.
+
+(* The state of the carry flag:
+   1       = Some true
+   0       = Some false
+   unknown = None *)
+Definition Carry := option bool.
 
 (* Assignments *)
-Inductive Assignment : Type :=
-  | ARegStackInt: forall n, IReg n -> Stack n -> Assignment
-  | AStackRegInt: forall n, Stack n -> IReg n -> Assignment
-  | ARegRegInt: forall n, IReg n -> IReg n -> Assignment
-  | AConstInt: forall n, IReg n -> IConst n -> Assignment
-  | AIndex: forall n m, IReg n -> Stack m -> Index (m/n)%nat -> Assignment
-  | APtr: forall n, IReg 32 -> Stack n -> Assignment.
 
-Hint Constructors Assignment.
+Inductive Assignment : Type :=
+  | ARegMem: forall {n m}, Reg n -> Mem n m -> Index m -> Assignment
+  | AMemReg: forall {n m}, Mem n m -> Index m -> Reg n -> Assignment
+  | AStackReg: forall {n}, Stack n -> Reg n -> Assignment
+  | ARegStack: forall {n}, Reg n -> Stack n -> Assignment
+  | ARegReg: forall {n}, Reg n -> Reg n -> Assignment
+  | AConstInt: forall {n}, Reg n -> Const n -> Assignment.
 
 (* Operations *)
 
 Inductive IntOp :=
-  | IPlus: IntOp | IMinus: IntOp
-  | IXor: IntOp  | IAnd: IntOp | IOr: IntOp.
+  | Add: IntOp  | Sub: IntOp
+  | Xor: IntOp  | And: IntOp
+  | Or: IntOp.
 
-Inductive DualOp :=
-  | IMult: DualOp.
+Inductive CarryOp := | AddWithCarry: CarryOp.
 
-Inductive RotOp :=
-  | Shl: RotOp | Shr: RotOp.
+Inductive DualOp := | Mult: DualOp.
+
+Inductive RotOp := | Shl: RotOp | Shr: RotOp.
 
 Inductive Operation :=
-  | IOpConst: forall n, IntOp -> IReg n -> IConst n -> Operation
-  | IOpReg: forall n, IntOp -> IReg n -> IReg n -> Operation
-  | DOpReg: forall n, DualOp -> IReg n -> IReg n -> option (IReg n) -> Operation
-  | OpRot: forall n, RotOp -> IReg n -> Index n -> Operation.
-
-Hint Constructors Operation.
+  | IOpConst: forall {n}, IntOp -> Reg n -> Const n -> Operation
+  | IOpReg: forall {n}, IntOp -> Reg n -> Reg n -> Operation
+  | IOpMem: forall {n m}, IntOp -> Reg n -> Mem n m -> Index m -> Operation
+  | DOp: forall {n}, DualOp -> Reg n -> Reg n -> option (Reg n) -> Operation
+  | ROp: forall {n}, RotOp -> Reg n -> Index n -> Operation
+  | COp: forall {n}, CarryOp -> Reg n -> Reg n -> Operation.
 
 (* Control Flow *)
 
@@ -75,50 +82,47 @@ Inductive TestOp :=
   | TGt: TestOp   | TGe: TestOp.
 
 Inductive Conditional :=
-  | TestTrue: Conditional
-  | TestFalse: Conditional
-  | TestInt: forall n, TestOp -> IReg n -> IReg n -> Conditional.
+  | CTrue: Conditional 
+  | CZero: forall n, Reg n -> Conditional 
+  | CReg: forall n, TestOp -> Reg n -> Reg n -> Conditional 
+  | CConst: forall n, TestOp -> Reg n -> Const n -> Conditional.
 
-Hint Constructors Conditional.
+(* Generalized Variable Entry *)
 
-(* Reg, Stack, Const Utilities *)
+Inductive Mapping (n: nat) :=
+  | regM: forall (r: Reg n), Mapping n
+  | stackM: forall (s: Stack n), Mapping n
+  | memM: forall {m} (x: Mem n m), Mapping n
+  | constM: forall (x: Const n), Mapping n.
 
-Definition getIRegWords {n} (x: IReg n) :=
-  match x with
-  | regInt32 loc => 1
-  | regInt64 loc => 2
-  end.
+(* Parameter Accessors *)
 
-Definition getStackWords {n} (x: Stack n) :=
-  match x with
-  | stack32 loc => 1
-  | stack64 loc => 2
-  | stack128 loc => 4
-  end.
+Definition constWidth {n} (x: Const n): nat := n.
 
-Definition getIConstValue {n} (x: IConst n): nat :=
-  match x with
-  | constInt32 v => wordToNat v
-  | constInt64 v => wordToNat v
-  end.
+Definition regWidth {n} (x: Reg n): nat := n.
 
-Definition getIRegIndex {n} (x: IReg n): nat :=
-  match x with
-  | regInt32 loc => loc
-  | regInt64 loc => loc
-  end.
+Definition stackWidth {n} (x: Stack n): nat := n.
 
-Definition getStackIndex {n} (x: Stack n): nat :=
-  match x with
-  | stack32 loc => loc
-  | stack64 loc => loc
-  | stack128 loc => loc
-  end.
+Definition memWidth {n m} (x: Mem n m): nat := n.
 
-(* For register allocation checking *)
-Definition intRegCount (base: nat): nat :=
-  match base with
-  | 32 => 7
-  | 64 => 8
-  | _ => 0
-  end.
+Definition memLength {n m} (x: Mem n m): nat := m.
+
+Definition constValueW {n} (x: Const n): word n :=
+  match x with | @const n _ v => v end.
+
+Definition constValueN {n} (x: Const n): nat :=
+  match x with | @const n _ v => wordToNat v end.
+
+Definition regName {n} (x: Reg n): nat :=
+  match x with | @reg n _ v => v end.
+
+Definition stackName {n} (x: Stack n): nat :=
+  match x with | @stack n _ v => v end.
+
+Definition memName {n m} (x: Mem n m): nat :=
+  match x with | @mem n m _ v => v end.
+
+(* Hints *)
+Hint Constructors
+     Reg Stack Const Mem Mapping
+     Assignment Operation Conditional.

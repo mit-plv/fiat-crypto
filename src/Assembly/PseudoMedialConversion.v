@@ -12,11 +12,6 @@ Module PseudoMedialConversion (Arch: PseudoMachine).
   Module P := Pseudo Arch.
   Module M := Medial Arch.
 
-  Inductive Mapping (n: nat) :=
-    | regM: forall (r: IReg n) (v: nat), v = getIRegIndex r -> Mapping n
-    | stackM: forall (r: Stack n) (v: nat), v = getStackIndex r -> Mapping n
-    | constM: forall (r: IConst n) (v: nat), v = getIConstValue r -> Mapping n.
-
   Definition wordToM {n: nat} {spec: ISize n} (w: word n): Mapping n.
     destruct spec; first [
       refine (@constM 32 (constInt32 w) (wordToNat w) _)
@@ -87,11 +82,6 @@ Module PseudoMedialConversion (Arch: PseudoMachine).
       if (Nat.eq_dec (length res) vars)
       then Some res
       else None.
-
-    Definition omap {A B} (x: option A) (f: A -> option B) :=
-        match x with | Some y => f y | _ => None end.
-
-    Notation "A <- X ; B" := (omap X (fun A => B)) (at level 70, right associativity).
 
     Fixpoint range (start len: nat): list nat :=
       match len with

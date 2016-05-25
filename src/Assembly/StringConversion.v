@@ -187,36 +187,6 @@ Module StringConversion <: Conversion Qhasm QhasmString.
         simpl in H; inversion H; intuition.
     Qed.
 
-    Lemma triple_conv: forall {x0 x1 x2 y0 y1 y2: nat},
-      (x0 = y0 /\ x1 = y1 /\ x2 = y2) <-> (x0, x1, x2) = (y0, y1, y2).
-    Proof.
-      intros; split; intros.
-
-      - destruct H; destruct H0; subst; intuition.
-
-      - inversion_clear H; intuition.
-    Qed.
-
-    Definition triple_dec (x y: nat * nat * nat): {x = y} + {x <> y}.
-      refine (match x as x' return x' = _ -> _ with
-      | (x0, x1, x2) => fun _ =>
-        match y as y' return y' = _ -> _ with
-        | (y0, y1, y2) => fun _ =>
-           _ (Nat.eq_dec x0 y0) (Nat.eq_dec x1 y1) (Nat.eq_dec x2 y2)
-        end (eq_refl y)
-      end (eq_refl x));
-        rewrite <- _H, <- _H0;
-        clear _H _H0 x y p p0;
-        intros.
-
-      intros; destruct x6, x7, x8; first [
-        left; abstract (subst; intuition)
-      | right; abstract (intro;
-          apply triple_conv in H;
-          destruct H; destruct H0; intuition)
-      ].
-    Defined.
-
     Definition entry_dec (x y: Entry): {x = y} + {x <> y}.
       refine (_ (triple_dec (entryId x) (entryId y))).
       intros; destruct x0.
