@@ -17,7 +17,7 @@ Module AlmostConversion <: Conversion AlmostQhasm Qhasm.
     | AOp a => [ QOp a ]
     | ACond c a b =>
       let tru := N.to_nat (N.shiftl 1 label0) in
-      let finish := S tru in
+      let finish := S tru 
       [QJmp c tru] ++
       (almostToQhasm' b label1) ++
       [QJmp TestTrue finish] ++

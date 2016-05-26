@@ -1,274 +1,278 @@
 Require Export String List Logic.
 Require Export Bedrock.Word.
 
-Require Import ZArith NArith NPeano.
-Require Import Coq.Structures.OrderedTypeEx.
-Require Import FMapAVL FMapList.
-Require Import JMeq.
+Require Import ZArith NArith NPeano Ndec.
+Require Import Compare_dec Omega.
+Require Import OrderedType Coq.Structures.OrderedTypeEx.
+Require Import FMapAVL FMapList JMeq.
 
 Require Import QhasmUtil QhasmCommon.
 
-(* There's a lot in here.
-   We don't want to automatically give it all to the client. *)
+(* We want to use pairs and triples as map keys: *)
+
+Module Pair_as_OT <: UsualOrderedType.
+  Definition t := (nat * nat)%type.
+
+  Definition eq := @eq t.
+  Definition eq_refl := @eq_refl t.
+  Definition eq_sym := @eq_sym t.
+  Definition eq_trans := @eq_trans t.
+
+  Definition lt (a b: t) :=
+    if (Nat.eq_dec (fst a) (fst b))
+    then lt (snd a) (snd b)
+    else lt (fst a) (fst b).
+
+  Lemma conv: forall {x0 x1 y0 y1: nat},
+    (x0 = y0 /\ x1 = y1) <-> (x0, x1) = (y0, y1).
+  Proof.
+    intros; split; intros.
+  - destruct H; destruct H0; subst; intuition.
+  - inversion_clear H; intuition.
+  Qed.
+
+  Lemma lt_trans : forall x y z : t, lt x y -> lt y z -> lt x z.
+    intros; destruct x as [x0 x1], y as [y0 y1], z as [z0 z1];
+      unfold lt in *; simpl in *;
+      destruct (Nat.eq_dec x0 y0), (Nat.eq_dec y0 z0), (Nat.eq_dec x0 z0);
+      omega.
+  Qed.
+
+  Lemma lt_not_eq : forall x y : t, lt x y -> ~ eq x y.
+    intros; destruct x as [x0 x1], y as [y0 y1];
+      unfold lt, eq in *; simpl in *;
+      destruct (Nat.eq_dec x0 y0); subst; intuition;
+      inversion H0; subst; omega.
+  Qed.
+
+  Definition compare x y : Compare lt eq x y.
+    destruct x as [x0 x1], y as [y0 y1];
+      destruct (Nat_as_OT.compare x0 y0);
+      unfold Nat_as_OT.lt, Nat_as_OT.eq in *.
+
+    - apply LT; abstract (unfold lt; simpl; destruct (Nat.eq_dec x0 y0); intuition).
+
+    - destruct (Nat_as_OT.compare x1 y1);
+        unfold Nat_as_OT.lt, Nat_as_OT.eq in *.
+
+      + apply LT; abstract (unfold lt; simpl; destruct (Nat.eq_dec x0 y0); intuition).
+      + apply EQ; abstract (unfold lt; simpl; subst; intuition).
+      + apply GT; abstract (unfold lt; simpl; destruct (Nat.eq_dec y0 x0); intuition).
+
+    - apply GT; abstract (unfold lt; simpl; destruct (Nat.eq_dec y0 x0); intuition).
+  Defined.
+
+  Definition eq_dec (a b: t): {a = b} + {a <> b}.
+    destruct (compare a b);
+      destruct a as [a0 a1], b as [b0 b1].
+
+    - right; abstract (
+        unfold lt in *; simpl in *;
+        destruct (Nat.eq_dec a0 b0); intuition;
+        inversion H; intuition).
+
+    - left; abstract (inversion e; intuition).
+
+    - right; abstract (
+        unfold lt in *; simpl in *;
+        destruct (Nat.eq_dec b0 a0); intuition;
+        inversion H; intuition).
+  Defined.
+End Pair_as_OT.
+
+Module Triple_as_OT <: UsualOrderedType.
+  Definition t := (nat * nat * nat)%type.
+
+  Definition get0 (x: t) := fst (fst x).
+  Definition get1 (x: t) := snd (fst x).
+  Definition get2 (x: t) := snd x.
+
+  Definition eq := @eq t.
+  Definition eq_refl := @eq_refl t.
+  Definition eq_sym := @eq_sym t.
+  Definition eq_trans := @eq_trans t.
+
+  Definition lt (a b: t) :=
+    if (Nat.eq_dec (get0 a) (get0 b))
+    then
+      if (Nat.eq_dec (get1 a) (get1 b))
+      then lt (get2 a) (get2 b)
+      else lt (get1 a) (get1 b)
+    else lt (get0 a) (get0 b).
+
+  Lemma conv: forall {x0 x1 x2 y0 y1 y2: nat},
+      (x0 = y0 /\ x1 = y1 /\ x2 = y2) <-> (x0, x1, x2) = (y0, y1, y2).
+  Proof.
+    intros; split; intros.
+    - destruct H; destruct H0; subst; intuition.
+    - inversion_clear H; intuition.
+  Qed.
+
+  Lemma lt_trans : forall x y z : t, lt x y -> lt y z -> lt x z.
+    intros; unfold lt in *;
+    destruct (Nat.eq_dec (get0 x) (get0 y)),
+             (Nat.eq_dec (get1 x) (get1 y)),
+             (Nat.eq_dec (get0 y) (get0 z)),
+             (Nat.eq_dec (get1 y) (get1 z)),
+             (Nat.eq_dec (get0 x) (get0 z)),
+             (Nat.eq_dec (get1 x) (get1 z));
+      omega.
+  Qed.
+
+  Lemma lt_not_eq : forall x y : t, lt x y -> ~ eq x y.
+    intros; unfold lt, eq in *;
+      destruct (Nat.eq_dec (get0 x) (get0 y)),
+               (Nat.eq_dec (get1 x) (get1 y));
+      subst; intuition;
+      inversion H0; subst; omega.
+  Qed.
+
+  Definition compare x y : Compare lt eq x y.
+    destruct (Nat_as_OT.compare (get0 x) (get0 y)).
+
+    Ltac compare_tmp x y :=
+      abstract (
+        unfold Nat_as_OT.lt, Nat_as_OT.eq, lt, eq in *;
+        destruct (Nat.eq_dec (get0 x) (get0 y));
+        destruct (Nat.eq_dec (get1 x) (get1 y));
+        simpl; intuition).
+
+    Ltac compare_eq x y :=
+      abstract (
+        unfold Nat_as_OT.lt, Nat_as_OT.eq, lt, eq, get0, get1 in *;
+        destruct x as [x x2], y as [y y2];
+        destruct x as [x0 x1], y as [y0 y1];
+        simpl in *; subst; intuition).
+
+    - apply LT; compare_tmp x y.
+    - destruct (Nat_as_OT.compare (get1 x) (get1 y)).
+      + apply LT; compare_tmp x y.
+      + destruct (Nat_as_OT.compare (get2 x) (get2 y)).
+        * apply LT; compare_tmp x y.
+        * apply EQ; compare_eq x y.
+        * apply GT; compare_tmp y x.
+      + apply GT; compare_tmp y x.
+    - apply GT; compare_tmp y x.
+  Defined.
+
+  Definition eq_dec (a b: t): {a = b} + {a <> b}.
+    destruct (compare a b);
+      destruct a as [a a2], b as [b b2];
+      destruct a as [a0 a1], b as [b0 b1].
+
+    - right; abstract (
+        unfold lt, get0, get1, get2 in *; simpl in *;
+        destruct (Nat.eq_dec a0 b0), (Nat.eq_dec a1 b1);
+        intuition; inversion H; intuition).
+
+    - left; abstract (inversion e; intuition).
+
+    - right; abstract (
+        unfold lt, get0, get1, get2 in *; simpl in *;
+        destruct (Nat.eq_dec b0 a0), (Nat.eq_dec b1 a1);
+        intuition; inversion H; intuition).
+  Defined.
+End Triple_as_OT.
 
 Module State.
-    Import ListNotations.
-    Import Util.
+  Import ListNotations Util.
 
-    Module NatM := FMapAVL.Make(Nat_as_OT).
-    Definition DefMap: Type := NatM.t N.
-    Definition StateMap: Type := NatM.t DefMap.
-    Definition LabelMap: Type := NatM.t nat.
+  Module NatM := FMapAVL.Make(Nat_as_OT).
+  Module PairM := FMapAVL.Make(Pair_as_OT).
+  Module TripleM := FMapAVL.Make(Triple_as_OT).
 
-    Delimit Scope state_scope with state.
-    Local Open Scope state_scope.
+  Definition NatNMap: Type := NatM.t N.
+  Definition PairNMap: Type := PairM.t N.
+  Definition TripleNMap: Type := TripleM.t N.
+  Definition LabelMap: Type := NatM.t nat.
 
-    (* The Big Definition *)
+  Delimit Scope state_scope with state.
+  Open Scope state_scope.
 
-    Inductive State :=
-    | fullState (intRegState: StateMap)
-                (stackState: DefMap)
-                (carryBit: CarryState): State.
+  (* The Big Definition *)
 
-    Definition emptyState: State := fullState (NatM.empty DefMap) (NatM.empty N) None.
+  Inductive State :=
+    | fullState (regState: PairNMap)
+                (stackState: PairNMap)
+                (memState: TripleNMap)
+                (carry: Carry): State.
 
-    (* Register State Manipulations *)
+  Definition emptyState: State :=
+    fullState (PairM.empty N) (PairM.empty N) (TripleM.empty N) None.
 
-    Definition getIntReg {n} (reg: IReg n) (state: State): option (word n) :=
-      match state with
-      | fullState intRegState _ _ =>
-        match (NatM.find n intRegState) with
-        | Some map =>
-            match (NatM.find (getIRegIndex reg) map) with
-            | Some m => Some (NToWord n m)
-            | _ => None
-            end
-        | None => None
-        end
-      end.
+  (* Register *)
 
-    Definition setIntReg {n} (reg: IReg n) (value: word n) (state: State): option State :=
-      match state with
-      | fullState intRegState stackState carryState =>
-        match (NatM.find n intRegState) with
-        | Some map =>
-            Some (fullState
-                    (NatM.add n (NatM.add (getIRegIndex reg) (wordToN value) map) intRegState)
-                    stackState
-                    carryState)
-        | None => None
-        end
-      end.
-
-    (* Carry State Manipulations *)
-
-    Definition getCarry (state: State): CarryState :=
-      match state with
-      | fullState _ _ b => b
-      end.
-
-    Definition setCarry (value: bool) (state: State): State :=
-      match state with
-      | fullState intRegState stackState carryState =>
-        fullState intRegState stackState (Some value)
-      end.
-
-    (* Per-word Stack Operations *)
-
-    Definition getStack32 (entry: Stack 32) (state: State): option (word 32) :=
-      match state with
-      | fullState _ stackState _ =>
-        match entry with
-        | stack32 loc =>
-          match (NatM.find loc stackState) with
-          | Some n => Some (NToWord 32 n)
-          | _ => None
-          end
-        end
-      end.
-
-    Definition setStack32 (entry: Stack 32) (value: word 32) (state: State): option State :=
+  Definition getReg {n} (r: Reg n) (state: State): option (word n) :=
     match state with
-    | fullState intRegState stackState carryState =>
-        match entry with
-        | stack32 loc =>
-          (Some (fullState intRegState 
-                   (NatM.add loc (wordToN value) stackState)
-                   carryState))
-        end
+    | fullState regS _ _ _ =>
+      match (PairM.find (n, regName r) regS) with
+      | Some v => Some (NToWord n v)
+      | None => None
+      end
     end.
 
-    (* Inductive Word Manipulations*)
-
-    Definition getWords' {n} (st: (list (word 32)) * word (32 * n)) :
-        Either (list (word 32)) ((list (word 32)) * word (32 * (n - 1))).
-
-      destruct (Nat.eq_dec n 0) as [H | H];
-        destruct st as [lst w].
-
-    - refine (xleft _ _ lst).
-
-    - refine (xright _ _
-             (cons (split1 32 (32 * (n - 1)) (cast w)) lst,
-             (split2 32 (32 * (n - 1)) (cast w))));
-      intuition.
-    Defined.
-
-    Section GetWords.
-      Program Fixpoint getWords'_iter (n: nat) (st: (list (word 32)) * word (32 * n)): list (word 32) :=
-        match n with
-        | O => fst st
-        | S m =>
-            match (getWords' st) with
-            | xleft lst => lst
-            | xright st => cast (getWords'_iter m st)
-            end
-        end.
-
-      Definition getWords {len} (wd: word (32 * len)): list (word 32) :=
-        getWords'_iter len ([], wd).
-    End GetWords.
-
-    Section JoinWords.
-
-        Inductive Any (U: nat -> Type) (lim: nat) := | any: forall n, (n <= lim)%nat -> U n -> Any U lim.
-
-        Definition getAnySize {U lim} (a: Any U lim) :=
-          match a as a' return a = a' -> _ with
-          | any n p v => fun _ => n
-          end (eq_refl a).
-
-        Lemma lim_prop: forall (n lim: nat), (n <= lim)%nat -> ((n - 1) <= lim)%nat.
-        Proof. intros; intuition. Qed.
-
-        Lemma zero_prop: forall (n m: nat), n = S m -> n <> 0.
-        Proof. intros; intuition. Qed.
-
-        Fixpoint anyExp {U: nat -> Type}
-            {lim: nat}
-            (f: forall n, (n <> 0)%nat -> (n <= lim)%nat -> U n -> U (n - 1))
-            (rem: nat)
-            (cur: Any U lim): option {a: Any U lim | getAnySize a = 0}.
-
-          refine match rem with
-          | O => None
-          | S rem' =>
-            match cur as c' return cur = c' -> _ with
-            | any n p v => always
-              match (Nat.eq_dec n 0) with
-              | left peq => Some (lift cur)
-              | right pneq =>
-                anyExp U lim f rem' (any U lim (n - 1) (lim_prop n lim p) (f n pneq p v))
-              end
-            end (eq_refl cur)
-          end.
-
-          subst; unfold getAnySize; intuition.
-
-        Defined.
-
-        Definition JoinWordType (len: nat): nat -> Type := fun n => option (word (32 * (len - n))).
-
-        Definition joinWordUpdate (len: nat) (wds: list (option (word 32))):
-            forall n, (n <> 0)%nat -> (n <= len)%nat -> JoinWordType len n -> JoinWordType len (n - 1).
-
-          intros n H0 Hlen v; unfold JoinWordType in v.
-          refine match v with
-            | Some cur =>
-              match (nth_error wds n) with
-              | Some (Some w) => Some (cast (combine w cur))
-              | _ => None
-              end
-            | _ => None
-            end.
-
-          abstract (replace (32 + 32 * (len - n)) with (32 * (len - (n - 1))); intuition).
-        Defined.
-
-        Definition joinWordOpts (wds: list (option (word 32))): option (word (32 * (length wds))).
-          refine (
-            let len := (length wds) in
-            let start := (any (JoinWordType len) len len _ (cast (Some (wzero 0)))) in
-            let aopt := anyExp (cast (joinWordUpdate len wds)) (length wds) start in
-            match aopt as aopt' return aopt = aopt' -> _ with
-            | Some a => always
-              match (proj1_sig a) as a' return (proj1_sig a) = a' -> _ with
-              | any n p v => always (cast v)
-              end (eq_refl (proj1_sig a))
-            | _ => always None
-            end (eq_refl aopt)
-          ); try abstract intuition.
-
-          - abstract ( unfold JoinWordType; replace (32 * (len-len)) with 0; intuition).
-
-          - destruct a; simpl in _H0; destruct x, aopt.
-
-            + abstract (
-                destruct s; unfold getAnySize in e; simpl in e; subst;
-                inversion _H0;
-                unfold JoinWordType;
-                replace (len - 0) with len by intuition;
-                unfold len; intuition ).
-
-            + inversion _H.
-        Defined.
-
-    End JoinWords.
-
-    (* Stack Manipulations *)
-
-    Fixpoint getStack_iter (rem: nat) (loc: nat) (state: State): list (option (word 32)) :=
-      match rem with
-      | O => []
-      | (S rem') =>
-        (getStack32 (stack32 loc) state) ::
-        (getStack_iter rem' (loc + 32) state)
+  Definition setReg {n} (r: Reg n) (value: word n) (state: State): State :=
+    match state with
+    | fullState regS stackS memS carry =>
+      fullState (PairM.add (n, regName r) (wordToN value) regS)
+                stackS memS carry
     end.
 
-    Lemma getStack_iter_length: forall rem loc state,
-        length (getStack_iter rem loc state) = rem.
-    Proof.
-      induction rem; intuition.
+  (* Stack *)
 
-      replace (getStack_iter (S rem) loc state) with 
-        ((getStack32 (stack32 loc) state) ::
-        (getStack_iter rem (loc + 32) state)) by intuition.
+  Definition getStack {n} (s: Stack n) (state: State): option (word n) :=
+    match state with
+    | fullState _ stackS _ _ =>
+      match (PairM.find (n, stackName s) stackS) with
+      | Some v => Some (NToWord n v)
+      | None => None
+      end
+    end.
 
-      replace (Datatypes.length _) with
-        (1 + Datatypes.length (getStack_iter rem (loc + 32) state)) by intuition.
+  Definition setStack {n} (s: Stack n) (value: word n) (state: State): State :=
+    match state with
+    | fullState regS stackS memS carry =>
+      fullState regS
+                (PairM.add (n, stackName s) (wordToN value) stackS)
+                memS carry
+    end.
 
-      rewrite IHrem; intuition.
-    Qed.
+  (* Memory *)
 
-    Definition getStack {n} (entry: Stack n) (state: State) : option (word n).
+  Definition getMem {n m} (x: Mem n m) (i: Index m) (state: State): option (word n) :=
+    match state with
+    | fullState _ _ memS _ =>
+      match (TripleM.find (n, memName x, proj1_sig i) memS) with
+      | Some v => Some (NToWord n v)
+      | None => None
+      end
+    end.
 
-      refine (
-        let m := getStackWords entry in
-        let i := getStackIndex entry in
-        let wos := (getStack_iter m i state) in
-        let joined := (joinWordOpts wos) in
+  Definition setMem {n m} (x: Mem n m) (i: Index m) (value: word n) (state: State): State :=
+    match state with
+    | fullState regS stackS memS carry =>
+      fullState regS stackS
+                (TripleM.add (n, memName x, proj1_sig i) (wordToN value) memS)
+                carry
+    end.
 
-        match joined as j return j = joined -> _ with
-        | Some w => always Some (cast w)
-        | None => always None
-        end (eq_refl joined)
-      ); abstract (
-        intuition;
-        unfold wos;
-        rewrite getStack_iter_length;
-        destruct entry; simpl; intuition).
+  (* Carry State Manipulations *)
 
-    Defined.
+  Definition getCarry (state: State): Carry :=
+    match state with
+    | fullState _ _ _ b => b
+    end.
 
-    Definition setStack {n} (entry: Stack n) (value: word n) (state: State) : option State :=
-      (fix setStack_iter (wds: list (word 32)) (nextLoc: nat) (state: State) :=
-        match wds with
-        | [] => Some state
-        | w :: ws =>
-        match (setStack32 (stack32 nextLoc) w state) with 
-        | Some st' => setStack_iter ws (S nextLoc) st'
-        | None => None
-        end
-        end) (getWords (segmentStackWord entry value)) (getStackIndex entry) state.
+  Definition setCarry (value: bool) (state: State): State :=
+    match state with
+    | fullState regS stackS memS carry =>
+      fullState regS stackS memS (Some value)
+    end.
+
+  Definition setCarryOpt (value: option bool) (state: State): State :=
+    match value with
+    | Some c' => setCarry c' state
+    | _ => state
+    end.
 
 End State.
