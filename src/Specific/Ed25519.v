@@ -12,6 +12,7 @@ Require Import Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
 Require Import Crypto.Util.IterAssocOp Crypto.Util.WordUtil Crypto.Rep.
 Require Import Coq.Setoids.Setoid.
 Require Import Coq.Classes.Morphisms.
+Require Import Zdiv.
   
 (*TODO: move enerything before the section out of this file *)
 
@@ -247,32 +248,37 @@ Proof.
     destruct (B_eqb P_ (enc Q)) eqn:Heq; [rewrite B_eqb_iff in Heq; eauto | trivial]. }
 Qed.
 
+Definition FieldToN {m} (x:F m) := Z.to_N (FieldToZ x).
+Lemma FieldToN_correct {m} (x:F m) : FieldToN (m:=m) x = Z.to_N (FieldToZ x). reflexivity. Qed.
+
 Generalizable All Variables.
 Section FSRepOperations.
   Context {q:Z} {prime_q:Znumtheory.prime q} {two_lt_q:(2 < q)%Z}.
-  Context `(rcS:RepConversions N SRep) (rcSOK:RepConversionsOK rcS).
+  Context {l:Z} {two_lt_l:(2 < l)%Z}.
+  Context `{rcS:RepConversions (F l) SRep} {rcSOK:RepConversionsOK rcS}.
   Context `(rcF:RepConversions (F q) FRep) (rcFOK:RepConversionsOK rcF).
   Context (FRepAdd FRepSub FRepMul:FRep->FRep->FRep) (FRepAdd_correct:RepBinOpOK rcF add FRepMul).
   Context (FRepSub_correct:RepBinOpOK rcF sub FRepSub) (FRepMul_correct:RepBinOpOK rcF mul FRepMul).
   Axiom SRep_testbit : SRep -> nat -> bool.
-  Axiom SRep_testbit_correct : forall (x0 : SRep) (i : nat), SRep_testbit x0 i = N.testbit_nat (unRep x0) i.
+  Axiom SRep_testbit_correct : forall (x0 : SRep) (i : nat), SRep_testbit x0 i = N.testbit_nat (FieldToN (unRep x0)) i.
 
   Definition FSRepPow width x n := iter_op FRepMul (toRep 1%F) SRep_testbit n x width.
-  Lemma FSRepPow_correct : forall width x n, (N.size_nat (unRep n) <= width)%nat -> (unRep x ^ unRep n)%F = unRep (FSRepPow width x n).
+  Lemma FSRepPow_correct : forall width x n, (N.size_nat (FieldToN (unRep n)) <= width)%nat -> (unRep x ^ FieldToN (unRep n))%F = unRep (FSRepPow width x n).
   Proof. (* this proof derives the required formula, which I copy-pasted above to be able to reference it without the length precondition *)
     unfold FSRepPow; intros.
     erewrite <-pow_nat_iter_op_correct by auto.
-    erewrite <-(fun x => iter_op_spec (scalar := SRep) mul F_mul_assoc _ F_mul_1_l _ unRep SRep_testbit_correct n x width) by auto.
+    erewrite <-(fun x => iter_op_spec (scalar := SRep) mul F_mul_assoc _ F_mul_1_l _ _ SRep_testbit_correct n x width) by auto.
     rewrite <-(rcFOK 1%F) at 1.
     erewrite <-iter_op_proj by auto.
     reflexivity.
   Qed.
 
-  Definition FRepInv x : FRep := FSRepPow (COMPILETIME (N.size_nat (Z.to_N (q - 2)))) x (COMPILETIME (toRep (Z.to_N (q - 2)))).
+  Context (q_minus_2_lt_l:(q - 2 < l)%Z).
+  Definition FRepInv x : FRep := FSRepPow (COMPILETIME (N.size_nat (Z.to_N (q - 2)))) x (COMPILETIME (toRep (ZToField (q - 2)))).
   Lemma FRepInv_correct : forall x, inv (unRep x)%F = unRep (FRepInv x).
     unfold FRepInv, COMPILETIME; intros.
-    rewrite <-FSRepPow_correct; rewrite rcSOK; try reflexivity.
-    pose proof @Fq_inv_fermat_correct as H; unfold inv_fermat in H; rewrite H by
+    rewrite <-FSRepPow_correct; rewrite FieldToN_correct, rcSOK, FieldToZ_ZToField, Zmod_small by omega; trivial.
+    pose proof @Fq_inv_fermat_correct as Hf; unfold inv_fermat in Hf; rewrite Hf by
         auto using prime_q, two_lt_q.
     reflexivity.
   Qed.
@@ -280,27 +286,39 @@ End FSRepOperations.
 
 Section ESRepOperations.
   Context {tep:TwistedEdwardsParams} {a_is_minus1:a = opp 1}.
-  Context `{rcS:RepConversions N SRep} {rcSOK:RepConversionsOK rcS}.
+  Context {l:Z} {two_lt_l:(2 < l)%Z}.
+  Context `{rcS:RepConversions (F l) SRep} {rcSOK:RepConversionsOK rcS}.
   Context {SRep_testbit : SRep -> nat -> bool}.
-  Context {SRep_testbit_correct : forall (x0 : SRep) (i : nat), SRep_testbit x0 i = N.testbit_nat (unRep x0) i}.
-  Definition scalarMultExtendedSRep (bound:nat) (a:SRep) (P:extendedPoint) :=
-    unExtendedPoint (iter_op (@unifiedAddM1 _ a_is_minus1) (mkExtendedPoint E.zero) SRep_testbit a P bound).
-  Definition scalarMultExtendedSRep_correct : forall (bound:nat) (a:SRep) (P:extendedPoint) (bound_satisfied:(N.size_nat (unRep a) <= bound)%nat),
-      scalarMultExtendedSRep bound a P = (N.to_nat (unRep a) * unExtendedPoint P)%E.
+  Context {SRep_testbit_correct : forall (x0 : SRep) (i : nat), SRep_testbit x0 i = N.testbit_nat (FieldToN (unRep x0)) i}.
+  Definition scalarMultExtendedSRep (a:SRep) (P:extendedPoint) :=
+    unExtendedPoint (iter_op (@unifiedAddM1 _ a_is_minus1) (mkExtendedPoint E.zero) SRep_testbit a P (N.size_nat (Z.to_N (Z.pred l)))).
+
+  Lemma bound_satisfied : forall a, (N.size_nat (FieldToN (unRep a)) <= N.size_nat (Z.to_N (Z.pred l)))%nat.
+  Proof.
+    intros.
+    apply N_size_nat_le_mono.
+    rewrite FieldToN_correct.
+    destruct (FieldToZ_range (unRep a)); [omega|].
+    rewrite <-Z2N.inj_le; omega.
+  Qed.
+    
+  Definition scalarMultExtendedSRep_correct : forall (a:SRep) (P:extendedPoint),
+      scalarMultExtendedSRep a P = (N.to_nat (FieldToN (unRep a)) * unExtendedPoint P)%E.
   Proof. (* derivation result copy-pasted to above to remove preconditions from it *)
     intros.
-    rewrite <-(scalarMultM1_rep a_is_minus1), <-(@iter_op_spec _ extendedPoint_eq _ _ (@unifiedAddM1 _ a_is_minus1) _ (@unifiedAddM1_assoc _ a_is_minus1) _ (@unifiedAddM1_0_l _ a_is_minus1) _ _ SRep_testbit_correct _ _ bound) by assumption.
+    rewrite <-(scalarMultM1_rep a_is_minus1), <-(@iter_op_spec _ extendedPoint_eq _ _ (@unifiedAddM1 _ a_is_minus1) _ (@unifiedAddM1_assoc _ a_is_minus1) _ (@unifiedAddM1_0_l _ a_is_minus1) _ _ SRep_testbit_correct _ _ _ (bound_satisfied _)).
     reflexivity.
   Defined.
 End ESRepOperations.
 
 Section EdDSADerivation.
   Context `(eddsaprm:EdDSAParams).
-  Context `(rcS:RepConversions N SRep) (rcSOK:RepConversionsOK rcS).
+  Context `(rcS:RepConversions (F (Z.of_nat l)) SRep) (rcSOK:RepConversionsOK rcS).
+  Context {SRep_testbit : SRep -> nat -> bool}.
+  Context {SRep_testbit_correct : forall (x0 : SRep) (i : nat), SRep_testbit x0 i = N.testbit_nat (FieldToN (unRep x0)) i}.
   Context `(rcF:RepConversions (F q) FRep) (rcFOK:RepConversionsOK rcF).
   Context (FRepAdd FRepSub FRepMul:FRep->FRep->FRep) (FRepAdd_correct:RepBinOpOK rcF add FRepMul).
   Context (FRepSub_correct:RepBinOpOK rcF sub FRepSub) (FRepMul_correct:RepBinOpOK rcF mul FRepMul).
-  Context (FSRepPow:FRep->SRep->FRep) (FSRepPow_correct: forall x n, (N.size_nat (unRep n) <= (N.size_nat (N.of_nat l)))%nat -> (unRep x ^ unRep n)%F = unRep (FSRepPow x n)).
   Context (FRepInv:FRep->FRep) (FRepInv_correct:forall x, inv (unRep x)%F = unRep (FRepInv x)).
   Context (a_is_minus1:CompleteEdwardsCurve.a = opp 1).
 
@@ -359,6 +377,16 @@ Section EdDSADerivation.
   
   Local Notation "'(' X ',' Y ',' Z ',' T ')'" := (mkExtended X Y Z T).
   Local Notation "2" := (ZToField 2) : F_scope.
+
+  Axiom nonequivalent_optimization_Hmodl : forall n (x:word n) A, (wordToNat (H x) * A = (wordToNat (H x) mod l * A))%E.
+  Lemma two_lt_l : (2 < Z.of_nat l)%Z.
+  Proof.
+    pose proof l_odd. omega.
+  Qed.
+  Lemma l_nonzero : l <> 0.
+  Proof.
+    pose proof l_odd. omega.
+  Qed.
 
   Lemma unfoldDiv : forall {m} (x y:F m), (x/y = x * inv y)%F. Proof. unfold div. congruence. Qed.
 
@@ -436,16 +464,6 @@ Section EdDSADerivation.
   Proof.
     unfold rep2T, rep2E, erep2trep, extendedToTwisted; destruct P as [[[]]]; simpl.
     rewrite !unfoldDiv, <-!FRepMul_correct, <-FRepInv_correct. reflexivity.
-  Qed.
-
-  Lemma Fl_SRep_bound : forall (a:F (Z.of_nat EdDSA.l)), (N.size_nat (unRep (toRep (Z.to_N (FieldToZ a)))) <= N.size_nat (Z.to_N (Z.pred (Z.of_nat EdDSA.l))))%nat.
-  Proof.
-    intros.
-    rewrite rcSOK.
-    apply N_size_nat_le_mono.
-    pose proof l_odd.
-    edestruct (FieldToZ_range a); [omega|].
-    apply Znat.Z2N.inj_le; trivial; omega.
   Qed.
 
   (** TODO: Move me, remove Local *)
@@ -528,15 +546,16 @@ Section EdDSADerivation.
     setoid_rewrite <-(unExtendedPoint_mkExtendedPoint B).
     setoid_rewrite <-(fun a => unExtendedPoint_mkExtendedPoint (E.opp a)).
 
-    setoid_rewrite <-Znat.Z_N_nat.
-    Axiom nonequivalent_optimization_Hmodl : forall n (x:word n) A, (wordToNat (H x) * A = (wordToNat (H x) mod l * A))%E.
     setoid_rewrite nonequivalent_optimization_Hmodl.
-    setoid_rewrite <-(Nat2N.id (_ mod EdDSA.l)).
+    setoid_rewrite <-(Nat2Z.id (_ mod EdDSA.l)).
+    setoid_rewrite (mod_Zmod _ _ l_nonzero).
+    setoid_rewrite <-Znat.Z_N_nat.
+    setoid_rewrite <-FieldToZ_ZToField.
+    setoid_rewrite <-FieldToN_correct.
     setoid_rewrite <-rcSOK.
-    setoid_rewrite <-(scalarMultExtendedSRep_correct _ _ _ (Fl_SRep_bound _)).
 
-    rewrite N_of_nat_modulo by (pose proof l_odd; omega).
-    
+    setoid_rewrite <-(scalarMultExtendedSRep_correct (a_is_minus1:=a_is_minus1) (SRep_testbit_correct:=SRep_testbit_correct) (two_lt_l:=two_lt_l)).
+
     setoid_rewrite (unifiedAddM1_rep a_is_minus1).
 
     etransitivity.
