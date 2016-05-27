@@ -161,40 +161,6 @@ Module StringConversion <: Conversion Qhasm QhasmString.
   End Elements.
 
   Section Parsing.
-    Inductive Entry :=
-      | intEntry: forall n, IReg n -> Entry
-      | stackEntry: forall n, Stack n -> Entry.
-
-    Definition entryId (x: Entry): nat * nat * nat :=
-      match x with
-      | intEntry n (regInt32 v) => (0, n, v)
-      | intEntry n (regInt64 v) => (1, n, v)
-      | stackEntry n (stack32 v) => (2, n, v)
-      | stackEntry n (stack64 v) => (3, n, v)
-      | stackEntry n (stack128 v) => (4, n, v)
-      end.
-
-    Lemma id_equal: forall {x y}, x = y <-> entryId x = entryId y.
-    Proof.
-      intros; split; intros;
-        destruct x as [nx x | nx x];
-        destruct y as [ny y | ny y];
-        try rewrite H;
-
-        destruct x, y; subst;
-        destruct (Nat.eq_dec n n0); subst;
-
-        simpl in H; inversion H; intuition.
-    Qed.
-
-    Definition entry_dec (x y: Entry): {x = y} + {x <> y}.
-      refine (_ (triple_dec (entryId x) (entryId y))).
-      intros; destruct x0.
-
-      - left; abstract (apply id_equal in e; intuition).
-      - right; abstract (intro; apply id_equal in H; intuition).
-    Defined.
-
     Fixpoint entries (prog: Program): list Entry :=
       match prog with
       | cons s next =>

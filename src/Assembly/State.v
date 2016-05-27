@@ -174,8 +174,8 @@ Module Triple_as_OT <: UsualOrderedType.
   Defined.
 End Triple_as_OT.
 
-Module State.
-  Import ListNotations Util.
+Module StateCommon.
+  Export ListNotations Util.
 
   Module NatM := FMapAVL.Make(Nat_as_OT).
   Module PairM := FMapAVL.Make(Pair_as_OT).
@@ -185,9 +185,70 @@ Module State.
   Definition PairNMap: Type := PairM.t N.
   Definition TripleNMap: Type := TripleM.t N.
   Definition LabelMap: Type := NatM.t nat.
+End StateCommon.
 
-  Delimit Scope state_scope with state.
-  Open Scope state_scope.
+Module ListState.
+  Export StateCommon.
+
+  Definition ListState (n: nat) := ((list (word n)) * PairNMap * (option bool))%type.
+
+  Definition emptyState {n}: ListState n := ([], PairM.empty N, None).
+
+  Definition getVar {n: nat} (name: nat) (st: ListState n): option (word n) :=
+    nth_error (fst (fst st)) name.
+
+  Definition getList {n: nat} (st: ListState n): list (word n) :=
+    fst (fst st).
+
+  Definition setList {n: nat} (lst: list (word n)) (st: ListState n): ListState n :=
+    (lst, snd (fst st), snd st).
+
+  Definition getMem {n: nat} (name index: nat) (st: ListState n): option (word n) :=
+    omap (PairM.find (name, index) (snd (fst st))) (fun v => Some (NToWord n v)).
+
+  Definition setMem {n: nat} (name index: nat) (v: word n) (st: ListState n): ListState n :=
+    (fst (fst st), PairM.add (name, index) (wordToN v) (snd (fst st)), snd st).
+
+  Definition getCarry {n: nat} (st: ListState n): option bool := (snd st).
+
+  Definition setCarry {n: nat} (v: bool) (st: ListState n): ListState n :=
+    (fst st, Some v).
+
+  Definition setCarryOpt {n: nat} (v: option bool) (st: ListState n): ListState n :=
+    (fst st, v).
+
+End ListState.
+
+Module MedState.
+  Export StateCommon.
+
+  Definition MedState (n: nat) := (NatNMap * PairNMap * (option bool))%type.
+
+  Definition emptyState {n}: MedState n := (NatM.empty N, PairM.empty N, None).
+
+  Definition getVar {n: nat} (name: nat) (st: MedState n): option (word n) :=
+    omap (NatM.find name (fst (fst st))) (fun v => Some (NToWord n v)).
+
+  Definition setVar {n: nat} (name: nat) (v: word n) (st: MedState n): MedState n :=
+    (NatM.add name (wordToN v) (fst (fst st)), snd (fst st), snd st).
+
+  Definition getMem {n: nat} (name index: nat) (st: MedState n): option (word n) :=
+    omap (PairM.find (name, index) (snd (fst st))) (fun v => Some (NToWord n v)).
+
+  Definition setMem {n: nat} (name index: nat) (v: word n) (st: MedState n): MedState n :=
+    (fst (fst st), PairM.add (name, index) (wordToN v) (snd (fst st)), snd st).
+
+  Definition getCarry {n: nat} (st: MedState n): option bool := (snd st).
+
+  Definition setCarry {n: nat} (v: bool) (st: MedState n): MedState n :=
+    (fst st, Some v).
+
+  Definition setCarryOpt {n: nat} (v: option bool) (st: MedState n): MedState n :=
+    (fst st, v).
+End MedState.
+
+Module FullState.
+  Export StateCommon.
 
   (* The Big Definition *)
 
@@ -275,4 +336,4 @@ Module State.
     | _ => state
     end.
 
-End State.
+End FullState.
