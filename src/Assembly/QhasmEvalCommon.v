@@ -1,6 +1,7 @@
 Require Export QhasmCommon QhasmUtil State.
 Require Export ZArith Sumbool.
 Require Export Bedrock.Word.
+Require Import Logic.Eqdep_dec.
 
 Import State.
 Import Util.
@@ -142,3 +143,111 @@ Definition evalAssignment (a: Assignment) (state: State): option State :=
   | AConstInt _ r c =>
     Some (setReg r (constValueW c) state)
   end.
+
+(* Width decideability *)
+
+Definition getWidth (n: nat): option (Width n) :=
+  match n with
+  | 32 => Some W32
+  | 64 => Some W64
+  | _ => None
+  end.
+
+Lemma getWidth_eq {n} (a: Width n): Some a = getWidth n.
+Proof. induction a; unfold getWidth; simpl; intuition. Qed.
+
+Lemma width_eq {n} (a b: Width n): a = b.
+Proof. 
+  assert (Some a = Some b) as H by (
+    replace (Some a) with (getWidth n) by (rewrite getWidth_eq; intuition);
+    replace (Some b) with (getWidth n) by (rewrite getWidth_eq; intuition);
+    intuition).
+  inversion H; intuition.
+Qed. 
+
+(* Mapping Conversions *)
+
+Definition wordToM {n: nat} {spec: Width n} (w: word n): Mapping n :=
+  constM _ (const spec w).
+
+Definition regToM {n: nat} {spec: Width n} (r: Reg n): Mapping n :=
+  regM _ r.
+
+Definition stackToM {n: nat} {spec: Width n} (s: Stack n): Mapping n :=
+  stackM _ s.
+
+Definition constToM {n: nat} {spec: Width n} (c: Const n): Mapping n :=
+  constM _ c.
+
+Definition mapping_dec {n} (a b: Mapping n): {a = b} + {a <> b}.
+  refine (match (a, b) as p' return (a, b) = p' -> _ with
+  | (regM v, regM v') => fun _ => 
+    if (Nat.eq_dec (regName v) (regName v'))
+    then left _
+    else right _
+
+  | (stackM v, stackM v') => fun _ => 
+    if (Nat.eq_dec (stackName v) (stackName v'))
+    then left _
+    else right _
+
+  | (constM v, constM v') => fun _ => 
+    if (Nat.eq_dec (constValueN v) (constValueN v'))
+    then left _
+    else right _
+
+  | (memM _ v, memM _ v') => fun _ => 
+    if (Nat.eq_dec (memName v) (memName v')) 
+    then if (Nat.eq_dec (memLength v) (memLength v'))
+      then left _
+      else right _
+    else right _
+
+  | _ => fun _ => right _
+  end (eq_refl (a, b))); abstract (
+    inversion_clear _H;
+    unfold regName, stackName, constValueN, memName, memLength in *;
+    intuition; try inversion H;
+    destruct v, v'; subst;
+    try assert (w = w0) by (apply width_eq); do 3 first [
+      contradict _H0; inversion H1
+    | rewrite <- (natToWord_wordToNat w0);
+      rewrite <- (natToWord_wordToNat w2);
+      assert (w = w1) by (apply width_eq); subst;
+      rewrite _H0
+    | apply (inj_pair2_eq_dec _ Nat.eq_dec) in H3
+    | inversion H; subst; intuition
+    | intuition ]).
+Defined.
+
+Definition dec_lt (a b: nat): {(a < b)%nat} + {(a >= b)%nat}.
+  assert ({(a <? b)%nat = true} + {(a <? b)%nat <> true})
+    by abstract (destruct (a <? b)%nat; intuition);
+    destruct H.
+
+  - left; abstract (apply Nat.ltb_lt in e; intuition).
+
+  - right; abstract (rewrite Nat.ltb_lt in n; intuition).
+Defined.
+
+Fixpoint stackNames {n} (lst: list (Mapping n)): list nat :=
+  match lst with
+  | nil => nil
+  | cons c cs =>
+    match c with
+    | stackM v => cons (stackName v) (stackNames cs)
+    | _ => stackNames cs
+    end
+  end.
+
+Fixpoint regNames {n} (lst: list (Mapping n)): list nat :=
+  match lst with
+  | nil => nil
+  | cons c cs =>
+    match c with
+    | regM v => cons (regName v) (regNames cs)
+    | _ => regNames cs
+    end
+  end.
+
+
