@@ -250,4 +250,37 @@ Fixpoint regNames {n} (lst: list (Mapping n)): list nat :=
     end
   end.
 
+(* Mapping Identifier-Triples *)
 
+Definition mappingId {n} (x: Mapping n): nat * nat * nat :=
+  match x with
+  | regM (reg n _ v) => (0, n, v)
+  | stackM (stack n _ v) => (1, n, v)
+  | constM (const n _ w) => (2, n, wordToNat w)
+  | memM _ (mem n m _ v) => (3, m, v)
+  end.
+
+Lemma id_equal: forall {n: nat} (x y: Mapping n),
+    x = y <-> mappingId x = mappingId y.
+Proof.
+  intros; split; intros; try abstract (rewrite H; intuition);
+    destruct x as [x | x | x | x], y as [y | y | y | y];
+    destruct x, y; unfold mappingId in H; simpl in H;
+
+    repeat match goal with
+    | [X: (_, _, _) = (_, _, _) |- _ ] =>
+      apply Triple_as_OT.conv in X
+    | [X: _ /\ _ /\ _ |- _ ] => destruct X
+    | [X: _ /\ _ |- _ ] => destruct X
+    | [A: Width _, B: Width _ |- _ ] =>
+      replace A with B by (apply width_eq)
+    | [X: context[match ?a with | _ => _ end] |- _ ] =>
+      destruct a
+    end; try subst; try omega; intuition.
+
+  rewrite <- (natToWord_wordToNat w0);
+    rewrite <- (natToWord_wordToNat w2);
+    rewrite H1; intuition.
+Qed.
+
+Definition id_dec := Triple_as_OT.eq_dec.
