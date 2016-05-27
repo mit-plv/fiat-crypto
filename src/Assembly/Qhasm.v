@@ -7,7 +7,6 @@ Module Qhasm <: Language.
   Import State.
 
   (* A constant upper-bound on the number of operations we run *)
-  Definition maxOps: nat := 1000.
   Definition State := State.
 
   (* Program Types *)

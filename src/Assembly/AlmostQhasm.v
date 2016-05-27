@@ -15,11 +15,29 @@ Module AlmostQhasm <: Language.
     | AAssign: Assignment -> AlmostProgram
     | AOp: Operation -> AlmostProgram
     | ACond: Conditional -> AlmostProgram -> AlmostProgram -> AlmostProgram
-    | AWhile: Conditional -> AlmostProgram -> AlmostProgram.
+    | AWhile: Conditional -> AlmostProgram -> AlmostProgram
+    | ADef: Label -> AlmostProgram -> AlmostProgram -> AlmostProgram
+    | ACall: Label -> AlmostProgram.
 
   Hint Constructors AlmostProgram.
 
   Definition Program := AlmostProgram.
+
+  Fixpoint inline (l: nat) (f prog: AlmostProgram) :=
+    match prog with
+    | ASeq a b => ASeq (inline l f a) (inline l f b)
+    | ACond c a b => ACond c (inline l f a) (inline l f b)
+    | AWhile c a => AWhile c (inline l f a)
+    | ADef l' f' p' =>
+      if (Nat.eq_dec l l')
+      then prog
+      else ADef l' (inline l f f') (inline l f p')
+    | ACall l' =>
+      if (Nat.eq_dec l l')
+      then f
+      else prog
+    | _ => prog
+    end.
 
   Inductive AlmostEval: AlmostProgram -> State -> State -> Prop :=
     | AESkip: forall s, AlmostEval ASkip s s
@@ -48,7 +66,10 @@ Module AlmostQhasm <: Language.
       -> AlmostEval (AWhile c a) s s''
     | AEWhileSkip: forall c a s,
         evalCond c s = Some false
-      -> AlmostEval (AWhile c a) s s.
+        -> AlmostEval (AWhile c a) s s
+    | AEFun: forall l f p s s',
+        AlmostEval (inline l f p) s s'
+        -> AlmostEval (ADef l f p) s s'.
 
   Definition evaluatesTo := AlmostEval.
 

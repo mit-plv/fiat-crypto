@@ -1,11 +1,11 @@
-Require Import QhasmEvalCommon QhasmUtil.
+Require Import QhasmEvalCommon QhasmUtil State.
 Require Import Language.
 Require Import List.
 
 Module Type PseudoMachine.
   Parameter width: nat.
   Parameter vars: nat.
-  Parameter width_spec: ISize width.
+  Parameter width_spec: Width width.
 End PseudoMachine.
 
 Module Pseudo (M: PseudoMachine) <: Language.
@@ -14,104 +14,90 @@ Module Pseudo (M: PseudoMachine) <: Language.
   Definition const: Type := word width.
 
   (* Program Types *)
-  Definition State := list const.
+  Definition State := ((list const) * (list (list const)) * (option bool))%type.
+
+  Definition var (st: State)  := fst (fst st).
+  Definition mem (st: State)  := snd (fst st).
+  Definition carry (st: State) := snd st.
 
   Inductive Pseudo: nat -> nat -> Type :=
     | PVar: forall n, Index n -> Pseudo n 1
+    | PMem: forall n m, Index n -> Index m -> Pseudo n 1
     | PConst: forall n, const -> Pseudo n 1
 
     | PBin: forall n, IntOp -> Pseudo n 2 -> Pseudo n 1
     | PDual: forall n, DualOp -> Pseudo n 2 -> Pseudo n 2
+    | PCarry: forall n, CarryOp -> Pseudo n 2 -> Pseudo n 1
     | PShift: forall n, RotOp -> Index width -> Pseudo n 1 -> Pseudo n 1
+
+    | PIf: forall n m, TestOp -> Index n -> Index n -> Pseudo n m -> Pseudo n m -> Pseudo n m
+    | PFunExp: forall n, Pseudo n n -> nat -> Pseudo n n
 
     | PLet: forall n k m, Pseudo n k -> Pseudo (n + k) m -> Pseudo n m
     | PComb: forall n a b, Pseudo n a -> Pseudo n b -> Pseudo n (a + b)
-
-    | PIf: forall n m, TestOp -> Index n -> Index n -> Pseudo n m -> Pseudo n m -> Pseudo n m
-    | PFunExp: forall n, Pseudo n n -> nat -> Pseudo n n.
+    | PCall: forall n m, Pseudo n m -> Pseudo n m.
 
   Hint Constructors Pseudo.
 
   Definition Program := Pseudo vars vars.
 
-  Definition applyBin (op: IntOp) (a b: word width): const :=
-    match op with
-    | IPlus => wplus a b
-    | IMinus => wminus a b
-    | IAnd => wand a b
-    | IXor => wxor a b
-    | IOr => wor a b
-    end.
-
-  Definition applyDual (op: DualOp) (a b: word width): list const :=
-    match op with
-    | Wmult =>
-      let wres := natToWord (width + width)
-        (N.to_nat ((wordToN a) * (wordToN b))) in
-      [split1 _ _ wres; split2 _ _ wres]
-    end.
-
-  Definition applyShift (op: RotOp) (v: const) (n: Index width): const.
-    refine match op with
-    | Shl => convert (Word.combine (wzero n) (split1 (width - n) n (convert v _))) _
-    | Shr => convert (Word.combine (split2 n (width - n) (convert v _)) (wzero n)) _
-    end; abstract (
-      unfold const;
-      destruct n; simpl;
-      replace (width - x + x) with width;
-      replace (x + (width - x)) with width;
-      intuition ).
-  Defined.
-
   Fixpoint pseudoEval {n m} (prog: Pseudo n m) (st: State): option State :=
-    let option_map' := fun {A B: Type} (x: option A) (f: A -> option B) =>
-      match x with
-      | Some x' =>
-        match (f x') with
-        | Some res => Some res
-        | None => None
-        end
-      | _ => None
-      end in
-
     match prog with
-    | PVar n i => option_map' (nth_error st i) (fun x => Some [x])
-    | PConst n c => Some ([c])
+    | PVar n i =>
+      omap (nth_error (var st) i) (fun x =>
+        Some ([x], mem st, carry st))
+
+    | PMem n m v i =>
+      omap (nth_error (mem st) v) (fun vec =>
+        omap (nth_error vec i) (fun x =>
+          Some ([x], mem st, carry st)))
+
+    | PConst n c => Some ([c], mem st, carry st)
 
     | PBin n o p =>
-      option_map' (pseudoEval p st) (fun sp =>
+      omap (pseudoEval p st) (fun sp =>
         match sp with
-        | [wa; wb] => Some [applyBin o wa wb]
+        | ([wa; wb], m', _) =>
+          let (v, c) := evalIntOp o wa wb in Some ([v], m', c)
+        | _ => None
+        end)
+
+    | PCarry n o p =>
+      omap (pseudoEval p st) (fun sp =>
+        match sp with
+        | ([wa; wb], m', Some c) =>
+          let (v, c') := evalCarryOp o wa wb c in Some ([v], m', Some c')
         | _ => None
         end)
 
     | PDual n o p =>
-      option_map' (pseudoEval p st) (fun sp =>
+      omap (pseudoEval p st) (fun sp =>
         match sp with
-        | [wa; wb] => Some (applyDual o wa wb)
+        | ([wa; wb], m', co) =>
+          let (low, high) := evalDualOp o wa wb in Some ([low; high], m', co)
         | _ => None
         end)
 
     | PShift n o a x =>
-      option_map' (pseudoEval x st) (fun sx =>
+      omap (pseudoEval x st) (fun sx =>
         match sx with
-        | [wx] => Some [applyShift o wx a]
+        | ([wx], m', co) => Some ([evalRotOp o wx a], m', co)
         | _ => None
         end)
 
     | PLet n k m f g =>
-      option_map' (pseudoEval f st) (fun sf =>
-        option_map' (pseudoEval g (st ++ sf))
+      omap (pseudoEval f st) (fun sf =>
+        omap (pseudoEval g ((var st) ++ (var sf), mem sf, carry sf))
           (fun sg => Some sg))
 
     | PComb n a b f g =>
-      option_map' (pseudoEval f st) (fun sf =>
-        option_map' (pseudoEval g st) (fun sg =>
-          Some (sf ++ sg)))
+      omap (pseudoEval f st) (fun sf =>
+        omap (pseudoEval g st) (fun sg =>
+          Some ((var sf) ++ (var sg), mem sg, carry sg)))
 
     | PIf n m t i0 i1 l r =>
-      option_map' (nth_error st i0) (fun v0 =>
-        option_map' (nth_error st i1) (fun v1 =>
+      omap (nth_error (var st) i0) (fun v0 =>
+        omap (nth_error (var st) i1) (fun v1 =>
           if (evalTest t v0 v1)
           then pseudoEval l st
           else pseudoEval r st ))
@@ -121,9 +107,11 @@ Module Pseudo (M: PseudoMachine) <: Language.
         match e' with
         | O => Some st'
         | S e'' =>
-          option_map' (pseudoEval p st') (fun st'' =>
+          omap (pseudoEval p st') (fun st'' =>
             funexpseudo e'' st'')
         end) e st
+
+    | PCall n m p => pseudoEval p st
     end.
 
   Definition evaluatesTo := fun (p: Program) (st st': State) => (pseudoEval p st = Some st').
@@ -134,14 +122,14 @@ End Pseudo.
 Module PseudoUnary32 <: PseudoMachine.
   Definition width := 32.
   Definition vars := 1.
-  Definition width_spec := I32.
+  Definition width_spec := W32.
   Definition const: Type := word width.
 End PseudoUnary32.
 
 Module PseudoUnary64 <: PseudoMachine.
   Definition width := 64.
   Definition vars := 1.
-  Definition width_spec := I64.
+  Definition width_spec := W64.
   Definition const: Type := word width.
 End PseudoUnary64.
  
