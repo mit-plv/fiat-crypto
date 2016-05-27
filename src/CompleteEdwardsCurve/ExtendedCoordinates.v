@@ -210,17 +210,11 @@ Section ExtendedCoordinates.
       trivial.
     Qed.
 
-    Definition scalarMultM1 := iter_op unifiedAddM1 (mkExtendedPoint E.zero) N.testbit_nat.
-    Definition scalarMultM1_spec :=
-      iter_op_spec unifiedAddM1 unifiedAddM1_assoc (mkExtendedPoint E.zero) unifiedAddM1_0_l
-        N.testbit_nat (fun x => x) testbit_conversion_identity.
-    Lemma scalarMultM1_rep : forall n P, unExtendedPoint (scalarMultM1 (N.of_nat n) P (N.size_nat (N.of_nat n))) = E.mul n (unExtendedPoint P).
-      intros; rewrite scalarMultM1_spec, Nat2N.id; auto.
-      induction n; [simpl; rewrite !unExtendedPoint_mkExtendedPoint; reflexivity|].
+    Lemma scalarMultM1_rep : forall n P, unExtendedPoint (nat_iter_op unifiedAddM1 (mkExtendedPoint E.zero) n P) = E.mul n (unExtendedPoint P).
+      induction n; [simpl; rewrite !unExtendedPoint_mkExtendedPoint; reflexivity|]; intros.
       unfold E.mul; fold E.mul.
       rewrite <-IHn, unifiedAddM1_rep; auto.
     Qed.
-
   End TwistMinus1.
 
   Definition negateExtended' P := let '(X, Y, Z, T) := P in (opp X, Y, Z, opp T).

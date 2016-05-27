@@ -46,9 +46,9 @@ End EdDSAParams.
 
 Section EdDSA.
   Context {prm:EdDSAParams}.
-  Existing Instance E.
-  Existing Instance PointEncoding.
-  Existing Instance FlEncoding.
+  Global Existing Instance E.
+  Global Existing Instance PointEncoding.
+  Global Existing Instance FlEncoding.
   Existing Class le.
   Existing Instance n_le_b.
 
