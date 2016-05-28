@@ -40,6 +40,33 @@ Local Ltac replace_let_in_with_Let_In :=
            => apply Let_In_Proper_nd; [ reflexivity | cbv beta delta [pointwise_relation]; intro ]
          end.
 
+Local Ltac Let_In_app fn :=
+  match goal with
+  | [ |- appcontext G[Let_In (fn ?x) ?f] ]
+    => change (Let_In (fn x) f) with (Let_In x (fun y => f (fn y))); cbv beta
+  end.
+
+Lemma if_map : forall {T U} (f:T->U) (b:bool) (x y:T), (if b then f x else f y) = f (if b then x else y).
+Proof.
+  destruct b; trivial.
+Qed.
+
+Lemma pull_Let_In {B C} (f : B -> C) A (v : A) (b : A -> B)
+  : Let_In v (fun v' => f (b v')) = f (Let_In v b).
+Proof.
+  reflexivity.
+Qed.
+
+Lemma Let_app_In {A B T} (g:A->B) (f:B->T) (x:A) :
+    @Let_In _ (fun _ => T) (g x) f =
+    @Let_In _ (fun _ => T) x (fun p => f (g x)).
+Proof. reflexivity. Qed.
+
+Lemma Let_app2_In {A B C D T} (g1:A->C) (g2:B->D) (f:C*D->T) (x:A) (y:B) :
+    @Let_In _ (fun _ => T) (g1 x, g2 y) f =
+    @Let_In _ (fun _ => T) (x, y) (fun p => f ((g1 (fst p), g2 (snd p)))).
+Proof. reflexivity. Qed.
+
 Lemma funexp_proj {T T'} (proj : T -> T') (f : T -> T) (f' : T' -> T') x n
       (f_proj : forall a, proj (f a) = f' (proj a))
   : proj (funexp f x n) = funexp f' (proj x) n.
@@ -248,8 +275,28 @@ Proof.
     destruct (B_eqb P_ (enc Q)) eqn:Heq; [rewrite B_eqb_iff in Heq; eauto | trivial]. }
 Qed.
 
+Lemma unfoldDiv : forall {m} (x y:F m), (x/y = x * inv y)%F. Proof. unfold div. congruence. Qed.
+
 Definition FieldToN {m} (x:F m) := Z.to_N (FieldToZ x).
 Lemma FieldToN_correct {m} (x:F m) : FieldToN (m:=m) x = Z.to_N (FieldToZ x). reflexivity. Qed.
+
+Definition natToField {m} x : F m := ZToField (Z.of_nat x).
+Definition FieldToNat {m} (x:F m) : nat := Z.to_nat (FieldToZ x).
+Lemma FieldToNat_natToField {m} : m <> 0 -> forall x, x mod m = FieldToNat (natToField (m:=Z.of_nat m) x).
+  unfold natToField, FieldToNat; intros.
+  rewrite (FieldToZ_ZToField), <-mod_Zmod, Nat2Z.id; trivial.
+Qed.
+
+Lemma F_eqb_iff {q} : forall x y : F q, F_eqb x y = true <-> x = y.
+Proof.
+  split; eauto using F_eqb_eq, F_eqb_complete.
+Qed.
+Lemma E_eqb_iff : forall {prm:TwistedEdwardsParams} (x y : E.point), E.point_eqb x y = true <-> x = y.
+Proof.
+  split; eauto using E.point_eqb_sound, E.point_eqb_complete.
+Qed.
+
+Lemma unfold_E_sub : forall {prm:TwistedEdwardsParams} a b, (a - b = a + E.opp b)%E. Proof. reflexivity. Qed.
 
 Generalizable All Variables.
 Section FSRepOperations.
@@ -291,7 +338,7 @@ Section ESRepOperations.
   Context {SRep_testbit : SRep -> nat -> bool}.
   Context {SRep_testbit_correct : forall (x0 : SRep) (i : nat), SRep_testbit x0 i = N.testbit_nat (FieldToN (unRep x0)) i}.
   Definition scalarMultExtendedSRep (a:SRep) (P:extendedPoint) :=
-    unExtendedPoint (iter_op (@unifiedAddM1 _ a_is_minus1) (mkExtendedPoint E.zero) SRep_testbit a P (N.size_nat (Z.to_N (Z.pred l)))).
+    iter_op (@unifiedAddM1 _ a_is_minus1) (mkExtendedPoint E.zero) SRep_testbit a P (COMPILETIME (N.size_nat (Z.to_N (Z.pred l)))).
 
   Lemma bound_satisfied : forall a, (N.size_nat (FieldToN (unRep a)) <= N.size_nat (Z.to_N (Z.pred l)))%nat.
   Proof.
@@ -303,132 +350,35 @@ Section ESRepOperations.
   Qed.
     
   Definition scalarMultExtendedSRep_correct : forall (a:SRep) (P:extendedPoint),
-      scalarMultExtendedSRep a P = (N.to_nat (FieldToN (unRep a)) * unExtendedPoint P)%E.
+      unExtendedPoint (scalarMultExtendedSRep a P) = (N.to_nat (FieldToN (unRep a)) * unExtendedPoint P)%E.
   Proof. (* derivation result copy-pasted to above to remove preconditions from it *)
     intros.
     rewrite <-(scalarMultM1_rep a_is_minus1), <-(@iter_op_spec _ extendedPoint_eq _ _ (@unifiedAddM1 _ a_is_minus1) _ (@unifiedAddM1_assoc _ a_is_minus1) _ (@unifiedAddM1_0_l _ a_is_minus1) _ _ SRep_testbit_correct _ _ _ (bound_satisfied _)).
     reflexivity.
   Defined.
-End ESRepOperations.
 
-Section EdDSADerivation.
-  Context `(eddsaprm:EdDSAParams).
-  Context `(rcS:RepConversions (F (Z.of_nat l)) SRep) (rcSOK:RepConversionsOK rcS).
-  Context {SRep_testbit : SRep -> nat -> bool}.
-  Context {SRep_testbit_correct : forall (x0 : SRep) (i : nat), SRep_testbit x0 i = N.testbit_nat (FieldToN (unRep x0)) i}.
-  Context `(rcF:RepConversions (F q) FRep) (rcFOK:RepConversionsOK rcF).
-  Context (FRepAdd FRepSub FRepMul:FRep->FRep->FRep) (FRepAdd_correct:RepBinOpOK rcF add FRepMul).
-  Context (FRepSub_correct:RepBinOpOK rcF sub FRepSub) (FRepMul_correct:RepBinOpOK rcF mul FRepMul).
-  Context (FRepInv:FRep->FRep) (FRepInv_correct:forall x, inv (unRep x)%F = unRep (FRepInv x)).
-  Context (a_is_minus1:CompleteEdwardsCurve.a = opp 1).
-
-  Local Infix "++" := Word.combine.
-  Local Infix "==?" := E.point_eqb (at level 70) : E_scope.
-  Local Infix "==?" := ModularArithmeticTheorems.F_eq_dec (at level 70) : F_scope.
-  Local Notation " a '[:' i ']' " := (Word.split1 i _ a) (at level 40).
-  Local Notation " a '[' i ':]' " := (Word.split2 i _ a) (at level 40).
-  Local Arguments H {_ _} _.
-  Local Arguments unifiedAddM1 {_} {_} _ _.
-
-  (*TODO:move*)
-  Lemma F_eqb_iff : forall x y : F q, F_eqb x y = true <-> x = y.
-  Proof.
-    split; eauto using F_eqb_eq, F_eqb_complete.
-  Qed.
-  Lemma E_eqb_iff : forall x y : E.point, E.point_eqb x y = true <-> x = y.
-  Proof.
-    split; eauto using E.point_eqb_sound, E.point_eqb_complete.
-  Qed.
-  
-  Lemma B_proj : proj1_sig B = (fst(proj1_sig B), snd(proj1_sig B)). destruct B as [[]]; reflexivity. Qed.
-
-  Lemma solve_for_R_eq : forall A B C, (A = B + C <-> B = A - C)%E.
-  Proof.
-    intros; split; intros; subst; unfold E.sub;
-      rewrite <-E.add_assoc, ?E.add_opp_r, ?E.add_opp_l, E.add_0_r; reflexivity.
-  Qed.
-  
-  Lemma solve_for_R : forall A B C, (A ==? B + C)%E = (B ==? A - C)%E.
-  Proof.
-    intros;
-      rewrite !E.point_eqb_correct;
-      repeat match goal with |- context[E.point_eq_dec ?x ?y] => destruct (E.point_eq_dec x y) end;
-      rewrite solve_for_R_eq in *;
-      congruence.
-  Qed.
-
-  Axiom decode_scalar : word b -> option N.
-  Axiom decode_scalar_correct : forall x, decode_scalar x = option_map (fun x : F (Z.of_nat l) => Z.to_N x) (dec x).
-  
-  Axiom enc':(F q * F q) -> word b.
-  Axiom enc'_correct : @enc E.point _ _ = (fun x => enc' (proj1_sig x)).
+  Context `{rcF:RepConversions (F q) FRep} {rcFOK:RepConversionsOK rcF}.
+  Context {FRepAdd FRepSub FRepMul:FRep->FRep->FRep} {FRepAdd_correct:RepBinOpOK rcF add FRepMul}.
+  Context {FRepSub_correct:RepBinOpOK rcF sub FRepSub} {FRepMul_correct:RepBinOpOK rcF mul FRepMul}.
+  Context {FRepInv:FRep->FRep} {FRepInv_correct:forall x, inv (unRep x)%F = unRep (FRepInv x)}.
 
   Axiom FRepOpp : FRep -> FRep.
   Axiom FRepOpp_correct : forall x, opp (unRep x) = unRep (FRepOpp x).
 
-  Axiom wltu : forall {b}, word b -> word b -> bool.
-  Axiom wltu_correct : forall {b} (x y:word b), wltu x y = (wordToN x <? wordToN y)%N.
+  Create HintDb FRepOperations discriminated.
+  Hint Rewrite FRepMul_correct FRepAdd_correct FRepSub_correct @FRepInv_correct @FSRepPow_correct FRepOpp_correct : FRepOperations.
 
-  Axiom wire2FRep : word (b-1) -> option FRep.
-  Axiom wire2FRep_correct : forall x, Fm_dec x = option_map unRep (wire2FRep x).
-
-  Axiom FRep2wire : FRep -> word (b-1).
-  Axiom FRep2wire_correct : forall x, FRep2wire x = @enc _ _ FqEncoding (unRep x).
-  
-  Local Notation "'(' X ',' Y ',' Z ',' T ')'" := (mkExtended X Y Z T).
-  Local Notation "2" := (ZToField 2) : F_scope.
-
-  Axiom nonequivalent_optimization_Hmodl : forall n (x:word n) A, (wordToNat (H x) * A = (wordToNat (H x) mod l * A))%E.
-  Lemma two_lt_l : (2 < Z.of_nat l)%Z.
-  Proof.
-    pose proof l_odd. omega.
-  Qed.
-  Lemma l_nonzero : l <> 0.
-  Proof.
-    pose proof l_odd. omega.
-  Qed.
-
-  Lemma unfoldDiv : forall {m} (x y:F m), (x/y = x * inv y)%F. Proof. unfold div. congruence. Qed.
+  (*
+  Definition ERep := (FRep * FRep * FRep * FRep)%type.
 
   Definition rep2E (r:FRep * FRep * FRep * FRep) : extended :=
     match r with (((x, y), z), t) => mkExtended (unRep x) (unRep y) (unRep z) (unRep t) end.
 
-  Lemma if_map : forall {T U} (f:T->U) (b:bool) (x y:T), (if b then f x else f y) = f (if b then x else y).
-  Proof.
-    destruct b; trivial.
-  Qed.
-
-  (** TODO: Move me *)
-  Local Ltac Let_In_app fn :=
-    match goal with
-    | [ |- appcontext G[Let_In (fn ?x) ?f] ]
-      => change (Let_In (fn x) f) with (Let_In x (fun y => f (fn y))); cbv beta
-    end.
-
-  Lemma pull_Let_In {B C} (f : B -> C) A (v : A) (b : A -> B)
-    : Let_In v (fun v' => f (b v')) = f (Let_In v b).
-  Proof.
-    reflexivity.
-  Qed.
-
-  Lemma Let_app_In {A B T} (g:A->B) (f:B->T) (x:A) :
-      @Let_In _ (fun _ => T) (g x) f =
-      @Let_In _ (fun _ => T) x (fun p => f (g x)).
+  Lemma fold_rep2E x y z t
+    : mkExtended (unRep x) (unRep y) (unRep z) (unRep t) = rep2E (((x, y), z), t).
   Proof. reflexivity. Qed.
 
-  Lemma Let_app2_In {A B C D T} (g1:A->C) (g2:B->D) (f:C*D->T) (x:A) (y:B) :
-      @Let_In _ (fun _ => T) (g1 x, g2 y) f =
-      @Let_In _ (fun _ => T) (x, y) (fun p => f ((g1 (fst p), g2 (snd p)))).
-  Proof. reflexivity. Qed.
-
-
-  Create HintDb FRepOperations discriminated.
-  Hint Rewrite FRepMul_correct FRepAdd_correct FRepSub_correct @FRepInv_correct @FSRepPow_correct FRepOpp_correct : FRepOperations.
-
-  Create HintDb EdDSA_opts discriminated.
-  Hint Rewrite FRepMul_correct FRepAdd_correct FRepSub_correct @FRepInv_correct @FSRepPow_correct FRepOpp_correct : EdDSA_opts.
-
-  Lemma unifiedAddM1Rep_sig : forall a b : FRep * FRep * FRep * FRep, { unifiedAddM1Rep | rep2E unifiedAddM1Rep = unifiedAddM1' (rep2E a) (rep2E b) }.
+  Lemma unifiedAddM1Rep_sig : forall a b : ERep, { unifiedAddM1Rep | rep2E unifiedAddM1Rep = unifiedAddM1' (rep2E a) (rep2E b) }.
   Proof.
     destruct a as [[[]]]; destruct b as [[[]]].
     eexists.
@@ -443,7 +393,7 @@ Section EdDSADerivation.
         autorewrite with FRepOperations;
         Let_In_app unRep;
         eapply Let_In_Proper_nd; [reflexivity|cbv beta delta [Proper respectful pointwise_relation]; intro]).
-        lazymatch goal with |- ?LHS = (unRep ?x, unRep ?y, unRep ?z, unRep ?t) =>
+        lazymatch goal with |- ?LHS = mkExtended (unRep ?x) (unRep ?y) (unRep ?z) (unRep ?t) =>
                             change (LHS = (rep2E (((x, y), z), t)))
         end.
         reflexivity. }
@@ -465,70 +415,88 @@ Section EdDSADerivation.
     unfold rep2T, rep2E, erep2trep, extendedToTwisted; destruct P as [[[]]]; simpl.
     rewrite !unfoldDiv, <-!FRepMul_correct, <-FRepInv_correct. reflexivity.
   Qed.
+  *)
+End ESRepOperations.
 
-  (** TODO: Move me, remove Local *)
-  Definition proj1_sig_unmatched {A P} := @proj1_sig A P.
-  Definition proj1_sig_nounfold {A P} := @proj1_sig A P.
-  Definition proj1_sig_unfold {A P} := Eval cbv [proj1_sig] in @proj1_sig A P.
-  Local Ltac unfold_proj1_sig_exist :=
-  (** Change the first [proj1_sig] into [proj1_sig_unmatched]; if it's applied to [exist], mark it as unfoldable, otherwise mark it as not unfoldable.  Then repeat.  Finally, unfold. *)
-    repeat (change @proj1_sig with @proj1_sig_unmatched at 1;
-            match goal with
-            | [ |- context[proj1_sig_unmatched (exist _ _ _)] ]
-              => change @proj1_sig_unmatched with @proj1_sig_unfold
-            | _ => change @proj1_sig_unmatched with @proj1_sig_nounfold
-            end);
-    (* [proj1_sig_nounfold] is a thin wrapper around [proj1_sig]; unfolding it restores [proj1_sig].  Unfolding [proj1_sig_nounfold] exposes the pattern match, which is reduced by ι. *)
-    cbv [proj1_sig_nounfold proj1_sig_unfold].
+Section EdDSADerivation.
+  Context `(eddsaprm:EdDSAParams).
+  Context `(rcS:RepConversions (F (Z.of_nat l)) SRep) (rcSOK:RepConversionsOK rcS).
+  Context {SRep_testbit : SRep -> nat -> bool}.
+  Context {SRep_testbit_correct : forall (x0 : SRep) (i : nat), SRep_testbit x0 i = N.testbit_nat (FieldToN (unRep x0)) i}.
+  Context `(rcF:RepConversions (F q) FRep) (rcFOK:RepConversionsOK rcF).
+  Context (FRepAdd FRepSub FRepMul:FRep->FRep->FRep) (FRepAdd_correct:RepBinOpOK rcF add FRepMul).
+  Context (FRepSub_correct:RepBinOpOK rcF sub FRepSub) (FRepMul_correct:RepBinOpOK rcF mul FRepMul).
+  Context (FRepInv:FRep->FRep) (FRepInv_correct:forall x, inv (unRep x)%F = unRep (FRepInv x)).
+  Context (a_is_minus1:CompleteEdwardsCurve.a = opp 1).
 
-  Lemma unfold_E_sub : forall a b, (a - b = a + E.opp b)%E. Proof. reflexivity. Qed.
+  Context (SRepDec : word b -> option SRep) (SRepDec_correct : forall x, option_map (fun x : F (Z.of_nat l) => toRep x) (dec x) = SRepDec x).
+  Context (ERep:Type) (E2Rep : E.point -> ERep).
+  Context (ERepEnc : ERep -> word b) (ERepEnc_correct : forall (P:E.point), enc P = ERepEnc (E2Rep P)).
+  Context (ERepOpp : ERep -> ERep) (ERepOpp_correct : forall P:E.point, E2Rep (E.opp P) = ERepOpp (E2Rep P)).
+  Context (ERepAdd : ERep -> ERep -> ERep) (ERepAdd_correct : forall (P Q:E.point), E2Rep (E.add P Q) = ERepAdd (E2Rep P) (E2Rep Q)).
+  Context (ESRepMul : SRep -> ERep -> ERep) (ESRepMul_correct : forall (n:F (Z.of_nat l)) (Q:E.point), E2Rep (E.mul (Z.to_nat n) Q) = ESRepMul (toRep (ZToField n)) (E2Rep Q)).
+  Context (ERepDec:word b -> option ERep) (ERepDec_correct:forall P_, option_map E2Rep (dec P_) = ERepDec P_).
 
+  Axiom nonequivalent_optimization_Hmodl : forall n (x:word n) A, (wordToNat (H x) * A = (wordToNat (H x) mod l * A))%E.
+  Axiom (SRepH:forall {n}, word n -> SRep).
+  Axiom SRepH_correct : forall {n} (x:word n), toRep (natToField (H x)) = SRepH x.
 
-  Local Existing Instance eq_Reflexive. (* To get some of the [setoid_rewrite]s below to work, we need to infer [Reflexive eq] before [Reflexive Equivalence.equiv] *)
+  (* TODO: move to EdDSAProofs *)
+  Lemma two_lt_l : (2 < Z.of_nat l)%Z.
+  Proof.
+    pose proof l_odd. omega.
+  Qed.
+  Lemma l_nonzero : l <> 0.
+  Proof.
+    pose proof l_odd. omega.
+  Qed.
 
-  (* TODO: move me *)
-  Lemma fold_rep2E x y z t
-    : (unRep x, unRep y, unRep z, unRep t) = rep2E (((x, y), z), t).
-  Proof. reflexivity. Qed.
-  Lemma commute_negateExtended'_rep2E x y z t
-    : negateExtended' (rep2E (((x, y), z), t))
-      = rep2E (((FRepOpp x, y), z), FRepOpp t).
-  Proof. simpl; autorewrite with FRepOperations; reflexivity. Qed.
-  Lemma fold_rep2E_ffff x y z t
-    : (x, y, z, t) = rep2E (((toRep x, toRep y), toRep z), toRep t).
-  Proof. simpl; rewrite !rcFOK; reflexivity. Qed.
-  Lemma fold_rep2E_rrfr x y z t
-    : (unRep x, unRep y, z, unRep t) = rep2E (((x, y), toRep z), t).
-  Proof. simpl; rewrite !rcFOK; reflexivity. Qed.
-  Lemma fold_rep2E_0fff y z t
-    : (0%F, y, z, t) = rep2E (((toRep 0%F, toRep y), toRep z), toRep t).
-  Proof. apply fold_rep2E_ffff. Qed.
-  Lemma fold_rep2E_ff1f x y t
-    : (x, y, 1%F, t) = rep2E (((toRep x, toRep y), toRep 1%F), toRep t).
-  Proof. apply fold_rep2E_ffff. Qed.
-  Lemma commute_negateExtended'_rep2E_rrfr x y z t
-    : negateExtended' (unRep x, unRep y, z, unRep t)
-      = rep2E (((FRepOpp x, y), toRep z), FRepOpp t).
-  Proof. rewrite <- commute_negateExtended'_rep2E; simpl; rewrite !rcFOK; reflexivity. Qed.
+  Local Infix "++" := Word.combine.
+  Local Infix "==?" := E.point_eqb (at level 70) : E_scope.
+  Local Notation " a '[:' i ']' " := (Word.split1 i _ a) (at level 40).
+  Local Notation " a '[' i ':]' " := (Word.split2 i _ a) (at level 40).
+  Local Arguments H {_ _} _.
 
-  Local Existing Instance FqEncoding.
+  Lemma solve_for_R_eq : forall A B C, (A = B + C <-> B = A - C)%E.
+  Proof.
+    intros; split; intros; subst; unfold E.sub;
+      rewrite <-E.add_assoc, ?E.add_opp_r, ?E.add_opp_l, E.add_0_r; reflexivity.
+  Qed.
+  
+  Lemma solve_for_R : forall A B C, (A ==? B + C)%E = (B ==? A - C)%E.
+  Proof.
+    intros;
+      rewrite !E.point_eqb_correct;
+      repeat match goal with |- context[E.point_eq_dec ?x ?y] => destruct (E.point_eq_dec x y) end;
+      rewrite solve_for_R_eq in *;
+      congruence.
+  Qed.
 
-  Hint Rewrite @F_mul_0_l commute_negateExtended'_rep2E_rrfr fold_rep2E_0fff solve_for_R
-       (@fold_rep2E_ff1f (fst (proj1_sig B)))
-       (eqb_compare_encodings F_eqb F_eqb_iff (@weqb (b-1)) (@weqb_true_iff (b-1)))
-       (eqb_compare_encodings E.point_eqb E_eqb_iff (@weqb b) (@weqb_true_iff b))
-       (if_map unRep) unfold_E_sub E.opp_mul
-       (fun T => Let_app2_In (T := T) unRep unRep) @F_pow_2_r @unfoldDiv : EdDSA_opts.
-  Hint Rewrite <- unifiedAddM1Rep_correct erep2trep_correct
-       (fun x y z bound => iter_op_proj rep2E unifiedAddM1Rep unifiedAddM1' x y z N.testbit_nat bound unifiedAddM1Rep_correct)
-       FRep2wire_correct E.point_eqb_correct
-    : EdDSA_opts.
+  Create HintDb toESRep discriminated.
+  Hint Rewrite <-E.point_eqb_correct : toESRep.
+  Hint Rewrite
+    nonequivalent_optimization_Hmodl
+    (FieldToNat_natToField l_nonzero)
 
+    (fun n => solve_for_R (n * B)%E)
+    (compare_without_decoding PointEncoding _ E_eqb_iff _ (@weqb_true_iff _))
+
+    unfold_E_sub
+    E.opp_mul
+
+    ESRepMul_correct
+    ERepAdd_correct
+    ERepEnc_correct
+    ERepOpp_correct
+
+    @ZToField_FieldToZ
+    @SRepH_correct : toESRep.
+  
   Lemma sharper_verify : forall pk l msg sig, { sherper_verify | sherper_verify = verify (n:=l) pk msg sig}.
   Proof.
     eexists; cbv [EdDSA.verify]; intros.
 
-    etransitivity. Focus 2. {
+    etransitivity. Focus 2. { (* match dec .. with -> option_rect *)
       repeat match goal with 
              | [ |- ?x = ?x ] => reflexivity
              | _ => replace_option_match_with_option_rect
@@ -537,31 +505,17 @@ Section EdDSADerivation.
              end.
       reflexivity. } Unfocus.
     
-    setoid_rewrite <-E.point_eqb_correct.
-    setoid_rewrite solve_for_R.
-    setoid_rewrite (compare_without_decoding PointEncoding _ E_eqb_iff _ (@weqb_true_iff _)).
-
-    rewrite_strat bottomup hints EdDSA_opts.
-
-    setoid_rewrite <-(unExtendedPoint_mkExtendedPoint B).
-    setoid_rewrite <-(fun a => unExtendedPoint_mkExtendedPoint (E.opp a)).
-
-    setoid_rewrite nonequivalent_optimization_Hmodl.
-    setoid_rewrite <-(Nat2Z.id (_ mod EdDSA.l)).
-    setoid_rewrite (mod_Zmod _ _ l_nonzero).
-    setoid_rewrite <-Znat.Z_N_nat.
-    setoid_rewrite <-FieldToZ_ZToField.
-    setoid_rewrite <-FieldToN_correct.
-    setoid_rewrite <-rcSOK.
-
-    setoid_rewrite <-(scalarMultExtendedSRep_correct (a_is_minus1:=a_is_minus1) (SRep_testbit_correct:=SRep_testbit_correct) (two_lt_l:=two_lt_l)).
-
-    setoid_rewrite (unifiedAddM1_rep a_is_minus1).
-
+    rewrite_strat topdown hints toESRep.
+    setoid_rewrite ESRepMul_correct. (* TODO: why does [rewrite_strat] not do this? *)
+    rewrite_strat topdown hints toESRep.
+    
+    (* decoding of  S : option_rect (F l) -> option_map SRep *)
+    (* TODO: we want this section to look more like the following:
+        setoid_rewrite (@option_rect_option_map (F (Z.of_nat EdDSA.l)) _ bool toRep). *)
     etransitivity.
     Focus 2.
     { lazymatch goal with |- _ = option_rect _ _ ?false ?dec =>
-                          symmetry; etransitivity; [|eapply (option_rect_option_map (fun (x:F _) => Z.to_N x) _ false dec)]
+                          symmetry; etransitivity; [|eapply (option_rect_option_map (fun (x:F _) => toRep x) _ false dec)]
       end.
       eapply option_rect_Proper_nd; [intro|reflexivity..].
       match goal with
@@ -571,10 +525,36 @@ Section EdDSADerivation.
       end.
       reflexivity.
     } Unfocus.
-    rewrite <-decode_scalar_correct.
+    rewrite SRepDec_correct.
 
-    rewrite enc'_correct.
-    cbv [unExtendedPoint unifiedAddM1 negateExtended scalarMultM1].
+    (* decoding of A : option_rect E.point -> option_map E2Rep *)
+    (* TODO: automate *)
+    etransitivity.
+    Focus 2.
+    { do 1 (eapply option_rect_Proper_nd; [intro|reflexivity..]).
+      set_evars.
+      lazymatch goal with |- _ = option_rect _ _ ?false ?dec =>
+                          symmetry; etransitivity; [|eapply (option_rect_option_map E2Rep _ false dec)]
+      end.
+      eapply option_rect_Proper_nd; [intro|reflexivity..].
+      match goal with
+      | [ |- ?RHS = ?e ?v ]
+        => let RHS' := (match eval pattern v in RHS with ?RHS' _ => RHS' end) in
+           unify e RHS'
+      end.
+      reflexivity.
+    } Unfocus.
+    rewrite ERepDec_correct.
+
+    reflexivity.
+  Defined.
+  
+  (*
+
+    (** start dropping sigma-types from Extended points **)
+
+    setoid_rewrite point_enc_coordinates_correct.
+    cbv beta delta [unExtendedPoint unifiedAddM1 negateExtended scalarMultExtendedSRep E.opp].
     unfold_proj1_sig_exist.
 
     etransitivity.
@@ -593,6 +573,8 @@ Section EdDSADerivation.
     unfold_proj1_sig_exist.
     rewrite B_proj.
 
+    (* decoding of A : option_rect E.point -> option_map (F q * F q) *)
+    (* TODO: change to (FRep * FRep) instead *)
     etransitivity.
     Focus 2.
     { do 1 (eapply option_rect_Proper_nd; [intro|reflexivity..]).
@@ -609,7 +591,7 @@ Section EdDSADerivation.
       reflexivity.
     } Unfocus.
 
-    cbv [dec PointEncoding point_encoding].
+    (* TODO: this is specific to the encoding pattern (but not specific parameters:
     etransitivity.
     Focus 2.
     { do 1 (eapply option_rect_Proper_nd; [intro|reflexivity..]).
@@ -673,9 +655,8 @@ Section EdDSADerivation.
       reflexivity.
     } Unfocus.
 
-    cbv iota beta delta [q d a].
-
-    rewrite wire2FRep_correct.
+    setoid_rewrite wire2FRep_correct.
+    *)
 
     etransitivity.
     Focus 2. {
@@ -722,3 +703,4 @@ Section EdDSADerivation.
     reflexivity.
   Defined.
 End EdDSADerivation.
+*)

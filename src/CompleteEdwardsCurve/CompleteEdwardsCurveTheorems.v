@@ -215,23 +215,23 @@ Module E.
     Qed.
   
   
-    Program Definition opp (P:E.point) : E.point := let '(x, y) := proj1_sig P in (opp x, y).
-    Next Obligation. Proof.
-      pose (proj2_sig P) as H; rewrite <-Heq_anonymous in H; simpl in H.
-      rewrite F_square_opp; trivial.
-    Qed.
+    Definition opp' (xy:(F q*F q)) : (F q * F q) := let '(x, y) := xy in (opp x, y).
+    Definition opp (P:E.point) : E.point. exists (opp' (proj1_sig P)).
+    Proof.
+      destruct P as [[]]; simpl; rewrite F_square_opp; trivial.
+    Defined.
     
     Definition sub P Q := (P + opp Q)%E.
     
     Lemma opp_zero : opp E.zero = E.zero.
     Proof.
       pose proof @F_opp_0.
-      unfold opp, E.zero; eapply point_eq; congruence.
+      unfold opp, opp', E.zero; simpl; eapply point_eq; congruence.
     Qed.
   
     Lemma add_opp_r : forall P, (P + opp P = E.zero)%E.
     Proof.
-      unfold opp; Edefn; rewrite ?@F_pow_2_r in *; (F_field_simplify_eq; [clear_prm; F_nsatz|..]);
+      unfold opp, opp'; Edefn; rewrite ?@F_pow_2_r in *; (F_field_simplify_eq; [clear_prm; F_nsatz|..]);
         rewrite <-?@F_pow_2_r in *;
         pose proof (@edwardsAddCompletePlus _ _ _ _ two_lt_q nonzero_a square_a nonsquare_d _ _ _ _ pfP pfP);
         pose proof (@edwardsAddCompleteMinus _ _ _ _ two_lt_q nonzero_a square_a nonsquare_d _ _ _ _ pfP pfP);
@@ -293,7 +293,7 @@ Module E.
     Lemma opp_mul : forall n P, opp (E.mul n P) = E.mul n (opp P).
     Proof.
       pose proof opp_add; pose proof opp_zero.
-      induction n; simpl; intros; congruence.
+      induction n; trivial; intros; rewrite !mul_S_l, opp_add; congruence.
     Qed.
   End CompleteEdwardsCurveTheorems.
 End E.
