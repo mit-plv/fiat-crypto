@@ -358,15 +358,10 @@ Section ESRepOperations.
   Defined.
 
   Context `{rcF:RepConversions (F q) FRep} {rcFOK:RepConversionsOK rcF}.
-  Context {FRepAdd FRepSub FRepMul:FRep->FRep->FRep} {FRepAdd_correct:RepBinOpOK rcF add FRepMul}.
-  Context {FRepSub_correct:RepBinOpOK rcF sub FRepSub} {FRepMul_correct:RepBinOpOK rcF mul FRepMul}.
-  Context {FRepInv:FRep->FRep} {FRepInv_correct:forall x, inv (unRep x)%F = unRep (FRepInv x)}.
-
-  Axiom FRepOpp : FRep -> FRep.
-  Axiom FRepOpp_correct : forall x, opp (unRep x) = unRep (FRepOpp x).
-
-  Create HintDb FRepOperations discriminated.
-  Hint Rewrite FRepMul_correct FRepAdd_correct FRepSub_correct @FRepInv_correct @FSRepPow_correct FRepOpp_correct : FRepOperations.
+  Context {FRepAdd FRepSub FRepMul:FRep->FRep->FRep} {FRepAdd_correct:forall a b, toRep (mul a b) = FRepMul (toRep a) (toRep b)}.
+  Context {FRepSub_correct:RepBinOpOK rcF sub FRepSub} {FRepMul_correct:forall a b, toRep (mul a b) = FRepMul (toRep a) (toRep b)}.
+  Context {FRepInv:FRep->FRep} {FRepInv_correct:forall x, toRep (inv x) = FRepInv (toRep x)}.
+  Context {FRepOpp : FRep -> FRep} {FRepOpp_correct : forall x, toRep (opp x) = FRepOpp (toRep x)}.
 
   (*
   Definition ERep := (FRep * FRep * FRep * FRep)%type.
@@ -418,21 +413,26 @@ Section ESRepOperations.
   *)
 End ESRepOperations.
 
-Section EdDSADerivation.
-  Context `(eddsaprm:EdDSAParams).
-  Context `(rcS:RepConversions (F (Z.of_nat l)) SRep) (rcSOK:RepConversionsOK rcS).
+Require Import Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Classes.Equivalence.
+Local Open Scope equiv_scope.
 
-  Context (SRepDec : word b -> option SRep) (SRepDec_correct : forall x, option_map (fun x : F (Z.of_nat l) => toRep x) (dec x) = SRepDec x).
-  Context (ERep:Type) (E2Rep : E.point -> ERep).
-  Context (ERepEnc : ERep -> word b) (ERepEnc_correct : forall (P:E.point), enc P = ERepEnc (E2Rep P)).
-  Context (ERepOpp : ERep -> ERep) (ERepOpp_correct : forall P:E.point, E2Rep (E.opp P) = ERepOpp (E2Rep P)).
-  Context (ERepAdd : ERep -> ERep -> ERep) (ERepAdd_correct : forall (P Q:E.point), E2Rep (E.add P Q) = ERepAdd (E2Rep P) (E2Rep Q)).
-  Context (ESRepMul : SRep -> ERep -> ERep) (ESRepMul_correct : forall (n:F (Z.of_nat l)) (Q:E.point), E2Rep (E.mul (Z.to_nat n) Q) = ESRepMul (toRep (ZToField n)) (E2Rep Q)).
-  Context (ERepDec:word b -> option ERep) (ERepDec_correct:forall P_, option_map E2Rep (dec P_) = ERepDec P_).
+Section EdDSADerivation.
+  Context `{eddsaprm:EdDSAParams}.
+  Context `{ERepEquiv_ok:Equivalence ERep ERepEquiv} {E2Rep : E.point -> ERep}.
+  Context `{SRepEquiv_ok:Equivalence SRep SRepEquiv} {S2Rep : F (Z.of_nat l) -> SRep}.
+
+  Context `{SRepDec_correct : forall x, option_map (fun x : F (Z.of_nat l) => S2Rep x) (dec x) === SRepDec x}.
+  Context `{ERepDec_correct:forall P_, option_map E2Rep (dec P_) === ERepDec P_}.
+  Context `{ERepEnc_correct : forall (P:E.point), enc P = ERepEnc (E2Rep P)} {ERepEnc_proper:Proper (ERepEquiv==>eq) ERepEnc}.
+
+  Context `{ERepAdd_correct : forall (P Q:E.point), E2Rep (E.add P Q) = ERepAdd (E2Rep P) (E2Rep Q)} {ERepAdd_proper:Proper (ERepEquiv==>ERepEquiv==>ERepEquiv) ERepAdd}.
+  Context `{ESRepMul_correct : forall (n:F (Z.of_nat l)) (Q:E.point), E2Rep (E.mul (Z.to_nat n) Q) = ESRepMul (S2Rep (ZToField n)) (E2Rep Q)} {ESRepMul_proper : Proper (eq==>ERepEquiv==>ERepEquiv) ESRepMul}.
+  Context `{ERepOpp_correct : forall P:E.point, E2Rep (E.opp P) === ERepOpp (E2Rep P)} {ERepOpp_proper:Proper (ERepEquiv==>ERepEquiv) ERepOpp}.
+
 
   Axiom nonequivalent_optimization_Hmodl : forall n (x:word n) A, (wordToNat (H x) * A = (wordToNat (H x) mod l * A))%E.
   Axiom (SRepH:forall {n}, word n -> SRep).
-  Axiom SRepH_correct : forall {n} (x:word n), toRep (natToField (H x)) = SRepH x.
+  Axiom SRepH_correct : forall {n} (x:word n), S2Rep (natToField (H x)) = SRepH x.
 
   (* TODO: move to EdDSAProofs *)
   Lemma two_lt_l : (2 < Z.of_nat l)%Z.
@@ -508,9 +508,9 @@ Section EdDSADerivation.
     etransitivity.
     Focus 2.
     { lazymatch goal with |- _ = option_rect _ _ ?false ?dec =>
-                          symmetry; etransitivity; [|eapply (option_rect_option_map (fun (x:F _) => toRep x) _ false dec)]
+                          symmetry; etransitivity; [|eapply (option_rect_option_map (fun (x:F _) => S2Rep x) _ false dec)]
       end.
-      eapply option_rect_Proper_nd; [intro|reflexivity..].
+      eapply option_rect_Proper_nd; [intro | reflexivity.. ].
       match goal with
       | [ |- ?RHS = ?e ?v ]
         => let RHS' := (match eval pattern v in RHS with ?RHS' _ => RHS' end) in
