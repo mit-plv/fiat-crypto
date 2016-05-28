@@ -421,13 +421,6 @@ End ESRepOperations.
 Section EdDSADerivation.
   Context `(eddsaprm:EdDSAParams).
   Context `(rcS:RepConversions (F (Z.of_nat l)) SRep) (rcSOK:RepConversionsOK rcS).
-  Context {SRep_testbit : SRep -> nat -> bool}.
-  Context {SRep_testbit_correct : forall (x0 : SRep) (i : nat), SRep_testbit x0 i = N.testbit_nat (FieldToN (unRep x0)) i}.
-  Context `(rcF:RepConversions (F q) FRep) (rcFOK:RepConversionsOK rcF).
-  Context (FRepAdd FRepSub FRepMul:FRep->FRep->FRep) (FRepAdd_correct:RepBinOpOK rcF add FRepMul).
-  Context (FRepSub_correct:RepBinOpOK rcF sub FRepSub) (FRepMul_correct:RepBinOpOK rcF mul FRepMul).
-  Context (FRepInv:FRep->FRep) (FRepInv_correct:forall x, inv (unRep x)%F = unRep (FRepInv x)).
-  Context (a_is_minus1:CompleteEdwardsCurve.a = opp 1).
 
   Context (SRepDec : word b -> option SRep) (SRepDec_correct : forall x, option_map (fun x : F (Z.of_nat l) => toRep x) (dec x) = SRepDec x).
   Context (ERep:Type) (E2Rep : E.point -> ERep).
