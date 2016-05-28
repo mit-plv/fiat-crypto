@@ -10,9 +10,9 @@ Require Import Crypto.Spec.Encoding Crypto.Spec.ModularWordEncoding Crypto.Spec.
 Require Import Crypto.CompleteEdwardsCurve.ExtendedCoordinates.
 Require Import Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
 Require Import Crypto.Util.IterAssocOp Crypto.Util.WordUtil Crypto.Rep.
-Require Import Coq.Setoids.Setoid.
-Require Import Coq.Classes.Morphisms.
+Require Import Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Classes.Equivalence.
 Require Import Zdiv.
+Local Open Scope equiv_scope.
   
 (*TODO: move enerything before the section out of this file *)
 
@@ -357,11 +357,16 @@ Section ESRepOperations.
     reflexivity.
   Defined.
 
-  Context `{rcF:RepConversions (F q) FRep} {rcFOK:RepConversionsOK rcF}.
-  Context {FRepAdd FRepSub FRepMul:FRep->FRep->FRep} {FRepAdd_correct:forall a b, toRep (mul a b) = FRepMul (toRep a) (toRep b)}.
-  Context {FRepSub_correct:RepBinOpOK rcF sub FRepSub} {FRepMul_correct:forall a b, toRep (mul a b) = FRepMul (toRep a) (toRep b)}.
-  Context {FRepInv:FRep->FRep} {FRepInv_correct:forall x, toRep (inv x) = FRepInv (toRep x)}.
-  Context {FRepOpp : FRep -> FRep} {FRepOpp_correct : forall x, toRep (opp x) = FRepOpp (toRep x)}.
+  Context `{FRepEquiv_ok:Equivalence FRep FRepEquiv} {F2Rep : F q -> FRep}.
+  Context `{FRepAdd_correct:forall a b, F2Rep (add a b) === FRepAdd (F2Rep a) (F2Rep b)} {FRepAdd_proper: Proper (FRepEquiv==>FRepEquiv==>FRepEquiv) FRepAdd}.
+  Context `{FRepMul_correct:forall a b, F2Rep (mul a b) === FRepMul (F2Rep a) (F2Rep b)} {FRepMul_proper: Proper (FRepEquiv==>FRepEquiv==>FRepEquiv) FRepMul}.
+  Context `{FRepSub_correct:forall a b, F2Rep (sub a b) === FRepSub (F2Rep a) (F2Rep b)} {FRepSub_proper: Proper (FRepEquiv==>FRepEquiv==>FRepEquiv) FRepSub}.
+  Context {FRepInv:FRep->FRep} {FRepInv_correct:forall x, F2Rep (inv x) === FRepInv (F2Rep x)} {FRepInv_proper: Proper (FRepEquiv==>FRepEquiv) FRepInv}.
+  Context {FRepOpp : FRep -> FRep} {FRepOpp_correct : forall x, F2Rep (opp x) = FRepOpp (F2Rep x)}.
+  (*
+  Lemma ERepAdd_correct : forall (P Q:E.point), E2Rep (E.add P Q) = ERepAdd (E2Rep P) (E2Rep Q).
+  Lemma ERepAdd_proper : Proper (ERepEquiv==>ERepEquiv==>ERepEquiv) ERepAdd.
+  *)
 
   (*
   Definition ERep := (FRep * FRep * FRep * FRep)%type.
@@ -413,26 +418,23 @@ Section ESRepOperations.
   *)
 End ESRepOperations.
 
-Require Import Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Classes.Equivalence.
-Local Open Scope equiv_scope.
-
 Section EdDSADerivation.
   Context `{eddsaprm:EdDSAParams}.
   Context `{ERepEquiv_ok:Equivalence ERep ERepEquiv} {E2Rep : E.point -> ERep}.
   Context `{SRepEquiv_ok:Equivalence SRep SRepEquiv} {S2Rep : F (Z.of_nat l) -> SRep}.
 
-  Context `{SRepDec_correct : forall x, option_map (fun x : F (Z.of_nat l) => S2Rep x) (dec x) === SRepDec x}.
-  Context `{ERepDec_correct:forall P_, option_map E2Rep (dec P_) === ERepDec P_}.
   Context `{ERepEnc_correct : forall (P:E.point), enc P = ERepEnc (E2Rep P)} {ERepEnc_proper:Proper (ERepEquiv==>eq) ERepEnc}.
 
-  Context `{ERepAdd_correct : forall (P Q:E.point), E2Rep (E.add P Q) = ERepAdd (E2Rep P) (E2Rep Q)} {ERepAdd_proper:Proper (ERepEquiv==>ERepEquiv==>ERepEquiv) ERepAdd}.
-  Context `{ESRepMul_correct : forall (n:F (Z.of_nat l)) (Q:E.point), E2Rep (E.mul (Z.to_nat n) Q) = ESRepMul (S2Rep (ZToField n)) (E2Rep Q)} {ESRepMul_proper : Proper (eq==>ERepEquiv==>ERepEquiv) ESRepMul}.
+  Context `{ERepAdd_correct : forall (P Q:E.point), E2Rep (E.add P Q) === ERepAdd (E2Rep P) (E2Rep Q)} {ERepAdd_proper:Proper (ERepEquiv==>ERepEquiv==>ERepEquiv) ERepAdd}.
+  Context `{ESRepMul_correct : forall (n:F (Z.of_nat l)) (Q:E.point), E2Rep (E.mul (Z.to_nat n) Q) === ESRepMul (S2Rep (ZToField n)) (E2Rep Q)} {ESRepMul_proper : Proper (SRepEquiv==>ERepEquiv==>ERepEquiv) ESRepMul}.
   Context `{ERepOpp_correct : forall P:E.point, E2Rep (E.opp P) === ERepOpp (E2Rep P)} {ERepOpp_proper:Proper (ERepEquiv==>ERepEquiv) ERepOpp}.
 
+  Context `{SRepDec_correct : forall x, option_map (fun x : F (Z.of_nat l) => S2Rep x) (dec x) === SRepDec x}.
+  Context `{ERepDec_correct:forall P_, option_map E2Rep (dec P_) === ERepDec P_}.
 
   Axiom nonequivalent_optimization_Hmodl : forall n (x:word n) A, (wordToNat (H x) * A = (wordToNat (H x) mod l * A))%E.
   Axiom (SRepH:forall {n}, word n -> SRep).
-  Axiom SRepH_correct : forall {n} (x:word n), S2Rep (natToField (H x)) = SRepH x.
+  Axiom SRepH_correct : forall {n} (x:word n), S2Rep (natToField (H x)) === SRepH x.
 
   (* TODO: move to EdDSAProofs *)
   Lemma two_lt_l : (2 < Z.of_nat l)%Z.
