@@ -12,60 +12,6 @@ Module PseudoMedialConversion (Arch: PseudoMachine).
   Module P := Pseudo Arch.
   Module M := Medial Arch.
 
-  Definition wordToM {n: nat} {spec: ISize n} (w: word n): Mapping n.
-    destruct spec; first [
-      refine (@constM 32 (constInt32 w) (wordToNat w) _)
-    | refine (@constM 64 (constInt64 w) (wordToNat w) _)];
-      abstract intuition.
-  Defined.
-
-  Definition regToM {n: nat} {spec: ISize n} (r: IReg n): Mapping n.
-    destruct spec; refine (@regM _ r (getIRegIndex r) _); abstract intuition.
-  Defined.
-
-  Definition stackToM {n: nat} {spec: ISize n} (s: Stack n): Mapping n.
-    destruct spec; refine (@stackM _ s (getStackIndex s) _); abstract intuition.
-  Defined.
-
-  Definition constToM {n: nat} {spec: ISize n} (c: IConst n): Mapping n.
-    destruct spec; refine (@constM _ c (getIConstValue c) _); abstract intuition.
-  Defined.
-
-  Definition mapping_dec {n} (a b: Mapping n): {a = b} + {a <> b}.
-    refine (match (a, b) as p' return (a, b) = p' -> _ with
-    | (regM x v _, regM y v' _) => fun _ => 
-      if (Nat.eq_dec v v') then left _ else right _
-
-    | (stackM x v _, stackM y v' _) => fun _ => 
-      if (Nat.eq_dec v v') then left _ else right _
-
-    | (constM x v _, constM y v' _) => fun _ => 
-      if (Nat.eq_dec v v') then left _ else right _
-
-    | _ => fun _ => right _
-    end (eq_refl (a, b))); admit. (* TODO (rsloan): prove *)
-  Defined.
-
-  Definition dec_lt (a b: nat): {(a < b)%nat} + {(a >= b)%nat}.
-    assert ({(a <? b)%nat = true} + {(a <? b)%nat <> true})
-      by abstract (destruct (a <? b)%nat; intuition);
-      destruct H.
-
-    - left; abstract (apply Nat.ltb_lt in e; intuition).
-
-    - right; abstract (rewrite Nat.ltb_lt in n; intuition).
-  Defined.
-
-  Fixpoint usedStackEntries {n} (lst: list (Mapping n)): list nat :=
-    match lst with
-    | nil => []
-    | cons c cs =>
-      match c with
-      | stackM _ v _ => cons v (usedStackEntries cs)
-      | _ => usedStackEntries cs
-      end
-    end.
-
   (******************    Material Conversions    ************************)
 
   Module PseudoConversion <: Conversion P M.

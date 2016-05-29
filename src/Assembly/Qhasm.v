@@ -4,7 +4,7 @@ Require Import List NPeano.
 
 Module Qhasm <: Language.
   Import ListNotations.
-  Import State.
+  Import QhasmEval.
 
   (* A constant upper-bound on the number of operations we run *)
   Definition State := State.

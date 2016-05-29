@@ -9,17 +9,11 @@ Module Type PseudoMachine.
 End PseudoMachine.
 
 Module Pseudo (M: PseudoMachine) <: Language.
-  Import ListNotations State Util M.
+  Import EvalUtil ListState Util M.
 
   Definition const: Type := word width.
 
   (* Program Types *)
-  Definition State := ((list const) * (list (list const)) * (option bool))%type.
-
-  Definition var (st: State)  := fst (fst st).
-  Definition mem (st: State)  := snd (fst st).
-  Definition carry (st: State) := snd st.
-
   Inductive Pseudo: nat -> nat -> Type :=
     | PVar: forall n, Index n -> Pseudo n 1
     | PMem: forall n m, Index n -> Index m -> Pseudo n 1
@@ -40,64 +34,60 @@ Module Pseudo (M: PseudoMachine) <: Language.
   Hint Constructors Pseudo.
 
   Definition Program := Pseudo vars vars.
+  Definition State := ListState width.
 
   Fixpoint pseudoEval {n m} (prog: Pseudo n m) (st: State): option State :=
     match prog with
-    | PVar n i =>
-      omap (nth_error (var st) i) (fun x =>
-        Some ([x], mem st, carry st))
-
-    | PMem n m v i =>
-      omap (nth_error (mem st) v) (fun vec =>
-        omap (nth_error vec i) (fun x =>
-          Some ([x], mem st, carry st)))
-
-    | PConst n c => Some ([c], mem st, carry st)
-
+    | PVar n i => omap (getVar i st) (fun x => Some (setList [x] st))
+    | PMem n m v i => omap (getMem v i st) (fun x => Some (setList [x] st))
+    | PConst n c => Some (setList [c] st)
     | PBin n o p =>
       omap (pseudoEval p st) (fun sp =>
-        match sp with
-        | ([wa; wb], m', _) =>
-          let (v, c) := evalIntOp o wa wb in Some ([v], m', c)
+        match (getList sp) with
+        | [wa; wb] =>
+          let (v, c) := evalIntOp o wa wb in
+          Some (setList [v] (setCarryOpt c sp))
         | _ => None
         end)
 
     | PCarry n o p =>
       omap (pseudoEval p st) (fun sp =>
-        match sp with
-        | ([wa; wb], m', Some c) =>
-          let (v, c') := evalCarryOp o wa wb c in Some ([v], m', Some c')
+        match (getList sp, getCarry sp) with
+        | ([wa; wb], Some c) =>
+          let (v, c') := evalCarryOp o wa wb c in
+          Some (setList [v] (setCarry c' sp))
         | _ => None
         end)
 
     | PDual n o p =>
       omap (pseudoEval p st) (fun sp =>
-        match sp with
-        | ([wa; wb], m', co) =>
-          let (low, high) := evalDualOp o wa wb in Some ([low; high], m', co)
+        match (getList sp) with
+        | [wa; wb] =>
+          let (low, high) := evalDualOp o wa wb in
+          Some (setList [low; high] sp)
         | _ => None
         end)
 
     | PShift n o a x =>
       omap (pseudoEval x st) (fun sx =>
-        match sx with
-        | ([wx], m', co) => Some ([evalRotOp o wx a], m', co)
+        match (getList sx) with
+        | [wx] => Some (setList [evalRotOp o wx a] sx)
         | _ => None
         end)
 
     | PLet n k m f g =>
       omap (pseudoEval f st) (fun sf =>
-        omap (pseudoEval g ((var st) ++ (var sf), mem sf, carry sf))
+        omap (pseudoEval g (setList ((getList st) ++ (getList sf)) sf))
           (fun sg => Some sg))
 
     | PComb n a b f g =>
       omap (pseudoEval f st) (fun sf =>
         omap (pseudoEval g st) (fun sg =>
-          Some ((var sf) ++ (var sg), mem sg, carry sg)))
+          Some (setList ((getList sf) ++ (getList sg)) sg)))
 
     | PIf n m t i0 i1 l r =>
-      omap (nth_error (var st) i0) (fun v0 =>
-        omap (nth_error (var st) i1) (fun v1 =>
+      omap (getVar i0 st) (fun v0 =>
+        omap (getVar i1 st) (fun v1 =>
           if (evalTest t v0 v1)
           then pseudoEval l st
           else pseudoEval r st ))

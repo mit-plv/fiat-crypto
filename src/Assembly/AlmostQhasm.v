@@ -3,8 +3,7 @@ Require Import Language.
 Require Import List.
 
 Module AlmostQhasm <: Language.
-  Import ListNotations.
-  Import State.
+  Import QhasmEval.
 
   (* Program Types *)
   Definition State := State.

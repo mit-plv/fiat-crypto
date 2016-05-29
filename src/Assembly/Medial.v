@@ -2,22 +2,14 @@ Require Import QhasmEvalCommon Pseudo.
 Require Import Language.
 Require Import List.
 
-Module Medial (M: PseudoMachine) <: Language.
-  Import ListNotations.
-  Import State.
-  Import M.
+Module Medial (Arch: PseudoMachine) <: Language.
+  Import MedState EvalUtil Arch.
 
   Definition W := word width.
 
   (* Program Types *)
-  Definition State := (NatNMap * PairNMap * (option bool))%type.
-
-  Definition varS (st: State) := fst (fst st).
-  Definition memS (st: State) := snd (fst st).
-  Definition carryS (st: State) := snd st.
-
-  Definition var (i: nat) (st: State) := NatM.find i (varS st).
-  Definition mem (v i: nat) (st: State) := PairM.find (v, i) (memS st).
+  Definition State := MedState width.
+  Transparent State.
 
   Inductive MAssignment : Type :=
     | MAVar: nat -> nat -> MAssignment 
@@ -83,65 +75,66 @@ Module Medial (M: PseudoMachine) <: Language.
     | MAssign a =>
       match a with
       | MAVar x y =>
-        match (var y st) with
-        | Some v => Some (NatM.add x v (varS st), memS st, carryS st)
+        match (getVar y st) with
+        | Some v => Some (setVar x v st)
         | _ => None
         end
 
       | MAMem x y i =>
-        match (mem y i st) with
-        | Some v => Some (NatM.add x v (varS st), memS st, carryS st)
+        match (getMem y i st) with
+        | Some v => Some (setVar x v st)
         | _ => None
         end
 
-      | MAConst x c => Some (NatM.add x (wordToN c) (varS st), memS st, carryS st)
+      | MAConst x c => Some (setVar x c st)
       end
 
     | MOp o =>
       match o with
       | MIOpConst io a c =>
-        omap (var a st) (fun v =>
-          let (res, c') := evalIntOp io (NToWord _ v) c in
-          Some (NatM.add a (wordToN res) (varS st), memS st, c'))
+        omap (getVar a st) (fun v =>
+          let (res, c') := evalIntOp io v c in
+          Some (setVar a res (setCarryOpt c' st)))
 
       | MIOpReg io a b =>
-        omap (var a st) (fun va =>
-          omap (var b st) (fun vb =>
-            let (res, c') := evalIntOp io (NToWord width va) (NToWord width vb) in
-            Some (NatM.add a (wordToN res) (varS st), memS st, c')))
+        omap (getVar a st) (fun va =>
+          omap (getVar b st) (fun vb =>
+            let (res, c') := evalIntOp io va vb in
+            Some (setVar a res (setCarryOpt c' st))))
 
       | MCOpReg o a b =>
-        omap (var a st) (fun va =>
-          omap (var b st) (fun vb =>
-            let c := match (carryS st) with | Some b => b | _ => false end in
-            let (res, c') := evalCarryOp o (NToWord width va) (NToWord width vb) c in
-            Some (NatM.add a (wordToN res) (varS st), memS st, Some c')))
+        omap (getVar a st) (fun va =>
+          omap (getVar b st) (fun vb =>
+            let c := match (snd st) with | Some b => b | _ => false end in
+            let (res, c') := evalCarryOp o va vb c in
+            Some (setVar a res (setCarry c' st))))
 
       | MDOpReg duo a b (Some x) =>
-        omap (var a st) (fun va =>
-          omap (var b st) (fun vb =>
-            let res := evalDualOp duo (NToWord width va) (NToWord width vb) in
-            Some (NatM.add a (wordToN (fst res))
-                   (NatM.add x (wordToN (snd res)) (varS st)), memS st, carryS st)))
+        omap (getVar a st) (fun va =>
+          omap (getVar b st) (fun vb =>
+            let (low, high) := evalDualOp duo va vb in
+            Some (setVar a low (setVar x high st))))
 
       | MDOpReg duo a b None =>
-        omap (var a st) (fun va =>
-          omap (var b st) (fun vb =>
-            let res := evalDualOp duo (NToWord width va) (NToWord width vb) in
-            Some (NatM.add a (wordToN (fst res)) (varS st), memS st, carryS st)))
+        omap (getVar a st) (fun va =>
+          omap (getVar b st) (fun vb =>
+            let (low, high) := evalDualOp duo va vb in
+            Some (setVar a low st)))
 
       | MOpRot ro a x =>
-        omap (var a st) (fun v =>
-          let res := evalRotOp ro (NToWord width v) (proj1_sig x) in
-          Some (NatM.add a (wordToN res) (varS st), memS st, carryS st))
+        omap (getVar a st) (fun v =>
+          let res := evalRotOp ro v (proj1_sig x) in
+          Some (setVar a res st))
       end
 
     | MCond c a b =>
       match c with
       | MC t x y =>
-        omap (var x st) (fun vx =>
-          omap (var y st) (fun vy =>
-            if (evalTest t (NToWord width vx) (NToWord width vy))
+        omap (getVar x st) (fun vx =>
+
+          (* TODO: why can't we infer width here? *)
+          omap (@getVar width y st) (fun vy =>
+            if (evalTest t vx vy)
             then meval a st
             else meval b st))
       end
