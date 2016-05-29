@@ -181,6 +181,14 @@ Section ExtendedCoordinates.
         unfold rep in *; intuition.
     Qed.
 
+    Lemma unifiedAddM1_correct : forall P Q, mkExtendedPoint (E.add P Q) === unifiedAddM1 (mkExtendedPoint P) (mkExtendedPoint Q).
+    Proof.
+      unfold equiv, extendedPoint_eq; intros;
+        pose proof unifiedAddM1_rep (mkExtendedPoint P) (mkExtendedPoint Q);
+        pose proof unExtendedPoint_mkExtendedPoint;
+        congruence.
+    Qed.
+
     Global Instance Proper_unifiedAddM1 : Proper (equiv==>equiv==>equiv) unifiedAddM1.
     Proof.
       repeat (econstructor || intro).

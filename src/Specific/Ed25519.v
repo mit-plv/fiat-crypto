@@ -26,19 +26,18 @@ Local Ltac subst_evars :=
          end.
 
 Definition Let_In {A P} (x : A) (f : forall a : A, P a) : P x := let y := x in f y.
-Global Instance Let_In_Proper_nd {A P}
-  : Proper (eq ==> pointwise_relation _ eq ==> eq) (@Let_In A (fun _ => P)).
+Global Instance Let_In_Proper_nd {A P} R {Reflexive_R:@Reflexive P R}
+  : Proper (eq ==> pointwise_relation _ R ==> R) (@Let_In A (fun _ => P)).
 Proof.
-  lazy; intros; congruence.
+  lazy; intros; try congruence.
+  subst; auto.
 Qed.
 
 Local Ltac replace_let_in_with_Let_In :=
-  repeat match goal with
-         | [ |- context G[let x := ?y in @?z x] ]
-           => let G' := context G[Let_In y z] in change G'
-         | [ |- _ = Let_In _ _ ]
-           => apply Let_In_Proper_nd; [ reflexivity | cbv beta delta [pointwise_relation]; intro ]
-         end.
+  match goal with
+  | [ |- context G[let x := ?y in @?z x] ]
+    => let G' := context G[Let_In y z] in change G'
+  end.
 
 Local Ltac Let_In_app fn :=
   match goal with
@@ -332,61 +331,133 @@ Section FSRepOperations.
 End FSRepOperations.
 
 Section ESRepOperations.
-  Context {tep:TwistedEdwardsParams} {a_is_minus1:a = opp 1}.
-  Context {l:Z} {two_lt_l:(2 < l)%Z}.
-  Context `{rcS:RepConversions (F l) SRep} {rcSOK:RepConversionsOK rcS}.
+  Context {tep:TwistedEdwardsParams} {a_eq_minus1:a = opp 1}.
+  Context {l:Z} {two_lt_l:(2 < l)%Z} `{rep2S : SRep -> F l}.
   Context {SRep_testbit : SRep -> nat -> bool}.
-  Context {SRep_testbit_correct : forall (x0 : SRep) (i : nat), SRep_testbit x0 i = N.testbit_nat (FieldToN (unRep x0)) i}.
-  Definition scalarMultExtendedSRep (a:SRep) (P:extendedPoint) :=
-    iter_op (@unifiedAddM1 _ a_is_minus1) (mkExtendedPoint E.zero) SRep_testbit a P (COMPILETIME (N.size_nat (Z.to_N (Z.pred l)))).
+  Context {SRep_testbit_correct : forall (x0 : SRep) (i : nat), SRep_testbit x0 i = N.testbit_nat (FieldToN (rep2S x0)) i}.
 
-  Lemma bound_satisfied : forall a, (N.size_nat (FieldToN (unRep a)) <= N.size_nat (Z.to_N (Z.pred l)))%nat.
+  Definition scalarMultExtendedSRep (a:SRep) (P:extendedPoint) :=
+    iter_op (@unifiedAddM1 _ a_eq_minus1) (mkExtendedPoint E.zero) SRep_testbit a P (COMPILETIME (N.size_nat (Z.to_N (Z.pred l)))).
+
+  Lemma bound_satisfied : forall a, (N.size_nat (FieldToN (rep2S a)) <= N.size_nat (Z.to_N (Z.pred l)))%nat.
   Proof.
     intros.
     apply N_size_nat_le_mono.
     rewrite FieldToN_correct.
-    destruct (FieldToZ_range (unRep a)); [omega|].
+    destruct (FieldToZ_range (rep2S a)); [omega|].
     rewrite <-Z2N.inj_le; omega.
   Qed.
     
   Definition scalarMultExtendedSRep_correct : forall (a:SRep) (P:extendedPoint),
-      unExtendedPoint (scalarMultExtendedSRep a P) = (N.to_nat (FieldToN (unRep a)) * unExtendedPoint P)%E.
+      unExtendedPoint (scalarMultExtendedSRep a P) = (N.to_nat (FieldToN (rep2S a)) * unExtendedPoint P)%E.
   Proof. (* derivation result copy-pasted to above to remove preconditions from it *)
     intros.
-    rewrite <-(scalarMultM1_rep a_is_minus1), <-(@iter_op_spec _ extendedPoint_eq _ _ (@unifiedAddM1 _ a_is_minus1) _ (@unifiedAddM1_assoc _ a_is_minus1) _ (@unifiedAddM1_0_l _ a_is_minus1) _ _ SRep_testbit_correct _ _ _ (bound_satisfied _)).
+    rewrite <-(scalarMultM1_rep a_eq_minus1), <-(@iter_op_spec _ extendedPoint_eq _ _ (@unifiedAddM1 _ a_eq_minus1) _ (@unifiedAddM1_assoc _ a_eq_minus1) _ (@unifiedAddM1_0_l _ a_eq_minus1) _ _ SRep_testbit_correct _ _ _ (bound_satisfied _)).
     reflexivity.
   Defined.
 
-  Context `{FRepEquiv_ok:Equivalence FRep FRepEquiv} {F2Rep : F q -> FRep}.
+  Context `{FRepEquiv_ok:Equivalence FRep FRepEquiv} {F2Rep : F q -> FRep} {rep2F:FRep -> F q} {rep2F_proper: Proper (FRepEquiv==>eq) rep2F} {rep2F_F2Rep: forall x, rep2F (F2Rep x) = x}.
   Context `{FRepAdd_correct:forall a b, F2Rep (add a b) === FRepAdd (F2Rep a) (F2Rep b)} {FRepAdd_proper: Proper (FRepEquiv==>FRepEquiv==>FRepEquiv) FRepAdd}.
   Context `{FRepMul_correct:forall a b, F2Rep (mul a b) === FRepMul (F2Rep a) (F2Rep b)} {FRepMul_proper: Proper (FRepEquiv==>FRepEquiv==>FRepEquiv) FRepMul}.
   Context `{FRepSub_correct:forall a b, F2Rep (sub a b) === FRepSub (F2Rep a) (F2Rep b)} {FRepSub_proper: Proper (FRepEquiv==>FRepEquiv==>FRepEquiv) FRepSub}.
   Context {FRepInv:FRep->FRep} {FRepInv_correct:forall x, F2Rep (inv x) === FRepInv (F2Rep x)} {FRepInv_proper: Proper (FRepEquiv==>FRepEquiv) FRepInv}.
-  Context {FRepOpp : FRep -> FRep} {FRepOpp_correct : forall x, F2Rep (opp x) = FRepOpp (F2Rep x)}.
-  (*
-  Lemma ERepAdd_correct : forall (P Q:E.point), E2Rep (E.add P Q) = ERepAdd (E2Rep P) (E2Rep Q).
-  Lemma ERepAdd_proper : Proper (ERepEquiv==>ERepEquiv==>ERepEquiv) ERepAdd.
-  *)
+  Context {FRepOpp : FRep -> FRep} {FRepOpp_correct : forall x, F2Rep (opp x) = FRepOpp (F2Rep x)} {FRepOpp_proper: Proper (FRepEquiv==>FRepEquiv) FRepOpp}.
 
-  (*
-  Definition ERep := (FRep * FRep * FRep * FRep)%type.
+  Definition extendedRep := (FRep * FRep * FRep * FRep)%type.
+  
+  Definition extended2Rep (P:extendedPoint) :=
+    let 'exist (mkExtended X Y Z T) _ := P in
+    (F2Rep X, F2Rep Y, F2Rep Z, F2Rep T).
 
-  Definition rep2E (r:FRep * FRep * FRep * FRep) : extended :=
-    match r with (((x, y), z), t) => mkExtended (unRep x) (unRep y) (unRep z) (unRep t) end.
+  Definition point2ExtendedRep (P:E.point) := extended2Rep (mkExtendedPoint P).
 
-  Lemma fold_rep2E x y z t
-    : mkExtended (unRep x) (unRep y) (unRep z) (unRep t) = rep2E (((x, y), z), t).
-  Proof. reflexivity. Qed.
+  Definition extendedRep2Extended (P:extendedRep) : extended :=
+    let '(X, Y, Z, T) := P in
+    mkExtended (rep2F X) (rep2F Y) (rep2F Z) (rep2F T).
 
-  Lemma unifiedAddM1Rep_sig : forall a b : ERep, { unifiedAddM1Rep | rep2E unifiedAddM1Rep = unifiedAddM1' (rep2E a) (rep2E b) }.
+  Definition extendedRep2Twisted (P:extendedRep) : (F q * F q) := extendedToTwisted (extendedRep2Extended P).
+
+  Definition extendedRepEquiv (P Q:extendedRep) := extendedRep2Twisted P = extendedRep2Twisted Q.
+
+  Global Instance Equivalence_extendedRepEquiv : Equivalence extendedRepEquiv.
+  Proof. constructor; intros; congruence. Qed.
+
+  Lemma extendedRep2Extended_extended2Rep : forall P, (extendedRep2Extended (extended2Rep P)) = proj1_sig P.
+  Proof. destruct P as [[] ?]; simpl; rewrite !rep2F_F2Rep; reflexivity. Qed.
+
+  Global Instance extended2Rep_Proper : Proper (extendedPoint_eq==>extendedRepEquiv) extended2Rep.
   Proof.
-    destruct a as [[[]]]; destruct b as [[[]]].
-    eexists.
-    lazymatch goal with |- ?LHS = ?RHS :> ?T =>
-                    evar (e:T); replace LHS with e; [subst e|]
+    repeat intro.
+    unfold extendedRepEquiv, extendedRep2Twisted. rewrite !extendedRep2Extended_extended2Rep.
+    lazymatch goal with [H: extendedPoint_eq _ _ |- _ ] =>
+                        unfold extendedPoint_eq, unExtendedPoint in H;
+                          injection H;
+                          solve [trivial]
     end.
-    unfold rep2E. cbv beta delta [unifiedAddM1'].
-    pose proof (rcFOK twice_d) as H; rewrite <-H; clear H. (* XXX: this is a hack -- rewrite misresolves typeclasses? *)
+  Qed.
+
+  Lemma extendedRepAdd_extendedPoint_sig : { op | forall P Q, extended2Rep (unifiedAddM1 a_eq_minus1 P Q) === op (extended2Rep P) (extended2Rep Q) }.
+  Proof.
+    eexists.
+    repeat match goal with
+           | _ => progress intros
+           | [ P : extendedPoint |- _ ] => destruct P
+           | [ P : extended |- _ ] => destruct P
+           | _ => progress cbv iota beta delta [proj1_sig unifiedAddM1 extended2Rep unifiedAddM1']
+           | [ H : rep _ _ /\ _ |- _ ] => clear H
+           end.
+    
+    match goal with |- context[?E] =>
+                    match E with let '{| extendedX := _; extendedY := _; extendedZ := _; extendedT := _ |} := ?X in _
+                                 => let E' := (eval pattern X in E) in
+                                   change E with E';
+                                   match E' with ?f _ => set (proj := f) end
+                    end
+    end.
+
+    etransitivity.
+    repeat (
+        etransitivity; [
+          replace_let_in_with_Let_In;
+          rewrite <-pull_Let_In;
+          eapply Let_In_Proper_nd;
+          [solve [eauto with typeclass_instances]
+          |reflexivity|
+          cbv beta delta [pointwise_relation]; intro]
+         |reflexivity]).
+    subst proj.
+    cbv beta iota.
+    reflexivity.
+  Admitted.
+
+  Definition extendRepAdd_extendedPoint : extendedRep -> extendedRep -> extendedRep := proj1_sig (extendedRepAdd_extendedPoint_sig).
+  Definition extendRepAdd_extendedPoint_correct : forall P Q, extended2Rep (unifiedAddM1 a_eq_minus1 P Q) === extendRepAdd_extendedPoint (extended2Rep P) (extended2Rep Q) := proj2_sig extendedRepAdd_extendedPoint_sig.
+
+  Lemma extendedRepAdd_sig : { op | forall P Q, point2ExtendedRep (E.add P Q) === op (point2ExtendedRep P) (point2ExtendedRep Q) }.
+  Proof.
+    eexists; intros.
+    unfold point2ExtendedRep.
+    rewrite <-extendRepAdd_extendedPoint_correct.
+    apply extended2Rep_Proper.
+    apply unifiedAddM1_correct.
+  Defined.
+
+
+    cbv beta delta [Let_In].
+    
+    rewrite pull_Let_In.
+                     eapply Let_In_Proper_nd;
+                     [solve [eauto with typeclass_instances]
+                     |reflexivity|
+                     cbv beta delta [pointwise_relation]; intro]
+                    |].
+    
+    replace_let_in_with_Let_In.
+    rewrite <-pull_Let_In.
+    eapply Let_In_Proper_nd; [eauto with typeclass_instances|reflexivity|cbv beta delta [pointwise_relation]; intro];
+    etransitivity.
+    
+
 
     { etransitivity; [|replace_let_in_with_Let_In; reflexivity].
       repeat (
