@@ -1,12 +1,13 @@
 
-Require Export Language Conversion QhasmCommon QhasmUtil.
+Require Export Language Conversion QhasmEvalCommon QhasmUtil.
 Require Export Pseudo Medial AlmostQhasm State.
 Require Export Bedrock.Word NArith NPeano.
 Require Export List Sumbool.
+Require Import FMapAVL FMapList JMeq.
 Require Vector.
 
 Module PseudoMedialConversion (Arch: PseudoMachine).
-  Import QhasmCommon AlmostQhasm State Util.
+  Import QhasmCommon AlmostQhasm EvalUtil Util.
   Import ListNotations.
 
   Module P := Pseudo Arch.
@@ -15,19 +16,22 @@ Module PseudoMedialConversion (Arch: PseudoMachine).
   (******************    Material Conversions    ************************)
 
   Module PseudoConversion <: Conversion P M.
-    Import P M Arch.
+    Import P M Arch StateCommon.
 
     Fixpoint convertState (st: M.State): option P.State :=
       let try_cons := fun {T} (x: option T) (l: list T) =>
         match x with | Some x' => cons x' l | _ => l end in
 
-      let res := (fix cs' (n: nat) :=
-         try_cons (option_map (NToWord width) (NatM.find n st))
-           (match n with | O => [] | S m => cs' m end)) vars in
+      match st with
+      | (v, m, c) =>
+        let varList := (fix cs' (n: nat) :=
+          try_cons (option_map (NToWord width) (NatM.find n v))
+            (match n with | O => [] | S m => cs' m end)) vars in
 
-      if (Nat.eq_dec (length res) vars)
-      then Some res
-      else None.
+        if (Nat.eq_dec (length varList) vars)
+        then Some (varList, m, c)
+        else None
+      end.
 
     Fixpoint range (start len: nat): list nat :=
       match len with
@@ -48,72 +52,80 @@ Module PseudoMedialConversion (Arch: PseudoMachine).
         end
       end.
 
-    Fixpoint convertProgram' {n m}
-          (prog: Pseudo n m) (inMap outMap: list nat) (start: nat):
-        option (Medial * nat) :=
+    Fixpoint maxN (lst: list nat): nat :=
+      match lst with
+      | cons x xs => max x (maxN xs)
+      | nil => O
+      end.
+
+    Module NatM := FMapAVL.Make(Nat_as_OT).
+    Module ProgMap := NatM.t Medial.
+    Definition noProgs := NatM.empty Medial.
+
+    (* Results are in the locations described by the
+       returned list. start is the next known open address *)
+    Fixpoint convertProgram' {n m} (prog: Pseudo n m) (start: nat) (funs: nat):
+        option (Medial * (list nat) * (NatM.t Medial)) :=
 
       match prog with
-      | PVar n i =>
-        min <- nth_error inMap i;
-        mout <- nth_error outMap 0;
+      | PVar n i => Some (MSkip, [start], NatM.empty)
+      | PConst n c => Some (MAssign (MAConst start c), [start], [])
+      | PMem n m v i => Some (MAssign (MAMem start v i), [start], [])
 
-        if (Nat.eq_dec min mout)
-        then Some (MSkip, start)
-        else Some ((MAssign (MAVar mout min)), start)
-
-      | PConst n c =>
-        mout <- nth_error outMap 0;
-        Some (MAssign (MAConst mout c), start)
-
+                            | _ => None end.
       | PBin n o p =>
-        t <- convertProgram' p inMap (outMap ++ [start]) (S start);
-        a <- nth_error outMap 0;
-
-        Some (MSeq (fst t) (MOp (MIOpReg o a start)), (snd t))
+        t <- convertProgram' p start funs;
+        match (snd t) with
+        | [a; b] =>
+          Some (MSeq (fst t) (MOp (MIOpReg o a b)), [a])
+        | _ => None
+        end
 
       | PDual n o p =>
-        match outMap with
+        t <- convertProgram' p start funs;
+        match (snd t) with
         | [a; b] =>
-          x <- nth_error inMap 1;
-          t <- convertProgram' p inMap [a; x] start;
-          Some (MSeq (fst t) (MOp (MDOpReg o a b (Some x))), snd t)
-
+          let nextOpen := S (maxN (snd t)) in
+          Some (MSeq (fst t) (MOp (MDOpReg o a b (Some nextOpen))),
+                [a; nextOpen])
         | _ => None
         end
 
       | PShift n o a x =>
-        t <- convertProgram' x inMap outMap start;
-        b <- nth_error outMap 0;
-        Some (MSeq (fst t) (MOp (MOpRot o b a)), snd t)
+        t <- convertProgram' x start funs;
+        match (snd t) with
+        | [r] => Some (MSeq (fst t) (MOp (MOpRot o r a)), [proj1_sig a])
+        | _ => None
+        end
 
       | PLet n k m f g =>
-        let medMap := range start k in
-        ft <- convertProgram' f inMap medMap (start + k);
-        gt <- convertProgram' g (inMap ++ medMap) outMap (snd ft);
-        Some (MSeq (fst ft) (fst gt), (snd gt))
+        ft <- convertProgram' f (start + k) funs;
+        gt <- convertProgram' g (S (maxN (snd ft))) funs;
 
-      | PComp n k m f g =>
-        let medMap := range start k in
-        ft <- convertProgram' f inMap medMap (start + k);
-        gt <- convertProgram' g medMap outMap (snd ft);
-        Some (MSeq (fst ft) (fst gt), (snd gt))
-
-      | PComb n a b f g => 
-        let outt := list_split a outMap in
-        ft <- convertProgram' f inMap (fst outt) start;
-        gt <- convertProgram' g inMap (snd outt) (snd ft);
         Some (MSeq (fst ft) (fst gt), snd gt)
 
+      | PComb n a b f g => 
+        ft <- convertProgram' f start funs;
+        gt <- convertProgram' g (S (maxN (snd ft))) funs;
+        Some (MSeq (fst ft) (fst gt), (snd ft) ++ (snd gt))
+
       | PIf n m o i0 i1 l r => 
-        lt <- convertProgram' l inMap outMap start;
-        rt <- convertProgram' r inMap outMap start;
-        c0 <- nth_error inMap i0;
-        c1 <- nth_error inMap i1;
-        Some (MCond (MC o c0 c1) (fst lt) (fst rt), (max (snd rt) (snd lt)))
+        lt <- convertProgram' l start funs;
+        rt <- convertProgram' r start funs;
+        Some (MCond (MC o i0 i1) (fst lt) (fst rt), snd lt)
+             (* TODO: prove that all (Pseudo n m) will return the same list *)
 
       | PFunExp n f e => 
-        ft <- convertProgram' f inMap outMap start;
-        Some (MFunexp e (fst ft), (snd ft))
+        ft <- convertProgram' f start funs;
+        Some (MFunexp e (fst ft), snd ft)
+ 
+      | PCall n m f => 
+        ft <- convertProgram' f start funs;
+        Some (MCall funs (fst ft), snd ft)
+    | MDef: nat -> Medial -> Medial -> Medial
+    | MCall: nat -> Medial.
+
+
       end.
 
     Definition convertProgram (prog: Pseudo vars vars): option M.Program :=
