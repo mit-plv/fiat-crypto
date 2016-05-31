@@ -13,8 +13,10 @@ Module Qhasm <: Language.
   Inductive QhasmStatement :=
     | QAssign: Assignment -> QhasmStatement
     | QOp: Operation -> QhasmStatement
-    | QJmp: Conditional -> Label -> QhasmStatement
-    | QLabel: Label -> QhasmStatement.
+    | QCond: Conditional -> Label -> QhasmStatement
+    | QLabel: Label -> QhasmStatement
+    | QCall: Label -> QhasmStatement
+    | QRet: QhasmStatement.
 
   Hint Constructors QhasmStatement.
 
@@ -49,17 +51,27 @@ Module Qhasm <: Language.
       -> evalOperation a s = Some s'
       -> QhasmEval (S n) p m s' s''
       -> QhasmEval n p m s s''
-    | QEJmpTrue: forall (n loc next: nat) p m c l s s',
-        (nth_error p n) = Some (QJmp c l)
+    | QECondTrue: forall (n loc next: nat) p m c l s s',
+        (nth_error p n) = Some (QCond c l)
       -> evalCond c s = Some true
       -> NatM.find l m = Some loc
       -> QhasmEval loc p m s s'
       -> QhasmEval n p m s s'
-    | QEJmpFalse: forall (n loc next: nat) p m c l s s',
-        (nth_error p n) = Some (QJmp c l)
+    | QECondFalse: forall (n loc next: nat) p m c l s s',
+        (nth_error p n) = Some (QCond c l)
       -> evalCond c s = Some false
       -> QhasmEval (S n) p m s s'
       -> QhasmEval n p m s s'
+    | QERet: forall (n n': nat) s s' s'' p m,
+        (nth_error p n) = Some QRet
+      -> popRet s = Some (s', n')
+      -> QhasmEval n' p m s' s''
+      -> QhasmEval n  p m s s''
+    | QECall: forall (w n n' lbl: nat) s s' s'' p m,
+        (nth_error p n) = Some (QCall lbl)
+      -> NatM.find lbl m = Some n'
+      -> QhasmEval n' p m (pushRet (S n) s') s''
+      -> QhasmEval n  p m s s''
     | QELabel: forall n p m l s s',
         (nth_error p n) = Some (QLabel l)
       -> QhasmEval (S n) p m s s'

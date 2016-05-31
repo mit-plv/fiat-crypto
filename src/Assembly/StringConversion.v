@@ -61,16 +61,13 @@ Module StringConversion <: Conversion Qhasm QhasmString.
     Coercion wordToString {n} (w: word n): string := 
       "0x" ++ (nToHex (wordToN w)).
 
-    Coercion intConstToString {n} (c: IConst n): string :=
-      match c with
-      | constInt32 w => "0x" ++ w
-      | constInt64 w => "0x" ++ w
-      end.
+    Coercion constToString {n} (c: Const n): string :=
+      match c with | const _ _ w => "0x" ++ w end.
 
-    Coercion intRegToString {n} (r: IReg n): string :=
+    Coercion regToString {n} (r: Reg n): string :=
       match r with
-      | regInt32 n => "w" ++ (nameSuffix n)
-      | regInt64 n => "w" ++ (nameSuffix n)
+      | reg _ W32 n => "w" ++ (nameSuffix n)
+      | reg _ W64 n => "d" ++ (nameSuffix n)
       end.
 
     Coercion natToString (n: nat): string :=
@@ -78,9 +75,14 @@ Module StringConversion <: Conversion Qhasm QhasmString.
 
     Coercion stackToString {n} (s: Stack n): string :=
       match s with
-      | stack32 n => "ss" ++ (nameSuffix n)
-      | stack64 n => "ls" ++ (nameSuffix n)
-      | stack128 n => "qs" ++ (nameSuffix n)
+      | stack _ W32 n => "ws" ++ (nameSuffix n)
+      | stack _ W64 n => "ds" ++ (nameSuffix n)
+      end.
+
+    Coercion memToString {n m} (s: Mem n m): string :=
+      match s with
+      | mem _ _ W32 v => "wm" ++ (nameSuffix v)
+      | mem _ _ W64 v => "dm" ++ (nameSuffix v)
       end.
 
     Coercion stringToSome (x: string): option string := Some x.
@@ -91,27 +93,31 @@ Module StringConversion <: Conversion Qhasm QhasmString.
     Definition assignmentToString (a: Assignment): option string :=
       let f := fun x => if (Nat.eq_dec x 32) then "32" else "64" in
       match a with
-      | ARegStackInt n r s => r ++ " = *(int" ++ f n ++ " *)" ++ s
-      | AStackRegInt n s r => "*(int" ++ f n ++ " *) " ++ s ++ " = " ++ r
-      | ARegRegInt n a b => a ++ " = " ++ b
+      | ARegStack n r s => r ++ " = *(int" ++ f n ++ " *)" ++ s
+      | AStackReg n s r => "*(int" ++ f n ++ " *) " ++ s ++ " = " ++ r
+      | ARegMem n m r v i => r ++ " = " ++ "*(int" ++ f n ++ " *) (" ++ v ++ " + " ++ i ++ ")"
+      | AMemReg n m v i r => "*(int" ++ f n ++ " *) (" ++ v ++ " + " ++ i ++ ") = " ++ r
+      | ARegReg n a b => a ++ " = " ++ b
       | AConstInt n r c => r ++ " = " ++ c
-      | AIndex n m a b i =>
-        a ++ " = *(int" ++ f n ++ " *) (" ++ b ++ " + " ++ (m/n) ++ ")"
-      | APtr n r s => r ++ " = " ++ s
       end.
 
     Coercion intOpToString (b: IntOp): string :=
       match b with
-      | IPlus => "+"
-      | IMinus => "-"
-      | IXor => "^"
-      | IAnd => "&"
-      | IOr => "|"
+      | Add => "+"
+      | Sub => "-"
+      | Xor => "^"
+      | And => "&"
+      | Or => "|"
       end.
 
     Coercion dualOpToString (b: DualOp): string :=
       match b with
-      | IMult => "*"
+      | Mult => "*"
+      end.
+
+    Coercion carryOpToString (b: CarryOp): string :=
+      match b with
+      | AddWithCarry => "+"
       end.
  
     Coercion rotOpToString (r: RotOp): string :=
