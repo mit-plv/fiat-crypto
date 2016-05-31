@@ -61,16 +61,13 @@ Module StringConversion <: Conversion Qhasm QhasmString.
     Coercion wordToString {n} (w: word n): string := 
       "0x" ++ (nToHex (wordToN w)).
 
-    Coercion intConstToString {n} (c: IConst n): string :=
-      match c with
-      | constInt32 w => "0x" ++ w
-      | constInt64 w => "0x" ++ w
-      end.
+    Coercion constToString {n} (c: Const n): string :=
+      match c with | const _ _ w => "0x" ++ w end.
 
-    Coercion intRegToString {n} (r: IReg n): string :=
+    Coercion regToString {n} (r: Reg n): string :=
       match r with
-      | regInt32 n => "w" ++ (nameSuffix n)
-      | regInt64 n => "w" ++ (nameSuffix n)
+      | reg _ W32 n => "w" ++ (nameSuffix n)
+      | reg _ W64 n => "d" ++ (nameSuffix n)
       end.
 
     Coercion natToString (n: nat): string :=
@@ -78,9 +75,14 @@ Module StringConversion <: Conversion Qhasm QhasmString.
 
     Coercion stackToString {n} (s: Stack n): string :=
       match s with
-      | stack32 n => "ss" ++ (nameSuffix n)
-      | stack64 n => "ls" ++ (nameSuffix n)
-      | stack128 n => "qs" ++ (nameSuffix n)
+      | stack _ W32 n => "ws" ++ (nameSuffix n)
+      | stack _ W64 n => "ds" ++ (nameSuffix n)
+      end.
+
+    Coercion memToString {n m} (s: Mem n m): string :=
+      match s with
+      | mem _ _ W32 v => "wm" ++ (nameSuffix v)
+      | mem _ _ W64 v => "dm" ++ (nameSuffix v)
       end.
 
     Coercion stringToSome (x: string): option string := Some x.
@@ -91,27 +93,31 @@ Module StringConversion <: Conversion Qhasm QhasmString.
     Definition assignmentToString (a: Assignment): option string :=
       let f := fun x => if (Nat.eq_dec x 32) then "32" else "64" in
       match a with
-      | ARegStackInt n r s => r ++ " = *(int" ++ f n ++ " *)" ++ s
-      | AStackRegInt n s r => "*(int" ++ f n ++ " *) " ++ s ++ " = " ++ r
-      | ARegRegInt n a b => a ++ " = " ++ b
+      | ARegStack n r s => r ++ " = *(int" ++ f n ++ " *)" ++ s
+      | AStackReg n s r => "*(int" ++ f n ++ " *) " ++ s ++ " = " ++ r
+      | ARegMem n m r v i => r ++ " = " ++ "*(int" ++ f n ++ " *) (" ++ v ++ " + " ++ i ++ ")"
+      | AMemReg n m v i r => "*(int" ++ f n ++ " *) (" ++ v ++ " + " ++ i ++ ") = " ++ r
+      | ARegReg n a b => a ++ " = " ++ b
       | AConstInt n r c => r ++ " = " ++ c
-      | AIndex n m a b i =>
-        a ++ " = *(int" ++ f n ++ " *) (" ++ b ++ " + " ++ (m/n) ++ ")"
-      | APtr n r s => r ++ " = " ++ s
       end.
 
     Coercion intOpToString (b: IntOp): string :=
       match b with
-      | IPlus => "+"
-      | IMinus => "-"
-      | IXor => "^"
-      | IAnd => "&"
-      | IOr => "|"
+      | Add => "+"
+      | Sub => "-"
+      | Xor => "^"
+      | And => "&"
+      | Or => "|"
       end.
 
     Coercion dualOpToString (b: DualOp): string :=
       match b with
-      | IMult => "*"
+      | Mult => "*"
+      end.
+
+    Coercion carryOpToString (b: CarryOp): string :=
+      match b with
+      | AddWithCarry => "+"
       end.
  
     Coercion rotOpToString (r: RotOp): string :=
@@ -121,18 +127,25 @@ Module StringConversion <: Conversion Qhasm QhasmString.
       end.
  
     Definition operationToString (op: Operation): option string :=
+      let f := fun x => if (Nat.eq_dec x 32) then "32" else "64" in
       match op with
       | IOpConst n o r c => 
         r ++ " " ++ o ++ "= " ++ c
       | IOpReg n o a b =>
         a ++ " " ++ o ++ "= " ++ b
-      | DOpReg n o a b x =>
+      | IOpMem n _ o a b i =>
+        a ++ " " ++ o ++ "= *(int" ++ (f n) ++ "* " ++ b ++ " + " ++ i ++ ")"
+      | IOpStack n o a b =>
+        a ++ " " ++ o ++ "= " ++ b
+      | DOp n o a b x =>
         match x with
         | Some r =>
           "inline " ++ r ++ " " ++ a ++ " " ++ o ++ "= " ++ b
         | None => a ++ " " ++ o ++ "= " ++ b
         end
-      | OpRot n o r i =>
+      | COp n o a b =>
+        a ++ " " ++ o ++ "= " ++ b
+      | ROp n o r i =>
         r ++ " " ++ o ++ "= " ++ i
       end.
 
@@ -147,53 +160,70 @@ Module StringConversion <: Conversion Qhasm QhasmString.
 
     Definition conditionalToString (c: Conditional): string * string :=
       match c with
-      | TestTrue => ("=? 0", ">") (* these will be elided later on*)
-      | TestFalse => (">? 0", ">")
-      | TestInt n o a b =>
-        match (testOpToString o) with
+      | CTrue => ("=? 0", "=") 
+      | CZero n r => ("=? " ++ r, "=")
+      | CReg n t a b => 
+        match (testOpToString t) with
         | (true, s) =>
           (s ++ "? " ++ a ++ " - " ++ b, s)
         | (false, s) =>
-          ("!" ++ s ++ "? " ++ a ++ " - " ++ b, "!" ++ s)
+          (s ++ "? " ++ a ++ " - " ++ b, "!" ++ s)
+        end
+
+      | CConst n t a b => 
+        match (testOpToString t) with
+        | (true, s) => 
+          (s ++ "? " ++ a ++ " - " ++ b, s)
+        | (false, s) =>
+          (s ++ "? " ++ a ++ " - " ++ b, "!" ++ s)
         end
       end.
 
   End Elements.
 
   Section Parsing.
-    Fixpoint entries (prog: Program): list Entry :=
+    Definition convM {n m} (x: list (Mapping n)): list (Mapping m).
+      destruct (Nat.eq_dec n m); subst. exact x. exact [].
+    Defined.
+
+    Arguments regM [n] r.
+    Arguments stackM [n] s.
+    Arguments memM [n m] x.
+    Arguments constM [n] x.
+
+    Fixpoint entries (width: nat) (prog: Program): list (Mapping width) :=
       match prog with
       | cons s next =>
         match s with
         | QAssign a =>
           match a with
-          | ARegStackInt n r s => [intEntry n r; stackEntry n s]
-          | AStackRegInt n s r => [intEntry n r; stackEntry n s]
-          | ARegRegInt n a b => [intEntry n a; intEntry n b]
-          | AConstInt n r c => [intEntry n r]
-          | AIndex n m a b i => [intEntry n a; stackEntry m b]
-          | APtr n r s => [intEntry 32 r; stackEntry n s]
+          | ARegStack n r s => convM [regM r; stackM s]
+          | AStackReg n s r => convM [regM r; stackM s]
+          | ARegMem n m a b i => convM [regM a; memM b]
+          | AMemReg n m a i b => convM [memM a; regM b]
+          | ARegReg n a b => convM [regM a; regM b]
+          | AConstInt n r c => convM [regM r; constM c]
           end
         | QOp o =>
           match o with
-          | IOpConst n o r c => [intEntry n r]
-          | IOpReg n o a b => [intEntry n a; intEntry n b]
-          | DOpReg n o a b x =>
-            match x with
-            | Some r =>
-              [intEntry n a; intEntry n b; intEntry n r]
-            | None =>
-              [intEntry n a; intEntry n b]
-            end
-          | OpRot n o r i => [intEntry n r]
+          | IOpConst _ o a c => convM [regM a; constM c]
+          | IOpReg _ o a b => convM [regM a; regM b]
+          | IOpStack _ o a b => convM [regM a; stackM b]
+          | IOpMem _ _ o a b i => convM [regM a; memM b]
+          | DOp _ o a b (Some x) => convM [regM a; regM b; regM x]
+          | DOp _ o a b None => convM [regM a; regM b]
+          | ROp _ o a i => convM [regM a]
+          | COp _ o a b => convM [regM a; regM b]
           end
-        | QJmp c _ =>
+        | QCond c _ =>
           match c with
-          | TestInt n o a b => [intEntry n a; intEntry n b]
-          | _ => []
+          | CTrue => []
+          | CZero n r => convM [regM r]
+          | CReg n o a b => convM [regM a; regM b]
+          | CConst n o a c => convM [regM a; constM c]
           end
-        | QLabel _ => []
-        end ++ (entries next)
+        | _ => []
+        end ++ (entries width next)
       | nil => nil
       end.
 
@@ -205,119 +235,101 @@ Module StringConversion <: Conversion Qhasm QhasmString.
     Definition flatMapList {A B} (lst: list A) (f: A -> list B): list B :=
       fold_left (fun lst a => lst ++ (f a)) lst [].
 
-    Fixpoint dedup (l : list Entry) : list Entry :=
+    Fixpoint dedup {n} (l : list (Mapping n)) : list (Mapping n) :=
       match l with
       | [] => []
       | x::xs =>
-        if in_dec entry_dec x xs
+        if in_dec EvalUtil.mapping_dec x xs
         then dedup xs
         else x::(dedup xs)
       end.
 
-    Definition everyIReg32 (lst: list Entry): list (IReg 32) :=
+    Definition getRegNames (n: nat) (lst: list (Mapping n)): list nat :=
       flatMapOpt (dedup lst) (fun e =>
-        match e with | intEntry 32 r => Some r | _ => None end).
+        match e with | regM (reg _ _ x) => Some x | _ => None end).
 
-    Definition everyIReg64 (lst: list Entry): list (IReg 64) :=
+    Definition getStackNames (n: nat) (lst: list (Mapping n)): list nat :=
       flatMapOpt (dedup lst) (fun e =>
-        match e with | intEntry 64 r => Some r | _ => None end).
+        match e with | stackM (stack _ _ x) => Some x | _ => None end).
 
-    Definition everyStack (n: nat) (lst: list Entry): list (Stack n).
-      refine (flatMapOpt (dedup lst) (fun e =>
-        match e with
-        | stackEntry n' r =>
-          if (Nat.eq_dec n n') then Some (convert r _) else None
-        | _ => None
-        end)); subst; reflexivity.
-    Defined.
+    Definition getMemNames (n: nat) (lst: list (Mapping n)): list nat :=
+      flatMapOpt (dedup lst) (fun e =>
+        match e with | memM _ (mem _ _ _ x) => Some x | _ => None end).
 
-    Fixpoint getUsedBeforeInit' (prog: list QhasmStatement) (init: list Entry): list Entry :=
-      let f := fun rs => filter (fun x => proj1_sig (bool_of_sumbool (in_dec entry_dec x init))) rs in
+    Fixpoint getInputs' (n: nat) (prog: list QhasmStatement) (init: list (Mapping n)): list (Mapping n) :=
+      let f := fun rs => filter (fun x =>
+        proj1_sig (bool_of_sumbool (in_dec EvalUtil.mapping_dec x init))) rs in
+      let g := fun {w} p => (@convM w n (fst p), @convM w n (snd p)) in
       match prog with
       | [] => []
       | cons p ps =>
         let requiredCommaUsed := match p with
         | QAssign a =>
           match a with
-          | ARegStackInt n r s =>
-            let re := intEntry n r in
-            let se := stackEntry n s in
-            ([se], [re; se])
-
-          | AStackRegInt n s r =>
-            let re := intEntry n r in
-            let se := stackEntry n s in
-            ([re], [re; se])
-
-          | ARegRegInt n a b =>
-            let ae := intEntry n a in
-            let be := intEntry n b in
-            ([be], [ae; be])
-
-          | AConstInt n r c =>
-            let re := intEntry n r in
-            ([], [re])
-
-          | AIndex n m a b i =>
-            let ae := intEntry n a in
-            let be := stackEntry m b in
-            ([be], [ae; be])
-
-          | APtr n r s =>
-            let re := intEntry 32 r in
-            let se := stackEntry n s in
-            ([se], [re; se])
+          | ARegStack n r s   => g ([stackM s], [regM r; stackM s])
+          | AStackReg n s r   => g ([regM r], [regM r; stackM s])
+          | ARegMem n m r x i => g ([memM x], [regM r; memM x])
+          | AMemReg n m x i r => g ([regM r], [regM r; memM x])
+          | ARegReg n a b     => g ([regM b], [regM a; regM b])
+          | AConstInt n r c   => g ([], [regM r])
           end
         | QOp o =>
           match o with
-          | IOpConst n o r c =>
-            let re := intEntry n r in
-            ([re], [re])
-
-          | IOpReg n o a b =>
-            let ae := intEntry n a in
-            let be := intEntry n b in
-            ([ae; be], [ae; be])
-
-          | DOpReg n o a b x =>
-            let ae := intEntry n a in
-            let be := intEntry n b in
-
-            match x with
-            | Some r =>
-              let xe := intEntry n r in
-              ([ae; be], [ae; be; xe])
-            | None => ([ae; be], [ae; be])
-            end
-
-          | OpRot n o r i =>
-            let re := intEntry n r in
-            ([re], [re])
+          | IOpConst _ o a c     => g ([regM a], [regM a])
+          | IOpReg _ o a b       => g ([regM a], [regM a; regM b])
+          | IOpStack _ o a b     => g ([regM a], [regM a; stackM b])
+          | IOpMem _ _ o a b i   => g ([regM a], [regM a; memM b])
+          | DOp _ o a b (Some x) => g ([regM a; regM b], [regM a; regM b; regM x])
+          | DOp _ o a b None     => g ([regM a; regM b], [regM a; regM b])
+          | ROp _ o a i          => g ([regM a], [regM a])
+          | COp _ o a b          => g ([regM a], [regM a; regM b])
           end
-        | QJmp c _ =>
+        | QCond c _ =>
           match c with
-          | TestInt n o a b =>
-            let ae := intEntry n a in
-            let be := intEntry n b in
-            ([ae; be], [])
-
-          | _ => ([], [])
+          | CTrue => ([], [])
+          | CZero n r => g ([], [regM r])
+          | CReg n o a b => g ([], [regM a; regM b])
+          | CConst n o a c => g ([], [regM a])
           end
-        | QLabel _ => ([], [])
-        end in
-        match requiredCommaUsed with
-        | (r, u) =>
-          ((f r) ++ (getUsedBeforeInit' ps ((f u) ++ init)))
+        | _ => ([], [])
+        end in match requiredCommaUsed with
+        | (r, u) => ((f r) ++ (getInputs' n ps ((f u) ++ init)))
         end
       end.
 
-    Definition getUsedBeforeInit (prog: list QhasmStatement) := getUsedBeforeInit' prog [].
+    Definition getInputs (n: nat) (prog: list QhasmStatement) := getInputs' n prog [].
 
-    Definition entryToString (e: Entry) :=
-      match e with
-      | intEntry n i => intRegToString i
-      | stackEntry n s => stackToString s
+    Definition mappingDeclaration {n} (x: Mapping n): option string :=
+      match x with
+      | regM (reg _ w x) =>
+        match w with
+        | W32 => Some ("int32 " ++ (reg w x))%string
+        | W64 => Some ("int64 " ++ (reg w x))%string
+        end
+
+      | stackM (stack _ w x) =>
+        match w with
+        | W32 => Some ("stack32 " ++ (stack w x))%string
+        | W64 => Some ("stack64 " ++ (stack w x))%string
+        end
+
+      | memM _ (mem _ m w x) =>
+        match w with
+        | W32 => Some ("stack32 " ++ (@mem _ m w x))%string
+        | W64 => Some ("stack64 " ++ (@mem _ m w x))%string
+        end
+
+      | _ => None
       end.
+
+    Definition inputDeclaration {n} (x: Mapping n): option string :=
+      match x with
+      | regM r => Some ("input " ++ r)%string
+      | stackM s => Some ("input " ++ s)%string
+      | memM _ m => Some ("input " ++ m)%string
+      | _ => None
+      end.
+
   End Parsing.
 
   (* Macroscopic Conversion Methods *)

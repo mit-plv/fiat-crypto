@@ -256,16 +256,17 @@ Module FullState.
     | fullState (regState: PairNMap)
                 (stackState: PairNMap)
                 (memState: TripleNMap)
+                (retState: list nat)
                 (carry: Carry): State.
 
   Definition emptyState: State :=
-    fullState (PairM.empty N) (PairM.empty N) (TripleM.empty N) None.
+    fullState (PairM.empty N) (PairM.empty N) (TripleM.empty N) [] None.
 
   (* Register *)
 
   Definition getReg {n} (r: Reg n) (state: State): option (word n) :=
     match state with
-    | fullState regS _ _ _ =>
+    | fullState regS _ _ _ _ =>
       match (PairM.find (n, regName r) regS) with
       | Some v => Some (NToWord n v)
       | None => None
@@ -274,16 +275,16 @@ Module FullState.
 
   Definition setReg {n} (r: Reg n) (value: word n) (state: State): State :=
     match state with
-    | fullState regS stackS memS carry =>
+    | fullState regS stackS memS retS carry =>
       fullState (PairM.add (n, regName r) (wordToN value) regS)
-                stackS memS carry
+                stackS memS retS carry
     end.
 
   (* Stack *)
 
   Definition getStack {n} (s: Stack n) (state: State): option (word n) :=
     match state with
-    | fullState _ stackS _ _ =>
+    | fullState _ stackS _ _ _ =>
       match (PairM.find (n, stackName s) stackS) with
       | Some v => Some (NToWord n v)
       | None => None
@@ -292,17 +293,17 @@ Module FullState.
 
   Definition setStack {n} (s: Stack n) (value: word n) (state: State): State :=
     match state with
-    | fullState regS stackS memS carry =>
+    | fullState regS stackS memS retS carry =>
       fullState regS
                 (PairM.add (n, stackName s) (wordToN value) stackS)
-                memS carry
+                memS retS carry
     end.
 
   (* Memory *)
 
   Definition getMem {n m} (x: Mem n m) (i: Index m) (state: State): option (word n) :=
     match state with
-    | fullState _ _ memS _ =>
+    | fullState _ _ memS _ _ =>
       match (TripleM.find (n, memName x, proj1_sig i) memS) with
       | Some v => Some (NToWord n v)
       | None => None
@@ -311,23 +312,38 @@ Module FullState.
 
   Definition setMem {n m} (x: Mem n m) (i: Index m) (value: word n) (state: State): State :=
     match state with
-    | fullState regS stackS memS carry =>
+    | fullState regS stackS memS retS carry =>
       fullState regS stackS
                 (TripleM.add (n, memName x, proj1_sig i) (wordToN value) memS)
-                carry
+                retS carry
+    end.
+
+  (* Return Pointers *)
+
+  Definition pushRet (x: nat) (state: State): State :=
+    match state with
+    | fullState regS stackS memS retS carry =>
+      fullState regS stackS memS (cons x retS) carry
+    end.
+
+  Definition popRet (state: State): option (State * nat) :=
+    match state with
+    | fullState regS stackS memS [] carry => None
+    | fullState regS stackS memS (r :: rs) carry =>
+      Some (fullState regS stackS memS rs carry, r)
     end.
 
   (* Carry State Manipulations *)
 
   Definition getCarry (state: State): Carry :=
     match state with
-    | fullState _ _ _ b => b
+    | fullState _ _ _ _ b => b
     end.
 
   Definition setCarry (value: bool) (state: State): State :=
     match state with
-    | fullState regS stackS memS carry =>
-      fullState regS stackS memS (Some value)
+    | fullState regS stackS memS retS carry =>
+      fullState regS stackS memS retS (Some value)
     end.
 
   Definition setCarryOpt (value: option bool) (state: State): State :=

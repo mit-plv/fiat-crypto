@@ -240,6 +240,12 @@ Module QhasmEval.
             let (v', co) := (evalIntOp o va vb) in
             Some (setCarryOpt co (setReg a v' state))))
 
+    | IOpStack _ o a b =>
+      omap (getReg a state) (fun va =>
+        omap (getStack b state) (fun vb =>
+            let (v', co) := (evalIntOp o va vb) in
+            Some (setCarryOpt co (setReg a v' state))))
+
     | IOpMem _ _ o r m i => 
       omap (getReg r state) (fun va =>
         omap (getMem m i state) (fun vb =>
