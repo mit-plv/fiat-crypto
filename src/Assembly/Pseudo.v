@@ -29,7 +29,7 @@ Module Pseudo (M: PseudoMachine) <: Language.
 
     | PLet: forall n k m, Pseudo n k -> Pseudo (n + k) m -> Pseudo n m
     | PComb: forall n a b, Pseudo n a -> Pseudo n b -> Pseudo n (a + b)
-    | PCall: forall n m, Pseudo n m -> Pseudo n m.
+    | PCall: forall n m, Label -> Pseudo n m -> Pseudo n m.
 
   Hint Constructors Pseudo.
 
@@ -101,7 +101,7 @@ Module Pseudo (M: PseudoMachine) <: Language.
             funexpseudo e'' st'')
         end) e st
 
-    | PCall n m p => pseudoEval p st
+    | PCall n m _ p => pseudoEval p st
     end.
 
   Definition evaluatesTo := fun (p: Program) (st st': State) => (pseudoEval p st = Some st').
