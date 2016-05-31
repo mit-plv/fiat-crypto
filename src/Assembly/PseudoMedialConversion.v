@@ -4,7 +4,7 @@ Require Export Pseudo Medial AlmostQhasm State.
 Require Export Bedrock.Word NArith NPeano.
 Require Export List Sumbool.
 Require Import FMapAVL FMapList JMeq.
-Require Vector.
+Require Import Vector.
 
 Module PseudoMedialConversion (Arch: PseudoMachine).
   Import QhasmCommon AlmostQhasm EvalUtil Util.
@@ -20,7 +20,7 @@ Module PseudoMedialConversion (Arch: PseudoMachine).
 
     Fixpoint convertState (st: M.State): option P.State :=
       let try_cons := fun {T} (x: option T) (l: list T) =>
-        match x with | Some x' => cons x' l | _ => l end in
+        match x with | Some x' => x' :: l | _ => l end in
 
       match st with
       | (v, m, c) =>
@@ -47,90 +47,127 @@ Module PseudoMedialConversion (Arch: PseudoMachine).
         | [] => ([], [])
         | l :: ls =>
           match list_split m ls with
-          | (a, b) => (cons l a, b)
+          | (a, b) => (l :: a, b)
           end
         end
       end.
 
     Fixpoint maxN (lst: list nat): nat :=
       match lst with
-      | cons x xs => max x (maxN xs)
-      | nil => O
+      | x :: xs => max x (maxN xs)
+      | [] => O
       end.
-
-    Module NatM := FMapAVL.Make(Nat_as_OT).
-    Module ProgMap := NatM.t Medial.
-    Definition noProgs := NatM.empty Medial.
 
     (* Results are in the locations described by the
        returned list. start is the next known open address *)
-    Fixpoint convertProgram' {n m} (prog: Pseudo n m) (start: nat) (funs: nat):
-        option (Medial * (list nat) * (NatM.t Medial)) :=
+    Fixpoint convertProgram' {n m} (prog: Pseudo n m) (start: nat):
+        option (Medial * (list nat)) :=
 
       match prog with
-      | PVar n i => Some (MSkip, [start], NatM.empty)
-      | PConst n c => Some (MAssign (MAConst start c), [start], [])
-      | PMem n m v i => Some (MAssign (MAMem start v i), [start], [])
+      | PVar n i => Some (MSkip, [start])
+      | PConst n c => Some (MAssign (MAConst start c), [start])
+      | PMem n m v i => Some (MAssign (MAMem start v i), [start])
 
-                            | _ => None end.
       | PBin n o p =>
-        t <- convertProgram' p start funs;
-        match (snd t) with
-        | [a; b] =>
-          Some (MSeq (fst t) (MOp (MIOpReg o a b)), [a])
+        match (convertProgram' p start) with
+        | Some (p', [a; b]) =>
+          Some (MSeq p' (MOp (MIOpReg o a b)), [a])
+        | _ => None
+        end
+
+      | PCarry n o p =>
+        match (convertProgram' p start) with
+        | Some (p', [a; b]) =>
+          Some (MSeq p' (MOp (MCOpReg o a b)), [a])
         | _ => None
         end
 
       | PDual n o p =>
-        t <- convertProgram' p start funs;
-        match (snd t) with
-        | [a; b] =>
-          let nextOpen := S (maxN (snd t)) in
-          Some (MSeq (fst t) (MOp (MDOpReg o a b (Some nextOpen))),
-                [a; nextOpen])
+        match (convertProgram' p start) with
+        | Some (p', [a; b]) =>
+          let nextOpen := S (maxN [a; b]) in
+          Some (MSeq p' (MOp (MDOpReg o a b (Some nextOpen))), [a; nextOpen])
         | _ => None
         end
 
       | PShift n o a x =>
-        t <- convertProgram' x start funs;
-        match (snd t) with
-        | [r] => Some (MSeq (fst t) (MOp (MOpRot o r a)), [proj1_sig a])
+        match (convertProgram' x start) with
+        | Some (p', [r]) =>
+          Some (MSeq p' (MOp (MOpRot o r a)), [proj1_sig a])
         | _ => None
         end
 
       | PLet n k m f g =>
-        ft <- convertProgram' f (start + k) funs;
-        gt <- convertProgram' g (S (maxN (snd ft))) funs;
+        ft <- convertProgram' f (start + k);
+        gt <- convertProgram' g (S (maxN (snd ft)));
 
-        Some (MSeq (fst ft) (fst gt), snd gt)
+        match (ft, gt) with
+        | ((fp, fr), (gp, gr)) => Some (MSeq fp gp, gr)
+        end
 
       | PComb n a b f g => 
-        ft <- convertProgram' f start funs;
-        gt <- convertProgram' g (S (maxN (snd ft))) funs;
-        Some (MSeq (fst ft) (fst gt), (snd ft) ++ (snd gt))
+        ft <- convertProgram' f start;
+        gt <- convertProgram' g (S (maxN (snd ft)));
+        match (ft, gt) with
+        | ((fp, fr), (gp, gr)) => Some (MSeq fp gp, fr ++ gr)
+        end
 
       | PIf n m o i0 i1 l r => 
-        lt <- convertProgram' l start funs;
-        rt <- convertProgram' r start funs;
-        Some (MCond (MC o i0 i1) (fst lt) (fst rt), snd lt)
-             (* TODO: prove that all (Pseudo n m) will return the same list *)
+        lt <- convertProgram' l start;
+        rt <- convertProgram' r start;
+        match (lt, rt) with
+        | ((lp, lr), (rp, rr)) => Some (MCond (MC o i0 i1) lp rp, lr)
+        end
+        (* TODO: prove that all (Pseudo n m) will return the same list *)
 
       | PFunExp n f e => 
-        ft <- convertProgram' f start funs;
-        Some (MFunexp e (fst ft), snd ft)
+        match (convertProgram' f start) with
+        | Some (fp, fr) => Some (MFunexp e fp, fr)
+        | _ => None
+        end
  
-      | PCall n m f => 
-        ft <- convertProgram' f start funs;
-        Some (MCall funs (fst ft), snd ft)
-    | MDef: nat -> Medial -> Medial -> Medial
-    | MCall: nat -> Medial.
-
-
+      | PCall n m lbl _ => Some (MCall lbl, range n m)
       end.
 
+    Definition addFunMap {T} (a b: TripleM.t T): TripleM.t T :=
+      (fix add' (m: TripleM.t T) (elts: list ((nat * nat * nat) * T)%type) :=
+        match elts with
+        | [] => m
+        | (k, v) :: elts' => add' (TripleM.add k v m) elts'
+        end) a (TripleM.elements b).
+
     Definition convertProgram (prog: Pseudo vars vars): option M.Program :=
-      let m := range O vars in
-      option_map (@fst Medial nat) (convertProgram' prog m m vars).
+      let defs: TripleM.t M.Program :=
+        (fix allDefs {n m: nat} (prog: Pseudo n m): TripleM.t M.Program :=
+          match prog with
+          | PBin n o p => allDefs p
+          | PCarry n o p => allDefs p
+          | PDual n o p => allDefs p
+          | PShift n o a x => allDefs x
+          | PLet n k m f g => addFunMap (allDefs f) (allDefs g)
+          | PComb n a b f g => addFunMap (allDefs f) (allDefs g)
+          | PIf n m t i0 i1 l r => addFunMap (allDefs l) (allDefs r)
+          | PFunExp n p e => allDefs p
+          | PCall n m l p =>
+            match (convertProgram' p n) with
+            | Some (mp, _) => TripleM.add (n, m, l) mp (allDefs p)
+            | _ => allDefs p
+            end
+          | _ => TripleM.empty M.Program
+          end) _ _ prog in
+
+     let foldF := fun (p: M.Program) (t: (nat * nat * nat) * M.Program) =>
+       match t with
+       | ((n', m', lbl), p') => MDef lbl p' p
+       end in
+
+     let f: M.Program -> option M.Program := fun x =>
+       Some (fold_left foldF x (of_list (TripleM.elements defs))) in
+
+     match (convertProgram' prog vars) with
+     | Some (p', _) => f p'
+     | _ => None
+     end.
 
     Lemma convert_spec:  forall a a' b b' prog prog',
       convertProgram prog = Some prog' ->
@@ -150,25 +187,14 @@ Module PseudoMedialConversion (Arch: PseudoMachine).
         | right; abstract intuition].
     Defined.
 
-    Definition ireg (x: nat): IReg width :=
-      match width_spec with
-      | I32 => regInt32 x
-      | I64 => regInt64 x
-      end.
+    Definition ireg (x: nat): Reg width :=
+      reg width_spec x.
 
-    Definition iconst (x: word width): IConst width.
-      refine (
-        if width_dec
-        then (convert constInt32 _) x
-        else (convert constInt64 _) x);
-        abstract (rewrite _H; intuition).
-    Defined.
+    Definition iconst (x: word width): Const width :=
+      const width_spec x.
 
-    Definition stack (x: nat): Stack width :=
-      match width_spec with
-      | I32 => stack32 x
-      | I64 => stack64 (2 * x)
-      end.
+    Definition istack (x: nat): Stack width :=
+      stack width_spec x.
 
     Fixpoint convertState (st: AlmostQhasm.State): option M.State :=
       let try_cons := fun (k: nat) (x: option N) (m: DefMap) =>
