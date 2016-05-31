@@ -137,30 +137,37 @@ Module PseudoMedialConversion (Arch: PseudoMachine).
         end) a (TripleM.elements b).
 
     Definition convertProgram (prog: Pseudo vars vars): option M.Program :=
-     let defs := (fix allDefs {n m} (prog: Pseudo n m): TripleM.t M.Program :=
-        match prog with
-        | PBin n o p => allDefs p
-        | PCarry n o p => allDefs p
-        | PDual n o p => allDefs p
-        | PShift n o a x => allDefs x
-        | PLet n k m f g => addFunMap (allDefs f) (allDefs g)
-        | PComb n a b f g => addFunMap (allDefs f) (allDefs g)
-        | PIf n m t i0 i1 l r => addFunMap (allDefs l) (allDefs r)
-        | PFunExp n p e => allDefs p
-        | PCall n m l p =>
-          match (convertProgram' p n) with
-          | Some (mp, _) => TripleM.add (n, m, l) mp (allDefs p)
-          | _ => allDefs p
-          end
-        | _ => TripleM.empty M.Program
-        end) prog in
+      let defs: TripleM.t M.Program :=
+        (fix allDefs {n m: nat} (prog: Pseudo n m): TripleM.t M.Program :=
+          match prog with
+          | PBin n o p => allDefs p
+          | PCarry n o p => allDefs p
+          | PDual n o p => allDefs p
+          | PShift n o a x => allDefs x
+          | PLet n k m f g => addFunMap (allDefs f) (allDefs g)
+          | PComb n a b f g => addFunMap (allDefs f) (allDefs g)
+          | PIf n m t i0 i1 l r => addFunMap (allDefs l) (allDefs r)
+          | PFunExp n p e => allDefs p
+          | PCall n m l p =>
+            match (convertProgram' p n) with
+            | Some (mp, _) => TripleM.add (n, m, l) mp (allDefs p)
+            | _ => allDefs p
+            end
+          | _ => TripleM.empty M.Program
+          end) _ _ prog in
 
-     let foldF := fun (t: (nat * nat * nat) * M.Program) (p: M.Program) =>
+     let foldF := fun (p: M.Program) (t: (nat * nat * nat) * M.Program) =>
        match t with
        | ((n', m', lbl), p') => MDef lbl p' p
        end in
 
-     option_map (fold_left _ _ foldF (TripleM.elements defs)) (convertProgram' prog _ _ vars).
+     let f: M.Program -> option M.Program := fun x =>
+       Some (fold_left foldF x (of_list (TripleM.elements defs))) in
+
+     match (convertProgram' prog vars) with
+     | Some (p', _) => f p'
+     | _ => None
+     end.
 
     Lemma convert_spec:  forall a a' b b' prog prog',
       convertProgram prog = Some prog' ->
@@ -180,25 +187,14 @@ Module PseudoMedialConversion (Arch: PseudoMachine).
         | right; abstract intuition].
     Defined.
 
-    Definition ireg (x: nat): IReg width :=
-      match width_spec with
-      | I32 => regInt32 x
-      | I64 => regInt64 x
-      end.
+    Definition ireg (x: nat): Reg width :=
+      reg width_spec x.
 
-    Definition iconst (x: word width): IConst width.
-      refine (
-        if width_dec
-        then (convert constInt32 _) x
-        else (convert constInt64 _) x);
-        abstract (rewrite _H; intuition).
-    Defined.
+    Definition iconst (x: word width): Const width :=
+      const width_spec x.
 
-    Definition stack (x: nat): Stack width :=
-      match width_spec with
-      | I32 => stack32 x
-      | I64 => stack64 (2 * x)
-      end.
+    Definition istack (x: nat): Stack width :=
+      stack width_spec x.
 
     Fixpoint convertState (st: AlmostQhasm.State): option M.State :=
       let try_cons := fun (k: nat) (x: option N) (m: DefMap) =>
