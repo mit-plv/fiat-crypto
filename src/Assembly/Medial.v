@@ -13,7 +13,7 @@ Module Medial (Arch: PseudoMachine) <: Language.
 
   Inductive MAssignment : Type :=
     | MAVar: nat -> nat -> MAssignment 
-    | MAMem: nat -> nat -> nat -> MAssignment 
+    | MAMem: forall m, nat -> nat -> Index m -> MAssignment 
     | MAConst: nat -> W -> MAssignment.
 
   Inductive MOperation :=
@@ -24,7 +24,9 @@ Module Medial (Arch: PseudoMachine) <: Language.
     | MOpRot: RotOp -> nat -> Index width -> MOperation.
 
   Inductive MConditional :=
-    | MC: TestOp -> nat -> nat -> MConditional.
+    | MZ: nat -> MConditional
+    | MCReg: TestOp -> nat -> nat -> MConditional
+    | MCConst: TestOp -> nat -> W -> MConditional.
 
   Inductive Medial: Set :=
     | MSkip: Medial
@@ -80,7 +82,7 @@ Module Medial (Arch: PseudoMachine) <: Language.
         | _ => None
         end
 
-      | MAMem x y i =>
+      | MAMem _ x y i =>
         match (getMem y i st) with
         | Some v => Some (setVar x v st)
         | _ => None
@@ -129,7 +131,13 @@ Module Medial (Arch: PseudoMachine) <: Language.
 
     | MCond c a b =>
       match c with
-      | MC t x y =>
+      | MCConst t x y =>
+        omap (getVar x st) (fun vx =>
+          if (evalTest t vx y)
+          then meval a st
+          else meval b st)
+
+      | MCReg t x y =>
         omap (getVar x st) (fun vx =>
 
           (* TODO: why can't we infer width here? *)
@@ -137,6 +145,13 @@ Module Medial (Arch: PseudoMachine) <: Language.
             if (evalTest t vx vy)
             then meval a st
             else meval b st))
+
+      | MZ x =>
+        omap (getVar x st) (fun vx =>
+          if (evalTest TEq vx (wzero width))
+          then meval a st
+          else meval b st)
+
       end
 
     | MFunexp n a =>

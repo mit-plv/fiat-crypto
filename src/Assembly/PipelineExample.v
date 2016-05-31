@@ -45,4 +45,4 @@ Module Progs.
   Print result.
 End Progs.
 
-(* Extraction "Progs.ml" Progs. *)
+Extraction "Progs.ml" Progs.
