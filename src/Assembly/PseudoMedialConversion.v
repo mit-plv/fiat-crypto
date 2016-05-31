@@ -1,7 +1,7 @@
 
 Require Export Language Conversion QhasmEvalCommon QhasmUtil.
 Require Export Pseudo Medial AlmostQhasm State.
-Require Export Bedrock.Word NArith NPeano.
+Require Export Bedrock.Word NArith NPeano Euclid.
 Require Export List Sumbool.
 Require Import FMapAVL FMapList JMeq.
 Require Import Vector.
@@ -66,7 +66,7 @@ Module PseudoMedialConversion (Arch: PseudoMachine).
       match prog with
       | PVar n i => Some (MSkip, [start])
       | PConst n c => Some (MAssign (MAConst start c), [start])
-      | PMem n m v i => Some (MAssign (MAMem start v i), [start])
+      | PMem n m v i => Some (MAssign (MAMem _ start v i), [start])
 
       | PBin n o p =>
         match (convertProgram' p start) with
@@ -116,7 +116,7 @@ Module PseudoMedialConversion (Arch: PseudoMachine).
         lt <- convertProgram' l start;
         rt <- convertProgram' r start;
         match (lt, rt) with
-        | ((lp, lr), (rp, rr)) => Some (MCond (MC o i0 i1) lp rp, lr)
+        | ((lp, lr), (rp, rr)) => Some (MCond (MCReg o i0 i1) lp rp, lr)
         end
         (* TODO: prove that all (Pseudo n m) will return the same list *)
 
@@ -178,40 +178,32 @@ Module PseudoMedialConversion (Arch: PseudoMachine).
   End PseudoConversion.
 
   Module MedialConversion <: Conversion M AlmostQhasm.
+    Import Arch M FullState.
 
-    Import Arch M.
+    Definition ireg (x: nat): Reg width := reg width_spec x.
+    Definition iconst (x: word width): Const width := const width_spec x.
+    Definition istack (x: nat): Stack width := stack width_spec x.
 
-    Definition width_dec : {width = 32} + {width = 64}.
-      destruct width_spec; first [
-        left; abstract intuition
-        | right; abstract intuition].
-    Defined.
+    Definition tmpMap: nat -> Mapping width := (fun x => regM width (ireg x)).
 
-    Definition ireg (x: nat): Reg width :=
-      reg width_spec x.
+    Definition getMapping (m: Mapping width) (st: AlmostQhasm.State): option (word width) :=
+      match m with
+      | regM r => getReg r st
+      | stackM s => getStack s st
+      | _ => None
+      end.
 
-    Definition iconst (x: word width): Const width :=
-      const width_spec x.
+    Definition convertState' (mapF: nat -> Mapping width) (st: AlmostQhasm.State): option M.State :=
+      let tryAddVar := fun (k: nat) (x: option (word width)) (st: M.State) =>
+        match x with | Some x' => MedState.setVar k x' st | _ => st end in
 
-    Definition istack (x: nat): Stack width :=
-      stack width_spec x.
-
-    Fixpoint convertState (st: AlmostQhasm.State): option M.State :=
-      let try_cons := fun (k: nat) (x: option N) (m: DefMap) =>
-        match x with | Some x' => NatM.add k x' m | _ => m end in
-
-      let get (n: nat): option N :=
-        match (getIntReg (ireg n) st, getStack (stack n) st) with
-        | (Some v, _) => Some (wordToN v)
-        | (_, Some v) => Some (wordToN v)
-        | _ => None
-        end in
-
-      Some (
-        (fix cs' (n: nat) :=
-         try_cons n (get n)
-           (match n with | O => NatM.empty N | S m => cs' m end))
+      Some ((fix cs' (n: nat) :=
+           tryAddVar n (getMapping (mapF n) st)
+           (match n with | O => MedState.emptyState | S m => cs' m end))
          vars).
+
+    Definition convertState (st: AlmostQhasm.State): option M.State :=
+      convertState' tmpMap st.
 
     Fixpoint convertProgram'
              (prog: M.Program)
@@ -234,21 +226,26 @@ Module PseudoMedialConversion (Arch: PseudoMachine).
         match a with
         | MAVar x y => 
           match (mapF x, mapF y) with
-          | (regM rx _ _, regM ry _ _) =>
-            Some (AAssign (ARegRegInt _ rx ry))
-          | (stackM sx _ _, regM ry _ _) =>
-            Some (AAssign (AStackRegInt _ sx ry))
-          | (regM rx _ _, stackM sy _ _) =>
-            Some (AAssign (ARegStackInt _ rx sy))
-          | (regM rx _ _, constM cy _ _) =>
-            Some (AAssign (AConstInt _ rx cy))
+          | (regM rx, regM ry) =>
+            Some (AAssign (ARegReg rx ry))
+          | (stackM sx, regM ry) =>
+            Some (AAssign (AStackReg sx ry))
+          | (regM rx, stackM sy) =>
+            Some (AAssign (ARegStack rx sy))
+          | (regM rx, constM cy) =>
+            Some (AAssign (AConstInt rx cy))
           | _ => None
           end
 
         | MAConst x c =>
           match (mapF x) with
-          | (regM rx _ _) =>
-            Some (AAssign (AConstInt _ rx (iconst c)))
+          | (regM rx) => Some (AAssign (AConstInt rx (iconst c)))
+          | _ => None
+          end
+
+        | MAMem m x v i =>
+          match (mapF x) with
+          | (regM rx) => Some (AAssign (ARegMem rx (@mem _ m width_spec v) i))
           | _ => None
           end
         end
@@ -257,70 +254,101 @@ Module PseudoMedialConversion (Arch: PseudoMachine).
         match o with
         | MIOpConst io a c =>
           match (mapF a) with
-          | (regM ra _ _) =>
-            Some (AOp (IOpConst _ io ra (iconst c)))
+          | (regM ra) =>
+            Some (AOp (IOpConst io ra (iconst c)))
           | _ => None
           end
 
         | MIOpReg io a b =>
           match (mapF a, mapF b) with
-          | (regM ra _ _, regM rb _ _) =>
-            Some (AOp (IOpReg _ io ra rb))
+          | (regM ra, regM rb) =>
+            Some (AOp (IOpReg io ra rb))
+          | _ => None
+          end
+
+        | MCOpReg co a b =>
+          match (mapF a, mapF b) with
+          | (regM ra, regM rb) =>
+            Some (AOp (COp co ra rb))
           | _ => None
           end
 
         | MDOpReg duo a b (Some x) =>
           match (mapF a, mapF b, mapF x) with
-          | (regM ra _ _, regM rb _ _, regM rx _ _) =>
-            Some (AOp (DOpReg _ duo ra rb (Some rx)))
+          | (regM ra, regM rb, regM rx) =>
+            Some (AOp (DOp duo ra rb (Some rx)))
           | _ => None
           end
 
         | MDOpReg duo a b None =>
           match (mapF a, mapF b) with
-          | (regM ra _ _, regM rb _ _) =>
-            Some (AOp (DOpReg _ duo ra rb None))
+          | (regM ra, regM rb) =>
+            Some (AOp (DOp duo ra rb None))
           | _ => None
           end
 
         | MOpRot ro a c =>
           match (mapF a) with
-          | (regM ra _ _) =>
-            Some (AOp (OpRot _ ro ra c))
+          | (regM ra) =>
+            Some (AOp (ROp ro ra c))
           | _ => None
           end
         end
 
-      | MCond (MC to i0 i1) a b =>
-        let c := (fun x => convertProgram' x mapF nextFree tmp) in
+      | MCond c a b =>
 
-        omap (c a) (fun aprog => omap (c b) (fun bprog =>
-          match (mapF i0, mapF i1) with
-          | (regM r0 _ _, regM r1 _ _) =>
-            Some (ACond (TestInt _ to r0 r1) aprog bprog)
-          | _ => None
+        let conv := (fun x => convertProgram' x mapF nextFree tmp) in
+
+        omap (conv a) (fun aprog => omap (conv b) (fun bprog =>
+          match c with
+          | MCReg t x y =>
+            match (mapF x, mapF y) with
+            | (regM r0, regM r1) =>
+              Some (ACond (CReg _ t r0 r1) aprog bprog)
+            | _ => None
+            end
+
+          | MCConst t x y =>
+            match (mapF x) with
+            | (regM r) =>
+              Some (ACond (CConst _ t r (iconst y)) aprog bprog)
+            | _ => None
+            end
+
+          | MZ x =>
+            match (mapF x) with
+            | (regM r) =>
+              Some (ACond (CZero _ r) aprog bprog)
+            | _ => None
+            end
           end))
 
       | MFunexp e a =>
-        let c := (fun x => convertProgram' x mapF (S nextFree) tmp) in
-        omap (c a) (fun aprog =>
+        let conv := (fun x => convertProgram' x mapF (S nextFree) tmp) in
+        omap (conv a) (fun aprog =>
           match (mapF nextFree, mapF tmp) with
-          | (regM rf _ _, regM rt _ _) =>
+          | (regM rf, regM rt) =>
 
             Some (ASeq (ASeq
-              (AAssign (AConstInt _ rf (iconst (natToWord _ O))))
-              (AAssign (AConstInt _ rt (iconst (natToWord _ e)))))
-              (AWhile (TestInt _ TLt rf rt)
+              (AAssign (AConstInt rf (iconst (natToWord _ O))))
+              (AAssign (AConstInt rt (iconst (natToWord _ e)))))
+              (AWhile (CReg _ TLt rf rt)
                 (ASeq aprog (ASeq 
-                (AOp (IOpConst _ IPlus rf (iconst (natToWord _ 1))))
-                (AAssign (AConstInt _ rt (iconst (natToWord _ e))))))))
+                (AOp (IOpConst Add rf (iconst (natToWord _ 1))))
+                (AAssign (AConstInt rt (iconst (natToWord _ e))))))))
           | _ => None
           end)
+
+      | MDef lbl f a =>
+        omap (convertProgram' f mapF nextFree tmp) (fun fprog =>
+          omap (convertProgram' a mapF (S nextFree) tmp) (fun aprog =>
+            Some (ADef lbl fprog aprog)))
+      | MCall lbl => Some (ACall lbl)
       end.
 
     (* TODO (rsloan): make these into parameters *)
     Definition convertProgram (prog: M.Program): option AlmostQhasm.Program :=
-      convertProgram' prog (fun x => @regToM width width_spec (ireg x)) 100 100.
+      convertProgram' prog tmpMap 100 100.
 
     Lemma convert_spec:  forall a a' b b' prog prog',
       convertProgram prog = Some prog' ->
