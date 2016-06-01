@@ -461,20 +461,10 @@ Section ESRepOperations.
   eq_rect _ P (proj2_sig x) _ pf = proj2_sig y)
    : x = y.
   Proof. destruct x, y; simpl in *; destruct pf, pf'; reflexivity. Defined.
-  lazymatch goal with
-    |- ?LHS = _ :> ?T
-    => lazymatch eval hnf in T with
-      @sig ?A ?P
-      => let lem := constr:(fun x y pf => @path_sig A P LHS (exist _ x y) pf) in
-        pose proof lem as lem';
-          cbv [proj2_sig] in lem';
-          simpl @proj1_sig in lem';
-          specialize (fun x pf y => lem' x y pf);
-          specialize (fun x pf => lem' x pf _ eq_refl)
-    end
-  end.
-  apply lem'.
-
+  Definition path_sig' {A P} (x : @sig A P) (y0:A) (pf : proj1_sig x = y0)
+    : x = exist _ y0 (eq_rect _ P (proj2_sig x) _ pf).
+  Proof. eapply path_sig. reflexivity. Qed.
+  apply path_sig'.
   Grab Existential Variables.
   repeat match goal with [H : _ |- _] => revert H end ; intros.
   reflexivity.
