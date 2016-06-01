@@ -71,6 +71,7 @@ Inductive Operation :=
   | IOpConst: forall {n}, IntOp -> Reg n -> Const n -> Operation
   | IOpReg: forall {n}, IntOp -> Reg n -> Reg n -> Operation
   | IOpMem: forall {n m}, IntOp -> Reg n -> Mem n m -> Index m -> Operation
+  | IOpStack: forall {n}, IntOp -> Reg n -> Stack n -> Operation
   | DOp: forall {n}, DualOp -> Reg n -> Reg n -> option (Reg n) -> Operation
   | ROp: forall {n}, RotOp -> Reg n -> Index n -> Operation
   | COp: forall {n}, CarryOp -> Reg n -> Reg n -> Operation.
