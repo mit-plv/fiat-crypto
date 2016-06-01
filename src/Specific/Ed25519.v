@@ -363,50 +363,221 @@ Section ESRepOperations.
   Context {FRepInv:FRep->FRep} {FRepInv_correct:forall x, F2Rep (inv x) === FRepInv (F2Rep x)} {FRepInv_proper: Proper (FRepEquiv==>FRepEquiv) FRepInv}.
   Context {FRepOpp : FRep -> FRep} {FRepOpp_correct : forall x, F2Rep (opp x) = FRepOpp (F2Rep x)} {FRepOpp_proper: Proper (FRepEquiv==>FRepEquiv) FRepOpp}.
 
-  Definition extendedRep := (FRep * FRep * FRep * FRep)%type.
-  
   Definition extended2Rep (P:extended) :=
     let 'mkExtended X Y Z T := P in
     (F2Rep X, F2Rep Y, F2Rep Z, F2Rep T).
-
-  Definition point2ExtendedRep (P:E.point) := extended2Rep (proj1_sig (mkExtendedPoint P)).
-
-  Definition extendedRep2Extended (P:extendedRep) : extended :=
+  Definition extendedRep2Extended P : extended :=
     let '(X, Y, Z, T) := P in
     mkExtended (rep2F X) (rep2F Y) (rep2F Z) (rep2F T).
+  Definition extendedPointInvariant P := rep P (extendedToTwisted P) /\ E.onCurve (extendedToTwisted P).
+  Definition extendedRep := { XYZT | extendedPointInvariant (extendedRep2Extended XYZT) }.
 
-  Definition extendedRep2Twisted (P:extendedRep) : (F q * F q) := extendedToTwisted (extendedRep2Extended P).
+  Lemma extendedRep2Extended_extended2Rep P : extendedRep2Extended (extended2Rep P) = P.
+  Proof. destruct P as [? ? ? ?]; simpl; rewrite !rep2F_F2Rep; reflexivity. Qed.
 
-  Definition extendedRepEquiv (P Q:extendedRep) := extendedRep2Twisted P = extendedRep2Twisted Q.
+  Definition extendedPoint2ExtendedRep (P:extendedPoint) : extendedRep. exists (extended2Rep (proj1_sig P)).
+  Proof. abstract (rewrite extendedRep2Extended_extended2Rep; destruct P; eauto). Defined.
+
+  Definition extendedRep2ExtendedPoint (P:extendedRep) : extendedPoint. exists (extendedRep2Extended (proj1_sig P)).
+  Proof. abstract (destruct P; eauto). Defined.
+
+  Definition point2ExtendedRep (P:E.point) : extendedRep := (extendedPoint2ExtendedRep (mkExtendedPoint P)).
+  Definition extendedRep2Point (P:extendedRep) : E.point := unExtendedPoint (extendedRep2ExtendedPoint P).
+
+  Lemma extendedRep2ExtendedPoint_extendedPoint2ExtendedRep_proj1_sig : forall P,
+      proj1_sig (extendedRep2ExtendedPoint (extendedPoint2ExtendedRep P)) = proj1_sig P.
+  Proof. destruct P; simpl; rewrite extendedRep2Extended_extended2Rep; reflexivity. Qed.
+ 
+  Definition extendedRepEquiv (P Q:extendedRep) := extendedRep2Point P = extendedRep2Point Q.
+
+  Lemma extendedRepEquiv_iff_extendedPoint P Q : extendedRepEquiv P Q <-> extendedRep2ExtendedPoint P === extendedRep2ExtendedPoint Q.
+  Proof. unfold extendedRepEquiv, extendedRep2Point; split; intros; congruence. Qed.
 
   Global Instance Equivalence_extendedRepEquiv : Equivalence extendedRepEquiv.
   Proof. constructor; intros; congruence. Qed.
 
-  Lemma extendedRep2Extended_extended2Rep : forall P, (extendedRep2Extended (extended2Rep P)) = P.
-  Proof. destruct P as [[] ?]; simpl; rewrite !rep2F_F2Rep; reflexivity. Qed.
+  Global Instance Proper_extendedPoint2ExtendedRep : Proper (extendedPoint_eq==>extendedRepEquiv) extendedPoint2ExtendedRep.
+  Proof.
+    repeat intro. apply E.point_eq.
+    rewrite !extendedRep2ExtendedPoint_extendedPoint2ExtendedRep_proj1_sig.
+    injection H; trivial.
+  Qed.
 
-  (*
-  Global Instance extended2Rep_Proper : Proper (extendedPoint_eq==>extendedRepEquiv) extended2Rep.
+  Global Instance Proper_extendedRep2Point : Proper (extendedRepEquiv==>eq) extendedRep2Point.
+  Proof. repeat intro. congruence. Qed.
+
+  Lemma unExtendedPoint_extendedRep2ExtendedPoint : forall P,
+      unExtendedPoint (extendedRep2ExtendedPoint P) = extendedRep2Point P.
+  Proof. reflexivity. Qed.
+
+  (* TODO: move *)
+  Lemma extendedToTwisted_twistedToExtended : forall P, extendedToTwisted (twistedToExtended P) = P.
+  Proof.
+    destruct P; unfold extendedToTwisted, twistedToExtended; simpl; rewrite !@F_div_1_r; auto using prime_q.
+  Qed.
+  Lemma mkExtendedPoint_unExtendedPoint : forall P, mkExtendedPoint (unExtendedPoint P) === P.
+  Proof.
+    intros.  destruct P; cbv [mkExtendedPoint unExtendedPoint proj1_sig extendedPoint_eq equiv].
+    apply E.point_eq. rewrite extendedToTwisted_twistedToExtended; reflexivity.
+  Qed.
+    
+  Lemma extendedRep2Point_point2ExtendedRep : forall P, 
+      extendedRep2Point (point2ExtendedRep P) = P.
+  Proof.
+    intros.
+    unfold extendedRep2Point, point2ExtendedRep.
+    destruct P; apply E.point_eq.
+    rewrite !extendedRep2ExtendedPoint_extendedPoint2ExtendedRep_proj1_sig.
+    apply extendedToTwisted_twistedToExtended.
+  Qed.
+
+  Lemma point2ExtendedRep_unExtendedPoint : forall P,
+      (point2ExtendedRep (unExtendedPoint P)) === extendedPoint2ExtendedRep P.
+  Proof.
+    intros. unfold point2ExtendedRep. f_equiv. apply mkExtendedPoint_unExtendedPoint.
+  Qed.
+
+  Lemma point2ExtendedRep_extendedRep2Point : forall P, point2ExtendedRep (extendedRep2Point P) === P.
+  Proof.
+    intros; unfold equiv, extendedRepEquiv; pose proof extendedRep2Point_point2ExtendedRep; congruence.
+  Qed.
+
+  Lemma extendedRepEquiv_refl_proj1_sig : forall P Q : extendedRep, proj1_sig P = proj1_sig Q -> P === Q.
+  Admitted.
+
+  Definition extendedRepAdd_sig : { op | forall P Q rP rQ, rP === point2ExtendedRep P -> rQ === point2ExtendedRep Q -> point2ExtendedRep (E.add P Q) === op rP rQ }.
+  Proof.
+    eexists; intros ? ? ? ? HP HQ.
+    pose proof unifiedAddM1_rep a_eq_minus1 (extendedRep2ExtendedPoint rP) (extendedRep2ExtendedPoint rQ) as H.
+    setoid_rewrite unExtendedPoint_extendedRep2ExtendedPoint in H.
+    rewrite HP in H.
+    rewrite HQ in H.
+    rewrite !extendedRep2Point_point2ExtendedRep in H.
+    rewrite H; clear H HP HQ P Q. rename rQ into Q; rename rP into P.
+    rewrite point2ExtendedRep_unExtendedPoint at 1.
+    Axiom BAD: forall x y :extendedRep, x === y <-> x = y.
+    rewrite BAD.
+  Lemma path_sig {A P} (x y : @sig A P) (pf : proj1_sig x = proj1_sig y) (pf' :
+  eq_rect _ P (proj2_sig x) _ pf = proj2_sig y)
+   : x = y.
+  Proof. destruct x, y; simpl in *; destruct pf, pf'; reflexivity. Defined.
+  lazymatch goal with
+    |- ?LHS = _ :> ?T
+    => lazymatch eval hnf in T with
+      @sig ?A ?P
+      => let lem := constr:(fun x y pf => @path_sig A P LHS (exist _ x y) pf) in
+        pose proof lem as lem';
+          cbv [proj2_sig] in lem';
+          simpl @proj1_sig in lem';
+          specialize (fun x pf y => lem' x y pf);
+          specialize (fun x pf => lem' x pf _ eq_refl)
+    end
+  end.
+  apply lem'.
+
+  Grab Existential Variables.
+  repeat match goal with [H : _ |- _] => revert H end ; intros.
+  reflexivity.
+  Defined.
+
+  Definition extendedRepAdd : extendedRep -> extendedRep -> extendedRep := proj1_sig extendedRepAdd_sig.
+
+  Lemma extendedRepAdd_correct : forall P Q,
+    point2ExtendedRep (E.add P Q) === extendedRepAdd (point2ExtendedRep P) (point2ExtendedRep Q).
+  Proof.
+    intros.
+    setoid_rewrite <-(proj2_sig extendedRepAdd_sig P Q (point2ExtendedRep P) (point2ExtendedRep Q)); reflexivity.
+  Qed.
+
+  Lemma extendedRepAdd_proper : Proper (extendedRepEquiv==>extendedRepEquiv==>extendedRepEquiv) extendedRepAdd.
   Proof.
     repeat intro.
-    unfold extendedRepEquiv, extendedRep2Twisted. rewrite !extendedRep2Extended_extended2Rep.
-    lazymatch goal with [H: extendedPoint_eq _ _ |- _ ] => injection H; solve [trivial] end.
+    pose proof point2ExtendedRep_extendedRep2Point.
+    setoid_rewrite <- (proj2_sig extendedRepAdd_sig (extendedRep2Point x) (extendedRep2Point x0) x x0);
+      try setoid_rewrite <- (proj2_sig extendedRepAdd_sig (extendedRep2Point y) (extendedRep2Point y0) y y0);
+      congruence.
   Qed.
-  *)
-
-  Definition extendedRepAdd_sig : { op | forall P Q, extended2Rep (unifiedAddM1' P Q) === op (extended2Rep P) (extended2Rep Q) }.
-  Proof.
-    eexists.
-    repeat match goal with
-           | _ => progress intros
-           | [ P : extendedPoint |- _ ] => destruct P
-           | [ P : extended |- _ ] => destruct P
-           | _ => progress cbv iota beta delta [proj1_sig unifiedAddM1 extended2Rep unifiedAddM1']
-           | [ H : rep _ _ /\ _ |- _ ] => clear H
-           end.
     
+
+    (*
+  Lemma path_sig {A P} (x y : @sig A P) (pf : proj1_sig x = proj1_sig y) (pf' :
+  eq_rect _ P (proj2_sig x) _ pf = proj2_sig y)
+   : x = y.
+  Proof. destruct x, y; simpl in *; destruct pf, pf'; reflexivity. Defined.
+
+  Axiom BAD_equiv_eq : forall P Q :extendedRep, P === Q <-> P = Q.
+  rewrite BAD_equiv_eq.
+
+    cbv iota beta delta [proj1_sig extendedRep2Extended extendedRep2ExtendedPoint extendedPoint2ExtendedRep extended2Rep unifiedAddM1 unifiedAddM1'].
+
+   lazymatch goal with
+     | [ |- ?LHS = ?e ?x ?y ]
+       => is_evar e; is_var x; is_var y; (* sanity checks *)
+            revert x y;
+            lazymatch goal with
+              | [ |- forall x' y', @?P x' y' = _ ]
+                  => unify P e
+            end
+   end; reflexivity.
+
+  
+    Definition mkSigBinop : forall T (P:T->Prop) (f:T->T->T) (f_ok:forall x y, P x -> P y -> P(f x y)) (x y:sig P), sig P.
+    Proof.
+      intros.
+      exists (f (proj1_sig x) (proj1_sig y)).
+      abstract (destruct x; destruct y; eauto).
+    Defined.
+    instantiate (1:=mkSigBinop _ _ _ _).
+    unfold mkSigBinop.
+    reflexivity.
+      Or perhaps you are looking for this theorem?
+  
+  
+  and then you want something like
+  ?
+  
+  (You might need to run [shelve. Grab Existential Variables.], where [shelve]
+  is:
+  
+  Ltac shelve :=
+    idtac;
+    let H := fresh in
+    lazymatch goal with
+    | [ |- ?G ] => evar (H : G); exact H
+    end.
+  )
+  
+*)
+  
+
+
+    Lemma 
+
+    (*
+    apply extendedRepEquiv_refl_proj1_sig.
+    unfold extendedPoint2ExtendedRep.
+    simpl.
+    reflexivity.
+    
+
+    destruct P as [[[]]]; destruct Q as [[[]]].
+    cbv iota beta delta [proj1_sig extendedRep2Extended extendedRep2ExtendedPoint extendedPoint2ExtendedRep extended2Rep unifiedAddM1 unifiedAddM1'].
+
+    rewrite extendedRepEquiv_iff_extendedPoint in *.
+
+    cbv iota beta delta [proj1_sig extendedPoint2ExtendedRep extended2Rep unifiedAddM1 unifiedAddM1'].
+    *)
+    reflexivity.
+  Qed.
+
+  Definition extendedRepAdd_bottomup P Q : { R | extendedRep2Extended R = unifiedAddM1' (extendedRep2Extended P) (extendedRep2Extended Q) }.
+  Proof.
+    destruct P as [[[]]]; destruct Q as [[[]]]; eexists.
+    cbv iota beta delta [proj1_sig extendedRep2Extended unifiedAddM1'].
+
+    SearchAbout FRepAdd.
     match goal with |- context[?E] =>
-                    match E with let '{| extendedX := _; extendedY := _; extendedZ := _; extendedT := _ |} := ?X in _
+                    match E with let _ := ?X in _
                                  => let E' := (eval pattern X in E) in
                                    change E with E';
                                    match E' with ?f _ => set (proj := f) end
