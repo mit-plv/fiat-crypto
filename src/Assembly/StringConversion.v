@@ -1,6 +1,6 @@
 Require Export Language Conversion.
+Require Export String Ascii Basics.
 Require Import QhasmCommon QhasmEvalCommon QhasmUtil Qhasm.
-Require Export String Ascii.
 Require Import NArith NPeano.
 Require Export Bedrock.Word.
 
@@ -62,7 +62,7 @@ Module StringConversion <: Conversion Qhasm QhasmString.
       "0x" ++ (nToHex (wordToN w)).
 
     Coercion constToString {n} (c: Const n): string :=
-      match c with | const _ _ w => "0x" ++ w end.
+      match c with | const _ _ w => wordToString w end.
 
     Coercion regToString {n} (r: Reg n): string :=
       match r with
@@ -258,7 +258,7 @@ Module StringConversion <: Conversion Qhasm QhasmString.
 
     Fixpoint getInputs' (n: nat) (prog: list QhasmStatement) (init: list (Mapping n)): list (Mapping n) :=
       let f := fun rs => filter (fun x =>
-        proj1_sig (bool_of_sumbool (in_dec EvalUtil.mapping_dec x init))) rs in
+        negb (proj1_sig (bool_of_sumbool (in_dec EvalUtil.mapping_dec x init)))) rs in
       let g := fun {w} p => (@convM w n (fst p), @convM w n (snd p)) in
       match prog with
       | [] => []
@@ -343,56 +343,35 @@ Module StringConversion <: Conversion Qhasm QhasmString.
     match statement with
     | QAssign a => optionToList (assignmentToString a)
     | QOp o => optionToList (operationToString o)
-    | QJmp c l =>
+    | QCond c l =>
       match (conditionalToString c) with
       | (s1, s2) =>
         let s' := ("goto lbl" ++ l ++ " if " ++ s2)%string in
         [s1; s']
       end
     | QLabel l => [("lbl" ++ l ++ ": ")%string]
+    | QCall l => [("push %eip+2")%string; ("goto" ++ l)%string]
+    | QRet => [("pop %eip")%string]
     end.
 
   Definition convertProgram (prog: Qhasm.Program): option string :=
-    let es := (entries prog) in
+    let decls := fun x => flatMapList (dedup (entries x prog))
+      (compose optionToList mappingDeclaration) in
 
-    let ireg32s :=
-        (map (fun x => "int32 " ++ (intRegToString x))%string
-             (everyIReg32 es)) in
-    let ireg64s :=
-        (map (fun x => "int64 " ++ (intRegToString x))%string
-             (everyIReg64 es)) in
-
-    let stack32s :=
-        (map (fun x => "stack32 " ++ (stackToString x))%string
-             (everyStack 32 es)) in
-    let stack64s := 
-        (map (fun x => "stack64 " ++ (stackToString x))%string
-             (everyStack 64 es)) in
-    let stack128s := 
-        (map (fun x => "stack128 " ++ (stackToString x))%string
-             (everyStack 128 es)) in
-
-    let inputs :=
-        (map (fun x => "input " ++ (entryToString x))%string
-             (getUsedBeforeInit prog)) in
+    let inputs := fun x => flatMapList (getInputs x prog)
+      (compose optionToList inputDeclaration) in
 
     let stmts := (flatMapList prog convertStatement) in
-
     let enter := [("enter prog")%string] in
     let leave := [("leave")%string] in
-
     let blank := [EmptyString] in
     let newline := String (ascii_of_nat 10) EmptyString in
 
     Some (fold_left (fun x y => (x ++ newline ++ y)%string)
-      (ireg32s ++ blank ++
-       ireg64s ++ blank ++
-       stack32s ++ blank ++
-       stack64s ++ blank ++
-       stack128s ++ blank ++
-       inputs ++ blank ++ blank ++
+      (decls 32 ++ inputs 32 ++
+       decls 64 ++ inputs 64 ++ blank ++
        enter ++ blank ++
-       stmts ++ blank ++ blank ++
+       stmts ++ blank ++
        leave) EmptyString).
 
   Lemma convert_spec: forall a a' b b' prog prog',
