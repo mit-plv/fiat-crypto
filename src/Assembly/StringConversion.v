@@ -368,10 +368,8 @@ Module StringConversion <: Conversion Qhasm QhasmString.
     let newline := String (ascii_of_nat 10) EmptyString in
 
     Some (fold_left (fun x y => (x ++ newline ++ y)%string)
-      (decls 32 ++
-       inputs 32 ++ blank ++
-       decls 64 ++
-       inputs 64 ++ blank ++
+      (decls 32 ++ inputs 32 ++
+       decls 64 ++ inputs 64 ++ blank ++
        enter ++ blank ++
        stmts ++ blank ++
        leave) EmptyString).

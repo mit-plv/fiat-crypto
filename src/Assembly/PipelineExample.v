@@ -1,4 +1,5 @@
 
+Require Import QhasmCommon QhasmEvalCommon.
 Require Import Pseudo Qhasm AlmostQhasm Medial Conversion Language.
 Require Import PseudoMedialConversion AlmostConversion StringConversion.
 
@@ -20,7 +21,7 @@ Module Progs.
 
   Definition prog0: C64.P.Program.
     refine
-      (PBin _ IPlus (PComb _ _ _
+      (PBin _ Add (PComb _ _ _
         (PVar 1 (exist _ 0 _))
         (PConst _ (natToWord _ 1)))); abstract intuition.
   Defined.
@@ -36,13 +37,17 @@ Module Progs.
 
   Definition prog4: option string :=
     omap StringConversion.convertProgram prog3.
-
-  Definition result: option string.
-    let res := eval vm_compute in prog4 in exact res.
-  Defined.
-
-  Open Scope string_scope.
-  Print result.
 End Progs.
 
-Extraction "Progs.ml" Progs.
+Definition Result: string.
+  let res := eval vm_compute in (
+    match Progs.prog4 with
+    | Some x => x
+    | None => EmptyString
+    end) in exact res.
+Defined.
+
+Open Scope string_scope.
+Print Result.
+
+Extraction "Result.ml" Result.
