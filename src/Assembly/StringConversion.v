@@ -1,6 +1,6 @@
 Require Export Language Conversion.
+Require Export String Ascii Basics.
 Require Import QhasmCommon QhasmEvalCommon QhasmUtil Qhasm.
-Require Export String Ascii.
 Require Import NArith NPeano.
 Require Export Bedrock.Word.
 
@@ -62,7 +62,7 @@ Module StringConversion <: Conversion Qhasm QhasmString.
       "0x" ++ (nToHex (wordToN w)).
 
     Coercion constToString {n} (c: Const n): string :=
-      match c with | const _ _ w => "0x" ++ w end.
+      match c with | const _ _ w => wordToString w end.
 
     Coercion regToString {n} (r: Reg n): string :=
       match r with
@@ -355,25 +355,23 @@ Module StringConversion <: Conversion Qhasm QhasmString.
     end.
 
   Definition convertProgram (prog: Qhasm.Program): option string :=
-    let es := (entries prog) in
-    let decls := (mappingDeclaration es) in
-    let inputs := (inputDeclaration (getInputs es)) in
+    let decls := fun x => flatMapList (entries x prog)
+      (compose optionToList mappingDeclaration) in
+
+    let inputs := fun x => flatMapList (getInputs x prog)
+      (compose optionToList inputDeclaration) in
 
     let stmts := (flatMapList prog convertStatement) in
-
     let enter := [("enter prog")%string] in
     let leave := [("leave")%string] in
-
     let blank := [EmptyString] in
     let newline := String (ascii_of_nat 10) EmptyString in
 
     Some (fold_left (fun x y => (x ++ newline ++ y)%string)
-      (ireg32s ++ blank ++
-       ireg64s ++ blank ++
-       stack32s ++ blank ++
-       stack64s ++ blank ++
-       stack128s ++ blank ++
-       inputs ++ blank ++ blank ++
+      (decls 32 ++ blank ++
+       inputs 32 ++ blank ++ blank ++
+       decls 64 ++ blank ++
+       inputs 64 ++ blank ++ blank ++
        enter ++ blank ++
        stmts ++ blank ++ blank ++
        leave) EmptyString).
