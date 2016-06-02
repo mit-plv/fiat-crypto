@@ -343,38 +343,21 @@ Module StringConversion <: Conversion Qhasm QhasmString.
     match statement with
     | QAssign a => optionToList (assignmentToString a)
     | QOp o => optionToList (operationToString o)
-    | QJmp c l =>
+    | QCond c l =>
       match (conditionalToString c) with
       | (s1, s2) =>
         let s' := ("goto lbl" ++ l ++ " if " ++ s2)%string in
         [s1; s']
       end
     | QLabel l => [("lbl" ++ l ++ ": ")%string]
+    | QCall l => [("push %eip+2")%string; ("goto" ++ l)%string]
+    | QRet => [("pop %eip")%string]
     end.
 
   Definition convertProgram (prog: Qhasm.Program): option string :=
     let es := (entries prog) in
-
-    let ireg32s :=
-        (map (fun x => "int32 " ++ (intRegToString x))%string
-             (everyIReg32 es)) in
-    let ireg64s :=
-        (map (fun x => "int64 " ++ (intRegToString x))%string
-             (everyIReg64 es)) in
-
-    let stack32s :=
-        (map (fun x => "stack32 " ++ (stackToString x))%string
-             (everyStack 32 es)) in
-    let stack64s := 
-        (map (fun x => "stack64 " ++ (stackToString x))%string
-             (everyStack 64 es)) in
-    let stack128s := 
-        (map (fun x => "stack128 " ++ (stackToString x))%string
-             (everyStack 128 es)) in
-
-    let inputs :=
-        (map (fun x => "input " ++ (entryToString x))%string
-             (getUsedBeforeInit prog)) in
+    let decls := (mappingDeclaration es) in
+    let inputs := (inputDeclaration (getInputs es)) in
 
     let stmts := (flatMapList prog convertStatement) in
 
