@@ -258,7 +258,7 @@ Module StringConversion <: Conversion Qhasm QhasmString.
 
     Fixpoint getInputs' (n: nat) (prog: list QhasmStatement) (init: list (Mapping n)): list (Mapping n) :=
       let f := fun rs => filter (fun x =>
-        proj1_sig (bool_of_sumbool (in_dec EvalUtil.mapping_dec x init))) rs in
+        negb (proj1_sig (bool_of_sumbool (in_dec EvalUtil.mapping_dec x init)))) rs in
       let g := fun {w} p => (@convM w n (fst p), @convM w n (snd p)) in
       match prog with
       | [] => []
@@ -355,7 +355,7 @@ Module StringConversion <: Conversion Qhasm QhasmString.
     end.
 
   Definition convertProgram (prog: Qhasm.Program): option string :=
-    let decls := fun x => flatMapList (entries x prog)
+    let decls := fun x => flatMapList (dedup (entries x prog))
       (compose optionToList mappingDeclaration) in
 
     let inputs := fun x => flatMapList (getInputs x prog)
@@ -368,12 +368,12 @@ Module StringConversion <: Conversion Qhasm QhasmString.
     let newline := String (ascii_of_nat 10) EmptyString in
 
     Some (fold_left (fun x y => (x ++ newline ++ y)%string)
-      (decls 32 ++ blank ++
-       inputs 32 ++ blank ++ blank ++
-       decls 64 ++ blank ++
-       inputs 64 ++ blank ++ blank ++
+      (decls 32 ++
+       inputs 32 ++ blank ++
+       decls 64 ++
+       inputs 64 ++ blank ++
        enter ++ blank ++
-       stmts ++ blank ++ blank ++
+       stmts ++ blank ++
        leave) EmptyString).
 
   Lemma convert_spec: forall a a' b b' prog prog',
