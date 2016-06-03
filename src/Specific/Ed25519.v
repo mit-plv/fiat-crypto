@@ -16,22 +16,81 @@ Local Open Scope equiv_scope.
   
 (*TODO: move enerything before the section out of this file *)
 
+Fixpoint tuple' n T : Type :=
+  match n with
+  | O => T
+  | S n' => (tuple' n' T * T)%type
+  end.
+
+Definition tuple n T : Type :=
+  match n with
+    | O => unit
+    | S n' => tuple' n' T
+  end.
+
+Fixpoint fieldwise' {A B} (n:nat) (R:A->B->Prop) (a:tuple' n A) (b:tuple' n B) {struct n} : Prop.
+  destruct n; simpl @tuple' in *.
+  { exact (R a b). }
+  { exact (R (snd a) (snd b) /\ fieldwise' _ _ n R (fst a) (fst b)). }
+Defined.
+
+Definition fieldwise {A B} (n:nat) (R:A->B->Prop) (a:tuple n A) (b:tuple n B) : Prop.
+  destruct n; simpl @tuple in *.
+  { exact True. }
+  { exact (fieldwise' _ R a b). }
+Defined.
+
+Global Instance Equivalence_fieldwise' {A} {R:relation A} {R_equiv:Equivalence R} {n:nat}:
+    Equivalence (fieldwise' n R).
+Proof.
+  induction n; [solve [auto]|].
+  simpl; constructor; repeat intro; intuition eauto.
+Qed.
+
+Global Instance Equivalence_fieldwise {A} {R:relation A} {R_equiv:Equivalence R} {n:nat}:
+    Equivalence (fieldwise n R).
+Proof.
+  destruct n; (repeat constructor || apply Equivalence_fieldwise').
+Qed.
+
+Arguments fieldwise' {A B n} _ _ _.
+Arguments fieldwise {A B n} _ _ _.
+
+
 Local Ltac set_evars :=
   repeat match goal with
          | [ |- appcontext[?E] ] => is_evar E; let e := fresh "e" in set (e := E)
          end.
+
 Local Ltac subst_evars :=
   repeat match goal with
          | [ e := ?E |- _ ] => is_evar E; subst e
          end.
 
+Definition path_sig {A P} {RA:relation A} {Rsig:relation (@sig A P)}
+           {HP:Proper (RA==>Basics.impl) P}
+           (H:forall (x y:A) (px:P x) (py:P y), RA x y -> Rsig (exist _ x px) (exist _ y py))
+           (x : @sig A P) (y0:A) (pf : RA (proj1_sig x) y0)
+: Rsig x (exist _ y0 (HP _ _ pf (proj2_sig x))).
+Proof. destruct x. eapply H. assumption. Defined.
+
 Definition Let_In {A P} (x : A) (f : forall a : A, P a) : P x := let y := x in f y.
-Global Instance Let_In_Proper_nd {A P} R {Reflexive_R:@Reflexive P R}
+Global Instance Let_In_Proper_changebody {A P R} {Reflexive_R:@Reflexive P R}
   : Proper (eq ==> pointwise_relation _ R ==> R) (@Let_In A (fun _ => P)).
 Proof.
   lazy; intros; try congruence.
   subst; auto.
 Qed.
+
+Lemma Let_In_Proper_changevalue {A B} RA {RB} (f:A->B) {Proper_f:Proper (RA==>RB) f}
+  : Proper (RA ==> RB) (fun x => Let_In x f).
+Proof. intuition. Qed.
+
+Ltac fold_identity_lambdas := 
+  repeat match goal with
+           | [ H: appcontext [fun x => ?f x] |- _ ] => change (fun x => f x) with f in *
+           | |- appcontext [fun x => ?f x] => change (fun x => f x) with f in *
+         end.
 
 Local Ltac replace_let_in_with_Let_In :=
   match goal with
@@ -355,14 +414,11 @@ Section ESRepOperations.
     rewrite <-(scalarMultM1_rep a_eq_minus1), <-(@iter_op_spec _ extendedPoint_eq _ _ (@unifiedAddM1 _ a_eq_minus1) _ (@unifiedAddM1_assoc _ a_eq_minus1) _ (@unifiedAddM1_0_l _ a_eq_minus1) _ _ SRep_testbit_correct _ _ _ (bound_satisfied _)).
     reflexivity.
   Defined.
+End ESRepOperations.
 
+Section EFRepDefn.
+  Context {tep:TwistedEdwardsParams} {a_eq_minus1:a = opp 1}.
   Context `{FRepEquiv_ok:Equivalence FRep FRepEquiv} {F2Rep : F q -> FRep} {rep2F:FRep -> F q} {rep2F_proper: Proper (FRepEquiv==>eq) rep2F} {rep2F_F2Rep: forall x, rep2F (F2Rep x) = x}.
-  Context `{FRepAdd_correct:forall a b, F2Rep (add a b) === FRepAdd (F2Rep a) (F2Rep b)} {FRepAdd_proper: Proper (FRepEquiv==>FRepEquiv==>FRepEquiv) FRepAdd}.
-  Context `{FRepMul_correct:forall a b, F2Rep (mul a b) === FRepMul (F2Rep a) (F2Rep b)} {FRepMul_proper: Proper (FRepEquiv==>FRepEquiv==>FRepEquiv) FRepMul}.
-  Context `{FRepSub_correct:forall a b, F2Rep (sub a b) === FRepSub (F2Rep a) (F2Rep b)} {FRepSub_proper: Proper (FRepEquiv==>FRepEquiv==>FRepEquiv) FRepSub}.
-  Context {FRepInv:FRep->FRep} {FRepInv_correct:forall x, F2Rep (inv x) === FRepInv (F2Rep x)} {FRepInv_proper: Proper (FRepEquiv==>FRepEquiv) FRepInv}.
-  Context {FRepOpp : FRep -> FRep} {FRepOpp_correct : forall x, F2Rep (opp x) = FRepOpp (F2Rep x)} {FRepOpp_proper: Proper (FRepEquiv==>FRepEquiv) FRepOpp}.
-
   Definition extended2Rep (P:extended) :=
     let 'mkExtended X Y Z T := P in
     (F2Rep X, F2Rep Y, F2Rep Z, F2Rep T).
@@ -370,13 +426,14 @@ Section ESRepOperations.
     let '(X, Y, Z, T) := P in
     mkExtended (rep2F X) (rep2F Y) (rep2F Z) (rep2F T).
   Definition extendedPointInvariant P := rep P (extendedToTwisted P) /\ E.onCurve (extendedToTwisted P).
-  Definition extendedRep := { XYZT | extendedPointInvariant (extendedRep2Extended XYZT) }.
+  Definition extendedRepInvariant XYZT := extendedPointInvariant (extendedRep2Extended XYZT).
+  Definition extendedRep := { XYZT | extendedRepInvariant XYZT }.
 
   Lemma extendedRep2Extended_extended2Rep P : extendedRep2Extended (extended2Rep P) = P.
   Proof. destruct P as [? ? ? ?]; simpl; rewrite !rep2F_F2Rep; reflexivity. Qed.
 
   Definition extendedPoint2ExtendedRep (P:extendedPoint) : extendedRep. exists (extended2Rep (proj1_sig P)).
-  Proof. abstract (rewrite extendedRep2Extended_extended2Rep; destruct P; eauto). Defined.
+  Proof. abstract (unfold extendedRepInvariant; rewrite extendedRep2Extended_extended2Rep; destruct P; eauto). Defined.
 
   Definition extendedRep2ExtendedPoint (P:extendedRep) : extendedPoint. exists (extendedRep2Extended (proj1_sig P)).
   Proof. abstract (destruct P; eauto). Defined.
@@ -442,47 +499,211 @@ Section ESRepOperations.
     intros; unfold equiv, extendedRepEquiv; pose proof extendedRep2Point_point2ExtendedRep; congruence.
   Qed.
 
-  Lemma extendedRepEquiv_refl_proj1_sig : forall P Q : extendedRep, proj1_sig P = proj1_sig Q -> P === Q.
-  Admitted.
-
-  Definition extendedRepAdd_sig : { op | forall P Q rP rQ, rP === point2ExtendedRep P -> rQ === point2ExtendedRep Q -> point2ExtendedRep (E.add P Q) === op rP rQ }.
+  Global Instance Proper_extendedRepInvariant : Proper ((fieldwise (n:=4) FRepEquiv) ==> Basics.impl) (extendedRepInvariant).
   Proof.
-    eexists; intros ? ? ? ? HP HQ.
-    pose proof unifiedAddM1_rep a_eq_minus1 (extendedRep2ExtendedPoint rP) (extendedRep2ExtendedPoint rQ) as H.
-    setoid_rewrite unExtendedPoint_extendedRep2ExtendedPoint in H.
-    rewrite HP in H.
-    rewrite HQ in H.
-    rewrite !extendedRep2Point_point2ExtendedRep in H.
-    rewrite H; clear H HP HQ P Q. rename rQ into Q; rename rP into P.
-    rewrite point2ExtendedRep_unExtendedPoint at 1.
-    Axiom BAD: forall x y :extendedRep, x === y <-> x = y.
-    rewrite BAD.
-  Lemma path_sig {A P} (x y : @sig A P) (pf : proj1_sig x = proj1_sig y) (pf' :
-  eq_rect _ P (proj2_sig x) _ pf = proj2_sig y)
-   : x = y.
-  Proof. destruct x, y; simpl in *; destruct pf, pf'; reflexivity. Defined.
-  Definition path_sig' {A P} (x : @sig A P) (y0:A) (pf : proj1_sig x = y0)
-    : x = exist _ y0 (eq_rect _ P (proj2_sig x) _ pf).
-  Proof. eapply path_sig. reflexivity. Qed.
-  apply path_sig'.
-  Grab Existential Variables.
-  repeat match goal with [H : _ |- _] => revert H end ; intros.
-  reflexivity.
+    repeat intro; cbv [tuple tuple' fieldwise fieldwise' extendedRepInvariant extendedRep2Extended] in *.
+    repeat match goal with
+           | [x : prod _ _ |- _ ] => destruct x
+           end.
+    simpl in *; intuition.
+    repeat match goal with
+           | [H: FRepEquiv _ _ |- _ ] => rewrite <- H; []
+           end; trivial.
+  Qed.
+
+  Lemma extendedRep_proof_equiv: forall x y px py, fieldwise (n:=4) FRepEquiv x y -> 
+    exist extendedRepInvariant x px === exist extendedRepInvariant y py.
+  Proof.
+    destruct x as [[[]]]; destruct y as [[[]]]; simpl in *; intuition.
+    apply E.point_eq. unfold extendedRep2ExtendedPoint; simpl.
+    repeat match goal with
+           | [H: FRepEquiv _ _ |- _ ] => rewrite <- H; []
+           end; trivial.
+  Qed.
+
+  Definition extended2Rep_mkExtended x y z t :
+    extended2Rep (mkExtended x y z t) = (F2Rep x, F2Rep y, F2Rep z, F2Rep t) := eq_refl.
+
+End EFRepDefn.
+Section EFRepOperations.
+  Context {tep:TwistedEdwardsParams} {a_eq_minus1:a = opp 1}.
+  Context `{FRepEquiv_ok:Equivalence FRep FRepEquiv} {F2Rep : F q -> FRep} {rep2F:FRep -> F q} {rep2F_proper: Proper (FRepEquiv==>eq) rep2F} {rep2F_F2Rep: forall x, rep2F (F2Rep x) = x} {F2Rep_rep2F: forall x, F2Rep (rep2F x) === x}.
+  Existing Instances tep FRepEquiv_ok.
+
+  Context `{FRepAdd_correct:forall a b, F2Rep (add a b) === FRepAdd (F2Rep a) (F2Rep b)} {FRepAdd_proper: Proper (FRepEquiv==>FRepEquiv==>FRepEquiv) FRepAdd}.
+  Context `{FRepMul_correct:forall a b, F2Rep (mul a b) === FRepMul (F2Rep a) (F2Rep b)} {FRepMul_proper: Proper (FRepEquiv==>FRepEquiv==>FRepEquiv) FRepMul}.
+  Context `{FRepSub_correct:forall a b, F2Rep (sub a b) === FRepSub (F2Rep a) (F2Rep b)} {FRepSub_proper: Proper (FRepEquiv==>FRepEquiv==>FRepEquiv) FRepSub}.
+  Context {FRepInv:FRep->FRep} {FRepInv_correct:forall x, F2Rep (inv x) === FRepInv (F2Rep x)} {FRepInv_proper: Proper (FRepEquiv==>FRepEquiv) FRepInv}.
+  Context {FRepOpp : FRep -> FRep} {FRepOpp_correct : forall x, F2Rep (opp x) = FRepOpp (F2Rep x)} {FRepOpp_proper: Proper (FRepEquiv==>FRepEquiv) FRepOpp}.
+
+  Create HintDb toFRep discriminated.
+  Hint Rewrite
+       @unfoldDiv
+       FRepAdd_correct FRepMul_correct FRepSub_correct FRepInv_correct FRepOpp_correct
+       F2Rep_rep2F
+    : toFRep.
+
+  Definition extendedRepAdd_sig : forall P Q,
+      { x | forall Pref Qref,
+            P === (point2ExtendedRep (rep2F_F2Rep:=rep2F_F2Rep)) Pref
+          -> Q === (point2ExtendedRep (rep2F_F2Rep:=rep2F_F2Rep)) Qref
+          -> x === point2ExtendedRep (rep2F_F2Rep:=rep2F_F2Rep) (E.add Pref Qref)}.
+  Proof.
+    destruct P as [[[[]]] ?]; destruct Q as [[[[]]] ?].
+    eexists; intros ? ? HP HQ; fold_identity_lambdas.
+
+    match goal with
+      [ Hx : ?x === point2ExtendedRep ?p, Hy : ?y === point2ExtendedRep ?q |- _ ]
+      => pose proof unifiedAddM1_rep a_eq_minus1 (extendedRep2ExtendedPoint x) (extendedRep2ExtendedPoint y) as H;
+          setoid_rewrite unExtendedPoint_extendedRep2ExtendedPoint in H;
+          rewrite HP, HQ, !extendedRep2Point_point2ExtendedRep in H;
+          rewrite H; clear H Hx Hy; try clear p q
+    end.
+    
+    rewrite point2ExtendedRep_unExtendedPoint.
+    
+    symmetry;
+      eapply (path_sig (RA:=fieldwise (n:=4) FRepEquiv));
+      eapply extendedRep_proof_equiv; assumption.
+
+    Grab Existential Variables.
+    cbv iota beta delta [proj1_sig extendedRep2Extended extendedRep2ExtendedPoint extendedPoint2ExtendedRep unifiedAddM1 unifiedAddM1'].
+
+    assert (Proper (eq==>fieldwise (n:=4) FRepEquiv) (@extended2Rep tep FRep F2Rep)) as HProper by admit.
+    etransitivity; [
+                     eapply HProper;
+                     repeat (replace_let_in_with_Let_In;
+                             eapply Let_In_Proper_changebody;
+                             [reflexivity|
+                              cbv beta delta [pointwise_relation]; intro
+                            ]);
+                     reflexivity|].
+
+    Lemma Let_app_In' : forall {A B T} {R} {R_equiv:@Equivalence T R}
+                          (g : A -> B) (f : B -> T) (x : A)
+        f' (f'_ok: forall z, f' z === f (g z)),
+        Let_In (g x) f === Let_In x f'.
+    Proof. intros; cbv [Let_In]; rewrite f'_ok; reflexivity. Qed.
+    Definition unfold_Let_In {A B} x (f:A->B) : Let_In x f = let y := x in f y := eq_refl.
+
+    Local Opaque Let_In.
+    repeat setoid_rewrite <-(pull_Let_In extended2Rep). setoid_rewrite extended2Rep_mkExtended.
+
+    Ltac pattern_reflexivity :=
+      intros;
+      try reflexivity;
+      lazymatch goal with
+        |- _ ?LHS (?f ?a) =>
+        let t := eval pattern a in LHS in
+            match t with
+              ?LHS' ?x => unify LHS' f; reflexivity
+            end
+      end.
+    
+    Ltac descend :=
+      idtac; (
+        lazymatch goal with
+          |- ?R (Let_In ?x ?f) ?RHS  =>
+          let A := type of x in
+          eapply (@Let_In_Proper_changebody A _ R);
+          [eauto with typeclass_instances
+          |reflexivity
+          |cbv beta delta [pointwise_relation]; intro]
+        end || fail "goal must be of the form [LetIn _ _ == _]").
+
+    Ltac inLetInBody' t :=
+      etransitivity; [descend; t; pattern_reflexivity|].
+    Tactic Notation "inLetInBody" tactic3(t) := inLetInBody' t.
+
+    Ltac inLetInValue' properTac rewriteTac :=
+      etransitivity;
+      [eapply (Let_In_Proper_changevalue FRepEquiv); [properTac | rewriteTac; pattern_reflexivity]|].
+    Tactic Notation "inLetInValue" tactic3(properTac) tactic3(rewriteTac) := inLetInValue' properTac rewriteTac.
+
+    etransitivity.
+
+    etransitivity.
+    descend.
+    etransitivity.
+    descend.
+    etransitivity.
+    descend.
+    etransitivity.
+    descend.
+    etransitivity.
+    descend.
+    etransitivity.
+    descend.
+    etransitivity.
+    descend.
+    etransitivity.
+    descend.
+    etransitivity.
+    descend.
+    etransitivity.
+    descend.
+    etransitivity.
+    descend.
+    etransitivity.
+    descend.
+
+    pattern_reflexivity.
+    erewrite <- Let_app_In' with (g:=F2Rep); [|pattern_reflexivity];
+      try (inLetInValue admit (rewrite_strat topdown hints toFRep));
+      pattern_reflexivity. 
+    erewrite <- Let_app_In' with (g:=F2Rep); [|pattern_reflexivity];
+      try (inLetInValue admit (rewrite_strat topdown hints toFRep));
+      pattern_reflexivity. 
+    erewrite <- Let_app_In' with (g:=F2Rep); [|pattern_reflexivity];
+      try (inLetInValue admit (rewrite_strat topdown hints toFRep));
+      pattern_reflexivity. 
+    erewrite <- Let_app_In' with (g:=F2Rep); [|pattern_reflexivity];
+      try (inLetInValue admit (rewrite_strat topdown hints toFRep));
+      pattern_reflexivity. 
+    erewrite <- Let_app_In' with (g:=F2Rep); [|pattern_reflexivity];
+      try (inLetInValue admit (rewrite_strat topdown hints toFRep));
+      pattern_reflexivity. 
+    erewrite <- Let_app_In' with (g:=F2Rep); [|pattern_reflexivity];
+      try (inLetInValue admit (rewrite_strat topdown hints toFRep));
+      pattern_reflexivity. 
+    erewrite <- Let_app_In' with (g:=F2Rep); [|pattern_reflexivity];
+      try (inLetInValue admit (rewrite_strat topdown hints toFRep));
+      pattern_reflexivity. 
+    erewrite <- Let_app_In' with (g:=F2Rep); [|pattern_reflexivity];
+      try (inLetInValue admit (rewrite_strat topdown hints toFRep));
+      pattern_reflexivity. 
+    erewrite <- Let_app_In' with (g:=F2Rep); [|pattern_reflexivity];
+      try (inLetInValue admit (rewrite_strat topdown hints toFRep));
+      pattern_reflexivity. 
+    erewrite <- Let_app_In' with (g:=F2Rep); [|pattern_reflexivity];
+      try (inLetInValue admit (rewrite_strat topdown hints toFRep));
+      pattern_reflexivity. 
+    erewrite <- Let_app_In' with (g:=F2Rep); [|pattern_reflexivity];
+      try (inLetInValue admit (rewrite_strat topdown hints toFRep));
+      pattern_reflexivity. 
+    erewrite <- Let_app_In' with (g:=F2Rep); [|pattern_reflexivity];
+      try (inLetInValue admit (rewrite_strat topdown hints toFRep));
+      pattern_reflexivity. 
+
+    reflexivity.
   Defined.
 
-  Definition extendedRepAdd : extendedRep -> extendedRep -> extendedRep := proj1_sig extendedRepAdd_sig.
+  Definition extendedRepAdd (P Q:extendedRep) : extendedRep :=
+    Eval cbv beta delta [proj1_sig extendedRepAdd_sig] in (proj1_sig (extendedRepAdd_sig P Q)).
+  Definition admit : forall {T}, T. Admitted.
+  Eval cbv beta delta [proj1_sig extendedRepAdd] in (fun P Q =>
 
   Lemma extendedRepAdd_correct : forall P Q,
-    point2ExtendedRep (E.add P Q) === extendedRepAdd (point2ExtendedRep P) (point2ExtendedRep Q).
+    point2ExtendedRep (rep2F_F2Rep:=rep2F_F2Rep) (E.add P Q) === extendedRepAdd (point2ExtendedRep (rep2F_F2Rep:=rep2F_F2Rep) P) (point2ExtendedRep (rep2F_F2Rep:=rep2F_F2Rep) Q).
   Proof.
     intros.
-    setoid_rewrite <-(proj2_sig extendedRepAdd_sig P Q (point2ExtendedRep P) (point2ExtendedRep Q)); reflexivity.
+    setoid_rewrite <-(proj2_sig (extendedRepAdd_sig (point2ExtendedRep P) (point2ExtendedRep Q)) P Q); reflexivity.
   Qed.
 
   Lemma extendedRepAdd_proper : Proper (extendedRepEquiv==>extendedRepEquiv==>extendedRepEquiv) extendedRepAdd.
   Proof.
     repeat intro.
-    pose proof point2ExtendedRep_extendedRep2Point.
+    pose proof (point2ExtendedRep_extendedRep2Point (rep2F_F2Rep:=rep2F_F2Rep)).
     setoid_rewrite <- (proj2_sig extendedRepAdd_sig (extendedRep2Point x) (extendedRep2Point x0) x x0);
       try setoid_rewrite <- (proj2_sig extendedRepAdd_sig (extendedRep2Point y) (extendedRep2Point y0) y y0);
       congruence.
