@@ -372,7 +372,7 @@ Module StringConversion <: Conversion Qhasm QhasmString.
        decls 64 ++ inputs 64 ++ blank ++
        enter ++ blank ++
        stmts ++ blank ++
-       leave) EmptyString).
+       leave ++ blank) EmptyString).
 
   Lemma convert_spec: forall a a' b b' prog prog',
     convertProgram prog = Some prog' ->
