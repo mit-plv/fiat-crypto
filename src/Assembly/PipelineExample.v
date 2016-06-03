@@ -8,10 +8,10 @@ Require Import ExtrOcamlString ExtrOcamlBasic.
 Require Import Coq.Strings.String.
 
 Module Progs.
-  Module Arch := PseudoUnary64.
-  Module C64 := PseudoMedialConversion Arch.
+  Module Arch := PseudoUnary32.
+  Module C32 := PseudoMedialConversion Arch.
 
-  Import C64.P.
+  Import C32.P.
 
   Definition omap {A B} (f: A -> option B) (x: option A): option B :=
     match x with
@@ -19,18 +19,18 @@ Module Progs.
     | None => None
     end.
 
-  Definition prog0: C64.P.Program.
+  Definition prog0: C32.P.Program.
     refine
       (PBin _ Add (PComb _ _ _
         (PVar 1 (exist _ 0 _))
         (PConst _ (natToWord _ 1)))); abstract intuition.
   Defined.
 
-  Definition prog1: option C64.M.Program :=
-    C64.PseudoConversion.convertProgram prog0.
+  Definition prog1: option C32.M.Program :=
+    C32.PseudoConversion.convertProgram prog0.
 
   Definition prog2: option AlmostQhasm.Program :=
-    omap C64.MedialConversion.convertProgram prog1.
+    omap C32.MedialConversion.convertProgram prog1.
 
   Definition prog3: option Qhasm.Program :=
     omap AlmostConversion.convertProgram prog2.

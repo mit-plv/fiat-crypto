@@ -106,6 +106,13 @@ Module Pseudo (M: PseudoMachine) <: Language.
 
   Definition evaluatesTo := fun (p: Program) (st st': State) => (pseudoEval p st = Some st').
 
+  Module Notations.
+    Delimit Scope pseudo_notations with p.
+    Open Scope pseudo_notations.
+
+    Notation "'LET' A := B 'IN' C" (at level 60, right associativity) : pseudo_notations.
+  End Notations.
+
   (* world peace *)
 End Pseudo.
 
@@ -122,4 +129,3 @@ Module PseudoUnary64 <: PseudoMachine.
   Definition width_spec := W64.
   Definition const: Type := word width.
 End PseudoUnary64.
- 
