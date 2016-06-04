@@ -595,7 +595,7 @@ Section EFRepOperations.
       lazymatch goal with
         |- _ ?LHS (?f ?a) =>
         let t := eval pattern a in LHS in
-            match t with
+            lazymatch t with
               ?LHS' ?x => unify LHS' f; reflexivity
             end
       end.
@@ -617,8 +617,10 @@ Section EFRepOperations.
 
     Ltac inLetInValue' properTac rewriteTac :=
       etransitivity;
-      [eapply (Let_In_Proper_changevalue FRepEquiv); [properTac | rewriteTac; pattern_reflexivity]|].
-    Tactic Notation "inLetInValue" tactic3(properTac) tactic3(rewriteTac) := inLetInValue' properTac rewriteTac.
+      [eapply (Let_In_Proper_changevalue equiv); [properTac|rewriteTac; pattern_reflexivity]|].
+    Tactic Notation "inLetInValue" tactic3(rewriteTac) := inLetInValue' idtac rewriteTac.
+    Tactic Notation "inLetInValue" tactic3(rewriteTac) "by" tactic3(properTac) := inLetInValue' properTac rewriteTac.
+    Ltac prtc := abstract (repeat intro; repeat rewrite unfold_Let_In; simpl; intuition; repeat f_equiv; assumption).
 
     etransitivity.
 
@@ -649,41 +651,55 @@ Section EFRepOperations.
 
     pattern_reflexivity.
     erewrite <- Let_app_In' with (g:=F2Rep); [|pattern_reflexivity];
-      try (inLetInValue admit (rewrite_strat topdown hints toFRep));
-      pattern_reflexivity. 
+      try (inLetInValue (rewrite_strat topdown hints toFRep) by prtc).
+
+    pattern_reflexivity. 
+
     erewrite <- Let_app_In' with (g:=F2Rep); [|pattern_reflexivity];
-      try (inLetInValue admit (rewrite_strat topdown hints toFRep));
-      pattern_reflexivity. 
+      try (inLetInValue (rewrite_strat topdown hints toFRep) by prtc).
+    pattern_reflexivity. 
+
     erewrite <- Let_app_In' with (g:=F2Rep); [|pattern_reflexivity];
-      try (inLetInValue admit (rewrite_strat topdown hints toFRep));
-      pattern_reflexivity. 
+      try (inLetInValue (rewrite_strat topdown hints toFRep) by prtc).
+    pattern_reflexivity. 
+
     erewrite <- Let_app_In' with (g:=F2Rep); [|pattern_reflexivity];
-      try (inLetInValue admit (rewrite_strat topdown hints toFRep));
-      pattern_reflexivity. 
+      try (inLetInValue (rewrite_strat topdown hints toFRep) by prtc).
+    pattern_reflexivity. 
+
     erewrite <- Let_app_In' with (g:=F2Rep); [|pattern_reflexivity];
-      try (inLetInValue admit (rewrite_strat topdown hints toFRep));
-      pattern_reflexivity. 
+      try (inLetInValue (rewrite_strat topdown hints toFRep) by prtc).
+    pattern_reflexivity. 
+
     erewrite <- Let_app_In' with (g:=F2Rep); [|pattern_reflexivity];
-      try (inLetInValue admit (rewrite_strat topdown hints toFRep));
-      pattern_reflexivity. 
+      try (inLetInValue (rewrite_strat topdown hints toFRep) by prtc).
+    pattern_reflexivity. 
+
     erewrite <- Let_app_In' with (g:=F2Rep); [|pattern_reflexivity];
-      try (inLetInValue admit (rewrite_strat topdown hints toFRep));
-      pattern_reflexivity. 
+      try (inLetInValue (rewrite_strat topdown hints toFRep) by prtc).
+    pattern_reflexivity. 
+
     erewrite <- Let_app_In' with (g:=F2Rep); [|pattern_reflexivity];
-      try (inLetInValue admit (rewrite_strat topdown hints toFRep));
-      pattern_reflexivity. 
+      try (inLetInValue (rewrite_strat topdown hints toFRep) by prtc).
+    pattern_reflexivity. 
+
     erewrite <- Let_app_In' with (g:=F2Rep); [|pattern_reflexivity];
-      try (inLetInValue admit (rewrite_strat topdown hints toFRep));
-      pattern_reflexivity. 
+      try (inLetInValue (rewrite_strat topdown hints toFRep) by prtc).
+    pattern_reflexivity. 
+
     erewrite <- Let_app_In' with (g:=F2Rep); [|pattern_reflexivity];
-      try (inLetInValue admit (rewrite_strat topdown hints toFRep));
-      pattern_reflexivity. 
+      try (inLetInValue (rewrite_strat topdown hints toFRep) by prtc).
+    pattern_reflexivity. 
+
     erewrite <- Let_app_In' with (g:=F2Rep); [|pattern_reflexivity];
-      try (inLetInValue admit (rewrite_strat topdown hints toFRep));
-      pattern_reflexivity. 
+      try (inLetInValue (rewrite_strat topdown hints toFRep) by prtc).
+    pattern_reflexivity. 
+
     erewrite <- Let_app_In' with (g:=F2Rep); [|pattern_reflexivity];
-      try (inLetInValue admit (rewrite_strat topdown hints toFRep));
-      pattern_reflexivity. 
+      try (inLetInValue (rewrite_strat topdown hints toFRep) by prtc).
+    pattern_reflexivity. 
+
+    rewrite_strat bottomup unfold_Let_In.
 
     reflexivity.
   Defined.
