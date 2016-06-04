@@ -1,24 +1,22 @@
 
 Require Export Language Conversion QhasmEvalCommon QhasmUtil.
-Require Export Pseudo Medial AlmostQhasm State.
+Require Export Pseudo AlmostQhasm State.
 Require Export Bedrock.Word NArith NPeano Euclid.
-Require Export List Sumbool.
-Require Import FMapAVL FMapList JMeq.
-Require Import Vector.
+Require Export List Sumbool Vector.
 
-Module PseudoMedialConversion (Arch: PseudoMachine).
+Module PseudoConversion (Arch: PseudoMachine).
   Import QhasmCommon AlmostQhasm EvalUtil Util.
   Import ListNotations.
 
   Module P := Pseudo Arch.
-  Module M := Medial Arch.
+  (* Module M := Medial Arch. *)
 
   (******************    Material Conversions    ************************)
 
-  Module PseudoConversion <: Conversion P M.
-    Import P M Arch StateCommon.
+  Module PseudoConversion <: Conversion P AlmostQhasm.
+    Import P (* M *) Arch StateCommon.
 
-    Fixpoint convertState (st: M.State): option P.State :=
+    (* Fixpoint convertState (st: M.State): option P.State :=
       let try_cons := fun {T} (x: option T) (l: list T) =>
         match x with | Some x' => x' :: l | _ => l end in
 
@@ -31,7 +29,7 @@ Module PseudoMedialConversion (Arch: PseudoMachine).
         if (Nat.eq_dec (length varList) vars)
         then Some (varList, m, c)
         else None
-      end.
+      end. *)
 
     Fixpoint range (start len: nat): list nat :=
       match len with
@@ -56,6 +54,93 @@ Module PseudoMedialConversion (Arch: PseudoMachine).
       match lst with
       | x :: xs => max x (maxN xs)
       | [] => O
+      end.
+
+    Definition MMap := NatM.t (Mapping width).
+    Definition mempty := NatM.empty (Mapping width).
+
+    Fixpoint convertProgram' {n m} (prog: Pseudo n m) (start: nat) (M: MMap):
+        option (AlmostProgram * (list (Mapping width)) * MMap) :=
+      let rM := fun (x: nat) => regM _ (reg width_spec x) in
+      let sM := fun (x: nat) => stackM _ (stack width_spec x) in
+
+      let g := fun (k: nat) =>
+        match (NatM.find k M) with
+        | Some v => v
+        | _ => rM k (* TODO: more intelligent defaults *)
+        end in
+
+      let madd := fun (k: nat) (f: nat -> Mapping width) => NatM.add k (f k) M in
+
+      match prog with
+      | PVar n (Some true) i => Some (ASkip, [rM i], madd i rM)
+      | PVar n (Some false) i => Some (ASkip, [sM i], madd i sM)
+      | PVar n None i => Some (ASkip, [g i], M) 
+      | PConst n c => Some (AAssign (AConstInt (rM start) c), [rM start], madd start rM)
+      | PMem n m v i => Some (AAssign (ARegMem (rM start) v i), madd start rM)
+      | _ => None
+      end.
+
+
+      | PBin n o p =>
+        match (convertProgram' p start) with
+        | Some (p', [a; b]) =>
+          Some (MSeq p' (MOp (MIOpReg o a b)), [a])
+        | _ => None
+        end
+
+      | PCarry n o p =>
+        match (convertProgram' p start) with
+        | Some (p', [a; b]) =>
+          Some (MSeq p' (MOp (MCOpReg o a b)), [a])
+        | _ => None
+        end
+
+      | PDual n o p =>
+        match (convertProgram' p start) with
+        | Some (p', [a; b]) =>
+          let nextOpen := S (maxN [a; b]) in
+          Some (MSeq p' (MOp (MDOpReg o a b (Some nextOpen))), [a; nextOpen])
+        | _ => None
+        end
+
+      | PShift n o a x =>
+        match (convertProgram' x start) with
+        | Some (p', [r]) =>
+          Some (MSeq p' (MOp (MOpRot o r a)), [proj1_sig a])
+        | _ => None
+        end
+
+      | PLet n k m f g =>
+        ft <- convertProgram' f (start + k);
+        gt <- convertProgram' g (S (maxN (snd ft)));
+
+        match (ft, gt) with
+        | ((fp, fr), (gp, gr)) => Some (MSeq fp gp, gr)
+        end
+
+      | PComb n a b f g => 
+        ft <- convertProgram' f start;
+        gt <- convertProgram' g (S (maxN (snd ft)));
+        match (ft, gt) with
+        | ((fp, fr), (gp, gr)) => Some (MSeq fp gp, fr ++ gr)
+        end
+
+      | PIf n m o i0 i1 l r => 
+        lt <- convertProgram' l start;
+        rt <- convertProgram' r start;
+        match (lt, rt) with
+        | ((lp, lr), (rp, rr)) => Some (MCond (MCReg o i0 i1) lp rp, lr)
+        end
+        (* TODO: prove that all (Pseudo n m) will return the same list *)
+
+      | PFunExp n f e => 
+        match (convertProgram' f start) with
+        | Some (fp, fr) => Some (MFunexp e fp, fr)
+        | _ => None
+        end
+ 
+      | PCall n m lbl _ => Some (MCall lbl, range n m)
       end.
 
     (* Results are in the locations described by the
