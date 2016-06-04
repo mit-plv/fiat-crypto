@@ -15,7 +15,8 @@ Module Pseudo (M: PseudoMachine) <: Language.
 
   (* Program Types *)
   Inductive Pseudo: nat -> nat -> Type :=
-    | PVar: forall n, Index n -> Pseudo n 1
+    (* Some true for registers, false for stack, None for default *)
+    | PVar: forall n, option bool -> Index n -> Pseudo n 1
     | PMem: forall n m, Index n -> Index m -> Pseudo n 1
     | PConst: forall n, const -> Pseudo n 1
 
@@ -38,7 +39,7 @@ Module Pseudo (M: PseudoMachine) <: Language.
 
   Fixpoint pseudoEval {n m} (prog: Pseudo n m) (st: State): option State :=
     match prog with
-    | PVar n i => omap (getVar i st) (fun x => Some (setList [x] st))
+    | PVar n _ i => omap (getVar i st) (fun x => Some (setList [x] st))
     | PMem n m v i => omap (getMem v i st) (fun x => Some (setList [x] st))
     | PConst n c => Some (setList [c] st)
     | PBin n o p =>
@@ -110,7 +111,73 @@ Module Pseudo (M: PseudoMachine) <: Language.
     Delimit Scope pseudo_notations with p.
     Open Scope pseudo_notations.
 
-    Notation "'LET' A := B 'IN' C" (at level 60, right associativity) : pseudo_notations.
+    Definition indexize (n: nat) (p: (n > 0)%nat) (x: nat): Index n.
+      intros; exists (x mod n);
+        abstract (pose proof (mod_bound_pos x n); omega).
+    Defined.
+
+    Notation "% A" := (PVar _ (Some false) (indexize _ _ A))
+      (at level 20, right associativity) : pseudo_notations.
+
+    Notation "$ A" := (PVar _ (Some true) (indexize _ _ A))
+      (at level 20, right associativity) : pseudo_notations.
+
+    Notation "'MEM' ( A , B )" :=  (PMem _ _ (indexize _ _ A) (indexize _ _ B))
+      (at level 20, right associativity) : pseudo_notations.
+
+    Notation "# A" := (PConst _ (natToWord _ A))
+      (at level 20, right associativity) : pseudo_notations.
+
+    Notation "A :+: B" := (PBin _ Add (PComb _ _ _ A B))
+      (at level 60, right associativity) : pseudo_notations.
+
+    Notation "A :+c: B" := (PCarry _ AddWithCarry (PComb _ _ _ A B))
+      (at level 60, right associativity) : pseudo_notations.
+
+    Notation "A :-: B" := (PBin _ Sub (PComb _ _ _ A B))
+      (at level 60, right associativity) : pseudo_notations.
+
+    Notation "A :&: B" := (PBin _ And (PComb _ _ _ A B))
+      (at level 45, right associativity) : pseudo_notations.
+
+    Notation "A :^: B" := (PBin _ Xor (PComb _ _ _ A B))
+      (at level 45, right associativity) : pseudo_notations.
+
+    Notation "A :|: B" := (PBin _ Or (PComb _ _ _ A B))
+      (at level 60, right associativity) : pseudo_notations.
+
+    Notation "A :>>: B" := (PShift _ Shr (indexize _ _ B) A)
+      (at level 60, right associativity) : pseudo_notations.
+
+    Notation "A :<<: B" := (PShift _ Shl (indexize _ _ B) A)
+      (at level 60, right associativity) : pseudo_notations.
+
+    Notation "A :**: B" := (PDual _ Mult (PComb _ _ _ A B))
+      (at level 55, right associativity) : pseudo_notations.
+
+    Notation "'IF' O ( A , B ) 'THEN' L 'ELSE' R" :=
+      (PIf _ _ O (indexize _ _ A) (indexize _ _ B) L R)
+      (at level 70, left associativity) : pseudo_notations.
+
+    Notation "'EXP' ( e ) ( F )" :=
+      (PFunExp _ F e)
+      (at level 70, left associativity) : pseudo_notations.
+
+    Notation "'LET' E 'IN' F" :=
+      (PLet _ _ _ E F)
+      (at level 70, left associativity) : pseudo_notations.
+
+    Notation "A | B" :=
+      (PComb _ _ _ A B)
+      (at level 65, left associativity) : pseudo_notations.
+
+    Notation "'CALL' n ::: A" :=
+      (PCall _ _ n A)
+      (at level 65, left associativity) : pseudo_notations.
+
+    Definition p0: Pseudo 1 2.
+      refine (CALL 0 ::: %0 :**: $0); intuition.
+    Defined.
   End Notations.
 
   (* world peace *)
