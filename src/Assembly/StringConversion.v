@@ -188,7 +188,7 @@ Module StringConversion <: Conversion Qhasm QhasmString.
 
     Arguments regM [n] r.
     Arguments stackM [n] s.
-    Arguments memM [n m] x.
+    Arguments memM [n m] x i.
     Arguments constM [n] x.
 
     Fixpoint entries (width: nat) (prog: Program): list (Mapping width) :=
@@ -199,8 +199,8 @@ Module StringConversion <: Conversion Qhasm QhasmString.
           match a with
           | ARegStack n r s => convM [regM r; stackM s]
           | AStackReg n s r => convM [regM r; stackM s]
-          | ARegMem n m a b i => convM [regM a; memM b]
-          | AMemReg n m a i b => convM [memM a; regM b]
+          | ARegMem n m a b i => convM [regM a; memM b i]
+          | AMemReg n m a i b => convM [memM a i; regM b]
           | ARegReg n a b => convM [regM a; regM b]
           | AConstInt n r c => convM [regM r; constM c]
           end
@@ -209,7 +209,7 @@ Module StringConversion <: Conversion Qhasm QhasmString.
           | IOpConst _ o a c => convM [regM a; constM c]
           | IOpReg _ o a b => convM [regM a; regM b]
           | IOpStack _ o a b => convM [regM a; stackM b]
-          | IOpMem _ _ o a b i => convM [regM a; memM b]
+          | IOpMem _ _ o a b i => convM [regM a; memM b i]
           | DOp _ o a b (Some x) => convM [regM a; regM b; regM x]
           | DOp _ o a b None => convM [regM a; regM b]
           | ROp _ o a i => convM [regM a]
@@ -254,7 +254,7 @@ Module StringConversion <: Conversion Qhasm QhasmString.
 
     Definition getMemNames (n: nat) (lst: list (Mapping n)): list nat :=
       flatMapOpt (dedup lst) (fun e =>
-        match e with | memM _ (mem _ _ _ x) => Some x | _ => None end).
+        match e with | memM _ (mem _ _ _ x) _ => Some x | _ => None end).
 
     Fixpoint getInputs' (n: nat) (prog: list QhasmStatement) (init: list (Mapping n)): list (Mapping n) :=
       let f := fun rs => filter (fun x =>
@@ -268,8 +268,8 @@ Module StringConversion <: Conversion Qhasm QhasmString.
           match a with
           | ARegStack n r s   => g ([stackM s], [regM r; stackM s])
           | AStackReg n s r   => g ([regM r], [regM r; stackM s])
-          | ARegMem n m r x i => g ([memM x], [regM r; memM x])
-          | AMemReg n m x i r => g ([regM r], [regM r; memM x])
+          | ARegMem n m r x i => g ([memM x i], [regM r; memM x i])
+          | AMemReg n m x i r => g ([regM r], [regM r; memM x i])
           | ARegReg n a b     => g ([regM b], [regM a; regM b])
           | AConstInt n r c   => g ([], [regM r])
           end
@@ -278,7 +278,7 @@ Module StringConversion <: Conversion Qhasm QhasmString.
           | IOpConst _ o a c     => g ([regM a], [regM a])
           | IOpReg _ o a b       => g ([regM a], [regM a; regM b])
           | IOpStack _ o a b     => g ([regM a], [regM a; stackM b])
-          | IOpMem _ _ o a b i   => g ([regM a], [regM a; memM b])
+          | IOpMem _ _ o a b i   => g ([regM a], [regM a; memM b i])
           | DOp _ o a b (Some x) => g ([regM a; regM b], [regM a; regM b; regM x])
           | DOp _ o a b None     => g ([regM a; regM b], [regM a; regM b])
           | ROp _ o a i          => g ([regM a], [regM a])
@@ -313,7 +313,7 @@ Module StringConversion <: Conversion Qhasm QhasmString.
         | W64 => Some ("stack64 " ++ (stack w x))%string
         end
 
-      | memM _ (mem _ m w x) =>
+      | memM _ (mem _ m w x) _ =>
         match w with
         | W32 => Some ("stack32 " ++ (@mem _ m w x))%string
         | W64 => Some ("stack64 " ++ (@mem _ m w x))%string
@@ -326,7 +326,7 @@ Module StringConversion <: Conversion Qhasm QhasmString.
       match x with
       | regM r => Some ("input " ++ r)%string
       | stackM s => Some ("input " ++ s)%string
-      | memM _ m => Some ("input " ++ m)%string
+      | memM _ m i => Some ("input " ++ m)%string
       | _ => None
       end.
 

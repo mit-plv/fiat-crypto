@@ -93,7 +93,7 @@ Inductive Conditional :=
 Inductive Mapping (n: nat) :=
   | regM: forall (r: Reg n), Mapping n
   | stackM: forall (s: Stack n), Mapping n
-  | memM: forall {m} (x: Mem n m), Mapping n
+  | memM: forall {m} (x: Mem n m) (i: Index m), Mapping n
   | constM: forall (x: Const n), Mapping n.
 
 (* Parameter Accessors *)

@@ -6,7 +6,8 @@ Module AlmostQhasm <: Language.
   Import QhasmEval.
 
   (* Program Types *)
-  Definition State := State.
+  Definition Params := unit.
+  Definition State := fun (_: Params) => State.
 
   Inductive AlmostProgram: Set :=
     | ASkip: AlmostProgram
@@ -20,7 +21,7 @@ Module AlmostQhasm <: Language.
 
   Hint Constructors AlmostProgram.
 
-  Definition Program := AlmostProgram.
+  Definition Program := fun (_: Params) => AlmostProgram.
 
   Fixpoint inline (l: nat) (f prog: AlmostProgram) :=
     match prog with
@@ -38,7 +39,7 @@ Module AlmostQhasm <: Language.
     | _ => prog
     end.
 
-  Inductive AlmostEval: AlmostProgram -> State -> State -> Prop :=
+  Inductive AlmostEval {x: Params}: Program x -> State x -> State x -> Prop :=
     | AESkip: forall s, AlmostEval ASkip s s
     | AESeq: forall p p' s s' s'',
         AlmostEval p s s'
@@ -70,7 +71,7 @@ Module AlmostQhasm <: Language.
         AlmostEval (inline l f p) s s'
         -> AlmostEval (ADef l f p) s s'.
 
-  Definition evaluatesTo := AlmostEval.
+  Definition evaluatesTo := @AlmostEval.
 
   (* world peace *)
 End AlmostQhasm.
