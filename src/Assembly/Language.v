@@ -1,7 +1,8 @@
 
 Module Type Language.
-  Parameter Program: Type.
-  Parameter State: Type.
+  Parameter Params: Type.
+  Parameter Program: Params -> Type.
+  Parameter State: Params -> Type.
 
-  Parameter evaluatesTo: Program -> State -> State -> Prop.
+  Parameter evaluatesTo: forall x: Params, Program x -> State x -> State x -> Prop.
 End Language.

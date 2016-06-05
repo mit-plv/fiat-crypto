@@ -3,12 +3,15 @@ Require Export Language.
 
 Module Type Conversion (A B: Language).
 
-  Parameter convertProgram: A.Program -> option B.Program.
-  Parameter convertState: B.State -> option A.State.
+  Parameter convertProgram: forall (x: A.Params) (y: B.Params),
+    A.Program x -> option (B.Program y).
+  Parameter convertState: forall (x: A.Params) (y: B.Params),
+    B.State y -> option (A.State x).
 
-  Axiom convert_spec: forall a a' b b' prog prog',
-    convertProgram prog = Some prog' ->
-    convertState a = Some a' -> convertState b = Some b' ->
-    B.evaluatesTo prog' a b <-> A.evaluatesTo prog a' b'.
+  Axiom convert_spec: forall pa pb a a' b b' prog prog',
+    convertProgram pa pb prog = Some prog' ->
+    convertState pa pb a = Some a' ->
+    convertState pa pb b = Some b' ->
+    B.evaluatesTo pb prog' a b <-> A.evaluatesTo pa prog a' b'.
 
 End Conversion.
