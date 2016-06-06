@@ -88,7 +88,7 @@ Module EvalUtil.
   (* Mapping Conversions *)
 
   Definition wordToM {n: nat} {spec: Width n} (w: word n): Mapping n :=
-    constM _ (const spec w).
+    constM _ (constant spec w).
 
   Definition regToM {n: nat} {spec: Width n} (r: Reg n): Mapping n :=
     regM _ r.

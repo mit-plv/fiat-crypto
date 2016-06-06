@@ -5,17 +5,18 @@ Require Import NArith NPeano.
 Require Export Bedrock.Word.
 
 Module QhasmString <: Language.
-  Definition Program := string.
-  Definition State := unit.
+  Definition Params := unit.
+  Definition Program := fun (_: Params) => string.
+  Definition State := fun (_: Params) => unit.
 
-  Definition evaluatesTo (p: Program) (i o: State): Prop := True.
+  Definition evaluatesTo x (p: Program x) (i o: State x): Prop := True.
 End QhasmString.
 
 Module StringConversion <: Conversion Qhasm QhasmString.
   Import Qhasm ListNotations.
 
   (* The easy one *)
-  Definition convertState (st: QhasmString.State): option Qhasm.State := None.
+  Definition convertState x y (st: QhasmString.State y): option (Qhasm.State x) := None.
 
   (* Hexadecimal Primitives *)
 
@@ -62,7 +63,7 @@ Module StringConversion <: Conversion Qhasm QhasmString.
       "0x" ++ (nToHex (wordToN w)).
 
     Coercion constToString {n} (c: Const n): string :=
-      match c with | const _ _ w => wordToString w end.
+      match c with | constant _ _ w => wordToString w end.
 
     Coercion regToString {n} (r: Reg n): string :=
       match r with
@@ -191,7 +192,7 @@ Module StringConversion <: Conversion Qhasm QhasmString.
     Arguments memM [n m] x i.
     Arguments constM [n] x.
 
-    Fixpoint entries (width: nat) (prog: Program): list (Mapping width) :=
+    Fixpoint entries (width: nat) (prog: list QhasmStatement): list (Mapping width) :=
       match prog with
       | cons s next =>
         match s with
@@ -354,7 +355,9 @@ Module StringConversion <: Conversion Qhasm QhasmString.
     | QRet => [("pop %eip")%string]
     end.
 
-  Definition convertProgram (prog: Qhasm.Program): option string :=
+  Transparent Qhasm.Program QhasmString.Program.
+
+  Definition convertProgram x y (prog: Qhasm.Program x): option (QhasmString.Program y) :=
     let decls := fun x => flatMapList (dedup (entries x prog))
       (compose optionToList mappingDeclaration) in
 
@@ -374,10 +377,11 @@ Module StringConversion <: Conversion Qhasm QhasmString.
        stmts ++ blank ++
        leave ++ blank) EmptyString).
 
-  Lemma convert_spec: forall a a' b b' prog prog',
-    convertProgram prog = Some prog' ->
-    convertState a = Some a' -> convertState b = Some b' ->
-    QhasmString.evaluatesTo prog' a b <-> Qhasm.evaluatesTo prog a' b'.
+  Lemma convert_spec: forall pa pb a a' b b' prog prog',
+    convertProgram pa pb prog = Some prog' ->
+    convertState pa pb a = Some a' ->
+    convertState pa pb b = Some b' ->
+    QhasmString.evaluatesTo pb prog' a b <-> Qhasm.evaluatesTo pa prog a' b'.
   Admitted.
 
 End StringConversion.

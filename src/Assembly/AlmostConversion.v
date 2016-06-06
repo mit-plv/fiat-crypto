@@ -6,7 +6,7 @@ Module AlmostConversion <: Conversion AlmostQhasm Qhasm.
   Import QhasmCommon AlmostQhasm Qhasm.
   Import ListNotations.
 
-  Fixpoint almostToQhasm' (prog: AlmostProgram) (lblStart: N): Qhasm.Program :=
+  Fixpoint almostToQhasm' (prog: AlmostProgram) (lblStart: N): list QhasmStatement :=
     let label0 := (lblStart * 2)%N in
     let label1 := (label0 + 1)%N in
 
@@ -44,13 +44,21 @@ Module AlmostConversion <: Conversion AlmostQhasm Qhasm.
     | ACall lbl => [QCall lbl]
     end.
 
-  Definition convertProgram (prog: AlmostQhasm.Program) := Some (almostToQhasm' prog 0%N).
-  Definition convertState (st: Qhasm.State): option AlmostQhasm.State := Some st.
+  Transparent Qhasm.Program AlmostQhasm.Program.
 
-  Lemma convert_spec:  forall a a' b b' prog prog',
-    convertProgram prog = Some prog' ->
-    convertState a = Some a' -> convertState b = Some b' ->
-    Qhasm.evaluatesTo prog' a b <-> AlmostQhasm.evaluatesTo prog a' b'.
+  Definition convertProgram x y (prog: AlmostQhasm.Program x):
+      option (Qhasm.Program y) :=
+    Some (almostToQhasm' prog 0%N).
+
+  Definition convertState x y (st: Qhasm.State y):
+      option (AlmostQhasm.State x) :=
+    Some st.
+
+  Lemma convert_spec: forall pa pb a a' b b' prog prog',
+    convertProgram pa pb prog = Some prog' ->
+    convertState pa pb a = Some a' ->
+    convertState pa pb b = Some b' ->
+    Qhasm.evaluatesTo pb prog' a b <-> AlmostQhasm.evaluatesTo pa prog a' b'.
   Admitted.
 
 End AlmostConversion.
