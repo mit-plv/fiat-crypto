@@ -51,6 +51,17 @@ Proof.
   compute_formula.
 Time Defined.
 
+Local Transparent Let_In.
+Infix "<<" := Z.shiftr (at level 50).
+Infix "&" := Z.land (at level 50).
+Eval cbv beta iota delta [proj1_sig GF25519Base25Point5_mul_reduce_formula Let_In] in
+  fun f0 f1 f2 f3 f4 f5 f6 f7 f8 f9
+    g0 g1 g2 g3 g4 g5 g6 g7 g8 g9 => proj1_sig (
+    GF25519Base25Point5_mul_reduce_formula f0 f1 f2 f3 f4 f5 f6 f7 f8 f9
+                                           g0 g1 g2 g3 g4 g5 g6 g7 g8 g9).
+Local Opaque Let_In.
+
+
 Extraction "/tmp/test.ml" GF25519Base25Point5_mul_reduce_formula.
 (* It's easy enough to use extraction to get the proper nice-looking formula.
  * More Ltac acrobatics will be needed to get out that formula for further use in Coq.
