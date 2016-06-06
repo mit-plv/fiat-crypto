@@ -19,7 +19,7 @@ Inductive Width: nat -> Type := | W32: Width 32 | W64: Width 64.
 
 (* A constant value *)
 Inductive Const: nat -> Type :=
-  | const: forall {n}, Width n -> word n -> Const n.
+  | constant: forall {n}, Width n -> word n -> Const n.
 
 (* A variable in any register *)
 Inductive Reg: nat -> Type :=
@@ -109,10 +109,10 @@ Definition memWidth {n m} (x: Mem n m): nat := n.
 Definition memLength {n m} (x: Mem n m): nat := m.
 
 Definition constValueW {n} (x: Const n): word n :=
-  match x with | @const n _ v => v end.
+  match x with | @constant n _ v => v end.
 
 Definition constValueN {n} (x: Const n): nat :=
-  match x with | @const n _ v => wordToNat v end.
+  match x with | @constant n _ v => wordToNat v end.
 
 Definition regName {n} (x: Reg n): nat :=
   match x with | @reg n _ v => v end.

@@ -4,16 +4,20 @@ Require Import Pseudo Qhasm AlmostQhasm Conversion Language.
 Require Import PseudoConversion AlmostConversion StringConversion.
 
 Module Pipeline.
-  Export Pseudo Util.
+  Export Util AlmostQhasm Qhasm QhasmString.
+  Export Pseudo.
 
-  Definition toAlmost (p: Pseudo inVars outVars): option AlmostQhasm.Program :=
-    PseudoConversion.convertProgram p.
+  Transparent Pseudo.Program AlmostQhasm.Program Qhasm.Program QhasmString.Program.
+  Transparent Pseudo.Params AlmostQhasm.Params Qhasm.Params QhasmString.Params.
 
-  Definition toQhasm (p: Pseudo inVars outVars): option Qhasm.Program :=
-    omap (toAlmost p) AlmostConversion.convertProgram.
+  Definition toAlmost {w s n m} (p: @Pseudo w s n m) : option AlmostProgram :=
+    PseudoConversion.convertProgram (mkParams w s n m) tt p.
 
-  Definition toString (p: Pseudo inVars outVars): option string :=
-    omap (toQhasm p) StringConversion.convertProgram.
+  Definition toQhasm {w s n m} (p: @Pseudo w s n m) : option (list QhasmStatement) :=
+    omap (toAlmost p) (AlmostConversion.convertProgram tt tt).
+
+  Definition toString {w s n m} (p: @Pseudo w s n m) : option string :=
+    omap (toQhasm p) (StringConversion.convertProgram tt tt).
 End Pipeline.
 
 Module PipelineExample.
@@ -21,13 +25,7 @@ Module PipelineExample.
 
   Program Definition asdf: Program Unary32 := ($0 :+: $0)%p.
 
-  Definition exStr := Pipeline.toString ex.
-    | Some x => x
-    | None => EmptyString
-    end.
-  Defined.
+  Definition exStr := Pipeline.toString asdf.
 
-Open Scope string_scope.
-Print Result.
-
-Extraction "Result.ml" Result.
+  Eval vm_compute in exStr.
+End PipelineExample.
