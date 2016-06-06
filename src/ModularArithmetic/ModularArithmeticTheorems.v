@@ -6,6 +6,7 @@ Require Import Crypto.Tactics.VerdiTactics.
 Require Import Coq.ZArith.BinInt Coq.ZArith.Zdiv Coq.ZArith.Znumtheory Coq.NArith.NArith. (* import Zdiv before Znumtheory *)
 Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
 Require Export Coq.setoid_ring.Ring_theory Coq.setoid_ring.Field_theory Coq.setoid_ring.Field_tac.
+Require Export Crypto.Util.IterAssocOp.
 
 Section ModularArithmeticPreliminaries.
   Context {m:Z}.
@@ -209,6 +210,14 @@ Section FandZ.
     reflexivity.
   Qed.
 
+  Lemma pow_nat_iter_op_correct: forall (x:F m) n, (nat_iter_op mul 1) (N.to_nat n) x = x^n.
+  Proof.
+    induction n using N.peano_ind;
+      destruct (F_pow_spec x) as [pow_0 pow_succ];
+      rewrite ?N2Nat.inj_succ, ?pow_0, <-?N.add_1_l, ?pow_succ;
+      simpl; congruence.
+  Qed.
+  
   Lemma mod_plus_zero_subproof a b : 0 mod m = (a + b) mod m ->
                                      b mod m =  (- a)  mod m.
   Proof.
@@ -513,6 +522,11 @@ Section VariousModulo.
     ring.
   Qed.
   
+  Lemma F_opp_0 : opp (0 : F m) = 0%F.
+  Proof.
+    intros; ring.
+  Qed.
+
   Lemma F_opp_swap : forall x y : F m, opp x = y <-> x = opp y.
   Proof.
     split; intro; subst; ring.
@@ -520,6 +534,23 @@ Section VariousModulo.
 
   Lemma F_opp_involutive : forall x : F m, opp (opp x) = x.
   Proof.
+    intros; ring.
+  Qed.
+
+  Lemma F_square_opp : forall x : F m, (opp x ^ 2 = x ^ 2)%F.
+  Proof.
+    intros; ring.
+  Qed.
+
+  Lemma F_mul_opp_r : forall x y : F m, (x * opp y = opp (x * y))%F.
+    intros; ring.
+  Qed.
+
+  Lemma F_mul_opp_l : forall x y : F m, (opp x * y = opp (x * y))%F.
+    intros; ring.
+  Qed.
+
+  Lemma F_mul_opp_both : forall x y : F m, (opp x * opp y = x * y)%F.
     intros; ring.
   Qed.
 
@@ -675,4 +706,17 @@ Section VariousModulo.
     replace y with ((y - b) + b) by ring.
     rewrite Hxayb; ring.
   Qed.
+
+  Lemma F_FieldToZ_add_opp : forall x : F m, x <> 0 -> (FieldToZ x + FieldToZ (opp x) = m)%Z.
+  Proof.
+    intros.
+    rewrite FieldToZ_opp.
+    rewrite Z_mod_nz_opp_full, mod_FieldToZ; try omega.
+    rewrite mod_FieldToZ.
+    replace 0%Z with (@FieldToZ m 0) by auto.
+    intro false_eq.
+    rewrite <-F_eq in false_eq.
+    congruence.
+  Qed.
+
 End VariousModulo.

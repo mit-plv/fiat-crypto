@@ -9,6 +9,7 @@ Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
 Require Import Coq.ZArith.BinInt Coq.NArith.BinNat Coq.ZArith.ZArith Coq.ZArith.Znumtheory Coq.NArith.NArith. (* import Zdiv before Znumtheory *)
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Crypto.Util.NumTheoryUtil Crypto.Util.ZUtil.
+Require Import Crypto.Util.Tactics.
 
 Existing Class prime.
 
@@ -67,7 +68,7 @@ Module FieldModulo (Import M : PrimeModulus).
      postprocess [Fpostprocess],
      constants [Fconstant],
      div morph_div_theory_modulo,
-     power_tac power_theory_modulo [Fexp_tac]). 
+     power_tac power_theory_modulo [Fexp_tac]).
 End FieldModulo.
 
 Section VariousModPrime.
@@ -79,8 +80,8 @@ Section VariousModPrime.
      postprocess [Fpostprocess; try exact Fq_1_neq_0; try assumption],
      constants [Fconstant],
      div (@Fmorph_div_theory q),
-     power_tac (@Fpower_theory q) [Fexp_tac]). 
-  
+     power_tac (@Fpower_theory q) [Fexp_tac]).
+
   Lemma Fq_mul_eq : forall x y z : F q, z <> 0 -> x * z = y * z -> x = y.
   Proof.
     intros ? ? ? z_nonzero mul_z_eq.
@@ -119,47 +120,26 @@ Section VariousModPrime.
     eauto using Fq_inv_unique'.
   Qed.
 
-  Let inv_fermat_powmod (x:Z) : Z := powmod q x (Z.to_N (q-2)).
-  Lemma FieldToZ_inv_efficient : 2 < q ->
-                                 forall x : F q, FieldToZ (inv x) = inv_fermat_powmod x.
-  Proof.
-    intros.
-    rewrite (fun pf => Fq_inv_unique (fun x : F q => ZToField (inv_fermat_powmod (FieldToZ x))) pf);
-    subst inv_fermat_powmod; intuition; rewrite powmod_Zpow_mod;
-    replace (Z.of_N (Z.to_N (q - 2))) with (q-2)%Z by (rewrite Z2N.id ; omega).
-    - (* inv in range *) rewrite FieldToZ_ZToField, Zmod_mod; reflexivity.
-    - (* inv 0 *) replace (FieldToZ 0) with 0%Z by auto.
-      rewrite Z.pow_0_l by omega.
-      rewrite Zmod_0_l; trivial.
-    - (* inv nonzero *) rewrite <- (fermat_inv q _ x0) by
-        (rewrite mod_FieldToZ; eauto using FieldToZ_nonzero).
-      rewrite <-(ZToField_FieldToZ x0).
-      rewrite <-ZToField_mul.
-      rewrite ZToField_FieldToZ.
-      apply ZToField_eqmod.
-      demod; reflexivity.
-  Qed.
- 
   Lemma Fq_mul_zero_why : forall a b : F q, a*b = 0 -> a = 0 \/ b = 0.
     intros.
     assert (Z := F_eq_dec a 0); destruct Z.
-  
+
     - left; intuition.
-  
+
     - assert (a * b / a = 0) by
         ( rewrite H; field; intuition ).
-  
+
       replace (a*b/a) with (b) in H0 by (field; trivial).
       right; intuition.
   Qed.
-  
+
   Lemma Fq_mul_nonzero_nonzero : forall a b : F q, a <> 0 -> b <> 0 -> a*b <> 0.
     intros; intuition; subst.
     apply Fq_mul_zero_why in H1.
     destruct H1; subst; intuition.
   Qed.
   Hint Resolve Fq_mul_nonzero_nonzero.
-  
+
   Lemma Fq_pow_zero : forall (p: N), p <> 0%N -> (0^p = @ZToField q 0)%F.
     induction p using N.peano_ind;
     rewrite <-?N.add_1_l, ?(proj2 (@F_pow_spec q _) _), ?(proj1 (@F_pow_spec q _)).
@@ -191,6 +171,43 @@ Section VariousModPrime.
     - intros H Hc. destruct (Fq_mul_zero_why _ _ Hc).
       + intuition.
       + apply IHp; auto.
+  Qed.
+
+  Lemma F_inv_0 : inv 0 = (0 : F q).
+  Proof.
+    destruct (@F_inv_spec q); auto.
+  Qed.
+
+  Definition inv_fermat (x:F q) : F q := x ^ Z.to_N (q - 2)%Z.
+  Lemma Fq_inv_fermat: 2 < q -> forall x : F q, inv x = x ^ Z.to_N (q - 2)%Z.
+  Proof.
+    intros.
+    erewrite (Fq_inv_unique inv_fermat); trivial; split; intros; unfold inv_fermat.
+    { replace 2%N with (Z.to_N (Z.of_N 2))%N by auto.
+      rewrite Fq_pow_zero. reflexivity. intro.
+      assert (Z.of_N (Z.to_N (q-2)) = 0%Z) by (rewrite H0; eauto); rewrite Z2N.id in *; omega. }
+    { clear x. rename x0 into x. pose proof (fermat_inv _ _ x) as Hf; forward Hf.
+      { pose proof @ZToField_FieldToZ; pose proof @ZToField_mod; congruence. }
+      specialize (Hf H1); clear H1.
+      rewrite <-(ZToField_FieldToZ x).
+      rewrite ZToField_pow.
+      replace (Z.of_N (Z.to_N (q - 2))) with (q-2)%Z by (rewrite Z2N.id ; omega).
+      rewrite <-ZToField_mul.
+      apply ZToField_eqmod.
+      rewrite Hf, Zmod_small by omega; reflexivity.
+    }
+  Qed.
+  Lemma Fq_inv_fermat_correct : 2 < q -> forall x : F q, inv_fermat x = inv x.
+  Proof.
+    unfold inv_fermat; intros. rewrite Fq_inv_fermat; auto.
+  Qed.
+
+  Let inv_fermat_powmod (x:Z) : Z := powmod q x (Z.to_N (q-2)).
+  Lemma FieldToZ_inv_efficient : 2 < q ->
+                                 forall x : F q, FieldToZ (inv x) = inv_fermat_powmod x.
+  Proof.
+    unfold inv_fermat_powmod; intros.
+    rewrite Fq_inv_fermat, powmod_Zpow_mod, <-FieldToZ_pow_Zpow_mod; auto.
   Qed.
 
   Lemma F_minus_swap : forall x y : F q, x - y = 0 -> y - x = 0.
@@ -232,7 +249,7 @@ Section VariousModPrime.
       left.
       eapply Fq_square_mul; eauto.
       instantiate (1 := x).
-      assert (x ^ 2 = z * y ^ 2 - x ^ 2 + x ^ 2) as plus_minus_x2 by 
+      assert (x ^ 2 = z * y ^ 2 - x ^ 2 + x ^ 2) as plus_minus_x2 by
         (rewrite <- eq_zero_sub; ring).
       rewrite plus_minus_x2; ring.
     }
@@ -246,6 +263,11 @@ Section VariousModPrime.
   Lemma F_div_1_r : forall x : F q, (x/1)%F = x.
   Proof.
     intros; field. (* TODO: Warning: Collision between bound variables ... *)
+  Qed.
+
+  Lemma F_div_opp_1 : forall x y : F q, (opp x / y = opp (x / y))%F.
+  Proof.
+    intros; destruct (F_eq_dec y 0); [subst;unfold div;rewrite !F_inv_0|]; field.
   Qed.
 
   Lemma F_eq_opp_zero : forall x : F q, 2 < q -> (x = opp x <-> x = 0).
@@ -352,6 +374,22 @@ Section VariousModPrime.
   Proof.
     econstructor; eauto using Fq_mul_zero_why, Fq_1_neq_0.
   Qed.
+
+  Lemma add_cancel_mul_r_nonzero {y : F q} (H : y <> 0) (x z : F q)
+    : x * y + z = (x + (z * (inv y))) * y.
+  Proof. field. Qed.
+
+  Lemma sub_cancel_mul_r_nonzero {y : F q} (H : y <> 0) (x z : F q)
+    : x * y - z = (x - (z * (inv y))) * y.
+  Proof. field. Qed.
+
+  Lemma add_cancel_l_nonzero {y : F q} (H : y <> 0) (z : F q)
+    : y + z = (1 + (z * (inv y))) * y.
+  Proof. field. Qed.
+
+  Lemma sub_cancel_l_nonzero {y : F q} (H : y <> 0) (z : F q)
+    : y - z = (1 - (z * (inv y))) * y.
+  Proof. field. Qed.
 End VariousModPrime.
 
 Section SquareRootsPrime5Mod8.
@@ -367,7 +405,7 @@ Section SquareRootsPrime5Mod8.
      postprocess [Fpostprocess; try exact Fq_1_neq_0; try assumption],
      constants [Fconstant],
      div (@Fmorph_div_theory q),
-     power_tac (@Fpower_theory q) [Fexp_tac]). 
+     power_tac (@Fpower_theory q) [Fexp_tac]).
 
   (* This is only the square root of -1 if q mod 8 is 3 or 5 *)
   Definition sqrt_minus1 : F q :=  ZToField 2 ^ Z.to_N (q / 4).
@@ -382,7 +420,7 @@ Section SquareRootsPrime5Mod8.
   Qed.
 
   (* square root mod q relies on the fact that q is 5 mod 8 *)
-  Definition sqrt_mod_q (a : F q) := 
+  Definition sqrt_mod_q (a : F q) :=
     let b := a ^ Z.to_N (q / 8 + 1) in
     (match (F_eq_dec (b ^ 2) a) with
     | left A => b
@@ -445,4 +483,85 @@ Section SquareRootsPrime5Mod8.
     field.
   Qed.
 
+  Lemma sqrt_mod_q_of_0 : sqrt_mod_q 0 = 0.
+  Proof.
+    unfold sqrt_mod_q.
+    rewrite !Fq_pow_zero.
+    break_if; ring.
+
+    congruence.
+    intro false_eq.
+    rewrite <-(N2Z.id 0) in false_eq.
+    rewrite N2Z.inj_0 in false_eq.
+    pose proof (prime_ge_2 q prime_q).
+    apply Z2N.inj in false_eq; zero_bounds.
+    assert (0 < q / 8 + 1)%Z.
+    apply Z.add_nonneg_pos; zero_bounds.
+    omega.
+  Qed.
+
+  Lemma sqrt_mod_q_root_0 : forall x : F q, sqrt_mod_q x = 0 -> x = 0.
+  Proof.
+    unfold sqrt_mod_q; intros.
+    break_if.
+    - match goal with [ H : ?sqrt_x ^ 2 = x, H' : ?sqrt_x = 0 |- _ ] => rewrite <-H, H' end.
+      ring.
+    - match goal with
+      | [H : sqrt_minus1 * _ = 0 |- _ ]=>
+         apply Fq_mul_zero_why in H; destruct H as [sqrt_minus1_zero | ? ];
+         [ | eapply Fq_root_zero; eauto ]
+      end.
+      unfold sqrt_minus1 in sqrt_minus1_zero.
+      rewrite sqrt_minus1_zero in sqrt_minus1_valid.
+      exfalso.
+      pose proof (@F_opp_spec q 1) as opp_spec_1.
+      rewrite <-sqrt_minus1_valid in opp_spec_1.
+      assert (((1 + 0 ^ 2) : F q) = (1 : F q)) as ring_subst by ring.
+      rewrite ring_subst in *.
+      apply Fq_1_neq_0; assumption.
+  Qed.
+
 End SquareRootsPrime5Mod8.
+
+Local Open Scope F_scope.
+(** Tactics for solving inequalities. *)
+Ltac solve_cancel_by_field y tnz :=
+  solve [ generalize dependent y; intros;
+          field; tnz ].
+
+Ltac cancel_nonzero_factors' tnz :=
+  idtac;
+  match goal with
+  | [ |- ?x = 0 -> False ]
+    => change (x <> 0)
+  | [ |- ?x * ?y <> 0 ]
+    => apply Fq_mul_nonzero_nonzero
+  | [ H : ?y <> 0 |- _ ]
+    => progress rewrite ?(add_cancel_mul_r_nonzero H), ?(sub_cancel_mul_r_nonzero H), ?(add_cancel_l_nonzero H), ?(sub_cancel_l_nonzero H);
+       apply Fq_mul_nonzero_nonzero; [ | assumption ]
+  | [ |- ?op (?y * (ZToField (m := ?q) ?n)) ?z <> 0 ]
+    => unique assert (ZToField (m := q) n <> 0) by tnz;
+       generalize dependent (ZToField (m := q) n); intros
+  | [ |- ?op (?x * (?y * ?z)) _ <> 0 ]
+    => rewrite F_mul_assoc
+  end.
+Ltac cancel_nonzero_factors tnz := repeat cancel_nonzero_factors' tnz.
+Ltac specialize_quantified_equalities :=
+  repeat match goal with
+         | [ H : forall _ _ _ _, _ = _ -> _, H' : _ = _ |- _ ]
+           => unique pose proof (fun x2 y2 => H _ _ x2 y2 H')
+         | [ H : forall _ _, _ = _ -> _, H' : _ = _ |- _ ]
+           => unique pose proof (H _ _ H')
+         end.
+Ltac finish_inequality tnz :=
+  idtac;
+  match goal with
+  | [ H : ?x <> 0 |- ?y <> 0 ]
+    => replace y with x by (field; tnz); exact H
+  end.
+Ltac field_nonzero tnz :=
+  cancel_nonzero_factors tnz;
+  try (specialize_quantified_equalities;
+       progress cancel_nonzero_factors tnz);
+  try solve [ specialize_quantified_equalities;
+              finish_inequality tnz ].

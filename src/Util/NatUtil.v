@@ -56,3 +56,14 @@ Proof.
     rewrite <- nat_compare_lt; auto.
   }
 Qed.
+
+
+
+Lemma beq_nat_eq_nat_dec {R} (x y : nat) (a b : R)
+  : (if EqNat.beq_nat x y then a else b) = (if eq_nat_dec x y then a else b).
+Proof.
+  destruct (eq_nat_dec x y) as [H|H];
+    [ rewrite (proj2 (@beq_nat_true_iff _ _) H); reflexivity
+    | rewrite (proj2 (@beq_nat_false_iff _ _) H); reflexivity ].
+Qed.
+
