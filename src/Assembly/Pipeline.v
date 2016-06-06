@@ -26,6 +26,4 @@ Module PipelineExample.
   Program Definition asdf: Program Unary32 := ($0 :+: $0)%p.
 
   Definition exStr := Pipeline.toString asdf.
-
-  Eval vm_compute in exStr.
 End PipelineExample.
