@@ -2,6 +2,7 @@
 src/BaseSystem.v
 src/BaseSystemProofs.v
 src/EdDSAProofs.v
+src/Field.v
 src/Rep.v
 src/Testbit.v
 src/CompleteEdwardsCurve/CompleteEdwardsCurveTheorems.v

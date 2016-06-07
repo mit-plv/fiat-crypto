@@ -1,26 +1,17 @@
-Require Import Coq.ZArith.BinInt Coq.ZArith.Znumtheory Crypto.Tactics.VerdiTactics.
+Require Import Crypto.Field.
+Require Import Coq.setoid_ring.Cring.
 
-Require Import Crypto.Spec.ModularArithmetic.
-Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
-Local Open Scope F_scope.
-  
+Import Field.
+
 Section Pre.
-  Context {q : BinInt.Z}.
-  Context {a : F q}.
-  Context {d : F q}.
-  Context {prime_q : Znumtheory.prime q}.
-  Context {two_lt_q : 2 < q}.
-  Context {a_nonzero : a <> 0}.
-  Context {a_square : exists sqrt_a, sqrt_a^2 = a}.
-  Context {d_nonsquare : forall x, x^2 <> d}.
+  Context F `{Field F}.
 
-  Add Field Ffield_Z : (@Ffield_theory q _)
-    (morphism (@Fring_morph q),
-     preprocess [Fpreprocess],
-     postprocess [Fpostprocess],
-     constants [Fconstant],
-     div (@Fmorph_div_theory q),
-     power_tac (@Fpower_theory q) [Fexp_tac]). 
+  Context {a:F} {a_nonzero : a <> 0} {a_square : exists sqrt_a, sqrt_a^2%Z = a}.
+  Context {d:F} {d_nonsquare : forall x, x^2%Z <> d}.
+  Context {char_gt_2 : 1+1 == 0 -> False}.
+
+  Require Import Coq.setoid_ring.Field_tac.
+  Add Field EdwardsCurveField : (Field_theory_for_tactic F).
   
   (* the canonical definitions are in Spec *)
   Local Notation onCurve P := (let '(x, y) := P in a*x^2 + y^2 = 1 + d*x^2*y^2).
