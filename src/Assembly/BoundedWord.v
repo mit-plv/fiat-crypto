@@ -3,12 +3,11 @@ Require Import Bedrock.Word Bedrock.Nomega.
 Require Import NArith PArith Ndigits Compare_dec Arith.
 Require Import ProofIrrelevance.
 Require Import Ring.
+Require Import Wordize.
 
 Section BoundedWord.
 
-  Delimit Scope Bounded_scope with bounded.
-
-  Open Scope Bounded_scope.
+  Local Open Scope wordize_scope.
 
   Context {n: nat}.
 
@@ -50,10 +49,6 @@ Section BoundedWord.
   Defined.
 
   (* Definitions of Inequality and simple bounds. *)
-  Definition wordLeN {n: nat} (a: word n) (b: N): Prop :=
-    (wordToN a <= b)%N.
-
-  Notation "A <= B" := (wordLeN A B) (at level 70) : Bounded_scope.
 
   Lemma le_ge : forall n m, (n <= m -> m >= n)%nat.
   Proof.
