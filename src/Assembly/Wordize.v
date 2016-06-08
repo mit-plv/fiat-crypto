@@ -105,42 +105,6 @@ Proof.
   contradict H3; omega.
 Qed.
 
-Lemma testbit_pos0: forall p k,
-    testbit (Pos.to_nat p~0) k =
-      match k with | O => false | S k' => testbit (Pos.to_nat p) k' end.
-  intros; destruct k.
-
-  - unfold testbit; simpl; intuition.
-    unfold odd; replace (even _) with true; intuition.
-    symmetry; apply even_spec.
-    exists (Pos.to_nat p).
-    replace (p~0)%positive with (2*p)%positive by intuition.
-    apply Pos2Nat.inj_mul.
-
-  - rewrite (Pos2Nat.inj_xO); intuition.
-    rewrite Nat.testbit_even_succ; intuition.
-Qed.
-
-Lemma testbit_pos1: forall p k,
-    testbit (Pos.to_nat p~1) k =
-      match k with | O => true | S k' => testbit (Pos.to_nat p) k' end.
-  intros; destruct k.
-
-  - unfold testbit; simpl; intuition.
-    apply odd_spec; exists (Pos.to_nat p).
-    replace (p~1)%positive with (2*p + 1)%positive by intuition.
-    rewrite Pos2Nat.inj_add; rewrite Pos2Nat.inj_mul; intuition.
-
-  - rewrite (Pos2Nat.inj_xI); intuition.
-    replace (S (2 * Pos.to_nat p)) with ((2 * Pos.to_nat p) + 1) by intuition.
-    rewrite Nat.testbit_odd_succ; intuition.
-Qed.
-
-Lemma testbit_zero: testbit 0 = (fun (_: nat) => false).
-  apply functional_extensionality; intros;
-      rewrite testbit_0_l; intuition.
-Qed.
-
 Definition even_dec (x: nat): {exists x', x = 2*x'} + {exists x', x = 2*x' + 1}.
   refine (if (bool_dec (odd x) true) then right _ else left _).
 
@@ -186,17 +150,6 @@ Proof.
     pose proof (H1 (S k) Z); intuition.
     repeat rewrite testbit_odd_succ in H5; intuition.
 Qed. 
-
-Lemma odd_def0: forall x, odd (S (x*2)) = true.
-Proof. intros; intuition. apply odd_spec. exists x. omega. Qed.
-
-Lemma odd_def1: forall x, odd (x * 2) = false.
-Proof.
-  intros; intuition; unfold odd.
-  replace (even _) with true; intuition; symmetry.
-  rewrite even_spec.
-  exists x. omega.
-Qed.
 
 Inductive BinF := | binF: forall (a b c d: bool), BinF.
 
@@ -325,3 +278,14 @@ Proof.
   - intros; rewrite land_spec.
     unfold wand; rewrite testbit_bitwp; intuition.
 Qed.
+
+Definition take (k n: nat) (p: (k <= n)%nat) (w: word n): word k.
+  replace n with (k + (n - k)) in * by abstract omega.
+  refine (split1 k _ w).
+Defined.
+
+Lemma wordize_shiftr: forall {n} (x: word n) (k: nat) (p: (k <= n)%nat),
+  (Nat.shiftr (&x) k)%nat = & (take k n p x).
+Proof.
+  intros.
+Admitted.
