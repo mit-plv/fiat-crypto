@@ -1,7 +1,8 @@
 
 Require Export Bedrock.Word Bedrock.Nomega.
-Require Import NPeano NArith PArith Ndigits Nnat.
-Require Import Arith Ring List Compare_dec.
+Require Import NPeano NArith PArith Ndigits Nnat Pnat.
+Require Import Arith Ring List Compare_dec Bool.
+Require Import FunctionalExtensionality.
 
 Delimit Scope wordize_scope with wordize.
 Local Open Scope wordize_scope.
@@ -104,17 +105,223 @@ Proof.
   contradict H3; omega.
 Qed.
 
-Ltac wordize :=
-  repeat match goal with
-   | [ |- context[?a - 1] ] =>
-     let c := eval simpl in (a - 1) in
-     replace (a - 1) with c by omega
-  | [ |- vec (word ?n) O -> ?T] => apply (@lift0 T n)
-  | [ |- vec (word ?n) ?m -> ?T] => apply (@liftS T n (m - 1))
-  end.
+Lemma testbit_pos0: forall p k,
+    testbit (Pos.to_nat p~0) k =
+      match k with | O => false | S k' => testbit (Pos.to_nat p) k' end.
+  intros; destruct k.
 
-Section Examples.
-  Lemma vectorize_example: (vec (word 32) 2 -> word 32).
-    vectorize; refine (@wplus 32).
-  Qed.
-End Examples.
+  - unfold testbit; simpl; intuition.
+    unfold odd; replace (even _) with true; intuition.
+    symmetry; apply even_spec.
+    exists (Pos.to_nat p).
+    replace (p~0)%positive with (2*p)%positive by intuition.
+    apply Pos2Nat.inj_mul.
+
+  - rewrite (Pos2Nat.inj_xO); intuition.
+    rewrite Nat.testbit_even_succ; intuition.
+Qed.
+
+Lemma testbit_pos1: forall p k,
+    testbit (Pos.to_nat p~1) k =
+      match k with | O => true | S k' => testbit (Pos.to_nat p) k' end.
+  intros; destruct k.
+
+  - unfold testbit; simpl; intuition.
+    apply odd_spec; exists (Pos.to_nat p).
+    replace (p~1)%positive with (2*p + 1)%positive by intuition.
+    rewrite Pos2Nat.inj_add; rewrite Pos2Nat.inj_mul; intuition.
+
+  - rewrite (Pos2Nat.inj_xI); intuition.
+    replace (S (2 * Pos.to_nat p)) with ((2 * Pos.to_nat p) + 1) by intuition.
+    rewrite Nat.testbit_odd_succ; intuition.
+Qed.
+
+Lemma testbit_zero: testbit 0 = (fun (_: nat) => false).
+  apply functional_extensionality; intros;
+      rewrite testbit_0_l; intuition.
+Qed.
+
+Definition even_dec (x: nat): {exists x', x = 2*x'} + {exists x', x = 2*x' + 1}.
+  refine (if (bool_dec (odd x) true) then right _ else left _).
+
+  - apply odd_spec in _H; destruct _H; exists x0. abstract intuition.
+  - unfold odd in _H.
+    assert (even x = true) by abstract (destruct (even x); intuition).
+    apply even_spec in H; destruct H; exists x0; abstract intuition.
+Defined.
+
+Lemma testbit_spec: forall (n x y: nat), (x < pow2 n)%nat -> (y < pow2 n)%nat -> 
+    (forall k, (k < n)%nat -> testbit x k = testbit y k) -> x = y.
+Proof.
+  intro n; induction n; intros. simpl in *; omega.
+  destruct (even_dec x) as [px|px], (even_dec y) as [py|py];
+    destruct px as [x' px], py as [y' py];
+    rewrite px in *; rewrite py in *;
+    clear x y px py;
+    replace (pow2 (S n)) with (2 * (pow2 n)) in * by intuition;
+    assert (x' < pow2 n)%nat by intuition;
+    assert (y' < pow2 n)%nat by intuition.
+
+  - apply Nat.mul_cancel_l; intuition.
+    apply IHn; intuition.
+    assert (S k < S n)%nat as Z by intuition.
+    pose proof (H1 (S k) Z); intuition.
+    repeat rewrite testbit_even_succ in H5; intuition.
+
+  - assert (0 < S n)%nat as Z by intuition.
+    apply (H1 0) in Z.
+    rewrite testbit_even_0 in Z;
+      rewrite testbit_odd_0 in Z;
+      inversion Z.
+
+  - assert (0 < S n)%nat as Z by intuition.
+    apply (H1 0) in Z.
+    rewrite testbit_even_0 in Z;
+      rewrite testbit_odd_0 in Z;
+      inversion Z.
+
+  - apply Nat.add_cancel_r; apply Nat.mul_cancel_l; intuition.
+    apply IHn; intuition.
+    assert (S k < S n)%nat as Z by intuition.
+    pose proof (H1 (S k) Z); intuition.
+    repeat rewrite testbit_odd_succ in H5; intuition.
+Qed. 
+
+Lemma odd_def0: forall x, odd (S (x*2)) = true.
+Proof. intros; intuition. apply odd_spec. exists x. omega. Qed.
+
+Lemma odd_def1: forall x, odd (x * 2) = false.
+Proof.
+  intros; intuition; unfold odd.
+  replace (even _) with true; intuition; symmetry.
+  rewrite even_spec.
+  exists x. omega.
+Qed.
+
+Inductive BinF := | binF: forall (a b c d: bool), BinF.
+
+Definition applyBinF (f: BinF) (x y: bool) :=
+  match f as f' return f = f' -> _ with
+  | binF a b c d => fun _ =>
+    if x
+    then if y
+      then a
+      else b
+    else if y
+      then c
+      else d
+  end eq_refl.
+
+Definition boolToBinF (f: bool -> bool -> bool): {g: BinF | f = applyBinF g}.
+  intros; exists (binF (f true true) (f true false) (f false true) (f false false));
+    abstract (
+      apply functional_extensionality; intro x;
+      apply functional_extensionality; intro y;
+      destruct x, y; unfold applyBinF; simpl; intuition).
+Qed.
+
+Lemma testbit_odd_succ': forall x k, testbit (S (x * 2)) (S k) = testbit x k.
+  intros.
+  replace (S (x * 2)) with ((2 * x) + 1) by omega.
+  apply testbit_odd_succ.
+Qed. 
+
+Lemma testbit_even_succ': forall x k, testbit (x * 2) (S k) = testbit x k.
+  intros; replace (x * 2) with (2 * x) by omega; apply testbit_even_succ.
+Qed. 
+
+Lemma testbit_odd_zero': forall x, testbit (S (x * 2)) 0 = true.
+  intros.
+  replace (S (x * 2)) with ((2 * x) + 1) by omega.
+  apply testbit_odd_0.
+Qed. 
+
+Lemma testbit_even_zero': forall x, testbit (x * 2) 0 = false.
+  intros; replace (x * 2) with (2 * x) by omega; apply testbit_even_0.
+Qed. 
+
+Lemma testbit_bitwp: forall {n} (x y: word n) f k, (k < n)%nat ->
+  testbit (wordToNat (bitwp f x y)) k = f (testbit (&x) k) (testbit (&y) k).
+Proof.
+  intros.
+
+  pose proof (shatter_word x);
+    pose proof (shatter_word y);
+    simpl in *.
+
+  induction n. inversion H. clear IHn; rewrite H0, H1; clear H0 H1; simpl.
+
+  replace f with (applyBinF (proj1_sig (boolToBinF f))) in *
+    by (destruct (boolToBinF f); simpl; intuition);
+    generalize (boolToBinF f) as g; intro g;
+    destruct g as [g pg]; simpl; clear pg f.
+
+  revert x y H; generalize k n; clear k n; induction k, n;
+    intros; try omega. 
+
+  - destruct g as [a b c d], (whd x), (whd y);
+      destruct a, b, c, d; unfold applyBinF in *; clear H;
+      repeat rewrite testbit_odd_zero';
+      repeat rewrite testbit_even_zero';
+      reflexivity.
+
+  - destruct g as [a b c d], (whd x), (whd y);
+      destruct a, b, c, d; unfold applyBinF in *; clear H;
+      repeat rewrite testbit_odd_zero';
+      repeat rewrite testbit_even_zero';
+      reflexivity.
+
+  - assert (k < S n)%nat as HB by omega;
+      pose proof (IHk n (wtl x) (wtl y) HB) as Z; clear HB IHk.
+
+    assert (forall {m} (w: word (S m)),
+      &w = if whd w
+           then S (& wtl w * 2)
+           else & wtl w * 2) as r0. {
+      clear H Z x y; intros.
+      pose proof (shatter_word w); simpl in H; rewrite H; clear H; simpl.
+      destruct (whd w); intuition.
+    } repeat rewrite <- r0 in Z; clear r0.
+
+    assert (forall {m} (a b: word (S m)),
+      & bitwp (applyBinF g) a b
+         = if applyBinF g (whd a) (whd b)
+           then S (& bitwp (applyBinF g) (wtl a) (wtl b) * 2)
+           else & bitwp (applyBinF g) (wtl a) (wtl b) * 2) as r1. {
+      clear H Z x y; intros.
+      pose proof (shatter_word a); pose proof (shatter_word b);
+        simpl in *; rewrite H; rewrite H0; clear H H0; simpl.
+      destruct (applyBinF g (whd a) (whd b)); intuition.
+    } repeat rewrite <- r1 in Z; clear r1.
+
+    destruct g as [a b c d], (whd x), (whd y);
+      destruct a, b, c, d; unfold applyBinF in *; clear H;
+      repeat rewrite testbit_odd_succ';
+      repeat rewrite testbit_even_succ';
+      assumption.
+Qed.
+
+(* (forall k, testbit x k = testbit y k) <-> x = y. *)
+Lemma wordize_and: forall {n} (x y: word n),
+  (Nat.land (&x) (&y))%nat = & (x ^& y).
+Proof.
+  intros n x y.
+  pose proof (pow2_gt0 n).
+  assert (&x < pow2 n)%nat by (pose proof (word_size_bound x); intuition).
+  assert (&y < pow2 n)%nat by (pose proof (word_size_bound y); intuition).
+  apply (testbit_spec n).
+
+  - induction n.
+
+    + simpl in *; intuition.
+      replace (&x) with 0 by intuition.
+      replace (&y) with 0 by intuition.
+      simpl; intuition.
+
+    + admit.
+
+  - pose (word_size_bound (x ^& y)); intuition.
+
+  - intros; rewrite land_spec.
+    unfold wand; rewrite testbit_bitwp; intuition.
+Qed.
