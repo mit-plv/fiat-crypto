@@ -1,291 +1,299 @@
 
 Require Export Bedrock.Word Bedrock.Nomega.
-Require Import NPeano NArith PArith Ndigits Nnat Pnat.
-Require Import Arith Ring List Compare_dec Bool.
+Require Import NArith PArith Ndigits Nnat NPow Compare_dec.
 Require Import FunctionalExtensionality.
 
+Hint Rewrite wordToN_nat Nat2N.inj_add N2Nat.inj_add
+             Nat2N.inj_mul N2Nat.inj_mul Npow2_nat : N.
+
 Delimit Scope wordize_scope with wordize.
-Local Open Scope wordize_scope.
+Open Scope wordize_scope.
 
-Notation "& x" := (wordToNat x) (at level 30) : wordize_scope.
+Notation "& x" := (wordToN x) (at level 30) : wordize_scope.
+Notation "** x" := (NToWord _ x) (at level 30) : wordize_scope.
+Notation "$ x" := (natToWord x) (at level 30) : wordize_scope.
 
-Lemma word_size_bound : forall {n} (w: word n),
-  (& w <= pow2 n - 1)%nat.
-Proof. intros; assert (B := wordToNat_bound w); omega. Qed.
+Section Definitions.
 
-Lemma pow2_gt0 : forall x, (pow2 x > 0)%nat.
-Proof. intros; induction x; simpl; intuition. Qed.
+  Definition take (k n: nat) (p: (k <= n)%nat) (w: word n): word k.
+    replace n with (k + (n - k)) in * by abstract omega.
+    refine (split1 k _ w).
+  Defined.
 
-Lemma wordize_plus: forall {n} (x y: word n) (b: nat),
-    (&x <= b)%nat
-  -> (&y <= (pow2 n - b - 1))%nat
-  -> (&x + &y) = wordToNat (x ^+ y).
-Proof.
-  intros; unfold wplus, wordBin;
-    repeat rewrite wordToN_nat in *;
-    repeat rewrite NToWord_nat in *;
-    rewrite <- Nat2N.inj_add; rewrite Nat2N.id.
+  Definition shiftr {n} (w: word n) (k: nat): word n.
+    destruct (le_dec k n).
 
-  destruct (wordToNat_natToWord n (&x + &y)) as [k HW];
-    destruct HW as [HW HK]; rewrite HW; clear HW.
+    - replace n with (k + (n - k)) in * by abstract intuition.
+        refine (sext (take k (k + (n - k)) l w) _).
 
-  assert ((&x) + (&y) <= (pow2 n - 1))%nat by (
-    pose proof (word_size_bound x);
-    pose proof (word_size_bound y);
-    omega).
+    - exact (wzero n).
+  Defined.
 
-  assert (k * pow2 n <= pow2 n - 1)%nat by omega.
+  Definition mask {n} (m: nat) (w: word n): word n.
+    destruct (le_dec m n).
 
-  destruct k; subst; simpl in *; intuition;
-    clear H H0 H1 HK;
-    contradict H2.
+    - replace n with (m + (n - m)) in * by (abstract intuition).
+        refine (w ^& (zext (wones m) (n - m))).
 
-  pose proof (pow2_gt0 n).
-  induction k; simpl; intuition.
-Qed.
+    - exact w.
+  Defined.
 
-Lemma wordize_mult: forall {n} (x y: word n) (b: nat),
-    (1 <= n)%nat
-  -> (&x <= b)%nat
-  -> (&y <= (pow2 n - 1) / b)%nat
-  -> (&x * &y)%nat = wordToNat (x ^* y).
-Proof.
-  intros; unfold wmult, wordBin;
-    repeat rewrite wordToN_nat in *;
-    repeat rewrite NToWord_nat in *;
-    rewrite <- Nat2N.inj_mul; rewrite Nat2N.id.
+End Definitions.
 
-  destruct (wordToNat_natToWord n (&x * &y)) as [k HW];
-    destruct HW as [HW HK]; rewrite HW; clear HW.
+Section WordizeUtil.
 
-  assert ((&x) * (&y) <= (pow2 n - 1))%nat. {
-    destruct (Nat.eq_dec b 0); subst;
-      try abstract (replace (&x) with 0 by intuition; omega).
+  Lemma to_nat_lt: forall x b, (x < b)%N <-> (N.to_nat x < N.to_nat b)%nat.
+  Proof. (* via Nat2N.inj_compare *) Admitted.
 
-    transitivity ((&x * (pow2 n - 1)) / b). {
-      transitivity (&x * ((pow2 n - 1) / b)).
+  Lemma of_nat_lt: forall x b, (x < b)%nat <-> (N.of_nat x < N.of_nat b)%N.
+  Proof. (* via N2Nat.inj_compare *) Admitted.
 
-      + apply Nat.mul_le_mono_nonneg_l; intuition.
-      + apply Nat.div_mul_le; assumption.
-    }
+  Lemma Npow2_spec : forall n, Npow2 n = N.pow 2 (N.of_nat n).
+  Proof. (* by induction and omega *) Admitted.
 
-    transitivity ((b * (pow2 n - 1)) / (b * 1)). {
-      rewrite Nat.div_mul_cancel_l; intuition.
-      rewrite Nat.div_1_r.
-      apply Nat.div_le_upper_bound; intuition.
-      apply Nat.mul_le_mono_pos_r; intuition.
-      induction n; try inversion H; simpl; intuition.
-      pose proof (pow2_gt0 n).
-      omega.
-    }
+  Lemma NToWord_wordToN: forall sz x, NToWord sz (wordToN x) = x.
+  Proof.
+    intros.
+    rewrite NToWord_nat.
+    rewrite wordToN_nat.
+    rewrite Nat2N.id.
+    rewrite natToWord_wordToNat.
+    intuition.
+  Qed.
 
-    rewrite Nat.div_mul_cancel_l; intuition.
-    rewrite Nat.div_1_r; intuition.
-  }
+  Lemma wordToN_NToWord: forall sz x, (x < Npow2 sz)%N -> wordToN (NToWord sz x) = x.
+  Proof.
+    intros.
+    rewrite NToWord_nat.
+    rewrite wordToN_nat.
+    rewrite <- (N2Nat.id x).
+    apply Nat2N.inj_iff.
+    rewrite Nat2N.id.
+    apply natToWord_inj with (sz:=sz);
+        try rewrite natToWord_wordToNat;
+        intuition.
 
-  assert (k * (pow2 n) <= pow2 n - 1)%nat by omega.
+    - apply wordToNat_bound.
+    - rewrite <- Npow2_nat; apply to_nat_lt; assumption.
+  Qed.
 
-  induction k; try omega.
+  Lemma word_size_bound : forall {n} (w: word n), (&w < Npow2 n)%N.
+  Proof.
+    intros; pose proof (wordToNat_bound w) as B;
+        rewrite of_nat_lt in B;
+        rewrite <- Npow2_nat in B;
+        rewrite N2Nat.id in B;
+        rewrite <- wordToN_nat in B;
+        assumption.
+  Qed.
 
-  assert (pow2 n - 1 < S k * (pow2 n))%nat. {
-    destruct n; try inversion H; simpl; try omega.
-    pose proof (pow2_gt0 n).
-    induction k; try omega.
-    
-    transitivity (pow2 n + pow2 n + pow2 n); try omega.
-    replace (pow2 n + (pow2 n + 0) + S k * _)
-      with (pow2 n + pow2 n + pow2 n +
-           (pow2 n + k * (pow2 n + (pow2 n + 0)))).
-    apply Nat.lt_add_pos_r.
-    apply Nat.add_pos_nonneg; try omega; intuition.
+  Lemma Npow2_gt0 : forall x, (0 < Npow2 x)%N.
+  Proof.
+    intros; induction x.
 
-    simpl; omega.
-  }
+    - simpl; apply N.lt_1_r; intuition.
 
-  contradict H3; omega.
-Qed.
+    - replace (Npow2 (S x)) with (2 * (Npow2 x))%N by intuition.
+        apply (N.lt_0_mul 2 (Npow2 x)); left; split; apply N.neq_0_lt_0.
 
-Definition even_dec (x: nat): {exists x', x = 2*x'} + {exists x', x = 2*x' + 1}.
-  refine (if (bool_dec (odd x) true) then right _ else left _).
+        + intuition; inversion H.
 
-  - apply odd_spec in _H; destruct _H; exists x0. abstract intuition.
-  - unfold odd in _H.
-    assert (even x = true) by abstract (destruct (even x); intuition).
-    apply even_spec in H; destruct H; exists x0; abstract intuition.
-Defined.
+        + apply N.neq_0_lt_0 in IHx; intuition.
+  Qed.
 
-Lemma testbit_spec: forall (n x y: nat), (x < pow2 n)%nat -> (y < pow2 n)%nat -> 
-    (forall k, (k < n)%nat -> testbit x k = testbit y k) -> x = y.
-Proof.
-  intro n; induction n; intros. simpl in *; omega.
-  destruct (even_dec x) as [px|px], (even_dec y) as [py|py];
-    destruct px as [x' px], py as [y' py];
-    rewrite px in *; rewrite py in *;
-    clear x y px py;
-    replace (pow2 (S n)) with (2 * (pow2 n)) in * by intuition;
-    assert (x' < pow2 n)%nat by intuition;
-    assert (y' < pow2 n)%nat by intuition.
+End WordizeUtil.
 
-  - apply Nat.mul_cancel_l; intuition.
-    apply IHn; intuition.
-    assert (S k < S n)%nat as Z by intuition.
-    pose proof (H1 (S k) Z); intuition.
-    repeat rewrite testbit_even_succ in H5; intuition.
+(** Wordization Lemmas **)
 
-  - assert (0 < S n)%nat as Z by intuition.
-    apply (H1 0) in Z.
-    rewrite testbit_even_0 in Z;
-      rewrite testbit_odd_0 in Z;
-      inversion Z.
+Section Wordization.
 
-  - assert (0 < S n)%nat as Z by intuition.
-    apply (H1 0) in Z.
-    rewrite testbit_even_0 in Z;
-      rewrite testbit_odd_0 in Z;
-      inversion Z.
+  Lemma wordize_plus: forall {n} (x y: word n) (b: N),
+      (b <= Npow2 n)%N
+    -> (&x < b)%N
+    -> (&y < (Npow2 n - b))%N
+    -> (&x + &y)%N = & (x ^+ y).
+  Proof.
+    intros.
+    unfold wplus, wordBin.
+    rewrite wordToN_NToWord; intuition.
+    apply (N.lt_le_trans _ (b + &y)%N _).
 
-  - apply Nat.add_cancel_r; apply Nat.mul_cancel_l; intuition.
-    apply IHn; intuition.
-    assert (S k < S n)%nat as Z by intuition.
-    pose proof (H1 (S k) Z); intuition.
-    repeat rewrite testbit_odd_succ in H5; intuition.
-Qed. 
+    - apply N.add_lt_le_mono; try assumption; intuition.
 
-Inductive BinF := | binF: forall (a b c d: bool), BinF.
+    - replace (Npow2 n) with (b + Npow2 n - b)%N by nomega.
+        replace (b + Npow2 n - b)%N with (b + (Npow2 n - b))%N by (
+        replace (b + (Npow2 n - b))%N with ((Npow2 n - b) + b)%N by nomega;
+        rewrite (N.sub_add b (Npow2 n)) by assumption;
+        nomega).
 
-Definition applyBinF (f: BinF) (x y: bool) :=
-  match f as f' return f = f' -> _ with
-  | binF a b c d => fun _ =>
-    if x
-    then if y
-      then a
-      else b
-    else if y
-      then c
-      else d
-  end eq_refl.
+        apply N.add_le_mono_l; try nomega.
+        apply N.lt_le_incl; assumption.
+  Qed.
 
-Definition boolToBinF (f: bool -> bool -> bool): {g: BinF | f = applyBinF g}.
-  intros; exists (binF (f true true) (f true false) (f false true) (f false false));
-    abstract (
-      apply functional_extensionality; intro x;
-      apply functional_extensionality; intro y;
-      destruct x, y; unfold applyBinF; simpl; intuition).
-Qed.
+  Lemma wordize_mult: forall {n} (x y: word n) (b: N),
+      (1 < n)%nat -> (0 < b)%N
+    -> (&x < b)%N
+    -> (&y < (Npow2 n) / b)%N
+    -> (&x * &y)%N = & (x ^* y).
+  Proof.
+    intros; unfold wmult, wordBin.
+    rewrite wordToN_NToWord; intuition.
+    apply (N.lt_le_trans _ (b * ((Npow2 n) / b))%N _).
 
-Lemma testbit_odd_succ': forall x k, testbit (S (x * 2)) (S k) = testbit x k.
-  intros.
-  replace (S (x * 2)) with ((2 * x) + 1) by omega.
-  apply testbit_odd_succ.
-Qed. 
+    - apply N.mul_lt_mono; assumption.
 
-Lemma testbit_even_succ': forall x k, testbit (x * 2) (S k) = testbit x k.
-  intros; replace (x * 2) with (2 * x) by omega; apply testbit_even_succ.
-Qed. 
+    - apply N.mul_div_le; nomega.
+  Qed.
 
-Lemma testbit_odd_zero': forall x, testbit (S (x * 2)) 0 = true.
-  intros.
-  replace (S (x * 2)) with ((2 * x) + 1) by omega.
-  apply testbit_odd_0.
-Qed. 
+  Lemma wordize_and: forall {n} (x y: word n),
+    N.land (&x) (&y) = & (x ^& y).
+  Proof.
+    intros; pose proof (Npow2_gt0 n).
+    pose proof (word_size_bound x).
+    pose proof (word_size_bound y).
 
-Lemma testbit_even_zero': forall x, testbit (x * 2) 0 = false.
-  intros; replace (x * 2) with (2 * x) by omega; apply testbit_even_0.
-Qed. 
+    induction n.
 
-Lemma testbit_bitwp: forall {n} (x y: word n) f k, (k < n)%nat ->
-  testbit (wordToNat (bitwp f x y)) k = f (testbit (&x) k) (testbit (&y) k).
-Proof.
-  intros.
+    - rewrite (shatter_word_0 x) in *.
+        rewrite (shatter_word_0 y) in *.
+        simpl; intuition.
 
-  pose proof (shatter_word x);
-    pose proof (shatter_word y);
-    simpl in *.
+    - rewrite (shatter_word x) in *.
+        rewrite (shatter_word y) in *.
+        induction (whd x), (whd y).
 
-  induction n. inversion H. clear IHn; rewrite H0, H1; clear H0 H1; simpl.
+        + admit.
+        + admit.
+        + admit.
+        + admit.
+  Qed.
 
-  replace f with (applyBinF (proj1_sig (boolToBinF f))) in *
-    by (destruct (boolToBinF f); simpl; intuition);
-    generalize (boolToBinF f) as g; intro g;
-    destruct g as [g pg]; simpl; clear pg f.
+  Lemma wordize_shiftr: forall {n} (x: word n) (k: nat),
+    (N.shiftr_nat (&x) k) = & (shiftr x k).
+  Proof.
+    intros.
+    admit.
+  Qed.
 
-  revert x y H; generalize k n; clear k n; induction k, n;
-    intros; try omega. 
+End Wordization.
 
-  - destruct g as [a b c d], (whd x), (whd y);
-      destruct a, b, c, d; unfold applyBinF in *; clear H;
-      repeat rewrite testbit_odd_zero';
-      repeat rewrite testbit_even_zero';
-      reflexivity.
+Section Bounds.
 
-  - destruct g as [a b c d], (whd x), (whd y);
-      destruct a, b, c, d; unfold applyBinF in *; clear H;
-      repeat rewrite testbit_odd_zero';
-      repeat rewrite testbit_even_zero';
-      reflexivity.
+  Theorem constant_bound_N : forall {n} (k: word n),
+    (& k < & k + 1)%N.
+  Proof. intros; nomega. Qed.
 
-  - assert (k < S n)%nat as HB by omega;
-      pose proof (IHk n (wtl x) (wtl y) HB) as Z; clear HB IHk.
+  Lemma let_bound : forall {n} (x: word n) (f: word n -> word n) xb fb,
+      (& x < xb)%N
+    -> (forall x', & x' < xb -> & (f x') < fb)%N
+    -> ((let k := x in &(f k)) < fb)%N.
+  Proof. intros; eauto. Qed.
 
-    assert (forall {m} (w: word (S m)),
-      &w = if whd w
-           then S (& wtl w * 2)
-           else & wtl w * 2) as r0. {
-      clear H Z x y; intros.
-      pose proof (shatter_word w); simpl in H; rewrite H; clear H; simpl.
-      destruct (whd w); intuition.
-    } repeat rewrite <- r0 in Z; clear r0.
+  Definition Nlt_dec (x y: N): {(x < y)%N} + {(x >= y)%N}.
+    refine (
+      let c := N.compare x y in
+      match c as c' return c = c' -> _ with
+      | Lt => fun _ => left _
+      | _ => fun _ => right _
+      end eq_refl); admit.
+  Defined.
 
-    assert (forall {m} (a b: word (S m)),
-      & bitwp (applyBinF g) a b
-         = if applyBinF g (whd a) (whd b)
-           then S (& bitwp (applyBinF g) (wtl a) (wtl b) * 2)
-           else & bitwp (applyBinF g) (wtl a) (wtl b) * 2) as r1. {
-      clear H Z x y; intros.
-      pose proof (shatter_word a); pose proof (shatter_word b);
-        simpl in *; rewrite H; rewrite H0; clear H H0; simpl.
-      destruct (applyBinF g (whd a) (whd b)); intuition.
-    } repeat rewrite <- r1 in Z; clear r1.
+  Theorem wplus_bound : forall {n} (w1 w2 : word n) b1 b2,
+      (&w1 < b1)%N
+    -> (&w2 < b2)%N
+    -> (&(w1 ^+ w2) < b1 + b2)%N.
+  Proof.
+    intros.
 
-    destruct g as [a b c d], (whd x), (whd y);
-      destruct a, b, c, d; unfold applyBinF in *; clear H;
-      repeat rewrite testbit_odd_succ';
-      repeat rewrite testbit_even_succ';
-      assumption.
-Qed.
+    destruct (N.compare (b1 + b2)%N (Npow2 n));
+      rewrite <- wordize_plus with (b := b1);
+      try apply N.add_lt_mono;
+      try assumption.
 
-(* (forall k, testbit x k = testbit y k) <-> x = y. *)
-Lemma wordize_and: forall {n} (x y: word n),
-  (Nat.land (&x) (&y))%nat = & (x ^& y).
-Proof.
-  intros n x y.
-  pose proof (pow2_gt0 n).
-  assert (&x < pow2 n)%nat by (pose proof (word_size_bound x); intuition).
-  assert (&y < pow2 n)%nat by (pose proof (word_size_bound y); intuition).
-  apply (testbit_spec n).
+    - apply N.add_lt_mono; assumption.
 
-  - induction n.
+    - admit. 
+    - admit.
 
-    + simpl in *; intuition.
-      replace (&x) with 0 by intuition.
-      replace (&y) with 0 by intuition.
-      simpl; intuition.
+    - apply N.add_lt_mono; assumption.
+    - apply N.add_lt_mono; assumption.
 
-    + admit.
+  Qed.
 
-  - pose (word_size_bound (x ^& y)); intuition.
+  Theorem wmult_bound : forall (w1 w2 : word n) b1 b2,
+    w1 <= b1
+    -> w2 <= b2
+    -> w1 ^* w2 <= b1 * b2.
+  Proof.
+    preomega.
+    destruct (le_lt_dec (pow2 n) (N.to_nat b1 * N.to_nat b2)).
 
-  - intros; rewrite land_spec.
-    unfold wand; rewrite testbit_bitwp; intuition.
-Qed.
+    specialize (wordToNat_bound (w1 ^* w2)); nomega.
 
-Definition take (k n: nat) (p: (k <= n)%nat) (w: word n): word k.
-  replace n with (k + (n - k)) in * by abstract omega.
-  refine (split1 k _ w).
-Defined.
+    rewrite wmult_alt.
+    unfold wmultN, wordBinN.
+    rewrite wordToNat_natToWord_idempotent.
+    ge_to_le_nat.
 
-Lemma wordize_shiftr: forall {n} (x: word n) (k: nat) (p: (k <= n)%nat),
-  (Nat.shiftr (&x) k)%nat = & (take k n p x).
-Proof.
-  intros.
-Admitted.
+    apply Mult.mult_le_compat; nomega.
+    pre_nomega.
+    apply Lt.le_lt_trans with (N.to_nat b1 * N.to_nat b2); auto.
+    apply Mult.mult_le_compat; nomega.
+  Qed.
+
+  Theorem shiftr_bound : forall (w : word n) b bits,
+    w <= b
+    -> shiftr w bits <= N.shiftr b (N.of_nat bits).
+  Proof.
+    admit.
+  Qed.
+
+  Theorem mask_bound : forall (w : word n) m,
+    mask m w <= Npow2 m - 1.
+  Proof.
+    admit.
+  Qed.
+
+  Theorem mask_update_bound : forall (w : word n) b m,
+    w <= b
+    -> mask m w <= (N.min b (Npow2 m - 1)).
+  Proof.
+    admit.
+  Qed.
+
+End Bounds.
+
+(** Wordization Tactics **)
+
+Ltac wordize_ast :=
+  repeat match goal with
+  | [ H: (& ?x < ?b)%N |- context[((& ?x) + (& ?y))%N] ] => rewrite (wordize_plus x y b)
+  | [ H: (& ?x < ?b)%N |- context[((& ?x) * (& ?y))%N] ] => rewrite (wordize_mult x y b)
+  | [ |- context[N.land (& ?x) (& ?y)] ] => rewrite (wordize_and x y)
+  | [ |- context[N.shiftr (& ?x) ?k] ] => rewrite (wordize_shiftr x k)
+  | [ |- (_ < _ / _)%N ] => unfold N.div; simpl
+  | [ |- context[Npow2 _] ] => simpl
+  | [ |- (?x < ?c)%N ] => assumption
+  | [ |- _ = _ ] => reflexivity
+  end.
+
+Ltac lt_crush := try abstract (clear; vm_compute; intuition).
+
+(** Bounding Tactics **)
+
+(** Examples **)
+
+Module WordizationExamples.
+
+  Lemma wordize_example0: forall (x y z: word 16),
+    (wordToN x < 10)%N ->
+    (wordToN y < 10)%N ->
+    (wordToN z < 10)%N ->
+    & (x ^* y) = (&x * &y)%N.
+  Proof.
+    intros.
+    wordize_ast; lt_crush.
+    transitivity 10%N; try assumption; lt_crush.
+  Qed.
+
+End WordizationExamples.
