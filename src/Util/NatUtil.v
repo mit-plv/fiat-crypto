@@ -1,4 +1,5 @@
 Require Import Coq.Numbers.Natural.Peano.NPeano Coq.omega.Omega.
+Import Nat.
 
 Local Open Scope nat_scope.
 
@@ -66,4 +67,3 @@ Proof.
     [ rewrite (proj2 (@beq_nat_true_iff _ _) H); reflexivity
     | rewrite (proj2 (@beq_nat_false_iff _ _) H); reflexivity ].
 Qed.
-

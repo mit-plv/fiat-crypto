@@ -3,6 +3,7 @@ Require Import Crypto.Util.ListUtil Crypto.Util.CaseUtil Crypto.Util.ZUtil.
 Require Import Crypto.BaseSystem Crypto.BaseSystemProofs.
 Require Import Coq.ZArith.ZArith Coq.ZArith.Zdiv.
 Require Import Coq.omega.Omega Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
+Import Nat.
 
 Local Open Scope Z.
 

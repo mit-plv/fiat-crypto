@@ -1,3 +1,4 @@
+Require Import Coq.omega.Omega.
 Require Import Crypto.Spec.ModularArithmetic.
 Require Import Crypto.ModularArithmetic.Pre.
 
@@ -19,20 +20,20 @@ Section ModularArithmeticPreliminaries.
     f_equal.
     eapply UIP_dec, Z.eq_dec.
   Qed.
-  
+
   Lemma F_opp_spec : forall (a:F m), add a (opp a) = 0.
     intros a.
     pose (@opp_with_spec m) as H.
-    change (@opp m) with (proj1_sig H). 
+    change (@opp m) with (proj1_sig H).
     destruct H; eauto.
   Qed.
-  
+
   Lemma F_pow_spec : forall (a:F m),
       pow a 0%N = 1%F /\ forall x, pow a (1 + x)%N = mul a (pow a x).
   Proof.
     intros a.
     pose (@pow_with_spec m) as H.
-    change (@pow m) with (proj1_sig H). 
+    change (@pow m) with (proj1_sig H).
     destruct H; eauto.
   Qed.
 End ModularArithmeticPreliminaries.
@@ -81,7 +82,7 @@ Ltac eq_remove_proofs := lazymatch goal with
     assert (Q := F_eq a b);
     simpl in *; apply Q; clear Q
 end.
-            
+
 Ltac Fdefn :=
   intros;
   rewrite ?F_opp_spec;
@@ -217,7 +218,7 @@ Section FandZ.
       rewrite ?N2Nat.inj_succ, ?pow_0, <-?N.add_1_l, ?pow_succ;
       simpl; congruence.
   Qed.
-  
+
   Lemma mod_plus_zero_subproof a b : 0 mod m = (a + b) mod m ->
                                      b mod m =  (- a)  mod m.
   Proof.
@@ -244,7 +245,7 @@ Section FandZ.
     intros.
     pose proof (FieldToZ_opp' x) as H; rewrite mod_FieldToZ in H; trivial.
   Qed.
-  
+
   Lemma sub_intersperse_modulus : forall x y, ((x - y) mod m = (x + (m - y)) mod m)%Z.
   Proof.
     intros.
@@ -282,7 +283,7 @@ Section FandZ.
   Proof.
     Fdefn.
   Qed.
- 
+
   (* Compatibility between inject and pow *)
   Lemma ZToField_pow : forall x n,
     @ZToField m x ^ n = ZToField (x ^ (Z.of_N n) mod m).
@@ -317,7 +318,7 @@ End FandZ.
 
 Section RingModuloPre.
   Context {m:Z}.
-  Local Coercion ZToFm := ZToField : Z -> F m. Hint Unfold ZToFm.
+  Local Coercion ZToFm' := ZToField : Z -> F m. Hint Unfold ZToFm'.
   (* Substitution to prove all Compats *)
   Ltac compat := repeat intro; subst; trivial.
 
@@ -362,12 +363,12 @@ Section RingModuloPre.
   Proof.
     Fdefn; rewrite Z.mul_1_r; auto.
   Qed.
-    
+
   Lemma F_mul_assoc:
     forall x y z : F m, x * (y * z) = x * y * z.
   Proof.
     Fdefn.
-  Qed.  
+  Qed.
 
   Lemma F_pow_pow_N (x : F m) : forall (n : N), (x ^ id n)%F = pow_N 1%F mul x n.
   Proof.
@@ -390,7 +391,7 @@ Section RingModuloPre.
   Qed.
 
   (***** Division Theory *****)
-  Definition Fquotrem(a b: F m): F m * F m := 
+  Definition Fquotrem(a b: F m): F m * F m :=
     let '(q, r) := (Z.quotrem a b) in (q : F m, r : F m).
   Lemma Fdiv_theory : div_theory eq (@add m) (@mul m) (@id _) Fquotrem.
   Proof.
@@ -434,7 +435,7 @@ Section RingModuloPre.
   Qed.
 
   (* Redefine our division theory under the ring morphism *)
-  Lemma Fmorph_div_theory: 
+  Lemma Fmorph_div_theory:
       div_theory eq Zplus Zmult (@ZToField m) Z.quotrem.
   Proof.
     constructor; intros; intuition.
@@ -451,7 +452,7 @@ Section RingModuloPre.
     Fdefn.
   Qed.
 End RingModuloPre.
-  
+
 Ltac Fconstant t := match t with @ZToField _ ?x => x | _ => NotConstant end.
 Ltac Fexp_tac t := Ncst t.
 Ltac Fpreprocess := rewrite <-?ZToField_0, ?ZToField_1.
@@ -470,49 +471,49 @@ Module RingModulo (Export M : Modulus).
   Definition ring_morph_modulo := @Fring_morph modulus.
   Definition morph_div_theory_modulo := @Fmorph_div_theory modulus.
   Definition power_theory_modulo := @Fpower_theory modulus.
-  
+
   Add Ring GFring_Z : ring_theory_modulo
     (morphism ring_morph_modulo,
      constants [Fconstant],
      div morph_div_theory_modulo,
-     power_tac power_theory_modulo [Fexp_tac]). 
+     power_tac power_theory_modulo [Fexp_tac]).
 End RingModulo.
 
 Section VariousModulo.
   Context {m:Z}.
-  
+
   Add Ring GFring_Z : (@Fring_theory m)
     (morphism (@Fring_morph m),
      constants [Fconstant],
      div (@Fmorph_div_theory m),
-     power_tac (@Fpower_theory m) [Fexp_tac]). 
+     power_tac (@Fpower_theory m) [Fexp_tac]).
 
   Lemma F_mul_0_l : forall x : F m, 0 * x = 0.
   Proof.
     intros; ring.
   Qed.
-  
+
   Lemma F_mul_0_r : forall x : F m, x * 0 = 0.
   Proof.
     intros; ring.
   Qed.
-  
+
   Lemma F_mul_nonzero_l : forall a b : F m, a*b <> 0 -> a <> 0.
     intros; intuition; subst.
     assert (0 * b = 0) by ring; intuition.
   Qed.
-  
+
   Lemma F_mul_nonzero_r : forall a b : F m, a*b <> 0 -> b <> 0.
     intros; intuition; subst.
     assert (a * 0 = 0) by ring; intuition.
   Qed.
-  
+
   Lemma F_pow_distr_mul : forall (x y:F m) z, (0 <= z)%N ->
     (x ^ z) * (y ^ z) = (x * y) ^ z.
   Proof.
     intros.
     replace z with (Z.to_N (Z.of_N z)) by apply N2Z.id.
-    apply natlike_ind with (x := Z.of_N z); simpl; [ ring | | 
+    apply natlike_ind with (x := Z.of_N z); simpl; [ ring | |
       replace 0%Z with (Z.of_N 0%N) by auto; apply N2Z.inj_le; auto].
     intros z' z'_nonneg IHz'.
     rewrite Z2N.inj_succ by auto.
@@ -521,7 +522,7 @@ Section VariousModulo.
     rewrite <- IHz'.
     ring.
   Qed.
-  
+
   Lemma F_opp_0 : opp (0 : F m) = 0%F.
   Proof.
     intros; ring.
@@ -563,7 +564,7 @@ Section VariousModulo.
   Proof.
     intros; ring.
   Qed.
-  
+
   Lemma F_add_reg_r : forall x y z : F m, y + x = z + x -> y = z.
   Proof.
     intros ? ? ? A.
@@ -653,7 +654,7 @@ Section VariousModulo.
   Proof.
     split; intro A;
       [ replace w with (w - x + x) by ring
-      | replace w with (w + z - z) by ring ]; rewrite A; ring. 
+      | replace w with (w + z - z) by ring ]; rewrite A; ring.
   Qed.
 
   Definition isSquare (x : F m) := exists sqrt_x, sqrt_x ^ 2 = x.

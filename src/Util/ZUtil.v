@@ -2,6 +2,7 @@ Require Import Coq.ZArith.Zpower Coq.ZArith.Znumtheory Coq.ZArith.ZArith Coq.ZAr
 Require Import Coq.omega.Omega Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
 Require Import Crypto.Util.NatUtil.
 Require Import Coq.Lists.List.
+Import Nat.
 Local Open Scope Z.
 
 Lemma gt_lt_symmetry: forall n m, n > m <-> m < n.
@@ -208,7 +209,7 @@ Proof.
   rewrite (le_plus_minus n m) at 1 by assumption.
   rewrite Nat2Z.inj_add.
   rewrite Z.pow_add_r by apply Nat2Z.is_nonneg.
-  rewrite <- Z.div_div by first 
+  rewrite <- Z.div_div by first
     [ pose proof (Z.pow_pos_nonneg 2 (Z.of_nat n)); omega
     | apply Z.pow_pos_nonneg; omega ].
   rewrite Z.div_add by (pose proof (Z.pow_pos_nonneg 2 (Z.of_nat n)); omega).
@@ -345,7 +346,7 @@ Qed.
     + unfold Z.ones.
       rewrite Z.shiftr_0_r, Z.shiftl_1_l, Z.sub_0_r.
       omega.
-    + intros. 
+    + intros.
       destruct (Z_lt_le_dec x n); try omega.
       intuition.
       left.
@@ -360,7 +361,7 @@ Qed.
     Z.shiftr a i <= Z.ones (n - i) .
   Proof.
     intros a n i G G0 G1.
-    destruct (Z_le_lt_eq_dec i n G1). 
+    destruct (Z_le_lt_eq_dec i n G1).
     + destruct (Z_shiftr_ones' a n G i G0); omega.
     + subst; rewrite Z.sub_diag.
       destruct (Z_eq_dec a 0).
@@ -415,4 +416,3 @@ Ltac zero_bounds := try omega; try prime_bound; zero_bounds'.
       zero_bounds.
       apply Z.pow_nonneg; omega.
   Qed.
-
