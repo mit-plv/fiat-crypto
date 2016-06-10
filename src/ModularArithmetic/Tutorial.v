@@ -9,9 +9,9 @@ Section Mod24.
 
   (* Specify modulus *)
   Let q := 24.
-  
+
   (* Boilerplate for letting Z numbers be interpreted as field elements *)
-  Local Coercion ZToFq := ZToField : BinNums.Z -> F q. Hint Unfold ZToFq.
+  Let ZToFq := ZToField : BinNums.Z -> F q. Hint Unfold ZToFq. Local Coercion ZToFq : Z >-> F.
 
   (* Boilerplate for [ring]. Similar boilerplate works for [field] if
   the modulus is prime . *)
@@ -21,7 +21,7 @@ Section Mod24.
      postprocess [Fpostprocess; try exact Fq_1_neq_0; try assumption],
      constants [Fconstant],
      div (@Fmorph_div_theory q),
-     power_tac (@Fpower_theory q) [Fexp_tac]). 
+     power_tac (@Fpower_theory q) [Fexp_tac]).
 
   Lemma sumOfSquares : forall a b: F q, (a+b)^2 = a^2 + 2*a*b + b^2.
   Proof.
@@ -37,9 +37,9 @@ Section Modq.
 
   (* Set notations + - * / refer to F operations *)
   Local Open Scope F_scope.
-  
+
   (* Boilerplate for letting Z numbers be interpreted as field elements *)
-  Local Coercion ZToFq := ZToField : BinNums.Z -> F q. Hint Unfold ZToFq.
+  Let ZToFq := ZToField : BinNums.Z -> F q. Hint Unfold ZToFq. Local Coercion ZToFq : Z >-> F.
 
   (* Boilerplate for [field]. Similar boilerplate works for [ring] if
   the modulus is not prime . *)
@@ -49,7 +49,7 @@ Section Modq.
      postprocess [Fpostprocess; try exact Fq_1_neq_0; try assumption],
      constants [Fconstant],
      div (@Fmorph_div_theory q),
-     power_tac (@Fpower_theory q) [Fexp_tac]). 
+     power_tac (@Fpower_theory q) [Fexp_tac]).
 
   Lemma sumOfSquares' : forall a b c: F q, c <> 0 -> ((a+b)/c)^2 = a^2/c^2 + ZToField 2*(a/c)*(b/c) + b^2/c^2.
   Proof.
@@ -170,7 +170,7 @@ Module TimesZeroParametricTestModule (M: PrimeModulus).
     field; try exact Fq_1_neq_0.
   Qed.
 
-  Lemma biggerFraction : forall XP YP ZP TP XQ YQ ZQ TQ d : F modulus, 
+  Lemma biggerFraction : forall XP YP ZP TP XQ YQ ZQ TQ d : F modulus,
    ZQ <> 0 ->
    ZP <> 0 ->
    ZP * ZQ * ZP * ZQ + d * XP * XQ * YP * YQ <> 0 ->
@@ -187,4 +187,3 @@ Module TimesZeroParametricTestModule (M: PrimeModulus).
     field; assumption.
   Qed.
 End TimesZeroParametricTestModule.
-

@@ -11,7 +11,7 @@ Require Export Crypto.Util.IterAssocOp.
 
 Section ModularArithmeticPreliminaries.
   Context {m:Z}.
-  Local Coercion ZToFm := ZToField : BinNums.Z -> F m. Hint Unfold ZToFm.
+  Let ZToFm := ZToField : BinNums.Z -> F m. Hint Unfold ZToFm. Local Coercion ZToFm : Z >-> F.
 
   Theorem F_eq: forall (x y : F m), x = y <-> FieldToZ x = FieldToZ y.
   Proof.
@@ -318,7 +318,7 @@ End FandZ.
 
 Section RingModuloPre.
   Context {m:Z}.
-  Local Coercion ZToFm' := ZToField : Z -> F m. Hint Unfold ZToFm'.
+  Let ZToFm := ZToField : Z -> F m. Hint Unfold ZToFm. Local Coercion ZToFm : Z >-> F.
   (* Substitution to prove all Compats *)
   Ltac compat := repeat intro; subst; trivial.
 
