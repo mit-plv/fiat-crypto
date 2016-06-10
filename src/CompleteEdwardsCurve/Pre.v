@@ -144,7 +144,7 @@ Section Pre.
     (* https://eprint.iacr.org/2007/286.pdf Theorem 3.1;
       * c=1 and an extra a in front of x^2 *)
 
-    injection H; clear H; intros.
+    injection H; cbv beta iota; clear H; intros.
 
     Ltac t x1 y1 x2 y2 :=
       assert ((a*x2^2 + y2^2)*d*x1^2*y1^2
