@@ -2,6 +2,8 @@
 
 Require Import Coq.Arith.Arith Coq.omega.Omega Coq.NArith.NArith.
 
+Global Set Asymmetric Patterns.
+
 Local Open Scope N_scope.
 
 Hint Rewrite Nplus_0_r nat_of_Nsucc nat_of_Nplus nat_of_Nminus
