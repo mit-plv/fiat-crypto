@@ -26,7 +26,7 @@ Class Field_ops (F:Type)
       `{Ring_ops F}
       {inv:F->F} := {}.
 
-Class Division (A B:Type) := division : A -> B -> A.
+Class Division (A B C:Type) := division : A -> B -> C.
 
 Notation "_/_" := division.
 Notation "n / d" := (division n d).
@@ -34,7 +34,7 @@ Notation "n / d" := (division n d).
 Module F.
 
   Definition div `{Field_ops F} n d := n * (inv d).
-  Global Instance div_notation `{Field_ops F} : @Division F F := div.
+  Global Instance div_notation `{Field_ops F} : @Division F F F := div.
 
   Class Field {F inv} `{FieldCring:Cring (R:=F)} {Fo:Field_ops F (inv:=inv)} :=
     {
@@ -116,15 +116,39 @@ Module F.
       constructor; intros; eauto using mul_zero_why, field_one_neq_zero.
     Qed.
 
+    Tactic Notation (at level 0) "field_simplify_eq" "in" hyp(H) :=
+      let t := type of H in
+      generalize H;
+      field_lookup (PackField FIELD_SIMPL_EQ) [] t;
+      try (exact I);
+      try (idtac; []; clear H;intro H).
+
+    Require Import Util.Tactics.
+    Inductive field_simplify_done {x y:F} : (x==y) -> Type :=
+      Field_simplify_done : forall (H:x==y), field_simplify_done H.
+    Ltac field_nsatz :=
+      repeat match goal with
+               [ H: (_:F) == _ |- _ ] =>
+               match goal with
+               | [ Ha : Field_simplify_done H |- _ ] => fail
+               | _ => idtac
+               end;
+               field_simplify_eq in H;
+               unique pose proof (Field_simplify_done H)
+             end;
+      repeat match goal with [ H: field_simplify_done _ |- _] => clear H end;
+      try field_simplify_eq;
+      try nsatz.
+      
     Create HintDb field discriminated.
-    Hint Extern 5 (_ == _) => field_simplify_eq; nsatz : field.
+    Hint Extern 5 (_ == _) => field_nsatz : field.
     Hint Extern 5 (_ <-> _) => split.
 
     Lemma mul_inv_l : forall x, not (x == 0) -> inv x * x == 1. Proof. auto with field. Qed.
 
     Lemma mul_inv_r : forall x, not (x == 0) -> x * inv x == 1. Proof. auto with field. Qed.
 
-    Lemma mul_cancel_r (x y z:F) : not (z == 0) -> x * z == y * z -> x == y.
+    Lemma mul_cancel_r' (x y z:F) : not (z == 0) -> x * z == y * z -> x == y.
     Proof.
       intros.
       assert (x * z * inv z == y * z * inv z) by
@@ -134,8 +158,20 @@ Module F.
       rewrite mul_inv_r, @ring_mul_1_r in *; auto with field.
     Qed.
 
-    Lemma mul_cancel_l (x y z:F) : not (z == 0) -> z * x == z * y -> x == y.
-    Proof. intros. eauto using mul_cancel_r with field. Qed.
+    Lemma mul_cancel_r (x y z:F) : not (z == 0) -> (x * z == y * z <-> x == y).
+    Proof. intros;split;intros Heq; try eapply mul_cancel_r' in Heq; eauto with field. Qed.
+
+    Lemma mul_cancel_l (x y z:F) : not (z == 0) -> (z * x == z * y <-> x == y).
+    Proof. intros;split;intros; try eapply mul_cancel_r; eauto with field. Qed.
+
+    Lemma mul_cancel_r_eq : forall x z:F, not(z==0) -> (x*z == z <-> x == 1).
+    Proof.
+      intros;split;intros Heq; [|nsatz].
+      pose proof ring_mul_1_l z as Hz; rewrite <- Hz in Heq at 2; rewrite  mul_cancel_r in Heq; eauto.
+    Qed.
+
+    Lemma mul_cancel_l_eq : forall x z:F, not(z==0) -> (z*x == z <-> x == 1).
+    Proof. intros;split;intros Heq; try eapply mul_cancel_r_eq; eauto with field. Qed.
 
     Lemma inv_unique (a:F) : forall x y, x * a == 1 -> y * a == 1 -> x == y. Proof. auto with field. Qed.
     
@@ -171,7 +207,10 @@ Module F.
     Lemma inv_mul (x y:F) : not(x==0) -> not (y==0) -> inv (x*y) == inv x * inv y.
     Proof. intros;field;intuition. Qed.
 
-    Lemma pow_0_r (x:F) : x^0 == 1. Proof. reflexivity. Qed.
+    Lemma pow_0_r (x:F) : x^0 == 1. Proof. auto with field. Qed.
+    Lemma pow_1_r : forall x:F, x^1%Z == x. Proof. auto with field. Qed.
+    Lemma pow_2_r : forall x:F, x^2%Z == x*x. Proof. auto with field. Qed.
+    Lemma pow_3_r : forall x:F, x^3%Z == x*x*x. Proof. auto with field. Qed.
 
     Lemma pow_succ_r (x:F) (n:Z) : not (x==0)\/(n>=0)%Z -> x^(n+1) == x * x^n.
     Proof.
@@ -200,7 +239,7 @@ Module F.
       - rewrite Z_pred_neg, Ncring.pow_pos_succ; field; auto with field_nonzero.
     Qed.
           
-    Ltac pow_peano :=
+    Local Ltac pow_peano :=
       repeat (setoid_rewrite pow_0_r 
               || setoid_rewrite pow_succ_r
               || setoid_rewrite pow_pred_r).
@@ -251,3 +290,47 @@ Module F.
 
     Lemma issquare_mul_sub (x y z:F) : 0 == z*y^2%Z - x^2%Z -> (x/y)^2%Z == z \/ x == 0.
     Proof. destruct (eq_dec y 0); [right|left]; auto using issquare_mul with field. Qed.
+
+    Lemma div_mul : forall x y z : F, not(y==0) -> (z == (x / y) <-> z * y == x).
+    Proof. auto with field. Qed.
+
+    Lemma div_1_r : forall x : F, x/1 == x.
+    Proof. auto with field. Qed.
+
+    Lemma div_1_l : forall x : F, not(x==0) -> 1/x == inv x.
+    Proof. auto with field. Qed.
+
+    Lemma div_opp_l : forall x y, not (y==0) -> (-_ x) / y == -_ (x / y).
+    Proof. auto with field. Qed.
+
+    Lemma div_opp_r : forall x y, not (y==0) -> x / (-_ y) == -_ (x / y).
+    Proof. auto with field. Qed.
+    
+    Lemma eq_opp_zero : forall x : F, (~ 1 + 1 == (0:F)) -> (x == -_ x <-> x == 0).
+    Proof. auto with field. Qed.
+
+    Lemma add_cancel_l : forall x y z:F, z+x == z+y <-> x == y.
+    Proof. auto with field. Qed.
+
+    Lemma add_cancel_r : forall x y z:F, x+z == y+z <-> x == y.
+    Proof. auto with field. Qed.
+
+    Lemma add_cancel_r_eq : forall x z:F, x+z == z <-> x == 0.
+    Proof. auto with field. Qed.
+
+    Lemma add_cancel_l_eq : forall x z:F, z+x == z <-> x == 0.
+    Proof. auto with field. Qed.
+
+    Lemma sqrt_solutions : forall x y:F, y ^ 2%Z == x ^ 2%Z -> y == x \/ y == -_ x.
+    Proof.
+      intros ? ? squares_eq.
+      remember (y - x) as z eqn:Heqz.
+      assert (y == x + z) as Heqy by (subst; ring); rewrite Heqy in *; clear Heqy Heqz.
+      assert (Hw:(x + z)^2%Z == z * (x + (x + z)) + x^2%Z)
+        by (auto with field); rewrite Hw in squares_eq; clear Hw.
+      rewrite add_cancel_r_eq in squares_eq.
+      apply mul_zero_why in squares_eq; destruct squares_eq;  auto with field.
+    Qed.
+
+           
+
