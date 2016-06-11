@@ -333,7 +333,7 @@ Qed.
     replace (2 ^ (Z.pos p)) with (2 ^ (Z.pos p - 1)* 2).
     rewrite Z.div_add_l by omega.
     reflexivity.
-    replace 2 with (2 ^ 1) at 2 by auto.
+    change 2 with (2 ^ 1) at 2.
     rewrite <-Z.pow_add_r by (pose proof (Pos2Z.is_pos p); omega).
     f_equal. omega.
   Qed.
