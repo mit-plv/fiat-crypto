@@ -7,7 +7,7 @@ Definition sum_firstn l n := fold_right Z.add 0 (firstn n l).
 
 Class PseudoMersenneBaseParams (modulus : Z) := {
   limb_widths : list Z;
-  limb_widths_nonneg : forall w, In w limb_widths -> 0 <= w;
+  limb_widths_pos : forall w, In w limb_widths -> 0 < w;
   limb_widths_nonnil : limb_widths <> nil;
   limb_widths_good : forall i j, (i + j < length limb_widths)%nat ->
     sum_firstn limb_widths (i + j) <=

@@ -89,6 +89,13 @@ Section PseudoMersenneBaseParamProofs.
       - rewrite IHl by auto; ring.
   Qed.
 
+  Lemma limb_widths_nonneg : forall w, In w limb_widths -> 0 <= w.
+  Proof.
+    intros.
+    apply Z.lt_le_incl.
+    auto using limb_widths_pos.
+  Qed.
+
   Lemma sum_firstn_limb_widths_nonneg : forall n, 0 <= sum_firstn limb_widths n.
   Proof.
     unfold sum_firstn; intros.

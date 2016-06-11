@@ -76,42 +76,44 @@ Section Canonicalization.
   Definition full_carry_chain := make_chain (length limb_widths).
 
   (* compute at compile time *)
-  Definition max_ones := Z.ones
-    ((fix loop current_max lw :=
-      match lw with
-      | nil => current_max
-      | w :: lw' => loop (Z.max w current_max) lw'
-      end
-    ) 0 limb_widths).
+  Definition max_ones := Z.ones (fold_right Z.max 0 limb_widths).
   
   (* compute at compile time? *)
   Definition carry_full := carry_sequence full_carry_chain.
 
   Definition max_bound i := Z.ones (log_cap i).
 
-  Definition isFull us := 
-    (fix loop full i :=
-      match i with
-      | O => full (* don't test 0; the test for 0 is the initial value of [full]. *)
-      | S i' => loop (andb (Z.eqb (max_bound i) (nth_default 0 us i)) full) i'
-      end
-    ) (Z.ltb (max_bound 0 - (c + 1)) (nth_default 0 us 0)) (length us - 1)%nat.
-
-  Fixpoint range' n m :=
-    match m with
-    | O => nil
-    | S m' => (n - m)%nat :: range' n m'
+  Fixpoint isFull' us full i :=
+    match i with
+    | O => andb (Z.ltb (max_bound 0 - c) (nth_default 0 us 0)) full
+    | S i' => isFull' us (andb (Z.eqb (max_bound i) (nth_default 0 us i)) full) i'
     end.
 
-  Definition range n := range' n n.
+  Definition isFull us := isFull' us true (length us - 1)%nat.
 
-  Definition land_max_bound and_term i := Z.land and_term (max_bound i). 
+  Fixpoint modulus_digits' i :=
+    match i with
+    | O => max_bound i - c + 1 :: nil
+    | S i' => max_bound i :: modulus_digits' i'
+    end.
+
+  (* compute at compile time *)
+  Definition modulus_digits := modulus_digits' (length base).
+
+  Fixpoint map2 {A B C} (f : A -> B -> C) (la : list A) (lb : list B) : list C :=
+    match la with
+    | nil => nil
+    | a :: la' => match lb with
+                  | nil => nil
+                  | b :: lb' => f a b :: map2 f la' lb'
+                  end
+    end.
     
   Definition freeze us :=
     let us' := carry_full (carry_full (carry_full us)) in
     let and_term := if isFull us' then max_ones else 0 in
     (* [and_term] is all ones if us' is full, so the subtractions subtract q overall.
        Otherwise, it's all zeroes, and the subtractions do nothing. *)
-       map (fun x => (snd x) - land_max_bound and_term (fst x)) (combine (range (length us')) us').
+     map2 (fun x y => x - y) us' (map (Z.land and_term) modulus_digits).
    
 End Canonicalization.

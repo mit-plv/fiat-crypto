@@ -258,13 +258,13 @@ Proof.
   destruct (lt_dec n (length xs)); auto.
 Qed.
 
-Lemma combine_truncate_r : forall {A} (xs ys : list A),
+Lemma combine_truncate_r : forall {A B} (xs : list A) (ys : list B),
   combine xs ys = combine xs (firstn (length xs) ys).
 Proof.
   induction xs; destruct ys; boring.
 Qed.
 
-Lemma combine_truncate_l : forall {A} (xs ys : list A),
+Lemma combine_truncate_l : forall {A B} (xs : list A) (ys : list B),
   combine xs ys = combine (firstn (length ys) xs) ys.
 Proof.
   induction xs; destruct ys; boring.
