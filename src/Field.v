@@ -46,15 +46,15 @@ Module F.
 
   Definition powZ `{Field_ops F} (x:F) (n:Z) :=
     match n with
-      | Z0 => 1
-      | Zpos p => pow_pos x p
-      | Zneg p => inv (pow_pos x p)
+    | Z0 => 1
+    | Zpos p => pow_pos x p
+    | Zneg p => inv (pow_pos x p)
     end.
   Global Instance power_field `{Field_ops F} : Power | 5 := { power := powZ }.
 
   Section FieldProofs.
     Context `{Field F}.
-  
+    
     Definition unfold_div (x y:F) : x/y = x * inv y := eq_refl.
 
     Global Instance Proper_div :
@@ -73,7 +73,7 @@ Module F.
       induction n; simpl; intros; trivial;
         repeat eapply ring_mult_comp; eauto.
     Qed.
-      
+    
     Global Instance Propper_powZ : Proper (_==_==>eq==>_==_) powZ.
     Proof.
       repeat intro; subst; unfold powZ.
@@ -130,7 +130,7 @@ Module F.
       repeat match goal with
                [ H: (_:F) == _ |- _ ] =>
                match goal with
-               | [ Ha : Field_simplify_done H |- _ ] => fail
+               | [ Ha : field_simplify_done H |- _ ] => fail
                | _ => idtac
                end;
                field_simplify_eq in H;
@@ -139,7 +139,7 @@ Module F.
       repeat match goal with [ H: field_simplify_done _ |- _] => clear H end;
       try field_simplify_eq;
       try nsatz.
-      
+    
     Create HintDb field discriminated.
     Hint Extern 5 (_ == _) => field_nsatz : field.
     Hint Extern 5 (_ <-> _) => split.
@@ -238,7 +238,7 @@ Module F.
         + destruct p; discriminate.
       - rewrite Z_pred_neg, Ncring.pow_pos_succ; field; auto with field_nonzero.
     Qed.
-          
+    
     Local Ltac pow_peano :=
       repeat (setoid_rewrite pow_0_r 
               || setoid_rewrite pow_succ_r
@@ -261,7 +261,7 @@ Module F.
       { repeat intro. subst. reflexivity. }
     Qed.
     Hint Resolve pow_nonzero : field_nonzero.
- 
+    
     Lemma pow_inv (x:F) : forall (n:Z), not(x==0) -> inv x^n == inv (x^n).
       match goal with |- forall n, @?P n => eapply (Z.order_induction'_0 P) end.
       { repeat intro. subst. reflexivity. }
@@ -332,5 +332,5 @@ Module F.
       apply mul_zero_why in squares_eq; destruct squares_eq;  auto with field.
     Qed.
 
-           
-
+  End FieldProofs.
+End F.
