@@ -1412,8 +1412,19 @@ Section CanonicalizationProofs.
     length (map2 f ls1 ls2) = min (length ls1) (length ls2).
   Admitted.
 
+  Lemma modulus_digits'_length : forall i, length (modulus_digits' i) = S i.
+  Proof.
+    induction i; intros; [ cbv; congruence | ].
+    unfold modulus_digits'; fold modulus_digits'.
+    rewrite app_length, IHi.
+    cbv [length]; omega.
+  Qed.
+
   Lemma modulus_digits_length : length modulus_digits = length base.
-  Admitted.
+  Proof.
+    unfold modulus_digits.
+    rewrite modulus_digits'_length; omega.
+  Qed.
 
   (* Helps with solving goals of the form [x = y -> min x y = x] or [x = y -> min x y = y] *)
   Local Hint Resolve Nat.eq_le_incl eq_le_incl_rev.
@@ -1569,11 +1580,73 @@ Section CanonicalizationProofs.
     = BaseSystem.decode base us - BaseSystem.decode base vs.
   Admitted.
 
+  Lemma decode_modulus_digits' : forall i, (i <= length base)%nat ->
+    BaseSystem.decode' base (modulus_digits' i) = 2 ^ (sum_firstn limb_widths (S i)) - c.
+  Proof.
+    induction i; intros; unfold modulus_digits'; fold modulus_digits'.
+    + case_eq base;
+        [ intro base_eq; rewrite base_eq, (@nil_length0 Z) in lt_1_length_base; omega | ].
+      intros z ? base_eq.
+      rewrite decode'_cons, decode_nil, Z.add_0_r.
+      replace z with (nth_default 0 base 0) by (rewrite base_eq; auto).
+      rewrite nth_default_base by omega.
+      replace (max_bound 0 - c + 1) with (Z.succ (max_bound 0) - c) by ring.
+      rewrite max_bound_log_cap.
+      rewrite sum_firstn_succ with (x := log_cap 0) by (rewrite log_cap_eq;
+        apply nth_error_Some_nth_default; rewrite <-base_length; omega).
+      rewrite Z.pow_add_r by auto.
+      cbv [sum_firstn fold_right firstn].
+      ring.
+    + assert (S i < length base \/ S i = length base)%nat as cases by omega.
+      destruct cases.
+      - rewrite sum_firstn_succ with (x := log_cap (S i)) by
+          (rewrite log_cap_eq; apply nth_error_Some_nth_default;
+          rewrite <-base_length; omega).
+        rewrite Z.pow_add_r, <-max_bound_log_cap, set_higher by auto.
+        rewrite IHi by omega.
+        rewrite modulus_digits'_length.
+        rewrite nth_default_base by omega.
+        ring.
+      - rewrite sum_firstn_all_succ by (rewrite <-base_length; omega).
+        rewrite decode'_splice, modulus_digits'_length, firstn_all by auto.
+        rewrite skipn_all, decode_base_nil, Z.add_0_r by omega.
+        apply IHi.
+        omega.
+  Qed.
+
   Lemma decode_modulus_digits : BaseSystem.decode base modulus_digits = modulus.
-  Admitted.
+  Proof.
+    unfold modulus_digits; rewrite decode_modulus_digits' by omega.
+    replace (S (length base - 1)) with (length base) by omega.
+    rewrite base_length.
+    fold k. unfold c.
+    ring.
+  Qed.
+
+  Lemma map_land_max_ones_modulus_digits' : forall i,
+    map (Z.land max_ones) (modulus_digits' i) = (modulus_digits' i).
+  Proof.
+    induction i; intros.
+    + cbv [modulus_digits' map].
+      f_equal.
+      apply land_max_ones_noop with (i := 0%nat).
+      rewrite <-max_bound_log_cap.
+      omega.
+    + unfold modulus_digits'; fold modulus_digits'.
+      rewrite map_app.
+      f_equal; [ apply IHi; omega | ].
+      cbv [map]; f_equal.
+      apply land_max_ones_noop with (i := S i).
+      rewrite <-max_bound_log_cap.
+      split; auto; omega.
+  Qed.
 
   Lemma map_land_max_ones_modulus_digits : map (Z.land max_ones) modulus_digits = modulus_digits.
-  Admitted.
+  Proof.
+    apply map_land_max_ones_modulus_digits'.
+  Qed.
+
+  Opaque modulus_digits.
 
   Lemma map_land_zero : forall ls, map (Z.land 0) ls = BaseSystem.zeros (length ls).
   Admitted.
@@ -1728,7 +1801,7 @@ Section CanonicalizationProofs.
   Proof.
     intros until 5; intro nth_default_lt.
     destruct (lt_dec n (length us)).
-    + rewrite firstn_succ by omega.
+    + rewrite firstn_succ with (d := 0) by omega.
       rewrite !base_app.
       autorewrite with lengths; rewrite Min.min_l by omega.
       do 2 (rewrite skipn_nth_default with (d := 0) by omega;
@@ -1803,7 +1876,7 @@ Section CanonicalizationProofs.
   Proof.
     induction j; intros; auto.
     rewrite !compare'_succ by omega.
-    rewrite firstn_succ by omega.
+    rewrite firstn_succ with (d := 0) by omega.
     rewrite nth_default_app.
     simpl_lengths.
     rewrite Min.min_l by omega.

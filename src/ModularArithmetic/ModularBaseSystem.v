@@ -94,11 +94,11 @@ Section Canonicalization.
   Fixpoint modulus_digits' i :=
     match i with
     | O => max_bound i - c + 1 :: nil
-    | S i' => max_bound i :: modulus_digits' i'
+    | S i' => modulus_digits' i' ++ max_bound i :: nil
     end.
 
   (* compute at compile time *)
-  Definition modulus_digits := modulus_digits' (length base).
+  Definition modulus_digits := modulus_digits' (length base - 1).
 
   Fixpoint map2 {A B C} (f : A -> B -> C) (la : list A) (lb : list B) : list C :=
     match la with
