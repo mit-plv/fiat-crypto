@@ -28,8 +28,8 @@ Class Field_ops (F:Type)
 
 Class Division (A B C:Type) := division : A -> B -> C.
 
-Notation "_/_" := division.
-Notation "n / d" := (division n d).
+Local Notation "_/_" := division.
+Local Notation "n / d" := (division n d).
 
 Module F.
 

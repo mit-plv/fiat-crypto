@@ -1,32 +1,37 @@
-Require Import Crypto.Field.
-Require Import Coq.setoid_ring.Cring.
+Require Import Crypto.Field. Import Crypto.Field.F.
 
-Import Field.
-
+Generalizable All Variables.
 Section Pre.
-  Context F `{Field F}.
+  Context `{Field}.
+  Local Notation "0" := ring0.
+  Local Notation "1" := ring1.
+  Local Notation "a = b" := (ring_eq a b).
+  Local Notation "a <> b" := (not (ring_eq a b)).
+  Local Notation "a = b" := (ring_eq a b) : type_scope.
+  Local Notation "a <> b" := (not (ring_eq a b)) : type_scope.
+  Local Infix "+" := add.
+  Local Infix "*" := mul.
+  Local Infix "-" := sub.
+  Local Infix "/" := div.
+  Local Infix "^" := powZ.
 
-  Context {a:F} {a_nonzero : a <> 0} {a_square : exists sqrt_a, sqrt_a^2%Z = a}.
-  Context {d:F} {d_nonsquare : forall x, x^2%Z <> d}.
-  Context {char_gt_2 : 1+1 == 0 -> False}.
+  Context {a:F} {a_nonzero : not(a<>0)} {a_square : exists sqrt_a, sqrt_a^2 = a}.
+  Context {d:F} {d_nonsquare : forall x, x^2 <> d}.
+  Context {char_gt_2 : 1+1 <> 0}.
 
+  (*CRUFT
   Require Import Coq.setoid_ring.Field_tac.
   Add Field EdwardsCurveField : (Field_theory_for_tactic F).
+  *)
   
   (* the canonical definitions are in Spec *)
-  Local Notation onCurve P := (let '(x, y) := P in a*x^2 + y^2 = 1 + d*x^2*y^2).
-  Local Notation unifiedAdd' P1' P2' := (
+  Definition onCurve P := let '(x, y) := P in a*x^2 + y^2 = 1 + d*x^2*y^2.
+  Definition unifiedAdd' P1' P2' :=
     let '(x1, y1) := P1' in
     let '(x2, y2) := P2' in
-    (((x1*y2  +  y1*x2)/(1 + d*x1*x2*y1*y2)) , ((y1*y2 - a*x1*x2)/(1 - d*x1*x2*y1*y2)))
-  ).
-  
-  Lemma char_gt_2 : ZToField 2 <> (0: F q).
-    intro; find_injection.
-    pose proof two_lt_q.
-    rewrite (Z.mod_small 2 q), Z.mod_0_l in *; omega.
-  Qed.
+    (((x1*y2  +  y1*x2)/(1 + d*x1*x2*y1*y2)) , ((y1*y2 - a*x1*x2)/(1 - d*x1*x2*y1*y2))).
 
+  (*CRUFT
   Ltac rewriteAny := match goal with [H: _ = _ |- _ ] => rewrite H end.
   Ltac rewriteLeftAny := match goal with [H: _ = _ |- _ ] => rewrite <- H end.
   
@@ -38,7 +43,7 @@ Section Pre.
     | [H: ?lhs = ?rhs |- _ ] =>
         match goal with [Ha: rhs <> 0 |- _ ] => fail 1 | _ => idtac end;
         assert (rhs <> 0) by (rewrite H; auto using Fq_1_neq_0)
-    | [H: (?a^?p)%F <> 0 |- _ ] =>
+    | [H: (?a^?p) <> 0 |- _ ] =>
         match goal with [Ha: a <> 0 |- _ ] => fail 1 | _ => idtac end;
         let Y:=fresh in let Z:=fresh in try (
           assert (p <> 0%N) as Z by (intro Y; inversion Y);
@@ -51,13 +56,18 @@ Section Pre.
         match goal with [Ha: b <> 0 |- _ ] => fail 1 | _ => idtac end;
         assert (b <> 0) by (eapply F_mul_nonzero_r; eauto using Fq_1_neq_0)
     end.
+  *)
 
   Lemma edwardsAddComplete' x1 y1 x2 y2 :
     onCurve (x1, y1) ->
     onCurve (x2, y2) ->
     (d*x1*x2*y1*y2)^2 <> 1.
   Proof.
-    intros Hc1 Hc2 Hcontra; simpl in Hc1, Hc2; whatsNotZero.
+    unfold onCurve; intros Hc1 Hc2.
+    simpl in Hc1, Hc2.
+    Fail idtac.
+    Set Printing All.
+    Locate "*".
   
     pose proof char_gt_2. pose proof a_nonzero as Ha_nonzero. 
     destruct a_square as [sqrt_a a_square'].
