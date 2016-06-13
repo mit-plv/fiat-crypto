@@ -582,3 +582,37 @@ Lemma In_firstn : forall {T} n l (x : T), In x (firstn n l) -> In x l.
 Proof.
   induction n; destruct l; boring.
 Qed.
+
+Lemma firstn_firstn : forall {A} m n (l : list A), (n <= m)%nat ->
+  firstn n (firstn m l) = firstn n l.
+Proof.
+  induction m; destruct n; intros; try omega; auto.
+  destruct l; auto.
+  simpl.
+  f_equal.
+  apply IHm; omega.
+Qed.
+
+Lemma firstn_succ : forall {A} (d : A) n l, (n < length l)%nat ->
+  firstn (S n) l = (firstn n l) ++ nth_default d l n :: nil.
+Proof.
+  induction n; destruct l; rewrite ?(@nil_length0 A); intros; try omega.
+  + rewrite nth_default_cons; auto.
+  + simpl.
+    rewrite nth_default_cons_S.
+    rewrite <-IHn by (rewrite cons_length in *; omega).
+    reflexivity.
+Qed.
+
+Lemma firstn_all_strong : forall {A} (xs : list A) n, (length xs <= n)%nat ->
+  firstn n xs = xs.
+Proof.
+  induction xs; intros; try apply firstn_nil.
+  destruct n;
+    match goal with H : (length (_ :: _)  <= _)%nat |- _ =>
+      simpl in H; try omega end.
+  simpl.
+  f_equal.
+  apply IHxs.
+  omega.
+Qed.
