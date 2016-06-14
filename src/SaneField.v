@@ -1,4 +1,5 @@
 Require Import Coq.Classes.Morphisms. Require Coq.Setoids.Setoid.
+Require Import Util.Tactics.
 Close Scope nat_scope. Close Scope type_scope. Close Scope core_scope.
 
 Section Algebra.
@@ -305,3 +306,65 @@ Module Field.
     Qed.
   End Field.
 End Field.
+
+Module _NsatzExportGuarantine.
+  Require Import Coq.nsatz.Nsatz.
+  Ltac sane_nsatz :=
+    let Hops := fresh "HRingOps" in
+    let carrierType := lazymatch goal with |- ?R ?x _ => type of x end in
+    let inst := constr:(_:Ncring.Ring (T:=carrierType)) in
+    lazymatch type of inst with
+    | @Ncring.Ring _ _ _ _ _ _ _ _ ?ops =>
+      lazymatch type of ops with
+        @Ncring.Ring_ops ?F ?zero ?one ?add ?mul ?sub ?opp ?eq
+        =>
+        pose ops as Hops;
+        (* (* apparently [nsatz] matches the goal to look for equalitites, so [eq] will need to become
+              [Algebra_syntax.equality]. However, reification is done using typeclasses so definitional
+              equality is enough (and faster) *)
+        change zero with (@Algebra_syntax.zero F (@Ncring.zero_notation F zero one add mul sub opp eq ops)) in *;
+        change one with (@Algebra_syntax.one F (@Ncring.one_notation F zero one add mul sub opp eq ops)) in *;
+        change add with (@Algebra_syntax.addition F (@Ncring.add_notation F zero one add mul sub opp eq ops)) in *;
+        change mul with (@Algebra_syntax.multiplication F F (@Ncring.mul_notation F zero one add mul sub opp eq ops)) in *;
+        change opp with (@Algebra_syntax.opposite F (@Ncring.opp_notation F zero one add mul sub opp eq ops)) in *;
+        change eq with (@Algebra_syntax.equality F (@Ncring.eq_notation F zero one add mul sub opp eq ops)) in *;
+        *)
+        move Hops at top (* [nsatz] requires equalities to be continuously at the bottom of the hypothesis list *)
+      end
+    end;
+    nsatz;
+    clear Hops.
+End _NsatzExportGuarantine.
+Import _NsatzExportGuarantine.
+Ltac nsatz_without_field := sane_nsatz.
+
+Inductive field_simplify_done {T} : T -> Type :=
+  Field_simplify_done : forall H, field_simplify_done H.
+
+Require Import Coq.setoid_ring.Field_tac.
+Ltac field_simplify_eq_all :=
+  repeat match goal with
+           [ H: _ |- _ ] =>
+           match goal with
+           | [ Ha : field_simplify_done H |- _ ] => fail
+           | _ => idtac
+           end;
+           field_simplify_eq in H;
+           unique pose proof (Field_simplify_done H)
+         end;
+  repeat match goal with [ H: field_simplify_done _ |- _] => clear H end.
+
+Ltac nsatz :=
+  field_simplify_eq_all;
+  try field_simplify_eq;
+  try nsatz_without_field.
+
+Section Example.
+  Context {F zero one opp add sub mul inv div} `{field F eq zero one opp add sub mul inv div}.
+  Local Infix "+" := add. Local Infix "*" := mul. Local Infix "-" := sub. Local Infix "/" := div.
+
+  Add Field _ExampleField : (Field.field_theory_for_stdlib_tactic (T:=F)).
+
+  Example _example_field_nsatz x y z : y <> zero -> x/y = z -> z*y + y = x + y.
+  Proof. intros. nsatz. assumption. Qed.
+End Example.

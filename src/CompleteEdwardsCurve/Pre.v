@@ -2,58 +2,6 @@ Require Import Coq.Classes.Morphisms. Require Coq.Setoids.Setoid.
 Close Scope nat_scope. Close Scope type_scope. Close Scope core_scope.
 Require Import Crypto.SaneField.
 
-Module NsatzExportGuarantine.
-  Require Import Coq.nsatz.Nsatz.
-  Ltac sane_nsatz :=
-    let H := fresh "HRingOps" in
-    let carrierType := lazymatch goal with |- ?R ?x _ => type of x end in
-    let inst := constr:(_:Ncring.Ring (T:=carrierType)) in
-    lazymatch type of inst with
-    | @Ncring.Ring _ _ _ _ _ _ _ _ ?ops =>
-      lazymatch type of ops with
-        @Ncring.Ring_ops ?F ?zero ?one ?add ?mul ?sub ?opp ?eq
-        =>
-        pose ops as H;
-        (* (* apparently [nsatz] matches the goal to look for equalitites, so [eq] will need to become
-              [Algebra_syntax.equality]. However, reification is done using typeclasses so definitional
-              equality is enough (and faster) *)
-        change zero with (@Algebra_syntax.zero F (@Ncring.zero_notation F zero one add mul sub opp eq ops)) in *;
-        change one with (@Algebra_syntax.one F (@Ncring.one_notation F zero one add mul sub opp eq ops)) in *;
-        change add with (@Algebra_syntax.addition F (@Ncring.add_notation F zero one add mul sub opp eq ops)) in *;
-        change mul with (@Algebra_syntax.multiplication F F (@Ncring.mul_notation F zero one add mul sub opp eq ops)) in *;
-        change opp with (@Algebra_syntax.opposite F (@Ncring.opp_notation F zero one add mul sub opp eq ops)) in *;
-        change eq with (@Algebra_syntax.equality F (@Ncring.eq_notation F zero one add mul sub opp eq ops)) in *;
-        *)
-        move H at top (* [nsatz] requires equalities to be continuously at the bottom of the hypothesis list *)
-      end
-    end;
-    nsatz;
-    clear H.
-End NsatzExportGuarantine.
-Import NsatzExportGuarantine.
-Ltac nsatz := sane_nsatz.
-
-Require Import Util.Tactics.
-Inductive field_simplify_done {T} : T -> Type :=
-  Field_simplify_done : forall H, field_simplify_done H.
-
-Require Import Coq.setoid_ring.Field_tac.
-Ltac field_simplify_eq_all :=
-  repeat match goal with
-           [ H: _ |- _ ] =>
-           match goal with
-           | [ Ha : field_simplify_done H |- _ ] => fail
-           | _ => idtac
-           end;
-           field_simplify_eq in H;
-           unique pose proof (Field_simplify_done H)
-         end;
-  repeat match goal with [ H: field_simplify_done _ |- _] => clear H end.
-Ltac field_nsatz :=
-  field_simplify_eq_all;
-  try field_simplify_eq;
-  try nsatz.
-
 Generalizable All Variables.
 Section Pre.
   Context {F eq zero one opp add sub mul inv div} `{field F eq zero one opp add sub mul inv div}.
@@ -65,8 +13,6 @@ Section Pre.
   Local Notation "x '^' 2" := (x*x) (at level 30).
 
   Add Field EdwardsCurveField : (Field.field_theory_for_stdlib_tactic (T:=F)).
-  
-  Goal forall x y z, y <> 0 -> x/y = z -> z*y + y = x + y. intros; field_nsatz; auto. Qed.
 
   Context {a:F} {a_nonzero : a<>0} {a_square : exists sqrt_a, sqrt_a^2 = a}.
   Context {d:F} {d_nonsquare : forall x, x^2 <> d}.
@@ -79,33 +25,6 @@ Section Pre.
     let (x2, y2) := P2' in
     pair (((x1*y2  +  y1*x2)/(1 + d*x1*x2*y1*y2))) (((y1*y2 - a*x1*x2)/(1 - d*x1*x2*y1*y2))).
 
-  Ltac rewriteAny := match goal with [H: _ = _ |- _ ] => rewrite H end.
-  Ltac rewriteLeftAny := match goal with [H: _ = _ |- _ ] => rewrite <- H end.
-  
-  (*CRUFT
-  Ltac whatsNotZero :=
-    repeat match goal with
-    | [H: ?lhs = ?rhs |- _ ] =>
-        match goal with [Ha: lhs <> 0 |- _ ] => fail 1 | _ => idtac end;
-        assert (lhs <> 0) by (rewrite H; auto using Fq_1_neq_0)
-    | [H: ?lhs = ?rhs |- _ ] =>
-        match goal with [Ha: rhs <> 0 |- _ ] => fail 1 | _ => idtac end;
-        assert (rhs <> 0) by (rewrite H; auto using Fq_1_neq_0)
-    | [H: (?a^?p) <> 0 |- _ ] =>
-        match goal with [Ha: a <> 0 |- _ ] => fail 1 | _ => idtac end;
-        let Y:=fresh in let Z:=fresh in try (
-          assert (p <> 0%N) as Z by (intro Y; inversion Y);
-          assert (a <> 0) by (eapply Fq_root_nonzero; eauto using Fq_1_neq_0);
-          clear Z)
-    | [H: (?a*?b)%F <> 0 |- _ ] =>
-        match goal with [Ha: a <> 0 |- _ ] => fail 1 | _ => idtac end;
-        assert (a <> 0) by (eapply F_mul_nonzero_l; eauto using Fq_1_neq_0)
-    | [H: (?a*?b)%F <> 0 |- _ ] =>
-        match goal with [Ha: b <> 0 |- _ ] => fail 1 | _ => idtac end;
-        assert (b <> 0) by (eapply F_mul_nonzero_r; eauto using Fq_1_neq_0)
-    end.
-  *)
-
   Ltac admit_nonzero := abstract (repeat split; match goal with |- not (eq _ 0) => admit end).
 
   Lemma edwardsAddComplete' x1 y1 x2 y2 :
@@ -113,15 +32,15 @@ Section Pre.
     onCurve (pair x2 y2) ->
     (d*x1*x2*y1*y2)^2 <> 1.
   Proof.
-    unfold onCurve; intros Hc1 Hc2 Hcontra.
+    unfold onCurve, not; intros.
     assert (d * x1 ^2 * y1 ^2 * (a * x2 ^2 + y2 ^2) = a * x1 ^2 + y1 ^2) as Heqt by nsatz.
     destruct a_square as [sqrt_a a_square']; rewrite <-a_square' in *.
     destruct (eq_dec (sqrt_a*x2 + y2) 0); destruct (eq_dec (sqrt_a*x2 - y2) 0);
       lazymatch goal with
       | [H: not (eq (?f (sqrt_a * x2)  y2) 0) |- _ ]
         => eapply (d_nonsquare ((f (sqrt_a * x1) (d * x1 * x2 * y1 * y2 * y1)) / (x1 * y1 * (f (sqrt_a * x2)  y2))  ));
-             field_nsatz; admit_nonzero
-      | _ => apply a_nonzero; nsatz
+             nsatz; admit_nonzero
+      | _ => apply a_nonzero; (do 2 nsatz) (* TODO: why does it not win on the first call? *)
       end.
   Qed.
 
