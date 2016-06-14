@@ -1,4 +1,7 @@
 -R src Crypto
+-R Bedrock Bedrock
+Bedrock/Nomega.v
+Bedrock/Word.v
 src/BaseSystem.v
 src/BaseSystemProofs.v
 src/EdDSAProofs.v

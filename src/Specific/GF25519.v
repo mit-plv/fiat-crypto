@@ -132,7 +132,7 @@ Lemma F25519_mul_OK : RepBinOpOK F25519RepConversions ModularArithmetic.mul F255
   destruct x as [[[[[[[[[x9 x8] x7] x6] x5] x4] x3] x2] x1] x0].
   destruct y as [[[[[[[[[y9 y8] y7] y6] y5] y4] y3] y2] y1] y0].
   let E := constr:(GF25519Base25Point5_mul_reduce_formula x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 y0 y1 y2 y3 y4 y5 y6 y7 y8 y9) in
-  transitivity (ModularBaseSystem.decode (proj1_sig E)); [|solve[simpl;f_equal]];
+  transitivity (ModularBaseSystem.decode (proj1_sig E)); [|solve[simpl; apply f_equal; reflexivity]];
     destruct E as [? r]; cbv [proj1_sig].
   cbv [rep ModularBaseSystem.rep PseudoMersenneBase modulus] in r; edestruct r; eauto.
 Qed.
@@ -164,7 +164,7 @@ Lemma F25519_add_OK : RepBinOpOK F25519RepConversions ModularArithmetic.add F255
   destruct x as [[[[[[[[[x9 x8] x7] x6] x5] x4] x3] x2] x1] x0].
   destruct y as [[[[[[[[[y9 y8] y7] y6] y5] y4] y3] y2] y1] y0].
   let E := constr:(GF25519Base25Point5_add_formula x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 y0 y1 y2 y3 y4 y5 y6 y7 y8 y9) in
-  transitivity (ModularBaseSystem.decode (proj1_sig E)); [|solve[simpl;f_equal]];
+  transitivity (ModularBaseSystem.decode (proj1_sig E)); [|solve[simpl; apply f_equal; reflexivity]];
     destruct E as [? r]; cbv [proj1_sig].
   cbv [rep ModularBaseSystem.rep PseudoMersenneBase modulus] in r; edestruct r; eauto.
 Qed.
@@ -174,7 +174,7 @@ Lemma F25519_sub_OK : RepBinOpOK F25519RepConversions ModularArithmetic.sub F255
   destruct x as [[[[[[[[[x9 x8] x7] x6] x5] x4] x3] x2] x1] x0].
   destruct y as [[[[[[[[[y9 y8] y7] y6] y5] y4] y3] y2] y1] y0].
   let E := constr:(GF25519Base25Point5_sub_formula x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 y0 y1 y2 y3 y4 y5 y6 y7 y8 y9) in
-  transitivity (ModularBaseSystem.decode (proj1_sig E)); [|solve[simpl;f_equal]];
+  transitivity (ModularBaseSystem.decode (proj1_sig E)); [|solve[simpl; apply f_equal; reflexivity]];
     destruct E as [? r]; cbv [proj1_sig].
   cbv [rep ModularBaseSystem.rep PseudoMersenneBase modulus] in r; edestruct r; eauto.
 Qed.

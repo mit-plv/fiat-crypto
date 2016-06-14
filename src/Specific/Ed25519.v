@@ -245,7 +245,7 @@ Section Ed25519Frep.
   Local Ltac Let_In_unRep :=
     match goal with
     | [ |- appcontext G[Let_In (unRep ?x) ?f] ]
-      => change (Let_In (unRep x) f) with (Let_In x (fun y => f (unRep y))); cbv beta
+      => let G' := context G[Let_In x (fun y => f (unRep y))] in change G'; cbv beta
     end.
 
 

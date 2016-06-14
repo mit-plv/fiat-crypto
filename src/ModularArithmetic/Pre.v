@@ -2,6 +2,7 @@ Require Import Coq.ZArith.BinInt Coq.NArith.BinNat Coq.Numbers.BinNums Coq.ZArit
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Coq.Logic.EqdepFacts.
 Require Import Crypto.Tactics.VerdiTactics.
+Require Import Coq.omega.Omega.
 
 Lemma Z_mod_mod x m : x mod m = (x mod m) mod m.
   symmetry.
@@ -46,7 +47,7 @@ Defined.
 Definition mulmod m := fun a b => a * b mod m.
 Definition powmod_pos m := Pos.iter_op (mulmod m).
 Definition powmod m a x := match x with N0 => 1 mod m | Npos p => powmod_pos m p (a mod m) end.
-  
+
 Lemma mulmod_assoc:
   forall m x y z : Z, mulmod m x (mulmod m y z) = mulmod m (mulmod m x y) z.
 Proof.
@@ -144,7 +145,7 @@ Definition mod_inv_eucl (a m:Z) : Z.
                                  (match d with Z.pos _ =>  u | _ => -u end)
           end) mod m).
 Defined.
-  
+
 Lemma reduced_nonzero_pos:
   forall a m : Z, m > 0 -> a <> 0 -> a = a mod m -> 0 < a.
 Proof.
@@ -209,7 +210,7 @@ Proof.
     unfold mod_inv_eucl; simpl.
     lazymatch goal with [ |- context [euclid ?a ?b] ] => destruct (euclid a b) end.
     auto.
-  - 
+  -
     destruct a.
     cbv [proj1_sig mod_inv_eucl_sig].
     rewrite Z.mul_comm.

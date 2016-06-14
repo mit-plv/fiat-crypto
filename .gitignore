@@ -4,5 +4,7 @@ fiat
 *.vo
 *.d
 *.glob
+*.aux
+*.vio
 Makefile.coq
 Makefile.bak
