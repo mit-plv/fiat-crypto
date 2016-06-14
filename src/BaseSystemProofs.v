@@ -130,6 +130,18 @@ Section BaseSystemProofs.
   Qed.
   Hint Rewrite zeros_app0.
 
+  Lemma nth_default_zeros : forall n i, nth_default 0 (BaseSystem.zeros n) i = 0.
+  Proof.
+    induction n; intros; [ cbv [BaseSystem.zeros]; apply nth_default_nil | ].
+    rewrite <-zeros_app0, nth_default_app.
+    rewrite length_zeros.
+    destruct (lt_dec i n); auto.
+    destruct (eq_nat_dec i n); subst.
+    + rewrite Nat.sub_diag; apply nth_default_cons.
+    + apply nth_default_out_of_bounds.
+      cbv [length]; omega.
+  Qed.
+
   Lemma rev_zeros : forall n, rev (zeros n) = zeros n.
   Proof.
     induction n; boring.

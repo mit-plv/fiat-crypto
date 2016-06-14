@@ -616,3 +616,12 @@ Proof.
   apply IHxs.
   omega.
 Qed.
+
+Lemma set_nth_nth_default : forall {A} (d:A) n x l i, (0 <= i < length l)%nat ->
+  nth_default d (set_nth n x l) i =
+  if (eq_nat_dec i n) then x else nth_default d l i.
+Proof.
+  induction n; (destruct l; [intros; simpl in *; omega | ]); simpl;
+    destruct i; break_if; try omega; intros; try apply nth_default_cons;
+    rewrite !nth_default_cons_S, ?IHn; try break_if; omega || reflexivity.
+Qed.
