@@ -389,8 +389,8 @@ Section BaseSystemProofs.
      induction us; boring.
   Qed.
 
-  Lemma sub_length_le_max : forall us vs,
-      (length (sub us vs) <= max (length us) (length vs))%nat.
+  Lemma sub_length : forall us vs,
+      (length (sub us vs) = max (length us) (length vs))%nat.
   Proof.
     induction us, vs; boring.
     rewrite sub_nil_length; auto.
@@ -511,5 +511,37 @@ Section BaseSystemProofs.
     rewrite rev_length; omega.
   Qed.
 
+  Lemma add_length_exact : forall us vs,
+      length (us .+ vs) = max (length us) (length vs).
+  Proof.
+    induction us; destruct vs; boring.
+  Qed.
+
+  Lemma mul'_length_exact: forall us vs,
+      (length us <= length vs)%nat -> us <> nil ->
+      (length (mul' us vs) = pred (length us + length vs))%nat.
+  Proof.
+    induction us; intros; try solve [boring].
+    unfold mul'; fold mul'.
+    unfold mul_each.
+    rewrite add_length_exact, map_length, mul_bi_length, length_cons.
+    destruct us.
+    + rewrite Max.max_0_r. simpl; omega.
+    + rewrite Max.max_l; [ omega | ].
+      rewrite IHus by ( congruence || simpl in *; omega).
+      omega.
+  Qed.
+
+  Lemma mul_length_exact: forall us vs,
+      (length us <= length vs)%nat -> us <> nil ->
+      (length (mul us vs) = pred (length us + length vs))%nat.
+  Proof.
+    intros; unfold mul.
+    rewrite mul'_length_exact; rewrite ?rev_length; try omega.
+    intro rev_nil.
+    match goal with H : us <> nil |- _ => apply H end.
+    apply length0_nil; rewrite <-rev_length, rev_nil.
+    reflexivity.
+  Qed.
 
 End BaseSystemProofs.

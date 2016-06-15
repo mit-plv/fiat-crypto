@@ -27,9 +27,11 @@ Section PseudoMersenneProofs.
     intros. unfold encode, rep.
     split. {
       unfold encode; simpl.
-      apply base_length_nonzero.
+      rewrite length_zeros.
+      pose proof base_length_nonzero; omega.
     } {
       unfold decode.
+      rewrite decode_highzeros.
       rewrite encode_rep.
       apply ZToField_FieldToZ.
       apply bv.
@@ -40,8 +42,7 @@ Section PseudoMersenneProofs.
   Proof.
     autounfold; intuition. {
       unfold add.
-      rewrite add_length_le_max.
-      case_max; try rewrite Max.max_r; omega.
+      auto using add_same_length.
     }
     unfold decode in *; unfold decode in *.
     rewrite add_rep.
@@ -49,15 +50,14 @@ Section PseudoMersenneProofs.
     subst; auto.
   Qed.
 
-  Lemma sub_rep : forall c c_0modq, (length c <= length base)%nat ->
+  Lemma sub_rep : forall c c_0modq, (length c = length base)%nat ->
     forall u v x y, u ~= x -> v ~= y ->
     ModularBaseSystem.sub c c_0modq u v ~= (x-y)%F.
   Proof.
     autounfold; unfold ModularBaseSystem.sub; intuition. {
-      rewrite sub_length_le_max.
+      rewrite sub_length.
       case_max; try rewrite Max.max_r; try omega.
-      rewrite add_length_le_max.
-      case_max; try rewrite Max.max_r; omega.
+      auto using add_same_length.
     }
     unfold decode in *; unfold BaseSystem.decode in *.
     rewrite BaseSystemProofs.sub_rep, BaseSystemProofs.add_rep.
@@ -138,33 +138,15 @@ Section PseudoMersenneProofs.
   Qed.
 
   Lemma reduce_length : forall us,
-      (length us <= length ext_base)%nat ->
-      (length (reduce us) <= length base)%nat.
+      (length base <= length us <= length ext_base)%nat ->
+      (length (reduce us) = length base)%nat.
   Proof.
-    intros.
-    unfold reduce.
-    remember (map (Z.mul c) (skipn (length base) us)) as high.
-    remember (firstn (length base) us) as low.
-    assert (length low >= length high)%nat. {
-      subst. rewrite firstn_length.
-      rewrite map_length.
-      rewrite skipn_length.
-      destruct (le_dec (length base) (length us)). {
-        rewrite Min.min_l by omega.
-        rewrite extended_base_length in H. omega.
-      } {
-        rewrite Min.min_r; omega.
-      }
-    }
-    assert ((length low <= length base)%nat)
-      by (rewrite Heqlow; rewrite firstn_length; apply Min.le_min_l).
-    assert (length high <= length base)%nat
-      by (rewrite Heqhigh; rewrite map_length; rewrite skipn_length;
-      rewrite extended_base_length in H; omega).
-    rewrite add_trailing_zeros; auto.
-    rewrite (add_same_length _ _ (length low)); auto.
-    rewrite app_length.
-    rewrite length_zeros; intuition.
+    rewrite extended_base_length.
+    unfold reduce; intros.
+    rewrite add_length_exact.
+    rewrite map_length, firstn_length, skipn_length.
+    rewrite Min.min_l by omega.
+    apply Max.max_l; omega.
   Qed.
 
   Lemma mul_rep : forall u v x y, u ~= x -> v ~= y -> u .* v ~= (x*y)%F.
@@ -172,14 +154,16 @@ Section PseudoMersenneProofs.
     autounfold; unfold ModularBaseSystem.mul; intuition.
     {
       apply reduce_length.
-      rewrite mul_length, extended_base_length.
-      omega.
+      rewrite mul_length_exact, extended_base_length; try omega.
+      destruct u; try congruence.
+      rewrite @nil_length0 in *.
+      pose proof base_length_nonzero; omega.
     } {
       rewrite ZToField_mod, reduce_rep, <-ZToField_mod.
       rewrite mul_rep by
         (apply ExtBaseVector || rewrite extended_base_length; omega).
       subst.
-      do 2 rewrite decode_short by auto.
+      do 2 rewrite decode_short by omega.
       apply ZToField_mul.
     }
   Qed.
@@ -365,8 +349,8 @@ Section CarryProofs.
   Qed.
 
   Lemma carry_length : forall i us,
-    (length       us     <= length base)%nat ->
-    (length (carry i us) <= length base)%nat.
+    (length       us     = length base)%nat ->
+    (length (carry i us) = length base)%nat.
   Proof.
     unfold carry, carry_simple, carry_and_reduce, add_to_nth.
     intros; break_if; subst; repeat (rewrite length_set_nth); auto.
@@ -379,36 +363,19 @@ Section CarryProofs.
     us ~= x -> carry i us ~= x.
   Proof.
     pose carry_length. pose carry_decode_eq_reduce. pose carry_simple_decode_eq.
-    unfold rep, decode, carry in *; intros.
-    intuition; break_if; subst; eauto;
-    apply F_eq; simpl; intuition.
+    intros; split; auto.
+    unfold rep, decode, carry in *.
+    intuition; break_if; subst; eauto; apply F_eq; simpl; intuition.
   Qed.
   Hint Resolve carry_rep.
 
   Lemma carry_sequence_length: forall is us,
-    (length us <= length base)%nat ->
-    (length (carry_sequence is us) <= length base)%nat.
-  Proof.
-    induction is; boring.
-  Qed.
-  Hint Resolve carry_sequence_length.
-
-  Lemma carry_length_exact : forall i us,
-    (length       us     = length base)%nat ->
-    (length (carry i us) = length base)%nat.
-  Proof.
-    unfold carry, carry_simple, carry_and_reduce, add_to_nth.
-    intros; break_if; subst; repeat (rewrite length_set_nth); auto.
-  Qed.
-
-  Lemma carry_sequence_length_exact: forall is us,
     (length us = length base)%nat ->
     (length (carry_sequence is us) = length base)%nat.
   Proof.
     induction is; boring.
-    apply carry_length_exact; auto.
   Qed.
-  Hint Resolve carry_sequence_length_exact.
+  Hint Resolve carry_sequence_length.
 
   Lemma carry_sequence_rep : forall is us x,
     (forall i, In i is -> (i < length base)%nat) ->
@@ -558,7 +525,7 @@ Section CanonicalizationProofs.
 
   (* automation *)
   Ltac carry_length_conditions' := unfold carry_full, add_to_nth;
-    rewrite ?length_set_nth, ?carry_length_exact, ?carry_sequence_length_exact, ?carry_sequence_length_exact;
+    rewrite ?length_set_nth, ?carry_length, ?carry_sequence_length;
     try omega; try solve [pose proof base_length; pose proof base_length_nonzero; omega || auto ].
   Ltac carry_length_conditions := try split; try omega; repeat carry_length_conditions'.
 
@@ -1643,8 +1610,7 @@ Section CanonicalizationProofs.
     unfold rep; auto.
   Qed.
 
-  Lemma freeze_preserves_rep : forall us x, (length us = length base) ->
-    rep us x -> rep (freeze us) x.
+  Lemma freeze_preserves_rep : forall us x, rep us x -> rep (freeze us) x.
   Proof.
     unfold rep; intros.
     intuition; rewrite ?freeze_length; auto.
@@ -2080,8 +2046,8 @@ Section CanonicalizationProofs.
   Qed.
 
   Lemma minimal_rep_unique : forall us vs x,
-    length us = length base -> rep us x -> minimal_rep us -> carry_done us ->
-    length vs = length base -> rep vs x -> minimal_rep vs -> carry_done vs ->
+    rep us x -> minimal_rep us -> carry_done us ->
+    rep vs x -> minimal_rep vs -> carry_done vs ->
     us = vs.
   Proof.
    intros.
@@ -2090,17 +2056,20 @@ Section CanonicalizationProofs.
    repeat match goal with Hmin : minimal_rep ?us |- _ => unfold minimal_rep in Hmin;
      rewrite <- Hmin in eqmod; clear Hmin end.
    apply Z.compare_eq_iff in eqmod.
-   rewrite decode_compare in eqmod; auto.
+   rewrite decode_compare in eqmod; unfold rep in *; auto; intuition; try congruence.
    apply compare_Eq; auto.
    congruence.
   Qed.
 
   Lemma freeze_canonical : forall us vs x,
-    pre_carry_bounds us -> (length us = length base) -> rep us x -> 
-    pre_carry_bounds vs -> (length vs = length base) -> rep vs x ->
+    pre_carry_bounds us -> rep us x -> 
+    pre_carry_bounds vs -> rep vs x ->
     freeze us = freeze vs.
   Proof.
-    intros; eapply minimal_rep_unique; eauto; rewrite freeze_length; assumption.
+    intros.
+    assert (length us = length base) by (unfold rep in *; intuition).
+    assert (length vs = length base) by (unfold rep in *; intuition).
+    eapply minimal_rep_unique; eauto; rewrite freeze_length; assumption.
   Qed.
 
 End CanonicalizationProofs.

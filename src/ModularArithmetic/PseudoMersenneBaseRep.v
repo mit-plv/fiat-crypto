@@ -25,7 +25,7 @@ Class RepZMod (modulus : Z) := {
 
 Class SubtractionCoefficient (m : Z) (prm : PseudoMersenneBaseParams m) := {
   coeff : BaseSystem.digits;
-  coeff_length : (length coeff <= length PseudoMersenneBaseParamProofs.base)%nat;
+  coeff_length : (length coeff = length PseudoMersenneBaseParamProofs.base)%nat;
   coeff_mod: (BaseSystem.decode PseudoMersenneBaseParamProofs.base coeff) mod m = 0
 }.
 

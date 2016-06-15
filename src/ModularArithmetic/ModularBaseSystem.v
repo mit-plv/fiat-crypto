@@ -14,11 +14,11 @@ Section PseudoMersenneBase.
   
   Definition decode (us : digits) : F modulus := ZToField (BaseSystem.decode base us).
   
-  Definition rep (us : digits) (x : F modulus) := (length us <= length base)%nat /\ decode us = x.
+  Definition rep (us : digits) (x : F modulus) := (length us = length base)%nat /\ decode us = x.
   Local Notation "u '~=' x" := (rep u x) (at level 70).
   Local Hint Unfold rep.
 
-  Definition encode (x : F modulus) := encode x.
+  Definition encode (x : F modulus) := encode x ++ BaseSystem.zeros (length base - 1)%nat.
 
   (* Converts from length of extended base to length of base by reduction modulo M.*)
   Definition reduce (us : digits) : digits :=

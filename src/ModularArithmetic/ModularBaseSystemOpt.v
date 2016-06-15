@@ -473,7 +473,6 @@ Section Canonicalization.
     (c_reduce2 : c <= max_bound 0 - c)
     (two_pow_k_le_2modulus : 2 ^ k <= 2 * modulus).
 
-  Print freeze.
   Definition max_ones_opt := Eval compute in max_ones.
   Definition max_bound_opt := Eval compute in max_bound.
   Definition full_carry_chain_opt := Eval compute in full_carry_chain.
@@ -552,8 +551,8 @@ Section Canonicalization.
     := proj2_sig (freeze_opt_sig us).
 
   Lemma freeze_opt_canonical: forall us vs x,
-    @pre_carry_bounds _ _ int_width us -> (length us = length base) -> rep us x -> 
-    @pre_carry_bounds _ _ int_width vs -> (length vs = length base) -> rep vs x ->
+    @pre_carry_bounds _ _ int_width us -> rep us x -> 
+    @pre_carry_bounds _ _ int_width vs -> rep vs x ->
     freeze_opt us = freeze_opt vs.
   Proof.
     intros.
@@ -561,12 +560,21 @@ Section Canonicalization.
     eapply freeze_canonical with (B := int_width); eauto.
   Qed.
 
-  Lemma freeze_opt_preserves_rep : forall us x, (length us = length base) ->
-    rep us x -> rep (freeze_opt us) x.
+  Lemma freeze_opt_preserves_rep : forall us x, rep us x -> rep (freeze_opt us) x.
   Proof.
     intros.
     rewrite freeze_opt_correct.
     eauto using freeze_preserves_rep.
+  Qed.
+
+  Lemma freeze_opt_spec : forall us x, rep us x ->
+    rep (freeze_opt us) x /\
+    (forall vs, rep vs x ->
+      @pre_carry_bounds _ _ int_width us ->
+      @pre_carry_bounds _ _ int_width vs ->
+      freeze_opt us = freeze_opt vs).
+  Proof.
+    split; eauto using freeze_opt_preserves_rep; eauto using freeze_opt_canonical.
   Qed.
 
 End Canonicalization.
