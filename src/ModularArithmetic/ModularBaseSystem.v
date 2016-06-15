@@ -89,7 +89,7 @@ Section Canonicalization.
     | S i' => isFull' us (andb (Z.eqb (max_bound i) (nth_default 0 us i)) full) i'
     end.
 
-  Definition isFull us := isFull' us true (length us - 1)%nat.
+  Definition isFull us := isFull' us true (length base - 1)%nat.
 
   Fixpoint modulus_digits' i :=
     match i with
@@ -108,10 +108,12 @@ Section Canonicalization.
                   | b :: lb' => f a b :: map2 f la' lb'
                   end
     end.
+
+  Definition and_term us := if isFull us then max_ones else 0.
     
   Definition freeze us :=
     let us' := carry_full (carry_full (carry_full us)) in
-    let and_term := if isFull us' then max_ones else 0 in
+    let and_term := and_term us' in
     (* [and_term] is all ones if us' is full, so the subtractions subtract q overall.
        Otherwise, it's all zeroes, and the subtractions do nothing. *)
      map2 (fun x y => x - y) us' (map (Z.land and_term) modulus_digits).

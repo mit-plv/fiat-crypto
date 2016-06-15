@@ -1229,9 +1229,6 @@ Section CanonicalizationProofs.
     right.
     apply IHl; auto using in_cons.
   Qed.
-  (*
-  Local Hint Resolve max_ones_nonneg. *)
-
 
   Lemma land_max_ones_noop : forall x i, 0 <= x < 2 ^ log_cap i -> Z.land max_ones x = x.
   Proof.
@@ -1343,7 +1340,7 @@ Section CanonicalizationProofs.
   Proof.
     destruct ls1; reflexivity.
   Qed.
-  Hint Resolve map2_nil_r map2_nil_l.
+  Local Hint Resolve map2_nil_r map2_nil_l.
 
   Opaque map2.
 
@@ -1651,7 +1648,7 @@ Section CanonicalizationProofs.
   Proof.
     unfold rep; intros.
     intuition; rewrite ?freeze_length; auto.
-    unfold freeze.
+    unfold freeze, and_term.
     break_if.
     + apply decode_mod with (us := carry_full (carry_full (carry_full us))).
       - rewrite carry_full_3_length; auto.
@@ -1679,14 +1676,14 @@ Section CanonicalizationProofs.
 
   Lemma isFull_true_iff : forall us, (length us = length base) -> (isFull us = true <->
     max_bound 0 - c < nth_default 0 us 0
-    /\ (forall i, (0 < i <= length us - 1)%nat -> nth_default 0 us i = max_bound i)).
+    /\ (forall i, (0 < i <= length base - 1)%nat -> nth_default 0 us i = max_bound i)).
   Proof.
     unfold isFull; intros; auto using isFull'_true_iff.
   Qed.
-
+  
   Definition minimal_rep us := BaseSystem.decode base us = (BaseSystem.decode base us) mod modulus.
 
-   Fixpoint compare' us vs i :=
+  Fixpoint compare' us vs i :=
     match i with
     | O => Eq
     | S i' => if Z_eq_dec (nth_default 0 us i') (nth_default 0 vs i')
@@ -1695,7 +1692,7 @@ Section CanonicalizationProofs.
     end.
 
   (* Lexicographically compare two vectors of equal length, starting from the END of the list
-     (in our context, this is the most significant end). *)
+     (in our context, this is the most significant end). NOT constant time. *)
   Definition compare us vs := compare' us vs (length us).
 
   Lemma compare'_Eq : forall us vs i, (length us = length vs) ->
@@ -2012,7 +2009,7 @@ Section CanonicalizationProofs.
     pre_carry_bounds us -> (length us = length base) ->
     carry_done (freeze us).
   Proof.
-    unfold freeze; intros ? PCB lengths_eq.
+    unfold freeze, and_term; intros ? PCB lengths_eq.
     rewrite carry_done_bounds by simpl_lengths; intro i.
     rewrite nth_default_map2 with (d1 := 0) (d2 := 0).
     simpl_lengths.
@@ -2030,7 +2027,7 @@ Section CanonicalizationProofs.
         rewrite carry_done_bounds in cf3_done by simpl_lengths.
         specialize (cf3_done 0%nat).
         omega.
-      - assert ((0 < i <= length (carry_full (carry_full (carry_full us))) - 1)%nat) as i_range by
+      - assert ((0 < i <= length base - 1)%nat) as i_range by
           (simpl_lengths; apply lt_min_l in l; omega).
         specialize (high_digits i i_range).
         clear first_digit i_range.
@@ -2054,7 +2051,7 @@ Section CanonicalizationProofs.
   Lemma freeze_minimal_rep : forall us, pre_carry_bounds us -> (length us = length base) ->
     minimal_rep (freeze us).
   Proof.
-    unfold minimal_rep, freeze.
+    unfold minimal_rep, freeze, and_term.
     intros.
     symmetry. apply Z.mod_small.
     split; break_if; rewrite decode_map2_sub; simpl_lengths.
