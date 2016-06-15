@@ -111,6 +111,7 @@ Module Pseudo <: Language.
       pseudoEval prog st = Some st'.
 
   Delimit Scope pseudo_notations with p.
+  Local Open Scope pseudo_notations.
 
   Definition indexize (n: nat) (p: (n > 0)%nat) (x: nat): Index n.
     intros; exists (x mod n);
@@ -172,5 +173,7 @@ Module Pseudo <: Language.
   Notation "n ::: A :():" :=
     (PCall _ _ n A)
     (at level 65, left associativity) : pseudo_notations.
+
+  Close Scope pseudo_notations.
 End Pseudo.
 
