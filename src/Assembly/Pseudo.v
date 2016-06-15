@@ -1,9 +1,9 @@
-Require Import QhasmEvalCommon QhasmUtil State.
+Require Import QhasmUtil QhasmCommon QhasmEvalCommon QhasmUtil State.
 Require Import Language.
 Require Import List.
 
 Module Pseudo <: Language.
-  Import EvalUtil ListState Util.
+  Import EvalUtil ListState.
 
   Inductive Pseudo {w: nat} {s: Width w}: nat -> nat -> Type :=
     | PVar: forall n, option bool -> Index n -> Pseudo n 1
@@ -85,7 +85,7 @@ Module Pseudo <: Language.
 
     | PComb n a b f g =>
       omap (pseudoEval f st) (fun sf =>
-        omap (pseudoEval g st) (fun sg =>
+        omap (pseudoEval g (setList (getList st) sf)) (fun sg =>
           Some (setList ((getList sf) ++ (getList sg)) sg)))
 
     | PIf n m t i0 i1 l r =>
@@ -111,6 +111,7 @@ Module Pseudo <: Language.
       pseudoEval prog st = Some st'.
 
   Delimit Scope pseudo_notations with p.
+  Local Open Scope pseudo_notations.
 
   Definition indexize (n: nat) (p: (n > 0)%nat) (x: nat): Index n.
     intros; exists (x mod n);
@@ -172,5 +173,7 @@ Module Pseudo <: Language.
   Notation "n ::: A :():" :=
     (PCall _ _ n A)
     (at level 65, left associativity) : pseudo_notations.
+
+  Close Scope pseudo_notations.
 End Pseudo.
 

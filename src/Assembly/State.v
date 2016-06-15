@@ -175,7 +175,7 @@ Module Triple_as_OT <: UsualOrderedType.
 End Triple_as_OT.
 
 Module StateCommon.
-  Export ListNotations Util.
+  Export ListNotations.
 
   Module NatM := FMapAVL.Make(Nat_as_OT).
   Module PairM := FMapAVL.Make(Pair_as_OT).
@@ -215,7 +215,10 @@ Module ListState.
     (fst st, Some v).
 
   Definition setCarryOpt {n: nat} (v: option bool) (st: ListState n): ListState n :=
-    (fst st, v).
+    match v with
+    | Some v' => (fst st, v)
+    | None => st
+    end.
 
 End ListState.
 

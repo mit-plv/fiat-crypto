@@ -1,4 +1,3 @@
-
 Require Export Bedrock.Word Bedrock.Nomega.
 Require Import NPeano NArith PArith Ndigits Compare_dec Arith.
 Require Import ProofIrrelevance Ring List.
