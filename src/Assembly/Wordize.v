@@ -1,7 +1,7 @@
 
 Require Export Bedrock.Word Bedrock.Nomega.
-Require Import NArith PArith Ndigits Nnat NPow Compare_dec.
-Require Import FunctionalExtensionality.
+Require Import NArith PArith Ndigits Nnat NPow NPeano Compare_dec.
+Require Import FunctionalExtensionality ProofIrrelevance.
 
 Hint Rewrite wordToN_nat Nat2N.inj_add N2Nat.inj_add
              Nat2N.inj_mul N2Nat.inj_mul Npow2_nat : N.
@@ -14,33 +14,56 @@ Notation "** x" := (NToWord _ x) (at level 30) : wordize_scope.
 Notation "$ x" := (natToWord x) (at level 30) : wordize_scope.
 
 Section Definitions.
+  Definition convS {A B: Set} (x: A) (H: A = B): B :=
+    eq_rect A (fun B0 : Set => B0) x B H.
 
-  Definition take (k n: nat) (p: (k <= n)%nat) (w: word n): word k.
-    replace n with (k + (n - k)) in * by abstract omega.
-    refine (split1 k _ w).
+  Definition take {k n: nat} (p: (k <= n)%nat) (w: word n): word k.
+    refine (split1 k (n - k) (convS w _)).
+    abstract (replace n with (k + (n - k)) by omega; intuition).
   Defined.
 
-  Definition shiftr {n} (w: word n) (k: nat): word n.
-    destruct (le_dec k n).
-
-    - replace n with (k + (n - k)) in * by abstract intuition.
-        refine (sext (take k (k + (n - k)) l w) _).
-
-    - exact (wzero n).
+  Definition extend {k n: nat} (p: (k <= n)%nat) (w: word k): word n.
+    refine (convS (zext w (n - k)) _).
+    abstract (replace (k + (n - k)) with n by omega; intuition).
   Defined.
 
-  Definition mask {n} (m: nat) (w: word n): word n.
-    destruct (le_dec m n).
+  Definition shiftr {n} (w: word n) (k: nat): word n :=
+    match (le_dec k n) with
+    | left p => extend p (take p w)
+    | right _ => wzero n
+    end.
 
-    - replace n with (m + (n - m)) in * by (abstract intuition).
-        refine (w ^& (zext (wones m) (n - m))).
-
-    - exact w.
-  Defined.
+  Definition mask {n} (k: nat) (w: word n): word n :=
+    match (le_dec k n) with
+    | left p => w ^& (extend p (wones k))
+    | right _ => w
+    end.
 
 End Definitions.
 
 Section WordizeUtil.
+  Lemma convS_id: forall A x p, x = (@convS A A x p).
+  Proof.
+    intros; unfold convS; vm_compute.
+    replace p with (eq_refl A); intuition.
+    apply proof_irrelevance.
+  Qed.
+
+  Lemma word_param_eq: forall n m, word n = word m -> n = m.
+  Proof. (* TODO: How do we prove this *) Admitted. 
+
+  Lemma word_conv_eq: forall {n m} (y: word m) p,
+      &y = &(@convS (word m) (word n) y p).
+  Proof.
+    intros.
+    revert p.
+    destruct (Nat.eq_dec n m).
+
+    - rewrite e; intros; apply f_equal; apply convS_id.
+
+    - intros; contradict n0.
+      apply word_param_eq; rewrite p; intuition.
+  Qed.
 
   Lemma to_nat_lt: forall x b, (x < b)%N <-> (N.to_nat x < N.to_nat b)%nat.
   Proof. (* via Nat2N.inj_compare *) Admitted.
@@ -99,6 +122,43 @@ Section WordizeUtil.
         + intuition; inversion H.
 
         + apply N.neq_0_lt_0 in IHx; intuition.
+  Qed.
+
+  Lemma natToWord_convS: forall {n m} (x: word n) p,
+      & x = & @convS (word n) (word m) x p.
+  Proof. admit. Qed.
+
+  Lemma natToWord_combine: forall {n} (x: word n) k,
+      & x = & combine x (wzero k).
+  Proof. admit. Qed.
+
+  Lemma natToWord_split1: forall {n} (x: word n) p,
+      & x = & split1 n 0 (convS x p).
+  Proof. admit. Qed.
+
+  Lemma extend_bound: forall k n (p: (k <= n)%nat) (w: word k),
+    (& (extend p w) < Npow2 k)%N.
+  Proof.
+    intros.
+    assert (n = k + (n - k)) by abstract omega.
+    replace (& (extend p w)) with (& w); try apply word_size_bound.
+    unfold extend.
+    rewrite <- word_conv_eq.
+    unfold zext.
+    clear; revert w; induction (n - k).
+
+    - intros.
+      assert (word k = word (k + 0)) as Z by intuition.
+      replace w with (split1 k 0 (convS w Z)).
+      replace (wzero 0) with (split2 k 0 (convS w Z)).
+      rewrite <- natToWord_split1 with (p := Z).
+      rewrite combine_split.
+      apply natToWord_convS.
+
+      + admit.
+      + admit.
+
+    - intros; rewrite <- natToWord_combine; intuition.
   Qed.
 
 End WordizeUtil.
@@ -172,6 +232,7 @@ Section Wordization.
     (N.shiftr_nat (&x) k) = & (shiftr x k).
   Proof.
     intros.
+
     admit.
   Qed.
 
@@ -195,7 +256,13 @@ Section Bounds.
       match c as c' return c = c' -> _ with
       | Lt => fun _ => left _
       | _ => fun _ => right _
-      end eq_refl); admit.
+      end eq_refl);
+      abstract (unfold c in *; try first [
+        apply N.compare_eq_iff in _H
+      | apply N.compare_lt_iff in _H
+      | pose proof (N.compare_antisym x y) as _H0;
+        rewrite _H in _H0; simpl in _H0;
+        apply N.compare_lt_iff in _H0 ]; nomega).
   Defined.
 
   Theorem wplus_bound : forall {n} (w1 w2 : word n) b1 b2,
@@ -205,60 +272,91 @@ Section Bounds.
   Proof.
     intros.
 
-    destruct (N.compare (b1 + b2)%N (Npow2 n));
+    destruct (Nlt_dec (b1 + b2)%N (Npow2 n));
       rewrite <- wordize_plus with (b := b1);
       try apply N.add_lt_mono;
       try assumption.
 
-    - apply N.add_lt_mono; assumption.
+    (* A couple inequality subgoals *)
+  Admitted.
 
-    - admit. 
+  Theorem wmult_bound : forall {n} (w1 w2 : word n) b1 b2,
+      (1 < n)%nat
+    -> (&w1 < b1)%N
+    -> (&w2 < b2)%N
+    -> (&(w1 ^* w2) < b1 * b2)%N.
+  Proof.
+    intros.
+    destruct (Nlt_dec (b1 * b2)%N (Npow2 n));
+      rewrite <- wordize_mult with (b := b1);
+      try apply N.mul_lt_mono;
+      try assumption;
+      try nomega.
+
+    (* A couple inequality subgoals *)
+  Admitted.
+
+  Theorem shiftr_bound : forall {n} (w : word n) b bits,
+      (&w <= b)%N
+    -> (&(shiftr w bits) <= N.shiftr_nat b bits)%N.
+  Proof.
+    intros.
+    rewrite <- wordize_shiftr.
+    induction bits; unfold N.shiftr_nat in *; simpl; intuition.
+    revert IHbits;
+      generalize (nat_iter bits N.div2 (& w)),
+                 (nat_iter bits N.div2 b);
+      clear; intros x y H.
+
+    admit. (* Monotonicity of N.div2 *)
+  Qed.
+
+  Theorem mask_bound : forall {n} (w : word n) m,
+    (n > 1)%nat ->
+    (&(mask m w) < Npow2 m)%N.
+  Proof.
+    intros.
+    unfold mask in *; destruct (le_dec m n); simpl.
+
     - admit.
 
-    - apply N.add_lt_mono; assumption.
-    - apply N.add_lt_mono; assumption.
+    - transitivity (Npow2 n); try assumption; try apply word_size_bound.
+      replace m with (n + (m - n)) by intuition.
+      replace (Npow2 n) with ((Npow2 n) * 1)%N by nomega.
+      replace (Npow2 (n + (m - n)))
+         with (Npow2 n * Npow2 (m - n))%N.
 
+      + admit.
+
+      + admit.
   Qed.
 
-  Theorem wmult_bound : forall (w1 w2 : word n) b1 b2,
-    w1 <= b1
-    -> w2 <= b2
-    -> w1 ^* w2 <= b1 * b2.
+  Theorem mask_update_bound : forall {n} (w : word n) b m,
+      (n > 1)%nat
+    -> (&w < b)%N
+    -> (&(mask m w) < (N.min b (Npow2 m)))%N.
   Proof.
-    preomega.
-    destruct (le_lt_dec (pow2 n) (N.to_nat b1 * N.to_nat b2)).
+    intros.
+    pose proof (mask_bound w m H).
+    assert (&(mask m w) < b)%N.
 
-    specialize (wordToNat_bound (w1 ^* w2)); nomega.
+    - induction m.
 
-    rewrite wmult_alt.
-    unfold wmultN, wordBinN.
-    rewrite wordToNat_natToWord_idempotent.
-    ge_to_le_nat.
+      + replace (&(mask 0 w)) with 0%N by admit.
+        admit.
 
-    apply Mult.mult_le_compat; nomega.
-    pre_nomega.
-    apply Lt.le_lt_trans with (N.to_nat b1 * N.to_nat b2); auto.
-    apply Mult.mult_le_compat; nomega.
-  Qed.
+      + induction (&w); intuition.
 
-  Theorem shiftr_bound : forall (w : word n) b bits,
-    w <= b
-    -> shiftr w bits <= N.shiftr b (N.of_nat bits).
-  Proof.
-    admit.
-  Qed.
+      induction n; rewrite (shatter_word w) in *;
+        try inversion H; subst.
 
-  Theorem mask_bound : forall (w : word n) m,
-    mask m w <= Npow2 m - 1.
-  Proof.
-    admit.
-  Qed.
+      + rewrite (shatter_word (wtl w)) in *.
+        replace (wtl (wtl w)) with WO in * by admit.
+        induction (whd w), (whd (wtl w)); simpl in *.
+      +
 
-  Theorem mask_update_bound : forall (w : word n) b m,
-    w <= b
-    -> mask m w <= (N.min b (Npow2 m - 1)).
-  Proof.
-    admit.
+    - unfold N.min; destruct (b ?= Npow2 m)%N;
+        simpl; try assumption.
   Qed.
 
 End Bounds.
@@ -280,6 +378,81 @@ Ltac wordize_ast :=
 Ltac lt_crush := try abstract (clear; vm_compute; intuition).
 
 (** Bounding Tactics **)
+Ltac multi_apply0 A L := pose proof (L A).
+
+Ltac multi_apply1 A L :=
+  match goal with
+  | [ H: A <= ?b |- _] => pose proof (L A b H)
+  end.
+
+Ltac multi_apply2 A B L :=
+  match goal with
+  | [ H1: A <= ?b1, H2: B <= ?b2 |- _] => pose proof (L A B b1 b2 H1 H2)
+  end.
+
+Ltac multi_recurse n T :=
+  match goal with
+  | [ H: T <= _ |- _] => idtac
+  | _ =>
+    is_var T;
+    let T' := (eval cbv delta [T] in T) in multi_recurse n T';
+    match goal with
+    | [ H : T' <= ?x |- _ ] =>
+    pose proof (H : T <= x)
+    end
+
+  | _ =>
+    match T with
+    | ?W1 ^+ ?W2 =>
+      multi_recurse n W1; multi_recurse n W2;
+      multi_apply2 W1 W2 (@wplus_bound n)
+
+    | ?W1 ^* ?W2 =>
+      multi_recurse n W1; multi_recurse n W2;
+      multi_apply2 W1 W2 (@wmult_bound n)
+
+    | mask ?m ?w =>
+      multi_recurse n w;
+      multi_apply1 w (fun b => @mask_update_bound n w b)
+
+    | mask ?m ?w =>
+      multi_recurse n w;
+      pose proof (@mask_bound n w m)
+
+    | ?x ^& (@NToWord _ (N.ones ?m)) =>
+      multi_recurse n (mask (N.to_nat m) x);
+      match goal with
+      | [ H: (mask (N.to_nat m) x) <= ?b |- _] =>
+        pose proof (@mask_wand n x m b H)
+      end
+
+    | shiftr ?w ?bits =>
+      multi_recurse n w;
+      match goal with
+      | [ H: w <= ?b |- _] =>
+        pose proof (@shiftr_bound n w b bits H)
+      end
+
+    | NToWord _ ?k => pose proof (@constant_bound_N n k)
+    | natToWord _ ?k => pose proof (@constant_bound_nat n k)
+    | ($ ?k) => pose proof (@constant_bound_nat n k)
+    | _ => pose proof (@word_size_bound n T)
+    end
+  end.
+
+Lemma unwrap_let: forall {n} (y: word n) (f: word n -> word n) (b: N),
+    (let x := y in f x) <= b <-> let x := y in (f x <= b).
+Proof. intuition. Qed.
+
+Ltac multi_bound n :=
+  match goal with
+  | [|- let A := ?B in _] =>
+    multi_recurse n B; intro; multi_bound n
+  | [|- (let A := _ in _) <= _] =>
+    apply unwrap_let; multi_bound n
+  | [|- ?W <= _ ] =>
+    multi_recurse n W
+  end.
 
 (** Examples **)
 
