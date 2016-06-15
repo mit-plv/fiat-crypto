@@ -1,10 +1,10 @@
 -R src Crypto
+src/Algebra.v
 src/BaseSystem.v
 src/BaseSystemProofs.v
 src/EdDSAProofs.v
 src/Field.v
 src/Rep.v
-src/SaneField.v
 src/Testbit.v
 src/CompleteEdwardsCurve/CompleteEdwardsCurveTheorems.v
 src/CompleteEdwardsCurve/DoubleAndAdd.v

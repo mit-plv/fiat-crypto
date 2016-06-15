@@ -1,6 +1,5 @@
 Require Import Coq.Classes.Morphisms. Require Coq.Setoids.Setoid.
-Close Scope nat_scope. Close Scope type_scope. Close Scope core_scope.
-Require Import Crypto.SaneField.
+Require Import Crypto.Algebra.
 
 Generalizable All Variables.
 Section Pre.
@@ -15,7 +14,7 @@ Section Pre.
   Add Field EdwardsCurveField : (Field.field_theory_for_stdlib_tactic (T:=F)).
 
   Context {a:F} {a_nonzero : a<>0} {a_square : exists sqrt_a, sqrt_a^2 = a}.
-  Context {d:F} {d_nonsquare : forall x, x^2 <> d}.
+  Context {d:F} {d_nonsquare : forall sqrt_d, sqrt_d^2 <> d}.
   Context {char_gt_2 : 1+1 <> 0}.
   
   (* the canonical definitions are in Spec *)
@@ -25,23 +24,24 @@ Section Pre.
     let (x2, y2) := P2' in
     pair (((x1*y2  +  y1*x2)/(1 + d*x1*x2*y1*y2))) (((y1*y2 - a*x1*x2)/(1 - d*x1*x2*y1*y2))).
 
-  Ltac admit_nonzero := abstract (repeat split; match goal with |- not (eq _ 0) => admit end).
+  Lemma opp_nonzero_nonzero : forall x, x <> 0 -> opp x <> 0. Admitted.
+
+  Hint Extern 0 (not (eq _ 0)) => apply opp_nonzero_nonzero : field_algebra.
+
+  Ltac use_sqrt_a := destruct a_square as [sqrt_a a_square']; rewrite <-a_square' in *.
 
   Lemma edwardsAddComplete' x1 y1 x2 y2 :
     onCurve (pair x1 y1) ->
     onCurve (pair x2 y2) ->
     (d*x1*x2*y1*y2)^2 <> 1.
   Proof.
-    unfold onCurve, not; intros.
-    assert (d * x1 ^2 * y1 ^2 * (a * x2 ^2 + y2 ^2) = a * x1 ^2 + y1 ^2) as Heqt by nsatz.
-    destruct a_square as [sqrt_a a_square']; rewrite <-a_square' in *.
+    unfold onCurve, not; use_sqrt_a; intros.
     destruct (eq_dec (sqrt_a*x2 + y2) 0); destruct (eq_dec (sqrt_a*x2 - y2) 0);
       lazymatch goal with
       | [H: not (eq (?f (sqrt_a * x2)  y2) 0) |- _ ]
-        => eapply (d_nonsquare ((f (sqrt_a * x1) (d * x1 * x2 * y1 * y2 * y1)) / (x1 * y1 * (f (sqrt_a * x2)  y2))  ));
-             nsatz; admit_nonzero
-      | _ => apply a_nonzero; (do 2 nsatz) (* TODO: why does it not win on the first call? *)
-      end.
+        => apply d_nonsquare with (sqrt_d:=(f (sqrt_a * x1) (d * x1 * x2 * y1 * y2 * y1)) / (x1 * y1 * (f (sqrt_a * x2) y2)))
+      | _ => apply a_nonzero
+      end; field_algebra; auto using opp_nonzero_nonzero.
   Qed.
 
   Lemma edwardsAddCompletePlus x1 y1 x2 y2 :
@@ -49,11 +49,7 @@ Section Pre.
     onCurve (x2, y2) ->
     (1 + d*x1*x2*y1*y2) <> 0.
   Proof.
-    intros Hc1 Hc2; simpl in Hc1, Hc2.
-    intros; destruct (F_eq_dec (d*x1*x2*y1*y2) (0-1)) as [H|H].
-    - assert ((d*x1*x2*y1*y2)^2 = 1) by (rewriteAny; field). destruct (edwardsAddComplete' x1 y1 x2 y2); auto.
-    - replace (d * x1 * x2 * y1 * y2) with (1+d * x1 * x2 * y1 * y2-1) in H by field.
-      intro Hz; rewrite Hz in H; intuition.
+    intros H1 H2 ?. apply (edwardsAddComplete' x1 y1 x2 y2 H1 H2); field_algebra.
   Qed.
   
   Lemma edwardsAddCompleteMinus x1 y1 x2 y2 :
@@ -61,16 +57,14 @@ Section Pre.
     onCurve (x2, y2) ->
     (1 - d*x1*x2*y1*y2) <> 0.
   Proof.
-    intros Hc1 Hc2. destruct (F_eq_dec (d*x1*x2*y1*y2) 1) as [H|H].
-    - assert ((d*x1*x2*y1*y2)^2 = 1) by (rewriteAny; field). destruct (edwardsAddComplete' x1 y1 x2 y2); auto.
-    - replace (d * x1 * x2 * y1 * y2) with ((1-(1-d * x1 * x2 * y1 * y2))) in H by field.
-      intro Hz; rewrite Hz in H; apply H; field.
+    intros H1 H2 ?. apply (edwardsAddComplete' x1 y1 x2 y2 H1 H2); field_algebra.
   Qed.
   
   Definition zeroOnCurve : onCurve (0, 1).
-    simpl. field.
+    simpl. field_algebra.
   Qed.
   
+  (* TODO: port
   Lemma unifiedAdd'_onCurve' x1 y1 x2 y2 x3 y3
     (H: (x3, y3) = unifiedAdd' (x1, y1) (x2, y2)) :
     onCurve (x1, y1) -> onCurve (x2, y2) -> onCurve (x3, y3).
@@ -119,4 +113,5 @@ Section Pre.
     remember (unifiedAdd' (f, f0) (f1, f2)) as r; destruct r.
     eapply unifiedAdd'_onCurve'; eauto.
   Qed.
+  *)
 End Pre.
