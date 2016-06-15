@@ -28,6 +28,8 @@ Definition nth_default_opt {A} := Eval compute in @nth_default A.
 Definition set_nth_opt {A} := Eval compute in @set_nth A.
 Definition map_opt {A B} := Eval compute in @map A B.
 Definition base_from_limb_widths_opt := Eval compute in base_from_limb_widths.
+Definition full_carry_chain_opt := Eval compute in @full_carry_chain.
+Definition length_opt := Eval compute in length.
 
 Definition Let_In {A P} (x : A) (f : forall y : A, P y)
   := let y := x in f y.
@@ -226,13 +228,34 @@ Section Carries.
   Lemma carry_sequence_opt_cps_rep
        : forall (is : list nat) (us : list Z) (x : F modulus),
          (forall i : nat, In i is -> i < length base)%nat ->
-         length us = length base ->
          rep us x -> rep (carry_sequence_opt_cps is us) x.
   Proof.
     intros.
     rewrite carry_sequence_opt_cps_correct by assumption.
-    apply carry_sequence_rep; assumption.
+    apply carry_sequence_rep; eauto using rep_length.
   Qed.
+
+
+  Lemma full_carry_chain_bounds : forall i, In i full_carry_chain -> (i < length base)%nat.
+  Proof.
+    unfold full_carry_chain; rewrite <-base_length; intros.
+    apply make_chain_lt; auto.
+  Qed.
+
+  Definition carry_full_opt_sig (us : digits) : { b : digits | b = carry_full us }.
+  Proof.
+    eexists.
+    cbv [carry_full].
+    change @full_carry_chain with full_carry_chain_opt.
+    rewrite <-carry_sequence_opt_cps_correct by (auto; apply full_carry_chain_bounds).
+    reflexivity.
+  Defined.
+
+  Definition carry_full_opt (us : digits) : digits
+    := Eval cbv [proj1_sig carry_full_opt_sig] in proj1_sig (carry_full_opt_sig us).
+
+  Definition carry_full_opt_correct us : carry_full_opt us = carry_full us :=
+    proj2_sig (carry_full_opt_sig us).
 
 End Carries.
 
@@ -433,33 +456,32 @@ Section Multiplication.
     : mul_opt us vs = mul us vs
     := proj2_sig (mul_opt_sig us vs).
 
-  Lemma mul_opt_rep:
+  Definition carry_mul_opt_sig (us vs : T) : { b : digits | b = carry_mul us vs }.
+  Proof.
+    eexists.
+    cbv [carry_mul].
+    erewrite <-carry_full_opt_correct by eauto.
+    erewrite <-mul_opt_correct.
+    reflexivity.
+  Defined.
+
+  Definition carry_mul_opt (us vs : T) : digits
+    := Eval cbv [proj1_sig carry_mul_opt_sig] in proj1_sig (carry_mul_opt_sig us vs).
+
+  Definition carry_mul_opt_correct us vs
+    : carry_mul_opt us vs = carry_mul us vs
+    := proj2_sig (carry_mul_opt_sig us vs).
+
+  Lemma carry_mul_opt_rep:
     forall (u v : T) (x y : F modulus), PseudoMersenneBaseRep.rep u x -> PseudoMersenneBaseRep.rep v y ->
-    PseudoMersenneBaseRep.rep (mul_opt u v) (x * y)%F.
+    PseudoMersenneBaseRep.rep (carry_mul_opt u v) (x * y)%F.
   Proof.
     intros.
-    rewrite mul_opt_correct.
-    change mul with PseudoMersenneBaseRep.mul.
+    rewrite carry_mul_opt_correct.
+    change carry_mul with PseudoMersenneBaseRep.mul.
     auto using PseudoMersenneBaseRep.mul_rep.
   Qed.
 
-  Definition carry_mul_opt 
-             (is : list nat)
-             (us vs : list Z)
-             : list Z
-    := carry_sequence_opt_cps c_ is (mul_opt us vs).
-
-  Lemma carry_mul_opt_correct
-    : forall (is : list nat) (us vs : list Z) (x  y: F modulus),
-      PseudoMersenneBaseRep.rep us x -> PseudoMersenneBaseRep.rep vs y ->
-      (forall i : nat, In i is -> i < length base)%nat ->
-      length (mul_opt us vs) = length base ->
-      PseudoMersenneBaseRep.rep (carry_mul_opt is us vs) (x*y)%F.
-  Proof.
-    intros is us vs x y; intros.
-    change (carry_mul_opt _ _ _) with (carry_sequence_opt_cps c_ is (mul_opt us vs)).
-    apply carry_sequence_opt_cps_rep, mul_opt_rep; auto.
-  Qed.
 End Multiplication.
 
 Section Canonicalization.
@@ -475,8 +497,6 @@ Section Canonicalization.
 
   Definition max_ones_opt := Eval compute in max_ones.
   Definition max_bound_opt := Eval compute in max_bound.
-  Definition full_carry_chain_opt := Eval compute in full_carry_chain.
-  Definition length_opt := Eval compute in length.
   Definition minus_opt := Eval compute in minus.
 
   Definition isFull'_opt_sig (us : T) full i :
@@ -493,27 +513,6 @@ Section Canonicalization.
 
   Definition isFull'_opt_correct us full i: isFull'_opt us full i = isFull' us full i :=
     proj2_sig (isFull'_opt_sig us full i).
-
-  Lemma full_carry_chain_bounds : forall i, In i full_carry_chain -> (i < length base)%nat.
-  Proof.
-    unfold full_carry_chain; rewrite <-base_length; intros.
-    apply make_chain_lt; auto.
-  Qed.
-
-  Definition carry_full_opt_sig (us : T) : { b : digits | b = carry_full us }.
-  Proof.
-    eexists.
-    cbv [carry_full].
-    change full_carry_chain with full_carry_chain_opt.
-    rewrite <-(carry_sequence_opt_cps_correct c_) by (auto; apply full_carry_chain_bounds).
-    reflexivity.
-  Defined.
-
-  Definition carry_full_opt (us : T) : digits
-    := Eval cbv [proj1_sig carry_full_opt_sig] in proj1_sig (carry_full_opt_sig us).
-
-  Definition carry_full_opt_correct us : carry_full_opt us = carry_full us :=
-    proj2_sig (carry_full_opt_sig us).
 
   Definition and_term_opt_sig (us : T) : { b : Z | b = and_term us }.
   Proof.
@@ -536,8 +535,7 @@ Section Canonicalization.
   Proof.
     eexists.
     cbv beta iota delta [freeze map2].
-    repeat rewrite <-carry_full_opt_correct.
-    change (@carry_full modulus prm) with @carry_full_opt.
+    repeat erewrite <-carry_full_opt_correct by eauto.
     change and_term with and_term_opt.
     change @map with @map_opt.
     reflexivity.

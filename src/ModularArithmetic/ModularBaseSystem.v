@@ -61,25 +61,25 @@ Section CarryBasePow2.
 
   Definition carry_sequence is us := fold_right carry us is.
 
-End CarryBasePow2.
-
-Section Canonicalization.
-  Context `{prm :PseudoMersenneBaseParams}.
-
   Fixpoint make_chain i :=
     match i with
     | O => nil
     | S i' => i' :: make_chain i'
     end.
 
-  (* compute at compile time *)
   Definition full_carry_chain := make_chain (length limb_widths).
+
+  Definition carry_full := carry_sequence full_carry_chain.
+
+  Definition carry_mul us vs := carry_full (mul us vs).
+
+End CarryBasePow2.
+
+Section Canonicalization.
+  Context `{prm :PseudoMersenneBaseParams}.
 
   (* compute at compile time *)
   Definition max_ones := Z.ones (fold_right Z.max 0 limb_widths).
-  
-  (* compute at compile time? *)
-  Definition carry_full := carry_sequence full_carry_chain.
 
   Definition max_bound i := Z.ones (log_cap i).
 

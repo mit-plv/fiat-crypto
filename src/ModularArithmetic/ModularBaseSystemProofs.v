@@ -22,6 +22,11 @@ Section PseudoMersenneProofs.
     autounfold; intuition.
   Qed.
 
+  Lemma rep_length : forall us x, us ~= x -> length us = length base.
+  Proof.
+    autounfold; intuition.
+  Qed.
+
   Lemma encode_rep : forall x : F modulus, encode x ~= x.
   Proof.
     intros. unfold encode, rep.
@@ -383,6 +388,31 @@ Section CarryProofs.
     us ~= x -> carry_sequence is us ~= x.
   Proof.
     induction is; boring.
+  Qed.
+
+
+  (* TODO : move? *)
+  Lemma make_chain_lt : forall x i : nat, In i (make_chain x) -> (i < x)%nat.
+  Proof.
+    induction x; simpl; intuition.
+  Qed.
+
+  Lemma carry_full_preserves_rep : forall us x,
+    rep us x -> rep (carry_full us) x.
+  Proof.
+    unfold carry_full; intros.
+    apply carry_sequence_rep; auto.
+    unfold full_carry_chain; rewrite base_length; apply make_chain_lt.
+    eauto using rep_length.
+  Qed.
+
+  Opaque carry_full.
+
+  Lemma carry_mul_rep : forall us vs x y, rep us x -> rep vs y ->
+    rep (carry_mul us vs) (x * y)%F.
+  Proof.
+    unfold carry_mul; intros; apply carry_full_preserves_rep.
+    auto using mul_rep.
   Qed.
 
 End CarryProofs.
@@ -1131,22 +1161,6 @@ Section CanonicalizationProofs.
   Qed.
 
   (* END proofs about third carry loop *)
-
-  (* TODO : move? *)
-  Lemma make_chain_lt : forall x i : nat, In i (make_chain x) -> (i < x)%nat.
-  Proof.
-    induction x; simpl; intuition.
-  Qed.
-
-  Lemma carry_full_preserves_rep : forall us x, (length us = length base)%nat ->
-    rep us x -> rep (carry_full us) x.
-  Proof.
-    unfold carry_full; intros.
-    apply carry_sequence_rep; auto.
-    unfold full_carry_chain; rewrite base_length; apply make_chain_lt.
-  Qed.
-
-  Opaque carry_full.
 
   Lemma isFull'_false : forall us n, isFull' us false n = false.
   Proof.

@@ -45,7 +45,7 @@ Lemma GF1305Base26_mul_reduce_formula :
                       -> rep ls (f*g)%F}.
 Proof.
   eexists; intros ? ? Hf Hg.
-  pose proof (carry_mul_opt_correct k_ c_ (eq_refl k) (eq_refl c_) [0;4;3;2;1;0]_ _ _ _ Hf Hg) as Hfg.
+  pose proof (carry_mul_opt_rep k_ c_ (eq_refl k) (eq_refl c_) _ _ _ _ Hf Hg) as Hfg.
   compute_formula.
 Defined.
 
