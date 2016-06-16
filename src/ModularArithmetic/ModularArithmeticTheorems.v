@@ -149,6 +149,16 @@ Section FandZ.
     intuition; find_inversion; rewrite ?Z.mod_0_l, ?Z.mod_small in *; intuition.
   Qed.
 
+  Require Crypto.Algebra.
+  Global Instance ring_modulo : @Algebra.ring (F m) Logic.eq (ZToField 0) (ZToField 1) opp add sub mul.
+  Proof.
+    repeat split; Fdefn.
+    { rewrite Z.add_0_r. auto. }
+    { rewrite <-Z.add_sub_swap, <-Z.add_sub_assoc, Z.sub_diag, Z.add_0_r. apply Z_mod_same_full. }
+    { apply F_eq_dec. }
+    { rewrite Z.mul_1_r. auto. }
+  Qed.
+
   Lemma ZToField_0 : @ZToField m 0 = 0.
   Proof.
     Fdefn.

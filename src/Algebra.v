@@ -527,7 +527,8 @@ Ltac nsatz_rewrite_and_revert domain :=
 Ltac nsatz_nonzero := 
   try solve [apply Integral_domain.integral_domain_one_zero
             |apply Integral_domain.integral_domain_minus_one_zero
-            |trivial].
+            |trivial
+            |apply Ring.opp_nonzero_nonzero;trivial].
 
 Ltac nsatz_domain_sugar_power domain sugar power := 
   let nparams := constr:(BinInt.Zneg BinPos.xH) in (* some symbols can be "parameters", treated as coefficients *)
@@ -585,8 +586,8 @@ Ltac field_algebra :=
   try (nsatz; dropRingSyntax);
   repeat (apply conj);
   try solve
-      [unfold not; intro; nsatz_contradict
-      |nsatz_nonzero].
+      [nsatz_nonzero
+      |unfold not; intro; nsatz_contradict].
 
 Section Example.
   Context {F zero one opp add sub mul inv div} `{F_field:field F eq zero one opp add sub mul inv div}.
@@ -604,3 +605,23 @@ Section Example.
   Example _example_nonzero_nsatz_contradict x y : x * y = 1 -> not (x = 0).
   Proof. intros. intro. nsatz_contradict. Qed.
 End Example.
+
+Section Z.
+  Require Import ZArith.
+  Global Instance ring_Z : @ring Z Logic.eq 0%Z 1%Z Z.opp Z.add Z.sub Z.mul.
+  Proof. repeat split; auto using Z.eq_dec with zarith typeclass_instances. Qed.
+
+  Global Instance commutative_ring_Z : @commutative_ring Z Logic.eq 0%Z 1%Z Z.opp Z.add Z.sub Z.mul.
+  Proof. eauto using @commutative_ring, @is_commutative, ring_Z with zarith. Qed.
+
+  Global Instance integral_domain_Z : @integral_domain Z Logic.eq 0%Z 1%Z Z.opp Z.add Z.sub Z.mul.
+  Proof.
+    split.
+    { apply commutative_ring_Z. }
+    { constructor. intros. apply Z.neq_mul_0; auto. }
+    { constructor. discriminate. }
+  Qed.
+
+  Example _example_nonzero_nsatz_contradict_Z x y : Z.mul x y = (Zpos xH) -> not (x = Z0).
+  Proof. intros. intro. nsatz_contradict. Qed.
+End Z.
