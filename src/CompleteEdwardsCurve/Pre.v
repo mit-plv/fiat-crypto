@@ -58,3 +58,43 @@ Section Pre.
     field_algebra; auto using edwardsAddCompleteMinus, edwardsAddCompletePlus.
   Qed.
 End Pre.
+
+Import Group Ring Field.
+
+(* TODO: move -- this does not need to be defined before [point] *)
+Section RespectsFieldHomomorphism.
+  Context {F EQ ZERO ONE OPP ADD MUL SUB INV DIV} `{@field F EQ ZERO ONE OPP ADD SUB MUL INV DIV}.
+  Context {K eq zero one opp add mul sub inv div} `{@field K eq zero one opp add sub mul inv div}.
+  Local Infix "=" := eq. Local Infix "=" := eq : type_scope.
+  Context {phi:F->K} `{@is_homomorphism F EQ ONE ADD MUL K eq one add mul phi}.
+  Context {A D:F} {a d:K} {a_ok:phi A=a} {d_ok:phi D=d}.
+
+  Let phip  := fun (P':F*F) => let (x, y) := P' in (phi x, phi y).
+
+  Let eqp := fun (P1' P2':K*K) => 
+    let (x1, y1) := P1' in
+    let (x2, y2) := P2' in
+    and (eq x1 x2) (eq y1 y2).
+
+  Create HintDb field_homomorphism discriminated.
+  Hint Rewrite
+       homomorphism_one
+       homomorphism_add 
+       homomorphism_sub 
+       homomorphism_mul 
+       homomorphism_div 
+       a_ok 
+       d_ok
+       : field_homomorphism.
+
+  Lemma morphism_unidiedAdd' : forall P Q:F*F,
+    eqp
+      (phip (unifiedAdd'(F:=F)(one:=ONE)(add:=ADD)(sub:=SUB)(mul:=MUL)(div:=DIV)(a:=A)(d:=D) P Q))
+            (unifiedAdd'(F:=K)(one:=one)(add:=add)(sub:=sub)(mul:=mul)(div:=div)(a:=a)(d:=d) (phip P) (phip Q)).
+  Proof.
+    intros [x1 y1] [x2 y2].
+    cbv [unifiedAdd' phip eqp];
+      apply conj;
+      (rewrite_strat topdown hints field_homomorphism); reflexivity.
+  Qed.
+End RespectsFieldHomomorphism.
