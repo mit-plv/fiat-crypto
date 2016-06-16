@@ -240,6 +240,13 @@ Module Ring.
       - eapply @right_identity; eauto with typeclass_instances.
       - eapply associative.
     Qed.
+    
+    Lemma opp_nonzero_nonzero : forall x, x <> 0 -> opp x <> 0.
+    Proof.
+      intros ? Hx Ho.
+      assert (Hxo: x + opp x = 0) by (rewrite right_inverse; reflexivity).
+      rewrite Ho, right_identity in Hxo. intuition.
+   Qed.
   End Ring.
   
   Section TacticSupportCommutative.
@@ -248,6 +255,20 @@ Module Ring.
     Global Instance Cring_Cring_commutative_ring :
       @Cring.Cring T zero one add mul sub opp eq Ring.Ncring_Ring_ops Ring.Ncring_Ring.
     Proof. unfold Cring.Cring; intros; dropRingSyntax. eapply commutative. Qed.
+
+   Lemma ring_theory_for_stdlib_tactic : Ring_theory.ring_theory zero one add mul sub opp eq.
+   Proof.
+     constructor; intros. (* TODO(automation): make [auto] do this? *)
+     - apply left_identity.
+     - apply commutative.
+     - apply associative.
+     - apply left_identity.
+     - apply commutative.
+     - apply associative.
+     - apply right_distributive.
+     - apply ring_sub_definition.
+     - apply right_inverse.
+   Qed.
   End TacticSupportCommutative.
 End Ring.
 
@@ -299,7 +320,7 @@ Module Field.
     Lemma field_theory_for_stdlib_tactic : Field_theory.field_theory 0 1 add mul sub opp div inv eq.
     Proof.
       constructor.
-      admit.
+      { apply Ring.ring_theory_for_stdlib_tactic. }
       { intro H01. symmetry in H01. auto using zero_neq_one. }
       { apply field_div_definition. }
       { apply left_multiplicative_inverse. }
