@@ -177,6 +177,33 @@ Module Group.
     Lemma cancel_right : forall z x y, op x z = op y z <-> x = y.
     Proof. eauto using cancel_right, right_inverse. Qed.
   End BasicProperties.
+
+  Section Homomorphism.
+    Context {H eq op id inv} `{@group H eq op id inv}.
+    Context {G EQ OP ID INV} `{@group G EQ OP ID INV}.
+    Context {phi:G->H}.
+    Local Infix "=" := eq. Local Infix "=" := eq : type_scope.
+
+    Class is_homomorphism :=
+      {
+        homomorphism : forall a b,  phi (OP a b) = op (phi a) (phi b);
+
+        is_homomorphism_phi_proper : Proper (respectful EQ eq) phi
+      }.
+    Global Existing Instance is_homomorphism_phi_proper.
+    Context `{is_homomorphism}.
+
+    Lemma homomorphism_id : phi ID = id.
+    Proof.
+      assert (Hii: op (phi ID) (phi ID) = op (phi ID) id) by
+        (rewrite <- homomorphism, left_identity, right_identity; reflexivity).
+      rewrite cancel_left in Hii; exact Hii.
+    Qed.
+
+    Lemma homomorphism_inv : forall x, phi (INV x) = inv (phi x).
+    Proof.
+    Admitted.
+  End Homomorphism.
 End Group.
 
 Require Coq.nsatz.Nsatz.
@@ -248,7 +275,37 @@ Module Ring.
       rewrite Ho, right_identity in Hxo. intuition.
    Qed.
   End Ring.
-  
+
+  Section Homomorphism.
+    Context {R EQ ZERO ONE OPP ADD SUB MUL} `{@ring R EQ ZERO ONE OPP ADD SUB MUL}.
+    Context {S eq zero one opp add sub mul} `{@ring S eq zero one opp add sub mul}.
+    Context {phi:R->S}.
+    Local Infix "=" := eq. Local Infix "=" := eq : type_scope.
+
+    Class is_homomorphism :=
+      {
+        homomorphism_is_homomorphism : Group.is_homomorphism (phi:=phi) (OP:=ADD) (op:=add) (EQ:=EQ) (eq:=eq);
+        homomorphism_mul : forall x y, phi (MUL x y) = mul (phi x) (phi y);
+        homomorphism_one : phi ONE = one
+      }.
+    Global Existing Instance homomorphism_is_homomorphism.
+
+    Context `{is_homomorphism}.
+
+    Definition homomorphism_add : forall x y,  phi (ADD x y) = add (phi x) (phi y) :=
+      Group.homomorphism.
+
+    Definition homomorphism_opp : forall x,  phi (OPP x) = opp (phi x) :=
+      (Group.homomorphism_inv (INV:=OPP) (inv:=opp)).
+
+    Lemma homomorphism_sub : forall x y, phi (SUB x y) = sub (phi x) (phi y).
+    Proof.
+      intros.
+      rewrite !ring_sub_definition, Group.homomorphism, homomorphism_opp. reflexivity.
+    Qed.
+
+  End Homomorphism.
+           
   Section TacticSupportCommutative.
     Context {T eq zero one opp add sub mul} `{@commutative_ring T eq zero one opp add sub mul}.
   
@@ -325,7 +382,24 @@ Module Field.
       { apply field_div_definition. }
       { apply left_multiplicative_inverse. }
     Qed.
+
   End Field.
+  
+  Section Homomorphism.
+    Context {F EQ ZERO ONE OPP ADD MUL SUB INV DIV} `{@field F EQ ZERO ONE OPP ADD SUB MUL INV DIV}.
+    Context {K eq zero one opp add mul sub inv div} `{@field K eq zero one opp add sub mul inv div}.
+    Context {phi:F->K}.
+    Local Infix "=" := eq. Local Infix "=" := eq : type_scope.
+    Context `{@Ring.is_homomorphism F EQ ONE ADD MUL K eq one add mul phi}.
+    
+    Lemma homomorphism_multiplicative_inverse : forall x, phi (INV x) = inv (phi x). Admitted.
+
+    Lemma homomorphism_div : forall x y, phi (DIV x y) = div (phi x) (phi y).
+    Proof.
+      intros. rewrite !field_div_definition.
+      rewrite Ring.homomorphism_mul, homomorphism_multiplicative_inverse. reflexivity.
+    Qed.
+  End Homomorphism.
 End Field.
 
 
