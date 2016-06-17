@@ -154,9 +154,10 @@ Section FandZ.
   Proof.
     repeat split; Fdefn.
     { rewrite Z.add_0_r. auto. }
-    { rewrite <-Z.add_sub_swap, <-Z.add_sub_assoc, Z.sub_diag, Z.add_0_r. apply Z_mod_same_full. }
     { apply F_eq_dec. }
+    { rewrite <-Z.add_sub_swap, <-Z.add_sub_assoc, Z.sub_diag, Z.add_0_r. apply Z_mod_same_full. }
     { rewrite Z.mul_1_r. auto. }
+    { apply F_eq_dec. }
   Qed.
 
   Lemma ZToField_0 : @ZToField m 0 = 0.

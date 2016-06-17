@@ -8,11 +8,11 @@ Module E.
     * <https://eprint.iacr.org/2015/677.pdf>
     *)
 
-    Context {F eq Fzero one opp Fadd sub Fmul inv div} `{Algebra.field F eq Fzero one opp Fadd sub Fmul inv div}.
-    Local Infix "=" := eq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
-    Local Notation "0" := Fzero.  Local Notation "1" := one.
+    Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv} `{Algebra.field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}.
+    Local Infix "=" := Feq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
+    Local Notation "0" := Fzero.  Local Notation "1" := Fone.
     Local Infix "+" := Fadd. Local Infix "*" := Fmul.
-    Local Infix "-" := sub. Local Infix "/" := div.
+    Local Infix "-" := Fsub. Local Infix "/" := Fdiv.
     Local Notation "x ^2" := (x*x) (at level 30).
 
     Context {a d: F}.

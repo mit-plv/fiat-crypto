@@ -1,6 +1,6 @@
 Require Import Coq.Classes.Morphisms. Require Coq.Setoids.Setoid.
-Require Import Util.Tactics.
-Close Scope nat_scope. Close Scope type_scope. Close Scope core_scope.
+Require Import Crypto.Util.Tactics Crypto.Nsatz.
+Local Close Scope nat_scope. Local Close Scope type_scope. Local Close Scope core_scope.
 
 Section Algebra.
   Context {T:Type} {eq:T->T->Prop}.
@@ -22,11 +22,18 @@ Section Algebra.
       {
         monoid_is_associative : is_associative;
         monoid_is_left_identity : is_left_identity;
-        monoid_is_right_identity : is_right_identity
+        monoid_is_right_identity : is_right_identity;
+
+        monoid_op_Proper: Proper (respectful eq (respectful eq eq)) op;
+        monoid_Equivalence : Equivalence eq;
+        monoid_is_eq_dec : is_eq_dec
       }.
     Global Existing Instance monoid_is_associative.
     Global Existing Instance monoid_is_left_identity.
     Global Existing Instance monoid_is_right_identity.
+    Global Existing Instance monoid_Equivalence.
+    Global Existing Instance monoid_is_eq_dec.
+    Global Existing Instance monoid_op_Proper.
 
     Context {inv:T->T}.
     Class is_left_inverse := { left_inverse : forall x, op (inv x) x = id }.
@@ -38,17 +45,11 @@ Section Algebra.
         group_is_left_inverse : is_left_inverse;
         group_is_right_inverse : is_right_inverse;
 
-        group_Equivalence : Equivalence eq;
-        group_is_eq_dec : is_eq_dec;
-        group_op_Proper: Proper (respectful eq (respectful eq eq)) op;
         group_inv_Proper: Proper (respectful eq eq) inv
       }.
     Global Existing Instance group_monoid.
     Global Existing Instance group_is_left_inverse.
     Global Existing Instance group_is_right_inverse.
-    Global Existing Instance group_Equivalence.
-    Global Existing Instance group_is_eq_dec.
-    Global Existing Instance group_op_Proper.
     Global Existing Instance group_inv_Proper.
 
     Class is_commutative := { commutative : forall x y, op x y = op y x }.
@@ -137,45 +138,63 @@ Section Algebra.
 End Algebra.
 
 
-Section GenericCancellation.
-  Context {T:Type} {eq:T->T->Prop} {Equivalence_eq : Equivalence eq}.
-  Local Infix "=" := eq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
-  Context {op:T->T->T} {Proper_op : Proper(respectful eq (respectful eq eq)) op}.
-  Context {id:T}.
-  
-  Context {Hassoc: is_associative (op:=op) (eq:=eq)}.
-  Context {Hrid: is_right_identity (op:=op) (eq:=eq) (id := id)}.
-  Context {Hlid: is_left_identity (op:=op) (eq:=eq) (id:=id) }.
+Module Monoid.
+  Section Monoid.
+    Context {T eq op id} {monoid:@monoid T eq op id}.
+    Local Infix "=" := eq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
+    Local Infix "*" := op.
 
-  Lemma cancel_right z iz (Hinv:op z iz = id) :
-    forall x y, op x z = op y z <-> x = y.
-  Proof.
-    split; intros.
-    { assert (op (op x z) iz = op (op y z) iz) as Hcut by (f_equiv; assumption).
-      rewrite <-associative in Hcut.
-      rewrite <-!associative, !Hinv, !right_identity in Hcut; exact Hcut. }
-    { f_equiv; assumption. }
-  Qed.
+    Lemma cancel_right z iz (Hinv:op z iz = id) :
+      forall x y, x * z = y * z <-> x = y.
+    Proof.
+      split; intros.
+      { assert (op (op x z) iz = op (op y z) iz) as Hcut by (f_equiv; assumption).
+        rewrite <-associative in Hcut.
+        rewrite <-!associative, !Hinv, !right_identity in Hcut; exact Hcut. }
+      { f_equiv; assumption. }
+    Qed.
 
-  Lemma cancel_left z iz (Hinv:op iz z = id) :
-    forall x y, op z x = op z y <-> x = y.
-  Proof.
-    split; intros.
-    { assert (op iz (op z x) = op iz (op z y)) as Hcut by (f_equiv; assumption).
-      rewrite !associative, !Hinv, !left_identity in Hcut; exact Hcut. }
-    { f_equiv; assumption. }
-  Qed.
-End GenericCancellation.
+    Lemma cancel_left z iz (Hinv:op iz z = id) :
+      forall x y, z * x = z * y <-> x = y.
+    Proof.
+      split; intros.
+      { assert (op iz (op z x) = op iz (op z y)) as Hcut by (f_equiv; assumption).
+        rewrite !associative, !Hinv, !left_identity in Hcut; exact Hcut. }
+      { f_equiv; assumption. }
+    Qed.
+
+    Lemma inv_inv x ix iix : ix*x = id -> iix*ix = id -> iix = x. 
+    Proof.
+      intros Hi Hii.
+      assert (H:op iix id = op iix (op ix x)) by (rewrite Hi; reflexivity).
+      rewrite associative, Hii, left_identity, right_identity in H; exact H.
+    Qed.
+
+    Lemma inv_op x y ix iy : ix*x = id -> iy*y = id -> (iy*ix)*(x*y) =id.
+    Proof.
+      intros Hx Hy.
+      cut (iy * (ix*x) * y = id); try intro H.
+      { rewrite <-!associative; rewrite <-!associative in H; exact H. }
+      rewrite Hx, right_identity, Hy. reflexivity.
+    Qed.
+    
+  End Monoid.
+End Monoid.
 
 Module Group.
   Section BasicProperties.
     Context {T eq op id inv} `{@group T eq op id inv}.
     Local Infix "=" := eq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
+    Local Infix "*" := op.
 
-    Lemma cancel_left : forall z x y, op z x = op z y <-> x = y.
-    Proof. eauto using cancel_left, left_inverse. Qed.
-    Lemma cancel_right : forall z x y, op x z = op y z <-> x = y.
-    Proof. eauto using cancel_right, right_inverse. Qed.
+    Lemma cancel_left : forall z x y, z*x = z*y <-> x = y.
+    Proof. eauto using Monoid.cancel_left, left_inverse. Qed.
+    Lemma cancel_right : forall z x y, x*z = y*z <-> x = y.
+    Proof. eauto using Monoid.cancel_right, right_inverse. Qed.
+    Lemma inv_inv x : inv(inv(x)) = x.
+    Proof. eauto using Monoid.inv_inv, left_inverse. Qed.
+    Lemma inv_op x y : (inv y*inv x)*(x*y) =id.
+    Proof. eauto using Monoid.inv_op, left_inverse. Qed.
   End BasicProperties.
 
   Section Homomorphism.
@@ -240,12 +259,12 @@ Module Ring.
     Local Notation "0" := zero. Local Notation "1" := one.
     Local Infix "+" := add. Local Infix "-" := sub. Local Infix "*" := mul.
 
-    Lemma mul_0_r : forall x, x * 0 = 0.
+    Lemma mul_0_r : forall x, 0 * x = 0.
     Proof.
       intros.
-      assert (x*0 = x*0) as Hx by reflexivity.
-      rewrite <-(left_identity 0), left_distributive in Hx at 1.
-      assert (x*0 + x*0 - x*0 = x*0 - x*0) as Hxx by (f_equiv; exact Hx).
+      assert (0*x = 0*x) as Hx by reflexivity.
+      rewrite <-(right_identity 0), right_distributive in Hx at 1.
+      assert (0*x + 0*x - 0*x = 0*x - 0*x) as Hxx by (f_equiv; exact Hx).
       rewrite !ring_sub_definition, <-associative, right_inverse, right_identity in Hxx; exact Hxx.
     Qed.
 
@@ -258,6 +277,37 @@ Module Ring.
       rewrite associative, left_inverse, left_identity in Hxx; exact Hxx.
     Qed.
 
+    Lemma sub_0_l x : 0 - x = opp x.
+    Proof. rewrite ring_sub_definition. rewrite left_identity. reflexivity. Qed.
+
+    Lemma mul_opp_r x y : x * opp y = opp (x * y).
+    Proof.
+      assert (Ho:x*(opp y) + x*y = 0)
+        by (rewrite <-left_distributive, left_inverse, mul_0_l; reflexivity).
+      rewrite <-(left_identity (opp (x*y))), <-Ho; clear Ho.
+      rewrite <-!associative, right_inverse, right_identity; reflexivity.
+    Qed.
+
+    Lemma mul_opp_l x y : opp x * y = opp (x * y).
+    Proof.
+      assert (Ho:opp x*y + x*y = 0)
+        by (rewrite <-right_distributive, left_inverse, mul_0_r; reflexivity).
+      rewrite <-(left_identity (opp (x*y))), <-Ho; clear Ho.
+      rewrite <-!associative, right_inverse, right_identity; reflexivity.
+    Qed.
+
+    Global Instance is_left_distributive_sub : is_left_distributive (eq:=eq)(add:=sub)(mul:=mul).
+    Proof.
+      split; intros. rewrite !ring_sub_definition, left_distributive.
+      eapply Group.cancel_left, mul_opp_r.
+    Qed.
+
+    Global Instance is_right_distributive_sub : is_right_distributive (eq:=eq)(add:=sub)(mul:=mul).
+    Proof.
+      split; intros. rewrite !ring_sub_definition, right_distributive.
+      eapply Group.cancel_left, mul_opp_l.
+    Qed.
+
     Global Instance Ncring_Ring_ops : @Ncring.Ring_ops T zero one add mul sub opp eq. 
     Global Instance Ncring_Ring : @Ncring.Ring T zero one add mul sub opp eq Ncring_Ring_ops.
     Proof.
@@ -266,6 +316,8 @@ Module Ring.
         eapply @left_identity; eauto with typeclass_instances.
       - eapply @right_identity; eauto with typeclass_instances.
       - eapply associative.
+      - intros; eapply right_distributive.
+      - intros; eapply left_distributive.
     Qed.
     
     Lemma opp_nonzero_nonzero : forall x, x <> 0 -> opp x <> 0.
@@ -361,7 +413,7 @@ Module Field.
     Global Instance is_mul_nonzero_nonzero : @is_mul_nonzero_nonzero T eq 0 mul.
     Proof.
       constructor. intros x y Hx Hy Hxy.
-      assert (0 = (inv y * (inv x * x)) * y) as H00 by (rewrite <-!associative, Hxy, !Ring.mul_0_r; reflexivity).
+      assert (0 = (inv y * (inv x * x)) * y) as H00. (rewrite <-!associative, Hxy, !Ring.mul_0_l; reflexivity).
       rewrite left_multiplicative_inverse in H00 by assumption.
       rewrite right_identity in H00.
       rewrite left_multiplicative_inverse in H00 by assumption.
@@ -456,128 +508,6 @@ Ltac field_simplify_eq_hyps :=
 Ltac field_simplify_eq_all := field_simplify_eq_hyps; try field_simplify_eq.
 
 
-(*** Tactics for manipulating polynomial equations *)
-Require Nsatz.
-Require Import List.
-Open Scope core_scope.
-
-Generalizable All Variables.
-Lemma cring_sub_diag_iff {R zero eq sub} `{cring:Cring.Cring (R:=R) (ring0:=zero) (ring_eq:=eq) (sub:=sub)}
-  : forall x y, eq (sub x y) zero <-> eq x y.
-Proof.
-  split;intros Hx.
-  { eapply Nsatz.psos_r1b. eapply Hx. }
-  { eapply Nsatz.psos_r1. eapply Hx. }
-Qed.
-
-Ltac get_goal := lazymatch goal with |- ?g => g end.
-
-Ltac nsatz_equation_implications_to_list eq zero g :=
-  lazymatch g with
-  | eq ?p zero => constr:(p::nil)
-  | eq ?p zero -> ?g => let l := nsatz_equation_implications_to_list eq zero g in constr:(p::l)
-  end.
-
-Ltac nsatz_reify_equations eq zero :=
-  let g := get_goal in
-  let lb := nsatz_equation_implications_to_list eq zero g in
-  lazymatch (eval red in (Ncring_tac.list_reifyl (lterm:=lb))) with
-    (?variables, ?le) =>
-    lazymatch (eval compute in (List.rev le)) with
-    | ?reified_goal::?reified_givens => constr:(variables, reified_givens, reified_goal)
-    end
-  end.
-
-Ltac nsatz_get_free_variables reified_package :=
-  lazymatch reified_package with (?fv, _, _) => fv end.
-
-Ltac nsatz_get_reified_givens reified_package :=
-  lazymatch reified_package with (_, ?givens, _) => givens end.
-
-Ltac nsatz_get_reified_goal reified_package :=
-  lazymatch reified_package with (_, _, ?goal) => goal end.
-
-Require Import Coq.setoid_ring.Ring_polynom.
-Ltac nsatz_compute_to_goal sugar nparams reified_goal power reified_givens :=
-  nsatz_compute (PEc sugar :: PEc nparams :: PEpow reified_goal power :: reified_givens).
-
-Ltac nsatz_compute_get_leading_coefficient :=
-  lazymatch goal with
-    |- Logic.eq ((?a :: _ :: ?b) :: ?c) _ -> _ => a
-  end.
-
-Ltac nsatz_compute_get_certificate :=
-  lazymatch goal with
-    |- Logic.eq ((?a :: _ :: ?b) :: ?c) _ -> _ => constr:(c,b)
-  end.
-
-Ltac nsatz_rewrite_and_revert domain :=
-  lazymatch type of domain with
-  | @Integral_domain.Integral_domain ?F ?zero _ _ _ _ _ ?eq ?Fops ?FRing ?FCring =>
-    lazymatch goal with
-    | |- eq _ zero => idtac
-    | |- eq _ _ => rewrite <-(cring_sub_diag_iff (cring:=FCring))
-    end;
-    repeat match goal with
-           | [H : eq _ zero |- _ ] => revert H
-           | [H : eq _ _ |- _ ] => rewrite <-(cring_sub_diag_iff (cring:=FCring)) in H; revert H
-           end
-  end.
-  
-Ltac nsatz_nonzero := 
-  try solve [apply Integral_domain.integral_domain_one_zero
-            |apply Integral_domain.integral_domain_minus_one_zero
-            |trivial
-            |apply Ring.opp_nonzero_nonzero;trivial].
-
-Ltac nsatz_domain_sugar_power domain sugar power := 
-  let nparams := constr:(BinInt.Zneg BinPos.xH) in (* some symbols can be "parameters", treated as coefficients *)
-  lazymatch type of domain with
-  | @Integral_domain.Integral_domain ?F ?zero _ _ _ _ _ ?eq ?Fops ?FRing ?FCring =>
-    nsatz_rewrite_and_revert domain;
-    let reified_package := nsatz_reify_equations eq zero in
-    let fv := nsatz_get_free_variables reified_package in
-    let interp := constr:(@Nsatz.PEevalR _ _ _ _ _ _ _ _ Fops fv) in
-    let reified_givens := nsatz_get_reified_givens reified_package in
-    let reified_goal := nsatz_get_reified_goal reified_package in
-    nsatz_compute_to_goal sugar nparams reified_goal power reified_givens;
-    let a := nsatz_compute_get_leading_coefficient in
-    let crt := nsatz_compute_get_certificate in
-    intros _ (* discard [nsatz_compute] output *); intros;
-    apply (fun Haa refl cond => @Integral_domain.Rintegral_domain_pow _ _ _ _ _ _ _ _ _ _ _ domain (interp a) _ (BinNat.N.to_nat power) Haa (@Nsatz.check_correct _ _ _ _ _ _ _ _ _ _ FCring fv reified_givens (PEmul a (PEpow reified_goal power)) crt refl cond));
-    [ nsatz_nonzero; cbv iota beta delta [Nsatz.PEevalR PEeval InitialRing.gen_phiZ InitialRing.gen_phiPOS]
-    | solve [vm_compute; exact (eq_refl true)] (* exact_no_check (eq_refl true) *)
-    | solve [repeat (split; [assumption|]); exact I] ]
-  end.
-
-Ltac nsatz_guess_domain :=
-  match goal with
-  | |- ?eq _ _ => constr:(_:Integral_domain.Integral_domain (ring_eq:=eq))
-  | |- not (?eq _ _) =>  constr:(_:Integral_domain.Integral_domain (ring_eq:=eq))
-  | [H: ?eq _ _ |- _ ] =>  constr:(_:Integral_domain.Integral_domain (ring_eq:=eq))
-  | [H: not (?eq _ _) |- _] =>  constr:(_:Integral_domain.Integral_domain (ring_eq:=eq))
-  end.
-
-Ltac nsatz_sugar_power sugar power :=
-  let domain := nsatz_guess_domain in
-  nsatz_domain_sugar_power domain sugar power.
-
-Tactic Notation "nsatz" constr(n) :=
-  let nn := (eval compute in (BinNat.N.of_nat n)) in
-  nsatz_sugar_power BinInt.Z0 nn.
-
-Tactic Notation "nsatz" := nsatz 1%nat || nsatz 2%nat || nsatz 3%nat || nsatz 4%nat || nsatz 5%nat.
-
-Ltac nsatz_contradict :=
-  intros;
-  let domain := nsatz_guess_domain in
-  lazymatch type of domain with
-  | @Integral_domain.Integral_domain _ ?zero ?one _ _ _ _ ?eq ?Fops ?FRing ?FCring =>
-    assert (eq one zero) as Hbad;
-    [nsatz; nsatz_nonzero
-    |destruct (Integral_domain.integral_domain_one_zero (Integral_domain:=domain) Hbad)]
-  end.
-
 (*** Polynomial equations over fields *)
 
 Ltac field_algebra :=
@@ -587,6 +517,7 @@ Ltac field_algebra :=
   repeat (apply conj);
   try solve
       [nsatz_nonzero
+      |apply Ring.opp_nonzero_nonzero;trivial
       |unfold not; intro; nsatz_contradict].
 
 Section Example.

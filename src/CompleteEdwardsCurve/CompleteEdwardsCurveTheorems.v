@@ -1,47 +1,32 @@
 Require Export Crypto.Spec.CompleteEdwardsCurve.
 
-Require Import Crypto.ModularArithmetic.FField.
-Require Import Crypto.ModularArithmetic.FNsatz.
+Require Import Crypto.Algebra Crypto.Nsatz.
 Require Import Crypto.CompleteEdwardsCurve.Pre.
-Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Crypto.Tactics.VerdiTactics.
 
 Module E.
+  Import Group Ring Field CompleteEdwardsCurve.E.
   Section CompleteEdwardsCurveTheorems.
-    Context {prm:TwistedEdwardsParams}.
-    Local Opaque q a d prime_q two_lt_q nonzero_a square_a nonsquare_d. (* [F_field] calls [compute] *)
-    Existing Instance prime_q.
+    Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv a d}
+            {field:@field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
+            {prm:@twisted_edwards_params F Feq Fzero Fone Fadd Fmul a d}.
+    Local Infix "=" := Feq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
+    Local Notation "0" := Fzero.  Local Notation "1" := Fone.
+    Local Infix "+" := Fadd. Local Infix "*" := Fmul.
+    Local Infix "-" := Fsub. Local Infix "/" := Fdiv.
+    Local Notation "x ^2" := (x*x) (at level 30).
+    Local Notation point := (@point F Feq Fone Fadd Fmul a d).
+    Local Notation onCurve := (@onCurve F Feq Fone Fadd Fmul a d).
+
+    Add Field _edwards_curve_theorems_field : (field_theory_for_stdlib_tactic (H:=field)).
   
-    Add Field Ffield_p' : (@Ffield_theory q _)
-      (morphism (@Fring_morph q),
-       preprocess [Fpreprocess],
-       postprocess [Fpostprocess; try exact Fq_1_neq_0; try assumption],
-       constants [Fconstant],
-       div (@Fmorph_div_theory q),
-       power_tac (@Fpower_theory q) [Fexp_tac]).
+    Definition eq (P Q:point) :=
+      let Feq2 (ab xy:F*F) := fst ab = fst xy /\ snd ab = snd xy in
+      Feq2 (coordinates P) (coordinates Q).
+    Infix "=" := eq : E_scope.
   
-    Add Field Ffield_notConstant : (OpaqueFieldTheory q)
-      (constants [notConstant]).
-  
-    Ltac clear_prm :=
-      generalize dependent a; intro a; intros;
-      generalize dependent d; intro d; intros;
-      generalize dependent prime_q; intro prime_q; intros;
-      generalize dependent q; intro q; intros;
-      clear prm.
-  
-    Lemma point_eq : forall xy1 xy2 pf1 pf2,
-      xy1 = xy2 -> exist E.onCurve xy1 pf1 = exist E.onCurve xy2 pf2.
-    Proof.
-      destruct xy1, xy2; intros; find_injection; intros; subst. apply f_equal.
-      apply UIP_dec, F_eq_dec. (* this is a hack. We actually don't care about the equality of the proofs. However, we *can* prove it, and knowing it lets us use the universal equality instead of a type-specific equivalence, which makes many things nicer. *)
-    Qed. Hint Resolve point_eq.
-  
-    Definition point_eqb (p1 p2:E.point) : bool := andb
-        (F_eqb (fst (proj1_sig p1)) (fst (proj1_sig p2)))
-        (F_eqb (snd (proj1_sig p1)) (snd (proj1_sig p2))).
-  
+    (* TODO:port
     Local Ltac t :=
       unfold point_eqb;
         repeat match goal with
@@ -94,207 +79,94 @@ Module E.
     Proof.
       intros. destruct (point_eq_dec p1 p2); eauto using point_eqb_complete, point_eqb_neq_complete.
     Qed.
+    *)
+
+    (* TODO: move to util *)
+    Lemma decide_and  : forall P Q, {P}+{not P} -> {Q}+{not Q} -> {P/\Q}+{not(P/\Q)}.
+    Proof. intros; repeat match goal with [H:{_}+{_}|-_] => destruct H end; intuition. Qed.
+
+    Ltac destruct_points := 
+      repeat match goal with
+             | [ p : point |- _ ] =>
+               let x := fresh "x" p in
+               let y := fresh "y" p in
+               let pf := fresh "pf" p in
+               destruct p as [[x y] pf]
+             end.
+
+    Ltac expand_opp :=
+      rewrite ?mul_opp_r, ?mul_opp_l, ?ring_sub_definition, ?inv_inv, <-?ring_sub_definition.
+
+    Local Hint Resolve char_gt_2.
+    Local Hint Resolve nonzero_a.
+    Local Hint Resolve square_a.
+    Local Hint Resolve nonsquare_d.
+    Local Hint Resolve @edwardsAddCompletePlus.
+    Local Hint Resolve @edwardsAddCompleteMinus.
   
-    Ltac Edefn := unfold E.add, E.add', E.zero; intros;
-                    repeat match goal with
-                           | [ p : E.point |- _ ] =>
-                             let x := fresh "x" p in
-                             let y := fresh "y" p in
-                             let pf := fresh "pf" p in
-                             destruct p as [[x y] pf]; unfold E.onCurve in pf
-                    | _ => eapply point_eq, (f_equal2 pair)
-                    | _ => eapply point_eq
-    end.
-    Lemma add_comm : forall A B, (A+B = B+A)%E.
+    Program Definition opp (P:point) : point :=
+      exist _ (let '(x, y) := coordinates P in (Fopp x, y) ) _.
+    Solve All Obligations using intros; destruct_points; simpl; field_algebra.
+
+    Global Instance edwards_acurve_abelian_group : abelian_group (eq:=eq)(op:=add)(id:=zero)(inv:=opp).
     Proof.
-      Edefn; apply (f_equal2 div); ring.
-    Qed.
-  
-    Ltac unifiedAdd_nonzero := match goal with
-    | [ |- (?op 1 (d * _ * _ * _ * _ *
-      inv (1 - d * ?xA * ?xB * ?yA * ?yB) * inv (1 + d * ?xA * ?xB * ?yA * ?yB)))%F <> 0%F]
-      => let Hadd := fresh "Hadd" in
-       pose proof (@unifiedAdd'_onCurve _ _ _ _ two_lt_q nonzero_a square_a nonsquare_d (xA, yA) (xB, yB)) as Hadd;
-       simpl in Hadd;
-       match goal with
-       | [H : (1 - d * ?xC * xB * ?yC * yB)%F <> 0%F |- (?op 1 ?other)%F <> 0%F] =>
-         replace other with
-          (d * xC * ((xA * yB + yA * xB) / (1 + d * xA * xB * yA * yB)) 
-          * yC * ((yA * yB - a * xA * xB) / (1 - d * xA * xB * yA * yB)))%F by (subst; unfold div; ring);
-          auto
-      end
-    end.
-  
-    Lemma add_assoc : forall A B C, (A+(B+C) = (A+B)+C)%E.
-    Proof.
-      Edefn; F_field_simplify_eq; try abstract (rewrite ?@F_pow_2_r in *; clear_prm; F_nsatz);
-        pose proof (@edwardsAddCompletePlus _ _ _ _ two_lt_q nonzero_a square_a nonsquare_d);
-        pose proof (@edwardsAddCompleteMinus _ _ _ _ two_lt_q nonzero_a square_a nonsquare_d);
-        cbv beta iota in *;
-        repeat split; field_nonzero idtac; unifiedAdd_nonzero.
-    Qed.
-  
-    Lemma add_0_r : forall P, (P + E.zero = P)%E.
-    Proof.
-      Edefn; repeat rewrite ?F_add_0_r, ?F_add_0_l, ?F_sub_0_l, ?F_sub_0_r,
-             ?F_mul_0_r, ?F_mul_0_l, ?F_mul_1_l, ?F_mul_1_r, ?F_div_1_r; exact eq_refl.
+        repeat match goal with
+               | |- _ => progress intros
+               | [H: _ /\ _ |- _ ] => destruct H
+               | |- _ => progress destruct_points
+               | |- _ => progress cbv [fst snd coordinates proj1_sig eq add zero opp] in *
+               | |- _ => split
+               | |- Feq _ _ => common_denominator_all; try nsatz
+               | |- _ <> 0 => expand_opp; solve [nsatz_nonzero|eauto]
+               | |- {_}+{_} => eauto 15 using decide_and, @eq_dec with typeclass_instances
+               end.
+        (* TODO: port denominator-nonzero proofs for associativity *)
+        match goal with | |- _ <> 0 => admit end.
+        match goal with | |- _ <> 0 => admit end.
+        match goal with | |- _ <> 0 => admit end.
+        match goal with | |- _ <> 0 => admit end.
     Qed.
 
-    Lemma add_0_l : forall P, (E.zero + P)%E = P.
+    (* TODO: move to [Group] and [AbelianGroup] as appropriate *)
+    Lemma mul_0_l : forall P, (0 * P = zero)%E.
+    Proof. intros; reflexivity. Qed.
+    Lemma mul_S_l : forall n P, (S n * P = P + n * P)%E.
+    Proof. intros; reflexivity. Qed.
+    Lemma mul_add_l : forall (n m:nat) (P:point), ((n + m)%nat * P = n * P + m * P)%E.
     Proof.
-      intros; rewrite add_comm. apply add_0_r.
+      induction n; intros;
+        rewrite ?plus_Sn_m, ?plus_O_n, ?mul_S_l, ?left_identity, <-?associative, <-?IHn; reflexivity.
     Qed.
-
-    Lemma mul_0_l : forall P, (0 * P = E.zero)%E.
-    Proof.
-      auto.
-    Qed.
-
-    Lemma mul_S_l : forall n P, (S n * P)%E = (P + n * P)%E.
-    Proof.
-      auto.
-    Qed.
-
-    Lemma mul_add_l : forall a b P, ((a + b)%nat * P)%E = E.add (a * P)%E (b * P)%E.
-    Proof.
-      induction a; intros; rewrite ?plus_Sn_m, ?plus_O_n, ?mul_S_l, ?mul_0_l, ?add_0_l, ?mul_S_, ?IHa, ?add_assoc; auto.
-    Qed.
-
     Lemma mul_assoc : forall (n m : nat) P, (n * (m * P) = (n * m)%nat * P)%E.
     Proof.
-      induction n; intros; auto.
-      rewrite ?mul_S_l, ?Mult.mult_succ_l, ?mul_add_l, ?IHn, add_comm. reflexivity.
+      induction n; intros; [reflexivity|].
+      rewrite ?mul_S_l, ?Mult.mult_succ_l, ?mul_add_l, ?IHn, commutative; reflexivity.
     Qed.
-
     Lemma mul_zero_r : forall m, (m * E.zero = E.zero)%E.
+    Proof. induction m; rewrite ?mul_S_l, ?left_identity, ?IHm; try reflexivity. Qed.
+    (*
+    Lemma opp_mul : forall n P, (opp (n * P) = n * (opp P))%E.
     Proof.
-      induction m; rewrite ?mul_S_l, ?add_0_l; auto.
+      induction n. intros. simpl. admit.
     Qed.
+     *)
   
-    (* solve for x ^ 2 *)
-    Definition solve_for_x2 (y : F q) := ((y ^ 2 - 1) / (d * (y ^ 2) - a))%F.
-  
-    Lemma d_y2_a_nonzero : (forall y, 0 <> d * y ^ 2 - a)%F.
-      intros ? eq_zero.
-      pose proof prime_q.
-      destruct square_a as [sqrt_a sqrt_a_id].
-      rewrite <- sqrt_a_id in eq_zero.
-      destruct (Fq_square_mul_sub _ _ _ eq_zero) as [ [sqrt_d sqrt_d_id] | a_zero].
-      + pose proof (nonsquare_d sqrt_d); auto.
-      + subst.
-        rewrite Fq_pow_zero in sqrt_a_id by congruence.
-        auto using nonzero_a.
-    Qed.
-  
-    Lemma a_d_y2_nonzero : (forall y, a - d * y ^ 2 <> 0)%F.
-    Proof.
-      intros y eq_zero.
-      pose proof prime_q.
-      eapply F_minus_swap in eq_zero.
-      eauto using (d_y2_a_nonzero y).
-    Qed.
-  
-    Lemma solve_correct : forall x y, E.onCurve (x, y) <->
-      (x ^ 2 = solve_for_x2 y)%F.
-    Proof.
-      split.
-      + intro onCurve_x_y.
-        pose proof prime_q.
-        unfold E.onCurve in onCurve_x_y.
-        eapply F_div_mul; auto using (d_y2_a_nonzero y).
-        replace (x ^ 2 * (d * y ^ 2 - a))%F with ((d * x ^ 2 * y ^ 2) - (a * x ^ 2))%F by ring.
-        rewrite F_sub_add_swap.
-        replace (y ^ 2 + a * x ^ 2)%F with (a * x ^ 2 + y ^ 2)%F by ring.
-        rewrite onCurve_x_y.
-        ring.
-      + intro x2_eq.
-        unfold E.onCurve, solve_for_x2 in *.
-        rewrite x2_eq.
-        field.
-        auto using d_y2_a_nonzero.
-    Qed.
-  
-  
-    Definition opp' (xy:(F q*F q)) : (F q * F q) := let '(x, y) := xy in (opp x, y).
-    Definition opp (P:E.point) : E.point. exists (opp' (proj1_sig P)).
-    Proof.
-      destruct P as [[]]; simpl; rewrite F_square_opp; trivial.
-    Defined.
-    
-    Definition sub P Q := (P + opp Q)%E.
-    
-    Lemma opp_zero : opp E.zero = E.zero.
-    Proof.
-      pose proof @F_opp_0.
-      unfold opp, opp', E.zero; simpl; eapply point_eq; congruence.
-    Qed.
-  
-    Lemma add_opp_r : forall P, (P + opp P = E.zero)%E.
-    Proof.
-      unfold opp, opp'; Edefn; rewrite ?@F_pow_2_r in *; (F_field_simplify_eq; [clear_prm; F_nsatz|..]);
-        rewrite <-?@F_pow_2_r in *;
-        pose proof (@edwardsAddCompletePlus _ _ _ _ two_lt_q nonzero_a square_a nonsquare_d _ _ _ _ pfP pfP);
-        pose proof (@edwardsAddCompleteMinus _ _ _ _ two_lt_q nonzero_a square_a nonsquare_d _ _ _ _ pfP pfP);
-        field_nonzero idtac.
-    Qed.
-  
-    Lemma add_opp_l : forall P, (opp P + P = E.zero)%E.
-    Proof.
-      intros. rewrite add_comm. eapply add_opp_r.
-    Qed.
-  
-    Lemma add_cancel_r : forall A B C, (B+A = C+A -> B = C)%E.
-    Proof.
-      intros.
-      assert ((B + A) + opp A = (C + A) + opp A)%E as Hc by congruence.
-      rewrite <-!add_assoc, !add_opp_r, !add_0_r in Hc; exact Hc.
-    Qed.
-  
-    Lemma add_cancel_l : forall A B C, (A+B = A+C -> B = C)%E.
-    Proof.
-      intros.
-      rewrite (add_comm A C) in H.
-      rewrite (add_comm A B) in H.
-      eauto using add_cancel_r.
-    Qed.
-    
-    Lemma shuffle_eq_add_opp : forall P Q R, (P + Q = R <-> Q = opp P + R)%E.
-    Proof.
-      split; intros.
-      { assert (opp P + (P + Q) = opp P + R)%E as Hc by congruence.
-        rewrite add_assoc, add_opp_l, add_comm, add_0_r in Hc; exact Hc. }
-      { subst. rewrite add_assoc, add_opp_r, add_comm, add_0_r; reflexivity. }
-    Qed.
-        
-    Lemma opp_opp : forall P, opp (opp P) = P.
-    Proof.
-      intros.
-      pose proof (add_opp_r P%E) as H.
-      rewrite add_comm in H.
-      rewrite shuffle_eq_add_opp in H.
-      rewrite add_0_r in H.
-      congruence.
-    Qed.
-    
-    Lemma opp_add : forall P Q, opp (P + Q)%E = (opp P + opp Q)%E.
-    Proof.
-      intros.
-      pose proof (add_opp_r (P+Q)%E) as H.
-      rewrite <-!add_assoc in H.
-      rewrite add_comm in H.
-      rewrite <-!add_assoc in H.
-      rewrite shuffle_eq_add_opp in H.
-      rewrite add_comm in H.
-      rewrite shuffle_eq_add_opp in H.
-      rewrite add_0_r in H.
-      assumption.
-    Qed.
+
+    Section PointCompression.
+      Local Notation "x ^2" := (x*x).
+      Definition solve_for_x2 (y : F) := ((y^2 - 1) / (d * (y^2) - a)).
       
-    Lemma opp_mul : forall n P, opp (E.mul n P) = E.mul n (opp P).
-    Proof.
-      pose proof opp_add; pose proof opp_zero.
-      induction n; trivial; intros; rewrite !mul_S_l, opp_add; congruence.
-    Qed.
+      Lemma a_d_y2_nonzero : forall y, d * y^2 - a <> 0.
+      Proof.
+        intros ? eq_zero.
+        destruct square_a as [sqrt_a sqrt_a_id]; rewrite <- sqrt_a_id in eq_zero.
+        destruct (eq_dec y 0); [apply nonzero_a|apply nonsquare_d with (sqrt_a/y)]; field_algebra.
+      Qed.
+      
+      Lemma solve_correct : forall x y, onCurve (x, y) <-> (x^2 = solve_for_x2 y).
+      Proof.
+        unfold solve_for_x2; simpl; split; intros; field_algebra; auto using a_d_y2_nonzero.
+      Qed.
+    End PointCompression.
   End CompleteEdwardsCurveTheorems.
 End E.
-Infix "-" := E.sub : E_scope.
