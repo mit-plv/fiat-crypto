@@ -27,9 +27,9 @@ Definition Z_shiftl_by_opt := Eval compute in Z_shiftl_by.
 Definition nth_default_opt {A} := Eval compute in @nth_default A.
 Definition set_nth_opt {A} := Eval compute in @set_nth A.
 Definition map_opt {A B} := Eval compute in @map A B.
-Definition base_from_limb_widths_opt := Eval compute in base_from_limb_widths.
 Definition full_carry_chain_opt := Eval compute in @full_carry_chain.
 Definition length_opt := Eval compute in length.
+Definition base_opt := Eval compute in @base.
 
 Definition Let_In {A P} (x : A) (f : forall y : A, P y)
   := let y := x in f y.
@@ -115,8 +115,9 @@ Section Carries.
     rewrite <- pull_app_if_sumbool.
     cbv beta delta
       [carry carry_and_reduce carry_simple add_to_nth log_cap
-       pow2_mod Z.ones Z.pred base
+       pow2_mod Z.ones Z.pred
        PseudoMersenneBaseParams.limb_widths].
+    change @base with @base_opt.
     change @nth_default with @nth_default_opt in *.
     change @set_nth with @set_nth_opt in *.
     lazymatch goal with
@@ -131,7 +132,6 @@ Section Carries.
     change @set_nth with @set_nth_opt.
     change @map with @map_opt.
     rewrite <- @beq_nat_eq_nat_dec.
-    change base_from_limb_widths with base_from_limb_widths_opt.
     reflexivity.
   Defined.
 
@@ -193,6 +193,39 @@ Section Carries.
     @carry_opt_cps T i f b = f (carry i b)
     := proj2_sig (carry_opt_cps_sig i f b).
 
+  Definition carry_sequence_opt_cps2_sig {T} (is : list nat) (us : digits)
+     (f : digits -> T)
+    : { b : T | (forall i, In i is -> i < length base)%nat -> b = f (carry_sequence is us) }.
+  Proof.
+    eexists.
+    cbv [carry_sequence].
+    transitivity (fold_right carry_opt_cps f (List.rev is) us).
+    Focus 2.
+    { 
+      assert (forall i, In i (rev is) -> i < length base)%nat as Hr. {
+        subst. intros. rewrite <- in_rev in *. auto. }
+      remember (rev is) as ris eqn:Heq.
+      rewrite <- (rev_involutive is), <- Heq.
+      clear H Heq is.
+      rewrite fold_left_rev_right.
+      revert us; induction ris; [ reflexivity | ]; intros.
+      { simpl.
+        rewrite <- IHris; clear IHris; [|intros; apply Hr; right; assumption].
+        rewrite carry_opt_cps_correct; [reflexivity|].
+        apply Hr; left; reflexivity.
+        } }
+    Unfocus.
+    reflexivity.
+  Defined.
+
+  Definition carry_sequence_opt_cps2 {T} is us (f : digits -> T) :=
+    Eval cbv [proj1_sig carry_sequence_opt_cps2_sig] in
+      proj1_sig (carry_sequence_opt_cps2_sig is us f).
+
+  Definition carry_sequence_opt_cps2_correct {T} is us (f : digits -> T)
+    : (forall i, In i is -> i < length base)%nat -> carry_sequence_opt_cps2 is us f = f (carry_sequence is us)
+    := proj2_sig (carry_sequence_opt_cps2_sig is us f).
+
   Definition carry_sequence_opt_cps_sig (is : list nat) (us : digits)
     : { b : digits | (forall i, In i is -> i < length base)%nat -> b = carry_sequence is us }.
   Proof.
@@ -234,8 +267,7 @@ Section Carries.
     rewrite carry_sequence_opt_cps_correct by assumption.
     apply carry_sequence_rep; eauto using rep_length.
   Qed.
-
-
+ 
   Lemma full_carry_chain_bounds : forall i, In i full_carry_chain -> (i < length base)%nat.
   Proof.
     unfold full_carry_chain; rewrite <-base_length; intros.
@@ -256,6 +288,27 @@ Section Carries.
 
   Definition carry_full_opt_correct us : carry_full_opt us = carry_full us :=
     proj2_sig (carry_full_opt_sig us).
+
+  Definition carry_full_opt_cps_sig
+             {T}
+             (f : digits -> T)
+             (us : digits)
+    : { d : T | d = f (carry_full us) }.
+  Proof.
+    eexists.
+    rewrite <- carry_full_opt_correct.
+    cbv beta iota delta [carry_full_opt].
+    rewrite carry_sequence_opt_cps_correct by apply full_carry_chain_bounds.
+    rewrite <-carry_sequence_opt_cps2_correct by apply full_carry_chain_bounds.
+    reflexivity.
+  Defined.
+
+  Definition carry_full_opt_cps {T} (f : digits -> T) (us : digits) : T
+    := Eval cbv [proj1_sig carry_full_opt_cps_sig] in proj1_sig (carry_full_opt_cps_sig f us).
+
+  Definition carry_full_opt_cps_correct {T} us (f : digits -> T) :
+    carry_full_opt_cps f us = f (carry_full us) :=
+    proj2_sig (carry_full_opt_cps_sig f us).
 
 End Carries.
 
@@ -439,12 +492,11 @@ Section Multiplication.
     eexists.
     cbv [BaseSystem.mul mul mul_each mul_bi mul_bi' zeros ext_base reduce].
     rewrite <- mul'_opt_correct.
-    cbv [base PseudoMersenneBaseParams.limb_widths].
+    change @base with base_opt.
     rewrite map_shiftl by apply k_nonneg.
     rewrite c_subst.
     rewrite k_subst.
-    change @map with @map_opt.
-    change base_from_limb_widths with base_from_limb_widths_opt.  
+    change @map with @map_opt. 
     change @Z_shiftl_by with @Z_shiftl_by_opt.
     reflexivity.
   Defined.
@@ -505,6 +557,8 @@ Section Canonicalization.
     eexists.
     cbv [isFull'].
     change max_bound with max_bound_opt.
+    rewrite c_subst.
+    change Z.sub with Z_sub_opt.
     reflexivity.
   Defined.
 
@@ -514,35 +568,96 @@ Section Canonicalization.
   Definition isFull'_opt_correct us full i: isFull'_opt us full i = isFull' us full i :=
     proj2_sig (isFull'_opt_sig us full i).
 
-  Definition and_term_opt_sig (us : T) : { b : Z | b = and_term us }.
+  Definition and_term_opt_sig (us : list Z) : { b : Z | b = and_term us }.
   Proof.
     eexists.
     cbv [and_term isFull].
     change length with length_opt.
     rewrite <-isFull'_opt_correct.
     change max_ones with max_ones_opt.
+    change @base with base_opt.
+    change minus with minus_opt.
     reflexivity.
   Defined.
 
-  Definition and_term_opt (us : T) : Z
+  Definition and_term_opt (us : digits) : Z
     := Eval cbv [proj1_sig and_term_opt_sig] in proj1_sig (and_term_opt_sig us).
 
   Definition and_term_opt_correct us : and_term_opt us = and_term us :=
-    proj2_sig (and_term_opt_sig us).
+    proj2_sig (and_term_opt_sig us). 
+
+  Definition modulus_digits_opt_sig :
+    { b : digits | b = modulus_digits }.
+  Proof.
+    eexists.
+    cbv beta iota delta [modulus_digits modulus_digits' app].
+    change max_bound with max_bound_opt.
+    rewrite c_subst.
+    change length with length_opt.
+    change minus with minus_opt.
+    change Z.add with Z_add_opt.
+    change Z.sub with Z_sub_opt.
+    change @base with base_opt.
+    reflexivity.
+  Defined.
+
+  Definition modulus_digits_opt : digits
+    := Eval cbv [proj1_sig modulus_digits_opt_sig] in proj1_sig (modulus_digits_opt_sig).
+
+  Definition modulus_digits_opt_correct
+    : modulus_digits_opt = modulus_digits
+    := proj2_sig (modulus_digits_opt_sig).
+
+
+  Definition carry_full_3_opt_cps_sig
+             {T} (f : digits -> T)
+             (us : digits)
+    : { d : T | d = f (carry_full (carry_full (carry_full us))) }.
+  Proof.
+    eexists.
+    transitivity (carry_full_opt_cps c_ (carry_full_opt_cps c_ (carry_full_opt_cps c_ f)) us).
+    Focus 2. {
+      rewrite !carry_full_opt_cps_correct by assumption; reflexivity.
+    }
+    Unfocus.
+    reflexivity.
+  Defined.
+
+  Definition carry_full_3_opt_cps {T} (f : digits -> T) (us : digits) : T
+    := Eval cbv [proj1_sig carry_full_3_opt_cps_sig] in proj1_sig (carry_full_3_opt_cps_sig f us).
+
+  Definition carry_full_3_opt_cps_correct {T} (f : digits -> T) us :
+    carry_full_3_opt_cps f us = f (carry_full (carry_full (carry_full us))) :=
+    proj2_sig (carry_full_3_opt_cps_sig f us).
 
   Definition freeze_opt_sig (us : T) :
     { b : digits | b = freeze us }.
   Proof.
     eexists.
-    cbv beta iota delta [freeze map2].
-    repeat erewrite <-carry_full_opt_correct by eauto.
-    change and_term with and_term_opt.
+    cbv [freeze].
+    cbv [and_term].
+    let LHS := match goal with |- ?LHS = ?RHS => LHS end in
+    let RHS := match goal with |- ?LHS = ?RHS => RHS end in
+    let RHSf := match (eval pattern (isFull (carry_full (carry_full (carry_full us)))) in RHS) with ?RHSf _ => RHSf end in
+    change (LHS = Let_In (isFull(carry_full (carry_full (carry_full us)))) RHSf).
+    let LHS := match goal with |- ?LHS = ?RHS => LHS end in
+    let RHS := match goal with |- ?LHS = ?RHS => RHS end in
+    let RHSf := match (eval pattern (carry_full (carry_full (carry_full us))) in RHS) with ?RHSf _ => RHSf end in
+    rewrite <-carry_full_3_opt_cps_correct with (f := RHSf).
+    cbv beta iota delta [and_term isFull isFull'].
+    change length with length_opt.
+    change max_bound with max_bound_opt.
+    rewrite c_subst.
+    change max_ones with max_ones_opt.
+    change @base with base_opt.
+    change minus with minus_opt.
+    rewrite <-modulus_digits_opt_correct.
     change @map with @map_opt.
     reflexivity.
   Defined.
 
   Definition freeze_opt (us : T) : digits
-    := Eval cbv [proj1_sig freeze_opt_sig] in proj1_sig (freeze_opt_sig us).
+    := Eval cbv beta iota delta [proj1_sig freeze_opt_sig] in proj1_sig (freeze_opt_sig us).
 
   Definition freeze_opt_correct us
     : freeze_opt us = freeze us
@@ -565,14 +680,14 @@ Section Canonicalization.
     eauto using freeze_preserves_rep.
   Qed.
 
-  Lemma freeze_opt_spec : forall us x, rep us x ->
-    rep (freeze_opt us) x /\
-    (forall vs, rep vs x ->
-      @pre_carry_bounds _ _ int_width us ->
-      @pre_carry_bounds _ _ int_width vs ->
-      freeze_opt us = freeze_opt vs).
+  Lemma freeze_opt_spec : forall us vs x, rep us x -> rep vs x ->
+    @pre_carry_bounds _ _ int_width us ->
+    @pre_carry_bounds _ _ int_width vs ->
+    (PseudoMersenneBaseRep.rep (freeze_opt us) x /\ freeze_opt us = freeze_opt vs).
   Proof.
-    split; eauto using freeze_opt_preserves_rep; eauto using freeze_opt_canonical.
+    split; eauto using freeze_opt_canonical.
+    change PseudoMersenneBaseRep.rep with rep.
+    auto using freeze_opt_preserves_rep.
   Qed.
 
 End Canonicalization.
