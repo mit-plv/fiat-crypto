@@ -16,6 +16,7 @@ Local Open Scope Z.
 
 Definition modulus : Z := 2^255 - 19.
 Lemma prime_modulus : prime modulus. Admitted.
+Definition int_width := 32%Z.
 
 Instance params25519 : PseudoMersenneBaseParams modulus.
   construct_params prime_modulus 10%nat 255.
@@ -27,30 +28,17 @@ Instance subCoeff : SubtractionCoefficient modulus params25519.
   apply Build_SubtractionCoefficient with (coeff := mul2modulus); cbv; auto.
 Defined.
 
+Definition freezePreconditions25519 : freezePreconditions params25519 int_width.
+Proof.
+  constructor; compute_preconditions.
+Defined.
+
 (* END PseudoMersenneBaseParams instance construction. *)
 
 (* Precompute k and c *)
 Definition k_ := Eval compute in k.
 Definition c_ := Eval compute in c.
-Definition base_ := Eval compute in base.
-Definition limb_widths_ := Eval compute in limb_widths.
-
 Definition c_subst : c = c_ := eq_refl c_.
-
-Lemma c_reduce1 : (c * Z.ones (32 - log_cap (pred (length base))) < max_bound 0 + 1)%Z.
-Proof.
-  cbv; congruence.
-Qed.
-
-Lemma c_reduce2 : c <= max_bound 0 - c.
-Proof.
-  cbv; congruence.
-Qed.
-
-Lemma two_pow_k_le_2modulus : (2 ^ k <= 2 * modulus)%Z.
-Proof.
-  cbv; congruence.
-Qed.
 
 (* Makes Qed not take forever *)
 Opaque Z.shiftr Pos.iter Z.div2 Pos.div2 Pos.div2_up Pos.succ Z.land
@@ -68,6 +56,7 @@ Proof.
   eexists; intros ? ? Hf Hg.
   pose proof (carry_mul_opt_rep k_ c_ (eq_refl k_) c_subst _ _ _ _ Hf Hg) as Hfg.
   compute_formula.
+  exact Hfg.
 Time Defined.
 
 Extraction "/tmp/test.ml" GF25519Base25Point5_mul_reduce_formula.
@@ -88,6 +77,7 @@ Proof.
   intros f g Hf Hg.
   pose proof (add_opt_rep _ _ _ _ Hf Hg) as Hfg.
   compute_formula.
+  exact Hfg.
 Defined.
 
 Lemma GF25519Base25Point5_sub_formula :
@@ -101,6 +91,7 @@ Proof.
   intros f g Hf Hg.
   pose proof (sub_opt_rep _ _ _ _ Hf Hg) as Hfg.
   compute_formula.
+  exact Hfg.
 Defined.
 
 Lemma GF25519Base25Point5_freeze_formula :
@@ -110,35 +101,14 @@ Lemma GF25519Base25Point5_freeze_formula :
 Proof.
   eexists.
   intros x Hf.
-  assert (1 < length base)%nat as lt_1_length_base by (cbv; repeat constructor).
-  assert (0 < 32)%Z by omega.
-  assert (forall w : Z, In w limb_widths -> (w <= 32)%Z) by
-    (cbv [limb_widths params25519 limb_widths_from_len In]; intros w w_cases;
-     repeat (destruct w_cases as  [ ? | w_cases]; [ subst; omega | ]); exfalso; assumption).
-  assert (0 < c)%Z by (change c with c_; cbv; congruence).
-  pose proof c_reduce1.
-  pose proof c_reduce2.
-  pose proof two_pow_k_le_2modulus.
-  pose proof (@freeze_opt_preserves_rep modulus params25519 subCoeff c_ (eq_refl c_) lt_1_length_base 32) as Hfreeze_rep.
-  repeat match goal with H : ?P, H' : ?P -> _ |- _ => specialize (H' H) end.
-  specialize (Hfreeze_rep _ _ Hf).
-  change ModularBaseSystem.rep with rep in Hfreeze_rep.
-  match goal with H : @rep ?M ?P (?f ?l) ?result |- _ =>
-    let m := fresh "m" in
-        set (m := M) in H at 1; change M with m in |- * at 1;
-         (let p := fresh "p" in
-          set (p := P) in H at 1; change P with p in |- * at 1;
-           (let r := fresh "r" in
-            set (r := result) in H |- *))
-  end.
-  cbv [freeze_opt] in Hfreeze_rep.
-  cbv [carry_full_3_opt_cps] in Hfreeze_rep.
-  cbv -[m p r rep] in Hfreeze_rep.
+  pose proof (freeze_opt_preserves_rep _ c_subst freezePreconditions25519 _ _ Hf) as Hfreeze_rep.
+  compute_formula.
   exact Hfreeze_rep.
 Defined.
 
 (* Uncomment the below to see pretty-printed freeze function *)
 (*
+Set Printing Depth 1000.
 Local Transparent Let_In.
 Infix "<<" := Z.shiftr (at level 50).
 Infix "&" := Z.land (at level 50).

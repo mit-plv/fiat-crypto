@@ -30,6 +30,9 @@ Definition map_opt {A B} := Eval compute in @map A B.
 Definition full_carry_chain_opt := Eval compute in @full_carry_chain.
 Definition length_opt := Eval compute in length.
 Definition base_opt := Eval compute in @base.
+Definition max_ones_opt := Eval compute in @max_ones.
+Definition max_bound_opt := Eval compute in @max_bound.
+Definition minus_opt := Eval compute in minus.
 
 Definition Let_In {A P} (x : A) (f : forall y : A, P y)
   := let y := x in f y.
@@ -80,6 +83,10 @@ Definition construct_mul2modulus {m} (prm : PseudoMersenneBaseParams m) : digits
       2 ^ (x + 1) - (2 * c) :: map (fun w => 2 ^ (w + 1) - 2) tail
   end.
 
+Ltac compute_preconditions :=
+  cbv; intros; repeat match goal with H : _ \/ _ |- _  =>
+    destruct H; subst; [ congruence | ] end; (congruence || omega).
+
 Ltac subst_precondition := match goal with
   | [H : ?P, H' : ?P -> _ |- _] => specialize (H' H); clear H
 end.
@@ -97,8 +104,7 @@ Ltac compute_formula :=
     let p := fresh "p" in set (p := P) in H at 1; change P with p at 1;
     let r := fresh "r" in set (r := result) in H |- *;
     cbv -[m p r PseudoMersenneBaseRep.rep] in H;
-    repeat rewrite ?Z.mul_1_r, ?Z.add_0_l, ?Z.add_assoc, ?Z.mul_assoc in H;
-    exact H
+    repeat rewrite ?Z.mul_1_r, ?Z.add_0_l, ?Z.add_assoc, ?Z.mul_assoc in H
   end.
 
 Section Carries.
@@ -181,7 +187,7 @@ Section Carries.
     change (LHS = Let_In (nth_default_opt 0%Z b i) RHSf).
     change Z.shiftl with Z_shiftl_opt.
     change (-1) with (Z_opp_opt 1).
-    change Z.add with Z_add_opt at 8 12 20 24.
+    change Z.add with Z_add_opt at 5 9 17 21.
     reflexivity.
   Defined.
 
@@ -536,62 +542,31 @@ Section Multiplication.
 
 End Multiplication.
 
+Record freezePreconditions {modulus} (prm : PseudoMersenneBaseParams modulus) int_width :=
+mkFreezePreconditions {
+    lt_1_length_base : (1 < length base)%nat;
+    int_width_pos : 0 < int_width;
+    int_width_compat : forall w, In w limb_widths -> w <= int_width;
+    c_pos : 0 < c;
+    c_reduce1 : c * (Z.ones (int_width - log_cap (pred (length base)))) < max_bound 0 + 1;
+    c_reduce2 : c <= max_bound 0 - c;
+    two_pow_k_le_2modulus : 2 ^ k <= 2 * modulus
+}.
+Local Hint Resolve lt_1_length_base int_width_pos int_width_compat c_pos
+    c_reduce1 c_reduce2 two_pow_k_le_2modulus.
+
 Section Canonicalization.
   Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient modulus prm}
     (* allows caller to precompute k and c *)
     (k_ c_ : Z) (k_subst : k = k_) (c_subst : c = c_)
-    (lt_1_length_base : (1 < length base)%nat)
-    {int_width} (int_width_pos : 0 < int_width) (int_width_compat : forall w, In w limb_widths -> w <= int_width)
-    (c_pos : 0 < c)
-    (c_reduce1 : c * (Z.ones (int_width - log_cap (pred (length base)))) < max_bound 0 + 1)
-    (c_reduce2 : c <= max_bound 0 - c)
-    (two_pow_k_le_2modulus : 2 ^ k <= 2 * modulus).
-
-  Definition max_ones_opt := Eval compute in max_ones.
-  Definition max_bound_opt := Eval compute in max_bound.
-  Definition minus_opt := Eval compute in minus.
-
-  Definition isFull'_opt_sig (us : T) full i :
-    { b : bool | b = isFull' us full i }.
-  Proof.
-    eexists.
-    cbv [isFull'].
-    change max_bound with max_bound_opt.
-    rewrite c_subst.
-    change Z.sub with Z_sub_opt.
-    reflexivity.
-  Defined.
-
-  Definition isFull'_opt (us : T) full i: bool
-    := Eval cbv [proj1_sig isFull'_opt_sig] in proj1_sig (isFull'_opt_sig us full i).
-
-  Definition isFull'_opt_correct us full i: isFull'_opt us full i = isFull' us full i :=
-    proj2_sig (isFull'_opt_sig us full i).
-
-  Definition and_term_opt_sig (us : list Z) : { b : Z | b = and_term us }.
-  Proof.
-    eexists.
-    cbv [and_term isFull].
-    change length with length_opt.
-    rewrite <-isFull'_opt_correct.
-    change max_ones with max_ones_opt.
-    change @base with base_opt.
-    change minus with minus_opt.
-    reflexivity.
-  Defined.
-
-  Definition and_term_opt (us : digits) : Z
-    := Eval cbv [proj1_sig and_term_opt_sig] in proj1_sig (and_term_opt_sig us).
-
-  Definition and_term_opt_correct us : and_term_opt us = and_term us :=
-    proj2_sig (and_term_opt_sig us). 
+    {int_width} (preconditions : freezePreconditions prm int_width).
 
   Definition modulus_digits_opt_sig :
     { b : digits | b = modulus_digits }.
   Proof.
     eexists.
     cbv beta iota delta [modulus_digits modulus_digits' app].
-    change max_bound with max_bound_opt.
+    change @max_bound with max_bound_opt.
     rewrite c_subst.
     change length with length_opt.
     change minus with minus_opt.
@@ -646,13 +621,14 @@ Section Canonicalization.
     rewrite <-carry_full_3_opt_cps_correct with (f := RHSf).
     cbv beta iota delta [and_term isFull isFull'].
     change length with length_opt.
-    change max_bound with max_bound_opt.
+    change @max_bound with max_bound_opt.
     rewrite c_subst.
-    change max_ones with max_ones_opt.
+    change @max_ones with max_ones_opt.
     change @base with base_opt.
     change minus with minus_opt.
-    rewrite <-modulus_digits_opt_correct.
     change @map with @map_opt.
+    change Z.sub with Z_sub_opt at 1.
+    rewrite <-modulus_digits_opt_correct.
     reflexivity.
   Defined.
 
@@ -664,20 +640,23 @@ Section Canonicalization.
     := proj2_sig (freeze_opt_sig us).
 
   Lemma freeze_opt_canonical: forall us vs x,
-    @pre_carry_bounds _ _ int_width us -> rep us x -> 
-    @pre_carry_bounds _ _ int_width vs -> rep vs x ->
+    @pre_carry_bounds _ _ int_width us -> PseudoMersenneBaseRep.rep us x -> 
+    @pre_carry_bounds _ _ int_width vs -> PseudoMersenneBaseRep.rep vs x ->
     freeze_opt us = freeze_opt vs.
   Proof.
     intros.
     rewrite !freeze_opt_correct.
+    change PseudoMersenneBaseRep.rep with rep in *.
     eapply freeze_canonical with (B := int_width); eauto.
   Qed.
 
-  Lemma freeze_opt_preserves_rep : forall us x, rep us x -> rep (freeze_opt us) x.
+  Lemma freeze_opt_preserves_rep : forall us x, PseudoMersenneBaseRep.rep us x ->
+    PseudoMersenneBaseRep.rep (freeze_opt us) x.
   Proof.
     intros.
     rewrite freeze_opt_correct.
-    eauto using freeze_preserves_rep.
+    change PseudoMersenneBaseRep.rep with rep in *.
+    eapply freeze_preserves_rep; eauto.
   Qed.
 
   Lemma freeze_opt_spec : forall us vs x, rep us x -> rep vs x ->
@@ -686,7 +665,6 @@ Section Canonicalization.
     (PseudoMersenneBaseRep.rep (freeze_opt us) x /\ freeze_opt us = freeze_opt vs).
   Proof.
     split; eauto using freeze_opt_canonical.
-    change PseudoMersenneBaseRep.rep with rep.
     auto using freeze_opt_preserves_rep.
   Qed.
 
