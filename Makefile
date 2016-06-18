@@ -4,10 +4,21 @@ SRC_DIR  := src
 .PHONY: coq clean install coqprime-8.4 coqprime-8.5 coqprime update-_CoqProject
 .DEFAULT_GOAL := coq
 
+VERBOSE = 0
+
+SILENCE_COQC_0 = @echo "COQC $<"; #
+SILENCE_COQC_1 =
+SILENCE_COQC = $(SILENCE_COQC_$(VERBOSE))
+
+SILENCE_COQDEP_0 = @echo "COQDEP $<"; #
+SILENCE_COQDEP_1 =
+SILENCE_COQDEP = $(SILENCE_COQDEP_$(VERBOSE))
+
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g'
 
 update-_CoqProject::
-	(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-R Bedrock Bedrock'; (git ls-files 'src/*.v' 'Bedrock/*.v' | $(SORT_COQPROJECT))) > _CoqProject
+	$(VECHO) "GIT LS-FILES *.V > _COQPROJECT"
+	$(Q)(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-R Bedrock Bedrock'; (git ls-files 'src/*.v' 'Bedrock/*.v' | $(SORT_COQPROJECT))) > _CoqProject
 
 coq: coqprime Makefile.coq
 	$(MAKE) -f Makefile.coq
@@ -28,7 +39,8 @@ coqprime-8.5:
 	$(MAKE) -C coqprime-8.5
 
 Makefile.coq: Makefile _CoqProject
-	$(COQBIN)coq_makefile -f _CoqProject -o Makefile.coq
+	$(VECHO) "COQ_MAKEFILE"
+	$(Q)$(COQBIN)coq_makefile -f _CoqProject -o Makefile.coq
 
 clean: Makefile.coq
 	$(MAKE) -f Makefile.coq clean
