@@ -3,8 +3,6 @@ Require Export ZArith Sumbool.
 Require Export Bedrock.Word.
 Require Import Logic.Eqdep_dec ProofIrrelevance.
 
-Import Util.
-
 Module EvalUtil.
   Definition evalTest {n} (o: TestOp) (a b: word n): bool :=
     let c := (N.compare (wordToN a) (wordToN b)) in
@@ -25,11 +23,11 @@ Module EvalUtil.
     match io with
     | Add =>
       let v := (wordToN x + wordToN y)%N in
-      let c := (N.compare v (Npow2 b)) in
+      let c := (overflows x y) in
 
       match c as c' return c' = c -> _ with
-      | Lt => fun _ => (NToWord b v, Some false)
-      | _ => fun _ => (NToWord b v, Some true)
+      | right _ => fun _ => (NToWord b v, Some false)
+      | left _ => fun _ => (NToWord b v, Some true)
       end eq_refl
 
     | Sub => (wminus x y, None)

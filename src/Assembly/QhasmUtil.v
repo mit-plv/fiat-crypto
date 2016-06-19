@@ -3,44 +3,70 @@ Require Import ZArith NArith NPeano.
 Require Import QhasmCommon.
 Require Export Bedrock.Word.
 
-Module Util.
-  (* Magical Bitwise Manipulations *)
+Delimit Scope nword_scope with w.
+Local Open Scope nword_scope.
 
-  (* Force w to be m bits long, by truncation or zero-extension *)
-  Definition trunc {n} (m: nat) (w: word n): word m.
-    destruct (lt_eq_lt_dec n m) as [s|s]; try destruct s as [s|s].
+Notation "& x" := (wordToN x) (at level 30) : nword_scope.
+Notation "** x" := (NToWord _ x) (at level 30) : nword_scope.
 
-  - replace m with (n + (m - n)) by abstract intuition.
-    refine (zext w (m - n)).
+Section Util.
+  Definition convS {A B: Set} (x: A) (H: A = B): B :=
+    eq_rect A (fun B0 : Set => B0) x B H.
 
-  - rewrite <- s; assumption.
-
-  - replace n with (m + (n - m)) in w by abstract intuition.
-    refine (split1 m (n-m) w).
+  Definition high {k n: nat} (p: (k <= n)%nat) (w: word n): word k.
+    refine (split1 k (n - k) (convS w _)).
+    abstract (replace n with (k + (n - k)) by omega; intuition).
   Defined.
 
-  (* Get the index-th m-bit block of w *)
-  Definition getIndex {n} (w: word n) (m index: nat): word m.
-    replace n with
-      ((min n (m * index)) + (n - (min n (m * index))))%nat
-      in w by abstract (
-      assert ((min n (m * index)) <= n)%nat
-          by apply Nat.le_min_l;
-      intuition).
-
-    refine
-      (trunc m
-      (split2 (min n (m * index)) (n - min n (m * index)) w)).
+  Definition low {k n: nat} (p: (k <= n)%nat) (w: word n): word k.
+    refine (split2 (n - k) k (convS w _)).
+    abstract (replace n with (k + (n - k)) by omega; intuition).
   Defined.
 
-  (* set the index-th m-bit block of w to s *)
-  Definition setInPlace {n m} (w: word n) (s: word m) (index: nat): word n :=
-    (w ^& (wnot (trunc n (combine (wones m) (wzero (index * m)%nat)))))
-       ^| (trunc n (combine s (wzero (index * m)%nat))).
+  Definition extend {k n: nat} (p: (k <= n)%nat) (w: word k): word n.
+    refine (convS (zext w (n - k)) _).
+    abstract (replace (k + (n - k)) with n by omega; intuition).
+  Defined.
+
+  Definition shiftr {n} (w: word n) (k: nat): word n :=
+    match (le_dec k n) with
+    | left p => extend p (high p w)
+    | right _ => wzero n
+    end.
+
+  Definition mask {n} (k: nat) (w: word n): word n :=
+    match (le_dec k n) with
+    | left p => extend p (low p w)
+    | right _ => w
+    end.
+
+  Definition overflows {n} (out0 out1: word n) :
+      {(&out0 + &out1 >= Npow2 n)%N} + {(&out0 + &out1 < Npow2 n)%N}.
+    refine (
+      let c := ((& out0)%w + (& out1)%w ?= Npow2 n)%N in
+      match c as c' return c = c' -> _ with
+      | Lt => fun _ => right _
+      | _ => fun _ => left _
+      end eq_refl); abstract (
+        unfold c in *; unfold N.lt, N.ge;
+        rewrite _H in *; intuition; try inversion H).
+  Defined.
+
+  Definition break {n} (m: nat) (x: word n): word m * word (n - m).
+    refine match (le_dec m n) with
+    | left p => (extend _ (low p x), extend _ (@high (n - m) n _ x))
+    | right p => (extend _ x, _)
+    end; try abstract intuition.
+
+    replace (n - m) with O by abstract omega; exact WO.
+  Defined.
 
   (* Option utilities *)
   Definition omap {A B} (x: option A) (f: A -> option B) :=
     match x with | Some y => f y | _ => None end.
 
   Notation "A <- X ; B" := (omap X (fun A => B)) (at level 70, right associativity).
+
 End Util.
+
+Close Scope nword_scope.

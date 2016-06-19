@@ -2,50 +2,22 @@
 Require Export Bedrock.Word Bedrock.Nomega.
 Require Import NArith PArith Ndigits Nnat NPow NPeano Ndec Compare_dec.
 Require Import FunctionalExtensionality ProofIrrelevance.
+Require Import QhasmUtil.
 
 Hint Rewrite wordToN_nat Nat2N.inj_add N2Nat.inj_add
              Nat2N.inj_mul N2Nat.inj_mul Npow2_nat : N.
 
-Delimit Scope wordize_scope with w.
-Local Open Scope wordize_scope.
-
-Notation "& x" := (wordToN x) (at level 30) : wordize_scope.
-Notation "** x" := (NToWord _ x) (at level 30) : wordize_scope.
-
-Section Definitions.
-  Definition convS {A B: Set} (x: A) (H: A = B): B :=
-    eq_rect A (fun B0 : Set => B0) x B H.
-
-  Definition high {k n: nat} (p: (k <= n)%nat) (w: word n): word k.
-    refine (split1 k (n - k) (convS w _)).
-    abstract (replace n with (k + (n - k)) by omega; intuition).
-  Defined.
-
-  Definition low {k n: nat} (p: (k <= n)%nat) (w: word n): word k.
-    refine (split2 (n - k) k (convS w _)).
-    abstract (replace n with (k + (n - k)) by omega; intuition).
-  Defined.
-
-  Definition extend {k n: nat} (p: (k <= n)%nat) (w: word k): word n.
-    refine (convS (zext w (n - k)) _).
-    abstract (replace (k + (n - k)) with n by omega; intuition).
-  Defined.
-
-  Definition shiftr {n} (w: word n) (k: nat): word n :=
-    match (le_dec k n) with
-    | left p => extend p (high p w)
-    | right _ => wzero n
-    end.
-
-  Definition mask {n} (k: nat) (w: word n): word n :=
-    match (le_dec k n) with
-    | left p => extend p (low p w)
-    | right _ => w
-    end.
-
-End Definitions.
+Open Scope nword_scope.
 
 Section WordizeUtil.
+  Lemma break_spec: forall (m n: nat) (x: word n) low high,
+      (low, high) = break m x
+    -> &x = (&high * Npow2 m + &low)%N.
+  Proof.
+    intros; unfold break in *; destruct (le_dec m n);
+      inversion H; subst; clear H; simpl.
+  Admitted.
+ 
   Lemma mask_wand : forall (n: nat) (x: word n) m b,
       (& (mask (N.to_nat m) x) < b)%N
     -> (& (x ^& (@NToWord n (N.ones m))) < b)%N.
@@ -186,13 +158,17 @@ Section WordizeUtil.
       rewrite Pos.mul_xO_r; intuition.
   Qed.
 
+  Lemma Npow2_ignore: forall {n} (x: word n),
+    x = NToWord _ (& x + Npow2 n).
+  Proof. intros. Admitted.
+
 End WordizeUtil.
 
 (** Wordization Lemmas **)
 
 Section Wordization.
 
-  Lemma wordize_plus: forall {n} (x y: word n) (b: N),
+  Lemma wordize_plus': forall {n} (x y: word n) (b: N),
       (b <= Npow2 n)%N
     -> (&x < b)%N
     -> (&y < (Npow2 n - b))%N
@@ -215,7 +191,20 @@ Section Wordization.
         apply N.lt_le_incl; assumption.
   Qed.
 
-  Lemma wordize_mult: forall {n} (x y: word n) (b: N),
+  Lemma wordize_plus: forall {n} (x y: word n),
+    if (overflows x y)
+    then (&x + &y)%N = (& (x ^+ y) + Npow2 n)%N
+    else (&x + &y)%N = & (x ^+ y).
+  Proof.
+    intros; induction (overflows x y).
+
+    - admit.
+
+    - admit.
+
+  Qed.
+
+  Lemma wordize_mult': forall {n} (x y: word n) (b: N),
       (1 < n)%nat -> (0 < b)%N
     -> (&x < b)%N
     -> (&y < (Npow2 n) / b)%N
@@ -229,6 +218,13 @@ Section Wordization.
 
     - apply N.mul_div_le; nomega.
   Qed.
+
+  Definition highBits {n} (m: nat) (x: word n) := snd (break m x).
+
+  Lemma wordize_mult: forall {n} (x y: word n) (b: N),
+    (&x * &y)%N = (&(x ^* y) +
+      &((highBits (n/2) x) ^* (highBits (n/2) y)) * Npow2 n)%N.
+  Proof. intros. Admitted.
 
   Lemma wordize_and: forall {n} (x y: word n),
     N.land (&x) (&y) = & (x ^& y).
@@ -308,7 +304,7 @@ Section Bounds.
     intros.
 
     destruct (Nlt_dec (b1 + b2)%N (Npow2 n));
-      rewrite <- wordize_plus with (b := b1);
+      rewrite <- wordize_plus' with (b := b1);
       try apply N.add_lt_mono;
       try assumption.
 
@@ -323,7 +319,7 @@ Section Bounds.
   Proof.
     intros.
     destruct (Nlt_dec (b1 * b2)%N (Npow2 n));
-      rewrite <- wordize_mult with (b := b1);
+      rewrite <- wordize_mult' with (b := b1);
       try apply N.mul_lt_mono;
       try assumption;
       try nomega.
@@ -405,8 +401,8 @@ End Bounds.
 
 Ltac wordize_ast :=
   repeat match goal with
-  | [ H: (& ?x < ?b)%N |- context[((& ?x) + (& ?y))%N] ] => rewrite (wordize_plus x y b)
-  | [ H: (& ?x < ?b)%N |- context[((& ?x) * (& ?y))%N] ] => rewrite (wordize_mult x y b)
+  | [ H: (& ?x < ?b)%N |- context[((& ?x) + (& ?y))%N] ] => rewrite (wordize_plus' x y b)
+  | [ H: (& ?x < ?b)%N |- context[((& ?x) * (& ?y))%N] ] => rewrite (wordize_mult' x y b)
   | [ |- context[N.land (& ?x) (& ?y)] ] => rewrite (wordize_and x y)
   | [ |- context[N.shiftr (& ?x) ?k] ] => rewrite (wordize_shiftr x k)
   | [ |- (_ < _ / _)%N ] => unfold N.div; simpl
@@ -511,4 +507,4 @@ Module WordizationExamples.
 
 End WordizationExamples.
 
-Close Scope wordize_scope.
+Close Scope nword_scope.

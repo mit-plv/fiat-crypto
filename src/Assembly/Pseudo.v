@@ -3,7 +3,7 @@ Require Import Language.
 Require Import List.
 
 Module Pseudo <: Language.
-  Import EvalUtil ListState Util.
+  Import EvalUtil ListState.
 
   Inductive Pseudo {w: nat} {s: Width w}: nat -> nat -> Type :=
     | PVar: forall n, option bool -> Index n -> Pseudo n 1
@@ -85,7 +85,7 @@ Module Pseudo <: Language.
 
     | PComb n a b f g =>
       omap (pseudoEval f st) (fun sf =>
-        omap (pseudoEval g st) (fun sg =>
+        omap (pseudoEval g (setList (getList st) sf)) (fun sg =>
           Some (setList ((getList sf) ++ (getList sg)) sg)))
 
     | PIf n m t i0 i1 l r =>
