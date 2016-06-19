@@ -4,6 +4,9 @@ Require Import Crypto.Algebra Crypto.Nsatz.
 Require Import Crypto.CompleteEdwardsCurve.Pre.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Crypto.Tactics.VerdiTactics.
+Require Import Coq.Classes.Morphisms.
+Require Import Relation_Definitions.
+Require Import Crypto.Util.Fieldwise.
 
 Module E.
   Import Group Ring Field CompleteEdwardsCurve.E.
@@ -21,12 +24,10 @@ Module E.
 
     Add Field _edwards_curve_theorems_field : (field_theory_for_stdlib_tactic (H:=field)).
   
-    Definition eq (P Q:point) :=
-      let Feq2 (ab xy:F*F) := fst ab = fst xy /\ snd ab = snd xy in
-      Feq2 (coordinates P) (coordinates Q).
+    Definition eq (P Q:point) := fieldwise (n:=2) Feq (coordinates P) (coordinates Q).
     Infix "=" := eq : E_scope.
   
-    (* TODO:port
+    (* TODO: decide whether we still want something like this, then port
     Local Ltac t :=
       unfold point_eqb;
         repeat match goal with
@@ -108,23 +109,30 @@ Module E.
       exist _ (let '(x, y) := coordinates P in (Fopp x, y) ) _.
     Solve All Obligations using intros; destruct_points; simpl; field_algebra.
 
+    Ltac bash :=
+      repeat match goal with
+             | |- _ => progress intros
+             | [H: _ /\ _ |- _ ] => destruct H
+             | |- _ => progress destruct_points
+             | |- _ => progress cbv [fst snd coordinates proj1_sig eq fieldwise fieldwise' add zero opp] in *
+             | |- _ => split
+             | |- Feq _ _ => field_algebra
+             | |- _ <> 0 => expand_opp; solve [nsatz_nonzero|eauto]
+             | |- {_}+{_} => eauto 15 using decide_and, @eq_dec with typeclass_instances
+             end.
+
+    Global Instance Proper_add : Proper (eq==>eq==>eq) add. Proof. bash. Qed.
+    Global Instance Proper_opp : Proper (eq==>eq) opp. Proof. bash. Qed.
+    Global Instance Proper_coordinates : Proper (eq==>fieldwise (n:=2) Feq) coordinates. Proof. bash. Qed.
+
     Global Instance edwards_acurve_abelian_group : abelian_group (eq:=eq)(op:=add)(id:=zero)(inv:=opp).
     Proof.
-        repeat match goal with
-               | |- _ => progress intros
-               | [H: _ /\ _ |- _ ] => destruct H
-               | |- _ => progress destruct_points
-               | |- _ => progress cbv [fst snd coordinates proj1_sig eq add zero opp] in *
-               | |- _ => split
-               | |- Feq _ _ => common_denominator_all; try nsatz
-               | |- _ <> 0 => expand_opp; solve [nsatz_nonzero|eauto]
-               | |- {_}+{_} => eauto 15 using decide_and, @eq_dec with typeclass_instances
-               end.
-        (* TODO: port denominator-nonzero proofs for associativity *)
-        match goal with | |- _ <> 0 => admit end.
-        match goal with | |- _ <> 0 => admit end.
-        match goal with | |- _ <> 0 => admit end.
-        match goal with | |- _ <> 0 => admit end.
+      bash.
+      (* TODO: port denominator-nonzero proofs for associativity *)
+      match goal with | |- _ <> 0 => admit end.
+      match goal with | |- _ <> 0 => admit end.
+      match goal with | |- _ <> 0 => admit end.
+      match goal with | |- _ <> 0 => admit end.
     Qed.
 
     (* TODO: move to [Group] and [AbelianGroup] as appropriate *)
@@ -144,13 +152,8 @@ Module E.
     Qed.
     Lemma mul_zero_r : forall m, (m * E.zero = E.zero)%E.
     Proof. induction m; rewrite ?mul_S_l, ?left_identity, ?IHm; try reflexivity. Qed.
-    (*
     Lemma opp_mul : forall n P, (opp (n * P) = n * (opp P))%E.
-    Proof.
-      induction n. intros. simpl. admit.
-    Qed.
-     *)
-  
+    Admitted.
 
     Section PointCompression.
       Local Notation "x ^2" := (x*x).
@@ -169,4 +172,57 @@ Module E.
       Qed.
     End PointCompression.
   End CompleteEdwardsCurveTheorems.
+
+  Section Homomorphism.
+    Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv Fa Fd}
+            {fieldF:@field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
+            {Fprm:@twisted_edwards_params F Feq Fzero Fone Fadd Fmul Fa Fd}.
+    Context {K Keq Kzero Kone Kopp Kadd Ksub Kmul Kinv Kdiv Ka Kd}
+            {fieldK:@field K Keq Kzero Kone Kopp Kadd Ksub Kmul Kinv Kdiv}
+            {Kprm:@twisted_edwards_params K Keq Kzero Kone Kadd Kmul Ka Kd}.
+    Context {phi:F->K} {Hphi:@Ring.is_homomorphism F Feq Fone Fadd Fmul
+                                                   K Keq Kone Kadd Kmul phi}.
+    Context {Ha:Keq (phi Fa) Ka} {Hd:Keq (phi Fd) Kd}.
+    Local Notation Fpoint := (@point F Feq Fone Fadd Fmul Fa Fd).
+    Local Notation Kpoint := (@point K Keq Kone Kadd Kmul Ka Kd).
+
+    Create HintDb field_homomorphism discriminated.
+    Hint Rewrite <-
+         homomorphism_one
+         homomorphism_add 
+         homomorphism_sub 
+         homomorphism_mul 
+         homomorphism_div 
+         Ha
+         Hd
+      : field_homomorphism.
+
+    Program Definition ref_phi (P:Fpoint) : Kpoint := exist _ (
+      let (x, y) := coordinates P in (phi x, phi y)) _.
+    Next Obligation.
+      destruct P as [[? ?] ?]; simpl.
+      rewrite_strat bottomup hints field_homomorphism.
+      eauto using is_homomorphism_phi_proper; assumption.
+    Qed.
+
+    Context {point_phi:Fpoint->Kpoint}
+            {point_phi_Proper:Proper (eq==>eq) point_phi}
+            {point_phi_correct: forall (P:Fpoint), eq (point_phi P) (ref_phi P)}.
+
+    Lemma lift_homomorphism : @Group.is_homomorphism Fpoint eq add Kpoint eq add point_phi.
+    Proof.
+      repeat match goal with
+             | |- Group.is_homomorphism => split
+             | |- _ => intro
+             | |-  _ /\ _ => split
+             | [H: _ /\ _ |- _ ] => destruct H
+             | [p: point |- _ ] => destruct p as [[??]?]
+             | |- context[point_phi] => setoid_rewrite point_phi_correct
+             | |- _ => progress cbv [fst snd coordinates proj1_sig eq fieldwise fieldwise' add zero opp ref_phi] in *
+             | |- Keq ?x ?x => reflexivity
+             | |- Keq ?x ?y => rewrite_strat bottomup hints field_homomorphism
+             | [ H : Feq _ _ |- Keq (phi _) (phi _)] => solve [f_equiv; intuition]
+             end.
+      Qed.
+  End Homomorphism.
 End E.

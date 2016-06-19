@@ -1,5 +1,5 @@
 Require Import Coq.Classes.Morphisms. Require Coq.Setoids.Setoid.
-Require Import Crypto.Algebra.
+Require Import Crypto.Algebra Crypto.Nsatz.
 
 Generalizable All Variables.
 Section Pre.
@@ -38,7 +38,7 @@ Section Pre.
         => apply d_nonsquare with (sqrt_d:= (f (sqrt_a * x1) (d * x1 * x2 * y1 * y2 * y1))
                                            /(f (sqrt_a * x2) y2   *   x1 * y1           ))
       | _ => apply a_nonzero
-      end; field_algebra; auto using Ring.opp_nonzero_nonzero.
+      end; field_algebra; auto using Ring.opp_nonzero_nonzero; intro; nsatz_contradict.
   Qed.
 
   Lemma edwardsAddCompletePlus x1 y1 x2 y2 :

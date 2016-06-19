@@ -1,5 +1,5 @@
 (*** Tactics for manipulating polynomial equations *)
-Require Nsatz.
+Require Coq.nsatz.Nsatz.
 Require Import List.
 
 Generalizable All Variables.
@@ -109,6 +109,7 @@ Tactic Notation "nsatz" constr(n) :=
 Tactic Notation "nsatz" := nsatz 1%nat || nsatz 2%nat || nsatz 3%nat || nsatz 4%nat || nsatz 5%nat.
 
 Ltac nsatz_contradict :=
+  unfold not;
   intros;
   let domain := nsatz_guess_domain in
   lazymatch type of domain with

@@ -17,8 +17,6 @@ src/Encoding/ModularWordEncodingTheorems.v
 src/Encoding/PointEncodingPre.v
 src/Encoding/PointEncodingTheorems.v
 src/ModularArithmetic/ExtendedBaseVector.v
-src/ModularArithmetic/FField.v
-src/ModularArithmetic/FNsatz.v
 src/ModularArithmetic/ModularArithmeticTheorems.v
 src/ModularArithmetic/ModularBaseSystem.v
 src/ModularArithmetic/ModularBaseSystemOpt.v
@@ -41,6 +39,7 @@ src/Specific/GF1305.v
 src/Specific/GF25519.v
 src/Tactics/VerdiTactics.v
 src/Util/CaseUtil.v
+src/Util/Fieldwise.v
 src/Util/IterAssocOp.v
 src/Util/ListUtil.v
 src/Util/NatUtil.v

@@ -181,6 +181,15 @@ Module Monoid.
   End Monoid.
 End Monoid.
 
+Section ZeroNeqOne.
+  Context {T eq zero one} `{@is_zero_neq_one T eq zero one} `{Equivalence T eq}.
+
+  Lemma one_neq_zero : not (eq one zero).
+  Proof.
+    intro HH; symmetry in HH. auto using zero_neq_one.
+  Qed.
+End ZeroNeqOne.
+
 Module Group.
   Section BasicProperties.
     Context {T eq op id inv} `{@group T eq op id inv}.
@@ -195,11 +204,37 @@ Module Group.
     Proof. eauto using Monoid.inv_inv, left_inverse. Qed.
     Lemma inv_op x y : (inv y*inv x)*(x*y) =id.
     Proof. eauto using Monoid.inv_op, left_inverse. Qed.
+
+    Lemma inv_unique x ix : ix * x = id -> ix = inv x.
+    Proof.
+      intro Hix.
+      cut (ix*x*inv x = inv x).
+      - rewrite <-associative, right_inverse, right_identity; trivial.
+      - rewrite Hix, left_identity; reflexivity.
+    Qed.
+
+    Lemma inv_id : inv id = id.
+    Proof. symmetry. eapply inv_unique, left_identity. Qed.
+
+    Lemma inv_nonzero_nonzero : forall x, x <> id -> inv x <> id.
+    Proof.
+      intros ? Hx Ho.
+      assert (Hxo: x * inv x = id) by (rewrite right_inverse; reflexivity).
+      rewrite Ho, right_identity in Hxo. intuition.
+   Qed.
+
+    Section ZeroNeqOne.
+      Context {one} `{is_zero_neq_one T eq id one}.
+      Lemma opp_one_neq_zero : inv one <> id.
+      Proof. apply inv_nonzero_nonzero, one_neq_zero. Qed.
+      Lemma zero_neq_opp_one : id <> inv one.
+      Proof. intro Hx. symmetry in Hx. eauto using opp_one_neq_zero. Qed.
+    End ZeroNeqOne.
   End BasicProperties.
 
   Section Homomorphism.
-    Context {H eq op id inv} `{@group H eq op id inv}.
-    Context {G EQ OP ID INV} `{@group G EQ OP ID INV}.
+    Context {G EQ OP ID INV} {groupG:@group G EQ OP ID INV}.
+    Context {H eq op id inv} {groupH:@group H eq op id inv}.
     Context {phi:G->H}.
     Local Infix "=" := eq. Local Infix "=" := eq : type_scope.
 
@@ -296,6 +331,8 @@ Module Ring.
       rewrite <-!associative, right_inverse, right_identity; reflexivity.
     Qed.
 
+    Definition opp_nonzero_nonzero : forall x, x <> 0 -> opp x <> 0 := Group.inv_nonzero_nonzero.
+
     Global Instance is_left_distributive_sub : is_left_distributive (eq:=eq)(add:=sub)(mul:=mul).
     Proof.
       split; intros. rewrite !ring_sub_definition, left_distributive.
@@ -319,13 +356,6 @@ Module Ring.
       - intros; eapply right_distributive.
       - intros; eapply left_distributive.
     Qed.
-    
-    Lemma opp_nonzero_nonzero : forall x, x <> 0 -> opp x <> 0.
-    Proof.
-      intros ? Hx Ho.
-      assert (Hxo: x + opp x = 0) by (rewrite right_inverse; reflexivity).
-      rewrite Ho, right_identity in Hxo. intuition.
-   Qed.
   End Ring.
 
   Section Homomorphism.
@@ -382,7 +412,7 @@ Module Ring.
 End Ring.
 
 Module IntegralDomain.
-  Section CommutativeRing.
+  Section IntegralDomain.
     Context {T eq zero one opp add sub mul} `{@integral_domain T eq zero one opp add sub mul}.
     
     Lemma mul_nonzero_nonzero_cases (x y : T)
@@ -400,7 +430,7 @@ Module IntegralDomain.
       - auto using mul_nonzero_nonzero_cases.
       - intro bad; symmetry in bad; auto using zero_neq_one.
     Qed.
-  End CommutativeRing.
+  End IntegralDomain.
 End IntegralDomain.
 
 Module Field.
@@ -454,7 +484,6 @@ Module Field.
   End Homomorphism.
 End Field.
 
-
 (*** Tactics for manipulating field equations *)
 Require Import Coq.setoid_ring.Field_tac.
 
@@ -488,7 +517,7 @@ Ltac common_denominator_in H :=
 
 Ltac common_denominator_all := 
   common_denominator;
-  repeat match goal with [H: _ |- _ _ _ ] => common_denominator_in H end.
+  repeat match goal with [H: _ |- _ _ _ ] => progress common_denominator_in H end.
 
 Inductive field_simplify_done {T} : T -> Type :=
   Field_simplify_done : forall H, field_simplify_done H.
@@ -510,15 +539,22 @@ Ltac field_simplify_eq_all := field_simplify_eq_hyps; try field_simplify_eq.
 
 (*** Polynomial equations over fields *)
 
+Ltac neq01 :=
+  try solve
+      [apply zero_neq_one
+      |apply Group.zero_neq_opp_one
+      |apply one_neq_zero
+      |apply Group.opp_one_neq_zero].
+
 Ltac field_algebra :=
   intros;
   common_denominator_all;
   try (nsatz; dropRingSyntax);
   repeat (apply conj);
   try solve
-      [nsatz_nonzero
-      |apply Ring.opp_nonzero_nonzero;trivial
-      |unfold not; intro; nsatz_contradict].
+      [neq01
+      |trivial
+      |apply Ring.opp_nonzero_nonzero;trivial].
 
 Section Example.
   Context {F zero one opp add sub mul inv div} `{F_field:field F eq zero one opp add sub mul inv div}.
