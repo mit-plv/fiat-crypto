@@ -215,7 +215,10 @@ Module ListState.
     (fst st, Some v).
 
   Definition setCarryOpt {n: nat} (v: option bool) (st: ListState n): ListState n :=
-    (fst st, v).
+    match v with
+    | Some v' => (fst st, v)
+    | None => st
+    end.
 
 End ListState.
 
