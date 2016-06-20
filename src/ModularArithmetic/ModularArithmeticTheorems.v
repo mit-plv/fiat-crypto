@@ -150,14 +150,12 @@ Section FandZ.
   Qed.
 
   Require Crypto.Algebra.
-  Global Instance ring_modulo : @Algebra.ring (F m) Logic.eq (ZToField 0) (ZToField 1) opp add sub mul.
+  Global Instance commutative_ring_modulo : @Algebra.commutative_ring (F m) Logic.eq (ZToField 0) (ZToField 1) opp add sub mul.
   Proof.
-    repeat split; Fdefn.
+    repeat split; Fdefn; try apply F_eq_dec.
     { rewrite Z.add_0_r. auto. }
-    { apply F_eq_dec. }
     { rewrite <-Z.add_sub_swap, <-Z.add_sub_assoc, Z.sub_diag, Z.add_0_r. apply Z_mod_same_full. }
     { rewrite Z.mul_1_r. auto. }
-    { apply F_eq_dec. }
   Qed.
 
   Lemma ZToField_0 : @ZToField m 0 = 0.

@@ -10,6 +10,7 @@ Require Import Coq.ZArith.BinInt Coq.NArith.BinNat Coq.ZArith.ZArith Coq.ZArith.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Crypto.Util.NumTheoryUtil Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tactics.
+Require Crypto.Algebra.
 
 Existing Class prime.
 
@@ -50,6 +51,14 @@ Section FieldModuloPre.
   Definition Ffield_theory : field_theory 0%F 1%F (@add q) (@mul q) (@sub q) (@opp q) (@div q) (@inv q) eq.
   Proof.
     constructor; auto using Fring_theory, Fq_1_neq_0, F_mul_inv_l.
+  Qed.
+
+  Global Instance field_modulo : @Algebra.field (F q) Logic.eq (ZToField 0) (ZToField 1) opp add sub mul inv div.
+  Proof.
+    constructor; try solve_proper.
+    - apply commutative_ring_modulo.
+    - split. auto using F_mul_inv_l.
+    - split. auto using Fq_1_neq_0.
   Qed.
 End FieldModuloPre.
 
