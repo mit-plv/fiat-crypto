@@ -57,8 +57,9 @@ Proof.
   pose proof (carry_mul_opt_rep k_ c_ (eq_refl k_) c_subst _ _ _ _ Hf Hg) as Hfg.
   compute_formula.
   exact Hfg.
-Time Defined.
+(*Time*) Defined.
 
+(* Uncomment this to see a pretty-printed mulmod
 Local Transparent Let_In.
 Infix "<<" := Z.shiftr (at level 50).
 Infix "&" := Z.land (at level 50).
@@ -68,6 +69,7 @@ Eval cbv beta iota delta [proj1_sig GF25519Base25Point5_mul_reduce_formula Let_I
     GF25519Base25Point5_mul_reduce_formula f0 f1 f2 f3 f4 f5 f6 f7 f8 f9
                                            g0 g1 g2 g3 g4 g5 g6 g7 g8 g9).
 Local Opaque Let_In.
+*)
 
 
 Extraction "/tmp/test.ml" GF25519Base25Point5_mul_reduce_formula.
@@ -169,7 +171,7 @@ Definition F25519Rep_mul (f g:F25519Rep) : F25519Rep.
                     clear r;
                     exact (r9, r8, r7, r6, r5, r4, r3, r2, r1, r0)
   end.
-Time Defined.
+(*Time*) Defined.
 
 Lemma F25519_mul_OK : RepBinOpOK F25519RepConversions ModularArithmetic.mul F25519Rep_mul.
   cbv iota beta delta [RepBinOpOK F25519RepConversions F25519Rep_mul toRep unRep F25519toRep F25519unRep].
