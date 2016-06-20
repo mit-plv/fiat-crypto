@@ -1,6 +1,6 @@
 Require Import Coq.ZArith.ZArith Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.ZArith.Znumtheory.
 Require Import Coq.Numbers.Natural.Peano.NPeano Coq.NArith.NArith.
-Require Import Crypto.Spec.PointEncoding Crypto.Spec.ModularWordEncoding.
+Require Import Crypto.Spec.ModularWordEncoding.
 Require Import Crypto.Encoding.ModularWordEncodingTheorems.
 Require Import Crypto.Spec.EdDSA.
 Require Import Crypto.Spec.CompleteEdwardsCurve Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
@@ -13,7 +13,7 @@ Require Import Coq.omega.Omega.
 
 Local Open Scope nat_scope.
 Definition q : Z := (2 ^ 255 - 19)%Z.
-Lemma prime_q : prime q. Admitted.
+Global Instance prime_q : prime q. Admitted.
 Lemma two_lt_q : (2 < q)%Z. reflexivity. Qed.
 
 Definition a : F q := opp 1%F.
@@ -65,24 +65,23 @@ Lemma nonsquare_d : forall x, (x^2 <> d)%F.
   exact eq_refl.
 Qed. (* 10s *)
 
-Instance curve25519params : TwistedEdwardsParams := {
-  q := q;
-  prime_q := prime_q;
-  two_lt_q := two_lt_q;
-  a := a;
-  nonzero_a := nonzero_a;
-  square_a := square_a;
-  d := d;
-  nonsquare_d := nonsquare_d
-}.
+Instance curve25519params : @E.twisted_edwards_params (F q) eq (ZToField 0) (ZToField 1) add mul a d :=
+  {
+    nonzero_a := nonzero_a
+                   (* TODO:port
+    char_gt_2 : ~ Feq (Fadd Fone Fone) Fzero;
+    nonzero_a : ~ Feq a Fzero;
+    nonsquare_d : forall x : F, ~ Feq (Fmul x x) d }
+                    *)
+  }.
+Admitted.
 
 Lemma two_power_nat_Z2Nat : forall n, Z.to_nat (two_power_nat n) = 2 ^ n.
 Admitted.
 
 Definition b := 256.
-Lemma b_valid : (2 ^ (b - 1) > Z.to_nat CompleteEdwardsCurve.q)%nat.
+Lemma b_valid : (2 ^ (b - 1) > Z.to_nat q)%nat.
 Proof.
-  replace (CompleteEdwardsCurve.q) with q by reflexivity.
   unfold q, gt.
   replace (2 ^ (b - 1)) with (Z.to_nat (2 ^ (Z.of_nat (b - 1))))
     by (rewrite <- two_power_nat_equiv; apply two_power_nat_Z2Nat).
@@ -143,37 +142,24 @@ Proof.
   reflexivity.
 Qed.
 
-Definition PointEncoding : canonical encoding of E.point as (word b) :=
-  (@point_encoding curve25519params (b - 1) q_5mod8 sqrt_minus1_valid FqEncoding sign_bit
-  (@sign_bit_zero _ prime_q two_lt_q _ b_valid) (@sign_bit_opp _ prime_q two_lt_q _ b_valid)).
+Local Notation point := (@E.point (F q) eq (ZToField 1) add mul a d).
+Local Notation zero := (E.zero(H:=field_modulo)).
+Local Notation add := (E.add(H0:=curve25519params)).
+Local Infix "*" := (E.mul(H0:=curve25519params)).
+Axiom H : forall n : nat, word n -> word (b + b).
+Axiom B : point. (* TODO: B = decodePoint (y=4/5, x="positive") *)
+Axiom B_nonzero : B <> zero.
+Axiom l_order_B : l * B = zero.
+Axiom point_encoding : canonical encoding of point as word b.
+Axiom scalar_encoding : canonical encoding of {n : nat | n < l} as word b.
 
-Definition H : forall n : nat, word n -> word (b + b). Admitted.
-Definition B : E.point. Admitted. (* TODO: B = decodePoint (y=4/5, x="positive") *)
-Definition B_nonzero : B <> E.zero. Admitted.
-Definition l_order_B : (l * B)%E = E.zero. Admitted.
-
-Local Instance ed25519params : EdDSAParams := {
-  E := curve25519params;
-  b := b;
-  H := H;
-  c := c;
-  n := n;
-  B := B;
-  l := l;
-  FqEncoding := FqEncoding;
-  FlEncoding := FlEncoding;
-  PointEncoding := PointEncoding;
-
-  b_valid := b_valid;
-  c_valid := c_valid;
-  n_ge_c := n_ge_c;
-  n_le_b := n_le_b;
-  B_not_identity := B_nonzero;
-  l_prime := prime_l;
-  l_odd := l_odd;
-  l_order_B := l_order_B
-}.
-
-Definition ed25519_verify
-  : forall (pubkey:word b) (len:nat) (msg:word len) (sig:word (b+b)), bool
-  := @verify ed25519params.
+Global Instance Ed25519 : @EdDSA point E.eq add zero E.opp E.mul b H c n l B point_encoding scalar_encoding :=
+  {
+    EdDSA_c_valid := c_valid;
+    EdDSA_n_ge_c := n_ge_c;
+    EdDSA_n_le_b := n_le_b;
+    EdDSA_B_not_identity := B_nonzero;
+    EdDSA_l_prime := prime_l;
+    EdDSA_l_odd := l_odd;
+    EdDSA_l_order_B := l_order_B
+  }.
