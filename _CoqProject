@@ -2,11 +2,15 @@
 -R Bedrock Bedrock
 Bedrock/Nomega.v
 Bedrock/Word.v
+src/Algebra.v
 src/BaseSystem.v
 src/BaseSystemProofs.v
 src/EdDSAProofs.v
+src/Field.v
+src/Nsatz.v
 src/Rep.v
 src/Testbit.v
+src/UnfinishedDerivations.v
 src/CompleteEdwardsCurve/CompleteEdwardsCurveTheorems.v
 src/CompleteEdwardsCurve/DoubleAndAdd.v
 src/CompleteEdwardsCurve/ExtendedCoordinates.v
@@ -17,8 +21,6 @@ src/Encoding/ModularWordEncodingTheorems.v
 src/Encoding/PointEncodingPre.v
 src/Encoding/PointEncodingTheorems.v
 src/ModularArithmetic/ExtendedBaseVector.v
-src/ModularArithmetic/FField.v
-src/ModularArithmetic/FNsatz.v
 src/ModularArithmetic/ModularArithmeticTheorems.v
 src/ModularArithmetic/ModularBaseSystem.v
 src/ModularArithmetic/ModularBaseSystemOpt.v
@@ -36,7 +38,6 @@ src/Spec/Encoding.v
 src/Spec/ModularArithmetic.v
 src/Spec/ModularWordEncoding.v
 src/Spec/PointEncoding.v
-src/Specific/Ed25519.v
 src/Specific/GF1305.v
 src/Specific/GF25519.v
 src/Tactics/VerdiTactics.v
@@ -46,5 +47,6 @@ src/Util/ListUtil.v
 src/Util/NatUtil.v
 src/Util/NumTheoryUtil.v
 src/Util/Tactics.v
+src/Util/Tuple.v
 src/Util/WordUtil.v
 src/Util/ZUtil.v

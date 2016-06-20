@@ -75,4 +75,34 @@ Section EdDSAProofs.
   Proof.
     unfold verify, sign, public; arith; try break_if; intuition.
   Qed.
+
+  (*  This is just an experiment, talk to andreser if you think this is a good idea *)
+  Inductive valid {n:nat} : word b -> Word.word n -> word (b+b) -> Prop :=
+    Valid : forall (A:E.point) (M:Word.word n) (S:nat) (R:E.point),
+      (S * B = R + (H (enc R ++ enc A ++ M)) * A)%E
+      -> valid (enc A) M (enc R ++ enc (ZToField (BinInt.Z.of_nat S))).
+  Goal forall A_ {n} (M:Word.word n) sig, verify A_ M sig = true <-> valid A_ M sig.
+    split; unfold verify.
+    Focus 2. {
+      intros.
+      inversion H. subst.
+      rewrite !Word.split2_combine, !Word.split1_combine, !encoding_valid.
+      rewrite FieldToZ_ZToField.
+      rewrite <-Zdiv.mod_Zmod by admit.
+      rewrite Znat.Nat2Z.id.
+      rewrite <-H0.
+      assert ((S mod l) * B = S * B)%E as Hl by admit; rewrite Hl.
+      destruct (E.point_eq_dec (S * B)%E); congruence.
+    } Unfocus. {
+      repeat match goal with |- context [match ?x with _ => _ end] => case_eq x; intro end; try congruence.
+      intros. clear H.
+      repeat match goal with [H: _ |- _ ] => apply encoding_canonical in H end; subst.
+      rewrite <-(Word.combine_split b b sig).
+      rewrite <-H0 in *; clear H0. rewrite <-H2  in *; clear H2.
+      assert (f = (ZToField (BinInt.Z.of_nat (BinInt.Z.to_nat (FieldToZ f))))) as H1. {
+        rewrite Znat.Z2Nat.id by admit. rewrite ZToField_FieldToZ; reflexivity. }
+      rewrite H1; clear H1.
+      econstructor; trivial.
+     }
+  Qed.
 End EdDSAProofs.
