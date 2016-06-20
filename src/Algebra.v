@@ -63,7 +63,7 @@ Section Algebra.
     Global Existing Instance abelian_group_group.
     Global Existing Instance abelian_group_is_commutative.
   End SingleOperation.
-  
+
   Section AddMul.
     Context {zero one:T}. Local Notation "0" := zero. Local Notation "1" := one.
     Context {opp:T->T}. Local Notation "- x" := (opp x).
@@ -82,7 +82,7 @@ Section Algebra.
         ring_is_right_distributive : is_right_distributive;
 
         ring_sub_definition : forall x y, x - y = x + opp y;
-                                       
+
         ring_mul_Proper : Proper (respectful eq (respectful eq eq)) mul;
         ring_sub_Proper : Proper(respectful eq (respectful eq eq)) sub
       }.
@@ -104,7 +104,7 @@ Section Algebra.
     Class is_mul_nonzero_nonzero := { mul_nonzero_nonzero : forall x y, x<>0 -> y<>0 -> x*y<>0 }.
 
     Class is_zero_neq_one := { zero_neq_one : zero <> one }.
-    
+
     Class integral_domain :=
       {
         integral_domain_commutative_ring : commutative_ring;
@@ -163,7 +163,7 @@ Module Monoid.
       { f_equiv; assumption. }
     Qed.
 
-    Lemma inv_inv x ix iix : ix*x = id -> iix*ix = id -> iix = x. 
+    Lemma inv_inv x ix iix : ix*x = id -> iix*ix = id -> iix = x.
     Proof.
       intros Hi Hii.
       assert (H:op iix id = op iix (op ix x)) by (rewrite Hi; reflexivity).
@@ -177,7 +177,7 @@ Module Monoid.
       { rewrite <-!associative; rewrite <-!associative in H; exact H. }
       rewrite Hx, right_identity, Hy. reflexivity.
     Qed.
-    
+
   End Monoid.
 End Monoid.
 
@@ -262,7 +262,7 @@ End Group.
 
 Require Coq.nsatz.Nsatz.
 
-Ltac dropAlgebraSyntax := 
+Ltac dropAlgebraSyntax :=
   cbv beta delta [
       Algebra_syntax.zero
         Algebra_syntax.one
@@ -345,7 +345,7 @@ Module Ring.
       eapply Group.cancel_left, mul_opp_l.
     Qed.
 
-    Global Instance Ncring_Ring_ops : @Ncring.Ring_ops T zero one add mul sub opp eq. 
+    Global Instance Ncring_Ring_ops : @Ncring.Ring_ops T zero one add mul sub opp eq.
     Global Instance Ncring_Ring : @Ncring.Ring T zero one add mul sub opp eq Ncring_Ring_ops.
     Proof.
       split; dropRingSyntax; eauto using left_identity, right_identity, commutative, associative, right_inverse, left_distributive, right_distributive, ring_sub_definition with core typeclass_instances.
@@ -387,10 +387,10 @@ Module Ring.
     Qed.
 
   End Homomorphism.
-           
+
   Section TacticSupportCommutative.
     Context {T eq zero one opp add sub mul} `{@commutative_ring T eq zero one opp add sub mul}.
-  
+
     Global Instance Cring_Cring_commutative_ring :
       @Cring.Cring T zero one add mul sub opp eq Ring.Ncring_Ring_ops Ring.Ncring_Ring.
     Proof. unfold Cring.Cring; intros; dropRingSyntax. eapply commutative. Qed.
@@ -414,14 +414,14 @@ End Ring.
 Module IntegralDomain.
   Section IntegralDomain.
     Context {T eq zero one opp add sub mul} `{@integral_domain T eq zero one opp add sub mul}.
-    
+
     Lemma mul_nonzero_nonzero_cases (x y : T)
       : eq (mul x  y) zero -> eq x zero \/ eq y zero.
     Proof.
       pose proof mul_nonzero_nonzero x y.
       destruct (eq_dec x zero); destruct (eq_dec y zero); intuition.
     Qed.
-    
+
     Global Instance Integral_domain :
       @Integral_domain.Integral_domain T zero one add mul sub opp eq Ring.Ncring_Ring_ops
                                        Ring.Ncring_Ring Ring.Cring_Cring_commutative_ring.
@@ -466,14 +466,14 @@ Module Field.
     Qed.
 
   End Field.
-  
+
   Section Homomorphism.
     Context {F EQ ZERO ONE OPP ADD MUL SUB INV DIV} `{@field F EQ ZERO ONE OPP ADD SUB MUL INV DIV}.
     Context {K eq zero one opp add mul sub inv div} `{@field K eq zero one opp add sub mul inv div}.
     Context {phi:F->K}.
     Local Infix "=" := eq. Local Infix "=" := eq : type_scope.
     Context `{@Ring.is_homomorphism F EQ ONE ADD MUL K eq one add mul phi}.
-    
+
     Lemma homomorphism_multiplicative_inverse : forall x, phi (INV x) = inv (phi x). Admitted.
 
     Lemma homomorphism_div : forall x y, phi (DIV x y) = div (phi x) (phi y).
@@ -487,7 +487,7 @@ End Field.
 (*** Tactics for manipulating field equations *)
 Require Import Coq.setoid_ring.Field_tac.
 
-Ltac guess_field := 
+Ltac guess_field :=
   match goal with
   | |- ?eq _ _ =>  constr:(_:field (eq:=eq))
   | |- not (?eq _ _) =>  constr:(_:field (eq:=eq))
@@ -515,7 +515,7 @@ Ltac common_denominator_in H :=
     end
   end.
 
-Ltac common_denominator_all := 
+Ltac common_denominator_all :=
   common_denominator;
   repeat match goal with [H: _ |- _ _ _ ] => progress common_denominator_in H end.
 
@@ -567,7 +567,7 @@ Section Example.
   Proof. field_algebra. Qed.
 
   Example _example_field_nsatz x y z : y <> 0 -> x/y = z -> z*y + y = x + y.
-  Proof. field_algebra. Qed.
+  Proof. intros; subst; field_algebra. Qed.
 
   Example _example_nonzero_nsatz_contradict x y : x * y = 1 -> not (x = 0).
   Proof. intros. intro. nsatz_contradict. Qed.
