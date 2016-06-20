@@ -1,6 +1,6 @@
 Require Export Crypto.Spec.CompleteEdwardsCurve.
 
-Require Import Crypto.Algebra Crypto.Nsatz.
+Require Import Crypto.Algebra Crypto.Tactics.Nsatz.
 Require Import Crypto.CompleteEdwardsCurve.Pre.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Crypto.Tactics.VerdiTactics.

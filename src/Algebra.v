@@ -1,5 +1,5 @@
 Require Import Coq.Classes.Morphisms. Require Coq.Setoids.Setoid.
-Require Import Crypto.Util.Tactics Crypto.Nsatz.
+Require Import Crypto.Util.Tactics Crypto.Tactics.Nsatz.
 Local Close Scope nat_scope. Local Close Scope type_scope. Local Close Scope core_scope.
 
 Section Algebra.

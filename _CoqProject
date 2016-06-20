@@ -5,7 +5,6 @@ Bedrock/Word.v
 src/Algebra.v
 src/BaseSystem.v
 src/BaseSystemProofs.v
-src/Nsatz.v
 src/Testbit.v
 src/CompleteEdwardsCurve/CompleteEdwardsCurveTheorems.v
 src/CompleteEdwardsCurve/ExtendedCoordinates.v
@@ -34,6 +33,7 @@ src/Spec/ModularArithmetic.v
 src/Spec/ModularWordEncoding.v
 src/Specific/GF1305.v
 src/Specific/GF25519.v
+src/Tactics/Nsatz.v
 src/Tactics/VerdiTactics.v
 src/Util/CaseUtil.v
 src/Util/IterAssocOp.v
