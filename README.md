@@ -1,7 +1,7 @@
 Fiat-Crypto: Synthesizing Correct-by-Construction Assembly for Cryptographic Primitives
 -----
 
-NOTE: The gibhub.com repo is only intermittently synced with
+NOTE: The github.com repo is only intermittently synced with
 github.mit.edu.
 
 To build:
