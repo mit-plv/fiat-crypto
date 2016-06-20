@@ -6,7 +6,7 @@ Require Import Coq.Logic.Eqdep_dec.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Coq.Classes.Morphisms.
 Require Import Relation_Definitions.
-Require Import Crypto.Util.Fieldwise.
+Require Import Crypto.Util.Tuple.
 
 Module E.
   Import Group Ring Field CompleteEdwardsCurve.E.
