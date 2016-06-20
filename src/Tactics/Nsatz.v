@@ -39,6 +39,13 @@ Ltac nsatz_get_reified_goal reified_package :=
   lazymatch reified_package with (_, _, ?goal) => goal end.
 
 Require Import Coq.setoid_ring.Ring_polynom.
+(* Kludge for 8.4/8.5 compatibility *)
+Module Import mynsatz_compute.
+  Import Nsatz.
+  Global Ltac mynsatz_compute := nsatz_compute.
+End mynsatz_compute.
+Ltac nsatz_compute := mynsatz_compute.
+
 Ltac nsatz_compute_to_goal sugar nparams reified_goal power reified_givens :=
   nsatz_compute (PEc sugar :: PEc nparams :: PEpow reified_goal power :: reified_givens).
 
@@ -64,13 +71,13 @@ Ltac nsatz_rewrite_and_revert domain :=
            | [H : eq _ _ |- _ ] => rewrite <-(cring_sub_diag_iff (cring:=FCring)) in H; revert H
            end
   end.
-  
-Ltac nsatz_nonzero := 
+
+Ltac nsatz_nonzero :=
   try solve [apply Integral_domain.integral_domain_one_zero
             |apply Integral_domain.integral_domain_minus_one_zero
             |trivial].
 
-Ltac nsatz_domain_sugar_power domain sugar power := 
+Ltac nsatz_domain_sugar_power domain sugar power :=
   let nparams := constr:(BinInt.Zneg BinPos.xH) in (* some symbols can be "parameters", treated as coefficients *)
   lazymatch type of domain with
   | @Integral_domain.Integral_domain ?F ?zero _ _ _ _ _ ?eq ?Fops ?FRing ?FCring =>
