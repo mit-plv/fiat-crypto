@@ -25,7 +25,7 @@ Ltac nsatz_reify_equations eq zero :=
   lazymatch (eval red in (Ncring_tac.list_reifyl (lterm:=lb))) with
     (?variables, ?le) =>
     lazymatch (eval compute in (List.rev le)) with
-    | ?reified_goal::?reified_givens => constr:(variables, reified_givens, reified_goal)
+    | ?reified_goal::?reified_givens => constr:((variables, reified_givens, reified_goal))
     end
   end.
 
@@ -56,7 +56,7 @@ Ltac nsatz_compute_get_leading_coefficient :=
 
 Ltac nsatz_compute_get_certificate :=
   lazymatch goal with
-    |- Logic.eq ((?a :: _ :: ?b) :: ?c) _ -> _ => constr:(c,b)
+    |- Logic.eq ((?a :: _ :: ?b) :: ?c) _ -> _ => constr:((c,b))
   end.
 
 Ltac nsatz_rewrite_and_revert domain :=
