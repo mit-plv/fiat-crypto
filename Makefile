@@ -17,7 +17,6 @@ SILENCE_COQDEP = $(SILENCE_COQDEP_$(VERBOSE))
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g'
 
 update-_CoqProject::
-	$(VECHO) "GIT LS-FILES *.V > _COQPROJECT"
 	$(Q)(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-R Bedrock Bedrock'; (git ls-files 'src/*.v' 'Bedrock/*.v' | $(SORT_COQPROJECT))) > _CoqProject
 
 coq: coqprime Makefile.coq
@@ -39,7 +38,6 @@ coqprime-8.5:
 	$(MAKE) -C coqprime-8.5
 
 Makefile.coq: Makefile _CoqProject
-	$(VECHO) "COQ_MAKEFILE"
 	$(Q)$(COQBIN)coq_makefile -f _CoqProject -o Makefile.coq
 
 clean: Makefile.coq
