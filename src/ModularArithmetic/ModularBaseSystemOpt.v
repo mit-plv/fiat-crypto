@@ -76,7 +76,7 @@ Ltac construct_params prime_modulus len k :=
   | abstract apply prime_modulus
   | abstract brute_force_indices lw].
 
-Definition construct_mul2modulus {m} (prm : PseudoMersenneBaseParams m) : digits :=  
+Definition construct_mul2modulus {m} (prm : PseudoMersenneBaseParams m) : digits :=
   match limb_widths with
   | nil => nil
   | x :: tail =>
@@ -91,7 +91,7 @@ Ltac subst_precondition := match goal with
   | [H : ?P, H' : ?P -> _ |- _] => specialize (H' H); clear H
 end.
 
-Ltac kill_precondition H := 
+Ltac kill_precondition H :=
   forward H; [abstract (try exact eq_refl; clear; cbv; intros; repeat break_or_hyp; intuition)|];
   subst_precondition.
 
@@ -207,7 +207,7 @@ Section Carries.
     cbv [carry_sequence].
     transitivity (fold_right carry_opt_cps f (List.rev is) us).
     Focus 2.
-    { 
+    {
       assert (forall i, In i (rev is) -> i < length base)%nat as Hr. {
         subst. intros. rewrite <- in_rev in *. auto. }
       remember (rev is) as ris eqn:Heq.
@@ -239,7 +239,7 @@ Section Carries.
     cbv [carry_sequence].
     transitivity (fold_right carry_opt_cps id (List.rev is) us).
     Focus 2.
-    { 
+    {
       assert (forall i, In i (rev is) -> i < length base)%nat as Hr. {
         subst. intros. rewrite <- in_rev in *. auto. }
       remember (rev is) as ris eqn:Heq.
@@ -273,7 +273,7 @@ Section Carries.
     rewrite carry_sequence_opt_cps_correct by assumption.
     apply carry_sequence_rep; eauto using rep_length.
   Qed.
- 
+
   Lemma full_carry_chain_bounds : forall i, In i full_carry_chain -> (i < length base)%nat.
   Proof.
     unfold full_carry_chain; rewrite <-base_length; intros.
@@ -502,7 +502,7 @@ Section Multiplication.
     rewrite map_shiftl by apply k_nonneg.
     rewrite c_subst.
     rewrite k_subst.
-    change @map with @map_opt. 
+    change @map with @map_opt.
     change @Z_shiftl_by with @Z_shiftl_by_opt.
     reflexivity.
   Defined.
@@ -640,7 +640,7 @@ Section Canonicalization.
     := proj2_sig (freeze_opt_sig us).
 
   Lemma freeze_opt_canonical: forall us vs x,
-    @pre_carry_bounds _ _ int_width us -> PseudoMersenneBaseRep.rep us x -> 
+    @pre_carry_bounds _ _ int_width us -> PseudoMersenneBaseRep.rep us x ->
     @pre_carry_bounds _ _ int_width vs -> PseudoMersenneBaseRep.rep vs x ->
     freeze_opt us = freeze_opt vs.
   Proof.

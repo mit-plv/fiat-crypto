@@ -46,7 +46,7 @@ Lemma Let_In_Proper_changevalue {A B} RA {RB} (f:A->B) {Proper_f:Proper (RA==>RB
   : Proper (RA ==> RB) (fun x => Let_In x f).
 Proof. intuition. Qed.
 
-Ltac fold_identity_lambdas := 
+Ltac fold_identity_lambdas :=
   repeat match goal with
            | [ H: appcontext [fun x => ?f x] |- _ ] => change (fun x => f x) with f in *
            | |- appcontext [fun x => ?f x] => change (fun x => f x) with f in *
@@ -285,7 +285,7 @@ Proof.
   intros.
   pose proof (eqb_eq_dec' eqb eqb_iff a b).
   destruct (eqb a b); eauto.
-Qed. 
+Qed.
 
 Lemma eqb_compare_encodings {T} {B} {encoding:canonical encoding of T as B}
            (T_eqb:T->T->bool) (T_eqb_iff : forall a b:T, (T_eqb a b = true) <-> a = b)
@@ -308,7 +308,7 @@ Proof. pose proof encoding_valid. congruence. Qed.
 Lemma compare_without_decoding {T B} (encoding_T_B:canonical encoding of T as B)
       (T_eqb:T->T->bool) (T_eqb_iff:forall a b, T_eqb a b = true <-> a = b)
       (B_eqb:B->B->bool) (B_eqb_iff:forall a b, B_eqb a b = true <-> a = b)
-      (P_:B) (Q:T) : 
+      (P_:B) (Q:T) :
   option_rect (fun _ : option T => bool)
                  (fun P : T => T_eqb P Q)
                  false

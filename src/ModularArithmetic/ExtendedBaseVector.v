@@ -22,19 +22,19 @@ Section ExtendedBaseVector.
   *
   * (x \dot base) * (y \dot base) = (z \dot ext_base)
   *
-  * Then we can separate z into its first and second halves: 
+  * Then we can separate z into its first and second halves:
   *
   * (z \dot ext_base) = (z1 \dot base) + (2 ^ k) * (z2 \dot base)
   *
   * Now, if we want to reduce the product modulo 2 ^ k - c:
-  * 
+  *
   * (z \dot ext_base) mod (2^k-c)= (z1 \dot base) + (2 ^ k) * (z2 \dot base) mod (2^k-c)
   * (z \dot ext_base) mod (2^k-c)= (z1 \dot base) + c * (z2 \dot base) mod (2^k-c)
   *
   * This sum may be short enough to express using base; if not, we can reduce again.
   *)
   Definition ext_base := base ++ (map (Z.mul (2^k)) base).
-    
+
   Lemma ext_base_positive : forall b, In b ext_base -> b > 0.
   Proof.
     unfold ext_base. intros b In_b_base.
@@ -76,14 +76,14 @@ Section ExtendedBaseVector.
     intuition.
   Qed.
 
-  Lemma map_nth_default_base_high : forall n, (n < (length base))%nat -> 
+  Lemma map_nth_default_base_high : forall n, (n < (length base))%nat ->
     nth_default 0 (map (Z.mul (2 ^ k)) base) n =
     (2 ^ k) * (nth_default 0 base n).
   Proof.
     intros.
     erewrite map_nth_default; auto.
   Qed.
-  
+
   Lemma base_good_over_boundary : forall
     (i : nat)
     (l : (i < length base)%nat)

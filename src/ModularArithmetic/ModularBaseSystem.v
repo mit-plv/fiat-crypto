@@ -11,9 +11,9 @@ Local Open Scope Z_scope.
 
 Section PseudoMersenneBase.
   Context `{prm :PseudoMersenneBaseParams}.
-  
+
   Definition decode (us : digits) : F modulus := ZToField (BaseSystem.decode base us).
-  
+
   Definition rep (us : digits) (x : F modulus) := (length us = length base)%nat /\ decode us = x.
   Local Notation "u '~=' x" := (rep u x) (at level 70).
   Local Hint Unfold rep.
@@ -35,13 +35,13 @@ Section PseudoMersenneBase.
 End PseudoMersenneBase.
 
 Section CarryBasePow2.
-  Context `{prm :PseudoMersenneBaseParams}. 
+  Context `{prm :PseudoMersenneBaseParams}.
 
   Definition log_cap i := nth_default 0 limb_widths i.
 
   Definition add_to_nth n (x:Z) xs :=
     set_nth n (x + nth_default 0 xs n) xs.
-  
+
   Definition pow2_mod n i := Z.land n (Z.ones i).
 
   Definition carry_simple i := fun us =>
@@ -54,7 +54,7 @@ Section CarryBasePow2.
     let us' := set_nth i (pow2_mod di (log_cap i)) us in
     add_to_nth   0  (c * (Z.shiftr di (log_cap i))) us'.
 
-  Definition carry i : digits -> digits := 
+  Definition carry i : digits -> digits :=
     if eq_nat_dec i (pred (length base))
     then carry_and_reduce i
     else carry_simple i.
@@ -110,12 +110,12 @@ Section Canonicalization.
     end.
 
   Definition and_term us := if isFull us then max_ones else 0.
-    
+
   Definition freeze us :=
     let us' := carry_full (carry_full (carry_full us)) in
     let and_term := and_term us' in
     (* [and_term] is all ones if us' is full, so the subtractions subtract q overall.
        Otherwise, it's all zeroes, and the subtractions do nothing. *)
      map2 (fun x y => x - y) us' (map (Z.land and_term) modulus_digits).
-   
+
 End Canonicalization.

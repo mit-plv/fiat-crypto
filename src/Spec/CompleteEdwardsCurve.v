@@ -24,12 +24,12 @@ Module E.
         nonsquare_d : forall x, x^2 <> d
       }.
     Context `{twisted_edwards_params}.
-  
+
     Definition point := { P | let '(x,y) := P in a*x^2 + y^2 = 1 + d*x^2*y^2 }.
     Definition coordinates (P:point) : (F*F) := proj1_sig P.
 
     Program Definition zero : point := (0, 1).
-    
+
     Program Definition add (P1 P2:point) : point := exist _ (
       let (x1, y1) := coordinates P1 in
       let (x2, y2) := coordinates P2 in
@@ -47,7 +47,7 @@ Module E.
       end.
   End TwistedEdwardsCurves.
 End E.
-  
+
 Delimit Scope E_scope with E.
 Infix "+" := E.add : E_scope.
 Infix "*" := E.mul : E_scope.

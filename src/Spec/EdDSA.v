@@ -26,7 +26,7 @@ Section EdDSA.
         {PointEncoding : canonical encoding of E as Word.word b} (* wire format *)
         {FlEncoding : canonical encoding of { n | n < l } as Word.word b}
     :=
-      { 
+      {
         EdDSA_group:@Algebra.group E Eeq Eadd Ezero Eopp;
 
         EdDSA_c_valid : c = 2 \/ c = 3;

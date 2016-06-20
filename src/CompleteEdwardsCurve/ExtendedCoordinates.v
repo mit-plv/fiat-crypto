@@ -127,7 +127,7 @@ Module Extended.
         destruct Hrep as [HA HB]. rewrite <-!HA, <-!HB; clear HA HB.
         split; reflexivity.
       Qed.
-      
+
       Global Instance Proper_add : Proper (eq==>eq==>eq) add.
       Proof.
         unfold eq. intros x y H x0 y0 H0.
@@ -204,10 +204,10 @@ Module Extended.
     Create HintDb field_homomorphism discriminated.
     Hint Rewrite <-
          homomorphism_one
-         homomorphism_add 
-         homomorphism_sub 
-         homomorphism_mul 
-         homomorphism_div 
+         homomorphism_add
+         homomorphism_sub
+         homomorphism_mul
+         homomorphism_div
          Ha
          Hd
          Hdd

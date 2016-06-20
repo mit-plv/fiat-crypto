@@ -23,10 +23,10 @@ Module E.
     Local Notation onCurve := (@onCurve F Feq Fone Fadd Fmul a d).
 
     Add Field _edwards_curve_theorems_field : (field_theory_for_stdlib_tactic (H:=field)).
-  
+
     Definition eq (P Q:point) := fieldwise (n:=2) Feq (coordinates P) (coordinates Q).
     Infix "=" := eq : E_scope.
-  
+
     (* TODO: decide whether we still want something like this, then port
     Local Ltac t :=
       unfold point_eqb;
@@ -41,41 +41,41 @@ Module E.
         | [H: _ |- _ ] => apply F_eqb_eq in H
         | _ => rewrite F_eqb_refl
         end; eauto.
-  
+
     Lemma point_eqb_sound : forall p1 p2, point_eqb p1 p2 = true -> p1 = p2.
     Proof.
       t.
     Qed.
-  
+
     Lemma point_eqb_complete : forall p1 p2, p1 = p2 -> point_eqb p1 p2 = true.
     Proof.
       t.
     Qed.
-  
+
     Lemma point_eqb_neq : forall p1 p2, point_eqb p1 p2 = false -> p1 <> p2.
     Proof.
       intros. destruct (point_eqb p1 p2) eqn:Hneq; intuition.
       apply point_eqb_complete in H0; congruence.
     Qed.
-  
+
     Lemma point_eqb_neq_complete : forall p1 p2, p1 <> p2 -> point_eqb p1 p2 = false.
     Proof.
       intros. destruct (point_eqb p1 p2) eqn:Hneq; intuition.
       apply point_eqb_sound in Hneq. congruence.
     Qed.
-  
+
     Lemma point_eqb_refl : forall p, point_eqb p p = true.
     Proof.
       t.
     Qed.
-  
+
     Definition point_eq_dec (p1 p2:E.point) : {p1 = p2} + {p1 <> p2}.
       destruct (point_eqb p1 p2) eqn:H; match goal with
                                         | [ H: _ |- _ ] => apply point_eqb_sound in H
                                         | [ H: _ |- _ ] => apply point_eqb_neq in H
                                         end; eauto.
     Qed.
-  
+
     Lemma point_eqb_correct : forall p1 p2, point_eqb p1 p2 = if point_eq_dec p1 p2 then true else false.
     Proof.
       intros. destruct (point_eq_dec p1 p2); eauto using point_eqb_complete, point_eqb_neq_complete.
@@ -86,7 +86,7 @@ Module E.
     Lemma decide_and  : forall P Q, {P}+{not P} -> {Q}+{not Q} -> {P/\Q}+{not(P/\Q)}.
     Proof. intros; repeat match goal with [H:{_}+{_}|-_] => destruct H end; intuition. Qed.
 
-    Ltac destruct_points := 
+    Ltac destruct_points :=
       repeat match goal with
              | [ p : point |- _ ] =>
                let x := fresh "x" p in
@@ -104,7 +104,7 @@ Module E.
     Local Hint Resolve nonsquare_d.
     Local Hint Resolve @edwardsAddCompletePlus.
     Local Hint Resolve @edwardsAddCompleteMinus.
-  
+
     Program Definition opp (P:point) : point :=
       exist _ (let '(x, y) := coordinates P in (Fopp x, y) ) _.
     Solve All Obligations using intros; destruct_points; simpl; field_algebra.
@@ -158,14 +158,14 @@ Module E.
     Section PointCompression.
       Local Notation "x ^2" := (x*x).
       Definition solve_for_x2 (y : F) := ((y^2 - 1) / (d * (y^2) - a)).
-      
+
       Lemma a_d_y2_nonzero : forall y, d * y^2 - a <> 0.
       Proof.
         intros ? eq_zero.
         destruct square_a as [sqrt_a sqrt_a_id]; rewrite <- sqrt_a_id in eq_zero.
         destruct (eq_dec y 0); [apply nonzero_a|apply nonsquare_d with (sqrt_a/y)]; field_algebra.
       Qed.
-      
+
       Lemma solve_correct : forall x y, onCurve (x, y) <-> (x^2 = solve_for_x2 y).
       Proof.
         unfold solve_for_x2; simpl; split; intros; field_algebra; auto using a_d_y2_nonzero.
@@ -189,10 +189,10 @@ Module E.
     Create HintDb field_homomorphism discriminated.
     Hint Rewrite <-
          homomorphism_one
-         homomorphism_add 
-         homomorphism_sub 
-         homomorphism_mul 
-         homomorphism_div 
+         homomorphism_add
+         homomorphism_sub
+         homomorphism_mul
+         homomorphism_div
          Ha
          Hd
       : field_homomorphism.

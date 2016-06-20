@@ -16,14 +16,14 @@ Section Pre.
   Context {a:F} {a_nonzero : a<>0} {a_square : exists sqrt_a, sqrt_a^2 = a}.
   Context {d:F} {d_nonsquare : forall sqrt_d, sqrt_d^2 <> d}.
   Context {char_gt_2 : 1+1 <> 0}.
-  
+
   (* the canonical definitions are in Spec *)
   Definition onCurve (P:F*F) := let (x, y) := P in a*x^2 + y^2 = 1 + d*x^2*y^2.
   Definition unifiedAdd' (P1' P2':F*F) : F*F :=
     let (x1, y1) := P1' in
     let (x2, y2) := P2' in
     pair (((x1*y2  +  y1*x2)/(1 + d*x1*x2*y1*y2))) (((y1*y2 - a*x1*x2)/(1 - d*x1*x2*y1*y2))).
-  
+
   Ltac use_sqrt_a := destruct a_square as [sqrt_a a_square']; rewrite <-a_square' in *.
 
   Lemma edwardsAddComplete' x1 y1 x2 y2 :
@@ -44,13 +44,13 @@ Section Pre.
   Lemma edwardsAddCompletePlus x1 y1 x2 y2 :
     onCurve (x1, y1) -> onCurve (x2, y2) -> (1 + d*x1*x2*y1*y2) <> 0.
   Proof. intros H1 H2 ?. apply (edwardsAddComplete' _ _ _ _ H1 H2); field_algebra. Qed.
-  
+
   Lemma edwardsAddCompleteMinus x1 y1 x2 y2 :
     onCurve (x1, y1) -> onCurve (x2, y2) -> (1 - d*x1*x2*y1*y2) <> 0.
   Proof. intros H1 H2 ?. apply (edwardsAddComplete' _ _ _ _ H1 H2); field_algebra. Qed.
-  
+
   Lemma zeroOnCurve : onCurve (0, 1). Proof. simpl. field_algebra. Qed.
-  
+
   Lemma unifiedAdd'_onCurve : forall P1 P2,
     onCurve P1 -> onCurve P2 -> onCurve (unifiedAdd' P1 P2).
   Proof.
@@ -71,7 +71,7 @@ Section RespectsFieldHomomorphism.
 
   Let phip  := fun (P':F*F) => let (x, y) := P' in (phi x, phi y).
 
-  Let eqp := fun (P1' P2':K*K) => 
+  Let eqp := fun (P1' P2':K*K) =>
     let (x1, y1) := P1' in
     let (x2, y2) := P2' in
     and (eq x1 x2) (eq y1 y2).
@@ -79,11 +79,11 @@ Section RespectsFieldHomomorphism.
   Create HintDb field_homomorphism discriminated.
   Hint Rewrite
        homomorphism_one
-       homomorphism_add 
-       homomorphism_sub 
-       homomorphism_mul 
-       homomorphism_div 
-       a_ok 
+       homomorphism_add
+       homomorphism_sub
+       homomorphism_mul
+       homomorphism_div
+       a_ok
        d_ok
        : field_homomorphism.
 
