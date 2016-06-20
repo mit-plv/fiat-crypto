@@ -1,4 +1,5 @@
 Require Import Coq.setoid_ring.Cring.
+Require Import Coq.omega.Omega.
 Generalizable All Variables.
 
 
@@ -54,7 +55,7 @@ Module F.
 
   Section FieldProofs.
     Context `{Field F}.
-    
+
     Definition unfold_div (x y:F) : x/y = x * inv y := eq_refl.
 
     Global Instance Proper_div :
@@ -73,7 +74,7 @@ Module F.
       induction n; simpl; intros; trivial;
         repeat eapply ring_mult_comp; eauto.
     Qed.
-    
+
     Global Instance Propper_powZ : Proper (_==_==>eq==>_==_) powZ.
     Proof.
       repeat intro; subst; unfold powZ.
@@ -139,7 +140,7 @@ Module F.
       repeat match goal with [ H: field_simplify_done _ |- _] => clear H end;
       try field_simplify_eq;
       try nsatz.
-    
+
     Create HintDb field discriminated.
     Hint Extern 5 (_ == _) => field_nsatz : field.
     Hint Extern 5 (_ <-> _) => split.
@@ -174,7 +175,7 @@ Module F.
     Proof. intros;split;intros Heq; try eapply mul_cancel_r_eq; eauto with field. Qed.
 
     Lemma inv_unique (a:F) : forall x y, x * a == 1 -> y * a == 1 -> x == y. Proof. auto with field. Qed.
-    
+
     Lemma mul_nonzero_nonzero (a b:F) : not (a == 0) -> not (b == 0) -> not (a*b == 0).
     Proof. intros; intro Hab. destruct (mul_zero_why _ _ Hab); auto. Qed.
     Hint Resolve mul_nonzero_nonzero : field_nonzero.
@@ -182,7 +183,7 @@ Module F.
     Lemma inv_nonzero (x:F) : not(x == 0) -> not(inv x==0).
     Proof.
       intros Hx Hi.
-      assert (Hc:not (inv x*x==0)) by (rewrite field_inv_def; auto with field_nonzero); contradict Hc.
+      assert (Hc:not (inv x*x==0)) by (rewrite field_inv_def; eauto with field_nonzero); contradict Hc.
       ring [Hi].
     Qed.
     Hint Resolve inv_nonzero : field_nonzero.
@@ -215,7 +216,7 @@ Module F.
     Lemma pow_succ_r (x:F) (n:Z) : not (x==0)\/(n>=0)%Z -> x^(n+1) == x * x^n.
     Proof.
       intros Hnz; unfold power, powZ, power_field, powZ; destruct n eqn:HSn.
-      - simpl; ring. 
+      - simpl; ring.
       - setoid_rewrite <-Pos2Z.inj_succ; rewrite Ncring.pow_pos_succ; ring.
       - destruct (Z.succ (Z.neg p)) eqn:Hn.
         + assert (p=1%positive) by (destruct p; simpl in *; try discriminate; auto).
@@ -238,12 +239,12 @@ Module F.
         + destruct p; discriminate.
       - rewrite Z_pred_neg, Ncring.pow_pos_succ; field; auto with field_nonzero.
     Qed.
-    
+
     Local Ltac pow_peano :=
-      repeat (setoid_rewrite pow_0_r 
+      repeat (setoid_rewrite pow_0_r
               || setoid_rewrite pow_succ_r
               || setoid_rewrite pow_pred_r).
-    
+
     Lemma pow_mul (x y:F) : forall (n:Z), not(x==0)/\not(y==0)\/(n>=0)%Z -> (x * y)^n == x^n * y^n.
     Proof.
       match goal with |- forall n, @?P n => eapply (Z.order_induction'_0 P) end.
@@ -257,19 +258,19 @@ Module F.
 
     Lemma pow_nonzero (x:F) : forall (n:Z), not(x==0) -> not(x^n==0).
       match goal with |- forall n, @?P n => eapply (Z.order_induction'_0 P) end; intros; pow_peano;
-        auto with field_nonzero.
+        eauto with field_nonzero.
       { repeat intro. subst. reflexivity. }
     Qed.
     Hint Resolve pow_nonzero : field_nonzero.
-    
+
     Lemma pow_inv (x:F) : forall (n:Z), not(x==0) -> inv x^n == inv (x^n).
       match goal with |- forall n, @?P n => eapply (Z.order_induction'_0 P) end.
       { repeat intro. subst. reflexivity. }
-      - intros; cbv [power power_field powZ]. field.
+      - intros; cbv [power power_field powZ]. field; eauto with field_nonzero.
       - intros n Hn IH Hx.
-        repeat setoid_rewrite pow_succ_r; try rewrite IH; try field; auto with field_nonzero.
-      - intros n Hn IH Hx. 
-        repeat setoid_rewrite pow_pred_r; try rewrite IH; try field; auto 3 with field_nonzero.
+        repeat setoid_rewrite pow_succ_r; try rewrite IH; try field; eauto with field_nonzero.
+      - intros n Hn IH Hx.
+        repeat setoid_rewrite pow_pred_r; try rewrite IH; try field; eauto 3 with field_nonzero.
     Qed.
 
     Lemma pow_0_l : forall n, (n>0)%Z -> (0:F)^n==0.
@@ -295,7 +296,7 @@ Module F.
     Proof. auto with field. Qed.
 
     Lemma div_1_r : forall x : F, x/1 == x.
-    Proof. auto with field. Qed.
+    Proof. eauto with field field_nonzero. Qed.
 
     Lemma div_1_l : forall x : F, not(x==0) -> 1/x == inv x.
     Proof. auto with field. Qed.
@@ -305,7 +306,7 @@ Module F.
 
     Lemma div_opp_r : forall x y, not (y==0) -> x / (-_ y) == -_ (x / y).
     Proof. auto with field. Qed.
-    
+
     Lemma eq_opp_zero : forall x : F, (~ 1 + 1 == (0:F)) -> (x == -_ x <-> x == 0).
     Proof. auto with field. Qed.
 

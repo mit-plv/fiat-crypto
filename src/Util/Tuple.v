@@ -66,8 +66,9 @@ Defined.
 Global Instance Equivalence_fieldwise' {A} {R:relation A} {R_equiv:Equivalence R} {n:nat}:
     Equivalence (fieldwise' n R).
 Proof.
-  induction n; [solve [auto]|].
-  simpl; constructor; repeat intro; intuition eauto.
+  induction n as [|? IHn]; [solve [auto]|].
+  (* could use [dintuition] in 8.5 only, and remove the [destruct] *)
+  destruct IHn, R_equiv; simpl; constructor; repeat intro; intuition eauto.
 Qed.
 
 Global Instance Equivalence_fieldwise {A} {R:relation A} {R_equiv:Equivalence R} {n:nat}:
