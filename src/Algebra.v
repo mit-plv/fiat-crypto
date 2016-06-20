@@ -143,6 +143,8 @@ Module Monoid.
     Context {T eq op id} {monoid:@monoid T eq op id}.
     Local Infix "=" := eq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
     Local Infix "*" := op.
+    Local Infix "=" := eq : eq_scope.
+    Local Open Scope eq_scope.
 
     Lemma cancel_right z iz (Hinv:op z iz = id) :
       forall x y, x * z = y * z <-> x = y.
@@ -195,6 +197,8 @@ Module Group.
     Context {T eq op id inv} `{@group T eq op id inv}.
     Local Infix "=" := eq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
     Local Infix "*" := op.
+    Local Infix "=" := eq : eq_scope.
+    Local Open Scope eq_scope.
 
     Lemma cancel_left : forall z x y, z*x = z*y <-> x = y.
     Proof. eauto using Monoid.cancel_left, left_inverse. Qed.
