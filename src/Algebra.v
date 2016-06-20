@@ -378,8 +378,8 @@ Module Ring.
 
     Context `{is_homomorphism}.
 
-    Definition homomorphism_add : forall x y,  phi (ADD x y) = add (phi x) (phi y) :=
-      Group.homomorphism.
+    Lemma homomorphism_add : forall x y,  phi (ADD x y) = add (phi x) (phi y).
+    Proof. apply Group.homomorphism. Qed.
 
     Definition homomorphism_opp : forall x,  phi (OPP x) = opp (phi x) :=
       (Group.homomorphism_inv (INV:=OPP) (inv:=opp)).
