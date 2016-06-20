@@ -42,9 +42,9 @@ Require Import Coq.setoid_ring.Ring_polynom.
 (* Kludge for 8.4/8.5 compatibility *)
 Module Import mynsatz_compute.
   Import Nsatz.
-  Global Ltac mynsatz_compute := nsatz_compute.
+  Global Ltac mynsatz_compute x := nsatz_compute x.
 End mynsatz_compute.
-Ltac nsatz_compute := mynsatz_compute.
+Ltac nsatz_compute x := mynsatz_compute x.
 
 Ltac nsatz_compute_to_goal sugar nparams reified_goal power reified_givens :=
   nsatz_compute (PEc sugar :: PEc nparams :: PEpow reified_goal power :: reified_givens).
