@@ -36,12 +36,13 @@ Module Conversion.
       pseudoEval p (x, m0, c0) = Some ([out0; out1], m1, c1)
     -> pseudoEval (PBin n Add p) (x, m0, c0) =
         Some ([out0 ^+ out1], m1,
-          Some (proj1_sig (bool_of_sumbool (overflows out0 out1)))).
+          Some (proj1_sig (bool_of_sumbool
+               (overflows w (&out0 + &out1)%N)%w))).
   Proof.
     intros; simpl; rewrite H; simpl.
 
     pose proof (wordize_plus out0 out1).
-    destruct (overflows out0 out1); autounfold; simpl; try rewrite H0;
+    destruct (overflows w _); autounfold; simpl; try rewrite H0;
       try rewrite <- (@Npow2_ignore w (out0 ^+ out1));
       try rewrite NToWord_wordToN; intuition.
   Qed.
@@ -71,6 +72,42 @@ Module Conversion.
     replace (out0 ^& out1) with (fst (evalIntOp And out0 out1)).
     - apply pseudo_bin; intuition; inversion H0.
     - unfold evalIntOp; simpl; intuition.
+  Qed.
+
+  Lemma pseudo_awc:
+    forall {w s n} (p: @Pseudo w s n 2) x out0 out1 m0 m1 c0 c,
+      pseudoEval p (x, m0, c0) = Some ([out0; out1], m1, Some c)
+    -> pseudoEval (PCarry n AddWithCarry p) (x, m0, c0) =
+        Some ([addWithCarry out0 out1 c], m1,
+          Some (proj1_sig (bool_of_sumbool (overflows w
+          (&out0 + &out1 + (if c then 1 else 0))%N)%w))).
+  Proof.
+    intros; simpl; rewrite H; simpl.
+
+    pose proof (wordize_awc out0 out1); unfold evalCarryOp.
+    destruct (overflows w ((& out0)%w + (& out1)%w +
+                           (if c then 1%N else 0%N)));
+      autounfold; simpl; try rewrite H0; intuition.
+  Qed.
+
+  Lemma pseudo_shiftr:
+    forall {w s n} (p: @Pseudo w s n 1) x out m0 m1 c0 c1 k,
+      pseudoEval p (x, m0, c0) = Some ([out], m1, c1)
+    -> pseudoEval (PShift n Shr k p) (x, m0, c0) =
+        Some ([shiftr out k], m1, c1).
+  Proof.
+    intros; simpl; rewrite H; autounfold; simpl.
+    rewrite wordize_shiftr; rewrite NToWord_wordToN; intuition.
+  Qed.
+
+  Lemma pseudo_dual:
+    forall {w s n} (p: @Pseudo w s n 1) x out0 out1 m0 m1 c0 c1 k,
+      pseudoEval p (x, m0, c0) = Some ([out0; out1], m1, c1)
+    -> pseudoEval (PDual n Mult p) (x, m0, c0) =
+      Some ([x ^* y; (highBits (n/2) x) ^* (highBits (n/2) y)], m1, c1).
+  Proof.
+    intros; simpl; rewrite H; autounfold; simpl.
+    rewrite wordize_shiftr; rewrite NToWord_wordToN; intuition.
   Qed.
 
   Lemma pseudo_comb:
@@ -108,37 +145,40 @@ Module Conversion.
   Definition example (v: list (word 32)) : list (word 32) :=
       [(natToWord _ 1) ^& (nth 0 v (wzero _))].
 
+  Ltac autodestruct :=
+    repeat match goal with
+    | [H: context[Datatypes.length (cons _ _)] |- _] => simpl in H
+    | [H: context[Datatypes.length nil] |- _] => simpl in H
+    | [H: S ?a = S ?b |- _] => inversion H; clear H
+    | [H: (S ?a) = 0 |- _] => contradict H; intuition
+    | [H: 0 = (S ?a) |- _] => contradict H; intuition
+    | [H: 0 = 0 |- _] => clear H
+    | [x: list ?T |- _] =>
+      match goal with
+      | [H: context[Datatypes.length x] |- _] => destruct x
+      end
+    end.
+
   Definition convert_example: @pseudeq 32 W32 1 1 example.
-    eexists; intro x; eexists; eexists.
+    repeat eexists; unfold example; autounfold; autodestruct.
 
-    destruct x as [v x|]; try destruct x; autounfold.
+    eapply pseudo_and.
+    eapply pseudo_cons.
+    eapply pseudo_const.
+    eapply pseudo_var.
 
-    Focus 2.
+    (* leftovers *)
 
-    - (* Unfold all of our boilerplate *)
-      unfold example; autounfold.
+    instantiate (1 := 0); simpl; intuition.
+    reflexivity.
 
-      (* eapply the relevant lemmas *)
-
-      eapply pseudo_and.
-      eapply pseudo_cons.
-      eapply pseudo_const.
-      eapply pseudo_var.
-
-      (* leftovers *)
-
-      + instantiate (1 := 0); abstract (simpl; intuition).
-      + reflexivity.
-
-    - contradict H; abstract (simpl; intuition).
-
-    - contradict H; abstract (simpl; intuition).
-
-    (* Deal with leftover existentials *)
     Grab Existential Variables.
+
     abstract (simpl; intuition).
-    refine None.
+    exact None.
   Defined.
+
+  Eval simpl in (proj1_sig convert_example).
 
 End Conversion.
 

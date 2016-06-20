@@ -40,10 +40,10 @@ Section Util.
     | right _ => w
     end.
 
-  Definition overflows {n} (out0 out1: word n) :
-      {(&out0 + &out1 >= Npow2 n)%N} + {(&out0 + &out1 < Npow2 n)%N}.
+  Definition overflows (n: nat) (x: N) :
+      {(x >= Npow2 n)%N} + {(x < Npow2 n)%N}.
     refine (
-      let c := ((& out0)%w + (& out1)%w ?= Npow2 n)%N in
+      let c := (x ?= Npow2 n)%N in
       match c as c' return c = c' -> _ with
       | Lt => fun _ => right _
       | _ => fun _ => left _
@@ -61,12 +61,13 @@ Section Util.
     replace (n - m) with O by abstract omega; exact WO.
   Defined.
 
-  (* Option utilities *)
+  Definition addWithCarry {n} (x y: word n) (c: bool): word n :=
+    x ^+ y ^+ (natToWord _ (if c then 1 else 0)).
+
   Definition omap {A B} (x: option A) (f: A -> option B) :=
     match x with | Some y => f y | _ => None end.
 
   Notation "A <- X ; B" := (omap X (fun A => B)) (at level 70, right associativity).
-
 End Util.
 
 Close Scope nword_scope.

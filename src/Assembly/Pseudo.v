@@ -1,4 +1,4 @@
-Require Import QhasmEvalCommon QhasmUtil State.
+Require Import QhasmUtil QhasmCommon QhasmEvalCommon QhasmUtil State.
 Require Import Language.
 Require Import List.
 

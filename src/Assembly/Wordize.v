@@ -2,7 +2,7 @@
 Require Export Bedrock.Word Bedrock.Nomega.
 Require Import NArith PArith Ndigits Nnat NPow NPeano Ndec Compare_dec.
 Require Import FunctionalExtensionality ProofIrrelevance.
-Require Import QhasmUtil.
+Require Import QhasmUtil QhasmEvalCommon.
 
 Hint Rewrite wordToN_nat Nat2N.inj_add N2Nat.inj_add
              Nat2N.inj_mul N2Nat.inj_mul Npow2_nat : N.
@@ -192,17 +192,16 @@ Section Wordization.
   Qed.
 
   Lemma wordize_plus: forall {n} (x y: word n),
-    if (overflows x y)
+    if (overflows n (&x + &y)%N)
     then (&x + &y)%N = (& (x ^+ y) + Npow2 n)%N
     else (&x + &y)%N = & (x ^+ y).
-  Proof.
-    intros; induction (overflows x y).
+  Proof. Admitted.
 
-    - admit.
-
-    - admit.
-
-  Qed.
+  Lemma wordize_awc: forall {n} (x y: word n) (c: bool),
+    if (overflows n (&x + &y + (if c then 1 else 0))%N)
+    then (&x + &y + (if c then 1 else 0))%N = (&(addWithCarry x y c) + Npow2 n)%N
+    else (&x + &y + (if c then 1 else 0))%N = &(addWithCarry x y c).
+  Proof. Admitted.
 
   Lemma wordize_mult': forall {n} (x y: word n) (b: N),
       (1 < n)%nat -> (0 < b)%N
@@ -219,11 +218,9 @@ Section Wordization.
     - apply N.mul_div_le; nomega.
   Qed.
 
-  Definition highBits {n} (m: nat) (x: word n) := snd (break m x).
-
   Lemma wordize_mult: forall {n} (x y: word n) (b: N),
     (&x * &y)%N = (&(x ^* y) +
-      &((highBits (n/2) x) ^* (highBits (n/2) y)) * Npow2 n)%N.
+      &((EvalUtil.highBits (n/2) x) ^* (EvalUtil.highBits (n/2) y)) * Npow2 n)%N.
   Proof. intros. Admitted.
 
   Lemma wordize_and: forall {n} (x y: word n),
