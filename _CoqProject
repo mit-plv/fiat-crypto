@@ -6,7 +6,6 @@ src/Algebra.v
 src/BaseSystem.v
 src/BaseSystemProofs.v
 src/Nsatz.v
-src/Rep.v
 src/Testbit.v
 src/CompleteEdwardsCurve/CompleteEdwardsCurveTheorems.v
 src/CompleteEdwardsCurve/ExtendedCoordinates.v
@@ -14,7 +13,7 @@ src/CompleteEdwardsCurve/Pre.v
 src/Encoding/EncodingTheorems.v
 src/Encoding/ModularWordEncodingPre.v
 src/Encoding/ModularWordEncodingTheorems.v
-src/Experiments/DerivationsOptionRectLetInFqPowEncoding.v
+src/Experiments/DerivationsOptionRectLetInEncoding.v
 src/Experiments/GenericFieldPow.v
 src/Experiments/SpecEd25519.v
 src/ModularArithmetic/ExtendedBaseVector.v

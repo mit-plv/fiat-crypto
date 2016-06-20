@@ -8,7 +8,7 @@ Require Import Crypto.Spec.CompleteEdwardsCurve.
 Require Import Crypto.Spec.Encoding Crypto.Spec.ModularWordEncoding.
 Require Import Crypto.CompleteEdwardsCurve.ExtendedCoordinates.
 Require Import Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
-Require Import Crypto.Util.IterAssocOp Crypto.Util.WordUtil Crypto.Rep.
+Require Import Crypto.Util.IterAssocOp Crypto.Util.WordUtil.
 Require Import Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Classes.Equivalence.
 Require Import Zdiv.
 Require Import Crypto.Util.Tuple.
@@ -340,37 +340,3 @@ Lemma F_eqb_iff {q} : forall x y : F q, F_eqb x y = true <-> x = y.
 Proof.
   split; eauto using F_eqb_eq, F_eqb_complete.
 Qed.
-
-Section FSRepOperations.
-  Context {q:Z} {prime_q:Znumtheory.prime q} {two_lt_q:(2 < q)%Z}.
-  Context {l:Z} {two_lt_l:(2 < l)%Z}.
-  Context `{rcS:RepConversions (F l) SRep} {rcSOK:RepConversionsOK rcS}.
-  Context `(rcF:RepConversions (F q) FRep) (rcFOK:RepConversionsOK rcF).
-  Context (FRepAdd FRepSub FRepMul:FRep->FRep->FRep) (FRepAdd_correct:RepBinOpOK rcF add FRepMul).
-  Context (FRepSub_correct:RepBinOpOK rcF sub FRepSub) (FRepMul_correct:RepBinOpOK rcF mul FRepMul).
-  Axiom SRep_testbit : SRep -> nat -> bool.
-  Axiom SRep_testbit_correct : forall (x0 : SRep) (i : nat), SRep_testbit x0 i = N.testbit_nat (FieldToN (unRep x0)) i.
-
-  Definition FSRepPow width x n := iter_op FRepMul (toRep 1%F) SRep_testbit n x width.
-  Lemma FSRepPow_correct : forall width x n, (N.size_nat (FieldToN (unRep n)) <= width)%nat -> (unRep x ^ FieldToN (unRep n))%F = unRep (FSRepPow width x n).
-  Proof. (* this proof derives the required formula, which I copy-pasted above to be able to reference it without the length precondition *)
-    unfold FSRepPow; intros.
-    erewrite <-pow_nat_iter_op_correct by auto.
-    erewrite <-(fun x => iter_op_spec (scalar := SRep) mul F_mul_assoc _ F_mul_1_l _ _ SRep_testbit_correct n x width) by auto.
-    rewrite <-(rcFOK 1%F) at 1.
-    erewrite <-iter_op_proj;
-      [apply eq_refl
-      |eauto with typeclass_instances
-      |symmetry; eapply FRepMul_correct].
-  Qed.
-
-  Context (q_minus_2_lt_l:(q - 2 < l)%Z).
-  Definition FRepInv x : FRep := FSRepPow (COMPILETIME (N.size_nat (Z.to_N (q - 2)))) x (COMPILETIME (toRep (ZToField (q - 2)))).
-  Lemma FRepInv_correct : forall x, inv (unRep x)%F = unRep (FRepInv x).
-    unfold FRepInv, COMPILETIME; intros.
-    rewrite <-FSRepPow_correct; rewrite FieldToN_correct, rcSOK, FieldToZ_ZToField, Zmod_small by omega; trivial.
-    pose proof @Fq_inv_fermat_correct as Hf; unfold inv_fermat in Hf; rewrite Hf by
-        auto using prime_q, two_lt_q.
-    reflexivity.
-  Qed.
-End FSRepOperations.
