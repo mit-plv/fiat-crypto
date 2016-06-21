@@ -109,17 +109,19 @@ Module E.
     Program Definition opp (P:point) : point :=
       exist _ (let '(x, y) := coordinates P in (Fopp x, y) ) _.
 
-    Ltac bash :=
-      repeat match goal with
-             | |- _ => progress intros
-             | [H: _ /\ _ |- _ ] => destruct H
-             | |- _ => progress destruct_points
-             | |- _ => progress cbv [fst snd coordinates proj1_sig eq fieldwise fieldwise' add zero opp] in *
-             | |- _ => split
-             | |- Feq _ _ => field_algebra
-             | |- _ <> 0 => expand_opp; solve [nsatz_nonzero|eauto]
-             | |- {_}+{_} => eauto 15 using decide_and, @eq_dec with typeclass_instances
-             end.
+    Ltac bash_step :=
+      match goal with
+      | |- _ => progress intros
+      | [H: _ /\ _ |- _ ] => destruct H
+      | |- _ => progress destruct_points
+      | |- _ => progress cbv [fst snd coordinates proj1_sig eq fieldwise fieldwise' add zero opp] in *
+      | |- _ => split
+      | |- Feq _ _ => field_algebra
+      | |- _ <> 0 => expand_opp; solve [nsatz_nonzero|eauto]
+      | |- {_}+{_} => eauto 15 using decide_and, @eq_dec with typeclass_instances
+      end.
+
+    Ltac bash := repeat bash_step.
 
     Global Instance Proper_add : Proper (eq==>eq==>eq) add. Proof. bash. Qed.
     Global Instance Proper_opp : Proper (eq==>eq) opp. Proof. bash. Qed.
