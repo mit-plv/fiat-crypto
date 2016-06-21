@@ -28,17 +28,17 @@ Module E.
     Definition point := { P | let '(x,y) := P in a*x^2 + y^2 = 1 + d*x^2*y^2 }.
     Definition coordinates (P:point) : (F*F) := proj1_sig P.
 
+    (** The following points are indeed on the curve -- see [CompleteEdwardsCurve.Pre] for proof *)
+    Local Obligation Tactic := intros; apply Pre.zeroOnCurve
+      || apply (Pre.unifiedAdd'_onCurve (char_gt_2:=char_gt_2) (d_nonsquare:=nonsquare_d)
+         (a_nonzero:=nonzero_a) (a_square:=square_a) _ _ (proj2_sig _) (proj2_sig _)).
+
     Program Definition zero : point := (0, 1).
 
     Program Definition add (P1 P2:point) : point := exist _ (
       let (x1, y1) := coordinates P1 in
       let (x2, y2) := coordinates P2 in
         (((x1*y2  +  y1*x2)/(1 + d*x1*x2*y1*y2)) , ((y1*y2 - a*x1*x2)/(1 - d*x1*x2*y1*y2)))) _.
-
-    (** The described points are indeed on the curve -- see [CompleteEdwardsCurve.Pre] for proof *)
-    Solve All Obligations using intros; exact Pre.zeroOnCurve
-      || exact (Pre.unifiedAdd'_onCurve (char_gt_2:=char_gt_2) (d_nonsquare:=nonsquare_d)
-         (a_nonzero:=nonzero_a) (a_square:=square_a) _ _ (proj2_sig _) (proj2_sig _)).
 
     Fixpoint mul (n:nat) (P : point) : point :=
       match n with

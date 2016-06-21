@@ -105,9 +105,9 @@ Module E.
     Local Hint Resolve @edwardsAddCompletePlus.
     Local Hint Resolve @edwardsAddCompleteMinus.
 
+    Local Obligation Tactic := intros; destruct_points; simpl; field_algebra.
     Program Definition opp (P:point) : point :=
       exist _ (let '(x, y) := coordinates P in (Fopp x, y) ) _.
-    Solve All Obligations using intros; destruct_points; simpl; field_algebra.
 
     Ltac bash :=
       repeat match goal with
