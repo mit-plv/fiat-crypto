@@ -1,7 +1,5 @@
 Require Import Crypto.Spec.Encoding.
-
-Require Import Crypto.Util.WordUtil.
-Require Bedrock.Word.
+Require Bedrock.Word Crypto.Util.WordUtil.
 Require Coq.ZArith.Znumtheory Coq.ZArith.BinInt.
 Require Coq.Numbers.Natural.Peano.NPeano.
 Require Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
@@ -50,13 +48,14 @@ Section EdDSA.
   Local Notation publickey := (Word.word b) (only parsing).
   Local Notation signature := (Word.word (b + b)) (only parsing).
 
-
-  Existing Class le. Local Existing Instance EdDSA_n_le_b.
   Local Arguments H {n} _.
+  Local Notation wfirstn n w := (@WordUtil.wfirstn n _ w _) (only parsing).
 
-  (* TODO: proofread curveKey and definition of n *)
-  Definition curveKey (sk:secretkey) : nat :=
-    let x := wfirstn n sk in (* first half of the secret key is a scalar *)
+  Require Import Omega.
+  Obligation Tactic := simpl; intros; try apply NPeano.Nat.mod_upper_bound; destruct prm; omega.
+
+  Program Definition curveKey (sk:secretkey) : nat :=
+    let x := wfirstn n (H sk) in (* hash the key, use first "half" for secret scalar *)
     let x := x - (x mod (2^c)) in (* it is implicitly 0 mod (2^c) *)
              x + 2^n. (* and the high bit is always set *)
 
@@ -72,7 +71,6 @@ Section EdDSA.
     let s : nat := curveKey sk in (* secret scalar *)
     let S : {n|n<l} := exist _ ((r + H (enc R ++ public sk ++ M) * s) mod l) _ in
         enc R ++ enc S.
-  Admit Obligations.
 
   (* For a [n]-bit [message] from public key [A_], validity of a signature [R_ ++ S_] *)
   Inductive valid {n:nat} : Word.word n -> publickey -> signature -> Prop :=
