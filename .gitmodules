@@ -1,0 +1,3 @@
+[submodule "etc/coq-scripts"]
+	path = etc/coq-scripts
+	url = https://github.com/JasonGross/coq-scripts.git

@@ -14,16 +14,16 @@
                                                                  
     Definition: ZpGroup              
  **********************************************************************)
-Require Import Coq.ZArith.ZArith Coq.ZArith.Znumtheory Coq.ZArith.Zpow_facts.
-Require Import Coqprime.Tactic.
-Require Import Coq.Arith.Wf_nat.
-Require Import Coqprime.UList.
-Require Import Coqprime.FGroup.
-Require Import Coqprime.EGroup.
-Require Import Coqprime.IGroup.
-Require Import Coqprime.Cyclic.
-Require Import Coqprime.Euler.
-Require Import Coqprime.ZProgression.
+Require Import ZArith Znumtheory Zpow_facts.
+Require Import Tactic.
+Require Import Wf_nat.
+Require Import UList.
+Require Import FGroup.
+Require Import EGroup.
+Require Import IGroup.
+Require Import Cyclic.
+Require Import Euler.
+Require Import ZProgression.
 
 Open Scope Z_scope.
 

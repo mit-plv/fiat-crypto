@@ -36,9 +36,11 @@ src/Specific/GF25519.v
 src/Tactics/Nsatz.v
 src/Tactics/VerdiTactics.v
 src/Util/CaseUtil.v
+src/Util/Decidable.v
 src/Util/IterAssocOp.v
 src/Util/ListUtil.v
 src/Util/NatUtil.v
+src/Util/Notations.v
 src/Util/NumTheoryUtil.v
 src/Util/Tactics.v
 src/Util/Tuple.v

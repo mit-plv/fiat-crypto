@@ -13,7 +13,7 @@ Module E.
     Local Notation "0" := Fzero.  Local Notation "1" := Fone.
     Local Infix "+" := Fadd. Local Infix "*" := Fmul.
     Local Infix "-" := Fsub. Local Infix "/" := Fdiv.
-    Local Notation "x ^2" := (x*x) (at level 30).
+    Local Notation "x ^ 2" := (x*x) (at level 30).
 
     Context {a d: F}.
     Class twisted_edwards_params :=

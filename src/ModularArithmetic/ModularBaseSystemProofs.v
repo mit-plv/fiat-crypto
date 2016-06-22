@@ -6,15 +6,16 @@ Require Import VerdiTactics.
 Require Crypto.BaseSystem.
 Require Import Crypto.ModularArithmetic.ModularBaseSystem Crypto.ModularArithmetic.PrimeFieldTheorems.
 Require Import Crypto.BaseSystemProofs Crypto.ModularArithmetic.PseudoMersenneBaseParams Crypto.ModularArithmetic.PseudoMersenneBaseParamProofs Crypto.ModularArithmetic.ExtendedBaseVector.
+Require Import Crypto.Util.Notations.
 Local Open Scope Z_scope.
 
 Section PseudoMersenneProofs.
   Context `{prm :PseudoMersenneBaseParams}.
 
   Local Hint Unfold decode.
-  Local Notation "u '~=' x" := (rep u x) (at level 70).
-  Local Notation "u '.+' x" := (add u x) (at level 70).
-  Local Notation "u '.*' x" := (ModularBaseSystem.mul u x) (at level 70).
+  Local Notation "u ~= x" := (rep u x).
+  Local Notation "u .+ x" := (add u x).
+  Local Notation "u .* x" := (ModularBaseSystem.mul u x).
   Local Hint Unfold rep.
 
   Lemma rep_decode : forall us x, us ~= x -> decode us = x.
@@ -256,7 +257,7 @@ End PseudoMersenneProofs.
 
 Section CarryProofs.
   Context `{prm : PseudoMersenneBaseParams}.
-  Local Notation "u '~=' x" := (rep u x) (at level 70).
+  Local Notation "u ~= x" := (rep u x).
   Hint Unfold log_cap.
 
   Lemma base_length_lt_pred : (pred (length base) < length base)%nat.

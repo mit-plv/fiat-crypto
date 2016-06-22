@@ -25,17 +25,17 @@ coq: coqprime Makefile.coq
 COQ_VERSION_PREFIX = The Coq Proof Assistant, version
 COQ_VERSION := $(firstword $(subst $(COQ_VERSION_PREFIX),,$(shell $(COQBIN)coqc --version 2>/dev/null)))
 
-ifneq ($(filter 8.5%,$(COQ_VERSION)),) # 8.5
-coqprime: coqprime-8.5
-else
+ifneq ($(filter 8.4%,$(COQ_VERSION)),) # 8.4
 coqprime: coqprime-8.4
+else
+coqprime: coqprime-8.5
 endif
 
 coqprime-8.4:
-	$(MAKE) -C coqprime
+	$(MAKE) -C coqprime-8.4
 
 coqprime-8.5:
-	$(MAKE) -C coqprime-8.5
+	$(MAKE) -C coqprime
 
 Makefile.coq: Makefile _CoqProject
 	$(Q)$(COQBIN)coq_makefile -f _CoqProject -o Makefile.coq
