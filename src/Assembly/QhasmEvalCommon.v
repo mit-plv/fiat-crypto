@@ -19,9 +19,13 @@ Module EvalUtil.
     | TGe => orb (eqBit) (gtBit)
     end.
 
-  Definition evalIntOp {b} (io: IntOp) (x y: word b): (word b) * option bool :=
-    match io with
-    | Add =>
+  Definition evalIntOp {b} (io: IntOp) (x y: word b) :=
+    match io return (word b) * option bool with
+    | ISub => (wminus x y, None)
+    | IXor => (wxor x y, None)
+    | IAnd => (wand x y, None)
+    | IOr => (wor x y, None)
+    | IAdd =>
       let v := (wordToN x + wordToN y)%N in
       let c := (overflows b (&x + &y)%N)%w in
 
@@ -29,11 +33,6 @@ Module EvalUtil.
       | right _ => fun _ => (NToWord b v, Some false)
       | left _ => fun _ => (NToWord b v, Some true)
       end eq_refl
-
-    | Sub => (wminus x y, None)
-    | Xor => (wxor x y, None)
-    | And => (wand x y, None)
-    | Or => (wor x y, None)
     end.
 
   Definition evalCarryOp {b} (io: CarryOp) (x y: word b) (c: bool): (word b) * bool :=
@@ -125,22 +124,54 @@ Module EvalUtil.
         then left _ else right _ else right _ else right _
 
     | _ => fun _ => right _
-    end (eq_refl (a, b))); abstract (
-      inversion_clear _H;
+    end (eq_refl (a, b))); 
+      try destruct v, v'; subst;
       unfold regName, stackName, constValueN, memName, memLength in *;
-      intuition; try inversion H;
-      destruct v, v'; subst;
-      try assert (w = w0) by (apply width_eq); do 3 first [
-          contradict _H0; inversion H1
-        | rewrite <- (natToWord_wordToNat w0);
-          rewrite <- (natToWord_wordToNat w2);
-          assert (w = w1) by (apply width_eq); subst;
-          rewrite _H0
-        | apply (inj_pair2_eq_dec _ Nat.eq_dec) in H3
-        | inversion H; subst; intuition
-        | destruct i, i'; simpl in _H2; subst;
-          replace l with l0 by apply proof_irrelevance
-        | intuition ]).
+      repeat progress (try apply f_equal; subst; match goal with
+        (* Makeshift intuition *)
+      | [ |- ?x = ?x ] => reflexivity
+      | [ H: ?x <> ?x |- _ ] => destruct H
+      | [ |- ?x = ?y ] => apply proof_irrelevance
+
+        (* Destruct the widths *)
+      | [ w0: Width ?x, w1: Width ?x |- _ ] =>
+        let H := fresh in
+        assert (w0 = w1) as H by (apply width_eq);
+          rewrite H in *;
+          clear w0 H
+
+        (* Invert <> *)
+      | [ |- regM _ _ <> _ ] => let H := fresh in (intro H; inversion H)
+      | [ |- memM _ _ _ <> _ ] => let H := fresh in (intro H; inversion H)
+      | [ |- stackM _ _ <> _ ] => let H := fresh in (intro H; inversion H)
+      | [ |- constM _ _ <> _ ] => let H := fresh in (intro H; inversion H)
+
+        (* Invert common structures *)
+      | [ H: regName _ = regName _ |- _ ] => inversion_clear H
+      | [ H: (_, _) = _ |- _ ] => inversion_clear H
+      | [ H: ?x = _ |- _ ] => is_var x; rewrite H in *; clear H
+
+        (* Destruct sigmas, exist, existT *)
+      | [ H: proj1_sig ?a = proj1_sig ?b |- _ ] =>
+        let l0 := fresh in let l1 := fresh in
+        destruct a, b; simpl in H; subst
+      | [ H: proj1_sig ?a <> proj1_sig ?b |- _ ] =>
+        let l0 := fresh in let l1 := fresh in
+        destruct a, b; simpl in H; subst
+      | [ H: existT ?a ?b _ = existT ?a ?b _ |- _ ] => 
+        apply (inj_pair2_eq_dec _ Nat.eq_dec) in H;
+            subst; intuition
+      | [ H: exist _ _ _ = exist _ _ _ |- _ ] => 
+        inversion H; subst; intuition
+
+        (* Single specialized wordToNat proof *)
+      | [ H: wordToNat ?a = wordToNat ?b |- ?a = ?b] =>
+        rewrite <- (natToWord_wordToNat a);
+        rewrite <- (natToWord_wordToNat b);
+        rewrite H; reflexivity
+
+      | _ => idtac
+      end).
   Defined.
 
   Definition dec_lt (a b: nat): {(a < b)%nat} + {(a >= b)%nat}.
@@ -148,9 +179,9 @@ Module EvalUtil.
       by abstract (destruct (a <? b)%nat; intuition);
       destruct H.
 
-    - left; abstract (apply Nat.ltb_lt in e; intuition).
+    - left; abstract (apply Nat.ltb_lt; intuition).
 
-    - right; abstract (rewrite Nat.ltb_lt in n; intuition).
+    - right; abstract (rewrite Nat.ltb_lt in *; intuition).
   Defined.
 
   Fixpoint stackNames {n} (lst: list (Mapping n)): list nat :=

@@ -4,7 +4,7 @@ Require Export Bedrock.Word.
 Require Import ZArith NArith NPeano Ndec.
 Require Import Compare_dec Omega.
 Require Import OrderedType Coq.Structures.OrderedTypeEx.
-Require Import FMapAVL FMapList JMeq.
+Require Import FMapPositive FMapFullAVL JMeq.
 
 Require Import QhasmUtil QhasmCommon.
 
@@ -127,22 +127,22 @@ Module Triple_as_OT <: UsualOrderedType.
       inversion H0; subst; omega.
   Qed.
 
+  Ltac compare_tmp x y :=
+    abstract (
+      unfold Nat_as_OT.lt, Nat_as_OT.eq, lt, eq in *;
+      destruct (Nat.eq_dec (get0 x) (get0 y));
+      destruct (Nat.eq_dec (get1 x) (get1 y));
+      simpl; intuition).
+
+  Ltac compare_eq x y :=
+    abstract (
+      unfold Nat_as_OT.lt, Nat_as_OT.eq, lt, eq, get0, get1 in *;
+      destruct x as [x x2], y as [y y2];
+      destruct x as [x0 x1], y as [y0 y1];
+      simpl in *; subst; intuition).
+
   Definition compare x y : Compare lt eq x y.
     destruct (Nat_as_OT.compare (get0 x) (get0 y)).
-
-    Ltac compare_tmp x y :=
-      abstract (
-        unfold Nat_as_OT.lt, Nat_as_OT.eq, lt, eq in *;
-        destruct (Nat.eq_dec (get0 x) (get0 y));
-        destruct (Nat.eq_dec (get1 x) (get1 y));
-        simpl; intuition).
-
-    Ltac compare_eq x y :=
-      abstract (
-        unfold Nat_as_OT.lt, Nat_as_OT.eq, lt, eq, get0, get1 in *;
-        destruct x as [x x2], y as [y y2];
-        destruct x as [x0 x1], y as [y0 y1];
-        simpl in *; subst; intuition).
 
     - apply LT; compare_tmp x y.
     - destruct (Nat_as_OT.compare (get1 x) (get1 y)).
@@ -177,9 +177,9 @@ End Triple_as_OT.
 Module StateCommon.
   Export ListNotations.
 
-  Module NatM := FMapAVL.Make(Nat_as_OT).
-  Module PairM := FMapAVL.Make(Pair_as_OT).
-  Module TripleM := FMapAVL.Make(Triple_as_OT).
+  Module NatM := FMapFullAVL.Make(Nat_as_OT).
+  Module PairM := FMapFullAVL.Make(Pair_as_OT).
+  Module TripleM := FMapFullAVL.Make(Triple_as_OT).
 
   Definition NatNMap: Type := NatM.t N.
   Definition PairNMap: Type := PairM.t N.

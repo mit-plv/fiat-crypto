@@ -103,11 +103,11 @@ Module StringConversion <: Conversion Qhasm QhasmString.
 
     Coercion intOpToString (b: IntOp): string :=
       match b with
-      | Add => "+"
-      | Sub => "-"
-      | Xor => "^"
-      | And => "&"
-      | Or => "|"
+      | IAdd => "+"
+      | ISub => "-"
+      | IXor => "^"
+      | IAnd => "&"
+      | IOr => "|"
       end.
 
     Coercion dualOpToString (b: DualOp): string :=

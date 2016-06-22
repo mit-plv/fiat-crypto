@@ -57,9 +57,11 @@ Inductive Assignment : Type :=
 (* Operations *)
 
 Inductive IntOp :=
-  | Add: IntOp  | Sub: IntOp
-  | Xor: IntOp  | And: IntOp
-  | Or: IntOp.
+  | IAdd: IntOp
+  | ISub: IntOp
+  | IXor: IntOp
+  | IAnd: IntOp
+  | IOr: IntOp.
 
 Inductive CarryOp := | AddWithCarry: CarryOp.
 

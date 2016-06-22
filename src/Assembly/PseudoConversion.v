@@ -174,7 +174,7 @@ Module PseudoConversion <: Conversion Pseudo AlmostQhasm.
             Some (ASeq
             (AAssign (AConstInt (reg' a) (const' (natToWord _ O))))
             (AWhile (CConst _ TLt (reg' a) (const' (natToWord _ e)))
-                (ASeq fp (AOp (IOpConst Add (reg' a) (const' (natToWord _ 1)))))),
+                (ASeq fp (AOp (IOpConst IAdd (reg' a) (const' (natToWord _ 1)))))),
             fr, madd a rM M', F')
 
         | _ => None

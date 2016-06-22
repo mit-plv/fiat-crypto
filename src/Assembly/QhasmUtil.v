@@ -48,7 +48,7 @@ Section Util.
       | _ => fun _ => left _
       end eq_refl); abstract (
         unfold c in *; unfold N.lt, N.ge;
-        rewrite _H in *; intuition; try inversion H).
+        rewrite e in *; intuition; try inversion H).
   Defined.
 
   Definition break {n} (m: nat) (x: word n): word m * word (n - m).

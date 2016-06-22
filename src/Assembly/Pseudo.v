@@ -1,6 +1,6 @@
-Require Import QhasmUtil QhasmCommon QhasmEvalCommon QhasmUtil State.
-Require Import Language.
-Require Import List Compare_dec.
+Require Import QhasmCommon QhasmUtil State.
+Require Import Language QhasmEvalCommon.
+Require Import List Compare_dec PeanoNat Omega.
 
 Module Pseudo <: Language.
   Import EvalUtil ListState.
@@ -117,8 +117,8 @@ Module Pseudo <: Language.
     intros; destruct (le_dec n 0).
 
     - exists 0; abstract intuition.
-    - exists (x mod n); abstract (
-        pose proof (mod_bound_pos x n); omega).
+    - exists (x mod n)%nat; abstract (
+        pose proof (Nat.mod_bound_pos x n); omega).
   Defined.
 
   Notation "% A" := (PVar _ (Some false) (indexize A))
@@ -133,19 +133,19 @@ Module Pseudo <: Language.
   Notation "# A" := (PConst _ (natToWord _ A))
     (at level 20, right associativity) : pseudo_notations.
 
-  Notation "A :+: B" := (PBin _ Add (PComb _ _ _ A B))
+  Notation "A :+: B" := (PBin _ IAdd (PComb _ _ _ A B))
     (at level 60, right associativity) : pseudo_notations.
 
   Notation "A :+c: B" := (PCarry _ AddWithCarry (PComb _ _ _ A B))
     (at level 60, right associativity) : pseudo_notations.
 
-  Notation "A :-: B" := (PBin _ Sub (PComb _ _ _ A B))
+  Notation "A :-: B" := (PBin _ ISub (PComb _ _ _ A B))
     (at level 60, right associativity) : pseudo_notations.
 
-  Notation "A :&: B" := (PBin _ And (PComb _ _ _ A B))
+  Notation "A :&: B" := (PBin _ IAnd (PComb _ _ _ A B))
     (at level 45, right associativity) : pseudo_notations.
 
-  Notation "A :^: B" := (PBin _ Xor (PComb _ _ _ A B))
+  Notation "A :^: B" := (PBin _ IXor (PComb _ _ _ A B))
     (at level 45, right associativity) : pseudo_notations.
 
   Notation "A :>>: B" := (PShift _ Shr (indexize B) A)
