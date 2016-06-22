@@ -13,11 +13,11 @@ Require Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
     file. *)
 
 Module Import Notations.
-Import NPeano Nat.
-
-Infix "^" := pow.
-Infix "mod" := modulo (at level 40, no associativity).
-Infix "++" := Word.combine.
+  Import NPeano Nat.
+  
+  Infix "^" := pow.
+  Infix "mod" := modulo (at level 40, no associativity).
+  Infix "++" := Word.combine.
 End Notations.
 
 Generalizable All Variables.
