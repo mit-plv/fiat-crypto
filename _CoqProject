@@ -1,4 +1,5 @@
 -R src Crypto
+-R Coqprime/Coqprime Coqprime
 src/BaseSystem.v
 src/BaseSystemProofs.v
 src/EdDSAProofs.v
@@ -45,3 +46,14 @@ src/Util/NumTheoryUtil.v
 src/Util/Tactics.v
 src/Util/WordUtil.v
 src/Util/ZUtil.v
+src/Assembly/QhasmCommon.v
+src/Assembly/QhasmUtil.v
+src/Assembly/State.v
+src/Assembly/QhasmEvalCommon.v
+src/Assembly/Pseudo.v
+src/Assembly/AlmostQhasm.v
+src/Assembly/Qhasm.v
+src/Assembly/PseudoConversion.v
+src/Assembly/AlmostConversion.v
+src/Assembly/StringConversion.v
+src/Assembly/Pipeline.v
