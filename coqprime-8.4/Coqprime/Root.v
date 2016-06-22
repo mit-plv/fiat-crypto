@@ -11,11 +11,11 @@
                                                                                                          
       Proof that a polynomial has at most n roots                                 
 ************************************************************************)
-Require Import ZArith.
-Require Import List.
-Require Import UList.
-Require Import Tactic.
-Require Import Permutation.
+Require Import Coq.ZArith.ZArith.
+Require Import Coq.Lists.List.
+Require Import Coqprime.UList.
+Require Import Coqprime.Tactic.
+Require Import Coqprime.Permutation.
 
 Open Scope Z_scope.
 
@@ -33,8 +33,8 @@ Let pol := list A.
 Definition toA z := 
 match z with 
   Z0  => zero 
-| Zpos p => iter_pos _ (plus one) zero p 
-| Zneg p => op (iter_pos _ (plus one) zero p) 
+| Zpos p => iter_pos  p _ (plus one) zero 
+| Zneg p => op (iter_pos p _ (plus one) zero) 
 end.
 
 Fixpoint eval (p: pol) (x: A) {struct p} : A :=

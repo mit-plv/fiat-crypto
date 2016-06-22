@@ -32,10 +32,10 @@ coqprime: coqprime-8.4
 endif
 
 coqprime-8.4:
-	$(MAKE) -C coqprime
+	$(MAKE) -C coqprime-8.4
 
 coqprime-8.5:
-	$(MAKE) -C coqprime-8.5
+	$(MAKE) -C coqprime
 
 Makefile.coq: Makefile _CoqProject
 	$(Q)$(COQBIN)coq_makefile -f _CoqProject -o Makefile.coq

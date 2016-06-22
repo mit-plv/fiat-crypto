@@ -6,9 +6,9 @@
 (*    Benjamin.Gregoire@inria.fr Laurent.Thery@inria.fr      *)
 (*************************************************************)
 
-Require Export Coqprime.Iterator.
-Require Import Coq.ZArith.ZArith.
-Require Export Coqprime.UList.
+Require Export Iterator.
+Require Import ZArith.
+Require Export UList.
 Open Scope Z_scope.
  
 Theorem next_n_Z: forall n m,  next_n Zsucc n m = n + Z_of_nat m.

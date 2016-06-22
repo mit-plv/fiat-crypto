@@ -13,17 +13,17 @@
                                                                  
     Definition: LucasLehmer              
   **********************************************************************)
-Require Import Coq.ZArith.ZArith.
-Require Import Coqprime.ZCAux.
-Require Import Coqprime.Tactic.
-Require Import Coq.Arith.Wf_nat.
-Require Import Coqprime.NatAux.
-Require Import Coqprime.UList.
-Require Import Coqprime.ListAux.
-Require Import Coqprime.FGroup.
-Require Import Coqprime.EGroup.
-Require Import Coqprime.PGroup.
-Require Import Coqprime.IGroup.
+Require Import ZArith.
+Require Import ZCAux.
+Require Import Tactic.
+Require Import Wf_nat.
+Require Import NatAux.
+Require Import UList.
+Require Import ListAux.
+Require Import FGroup.
+Require Import EGroup.
+Require Import PGroup.
+Require Import IGroup.
 
 Open Scope Z_scope.
 
@@ -47,7 +47,7 @@ Qed.
   Definition of the power function for pairs p^n
  **************************************)
 
-Definition ppow p n := match n with  Zpos q => iter_pos q _ (pmult p) (1, 0)  | _ => (1, 0) end.
+Definition ppow p n := match n with  Zpos q => iter_pos _ (pmult p) (1, 0) q | _ => (1, 0) end.
 
 (************************************** 
   Some properties of ppow
@@ -63,14 +63,14 @@ intros p; apply iter_pos_invariant with (Inv := fun x => x = (1, 0)); auto.
 intros x H; rewrite H; auto.
 Qed.
 
-Theorem ppow_op: forall a b p, iter_pos p _ (pmult a) b = pmult (iter_pos p _ (pmult a) (1, 0)) b.
+Theorem ppow_op: forall a b p, iter_pos _ (pmult a) b p = pmult (iter_pos _ (pmult a) (1, 0) p) b.
 intros a b p; generalize b; elim p; simpl; auto; clear  b p.
 intros p Rec b.
 rewrite (Rec b). 
-try rewrite (fun x y => Rec (pmult x y)); try rewrite (fun x y => Rec (iter_pos p _ x y)); auto.
+try rewrite (fun x y => Rec (pmult x y)); try rewrite (fun x y => Rec (iter_pos _ x y p)); auto.
 repeat rewrite pmult_assoc; auto.
 intros p Rec b.
-rewrite (Rec b); try rewrite (fun x y => Rec (pmult x y)); try rewrite (fun x y => Rec (iter_pos p _ x y)); auto.
+rewrite (Rec b); try rewrite (fun x y => Rec (pmult x y)); try rewrite (fun x y => Rec (iter_pos _ x y p)); auto.
 repeat rewrite pmult_assoc; auto.
 intros b; rewrite pmult_1_r; auto.
 Qed.
@@ -114,7 +114,7 @@ repeat rewrite (fun x y z => ppow_op x (pmult y z)) ; auto.
 rewrite Rec.
 repeat rewrite pmult_1_r; auto.
 repeat rewrite <- pmult_assoc; try eq_tac; auto.
-rewrite (fun x y => pmult_comm (iter_pos p3 _ x y) p); auto.
+rewrite (fun x y => pmult_comm (iter_pos _ x y p3) p); auto.
 rewrite (pmult_assoc m); try apply pmult_comm; auto.
 Qed.
 
@@ -490,13 +490,13 @@ End Lucas.
 Definition SS p :=
   let n := Mp p in
   match p - 2 with
-    Zpos p1 => iter_pos p1 _ (fun x => Zmodd (Zsquare x - 2) n) (Zmodd 4 n)
+    Zpos p1 => iter_pos _ (fun x => Zmodd (Zsquare x - 2) n) (Zmodd 4 n) p1
   | _ => (Zmodd 4 n)
   end.
 
 Theorem SS_aux_correct: 
   forall p z1 z2 n, 0 <= n -> 0 < z1 -> z2 = fst (s n) mod z1 ->
-        iter_pos p _ (fun x => Zmodd (Zsquare x - 2) z1) z2 = fst (s (n + Zpos p)) mod z1.
+        iter_pos _ (fun x => Zmodd (Zsquare x - 2) z1) z2 p = fst (s (n + Zpos p)) mod z1.
 intros p; pattern p; apply Pind.
 simpl.
 intros z1 z2 n Hn H H1; rewrite sn; auto; rewrite H1;  rewrite Zmodd_correct; rewrite Zsquare_correct; simpl.

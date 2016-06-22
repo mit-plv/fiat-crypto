@@ -13,10 +13,10 @@
                                                                      
     Definition: FGroup              
   **********************************************************************)
-Require Import Coq.Lists.List.
-Require Import Coqprime.UList.
-Require Import Coqprime.Tactic.
-Require Import Coq.ZArith.ZArith.
+Require Import List.
+Require Import UList.
+Require Import Tactic.
+Require Import ZArith.
 
 Open Scope Z_scope. 
 

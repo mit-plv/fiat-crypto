@@ -5,12 +5,8 @@ dist: trusty
 
 env:
   matrix:
-    - COQ_VERSION="8.4"  COQPRIME="coqprime"
-    - COQ_VERSION="8.5"  COQPRIME="coqprime-8.5"
-
-matrix:
-  allow_failures:
-    - env: COQ_VERSION="8.5"  COQPRIME="coqprime-8.5"
+    - COQ_VERSION="8.4"  COQPRIME="coqprime-8.4"
+    - COQ_VERSION="8.5"  COQPRIME="coqprime"
 
 before_install:
   - if [ "$COQ_VERSION" == "8.5" ]; then sudo add-apt-repository ppa:jgross-h/coq-backports -y; fi

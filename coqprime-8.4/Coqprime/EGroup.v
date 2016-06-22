@@ -11,15 +11,15 @@
                                                                      
     Given an element a, create the group {e, a, a^2, ..., a^n}
  **********************************************************************)
-Require Import ZArith.
-Require Import Tactic.
-Require Import List.
-Require Import ZCAux.
-Require Import ZArith Znumtheory.
-Require Import Wf_nat.
-Require Import UList.
-Require Import FGroup.
-Require Import Lagrange.
+Require Import Coq.ZArith.ZArith.
+Require Import Coqprime.Tactic.
+Require Import Coq.Lists.List.
+Require Import Coqprime.ZCAux.
+Require Import Coq.ZArith.ZArith Coq.ZArith.Znumtheory.
+Require Import Coq.Arith.Wf_nat.
+Require Import Coqprime.UList.
+Require Import Coqprime.FGroup.
+Require Import Coqprime.Lagrange.
 
 Open Scope Z_scope.
 
@@ -43,7 +43,7 @@ Hypothesis a_in_G: In a G.(s).
  **************************************)
  
 Set Implicit Arguments.
-Definition gpow n := match n with  Zpos p => iter_pos _ (op a) G.(e) p | _ => G.(e) end.
+Definition gpow n := match n with  Zpos p => iter_pos p _ (op a) G.(e)  | _ => G.(e) end.
 Unset Implicit Arguments.
 
 Theorem gpow_0: gpow 0 = G.(e).
@@ -63,17 +63,17 @@ intros n; case n; simpl; auto.
 intros p; apply iter_pos_invariant with (Inv := fun x => In x G.(s)); auto.
 Qed.
 
-Theorem gpow_op: forall b p, In b G.(s) -> iter_pos _ (op a) b p = op (iter_pos _ (op a) G.(e) p) b.
+Theorem gpow_op: forall b p, In b G.(s) -> iter_pos p _ (op a) b = op (iter_pos p _ (op a) G.(e)) b.
 intros b p; generalize b; elim p; simpl; auto; clear  b p.
 intros p Rec b Hb.
 assert (H: In (gpow (Zpos p)) G.(s)).
 apply gpow_in.
-rewrite (Rec b); try rewrite (fun x y => Rec (op x y)); try rewrite (fun x y => Rec (iter_pos A x y p)); auto.
+rewrite (Rec b); try rewrite (fun x y => Rec (op x y)); try rewrite (fun x y => Rec (iter_pos p A x y)); auto.
 repeat rewrite G.(assoc); auto.
 intros p Rec b Hb.
 assert (H: In (gpow (Zpos p)) G.(s)).
 apply gpow_in.
-rewrite (Rec b); try rewrite (fun x y => Rec (op x y)); try rewrite (fun x y => Rec (iter_pos A x y p)); auto.
+rewrite (Rec b); try rewrite (fun x y => Rec (op x y)); try rewrite (fun x y => Rec (iter_pos p A x y)); auto.
 repeat rewrite G.(assoc); auto.
 intros b H; rewrite e_is_zero_r; auto.
 Qed.
@@ -87,7 +87,7 @@ intros _ _; simpl; apply sym_equal; apply e_is_zero_r.
 exact (gpow_in (Zpos p1)).
 2: intros p2 _ H; contradict H; auto with zarith.
 intros p2 _ _; simpl.
-rewrite iter_pos_plus; rewrite (fun x y => gpow_op (iter_pos A x y p2)); auto.
+rewrite iter_pos_plus; rewrite (fun x y => gpow_op (iter_pos p2 A x y)); auto.
 exact (gpow_in (Zpos p2)).
 Qed.
 
@@ -445,7 +445,7 @@ intros x H2 Rec _; unfold Zsucc; rewrite gpow_add; simpl; auto with zarith.
 repeat rewrite G.(e_is_zero_r); auto with zarith.
 apply gpow_in; sauto.
 intros p1 _; case m; simpl; auto.
-assert(H1: In (iter_pos A (op a) (e G) p1) (s G)).
+assert(H1: In (iter_pos p1 A (op a) (e G)) (s G)).
 refine (gpow_in _ _ _ _ _ (Zpos p1)); auto.
 intros p2 _;  pattern p2; apply Pind; simpl; auto.
 rewrite Pmult_1_r; rewrite G.(e_is_zero_r); try rewrite G.(e_is_zero_r); auto.
@@ -486,12 +486,12 @@ repeat rewrite iter_pos_plus; simpl.
 repeat rewrite (fun x y H z => gpow_op A  op x G H (op y z)) ; auto.
 rewrite Rec.
 repeat rewrite G.(e_is_zero_r); auto.
-assert(H1: In (iter_pos A (op a) (e G) p3) (s G)).
+assert(H1: In (iter_pos p3 A (op a) (e G)) (s G)).
 refine (gpow_in _ _ _ _ _ (Zpos p3)); auto.
-assert(H2: In (iter_pos A (op b) (e G) p3) (s G)).
+assert(H2: In (iter_pos p3 A (op b) (e G)) (s G)).
 refine (gpow_in _ _ _ _ _ (Zpos p3)); auto.
 repeat rewrite <- G.(assoc); try eq_tac; auto.
-rewrite (fun x y => comm (iter_pos A x y p3) b); auto.
+rewrite (fun x y => comm (iter_pos p3 A x y) b); auto.
 rewrite (G.(assoc) a); try apply comm; auto.
 Qed.
 
