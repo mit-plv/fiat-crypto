@@ -133,7 +133,7 @@ Proof.
   unfold iter_op.
   lazymatch goal with
   | [ |- ?proj (snd (funexp ?f ?x ?n)) === snd (funexp ?f' _ ?n) ]
-    => pose proof (fun pf x0 x1 => @funexp_proj _ _ _ _ (fun x => (fst x, proj (snd x))) f f' (Proper_test_and_op (Requiv:=T'Equiv)) pf (x0, x1)) as H';
+    => pose proof (fun pf x0 x1 => @funexp_proj _ _ _ _ (fun x' => (fst x', proj (snd x'))) f f' (Proper_test_and_op (Requiv:=T'Equiv)) pf (x0, x1)) as H';
       lazymatch type of H' with
       | ?H'' -> _ => assert (H'') as pf; [clear H'|edestruct (H' pf); simpl in *; solve [eauto]]
       end
