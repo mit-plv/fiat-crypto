@@ -1,4 +1,4 @@
-Require Import QhasmEvalCommon.
+Require Import QhasmCommon QhasmEvalCommon.
 Require Import Language.
 Require Import List NPeano.
 

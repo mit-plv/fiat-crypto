@@ -1,7 +1,6 @@
 
 MOD_NAME := Crypto
 SRC_DIR  := src
-FLAGS := Coqprime/Coqprime
 
 .PHONY: coq clean install coqprime update-_CoqProject
 .DEFAULT_GOAL := coq
@@ -9,7 +8,7 @@ FLAGS := Coqprime/Coqprime
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g'
 
 update-_CoqProject::
-	@(echo "-R $(SRC_DIR) $(MOD_NAME) $(FLAGS)"; git ls-files src/*.v) > _CoqProject
+	@(echo "-R $(SRC_DIR) $(MOD_NAME)"; git ls-files src/*.v) > _CoqProject
 
 coq: coqprime Makefile.coq
 	@$(MAKE) -f Makefile.coq

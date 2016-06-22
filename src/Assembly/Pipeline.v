@@ -1,10 +1,9 @@
-
 Require Import QhasmCommon QhasmEvalCommon.
 Require Import Pseudo Qhasm AlmostQhasm Conversion Language.
 Require Import PseudoConversion AlmostConversion StringConversion.
 
 Module Pipeline.
-  Export Util AlmostQhasm Qhasm QhasmString.
+  Export AlmostQhasm Qhasm QhasmString.
   Export Pseudo.
 
   Transparent Pseudo.Program AlmostQhasm.Program Qhasm.Program QhasmString.Program.

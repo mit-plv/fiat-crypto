@@ -1,10 +1,10 @@
-Require Export Language Conversion QhasmEvalCommon QhasmUtil.
+Require Export Language Conversion QhasmCommon QhasmEvalCommon QhasmUtil.
 Require Export Pseudo AlmostQhasm State.
 Require Import Bedrock.Word NArith NPeano Euclid.
 Require Import List Sumbool Vector.
 
 Module PseudoConversion <: Conversion Pseudo AlmostQhasm.
-  Import AlmostQhasm EvalUtil ListState Util Pseudo ListNotations.
+  Import AlmostQhasm EvalUtil ListState Pseudo ListNotations.
 
   Section Conv.
     Variable w: nat.
