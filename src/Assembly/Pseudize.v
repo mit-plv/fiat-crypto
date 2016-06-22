@@ -1,5 +1,5 @@
 Require Export Bedrock.Word Bedrock.Nomega.
-Require Import NArith NPeano List Sumbool.
+Require Import NArith NPeano List Sumbool Compare_dec.
 Require Import QhasmCommon QhasmEvalCommon QhasmUtil Pseudo State.
 Require Export Wordize Vectorize.
 
@@ -9,22 +9,35 @@ Module Conversion.
   Hint Unfold setList getList getVar setCarry setCarryOpt getCarry
        getMem setMem overflows.
 
-  Lemma pseudo_var: forall {w s n} x k v b p m c,
-      nth_error x k = Some v
-    -> pseudoEval (@PVar w s n b (exist _ k p)) (x, m, c) = Some ([v], m, c).
+  Lemma pseudo_var: forall {w s n} b k x v m c,
+      (k < n)%nat
+    -> nth_error x k = Some v
+    -> pseudoEval (@PVar w s n b (indexize k)) (x, m, c) = Some ([v], m, c).
   Proof.
-    intros; simpl; autounfold; simpl.
-    destruct (nth_error x k); simpl; try inversion H; intuition.
+    intros; autounfold; simpl; unfold indexize.
+    destruct (le_dec n 0); simpl. {
+      replace k with 0 in * by omega; autounfold; simpl in *.
+      rewrite H0; simpl; intuition.
+    }
+
+    replace (k mod n) with k by admit. (* TODO (rsloan): find lemma name *)
+
+    autounfold; simpl.
+    destruct (nth_error x k); simpl; try inversion H0; intuition.
   Qed.
 
-  Lemma pseudo_mem: forall {w s} n v m c x name len index p0 p1,
+  Lemma pseudo_mem: forall {w s} n v m c x name len index,
       TripleM.find (w, name mod n, index mod len)%nat m = Some (@wordToN w v)
-    -> pseudoEval (@PMem w s n len (indexize _ p0 name) (indexize _ p1 index)) (x, m, c) = Some ([v], m, c).
+    -> pseudoEval (@PMem w s n len (indexize name) (indexize index)) (x, m, c) = Some ([v], m, c).
   Proof.
     intros; autounfold; simpl.
-    unfold getMem; simpl.
-    rewrite H; autounfold; simpl.
-    rewrite NToWord_wordToN; intuition.
+    unfold indexize;
+      destruct (le_dec n 0), (le_dec len 0);
+      try replace n with 0 in * by intuition;
+      try replace len with 0 in * by intuition;
+      autounfold; simpl in *; rewrite H;
+      autounfold; simpl; rewrite NToWord_wordToN;
+      intuition.
   Qed.
 
   Lemma pseudo_const: forall {w s n} x v m c,
@@ -100,14 +113,13 @@ Module Conversion.
     rewrite wordize_shiftr; rewrite NToWord_wordToN; intuition.
   Qed.
 
-  Lemma pseudo_dual:
-    forall {w s n} (p: @Pseudo w s n 1) x out0 out1 m0 m1 c0 c1 k,
+  Lemma pseudo_mult:
+    forall {w s n} (p: @Pseudo w s n 2) x out0 out1 m0 m1 c0 c1,
       pseudoEval p (x, m0, c0) = Some ([out0; out1], m1, c1)
     -> pseudoEval (PDual n Mult p) (x, m0, c0) =
-      Some ([x ^* y; (highBits (n/2) x) ^* (highBits (n/2) y)], m1, c1).
+      Some ([out0 ^* out1; multHigh out0 out1], m1, c1).
   Proof.
-    intros; simpl; rewrite H; autounfold; simpl.
-    rewrite wordize_shiftr; rewrite NToWord_wordToN; intuition.
+    intros; simpl; rewrite H; autounfold; simpl; intuition.
   Qed.
 
   Lemma pseudo_comb:
@@ -137,13 +149,23 @@ Module Conversion.
     apply (pseudo_comb p0 p1 input _ _ m0 m1 m2 c0 c1 c2); intuition.
   Qed.
 
+  Lemma pseudo_let:
+    forall {w s n k m} (p0: @Pseudo w s n k) (p1: @Pseudo w s (n + k) m)
+      input out0 out1 m0 m1 m2 c0 c1 c2,
+      pseudoEval p0 (input, m0, c0) = Some (out0, m1, c1)
+    -> pseudoEval p1 (input ++ out0, m1, c1) = Some (out1, m2, c2)
+    -> pseudoEval (@PLet w s n k m p0 p1) (input, m0, c0) =
+        Some (out1, m2, c2).
+  Proof.
+    intros; autounfold; simpl.
+    rewrite H; autounfold; simpl.
+    rewrite H0; autounfold; simpl; intuition.
+  Qed.
+
   Definition pseudeq {w s} (n m: nat) (f: list (word w) -> list (word w)) : Type := 
     {p: @Pseudo w s n m | forall x: (list (word w)),
       List.length x = n -> exists m' c',
       pseudoEval p (x, TripleM.empty N, None) = Some (f x, m', c')}.
-
-  Definition example (v: list (word 32)) : list (word 32) :=
-      [(natToWord _ 1) ^& (nth 0 v (wzero _))].
 
   Ltac autodestruct :=
     repeat match goal with
@@ -159,23 +181,34 @@ Module Conversion.
       end
     end.
 
-  Definition convert_example: @pseudeq 32 W32 1 1 example.
-    repeat eexists; unfold example; autounfold; autodestruct.
+  Ltac pseudo_step :=
+    match goal with
+    | [ |- pseudoEval ?p _ = Some ([?x ^& ?y], _, _) ] =>
+      is_evar p; eapply pseudo_and
+    | [ |- pseudoEval ?p _ = Some ([?x ^+ ?y], _, _) ] =>
+      is_evar p; eapply pseudo_plus
+    | [ |- pseudoEval ?p _ = Some (cons ?x (cons _ _), _, _) ] =>
+      is_evar p; eapply pseudo_cons; try reflexivity
+    | [ |- pseudoEval ?p _ = Some ([natToWord _ ?x], _, _)%p ] =>
+      is_evar p; eapply pseudo_const
+    | [ |- @pseudoEval ?n _ _ _ ?P (?lst, _, _) =
+            Some ([nth ?i ?lst _], _, _)%p ] =>
+      eapply (pseudo_var None); simpl; intuition
+    end.
 
-    eapply pseudo_and.
-    eapply pseudo_cons.
-    eapply pseudo_const.
-    eapply pseudo_var.
+  Ltac pseudo_solve :=
+    repeat eexists;
+    autounfold;
+    autodestruct;
+    repeat pseudo_step.
 
-    (* leftovers *)
+  Definition convert_example: @pseudeq 32 W32 1 1 (fun v =>
+      let a := natToWord _ 1 in
+      let b := nth 0 v (wzero _) in
+      [a ^& b]).
 
-    instantiate (1 := 0); simpl; intuition.
-    reflexivity.
+    cbv zeta; pseudo_solve.
 
-    Grab Existential Variables.
-
-    abstract (simpl; intuition).
-    exact None.
   Defined.
 
   Eval simpl in (proj1_sig convert_example).

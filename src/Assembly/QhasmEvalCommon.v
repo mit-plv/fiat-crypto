@@ -50,12 +50,15 @@ Module EvalUtil.
 
   Definition highBits {n} (m: nat) (x: word n) := snd (break m x).
 
-  Definition evalDualOp {n} (duo: DualOp) (x y: word n): word n * word n.
-    refine match duo with
-    | Mult => (x ^* y,
-        @extend _ n _ ((highBits (n/2) x) ^* (highBits (n/2) y)))
-    end; abstract omega.
+  Definition multHigh {n} (x y: word n): word n.
+    refine (@extend _ n _ ((highBits (n/2) x) ^* (highBits (n/2) y)));
+      abstract omega.
   Defined.
+
+  Definition evalDualOp {n} (duo: DualOp) (x y: word n) :=
+    match duo with
+    | Mult => (x ^* y, multHigh x y)
+    end.
 
   Definition evalRotOp {b} (ro: RotOp) (x: word b) (n: nat) :=
     match ro with
