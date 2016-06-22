@@ -7,6 +7,7 @@ Require Import Crypto.Tactics.VerdiTactics.
 Require Import Coq.Classes.Morphisms.
 Require Import Relation_Definitions.
 Require Import Crypto.Util.Tuple.
+Require Import Crypto.Util.Notations.
 
 Module Extended.
   Section ExtendedCoordinates.
@@ -18,7 +19,7 @@ Module Extended.
     Local Notation "0" := Fzero.  Local Notation "1" := Fone.
     Local Infix "+" := Fadd. Local Infix "*" := Fmul.
     Local Infix "-" := Fsub. Local Infix "/" := Fdiv.
-    Local Notation "x ^2" := (x*x) (at level 30).
+    Local Notation "x ^2" := (x*x).
     Local Notation Epoint := (@E.point F Feq Fone Fadd Fmul a d).
     Local Notation onCurve := (@Pre.onCurve F Feq Fone Fadd Fmul a d).
 

@@ -1,5 +1,6 @@
 Require Import Coq.Classes.Morphisms. Require Coq.Setoids.Setoid.
 Require Import Crypto.Algebra Crypto.Tactics.Nsatz.
+Require Import Crypto.Util.Notations.
 
 Generalizable All Variables.
 Section Pre.
@@ -9,7 +10,7 @@ Section Pre.
   Local Notation "0" := zero.  Local Notation "1" := one.
   Local Infix "+" := add. Local Infix "*" := mul.
   Local Infix "-" := sub. Local Infix "/" := div.
-  Local Notation "x '^' 2" := (x*x) (at level 30).
+  Local Notation "x ^2" := (x*x).
 
   Add Field EdwardsCurveField : (Field.field_theory_for_stdlib_tactic (T:=F)).
 

@@ -7,6 +7,7 @@ Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParams.
 Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParamProofs.
 Require Import Crypto.ModularArithmetic.ExtendedBaseVector.
 Require Import Crypto.Tactics.VerdiTactics.
+Require Import Crypto.Util.Notations.
 Local Open Scope Z_scope.
 
 Section PseudoMersenneBase.
@@ -15,7 +16,7 @@ Section PseudoMersenneBase.
   Definition decode (us : digits) : F modulus := ZToField (BaseSystem.decode base us).
 
   Definition rep (us : digits) (x : F modulus) := (length us = length base)%nat /\ decode us = x.
-  Local Notation "u '~=' x" := (rep u x) (at level 70).
+  Local Notation "u ~= x" := (rep u x).
   Local Hint Unfold rep.
 
   Definition encode (x : F modulus) := encode x ++ BaseSystem.zeros (length base - 1)%nat.

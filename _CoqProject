@@ -40,6 +40,7 @@ src/Util/Decidable.v
 src/Util/IterAssocOp.v
 src/Util/ListUtil.v
 src/Util/NatUtil.v
+src/Util/Notations.v
 src/Util/NumTheoryUtil.v
 src/Util/Tactics.v
 src/Util/Tuple.v

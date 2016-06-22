@@ -9,6 +9,7 @@ Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.BaseSystem.
 Import ListNotations.
 Require Import Coq.ZArith.ZArith Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.ZArith.Znumtheory.
+Require Import Crypto.Util.Notations.
 Local Open Scope Z.
 
 (* BEGIN PseudoMersenneBaseParams instance construction. *)
@@ -60,8 +61,8 @@ Proof.
 
 (* Uncomment this to see a pretty-printed mulmod
 Local Transparent Let_In.
-Infix "<<" := Z.shiftr (at level 50).
-Infix "&" := Z.land (at level 50).
+Infix "<<" := Z.shiftr.
+Infix "&" := Z.land.
 Eval cbv beta iota delta [proj1_sig GF25519Base25Point5_mul_reduce_formula Let_In] in
   fun f0 f1 f2 f3 f4 f5 f6 f7 f8 f9
     g0 g1 g2 g3 g4 g5 g6 g7 g8 g9 => proj1_sig (
@@ -122,8 +123,8 @@ Defined.
 (*
 Set Printing Depth 1000.
 Local Transparent Let_In.
-Infix "<<" := Z.shiftr (at level 50).
-Infix "&" := Z.land (at level 50).
+Infix "<<" := Z.shiftr.
+Infix "&" := Z.land.
 Eval cbv beta iota delta [proj1_sig GF25519Base25Point5_freeze_formula Let_In] in
   fun f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 => proj1_sig (
     GF25519Base25Point5_freeze_formula f0 f1 f2 f3 f4 f5 f6 f7 f8 f9).
