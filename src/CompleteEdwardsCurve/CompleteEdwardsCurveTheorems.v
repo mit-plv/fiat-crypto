@@ -135,7 +135,7 @@ Module E.
       match goal with | |- _ <> 0 => admit end.
       match goal with | |- _ <> 0 => admit end.
       match goal with | |- _ <> 0 => admit end.
-    Qed.
+    Admitted.
 
     (* TODO: move to [Group] and [AbelianGroup] as appropriate *)
     Lemma mul_0_l : forall P, (0 * P = zero)%E.
