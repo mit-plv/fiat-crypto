@@ -2,7 +2,7 @@
 MOD_NAME := Crypto
 SRC_DIR  := src
 
-.PHONY: coq clean install coqprime update- update-_CoqProject
+.PHONY: coq clean install coqprime update-_CoqProject
 .DEFAULT_GOAL := coq
 
 update-_CoqProject::
