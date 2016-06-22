@@ -1,5 +1,4 @@
 -R src Crypto
--R Coqprime/Coqprime Coqprime
 src/BaseSystem.v
 src/BaseSystemProofs.v
 src/EdDSAProofs.v

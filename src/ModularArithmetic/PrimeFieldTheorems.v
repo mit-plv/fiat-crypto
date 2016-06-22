@@ -410,7 +410,7 @@ Section SquareRootsPrime5Mod8.
   (* This is only the square root of -1 if q mod 8 is 3 or 5 *)
   Definition sqrt_minus1 : F q :=  ZToField 2 ^ Z.to_N (q / 4).
 
-  Lemma two_lt_q : 2 < q.
+  Lemma two_lt_q_5mod8 : 2 < q.
   Proof.
     pose proof (prime_ge_2 q _) as two_le_q.
     apply Zle_lt_or_eq in two_le_q.
@@ -466,7 +466,7 @@ Section SquareRootsPrime5Mod8.
       replace (Z.to_N 2) with 2%N by auto.
       ring.
 
-      symmetry; apply euler_criterion_F; auto using two_lt_q.
+      symmetry; apply euler_criterion_F; auto using two_lt_q_5mod8.
     }
   Qed.
 
