@@ -229,7 +229,9 @@ Proof. induction n; auto. Qed.
 Lemma Z_of_nat_nonzero : forall m, m <> 0 -> (0 < Z.of_nat m)%Z.
 Proof. intros. destruct m; [congruence|reflexivity]. Qed.
 
-Local Infix "mod" := NPeano.modulo : nat_scope.
+Section with_unqualified_modulo.
+Import NPeano Nat.
+Local Infix "mod" := modulo : nat_scope.
 Lemma N_of_nat_modulo : forall n m, m <> 0 -> N.of_nat (n mod m)%nat = (N.of_nat n mod N.of_nat m)%N.
 Proof.
   intros.
@@ -242,6 +244,7 @@ Proof.
   rewrite Znat.Z2N.inj_mod by (auto using Znat.Nat2Z.is_nonneg, Z_of_nat_nonzero).
   rewrite !Z_to_N_Z_of_nat, !Znat.N2Z.id; reflexivity.
 Qed.
+End with_unqualified_modulo.
 
 Lemma encoding_canonical' {T} {B} {encoding:canonical encoding of T as B} :
   forall a b, enc a = enc b -> a = b.
