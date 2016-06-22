@@ -117,7 +117,7 @@ Module E.
       | |- _ => progress cbv [fst snd coordinates proj1_sig eq fieldwise fieldwise' add zero opp] in *
       | |- _ => split
       | |- Feq _ _ => field_algebra
-      | |- _ <> 0 => expand_opp; solve [nsatz_nonzero|eauto]
+      | |- _ <> 0 => expand_opp; solve [nsatz_nonzero|eauto 6]
       | |- {_}+{_} => eauto 15 using decide_and, @eq_dec with typeclass_instances
       end.
 
