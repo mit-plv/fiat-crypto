@@ -4,7 +4,7 @@ Require Export Bedrock.Word.
 (* Utilities *)
 Definition Label := nat.
 
-Definition Index (limit: nat) := {x: nat | (x < limit)%nat}.
+Definition Index (limit: nat) := {x: nat | (x <= (pred limit))%nat}.
 Coercion indexToNat {lim: nat} (i: Index lim): nat := proj1_sig i.
 
 Inductive Either A B :=
