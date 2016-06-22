@@ -1,0 +1,11 @@
+language: generic
+
+sudo: required
+dist: trusty
+
+addons:
+  apt:
+    packages:
+    - coq
+
+script: make COQPATH="$(pwd)/coqprime" TIMED=1 -j2

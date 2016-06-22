@@ -2,6 +2,7 @@ Require Import Coq.ZArith.Zpower Coq.ZArith.Znumtheory Coq.ZArith.ZArith Coq.ZAr
 Require Import Coq.omega.Omega Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
 Require Import Crypto.Util.NatUtil.
 Require Import Coq.Lists.List.
+Import Nat.
 Local Open Scope Z.
 
 Lemma gt_lt_symmetry: forall n m, n > m <-> m < n.
@@ -208,7 +209,7 @@ Proof.
   rewrite (le_plus_minus n m) at 1 by assumption.
   rewrite Nat2Z.inj_add.
   rewrite Z.pow_add_r by apply Nat2Z.is_nonneg.
-  rewrite <- Z.div_div by first 
+  rewrite <- Z.div_div by first
     [ pose proof (Z.pow_pos_nonneg 2 (Z.of_nat n)); omega
     | apply Z.pow_pos_nonneg; omega ].
   rewrite Z.div_add by (pose proof (Z.pow_pos_nonneg 2 (Z.of_nat n)); omega).
@@ -332,7 +333,7 @@ Qed.
     replace (2 ^ (Z.pos p)) with (2 ^ (Z.pos p - 1)* 2).
     rewrite Z.div_add_l by omega.
     reflexivity.
-    replace 2 with (2 ^ 1) at 2 by auto.
+    change 2 with (2 ^ 1) at 2.
     rewrite <-Z.pow_add_r by (pose proof (Pos2Z.is_pos p); omega).
     f_equal. omega.
   Qed.
@@ -345,7 +346,7 @@ Qed.
     + unfold Z.ones.
       rewrite Z.shiftr_0_r, Z.shiftl_1_l, Z.sub_0_r.
       omega.
-    + intros. 
+    + intros.
       destruct (Z_lt_le_dec x n); try omega.
       intuition.
       left.
@@ -360,7 +361,7 @@ Qed.
     Z.shiftr a i <= Z.ones (n - i) .
   Proof.
     intros a n i G G0 G1.
-    destruct (Z_le_lt_eq_dec i n G1). 
+    destruct (Z_le_lt_eq_dec i n G1).
     + destruct (Z_shiftr_ones' a n G i G0); omega.
     + subst; rewrite Z.sub_diag.
       destruct (Z_eq_dec a 0).
@@ -385,34 +386,91 @@ Qed.
       omega.
   Qed.
 
-(* prove that known nonnegative numbers are nonnegative *)
+(* prove that combinations of known positive/nonnegative numbers are positive/nonnegative *)
 Ltac zero_bounds' :=
   repeat match goal with
   | [ |- 0 <= _ + _] => apply Z.add_nonneg_nonneg
-  | [ |- 0 <= _ - _] => apply Zle_minus_le_0
+  | [ |- 0 <= _ - _] => apply Z.le_0_sub
   | [ |- 0 <= _ * _] => apply Z.mul_nonneg_nonneg
   | [ |- 0 <= _ / _] => apply Z.div_pos
-  | [ |- 0 < _ + _] => apply Z.add_pos_nonneg
-  (* TODO : this apply is not good: it can make a true goal false. Actually,
-  * we would want this tactic to explore two branches:
-  * - apply Z.add_pos_nonneg and continue
-  * - apply Z.add_nonneg_pos and continue
-  * Keep whichever one solves all subgoals. If neither does, don't apply. *)
-
-  | [ |- 0 < _ - _] => apply Zlt_minus_lt_0
+  | [ |- 0 <= _ ^ _ ] => apply Z.pow_nonneg
+  | [ |- 0 <= Z.shiftr _ _] => apply Z.shiftr_nonneg
+  | [ |- 0 < _ + _] => try solve [apply Z.add_pos_nonneg; zero_bounds'];
+                       try solve [apply Z.add_nonneg_pos; zero_bounds']
+  | [ |- 0 < _ - _] => apply Z.lt_0_sub
   | [ |- 0 < _ * _] => apply Z.lt_0_mul; left; split
   | [ |- 0 < _ / _] => apply Z.div_str_pos
+  | [ |- 0 < _ ^ _ ] => apply Z.pow_pos_nonneg
   end; try omega; try prime_bound; auto.
 
 Ltac zero_bounds := try omega; try prime_bound; zero_bounds'.
 
-  Lemma Z_ones_nonneg : forall i, (0 <= i) -> 0 <= Z.ones i.
-  Proof.
-    apply natlike_ind.
-    + unfold Z.ones. simpl; omega.
-    + intros.
-      rewrite Z_ones_succ by assumption.
-      zero_bounds.
-      apply Z.pow_nonneg; omega.
-  Qed.
+Lemma Z_ones_nonneg : forall i, (0 <= i) -> 0 <= Z.ones i.
+Proof.
+  apply natlike_ind.
+  + unfold Z.ones. simpl; omega.
+  + intros.
+    rewrite Z_ones_succ by assumption.
+    zero_bounds.
+Qed.
 
+Lemma Z_ones_pos_pos : forall i, (0 < i) -> 0 < Z.ones i.
+Proof.
+  intros.
+  unfold Z.ones.
+  rewrite Z.shiftl_1_l.
+  apply Z.lt_succ_lt_pred.
+  apply Z.pow_gt_1; omega.
+Qed.
+
+Lemma N_le_1_l : forall p, (1 <= N.pos p)%N.
+Proof.
+  destruct p; cbv; congruence.
+Qed.
+
+Lemma Pos_land_upper_bound_l : forall a b, (Pos.land a b <= N.pos a)%N.
+Proof.
+  induction a; destruct b; intros; try solve [cbv; congruence];
+    simpl; specialize (IHa b); case_eq (Pos.land a b); intro; simpl;
+    try (apply N_le_1_l || apply N.le_0_l); intro land_eq;
+    rewrite land_eq in *; unfold N.le, N.compare in *;
+    rewrite ?Pos.compare_xI_xI, ?Pos.compare_xO_xI, ?Pos.compare_xO_xO;
+    try assumption.
+  destruct (p ?=a)%positive; cbv; congruence.
+Qed.
+
+Lemma Z_land_upper_bound_l : forall a b, (0 <= a) -> (0 <= b) ->
+  Z.land a b <= a.
+Proof.
+  intros.
+  destruct a, b; try solve [exfalso; auto]; try solve [cbv; congruence].
+  cbv [Z.land].
+  rewrite <-N2Z.inj_pos, <-N2Z.inj_le.
+  auto using Pos_land_upper_bound_l.
+Qed.
+
+Lemma Z_land_upper_bound_r : forall a b, (0 <= a) -> (0 <= b) ->
+  Z.land a b <= b.
+Proof.
+  intros.
+  rewrite Z.land_comm.
+  auto using Z_land_upper_bound_l.
+Qed.
+
+Lemma Z_le_fold_right_max : forall low l x, (forall y, In y l -> low <= y) ->
+  In x l -> x <= fold_right Z.max low l.
+Proof.
+  induction l; intros ? lower_bound In_list; [cbv [In] in *; intuition | ].
+  simpl.
+  destruct (in_inv In_list); subst.
+  + apply Z.le_max_l.
+  + etransitivity.
+    - apply IHl; auto; intuition.
+    - apply Z.le_max_r.
+Qed.
+
+Lemma Z_le_fold_right_max_initial : forall low l, low <= fold_right Z.max low l.
+Proof.
+  induction l; intros; try reflexivity.
+  etransitivity; [ apply IHl | apply Z.le_max_r ].
+Qed.

@@ -18,7 +18,7 @@ Section BaseSystemProofs.
   Qed.
 
   Lemma decode'_splice : forall xs ys bs,
-    decode' bs (xs ++ ys) = 
+    decode' bs (xs ++ ys) =
     decode' (firstn (length xs) bs) xs + decode'  (skipn (length xs) bs) ys.
   Proof.
     unfold decode'.
@@ -83,7 +83,7 @@ Section BaseSystemProofs.
     unfold decode, encode; destruct z; boring.
   Qed.
 
-  Lemma mul_each_base : forall us bs c, 
+  Lemma mul_each_base : forall us bs c,
       decode' bs (mul_each c us) = decode' (mul_each c bs) us.
   Proof.
     induction us; destruct bs; boring; ring.
@@ -99,8 +99,8 @@ Section BaseSystemProofs.
     induction us; destruct low; boring.
   Qed.
 
-  Lemma base_mul_app : forall low c us, 
-      decode' (low ++ mul_each c low) us = decode' low (firstn (length low) us) + 
+  Lemma base_mul_app : forall low c us,
+      decode' (low ++ mul_each c low) us = decode' low (firstn (length low) us) +
       c * decode' low (skipn (length low) us).
   Proof.
     intros.
@@ -118,7 +118,7 @@ Section BaseSystemProofs.
   Qed.
   Hint Rewrite length_zeros.
 
-  Lemma app_zeros_zeros : forall n m, zeros n ++ zeros m = zeros (n + m).
+  Lemma app_zeros_zeros : forall n m, zeros n ++ zeros m = zeros (n + m)%nat.
   Proof.
     induction n; boring.
   Qed.
@@ -129,6 +129,18 @@ Section BaseSystemProofs.
     induction m; boring.
   Qed.
   Hint Rewrite zeros_app0.
+
+  Lemma nth_default_zeros : forall n i, nth_default 0 (BaseSystem.zeros n) i = 0.
+  Proof.
+    induction n; intros; [ cbv [BaseSystem.zeros]; apply nth_default_nil | ].
+    rewrite <-zeros_app0, nth_default_app.
+    rewrite length_zeros.
+    destruct (lt_dec i n); auto.
+    destruct (eq_nat_dec i n); subst.
+    + rewrite Nat.sub_diag; apply nth_default_cons.
+    + apply nth_default_out_of_bounds.
+      cbv [length]; omega.
+  Qed.
 
   Lemma rev_zeros : forall n, rev (zeros n) = zeros n.
   Proof.
@@ -225,7 +237,7 @@ Section BaseSystemProofs.
 
   Lemma zeros_plus_zeros : forall n, zeros n = zeros n .+ zeros n.
     induction n; auto.
-    simpl; f_equal; auto. 
+    simpl; f_equal; auto.
   Qed.
 
   Lemma mul_bi'_n_nil : forall n, mul_bi' base n nil = nil.
@@ -243,13 +255,13 @@ Section BaseSystemProofs.
     induction us; auto.
   Qed.
   Hint Rewrite add_nil_r.
-  
+
   Lemma add_first_terms : forall us vs a b,
     (a :: us) .+ (b :: vs) = (a + b) :: (us .+ vs).
     auto.
   Qed.
   Hint Rewrite add_first_terms.
- 
+
   Lemma mul_bi'_cons : forall n x us,
     mul_bi' base n (x :: us) = x * crosscoef base n (length us) :: mul_bi' base n us.
   Proof.
@@ -266,7 +278,7 @@ Section BaseSystemProofs.
   Hint Rewrite app_nil_l.
   Hint Rewrite app_nil_r.
 
-  Lemma add_snoc_same_length : forall l us vs a b, 
+  Lemma add_snoc_same_length : forall l us vs a b,
     (length us = l) -> (length vs = l) ->
     (us ++ a :: nil) .+ (vs ++ b :: nil) = (us .+ vs) ++ (a + b) :: nil.
   Proof.
@@ -276,7 +288,7 @@ Section BaseSystemProofs.
   Lemma mul_bi'_add : forall us n vs l
     (Hlus: length us = l)
     (Hlvs: length vs = l),
-    mul_bi' base n (rev (us .+ vs)) = 
+    mul_bi' base n (rev (us .+ vs)) =
     mul_bi' base n (rev us) .+ mul_bi' base n (rev vs).
   Proof.
     (* TODO(adamc): please help prettify this *)
@@ -310,7 +322,7 @@ Section BaseSystemProofs.
   Proof.
     induction n; boring.
   Qed.
-  
+
   Lemma rev_add_rev : forall us vs l, (length us = l) -> (length vs = l) ->
     (rev us) .+ (rev vs) = rev (us .+ vs).
   Proof.
@@ -352,7 +364,7 @@ Section BaseSystemProofs.
   Hint Rewrite minus_diag.
 
   Lemma add_trailing_zeros : forall us vs, (length us >= length vs)%nat ->
-    us .+ vs = us .+ (vs ++ (zeros (length us - length vs))).
+    us .+ vs = us .+ (vs ++ (zeros (length us - length vs)%nat)).
   Proof.
     induction us, vs; boring; f_equal; boring.
   Qed.
@@ -377,8 +389,8 @@ Section BaseSystemProofs.
      induction us; boring.
   Qed.
 
-  Lemma sub_length_le_max : forall us vs,
-      (length (sub us vs) <= max (length us) (length vs))%nat.
+  Lemma sub_length : forall us vs,
+      (length (sub us vs) = max (length us) (length vs))%nat.
   Proof.
     induction us, vs; boring.
     rewrite sub_nil_length; auto.
@@ -450,7 +462,7 @@ Section BaseSystemProofs.
   (* mul' is multiplication with the FIRST ARGUMENT REVERSED *)
   Fixpoint mul' (usr vs:digits) : digits :=
     match usr with
-      | u::usr' => 
+      | u::usr' =>
         mul_each u (mul_bi base (length usr') vs) .+ mul' usr' vs
       | _ => nil
     end.
@@ -499,5 +511,37 @@ Section BaseSystemProofs.
     rewrite rev_length; omega.
   Qed.
 
+  Lemma add_length_exact : forall us vs,
+      length (us .+ vs) = max (length us) (length vs).
+  Proof.
+    induction us; destruct vs; boring.
+  Qed.
+
+  Lemma mul'_length_exact: forall us vs,
+      (length us <= length vs)%nat -> us <> nil ->
+      (length (mul' us vs) = pred (length us + length vs))%nat.
+  Proof.
+    induction us; intros; try solve [boring].
+    unfold mul'; fold mul'.
+    unfold mul_each.
+    rewrite add_length_exact, map_length, mul_bi_length, length_cons.
+    destruct us.
+    + rewrite Max.max_0_r. simpl; omega.
+    + rewrite Max.max_l; [ omega | ].
+      rewrite IHus by ( congruence || simpl in *; omega).
+      omega.
+  Qed.
+
+  Lemma mul_length_exact: forall us vs,
+      (length us <= length vs)%nat -> us <> nil ->
+      (length (mul us vs) = pred (length us + length vs))%nat.
+  Proof.
+    intros; unfold mul.
+    rewrite mul'_length_exact; rewrite ?rev_length; try omega.
+    intro rev_nil.
+    match goal with H : us <> nil |- _ => apply H end.
+    apply length0_nil; rewrite <-rev_length, rev_nil.
+    reflexivity.
+  Qed.
 
 End BaseSystemProofs.

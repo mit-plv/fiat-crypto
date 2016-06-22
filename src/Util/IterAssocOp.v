@@ -1,5 +1,7 @@
 Require Import Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Classes.Equivalence.
 Require Import Coq.NArith.NArith Coq.PArith.BinPosDef.
+Require Import Coq.Numbers.Natural.Peano.NPeano.
+
 Local Open Scope equiv_scope.
 
 Generalizable All Variables.
@@ -147,7 +149,7 @@ Section IterAssocOp.
     destruct (funexp (test_and_op n a) (x, acc) y) as [i acc'].
     simpl in IHy.
     unfold test_and_op.
-    destruct i; rewrite NPeano.Nat.sub_succ_r; subst; rewrite <- IHy; simpl; reflexivity.
+    destruct i; rewrite Nat.sub_succ_r; subst; rewrite <- IHy; simpl; reflexivity.
   Qed.
 
   Lemma iter_op_termination : forall sc a bound,

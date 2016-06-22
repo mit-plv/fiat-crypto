@@ -1,12 +1,12 @@
-Require Import Coq.Arith.Arith.
+Require Import Coq.Arith.Arith Coq.Arith.Max.
 
 Ltac case_max :=
   match goal with [ |- context[max ?x ?y] ] =>
       destruct (le_dec x y);
       match goal with
-        | [ H : (?x <= ?y)%nat |- context[max ?x ?y] ] => rewrite Max.max_r by
+        | [ H : (?x <= ?y)%nat |- context[max ?x ?y] ] => rewrite max_r by
           (exact H)
-        | [ H : ~ (?x <= ?y)%nat   |- context[max ?x ?y] ] => rewrite Max.max_l by
+        | [ H : ~ (?x <= ?y)%nat   |- context[max ?x ?y] ] => rewrite max_l by
           (exact (le_Sn_le _ _ (not_le _ _ H)))
       end
   end.

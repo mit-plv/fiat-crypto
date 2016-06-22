@@ -26,8 +26,8 @@ Section FieldOperations.
   Context {m : BinInt.Z}.
 
   (* Coercion without Context {m} --> non-uniform inheritance --> Anomalies *)
-  Local Coercion ZToFm := ZToField : BinNums.Z -> F m.
-  
+  Let ZToFm := ZToField : BinNums.Z -> F m. Local Coercion ZToFm : BinNums.Z >-> F.
+
   Definition add (a b:F m) : F m := ZToField (a + b).
   Definition mul (a b:F m) : F m := ZToField (a * b).
 

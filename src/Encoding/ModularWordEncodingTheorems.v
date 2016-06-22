@@ -24,7 +24,7 @@ Section SignBit.
       assert (m < 1)%Z by (apply Z2Nat.inj_lt; try omega; assumption).
       omega.
     + assert (0 < m)%Z as m_pos by (pose proof prime_ge_2 m prime_m; omega).
-      pose proof (FieldToZ_range x m_pos).  
+      pose proof (FieldToZ_range x m_pos).
       destruct (FieldToZ x); auto.
       - destruct p; auto.
       - pose proof (Pos2Z.neg_is_neg p); omega.

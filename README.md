@@ -1,12 +1,12 @@
-Synthesizing Correct-by-Construction Assembly for Cryptographic Primitives
+[![Build Status](https://api.travis-ci.org/mit-plv/fiat-crypto.png?branch=master)](https://travis-ci.org/mit-plv/fiat-crypto)
+
+Fiat-Crypto: Synthesizing Correct-by-Construction Assembly for Cryptographic Primitives
 -----
 
-... which would make a good paper title.
+NOTE: The github.com repo is only intermittently synced with
+github.mit.edu.
 
 To build:
 
-	git clone git@github.mit.edu:plv/bedrock.git
-	( cd bedrock && make Bedrock/Word.vo )
-	( cd coqprime && make )
-	export COQPATH="$(pwd)/bedrock:$(pwd)/coqprime${COQPATH:+:}$COQPATH"
+	export COQPATH="$(pwd)/coqprime${COQPATH:+:}$COQPATH"
 	make

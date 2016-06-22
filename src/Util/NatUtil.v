@@ -1,4 +1,5 @@
 Require Import Coq.Numbers.Natural.Peano.NPeano Coq.omega.Omega.
+Import Nat.
 
 Local Open Scope nat_scope.
 
@@ -57,7 +58,18 @@ Proof.
   }
 Qed.
 
+Lemma lt_min_l : forall x a b, (x < min a b)%nat -> (x < a)%nat.
+Proof.
+  intros ? ? ? lt_min.
+  apply Nat.min_glb_lt_iff in lt_min.
+  destruct lt_min; assumption.
+Qed.
 
+(* useful for hints *)
+Lemma eq_le_incl_rev : forall a b, a = b -> b <= a.
+Proof.
+  intros; omega.
+Qed.
 
 Lemma beq_nat_eq_nat_dec {R} (x y : nat) (a b : R)
   : (if EqNat.beq_nat x y then a else b) = (if eq_nat_dec x y then a else b).
@@ -66,4 +78,3 @@ Proof.
     [ rewrite (proj2 (@beq_nat_true_iff _ _) H); reflexivity
     | rewrite (proj2 (@beq_nat_false_iff _ _) H); reflexivity ].
 Qed.
-

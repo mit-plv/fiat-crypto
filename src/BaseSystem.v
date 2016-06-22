@@ -1,7 +1,8 @@
 Require Import Coq.Lists.List.
-Require Import Crypto.Util.ListUtil Crypto.Util.CaseUtil Crypto.Util.ZUtil.
 Require Import Coq.ZArith.ZArith Coq.ZArith.Zdiv.
 Require Import Coq.omega.Omega Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
+Require Import Crypto.Util.ListUtil Crypto.Util.CaseUtil Crypto.Util.ZUtil.
+Import Nat.
 
 Local Open Scope Z.
 
@@ -39,7 +40,7 @@ Section BaseSystem.
   Proof.
     unfold decode'; intros; f_equal; apply combine_truncate_l.
   Qed.
-  
+
   Fixpoint add (us vs:digits) : digits :=
     match us,vs with
       | u::us', v::vs' => u+v :: add us' vs'
@@ -58,26 +59,26 @@ Section BaseSystem.
       | nil, v::vs' => (0-v)::sub nil vs'
     end.
 
-  Definition crosscoef i j : Z := 
+  Definition crosscoef i j : Z :=
     let b := nth_default 0 base in
     (b(i) * b(j)) / b(i+j)%nat.
   Hint Unfold crosscoef.
 
   Fixpoint zeros n := match n with O => nil | S n' => 0::zeros n' end.
-  
+
   (* mul' is multiplication with the SECOND ARGUMENT REVERSED and OUTPUT REVERSED *)
-  Fixpoint mul_bi' (i:nat) (vsr:digits) := 
+  Fixpoint mul_bi' (i:nat) (vsr:digits) :=
     match vsr with
     | v::vsr' => v * crosscoef i (length vsr') :: mul_bi' i vsr'
     | nil => nil
     end.
   Definition mul_bi (i:nat) (vs:digits) : digits :=
     zeros i ++ rev (mul_bi' i (rev vs)).
-  
+
   (* mul' is multiplication with the FIRST ARGUMENT REVERSED *)
   Fixpoint mul' (usr vs:digits) : digits :=
     match usr with
-      | u::usr' => 
+      | u::usr' =>
         mul_each u (mul_bi (length usr') vs) .+ mul' usr' vs
       | _ => nil
     end.
@@ -87,7 +88,7 @@ End BaseSystem.
 
 (* Example : polynomial base system *)
 Section PolynomialBaseCoefs.
-  Context (b1 : positive) (baseLength : nat) (baseLengthNonzero : NPeano.ltb 0 baseLength = true).
+  Context (b1 : positive) (baseLength : nat) (baseLengthNonzero : ltb 0 baseLength = true).
   (** PolynomialBaseCoefs generates base vectors for [BaseSystem]. *)
   Definition bi i := (Zpos b1)^(Z.of_nat i).
   Definition poly_base := map bi (seq 0 baseLength).
@@ -96,7 +97,7 @@ Section PolynomialBaseCoefs.
     unfold poly_base, bi, nth_default.
     case_eq baseLength; intros. {
       assert ((0 < baseLength)%nat) by
-        (rewrite <-NPeano.ltb_lt; apply baseLengthNonzero).
+        (rewrite <-ltb_lt; apply baseLengthNonzero).
       subst; omega.
     }
     auto.
@@ -119,7 +120,7 @@ Section PolynomialBaseCoefs.
   Qed.
 
   Lemma poly_base_succ :
-    forall i, ((S i) < length poly_base)%nat -> 
+    forall i, ((S i) < length poly_base)%nat ->
     let b := nth_default 0 poly_base in
     let r := (b (S i) / b i) in
     b (S i) = r * b i.
@@ -127,7 +128,7 @@ Section PolynomialBaseCoefs.
     intros; subst b; subst r.
     repeat rewrite poly_base_defn in * by omega.
     unfold bi.
-    replace (Z.pos b1 ^ Z.of_nat (S i)) 
+    replace (Z.pos b1 ^ Z.of_nat (S i))
       with (Z.pos b1 * (Z.pos b1 ^ Z.of_nat i)) by
       (rewrite Nat2Z.inj_succ; rewrite <- Z.pow_succ_r; intuition).
     replace (Z.pos b1 * Z.pos b1 ^ Z.of_nat i / Z.pos b1 ^ Z.of_nat i)
@@ -166,7 +167,7 @@ Import ListNotations.
 
 Section BaseSystemExample.
   Definition baseLength := 32%nat.
-  Lemma baseLengthNonzero : NPeano.ltb 0 baseLength = true.
+  Lemma baseLengthNonzero : ltb 0 baseLength = true.
     compute; reflexivity.
   Qed.
   Definition base2 := poly_base 2 baseLength.

@@ -32,7 +32,7 @@ Section PseudoMersenneBaseParamProofs.
     unfold value in *.
     congruence.
   Qed.
-  
+
   Lemma base_from_limb_widths_step : forall i b w, (S i < length base)%nat ->
     nth_error base i = Some b ->
     nth_error limb_widths i = Some w ->
@@ -45,7 +45,7 @@ Section PseudoMersenneBaseParamProofs.
     case_eq i; intros; subst.
     + subst; apply nth_error_first in nth_err_w.
       apply nth_error_first in nth_err_b; subst.
-      apply map_nth_error. 
+      apply map_nth_error.
       case_eq l; intros; subst; [simpl in *; omega | ].
       unfold base_from_limb_widths; fold base_from_limb_widths.
       reflexivity.
@@ -65,7 +65,7 @@ Section PseudoMersenneBaseParamProofs.
     apply nth_error_first in H.
     subst; eauto.
   Qed.
-  
+
   Lemma sum_firstn_succ : forall l i x,
     nth_error l i = Some x ->
     sum_firstn l (S i) = x + sum_firstn l i.
@@ -89,6 +89,13 @@ Section PseudoMersenneBaseParamProofs.
       - rewrite IHl by auto; ring.
   Qed.
 
+  Lemma limb_widths_nonneg : forall w, In w limb_widths -> 0 <= w.
+  Proof.
+    intros.
+    apply Z.lt_le_incl.
+    auto using limb_widths_pos.
+  Qed.
+
   Lemma sum_firstn_limb_widths_nonneg : forall n, 0 <= sum_firstn limb_widths n.
   Proof.
     unfold sum_firstn; intros.
@@ -110,7 +117,7 @@ Section PseudoMersenneBaseParamProofs.
     induction i; intros.
     + unfold base, sum_firstn, base_from_limb_widths in *; case_eq limb_widths; try reflexivity.
       intro lw_nil; rewrite lw_nil, (@nil_length0 Z) in *; omega.
-    + 
+    +
       assert (i < length base)%nat as lt_i_length by omega.
       specialize (IHi lt_i_length).
       rewrite base_length in lt_i_length.
@@ -131,7 +138,7 @@ Section PseudoMersenneBaseParamProofs.
         apply limb_widths_nonneg.
         eapply nth_error_value_In; eauto.
   Qed.
-  
+
   Lemma nth_default_base : forall d i, (i < length base)%nat ->
     nth_default d base i = 2 ^ (sum_firstn limb_widths i).
   Proof.
@@ -171,7 +178,7 @@ Section PseudoMersenneBaseParamProofs.
     + rewrite base_length in *; apply limb_widths_match_modulus; assumption.
   Qed.
 
-  Lemma base_succ : forall i, ((S i) < length base)%nat -> 
+  Lemma base_succ : forall i, ((S i) < length base)%nat ->
     nth_default 0 base (S i) mod nth_default 0 base i = 0.
   Proof.
     intros.
@@ -219,7 +226,7 @@ Section PseudoMersenneBaseParamProofs.
    Proof.
      unfold base; case_eq limb_widths; intros; [pose proof limb_widths_nonnil; congruence | reflexivity].
    Qed.
- 
+
    Lemma base_good : forall i j : nat,
                 (i + j < length base)%nat ->
                 let b := nth_default 0 base in

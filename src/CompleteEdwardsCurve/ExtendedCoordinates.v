@@ -1,194 +1,154 @@
-Require Import Crypto.CompleteEdwardsCurve.Pre.
-Require Import Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
-Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
-Require Import Crypto.ModularArithmetic.FField.
+Require Export Crypto.Spec.CompleteEdwardsCurve.
+
+Require Import Crypto.Algebra Crypto.Tactics.Nsatz.
+Require Import Crypto.CompleteEdwardsCurve.Pre Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
+Require Import Coq.Logic.Eqdep_dec.
 Require Import Crypto.Tactics.VerdiTactics.
-Require Import Util.IterAssocOp BinNat NArith.
-Require Import Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Classes.Equivalence.
-Local Open Scope equiv_scope.
-Local Open Scope F_scope.
+Require Import Coq.Classes.Morphisms.
+Require Import Relation_Definitions.
+Require Import Crypto.Util.Tuple.
 
-Section ExtendedCoordinates.
-  Context {prm:TwistedEdwardsParams}.
-  Local Opaque q a d prime_q two_lt_q nonzero_a square_a nonsquare_d. (* [F_field] calls [compute] *)
-  Existing Instance prime_q.
+Module Extended.
+  Section ExtendedCoordinates.
+    Import Group Ring Field.
+    Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv a d}
+            {field:@field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
+            {prm:@E.twisted_edwards_params F Feq Fzero Fone Fadd Fmul a d}.
+    Local Infix "=" := Feq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
+    Local Notation "0" := Fzero.  Local Notation "1" := Fone.
+    Local Infix "+" := Fadd. Local Infix "*" := Fmul.
+    Local Infix "-" := Fsub. Local Infix "/" := Fdiv.
+    Local Notation "x ^2" := (x*x) (at level 30).
+    Local Notation Epoint := (@E.point F Feq Fone Fadd Fmul a d).
+    Local Notation onCurve := (@Pre.onCurve F Feq Fone Fadd Fmul a d).
 
-  Add Field Ffield_p' : (@Ffield_theory q _)
-    (morphism (@Fring_morph q),
-     preprocess [Fpreprocess],
-     postprocess [Fpostprocess; try exact Fq_1_neq_0; try assumption],
-     constants [Fconstant],
-     div (@Fmorph_div_theory q),
-     power_tac (@Fpower_theory q) [Fexp_tac]).
+    Add Field _edwards_curve_extended_field : (field_theory_for_stdlib_tactic (H:=field)).
 
-  Add Field Ffield_notConstant : (OpaqueFieldTheory q)
-    (constants [notConstant]).
+    (** [Extended.point] represents a point on an elliptic curve using extended projective
+     * Edwards coordinates with twist a=-1 (see <https://eprint.iacr.org/2008/522.pdf>). *)
+    Definition point := { P | let '(X,Y,Z,T) := P in onCurve((X/Z), (Y/Z)) /\ Z<>0 /\ Z*T=X*Y }.
+    Definition coordinates (P:point) : F*F*F*F := proj1_sig P.
 
-  (** [extended] represents a point on an elliptic curve using extended projective
-  * Edwards coordinates with twist a=-1 (see <https://eprint.iacr.org/2008/522.pdf>). *)
-  Record extended := mkExtended {extendedX : F q;
-                                 extendedY : F q;
-                                 extendedZ : F q;
-                                 extendedT : F q}.
-  Local Notation "'(' X ',' Y ',' Z ',' T ')'" := (mkExtended X Y Z T).
+    Create HintDb bash discriminated.
+    Local Hint Unfold E.eq fst snd fieldwise fieldwise' coordinates E.coordinates proj1_sig Pre.onCurve : bash.
+    Ltac bash :=
+      repeat match goal with
+             | |- Proper _ _ => intro
+             | _ => progress intros
+             | [ H: _ /\ _ |- _ ] => destruct H
+             | [ p:E.point |- _ ] => destruct p as [[??]?]
+             | [ p:point |- _ ] => destruct p as [[[[??]?]?]?]
+             | _ => progress autounfold with bash in *
+             | |- _ /\ _ => split
+             | _ => solve [neq01]
+             | _ => solve [eauto]
+             | _ => solve [intuition]
+             | _ => solve [etransitivity; eauto]
+             | |- Feq _ _ => field_algebra
+             | |- _ <> 0 => apply mul_nonzero_nonzero
+             | [ H : _ <> 0 |- _ <> 0 ] =>
+               intro; apply H;
+               field_algebra;
+               solve [ apply Ring.opp_nonzero_nonzero, E.char_gt_2
+                     | apply E.char_gt_2]
+             end.
 
-  Definition twistedToExtended (P : (F q*F q)) : extended :=
-    let '(x, y) := P in (x, y, 1, x*y).
-  Definition extendedToTwisted (P : extended) : F q * F q :=
-    let '(X, Y, Z, T) := P in ((X/Z), (Y/Z)).
-  Definition rep (P:extended) (rP:(F q*F q)) : Prop :=
-    let '(X, Y, Z, T) := P in
-    extendedToTwisted P = rP /\
-    Z <> 0 /\
-    T = X*Y/Z.
-  Local Hint Unfold twistedToExtended extendedToTwisted rep.
-  Local Notation "P '~=' rP" := (rep P rP) (at level 70).
+    Obligation Tactic := bash.
 
-  Ltac unfoldExtended :=
-    repeat progress (autounfold; unfold E.onCurve, E.add, E.add', rep in *; intros);
-    repeat match goal with
-      | [ p : (F q*F q)%type |- _ ] =>
-          let x := fresh "x" p in
-          let y := fresh "y" p in
-          destruct p as [x y]
-      | [ p : extended |- _ ] =>
-          let X := fresh "X" p in
-          let Y := fresh "Y" p in
-          let Z := fresh "Z" p in
-          let T := fresh "T" p in
-          destruct p as [X Y Z T]
-      | [ H: _ /\ _ |- _ ] => destruct H
-      | [ H: @eq (F q * F q)%type _ _ |- _ ] => invcs H
-      | [ H: @eq F q ?x _ |- _ ] => isVar x; rewrite H; clear H
-  end.
+    Program Definition from_twisted (P:Epoint) : point := exist _
+      (let (x,y) := E.coordinates P in (x, y, 1, x*y)) _.
 
-  Ltac solveExtended := unfoldExtended;
-    repeat match goal with
-      | [ |- _ /\ _ ] => split
-      | [ |- @eq (F q * F q)%type _ _] => apply f_equal2
-      | _ => progress rewrite ?@F_add_0_r, ?@F_add_0_l, ?@F_sub_0_l, ?@F_sub_0_r,
-           ?@F_mul_0_r, ?@F_mul_0_l, ?@F_mul_1_l, ?@F_mul_1_r, ?@F_div_1_r
-      | _ => solve [eapply @Fq_1_neq_0; eauto with typeclass_instances]
-      | _ => solve [eauto with typeclass_instances]
-      | [ H: a = _ |- _ ] => rewrite H
-  end.
+    Program Definition to_twisted (P:point) : Epoint := exist _
+      (let '(X,Y,Z,T) := coordinates P in ((X/Z), (Y/Z))) _.
 
-  Lemma twistedToExtended_rep : forall P, twistedToExtended P ~= P.
-  Proof.
-    solveExtended.
-  Qed.
+    Definition eq (P Q:point) := E.eq (to_twisted P) (to_twisted Q).
 
-  Lemma extendedToTwisted_rep : forall P rP, P ~= rP -> extendedToTwisted P = rP.
-  Proof.
-    solveExtended.
-  Qed.
+    Local Hint Unfold from_twisted to_twisted eq : bash.
 
-  Definition extendedPoint := { P:extended | rep P (extendedToTwisted P) /\ E.onCurve (extendedToTwisted P) }.
+    Global Instance Equivalence_eq : Equivalence eq. Proof. split; split; bash. Qed.
+    Global Instance Proper_from_twisted : Proper (E.eq==>eq) from_twisted. Proof. bash. Qed.
+    Global Instance Proper_to_twisted : Proper (eq==>E.eq) to_twisted. Proof. bash. Qed.
+    Lemma to_twisted_from_twisted P : E.eq (to_twisted (from_twisted P)) P. Proof. bash. Qed.
 
-  Program Definition mkExtendedPoint : E.point -> extendedPoint := twistedToExtended.
-  Next Obligation.
-    destruct x; erewrite extendedToTwisted_rep; eauto using twistedToExtended_rep.
-  Qed.
+    Section TwistMinus1.
+      Context {a_eq_minus1 : a = Fopp 1}.
+      Context {twice_d:F} {Htwice_d:twice_d = d + d}.
+      (** Second equation from <http://eprint.iacr.org/2008/522.pdf> section 3.1, also <https://www.hyperelliptic.org/EFD/g1p/auto-twisted-extended-1.html#addition-add-2008-hwcd-3> and <https://tools.ietf.org/html/draft-josefsson-eddsa-ed25519-03> *)
+      Definition add_coordinates P1 P2 : F*F*F*F :=
+        let '(X1, Y1, Z1, T1) := P1 in
+        let '(X2, Y2, Z2, T2) := P2 in
+        let  A := (Y1-X1)*(Y2-X2) in
+        let  B := (Y1+X1)*(Y2+X2) in
+        let  C := T1*twice_d*T2 in
+        let  D := Z1*(Z2+Z2) in
+        let  E := B-A in
+        let  F := D-C in
+        let  G := D+C in
+        let  H := B+A in
+        let X3 := E*F in
+        let Y3 := G*H in
+        let T3 := E*H in
+        let Z3 := F*G in
+        (X3, Y3, Z3, T3).
 
-  Program Definition unExtendedPoint : extendedPoint -> E.point := extendedToTwisted.
-  Next Obligation.
-    destruct x; simpl; intuition.
-  Qed.
+      Local Hint Unfold E.add E.coordinates add_coordinates : bash.
 
-  Definition extendedPoint_eq P Q := unExtendedPoint P = unExtendedPoint Q.
-  Global Instance Equivalence_extendedPoint_eq : Equivalence extendedPoint_eq.
-  Proof.
-    repeat (econstructor || intro); unfold extendedPoint_eq in *; congruence.
-  Qed.
+      Lemma add_coordinates_correct (P Q:point) :
+        let '(X,Y,Z,T) := add_coordinates (coordinates P) (coordinates Q) in
+        let (x, y) := E.coordinates (E.add (to_twisted P) (to_twisted Q)) in
+        (fieldwise (n:=2) Feq) (x, y) (X/Z, Y/Z).
+      Proof.
+        destruct P as [[[[]?]?][HP []]]; destruct Q as [[[[]?]?][HQ []]].
+        pose proof edwardsAddCompletePlus (a_nonzero:=E.nonzero_a)(a_square:=E.square_a)(d_nonsquare:=E.nonsquare_d)(char_gt_2:=E.char_gt_2) _ _ _ _ HP HQ.
+        pose proof edwardsAddCompleteMinus (a_nonzero:=E.nonzero_a)(a_square:=E.square_a)(d_nonsquare:=E.nonsquare_d)(char_gt_2:=E.char_gt_2) _ _ _ _ HP HQ.
+        bash.
+      Qed.
 
-  Lemma unExtendedPoint_mkExtendedPoint : forall P, unExtendedPoint (mkExtendedPoint P) = P.
-  Proof.
-    destruct P; eapply E.point_eq; simpl; erewrite extendedToTwisted_rep; eauto using twistedToExtended_rep.
-  Qed.
+      Obligation Tactic := idtac.
+      Program Definition add (P Q:point) : point := add_coordinates (coordinates P) (coordinates Q).
+      Next Obligation.
+        intros.
+        pose proof (add_coordinates_correct P Q) as Hrep.
+        pose proof Pre.unifiedAdd'_onCurve(a_nonzero:=E.nonzero_a)(a_square:=E.square_a)(d_nonsquare:=E.nonsquare_d)(char_gt_2:=E.char_gt_2) (E.coordinates (to_twisted P)) (E.coordinates (to_twisted Q)) as Hon.
+        destruct P as [[[[]?]?][HP []]]; destruct Q as [[[[]?]?][HQ []]].
+        pose proof edwardsAddCompletePlus (a_nonzero:=E.nonzero_a)(a_square:=E.square_a)(d_nonsquare:=E.nonsquare_d)(char_gt_2:=E.char_gt_2) _ _ _ _ HP HQ as Hnz1.
+        pose proof edwardsAddCompleteMinus (a_nonzero:=E.nonzero_a)(a_square:=E.square_a)(d_nonsquare:=E.nonsquare_d)(char_gt_2:=E.char_gt_2) _ _ _ _ HP HQ as Hnz2.
+        autounfold with bash in *; simpl in *.
+        destruct Hrep as [HA HB]. rewrite <-!HA, <-!HB; clear HA HB.
+        bash.
+      Qed.
+      Local Hint Unfold add : bash.
 
-  Global Instance Proper_mkExtendedPoint : Proper (eq==>equiv) mkExtendedPoint.
-  Proof.
-    repeat (econstructor || intro); unfold extendedPoint_eq in *; congruence.
-  Qed.
+      Lemma to_twisted_add P Q : E.eq (to_twisted (add P Q)) (E.add (to_twisted P) (to_twisted Q)).
+      Proof.
+        pose proof (add_coordinates_correct P Q) as Hrep.
+        destruct P as [[[[]?]?][HP []]]; destruct Q as [[[[]?]?][HQ []]].
+        autounfold with bash in *; simpl in *.
+        destruct Hrep as [HA HB]. rewrite <-!HA, <-!HB; clear HA HB.
+        split; reflexivity.
+      Qed.
 
-  Global Instance Proper_unExtendedPoint : Proper (equiv==>eq) unExtendedPoint.
-  Proof.
-    repeat (econstructor || intro); unfold extendedPoint_eq in *; congruence.
-  Qed.
+      Global Instance Proper_add : Proper (eq==>eq==>eq) add.
+      Proof.
+        unfold eq. intros x y H x0 y0 H0.
+        transitivity (to_twisted x + to_twisted x0)%E; rewrite to_twisted_add, ?H, ?H0; reflexivity.
+      Qed.
 
-  Definition twice_d := d + d.
+      Lemma homomorphism_to_twisted : @Group.is_homomorphism point eq add Epoint E.eq E.add to_twisted.
+      Proof. split; trivial using Proper_to_twisted, to_twisted_add. Qed.
 
-  Section TwistMinus1.
-    Context (a_eq_minus1 : a = opp 1).
-    (** Second equation from <http://eprint.iacr.org/2008/522.pdf> section 3.1, also <https://www.hyperelliptic.org/EFD/g1p/auto-twisted-extended-1.html#addition-add-2008-hwcd-3> and <https://tools.ietf.org/html/draft-josefsson-eddsa-ed25519-03> *)
-    Definition unifiedAddM1' (P1 P2 : extended) : extended :=
-      let '(X1, Y1, Z1, T1) := P1 in
-      let '(X2, Y2, Z2, T2) := P2 in
-      let  A := (Y1-X1)*(Y2-X2) in
-      let  B := (Y1+X1)*(Y2+X2) in
-      let  C := T1*twice_d*T2 in
-      let  D := Z1*(Z2+Z2) in
-      let  E := B-A in
-      let  F := D-C in
-      let  G := D+C in
-      let  H := B+A in
-      let X3 := E*F in
-      let Y3 := G*H in
-      let T3 := E*H in
-      let Z3 := F*G in
-      (X3, Y3, Z3, T3).
-    Local Hint Unfold E.add.
+      Lemma add_from_twisted P Q : eq (from_twisted (P + Q)%E) (add (from_twisted P) (from_twisted Q)).
+      Proof.
+        pose proof (to_twisted_add (from_twisted P) (from_twisted Q)).
+        unfold eq; rewrite !to_twisted_from_twisted in *.
+        symmetry; assumption.
+      Qed.
 
-    Local Ltac tnz := repeat apply Fq_mul_nonzero_nonzero; auto using (@char_gt_2 q two_lt_q).
+      Lemma homomorphism_from_twisted : @Group.is_homomorphism Epoint E.eq E.add point eq add from_twisted.
+      Proof. split; trivial using Proper_from_twisted, add_from_twisted. Qed.
 
-    Lemma F_mul_2_l : forall x : F q, ZToField 2 * x = x + x.
-      intros. ring.
-    Qed.
-
-    Lemma unifiedAddM1'_rep: forall P Q rP rQ, E.onCurve rP -> E.onCurve rQ ->
-      P ~= rP -> Q ~= rQ -> (unifiedAddM1' P Q) ~= (E.add' rP rQ).
-    Proof.
-      intros P Q rP rQ HoP HoQ HrP HrQ.
-      pose proof (@edwardsAddCompletePlus _ _ _ _ two_lt_q nonzero_a square_a nonsquare_d).
-      pose proof (@edwardsAddCompleteMinus _ _ _ _ two_lt_q nonzero_a square_a nonsquare_d).
-      unfoldExtended; unfold twice_d; rewrite a_eq_minus1 in *; simpl in *. repeat rewrite <-F_mul_2_l.
-        repeat split; repeat apply (f_equal2 pair); try F_field; repeat split; auto;
-        repeat rewrite ?F_add_0_r, ?F_add_0_l, ?F_sub_0_l, ?F_sub_0_r,
-           ?F_mul_0_r, ?F_mul_0_l, ?F_mul_1_l, ?F_mul_1_r, ?F_div_1_r;
-        field_nonzero tnz.
-    Qed.
-
-    Lemma unifiedAdd'_onCurve : forall P Q, E.onCurve P -> E.onCurve Q -> E.onCurve (E.add' P Q).
-    Proof.
-      intros; pose proof (proj2_sig (E.add (exist _ _ H) (exist _ _ H0))); eauto.
-    Qed.
-
-    Program Definition unifiedAddM1 : extendedPoint -> extendedPoint -> extendedPoint := unifiedAddM1'.
-    Next Obligation.
-      destruct x, x0; simpl; intuition.
-      - erewrite extendedToTwisted_rep; eauto using unifiedAddM1'_rep.
-      - erewrite extendedToTwisted_rep.
-        (* It would be nice if I could use eauto here, but it gets evars wrong :( *)
-        2: eapply unifiedAddM1'_rep. 5:apply H1. 4:apply H. 3:auto. 2:auto.
-        eauto using unifiedAdd'_onCurve.
-    Qed.
-
-    Lemma unifiedAddM1_rep : forall P Q, E.add (unExtendedPoint P) (unExtendedPoint Q) = unExtendedPoint (unifiedAddM1 P Q).
-    Proof.
-      destruct P, Q; unfold unExtendedPoint, E.add, unifiedAddM1; eapply E.point_eq; simpl in *; intuition.
-      pose proof (unifiedAddM1'_rep x x0 (extendedToTwisted x) (extendedToTwisted x0));
-        destruct (unifiedAddM1' x x0);
-        unfold rep in *; intuition.
-    Qed.
-
-    Global Instance Proper_unifiedAddM1 : Proper (equiv==>equiv==>equiv) unifiedAddM1.
-    Proof.
-      repeat (econstructor || intro).
-      repeat match goal with [H: _ === _ |- _ ] => inversion H; clear H end; unfold equiv, extendedPoint_eq.
-      rewrite <-!unifiedAddM1_rep.
-      destruct x, y, x0, y0; simpl in *; eapply E.point_eq; congruence.
-    Qed.
-
+      (* TODO: decide whether we still need those, then port *)
+    (*
     Lemma unifiedAddM1_0_r : forall P, unifiedAddM1 P (mkExtendedPoint E.zero) === P.
       unfold equiv, extendedPoint_eq; intros.
       rewrite <-!unifiedAddM1_rep, unExtendedPoint_mkExtendedPoint, E.add_0_r; auto.
@@ -210,30 +170,75 @@ Section ExtendedCoordinates.
       trivial.
     Qed.
 
-    Definition scalarMultM1 := iter_op unifiedAddM1 (mkExtendedPoint E.zero) N.testbit_nat.
-    Definition scalarMultM1_spec :=
-      iter_op_spec unifiedAddM1 unifiedAddM1_assoc (mkExtendedPoint E.zero) unifiedAddM1_0_l
-        N.testbit_nat (fun x => x) testbit_conversion_identity.
-    Lemma scalarMultM1_rep : forall n P, unExtendedPoint (scalarMultM1 (N.of_nat n) P (N.size_nat (N.of_nat n))) = E.mul n (unExtendedPoint P).
-      intros; rewrite scalarMultM1_spec, Nat2N.id; auto.
-      induction n; [simpl; rewrite !unExtendedPoint_mkExtendedPoint; reflexivity|].
+    Lemma scalarMultM1_rep : forall n P, unExtendedPoint (nat_iter_op unifiedAddM1 (mkExtendedPoint E.zero) n P) = E.mul n (unExtendedPoint P).
+      induction n; [simpl; rewrite !unExtendedPoint_mkExtendedPoint; reflexivity|]; intros.
       unfold E.mul; fold E.mul.
       rewrite <-IHn, unifiedAddM1_rep; auto.
     Qed.
+     *)
+    End TwistMinus1.
+  End ExtendedCoordinates.
 
-  End TwistMinus1.
+  Section Homomorphism.
+    Import Group Ring Field.
+    Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv Fa Fd}
+            {fieldF:@field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
+            {Fprm:@E.twisted_edwards_params F Feq Fzero Fone Fadd Fmul Fa Fd}.
+    Context {K Keq Kzero Kone Kopp Kadd Ksub Kmul Kinv Kdiv Ka Kd}
+            {fieldK:@field K Keq Kzero Kone Kopp Kadd Ksub Kmul Kinv Kdiv}
+            {Kprm:@E.twisted_edwards_params K Keq Kzero Kone Kadd Kmul Ka Kd}.
+    Context {phi:F->K} {Hphi:@Ring.is_homomorphism F Feq Fone Fadd Fmul
+                                                   K Keq Kone Kadd Kmul phi}.
+    Context {phi_nonzero : forall x, ~ Feq x Fzero -> ~ Keq (phi x) Kzero}.
+    Context {HFa: Feq Fa (Fopp Fone)} {HKa:Keq Ka (Kopp Kone)}.
+    Context {Hd:Keq (phi Fd) Kd} {Kdd Fdd} {HKdd:Keq Kdd (Kadd Kd Kd)} {HFdd:Feq Fdd (Fadd Fd Fd)}.
+    Local Notation Fpoint := (@point F Feq Fzero Fone Fadd Fmul Fdiv Fa Fd).
+    Local Notation Kpoint := (@point K Keq Kzero Kone Kadd Kmul Kdiv Ka Kd).
 
-  Definition negateExtended' P := let '(X, Y, Z, T) := P in (opp X, Y, Z, opp T).
-  Program Definition negateExtended (P:extendedPoint) : extendedPoint := negateExtended' (proj1_sig P).
-  Next Obligation.
-  Proof.
-    unfold negateExtended', rep; destruct P as [[X Y Z T] H]; simpl. destruct H as [[[] []] ?]; subst.
-    repeat rewrite ?F_div_opp_1, ?F_mul_opp_l, ?F_square_opp; repeat split; trivial.
-  Qed.
-  
-  Lemma negateExtended_correct : forall P, E.opp (unExtendedPoint P) = unExtendedPoint (negateExtended P).
-  Proof.
-    unfold E.opp, unExtendedPoint, negateExtended; destruct P as [[]]; simpl; intros.
-    eapply E.point_eq; repeat rewrite ?F_div_opp_1, ?F_mul_opp_l, ?F_square_opp; trivial.
-  Qed.
-End ExtendedCoordinates.
+    Lemma Ha : Keq (phi Fa) Ka.
+    Proof. rewrite HFa, HKa, <-homomorphism_one. eapply homomorphism_opp. Qed.
+
+    Lemma Hdd : Keq (phi Fdd) Kdd.
+    Proof. rewrite HFdd, HKdd. rewrite homomorphism_add. repeat f_equiv; auto. Qed.
+
+    Create HintDb field_homomorphism discriminated.
+    Hint Rewrite <-
+         homomorphism_one
+         homomorphism_add
+         homomorphism_sub
+         homomorphism_mul
+         homomorphism_div
+         Ha
+         Hd
+         Hdd
+      : field_homomorphism.
+
+    Program Definition ref_phi (P:Fpoint) : Kpoint := exist _ (
+      let '(X, Y, Z, T) := coordinates P in (phi X, phi Y, phi Z, phi T)) _.
+    Next Obligation.
+      destruct P as [[[[] ?] ?] [? [? ?]]]; unfold onCurve in *; simpl.
+      rewrite_strat bottomup hints field_homomorphism.
+      eauto 10 using is_homomorphism_phi_proper, phi_nonzero.
+    Qed.
+
+    Context {point_phi:Fpoint->Kpoint}
+            {point_phi_Proper:Proper (eq==>eq) point_phi}
+            {point_phi_correct: forall (P:Fpoint), eq (point_phi P) (ref_phi P)}.
+
+    Lemma lift_homomorphism : @Group.is_homomorphism Fpoint eq (add(a_eq_minus1:=HFa)(Htwice_d:=HFdd)) Kpoint eq (add(a_eq_minus1:=HKa)(Htwice_d:=HKdd)) point_phi.
+    Proof.
+      repeat match goal with
+             | |- Group.is_homomorphism => split
+             | |- _ => intro
+             | |-  _ /\ _ => split
+             | [H: _ /\ _ |- _ ] => destruct H
+             | [p: point |- _ ] => destruct p as [[[[] ?] ?] [? [? ?]]]
+             | |- context[point_phi] => setoid_rewrite point_phi_correct
+             | |- _ => progress cbv [fst snd coordinates proj1_sig eq to_twisted E.eq E.coordinates fieldwise fieldwise' add add_coordinates ref_phi] in *
+             | |- Keq ?x ?x => reflexivity
+             | |- Keq ?x ?y => rewrite_strat bottomup hints field_homomorphism
+             | [ H : Feq _ _ |- Keq (phi _) (phi _)] => solve [f_equiv; intuition]
+             end.
+    Qed.
+  End Homomorphism.
+End Extended.
