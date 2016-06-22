@@ -1,3 +1,4 @@
+Require Import Coq.omega.Omega.
 Require Import Bedrock.Word.
 Require Import Crypto.Spec.EdDSA.
 Require Import Crypto.Tactics.VerdiTactics.
