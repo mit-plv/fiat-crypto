@@ -1,5 +1,5 @@
 Require Export Language Conversion.
-Require Export String Ascii Basics.
+Require Export String Ascii Basics Sumbool.
 Require Import QhasmCommon QhasmEvalCommon QhasmUtil Qhasm.
 Require Import NArith NPeano.
 Require Export Bedrock.Word.
@@ -54,7 +54,6 @@ Module StringConversion <: Conversion Qhasm QhasmString.
 
   Section Elements.
     Local Open Scope string_scope.
-    Import Util.
 
     Definition nameSuffix (n: nat): string := 
       (nToHex (N.of_nat n)).
