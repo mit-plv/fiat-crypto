@@ -19,7 +19,7 @@ Module Extended.
     Local Notation "0" := Fzero.  Local Notation "1" := Fone.
     Local Infix "+" := Fadd. Local Infix "*" := Fmul.
     Local Infix "-" := Fsub. Local Infix "/" := Fdiv.
-    Local Notation "x ^2" := (x*x).
+    Local Notation "x ^ 2" := (x*x).
     Local Notation Epoint := (@E.point F Feq Fone Fadd Fmul a d).
     Local Notation onCurve := (@Pre.onCurve F Feq Fone Fadd Fmul a d).
 

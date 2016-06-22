@@ -19,7 +19,7 @@ Module E.
     Local Notation "0" := Fzero.  Local Notation "1" := Fone.
     Local Infix "+" := Fadd. Local Infix "*" := Fmul.
     Local Infix "-" := Fsub. Local Infix "/" := Fdiv.
-    Local Notation "x ^2" := (x*x).
+    Local Notation "x ^ 2" := (x*x).
     Local Notation point := (@point F Feq Fone Fadd Fmul a d).
     Local Notation onCurve := (@onCurve F Feq Fone Fadd Fmul a d).
 
@@ -159,7 +159,7 @@ Module E.
     Admitted.
 
     Section PointCompression.
-      Local Notation "x ^2" := (x*x).
+      Local Notation "x ^ 2" := (x*x).
       Definition solve_for_x2 (y : F) := ((y^2 - 1) / (d * (y^2) - a)).
 
       Lemma a_d_y2_nonzero : forall y, d * y^2 - a <> 0.

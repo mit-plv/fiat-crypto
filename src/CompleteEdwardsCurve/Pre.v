@@ -10,7 +10,7 @@ Section Pre.
   Local Notation "0" := zero.  Local Notation "1" := one.
   Local Infix "+" := add. Local Infix "*" := mul.
   Local Infix "-" := sub. Local Infix "/" := div.
-  Local Notation "x ^2" := (x*x).
+  Local Notation "x ^ 2" := (x*x).
 
   Add Field EdwardsCurveField : (Field.field_theory_for_stdlib_tactic (T:=F)).
 
