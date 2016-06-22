@@ -4,8 +4,8 @@ Require Coq.ZArith.Znumtheory Coq.ZArith.BinInt.
 Require Coq.Numbers.Natural.Peano.NPeano.
 Require Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
 
-Local Infix "^" := NPeano.pow.
-Local Infix "mod" := NPeano.modulo (at level 40, no associativity).
+Local Infix "^" := Nat.pow.
+Local Infix "mod" := Nat.modulo (at level 40, no associativity).
 Local Infix "++" := Word.combine.
 
 Generalizable All Variables.

@@ -1,4 +1,3 @@
-
 Require Import ZArith NArith NPeano.
 Require Import QhasmCommon.
 Require Export Bedrock.Word.

@@ -162,6 +162,28 @@ Module Conversion.
     rewrite H0; autounfold; simpl; intuition.
   Qed.
 
+  Lemma pseudo_let_var:
+    forall {w s n k m} (p0: @Pseudo w s n k) (p1: @Pseudo w s (n + k) m)
+      input out0 out1 m0 m1 m2 c0 c1 c2,
+      pseudoEval p0 (input, m0, c0) = Some ([a], m1, c1)
+    -> pseudoEval p1 (input ++ [a], m1, c1) = Some (f (nth n (input ++ [a]) (wzero _)), m2, c2)
+    -> pseudoEval (@PLet w s n k m p0 p1) (input, m0, c0) =
+        Some (let x := a in f a, m2, c2).
+  Proof.
+    intros; cbv beta; simpl in *; apply pseudo_let.
+  Qed.
+
+  Lemma pseudo_let_list:
+    forall {w s n k m} (p0: @Pseudo w s n k) (p1: @Pseudo w s (n + k) m)
+      input out0 out1 m0 m1 m2 c0 c1 c2,
+      pseudoEval p0 (input, m0, c0) = Some (lst, m1, c1)
+    -> pseudoEval p1 (input ++ lst, m1, c1) = Some (f lst, m2, c2)
+    -> pseudoEval (@PLet w s n k m p0 p1) (input, m0, c0) =
+        Some (let x := lst in f a, m2, c2).
+  Proof.
+    intros; cbv beta; simpl in *; apply pseudo_let.
+  Qed.
+
   Definition pseudeq {w s} (n m: nat) (f: list (word w) -> list (word w)) : Type := 
     {p: @Pseudo w s n m | forall x: (list (word w)),
       List.length x = n -> exists m' c',
