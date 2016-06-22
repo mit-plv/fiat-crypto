@@ -1,13 +1,12 @@
 
 MOD_NAME := Crypto
 SRC_DIR  := src
-FLAGS := -R Coqprime/Coqprime Coqprime
 
-.PHONY: coq clean install coqprime update-_CoqProject
+.PHONY: coq clean install coqprime update- update-_CoqProject
 .DEFAULT_GOAL := coq
 
 update-_CoqProject::
-	@(echo "-R $(SRC_DIR) $(MOD_NAME)"; echo "$(FLAGS)"; git ls-files src/*.v) > _CoqProject
+	@(echo "-R $(SRC_DIR) $(MOD_NAME)"; git ls-files src/*.v) > _CoqProject
 
 coq: coqprime Makefile.coq
 	@$(MAKE) -f Makefile.coq
