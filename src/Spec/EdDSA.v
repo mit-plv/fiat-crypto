@@ -4,9 +4,21 @@ Require Coq.ZArith.Znumtheory Coq.ZArith.BinInt.
 Require Coq.Numbers.Natural.Peano.NPeano.
 Require Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
 
-Local Infix "^" := NPeano.pow.
-Local Infix "mod" := NPeano.modulo (at level 40, no associativity).
-Local Infix "++" := Word.combine.
+(** In Coq 8.4, we have [NPeano.pow] and [NPeano.modulo].  In Coq 8.5,
+    they are [Nat.pow] and [Nat.modulo].  To allow this file to work
+    with both versions, we create a module where we (locally) import
+    both [NPeano] and [Nat], and define the notations with unqualified
+    names.  By importing the module, we get access to the notations
+    without importing [NPeano] and [Nat] in the top-level of this
+    file. *)
+
+Module Import Notations.
+Import NPeano Nat.
+
+Infix "^" := pow.
+Infix "mod" := modulo (at level 40, no associativity).
+Infix "++" := Word.combine.
+End Notations.
 
 Generalizable All Variables.
 Section EdDSA.
