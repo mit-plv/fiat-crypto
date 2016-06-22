@@ -6,12 +6,7 @@ Fiat-Crypto: Synthesizing Correct-by-Construction Assembly for Cryptographic Pri
 NOTE: The github.com repo is only intermittently synced with
 github.mit.edu.
 
-To build (Coq 8.5):
+To build:
 
 	export COQPATH="$(pwd)/coqprime${COQPATH:+:}$COQPATH"
-	make
-
-To build with Coq 8.4
-
-	export COQPATH="$(pwd)/coqprime-8.4${COQPATH:+:}$COQPATH"
 	make
