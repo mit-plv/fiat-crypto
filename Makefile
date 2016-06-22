@@ -1,7 +1,7 @@
 MOD_NAME := Crypto
 SRC_DIR  := src
 
-.PHONY: coq clean install coqprime-8.4 coqprime-8.5 coqprime update-_CoqProject
+.PHONY: coq clean install coqprime-8.5 coqprime update-_CoqProject
 .DEFAULT_GOAL := coq
 
 VERBOSE = 0
@@ -28,11 +28,10 @@ COQ_VERSION := $(firstword $(subst $(COQ_VERSION_PREFIX),,$(shell $(COQBIN)coqc 
 ifneq ($(filter 8.5%,$(COQ_VERSION)),) # 8.5
 coqprime: coqprime-8.5
 else
-coqprime: coqprime-8.4
+coqprime::
+	@echo 'ERROR: Unsupported version of Coq $(COQ_VERSION)'
+	@exit 1
 endif
-
-coqprime-8.4:
-	$(MAKE) -C coqprime-8.4
 
 coqprime-8.5:
 	$(MAKE) -C coqprime
