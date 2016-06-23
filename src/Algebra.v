@@ -550,6 +550,51 @@ Ltac field_simplify_eq_hyps :=
 
 Ltac field_simplify_eq_all := field_simplify_eq_hyps; try field_simplify_eq.
 
+(*** Inequalities over fields *)
+Ltac assert_expr_by_nsatz H ty :=
+  let H' := fresh in
+  rename H into H'; assert (H : ty)
+    by (try (intro; apply H'); nsatz);
+  clear H'.
+Ltac test_not_constr_eq_assert_expr_by_nsatz y zero H ty :=
+  first [ constr_eq y zero; fail 1 y "is already" zero
+        | assert_expr_by_nsatz H ty ].
+Ltac canonicalize_field_inequalities_step' eq zero opp add sub :=
+  match goal with
+  |  [ H : not (eq ?x (opp ?y)) |- _ ]
+     => test_not_constr_eq_assert_expr_by_nsatz y zero H (not (eq (add x y) zero))
+  |  [ H : (eq ?x (opp ?y) -> False)%type |- _ ]
+     => test_not_constr_eq_assert_expr_by_nsatz y zero H (eq (add x y) zero -> False)%type
+  |  [ H : not (eq ?x ?y) |- _ ]
+     => test_not_constr_eq_assert_expr_by_nsatz y zero H (not (eq (sub x y) zero))
+  |  [ H : (eq ?x ?y -> False)%type |- _ ]
+     => test_not_constr_eq_assert_expr_by_nsatz y zero H (not (eq (sub x y) zero))
+  end.
+Ltac canonicalize_field_inequalities' eq zero opp add sub := repeat canonicalize_field_inequalities_step' eq zero opp add sub.
+Ltac canonicalize_field_equalities_step' eq zero opp add sub :=
+  lazymatch goal with
+  |  [ H : eq ?x (opp ?y) |- _ ]
+     => test_not_constr_eq_assert_expr_by_nsatz y zero H (eq (add x y) zero)
+  |  [ H : eq ?x ?y |- _ ]
+     => test_not_constr_eq_assert_expr_by_nsatz y zero H (eq (sub x y) zero)
+  end.
+Ltac canonicalize_field_equalities' eq zero opp add sub := repeat canonicalize_field_equalities_step' eq zero opp add sub.
+
+(** These are the two user-facing tactics.  They put (in)equalities
+    into the form [_ <> 0] / [_ = 0]. *)
+Ltac canonicalize_field_inequalities :=
+  let fld := guess_field in
+  lazymatch type of fld with
+  | @field ?F ?eq ?zero ?one ?opp ?add ?sub ?mul ?inv ?div
+    => canonicalize_field_inequalities' eq zero opp add sub
+  end.
+Ltac canonicalize_field_equalities :=
+  let fld := guess_field in
+  lazymatch type of fld with
+  | @field ?F ?eq ?zero ?one ?opp ?add ?sub ?mul ?inv ?div
+    => canonicalize_field_equalities' eq zero opp add sub
+  end.
+
 
 (*** Polynomial equations over fields *)
 
