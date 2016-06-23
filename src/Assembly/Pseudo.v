@@ -1,6 +1,6 @@
 Require Import QhasmCommon QhasmUtil State.
 Require Import Language QhasmEvalCommon.
-Require Import List Compare_dec PeanoNat Omega.
+Require Import List Compare_dec Omega.
 
 Module Pseudo <: Language.
   Import EvalUtil ListState.

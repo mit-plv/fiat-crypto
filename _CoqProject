@@ -46,6 +46,8 @@ src/Util/Tactics.v
 src/Util/Tuple.v
 src/Util/WordUtil.v
 src/Util/ZUtil.v
+src/Assembly/Language.v
+src/Assembly/Conversion.v
 src/Assembly/QhasmCommon.v
 src/Assembly/QhasmUtil.v
 src/Assembly/State.v
