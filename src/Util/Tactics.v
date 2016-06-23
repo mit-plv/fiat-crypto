@@ -7,6 +7,13 @@ Tactic Notation "test" tactic3(tac) :=
 (** [not tac] is equivalent to [fail tac "succeeds"] if [tac] succeeds, and is equivalent to [idtac] if [tac] fails *)
 Tactic Notation "not" tactic3(tac) := try ((test tac); fail 1 tac "succeeds").
 
+(** find the head of the given expression *)
+Ltac head expr :=
+  match expr with
+    | ?f _ => head f
+    | _ => expr
+  end.
+
 (* [pose proof defn], but only if no hypothesis of the same type exists.
    most useful for proofs of a proposition *)
 Tactic Notation "unique" "pose" "proof" constr(defn) :=
@@ -32,16 +39,30 @@ Tactic Notation "unique" "assert" constr(T) "by" tactic3(tac) :=
   end.
 
 (** destruct discriminees of [match]es in the goal *)
-Ltac break_match_step :=
+(* Prioritize breaking apart things in the context, then things which
+   don't need equations, then simple matches (which can be displayed
+   as [if]s), and finally matches in general. *)
+Ltac break_match_step only_when :=
   match goal with
   | [ |- appcontext[match ?e with _ => _ end] ]
-    => match type of e with
+    => only_when e; is_var e; destruct e
+  | [ |- appcontext[match ?e with _ => _ end] ]
+    => only_when e;
+       match type of e with
        | sumbool _ _ => destruct e
-       | _ => is_var e; destruct e
-       | _ => destruct e eqn:?
        end
+  | [ |- appcontext[if ?e then _ else _] ]
+    => only_when e; destruct e eqn:?
+  | [ |- appcontext[match ?e with _ => _ end] ]
+    => only_when e; destruct e eqn:?
   end.
-Ltac break_match := repeat break_match_step.
+Ltac break_match := repeat break_match_step ltac:(fun _ => idtac).
+Ltac break_match_when_head_step T :=
+  break_match_step
+    ltac:(fun e => let T' := type of e in
+                   let T' := head T' in
+                   constr_eq T T').
+Ltac break_match_when_head T := repeat break_match_when_head_step T.
 
 Ltac free_in x y :=
   idtac;

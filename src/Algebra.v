@@ -658,9 +658,10 @@ Ltac field_algebra :=
       |apply Ring.opp_nonzero_nonzero;trivial].
 
 Section ExtraLemmas.
-  Context {F zero one opp add sub mul inv div} `{F_field:field F eq zero one opp add sub mul inv div}.
+  Context {F eq zero one opp add sub mul inv div} `{F_field:field F eq zero one opp add sub mul inv div}.
   Local Infix "+" := add. Local Infix "*" := mul. Local Infix "-" := sub. Local Infix "/" := div.
   Local Notation "0" := zero. Local Notation "1" := one.
+  Local Infix "=" := eq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
 
   Lemma only_two_square_roots' x y : x * x = y * y -> x <> y -> x <> opp y -> False.
   Proof.
