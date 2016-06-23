@@ -426,12 +426,14 @@ Module IntegralDomain.
       destruct (eq_dec x zero); destruct (eq_dec y zero); intuition.
     Qed.
 
-    Lemma mul_nonzero_nonzero_and (x y : T)
-      : ~eq (mul x y) zero -> ~eq x zero /\ ~eq y zero.
+    Lemma mul_nonzero_nonzero_iff (x y : T)
+      : ~eq (mul x y) zero <-> ~eq x zero /\ ~eq y zero.
     Proof.
-      intro H0; split; intro H1; apply H0; rewrite H1.
-      { apply Ring.mul_0_r. }
-      { apply Ring.mul_0_l. }
+      split.
+      { intro H0; split; intro H1; apply H0; rewrite H1.
+        { apply Ring.mul_0_r. }
+        { apply Ring.mul_0_l. } }
+      { intros [? ?] ?; edestruct mul_nonzero_nonzero_cases; eauto with nocore. }
     Qed.
 
     Global Instance Integral_domain :
