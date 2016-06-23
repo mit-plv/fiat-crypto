@@ -1,3 +1,4 @@
+Require Import Bedrock.Word.
 Require Import QhasmCommon QhasmEvalCommon.
 Require Import Pseudo Qhasm AlmostQhasm Conversion Language.
 Require Import PseudoConversion AlmostConversion StringConversion.
@@ -21,7 +22,7 @@ Module Pipeline.
 End Pipeline.
 
 Module PipelineExample.
-  Import Pipeline.
+  Import Pipeline ListNotations.
 
   Local Notation "v [[ i ]]" := (nth i v (wzero _)) (at level 40).
   Local Notation "$$ v" := (natToWord _ v) (at level 40).
@@ -35,7 +36,7 @@ Module PipelineExample.
     pseudo_solve.
   Defined.
 
-  Definition exStr := Pipeline.toString example.
+  Definition exStr := Pipeline.toString (proj1_sig example).
 
   (* Eval vm_compute in exStr. *)
 End PipelineExample.

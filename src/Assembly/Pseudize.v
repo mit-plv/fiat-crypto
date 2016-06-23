@@ -3,8 +3,9 @@ Require Import NArith NPeano List Sumbool Compare_dec Omega.
 Require Import QhasmCommon QhasmEvalCommon QhasmUtil Pseudo State.
 Require Export Wordize Vectorize.
 
-Module Conversion.
-  Import Pseudo ListNotations StateCommon EvalUtil ListState.
+Import Pseudo ListNotations StateCommon EvalUtil ListState.
+
+Section Conversion.
 
   Definition Let_In {A P} (x : A) (f : forall a : A, P a) : P x := let y := x in f y.
 
@@ -213,62 +214,46 @@ Module Conversion.
     {p: @Pseudo w s n m | forall x: (list (word w)),
       List.length x = n -> exists m' c',
       pseudoEval p (x, TripleM.empty N, None) = Some (f x, m', c')}.
-
-  Ltac autodestruct :=
-    repeat match goal with
-    | [H: context[Datatypes.length (cons _ _)] |- _] => simpl in H
-    | [H: context[Datatypes.length nil] |- _] => simpl in H
-    | [H: S ?a = S ?b |- _] => inversion H; clear H
-    | [H: (S ?a) = 0 |- _] => contradict H; intuition
-    | [H: 0 = (S ?a) |- _] => contradict H; intuition
-    | [H: 0 = 0 |- _] => clear H
-    | [x: list ?T |- _] =>
-      match goal with
-      | [H: context[Datatypes.length x] |- _] => destruct x
-      end
-    end.
-
-  Ltac pseudo_step :=
-    match goal with
-    | [ |- pseudoEval ?p _ = Some ((Let_In ?a ?f), _, _) ] =>
-      is_evar p;
-      match (type of a) with
-      | word _ => eapply pseudo_let_var
-      | list _ => eapply pseudo_let_list
-      end
-
-    | [ |- pseudoEval ?p _ = Some ([?x ^& ?y], _, _) ] =>
-      is_evar p; eapply pseudo_and
-    | [ |- pseudoEval ?p _ = Some ([?x ^+ ?y], _, _) ] =>
-      is_evar p; eapply pseudo_plus
-    | [ |- pseudoEval ?p _ = Some (cons ?x (cons _ _), _, _) ] =>
-      is_evar p; eapply pseudo_cons; try reflexivity
-    | [ |- pseudoEval ?p _ = Some ([natToWord _ ?x], _, _)%p ] =>
-      is_evar p; eapply pseudo_const
-    | [ |- @pseudoEval ?n _ _ _ ?P _ =
-            Some ([nth ?i ?lst _], _, _)%p ] =>
-      eapply (pseudo_var None i); simpl; intuition
-    end.
-
-  Ltac pseudo_solve :=
-    repeat eexists;
-    autounfold;
-    autodestruct;
-    repeat pseudo_step.
-
-  Local Notation "v [[ i ]]" := (nth i v (wzero _)) (at level 40).
-  Local Notation "$$ v" := (natToWord _ v) (at level 40).
-
-  Definition convert_example: @pseudeq 32 W32 1 1 (fun v =>
-      Let_In ($$ 1) (fun a =>
-        Let_In (v[[0]]) (fun b => [
-          a ^& b
-      ]))).
-
-    pseudo_solve.
-  Defined.
-
-  (* Eval simpl in (proj1_sig convert_example). *)
-
 End Conversion.
 
+Ltac autodestruct :=
+  repeat match goal with
+  | [H: context[Datatypes.length (cons _ _)] |- _] => simpl in H
+  | [H: context[Datatypes.length nil] |- _] => simpl in H
+  | [H: S ?a = S ?b |- _] => inversion H; clear H
+  | [H: (S ?a) = 0 |- _] => contradict H; intuition
+  | [H: 0 = (S ?a) |- _] => contradict H; intuition
+  | [H: 0 = 0 |- _] => clear H
+  | [x: list ?T |- _] =>
+    match goal with
+    | [H: context[Datatypes.length x] |- _] => destruct x
+    end
+  end.
+
+Ltac pseudo_step :=
+  match goal with
+  | [ |- pseudoEval ?p _ = Some ((Let_In ?a ?f), _, _) ] =>
+    is_evar p;
+    match (type of a) with
+    | word _ => eapply pseudo_let_var
+    | list _ => eapply pseudo_let_list
+    end
+
+  | [ |- pseudoEval ?p _ = Some ([?x ^& ?y], _, _) ] =>
+    is_evar p; eapply pseudo_and
+  | [ |- pseudoEval ?p _ = Some ([?x ^+ ?y], _, _) ] =>
+    is_evar p; eapply pseudo_plus
+  | [ |- pseudoEval ?p _ = Some (cons ?x (cons _ _), _, _) ] =>
+    is_evar p; eapply pseudo_cons; try reflexivity
+  | [ |- pseudoEval ?p _ = Some ([natToWord _ ?x], _, _)%p ] =>
+    is_evar p; eapply pseudo_const
+  | [ |- @pseudoEval ?n _ _ _ ?P _ =
+        Some ([nth ?i ?lst _], _, _)%p ] =>
+    eapply (pseudo_var None i); simpl; intuition
+  end.
+
+Ltac pseudo_solve :=
+  repeat eexists;
+  autounfold;
+  autodestruct;
+  repeat pseudo_step.
