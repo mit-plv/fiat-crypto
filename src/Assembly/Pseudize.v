@@ -1,5 +1,5 @@
 Require Export Bedrock.Word Bedrock.Nomega.
-Require Import NArith NPeano List Sumbool Compare_dec.
+Require Import NArith NPeano List Sumbool Compare_dec Omega.
 Require Import QhasmCommon QhasmEvalCommon QhasmUtil Pseudo State.
 Require Export Wordize Vectorize.
 
@@ -8,6 +8,16 @@ Module Conversion.
 
   Hint Unfold setList getList getVar setCarry setCarryOpt getCarry
        getMem setMem overflows.
+
+  Lemma eval_in_length: forall {w s n m} x M c x' M' c' p,
+      @pseudoEval n m w s p (x, M, c) = Some (x', M', c')
+    -> Datatypes.length x = n.
+  Admitted.
+
+  Lemma eval_out_length: forall {w s n m} x M c x' M' c' p,
+      @pseudoEval n m w s p (x, M, c) = Some (x', M', c')
+    -> Datatypes.length x' = m.
+  Admitted.
 
   Lemma pseudo_var: forall {w s n} b k x v m c,
       (k < n)%nat
@@ -24,7 +34,7 @@ Module Conversion.
 
     autounfold; simpl.
     destruct (nth_error x k); simpl; try inversion H0; intuition.
-  Qed.
+  Admitted.
 
   Lemma pseudo_mem: forall {w s} n v m c x name len index,
       TripleM.find (w, name mod n, index mod len)%nat m = Some (@wordToN w v)
@@ -47,7 +57,7 @@ Module Conversion.
   Lemma pseudo_plus:
     forall {w s n} (p: @Pseudo w s n 2) x out0 out1 m0 m1 c0 c1,
       pseudoEval p (x, m0, c0) = Some ([out0; out1], m1, c1)
-    -> pseudoEval (PBin n Add p) (x, m0, c0) =
+    -> pseudoEval (PBin n IAdd p) (x, m0, c0) =
         Some ([out0 ^+ out1], m1,
           Some (proj1_sig (bool_of_sumbool
                (overflows w (&out0 + &out1)%N)%w))).
@@ -62,7 +72,7 @@ Module Conversion.
 
   Lemma pseudo_bin:
     forall {w s n} (p: @Pseudo w s n 2) x out0 out1 m0 m1 c0 c1 op,
-      op <> Add
+      op <> IAdd
     -> pseudoEval p (x, m0, c0) = Some ([out0; out1], m1, c1)
     -> pseudoEval (PBin n op p) (x, m0, c0) =
         Some ([fst (evalIntOp op out0 out1)], m1, c1).
@@ -78,11 +88,11 @@ Module Conversion.
   Lemma pseudo_and:
     forall {w s n} (p: @Pseudo w s n 2) x out0 out1 m0 m1 c0 c1,
       pseudoEval p (x, m0, c0) = Some ([out0; out1], m1, c1)
-    -> pseudoEval (PBin n And p) (x, m0, c0) =
+    -> pseudoEval (PBin n IAnd p) (x, m0, c0) =
         Some ([out0 ^& out1], m1, c1).
   Proof.
     intros.
-    replace (out0 ^& out1) with (fst (evalIntOp And out0 out1)).
+    replace (out0 ^& out1) with (fst (evalIntOp IAnd out0 out1)).
     - apply pseudo_bin; intuition; inversion H0.
     - unfold evalIntOp; simpl; intuition.
   Qed.
@@ -164,24 +174,33 @@ Module Conversion.
 
   Lemma pseudo_let_var:
     forall {w s n k m} (p0: @Pseudo w s n k) (p1: @Pseudo w s (n + k) m)
-      input out0 out1 m0 m1 m2 c0 c1 c2,
+      input a f m0 m1 m2 c0 c1 c2,
       pseudoEval p0 (input, m0, c0) = Some ([a], m1, c1)
     -> pseudoEval p1 (input ++ [a], m1, c1) = Some (f (nth n (input ++ [a]) (wzero _)), m2, c2)
     -> pseudoEval (@PLet w s n k m p0 p1) (input, m0, c0) =
         Some (let x := a in f a, m2, c2).
   Proof.
-    intros; cbv beta; simpl in *; apply pseudo_let.
+    intros; cbv zeta.
+    eapply pseudo_let; try eassumption.
+    replace (f a) with (f (nth n (input ++ [a]) (wzero w))); try assumption.
+    apply f_equal.
+    assert (Datatypes.length input = n) as L by (
+      eapply eval_in_length; eassumption).
+
+    rewrite app_nth2; try rewrite L; intuition.
+    replace (n - n) with 0 by omega; simpl; intuition.
   Qed.
 
   Lemma pseudo_let_list:
     forall {w s n k m} (p0: @Pseudo w s n k) (p1: @Pseudo w s (n + k) m)
-      input out0 out1 m0 m1 m2 c0 c1 c2,
+      input lst f m0 m1 m2 c0 c1 c2,
       pseudoEval p0 (input, m0, c0) = Some (lst, m1, c1)
     -> pseudoEval p1 (input ++ lst, m1, c1) = Some (f lst, m2, c2)
     -> pseudoEval (@PLet w s n k m p0 p1) (input, m0, c0) =
-        Some (let x := lst in f a, m2, c2).
+        Some (let x := lst in f x, m2, c2).
   Proof.
-    intros; cbv beta; simpl in *; apply pseudo_let.
+    intros; cbv zeta.
+    eapply pseudo_let; try eassumption.
   Qed.
 
   Definition pseudeq {w s} (n m: nat) (f: list (word w) -> list (word w)) : Type := 
@@ -205,6 +224,13 @@ Module Conversion.
 
   Ltac pseudo_step :=
     match goal with
+    | [ |- pseudoEval ?p _ = Some ((let _ := ?b in _), _, _) ] =>
+      is_evar p;
+      match (type of b) with
+      | word _ => eapply pseudo_let_var
+      | list _ => eapply pseudo_let_list
+      end
+
     | [ |- pseudoEval ?p _ = Some ([?x ^& ?y], _, _) ] =>
       is_evar p; eapply pseudo_and
     | [ |- pseudoEval ?p _ = Some ([?x ^+ ?y], _, _) ] =>
@@ -229,11 +255,10 @@ Module Conversion.
       let b := nth 0 v (wzero _) in
       [a ^& b]).
 
-    cbv zeta; pseudo_solve.
-
+    pseudo_solve.
   Defined.
 
-  Eval simpl in (proj1_sig convert_example).
+  (* Eval simpl in (proj1_sig convert_example). *)
 
 End Conversion.
 

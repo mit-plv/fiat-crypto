@@ -57,3 +57,6 @@ src/Assembly/PseudoConversion.v
 src/Assembly/AlmostConversion.v
 src/Assembly/StringConversion.v
 src/Assembly/Pipeline.v
+src/Assembly/Vectorize.v
+src/Assembly/Wordize.v
+src/Assembly/Pseudize.v

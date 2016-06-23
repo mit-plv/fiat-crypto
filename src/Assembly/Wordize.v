@@ -1,6 +1,7 @@
 
 Require Export Bedrock.Word Bedrock.Nomega.
-Require Import NArith PArith Ndigits Nnat NPow NPeano Ndec Compare_dec.
+Require Import NArith PArith Ndigits Nnat NPow NPeano Ndec.
+Require Import Compare_dec Omega.
 Require Import FunctionalExtensionality ProofIrrelevance.
 Require Import QhasmUtil QhasmEvalCommon.
 
@@ -108,15 +109,15 @@ Section WordizeUtil.
 
   Lemma natToWord_convS: forall {n m} (x: word n) p,
       & x = & @convS (word n) (word m) x p.
-  Proof. admit. Qed.
+  Proof. Admitted.
 
   Lemma natToWord_combine: forall {n} (x: word n) k,
       & x = & combine x (wzero k).
-  Proof. admit. Qed.
+  Proof. Admitted.
 
   Lemma natToWord_split1: forall {n} (x: word n) p,
       & x = & split1 n 0 (convS x p).
-  Proof. admit. Qed.
+  Proof. Admitted.
 
   Lemma extend_bound: forall k n (p: (k <= n)%nat) (w: word k),
     (& (extend p w) < Npow2 k)%N.
@@ -141,7 +142,7 @@ Section WordizeUtil.
       + admit.
 
     - intros; rewrite <- natToWord_combine; intuition.
-  Qed.
+  Admitted.
 
   Lemma Npow2_split: forall a b,
     (Npow2 (a + b) = (Npow2 a) * (Npow2 b))%N.
@@ -160,7 +161,7 @@ Section WordizeUtil.
 
   Lemma Npow2_ignore: forall {n} (x: word n),
     x = NToWord _ (& x + Npow2 n).
-  Proof. intros. Admitted.
+  Proof. Admitted.
 
 End WordizeUtil.
 
@@ -244,15 +245,11 @@ Section Wordization.
         + admit.
         + admit.
         + admit.
-  Qed.
+  Admitted.
 
   Lemma wordize_shiftr: forall {n} (x: word n) (k: nat),
     (N.shiftr_nat (&x) k) = & (shiftr x k).
-  Proof.
-    intros.
-
-    admit.
-  Qed.
+  Proof. Admitted.
 
 End Wordization.
 
@@ -285,12 +282,12 @@ Section Bounds.
       | Lt => fun _ => left _
       | _ => fun _ => right _
       end eq_refl);
-      abstract (unfold c in *; try first [
-        apply N.compare_eq_iff in _H
-      | apply N.compare_lt_iff in _H
-      | pose proof (N.compare_antisym x y) as _H0;
-        rewrite _H in _H0; simpl in _H0;
-        apply N.compare_lt_iff in _H0 ]; nomega).
+    abstract (
+      unfold c, N.ge, N.lt in *; intuition; subst;
+      match goal with
+      | [H0: ?x = _, H1: ?x = _ |- _] =>
+        rewrite H0 in H1; inversion H1
+      end).
   Defined.
 
   Theorem wplus_bound : forall {n} (w1 w2 : word n) b1 b2,
@@ -336,15 +333,12 @@ Section Bounds.
       - unfold N.le, N.lt in *; rewrite H; intuition; inversion H0.
 
       - revert IHbits;
-          generalize (nat_iter bits N.div2 (& w)),
-                     (nat_iter bits N.div2 b);
-          clear; intros x y H.
 
        admit. (* Monotonicity of N.div2 *)
     }
 
     apply N.le_lteq in H0; destruct H0; nomega.
-  Qed.
+  Admitted.
 
   Theorem mask_bound : forall {n} (w : word n) m,
     (n > 1)%nat ->
@@ -378,7 +372,7 @@ Section Bounds.
 
         * admit.
         * admit.
-  Qed.
+  Admitted.
 
   Theorem mask_update_bound : forall {n} (w : word n) b m,
       (n > 1)%nat

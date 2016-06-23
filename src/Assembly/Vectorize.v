@@ -1,7 +1,6 @@
 Require Export Bedrock.Word Bedrock.Nomega.
 Require Import NPeano NArith PArith Ndigits Compare_dec Arith.
-Require Import ProofIrrelevance Ring List.
-Require Import MultiBoundedWord.
+Require Import ProofIrrelevance Ring List Omega.
 
 Section Vector.
   Import ListNotations.
@@ -13,9 +12,13 @@ Section Vector.
       match (proj1_sig x) as x' return (proj1_sig x) = x' -> _ with
       | [] => fun _ => _
       | x0 :: xs => fun _ => nth (proj1_sig i) (proj1_sig x) x0
-      end eq_refl); abstract (
+      end eq_refl);
+    abstract (
       destruct x as [x xp], i as [i ip]; destruct x as [|x0 xs];
-      simpl in xp; subst; inversion _H; clear _H; omega).
+      simpl in *; subst; try omega;
+      match goal with
+      | [H: _ = @nil _ |- _] => inversion H
+      end).
   Defined.
 
   Lemma vget_spec: forall {T n} (x: vec T n) (i: {v: nat | (v < n)%nat}) (d: T),
