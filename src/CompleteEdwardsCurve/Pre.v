@@ -60,17 +60,6 @@ Section Pre.
     unfold onCurve, unifiedAdd'; intros [x1 y1] [x2 y2] H1 H2.
     field_algebra; auto using edwardsAddCompleteMinus, edwardsAddCompletePlus.
   Qed.
- 
-  Lemma jason : forall (x y: F),
-      x^2 = y^2 -> x <> 0-y -> x <> y -> False.
-  Proof.
-    intros x y A B C; destruct (eq_dec (x - y) 0).
-
-    - contradict C. field_algebra.
-    - assert ((x + y) = 0 / (x - y)) as Z by (field_simplify_eq_all; field_algebra).
-      replace (0 / _) with 0 in Z by admit.
-      contradict B; field_algebra.
-  Admitted.
 End Pre.
 
 Import Group Ring Field.
