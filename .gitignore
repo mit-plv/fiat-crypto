@@ -1,6 +1,7 @@
 bedrock
 fiat
 *~
+*#
 *.vo
 *.d
 *.glob
