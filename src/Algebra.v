@@ -613,7 +613,13 @@ Ltac field_algebra :=
   try solve
       [neq01
       |trivial
-      |apply Ring.opp_nonzero_nonzero;trivial].
+      |apply Ring.opp_nonzero_nonzero;trivial
+      |match goal with
+       | [ H : not (?eq ?zero (?opp ?zero)) |- _ ]
+         => exfalso; apply H; nsatz
+       | [ H : not (?eq (?opp ?zero) ?zero) |- _ ]
+         => exfalso; apply H; nsatz
+       end].
 
 Section Example.
   Context {F zero one opp add sub mul inv div} `{F_field:field F eq zero one opp add sub mul inv div}.
