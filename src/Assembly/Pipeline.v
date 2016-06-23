@@ -68,7 +68,7 @@ Module PipelineExamples.
       plet b := v[[0]] in
       ([b ^& a; a ^+ b])).
     pseudo_solve.
-  Admitted. (*TODO (rsloan): eapply unification *)
+  Admitted. (* TODO (rsloan): eapply unification *)
 
   Definition comb_ex_str :=
     (Pipeline.toString (proj1_sig comb_example)).
