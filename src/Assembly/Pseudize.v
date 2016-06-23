@@ -256,10 +256,14 @@ Module Conversion.
     autodestruct;
     repeat pseudo_step.
 
+  Local Notation "v [[ i ]]" := (nth i v (wzero _)) (at level 40).
+  Local Notation "$$ v" := (natToWord _ v) (at level 40).
+
   Definition convert_example: @pseudeq 32 W32 1 1 (fun v =>
-      Let_In (natToWord _ 1) (fun a =>
-      Let_In (nth 0 v (wzero _)) (fun b =>
-      [a ^& b]))).
+      Let_In ($$ 1) (fun a =>
+        Let_In (v[[0]]) (fun b => [
+          a ^& b
+      ]))).
 
     pseudo_solve.
   Defined.
