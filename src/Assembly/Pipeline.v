@@ -1,6 +1,7 @@
 Require Import QhasmCommon QhasmEvalCommon.
 Require Import Pseudo Qhasm AlmostQhasm Conversion Language.
 Require Import PseudoConversion AlmostConversion StringConversion.
+Require Import Wordize Vectorize Pseudize.
 
 Module Pipeline.
   Export AlmostQhasm Qhasm QhasmString.
@@ -22,9 +23,19 @@ End Pipeline.
 Module PipelineExample.
   Import Pipeline.
 
-  Program Definition asdf: Program Unary32 := ($0 :+: $0)%p.
+  Local Notation "v [[ i ]]" := (nth i v (wzero _)) (at level 40).
+  Local Notation "$$ v" := (natToWord _ v) (at level 40).
 
-  Definition exStr := Pipeline.toString asdf.
+  Definition example: @pseudeq 32 W32 1 1 (fun v =>
+      Let_In ($$ 1) (fun a =>
+        Let_In (v[[0]]) (fun b => [
+          a ^& b
+      ]))).
+
+    pseudo_solve.
+  Defined.
+
+  Definition exStr := Pipeline.toString example.
 
   (* Eval vm_compute in exStr. *)
 End PipelineExample.
