@@ -7,8 +7,6 @@ Import Pseudo ListNotations StateCommon EvalUtil ListState.
 
 Section Conversion.
 
-  Definition Let_In {A P} (x : A) (f : forall a : A, P a) : P x := let y := x in f y.
-
   Hint Unfold setList getList getVar setCarry setCarryOpt getCarry
        getMem setMem overflows.
 
@@ -130,15 +128,6 @@ Section Conversion.
     rewrite wordize_shiftr; rewrite NToWord_wordToN; intuition.
   Qed.
 
-  Lemma pseudo_mult:
-    forall {w s n} (p: @Pseudo w s n 2) x out0 out1 m0 m1 c0 c1,
-      pseudoEval p (x, m0, c0) = Some ([out0; out1], m1, c1)
-    -> pseudoEval (PDual n Mult p) (x, m0, c0) =
-      Some ([out0 ^* out1; multHigh out0 out1], m1, c1).
-  Proof.
-    intros; simpl; rewrite H; autounfold; simpl; intuition.
-  Qed.
-
   Lemma pseudo_comb:
     forall {w s n a b} (p0: @Pseudo w s n a) (p1: @Pseudo w s n b)
       input out0 out1 m0 m1 m2 c0 c1 c2,
@@ -210,6 +199,54 @@ Section Conversion.
     eapply pseudo_let; try eassumption.
   Qed.
 
+  Lemma pseudo_mult_single:
+    forall {w s n m} (p0: @Pseudo w s n 2)
+                (p1: @Pseudo w s (n + 2) m)
+        out0 out1 f x m0 m1 m2 c0 c1 c2,
+      pseudoEval p0 (x, m0, c0) = Some ([out0; out1], m1, c1)
+    -> pseudoEval p1 (x ++ [out0 ^* out1; multHigh out0 out1], m1, c1) =
+        Some (f (nth n (x ++ [out0 ^* out1; multHigh out0 out1]) (wzero _)), m2, c2)
+    -> pseudoEval (@PLet w s n 2 m (PDual n Mult p0) p1) (x, m0, c0) =
+      Some (Let_In (out0 ^* out1) f, m2, c2).
+  Proof.
+    intros; simpl; rewrite H; autounfold; simpl; rewrite H0; simpl; intuition.
+    replace (nth n (x ++ _) _) with (out0 ^* out1); simpl; intuition.
+    assert (Datatypes.length x = n) as L by (
+      eapply eval_in_length; eassumption).
+    rewrite app_nth2; try rewrite L; intuition.
+    replace (n - n) with 0 by omega.
+    simpl; intuition.
+  Qed.
+
+  Lemma pseudo_mult_dual:
+    forall {w s n m} (p0: @Pseudo w s n 2)
+                (p1: @Pseudo w s (n + 2) m)
+        out0 out1 f x m0 m1 m2 c0 c1 c2,
+      pseudoEval p0 (x, m0, c0) = Some ([out0; out1], m1, c1)
+    -> pseudoEval p1 (x ++ [out0 ^* out1; multHigh out0 out1], m1, c1) =
+      Some (f (nth n (x ++ [out0 ^* out1; multHigh out0 out1]) (wzero _))
+              (nth (S n) (x ++ [out0 ^* out1; multHigh out0 out1]) (wzero _)),
+            m2, c2)
+    -> pseudoEval (@PLet w s n 2 m (PDual n Mult p0) p1) (x, m0, c0) =
+      Some (Let_In (multHigh out0 out1) (fun x =>
+            Let_In (out0 ^* out1) (fun y =>
+            f y x)), m2, c2).
+  Proof.
+    intros; simpl; rewrite H; autounfold; simpl; rewrite H0; simpl; intuition.
+    assert (Datatypes.length x = n) as L by (eapply eval_in_length; eassumption).
+
+    replace (nth n (x ++ _) _) with (out0 ^* out1); simpl; intuition.
+    replace (nth (S n) (x ++ _) _) with (multHigh out0 out1); simpl; intuition.
+
+    - rewrite app_nth2; try rewrite L; intuition.
+      replace (S n - n) with 1 by omega.
+      simpl; intuition.
+
+    - rewrite app_nth2; try rewrite L; intuition.
+      replace (n - n) with 0 by omega.
+      simpl; intuition.
+  Qed.
+
   Definition pseudeq {w s} (n m: nat) (f: list (word w) -> list (word w)) : Type := 
     {p: @Pseudo w s n m | forall x: (list (word w)),
       List.length x = n -> exists m' c',
@@ -232,21 +269,34 @@ Ltac autodestruct :=
 
 Ltac pseudo_step :=
   match goal with
-  | [ |- pseudoEval ?p _ = Some ((Let_In ?a ?f), _, _) ] =>
-    is_evar p;
-    match (type of a) with
-    | word _ => eapply pseudo_let_var
-    | list _ => eapply pseudo_let_list
-    end
+  | [ |- pseudoEval ?p _ = Some ((
+            Let_In (multHigh ?a ?b) (fun x =>
+            Let_In (?a ^* ?b) (fun y => _))), _, _) ] =>
+    is_evar p; eapply pseudo_mult_dual
+
+  | [ |- pseudoEval ?p _ = Some (Let_In (?a ^* ?b) _, _, _) ] =>
+    is_evar p; eapply pseudo_mult_single
 
   | [ |- pseudoEval ?p _ = Some ([?x ^& ?y], _, _) ] =>
     is_evar p; eapply pseudo_and
+
   | [ |- pseudoEval ?p _ = Some ([?x ^+ ?y], _, _) ] =>
     is_evar p; eapply pseudo_plus
+
   | [ |- pseudoEval ?p _ = Some (cons ?x (cons _ _), _, _) ] =>
     is_evar p; eapply pseudo_cons; try reflexivity
+
   | [ |- pseudoEval ?p _ = Some ([natToWord _ ?x], _, _)%p ] =>
     is_evar p; eapply pseudo_const
+
+  | [ |- pseudoEval ?p _ = Some ((Let_In ?a ?f), _, _) ] =>
+    is_evar p;
+    match (type of a) with
+    | list _ => eapply pseudo_let_list
+    | word _ => eapply pseudo_let_var
+    | (_ * _)%type => rewrite detuple_let
+    end
+
   | [ |- @pseudoEval ?n _ _ _ ?P _ =
         Some ([nth ?i ?lst _], _, _)%p ] =>
     eapply (pseudo_var None i); simpl; intuition

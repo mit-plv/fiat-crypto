@@ -127,7 +127,13 @@ Module StringConversion <: Conversion Qhasm QhasmString.
       end.
  
     Definition operationToString (op: Operation): option string :=
-      let f := fun x => if (Nat.eq_dec x 32) then "32" else "64" in
+      let f := fun x => (
+        if (Nat.eq_dec x 32)
+        then "32"
+        else if (Nat.eq_dec x 64)
+          then "64"
+          else "128") in
+
       match op with
       | IOpConst n o r c => 
         r ++ " " ++ o ++ "= " ++ c
@@ -140,7 +146,7 @@ Module StringConversion <: Conversion Qhasm QhasmString.
       | DOp n o a b x =>
         match x with
         | Some r =>
-          "inline " ++ r ++ " " ++ a ++ " " ++ o ++ "= " ++ b
+          "(int" ++ (f (2 * n)) ++ ") " ++ r ++ " " ++ a ++ " " ++ o ++ "= " ++ b
         | None => a ++ " " ++ o ++ "= " ++ b
         end
       | COp n o a b =>

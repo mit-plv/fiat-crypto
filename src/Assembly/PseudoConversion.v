@@ -16,6 +16,8 @@ Module PseudoConversion <: Conversion Pseudo AlmostQhasm.
     Definition FMap := NatM.t (AlmostProgram * (list (Mapping w))).
     Definition fempty := NatM.empty (AlmostProgram * (list (Mapping w))).
 
+    Transparent MMap FMap.
+
     Definition getStart {n m} (prog: @Pseudo w s n m) :=
       let ns := (fix getStart' {n' m'} (prog': @Pseudo w s n' m') :=
         match prog' with
@@ -54,48 +56,60 @@ Module PseudoConversion <: Conversion Pseudo AlmostQhasm.
       let stack' := stack s in
       let const' := constant s in
 
-      let G := fun (k: nat) =>
-        match (NatM.find k M) with
+      let get := fun (k: nat) (default: nat -> Mapping w) (M': MMap) =>
+        match (NatM.find k M') with
         | Some v => v
-        | _ => rM k (* TODO: more intelligent defaults *)
+        | _ => default k
         end in
 
-      let madd := fun (k: nat) (f: nat -> Mapping w) =>
-        NatM.add k (f k) in
+      let madd := fun (a: nat) (default: nat -> Mapping w) (M': MMap) =>
+        NatM.add a (get a default M') M' in
 
       let fadd := fun (k: nat) (f: AlmostProgram) (r: list (Mapping w)) =>
         NatM.add k (f, r) in
 
+      let updateM := (
+        fix updateM' (k: nat) (mtmp: list (Mapping w)) (Miter: MMap) : MMap :=
+        match mtmp with
+        | [] => Miter
+        | a :: mtmp' => NatM.add k a (updateM' (S k) mtmp' Miter)
+        end) in
+
       match prog with
-      | PVar n (Some true) i => Some (ASkip, [rM i], madd i rM M, F)
-      | PVar n (Some false) i => Some (ASkip, [sM i], madd i sM M, F)
-      | PVar n None i => Some (ASkip, [G i], M, F) 
+      | PVar n (Some true) i =>
+        Some (ASkip, [get i rM M], madd i rM M, F)
+
+      | PVar n (Some false) i =>
+        Some (ASkip, [get i sM M], madd i sM M, F)
+
+      | PVar n None i => (* assign to register by default *)
+        Some (ASkip, [get i rM M], madd i rM M, F) 
 
       | PConst n c =>
         Some (AAssign (AConstInt (reg' start) (const' c)),
-                       [rM start], madd start rM M, F)
+              [get start rM M], madd start rM M, F)
 
       | PMem n m v i =>
         Some (AAssign (ARegMem (reg' start) (mem s v) i),
-                       [rM start], madd start rM M, F)
+              [get start rM M], madd start rM M, F)
 
       | PBin n o p =>
         match (convertProgram' p start M F) with
         | Some (p', [regM (reg _ _ a); regM (reg _ _ b)], M', F') =>
             Some (ASeq p' (AOp (IOpReg o (reg' a) (reg' b))),
-                [rM a], madd a rM (madd b rM M'), F')
+                [get a rM M'], madd a rM (madd b rM M'), F')
 
         | Some (p', [regM (reg _ _ a); constM c], M', F') =>
             Some (ASeq p' (AOp (IOpConst o (reg' a) c)),
-                [rM a], madd a rM M', F')
+                [get a rM M'], madd a rM M', F')
 
         | Some (p', [regM (reg _ _ a); memM _ b i], M', F') =>
             Some (ASeq p' (AOp (IOpMem o (reg' a) b i)),
-                [rM a], madd a rM M', F')
+                [get a rM M'], madd a rM M', F')
 
         | Some (p', [regM (reg _ _ a); stackM (stack _ _ b)], M', F') =>
             Some (ASeq p' (AOp (IOpStack o (reg' a) (stack' b))),
-                [rM a], madd a rM (madd b sM M'), F')
+                [get a rM M'], madd a rM (madd b sM M'), F')
 
         | _ => None
         end
@@ -104,7 +118,7 @@ Module PseudoConversion <: Conversion Pseudo AlmostQhasm.
         match (convertProgram' p start M F) with
         | Some (p', [regM (reg _ _ a); regM (reg _ _ b)], M', F') =>
             Some (ASeq p' (AOp (COp o (reg' a) (reg' b))),
-                [rM a], madd a rM (madd b rM M'), F')
+                [get a rM M'], madd a rM (madd b rM M'), F')
 
         | _ => None
         end
@@ -113,7 +127,8 @@ Module PseudoConversion <: Conversion Pseudo AlmostQhasm.
         match (convertProgram' p (S start) M F) with
         | Some (p', [regM (reg _ _ a); regM (reg _ _ b)], M', F') =>
             Some (ASeq p' (AOp (DOp o (reg' a) (reg' b) (Some (reg' start)))),
-                [rM a; rM start], madd a rM (madd b rM (madd start rM M')), F')
+                  [get a rM M'; get start rM M'],
+                  madd a rM (madd b rM (madd start rM M')), F')
 
         | _ => None
         end
@@ -122,7 +137,7 @@ Module PseudoConversion <: Conversion Pseudo AlmostQhasm.
         match (convertProgram' p start M F) with
         | Some (p', [regM (reg _ _ a)], M', F') =>
             Some (ASeq p' (AOp (ROp o (reg' a) x)),
-                [rM a], madd a rM M', F')
+                [get a rM M'], madd a rM M', F')
 
         | _ => None
         end
@@ -131,10 +146,15 @@ Module PseudoConversion <: Conversion Pseudo AlmostQhasm.
         match (convertProgram' f start M F) with
         | None => None
         | Some (fp, fm, M', F') =>
-            match (convertProgram' g (start + (length fm)) M' F') with
-            | None => None
-            | Some (gp, gm, M'', F'') => Some (ASeq fp gp, gm, M'', F'')
-            end
+
+          (* Make sure all of the new variables are bound to their results *)
+          let M'' := updateM start fm M' in
+
+          (* Then convert the second program *)
+          match (convertProgram' g (start + (length fm)) M'' F') with
+          | None => None
+          | Some (gp, gm, M''', F'') => Some (ASeq fp gp, gm, M''', F'')
+          end
         end
 
       | PComb n a b f g => 
@@ -158,7 +178,7 @@ Module PseudoConversion <: Conversion Pseudo AlmostQhasm.
 
             if (list_eq_dec mapping_dec lr rr)
             then
-                match (G (proj1_sig i0), G (proj1_sig i1)) with
+                match (get (proj1_sig i0) rM M, get (proj1_sig i1) rM M) with
                 | (regM r0, regM r1) => Some (ACond (CReg _ o r0 r1) lp rp, lr, M', F')
                 | (regM r, constM c) => Some (ACond (CConst _ o r c) lp rp, lr, M', F')
                 | _ => None

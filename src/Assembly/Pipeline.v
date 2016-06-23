@@ -22,21 +22,19 @@ Module Pipeline.
 End Pipeline.
 
 Module PipelineExample.
-  Import Pipeline ListNotations.
+  Import Pipeline ListNotations StateCommon EvalUtil ListState.
 
   Local Notation "v [[ i ]]" := (nth i v (wzero _)) (at level 40).
   Local Notation "$$ v" := (natToWord _ v) (at level 40).
 
   Definition example: @pseudeq 32 W32 1 1 (fun v =>
-      Let_In ($$ 1) (fun a =>
-        Let_In (v[[0]]) (fun b => [
-          a ^& b
-      ]))).
-
+      plet a := $$ 1 in
+      plet b := v[[0]] in
+      plet c := multHigh a b in
+      plet d := a ^* b in
+      [b ^& d]).
     pseudo_solve.
   Defined.
 
-  Definition exStr := Pipeline.toString (proj1_sig example).
-
-  (* Eval vm_compute in exStr. *)
+  Eval vm_compute in (Pipeline.toString (proj1_sig example)).
 End PipelineExample.
