@@ -420,10 +420,18 @@ Module IntegralDomain.
     Context {T eq zero one opp add sub mul} `{@integral_domain T eq zero one opp add sub mul}.
 
     Lemma mul_nonzero_nonzero_cases (x y : T)
-      : eq (mul x  y) zero -> eq x zero \/ eq y zero.
+      : eq (mul x y) zero -> eq x zero \/ eq y zero.
     Proof.
       pose proof mul_nonzero_nonzero x y.
       destruct (eq_dec x zero); destruct (eq_dec y zero); intuition.
+    Qed.
+
+    Lemma mul_nonzero_nonzero_and (x y : T)
+      : ~eq (mul x y) zero -> ~eq x zero /\ ~eq y zero.
+    Proof.
+      intro H0; split; intro H1; apply H0; rewrite H1.
+      { apply Ring.mul_0_r. }
+      { apply Ring.mul_0_l. }
     Qed.
 
     Global Instance Integral_domain :
