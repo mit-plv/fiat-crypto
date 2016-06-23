@@ -72,6 +72,16 @@ Ltac nsatz_rewrite_and_revert domain :=
            end
   end.
 
+(** As per https://coq.inria.fr/bugs/show_bug.cgi?id=4851, [nsatz]
+    cannot handle duplicate hypotheses.  So we clear them. *)
+Ltac nsatz_clear_duplicates_for_bug_4851 domain :=
+  lazymatch type of domain with
+  | @Integral_domain.Integral_domain _ _ _ _ _ _ _ ?eq _ _ _ =>
+    repeat match goal with
+           | [ H : eq ?x ?y, H' : eq ?x ?y |- _ ] => clear H'
+           end
+  end.
+
 Ltac nsatz_nonzero :=
   try solve [apply Integral_domain.integral_domain_one_zero
             |apply Integral_domain.integral_domain_minus_one_zero
@@ -81,6 +91,7 @@ Ltac nsatz_domain_sugar_power domain sugar power :=
   let nparams := constr:(BinInt.Zneg BinPos.xH) in (* some symbols can be "parameters", treated as coefficients *)
   lazymatch type of domain with
   | @Integral_domain.Integral_domain ?F ?zero _ _ _ _ _ ?eq ?Fops ?FRing ?FCring =>
+    nsatz_clear_duplicates_for_bug_4851 domain;
     nsatz_rewrite_and_revert domain;
     let reified_package := nsatz_reify_equations eq zero in
     let fv := nsatz_get_free_variables reified_package in
@@ -115,13 +126,28 @@ Tactic Notation "nsatz" constr(n) :=
 
 Tactic Notation "nsatz" := nsatz 1%nat || nsatz 2%nat || nsatz 3%nat || nsatz 4%nat || nsatz 5%nat.
 
-Ltac nsatz_contradict :=
-  unfold not;
-  intros;
-  let domain := nsatz_guess_domain in
+(** If the goal is of the form [?x <> ?y] and assuming [?x = ?y]
+    contradicts any hypothesis of the form [?x' <> ?y'], we turn this
+    problem about inequalities into one about equalities and give it
+    to [nsatz]. *)
+Ltac nsatz_contradict_single_hypothesis domain :=
   lazymatch type of domain with
   | @Integral_domain.Integral_domain _ ?zero ?one _ _ _ _ ?eq ?Fops ?FRing ?FCring =>
-    assert (eq one zero) as Hbad;
-    [nsatz; nsatz_nonzero
-    |destruct (Integral_domain.integral_domain_one_zero (Integral_domain:=domain) Hbad)]
+    unfold not in *;
+    match goal with
+    | [ H : eq _ _ -> False |- eq _ _ -> False ]
+      => intro; apply H; nsatz
+    end
   end.
+
+Ltac nsatz_contradict :=
+  let domain := nsatz_guess_domain in
+  nsatz_contradict_single_hypothesis domain
+  || (unfold not;
+      intros;
+      lazymatch type of domain with
+      | @Integral_domain.Integral_domain _ ?zero ?one _ _ _ _ ?eq ?Fops ?FRing ?FCring =>
+        assert (eq one zero) as Hbad;
+        [nsatz; nsatz_nonzero
+        |destruct (Integral_domain.integral_domain_one_zero (Integral_domain:=domain) Hbad)]
+      end).

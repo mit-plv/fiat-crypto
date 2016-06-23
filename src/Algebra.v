@@ -225,7 +225,21 @@ Module Group.
       intros ? Hx Ho.
       assert (Hxo: x * inv x = id) by (rewrite right_inverse; reflexivity).
       rewrite Ho, right_identity in Hxo. intuition.
-   Qed.
+    Qed.
+
+    Lemma neq_inv_nonzero : forall x, x <> inv x -> x <> id.
+    Proof.
+      intros ? Hx Hi; apply Hx.
+      rewrite Hi.
+      symmetry; apply inv_id.
+    Qed.
+
+    Lemma inv_neq_nonzero : forall x, inv x <> x -> x <> id.
+    Proof.
+      intros ? Hx Hi; apply Hx.
+      rewrite Hi.
+      apply inv_id.
+    Qed.
 
     Section ZeroNeqOne.
       Context {one} `{is_zero_neq_one T eq id one}.
@@ -420,10 +434,20 @@ Module IntegralDomain.
     Context {T eq zero one opp add sub mul} `{@integral_domain T eq zero one opp add sub mul}.
 
     Lemma mul_nonzero_nonzero_cases (x y : T)
-      : eq (mul x  y) zero -> eq x zero \/ eq y zero.
+      : eq (mul x y) zero -> eq x zero \/ eq y zero.
     Proof.
       pose proof mul_nonzero_nonzero x y.
       destruct (eq_dec x zero); destruct (eq_dec y zero); intuition.
+    Qed.
+
+    Lemma mul_nonzero_nonzero_iff (x y : T)
+      : ~eq (mul x y) zero <-> ~eq x zero /\ ~eq y zero.
+    Proof.
+      split.
+      { intro H0; split; intro H1; apply H0; rewrite H1.
+        { apply Ring.mul_0_r. }
+        { apply Ring.mul_0_l. } }
+      { intros [? ?] ?; edestruct mul_nonzero_nonzero_cases; eauto with nocore. }
     Qed.
 
     Global Instance Integral_domain :
@@ -539,6 +563,51 @@ Ltac field_simplify_eq_hyps :=
   repeat match goal with [ H: field_simplify_done _ |- _] => clear H end.
 
 Ltac field_simplify_eq_all := field_simplify_eq_hyps; try field_simplify_eq.
+
+(*** Inequalities over fields *)
+Ltac assert_expr_by_nsatz H ty :=
+  let H' := fresh in
+  rename H into H'; assert (H : ty)
+    by (try (intro; apply H'); nsatz);
+  clear H'.
+Ltac test_not_constr_eq_assert_expr_by_nsatz y zero H ty :=
+  first [ constr_eq y zero; fail 1 y "is already" zero
+        | assert_expr_by_nsatz H ty ].
+Ltac canonicalize_field_inequalities_step' eq zero opp add sub :=
+  match goal with
+  |  [ H : not (eq ?x (opp ?y)) |- _ ]
+     => test_not_constr_eq_assert_expr_by_nsatz y zero H (not (eq (add x y) zero))
+  |  [ H : (eq ?x (opp ?y) -> False)%type |- _ ]
+     => test_not_constr_eq_assert_expr_by_nsatz y zero H (eq (add x y) zero -> False)%type
+  |  [ H : not (eq ?x ?y) |- _ ]
+     => test_not_constr_eq_assert_expr_by_nsatz y zero H (not (eq (sub x y) zero))
+  |  [ H : (eq ?x ?y -> False)%type |- _ ]
+     => test_not_constr_eq_assert_expr_by_nsatz y zero H (not (eq (sub x y) zero))
+  end.
+Ltac canonicalize_field_inequalities' eq zero opp add sub := repeat canonicalize_field_inequalities_step' eq zero opp add sub.
+Ltac canonicalize_field_equalities_step' eq zero opp add sub :=
+  lazymatch goal with
+  |  [ H : eq ?x (opp ?y) |- _ ]
+     => test_not_constr_eq_assert_expr_by_nsatz y zero H (eq (add x y) zero)
+  |  [ H : eq ?x ?y |- _ ]
+     => test_not_constr_eq_assert_expr_by_nsatz y zero H (eq (sub x y) zero)
+  end.
+Ltac canonicalize_field_equalities' eq zero opp add sub := repeat canonicalize_field_equalities_step' eq zero opp add sub.
+
+(** These are the two user-facing tactics.  They put (in)equalities
+    into the form [_ <> 0] / [_ = 0]. *)
+Ltac canonicalize_field_inequalities :=
+  let fld := guess_field in
+  lazymatch type of fld with
+  | @field ?F ?eq ?zero ?one ?opp ?add ?sub ?mul ?inv ?div
+    => canonicalize_field_inequalities' eq zero opp add sub
+  end.
+Ltac canonicalize_field_equalities :=
+  let fld := guess_field in
+  lazymatch type of fld with
+  | @field ?F ?eq ?zero ?one ?opp ?add ?sub ?mul ?inv ?div
+    => canonicalize_field_equalities' eq zero opp add sub
+  end.
 
 
 (*** Polynomial equations over fields *)
