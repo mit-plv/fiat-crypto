@@ -8,10 +8,8 @@ src/BaseSystemProofs.v
 src/Testbit.v
 src/Assembly/AlmostConversion.v
 src/Assembly/AlmostQhasm.v
-src/Assembly/BoundedWord.v
 src/Assembly/Conversion.v
 src/Assembly/Language.v
-src/Assembly/MultiBoundedWord.v
 src/Assembly/Pipeline.v
 src/Assembly/Pseudize.v
 src/Assembly/Pseudo.v
@@ -33,7 +31,6 @@ src/Encoding/ModularWordEncodingTheorems.v
 src/Experiments/DerivationsOptionRectLetInEncoding.v
 src/Experiments/GenericFieldPow.v
 src/Experiments/SpecEd25519.v
-src/Galois/GaloisField.v
 src/ModularArithmetic/ExtendedBaseVector.v
 src/ModularArithmetic/ModularArithmeticTheorems.v
 src/ModularArithmetic/ModularBaseSystem.v
