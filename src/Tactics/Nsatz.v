@@ -126,13 +126,28 @@ Tactic Notation "nsatz" constr(n) :=
 
 Tactic Notation "nsatz" := nsatz 1%nat || nsatz 2%nat || nsatz 3%nat || nsatz 4%nat || nsatz 5%nat.
 
-Ltac nsatz_contradict :=
-  unfold not;
-  intros;
-  let domain := nsatz_guess_domain in
+(** If the goal is of the form [?x <> ?y] and assuming [?x = ?y]
+    contradicts any hypothesis of the form [?x' <> ?y'], we turn this
+    problem about inequalities into one about equalities and give it
+    to [nsatz]. *)
+Ltac nsatz_contradict_single_hypothesis domain :=
   lazymatch type of domain with
   | @Integral_domain.Integral_domain _ ?zero ?one _ _ _ _ ?eq ?Fops ?FRing ?FCring =>
-    assert (eq one zero) as Hbad;
-    [nsatz; nsatz_nonzero
-    |destruct (Integral_domain.integral_domain_one_zero (Integral_domain:=domain) Hbad)]
+    unfold not in *;
+    match goal with
+    | [ H : eq _ _ -> False |- eq _ _ -> False ]
+      => intro; apply H; nsatz
+    end
   end.
+
+Ltac nsatz_contradict :=
+  let domain := nsatz_guess_domain in
+  nsatz_contradict_single_hypothesis domain
+  || (unfold not;
+      intros;
+      lazymatch type of domain with
+      | @Integral_domain.Integral_domain _ ?zero ?one _ _ _ _ ?eq ?Fops ?FRing ?FCring =>
+        assert (eq one zero) as Hbad;
+        [nsatz; nsatz_nonzero
+        |destruct (Integral_domain.integral_domain_one_zero (Integral_domain:=domain) Hbad)]
+      end).

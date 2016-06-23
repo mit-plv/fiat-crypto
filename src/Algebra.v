@@ -225,7 +225,21 @@ Module Group.
       intros ? Hx Ho.
       assert (Hxo: x * inv x = id) by (rewrite right_inverse; reflexivity).
       rewrite Ho, right_identity in Hxo. intuition.
-   Qed.
+    Qed.
+
+    Lemma neq_inv_nonzero : forall x, x <> inv x -> x <> id.
+    Proof.
+      intros ? Hx Hi; apply Hx.
+      rewrite Hi.
+      symmetry; apply inv_id.
+    Qed.
+
+    Lemma inv_neq_nonzero : forall x, inv x <> x -> x <> id.
+    Proof.
+      intros ? Hx Hi; apply Hx.
+      rewrite Hi.
+      apply inv_id.
+    Qed.
 
     Section ZeroNeqOne.
       Context {one} `{is_zero_neq_one T eq id one}.
@@ -613,13 +627,7 @@ Ltac field_algebra :=
   try solve
       [neq01
       |trivial
-      |apply Ring.opp_nonzero_nonzero;trivial
-      |match goal with
-       | [ H : not (?eq ?zero (?opp ?zero)) |- _ ]
-         => exfalso; apply H; nsatz
-       | [ H : not (?eq (?opp ?zero) ?zero) |- _ ]
-         => exfalso; apply H; nsatz
-       end].
+      |apply Ring.opp_nonzero_nonzero;trivial].
 
 Section Example.
   Context {F zero one opp add sub mul inv div} `{F_field:field F eq zero one opp add sub mul inv div}.
