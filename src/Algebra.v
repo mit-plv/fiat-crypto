@@ -276,6 +276,34 @@ Module Group.
     Proof.
     Admitted.
   End Homomorphism.
+
+  Section SurjectiveHomomorphism.
+    Lemma surjective_homomorphism_group
+          {G EQ OP ID INV} {groupG:@group G EQ OP ID INV}
+          {H eq op id inv}
+          {Equivalence_eq: @Equivalence H eq} {eq_dec: forall x y, {eq x y} + {~ eq x y}}
+          {Proper_op:Proper(eq==>eq==>eq)op}
+          {Proper_inv:Proper(eq==>eq)inv}
+          {phi iph} {Proper_phi:Proper(EQ==>eq)phi} {Proper_iph:Proper(eq==>EQ)iph}
+          {surj:forall h, phi (iph h) = h}
+          {phi_op : forall a b, phi (OP a b) = op (phi a) (phi b)}
+          {phi_inv : forall a, phi (INV a) = inv (phi a)}
+          {phi_id : phi ID = id}
+          : @group H eq op id inv.
+    Proof.
+      repeat split; eauto with core typeclass_instances; intros;
+        repeat match goal with
+                 |- context[?x] =>
+                 match goal with
+                 | |- context[iph x] => fail 1
+                 | _ => unify x id; fail 1
+                 | _ => is_var x; rewrite <- (surj x)
+                 end
+               end;
+        repeat rewrite <-?phi_op, <-?phi_inv, <-?phi_id;
+      f_equiv; auto using associative, left_identity, right_identity, left_inverse, right_inverse.
+    Qed.
+  End SurjectiveHomomorphism.
 End Group.
 
 Require Coq.nsatz.Nsatz.
