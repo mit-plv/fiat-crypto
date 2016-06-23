@@ -6,18 +6,20 @@ Require Export Wordize Vectorize.
 Module Conversion.
   Import Pseudo ListNotations StateCommon EvalUtil ListState.
 
+  Definition Let_In {A P} (x : A) (f : forall a : A, P a) : P x := let y := x in f y.
+
   Hint Unfold setList getList getVar setCarry setCarryOpt getCarry
        getMem setMem overflows.
 
-  Lemma eval_in_length: forall {w s n m} x M c x' M' c' p,
+  Lemma eval_in_length: forall {w s n m} p x M c x' M' c',
       @pseudoEval n m w s p (x, M, c) = Some (x', M', c')
     -> Datatypes.length x = n.
-  Admitted.
+  Proof. Admitted.
 
   Lemma eval_out_length: forall {w s n m} x M c x' M' c' p,
       @pseudoEval n m w s p (x, M, c) = Some (x', M', c')
     -> Datatypes.length x' = m.
-  Admitted.
+  Proof. Admitted.
 
   Lemma pseudo_var: forall {w s n} b k x v m c,
       (k < n)%nat
@@ -30,11 +32,15 @@ Module Conversion.
       rewrite H0; simpl; intuition.
     }
 
-    replace (k mod n) with k by admit. (* TODO (rsloan): find lemma name *)
+    replace (k mod n) with k by (
+      assert (n <> 0) as NZ by omega;
+      pose proof (Nat.div_mod k n NZ);
+      replace (k mod n) with (k - n * (k / n)) by intuition;
+      rewrite (Nat.div_small k n); intuition).
 
     autounfold; simpl.
     destruct (nth_error x k); simpl; try inversion H0; intuition.
-  Admitted.
+  Qed.
 
   Lemma pseudo_mem: forall {w s} n v m c x name len index,
       TripleM.find (w, name mod n, index mod len)%nat m = Some (@wordToN w v)
@@ -178,9 +184,9 @@ Module Conversion.
       pseudoEval p0 (input, m0, c0) = Some ([a], m1, c1)
     -> pseudoEval p1 (input ++ [a], m1, c1) = Some (f (nth n (input ++ [a]) (wzero _)), m2, c2)
     -> pseudoEval (@PLet w s n k m p0 p1) (input, m0, c0) =
-        Some (let x := a in f a, m2, c2).
+        Some (Let_In a f, m2, c2).
   Proof.
-    intros; cbv zeta.
+    intros; unfold Let_In; cbv zeta.
     eapply pseudo_let; try eassumption.
     replace (f a) with (f (nth n (input ++ [a]) (wzero w))); try assumption.
     apply f_equal.
@@ -197,9 +203,9 @@ Module Conversion.
       pseudoEval p0 (input, m0, c0) = Some (lst, m1, c1)
     -> pseudoEval p1 (input ++ lst, m1, c1) = Some (f lst, m2, c2)
     -> pseudoEval (@PLet w s n k m p0 p1) (input, m0, c0) =
-        Some (let x := lst in f x, m2, c2).
+        Some (Let_In lst f, m2, c2).
   Proof.
-    intros; cbv zeta.
+    intros; unfold Let_In; cbv zeta.
     eapply pseudo_let; try eassumption.
   Qed.
 
@@ -224,9 +230,9 @@ Module Conversion.
 
   Ltac pseudo_step :=
     match goal with
-    | [ |- pseudoEval ?p _ = Some ((let _ := ?b in _), _, _) ] =>
+    | [ |- pseudoEval ?p _ = Some ((Let_In ?a ?f), _, _) ] =>
       is_evar p;
-      match (type of b) with
+      match (type of a) with
       | word _ => eapply pseudo_let_var
       | list _ => eapply pseudo_let_list
       end
@@ -239,9 +245,9 @@ Module Conversion.
       is_evar p; eapply pseudo_cons; try reflexivity
     | [ |- pseudoEval ?p _ = Some ([natToWord _ ?x], _, _)%p ] =>
       is_evar p; eapply pseudo_const
-    | [ |- @pseudoEval ?n _ _ _ ?P (?lst, _, _) =
+    | [ |- @pseudoEval ?n _ _ _ ?P _ =
             Some ([nth ?i ?lst _], _, _)%p ] =>
-      eapply (pseudo_var None); simpl; intuition
+      eapply (pseudo_var None i); simpl; intuition
     end.
 
   Ltac pseudo_solve :=
@@ -251,9 +257,9 @@ Module Conversion.
     repeat pseudo_step.
 
   Definition convert_example: @pseudeq 32 W32 1 1 (fun v =>
-      let a := natToWord _ 1 in
-      let b := nth 0 v (wzero _) in
-      [a ^& b]).
+      Let_In (natToWord _ 1) (fun a =>
+      Let_In (nth 0 v (wzero _)) (fun b =>
+      [a ^& b]))).
 
     pseudo_solve.
   Defined.
