@@ -27,6 +27,7 @@ Module PipelineExamples.
   Local Notation "v [[ i ]]" := (nth i v (wzero _)) (at level 40).
   Local Notation "$$ v" := (natToWord _ v) (at level 40).
 
+  (*
   Definition add_example: @pseudeq 32 W32 1 1 (fun v =>
       plet a := $$ 1 in
       plet b := v[[0]] in
@@ -63,7 +64,6 @@ Module PipelineExamples.
   Definition mult_ex_str :=
     (Pipeline.toString (proj1_sig mult_example)).
 
-  (*
   Definition comb_example: @pseudeq 32 W32 1 1 (fun v =>
       plet a := $$ 7 in
       plet b := v[[0]] in
