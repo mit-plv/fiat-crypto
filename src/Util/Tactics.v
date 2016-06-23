@@ -41,7 +41,7 @@ Ltac break_match_step :=
        | _ => destruct e eqn:?
        end
   end.
-Local Ltac break_match := repeat break_match_step.
+Ltac break_match := repeat break_match_step.
 
 Ltac free_in x y :=
   idtac;
