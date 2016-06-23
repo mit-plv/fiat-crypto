@@ -21,20 +21,56 @@ Module Pipeline.
     omap (toQhasm p) (StringConversion.convertProgram tt tt).
 End Pipeline.
 
-Module PipelineExample.
+Module PipelineExamples.
   Import Pipeline ListNotations StateCommon EvalUtil ListState.
 
   Local Notation "v [[ i ]]" := (nth i v (wzero _)) (at level 40).
   Local Notation "$$ v" := (natToWord _ v) (at level 40).
 
-  Definition example: @pseudeq 32 W32 1 1 (fun v =>
+  Definition add_example: @pseudeq 32 W32 1 1 (fun v =>
       plet a := $$ 1 in
       plet b := v[[0]] in
+      [a ^+ b]).
+    pseudo_solve.
+  Defined.
+
+  Definition add_ex_str :=
+    (Pipeline.toString (proj1_sig add_example)).
+
+  Definition and_example: @pseudeq 32 W32 1 1 (fun v =>
+      plet a := $$ 1 in
+      plet b := v[[0]] in
+      [a ^& b]).
+    pseudo_solve.
+  Defined.
+
+  Definition and_ex_str :=
+    (Pipeline.toString (proj1_sig and_example)).
+
+  Definition mult_example: @pseudeq 32 W32 1 1 (fun v =>
+      plet a := $$ 1 in
+      plet b := v[[0]] in
+
+      (* NOTE: we want the lets in this format to unify with
+               pseudo_mult_dual *)  
       plet c := multHigh a b in
       plet d := a ^* b in
+
       [b ^& d]).
     pseudo_solve.
   Defined.
 
-  Eval vm_compute in (Pipeline.toString (proj1_sig example)).
-End PipelineExample.
+  Definition mult_ex_str :=
+    (Pipeline.toString (proj1_sig mult_example)).
+
+  Definition comb_example: @pseudeq 32 W32 1 1 (fun v =>
+      plet a := $$ 7 in
+      plet b := v[[0]] in
+      ([b ^& a; a ^+ b])).
+    pseudo_solve.
+  Admitted. (*TODO (rsloan): eapply unification *)
+
+  Definition comb_ex_str :=
+    (Pipeline.toString (proj1_sig comb_example)).
+
+End PipelineExamples.
