@@ -657,6 +657,25 @@ Ltac field_algebra :=
       |trivial
       |apply Ring.opp_nonzero_nonzero;trivial].
 
+Section ExtraLemmas.
+  Context {F zero one opp add sub mul inv div} `{F_field:field F eq zero one opp add sub mul inv div}.
+  Local Infix "+" := add. Local Infix "*" := mul. Local Infix "-" := sub. Local Infix "/" := div.
+  Local Notation "0" := zero. Local Notation "1" := one.
+
+  Lemma only_two_square_roots' x y : x * x = y * y -> x <> y -> x <> opp y -> False.
+  Proof.
+    intros.
+    canonicalize_field_equalities; canonicalize_field_inequalities.
+    assert (H' : (x + y) * (x - y) <> 0) by (apply mul_nonzero_nonzero; assumption).
+    apply H'; nsatz.
+  Qed.
+
+  Lemma only_two_square_roots x y z : x * x = z -> y * y = z -> x <> y -> x <> opp y -> False.
+  Proof.
+    intros; setoid_subst z; eauto using only_two_square_roots'.
+  Qed.
+End ExtraLemmas.
+
 Section Example.
   Context {F zero one opp add sub mul inv div} `{F_field:field F eq zero one opp add sub mul inv div}.
   Local Infix "+" := add. Local Infix "*" := mul. Local Infix "-" := sub. Local Infix "/" := div.
