@@ -72,6 +72,16 @@ Ltac nsatz_rewrite_and_revert domain :=
            end
   end.
 
+(** As per https://coq.inria.fr/bugs/show_bug.cgi?id=4851, [nsatz]
+    cannot handle duplicate hypotheses.  So we clear them. *)
+Ltac nsatz_clear_duplicates_for_bug_4851 domain :=
+  lazymatch type of domain with
+  | @Integral_domain.Integral_domain _ _ _ _ _ _ _ ?eq _ _ _ =>
+    repeat match goal with
+           | [ H : eq ?x ?y, H' : eq ?x ?y |- _ ] => clear H'
+           end
+  end.
+
 Ltac nsatz_nonzero :=
   try solve [apply Integral_domain.integral_domain_one_zero
             |apply Integral_domain.integral_domain_minus_one_zero
@@ -81,6 +91,7 @@ Ltac nsatz_domain_sugar_power domain sugar power :=
   let nparams := constr:(BinInt.Zneg BinPos.xH) in (* some symbols can be "parameters", treated as coefficients *)
   lazymatch type of domain with
   | @Integral_domain.Integral_domain ?F ?zero _ _ _ _ _ ?eq ?Fops ?FRing ?FCring =>
+    nsatz_clear_duplicates_for_bug_4851 domain;
     nsatz_rewrite_and_revert domain;
     let reified_package := nsatz_reify_equations eq zero in
     let fv := nsatz_get_free_variables reified_package in
