@@ -63,14 +63,16 @@ Module PipelineExamples.
   Definition mult_ex_str :=
     (Pipeline.toString (proj1_sig mult_example)).
 
+  (*
   Definition comb_example: @pseudeq 32 W32 1 1 (fun v =>
       plet a := $$ 7 in
       plet b := v[[0]] in
       ([b ^& a; a ^+ b])).
     pseudo_solve.
-  Admitted. (* TODO (rsloan): eapply unification *)
+  Admitted.
 
   Definition comb_ex_str :=
     (Pipeline.toString (proj1_sig comb_example)).
+  *)
 
 End PipelineExamples.
