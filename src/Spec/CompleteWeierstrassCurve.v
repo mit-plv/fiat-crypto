@@ -1,0 +1,78 @@
+Require Crypto.CompleteWeierstrassCurve.Pre.
+
+Module E.
+  Section WeierstrassCurves.
+    (* Short Weierstrass curves with complete addition laws. References:
+     * <https://hyperelliptic.org/EFD/g1p/auto-shortw.html>
+     * <https://cr.yp.to/talks/2007.06.07/slides.pdf>
+     * See also:
+     * <http://cs.ucsb.edu/~koc/ccs130h/2013/EllipticHyperelliptic-CohenFrey.pdf> (page 79)
+     *)
+
+    Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv} `{Algebra.field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}.
+    Local Infix "=" := Feq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
+    Local Infix "=?" := Algebra.eq_dec (at level 70, no associativity) : type_scope.
+    Local Notation "x =? y" := (Sumbool.bool_of_sumbool (Algebra.eq_dec x y)) : bool_scope.
+    Local Notation "0" := Fzero.  Local Notation "1" := Fone.
+    Local Infix "+" := Fadd. Local Infix "*" := Fmul.
+    Local Infix "-" := Fsub. Local Infix "/" := Fdiv.
+    Local Notation "- x" := (Fopp x).
+    Local Notation "x ^ 2" := (x*x) (at level 30). Local Notation "x ^ 3" := (x*x*x) (at level 30).
+    Local Notation "'∞'" := unit : type_scope.
+    Local Notation "'∞'" := (inr tt) : core_scope.
+    Notation "2" := (1+1). Notation "3" := (1+2).
+    Local Notation "( x , y )" := (inl (pair x y)).
+    Local Open Scope core_scope.
+
+    Context {a b: F}.
+    Class weierstrass_params :=
+      {
+        char_gt_2 : 2 <> 0;
+        char_ne_3 : 3 <> 0
+        (** TODO FIXME What do we need to say about a, b, characteristic, etc? *)
+      }.
+    Context `{weierstrass_params}.
+
+    Definition point := { P | match P with
+                              | (x, y) => y^2 = x^3 + a*x + b
+                              | ∞ => True
+                              end }.
+    Definition coordinates (P:point) : (F*F + ∞) := proj1_sig P.
+
+    (** The following points are indeed on the curve -- see [CompleteWeierstrassCurve.Pre] for proof *)
+    Local Ltac t := intros; apply (Pre.unifiedAdd'_onCurve _ _ (proj2_sig _) (proj2_sig _)).
+
+    Program Definition zero : point := ∞.
+
+    (* If we use [Program Definition], Coq inserts too many
+       intermediate casts, and does too much destruction. *)
+    Definition add (P1 P2:point) : point.
+      refine
+        (exist
+           _
+           (match coordinates P1, coordinates P2 with
+            | (x1, y1), (x2, y2) =>
+              if x1 =? x2 then
+                if y2 =? -y1 then          ∞
+                else                       ((3*x1^2+a)^2 / (2*y1)^2 - x1 - x1,
+                                             (2*x1+x1)*(3*x1^2+a) / (2*y1) - (3*x1^2+a)^3/(2*y1)^3-y1)
+              else                         ((y2-y1)^2 / (x2-x1)^2 - x1 - x2,
+                                             (2*x1+x2)*(y2-y1) / (x2-x1) - (y2-y1)^3 / (x2-x1)^3 - y1)
+            | ∞, ∞ =>                      ∞
+            | ∞, _ =>                      coordinates P2
+            | _, ∞ =>                      coordinates P1
+            end)
+           _); t.
+    Defined.
+
+    Fixpoint mul (n:nat) (P : point) : point :=
+      match n with
+      | O => zero
+      | S n' => add P (mul n' P)
+      end.
+  End WeierstrassCurves.
+End E.
+
+Delimit Scope E_scope with E.
+Infix "+" := E.add : E_scope.
+Infix "*" := E.mul : E_scope.

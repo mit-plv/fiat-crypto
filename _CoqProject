@@ -25,6 +25,7 @@ src/Assembly/Wordize.v
 src/CompleteEdwardsCurve/CompleteEdwardsCurveTheorems.v
 src/CompleteEdwardsCurve/ExtendedCoordinates.v
 src/CompleteEdwardsCurve/Pre.v
+src/CompleteWeierstrassCurve/Pre.v
 src/Encoding/EncodingTheorems.v
 src/Encoding/ModularWordEncodingPre.v
 src/Encoding/ModularWordEncodingTheorems.v
@@ -43,6 +44,7 @@ src/ModularArithmetic/PseudoMersenneBaseParams.v
 src/ModularArithmetic/PseudoMersenneBaseRep.v
 src/ModularArithmetic/Tutorial.v
 src/Spec/CompleteEdwardsCurve.v
+src/Spec/CompleteWeierstrassCurve.v
 src/Spec/EdDSA.v
 src/Spec/Encoding.v
 src/Spec/ModularArithmetic.v
