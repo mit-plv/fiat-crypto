@@ -119,7 +119,7 @@ Module E.
       | |- _ => split
       | |- Feq _ _ => field_algebra
       | |- _ <> 0 => expand_opp; solve [nsatz_nonzero|eauto 6]
-      | |- {_}+{_} => eauto 15 using decide_and, @eq_dec with typeclass_instances
+      | |- Decidable.Decidable _ => solve [ typeclasses eauto ]
       end.
 
     Ltac bash := repeat bash_step.
