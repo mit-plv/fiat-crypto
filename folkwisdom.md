@@ -110,11 +110,15 @@ involves nontrivial considerations of its own).
 The most reliable way to make a value of a sigma type is to start the
 `Definition` in proof mode (ending the first line with a dot like `Definition
 zero : point.`) and then do `refine (exist _ value _); abstract
-(tacticThatProvesInvariant)`. Some of the time, `Program Definition` will do the
-same thing without explicit proof mode (as the Edwards curve spec) but it tends
-to over-eagerly rewrite `if` and `match` statements (as in the Weierstrass curve
-spec). Neatness of the value that is defined takes priority over neatness of the
-code that performs the definition.
+(tacticThatProvesInvariant)`. Another way of doing this is to first do
+`Obligation Tactic := tacticThatProvesInvariant.` and then `Program Definition
+zero : point := exist _ value _.` which will call the tactic to fill in the
+holes that implicit argument inference does not fill. By default, `Program
+Definition` rewrites all match statements using the convoy pattern, and this can
+clutter definitions quite badly. Neatness of resulting definitions takes
+priority over neatness of source code. To prevent `Program Definition` to
+rewriting a match statement, specify an explicit return clause: `match x return
+_ with ... end.`
 
 ## Equivalence
 
