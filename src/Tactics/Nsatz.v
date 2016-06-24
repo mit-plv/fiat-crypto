@@ -137,6 +137,8 @@ Ltac nsatz_contradict_single_hypothesis domain :=
     match goal with
     | [ H : eq _ _ -> False |- eq _ _ -> False ]
       => intro; apply H; nsatz
+    | [ H : eq _ _ -> False |- False ]
+      => apply H; nsatz
     end
   end.
 
