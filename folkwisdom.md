@@ -211,7 +211,7 @@ buffer in `proofgeneral`). A useful heuristic for reading that log is to look
 for the first place where the resolution backtracks and then read backwards from
 there.
 5. To perform multiple rewrites at once, make rewrite hint database and call
-`idtac; (rewrite_strat topdown hints dbname).` where `topdown` can be replaced
+`(rewrite_strat topdown hints dbname).` where `topdown` can be replaced
 with `bottomup` for different behavior. This does not seem to unfold
 definitions, so it may be a reasonable alternative to using `Local Opaque` to
 protect definitions from `setoid_rewrite`.
