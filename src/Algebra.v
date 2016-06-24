@@ -283,8 +283,8 @@ Module Group.
     Admitted.
   End Homomorphism.
 
-  Section SurjectiveHomomorphism.
-    Lemma surjective_homomorphism_group
+  Section GroupByHomomorphism.
+    Lemma surjective_homomorphism_from_group
           {G EQ OP ID INV} {groupG:@group G EQ OP ID INV}
           {H eq op id inv}
           {Equivalence_eq: @Equivalence H eq} {eq_dec: forall x y, {eq x y} + {~ eq x y}}
@@ -309,7 +309,26 @@ Module Group.
         repeat rewrite <-?phi_op, <-?phi_inv, <-?phi_id;
       f_equiv; auto using associative, left_identity, right_identity, left_inverse, right_inverse.
     Qed.
-  End SurjectiveHomomorphism.
+
+    Lemma isomorphism_to_subgroup_group
+          {G EQ OP ID INV}
+          {Equivalence_EQ: @Equivalence G EQ} {eq_dec: forall x y, {EQ x y} + {~ EQ x y}}
+          {Proper_OP:Proper(EQ==>EQ==>EQ)OP}
+          {Proper_INV:Proper(EQ==>EQ)INV}
+          {H eq op id inv} {groupG:@group H eq op id inv}
+          {phi}
+          {eq_phi_EQ: forall x y, eq (phi x) (phi y) -> EQ x y}
+          {phi_op : forall a b, phi (OP a b) = op (phi a) (phi b)}
+          {phi_inv : forall a, phi (INV a) = inv (phi a)}
+          {phi_id : phi ID = id}
+          : @group G EQ OP ID INV.
+    Proof.
+      repeat split; eauto with core typeclass_instances; intros;
+        eapply eq_phi_EQ;
+        repeat rewrite ?phi_op, ?phi_inv, ?phi_id;
+        auto using associative, left_identity, right_identity, left_inverse, right_inverse.
+    Qed.
+  End GroupByHomomorphism.
 End Group.
 
 Require Coq.nsatz.Nsatz.
