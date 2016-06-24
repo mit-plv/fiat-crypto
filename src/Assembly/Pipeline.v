@@ -27,6 +27,7 @@ Module PipelineExamples.
   Local Notation "v [[ i ]]" := (nth i v (wzero _)) (at level 40).
   Local Notation "$$ v" := (natToWord _ v) (at level 40).
 
+  (*
   Definition add_example: @pseudeq 32 W32 1 1 (fun v =>
       plet a := $$ 1 in
       plet b := v[[0]] in
@@ -68,9 +69,10 @@ Module PipelineExamples.
       plet b := v[[0]] in
       ([b ^& a; a ^+ b])).
     pseudo_solve.
-  Admitted. (* TODO (rsloan): eapply unification *)
+  Admitted.
 
   Definition comb_ex_str :=
     (Pipeline.toString (proj1_sig comb_example)).
+  *)
 
 End PipelineExamples.
