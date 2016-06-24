@@ -58,7 +58,9 @@ src/Util/ListUtil.v
 src/Util/NatUtil.v
 src/Util/Notations.v
 src/Util/NumTheoryUtil.v
+src/Util/Sum.v
 src/Util/Tactics.v
 src/Util/Tuple.v
+src/Util/Unit.v
 src/Util/WordUtil.v
 src/Util/ZUtil.v
