@@ -576,6 +576,12 @@ Ltac guess_field :=
   | [H: not (?eq _ _) |- _] =>  constr:(_:field (eq:=eq))
   end.
 
+Ltac field_nonzero_mul_split :=
+  repeat match goal with
+         | [ H : ?R (?mul ?x ?y) ?zero |- _ ]
+           => apply IntegralDomain.mul_nonzero_nonzero_cases in H; destruct H
+         end.
+
 Ltac common_denominator :=
   let fld := guess_field in
   lazymatch type of fld with
@@ -599,6 +605,92 @@ Ltac common_denominator_in H :=
 Ltac common_denominator_all :=
   common_denominator;
   repeat match goal with [H: _ |- _ _ _ ] => progress common_denominator_in H end.
+
+(** Now we have more conservative versions that don't simplify non-division structure. *)
+Ltac set_nonfraction_pieces_on T eq zero opp add sub mul inv div nonzero_tac cont :=
+  idtac;
+  let one_arg_recr :=
+      fun op v
+      => set_nonfraction_pieces_on
+           v eq zero opp add sub mul inv div nonzero_tac
+           ltac:(fun x => cont (op x)) in
+  let two_arg_recr :=
+      fun op v0 v1
+      => set_nonfraction_pieces_on
+           v0 eq zero opp add sub mul inv div nonzero_tac
+           ltac:(fun x
+                 =>
+                   set_nonfraction_pieces_on
+                     v1 eq zero opp add sub mul inv div nonzero_tac
+                     ltac:(fun y => cont (op x y))) in
+  lazymatch T with
+  | eq ?x ?y => two_arg_recr eq x y
+  | appcontext[div]
+    => lazymatch T with
+       | div ?numerator ?denominator
+         => let d := fresh "d" in
+            pose denominator as d;
+            assert (~eq d zero);
+            [ subst d; nonzero_tac
+            | set_nonfraction_pieces_on
+                numerator eq zero opp add sub mul inv div nonzero_tac
+                ltac:(fun numerator'
+                      => cont (div numerator' d)) ]
+       | opp ?x => one_arg_recr opp x
+       | inv ?x => one_arg_recr inv x
+       | add ?x ?y => two_arg_recr add x y
+       | sub ?x ?y => two_arg_recr sub x y
+       | mul ?x ?y => two_arg_recr mul x y
+       | div ?x ?y => two_arg_recr div x y
+       | _ => idtac
+       end
+  | _ => let x := fresh "x" in
+         pose T as x;
+         cont x
+  end.
+Ltac set_nonfraction_pieces_in_by H nonzero_tac :=
+  idtac;
+  let fld := guess_field in
+  lazymatch type of fld with
+  | @field ?T ?eq ?zero ?one ?opp ?add ?sub ?mul ?inv ?div
+    => let T := type of H in
+       set_nonfraction_pieces_on
+         T eq zero opp add sub mul inv div nonzero_tac
+         ltac:(fun T' => change T' in H)
+  end.
+Ltac set_nonfraction_pieces_by nonzero_tac :=
+  idtac;
+  let fld := guess_field in
+  lazymatch type of fld with
+  | @field ?T ?eq ?zero ?one ?opp ?add ?sub ?mul ?inv ?div
+    => let T := get_goal in
+       set_nonfraction_pieces_on
+         T eq zero opp add sub mul inv div nonzero_tac
+         ltac:(fun T' => change T')
+  end.
+Ltac set_nonfraction_pieces_in H :=
+  set_nonfraction_pieces_in_by H ltac:(try (intro; field_nonzero_mul_split; try tauto)).
+Ltac set_nonfraction_pieces :=
+  set_nonfraction_pieces_by ltac:(try (intro; field_nonzero_mul_split; tauto)).
+Ltac conservative_common_denominator_in H :=
+  set_nonfraction_pieces_in H;
+  [ ..
+  | common_denominator_in H;
+    [ repeat split; try assumption..
+    | ] ];
+  repeat match goal with H := _ |- _ => subst H end.
+Ltac conservative_common_denominator :=
+  set_nonfraction_pieces;
+  [ ..
+  | common_denominator;
+    [ repeat split; try assumption..
+    | ] ];
+  repeat match goal with H := _ |- _ => subst H end.
+
+Ltac conservative_common_denominator_all :=
+  try conservative_common_denominator;
+  [ ..
+  | repeat match goal with [H: _ |- _ _ _ ] => progress conservative_common_denominator_in H; [] end ].
 
 Inductive field_simplify_done {T} : T -> Type :=
   Field_simplify_done : forall H, field_simplify_done H.
@@ -671,6 +763,16 @@ Ltac neq01 :=
       |apply Group.zero_neq_opp_one
       |apply one_neq_zero
       |apply Group.opp_one_neq_zero].
+
+Ltac conservative_field_algebra :=
+  intros;
+  conservative_common_denominator_all;
+  try (nsatz; dropRingSyntax);
+  repeat (apply conj);
+  try solve
+      [neq01
+      |trivial
+      |apply Ring.opp_nonzero_nonzero;trivial].
 
 Ltac field_algebra :=
   intros;
