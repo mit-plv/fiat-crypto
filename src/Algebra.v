@@ -292,9 +292,9 @@ Module Group.
           {Proper_inv:Proper(eq==>eq)inv}
           {phi iph} {Proper_phi:Proper(EQ==>eq)phi} {Proper_iph:Proper(eq==>EQ)iph}
           {surj:forall h, phi (iph h) = h}
-          {phi_op : forall a b, phi (OP a b) = op (phi a) (phi b)}
-          {phi_inv : forall a, phi (INV a) = inv (phi a)}
-          {phi_id : phi ID = id}
+          {phi_op : forall a b, eq (phi (OP a b)) (op (phi a) (phi b))}
+          {phi_inv : forall a, eq (phi (INV a)) (inv (phi a))}
+          {phi_id : eq (phi ID) id}
           : @group H eq op id inv.
     Proof.
       repeat split; eauto with core typeclass_instances; intros;
@@ -318,9 +318,9 @@ Module Group.
           {H eq op id inv} {groupG:@group H eq op id inv}
           {phi}
           {eq_phi_EQ: forall x y, eq (phi x) (phi y) -> EQ x y}
-          {phi_op : forall a b, phi (OP a b) = op (phi a) (phi b)}
-          {phi_inv : forall a, phi (INV a) = inv (phi a)}
-          {phi_id : phi ID = id}
+          {phi_op : forall a b, eq (phi (OP a b)) (op (phi a) (phi b))}
+          {phi_inv : forall a, eq (phi (INV a)) (inv (phi a))}
+          {phi_id : eq (phi ID) id}
           : @group G EQ OP ID INV.
     Proof.
       repeat split; eauto with core typeclass_instances; intros;

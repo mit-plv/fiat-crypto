@@ -63,6 +63,8 @@ Module Extended.
       (let '(X,Y,Z,T) := coordinates P in ((X/Z), (Y/Z))) _.
 
     Definition eq (P Q:point) := E.eq (to_twisted P) (to_twisted Q).
+    Global Instance DecidableRel_eq : Decidable.DecidableRel eq.
+    Proof. typeclasses eauto. Qed.
 
     Local Hint Unfold from_twisted to_twisted eq : bash.
 
@@ -147,6 +149,18 @@ Module Extended.
 
       Lemma homomorphism_from_twisted : @Group.is_homomorphism Epoint E.eq E.add point eq add from_twisted.
       Proof. split; trivial using Proper_from_twisted, add_from_twisted. Qed.
+
+      Definition zero : point := from_twisted E.zero.
+      Definition opp P : point := from_twisted (E.opp (to_twisted P)).
+      Lemma extended_group : @group point eq add zero opp.
+      Proof.
+        eapply @isomorphism_to_subgroup_group; eauto with typeclass_instances core.
+        - apply DecidableRel_eq.
+        - unfold opp. repeat intro. match goal with [H:_|-_] => rewrite H; reflexivity end.
+        - intros. apply to_twisted_add.
+        - unfold opp; intros; rewrite to_twisted_from_twisted; reflexivity.
+        - unfold zero; intros; rewrite to_twisted_from_twisted; reflexivity.
+      Qed.
 
       (* TODO: decide whether we still need those, then port *)
     (*
