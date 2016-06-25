@@ -85,7 +85,8 @@ Ltac nsatz_clear_duplicates_for_bug_4851 domain :=
 Ltac nsatz_nonzero :=
   try solve [apply Integral_domain.integral_domain_one_zero
             |apply Integral_domain.integral_domain_minus_one_zero
-            |trivial].
+            |trivial
+            |assumption].
 
 Ltac nsatz_domain_sugar_power domain sugar power :=
   let nparams := constr:(BinInt.Zneg BinPos.xH) in (* some symbols can be "parameters", treated as coefficients *)
