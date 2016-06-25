@@ -166,12 +166,12 @@ be instantiated with a type whose propositional equivalence makes little sense,
 it is well worth requiring additional parameters for `Proper` and `Equivalence`
 (and maybe `Decidable`) instances. See the Algebra library for an example.
 
-When writing a tactic, specify on the form of the input goal format with
-syntactic precision -- trying to be insensitive to syntactic changes and only
-require definitional equality can lead to arbitrary amounts of computation and
-is usually not worth it. One possible exception is the
-reification-by-typeclasses pattern which has not yet had issues even when it
-works up to definitional equivalence to the extent typeclass resolution does.
+When writing a tactic, specify the form of the input goal format with syntactic
+precision -- trying to be insensitive to syntactic changes and only require
+definitional equality can lead to arbitrary amounts of computation and is
+usually not worth it. One possible exception is the reification-by-typeclasses
+pattern which has not yet had issues even when it works up to definitional
+equivalence to the extent typeclass resolution does.
 
 ### Custom Equivalence Relations and Tactics
 
