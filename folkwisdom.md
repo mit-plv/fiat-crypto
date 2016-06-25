@@ -154,7 +154,7 @@ propositional equality
 When defining a datatype that has a field of a type that is used with a custom
 equivalence, it is probably a good idea to define the obvious custom equivalence
 relation for the new type right away (and make an `Equivalence` instance for
-the relation and `Proper` instances for constructors and projections. When
+the relation and `Proper` instances for constructors and projections). When
 defining a type parametrized over some other type, and it is likely that some
 use of the parametric type will set the parameter to a type with a custom
 equivalence relation, define an equivalence relation for the new type,
