@@ -76,14 +76,14 @@ rewrite only changes the value within an equivalence class. It might even be
 possible to hook this argument with the `setoid_rewrite` tactic to automate it.
 However, a more lightweight rule has been successful enough to keep us from
 pursuing that strategy: when non-trivial equational reasoning on the value is
-required, split this up the invariant preservation proof. For example, when an
-optimized `add : point -> point -> point`, first define `add_coordinates : F*F
--> F*F -> F*F` that operates on arbitrary pairs of coordinates, do all the
-rewriting you want, and then define `add` in terms of `add_coordinates`. In
-analogy to Java's `public` and `private` annotations, users of the Edwards curve
-`point`s never operate on the coordinates alone, while the implementation
-of point addition operates on coordinates and proves invariant preservation
-separately.
+required, it can be done separately from the invariant preservation proof. For
+example, when aiming to implement an optimized `add : point -> point -> point`,
+first define `add_coordinates : F*F -> F*F -> F*F` that operates on arbitrary
+pairs of coordinates, do all the rewriting you want, and then define `add` in
+terms of `add_coordinates`. In analogy to Java's `public` and `private`
+annotations, users of the Edwards curve `point`s never operate on the
+coordinates alone, while the implementation of point addition operates on
+coordinates and proves invariant preservation separately.
 
 #### Computation inside Coq
 
