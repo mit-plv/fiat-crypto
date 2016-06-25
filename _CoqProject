@@ -29,6 +29,7 @@ src/Encoding/EncodingTheorems.v
 src/Encoding/ModularWordEncodingPre.v
 src/Encoding/ModularWordEncodingTheorems.v
 src/Experiments/DerivationsOptionRectLetInEncoding.v
+src/Experiments/EdDSARefinement.v
 src/Experiments/GenericFieldPow.v
 src/Experiments/SpecEd25519.v
 src/ModularArithmetic/ExtendedBaseVector.v
@@ -58,6 +59,7 @@ src/Util/ListUtil.v
 src/Util/NatUtil.v
 src/Util/Notations.v
 src/Util/NumTheoryUtil.v
+src/Util/Option.v
 src/Util/Sum.v
 src/Util/Tactics.v
 src/Util/Tuple.v
