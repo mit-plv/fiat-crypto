@@ -234,7 +234,7 @@ an abstract structure in multiple ways (e.g., integers can be a semiring under
 `+` and `*` or under `max` and `+`). Furthermore, we require that it be possible
 to manipulate abstractions using tactics.
 
-To define an abstraction, fist open a module with no parameters to make a new
+To define an abstraction, first open a module with no parameters to make a new
 namespace for the abstraction (even if the entire file is dedicated to one
 abstraction). Then open a new section and add to the context parameters for all
 definitions. The requirements which need to be satisfied by the definitions to
