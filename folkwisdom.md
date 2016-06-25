@@ -184,7 +184,7 @@ worse. Here are some suggestions.
 1. The number one reason for hitting issues with custom equivalence relations is
 that either the goal or the givens contain a typo that switched one equivalence
 relation with another. In particular, `<>` refers to negation of propositional
-quality by default. This can be avoided with good conventions: when introducing
+equality by default. This can be avoided with good conventions: when introducing
 a type that will be used with a custom equivalence relation, introduce the
 equivalence relation (and its `Equivalence` instance) right away. When
 introducing a function involving a such type, introduce a `Proper` instance
