@@ -100,10 +100,13 @@ Leibniz equality, showing that two points with equal coordinates are equal
 requires showing that the invariant preservation proofs are equal. This can be
 done using the `UIP_dec` lemma if the invariant itself is an equality and that
 for all values of coordinates it is decidable to compute whether the invariant
-holds on them or or not. These conditions tend to be met for the invariants this
-project uses. Otherwise, two points can be defined to be equivalent (not equal)
-if they have the same coordinates (working with custom equivalence relations
-involves nontrivial considerations of its own).
+holds on them or or not. A principled way of representing an invariant `P : T ->
+Prop` as an equality is to define `check_P : T -> bool` s.t. `check_P x = true
+<-> P x` and use `{x | is_true (check_P x) }` as the type of valid values^[This
+technique is used extensively in `ssreflect`.]. Alternatively, two points can be
+defined to be equivalent (not equal) if they have the same coordinates (working
+with custom equivalence relations involves nontrivial considerations of its
+own).
 
 #### Note on defining values
 
