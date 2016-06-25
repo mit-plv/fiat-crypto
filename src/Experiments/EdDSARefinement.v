@@ -2,6 +2,11 @@ Require Import Crypto.Spec.EdDSA Bedrock.Word.
 Require Import Coq.Classes.Morphisms.
 Require Import Util.Decidable Util.Option Util.Tactics.
 
+Module Import NotationsFor8485.
+  Import NPeano Nat.
+  Notation modulo := modulo.
+End NotationsFor8485.
+
 Section EdDSA.
   Context `{prm:EdDSA}.
   Context {eq_dec:DecidableRel Eeq}.
@@ -29,17 +34,17 @@ Section EdDSA.
     intros; split;
       intro Heq; rewrite Heq; clear Heq.
   Admitted.
-    
+
   Definition verify {mlen} (message:word mlen) (pk:word b) (sig:word (b+b)) : bool :=
     option_rect (fun _ => bool) (fun S : nat =>
     option_rect (fun _ => bool) (fun A : E =>
        weqb
          (split1 b b sig)
-         (Eenc (S * B - PeanoNat.Nat.modulo (wordToNat (H (b + (b + mlen)) (split1 b b sig ++ pk ++ message))) l * A))
+         (Eenc (S * B - modulo (wordToNat (H (b + (b + mlen)) (split1 b b sig ++ pk ++ message))) l * A))
     ) false (decE pk)
     ) false (decS (split2 b b sig))
   .
-  
+
   Lemma verify_correct mlen (message:word mlen) (pk:word b) (sig:word (b+b)) :
       verify message pk sig = true <-> valid message pk sig.
   Proof.
@@ -75,7 +80,7 @@ Section EdDSA.
     }
   Qed.
 
-  Lemma scalarMult_mod_order : forall l x B, l * B == Ezero -> (Nat.modulo x l) * B == x * B. Admitted.
+  Lemma scalarMult_mod_order : forall l x B, l * B == Ezero -> (modulo x l) * B == x * B. Admitted.
 
   Lemma sign_valid : forall A_ sk {n} (M:word n), A_ = public sk -> valid M A_ (sign A_ sk M).
   Proof.
@@ -83,7 +88,7 @@ Section EdDSA.
     intros. subst. constructor.
     Local Arguments H {_} _.
     Local Notation "'$' x" := (wordToNat x) (at level 1).
-    Local Infix "mod" := Nat.modulo (at level 50).
+    Local Infix "mod" := modulo (at level 50).
     set (HRAM := H (Eenc ($ (H (prngKey sk ++ M)) * B) ++ Eenc (curveKey sk * B) ++ M)).
     set (r := H (prngKey sk ++ M)).
     repeat rewrite scalarMult_mod_order by eapply EdDSA_l_order_B.
