@@ -32,6 +32,7 @@ Section Pre.
   Lemma onCurve_subst : forall x1 x2 y1 y2, and (eq x1 y1) (eq x2 y2) -> onCurve (x1, x2) ->
     onCurve (y1, y2).
   Proof.
+    unfold onCurve.
     intros ? ? ? ? [eq_1 eq_2] ?.
     rewrite eq_1, eq_2 in *.
     assumption.
