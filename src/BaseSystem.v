@@ -2,6 +2,7 @@ Require Import Coq.Lists.List.
 Require Import Coq.ZArith.ZArith Coq.ZArith.Zdiv.
 Require Import Coq.omega.Omega Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
 Require Import Crypto.Util.ListUtil Crypto.Util.CaseUtil Crypto.Util.ZUtil.
+Require Import Crypto.Util.Notations.
 Import Nat.
 
 Local Open Scope Z.
@@ -47,7 +48,7 @@ Section BaseSystem.
       | _, nil => us
       | _, _ => vs
     end.
-  Infix ".+" := add (at level 50).
+  Infix ".+" := add.
 
   Hint Extern 1 (@eq Z _ _) => ring.
 

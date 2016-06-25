@@ -17,7 +17,6 @@ SILENCE_COQDEP = $(SILENCE_COQDEP_$(VERBOSE))
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g'
 
 update-_CoqProject::
-	$(VECHO) "GIT LS-FILES *.V > _COQPROJECT"
 	$(Q)(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-R Bedrock Bedrock'; (git ls-files 'src/*.v' 'Bedrock/*.v' | $(SORT_COQPROJECT))) > _CoqProject
 
 coq: coqprime Makefile.coq
@@ -26,20 +25,19 @@ coq: coqprime Makefile.coq
 COQ_VERSION_PREFIX = The Coq Proof Assistant, version
 COQ_VERSION := $(firstword $(subst $(COQ_VERSION_PREFIX),,$(shell $(COQBIN)coqc --version 2>/dev/null)))
 
-ifneq ($(filter 8.5%,$(COQ_VERSION)),) # 8.5
-coqprime: coqprime-8.5
-else
+ifneq ($(filter 8.4%,$(COQ_VERSION)),) # 8.4
 coqprime: coqprime-8.4
+else
+coqprime: coqprime-8.5
 endif
 
 coqprime-8.4:
-	$(MAKE) -C coqprime
+	$(MAKE) -C coqprime-8.4
 
 coqprime-8.5:
-	$(MAKE) -C coqprime-8.5
+	$(MAKE) -C coqprime
 
 Makefile.coq: Makefile _CoqProject
-	$(VECHO) "COQ_MAKEFILE"
 	$(Q)$(COQBIN)coq_makefile -f _CoqProject -o Makefile.coq
 
 clean: Makefile.coq

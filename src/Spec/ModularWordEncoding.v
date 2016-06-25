@@ -28,7 +28,7 @@ Section ModularWordEncoding.
     | Word.WS b _ w' => b
   end.
 
-  Instance modular_word_encoding : canonical encoding of F m as word sz := {
+  Global Instance modular_word_encoding : canonical encoding of F m as word sz := {
     enc := Fm_enc;
     dec := Fm_dec;
     encoding_valid :=

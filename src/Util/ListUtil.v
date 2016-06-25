@@ -18,7 +18,7 @@ Proof.
 intros. induction n; boring.
 Qed.
 
-Ltac nth_tac' := 
+Ltac nth_tac' :=
   intros; simpl in *; unfold error,value in *; repeat progress (match goal with
     | [  |- context[nth_error nil ?n] ] => rewrite nth_error_nil_error
     | [ H: ?x = Some _  |- context[match ?x with Some _ => ?a | None => ?a end ] ] => destruct x
@@ -79,10 +79,10 @@ Proof.
   reflexivity.
   nth_tac'.
   pose proof (nth_error_error_length A n l H0).
-  omega.  
+  omega.
 Qed.
 
-Ltac nth_tac := 
+Ltac nth_tac :=
   repeat progress (try nth_tac'; try (match goal with
     | [ H: nth_error (map _ _) _ = Some _ |- _ ] => destruct (nth_error_map _ _ _ _ _ _ H); clear H
     | [ H: nth_error (seq _ _) _ = Some _ |- _ ] => rewrite nth_error_seq in H
@@ -191,7 +191,7 @@ Proof.
 Qed.
 
 Lemma set_nth_equiv_splice_nth: forall {T} n x (xs:list T),
-  set_nth n x xs = 
+  set_nth n x xs =
   if lt_dec n (length xs)
   then splice_nth n x xs
   else xs.
@@ -210,7 +210,7 @@ Lemma combine_set_nth : forall {A B} n (x:A) xs (ys:list B),
     end.
 Proof.
   (* TODO(andreser): this proof can totally be automated, but requires writing ltac that vets multiple hypotheses at once *)
-  induction n, xs, ys; nth_tac; try rewrite IHn; nth_tac; 
+  induction n, xs, ys; nth_tac; try rewrite IHn; nth_tac;
     try (f_equal; specialize (IHn x xs ys ); rewrite H in IHn; rewrite <- IHn);
     try (specialize (nth_error_value_length _ _ _ _ H); omega).
   assert (Some b0=Some b1) as HA by (rewrite <-H, <-H0; auto).
@@ -330,7 +330,7 @@ Proof.
   intros.
   rewrite firstn_app_inleft; auto using firstn_all; omega.
 Qed.
-    
+
 Lemma skipn_app_sharp : forall {A} n (l l': list A),
   length l = n ->
   skipn n (l ++ l') = l'.
@@ -422,7 +422,7 @@ Proof.
     right; repeat eexists; auto.
   }
 Qed.
- 
+
 Lemma nil_length0 : forall {T}, length (@nil T) = 0%nat.
 Proof.
   auto.
@@ -512,7 +512,7 @@ Ltac nth_error_inbounds :=
   match goal with
   | [ |- context[match nth_error ?xs ?i with Some _ => _ | None => _ end ] ] =>
     case_eq (nth_error xs i);
-    match goal with 
+    match goal with
       | [ |- forall _, nth_error xs i = Some _ -> _ ] =>
           let x := fresh "x" in
           let H := fresh "H" in

@@ -849,21 +849,21 @@ Implicit Arguments weqb_sound [].
 
 Ltac isWcst w :=
   match eval hnf in w with
-    | WO => constr:true
+    | WO => constr:(true)
     | WS ?b ?w' =>
       match eval hnf in b with
         | true => isWcst w'
         | false => isWcst w'
-        | _ => constr:false
+        | _ => constr:(false)
       end
-    | _ => constr:false
+    | _ => constr:(false)
   end.
 
 Ltac wcst w :=
   let b := isWcst w in
     match b with
       | true => w
-      | _ => constr:NotConstant
+      | _ => constr:(NotConstant)
     end.
 
 (* Here's how you can add a ring for a specific bit-width.

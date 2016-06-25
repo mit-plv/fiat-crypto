@@ -6,15 +6,16 @@ Require Import VerdiTactics.
 Require Crypto.BaseSystem.
 Require Import Crypto.ModularArithmetic.ModularBaseSystem Crypto.ModularArithmetic.PrimeFieldTheorems.
 Require Import Crypto.BaseSystemProofs Crypto.ModularArithmetic.PseudoMersenneBaseParams Crypto.ModularArithmetic.PseudoMersenneBaseParamProofs Crypto.ModularArithmetic.ExtendedBaseVector.
+Require Import Crypto.Util.Notations.
 Local Open Scope Z_scope.
 
 Section PseudoMersenneProofs.
   Context `{prm :PseudoMersenneBaseParams}.
 
   Local Hint Unfold decode.
-  Local Notation "u '~=' x" := (rep u x) (at level 70).
-  Local Notation "u '.+' x" := (add u x) (at level 70).
-  Local Notation "u '.*' x" := (ModularBaseSystem.mul u x) (at level 70).
+  Local Notation "u ~= x" := (rep u x).
+  Local Notation "u .+ x" := (add u x).
+  Local Notation "u .* x" := (ModularBaseSystem.mul u x).
   Local Hint Unfold rep.
 
   Lemma rep_decode : forall us x, us ~= x -> decode us = x.
@@ -256,7 +257,7 @@ End PseudoMersenneProofs.
 
 Section CarryProofs.
   Context `{prm : PseudoMersenneBaseParams}.
-  Local Notation "u '~=' x" := (rep u x) (at level 70).
+  Local Notation "u ~= x" := (rep u x).
   Hint Unfold log_cap.
 
   Lemma base_length_lt_pred : (pred (length base) < length base)%nat.
@@ -418,7 +419,7 @@ Section CarryProofs.
 End CarryProofs.
 
 Section CanonicalizationProofs.
-  Context `{prm : PseudoMersenneBaseParams} (lt_1_length_base : (1 < length base)%nat) 
+  Context `{prm : PseudoMersenneBaseParams} (lt_1_length_base : (1 < length base)%nat)
    {B} (B_pos : 0 < B) (B_compat : forall w, In w limb_widths -> w <= B)
    (c_pos : 0 < c)
    (* on the first reduce step, we add at most one bit of width to the first digit *)
@@ -783,7 +784,7 @@ Section CanonicalizationProofs.
         add_set_nth; [ zero_bounds | ]; apply IHj; auto; omega.
   Qed.
 
-  Ltac carry_seq_lower_bound := 
+  Ltac carry_seq_lower_bound :=
         repeat (intros; eapply carry_sequence_bounds_lower; eauto; carry_length_conditions).
 
   Lemma carry_bounds_lower : forall i us j, (0 < i <= j)%nat -> (length us = length base) ->
@@ -988,7 +989,7 @@ Section CanonicalizationProofs.
     split; (destruct (eq_nat_dec i 0); subst;
       [ cbv [make_chain carry_sequence fold_right carry_simple]; add_set_nth
       | eapply carry_full_2_bounds_succ; eauto; omega]).
-    + zero_bounds. 
+    + zero_bounds.
       - eapply carry_full_2_bounds_0; eauto.
       - eapply carry_full_bounds; eauto; carry_length_conditions.
         carry_seq_lower_bound.
@@ -1097,7 +1098,7 @@ Section CanonicalizationProofs.
           [ apply Z.sub_le_mono_r; subst x; apply carry_full_2_bounds_0; auto;
           ring_simplify | ]; omega.
     + rewrite carry_unaffected_low by carry_length_conditions.
-      assert (0 < S i < length base)%nat by omega. 
+      assert (0 < S i < length base)%nat by omega.
       intuition; right.
       apply carry_carry_done_done; try solve [carry_length_conditions].
       assumption.
@@ -1123,7 +1124,7 @@ Section CanonicalizationProofs.
     unfold carry, carry_and_reduce; break_if; try omega; intros.
     add_set_nth.
     split.
-    + zero_bounds. 
+    + zero_bounds.
       - eapply carry_full_2_bounds_same; eauto; omega.
       - eapply carry_carry_full_2_bounds_0_lower; eauto; omega.
     + pose proof (carry_carry_full_2_bounds_0_upper us (pred (length base))).
@@ -1138,12 +1139,12 @@ Section CanonicalizationProofs.
         ring_simplify.
         apply carry_full_2_bounds_same; auto.
       - match goal with H0 : (pred (length base) < length base)%nat,
-                        H : carry_done _ |- _ => 
+                        H : carry_done _ |- _ =>
           destruct (H (pred (length base)) H0) as [Hcd1 Hcd2]; rewrite Hcd2 by omega end.
         ring_simplify.
         apply shiftr_eq_0_max_bound; auto.
         assert (0 < length base)%nat as zero_lt_length by omega.
-        match goal with H : carry_done _ |- _ => 
+        match goal with H : carry_done _ |- _ =>
           destruct (H 0%nat zero_lt_length) end.
        assumption.
   Qed.
@@ -1277,7 +1278,7 @@ Section CanonicalizationProofs.
   Local Hint Resolve carry_full_3_length.
 
   Lemma nth_default_map2 : forall {A B C} (f : A -> B -> C) ls1 ls2 i d d1 d2,
-    nth_default d (map2 f ls1 ls2) i = 
+    nth_default d (map2 f ls1 ls2) i =
       if lt_dec i (min (length ls1) (length ls2))
       then f (nth_default d1 ls1 i) (nth_default d2 ls2 i)
       else d.
@@ -1487,7 +1488,7 @@ Section CanonicalizationProofs.
     replace (S (length base - 1)) with (length base) by omega.
     reflexivity.
   Qed.
-    
+
   Lemma carry_done_modulus_digits : carry_done modulus_digits.
   Proof.
     apply carry_done_bounds; [apply modulus_digits_length | ].
@@ -1660,7 +1661,7 @@ Section CanonicalizationProofs.
   Proof.
     unfold isFull; intros; auto using isFull'_true_iff.
   Qed.
-  
+
   Definition minimal_rep us := BaseSystem.decode base us = (BaseSystem.decode base us) mod modulus.
 
   Fixpoint compare' us vs i :=
@@ -1813,7 +1814,7 @@ Section CanonicalizationProofs.
     intros.
     destruct (Z_dec (nth_default 0 us n) (nth_default 0 vs n)) as [[?|Hgt]|?]; try congruence.
     + etransitivity; try apply Z_compare_decode_step_lt; auto.
-    + match goal with |- (?a ?= ?b) = (?c ?= ?d) => 
+    + match goal with |- (?a ?= ?b) = (?c ?= ?d) =>
         rewrite (Z.compare_antisym b a); rewrite (Z.compare_antisym d c) end.
       apply CompOpp_inj; rewrite !CompOpp_involutive.
       apply gt_lt_symmetry in Hgt.
@@ -1923,11 +1924,11 @@ Section CanonicalizationProofs.
       - rewrite nth_default_modulus_digits in *.
         repeat (break_if; try omega).
         * subst.
-          match goal with H : isFull' _ _ _ = true |- _ => 
+          match goal with H : isFull' _ _ _ = true |- _ =>
             apply isFull'_lower_bound_0 in H end.
           apply Z.compare_ge_iff.
           omega.
-        * match goal with H : isFull' _ _ _ = true |- _ => 
+        * match goal with H : isFull' _ _ _ = true |- _ =>
             apply isFull'_true_iff in H; try assumption; destruct H as [? eq_max_bound] end.
           specialize (eq_max_bound j).
           omega.
@@ -2065,7 +2066,7 @@ Section CanonicalizationProofs.
     us = vs.
   Proof.
    intros.
-   match goal with Hrep1 : rep _ ?x, Hrep2 : rep _ ?x |- _ => 
+   match goal with Hrep1 : rep _ ?x, Hrep2 : rep _ ?x |- _ =>
      pose proof (rep_decode_mod _ _ _ Hrep1 Hrep2) as eqmod end.
    repeat match goal with Hmin : minimal_rep ?us |- _ => unfold minimal_rep in Hmin;
      rewrite <- Hmin in eqmod; clear Hmin end.
@@ -2076,7 +2077,7 @@ Section CanonicalizationProofs.
   Qed.
 
   Lemma freeze_canonical : forall us vs x,
-    pre_carry_bounds us -> rep us x -> 
+    pre_carry_bounds us -> rep us x ->
     pre_carry_bounds vs -> rep vs x ->
     freeze us = freeze vs.
   Proof.

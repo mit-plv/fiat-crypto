@@ -3,9 +3,10 @@ Require Import Util.ListUtil Util.CaseUtil Util.ZUtil.
 Require Import ZArith.ZArith ZArith.Zdiv.
 Require Import Omega NPeano Arith.
 Require Import Crypto.BaseSystem.
+Require Import Crypto.Util.Notations.
 Local Open Scope Z.
 
-Local Infix ".+" := add (at level 50).
+Local Infix ".+" := add.
 
 Local Hint Extern 1 (@eq Z _ _) => ring.
 
