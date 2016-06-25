@@ -207,12 +207,12 @@ not reveal the issue, try `setoid_rewrite` instead for troubleshooting (it
 sometimes even gives sensible error messages in Coq 8.5) but revert to `rewrite`
 once the issue has been found and fixed. If rewriting picks the wrong
 `Equivalence` or `Proper` instance for some type or function (or fails to find
-one altogether), troubleshoot that separately: check that `pose (_:@Equivalence
-T equiv)` or `pose(_:Proper (equiv1==>equiv2) f)` give the right answer, and if
-not, `Set Typeclasses Debug` and read the log (which is in the hidden `*coq*`
-buffer in `proofgeneral`). A useful heuristic for reading that log is to look
-for the first place where the resolution backtracks and then read backwards from
-there.
+one altogether), troubleshoot that separately: check that `pose proof
+(_:@Equivalence T equiv)` or `pose(_:Proper (equiv1==>equiv2) f)` give the right
+answer, and if not, `Set Typeclasses Debug` and read the log (which is in the
+hidden `*coq*` buffer in `proofgeneral`). A useful heuristic for reading that
+log is to look for the first place where the resolution backtracks and then read
+backwards from there.
 5. To perform multiple rewrites at once, make rewrite hint database and call
 `(rewrite_strat topdown hints dbname).` where `topdown` can be replaced
 with `bottomup` for different behavior. This does not seem to unfold
