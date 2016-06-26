@@ -3,6 +3,11 @@ Require Import Crypto.Util.Tactics Crypto.Tactics.Nsatz.
 Require Import Crypto.Util.Decidable.
 Local Close Scope nat_scope. Local Close Scope type_scope. Local Close Scope core_scope.
 
+Module Import ModuloCoq8485.
+  Require Import NPeano Nat.
+  Infix "mod" := modulo (at level 40, no associativity).
+End ModuloCoq8485.
+
 Notation is_eq_dec := (DecidableRel _) (only parsing).
 Notation "@ 'is_eq_dec' T R" := (DecidableRel (R:T->T->Prop))
                                   (at level 10, T at level 8, R at level 8, only parsing).
@@ -212,7 +217,7 @@ Module Group.
     Proof. eauto using Monoid.cancel_right, right_inverse. Qed.
     Lemma inv_inv x : inv(inv(x)) = x.
     Proof. eauto using Monoid.inv_inv, left_inverse. Qed.
-    Lemma inv_op x y : (inv y*inv x)*(x*y) =id.
+    Lemma inv_op_ext x y : (inv y*inv x)*(x*y) =id.
     Proof. eauto using Monoid.inv_op, left_inverse. Qed.
 
     Lemma inv_unique x ix : ix * x = id -> ix = inv x.
@@ -221,6 +226,14 @@ Module Group.
       cut (ix*x*inv x = inv x).
       - rewrite <-associative, right_inverse, right_identity; trivial.
       - rewrite Hix, left_identity; reflexivity.
+    Qed.
+
+    Lemma inv_op x y : inv (x*y) = inv y*inv x.
+    Proof.
+      symmetry. etransitivity.
+      2:eapply inv_unique.
+      2:eapply inv_op_ext.
+      reflexivity.
     Qed.
 
     Lemma inv_id : inv id = id.
@@ -329,6 +342,50 @@ Module Group.
         auto using associative, left_identity, right_identity, left_inverse, right_inverse.
     Qed.
   End GroupByHomomorphism.
+
+  Section ScalarMult.
+    Context {G eq add zero opp} `{@group G eq add zero opp}.
+    Context {mul:nat->G->G} {Proper_mul : Proper (Logic.eq==>eq==>eq) mul}.
+    Local Infix "=" := eq : type_scope. Local Infix "=" := eq.
+    Local Infix "+" := add. Local Infix "*" := mul.
+    Context {mul_0_l : forall P, 0 * P = zero} {mul_S_l : forall n P, S n * P = P + n * P}.
+
+    Lemma mul_1_l : forall P, 1*P = P.
+    Proof. intros. rewrite mul_S_l, mul_0_l, right_identity; reflexivity. Qed.
+
+    Lemma mul_add_l : forall (n m:nat) (P:G), ((n + m)%nat * P = n * P + m * P).
+    Proof.
+      induction n; intros;
+        rewrite ?mul_0_l, ?mul_S_l, ?plus_Sn_m, ?plus_O_n, ?mul_S_l, ?left_identity, <-?associative, <-?IHn; reflexivity.
+    Qed.
+
+    Lemma mul_zero_r : forall m, m * zero = zero.
+    Proof. induction m; rewrite ?mul_S_l, ?mul_0_l, ?left_identity, ?IHm; try reflexivity. Qed.
+
+    Lemma mul_assoc : forall (n m : nat) P, n * (m * P) = (m * n)%nat * P.
+    Proof.
+      induction n; intros.
+      { rewrite PeanoNat.Nat.mul_0_r, !mul_0_l. reflexivity. }
+      { rewrite mul_S_l, <-mult_n_Sm, <-PeanoNat.Nat.add_comm, mul_add_l. apply cancel_left, IHn. }
+    Qed.
+
+    Lemma opp_mul : forall n P, opp (n * P) = n * (opp P).
+      induction n; intros.
+      { rewrite !mul_0_l, inv_id; reflexivity. }
+      { rewrite <-PeanoNat.Nat.add_1_r at 1.
+        rewrite mul_add_l, mul_1_l, inv_op, mul_S_l, cancel_left; eauto. }
+    Qed.
+
+    Lemma mul_times_order : forall l B, l*B = zero -> forall n, (l * n) * B = zero.
+    Proof. intros ? ? Hl ?. rewrite <-mul_assoc, Hl, mul_zero_r. reflexivity. Qed.
+
+    Lemma mul_mod_order : forall l B, l <> 0%nat -> l*B = zero -> forall n, n mod l * B = n * B.
+    Proof.
+      intros ? ? Hnz Hmod ?.
+      rewrite (NPeano.Nat.div_mod n l Hnz) at 2.
+      rewrite mul_add_l, mul_times_order, left_identity by auto. reflexivity.
+    Qed.
+  End ScalarMult.
 End Group.
 
 Require Coq.nsatz.Nsatz.
