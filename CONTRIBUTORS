@@ -20,9 +20,6 @@
 
 # Please keep the list sorted.
 
-## This file allows joining different accounts of a single person.
-## Cf for instance: git shortlog -nse. More details via: man git shortlog
-
 Adam Chlipala <adamc@csail.mit.edu> <adam@chlipala.net>
 Andres Erbsen <andreser@mit.edu>
 Daniel Ziegler <dmz@mit.edu>
