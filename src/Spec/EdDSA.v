@@ -37,6 +37,7 @@ Section EdDSA.
     :=
       {
         EdDSA_group:@Algebra.group E Eeq Eadd Ezero Eopp;
+        EdDSA_scalarmult:@Algebra.Group.is_scalarmult E Eeq Eadd Ezero EscalarMult;
 
         EdDSA_c_valid : c = 2 \/ c = 3;
 
@@ -50,6 +51,7 @@ Section EdDSA.
         EdDSA_l_order_B : Eeq (EscalarMult l B) Ezero
       }.
   Global Existing Instance EdDSA_group.
+  Global Existing Instance EdDSA_scalarmult.
 
   Context `{prm:EdDSA}.
 

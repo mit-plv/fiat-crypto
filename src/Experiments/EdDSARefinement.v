@@ -1,10 +1,12 @@
 Require Import Crypto.Spec.EdDSA Bedrock.Word.
 Require Import Coq.Classes.Morphisms.
+Require Import Crypto.Algebra. Import Group.
 Require Import Util.Decidable Util.Option Util.Tactics.
+Require Import Omega.
 
 Module Import NotationsFor8485.
   Import NPeano Nat.
-  Notation modulo := modulo.
+  Infix "mod" := modulo (at level 40).
 End NotationsFor8485.
 
 Section EdDSA.
@@ -18,7 +20,6 @@ Section EdDSA.
   Context {Proper_Eenc : Proper (Eeq==>Logic.eq) Eenc}.
   Context {Proper_Eopp : Proper (Eeq==>Eeq) Eopp}.
   Context {Proper_Eadd : Proper (Eeq==>Eeq==>Eeq) Eadd}.
-  Context {Proper_EscalarMult : Proper (Logic.eq==>Eeq==>Eeq) EscalarMult}.
 
   Context {decE:word b-> option E}.
   Context {decS:word b-> option nat}.
@@ -33,14 +34,16 @@ Section EdDSA.
   Proof.
     intros; split;
       intro Heq; rewrite Heq; clear Heq.
-  Admitted.
+    { rewrite <-associative, right_inverse, right_identity; reflexivity. }
+    { rewrite <-associative, left_inverse, right_identity; reflexivity. }
+  Qed.
 
   Definition verify {mlen} (message:word mlen) (pk:word b) (sig:word (b+b)) : bool :=
     option_rect (fun _ => bool) (fun S : nat =>
     option_rect (fun _ => bool) (fun A : E =>
        weqb
          (split1 b b sig)
-         (Eenc (S * B - modulo (wordToNat (H (b + (b + mlen)) (split1 b b sig ++ pk ++ message))) l * A))
+         (Eenc (S * B - (wordToNat (H (b + (b + mlen)) (split1 b b sig ++ pk ++ message))) mod l * A))
     ) false (decE pk)
     ) false (decS (split2 b b sig))
   .
@@ -80,17 +83,14 @@ Section EdDSA.
     }
   Qed.
 
-  Lemma scalarMult_mod_order : forall l x B, l * B == Ezero -> (modulo x l) * B == x * B. Admitted.
-
   Lemma sign_valid : forall A_ sk {n} (M:word n), A_ = public sk -> valid M A_ (sign A_ sk M).
   Proof.
-    cbv [sign public].
-    intros. subst. constructor.
-    Local Arguments H {_} _.
-    Local Notation "'$' x" := (wordToNat x) (at level 1).
-    Local Infix "mod" := modulo (at level 50).
-    set (HRAM := H (Eenc ($ (H (prngKey sk ++ M)) * B) ++ Eenc (curveKey sk * B) ++ M)).
-    set (r := H (prngKey sk ++ M)).
-    repeat rewrite scalarMult_mod_order by eapply EdDSA_l_order_B.
-  Admitted.
+    cbv [sign public]. intros. subst. split.
+    rewrite scalarmult_mod_order, scalarmult_add_l, cancel_left, scalarmult_mod_order, NPeano.Nat.mul_comm, scalarmult_assoc;
+      try solve [ reflexivity
+                | pose proof EdDSA_l_odd; omega
+                | apply EdDSA_l_order_B
+                | rewrite scalarmult_assoc, mult_comm, <-scalarmult_assoc,
+                             EdDSA_l_order_B, scalarmult_zero_r; reflexivity ].
+  Qed.
 End EdDSA.

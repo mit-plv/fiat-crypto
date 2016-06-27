@@ -1,12 +1,20 @@
 Require Import Coq.Classes.Morphisms. Require Coq.Setoids.Setoid.
 Require Import Crypto.Util.Tactics Crypto.Tactics.Nsatz.
 Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.Notations.
+Require Coq.Numbers.Natural.Peano.NPeano.
 Local Close Scope nat_scope. Local Close Scope type_scope. Local Close Scope core_scope.
+
+Module Import ModuloCoq8485.
+  Import NPeano Nat.
+  Infix "mod" := modulo (at level 40, no associativity).
+End ModuloCoq8485.
 
 Notation is_eq_dec := (DecidableRel _) (only parsing).
 Notation "@ 'is_eq_dec' T R" := (DecidableRel (R:T->T->Prop))
                                   (at level 10, T at level 8, R at level 8, only parsing).
 Notation eq_dec x y := (@dec (_ x y) _) (only parsing).
+Notation "x =? y" := (eq_dec x y) : type_scope.
 
 Section Algebra.
   Context {T:Type} {eq:T->T->Prop}.
@@ -212,7 +220,7 @@ Module Group.
     Proof. eauto using Monoid.cancel_right, right_inverse. Qed.
     Lemma inv_inv x : inv(inv(x)) = x.
     Proof. eauto using Monoid.inv_inv, left_inverse. Qed.
-    Lemma inv_op x y : (inv y*inv x)*(x*y) =id.
+    Lemma inv_op_ext x y : (inv y*inv x)*(x*y) =id.
     Proof. eauto using Monoid.inv_op, left_inverse. Qed.
 
     Lemma inv_unique x ix : ix * x = id -> ix = inv x.
@@ -221,6 +229,14 @@ Module Group.
       cut (ix*x*inv x = inv x).
       - rewrite <-associative, right_inverse, right_identity; trivial.
       - rewrite Hix, left_identity; reflexivity.
+    Qed.
+
+    Lemma inv_op x y : inv (x*y) = inv y*inv x.
+    Proof.
+      symmetry. etransitivity.
+      2:eapply inv_unique.
+      2:eapply inv_op_ext.
+      reflexivity.
     Qed.
 
     Lemma inv_id : inv id = id.
@@ -329,6 +345,58 @@ Module Group.
         auto using associative, left_identity, right_identity, left_inverse, right_inverse.
     Qed.
   End GroupByHomomorphism.
+
+  Section ScalarMult.
+    Context {G eq add zero opp} `{@group G eq add zero opp}.
+    Context {mul:nat->G->G}.
+    Local Infix "=" := eq : type_scope. Local Infix "=" := eq.
+    Local Infix "+" := add. Local Infix "*" := mul.
+    Class is_scalarmult :=
+      {
+        scalarmult_0_l : forall P, 0 * P = zero;
+        scalarmult_S_l : forall n P, S n * P = P + n * P;
+
+        scalarmult_Proper : Proper (Logic.eq==>eq==>eq) mul
+      }.
+    Global Existing Instance scalarmult_Proper.
+    Context `{is_scalarmult}.
+
+    Lemma scalarmult_1_l : forall P, 1*P = P.
+    Proof. intros. rewrite scalarmult_S_l, scalarmult_0_l, right_identity; reflexivity. Qed.
+
+    Lemma scalarmult_add_l : forall (n m:nat) (P:G), ((n + m)%nat * P = n * P + m * P).
+    Proof.
+      induction n; intros;
+        rewrite ?scalarmult_0_l, ?scalarmult_S_l, ?plus_Sn_m, ?plus_O_n, ?scalarmult_S_l, ?left_identity, <-?associative, <-?IHn; reflexivity.
+    Qed.
+
+    Lemma scalarmult_zero_r : forall m, m * zero = zero.
+    Proof. induction m; rewrite ?scalarmult_S_l, ?scalarmult_0_l, ?left_identity, ?IHm; try reflexivity. Qed.
+
+    Lemma scalarmult_assoc : forall (n m : nat) P, n * (m * P) = (m * n)%nat * P.
+    Proof.
+      induction n; intros.
+      { rewrite <-mult_n_O, !scalarmult_0_l. reflexivity. }
+      { rewrite scalarmult_S_l, <-mult_n_Sm, <-Plus.plus_comm, scalarmult_add_l. apply cancel_left, IHn. }
+    Qed.
+
+    Lemma opp_mul : forall n P, opp (n * P) = n * (opp P).
+      induction n; intros.
+      { rewrite !scalarmult_0_l, inv_id; reflexivity. }
+      { rewrite <-NPeano.Nat.add_1_l, Plus.plus_comm at 1.
+        rewrite scalarmult_add_l, scalarmult_1_l, inv_op, scalarmult_S_l, cancel_left; eauto. }
+    Qed.
+
+    Lemma scalarmult_times_order : forall l B, l*B = zero -> forall n, (l * n) * B = zero.
+    Proof. intros ? ? Hl ?. rewrite <-scalarmult_assoc, Hl, scalarmult_zero_r. reflexivity. Qed.
+
+    Lemma scalarmult_mod_order : forall l B, l <> 0%nat -> l*B = zero -> forall n, n mod l * B = n * B.
+    Proof.
+      intros ? ? Hnz Hmod ?.
+      rewrite (NPeano.Nat.div_mod n l Hnz) at 2.
+      rewrite scalarmult_add_l, scalarmult_times_order, left_identity by auto. reflexivity.
+    Qed.
+  End ScalarMult.
 End Group.
 
 Require Coq.nsatz.Nsatz.
