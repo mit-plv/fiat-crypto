@@ -13,6 +13,7 @@ Notation is_eq_dec := (DecidableRel _) (only parsing).
 Notation "@ 'is_eq_dec' T R" := (DecidableRel (R:T->T->Prop))
                                   (at level 10, T at level 8, R at level 8, only parsing).
 Notation eq_dec x y := (@dec (_ x y) _) (only parsing).
+Notation "x =? y" := (eq_dec x y) : type_scope.
 
 Section Algebra.
   Context {T:Type} {eq:T->T->Prop}.
