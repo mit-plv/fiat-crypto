@@ -1,11 +1,10 @@
-bedrock
-fiat
+.#*
 *~
 *#
-*.vo
+*.aux
 *.d
 *.glob
-*.aux
-*.vio
-Makefile.coq
 Makefile.bak
+Makefile.coq
+*.vio
+*.vo

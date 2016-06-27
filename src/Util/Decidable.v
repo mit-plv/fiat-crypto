@@ -14,7 +14,7 @@ Ltac destruct_decidable_step :=
   end.
 Ltac destruct_decidable := repeat destruct_decidable_step.
 
-Local Ltac pre_decide :=
+Ltac pre_decide :=
   repeat (intros
           || destruct_decidable
           || subst
@@ -22,13 +22,13 @@ Local Ltac pre_decide :=
           || unfold Decidable in *
           || hnf ).
 
-Local Ltac solve_decidable_transparent_with tac :=
+Ltac solve_decidable_transparent_with tac :=
   pre_decide;
   try solve [ left; abstract tac
             | right; abstract tac
             | decide equality; eauto with nocore ].
 
-Local Ltac solve_decidable_transparent := solve_decidable_transparent_with firstorder.
+Ltac solve_decidable_transparent := solve_decidable_transparent_with firstorder.
 
 Local Hint Extern 0 => solve [ solve_decidable_transparent ] : typeclass_instances.
 

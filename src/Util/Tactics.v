@@ -14,6 +14,8 @@ Ltac head expr :=
     | _ => expr
   end.
 
+Ltac head_hnf expr := let expr' := eval hnf in expr in head expr'.
+
 (* [pose proof defn], but only if no hypothesis of the same type exists.
    most useful for proofs of a proposition *)
 Tactic Notation "unique" "pose" "proof" constr(defn) :=
@@ -56,13 +58,34 @@ Ltac break_match_step only_when :=
   | [ |- appcontext[match ?e with _ => _ end] ]
     => only_when e; destruct e eqn:?
   end.
+Ltac break_match_hyps_step only_when :=
+  match goal with
+  | [ H : appcontext[match ?e with _ => _ end] |- _ ]
+    => only_when e; is_var e; destruct e
+  | [ H : appcontext[match ?e with _ => _ end] |- _ ]
+    => only_when e;
+       match type of e with
+       | sumbool _ _ => destruct e
+       end
+  | [ H : appcontext[if ?e then _ else _] |- _ ]
+    => only_when e; destruct e eqn:?
+  | [ H : appcontext[match ?e with _ => _ end] |- _ ]
+    => only_when e; destruct e eqn:?
+  end.
 Ltac break_match := repeat break_match_step ltac:(fun _ => idtac).
+Ltac break_match_hyps := repeat break_match_hyps_step ltac:(fun _ => idtac).
 Ltac break_match_when_head_step T :=
   break_match_step
     ltac:(fun e => let T' := type of e in
                    let T' := head T' in
                    constr_eq T T').
+Ltac break_match_hyps_when_head_step T :=
+  break_match_hyps_step
+    ltac:(fun e => let T' := type of e in
+                   let T' := head T' in
+                   constr_eq T T').
 Ltac break_match_when_head T := repeat break_match_when_head_step T.
+Ltac break_match_hyps_when_head T := repeat break_match_hyps_when_head_step T.
 
 Ltac free_in x y :=
   idtac;
@@ -118,3 +141,90 @@ Ltac clear_duplicates_step :=
   | [ H := ?T, H' := ?T |- _ ] => clear H'
   end.
 Ltac clear_duplicates := repeat clear_duplicates_step.
+
+
+(** given a [matcher] that succeeds on some hypotheses and fails on
+    others, destruct any matching hypotheses, and then execute [tac]
+    after each [destruct].
+
+    The [tac] part exists so that you can, e.g., [simpl in *], to
+    speed things up. *)
+Ltac do_one_match_then matcher do_tac tac :=
+  idtac;
+  match goal with
+  | [ H : ?T |- _ ]
+    => matcher T; do_tac H;
+       try match type of H with
+           | T => clear H
+           end;
+       tac
+  end.
+
+Ltac do_all_matches_then matcher do_tac tac :=
+  repeat do_one_match_then matcher do_tac tac.
+
+Ltac destruct_all_matches_then matcher tac :=
+  do_all_matches_then matcher ltac:(fun H => destruct H) tac.
+Ltac destruct_one_match_then matcher tac :=
+  do_one_match_then matcher ltac:(fun H => destruct H) tac.
+
+Ltac inversion_all_matches_then matcher tac :=
+  do_all_matches_then matcher ltac:(fun H => inversion H; subst) tac.
+Ltac inversion_one_match_then matcher tac :=
+  do_one_match_then matcher ltac:(fun H => inversion H; subst) tac.
+
+Ltac destruct_all_matches matcher :=
+  destruct_all_matches_then matcher ltac:( simpl in * ).
+Ltac destruct_one_match matcher := destruct_one_match_then matcher ltac:( simpl in * ).
+Ltac destruct_all_matches' matcher := destruct_all_matches_then matcher idtac.
+
+Ltac inversion_all_matches matcher := inversion_all_matches_then matcher ltac:( simpl in * ).
+Ltac inversion_one_match matcher := inversion_one_match_then matcher ltac:( simpl in * ).
+Ltac inversion_all_matches' matcher := inversion_all_matches_then matcher idtac.
+
+(* matches anything whose type has a [T] in it *)
+Ltac destruct_type_matcher T HT :=
+  match HT with
+  | context[T] => idtac
+  end.
+Ltac destruct_type T := destruct_all_matches ltac:(destruct_type_matcher T).
+Ltac destruct_type' T := destruct_all_matches' ltac:(destruct_type_matcher T).
+
+Ltac destruct_head_matcher T HT :=
+  match head HT with
+  | T => idtac
+  end.
+Ltac destruct_head T := destruct_all_matches ltac:(destruct_head_matcher T).
+Ltac destruct_one_head T := destruct_one_match ltac:(destruct_head_matcher T).
+Ltac destruct_head' T := destruct_all_matches' ltac:(destruct_head_matcher T).
+
+Ltac inversion_head T := inversion_all_matches ltac:(destruct_head_matcher T).
+Ltac inversion_one_head T := inversion_one_match ltac:(destruct_head_matcher T).
+Ltac inversion_head' T := inversion_all_matches' ltac:(destruct_head_matcher T).
+
+
+Ltac head_hnf_matcher T HT :=
+  match head_hnf HT with
+  | T => idtac
+  end.
+Ltac destruct_head_hnf T := destruct_all_matches ltac:(head_hnf_matcher T).
+Ltac destruct_one_head_hnf T := destruct_one_match ltac:(head_hnf_matcher T).
+Ltac destruct_head_hnf' T := destruct_all_matches' ltac:(head_hnf_matcher T).
+
+Ltac inversion_head_hnf T := inversion_all_matches ltac:(head_hnf_matcher T).
+Ltac inversion_one_head_hnf T := inversion_one_match ltac:(head_hnf_matcher T).
+Ltac inversion_head_hnf' T := inversion_all_matches' ltac:(head_hnf_matcher T).
+
+Ltac destruct_sig_matcher HT :=
+  match eval hnf in HT with
+  | ex _ => idtac
+  | ex2 _ _ => idtac
+  | sig _ => idtac
+  | sig2 _ _ => idtac
+  | sigT _ => idtac
+  | sigT2 _ _ => idtac
+  | and _ _ => idtac
+  | prod _ _ => idtac
+  end.
+Ltac destruct_sig := destruct_all_matches destruct_sig_matcher.
+Ltac destruct_sig' := destruct_all_matches' destruct_sig_matcher.
