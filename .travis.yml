@@ -1,16 +1,19 @@
 language: generic
 
 sudo: required
-dist: trusty
 
-env:
-  matrix:
-    - COQ_VERSION="8.4"  COQPRIME="coqprime-8.4"
-    - COQ_VERSION="8.5"  COQPRIME="coqprime"
+matrix:
+  include:
+    - dist: trusty
+      env: COQ_VERSION="8.5pl1" COQ_PACKAGE="coq-8.5pl1" COQPRIME="coqprime"     PPA="ppa:jgross-h/many-coq-versions"
+    - dist: trusty
+      env: COQ_VERSION="8.5"    COQ_PACKAGE="coq-8.5"    COQPRIME="coqprime"     PPA="ppa:jgross-h/many-coq-versions"
+    - dist: trusty
+      env: COQ_VERSION="8.4"    COQ_PACKAGE="coq"        COQPRIME="coqprime-8.4" PPA=""
 
 before_install:
-  - if [ "$COQ_VERSION" == "8.5" ]; then sudo add-apt-repository ppa:jgross-h/coq-backports -y; fi
+  - if [ ! -z "$PPA" ]; then sudo add-apt-repository "$PPA" -y; fi
   - sudo apt-get update -q
-  - sudo apt-get install coq -y
+  - sudo apt-get install "$COQ_PACKAGE" -y
 
 script: make COQPATH="$(pwd)/$COQPRIME" TIMED=1 -j2

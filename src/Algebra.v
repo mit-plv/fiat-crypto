@@ -758,6 +758,21 @@ Ltac field_simplify_eq_hyps :=
 
 Ltac field_simplify_eq_all := field_simplify_eq_hyps; try field_simplify_eq.
 
+(** Clear duplicate hypotheses, and hypotheses of the form [R x x] for a reflexive relation [R] *)
+Ltac clear_algebraic_duplicates_step R :=
+  match goal with
+  | [ H : R ?x ?x |- _ ]
+    => clear H
+  end.
+Ltac clear_algebraic_duplicates_guarded R :=
+  let test_reflexive := constr:(_ : Reflexive R) in
+  repeat clear_algebraic_duplicates_step R.
+Ltac clear_algebraic_duplicates :=
+  clear_duplicates;
+  repeat match goal with
+         | [ H : ?R ?x ?x |- _ ] => clear_algebraic_duplicates_guarded R
+         end.
+
 (*** Inequalities over fields *)
 Ltac assert_expr_by_nsatz H ty :=
   let H' := fresh in
@@ -851,7 +866,61 @@ Section ExtraLemmas.
   Proof.
     intros; setoid_subst z; eauto using only_two_square_roots'.
   Qed.
+
+  Lemma only_two_square_roots'_choice x y : x * x = y * y -> x = y \/ x = opp y.
+  Proof.
+    intro H.
+    destruct (eq_dec x y); [ left; assumption | right ].
+    destruct (eq_dec x (opp y)); [ assumption | exfalso ].
+    eapply only_two_square_roots'; eassumption.
+  Qed.
+
+  Lemma only_two_square_roots_choice x y z : x * x = z -> y * y = z -> x = y \/ x = opp y.
+  Proof.
+    intros; setoid_subst z; eauto using only_two_square_roots'_choice.
+  Qed.
 End ExtraLemmas.
+
+(** We look for hypotheses of the form [x^2 = y^2] and [x^2 = z] together with [y^2 = z], and prove that [x = y] or [x = opp y] *)
+Ltac pose_proof_only_two_square_roots x y H :=
+  not constr_eq x y;
+  match goal with
+  | [ H' : ?eq (?mul x x) (?mul y y) |- _ ]
+    => pose proof (only_two_square_roots'_choice x y H') as H
+  | [ H0 : ?eq (?mul x x) ?z, H1 : ?eq (?mul y y) ?z |- _ ]
+    => pose proof (only_two_square_roots_choice x y z H0 H1) as H
+  end.
+Ltac reduce_only_two_square_roots x y :=
+  let H := fresh in
+  pose_proof_only_two_square_roots x y H;
+  destruct H;
+  try setoid_subst y.
+Ltac pre_clean_only_two_square_roots :=
+  clear_algebraic_duplicates.
+(** Remove duplicates; solve goals by contradiction, and, if goals still remain, substitute the square roots *)
+Ltac post_clean_only_two_square_roots x y :=
+  clear_algebraic_duplicates;
+  try (unfold not in *;
+       match goal with
+       | [ H : (?T -> False)%type, H' : ?T |- _ ] => exfalso; apply H; exact H'
+       | [ H : (?R ?x ?x -> False)%type |- _ ] => exfalso; apply H; reflexivity
+       end);
+  try setoid_subst x; try setoid_subst y.
+Ltac only_two_square_roots_step :=
+  match goal with
+  | [ H : not (?eq ?x (?opp ?y)) |- _ ]
+    (* this one comes first, because it the procedure is asymmetric
+       with respect to [x] and [y], and this order is more likely to
+       lead to solving goals by contradiction. *)
+    => is_var x; is_var y; reduce_only_two_square_roots x y; post_clean_only_two_square_roots x y
+  | [ H : ?eq (?mul ?x ?x) (?mul ?y ?y) |- _ ]
+    => reduce_only_two_square_roots x y; post_clean_only_two_square_roots x y
+  | [ H : ?eq (?mul ?x ?x) ?z, H' : ?eq (?mul ?y ?y) ?z |- _ ]
+    => reduce_only_two_square_roots x y; post_clean_only_two_square_roots x y
+  end.
+Ltac only_two_square_roots :=
+  pre_clean_only_two_square_roots;
+  repeat only_two_square_roots_step.
 
 Section Example.
   Context {F zero one opp add sub mul inv div} `{F_field:field F eq zero one opp add sub mul inv div}.
