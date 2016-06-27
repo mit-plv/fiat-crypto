@@ -1,6 +1,7 @@
 Require Import Coq.Classes.Morphisms. Require Coq.Setoids.Setoid.
 Require Import Crypto.Util.Tactics Crypto.Tactics.Nsatz.
 Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.Notations.
 Require Coq.Numbers.Natural.Peano.NPeano.
 Local Close Scope nat_scope. Local Close Scope type_scope. Local Close Scope core_scope.
 
