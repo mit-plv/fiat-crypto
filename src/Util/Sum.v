@@ -16,3 +16,12 @@ Proof.
 Qed.
 
 Arguments sumwise {A B} _ _ _ _.
+
+Ltac congruence_sum_step :=
+  match goal with
+  | [ H : inl _ = inr _ |- _ ] => solve [ inversion H ]
+  | [ H : inr _ = inl _ |- _ ] => solve [ inversion H ]
+  | [ H : inl _ = inl _ |- _ ] => inversion H; clear H
+  | [ H : inr _ = inr _ |- _ ] => inversion H; clear H
+  end.
+Ltac congruence_sum := repeat congruence_sum_step.
