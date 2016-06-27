@@ -149,11 +149,11 @@ Local Infix "*" := (E.mul(H0:=curve25519params)).
 Axiom H : forall n : nat, word n -> word (b + b).
 Axiom B : point. (* TODO: B = decodePoint (y=4/5, x="positive") *)
 Axiom B_nonzero : B <> zero.
-Axiom l_order_B : l * B = zero.
-Axiom point_encoding : canonical encoding of point as word b.
-Axiom scalar_encoding : canonical encoding of {n : nat | n < l} as word b.
+Axiom l_order_B : E.eq (l * B) zero.
+Axiom Eenc : point -> word b.
+Axiom Senc : nat -> word b.
 
-Global Instance Ed25519 : @EdDSA point E.eq add zero E.opp E.mul b H c n l B point_encoding scalar_encoding :=
+Global Instance Ed25519 : @EdDSA point E.eq add zero E.opp E.mul b H c n l B Eenc Senc :=
   {
     EdDSA_c_valid := c_valid;
     EdDSA_n_ge_c := n_ge_c;

@@ -1,4 +1,3 @@
-Require Import Crypto.Spec.Encoding.
 Require Bedrock.Word Crypto.Util.WordUtil.
 Require Coq.ZArith.Znumtheory Coq.ZArith.BinInt.
 Require Coq.Numbers.Natural.Peano.NPeano.
@@ -33,11 +32,12 @@ Section EdDSA.
 
         {B : E} (* base point *)
 
-        {PointEncoding : canonical encoding of E as Word.word b} (* wire format *)
-        {FlEncoding : canonical encoding of { n | n < l } as Word.word b}
+        {Eenc : E   -> Word.word b} (* normative encoding of elliptic cuve points *)
+        {Senc : nat -> Word.word b} (* normative encoding of scalars *)
     :=
       {
         EdDSA_group:@Algebra.group E Eeq Eadd Ezero Eopp;
+        EdDSA_scalarmult:@Algebra.Group.is_scalarmult E Eeq Eadd Ezero EscalarMult;
 
         EdDSA_c_valid : c = 2 \/ c = 3;
 
@@ -48,13 +48,14 @@ Section EdDSA.
 
         EdDSA_l_prime : Znumtheory.prime (BinInt.Z.of_nat l);
         EdDSA_l_odd : l > 2;
-        EdDSA_l_order_B : EscalarMult l B = Ezero
+        EdDSA_l_order_B : Eeq (EscalarMult l B) Ezero
       }.
   Global Existing Instance EdDSA_group.
+  Global Existing Instance EdDSA_scalarmult.
 
   Context `{prm:EdDSA}.
 
-  Local Infix "=" := Eeq.
+  Local Infix "=" := Eeq : type_scope.
   Local Coercion Word.wordToNat : Word.word >-> nat.
   Local Notation secretkey := (Word.word b) (only parsing).
   Local Notation publickey := (Word.word b) (only parsing).
@@ -75,18 +76,18 @@ Section EdDSA.
   Local Infix "*" := EscalarMult.
 
   Definition prngKey (sk:secretkey) : Word.word b := Word.split2 b b (H sk).
-  Definition public (sk:secretkey) : publickey := enc (curveKey sk*B).
+  Definition public (sk:secretkey) : publickey := Eenc (curveKey sk*B).
 
   Program Definition sign (A_:publickey) sk {n} (M : Word.word n) :=
     let r : nat := H (prngKey sk ++ M) in (* secret nonce *)
     let R : E := r * B in (* commitment to nonce *)
     let s : nat := curveKey sk in (* secret scalar *)
-    let S : {n|n<l} := exist _ ((r + H (enc R ++ public sk ++ M) * s) mod l) _ in
-        enc R ++ enc S.
+    let S : nat := (r + H (Eenc R ++ A_ ++ M) * s) mod l in
+        Eenc R ++ Senc S.
 
   (* For a [n]-bit [message] from public key [A_], validity of a signature [R_ ++ S_] *)
   Inductive valid {n:nat} : Word.word n -> publickey -> signature -> Prop :=
-    ValidityRule : forall (message:Word.word n) (A:E) (R:E) (S:nat) S_lt_l,
-      S * B = R + (H (enc R ++ enc A ++ message) mod l) * A
-      -> valid message (enc A) (enc R ++ enc (exist _ S S_lt_l)).
+    ValidityRule : forall (message:Word.word n) (A:E) (R:E) (S:nat),
+      S * B = R + (H (Eenc R ++ Eenc A ++ message) mod l) * A
+      -> valid message (Eenc A) (Eenc R ++ Senc S).
 End EdDSA.

@@ -1,7 +1,13 @@
 Require Import Coq.Classes.Morphisms. Require Coq.Setoids.Setoid.
 Require Import Crypto.Util.Tactics Crypto.Tactics.Nsatz.
 Require Import Crypto.Util.Decidable.
+Require Coq.Numbers.Natural.Peano.NPeano.
 Local Close Scope nat_scope. Local Close Scope type_scope. Local Close Scope core_scope.
+
+Module Import ModuloCoq8485.
+  Import NPeano Nat.
+  Infix "mod" := modulo (at level 40, no associativity).
+End ModuloCoq8485.
 
 Notation is_eq_dec := (DecidableRel _) (only parsing).
 Notation "@ 'is_eq_dec' T R" := (DecidableRel (R:T->T->Prop))
@@ -212,7 +218,7 @@ Module Group.
     Proof. eauto using Monoid.cancel_right, right_inverse. Qed.
     Lemma inv_inv x : inv(inv(x)) = x.
     Proof. eauto using Monoid.inv_inv, left_inverse. Qed.
-    Lemma inv_op x y : (inv y*inv x)*(x*y) =id.
+    Lemma inv_op_ext x y : (inv y*inv x)*(x*y) =id.
     Proof. eauto using Monoid.inv_op, left_inverse. Qed.
 
     Lemma inv_unique x ix : ix * x = id -> ix = inv x.
@@ -221,6 +227,14 @@ Module Group.
       cut (ix*x*inv x = inv x).
       - rewrite <-associative, right_inverse, right_identity; trivial.
       - rewrite Hix, left_identity; reflexivity.
+    Qed.
+
+    Lemma inv_op x y : inv (x*y) = inv y*inv x.
+    Proof.
+      symmetry. etransitivity.
+      2:eapply inv_unique.
+      2:eapply inv_op_ext.
+      reflexivity.
     Qed.
 
     Lemma inv_id : inv id = id.
@@ -329,6 +343,58 @@ Module Group.
         auto using associative, left_identity, right_identity, left_inverse, right_inverse.
     Qed.
   End GroupByHomomorphism.
+
+  Section ScalarMult.
+    Context {G eq add zero opp} `{@group G eq add zero opp}.
+    Context {mul:nat->G->G}.
+    Local Infix "=" := eq : type_scope. Local Infix "=" := eq.
+    Local Infix "+" := add. Local Infix "*" := mul.
+    Class is_scalarmult :=
+      {
+        scalarmult_0_l : forall P, 0 * P = zero;
+        scalarmult_S_l : forall n P, S n * P = P + n * P;
+
+        scalarmult_Proper : Proper (Logic.eq==>eq==>eq) mul
+      }.
+    Global Existing Instance scalarmult_Proper.
+    Context `{is_scalarmult}.
+
+    Lemma scalarmult_1_l : forall P, 1*P = P.
+    Proof. intros. rewrite scalarmult_S_l, scalarmult_0_l, right_identity; reflexivity. Qed.
+
+    Lemma scalarmult_add_l : forall (n m:nat) (P:G), ((n + m)%nat * P = n * P + m * P).
+    Proof.
+      induction n; intros;
+        rewrite ?scalarmult_0_l, ?scalarmult_S_l, ?plus_Sn_m, ?plus_O_n, ?scalarmult_S_l, ?left_identity, <-?associative, <-?IHn; reflexivity.
+    Qed.
+
+    Lemma scalarmult_zero_r : forall m, m * zero = zero.
+    Proof. induction m; rewrite ?scalarmult_S_l, ?scalarmult_0_l, ?left_identity, ?IHm; try reflexivity. Qed.
+
+    Lemma scalarmult_assoc : forall (n m : nat) P, n * (m * P) = (m * n)%nat * P.
+    Proof.
+      induction n; intros.
+      { rewrite <-mult_n_O, !scalarmult_0_l. reflexivity. }
+      { rewrite scalarmult_S_l, <-mult_n_Sm, <-Plus.plus_comm, scalarmult_add_l. apply cancel_left, IHn. }
+    Qed.
+
+    Lemma opp_mul : forall n P, opp (n * P) = n * (opp P).
+      induction n; intros.
+      { rewrite !scalarmult_0_l, inv_id; reflexivity. }
+      { rewrite <-NPeano.Nat.add_1_l, Plus.plus_comm at 1.
+        rewrite scalarmult_add_l, scalarmult_1_l, inv_op, scalarmult_S_l, cancel_left; eauto. }
+    Qed.
+
+    Lemma scalarmult_times_order : forall l B, l*B = zero -> forall n, (l * n) * B = zero.
+    Proof. intros ? ? Hl ?. rewrite <-scalarmult_assoc, Hl, scalarmult_zero_r. reflexivity. Qed.
+
+    Lemma scalarmult_mod_order : forall l B, l <> 0%nat -> l*B = zero -> forall n, n mod l * B = n * B.
+    Proof.
+      intros ? ? Hnz Hmod ?.
+      rewrite (NPeano.Nat.div_mod n l Hnz) at 2.
+      rewrite scalarmult_add_l, scalarmult_times_order, left_identity by auto. reflexivity.
+    Qed.
+  End ScalarMult.
 End Group.
 
 Require Coq.nsatz.Nsatz.
@@ -758,6 +824,21 @@ Ltac field_simplify_eq_hyps :=
 
 Ltac field_simplify_eq_all := field_simplify_eq_hyps; try field_simplify_eq.
 
+(** Clear duplicate hypotheses, and hypotheses of the form [R x x] for a reflexive relation [R] *)
+Ltac clear_algebraic_duplicates_step R :=
+  match goal with
+  | [ H : R ?x ?x |- _ ]
+    => clear H
+  end.
+Ltac clear_algebraic_duplicates_guarded R :=
+  let test_reflexive := constr:(_ : Reflexive R) in
+  repeat clear_algebraic_duplicates_step R.
+Ltac clear_algebraic_duplicates :=
+  clear_duplicates;
+  repeat match goal with
+         | [ H : ?R ?x ?x |- _ ] => clear_algebraic_duplicates_guarded R
+         end.
+
 (*** Inequalities over fields *)
 Ltac assert_expr_by_nsatz H ty :=
   let H' := fresh in
@@ -851,7 +932,61 @@ Section ExtraLemmas.
   Proof.
     intros; setoid_subst z; eauto using only_two_square_roots'.
   Qed.
+
+  Lemma only_two_square_roots'_choice x y : x * x = y * y -> x = y \/ x = opp y.
+  Proof.
+    intro H.
+    destruct (eq_dec x y); [ left; assumption | right ].
+    destruct (eq_dec x (opp y)); [ assumption | exfalso ].
+    eapply only_two_square_roots'; eassumption.
+  Qed.
+
+  Lemma only_two_square_roots_choice x y z : x * x = z -> y * y = z -> x = y \/ x = opp y.
+  Proof.
+    intros; setoid_subst z; eauto using only_two_square_roots'_choice.
+  Qed.
 End ExtraLemmas.
+
+(** We look for hypotheses of the form [x^2 = y^2] and [x^2 = z] together with [y^2 = z], and prove that [x = y] or [x = opp y] *)
+Ltac pose_proof_only_two_square_roots x y H :=
+  not constr_eq x y;
+  match goal with
+  | [ H' : ?eq (?mul x x) (?mul y y) |- _ ]
+    => pose proof (only_two_square_roots'_choice x y H') as H
+  | [ H0 : ?eq (?mul x x) ?z, H1 : ?eq (?mul y y) ?z |- _ ]
+    => pose proof (only_two_square_roots_choice x y z H0 H1) as H
+  end.
+Ltac reduce_only_two_square_roots x y :=
+  let H := fresh in
+  pose_proof_only_two_square_roots x y H;
+  destruct H;
+  try setoid_subst y.
+Ltac pre_clean_only_two_square_roots :=
+  clear_algebraic_duplicates.
+(** Remove duplicates; solve goals by contradiction, and, if goals still remain, substitute the square roots *)
+Ltac post_clean_only_two_square_roots x y :=
+  clear_algebraic_duplicates;
+  try (unfold not in *;
+       match goal with
+       | [ H : (?T -> False)%type, H' : ?T |- _ ] => exfalso; apply H; exact H'
+       | [ H : (?R ?x ?x -> False)%type |- _ ] => exfalso; apply H; reflexivity
+       end);
+  try setoid_subst x; try setoid_subst y.
+Ltac only_two_square_roots_step :=
+  match goal with
+  | [ H : not (?eq ?x (?opp ?y)) |- _ ]
+    (* this one comes first, because it the procedure is asymmetric
+       with respect to [x] and [y], and this order is more likely to
+       lead to solving goals by contradiction. *)
+    => is_var x; is_var y; reduce_only_two_square_roots x y; post_clean_only_two_square_roots x y
+  | [ H : ?eq (?mul ?x ?x) (?mul ?y ?y) |- _ ]
+    => reduce_only_two_square_roots x y; post_clean_only_two_square_roots x y
+  | [ H : ?eq (?mul ?x ?x) ?z, H' : ?eq (?mul ?y ?y) ?z |- _ ]
+    => reduce_only_two_square_roots x y; post_clean_only_two_square_roots x y
+  end.
+Ltac only_two_square_roots :=
+  pre_clean_only_two_square_roots;
+  repeat only_two_square_roots_step.
 
 Section Example.
   Context {F zero one opp add sub mul inv div} `{F_field:field F eq zero one opp add sub mul inv div}.
