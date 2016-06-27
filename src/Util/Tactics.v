@@ -56,13 +56,34 @@ Ltac break_match_step only_when :=
   | [ |- appcontext[match ?e with _ => _ end] ]
     => only_when e; destruct e eqn:?
   end.
+Ltac break_match_hyps_step only_when :=
+  match goal with
+  | [ H : appcontext[match ?e with _ => _ end] |- _ ]
+    => only_when e; is_var e; destruct e
+  | [ H : appcontext[match ?e with _ => _ end] |- _ ]
+    => only_when e;
+       match type of e with
+       | sumbool _ _ => destruct e
+       end
+  | [ H : appcontext[if ?e then _ else _] |- _ ]
+    => only_when e; destruct e eqn:?
+  | [ H : appcontext[match ?e with _ => _ end] |- _ ]
+    => only_when e; destruct e eqn:?
+  end.
 Ltac break_match := repeat break_match_step ltac:(fun _ => idtac).
+Ltac break_match_hyps := repeat break_match_hyps_step ltac:(fun _ => idtac).
 Ltac break_match_when_head_step T :=
   break_match_step
     ltac:(fun e => let T' := type of e in
                    let T' := head T' in
                    constr_eq T T').
+Ltac break_match_hyps_when_head_step T :=
+  break_match_hyps_step
+    ltac:(fun e => let T' := type of e in
+                   let T' := head T' in
+                   constr_eq T T').
 Ltac break_match_when_head T := repeat break_match_when_head_step T.
+Ltac break_match_hyps_when_head T := repeat break_match_hyps_when_head_step T.
 
 Ltac free_in x y :=
   idtac;
