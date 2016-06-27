@@ -10,8 +10,6 @@ Section Pre.
   Context {F eq zero one opp add sub mul inv div} `{field F eq zero one opp add sub mul inv div}.
   Local Infix "=" := eq. Local Notation "a <> b" := (not (a = b)).
   Local Infix "=" := eq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
-  Local Notation "x =? y" := (eq_dec x y). Local Notation "x =? y" := (eq_dec x y) : type_scope.
-  Local Notation "x =? y" := (Sumbool.bool_of_sumbool (eq_dec x y)) : bool_scope.
   Local Notation "0" := zero.  Local Notation "1" := one.
   Local Infix "+" := add. Local Infix "*" := mul.
   Local Infix "-" := sub. Local Infix "/" := div.
