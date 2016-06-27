@@ -34,7 +34,13 @@ Module E.
       {
         char_gt_2 : 2 <> 0;
         char_ne_3 : 3 <> 0;
-        nonzero_discriminant : -(16) * (4 * a^3 + 27 * b^2) <> 0
+        nonzero_discriminant : -(16) * (4 * a^3 + 27 * b^2) <> 0;
+        (** We require that there be an odd number of points on the
+            curve.  Since every point [p] has a double [- p], and [-x
+            = x -> x = 0] in the field, this is equivalent to
+            requiring that [-p = p -> p = ∞], i.e., that (x, 0) is not
+            on the curve *)
+        odd_elliptic_curve_order : forall x, x^3 + a*x + b <> 0
       }.
     Context `{weierstrass_params}.
 
