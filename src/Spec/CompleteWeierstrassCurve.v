@@ -51,17 +51,18 @@ Module E.
     Definition coordinates (P:point) : (F*F + ∞) := proj1_sig P.
 
     (** The following points are indeed on the curve -- see [CompleteWeierstrassCurve.Pre] for proof *)
-    Local Ltac t := intros; apply (Pre.unifiedAdd'_onCurve _ _ (proj2_sig _) (proj2_sig _)).
+    Local Obligation Tactic :=
+      try solve [ Program.Tactics.program_simpl
+                | intros; apply (Pre.unifiedAdd'_onCurve _ _ (proj2_sig _) (proj2_sig _)) ].
 
     Program Definition zero : point := ∞.
 
     (* If we use [Program Definition], Coq inserts too many
        intermediate casts, and does too much destruction. *)
-    Definition add (P1 P2:point) : point.
-      refine
-        (exist
+    Program Definition add (P1 P2:point) : point
+      := exist
            _
-           (match coordinates P1, coordinates P2 with
+           (match coordinates P1, coordinates P2 return _ with
             | (x1, y1), (x2, y2) =>
               if x1 =? x2 then
                 if y2 =? -y1 then          ∞
@@ -73,8 +74,7 @@ Module E.
             | ∞, _ =>                      coordinates P2
             | _, ∞ =>                      coordinates P1
             end)
-           _); t.
-    Defined.
+           _.
 
     Fixpoint mul (n:nat) (P : point) : point :=
       match n with
