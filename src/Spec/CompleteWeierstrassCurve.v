@@ -2,7 +2,7 @@ Require Crypto.CompleteWeierstrassCurve.Pre.
 
 Module E.
   Section WeierstrassCurves.
-    (* Short Weierstrass curves with complete addition laws. References:
+    (* Short Weierstrass curves with addition laws. References:
      * <https://hyperelliptic.org/EFD/g1p/auto-shortw.html>
      * <https://cr.yp.to/talks/2007.06.07/slides.pdf>
      * See also:
@@ -13,23 +13,28 @@ Module E.
     Local Infix "=" := Feq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
     Local Infix "=?" := Algebra.eq_dec (at level 70, no associativity) : type_scope.
     Local Notation "x =? y" := (Sumbool.bool_of_sumbool (Algebra.eq_dec x y)) : bool_scope.
-    Local Notation "0" := Fzero.  Local Notation "1" := Fone.
     Local Infix "+" := Fadd. Local Infix "*" := Fmul.
     Local Infix "-" := Fsub. Local Infix "/" := Fdiv.
     Local Notation "- x" := (Fopp x).
-    Local Notation "x ^ 2" := (x*x) (at level 30). Local Notation "x ^ 3" := (x*x*x) (at level 30).
+    Local Notation "x ^ 2" := (x*x) (at level 30). Local Notation "x ^ 3" := (x*x^2) (at level 30).
     Local Notation "'∞'" := unit : type_scope.
     Local Notation "'∞'" := (inr tt) : core_scope.
-    Notation "2" := (1+1). Notation "3" := (1+2).
+    Local Notation "0" := Fzero.  Local Notation "1" := Fone.
+    Local Notation "2" := (1+1). Local Notation "3" := (1+2). Local Notation "4" := (1+3).
+    Local Notation "8" := (1+(1+(1+(1+4)))). Local Notation "12" := (1+(1+(1+(1+8)))).
+    Local Notation "16" := (1+(1+(1+(1+12)))). Local Notation "20" := (1+(1+(1+(1+16)))).
+    Local Notation "24" := (1+(1+(1+(1+20)))). Local Notation "27" := (1+(1+(1+24))).
+
     Local Notation "( x , y )" := (inl (pair x y)).
     Local Open Scope core_scope.
 
     Context {a b: F}.
+
     Class weierstrass_params :=
       {
         char_gt_2 : 2 <> 0;
-        char_ne_3 : 3 <> 0
-        (** TODO FIXME What do we need to say about a, b, characteristic, etc? *)
+        char_ne_3 : 3 <> 0;
+        nonzero_discriminant : -(16) * (4 * a^3 + 27 * b^2) <> 0
       }.
     Context `{weierstrass_params}.
 

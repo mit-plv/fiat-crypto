@@ -16,10 +16,10 @@ Section Pre.
   Local Infix "+" := add. Local Infix "*" := mul.
   Local Infix "-" := sub. Local Infix "/" := div.
   Local Notation "- x" := (opp x).
-  Local Notation "x ^ 2" := (x*x). Local Notation "x ^ 3" := (x*x*x).
+  Local Notation "x ^ 2" := (x*x). Local Notation "x ^ 3" := (x*x^2).
   Local Notation "'∞'" := unit : type_scope.
   Local Notation "'∞'" := (inr tt) : core_scope.
-  Notation "2" := (1+1). Notation "3" := (1+2).
+  Local Notation "2" := (1+1). Local Notation "3" := (1+2).
   Local Notation "( x , y )" := (inl (pair x y)).
 
   Add Field WeierstrassCurveField : (Field.field_theory_for_stdlib_tactic (T:=F)).
@@ -55,7 +55,7 @@ Section Pre.
     unfold onCurve, unifiedAdd'; intros [[x1 y1]|] [[x2 y2]|] H1 H2;
       break_match_when_head @sumbool; destruct_trivial; trivial; setoid_subst_rel eq;
         try match goal with
-            | [ H : ?x <> -?y |- _ ] => destruct (x =? y)
+            | [ H : (?x <> - ?y)%type |- _ ] => destruct (x =? y)
             end;
         setoid_subst_rel eq;
         try solve [ exfalso; eauto using only_two_square_roots
