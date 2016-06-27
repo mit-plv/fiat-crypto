@@ -1,5 +1,6 @@
 Require Import Coq.Classes.Morphisms.
 Require Import Relation_Definitions.
+Require Import Crypto.Util.Decidable.
 
 Fixpoint tuple' T n : Type :=
   match n with
@@ -79,3 +80,17 @@ Qed.
 
 Arguments fieldwise' {A B n} _ _ _.
 Arguments fieldwise {A B n} _ _ _.
+
+Local Hint Extern 0 => solve [ solve_decidable_transparent ] : typeclass_instances.
+Global Instance dec_fieldwise' {A RA} {HA : DecidableRel RA} {n} : DecidableRel (@fieldwise' A A n RA) | 10.
+Proof.
+  induction n; simpl @fieldwise'.
+  { exact _. }
+  { intros ??.
+    exact _. }
+Qed.
+
+Global Instance dec_fieldwise {A RA} {HA : DecidableRel RA} {n} : DecidableRel (@fieldwise A A n RA) | 10.
+Proof.
+  destruct n; unfold fieldwise; exact _.
+Qed.

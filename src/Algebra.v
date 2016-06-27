@@ -1,6 +1,7 @@
 Require Import Coq.Classes.Morphisms. Require Coq.Setoids.Setoid.
 Require Import Crypto.Util.Tactics Crypto.Tactics.Nsatz.
 Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.Notations.
 Require Coq.Numbers.Natural.Peano.NPeano.
 Local Close Scope nat_scope. Local Close Scope type_scope. Local Close Scope core_scope.
 
@@ -13,6 +14,7 @@ Notation is_eq_dec := (DecidableRel _) (only parsing).
 Notation "@ 'is_eq_dec' T R" := (DecidableRel (R:T->T->Prop))
                                   (at level 10, T at level 8, R at level 8, only parsing).
 Notation eq_dec x y := (@dec (_ x y) _) (only parsing).
+Notation "x =? y" := (eq_dec x y) : type_scope.
 
 Section Algebra.
   Context {T:Type} {eq:T->T->Prop}.
