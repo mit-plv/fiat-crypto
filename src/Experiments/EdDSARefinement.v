@@ -2,6 +2,7 @@ Require Import Crypto.Spec.EdDSA Bedrock.Word.
 Require Import Coq.Classes.Morphisms.
 Require Import Crypto.Algebra. Import Group.
 Require Import Util.Decidable Util.Option Util.Tactics.
+Require Import Omega.
 
 Module Import NotationsFor8485.
   Import NPeano Nat.
@@ -19,7 +20,6 @@ Section EdDSA.
   Context {Proper_Eenc : Proper (Eeq==>Logic.eq) Eenc}.
   Context {Proper_Eopp : Proper (Eeq==>Eeq) Eopp}.
   Context {Proper_Eadd : Proper (Eeq==>Eeq==>Eeq) Eadd}.
-  Context {Proper_EscalarMult : Proper (Logic.eq==>Eeq==>Eeq) EscalarMult}.
 
   Context {decE:word b-> option E}.
   Context {decS:word b-> option nat}.
@@ -85,28 +85,12 @@ Section EdDSA.
 
   Lemma sign_valid : forall A_ sk {n} (M:word n), A_ = public sk -> valid M A_ (sign A_ sk M).
   Proof.
-    cbv [sign public].
-    intros. subst. constructor.
-    rewrite (@mul_mod_order E Eeq Eadd Ezero Eopp _ EscalarMult _).
-    rewrite (@mul_add_l E Eeq Eadd Ezero Eopp _ EscalarMult).
-    eapply cancel_left.
-    rewrite (@mul_mod_order E Eeq Eadd Ezero Eopp _ EscalarMult _).
-    symmetry.
-    rewrite NPeano.Nat.mul_comm.
-    eapply (@mul_assoc E Eeq Eadd Ezero Eopp _ EscalarMult _ _ (wordToNat _) (curveKey sk) B).
-
-    admit.
-    admit.
-    admit.
-
-    admit.
-    
-    admit.
-    admit.
-    admit.
-    admit.
-    admit.
-
-    admit.
-  Admitted.
+    cbv [sign public]. intros. subst. split.
+    rewrite scalarmult_mod_order, scalarmult_add_l, cancel_left, scalarmult_mod_order, NPeano.Nat.mul_comm, scalarmult_assoc;
+      try solve [ reflexivity
+                | pose proof EdDSA_l_odd; omega
+                | apply EdDSA_l_order_B
+                | rewrite scalarmult_assoc, mult_comm, <-scalarmult_assoc,
+                             EdDSA_l_order_B, scalarmult_zero_r; reflexivity ].
+  Qed.
 End EdDSA.

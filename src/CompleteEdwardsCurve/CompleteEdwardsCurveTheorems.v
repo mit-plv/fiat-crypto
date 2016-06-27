@@ -138,25 +138,14 @@ Module E.
       match goal with | |- _ <> 0 => admit end.
     Admitted.
 
-    (* TODO: move to [Group] and [AbelianGroup] as appropriate *)
-    Lemma mul_0_l : forall P, (0 * P = zero)%E.
-    Proof. intros; reflexivity. Qed.
-    Lemma mul_S_l : forall n P, (S n * P = P + n * P)%E.
-    Proof. intros; reflexivity. Qed.
-    Lemma mul_add_l : forall (n m:nat) (P:point), ((n + m)%nat * P = n * P + m * P)%E.
+    Global Instance Proper_mul : Proper (Logic.eq==>eq==>eq) mul.
     Proof.
-      induction n; intros;
-        rewrite ?plus_Sn_m, ?plus_O_n, ?mul_S_l, ?left_identity, <-?associative, <-?IHn; reflexivity.
+      intros n m Hnm P Q HPQ. rewrite <-Hnm; clear Hnm m.
+      induction n; simpl; rewrite ?IHn, ?HPQ; reflexivity.
     Qed.
-    Lemma mul_assoc : forall (n m : nat) P, (n * (m * P) = (n * m)%nat * P)%E.
-    Proof.
-      induction n; intros; [reflexivity|].
-      rewrite ?mul_S_l, ?Mult.mult_succ_l, ?mul_add_l, ?IHn, commutative; reflexivity.
-    Qed.
-    Lemma mul_zero_r : forall m, (m * E.zero = E.zero)%E.
-    Proof. induction m; rewrite ?mul_S_l, ?left_identity, ?IHm; try reflexivity. Qed.
-    Lemma opp_mul : forall n P, (opp (n * P) = n * (opp P))%E.
-    Admitted.
+
+    Global Instance mul_is_scalarmult : @is_scalarmult point eq add zero mul.
+    Proof. split; intros; reflexivity || typeclasses eauto. Qed.
 
     Section PointCompression.
       Local Notation "x ^ 2" := (x*x).

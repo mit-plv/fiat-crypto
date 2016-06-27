@@ -1,10 +1,11 @@
 Require Import Coq.Classes.Morphisms. Require Coq.Setoids.Setoid.
 Require Import Crypto.Util.Tactics Crypto.Tactics.Nsatz.
 Require Import Crypto.Util.Decidable.
+Require Coq.Numbers.Natural.Peano.NPeano.
 Local Close Scope nat_scope. Local Close Scope type_scope. Local Close Scope core_scope.
 
 Module Import ModuloCoq8485.
-  Require Import NPeano Nat.
+  Import NPeano Nat.
   Infix "mod" := modulo (at level 40, no associativity).
 End ModuloCoq8485.
 
@@ -345,45 +346,53 @@ Module Group.
 
   Section ScalarMult.
     Context {G eq add zero opp} `{@group G eq add zero opp}.
-    Context {mul:nat->G->G} {Proper_mul : Proper (Logic.eq==>eq==>eq) mul}.
+    Context {mul:nat->G->G}.
     Local Infix "=" := eq : type_scope. Local Infix "=" := eq.
     Local Infix "+" := add. Local Infix "*" := mul.
-    Context {mul_0_l : forall P, 0 * P = zero} {mul_S_l : forall n P, S n * P = P + n * P}.
+    Class is_scalarmult :=
+      {
+        scalarmult_0_l : forall P, 0 * P = zero;
+        scalarmult_S_l : forall n P, S n * P = P + n * P;
 
-    Lemma mul_1_l : forall P, 1*P = P.
-    Proof. intros. rewrite mul_S_l, mul_0_l, right_identity; reflexivity. Qed.
+        scalarmult_Proper : Proper (Logic.eq==>eq==>eq) mul
+      }.
+    Global Existing Instance scalarmult_Proper.
+    Context `{is_scalarmult}.
 
-    Lemma mul_add_l : forall (n m:nat) (P:G), ((n + m)%nat * P = n * P + m * P).
+    Lemma scalarmult_1_l : forall P, 1*P = P.
+    Proof. intros. rewrite scalarmult_S_l, scalarmult_0_l, right_identity; reflexivity. Qed.
+
+    Lemma scalarmult_add_l : forall (n m:nat) (P:G), ((n + m)%nat * P = n * P + m * P).
     Proof.
       induction n; intros;
-        rewrite ?mul_0_l, ?mul_S_l, ?plus_Sn_m, ?plus_O_n, ?mul_S_l, ?left_identity, <-?associative, <-?IHn; reflexivity.
+        rewrite ?scalarmult_0_l, ?scalarmult_S_l, ?plus_Sn_m, ?plus_O_n, ?scalarmult_S_l, ?left_identity, <-?associative, <-?IHn; reflexivity.
     Qed.
 
-    Lemma mul_zero_r : forall m, m * zero = zero.
-    Proof. induction m; rewrite ?mul_S_l, ?mul_0_l, ?left_identity, ?IHm; try reflexivity. Qed.
+    Lemma scalarmult_zero_r : forall m, m * zero = zero.
+    Proof. induction m; rewrite ?scalarmult_S_l, ?scalarmult_0_l, ?left_identity, ?IHm; try reflexivity. Qed.
 
-    Lemma mul_assoc : forall (n m : nat) P, n * (m * P) = (m * n)%nat * P.
+    Lemma scalarmult_assoc : forall (n m : nat) P, n * (m * P) = (m * n)%nat * P.
     Proof.
       induction n; intros.
-      { rewrite PeanoNat.Nat.mul_0_r, !mul_0_l. reflexivity. }
-      { rewrite mul_S_l, <-mult_n_Sm, <-PeanoNat.Nat.add_comm, mul_add_l. apply cancel_left, IHn. }
+      { rewrite <-mult_n_O, !scalarmult_0_l. reflexivity. }
+      { rewrite scalarmult_S_l, <-mult_n_Sm, <-Plus.plus_comm, scalarmult_add_l. apply cancel_left, IHn. }
     Qed.
 
     Lemma opp_mul : forall n P, opp (n * P) = n * (opp P).
       induction n; intros.
-      { rewrite !mul_0_l, inv_id; reflexivity. }
-      { rewrite <-PeanoNat.Nat.add_1_r at 1.
-        rewrite mul_add_l, mul_1_l, inv_op, mul_S_l, cancel_left; eauto. }
+      { rewrite !scalarmult_0_l, inv_id; reflexivity. }
+      { rewrite <-NPeano.Nat.add_1_l, Plus.plus_comm at 1.
+        rewrite scalarmult_add_l, scalarmult_1_l, inv_op, scalarmult_S_l, cancel_left; eauto. }
     Qed.
 
-    Lemma mul_times_order : forall l B, l*B = zero -> forall n, (l * n) * B = zero.
-    Proof. intros ? ? Hl ?. rewrite <-mul_assoc, Hl, mul_zero_r. reflexivity. Qed.
+    Lemma scalarmult_times_order : forall l B, l*B = zero -> forall n, (l * n) * B = zero.
+    Proof. intros ? ? Hl ?. rewrite <-scalarmult_assoc, Hl, scalarmult_zero_r. reflexivity. Qed.
 
-    Lemma mul_mod_order : forall l B, l <> 0%nat -> l*B = zero -> forall n, n mod l * B = n * B.
+    Lemma scalarmult_mod_order : forall l B, l <> 0%nat -> l*B = zero -> forall n, n mod l * B = n * B.
     Proof.
       intros ? ? Hnz Hmod ?.
       rewrite (NPeano.Nat.div_mod n l Hnz) at 2.
-      rewrite mul_add_l, mul_times_order, left_identity by auto. reflexivity.
+      rewrite scalarmult_add_l, scalarmult_times_order, left_identity by auto. reflexivity.
     Qed.
   End ScalarMult.
 End Group.
