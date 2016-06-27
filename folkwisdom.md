@@ -268,3 +268,20 @@ very many times, the module system can be quite convenient. However, if the
 number of parameters and the number of places where the values of them are
 determined are comparable to the number of uses of abstractly proven lemmas, the
 module system can be cumbersome. Modules cannot be instantiated automatically.
+
+# Omissions
+
+Considerations not (yet) covered in this document include the following:
+
+- structuring proofs: bullets, braces, `Focus` (a la http://poleiro.info/posts/2013-06-27-structuring-proofs-with-bullets.html)
+- conflicts in notation levels (as resolved by having files import `Util/Notations.v`)
+- tactic engineering
+  - tactic expression evaluation vs tactic running
+  - how to write tactics that are debuggable
+  - how to write tactics that are robust against small changes
+  - reification: ltac, typeclasses, canonical structures (maybe reference an existing document)
+- performance of proofs and proof checking
+  - `simpl`, `cbn`, `cbv`
+  - `Qed slowness, `change` vs `rewrite`
+  - which things fail in what ways as terms get big
+- how to migrate across versions of Coq
