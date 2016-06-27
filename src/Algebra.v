@@ -916,6 +916,44 @@ Ltac field_algebra :=
       |trivial
       |apply Ring.opp_nonzero_nonzero;trivial].
 
+Ltac split_field_inequalities_step :=
+  match goal with
+  | [ H : not (?R (?mul ?x ?y) ?zero) |- _ ]
+    => apply IntegralDomain.mul_nonzero_nonzero_iff in H; destruct H
+  end.
+Ltac split_field_inequalities :=
+  canonicalize_field_inequalities;
+  repeat split_field_inequalities_step;
+  clear_duplicates.
+
+Ltac combine_field_inequalities_step :=
+  match goal with
+  | [ H : not (?R ?x ?zero), H' : not (?R ?x' ?zero) |- _ ]
+    => pose proof (mul_nonzero_nonzero x x' H H'); clear H H'
+  | [ H : (?X -> False)%type |- _ ]
+    => change (not X) in H
+  end.
+
+(** First we split apart the equalities so that we can clear
+    duplicates; it's easier for us to do this than to give [nsatz] the
+    extra work. *)
+Ltac combine_field_inequalities :=
+  split_field_inequalities;
+  repeat combine_field_inequalities_step.
+Ltac prensatz_contradict :=
+  combine_field_inequalities;
+  repeat intro;
+  match goal with
+  | [ H : not (?R ?x ?zero) |- False ] => apply H
+  | [ H : (?R ?x ?zero -> False)%type |- False ] => apply H
+  end.
+(** Handles inequalities and fractions *)
+Ltac super_nsatz :=
+  try prensatz_contradict;
+  try conservative_common_denominator_all;
+  [ try nsatz
+  | prensatz_contradict; try nsatz.. ].
+
 Section ExtraLemmas.
   Context {F eq zero one opp add sub mul inv div} `{F_field:field F eq zero one opp add sub mul inv div}.
   Local Infix "+" := add. Local Infix "*" := mul. Local Infix "-" := sub. Local Infix "/" := div.
