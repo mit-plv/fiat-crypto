@@ -1007,7 +1007,7 @@ Ltac nsatz_inequality_to_equality :=
   | [ H : (?R ?x ?zero -> False)%type |- False ] => apply H
   end.
 (** Clean up tactic handling side-conditions *)
-Ltac super_nsatz_post_clean_inequalities try_tac :=
+Ltac super_nsatz_post_clean_inequalities :=
   repeat (apply conj || split_field_inequalities);
   try assumption;
   prensatz_contradict; nsatz_inequality_to_equality;
@@ -1020,9 +1020,10 @@ Ltac super_nsatz :=
   (* Each goal left over by [prensatz_contradict] is separate (and
      there might not be any), so we handle them all separately *)
   [ try conservative_common_denominator_equality_inequality_all;
-    [ try nsatz_inequality_to_equality; try nsatz
-    | .. ];
-    super_nsatz_post_clean_inequalities.. ].
+    [ try nsatz_inequality_to_equality; try nsatz;
+      (* [nstaz] might leave over side-conditions; we handle them if they are inequalities *)
+      try super_nsatz_post_clean_inequalities
+    | super_nsatz_post_clean_inequalities.. ].. ].
 
 Section ExtraLemmas.
   Context {F eq zero one opp add sub mul inv div} `{F_field:field F eq zero one opp add sub mul inv div}.
