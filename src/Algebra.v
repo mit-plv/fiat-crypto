@@ -636,6 +636,10 @@ End Field.
 (*** Tactics for manipulating field equations *)
 Require Import Coq.setoid_ring.Field_tac.
 
+(** Convention: These tactics put the original goal first, and all
+    goals for non-zero side-conditions after that.  (Exception:
+    [field_simplify_eq in], which is silly.  *)
+
 Ltac guess_field :=
   match goal with
   | |- ?eq _ _ =>  constr:(_:field (eq:=eq))
@@ -664,7 +668,8 @@ Ltac common_denominator :=
     end
   end.
 
-Ltac common_denominator_in H :=
+(** We jump through some hoops to ensure that the side-conditions come late *)
+Ltac common_denominator_in_cycled_side_condition_order H :=
   let fld := guess_field in
   lazymatch type of fld with
     field (div:=?div) =>
@@ -673,6 +678,11 @@ Ltac common_denominator_in H :=
     | _ => idtac
     end
   end.
+
+Ltac common_denominator_in H :=
+  side_conditions_before_to_side_conditions_after
+    common_denominator_in_cycled_side_condition_order
+    H.
 
 Ltac common_denominator_all :=
   common_denominator;
@@ -724,12 +734,13 @@ Ltac set_nonfraction_pieces_on T eq zero opp add sub mul inv div nonzero_tac con
        | div ?numerator ?denominator
          => let d := fresh "d" in
             pose denominator as d;
-            assert (~eq d zero);
-            [ subst d; nonzero_tac
-            | set_nonfraction_pieces_on
+            cut (not (eq d zero));
+            [ intro;
+              set_nonfraction_pieces_on
                 numerator eq zero opp add sub mul inv div nonzero_tac
                 ltac:(fun numerator'
-                      => cont (div numerator' d)) ]
+                      => cont (div numerator' d))
+            | subst d; nonzero_tac ]
        | opp ?x => one_arg_recr opp x
        | inv ?x => one_arg_recr inv x
        | add ?x ?y => two_arg_recr add x y
@@ -778,10 +789,10 @@ Ltac conservative_common_denominator_in H :=
   lazymatch type of H with
   | appcontext[div]
     => set_nonfraction_pieces_in H;
-       [ ..
-       | common_denominator_in H;
-         [ repeat split; try assumption..
-         | ] ];
+       [ common_denominator_in H;
+         [
+         | repeat apply conj; try assumption.. ]
+       | .. ];
        repeat match goal with H := _ |- _ => subst H end
   | ?T => fail 0 "no division in" H ":" T
   end.
@@ -795,19 +806,60 @@ Ltac conservative_common_denominator :=
   lazymatch goal with
   | |- appcontext[div]
     => set_nonfraction_pieces;
-       [ ..
-       | common_denominator;
-         [ repeat split; try assumption..
-         | ] ];
+       [ common_denominator;
+         [
+         | repeat apply conj; try assumption.. ]
+       | .. ];
        repeat match goal with H := _ |- _ => subst H end
   | |- ?G
     => fail 0 "no division in goal" G
   end.
+Ltac conservative_common_denominator_inequality_in H :=
+  let HT := type of H in
+  lazymatch HT with
+  | not (?R _ _) => idtac
+  | (?R _ _ -> False)%type => idtac
+  | _ => fail 0 "Not an inequality" H ":" HT
+  end;
+  let HTT := type of HT in
+  let HT' := fresh in
+  evar (HT' : HTT);
+  let H' := fresh in
+  rename H into H';
+  cut (not HT'); subst HT';
+  [ intro H; clear H'
+  | let H'' := fresh in
+    intro H''; apply H'; conservative_common_denominator; [ eexact H'' | .. ] ].
+Ltac conservative_common_denominator_inequality :=
+  let G := get_goal in
+  lazymatch G with
+  | not (?R _ _) => idtac
+  | (?R _ _ -> False)%type => idtac
+  | _ => fail 0 "Not an inequality (goal):" G
+  end;
+  let GT := type of G in
+  let HT' := fresh in
+  evar (HT' : GT);
+  let H' := fresh in
+  assert (H' : not HT'); subst HT';
+  [
+  | let HG := fresh in
+    intros HG; apply H'; conservative_common_denominator_in HG; [ eexact HG | .. ] ].
 
 Ltac conservative_common_denominator_all :=
   try conservative_common_denominator;
-  [ ..
-  | repeat match goal with [H: _ |- _ ] => progress conservative_common_denominator_in H; [] end ].
+  [ repeat match goal with [H: _ |- _ ] => progress conservative_common_denominator_in H; [] end
+  | .. ].
+
+Ltac conservative_common_denominator_inequality_all :=
+  try conservative_common_denominator_inequality;
+  [ repeat match goal with [H: _ |- _ ] => progress conservative_common_denominator_inequality_in H; [] end
+  | .. ].
+
+Ltac conservative_common_denominator_equality_inequality_all :=
+  conservative_common_denominator_all;
+  [ conservative_common_denominator_inequality_all
+  | .. ].
 
 Inductive field_simplify_done {T} : T -> Type :=
   Field_simplify_done : forall H, field_simplify_done H.
@@ -915,6 +967,55 @@ Ltac field_algebra :=
       [neq01
       |trivial
       |apply Ring.opp_nonzero_nonzero;trivial].
+
+Ltac combine_field_inequalities_step :=
+  match goal with
+  | [ H : not (?R ?x ?zero), H' : not (?R ?x' ?zero) |- _ ]
+    => pose proof (mul_nonzero_nonzero x x' H H'); clear H H'
+  | [ H : (?X -> False)%type |- _ ]
+    => change (not X) in H
+  end.
+
+(** First we split apart the equalities so that we can clear
+    duplicates; it's easier for us to do this than to give [nsatz] the
+    extra work. *)
+
+Ltac split_field_inequalities_step :=
+  match goal with
+  | [ H : not (?R (?mul ?x ?y) ?zero) |- _ ]
+    => apply IntegralDomain.mul_nonzero_nonzero_iff in H; destruct H
+  end.
+Ltac split_field_inequalities :=
+  canonicalize_field_inequalities;
+  repeat split_field_inequalities_step;
+  clear_duplicates.
+
+Ltac combine_field_inequalities :=
+  split_field_inequalities;
+  repeat combine_field_inequalities_step.
+(** Handles field inequalities which can be made by splitting multiplications in the goal and the assumptions *)
+Ltac solve_simple_field_inequalities :=
+  repeat (apply conj || split_field_inequalities);
+  try assumption.
+Ltac prensatz_contradict :=
+  solve_simple_field_inequalities;
+  combine_field_inequalities.
+Ltac nsatz_inequality_to_equality :=
+  repeat intro;
+  match goal with
+  | [ H : not (?R ?x ?zero) |- False ] => apply H
+  | [ H : (?R ?x ?zero -> False)%type |- False ] => apply H
+  end.
+(** Handles inequalities and fractions *)
+Ltac super_nsatz :=
+  (* [nsatz] gives anomalies on duplicate hypotheses, so we strip them *)
+  clear_algebraic_duplicates;
+  prensatz_contradict;
+  (* Each goal left over by [prensatz_contradict] is separate (and
+     there might not be any), so we handle them all separately *)
+  [ try conservative_common_denominator_equality_inequality_all;
+    [ try nsatz_inequality_to_equality; try nsatz
+    | repeat (apply conj || split_field_inequalities); try assumption; prensatz_contradict; nsatz_inequality_to_equality; try nsatz.. ].. ].
 
 Section ExtraLemmas.
   Context {F eq zero one opp add sub mul inv div} `{F_field:field F eq zero one opp add sub mul inv div}.

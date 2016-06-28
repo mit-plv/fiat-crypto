@@ -8,12 +8,26 @@ matrix:
       env: COQ_VERSION="8.5pl1" COQ_PACKAGE="coq-8.5pl1" COQPRIME="coqprime"     PPA="ppa:jgross-h/many-coq-versions"
     - dist: trusty
       env: COQ_VERSION="8.5"    COQ_PACKAGE="coq-8.5"    COQPRIME="coqprime"     PPA="ppa:jgross-h/many-coq-versions"
+    - dist: precise
+      env: COQ_VERSION="8.4pl6" COQ_PACKAGE="coq-8.4pl6 libcoq-ocaml-8.4pl6" COQPRIME="coqprime-8.4" PPA="ppa:jgross-h/many-coq-versions-ocaml-3-temp-while-over-quota-2"
+    - dist: precise
+      env: COQ_VERSION="8.4pl5" COQ_PACKAGE="coq-8.4pl5 libcoq-ocaml-8.4pl5" COQPRIME="coqprime-8.4" PPA="ppa:jgross-h/many-coq-versions-ocaml-3-temp-while-over-quota-2"
+    - dist: precise
+      env: COQ_VERSION="8.4pl4" COQ_PACKAGE="coq-8.4pl4 libcoq-ocaml-8.4pl4" COQPRIME="coqprime-8.4" PPA="ppa:jgross-h/many-coq-versions-ocaml-3-temp-while-over-quota-2"
+    - dist: precise
+      env: COQ_VERSION="8.4pl3" COQ_PACKAGE="coq-8.4pl3 libcoq-ocaml-8.4pl3" COQPRIME="coqprime-8.4" PPA="ppa:jgross-h/many-coq-versions-ocaml-3-temp-while-over-quota-2"
+    - dist: precise
+      env: COQ_VERSION="8.4pl2" COQ_PACKAGE="coq-8.4pl2 libcoq-ocaml-8.4pl2" COQPRIME="coqprime-8.4" PPA="ppa:jgross-h/many-coq-versions-ocaml-3-temp-while-over-quota-2"
+    - dist: precise
+      env: COQ_VERSION="8.4pl1" COQ_PACKAGE="coq-8.4pl1 libcoq-ocaml-8.4pl1" COQPRIME="coqprime-8.4" PPA="ppa:jgross-h/many-coq-versions-ocaml-3-temp-while-over-quota-2"
+    - dist: precise
+      env: COQ_VERSION="8.4"    COQ_PACKAGE="coq-8.4 libcoq-ocaml-8.4"    COQPRIME="coqprime-8.4" PPA="ppa:jgross-h/many-coq-versions-ocaml-3-temp-while-over-quota-2"
     - dist: trusty
       env: COQ_VERSION="8.4"    COQ_PACKAGE="coq"        COQPRIME="coqprime-8.4" PPA=""
 
 before_install:
   - if [ ! -z "$PPA" ]; then sudo add-apt-repository "$PPA" -y; fi
   - sudo apt-get update -q
-  - sudo apt-get install "$COQ_PACKAGE" -y
+  - sudo apt-get install $COQ_PACKAGE -y
 
 script: make COQPATH="$(pwd)/$COQPRIME" TIMED=1 -j2
