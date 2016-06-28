@@ -952,7 +952,7 @@ Ltac super_nsatz :=
   try prensatz_contradict;
   try conservative_common_denominator_all;
   [ try nsatz
-  | try prensatz_contradict; try nsatz.. ].
+  | repeat apply conj; prensatz_contradict; try nsatz.. ].
 
 Section ExtraLemmas.
   Context {F eq zero one opp add sub mul inv div} `{F_field:field F eq zero one opp add sub mul inv div}.
