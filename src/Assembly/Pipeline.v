@@ -27,7 +27,6 @@ Module PipelineExamples.
   Local Notation "v [[ i ]]" := (nth i v (wzero _)) (at level 40).
   Local Notation "$$ v" := (natToWord _ v) (at level 40).
 
-  (*
   Definition add_example: @pseudeq 32 W32 1 1 (fun v =>
       plet a := $$ 1 in
       plet b := v[[0]] in
@@ -61,18 +60,20 @@ Module PipelineExamples.
     pseudo_solve.
   Defined.
 
+  Definition comb_example: @pseudeq 32 W32 1 2 (fun v =>
+      plet a := natToWord _ 7 in
+      plet b := nth 0 v (wzero _) in
+      ([a; b])).
+    pseudo_solve.
+  Qed.
+
   Definition mult_ex_str :=
     (Pipeline.toString (proj1_sig mult_example)).
 
-  Definition comb_example: @pseudeq 32 W32 1 1 (fun v =>
-      plet a := $$ 7 in
-      plet b := v[[0]] in
-      ([b ^& a; a ^+ b])).
-    pseudo_solve.
-  Admitted.
+  Ltac gen_evar_local_defs :=
+    repeat match goal with |- context[?V] => is_evar V; set V end.
 
   Definition comb_ex_str :=
     (Pipeline.toString (proj1_sig comb_example)).
-  *)
 
 End PipelineExamples.

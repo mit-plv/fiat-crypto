@@ -39,8 +39,13 @@ Module Pseudo <: Language.
 
   (* Evaluation *)
 
+  Definition ensureLength {w} (n: nat) (st: ListState w) (x: option (ListState w)) :=
+    if (Nat.eq_dec (Datatypes.length (getList st)) n)
+    then x
+    else None.
+
   Fixpoint pseudoEval {n m w s} (prog: @Pseudo w s n m) (st: ListState w): option (ListState w) :=
-    match prog with
+    ensureLength n st match prog with
     | PVar n _ i => omap (getVar i st) (fun x => Some (setList [x] st))
     | PMem n m v i => omap (getMem v i st) (fun x => Some (setList [x] st))
     | PConst n c => Some (setList [c] st)
