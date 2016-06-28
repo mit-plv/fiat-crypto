@@ -246,6 +246,7 @@ Ltac side_conditions_before_to_side_conditions_after tac_in H :=
   | tac_in H';
     [ ..
     | subst HT'; eexact H' ] ];
+  instantiate; (* required in 8.4 for the [move] to succeed, because evar dependencies *)
   [ (* We preserve the order of the hypotheses.  We need to do this
        here, after evars are instantiated, and not above. *)
     move H after H'; clear H'
