@@ -1008,6 +1008,8 @@ Ltac nsatz_inequality_to_equality :=
   end.
 (** Handles inequalities and fractions *)
 Ltac super_nsatz :=
+  (* [nsatz] gives anomalies on duplicate hypotheses, so we strip them *)
+  clear_algebraic_duplicates;
   prensatz_contradict;
   (* Each goal left over by [prensatz_contradict] is separate (and
      there might not be any), so we handle them all separately *)
