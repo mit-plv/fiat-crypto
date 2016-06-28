@@ -155,14 +155,12 @@ Module E.
       Proof.
         intros ? eq_zero.
         destruct square_a as [sqrt_a sqrt_a_id]; rewrite <- sqrt_a_id in eq_zero.
-        destruct (eq_dec y 0); [apply nonzero_a|apply nonsquare_d with (sqrt_a/y)]; super_nsatz.
+        destruct (eq_dec y 0); [apply nonzero_a|apply nonsquare_d with (sqrt_a/y)]; field_algebra.
       Qed.
 
       Lemma solve_correct : forall x y, onCurve (x, y) <-> (x^2 = solve_for_x2 y).
       Proof.
-        unfold solve_for_x2; simpl; split; intros H; pose proof a_d_y2_nonzero y.
-        - super_nsatz.
-        - rewrite H; clear H. super_nsatz.
+        unfold solve_for_x2; simpl; split; intros; field_algebra; auto using a_d_y2_nonzero.
       Qed.
     End PointCompression.
   End CompleteEdwardsCurveTheorems.
