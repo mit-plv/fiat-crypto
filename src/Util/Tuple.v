@@ -26,23 +26,39 @@ Definition to_list {T} (n:nat) : tuple T n -> list T :=
   | S n' => fun xs : tuple T (S n') => to_list' n' xs
   end.
 
-Fixpoint from_list' {T} (x:T) (xs:list T) : tuple' T (length xs) :=
-  match xs with
-  | nil => x
-  | (y :: xs')%list => (from_list' y xs', x)
+Program Fixpoint from_list' {T} (y:T) (n:nat) (xs:list T) : length xs = n -> tuple' T n :=
+  match n return _ with
+  | 0 =>
+    match xs return (length xs = 0 -> tuple' T 0) with
+    | nil => fun _ => y
+    | _ => _ (* impossible *)
+    end
+  | S n' =>
+    match xs return (length xs = S n' -> tuple' T (S n')) with
+    | cons x xs' => fun _ => (from_list' x n' xs' _, y)
+    | _ => _ (* impossible *)
+    end
   end.
 
-Definition from_list {T} (xs:list T) : tuple T (length xs) :=
-  match xs as l return (tuple T (length l)) with
-  | nil => tt
-  | (t :: xs')%list => from_list' t xs'
-  end.
+Program Definition from_list {T} (n:nat) (xs:list T) : length xs = n -> tuple T n :=
+match n return _ with
+| 0 =>
+    match xs return (length xs = 0 -> tuple T 0) with
+    | nil => fun _ : 0 = 0 => tt
+    | _ => _ (* impossible *)
+    end
+| S n' =>
+    match xs return (length xs = S n' -> tuple T (S n')) with
+    | cons x xs' => fun _ => from_list' x n' xs' _
+    | _ => _ (* impossible *)
+    end
+end.
 
-Lemma to_list_from_list : forall {T} (xs:list T), to_list (length xs) (from_list xs) = xs.
+Lemma to_list_from_list : forall {T} (n:nat) (xs:list T) pf, to_list n (from_list n xs pf) = xs.
 Proof.
-  destruct xs; auto; simpl.
-  generalize dependent t.
-  induction xs; auto; simpl; intros; f_equal; auto.
+  destruct xs; simpl; intros; subst; auto.
+  generalize dependent t. simpl in *.
+  induction xs; simpl in *; intros; congruence.
 Qed.
 
 Lemma length_to_list : forall {T} {n} (xs:tuple T n), length (to_list n xs) = n.
@@ -50,6 +66,26 @@ Proof.
   destruct n; auto; intros; simpl in *.
   induction n; auto; intros; simpl in *.
   destruct xs; simpl in *; eauto.
+Qed.
+
+Lemma from_list'_to_list' : forall T n (xs:tuple' T n),
+    forall x xs' pf, to_list' n xs = cons x xs' ->
+      from_list' x n xs' pf = xs.
+Proof.
+  induction n; intros.
+  { simpl in *. injection H; clear H; intros; subst. congruence. }
+  { destruct xs eqn:Hxs;
+    destruct xs' eqn:Hxs';
+    injection H; clear H; intros; subst; try discriminate.
+    simpl. f_equal. eapply IHn. assumption. }
+Qed.
+
+Lemma from_list_to_list : forall {T n} (xs:tuple T n) pf, from_list n (to_list n xs) pf = xs.
+Proof.
+  destruct n; auto; intros; simpl in *.
+  { destruct xs; auto. }
+  { destruct (to_list' n xs) eqn:H; try discriminate.
+    eapply from_list'_to_list'; assumption. }
 Qed.
 
 Fixpoint fieldwise' {A B} (n:nat) (R:A->B->Prop) (a:tuple' A n) (b:tuple' B n) {struct n} : Prop.
