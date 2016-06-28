@@ -1,4 +1,4 @@
-Require Crypto.CompleteWeierstrassCurve.Pre.
+Require Crypto.WeierstrassCurve.Pre.
 
 Module E.
   Section WeierstrassCurves.
@@ -44,7 +44,7 @@ Module E.
                               end }.
     Definition coordinates (P:point) : (F*F + ∞) := proj1_sig P.
 
-    (** The following points are indeed on the curve -- see [CompleteWeierstrassCurve.Pre] for proof *)
+    (** The following points are indeed on the curve -- see [WeierstrassCurve.Pre] for proof *)
     Local Obligation Tactic :=
       try solve [ Program.Tactics.program_simpl
                 | intros; apply (Pre.unifiedAdd'_onCurve _ _ (proj2_sig _) (proj2_sig _)) ].
