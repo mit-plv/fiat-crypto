@@ -1013,7 +1013,7 @@ Ltac super_nsatz :=
      there might not be any), so we handle them all separately *)
   [ try conservative_common_denominator_equality_inequality_all;
     [ try nsatz_inequality_to_equality; try nsatz
-    | repeat (apply conj || split_field_inequalities); try assumption; prensatz_contradict; nsatz_inequality_to_equality; try nsatz.. ].. ]
+    | repeat (apply conj || split_field_inequalities); try assumption; prensatz_contradict; nsatz_inequality_to_equality; try nsatz.. ].. ].
 
 Section ExtraLemmas.
   Context {F eq zero one opp add sub mul inv div} `{F_field:field F eq zero one opp add sub mul inv div}.
