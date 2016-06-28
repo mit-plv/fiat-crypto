@@ -34,8 +34,7 @@ Module E.
       {
         char_gt_2 : 2 <> 0;
         char_ne_3 : 3 <> 0;
-        nonzero_discriminant : -(16) * (4 * a^3 + 27 * b^2) <> 0;
-        nonzero_b : b <> 0
+        nonzero_discriminant : -(16) * (4 * a^3 + 27 * b^2) <> 0
       }.
     Context `{weierstrass_params}.
 
