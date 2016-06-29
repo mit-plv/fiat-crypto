@@ -1,5 +1,5 @@
 Require Import Coq.Classes.Morphisms. Require Coq.Setoids.Setoid.
-Require Import Crypto.Algebra Crypto.Tactics.Nsatz.
+Require Import Crypto.Algebra.
 Require Import Crypto.Util.Notations.
 
 Generalizable All Variables.

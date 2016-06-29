@@ -1,5 +1,7 @@
 (** * Generic Tactics *)
 
+Ltac get_goal := match goal with |- ?g => constr:(g) end.
+
 (** Test if a tactic succeeds, but always roll-back the results *)
 Tactic Notation "test" tactic3(tac) :=
   try (first [ tac | fail 2 tac "does not succeed" ]; fail 0 tac "succeeds"; [](* test for [t] solved all goals *)).
