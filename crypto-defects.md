@@ -16,3 +16,5 @@ appearing in our code.
 | [end-to-end#340](https://github.com/google/end-to-end/issues/340) | Curve25519 library | twisted Edwards coordinates | (0, 1) = ∞ |
 | [CVE-2006-4339](https://web.archive.org/web/20071010042708/http://www.imc.org/ietf-openpgp/mail-archive/msg14307.html) | RSA-PKCS-1 sig. verification | irrelevant | padding check |
 | [CVE-2014-3570](https://www.openssl.org/news/secadv/20150108.txt) | Bignum squaring |   |  |
+
+Not covered in the above list: memory mismanagement (buffer overrun, use-after-free, uninitialized read, null dereference), timing attacks (branch, cache, instruction). While these issues are very important, there are good programming disciplines for avoiding them without verifying intricate details of the computation.
