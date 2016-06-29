@@ -878,19 +878,41 @@ Ltac field_simplify_eq_hyps :=
 
 Ltac field_simplify_eq_all := field_simplify_eq_hyps; try field_simplify_eq.
 
-(** Clear duplicate hypotheses, and hypotheses of the form [R x x] for a reflexive relation [R] *)
+(** Clear duplicate hypotheses, and hypotheses of the form [R x x] for a reflexive relation [R], and similarly for symmetric relations *)
 Ltac clear_algebraic_duplicates_step R :=
   match goal with
   | [ H : R ?x ?x |- _ ]
     => clear H
   end.
+Ltac clear_algebraic_duplicates_step_S R :=
+  match goal with
+  | [ H : R ?x ?y, H' : R ?y ?x |- _ ]
+    => clear H
+  | [ H : not (R ?x ?y), H' : not (R ?y ?x) |- _ ]
+    => clear H
+  | [ H : (R ?x ?y -> False)%type, H' : (R ?y ?x -> False)%type |- _ ]
+    => clear H
+  | [ H : not (R ?x ?y), H' : (R ?y ?x -> False)%type |- _ ]
+    => clear H
+  end.
 Ltac clear_algebraic_duplicates_guarded R :=
   let test_reflexive := constr:(_ : Reflexive R) in
   repeat clear_algebraic_duplicates_step R.
+Ltac clear_algebraic_duplicates_guarded_S R :=
+  let test_symmetric := constr:(_ : Symmetric R) in
+  repeat clear_algebraic_duplicates_step_S R.
 Ltac clear_algebraic_duplicates :=
   clear_duplicates;
   repeat match goal with
-         | [ H : ?R ?x ?x |- _ ] => clear_algebraic_duplicates_guarded R
+         | [ H : ?R ?x ?x |- _ ] => progress clear_algebraic_duplicates_guarded R
+         | [ H : ?R ?x ?y, H' : ?R ?y ?x |- _ ]
+           => progress clear_algebraic_duplicates_guarded_S R
+         | [ H : not (?R ?x ?y), H' : not (?R ?y ?x) |- _ ]
+           => progress clear_algebraic_duplicates_guarded_S R
+         | [ H : not (?R ?x ?y), H' : (?R ?y ?x -> False)%type |- _ ]
+           => progress clear_algebraic_duplicates_guarded_S R
+         | [ H : (?R ?x ?y -> False)%type, H' : (?R ?y ?x -> False)%type |- _ ]
+           => progress clear_algebraic_duplicates_guarded_S R
          end.
 
 (*** Inequalities over fields *)
