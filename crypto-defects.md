@@ -12,3 +12,4 @@ appearing in our code.
 | [nettle#09e3ce4d](https://git.lysator.liu.se/nettle/nettle/commit/c71d2c9d20eeebb985e3872e4550137209e3ce4d) | secp-256r1 modular reduction | | carry handling |
 | [socat#7](http://www.dest-unreach.org/socat/contrib/socat-secadv7.html) | DH in Z*p | irrelevant | non-prime p |
 | [invalid-curve](http://euklid.org/pdf/ECC_Invalid_Curve.pdf) | NIST ECDH | irrelevant | not onCurve |
+| [donna#8edc799f](https://github.com/agl/curve25519-donna/commit/2647eeba59fb628914c79ce691df794a8edc799f) | F25519 internal to wire |  32-bit pseudo-Mersenne, C | non-canonical |
