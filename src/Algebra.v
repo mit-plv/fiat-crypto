@@ -841,14 +841,30 @@ Ltac conservative_common_denominator_inequality :=
   | let HG := fresh in
     intros HG; apply H'; conservative_common_denominator_in HG; [ eexact HG | .. ] ].
 
+Ltac conservative_common_denominator_hyps :=
+  try match goal with
+      | [H: _ |- _ ]
+        => progress conservative_common_denominator_in H;
+           [ conservative_common_denominator_hyps
+           | .. ]
+      end.
+
+Ltac conservative_common_denominator_inequality_hyps :=
+  try match goal with
+      | [H: _ |- _ ]
+        => progress conservative_common_denominator_inequality_in H;
+           [ conservative_common_denominator_inequality_hyps
+           | .. ]
+      end.
+
 Ltac conservative_common_denominator_all :=
   try conservative_common_denominator;
-  [ repeat match goal with [H: _ |- _ ] => progress conservative_common_denominator_in H; [] end
+  [ try conservative_common_denominator_hyps
   | .. ].
 
 Ltac conservative_common_denominator_inequality_all :=
   try conservative_common_denominator_inequality;
-  [ repeat match goal with [H: _ |- _ ] => progress conservative_common_denominator_inequality_in H; [] end
+  [ try conservative_common_denominator_inequality_hyps
   | .. ].
 
 Ltac conservative_common_denominator_equality_inequality_all :=
