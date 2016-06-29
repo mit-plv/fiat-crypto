@@ -10,3 +10,4 @@ appearing in our code.
 | [openssl#0c687d7e](https://git.openssl.org/gitweb/?p=openssl.git;a=commitdiff;h=dc3c5067cd90f3f2159e5d53c57b92730c687d7e;ds=sidebyside) | Poly1305 | 32-bit pseudo-Mersenne, x86 and ARM | bad truncation |
 | [openssl#ef5c9b11](https://github.com/openssl/openssl/commit/29851264f11ccc70c6c0140d7e3d8d93ef5c9b11) | Modular exponentiation | 64-bit Montgomery form, AMD64 | carry handling |
 | [nettle#09e3ce4d](https://git.lysator.liu.se/nettle/nettle/commit/c71d2c9d20eeebb985e3872e4550137209e3ce4d) | secp-256r1 modular reduction | | carry handling |
+| [socat#7](http://www.dest-unreach.org/socat/contrib/socat-secadv7.html) | DH in Z*p | irrelevant | non-prime p |
