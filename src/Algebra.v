@@ -770,10 +770,12 @@ Ltac set_nonfraction_pieces_by nonzero_tac :=
          ltac:(fun T' => change T');
        deduplicate_nonfraction_pieces mul
   end.
+Ltac default_set_nonfraction_nonzero_tac :=
+  try (intro; field_nonzero_mul_split; tauto).
 Ltac set_nonfraction_pieces_in H :=
-  set_nonfraction_pieces_in_by H ltac:(try (intro; field_nonzero_mul_split; try tauto)).
+  set_nonfraction_pieces_in_by H default_set_nonfraction_nonzero_tac.
 Ltac set_nonfraction_pieces :=
-  set_nonfraction_pieces_by ltac:(try (intro; field_nonzero_mul_split; tauto)).
+  set_nonfraction_pieces_by default_set_nonfraction_nonzero_tac.
 Ltac conservative_common_denominator_in H :=
   idtac;
   let fld := guess_field in
