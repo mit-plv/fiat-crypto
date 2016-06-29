@@ -5,5 +5,6 @@ appearing in our code.
 | Reference                                                           | Specification               | Implementation              | Defect        |
 | ------------------------------------------------------------------- | --------------------------- | --------------------------- | ------------- |
 | [openssl#3607](https://rt.openssl.org/Ticket/Display.html?id=3607)  | P256 field element squaring | 64-bit Montgomery form, asm | limb overflow |
+| [go#13515](https://github.com/golang/go/issues/13515)               | Modular exponentiation      | uintptr-sized Montgomery form, Go | carry handling |
 |                                                                     |                             |                             |               |
 |                                                                     |                             |                             |               |
