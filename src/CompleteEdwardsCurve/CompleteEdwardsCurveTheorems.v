@@ -99,14 +99,10 @@ Module E.
       { conservative_common_denominator.
         nsatz.
         admit.
-        admit.
-        admit.
         admit. }
       {
         conservative_common_denominator.
         nsatz.
-        admit.
-        admit.
         admit.
         admit. }
       bash.
