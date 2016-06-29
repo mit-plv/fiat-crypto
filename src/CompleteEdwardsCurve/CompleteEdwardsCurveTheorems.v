@@ -97,13 +97,16 @@ Module E.
       bash_step.
       bash_step.
       { conservative_common_denominator.
+        nsatz.
+        admit.
+        admit.
+        admit.
+        admit. }
+      {
         conservative_common_denominator.
         nsatz.
         admit.
-        admit. }
-      { conservative_common_denominator.
-        conservative_common_denominator.
-        nsatz.
+        admit.
         admit.
         admit. }
       bash.
@@ -139,10 +142,8 @@ Module E.
 
       Lemma solve_correct : forall x y, onCurve (x, y) <-> (x^2 = solve_for_x2 y).
       Proof.
-        unfold solve_for_x2; simpl; split; intros.
-        { conservative_common_denominator. nsatz. auto using a_d_y2_nonzero. }
-        { conservative_common_denominator_all. (* FIXME: doesn't do anything *)
-          common_denominator_all. nsatz. auto using a_d_y2_nonzero. }
+        unfold solve_for_x2; simpl; split; intros;
+          (conservative_common_denominator_all; [nsatz | eapply a_d_y2_nonzero; eauto]).
       Qed.
     End PointCompression.
   End CompleteEdwardsCurveTheorems.
