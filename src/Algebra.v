@@ -732,15 +732,10 @@ Ltac set_nonfraction_pieces_on T eq zero opp add sub mul inv div nonzero_tac con
   | appcontext[div]
     => lazymatch T with
        | div ?numerator ?denominator
-         => let d := fresh "d" in
-            pose denominator as d;
-            cut (not (eq d zero));
+         => cut (not (eq denominator zero));
             [ intro;
-              set_nonfraction_pieces_on
-                numerator eq zero opp add sub mul inv div nonzero_tac
-                ltac:(fun numerator'
-                      => cont (div numerator' d))
-            | subst d; nonzero_tac ]
+              two_arg_recr div numerator denominator
+            | nonzero_tac ]
        | opp ?x => one_arg_recr opp x
        | inv ?x => one_arg_recr inv x
        | add ?x ?y => two_arg_recr add x y
