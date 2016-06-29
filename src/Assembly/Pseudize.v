@@ -296,6 +296,33 @@ Section Conversion.
       simpl; intuition.
   Qed.
 
+  Lemma pseudo_if:
+    forall {w s n k m} (p0: @Pseudo w s n m) (p1: @Pseudo w s n m)
+      input a f m0 m1 m2 c0 c1 c2,
+      pseudoEval p0 (input, m0, c0) = Some ([a], m1, c1)
+    -> pseudoEval p1 (input ++ [a], m1, c1) = Some (f (nth n (input ++ [a]) (wzero _)), m2, c2)
+    -> pseudoEval (@PLet w s n k m p0 p1) (input, m0, c0) =
+        Some (Let_In a f, m2, c2).
+
+      | PIf n m t i0 i1 l r =>
+      omap (getVar i0 st) (fun v0 =>
+        omap (getVar i1 st) (fun v1 =>
+          if (evalTest t v0 v1)
+          then pseudoEval l st
+          else pseudoEval r st ))
+
+    | PFunExp n p e =>
+      (fix funexpseudo (e': nat) (st': ListState w) := 
+        match e' with
+        | O => Some st'
+        | S e'' =>
+          omap (pseudoEval p st') (fun st'' =>
+            funexpseudo e'' st'')
+        end) e st
+
+    | PCall n m _ p => pseudoEval p st
+
+
   Definition pseudeq {w s} (n m: nat) (f: list (word w) -> list (word w)) : Type := 
     {p: @Pseudo w s n m | forall x: (list (word w)),
       List.length x = n -> exists m' c',
