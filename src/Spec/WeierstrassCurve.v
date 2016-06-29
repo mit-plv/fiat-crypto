@@ -51,8 +51,6 @@ Module E.
 
     Program Definition zero : point := ∞.
 
-    (* If we use [Program Definition], Coq inserts too many
-       intermediate casts, and does too much destruction. *)
     Program Definition add (P1 P2:point) : point
       := exist
            _
