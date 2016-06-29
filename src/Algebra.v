@@ -1092,17 +1092,37 @@ Section ExtraLemmas.
 End ExtraLemmas.
 
 (** We look for hypotheses of the form [x^2 = y^2] and [x^2 = z] together with [y^2 = z], and prove that [x = y] or [x = opp y] *)
-Ltac pose_proof_only_two_square_roots x y H :=
+Ltac pose_proof_only_two_square_roots x y H eq opp mul :=
   not constr_eq x y;
-  match goal with
-  | [ H' : ?eq (?mul x x) (?mul y y) |- _ ]
-    => pose proof (only_two_square_roots'_choice x y H') as H
-  | [ H0 : ?eq (?mul x x) ?z, H1 : ?eq (?mul y y) ?z |- _ ]
-    => pose proof (only_two_square_roots_choice x y z H0 H1) as H
+  lazymatch x with
+  | opp ?x' => pose_proof_only_two_square_roots x' y H eq opp mul
+  | _
+    => lazymatch y with
+       | opp ?y' => pose_proof_only_two_square_roots x y' H eq opp mul
+       | _
+         => match goal with
+            | [ H' : eq x y |- _ ]
+              => let T := type of H' in fail 1 "The hypothesis" H' "already proves" T
+            | [ H' : eq y x |- _ ]
+              => let T := type of H' in fail 1 "The hypothesis" H' "already proves" T
+            | [ H' : eq x (opp y) |- _ ]
+              => let T := type of H' in fail 1 "The hypothesis" H' "already proves" T
+            | [ H' : eq y (opp x) |- _ ]
+              => let T := type of H' in fail 1 "The hypothesis" H' "already proves" T
+            | [ H' : eq (opp x) y |- _ ]
+              => let T := type of H' in fail 1 "The hypothesis" H' "already proves" T
+            | [ H' : eq (opp y) x |- _ ]
+              => let T := type of H' in fail 1 "The hypothesis" H' "already proves" T
+            | [ H' : eq (mul x x) (mul y y) |- _ ]
+              => pose proof (only_two_square_roots'_choice x y H') as H
+            | [ H0 : eq (mul x x) ?z, H1 : eq (mul y y) ?z |- _ ]
+              => pose proof (only_two_square_roots_choice x y z H0 H1) as H
+            end
+       end
   end.
-Ltac reduce_only_two_square_roots x y :=
+Ltac reduce_only_two_square_roots x y eq opp mul :=
   let H := fresh in
-  pose_proof_only_two_square_roots x y H;
+  pose_proof_only_two_square_roots x y H eq opp mul;
   destruct H;
   try setoid_subst y.
 Ltac pre_clean_only_two_square_roots :=
@@ -1116,21 +1136,25 @@ Ltac post_clean_only_two_square_roots x y :=
        | [ H : (?R ?x ?x -> False)%type |- _ ] => exfalso; apply H; reflexivity
        end);
   try setoid_subst x; try setoid_subst y.
-Ltac only_two_square_roots_step :=
+Ltac only_two_square_roots_step eq opp mul :=
   match goal with
-  | [ H : not (?eq ?x (?opp ?y)) |- _ ]
+  | [ H : not (eq ?x (opp ?y)) |- _ ]
     (* this one comes first, because it the procedure is asymmetric
        with respect to [x] and [y], and this order is more likely to
        lead to solving goals by contradiction. *)
-    => is_var x; is_var y; reduce_only_two_square_roots x y; post_clean_only_two_square_roots x y
-  | [ H : ?eq (?mul ?x ?x) (?mul ?y ?y) |- _ ]
-    => reduce_only_two_square_roots x y; post_clean_only_two_square_roots x y
-  | [ H : ?eq (?mul ?x ?x) ?z, H' : ?eq (?mul ?y ?y) ?z |- _ ]
-    => reduce_only_two_square_roots x y; post_clean_only_two_square_roots x y
+    => is_var x; is_var y; reduce_only_two_square_roots x y eq opp mul; post_clean_only_two_square_roots x y
+  | [ H : eq (mul ?x ?x) (mul ?y ?y) |- _ ]
+    => reduce_only_two_square_roots x y eq opp mul; post_clean_only_two_square_roots x y
+  | [ H : eq (mul ?x ?x) ?z, H' : eq (mul ?y ?y) ?z |- _ ]
+    => reduce_only_two_square_roots x y eq opp mul; post_clean_only_two_square_roots x y
   end.
 Ltac only_two_square_roots :=
   pre_clean_only_two_square_roots;
-  repeat only_two_square_roots_step.
+  let fld := guess_field in
+  lazymatch type of fld with
+  | @field ?F ?eq ?zero ?one ?opp ?add ?sub ?mul ?inv ?div
+    => repeat only_two_square_roots_step eq opp mul
+  end.
 
 Section Example.
   Context {F zero one opp add sub mul inv div} `{F_field:field F eq zero one opp add sub mul inv div}.
