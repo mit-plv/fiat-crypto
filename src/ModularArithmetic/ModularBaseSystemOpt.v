@@ -71,9 +71,10 @@ Ltac construct_params prime_modulus len k :=
   cbv in lw;
   eapply Build_PseudoMersenneBaseParams with (limb_widths := lw);
   [ abstract (apply fold_right_and_True_forall_In_iff; simpl; repeat (split; [omega |]); auto)
-  | abstract (unfold limb_widths; cbv; congruence)
+  | abstract (cbv; congruence)
   | abstract brute_force_indices lw
   | abstract apply prime_modulus
+  | abstract (cbv; congruence)
   | abstract brute_force_indices lw].
 
 Definition construct_mul2modulus {m} (prm : PseudoMersenneBaseParams m) : digits :=

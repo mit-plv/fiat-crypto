@@ -78,10 +78,24 @@ Section BaseSystemProofs.
     induction bs; destruct us; destruct vs; boring; ring.
   Qed.
 
-  Lemma encode_rep : forall z, decode base (encode z) = z.
+  Lemma nth_default_base_nonzero : forall d, d <> 0 ->
+    forall i, nth_default d base i <> 0.
   Proof.
-    pose proof base_eq_1cons.
-    unfold decode, encode; destruct z; boring.
+    intros.
+    rewrite nth_default_eq.
+    destruct (nth_in_or_default i base d).
+    + auto using positive_is_nonzero, base_positive.
+    + congruence.
+  Qed.
+
+  Lemma nth_default_base_pos : forall d, 0 < d ->
+    forall i,  0 < nth_default d base i.
+  Proof.
+    intros.
+    rewrite nth_default_eq.
+    destruct (nth_in_or_default i base d).
+    + rewrite <-gt_lt_symmetry; auto using base_positive.
+    + congruence.
   Qed.
 
   Lemma mul_each_base : forall us bs c,
@@ -543,6 +557,53 @@ Section BaseSystemProofs.
     match goal with H : us <> nil |- _ => apply H end.
     apply length0_nil; rewrite <-rev_length, rev_nil.
     reflexivity.
+  Qed.
+  Definition encode'_zero z max  : encode' base z max 0%nat = nil := eq_refl.
+  Definition encode'_succ z max i : encode' base z max (S i) = 
+    encode' base z max i ++ ((z mod (nth_default max base (S i))) / (nth_default max base i)) :: nil := eq_refl.
+  Opaque encode'.
+  Hint Resolve encode'_zero encode'_succ.
+
+  Lemma encode'_length : forall z max i, length (encode' base z max i) = i.
+  Proof.
+    induction i; auto.
+    rewrite encode'_succ, app_length, IHi.
+    cbv [length].
+    omega.
+  Qed.
+
+  (* States that each element of the base is a positive integer multiple of the previous
+     element, and that max is a positive integer multiple of the last element. Ideally this
+     would have a better name. *)
+  Definition base_max_succ_divide max := forall i, (S i <= length base)%nat ->
+    Z.divide (nth_default max base i) (nth_default max base (S i)).
+
+  Lemma encode'_spec : forall z max, 0 < max ->
+    base_max_succ_divide max -> forall i, (i <= length base)%nat ->
+    decode' base (encode' base z max i) = z mod (nth_default max base i).
+  Proof.
+    induction i; intros.
+    + rewrite encode'_zero, b0_1, Z.mod_1_r.
+      apply decode_nil.
+    + rewrite encode'_succ, set_higher.
+      rewrite IHi by omega.
+      rewrite encode'_length, (Z.add_comm (z mod nth_default max base i)).
+      replace (nth_default 0 base i) with (nth_default max base i) by
+        (rewrite !nth_default_eq; apply nth_indep; omega).
+      match goal with H1 : base_max_succ_divide _, H2 : (S i <= length base)%nat, H3 : 0 < max |- _ =>
+        specialize (H1 i H2);
+        rewrite (Znumtheory.Zmod_div_mod _ _ _ (nth_default_base_pos _ H _)
+                                               (nth_default_base_pos _ H _) H0) end.
+      rewrite <-Z.div_mod by (apply positive_is_nonzero, gt_lt_symmetry; auto using nth_default_base_pos).
+      reflexivity.
+  Qed.
+
+  Lemma encode_rep : forall z max, 0 <= z < max ->
+    base_max_succ_divide max -> decode base (encode base z max) = z.
+  Proof.
+    unfold encode; intros.
+    rewrite encode'_spec, nth_default_out_of_bounds by (omega || auto).
+    apply Z.mod_small; omega.
   Qed.
 
 End BaseSystemProofs.

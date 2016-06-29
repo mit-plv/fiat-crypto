@@ -28,19 +28,47 @@ Section PseudoMersenneProofs.
     autounfold; intuition.
   Qed.
 
+  Lemma lt_modulus_2k : modulus < 2 ^ k.
+  Proof.
+    replace (2 ^ k) with (modulus + c) by (unfold c; ring).
+    pose proof c_pos; omega.
+  Qed. Hint Resolve lt_modulus_2k.
+
+  Lemma modulus_pos : 0 < modulus.
+  Proof.
+    pose proof (NumTheoryUtil.lt_1_p _ prime_modulus); omega.
+  Qed. Hint Resolve modulus_pos.
+
   Lemma encode_rep : forall x : F modulus, encode x ~= x.
   Proof.
     intros. unfold encode, rep.
     split. {
-      unfold encode; simpl.
-      rewrite length_zeros.
-      pose proof base_length_nonzero; omega.
+      unfold BaseSystem.encode.
+      auto using encode'_length.
     } {
       unfold decode.
-      rewrite decode_highzeros.
       rewrite encode_rep.
-      apply ZToField_FieldToZ.
-      apply bv.
+      + apply ZToField_FieldToZ.
+      + apply bv.
+      + split; [ | etransitivity]; try (apply FieldToZ_range; auto using modulus_pos); auto.
+      + unfold base_max_succ_divide; intros.
+        match goal with H : (_ <= length base)%nat |- _ =>
+          apply le_lt_or_eq in H; destruct H end.
+        - apply Z.mod_divide.
+          * apply nth_default_base_nonzero; auto using bv, two_k_nonzero.
+          * rewrite !nth_default_eq.
+            do 2 (erewrite nth_indep with (d := 2 ^ k) (d' := 0) by omega).
+            rewrite <-!nth_default_eq.
+            apply base_succ; omega.
+        - rewrite nth_default_out_of_bounds with (n := S i) by omega.
+          rewrite nth_default_base by omega.
+          unfold k.
+          match goal with H : S _ = length base |- _ => 
+            rewrite base_length in H; rewrite <-H end.
+          erewrite sum_firstn_succ by (apply nth_error_Some_nth_default with (x0 := 0); omega).
+          rewrite Z.pow_add_r by (auto using sum_firstn_limb_widths_nonneg;
+            apply limb_widths_nonneg; rewrite nth_default_eq; apply nth_In; omega).
+          apply Z.divide_factor_r.
     }
   Qed.
 
@@ -421,7 +449,6 @@ End CarryProofs.
 Section CanonicalizationProofs.
   Context `{prm : PseudoMersenneBaseParams} (lt_1_length_base : (1 < length base)%nat)
    {B} (B_pos : 0 < B) (B_compat : forall w, In w limb_widths -> w <= B)
-   (c_pos : 0 < c)
    (* on the first reduce step, we add at most one bit of width to the first digit *)
    (c_reduce1 : c * (Z.ones (B - log_cap (pred (length base)))) < max_bound 0 + 1)
    (* on the second reduce step, we add at most one bit of width to the first digit,
@@ -780,7 +807,7 @@ Section CanonicalizationProofs.
         do 2 match goal with H : appcontext[S (pred (length base))] |- _ =>
           erewrite <-(S_pred (length base)) in H by eauto end.
         unfold carry; break_if; [ unfold carry_and_reduce | omega ].
-        clear_obvious.
+        clear_obvious. pose proof c_pos.
         add_set_nth; [ zero_bounds | ]; apply IHj; auto; omega.
   Qed.
 
@@ -869,11 +896,11 @@ Section CanonicalizationProofs.
     simpl.
     unfold carry, carry_and_reduce; break_if; try omega.
     clear_obvious; add_set_nth.
-    split; [zero_bounds; carry_seq_lower_bound | ].
+    split; [pose proof c_pos; zero_bounds; carry_seq_lower_bound | ].
     rewrite Z.add_comm.
     apply Z.add_le_mono.
     + apply carry_bounds_0_upper; auto; omega.
-    + apply Z.mul_le_mono_pos_l; auto.
+    + apply Z.mul_le_mono_pos_l; auto using c_pos.
       apply Z_shiftr_ones; auto;
         [ | pose proof (B_compat_log_cap (pred (length base))); omega ].
       split.
@@ -938,13 +965,13 @@ Section CanonicalizationProofs.
     unfold carry, carry_and_reduce; break_if; try omega.
     clear_obvious; add_set_nth.
     split.
-    + zero_bounds; [ | carry_seq_lower_bound].
+    + pose proof c_pos; zero_bounds; [ | carry_seq_lower_bound].
       apply carry_sequence_carry_full_bounds_same; auto; omega.
     + rewrite Z.add_comm.
       apply Z.add_le_mono.
       - apply carry_bounds_0_upper; carry_length_conditions.
       - etransitivity; [ | replace c with (c * 1) by ring; reflexivity ].
-        apply Z.mul_le_mono_pos_l; try omega.
+        apply Z.mul_le_mono_pos_l; try (pose proof c_pos; omega).
         rewrite Z.shiftr_div_pow2 by auto.
         apply Z.div_le_upper_bound; auto.
         ring_simplify.
@@ -1000,7 +1027,7 @@ Section CanonicalizationProofs.
         eapply Z.le_lt_trans; [ eapply carry_full_2_bounds_0; eauto | ].
         replace (Z.succ 1) with (2 ^ 1) by ring.
         rewrite <-max_bound_log_cap.
-        ring_simplify. omega.
+        ring_simplify. pose proof c_pos; omega.
       - apply carry_full_bounds; carry_length_conditions; carry_seq_lower_bound.
   Qed.
 
@@ -1096,7 +1123,7 @@ Section CanonicalizationProofs.
         pose proof carry_full_2_bounds_0.
         apply Z.le_lt_trans with (m := (max_bound 0 + c) - (1 + max_bound 0));
           [ apply Z.sub_le_mono_r; subst x; apply carry_full_2_bounds_0; auto;
-          ring_simplify | ]; omega.
+          ring_simplify | ]; pose proof c_pos; omega.
     + rewrite carry_unaffected_low by carry_length_conditions.
       assert (0 < S i < length base)%nat by omega.
       intuition; right.
@@ -1122,7 +1149,7 @@ Section CanonicalizationProofs.
     replace (length l) with (pred (length limb_widths)) by (rewrite limb_widths_eq; auto).
     rewrite <- base_length.
     unfold carry, carry_and_reduce; break_if; try omega; intros.
-    add_set_nth.
+    add_set_nth. pose proof c_pos.
     split.
     + zero_bounds.
       - eapply carry_full_2_bounds_same; eauto; omega.
@@ -1495,7 +1522,7 @@ Section CanonicalizationProofs.
     intros.
     rewrite nth_default_modulus_digits.
     break_if; [ | split; auto; omega].
-    break_if; subst; split; auto; try rewrite <- max_bound_log_cap; omega.
+    break_if; subst; split; auto; try rewrite <- max_bound_log_cap; pose proof c_pos; omega.
   Qed.
   Local Hint Resolve carry_done_modulus_digits.
 
@@ -1595,7 +1622,7 @@ Section CanonicalizationProofs.
       f_equal.
       apply land_max_ones_noop with (i := 0%nat).
       rewrite <-max_bound_log_cap.
-      omega.
+      pose proof c_pos; omega.
     + unfold modulus_digits'; fold modulus_digits'.
       rewrite map_app.
       f_equal; [ apply IHi; omega | ].
@@ -2007,7 +2034,7 @@ Section CanonicalizationProofs.
         pose proof (carry_full_3_done us PCB lengths_eq) as cf3_done.
         rewrite carry_done_bounds in cf3_done by simpl_lengths.
         specialize (cf3_done 0%nat).
-        omega.
+        pose proof c_pos; omega.
       - assert ((0 < i <= length base - 1)%nat) as i_range by
           (simpl_lengths; apply lt_min_l in l; omega).
         specialize (high_digits i i_range).

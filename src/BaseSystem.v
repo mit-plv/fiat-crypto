@@ -34,8 +34,17 @@ Section BaseSystem.
   Definition accumulate p acc := fst p * snd p + acc.
   Definition decode' bs u  := fold_right accumulate 0 (combine u bs).
   Definition decode := decode' base.
-  (* Does not carry; z becomes the lowest and only digit. *)
-  Definition encode (z : Z) := z :: nil.
+
+  (* i is current index, counts down *)
+  Fixpoint encode' z max i : digits :=
+    match i with
+    | O => nil
+    | S i' => let b := nth_default max base in 
+       encode' z max i' ++ ((z mod (b i)) / (b i')) :: nil
+    end.
+
+  (* max must be greater than input; this is used to truncate last digit *)
+  Definition encode z max := encode' z max (length base).
 
   Lemma decode'_truncate : forall bs us, decode' bs us = decode' bs (firstn (length bs) us).
   Proof.

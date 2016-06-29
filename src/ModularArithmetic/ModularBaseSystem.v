@@ -19,7 +19,7 @@ Section PseudoMersenneBase.
   Local Notation "u ~= x" := (rep u x).
   Local Hint Unfold rep.
 
-  Definition encode (x : F modulus) := encode x ++ BaseSystem.zeros (length base - 1)%nat.
+  Definition encode (x : F modulus) := encode base x (2 ^ k).
 
   (* Converts from length of extended base to length of base by reduction modulo M.*)
   Definition reduce (us : digits) : digits :=
