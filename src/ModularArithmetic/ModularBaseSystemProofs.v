@@ -39,9 +39,44 @@ Section PseudoMersenneProofs.
     pose proof (NumTheoryUtil.lt_1_p _ prime_modulus); omega.
   Qed. Hint Resolve modulus_pos.
 
+  (* TODO : move to ListUtil *)
+  Lemma nth_default_preserves_properties : forall {A} (P : A -> Prop) l n d,
+    (forall x, In x l -> P x) -> P d -> P (nth_default d l n).
+  Proof.
+    intros; rewrite nth_default_eq.
+    destruct (nth_in_or_default n l d); auto.
+    congruence.
+  Qed.
+
+  Lemma encode'_eq : forall (x : F modulus) i, (i <= length base)%nat ->
+    encode' x i = BaseSystem.encode' base x (2 ^ k) i.
+  Proof.
+    induction i; intros.
+    + rewrite encode'_zero. reflexivity.
+    + rewrite encode'_succ, <-IHi by omega.
+      simpl; do 2 f_equal.
+      rewrite Z.land_ones, Z.shiftr_div_pow2 by apply sum_firstn_limb_widths_nonneg.
+      match goal with H : (S _ <= length base)%nat |- _ =>
+        apply le_lt_or_eq in H; destruct H end.
+      - repeat f_equal; rewrite nth_default_base by omega; reflexivity.
+      - repeat f_equal; try solve [rewrite nth_default_base by omega; reflexivity].
+        rewrite nth_default_out_of_bounds by omega.
+        unfold k.
+        rewrite <-base_length; congruence.
+  Qed.
+
+  Lemma encode_eq : forall x : F modulus,
+    encode x = BaseSystem.encode base x (2 ^ k).
+  Proof.
+    unfold encode, BaseSystem.encode; intros.
+    apply encode'_eq; omega.
+  Qed.
+
   Lemma encode_rep : forall x : F modulus, encode x ~= x.
   Proof.
-    intros. unfold encode, rep.
+    intros.
+    rewrite encode_eq.
+    unfold encode, rep.
     split. {
       unfold BaseSystem.encode.
       auto using encode'_length.

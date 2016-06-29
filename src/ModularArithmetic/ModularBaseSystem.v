@@ -19,7 +19,16 @@ Section PseudoMersenneBase.
   Local Notation "u ~= x" := (rep u x).
   Local Hint Unfold rep.
 
-  Definition encode (x : F modulus) := encode base x (2 ^ k).
+  (* i is current index, counts down *)
+  Fixpoint encode' z i : digits :=
+    match i with
+    | O => nil
+    | S i' => let lw := sum_firstn limb_widths in
+       encode' z i' ++ (Z.shiftr (Z.land z (Z.ones (lw i))) (lw i')) :: nil
+    end.
+
+  (* max must be greater than input; this is used to truncate last digit *)
+  Definition encode (x : F modulus) := encode' x (length base).
 
   (* Converts from length of extended base to length of base by reduction modulo M.*)
   Definition reduce (us : digits) : digits :=
