@@ -14,3 +14,4 @@ appearing in our code.
 | [invalid-curve](http://euklid.org/pdf/ECC_Invalid_Curve.pdf) | NIST ECDH | irrelevant | not onCurve |
 | [donna#8edc799f](https://github.com/agl/curve25519-donna/commit/2647eeba59fb628914c79ce691df794a8edc799f) | F25519 internal to wire |  32-bit pseudo-Mersenne, C | non-canonical |
 | [end-to-end#340](https://github.com/google/end-to-end/issues/340) | Curve25519 library | twisted Edwards coordinates | (0, 1) = ∞ |
+| [CVE-2006-4339](https://web.archive.org/web/20071010042708/http://www.imc.org/ietf-openpgp/mail-archive/msg14307.html) | RSA-PKCS-1 sig. verification | irrelevant | padding check |
