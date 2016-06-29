@@ -711,31 +711,26 @@ Ltac deduplicate_nonfraction_pieces mul :=
            => subst x0 x1
          end.
 
-Ltac set_nonfraction_pieces_on T eq zero opp add sub mul inv div nonzero_tac cont :=
+Ltac set_nonfraction_pieces_on T eq zero opp add sub mul inv div cont :=
   idtac;
   let one_arg_recr :=
       fun op v
       => set_nonfraction_pieces_on
-           v eq zero opp add sub mul inv div nonzero_tac
+           v eq zero opp add sub mul inv div
            ltac:(fun x => cont (op x)) in
   let two_arg_recr :=
       fun op v0 v1
       => set_nonfraction_pieces_on
-           v0 eq zero opp add sub mul inv div nonzero_tac
+           v0 eq zero opp add sub mul inv div
            ltac:(fun x
                  =>
                    set_nonfraction_pieces_on
-                     v1 eq zero opp add sub mul inv div nonzero_tac
+                     v1 eq zero opp add sub mul inv div
                      ltac:(fun y => cont (op x y))) in
   lazymatch T with
   | eq ?x ?y => two_arg_recr eq x y
   | appcontext[div]
     => lazymatch T with
-       | div ?numerator ?denominator
-         => cut (not (eq denominator zero));
-            [ intro;
-              two_arg_recr div numerator denominator
-            | nonzero_tac ]
        | opp ?x => one_arg_recr opp x
        | inv ?x => one_arg_recr inv x
        | add ?x ?y => two_arg_recr add x y
@@ -748,34 +743,32 @@ Ltac set_nonfraction_pieces_on T eq zero opp add sub mul inv div nonzero_tac con
          pose T as x;
          cont x
   end.
-Ltac set_nonfraction_pieces_in_by H nonzero_tac :=
+Ltac set_nonfraction_pieces_in H :=
   idtac;
   let fld := guess_field in
   lazymatch type of fld with
   | @field ?T ?eq ?zero ?one ?opp ?add ?sub ?mul ?inv ?div
     => let T := type of H in
        set_nonfraction_pieces_on
-         T eq zero opp add sub mul inv div nonzero_tac
+         T eq zero opp add sub mul inv div
          ltac:(fun T' => change T' in H);
        deduplicate_nonfraction_pieces mul
   end.
-Ltac set_nonfraction_pieces_by nonzero_tac :=
+Ltac set_nonfraction_pieces :=
   idtac;
   let fld := guess_field in
   lazymatch type of fld with
   | @field ?T ?eq ?zero ?one ?opp ?add ?sub ?mul ?inv ?div
     => let T := get_goal in
        set_nonfraction_pieces_on
-         T eq zero opp add sub mul inv div nonzero_tac
+         T eq zero opp add sub mul inv div
          ltac:(fun T' => change T');
        deduplicate_nonfraction_pieces mul
   end.
-Ltac default_set_nonfraction_nonzero_tac :=
-  try (intro; field_nonzero_mul_split; tauto).
-Ltac set_nonfraction_pieces_in H :=
-  set_nonfraction_pieces_in_by H default_set_nonfraction_nonzero_tac.
-Ltac set_nonfraction_pieces :=
-  set_nonfraction_pieces_by default_set_nonfraction_nonzero_tac.
+Ltac default_conservative_common_denominator_nonzero_tac :=
+  repeat apply conj;
+  try first [ assumption
+            | intro; field_nonzero_mul_split; tauto ].
 Ltac conservative_common_denominator_in H :=
   idtac;
   let fld := guess_field in
@@ -786,10 +779,9 @@ Ltac conservative_common_denominator_in H :=
   lazymatch type of H with
   | appcontext[div]
     => set_nonfraction_pieces_in H;
-       [ common_denominator_in H;
-         [
-         | repeat apply conj; try assumption.. ]
-       | .. ];
+       common_denominator_in H;
+       [
+       | default_conservative_common_denominator_nonzero_tac.. ];
        repeat match goal with H := _ |- _ => subst H end
   | ?T => fail 0 "no division in" H ":" T
   end.
@@ -803,10 +795,9 @@ Ltac conservative_common_denominator :=
   lazymatch goal with
   | |- appcontext[div]
     => set_nonfraction_pieces;
-       [ common_denominator;
-         [
-         | repeat apply conj; try assumption.. ]
-       | .. ];
+       common_denominator;
+       [
+       | default_conservative_common_denominator_nonzero_tac.. ];
        repeat match goal with H := _ |- _ => subst H end
   | |- ?G
     => fail 0 "no division in goal" G
