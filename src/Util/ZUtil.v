@@ -65,6 +65,12 @@ Proof.
   rewrite Z2Nat.inj_mul; auto using Z.pow_nonneg.
 Qed.
 
+Lemma pow_Zpow : forall a n : nat, Z.of_nat (a ^ n) = Z.of_nat a ^ Z.of_nat n.
+Proof with auto using Zle_0_nat, Z.pow_nonneg.
+  intros; apply Z2Nat.inj...
+  rewrite <- pow_Z2N_Zpow, !Nat2Z.id...
+Qed.
+
 Lemma mod_exp_0 : forall a x m, x > 0 -> m > 1 -> a mod m = 0 ->
   a ^ x mod m = 0.
 Proof.
