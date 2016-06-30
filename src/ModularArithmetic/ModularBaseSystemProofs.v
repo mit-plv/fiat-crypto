@@ -316,6 +316,187 @@ Section PseudoMersenneProofs.
     apply FieldToZ_ZToField.
   Qed.
 
+  Lemma log_cap_nonneg : forall i, 0 <= log_cap i.
+  Proof.
+    unfold log_cap, nth_default; intros.
+    case_eq (nth_error limb_widths i); intros; try omega.
+    apply limb_widths_nonneg.
+    eapply nth_error_value_In; eauto.
+  Qed. Local Hint Resolve log_cap_nonneg.
+
+  Definition carry_done us := forall i, (i < length base)%nat ->
+    0 <= nth_default 0 us i /\ Z.shiftr (nth_default 0 us i) (log_cap i) = 0.
+
+  Lemma carry_done_bounds : forall us, (length us = length base) ->
+    (carry_done us <-> forall i, 0 <= nth_default 0 us i < 2 ^ log_cap i).
+  Proof.
+    intros ? ?; unfold carry_done; split; [ intros Hcarry_done i | intros Hbounds i i_lt ].
+    + destruct (lt_dec i (length base)) as [i_lt | i_nlt].
+      - specialize (Hcarry_done i i_lt).
+        split; [ intuition | ].
+        destruct Hcarry_done as [Hnth_nonneg Hshiftr_0].
+        apply Z.shiftr_eq_0_iff in Hshiftr_0.
+        destruct Hshiftr_0 as [nth_0 | []]; [ rewrite nth_0; zero_bounds | ].
+        apply Z.log2_lt_pow2; auto.
+      - rewrite nth_default_out_of_bounds by omega.
+        split; zero_bounds.
+    + specialize (Hbounds i).
+      split; [ intuition | ].
+      destruct Hbounds as [nth_nonneg nth_lt_pow2].
+      apply Z.shiftr_eq_0_iff.
+      apply Z.le_lteq in nth_nonneg; destruct nth_nonneg; try solve [left; auto].
+      right; split; auto.
+      apply Z.log2_lt_pow2; auto.
+  Qed.
+
+  Fixpoint decode_bitwise' us i acc := 
+    match i with
+    | O => acc
+    | S i' => decode_bitwise' us i' (Z.lor (nth_default 0 us i') (Z.shiftl acc (log_cap i')))
+    end.
+
+  Definition decode_bitwise us := decode_bitwise' us (length us) 0.
+ 
+
+  (* TODO : move to ZUtil *)
+  Lemma Z_lor_shiftl : forall a b n, 0 <= n -> 0 <= a < 2 ^ n ->
+    Z.lor a (Z.shiftl b n) = a + (Z.shiftl b n).
+  Proof.
+    intros.
+    apply Z.bits_inj'; intros t ?.
+    rewrite Z.lor_spec, Z.shiftl_spec by assumption.
+    destruct (Z_lt_dec t n).
+    + rewrite Z_testbit_add_shiftl_low by omega.
+      rewrite Z.testbit_neg_r with (n := t - n) by omega.
+      apply Bool.orb_false_r.
+    + rewrite Z_testbit_add_shiftl_high by omega.
+      replace (Z.testbit a t) with false; [ apply Bool.orb_false_l | ].
+      symmetry.
+      apply Z.testbit_false; try omega.
+      rewrite Z.div_small; try reflexivity.
+      split; try eapply Z.lt_le_trans with (m := 2 ^ n); try omega.
+      apply Z.pow_le_mono_r; omega.
+  Qed.
+
+  Lemma decode_bitwise'_succ : forall us i acc, carry_done us -> length us = length base ->
+    decode_bitwise' us (S i) acc = decode_bitwise' us i (acc * (2 ^ log_cap i) + nth_default 0 us i).
+  Proof.
+    intros.
+    simpl; f_equal.
+    rewrite Z_lor_shiftl by (auto; rewrite carry_done_bounds in H by assumption;
+      specialize (H i); assumption).
+    rewrite Z.shiftl_mul_pow2 by auto.
+    ring.
+  Qed.
+
+  (* c is a counter, allows i to count up rather than down *)
+  Fixpoint partial_decode us i c :=
+    match c with
+    | O => 0
+    | S c' => (partial_decode us (S i) c' *  2 ^ log_cap i) + nth_default 0 us i
+    end.
+
+  Lemma base_shift_log_cap : forall us, BaseSystem.decode' (skipn 1 base) us =
+                                  BaseSystem.decode' base us * 2 ^ log_cap 0.
+  Admitted.
+
+  Lemma decode_cons_log_cap : forall us u0,
+    BaseSystem.decode' base (u0 :: us) = u0  + BaseSystem.decode' base us * 2 ^ log_cap 0.
+  Proof.
+    intros.
+    rewrite decode_cons by apply bv.
+    f_equal.
+    replace (0 :: us) with (BaseSystem.zeros 1%nat ++ us) by reflexivity.
+    rewrite decode'_splice, zeros_rep, length_zeros.
+    apply base_shift_log_cap.
+  Qed.
+
+  Lemma partial_decode_counter_over : forall c us i, (c >= length us - i)%nat ->
+    partial_decode us i c = partial_decode us i (length us - i).
+  Proof.
+    induction c; intros.
+    + f_equal. omega.
+    + simpl. rewrite IHc by omega.
+      case_eq (length us - i)%nat; intros.
+      - rewrite nth_default_out_of_bounds by omega.
+        replace (length us - S i)%nat with 0%nat by omega.
+        reflexivity.
+      - simpl. repeat f_equal. omega.
+  Qed.
+
+  Lemma partial_decode_counter_subst : forall c c' us i,
+    (c >= length us - i)%nat -> (c' >= length us - i)%nat ->
+    partial_decode us i c = partial_decode us i c'.
+  Proof.
+    intros.
+    rewrite partial_decode_counter_over by assumption.
+    symmetry.
+    auto using partial_decode_counter_over.
+  Qed.
+
+  Lemma partial_decode_succ : forall c us i, (c >= length us - i)%nat ->
+    partial_decode us (S i) c * 2 ^ log_cap i + nth_default 0 us i =
+    partial_decode us i c.
+  Proof.
+    intros.
+    rewrite partial_decode_counter_subst with (i := i) (c' := S c) by omega.
+    reflexivity.
+  Qed.
+
+  Lemma partial_decode_intermediate : forall c us i, length us = length base ->
+    (c >= length us - i)%nat ->
+    partial_decode us i c = BaseSystem.decode' (base_from_limb_widths (skipn i limb_widths)) (skipn i us).
+  Proof.
+    induction c; intros.
+    + simpl. rewrite skipn_all by (rewrite <-base_length; omega).
+      symmetry; apply decode_base_nil.
+    + simpl.
+      destruct (lt_dec i (length base)).
+      - rewrite IHc by omega.
+        do 2 (rewrite skipn_nth_default with (n := i) (d := 0) by (rewrite <-?base_length; omega)).
+        unfold base_from_limb_widths; fold base_from_limb_widths.
+        rewrite peel_decode.
+        fold (BaseSystem.mul_each (two_p (nth_default 0 limb_widths i))).
+        rewrite <-mul_each_base, mul_each_rep, two_p_correct.
+        ring_simplify.
+        f_equal; ring.
+     - rewrite <- IHc by omega.
+       apply partial_decode_succ; omega.
+  Qed.
+
+
+  Lemma decode_bitwise'_succ_partial_decode : forall us i c,
+    carry_done us -> length us = length base ->
+    decode_bitwise' us (S i) (partial_decode us (S i) c) =
+    decode_bitwise' us i (partial_decode us i (S c)).
+  Proof.
+    intros.
+    rewrite decode_bitwise'_succ by auto.
+    f_equal.
+  Qed.
+
+  Lemma decode_bitwise'_spec : forall us i, (i <= length base)%nat ->
+    carry_done us -> length us = length base ->
+    decode_bitwise' us i (partial_decode us i (length us - i)) =
+    BaseSystem.decode base us.
+  Proof.
+    induction i; intros.
+    + rewrite partial_decode_intermediate by auto.
+      reflexivity.
+    + rewrite decode_bitwise'_succ_partial_decode by auto.
+      replace (S (length us - S i)) with (length us - i)%nat by omega.
+      apply IHi; auto; omega.
+  Qed.
+
+  Lemma decode_bitwise_spec : forall us, carry_done us -> length us = length base ->
+    decode_bitwise us = BaseSystem.decode base us.
+  Proof.
+    unfold decode, decode_bitwise; intros.
+    replace 0 with (partial_decode us (length us) (length us - length us)) by
+      (rewrite Nat.sub_diag; reflexivity).
+    apply decode_bitwise'_spec; auto; omega.
+  Qed.
+
 End PseudoMersenneProofs.
 
 Section CarryProofs.
@@ -328,14 +509,6 @@ Section CarryProofs.
     pose proof base_length_nonzero; omega.
   Qed.
   Hint Resolve base_length_lt_pred.
-
-  Lemma log_cap_nonneg : forall i, 0 <= log_cap i.
-  Proof.
-    unfold log_cap, nth_default; intros.
-    case_eq (nth_error limb_widths i); intros; try omega.
-    apply limb_widths_nonneg.
-    eapply nth_error_value_In; eauto.
-  Qed.
 
   Lemma nth_default_base_succ : forall i, (S i < length base)%nat ->
     nth_default 0 base (S i) = 2 ^ log_cap i * nth_default 0 base i.
@@ -641,9 +814,6 @@ Section CanonicalizationProofs.
   Qed.
   Local Hint Resolve pre_carry_bounds_nonzero.
 
-  Definition carry_done us := forall i, (i < length base)%nat ->
-    0 <= nth_default 0 us i /\ Z.shiftr (nth_default 0 us i) (log_cap i) = 0.
-
   (* END defs *)
 
   (* BEGIN proofs about first carry loop *)
@@ -732,23 +902,6 @@ Section CanonicalizationProofs.
     break_if; (add_set_nth;
       [ rewrite max_bound_shiftr_eq_0 by omega; ring
       | subst; apply pow2_mod_log_cap_small; assumption ]).
-  Qed.
-
-  Lemma carry_done_bounds : forall us, (length us = length base) ->
-    (carry_done us <-> forall i, 0 <= nth_default 0 us i < 2 ^ log_cap i).
-  Proof.
-    intros ? ?; unfold carry_done; split; [ intros Hcarry_done i | intros Hbounds i i_lt ].
-    + destruct (lt_dec i (length base)) as [i_lt | i_nlt].
-      - specialize (Hcarry_done i i_lt).
-        split; [ intuition | ].
-        rewrite <- max_bound_log_cap.
-        apply Z.lt_succ_r.
-        apply shiftr_eq_0_max_bound; intuition.
-      - rewrite nth_default_out_of_bounds; try split; try omega; auto.
-    + specialize (Hbounds i).
-      split; intuition.
-      apply max_bound_shiftr_eq_0; auto.
-      rewrite <-max_bound_log_cap in *; omega.
   Qed.
 
   Lemma carry_carry_done_done : forall i us,

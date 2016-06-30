@@ -179,9 +179,10 @@ Proof.
     - rewrite nth_default_cons_S.
       erewrite IHus; eauto using no_overflow_tail.
       remember (i * limb_width)%nat as k.
-      rewrite Z_shiftr_add_land by omega.
-      replace (limb_width + k - limb_width)%nat with k by omega.
-      reflexivity.
+      rewrite Z_shiftr_add_shiftl_high; rewrite ?Nat2Z.inj_add;
+        repeat f_equal; try omega.
+      rewrite Z.land_ones by apply Nat2Z.is_nonneg.
+      apply Z.mod_pos_bound. zero_bounds.
 Qed.
 
 Lemma unfold_bits_testbit : forall limb_width us n, (0 < limb_width)%nat ->
