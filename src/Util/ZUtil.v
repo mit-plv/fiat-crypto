@@ -480,3 +480,13 @@ Proof.
   induction l; intros; try reflexivity.
   etransitivity; [ apply IHl | apply Z.le_max_r ].
 Qed.
+
+Ltac Zltb_to_Zlt :=
+  repeat match goal with
+         | [ H : (?x <? ?y) = ?b |- _ ]
+           => let H' := fresh in
+              rename H into H';
+              pose proof (Zlt_cases x y) as H;
+              rewrite H' in H;
+              clear H'
+         end.
