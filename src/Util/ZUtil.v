@@ -522,3 +522,6 @@ Proof.
                  | [ x : Z |- _ ] => destruct x
                  end ].
 Qed.
+
+Lemma two_times_x_minus_x x : 2 * x - x = x.
+Proof. lia. Qed.
