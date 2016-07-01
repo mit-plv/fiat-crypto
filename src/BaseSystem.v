@@ -136,7 +136,6 @@ Section PolynomialBaseCoefs.
       with (Z.pos b1); auto.
     rewrite Z_div_mult_full; auto.
     apply Z.pow_nonzero; intuition.
-    pose proof (Zgt_pos_0 b1); omega.
   Qed.
 
   Lemma poly_base_good:
