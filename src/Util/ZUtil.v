@@ -10,15 +10,32 @@ Hint Extern 1 => lra : lra.
 Hint Extern 1 => nra : nra.
 Hint Extern 1 => nia : nia.
 Hint Extern 1 => omega : omega.
-Hint Resolve Z.log2_nonneg : zarith.
-Hint Resolve Z.pow_neg_r Z.pow_0_l : zarith.
+Hint Resolve Z.log2_nonneg Z.div_small Z.mod_small Z.pow_neg_r Z.pow_0_l : zarith.
+Hint Resolve (fun a b H => proj1 (Z.mod_pos_bound a b H)) (fun a b H => proj2 (Z.mod_pos_bound a b H)) : zarith.
 
 (** Only hints that are always safe to apply (i.e., reversible), and
     which can reasonably be said to "simplify" the goal, should go in
     this database. *)
 Create HintDb zsimplify discriminated.
-Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r : zsimplify.
-Hint Rewrite Z.div_mul Z.div_1_l using lia : zsimplify.
+Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r : zsimplify.
+Hint Rewrite Z.div_mul Z.div_1_l Z.div_same Z.mod_same Z.div_small Z.mod_small using lia : zsimplify.
+
+(** "push" means transform [-f x] to [f (-x)]; "pull" means go the other way *)
+Hint Rewrite Z.div_opp_l_nz Z.div_opp_l_z using lia : pull_Zopp.
+Hint Rewrite Z.mul_opp_l : pull_Zopp.
+Hint Rewrite <- Z.opp_add_distr : pull_Zopp.
+Hint Rewrite <- Z.div_opp_l_nz Z.div_opp_l_z using lia : push_Zopp.
+Hint Rewrite <- Z.mul_opp_l : push_Zopp.
+Hint Rewrite Z.opp_add_distr : push_Zopp.
+
+(** For the occasional lemma that can remove the use of [Z.div] *)
+Create HintDb zstrip_div.
+Hint Rewrite Z.div_small_iff using lia : zstrip_div.
+
+(** It's not clear that [mod] is much easier for [lia] than [Z.div],
+    so we separate out the transformations between [mod] and [div].
+    We'll put, e.g., [mul_div_eq] into it below. *)
+Create HintDb zstrip_div.
 
 Lemma gt_lt_symmetry: forall n m, n > m <-> m < n.
 Proof.
@@ -183,6 +200,16 @@ Proof.
   rewrite (Z_div_mod_eq a m) at 2 by auto.
   ring.
 Qed.
+
+Lemma mul_div_eq' : (forall a m, m > 0 -> (a / m) * m = (a - a mod m))%Z.
+Proof.
+  intros.
+  rewrite (Z_div_mod_eq a m) at 2 by auto.
+  ring.
+Qed.
+
+Hint Rewrite mul_div_eq mul_div_eq' using lia : zdiv_to_mod.
+Hint Rewrite <- mul_div_eq' using lia : zmod_to_div.
 
 Ltac prime_bound := match goal with
 | [ H : prime ?p |- _ ] => pose proof (prime_ge_2 p H); try omega
@@ -731,3 +758,79 @@ Proof.
 Qed.
 
 Hint Rewrite Zdiv_x_y_x using lia : zsimplify.
+
+Lemma Zmod_opp_l_z_iff a b (H : b <> 0) : a mod b = 0 <-> (-a) mod b = 0.
+Proof.
+  split; intro H'; apply Z.mod_opp_l_z in H'; rewrite ?Z.opp_involutive in H'; assumption.
+Qed.
+
+Lemma Zopp_eq_0_iff a : -a = 0 <-> a = 0.
+Proof. lia. Qed.
+
+Hint Rewrite <- Zmod_opp_l_z_iff using lia : zsimplify.
+Hint Rewrite Zopp_eq_0_iff : zsimplify.
+
+Lemma Zsub_pos_bound a b X : 0 <= a < X -> 0 <= b < X -> -X < a - b < X.
+Proof. lia. Qed.
+
+Lemma Zdiv_opp_l_complete a b (Hb : b <> 0) : -a/b = -(a/b) - (if Z_zerop (a mod b) then 0 else 1).
+Proof.
+  destruct (Z_zerop (a mod b)); autorewrite with zsimplify push_Zopp; reflexivity.
+Qed.
+
+Lemma Zdiv_opp_l_complete' a b (Hb : b <> 0) : -(a/b) = -a/b + (if Z_zerop (a mod b) then 0 else 1).
+Proof.
+  destruct (Z_zerop (a mod b)); autorewrite with zsimplify pull_Zopp; lia.
+Qed.
+
+Hint Rewrite Zdiv_opp_l_complete using lia : pull_Zopp.
+Hint Rewrite Zdiv_opp_l_complete' using lia : push_Zopp.
+
+Lemma Zdiv_opp a : a <> 0 -> -a / a = -1.
+Proof.
+  intros; autorewrite with pull_Zopp zsimplify; lia.
+Qed.
+
+Hint Rewrite Zdiv_opp using lia : zsimplify.
+
+Lemma Zdiv_sub_1_0 x : x > 0 -> (x - 1) / x = 0.
+Proof. auto with zarith lia. Qed.
+
+Hint Rewrite Zdiv_sub_1_0 using lia : zsimplify.
+
+Lemma Zsub_pos_bound_div a b X : 0 <= a < X -> 0 <= b < X -> -1 <= (a - b) / X <= 0.
+Proof.
+  intros H0 H1; pose proof (Zsub_pos_bound a b X H0 H1).
+  assert (Hn : -X <= a - b) by lia.
+  assert (Hp : a - b <= X - 1) by lia.
+  split; etransitivity; [ | apply Z_div_le, Hn; lia | apply Z_div_le, Hp; lia | ];
+    autorewrite with zsimplify; reflexivity.
+Qed.
+
+Hint Resolve (fun a b X H0 H1 => proj1 (Zsub_pos_bound_div a b X H0 H1))
+     (fun a b X H0 H1 => proj1 (Zsub_pos_bound_div a b X H0 H1)) : zarith.
+
+Lemma Zsub_pos_bound_div_eq a b X : 0 <= a < X -> 0 <= b < X -> (a - b) / X = if a <? b then -1 else 0.
+Proof.
+  intros H0 H1; pose proof (Zsub_pos_bound_div a b X H0 H1).
+  destruct (a <? b) eqn:?; Zltb_to_Zlt.
+  { cut ((a - b) / X <> 0); [ lia | ].
+    autorewrite with zstrip_div; auto with zarith lia. }
+  { autorewrite with zstrip_div; auto with zarith lia. }
+Qed.
+
+Lemma Zadd_opp_pos_bound_div_eq a b X : 0 <= a < X -> 0 <= b < X -> (-b + a) / X = if a <? b then -1 else 0.
+Proof.
+  rewrite !(Z.add_comm (-_)), !Z.add_opp_r.
+  apply Zsub_pos_bound_div_eq.
+Qed.
+
+Hint Rewrite Zsub_pos_bound_div_eq Zadd_opp_pos_bound_div_eq using lia : zstrip_div.
+
+Lemma Zdiv_small_sym a b : 0 <= a < b -> 0 = a / b.
+Proof. intros; symmetry; apply Z.div_small; assumption. Qed.
+
+Lemma Zmod_small_sym a b : 0 <= a < b -> a = a mod b.
+Proof. intros; symmetry; apply Z.mod_small; assumption. Qed.
+
+Hint Resolve Zdiv_small_sym Zmod_small_sym : zarith.
