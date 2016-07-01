@@ -1,5 +1,5 @@
 Require Import Coq.ZArith.Zpower Coq.ZArith.Znumtheory Coq.ZArith.ZArith Coq.ZArith.Zdiv.
-Require Import Coq.omega.Omega Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
+Require Import Coq.omega.Omega Coq.micromega.Psatz Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
 Require Import Crypto.Util.NatUtil.
 Require Import Coq.Lists.List.
 Import Nat.
@@ -490,3 +490,35 @@ Ltac Zltb_to_Zlt :=
               rewrite H' in H;
               clear H'
          end.
+
+Ltac Zcompare_to_sgn :=
+  repeat match goal with
+         | [ H : _ |- _ ] => progress rewrite <- ?Z.sgn_neg_iff, <- ?Z.sgn_pos_iff, <- ?Z.sgn_null_iff in H
+         | _ => progress rewrite <- ?Z.sgn_neg_iff, <- ?Z.sgn_pos_iff, <- ?Z.sgn_null_iff
+         end.
+
+Local Ltac replace_to_const c :=
+  repeat match goal with
+         | [ H : ?x = ?x |- _ ] => clear H
+         | [ H : ?x = c, H' : context[?x] |- _ ] => rewrite H in H'
+         | [ H : c = ?x, H' : context[?x] |- _ ] => rewrite <- H in H'
+         | [ H : ?x = c |- context[?x] ] => rewrite H
+         | [ H : c = ?x |- context[?x] ] => rewrite <- H
+         end.
+
+Lemma Zlt_div_0 n m : n / m < 0 <-> ((n < 0 < m \/ m < 0 < n) /\ 0 < -(n / m)).
+Proof.
+  Zcompare_to_sgn; rewrite Z.sgn_opp; simpl.
+  pose proof (Zdiv_sgn n m) as H.
+  pose proof (Z.sgn_spec (n / m)) as H'.
+  repeat first [ progress intuition
+               | progress simpl in *
+               | congruence
+               | lia
+               | progress replace_to_const (-1)
+               | progress replace_to_const 0
+               | progress replace_to_const 1
+               | match goal with
+                 | [ x : Z |- _ ] => destruct x
+                 end ].
+Qed.
