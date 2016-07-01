@@ -545,6 +545,8 @@ Ltac Zsplit_sums_step :=
   | [ |- _ - _ <= _ ]
     => etransitivity; [ eapply Z.sub_le_mono | ]
   end.
+Ltac Zsplit_sums :=
+  try (Zsplit_sums_step; [ Zsplit_sums | ]).
 Ltac Zpre_reorder_fractions_step :=
   match goal with
   | [ |- context[?x / ?y * ?z] ]
