@@ -13,6 +13,13 @@ Hint Extern 1 => omega : omega.
 Hint Resolve Z.log2_nonneg : zarith.
 Hint Resolve Z.pow_neg_r Z.pow_0_l : zarith.
 
+(** Only hints that are always safe to apply (i.e., reversible), and
+    which can reasonably be said to "simplify" the goal, should go in
+    this database. *)
+Create HintDb zsimplify discriminated.
+Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r : zsimplify.
+Hint Rewrite Z.div_mul Z.div_1_l using lia : zsimplify.
+
 Lemma gt_lt_symmetry: forall n m, n > m <-> m < n.
 Proof.
   intros; split; omega.
@@ -57,6 +64,8 @@ Qed.
 Lemma Z_div_mul' : forall a b : Z, b <> 0 -> (b * a) / b = a.
   intros. rewrite Z.mul_comm. apply Z.div_mul; auto.
 Qed.
+
+Hint Rewrite Z_div_mul' using lia : zsimplify.
 
 Lemma Zgt0_neq0 : forall x, x > 0 -> x <> 0.
   intuition.
@@ -714,3 +723,11 @@ Lemma Zle_lt_to_log2 x y z : 0 <= z -> 0 < y -> 2^x <= y < 2^z -> x <= Z.log2 y 
 Proof.
   destruct (Z_le_gt_dec 0 x); auto with concl_log2 lia.
 Qed.
+
+Lemma Zdiv_x_y_x x y : 0 < x -> 0 < y -> x / y / x = 1 / y.
+Proof.
+  intros; rewrite Z.div_div, (Z.mul_comm y x), <- Z.div_div, Z.div_same by lia.
+  reflexivity.
+Qed.
+
+Hint Rewrite Zdiv_x_y_x using lia : zsimplify.
