@@ -229,6 +229,15 @@ Ltac destruct_sig_matcher HT :=
 Ltac destruct_sig := destruct_all_matches destruct_sig_matcher.
 Ltac destruct_sig' := destruct_all_matches' destruct_sig_matcher.
 
+(** try to specialize all non-dependent hypotheses using [tac] *)
+Ltac specialize_by' tac :=
+  idtac;
+  match goal with
+  | [ H : ?A -> ?B |- _ ] => let H' := fresh in assert (H' : A) by tac; specialize (H H'); clear H'
+  end.
+
+Ltac specialize_by tac := repeat specialize_by' tac.
+
 (** If [tac_in H] operates in [H] and leaves side-conditions before
     the original goal, then
     [side_conditions_before_to_side_conditions_after tac_in H] does
