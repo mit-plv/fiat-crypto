@@ -526,6 +526,40 @@ Qed.
 Lemma two_times_x_minus_x x : 2 * x - x = x.
 Proof. lia. Qed.
 
+Lemma Zmul_div_le x y z
+      (Hx : 0 <= x) (Hy : 0 <= y) (Hz : 0 < z)
+      (Hyz : y <= z)
+  : x * y / z <= x.
+Proof.
+  transitivity (x * z / z); [ | rewrite Z.div_mul by lia; lia ].
+  apply Z_div_le; nia.
+Qed.
+
+Lemma Zdiv_mul_diff a b c
+      (Ha : 0 <= a) (Hb : 0 < b) (Hc : 0 <= c)
+  : c * a / b - c * (a / b) <= c.
+Proof.
+  pose proof (Z.mod_pos_bound a b).
+  etransitivity; [ | apply (Zmul_div_le c (a mod b) b); lia ].
+  rewrite (Z_div_mod_eq a b) at 1 by lia.
+  rewrite Z.mul_add_distr_l.
+  replace (c * (b * (a / b))) with ((c * (a / b)) * b) by lia.
+  rewrite Z.div_add_l by lia.
+  lia.
+Qed.
+
+Lemma Zdiv_mul_le_le a b c
+  :  0 <= a -> 0 < b -> 0 <= c -> c * (a / b) <= c * a / b <= c * (a / b) + c.
+Proof.
+  pose proof (Zdiv_mul_diff a b c); split; try apply Z.div_mul_le; lia.
+Qed.
+
+Lemma Zdiv_mul_le_le_offset a b c
+  : 0 <= a -> 0 < b -> 0 <= c -> c * a / b - c <= c * (a / b).
+Proof.
+  pose proof (Zdiv_mul_le_le a b c); lia.
+Qed.
+
 (** * [Zsimplify_fractions_le] *)
 (** The culmination of this series of tactics,
     [Zsimplify_fractions_le], will use the fact that [a * (b / c) <=
