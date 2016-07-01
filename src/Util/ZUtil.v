@@ -5,6 +5,14 @@ Require Import Coq.Lists.List.
 Import Nat.
 Local Open Scope Z.
 
+Hint Extern 1 => lia : lia.
+Hint Extern 1 => lra : lra.
+Hint Extern 1 => nra : nra.
+Hint Extern 1 => nia : nia.
+Hint Extern 1 => omega : omega.
+Hint Resolve Z.log2_nonneg : zarith.
+Hint Resolve Z.pow_neg_r Z.pow_0_l : zarith.
+
 Lemma gt_lt_symmetry: forall n m, n > m <-> m < n.
 Proof.
   intros; split; omega.
@@ -411,6 +419,8 @@ Ltac zero_bounds' :=
 
 Ltac zero_bounds := try omega; try prime_bound; zero_bounds'.
 
+Hint Extern 1 => progress zero_bounds : zero_bounds.
+
 Lemma Z_ones_nonneg : forall i, (0 <= i) -> 0 <= Z.ones i.
 Proof.
   apply natlike_ind.
@@ -681,3 +691,26 @@ Ltac Zsimplify_fractions_le :=
   Zpre_reorder_fractions;
   [ repeat Zsplit_comparison; Zsplit_comparison_fin; zero_bounds..
   | Zsimplify_fractions ].
+
+Lemma Zlog2_nonneg' n a : n <= 0 -> n <= Z.log2 a.
+Proof.
+  intros; transitivity 0; auto with zarith.
+Qed.
+
+Hint Resolve Zlog2_nonneg' : zarith.
+
+(** We create separate databases for two directions of transformations
+    involving [Z.log2]; combining them leads to loops. *)
+(* for hints that take in hypotheses of type [log2 _], and spit out conclusions of type [_ ^ _] *)
+Create HintDb hyp_log2.
+
+(* for hints that take in hypotheses of type [_ ^ _], and spit out conclusions of type [log2 _] *)
+Create HintDb concl_log2.
+
+Hint Resolve (fun a b H => proj1 (Z.log2_lt_pow2 a b H)) (fun a b H => proj1 (Z.log2_le_pow2 a b H)) : concl_log2.
+Hint Resolve (fun a b H => proj2 (Z.log2_lt_pow2 a b H)) (fun a b H => proj2 (Z.log2_le_pow2 a b H)) : hyp_log2.
+
+Lemma Zle_lt_to_log2 x y z : 0 <= z -> 0 < y -> 2^x <= y < 2^z -> x <= Z.log2 y < z.
+Proof.
+  destruct (Z_le_gt_dec 0 x); auto with concl_log2 lia.
+Qed.
