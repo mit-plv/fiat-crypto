@@ -56,7 +56,6 @@ Section barrett.
     Context (n_pos : 0 < n) (* or just [0 <= n], since we have [n <> 0] above *)
             (a_nonneg : 0 <= a).
 
-
     Lemma k_nonnegative : 0 <= k.
     Proof.
       destruct (Z_lt_le_dec k 0); try assumption.
