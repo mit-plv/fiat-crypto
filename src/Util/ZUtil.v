@@ -812,7 +812,7 @@ Proof.
   assert (Hn : -X <= a - b) by lia.
   assert (Hp : a - b <= X - 1) by lia.
   split; etransitivity; [ | apply Z_div_le, Hn; lia | apply Z_div_le, Hp; lia | ];
-    autorewrite with zsimplify; reflexivity.
+    instantiate; autorewrite with zsimplify; try reflexivity.
 Qed.
 
 Hint Resolve (fun a b X H0 H1 => proj1 (Zsub_pos_bound_div a b X H0 H1))
