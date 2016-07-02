@@ -26,9 +26,10 @@ Section barrett.
     (** where [⌊ x ⌋] denotes the floor function. The result is exact,
         as long as [m] is computed with sufficient accuracy. *)
 
-    Local Notation "⌊am⌋" := (a / n) (only parsing). (* Coq automatically takes the floor *)
+    (* [/] is [Z.div], which means truncated division *)
+    Local Notation "⌊am⌋" := (a / n) (only parsing).
 
-    Theorem barrett_reduction_spec_correct
+    Theorem naive_barrett_reduction_correct
       : a mod n = a - ⌊am⌋ * n.
     Proof.
       apply Zmod_eq_full; assumption.
@@ -43,11 +44,17 @@ Section barrett.
         fixed-point number [n 2⁻ᵏ]. We precompute [m] such that [m =
         ⌊4ᵏ / n⌋]. Then [m] represents the fixed-point number
         [m 2⁻ᵏ ≈ (n 2⁻ᵏ)⁻¹]. *)
+    (** N.B. We don't need [k] to be the smallest such integer. *)
     Context (k : Z)
-            (k_good : 2 ^ (k-1) <= n < 2 ^ k)
+            (k_good : n < 2 ^ k)
             (m : Z)
-            (m_good : m = 4^k / n). (* Coq automatically takes the floor *)
-    Context (a_nonneg : 0 <= a). (* Wikipedia neglects to mention this condition. *)
+            (m_good : m = 4^k / n). (* [/] is [Z.div], which is truncated *)
+    (** Wikipedia neglects to mention non-negativity, but we need it.
+        It might be possible to do with a relaxed assumption, such as
+        the sign of [a] and the sign of [n] being the same; but I
+        figured it wasn't worth it. *)
+    Context (n_pos : 0 < n) (* or just [0 <= n], since we have [n <> 0] above *)
+            (a_nonneg : 0 <= a).
 
 
     Lemma k_nonnegative : 0 <= k.
@@ -56,13 +63,11 @@ Section barrett.
       rewrite !Z.pow_neg_r in * by lia; lia.
     Qed.
 
-    (** Let *)
-    (** - [q = ⌊ma / 4ᵏ⌋] and *)
-    (** - [r = a - q n]. *)
+    (** Now *)
     Let q := (m * a) / 4^k.
     Let r := a - q * n.
-    (** Because of the floor function, [q] is an integer and [r ≡ a
-        mod n]. *)
+    (** Because of the floor function (in Coq, because [/] means
+        truncated division), [q] is an integer and [r ≡ a mod n]. *)
     Theorem barrett_reduction_equivalent
       : r mod n = a mod n.
     Proof.
@@ -99,15 +104,7 @@ Section barrett.
       break_match; auto with lia.
     Qed.
 
-    (** In that case *)
-    (**
-<<
-          ⎧
-          ⎪ r       if r < n
-a mod n = ⎨
-          ⎪ r - n   otherwise
-          ⎩
->> *)
+    (** In that case, we have *)
     Theorem barrett_reduction_small
       : a mod n = if r <? n
                   then r
