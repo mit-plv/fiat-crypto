@@ -17,7 +17,7 @@ Hint Resolve (fun a b H => proj1 (Z.mod_pos_bound a b H)) (fun a b H => proj2 (Z
     this database. *)
 Create HintDb zsimplify discriminated.
 Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r : zsimplify.
-Hint Rewrite Z.div_mul Z.div_1_l Z.div_same Z.mod_same Z.div_small Z.mod_small Z.div_add Z.div_add_l using lia : zsimplify.
+Hint Rewrite Z.div_mul Z.div_1_l Z.div_same Z.mod_same Z.div_small Z.mod_small Z.div_add Z.div_add_l Z.mod_add using lia : zsimplify.
 
 (** "push" means transform [-f x] to [f (-x)]; "pull" means go the other way *)
 Create HintDb push_Zopp discriminated.
@@ -43,56 +43,50 @@ Hint Rewrite Z.div_small_iff using lia : zstrip_div.
     We'll put, e.g., [mul_div_eq] into it below. *)
 Create HintDb zstrip_div.
 
-Lemma gt_lt_symmetry: forall n m, n > m <-> m < n.
-Proof.
-  intros; split; omega.
-Qed.
-
+Module Z.
 Lemma positive_is_nonzero : forall x, x > 0 -> x <> 0.
-Proof.
-  intros; omega.
-Qed.
-Hint Resolve positive_is_nonzero.
+Proof. intros; omega. Qed.
+
+Hint Resolve positive_is_nonzero : zarith.
 
 Lemma div_positive_gt_0 : forall a b, a > 0 -> b > 0 -> a mod b = 0 ->
   a / b > 0.
 Proof.
-  intros; rewrite gt_lt_symmetry.
+  intros; rewrite Z.gt_lt_iff.
   apply Z.div_str_pos.
   split; intuition.
   apply Z.divide_pos_le; try (apply Zmod_divide); omega.
 Qed.
 
 Lemma elim_mod : forall a b m, a = b -> a mod m = b mod m.
-Proof.
-  intros; subst; auto.
-Qed.
-Hint Resolve elim_mod.
+Proof. intros; subst; auto. Qed.
 
-Lemma mod_mult_plus: forall a b c, (b <> 0) -> (a * b + c) mod b = c mod b.
-Proof.
-  intros.
-  rewrite Zplus_mod.
-  rewrite Z.mod_mul; auto; simpl.
-  rewrite Zmod_mod; auto.
-Qed.
+Hint Resolve elim_mod : zarith.
+
+Lemma mod_add_l : forall a b c, b <> 0 -> (a * b + c) mod b = c mod b.
+Proof. intros; rewrite (Z.add_comm _ c); autorewrite with zsimplify; reflexivity. Qed.
+Hint Rewrite mod_add_l using lia : zsimplify.
+
+Lemma mod_add' : forall a b c, b <> 0 -> (a + b * c) mod b = a mod b.
+Proof. intros; rewrite (Z.mul_comm _ c); autorewrite with zsimplify; reflexivity. Qed.
+Lemma mod_add_l' : forall a b c, a <> 0 -> (a * b + c) mod a = c mod a.
+Proof. intros; rewrite (Z.mul_comm _ b); autorewrite with zsimplify; reflexivity. Qed.
+Hint Rewrite mod_add' mod_add_l' using lia : zsimplify.
 
 Lemma pos_pow_nat_pos : forall x n,
   Z.pos x ^ Z.of_nat n > 0.
+Proof.
   do 2 (intros; induction n; subst; simpl in *; auto with zarith).
   rewrite <- Pos.add_1_r, Zpower_pos_is_exp.
   apply Zmult_gt_0_compat; auto; reflexivity.
 Qed.
 
-Lemma Z_div_mul' : forall a b : Z, b <> 0 -> (b * a) / b = a.
-  intros. rewrite Z.mul_comm. apply Z.div_mul; auto.
-Qed.
+Lemma div_mul' : forall a b : Z, b <> 0 -> (b * a) / b = a.
+Proof. intros. rewrite Z.mul_comm. apply Z.div_mul; auto. Qed.
+Hint Rewrite div_mul' using lia : zsimplify.
 
-Hint Rewrite Z_div_mul' using lia : zsimplify.
-
-Lemma Zgt0_neq0 : forall x, x > 0 -> x <> 0.
-  intuition.
-Qed.
+(** TODO: Should we get rid of this duplicate? *)
+Notation gt0_neq0 := positive_is_nonzero (only parsing).
 
 Lemma pow_Z2N_Zpow : forall a n, 0 <= a ->
   ((Z.to_nat a) ^ n = Z.to_nat (a ^ Z.of_nat n)%Z)%nat.
@@ -150,7 +144,7 @@ Proof.
   reflexivity.
 Qed.
 
-Ltac Zdivide_exists_mul := let k := fresh "k" in
+Ltac divide_exists_mul := let k := fresh "k" in
 match goal with
 | [ H : (?a | ?b) |- _ ] => apply Z.mod_divide in H; try apply Zmod_divides in H; destruct H as [k H]
 | [ |- (?a | ?b) ] => apply Z.mod_divide; try apply Zmod_divides
@@ -159,9 +153,9 @@ end; (omega || auto).
 Lemma divide_mul_div: forall a b c (a_nonzero : a <> 0) (c_nonzero : c <> 0),
   (a | b * (a / c)) -> (c | a) -> (c | b).
 Proof.
-  intros ? ? ? ? ? divide_a divide_c_a; do 2 Zdivide_exists_mul.
+  intros ? ? ? ? ? divide_a divide_c_a; do 2 divide_exists_mul.
   rewrite divide_c_a in divide_a.
-  rewrite Z_div_mul' in divide_a by auto.
+  rewrite div_mul' in divide_a by auto.
   replace (b * k) with (k * b) in divide_a by ring.
   replace (c * k * k0) with (k * (k0 * c)) in divide_a by ring.
   rewrite Z.mul_cancel_l in divide_a by (intuition; rewrite H in divide_c_a; ring_simplify in divide_a; intuition).
@@ -172,7 +166,7 @@ Lemma divide2_even_iff : forall n, (2 | n) <-> Z.even n = true.
 Proof.
   intro; split. {
     intro divide2_n.
-    Zdivide_exists_mul; [ | pose proof (Z.mod_pos_bound n 2); omega].
+    divide_exists_mul; [ | pose proof (Z.mod_pos_bound n 2); omega].
     rewrite divide2_n.
     apply Z.even_mul.
   } {
@@ -200,7 +194,7 @@ Proof.
   pose proof (prime_ge_2 p prime_p); omega.
 Qed.
 
-Lemma mul_div_eq : (forall a m, m > 0 -> m * (a / m) = (a - a mod m))%Z.
+Lemma mul_div_eq : forall a m, m > 0 -> m * (a / m) = (a - a mod m).
 Proof.
   intros.
   rewrite (Z_div_mod_eq a m) at 2 by auto.
@@ -221,13 +215,7 @@ Ltac prime_bound := match goal with
 | [ H : prime ?p |- _ ] => pose proof (prime_ge_2 p H); try omega
 end.
 
-Lemma Zlt_minus_lt_0 : forall n m, m < n -> 0 < n - m.
-Proof.
-  intros; omega.
-Qed.
-
-
-Lemma Z_testbit_low : forall n x i, (0 <= i < n) ->
+Lemma testbit_low : forall n x i, (0 <= i < n) ->
   Z.testbit x i = Z.testbit (Z.land x (Z.ones n)) i.
 Proof.
   intros.
@@ -238,24 +226,25 @@ Proof.
 Qed.
 
 
-Lemma Z_testbit_shiftl : forall i, (0 <= i) -> forall a b n, (i < n) ->
+Lemma testbit_shiftl : forall i, (0 <= i) -> forall a b n, (i < n) ->
   Z.testbit (a + Z.shiftl b n) i = Z.testbit a i.
 Proof.
   intros.
-  erewrite Z_testbit_low; eauto.
+  erewrite Z.testbit_low; eauto.
   rewrite Z.land_ones, Z.shiftl_mul_pow2 by omega.
   rewrite Z.mod_add by (pose proof (Z.pow_pos_nonneg 2 n); omega).
   auto using Z.mod_pow2_bits_low.
 Qed.
 
-Lemma Z_mod_div_eq0 : forall a b, 0 < b -> (a mod b) / b = 0.
+Lemma mod_div_eq0 : forall a b, 0 < b -> (a mod b) / b = 0.
 Proof.
   intros.
   apply Z.div_small.
   auto using Z.mod_pos_bound.
 Qed.
+Hint Rewrite mod_div_eq0 using lia : zsimplify.
 
-Lemma Z_shiftr_add_land : forall n m a b, (n <= m)%nat ->
+Lemma shiftr_add_land : forall n m a b, (n <= m)%nat ->
   Z.shiftr ((Z.land a (Z.ones (Z.of_nat n))) + (Z.shiftl b (Z.of_nat n))) (Z.of_nat m) = Z.shiftr b (Z.of_nat (m - n)).
 Proof.
   intros.
@@ -269,10 +258,10 @@ Proof.
     [ pose proof (Z.pow_pos_nonneg 2 (Z.of_nat n)); omega
     | apply Z.pow_pos_nonneg; omega ].
   rewrite Z.div_add by (pose proof (Z.pow_pos_nonneg 2 (Z.of_nat n)); omega).
-  rewrite Z_mod_div_eq0 by (pose proof (Z.pow_pos_nonneg 2 (Z.of_nat n)); omega); auto.
+  rewrite mod_div_eq0 by (pose proof (Z.pow_pos_nonneg 2 (Z.of_nat n)); omega); auto.
 Qed.
 
-Lemma Z_land_add_land : forall n m a b, (m <= n)%nat ->
+Lemma land_add_land : forall n m a b, (m <= n)%nat ->
   Z.land ((Z.land a (Z.ones (Z.of_nat n))) + (Z.shiftl b (Z.of_nat n))) (Z.ones (Z.of_nat m)) = Z.land a (Z.ones (Z.of_nat m)).
 Proof.
   intros.
@@ -287,15 +276,6 @@ Proof.
   rewrite (le_plus_minus m n) by assumption.
   rewrite Nat2Z.inj_add, Z.pow_add_r by apply Nat2Z.is_nonneg.
   apply Z.divide_factor_l.
-Qed.
-
-Lemma Z_pow_gt0 : forall a, 0 < a -> forall b, 0 <= b -> 0 < a ^ b.
-Proof.
-  intros until 1.
-  apply natlike_ind; try (simpl; omega).
-  intros.
-  rewrite Z.pow_succ_r by assumption.
-  apply Z.mul_pos_pos; assumption.
 Qed.
 
 Lemma div_pow2succ : forall n x, (0 <= x) ->
@@ -317,27 +297,27 @@ Proof.
 Qed.
 
 
-Definition Z_shiftl_by n a := Z.shiftl a n.
+Definition shiftl_by n a := Z.shiftl a n.
 
-Lemma Z_shiftl_by_mul_pow2 : forall n a, 0 <= n -> Z.mul (2 ^ n) a = Z_shiftl_by n a.
+Lemma shiftl_by_mul_pow2 : forall n a, 0 <= n -> Z.mul (2 ^ n) a = Z.shiftl_by n a.
 Proof.
   intros.
-  unfold Z_shiftl_by.
+  unfold Z.shiftl_by.
   rewrite Z.shiftl_mul_pow2 by assumption.
   apply Z.mul_comm.
 Qed.
 
-Lemma map_shiftl : forall n l, 0 <= n -> map (Z.mul (2 ^ n)) l = map (Z_shiftl_by n) l.
+Lemma map_shiftl : forall n l, 0 <= n -> map (Z.mul (2 ^ n)) l = map (Z.shiftl_by n) l.
 Proof.
-  intros; induction l; auto using Z_shiftl_by_mul_pow2.
+  intros; induction l; auto using Z.shiftl_by_mul_pow2.
   simpl.
   rewrite IHl.
   f_equal.
-  apply Z_shiftl_by_mul_pow2.
+  apply Z.shiftl_by_mul_pow2.
   assumption.
 Qed.
 
-Lemma Z_odd_mod : forall a b, (b <> 0)%Z ->
+Lemma odd_mod : forall a b, (b <> 0)%Z ->
   Z.odd (a mod b) = if Z.odd b then xorb (Z.odd a) (Z.odd (a / b)) else Z.odd a.
 Proof.
   intros.
@@ -353,8 +333,9 @@ Proof.
   rewrite Z.pow_add_r by omega.
   apply Z_mod_mult.
 Qed.
+Hint Rewrite mod_same_pow using lia : zsimplify.
 
-  Lemma Z_ones_succ : forall x, (0 <= x) ->
+  Lemma ones_succ : forall x, (0 <= x) ->
     Z.ones (Z.succ x) = 2 ^ x + Z.ones x.
   Proof.
     unfold Z.ones; intros.
@@ -365,14 +346,14 @@ Qed.
     rewrite Z.pow_succ_r; omega.
   Qed.
 
-  Lemma Z_div_floor : forall a b c, 0 < b -> a < b * (Z.succ c) -> a / b <= c.
+  Lemma div_floor : forall a b c, 0 < b -> a < b * (Z.succ c) -> a / b <= c.
   Proof.
     intros.
     apply Z.lt_succ_r.
     apply Z.div_lt_upper_bound; try omega.
   Qed.
 
-  Lemma Z_shiftr_1_r_le : forall a b, a <= b ->
+  Lemma shiftr_1_r_le : forall a b, a <= b ->
     Z.shiftr a 1 <= Z.shiftr b 1.
   Proof.
     intros.
@@ -380,7 +361,7 @@ Qed.
     apply Z.div_le_mono; omega.
   Qed.
 
-  Lemma Z_ones_pred : forall i, 0 < i -> Z.ones (Z.pred i) = Z.shiftr (Z.ones i) 1.
+  Lemma ones_pred : forall i, 0 < i -> Z.ones (Z.pred i) = Z.shiftr (Z.ones i) 1.
   Proof.
     induction i; [ | | pose proof (Pos2Z.neg_is_neg p) ]; try omega.
     intros.
@@ -394,7 +375,7 @@ Qed.
     f_equal. omega.
   Qed.
 
-  Lemma Z_shiftr_ones' : forall a n, 0 <= a < 2 ^ n -> forall i, (0 <= i) ->
+  Lemma shiftr_ones' : forall a n, 0 <= a < 2 ^ n -> forall i, (0 <= i) ->
     Z.shiftr a i <= Z.ones (n - i) \/ n <= i.
   Proof.
     intros until 1.
@@ -408,17 +389,17 @@ Qed.
       left.
       rewrite shiftr_succ.
       replace (n - Z.succ x) with (Z.pred (n - x)) by omega.
-      rewrite Z_ones_pred by omega.
-      apply Z_shiftr_1_r_le.
+      rewrite Z.ones_pred by omega.
+      apply Z.shiftr_1_r_le.
       assumption.
   Qed.
 
-  Lemma Z_shiftr_ones : forall a n i, 0 <= a < 2 ^ n -> (0 <= i) -> (i <= n) ->
+  Lemma shiftr_ones : forall a n i, 0 <= a < 2 ^ n -> (0 <= i) -> (i <= n) ->
     Z.shiftr a i <= Z.ones (n - i) .
   Proof.
     intros a n i G G0 G1.
     destruct (Z_le_lt_eq_dec i n G1).
-    + destruct (Z_shiftr_ones' a n G i G0); omega.
+    + destruct (Z.shiftr_ones' a n G i G0); omega.
     + subst; rewrite Z.sub_diag.
       destruct (Z_eq_dec a 0).
       - subst; rewrite Z.shiftr_0_l; reflexivity.
@@ -426,7 +407,7 @@ Qed.
         apply Z.log2_lt_pow2; omega.
   Qed.
 
-  Lemma Z_shiftr_upper_bound : forall a n, 0 <= n -> 0 <= a <= 2 ^ n -> Z.shiftr a n <= 1.
+  Lemma shiftr_upper_bound : forall a n, 0 <= n -> 0 <= a <= 2 ^ n -> Z.shiftr a n <= 1.
   Proof.
     intros a ? ? [a_nonneg a_upper_bound].
     apply Z_le_lt_eq_dec in a_upper_bound.
@@ -463,16 +444,16 @@ Ltac zero_bounds := try omega; try prime_bound; zero_bounds'.
 
 Hint Extern 1 => progress zero_bounds : zero_bounds.
 
-Lemma Z_ones_nonneg : forall i, (0 <= i) -> 0 <= Z.ones i.
+Lemma ones_nonneg : forall i, (0 <= i) -> 0 <= Z.ones i.
 Proof.
   apply natlike_ind.
   + unfold Z.ones. simpl; omega.
   + intros.
-    rewrite Z_ones_succ by assumption.
+    rewrite Z.ones_succ by assumption.
     zero_bounds.
 Qed.
 
-Lemma Z_ones_pos_pos : forall i, (0 < i) -> 0 < Z.ones i.
+Lemma ones_pos_pos : forall i, (0 < i) -> 0 < Z.ones i.
 Proof.
   intros.
   unfold Z.ones.
@@ -497,7 +478,7 @@ Proof.
   destruct (p ?=a)%positive; cbv; congruence.
 Qed.
 
-Lemma Z_land_upper_bound_l : forall a b, (0 <= a) -> (0 <= b) ->
+Lemma land_upper_bound_l : forall a b, (0 <= a) -> (0 <= b) ->
   Z.land a b <= a.
 Proof.
   intros.
@@ -507,15 +488,15 @@ Proof.
   auto using Pos_land_upper_bound_l.
 Qed.
 
-Lemma Z_land_upper_bound_r : forall a b, (0 <= a) -> (0 <= b) ->
+Lemma land_upper_bound_r : forall a b, (0 <= a) -> (0 <= b) ->
   Z.land a b <= b.
 Proof.
   intros.
   rewrite Z.land_comm.
-  auto using Z_land_upper_bound_l.
+  auto using Z.land_upper_bound_l.
 Qed.
 
-Lemma Z_le_fold_right_max : forall low l x, (forall y, In y l -> low <= y) ->
+Lemma le_fold_right_max : forall low l x, (forall y, In y l -> low <= y) ->
   In x l -> x <= fold_right Z.max low l.
 Proof.
   induction l; intros ? lower_bound In_list; [cbv [In] in *; intuition | ].
@@ -527,13 +508,13 @@ Proof.
     - apply Z.le_max_r.
 Qed.
 
-Lemma Z_le_fold_right_max_initial : forall low l, low <= fold_right Z.max low l.
+Lemma le_fold_right_max_initial : forall low l, low <= fold_right Z.max low l.
 Proof.
   induction l; intros; try reflexivity.
   etransitivity; [ apply IHl | apply Z.le_max_r ].
 Qed.
 
-Ltac Zltb_to_Zlt :=
+Ltac ltb_to_lt :=
   repeat match goal with
          | [ H : (?x <? ?y) = ?b |- _ ]
            => let H' := fresh in
@@ -543,7 +524,7 @@ Ltac Zltb_to_Zlt :=
               clear H'
          end.
 
-Ltac Zcompare_to_sgn :=
+Ltac compare_to_sgn :=
   repeat match goal with
          | [ H : _ |- _ ] => progress rewrite <- ?Z.sgn_neg_iff, <- ?Z.sgn_pos_iff, <- ?Z.sgn_null_iff in H
          | _ => progress rewrite <- ?Z.sgn_neg_iff, <- ?Z.sgn_pos_iff, <- ?Z.sgn_null_iff
@@ -558,9 +539,9 @@ Local Ltac replace_to_const c :=
          | [ H : c = ?x |- context[?x] ] => rewrite <- H
          end.
 
-Lemma Zlt_div_0 n m : n / m < 0 <-> ((n < 0 < m \/ m < 0 < n) /\ 0 < -(n / m)).
+Lemma lt_div_0 n m : n / m < 0 <-> ((n < 0 < m \/ m < 0 < n) /\ 0 < -(n / m)).
 Proof.
-  Zcompare_to_sgn; rewrite Z.sgn_opp; simpl.
+  Z.compare_to_sgn; rewrite Z.sgn_opp; simpl.
   pose proof (Zdiv_sgn n m) as H.
   pose proof (Z.sgn_spec (n / m)) as H'.
   repeat first [ progress intuition
@@ -578,7 +559,7 @@ Qed.
 Lemma two_times_x_minus_x x : 2 * x - x = x.
 Proof. lia. Qed.
 
-Lemma Zmul_div_le x y z
+Lemma mul_div_le x y z
       (Hx : 0 <= x) (Hy : 0 <= y) (Hz : 0 < z)
       (Hyz : y <= z)
   : x * y / z <= x.
@@ -587,12 +568,12 @@ Proof.
   apply Z_div_le; nia.
 Qed.
 
-Lemma Zdiv_mul_diff a b c
+Lemma div_mul_diff a b c
       (Ha : 0 <= a) (Hb : 0 < b) (Hc : 0 <= c)
   : c * a / b - c * (a / b) <= c.
 Proof.
   pose proof (Z.mod_pos_bound a b).
-  etransitivity; [ | apply (Zmul_div_le c (a mod b) b); lia ].
+  etransitivity; [ | apply (mul_div_le c (a mod b) b); lia ].
   rewrite (Z_div_mod_eq a b) at 1 by lia.
   rewrite Z.mul_add_distr_l.
   replace (c * (b * (a / b))) with ((c * (a / b)) * b) by lia.
@@ -600,23 +581,23 @@ Proof.
   lia.
 Qed.
 
-Lemma Zdiv_mul_le_le a b c
+Lemma div_mul_le_le a b c
   :  0 <= a -> 0 < b -> 0 <= c -> c * (a / b) <= c * a / b <= c * (a / b) + c.
 Proof.
-  pose proof (Zdiv_mul_diff a b c); split; try apply Z.div_mul_le; lia.
+  pose proof (Z.div_mul_diff a b c); split; try apply Z.div_mul_le; lia.
 Qed.
 
-Lemma Zdiv_mul_le_le_offset a b c
+Lemma div_mul_le_le_offset a b c
   : 0 <= a -> 0 < b -> 0 <= c -> c * a / b - c <= c * (a / b).
 Proof.
-  pose proof (Zdiv_mul_le_le a b c); lia.
+  pose proof (Z.div_mul_le_le a b c); lia.
 Qed.
 
-Hint Resolve Zmult_le_compat_r Zmult_le_compat_l Z_div_le Zdiv_mul_le_le_offset Z.add_le_mono Z.sub_le_mono : zarith.
+Hint Resolve Zmult_le_compat_r Zmult_le_compat_l Z_div_le Z.div_mul_le_le_offset Z.add_le_mono Z.sub_le_mono : zarith.
 
-(** * [Zsimplify_fractions_le] *)
+(** * [Z.simplify_fractions_le] *)
 (** The culmination of this series of tactics,
-    [Zsimplify_fractions_le], will use the fact that [a * (b / c) <=
+    [Z.simplify_fractions_le], will use the fact that [a * (b / c) <=
     (a * b) / c], and do some reasoning modulo associativity and
     commutativity in [Z] to perform such a reduction.  It may leave
     over goals if it cannot prove that some denominators are non-zero.
@@ -626,16 +607,16 @@ Hint Resolve Zmult_le_compat_r Zmult_le_compat_l Z_div_le Zdiv_mul_le_le_offset 
 
     After running, the tactic does some basic rewriting to simplify
     fractions, e.g., that [a * b / b = a]. *)
-Ltac Zsplit_sums_step :=
+Ltac split_sums_step :=
   match goal with
   | [ |- _ + _ <= _ ]
     => etransitivity; [ eapply Z.add_le_mono | ]
   | [ |- _ - _ <= _ ]
     => etransitivity; [ eapply Z.sub_le_mono | ]
   end.
-Ltac Zsplit_sums :=
-  try (Zsplit_sums_step; [ Zsplit_sums.. | ]).
-Ltac Zpre_reorder_fractions_step :=
+Ltac split_sums :=
+  try (split_sums_step; [ split_sums.. | ]).
+Ltac pre_reorder_fractions_step :=
   match goal with
   | [ |- context[?x / ?y * ?z] ]
     => rewrite (Z.mul_comm (x / y) z)
@@ -646,10 +627,10 @@ Ltac Zpre_reorder_fractions_step :=
               transitivity G'
          end
   end.
-Ltac Zpre_reorder_fractions :=
-  try first [ Zsplit_sums_step; [ Zpre_reorder_fractions.. | ]
-            | Zpre_reorder_fractions_step; [ .. | Zpre_reorder_fractions ] ].
-Ltac Zsplit_comparison :=
+Ltac pre_reorder_fractions :=
+  try first [ split_sums_step; [ pre_reorder_fractions.. | ]
+            | pre_reorder_fractions_step; [ .. | pre_reorder_fractions ] ].
+Ltac split_comparison :=
   match goal with
   | [ |- ?x <= ?x ] => reflexivity
   | [ H : _ >= _ |- _ ]
@@ -674,7 +655,7 @@ Ltac Zsplit_comparison :=
        | [ H : y <= 0 |- _ ] => fail
        | _ => destruct (Z_lt_le_dec 0 y)
        end;
-       [ apply Z_div_le; [ apply gt_lt_symmetry; assumption | ]
+       [ apply Z_div_le; [ apply Z.gt_lt_iff; assumption | ]
        | .. ]
   | [ |- ?x / ?y <= ?x / ?z ]
     => lazymatch goal with
@@ -697,7 +678,7 @@ Ltac Zsplit_comparison :=
   | [ |- ?x * (?y / ?z) <= (?x * ?y) / ?z ]
     => apply Z.div_mul_le
   end.
-Ltac Zsplit_comparison_fin_step :=
+Ltac split_comparison_fin_step :=
   match goal with
   | _ => assumption
   | _ => lia
@@ -705,7 +686,7 @@ Ltac Zsplit_comparison_fin_step :=
   | [ H : ?n * ?m < 0 |- _ ]
     => apply (proj1 (Z.lt_mul_0 n m)) in H; destruct H as [[??]|[??]]
   | [ H : ?n / ?m < 0 |- _ ]
-    => apply (proj1 (Zlt_div_0 n m)) in H; destruct H as [[[??]|[??]]?]
+    => apply (proj1 (lt_div_0 n m)) in H; destruct H as [[[??]|[??]]?]
   | [ H : (?x^?y) <= ?n < _, H' : ?n < 0 |- _ ]
     => assert (0 <= x^y) by zero_bounds; lia
   | [ H : (?x^?y) < 0 |- _ ]
@@ -722,26 +703,26 @@ Ltac Zsplit_comparison_fin_step :=
   | [ |- ?x <= ?y ] => is_evar x; reflexivity
   | [ |- ?x <= ?y ] => is_evar y; reflexivity
   end.
-Ltac Zsplit_comparison_fin := repeat Zsplit_comparison_fin_step.
-Ltac Zsimplify_fractions_step :=
+Ltac split_comparison_fin := repeat split_comparison_fin_step.
+Ltac simplify_fractions_step :=
   match goal with
   | _ => rewrite Z.div_mul by (try apply Z.pow_nonzero; zero_bounds)
   | [ |- context[?x * ?y / ?x] ]
     => rewrite (Z.mul_comm x y)
   | [ |- ?x <= ?x ] => reflexivity
   end.
-Ltac Zsimplify_fractions := repeat Zsimplify_fractions_step.
-Ltac Zsimplify_fractions_le :=
-  Zpre_reorder_fractions;
-  [ repeat Zsplit_comparison; Zsplit_comparison_fin; zero_bounds..
-  | Zsimplify_fractions ].
+Ltac simplify_fractions := repeat simplify_fractions_step.
+Ltac simplify_fractions_le :=
+  pre_reorder_fractions;
+  [ repeat split_comparison; split_comparison_fin; zero_bounds..
+  | simplify_fractions ].
 
-Lemma Zlog2_nonneg' n a : n <= 0 -> n <= Z.log2 a.
+Lemma log2_nonneg' n a : n <= 0 -> n <= Z.log2 a.
 Proof.
   intros; transitivity 0; auto with zarith.
 Qed.
 
-Hint Resolve Zlog2_nonneg' : zarith.
+Hint Resolve log2_nonneg' : zarith.
 
 (** We create separate databases for two directions of transformations
     involving [Z.log2]; combining them leads to loops. *)
@@ -754,127 +735,133 @@ Create HintDb concl_log2.
 Hint Resolve (fun a b H => proj1 (Z.log2_lt_pow2 a b H)) (fun a b H => proj1 (Z.log2_le_pow2 a b H)) : concl_log2.
 Hint Resolve (fun a b H => proj2 (Z.log2_lt_pow2 a b H)) (fun a b H => proj2 (Z.log2_le_pow2 a b H)) : hyp_log2.
 
-Lemma Zle_lt_to_log2 x y z : 0 <= z -> 0 < y -> 2^x <= y < 2^z -> x <= Z.log2 y < z.
+Lemma le_lt_to_log2 x y z : 0 <= z -> 0 < y -> 2^x <= y < 2^z -> x <= Z.log2 y < z.
 Proof.
   destruct (Z_le_gt_dec 0 x); auto with concl_log2 lia.
 Qed.
 
-Lemma Zdiv_x_y_x x y : 0 < x -> 0 < y -> x / y / x = 1 / y.
+Lemma div_x_y_x x y : 0 < x -> 0 < y -> x / y / x = 1 / y.
 Proof.
   intros; rewrite Z.div_div, (Z.mul_comm y x), <- Z.div_div, Z.div_same by lia.
   reflexivity.
 Qed.
 
-Hint Rewrite Zdiv_x_y_x using lia : zsimplify.
+Hint Rewrite div_x_y_x using lia : zsimplify.
 
-Lemma Zmod_opp_l_z_iff a b (H : b <> 0) : a mod b = 0 <-> (-a) mod b = 0.
+Lemma mod_opp_l_z_iff a b (H : b <> 0) : a mod b = 0 <-> (-a) mod b = 0.
 Proof.
   split; intro H'; apply Z.mod_opp_l_z in H'; rewrite ?Z.opp_involutive in H'; assumption.
 Qed.
 
-Lemma Zopp_eq_0_iff a : -a = 0 <-> a = 0.
+Lemma opp_eq_0_iff a : -a = 0 <-> a = 0.
 Proof. lia. Qed.
 
-Hint Rewrite <- Zmod_opp_l_z_iff using lia : zsimplify.
-Hint Rewrite Zopp_eq_0_iff : zsimplify.
+Hint Rewrite <- mod_opp_l_z_iff using lia : zsimplify.
+Hint Rewrite opp_eq_0_iff : zsimplify.
 
-Lemma Zsub_pos_bound a b X : 0 <= a < X -> 0 <= b < X -> -X < a - b < X.
+Lemma sub_pos_bound a b X : 0 <= a < X -> 0 <= b < X -> -X < a - b < X.
 Proof. lia. Qed.
 
-Lemma Zdiv_opp_l_complete a b (Hb : b <> 0) : -a/b = -(a/b) - (if Z_zerop (a mod b) then 0 else 1).
+Lemma div_opp_l_complete a b (Hb : b <> 0) : -a/b = -(a/b) - (if Z_zerop (a mod b) then 0 else 1).
 Proof.
   destruct (Z_zerop (a mod b)); autorewrite with zsimplify push_Zopp; reflexivity.
 Qed.
 
-Lemma Zdiv_opp_l_complete' a b (Hb : b <> 0) : -(a/b) = -a/b + (if Z_zerop (a mod b) then 0 else 1).
+Lemma div_opp_l_complete' a b (Hb : b <> 0) : -(a/b) = -a/b + (if Z_zerop (a mod b) then 0 else 1).
 Proof.
   destruct (Z_zerop (a mod b)); autorewrite with zsimplify pull_Zopp; lia.
 Qed.
 
-Hint Rewrite Zdiv_opp_l_complete using lia : pull_Zopp.
-Hint Rewrite Zdiv_opp_l_complete' using lia : push_Zopp.
+Hint Rewrite Z.div_opp_l_complete using lia : pull_Zopp.
+Hint Rewrite Z.div_opp_l_complete' using lia : push_Zopp.
 
-Lemma Zdiv_opp a : a <> 0 -> -a / a = -1.
+Lemma div_opp a : a <> 0 -> -a / a = -1.
 Proof.
   intros; autorewrite with pull_Zopp zsimplify; lia.
 Qed.
 
-Hint Rewrite Zdiv_opp using lia : zsimplify.
+Hint Rewrite Z.div_opp using lia : zsimplify.
 
-Lemma Zdiv_sub_1_0 x : x > 0 -> (x - 1) / x = 0.
+Lemma div_sub_1_0 x : x > 0 -> (x - 1) / x = 0.
 Proof. auto with zarith lia. Qed.
 
-Hint Rewrite Zdiv_sub_1_0 using lia : zsimplify.
+Hint Rewrite div_sub_1_0 using lia : zsimplify.
 
-Lemma Zsub_pos_bound_div a b X : 0 <= a < X -> 0 <= b < X -> -1 <= (a - b) / X <= 0.
+Lemma sub_pos_bound_div a b X : 0 <= a < X -> 0 <= b < X -> -1 <= (a - b) / X <= 0.
 Proof.
-  intros H0 H1; pose proof (Zsub_pos_bound a b X H0 H1).
+  intros H0 H1; pose proof (Z.sub_pos_bound a b X H0 H1).
   assert (Hn : -X <= a - b) by lia.
   assert (Hp : a - b <= X - 1) by lia.
   split; etransitivity; [ | apply Z_div_le, Hn; lia | apply Z_div_le, Hp; lia | ];
     instantiate; autorewrite with zsimplify; try reflexivity.
 Qed.
 
-Hint Resolve (fun a b X H0 H1 => proj1 (Zsub_pos_bound_div a b X H0 H1))
-     (fun a b X H0 H1 => proj1 (Zsub_pos_bound_div a b X H0 H1)) : zarith.
+Hint Resolve (fun a b X H0 H1 => proj1 (Z.sub_pos_bound_div a b X H0 H1))
+     (fun a b X H0 H1 => proj1 (Z.sub_pos_bound_div a b X H0 H1)) : zarith.
 
-Lemma Zsub_pos_bound_div_eq a b X : 0 <= a < X -> 0 <= b < X -> (a - b) / X = if a <? b then -1 else 0.
+Lemma sub_pos_bound_div_eq a b X : 0 <= a < X -> 0 <= b < X -> (a - b) / X = if a <? b then -1 else 0.
 Proof.
-  intros H0 H1; pose proof (Zsub_pos_bound_div a b X H0 H1).
-  destruct (a <? b) eqn:?; Zltb_to_Zlt.
+  intros H0 H1; pose proof (Z.sub_pos_bound_div a b X H0 H1).
+  destruct (a <? b) eqn:?; Z.ltb_to_lt.
   { cut ((a - b) / X <> 0); [ lia | ].
     autorewrite with zstrip_div; auto with zarith lia. }
   { autorewrite with zstrip_div; auto with zarith lia. }
 Qed.
 
-Lemma Zadd_opp_pos_bound_div_eq a b X : 0 <= a < X -> 0 <= b < X -> (-b + a) / X = if a <? b then -1 else 0.
+Lemma add_opp_pos_bound_div_eq a b X : 0 <= a < X -> 0 <= b < X -> (-b + a) / X = if a <? b then -1 else 0.
 Proof.
   rewrite !(Z.add_comm (-_)), !Z.add_opp_r.
-  apply Zsub_pos_bound_div_eq.
+  apply Z.sub_pos_bound_div_eq.
 Qed.
 
-Hint Rewrite Zsub_pos_bound_div_eq Zadd_opp_pos_bound_div_eq using lia : zstrip_div.
+Hint Rewrite Z.sub_pos_bound_div_eq Z.add_opp_pos_bound_div_eq using lia : zstrip_div.
 
-Lemma Zdiv_small_sym a b : 0 <= a < b -> 0 = a / b.
+Lemma div_small_sym a b : 0 <= a < b -> 0 = a / b.
 Proof. intros; symmetry; apply Z.div_small; assumption. Qed.
 
-Lemma Zmod_small_sym a b : 0 <= a < b -> a = a mod b.
+Lemma mod_small_sym a b : 0 <= a < b -> a = a mod b.
 Proof. intros; symmetry; apply Z.mod_small; assumption. Qed.
 
-Hint Resolve Zdiv_small_sym Zmod_small_sym : zarith.
+Hint Resolve div_small_sym mod_small_sym : zarith.
 
-Lemma Zdiv_add' a b c : c <> 0 -> (a + c * b) / c = a / c + b.
+Lemma div_add' a b c : c <> 0 -> (a + c * b) / c = a / c + b.
 Proof. intro; rewrite <- Z.div_add, (Z.mul_comm c); try lia. Qed.
 
-Lemma Zdiv_add_l' a b c : b <> 0 -> (b * a + c) / b = a + c / b.
+Lemma div_add_l' a b c : b <> 0 -> (b * a + c) / b = a + c / b.
 Proof. intro; rewrite <- Z.div_add_l, (Z.mul_comm b); lia. Qed.
 
-Hint Rewrite Zdiv_add_l' Zdiv_add' using lia : zsimplify.
+Hint Rewrite div_add_l' div_add' using lia : zsimplify.
 
-Lemma Zdiv_add_sub_l a b c d : b <> 0 -> (a * b + c - d) / b = a + (c - d) / b.
+Lemma div_add_sub_l a b c d : b <> 0 -> (a * b + c - d) / b = a + (c - d) / b.
 Proof. rewrite <- Z.add_sub_assoc; apply Z.div_add_l. Qed.
 
-Lemma Zdiv_add_sub_l' a b c d : b <> 0 -> (b * a + c - d) / b = a + (c - d) / b.
-Proof. rewrite <- Z.add_sub_assoc; apply Zdiv_add_l'. Qed.
+Lemma div_add_sub_l' a b c d : b <> 0 -> (b * a + c - d) / b = a + (c - d) / b.
+Proof. rewrite <- Z.add_sub_assoc; apply Z.div_add_l'. Qed.
 
-Lemma Zdiv_add_sub a b c d : c <> 0 -> (a + b * c - d) / c = (a - d) / c + b.
-Proof. rewrite (Z.add_comm _ (_ * _)), (Z.add_comm (_ / _)); apply Zdiv_add_sub_l. Qed.
+Lemma div_add_sub a b c d : c <> 0 -> (a + b * c - d) / c = (a - d) / c + b.
+Proof. rewrite (Z.add_comm _ (_ * _)), (Z.add_comm (_ / _)); apply Z.div_add_sub_l. Qed.
 
-Lemma Zdiv_add_sub' a b c d : c <> 0 -> (a + c * b - d) / c = (a - d) / c + b.
-Proof. rewrite (Z.add_comm _ (_ * _)), (Z.add_comm (_ / _)); apply Zdiv_add_sub_l'. Qed.
+Lemma div_add_sub' a b c d : c <> 0 -> (a + c * b - d) / c = (a - d) / c + b.
+Proof. rewrite (Z.add_comm _ (_ * _)), (Z.add_comm (_ / _)); apply Z.div_add_sub_l'. Qed.
 
-Hint Rewrite Zdiv_add_sub Zdiv_add_sub' Zdiv_add_sub_l Zdiv_add_sub_l' using lia : zsimplify.
+Hint Rewrite Z.div_add_sub Z.div_add_sub' Z.div_add_sub_l Z.div_add_sub_l' using lia : zsimplify.
 
-Lemma Zdiv_mul_skip a b k : 0 < b -> 0 < k -> a * b / k / b = a / k.
+Lemma div_mul_skip a b k : 0 < b -> 0 < k -> a * b / k / b = a / k.
 Proof.
   intros; rewrite Z.div_div, (Z.mul_comm k), <- Z.div_div by lia.
   autorewrite with zsimplify; reflexivity.
 Qed.
 
-Lemma Zdiv_mul_skip' a b k : 0 < b -> 0 < k -> b * a / k / b = a / k.
+Lemma div_mul_skip' a b k : 0 < b -> 0 < k -> b * a / k / b = a / k.
 Proof.
   intros; rewrite Z.div_div, (Z.mul_comm k), <- Z.div_div by lia.
   autorewrite with zsimplify; reflexivity.
 Qed.
 
-Hint Rewrite Zdiv_mul_skip Zdiv_mul_skip' using lia : zsimplify.
+Hint Rewrite Z.div_mul_skip Z.div_mul_skip' using lia : zsimplify.
+End Z.
+
+Module Export BoundsTactics.
+  Ltac prime_bound := Z.prime_bound.
+  Ltac zero_bounds := Z.zero_bounds.
+End BoundsTactics.
