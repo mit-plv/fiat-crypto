@@ -1038,18 +1038,37 @@ Ltac super_nsatz_post_clean_inequalities :=
   try assumption;
   prensatz_contradict; nsatz_inequality_to_equality;
   try nsatz.
+Ltac nsatz_equality_to_inequality_by_decide_equality :=
+  lazymatch goal with
+  | [ H : not (?R _ _) |- ?R _ _ ] => idtac
+  | [ H : (?R _ _ -> False)%type |- ?R _ _ ] => idtac
+  | [ |- ?R _ _ ] => fail 0 "No hypothesis exists which negates the relation" R
+  | [ |- ?G ] => fail 0 "The goal is not a binary relation:" G
+  end;
+  lazymatch goal with
+  | [ |- ?R ?x ?y ]
+    => destruct (@dec (R x y) _); [ assumption | exfalso ]
+  end.
 (** Handles inequalities and fractions *)
-Ltac super_nsatz :=
+Ltac super_nsatz_internal nsatz_alternative :=
   (* [nsatz] gives anomalies on duplicate hypotheses, so we strip them *)
   clear_algebraic_duplicates;
   prensatz_contradict;
   (* Each goal left over by [prensatz_contradict] is separate (and
      there might not be any), so we handle them all separately *)
   [ try conservative_common_denominator_equality_inequality_all;
-    [ try nsatz_inequality_to_equality; try nsatz;
-      (* [nstaz] might leave over side-conditions; we handle them if they are inequalities *)
-      try super_nsatz_post_clean_inequalities
+    [ try nsatz_inequality_to_equality;
+      try first [ nsatz;
+                  (* [nstaz] might leave over side-conditions; we handle them if they are inequalities *)
+                  try super_nsatz_post_clean_inequalities
+                | nsatz_alternative ]
     | super_nsatz_post_clean_inequalities.. ].. ].
+
+Ltac super_nsatz :=
+  super_nsatz_internal
+    (* if [nsatz] fails, we try turning the goal equality into an inequality and trying again *)
+    ltac:(nsatz_equality_to_inequality_by_decide_equality;
+          super_nsatz_internal idtac).
 
 Section ExtraLemmas.
   Context {F eq zero one opp add sub mul inv div} `{F_field:field F eq zero one opp add sub mul inv div}.
@@ -1057,13 +1076,11 @@ Section ExtraLemmas.
   Local Notation "0" := zero. Local Notation "1" := one.
   Local Infix "=" := eq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
 
+  Example _only_two_square_roots_test x y : x * x = y * y -> x <> opp y -> x = y.
+  Proof. intros; super_nsatz. Qed.
+
   Lemma only_two_square_roots' x y : x * x = y * y -> x <> y -> x <> opp y -> False.
-  Proof.
-    intros.
-    canonicalize_field_equalities; canonicalize_field_inequalities.
-    assert (H' : (x + y) * (x - y) <> 0) by (apply mul_nonzero_nonzero; assumption).
-    apply H'; nsatz.
-  Qed.
+  Proof. intros; super_nsatz. Qed.
 
   Lemma only_two_square_roots x y z : x * x = z -> y * y = z -> x <> y -> x <> opp y -> False.
   Proof.
