@@ -612,6 +612,8 @@ Proof.
   pose proof (Zdiv_mul_le_le a b c); lia.
 Qed.
 
+Hint Resolve Zmult_le_compat_r Zmult_le_compat_l Z_div_le Zdiv_mul_le_le_offset Z.add_le_mono Z.sub_le_mono : zarith.
+
 (** * [Zsimplify_fractions_le] *)
 (** The culmination of this series of tactics,
     [Zsimplify_fractions_le], will use the fact that [a * (b / c) <=
