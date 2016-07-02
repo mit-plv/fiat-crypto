@@ -849,6 +849,20 @@ Proof. intro; rewrite <- Z.div_add_l, (Z.mul_comm b); lia. Qed.
 
 Hint Rewrite Zdiv_add_l' Zdiv_add' using lia : zsimplify.
 
+Lemma Zdiv_add_sub_l a b c d : b <> 0 -> (a * b + c - d) / b = a + (c - d) / b.
+Proof. rewrite <- Z.add_sub_assoc; apply Z.div_add_l. Qed.
+
+Lemma Zdiv_add_sub_l' a b c d : b <> 0 -> (b * a + c - d) / b = a + (c - d) / b.
+Proof. rewrite <- Z.add_sub_assoc; apply Zdiv_add_l'. Qed.
+
+Lemma Zdiv_add_sub a b c d : c <> 0 -> (a + b * c - d) / c = (a - d) / c + b.
+Proof. rewrite (Z.add_comm _ (_ * _)), (Z.add_comm (_ / _)); apply Zdiv_add_sub_l. Qed.
+
+Lemma Zdiv_add_sub' a b c d : c <> 0 -> (a + c * b - d) / c = (a - d) / c + b.
+Proof. rewrite (Z.add_comm _ (_ * _)), (Z.add_comm (_ / _)); apply Zdiv_add_sub_l'. Qed.
+
+Hint Rewrite Zdiv_add_sub Zdiv_add_sub' Zdiv_add_sub_l Zdiv_add_sub_l' using lia : zsimplify.
+
 Lemma Zdiv_mul_skip a b k : 0 < b -> 0 < k -> a * b / k / b = a / k.
 Proof.
   intros; rewrite Z.div_div, (Z.mul_comm k), <- Z.div_div by lia.
