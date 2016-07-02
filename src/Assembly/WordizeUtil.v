@@ -1,8 +1,9 @@
 Require Import Bedrock.Word Bedrock.Nomega.
 Require Import NArith PArith Ndigits Nnat NPow NPeano Ndec.
 Require Import List Omega NArith Nnat BoolEq.
-Require Import QhasmUtil QhasmEvalCommon.
+Require Import SetoidTactics.
 Require Import ProofIrrelevance FunctionalExtensionality.
+Require Import QhasmUtil QhasmEvalCommon.
 
 Section Misc.
   Local Open Scope nword_scope.
@@ -47,6 +48,25 @@ Section Misc.
       rewrite <- wordToN_nat in B;
       assumption.
   Qed.
+
+  Lemma N_gt_0: forall x: N, (0 <= x)%N.
+  Proof.
+    intro x0; unfold N.le.
+    pose proof (N.compare_0_r x0) as H.
+    rewrite N.compare_antisym in H.
+    induction x0; simpl in *;
+      intro V; inversion V.
+  Qed.
+
+  Lemma ge_to_le: forall (x y: N), (x >= y)%N <-> (y <= x)%N.
+  Proof.
+    intros x y; split; intro H;
+      unfold N.ge, N.le in *;
+      intro H0; contradict H;
+      rewrite N.compare_antisym;
+      rewrite H0; simpl; intuition.
+  Qed.
+
 End Misc.
 
 Section Exp.
@@ -510,32 +530,201 @@ Section SpecialFunctions.
         destruct b; intuition.
   Qed.
 
-  Lemma wordToN_split1: forall {n m} x,
-    & (@split1 n m x) = N.shiftr_nat (& x) m.
+  Lemma wordToN_div2: forall {n} (x: word (S n)),
+    N.div2 (&x) = & (wtl x).
   Proof.
-    intros; induction n; simpl in *.
-    pose proof (word_size_bound x).
+    intros.
+    pose proof (shatter_word x) as Hx; simpl in Hx; rewrite Hx; simpl.
+    destruct (whd x).
+    replace (match & wtl x with
+             | 0%N => 0%N
+             | N.pos q => N.pos (xO q)
+             end)
+       with (N.double (& (wtl x)))
+         by (induction (& (wtl x)); simpl; intuition).
 
-    - induction m; simpl in *; try nomega;
-        pose proof (shatter_word x) as H0;
-        simpl in H0; rewrite H0 in *; clear H0;
-        rewrite (IHm (wtl x)).
+    - rewrite N.double_spec.
+      replace (N.succ (2 * & wtl x))
+         with ((2 * (& wtl x)) + 1)%N
+           by nomega.
+      rewrite <- N.succ_double_spec.
+      rewrite N.div2_succ_double.
+      reflexivity.
 
-      + admit.
+    - induction (& (wtl x)); simpl; intuition.
+  Qed.
 
-      + admit.
+  Fixpoint wbit {n} (x: word n) (k: nat): bool :=
+    match n as n' return word n' -> bool with
+    | O => fun _ => false
+    | S m => fun x' =>
+      match k with
+      | O => (whd x')
+      | S k' => wbit (wtl x') k'
+      end
+    end x.
 
-    - admit.
-  
-  Admitted.
+  Lemma wbit_wtl: forall {n} (x: word (S n)) k,
+    wbit x (S k) = wbit (wtl x) k.
+  Proof.
+    intros.
+    pose proof (shatter_word x) as Hx;
+      simpl in Hx; rewrite Hx; simpl.
+    reflexivity.
+  Qed.
+
+  Ltac shatter a :=
+    let H := fresh in
+    pose proof (shatter_word a) as H; simpl in H;
+      try rewrite H in *; clear H.
+
+  Lemma wordToN_testbit: forall {n} (x: word n) k,
+    N.testbit (& x) k = wbit x (N.to_nat k).
+  Proof.
+    assert (forall x: N, match x with
+            | 0%N => 0%N
+            | N.pos q => N.pos (q~0)%positive
+            end = N.double x) as kill_match by (
+      induction x; simpl; intuition).
+
+    induction n; intros.
+
+    - shatter x; simpl; intuition.
+
+    - revert IHn; rewrite <- (N2Nat.id k).
+      generalize (N.to_nat k) as k'; intros; clear k.
+      rewrite Nat2N.id in *.
+
+      induction k'.
+
+      + clear IHn; induction x; simpl; intuition.
+        destruct (& x), b; simpl; intuition. 
+
+      + clear IHk'.
+        shatter x; simpl.
+
+        rewrite kill_match.
+        replace (N.pos (Pos.of_succ_nat k'))
+           with (N.succ (N.of_nat k'))
+             by (rewrite <- Nat2N.inj_succ;
+                 simpl; intuition).
+
+        rewrite N.double_spec.
+        replace (N.succ (2 * & wtl x))
+           with (2 * & wtl x + 1)%N
+             by nomega.
+
+        destruct (whd x);
+          try rewrite N.testbit_odd_succ;
+          try rewrite N.testbit_even_succ;
+          try abstract (
+            unfold N.le; simpl;
+            induction (N.of_nat k'); intuition;
+            try inversion H);
+          rewrite IHn;
+          rewrite Nat2N.id;
+          reflexivity.
+  Qed.
+ 
+  Lemma wordToN_split1: forall {n m} x,
+    & (@split1 n m x) = N.land (& x) (& (wones n)).
+  Proof.
+    intros.
+
+    pose proof (Word.combine_split _ _ x) as C; revert C.
+    generalize (split1 n m x) as a, (split2 n m x) as b.
+    intros a b C; rewrite <- C; clear C x.
+
+    apply N.bits_inj_iff; unfold N.eqf; intro x.
+    rewrite N.land_spec.
+    repeat rewrite wordToN_testbit.
+    revert x a b.
+
+    induction n, m; intros;
+      shatter a; shatter b;
+      induction (N.to_nat x) as [|n0];
+      try rewrite <- (Nat2N.id n0);
+      try rewrite andb_false_r;
+      try rewrite andb_true_r;
+      simpl; intuition.
+  Qed.
 
   Lemma wordToN_split2: forall {n m} x,
-    & (@split2 n m x) = N.land (& x) (N.ones (N.of_nat m)).
-  Proof. Admitted.
+    & (@split2 n m x) = N.shiftr (& x) (N.of_nat n).
+  Proof.
+    intros.
 
-  Lemma wordToN_combine: forall {n m} x y,
-    (& (@Word.combine n x m y) = (& x) * Npow2 m + & y)%N.
-  Proof. Admitted.
+    pose proof (Word.combine_split _ _ x) as C; revert C.
+    generalize (split1 n m x) as a, (split2 n m x) as b.
+    intros a b C.
+    rewrite <- C; clear C x.
+
+    apply N.bits_inj_iff; unfold N.eqf; intro x;
+      rewrite N.shiftr_spec;
+      repeat rewrite wordToN_testbit;
+      try apply N_gt_0.
+
+    revert x a b.
+    induction n, m; intros;
+      shatter a;
+      try apply N_gt_0.
+
+    - simpl; intuition.
+
+    - replace (x + N.of_nat 0)%N with x by nomega.
+      simpl; intuition.
+
+    - rewrite (IHn x (wtl a) b).
+      rewrite <- (N2Nat.id x).
+      repeat rewrite <- Nat2N.inj_add.
+      repeat rewrite Nat2N.id; simpl.
+      replace (N.to_nat x + S n) with (S (N.to_nat x + n)) by omega.
+      reflexivity.
+
+    - rewrite (IHn x (wtl a) b).
+      rewrite <- (N2Nat.id x).
+      repeat rewrite <- Nat2N.inj_add.
+      repeat rewrite Nat2N.id; simpl.
+      replace (N.to_nat x + S n) with (S (N.to_nat x + n)) by omega.
+      reflexivity.
+  Qed.
+
+  Lemma wordToN_combine: forall {n m} a b,
+    & (@Word.combine n a m b) = N.lxor (N.shiftl (& b) (N.of_nat n)) (& a).
+  Proof.
+    intros; symmetry.
+
+    replace a with (Word.split1 _ _ (Word.combine a b)) at 1
+      by (apply Word.split1_combine).
+
+    replace b with (Word.split2 _ _ (Word.combine a b)) at 1
+      by (apply Word.split2_combine).
+
+    generalize (Word.combine a b); intro x; clear a b.
+
+    rewrite wordToN_split1, wordToN_split2.
+    generalize (&x); clear x; intro x.
+    apply N.bits_inj_iff; unfold N.eqf; intro k.
+
+    rewrite N.lxor_spec.
+    destruct (Nge_dec k (N.of_nat n)).
+
+    - rewrite N.shiftl_spec_high; try apply N_gt_0;
+        try (apply ge_to_le; assumption).
+      rewrite N.shiftr_spec; try apply N_gt_0.
+      replace (k - N.of_nat n + N.of_nat n)%N with k by nomega.
+      rewrite N.land_spec.
+      induction (N.testbit x k); 
+        replace (N.testbit (& wones n) k) with false;
+        simpl; intuition.
+
+    - rewrite N.shiftl_spec_low; try assumption; try apply N_gt_0.
+      rewrite N.land_spec.
+      induction (N.testbit x k);
+        replace (N.testbit (& wones n) k) with true;
+        simpl; intuition.
+
+  Qed.
 
   Lemma break_spec: forall (m n: nat) (x: word n) low high,
       (low, high) = break m x

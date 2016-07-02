@@ -39,10 +39,10 @@ Section Util.
     | right _ => w
     end.
 
-  Definition overflows (n: nat) (x: N) :
-      {(x >= Npow2 n)%N} + {(x < Npow2 n)%N}.
+  Definition Nge_dec (x y: N) :
+      {(x >= y)%N} + {(x < y)%N}.
     refine (
-      let c := (x ?= Npow2 n)%N in
+      let c := (x ?= y)%N in
       match c as c' return c = c' -> _ with
       | Lt => fun _ => right _
       | _ => fun _ => left _
@@ -56,6 +56,8 @@ Section Util.
         | [ H: Lt = _ |- _] => inversion H
         end).
   Defined.
+
+  Definition overflows (n: nat) (x: N) := Nge_dec x (Npow2 n).
 
   Definition break {n} (m: nat) (x: word n): word m * word (n - m).
     refine match (le_dec m n) with
