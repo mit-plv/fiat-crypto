@@ -7,7 +7,6 @@ Local Open Scope Z.
 
 Hint Extern 1 => lia : lia.
 Hint Extern 1 => lra : lra.
-Hint Extern 1 => nra : nra.
 Hint Extern 1 => nia : nia.
 Hint Extern 1 => omega : omega.
 Hint Resolve Z.log2_nonneg Z.div_small Z.mod_small Z.pow_neg_r Z.pow_0_l : zarith.
@@ -18,15 +17,22 @@ Hint Resolve (fun a b H => proj1 (Z.mod_pos_bound a b H)) (fun a b H => proj2 (Z
     this database. *)
 Create HintDb zsimplify discriminated.
 Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r : zsimplify.
-Hint Rewrite Z.div_mul Z.div_1_l Z.div_same Z.mod_same Z.div_small Z.mod_small using lia : zsimplify.
+Hint Rewrite Z.div_mul Z.div_1_l Z.div_same Z.mod_same Z.div_small Z.mod_small Z.div_add Z.div_add_l using lia : zsimplify.
 
 (** "push" means transform [-f x] to [f (-x)]; "pull" means go the other way *)
+Create HintDb push_Zopp discriminated.
+Create HintDb pull_Zopp discriminated.
 Hint Rewrite Z.div_opp_l_nz Z.div_opp_l_z using lia : pull_Zopp.
 Hint Rewrite Z.mul_opp_l : pull_Zopp.
 Hint Rewrite <- Z.opp_add_distr : pull_Zopp.
 Hint Rewrite <- Z.div_opp_l_nz Z.div_opp_l_z using lia : push_Zopp.
 Hint Rewrite <- Z.mul_opp_l : push_Zopp.
 Hint Rewrite Z.opp_add_distr : push_Zopp.
+
+Create HintDb push_Zmul discriminated.
+Create HintDb pull_Zmul discriminated.
+Hint Rewrite Z.mul_add_distr_l Z.mul_add_distr_r Z.mul_sub_distr_l Z.mul_sub_distr_r : push_Zmul.
+Hint Rewrite <- Z.mul_add_distr_l Z.mul_add_distr_r Z.mul_sub_distr_l Z.mul_sub_distr_r : pull_Zmul.
 
 (** For the occasional lemma that can remove the use of [Z.div] *)
 Create HintDb zstrip_div.
@@ -834,3 +840,25 @@ Lemma Zmod_small_sym a b : 0 <= a < b -> a = a mod b.
 Proof. intros; symmetry; apply Z.mod_small; assumption. Qed.
 
 Hint Resolve Zdiv_small_sym Zmod_small_sym : zarith.
+
+Lemma Zdiv_add' a b c : c <> 0 -> (a + c * b) / c = a / c + b.
+Proof. intro; rewrite <- Z.div_add, (Z.mul_comm c); try lia. Qed.
+
+Lemma Zdiv_add_l' a b c : b <> 0 -> (b * a + c) / b = a + c / b.
+Proof. intro; rewrite <- Z.div_add_l, (Z.mul_comm b); lia. Qed.
+
+Hint Rewrite Zdiv_add_l' Zdiv_add' using lia : zsimplify.
+
+Lemma Zdiv_mul_skip a b k : 0 < b -> 0 < k -> a * b / k / b = a / k.
+Proof.
+  intros; rewrite Z.div_div, (Z.mul_comm k), <- Z.div_div by lia.
+  autorewrite with zsimplify; reflexivity.
+Qed.
+
+Lemma Zdiv_mul_skip' a b k : 0 < b -> 0 < k -> b * a / k / b = a / k.
+Proof.
+  intros; rewrite Z.div_div, (Z.mul_comm k), <- Z.div_div by lia.
+  autorewrite with zsimplify; reflexivity.
+Qed.
+
+Hint Rewrite Zdiv_mul_skip Zdiv_mul_skip' using lia : zsimplify.
