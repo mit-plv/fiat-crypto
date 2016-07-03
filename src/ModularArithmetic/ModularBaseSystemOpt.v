@@ -22,7 +22,7 @@ Definition Z_div_opt := Eval compute in Z.div.
 Definition Z_pow_opt := Eval compute in Z.pow.
 Definition Z_opp_opt := Eval compute in Z.opp.
 Definition Z_shiftl_opt := Eval compute in Z.shiftl.
-Definition Z_shiftl_by_opt := Eval compute in Z_shiftl_by.
+Definition Z_shiftl_by_opt := Eval compute in Z.shiftl_by.
 
 Definition nth_default_opt {A} := Eval compute in @nth_default A.
 Definition set_nth_opt {A} := Eval compute in @set_nth A.
@@ -499,11 +499,11 @@ Section Multiplication.
     cbv [BaseSystem.mul mul mul_each mul_bi mul_bi' zeros ext_base reduce].
     rewrite <- mul'_opt_correct.
     change @base with base_opt.
-    rewrite map_shiftl by apply k_nonneg.
+    rewrite Z.map_shiftl by apply k_nonneg.
     rewrite c_subst.
     rewrite k_subst.
     change @map with @map_opt.
-    change @Z_shiftl_by with @Z_shiftl_by_opt.
+    change @Z.shiftl_by with @Z_shiftl_by_opt.
     reflexivity.
   Defined.
 

@@ -711,36 +711,26 @@ Ltac deduplicate_nonfraction_pieces mul :=
            => subst x0 x1
          end.
 
-Ltac set_nonfraction_pieces_on T eq zero opp add sub mul inv div nonzero_tac cont :=
+Ltac set_nonfraction_pieces_on T eq zero opp add sub mul inv div cont :=
   idtac;
   let one_arg_recr :=
       fun op v
       => set_nonfraction_pieces_on
-           v eq zero opp add sub mul inv div nonzero_tac
+           v eq zero opp add sub mul inv div
            ltac:(fun x => cont (op x)) in
   let two_arg_recr :=
       fun op v0 v1
       => set_nonfraction_pieces_on
-           v0 eq zero opp add sub mul inv div nonzero_tac
+           v0 eq zero opp add sub mul inv div
            ltac:(fun x
                  =>
                    set_nonfraction_pieces_on
-                     v1 eq zero opp add sub mul inv div nonzero_tac
+                     v1 eq zero opp add sub mul inv div
                      ltac:(fun y => cont (op x y))) in
   lazymatch T with
   | eq ?x ?y => two_arg_recr eq x y
   | appcontext[div]
     => lazymatch T with
-       | div ?numerator ?denominator
-         => let d := fresh "d" in
-            pose denominator as d;
-            cut (not (eq d zero));
-            [ intro;
-              set_nonfraction_pieces_on
-                numerator eq zero opp add sub mul inv div nonzero_tac
-                ltac:(fun numerator'
-                      => cont (div numerator' d))
-            | subst d; nonzero_tac ]
        | opp ?x => one_arg_recr opp x
        | inv ?x => one_arg_recr inv x
        | add ?x ?y => two_arg_recr add x y
@@ -753,32 +743,32 @@ Ltac set_nonfraction_pieces_on T eq zero opp add sub mul inv div nonzero_tac con
          pose T as x;
          cont x
   end.
-Ltac set_nonfraction_pieces_in_by H nonzero_tac :=
+Ltac set_nonfraction_pieces_in H :=
   idtac;
   let fld := guess_field in
   lazymatch type of fld with
   | @field ?T ?eq ?zero ?one ?opp ?add ?sub ?mul ?inv ?div
     => let T := type of H in
        set_nonfraction_pieces_on
-         T eq zero opp add sub mul inv div nonzero_tac
+         T eq zero opp add sub mul inv div
          ltac:(fun T' => change T' in H);
        deduplicate_nonfraction_pieces mul
   end.
-Ltac set_nonfraction_pieces_by nonzero_tac :=
+Ltac set_nonfraction_pieces :=
   idtac;
   let fld := guess_field in
   lazymatch type of fld with
   | @field ?T ?eq ?zero ?one ?opp ?add ?sub ?mul ?inv ?div
     => let T := get_goal in
        set_nonfraction_pieces_on
-         T eq zero opp add sub mul inv div nonzero_tac
+         T eq zero opp add sub mul inv div
          ltac:(fun T' => change T');
        deduplicate_nonfraction_pieces mul
   end.
-Ltac set_nonfraction_pieces_in H :=
-  set_nonfraction_pieces_in_by H ltac:(try (intro; field_nonzero_mul_split; try tauto)).
-Ltac set_nonfraction_pieces :=
-  set_nonfraction_pieces_by ltac:(try (intro; field_nonzero_mul_split; tauto)).
+Ltac default_conservative_common_denominator_nonzero_tac :=
+  repeat apply conj;
+  try first [ assumption
+            | intro; field_nonzero_mul_split; tauto ].
 Ltac conservative_common_denominator_in H :=
   idtac;
   let fld := guess_field in
@@ -789,10 +779,9 @@ Ltac conservative_common_denominator_in H :=
   lazymatch type of H with
   | appcontext[div]
     => set_nonfraction_pieces_in H;
-       [ common_denominator_in H;
-         [
-         | repeat apply conj; try assumption.. ]
-       | .. ];
+       common_denominator_in H;
+       [
+       | default_conservative_common_denominator_nonzero_tac.. ];
        repeat match goal with H := _ |- _ => subst H end
   | ?T => fail 0 "no division in" H ":" T
   end.
@@ -806,10 +795,9 @@ Ltac conservative_common_denominator :=
   lazymatch goal with
   | |- appcontext[div]
     => set_nonfraction_pieces;
-       [ common_denominator;
-         [
-         | repeat apply conj; try assumption.. ]
-       | .. ];
+       common_denominator;
+       [
+       | default_conservative_common_denominator_nonzero_tac.. ];
        repeat match goal with H := _ |- _ => subst H end
   | |- ?G
     => fail 0 "no division in goal" G
@@ -846,14 +834,30 @@ Ltac conservative_common_denominator_inequality :=
   | let HG := fresh in
     intros HG; apply H'; conservative_common_denominator_in HG; [ eexact HG | .. ] ].
 
+Ltac conservative_common_denominator_hyps :=
+  try match goal with
+      | [H: _ |- _ ]
+        => progress conservative_common_denominator_in H;
+           [ conservative_common_denominator_hyps
+           | .. ]
+      end.
+
+Ltac conservative_common_denominator_inequality_hyps :=
+  try match goal with
+      | [H: _ |- _ ]
+        => progress conservative_common_denominator_inequality_in H;
+           [ conservative_common_denominator_inequality_hyps
+           | .. ]
+      end.
+
 Ltac conservative_common_denominator_all :=
   try conservative_common_denominator;
-  [ repeat match goal with [H: _ |- _ ] => progress conservative_common_denominator_in H; [] end
+  [ try conservative_common_denominator_hyps
   | .. ].
 
 Ltac conservative_common_denominator_inequality_all :=
   try conservative_common_denominator_inequality;
-  [ repeat match goal with [H: _ |- _ ] => progress conservative_common_denominator_inequality_in H; [] end
+  [ try conservative_common_denominator_inequality_hyps
   | .. ].
 
 Ltac conservative_common_denominator_equality_inequality_all :=
@@ -878,19 +882,41 @@ Ltac field_simplify_eq_hyps :=
 
 Ltac field_simplify_eq_all := field_simplify_eq_hyps; try field_simplify_eq.
 
-(** Clear duplicate hypotheses, and hypotheses of the form [R x x] for a reflexive relation [R] *)
+(** Clear duplicate hypotheses, and hypotheses of the form [R x x] for a reflexive relation [R], and similarly for symmetric relations *)
 Ltac clear_algebraic_duplicates_step R :=
   match goal with
   | [ H : R ?x ?x |- _ ]
     => clear H
   end.
+Ltac clear_algebraic_duplicates_step_S R :=
+  match goal with
+  | [ H : R ?x ?y, H' : R ?y ?x |- _ ]
+    => clear H
+  | [ H : not (R ?x ?y), H' : not (R ?y ?x) |- _ ]
+    => clear H
+  | [ H : (R ?x ?y -> False)%type, H' : (R ?y ?x -> False)%type |- _ ]
+    => clear H
+  | [ H : not (R ?x ?y), H' : (R ?y ?x -> False)%type |- _ ]
+    => clear H
+  end.
 Ltac clear_algebraic_duplicates_guarded R :=
   let test_reflexive := constr:(_ : Reflexive R) in
   repeat clear_algebraic_duplicates_step R.
+Ltac clear_algebraic_duplicates_guarded_S R :=
+  let test_symmetric := constr:(_ : Symmetric R) in
+  repeat clear_algebraic_duplicates_step_S R.
 Ltac clear_algebraic_duplicates :=
   clear_duplicates;
   repeat match goal with
-         | [ H : ?R ?x ?x |- _ ] => clear_algebraic_duplicates_guarded R
+         | [ H : ?R ?x ?x |- _ ] => progress clear_algebraic_duplicates_guarded R
+         | [ H : ?R ?x ?y, H' : ?R ?y ?x |- _ ]
+           => progress clear_algebraic_duplicates_guarded_S R
+         | [ H : not (?R ?x ?y), H' : not (?R ?y ?x) |- _ ]
+           => progress clear_algebraic_duplicates_guarded_S R
+         | [ H : not (?R ?x ?y), H' : (?R ?y ?x -> False)%type |- _ ]
+           => progress clear_algebraic_duplicates_guarded_S R
+         | [ H : (?R ?x ?y -> False)%type, H' : (?R ?y ?x -> False)%type |- _ ]
+           => progress clear_algebraic_duplicates_guarded_S R
          end.
 
 (*** Inequalities over fields *)
@@ -1006,16 +1032,43 @@ Ltac nsatz_inequality_to_equality :=
   | [ H : not (?R ?x ?zero) |- False ] => apply H
   | [ H : (?R ?x ?zero -> False)%type |- False ] => apply H
   end.
+(** Clean up tactic handling side-conditions *)
+Ltac super_nsatz_post_clean_inequalities :=
+  repeat (apply conj || split_field_inequalities);
+  try assumption;
+  prensatz_contradict; nsatz_inequality_to_equality;
+  try nsatz.
+Ltac nsatz_equality_to_inequality_by_decide_equality :=
+  lazymatch goal with
+  | [ H : not (?R _ _) |- ?R _ _ ] => idtac
+  | [ H : (?R _ _ -> False)%type |- ?R _ _ ] => idtac
+  | [ |- ?R _ _ ] => fail 0 "No hypothesis exists which negates the relation" R
+  | [ |- ?G ] => fail 0 "The goal is not a binary relation:" G
+  end;
+  lazymatch goal with
+  | [ |- ?R ?x ?y ]
+    => destruct (@dec (R x y) _); [ assumption | exfalso ]
+  end.
 (** Handles inequalities and fractions *)
-Ltac super_nsatz :=
+Ltac super_nsatz_internal nsatz_alternative :=
   (* [nsatz] gives anomalies on duplicate hypotheses, so we strip them *)
   clear_algebraic_duplicates;
   prensatz_contradict;
   (* Each goal left over by [prensatz_contradict] is separate (and
      there might not be any), so we handle them all separately *)
   [ try conservative_common_denominator_equality_inequality_all;
-    [ try nsatz_inequality_to_equality; try nsatz
-    | repeat (apply conj || split_field_inequalities); try assumption; prensatz_contradict; nsatz_inequality_to_equality; try nsatz.. ].. ].
+    [ try nsatz_inequality_to_equality;
+      try first [ nsatz;
+                  (* [nstaz] might leave over side-conditions; we handle them if they are inequalities *)
+                  try super_nsatz_post_clean_inequalities
+                | nsatz_alternative ]
+    | super_nsatz_post_clean_inequalities.. ].. ].
+
+Ltac super_nsatz :=
+  super_nsatz_internal
+    (* if [nsatz] fails, we try turning the goal equality into an inequality and trying again *)
+    ltac:(nsatz_equality_to_inequality_by_decide_equality;
+          super_nsatz_internal idtac).
 
 Section ExtraLemmas.
   Context {F eq zero one opp add sub mul inv div} `{F_field:field F eq zero one opp add sub mul inv div}.
@@ -1023,13 +1076,11 @@ Section ExtraLemmas.
   Local Notation "0" := zero. Local Notation "1" := one.
   Local Infix "=" := eq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
 
+  Example _only_two_square_roots_test x y : x * x = y * y -> x <> opp y -> x = y.
+  Proof. intros; super_nsatz. Qed.
+
   Lemma only_two_square_roots' x y : x * x = y * y -> x <> y -> x <> opp y -> False.
-  Proof.
-    intros.
-    canonicalize_field_equalities; canonicalize_field_inequalities.
-    assert (H' : (x + y) * (x - y) <> 0) by (apply mul_nonzero_nonzero; assumption).
-    apply H'; nsatz.
-  Qed.
+  Proof. intros; super_nsatz. Qed.
 
   Lemma only_two_square_roots x y z : x * x = z -> y * y = z -> x <> y -> x <> opp y -> False.
   Proof.
@@ -1051,17 +1102,37 @@ Section ExtraLemmas.
 End ExtraLemmas.
 
 (** We look for hypotheses of the form [x^2 = y^2] and [x^2 = z] together with [y^2 = z], and prove that [x = y] or [x = opp y] *)
-Ltac pose_proof_only_two_square_roots x y H :=
+Ltac pose_proof_only_two_square_roots x y H eq opp mul :=
   not constr_eq x y;
-  match goal with
-  | [ H' : ?eq (?mul x x) (?mul y y) |- _ ]
-    => pose proof (only_two_square_roots'_choice x y H') as H
-  | [ H0 : ?eq (?mul x x) ?z, H1 : ?eq (?mul y y) ?z |- _ ]
-    => pose proof (only_two_square_roots_choice x y z H0 H1) as H
+  lazymatch x with
+  | opp ?x' => pose_proof_only_two_square_roots x' y H eq opp mul
+  | _
+    => lazymatch y with
+       | opp ?y' => pose_proof_only_two_square_roots x y' H eq opp mul
+       | _
+         => match goal with
+            | [ H' : eq x y |- _ ]
+              => let T := type of H' in fail 1 "The hypothesis" H' "already proves" T
+            | [ H' : eq y x |- _ ]
+              => let T := type of H' in fail 1 "The hypothesis" H' "already proves" T
+            | [ H' : eq x (opp y) |- _ ]
+              => let T := type of H' in fail 1 "The hypothesis" H' "already proves" T
+            | [ H' : eq y (opp x) |- _ ]
+              => let T := type of H' in fail 1 "The hypothesis" H' "already proves" T
+            | [ H' : eq (opp x) y |- _ ]
+              => let T := type of H' in fail 1 "The hypothesis" H' "already proves" T
+            | [ H' : eq (opp y) x |- _ ]
+              => let T := type of H' in fail 1 "The hypothesis" H' "already proves" T
+            | [ H' : eq (mul x x) (mul y y) |- _ ]
+              => pose proof (only_two_square_roots'_choice x y H') as H
+            | [ H0 : eq (mul x x) ?z, H1 : eq (mul y y) ?z |- _ ]
+              => pose proof (only_two_square_roots_choice x y z H0 H1) as H
+            end
+       end
   end.
-Ltac reduce_only_two_square_roots x y :=
+Ltac reduce_only_two_square_roots x y eq opp mul :=
   let H := fresh in
-  pose_proof_only_two_square_roots x y H;
+  pose_proof_only_two_square_roots x y H eq opp mul;
   destruct H;
   try setoid_subst y.
 Ltac pre_clean_only_two_square_roots :=
@@ -1075,21 +1146,25 @@ Ltac post_clean_only_two_square_roots x y :=
        | [ H : (?R ?x ?x -> False)%type |- _ ] => exfalso; apply H; reflexivity
        end);
   try setoid_subst x; try setoid_subst y.
-Ltac only_two_square_roots_step :=
+Ltac only_two_square_roots_step eq opp mul :=
   match goal with
-  | [ H : not (?eq ?x (?opp ?y)) |- _ ]
+  | [ H : not (eq ?x (opp ?y)) |- _ ]
     (* this one comes first, because it the procedure is asymmetric
        with respect to [x] and [y], and this order is more likely to
        lead to solving goals by contradiction. *)
-    => is_var x; is_var y; reduce_only_two_square_roots x y; post_clean_only_two_square_roots x y
-  | [ H : ?eq (?mul ?x ?x) (?mul ?y ?y) |- _ ]
-    => reduce_only_two_square_roots x y; post_clean_only_two_square_roots x y
-  | [ H : ?eq (?mul ?x ?x) ?z, H' : ?eq (?mul ?y ?y) ?z |- _ ]
-    => reduce_only_two_square_roots x y; post_clean_only_two_square_roots x y
+    => is_var x; is_var y; reduce_only_two_square_roots x y eq opp mul; post_clean_only_two_square_roots x y
+  | [ H : eq (mul ?x ?x) (mul ?y ?y) |- _ ]
+    => reduce_only_two_square_roots x y eq opp mul; post_clean_only_two_square_roots x y
+  | [ H : eq (mul ?x ?x) ?z, H' : eq (mul ?y ?y) ?z |- _ ]
+    => reduce_only_two_square_roots x y eq opp mul; post_clean_only_two_square_roots x y
   end.
 Ltac only_two_square_roots :=
   pre_clean_only_two_square_roots;
-  repeat only_two_square_roots_step.
+  let fld := guess_field in
+  lazymatch type of fld with
+  | @field ?F ?eq ?zero ?one ?opp ?add ?sub ?mul ?inv ?div
+    => repeat only_two_square_roots_step eq opp mul
+  end.
 
 Section Example.
   Context {F zero one opp add sub mul inv div} `{F_field:field F eq zero one opp add sub mul inv div}.

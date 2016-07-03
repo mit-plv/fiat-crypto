@@ -43,6 +43,7 @@ src/ModularArithmetic/PseudoMersenneBaseParamProofs.v
 src/ModularArithmetic/PseudoMersenneBaseParams.v
 src/ModularArithmetic/PseudoMersenneBaseRep.v
 src/ModularArithmetic/Tutorial.v
+src/ModularArithmetic/BarrettReduction/Z.v
 src/Spec/CompleteEdwardsCurve.v
 src/Spec/EdDSA.v
 src/Spec/Encoding.v
