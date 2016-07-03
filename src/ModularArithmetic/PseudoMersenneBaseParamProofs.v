@@ -163,7 +163,7 @@ Section PseudoMersenneBaseParamProofs.
     rewrite (Z.mul_comm r).
     subst r.
     assert (i + j - length base < length base)%nat by omega.
-    rewrite mul_div_eq by (apply gt_lt_symmetry; apply Z.mul_pos_pos;
+    rewrite Z.mul_div_eq by (apply Z.gt_lt_iff; apply Z.mul_pos_pos;
       [ | subst b; rewrite nth_default_base; try assumption ];
       apply Z.pow_pos_nonneg; omega || apply k_nonneg || apply sum_firstn_limb_widths_nonneg).
     rewrite (Zminus_0_l_reverse (b i * b j)) at 1.
@@ -172,7 +172,7 @@ Section PseudoMersenneBaseParamProofs.
     repeat rewrite nth_default_base by assumption.
     do 2 rewrite <- Z.pow_add_r by (apply sum_firstn_limb_widths_nonneg || apply k_nonneg).
     symmetry.
-    apply mod_same_pow.
+    apply Z.mod_same_pow.
     split.
     + apply Z.add_nonneg_nonneg; apply sum_firstn_limb_widths_nonneg || apply k_nonneg.
     + rewrite base_length in *; apply limb_widths_match_modulus; assumption.
@@ -183,7 +183,7 @@ Section PseudoMersenneBaseParamProofs.
   Proof.
     intros.
     repeat rewrite nth_default_base by omega.
-    apply mod_same_pow.
+    apply Z.mod_same_pow.
     split; [apply sum_firstn_limb_widths_nonneg | ].
     destruct (NPeano.Nat.eq_dec i 0); subst.
       + case_eq limb_widths; intro; unfold sum_firstn; simpl; try omega; intros l' lw_eq.
@@ -218,7 +218,7 @@ Section PseudoMersenneBaseParamProofs.
      destruct In_b_base as [i nth_err_b].
      apply nth_error_subst in nth_err_b.
      rewrite nth_err_b.
-     apply gt_lt_symmetry.
+     apply Z.gt_lt_iff.
      apply Z.pow_pos_nonneg; omega || apply sum_firstn_limb_widths_nonneg.
    Qed.
 
@@ -236,9 +236,9 @@ Section PseudoMersenneBaseParamProofs.
      intros; subst b r.
      repeat rewrite nth_default_base by omega.
      rewrite (Z.mul_comm _ (2 ^ (sum_firstn limb_widths (i+j)))).
-     rewrite mul_div_eq by (apply gt_lt_symmetry; apply Z.pow_pos_nonneg; omega || apply sum_firstn_limb_widths_nonneg).
+     rewrite Z.mul_div_eq by (apply Z.gt_lt_iff; apply Z.pow_pos_nonneg; omega || apply sum_firstn_limb_widths_nonneg).
      rewrite <- Z.pow_add_r by apply sum_firstn_limb_widths_nonneg.
-     rewrite mod_same_pow; try ring.
+     rewrite Z.mod_same_pow; try ring.
      split; [ apply sum_firstn_limb_widths_nonneg | ].
      apply limb_widths_good.
      rewrite <- base_length; assumption.

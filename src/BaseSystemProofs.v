@@ -177,7 +177,7 @@ Section BaseSystemProofs.
   Lemma nth_error_base_nonzero : forall n x,
     nth_error base n = Some x -> x <> 0.
   Proof.
-    eauto using (@nth_error_value_In Z), Zgt0_neq0, base_positive.
+    eauto using (@nth_error_value_In Z), Z.gt0_neq0, base_positive.
   Qed.
 
   Hint Rewrite plus_0_r.
