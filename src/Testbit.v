@@ -107,7 +107,7 @@ Proof.
     rewrite <- nth_default_eq in uniform.
     erewrite nth_error_value_eq_nth_default in uniform; eauto.
     subst.
-    destruct r; [ | apply pos_pow_nat_pos | pose proof (Zlt_neg_0 p) ] ; omega.
+    destruct r; [ | apply Z.pos_pow_nat_pos | pose proof (Zlt_neg_0 p) ] ; omega.
   + intros.
     rewrite nth_default_eq.
     rewrite uniform; auto.
@@ -151,7 +151,7 @@ Proof.
   induction us; boring.
   rewrite <- (IHus base) by (omega || eauto using no_overflow_tail).
   rewrite decode_cons by (eapply uniform_base_BaseVector; eauto;
-    rewrite gt_lt_symmetry; apply Z_pow_gt0; omega).
+    rewrite Z.gt_lt_iff; apply Z.pow_pos_nonneg; omega).
   simpl.
   f_equal.
   + symmetry. eapply no_overflow_cons; eauto.
@@ -174,12 +174,12 @@ Proof.
     auto using Z.land_0_l.
   + destruct i; simpl.
     - rewrite nth_default_cons.
-      rewrite Z.shiftr_0_r, Z_land_add_land by omega.
+      rewrite Z.shiftr_0_r, Z.land_add_land by omega.
       symmetry; eapply no_overflow_cons; eauto.
     - rewrite nth_default_cons_S.
       erewrite IHus; eauto using no_overflow_tail.
       remember (i * limb_width)%nat as k.
-      rewrite Z_shiftr_add_land by omega.
+      rewrite Z.shiftr_add_land by omega.
       replace (limb_width + k - limb_width)%nat with k by omega.
       reflexivity.
 Qed.
@@ -190,7 +190,7 @@ Lemma unfold_bits_testbit : forall limb_width us n, (0 < limb_width)%nat ->
 Proof.
   unfold testbit; intros.
   erewrite unfold_bits_indexing; eauto.
-  rewrite <- Z_testbit_low by
+  rewrite <- Z.testbit_low by
     (split; try apply Nat2Z.inj_lt; pose proof (mod_bound_pos n limb_width); omega).
   rewrite Z.shiftr_spec by apply Nat2Z.is_nonneg.
   f_equal.

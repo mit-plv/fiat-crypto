@@ -111,7 +111,7 @@ Section PolynomialBaseCoefs.
     rewrite in_map_iff in *.
     destruct H; destruct H.
     subst.
-    apply pos_pow_nat_pos.
+    apply Z.pos_pow_nat_pos.
   Qed.
 
   Lemma poly_base_defn : forall i, (i < length poly_base)%nat ->
