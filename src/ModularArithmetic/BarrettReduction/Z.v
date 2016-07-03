@@ -80,7 +80,7 @@ Section barrett.
     Proof.
       pose proof k_nonnegative; subst q r m.
       assert (0 <= 2^(k-1)) by zero_bounds.
-      Zsimplify_fractions_le.
+      Z.simplify_fractions_le.
     Qed.
 
     (** Also, if [a < n²] then [r < 2n]. *)
@@ -89,7 +89,7 @@ Section barrett.
     Lemma r_small : r < 2 * n.
     Proof.
       Hint Rewrite (Z.div_small a (4^k)) (Z.mod_small a (4^k)) using lia : zsimplify.
-      Hint Rewrite (mul_div_eq' a n) using lia : zstrip_div.
+      Hint Rewrite (Z.mul_div_eq' a n) using lia : zstrip_div.
       cut (r + 1 <= 2 * n); [ lia | ].
       pose proof k_nonnegative; subst r q m.
       assert (0 <= 2^(k-1)) by zero_bounds.
@@ -110,7 +110,7 @@ Section barrett.
                   else r - n.
     Proof.
       pose proof r_small. pose proof qn_small.
-      destruct (r <? n) eqn:rlt; Zltb_to_Zlt.
+      destruct (r <? n) eqn:rlt; Z.ltb_to_lt.
       { symmetry; apply (Zmod_unique a n q); subst r; lia. }
       { symmetry; apply (Zmod_unique a n (q + 1)); subst r; lia. }
     Qed.
