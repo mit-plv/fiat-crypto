@@ -30,6 +30,9 @@ Module E.
 
     Context {a b: F}.
 
+    (** N.B. We may require more conditions to prove that points form
+        a group under addition (associativity, in particular.  If
+        that's the case, more fields will be added to this class. *)
     Class weierstrass_params :=
       {
         char_gt_2 : 2 <> 0;
