@@ -1,5 +1,4 @@
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
-Require Import Crypto.ModularArithmetic.PseudoMersenneBaseRep.
 Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParams.
 Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParamProofs.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemProofs.
@@ -12,6 +11,12 @@ Require Import Coq.ZArith.ZArith Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.ZArith.
 Require Import Coq.QArith.QArith Coq.QArith.Qround.
 Require Import Crypto.Tactics.VerdiTactics.
 Local Open Scope Z.
+
+Class SubtractionCoefficient (m : Z) (prm : PseudoMersenneBaseParams m) := {
+  coeff : BaseSystem.digits;
+  coeff_length : (length coeff = length PseudoMersenneBaseParamProofs.base)%nat;
+  coeff_mod: (BaseSystem.decode PseudoMersenneBaseParamProofs.base coeff) mod m = 0
+}.
 
 (* Computed versions of some functions. *)
 
@@ -94,18 +99,6 @@ end.
 Ltac kill_precondition H :=
   forward H; [abstract (try exact eq_refl; clear; cbv; intros; repeat break_or_hyp; intuition)|];
   subst_precondition.
-
-Ltac compute_formula :=
-  match goal with
-  | [H : _ -> _ -> PseudoMersenneBaseRep.rep _ ?result |- PseudoMersenneBaseRep.rep _ ?result] => kill_precondition H; compute_formula
-  | [H : _ -> PseudoMersenneBaseRep.rep _ ?result |- PseudoMersenneBaseRep.rep _ ?result] => kill_precondition H; compute_formula
-  | [H : @PseudoMersenneBaseRep.rep ?M ?P _ ?result |- @PseudoMersenneBaseRep.rep ?M ?P _ ?result] =>
-    let m := fresh "m" in set (m := M) in H at 1; change M with m at 1;
-    let p := fresh "p" in set (p := P) in H at 1; change P with p at 1;
-    let r := fresh "r" in set (r := result) in H |- *;
-    cbv -[m p r PseudoMersenneBaseRep.rep] in H;
-    repeat rewrite ?Z.mul_1_r, ?Z.add_0_l, ?Z.add_assoc, ?Z.mul_assoc in H
-  end.
 
 Section Carries.
   Context `{prm : PseudoMersenneBaseParams}
@@ -321,58 +314,37 @@ End Carries.
 Section Addition.
   Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient modulus prm}.
 
-  Definition add_opt_sig (us vs : T) : { b : digits | b = add us vs }.
+  Definition add_opt_sig (us vs : digits) : { b : digits | b = add us vs }.
   Proof.
     eexists.
     cbv [BaseSystem.add].
     reflexivity.
   Defined.
 
-  Definition add_opt (us vs : T) : digits
+  Definition add_opt (us vs : digits) : digits
     := Eval cbv [proj1_sig add_opt_sig] in proj1_sig (add_opt_sig us vs).
 
   Definition add_opt_correct us vs
     : add_opt us vs = add us vs
     := proj2_sig (add_opt_sig us vs).
-
-  Lemma add_opt_rep: forall (u v : T) (x y : F modulus),
-    PseudoMersenneBaseRep.rep u x -> PseudoMersenneBaseRep.rep v y ->
-    PseudoMersenneBaseRep.rep (add_opt u v) (x + y)%F.
-  Proof.
-    intros.
-    rewrite add_opt_correct.
-    auto using PseudoMersenneBaseRep.add_rep.
-  Qed.
-
 End Addition.
 
 Section Subtraction.
   Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient modulus prm}.
 
-  Definition sub_opt_sig (us vs : T) : { b : digits | b = sub coeff coeff_mod us vs }.
+  Definition sub_opt_sig (us vs : digits) : { b : digits | b = sub coeff coeff_mod us vs }.
   Proof.
     eexists.
     cbv [BaseSystem.add ModularBaseSystem.sub BaseSystem.sub].
     reflexivity.
   Defined.
 
-  Definition sub_opt (us vs : T) : digits
+  Definition sub_opt (us vs : digits) : digits
     := Eval cbv [proj1_sig sub_opt_sig] in proj1_sig (sub_opt_sig us vs).
 
   Definition sub_opt_correct us vs
     : sub_opt us vs = sub coeff coeff_mod us vs
     := proj2_sig (sub_opt_sig us vs).
-
-  Lemma sub_opt_rep: forall (u v : T) (x y : F modulus),
-    PseudoMersenneBaseRep.rep u x -> PseudoMersenneBaseRep.rep v y ->
-    PseudoMersenneBaseRep.rep (sub_opt u v) (x - y)%F.
-  Proof.
-    intros.
-    rewrite sub_opt_correct.
-    change (sub coeff coeff_mod) with PseudoMersenneBaseRep.sub.
-    apply PseudoMersenneBaseRep.sub_rep; auto using coeff_length.
-  Qed.
-
 End Subtraction.
 
 Section Multiplication.
@@ -493,7 +465,7 @@ Section Multiplication.
       reflexivity. }
   Qed.
 
-  Definition mul_opt_sig (us vs : T) : { b : digits | b = mul us vs }.
+  Definition mul_opt_sig (us vs : digits) : { b : digits | b = mul us vs }.
   Proof.
     eexists.
     cbv [BaseSystem.mul mul mul_each mul_bi mul_bi' zeros ext_base reduce].
@@ -507,14 +479,14 @@ Section Multiplication.
     reflexivity.
   Defined.
 
-  Definition mul_opt (us vs : T) : digits
+  Definition mul_opt (us vs : digits) : digits
     := Eval cbv [proj1_sig mul_opt_sig] in proj1_sig (mul_opt_sig us vs).
 
   Definition mul_opt_correct us vs
     : mul_opt us vs = mul us vs
     := proj2_sig (mul_opt_sig us vs).
 
-  Definition carry_mul_opt_sig (us vs : T) : { b : digits | b = carry_mul us vs }.
+  Definition carry_mul_opt_sig (us vs : digits) : { b : digits | b = carry_mul us vs }.
   Proof.
     eexists.
     cbv [carry_mul].
@@ -523,23 +495,12 @@ Section Multiplication.
     reflexivity.
   Defined.
 
-  Definition carry_mul_opt (us vs : T) : digits
+  Definition carry_mul_opt (us vs : digits) : digits
     := Eval cbv [proj1_sig carry_mul_opt_sig] in proj1_sig (carry_mul_opt_sig us vs).
 
   Definition carry_mul_opt_correct us vs
     : carry_mul_opt us vs = carry_mul us vs
     := proj2_sig (carry_mul_opt_sig us vs).
-
-  Lemma carry_mul_opt_rep:
-    forall (u v : T) (x y : F modulus), PseudoMersenneBaseRep.rep u x -> PseudoMersenneBaseRep.rep v y ->
-    PseudoMersenneBaseRep.rep (carry_mul_opt u v) (x * y)%F.
-  Proof.
-    intros.
-    rewrite carry_mul_opt_correct.
-    change carry_mul with PseudoMersenneBaseRep.mul.
-    auto using PseudoMersenneBaseRep.mul_rep.
-  Qed.
-
 End Multiplication.
 
 Record freezePreconditions {modulus} (prm : PseudoMersenneBaseParams modulus) int_width :=
@@ -605,7 +566,7 @@ Section Canonicalization.
     carry_full_3_opt_cps f us = f (carry_full (carry_full (carry_full us))) :=
     proj2_sig (carry_full_3_opt_cps_sig f us).
 
-  Definition freeze_opt_sig (us : T) :
+  Definition freeze_opt_sig (us : digits) :
     { b : digits | b = freeze us }.
   Proof.
     eexists.
@@ -632,40 +593,10 @@ Section Canonicalization.
     reflexivity.
   Defined.
 
-  Definition freeze_opt (us : T) : digits
+  Definition freeze_opt (us : digits) : digits
     := Eval cbv beta iota delta [proj1_sig freeze_opt_sig] in proj1_sig (freeze_opt_sig us).
 
   Definition freeze_opt_correct us
     : freeze_opt us = freeze us
     := proj2_sig (freeze_opt_sig us).
-
-  Lemma freeze_opt_canonical: forall us vs x,
-    @pre_carry_bounds _ _ int_width us -> PseudoMersenneBaseRep.rep us x ->
-    @pre_carry_bounds _ _ int_width vs -> PseudoMersenneBaseRep.rep vs x ->
-    freeze_opt us = freeze_opt vs.
-  Proof.
-    intros.
-    rewrite !freeze_opt_correct.
-    change PseudoMersenneBaseRep.rep with rep in *.
-    eapply freeze_canonical with (B := int_width); eauto.
-  Qed.
-
-  Lemma freeze_opt_preserves_rep : forall us x, PseudoMersenneBaseRep.rep us x ->
-    PseudoMersenneBaseRep.rep (freeze_opt us) x.
-  Proof.
-    intros.
-    rewrite freeze_opt_correct.
-    change PseudoMersenneBaseRep.rep with rep in *.
-    eapply freeze_preserves_rep; eauto.
-  Qed.
-
-  Lemma freeze_opt_spec : forall us vs x, rep us x -> rep vs x ->
-    @pre_carry_bounds _ _ int_width us ->
-    @pre_carry_bounds _ _ int_width vs ->
-    (PseudoMersenneBaseRep.rep (freeze_opt us) x /\ freeze_opt us = freeze_opt vs).
-  Proof.
-    split; eauto using freeze_opt_canonical.
-    auto using freeze_opt_preserves_rep.
-  Qed.
-
 End Canonicalization.
