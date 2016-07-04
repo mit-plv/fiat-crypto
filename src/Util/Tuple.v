@@ -88,6 +88,18 @@ Proof.
     eapply from_list'_to_list'; assumption. }
 Qed.
 
+Definition on_tuple {A B} (f:list A -> list B)
+           {n m:nat} (H:forall xs, length xs = n -> length (f xs) = m)
+           (xs:tuple A n) : tuple B m :=
+  from_list m (f (to_list n xs))
+            (H (to_list n xs) (length_to_list xs)).
+
+Definition on_tuple2 {A B C} (f : list A -> list B -> list C) {a b c : nat}
+           (Hlength : forall la lb, length la = a -> length lb = b -> length (f la lb) = c)
+           (ta:tuple A a) (tb:tuple B b) : tuple C c
+  := from_list c (f (to_list a ta) (to_list b tb))
+               (Hlength (to_list a ta) (to_list b tb) (length_to_list ta) (length_to_list tb)).
+
 Fixpoint fieldwise' {A B} (n:nat) (R:A->B->Prop) (a:tuple' A n) (b:tuple' B n) {struct n} : Prop.
   destruct n; simpl @tuple' in *.
   { exact (R a b). }
