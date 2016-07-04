@@ -35,13 +35,13 @@ src/Experiments/SpecEd25519.v
 src/ModularArithmetic/ExtendedBaseVector.v
 src/ModularArithmetic/ModularArithmeticTheorems.v
 src/ModularArithmetic/ModularBaseSystem.v
+src/ModularArithmetic/ModularBaseSystemInterface.v
 src/ModularArithmetic/ModularBaseSystemOpt.v
 src/ModularArithmetic/ModularBaseSystemProofs.v
 src/ModularArithmetic/Pre.v
 src/ModularArithmetic/PrimeFieldTheorems.v
 src/ModularArithmetic/PseudoMersenneBaseParamProofs.v
 src/ModularArithmetic/PseudoMersenneBaseParams.v
-src/ModularArithmetic/PseudoMersenneBaseRep.v
 src/ModularArithmetic/Tutorial.v
 src/Spec/CompleteEdwardsCurve.v
 src/Spec/EdDSA.v

@@ -56,20 +56,27 @@ Section PseudoMersenneProofs.
     subst; auto.
   Qed.
 
+  Lemma length_sub :  forall c x u v,
+      length c = length base
+      -> length u = length base
+      -> length v = length base
+      -> length (ModularBaseSystem.sub c x u v) = length base.
+  Proof.
+    autounfold; unfold ModularBaseSystem.sub; intuition idtac.
+    rewrite sub_length, add_length_exact.
+    case_max; try rewrite Max.max_r; omega.
+  Qed.
+
   Lemma sub_rep : forall c c_0modq, (length c = length base)%nat ->
     forall u v x y, u ~= x -> v ~= y ->
     ModularBaseSystem.sub c c_0modq u v ~= (x-y)%F.
   Proof.
-    autounfold; unfold ModularBaseSystem.sub; intuition. {
-      rewrite sub_length.
-      case_max; try rewrite Max.max_r; try omega.
-      auto using add_same_length.
-    }
-    unfold decode in *; unfold BaseSystem.decode in *.
-    rewrite BaseSystemProofs.sub_rep, BaseSystemProofs.add_rep.
-    rewrite ZToField_sub, ZToField_add, ZToField_mod.
-    rewrite c_0modq, F_add_0_l.
-    subst; auto.
+    split; autounfold in *.
+    { apply length_sub; intuition (auto; omega). }
+    { unfold decode, ModularBaseSystem.sub, BaseSystem.decode in *; intuition idtac.
+      rewrite BaseSystemProofs.sub_rep, BaseSystemProofs.add_rep.
+      rewrite ZToField_sub, ZToField_add, ZToField_mod.
+      rewrite c_0modq, F_add_0_l. congruence. }
   Qed.
 
   Lemma decode_short : forall (us : BaseSystem.digits),
@@ -155,23 +162,28 @@ Section PseudoMersenneProofs.
     apply Max.max_l; omega.
   Qed.
 
-  Lemma mul_rep : forall u v x y, u ~= x -> v ~= y -> u .* v ~= (x*y)%F.
+  Lemma length_mul : forall u v, 
+      length u = length base
+      -> length v = length base
+      -> length (u .* v) = length base.
   Proof.
-    autounfold; unfold ModularBaseSystem.mul; intuition.
-    {
+      autounfold in *; unfold ModularBaseSystem.mul in *; intuition eauto.
       apply reduce_length.
       rewrite mul_length_exact, extended_base_length; try omega.
       destruct u; try congruence.
       rewrite @nil_length0 in *.
       pose proof base_length_nonzero; omega.
-    } {
+  Qed.
+
+  Lemma mul_rep : forall u v x y, u ~= x -> v ~= y -> u .* v ~= (x*y)%F.
+  Proof.
+    split; autounfold in *; unfold ModularBaseSystem.mul in *.
+    { apply length_mul; intuition auto. }
+    { intuition idtac; subst.
       rewrite ZToField_mod, reduce_rep, <-ZToField_mod.
-      rewrite mul_rep by
-        (apply ExtBaseVector || rewrite extended_base_length; omega).
-      subst.
-      do 2 rewrite decode_short by omega.
-      apply ZToField_mul.
-    }
+      rewrite mul_rep by (apply ExtBaseVector || rewrite extended_base_length; omega).
+      rewrite 2decode_short by omega.
+      apply ZToField_mul. }
   Qed.
 
   Lemma set_nth_sum : forall n x us, (n < length us)%nat ->
