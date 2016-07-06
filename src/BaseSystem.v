@@ -9,7 +9,7 @@ Local Open Scope Z.
 
 Class BaseVector (base : list Z):= {
   base_positive : forall b, In b base -> b > 0; (* nonzero would probably work too... *)
-  b0_1 : forall x, nth_default x base 0 = 1;
+  b0_1 : forall x, nth_default x base 0 = 1; (** TODO(jadep,jgross): change to [nth_error base 0 = Some 1], then use [nth_error_value_eq_nth_default] to prove a [forall x, nth_default x base 0 = 1] as a lemma *)
   base_good :
     forall i j, (i+j < length base)%nat ->
     let b := nth_default 0 base in
@@ -39,7 +39,7 @@ Section BaseSystem.
   Fixpoint encode' z max i : digits :=
     match i with
     | O => nil
-    | S i' => let b := nth_default max base in 
+    | S i' => let b := nth_default max base in
        encode' z max i' ++ ((z mod (b i)) / (b i')) :: nil
     end.
 
