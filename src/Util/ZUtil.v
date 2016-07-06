@@ -244,47 +244,47 @@ Module Z.
   Qed.
   Hint Rewrite mod_div_eq0 using lia : zsimplify.
 
-Lemma shiftr_add_shiftl_high : forall n m a b, 0 <= n <= m -> 0 <= a < 2 ^ n ->
-  Z.shiftr (a + (Z.shiftl b n)) m = Z.shiftr b (m - n).
-Proof.
-  intros.
-  rewrite !Z.shiftr_div_pow2, Z.shiftl_mul_pow2 by omega.
-  replace (2 ^ m) with (2 ^ n * 2 ^ (m - n)) by
-    (rewrite <-Z.pow_add_r by omega; f_equal; ring).
-  rewrite <-Z.div_div, Z.div_add, (Z.div_small a) ; try solve
-    [assumption || apply Z.pow_nonzero || apply Z.pow_pos_nonneg; omega].
-  f_equal; ring.
-Qed.
+  Lemma shiftr_add_shiftl_high : forall n m a b, 0 <= n <= m -> 0 <= a < 2 ^ n ->
+    Z.shiftr (a + (Z.shiftl b n)) m = Z.shiftr b (m - n).
+  Proof.
+    intros.
+    rewrite !Z.shiftr_div_pow2, Z.shiftl_mul_pow2 by omega.
+    replace (2 ^ m) with (2 ^ n * 2 ^ (m - n)) by
+      (rewrite <-Z.pow_add_r by omega; f_equal; ring).
+    rewrite <-Z.div_div, Z.div_add, (Z.div_small a) ; try solve
+      [assumption || apply Z.pow_nonzero || apply Z.pow_pos_nonneg; omega].
+    f_equal; ring.
+  Qed.
 
-Lemma shiftr_add_shiftl_low : forall n m a b, 0 <= m <= n -> 0 <= a < 2 ^ n ->
-  Z.shiftr (a + (Z.shiftl b n)) m = Z.shiftr a m + Z.shiftr b (m - n).
-Proof.
-  intros.
-  rewrite !Z.shiftr_div_pow2, Z.shiftl_mul_pow2, Z.shiftr_mul_pow2 by omega.
-  replace (2 ^ n) with (2 ^ (n - m) * 2 ^ m) by
-    (rewrite <-Z.pow_add_r by omega; f_equal; ring).
-  rewrite Z.mul_assoc, Z.div_add by (apply Z.pow_nonzero; omega).
-  repeat f_equal; ring.
-Qed.
+  Lemma shiftr_add_shiftl_low : forall n m a b, 0 <= m <= n -> 0 <= a < 2 ^ n ->
+    Z.shiftr (a + (Z.shiftl b n)) m = Z.shiftr a m + Z.shiftr b (m - n).
+  Proof.
+    intros.
+    rewrite !Z.shiftr_div_pow2, Z.shiftl_mul_pow2, Z.shiftr_mul_pow2 by omega.
+    replace (2 ^ n) with (2 ^ (n - m) * 2 ^ m) by
+      (rewrite <-Z.pow_add_r by omega; f_equal; ring).
+    rewrite Z.mul_assoc, Z.div_add by (apply Z.pow_nonzero; omega).
+    repeat f_equal; ring.
+  Qed.
 
-Lemma testbit_add_shiftl_high : forall i, (0 <= i) -> forall a b n, (0 <= n <= i) ->
-  0 <= a < 2 ^ n ->
-  Z.testbit (a + Z.shiftl b n) i = Z.testbit b (i - n).
-Proof.
-  intros ? ?.
-  apply natlike_ind with (x := i); intros; try assumption;
-    (destruct (Z_eq_dec 0 n); [ subst; rewrite Z.pow_0_r in *;
-     replace a with 0 by omega; f_equal; ring | ]); try omega.
-  rewrite <-Z.add_1_r at 1. rewrite <-Z.shiftr_spec by assumption.
-  replace (Z.succ x - n) with (x - (n - 1)) by ring.
-  rewrite shiftr_add_shiftl_low, <-Z.shiftl_opp_r with (a := b) by omega.
-  rewrite <-H1 with (a := Z.shiftr a 1); try omega; [ repeat f_equal; ring | ].
-  rewrite Z.shiftr_div_pow2 by omega.
-  split; apply Z.div_pos || apply Z.div_lt_upper_bound;
-    try solve [rewrite ?Z.pow_1_r; omega].
-  rewrite <-Z.pow_add_r by omega.
-  replace (1 + (n - 1)) with n by ring; omega.
-Qed.
+  Lemma testbit_add_shiftl_high : forall i, (0 <= i) -> forall a b n, (0 <= n <= i) ->
+    0 <= a < 2 ^ n ->
+    Z.testbit (a + Z.shiftl b n) i = Z.testbit b (i - n).
+  Proof.
+    intros ? ?.
+    apply natlike_ind with (x := i); intros; try assumption;
+      (destruct (Z_eq_dec 0 n); [ subst; rewrite Z.pow_0_r in *;
+       replace a with 0 by omega; f_equal; ring | ]); try omega.
+    rewrite <-Z.add_1_r at 1. rewrite <-Z.shiftr_spec by assumption.
+    replace (Z.succ x - n) with (x - (n - 1)) by ring.
+    rewrite shiftr_add_shiftl_low, <-Z.shiftl_opp_r with (a := b) by omega.
+    rewrite <-H1 with (a := Z.shiftr a 1); try omega; [ repeat f_equal; ring | ].
+    rewrite Z.shiftr_div_pow2 by omega.
+    split; apply Z.div_pos || apply Z.div_lt_upper_bound;
+      try solve [rewrite ?Z.pow_1_r; omega].
+    rewrite <-Z.pow_add_r by omega.
+    replace (1 + (n - 1)) with n by ring; omega.
+  Qed.
 
   Lemma land_add_land : forall n m a b, (m <= n)%nat ->
     Z.land ((Z.land a (Z.ones (Z.of_nat n))) + (Z.shiftl b (Z.of_nat n))) (Z.ones (Z.of_nat m)) = Z.land a (Z.ones (Z.of_nat m)).
