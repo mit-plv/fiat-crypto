@@ -16,7 +16,8 @@ Reserved Notation "x ^ 2" (at level 30, format "x ^ 2").
 Reserved Notation "x ^ 3" (at level 30, format "x ^ 3").
 Reserved Infix "mod" (at level 40, no associativity).
 Reserved Notation "'canonical' 'encoding' 'of' T 'as' B" (at level 50).
-Reserved Infix "<<" (at level 30).
-Reserved Infix ">>" (at level 30).
+Reserved Infix "<<" (at level 30, no associativity).
+Reserved Infix ">>" (at level 30, no associativity).
 Reserved Infix "&" (at level 50).
+Reserved Infix "∣" (at level 50).
 Reserved Infix "~=" (at level 70).

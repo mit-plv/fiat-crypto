@@ -8,6 +8,7 @@ Local Open Scope Z.
 
 Infix ">>" := Z.shiftr : Z_scope.
 Infix "<<" := Z.shiftl : Z_scope.
+Infix "&" := Z.land : Z_scope.
 
 Hint Extern 1 => lia : lia.
 Hint Extern 1 => lra : lra.
