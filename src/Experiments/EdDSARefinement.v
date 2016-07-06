@@ -16,6 +16,7 @@ Section EdDSA.
   Local Notation valid := (@valid E Eeq Eadd EscalarMult b H l B Eenc Senc).
   Local Infix "*" := EscalarMult. Local Infix "+" := Eadd. Local Infix "++" := combine.
   Local Notation "P - Q" := (P + Eopp Q).
+  Local Arguments H {_} _.
 
   Context {Proper_Eenc : Proper (Eeq==>Logic.eq) Eenc}.
   Context {Proper_Eopp : Proper (Eeq==>Eeq) Eopp}.
@@ -43,7 +44,7 @@ Section EdDSA.
     option_rect (fun _ => bool) (fun A : E =>
        weqb
          (split1 b b sig)
-         (Eenc (S * B - (wordToNat (H (b + (b + mlen)) (split1 b b sig ++ pk ++ message))) mod l * A))
+         (Eenc (S * B - (wordToNat (H (split1 b b sig ++ pk ++ message))) mod l * A))
     ) false (decE pk)
     ) false (decS (split2 b b sig))
   .
@@ -93,4 +94,36 @@ Section EdDSA.
                 | rewrite scalarmult_assoc, mult_comm, <-scalarmult_assoc,
                              EdDSA_l_order_B, scalarmult_zero_r; reflexivity ].
   Qed.
+
+  Section ChangeRep.
+    Context {A Aeq Aadd Aid Aopp} {Agroup:@group A Aeq Aadd Aid Aopp}.
+    Context {EtoA} {Ahomom:@is_homomorphism E Eeq Eadd A Aeq Aadd EtoA}.
+
+    Context {Aenc : A -> word b} {Proper_Aenc:Proper (Aeq==>Logic.eq) Aenc}
+            {Aenc_correct : forall P:E, Eenc P = Aenc (EtoA P)}.
+
+    Context {S Seq} `{@Equivalence S Seq} {natToS:nat->S}
+            {SAmul:S->A->A} {Proper_SAmul: Proper (Seq==>Aeq==>Aeq) SAmul}
+            {SAmul_correct: forall n P, Aeq (EtoA (n*P)) (SAmul (natToS n) (EtoA P))}
+            {SdecS} {SdecS_correct : forall w, (decS w) = (SdecS w)} (* FIXME: equivalence relation *)
+            {natToS_modl : forall n,  Seq (natToS (n mod l)) (natToS n)}.
+
+    Definition verify_using_representation
+               {mlen} (message:word mlen) (pk:word b) (sig:word (b+b))
+               : { answer | answer = verify message pk sig }.
+    Proof.
+      eexists.
+      cbv [verify].
+      repeat (
+          setoid_rewrite Aenc_correct
+          || setoid_rewrite homomorphism
+          || setoid_rewrite homomorphism_id
+          || setoid_rewrite (homomorphism_inv(INV:=Eopp)(inv:=Aopp)(eq:=Aeq)(phi:=EtoA))
+          || setoid_rewrite SAmul_correct
+          || setoid_rewrite SdecS_correct
+          || setoid_rewrite natToS_modl
+        ).
+      reflexivity.
+    Defined.
+  End ChangeRep.
 End EdDSA.
