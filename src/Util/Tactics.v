@@ -40,6 +40,16 @@ Tactic Notation "unique" "assert" constr(T) "by" tactic3(tac) :=
   | _ => assert T by tac
   end.
 
+Ltac set_evars :=
+  repeat match goal with
+         | [ |- appcontext[?E] ] => is_evar E; let e := fresh "e" in set (e := E)
+         end.
+
+Ltac subst_evars :=
+  repeat match goal with
+         | [ e := ?E |- _ ] => is_evar E; subst e
+         end.
+
 (** destruct discriminees of [match]es in the goal *)
 (* Prioritize breaking apart things in the context, then things which
    don't need equations, then simple matches (which can be displayed

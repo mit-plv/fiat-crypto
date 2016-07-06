@@ -18,16 +18,6 @@ Local Open Scope equiv_scope.
 Generalizable All Variables.
 
 
-Local Ltac set_evars :=
-  repeat match goal with
-         | [ |- appcontext[?E] ] => is_evar E; let e := fresh "e" in set (e := E)
-         end.
-
-Local Ltac subst_evars :=
-  repeat match goal with
-         | [ e := ?E |- _ ] => is_evar E; subst e
-         end.
-
 Definition path_sig {A P} {RA:relation A} {Rsig:relation (@sig A P)}
            {HP:Proper (RA==>Basics.impl) P}
            (H:forall (x y:A) (px:P x) (py:P y), RA x y -> Rsig (exist _ x px) (exist _ y py))
