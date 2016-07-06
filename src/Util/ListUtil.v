@@ -2,6 +2,7 @@ Require Import Coq.Lists.List.
 Require Import Coq.omega.Omega.
 Require Import Coq.Arith.Peano_dec.
 Require Import Crypto.Tactics.VerdiTactics.
+Require Import Coq.Numbers.Natural.Peano.NPeano.
 
 Definition sum_firstn l n := fold_right Z.add 0%Z (firstn n l).
 
@@ -686,15 +687,15 @@ Lemma sum_firstn_succ : forall l i x,
 Proof.
   unfold sum_firstn; induction l;
     [intros; rewrite (@nth_error_nil_error Z) in *; congruence | ].
-  intros ? x nth_err_x; destruct (NPeano.Nat.eq_dec i 0).
+  intros ? x nth_err_x; destruct (Nat.eq_dec i 0).
   + subst; simpl in *; unfold value in *.
     congruence.
-  + rewrite <- (NPeano.Nat.succ_pred i) at 2 by auto.
-    rewrite <- (NPeano.Nat.succ_pred i) in nth_err_x by auto.
+  + rewrite <- (Nat.succ_pred i) at 2 by auto.
+    rewrite <- (Nat.succ_pred i) in nth_err_x by auto.
     simpl. simpl in nth_err_x.
     specialize (IHl (pred i) x).
-    rewrite NPeano.Nat.succ_pred in IHl by auto.
-    destruct (NPeano.Nat.eq_dec (pred i) 0).
+    rewrite Nat.succ_pred in IHl by auto.
+    destruct (Nat.eq_dec (pred i) 0).
     - replace i with 1%nat in * by omega.
       simpl. replace (pred 1) with 0%nat in * by auto.
       apply nth_error_exists_first in nth_err_x.
