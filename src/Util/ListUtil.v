@@ -3,6 +3,17 @@ Require Import Coq.omega.Omega.
 Require Import Coq.Arith.Peano_dec.
 Require Import Crypto.Tactics.VerdiTactics.
 
+Definition sum_firstn l n := fold_right Z.add 0%Z (firstn n l).
+
+Fixpoint map2 {A B C} (f : A -> B -> C) (la : list A) (lb : list B) : list C :=
+  match la with
+  | nil => nil
+  | a :: la' => match lb with
+                | nil => nil
+                | b :: lb' => f a b :: map2 f la' lb'
+                end
+  end.
+
 Ltac boring :=
   simpl; intuition;
   repeat match goal with
@@ -624,4 +635,144 @@ Proof.
   induction n; (destruct l; [intros; simpl in *; omega | ]); simpl;
     destruct i; break_if; try omega; intros; try apply nth_default_cons;
     rewrite !nth_default_cons_S, ?IHn; try break_if; omega || reflexivity.
+Qed.
+
+Lemma nth_default_preserves_properties : forall {A} (P : A -> Prop) l n d,
+  (forall x, In x l -> P x) -> P d -> P (nth_default d l n).
+Proof.
+  intros; rewrite nth_default_eq.
+  destruct (nth_in_or_default n l d); auto.
+  congruence.
+Qed.
+
+Lemma nth_error_first : forall {T} (a b : T) l,
+  nth_error (a :: l) 0 = Some b -> a = b.
+Proof.
+  intros; simpl in *.
+  unfold value in *.
+  congruence.
+Qed.
+
+Lemma nth_error_exists_first : forall {T} l (x : T) (H : nth_error l 0 = Some x),
+  exists l', l = x :: l'.
+Proof.
+  induction l; try discriminate; eexists.
+  apply nth_error_first in H.
+  subst; eauto.
+Qed.
+
+Lemma list_elementwise_eq : forall {T} (l1 l2 : list T),
+  (forall i, nth_error l1 i = nth_error l2 i) -> l1 = l2.
+Proof.
+  induction l1, l2; intros; try reflexivity;
+    pose proof (H 0%nat) as Hfirst; simpl in Hfirst; inversion Hfirst.
+  f_equal.
+  apply IHl1.
+  intros i; specialize (H (S i)).
+  boring.
+Qed.
+
+Lemma sum_firstn_all_succ : forall n l, (length l <= n)%nat ->
+  sum_firstn l (S n) = sum_firstn l n.
+Proof.
+  unfold sum_firstn; intros.
+  rewrite !firstn_all_strong by omega.
+  congruence.
+Qed.
+
+Lemma sum_firstn_succ : forall l i x,
+  nth_error l i = Some x ->
+  sum_firstn l (S i) = (x + sum_firstn l i)%Z.
+Proof.
+  unfold sum_firstn; induction l;
+    [intros; rewrite (@nth_error_nil_error Z) in *; congruence | ].
+  intros ? x nth_err_x; destruct (NPeano.Nat.eq_dec i 0).
+  + subst; simpl in *; unfold value in *.
+    congruence.
+  + rewrite <- (NPeano.Nat.succ_pred i) at 2 by auto.
+    rewrite <- (NPeano.Nat.succ_pred i) in nth_err_x by auto.
+    simpl. simpl in nth_err_x.
+    specialize (IHl (pred i) x).
+    rewrite NPeano.Nat.succ_pred in IHl by auto.
+    destruct (NPeano.Nat.eq_dec (pred i) 0).
+    - replace i with 1%nat in * by omega.
+      simpl. replace (pred 1) with 0%nat in * by auto.
+      apply nth_error_exists_first in nth_err_x.
+      destruct nth_err_x as [l' ?].
+      subst; simpl; omega.
+    - rewrite IHl by auto; omega.
+Qed.
+
+Lemma nth_default_map2 : forall {A B C} (f : A -> B -> C) ls1 ls2 i d d1 d2,
+  nth_default d (map2 f ls1 ls2) i =
+    if lt_dec i (min (length ls1) (length ls2))
+    then f (nth_default d1 ls1 i) (nth_default d2 ls2 i)
+    else d.
+Proof.
+  induction ls1, ls2.
+  + cbv [map2 length min].
+    intros.
+    break_if; try omega.
+    apply nth_default_nil.
+  + cbv [map2 length min].
+    intros.
+    break_if; try omega.
+    apply nth_default_nil.
+  + cbv [map2 length min].
+    intros.
+    break_if; try omega.
+    apply nth_default_nil.
+  + simpl.
+    destruct i.
+    - intros. rewrite !nth_default_cons.
+      break_if; auto; omega.
+    - intros. rewrite !nth_default_cons_S.
+      rewrite IHls1 with (d1 := d1) (d2 := d2).
+      repeat break_if; auto; omega.
+Qed.
+
+Lemma map2_cons : forall A B C (f : A -> B -> C) ls1 ls2 a b,
+  map2 f (a :: ls1) (b :: ls2) = f a b :: map2 f ls1 ls2.
+Proof.
+  reflexivity.
+Qed.
+
+Lemma map2_nil_l : forall A B C (f : A -> B -> C) ls2,
+  map2 f nil ls2 = nil.
+Proof.
+  reflexivity.
+Qed.
+
+Lemma map2_nil_r : forall A B C (f : A -> B -> C) ls1,
+  map2 f ls1 nil = nil.
+Proof.
+  destruct ls1; reflexivity.
+Qed.
+Local Hint Resolve map2_nil_r map2_nil_l.
+
+Opaque map2.
+
+Lemma map2_length : forall A B C (f : A -> B -> C) ls1 ls2,
+  length (map2 f ls1 ls2) = min (length ls1) (length ls2).
+Proof.
+  induction ls1, ls2; intros; try solve [cbv; auto].
+  rewrite map2_cons, !length_cons, IHls1.
+  auto.
+Qed.
+
+Ltac simpl_list_lengths := repeat match goal with
+  | H : appcontext[length (@nil ?A)] |- _ => rewrite (@nil_length0 A) in H
+  | H : appcontext[length (_ :: _)] |- _ => rewrite length_cons in H
+  | |- appcontext[length (@nil ?A)] => rewrite (@nil_length0 A)
+  | |- appcontext[length (_ :: _)] => rewrite length_cons
+  end.
+
+Lemma map2_app : forall A B C (f : A -> B -> C) ls1 ls2 ls1' ls2',
+  (length ls1 = length ls2) ->
+  map2 f (ls1 ++ ls1') (ls2 ++ ls2') = map2 f ls1 ls2 ++ map2 f ls1' ls2'.
+Proof.
+  induction ls1, ls2; intros; rewrite ?map2_nil_r, ?app_nil_l; try congruence;
+    simpl_list_lengths; try omega.
+  rewrite <-!app_comm_cons, !map2_cons.
+  rewrite IHls1; auto.
 Qed.

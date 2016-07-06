@@ -8,6 +8,7 @@ Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParamProofs.
 Require Import Crypto.ModularArithmetic.ExtendedBaseVector.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.Util.Notations.
+Require Import Crypto.ModularArithmetic.Pow2Base.
 Local Open Scope Z_scope.
 
 Section PseudoMersenneBase.
@@ -19,16 +20,8 @@ Section PseudoMersenneBase.
   Local Notation "u ~= x" := (rep u x).
   Local Hint Unfold rep.
 
-  (* i is current index, counts down *)
-  Fixpoint encode' z i : digits :=
-    match i with
-    | O => nil
-    | S i' => let lw := sum_firstn limb_widths in
-       encode' z i' ++ (Z.shiftr (Z.land z (Z.ones (lw i))) (lw i')) :: nil
-    end.
-
   (* max must be greater than input; this is used to truncate last digit *)
-  Definition encode (x : F modulus) := encode' x (length base).
+  Definition encode (x : F modulus) := encodeZ limb_widths x.
 
   (* Converts from length of extended base to length of base by reduction modulo M.*)
   Definition reduce (us : digits) : digits :=
@@ -109,15 +102,6 @@ Section Canonicalization.
 
   (* compute at compile time *)
   Definition modulus_digits := modulus_digits' (length base - 1).
-
-  Fixpoint map2 {A B C} (f : A -> B -> C) (la : list A) (lb : list B) : list C :=
-    match la with
-    | nil => nil
-    | a :: la' => match lb with
-                  | nil => nil
-                  | b :: lb' => f a b :: map2 f la' lb'
-                  end
-    end.
 
   Definition and_term us := if isFull us then max_ones else 0.
 

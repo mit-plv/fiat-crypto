@@ -500,3 +500,23 @@ Proof.
   induction l; intros; try reflexivity.
   etransitivity; [ apply IHl | apply Z.le_max_r ].
 Qed.
+
+  (* TODO : move to ZUtil *)
+  Lemma Z_lor_shiftl : forall a b n, 0 <= n -> 0 <= a < 2 ^ n ->
+    Z.lor a (Z.shiftl b n) = a + (Z.shiftl b n).
+  Proof.
+    intros.
+    apply Z.bits_inj'; intros t ?.
+    rewrite Z.lor_spec, Z.shiftl_spec by assumption.
+    destruct (Z_lt_dec t n).
+    + rewrite Z_testbit_add_shiftl_low by omega.
+      rewrite Z.testbit_neg_r with (n := t - n) by omega.
+      apply Bool.orb_false_r.
+    + rewrite Z_testbit_add_shiftl_high by omega.
+      replace (Z.testbit a t) with false; [ apply Bool.orb_false_l | ].
+      symmetry.
+      apply Z.testbit_false; try omega.
+      rewrite Z.div_small; try reflexivity.
+      split; try eapply Z.lt_le_trans with (m := 2 ^ n); try omega.
+      apply Z.pow_le_mono_r; omega.
+  Qed.

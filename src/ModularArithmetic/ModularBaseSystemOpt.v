@@ -45,10 +45,12 @@ Ltac opt_step :=
        destruct e
   end.
 
-Ltac brute_force_indices limb_widths := intros; unfold sum_firstn, limb_widths; simpl in *;
+Ltac brute_force_indices limb_widths :=
+  intros; unfold sum_firstn, limb_widths;  cbv [length limb_widths] in *;
   repeat match goal with
   | _ => progress simpl in *
-  | _ => reflexivity
+  | [H : (0 + _ < _)%nat |- _ ] => simpl in H
+  | [H : (S _ + _ < S _)%nat |- _ ] => simpl in H
   | [H : (S _ < S _)%nat |- _ ] => apply lt_S_n in H
   | [H : (?x + _ < _)%nat |- _ ] => is_var x; destruct x
   | [H : (?x < _)%nat |- _ ] => is_var x; destruct x
