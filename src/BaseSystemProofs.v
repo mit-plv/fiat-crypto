@@ -84,7 +84,7 @@ Section BaseSystemProofs.
     intros.
     rewrite nth_default_eq.
     destruct (nth_in_or_default i base d).
-    + auto using positive_is_nonzero, base_positive.
+    + auto using Z.positive_is_nonzero, base_positive.
     + congruence.
   Qed.
 
@@ -94,7 +94,7 @@ Section BaseSystemProofs.
     intros.
     rewrite nth_default_eq.
     destruct (nth_in_or_default i base d).
-    + rewrite <-gt_lt_symmetry; auto using base_positive.
+    + apply Z.gt_lt; auto using base_positive.
     + congruence.
   Qed.
 
@@ -191,7 +191,7 @@ Section BaseSystemProofs.
   Lemma nth_error_base_nonzero : forall n x,
     nth_error base n = Some x -> x <> 0.
   Proof.
-    eauto using (@nth_error_value_In Z), Zgt0_neq0, base_positive.
+    eauto using (@nth_error_value_In Z), Z.gt0_neq0, base_positive.
   Qed.
 
   Hint Rewrite plus_0_r.
@@ -594,7 +594,7 @@ Section BaseSystemProofs.
         specialize (H1 i H2);
         rewrite (Znumtheory.Zmod_div_mod _ _ _ (nth_default_base_pos _ H _)
                                                (nth_default_base_pos _ H _) H0) end.
-      rewrite <-Z.div_mod by (apply positive_is_nonzero, gt_lt_symmetry; auto using nth_default_base_pos).
+      rewrite <-Z.div_mod by (apply Z.positive_is_nonzero, Z.lt_gt; auto using nth_default_base_pos).
       reflexivity.
   Qed.
 

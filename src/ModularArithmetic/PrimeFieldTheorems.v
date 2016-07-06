@@ -460,8 +460,8 @@ Section SquareRootsPrime5Mod8.
       apply Z2N.inj_iff; try zero_bounds.
       rewrite <- Z.mul_cancel_l with (p := 2) by omega.
       ring_simplify.
-      rewrite mul_div_eq by omega.
-      rewrite mul_div_eq by omega.
+      rewrite Z.mul_div_eq by omega.
+      rewrite Z.mul_div_eq by omega.
       rewrite (Zmod_div_mod 2 8 q) by
         (try omega; apply Zmod_divide; omega || auto).
       rewrite q_5mod8.

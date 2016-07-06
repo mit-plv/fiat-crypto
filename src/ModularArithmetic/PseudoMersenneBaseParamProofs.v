@@ -42,7 +42,7 @@ Section PseudoMersenneBaseParamProofs.
     rewrite (Z.mul_comm r).
     subst r.
     assert (i + j - length base < length base)%nat by omega.
-    rewrite mul_div_eq by (apply gt_lt_symmetry; apply Z.mul_pos_pos;
+    rewrite Z.mul_div_eq by (apply Z.gt_lt_iff; apply Z.mul_pos_pos;
       [ | subst b; unfold base; rewrite nth_default_base; try assumption ];
       zero_bounds; auto using sum_firstn_limb_widths_nonneg, limb_widths_nonneg).
     rewrite (Zminus_0_l_reverse (b i * b j)) at 1.
@@ -51,7 +51,7 @@ Section PseudoMersenneBaseParamProofs.
     unfold base; repeat rewrite nth_default_base by auto.
     do 2 rewrite <- Z.pow_add_r by auto using sum_firstn_limb_widths_nonneg.
     symmetry.
-    apply mod_same_pow.
+    apply Z.mod_same_pow.
     split.
     + apply Z.add_nonneg_nonneg; auto using sum_firstn_limb_widths_nonneg.
     + rewrite base_length, base_from_limb_widths_length in * by auto.
@@ -65,7 +65,7 @@ Section PseudoMersenneBaseParamProofs.
      destruct In_b_base as [i nth_err_b].
      apply nth_error_subst in nth_err_b; [ | auto ].
      rewrite nth_err_b.
-     apply gt_lt_symmetry.
+     apply Z.gt_lt_iff.
      apply Z.pow_pos_nonneg; omega || auto using sum_firstn_limb_widths_nonneg.
    Qed.
 
@@ -84,10 +84,10 @@ Section PseudoMersenneBaseParamProofs.
      unfold base in *.
      repeat rewrite nth_default_base by (omega || auto).
      rewrite (Z.mul_comm _ (2 ^ (sum_firstn limb_widths (i+j)))).
-     rewrite mul_div_eq by (apply gt_lt_symmetry; zero_bounds;
+     rewrite Z.mul_div_eq by (apply Z.gt_lt_iff; zero_bounds;
        auto using sum_firstn_limb_widths_nonneg).
      rewrite <- Z.pow_add_r by auto using sum_firstn_limb_widths_nonneg.
-     rewrite mod_same_pow; try ring.
+     rewrite Z.mod_same_pow; try ring.
      split; [ auto using sum_firstn_limb_widths_nonneg | ].
      apply limb_widths_good.
      rewrite <- base_length; assumption.

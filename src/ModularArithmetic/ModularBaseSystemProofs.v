@@ -170,7 +170,7 @@ Section PseudoMersenneProofs.
     rewrite Z.sub_sub_distr, Z.sub_diag.
     simpl.
     rewrite Z.mul_comm.
-    rewrite mod_mult_plus; auto using modulus_nonzero.
+    rewrite Z.mod_add_l; auto using modulus_nonzero.
     rewrite <- Zplus_mod; auto.
   Qed.
 
@@ -390,8 +390,8 @@ Section CarryProofs.
     rewrite nth_default_base_succ by omega.
     rewrite Z.mul_assoc.
     rewrite (Z.mul_comm _ (2 ^ log_cap i)).
-    rewrite mul_div_eq; try ring.
-    apply gt_lt_symmetry.
+    rewrite Z.mul_div_eq; try ring.
+    apply Z.gt_lt_iff.
     apply Z.pow_pos_nonneg; omega || apply log_cap_nonneg.
   Qed.
 
@@ -423,7 +423,7 @@ Section CarryProofs.
       rewrite <- Z.add_opp_l, <- Z.opp_sub_distr.
       unfold pow2_mod.
       rewrite Z.land_ones by apply log_cap_nonneg.
-      rewrite <- mul_div_eq by (apply gt_lt_symmetry; apply Z.pow_pos_nonneg; omega || apply log_cap_nonneg).
+      rewrite <- Z.mul_div_eq by (apply Z.gt_lt_iff; apply Z.pow_pos_nonneg; omega || apply log_cap_nonneg).
       rewrite Z.shiftr_div_pow2 by apply log_cap_nonneg.
       rewrite Zopp_mult_distr_r.
       rewrite Z.mul_comm.
@@ -570,7 +570,7 @@ Section CanonicalizationProofs.
 
   Lemma max_bound_pos : forall i, (i < length base)%nat -> 0 < max_bound i.
   Proof.
-    unfold max_bound, log_cap; intros; apply Z_ones_pos_pos.
+    unfold max_bound, log_cap; intros; apply Z.ones_pos_pos.
     apply limb_widths_pos.
     rewrite nth_default_eq.
     apply nth_In.
@@ -580,7 +580,7 @@ Section CanonicalizationProofs.
 
   Lemma max_bound_nonneg : forall i, 0 <= max_bound i.
   Proof.
-    unfold max_bound; intros; auto using Z_ones_nonneg.
+    unfold max_bound; intros; auto using Z.ones_nonneg.
   Qed.
   Local Hint Resolve max_bound_nonneg.
 
@@ -939,7 +939,7 @@ Section CanonicalizationProofs.
     apply Z.add_le_mono.
     + apply carry_bounds_0_upper; auto; omega.
     + apply Z.mul_le_mono_pos_l; auto using c_pos.
-      apply Z_shiftr_ones; auto;
+      apply Z.shiftr_ones; auto;
         [ | pose proof (B_compat_log_cap (pred (length base))); omega ].
       split.
       - apply carry_bounds_lower; auto; omega.
@@ -978,7 +978,7 @@ Section CanonicalizationProofs.
     + rewrite <-max_bound_log_cap, <-Z.add_1_l.
       apply Z.add_le_mono.
       - rewrite Z.shiftr_div_pow2 by apply log_cap_nonneg.
-        apply Z_div_floor; auto.
+        apply Z.div_floor; auto.
         destruct i.
         * simpl.
           eapply Z.le_lt_trans; [ apply carry_full_bounds_0; auto | ].
@@ -1061,7 +1061,7 @@ Section CanonicalizationProofs.
     + rewrite <-max_bound_log_cap, <-Z.add_1_l.
       rewrite Z.shiftr_div_pow2 by apply log_cap_nonneg.
       apply Z.add_le_mono.
-      - apply Z_div_floor; auto.
+      - apply Z.div_floor; auto.
         eapply Z.le_lt_trans; [ eapply carry_full_2_bounds_0; eauto | ].
         replace (Z.succ 1) with (2 ^ 1) by ring.
         rewrite <-max_bound_log_cap.
@@ -1267,7 +1267,7 @@ Section CanonicalizationProofs.
   Lemma max_ones_nonneg : 0 <= max_ones.
   Proof.
     unfold max_ones.
-    apply Z_ones_nonneg.
+    apply Z.ones_nonneg.
     pose proof limb_widths_nonneg.
     induction limb_widths.
     cbv; congruence.
@@ -1282,19 +1282,19 @@ Section CanonicalizationProofs.
     unfold max_ones.
     intros ? ? x_range.
     rewrite Z.land_comm.
-    rewrite Z.land_ones by apply Z_le_fold_right_max_initial.
+    rewrite Z.land_ones by apply Z.le_fold_right_max_initial.
     apply Z.mod_small.
     split; try omega.
     eapply Z.lt_le_trans; try eapply x_range.
     apply Z.pow_le_mono_r; try omega.
     rewrite log_cap_eq.
     destruct (lt_dec i (length limb_widths)).
-    + apply Z_le_fold_right_max.
+    + apply Z.le_fold_right_max.
       - apply limb_widths_nonneg.
       - rewrite nth_default_eq.
         auto using nth_In.
     + rewrite nth_default_out_of_bounds by omega.
-      apply Z_le_fold_right_max_initial.
+      apply Z.le_fold_right_max_initial.
   Qed.
 
   Lemma full_isFull'_true : forall j us, (length us = length base) ->
@@ -1802,7 +1802,7 @@ Section CanonicalizationProofs.
     + match goal with |- (?a ?= ?b) = (?c ?= ?d) =>
         rewrite (Z.compare_antisym b a); rewrite (Z.compare_antisym d c) end.
       apply CompOpp_inj; rewrite !CompOpp_involutive.
-      apply gt_lt_symmetry in Hgt.
+      apply Z.gt_lt_iff in Hgt.
       etransitivity; try apply Z_compare_decode_step_lt; auto; omega.
   Qed.
 

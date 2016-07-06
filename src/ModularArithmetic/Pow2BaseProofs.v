@@ -97,7 +97,7 @@ Section Pow2BaseProofs.
   Proof.
     intros.
     repeat rewrite nth_default_base by omega.
-    apply mod_same_pow.
+    apply Z.mod_same_pow.
     split; [apply sum_firstn_limb_widths_nonneg | ].
     destruct (NPeano.Nat.eq_dec i 0); subst.
       + case_eq limb_widths; intro; unfold sum_firstn; simpl; try omega; intros l' lw_eq.
@@ -199,7 +199,7 @@ Section BitwiseDecodeEncode.
     intros.
     simpl; f_equal.
     match goal with H : bounded _ _ |- _ => 
-      rewrite Z_lor_shiftl by (auto; unfold bounded in H; specialize (H i); assumption) end.
+      rewrite Z.lor_shiftl by (auto; unfold bounded in H; specialize (H i); assumption) end.
     rewrite Z.shiftl_mul_pow2 by auto.
     ring.
   Qed.
