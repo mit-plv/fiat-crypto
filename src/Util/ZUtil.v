@@ -1,9 +1,13 @@
 Require Import Coq.ZArith.Zpower Coq.ZArith.Znumtheory Coq.ZArith.ZArith Coq.ZArith.Zdiv.
 Require Import Coq.omega.Omega Coq.micromega.Psatz Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
 Require Import Crypto.Util.NatUtil.
+Require Import Crypto.Util.Notations.
 Require Import Coq.Lists.List.
 Import Nat.
 Local Open Scope Z.
+
+Infix ">>" := Z.shiftr : Z_scope.
+Infix "<<" := Z.shiftl : Z_scope.
 
 Hint Extern 1 => lia : lia.
 Hint Extern 1 => lra : lra.
