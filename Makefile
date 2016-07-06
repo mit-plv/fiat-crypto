@@ -1,7 +1,10 @@
 MOD_NAME := Crypto
 SRC_DIR  := src
 
-.PHONY: coq clean install coqprime-8.4 coqprime-8.5 coqprime update-_CoqProject
+.PHONY: coq clean update-_CoqProject cleanall install \
+	install-coqprime install-coqprime-8.4 install-coqprime-8.5 \
+	clean-coqprime clean-coqprime-8.4 clean-coqprime-8.5 \
+	coqprime coqprime-8.4 coqprime-8.5
 .DEFAULT_GOAL := coq
 
 VERBOSE = 0
@@ -27,8 +30,12 @@ COQ_VERSION := $(firstword $(subst $(COQ_VERSION_PREFIX),,$(shell $(COQBIN)coqc 
 
 ifneq ($(filter 8.4%,$(COQ_VERSION)),) # 8.4
 coqprime: coqprime-8.4
+clean-coqprime: clean-coqprime-8.4
+install-coqprime: install-coqprime-8.4
 else
 coqprime: coqprime-8.5
+clean-coqprime: clean-coqprime-8.5
+install-coqprime: install-coqprime-8.5
 endif
 
 coqprime-8.4:
@@ -37,6 +44,18 @@ coqprime-8.4:
 coqprime-8.5:
 	$(MAKE) -C coqprime
 
+clean-coqprime-8.4:
+	$(MAKE) -C coqprime-8.4 clean
+
+clean-coqprime-8.5:
+	$(MAKE) -C coqprime clean
+
+install-coqprime-8.4:
+	$(MAKE) -C coqprime-8.4 install
+
+install-coqprime-8.5:
+	$(MAKE) -C coqprime install
+
 Makefile.coq: Makefile _CoqProject
 	$(Q)$(COQBIN)coq_makefile -f _CoqProject -o Makefile.coq
 
@@ -44,6 +63,8 @@ clean: Makefile.coq
 	$(MAKE) -f Makefile.coq clean
 	rm -f Makefile.coq
 
+cleanall: clean clean-coqprime
+
 install: coq Makefile.coq
+	$(MAKE) install-coqprime
 	$(MAKE) -f Makefile.coq install
-	$(MAKE) -C coqprime install
