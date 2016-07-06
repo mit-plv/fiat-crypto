@@ -1,7 +1,6 @@
 Require Import Coq.ZArith.ZArith Coq.ZArith.Znumtheory.
 Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Coq.Program.Equality.
-Require Import Crypto.Encoding.EncodingTheorems.
 Require Import Crypto.CompleteEdwardsCurve.Pre.
 Require Import Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
 Require Import Bedrock.Word.
@@ -41,7 +40,8 @@ Section PointEncodingPre.
     (sqrt_subst : forall x y, x == y -> sqrt x == sqrt y).
   Context (FEncoding : canonical encoding of F as (word sz)).
   Context {sign_bit : F -> bool} (sign_bit_zero : forall x, x == 0 -> Logic.eq (sign_bit x) false)
-    (sign_bit_opp : forall x, x !== 0 -> Logic.eq (negb (sign_bit x)) (sign_bit (opp x))).
+    (sign_bit_opp : forall x, x !== 0 -> Logic.eq (negb (sign_bit x)) (sign_bit (opp x)))
+    (sign_bit_subst : forall x y, x == y -> sign_bit x = sign_bit y).
 
   Definition sqrt_ok (a : F) := (sqrt a) ^ 2 == a.
 
@@ -54,15 +54,7 @@ Section PointEncodingPre.
     rewrite root2_y.
     symmetry; assumption.
   Qed.
-(*
-  Lemma solve_onCurve: forall y : F, sqrt_ok (solve_for_x2 y) ->
-    onCurve (sqrt (solve_for_x2 y), y).
-  Proof.
-    intros.
-    unfold sqrt_ok in *.
-    apply E.solve_correct; auto.
-  Qed.
-*)
+
   Lemma solve_onCurve: forall x y : F, onCurve (x,y) ->
     onCurve (sqrt (solve_for_x2 y), y).
   Proof.
@@ -307,21 +299,32 @@ Section PointEncodingPre.
     exact (encoding_valid _).
   Qed.
 
-  (* TODO : move? *)
   Lemma F_eqb_false : forall x y, x !== y -> F_eqb x y = false.
-  Admitted.
-
-  Lemma eqb_sign_opp_r : forall a b, (b !== 0) ->
-    Bool.eqb (sign_bit a) (sign_bit b) = false ->
-    Bool.eqb (sign_bit a) (sign_bit (opp b)) = true.
   Proof.
-  Admitted.
+    intros; unfold F_eqb; destruct (eq_dec x y); congruence.
+  Qed.
 
-  Lemma sign_match : forall x y x', onCurve (x,y) -> onCurve (x',y) ->
-    Bool.eqb (sign_bit x) (sign_bit x') = true ->
-    option_coordinates_eq (Some (x', y)) (Some (x, y)).
+  Lemma eqb_sign_opp_r : forall x y, (y !== 0) ->
+    Bool.eqb (sign_bit x) (sign_bit y) = false ->
+    Bool.eqb (sign_bit x) (sign_bit (opp y)) = true.
   Proof.
-  Admitted.
+    intros x y y_nonzero ?.
+    specialize (sign_bit_opp y y_nonzero).
+    destruct (sign_bit x), (sign_bit y); try discriminate;
+      rewrite <-sign_bit_opp; auto.
+  Qed.
+
+  Lemma sign_match : forall x y sqrt_y, sqrt_y !== 0 -> (x ^2) == y -> sqrt_y ^2 == y ->
+    Bool.eqb (sign_bit x) (sign_bit sqrt_y) = true ->
+    sqrt_y == x.
+  Proof.
+    intros.
+    pose proof (only_two_square_roots_choice x sqrt_y y) as Hchoice.
+    destruct Hchoice; try assumption; symmetry; try assumption.
+    rewrite (sign_bit_subst x (opp sqrt_y)) in * by assumption.
+    rewrite <-sign_bit_opp in * by assumption.
+    rewrite Bool.eqb_negb1 in *; discriminate.
+  Qed.
 
   Lemma point_encoding_coordinates_valid : forall p, onCurve p ->
     option_coordinates_eq (point_dec_coordinates (point_enc_coordinates p)) (Some p).
@@ -348,9 +351,12 @@ Section PointEncodingPre.
       transitivity (sqrt (x ^2)); auto.
       apply (sqrt_square); reflexivity.
     + rewrite F_eqb_false, Bool.andb_false_l by (rewrite sqrt_square; [ | eauto]; assumption).
-      break_if; [ | apply eqb_sign_opp_r in Heqb]; try apply sign_match;
-        eauto using solve_onCurve, solve_opp_onCurve.
-          rewrite sqrt_square; [ | eauto]; assumption.
+      break_if; [ | apply eqb_sign_opp_r in Heqb];
+        try (apply option_coordinates_eq_iff; split; try reflexivity);
+        try eapply sign_match with (y := solve_for_x2 y); eauto;
+        try solve [symmetry; auto]; rewrite ?square_opp; auto;
+        (rewrite sqrt_square; [ | eauto]); try apply Ring.opp_nonzero_nonzero;
+        assumption.
 Qed.
 
 Lemma point_dec'_valid : forall p q, option_coordinates_eq (Some q) (Some (proj1_sig p)) ->
