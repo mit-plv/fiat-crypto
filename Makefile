@@ -7,16 +7,6 @@ SRC_DIR  := src
 	coqprime coqprime-8.4 coqprime-8.5
 .DEFAULT_GOAL := coq
 
-VERBOSE = 0
-
-SILENCE_COQC_0 = @echo "COQC $<"; #
-SILENCE_COQC_1 =
-SILENCE_COQC = $(SILENCE_COQC_$(VERBOSE))
-
-SILENCE_COQDEP_0 = @echo "COQDEP $<"; #
-SILENCE_COQDEP_1 =
-SILENCE_COQDEP = $(SILENCE_COQDEP_$(VERBOSE))
-
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g'
 
 update-_CoqProject::
