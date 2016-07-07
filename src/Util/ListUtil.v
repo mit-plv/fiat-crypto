@@ -1059,3 +1059,6 @@ Proof.
     autorewrite with simpl_firstn simpl_update_nth;
     congruence.
 Qed.
+
+Hint Rewrite @firstn_update_nth : push_firstn pull_update_nth.
+Hint Rewrite <- @firstn_update_nth : pull_firstn push_update_nth.
