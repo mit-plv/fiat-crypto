@@ -4,6 +4,36 @@ Import Nat.
 
 Local Open Scope nat_scope.
 
+Lemma min_def {x y} : min x y = x - (x - y).
+Proof. apply Min.min_case_strong; omega. Qed.
+Lemma max_def {x y} : max x y = x + (y - x).
+Proof. apply Max.max_case_strong; omega. Qed.
+Ltac coq_omega := omega.
+Ltac handle_min_max_for_omega :=
+  repeat match goal with
+         | [ H : context[min _ _] |- _ ] => rewrite !min_def in H
+         | [ H : context[max _ _] |- _ ] => rewrite !max_def in H
+         | [ |- context[min _ _] ] => rewrite !min_def
+         | [ |- context[max _ _] ] => rewrite !max_def
+         end.
+Ltac handle_min_max_for_omega_case :=
+  repeat match goal with
+         | [ H : context[min _ _] |- _ ] => revert H
+         | [ H : context[max _ _] |- _ ] => revert H
+         | [ |- context[min _ _] ] => apply Min.min_case_strong
+         | [ |- context[max _ _] ] => apply Max.max_case_strong
+         end;
+  intros.
+Ltac omega_with_min_max :=
+  handle_min_max_for_omega;
+  omega.
+Ltac omega_with_min_max_case :=
+  handle_min_max_for_omega_case;
+  omega.
+Tactic Notation "omega" := coq_omega.
+Tactic Notation "omega" "*" := omega_with_min_max_case.
+Tactic Notation "omega" "**" := omega_with_min_max.
+
 Lemma div_minus : forall a b, b <> 0 -> (a + b) / b = a / b + 1.
 Proof.
   intros.
