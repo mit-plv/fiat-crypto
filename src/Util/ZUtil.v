@@ -49,6 +49,8 @@ Hint Rewrite Z.div_small_iff using lia : zstrip_div.
 Create HintDb zstrip_div.
 
 Module Z.
+  Definition pow2_mod n i := (n & (Z.ones i)).
+
   Lemma positive_is_nonzero : forall x, x > 0 -> x <> 0.
   Proof. intros; omega. Qed.
 
