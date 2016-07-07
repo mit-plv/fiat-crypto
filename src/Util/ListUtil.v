@@ -898,6 +898,14 @@ Proof.
   omega.
 Qed.
 
+Lemma update_nth_out_of_bounds : forall {A} n f xs, n >= length xs -> @update_nth A n f xs = xs.
+Proof.
+  induction n; destruct xs; simpl; try congruence; try omega; intros.
+  rewrite IHn by omega; reflexivity.
+Qed.
+
+Hint Rewrite @update_nth_out_of_bounds using omega : simpl_update_nth.
+
 Lemma update_nth_nth_default : forall {A} (d:A) n f l i, (0 <= i < length l)%nat ->
   nth_default d (update_nth n f l) i =
   if (eq_nat_dec i n) then f (nth_default d l i) else nth_default d l i.
