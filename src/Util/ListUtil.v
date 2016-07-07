@@ -322,13 +322,13 @@ Proof.
   destruct (nth_error_length_exists_value i xs); intuition; congruence.
 Qed.
 
-Lemma nth_error_value_eq_nth_default : forall {T} i xs (x d:T),
+Lemma nth_error_value_eq_nth_default : forall {T} i (x : T) xs,
   nth_error xs i = Some x -> forall d, nth_default d xs i = x.
 Proof.
   unfold nth_default; boring.
 Qed.
 
-Hint Rewrite @nth_error_value_eq_nth_default using assumption : simpl_nth_default.
+Hint Rewrite @nth_error_value_eq_nth_default using eassumption : simpl_nth_default.
 
 Lemma skipn0 : forall {T} (xs:list T), skipn 0 xs = xs.
 Proof. auto. Qed.
