@@ -28,65 +28,6 @@ Module E.
     Definition eq (P Q:point) := fieldwise (n:=2) Feq (coordinates P) (coordinates Q).
     Infix "=" := eq : E_scope.
 
-    (* TODO: decide whether we still want something like this, then port
-    Local Ltac t :=
-      unfold point_eqb;
-        repeat match goal with
-        | _ => progress intros
-        | _ => progress simpl in *
-        | _ => progress subst
-        | [P:E.point |- _ ] => destruct P
-        | [x: (F q * F q)%type |- _ ] => destruct x
-        | [H: _ /\ _ |- _ ] => destruct H
-        | [H: _ |- _ ] => rewrite Bool.andb_true_iff in H
-        | [H: _ |- _ ] => apply F_eqb_eq in H
-        | _ => rewrite F_eqb_refl
-        end; eauto.
-
-    Lemma point_eqb_sound : forall p1 p2, point_eqb p1 p2 = true -> p1 = p2.
-    Proof.
-      t.
-    Qed.
-
-    Lemma point_eqb_complete : forall p1 p2, p1 = p2 -> point_eqb p1 p2 = true.
-    Proof.
-      t.
-    Qed.
-
-    Lemma point_eqb_neq : forall p1 p2, point_eqb p1 p2 = false -> p1 <> p2.
-    Proof.
-      intros. destruct (point_eqb p1 p2) eqn:Hneq; intuition.
-      apply point_eqb_complete in H0; congruence.
-    Qed.
-
-    Lemma point_eqb_neq_complete : forall p1 p2, p1 <> p2 -> point_eqb p1 p2 = false.
-    Proof.
-      intros. destruct (point_eqb p1 p2) eqn:Hneq; intuition.
-      apply point_eqb_sound in Hneq. congruence.
-    Qed.
-
-    Lemma point_eqb_refl : forall p, point_eqb p p = true.
-    Proof.
-      t.
-    Qed.
-
-    Definition point_eq_dec (p1 p2:E.point) : {p1 = p2} + {p1 <> p2}.
-      destruct (point_eqb p1 p2) eqn:H; match goal with
-                                        | [ H: _ |- _ ] => apply point_eqb_sound in H
-                                        | [ H: _ |- _ ] => apply point_eqb_neq in H
-                                        end; eauto.
-    Qed.
-
-    Lemma point_eqb_correct : forall p1 p2, point_eqb p1 p2 = if point_eq_dec p1 p2 then true else false.
-    Proof.
-      intros. destruct (point_eq_dec p1 p2); eauto using point_eqb_complete, point_eqb_neq_complete.
-    Qed.
-    *)
-
-    (* TODO: move to util *)
-    Lemma decide_and  : forall P Q, {P}+{not P} -> {Q}+{not Q} -> {P/\Q}+{not(P/\Q)}.
-    Proof. intros; repeat match goal with [H:{_}+{_}|-_] => destruct H end; intuition. Qed.
-
     Ltac destruct_points :=
       repeat match goal with
              | [ p : point |- _ ] =>
@@ -95,16 +36,6 @@ Module E.
                let pf := fresh "pf" p in
                destruct p as [[x y] pf]
              end.
-
-    Ltac expand_opp :=
-      rewrite ?mul_opp_r, ?mul_opp_l, ?ring_sub_definition, ?inv_inv, <-?ring_sub_definition.
-
-    Local Hint Resolve char_gt_2.
-    Local Hint Resolve nonzero_a.
-    Local Hint Resolve square_a.
-    Local Hint Resolve nonsquare_d.
-    Local Hint Resolve @edwardsAddCompletePlus.
-    Local Hint Resolve @edwardsAddCompleteMinus.
 
     Local Obligation Tactic := intros; destruct_points; simpl; field_algebra.
     Program Definition opp (P:point) : point :=
@@ -118,13 +49,16 @@ Module E.
       | |- _ => progress cbv [fst snd coordinates proj1_sig eq fieldwise fieldwise' add zero opp] in *
       | |- _ => split
       | |- Feq _ _ => field_algebra
-      | |- _ <> 0 => expand_opp; solve [nsatz_nonzero|eauto 6]
-      | |- Decidable.Decidable _ => solve [ typeclasses eauto ]
       end.
 
     Ltac bash := repeat bash_step.
 
-    Global Instance Proper_add : Proper (eq==>eq==>eq) add. Proof. bash. Qed.
+    Global Instance Proper_add : Proper (eq==>eq==>eq) add.
+    Proof. bash.
+           pose proof edwardsAddCompletePlus(char_gt_2:=char_gt_2)(d_nonsquare:=nonsquare_d)(a_square:=square_a)(a_nonzero:=nonzero_a) as Hxy.
+           specialize (Hxy _ _ _ _ pfx pfy).
+           pose proof (edwardsAddCompletePlus(char_gt_2:=char_gt_2)(d_nonsquare:=nonsquare_d)(a_square:=square_a)(a_nonzero:=nonzero_a) _ _ _ _ pfx pfy).
+    Qed.
     Global Instance Proper_opp : Proper (eq==>eq) opp. Proof. bash. Qed.
     Global Instance Proper_coordinates : Proper (eq==>fieldwise (n:=2) Feq) coordinates. Proof. bash. Qed.
 
