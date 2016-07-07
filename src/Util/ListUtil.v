@@ -19,6 +19,10 @@ Create HintDb pull_nth_error discriminated.
 Create HintDb push_nth_error discriminated.
 Create HintDb pull_nth_default discriminated.
 Create HintDb push_nth_default discriminated.
+Create HintDb pull_firstn discriminated.
+Create HintDb push_firstn discriminated.
+Create HintDb pull_update_nth discriminated.
+Create HintDb push_update_nth discriminated.
 
 Hint Rewrite
   @app_length
@@ -539,6 +543,16 @@ Proof. destruct n; auto. Qed.
 
 Hint Rewrite @skipn_nil : simpl_skipn.
 
+Lemma firstn_0 : forall {A} xs, @firstn A 0 xs = nil.
+Proof. reflexivity. Qed.
+
+Hint Rewrite @firstn_0 : simpl_firstn.
+
+Lemma skipn_0 : forall {A} xs, @skipn A 0 xs = xs.
+Proof. reflexivity. Qed.
+
+Hint Rewrite @skipn_0 : simpl_skipn.
+
 Lemma firstn_cons_S : forall {A} n x xs, @firstn A (S n) (x::xs) = x::@firstn A n xs.
 Proof. reflexivity. Qed.
 
@@ -705,8 +719,12 @@ Qed.
 Lemma update_nth_cons : forall {T} f (u0 : T) us, update_nth 0 f (u0 :: us) = (f u0) :: us.
 Proof. reflexivity. Qed.
 
+Hint Rewrite @update_nth_cons : simpl_update_nth.
+
 Lemma set_nth_cons : forall {T} (x u0 : T) us, set_nth 0 x (u0 :: us) = x :: us.
 Proof. intros; apply update_nth_cons. Qed.
+
+Hint Rewrite @set_nth_cons : simpl_set_nth.
 
 Hint Rewrite
   @nil_length0
@@ -724,17 +742,25 @@ Proof.
   induction n; boring.
 Qed.
 
-Lemma update_nth_nil : forall {T} n f, set_nth n f (@nil T) = @nil T.
+Hint Rewrite <- @cons_update_nth : simpl_update_nth.
+
+Lemma update_nth_nil : forall {T} n f, update_nth n f (@nil T) = @nil T.
 Proof.
   induction n; boring.
 Qed.
+
+Hint Rewrite @update_nth_nil : simpl_update_nth.
 
 Lemma cons_set_nth : forall {T} n (x y : T) us,
   y :: set_nth n x us = set_nth (S n) x (y :: us).
 Proof. intros; apply cons_update_nth. Qed.
 
+Hint Rewrite <- @cons_set_nth : simpl_set_nth.
+
 Lemma set_nth_nil : forall {T} n (x : T), set_nth n x nil = nil.
 Proof. intros; apply update_nth_nil. Qed.
+
+Hint Rewrite @set_nth_nil : simpl_set_nth.
 
 Lemma skipn_nth_default : forall {T} n us (d : T), (n < length us)%nat ->
  skipn n us = nth_default d us n :: skipn (S n) us.
@@ -1024,4 +1050,12 @@ Proof.
     simpl_list_lengths; try omega.
   rewrite <-!app_comm_cons, !map2_cons.
   rewrite IHls1; auto.
+Qed.
+
+Lemma firstn_update_nth {A}
+  : forall f m n (xs : list A), firstn m (update_nth n f xs) = update_nth n f (firstn m xs).
+Proof.
+  induction m; destruct n, xs;
+    autorewrite with simpl_firstn simpl_update_nth;
+    congruence.
 Qed.
