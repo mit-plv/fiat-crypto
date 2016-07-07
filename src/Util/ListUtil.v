@@ -11,6 +11,10 @@ Create HintDb simpl_set_nth discriminated.
 Create HintDb simpl_update_nth discriminated.
 Create HintDb simpl_nth_default discriminated.
 Create HintDb simpl_nth_error discriminated.
+Create HintDb simpl_firstn discriminated.
+Create HintDb simpl_skipn discriminated.
+Create HintDb simpl_fold_right discriminated.
+Create HintDb simpl_sum_firstn discriminated.
 Create HintDb pull_nth_error discriminated.
 Create HintDb push_nth_error discriminated.
 Create HintDb pull_nth_default discriminated.
@@ -86,6 +90,11 @@ Lemma nth_default_cons_S : forall {A} us (u0 : A) n d,
 Proof. boring. Qed.
 
 Hint Rewrite @nth_default_cons_S : simpl_nth_default.
+
+Lemma nth_default_nil : forall {T} n (d : T), nth_default d nil n = d.
+Proof. induction n; boring. Qed.
+
+Hint Rewrite @nth_default_nil : simpl_nth_default.
 
 Lemma nth_error_nil_error : forall {A} n, nth_error (@nil A) n = None.
 Proof. induction n; boring. Qed.
@@ -521,14 +530,24 @@ Proof.
 Qed.
 
 Lemma firstn_nil : forall {A} n, firstn n nil = @nil A.
-Proof.
-  destruct n; auto.
-Qed.
+Proof. destruct n; auto. Qed.
+
+Hint Rewrite @firstn_nil : simpl_firstn.
 
 Lemma skipn_nil : forall {A} n, skipn n nil = @nil A.
-Proof.
-  destruct n; auto.
-Qed.
+Proof. destruct n; auto. Qed.
+
+Hint Rewrite @skipn_nil : simpl_skipn.
+
+Lemma firstn_cons_S : forall {A} n x xs, @firstn A (S n) (x::xs) = x::@firstn A n xs.
+Proof. reflexivity. Qed.
+
+Hint Rewrite @firstn_cons_S : simpl_firstn.
+
+Lemma skipn_cons_S : forall {A} n x xs, @skipn A (S n) (x::xs) = @skipn A n xs.
+Proof. reflexivity. Qed.
+
+Hint Rewrite @skipn_cons_S : simpl_skipn.
 
 Lemma firstn_app : forall {A} n (xs ys : list A),
   firstn n (xs ++ ys) = firstn n xs ++ firstn (n - length xs) ys.
@@ -593,6 +612,8 @@ Lemma fold_right_cons : forall {A B} (f:B->A->A) a b bs,
 Proof.
   reflexivity.
 Qed.
+
+Hint Rewrite @fold_right_cons : simpl_fold_right.
 
 Lemma length_cons : forall {T} (x:T) xs, length (x::xs) = S (length xs).
   reflexivity.
@@ -714,11 +735,6 @@ Proof. intros; apply cons_update_nth. Qed.
 
 Lemma set_nth_nil : forall {T} n (x : T), set_nth n x nil = nil.
 Proof. intros; apply update_nth_nil. Qed.
-
-Lemma nth_default_nil : forall {T} n (d : T), nth_default d nil n = d.
-Proof.
-  induction n; boring.
-Qed.
 
 Lemma skipn_nth_default : forall {T} n us (d : T), (n < length us)%nat ->
  skipn n us = nth_default d us n :: skipn (S n) us.
@@ -913,28 +929,28 @@ Proof.
   congruence.
 Qed.
 
+Hint Rewrite @sum_firstn_all_succ using omega : simpl_firstn.
+
+Lemma sum_firstn_succ_default : forall l i,
+  sum_firstn l (S i) = (nth_default 0 l i + sum_firstn l i)%Z.
+Proof.
+  unfold sum_firstn; induction l, i;
+    intros; autorewrite with simpl_nth_default simpl_firstn simpl_fold_right in *;
+      try reflexivity.
+  rewrite IHl; omega.
+Qed.
+
+Hint Rewrite @sum_firstn_succ_default : simpl_firstn.
+
 Lemma sum_firstn_succ : forall l i x,
   nth_error l i = Some x ->
   sum_firstn l (S i) = (x + sum_firstn l i)%Z.
 Proof.
-  unfold sum_firstn; induction l;
-    [intros; rewrite (@nth_error_nil_error Z) in *; congruence | ].
-  intros ? x nth_err_x; destruct (Nat.eq_dec i 0).
-  + subst; simpl in *; unfold value in *.
-    congruence.
-  + rewrite <- (Nat.succ_pred i) at 2 by auto.
-    rewrite <- (Nat.succ_pred i) in nth_err_x by auto.
-    simpl. simpl in nth_err_x.
-    specialize (IHl (pred i) x).
-    rewrite Nat.succ_pred in IHl by auto.
-    destruct (Nat.eq_dec (pred i) 0).
-    - replace i with 1%nat in * by omega.
-      simpl. replace (pred 1) with 0%nat in * by auto.
-      apply nth_error_exists_first in nth_err_x.
-      destruct nth_err_x as [l' ?].
-      subst; simpl; omega.
-    - rewrite IHl by auto; omega.
+  intros; rewrite sum_firstn_succ_default.
+  rewrite_strat topdown hints simpl_nth_default. reflexivity.
 Qed.
+
+Hint Rewrite @sum_firstn_succ using congruence : simpl_firstn.
 
 Lemma nth_default_map2 : forall {A B C} (f : A -> B -> C) ls1 ls2 i d d1 d2,
   nth_default d (map2 f ls1 ls2) i =
