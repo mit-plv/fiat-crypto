@@ -197,7 +197,7 @@ Lemma update_nth_id_eq_specific {T} f n
     update_nth n f xs = xs.
 Proof.
   induction n; destruct xs; simpl; intros;
-    try rewrite IHn; try rewrite H;
+    try rewrite IHn; try rewrite H; unfold value in *;
       try congruence; assumption.
 Qed.
 
@@ -233,6 +233,21 @@ Proof.
   induction i, xs; boring.
 Qed.
 
+(** TODO: this is in the stdlib in 8.5; remove this when we move to 8.5-only *)
+Lemma nth_error_None : forall (A : Type) (l : list A) (n : nat), nth_error l n = None <-> length l <= n.
+Proof.
+  intros A l n.
+  destruct (le_lt_dec (length l) n) as [H|H];
+    split; intro H';
+      try omega;
+      try (apply nth_error_length_error in H; tauto);
+      try (apply nth_error_error_length in H'; omega).
+Qed.
+
+(** TODO: this is in the stdlib in 8.5; remove this when we move to 8.5-only *)
+Lemma nth_error_Some : forall (A : Type) (l : list A) (n : nat), nth_error l n <> None <-> n < length l.
+Proof. intros; rewrite nth_error_None; split; omega. Qed.
+
 Lemma nth_set_nth : forall m {T} (xs:list T) (n:nat) x,
   nth_error (set_nth m x xs) n =
   if eq_nat_dec n m
@@ -240,6 +255,7 @@ Lemma nth_set_nth : forall m {T} (xs:list T) (n:nat) x,
   else nth_error xs n.
 Proof.
   intros; unfold set_nth; rewrite nth_update_nth.
+
   destruct (nth_error xs n) eqn:?, (lt_dec n (length xs)) as [p|p];
     rewrite <- nth_error_Some in p;
     solve [ reflexivity
