@@ -929,7 +929,7 @@ Proof.
   congruence.
 Qed.
 
-Hint Rewrite @sum_firstn_all_succ using omega : simpl_firstn.
+Hint Rewrite @sum_firstn_all_succ using omega : simpl_sum_firstn.
 
 Lemma sum_firstn_succ_default : forall l i,
   sum_firstn l (S i) = (nth_default 0 l i + sum_firstn l i)%Z.
@@ -940,7 +940,7 @@ Proof.
   rewrite IHl; omega.
 Qed.
 
-Hint Rewrite @sum_firstn_succ_default : simpl_firstn.
+Hint Rewrite @sum_firstn_succ_default : simpl_sum_firstn.
 
 Lemma sum_firstn_succ : forall l i x,
   nth_error l i = Some x ->
@@ -950,7 +950,7 @@ Proof.
   rewrite_strat topdown hints simpl_nth_default. reflexivity.
 Qed.
 
-Hint Rewrite @sum_firstn_succ using congruence : simpl_firstn.
+Hint Rewrite @sum_firstn_succ using congruence : simpl_sum_firstn.
 
 Lemma nth_default_map2 : forall {A B C} (f : A -> B -> C) ls1 ls2 i d d1 d2,
   nth_default d (map2 f ls1 ls2) i =
