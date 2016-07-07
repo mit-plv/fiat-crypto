@@ -1,9 +1,10 @@
 Require Import Coq.Classes.Morphisms. Require Coq.Setoids.Setoid.
-Require Import Crypto.Util.Tactics Crypto.Tactics.Nsatz.
+Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Notations.
 Require Coq.Numbers.Natural.Peano.NPeano.
 Local Close Scope nat_scope. Local Close Scope type_scope. Local Close Scope core_scope.
+Require Crypto.Tactics.Algebra_syntax.Nsatz.
 
 Module Import ModuloCoq8485.
   Import NPeano Nat.
@@ -637,6 +638,11 @@ Module Field.
   End Homomorphism.
 End Field.
 
+(** Tactics *)
+
+Ltac nsatz := Algebra_syntax.Nsatz.nsatz; dropRingSyntax.
+Ltac nsatz_contradict := Algebra_syntax.Nsatz.nsatz_contradict; dropRingSyntax.
+
 (*** Tactics for manipulating field equations *)
 Require Import Coq.setoid_ring.Field_tac.
 
@@ -981,7 +987,7 @@ Ltac neq01 :=
 Ltac conservative_field_algebra :=
   intros;
   conservative_common_denominator_all;
-  try (nsatz; dropRingSyntax);
+  try nsatz;
   repeat (apply conj);
   try solve
       [neq01
@@ -991,7 +997,7 @@ Ltac conservative_field_algebra :=
 Ltac field_algebra :=
   intros;
   common_denominator_all;
-  try (nsatz; dropRingSyntax);
+  try nsatz;
   repeat (apply conj);
   try solve
       [neq01

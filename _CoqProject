@@ -28,6 +28,7 @@ src/CompleteEdwardsCurve/Pre.v
 src/Encoding/EncodingTheorems.v
 src/Encoding/ModularWordEncodingPre.v
 src/Encoding/ModularWordEncodingTheorems.v
+src/Encoding/PointEncodingPre.v
 src/Experiments/DerivationsOptionRectLetInEncoding.v
 src/Experiments/EdDSARefinement.v
 src/Experiments/GenericFieldPow.v
@@ -54,8 +55,8 @@ src/Spec/ModularWordEncoding.v
 src/Spec/WeierstrassCurve.v
 src/Specific/GF1305.v
 src/Specific/GF25519.v
-src/Tactics/Nsatz.v
 src/Tactics/VerdiTactics.v
+src/Tactics/Algebra_syntax/Nsatz.v
 src/Util/CaseUtil.v
 src/Util/Decidable.v
 src/Util/IterAssocOp.v

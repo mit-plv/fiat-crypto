@@ -7,6 +7,9 @@ Tactic Notation "test" tactic3(tac) :=
 (** [not tac] is equivalent to [fail tac "succeeds"] if [tac] succeeds, and is equivalent to [idtac] if [tac] fails *)
 Tactic Notation "not" tactic3(tac) := try ((test tac); fail 1 tac "succeeds").
 
+Ltac get_goal :=
+  match goal with |- ?G => G end.
+
 (** find the head of the given expression *)
 Ltac head expr :=
   match expr with
