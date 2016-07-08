@@ -1,10 +1,14 @@
+Require Coq.Logic.Eqdep_dec.
 Require Import Coq.Numbers.Natural.Peano.NPeano Coq.omega.Omega.
 Require Import Coq.micromega.Psatz.
 Import Nat.
 
 Create HintDb natsimplify discriminated.
 
-Hint Rewrite @Nat.mod_small using omega : natsimplify.
+Hint Resolve mod_bound_pos : arith.
+Hint Resolve (fun x y p q => proj1 (@Nat.mod_bound_pos x y p q)) (fun x y p q => proj2 (@Nat.mod_bound_pos x y p q)) : arith.
+
+Hint Rewrite @mod_small @mod_mod @mod_1_l @mod_1_r succ_pred using omega : natsimplify.
 
 Local Open Scope nat_scope.
 
@@ -134,7 +138,52 @@ Qed.
 
 Hint Resolve pow_nonzero : arith.
 
+Lemma S_pred_nonzero : forall a, (a > 0 -> S (pred a) = a)%nat.
+Proof.
+  destruct a; omega.
+Qed.
+
+Hint Rewrite S_pred_nonzero using omega : natsimplify.
+
 Lemma mod_same_eq a b : a <> 0 -> a = b -> b mod a = 0.
 Proof. intros; subst; apply mod_same; assumption. Qed.
 
 Hint Rewrite @mod_same_eq using omega : natsimplify.
+Hint Resolve mod_same_eq : arith.
+
+Lemma mod_mod_eq a b c : a <> 0 -> b = c mod a -> b mod a = b.
+Proof. intros; subst; autorewrite with natsimplify; reflexivity. Qed.
+
+Hint Rewrite @mod_mod_eq using (reflexivity || omega) : natsimplify.
+
+Local Arguments minus !_ !_.
+
+Lemma S_mod_full a b : a <> 0 -> (S b) mod a = if eq_nat_dec (S (b mod a)) a
+                                               then 0
+                                               else S (b mod a).
+Proof.
+  change (S b) with (1+b); intros.
+  pose proof (mod_bound_pos b a).
+  rewrite add_mod by assumption.
+  destruct (eq_nat_dec (S (b mod a)) a) as [H'|H'];
+    destruct a as [|[|a]]; autorewrite with natsimplify in *;
+      try congruence; try reflexivity.
+Qed.
+
+Hint Rewrite S_mod_full using omega : natsimplify.
+
+Lemma S_mod a b : a <> 0 -> S (b mod a) <> a -> (S b) mod a = S (b mod a).
+Proof.
+  intros; rewrite S_mod_full by assumption.
+  edestruct eq_nat_dec; omega.
+Qed.
+
+Hint Rewrite S_mod using (omega || autorewrite with natsimplify; omega) : natsimplify.
+
+Lemma eq_nat_dec_refl x : eq_nat_dec x x = left (Logic.eq_refl x).
+Proof.
+  edestruct eq_nat_dec; try congruence.
+  apply f_equal, Eqdep_dec.UIP_dec, eq_nat_dec.
+Qed.
+
+Hint Rewrite eq_nat_dec_refl : natsimplify.

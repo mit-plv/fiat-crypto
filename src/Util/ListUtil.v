@@ -633,11 +633,6 @@ Lemma length_cons : forall {T} (x:T) xs, length (x::xs) = S (length xs).
   reflexivity.
 Qed.
 
-Lemma S_pred_nonzero : forall a, (a > 0 -> S (pred a) = a)%nat.
-Proof.
-  destruct a; omega.
-Qed.
-
 Lemma cons_length : forall A (xs : list A) a, length (a :: xs) = S (length xs).
 Proof.
   auto.
@@ -975,6 +970,14 @@ Proof.
 Qed.
 
 Hint Rewrite @sum_firstn_succ_default : simpl_sum_firstn.
+
+Lemma sum_firstn_0 : forall xs,
+  sum_firstn xs 0 = 0%Z.
+Proof.
+  destruct xs; reflexivity.
+Qed.
+
+Hint Rewrite @sum_firstn_0 : simpl_sum_firstn.
 
 Lemma sum_firstn_succ : forall l i x,
   nth_error l i = Some x ->
