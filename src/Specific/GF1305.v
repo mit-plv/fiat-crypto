@@ -48,11 +48,11 @@ Definition fe1305 : Type := Eval cbv in fe.
 
 Local Opaque Z.shiftr Z.shiftl Z.land Z.mul Z.add Z.sub Let_In.
 
-Definition mul (f g:fe1305) : { fg | fg = ModularBaseSystemInterface.mul k_subst c_subst f g }.
+Definition mul (f g:fe1305) : { fg | fg = @ModularBaseSystemInterface.mul _ _ k_ c_ f g }.
   (* NOTE: beautiful example of reduction slowness: stack overflow if [f] [g] are not destructed first *)
   cbv [fe1305] in *.
   repeat match goal with [p : (_*Z)%type |- _ ] => destruct p end.
-  eexists. 
+  eexists.
   cbv.
   autorewrite with zsimplify.
   reflexivity.
