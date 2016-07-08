@@ -51,11 +51,34 @@ Section s.
 
   Definition opp (x : fe) : fe := phi_inv (ModularArithmetic.opp (phi x)).
 
+
+  Lemma add_correct : forall a b,
+    to_list (add a b) = BaseSystem.add (to_list a) (to_list b).
+  Proof.
+    intros; cbv [add on_tuple2].
+    rewrite to_list_from_list.
+    apply add_opt_correct.
+  Qed.
+
+  Lemma add_phi : forall a b : fe,
+    phi (add a b) = ModularArithmetic.add (phi a) (phi b).
+  Proof.
+    intros; cbv [phi].
+    rewrite add_correct.
+    apply ModularBaseSystemProofs.add_rep; auto using decode_rep, length_to_list.
+  Qed.
+
   Lemma optimized_group : @group fe eq add zero opp.
   Proof.
     eapply @isomorphism_to_subgroup_group; cbv [opp zero eq]; intros;
       eauto; rewrite ?phi_inv_spec; try reflexivity.
-  Admitted.
+    + econstructor; eauto. admit.
+    + apply (eq_dec _ _).
+    + admit.
+    + admit.
+    + admit.
+    + apply add_phi.
+  Qed.
 
   Lemma mul_correct : forall a b,
     to_list (mul a b) = carry_mul (to_list a) (to_list b).
