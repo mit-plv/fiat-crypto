@@ -981,7 +981,7 @@ Lemma sum_firstn_succ : forall l i x,
   sum_firstn l (S i) = (x + sum_firstn l i)%Z.
 Proof.
   intros; rewrite sum_firstn_succ_default.
-  rewrite_strat topdown hints simpl_nth_default. reflexivity.
+  (rewrite_strat topdown hints simpl_nth_default); eauto using eq_refl with nocore.
 Qed.
 
 Hint Rewrite @sum_firstn_succ using congruence : simpl_sum_firstn.
@@ -1068,5 +1068,7 @@ Proof.
     congruence.
 Qed.
 
-Hint Rewrite @firstn_update_nth : push_firstn pull_update_nth.
-Hint Rewrite <- @firstn_update_nth : pull_firstn push_update_nth.
+Hint Rewrite @firstn_update_nth : push_firstn.
+Hint Rewrite @firstn_update_nth : pull_update_nth.
+Hint Rewrite <- @firstn_update_nth : pull_firstn.
+Hint Rewrite <- @firstn_update_nth : push_update_nth.
