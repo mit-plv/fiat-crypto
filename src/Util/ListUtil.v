@@ -986,6 +986,12 @@ Qed.
 
 Hint Rewrite @sum_firstn_succ using congruence : simpl_sum_firstn.
 
+Lemma sum_firstn_succ_default_rev : forall l i,
+  sum_firstn l i = (sum_firstn l (S i) - nth_default 0 l i)%Z.
+Proof.
+  intros; rewrite sum_firstn_succ_default; omega.
+Qed.
+
 Lemma sum_firstn_succ_rev : forall l i x,
   nth_error l i = Some x ->
   sum_firstn l i = (sum_firstn l (S i) - x)%Z.
