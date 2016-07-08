@@ -986,6 +986,13 @@ Qed.
 
 Hint Rewrite @sum_firstn_succ using congruence : simpl_sum_firstn.
 
+Lemma sum_firstn_succ_rev : forall l i x,
+  nth_error l i = Some x ->
+  sum_firstn l i = (sum_firstn l (S i) - x)%Z.
+Proof.
+  intros; erewrite sum_firstn_succ by eassumption; omega.
+Qed.
+
 Lemma nth_default_map2 : forall {A B C} (f : A -> B -> C) ls1 ls2 i d d1 d2,
   nth_default d (map2 f ls1 ls2) i =
     if lt_dec i (min (length ls1) (length ls2))
