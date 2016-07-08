@@ -12,12 +12,12 @@ Section Util.
   Definition convS {A B: Set} (x: A) (H: A = B): B :=
     eq_rect A (fun B0 : Set => B0) x B H.
 
-  Definition high {k n: nat} (p: (k <= n)%nat) (w: word n): word k.
+  Definition low {k n: nat} (p: (k <= n)%nat) (w: word n): word k.
     refine (split1 k (n - k) (convS w _)).
     abstract (replace n with (k + (n - k)) by omega; intuition).
   Defined.
 
-  Definition low {k n: nat} (p: (k <= n)%nat) (w: word n): word k.
+  Definition high {k n: nat} (p: (k <= n)%nat) (w: word n): word k.
     refine (split2 (n - k) k (convS w _)).
     abstract (replace n with (k + (n - k)) by omega; intuition).
   Defined.
@@ -59,13 +59,15 @@ Section Util.
 
   Definition overflows (n: nat) (x: N) := Nge_dec x (Npow2 n).
 
+  Definition ind (b: bool): N := if b then 1%N else 0%N.
+
+  Definition ind' {A B} (b: {A} + {B}): N := if b then 1%N else 0%N.
+
   Definition break {n} (m: nat) (x: word n): word m * word (n - m).
     refine match (le_dec m n) with
     | left p => (extend _ (low p x), extend _ (@high (n - m) n _ x))
-    | right p => (extend _ x, _)
+    | right p => (extend _ x, extend _ WO)
     end; try abstract intuition.
-
-    replace (n - m) with O by abstract omega; exact WO.
   Defined.
 
   Definition addWithCarry {n} (x y: word n) (c: bool): word n :=

@@ -8,6 +8,7 @@ src/BaseSystemProofs.v
 src/Testbit.v
 src/Assembly/AlmostConversion.v
 src/Assembly/AlmostQhasm.v
+src/Assembly/Bounds.v
 src/Assembly/Conversion.v
 src/Assembly/Language.v
 src/Assembly/Pipeline.v

@@ -1,73 +1,47 @@
 Require Export Bedrock.Word Bedrock.Nomega.
 Require Import NPeano NArith PArith Ndigits Compare_dec Arith.
 Require Import ProofIrrelevance Ring List Omega.
+Require Import Program.Equality.
 
 Definition Let_In {A P} (x : A) (f : forall a : A, P a) : P x :=
   let y := x in f y.
 
 Notation "'plet' x := y 'in' z" := (Let_In y (fun x => z)) (at level 60).
 
-Section Vector.
+Section Listize.
   Import ListNotations.
 
-  Definition vec T n := {x: list T | length x = n}.
+  Fixpoint Tuple (A: Type) (n: nat): Type :=
+    match n with
+    | O => unit
+    | 1 => A
+    | S m => (Tuple A m) * A
+    end.
+  Lemma tupleToList: forall {A} (k: nat), Tuple A k -> list A.
+    intros A k t; induction k as [|k]; try induction k as [|k].
 
-  Definition vget {n T} (x: vec T n) (i: {v: nat | (v < n)%nat}): T.
-    refine (
-      match (proj1_sig x) as x' return (proj1_sig x) = x' -> _ with
-      | [] => fun _ => _
-      | x0 :: xs => fun _ => nth (proj1_sig i) (proj1_sig x) x0
-      end eq_refl);
-    abstract (
-      destruct x as [x xp], i as [i ip]; destruct x as [|x0 xs];
-      simpl in *; subst; try omega;
-      match goal with
-      | [H: _ = @nil _ |- _] => inversion H
-      end).
+    - refine [].
+    - refine [t].
+    - refine ((IHk (fst t)) ++ [snd t]).
   Defined.
 
-  Lemma vget_spec: forall {T n} (x: vec T n) (i: {v: nat | (v < n)%nat}) (d: T),
-      vget x i = nth (proj1_sig i) (proj1_sig x) d.
-  Proof.
-    intros; destruct x as [x xp], i as [i ip];
-      destruct x as [|x0 xs]; induction i; unfold vget; simpl;
-      intuition; try (simpl in xp; subst; omega);
-      induction n; simpl in xp; try omega; clear IHi IHn.
+  Fixpoint Curried (A B: Type) (ins: nat) (outs: nat): Type :=
+    match ins with
+    | O => Tuple B outs
+    | S ins' => A -> (Curried A B ins' outs)
+    end.
 
-    apply nth_indep.
-    assert (length xs = n) by omega; subst.
-    omega.
-  Qed.
+  Definition ListF (A B: Type): Type := list A -> list B.
 
-  Definition vec0 {T} : vec T 0.
-    refine (exist _ [] _); abstract intuition.
-  Defined.
+  Fixpoint curriedToList {A B: Type} {ins outs: nat} (default: A)
+      (f: Curried A B ins outs): ListF A B := fun (lst: list A) =>
+    match ins as ins' return Curried A B ins' outs -> list B with
+    | O => fun g => tupleToList outs g
+    | S ins'' => fun g => (curriedToList default (g (nth ins'' lst default))) lst
+    end f.
+End Listize.
 
-  Lemma lift0: forall {T n} (x: T), vec (word n) 0 -> T.
-    intros; refine x.
-  Defined.
-
-  Lemma liftS: forall {T n m} (f: vec (word n) m -> word n -> T),
-    (vec (word n) (S m) -> T).
-  Proof.
-    intros T n m f v; destruct v as [v p]; induction m, v;
-      try (abstract (inversion p)).
-
-    - refine (f (exist _ [] _) w); abstract intuition.
-    - refine (f (exist _ v _) w); abstract intuition.
-  Defined.
-
-  Lemma vecToList: forall T n m (f: vec (word n) m -> T),
-    (list (word n) -> option T).
-  Proof.
-    intros T n m f x; destruct (Nat.eq_dec (length x) m).
-
-    - refine (Some (f (exist _ x _))); abstract intuition.
-    - refine None.
-  Defined.
-End Vector.
-
-Section Vectorization.
+Section Lets.
   Import ListNotations.
 
   Lemma detuple_let: forall {A B C} (y0: A) (y1: B) (z: (A * B) -> C),
@@ -104,19 +78,18 @@ Section Vectorization.
     rewrite HA, HB; reflexivity.
   Qed.
 
-End Vectorization.
+End Lets.
 
-Ltac vectorize :=
+Ltac list_destruct :=
   repeat match goal with
-   | [ |- context[?a - 1] ] =>
-     let c := eval simpl in (a - 1) in
-     replace (a - 1) with c by omega
-  | [ |- vec (word ?n) O -> ?T] => apply (@lift0 T n)
-  | [ |- vec (word ?n) ?m -> ?T] => apply (@liftS T n (m - 1))
+  | [H: context[Datatypes.length (cons _ _)] |- _] => simpl in H
+  | [H: context[Datatypes.length nil] |- _] => simpl in H
+  | [H: S ?a = S ?b |- _] => inversion H; clear H
+  | [H: (S ?a) = 0 |- _] => contradict H; intuition
+  | [H: 0 = (S ?a) |- _] => contradict H; intuition
+  | [H: 0 = 0 |- _] => clear H
+  | [x: list ?T |- _] =>
+    match goal with
+    | [H: context[Datatypes.length x] |- _] => destruct x
+    end
   end.
-
-Section Examples.
-  Lemma vectorize_example: (vec (word 32) 2 -> word 32).
-    vectorize; refine (@wplus 32).
-  Qed.
-End Examples.

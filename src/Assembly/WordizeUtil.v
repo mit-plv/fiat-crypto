@@ -49,15 +49,6 @@ Section Misc.
       assumption.
   Qed.
 
-  Lemma N_gt_0: forall x: N, (0 <= x)%N.
-  Proof.
-    intro x0; unfold N.le.
-    pose proof (N.compare_0_r x0) as H.
-    rewrite N.compare_antisym in H.
-    induction x0; simpl in *;
-      intro V; inversion V.
-  Qed.
-
   Lemma ge_to_le: forall (x y: N), (x >= y)%N <-> (y <= x)%N.
   Proof.
     intros x y; split; intro H;
@@ -67,6 +58,110 @@ Section Misc.
       rewrite H0; simpl; intuition.
   Qed.
 
+  Lemma N_ge_0: forall x: N, (0 <= x)%N.
+  Proof.
+    intro x0; unfold N.le.
+    pose proof (N.compare_0_r x0) as H.
+    rewrite N.compare_antisym in H.
+    induction x0; simpl in *;
+      intro V; inversion V.
+  Qed.
+
+  Lemma Pos_ge_1: forall p, (1 <= N.pos p)%N.
+  Proof.
+    intro.
+    replace (N.pos p) with (N.succ (N.pos p - 1)%N) by (
+      induction p; simpl;
+      try rewrite Pos.succ_pred_double;
+      try reflexivity).
+    unfold N.succ.
+    apply N.le_pred_le_succ.
+    replace (N.pred 1%N) with 0%N by (simpl; intuition).
+    apply N_ge_0.
+  Qed.
+
+  Lemma testbit_wones_false: forall n k,
+     (k >= N.of_nat n)%N
+   -> false = N.testbit (& wones n) k.
+  Proof.
+    induction n; try abstract (simpl; intuition).
+    induction k; try abstract (
+      intro H; destruct H; simpl; intuition).
+
+    intro H.
+    assert (N.pos p - 1 >= N.of_nat n)%N as Z.
+      apply ge_to_le;
+      apply ge_to_le in H;
+      apply (N.add_le_mono_r _ _ 1%N);
+      replace (N.of_nat n + 1)%N with (N.of_nat (S n));
+      replace (N.pos p - 1 + 1)%N with (N.pos p);
+      try rewrite N.sub_add;
+      try assumption;
+      try nomega;
+      apply Pos_ge_1.
+
+    rewrite (IHn (N.pos p - 1)%N Z) at 1.
+
+    assert (N.pos p = N.succ (N.pos p - 1)) as Hp by (
+      rewrite <- N.pred_sub;
+      rewrite N.succ_pred;
+      try abstract intuition;
+      intro H0; inversion H0).
+
+    symmetry.
+    rewrite Hp at 1.
+    rewrite Hp in H.
+
+    revert H; clear IHn Hp Z;
+      generalize (N.pos p - 1)%N as x;
+      intros x H.
+
+    replace (& wones (S n)) with (2 * & (wones n) + N.b2n true)%N
+      by (simpl; nomega).
+
+    rewrite N.testbit_succ_r; reflexivity.
+  Qed.
+
+  Lemma testbit_wones_true: forall n k,
+     (k < N.of_nat n)%N
+   -> true = N.testbit (& wones n) k.
+  Proof.
+    induction n; intros k H; try nomega.
+    destruct (N.eq_dec k (N.of_nat n)).
+
+    - clear IHn H; subst.
+      induction n.
+
+      + simpl; intuition.
+
+      + replace (& (wones (S (S n))))
+           with (2 * (& (wones (S n))) + N.b2n true)%N
+          by (simpl; nomega).
+        rewrite Nat2N.inj_succ.
+        rewrite N.testbit_succ_r.
+        assumption.
+
+    - induction k.
+
+      + replace (& (wones (S n))) with (2 * (& (wones n)) + N.b2n true)%N
+          by (simpl; nomega).
+        rewrite N.testbit_0_r.
+        reflexivity.
+
+      + assert (N.pos p < N.of_nat n)%N as IH by (
+          rewrite Nat2N.inj_succ in H;
+          nomega).
+        apply N.lt_lt_pred in IH.
+        apply IHn in IH.
+        replace (N.pos p) with (N.succ (N.pred (N.pos p))) by (
+          induction p; simpl;
+          try rewrite Pos.succ_pred_double;
+          intuition).
+        replace (& (wones (S n))) with (2 * (& (wones n)) + N.b2n true)%N
+          by (simpl; nomega).
+        rewrite N.testbit_succ_r.
+        assumption.
+  Qed.
 End Misc.
 
 Section Exp.
@@ -107,6 +202,14 @@ Section Exp.
       + apply N.neq_0_lt_0 in IHx; intuition.
   Qed.
 
+  Lemma Npow2_ge1 : forall x, (1 <= Npow2 x)%N.
+  Proof.
+    intro x.
+    pose proof (Npow2_gt0 x) as Z.
+    apply N.lt_pred_le; simpl.
+    assumption.
+  Qed.
+
   Lemma Npow2_split: forall a b,
     (Npow2 (a + b) = (Npow2 a) * (Npow2 b))%N.
   Proof.
@@ -122,6 +225,38 @@ Section Exp.
       induction (Npow2 a), (Npow2 b); simpl; intuition.
       rewrite Pos.mul_xO_r; intuition.
   Qed.
+
+  Lemma Npow2_N: forall n, Npow2 n = (2 ^ N.of_nat n)%N.
+  Proof.
+    induction n.
+
+    - simpl; intuition.
+
+    - rewrite Nat2N.inj_succ.
+      rewrite N.pow_succ_r; try apply N_ge_0.
+      rewrite <- IHn.
+      simpl; intuition.
+  Qed.
+ 
+  Lemma Npow2_succ: forall n, (Npow2 (S n) = 2 * (Npow2 n))%N.
+  Proof. intros; simpl; induction (Npow2 n); intuition. Qed.
+
+  Lemma Npow2_ordered: forall n m, (n <= m)%nat -> (Npow2 n <= Npow2 m)%N.
+  Proof.
+    induction n; intros m H; try rewrite Npow2_succ.
+
+    - simpl; apply Npow2_ge1.
+
+    - induction m; try rewrite Npow2_succ.
+
+      + inversion H.
+
+      + assert (n <= m)%nat as H0 by omega.
+        apply IHn in H0.
+        apply N.mul_le_mono_l.
+        assumption.
+  Qed.
+
 End Exp.
 
 Section Conversions.
@@ -662,12 +797,12 @@ Section SpecialFunctions.
     apply N.bits_inj_iff; unfold N.eqf; intro x;
       rewrite N.shiftr_spec;
       repeat rewrite wordToN_testbit;
-      try apply N_gt_0.
+      try apply N_ge_0.
 
     revert x a b.
     induction n, m; intros;
       shatter a;
-      try apply N_gt_0.
+      try apply N_ge_0.
 
     - simpl; intuition.
 
@@ -709,43 +844,126 @@ Section SpecialFunctions.
     rewrite N.lxor_spec.
     destruct (Nge_dec k (N.of_nat n)).
 
-    - rewrite N.shiftl_spec_high; try apply N_gt_0;
+    - rewrite N.shiftl_spec_high; try apply N_ge_0;
         try (apply ge_to_le; assumption).
-      rewrite N.shiftr_spec; try apply N_gt_0.
+      rewrite N.shiftr_spec; try apply N_ge_0.
       replace (k - N.of_nat n + N.of_nat n)%N with k by nomega.
       rewrite N.land_spec.
       induction (N.testbit x k); 
         replace (N.testbit (& wones n) k) with false;
-        simpl; intuition.
+        simpl; intuition;
+        try apply testbit_wones_false;
+        try assumption.
 
-    - rewrite N.shiftl_spec_low; try assumption; try apply N_gt_0.
+    - rewrite N.shiftl_spec_low; try assumption; try apply N_ge_0.
       rewrite N.land_spec.
       induction (N.testbit x k);
         replace (N.testbit (& wones n) k) with true;
-        simpl; intuition.
-
+        simpl; intuition;
+        try apply testbit_wones_true;
+        try assumption.
   Qed.
+
+  Lemma wordToN_wones: forall x, & (wones x) = N.ones (N.of_nat x).
+  Proof.
+    induction x.
+
+    - simpl; intuition.
+
+    - rewrite Nat2N.inj_succ.
+      replace (& wones (S x)) with (2 * & (wones x) + N.b2n true)%N
+        by (simpl; nomega).
+      replace (N.ones (N.succ _))
+         with (2 * N.ones (N.of_nat x) + N.b2n true)%N
+           by (
+        replace (N.succ (N.of_nat x)) with (1 + (N.of_nat x))%N by (
+          rewrite N.add_comm; nomega);
+        rewrite N.ones_add;
+        replace (N.ones 1) with 1%N by (
+          unfold N.ones; simpl; intuition);
+        simpl; reflexivity).
+ 
+      rewrite IHx.
+      nomega.
+  Qed.
+
+  Ltac propagate_wordToN :=
+    unfold extend, low, high, break;
+    repeat match goal with
+    | [|- context[@wordToN _ (@convS _ _ _ _)] ] =>
+      rewrite wordToN_convS
+    | [|- context[@wordToN _ (@split1 _ _ _)] ] =>
+      rewrite wordToN_split1
+    | [|- context[@wordToN _ (@split2 _ _ _)] ] =>
+      rewrite wordToN_split2
+    | [|- context[@wordToN _ (@combine _ _ _ _)] ] =>
+      rewrite wordToN_combine
+    | [|- context[@wordToN _ (@zext _ _ _)] ] =>
+      rewrite wordToN_zext
+    | [|- context[@wordToN _ (@wones _)] ] =>
+      rewrite wordToN_wones
+    end.
 
   Lemma break_spec: forall (m n: nat) (x: word n) low high,
       (low, high) = break m x
     -> &x = (&high * Npow2 m + &low)%N.
-  Proof. Admitted.
+  Proof.
+    intros m n x low high H.
+    unfold break in H.
+    destruct (le_dec m n).
+
+    - inversion H; subst; clear H.
+      propagate_wordToN.
+      rewrite N.land_ones.
+      rewrite N.shiftr_div_pow2.
+      replace (n - (n - m)) with m by omega.
+      rewrite N.mul_comm.
+      rewrite Npow2_N.
+      rewrite <- (N.div_mod' (& x) (2 ^ (N.of_nat m))%N).
+      reflexivity.
+
+    - inversion H; subst; clear H.
+      propagate_wordToN; simpl; nomega.
+  Qed.
 
   Lemma extend_bound: forall k n (p: (k <= n)%nat) (w: word k),
     (& (extend p w) < Npow2 k)%N.
   Proof.
     intros.
-    assert (n = k + (n - k)) by abstract omega.
-    replace (& (extend p w)) with (& w); try apply word_size_bound.
-    unfold extend.
-    rewrite wordToN_convS.
-    rewrite wordToN_zext.
-    reflexivity.
+    propagate_wordToN.
+    apply word_size_bound.
   Qed.
 
-  Lemma mask_wand : forall (n: nat) (x: word n) m b,
-      (& (mask (N.to_nat m) x) < b)%N
-    -> (& (x ^& (@NToWord n (N.ones m))) < b)%N.
-  Proof. Admitted.
+  Lemma mask_spec : forall (n: nat) (x: word n) m,
+    & (mask (N.to_nat m) x) = (N.land (& x) (N.ones m)).
+  Proof.
+    intros; unfold mask.
+    destruct (le_dec (N.to_nat m) n).
+
+    - propagate_wordToN.
+      rewrite N2Nat.id.
+      reflexivity.
+    
+    - rewrite N.land_ones.
+      rewrite N.mod_small; try reflexivity.
+      rewrite <- (N2Nat.id m).
+      rewrite <- Npow2_N.
+      apply (N.lt_le_trans _ (Npow2 n) _); try apply word_size_bound.
+      apply Npow2_ordered.
+      omega.
+  Qed.
+
+  Lemma mask_bound : forall (n: nat) (x: word n) m,
+    (& (mask m x) < Npow2 m)%N.
+  Proof.
+    intros; unfold mask.
+    destruct (le_dec m n).
+
+    - apply extend_bound.
+
+    - apply (N.lt_le_trans _ (Npow2 n) _); try apply word_size_bound.
+      apply Npow2_ordered.
+      omega.
+  Qed.
 
 End SpecialFunctions.

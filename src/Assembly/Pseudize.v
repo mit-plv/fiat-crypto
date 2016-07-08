@@ -329,20 +329,6 @@ Section Conversion.
       pseudoEval p (x, TripleM.empty N, None) = Some (f x, m', c')}.
 End Conversion.
 
-Ltac autodestruct :=
-  repeat match goal with
-  | [H: context[Datatypes.length (cons _ _)] |- _] => simpl in H
-  | [H: context[Datatypes.length nil] |- _] => simpl in H
-  | [H: S ?a = S ?b |- _] => inversion H; clear H
-  | [H: (S ?a) = 0 |- _] => contradict H; intuition
-  | [H: 0 = (S ?a) |- _] => contradict H; intuition
-  | [H: 0 = 0 |- _] => clear H
-  | [x: list ?T |- _] =>
-    match goal with
-    | [H: context[Datatypes.length x] |- _] => destruct x
-    end
-  end.
-
 Ltac pseudo_step :=
   match goal with
   | [ |- pseudoEval ?p _ = Some ((
