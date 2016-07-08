@@ -2,6 +2,10 @@ Require Import Coq.Numbers.Natural.Peano.NPeano Coq.omega.Omega.
 Require Import Coq.micromega.Psatz.
 Import Nat.
 
+Create HintDb natsimplify discriminated.
+
+Hint Rewrite @Nat.mod_small using omega : natsimplify.
+
 Local Open Scope nat_scope.
 
 Lemma min_def {x y} : min x y = x - (x - y).
@@ -129,3 +133,8 @@ Proof.
 Qed.
 
 Hint Resolve pow_nonzero : arith.
+
+Lemma mod_same_eq a b : a <> 0 -> a = b -> b mod a = 0.
+Proof. intros; subst; apply mod_same; assumption. Qed.
+
+Hint Rewrite @mod_same_eq using omega : natsimplify.
