@@ -140,7 +140,7 @@ Hint Resolve pow_nonzero : arith.
 
 Lemma S_pred_nonzero : forall a, (a > 0 -> S (pred a) = a)%nat.
 Proof.
-  destruct a; omega.
+  destruct a; simpl; omega.
 Qed.
 
 Hint Rewrite S_pred_nonzero using omega : natsimplify.
