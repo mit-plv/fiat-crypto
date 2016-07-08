@@ -142,3 +142,36 @@ Global Instance dec_fieldwise {A RA} {HA : DecidableRel RA} {n} : DecidableRel (
 Proof.
   destruct n; unfold fieldwise; exact _.
 Qed.
+
+Fixpoint from_list_default' {T} (d y:T) (n:nat) (xs:list T) : tuple' T n :=
+  match n return tuple' T n with
+  | 0 => y (* ignore high digits *)
+  | S n' =>
+         match xs return _ with
+         | cons x xs' => (from_list_default' d x n' xs', y)
+         | nil => (from_list_default' d d n' nil, y)
+         end
+  end.
+
+Definition from_list_default {T} d (n:nat) (xs:list T) : tuple T n :=
+match n return tuple T n with
+| 0 => tt
+| S n' =>
+    match xs return _ with
+    | cons x xs' => (from_list_default' d x n' xs')
+    | nil => (from_list_default' d d n' nil)
+    end
+end.
+
+Lemma from_list_default'_eq : forall {T} (d : T) xs n y pf,
+  from_list_default' d y n xs = from_list' y n xs pf.
+Proof.
+  induction xs; destruct n; intros; simpl in *; congruence.
+Qed.
+
+Lemma from_list_default_eq : forall {T} (d : T) xs n pf,
+  from_list_default d n xs = from_list n xs pf.
+Proof.
+  induction xs; destruct n; intros; try solve [simpl in *; congruence].
+  apply from_list_default'_eq.
+Qed.
