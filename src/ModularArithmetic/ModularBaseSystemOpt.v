@@ -486,21 +486,20 @@ Section Multiplication.
     : mul_opt us vs = mul us vs
     := proj2_sig (mul_opt_sig us vs).
 
-  Definition carry_mul_opt_sig {T:digits->Type} (f:forall d:digits, T d) (us vs : digits) : { x | x = f (carry_mul us vs) }.
+  Definition carry_mul_opt_sig {T} (f:digits -> T)
+    (us vs : digits) : { x | x = f (carry_mul us vs) }.
   Proof.
     eexists.
     cbv [carry_mul].
-    (* FIXME
     erewrite <-carry_full_opt_cps_correct by eauto.
     erewrite <-mul_opt_correct.
     reflexivity.
-   *)
   Defined.
 
-  Definition carry_mul_opt_cps {T} (f:forall d:digits, T d) (us vs : digits) : T (carry_mul us vs)
+  Definition carry_mul_opt_cps {T} (f:digits -> T) (us vs : digits) : T
     := Eval cbv [proj1_sig carry_mul_opt_sig] in proj1_sig (carry_mul_opt_sig f us vs).
 
-  Definition carry_mul_opt_cps_correct {T} (f:forall d:digits, T d) (us vs : digits)
+  Definition carry_mul_opt_cps_correct {T} (f:digits -> T) (us vs : digits)
     : carry_mul_opt_cps f us vs = f (carry_mul us vs)
     := proj2_sig (carry_mul_opt_sig f us vs).
 End Multiplication.
