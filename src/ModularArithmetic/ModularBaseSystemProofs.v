@@ -28,6 +28,12 @@ Section PseudoMersenneProofs.
     autounfold; intuition.
   Qed.
 
+  Lemma decode_rep : forall us, length us = length base ->
+    rep us (decode us).
+  Proof.
+    cbv [rep]; auto.
+  Qed.
+
   Lemma encode_rep : forall x : F modulus, encode x ~= x.
   Proof.
     intros. unfold encode, rep.
@@ -403,11 +409,17 @@ Section CarryProofs.
     induction is; boring.
   Qed.
 
-
   (* TODO : move? *)
   Lemma make_chain_lt : forall x i : nat, In i (make_chain x) -> (i < x)%nat.
   Proof.
     induction x; simpl; intuition.
+  Qed.
+
+
+  Lemma carry_full_length : forall us, (length us = length base)%nat ->
+    length (carry_full us) = length base.
+  Proof.
+    intros; cbv [carry_full]; auto using carry_sequence_length.
   Qed.
 
   Lemma carry_full_preserves_rep : forall us x,
@@ -426,6 +438,14 @@ Section CarryProofs.
   Proof.
     unfold carry_mul; intros; apply carry_full_preserves_rep.
     auto using mul_rep.
+  Qed.
+
+  Lemma carry_mul_length : forall us vs,
+    length us = length base -> length vs = length base -> 
+    length (carry_mul us vs) = length base.
+  Proof.
+    intros; cbv [carry_mul].
+    auto using carry_full_length, length_mul.
   Qed.
 
 End CarryProofs.
@@ -1067,11 +1087,6 @@ Section CanonicalizationProofs.
       - apply carry_full_bounds; carry_length_conditions.
   Qed.
 
-  Lemma carry_full_length : forall us, (length us = length base)%nat ->
-    length (carry_full us) = length us.
-  Proof.
-    intros; carry_length_conditions.
-  Qed.
   Local Hint Resolve carry_full_length.
 
   Lemma carry_carry_full_2_bounds_0_upper : forall us i, pre_carry_bounds us ->
@@ -1089,9 +1104,8 @@ Section CanonicalizationProofs.
         intros.
         simpl.
         split; [ auto using carry_full_2_bounds_lower | ].
-        * destruct i; rewrite <-max_bound_log_cap, Z.lt_succ_r; auto.
-          apply carry_full_bounds; auto using carry_full_bounds_lower.
-          rewrite carry_full_length; auto.
+        destruct i; rewrite <-max_bound_log_cap, Z.lt_succ_r; auto.
+        apply carry_full_bounds; auto using carry_full_bounds_lower.
       - left; unfold carry, carry_simple.
         break_if;
           [ pose proof base_length_nonzero; replace (length base) with 1%nat in *; omega | ].
@@ -1373,6 +1387,7 @@ Section CanonicalizationProofs.
     length (freeze us) = length us.
   Proof.
     unfold freeze; intros; simpl_lengths.
+    rewrite Min.min_l by omega. congruence.
   Qed.
 
   Lemma decode_firstn_succ : forall n us, (length us = length base) ->
