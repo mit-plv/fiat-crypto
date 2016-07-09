@@ -668,7 +668,7 @@ Ltac field_nonzero_mul_split :=
            => apply IntegralDomain.mul_nonzero_nonzero_iff in H; destruct H
          end.
 
-Ltac common_denominator :=
+Ltac field_simplify_eq_if_div :=
   let fld := guess_field in
   lazymatch type of fld with
     field (div:=?div) =>
@@ -679,7 +679,7 @@ Ltac common_denominator :=
   end.
 
 (** We jump through some hoops to ensure that the side-conditions come late *)
-Ltac common_denominator_in_cycled_side_condition_order H :=
+Ltac field_simplify_eq_if_div_in_cycled_side_condition_order H :=
   let fld := guess_field in
   lazymatch type of fld with
     field (div:=?div) =>
@@ -689,14 +689,10 @@ Ltac common_denominator_in_cycled_side_condition_order H :=
     end
   end.
 
-Ltac common_denominator_in H :=
+Ltac field_simplify_eq_if_div_in H :=
   side_conditions_before_to_side_conditions_after
-    common_denominator_in_cycled_side_condition_order
+    field_simplify_eq_if_div_in_cycled_side_condition_order
     H.
-
-Ltac common_denominator_all :=
-  common_denominator;
-  repeat match goal with [H: _ |- _ _ _ ] => progress common_denominator_in H end.
 
 (** Now we have more conservative versions that don't simplify non-division structure. *)
 Ltac deduplicate_nonfraction_pieces mul :=
@@ -789,7 +785,7 @@ Ltac conservative_common_denominator_in H :=
   lazymatch type of H with
   | appcontext[div]
     => set_nonfraction_pieces_in H;
-       common_denominator_in H;
+       field_simplify_eq_if_div_in H;
        [
        | default_conservative_common_denominator_nonzero_tac.. ];
        repeat match goal with H := _ |- _ => subst H end
@@ -805,7 +801,7 @@ Ltac conservative_common_denominator :=
   lazymatch goal with
   | |- appcontext[div]
     => set_nonfraction_pieces;
-       common_denominator;
+       field_simplify_eq_if_div;
        [
        | default_conservative_common_denominator_nonzero_tac.. ];
        repeat match goal with H := _ |- _ => subst H end
