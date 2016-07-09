@@ -54,8 +54,8 @@ src/Spec/ModularWordEncoding.v
 src/Spec/WeierstrassCurve.v
 src/Specific/GF1305.v
 src/Specific/GF25519.v
-src/Tactics/Nsatz.v
 src/Tactics/VerdiTactics.v
+src/Tactics/Algebra_syntax/Nsatz.v
 src/Util/CaseUtil.v
 src/Util/Decidable.v
 src/Util/IterAssocOp.v

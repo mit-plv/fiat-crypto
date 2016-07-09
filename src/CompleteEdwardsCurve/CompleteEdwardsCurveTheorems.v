@@ -1,6 +1,6 @@
 Require Export Crypto.Spec.CompleteEdwardsCurve.
 
-Require Import Crypto.Algebra Crypto.Tactics.Nsatz.
+Require Import Crypto.Algebra.
 Require Import Crypto.CompleteEdwardsCurve.Pre.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Crypto.Tactics.VerdiTactics.
@@ -8,6 +8,7 @@ Require Import Coq.Classes.Morphisms.
 Require Import Relation_Definitions.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Notations.
+Require Import Crypto.Util.Tactics.
 
 Module E.
   Import Group Ring Field CompleteEdwardsCurve.E.
@@ -28,65 +29,6 @@ Module E.
     Definition eq (P Q:point) := fieldwise (n:=2) Feq (coordinates P) (coordinates Q).
     Infix "=" := eq : E_scope.
 
-    (* TODO: decide whether we still want something like this, then port
-    Local Ltac t :=
-      unfold point_eqb;
-        repeat match goal with
-        | _ => progress intros
-        | _ => progress simpl in *
-        | _ => progress subst
-        | [P:E.point |- _ ] => destruct P
-        | [x: (F q * F q)%type |- _ ] => destruct x
-        | [H: _ /\ _ |- _ ] => destruct H
-        | [H: _ |- _ ] => rewrite Bool.andb_true_iff in H
-        | [H: _ |- _ ] => apply F_eqb_eq in H
-        | _ => rewrite F_eqb_refl
-        end; eauto.
-
-    Lemma point_eqb_sound : forall p1 p2, point_eqb p1 p2 = true -> p1 = p2.
-    Proof.
-      t.
-    Qed.
-
-    Lemma point_eqb_complete : forall p1 p2, p1 = p2 -> point_eqb p1 p2 = true.
-    Proof.
-      t.
-    Qed.
-
-    Lemma point_eqb_neq : forall p1 p2, point_eqb p1 p2 = false -> p1 <> p2.
-    Proof.
-      intros. destruct (point_eqb p1 p2) eqn:Hneq; intuition.
-      apply point_eqb_complete in H0; congruence.
-    Qed.
-
-    Lemma point_eqb_neq_complete : forall p1 p2, p1 <> p2 -> point_eqb p1 p2 = false.
-    Proof.
-      intros. destruct (point_eqb p1 p2) eqn:Hneq; intuition.
-      apply point_eqb_sound in Hneq. congruence.
-    Qed.
-
-    Lemma point_eqb_refl : forall p, point_eqb p p = true.
-    Proof.
-      t.
-    Qed.
-
-    Definition point_eq_dec (p1 p2:E.point) : {p1 = p2} + {p1 <> p2}.
-      destruct (point_eqb p1 p2) eqn:H; match goal with
-                                        | [ H: _ |- _ ] => apply point_eqb_sound in H
-                                        | [ H: _ |- _ ] => apply point_eqb_neq in H
-                                        end; eauto.
-    Qed.
-
-    Lemma point_eqb_correct : forall p1 p2, point_eqb p1 p2 = if point_eq_dec p1 p2 then true else false.
-    Proof.
-      intros. destruct (point_eq_dec p1 p2); eauto using point_eqb_complete, point_eqb_neq_complete.
-    Qed.
-    *)
-
-    (* TODO: move to util *)
-    Lemma decide_and  : forall P Q, {P}+{not P} -> {Q}+{not Q} -> {P/\Q}+{not(P/\Q)}.
-    Proof. intros; repeat match goal with [H:{_}+{_}|-_] => destruct H end; intuition. Qed.
-
     Ltac destruct_points :=
       repeat match goal with
              | [ p : point |- _ ] =>
@@ -96,9 +38,6 @@ Module E.
                destruct p as [[x y] pf]
              end.
 
-    Ltac expand_opp :=
-      rewrite ?mul_opp_r, ?mul_opp_l, ?ring_sub_definition, ?inv_inv, <-?ring_sub_definition.
-
     Local Hint Resolve char_gt_2.
     Local Hint Resolve nonzero_a.
     Local Hint Resolve square_a.
@@ -106,7 +45,7 @@ Module E.
     Local Hint Resolve @edwardsAddCompletePlus.
     Local Hint Resolve @edwardsAddCompleteMinus.
 
-    Local Obligation Tactic := intros; destruct_points; simpl; field_algebra.
+    Local Obligation Tactic := intros; destruct_points; simpl; super_nsatz.
     Program Definition opp (P:point) : point :=
       exist _ (let '(x, y) := coordinates P in (Fopp x, y) ) _.
 
@@ -114,28 +53,67 @@ Module E.
       match goal with
       | |- _ => progress intros
       | [H: _ /\ _ |- _ ] => destruct H
+      | |- _  => typeclasses eauto
       | |- _ => progress destruct_points
+      | [A:Feq (a*_^2+_^2) (1 + d*_^2*_^2),  B:Feq (a*_^2+_^2) (1 + d*_^2*_^2) |- _] =>
+        unique pose proof (edwardsAddCompletePlus(char_gt_2:=char_gt_2)(d_nonsquare:=nonsquare_d)(a_square:=square_a)(a_nonzero:=nonzero_a) _ _ _ _ A B);
+        unique pose proof (edwardsAddCompleteMinus(char_gt_2:=char_gt_2)(d_nonsquare:=nonsquare_d)(a_square:=square_a)(a_nonzero:=nonzero_a) _ _ _ _ A B)
+      | [A:Feq (a*_^2+_^2) (1 + d*_^2*_^2) |- _] =>
+        unique pose proof (edwardsAddCompletePlus(char_gt_2:=char_gt_2)(d_nonsquare:=nonsquare_d)(a_square:=square_a)(a_nonzero:=nonzero_a) _ _ _ _ A (proj2_sig zero));
+        unique pose proof (edwardsAddCompletePlus(char_gt_2:=char_gt_2)(d_nonsquare:=nonsquare_d)(a_square:=square_a)(a_nonzero:=nonzero_a) _ _ _ _ A A);
+        unique pose proof (edwardsAddCompletePlus(char_gt_2:=char_gt_2)(d_nonsquare:=nonsquare_d)(a_square:=square_a)(a_nonzero:=nonzero_a) _ _ _ _ (proj2_sig zero) A);
+        unique pose proof (edwardsAddCompleteMinus(char_gt_2:=char_gt_2)(d_nonsquare:=nonsquare_d)(a_square:=square_a)(a_nonzero:=nonzero_a) _ _ _ _ A (proj2_sig zero));
+        unique pose proof (edwardsAddCompleteMinus(char_gt_2:=char_gt_2)(d_nonsquare:=nonsquare_d)(a_square:=square_a)(a_nonzero:=nonzero_a) _ _ _ _ (proj2_sig zero) A);
+        unique pose proof (edwardsAddCompleteMinus(char_gt_2:=char_gt_2)(d_nonsquare:=nonsquare_d)(a_square:=square_a)(a_nonzero:=nonzero_a) _ _ _ _ A A)
       | |- _ => progress cbv [fst snd coordinates proj1_sig eq fieldwise fieldwise' add zero opp] in *
       | |- _ => split
-      | |- Feq _ _ => field_algebra
-      | |- _ <> 0 => expand_opp; solve [nsatz_nonzero|eauto 6]
-      | |- Decidable.Decidable _ => solve [ typeclasses eauto ]
+      | |- Feq _ _ => super_nsatz
       end.
 
     Ltac bash := repeat bash_step.
 
+    Global Instance Equivalence_eq : Equivalence eq. Proof. bash. Qed.
     Global Instance Proper_add : Proper (eq==>eq==>eq) add. Proof. bash. Qed.
     Global Instance Proper_opp : Proper (eq==>eq) opp. Proof. bash. Qed.
     Global Instance Proper_coordinates : Proper (eq==>fieldwise (n:=2) Feq) coordinates. Proof. bash. Qed.
 
     Global Instance edwards_acurve_abelian_group : abelian_group (eq:=eq)(op:=add)(id:=zero)(inv:=opp).
     Proof.
+      bash_step.
+      bash_step.
+      bash_step.
+      bash_step.
+      bash_step.
+      bash_step.
+      bash_step.
+      bash_step.
+      bash_step.
+      bash_step.
+      bash_step.
+      bash_step.
+      bash_step.
+      bash_step.
+      bash_step.
+      bash_step.
+      bash_step.
+      { conservative_common_denominator.
+        nsatz.
+        admit.
+        admit. }
+      {
+        conservative_common_denominator.
+        nsatz.
+        admit.
+        admit. }
       bash.
-      (* TODO: port denominator-nonzero proofs for associativity *)
-      match goal with | |- _ <> 0 => admit end.
-      match goal with | |- _ <> 0 => admit end.
-      match goal with | |- _ <> 0 => admit end.
-      match goal with | |- _ <> 0 => admit end.
+      bash.
+      bash.
+      bash.
+      bash.
+      bash.
+      bash.
+      bash.
+      bash.
     Admitted.
 
     Global Instance Proper_mul : Proper (Logic.eq==>eq==>eq) mul.
@@ -155,12 +133,13 @@ Module E.
       Proof.
         intros ? eq_zero.
         destruct square_a as [sqrt_a sqrt_a_id]; rewrite <- sqrt_a_id in eq_zero.
-        destruct (eq_dec y 0); [apply nonzero_a|apply nonsquare_d with (sqrt_a/y)]; field_algebra.
+        destruct (eq_dec y 0); [apply nonzero_a|apply nonsquare_d with (sqrt_a/y)]; super_nsatz.
       Qed.
 
       Lemma solve_correct : forall x y, onCurve (x, y) <-> (x^2 = solve_for_x2 y).
       Proof.
-        unfold solve_for_x2; simpl; split; intros; field_algebra; auto using a_d_y2_nonzero.
+        unfold solve_for_x2; simpl; split; intros;
+          (conservative_common_denominator_all; [nsatz | eapply a_d_y2_nonzero; eauto]).
       Qed.
     End PointCompression.
   End CompleteEdwardsCurveTheorems.
