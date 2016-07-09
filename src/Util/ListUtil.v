@@ -88,17 +88,20 @@ Lemma nth_default_cons : forall {T} (x u0 : T) us, nth_default x (u0 :: us) 0 = 
 Proof. auto. Qed.
 
 Hint Rewrite @nth_default_cons : simpl_nth_default.
+Hint Rewrite @nth_default_cons : push_nth_default.
 
 Lemma nth_default_cons_S : forall {A} us (u0 : A) n d,
   nth_default d (u0 :: us) (S n) = nth_default d us n.
 Proof. boring. Qed.
 
 Hint Rewrite @nth_default_cons_S : simpl_nth_default.
+Hint Rewrite @nth_default_cons_S : push_nth_default.
 
 Lemma nth_default_nil : forall {T} n (d : T), nth_default d nil n = d.
 Proof. induction n; boring. Qed.
 
 Hint Rewrite @nth_default_nil : simpl_nth_default.
+Hint Rewrite @nth_default_nil : push_nth_default.
 
 Lemma nth_error_nil_error : forall {A} n, nth_error (@nil A) n = None.
 Proof. induction n; boring. Qed.
@@ -514,6 +517,8 @@ Proof.
   destruct (lt_dec n (length xs)); auto.
 Qed.
 
+Hint Rewrite @nth_default_app : push_nth_default.
+
 Lemma combine_truncate_r : forall {A B} (xs : list A) (ys : list B),
   combine xs ys = combine xs (firstn (length xs) ys).
 Proof.
@@ -775,6 +780,8 @@ Proof.
   congruence.
 Qed.
 
+Hint Rewrite @nth_default_out_of_bounds using omega : simpl_nth_default.
+
 Ltac nth_error_inbounds :=
   match goal with
   | [ |- context[match nth_error ?xs ?i with Some _ => _ | None => _ end ] ] =>
@@ -832,6 +839,8 @@ Proof.
   revert n; induction l; simpl; intro n; destruct n; [ try reflexivity.. ].
   nth_tac.
 Qed.
+
+Hint Rewrite @map_nth_default_always : push_nth_default.
 
 Lemma fold_right_and_True_forall_In_iff : forall {T} (l : list T) (P : T -> Prop),
   (forall x, In x l -> P x) <-> fold_right and True (map P l).
@@ -901,19 +910,48 @@ Qed.
 
 Hint Rewrite @update_nth_out_of_bounds using omega : simpl_update_nth.
 
+
+Lemma update_nth_nth_default_full : forall {A} (d:A) n f l i,
+  nth_default d (update_nth n f l) i =
+  if lt_dec i (length l) then
+    if (eq_nat_dec i n) then f (nth_default d l i)
+    else nth_default d l i
+  else d.
+Proof.
+  induction n; (destruct l; simpl in *; [ intros; destruct i; simpl; try reflexivity; omega | ]);
+    intros; repeat break_if; subst; try destruct i;
+      repeat first [ progress break_if
+                   | progress subst
+                   | progress boring
+                   | progress autorewrite with simpl_nth_default
+                   | omega ].
+Qed.
+
+Hint Rewrite @update_nth_nth_default_full : push_nth_default.
+
 Lemma update_nth_nth_default : forall {A} (d:A) n f l i, (0 <= i < length l)%nat ->
   nth_default d (update_nth n f l) i =
   if (eq_nat_dec i n) then f (nth_default d l i) else nth_default d l i.
-Proof.
-  induction n; (destruct l; [intros; simpl in *; omega | ]); simpl;
-    destruct i; break_if; try omega; intros; try apply nth_default_cons;
-    rewrite !nth_default_cons_S, ?IHn; try break_if; omega || reflexivity.
-Qed.
+Proof. intros; rewrite update_nth_nth_default_full; repeat break_if; boring. Qed.
+
+Hint Rewrite @update_nth_nth_default using (omega || distr_length; omega) : push_nth_default.
+
+Lemma set_nth_nth_default_full : forall {A} (d:A) n v l i,
+  nth_default d (set_nth n v l) i =
+  if lt_dec i (length l) then
+    if (eq_nat_dec i n) then v
+    else nth_default d l i
+  else d.
+Proof. intros; apply update_nth_nth_default_full; assumption. Qed.
+
+Hint Rewrite @set_nth_nth_default_full : push_nth_default.
 
 Lemma set_nth_nth_default : forall {A} (d:A) n x l i, (0 <= i < length l)%nat ->
   nth_default d (set_nth n x l) i =
   if (eq_nat_dec i n) then x else nth_default d l i.
 Proof. intros; apply update_nth_nth_default; assumption. Qed.
+
+Hint Rewrite @set_nth_nth_default using (omega || distr_length; omega) : push_nth_default.
 
 Lemma nth_default_preserves_properties : forall {A} (P : A -> Prop) l n d,
   (forall x, In x l -> P x) -> P d -> P (nth_default d l n).
