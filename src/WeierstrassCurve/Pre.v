@@ -51,7 +51,6 @@ Section Pre.
     onCurve P1 -> onCurve P2 -> onCurve (unifiedAdd' P1 P2).
   Proof.
     unfold onCurve, unifiedAdd'; intros [[x1 y1]|] [[x2 y2]|] H1 H2;
-      break_match; trivial; setoid_subst_rel eq; only_two_square_roots;
-        field_algebra; nsatz_contradict.
+      break_match; trivial; setoid_subst_rel eq; only_two_square_roots; super_nsatz.
   Qed.
 End Pre.

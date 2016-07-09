@@ -984,26 +984,6 @@ Ltac neq01 :=
       |apply one_neq_zero
       |apply Group.opp_one_neq_zero].
 
-Ltac conservative_field_algebra :=
-  intros;
-  conservative_common_denominator_all;
-  try nsatz;
-  repeat (apply conj);
-  try solve
-      [neq01
-      |trivial
-      |apply Ring.opp_nonzero_nonzero;trivial].
-
-Ltac field_algebra :=
-  intros;
-  common_denominator_all;
-  try nsatz;
-  repeat (apply conj);
-  try solve
-      [neq01
-      |trivial
-      |apply Ring.opp_nonzero_nonzero;trivial].
-
 Ltac combine_field_inequalities_step :=
   match goal with
   | [ H : not (?R ?x ?zero), H' : not (?R ?x' ?zero) |- _ ]
@@ -1184,10 +1164,10 @@ Section Example.
   Add Field _ExampleField : (Field.field_theory_for_stdlib_tactic (T:=F)).
 
   Example _example_nsatz x y : 1+1 <> 0 -> x + y = 0 -> x - y = 0 -> x = 0.
-  Proof. field_algebra. Qed.
+  Proof. intros. nsatz. Qed.
 
   Example _example_field_nsatz x y z : y <> 0 -> x/y = z -> z*y + y = x + y.
-  Proof. intros; subst; field_algebra. Qed.
+  Proof. intros. super_nsatz. Qed.
 
   Example _example_nonzero_nsatz_contradict x y : x * y = 1 -> not (x = 0).
   Proof. intros. intro. nsatz_contradict. Qed.

@@ -50,24 +50,25 @@ Section Pre.
         => apply d_nonsquare with (sqrt_d:= (f (sqrt_a * x1) (d * x1 * x2 * y1 * y2 * y1))
                                            /(f (sqrt_a * x2) y2   *   x1 * y1           ))
       | _ => apply a_nonzero
-      end; field_algebra; auto using Ring.opp_nonzero_nonzero; nsatz_contradict.
+      end; super_nsatz.
   Qed.
 
   Lemma edwardsAddCompletePlus x1 y1 x2 y2 :
     onCurve (x1, y1) -> onCurve (x2, y2) -> (1 + d*x1*x2*y1*y2) <> 0.
-  Proof. intros H1 H2 ?. apply (edwardsAddComplete' _ _ _ _ H1 H2); field_algebra. Qed.
+  Proof. intros H1 H2 ?. apply (edwardsAddComplete' _ _ _ _ H1 H2); super_nsatz. Qed.
 
   Lemma edwardsAddCompleteMinus x1 y1 x2 y2 :
     onCurve (x1, y1) -> onCurve (x2, y2) -> (1 - d*x1*x2*y1*y2) <> 0.
-  Proof. intros H1 H2 ?. apply (edwardsAddComplete' _ _ _ _ H1 H2); field_algebra. Qed.
+  Proof. intros H1 H2 ?. apply (edwardsAddComplete' _ _ _ _ H1 H2); super_nsatz. Qed.
 
-  Lemma zeroOnCurve : onCurve (0, 1). Proof. simpl. field_algebra. Qed.
+  Lemma zeroOnCurve : onCurve (0, 1). Proof. simpl. super_nsatz. Qed.
 
   Lemma unifiedAdd'_onCurve : forall P1 P2,
     onCurve P1 -> onCurve P2 -> onCurve (unifiedAdd' P1 P2).
   Proof.
-    unfold onCurve, unifiedAdd'; intros [x1 y1] [x2 y2] H1 H2.
-    field_algebra; auto using edwardsAddCompleteMinus, edwardsAddCompletePlus.
+    unfold onCurve, unifiedAdd'; intros [x1 y1] [x2 y2] ? ?.
+    conservative_common_denominator; [ | auto using edwardsAddCompleteMinus, edwardsAddCompletePlus..].
+    nsatz.
   Qed.
 End Pre.
 
