@@ -67,7 +67,7 @@ Section Pre.
     onCurve P1 -> onCurve P2 -> onCurve (unifiedAdd' P1 P2).
   Proof.
     unfold onCurve, unifiedAdd'; intros [x1 y1] [x2 y2] ? ?.
-    conservative_common_denominator; [ | auto using edwardsAddCompleteMinus, edwardsAddCompletePlus..].
+    common_denominator; [ | auto using edwardsAddCompleteMinus, edwardsAddCompletePlus..].
     nsatz.
   Qed.
 End Pre.

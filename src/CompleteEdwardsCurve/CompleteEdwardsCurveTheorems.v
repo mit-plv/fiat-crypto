@@ -55,7 +55,7 @@ Module E.
       let Hx := fresh "H" in
       intro Hx;
       apply H;
-      try conservative_common_denominator;
+      try common_denominator;
       [rewrite <-Hx; ring | ..].
       
     Ltac bash_step :=
@@ -82,7 +82,7 @@ Module E.
         => apply_field_nonzero (addCompleteMinus _ _ _ _ A (addOnCurve (_, _) (_, _) B C)) ||
            apply_field_nonzero (addCompletePlus _ _ _ _ A (addOnCurve (_, _) (_, _) B C))
       | |- ?x <> 0 => let H := fresh "H" in assert (x = 1) as H by ring; rewrite H; exact one_neq_zero
-      | |- Feq _ _ => progress conservative_common_denominator
+      | |- Feq _ _ => progress common_denominator
       | |- Feq _ _ => nsatz
       | |- _ => exact _ (* typeclass instances *)
       end.
@@ -120,7 +120,7 @@ Module E.
       Lemma solve_correct : forall x y, onCurve (x, y) <-> (x^2 = solve_for_x2 y).
       Proof.
         unfold solve_for_x2; simpl; split; intros;
-          (conservative_common_denominator_all; [nsatz | auto using a_d_y2_nonzero]).
+          (common_denominator_all; [nsatz | auto using a_d_y2_nonzero]).
       Qed.
     End PointCompression.
   End CompleteEdwardsCurveTheorems.

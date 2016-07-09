@@ -771,11 +771,11 @@ Ltac set_nonfraction_pieces :=
          ltac:(fun T' => change T');
        deduplicate_nonfraction_pieces mul
   end.
-Ltac default_conservative_common_denominator_nonzero_tac :=
+Ltac default_common_denominator_nonzero_tac :=
   repeat apply conj;
   try first [ assumption
             | intro; field_nonzero_mul_split; tauto ].
-Ltac conservative_common_denominator_in H :=
+Ltac common_denominator_in H :=
   idtac;
   let fld := guess_field in
   let div := lazymatch type of fld with
@@ -787,11 +787,11 @@ Ltac conservative_common_denominator_in H :=
     => set_nonfraction_pieces_in H;
        field_simplify_eq_if_div_in H;
        [
-       | default_conservative_common_denominator_nonzero_tac.. ];
+       | default_common_denominator_nonzero_tac.. ];
        repeat match goal with H := _ |- _ => subst H end
   | ?T => fail 0 "no division in" H ":" T
   end.
-Ltac conservative_common_denominator :=
+Ltac common_denominator :=
   idtac;
   let fld := guess_field in
   let div := lazymatch type of fld with
@@ -803,12 +803,12 @@ Ltac conservative_common_denominator :=
     => set_nonfraction_pieces;
        field_simplify_eq_if_div;
        [
-       | default_conservative_common_denominator_nonzero_tac.. ];
+       | default_common_denominator_nonzero_tac.. ];
        repeat match goal with H := _ |- _ => subst H end
   | |- ?G
     => fail 0 "no division in goal" G
   end.
-Ltac conservative_common_denominator_inequality_in H :=
+Ltac common_denominator_inequality_in H :=
   let HT := type of H in
   lazymatch HT with
   | not (?R _ _) => idtac
@@ -823,8 +823,8 @@ Ltac conservative_common_denominator_inequality_in H :=
   cut (not HT'); subst HT';
   [ intro H; clear H'
   | let H'' := fresh in
-    intro H''; apply H'; conservative_common_denominator; [ eexact H'' | .. ] ].
-Ltac conservative_common_denominator_inequality :=
+    intro H''; apply H'; common_denominator; [ eexact H'' | .. ] ].
+Ltac common_denominator_inequality :=
   let G := get_goal in
   lazymatch G with
   | not (?R _ _) => idtac
@@ -838,37 +838,37 @@ Ltac conservative_common_denominator_inequality :=
   assert (H' : not HT'); subst HT';
   [
   | let HG := fresh in
-    intros HG; apply H'; conservative_common_denominator_in HG; [ eexact HG | .. ] ].
+    intros HG; apply H'; common_denominator_in HG; [ eexact HG | .. ] ].
 
-Ltac conservative_common_denominator_hyps :=
+Ltac common_denominator_hyps :=
   try match goal with
       | [H: _ |- _ ]
-        => progress conservative_common_denominator_in H;
-           [ conservative_common_denominator_hyps
+        => progress common_denominator_in H;
+           [ common_denominator_hyps
            | .. ]
       end.
 
-Ltac conservative_common_denominator_inequality_hyps :=
+Ltac common_denominator_inequality_hyps :=
   try match goal with
       | [H: _ |- _ ]
-        => progress conservative_common_denominator_inequality_in H;
-           [ conservative_common_denominator_inequality_hyps
+        => progress common_denominator_inequality_in H;
+           [ common_denominator_inequality_hyps
            | .. ]
       end.
 
-Ltac conservative_common_denominator_all :=
-  try conservative_common_denominator;
-  [ try conservative_common_denominator_hyps
+Ltac common_denominator_all :=
+  try common_denominator;
+  [ try common_denominator_hyps
   | .. ].
 
-Ltac conservative_common_denominator_inequality_all :=
-  try conservative_common_denominator_inequality;
-  [ try conservative_common_denominator_inequality_hyps
+Ltac common_denominator_inequality_all :=
+  try common_denominator_inequality;
+  [ try common_denominator_inequality_hyps
   | .. ].
 
-Ltac conservative_common_denominator_equality_inequality_all :=
-  conservative_common_denominator_all;
-  [ conservative_common_denominator_inequality_all
+Ltac common_denominator_equality_inequality_all :=
+  common_denominator_all;
+  [ common_denominator_inequality_all
   | .. ].
 
 Inductive field_simplify_done {T} : T -> Type :=
@@ -1042,7 +1042,7 @@ Ltac super_nsatz_internal nsatz_alternative :=
   prensatz_contradict;
   (* Each goal left over by [prensatz_contradict] is separate (and
      there might not be any), so we handle them all separately *)
-  [ try conservative_common_denominator_equality_inequality_all;
+  [ try common_denominator_equality_inequality_all;
     [ try nsatz_inequality_to_equality;
       try first [ nsatz;
                   (* [nstaz] might leave over side-conditions; we handle them if they are inequalities *)
