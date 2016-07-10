@@ -1022,7 +1022,7 @@ Lemma sum_firstn_succ : forall l i x,
   sum_firstn l (S i) = (x + sum_firstn l i)%Z.
 Proof.
   intros; rewrite sum_firstn_succ_default.
-  (rewrite_strat topdown hints simpl_nth_default); eauto using eq_refl with nocore.
+  erewrite nth_error_value_eq_nth_default by eassumption; reflexivity.
 Qed.
 
 Hint Rewrite @sum_firstn_succ using congruence : simpl_sum_firstn.
