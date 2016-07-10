@@ -37,7 +37,7 @@ Section EdDSA.
     :=
       {
         EdDSA_group:@Algebra.group E Eeq Eadd Ezero Eopp;
-        EdDSA_scalarmult:@Algebra.Group.is_scalarmult E Eeq Eadd Ezero EscalarMult;
+        EdDSA_scalarmult:@Algebra.ScalarMult.is_scalarmult E Eeq Eadd Ezero EscalarMult;
 
         EdDSA_c_valid : c = 2 \/ c = 3;
 

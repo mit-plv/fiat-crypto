@@ -926,3 +926,12 @@ Proof.
   rewrite <-!app_comm_cons, !map2_cons.
   rewrite IHls1; auto.
 Qed.
+
+Require Import Coq.Lists.SetoidList.
+Global Instance Proper_nth_default : forall A eq,
+  Proper (eq==>eqlistA eq==>Logic.eq==>eq) (nth_default (A:=A)).
+Proof.
+  do 5 intro; subst; induction 1.
+  + repeat intro; rewrite !nth_default_nil; assumption.
+  + repeat intro; subst; destruct y0; rewrite ?nth_default_cons, ?nth_default_cons_S; auto.
+Qed.

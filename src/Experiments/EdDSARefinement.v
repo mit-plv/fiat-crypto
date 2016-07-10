@@ -1,6 +1,6 @@
 Require Import Crypto.Spec.EdDSA Bedrock.Word.
 Require Import Coq.Classes.Morphisms.
-Require Import Crypto.Algebra. Import Group.
+Require Import Crypto.Algebra. Import Group ScalarMult.
 Require Import Util.Decidable Util.Option Util.Tactics.
 Require Import Omega.
 

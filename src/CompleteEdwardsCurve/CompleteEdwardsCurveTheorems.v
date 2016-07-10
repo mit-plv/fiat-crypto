@@ -10,7 +10,7 @@ Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Notations.
 
 Module E.
-  Import Group Ring Field CompleteEdwardsCurve.E.
+  Import Group ScalarMult Ring Field CompleteEdwardsCurve.E.
   Section CompleteEdwardsCurveTheorems.
     Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv a d}
             {field:@field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}

@@ -345,9 +345,11 @@ Module Group.
         auto using associative, left_identity, right_identity, left_inverse, right_inverse.
     Qed.
   End GroupByHomomorphism.
+End Group.
 
-  Section ScalarMult.
-    Context {G eq add zero opp} `{@group G eq add zero opp}.
+Module ScalarMult.
+  Section ScalarMultProperties.
+    Context {G eq add zero} `{@monoid G eq add zero}.
     Context {mul:nat->G->G}.
     Local Infix "=" := eq : type_scope. Local Infix "=" := eq.
     Local Infix "+" := add. Local Infix "*" := mul.
@@ -377,14 +379,8 @@ Module Group.
     Proof.
       induction n; intros.
       { rewrite <-mult_n_O, !scalarmult_0_l. reflexivity. }
-      { rewrite scalarmult_S_l, <-mult_n_Sm, <-Plus.plus_comm, scalarmult_add_l. apply cancel_left, IHn. }
-    Qed.
-
-    Lemma opp_mul : forall n P, opp (n * P) = n * (opp P).
-      induction n; intros.
-      { rewrite !scalarmult_0_l, inv_id; reflexivity. }
-      { rewrite <-NPeano.Nat.add_1_l, Plus.plus_comm at 1.
-        rewrite scalarmult_add_l, scalarmult_1_l, inv_op, scalarmult_S_l, cancel_left; eauto. }
+      { rewrite scalarmult_S_l, <-mult_n_Sm, <-Plus.plus_comm, scalarmult_add_l.
+        rewrite IHn. reflexivity. }
     Qed.
 
     Lemma scalarmult_times_order : forall l B, l*B = zero -> forall n, (l * n) * B = zero.
@@ -396,8 +392,16 @@ Module Group.
       rewrite (NPeano.Nat.div_mod n l Hnz) at 2.
       rewrite scalarmult_add_l, scalarmult_times_order, left_identity by auto. reflexivity.
     Qed.
-  End ScalarMult.
-End Group.
+    Context {opp} {group:@group G eq add zero opp}.
+
+    Lemma opp_mul : forall n P, opp (n * P) = n * (opp P).
+      induction n; intros.
+      { rewrite !scalarmult_0_l, Group.inv_id; reflexivity. }
+      { rewrite <-NPeano.Nat.add_1_l, Plus.plus_comm at 1.
+        rewrite scalarmult_add_l, scalarmult_1_l, Group.inv_op, scalarmult_S_l, Group.cancel_left; eauto. }
+    Qed.
+  End ScalarMultProperties.
+End ScalarMult.
 
 Require Coq.nsatz.Nsatz.
 
