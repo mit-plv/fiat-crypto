@@ -5,11 +5,11 @@ sudo: required
 matrix:
   include:
     - dist: trusty
-      env: COQ_VERSION="8.5pl2" COQ_PACKAGE="coq-8.5pl2" COQPRIME="coqprime"     PPA="ppa:jgross-h/many-coq-versions"
+      env: COQ_VERSION="8.5pl2" COQ_PACKAGE="coq-8.5pl2 libcoq-ocaml-8.5pl2" COQPRIME="coqprime"     PPA="ppa:jgross-h/many-coq-versions"
     - dist: trusty
-      env: COQ_VERSION="8.5pl1" COQ_PACKAGE="coq-8.5pl1" COQPRIME="coqprime"     PPA="ppa:jgross-h/many-coq-versions"
+      env: COQ_VERSION="8.5pl1" COQ_PACKAGE="coq-8.5pl1"                     COQPRIME="coqprime"     PPA="ppa:jgross-h/many-coq-versions"
     - dist: trusty
-      env: COQ_VERSION="8.5"    COQ_PACKAGE="coq-8.5"    COQPRIME="coqprime"     PPA="ppa:jgross-h/many-coq-versions"
+      env: COQ_VERSION="8.5"    COQ_PACKAGE="coq-8.5"                        COQPRIME="coqprime"     PPA="ppa:jgross-h/many-coq-versions"
     - dist: precise
       env: COQ_VERSION="8.4pl6" COQ_PACKAGE="coq-8.4pl6 libcoq-ocaml-8.4pl6" COQPRIME="coqprime-8.4" PPA="ppa:jgross-h/many-coq-versions-ocaml-3-temp-while-over-quota-2"
     - dist: precise
