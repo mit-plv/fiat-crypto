@@ -4,7 +4,6 @@ Require Import Crypto.Util.ListUtil Crypto.Util.CaseUtil Crypto.Util.ZUtil.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
 Require Import Crypto.BaseSystem.
 Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParams.
-Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParamProofs.
 Require Import Crypto.ModularArithmetic.ExtendedBaseVector.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.Util.Notations.
@@ -13,6 +12,7 @@ Local Open Scope Z_scope.
 
 Section PseudoMersenneBase.
   Context `{prm :PseudoMersenneBaseParams}.
+  Local Notation base := (base_from_limb_widths limb_widths).
 
   Definition decode (us : digits) : F modulus := ZToField (BaseSystem.decode base us).
 
@@ -39,22 +39,20 @@ End PseudoMersenneBase.
 
 Section CarryBasePow2.
   Context `{prm :PseudoMersenneBaseParams}.
-
-  Definition log_cap i := nth_default 0 limb_widths i.
+  Local Notation base := (base_from_limb_widths limb_widths).
+  Local Notation log_cap i := (nth_default 0 limb_widths i).
 
   Definition add_to_nth n (x:Z) xs :=
     set_nth n (x + nth_default 0 xs n) xs.
 
-  Definition pow2_mod n i := Z.land n (Z.ones i).
-
   Definition carry_simple i := fun us =>
     let di := nth_default 0 us      i in
-    let us' := set_nth i (pow2_mod di (log_cap i)) us in
+    let us' := set_nth i (Z.pow2_mod di (log_cap i)) us in
     add_to_nth (S i) (   (Z.shiftr di (log_cap i))) us'.
 
   Definition carry_and_reduce i := fun us =>
     let di := nth_default 0 us      i in
-    let us' := set_nth i (pow2_mod di (log_cap i)) us in
+    let us' := set_nth i (Z.pow2_mod di (log_cap i)) us in
     add_to_nth   0  (c * (Z.shiftr di (log_cap i))) us'.
 
   Definition carry i : digits -> digits :=
@@ -80,6 +78,8 @@ End CarryBasePow2.
 
 Section Canonicalization.
   Context `{prm :PseudoMersenneBaseParams}.
+  Local Notation base := (base_from_limb_widths limb_widths).
+  Local Notation log_cap i := (nth_default 0 limb_widths i).
 
   (* compute at compile time *)
   Definition max_ones := Z.ones (fold_right Z.max 0 limb_widths).

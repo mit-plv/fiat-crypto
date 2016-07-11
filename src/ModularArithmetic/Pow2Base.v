@@ -14,14 +14,13 @@ Section Pow2Base.
     | w :: lw => 1 :: map (Z.mul (two_p w)) (base_from_limb_widths lw)
     end.
 
-  Local Notation "{base}" := (base_from_limb_widths limb_widths).
-
+  Local Notation base := (base_from_limb_widths limb_widths).
 
   Definition bounded us := forall i, 0 <= nth_default 0 us i < 2 ^ w[i].
 
   Definition upper_bound := 2 ^ (sum_firstn limb_widths (length limb_widths)).
 
-  Fixpoint decode_bitwise' us i acc := 
+  Fixpoint decode_bitwise' us i acc :=
     match i with
     | O => acc
     | S i' => decode_bitwise' us i' (Z.lor (nth_default 0 us i') (Z.shiftl acc w[i']))

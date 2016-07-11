@@ -14,8 +14,8 @@ Local Open Scope Z.
 
 Class SubtractionCoefficient (m : Z) (prm : PseudoMersenneBaseParams m) := {
   coeff : BaseSystem.digits;
-  coeff_length : (length coeff = length PseudoMersenneBaseParamProofs.base)%nat;
-  coeff_mod: (BaseSystem.decode PseudoMersenneBaseParamProofs.base coeff) mod m = 0
+  coeff_length : (length coeff = length (Pow2Base.base_from_limb_widths limb_widths))%nat;
+  coeff_mod: (BaseSystem.decode (Pow2Base.base_from_limb_widths limb_widths) coeff) mod m = 0
 }.
 
 (* Computed versions of some functions. *)
@@ -31,10 +31,11 @@ Definition Z_shiftl_by_opt := Eval compute in Z.shiftl_by.
 
 Definition nth_default_opt {A} := Eval compute in @nth_default A.
 Definition set_nth_opt {A} := Eval compute in @set_nth A.
+Definition update_nth_opt {A} := Eval compute in @update_nth A.
 Definition map_opt {A B} := Eval compute in @map A B.
 Definition full_carry_chain_opt := Eval compute in @full_carry_chain.
 Definition length_opt := Eval compute in length.
-Definition base_opt := Eval compute in @base.
+Definition base_from_limb_widths_opt := Eval compute in @Pow2Base.base_from_limb_widths.
 Definition max_ones_opt := Eval compute in @max_ones.
 Definition max_bound_opt := Eval compute in @max_bound.
 Definition minus_opt := Eval compute in minus.
@@ -107,6 +108,7 @@ Section Carries.
   Context `{prm : PseudoMersenneBaseParams}
     (* allows caller to precompute k and c *)
     (k_ c_ : Z) (k_subst : k = k_) (c_subst : c = c_).
+  Local Notation base := (Pow2Base.base_from_limb_widths limb_widths).
 
   Definition carry_opt_sig
              (i : nat) (b : digits)
@@ -116,10 +118,10 @@ Section Carries.
     cbv [carry].
     rewrite <- pull_app_if_sumbool.
     cbv beta delta
-      [carry carry_and_reduce carry_simple add_to_nth log_cap
-       pow2_mod Z.ones Z.pred
+      [carry carry_and_reduce carry_simple add_to_nth
+       Z.pow2_mod Z.ones Z.pred
        PseudoMersenneBaseParams.limb_widths].
-    change @base with @base_opt.
+    change @Pow2Base.base_from_limb_widths with @base_from_limb_widths_opt.
     change @nth_default with @nth_default_opt in *.
     change @set_nth with @set_nth_opt in *.
     lazymatch goal with
@@ -372,7 +374,7 @@ Section Multiplication.
     cbv [mul_bi'_step].
     opt_step.
     { reflexivity. }
-    { cbv [crosscoef ext_base base].
+    { cbv [crosscoef ext_base].
       change Z.div with Z_div_opt.
       change Z.mul with Z_mul_opt at 2.
       change @nth_default with @nth_default_opt.
@@ -401,7 +403,7 @@ Section Multiplication.
       rewrite <- IHvsr; clear IHvsr.
       unfold mul_bi'_opt, mul_bi'_opt_step.
       apply f_equal2; [ | reflexivity ].
-      cbv [crosscoef ext_base base].
+      cbv [crosscoef ext_base].
       change Z.div with Z_div_opt.
       change Z.mul with Z_mul_opt at 2.
       change @nth_default with @nth_default_opt.
@@ -419,7 +421,9 @@ Section Multiplication.
 
   Lemma map_zeros : forall a n l,
     map (Z.mul a) (zeros n ++ l) = zeros n ++ map (Z.mul a) l.
-  Admitted.
+  Proof.
+    induction n; simpl; [ reflexivity | intros; apply f_equal2; [ omega | congruence ] ].
+  Qed.
 
   Definition mul'_opt_step_sig
              (mul' : digits -> digits -> list Z -> digits)
@@ -473,7 +477,7 @@ Section Multiplication.
     eexists.
     cbv [BaseSystem.mul mul mul_each mul_bi mul_bi' zeros ext_base reduce].
     rewrite <- mul'_opt_correct.
-    change @base with base_opt.
+    change @Pow2Base.base_from_limb_widths with base_from_limb_widths_opt.
     rewrite Z.map_shiftl by apply k_nonneg.
     rewrite c_subst.
     rewrite k_subst.
@@ -507,16 +511,22 @@ Section Multiplication.
     := proj2_sig (carry_mul_opt_sig f us vs).
 End Multiplication.
 
-Record freezePreconditions {modulus} (prm : PseudoMersenneBaseParams modulus) int_width :=
-mkFreezePreconditions {
-    lt_1_length_base : (1 < length base)%nat;
-    int_width_pos : 0 < int_width;
-    int_width_compat : forall w, In w limb_widths -> w <= int_width;
-    c_pos : 0 < c;
-    c_reduce1 : c * (Z.ones (int_width - log_cap (pred (length base)))) < max_bound 0 + 1;
-    c_reduce2 : c <= max_bound 0 - c;
-    two_pow_k_le_2modulus : 2 ^ k <= 2 * modulus
-}.
+Section with_base.
+  Context {modulus} (prm : PseudoMersenneBaseParams modulus).
+  Local Notation base := (Pow2Base.base_from_limb_widths limb_widths).
+  Local Notation log_cap i := (nth_default 0 limb_widths i).
+
+  Record freezePreconditions int_width :=
+    mkFreezePreconditions {
+        lt_1_length_base : (1 < length base)%nat;
+        int_width_pos : 0 < int_width;
+        int_width_compat : forall w, In w limb_widths -> w <= int_width;
+        c_pos : 0 < c;
+        c_reduce1 : c * (Z.ones (int_width - log_cap (pred (length base)))) < max_bound 0 + 1;
+        c_reduce2 : c <= max_bound 0 - c;
+        two_pow_k_le_2modulus : 2 ^ k <= 2 * modulus
+      }.
+End with_base.
 Local Hint Resolve lt_1_length_base int_width_pos int_width_compat c_pos
     c_reduce1 c_reduce2 two_pow_k_le_2modulus.
 
@@ -537,7 +547,7 @@ Section Canonicalization.
     change minus with minus_opt.
     change Z.add with Z_add_opt.
     change Z.sub with Z_sub_opt.
-    change @base with base_opt.
+    change @Pow2Base.base_from_limb_widths with base_from_limb_widths_opt.
     reflexivity.
   Defined.
 
@@ -589,7 +599,7 @@ Section Canonicalization.
     change @max_bound with max_bound_opt.
     rewrite c_subst.
     change @max_ones with max_ones_opt.
-    change @base with base_opt.
+    change @Pow2Base.base_from_limb_widths with base_from_limb_widths_opt.
     change minus with minus_opt.
     change @map with @map_opt.
     change Z.sub with Z_sub_opt at 1.

@@ -13,8 +13,9 @@ Generalizable All Variables.
 Section s.
   Context `{prm:PseudoMersenneBaseParams m} {sc : SubtractionCoefficient m prm}.
   Context {k_ c_} (pfk : k = k_) (pfc:c = c_).
+  Local Notation base := (Pow2Base.base_from_limb_widths limb_widths).
 
-  Definition fe := tuple Z (length PseudoMersenneBaseParamProofs.base).
+  Definition fe := tuple Z (length base).
 
   Definition mul  (x y:fe) : fe :=
     carry_mul_opt_cps k_ c_ (from_list_default 0%Z (length base))
