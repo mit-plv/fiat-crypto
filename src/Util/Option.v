@@ -60,3 +60,12 @@ Ltac simpl_option_rect := (* deal with [option_rect _ _ _ None] and [option_rect
          | [ |- context[option_rect ?P ?S ?N (Some ?x) ] ]
            => change (option_rect P S N (Some x)) with (S x); cbv beta
          end.
+
+Definition option_eq {A} eq (x y : option A) :=
+  match x with
+  | None    => y = None
+  | Some ax => match y with
+               | None => False
+               | Some ay => eq ax ay
+               end
+  end.

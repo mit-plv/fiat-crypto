@@ -7,6 +7,9 @@ Tactic Notation "test" tactic3(tac) :=
 (** [not tac] is equivalent to [fail tac "succeeds"] if [tac] succeeds, and is equivalent to [idtac] if [tac] fails *)
 Tactic Notation "not" tactic3(tac) := try ((test tac); fail 1 tac "succeeds").
 
+Ltac get_goal :=
+  match goal with |- ?G => G end.
+
 (** find the head of the given expression *)
 Ltac head expr :=
   match expr with
@@ -270,3 +273,30 @@ Ltac side_conditions_before_to_side_conditions_after tac_in H :=
        here, after evars are instantiated, and not above. *)
     move H after H'; clear H'
   | .. ].
+
+(** Do something with every hypothesis. *)
+Ltac do_with_hyp' tac :=
+  match goal with
+    | [ H : _ |- _ ] => tac H
+  end.
+
+(** Rewrite with any applicable hypothesis. *)
+Tactic Notation "rewrite_hyp" "*" := do_with_hyp' ltac:(fun H => rewrite H).
+Tactic Notation "rewrite_hyp" "->" "*" := do_with_hyp' ltac:(fun H => rewrite -> H).
+Tactic Notation "rewrite_hyp" "<-" "*" := do_with_hyp' ltac:(fun H => rewrite <- H).
+Tactic Notation "rewrite_hyp" "?*" := repeat do_with_hyp' ltac:(fun H => rewrite !H).
+Tactic Notation "rewrite_hyp" "->" "?*" := repeat do_with_hyp' ltac:(fun H => rewrite -> !H).
+Tactic Notation "rewrite_hyp" "<-" "?*" := repeat do_with_hyp' ltac:(fun H => rewrite <- !H).
+Tactic Notation "rewrite_hyp" "!*" := progress rewrite_hyp ?*.
+Tactic Notation "rewrite_hyp" "->" "!*" := progress rewrite_hyp -> ?*.
+Tactic Notation "rewrite_hyp" "<-" "!*" := progress rewrite_hyp <- ?*.
+
+Tactic Notation "rewrite_hyp" "*" "in" "*" := do_with_hyp' ltac:(fun H => rewrite H in * ).
+Tactic Notation "rewrite_hyp" "->" "*" "in" "*" := do_with_hyp' ltac:(fun H => rewrite -> H in * ).
+Tactic Notation "rewrite_hyp" "<-" "*" "in" "*" := do_with_hyp' ltac:(fun H => rewrite <- H in * ).
+Tactic Notation "rewrite_hyp" "?*" "in" "*" := repeat do_with_hyp' ltac:(fun H => rewrite !H in * ).
+Tactic Notation "rewrite_hyp" "->" "?*" "in" "*" := repeat do_with_hyp' ltac:(fun H => rewrite -> !H in * ).
+Tactic Notation "rewrite_hyp" "<-" "?*" "in" "*" := repeat do_with_hyp' ltac:(fun H => rewrite <- !H in * ).
+Tactic Notation "rewrite_hyp" "!*" "in" "*" := progress rewrite_hyp ?* in *.
+Tactic Notation "rewrite_hyp" "->" "!*" "in" "*" := progress rewrite_hyp -> ?* in *.
+Tactic Notation "rewrite_hyp" "<-" "!*" "in" "*" := progress rewrite_hyp <- ?* in *.

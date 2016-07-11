@@ -27,7 +27,7 @@ Definition Z_div_opt := Eval compute in Z.div.
 Definition Z_pow_opt := Eval compute in Z.pow.
 Definition Z_opp_opt := Eval compute in Z.opp.
 Definition Z_shiftl_opt := Eval compute in Z.shiftl.
-Definition Z_shiftl_by_opt := Eval compute in Z_shiftl_by.
+Definition Z_shiftl_by_opt := Eval compute in Z.shiftl_by.
 
 Definition nth_default_opt {A} := Eval compute in @nth_default A.
 Definition set_nth_opt {A} := Eval compute in @set_nth A.
@@ -50,10 +50,12 @@ Ltac opt_step :=
        destruct e
   end.
 
-Ltac brute_force_indices limb_widths := intros; unfold sum_firstn, limb_widths; simpl in *;
+Ltac brute_force_indices limb_widths :=
+  intros; unfold sum_firstn, limb_widths;  cbv [length limb_widths] in *;
   repeat match goal with
   | _ => progress simpl in *
-  | _ => reflexivity
+  | [H : (0 + _ < _)%nat |- _ ] => simpl in H
+  | [H : (S _ + _ < S _)%nat |- _ ] => simpl in H
   | [H : (S _ < S _)%nat |- _ ] => apply lt_S_n in H
   | [H : (?x + _ < _)%nat |- _ ] => is_var x; destruct x
   | [H : (?x < _)%nat |- _ ] => is_var x; destruct x
@@ -76,9 +78,10 @@ Ltac construct_params prime_modulus len k :=
   cbv in lw;
   eapply Build_PseudoMersenneBaseParams with (limb_widths := lw);
   [ abstract (apply fold_right_and_True_forall_In_iff; simpl; repeat (split; [omega |]); auto)
-  | abstract (unfold limb_widths; cbv; congruence)
+  | abstract (cbv; congruence)
   | abstract brute_force_indices lw
   | abstract apply prime_modulus
+  | abstract (cbv; congruence)
   | abstract brute_force_indices lw].
 
 Definition construct_mul2modulus {m} (prm : PseudoMersenneBaseParams m) : digits :=
@@ -471,11 +474,11 @@ Section Multiplication.
     cbv [BaseSystem.mul mul mul_each mul_bi mul_bi' zeros ext_base reduce].
     rewrite <- mul'_opt_correct.
     change @base with base_opt.
-    rewrite map_shiftl by apply k_nonneg.
+    rewrite Z.map_shiftl by apply k_nonneg.
     rewrite c_subst.
     rewrite k_subst.
     change @map with @map_opt.
-    change @Z_shiftl_by with @Z_shiftl_by_opt.
+    change @Z.shiftl_by with @Z_shiftl_by_opt.
     reflexivity.
   Defined.
 
@@ -600,4 +603,32 @@ Section Canonicalization.
   Definition freeze_opt_correct us
     : freeze_opt us = freeze us
     := proj2_sig (freeze_opt_sig us).
+
+  Lemma freeze_opt_canonical: forall us vs x,
+    @pre_carry_bounds _ _ int_width us -> rep us x ->
+    @pre_carry_bounds _ _ int_width vs -> rep vs x ->
+    freeze_opt us = freeze_opt vs.
+  Proof.
+    intros.
+    rewrite !freeze_opt_correct.
+    eapply freeze_canonical with (B := int_width); eauto.
+  Qed.
+
+  Lemma freeze_opt_preserves_rep : forall us x, rep us x ->
+    rep (freeze_opt us) x.
+  Proof.
+    intros.
+    rewrite freeze_opt_correct.
+    eapply freeze_preserves_rep; eauto.
+  Qed.
+
+  Lemma freeze_opt_spec : forall us vs x, rep us x -> rep vs x ->
+    @pre_carry_bounds _ _ int_width us ->
+    @pre_carry_bounds _ _ int_width vs ->
+    (rep (freeze_opt us) x /\ freeze_opt us = freeze_opt vs).
+  Proof.
+    split; eauto using freeze_opt_canonical.
+    auto using freeze_opt_preserves_rep.
+  Qed.
+
 End Canonicalization.

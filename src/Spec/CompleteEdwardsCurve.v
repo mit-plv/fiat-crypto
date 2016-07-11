@@ -29,8 +29,9 @@ Module E.
     Definition coordinates (P:point) : (F*F) := proj1_sig P.
 
     (** The following points are indeed on the curve -- see [CompleteEdwardsCurve.Pre] for proof *)
-    Local Obligation Tactic := intros; apply Pre.zeroOnCurve
-      || apply (Pre.unifiedAdd'_onCurve (char_gt_2:=char_gt_2) (d_nonsquare:=nonsquare_d)
+    Local Obligation Tactic := intros;
+      apply (Pre.zeroOnCurve(a_nonzero:=nonzero_a)(char_gt_2:=char_gt_2)) ||
+      apply (Pre.unifiedAdd'_onCurve (char_gt_2:=char_gt_2) (d_nonsquare:=nonsquare_d)
          (a_nonzero:=nonzero_a) (a_square:=square_a) _ _ (proj2_sig _) (proj2_sig _)).
 
     Program Definition zero : point := (0, 1).

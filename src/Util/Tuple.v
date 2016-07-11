@@ -166,7 +166,9 @@ end.
 Lemma from_list_default'_eq : forall {T} (d : T) xs n y pf,
   from_list_default' d y n xs = from_list' y n xs pf.
 Proof.
-  induction xs; destruct n; intros; simpl in *; congruence.
+  induction xs; destruct n; intros; simpl in *;
+    solve [ congruence (* 8.5 *)
+          | erewrite IHxs; reflexivity ]. (* 8.4 *)
 Qed.
 
 Lemma from_list_default_eq : forall {T} (d : T) xs n pf,

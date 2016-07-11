@@ -1,9 +1,8 @@
 Require Import ZArith.
 Require Import List.
+Require Import Crypto.Util.ListUtil.
 Require Crypto.BaseSystem.
 Local Open Scope Z_scope.
-
-Definition sum_firstn l n := fold_right Z.add 0 (firstn n l).
 
 Class PseudoMersenneBaseParams (modulus : Z) := {
   limb_widths : list Z;
@@ -15,6 +14,7 @@ Class PseudoMersenneBaseParams (modulus : Z) := {
   prime_modulus : Znumtheory.prime modulus;
   k := sum_firstn limb_widths (length limb_widths);
   c := 2 ^ k - modulus;
+  c_pos : 0 < c;
   limb_widths_match_modulus : forall i j,
     (i < length limb_widths)%nat ->
     (j < length limb_widths)%nat ->
