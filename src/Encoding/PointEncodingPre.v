@@ -7,7 +7,7 @@ Require Import Bedrock.Word.
 Require Import Crypto.Encoding.ModularWordEncodingTheorems.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.Util.ZUtil.
-Require Import Crypto.Algebra Crypto.Nsatz.
+Require Import Crypto.Algebra.
 
 Require Import Crypto.Spec.Encoding Crypto.Spec.ModularWordEncoding Crypto.Spec.ModularArithmetic.
 
@@ -241,13 +241,13 @@ Section PointEncodingPre.
       eauto using inversion_option_coordinates_eq, solve_onCurve, solve_opp_onCurve.
   Qed.
 
-  Definition point_dec' w p : option E.point :=
+  Definition point_dec' w p : option point :=
     match (option_coordinates_eq_dec  (point_dec_coordinates w) (Some p)) with
       | left EQ => Some (exist _ p (point_dec_coordinates_onCurve w p EQ))
       | right _ => None (* this case is never reached *)
     end.
 
-  Definition point_dec (w : word (S sz)) : option E.point :=
+  Definition point_dec (w : word (S sz)) : option point :=
     match point_dec_coordinates w with
     | Some p => point_dec' w p
     | None => None

@@ -121,11 +121,14 @@ Ltac nsatz_sugar_power sugar power :=
   let domain := nsatz_guess_domain in
   nsatz_domain_sugar_power domain sugar power.
 
-Tactic Notation "nsatz" constr(n) :=
-  let nn := (eval compute in (BinNat.N.of_nat n)) in
-  nsatz_sugar_power BinInt.Z0 nn.
+Ltac nsatz_power power :=
+  let power_N := (eval compute in (BinNat.N.of_nat power)) in
+  nsatz_sugar_power BinInt.Z0 power_N.
 
-Tactic Notation "nsatz" := nsatz 1%nat || nsatz 2%nat || nsatz 3%nat || nsatz 4%nat || nsatz 5%nat.
+Ltac nsatz := nsatz_power 1%nat || nsatz_power 2%nat || nsatz_power 3%nat || nsatz_power 4%nat || nsatz_power 5%nat.
+
+Tactic Notation "nsatz" := nsatz.
+Tactic Notation "nsatz" constr(n) := nsatz_power n.
 
 (** If the goal is of the form [?x <> ?y] and assuming [?x = ?y]
     contradicts any hypothesis of the form [?x' <> ?y'], we turn this
