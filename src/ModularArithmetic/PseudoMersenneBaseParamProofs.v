@@ -23,11 +23,11 @@ Section PseudoMersenneBaseParamProofs.
     apply sum_firstn_limb_widths_nonneg; auto.
   Qed. Hint Resolve k_nonneg.
 
-  Definition base := base_from_limb_widths limb_widths.
+  Local Notation base := (base_from_limb_widths limb_widths).
 
   Lemma base_length : length base = length limb_widths.
   Proof.
-    unfold base; auto using base_from_limb_widths_length.
+    auto using base_from_limb_widths_length.
   Qed.
 
   Lemma base_matches_modulus: forall i j,
@@ -43,18 +43,18 @@ Section PseudoMersenneBaseParamProofs.
     subst r.
     assert (i + j - length base < length base)%nat by omega.
     rewrite Z.mul_div_eq by (apply Z.gt_lt_iff; apply Z.mul_pos_pos;
-      [ | subst b; unfold base; rewrite nth_default_base; try assumption ];
+      [ | subst b; rewrite nth_default_base; try assumption ];
       zero_bounds; auto using sum_firstn_limb_widths_nonneg, limb_widths_nonneg).
     rewrite (Zminus_0_l_reverse (b i * b j)) at 1.
     f_equal.
     subst b.
-    unfold base; repeat rewrite nth_default_base by auto.
+    repeat rewrite nth_default_base by auto.
     do 2 rewrite <- Z.pow_add_r by auto using sum_firstn_limb_widths_nonneg.
     symmetry.
     apply Z.mod_same_pow.
     split.
     + apply Z.add_nonneg_nonneg; auto using sum_firstn_limb_widths_nonneg.
-    + rewrite base_length, base_from_limb_widths_length in * by auto.
+    + rewrite base_length in * by auto.
       apply limb_widths_match_modulus; auto.
   Qed.
 
@@ -71,7 +71,7 @@ Section PseudoMersenneBaseParamProofs.
 
    Lemma b0_1 : forall x : Z, nth_default x base 0 = 1.
    Proof.
-     unfold base; case_eq limb_widths; intros; [pose proof limb_widths_nonnil; congruence | reflexivity].
+     case_eq limb_widths; intros; [pose proof limb_widths_nonnil; congruence | reflexivity].
    Qed.
 
    Lemma base_good : forall i j : nat,
@@ -81,7 +81,6 @@ Section PseudoMersenneBaseParamProofs.
                 b i * b j = r * b (i + j)%nat.
    Proof.
      intros; subst b r.
-     unfold base in *.
      repeat rewrite nth_default_base by (omega || auto).
      rewrite (Z.mul_comm _ (2 ^ (sum_firstn limb_widths (i+j)))).
      rewrite Z.mul_div_eq by (apply Z.gt_lt_iff; zero_bounds;
