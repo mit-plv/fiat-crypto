@@ -66,25 +66,28 @@ Ltac wordize_contra :=
   | [ H: (_ >= _)%N |- _ ] =>
     unfold N.ge in H;
       contradict H;
-      apply N.compare_lt_iff
+      apply N.compare_lt_iff;
+      compute_bound
   end.
 
-Ltac lt_crush := try abstract (clear; vm_compute; intuition).
+Ltac wordize :=
+  wordize_intro;
+  wordize_iter;
+  wordize_contra.
 
 (** Examples **)
 
 Module WordizationExamples.
   Definition example0 : Curried N N 2 1 := fun x y =>
-    N.add (N.land x (N.ones 16)) (N.land y (N.ones 16)).
+    N.add (N.land x (N.ones 15)) (N.land y (N.ones 15)).
 
   Lemma wordize_example0: wordeq 16 example0.
   Proof.
     unfold example0.
-    wordize_intro.
-    wordize_iter.
-    wordize_contra.
-  Admitted.
+    wordize.
+  Defined.
 
+  (* Eval simpl in (proj1_sig wordize_example0). *)
 End WordizationExamples.
 
 Close Scope nword_scope.

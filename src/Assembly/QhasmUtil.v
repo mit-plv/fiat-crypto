@@ -1,6 +1,6 @@
 Require Import ZArith NArith NPeano.
 Require Import QhasmCommon.
-Require Export Bedrock.Word.
+Require Export Bedrock.Word Bedrock.Nomega.
 
 Delimit Scope nword_scope with w.
 Local Open Scope nword_scope.
@@ -17,8 +17,8 @@ Section Util.
     abstract (replace n with (k + (n - k)) by omega; intuition).
   Defined.
 
-  Definition high {k n: nat} (p: (k <= n)%nat) (w: word n): word k.
-    refine (split2 (n - k) k (convS w _)).
+  Definition high {k n: nat} (p: (k <= n)%nat) (w: word n): word (n - k).
+    refine (split2 k (n - k) (convS w _)).
     abstract (replace n with (k + (n - k)) by omega; intuition).
   Defined.
 
@@ -27,11 +27,12 @@ Section Util.
     abstract (replace (k + (n - k)) with n by omega; intuition).
   Defined.
 
-  Definition shiftr {n} (w: word n) (k: nat): word n :=
-    match (le_dec k n) with
-    | left p => extend p (high p w)
+  Definition shiftr {n} (w: word n) (k: nat): word n.
+    refine match (le_dec k n) with
+    | left p => extend _ (@high k _ _ w)
     | right _ => wzero n
-    end.
+    end; abstract nomega.
+  Defined.
 
   Definition mask {n} (k: nat) (w: word n): word n :=
     match (le_dec k n) with
@@ -65,7 +66,7 @@ Section Util.
 
   Definition break {n} (m: nat) (x: word n): word m * word (n - m).
     refine match (le_dec m n) with
-    | left p => (extend _ (low p x), extend _ (@high (n - m) n _ x))
+    | left p => (extend _ (low p x), extend _ (@high m n _ x))
     | right p => (extend _ x, extend _ WO)
     end; try abstract intuition.
   Defined.

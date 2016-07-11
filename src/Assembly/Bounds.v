@@ -1,5 +1,5 @@
 Require Export Bedrock.Word Bedrock.Nomega.
-Require Import NArith PArith Ndigits Nnat NPow NPeano Ndec.
+Require Import NArith PArith Ndigits Nnat NPow NPeano Ndec Ndigits.
 Require Import Compare_dec Omega.
 Require Import FunctionalExtensionality ProofIrrelevance.
 Require Import QhasmUtil QhasmEvalCommon.
@@ -51,11 +51,11 @@ Section Bounds.
     - apply N.mul_div_le; nomega.
   Qed.
 
-  Theorem constant_bound_N : forall {n} (k: word n),
+  Lemma constant_bound_N : forall {n} (k: word n),
     (& k < & k + 1)%N.
   Proof. intros; nomega. Qed.
 
-  Theorem constant_bound_nat : forall (n k: nat),
+  Lemma constant_bound_nat : forall (n k: nat),
       (N.of_nat k < Npow2 n)%N
     -> (& (@natToWord n k) < (N.of_nat k) + 1)%N.
   Proof.
@@ -86,20 +86,37 @@ Section Bounds.
       end).
   Defined.
 
-  Theorem wplus_bound : forall {n} (w1 w2 : word n) b1 b2,
+  Lemma wplus_bound : forall {n} (w1 w2 : word n) b1 b2,
       (&w1 < b1)%N
     -> (&w2 < b2)%N
     -> (&(w1 ^+ w2) < b1 + b2)%N.
   Proof.
     intros.
 
-    destruct (Nlt_dec (b1 + b2)%N (Npow2 n));
-      rewrite <- wordize_plus' with (b := b1);
-      try apply N.add_lt_mono;
-      try assumption.
+    destruct (Nlt_dec (b1 + b2)%N (Npow2 n)) as [g|g].
 
-    (* A couple inequality subgoals *)
-  Admitted.
+    - rewrite <- wordize_plus' with (b := b1);
+        try apply N.add_lt_mono;
+        try assumption.
+
+      + apply N.lt_le_incl; nomega.
+
+      + apply (N.lt_le_trans _ b2 _); try assumption.
+        apply N.lt_le_incl.
+        apply N.lt_add_lt_sub_l.
+        assumption.
+
+    - apply (N.lt_le_trans _ (Npow2 n) _).
+
+      + apply word_size_bound.
+
+      + unfold N.le, N.ge in *.
+        intro Hg.
+        contradict g.
+        rewrite N.compare_antisym.
+        rewrite Hg.
+        simpl; intuition.
+  Qed.
 
   Theorem wmult_bound : forall {n} (w1 w2 : word n) b1 b2,
       (1 < n)%nat
@@ -108,68 +125,159 @@ Section Bounds.
     -> (&(w1 ^* w2) < b1 * b2)%N.
   Proof.
     intros.
-    destruct (Nlt_dec (b1 * b2)%N (Npow2 n));
-      rewrite <- wordize_mult' with (b := b1);
-      try apply N.mul_lt_mono;
-      try assumption;
-      try nomega.
+    destruct (Nlt_dec (b1 * b2)%N (Npow2 n)) as [g|g].
 
-    (* A couple inequality subgoals *)
-  Admitted.
+    - rewrite <- wordize_mult' with (b := b1);
+        try apply N.mul_lt_mono;
+        try assumption;
+        try nomega.
 
-  Theorem shiftr_bound : forall {n} (w : word n) b bits,
+      apply (N.lt_le_trans _ b2 _); try assumption.
+      apply N.div_le_lower_bound.
+
+      + induction (& w1); nomega.
+
+      + apply N.lt_le_incl.
+        assumption.
+
+    - apply (N.lt_le_trans _ (Npow2 n) _).
+
+      + apply word_size_bound.
+
+      + unfold N.le, N.ge in *.
+        intro Hg.
+        contradict g.
+        rewrite N.compare_antisym.
+        rewrite Hg.
+        simpl; intuition.
+  Qed.
+
+  Lemma shiftr_bound : forall {n} (w : word n) b bits,
       (&w < b)%N
     -> (&(shiftr w bits) < N.succ (N.shiftr_nat b bits))%N.
   Proof.
     intros.
-    assert (& shiftr w bits <= N.shiftr_nat b bits)%N. {
-  Admitted.
+    apply (N.le_lt_trans _ (N.shiftr_nat b bits) _).
 
-  Theorem mask_bound : forall {n} (w : word n) m,
-    (n > 1)%nat ->
+    - unfold shiftr, extend, high.
+      destruct (le_dec bits n); try omega.
+
+      + rewrite wordToN_convS.
+        rewrite wordToN_zext.
+        rewrite wordToN_split2.
+        rewrite wordToN_convS.
+        rewrite <- Nshiftr_equiv_nat.
+        repeat rewrite N.shiftr_div_pow2.
+        apply N.div_le_mono.
+
+        * induction bits; try nomega.
+          rewrite Nat2N.inj_succ.
+          rewrite N.pow_succ_r'.
+          assert (bits <= n)%nat as Hc by omega.
+          apply IHbits in Hc.
+          intro Hc'; contradict Hc.
+          apply (N.mul_cancel_l _ _ 2);
+            try rewrite Hc';
+            try assumption;
+            nomega.
+
+        * apply N.lt_le_incl.
+          assumption.
+
+      + rewrite wordToN_nat.
+        unfold wzero.
+        rewrite wordToNat_natToWord_idempotent; simpl;
+          try apply N_ge_0;
+          try apply Npow2_gt0.
+
+    - nomega.
+
+  Qed.
+
+  Lemma mask_bound : forall {n} (w : word n) m,
     (&(mask m w) < Npow2 m)%N.
   Proof.
     intros.
     unfold mask in *; destruct (le_dec m n); simpl;
       try apply extend_bound.
 
-    pose proof (word_size_bound w).
+    pose proof (word_size_bound w) as H.
     apply (N.le_lt_trans _ (Npow2 n) _).
 
-    - unfold N.le, N.lt in *; rewrite H0; intuition; inversion H1.
+    - unfold N.le, N.lt in *; rewrite H; intro H0; inversion H0.
 
-    - clear H H0.
+    - clear H.
       replace m with ((m - n) + n) by nomega.
       replace (Npow2 n) with (1 * (Npow2 n))%N
         by (rewrite N.mul_comm; nomega).
       rewrite Npow2_split.
-      apply N.mul_lt_mono_pos_r.
+      apply N.mul_lt_mono_pos_r; try apply Npow2_gt0.
+      assert (0 < m - n)%nat by omega.
+      induction (m - n); try inversion H; try abstract (
+        simpl; replace 2 with (S 1) by omega;
+        apply N.lt_1_2); subst.
 
-      + apply Npow2_gt0.
+      assert (0 < n1)%nat as Z by omega; apply IHn1 in Z.
+      apply (N.le_lt_trans _ (Npow2 n1) _).
 
-      + assert (0 < m - n)%nat by omega.
-        induction (m - n); try inversion H; try abstract (
-          simpl; replace 2 with (S 1) by omega;
-          apply N.lt_1_2).
+      + apply N.lt_le_incl; assumption.
 
-        assert (0 < n1)%nat as Z by omega; apply IHn1 in Z.
-        apply (N.le_lt_trans _ (Npow2 n1) _).
+      + rewrite Npow2_succ.
+        replace (Npow2 n1) with (1 * Npow2 n1)%N at 1 by (apply N.mul_1_l).
+        apply N.mul_lt_mono_pos_r; try abstract (vm_compute; reflexivity).
+        apply (N.lt_le_trans _ 1 _); try abstract (vm_compute; reflexivity).
+        apply N.lt_le_incl; assumption.
+  Qed.
 
-        * admit.
-        * admit.
-  Admitted.
-
-  Theorem mask_update_bound : forall {n} (w : word n) b m,
+  Lemma mask_update_bound : forall {n} (w : word n) b m,
       (n > 1)%nat
     -> (&w < b)%N
     -> (&(mask m w) < (N.min b (Npow2 m)))%N.
   Proof.
-    intros; unfold mask, N.min;
-      destruct (le_dec m n),
-               (N.compare b (Npow2 m));
-      simpl; try assumption.
+    intros.
+    assert (& w mod Npow2 m < b)%N. {
+      destruct (Nge_dec (&w) (Npow2 m)).
 
-  Admitted.
+      - apply (N.lt_le_trans _ (Npow2 m) _).
+
+        + pose proof (N.mod_bound_pos (&w) (Npow2 m)
+                     (N_ge_0 _) (Npow2_gt0 _)) as H1.
+          destruct H1.
+          assumption.
+
+        + transitivity (&w); try abstract (apply ge_to_le; assumption).
+          apply N.lt_le_incl; assumption.
+
+      - rewrite N.mod_small; assumption.
+    }
+
+    unfold mask, N.min, extend, low;
+      destruct (le_dec m n),
+               (N.compare b (Npow2 m)); simpl;
+      repeat first [
+        rewrite wordToN_convS  |
+        rewrite wordToN_zext   |
+        rewrite wordToN_wones  |
+        rewrite wordToN_split1 |
+        rewrite N.land_ones    |
+        rewrite <- Npow2_N ];
+      try assumption.
+
+    - pose proof (N.mod_bound_pos (&w) (Npow2 m) (N_ge_0 _) (Npow2_gt0 _)) as Z.
+      destruct Z.
+      assumption.
+
+    - apply (N.lt_le_trans _ (Npow2 n) _);
+        try apply word_size_bound.
+      apply Npow2_ordered.
+      omega.
+  Qed.
+
+  Lemma plus_overflow_bound: forall x y a b,
+      (x < a)%N
+    -> (y < b - a)%N
+    -> (x + y < b)%N.
+  Proof. intros; nomega. Qed.
 
 End Bounds.
 
@@ -179,17 +287,17 @@ Ltac multi_apply0 A L := pose proof (L A).
 
 Ltac multi_apply1 A L :=
   match goal with
-  | [ H: A < ?b |- _] => pose proof (L A b H)
+  | [ H: (wordToN A < ?b)%N |- _] => pose proof (L A b H)
   end.
 
 Ltac multi_apply2 A B L :=
   match goal with
-  | [ H1: A < ?b1, H2: B < ?b2 |- _] => pose proof (L A B b1 b2 H1 H2)
+  | [ H1: (wordToN A < ?b1)%N, H2: (wordToN B < ?b2)%N |- _] => pose proof (L A B b1 b2 H1 H2)
   end.
 
 Ltac multi_recurse n T :=
   match goal with
-  | [ H: (T < _)%N |- _] => idtac
+  | [ H: (wordToN T < _)%N |- _] => idtac
   | _ =>
     is_var T;
     let T' := (eval cbv delta [T] in T) in multi_recurse n T';
@@ -233,12 +341,34 @@ Lemma unwrap_let: forall {n} (y: word n) (f: word n -> word n) (b: N),
     (&(let x := y in f x) < b)%N <-> let x := y in (&(f x) < b)%N.
 Proof. intuition. Qed.
 
-Ltac multi_bound n :=
-  match goal with
+Ltac compute_bound :=
+  repeat match goal with
   | [|- let A := ?B in _] =>
-    multi_recurse n B; intro; multi_bound n
+    match (type of B) with
+    | word ?n => multi_recurse n B; intro
+    end
+
   | [|- ((let A := _ in _) < _)%N] =>
-    apply unwrap_let; multi_bound n
-  | [|- (?W < _)%N ] =>
+    apply unwrap_let
+
+  | [ H: (wordToN ?W < ?b0)%N |- (wordToN ?W < ?b1)%N ] =>
+    eapply (N.lt_le_trans _ b0 _); try eassumption
+
+  | [|- (@wordToN ?n ?W < ?b)%N ] =>
     multi_recurse n W
+
+  | [|- (?x + ?y < ?b)%N ] =>
+    eapply plus_overflow_bound
+
+  | [|- (?a <= ?b)%N ] =>
+    is_evar b; apply N.eq_le_incl; reflexivity
+
+  | [|- (?a <= ?b)%N ] =>
+    is_evar a; apply N.eq_le_incl; reflexivity
+
+  | [|- (?a <= ?b)%N ] =>
+    vm_compute;
+      try reflexivity;
+      try abstract (let H := fresh in intro H; inversion H)
+
   end.
