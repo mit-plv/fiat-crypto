@@ -124,29 +124,6 @@ Section PseudoMersenneProofs.
     subst; auto.
   Qed.
 
-  Lemma length_sub :  forall c x u v,
-      length c = length base
-      -> length u = length base
-      -> length v = length base
-      -> length (ModularBaseSystem.sub c x u v) = length base.
-  Proof.
-    autounfold; unfold ModularBaseSystem.sub; intuition idtac.
-    rewrite sub_length, add_length_exact.
-    case_max; try rewrite Max.max_r; omega.
-  Qed.
-
-  Lemma sub_rep : forall c c_0modq, (length c = length base)%nat ->
-    forall u v x y, u ~= x -> v ~= y ->
-    ModularBaseSystem.sub c c_0modq u v ~= (x-y)%F.
-  Proof.
-    split; autounfold in *.
-    { apply length_sub; intuition (auto; omega). }
-    { unfold decode, ModularBaseSystem.sub, BaseSystem.decode in *; intuition idtac.
-      rewrite BaseSystemProofs.sub_rep, BaseSystemProofs.add_rep.
-      rewrite ZToField_sub, ZToField_add, ZToField_mod.
-      rewrite c_0modq, F_add_0_l. congruence. }
-  Qed.
-
   Lemma decode_short : forall (us : BaseSystem.digits),
     (length us <= length base)%nat ->
     BaseSystem.decode base us = BaseSystem.decode ext_base us.
@@ -364,6 +341,30 @@ Section PseudoMersenneProofs.
       apply Z.le_lteq in nth_nonneg; destruct nth_nonneg; try solve [left; auto].
       right; split; auto.
       apply Z.log2_lt_pow2; auto.
+  Qed.
+
+  Context mm (mm_length : length mm = length base) (mm_spec : decode mm = 0%F).
+
+  Lemma length_sub :  forall u v,
+      length u = length base
+      -> length v = length base
+      -> length (ModularBaseSystem.sub mm u v) = length base.
+  Proof.
+    autounfold; unfold ModularBaseSystem.sub; intuition idtac.
+    rewrite sub_length, add_length_exact.
+    case_max; try rewrite Max.max_r; omega.
+  Qed.
+
+  Lemma sub_rep : forall u v x y, u ~= x -> v ~= y ->
+    ModularBaseSystem.sub mm u v ~= (x-y)%F.
+  Proof.
+    split; autounfold in *.
+    { apply length_sub; intuition (auto; omega). }
+    { unfold decode, ModularBaseSystem.sub, BaseSystem.decode in *; intuition idtac.
+      rewrite BaseSystemProofs.sub_rep, BaseSystemProofs.add_rep.
+      rewrite ZToField_sub, ZToField_add.
+      match goal with H : _ = 0%F |- _ => rewrite H end.
+      rewrite F_add_0_l. congruence. }
   Qed.
 
 End PseudoMersenneProofs.

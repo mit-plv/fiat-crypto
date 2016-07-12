@@ -48,9 +48,26 @@ Section s.
 
   Definition eq (x y : fe) : Prop := phi x = phi y.
 
+  Import Morphisms.
+  Global Instance eq_Equivalence : Equivalence eq.
+  Proof.
+    split; cbv [eq]; repeat intro; congruence.
+  Qed.
+
+  Lemma phi_inv_spec_reverse : forall a, eq (phi_inv (phi a)) a.
+  Proof.
+    intros. unfold eq. rewrite phi_inv_spec; reflexivity.
+  Qed.
+
   Definition zero : fe := phi_inv (ModularArithmetic.ZToField 0).
 
   Definition opp (x : fe) : fe := phi_inv (ModularArithmetic.opp (phi x)).
+
+  Definition one : fe := phi_inv (ModularArithmetic.ZToField 1).
+
+  Definition inv (x : fe) : fe := phi_inv (ModularArithmetic.inv (phi x)).
+
+  Definition div (x y : fe) : fe := phi_inv (ModularArithmetic.div (phi x) (phi y)).
 
   Lemma add_correct : forall a b,
     to_list (add a b) = BaseSystem.add (to_list a) (to_list b).
@@ -66,6 +83,23 @@ Section s.
     intros; cbv [phi].
     rewrite add_correct.
     apply ModularBaseSystemProofs.add_rep; auto using decode_rep, length_to_list.
+  Qed.
+
+  Lemma sub_correct : forall a b,
+    to_list (sub a b) = ModularBaseSystem.sub coeff (to_list a) (to_list b).
+  Proof.
+    intros; cbv [sub on_tuple2].
+    rewrite to_list_from_list.
+    apply sub_opt_correct.
+  Qed.
+
+  Lemma sub_phi : forall a b : fe,
+    phi (sub a b) = ModularArithmetic.sub (phi a) (phi b).
+  Proof.
+    intros; cbv [phi].
+    rewrite sub_correct.
+    apply ModularBaseSystemProofs.sub_rep; auto using decode_rep, length_to_list,
+      coeff_length, coeff_mod.
   Qed.
 
   Lemma mul_correct : forall a b,
@@ -85,6 +119,30 @@ Section s.
     intros; cbv beta delta [phi].
     rewrite mul_correct.
     apply carry_mul_rep; auto using decode_rep, length_to_list.
+  Qed.
+
+  Lemma modular_base_system_field : @field fe eq zero one opp add sub mul inv div.
+  Proof.
+    eapply (Field.isomorphism_to_subfield_field (phi := phi) (fieldR := PrimeFieldTheorems.field_modulo  (prime_q := prime_modulus))).
+    Grab Existential Variables.
+    + intros; apply phi_inv_spec.
+    + intros; apply phi_inv_spec.
+    + intros; apply phi_inv_spec.
+    + intros; apply phi_inv_spec.
+    + intros; apply mul_phi.
+    + intros; apply sub_phi.
+    + intros; apply add_phi.
+    + intros; apply phi_inv_spec.
+    + cbv [eq zero one]. rewrite !phi_inv_spec. intro A.
+      eapply (PrimeFieldTheorems.Fq_1_neq_0 (prime_q := prime_modulus)). congruence.
+    + trivial.
+    + repeat intro. cbv [div]. congruence.
+    + repeat intro. cbv [inv]. congruence.
+    + repeat intro. cbv [eq]. rewrite !mul_phi. congruence.
+    + repeat intro. cbv [eq]. rewrite !sub_phi. congruence.
+    + repeat intro. cbv [eq]. rewrite !add_phi. congruence.
+    + repeat intro. cbv [opp]. congruence.
+    + cbv [eq]. auto using ModularArithmeticTheorems.F_eq_dec.
   Qed.
 
 End s.

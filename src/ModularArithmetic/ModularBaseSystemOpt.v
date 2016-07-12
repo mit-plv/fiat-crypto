@@ -15,7 +15,7 @@ Local Open Scope Z.
 Class SubtractionCoefficient (m : Z) (prm : PseudoMersenneBaseParams m) := {
   coeff : BaseSystem.digits;
   coeff_length : (length coeff = length (Pow2Base.base_from_limb_widths limb_widths))%nat;
-  coeff_mod: (BaseSystem.decode (Pow2Base.base_from_limb_widths limb_widths) coeff) mod m = 0
+  coeff_mod: decode coeff = 0%F
 }.
 
 (* Computed versions of some functions. *)
@@ -337,7 +337,7 @@ End Addition.
 Section Subtraction.
   Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient modulus prm}.
 
-  Definition sub_opt_sig (us vs : digits) : { b : digits | b = sub coeff coeff_mod us vs }.
+  Definition sub_opt_sig (us vs : digits) : { b : digits | b = sub coeff us vs }.
   Proof.
     eexists.
     cbv [BaseSystem.add ModularBaseSystem.sub BaseSystem.sub].
@@ -348,7 +348,7 @@ Section Subtraction.
     := Eval cbv [proj1_sig sub_opt_sig] in proj1_sig (sub_opt_sig us vs).
 
   Definition sub_opt_correct us vs
-    : sub_opt us vs = sub coeff coeff_mod us vs
+    : sub_opt us vs = sub coeff us vs
     := proj2_sig (sub_opt_sig us vs).
 End Subtraction.
 

@@ -25,7 +25,11 @@ Defined.
 Definition mul2modulus := Eval compute in (construct_mul2modulus params25519).
 
 Instance subCoeff : SubtractionCoefficient modulus params25519.
-  apply Build_SubtractionCoefficient with (coeff := mul2modulus); cbv; auto.
+  apply Build_SubtractionCoefficient with (coeff := mul2modulus).
+  cbv; auto.
+  cbv [ModularBaseSystem.decode].
+  apply ZToField_eqmod.
+  cbv; reflexivity.
 Defined.
 
 Definition freezePreconditions25519 : freezePreconditions params25519 int_width.

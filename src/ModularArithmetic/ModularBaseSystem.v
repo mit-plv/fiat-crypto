@@ -11,7 +11,7 @@ Require Import Crypto.ModularArithmetic.Pow2Base.
 Local Open Scope Z_scope.
 
 Section PseudoMersenneBase.
-  Context `{prm :PseudoMersenneBaseParams}.
+  Context `{prm :PseudoMersenneBaseParams} (modulus_multiple : digits).
   Local Notation base := (base_from_limb_widths limb_widths).
 
   Definition decode (us : digits) : F modulus := ZToField (BaseSystem.decode base us).
@@ -32,8 +32,8 @@ Section PseudoMersenneBase.
 
   Definition mul (us vs : digits) := reduce (BaseSystem.mul ext_base us vs).
 
-  Definition sub (xs : digits) (xs_0_mod : (BaseSystem.decode base xs) mod modulus = 0) (us vs : digits) :=
-      BaseSystem.sub (add xs us) vs.
+  (* In order to subtract without underflowing, we add a multiple of the modulus first. *)
+  Definition sub (us vs : digits) := BaseSystem.sub (add modulus_multiple us) vs.
 
 End PseudoMersenneBase.
 
