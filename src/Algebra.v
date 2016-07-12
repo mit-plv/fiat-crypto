@@ -679,6 +679,54 @@ Module Field.
       apply left_multiplicative_inverse; rewrite <-phi_zero; auto.
   Qed.
 
+  Lemma Proper_ext : forall {A} (f g : A -> A) eq, Equivalence eq ->
+    (forall x, eq (g x) (f x)) -> Proper (eq==>eq) f -> Proper (eq==>eq) g.
+  Proof.
+    repeat intro.
+    transitivity (f x); auto.
+    transitivity (f y); auto.
+    symmetry; auto.
+  Qed.
+
+  Lemma Proper_ext2 : forall {A} (f g : A -> A -> A) eq, Equivalence eq ->
+    (forall x y, eq (g x y) (f x y)) -> Proper (eq==>eq ==>eq) f -> Proper (eq==>eq==>eq) g.
+  Proof.
+    repeat intro.
+    transitivity (f x x0); auto.
+    transitivity (f y y0); match goal with H : Proper _ f |- _=> try apply H end; auto.
+    symmetry; auto.
+  Qed.
+
+  Lemma equivalent_operations_field
+        {T EQ ZERO ONE OPP ADD SUB MUL INV DIV}
+        {EQ_equivalence : Equivalence EQ}
+        {zero one opp add sub mul inv div}
+        {fieldR:@field T EQ zero one opp add sub mul inv div}
+        {EQ_opp : forall a, EQ (OPP a) (opp a)}
+        {EQ_inv : forall a, EQ (INV a) (inv a)}
+        {EQ_add : forall a b, EQ (ADD a b) (add a b)}
+        {EQ_sub : forall a b, EQ (SUB a b) (sub a b)}
+        {EQ_mul : forall a b, EQ (MUL a b) (mul a b)}
+        {EQ_div : forall a b, EQ (DIV a b) (div a b)}
+        {EQ_zero : EQ ZERO zero}
+        {EQ_one : EQ ONE one}
+    : @field T EQ ZERO ONE OPP ADD SUB MUL INV DIV.
+  Proof.
+    repeat split; eauto with core typeclass_instances; intros;
+      repeat rewrite ?EQ_opp, ?EQ_inv, ?EQ_add, ?EQ_sub, ?EQ_mul, ?EQ_div, ?EQ_zero, ?EQ_one;
+
+      auto using (associative (op := add)), (commutative (op := add)), (left_identity (op := add)), (right_identity (op := add)),
+                 (associative (op := mul)), (commutative (op := mul)), (left_identity (op := mul)), (right_identity (op := mul)),
+                 left_inverse, right_inverse, (left_distributive (add := add)), (right_distributive (add := add)),
+                 ring_sub_definition, field_div_definition;
+      try solve [(eapply Proper_ext2 || eapply Proper_ext);
+        eauto using group_inv_Proper, monoid_op_Proper, ring_mul_Proper, ring_sub_Proper,
+          field_inv_Proper, field_div_Proper].
+      + apply left_multiplicative_inverse.
+        symmetry in EQ_zero. rewrite EQ_zero. assumption.
+      + eapply field_domain_is_zero_neq_one; eauto.
+  Qed.
+
   Section Homomorphism.
     Context {F EQ ZERO ONE OPP ADD MUL SUB INV DIV} `{@field F EQ ZERO ONE OPP ADD SUB MUL INV DIV}.
     Context {K eq zero one opp add mul sub inv div} `{@field K eq zero one opp add sub mul inv div}.
