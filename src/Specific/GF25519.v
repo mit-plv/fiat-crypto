@@ -2,11 +2,12 @@ Require Import Crypto.ModularArithmetic.ModularBaseSystem.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemOpt.
 Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParams.
 Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParamProofs.
-Require Import Crypto.ModularArithmetic.ModularBaseSystemInterface.
 Require Import Coq.Lists.List Crypto.Util.ListUtil.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
+Require Import Crypto.ModularArithmetic.ModularBaseSystemInterface.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.BaseSystem.
+Require Import Algebra.
 Import ListNotations.
 Require Import Coq.ZArith.ZArith Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.ZArith.Znumtheory.
 Require Import Crypto.Util.Notations.
@@ -48,28 +49,90 @@ Definition fe25519 : Type := Eval cbv in fe.
 
 Local Opaque Z.shiftr Z.shiftl Z.land Z.mul Z.add Z.sub Let_In.
 
-Definition add (f g:fe25519) : { fg | phi fg = @ModularArithmetic.add modulus (phi f) (phi g) }.
+Definition add_sig (f g : fe25519) :
+  { fg : fe25519 | fg = ModularBaseSystemInterface.add f g}.
 Proof.
   cbv [fe25519] in *.
   repeat match goal with [p : (_*Z)%type |- _ ] => destruct p end.
   eexists.
-  rewrite <-add_phi.
-  apply f_equal.
   cbv.
   reflexivity.
-Qed.
+Defined.
 
-Definition mul (f g:fe25519) : { fg | phi fg = @ModularArithmetic.mul modulus (phi f) (phi g) }.
+Definition add (f g : fe25519) : fe25519 :=
+  Eval cbv beta iota delta [proj1_sig add_sig] in
+  let '(f0,f1,f2,f3,f4,f5,f6,f7,f8,f9) := f in
+  let '(g0,g1,g2,g3,g4,g5,g6,g7,g8,g9) := g in
+  proj1_sig (add_sig (f0,f1,f2,f3,f4,f5,f6,f7,f8,f9) (g0,g1,g2,g3,g4,g5,g6,g7,g8,g9)).
+
+Definition add_correct (f g : fe25519)
+  : add f g = ModularBaseSystemInterface.add f g :=
+  let '(f0,f1,f2,f3,f4,f5,f6,f7,f8,f9) := f in
+  let '(g0,g1,g2,g3,g4,g5,g6,g7,g8,g9) := g in
+  proj2_sig (add_sig (f0,f1,f2,f3,f4,f5,f6,f7,f8,f9) (g0,g1,g2,g3,g4,g5,g6,g7,g8,g9)).
+
+Definition sub_sig (f g : fe25519) :
+  { fg : fe25519 | fg = ModularBaseSystemInterface.sub f g}.
 Proof.
   cbv [fe25519] in *.
   repeat match goal with [p : (_*Z)%type |- _ ] => destruct p end.
   eexists.
-  rewrite <-(mul_phi (c_ := c_) (k_ := k_)) by auto using k_subst,c_subst.
-  apply f_equal.
+  cbv.
+  reflexivity.
+Defined.
+
+Definition sub (f g : fe25519) : fe25519 :=
+  Eval cbv beta iota delta [proj1_sig sub_sig] in
+  let '(f0,f1,f2,f3,f4,f5,f6,f7,f8,f9) := f in
+  let '(g0,g1,g2,g3,g4,g5,g6,g7,g8,g9) := g in
+  proj1_sig (sub_sig (f0,f1,f2,f3,f4,f5,f6,f7,f8,f9) (g0,g1,g2,g3,g4,g5,g6,g7,g8,g9)).
+
+Definition sub_correct (f g : fe25519)
+  : sub f g = ModularBaseSystemInterface.sub f g :=
+  let '(f0,f1,f2,f3,f4,f5,f6,f7,f8,f9) := f in
+  let '(g0,g1,g2,g3,g4,g5,g6,g7,g8,g9) := g in
+  proj2_sig (sub_sig (f0,f1,f2,f3,f4,f5,f6,f7,f8,f9) (g0,g1,g2,g3,g4,g5,g6,g7,g8,g9)).
+
+Definition mul_sig (f g : fe25519) :
+  { fg : fe25519 | fg = ModularBaseSystemInterface.mul (k_ := k_) (c_ := c_) f g}.
+Proof.
+  cbv [fe25519] in *.
+  repeat match goal with [p : (_*Z)%type |- _ ] => destruct p end.
+  eexists.
   cbv.
   autorewrite with zsimplify.
   reflexivity.
+Defined.
+
+Definition mul (f g : fe25519) : fe25519 :=
+  Eval cbv beta iota delta [proj1_sig mul_sig] in
+  let '(f0,f1,f2,f3,f4,f5,f6,f7,f8,f9) := f in
+  let '(g0,g1,g2,g3,g4,g5,g6,g7,g8,g9) := g in
+  proj1_sig (mul_sig (f0,f1,f2,f3,f4,f5,f6,f7,f8,f9) (g0,g1,g2,g3,g4,g5,g6,g7,g8,g9)).
+
+Definition mul_correct (f g : fe25519)
+  : mul f g = ModularBaseSystemInterface.mul (k_ := k_) (c_ := c_) f g :=
+  let '(f0,f1,f2,f3,f4,f5,f6,f7,f8,f9) := f in
+  let '(g0,g1,g2,g3,g4,g5,g6,g7,g8,g9) := g in
+  proj2_sig (mul_sig (f0,f1,f2,f3,f4,f5,f6,f7,f8,f9) (g0,g1,g2,g3,g4,g5,g6,g7,g8,g9)).
+
+Import Morphisms.
+
+Lemma field25519 : @field fe25519 eq zero one opp add sub mul inv div.
+Proof.
+  pose proof (Equivalence_Reflexive : Reflexive eq).
+  eapply (Field.equivalent_operations_field (fieldR := modular_base_system_field k_subst c_subst)).
+  Grab Existential Variables.
+  + reflexivity.
+  + reflexivity.
+  + reflexivity.
+  + intros; rewrite mul_correct; reflexivity.
+  + intros; rewrite sub_correct; reflexivity.
+  + intros; rewrite add_correct; reflexivity.
+  + reflexivity.
+  + reflexivity.
 Qed.
+
 
 (*
 Local Transparent Let_In.
