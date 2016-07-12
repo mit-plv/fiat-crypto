@@ -529,8 +529,33 @@ Module Ring.
       intros.
       rewrite !ring_sub_definition, Group.homomorphism, homomorphism_opp. reflexivity.
     Qed.
-
   End Homomorphism.
+
+  Lemma isomorphism_to_subring_ring
+        {T EQ ZERO ONE OPP ADD SUB MUL}
+        {Equivalence_EQ: @Equivalence T EQ} {eq_dec: forall x y, {EQ x y} + {~ EQ x y}}
+        {Proper_OPP:Proper(EQ==>EQ)OPP}
+        {Proper_ADD:Proper(EQ==>EQ==>EQ)ADD}
+        {Proper_SUB:Proper(EQ==>EQ==>EQ)SUB}
+        {Proper_MUL:Proper(EQ==>EQ==>EQ)MUL}
+        {R eq zero one opp add sub mul} {ringR:@ring R eq zero one opp add sub mul}
+        {phi}
+        {eq_phi_EQ: forall x y, eq (phi x) (phi y) -> EQ x y}
+        {phi_opp : forall a, eq (phi (OPP a)) (opp (phi a))}
+        {phi_add : forall a b, eq (phi (ADD a b)) (add (phi a) (phi b))}
+        {phi_sub : forall a b, eq (phi (SUB a b)) (sub (phi a) (phi b))}
+        {phi_mul : forall a b, eq (phi (MUL a b)) (mul (phi a) (phi b))}
+        {phi_zero : eq (phi ZERO) zero}
+        {phi_one : eq (phi ONE) one}
+    : @ring T EQ ZERO ONE OPP ADD SUB MUL.
+  Proof.
+    repeat split; eauto with core typeclass_instances; intros;
+      eapply eq_phi_EQ;
+      repeat rewrite ?phi_opp, ?phi_add, ?phi_sub, ?phi_mul, ?phi_inv, ?phi_zero, ?phi_one;
+      auto using (associative (op := add)), (commutative (op := add)), (left_identity (op := add)), (right_identity (op := add)),
+                 (associative (op := mul)), (commutative (op := add)), (left_identity (op := mul)), (right_identity (op := mul)),
+                 left_inverse, right_inverse, (left_distributive (add := add)), (right_distributive (add := add)), ring_sub_definition.
+  Qed.
 
   Section TacticSupportCommutative.
     Context {T eq zero one opp add sub mul} `{@commutative_ring T eq zero one opp add sub mul}.
@@ -620,6 +645,39 @@ Module Field.
     Qed.
 
   End Field.
+
+  Lemma isomorphism_to_subfield_field
+        {T EQ ZERO ONE OPP ADD SUB MUL INV DIV}
+        {Equivalence_EQ: @Equivalence T EQ} {eq_dec: forall x y, {EQ x y} + {~ EQ x y}}
+        {Proper_OPP:Proper(EQ==>EQ)OPP}
+        {Proper_ADD:Proper(EQ==>EQ==>EQ)ADD}
+        {Proper_SUB:Proper(EQ==>EQ==>EQ)SUB}
+        {Proper_MUL:Proper(EQ==>EQ==>EQ)MUL}
+        {Proper_INV:Proper(EQ==>EQ)INV}
+        {Proper_DIV:Proper(EQ==>EQ==>EQ)DIV}
+        {R eq zero one opp add sub mul inv div} {fieldR:@field R eq zero one opp add sub mul inv div}
+        {phi}
+        {eq_phi_EQ: forall x y, eq (phi x) (phi y) -> EQ x y}
+        {neq_zero_one : (EQ ZERO ONE -> False)}
+        {phi_opp : forall a, eq (phi (OPP a)) (opp (phi a))}
+        {phi_add : forall a b, eq (phi (ADD a b)) (add (phi a) (phi b))}
+        {phi_sub : forall a b, eq (phi (SUB a b)) (sub (phi a) (phi b))}
+        {phi_mul : forall a b, eq (phi (MUL a b)) (mul (phi a) (phi b))}
+        {phi_inv : forall a, eq (phi (INV a)) (inv (phi a))}
+        {phi_div : forall a b, eq (phi (DIV a b)) (div (phi a) (phi b))}
+        {phi_zero : eq (phi ZERO) zero}
+        {phi_one : eq (phi ONE) one}
+    : @field T EQ ZERO ONE OPP ADD SUB MUL INV DIV.
+  Proof.
+    repeat split; eauto with core typeclass_instances; intros;
+      eapply eq_phi_EQ;
+      repeat rewrite ?phi_opp, ?phi_add, ?phi_sub, ?phi_mul, ?phi_inv, ?phi_zero, ?phi_one, ?phi_inv, ?phi_div;
+      auto using (associative (op := add)), (commutative (op := add)), (left_identity (op := add)), (right_identity (op := add)),
+                 (associative (op := mul)), (commutative (op := mul)), (left_identity (op := mul)), (right_identity (op := mul)),
+                 left_inverse, right_inverse, (left_distributive (add := add)), (right_distributive (add := add)),
+                 ring_sub_definition, field_div_definition.
+      apply left_multiplicative_inverse; rewrite <-phi_zero; auto.
+  Qed.
 
   Section Homomorphism.
     Context {F EQ ZERO ONE OPP ADD MUL SUB INV DIV} `{@field F EQ ZERO ONE OPP ADD SUB MUL INV DIV}.
