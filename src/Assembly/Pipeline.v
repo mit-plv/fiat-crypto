@@ -27,11 +27,16 @@ Module PipelineExamples.
   Local Notation "v [[ i ]]" := (nth i v (wzero _)) (at level 40).
   Local Notation "$$ v" := (natToWord _ v) (at level 40).
 
-  Definition add_example: @pseudeq 32 W32 1 1 (fun v =>
-      plet a := $$ 1 in
-      plet b := v[[0]] in
-      [a ^+ b]).
-    pseudo_solve.
+  Definition add_f : Curried N N 2 1 := fun x y =>
+    N.add (N.land x (N.ones 15)) (N.land y (N.ones 15)).
+
+  Lemma add_wordF: wordeq 32 add_f.
+  Proof. unfold add_f; wordize. Defined.
+
+  Definition add_listF := curriedToList (wzero _) (proj1_sig add_wordF).
+
+  Definition add_example: @pseudeq 32 W32 1 1 add_listF.
+    unfold add_listF; simpl; pseudo_solve.
   Defined.
 
   Definition add_ex_str :=

@@ -1,6 +1,7 @@
 Require Import QhasmCommon QhasmUtil State.
 Require Import Language QhasmEvalCommon.
 Require Import List Compare_dec Omega.
+Require Import Crypto.Util.IterAssocOp.
 
 Module Pseudo <: Language.
   Import EvalUtil ListState.
@@ -101,13 +102,7 @@ Module Pseudo <: Language.
           else pseudoEval r st ))
 
     | PFunExp n p e =>
-      (fix funexpseudo (e': nat) (st': ListState w) := 
-        match e' with
-        | O => Some st'
-        | S e'' =>
-          omap (pseudoEval p st') (fun st'' =>
-            funexpseudo e'' st'')
-        end) e st
+      funexp (fun so => omap so (pseudoEval p)) (Some st) e
 
     | PCall n m _ p => pseudoEval p st
     end.

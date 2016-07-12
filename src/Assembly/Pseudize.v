@@ -1,7 +1,8 @@
 Require Export Bedrock.Word Bedrock.Nomega.
 Require Import NArith NPeano List Sumbool Compare_dec Omega.
 Require Import QhasmCommon QhasmEvalCommon QhasmUtil Pseudo State.
-Require Export Wordize Vectorize.
+Require Export WordizeUtil Wordize Vectorize.
+Require Import Crypto.Util.IterAssocOp.
 
 Import Pseudo ListNotations StateCommon EvalUtil ListState.
 
@@ -39,7 +40,6 @@ Section Conversion.
     destruct (le_dec n 0); simpl. {
       replace k with 0 in * by omega; autounfold; simpl in *.
       rewrite H0; simpl; intuition.
-      destruct (Nat.eq_dec _ n); try rewrite H0; intuition.
     }
 
     replace (k mod n) with k by (
@@ -296,33 +296,86 @@ Section Conversion.
       simpl; intuition.
   Qed.
 
-  Lemma pseudo_if:
-    forall {w s n k m} (p0: @Pseudo w s n m) (p1: @Pseudo w s n m)
-      input a f m0 m1 m2 c0 c1 c2,
-      pseudoEval p0 (input, m0, c0) = Some ([a], m1, c1)
-    -> pseudoEval p1 (input ++ [a], m1, c1) = Some (f (nth n (input ++ [a]) (wzero _)), m2, c2)
-    -> pseudoEval (@PLet w s n k m p0 p1) (input, m0, c0) =
-        Some (Let_In a f, m2, c2).
+  Lemma pseudo_if_left:
+    forall {w s n m} (p0: @Pseudo w s n m) (p1: @Pseudo w s n m)
+      input t (i0 i1: Index n) out0 out1 m0 m1 m2 c0 c1 c2,
+      Datatypes.length input = n
+    -> (i0 < n)%nat -> (i1 < n)%nat
+    -> evalTest t (nth i0 input (wzero _)) (nth i1 input (wzero _)) = true
+    -> pseudoEval p0 (input, m0, c0) = Some (out0, m1, c1)
+    -> pseudoEval p1 (input, m0, c0) = Some (out1, m2, c2)
+    -> pseudoEval (@PIf w s n m t i0 i1 p0 p1) (input, m0, c0) =
+        Some (out0, m1, c1).
+  Proof.
+    intros until c2; intros L nn0 nn1 T H H0; simpl.
+    rewrite H, H0; autounfold; simpl.
+    rewrite <- L in nn0, nn1.
+    apply nth_error_Some in nn0.
+    apply nth_error_Some in nn1.
 
-      | PIf n m t i0 i1 l r =>
-      omap (getVar i0 st) (fun v0 =>
-        omap (getVar i1 st) (fun v1 =>
-          if (evalTest t v0 v1)
-          then pseudoEval l st
-          else pseudoEval r st ))
+    repeat rewrite <- nth_default_eq in T; unfold nth_default in T.
+    induction (nth_error input i0),
+              (nth_error input i1),
+              (Nat.eq_dec _ n); simpl;
+      try match goal with
+      | [H: ?x <> ?x |- _] => contradict H; reflexivity
+      end;
+      try rewrite T; intuition.
+  Qed.
 
-    | PFunExp n p e =>
-      (fix funexpseudo (e': nat) (st': ListState w) := 
-        match e' with
-        | O => Some st'
-        | S e'' =>
-          omap (pseudoEval p st') (fun st'' =>
-            funexpseudo e'' st'')
-        end) e st
+  Lemma pseudo_if_right:
+    forall {w s n m} (p0: @Pseudo w s n m) (p1: @Pseudo w s n m)
+      input t (i0 i1: Index n) out0 out1 m0 m1 m2 c0 c1 c2,
+      Datatypes.length input = n
+    -> (i0 < n)%nat -> (i1 < n)%nat
+    -> evalTest t (nth i0 input (wzero _)) (nth i1 input (wzero _)) = false
+    -> pseudoEval p0 (input, m0, c0) = Some (out0, m1, c1)
+    -> pseudoEval p1 (input, m0, c0) = Some (out1, m2, c2)
+    -> pseudoEval (@PIf w s n m t i0 i1 p0 p1) (input, m0, c0) =
+        Some (out1, m2, c2).
+  Proof.
+    intros until c2; intros L nn0 nn1 T H H0; simpl.
+    rewrite H, H0; autounfold; simpl.
+    rewrite <- L in nn0, nn1.
+    apply nth_error_Some in nn0.
+    apply nth_error_Some in nn1.
 
-    | PCall n m _ p => pseudoEval p st
+    repeat rewrite <- nth_default_eq in T; unfold nth_default in T.
+    induction (nth_error input i0),
+              (nth_error input i1),
+              (Nat.eq_dec _ n); simpl;
+      try match goal with
+      | [H: ?x <> ?x |- _] => contradict H; reflexivity
+      end;
+      try rewrite T; intuition.
+  Qed.
 
+  Lemma pseudo_funexp:
+    forall {w s n k m} (p0: @Pseudo w s n k) (p1: @Pseudo w s (n + k) m)
+      input f p e (m0 m1: TripleNMap) (c0 c1: option bool),
+      Datatypes.length input = n
+    -> (forall x m c, exists m' c', pseudoEval p (x, m, c) = Some (f x, m', c'))
+    -> exists m1 c1,
+        pseudoEval (@PFunExp w s n p e) (input, m0, c0) =
+          Some (funexp f input e, m1, c1).
+  Proof.
+    intros until m0; intros m1 c0 c1 L H;
+      induction e; autounfold; simpl.
 
+    - repeat eexists; autounfold; simpl.
+      destruct (Nat.eq_dec _ n); simpl; intuition.
+
+    - repeat eexists; autounfold; simpl.
+
+      destruct IHe as [m' IHe];
+        destruct IHe as [c' IHe];
+        rewrite IHe.
+
+      destruct (Nat.eq_dec _ n); simpl; intuition.
+
+      (* Mess with some evars *)
+  Admitted.
+ 
   Definition pseudeq {w s} (n m: nat) (f: list (word w) -> list (word w)) : Type := 
     {p: @Pseudo w s n m | forall x: (list (word w)),
       List.length x = n -> exists m' c',
@@ -362,13 +415,13 @@ Ltac pseudo_step :=
   | [ |- @pseudoEval ?n _ _ _ ?P _ =
         Some ([nth ?i ?lst _], _, _)%p ] =>
     eapply (pseudo_var None i);
-      try reflexivity; autodestruct;
+      try reflexivity; list_destruct;
       simpl; intuition
   end.
 
 Ltac pseudo_solve :=
   repeat eexists;
   autounfold;
-  autodestruct;
+  list_destruct;
   repeat pseudo_step;
   intuition.

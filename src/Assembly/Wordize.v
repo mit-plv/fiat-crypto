@@ -37,6 +37,10 @@ Section ToWord.
   Lemma wordize_shiftr: forall {n} (x: word n) (k: nat),
     (N.shiftr_nat (&x) k) = & (shiftr x k).
   Proof. Admitted.
+
+  Lemma conv_mask: forall {n} (x: word n) (k: nat),
+    mask k x = x ^& (NToWord _ (N.ones (N.of_nat k))).
+  Proof. Admitted.
 End ToWord.
 
 Definition wordeq {ins outs} (n: nat) (f: Curried N N ins outs) :=
@@ -74,20 +78,5 @@ Ltac wordize :=
   wordize_intro;
   wordize_iter;
   wordize_contra.
-
-(** Examples **)
-
-Module WordizationExamples.
-  Definition example0 : Curried N N 2 1 := fun x y =>
-    N.add (N.land x (N.ones 15)) (N.land y (N.ones 15)).
-
-  Lemma wordize_example0: wordeq 16 example0.
-  Proof.
-    unfold example0.
-    wordize.
-  Defined.
-
-  (* Eval simpl in (proj1_sig wordize_example0). *)
-End WordizationExamples.
 
 Close Scope nword_scope.
