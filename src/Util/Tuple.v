@@ -177,3 +177,21 @@ Proof.
   induction xs; destruct n; intros; try solve [simpl in *; congruence].
   apply from_list_default'_eq.
 Qed.
+
+Fixpoint function R T n : Type :=
+  match n with
+  | O => R
+  | S n' => T -> function R T n'
+  end.
+
+Fixpoint apply' {R T} (n:nat) : (T -> function R T n) -> tuple' T n -> R :=
+  match n with
+  | 0 => id
+  | S n' => fun f x => apply' n' (f (snd x)) (fst x)
+  end.
+
+Definition apply {R T} (n:nat) : function R T n -> tuple T n -> R :=
+  match n with
+  | O => fun r _ => r
+  | S n' => fun f x =>  apply' n' f x
+  end.
