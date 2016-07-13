@@ -33,6 +33,7 @@ src/Experiments/DerivationsOptionRectLetInEncoding.v
 src/Experiments/EdDSARefinement.v
 src/Experiments/GenericFieldPow.v
 src/Experiments/SpecEd25519.v
+src/Experiments/SpecificCurve25519.v
 src/ModularArithmetic/ExtendedBaseVector.v
 src/ModularArithmetic/ModularArithmeticTheorems.v
 src/ModularArithmetic/ModularBaseSystem.v
@@ -57,6 +58,7 @@ src/Specific/GF1305.v
 src/Specific/GF25519.v
 src/Tactics/VerdiTactics.v
 src/Tactics/Algebra_syntax/Nsatz.v
+src/Util/AdditionChainExponentiation.v
 src/Util/CaseUtil.v
 src/Util/Decidable.v
 src/Util/IterAssocOp.v
