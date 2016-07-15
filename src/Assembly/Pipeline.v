@@ -61,4 +61,5 @@ Module PipelineExamples.
       (Pipeline.toString (proj1_sig pseudo2)).
   End Example2.
 
+  (* Eval vm_compute in asm2. *)
 End PipelineExamples.

@@ -381,17 +381,19 @@ Section Conversion.
 
   Lemma pseudo_mask:
     forall {w s n} (p: @Pseudo w s n 1) k x out m0 m1 c0 c1,
-      pseudoEval p (x, m0, c0) = Some ([out], m1, c1)
+      (k <= w)%nat
+    -> pseudoEval p (x, m0, c0) = Some ([out], m1, c1)
     -> pseudoEval (PBin n IAnd (PCons _ _ p
           (PConst _ (NToWord _ (N.ones (N.of_nat k)))))) (x, m0, c0) =
         Some ([mask k out], m1, c1).
   Proof.
-    intros until c1; intro H.
+    intros until c1; intros B H.
     pose proof (eval_in_length _ _ _ _ _ _ _ H).
     rewrite conv_mask.
     eapply pseudo_and.
     eapply pseudo_cons; try reflexivity; try apply H.
     eapply pseudo_const; try assumption.
+    assumption.
   Qed.
 
   Lemma pseudo_funexp':
@@ -549,6 +551,10 @@ Ltac pseudo_step :=
     eapply (pseudo_var None i);
       try reflexivity; list_destruct;
       simpl; intuition
+
+  (* clean up generated inequalities *)
+  | [ |- (_ <= _)%nat ] => vm_compute; omega
+  | [ |- (_ < _)%nat ] => vm_compute; omega
   end.
 
 Ltac pseudo_solve :=

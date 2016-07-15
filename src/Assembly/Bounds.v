@@ -36,6 +36,28 @@ Section Bounds.
         apply N.lt_le_incl; assumption.
   Qed.
 
+  Lemma plus_le: forall {n} (x y: word n),
+    (& (x ^+ y) <= &x + &y)%N.
+  Proof.
+    intros.
+    unfold wplus, wordBin.
+    rewrite wordToN_nat.
+    rewrite NToWord_nat.
+    pose proof (wordToNat_natToWord n (N.to_nat (& x + & y))) as H.
+    destruct H as [k H].
+    destruct H as [Heq Hk].
+    rewrite Heq.
+    rewrite Nat2N.inj_sub.
+    rewrite N2Nat.id.
+    generalize (&x + &y)%N; intro a.
+    generalize (N.of_nat (k * pow2 n))%N; intro b.
+    clear Heq Hk; clear x y k; clear n.
+    replace a with (a - 0)%N by nomega.
+    replace (a - 0)%N with a at 1 by nomega.
+    apply N.sub_le_mono_l.
+    apply N_ge_0.
+  Qed.
+
   Lemma wordize_mult': forall {n} (x y: word n) (b: N),
       (1 < n)%nat -> (0 < b)%N
     -> (&x < b)%N
@@ -49,6 +71,28 @@ Section Bounds.
     - apply N.mul_lt_mono; assumption.
 
     - apply N.mul_div_le; nomega.
+  Qed.
+
+  Lemma mult_le: forall {n} (x y: word n),
+    (& (x ^* y) <= &x * &y)%N.
+  Proof.
+    intros.
+    unfold wmult, wordBin.
+    rewrite wordToN_nat.
+    rewrite NToWord_nat.
+    pose proof (wordToNat_natToWord n (N.to_nat (& x * & y))) as H.
+    destruct H as [k H].
+    destruct H as [Heq Hk].
+    rewrite Heq.
+    rewrite Nat2N.inj_sub.
+    rewrite N2Nat.id.
+    generalize (&x * &y)%N; intro a.
+    generalize (N.of_nat (k * pow2 n))%N; intro b.
+    clear Heq Hk; clear x y k; clear n.
+    replace a with (a - 0)%N by nomega.
+    replace (a - 0)%N with a at 1 by nomega.
+    apply N.sub_le_mono_l.
+    apply N_ge_0.
   Qed.
 
   Lemma constant_bound_N : forall {n} (k: word n),
