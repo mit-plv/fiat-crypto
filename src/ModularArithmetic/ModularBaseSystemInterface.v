@@ -17,21 +17,20 @@ Section s.
 
   Definition fe := tuple Z (length base).
 
+  Arguments to_list {_ _} _.
+
   Definition mul  (x y:fe) : fe :=
     carry_mul_opt_cps k_ c_ (from_list_default 0%Z (length base))
-      (to_list _ x) (to_list _ y).
+      (to_list x) (to_list y).
 
-  Definition add : fe -> fe -> fe.
-    refine (on_tuple2 add_opt _).
-    abstract (intros; rewrite add_opt_correct, add_length_exact; case_max; omega).
-  Defined.
+  Definition add (x y : fe) : fe :=
+    from_list_default 0%Z (length base) (add_opt (to_list x) (to_list y)).
 
   Definition sub : fe -> fe -> fe.
     refine (on_tuple2 sub_opt _).
     abstract (intros; rewrite sub_opt_correct; apply length_sub; rewrite ?coeff_length; auto).
   Defined.
 
-  Arguments to_list {_ _} _.
   Definition phi (a : fe) : ModularArithmetic.F m := decode (to_list a).
   Definition phi_inv (a : ModularArithmetic.F m) : fe :=
     from_list_default 0%Z _ (encode a).
@@ -72,9 +71,12 @@ Section s.
   Lemma add_correct : forall a b,
     to_list (add a b) = BaseSystem.add (to_list a) (to_list b).
   Proof.
-    intros; cbv [add on_tuple2].
-    rewrite to_list_from_list.
-    apply add_opt_correct.
+    intros; cbv [add].
+    rewrite add_opt_correct.
+    erewrite from_list_default_eq.
+    apply to_list_from_list.
+    Grab Existential Variables.
+    apply add_same_length; auto using length_to_list.
   Qed.
 
   Lemma add_phi : forall a b : fe,
@@ -125,22 +127,22 @@ Section s.
   Proof.
     eapply (Field.isomorphism_to_subfield_field (phi := phi) (fieldR := PrimeFieldTheorems.field_modulo  (prime_q := prime_modulus))).
     Grab Existential Variables.
-    + intros; apply phi_inv_spec.
-    + intros; apply phi_inv_spec.
-    + intros; apply phi_inv_spec.
-    + intros; apply phi_inv_spec.
-    + intros; apply mul_phi.
-    + intros; apply sub_phi.
-    + intros; apply add_phi.
-    + intros; apply phi_inv_spec.
-    + cbv [eq zero one]. rewrite !phi_inv_spec. intro A.
+    + intros; eapply phi_inv_spec.
+    + intros; eapply phi_inv_spec.
+    + intros; eapply phi_inv_spec.
+    + intros; eapply phi_inv_spec.
+    + intros; eapply mul_phi.
+    + intros; eapply sub_phi.
+    + intros; eapply add_phi.
+    + intros; eapply phi_inv_spec.
+    + cbv [eq zero one]. erewrite !phi_inv_spec. intro A.
       eapply (PrimeFieldTheorems.Fq_1_neq_0 (prime_q := prime_modulus)). congruence.
     + trivial.
     + repeat intro. cbv [div]. congruence.
     + repeat intro. cbv [inv]. congruence.
-    + repeat intro. cbv [eq]. rewrite !mul_phi. congruence.
-    + repeat intro. cbv [eq]. rewrite !sub_phi. congruence.
-    + repeat intro. cbv [eq]. rewrite !add_phi. congruence.
+    + repeat intro. cbv [eq]. erewrite !mul_phi. congruence.
+    + repeat intro. cbv [eq]. erewrite !sub_phi. congruence.
+    + repeat intro. cbv [eq]. erewrite !add_phi. congruence.
     + repeat intro. cbv [opp]. congruence.
     + cbv [eq]. auto using ModularArithmeticTheorems.F_eq_dec.
   Qed.
