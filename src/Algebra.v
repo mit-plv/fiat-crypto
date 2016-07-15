@@ -438,7 +438,7 @@ Module Ring.
     Local Notation "0" := zero. Local Notation "1" := one.
     Local Infix "+" := add. Local Infix "-" := sub. Local Infix "*" := mul.
 
-    Lemma mul_0_r : forall x, 0 * x = 0.
+    Lemma mul_0_l : forall x, 0 * x = 0.
     Proof.
       intros.
       assert (0*x = 0*x) as Hx by reflexivity.
@@ -447,7 +447,7 @@ Module Ring.
       rewrite !ring_sub_definition, <-associative, right_inverse, right_identity in Hxx; exact Hxx.
     Qed.
 
-    Lemma mul_0_l : forall x, x * 0 = 0.
+    Lemma mul_0_r : forall x, x * 0 = 0.
     Proof.
       intros.
       assert (x*0 = x*0) as Hx by reflexivity.
@@ -462,7 +462,7 @@ Module Ring.
     Lemma mul_opp_r x y : x * opp y = opp (x * y).
     Proof.
       assert (Ho:x*(opp y) + x*y = 0)
-        by (rewrite <-left_distributive, left_inverse, mul_0_l; reflexivity).
+        by (rewrite <-left_distributive, left_inverse, mul_0_r; reflexivity).
       rewrite <-(left_identity (opp (x*y))), <-Ho; clear Ho.
       rewrite <-!associative, right_inverse, right_identity; reflexivity.
     Qed.
@@ -470,7 +470,7 @@ Module Ring.
     Lemma mul_opp_l x y : opp x * y = opp (x * y).
     Proof.
       assert (Ho:opp x*y + x*y = 0)
-        by (rewrite <-right_distributive, left_inverse, mul_0_r; reflexivity).
+        by (rewrite <-right_distributive, left_inverse, mul_0_l; reflexivity).
       rewrite <-(left_identity (opp (x*y))), <-Ho; clear Ho.
       rewrite <-!associative, right_inverse, right_identity; reflexivity.
     Qed.
@@ -596,8 +596,8 @@ Module IntegralDomain.
     Proof.
       split.
       { intro H0; split; intro H1; apply H0; rewrite H1.
-        { apply Ring.mul_0_r. }
-        { apply Ring.mul_0_l. } }
+        { apply Ring.mul_0_l. }
+        { apply Ring.mul_0_r. } }
       { intros [? ?] ?; edestruct mul_nonzero_nonzero_cases; eauto with nocore. }
     Qed.
 
@@ -619,10 +619,15 @@ Module Field.
     Local Notation "0" := zero. Local Notation "1" := one.
     Local Infix "+" := add. Local Infix "*" := mul.
 
+    Lemma right_multiplicative_inverse : forall x : T, ~ eq x zero -> eq (mul x (inv x)) one.
+    Proof.
+      intros. rewrite commutative. auto using left_multiplicative_inverse.
+    Qed.
+
     Global Instance is_mul_nonzero_nonzero : @is_mul_nonzero_nonzero T eq 0 mul.
     Proof.
       constructor. intros x y Hx Hy Hxy.
-      assert (0 = (inv y * (inv x * x)) * y) as H00. (rewrite <-!associative, Hxy, !Ring.mul_0_l; reflexivity).
+      assert (0 = (inv y * (inv x * x)) * y) as H00. (rewrite <-!associative, Hxy, !Ring.mul_0_r; reflexivity).
       rewrite left_multiplicative_inverse in H00 by assumption.
       rewrite right_identity in H00.
       rewrite left_multiplicative_inverse in H00 by assumption.
@@ -632,6 +637,16 @@ Module Field.
     Global Instance integral_domain : @integral_domain T eq zero one opp add sub mul.
     Proof.
       split; auto using field_commutative_ring, field_domain_is_zero_neq_one, is_mul_nonzero_nonzero.
+    Qed.
+
+    Lemma inv_unique x ix : ix * x = one -> ix = inv x.
+    Proof.
+      intro Hix.
+      assert (ix*x*inv x = inv x).
+      - rewrite Hix, left_identity; reflexivity.
+      - rewrite <-associative, right_multiplicative_inverse, right_identity in H0; trivial.
+        intro eq_x_0. rewrite eq_x_0, Ring.mul_0_r in Hix.
+        apply zero_neq_one. assumption.
     Qed.
 
     Require Coq.setoid_ring.Field_theory.
@@ -714,7 +729,6 @@ Module Field.
   Proof.
     repeat split; eauto with core typeclass_instances; intros;
       repeat rewrite ?EQ_opp, ?EQ_inv, ?EQ_add, ?EQ_sub, ?EQ_mul, ?EQ_div, ?EQ_zero, ?EQ_one;
-
       auto using (associative (op := add)), (commutative (op := add)), (left_identity (op := add)), (right_identity (op := add)),
                  (associative (op := mul)), (commutative (op := mul)), (left_identity (op := mul)), (right_identity (op := mul)),
                  left_inverse, right_inverse, (left_distributive (add := add)), (right_distributive (add := add)),
@@ -734,12 +748,39 @@ Module Field.
     Local Infix "=" := eq. Local Infix "=" := eq : type_scope.
     Context `{@Ring.is_homomorphism F EQ ONE ADD MUL K eq one add mul phi}.
 
-    Lemma homomorphism_multiplicative_inverse : forall x, phi (INV x) = inv (phi x). Admitted.
+    Lemma homomorphism_multiplicative_inverse_complete
+       : forall x, (EQ x ZERO -> phi (INV x) = inv (phi x))
+       -> phi (INV x) = inv (phi x).
+    Proof.
+      intros.
+      destruct (eq_dec x ZERO); auto.
+      assert (phi (MUL (INV x) x) = one) as A. {
+        rewrite left_multiplicative_inverse; auto using Ring.homomorphism_one.
+      }
+      rewrite Ring.homomorphism_mul in A.
+      apply inv_unique in A. assumption.
+    Qed.
 
-    Lemma homomorphism_div : forall x y, phi (DIV x y) = div (phi x) (phi y).
+    Lemma homomorphism_multiplicative_inverse
+      : forall x, not (EQ x ZERO)
+      -> phi (INV x) = inv (phi x).
+    Proof.
+      intros. apply homomorphism_multiplicative_inverse_complete. contradiction.
+    Qed.
+
+    Lemma homomorphism_div_complete
+      : forall x y, (EQ y ZERO -> phi (INV y) = inv (phi y))
+      -> phi (DIV x y) = div (phi x) (phi y).
     Proof.
       intros. rewrite !field_div_definition.
-      rewrite Ring.homomorphism_mul, homomorphism_multiplicative_inverse. reflexivity.
+      rewrite Ring.homomorphism_mul, homomorphism_multiplicative_inverse_complete. reflexivity. trivial.
+    Qed.
+
+    Lemma homomorphism_div
+      : forall x y, not (EQ y ZERO)
+      -> phi (DIV x y) = div (phi x) (phi y).
+    Proof.
+      intros. apply homomorphism_div_complete. contradiction.
     Qed.
   End Homomorphism.
 End Field.

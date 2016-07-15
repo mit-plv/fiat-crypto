@@ -100,14 +100,16 @@ Section RespectsFieldHomomorphism.
        d_ok
        : field_homomorphism.
 
-  Lemma morphism_unidiedAdd' : forall P Q:F*F,
+  Lemma morphism_unifiedAdd' : forall P Q:F*F,
+    (~ EQ (ADD ONE (MUL (MUL (MUL (MUL D (fst P)) (fst Q)) (snd P)) (snd Q))) ZERO) ->
+    (~ EQ (SUB ONE (MUL (MUL (MUL (MUL D (fst P)) (fst Q)) (snd P)) (snd Q))) ZERO) ->
     eqp
       (phip (unifiedAdd'(F:=F)(one:=ONE)(add:=ADD)(sub:=SUB)(mul:=MUL)(div:=DIV)(a:=A)(d:=D) P Q))
             (unifiedAdd'(F:=K)(one:=one)(add:=add)(sub:=sub)(mul:=mul)(div:=div)(a:=a)(d:=d) (phip P) (phip Q)).
   Proof.
-    intros [x1 y1] [x2 y2].
+    intros [x1 y1] [x2 y2] Hnonzero1 Hnonzero2;
     cbv [unifiedAdd' phip eqp];
       apply conj;
-      (rewrite_strat topdown hints field_homomorphism); reflexivity.
+      (rewrite_strat topdown hints field_homomorphism); try assumption; reflexivity.
   Qed.
 End RespectsFieldHomomorphism.

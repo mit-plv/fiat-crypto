@@ -205,6 +205,8 @@ Module Extended.
     Context {Hd:Keq (phi Fd) Kd} {Kdd Fdd} {HKdd:Keq Kdd (Kadd Kd Kd)} {HFdd:Feq Fdd (Fadd Fd Fd)}.
     Local Notation Fpoint := (@point F Feq Fzero Fone Fadd Fmul Fdiv Fa Fd).
     Local Notation Kpoint := (@point K Keq Kzero Kone Kadd Kmul Kdiv Ka Kd).
+    Local Notation FonCurve := (@onCurve F Feq Fone Fadd Fmul Fa Fd).
+    Local Notation KonCurve := (@onCurve K Keq Kone Kadd Kmul Ka Kd).
 
     Lemma Ha : Keq (phi Fa) Ka.
     Proof. rewrite HFa, HKa, <-homomorphism_one. eapply homomorphism_opp. Qed.
@@ -228,7 +230,7 @@ Module Extended.
       let '(X, Y, Z, T) := coordinates P in (phi X, phi Y, phi Z, phi T)) _.
     Next Obligation.
       destruct P as [[[[] ?] ?] [? [? ?]]]; unfold onCurve in *; simpl.
-      rewrite_strat bottomup hints field_homomorphism.
+      (rewrite_strat bottomup hints field_homomorphism); try assumption.
       eauto 10 using is_homomorphism_phi_proper, phi_nonzero.
     Qed.
 
@@ -250,6 +252,6 @@ Module Extended.
              | |- Keq ?x ?y => rewrite_strat bottomup hints field_homomorphism
              | [ H : Feq _ _ |- Keq (phi _) (phi _)] => solve [f_equiv; intuition]
              end.
-    Qed.
+      Admitted. (* TODO(jadep or andreser) *)
   End Homomorphism.
 End Extended.

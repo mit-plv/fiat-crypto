@@ -124,19 +124,20 @@ Module E.
       Qed.
     End PointCompression.
   End CompleteEdwardsCurveTheorems.
-
   Section Homomorphism.
     Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv Fa Fd}
-            {fieldF:@field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
+            {field:@field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
             {Fprm:@twisted_edwards_params F Feq Fzero Fone Fadd Fmul Fa Fd}.
     Context {K Keq Kzero Kone Kopp Kadd Ksub Kmul Kinv Kdiv Ka Kd}
-            {fieldK:@field K Keq Kzero Kone Kopp Kadd Ksub Kmul Kinv Kdiv}
+            {fieldK: @Algebra.field K Keq Kzero Kone Kopp Kadd Ksub Kmul Kinv Kdiv}
             {Kprm:@twisted_edwards_params K Keq Kzero Kone Kadd Kmul Ka Kd}.
     Context {phi:F->K} {Hphi:@Ring.is_homomorphism F Feq Fone Fadd Fmul
                                                    K Keq Kone Kadd Kmul phi}.
     Context {Ha:Keq (phi Fa) Ka} {Hd:Keq (phi Fd) Kd}.
-    Local Notation Fpoint := (@point F Feq Fone Fadd Fmul Fa Fd).
-    Local Notation Kpoint := (@point K Keq Kone Kadd Kmul Ka Kd).
+    Local Notation Fpoint := (@E.point F Feq Fone Fadd Fmul Fa Fd).
+    Local Notation Kpoint := (@E.point K Keq Kone Kadd Kmul Ka Kd).
+    Local Notation FonCurve := (@onCurve F Feq Fone Fadd Fmul Fa Fd).
+    Local Notation KonCurve := (@onCurve K Keq Kone Kadd Kmul Ka Kd).
 
     Create HintDb field_homomorphism discriminated.
     Hint Rewrite <-
@@ -149,6 +150,7 @@ Module E.
          Hd
       : field_homomorphism.
 
+    Obligation Tactic := idtac.
     Program Definition ref_phi (P:Fpoint) : Kpoint := exist _ (
       let (x, y) := coordinates P in (phi x, phi y)) _.
     Next Obligation.
@@ -159,7 +161,7 @@ Module E.
 
     Context {point_phi:Fpoint->Kpoint}
             {point_phi_Proper:Proper (eq==>eq) point_phi}
-            {point_phi_correct: forall (P:Fpoint), eq (point_phi P) (ref_phi P)}.
+            {point_phi_correct: forall (P:point), eq (point_phi P) (ref_phi P)}.
 
     Lemma lift_homomorphism : @Group.is_homomorphism Fpoint eq add Kpoint eq add point_phi.
     Proof.
@@ -174,7 +176,11 @@ Module E.
              | |- Keq ?x ?x => reflexivity
              | |- Keq ?x ?y => rewrite_strat bottomup hints field_homomorphism
              | [ H : Feq _ _ |- Keq (phi _) (phi _)] => solve [f_equiv; intuition]
-             end.
+             end;
+        assert (FonCurve (f1,f2)) as FonCurve1 by assumption;
+        assert (FonCurve (f,f0)) as FonCurve2 by assumption;
+        [ eapply (@edwardsAddCompleteMinus F) with (x1 := f1); destruct Fprm; eauto
+        | eapply (@edwardsAddCompletePlus  F) with (x1 := f1); destruct Fprm; eauto].
       Qed.
   End Homomorphism.
 End E.
