@@ -16,7 +16,7 @@ Module Pseudo <: Language.
     | PShift: forall n, RotOp -> Index w -> Pseudo n 1 -> Pseudo n 1
     | PFunExp: forall n, Pseudo n n -> nat -> Pseudo n n
     | PLet: forall n k m, Pseudo n k -> Pseudo (n + k) m -> Pseudo n m
-    | PComb: forall n a b, Pseudo n a -> Pseudo n b -> Pseudo n (a + b)
+    | PCons: forall n m, Pseudo n 1 -> Pseudo n m -> Pseudo n (S m)
     | PCall: forall n m, Label -> Pseudo n m -> Pseudo n m
     | PIf: forall n m, TestOp -> Index n -> Index n ->
                   Pseudo n m -> Pseudo n m -> Pseudo n m.
@@ -89,7 +89,7 @@ Module Pseudo <: Language.
         omap (pseudoEval g (setList ((getList st) ++ (getList sf)) sf))
           (fun sg => Some sg))
 
-    | PComb n a b f g =>
+    | PCons n m f g =>
       omap (pseudoEval f st) (fun sf =>
         omap (pseudoEval g (setList (getList st) sf)) (fun sg =>
           Some (setList ((getList sf) ++ (getList sg)) sg)))
@@ -133,19 +133,19 @@ Module Pseudo <: Language.
   Notation "# A" := (PConst _ (natToWord _ A))
     (at level 20, right associativity) : pseudo_notations.
 
-  Notation "A :+: B" := (PBin _ IAdd (PComb _ _ _ A B))
+  Notation "A :+: B" := (PBin _ IAdd (PCons _ _ A B))
     (at level 60, right associativity) : pseudo_notations.
 
-  Notation "A :+c: B" := (PCarry _ AddWithCarry (PComb _ _ _ A B))
+  Notation "A :+c: B" := (PCarry _ AddWithCarry (PCons _ _ A B))
     (at level 60, right associativity) : pseudo_notations.
 
-  Notation "A :-: B" := (PBin _ ISub (PComb _ _ _ A B))
+  Notation "A :-: B" := (PBin _ ISub (PCons _ _ A B))
     (at level 60, right associativity) : pseudo_notations.
 
-  Notation "A :&: B" := (PBin _ IAnd (PComb _ _ _ A B))
+  Notation "A :&: B" := (PBin _ IAnd (PCons _ _ A B))
     (at level 45, right associativity) : pseudo_notations.
 
-  Notation "A :^: B" := (PBin _ IXor (PComb _ _ _ A B))
+  Notation "A :^: B" := (PBin _ IXor (PCons _ _ A B))
     (at level 45, right associativity) : pseudo_notations.
 
   Notation "A :>>: B" := (PShift _ Shr (indexize B) A)
@@ -154,7 +154,7 @@ Module Pseudo <: Language.
   Notation "A :<<: B" := (PShift _ Shl (indexize B) A)
     (at level 60, right associativity) : pseudo_notations.
 
-  Notation "A :*: B" := (PDual _ Mult (PComb _ _ _ A B))
+  Notation "A :*: B" := (PDual _ Mult (PCons _ _ A B))
     (at level 55, right associativity) : pseudo_notations.
 
   Notation "O :( A , B ): :?: L ::: R" :=
@@ -170,7 +170,7 @@ Module Pseudo <: Language.
     (at level 70, right associativity) : pseudo_notations.
 
   Notation "A :|: B" :=
-    (PComb _ _ _ A B)
+    (PCons _ _ A B)
     (at level 65, left associativity) : pseudo_notations.
 
   Notation "n ::: A :():" :=

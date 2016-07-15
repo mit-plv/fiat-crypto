@@ -14,9 +14,9 @@ Open Scope nword_scope.
 
 Section Bounds.
   Lemma wordize_plus': forall {n} (x y: word n) (b: N),
-      (b <= Npow2 n)%N
-    -> (&x < b)%N
+      (&x < b)%N
     -> (&y < (Npow2 n - b))%N
+    -> (b <= Npow2 n)%N
     -> (&x + &y)%N = & (x ^+ y).
   Proof.
     intros.
@@ -99,12 +99,12 @@ Section Bounds.
         try apply N.add_lt_mono;
         try assumption.
 
-      + apply N.lt_le_incl; nomega.
-
       + apply (N.lt_le_trans _ b2 _); try assumption.
         apply N.lt_le_incl.
         apply N.lt_add_lt_sub_l.
         assumption.
+
+      + apply N.lt_le_incl; nomega.
 
     - apply (N.lt_le_trans _ (Npow2 n) _).
 
@@ -230,7 +230,7 @@ Section Bounds.
   Qed.
 
   Lemma mask_update_bound : forall {n} (w : word n) b m,
-      (n > 1)%nat
+      (1 < n)%nat
     -> (&w < b)%N
     -> (&(mask m w) < (N.min b (Npow2 m)))%N.
   Proof.
@@ -280,6 +280,30 @@ Section Bounds.
   Proof. intros; nomega. Qed.
 
 End Bounds.
+
+(** Constant Tactics **)
+
+Ltac assert_nat_constant t :=
+  timeout 1 (match (eval vm_compute in t) with
+  | O => idtac
+  | S ?n => assert_nat_constant n
+  | _ => fail
+  end).
+
+Ltac assert_bin_constant t :=
+  timeout 1 (match (eval vm_compute in t) with
+  | xH => idtac
+  | xI ?p => assert_bin_constant p
+  | xO ?p => assert_bin_constant p
+  | _ => fail
+  end).
+
+Ltac assert_word_constant t :=
+  timeout 1 (match (eval vm_compute in t) with
+  | WO => idtac
+  | WS _ ?w => assert_word_constant w
+  | _ => fail
+  end).
 
 (** Bounding Tactics **)
 
@@ -341,7 +365,7 @@ Lemma unwrap_let: forall {n} (y: word n) (f: word n -> word n) (b: N),
     (&(let x := y in f x) < b)%N <-> let x := y in (&(f x) < b)%N.
 Proof. intuition. Qed.
 
-Ltac compute_bound :=
+Ltac bound_compute :=
   repeat match goal with
   | [|- let A := ?B in _] =>
     match (type of B) with
@@ -352,7 +376,7 @@ Ltac compute_bound :=
     apply unwrap_let
 
   | [ H: (wordToN ?W < ?b0)%N |- (wordToN ?W < ?b1)%N ] =>
-    eapply (N.lt_le_trans _ b0 _); try eassumption
+    try eassumption; eapply (N.lt_le_trans _ b0 _); try eassumption
 
   | [|- (@wordToN ?n ?W < ?b)%N ] =>
     multi_recurse n W
@@ -371,4 +395,19 @@ Ltac compute_bound :=
       try reflexivity;
       try abstract (let H := fresh in intro H; inversion H)
 
+  (* cleanup generated nat goals *)
+  | [|- (?a <= ?b)%nat ] => omega
+  | [|- (?a < ?b)%nat ] => omega
+
+  end.
+
+(* for x : word n *)
+Ltac find_bound_on x :=
+  match (type of x) with
+  | word ?n =>
+    match x with
+    | let A := ?b in ?c => find_bound_on b; set (A := b)
+    | _ => multi_recurse n x
+    end
+  | _ => idtac
   end.

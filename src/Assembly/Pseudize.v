@@ -9,13 +9,14 @@ Import Pseudo ListNotations StateCommon EvalUtil ListState.
 Section Conversion.
 
   Hint Unfold setList getList getVar setCarry setCarryOpt getCarry
-       getMem setMem overflows ensureLength.
+       getMem setMem overflows ensureLength evalCarryOp.
 
   Lemma eval_in_length: forall {w s n m} p x M c x' M' c',
       @pseudoEval n m w s p (x, M, c) = Some (x', M', c')
     -> Datatypes.length x = n.
   Proof.
-    autounfold; intros until c'; intro H.
+    intros until c'; intro H; autounfold.
+
     destruct (Nat.eq_dec (Datatypes.length (getList (x, M, c))) n)
       as [Hn|Hn].
 
@@ -90,14 +91,10 @@ Section Conversion.
   Proof.
     intros until c1; intro H; simpl; rewrite H; simpl.
 
-    pose proof (wordize_plus out0 out1).
-    destruct (overflows w _); autounfold; simpl; try rewrite H0;
-      try rewrite <- (@Npow2_ignore w (out0 ^+ out1));
-      try rewrite NToWord_wordToN; intuition;
-
-      apply eval_in_length in H;
+    autounfold; simpl; apply eval_in_length in H;
       destruct (Nat.eq_dec (Datatypes.length x) n);
-      intuition; inversion H.
+      destruct (Nge_dec _ _);
+      try rewrite NToWord_wordToN; simpl; intuition.
   Qed.
 
   Lemma pseudo_bin:
@@ -138,15 +135,15 @@ Section Conversion.
           Some (proj1_sig (bool_of_sumbool (overflows w
           (&out0 + &out1 + (if c then 1 else 0))%N)%w))).
   Proof.
-    intros; simpl; rewrite H; simpl.
+    intros until c; intro H; simpl; rewrite H; simpl.
+    unfold addWithCarry, evalCarryOp.
 
-    pose proof (wordize_awc out0 out1); unfold evalCarryOp.
-    destruct (overflows w _);
-      autounfold; simpl; try rewrite H0; intuition;
-
-      apply eval_in_length in H;
-      destruct (Nat.eq_dec _ n);
-      intuition.
+    autounfold; simpl; apply eval_in_length in H;
+      destruct (Nat.eq_dec (Datatypes.length x) n);
+      destruct (Nge_dec _ _);
+      destruct (overflows w
+        ((& out0)%w + (& out1)%w + (ind c)));
+      try rewrite NToWord_wordToN; simpl; intuition.
   Qed.
 
   Lemma pseudo_shiftr:
@@ -163,35 +160,21 @@ Section Conversion.
       intuition.
   Qed.
 
-  Lemma pseudo_comb:
-    forall {w s n a b} (p0: @Pseudo w s n a) (p1: @Pseudo w s n b)
-      input out0 out1 m0 m1 m2 c0 c1 c2,
-      pseudoEval p0 (input, m0, c0) = Some (out0, m1, c1)
-    -> pseudoEval p1 (input, m1, c1) = Some (out1, m2, c2)
-    -> pseudoEval (@PComb w s n _ _ p0 p1) (input, m0, c0) =
-        Some (out0 ++ out1, m2, c2).
+  Lemma pseudo_cons:
+    forall {w s n m} (p0: @Pseudo w s n 1) (p1: @Pseudo w s n m)
+        input x xs m0 m1 m2 c0 c1 c2,
+      pseudoEval p0 (input, m0, c0) = Some ([x], m1, c1)
+    -> pseudoEval p1 (input, m1, c1) = Some (xs, m2, c2)
+    -> pseudoEval (@PCons w s _ _ p0 p1) (input, m0, c0) = Some (x :: xs, m2, c2).
   Proof.
-    intros; autounfold; simpl.
+    intros until c2; intros H H0; simpl.
+
     rewrite H; autounfold; simpl.
     rewrite H0; autounfold; simpl; intuition.
 
     apply eval_in_length in H;
       destruct (Nat.eq_dec _ n);
       intuition.
-  Qed.
-
-  Lemma pseudo_cons:
-    forall {w s n b} (p0: @Pseudo w s n 1) (p1: @Pseudo w s n b)
-        (p2: @Pseudo w s n (S b)) input x xs m0 m1 m2 c0 c1 c2,
-      pseudoEval p1 (input, m1, c1) = Some (xs, m2, c2)
-    -> pseudoEval p0 (input, m0, c0) = Some ([x], m1, c1)
-    -> p2 = (@PComb w s n _ _ p0 p1)
-    -> pseudoEval p2 (input, m0, c0) = Some (x :: xs, m2, c2).
-  Proof.
-    intros.
-    replace (x :: xs) with ([x] ++ xs) by (simpl; intuition).
-    rewrite H1.
-    apply (pseudo_comb p0 p1 input _ _ m0 m1 m2 c0 c1 c2); intuition.
   Qed.
 
   Lemma pseudo_let:
@@ -242,7 +225,7 @@ Section Conversion.
     eapply pseudo_let; try eassumption.
   Qed.
 
-  Lemma pseudo_mult_single:
+  Lemma pseudo_mult_single_let:
     forall {w s n m} (p0: @Pseudo w s n 2)
                 (p1: @Pseudo w s (n + 2) m)
         out0 out1 f x m0 m1 m2 c0 c1 c2,
@@ -264,7 +247,7 @@ Section Conversion.
     simpl; intuition.
   Qed.
 
-  Lemma pseudo_mult_dual:
+  Lemma pseudo_mult_dual_let:
     forall {w s n m} (p0: @Pseudo w s n 2)
                 (p1: @Pseudo w s (n + 2) m)
         out0 out1 f x m0 m1 m2 c0 c1 c2,
@@ -294,6 +277,52 @@ Section Conversion.
     - rewrite app_nth2; try rewrite H; intuition.
       replace (n - n) with 0 by omega.
       simpl; intuition.
+  Qed.
+
+  Lemma pseudo_mult_low:
+    forall {w s n} (p0: @Pseudo w s n 2)
+        out0 out1 x m0 m1 c0 c1,
+      pseudoEval p0 (x, m0, c0) = Some ([out0; out1], m1, c1)
+    -> pseudoEval (@PLet w s n 2 1 (PDual n Mult p0) (PVar (n + 2) None (indexize n))) (x, m0, c0) =
+      Some ([out0 ^* out1], m1, c1).
+  Proof.
+    intros until c1; intro H.
+    replace [out0 ^* out1] with (Let_In (out0 ^* out1) (fun x => [x])) by (cbv zeta; reflexivity).
+    eapply pseudo_mult_single_let; try apply H.
+    apply eval_in_length in H.
+    apply pseudo_var; try reflexivity; try omega.
+
+    - rewrite app_length; rewrite H; simpl; reflexivity.
+
+    - rewrite <- nth_default_eq; unfold nth_default.
+      rewrite nth_error_app2; try rewrite H; intuition.
+      replace (n - n) with 0 by omega; simpl.
+      reflexivity.
+  Qed.
+
+  Lemma pseudo_mult_high:
+    forall {w s n} (p0: @Pseudo w s n 2)
+        out0 out1 x m0 m1 c0 c1,
+      pseudoEval p0 (x, m0, c0) = Some ([out0; out1], m1, c1)
+    -> pseudoEval (@PLet w s n 2 1 (PDual n Mult p0) (PVar (n + 2) None (indexize (n + 1)))) (x, m0, c0) =
+      Some ([multHigh out0 out1], m1, c1).
+  Proof.
+    intros until c1; intro H.
+    replace [multHigh out0 out1] with (
+      Let_In (multHigh out0 out1) (fun x =>
+        Let_In (out0 ^* out1) (fun y => [x]))) by (cbv zeta; reflexivity).
+
+    eapply pseudo_mult_dual_let; try apply H.
+    apply eval_in_length in H.
+    apply pseudo_var; try reflexivity; try omega.
+
+    - rewrite app_length; rewrite H; simpl; reflexivity.
+
+    - rewrite <- nth_default_eq; unfold nth_default.
+      repeat rewrite nth_error_app2; try rewrite H; intuition.
+      replace (n + 1 - n) with 1 by omega.
+      replace (S n - n) with 1 by omega; simpl.
+      reflexivity.
   Qed.
 
   Lemma pseudo_if_left:
@@ -350,31 +379,122 @@ Section Conversion.
       try rewrite T; intuition.
   Qed.
 
-  Lemma pseudo_funexp:
-    forall {w s n k m} (p0: @Pseudo w s n k) (p1: @Pseudo w s (n + k) m)
-      input f p e (m0 m1: TripleNMap) (c0 c1: option bool),
-      Datatypes.length input = n
-    -> (forall x m c, exists m' c', pseudoEval p (x, m, c) = Some (f x, m', c'))
-    -> exists m1 c1,
-        pseudoEval (@PFunExp w s n p e) (input, m0, c0) =
-          Some (funexp f input e, m1, c1).
+  Lemma pseudo_mask:
+    forall {w s n} (p: @Pseudo w s n 1) k x out m0 m1 c0 c1,
+      pseudoEval p (x, m0, c0) = Some ([out], m1, c1)
+    -> pseudoEval (PBin n IAnd (PCons _ _ p
+          (PConst _ (NToWord _ (N.ones (N.of_nat k)))))) (x, m0, c0) =
+        Some ([mask k out], m1, c1).
   Proof.
-    intros until m0; intros m1 c0 c1 L H;
-      induction e; autounfold; simpl.
+    intros until c1; intro H.
+    pose proof (eval_in_length _ _ _ _ _ _ _ H).
+    rewrite conv_mask.
+    eapply pseudo_and.
+    eapply pseudo_cons; try reflexivity; try apply H.
+    eapply pseudo_const; try assumption.
+  Qed.
 
-    - repeat eexists; autounfold; simpl.
-      destruct (Nat.eq_dec _ n); simpl; intuition.
+  Lemma pseudo_funexp':
+    forall {w s n} input f p e (m0 m1: TripleNMap) (c0 c1: option bool),
+      Datatypes.length input = n
+    -> (forall x m c, {st | pseudoEval p (x, m, c) = Some (setList (f x) st)})
+    -> {st |
+        pseudoEval (@PFunExp w s n p e) (input, m0, c0) =
+          Some (setList (funexp f input e) st)}.
+  Proof.
+    intros until m0; intros m1 c0 c1 L H.
+    autounfold; simpl; autounfold; simpl.
+    destruct (Nat.eq_dec _ n); intuition.
 
-    - repeat eexists; autounfold; simpl.
+    induction e; eexists; simpl.
 
-      destruct IHe as [m' IHe];
-        destruct IHe as [c' IHe];
-        rewrite IHe.
+    - transitivity (Some
+       (input,
+        snd (fst (input, m0, c0)),
+        snd (input, m0, c0)));
+      try reflexivity.
 
-      destruct (Nat.eq_dec _ n); simpl; intuition.
+    - rewrite (proj2_sig IHe); simpl.
+      rewrite
+        (proj2_sig (H (funexp f input e)
+           (snd (fst (proj1_sig IHe)))
+           (snd (proj1_sig IHe)))).
+      unfold setList; simpl.
+      reflexivity.
+  Qed.
 
-      (* Mess with some evars *)
-  Admitted.
+  Lemma pseudo_funexp_O:
+    forall {w s n} input p m c,
+      Datatypes.length input = n
+    -> pseudoEval (@PFunExp w s n p O) (input, m, c) =
+        Some (input, m, c).
+  Proof.
+    intros until c; intros H.
+    autounfold; simpl; autounfold; simpl.
+    destruct (Nat.eq_dec _ n); intuition.
+  Qed.
+
+  Lemma pseudo_funexp_S:
+    forall {w s n} e input p (m: TripleNMap) (c: option bool),
+      Datatypes.length input = n
+    -> pseudoEval (@PFunExp w s n p (S e)) (input, m, c) =
+        omap (pseudoEval (@PFunExp w s n p e) (input, m, c)) (pseudoEval p).
+  Proof.
+    intros until c; intro H.
+    simpl; autounfold; simpl.
+    destruct (Nat.eq_dec _ n); intuition.
+  Qed.
+
+  Lemma pseudo_funexp:
+    forall {w s n} e input input' f p (m0 m1: TripleNMap) (c0 c1: option bool),
+      Datatypes.length input = n
+    -> (forall x m c x' m' c',
+            pseudoEval p (x, m, c) = Some (x', m', c')
+          -> pseudoEval p (x, m, c) = Some (f x, m', c'))
+    -> pseudoEval (@PFunExp w s n p e) (input, m0, c0) = Some (input', m1, c1)
+    -> pseudoEval (@PFunExp w s n p e) (input, m0, c0) =
+        Some (funexp f input e, m1, c1).
+  Proof.
+    intros until c1; intros H Hf He.
+    revert He H; revert input input' m0 m1 c0 c1.
+    induction e; intros.
+
+    - rewrite pseudo_funexp_O; try assumption.
+      simpl in *; autounfold in He; simpl in He.
+      destruct (Nat.eq_dec (Datatypes.length input) n); intuition.
+      inversion He; subst.
+      reflexivity.
+
+    - rewrite (pseudo_funexp_S); try assumption.
+      rewrite (pseudo_funexp_S) in He; try assumption.
+      assert (exists a b c, pseudoEval (p :**: e)%p (input, m0, c0) = Some (a, b, c)) as Z. {
+        induction (pseudoEval (p :**: e)%p (input, m0, c0)) as [z|].
+
+        + exists (fst (fst z)); exists (snd (fst z)); exists (snd z).
+          induction z as [z0 z2]; induction z0 as [z0 z1]; simpl; reflexivity.
+
+        + simpl in He; inversion He.
+      }
+
+      destruct Z as [a Z], Z as [b Z], Z as [c Z].
+      replace (funexp f input (S e)) with (f (funexp f input e)) by (simpl; intuition).
+
+      erewrite <- Hf.
+
+      + rewrite (IHe _ a _ b _ c); try assumption.
+        simpl; reflexivity.
+
+      + rewrite Z in *; simpl in He.
+        rewrite <- He.
+        f_equal.
+        assert (Some (funexp f input e, b, c) = Some (a, b, c)) as HSome. {
+          rewrite <- Z.
+          rewrite (IHe _ a _ b _ c); try assumption.
+          reflexivity.
+        }
+
+        inversion HSome; subst; intuition.
+  Qed.
  
   Definition pseudeq {w s} (n m: nat) (f: list (word w) -> list (word w)) : Type := 
     {p: @Pseudo w s n m | forall x: (list (word w)),
@@ -387,10 +507,10 @@ Ltac pseudo_step :=
   | [ |- pseudoEval ?p _ = Some ((
             Let_In (multHigh ?a ?b) (fun x =>
             Let_In (?a ^* ?b) (fun y => _))), _, _) ] =>
-    is_evar p; eapply pseudo_mult_dual
+    is_evar p; eapply pseudo_mult_dual_let
 
   | [ |- pseudoEval ?p _ = Some (Let_In (?a ^* ?b) _, _, _) ] =>
-    is_evar p; eapply pseudo_mult_single
+    is_evar p; eapply pseudo_mult_single_let
 
   | [ |- pseudoEval ?p _ = Some ([?x ^& ?y], _, _) ] =>
     is_evar p; eapply pseudo_and
@@ -398,10 +518,22 @@ Ltac pseudo_step :=
   | [ |- pseudoEval ?p _ = Some ([?x ^+ ?y], _, _) ] =>
     is_evar p; eapply pseudo_plus
 
+  | [ |- pseudoEval ?p _ = Some ([?x ^* ?y], _, _) ] =>
+    is_evar p; eapply pseudo_mult_low
+
+  | [ |- pseudoEval ?p _ = Some ([multHigh ?x ?y], _, _) ] =>
+    is_evar p; eapply pseudo_mult_high
+
+  | [ |- pseudoEval ?p _ = Some ([mask ?k ?x], _, _) ] =>
+    is_evar p; eapply pseudo_mask
+
   | [ |- pseudoEval ?p _ = Some (cons ?x (cons _ _), _, _) ] =>
-    is_evar p; eapply pseudo_cons; try reflexivity
+    is_evar p; eapply pseudo_cons
 
   | [ |- pseudoEval ?p _ = Some ([natToWord _ ?x], _, _)%p ] =>
+    is_evar p; eapply pseudo_const
+
+  | [ |- pseudoEval ?p _ = Some ([NToWord _ ?x], _, _)%p ] =>
     is_evar p; eapply pseudo_const
 
   | [ |- pseudoEval ?p _ = Some ((Let_In ?a ?f), _, _) ] =>

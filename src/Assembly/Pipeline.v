@@ -27,58 +27,38 @@ Module PipelineExamples.
   Local Notation "v [[ i ]]" := (nth i v (wzero _)) (at level 40).
   Local Notation "$$ v" := (natToWord _ v) (at level 40).
 
-  Definition add_f : Curried N N 2 1 := fun x y =>
-    N.add (N.land x (N.ones 15)) (N.land y (N.ones 15)).
+  Section Example1.
+    Definition f1 : Curried N N 2 1 := fun x y =>
+      N.add (N.land x (N.ones 15)) (N.land y (N.ones 15)).
 
-  Lemma add_wordF: wordeq 32 add_f.
-  Proof. unfold add_f; wordize. Defined.
+    Lemma wordF1: wordeq 32 f1.
+    Proof. unfold f1; wordize. Defined.
 
-  Definition add_listF := curriedToList (wzero _) (proj1_sig add_wordF).
+    Definition listF1 := curriedToList (wzero _) (proj1_sig wordF1).
 
-  Definition add_example: @pseudeq 32 W32 1 1 add_listF.
-    unfold add_listF; simpl; pseudo_solve.
-  Defined.
+    Definition pseudo1: @pseudeq 32 W32 2 1 listF1.
+      unfold listF1; simpl; pseudo_solve.
+    Defined.
 
-  Definition add_ex_str :=
-    (Pipeline.toString (proj1_sig add_example)).
+    Definition asm1 :=
+      (Pipeline.toString (proj1_sig pseudo1)).
+  End Example1.
 
-  Definition and_example: @pseudeq 32 W32 1 1 (fun v =>
-      plet a := $$ 1 in
-      plet b := v[[0]] in
-      [a ^& b]).
-    pseudo_solve.
-  Defined.
+  Section Example2.
+    Definition f2 : Curried N N 2 1 := fun x y =>
+      N.mul (N.land x (N.ones 15)) (N.land y (N.ones 15)).
 
-  Definition and_ex_str :=
-    (Pipeline.toString (proj1_sig and_example)).
+    Lemma wordF2: wordeq 32 f2.
+    Proof. unfold f2; wordize. Defined.
 
-  Definition mult_example: @pseudeq 32 W32 1 1 (fun v =>
-      plet a := $$ 1 in
-      plet b := v[[0]] in
+    Definition listF2 := curriedToList (wzero _) (proj1_sig wordF2).
 
-      (* NOTE: we want the lets in this format to unify with
-               pseudo_mult_dual *)  
-      plet c := multHigh a b in
-      plet d := a ^* b in
+    Definition pseudo2: @pseudeq 32 W32 2 1 listF2.
+      unfold listF2; simpl; pseudo_solve.
+    Defined.
 
-      [b ^& d]).
-    pseudo_solve.
-  Defined.
-
-  Definition comb_example: @pseudeq 32 W32 1 2 (fun v =>
-      plet a := natToWord _ 7 in
-      plet b := nth 0 v (wzero _) in
-      ([a; b])).
-    pseudo_solve.
-  Qed.
-
-  Definition mult_ex_str :=
-    (Pipeline.toString (proj1_sig mult_example)).
-
-  Ltac gen_evar_local_defs :=
-    repeat match goal with |- context[?V] => is_evar V; set V end.
-
-  Definition comb_ex_str :=
-    (Pipeline.toString (proj1_sig comb_example)).
+    Definition asm2 :=
+      (Pipeline.toString (proj1_sig pseudo2)).
+  End Example2.
 
 End PipelineExamples.

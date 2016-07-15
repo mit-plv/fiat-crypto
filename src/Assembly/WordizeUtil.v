@@ -5,6 +5,11 @@ Require Import SetoidTactics.
 Require Import ProofIrrelevance FunctionalExtensionality.
 Require Import QhasmUtil QhasmEvalCommon.
 
+Ltac shatter a :=
+  let H := fresh in
+  pose proof (shatter_word a) as H; simpl in H;
+    try rewrite H in *; clear H.
+
 Section Misc.
   Local Open Scope nword_scope.
 
@@ -270,6 +275,15 @@ Section Conversions.
     rewrite Nat2N.id.
     rewrite natToWord_wordToNat.
     intuition.
+  Qed.
+
+  Lemma NToWord_equal: forall n (x y: word n),
+      wordToN x = wordToN y -> x = y.
+  Proof.
+    intros.
+    rewrite <- (NToWord_wordToN _ x).
+    rewrite <- (NToWord_wordToN _ y).
+    rewrite H; reflexivity.
   Qed.
 
   Lemma wordToN_NToWord: forall sz x, (x < Npow2 sz)%N -> wordToN (NToWord sz x) = x.
@@ -707,11 +721,6 @@ Section SpecialFunctions.
       simpl in Hx; rewrite Hx; simpl.
     reflexivity.
   Qed.
-
-  Ltac shatter a :=
-    let H := fresh in
-    pose proof (shatter_word a) as H; simpl in H;
-      try rewrite H in *; clear H.
 
   Lemma wordToN_testbit: forall {n} (x: word n) k,
     N.testbit (& x) k = wbit x (N.to_nat k).
