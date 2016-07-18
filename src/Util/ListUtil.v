@@ -72,6 +72,7 @@ Ltac boring :=
   simpl; intuition;
   repeat match goal with
            | [ H : _ |- _ ] => rewrite H; clear H
+           | [ |- appcontext[match ?pf with end] ] => solve [ case pf ]
            | _ => progress autounfold in *
            | _ => progress autorewrite with core
            | _ => progress simpl in *
@@ -846,6 +847,41 @@ Ltac update_nth_inbounds :=
   end.
 
 Ltac nth_inbounds := nth_error_inbounds || set_nth_inbounds || update_nth_inbounds.
+
+Definition nth_dep {A} (ls : list A) (n : nat) (pf : n < length ls) : A.
+Proof.
+  refine (match nth_error ls n as v return nth_error ls n = v -> A with
+          | Some v => fun _ => v
+          | None => fun bad => match _ : False with end
+          end eq_refl).
+  apply (proj1 (@List.nth_error_None _ _ _)) in bad; generalize dependent (length ls); clear.
+  abstract (intros; omega).
+Defined.
+
+Lemma nth_error_nth_dep {A} ls n pf : nth_error ls n = Some (@nth_dep A ls n pf).
+Proof.
+  unfold nth_dep.
+  generalize dependent (List.nth_error_None ls n).
+  edestruct nth_error; boring.
+Qed.
+
+Lemma nth_default_nth_dep {A} d ls n pf : nth_default d ls n = @nth_dep A ls n pf.
+Proof.
+  unfold nth_dep.
+  generalize dependent (List.nth_error_None ls n).
+  destruct (nth_error ls n) eqn:?; boring.
+  erewrite nth_error_value_eq_nth_default by eassumption; reflexivity.
+Qed.
+
+Lemma nth_default_in_bounds : forall {T} n us (d d' : T), (n < length us)%nat ->
+  nth_default d us n = nth_default d us n.
+Proof.
+  intros; erewrite !nth_default_nth_dep; reflexivity.
+  Grab Existential Variables.
+  assumption.
+Qed.
+
+Hint Resolve @nth_default_in_bounds : simpl_nth_default.
 
 Lemma cons_eq_head : forall {T} (x y:T) xs ys, x::xs = y::ys -> x=y.
 Proof.
