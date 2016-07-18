@@ -1,5 +1,7 @@
 (** * Reserved Notations *)
 
+Require Export Crypto.Util.GlobalSettings.
+
 (** Putting them all together in one file prevents conflicts.  Coq's
     parser (camlpX) is really bad at conflicting notation levels and
     is sometimes really bad at backtracking, too.  Not having level
