@@ -474,14 +474,8 @@ Section BaseSystemProofs.
     auto.
   Qed.
 
-  (* mul' is multiplication with the FIRST ARGUMENT REVERSED *)
-  Fixpoint mul' (usr vs:digits) : digits :=
-    match usr with
-      | u::usr' =>
-        mul_each u (mul_bi base (length usr') vs) .+ mul' usr' vs
-      | _ => nil
-    end.
-  Definition mul us := mul' (rev us).
+  Local Notation mul' := (mul' base).
+  Local Notation mul := (mul base).
 
   Lemma mul'_rep : forall us vs,
     (length us + length vs <= length base)%nat ->
@@ -521,7 +515,7 @@ Section BaseSystemProofs.
   Lemma mul_length: forall us vs,
       (length (mul us vs) <= length us + length vs)%nat.
   Proof.
-    intros; unfold mul.
+    intros; unfold BaseSystem.mul.
     rewrite mul'_length.
     rewrite rev_length; omega.
   Qed.
@@ -541,7 +535,7 @@ Section BaseSystemProofs.
                              end)%nat.
   Proof.
     induction us; intros; try solve [boring].
-    unfold mul'; fold mul'.
+    unfold BaseSystem.mul'; fold mul'.
     unfold mul_each.
     rewrite add_length_exact, map_length, mul_bi_length, length_cons.
     destruct us.
@@ -568,7 +562,7 @@ Section BaseSystemProofs.
                             | _ => pred (length us + length vs)
                             end)%nat.
   Proof.
-    intros; unfold mul; autorewrite with distr_length; reflexivity.
+    intros; unfold BaseSystem.mul; autorewrite with distr_length; reflexivity.
   Qed.
 
   Hint Rewrite mul_length_exact_full : distr_length.
@@ -579,7 +573,7 @@ Section BaseSystemProofs.
       (length us <= length vs)%nat -> us <> nil ->
       (length (mul us vs) = pred (length us + length vs))%nat.
   Proof.
-    intros; unfold mul.
+    intros; unfold BaseSystem.mul.
     rewrite mul'_length_exact; rewrite ?rev_length; try omega.
     intro rev_nil.
     match goal with H : us <> nil |- _ => apply H end.
@@ -637,3 +631,29 @@ Section BaseSystemProofs.
 End BaseSystemProofs.
 
 Hint Rewrite @add_length_exact @mul'_length_exact_full @mul_length_exact_full @encode'_length @sub_length : distr_length.
+
+Section MultiBaseSystemProofs.
+  Context base0 (base_vector0 : @BaseVector base0) base1 (base_vector1 : @BaseVector base1).
+
+  Lemma decode_short_initial : forall (us : digits),
+      (firstn (length us) base0 = firstn (length us) base1)
+      -> decode base0 us = decode base1 us.
+  Proof.
+    intros us H.
+    unfold decode, decode'.
+    rewrite (combine_truncate_r us base0), (combine_truncate_r us base1), H.
+    reflexivity.
+  Qed.
+
+  Lemma mul_rep_two_base : forall (us vs : digits),
+      (length us + length vs <= length base1)%nat
+      -> firstn (length us) base0 = firstn (length us) base1
+      -> firstn (length vs) base0 = firstn (length vs) base1
+      -> (decode base0 us) * (decode base0 vs) = decode base1 (mul base1 us vs).
+  Proof.
+      intros.
+      rewrite mul_rep by trivial.
+      apply f_equal2; apply decode_short_initial; assumption.
+  Qed.
+
+End MultiBaseSystemProofs.

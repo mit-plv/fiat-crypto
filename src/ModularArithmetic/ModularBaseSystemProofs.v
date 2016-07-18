@@ -128,27 +128,29 @@ Section PseudoMersenneProofs.
     subst; auto.
   Qed.
 
+  Lemma firstn_us_base_ext_base : forall (us : BaseSystem.digits),
+      (length us <= length base)%nat
+      -> firstn (length us) base = firstn (length us) ext_base.
+  Proof.
+    unfold ext_base; intros.
+    rewrite firstn_app_inleft; auto; omega.
+  Qed.
+  Local Hint Immediate firstn_us_base_ext_base.
+
   Lemma decode_short : forall (us : BaseSystem.digits),
     (length us <= length base)%nat ->
     BaseSystem.decode base us = BaseSystem.decode ext_base us.
-  Proof.
-    intros.
-    unfold BaseSystem.decode, BaseSystem.decode'.
-    rewrite combine_truncate_r.
-    rewrite (combine_truncate_r us ext_base).
-    f_equal; f_equal.
-    unfold ext_base.
-    rewrite firstn_app_inleft; auto; omega.
-  Qed.
+  Proof. auto using decode_short_initial. Qed.
+
+  Local Hint Immediate ExtBaseVector.
 
   Lemma mul_rep_extended : forall (us vs : BaseSystem.digits),
       (length us <= length base)%nat ->
       (length vs <= length base)%nat ->
       (BaseSystem.decode base us) * (BaseSystem.decode base vs) = BaseSystem.decode ext_base (BaseSystem.mul ext_base us vs).
   Proof.
-      intros.
-      rewrite mul_rep by (apply ExtBaseVector || unfold ext_base; simpl_list; omega).
-      f_equal; rewrite decode_short; auto.
+    intros; apply mul_rep_two_base; auto;
+      autorewrite with distr_length; try omega.
   Qed.
 
   Lemma modulus_nonzero : modulus <> 0.

@@ -160,3 +160,5 @@ Section ExtendedBaseVector.
     unfold ext_base; rewrite app_length; rewrite map_length; auto.
   Qed.
 End ExtendedBaseVector.
+
+Hint Rewrite @extended_base_length : distr_length.
