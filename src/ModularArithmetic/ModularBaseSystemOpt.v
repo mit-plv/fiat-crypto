@@ -3,6 +3,7 @@ Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParams.
 Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParamProofs.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemProofs.
 Require Import Crypto.ModularArithmetic.ExtendedBaseVector.
+Require Import Crypto.ModularArithmetic.Pow2BaseProofs.
 Require Import Crypto.BaseSystem Crypto.ModularArithmetic.ModularBaseSystem.
 Require Import Coq.Lists.List.
 Require Import Crypto.Util.ListUtil Crypto.Util.ZUtil Crypto.Util.NatUtil Crypto.Util.CaseUtil.
@@ -118,9 +119,10 @@ Section Carries.
     cbv [carry].
     rewrite <- pull_app_if_sumbool.
     cbv beta delta
-      [carry carry_and_reduce Pow2Base.carry_simple Pow2Base.add_to_nth
+      [carry carry_and_reduce Pow2Base.carry_gen Pow2Base.carry_and_reduce_single Pow2Base.carry_simple
        Z.pow2_mod Z.ones Z.pred
        PseudoMersenneBaseParams.limb_widths].
+    rewrite !add_to_nth_set_nth.
     change @Pow2Base.base_from_limb_widths with @base_from_limb_widths_opt.
     change @nth_default with @nth_default_opt in *.
     change @set_nth with @set_nth_opt in *.
