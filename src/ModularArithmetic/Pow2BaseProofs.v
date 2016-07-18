@@ -150,6 +150,18 @@ Section Pow2BaseProofs.
     reflexivity.
   Qed.
 
+  Lemma base_from_limb_widths_app : forall l0 l
+                                           (l0_nonneg : forall x, In x l0 -> 0 <= x)
+                                           (l_nonneg : forall x, In x l -> 0 <= x),
+      base_from_limb_widths (l0 ++ l)
+      = base_from_limb_widths l0 ++ map (Z.mul (two_p (sum_firstn l0 (length l0)))) (base_from_limb_widths l).
+  Proof.
+    induction l0 as [|?? IHl0].
+    { simpl; intros; rewrite <- map_id at 1; apply map_ext; intros; omega. }
+    { simpl; intros; rewrite !IHl0, !map_app, map_map, sum_firstn_succ_cons, two_p_is_exp by auto with znonzero.
+      do 2 f_equal; apply map_ext; intros; lia. }
+  Qed.
+
 End Pow2BaseProofs.
 
 Section BitwiseDecodeEncode.
