@@ -873,8 +873,8 @@ Proof.
   erewrite nth_error_value_eq_nth_default by eassumption; reflexivity.
 Qed.
 
-Lemma nth_default_in_bounds : forall {T} n us (d d' : T), (n < length us)%nat ->
-  nth_default d us n = nth_default d us n.
+Lemma nth_default_in_bounds : forall {T} (d' d : T) n us, (n < length us)%nat ->
+  nth_default d us n = nth_default d' us n.
 Proof.
   intros; erewrite !nth_default_nth_dep; reflexivity.
   Grab Existential Variables.
