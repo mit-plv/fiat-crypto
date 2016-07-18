@@ -1,5 +1,7 @@
 Require Import Zpower ZArith.
 Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.ZUtil.
+Require Crypto.BaseSystem.
 Require Import Coq.Lists.List.
 
 Local Open Scope Z_scope.
@@ -15,6 +17,7 @@ Section Pow2Base.
     end.
 
   Local Notation base := (base_from_limb_widths limb_widths).
+
 
   Definition bounded us := forall i, 0 <= nth_default 0 us i < 2 ^ w[i].
 
@@ -38,5 +41,54 @@ Section Pow2Base.
 
   (* max must be greater than input; this is used to truncate last digit *)
   Definition encodeZ x:= encode' x (length limb_widths).
+
+  (** ** Carrying *)
+  Section carrying.
+    (** Here we implement addition and multiplication with simple
+        carrying. *)
+    Notation log_cap i := (nth_default 0 limb_widths i).
+
+
+    Definition add_to_nth n (x:Z) xs :=
+      set_nth n (x + nth_default 0 xs n) xs.
+    (* TODO: Maybe we should use this instead? *)
+    (*
+    Definition add_to_nth n (x:Z) xs :=
+      update_nth n (fun y => x + y) xs.
+
+    Definition carry_and_reduce_single i := fun di =>
+      (Z.pow2_mod di (log_cap i),
+       Z.shiftr di (log_cap i)).
+
+    Definition carry_gen f i := fun us =>
+      let i := (i mod length us)%nat in
+      let di := nth_default 0 us      i in
+      let '(di', ci) := carry_and_reduce_single i di in
+      let us' := set_nth i di' us in
+      add_to_nth ((S i) mod (length us)) (f ci) us'.
+
+    Definition carry_simple := carry_gen (fun ci => ci).
+     *)
+    Definition carry_simple i := fun us =>
+      let di := nth_default 0 us      i in
+      let us' := set_nth i (Z.pow2_mod di (log_cap i)) us in
+      add_to_nth (S i) (   (Z.shiftr di (log_cap i))) us'.
+
+    Definition carry_simple_sequence is us := fold_right carry_simple us is.
+
+    Fixpoint make_chain i :=
+      match i with
+      | O => nil
+      | S i' => i' :: make_chain i'
+      end.
+
+    Definition full_carry_chain := make_chain (length limb_widths).
+
+    Definition carry_simple_full := carry_simple_sequence full_carry_chain.
+
+    Definition carry_simple_add us vs := carry_simple_full (BaseSystem.add us vs).
+
+    Definition carry_simple_mul out_base us vs := carry_simple_full (BaseSystem.mul out_base us vs).
+  End carrying.
 
 End Pow2Base.

@@ -51,6 +51,13 @@ Create HintDb zstrip_div.
 Module Z.
   Definition pow2_mod n i := (n & (Z.ones i)).
 
+  Lemma pow2_mod_spec : forall a b, (0 <= b) -> Z.pow2_mod a b = a mod (2 ^ b).
+  Proof.
+    intros.
+    unfold Z.pow2_mod.
+    rewrite Z.land_ones; auto.
+  Qed.
+
   Lemma positive_is_nonzero : forall x, x > 0 -> x <> 0.
   Proof. intros; omega. Qed.
 
