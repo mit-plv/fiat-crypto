@@ -3,7 +3,7 @@ Require Import NArith PArith Ndigits Nnat NPow NPeano Ndec Ndigits.
 Require Import Compare_dec Omega.
 Require Import FunctionalExtensionality ProofIrrelevance.
 Require Import QhasmUtil QhasmEvalCommon.
-Require Import WordizeUtil Vectorize.
+Require Import WordizeUtil Listize.
 
 Import EvalUtil.
 

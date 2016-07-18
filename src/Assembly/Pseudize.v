@@ -1,7 +1,7 @@
 Require Export Bedrock.Word Bedrock.Nomega.
 Require Import NArith NPeano List Sumbool Compare_dec Omega.
 Require Import QhasmCommon QhasmEvalCommon QhasmUtil Pseudo State.
-Require Export WordizeUtil Wordize Vectorize.
+Require Export WordizeUtil Wordize Listize.
 Require Import Crypto.Util.IterAssocOp.
 
 Import Pseudo ListNotations StateCommon EvalUtil ListState.
@@ -551,6 +551,10 @@ Ltac pseudo_step :=
     eapply (pseudo_var None i);
       try reflexivity; list_destruct;
       simpl; intuition
+
+  (* implifications *)
+  | [ |- context [@NToWord ?x (@wordToN ?x _)]] =>
+    rewrite NToWord_wordToN
 
   (* clean up generated inequalities *)
   | [ |- (_ <= _)%nat ] => vm_compute; omega

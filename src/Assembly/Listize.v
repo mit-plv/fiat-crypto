@@ -17,6 +17,7 @@ Section Listize.
     | 1 => A
     | S m => (Tuple A m) * A
     end.
+
   Lemma tupleToList: forall {A} (k: nat), Tuple A k -> list A.
     intros A k t; induction k as [|k]; try induction k as [|k].
 
@@ -25,20 +26,31 @@ Section Listize.
     - refine ((IHk (fst t)) ++ [snd t]).
   Defined.
 
+  Lemma listToTuple: forall {A} (lst: list A), Tuple A (length lst).
+    intros A lst.
+    induction lst as [|x0 xs];
+      try refine tt;
+      try induction xs as [|x1 xs].
+
+    - refine x0. 
+    - refine (IHxs, x0). 
+  Defined.
+
   Fixpoint Curried (A B: Type) (ins: nat) (outs: nat): Type :=
     match ins with
-    | O => Tuple B outs
+    | O => list B
     | S ins' => A -> (Curried A B ins' outs)
     end.
 
   Definition ListF (A B: Type): Type := list A -> list B.
 
-  Fixpoint curriedToList {A B: Type} {ins outs: nat} (default: A)
+  Fixpoint curriedToListF {A B: Type} {ins outs: nat} (default: A)
       (f: Curried A B ins outs): ListF A B := fun (lst: list A) =>
     match ins as ins' return Curried A B ins' outs -> list B with
-    | O => fun g => tupleToList outs g
-    | S ins'' => fun g => (curriedToList default (g (nth ins'' lst default))) lst
+    | O => fun g => g
+    | S ins'' => fun g => (curriedToListF default (g (nth ins'' lst default))) lst
     end f.
+
 End Listize.
 
 Section Lets.

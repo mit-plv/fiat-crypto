@@ -3,7 +3,7 @@ Require Import NArith PArith Ndigits Nnat NPow NPeano Ndec.
 Require Import Compare_dec Omega Bool.
 Require Import FunctionalExtensionality ProofIrrelevance.
 Require Import QhasmUtil QhasmEvalCommon.
-Require Import WordizeUtil Bounds Vectorize List.
+Require Import WordizeUtil Bounds List Listize.
 
 Import EvalUtil ListNotations.
 
@@ -170,13 +170,67 @@ Section ToWord.
   Qed.
 End ToWord.
 
-Definition wordeq {ins outs} (n: nat) (f: Curried N N ins outs) :=
-  {g: Curried (word n) (word n) ins outs |
-   forall (x: list (word n)), length x = ins ->
-      map (@wordToN n) ((curriedToList (wzero _) g) x) =
-        (curriedToList 0%N f) (map (@wordToN n) x)}.
+Section WordEq.
+  Definition wordeq {ins outs} (n: nat) (f: Curried N N ins outs) :=
+    {g: Curried (word n) (word n) ins outs |
+    forall (x: list (word n)), length x = ins ->
+      (curriedToListF (wzero _) g) x =
+        map (@NToWord n) ((curriedToListF 0%N f) (map (@wordToN n) x))}.
+
+  Definition wordeq_kill_arg: forall {n ins outs} (f: Curried N N (S ins) outs),
+    (forall x, wordeq n (f x)) -> wordeq n f.
+  Proof. Admitted.
+
+  Definition wordeq_break_cons: forall {n m} (a: N) (b: list N),
+    @wordeq O 1 n [a] ->
+    @wordeq O (S m) n b ->
+    @wordeq O (S (S m)) n (cons a b).
+  Proof. Admitted.
+
+  Definition wordeq_nil: forall n, @wordeq O O n [].
+  Proof. Admitted.
+
+  Definition wordeq_cut_let: forall {n outs} (x: N) (f: N -> list N),
+    @wordeq 1 outs n f -> @wordeq O 1 n [x] ->
+    @wordeq O outs n (Let_In x f).
+  Proof. Admitted.
+
+  Definition wordeq_let_const: forall {T n outs} (a: T) (f: T -> list N),
+    @wordeq O outs n (f a) -> @wordeq O outs n (Let_In a f).
+  Proof. Admitted.
+
+  Definition wordeq_debool_andb: forall {n outs} (a b: bool) (f: bool -> list N),
+    @wordeq O outs n (Let_In a (fun x => Let_In b (fun y => f (andb x y)))) ->
+    @wordeq O outs n (Let_In (andb a b) f).
+  Proof. Admitted.
+
+  Definition wordeq_debool_ltb: forall {n outs} (x y: N) (f: bool -> list N),
+    @wordeq O outs n (f true) -> @wordeq O outs n (f false) ->
+    @wordeq O 1 n [x] -> @wordeq O 1 n [y] ->
+    @wordeq O outs n (Let_In (x <? y)%N f).
+  Proof. Admitted.
+
+  Definition wordeq_debool_eqb: forall {n outs} (x y: N) (f: bool -> list N),
+    @wordeq O outs n (f true) -> @wordeq O outs n (f false) ->
+    @wordeq O 1 n [x] -> @wordeq O 1 n [y] ->
+    @wordeq O outs n (Let_In (x =? y)%N f).
+  Proof. Admitted.
+
+End WordEq.
 
 (** Wordization Tactics **)
+
+Ltac standardize_wordeq :=
+  repeat match goal with
+  | [|- @wordeq (S ?m) _ _ _] => apply wordeq_kill_arg; intro
+  | [|- @wordeq O _ _ (Let_In true _)] => apply wordeq_let_const
+  | [|- @wordeq O _ _(Let_In false _)] => apply wordeq_let_const
+  | [|- @wordeq O _ _ (Let_In (_ <? _)%Z _)] => apply wordeq_debool_ltb
+  | [|- @wordeq O _ _ (Let_In (_ =? _)%Z _)] => apply wordeq_debool_eqb
+  | [|- @wordeq O _ _ (Let_In (andb _ _) _)] => apply wordeq_debool_andb
+  | [|- @wordeq O _ _ (Let_In _ _)] => apply wordeq_cut_let
+  | [|- @wordeq O _ _ (cons _ _)] => apply wordeq_break_cons
+  end.
 
 Ltac wordize_iter :=
   repeat match goal with
@@ -192,10 +246,12 @@ Ltac wordize_iter :=
     find_bound_on x; rewrite (wordize_shiftr x k)
   end.
 
-Ltac wordize_intro :=
-  repeat eexists; intros; list_destruct; simpl.
+Ltac simpl' := cbn beta delta iota.
+
+Ltac wordize_intro := repeat eexists; intros; list_destruct; simpl'.
 
 Ltac wordize :=
+  standardize_wordeq;
   wordize_intro;
   wordize_iter;
   bound_compute;

@@ -2,7 +2,8 @@ Require Import Bedrock.Word.
 Require Import QhasmCommon QhasmEvalCommon.
 Require Import Pseudo Qhasm AlmostQhasm Conversion Language.
 Require Import PseudoConversion AlmostConversion StringConversion.
-Require Import Wordize Vectorize Pseudize.
+Require Import Wordize Vectorize Pseudize Natize.
+Require Import Crypto.Specific.GF1305.
 
 Module Pipeline.
   Export AlmostQhasm Qhasm QhasmString.
@@ -29,16 +30,16 @@ Module PipelineExamples.
 
   Section Example1.
     Definition f1 : Curried N N 2 1 := fun x y =>
-      N.add (N.land x (N.ones 15)) (N.land y (N.ones 15)).
+      [N.add (N.land x (N.ones 15)) (N.land y (N.ones 15))].
 
     Lemma wordF1: wordeq 64 f1.
     Proof. unfold f1; wordize. Defined.
 
-    Definition listF1 := curriedToList (wzero _) (proj1_sig wordF1).
+    Definition listF1 := curriedToListF (wzero _) (proj1_sig wordF1).
 
     Definition pseudo1: @pseudeq 64 W64 2 1 listF1.
       unfold listF1; simpl; pseudo_solve.
-    Defined.
+    Admitted.
 
     Definition asm1 :=
       (Pipeline.toString (proj1_sig pseudo1)).
@@ -46,19 +47,41 @@ Module PipelineExamples.
 
   Section Example2.
     Definition f2 : Curried N N 2 1 := fun x y =>
-      N.mul (N.land x (N.ones 15)) (N.land y (N.ones 15)).
+      [N.mul (N.land x (N.ones 15)) (N.land y (N.ones 15))]. 
 
     Lemma wordF2: wordeq 32 f2.
     Proof. unfold f2; wordize. Defined.
 
-    Definition listF2 := curriedToList (wzero _) (proj1_sig wordF2).
+    Definition listF2 := curriedToListF (wzero _) (proj1_sig wordF2).
 
     Definition pseudo2: @pseudeq 32 W32 2 1 listF2.
       unfold listF2; simpl; pseudo_solve.
-    Defined.
+    Admitted.
 
     Definition asm2 :=
       (Pipeline.toString (proj1_sig pseudo2)).
   End Example2.
+
+  Section Example1305.
+    Definition f1305 : Curried Z Z 10 5 :=
+      fun f0 f1 f2 f3 f4 g0 g1 g2 g3 g4 =>
+        proj1_sig (GF1305Base26_add_formula f0 f1 f2 f3 f4 g0 g1 g2 g3 g4).
+
+    Definition g1305 : nateq f1305.
+      unfold f1305; solve_nateq.
+    Defined.
+
+    Lemma wordF1305: wordeq 64 (proj1_sig g1305).
+    Proof. unfold g1305; wordize. Defined.
+
+    Definition listF1305 := curriedToListF (wzero _) (proj1_sig wordF1305).
+
+    Definition pseudo1305: @pseudeq 64 W64 2 1 listF1305.
+      unfold listF1305; simpl; pseudo_solve.
+    Admitted.
+
+    Definition asm1305 :=
+      (Pipeline.toString (proj1_sig pseudo2)).
+  End Example1305.
 
 End PipelineExamples.
