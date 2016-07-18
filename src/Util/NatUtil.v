@@ -235,3 +235,23 @@ Proof.
 Qed.
 
 Hint Rewrite eq_nat_dec_n_S : natsimplify.
+
+Hint Rewrite Max.max_0_l Max.max_0_r Max.max_idempotent Min.min_0_l Min.min_0_r Min.min_idempotent : natsimplify.
+
+(** Helper to get around the lack of function extensionality *)
+Definition lt_dec_right_val n m (pf0 : ~n < m) : { pf | lt_dec n m = right pf }.
+Proof.
+  destruct (lt_dec n m) eqn:Heq; [ | eexists; reflexivity ].
+  exfalso; clear Heq; apply pf0; assumption.
+Qed.
+
+Lemma lt_dec_irrefl n : lt_dec n n = right (proj1_sig (@lt_dec_right_val _ _ (lt_irrefl n))).
+Proof. edestruct lt_dec_right_val; assumption. Qed.
+Hint Rewrite lt_dec_irrefl : natsimplify.
+
+Lemma not_lt_n_pred_n n : ~n < pred n.
+Proof. omega. Qed.
+
+Lemma lt_dec_n_pred_n n : lt_dec n (pred n) = right (proj1_sig (@lt_dec_right_val _ _ (not_lt_n_pred_n n))).
+Proof. edestruct lt_dec_right_val; assumption. Qed.
+Hint Rewrite lt_dec_n_pred_n : natsimplify.
