@@ -64,6 +64,26 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma div_add_l' : forall a b c, a <> 0 -> (a * b + c) / a = b + c / a.
+Proof.
+  intros; rewrite Nat.mul_comm; auto using div_add_l.
+Qed.
+
+Lemma mod_add_l : forall a b c, b <> 0 -> (a * b + c) mod b = c mod b.
+Proof.
+  intros; rewrite Nat.add_comm; auto using mod_add.
+Qed.
+
+Lemma mod_add_l' : forall a b c, b <> 0 -> (b * a + c) mod b = c mod b.
+Proof.
+  intros; rewrite Nat.mul_comm; auto using mod_add_l.
+Qed.
+
+Lemma mod_div_eq0 : forall a b, b <> 0 -> a mod b / b = 0.
+Proof.
+  intros; apply Nat.div_small, mod_bound_pos; omega.
+Qed.
+
 Lemma divide2_1mod4_nat : forall c x, c = x / 4 -> x mod 4 = 1 -> exists y, 2 * y = (x / 2).
 Proof.
   assert (4 <> 0) as ne40 by omega.

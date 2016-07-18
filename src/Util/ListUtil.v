@@ -173,6 +173,19 @@ Proof.
   omega.
 Qed.
 
+(* Note: this is a duplicate of a lemma that exists in 8.5, included for
+   8.4 support *)
+Lemma In_nth : forall {A} (x : A) d xs, In x xs ->
+  exists i, i < length xs /\ nth i xs d = x.
+Proof.
+  induction xs; intros;
+    match goal with H : In _ _ |- _ => simpl in H; destruct H end.
+  + subst. exists 0. simpl; split; auto || omega.
+  + destruct IHxs as [i [ ]]; auto.
+    exists (S i).
+    split; auto; simpl; try omega.
+Qed.
+
 Hint Rewrite @map_nth_default using omega : push_nth_default.
 
 Ltac nth_tac :=
@@ -342,6 +355,16 @@ Proof. auto. Qed.
 
 Lemma firstn0 : forall {T} (xs:list T), firstn 0 xs = nil.
 Proof. auto. Qed.
+
+Lemma destruct_repeat : forall {A} xs y, (forall x : A, In x xs -> x = y) ->
+  xs = nil \/ exists xs', xs = y :: xs' /\ (forall x : A, In x xs' -> x = y).
+Proof.
+  destruct xs; intros; try tauto.
+  right.
+  exists xs; split.
+  + f_equal; auto using in_eq.
+  + intros; auto using in_cons.
+Qed.
 
 Lemma splice_nth_equiv_update_nth : forall {T} n f d (xs:list T),
   splice_nth n (f (nth_default d xs n)) xs =
@@ -959,6 +982,17 @@ Proof.
   intros; rewrite nth_default_eq.
   destruct (nth_in_or_default n l d); auto.
   congruence.
+Qed.
+
+Lemma nth_default_preserves_properties_length_dep :
+  forall {A} (P : A -> Prop) l n d,
+  (forall x, In x l -> n < (length l) -> P x) -> ((~ n < length l) -> P d) -> P (nth_default d l n).
+Proof.
+  intros.
+  destruct (lt_dec n (length l)).
+  + rewrite nth_default_eq; auto using nth_In.
+  + rewrite nth_default_out_of_bounds by omega.
+    auto.
 Qed.
 
 Lemma nth_error_first : forall {T} (a b : T) l,
