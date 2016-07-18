@@ -575,7 +575,7 @@ Section carrying_helper.
   Lemma add_to_nth_sum : forall n x us, (n < length us \/ n >= length base)%nat ->
     BaseSystem.decode base (add_to_nth n x us) =
     x * nth_default 0 base n + BaseSystem.decode base us.
-  Proof. unfold add_to_nth; intros; rewrite set_nth_sum; try ring_simplify; auto. Qed.
+  Proof. intros; rewrite add_to_nth_set_nth, set_nth_sum; try ring_simplify; auto. Qed.
 
   Lemma add_to_nth_nth_default_full : forall n x l i d,
     nth_default d (add_to_nth n x l) i =
