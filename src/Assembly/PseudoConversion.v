@@ -253,6 +253,7 @@ Module PseudoConversion <: Conversion Pseudo AlmostQhasm.
     convertProgram pa pb prog = Some prog' ->
     convertState pa pb a = Some a' ->
     convertState pa pb b = Some b' ->
-    AlmostQhasm.evaluatesTo pb prog' a b <-> evaluatesTo pa prog a' b'.
+    evaluatesTo pa prog a' b' ->
+    AlmostQhasm.evaluatesTo pb prog' a b.
   Admitted.
 End PseudoConversion.

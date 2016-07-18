@@ -12,6 +12,7 @@ Module Type Conversion (A B: Language).
     convertProgram pa pb prog = Some prog' ->
     convertState pa pb a = Some a' ->
     convertState pa pb b = Some b' ->
-    B.evaluatesTo pb prog' a b <-> A.evaluatesTo pa prog a' b'.
+    A.evaluatesTo pa prog a' b' ->
+    B.evaluatesTo pb prog' a b.
 
 End Conversion.

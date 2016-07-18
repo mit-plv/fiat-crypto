@@ -31,12 +31,12 @@ Module PipelineExamples.
     Definition f1 : Curried N N 2 1 := fun x y =>
       N.add (N.land x (N.ones 15)) (N.land y (N.ones 15)).
 
-    Lemma wordF1: wordeq 32 f1.
+    Lemma wordF1: wordeq 64 f1.
     Proof. unfold f1; wordize. Defined.
 
     Definition listF1 := curriedToList (wzero _) (proj1_sig wordF1).
 
-    Definition pseudo1: @pseudeq 32 W32 2 1 listF1.
+    Definition pseudo1: @pseudeq 64 W64 2 1 listF1.
       unfold listF1; simpl; pseudo_solve.
     Defined.
 
@@ -61,5 +61,4 @@ Module PipelineExamples.
       (Pipeline.toString (proj1_sig pseudo2)).
   End Example2.
 
-  (* Eval vm_compute in asm2. *)
 End PipelineExamples.
