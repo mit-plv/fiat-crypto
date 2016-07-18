@@ -854,21 +854,21 @@ Proof.
           | Some v => fun _ => v
           | None => fun bad => match _ : False with end
           end eq_refl).
-  apply (proj1 (@List.nth_error_None _ _ _)) in bad; generalize dependent (length ls); clear.
+  apply (proj1 (@nth_error_None _ _ _)) in bad; instantiate; generalize dependent (length ls); clear.
   abstract (intros; omega).
 Defined.
 
 Lemma nth_error_nth_dep {A} ls n pf : nth_error ls n = Some (@nth_dep A ls n pf).
 Proof.
   unfold nth_dep.
-  generalize dependent (List.nth_error_None ls n).
+  generalize dependent (@nth_error_None A ls n).
   edestruct nth_error; boring.
 Qed.
 
 Lemma nth_default_nth_dep {A} d ls n pf : nth_default d ls n = @nth_dep A ls n pf.
 Proof.
   unfold nth_dep.
-  generalize dependent (List.nth_error_None ls n).
+  generalize dependent (@nth_error_None A ls n).
   destruct (nth_error ls n) eqn:?; boring.
   erewrite nth_error_value_eq_nth_default by eassumption; reflexivity.
 Qed.
