@@ -1097,6 +1097,14 @@ Qed.
 
 Hint Rewrite @sum_firstn_succ using congruence : simpl_sum_firstn.
 
+Lemma sum_firstn_succ_cons : forall x xs i,
+  sum_firstn (x :: xs) (S i) = (x + sum_firstn xs i)%Z.
+Proof.
+  unfold sum_firstn; simpl; reflexivity.
+Qed.
+
+Hint Rewrite @sum_firstn_succ_cons : simpl_sum_firstn.
+
 Lemma sum_firstn_succ_default_rev : forall l i,
   sum_firstn l i = (sum_firstn l (S i) - nth_default 0 l i)%Z.
 Proof.
