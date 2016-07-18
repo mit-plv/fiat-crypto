@@ -220,7 +220,7 @@ Section FandZ.
     reflexivity.
   Qed.
 
-  Lemma pow_nat_iter_op_correct: forall (x:F m) n, (nat_iter_op mul 1) (N.to_nat n) x = x^n.
+  Lemma pow_nat_iter_op_correct: forall (x:F m) n, (@nat_iter_op _ mul 1) (N.to_nat n) x = x^n.
   Proof.
     induction n using N.peano_ind;
       destruct (F_pow_spec x) as [pow_0 pow_succ];

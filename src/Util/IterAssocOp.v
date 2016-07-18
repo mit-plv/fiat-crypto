@@ -1,49 +1,44 @@
 Require Import Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Classes.Equivalence.
 Require Import Coq.NArith.NArith Coq.PArith.BinPosDef.
 Require Import Coq.Numbers.Natural.Peano.NPeano.
+Require Import Crypto.Algebra.
+Import Monoid.
 
 Local Open Scope equiv_scope.
 
 Generalizable All Variables.
 Section IterAssocOp.
-  Context `{Equivalence T}
-          {scalar : Type}
-          (op:T->T->T) {op_proper:Proper (equiv==>equiv==>equiv) op}
-          (assoc: forall a b c, op a (op b c) === op (op a b) c)
-          (neutral:T)
-          (neutral_l : forall a, op neutral a === a)
-          (neutral_r : forall a, op a neutral === a)
+  Context {T eq op id} {moinoid : @monoid T eq op id}
+          {scalar : Type} (scToN : scalar -> N)
           (testbit : scalar -> nat -> bool)
-          (scToN : scalar -> N)
           (testbit_spec : forall x i, testbit x i = N.testbit_nat (scToN x) i).
-  Existing Instance op_proper.
 
-  Fixpoint nat_iter_op n a :=
+  Fixpoint nat_iter_op n a : T :=
     match n with
-    | 0%nat => neutral
+    | 0%nat => id
     | S n' => op a (nat_iter_op n' a)
     end.
 
   Lemma nat_iter_op_plus : forall m n a,
     op (nat_iter_op m a) (nat_iter_op n a) === nat_iter_op (m + n) a.
   Proof.
-    induction m; intros; simpl; rewrite ?neutral_l, <-?IHm, ?assoc; reflexivity.
+    induction m; intros; simpl; rewrite ?left_identity, <-?IHm, ?associative; reflexivity.
   Qed.
 
   Definition N_iter_op n a :=
     match n with
-    | 0%N => neutral
+    | 0%N => id
     | Npos p => Pos.iter_op op p a
     end.
 
   Lemma Pos_iter_op_succ : forall p a, Pos.iter_op op (Pos.succ p) a === op a (Pos.iter_op op p a).
   Proof.
-   induction p; intros; simpl; rewrite ?assoc, ?IHp; reflexivity.
+   induction p; intros; simpl; rewrite ?associative, ?IHp; reflexivity.
   Qed.
 
   Lemma N_iter_op_succ : forall n a, N_iter_op (N.succ n) a  === op a (N_iter_op n a).
   Proof.
-    destruct n; simpl; intros; rewrite ?Pos_iter_op_succ, ?neutral_r; reflexivity.
+    destruct n; simpl; intros; rewrite ?Pos_iter_op_succ, ?right_identity; reflexivity.
   Qed.
 
   Lemma N_iter_op_is_nat_iter_op : forall n a, N_iter_op n a === nat_iter_op (N.to_nat n) a.
@@ -66,7 +61,7 @@ Section IterAssocOp.
     end.
 
   Definition iter_op sc a bound : T :=
-    snd (funexp (test_and_op sc a) (bound, neutral) bound).
+    snd (funexp (test_and_op sc a) (bound, id) bound).
 
   Definition test_and_op_inv sc a (s : nat * T) :=
     snd s === nat_iter_op (N.to_nat (N.shiftr_nat (scToN sc) (fst s))) a.
@@ -155,7 +150,7 @@ Section IterAssocOp.
   Lemma iter_op_termination : forall sc a bound,
     N.size_nat (scToN sc) <= bound ->
     test_and_op_inv sc a
-      (funexp (test_and_op sc a) (bound, neutral) bound) ->
+      (funexp (test_and_op sc a) (bound, id) bound) ->
     iter_op sc a bound === nat_iter_op (N.to_nat (scToN sc)) a.
   Proof.
     unfold test_and_op_inv, iter_op; simpl; intros ? ? ? ? Hinv.
