@@ -48,14 +48,8 @@ Section Pow2Base.
         carrying. *)
     Notation log_cap i := (nth_default 0 limb_widths i).
 
-
-    Definition add_to_nth n (x:Z) xs :=
-      set_nth n (x + nth_default 0 xs n) xs.
-    (* TODO: Maybe we should use this instead? *)
-    (*
     Definition add_to_nth n (x:Z) xs :=
       update_nth n (fun y => x + y) xs.
-     *)
     Definition carry_and_reduce_single i := fun di =>
       (Z.pow2_mod di (log_cap i),
        Z.shiftr di (log_cap i)).
