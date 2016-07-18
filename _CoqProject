@@ -61,6 +61,7 @@ src/Tactics/Algebra_syntax/Nsatz.v
 src/Util/AdditionChainExponentiation.v
 src/Util/CaseUtil.v
 src/Util/Decidable.v
+src/Util/GlobalSettings.v
 src/Util/IterAssocOp.v
 src/Util/ListUtil.v
 src/Util/NatUtil.v
