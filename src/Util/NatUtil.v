@@ -217,8 +217,8 @@ Proof.
     | eexists; reflexivity
     | eexists; reflexivity
     | ].
-  { specialize (IHm n (fun e => pf0 (f_equal_nat nat S n m e))).
-    destruct IHm as [? IHm].
+  { specialize (IHm n).
+    destruct IHm as [? IHm]; [ omega | ].
     eexists; rewrite IHm; reflexivity. }
 Qed.
 
@@ -254,7 +254,7 @@ Proof. edestruct lt_dec_right_val; assumption. Qed.
 Hint Rewrite lt_dec_irrefl : natsimplify.
 
 Lemma not_lt_n_pred_n n : ~n < pred n.
-Proof. omega. Qed.
+Proof. destruct n; simpl; omega. Qed.
 
 Lemma lt_dec_n_pred_n n : lt_dec n (pred n) = right (proj1_sig (@lt_dec_right_val _ _ (not_lt_n_pred_n n))).
 Proof. edestruct lt_dec_right_val; assumption. Qed.
@@ -269,17 +269,17 @@ Hint Rewrite le_dec_refl : natsimplify.
 
 Lemma le_dec_pred_l n : le_dec (pred n) n = left (le_pred_l n).
 Proof.
-  edestruct le_dec; try omega.
+  edestruct le_dec; [ | destruct n; simpl in *; omega ].
   apply f_equal, le_unique.
 Qed.
 Hint Rewrite le_dec_pred_l : natsimplify.
 
 Lemma le_pred_plus_same n : n <= pred (n + n).
-Proof. omega. Qed.
+Proof. destruct n; simpl; omega. Qed.
 
 Lemma le_dec_pred_plus_same n : le_dec n (pred (n + n)) = left (le_pred_plus_same n).
 Proof.
-  edestruct le_dec; try omega.
+  edestruct le_dec; [ | destruct n; simpl in *; omega ].
   apply f_equal, le_unique.
 Qed.
 Hint Rewrite le_dec_pred_plus_same : natsimplify.
