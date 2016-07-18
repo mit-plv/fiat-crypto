@@ -457,7 +457,7 @@ Section carrying_helper.
     unfold BaseSystem.decode.
     destruct H as [H|H].
     { nth_inbounds; auto. (* TODO(andreser): nth_inbounds should do this auto*)
-      rewrite_strat topdown hints simpl_nth_default.
+      erewrite nth_error_value_eq_nth_default by eassumption.
       unfold splice_nth.
       rewrite <- (firstn_skipn n us) at 3.
       do 2 rewrite decode'_splice.
@@ -465,7 +465,7 @@ Section carrying_helper.
       ring_simplify.
       remember (BaseSystem.decode' (firstn n0 base) (firstn n us)).
       rewrite (skipn_nth_default n us 0) by omega.
-      rewrite_strat topdown hints simpl_nth_default.
+      erewrite (nth_error_value_eq_nth_default _ _ us) by eassumption.
       rewrite firstn_length in Heqn0.
       rewrite Min.min_l in Heqn0 by omega; subst n0.
       destruct (le_lt_dec (length base) n). {
@@ -594,7 +594,7 @@ Section carrying_helper.
 
   Lemma log_cap_nonneg : forall i, 0 <= log_cap i.
   Proof.
-    unfold log_cap, nth_default; intros.
+    unfold nth_default; intros.
     case_eq (nth_error limb_widths i); intros; try omega.
     apply limb_widths_nonneg.
     eapply nth_error_value_In; eauto.
