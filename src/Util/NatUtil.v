@@ -239,11 +239,15 @@ Hint Rewrite eq_nat_dec_n_S : natsimplify.
 Hint Rewrite Max.max_0_l Max.max_0_r Max.max_idempotent Min.min_0_l Min.min_0_r Min.min_idempotent : natsimplify.
 
 (** Helper to get around the lack of function extensionality *)
-Definition lt_dec_right_val n m (pf0 : ~n < m) : { pf | lt_dec n m = right pf }.
+Definition le_dec_right_val n m (pf0 : ~n <= m) : { pf | le_dec n m = right pf }.
 Proof.
-  destruct (lt_dec n m) eqn:Heq; [ | eexists; reflexivity ].
+  destruct (le_dec n m) eqn:Heq; [ | eexists; reflexivity ].
   exfalso; clear Heq; apply pf0; assumption.
 Qed.
+
+(** Helper to get around the lack of function extensionality *)
+Definition lt_dec_right_val n m (pf0 : ~n < m) : { pf | lt_dec n m = right pf }
+  := @le_dec_right_val _ _ pf0.
 
 Lemma lt_dec_irrefl n : lt_dec n n = right (proj1_sig (@lt_dec_right_val _ _ (lt_irrefl n))).
 Proof. edestruct lt_dec_right_val; assumption. Qed.
@@ -255,3 +259,27 @@ Proof. omega. Qed.
 Lemma lt_dec_n_pred_n n : lt_dec n (pred n) = right (proj1_sig (@lt_dec_right_val _ _ (not_lt_n_pred_n n))).
 Proof. edestruct lt_dec_right_val; assumption. Qed.
 Hint Rewrite lt_dec_n_pred_n : natsimplify.
+
+Lemma le_dec_refl n : le_dec n n = left (le_refl n).
+Proof.
+  edestruct le_dec; try omega.
+  apply f_equal, le_unique.
+Qed.
+Hint Rewrite le_dec_refl : natsimplify.
+
+Lemma le_dec_pred_l n : le_dec (pred n) n = left (le_pred_l n).
+Proof.
+  edestruct le_dec; try omega.
+  apply f_equal, le_unique.
+Qed.
+Hint Rewrite le_dec_pred_l : natsimplify.
+
+Lemma le_pred_plus_same n : n <= pred (n + n).
+Proof. omega. Qed.
+
+Lemma le_dec_pred_plus_same n : le_dec n (pred (n + n)) = left (le_pred_plus_same n).
+Proof.
+  edestruct le_dec; try omega.
+  apply f_equal, le_unique.
+Qed.
+Hint Rewrite le_dec_pred_plus_same : natsimplify.
