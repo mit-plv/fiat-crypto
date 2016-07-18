@@ -132,7 +132,7 @@ Section PseudoMersenneProofs.
       (length us <= length base)%nat
       -> firstn (length us) base = firstn (length us) ext_base.
   Proof.
-    unfold ext_base; intros.
+    rewrite ext_base_alt; intros.
     rewrite firstn_app_inleft; auto; omega.
   Qed.
   Local Hint Immediate firstn_us_base_ext_base.
@@ -184,7 +184,7 @@ Section PseudoMersenneProofs.
   Proof.
     intros.
     unfold BaseSystem.decode; rewrite <- mul_each_rep.
-    unfold ext_base.
+    rewrite ext_base_alt.
     replace (map (Z.mul (2 ^ k)) base) with (BaseSystem.mul_each (2 ^ k) base) by auto.
     rewrite base_mul_app.
     rewrite <- mul_each_rep; auto.

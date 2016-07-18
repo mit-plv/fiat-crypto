@@ -376,7 +376,7 @@ Section Multiplication.
     cbv [mul_bi'_step].
     opt_step.
     { reflexivity. }
-    { cbv [crosscoef ext_base].
+    { cbv [crosscoef].
       change Z.div with Z_div_opt.
       change Z.mul with Z_mul_opt at 2.
       change @nth_default with @nth_default_opt.
@@ -405,7 +405,7 @@ Section Multiplication.
       rewrite <- IHvsr; clear IHvsr.
       unfold mul_bi'_opt, mul_bi'_opt_step.
       apply f_equal2; [ | reflexivity ].
-      cbv [crosscoef ext_base].
+      cbv [crosscoef].
       change Z.div with Z_div_opt.
       change Z.mul with Z_mul_opt at 2.
       change @nth_default with @nth_default_opt.
@@ -477,7 +477,8 @@ Section Multiplication.
   Definition mul_opt_sig (us vs : digits) : { b : digits | b = mul us vs }.
   Proof.
     eexists.
-    cbv [BaseSystem.mul mul mul_each mul_bi mul_bi' zeros ext_base reduce].
+    cbv [BaseSystem.mul mul mul_each mul_bi mul_bi' zeros reduce].
+    rewrite ext_base_alt.
     rewrite <- mul'_opt_correct.
     change @Pow2Base.base_from_limb_widths with base_from_limb_widths_opt.
     rewrite Z.map_shiftl by apply k_nonneg.
