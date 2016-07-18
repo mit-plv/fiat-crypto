@@ -207,3 +207,31 @@ Proof.
 Qed.
 
 Hint Rewrite eq_nat_dec_refl : natsimplify.
+
+(** Helper to get around the lack of function extensionality *)
+Definition eq_nat_dec_right_val n m (pf0 : n <> m) : { pf | eq_nat_dec n m = right pf }.
+Proof.
+  revert dependent n; induction m; destruct n as [|n]; simpl;
+    intro pf0;
+    [ (exists pf0; exfalso; abstract congruence)
+    | eexists; reflexivity
+    | eexists; reflexivity
+    | ].
+  { specialize (IHm n (fun e => pf0 (f_equal_nat nat S n m e))).
+    destruct IHm as [? IHm].
+    eexists; rewrite IHm; reflexivity. }
+Qed.
+
+Lemma eq_nat_dec_S_n n : eq_nat_dec (S n) n = right (proj1_sig (@eq_nat_dec_right_val _ _ (@neq_succ_diag_l n))).
+Proof.
+  edestruct eq_nat_dec_right_val; assumption.
+Qed.
+
+Hint Rewrite eq_nat_dec_S_n : natsimplify.
+
+Lemma eq_nat_dec_n_S n : eq_nat_dec n (S n) = right (proj1_sig (@eq_nat_dec_right_val _ _ (n_Sn n))).
+Proof.
+  edestruct eq_nat_dec_right_val; assumption.
+Qed.
+
+Hint Rewrite eq_nat_dec_n_S : natsimplify.
