@@ -8,9 +8,9 @@ Local Open Scope Z_scope.
 
 Section Pow2BaseProofs.
   Context {limb_widths} (limb_widths_nonneg : forall w, In w limb_widths -> 0 <= w).
-  Local Notation "{base}" := (base_from_limb_widths limb_widths).
+  Local Notation base := (base_from_limb_widths limb_widths).
 
-  Lemma base_from_limb_widths_length : length {base} = length limb_widths.
+  Lemma base_from_limb_widths_length : length base = length limb_widths.
   Proof.
     induction limb_widths; try reflexivity.
     simpl; rewrite map_length.
@@ -28,10 +28,10 @@ Section Pow2BaseProofs.
     eapply In_firstn; eauto.
   Qed. Hint Resolve sum_firstn_limb_widths_nonneg.
 
-  Lemma base_from_limb_widths_step : forall i b w, (S i < length {base})%nat ->
-    nth_error {base} i = Some b ->
+  Lemma base_from_limb_widths_step : forall i b w, (S i < length base)%nat ->
+    nth_error base i = Some b ->
     nth_error limb_widths i = Some w ->
-    nth_error {base} (S i) = Some (two_p w * b).
+    nth_error base (S i) = Some (two_p w * b).
   Proof.
     induction limb_widths; intros ? ? ? ? nth_err_w nth_err_b;
       unfold base_from_limb_widths in *; fold base_from_limb_widths in *;
@@ -54,13 +54,13 @@ Section Pow2BaseProofs.
   Qed.
 
 
-  Lemma nth_error_base : forall i, (i < length {base})%nat ->
-    nth_error {base} i = Some (two_p (sum_firstn limb_widths i)).
+  Lemma nth_error_base : forall i, (i < length base)%nat ->
+    nth_error base i = Some (two_p (sum_firstn limb_widths i)).
   Proof.
     induction i; intros.
     + unfold sum_firstn, base_from_limb_widths in *; case_eq limb_widths; try reflexivity.
       intro lw_nil; rewrite lw_nil, (@nil_length0 Z) in *; omega.
-    + assert (i < length {base})%nat as lt_i_length by omega.
+    + assert (i < length base)%nat as lt_i_length by omega.
       specialize (IHi lt_i_length).
       rewrite base_from_limb_widths_length in lt_i_length.
       destruct (nth_error_length_exists_value _ _ lt_i_length) as [w nth_err_w].
@@ -80,8 +80,8 @@ Section Pow2BaseProofs.
         eapply nth_error_value_In; eauto.
   Qed.
 
-  Lemma nth_default_base : forall d i, (i < length {base})%nat ->
-    nth_default d {base} i = 2 ^ (sum_firstn limb_widths i).
+  Lemma nth_default_base : forall d i, (i < length base)%nat ->
+    nth_default d base i = 2 ^ (sum_firstn limb_widths i).
   Proof.
     intros ? ? i_lt_length.
     destruct (nth_error_length_exists_value _ _ i_lt_length) as [x nth_err_x].
@@ -92,8 +92,8 @@ Section Pow2BaseProofs.
     congruence.
   Qed.
 
-  Lemma base_succ : forall i, ((S i) < length {base})%nat ->
-    nth_default 0 {base} (S i) mod nth_default 0 {base} i = 0.
+  Lemma base_succ : forall i, ((S i) < length base)%nat ->
+    nth_default 0 base (S i) mod nth_default 0 base i = 0.
   Proof.
     intros.
     repeat rewrite nth_default_base by omega.
@@ -105,7 +105,7 @@ Section Pow2BaseProofs.
         apply limb_widths_nonneg.
         rewrite lw_eq.
         apply in_eq.
-      + assert (i < length {base})%nat as i_lt_length by omega.
+      + assert (i < length base)%nat as i_lt_length by omega.
         rewrite base_from_limb_widths_length in *.
         apply nth_error_length_exists_value in i_lt_length.
         destruct i_lt_length as [x nth_err_x].
@@ -115,7 +115,7 @@ Section Pow2BaseProofs.
         omega.
    Qed.
 
-   Lemma nth_error_subst : forall i b, nth_error {base} i = Some b ->
+   Lemma nth_error_subst : forall i b, nth_error base i = Some b ->
      b = 2 ^ (sum_firstn limb_widths i).
    Proof.
      intros i b nth_err_b.
@@ -125,7 +125,7 @@ Section Pow2BaseProofs.
      congruence.
    Qed.
 
-   Lemma base_positive : forall b : Z, In b {base} -> b > 0.
+   Lemma base_positive : forall b : Z, In b base -> b > 0.
    Proof.
      intros b In_b_base.
      apply In_nth_error_value in In_b_base.
@@ -136,7 +136,7 @@ Section Pow2BaseProofs.
      apply Z.pow_pos_nonneg; omega || auto using sum_firstn_limb_widths_nonneg.
    Qed.
 
-   Lemma b0_1 : forall x : Z, limb_widths <> nil -> nth_default x {base} 0 = 1.
+   Lemma b0_1 : forall x : Z, limb_widths <> nil -> nth_default x base 0 = 1.
    Proof.
      case_eq limb_widths; intros; [congruence | reflexivity].
    Qed.
@@ -154,23 +154,23 @@ Section BitwiseDecodeEncode.
           (limb_widths_nonneg : forall w, In w limb_widths -> 0 <= w).
   Local Hint Resolve limb_widths_nonneg.
   Local Notation "w[ i ]" := (nth_default 0 limb_widths i).
-  Local Notation "{base}" := (base_from_limb_widths limb_widths).
-  Local Notation "{max}" := (upper_bound limb_widths).
+  Local Notation base := (base_from_limb_widths limb_widths).
+  Local Notation upper_bound := (upper_bound limb_widths).
 
-  Lemma encode'_spec : forall x i, (i <= length {base})%nat ->
-    encode' limb_widths x i = BaseSystem.encode' {base} x {max} i.
+  Lemma encode'_spec : forall x i, (i <= length base)%nat ->
+    encode' limb_widths x i = BaseSystem.encode' base x upper_bound i.
   Proof.
     induction i; intros.
     + rewrite encode'_zero. reflexivity.
     + rewrite encode'_succ, <-IHi by omega.
       simpl; do 2 f_equal.
       rewrite Z.land_ones, Z.shiftr_div_pow2 by auto using sum_firstn_limb_widths_nonneg.
-      match goal with H : (S _ <= length {base})%nat |- _ =>
+      match goal with H : (S _ <= length base)%nat |- _ =>
         apply le_lt_or_eq in H; destruct H end.
       - repeat f_equal; rewrite nth_default_base by (omega || auto); reflexivity.
       - repeat f_equal; try solve [rewrite nth_default_base by (omega || auto); reflexivity].
         rewrite nth_default_out_of_bounds by omega.
-        unfold upper_bound.
+        unfold Pow2Base.upper_bound.
         rewrite <-base_from_limb_widths_length by auto.
         congruence.
   Qed.
@@ -180,7 +180,7 @@ Section BitwiseDecodeEncode.
     intros; apply nth_default_preserves_properties; auto; omega.
   Qed. Hint Resolve nth_default_limb_widths_nonneg.
 
-  Lemma base_upper_bound_compatible : @base_max_succ_divide {base} {max}.
+  Lemma base_upper_bound_compatible : @base_max_succ_divide base upper_bound.
   Proof.
     unfold base_max_succ_divide; intros i lt_Si_length.
     rewrite Nat.lt_eq_cases in lt_Si_length; destruct lt_Si_length;
@@ -190,7 +190,7 @@ Section BitwiseDecodeEncode.
       rewrite Z.pow_add_r; auto using sum_firstn_limb_widths_nonneg.
       apply Z.divide_factor_r.
     + rewrite nth_default_out_of_bounds by omega.
-      unfold upper_bound.
+      unfold Pow2Base.upper_bound.
       replace (length limb_widths) with (S (pred (length limb_widths))) by
         (rewrite base_from_limb_widths_length in H by auto; omega).
       replace i with (pred (length limb_widths)) by
@@ -203,12 +203,12 @@ Section BitwiseDecodeEncode.
   Hint Resolve base_upper_bound_compatible.
 
   Lemma encodeZ_spec : forall x,
-    BaseSystem.decode {base} (encodeZ limb_widths x) = x mod {max}.
+    BaseSystem.decode base (encodeZ limb_widths x) = x mod upper_bound.
   Proof.
     intros.
-    assert (length {base} = length limb_widths) by auto using base_from_limb_widths_length.
+    assert (length base = length limb_widths) by auto using base_from_limb_widths_length.
     unfold encodeZ; rewrite encode'_spec by omega.
-    rewrite BaseSystemProofs.encode'_spec; unfold upper_bound; try zero_bounds;
+    rewrite BaseSystemProofs.encode'_spec; unfold Pow2Base.upper_bound; try zero_bounds;
       auto using sum_firstn_limb_widths_nonneg.
     rewrite nth_default_out_of_bounds by omega.
     reflexivity.
@@ -316,7 +316,7 @@ Section BitwiseDecodeEncode.
   Lemma decode_bitwise'_spec : forall us i, (i <= length limb_widths)%nat ->
     bounded limb_widths us -> length us = length limb_widths ->
     decode_bitwise' limb_widths us i (partial_decode us i (length us - i)) =
-    BaseSystem.decode {base} us.
+    BaseSystem.decode base us.
   Proof.
     induction i; intros.
     + rewrite partial_decode_intermediate by auto.
@@ -328,7 +328,7 @@ Section BitwiseDecodeEncode.
 
   Lemma decode_bitwise_spec : forall us, bounded limb_widths us ->
     length us = length limb_widths ->
-    decode_bitwise limb_widths us = BaseSystem.decode {base} us.
+    decode_bitwise limb_widths us = BaseSystem.decode base us.
   Proof.
     unfold decode_bitwise; intros.
     replace 0 with (partial_decode us (length us) (length us - length us)) by
@@ -341,14 +341,14 @@ End BitwiseDecodeEncode.
 Section Conversion.
   Context {limb_widthsA} (limb_widthsA_nonneg : forall w, In w limb_widthsA -> 0 <= w)
           {limb_widthsB} (limb_widthsB_nonneg : forall w, In w limb_widthsB -> 0 <= w).
-  Local Notation "{baseA}" := (base_from_limb_widths limb_widthsA).
-  Local Notation "{baseB}" := (base_from_limb_widths limb_widthsB).
-  Context (bvB : BaseSystem.BaseVector {baseB}).
+  Local Notation baseA := (base_from_limb_widths limb_widthsA).
+  Local Notation baseB := (base_from_limb_widths limb_widthsB).
+  Context (bvB : BaseSystem.BaseVector baseB).
 
   Definition convert xs := @encodeZ limb_widthsB (@decode_bitwise limb_widthsA xs).
 
   Lemma convert_spec : forall xs, @bounded limb_widthsA xs -> length xs = length limb_widthsA ->
-    BaseSystem.decode {baseA} xs mod (@upper_bound limb_widthsB) = BaseSystem.decode {baseB} (convert xs).
+    BaseSystem.decode baseA xs mod (@upper_bound limb_widthsB) = BaseSystem.decode baseB (convert xs).
   Proof.
     unfold convert; intros.
     rewrite encodeZ_spec, decode_bitwise_spec by auto.
@@ -361,7 +361,7 @@ Section UniformBase.
   Context {width : Z} (limb_width_pos : 0 < width).
   Context (limb_widths : list Z) (limb_widths_nonnil : limb_widths <> nil)
     (limb_widths_uniform : forall w, In w limb_widths -> w = width).
-  Local Notation "{base}" := (base_from_limb_widths limb_widths).
+  Local Notation base := (base_from_limb_widths limb_widths).
 
    Lemma bounded_uniform : forall us, (length us <= length limb_widths)%nat ->
      (bounded limb_widths us <-> (forall u, In u us -> 0 <= u < 2 ^ width)).
@@ -409,7 +409,7 @@ Section UniformBase.
   Qed.
 
   Lemma decode_tl_base_shift : forall us, (length us < length limb_widths)%nat ->
-    BaseSystem.decode (tl {base}) us = BaseSystem.decode {base} us << width.
+    BaseSystem.decode (tl base) us = BaseSystem.decode base us << width.
   Proof.
     intros ? Hlength.
     edestruct (destruct_repeat limb_widths) as [? | [tl_lw [Heq_lw tl_lw_uniform]]];
@@ -422,7 +422,7 @@ Section UniformBase.
   Qed.
 
   Lemma decode_shift : forall us u0, (length (u0 :: us) <= length limb_widths)%nat ->
-    BaseSystem.decode {base} (u0 :: us) = u0 + ((BaseSystem.decode {base} us) << width).
+    BaseSystem.decode base (u0 :: us) = u0 + ((BaseSystem.decode base us) << width).
   Proof.
     intros.
     rewrite <-decode_tl_base_shift by (simpl in *; omega).

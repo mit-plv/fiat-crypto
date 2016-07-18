@@ -11,7 +11,7 @@ Local Open Scope Z_scope.
 
 Section PseudoMersenneBaseParamProofs.
   Context `{prm : PseudoMersenneBaseParams}.
-  Local Notation "{base}" := (base_from_limb_widths limb_widths).
+  Local Notation base := (base_from_limb_widths limb_widths).
 
   Lemma limb_widths_nonneg : forall w, In w limb_widths -> 0 <= w.
   Proof.
@@ -29,9 +29,9 @@ Section PseudoMersenneBaseParamProofs.
     (i   <  length limb_widths)%nat ->
     (j   <  length limb_widths)%nat ->
     (i+j >= length limb_widths)%nat->
-    let b := nth_default 0 {base} in
-    let r := (b i * b j)  /   (2^k * b (i+j-length {base})%nat) in
-              b i * b j = r * (2^k * b (i+j-length {base})%nat).
+    let b := nth_default 0 base in
+    let r := (b i * b j)  /   (2^k * b (i+j-length base)%nat) in
+              b i * b j = r * (2^k * b (i+j-length base)%nat).
   Proof.
     intros.
     rewrite (Z.mul_comm r).
@@ -53,8 +53,8 @@ Section PseudoMersenneBaseParamProofs.
   Qed.
 
    Lemma base_good : forall i j : nat,
-                (i + j < length {base})%nat ->
-                let b := nth_default 0 {base} in
+                (i + j < length base)%nat ->
+                let b := nth_default 0 base in
                 let r := b i * b j / b (i + j)%nat in
                 b i * b j = r * b (i + j)%nat.
    Proof.
@@ -70,12 +70,12 @@ Section PseudoMersenneBaseParamProofs.
      rewrite <-base_from_limb_widths_length; auto using limb_widths_nonneg.
    Qed.
 
-  Lemma base_length : length {base} = length limb_widths.
+  Lemma base_length : length base = length limb_widths.
   Proof.
     auto using base_from_limb_widths_length.
   Qed.
 
-  Global Instance bv : BaseSystem.BaseVector {base} := {
+  Global Instance bv : BaseSystem.BaseVector base := {
     base_positive := base_positive limb_widths_nonneg;
     b0_1 := fun x => b0_1 x limb_widths_nonnil;
     base_good := base_good
