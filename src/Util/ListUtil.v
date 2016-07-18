@@ -23,6 +23,7 @@ Create HintDb pull_firstn discriminated.
 Create HintDb push_firstn discriminated.
 Create HintDb pull_update_nth discriminated.
 Create HintDb push_update_nth discriminated.
+Create HintDb znonzero discriminated.
 
 Hint Rewrite
   @app_length
@@ -1105,6 +1106,12 @@ Qed.
 
 Hint Rewrite @sum_firstn_succ_cons : simpl_sum_firstn.
 
+Lemma sum_firstn_nil : forall i,
+  sum_firstn nil i = 0%Z.
+Proof. destruct i; reflexivity. Qed.
+
+Hint Rewrite @sum_firstn_nil : simpl_sum_firstn.
+
 Lemma sum_firstn_succ_default_rev : forall l i,
   sum_firstn l i = (sum_firstn l (S i) - nth_default 0 l i)%Z.
 Proof.
@@ -1117,6 +1124,17 @@ Lemma sum_firstn_succ_rev : forall l i x,
 Proof.
   intros; erewrite sum_firstn_succ by eassumption; omega.
 Qed.
+
+Lemma sum_firstn_nonnegative : forall n l, (forall x, In x l -> 0 <= x)%Z
+                                       -> (0 <= sum_firstn l n)%Z.
+Proof.
+  induction n as [|n IHn]; destruct l as [|? l]; autorewrite with simpl_sum_firstn; simpl; try omega.
+  { specialize (IHn l).
+    destruct n; simpl; autorewrite with simpl_sum_firstn simpl_nth_default in *;
+      intuition. }
+Qed.
+
+Hint Resolve sum_firstn_nonnegative : znonzero.
 
 Lemma nth_default_map2 : forall {A B C} (f : A -> B -> C) ls1 ls2 i d d1 d2,
   nth_default d (map2 f ls1 ls2) i =
