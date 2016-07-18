@@ -115,13 +115,32 @@ Definition sub_correct (f g : fe1305)
   Eval cbv beta iota delta [proj1_sig sub_sig] in
   proj2_sig (sub_sig f g). (* Coq 8.4 : 10s *)
 
+Definition mul_simpl_sig (f g : fe1305) :
+  { fg : fe1305 | fg = ModularBaseSystemInterface.mul (k_ := k_) (c_ := c_) f g}.
+Proof.
+  cbv [fe1305] in *.
+  repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
+  eexists.
+  cbv.
+  autorewrite with zsimplify.
+  reflexivity.
+Defined.
+
+Definition mul_simpl (f g : fe1305) : fe1305 :=
+  Eval cbv beta iota delta [proj1_sig mul_simpl_sig] in
+  proj1_sig (mul_simpl_sig f g).
+
+Definition mul_simpl_correct (f g : fe1305)
+  : mul_simpl f g = ModularBaseSystemInterface.mul (k_ := k_) (c_ := c_) f g :=
+  Eval cbv beta iota delta [proj1_sig mul_simpl_sig] in
+  proj2_sig (mul_simpl_sig f g).
+
 Definition mul_sig (f g : fe1305) :
   { fg : fe1305 | fg = ModularBaseSystemInterface.mul (k_ := k_) (c_ := c_) f g}.
 Proof.
-  rewrite <-appify2_correct. (* Coq 8.4 : 5s; changes the [repeat match ... => destruct] below from 25s to 8s *)
-  cbv [fe1305] in *.
-  repeat match goal with [p : (_*Z)%type |- _ ] => destruct p end. (* 8s *)
   eexists.
+  rewrite <-mul_simpl_correct.
+  rewrite <-appify2_correct.
   cbv.
   autorewrite with zsimplify.
   reflexivity.

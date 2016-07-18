@@ -111,15 +111,33 @@ Definition sub_correct (f g : fe25519)
   Eval cbv beta iota delta [proj1_sig sub_sig] in
   proj2_sig (sub_sig f g).
 
-Definition mul_sig (f g : fe25519) :
+Definition mul_simpl_sig (f g : fe25519) :
   { fg : fe25519 | fg = ModularBaseSystemInterface.mul (k_ := k_) (c_ := c_) f g}.
 Proof.
-  rewrite <-appify2_correct.
   cbv [fe25519] in *.
-  repeat match goal with [p : (_*Z)%type |- _ ] => destruct p end.
+  repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
   eexists.
   cbv.
   autorewrite with zsimplify.
+  reflexivity.
+Defined.
+
+Definition mul_simpl (f g : fe25519) : fe25519 :=
+  Eval cbv beta iota delta [proj1_sig mul_simpl_sig] in
+  proj1_sig (mul_simpl_sig f g).
+
+Definition mul_simpl_correct (f g : fe25519)
+  : mul_simpl f g = ModularBaseSystemInterface.mul (k_ := k_) (c_ := c_) f g :=
+  Eval cbv beta iota delta [proj1_sig mul_simpl_sig] in
+  proj2_sig (mul_simpl_sig f g).
+
+Definition mul_sig (f g : fe25519) :
+  { fg : fe25519 | fg = ModularBaseSystemInterface.mul (k_ := k_) (c_ := c_) f g}.
+Proof.
+  eexists.
+  rewrite <- mul_simpl_correct.
+  rewrite <-appify2_correct.
+  cbv.
   reflexivity.
 Defined.
 
@@ -129,7 +147,7 @@ Definition mul (f g : fe25519) : fe25519 :=
 
 Definition mul_correct (f g : fe25519)
   : mul f g = ModularBaseSystemInterface.mul (k_ := k_) (c_ := c_) f g :=
-  Eval cbv beta iota delta [proj1_sig add_sig] in
+  Eval cbv beta iota delta [proj1_sig mul_sig] in
   proj2_sig (mul_sig f g).
 
 Import Morphisms.
