@@ -1,7 +1,7 @@
-Require Import List.
-Require Import Util.ListUtil Util.CaseUtil Util.ZUtil.
-Require Import ZArith.ZArith ZArith.Zdiv.
-Require Import Omega NPeano Arith.
+Require Import Coq.Lists.List.
+Require Import Crypto.Util.ListUtil Crypto.Util.CaseUtil Crypto.Util.ZUtil.
+Require Import Coq.ZArith.ZArith Coq.ZArith.Zdiv.
+Require Import Coq.omega.Omega Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
 Require Import Crypto.BaseSystem.
 Require Import Crypto.Util.Notations.
 Local Open Scope Z.
@@ -532,9 +532,13 @@ Section BaseSystemProofs.
     induction us; destruct vs; boring.
   Qed.
 
-  Lemma mul'_length_exact: forall us vs,
-      (length us <= length vs)%nat -> us <> nil ->
-      (length (mul' us vs) = pred (length us + length vs))%nat.
+  Hint Rewrite add_length_exact : distr_length.
+
+  Lemma mul'_length_exact_full: forall us vs,
+      (length (mul' us vs) = match length us with
+                             | 0 => 0%nat
+                             | _ => pred (length us + length vs)
+                             end)%nat.
   Proof.
     induction us; intros; try solve [boring].
     unfold mul'; fold mul'.
@@ -544,9 +548,33 @@ Section BaseSystemProofs.
     + rewrite Max.max_0_r. simpl; omega.
     + rewrite Max.max_l; [ omega | ].
       rewrite IHus by ( congruence || simpl in *; omega).
-      omega.
+      simpl; omega.
   Qed.
 
+  Hint Rewrite mul'_length_exact_full : distr_length.
+
+  (* TODO(@jadephilipoom, from jgross): one of these conditions isn't
+  needed.  Should it be dropped, or was there a reason to keep it? *)
+  Lemma mul'_length_exact: forall us vs,
+      (length us <= length vs)%nat -> us <> nil ->
+      (length (mul' us vs) = pred (length us + length vs))%nat.
+  Proof.
+    intros; rewrite mul'_length_exact_full; destruct us; simpl; congruence.
+  Qed.
+
+  Lemma mul_length_exact_full: forall us vs,
+      (length (mul us vs) = match length us with
+                            | 0 => 0
+                            | _ => pred (length us + length vs)
+                            end)%nat.
+  Proof.
+    intros; unfold mul; autorewrite with distr_length; reflexivity.
+  Qed.
+
+  Hint Rewrite mul_length_exact_full : distr_length.
+
+  (* TODO(@jadephilipoom, from jgross): one of these conditions isn't
+  needed.  Should it be dropped, or was there a reason to keep it? *)
   Lemma mul_length_exact: forall us vs,
       (length us <= length vs)%nat -> us <> nil ->
       (length (mul us vs) = pred (length us + length vs))%nat.
@@ -559,7 +587,7 @@ Section BaseSystemProofs.
     reflexivity.
   Qed.
   Definition encode'_zero z max  : encode' base z max 0%nat = nil := eq_refl.
-  Definition encode'_succ z max i : encode' base z max (S i) = 
+  Definition encode'_succ z max i : encode' base z max (S i) =
     encode' base z max i ++ ((z mod (nth_default max base (S i))) / (nth_default max base i)) :: nil := eq_refl.
   Opaque encode'.
   Hint Resolve encode'_zero encode'_succ.
@@ -607,3 +635,5 @@ Section BaseSystemProofs.
   Qed.
 
 End BaseSystemProofs.
+
+Hint Rewrite @add_length_exact @mul'_length_exact_full @mul_length_exact_full @encode'_length @sub_length : distr_length.
