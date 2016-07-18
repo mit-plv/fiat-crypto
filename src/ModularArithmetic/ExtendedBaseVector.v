@@ -3,7 +3,10 @@ Require Import List.
 Require Import Crypto.Util.ListUtil Crypto.Util.CaseUtil Crypto.Util.ZUtil.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
 Require Import VerdiTactics.
-Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParams Crypto.ModularArithmetic.PseudoMersenneBaseParamProofs.
+Require Import Crypto.ModularArithmetic.Pow2Base.
+Require Import Crypto.ModularArithmetic.Pow2BaseProofs.
+Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParams.
+Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParamProofs.
 Require Crypto.BaseSystem.
 Local Open Scope Z_scope.
 
@@ -120,15 +123,12 @@ Section ExtendedBaseVector.
     unfold ext_base in *.
     rewrite app_length in H; rewrite map_length in H.
     repeat rewrite nth_default_app.
-    destruct (lt_dec i (length base));
-      destruct (lt_dec j (length base));
-      destruct (lt_dec (i + j) (length base));
-      try omega.
+    repeat break_if; try omega.
     { (* i < length base, j < length base, i + j < length base *)
-      apply BaseSystem.base_good; auto.
+      auto using BaseSystem.base_good.
     } { (* i < length base, j < length base, i + j >= length base *)
       rewrite (map_nth_default _ _ _ _ 0) by omega.
-      apply base_matches_modulus; omega.
+      apply (base_matches_modulus i j); rewrite <-base_length by auto using limb_widths_nonneg; omega.
     } { (* i < length base, j >= length base, i + j >= length base *)
       do 2 rewrite map_nth_default_base_high by omega.
       remember (j - length base)%nat as j'.
