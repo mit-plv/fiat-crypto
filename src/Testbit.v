@@ -13,7 +13,7 @@ Section Testbit.
   Context {width : Z} (limb_width_pos : 0 < width).
   Context (limb_widths : list Z) (limb_widths_nonnil : limb_widths <> nil)
     (limb_widths_uniform : forall w, In w limb_widths -> w = width).
-  Local Notation "{base}" := (base_from_limb_widths limb_widths).
+  Local Notation base := (base_from_limb_widths limb_widths).
 
   Definition testbit (us : list Z) (n : nat) :=
     Z.testbit (nth_default 0 us (n / (Z.to_nat width))) (Z.of_nat (n mod Z.to_nat width)%nat).
@@ -22,7 +22,7 @@ Section Testbit.
 
   Lemma testbit_spec' : forall a b us, (0 <= b < width) ->
     bounded limb_widths us -> (length us <= length limb_widths)%nat ->
-    Z.testbit (nth_default 0 us a) b = Z.testbit (decode {base} us) (Z.of_nat a * width + b).
+    Z.testbit (nth_default 0 us a) b = Z.testbit (decode base us) (Z.of_nat a * width + b).
   Proof.
     induction a; destruct us; intros;
       match goal with H : bounded _ _ |- _ =>
@@ -42,7 +42,7 @@ Section Testbit.
 
   Lemma testbit_spec : forall n us, (length us = length limb_widths)%nat ->
     bounded limb_widths us ->
-    testbit us n = Z.testbit (BaseSystem.decode {base} us) (Z.of_nat n).
+    testbit us n = Z.testbit (BaseSystem.decode base us) (Z.of_nat n).
   Proof.
     cbv [testbit]; intros.
     pose proof limb_width_pos as limb_width_pos_nat.
