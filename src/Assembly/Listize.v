@@ -44,12 +44,17 @@ Section Listize.
 
   Definition ListF (A B: Type): Type := list A -> list B.
 
-  Fixpoint curriedToListF {A B: Type} {ins outs: nat} (default: A)
+  Fixpoint curriedToListF' {A B: Type} {ins outs: nat} (args: nat) (default: A)
       (f: Curried A B ins outs): ListF A B := fun (lst: list A) =>
     match ins as ins' return Curried A B ins' outs -> list B with
     | O => fun g => g
-    | S ins'' => fun g => (curriedToListF default (g (nth ins'' lst default))) lst
+    | S ins'' => fun g =>
+      (curriedToListF' args default (g (nth (args - ins) lst default))) lst
     end f.
+
+  Definition curriedToListF {A B: Type} {ins outs: nat} (default: A)
+      (f: Curried A B ins outs): ListF A B :=
+    curriedToListF' ins default f.
 
 End Listize.
 
