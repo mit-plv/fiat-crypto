@@ -38,7 +38,7 @@ Module PipelineExamples.
     Definition listF1 := curriedToListF (wzero _) (proj1_sig wordF1).
 
     Definition pseudo1: @pseudeq 64 W64 2 1 listF1.
-      unfold listF1; simpl; pseudo_solve.
+      simpl'; pseudo_solve.
     Admitted.
 
     Definition asm1 :=
