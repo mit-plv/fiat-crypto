@@ -1,4 +1,4 @@
-Require Import Bedrock.Word.
+Require Import Bedrock.Word ZArith NArith PArith.
 Require Import QhasmCommon QhasmEvalCommon.
 Require Import Pseudo Qhasm AlmostQhasm Conversion Language.
 Require Import PseudoConversion AlmostConversion StringConversion.
@@ -38,8 +38,8 @@ Module PipelineExamples.
     Definition listF1 := curriedToListF (wzero _) (proj1_sig wordF1).
 
     Definition pseudo1: @pseudeq 64 W64 2 1 listF1.
-      simpl'; pseudo_solve.
-    Admitted.
+      unfold listF1; simpl'; pseudo_solve.
+    Qed.
 
     Definition asm1 :=
       (Pipeline.toString (proj1_sig pseudo1)).
@@ -55,8 +55,8 @@ Module PipelineExamples.
     Definition listF2 := curriedToListF (wzero _) (proj1_sig wordF2).
 
     Definition pseudo2: @pseudeq 32 W32 2 1 listF2.
-      unfold listF2; simpl; pseudo_solve.
-    Admitted.
+      unfold listF2; simpl'; pseudo_solve.
+    Qed.
 
     Definition asm2 :=
       (Pipeline.toString (proj1_sig pseudo2)).
@@ -71,13 +71,14 @@ Module PipelineExamples.
       unfold f1305; solve_nateq.
     Defined.
 
+    (* These bounds are actually unproveable! *)
     Lemma wordF1305: wordeq 64 (proj1_sig g1305).
-    Proof. unfold g1305; wordize. Defined.
+    Proof. unfold g1305; wordize. Admitted.
 
     Definition listF1305 := curriedToListF (wzero _) (proj1_sig wordF1305).
 
     Definition pseudo1305: @pseudeq 64 W64 2 1 listF1305.
-      unfold listF1305; simpl; pseudo_solve.
+      unfold listF1305; simpl'; pseudo_solve.
     Admitted.
 
     Definition asm1305 :=

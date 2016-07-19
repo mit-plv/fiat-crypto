@@ -4,6 +4,7 @@ Require Import Compare_dec Omega Bool.
 Require Import FunctionalExtensionality ProofIrrelevance.
 Require Import QhasmUtil QhasmEvalCommon.
 Require Import WordizeUtil Bounds List Listize Natize.
+Require Import Crypto.Specific.GF1305.
 
 Import EvalUtil ListNotations.
 
@@ -168,6 +169,8 @@ Section ToWord.
     + apply Npow2_ordered.
       omega.
   Qed.
+
+  Definition getBits (x: N) := N.log2 (x + 1).
 End ToWord.
 
 Section WordEq.
@@ -178,8 +181,9 @@ Section WordEq.
 
   Definition wordeq_kill_arg'' {m n w}
       (f: Curried N N (S m) n)
-      (g: forall x, wordeq w (f x)): Curried (word w) (word w) (S m) n :=
-    fun x => proj1_sig (g (wordToN x)).
+      (g: forall x, wordeq w (f (wordToN x))):
+      Curried (word w) (word w) (S m) n :=
+    fun x => proj1_sig (g x).
 
   Lemma wordToN_zero: forall w, wordToN (wzero w) = 0%N.
   Proof.
@@ -191,7 +195,7 @@ Section WordEq.
 
   Lemma wordeq_kill_arg': forall {m n w: nat}
         (f: Curried N N (S m) n)
-        (g: forall x : N, wordeq w (f x))
+        (g: forall x, wordeq w (f (wordToN x)))
         (x: list (word w)),
     curriedToListF (wzero w) (wordeq_kill_arg'' f g) x =
         map (NToWord w) (curriedToListF 0%N f (map (@wordToN w) x)).
@@ -221,7 +225,7 @@ Section WordEq.
   Qed.
 
   Definition wordeq_kill_arg {m n w} (f: Curried N N (S m) n):
-    (forall x, wordeq w (f x)) -> wordeq w f.
+    (forall x, wordeq w (f (@wordToN w x))) -> wordeq w f.
   Proof.
     refine (fun g => exist _ (wordeq_kill_arg'' f g) _).
     apply wordeq_kill_arg'.
@@ -271,7 +275,7 @@ Section WordEq.
         f_equal;
         rewrite wordToN_NToWord;
         intuition).
-  Qed.
+  Defined.
 
   Definition wordeq_let_const: forall {T outs w} (a: T) (f: T -> list N),
     @wordeq O outs w (f a) -> @wordeq O outs w (Let_In a f).
@@ -283,7 +287,7 @@ Section WordEq.
     abstract (
         simpl; rewrite p0'; unfold Let_In;
         simpl; reflexivity).
-  Qed.
+  Defined.
 
   Definition wordeq_debool_andb: forall {outs w} (a b: bool) (f: bool -> list N),
     @wordeq O outs w (Let_In a (fun x => Let_In b (fun y => f (andb x y)))) ->
@@ -296,7 +300,7 @@ Section WordEq.
     abstract (
         simpl; rewrite p0'; unfold Let_In;
         simpl; reflexivity).
-  Qed.
+  Defined.
 
   Definition wordeq_debool_ltb: forall {outs w} (x y: N) (f: bool -> list N),
     (x < Npow2 w)%N -> (y < Npow2 w)%N ->
@@ -326,7 +330,7 @@ Section WordEq.
         rewrite p2, p3; simpl;
         repeat rewrite wordToN_NToWord; try assumption;
         destruct (a <? b)%N; try assumption).
-  Qed.
+  Defined.
 
   Lemma Ninj_eqb: forall w a b,
       (a < Npow2 w)%N -> (b < Npow2 w)%N ->
@@ -368,7 +372,7 @@ Section WordEq.
         }
 
         induction (weqb _ _); intuition.
-  Qed.
+  Defined.
 
   Definition wordeq_debool_eqb: forall {outs w} (x y: N) (f: bool -> list N),
     (x < Npow2 w)%N -> (y < Npow2 w)%N ->
@@ -400,11 +404,23 @@ Section WordEq.
         rewrite Ninj_eqb;
         destruct (a =? b)%N;
         assumption).
-  Qed.
+  Defined.
 
 End WordEq.
 
 (** Wordization Tactics **)
+
+Ltac replace_ones x :=
+  let e := fresh in (
+    destruct (N.eq_dec x (N.ones (getBits x))) as [e|e];
+    try rewrite e;
+    vm_compute in e;
+    match goal with
+    | [H: ?x = ?x |- _] => clear H
+    | [H: ?x = ?x -> False |- _] => contradict H; reflexivity
+    | [H: _ = _ -> False |- _] => clear H
+    | [H: _ = _ |- _] => inversion H
+    end).
 
 Ltac standardize_wordeq :=
   repeat match goal with
@@ -418,6 +434,10 @@ Ltac standardize_wordeq :=
   | [|- @wordeq O _ _ (cons _ _)] => apply wordeq_break_cons
   end.
 
+Transparent wordeq_kill_arg wordeq_let_const wordeq_debool_ltb
+            wordeq_debool_eqb wordeq_debool_andb wordeq_cut_let
+            wordeq_break_cons.
+
 Ltac wordize_iter :=
   repeat match goal with
   | [ |- context[& ?x + & ?y + ind ?b] ] =>
@@ -426,15 +446,17 @@ Ltac wordize_iter :=
     find_bound_on x; find_bound_on y; erewrite wordize_mult'
   | [ |- context[N.add (& ?x) (& ?y)] ] =>
     find_bound_on x; find_bound_on y; erewrite wordize_plus'
-  | [ |- context[N.land (& ?x) _] ] =>
-    find_bound_on x; rewrite <- mask_spec
+  | [ |- context[N.land (& ?x) ?y] ] =>
+    find_bound_on x; replace_ones y; rewrite <- mask_spec
   | [ |- context[N.shiftr (& ?x) ?k] ] =>
     find_bound_on x; rewrite (wordize_shiftr x k)
+  | [ |- context[@NToWord _ (@wordToN _ _)] ] =>
+    rewrite NToWord_wordToN
   end.
 
 Ltac simpl' := cbn beta delta iota.
 
-Ltac wordize_intro := repeat eexists; intros; list_destruct; simpl'.
+Ltac wordize_intro := repeat eexists; intros; simpl'.
 
 Ltac wordize :=
   standardize_wordeq;
@@ -442,5 +464,3 @@ Ltac wordize :=
   wordize_iter;
   bound_compute;
   try reflexivity.
-
-Close Scope nword_scope.

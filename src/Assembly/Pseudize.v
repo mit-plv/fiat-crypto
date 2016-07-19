@@ -535,6 +535,9 @@ Ltac pseudo_step :=
   | [ |- pseudoEval ?p _ = Some ([natToWord _ ?x], _, _)%p ] =>
     is_evar p; eapply pseudo_const
 
+  | [ |- pseudoEval ?p _ = Some ([NToWord _ (@wordToN _ ?x)], _, _)%p ] =>
+    is_evar p; rewrite NToWord_wordToN
+
   | [ |- pseudoEval ?p _ = Some ([NToWord _ ?x], _, _)%p ] =>
     is_evar p; eapply pseudo_const
 
