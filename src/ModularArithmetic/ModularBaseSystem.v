@@ -42,14 +42,10 @@ Section CarryBasePow2.
   Local Notation base := (base_from_limb_widths limb_widths).
   Local Notation log_cap i := (nth_default 0 limb_widths i).
 
-  Definition add_to_nth n (x:Z) xs :=
-    set_nth n (x + nth_default 0 xs n) xs.
-
-  Definition carry_simple i := fun us =>
-    let di := nth_default 0 us      i in
-    let us' := set_nth i (Z.pow2_mod di (log_cap i)) us in
-    add_to_nth (S i) (   (Z.shiftr di (log_cap i))) us'.
-
+  (*
+  Definition carry_and_reduce :=
+    carry_gen limb_widths (fun ci => c * ci).
+   *)
   Definition carry_and_reduce i := fun us =>
     let di := nth_default 0 us      i in
     let us' := set_nth i (Z.pow2_mod di (log_cap i)) us in
@@ -58,19 +54,11 @@ Section CarryBasePow2.
   Definition carry i : digits -> digits :=
     if eq_nat_dec i (pred (length base))
     then carry_and_reduce i
-    else carry_simple i.
+    else carry_simple limb_widths i.
 
   Definition carry_sequence is us := fold_right carry us is.
 
-  Fixpoint make_chain i :=
-    match i with
-    | O => nil
-    | S i' => i' :: make_chain i'
-    end.
-
-  Definition full_carry_chain := make_chain (length limb_widths).
-
-  Definition carry_full := carry_sequence full_carry_chain.
+  Definition carry_full := carry_sequence (full_carry_chain limb_widths).
 
   Definition carry_mul us vs := carry_full (mul us vs).
 

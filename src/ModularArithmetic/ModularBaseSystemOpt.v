@@ -33,7 +33,7 @@ Definition nth_default_opt {A} := Eval compute in @nth_default A.
 Definition set_nth_opt {A} := Eval compute in @set_nth A.
 Definition update_nth_opt {A} := Eval compute in @update_nth A.
 Definition map_opt {A B} := Eval compute in @map A B.
-Definition full_carry_chain_opt := Eval compute in @full_carry_chain.
+Definition full_carry_chain_opt := Eval compute in @Pow2Base.full_carry_chain.
 Definition length_opt := Eval compute in length.
 Definition base_from_limb_widths_opt := Eval compute in @Pow2Base.base_from_limb_widths.
 Definition max_ones_opt := Eval compute in @max_ones.
@@ -118,7 +118,7 @@ Section Carries.
     cbv [carry].
     rewrite <- pull_app_if_sumbool.
     cbv beta delta
-      [carry carry_and_reduce carry_simple add_to_nth
+      [carry carry_and_reduce Pow2Base.carry_simple Pow2Base.add_to_nth
        Z.pow2_mod Z.ones Z.pred
        PseudoMersenneBaseParams.limb_widths].
     change @Pow2Base.base_from_limb_widths with @base_from_limb_widths_opt.
@@ -272,17 +272,17 @@ Section Carries.
     apply carry_sequence_rep; eauto using rep_length.
   Qed.
 
-  Lemma full_carry_chain_bounds : forall i, In i full_carry_chain -> (i < length base)%nat.
+  Lemma full_carry_chain_bounds : forall i, In i (Pow2Base.full_carry_chain limb_widths) -> (i < length base)%nat.
   Proof.
-    unfold full_carry_chain; rewrite <-base_length; intros.
-    apply make_chain_lt; auto.
+    unfold Pow2Base.full_carry_chain; rewrite <-base_length; intros.
+    apply Pow2BaseProofs.make_chain_lt; auto.
   Qed.
 
   Definition carry_full_opt_sig (us : digits) : { b : digits | b = carry_full us }.
   Proof.
     eexists.
     cbv [carry_full].
-    change @full_carry_chain with full_carry_chain_opt.
+    change @Pow2Base.full_carry_chain with full_carry_chain_opt.
     rewrite <-carry_sequence_opt_cps_correct by (auto; apply full_carry_chain_bounds).
     reflexivity.
   Defined.
