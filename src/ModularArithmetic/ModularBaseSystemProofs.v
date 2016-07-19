@@ -57,6 +57,15 @@ Section PseudoMersenneProofs.
     pose proof (NumTheoryUtil.lt_1_p _ prime_modulus); omega.
   Qed. Hint Resolve modulus_pos.
 
+  (** TODO(jadep, from jgross): The abstraction barrier of
+      [base]/[limb_widths] is repeatedly broken in the following
+      proofs.  This lemma should almost never be needed, but removing
+      it breaks everything.  (And using [distr_length] is too much of
+      a sledgehammer, and demolishes the abstraction barrier that's
+      currently merely in pieces.) *)
+  Lemma base_length : length base = length limb_widths.
+  Proof. distr_length. Qed.
+
   Lemma encode'_eq : forall (x : F modulus) i, (i <= length limb_widths)%nat ->
     encode' limb_widths x i = BaseSystem.encode' base x (2 ^ k) i.
   Proof.
@@ -99,7 +108,7 @@ Section PseudoMersenneProofs.
         match goal with H : (_ <= length base)%nat |- _ =>
           apply le_lt_or_eq in H; destruct H end.
         - apply Z.mod_divide.
-          * apply nth_default_base_nonzero; auto using bv, two_k_nonzero.
+          * apply nth_default_base_nonzero, two_sum_firstn_limb_widths_nonzero; auto using bv.
           * rewrite !nth_default_eq.
             do 2 (erewrite nth_indep with (d := 2 ^ k) (d' := 0) by omega).
             rewrite <-!nth_default_eq.
@@ -150,7 +159,7 @@ Section PseudoMersenneProofs.
       (BaseSystem.decode base us) * (BaseSystem.decode base vs) = BaseSystem.decode ext_base (BaseSystem.mul ext_base us vs).
   Proof.
     intros; apply mul_rep_two_base; auto;
-      autorewrite with distr_length; try omega.
+      distr_length.
   Qed.
 
   Lemma modulus_nonzero : modulus <> 0.
@@ -396,7 +405,7 @@ Section CarryProofs.
   Proof.
     pose proof length_carry. pose proof carry_decode_eq_reduce. pose proof (@carry_simple_decode_eq limb_widths).
     specialize_by eauto.
-    intros; split; auto.
+    intros; split; try solve [ distr_length ].
     unfold rep, decode, carry in *.
     intuition; break_if; subst; eauto; apply F_eq; simpl; intuition.
   Qed.
@@ -412,7 +421,7 @@ Section CarryProofs.
   Lemma carry_sequence_length: forall is us,
     (length us = length base)%nat ->
     (length (carry_sequence is us) = length base)%nat.
-  Proof. intros; autorewrite with distr_length; congruence. Qed.
+  Proof. intros; distr_length. Qed.
   Hint Resolve carry_sequence_length.
 
   Lemma carry_sequence_rep : forall is us x,
@@ -432,7 +441,7 @@ Section CarryProofs.
 
   Lemma carry_full_length : forall us, (length us = length base)%nat ->
     length (carry_full us) = length base.
-  Proof. intros; autorewrite with distr_length; congruence. Qed.
+  Proof. intros; distr_length. Qed.
 
   Lemma carry_full_preserves_rep : forall us x,
     rep us x -> rep (carry_full us) x.

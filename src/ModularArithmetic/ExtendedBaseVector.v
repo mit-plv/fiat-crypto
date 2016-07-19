@@ -63,7 +63,7 @@ Section ExtendedBaseVector.
       apply (Zmult_gt_compat_l b' 0 (2 ^ k)); [| apply base_pos; intuition].
       rewrite Z.gt_lt_iff.
       apply Z.pow_pos_nonneg; intuition.
-      pose proof k_nonneg; omega.
+      apply sum_firstn_limb_widths_nonneg; auto using limb_widths_nonneg.
   Qed.
 
   Lemma base_length_nonzero : (0 < length base)%nat.
@@ -105,10 +105,10 @@ Section ExtendedBaseVector.
   Proof.
     intros.
     remember (nth_default 0 base) as b.
-    rewrite Zdiv_mult_cancel_l by (exact two_k_nonzero).
+    rewrite Zdiv_mult_cancel_l by apply two_sum_firstn_limb_widths_nonzero, limb_widths_nonneg.
     replace (b i * b j' / b (i + j')%nat * (2 ^ k * b (i + j')%nat))
      with  ((2 ^ k * (b (i + j')%nat * (b i * b j' / b (i + j')%nat)))) by ring.
-    rewrite Z.mul_cancel_l by (exact two_k_nonzero).
+    rewrite Z.mul_cancel_l by apply two_sum_firstn_limb_widths_nonzero, limb_widths_nonneg.
     replace (b (i + j')%nat * (b i * b j' / b (i + j')%nat))
      with ((b i * b j' / b (i + j')%nat) * b (i + j')%nat) by ring.
     subst b.
@@ -131,7 +131,9 @@ Section ExtendedBaseVector.
       auto using BaseSystem.base_good.
     } { (* i < length base, j < length base, i + j >= length base *)
       rewrite (map_nth_default _ _ _ _ 0) by omega.
-      apply (base_matches_modulus i j); rewrite <-base_length by auto using limb_widths_nonneg; omega.
+      autorewrite with distr_length in * |- .
+      apply base_matches_modulus; auto using limb_widths_nonneg, limb_widths_match_modulus.
+      omega.
     } { (* i < length base, j >= length base, i + j >= length base *)
       do 2 rewrite map_nth_default_base_high by omega.
       remember (j - length base)%nat as j'.

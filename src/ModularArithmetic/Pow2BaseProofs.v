@@ -15,21 +15,24 @@ Section Pow2BaseProofs.
 
   Lemma base_from_limb_widths_length : length base = length limb_widths.
   Proof.
-    induction limb_widths; try reflexivity.
-    simpl; rewrite map_length.
-    simpl in limb_widths_nonneg.
-    rewrite IHl; auto.
+    clear limb_widths_nonneg.
+    induction limb_widths; [ reflexivity | simpl in * ].
+    autorewrite with distr_length; auto.
   Qed.
+  Hint Rewrite base_from_limb_widths_length : distr_length.
 
   Lemma sum_firstn_limb_widths_nonneg : forall n, 0 <= sum_firstn limb_widths n.
   Proof.
     unfold sum_firstn; intros.
     apply fold_right_invariant; try omega.
-    intros y In_y_lw ? ?.
-    apply Z.add_nonneg_nonneg; try assumption.
-    apply limb_widths_nonneg.
-    eapply In_firstn; eauto.
+    eauto using Z.add_nonneg_nonneg, limb_widths_nonneg, In_firstn.
   Qed. Hint Resolve sum_firstn_limb_widths_nonneg.
+
+  Lemma two_sum_firstn_limb_widths_pos n : 0 < 2^sum_firstn limb_widths n.
+  Proof. auto with zarith. Qed.
+
+  Lemma two_sum_firstn_limb_widths_nonzero n : 2^sum_firstn limb_widths n <> 0.
+  Proof. pose proof (two_sum_firstn_limb_widths_pos n); omega. Qed.
 
   Lemma base_from_limb_widths_step : forall i b w, (S i < length base)%nat ->
     nth_error base i = Some b ->
@@ -162,6 +165,63 @@ Section Pow2BaseProofs.
       do 2 f_equal; apply map_ext; intros; lia. }
   Qed.
 
+  Section make_base_vector.
+    Local Notation k := (sum_firstn limb_widths (length limb_widths)).
+    Context (limb_widths_match_modulus : forall i j,
+                (i < length limb_widths)%nat ->
+                (j < length limb_widths)%nat ->
+                (i + j >= length limb_widths)%nat ->
+                let w_sum := sum_firstn limb_widths in
+                k + w_sum (i + j - length limb_widths)%nat <= w_sum i + w_sum j)
+            (limb_widths_good : forall i j, (i + j < length limb_widths)%nat ->
+                                            sum_firstn limb_widths (i + j) <=
+                                            sum_firstn limb_widths i + sum_firstn limb_widths j).
+
+    Lemma base_matches_modulus: forall i j,
+      (i   <  length limb_widths)%nat ->
+      (j   <  length limb_widths)%nat ->
+      (i+j >= length limb_widths)%nat->
+      let b := nth_default 0 base in
+      let r := (b i * b j)  /   (2^k * b (i+j-length base)%nat) in
+                b i * b j = r * (2^k * b (i+j-length base)%nat).
+    Proof.
+      intros.
+      rewrite (Z.mul_comm r).
+      subst r.
+      assert (i + j - length limb_widths < length limb_widths)%nat by omega.
+      rewrite Z.mul_div_eq by (apply Z.gt_lt_iff; apply Z.mul_pos_pos;
+        subst b; rewrite ?nth_default_base; zero_bounds; rewrite ?base_from_limb_widths_length;
+        auto using sum_firstn_limb_widths_nonneg, limb_widths_nonneg).
+      rewrite (Zminus_0_l_reverse (b i * b j)) at 1.
+      f_equal.
+      subst b.
+      repeat rewrite nth_default_base by (rewrite ?base_from_limb_widths_length; auto).
+      do 2 rewrite <- Z.pow_add_r by auto using sum_firstn_limb_widths_nonneg.
+      symmetry.
+      apply Z.mod_same_pow.
+      split.
+      + apply Z.add_nonneg_nonneg; auto using sum_firstn_limb_widths_nonneg.
+      + rewrite base_from_limb_widths_length; auto using limb_widths_nonneg, limb_widths_match_modulus.
+    Qed.
+
+    Lemma base_good : forall i j : nat,
+                 (i + j < length base)%nat ->
+                 let b := nth_default 0 base in
+                 let r := b i * b j / b (i + j)%nat in
+                 b i * b j = r * b (i + j)%nat.
+    Proof.
+      intros; subst b r.
+      repeat rewrite nth_default_base by (omega || auto).
+      rewrite (Z.mul_comm _ (2 ^ (sum_firstn limb_widths (i+j)))).
+      rewrite Z.mul_div_eq by (apply Z.gt_lt_iff; zero_bounds;
+        auto using sum_firstn_limb_widths_nonneg).
+      rewrite <- Z.pow_add_r by auto using sum_firstn_limb_widths_nonneg.
+      rewrite Z.mod_same_pow; try ring.
+      split; [ auto using sum_firstn_limb_widths_nonneg | ].
+      apply limb_widths_good.
+      rewrite <-base_from_limb_widths_length; auto using limb_widths_nonneg.
+    Qed.
+  End make_base_vector.
 End Pow2BaseProofs.
 
 Section BitwiseDecodeEncode.
@@ -788,8 +848,7 @@ Section carrying.
   Hint Rewrite @nth_default_carry_simple using (omega || distr_length; omega) : push_nth_default.
 End carrying.
 
-Hint Rewrite @length_carry_gen : distr_length.
+Hint Rewrite @length_carry_gen @base_from_limb_widths_length : distr_length.
 Hint Rewrite @length_carry_simple @length_carry_simple_sequence @length_make_chain @length_full_carry_chain @length_carry_simple_full : distr_length.
 Hint Rewrite @nth_default_carry_simple_full @nth_default_carry_gen_full : push_nth_default.
 Hint Rewrite @nth_default_carry_simple @nth_default_carry_gen using (omega || distr_length; omega) : push_nth_default.
-Hint Rewrite @base_from_limb_widths_length using auto with nocore distr_length : distr_length.
