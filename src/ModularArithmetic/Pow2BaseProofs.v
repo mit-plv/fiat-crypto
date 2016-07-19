@@ -788,7 +788,8 @@ Section carrying.
   Hint Rewrite @nth_default_carry_simple using (omega || distr_length; omega) : push_nth_default.
 End carrying.
 
-Hint Rewrite @length_carry_gen @base_from_limb_widths_length : distr_length.
+Hint Rewrite @length_carry_gen : distr_length.
 Hint Rewrite @length_carry_simple @length_carry_simple_sequence @length_make_chain @length_full_carry_chain @length_carry_simple_full : distr_length.
 Hint Rewrite @nth_default_carry_simple_full @nth_default_carry_gen_full : push_nth_default.
 Hint Rewrite @nth_default_carry_simple @nth_default_carry_gen using (omega || distr_length; omega) : push_nth_default.
+Hint Rewrite @base_from_limb_widths_length using auto with nocore distr_length : distr_length.
