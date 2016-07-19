@@ -83,12 +83,6 @@ Section ExtendedBaseVector.
     destruct (lt_dec 0 (length base)); try apply BaseSystem.b0_1; try omega.
   Qed.
 
-  Lemma two_k_nonzero : 2^k <> 0.
-  Proof.
-    pose proof (Z.pow_eq_0 2 k k_nonneg).
-    intuition.
-  Qed.
-
   Lemma map_nth_default_base_high : forall n, (n < (length base))%nat ->
     nth_default 0 (map (Z.mul (2 ^ k)) base) n =
     (2 ^ k) * (nth_default 0 base n).

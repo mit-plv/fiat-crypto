@@ -25,6 +25,12 @@ Section PseudoMersenneBaseParamProofs.
     apply sum_firstn_limb_widths_nonneg; auto.
   Qed. Hint Resolve k_nonneg.
 
+  Lemma two_k_nonzero : 2^k <> 0.
+  Proof.
+    pose proof (Z.pow_eq_0 2 k k_nonneg).
+    intuition.
+  Qed.
+
   Lemma base_matches_modulus: forall i j,
     (i   <  length limb_widths)%nat ->
     (j   <  length limb_widths)%nat ->
