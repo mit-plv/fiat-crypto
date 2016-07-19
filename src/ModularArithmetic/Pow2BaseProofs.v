@@ -150,6 +150,18 @@ Section Pow2BaseProofs.
     reflexivity.
   Qed.
 
+  Lemma base_from_limb_widths_app : forall l0 l
+                                           (l0_nonneg : forall x, In x l0 -> 0 <= x)
+                                           (l_nonneg : forall x, In x l -> 0 <= x),
+      base_from_limb_widths (l0 ++ l)
+      = base_from_limb_widths l0 ++ map (Z.mul (two_p (sum_firstn l0 (length l0)))) (base_from_limb_widths l).
+  Proof.
+    induction l0 as [|?? IHl0].
+    { simpl; intros; rewrite <- map_id at 1; apply map_ext; intros; omega. }
+    { simpl; intros; rewrite !IHl0, !map_app, map_map, sum_firstn_succ_cons, two_p_is_exp by auto with znonzero.
+      do 2 f_equal; apply map_ext; intros; lia. }
+  Qed.
+
 End Pow2BaseProofs.
 
 Section BitwiseDecodeEncode.
@@ -575,7 +587,7 @@ Section carrying_helper.
   Lemma add_to_nth_sum : forall n x us, (n < length us \/ n >= length base)%nat ->
     BaseSystem.decode base (add_to_nth n x us) =
     x * nth_default 0 base n + BaseSystem.decode base us.
-  Proof. unfold add_to_nth; intros; rewrite set_nth_sum; try ring_simplify; auto. Qed.
+  Proof. intros; rewrite add_to_nth_set_nth, set_nth_sum; try ring_simplify; auto. Qed.
 
   Lemma add_to_nth_nth_default_full : forall n x l i d,
     nth_default d (add_to_nth n x l) i =
@@ -615,12 +627,10 @@ Section carrying.
   Local Notation log_cap i := (nth_default 0 limb_widths i).
   Local Hint Resolve limb_widths_nonneg sum_firstn_limb_widths_nonneg.
 
-  (*
-  Lemma length_carry_gen : forall f i us, length (carry_gen limb_widths f i us) = length us.
+  Lemma length_carry_gen : forall fc fi i us, length (carry_gen limb_widths fc fi i us) = length us.
   Proof. intros; unfold carry_gen, carry_and_reduce_single; distr_length; reflexivity. Qed.
 
   Hint Rewrite @length_carry_gen : distr_length.
-  *)
 
   Lemma length_carry_simple : forall i us, length (carry_simple limb_widths i us) = length us.
   Proof. intros; unfold carry_simple; distr_length; reflexivity. Qed.
@@ -634,26 +644,29 @@ Section carrying.
     autorewrite with simpl_sum_firstn; reflexivity.
   Qed.
 
-  (*
-  Lemma carry_gen_decode_eq : forall f i' us (i := (i' mod length base)%nat),
+  Lemma carry_gen_decode_eq : forall fc fi i' us
+                                     (i := fi (length base) i')
+                                     (Si := fi (length base) (S i)),
     (length us = length base) ->
-    BaseSystem.decode base (carry_gen limb_widths f i' us)
-    = ((f (nth_default 0 us i / 2 ^ log_cap i))
-         * (if eq_nat_dec (S i mod length base) 0
-            then nth_default 0 base 0
-            else (2 ^ log_cap i) * (nth_default 0 base i))
-       - (nth_default 0 us i / 2 ^ log_cap i) * 2 ^ log_cap i * nth_default 0 base i
-      )
+    BaseSystem.decode base (carry_gen limb_widths fc fi i' us)
+    =  (fc (nth_default 0 us i / 2 ^ log_cap i) *
+        (if eq_nat_dec Si (S i)
+         then if lt_dec (S i) (length base)
+              then 2 ^ log_cap i * nth_default 0 base i
+              else 0
+         else nth_default 0 base Si)
+        - 2 ^ log_cap i * (nth_default 0 us i / 2 ^ log_cap i) * nth_default 0 base i)
       + BaseSystem.decode base us.
   Proof.
-    intros f i' us i H; intros.
+    intros fc fi i' us i Si H; intros.
     destruct (eq_nat_dec 0 (length base));
       [ destruct limb_widths, us, i; simpl in *; try congruence;
+        break_match;
         unfold carry_gen, carry_and_reduce_single, add_to_nth;
         autorewrite with zsimplify simpl_nth_default simpl_set_nth simpl_update_nth distr_length;
         reflexivity
       | ].
-    assert (0 <= i < length base)%nat by (subst i; auto with arith).
+    (*assert (0 <= i < length base)%nat by (subst i; auto with arith).*)
     assert (0 <= log_cap i) by auto using log_cap_nonneg.
     assert (2 ^ log_cap i <> 0) by (apply Z.pow_nonzero; lia).
     unfold carry_gen, carry_and_reduce_single.
@@ -663,17 +676,17 @@ Section carrying.
     unfold Z.pow2_mod.
     rewrite Z.land_ones by auto using log_cap_nonneg.
     rewrite Z.shiftr_div_pow2 by auto using log_cap_nonneg.
-    destruct (eq_nat_dec (S i mod length base) 0);
-      repeat first [ ring
-                   | congruence
-                   | match goal with H : _ = _ |- _ => rewrite !H in * end
-                   | rewrite nth_default_base_succ by omega
-                   | rewrite !(nth_default_out_of_bounds _ base) by omega
-                   | rewrite !(nth_default_out_of_bounds _ us) by omega
-                   | rewrite Z.mod_eq by assumption
-                   | progress distr_length
-                   | progress autorewrite with natsimplify zsimplify in *
-                   | progress break_match ].
+    change (fi (length base) i') with i.
+    subst Si.
+    repeat first [ ring
+                 | match goal with H : _ = _ |- _ => rewrite !H in * end
+                 | rewrite nth_default_base_succ by omega
+                 | rewrite !(nth_default_out_of_bounds _ base) by omega
+                 | rewrite !(nth_default_out_of_bounds _ us) by omega
+                 | rewrite Z.mod_eq by assumption
+                 | progress distr_length
+                 | progress autorewrite with natsimplify zsimplify in *
+                 | progress break_match ].
   Qed.
 
   Lemma carry_simple_decode_eq : forall i us,
@@ -685,26 +698,7 @@ Section carrying.
     autorewrite with natsimplify.
     break_match; lia.
   Qed.
-*)
 
-  Lemma carry_simple_decode_eq : forall i us,
-    (length us = length base) ->
-    (i < (pred (length base)))%nat ->
-    BaseSystem.decode base (carry_simple limb_widths i us) = BaseSystem.decode base us.
-  Proof.
-    unfold carry_simple. intros.
-    rewrite add_to_nth_sum by (rewrite length_set_nth; omega).
-    rewrite set_nth_sum by omega.
-    unfold Z.pow2_mod.
-    rewrite Z.land_ones by eauto using log_cap_nonneg.
-    rewrite Z.shiftr_div_pow2 by eauto using log_cap_nonneg.
-    rewrite nth_default_base_succ by omega.
-    rewrite Z.mul_assoc.
-    rewrite (Z.mul_comm _ (2 ^ log_cap i)).
-    rewrite Z.mul_div_eq; try ring.
-    apply Z.gt_lt_iff.
-    apply Z.pow_pos_nonneg; omega || eauto using log_cap_nonneg.
-  Qed.
 
   Lemma length_carry_simple_sequence : forall is us, length (carry_simple_sequence limb_widths is us) = length us.
   Proof.
@@ -732,32 +726,23 @@ Section carrying.
   Proof.
     induction x; simpl; intuition.
   Qed.
-(*
-  Lemma nth_default_carry_gen_full : forall f d i n us,
-      nth_default d (carry_gen limb_widths f i us) n
+
+  Lemma nth_default_carry_gen_full fc fi d i n us
+    : nth_default d (carry_gen limb_widths fc fi i us) n
       = if lt_dec n (length us)
-        then if eq_nat_dec n (i mod length us)
-             then (if eq_nat_dec (S n) (length us)
-                   then (if eq_nat_dec n 0
-                         then f ((nth_default 0 us n) >> log_cap n)
-                         else 0)
-                   else 0)
-                  + Z.pow2_mod (nth_default 0 us n) (log_cap n)
-             else (if eq_nat_dec n (if eq_nat_dec (S (i mod length us)) (length us) then 0%nat else S (i mod length us))
-                   then f (nth_default 0 us (i mod length us) >> log_cap (i mod length us))
-                   else 0)
-                  + nth_default d us n
+        then (if eq_nat_dec n (fi (length us) i)
+              then Z.pow2_mod (nth_default 0 us n) (log_cap n)
+              else nth_default 0 us n) +
+             if eq_nat_dec n (fi (length us) (S (fi (length us) i)))
+             then fc (nth_default 0 us (fi (length us) i) >> log_cap (fi (length us) i))
+             else 0
         else d.
   Proof.
     unfold carry_gen, carry_and_reduce_single.
     intros; autorewrite with push_nth_default natsimplify distr_length.
-    edestruct lt_dec; [ | reflexivity ].
-    change (S ?x) with (1 + x)%nat.
-    rewrite (Nat.add_mod_idemp_r 1 i (length us)) by omega.
-    autorewrite with natsimplify.
-    change (1 + ?x)%nat with (S x).
-    destruct (eq_nat_dec n (i mod length us));
-      subst; repeat break_match; omega.
+    edestruct (lt_dec n (length us)) as [H|H]; [ | reflexivity ].
+    rewrite !(@nth_default_in_bounds Z 0 d) by assumption.
+    repeat break_match; subst; try omega; try rewrite_hyp *; omega.
   Qed.
 
   Hint Rewrite @nth_default_carry_gen_full : push_nth_default.
@@ -765,72 +750,45 @@ Section carrying.
   Lemma nth_default_carry_simple_full : forall d i n us,
       nth_default d (carry_simple limb_widths i us) n
       = if lt_dec n (length us)
-        then if eq_nat_dec n (i mod length us)
-             then (if eq_nat_dec (S n) (length us)
-                   then (if eq_nat_dec n 0
-                         then (nth_default 0 us n >> log_cap n + Z.pow2_mod (nth_default 0 us n) (log_cap n))
-                         (* FIXME: The above is just [nth_default 0 us n], but do we really care about the case of [n = 0], [length us = 1]? *)
-                         else Z.pow2_mod (nth_default 0 us n) (log_cap n))
-                   else Z.pow2_mod (nth_default 0 us n) (log_cap n))
-             else (if eq_nat_dec n (if eq_nat_dec (S (i mod length us)) (length us) then 0%nat else S (i mod length us))
-                   then nth_default 0 us (i mod length us) >> log_cap (i mod length us)
-                   else 0)
-                  + nth_default d us n
+        then if eq_nat_dec n i
+             then Z.pow2_mod (nth_default 0 us n) (log_cap n)
+             else nth_default 0 us n +
+                  if eq_nat_dec n (S i) then nth_default 0 us i >> log_cap i else 0
         else d.
   Proof.
-    intros; unfold carry_simple; autorewrite with push_nth_default;
-      repeat break_match; reflexivity.
+    intros; unfold carry_simple; autorewrite with push_nth_default.
+    repeat break_match; try omega; try reflexivity.
   Qed.
 
   Hint Rewrite @nth_default_carry_simple_full : push_nth_default.
 
   Lemma nth_default_carry_gen
-    : forall f i us,
+    : forall fc fi i us,
       (0 <= i < length us)%nat
-      -> nth_default 0 (carry_gen limb_widths f i us) i
-         = (if PeanoNat.Nat.eq_dec i (if PeanoNat.Nat.eq_dec (S i) (length us) then 0%nat else S i)
-            then f (nth_default 0 us i >> log_cap i) + Z.pow2_mod (nth_default 0 us i) (log_cap i)
-            else Z.pow2_mod (nth_default 0 us i) (log_cap i)).
+      -> nth_default 0 (carry_gen limb_widths fc fi i us) i
+         = (if eq_nat_dec i (fi (length us) i)
+            then Z.pow2_mod (nth_default 0 us i) (log_cap i)
+            else nth_default 0 us i) +
+           if eq_nat_dec i (fi (length us) (S (fi (length us) i)))
+           then fc (nth_default 0 us (fi (length us) i) >> log_cap (fi (length us) i))
+           else 0.
   Proof.
-    unfold carry_gen, carry_and_reduce_single.
-    intros; autorewrite with push_nth_default natsimplify; reflexivity.
+    intros; autorewrite with push_nth_default natsimplify; break_match; omega.
   Qed.
   Hint Rewrite @nth_default_carry_gen using (omega || distr_length; omega) : push_nth_default.
 
   Lemma nth_default_carry_simple
-    : forall f i us,
+    : forall i us,
       (0 <= i < length us)%nat
-      -> nth_default 0 (carry_gen limb_widths f i us) i
-         = (if PeanoNat.Nat.eq_dec i (if PeanoNat.Nat.eq_dec (S i) (length us) then 0%nat else S i)
-            then f (nth_default 0 us i >> log_cap i) + Z.pow2_mod (nth_default 0 us i) (log_cap i)
-            else Z.pow2_mod (nth_default 0 us i) (log_cap i)).
+      -> nth_default 0 (carry_simple limb_widths i us) i
+         = Z.pow2_mod (nth_default 0 us i) (log_cap i).
   Proof.
-    unfold carry_gen, carry_and_reduce_single.
-    intros; autorewrite with push_nth_default natsimplify; reflexivity.
+    intros; autorewrite with push_nth_default natsimplify; break_match; omega.
   Qed.
-  Hint Rewrite @nth_default_carry_gen using (omega || distr_length; omega) : push_nth_default.
-
-
-  Lemma nth_default_carry_gen
-    : forall f i us,
-      (0 <= i < length us)%nat
-      -> nth_default 0 (carry_gen limb_widths f i us) i
-         = (if PeanoNat.Nat.eq_dec i (if PeanoNat.Nat.eq_dec (S i) (length us) then 0%nat else S i)
-            then f (nth_default 0 us i >> log_cap i) + Z.pow2_mod (nth_default 0 us i) (log_cap i)
-            else Z.pow2_mod (nth_default 0 us i) (log_cap i)).
-  Proof.
-    unfold carry_gen, carry_and_reduce_single.
-    intros; autorewrite with push_nth_default natsimplify; reflexivity.
-  Qed.
-  Hint Rewrite @nth_default_carry_gen using (omega || distr_length; omega) : push_nth_default.
-*)
+  Hint Rewrite @nth_default_carry_simple using (omega || distr_length; omega) : push_nth_default.
 End carrying.
 
-(*
 Hint Rewrite @length_carry_gen : distr_length.
-*)
 Hint Rewrite @length_carry_simple @length_carry_simple_sequence @length_make_chain @length_full_carry_chain @length_carry_simple_full : distr_length.
-(*
-Hint Rewrite @nth_default_carry_gen_full : push_nth_default.
-Hint Rewrite @nth_default_carry_gen using (omega || distr_length; omega) : push_nth_default.
-*)
+Hint Rewrite @nth_default_carry_simple_full @nth_default_carry_gen_full : push_nth_default.
+Hint Rewrite @nth_default_carry_simple @nth_default_carry_gen using (omega || distr_length; omega) : push_nth_default.

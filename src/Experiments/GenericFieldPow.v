@@ -129,7 +129,7 @@ Module F.
       Field_simplify_done : forall (H:x==y), field_simplify_done H.
     Ltac field_nsatz :=
       repeat match goal with
-               [ H: (_:F) == _ |- _ ] =>
+               [ H: _ == _ |- _ ] =>
                match goal with
                | [ Ha : field_simplify_done H |- _ ] => fail
                | _ => idtac

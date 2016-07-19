@@ -23,6 +23,7 @@ Create HintDb pull_firstn discriminated.
 Create HintDb push_firstn discriminated.
 Create HintDb pull_update_nth discriminated.
 Create HintDb push_update_nth discriminated.
+Create HintDb znonzero discriminated.
 
 Hint Rewrite
   @app_length
@@ -72,6 +73,7 @@ Ltac boring :=
   simpl; intuition;
   repeat match goal with
            | [ H : _ |- _ ] => rewrite H; clear H
+           | [ |- appcontext[match ?pf with end] ] => solve [ case pf ]
            | _ => progress autounfold in *
            | _ => progress autorewrite with core
            | _ => progress simpl in *
@@ -847,6 +849,41 @@ Ltac update_nth_inbounds :=
 
 Ltac nth_inbounds := nth_error_inbounds || set_nth_inbounds || update_nth_inbounds.
 
+Definition nth_dep {A} (ls : list A) (n : nat) (pf : n < length ls) : A.
+Proof.
+  refine (match nth_error ls n as v return nth_error ls n = v -> A with
+          | Some v => fun _ => v
+          | None => fun bad => match _ : False with end
+          end eq_refl).
+  apply (proj1 (@nth_error_None _ _ _)) in bad; instantiate; generalize dependent (length ls); clear.
+  abstract (intros; omega).
+Defined.
+
+Lemma nth_error_nth_dep {A} ls n pf : nth_error ls n = Some (@nth_dep A ls n pf).
+Proof.
+  unfold nth_dep.
+  generalize dependent (@nth_error_None A ls n).
+  edestruct nth_error; boring.
+Qed.
+
+Lemma nth_default_nth_dep {A} d ls n pf : nth_default d ls n = @nth_dep A ls n pf.
+Proof.
+  unfold nth_dep.
+  generalize dependent (@nth_error_None A ls n).
+  destruct (nth_error ls n) eqn:?; boring.
+  erewrite nth_error_value_eq_nth_default by eassumption; reflexivity.
+Qed.
+
+Lemma nth_default_in_bounds : forall {T} (d' d : T) n us, (n < length us)%nat ->
+  nth_default d us n = nth_default d' us n.
+Proof.
+  intros; erewrite !nth_default_nth_dep; reflexivity.
+  Grab Existential Variables.
+  assumption.
+Qed.
+
+Hint Resolve @nth_default_in_bounds : simpl_nth_default.
+
 Lemma cons_eq_head : forall {T} (x y:T) xs ys, x::xs = y::ys -> x=y.
 Proof.
   intros; solve_by_inversion.
@@ -1061,6 +1098,20 @@ Qed.
 
 Hint Rewrite @sum_firstn_succ using congruence : simpl_sum_firstn.
 
+Lemma sum_firstn_succ_cons : forall x xs i,
+  sum_firstn (x :: xs) (S i) = (x + sum_firstn xs i)%Z.
+Proof.
+  unfold sum_firstn; simpl; reflexivity.
+Qed.
+
+Hint Rewrite @sum_firstn_succ_cons : simpl_sum_firstn.
+
+Lemma sum_firstn_nil : forall i,
+  sum_firstn nil i = 0%Z.
+Proof. destruct i; reflexivity. Qed.
+
+Hint Rewrite @sum_firstn_nil : simpl_sum_firstn.
+
 Lemma sum_firstn_succ_default_rev : forall l i,
   sum_firstn l i = (sum_firstn l (S i) - nth_default 0 l i)%Z.
 Proof.
@@ -1073,6 +1124,17 @@ Lemma sum_firstn_succ_rev : forall l i x,
 Proof.
   intros; erewrite sum_firstn_succ by eassumption; omega.
 Qed.
+
+Lemma sum_firstn_nonnegative : forall n l, (forall x, In x l -> 0 <= x)%Z
+                                       -> (0 <= sum_firstn l n)%Z.
+Proof.
+  induction n as [|n IHn]; destruct l as [|? l]; autorewrite with simpl_sum_firstn; simpl; try omega.
+  { specialize (IHn l).
+    destruct n; simpl; autorewrite with simpl_sum_firstn simpl_nth_default in *;
+      intuition. }
+Qed.
+
+Hint Resolve sum_firstn_nonnegative : znonzero.
 
 Lemma nth_default_map2 : forall {A B C} (f : A -> B -> C) ls1 ls2 i d d1 d2,
   nth_default d (map2 f ls1 ls2) i =

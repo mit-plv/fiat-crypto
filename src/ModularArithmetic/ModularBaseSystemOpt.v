@@ -3,6 +3,7 @@ Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParams.
 Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParamProofs.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemProofs.
 Require Import Crypto.ModularArithmetic.ExtendedBaseVector.
+Require Import Crypto.ModularArithmetic.Pow2BaseProofs.
 Require Import Crypto.BaseSystem Crypto.ModularArithmetic.ModularBaseSystem.
 Require Import Coq.Lists.List.
 Require Import Crypto.Util.ListUtil Crypto.Util.ZUtil Crypto.Util.NatUtil Crypto.Util.CaseUtil.
@@ -118,9 +119,10 @@ Section Carries.
     cbv [carry].
     rewrite <- pull_app_if_sumbool.
     cbv beta delta
-      [carry carry_and_reduce Pow2Base.carry_simple Pow2Base.add_to_nth
+      [carry carry_and_reduce Pow2Base.carry_gen Pow2Base.carry_and_reduce_single Pow2Base.carry_simple
        Z.pow2_mod Z.ones Z.pred
        PseudoMersenneBaseParams.limb_widths].
+    rewrite !add_to_nth_set_nth.
     change @Pow2Base.base_from_limb_widths with @base_from_limb_widths_opt.
     change @nth_default with @nth_default_opt in *.
     change @set_nth with @set_nth_opt in *.
@@ -374,7 +376,7 @@ Section Multiplication.
     cbv [mul_bi'_step].
     opt_step.
     { reflexivity. }
-    { cbv [crosscoef ext_base].
+    { cbv [crosscoef].
       change Z.div with Z_div_opt.
       change Z.mul with Z_mul_opt at 2.
       change @nth_default with @nth_default_opt.
@@ -403,7 +405,7 @@ Section Multiplication.
       rewrite <- IHvsr; clear IHvsr.
       unfold mul_bi'_opt, mul_bi'_opt_step.
       apply f_equal2; [ | reflexivity ].
-      cbv [crosscoef ext_base].
+      cbv [crosscoef].
       change Z.div with Z_div_opt.
       change Z.mul with Z_mul_opt at 2.
       change @nth_default with @nth_default_opt.
@@ -475,7 +477,8 @@ Section Multiplication.
   Definition mul_opt_sig (us vs : digits) : { b : digits | b = mul us vs }.
   Proof.
     eexists.
-    cbv [BaseSystem.mul mul mul_each mul_bi mul_bi' zeros ext_base reduce].
+    cbv [BaseSystem.mul mul mul_each mul_bi mul_bi' zeros reduce].
+    rewrite ext_base_alt.
     rewrite <- mul'_opt_correct.
     change @Pow2Base.base_from_limb_widths with base_from_limb_widths_opt.
     rewrite Z.map_shiftl by apply k_nonneg.

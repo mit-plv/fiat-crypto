@@ -32,7 +32,7 @@ Qed.
 Ltac q_bound := pose proof two_lt_q; omega.
 Lemma square_a : isSquare a.
 Proof.
-  Lemma q_1mod4 : (q mod 4 = 1)%Z. reflexivity. Qed.
+  assert (q_1mod4 : (q mod 4 = 1)%Z) by abstract reflexivity.
   intros.
   pose proof (minus1_square_1mod4 q prime_q q_1mod4) as minus1_square.
   destruct minus1_square as [b b_id].
