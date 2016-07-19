@@ -38,6 +38,8 @@ Hint Rewrite
   @prod_length
   : distr_length.
 
+Hint Extern 1 => progress autorewrite with distr_length in * : distr_length.
+
 Definition sum_firstn l n := fold_right Z.add 0%Z (firstn n l).
 
 Fixpoint map2 {A B C} (f : A -> B -> C) (la : list A) (lb : list B) : list C :=
