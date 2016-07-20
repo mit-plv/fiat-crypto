@@ -408,6 +408,216 @@ Section WordEq.
 
 End WordEq.
 
+Section Masked.
+  Definition maskeq {ins outs} (n: nat) (f: Curried N N ins outs) (masks: list nat) :=
+    {g: Curried (word n) (word n) ins outs | forall (x: list (word n)),
+        (forall k, (wordToN (nth k x (wzero _)) < Npow2 (nth k masks n))%N) ->
+      (curriedToListF (wzero _) g) x =
+        map (@NToWord n) ((curriedToListF 0%N f) (map (@wordToN n) x))}.
+
+  Definition maskeq_kill_arg'' {m n w}
+      (f: Curried N N (S m) n) masks
+      (g: forall x, maskeq w (f (wordToN x)) (tl masks)):
+      Curried (word w) (word w) (S m) n :=
+    fun x => proj1_sig (g x).
+
+  Lemma nth_tl: forall {T k} (x: list T) d, nth k (tl x) d = nth (S k) x d.
+  Proof. intros; induction x, k; simpl; intuition. Qed.
+
+  Lemma maskeq_kill_arg': forall {m n w: nat}
+      (f: Curried N N (S m) n) masks
+      (g: forall x, maskeq w (f (wordToN x)) (tl masks))
+      (x: list (word w)),
+    (forall k : nat, (& nth k x (wzero w) < Npow2 (nth k masks w))%N) ->
+    curriedToListF (wzero w) (maskeq_kill_arg'' f masks g) x =
+        map (NToWord w) (curriedToListF 0%N f (map (@wordToN w) x)).
+  Proof.
+    intros; unfold maskeq_kill_arg'', curriedToListF; simpl in *.
+    destruct (g _) as [f' p]; simpl.
+    pose proof (p (tl x)) as p'; clear p.
+    rewrite <- (wordToN_zero w).
+    replace (m - m) with O in * by omega.
+    rewrite map_nth.
+    unfold curriedToListF in p'.
+    replace (map (@wordToN w) (tl x)) with (tl (map (@wordToN w) x)) in p'.
+    replace (curriedToListF' (S m) (wzero w) f' x)
+       with (curriedToListF' m (wzero w) f' (tl x));
+      try rewrite p'; try clear f'; try clear f; try f_equal;
+      try (intro; repeat rewrite nth_tl; apply H).
+
+    - rewrite curriedToListF'_tl; try omega.
+      repeat f_equal; intuition.
+      rewrite wordToN_zero.
+      reflexivity.
+
+    - rewrite curriedToListF'_tl; try omega.
+      rewrite p'.
+      reflexivity.
+      intro; repeat rewrite nth_tl; apply H.
+
+    - induction x; simpl; intuition.
+  Qed.
+
+  Definition maskeq_kill_arg {m n w} (f: Curried N N (S m) n) masks:
+    (forall x, maskeq w (f (@wordToN w x)) (tl masks)) -> maskeq w f masks.
+  Proof.
+    refine (fun g => exist _ (maskeq_kill_arg'' f _ g) _).
+    intros; unfold maskeq_kill_arg''.
+    apply maskeq_kill_arg'; intro; apply H.
+  Defined.
+
+  Definition maskeq_break_cons: forall {m w} (a: N) (b: list N) m0 ms,
+    @maskeq O 1 w [a] [m0] ->
+    @maskeq O (S m) w b ms ->
+    @maskeq O (S (S m)) w (cons a b) (cons m0 ms).
+  Proof.
+    intros m w a b m0 ms n0 n1.
+    exists (@cons (word w) (hd (wzero w) (proj1_sig n0)) (proj1_sig n1)); intros x H.
+    destruct n0 as [f0 p0].
+    destruct n1 as [f1 p1].
+    pose proof (p0 x) as p0'.
+    pose proof (p1 (tl x)) as p1'.
+
+    abstract (
+        unfold curriedToListF in *; simpl in *;
+        rewrite p0', p1'; simpl; try reflexivity; intro k;
+        induction k; try rewrite nth_tl; try apply H;
+        induction k; apply word_size_bound ).
+  Defined.
+
+  Definition maskeq_nil: forall w, @maskeq O O w [] [].
+  Proof. intro; exists []; abstract (intro; simpl; reflexivity). Qed.
+
+  Definition maskeq_cut_let: forall {outs w} (x: N) (f: N -> list N) m0 ms,
+    (x < Npow2 w)%N -> (x < Npow2 m0)%N ->
+    @maskeq 1 outs w f (cons m0 ms) ->
+    @maskeq O 1 w [x] [m0] ->
+    @maskeq O outs w (Let_In x f) ms.
+  Proof.
+    intros outs w x f m0 ms W B n0 n1.
+    exists (Let_In (hd (wzero w) (proj1_sig n1)) (proj1_sig n0)); intros x0 M.
+
+    destruct n0 as [f0 p0].
+    destruct n1 as [f1 p1].
+    pose proof (p0 [NToWord w x]) as p0'.
+    pose proof (p1 (cons (NToWord w x) x0)) as p1'.
+
+    abstract (
+      unfold curriedToListF, Let_In in *; simpl in *;
+
+      rewrite p1'; simpl;
+      try rewrite p0'; simpl;
+      try rewrite wordToN_NToWord; intuition;
+
+      induction k; try induction k;
+      try rewrite wordToN_zero;
+      try apply Npow2_gt0;
+      try apply word_size_bound;
+      pose proof (M 1) as M'; simpl in M';
+      try rewrite nth_tl;
+      try rewrite wordToN_NToWord;
+      try assumption).
+  Defined.
+
+  Definition maskeq_let_const: forall {T outs w} (a: T) (f: T -> list N) masks,
+    @maskeq O outs w (f a) masks -> @maskeq O outs w (Let_In a f) masks.
+  Proof.
+    intros T outs w a f masks n0.
+    exists (proj1_sig n0); intros x0 H.
+    destruct n0 as [f0 p0].
+    pose proof (p0 x0) as p0'.
+    abstract (
+        simpl; rewrite p0'; unfold Let_In; try intro;
+        try reflexivity;
+        apply H).
+  Defined.
+
+  Definition maskeq_debool_andb: forall {outs w} (a b: bool) (f: bool -> list N) masks,
+    @maskeq O outs w (Let_In a (fun x => Let_In b (fun y => f (andb x y)))) masks ->
+    @maskeq O outs w (Let_In (andb a b) f) masks.
+  Proof.
+    intros T outs w a f masks n0.
+    exists (proj1_sig n0); intros x0 H.
+    destruct n0 as [f0 p0].
+    pose proof (p0 x0) as p0'.
+    abstract (
+        simpl; rewrite p0'; unfold Let_In;
+        simpl; try reflexivity; try intro; try apply H).
+  Defined.
+
+  Definition maskeq_debool_ltb: forall {outs w} (x y: N) (f: bool -> list N) m0 m1 masks,
+    (x < Npow2 w)%N -> (y < Npow2 w)%N ->
+    (0 <= x)%N -> (0 <= y)%N ->
+    @maskeq O outs w (f true) masks -> @maskeq O outs w (f false) masks ->
+    @maskeq O 1 w [x] m0 -> @maskeq O 1 w [y] m1 ->
+    @maskeq O outs w (Let_In (x <? y)%N f) masks.
+  Proof.
+    intros outs w a b f m0 m1 masks B0 B1 I0 I1 n0 n1 n2 n3.
+
+    exists (if ((wordToN (hd (wzero w) (curriedToListF (wzero w) (proj1_sig n2) [])))
+            <? wordToN (hd (wzero w) (curriedToListF (wzero w) (proj1_sig n3) [])))%N
+        then (proj1_sig n0) else (proj1_sig n1)); intros x H.
+
+    destruct n0 as [f0 p0].
+    destruct n1 as [f1 p1].
+    destruct n2 as [f2 p2].
+    destruct n3 as [f3 p3].
+
+    pose proof (p0 x) as p0'.
+    pose proof (p1 x) as p1'.
+    pose proof (p2 x) as p2'.
+    pose proof (p3 x) as p3'.
+
+    abstract (
+        unfold Let_In; simpl;
+        rewrite p2, p3; simpl;
+        repeat rewrite wordToN_NToWord; try assumption;
+        destruct (a <? b)%N; try assumption;
+        try apply p0; try apply p1; intro k;
+        induction k; try induction k;
+        try rewrite wordToN_zero;
+        try apply Npow2_gt0;
+        apply H).
+  Defined.
+
+  Definition maskeq_debool_eqb: forall {outs w} (x y: N) (f: bool -> list N) m0 m1 masks,
+    (x < Npow2 w)%N -> (y < Npow2 w)%N ->
+    (0 <= x)%N -> (0 <= y)%N ->
+    @maskeq O outs w (f true) masks -> @maskeq O outs w (f false) masks ->
+    @maskeq O 1 w [x] m0 -> @maskeq O 1 w [y] m1 ->
+    @maskeq O outs w (Let_In (N.eqb x y) f) masks.
+  Proof.
+    intros outs w a b f m0 m1 masks B0 B1 I0 I1 n0 n1 n2 n3.
+
+    exists (if (weqb
+            (hd (wzero w) (curriedToListF (wzero w) (proj1_sig n2) []))
+            (hd (wzero w) (curriedToListF (wzero w) (proj1_sig n3) [])))%N
+        then (proj1_sig n0) else (proj1_sig n1)); intros x H.
+
+    destruct n0 as [f0 p0].
+    destruct n1 as [f1 p1].
+    destruct n2 as [f2 p2].
+    destruct n3 as [f3 p3].
+
+    pose proof (p0 x) as p0'.
+    pose proof (p1 x) as p1'.
+    pose proof (p2 x) as p2'.
+    pose proof (p3 x) as p3'.
+
+    abstract (
+        unfold Let_In; simpl;
+        rewrite p2, p3; simpl;
+        try rewrite Ninj_eqb;
+        repeat rewrite wordToN_NToWord; try assumption;
+        destruct (a =? b)%N; try assumption;
+        try apply p0; try apply p1; intro k;
+        induction k; try induction k;
+        try rewrite wordToN_zero;
+        try apply Npow2_gt0;
+        apply H).
+  Defined.
+End Masked.
+
 (** Wordization Tactics **)
 
 Ltac replace_ones x :=
@@ -434,9 +644,25 @@ Ltac standardize_wordeq :=
   | [|- @wordeq O _ _ (cons _ _)] => apply wordeq_break_cons
   end.
 
+Ltac standardize_maskeq :=
+  repeat match goal with
+  | [|- @maskeq (S ?m) _ _ _ _] => apply maskeq_kill_arg; intro
+  | [|- @maskeq O _ _ (Let_In true _) _] => apply maskeq_let_const
+  | [|- @maskeq O _ _(Let_In false _) _] => apply maskeq_let_const
+  | [|- @maskeq O _ _ (Let_In (_ <? _)%N _) _] => apply maskeq_debool_ltb
+  | [|- @maskeq O _ _ (Let_In (_ =? _)%N _) _] => apply maskeq_debool_eqb
+  | [|- @maskeq O _ _ (Let_In (andb _ _) _) _] => apply maskeq_debool_andb
+  | [|- @maskeq O _ _ (Let_In _ _) _] => apply maskeq_cut_let
+  | [|- @maskeq O _ _ (cons _ _) _] => apply eq_break_cons
+  end.
+
 Transparent wordeq_kill_arg wordeq_let_const wordeq_debool_ltb
             wordeq_debool_eqb wordeq_debool_andb wordeq_cut_let
             wordeq_break_cons.
+
+Transparent maskeq_kill_arg maskeq_let_const maskeq_debool_ltb
+            maskeq_debool_eqb maskeq_debool_andb maskeq_cut_let
+            maskeq_break_cons.
 
 Ltac wordize_iter :=
   repeat match goal with
@@ -464,3 +690,13 @@ Ltac wordize :=
   wordize_iter;
   bound_compute;
   try reflexivity.
+
+Ltac wordize_masked :=
+  standardize_maskeq;
+  wordize_intro;
+  wordize_iter;
+  match goal with
+  | [|- (_ < _)%N] => simpl in *; bound_compute
+  | [|- (_ <= _)%N] => simpl in *; bound_compute
+  | [|- _ = _] => reflexivity
+  end.
