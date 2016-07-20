@@ -653,7 +653,7 @@ Ltac standardize_maskeq :=
   | [|- @maskeq O _ _ (Let_In (_ =? _)%N _) _] => apply maskeq_debool_eqb
   | [|- @maskeq O _ _ (Let_In (andb _ _) _) _] => apply maskeq_debool_andb
   | [|- @maskeq O _ _ (Let_In _ _) _] => apply maskeq_cut_let
-  | [|- @maskeq O _ _ (cons _ _) _] => apply eq_break_cons
+  | [|- @maskeq O _ _ (cons _ _) _] => apply maskeq_break_cons
   end.
 
 Transparent wordeq_kill_arg wordeq_let_const wordeq_debool_ltb
