@@ -4,7 +4,6 @@ Require Import Compare_dec Omega Bool.
 Require Import FunctionalExtensionality ProofIrrelevance.
 Require Import QhasmUtil QhasmEvalCommon.
 Require Import WordizeUtil Bounds List Listize Natize.
-Require Import Crypto.Specific.GF1305.
 
 Import EvalUtil ListNotations.
 
@@ -171,6 +170,17 @@ Section ToWord.
   Qed.
 
   Definition getBits (x: N) := N.log2 (x + 1).
+
+  Lemma map_nth': forall w k x d,
+      (d < Npow2 w)%N ->
+      nth k (map (@wordToN w) x) d =
+             @wordToN w (nth k x (NToWord w d)).
+  Proof.
+    intros; rewrite <- (wordToN_NToWord w d); try assumption.
+    rewrite map_nth.
+    rewrite NToWord_wordToN.
+    reflexivity.
+  Qed.
 End ToWord.
 
 Section WordEq.
@@ -191,6 +201,13 @@ Section WordEq.
     unfold wzero; rewrite wordToN_nat.
     rewrite wordToNat_natToWord_idempotent; simpl; intuition.
     apply Npow2_gt0.
+  Qed.
+
+  Lemma NToWord_zero: forall w, NToWord w 0%N = wzero w.
+  Proof.
+    intros.
+    unfold wzero; rewrite NToWord_nat.
+    f_equal.
   Qed.
 
   Lemma wordeq_kill_arg': forall {m n w: nat}
@@ -417,49 +434,66 @@ Section Masked.
 
   Definition maskeq_kill_arg'' {m n w}
       (f: Curried N N (S m) n) masks
-      (g: forall x, maskeq w (f (wordToN x)) (tl masks)):
-      Curried (word w) (word w) (S m) n :=
-    fun x => proj1_sig (g x).
+      (g: forall x, (wordToN x < Npow2 (hd w masks))%N ->
+               maskeq w (f (@wordToN w x)) (tl masks)):
+        Curried (word w) (word w) (S m) n.
+    refine (fun x =>
+      match (Nge_dec (wordToN x) (Npow2 (hd w masks))) with
+      | right p => proj1_sig (g x p)
+      | left _ => proj1_sig (g (wzero _) _)
+      end); abstract (rewrite wordToN_zero; apply Npow2_gt0).
+  Defined.
 
   Lemma nth_tl: forall {T k} (x: list T) d, nth k (tl x) d = nth (S k) x d.
   Proof. intros; induction x, k; simpl; intuition. Qed.
 
   Lemma maskeq_kill_arg': forall {m n w: nat}
       (f: Curried N N (S m) n) masks
-      (g: forall x, maskeq w (f (wordToN x)) (tl masks))
+      (g: forall x, (wordToN x < Npow2 (hd w masks))%N ->
+               maskeq w (f (wordToN x)) (tl masks))
       (x: list (word w)),
     (forall k : nat, (& nth k x (wzero w) < Npow2 (nth k masks w))%N) ->
     curriedToListF (wzero w) (maskeq_kill_arg'' f masks g) x =
         map (NToWord w) (curriedToListF 0%N f (map (@wordToN w) x)).
   Proof.
     intros; unfold maskeq_kill_arg'', curriedToListF; simpl in *.
-    destruct (g _) as [f' p]; simpl.
-    pose proof (p (tl x)) as p'; clear p.
-    rewrite <- (wordToN_zero w).
-    replace (m - m) with O in * by omega.
-    rewrite map_nth.
-    unfold curriedToListF in p'.
-    replace (map (@wordToN w) (tl x)) with (tl (map (@wordToN w) x)) in p'.
-    replace (curriedToListF' (S m) (wzero w) f' x)
-       with (curriedToListF' m (wzero w) f' (tl x));
-      try rewrite p'; try clear f'; try clear f; try f_equal;
-      try (intro; repeat rewrite nth_tl; apply H).
+    destruct (Nge_dec _ _) as [g0|g0].
 
-    - rewrite curriedToListF'_tl; try omega.
-      repeat f_equal; intuition.
-      rewrite wordToN_zero.
-      reflexivity.
+    - destruct (g _) as [f' p]; simpl.
+      replace (m - m) with O in * by omega.
+      unfold N.ge in g0.
+      contradict g0.
+      pose proof (H 0) as H0; unfold N.lt in H0.
+      induction masks; simpl in *; assumption.
 
-    - rewrite curriedToListF'_tl; try omega.
-      rewrite p'.
-      reflexivity.
-      intro; repeat rewrite nth_tl; apply H.
+    - destruct (g _) as [f' p]; simpl.
+      pose proof (p (tl x)) as p'; clear p.
+      rewrite <- (wordToN_zero w).
+      replace (m - m) with O in * by omega.
+      rewrite map_nth.
+      unfold curriedToListF in p'.
+      replace (map (@wordToN w) (tl x)) with (tl (map (@wordToN w) x)) in p'.
+      replace (curriedToListF' (S m) (wzero w) f' x)
+          with (curriedToListF' m (wzero w) f' (tl x));
+        try rewrite p'; try clear f'; try clear f; try f_equal;
+        try (intro; repeat rewrite nth_tl; apply H).
 
-    - induction x; simpl; intuition.
+      + rewrite curriedToListF'_tl; try omega.
+        repeat f_equal; intuition.
+        rewrite wordToN_zero.
+        reflexivity.
+
+      + rewrite curriedToListF'_tl; try omega.
+        rewrite p'.
+        reflexivity.
+        intro; repeat rewrite nth_tl; apply H.
+
+      + induction x; simpl; intuition.
   Qed.
 
   Definition maskeq_kill_arg {m n w} (f: Curried N N (S m) n) masks:
-    (forall x, maskeq w (f (@wordToN w x)) (tl masks)) -> maskeq w f masks.
+    (forall x, (wordToN x < Npow2 (hd w masks))%N ->
+          maskeq w (f (@wordToN w x)) (tl masks)) -> maskeq w f masks.
   Proof.
     refine (fun g => exist _ (maskeq_kill_arg'' f _ g) _).
     intros; unfold maskeq_kill_arg''.
@@ -656,16 +690,26 @@ Ltac standardize_maskeq :=
   | [|- @maskeq O _ _ (cons _ _) _] => apply maskeq_break_cons
   end.
 
+Transparent curriedToListF curriedToListF'. 
+
 Transparent wordeq_kill_arg wordeq_let_const wordeq_debool_ltb
             wordeq_debool_eqb wordeq_debool_andb wordeq_cut_let
             wordeq_break_cons.
 
 Transparent maskeq_kill_arg maskeq_let_const maskeq_debool_ltb
             maskeq_debool_eqb maskeq_debool_andb maskeq_cut_let
-            maskeq_break_cons.
+            maskeq_break_cons maskeq_kill_arg''.
 
 Ltac wordize_iter :=
-  repeat match goal with
+  match goal with
+  | [ |- context[@NToWord _ 0%N] ] =>
+    rewrite NToWord_zero
+  | [ H: context[@NToWord _ 0%N] |- _ ] =>
+    rewrite NToWord_zero
+  | [ |- context[(nth _ (map ?f ?lst) ?d)] ] =>
+    match type of lst with
+    | list (word ?n) => find_bound_on (NToWord n d); rewrite map_nth'
+    end
   | [ |- context[& ?x + & ?y + ind ?b] ] =>
     find_bound_on x; find_bound_on y; rewrite wordize_awc
   | [ |- context[N.mul (& ?x) (& ?y)] ] =>
@@ -682,21 +726,46 @@ Ltac wordize_iter :=
 
 Ltac simpl' := cbn beta delta iota.
 
-Ltac wordize_intro := repeat eexists; intros; simpl'.
+Ltac wordize_intro := repeat eexists; intros.
 
 Ltac wordize :=
   standardize_wordeq;
   wordize_intro;
-  wordize_iter;
+  simpl in *;
+  repeat wordize_iter;
+  simpl in *;
   bound_compute;
   try reflexivity.
+
+Ltac unfold_bounds' n H :=
+  let H' := fresh in
+  match n with
+  | O => pose proof (H O) as H'; simpl in H'
+  | S ?k =>
+    pose proof (H k) as H';
+      simpl in H';
+      unfold_bounds' k H
+  end.
+
+Ltac unfold_bounds :=
+  match goal with
+  | [H: forall _, (& nth _ ?x ?d < Npow2 (nth _ ?lst ?w))%N |- _] =>
+    let n := eval simpl in (length lst) in
+    unfold_bounds' n H
+  end.
 
 Ltac wordize_masked :=
   standardize_maskeq;
   wordize_intro;
-  wordize_iter;
+  unfold_bounds;
+  simpl in *;
+  repeat wordize_iter;
+  simpl in *;
   match goal with
-  | [|- (_ < _)%N] => simpl in *; bound_compute
-  | [|- (_ <= _)%N] => simpl in *; bound_compute
-  | [|- _ = _] => reflexivity
+  | [|- (_ < _)%N] => bound_compute
+  | [|- (_ <= _)%N] => bound_compute
+  | [|- _ = _] => simpl';
+    repeat match goal with
+    | [ |- context[nth ?k ?x ?d] ] => generalize (nth k x d); intro
+    end; reflexivity
   end.

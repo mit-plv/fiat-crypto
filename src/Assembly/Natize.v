@@ -281,7 +281,7 @@ Ltac standardize_nateq :=
 
 Transparent nateq_kill_arg nateq_let_const nateq_debool_ltb
             nateq_debool_eqb nateq_debool_andb nateq_cut_let
-            nateq_break_cons.
+            nateq_break_cons nateq_kill_arg''.
 
 Ltac natize_iter :=
   match goal with

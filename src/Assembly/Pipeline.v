@@ -39,7 +39,7 @@ Module PipelineExamples.
 
     Definition pseudo1: @pseudeq 64 W64 2 1 listF1.
       unfold listF1; simpl'; pseudo_solve.
-    Qed.
+    Defined.
 
     Definition asm1 :=
       (Pipeline.toString (proj1_sig pseudo1)).
@@ -56,7 +56,7 @@ Module PipelineExamples.
 
     Definition pseudo2: @pseudeq 32 W32 2 1 listF2.
       unfold listF2; simpl'; pseudo_solve.
-    Qed.
+    Defined.
 
     Definition asm2 :=
       (Pipeline.toString (proj1_sig pseudo2)).
@@ -71,14 +71,14 @@ Module PipelineExamples.
       unfold f1305; solve_nateq.
     Defined.
 
-    (* These bounds are actually unproveable! *)
-    Lemma wordF1305: wordeq 64 (proj1_sig g1305).
-    Proof. unfold g1305; wordize. Admitted.
+    Lemma wordF1305: maskeq 64 (proj1_sig g1305) (List.repeat 15 10).
+    Proof. unfold g1305; wordize_masked. Defined.
 
     Definition listF1305 := curriedToListF (wzero _) (proj1_sig wordF1305).
 
     Definition pseudo1305: @pseudeq 64 W64 2 1 listF1305.
-      unfold listF1305; simpl'; pseudo_solve.
+      unfold listF1305; simpl'.
+      (* unfolding struggles... pseudo_solve. *)
     Admitted.
 
     Definition asm1305 :=

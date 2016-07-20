@@ -334,11 +334,18 @@ Ltac assert_nat_constant t :=
   | _ => fail
   end).
 
-Ltac assert_bin_constant t :=
+Ltac assert_pos_constant t :=
   timeout 1 (match (eval vm_compute in t) with
   | xH => idtac
-  | xI ?p => assert_bin_constant p
-  | xO ?p => assert_bin_constant p
+  | xI ?p => assert_pos_constant p
+  | xO ?p => assert_pos_constant p
+  | _ => fail
+  end).
+
+Ltac assert_bin_constant t :=
+  timeout 1 (match (eval vm_compute in t) with
+  | N.pos ?p => assert_pos_constant p
+  | N0 => idtac
   | _ => fail
   end).
 
@@ -410,7 +417,7 @@ Lemma unwrap_let: forall {n} (y: word n) (f: word n -> word n) (b: N),
 Proof. intuition. Qed.
 
 Ltac bound_compute :=
-  repeat match goal with
+  repeat (try assumption; match goal with
   | [|- let A := ?B in _] =>
     match (type of B) with
     | word ?n => multi_recurse n B; intro
@@ -435,15 +442,21 @@ Ltac bound_compute :=
     is_evar a; apply N.eq_le_incl; reflexivity
 
   | [|- (?a <= ?b)%N ] =>
+    assert_bin_constant a;
+    assert_bin_constant b;
     vm_compute;
       try reflexivity;
       try abstract (let H := fresh in intro H; inversion H)
 
+  | [|- (?x < ?b)%N ] =>
+    assert_bin_constant x;
+    assert_bin_constant b;
+    vm_compute; reflexivity
+
   (* cleanup generated nat goals *)
   | [|- (?a <= ?b)%nat ] => omega
   | [|- (?a < ?b)%nat ] => omega
-
-  end.
+  end).
 
 (* for x : word n *)
 Ltac find_bound_on x :=
