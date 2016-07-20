@@ -127,7 +127,7 @@ Section PseudoMersenneProofs.
 
   Lemma add_rep : forall u v x y, u ~= x -> v ~= y -> BaseSystem.add u v ~= (x+y)%F.
   Proof.
-    autounfold; intuition. {
+    autounfold; intuition auto. {
       unfold add.
       auto using add_same_length.
     }
