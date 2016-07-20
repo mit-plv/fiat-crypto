@@ -37,7 +37,6 @@ src/Experiments/SpecificCurve25519.v
 src/ModularArithmetic/ExtendedBaseVector.v
 src/ModularArithmetic/ModularArithmeticTheorems.v
 src/ModularArithmetic/ModularBaseSystem.v
-src/ModularArithmetic/ModularBaseSystemInterface.v
 src/ModularArithmetic/ModularBaseSystemList.v
 src/ModularArithmetic/ModularBaseSystemListProofs.v
 src/ModularArithmetic/ModularBaseSystemOpt.v

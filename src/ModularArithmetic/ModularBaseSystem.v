@@ -37,6 +37,19 @@ Section ModularBaseSystem.
    from_list (sub [[modulus_multiple]] [[us]] [[vs]])
    (length_sub length_to_list length_to_list length_to_list).
 
+  Definition zero : digits := encode (ZToField 0).
+
+  Definition one : digits := encode (ZToField 1).
+
+  (* Placeholder *)
+  Definition opp (x : digits) : digits := encode (ModularArithmetic.opp (decode x)).
+
+  (* Placeholder *)
+  Definition inv (x : digits) : digits := encode (ModularArithmetic.inv (decode x)).
+
+  (* Placeholder *)
+  Definition div (x y : digits) : digits := encode (ModularArithmetic.div (decode x) (decode y)).
+
   Definition carry i (us : digits) : digits := from_list (carry i [[us]])
     (length_carry length_to_list).
 
@@ -52,7 +65,15 @@ Section ModularBaseSystem.
 
   Definition freeze (us : digits) : digits :=
     let us' := carry_full (carry_full (carry_full us)) in
-     from_list (conditional_subtract_modulus [[us]] (ge_modulus [[us]]))
+     from_list (conditional_subtract_modulus [[us']] (ge_modulus [[us']]))
      (length_conditional_subtract_modulus length_to_list).
+
+  Definition eq (x y : digits) : Prop := decode x = decode y.
+
+  Import Morphisms.
+  Global Instance eq_Equivalence : Equivalence eq.
+  Proof.
+    split; cbv [eq]; repeat intro; congruence.
+  Qed.
 
 End ModularBaseSystem.
