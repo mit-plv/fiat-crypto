@@ -162,7 +162,7 @@ Section ExtendedBaseVector.
   Lemma extended_base_length:
       length ext_base = (length base + length base)%nat.
   Proof.
-    rewrite ext_base_alt, app_length, map_length; auto.
+    unfold ext_base, ext_limb_widths; autorewrite with distr_length; reflexivity.
   Qed.
 
   Lemma firstn_us_base_ext_base : forall (us : BaseSystem.digits),
