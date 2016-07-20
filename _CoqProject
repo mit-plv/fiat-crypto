@@ -34,6 +34,7 @@ src/Experiments/EdDSARefinement.v
 src/Experiments/GenericFieldPow.v
 src/Experiments/SpecEd25519.v
 src/Experiments/SpecificCurve25519.v
+src/ModularArithmetic/ExtPow2BaseMulProofs.v
 src/ModularArithmetic/ExtendedBaseVector.v
 src/ModularArithmetic/ModularArithmeticTheorems.v
 src/ModularArithmetic/ModularBaseSystem.v

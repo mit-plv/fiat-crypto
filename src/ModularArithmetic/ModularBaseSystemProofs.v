@@ -147,14 +147,6 @@ Section PseudoMersenneProofs.
   Local Hint Resolve firstn_us_base_ext_base bv ExtBaseVector limb_widths_match_modulus.
   Local Hint Extern 1 => apply limb_widths_match_modulus.
 
-  Lemma mul_rep_extended : forall (us vs : BaseSystem.digits),
-      (length us <= length base)%nat ->
-      (length vs <= length base)%nat ->
-      (BaseSystem.decode base us) * (BaseSystem.decode base vs) = BaseSystem.decode (ext_base limb_widths) (BaseSystem.mul (ext_base limb_widths) us vs).
-  Proof.
-    intros; apply mul_rep_two_base; auto with arith distr_length.
-  Qed.
-
   Lemma modulus_nonzero : modulus <> 0.
     pose proof (Znumtheory.prime_ge_2 _ prime_modulus); omega.
   Qed.
