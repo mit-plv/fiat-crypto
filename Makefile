@@ -1,6 +1,9 @@
 MOD_NAME := Crypto
 SRC_DIR  := src
+TIMED?=
+TIMECMD?=
 STDTIME?=/usr/bin/time -f "$* (real: %e, user: %U, sys: %S, mem: %M ko)"
+TIMER=$(if $(TIMED), $(STDTIME), $(TIMECMD))
 
 VERBOSE?=
 SHOW := $(if $(VERBOSE),@true "",@echo "")
@@ -14,6 +17,14 @@ SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g'
 
 FAST_TARGETS += archclean clean cleanall printenv clean-old update-_CoqProject Makefile.coq
 SUPER_FAST_TARGETS += update-_CoqProject Makefile.coq
+
+COQ_VERSION_PREFIX = The Coq Proof Assistant, version
+COQ_VERSION := $(firstword $(subst $(COQ_VERSION_PREFIX),,$(shell "$(COQBIN)coqc" --version 2>/dev/null)))
+
+ifneq ($(filter 8.4%,$(COQ_VERSION)),) # 8.4
+# Give us TIMED=1 in Coq 8.4
+COQC?=$(TIMER) "$(COQBIN)coqc"
+endif
 
 -include Makefile.coq
 
@@ -35,9 +46,6 @@ NON_SPECIFIC_VO := $(filter-out $(SPECIFIC_VO),$(VO_FILES))
 specific: $(SPECIFIC_VO) coqprime
 non-specific: $(NON_SPECIFIC_VO) coqprime
 coq: $(COQ_VOFILES) coqprime
-
-COQ_VERSION_PREFIX = The Coq Proof Assistant, version
-COQ_VERSION := $(firstword $(subst $(COQ_VERSION_PREFIX),,$(shell $(COQBIN)coqc --version 2>/dev/null)))
 
 ifneq ($(filter 8.4%,$(COQ_VERSION)),) # 8.4
 COQPRIME_FOLDER := coqprime-8.4
