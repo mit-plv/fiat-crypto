@@ -18,16 +18,7 @@ Lemma two_lt_q : (2 < q)%Z. reflexivity. Qed.
 
 Definition a : F q := opp 1%F.
 
-(* TODO (jadep) : make the proofs about a and d more general *)
-Lemma nonzero_a : a <> 0%F.
-Proof.
-  unfold a.
-  intro eq_opp1_0.
-  apply (@Fq_1_neq_0 q prime_q).
-  rewrite <- (F_opp_spec 1%F).
-  rewrite eq_opp1_0.
-  symmetry; apply F_add_0_r.
-Qed.
+Lemma nonzero_a : a <> 0%F. Proof. rewrite F_eq; compute; discriminate. Qed.
 
 Ltac q_bound := pose proof two_lt_q; omega.
 Lemma square_a : isSquare a.
