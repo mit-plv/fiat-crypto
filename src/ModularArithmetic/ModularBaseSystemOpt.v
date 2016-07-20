@@ -478,12 +478,12 @@ Section Multiplication.
   Proof.
     eexists.
     cbv [BaseSystem.mul mul mul_each mul_bi mul_bi' zeros reduce].
-    rewrite ext_base_alt.
+    rewrite ext_base_alt by auto using limb_widths_pos with zarith.
     rewrite <- mul'_opt_correct.
     change @Pow2Base.base_from_limb_widths with base_from_limb_widths_opt.
     rewrite Z.map_shiftl by apply k_nonneg.
     rewrite c_subst.
-    rewrite k_subst.
+    fold k; rewrite k_subst.
     change @map with @map_opt.
     change @Z.shiftl_by with @Z_shiftl_by_opt.
     reflexivity.

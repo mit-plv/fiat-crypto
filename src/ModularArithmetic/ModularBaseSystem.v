@@ -30,7 +30,7 @@ Section PseudoMersenneBase.
     let wrap := map (Z.mul c) high in
     BaseSystem.add low wrap.
 
-  Definition mul (us vs : digits) := reduce (BaseSystem.mul ext_base us vs).
+  Definition mul (us vs : digits) := reduce (BaseSystem.mul (ext_base limb_widths) us vs).
 
   (* In order to subtract without underflowing, we add a multiple of the modulus first. *)
   Definition sub (us vs : digits) := BaseSystem.sub (add modulus_multiple us) vs.

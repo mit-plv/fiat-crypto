@@ -66,6 +66,13 @@ Section PseudoMersenneProofs.
   Lemma base_length : length base = length limb_widths.
   Proof. distr_length. Qed.
 
+  Lemma base_length_nonzero : length base <> 0%nat.
+  Proof.
+    distr_length.
+    pose proof limb_widths_nonnil.
+    destruct limb_widths; simpl in *; congruence.
+  Qed.
+
   Lemma encode'_eq : forall (x : F modulus) i, (i <= length limb_widths)%nat ->
     encode' limb_widths x i = BaseSystem.encode' base x (2 ^ k) i.
   Proof.
@@ -137,29 +144,15 @@ Section PseudoMersenneProofs.
     subst; auto.
   Qed.
 
-  Lemma firstn_us_base_ext_base : forall (us : BaseSystem.digits),
-      (length us <= length base)%nat
-      -> firstn (length us) base = firstn (length us) ext_base.
-  Proof.
-    rewrite ext_base_alt; intros.
-    rewrite firstn_app_inleft; auto; omega.
-  Qed.
-  Local Hint Immediate firstn_us_base_ext_base.
-
-  Lemma decode_short : forall (us : BaseSystem.digits),
-    (length us <= length base)%nat ->
-    BaseSystem.decode base us = BaseSystem.decode ext_base us.
-  Proof. auto using decode_short_initial. Qed.
-
-  Local Hint Immediate ExtBaseVector.
+  Local Hint Resolve firstn_us_base_ext_base bv ExtBaseVector limb_widths_match_modulus.
+  Local Hint Extern 1 => apply limb_widths_match_modulus.
 
   Lemma mul_rep_extended : forall (us vs : BaseSystem.digits),
       (length us <= length base)%nat ->
       (length vs <= length base)%nat ->
-      (BaseSystem.decode base us) * (BaseSystem.decode base vs) = BaseSystem.decode ext_base (BaseSystem.mul ext_base us vs).
+      (BaseSystem.decode base us) * (BaseSystem.decode base vs) = BaseSystem.decode (ext_base limb_widths) (BaseSystem.mul (ext_base limb_widths) us vs).
   Proof.
-    intros; apply mul_rep_two_base; auto;
-      distr_length.
+    intros; apply mul_rep_two_base; auto with arith distr_length.
   Qed.
 
   Lemma modulus_nonzero : modulus <> 0.
@@ -187,13 +180,14 @@ Section PseudoMersenneProofs.
   Qed.
 
   Lemma extended_shiftadd: forall (us : BaseSystem.digits),
-    BaseSystem.decode ext_base us =
+    BaseSystem.decode (ext_base limb_widths) us =
       BaseSystem.decode base (firstn (length base) us)
       + (2^k * BaseSystem.decode base (skipn (length base) us)).
   Proof.
     intros.
     unfold BaseSystem.decode; rewrite <- mul_each_rep.
-    rewrite ext_base_alt.
+    rewrite ext_base_alt by auto.
+    fold k.
     replace (map (Z.mul (2 ^ k)) base) with (BaseSystem.mul_each (2 ^ k) base) by auto.
     rewrite base_mul_app.
     rewrite <- mul_each_rep; auto.
@@ -201,7 +195,7 @@ Section PseudoMersenneProofs.
 
   Lemma reduce_rep : forall us,
     BaseSystem.decode base (reduce us) mod modulus =
-    BaseSystem.decode ext_base us mod modulus.
+    BaseSystem.decode (ext_base limb_widths) us mod modulus.
   Proof.
     intros.
     rewrite extended_shiftadd.
@@ -216,7 +210,7 @@ Section PseudoMersenneProofs.
   Qed.
 
   Lemma reduce_length : forall us,
-      (length base <= length us <= length ext_base)%nat ->
+      (length base <= length us <= length (ext_base limb_widths))%nat ->
       (length (reduce us) = length base)%nat.
   Proof.
     rewrite extended_base_length.
@@ -236,8 +230,9 @@ Section PseudoMersenneProofs.
       apply reduce_length.
       rewrite mul_length_exact, extended_base_length; try omega.
       destruct u; try congruence.
-      rewrite @nil_length0 in *.
-      pose proof base_length_nonzero; omega.
+      pose proof limb_widths_nonnil.
+      autorewrite with distr_length in *.
+      destruct limb_widths; simpl in *; congruence.
   Qed.
 
   Lemma mul_rep : forall u v x y, u ~= x -> v ~= y -> u .* v ~= (x*y)%F.
@@ -246,8 +241,8 @@ Section PseudoMersenneProofs.
     { apply length_mul; intuition auto. }
     { intuition idtac; subst.
       rewrite ZToField_mod, reduce_rep, <-ZToField_mod.
-      rewrite mul_rep by (apply ExtBaseVector || rewrite extended_base_length; omega).
-      rewrite 2decode_short by omega.
+      rewrite mul_rep by (auto using ExtBaseVector || rewrite extended_base_length; omega).
+      rewrite 2decode_short by auto with omega.
       apply ZToField_mul. }
   Qed.
 
