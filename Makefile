@@ -2,23 +2,26 @@ MOD_NAME := Crypto
 SRC_DIR  := src
 STDTIME?=/usr/bin/time -f "$* (real: %e, user: %U, sys: %S, mem: %M ko)"
 
+VERBOSE?=
+SHOW := $(if $(VERBOSE),@true "",@echo "")
+HIDE := $(if $(VERBOSE),,@)
+
 .PHONY: coq clean update-_CoqProject cleanall install \
 	install-coqprime clean-coqprime coqprime \
 	specific non-specific
+
+SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g'
+
+FAST_TARGETS += archclean clean cleanall printenv clean-old update-_CoqProject Makefile.coq
+SUPER_FAST_TARGETS += update-_CoqProject Makefile.coq
+
+-include Makefile.coq
+
 .DEFAULT_GOAL := coq
-
--include Makefile.submodule
-
-STRICT_COQDEP ?= 1
-
--include etc/coq-scripts/Makefile.coq.common
 
 update-_CoqProject::
 	$(SHOW)'ECHO > _CoqProject'
 	$(HIDE)(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-R Bedrock Bedrock'; (git ls-files 'src/*.v' 'Bedrock/*.v' | $(SORT_COQPROJECT))) > _CoqProject
-
-clean::
-	rm -f submodule-update
 
 $(VOFILES): | coqprime
 
@@ -50,6 +53,10 @@ clean-coqprime:
 
 install-coqprime:
 	$(MAKE) -C $(COQPRIME_FOLDER) install
+
+Makefile.coq: Makefile _CoqProject
+	$(SHOW)'COQ_MAKEFILE -f _CoqProject > $@'
+	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject | sed s'|^\(-include.*\)$$|ifneq ($$(filter-out $(FAST_TARGETS),$$(MAKECMDGOALS)),)~\1~else~ifeq ($$(MAKECMDGOALS),)~\1~endif~endif|g' | tr '~' '\n' | sed s'/^clean:$$/clean-old::/g' | sed s'/^clean::$$/clean-old::/g' | sed s'/^Makefile: /Makefile-old: /g' > $@
 
 cleanall:: clean clean-coqprime
 	rm -f .dir-locals.el

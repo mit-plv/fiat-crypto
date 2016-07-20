@@ -7,7 +7,6 @@
 *~
 .#*
 /.dir-locals.el
-/submodule-update
 Makefile.bak
 Makefile.coq
 Makefile.coq.bak
