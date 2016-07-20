@@ -32,12 +32,12 @@ Section PseudoMersenneProofs.
 
   Lemma rep_decode : forall us x, us ~= x -> decode us = x.
   Proof.
-    autounfold; intuition.
+    autounfold; intuition auto.
   Qed.
 
   Lemma rep_length : forall us x, us ~= x -> length us = length base.
   Proof.
-    autounfold; intuition.
+    autounfold; intuition auto.
   Qed.
 
   Lemma decode_rep : forall us, length us = length base ->
@@ -284,7 +284,7 @@ Section PseudoMersenneProofs.
     intros ? ?; unfold carry_done; split; [ intros Hcarry_done i | intros Hbounds i i_lt ].
     + destruct (lt_dec i (length base)) as [i_lt | i_nlt].
       - specialize (Hcarry_done i i_lt).
-        split; [ intuition | ].
+        split; [ intuition auto | ].
         destruct Hcarry_done as [Hnth_nonneg Hshiftr_0].
         apply Z.shiftr_eq_0_iff in Hshiftr_0.
         destruct Hshiftr_0 as [nth_0 | []]; [ rewrite nth_0; zero_bounds | ].
@@ -292,7 +292,7 @@ Section PseudoMersenneProofs.
       - rewrite nth_default_out_of_bounds by omega.
         split; zero_bounds.
     + specialize (Hbounds i).
-      split; [ intuition | ].
+      split; [ intuition auto | ].
       destruct Hbounds as [nth_nonneg nth_lt_pow2].
       apply Z.shiftr_eq_0_iff.
       apply Z.le_lteq in nth_nonneg; destruct nth_nonneg; try solve [left; auto].
@@ -402,7 +402,7 @@ Section CarryProofs.
     specialize_by eauto.
     intros; split; try solve [ distr_length ].
     unfold rep, decode, carry in *.
-    intuition; break_if; subst; eauto; apply F_eq; simpl; intuition.
+    intuition auto; break_if; subst; eauto; apply F_eq; simpl; intuition auto with zarith.
   Qed.
   Hint Resolve carry_rep.
 
@@ -575,7 +575,7 @@ Section CanonicalizationProofs.
   Proof.
     intros ? ? shiftr_0.
     apply Z.shiftr_eq_0_iff in shiftr_0.
-    intuition; subst; try apply max_bound_nonneg.
+    intuition auto; subst; try apply max_bound_nonneg.
     match goal with H : Z.log2 _ < log_cap _ |- _ => apply Z.log2_lt_pow2 in H;
       replace (2 ^ log_cap i) with (Z.succ (max_bound i)) in H by
         (unfold max_bound, Z.ones; rewrite Z.shiftl_1_l; omega)
@@ -725,7 +725,7 @@ Section CanonicalizationProofs.
             || omega).
   Qed.
 
-  Hint Rewrite pow2_mod_log_cap_small using (intuition; auto using shiftr_eq_0_max_bound) : core.
+  Hint Rewrite pow2_mod_log_cap_small using (intuition auto; auto using shiftr_eq_0_max_bound) : core.
 
   Lemma carry_carry_done_done : forall i us,
     (length us = length base)%nat ->
@@ -744,7 +744,7 @@ Section CanonicalizationProofs.
       - add_set_nth; subst.
         * rewrite shiftr_0_i, Z.mul_0_r, Z.add_0_l.
           assumption.
-        * rewrite pow2_mod_log_cap_small by (intuition; auto using shiftr_eq_0_max_bound).
+        * rewrite pow2_mod_log_cap_small by (intuition auto; auto using shiftr_eq_0_max_bound).
           assumption.
       - repeat (carry_length_conditions
                 || (autorewrite with push_nth_default natsimplify core zsimplify)
@@ -886,13 +886,13 @@ Section CanonicalizationProofs.
     intros ? ? PCB ?.
     induction i.
     + simpl. specialize (PCB 0%nat).
-      intuition.
+      intuition auto.
     + simpl.
       destruct (lt_eq_lt_dec i (pred (length base))) as [[? | ? ] | ? ].
       - apply carry_simple_no_overflow; carry_length_conditions; carry_seq_lower_bound.
        rewrite carry_sequence_unaffected; try omega.
         specialize (PCB (S i)); rewrite Nat.pred_succ in PCB.
-        break_if; intuition.
+        break_if; intuition auto with zarith.
       - unfold carry; break_if; try omega.
         rewrite nth_default_out_of_bounds; [ apply Z.pow_pos_nonneg; omega | ].
         subst; unfold carry_and_reduce.
@@ -1085,7 +1085,7 @@ Section CanonicalizationProofs.
       apply pow2_mod_log_cap_bounds_lower.
     + rewrite carry_unaffected_low by carry_length_conditions.
       assert (0 < S i < length base)%nat by omega.
-      intuition.
+      intuition auto.
   Qed.
 
   Lemma carry_full_2_bounds_lower :forall us i, pre_carry_bounds us ->
@@ -1139,7 +1139,7 @@ Section CanonicalizationProofs.
           ring_simplify | ]; pose proof c_pos; omega.
     + rewrite carry_unaffected_low by carry_length_conditions.
       assert (0 < S i < length base)%nat by omega.
-      intuition; right.
+      intuition auto; right.
       apply carry_carry_done_done; try solve [carry_length_conditions].
       assumption.
   Qed.
@@ -1170,7 +1170,7 @@ Section CanonicalizationProofs.
       - eapply carry_carry_full_2_bounds_0_lower; eauto; omega.
     + pose proof (carry_carry_full_2_bounds_0_upper us (pred (length base))).
       assert (0 < pred (length base) < length base)%nat by omega.
-      intuition.
+      intuition auto.
       - replace (max_bound 0) with (c + (max_bound 0 - c)) by ring.
         apply Z.add_le_mono; try assumption.
         etransitivity; [ | replace c with (c * 1) by ring; reflexivity ].
@@ -1280,12 +1280,12 @@ Section CanonicalizationProofs.
   Proof.
     induction j; intros.
     + cbv [isFull']; apply Bool.andb_true_iff.
-      rewrite Z.ltb_lt; intuition.
-    + intuition.
+      rewrite Z.ltb_lt; intuition auto.
+    + intuition auto.
       simpl.
       match goal with H : forall j, _ -> ?b j = ?a j |- appcontext[?a ?i =? ?b ?i] =>
         replace (a i =? b i) with true  by (symmetry; apply Z.eqb_eq; symmetry; apply H; omega) end.
-      apply IHj; auto; intuition.
+      apply IHj; auto; intuition auto.
   Qed.
 
   Lemma isFull'_true_iff : forall j us, (length us = length base) -> (isFull' us true j = true <->
@@ -1390,7 +1390,7 @@ Section CanonicalizationProofs.
       replace 1 with (Z.succ 0) by reflexivity.
       rewrite Z.le_succ_l, Z.lt_0_sub.
       match goal with H : carry_done us |- _ => rewrite carry_done_bounds in H by auto; specialize (H n) end.
-      replace x with (log_cap n); try intuition.
+      replace x with (log_cap n); try intuition auto.
       apply nth_error_value_eq_nth_default; auto.
     + repeat erewrite firstn_all_strong by omega.
       rewrite sum_firstn_all_succ by (rewrite <-base_length; omega).
@@ -1419,7 +1419,7 @@ Section CanonicalizationProofs.
       - rewrite nth_default_base by (omega || eauto).
         apply Z.pow_nonneg; omega.
       - match goal with H : carry_done us |- _ => rewrite carry_done_bounds in H by auto; specialize (H n) end.
-        intuition.
+        intuition auto.
     + eapply Z.le_trans; [ apply IHn; eauto | ].
       repeat rewrite firstn_all_strong by omega.
       omega.
@@ -1588,7 +1588,7 @@ Section CanonicalizationProofs.
   Lemma freeze_preserves_rep : forall us x, rep us x -> rep (freeze us) x.
   Proof.
     unfold rep; intros.
-    intuition; rewrite ?freeze_length; auto.
+    intuition auto; rewrite ?freeze_length; auto.
     unfold freeze, and_term.
     break_if.
     + apply decode_mod with (us := carry_full (carry_full (carry_full us))).
@@ -1597,7 +1597,7 @@ Section CanonicalizationProofs.
         apply Min.min_r.
         simpl_lengths; omega.
       - repeat apply carry_full_preserves_rep; repeat rewrite carry_full_length; auto.
-        unfold rep; intuition.
+        unfold rep; intuition auto.
       - rewrite decode_map2_sub by (simpl_lengths; omega).
         rewrite map_land_max_ones_modulus_digits.
         rewrite decode_modulus_digits.
@@ -2016,7 +2016,7 @@ Section CanonicalizationProofs.
     (BaseSystem.decode base us) mod modulus = (BaseSystem.decode base vs) mod modulus.
   Proof.
     unfold rep, decode; intros.
-    intuition.
+    intuition auto.
     repeat rewrite <-FieldToZ_ZToField.
     congruence.
   Qed.
@@ -2032,7 +2032,7 @@ Section CanonicalizationProofs.
    repeat match goal with Hmin : minimal_rep ?us |- _ => unfold minimal_rep in Hmin;
      rewrite <- Hmin in eqmod; clear Hmin end.
    apply Z.compare_eq_iff in eqmod.
-   rewrite decode_compare in eqmod; unfold rep in *; auto; intuition; try congruence.
+   rewrite decode_compare in eqmod; unfold rep in *; auto; intuition auto; try congruence.
    apply compare_Eq; auto.
    congruence.
   Qed.
@@ -2043,8 +2043,8 @@ Section CanonicalizationProofs.
       freeze us = freeze vs.
   Proof.
     intros.
-    assert (length us = length base) by (unfold rep in *; intuition).
-    assert (length vs = length base) by (unfold rep in *; intuition).
+    assert (length us = length base) by (unfold rep in *; intuition auto).
+    assert (length vs = length base) by (unfold rep in *; intuition auto).
     eapply minimal_rep_unique; eauto; rewrite freeze_length; assumption.
   Qed.
 
