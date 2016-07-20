@@ -2,7 +2,7 @@ Require Import Bedrock.Word ZArith NArith PArith.
 Require Import QhasmCommon QhasmEvalCommon.
 Require Import Pseudo Qhasm AlmostQhasm Conversion Language.
 Require Import PseudoConversion AlmostConversion StringConversion.
-Require Import Wordize Vectorize Pseudize Natize.
+Require Import Wordize Pseudize Natize.
 Require Import Crypto.Specific.GF1305.
 
 Module Pipeline.
