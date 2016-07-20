@@ -46,15 +46,18 @@ Hint Rewrite
  : ZToField.
 
 Definition d : F q := (opp (ZToField 121665) / (ZToField 121666))%F.
+
+Lemma euler_criterion_nonsquare {q} (prime_q:prime q) (two_lt_q:(2<q)%Z) (d:F q) : 
+  ((d =? 0)%Z || (Pre.powmod q d (Z.to_N (q / 2)) =? 1)%Z)%bool = false -> 
+   forall x : F q, (x ^ 2)%F <> d.
+Proof.
+  pose proof @euler_criterion_if q prime_q d two_lt_q;
+    break_if; intros; try discriminate; eauto.
+Qed.
+
 Lemma nonsquare_d : forall x, (x^2 <> d)%F.
-  pose proof @euler_criterion_if q prime_q d two_lt_q.
-  match goal with
-    [H: if ?b then ?x else ?y |- ?y ] => replace b with false in H; [exact H|clear H]
-  end.
-  unfold d, div. autorewrite with ZToField; [|eauto using prime_q, two_lt_q..].
-  vm_compute. (* 10s *)
-  exact eq_refl.
-Qed. (* 10s *)
+  apply (euler_criterion_nonsquare prime_q two_lt_q); vm_cast_no_check (eq_refl false).
+Qed. (* 3s *)
 
 Instance curve25519params : @E.twisted_edwards_params (F q) eq (ZToField 0) (ZToField 1) add mul a d :=
   {

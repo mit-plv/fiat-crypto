@@ -346,8 +346,8 @@ Section VariousModPrime.
   Proof.
     intros.
     pose proof (euler_criterion_if' a q_odd) as H.
-    unfold F_eqb in *; simpl in *.
-    rewrite !Zmod_small, !@FieldToZ_pow_efficient in H by omega; eauto.
+    unfold F_eqb in H.
+    rewrite !FieldToZ_ZToField, !@FieldToZ_pow_efficient, !Zmod_small in H by omega; assumption.
   Qed.
 
   Lemma sqrt_solutions : forall x y : F q, y ^ 2 = x ^ 2 -> y = x \/ y = opp x.
