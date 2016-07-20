@@ -4,6 +4,7 @@ Require Import Coq.Logic.EqdepFacts.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Coq.omega.Omega.
 Require Import Crypto.Util.NumTheoryUtil.
+Require Import Crypto.Tactics.VerdiTactics.
 
 Lemma Z_mod_mod x m : x mod m = (x mod m) mod m.
   symmetry.
@@ -106,7 +107,7 @@ Program Definition mod_inv_sig {m} (a:{z : Z | z = z mod m}) : {z : Z | z = z mo
   | _ => powmod m a (Z.to_N (m-2))
   end.
 Next Obligation.
-  abstract (destruct a; rewrite ?powmod_Zpow_mod, ?Zmod_mod, ?Zmod_0_l; reflexivity).
+  intros; break_match; rewrite ?powmod_Zpow_mod, ?Zmod_mod, ?Zmod_0_l; reflexivity.
 Qed.
 
 Program Definition inv_impl {m : BinNums.Z} :
