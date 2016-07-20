@@ -6,6 +6,7 @@
 *.vo
 *~
 .#*
+/.dir-locals.el
 Makefile.bak
 Makefile.coq
 Makefile.coq.bak
