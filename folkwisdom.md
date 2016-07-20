@@ -280,6 +280,8 @@ Considerations not (yet) covered in this document include the following:
   - how to write tactics that are debuggable
   - how to write tactics that are robust against small changes
   - reification: ltac, typeclasses, canonical structures (maybe reference an existing document)
+  - how `intuition` should never be used because it calls `auto with *`, which
+    leads to fragile documents, and `intuition auto` should be used instead
 - performance of proofs and proof checking
   - `simpl`, `cbn`, `cbv`
   - `Qed slowness, `change` vs `rewrite`

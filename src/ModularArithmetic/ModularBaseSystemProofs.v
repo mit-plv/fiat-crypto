@@ -59,6 +59,22 @@ Section PseudoMersenneProofs.
     pose proof (NumTheoryUtil.lt_1_p _ prime_modulus); omega.
   Qed. Hint Resolve modulus_pos.
 
+  (** TODO(jadep, from jgross): The abstraction barrier of
+      [base]/[limb_widths] is repeatedly broken in the following
+      proofs.  This lemma should almost never be needed, but removing
+      it breaks everything.  (And using [distr_length] is too much of
+      a sledgehammer, and demolishes the abstraction barrier that's
+      currently merely in pieces.) *)
+  Lemma base_length : length base = length limb_widths.
+  Proof. distr_length. Qed.
+
+  Lemma base_length_nonzero : length base <> 0%nat.
+  Proof.
+    distr_length.
+    pose proof limb_widths_nonnil.
+    destruct limb_widths; simpl in *; congruence.
+  Qed.
+
   Lemma encode_eq : forall x : F modulus,
     ModularBaseSystemList.encode x = BaseSystem.encode base x (2 ^ k).
   Proof.
@@ -87,29 +103,15 @@ Section PseudoMersenneProofs.
     f_equal; assumption.
   Qed.
 
-  Lemma firstn_us_base_ext_base : forall (us : BaseSystem.digits),
-      (length us <= length base)%nat
-      -> firstn (length us) base = firstn (length us) ext_base.
-  Proof.
-    rewrite ext_base_alt; intros.
-    rewrite firstn_app_inleft; auto; omega.
-  Qed.
-  Local Hint Immediate firstn_us_base_ext_base.
-
-  Lemma decode_short : forall (us : BaseSystem.digits),
-    (length us <= length base)%nat ->
-    BaseSystem.decode base us = BaseSystem.decode ext_base us.
-  Proof. auto using decode_short_initial. Qed.
-
-  Local Hint Immediate ExtBaseVector.
+  Local Hint Resolve firstn_us_base_ext_base bv ExtBaseVector limb_widths_match_modulus.
+  Local Hint Extern 1 => apply limb_widths_match_modulus.
 
   Lemma mul_rep_extended : forall (us vs : BaseSystem.digits),
       (length us <= length base)%nat ->
       (length vs <= length base)%nat ->
-      (BaseSystem.decode base us) * (BaseSystem.decode base vs) = BaseSystem.decode ext_base (BaseSystem.mul ext_base us vs).
+      (BaseSystem.decode base us) * (BaseSystem.decode base vs) = BaseSystem.decode (ext_base limb_widths) (BaseSystem.mul (ext_base limb_widths) us vs).
   Proof.
-    intros; apply mul_rep_two_base; auto;
-      autorewrite with distr_length; try omega.
+    intros; apply mul_rep_two_base; auto with arith distr_length.
   Qed.
 
   Lemma modulus_nonzero : modulus <> 0.
@@ -135,13 +137,14 @@ Section PseudoMersenneProofs.
   Qed.
 
   Lemma extended_shiftadd: forall (us : BaseSystem.digits),
-    BaseSystem.decode ext_base us =
+    BaseSystem.decode (ext_base limb_widths) us =
       BaseSystem.decode base (firstn (length base) us)
       + (2^k * BaseSystem.decode base (skipn (length base) us)).
   Proof.
     intros.
     unfold BaseSystem.decode; rewrite <- mul_each_rep.
-    rewrite ext_base_alt.
+    rewrite ext_base_alt by auto.
+    fold k.
     replace (map (Z.mul (2 ^ k)) base) with (BaseSystem.mul_each (2 ^ k) base) by auto.
     rewrite base_mul_app.
     rewrite <- mul_each_rep; auto.
@@ -149,7 +152,7 @@ Section PseudoMersenneProofs.
 
   Lemma reduce_rep : forall us,
     BaseSystem.decode base (reduce us) mod modulus =
-    BaseSystem.decode ext_base us mod modulus.
+    BaseSystem.decode (ext_base limb_widths) us mod modulus.
   Proof.
     cbv [reduce]; intros.
     rewrite extended_shiftadd, base_length, pseudomersenne_add, BaseSystemProofs.add_rep.
@@ -159,16 +162,16 @@ Section PseudoMersenneProofs.
 
   Lemma mul_rep : forall u v x y, u ~= x -> v ~= y -> mul u v ~= (x*y)%F.
   Proof.
-    autounfold; cbv [mul]; intros.
-    rewrite to_list_from_list; autounfold.
-    cbv [ModularBaseSystemList.mul].
-    rewrite ZToField_mod, reduce_rep.
-    rewrite mul_rep, <-ZToField_mod, ZToField_mul.
-    rewrite <-!decode_short; rewrite ?base_length;
-      auto using Nat.eq_le_incl, length_to_list.
-    + f_equal; assumption.
-    + apply ExtBaseVector.
-    + rewrite extended_base_length, base_length, !length_to_list. omega.
+    autounfold in *; unfold ModularBaseSystem.mul in *.
+    intuition idtac; subst.
+    rewrite to_list_from_list.
+    cbv [ModularBaseSystemList.mul ModularBaseSystemList.decode].
+    rewrite ZToField_mod, reduce_rep, <-ZToField_mod.
+    pose proof (@base_from_limb_widths_length limb_widths).
+    rewrite mul_rep by (auto using ExtBaseVector || rewrite extended_base_length, !length_to_list; omega).
+    rewrite 2decode_short by (rewrite ?base_from_limb_widths_length;
+      auto using Nat.eq_le_incl, length_to_list with omega).
+    apply ZToField_mul.
   Qed.
 
   Lemma nth_default_base_positive : forall i, (i < length base)%nat ->

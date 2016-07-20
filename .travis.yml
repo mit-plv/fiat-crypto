@@ -32,4 +32,4 @@ before_install:
   - sudo apt-get update -q
   - sudo apt-get install $COQ_PACKAGE -y
 
-script: make COQPATH="$(pwd)/$COQPRIME" TIMED=1 -j2
+script: COQPATH="$(pwd)/$COQPRIME" ./etc/coq-scripts/timing/make-pretty-timed.sh -j2 && make COQPATH="$(pwd)/$COQPRIME" TIMED=1 -j2

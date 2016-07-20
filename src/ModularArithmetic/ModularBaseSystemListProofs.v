@@ -24,17 +24,17 @@ Section LengthProofs.
   Proof.
     cbv [encode encodeZ]; intros.
     rewrite encode'_spec;
-      auto using encode'_length, limb_widths_nonneg, Nat.eq_le_incl, base_length.
+      auto using encode'_length, limb_widths_nonneg, Nat.eq_le_incl, base_from_limb_widths_length.
   Qed.
 
   Lemma length_reduce : forall us,
-      (length limb_widths <= length us <= length ext_base)%nat ->
+      (length limb_widths <= length us <= length (ext_base limb_widths))%nat ->
       (length (reduce us) = length limb_widths)%nat.
   Proof.
     rewrite extended_base_length.
     unfold reduce; intros.
     rewrite add_length_exact.
-    pose proof base_length.
+    pose proof (@base_from_limb_widths_length limb_widths).
     rewrite map_length, firstn_length, skipn_length, Min.min_l, Max.max_l;
       omega.
   Qed.
@@ -48,7 +48,7 @@ Section LengthProofs.
     apply length_reduce.
     destruct u; try congruence.
     + rewrite @nil_length0 in *; omega.
-    + rewrite mul_length_exact, extended_base_length, base_length; try omega.
+    + rewrite mul_length_exact, extended_base_length, base_from_limb_widths_length; try omega.
       congruence.
   Qed.
 
@@ -80,7 +80,7 @@ Section LengthProofs.
   Proof.
     intros; unfold modulus_digits, encodeZ.
     rewrite encode'_spec, encode'_length;
-      auto using encode'_length, limb_widths_nonneg, Nat.eq_le_incl, base_length.
+      auto using encode'_length, limb_widths_nonneg, Nat.eq_le_incl, base_from_limb_widths_length.
   Qed.
 
   Lemma length_conditional_subtract_modulus {u cond} :

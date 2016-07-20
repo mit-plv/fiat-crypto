@@ -845,7 +845,7 @@ Proof.
   eapply weqb_true_iff.
 Qed.
 
-Implicit Arguments weqb_sound [].
+Arguments weqb_sound : clear implicits.
 
 Ltac isWcst w :=
   match eval hnf in w with
