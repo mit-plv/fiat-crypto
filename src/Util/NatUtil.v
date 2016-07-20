@@ -5,7 +5,7 @@ Import Nat.
 
 Create HintDb natsimplify discriminated.
 
-Hint Resolve mod_bound_pos : arith.
+Hint Resolve mod_bound_pos plus_le_compat : arith.
 Hint Resolve (fun x y p q => proj1 (@Nat.mod_bound_pos x y p q)) (fun x y p q => proj2 (@Nat.mod_bound_pos x y p q)) : arith.
 
 Hint Rewrite @mod_small @mod_mod @mod_1_l @mod_1_r succ_pred using omega : natsimplify.
