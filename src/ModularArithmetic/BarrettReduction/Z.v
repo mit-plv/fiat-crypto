@@ -86,20 +86,23 @@ Section barrett.
     (** Also, if [a < n²] then [r < 2n]. *)
     (** N.B. It turns out that it is sufficient to assume [a < 4ᵏ]. *)
     Context (a_small : a < 4^k).
+    Lemma q_nice : { b : bool | q = a / n + if b then -1 else 0 }.
+    Proof.
+      assert (0 <= (4 ^ k * a / n) mod 4 ^ k < 4 ^ k) by auto with zarith lia.
+      assert (0 <= a * (4 ^ k mod n) / n < 4 ^ k) by (auto with zero_bounds zarith lia).
+      subst q r m.
+      rewrite (Z.div_mul_diff_exact''' (4^k) n a) by lia.
+      rewrite (Z_div_mod_eq (4^k * _ / n) (4^k)) by lia.
+      autorewrite with push_Zmul push_Zopp zsimplify zstrip_div.
+      eexists; reflexivity.
+    Qed.
+
     Lemma r_small : r < 2 * n.
     Proof.
-      Hint Rewrite (Z.div_small a (4^k)) (Z.mod_small a (4^k)) using lia : zsimplify.
       Hint Rewrite (Z.mul_div_eq' a n) using lia : zstrip_div.
-      cut (r + 1 <= 2 * n); [ lia | ].
-      pose proof k_nonnegative; subst r q m.
-      assert (0 <= 2^(k-1)) by zero_bounds.
-      assert (4^k <> 0) by auto with zarith lia.
       assert (a mod n < n) by auto with zarith lia.
-      pose proof (Z.mod_pos_bound (a * 4^k / n) (4^k)).
-      transitivity (a - (a * 4 ^ k / n - a) / 4 ^ k * n + 1).
-      { rewrite <- (Z.mul_comm a); auto 6 with zarith lia. }
-      rewrite (Z_div_mod_eq (_ * 4^k / n) (4^k)) by lia.
-      autorewrite with push_Zmul push_Zopp zsimplify zstrip_div.
+      subst r; rewrite (proj2_sig q_nice); generalize (proj1_sig q_nice); intro; subst q m.
+      autorewrite with push_Zmul zsimplify zstrip_div.
       break_match; auto with lia.
     Qed.
 
