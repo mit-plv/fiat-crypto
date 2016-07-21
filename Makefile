@@ -26,7 +26,13 @@ ifneq ($(filter 8.4%,$(COQ_VERSION)),) # 8.4
 COQC?=$(TIMER) "$(COQBIN)coqc"
 endif
 
+ifneq ($(filter-out $(SUPER_FAST_TARGETS),$(MAKECMDGOALS)),)
 -include Makefile.coq
+else
+ifeq ($(MAKECMDGOALS),)
+-include Makefile.coq
+endif
+endif
 
 .DEFAULT_GOAL := coq
 
