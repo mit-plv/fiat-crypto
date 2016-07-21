@@ -49,14 +49,14 @@ Section Pow2Base.
 
     Definition add_to_nth n (x:Z) xs :=
       update_nth n (fun y => x + y) xs.
-    Definition carry_and_reduce_single i := fun di =>
+    Definition carry_single i := fun di =>
       (Z.pow2_mod di (log_cap i),
        Z.shiftr di (log_cap i)).
 
     Definition carry_gen fc fi i := fun us =>
       let i := fi (length us) i in
       let di := nth_default 0 us      i in
-      let '(di', ci) := carry_and_reduce_single i di in
+      let '(di', ci) := carry_single i di in
       let us' := set_nth i di' us in
       add_to_nth (fi (length us) (S i)) (fc ci) us'.
 

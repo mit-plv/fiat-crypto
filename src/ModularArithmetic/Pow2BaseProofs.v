@@ -688,7 +688,7 @@ Section carrying.
   Local Hint Resolve limb_widths_nonneg sum_firstn_limb_widths_nonneg.
 
   Lemma length_carry_gen : forall fc fi i us, length (carry_gen limb_widths fc fi i us) = length us.
-  Proof. intros; unfold carry_gen, carry_and_reduce_single; distr_length; reflexivity. Qed.
+  Proof. intros; unfold carry_gen, carry_single; distr_length; reflexivity. Qed.
 
   Hint Rewrite @length_carry_gen : distr_length.
 
@@ -722,14 +722,14 @@ Section carrying.
     destruct (eq_nat_dec 0 (length base));
       [ destruct limb_widths, us, i; simpl in *; try congruence;
         break_match;
-        unfold carry_gen, carry_and_reduce_single, add_to_nth;
+        unfold carry_gen, carry_single, add_to_nth;
         autorewrite with zsimplify simpl_nth_default simpl_set_nth simpl_update_nth distr_length;
         reflexivity
       | ].
     (*assert (0 <= i < length base)%nat by (subst i; auto with arith).*)
     assert (0 <= log_cap i) by auto using log_cap_nonneg.
     assert (2 ^ log_cap i <> 0) by (apply Z.pow_nonzero; lia).
-    unfold carry_gen, carry_and_reduce_single.
+    unfold carry_gen, carry_single.
     rewrite H; change (i' mod length base)%nat with i.
     rewrite add_to_nth_sum by (rewrite length_set_nth; omega).
     rewrite set_nth_sum by omega.
@@ -798,7 +798,7 @@ Section carrying.
              else 0
         else d.
   Proof.
-    unfold carry_gen, carry_and_reduce_single.
+    unfold carry_gen, carry_single.
     intros; autorewrite with push_nth_default natsimplify distr_length.
     edestruct (lt_dec n (length us)) as [H|H]; [ | reflexivity ].
     rewrite !(@nth_default_in_bounds Z 0 d) by assumption.

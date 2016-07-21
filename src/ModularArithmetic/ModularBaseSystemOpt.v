@@ -124,7 +124,7 @@ Section Carries.
     rewrite <-from_list_default_eq with (d := 0%Z).
     rewrite <-pull_app_if_sumbool.
     cbv beta delta
-      [carry carry_and_reduce Pow2Base.carry_gen Pow2Base.carry_and_reduce_single Pow2Base.carry_simple
+      [carry carry_and_reduce Pow2Base.carry_gen Pow2Base.carry_single Pow2Base.carry_simple
        Z.pow2_mod Z.ones Z.pred
        PseudoMersenneBaseParams.limb_widths].
     rewrite !add_to_nth_set_nth.
