@@ -528,6 +528,13 @@ Section Multiplication.
   Definition carry_mul_opt_cps_correct {T} (f:digits -> T) (us vs : digits)
     : carry_mul_opt_cps f us vs = f (carry_mul us vs)
     := proj2_sig (carry_mul_opt_sig f us vs).
+
+  Definition carry_mul_opt := carry_mul_opt_cps id.
+
+  Definition carry_mul_opt_correct (us vs : digits)
+    : carry_mul_opt us vs = carry_mul us vs :=
+    carry_mul_opt_cps_correct id us vs.
+
 End Multiplication.
 
 Section with_base.

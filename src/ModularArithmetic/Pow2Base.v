@@ -39,7 +39,6 @@ Section Pow2Base.
        encode' z i' ++ (Z.shiftr (Z.land z (Z.ones (lw i))) (lw i')) :: nil
     end.
 
-  (* max must be greater than input; this is used to truncate last digit *)
   Definition encodeZ x:= encode' x (length limb_widths).
 
   (** ** Carrying *)

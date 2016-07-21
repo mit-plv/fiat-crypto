@@ -1,10 +1,11 @@
 Require Import Crypto.BaseSystem.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
-Require Import Crypto.ModularArithmetic.ModularBaseSystemOpt.
 Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParams.
 Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParamProofs.
 Require Import Crypto.ModularArithmetic.ModularBaseSystem.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemProofs.
+Require Import Crypto.ModularArithmetic.ModularBaseSystemOpt.
+Require Import Crypto.ModularArithmetic.ModularBaseSystemField.
 Require Import Coq.Lists.List Crypto.Util.ListUtil.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.Util.ZUtil.
@@ -80,25 +81,25 @@ Proof.
 Qed.
 
 Definition add_sig (f g : fe1305) :
-  { fg : fe1305 | fg = ModularBaseSystem.add f g}.
+  { fg : fe1305 | fg = add_opt f g}.
 Proof.
   eexists.
-  rewrite <-appify2_correct. (* Coq 8.4 : 6s *)
+  rewrite <-appify2_correct.
   cbv.
   reflexivity.
-Defined. (* Coq 8.4 : 7s *)
+Defined.
 
 Definition add (f g : fe1305) : fe1305 :=
   Eval cbv beta iota delta [proj1_sig add_sig] in
   proj1_sig (add_sig f g).
 
 Definition add_correct (f g : fe1305)
-  : add f g = ModularBaseSystem.add f g :=
+  : add f g = add_opt f g :=
   Eval cbv beta iota delta [proj1_sig add_sig] in
-  proj2_sig (add_sig f g). (* Coq 8.4 : 10s *)
+  proj2_sig (add_sig f g).
 
 Definition sub_sig (f g : fe1305) :
-  { fg : fe1305 | fg = ModularBaseSystem.sub mul2modulus f g}.
+  { fg : fe1305 | fg = sub_opt f g}.
 Proof.
   eexists.
   rewrite <-appify2_correct.
@@ -111,19 +112,18 @@ Definition sub (f g : fe1305) : fe1305 :=
   proj1_sig (sub_sig f g).
 
 Definition sub_correct (f g : fe1305)
-  : sub f g = ModularBaseSystem.sub mul2modulus f g :=
+  : sub f g = sub_opt f g :=
   Eval cbv beta iota delta [proj1_sig sub_sig] in
-  proj2_sig (sub_sig f g). (* Coq 8.4 : 10s *)
+  proj2_sig (sub_sig f g).
 
 (* For multiplication, we add another layer of definition so that we can
    rewrite under the [let] binders. *)
 Definition mul_simpl_sig (f g : fe1305) :
-  { fg : fe1305 | fg = ModularBaseSystem.mul f g}.
+  { fg : fe1305 | fg = carry_mul_opt k_ c_ f g}.
 Proof.
   cbv [fe1305] in *.
   repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
   eexists.
-  rewrite <-mul_opt_correct with (k_ := k_) (c_ := c_) by auto.
   cbv.
   autorewrite with zsimplify.
   reflexivity.
@@ -134,64 +134,46 @@ Definition mul_simpl (f g : fe1305) : fe1305 :=
   proj1_sig (mul_simpl_sig f g).
 
 Definition mul_simpl_correct (f g : fe1305)
-  : mul_simpl f g = ModularBaseSystem.mul f g :=
+  : mul_simpl f g = carry_mul_opt k_ c_ f g :=
   Eval cbv beta iota delta [proj1_sig mul_simpl_sig] in
   proj2_sig (mul_simpl_sig f g).
 
 Definition mul_sig (f g : fe1305) :
-  { fg : fe1305 | fg = ModularBaseSystem.mul f g}.
+  { fg : fe1305 | fg = carry_mul_opt k_ c_ f g}.
 Proof.
   eexists.
   rewrite <-mul_simpl_correct.
   rewrite <-appify2_correct.
   cbv.
   reflexivity.
-Defined. (* Coq 8.4 : 14s *)
+Defined.
 
 Definition mul (f g : fe1305) : fe1305 :=
   Eval cbv beta iota delta [proj1_sig mul_sig] in
   proj1_sig (mul_sig f g).
 
-Definition mul_correct (f g : fe1305)
-  : mul f g = ModularBaseSystem.mul f g :=
-  Eval cbv beta iota delta [proj1_sig add_sig] in
-  proj2_sig (mul_sig f g). (* Coq 8.4 : 5s *)
+Print mul.
 
-Definition decode := Eval compute in ModularBaseSystem.decode.
+Definition mul_correct (f g : fe1305)
+  : mul f g = carry_mul_opt k_ c_ f g :=
+  Eval cbv beta iota delta [proj1_sig add_sig] in
+  proj2_sig (mul_sig f g).
 
 Import Morphisms.
 
 Lemma field1305 : @field fe1305 eq zero one opp add sub mul inv div.
 Proof.
   pose proof (Equivalence_Reflexive : Reflexive eq).
-  eapply (Field.isomorphism_to_subfield_field (phi := decode)
-    (fieldR := PrimeFieldTheorems.field_modulo (prime_q := prime_modulus))).
+  eapply (Field.equivalent_operations_field (fieldR := modular_base_system_field k_ c_ k_subst c_subst)).
   Grab Existential Variables.
-  + intros; change decode with ModularBaseSystem.decode; apply encode_rep.
-  + intros; change decode with ModularBaseSystem.decode; apply encode_rep.
-  + intros; change decode with ModularBaseSystem.decode; apply encode_rep.
-  + intros; change decode with ModularBaseSystem.decode; apply encode_rep.
-  + intros; change decode with ModularBaseSystem.decode.
-    rewrite mul_correct; apply mul_rep; reflexivity.
-  + intros; change decode with ModularBaseSystem.decode.
-    rewrite sub_correct; apply sub_rep; try reflexivity.
-    rewrite <- coeff_mod. reflexivity.
-  + intros; change decode with ModularBaseSystem.decode.
-    rewrite add_correct; apply add_rep; reflexivity.
-  + intros; change decode with ModularBaseSystem.decode; apply encode_rep.
-  + cbv [eq zero one]. change decode with ModularBaseSystem.decode.
-    rewrite !encode_rep. intro A.
-    eapply (PrimeFieldTheorems.Fq_1_neq_0 (prime_q := prime_modulus)). congruence.
-  + trivial.
-  + repeat intro. cbv [div]. congruence.
-  + repeat intro. cbv [inv]. congruence.
-  + repeat intro. cbv [eq] in *. rewrite !mul_correct, !mul_rep by reflexivity; congruence.
-  + repeat intro. cbv [eq] in *. rewrite !sub_correct. rewrite !sub_rep by
-      (rewrite <-?coeff_mod; reflexivity); congruence.
-  + repeat intro. cbv [eq] in *. rewrite !add_correct, !add_rep by reflexivity; congruence.
-  + repeat intro. cbv [opp]. congruence.
-  + cbv [eq]. auto using ModularArithmeticTheorems.F_eq_dec.
-  + apply (eq_Equivalence (prm := params1305)).
+  + reflexivity.
+  + reflexivity.
+  + reflexivity.
+  + intros; rewrite mul_correct. reflexivity.
+  + intros; rewrite sub_correct; reflexivity.
+  + intros; rewrite add_correct; reflexivity.
+  + reflexivity.
+  + reflexivity.
 Qed.
 
 (*
