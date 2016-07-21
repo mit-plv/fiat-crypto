@@ -14,7 +14,7 @@ Hint Extern 1 => lia : lia.
 Hint Extern 1 => lra : lra.
 Hint Extern 1 => nia : nia.
 Hint Extern 1 => omega : omega.
-Hint Resolve Z.log2_nonneg Z.div_small Z.mod_small Z.pow_neg_r Z.pow_0_l Z.pow_pos_nonneg Z.lt_le_incl : zarith.
+Hint Resolve Z.log2_nonneg Z.div_small Z.mod_small Z.pow_neg_r Z.pow_0_l Z.pow_pos_nonneg Z.lt_le_incl Z.pow_nonzero : zarith.
 Hint Resolve (fun a b H => proj1 (Z.mod_pos_bound a b H)) (fun a b H => proj2 (Z.mod_pos_bound a b H)) : zarith.
 
 (** Only hints that are always safe to apply (i.e., reversible), and
@@ -603,7 +603,7 @@ Module Z.
     Z.compare_to_sgn; rewrite Z.sgn_opp; simpl.
     pose proof (Zdiv_sgn n m) as H.
     pose proof (Z.sgn_spec (n / m)) as H'.
-    repeat first [ progress intuition
+    repeat first [ progress intuition auto
                  | progress simpl in *
                  | congruence
                  | lia
@@ -627,17 +627,46 @@ Module Z.
     apply Z_div_le; nia.
   Qed.
 
-  Lemma div_mul_diff a b c
+  Hint Resolve mul_div_le : zarith.
+
+  Lemma div_mul_diff_exact a b c
         (Ha : 0 <= a) (Hb : 0 < b) (Hc : 0 <= c)
-    : c * a / b - c * (a / b) <= c.
+    : c * a / b = c * (a / b) + (c * (a mod b)) / b.
   Proof.
-    pose proof (Z.mod_pos_bound a b).
-    etransitivity; [ | apply (mul_div_le c (a mod b) b); lia ].
     rewrite (Z_div_mod_eq a b) at 1 by lia.
     rewrite Z.mul_add_distr_l.
     replace (c * (b * (a / b))) with ((c * (a / b)) * b) by lia.
     rewrite Z.div_add_l by lia.
     lia.
+  Qed.
+
+  Lemma div_mul_diff_exact' a b c
+        (Ha : 0 <= a) (Hb : 0 < b) (Hc : 0 <= c)
+    : c * (a / b) = c * a / b - (c * (a mod b)) / b.
+  Proof.
+    rewrite div_mul_diff_exact by assumption; lia.
+  Qed.
+
+  Lemma div_mul_diff_exact'' a b c
+        (Ha : 0 <= a) (Hb : 0 < b) (Hc : 0 <= c)
+    : a * c / b = (a / b) * c + (c * (a mod b)) / b.
+  Proof.
+    rewrite (Z.mul_comm a c), div_mul_diff_exact by lia; lia.
+  Qed.
+
+  Lemma div_mul_diff_exact''' a b c
+        (Ha : 0 <= a) (Hb : 0 < b) (Hc : 0 <= c)
+    : (a / b) * c = a * c / b - (c * (a mod b)) / b.
+  Proof.
+    rewrite (Z.mul_comm a c), div_mul_diff_exact by lia; lia.
+  Qed.
+
+  Lemma div_mul_diff a b c
+        (Ha : 0 <= a) (Hb : 0 < b) (Hc : 0 <= c)
+    : c * a / b - c * (a / b) <= c.
+  Proof.
+    rewrite div_mul_diff_exact by assumption.
+    ring_simplify; auto with zarith.
   Qed.
 
   Lemma div_mul_le_le a b c
@@ -653,6 +682,43 @@ Module Z.
   Qed.
 
   Hint Resolve Zmult_le_compat_r Zmult_le_compat_l Z_div_le Z.div_mul_le_le_offset Z.add_le_mono Z.sub_le_mono : zarith.
+
+  Lemma sub_same_minus (x y : Z) : x - (x - y) = y.
+  Proof. lia. Qed.
+  Hint Rewrite sub_same_minus : zsimplify.
+  Lemma sub_same_plus (x y : Z) : x - (x + y) = -y.
+  Proof. lia. Qed.
+  Hint Rewrite sub_same_plus : zsimplify.
+  Lemma sub_same_minus_plus (x y z : Z) : x - (x - y + z) = y - z.
+  Proof. lia. Qed.
+  Hint Rewrite sub_same_minus_plus : zsimplify.
+  Lemma sub_same_plus_plus (x y z : Z) : x - (x + y + z) = -y - z.
+  Proof. lia. Qed.
+  Hint Rewrite sub_same_plus_plus : zsimplify.
+  Lemma sub_same_minus_minus (x y z : Z) : x - (x - y - z) = y + z.
+  Proof. lia. Qed.
+  Hint Rewrite sub_same_minus_minus : zsimplify.
+  Lemma sub_same_plus_minus (x y z : Z) : x - (x + y - z) = z - y.
+  Proof. lia. Qed.
+  Hint Rewrite sub_same_plus_minus : zsimplify.
+  Lemma sub_same_minus_then_plus (x y w : Z) : x - (x - y) + w = y + w.
+  Proof. lia. Qed.
+  Hint Rewrite sub_same_minus_then_plus : zsimplify.
+  Lemma sub_same_plus_then_plus (x y w : Z) : x - (x + y) + w = w - y.
+  Proof. lia. Qed.
+  Hint Rewrite sub_same_plus_then_plus : zsimplify.
+  Lemma sub_same_minus_plus_then_plus (x y z w : Z) : x - (x - y + z) + w = y - z + w.
+  Proof. lia. Qed.
+  Hint Rewrite sub_same_minus_plus_then_plus : zsimplify.
+  Lemma sub_same_plus_plus_then_plus (x y z w : Z) : x - (x + y + z) + w = w - y - z.
+  Proof. lia. Qed.
+  Hint Rewrite sub_same_plus_plus_then_plus : zsimplify.
+  Lemma sub_same_minus_minus_then_plus (x y z w : Z) : x - (x - y - z) + w = y + z + w.
+  Proof. lia. Qed.
+  Hint Rewrite sub_same_minus_minus : zsimplify.
+  Lemma sub_same_plus_minus_then_plus (x y z w : Z) : x - (x + y - z) + w = z - y + w.
+  Proof. lia. Qed.
+  Hint Rewrite sub_same_plus_minus_then_plus : zsimplify.
 
   (** * [Z.simplify_fractions_le] *)
   (** The culmination of this series of tactics,
@@ -918,6 +984,33 @@ Module Z.
   Qed.
 
   Hint Rewrite Z.div_mul_skip Z.div_mul_skip' using lia : zsimplify.
+
+  Lemma div_small_neg x y : 0 < -x < y -> x / y = -1.
+  Proof.
+    intro H; rewrite <- (Z.opp_involutive x).
+    rewrite Z.div_opp_l_complete by lia.
+    generalize dependent (-x); clear x; intros x H.
+    autorewrite with zsimplify; edestruct Z_zerop; lia.
+  Qed.
+  Hint Rewrite div_small_neg using lia : zsimplify.
+
+  Lemma div_sub_small x y z : 0 <= x < z -> 0 <= y < z -> (x - y) / z = if x <? y then -1 else 0.
+  Proof.
+    pose proof (Zlt_cases x y).
+    (destruct (x <? y) eqn:?);
+      intros; autorewrite with zsimplify; lia.
+  Qed.
+  Hint Rewrite div_sub_small using lia : zsimplify.
+
+  Lemma le_lt_trans n m p : n <= m -> m < p -> n < p.
+  Proof. lia. Qed.
+
+  Lemma mul_div_lt_by_le x y z b : 0 <= y < z -> 0 <= x < b -> x * y / z < b.
+  Proof.
+    intros [? ?] [? ?]; eapply Z.le_lt_trans; [ | eassumption ].
+    auto with zarith.
+  Qed.
+  Hint Resolve mul_div_lt_by_le : zarith.
 End Z.
 
 Module Export BoundsTactics.
