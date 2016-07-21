@@ -683,6 +683,43 @@ Module Z.
 
   Hint Resolve Zmult_le_compat_r Zmult_le_compat_l Z_div_le Z.div_mul_le_le_offset Z.add_le_mono Z.sub_le_mono : zarith.
 
+  Lemma sub_same_minus (x y : Z) : x - (x - y) = y.
+  Proof. lia. Qed.
+  Hint Rewrite sub_same_minus : zsimplify.
+  Lemma sub_same_plus (x y : Z) : x - (x + y) = -y.
+  Proof. lia. Qed.
+  Hint Rewrite sub_same_plus : zsimplify.
+  Lemma sub_same_minus_plus (x y z : Z) : x - (x - y + z) = y - z.
+  Proof. lia. Qed.
+  Hint Rewrite sub_same_minus_plus : zsimplify.
+  Lemma sub_same_plus_plus (x y z : Z) : x - (x + y + z) = -y - z.
+  Proof. lia. Qed.
+  Hint Rewrite sub_same_plus_plus : zsimplify.
+  Lemma sub_same_minus_minus (x y z : Z) : x - (x - y - z) = y + z.
+  Proof. lia. Qed.
+  Hint Rewrite sub_same_minus_minus : zsimplify.
+  Lemma sub_same_plus_minus (x y z : Z) : x - (x + y - z) = z - y.
+  Proof. lia. Qed.
+  Hint Rewrite sub_same_plus_minus : zsimplify.
+  Lemma sub_same_minus_then_plus (x y w : Z) : x - (x - y) + w = y + w.
+  Proof. lia. Qed.
+  Hint Rewrite sub_same_minus_then_plus : zsimplify.
+  Lemma sub_same_plus_then_plus (x y w : Z) : x - (x + y) + w = w - y.
+  Proof. lia. Qed.
+  Hint Rewrite sub_same_plus_then_plus : zsimplify.
+  Lemma sub_same_minus_plus_then_plus (x y z w : Z) : x - (x - y + z) + w = y - z + w.
+  Proof. lia. Qed.
+  Hint Rewrite sub_same_minus_plus_then_plus : zsimplify.
+  Lemma sub_same_plus_plus_then_plus (x y z w : Z) : x - (x + y + z) + w = w - y - z.
+  Proof. lia. Qed.
+  Hint Rewrite sub_same_plus_plus_then_plus : zsimplify.
+  Lemma sub_same_minus_minus_then_plus (x y z w : Z) : x - (x - y - z) + w = y + z + w.
+  Proof. lia. Qed.
+  Hint Rewrite sub_same_minus_minus : zsimplify.
+  Lemma sub_same_plus_minus_then_plus (x y z w : Z) : x - (x + y - z) + w = z - y + w.
+  Proof. lia. Qed.
+  Hint Rewrite sub_same_plus_minus_then_plus : zsimplify.
+
   (** * [Z.simplify_fractions_le] *)
   (** The culmination of this series of tactics,
       [Z.simplify_fractions_le], will use the fact that [a * (b / c) <=
