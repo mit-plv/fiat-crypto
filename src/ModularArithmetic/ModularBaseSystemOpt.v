@@ -194,8 +194,7 @@ Section Carries.
     let RHSf := match (eval pattern (nth_default_opt 0%Z (to_list _ b) i) in RHS) with ?RHSf _ => RHSf end in
     change (LHS = Let_In (nth_default_opt 0%Z (to_list _ b) i) RHSf).
     change Z.shiftl with Z_shiftl_opt.
-    change (-1) with (Z_opp_opt 1).
-    change Z.add with Z_add_opt at 5 9 17 21.
+    match goal with |- appcontext[ ?x + -1] => change (x + -1) with (Z_add_opt x (Z_opp_opt 1)) end.
     reflexivity.
   Defined.
 
