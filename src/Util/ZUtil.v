@@ -990,16 +990,17 @@ Module Z.
     intro H; rewrite <- (Z.opp_involutive x).
     rewrite Z.div_opp_l_complete by lia.
     generalize dependent (-x); clear x; intros x H.
-    autorewrite with zsimplify; break_match; lia.
+    autorewrite with zsimplify; edestruct Z_zerop; lia.
   Qed.
   Hint Rewrite div_small_neg using lia : zsimplify.
 
   Lemma div_sub_small x y z : 0 <= x < z -> 0 <= y < z -> (x - y) / z = if x <? y then -1 else 0.
   Proof.
     pose proof (Zlt_cases x y).
-    intros; break_match; autorewrite with zsimplify; lia.
+    (destruct (x <? y) eqn:?);
+      intros; autorewrite with zsimplify; lia.
   Qed.
-  Hint Rewrite div_small_neg using lia : zsimplify.
+  Hint Rewrite div_sub_small using lia : zsimplify.
 End Z.
 
 Module Export BoundsTactics.
