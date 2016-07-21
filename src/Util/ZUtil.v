@@ -1004,6 +1004,13 @@ Module Z.
 
   Lemma le_lt_trans n m p : n <= m -> m < p -> n < p.
   Proof. lia. Qed.
+
+  Lemma mul_div_lt_by_le x y z b : 0 <= y < z -> 0 <= x < b -> x * y / z < b.
+  Proof.
+    intros [? ?] [? ?]; eapply Z.le_lt_trans; [ | eassumption ].
+    auto with zarith.
+  Qed.
+  Hint Resolve mul_div_lt_by_le : zarith.
 End Z.
 
 Module Export BoundsTactics.
