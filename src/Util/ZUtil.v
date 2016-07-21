@@ -647,6 +647,20 @@ Module Z.
     rewrite div_mul_diff_exact by assumption; lia.
   Qed.
 
+  Lemma div_mul_diff_exact'' a b c
+        (Ha : 0 <= a) (Hb : 0 < b) (Hc : 0 <= c)
+    : a * c / b = (a / b) * c + (c * (a mod b)) / b.
+  Proof.
+    rewrite (Z.mul_comm a c), div_mul_diff_exact by lia; lia.
+  Qed.
+
+  Lemma div_mul_diff_exact''' a b c
+        (Ha : 0 <= a) (Hb : 0 < b) (Hc : 0 <= c)
+    : (a / b) * c = a * c / b - (c * (a mod b)) / b.
+  Proof.
+    rewrite (Z.mul_comm a c), div_mul_diff_exact by lia; lia.
+  Qed.
+
   Lemma div_mul_diff a b c
         (Ha : 0 <= a) (Hb : 0 < b) (Hc : 0 <= c)
     : c * a / b - c * (a / b) <= c.
