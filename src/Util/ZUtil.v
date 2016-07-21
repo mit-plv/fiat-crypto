@@ -1001,6 +1001,9 @@ Module Z.
       intros; autorewrite with zsimplify; lia.
   Qed.
   Hint Rewrite div_sub_small using lia : zsimplify.
+
+  Lemma le_lt_trans n m p : n <= m -> m < p -> n < p.
+  Proof. lia. Qed.
 End Z.
 
 Module Export BoundsTactics.
