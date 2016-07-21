@@ -152,8 +152,6 @@ Definition mul (f g : fe1305) : fe1305 :=
   Eval cbv beta iota delta [proj1_sig mul_sig] in
   proj1_sig (mul_sig f g).
 
-Print mul.
-
 Definition mul_correct (f g : fe1305)
   : mul f g = carry_mul_opt k_ c_ f g :=
   Eval cbv beta iota delta [proj1_sig add_sig] in
