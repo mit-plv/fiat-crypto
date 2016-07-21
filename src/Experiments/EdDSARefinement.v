@@ -1,6 +1,6 @@
 Require Import Crypto.Spec.EdDSA Bedrock.Word.
 Require Import Coq.Classes.Morphisms.
-Require Import Crypto.Algebra. Import Group.
+Require Import Crypto.Algebra. Import Group ScalarMult.
 Require Import Util.Decidable Util.Option Util.Tactics.
 Require Import Omega.
 
@@ -108,24 +108,21 @@ Section EdDSA.
             {SdecS} {SdecS_correct : forall w, (decS w) = (SdecS w)} (* FIXME: equivalence relation *)
             {natToS_modl : forall n,  Seq (natToS (n mod l)) (natToS n)}.
 
-    Create HintDb hintsEtoA discriminated.
-    Hint Rewrite 
-      Aenc_correct
-      homomorphism
-      homomorphism_id
-      homomorphism_inv
-      SAmul_correct
-      SdecS_correct
-      natToS_modl
-      : hintsEtoA.
-
     Definition verify_using_representation
                {mlen} (message:word mlen) (pk:word b) (sig:word (b+b))
                : { answer | answer = verify message pk sig }.
     Proof.
       eexists.
       cbv [verify].
-      (rewrite_strat topdown hints hintsEtoA).
+      repeat (
+          setoid_rewrite Aenc_correct
+          || setoid_rewrite homomorphism
+          || setoid_rewrite homomorphism_id
+          || setoid_rewrite (homomorphism_inv(INV:=Eopp)(inv:=Aopp)(eq:=Aeq)(phi:=EtoA))
+          || setoid_rewrite SAmul_correct
+          || setoid_rewrite SdecS_correct
+          || setoid_rewrite natToS_modl
+        ).
       reflexivity.
     Defined.
   End ChangeRep.

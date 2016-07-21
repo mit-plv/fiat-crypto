@@ -9,7 +9,7 @@ Local Open Scope Z.
 
 Class BaseVector (base : list Z):= {
   base_positive : forall b, In b base -> b > 0; (* nonzero would probably work too... *)
-  b0_1 : forall x, nth_default x base 0 = 1;
+  b0_1 : forall x, nth_default x base 0 = 1; (** TODO(jadep,jgross): change to [nth_error base 0 = Some 1], then use [nth_error_value_eq_nth_default] to prove a [forall x, nth_default x base 0 = 1] as a lemma *)
   base_good :
     forall i j, (i+j < length base)%nat ->
     let b := nth_default 0 base in
@@ -34,8 +34,17 @@ Section BaseSystem.
   Definition accumulate p acc := fst p * snd p + acc.
   Definition decode' bs u  := fold_right accumulate 0 (combine u bs).
   Definition decode := decode' base.
-  (* Does not carry; z becomes the lowest and only digit. *)
-  Definition encode (z : Z) := z :: nil.
+
+  (* i is current index, counts down *)
+  Fixpoint encode' z max i : digits :=
+    match i with
+    | O => nil
+    | S i' => let b := nth_default max base in
+       encode' z max i' ++ ((z mod (b i)) / (b i')) :: nil
+    end.
+
+  (* max must be greater than input; this is used to truncate last digit *)
+  Definition encode z max := encode' z max (length base).
 
   Lemma decode'_truncate : forall bs us, decode' bs us = decode' bs (firstn (length bs) us).
   Proof.
@@ -111,7 +120,7 @@ Section PolynomialBaseCoefs.
     rewrite in_map_iff in *.
     destruct H; destruct H.
     subst.
-    apply pos_pow_nat_pos.
+    apply Z.pos_pow_nat_pos.
   Qed.
 
   Lemma poly_base_defn : forall i, (i < length poly_base)%nat ->
@@ -136,7 +145,6 @@ Section PolynomialBaseCoefs.
       with (Z.pos b1); auto.
     rewrite Z_div_mult_full; auto.
     apply Z.pow_nonzero; intuition.
-    pose proof (Zgt_pos_0 b1); omega.
   Qed.
 
   Lemma poly_base_good:

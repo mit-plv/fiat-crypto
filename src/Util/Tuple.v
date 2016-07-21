@@ -26,23 +26,39 @@ Definition to_list {T} (n:nat) : tuple T n -> list T :=
   | S n' => fun xs : tuple T (S n') => to_list' n' xs
   end.
 
-Fixpoint from_list' {T} (x:T) (xs:list T) : tuple' T (length xs) :=
-  match xs with
-  | nil => x
-  | (y :: xs')%list => (from_list' y xs', x)
+Program Fixpoint from_list' {T} (y:T) (n:nat) (xs:list T) : length xs = n -> tuple' T n :=
+  match n return _ with
+  | 0 =>
+    match xs return (length xs = 0 -> tuple' T 0) with
+    | nil => fun _ => y
+    | _ => _ (* impossible *)
+    end
+  | S n' =>
+    match xs return (length xs = S n' -> tuple' T (S n')) with
+    | cons x xs' => fun _ => (from_list' x n' xs' _, y)
+    | _ => _ (* impossible *)
+    end
   end.
 
-Definition from_list {T} (xs:list T) : tuple T (length xs) :=
-  match xs as l return (tuple T (length l)) with
-  | nil => tt
-  | (t :: xs')%list => from_list' t xs'
-  end.
+Program Definition from_list {T} (n:nat) (xs:list T) : length xs = n -> tuple T n :=
+match n return _ with
+| 0 =>
+    match xs return (length xs = 0 -> tuple T 0) with
+    | nil => fun _ : 0 = 0 => tt
+    | _ => _ (* impossible *)
+    end
+| S n' =>
+    match xs return (length xs = S n' -> tuple T (S n')) with
+    | cons x xs' => fun _ => from_list' x n' xs' _
+    | _ => _ (* impossible *)
+    end
+end.
 
-Lemma to_list_from_list : forall {T} (xs:list T), to_list (length xs) (from_list xs) = xs.
+Lemma to_list_from_list : forall {T} (n:nat) (xs:list T) pf, to_list n (from_list n xs pf) = xs.
 Proof.
-  destruct xs; auto; simpl.
-  generalize dependent t.
-  induction xs; auto; simpl; intros; f_equal; auto.
+  destruct xs; simpl; intros; subst; auto.
+  generalize dependent t. simpl in *.
+  induction xs; simpl in *; intros; congruence.
 Qed.
 
 Lemma length_to_list : forall {T} {n} (xs:tuple T n), length (to_list n xs) = n.
@@ -51,6 +67,38 @@ Proof.
   induction n; auto; intros; simpl in *.
   destruct xs; simpl in *; eauto.
 Qed.
+
+Lemma from_list'_to_list' : forall T n (xs:tuple' T n),
+    forall x xs' pf, to_list' n xs = cons x xs' ->
+      from_list' x n xs' pf = xs.
+Proof.
+  induction n; intros.
+  { simpl in *. injection H; clear H; intros; subst. congruence. }
+  { destruct xs eqn:Hxs;
+    destruct xs' eqn:Hxs';
+    injection H; clear H; intros; subst; try discriminate.
+    simpl. f_equal. eapply IHn. assumption. }
+Qed.
+
+Lemma from_list_to_list : forall {T n} (xs:tuple T n) pf, from_list n (to_list n xs) pf = xs.
+Proof.
+  destruct n; auto; intros; simpl in *.
+  { destruct xs; auto. }
+  { destruct (to_list' n xs) eqn:H; try discriminate.
+    eapply from_list'_to_list'; assumption. }
+Qed.
+
+Definition on_tuple {A B} (f:list A -> list B)
+           {n m:nat} (H:forall xs, length xs = n -> length (f xs) = m)
+           (xs:tuple A n) : tuple B m :=
+  from_list m (f (to_list n xs))
+            (H (to_list n xs) (length_to_list xs)).
+
+Definition on_tuple2 {A B C} (f : list A -> list B -> list C) {a b c : nat}
+           (Hlength : forall la lb, length la = a -> length lb = b -> length (f la lb) = c)
+           (ta:tuple A a) (tb:tuple B b) : tuple C c
+  := from_list c (f (to_list a ta) (to_list b tb))
+               (Hlength (to_list a ta) (to_list b tb) (length_to_list ta) (length_to_list tb)).
 
 Fixpoint fieldwise' {A B} (n:nat) (R:A->B->Prop) (a:tuple' A n) (b:tuple' B n) {struct n} : Prop.
   destruct n; simpl @tuple' in *.
@@ -94,3 +142,56 @@ Global Instance dec_fieldwise {A RA} {HA : DecidableRel RA} {n} : DecidableRel (
 Proof.
   destruct n; unfold fieldwise; exact _.
 Qed.
+
+Fixpoint from_list_default' {T} (d y:T) (n:nat) (xs:list T) : tuple' T n :=
+  match n return tuple' T n with
+  | 0 => y (* ignore high digits *)
+  | S n' =>
+         match xs return _ with
+         | cons x xs' => (from_list_default' d x n' xs', y)
+         | nil => (from_list_default' d d n' nil, y)
+         end
+  end.
+
+Definition from_list_default {T} d (n:nat) (xs:list T) : tuple T n :=
+match n return tuple T n with
+| 0 => tt
+| S n' =>
+    match xs return _ with
+    | cons x xs' => (from_list_default' d x n' xs')
+    | nil => (from_list_default' d d n' nil)
+    end
+end.
+
+Lemma from_list_default'_eq : forall {T} (d : T) xs n y pf,
+  from_list_default' d y n xs = from_list' y n xs pf.
+Proof.
+  induction xs; destruct n; intros; simpl in *;
+    solve [ congruence (* 8.5 *)
+          | erewrite IHxs; reflexivity ]. (* 8.4 *)
+Qed.
+
+Lemma from_list_default_eq : forall {T} (d : T) xs n pf,
+  from_list_default d n xs = from_list n xs pf.
+Proof.
+  induction xs; destruct n; intros; try solve [simpl in *; congruence].
+  apply from_list_default'_eq.
+Qed.
+
+Fixpoint function R T n : Type :=
+  match n with
+  | O => R
+  | S n' => T -> function R T n'
+  end.
+
+Fixpoint apply' {R T} (n:nat) : (T -> function R T n) -> tuple' T n -> R :=
+  match n with
+  | 0 => id
+  | S n' => fun f x => apply' n' (f (snd x)) (fst x)
+  end.
+
+Definition apply {R T} (n:nat) : function R T n -> tuple T n -> R :=
+  match n with
+  | O => fun r _ => r
+  | S n' => fun f x =>  apply' n' f x
+  end.

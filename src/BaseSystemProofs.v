@@ -1,7 +1,7 @@
-Require Import List.
-Require Import Util.ListUtil Util.CaseUtil Util.ZUtil.
-Require Import ZArith.ZArith ZArith.Zdiv.
-Require Import Omega NPeano Arith.
+Require Import Coq.Lists.List.
+Require Import Crypto.Util.ListUtil Crypto.Util.CaseUtil Crypto.Util.ZUtil.
+Require Import Coq.ZArith.ZArith Coq.ZArith.Zdiv.
+Require Import Coq.omega.Omega Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
 Require Import Crypto.BaseSystem.
 Require Import Crypto.Util.Notations.
 Local Open Scope Z.
@@ -78,10 +78,24 @@ Section BaseSystemProofs.
     induction bs; destruct us; destruct vs; boring; ring.
   Qed.
 
-  Lemma encode_rep : forall z, decode base (encode z) = z.
+  Lemma nth_default_base_nonzero : forall d, d <> 0 ->
+    forall i, nth_default d base i <> 0.
   Proof.
-    pose proof base_eq_1cons.
-    unfold decode, encode; destruct z; boring.
+    intros.
+    rewrite nth_default_eq.
+    destruct (nth_in_or_default i base d).
+    + auto using Z.positive_is_nonzero, base_positive.
+    + congruence.
+  Qed.
+
+  Lemma nth_default_base_pos : forall d, 0 < d ->
+    forall i,  0 < nth_default d base i.
+  Proof.
+    intros.
+    rewrite nth_default_eq.
+    destruct (nth_in_or_default i base d).
+    + apply Z.gt_lt; auto using base_positive.
+    + congruence.
   Qed.
 
   Lemma mul_each_base : forall us bs c,
@@ -177,7 +191,7 @@ Section BaseSystemProofs.
   Lemma nth_error_base_nonzero : forall n x,
     nth_error base n = Some x -> x <> 0.
   Proof.
-    eauto using (@nth_error_value_In Z), Zgt0_neq0, base_positive.
+    eauto using (@nth_error_value_In Z), Z.gt0_neq0, base_positive.
   Qed.
 
   Hint Rewrite plus_0_r.
@@ -460,14 +474,8 @@ Section BaseSystemProofs.
     auto.
   Qed.
 
-  (* mul' is multiplication with the FIRST ARGUMENT REVERSED *)
-  Fixpoint mul' (usr vs:digits) : digits :=
-    match usr with
-      | u::usr' =>
-        mul_each u (mul_bi base (length usr') vs) .+ mul' usr' vs
-      | _ => nil
-    end.
-  Definition mul us := mul' (rev us).
+  Local Notation mul' := (mul' base).
+  Local Notation mul := (mul base).
 
   Lemma mul'_rep : forall us vs,
     (length us + length vs <= length base)%nat ->
@@ -507,7 +515,7 @@ Section BaseSystemProofs.
   Lemma mul_length: forall us vs,
       (length (mul us vs) <= length us + length vs)%nat.
   Proof.
-    intros; unfold mul.
+    intros; unfold BaseSystem.mul.
     rewrite mul'_length.
     rewrite rev_length; omega.
   Qed.
@@ -518,31 +526,134 @@ Section BaseSystemProofs.
     induction us; destruct vs; boring.
   Qed.
 
-  Lemma mul'_length_exact: forall us vs,
-      (length us <= length vs)%nat -> us <> nil ->
-      (length (mul' us vs) = pred (length us + length vs))%nat.
+  Hint Rewrite add_length_exact : distr_length.
+
+  Lemma mul'_length_exact_full: forall us vs,
+      (length (mul' us vs) = match length us with
+                             | 0 => 0%nat
+                             | _ => pred (length us + length vs)
+                             end)%nat.
   Proof.
     induction us; intros; try solve [boring].
-    unfold mul'; fold mul'.
+    unfold BaseSystem.mul'; fold mul'.
     unfold mul_each.
     rewrite add_length_exact, map_length, mul_bi_length, length_cons.
     destruct us.
     + rewrite Max.max_0_r. simpl; omega.
     + rewrite Max.max_l; [ omega | ].
       rewrite IHus by ( congruence || simpl in *; omega).
-      omega.
+      simpl; omega.
   Qed.
 
+  Hint Rewrite mul'_length_exact_full : distr_length.
+
+  (* TODO(@jadephilipoom, from jgross): one of these conditions isn't
+  needed.  Should it be dropped, or was there a reason to keep it? *)
+  Lemma mul'_length_exact: forall us vs,
+      (length us <= length vs)%nat -> us <> nil ->
+      (length (mul' us vs) = pred (length us + length vs))%nat.
+  Proof.
+    intros; rewrite mul'_length_exact_full; destruct us; simpl; congruence.
+  Qed.
+
+  Lemma mul_length_exact_full: forall us vs,
+      (length (mul us vs) = match length us with
+                            | 0 => 0
+                            | _ => pred (length us + length vs)
+                            end)%nat.
+  Proof.
+    intros; unfold BaseSystem.mul; autorewrite with distr_length; reflexivity.
+  Qed.
+
+  Hint Rewrite mul_length_exact_full : distr_length.
+
+  (* TODO(@jadephilipoom, from jgross): one of these conditions isn't
+  needed.  Should it be dropped, or was there a reason to keep it? *)
   Lemma mul_length_exact: forall us vs,
       (length us <= length vs)%nat -> us <> nil ->
       (length (mul us vs) = pred (length us + length vs))%nat.
   Proof.
-    intros; unfold mul.
+    intros; unfold BaseSystem.mul.
     rewrite mul'_length_exact; rewrite ?rev_length; try omega.
     intro rev_nil.
     match goal with H : us <> nil |- _ => apply H end.
     apply length0_nil; rewrite <-rev_length, rev_nil.
     reflexivity.
   Qed.
+  Definition encode'_zero z max  : encode' base z max 0%nat = nil := eq_refl.
+  Definition encode'_succ z max i : encode' base z max (S i) =
+    encode' base z max i ++ ((z mod (nth_default max base (S i))) / (nth_default max base i)) :: nil := eq_refl.
+  Opaque encode'.
+  Hint Resolve encode'_zero encode'_succ.
+
+  Lemma encode'_length : forall z max i, length (encode' base z max i) = i.
+  Proof.
+    induction i; auto.
+    rewrite encode'_succ, app_length, IHi.
+    cbv [length].
+    omega.
+  Qed.
+
+  (* States that each element of the base is a positive integer multiple of the previous
+     element, and that max is a positive integer multiple of the last element. Ideally this
+     would have a better name. *)
+  Definition base_max_succ_divide max := forall i, (S i <= length base)%nat ->
+    Z.divide (nth_default max base i) (nth_default max base (S i)).
+
+  Lemma encode'_spec : forall z max, 0 < max ->
+    base_max_succ_divide max -> forall i, (i <= length base)%nat ->
+    decode' base (encode' base z max i) = z mod (nth_default max base i).
+  Proof.
+    induction i; intros.
+    + rewrite encode'_zero, b0_1, Z.mod_1_r.
+      apply decode_nil.
+    + rewrite encode'_succ, set_higher.
+      rewrite IHi by omega.
+      rewrite encode'_length, (Z.add_comm (z mod nth_default max base i)).
+      replace (nth_default 0 base i) with (nth_default max base i) by
+        (rewrite !nth_default_eq; apply nth_indep; omega).
+      match goal with H1 : base_max_succ_divide _, H2 : (S i <= length base)%nat, H3 : 0 < max |- _ =>
+        specialize (H1 i H2);
+        rewrite (Znumtheory.Zmod_div_mod _ _ _ (nth_default_base_pos _ H _)
+                                               (nth_default_base_pos _ H _) H0) end.
+      rewrite <-Z.div_mod by (apply Z.positive_is_nonzero, Z.lt_gt; auto using nth_default_base_pos).
+      reflexivity.
+  Qed.
+
+  Lemma encode_rep : forall z max, 0 <= z < max ->
+    base_max_succ_divide max -> decode base (encode base z max) = z.
+  Proof.
+    unfold encode; intros.
+    rewrite encode'_spec, nth_default_out_of_bounds by (omega || auto).
+    apply Z.mod_small; omega.
+  Qed.
 
 End BaseSystemProofs.
+
+Hint Rewrite @add_length_exact @mul'_length_exact_full @mul_length_exact_full @encode'_length @sub_length : distr_length.
+
+Section MultiBaseSystemProofs.
+  Context base0 (base_vector0 : @BaseVector base0) base1 (base_vector1 : @BaseVector base1).
+
+  Lemma decode_short_initial : forall (us : digits),
+      (firstn (length us) base0 = firstn (length us) base1)
+      -> decode base0 us = decode base1 us.
+  Proof.
+    intros us H.
+    unfold decode, decode'.
+    rewrite (combine_truncate_r us base0), (combine_truncate_r us base1), H.
+    reflexivity.
+  Qed.
+
+  Lemma mul_rep_two_base : forall (us vs : digits),
+      (length us + length vs <= length base1)%nat
+      -> firstn (length us) base0 = firstn (length us) base1
+      -> firstn (length vs) base0 = firstn (length vs) base1
+      -> (decode base0 us) * (decode base0 vs) = decode base1 (mul base1 us vs).
+  Proof.
+      intros.
+      rewrite mul_rep by trivial.
+      apply f_equal2; apply decode_short_initial; assumption.
+  Qed.
+
+End MultiBaseSystemProofs.

@@ -1,16 +1,15 @@
 Require Export Crypto.Spec.CompleteEdwardsCurve.
 
-Require Import Crypto.Algebra Crypto.Tactics.Nsatz.
+Require Import Crypto.Algebra Crypto.Algebra.
 Require Import Crypto.CompleteEdwardsCurve.Pre.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Coq.Classes.Morphisms.
 Require Import Relation_Definitions.
-Require Import Crypto.Util.Tuple.
-Require Import Crypto.Util.Notations.
+Require Import Crypto.Util.Tuple Crypto.Util.Notations Crypto.Util.Tactics.
 
 Module E.
-  Import Group Ring Field CompleteEdwardsCurve.E.
+  Import Group ScalarMult Ring Field CompleteEdwardsCurve.E.
   Section CompleteEdwardsCurveTheorems.
     Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv a d}
             {field:@field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
@@ -28,65 +27,6 @@ Module E.
     Definition eq (P Q:point) := fieldwise (n:=2) Feq (coordinates P) (coordinates Q).
     Infix "=" := eq : E_scope.
 
-    (* TODO: decide whether we still want something like this, then port
-    Local Ltac t :=
-      unfold point_eqb;
-        repeat match goal with
-        | _ => progress intros
-        | _ => progress simpl in *
-        | _ => progress subst
-        | [P:E.point |- _ ] => destruct P
-        | [x: (F q * F q)%type |- _ ] => destruct x
-        | [H: _ /\ _ |- _ ] => destruct H
-        | [H: _ |- _ ] => rewrite Bool.andb_true_iff in H
-        | [H: _ |- _ ] => apply F_eqb_eq in H
-        | _ => rewrite F_eqb_refl
-        end; eauto.
-
-    Lemma point_eqb_sound : forall p1 p2, point_eqb p1 p2 = true -> p1 = p2.
-    Proof.
-      t.
-    Qed.
-
-    Lemma point_eqb_complete : forall p1 p2, p1 = p2 -> point_eqb p1 p2 = true.
-    Proof.
-      t.
-    Qed.
-
-    Lemma point_eqb_neq : forall p1 p2, point_eqb p1 p2 = false -> p1 <> p2.
-    Proof.
-      intros. destruct (point_eqb p1 p2) eqn:Hneq; intuition.
-      apply point_eqb_complete in H0; congruence.
-    Qed.
-
-    Lemma point_eqb_neq_complete : forall p1 p2, p1 <> p2 -> point_eqb p1 p2 = false.
-    Proof.
-      intros. destruct (point_eqb p1 p2) eqn:Hneq; intuition.
-      apply point_eqb_sound in Hneq. congruence.
-    Qed.
-
-    Lemma point_eqb_refl : forall p, point_eqb p p = true.
-    Proof.
-      t.
-    Qed.
-
-    Definition point_eq_dec (p1 p2:E.point) : {p1 = p2} + {p1 <> p2}.
-      destruct (point_eqb p1 p2) eqn:H; match goal with
-                                        | [ H: _ |- _ ] => apply point_eqb_sound in H
-                                        | [ H: _ |- _ ] => apply point_eqb_neq in H
-                                        end; eauto.
-    Qed.
-
-    Lemma point_eqb_correct : forall p1 p2, point_eqb p1 p2 = if point_eq_dec p1 p2 then true else false.
-    Proof.
-      intros. destruct (point_eq_dec p1 p2); eauto using point_eqb_complete, point_eqb_neq_complete.
-    Qed.
-    *)
-
-    (* TODO: move to util *)
-    Lemma decide_and  : forall P Q, {P}+{not P} -> {Q}+{not Q} -> {P/\Q}+{not(P/\Q)}.
-    Proof. intros; repeat match goal with [H:{_}+{_}|-_] => destruct H end; intuition. Qed.
-
     Ltac destruct_points :=
       repeat match goal with
              | [ p : point |- _ ] =>
@@ -96,30 +36,55 @@ Module E.
                destruct p as [[x y] pf]
              end.
 
-    Ltac expand_opp :=
-      rewrite ?mul_opp_r, ?mul_opp_l, ?ring_sub_definition, ?inv_inv, <-?ring_sub_definition.
-
-    Local Hint Resolve char_gt_2.
-    Local Hint Resolve nonzero_a.
-    Local Hint Resolve square_a.
-    Local Hint Resolve nonsquare_d.
-    Local Hint Resolve @edwardsAddCompletePlus.
-    Local Hint Resolve @edwardsAddCompleteMinus.
-
-    Local Obligation Tactic := intros; destruct_points; simpl; field_algebra.
+    Local Obligation Tactic := intros; destruct_points; simpl; super_nsatz.
     Program Definition opp (P:point) : point :=
       exist _ (let '(x, y) := coordinates P in (Fopp x, y) ) _.
 
+    (* all nonzero-denominator goals here require proofs that are not
+    trivially implied by field axioms. Posing all such proofs at once
+    and then solving the nonzero-denominator goal using [super_nsatz]
+    is too slow because the context contains many assumed nonzero
+    expressions and the product of all of them is a very large
+    polynomial. However, we never need to use more than one
+    nonzero-ness assumption for a given nonzero-denominator goal, so
+    we can try them separately one-by-one. *)
+
+    Ltac apply_field_nonzero H :=
+      match goal with |- not (Feq _ 0) => idtac | _ => fail "not a nonzero goal" end;
+      try solve [exact H];
+      let Hx := fresh "H" in
+      intro Hx;
+      apply H;
+      try common_denominator;
+      [rewrite <-Hx; ring | ..].
+      
     Ltac bash_step :=
+      let addCompletePlus := constr:(edwardsAddCompletePlus(char_gt_2:=char_gt_2)(d_nonsquare:=nonsquare_d)(a_square:=square_a)(a_nonzero:=nonzero_a)) in
+      let addCompleteMinus := constr:(edwardsAddCompleteMinus(char_gt_2:=char_gt_2)(d_nonsquare:=nonsquare_d)(a_square:=square_a)(a_nonzero:=nonzero_a)) in
+      let addOnCurve := constr:(unifiedAdd'_onCurve(char_gt_2:=char_gt_2)(d_nonsquare:=nonsquare_d)(a_square:=square_a)(a_nonzero:=nonzero_a)) in
       match goal with
       | |- _ => progress intros
       | [H: _ /\ _ |- _ ] => destruct H
+      | [H: ?a = ?b |- _ ] => is_var a; is_var b; repeat rewrite <-H in *; clear H b (* fast path *)
       | |- _ => progress destruct_points
       | |- _ => progress cbv [fst snd coordinates proj1_sig eq fieldwise fieldwise' add zero opp] in *
       | |- _ => split
-      | |- Feq _ _ => field_algebra
-      | |- _ <> 0 => expand_opp; solve [nsatz_nonzero|eauto 6]
-      | |- Decidable.Decidable _ => solve [ typeclasses eauto ]
+      | [H:Feq (a*_^2+_^2) (1 + d*_^2*_^2) |- _ <> 0]
+        => apply_field_nonzero (addCompletePlus _ _ _ _ H H) ||
+           apply_field_nonzero (addCompleteMinus _ _ _ _ H H)
+      | [A:Feq (a*_^2+_^2) (1 + d*_^2*_^2),
+           B:Feq (a*_^2+_^2) (1 + d*_^2*_^2) |- _ <> 0]
+        => apply_field_nonzero (addCompletePlus _ _ _ _ A B) ||
+           apply_field_nonzero (addCompleteMinus _ _ _ _ A B)
+      | [A:Feq (a*_^2+_^2) (1 + d*_^2*_^2),
+           B:Feq (a*_^2+_^2) (1 + d*_^2*_^2),
+             C:Feq (a*_^2+_^2) (1 + d*_^2*_^2) |- _ <> 0]
+        => apply_field_nonzero (addCompleteMinus _ _ _ _ A (addOnCurve (_, _) (_, _) B C)) ||
+           apply_field_nonzero (addCompletePlus _ _ _ _ A (addOnCurve (_, _) (_, _) B C))
+      | |- ?x <> 0 => let H := fresh "H" in assert (x = 1) as H by ring; rewrite H; exact one_neq_zero
+      | |- Feq _ _ => progress common_denominator
+      | |- Feq _ _ => nsatz
+      | |- _ => exact _ (* typeclass instances *)
       end.
 
     Ltac bash := repeat bash_step.
@@ -127,25 +92,19 @@ Module E.
     Global Instance Proper_add : Proper (eq==>eq==>eq) add. Proof. bash. Qed.
     Global Instance Proper_opp : Proper (eq==>eq) opp. Proof. bash. Qed.
     Global Instance Proper_coordinates : Proper (eq==>fieldwise (n:=2) Feq) coordinates. Proof. bash. Qed.
-
     Global Instance edwards_acurve_abelian_group : abelian_group (eq:=eq)(op:=add)(id:=zero)(inv:=opp).
     Proof.
       bash.
-      (* TODO: port denominator-nonzero proofs for associativity *)
-      match goal with | |- _ <> 0 => admit end.
-      match goal with | |- _ <> 0 => admit end.
-      match goal with | |- _ <> 0 => admit end.
-      match goal with | |- _ <> 0 => admit end.
-    Admitted.
+    Qed.
 
     Global Instance Proper_mul : Proper (Logic.eq==>eq==>eq) mul.
     Proof.
-      intros n m Hnm P Q HPQ. rewrite <-Hnm; clear Hnm m.
-      induction n; simpl; rewrite ?IHn, ?HPQ; reflexivity.
+      intros n n'; repeat intro; subst n'.
+      induction n; (reflexivity || eapply Proper_add; eauto).
     Qed.
 
     Global Instance mul_is_scalarmult : @is_scalarmult point eq add zero mul.
-    Proof. split; intros; reflexivity || typeclasses eauto. Qed.
+    Proof. unfold mul; split; intros; (reflexivity || exact _). Qed.
 
     Section PointCompression.
       Local Notation "x ^ 2" := (x*x).
@@ -155,28 +114,30 @@ Module E.
       Proof.
         intros ? eq_zero.
         destruct square_a as [sqrt_a sqrt_a_id]; rewrite <- sqrt_a_id in eq_zero.
-        destruct (eq_dec y 0); [apply nonzero_a|apply nonsquare_d with (sqrt_a/y)]; field_algebra.
+        destruct (eq_dec y 0); [apply nonzero_a | apply nonsquare_d with (sqrt_a/y)]; super_nsatz.
       Qed.
 
       Lemma solve_correct : forall x y, onCurve (x, y) <-> (x^2 = solve_for_x2 y).
       Proof.
-        unfold solve_for_x2; simpl; split; intros; field_algebra; auto using a_d_y2_nonzero.
+        unfold solve_for_x2; simpl; split; intros;
+          (common_denominator_all; [nsatz | auto using a_d_y2_nonzero]).
       Qed.
     End PointCompression.
   End CompleteEdwardsCurveTheorems.
-
   Section Homomorphism.
     Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv Fa Fd}
-            {fieldF:@field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
+            {field:@field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
             {Fprm:@twisted_edwards_params F Feq Fzero Fone Fadd Fmul Fa Fd}.
     Context {K Keq Kzero Kone Kopp Kadd Ksub Kmul Kinv Kdiv Ka Kd}
-            {fieldK:@field K Keq Kzero Kone Kopp Kadd Ksub Kmul Kinv Kdiv}
+            {fieldK: @Algebra.field K Keq Kzero Kone Kopp Kadd Ksub Kmul Kinv Kdiv}
             {Kprm:@twisted_edwards_params K Keq Kzero Kone Kadd Kmul Ka Kd}.
     Context {phi:F->K} {Hphi:@Ring.is_homomorphism F Feq Fone Fadd Fmul
                                                    K Keq Kone Kadd Kmul phi}.
     Context {Ha:Keq (phi Fa) Ka} {Hd:Keq (phi Fd) Kd}.
-    Local Notation Fpoint := (@point F Feq Fone Fadd Fmul Fa Fd).
-    Local Notation Kpoint := (@point K Keq Kone Kadd Kmul Ka Kd).
+    Local Notation Fpoint := (@E.point F Feq Fone Fadd Fmul Fa Fd).
+    Local Notation Kpoint := (@E.point K Keq Kone Kadd Kmul Ka Kd).
+    Local Notation FonCurve := (@onCurve F Feq Fone Fadd Fmul Fa Fd).
+    Local Notation KonCurve := (@onCurve K Keq Kone Kadd Kmul Ka Kd).
 
     Create HintDb field_homomorphism discriminated.
     Hint Rewrite <-
@@ -189,6 +150,7 @@ Module E.
          Hd
       : field_homomorphism.
 
+    Obligation Tactic := idtac.
     Program Definition ref_phi (P:Fpoint) : Kpoint := exist _ (
       let (x, y) := coordinates P in (phi x, phi y)) _.
     Next Obligation.
@@ -199,7 +161,7 @@ Module E.
 
     Context {point_phi:Fpoint->Kpoint}
             {point_phi_Proper:Proper (eq==>eq) point_phi}
-            {point_phi_correct: forall (P:Fpoint), eq (point_phi P) (ref_phi P)}.
+            {point_phi_correct: forall (P:point), eq (point_phi P) (ref_phi P)}.
 
     Lemma lift_homomorphism : @Group.is_homomorphism Fpoint eq add Kpoint eq add point_phi.
     Proof.
@@ -214,7 +176,11 @@ Module E.
              | |- Keq ?x ?x => reflexivity
              | |- Keq ?x ?y => rewrite_strat bottomup hints field_homomorphism
              | [ H : Feq _ _ |- Keq (phi _) (phi _)] => solve [f_equiv; intuition]
-             end.
+             end;
+        assert (FonCurve (f1,f2)) as FonCurve1 by assumption;
+        assert (FonCurve (f,f0)) as FonCurve2 by assumption;
+        [ eapply (@edwardsAddCompleteMinus F) with (x1 := f1); destruct Fprm; eauto
+        | eapply (@edwardsAddCompletePlus  F) with (x1 := f1); destruct Fprm; eauto].
       Qed.
   End Homomorphism.
 End E.

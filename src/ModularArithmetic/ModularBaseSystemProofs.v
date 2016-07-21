@@ -1,99 +1,110 @@
-Require Import Zpower ZArith.
+Require Import Coq.ZArith.Zpower Coq.ZArith.ZArith.
 Require Import Coq.Numbers.Natural.Peano.NPeano.
-Require Import List.
+Require Import Coq.Lists.List.
+Require Import Crypto.Tactics.VerdiTactics.
+Require Import Crypto.BaseSystem.
+Require Import Crypto.BaseSystemProofs.
+Require Import Crypto.ModularArithmetic.ExtendedBaseVector.
+Require Import Crypto.ModularArithmetic.Pow2Base.
+Require Import Crypto.ModularArithmetic.Pow2BaseProofs.
+Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
+Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParams.
+Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParamProofs.
+Require Import Crypto.ModularArithmetic.ModularBaseSystemList.
+Require Import Crypto.ModularArithmetic.ModularBaseSystemListProofs.
+Require Import Crypto.ModularArithmetic.ModularBaseSystem.
 Require Import Crypto.Util.ListUtil Crypto.Util.CaseUtil Crypto.Util.ZUtil Crypto.Util.NatUtil.
-Require Import VerdiTactics.
-Require Crypto.BaseSystem.
-Require Import Crypto.ModularArithmetic.ModularBaseSystem Crypto.ModularArithmetic.PrimeFieldTheorems.
-Require Import Crypto.BaseSystemProofs Crypto.ModularArithmetic.PseudoMersenneBaseParams Crypto.ModularArithmetic.PseudoMersenneBaseParamProofs Crypto.ModularArithmetic.ExtendedBaseVector.
+Require Import Crypto.Util.Tuple.
+Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
 Local Open Scope Z_scope.
+
+Local Opaque add_to_nth carry_simple.
 
 Section PseudoMersenneProofs.
   Context `{prm :PseudoMersenneBaseParams}.
 
+  Local Arguments to_list {_ _} _.
+  Local Arguments from_list {_ _} _ _.
+
   Local Hint Unfold decode.
   Local Notation "u ~= x" := (rep u x).
-  Local Notation "u .+ x" := (add u x).
-  Local Notation "u .* x" := (ModularBaseSystem.mul u x).
-  Local Hint Unfold rep.
+  Local Notation digits := (tuple Z (length limb_widths)).
+  Local Hint Resolve (@limb_widths_nonneg _ prm) sum_firstn_limb_widths_nonneg.
+
+  Local Hint Resolve log_cap_nonneg.
+  Local Notation base := (base_from_limb_widths limb_widths).
+  Local Notation log_cap i := (nth_default 0 limb_widths i).
+
+  Local Hint Unfold rep decode ModularBaseSystemList.decode.
 
   Lemma rep_decode : forall us x, us ~= x -> decode us = x.
   Proof.
     autounfold; intuition.
   Qed.
 
-  Lemma rep_length : forall us x, us ~= x -> length us = length base.
+  Lemma decode_rep : forall us, rep us (decode us).
   Proof.
-    autounfold; intuition.
+    cbv [rep]; auto.
+  Qed.
+
+  Lemma lt_modulus_2k : modulus < 2 ^ k.
+  Proof.
+    replace (2 ^ k) with (modulus + c) by (unfold c; ring).
+    pose proof c_pos; omega.
+  Qed. Hint Resolve lt_modulus_2k.
+
+  Lemma modulus_pos : 0 < modulus.
+  Proof.
+    pose proof (NumTheoryUtil.lt_1_p _ prime_modulus); omega.
+  Qed. Hint Resolve modulus_pos.
+
+  (** TODO(jadep, from jgross): The abstraction barrier of
+      [base]/[limb_widths] is repeatedly broken in the following
+      proofs.  This lemma should almost never be needed, but removing
+      it breaks everything.  (And using [distr_length] is too much of
+      a sledgehammer, and demolishes the abstraction barrier that's
+      currently merely in pieces.) *)
+  Lemma base_length : length base = length limb_widths.
+  Proof. distr_length. Qed.
+
+  Lemma base_length_nonzero : length base <> 0%nat.
+  Proof.
+    distr_length.
+    pose proof limb_widths_nonnil.
+    destruct limb_widths; simpl in *; congruence.
+  Qed.
+
+  Lemma encode_eq : forall x : F modulus,
+    ModularBaseSystemList.encode x = BaseSystem.encode base x (2 ^ k).
+  Proof.
+    cbv [ModularBaseSystemList.encode BaseSystem.encode encodeZ]; intros.
+    rewrite base_length.
+    apply encode'_spec; auto using Nat.eq_le_incl, base_length.
   Qed.
 
   Lemma encode_rep : forall x : F modulus, encode x ~= x.
   Proof.
-    intros. unfold encode, rep.
-    split. {
-      unfold encode; simpl.
-      rewrite length_zeros.
-      pose proof base_length_nonzero; omega.
-    } {
-      unfold decode.
-      rewrite decode_highzeros.
-      rewrite encode_rep.
-      apply ZToField_FieldToZ.
-      apply bv.
-    }
+    autounfold; cbv [encode]; intros.
+    rewrite to_list_from_list; autounfold.
+    rewrite encode_eq, encode_rep.
+    + apply ZToField_FieldToZ.
+    + apply bv.
+    + split; [ | etransitivity]; try (apply FieldToZ_range; auto using modulus_pos); auto.
+    + eauto using base_upper_bound_compatible, limb_widths_nonneg.
   Qed.
 
-  Lemma add_rep : forall u v x y, u ~= x -> v ~= y -> BaseSystem.add u v ~= (x+y)%F.
+  Lemma add_rep : forall u v x y, u ~= x -> v ~= y ->
+    add u v ~= (x+y)%F.
   Proof.
-    autounfold; intuition. {
-      unfold add.
-      auto using add_same_length.
-    }
-    unfold decode in *; unfold decode in *.
-    rewrite add_rep.
-    rewrite ZToField_add.
-    subst; auto.
+    autounfold; cbv [add]; intros.
+    rewrite to_list_from_list; autounfold.
+    rewrite add_rep, ZToField_add.
+    f_equal; assumption.
   Qed.
 
-  Lemma sub_rep : forall c c_0modq, (length c = length base)%nat ->
-    forall u v x y, u ~= x -> v ~= y ->
-    ModularBaseSystem.sub c c_0modq u v ~= (x-y)%F.
-  Proof.
-    autounfold; unfold ModularBaseSystem.sub; intuition. {
-      rewrite sub_length.
-      case_max; try rewrite Max.max_r; try omega.
-      auto using add_same_length.
-    }
-    unfold decode in *; unfold BaseSystem.decode in *.
-    rewrite BaseSystemProofs.sub_rep, BaseSystemProofs.add_rep.
-    rewrite ZToField_sub, ZToField_add, ZToField_mod.
-    rewrite c_0modq, F_add_0_l.
-    subst; auto.
-  Qed.
-
-  Lemma decode_short : forall (us : BaseSystem.digits),
-    (length us <= length base)%nat ->
-    BaseSystem.decode base us = BaseSystem.decode ext_base us.
-  Proof.
-    intros.
-    unfold BaseSystem.decode, BaseSystem.decode'.
-    rewrite combine_truncate_r.
-    rewrite (combine_truncate_r us ext_base).
-    f_equal; f_equal.
-    unfold ext_base.
-    rewrite firstn_app_inleft; auto; omega.
-  Qed.
-
-  Lemma mul_rep_extended : forall (us vs : BaseSystem.digits),
-      (length us <= length base)%nat ->
-      (length vs <= length base)%nat ->
-      (BaseSystem.decode base us) * (BaseSystem.decode base vs) = BaseSystem.decode ext_base (BaseSystem.mul ext_base us vs).
-  Proof.
-      intros.
-      rewrite mul_rep by (apply ExtBaseVector || unfold ext_base; simpl_list; omega).
-      f_equal; rewrite decode_short; auto.
-  Qed.
+  Local Hint Resolve firstn_us_base_ext_base bv ExtBaseVector limb_widths_match_modulus.
+  Local Hint Extern 1 => apply limb_widths_match_modulus.
 
   Lemma modulus_nonzero : modulus <> 0.
     pose proof (Znumtheory.prime_ge_2 _ prime_modulus); omega.
@@ -104,24 +115,28 @@ Section PseudoMersenneProofs.
   Proof.
     intros.
     replace (2^k) with ((2^k - c) + c) by ring.
-    rewrite Z.mul_add_distr_r.
-    rewrite Zplus_mod.
+    rewrite Z.mul_add_distr_r, Zplus_mod.
     unfold c.
     rewrite Z.sub_sub_distr, Z.sub_diag.
     simpl.
-    rewrite Z.mul_comm.
-    rewrite mod_mult_plus; auto using modulus_nonzero.
+    rewrite Z.mul_comm, Z.mod_add_l; auto using modulus_nonzero.
     rewrite <- Zplus_mod; auto.
   Qed.
 
+  Lemma pseudomersenne_add': forall x y0 y1 z, (z - x + ((2^k) * y0 * y1)) mod modulus = (c * y0 * y1 - x + z) mod modulus.
+  Proof.
+    intros; rewrite <- !Z.add_opp_r, <- !Z.mul_assoc, pseudomersenne_add; apply f_equal2; omega.
+  Qed.
+
   Lemma extended_shiftadd: forall (us : BaseSystem.digits),
-    BaseSystem.decode ext_base us =
+    BaseSystem.decode (ext_base limb_widths) us =
       BaseSystem.decode base (firstn (length base) us)
       + (2^k * BaseSystem.decode base (skipn (length base) us)).
   Proof.
     intros.
     unfold BaseSystem.decode; rewrite <- mul_each_rep.
-    unfold ext_base.
+    rewrite ext_base_alt by auto.
+    fold k.
     replace (map (Z.mul (2 ^ k)) base) with (BaseSystem.mul_each (2 ^ k) base) by auto.
     rewrite base_mul_app.
     rewrite <- mul_each_rep; auto.
@@ -129,99 +144,26 @@ Section PseudoMersenneProofs.
 
   Lemma reduce_rep : forall us,
     BaseSystem.decode base (reduce us) mod modulus =
-    BaseSystem.decode ext_base us mod modulus.
+    BaseSystem.decode (ext_base limb_widths) us mod modulus.
   Proof.
-    intros.
-    rewrite extended_shiftadd.
-    rewrite pseudomersenne_add.
-    unfold reduce.
-    remember (firstn (length base) us) as low.
-    remember (skipn (length base) us) as high.
-    unfold BaseSystem.decode.
-    rewrite BaseSystemProofs.add_rep.
-    replace (map (Z.mul c) high) with (BaseSystem.mul_each c high) by auto.
+    cbv [reduce]; intros.
+    rewrite extended_shiftadd, base_length, pseudomersenne_add, BaseSystemProofs.add_rep.
+    change (map (Z.mul c)) with (BaseSystem.mul_each c).
     rewrite mul_each_rep; auto.
   Qed.
 
-  Lemma reduce_length : forall us,
-      (length base <= length us <= length ext_base)%nat ->
-      (length (reduce us) = length base)%nat.
+  Lemma mul_rep : forall u v x y, u ~= x -> v ~= y -> mul u v ~= (x*y)%F.
   Proof.
-    rewrite extended_base_length.
-    unfold reduce; intros.
-    rewrite add_length_exact.
-    rewrite map_length, firstn_length, skipn_length.
-    rewrite Min.min_l by omega.
-    apply Max.max_l; omega.
-  Qed.
-
-  Lemma mul_rep : forall u v x y, u ~= x -> v ~= y -> u .* v ~= (x*y)%F.
-  Proof.
-    autounfold; unfold ModularBaseSystem.mul; intuition.
-    {
-      apply reduce_length.
-      rewrite mul_length_exact, extended_base_length; try omega.
-      destruct u; try congruence.
-      rewrite @nil_length0 in *.
-      pose proof base_length_nonzero; omega.
-    } {
-      rewrite ZToField_mod, reduce_rep, <-ZToField_mod.
-      rewrite mul_rep by
-        (apply ExtBaseVector || rewrite extended_base_length; omega).
-      subst.
-      do 2 rewrite decode_short by omega.
-      apply ZToField_mul.
-    }
-  Qed.
-
-  Lemma set_nth_sum : forall n x us, (n < length us)%nat ->
-    BaseSystem.decode base (set_nth n x us) =
-    (x - nth_default 0 us n) * nth_default 0 base n + BaseSystem.decode base us.
-  Proof.
-    intros.
-    unfold BaseSystem.decode.
-    nth_inbounds; auto. (* TODO(andreser): nth_inbounds should do this auto*)
-    unfold splice_nth.
-    rewrite <- (firstn_skipn n us) at 4.
-    do 2 rewrite decode'_splice.
-    remember (length (firstn n us)) as n0.
-    ring_simplify.
-    remember (BaseSystem.decode' (firstn n0 base) (firstn n us)).
-    rewrite (skipn_nth_default n us 0) by omega.
-    rewrite firstn_length in Heqn0.
-    rewrite Min.min_l in Heqn0 by omega; subst n0.
-    destruct (le_lt_dec (length base) n). {
-      rewrite nth_default_out_of_bounds by auto.
-      rewrite skipn_all by omega.
-      do 2 rewrite decode_base_nil.
-      ring_simplify; auto.
-    } {
-      rewrite (skipn_nth_default n base 0) by omega.
-      do 2 rewrite decode'_cons.
-      ring_simplify; ring.
-    }
-  Qed.
-
-  Lemma add_to_nth_sum : forall n x us, (n < length us)%nat ->
-    BaseSystem.decode base (add_to_nth n x us) =
-    x * nth_default 0 base n + BaseSystem.decode base us.
-  Proof.
-    unfold add_to_nth; intros; rewrite set_nth_sum; try ring_simplify; auto.
-  Qed.
-
-  Lemma add_to_nth_nth_default : forall n x l i, (0 <= i < length l)%nat ->
-    nth_default 0 (add_to_nth n x l) i =
-    if (eq_nat_dec i n) then x + nth_default 0 l i else nth_default 0 l i.
-  Proof.
-    intros.
-    unfold add_to_nth.
-    rewrite set_nth_nth_default by assumption.
-    break_if; subst; reflexivity.
-  Qed.
-
-  Lemma length_add_to_nth : forall n x l, length (add_to_nth n x l) = length l.
-  Proof.
-    unfold add_to_nth; intros; apply length_set_nth.
+    autounfold in *; unfold ModularBaseSystem.mul in *.
+    intuition idtac; subst.
+    rewrite to_list_from_list.
+    cbv [ModularBaseSystemList.mul ModularBaseSystemList.decode].
+    rewrite ZToField_mod, reduce_rep, <-ZToField_mod.
+    pose proof (@base_from_limb_widths_length limb_widths).
+    rewrite mul_rep by (auto using ExtBaseVector || rewrite extended_base_length, !length_to_list; omega).
+    rewrite 2decode_short by (rewrite ?base_from_limb_widths_length;
+      auto using Nat.eq_le_incl, length_to_list with omega).
+    apply ZToField_mul.
   Qed.
 
   Lemma nth_default_base_positive : forall i, (i < length base)%nat ->
@@ -242,23 +184,66 @@ Section PseudoMersenneProofs.
   Proof.
     intros.
     apply Z_div_exact_2; try (apply nth_default_base_positive; omega).
-    apply base_succ; auto.
+    apply base_succ; eauto.
   Qed.
 
-  Lemma Fdecode_decode_mod : forall us x, (length us = length base) ->
-    decode us = x -> BaseSystem.decode base us mod modulus = x.
+  Lemma Fdecode_decode_mod : forall us x,
+    decode us = x -> BaseSystem.decode base (to_list us) mod modulus = x.
   Proof.
-    unfold decode; intros ? ? ? decode_us.
-    rewrite <-decode_us.
+    autounfold; intros.
+    rewrite <-H.
     apply FieldToZ_ZToField.
   Qed.
 
+  Definition carry_done us := forall i, (i < length base)%nat ->
+    0 <= nth_default 0 us i /\ Z.shiftr (nth_default 0 us i) (log_cap i) = 0.
+
+  Lemma carry_done_bounds : forall us, (length us = length base) ->
+    (carry_done us <-> forall i, 0 <= nth_default 0 us i < 2 ^ log_cap i).
+  Proof.
+    intros ? ?; unfold carry_done; split; [ intros Hcarry_done i | intros Hbounds i i_lt ].
+    + destruct (lt_dec i (length base)) as [i_lt | i_nlt].
+      - specialize (Hcarry_done i i_lt).
+        split; [ intuition | ].
+        destruct Hcarry_done as [Hnth_nonneg Hshiftr_0].
+        apply Z.shiftr_eq_0_iff in Hshiftr_0.
+        destruct Hshiftr_0 as [nth_0 | []]; [ rewrite nth_0; zero_bounds | ].
+        apply Z.log2_lt_pow2; auto.
+      - rewrite nth_default_out_of_bounds by omega.
+        split; zero_bounds.
+    + specialize (Hbounds i).
+      split; [ intuition | ].
+      destruct Hbounds as [nth_nonneg nth_lt_pow2].
+      apply Z.shiftr_eq_0_iff.
+      apply Z.le_lteq in nth_nonneg; destruct nth_nonneg; try solve [left; auto].
+      right; split; auto.
+      apply Z.log2_lt_pow2; auto.
+  Qed.
+
+  Context (mm : digits) (mm_spec : decode mm = 0%F).
+
+  Lemma sub_rep : forall u v x y, u ~= x -> v ~= y ->
+    ModularBaseSystem.sub mm u v ~= (x-y)%F.
+  Proof.
+    autounfold; cbv [sub]; intros.
+    rewrite to_list_from_list; autounfold.
+    cbv [ModularBaseSystemList.sub].
+    rewrite BaseSystemProofs.sub_rep, BaseSystemProofs.add_rep.
+    rewrite ZToField_sub, ZToField_add, ZToField_mod.
+    apply Fdecode_decode_mod in mm_spec; cbv [BaseSystem.decode] in *.
+    rewrite mm_spec, F_add_0_l.
+    f_equal; assumption.
+  Qed.
+
 End PseudoMersenneProofs.
+Opaque encode add mul sub.
 
 Section CarryProofs.
   Context `{prm : PseudoMersenneBaseParams}.
+  Local Notation base := (base_from_limb_widths limb_widths).
+  Local Notation log_cap i := (nth_default 0 limb_widths i).
   Local Notation "u ~= x" := (rep u x).
-  Hint Unfold log_cap.
+  Local Hint Resolve (@limb_widths_nonneg _ prm) sum_firstn_limb_widths_nonneg.
 
   Lemma base_length_lt_pred : (pred (length base) < length base)%nat.
   Proof.
@@ -266,136 +251,62 @@ Section CarryProofs.
   Qed.
   Hint Resolve base_length_lt_pred.
 
-  Lemma log_cap_nonneg : forall i, 0 <= log_cap i.
-  Proof.
-    unfold log_cap, nth_default; intros.
-    case_eq (nth_error limb_widths i); intros; try omega.
-    apply limb_widths_nonneg.
-    eapply nth_error_value_In; eauto.
-  Qed.
-
-  Lemma nth_default_base_succ : forall i, (S i < length base)%nat ->
-    nth_default 0 base (S i) = 2 ^ log_cap i * nth_default 0 base i.
-  Proof.
-    intros.
-    repeat rewrite nth_default_base by omega.
-    rewrite <- Z.pow_add_r by (apply log_cap_nonneg || apply sum_firstn_limb_widths_nonneg).
-    destruct (NPeano.Nat.eq_dec i 0).
-    + subst; f_equal.
-      unfold sum_firstn, log_cap.
-      destruct limb_widths; auto.
-    + erewrite sum_firstn_succ; eauto.
-      unfold log_cap.
-      apply nth_error_Some_nth_default.
-      rewrite <- base_length; omega.
-  Qed.
-
-  Lemma carry_simple_decode_eq : forall i us,
-    (length us = length base) ->
-    (i < (pred (length base)))%nat ->
-    BaseSystem.decode base (carry_simple i us) = BaseSystem.decode base us.
-  Proof.
-    unfold carry_simple. intros.
-    rewrite add_to_nth_sum by (rewrite length_set_nth; omega).
-    rewrite set_nth_sum by omega.
-    unfold pow2_mod.
-    rewrite Z.land_ones by apply log_cap_nonneg.
-    rewrite Z.shiftr_div_pow2 by apply log_cap_nonneg.
-    rewrite nth_default_base_succ by omega.
-    rewrite Z.mul_assoc.
-    rewrite (Z.mul_comm _ (2 ^ log_cap i)).
-    rewrite mul_div_eq; try ring.
-    apply gt_lt_symmetry.
-    apply Z.pow_pos_nonneg; omega || apply log_cap_nonneg.
-  Qed.
-
   Lemma carry_decode_eq_reduce : forall us,
-    (length us = length base) ->
+    (length us = length limb_widths) ->
     BaseSystem.decode base (carry_and_reduce (pred (length base)) us) mod modulus
     = BaseSystem.decode base us mod modulus.
   Proof.
     unfold carry_and_reduce; intros ? length_eq.
     pose proof base_length_nonzero.
-    rewrite add_to_nth_sum by (rewrite length_set_nth; omega).
-    rewrite set_nth_sum by omega.
+    rewrite add_to_nth_sum by (rewrite length_set_nth, base_length; omega).
+    rewrite set_nth_sum by (rewrite base_length; omega).
     rewrite Zplus_comm, <- Z.mul_assoc, <- pseudomersenne_add, BaseSystem.b0_1.
     rewrite (Z.mul_comm (2 ^ k)), <- Zred_factor0.
     f_equal.
     rewrite <- (Z.add_comm (BaseSystem.decode base us)), <- Z.add_assoc, <- Z.add_0_r.
     f_equal.
     destruct (NPeano.Nat.eq_dec (length base) 0) as [length_zero | length_nonzero].
-    + apply length0_nil in length_zero.
-      pose proof (base_length) as limbs_length.
-      rewrite length_zero in length_eq, limbs_length.
-      apply length0_nil in length_eq.
-      symmetry in limbs_length.
-      apply length0_nil in limbs_length.
-      unfold log_cap.
-      subst; rewrite length_zero, limbs_length, nth_default_nil.
-      reflexivity.
-    + rewrite nth_default_base by omega.
+    + pose proof (base_length) as limbs_length.
+      destruct us; rewrite ?(@nil_length0 Z), ?(@length_cons Z) in *;
+        pose proof base_length_nonzero; omega.
+    + rewrite nth_default_base by (omega || eauto).
       rewrite <- Z.add_opp_l, <- Z.opp_sub_distr.
-      unfold pow2_mod.
-      rewrite Z.land_ones by apply log_cap_nonneg.
-      rewrite <- mul_div_eq by (apply gt_lt_symmetry; apply Z.pow_pos_nonneg; omega || apply log_cap_nonneg).
-      rewrite Z.shiftr_div_pow2 by apply log_cap_nonneg.
-      rewrite Zopp_mult_distr_r.
-      rewrite Z.mul_comm.
-      rewrite Z.mul_assoc.
-      rewrite <- Z.pow_add_r by (apply log_cap_nonneg || apply sum_firstn_limb_widths_nonneg).
+      unfold Z.pow2_mod.
+      rewrite Z.land_ones by eauto using log_cap_nonneg.
+      rewrite <- Z.mul_div_eq by (apply Z.gt_lt_iff; apply Z.pow_pos_nonneg; omega || eauto using log_cap_nonneg).
+      rewrite Z.shiftr_div_pow2 by eauto using log_cap_nonneg.
       unfold k.
       replace (length limb_widths) with (S (pred (length base))) by
         (subst; rewrite <- base_length; apply NPeano.Nat.succ_pred; omega).
       rewrite sum_firstn_succ with (x:= log_cap (pred (length base))) by
-        (unfold log_cap; apply nth_error_Some_nth_default; rewrite <- base_length; omega).
-      rewrite <- Zopp_mult_distr_r.
-      rewrite Z.mul_comm.
-      rewrite (Z.add_comm (log_cap (pred (length base)))).
+        (apply nth_error_Some_nth_default; rewrite <- base_length; omega).
+      rewrite Z.pow_add_r by eauto using log_cap_nonneg.
       ring.
   Qed.
 
-  Lemma carry_length : forall i us,
-    (length       us     = length base)%nat ->
-    (length (carry i us) = length base)%nat.
-  Proof.
-    unfold carry, carry_simple, carry_and_reduce, add_to_nth.
-    intros; break_if; subst; repeat (rewrite length_set_nth); auto.
-  Qed.
-  Hint Resolve carry_length.
-
   Lemma carry_rep : forall i us x,
-    (length us = length base) ->
     (i < length base)%nat ->
     us ~= x -> carry i us ~= x.
   Proof.
-    pose carry_length. pose carry_decode_eq_reduce. pose carry_simple_decode_eq.
-    intros; split; auto.
-    unfold rep, decode, carry in *.
-    intuition; break_if; subst; eauto; apply F_eq; simpl; intuition.
+    cbv [carry rep decode]; intros.
+    rewrite to_list_from_list.
+    pose proof carry_decode_eq_reduce. pose proof (@carry_simple_decode_eq limb_widths).
+
+    specialize_by eauto.
+    cbv [ModularBaseSystemList.carry].
+    break_if; subst; eauto.
+    apply F_eq; apply carry_decode_eq_reduce; apply length_to_list.
+    cbv [ModularBaseSystemList.decode].
+    f_equal.
+    apply carry_simple_decode_eq; try omega; rewrite ?base_length; auto using length_to_list.
   Qed.
   Hint Resolve carry_rep.
 
-  Lemma carry_sequence_length: forall is us,
-    (length us = length base)%nat ->
-    (length (carry_sequence is us) = length base)%nat.
-  Proof.
-    induction is; boring.
-  Qed.
-  Hint Resolve carry_sequence_length.
-
   Lemma carry_sequence_rep : forall is us x,
     (forall i, In i is -> (i < length base)%nat) ->
-    (length us = length base) ->
     us ~= x -> carry_sequence is us ~= x.
   Proof.
     induction is; boring.
-  Qed.
-
-
-  (* TODO : move? *)
-  Lemma make_chain_lt : forall x i : nat, In i (make_chain x) -> (i < x)%nat.
-  Proof.
-    induction x; simpl; intuition.
   Qed.
 
   Lemma carry_full_preserves_rep : forall us x,
@@ -404,7 +315,6 @@ Section CarryProofs.
     unfold carry_full; intros.
     apply carry_sequence_rep; auto.
     unfold full_carry_chain; rewrite base_length; apply make_chain_lt.
-    eauto using rep_length.
   Qed.
 
   Opaque carry_full.
@@ -418,110 +328,107 @@ Section CarryProofs.
 
 End CarryProofs.
 
+Hint Rewrite @length_carry_and_reduce @length_carry : distr_length.
+
 Section CanonicalizationProofs.
-  Context `{prm : PseudoMersenneBaseParams} (lt_1_length_base : (1 < length base)%nat)
+  Context `{prm : PseudoMersenneBaseParams}.
+  Local Notation base := (base_from_limb_widths limb_widths).
+  Local Notation log_cap i := (nth_default 0 limb_widths i).
+  Context (lt_1_length_base : (1 < length base)%nat)
    {B} (B_pos : 0 < B) (B_compat : forall w, In w limb_widths -> w <= B)
-   (c_pos : 0 < c)
    (* on the first reduce step, we add at most one bit of width to the first digit *)
-   (c_reduce1 : c * (Z.ones (B - log_cap (pred (length base)))) < max_bound 0 + 1)
+   (c_reduce1 : c * (Z.ones (B - log_cap (pred (length base)))) < 2 ^ log_cap 0)
    (* on the second reduce step, we add at most one bit of width to the first digit,
       and leave room to carry c one more time after the highest bit is carried *)
-   (c_reduce2 : c <= max_bound 0 - c)
+   (c_reduce2 : c <= nth_default 0 modulus_digits 0)
    (* this condition is probably implied by c_reduce2, but is more straighforward to compute than to prove *)
    (two_pow_k_le_2modulus : 2 ^ k <= 2 * modulus).
-
+(*
   (* BEGIN groundwork proofs *)
+  Local Hint Resolve (@log_cap_nonneg limb_widths) limb_widths_nonneg.
 
   Lemma pow_2_log_cap_pos : forall i, 0 < 2 ^ log_cap i.
   Proof.
-    intros; apply Z.pow_pos_nonneg; auto using log_cap_nonneg; omega.
+    intros; apply Z.pow_pos_nonneg; eauto using log_cap_nonneg; omega.
   Qed.
   Local Hint Resolve pow_2_log_cap_pos.
 
-  Lemma max_bound_log_cap : forall i, Z.succ (max_bound i) = 2 ^ log_cap i.
+  Lemma max_value_log_cap : forall i, Z.succ (max_value i) = 2 ^ log_cap i.
   Proof.
     intros.
-    unfold max_bound, Z.ones.
+    unfold max_value, Z.ones.
     rewrite Z.shiftl_1_l.
     omega.
   Qed.
 
-  Local Hint Resolve log_cap_nonneg.
-  Lemma pow2_mod_log_cap_range : forall a i, 0 <= pow2_mod a (log_cap i) <= max_bound i.
+  Lemma pow2_mod_log_cap_range : forall a i, 0 <= Z.pow2_mod a (log_cap i) <= max_value i.
   Proof.
     intros.
-    unfold pow2_mod.
-    rewrite Z.land_ones by apply log_cap_nonneg.
-    unfold max_bound, Z.ones.
+    unfold Z.pow2_mod.
+    rewrite Z.land_ones by eauto using log_cap_nonneg.
+    unfold max_value, Z.ones.
     rewrite Z.shiftl_1_l, <-Z.lt_le_pred.
     apply Z_mod_lt.
     pose proof (pow_2_log_cap_pos i).
     omega.
   Qed.
 
-  Lemma pow2_mod_log_cap_bounds_lower : forall a i, 0 <= pow2_mod a (log_cap i).
+  Lemma pow2_mod_log_cap_bounds_lower : forall a i, 0 <= Z.pow2_mod a (log_cap i).
   Proof.
     intros.
     pose proof (pow2_mod_log_cap_range a  i); omega.
   Qed.
 
-  Lemma pow2_mod_log_cap_bounds_upper : forall a i, pow2_mod a (log_cap i) <= max_bound i.
+  Lemma pow2_mod_log_cap_bounds_upper : forall a i, Z.pow2_mod a (log_cap i) <= max_value i.
   Proof.
     intros.
     pose proof (pow2_mod_log_cap_range a  i); omega.
   Qed.
 
-  Lemma pow2_mod_log_cap_small : forall a i, 0 <= a <= max_bound i ->
-    pow2_mod a (log_cap i) = a.
+  Lemma pow2_mod_log_cap_small : forall a i, 0 <= a <= max_value i ->
+    Z.pow2_mod a (log_cap i) = a.
   Proof.
     intros.
-    unfold pow2_mod.
-    rewrite Z.land_ones by apply log_cap_nonneg.
+    unfold Z.pow2_mod.
+    rewrite Z.land_ones by eauto using log_cap_nonneg.
     apply Z.mod_small.
     split; try omega.
-    rewrite <- max_bound_log_cap.
+    rewrite <- max_value_log_cap.
     omega.
   Qed.
 
-  Lemma max_bound_pos : forall i, (i < length base)%nat -> 0 < max_bound i.
+  Lemma max_value_pos : forall i, (i < length base)%nat -> 0 < max_value i.
   Proof.
-    unfold max_bound, log_cap; intros; apply Z_ones_pos_pos.
+    unfold max_value; intros; apply Z.ones_pos_pos.
     apply limb_widths_pos.
     rewrite nth_default_eq.
     apply nth_In.
     rewrite <-base_length; assumption.
   Qed.
-  Local Hint Resolve max_bound_pos.
+  Local Hint Resolve max_value_pos.
 
-  Lemma max_bound_nonneg : forall i, 0 <= max_bound i.
+  Lemma max_value_nonneg : forall i, 0 <= max_value i.
   Proof.
-    unfold max_bound; intros; auto using Z_ones_nonneg.
+    unfold max_value; intros; eauto using Z.ones_nonneg.
   Qed.
-  Local Hint Resolve max_bound_nonneg.
+  Local Hint Resolve max_value_nonneg.
 
-  Lemma pow2_mod_spec : forall a b, (0 <= b) -> pow2_mod a b = a mod (2 ^ b).
-  Proof.
-    intros.
-    unfold pow2_mod.
-    rewrite Z.land_ones; auto.
-  Qed.
-
-  Lemma shiftr_eq_0_max_bound : forall i a, Z.shiftr a (log_cap i) = 0 ->
-    a <= max_bound i.
+  Lemma shiftr_eq_0_max_value : forall i a, Z.shiftr a (log_cap i) = 0 ->
+    a <= max_value i.
   Proof.
     intros ? ? shiftr_0.
     apply Z.shiftr_eq_0_iff in shiftr_0.
-    intuition; subst; try apply max_bound_nonneg.
+    intuition; subst; try apply max_value_nonneg.
     match goal with H : Z.log2 _ < log_cap _ |- _ => apply Z.log2_lt_pow2 in H;
-      replace (2 ^ log_cap i) with (Z.succ (max_bound i)) in H by
-        (unfold max_bound, Z.ones; rewrite Z.shiftl_1_l; omega)
+      replace (2 ^ log_cap i) with (Z.succ (max_value i)) in H by
+        (unfold max_value, Z.ones; rewrite Z.shiftl_1_l; omega)
     end; auto.
     omega.
   Qed.
 
   Lemma B_compat_log_cap : forall i, 0 <= B - log_cap i.
   Proof.
-    unfold log_cap; intros.
+    intros.
     destruct (lt_dec i (length limb_widths)).
     + apply Z.le_0_sub.
       apply B_compat.
@@ -533,16 +440,16 @@ Section CanonicalizationProofs.
   Qed.
   Local Hint Resolve B_compat_log_cap.
 
-  Lemma max_bound_shiftr_eq_0 : forall i a, 0 <= a -> a <= max_bound i ->
+  Lemma max_value_shiftr_eq_0 : forall i a, 0 <= a -> a <= max_value i ->
     Z.shiftr a (log_cap i) = 0.
   Proof.
-    intros ? ? ? le_max_bound.
+    intros ? ? ? le_max_value.
     apply Z.shiftr_eq_0_iff.
     destruct (Z_eq_dec a 0); auto.
     right.
     split; try omega.
     apply Z.log2_lt_pow2; try omega.
-    rewrite <-max_bound_log_cap.
+    rewrite <-max_value_log_cap.
     omega.
   Qed.
 
@@ -552,11 +459,11 @@ Section CanonicalizationProofs.
   Qed.
 
   (* END groundwork proofs *)
-  Opaque pow2_mod log_cap max_bound.
+  Opaque Z.pow2_mod max_value.
 
   (* automation *)
-  Ltac carry_length_conditions' := unfold carry_full, add_to_nth;
-    rewrite ?length_set_nth, ?carry_length, ?carry_sequence_length;
+  Ltac carry_length_conditions' := unfold carry_full;
+    rewrite ?length_set_nth, ?length_add_to_nth, ?length_carry, ?carry_sequence_length;
     try omega; try solve [pose proof base_length; pose proof base_length_nonzero; omega || auto ].
   Ltac carry_length_conditions := try split; try omega; repeat carry_length_conditions'.
 
@@ -579,26 +486,20 @@ Section CanonicalizationProofs.
   Qed.
   Local Hint Resolve pre_carry_bounds_nonzero.
 
-  Definition carry_done us := forall i, (i < length base)%nat ->
-    0 <= nth_default 0 us i /\ Z.shiftr (nth_default 0 us i) (log_cap i) = 0.
-
   (* END defs *)
 
   (* BEGIN proofs about first carry loop *)
 
   Lemma nth_default_carry_bound_upper : forall i us, (length us = length base) ->
-    nth_default 0 (carry i us) i <= max_bound i.
+    nth_default 0 (carry i us) i <= max_value i.
   Proof.
     unfold carry; intros.
     break_if.
     + unfold carry_and_reduce.
       add_set_nth.
       apply pow2_mod_log_cap_bounds_upper.
-    + unfold carry_simple.
-      destruct (lt_dec i (length us)).
-      - add_set_nth.
-        apply pow2_mod_log_cap_bounds_upper.
-      - rewrite nth_default_out_of_bounds by carry_length_conditions; auto.
+    + autorewrite with push_nth_default natsimplify.
+      destruct (lt_dec i (length us)); auto using pow2_mod_log_cap_bounds_upper.
   Qed.
   Local Hint Resolve nth_default_carry_bound_upper.
 
@@ -610,11 +511,8 @@ Section CanonicalizationProofs.
     + unfold carry_and_reduce.
       add_set_nth.
       apply pow2_mod_log_cap_bounds_lower.
-    + unfold carry_simple.
-      destruct (lt_dec i (length us)).
-      - add_set_nth.
-        apply pow2_mod_log_cap_bounds_lower.
-      - rewrite nth_default_out_of_bounds by carry_length_conditions; omega.
+    + autorewrite with push_nth_default natsimplify.
+      break_if; auto using pow2_mod_log_cap_bounds_lower, Z.le_refl.
   Qed.
   Local Hint Resolve nth_default_carry_bound_lower.
 
@@ -628,10 +526,8 @@ Section CanonicalizationProofs.
       rewrite nth_default_out_of_bounds; carry_length_conditions.
       unfold carry_and_reduce.
       carry_length_conditions.
-    + unfold carry_simple.
-      destruct (lt_dec (S i) (length us)).
-      - add_set_nth; zero_bounds.
-      - rewrite nth_default_out_of_bounds by carry_length_conditions; omega.
+    + autorewrite with push_nth_default natsimplify.
+      break_if; zero_bounds.
   Qed.
 
   Lemma carry_unaffected_low : forall i j us, ((0 < i < j)%nat \/ (i = 0 /\ j <> 0 /\ j <> pred (length base))%nat)->
@@ -643,12 +539,8 @@ Section CanonicalizationProofs.
     break_if.
     + unfold carry_and_reduce.
       add_set_nth.
-    + unfold carry_simple.
-      destruct (lt_dec i (length us)).
-      - add_set_nth.
-      - rewrite !nth_default_out_of_bounds by
-          (omega || rewrite length_add_to_nth; rewrite length_set_nth; pose proof base_length_nonzero; omega).
-        reflexivity.
+    + autorewrite with push_nth_default simpl_nth_default natsimplify.
+      repeat break_if; autorewrite with simpl_nth_default natsimplify; omega.
   Qed.
 
   Lemma carry_unaffected_high : forall i j us, (S j < i)%nat -> (length us = length base) ->
@@ -657,37 +549,26 @@ Section CanonicalizationProofs.
     intros.
     destruct (lt_dec i (length us));
       [ | rewrite !nth_default_out_of_bounds by carry_length_conditions; reflexivity].
-    unfold carry, carry_simple.
-    break_if; [omega | add_set_nth].
+    unfold carry.
+    break_if; [omega | autorewrite with push_nth_default natsimplify; repeat break_if; omega ].
   Qed.
+
+  Hint Rewrite max_bound_shiftr_eq_0 using omega : core.
+  Hint Rewrite pow2_mod_log_cap_small using assumption : core.
 
   Lemma carry_nothing : forall i j us, (i < length base)%nat ->
     (length us = length base)%nat ->
-    0 <= nth_default 0 us j <= max_bound j ->
+    0 <= nth_default 0 us j <= max_value j ->
     nth_default 0 (carry j us) i = nth_default 0 us i.
   Proof.
-    unfold carry, carry_simple, carry_and_reduce; intros.
-    break_if; (add_set_nth;
-      [ rewrite max_bound_shiftr_eq_0 by omega; ring
-      | subst; apply pow2_mod_log_cap_small; assumption ]).
+    unfold carry, carry_and_reduce; intros.
+    repeat (break_if
+            || subst
+            || (autorewrite with push_nth_default natsimplify core)
+            || omega).
   Qed.
 
-  Lemma carry_done_bounds : forall us, (length us = length base) ->
-    (carry_done us <-> forall i, 0 <= nth_default 0 us i < 2 ^ log_cap i).
-  Proof.
-    intros ? ?; unfold carry_done; split; [ intros Hcarry_done i | intros Hbounds i i_lt ].
-    + destruct (lt_dec i (length base)) as [i_lt | i_nlt].
-      - specialize (Hcarry_done i i_lt).
-        split; [ intuition | ].
-        rewrite <- max_bound_log_cap.
-        apply Z.lt_succ_r.
-        apply shiftr_eq_0_max_bound; intuition.
-      - rewrite nth_default_out_of_bounds; try split; try omega; auto.
-    + specialize (Hbounds i).
-      split; intuition.
-      apply max_bound_shiftr_eq_0; auto.
-      rewrite <-max_bound_log_cap in *; omega.
-  Qed.
+  Hint Rewrite pow2_mod_log_cap_small using (intuition; auto using shiftr_eq_0_max_bound) : core.
 
   Lemma carry_carry_done_done : forall i us,
     (length us = length base)%nat ->
@@ -700,17 +581,19 @@ Section CanonicalizationProofs.
     split.
     + rewrite carry_nothing; auto.
       split; [ apply Hcarry_done; auto | ].
-      apply shiftr_eq_0_max_bound.
+      apply shiftr_eq_0_max_value.
       apply Hcarry_done; auto.
-    + unfold carry, carry_simple, carry_and_reduce; break_if; subst.
+    + unfold carry, carry_and_reduce; break_if; subst.
       - add_set_nth; subst.
         * rewrite shiftr_0_i, Z.mul_0_r, Z.add_0_l.
           assumption.
-        * rewrite pow2_mod_log_cap_small by (intuition; auto using shiftr_eq_0_max_bound).
+        * rewrite pow2_mod_log_cap_small by (intuition; auto using shiftr_eq_0_max_value).
           assumption.
-      - rewrite shiftr_0_i by omega.
-        rewrite pow2_mod_log_cap_small by (intuition; auto using shiftr_eq_0_max_bound).
-        add_set_nth; subst; rewrite ?Z.add_0_l; auto.
+      - repeat (carry_length_conditions
+                || (autorewrite with push_nth_default natsimplify core zsimplify)
+                || break_if
+                || subst
+                || rewrite shiftr_0_i by omega).
   Qed.
 
   Lemma carry_sequence_chain_step : forall i us,
@@ -721,7 +604,7 @@ Section CanonicalizationProofs.
 
   Lemma carry_bounds_0_upper : forall us j, (length us = length base) ->
     (0 < j < length base)%nat ->
-    nth_default 0 (carry_sequence (make_chain j) us) 0 <= max_bound 0.
+    nth_default 0 (carry_sequence (make_chain j) us) 0 <= max_value 0.
   Proof.
     induction j as [ | [ | j ] IHj ]; [simpl; intros; omega | | ]; intros.
     + subst; simpl; auto.
@@ -729,7 +612,7 @@ Section CanonicalizationProofs.
     Qed.
 
   Lemma carry_bounds_upper : forall i us j, (0 < i < j)%nat -> (length us = length base) ->
-    nth_default 0 (carry_sequence (make_chain j) us) i <= max_bound i.
+    nth_default 0 (carry_sequence (make_chain j) us) i <= max_value i.
   Proof.
     unfold carry_sequence;
     induction j; [simpl; intros; omega | ].
@@ -780,7 +663,7 @@ Section CanonicalizationProofs.
         do 2 match goal with H : appcontext[S (pred (length base))] |- _ =>
           erewrite <-(S_pred (length base)) in H by eauto end.
         unfold carry; break_if; [ unfold carry_and_reduce | omega ].
-        clear_obvious.
+        clear_obvious. pose proof c_pos.
         add_set_nth; [ zero_bounds | ]; apply IHj; auto; omega.
   Qed.
 
@@ -808,7 +691,7 @@ Section CanonicalizationProofs.
 
   Lemma carry_full_bounds : forall us i, (i <> 0)%nat -> (forall i, 0 <= nth_default 0 us i) ->
     (length us = length base)%nat ->
-    0 <= nth_default 0 (carry_full us) i <= max_bound i.
+    0 <= nth_default 0 (carry_full us) i <= max_value i.
   Proof.
     unfold carry_full, full_carry_chain; intros.
     split; (destruct (lt_dec i (length limb_widths));
@@ -824,14 +707,16 @@ Section CanonicalizationProofs.
     0 <= nth_default 0 (carry i us) (S i) < 2 ^ B.
   Proof.
     intros.
-    unfold carry, carry_simple; break_if; try omega.
-    add_set_nth.
+    unfold carry; break_if; try omega.
+    autorewrite with push_nth_default natsimplify.
+    break_if; try omega.
+    rewrite Z.add_comm.
     replace (2 ^ B) with (2 ^ (B - log_cap i) + (2 ^ B - 2 ^ (B - log_cap i))) by omega.
     split; [ zero_bounds | ].
     apply Z.add_lt_mono; try omega.
-    rewrite Z.shiftr_div_pow2 by apply log_cap_nonneg.
+    rewrite Z.shiftr_div_pow2 by eauto using log_cap_nonneg.
     apply Z.div_lt_upper_bound; try apply pow_2_log_cap_pos.
-    rewrite <-Z.pow_add_r by (apply log_cap_nonneg || apply B_compat_log_cap).
+    rewrite <-Z.pow_add_r by (eauto using log_cap_nonneg || apply B_compat_log_cap).
     replace (log_cap i + (B - log_cap i)) with B by ring.
     omega.
   Qed.
@@ -861,7 +746,7 @@ Section CanonicalizationProofs.
 
   Lemma carry_full_bounds_0 : forall us, pre_carry_bounds us ->
     (length us = length base)%nat ->
-    0 <= nth_default 0 (carry_full us) 0 <= max_bound 0 + c * (Z.ones (B - log_cap (pred (length base)))).
+    0 <= nth_default 0 (carry_full us) 0 <= max_value 0 + c * (Z.ones (B - log_cap (pred (length base)))).
   Proof.
     unfold carry_full, full_carry_chain; intros.
     rewrite <- base_length.
@@ -869,12 +754,12 @@ Section CanonicalizationProofs.
     simpl.
     unfold carry, carry_and_reduce; break_if; try omega.
     clear_obvious; add_set_nth.
-    split; [zero_bounds; carry_seq_lower_bound | ].
+    split; [pose proof c_pos; zero_bounds; carry_seq_lower_bound | ].
     rewrite Z.add_comm.
     apply Z.add_le_mono.
     + apply carry_bounds_0_upper; auto; omega.
-    + apply Z.mul_le_mono_pos_l; auto.
-      apply Z_shiftr_ones; auto;
+    + apply Z.mul_le_mono_pos_l; auto using c_pos.
+      apply Z.shiftr_ones; eauto;
         [ | pose proof (B_compat_log_cap (pred (length base))); omega ].
       split.
       - apply carry_bounds_lower; auto; omega.
@@ -902,23 +787,24 @@ Section CanonicalizationProofs.
   Proof.
     induction i; intros; try omega.
     simpl.
-    unfold carry, carry_simple; break_if; try omega.
-    add_set_nth.
+    unfold carry; break_if; try omega.
+    autorewrite with push_nth_default natsimplify distr_length; break_if; [ | omega ].
+    rewrite Z.add_comm.
     split.
     + zero_bounds; [destruct (eq_nat_dec i 0); subst | ].
       - simpl; apply carry_full_bounds_0; auto.
       - apply IHi; auto; omega.
       - rewrite carry_sequence_unaffected by carry_length_conditions.
         apply carry_full_bounds; auto; omega.
-    + rewrite <-max_bound_log_cap, <-Z.add_1_l.
+    + rewrite <-max_value_log_cap, <-Z.add_1_l.
       apply Z.add_le_mono.
-      - rewrite Z.shiftr_div_pow2 by apply log_cap_nonneg.
-        apply Z_div_floor; auto.
+      - rewrite Z.shiftr_div_pow2 by eauto using log_cap_nonneg.
+        apply Z.div_floor; auto.
         destruct i.
         * simpl.
           eapply Z.le_lt_trans; [ apply carry_full_bounds_0; auto | ].
           replace (2 ^ log_cap 0 * 2) with (2 ^ log_cap 0 + 2 ^ log_cap 0) by ring.
-          rewrite <-max_bound_log_cap, <-Z.add_1_l.
+          rewrite <-max_value_log_cap, <-Z.add_1_l.
           apply Z.add_lt_le_mono; omega.
         * eapply Z.le_lt_trans; [ apply IHi; auto; omega | ].
           apply Z.lt_mul_diag_r; auto; omega.
@@ -928,7 +814,7 @@ Section CanonicalizationProofs.
 
   Lemma carry_full_2_bounds_0 : forall us, pre_carry_bounds us ->
     (length us = length base)%nat -> (1 < length base)%nat ->
-    0 <= nth_default 0 (carry_full (carry_full us)) 0 <= max_bound 0 + c.
+    0 <= nth_default 0 (carry_full (carry_full us)) 0 <= max_value 0 + c.
   Proof.
     intros.
     unfold carry_full at 1 3, full_carry_chain.
@@ -938,14 +824,14 @@ Section CanonicalizationProofs.
     unfold carry, carry_and_reduce; break_if; try omega.
     clear_obvious; add_set_nth.
     split.
-    + zero_bounds; [ | carry_seq_lower_bound].
+    + pose proof c_pos; zero_bounds; [ | carry_seq_lower_bound].
       apply carry_sequence_carry_full_bounds_same; auto; omega.
     + rewrite Z.add_comm.
       apply Z.add_le_mono.
       - apply carry_bounds_0_upper; carry_length_conditions.
       - etransitivity; [ | replace c with (c * 1) by ring; reflexivity ].
-        apply Z.mul_le_mono_pos_l; try omega.
-        rewrite Z.shiftr_div_pow2 by auto.
+        apply Z.mul_le_mono_pos_l; try (pose proof c_pos; omega).
+        rewrite Z.shiftr_div_pow2 by eauto.
         apply Z.div_le_upper_bound; auto.
         ring_simplify.
         apply carry_sequence_carry_full_bounds_same; auto.
@@ -958,19 +844,20 @@ Section CanonicalizationProofs.
       0 <= nth_default 0
         (carry_sequence (make_chain i) (carry_full (carry_full us))) i <=
       2 ^ log_cap i) ->
-      0 <= nth_default 0 (carry_simple i
+      0 <= nth_default 0 (carry_simple limb_widths i
         (carry_sequence (make_chain i) (carry_full (carry_full us)))) (S i) <= 2 ^ log_cap (S i).
   Proof.
-    unfold carry_simple; intros ? ? PCB length_eq ? IH.
-    add_set_nth.
+    intros ? ? PCB length_eq ? IH.
+    autorewrite with push_nth_default natsimplify distr_length; break_if; [ | omega ].
+    rewrite Z.add_comm.
     split.
     + zero_bounds. destruct i;
         [ simpl; pose proof (carry_full_2_bounds_0 us PCB length_eq); omega | ].
       rewrite carry_sequence_unaffected by carry_length_conditions.
       apply carry_full_bounds; carry_length_conditions.
       carry_seq_lower_bound.
-    + rewrite <-max_bound_log_cap, <-Z.add_1_l.
-      rewrite Z.shiftr_div_pow2 by apply log_cap_nonneg.
+    + rewrite <-max_value_log_cap, <-Z.add_1_l.
+      rewrite Z.shiftr_div_pow2 by eauto using log_cap_nonneg.
       apply Z.add_le_mono.
       - apply Z.div_le_upper_bound; auto.
         ring_simplify. apply IH. omega.
@@ -987,26 +874,28 @@ Section CanonicalizationProofs.
     simpl; unfold carry.
     break_if; try omega.
     split; (destruct (eq_nat_dec i 0); subst;
-      [ cbv [make_chain carry_sequence fold_right carry_simple]; add_set_nth
+      [ cbv [make_chain carry_sequence fold_right];
+        autorewrite with push_nth_default natsimplify distr_length; break_if; [ | omega ];
+        rewrite Z.add_comm
       | eapply carry_full_2_bounds_succ; eauto; omega]).
     + zero_bounds.
       - eapply carry_full_2_bounds_0; eauto.
       - eapply carry_full_bounds; eauto; carry_length_conditions.
         carry_seq_lower_bound.
-    + rewrite <-max_bound_log_cap, <-Z.add_1_l.
-      rewrite Z.shiftr_div_pow2 by apply log_cap_nonneg.
+    + rewrite <-max_value_log_cap, <-Z.add_1_l.
+      rewrite Z.shiftr_div_pow2 by eauto using log_cap_nonneg.
       apply Z.add_le_mono.
-      - apply Z_div_floor; auto.
+      - apply Z.div_floor; auto.
         eapply Z.le_lt_trans; [ eapply carry_full_2_bounds_0; eauto | ].
         replace (Z.succ 1) with (2 ^ 1) by ring.
-        rewrite <-max_bound_log_cap.
-        ring_simplify. omega.
+        rewrite <-max_value_log_cap.
+        ring_simplify. pose proof c_pos; omega.
       - apply carry_full_bounds; carry_length_conditions; carry_seq_lower_bound.
   Qed.
 
   Lemma carry_full_2_bounds' : forall us i j, pre_carry_bounds us ->
     (length us = length base)%nat -> (0 < i < length base)%nat -> (i + j < length base)%nat -> (j <> 0)%nat ->
-    0 <= nth_default 0 (carry_sequence (make_chain (i + j)) (carry_full (carry_full us))) i <= max_bound i.
+    0 <= nth_default 0 (carry_sequence (make_chain (i + j)) (carry_full (carry_full us))) i <= max_value i.
   Proof.
     induction j; intros; try omega.
     split; (destruct j; [ rewrite Nat.add_1_r; simpl
@@ -1017,7 +906,7 @@ Section CanonicalizationProofs.
 
   Lemma carry_full_2_bounds : forall us i j, pre_carry_bounds us ->
     (length us = length base)%nat -> (0 < i < length base)%nat -> (i < j < length base)%nat ->
-    0 <= nth_default 0 (carry_sequence (make_chain j) (carry_full (carry_full us))) i <= max_bound i.
+    0 <= nth_default 0 (carry_sequence (make_chain j) (carry_full (carry_full us))) i <= max_value i.
   Proof.
     intros.
     replace j with (i + (j - i))%nat by omega.
@@ -1035,8 +924,7 @@ Section CanonicalizationProofs.
       break_if;
         [ pose proof base_length_nonzero; replace (length base) with 1%nat in *; omega | ].
       simpl.
-      unfold carry_simple.
-      add_set_nth.
+      autorewrite with push_nth_default natsimplify.
       apply pow2_mod_log_cap_bounds_lower.
     + rewrite carry_unaffected_low by carry_length_conditions.
       assert (0 < S i < length base)%nat by omega.
@@ -1055,48 +943,43 @@ Section CanonicalizationProofs.
       - apply carry_full_bounds; carry_length_conditions.
   Qed.
 
-  Lemma carry_full_length : forall us, (length us = length base)%nat ->
-    length (carry_full us) = length us.
-  Proof.
-    intros; carry_length_conditions.
-  Qed.
   Local Hint Resolve carry_full_length.
 
   Lemma carry_carry_full_2_bounds_0_upper : forall us i, pre_carry_bounds us ->
     (length us = length base)%nat -> (0 < i < length base)%nat ->
-    (nth_default 0 (carry_sequence (make_chain i) (carry_full (carry_full us))) 0 <= max_bound 0 - c)
+    (nth_default 0 (carry_sequence (make_chain i) (carry_full (carry_full us))) 0 <= max_value 0 - c)
     \/ carry_done (carry_sequence (make_chain i) (carry_full (carry_full us))).
   Proof.
     induction i; try omega.
     intros ? length_eq ?; simpl.
     destruct i.
-    + destruct (Z_le_dec (nth_default 0 (carry_full (carry_full us)) 0) (max_bound 0)).
+    + destruct (Z_le_dec (nth_default 0 (carry_full (carry_full us)) 0) (max_value 0)).
       - right.
         apply carry_carry_done_done; try solve [carry_length_conditions].
         apply carry_done_bounds; try solve [carry_length_conditions].
         intros.
         simpl.
         split; [ auto using carry_full_2_bounds_lower | ].
-        * destruct i; rewrite <-max_bound_log_cap, Z.lt_succ_r; auto.
-          apply carry_full_bounds; auto using carry_full_bounds_lower.
-          rewrite carry_full_length; auto.
-      - left; unfold carry, carry_simple.
+        destruct i; rewrite <-max_value_log_cap, Z.lt_succ_r; auto.
+        apply carry_full_bounds; auto using carry_full_bounds_lower.
+      - left; unfold carry.
         break_if;
           [ pose proof base_length_nonzero; replace (length base) with 1%nat in *; omega | ].
-        add_set_nth. simpl.
+        autorewrite with push_nth_default natsimplify.
+        simpl.
         remember ((nth_default 0 (carry_full (carry_full us)) 0)) as x.
-        apply Z.le_trans with (m := (max_bound 0 + c) - (1 + max_bound 0)); try omega.
+        apply Z.le_trans with (m := (max_value 0 + c) - (1 + max_value 0)); try omega.
         replace x with ((x - 2 ^ log_cap 0) + (1 * 2 ^ log_cap 0)) by ring.
-        rewrite pow2_mod_spec by auto.
+        rewrite Z.pow2_mod_spec by eauto.
         cbv [make_chain carry_sequence fold_right].
         rewrite Z.mod_add by (pose proof (pow_2_log_cap_pos 0); omega).
-        rewrite <-max_bound_log_cap, <-Z.add_1_l, Z.mod_small;
+        rewrite <-max_value_log_cap, <-Z.add_1_l, Z.mod_small;
           [ apply Z.sub_le_mono_r; subst; apply carry_full_2_bounds_0; auto | ].
         split; try omega.
         pose proof carry_full_2_bounds_0.
-        apply Z.le_lt_trans with (m := (max_bound 0 + c) - (1 + max_bound 0));
+        apply Z.le_lt_trans with (m := (max_value 0 + c) - (1 + max_value 0));
           [ apply Z.sub_le_mono_r; subst x; apply carry_full_2_bounds_0; auto;
-          ring_simplify | ]; omega.
+          ring_simplify | ]; pose proof c_pos; omega.
     + rewrite carry_unaffected_low by carry_length_conditions.
       assert (0 < S i < length base)%nat by omega.
       intuition; right.
@@ -1104,13 +987,14 @@ Section CanonicalizationProofs.
       assumption.
   Qed.
 
+
   (* END proofs about second carry loop *)
 
   (* BEGIN proofs about third carry loop *)
 
   Lemma carry_full_3_bounds : forall us i, pre_carry_bounds us ->
     (length us = length base)%nat ->(i < length base)%nat ->
-    0 <= nth_default 0 (carry_full (carry_full (carry_full us))) i <= max_bound i.
+    0 <= nth_default 0 (carry_full (carry_full (carry_full us))) i <= max_value i.
   Proof.
     intros.
     destruct i; [ | apply carry_full_bounds; carry_length_conditions;
@@ -1122,7 +1006,7 @@ Section CanonicalizationProofs.
     replace (length l) with (pred (length limb_widths)) by (rewrite limb_widths_eq; auto).
     rewrite <- base_length.
     unfold carry, carry_and_reduce; break_if; try omega; intros.
-    add_set_nth.
+    add_set_nth. pose proof c_pos.
     split.
     + zero_bounds.
       - eapply carry_full_2_bounds_same; eauto; omega.
@@ -1130,11 +1014,11 @@ Section CanonicalizationProofs.
     + pose proof (carry_carry_full_2_bounds_0_upper us (pred (length base))).
       assert (0 < pred (length base) < length base)%nat by omega.
       intuition.
-      - replace (max_bound 0) with (c + (max_bound 0 - c)) by ring.
+      - replace (max_value 0) with (c + (max_value 0 - c)) by ring.
         apply Z.add_le_mono; try assumption.
         etransitivity; [ | replace c with (c * 1) by ring; reflexivity ].
         apply Z.mul_le_mono_pos_l; try omega.
-        rewrite Z.shiftr_div_pow2 by auto.
+        rewrite Z.shiftr_div_pow2 by eauto.
         apply Z.div_le_upper_bound; auto.
         ring_simplify.
         apply carry_full_2_bounds_same; auto.
@@ -1142,7 +1026,7 @@ Section CanonicalizationProofs.
                         H : carry_done _ |- _ =>
           destruct (H (pred (length base)) H0) as [Hcd1 Hcd2]; rewrite Hcd2 by omega end.
         ring_simplify.
-        apply shiftr_eq_0_max_bound; auto.
+        apply shiftr_eq_0_max_value; auto.
         assert (0 < length base)%nat as zero_lt_length by omega.
         match goal with H : carry_done _ |- _ =>
           destruct (H 0%nat zero_lt_length) end.
@@ -1156,7 +1040,7 @@ Section CanonicalizationProofs.
     intros.
     apply carry_done_bounds; [ carry_length_conditions | intros ].
     destruct (lt_dec i (length base)).
-    + rewrite <-max_bound_log_cap, Z.lt_succ_r.
+    + rewrite <-max_value_log_cap, Z.lt_succ_r.
       auto using carry_full_3_bounds.
     + rewrite nth_default_out_of_bounds; carry_length_conditions.
   Qed.
@@ -1169,7 +1053,7 @@ Section CanonicalizationProofs.
   Qed.
 
   Lemma isFull'_last : forall us b j, (j <> 0)%nat -> isFull' us b j = true ->
-    max_bound j = nth_default 0 us j.
+    max_value j = nth_default 0 us j.
   Proof.
     induction j; simpl; intros; try omega.
     match goal with
@@ -1180,7 +1064,7 @@ Section CanonicalizationProofs.
   Qed.
 
   Lemma isFull'_lower_bound_0 : forall j us b, isFull' us b j = true ->
-    max_bound 0 - c < nth_default 0 us 0.
+    max_value 0 - c < nth_default 0 us 0.
   Proof.
     induction j; intros.
     + match goal with H : isFull' _ _ 0 = _ |- _ => cbv [isFull'] in H;
@@ -1190,7 +1074,7 @@ Section CanonicalizationProofs.
   Qed.
 
   Lemma isFull'_true_full : forall us i j b, (i <> 0)%nat -> (i <= j)%nat -> isFull' us b j = true ->
-    max_bound i = nth_default 0 us i.
+    max_value i = nth_default 0 us i.
   Proof.
     induction j; intros; try omega.
     assert (i = S j \/ i <= j)%nat as cases by omega.
@@ -1202,14 +1086,15 @@ Section CanonicalizationProofs.
   Lemma max_ones_nonneg : 0 <= max_ones.
   Proof.
     unfold max_ones.
-    apply Z_ones_nonneg.
+    apply Z.ones_nonneg.
+    clear.
     pose proof limb_widths_nonneg.
-    induction limb_widths.
+    induction limb_widths as [|?? IHl].
     cbv; congruence.
     simpl.
     apply Z.max_le_iff.
     right.
-    apply IHl; auto using in_cons.
+    apply IHl; eauto using in_cons.
   Qed.
 
   Lemma land_max_ones_noop : forall x i, 0 <= x < 2 ^ log_cap i -> Z.land max_ones x = x.
@@ -1217,24 +1102,23 @@ Section CanonicalizationProofs.
     unfold max_ones.
     intros ? ? x_range.
     rewrite Z.land_comm.
-    rewrite Z.land_ones by apply Z_le_fold_right_max_initial.
+    rewrite Z.land_ones by apply Z.le_fold_right_max_initial.
     apply Z.mod_small.
     split; try omega.
     eapply Z.lt_le_trans; try eapply x_range.
     apply Z.pow_le_mono_r; try omega.
-    rewrite log_cap_eq.
     destruct (lt_dec i (length limb_widths)).
-    + apply Z_le_fold_right_max.
+    + apply Z.le_fold_right_max.
       - apply limb_widths_nonneg.
       - rewrite nth_default_eq.
         auto using nth_In.
     + rewrite nth_default_out_of_bounds by omega.
-      apply Z_le_fold_right_max_initial.
+      apply Z.le_fold_right_max_initial.
   Qed.
 
   Lemma full_isFull'_true : forall j us, (length us = length base) ->
-    ( max_bound 0 - c < nth_default 0 us 0
-    /\ (forall i, (0 < i <= j)%nat -> nth_default 0 us i = max_bound i)) ->
+    ( max_value 0 - c < nth_default 0 us 0
+    /\ (forall i, (0 < i <= j)%nat -> nth_default 0 us i = max_value i)) ->
     isFull' us true j = true.
   Proof.
     induction j; intros.
@@ -1248,8 +1132,8 @@ Section CanonicalizationProofs.
   Qed.
 
   Lemma isFull'_true_iff : forall j us, (length us = length base) -> (isFull' us true j = true <->
-    max_bound 0 - c < nth_default 0 us 0
-    /\ (forall i, (0 < i <= j)%nat -> nth_default 0 us i = max_bound i)).
+    max_value 0 - c < nth_default 0 us 0
+    /\ (forall i, (0 < i <= j)%nat -> nth_default 0 us i = max_value i)).
   Proof.
     intros; split; intros; auto using full_isFull'_true.
     split; eauto using isFull'_lower_bound_0.
@@ -1262,7 +1146,7 @@ Section CanonicalizationProofs.
     isFull' us true j = true.
   Proof.
     simpl; intros ? ? succ_true.
-    destruct (max_bound (S j) =? nth_default 0 us (S j)); auto.
+    destruct (max_value (S j) =? nth_default 0 us (S j)); auto.
     rewrite isFull'_false in succ_true.
     congruence.
   Qed.
@@ -1276,63 +1160,6 @@ Section CanonicalizationProofs.
     repeat rewrite carry_full_length by (repeat rewrite carry_full_length; auto); auto.
   Qed.
   Local Hint Resolve carry_full_3_length.
-
-  Lemma nth_default_map2 : forall {A B C} (f : A -> B -> C) ls1 ls2 i d d1 d2,
-    nth_default d (map2 f ls1 ls2) i =
-      if lt_dec i (min (length ls1) (length ls2))
-      then f (nth_default d1 ls1 i) (nth_default d2 ls2 i)
-      else d.
-  Proof.
-    induction ls1, ls2.
-    + cbv [map2 length min].
-      intros.
-      break_if; try omega.
-      apply nth_default_nil.
-    + cbv [map2 length min].
-      intros.
-      break_if; try omega.
-      apply nth_default_nil.
-    + cbv [map2 length min].
-      intros.
-      break_if; try omega.
-      apply nth_default_nil.
-    + simpl.
-      destruct i.
-      - intros. rewrite !nth_default_cons.
-        break_if; auto; omega.
-      - intros. rewrite !nth_default_cons_S.
-        rewrite IHls1 with (d1 := d1) (d2 := d2).
-        repeat break_if; auto; omega.
-  Qed.
-
-  Lemma map2_cons : forall A B C (f : A -> B -> C) ls1 ls2 a b,
-    map2 f (a :: ls1) (b :: ls2) = f a b :: map2 f ls1 ls2.
-  Proof.
-    reflexivity.
-  Qed.
-
-  Lemma map2_nil_l : forall A B C (f : A -> B -> C) ls2,
-    map2 f nil ls2 = nil.
-  Proof.
-    reflexivity.
-  Qed.
-
-  Lemma map2_nil_r : forall A B C (f : A -> B -> C) ls1,
-    map2 f ls1 nil = nil.
-  Proof.
-    destruct ls1; reflexivity.
-  Qed.
-  Local Hint Resolve map2_nil_r map2_nil_l.
-
-  Opaque map2.
-
-  Lemma map2_length : forall A B C (f : A -> B -> C) ls1 ls2,
-    length (map2 f ls1 ls2) = min (length ls1) (length ls2).
-  Proof.
-    induction ls1, ls2; intros; try solve [cbv; auto].
-    rewrite map2_cons, !length_cons, IHls1.
-    auto.
-  Qed.
 
   Lemma modulus_digits'_length : forall i, length (modulus_digits' i) = S i.
   Proof.
@@ -1361,6 +1188,7 @@ Section CanonicalizationProofs.
     length (freeze us) = length us.
   Proof.
     unfold freeze; intros; simpl_lengths.
+    rewrite Min.min_l by omega. congruence.
   Qed.
 
   Lemma decode_firstn_succ : forall n us, (length us = length base) ->
@@ -1383,15 +1211,6 @@ Section CanonicalizationProofs.
   Local Hint Resolve limb_widths_nonneg.
   Local Hint Resolve nth_error_value_In.
 
-  (* TODO : move *)
-  Lemma sum_firstn_all_succ : forall n l, (length l <= n)%nat ->
-    sum_firstn l (S n) = sum_firstn l n.
-  Proof.
-    unfold sum_firstn; intros.
-    rewrite !firstn_all_strong by omega.
-    congruence.
-  Qed.
-
   Lemma decode_carry_done_upper_bound' : forall n us, carry_done us ->
     (length us = length base) ->
     BaseSystem.decode (firstn n base) (firstn n us) < 2 ^ (sum_firstn limb_widths n).
@@ -1403,7 +1222,8 @@ Section CanonicalizationProofs.
       destruct (nth_error_length_exists_value _ _ n_lt_length).
       erewrite sum_firstn_succ; eauto.
       rewrite Z.pow_add_r; eauto.
-      rewrite nth_default_base by (rewrite base_length; assumption).
+      rewrite nth_default_base by
+        (try rewrite base_from_limb_widths_length; omega || eauto).
       rewrite Z.lt_add_lt_sub_r.
       eapply Z.lt_le_trans; eauto.
       rewrite Z.mul_comm at 1.
@@ -1414,7 +1234,6 @@ Section CanonicalizationProofs.
       rewrite Z.le_succ_l, Z.lt_0_sub.
       match goal with H : carry_done us |- _ => rewrite carry_done_bounds in H by auto; specialize (H n) end.
       replace x with (log_cap n); try intuition.
-      rewrite log_cap_eq.
       apply nth_error_value_eq_nth_default; auto.
     + repeat erewrite firstn_all_strong by omega.
       rewrite sum_firstn_all_succ by (rewrite <-base_length; omega).
@@ -1440,7 +1259,7 @@ Section CanonicalizationProofs.
     destruct (lt_dec n (length base)) as [ n_lt_length | ? ].
     + rewrite decode_firstn_succ by auto.
       zero_bounds.
-      - rewrite nth_default_base by assumption.
+      - rewrite nth_default_base by (omega || eauto).
         apply Z.pow_nonneg; omega.
       - match goal with H : carry_done us |- _ => rewrite carry_done_bounds in H by auto; specialize (H n) end.
         intuition.
@@ -1462,7 +1281,7 @@ Section CanonicalizationProofs.
   Lemma nth_default_modulus_digits' : forall d j i,
     nth_default d (modulus_digits' j) i =
       if lt_dec i (S j)
-      then (if (eq_nat_dec i 0) then max_bound i - c + 1 else max_bound i)
+      then (if (eq_nat_dec i 0) then max_value i - c + 1 else max_value i)
       else d.
   Proof.
     induction j; intros; (break_if; [| apply nth_default_out_of_bounds; rewrite modulus_digits'_length; omega]).
@@ -1480,7 +1299,7 @@ Section CanonicalizationProofs.
   Lemma nth_default_modulus_digits : forall d i,
     nth_default d modulus_digits i =
       if lt_dec i (length base)
-      then (if (eq_nat_dec i 0) then max_bound i - c + 1 else max_bound i)
+      then (if (eq_nat_dec i 0) then max_value i - c + 1 else max_value i)
       else d.
   Proof.
     unfold modulus_digits; intros.
@@ -1495,11 +1314,10 @@ Section CanonicalizationProofs.
     intros.
     rewrite nth_default_modulus_digits.
     break_if; [ | split; auto; omega].
-    break_if; subst; split; auto; try rewrite <- max_bound_log_cap; omega.
+    break_if; subst; split; auto; try rewrite <- max_value_log_cap; pose proof c_pos; omega.
   Qed.
   Local Hint Resolve carry_done_modulus_digits.
 
-  (* TODO : move *)
   Lemma decode_mod : forall us vs x, (length us = length base) -> (length vs = length base) ->
     decode us = x ->
     BaseSystem.decode base us mod modulus = BaseSystem.decode base vs mod modulus ->
@@ -1509,23 +1327,6 @@ Section CanonicalizationProofs.
     rewrite ZToField_mod in decode_us_x |- *.
     rewrite <-BSdecode_eq.
     assumption.
-  Qed.
-
-  Ltac simpl_list_lengths := repeat match goal with
-    | H : appcontext[length (@nil ?A)] |- _ => rewrite (@nil_length0 A) in H
-    | H : appcontext[length (_ :: _)] |- _ => rewrite length_cons in H
-    | |- appcontext[length (@nil ?A)] => rewrite (@nil_length0 A)
-    | |- appcontext[length (_ :: _)] => rewrite length_cons
-    end.
-
-  Lemma map2_app : forall A B C (f : A -> B -> C) ls1 ls2 ls1' ls2',
-    (length ls1 = length ls2) ->
-    map2 f (ls1 ++ ls1') (ls2 ++ ls2') = map2 f ls1 ls2 ++ map2 f ls1' ls2'.
-  Proof.
-    induction ls1, ls2; intros; rewrite ?map2_nil_r, ?app_nil_l; try congruence;
-      simpl_list_lengths; try omega.
-    rewrite <-!app_comm_cons, !map2_cons.
-    rewrite IHls1; auto.
   Qed.
 
   Lemma decode_map2_sub : forall us vs,
@@ -1550,26 +1351,28 @@ Section CanonicalizationProofs.
     BaseSystem.decode' base (modulus_digits' i) = 2 ^ (sum_firstn limb_widths (S i)) - c.
   Proof.
     induction i; intros; unfold modulus_digits'; fold modulus_digits'.
-    + case_eq base;
+    + let base := constr:(base) in
+      case_eq base;
         [ intro base_eq; rewrite base_eq, (@nil_length0 Z) in lt_1_length_base; omega | ].
       intros z ? base_eq.
       rewrite decode'_cons, decode_nil, Z.add_0_r.
       replace z with (nth_default 0 base 0) by (rewrite base_eq; auto).
-      rewrite nth_default_base by omega.
-      replace (max_bound 0 - c + 1) with (Z.succ (max_bound 0) - c) by ring.
-      rewrite max_bound_log_cap.
-      rewrite sum_firstn_succ with (x := log_cap 0) by (rewrite log_cap_eq;
+      rewrite nth_default_base by (omega || eauto).
+      replace (max_value 0 - c + 1) with (Z.succ (max_value 0) - c) by ring.
+      rewrite max_value_log_cap.
+      rewrite sum_firstn_succ with (x := log_cap 0) by (
         apply nth_error_Some_nth_default; rewrite <-base_length; omega).
-      rewrite Z.pow_add_r by auto.
+      rewrite Z.pow_add_r by eauto.
       cbv [sum_firstn fold_right firstn].
       ring.
     + assert (S i < length base \/ S i = length base)%nat as cases by omega.
       destruct cases.
       - rewrite sum_firstn_succ with (x := log_cap (S i)) by
-          (rewrite log_cap_eq; apply nth_error_Some_nth_default;
+          (apply nth_error_Some_nth_default;
           rewrite <-base_length; omega).
-        rewrite Z.pow_add_r, <-max_bound_log_cap, set_higher by auto.
-        rewrite IHi, modulus_digits'_length, nth_default_base by omega.
+        rewrite Z.pow_add_r, <-max_value_log_cap, set_higher by eauto.
+        rewrite IHi, modulus_digits'_length by omega.
+        rewrite nth_default_base by (omega || eauto).
         ring.
       - rewrite sum_firstn_all_succ by (rewrite <-base_length; omega).
         rewrite decode'_splice, modulus_digits'_length, firstn_all by auto.
@@ -1594,14 +1397,14 @@ Section CanonicalizationProofs.
     + cbv [modulus_digits' map].
       f_equal.
       apply land_max_ones_noop with (i := 0%nat).
-      rewrite <-max_bound_log_cap.
-      omega.
+      rewrite <-max_value_log_cap.
+      pose proof c_pos; omega.
     + unfold modulus_digits'; fold modulus_digits'.
       rewrite map_app.
       f_equal; [ apply IHi; omega | ].
       cbv [map]; f_equal.
       apply land_max_ones_noop with (i := S i).
-      rewrite <-max_bound_log_cap.
+      rewrite <-max_value_log_cap.
       split; auto; omega.
   Qed.
 
@@ -1656,8 +1459,8 @@ Section CanonicalizationProofs.
   Hint Resolve freeze_preserves_rep.
 
   Lemma isFull_true_iff : forall us, (length us = length base) -> (isFull us = true <->
-    max_bound 0 - c < nth_default 0 us 0
-    /\ (forall i, (0 < i <= length base - 1)%nat -> nth_default 0 us i = max_bound i)).
+    max_value 0 - c < nth_default 0 us 0
+    /\ (forall i, (0 < i <= length base - 1)%nat -> nth_default 0 us i = max_value i)).
   Proof.
     unfold isFull; intros; auto using isFull'_true_iff.
   Qed.
@@ -1717,7 +1520,7 @@ Section CanonicalizationProofs.
       rewrite decode_base_nil.
       apply Z.gt_lt; auto using nth_default_base_positive.
     + rewrite decode_firstn_succ by (auto || omega).
-      rewrite nth_default_base_succ by omega.
+      rewrite nth_default_base_succ by (eauto || omega).
       eapply Z.lt_le_trans.
       - apply Z.add_lt_mono_r.
         apply IHn; auto; omega.
@@ -1747,7 +1550,8 @@ Section CanonicalizationProofs.
     + eapply Z.le_lt_trans.
       - eapply Z.add_le_mono with (q := nth_default 0 base n * -1); [ apply Z.le_refl | ].
         apply Z.mul_le_mono_nonneg_l; try omega.
-        rewrite nth_default_base by omega; apply Z.pow_nonneg; omega.
+        rewrite nth_default_base by (omega || eauto).
+        zero_bounds.
       - ring_simplify.
         apply Z.lt_sub_0.
         apply decode_lt_next_digit; auto.
@@ -1817,7 +1621,7 @@ Section CanonicalizationProofs.
     + match goal with |- (?a ?= ?b) = (?c ?= ?d) =>
         rewrite (Z.compare_antisym b a); rewrite (Z.compare_antisym d c) end.
       apply CompOpp_inj; rewrite !CompOpp_involutive.
-      apply gt_lt_symmetry in Hgt.
+      apply Z.gt_lt_iff in Hgt.
       etransitivity; try apply Z_compare_decode_step_lt; auto; omega.
   Qed.
 
@@ -1929,8 +1733,8 @@ Section CanonicalizationProofs.
           apply Z.compare_ge_iff.
           omega.
         * match goal with H : isFull' _ _ _ = true |- _ =>
-            apply isFull'_true_iff in H; try assumption; destruct H as [? eq_max_bound] end.
-          specialize (eq_max_bound j).
+            apply isFull'_true_iff in H; try assumption; destruct H as [? eq_max_value] end.
+          specialize (eq_max_value j).
           omega.
     + apply isFull'_true_iff; try assumption.
       match goal with H : compare' _ _ _ <> Lt |- _ => apply compare'_not_Lt in H; [ destruct H as [Hdigit0 Hnonzero] | | ] end.
@@ -1942,8 +1746,8 @@ Section CanonicalizationProofs.
       - intros.
         rewrite nth_default_modulus_digits.
         repeat (break_if; try omega).
-        rewrite <-Z.lt_succ_r with (m := max_bound i).
-        rewrite max_bound_log_cap; apply carry_done_bounds; assumption.
+        rewrite <-Z.lt_succ_r with (m := max_value i).
+        rewrite max_value_log_cap; apply carry_done_bounds; assumption.
   Qed.
 
   Lemma isFull_compare : forall us, (length us = length base) -> carry_done us ->
@@ -2007,13 +1811,13 @@ Section CanonicalizationProofs.
         pose proof (carry_full_3_done us PCB lengths_eq) as cf3_done.
         rewrite carry_done_bounds in cf3_done by simpl_lengths.
         specialize (cf3_done 0%nat).
-        omega.
+        pose proof c_pos; omega.
       - assert ((0 < i <= length base - 1)%nat) as i_range by
           (simpl_lengths; apply lt_min_l in l; omega).
         specialize (high_digits i i_range).
         clear first_digit i_range.
         rewrite high_digits.
-        rewrite <-max_bound_log_cap.
+        rewrite <-max_value_log_cap.
         rewrite nth_default_modulus_digits.
         repeat (break_if; try omega).
         * rewrite Z.sub_diag.
@@ -2079,12 +1883,12 @@ Section CanonicalizationProofs.
   Lemma freeze_canonical : forall us vs x,
     pre_carry_bounds us -> rep us x ->
     pre_carry_bounds vs -> rep vs x ->
-    freeze us = freeze vs.
+      freeze us = freeze vs.
   Proof.
     intros.
     assert (length us = length base) by (unfold rep in *; intuition).
     assert (length vs = length base) by (unfold rep in *; intuition).
     eapply minimal_rep_unique; eauto; rewrite freeze_length; assumption.
   Qed.
-
+*)
 End CanonicalizationProofs.

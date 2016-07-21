@@ -1,9 +1,10 @@
 Require Import Coq.Classes.Morphisms. Require Coq.Setoids.Setoid.
-Require Import Crypto.Util.Tactics Crypto.Tactics.Nsatz.
+Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Notations.
 Require Coq.Numbers.Natural.Peano.NPeano.
 Local Close Scope nat_scope. Local Close Scope type_scope. Local Close Scope core_scope.
+Require Crypto.Tactics.Algebra_syntax.Nsatz.
 
 Module Import ModuloCoq8485.
   Import NPeano Nat.
@@ -345,9 +346,11 @@ Module Group.
         auto using associative, left_identity, right_identity, left_inverse, right_inverse.
     Qed.
   End GroupByHomomorphism.
+End Group.
 
-  Section ScalarMult.
-    Context {G eq add zero opp} `{@group G eq add zero opp}.
+Module ScalarMult.
+  Section ScalarMultProperties.
+    Context {G eq add zero} `{@monoid G eq add zero}.
     Context {mul:nat->G->G}.
     Local Infix "=" := eq : type_scope. Local Infix "=" := eq.
     Local Infix "+" := add. Local Infix "*" := mul.
@@ -377,14 +380,8 @@ Module Group.
     Proof.
       induction n; intros.
       { rewrite <-mult_n_O, !scalarmult_0_l. reflexivity. }
-      { rewrite scalarmult_S_l, <-mult_n_Sm, <-Plus.plus_comm, scalarmult_add_l. apply cancel_left, IHn. }
-    Qed.
-
-    Lemma opp_mul : forall n P, opp (n * P) = n * (opp P).
-      induction n; intros.
-      { rewrite !scalarmult_0_l, inv_id; reflexivity. }
-      { rewrite <-NPeano.Nat.add_1_l, Plus.plus_comm at 1.
-        rewrite scalarmult_add_l, scalarmult_1_l, inv_op, scalarmult_S_l, cancel_left; eauto. }
+      { rewrite scalarmult_S_l, <-mult_n_Sm, <-Plus.plus_comm, scalarmult_add_l.
+        rewrite IHn. reflexivity. }
     Qed.
 
     Lemma scalarmult_times_order : forall l B, l*B = zero -> forall n, (l * n) * B = zero.
@@ -396,8 +393,16 @@ Module Group.
       rewrite (NPeano.Nat.div_mod n l Hnz) at 2.
       rewrite scalarmult_add_l, scalarmult_times_order, left_identity by auto. reflexivity.
     Qed.
-  End ScalarMult.
-End Group.
+    Context {opp} {group:@group G eq add zero opp}.
+
+    Lemma opp_mul : forall n P, opp (n * P) = n * (opp P).
+      induction n; intros.
+      { rewrite !scalarmult_0_l, Group.inv_id; reflexivity. }
+      { rewrite <-NPeano.Nat.add_1_l, Plus.plus_comm at 1.
+        rewrite scalarmult_add_l, scalarmult_1_l, Group.inv_op, scalarmult_S_l, Group.cancel_left; eauto. }
+    Qed.
+  End ScalarMultProperties.
+End ScalarMult.
 
 Require Coq.nsatz.Nsatz.
 
@@ -433,7 +438,7 @@ Module Ring.
     Local Notation "0" := zero. Local Notation "1" := one.
     Local Infix "+" := add. Local Infix "-" := sub. Local Infix "*" := mul.
 
-    Lemma mul_0_r : forall x, 0 * x = 0.
+    Lemma mul_0_l : forall x, 0 * x = 0.
     Proof.
       intros.
       assert (0*x = 0*x) as Hx by reflexivity.
@@ -442,7 +447,7 @@ Module Ring.
       rewrite !ring_sub_definition, <-associative, right_inverse, right_identity in Hxx; exact Hxx.
     Qed.
 
-    Lemma mul_0_l : forall x, x * 0 = 0.
+    Lemma mul_0_r : forall x, x * 0 = 0.
     Proof.
       intros.
       assert (x*0 = x*0) as Hx by reflexivity.
@@ -457,7 +462,7 @@ Module Ring.
     Lemma mul_opp_r x y : x * opp y = opp (x * y).
     Proof.
       assert (Ho:x*(opp y) + x*y = 0)
-        by (rewrite <-left_distributive, left_inverse, mul_0_l; reflexivity).
+        by (rewrite <-left_distributive, left_inverse, mul_0_r; reflexivity).
       rewrite <-(left_identity (opp (x*y))), <-Ho; clear Ho.
       rewrite <-!associative, right_inverse, right_identity; reflexivity.
     Qed.
@@ -465,7 +470,7 @@ Module Ring.
     Lemma mul_opp_l x y : opp x * y = opp (x * y).
     Proof.
       assert (Ho:opp x*y + x*y = 0)
-        by (rewrite <-right_distributive, left_inverse, mul_0_r; reflexivity).
+        by (rewrite <-right_distributive, left_inverse, mul_0_l; reflexivity).
       rewrite <-(left_identity (opp (x*y))), <-Ho; clear Ho.
       rewrite <-!associative, right_inverse, right_identity; reflexivity.
     Qed.
@@ -524,8 +529,33 @@ Module Ring.
       intros.
       rewrite !ring_sub_definition, Group.homomorphism, homomorphism_opp. reflexivity.
     Qed.
-
   End Homomorphism.
+
+  Lemma isomorphism_to_subring_ring
+        {T EQ ZERO ONE OPP ADD SUB MUL}
+        {Equivalence_EQ: @Equivalence T EQ} {eq_dec: forall x y, {EQ x y} + {~ EQ x y}}
+        {Proper_OPP:Proper(EQ==>EQ)OPP}
+        {Proper_ADD:Proper(EQ==>EQ==>EQ)ADD}
+        {Proper_SUB:Proper(EQ==>EQ==>EQ)SUB}
+        {Proper_MUL:Proper(EQ==>EQ==>EQ)MUL}
+        {R eq zero one opp add sub mul} {ringR:@ring R eq zero one opp add sub mul}
+        {phi}
+        {eq_phi_EQ: forall x y, eq (phi x) (phi y) -> EQ x y}
+        {phi_opp : forall a, eq (phi (OPP a)) (opp (phi a))}
+        {phi_add : forall a b, eq (phi (ADD a b)) (add (phi a) (phi b))}
+        {phi_sub : forall a b, eq (phi (SUB a b)) (sub (phi a) (phi b))}
+        {phi_mul : forall a b, eq (phi (MUL a b)) (mul (phi a) (phi b))}
+        {phi_zero : eq (phi ZERO) zero}
+        {phi_one : eq (phi ONE) one}
+    : @ring T EQ ZERO ONE OPP ADD SUB MUL.
+  Proof.
+    repeat split; eauto with core typeclass_instances; intros;
+      eapply eq_phi_EQ;
+      repeat rewrite ?phi_opp, ?phi_add, ?phi_sub, ?phi_mul, ?phi_inv, ?phi_zero, ?phi_one;
+      auto using (associative (op := add)), (commutative (op := add)), (left_identity (op := add)), (right_identity (op := add)),
+                 (associative (op := mul)), (commutative (op := add)), (left_identity (op := mul)), (right_identity (op := mul)),
+                 left_inverse, right_inverse, (left_distributive (add := add)), (right_distributive (add := add)), ring_sub_definition.
+  Qed.
 
   Section TacticSupportCommutative.
     Context {T eq zero one opp add sub mul} `{@commutative_ring T eq zero one opp add sub mul}.
@@ -566,8 +596,8 @@ Module IntegralDomain.
     Proof.
       split.
       { intro H0; split; intro H1; apply H0; rewrite H1.
-        { apply Ring.mul_0_r. }
-        { apply Ring.mul_0_l. } }
+        { apply Ring.mul_0_l. }
+        { apply Ring.mul_0_r. } }
       { intros [? ?] ?; edestruct mul_nonzero_nonzero_cases; eauto with nocore. }
     Qed.
 
@@ -589,10 +619,15 @@ Module Field.
     Local Notation "0" := zero. Local Notation "1" := one.
     Local Infix "+" := add. Local Infix "*" := mul.
 
+    Lemma right_multiplicative_inverse : forall x : T, ~ eq x zero -> eq (mul x (inv x)) one.
+    Proof.
+      intros. rewrite commutative. auto using left_multiplicative_inverse.
+    Qed.
+
     Global Instance is_mul_nonzero_nonzero : @is_mul_nonzero_nonzero T eq 0 mul.
     Proof.
       constructor. intros x y Hx Hy Hxy.
-      assert (0 = (inv y * (inv x * x)) * y) as H00. (rewrite <-!associative, Hxy, !Ring.mul_0_l; reflexivity).
+      assert (0 = (inv y * (inv x * x)) * y) as H00. (rewrite <-!associative, Hxy, !Ring.mul_0_r; reflexivity).
       rewrite left_multiplicative_inverse in H00 by assumption.
       rewrite right_identity in H00.
       rewrite left_multiplicative_inverse in H00 by assumption.
@@ -602,6 +637,16 @@ Module Field.
     Global Instance integral_domain : @integral_domain T eq zero one opp add sub mul.
     Proof.
       split; auto using field_commutative_ring, field_domain_is_zero_neq_one, is_mul_nonzero_nonzero.
+    Qed.
+
+    Lemma inv_unique x ix : ix * x = one -> ix = inv x.
+    Proof.
+      intro Hix.
+      assert (ix*x*inv x = inv x).
+      - rewrite Hix, left_identity; reflexivity.
+      - rewrite <-associative, right_multiplicative_inverse, right_identity in H0; trivial.
+        intro eq_x_0. rewrite eq_x_0, Ring.mul_0_r in Hix.
+        apply zero_neq_one. assumption.
     Qed.
 
     Require Coq.setoid_ring.Field_theory.
@@ -616,6 +661,86 @@ Module Field.
 
   End Field.
 
+  Lemma isomorphism_to_subfield_field
+        {T EQ ZERO ONE OPP ADD SUB MUL INV DIV}
+        {Equivalence_EQ: @Equivalence T EQ} {eq_dec: forall x y, {EQ x y} + {~ EQ x y}}
+        {Proper_OPP:Proper(EQ==>EQ)OPP}
+        {Proper_ADD:Proper(EQ==>EQ==>EQ)ADD}
+        {Proper_SUB:Proper(EQ==>EQ==>EQ)SUB}
+        {Proper_MUL:Proper(EQ==>EQ==>EQ)MUL}
+        {Proper_INV:Proper(EQ==>EQ)INV}
+        {Proper_DIV:Proper(EQ==>EQ==>EQ)DIV}
+        {R eq zero one opp add sub mul inv div} {fieldR:@field R eq zero one opp add sub mul inv div}
+        {phi}
+        {eq_phi_EQ: forall x y, eq (phi x) (phi y) -> EQ x y}
+        {neq_zero_one : (EQ ZERO ONE -> False)}
+        {phi_opp : forall a, eq (phi (OPP a)) (opp (phi a))}
+        {phi_add : forall a b, eq (phi (ADD a b)) (add (phi a) (phi b))}
+        {phi_sub : forall a b, eq (phi (SUB a b)) (sub (phi a) (phi b))}
+        {phi_mul : forall a b, eq (phi (MUL a b)) (mul (phi a) (phi b))}
+        {phi_inv : forall a, eq (phi (INV a)) (inv (phi a))}
+        {phi_div : forall a b, eq (phi (DIV a b)) (div (phi a) (phi b))}
+        {phi_zero : eq (phi ZERO) zero}
+        {phi_one : eq (phi ONE) one}
+    : @field T EQ ZERO ONE OPP ADD SUB MUL INV DIV.
+  Proof.
+    repeat split; eauto with core typeclass_instances; intros;
+      eapply eq_phi_EQ;
+      repeat rewrite ?phi_opp, ?phi_add, ?phi_sub, ?phi_mul, ?phi_inv, ?phi_zero, ?phi_one, ?phi_inv, ?phi_div;
+      auto using (associative (op := add)), (commutative (op := add)), (left_identity (op := add)), (right_identity (op := add)),
+                 (associative (op := mul)), (commutative (op := mul)), (left_identity (op := mul)), (right_identity (op := mul)),
+                 left_inverse, right_inverse, (left_distributive (add := add)), (right_distributive (add := add)),
+                 ring_sub_definition, field_div_definition.
+      apply left_multiplicative_inverse; rewrite <-phi_zero; auto.
+  Qed.
+
+  Lemma Proper_ext : forall {A} (f g : A -> A) eq, Equivalence eq ->
+    (forall x, eq (g x) (f x)) -> Proper (eq==>eq) f -> Proper (eq==>eq) g.
+  Proof.
+    repeat intro.
+    transitivity (f x); auto.
+    transitivity (f y); auto.
+    symmetry; auto.
+  Qed.
+
+  Lemma Proper_ext2 : forall {A} (f g : A -> A -> A) eq, Equivalence eq ->
+    (forall x y, eq (g x y) (f x y)) -> Proper (eq==>eq ==>eq) f -> Proper (eq==>eq==>eq) g.
+  Proof.
+    repeat intro.
+    transitivity (f x x0); auto.
+    transitivity (f y y0); match goal with H : Proper _ f |- _=> try apply H end; auto.
+    symmetry; auto.
+  Qed.
+
+  Lemma equivalent_operations_field
+        {T EQ ZERO ONE OPP ADD SUB MUL INV DIV}
+        {EQ_equivalence : Equivalence EQ}
+        {zero one opp add sub mul inv div}
+        {fieldR:@field T EQ zero one opp add sub mul inv div}
+        {EQ_opp : forall a, EQ (OPP a) (opp a)}
+        {EQ_inv : forall a, EQ (INV a) (inv a)}
+        {EQ_add : forall a b, EQ (ADD a b) (add a b)}
+        {EQ_sub : forall a b, EQ (SUB a b) (sub a b)}
+        {EQ_mul : forall a b, EQ (MUL a b) (mul a b)}
+        {EQ_div : forall a b, EQ (DIV a b) (div a b)}
+        {EQ_zero : EQ ZERO zero}
+        {EQ_one : EQ ONE one}
+    : @field T EQ ZERO ONE OPP ADD SUB MUL INV DIV.
+  Proof.
+    repeat split; eauto with core typeclass_instances; intros;
+      repeat rewrite ?EQ_opp, ?EQ_inv, ?EQ_add, ?EQ_sub, ?EQ_mul, ?EQ_div, ?EQ_zero, ?EQ_one;
+      auto using (associative (op := add)), (commutative (op := add)), (left_identity (op := add)), (right_identity (op := add)),
+                 (associative (op := mul)), (commutative (op := mul)), (left_identity (op := mul)), (right_identity (op := mul)),
+                 left_inverse, right_inverse, (left_distributive (add := add)), (right_distributive (add := add)),
+                 ring_sub_definition, field_div_definition;
+      try solve [(eapply Proper_ext2 || eapply Proper_ext);
+        eauto using group_inv_Proper, monoid_op_Proper, ring_mul_Proper, ring_sub_Proper,
+          field_inv_Proper, field_div_Proper].
+      + apply left_multiplicative_inverse.
+        symmetry in EQ_zero. rewrite EQ_zero. assumption.
+      + eapply field_domain_is_zero_neq_one; eauto.
+  Qed.
+
   Section Homomorphism.
     Context {F EQ ZERO ONE OPP ADD MUL SUB INV DIV} `{@field F EQ ZERO ONE OPP ADD SUB MUL INV DIV}.
     Context {K eq zero one opp add mul sub inv div} `{@field K eq zero one opp add sub mul inv div}.
@@ -623,18 +748,54 @@ Module Field.
     Local Infix "=" := eq. Local Infix "=" := eq : type_scope.
     Context `{@Ring.is_homomorphism F EQ ONE ADD MUL K eq one add mul phi}.
 
-    Lemma homomorphism_multiplicative_inverse : forall x, phi (INV x) = inv (phi x). Admitted.
+    Lemma homomorphism_multiplicative_inverse_complete
+       : forall x, (EQ x ZERO -> phi (INV x) = inv (phi x))
+       -> phi (INV x) = inv (phi x).
+    Proof.
+      intros.
+      destruct (eq_dec x ZERO); auto.
+      assert (phi (MUL (INV x) x) = one) as A. {
+        rewrite left_multiplicative_inverse; auto using Ring.homomorphism_one.
+      }
+      rewrite Ring.homomorphism_mul in A.
+      apply inv_unique in A. assumption.
+    Qed.
 
-    Lemma homomorphism_div : forall x y, phi (DIV x y) = div (phi x) (phi y).
+    Lemma homomorphism_multiplicative_inverse
+      : forall x, not (EQ x ZERO)
+      -> phi (INV x) = inv (phi x).
+    Proof.
+      intros. apply homomorphism_multiplicative_inverse_complete. contradiction.
+    Qed.
+
+    Lemma homomorphism_div_complete
+      : forall x y, (EQ y ZERO -> phi (INV y) = inv (phi y))
+      -> phi (DIV x y) = div (phi x) (phi y).
     Proof.
       intros. rewrite !field_div_definition.
-      rewrite Ring.homomorphism_mul, homomorphism_multiplicative_inverse. reflexivity.
+      rewrite Ring.homomorphism_mul, homomorphism_multiplicative_inverse_complete. reflexivity. trivial.
+    Qed.
+
+    Lemma homomorphism_div
+      : forall x y, not (EQ y ZERO)
+      -> phi (DIV x y) = div (phi x) (phi y).
+    Proof.
+      intros. apply homomorphism_div_complete. contradiction.
     Qed.
   End Homomorphism.
 End Field.
 
+(** Tactics *)
+
+Ltac nsatz := Algebra_syntax.Nsatz.nsatz; dropRingSyntax.
+Ltac nsatz_contradict := Algebra_syntax.Nsatz.nsatz_contradict; dropRingSyntax.
+
 (*** Tactics for manipulating field equations *)
 Require Import Coq.setoid_ring.Field_tac.
+
+(** Convention: These tactics put the original goal first, and all
+    goals for non-zero side-conditions after that.  (Exception:
+    [field_simplify_eq in], which is silly.  *)
 
 Ltac guess_field :=
   match goal with
@@ -654,7 +815,7 @@ Ltac field_nonzero_mul_split :=
            => apply IntegralDomain.mul_nonzero_nonzero_iff in H; destruct H
          end.
 
-Ltac common_denominator :=
+Ltac field_simplify_eq_if_div :=
   let fld := guess_field in
   lazymatch type of fld with
     field (div:=?div) =>
@@ -664,7 +825,8 @@ Ltac common_denominator :=
     end
   end.
 
-Ltac common_denominator_in H :=
+(** We jump through some hoops to ensure that the side-conditions come late *)
+Ltac field_simplify_eq_if_div_in_cycled_side_condition_order H :=
   let fld := guess_field in
   lazymatch type of fld with
     field (div:=?div) =>
@@ -674,9 +836,10 @@ Ltac common_denominator_in H :=
     end
   end.
 
-Ltac common_denominator_all :=
-  common_denominator;
-  repeat match goal with [H: _ |- _ _ _ ] => progress common_denominator_in H end.
+Ltac field_simplify_eq_if_div_in H :=
+  side_conditions_before_to_side_conditions_after
+    field_simplify_eq_if_div_in_cycled_side_condition_order
+    H.
 
 (** Now we have more conservative versions that don't simplify non-division structure. *)
 Ltac deduplicate_nonfraction_pieces mul :=
@@ -701,35 +864,26 @@ Ltac deduplicate_nonfraction_pieces mul :=
            => subst x0 x1
          end.
 
-Ltac set_nonfraction_pieces_on T eq zero opp add sub mul inv div nonzero_tac cont :=
+Ltac set_nonfraction_pieces_on T eq zero opp add sub mul inv div cont :=
   idtac;
   let one_arg_recr :=
       fun op v
       => set_nonfraction_pieces_on
-           v eq zero opp add sub mul inv div nonzero_tac
+           v eq zero opp add sub mul inv div
            ltac:(fun x => cont (op x)) in
   let two_arg_recr :=
       fun op v0 v1
       => set_nonfraction_pieces_on
-           v0 eq zero opp add sub mul inv div nonzero_tac
+           v0 eq zero opp add sub mul inv div
            ltac:(fun x
                  =>
                    set_nonfraction_pieces_on
-                     v1 eq zero opp add sub mul inv div nonzero_tac
+                     v1 eq zero opp add sub mul inv div
                      ltac:(fun y => cont (op x y))) in
   lazymatch T with
   | eq ?x ?y => two_arg_recr eq x y
   | appcontext[div]
     => lazymatch T with
-       | div ?numerator ?denominator
-         => let d := fresh "d" in
-            pose denominator as d;
-            assert (~eq d zero);
-            [ subst d; nonzero_tac
-            | set_nonfraction_pieces_on
-                numerator eq zero opp add sub mul inv div nonzero_tac
-                ltac:(fun numerator'
-                      => cont (div numerator' d)) ]
        | opp ?x => one_arg_recr opp x
        | inv ?x => one_arg_recr inv x
        | add ?x ?y => two_arg_recr add x y
@@ -742,33 +896,33 @@ Ltac set_nonfraction_pieces_on T eq zero opp add sub mul inv div nonzero_tac con
          pose T as x;
          cont x
   end.
-Ltac set_nonfraction_pieces_in_by H nonzero_tac :=
+Ltac set_nonfraction_pieces_in H :=
   idtac;
   let fld := guess_field in
   lazymatch type of fld with
   | @field ?T ?eq ?zero ?one ?opp ?add ?sub ?mul ?inv ?div
     => let T := type of H in
        set_nonfraction_pieces_on
-         T eq zero opp add sub mul inv div nonzero_tac
+         T eq zero opp add sub mul inv div
          ltac:(fun T' => change T' in H);
        deduplicate_nonfraction_pieces mul
   end.
-Ltac set_nonfraction_pieces_by nonzero_tac :=
+Ltac set_nonfraction_pieces :=
   idtac;
   let fld := guess_field in
   lazymatch type of fld with
   | @field ?T ?eq ?zero ?one ?opp ?add ?sub ?mul ?inv ?div
     => let T := get_goal in
        set_nonfraction_pieces_on
-         T eq zero opp add sub mul inv div nonzero_tac
+         T eq zero opp add sub mul inv div
          ltac:(fun T' => change T');
        deduplicate_nonfraction_pieces mul
   end.
-Ltac set_nonfraction_pieces_in H :=
-  set_nonfraction_pieces_in_by H ltac:(try (intro; field_nonzero_mul_split; try tauto)).
-Ltac set_nonfraction_pieces :=
-  set_nonfraction_pieces_by ltac:(try (intro; field_nonzero_mul_split; tauto)).
-Ltac conservative_common_denominator_in H :=
+Ltac default_common_denominator_nonzero_tac :=
+  repeat apply conj;
+  try first [ assumption
+            | intro; field_nonzero_mul_split; tauto ].
+Ltac common_denominator_in H :=
   idtac;
   let fld := guess_field in
   let div := lazymatch type of fld with
@@ -778,14 +932,13 @@ Ltac conservative_common_denominator_in H :=
   lazymatch type of H with
   | appcontext[div]
     => set_nonfraction_pieces_in H;
-       [ ..
-       | common_denominator_in H;
-         [ repeat split; try assumption..
-         | ] ];
+       field_simplify_eq_if_div_in H;
+       [
+       | default_common_denominator_nonzero_tac.. ];
        repeat match goal with H := _ |- _ => subst H end
   | ?T => fail 0 "no division in" H ":" T
   end.
-Ltac conservative_common_denominator :=
+Ltac common_denominator :=
   idtac;
   let fld := guess_field in
   let div := lazymatch type of fld with
@@ -795,19 +948,75 @@ Ltac conservative_common_denominator :=
   lazymatch goal with
   | |- appcontext[div]
     => set_nonfraction_pieces;
-       [ ..
-       | common_denominator;
-         [ repeat split; try assumption..
-         | ] ];
+       field_simplify_eq_if_div;
+       [
+       | default_common_denominator_nonzero_tac.. ];
        repeat match goal with H := _ |- _ => subst H end
   | |- ?G
     => fail 0 "no division in goal" G
   end.
+Ltac common_denominator_inequality_in H :=
+  let HT := type of H in
+  lazymatch HT with
+  | not (?R _ _) => idtac
+  | (?R _ _ -> False)%type => idtac
+  | _ => fail 0 "Not an inequality" H ":" HT
+  end;
+  let HTT := type of HT in
+  let HT' := fresh in
+  evar (HT' : HTT);
+  let H' := fresh in
+  rename H into H';
+  cut (not HT'); subst HT';
+  [ intro H; clear H'
+  | let H'' := fresh in
+    intro H''; apply H'; common_denominator; [ eexact H'' | .. ] ].
+Ltac common_denominator_inequality :=
+  let G := get_goal in
+  lazymatch G with
+  | not (?R _ _) => idtac
+  | (?R _ _ -> False)%type => idtac
+  | _ => fail 0 "Not an inequality (goal):" G
+  end;
+  let GT := type of G in
+  let HT' := fresh in
+  evar (HT' : GT);
+  let H' := fresh in
+  assert (H' : not HT'); subst HT';
+  [
+  | let HG := fresh in
+    intros HG; apply H'; common_denominator_in HG; [ eexact HG | .. ] ].
 
-Ltac conservative_common_denominator_all :=
-  try conservative_common_denominator;
-  [ ..
-  | repeat match goal with [H: _ |- _ ] => progress conservative_common_denominator_in H; [] end ].
+Ltac common_denominator_hyps :=
+  try match goal with
+      | [H: _ |- _ ]
+        => progress common_denominator_in H;
+           [ common_denominator_hyps
+           | .. ]
+      end.
+
+Ltac common_denominator_inequality_hyps :=
+  try match goal with
+      | [H: _ |- _ ]
+        => progress common_denominator_inequality_in H;
+           [ common_denominator_inequality_hyps
+           | .. ]
+      end.
+
+Ltac common_denominator_all :=
+  try common_denominator;
+  [ try common_denominator_hyps
+  | .. ].
+
+Ltac common_denominator_inequality_all :=
+  try common_denominator_inequality;
+  [ try common_denominator_inequality_hyps
+  | .. ].
+
+Ltac common_denominator_equality_inequality_all :=
+  common_denominator_all;
+  [ common_denominator_inequality_all
+  | .. ].
 
 Inductive field_simplify_done {T} : T -> Type :=
   Field_simplify_done : forall H, field_simplify_done H.
@@ -826,19 +1035,41 @@ Ltac field_simplify_eq_hyps :=
 
 Ltac field_simplify_eq_all := field_simplify_eq_hyps; try field_simplify_eq.
 
-(** Clear duplicate hypotheses, and hypotheses of the form [R x x] for a reflexive relation [R] *)
+(** Clear duplicate hypotheses, and hypotheses of the form [R x x] for a reflexive relation [R], and similarly for symmetric relations *)
 Ltac clear_algebraic_duplicates_step R :=
   match goal with
   | [ H : R ?x ?x |- _ ]
     => clear H
   end.
+Ltac clear_algebraic_duplicates_step_S R :=
+  match goal with
+  | [ H : R ?x ?y, H' : R ?y ?x |- _ ]
+    => clear H
+  | [ H : not (R ?x ?y), H' : not (R ?y ?x) |- _ ]
+    => clear H
+  | [ H : (R ?x ?y -> False)%type, H' : (R ?y ?x -> False)%type |- _ ]
+    => clear H
+  | [ H : not (R ?x ?y), H' : (R ?y ?x -> False)%type |- _ ]
+    => clear H
+  end.
 Ltac clear_algebraic_duplicates_guarded R :=
   let test_reflexive := constr:(_ : Reflexive R) in
   repeat clear_algebraic_duplicates_step R.
+Ltac clear_algebraic_duplicates_guarded_S R :=
+  let test_symmetric := constr:(_ : Symmetric R) in
+  repeat clear_algebraic_duplicates_step_S R.
 Ltac clear_algebraic_duplicates :=
   clear_duplicates;
   repeat match goal with
-         | [ H : ?R ?x ?x |- _ ] => clear_algebraic_duplicates_guarded R
+         | [ H : ?R ?x ?x |- _ ] => progress clear_algebraic_duplicates_guarded R
+         | [ H : ?R ?x ?y, H' : ?R ?y ?x |- _ ]
+           => progress clear_algebraic_duplicates_guarded_S R
+         | [ H : not (?R ?x ?y), H' : not (?R ?y ?x) |- _ ]
+           => progress clear_algebraic_duplicates_guarded_S R
+         | [ H : not (?R ?x ?y), H' : (?R ?y ?x -> False)%type |- _ ]
+           => progress clear_algebraic_duplicates_guarded_S R
+         | [ H : (?R ?x ?y -> False)%type, H' : (?R ?y ?x -> False)%type |- _ ]
+           => progress clear_algebraic_duplicates_guarded_S R
          end.
 
 (*** Inequalities over fields *)
@@ -896,36 +1127,6 @@ Ltac neq01 :=
       |apply one_neq_zero
       |apply Group.opp_one_neq_zero].
 
-Ltac conservative_field_algebra :=
-  intros;
-  conservative_common_denominator_all;
-  try (nsatz; dropRingSyntax);
-  repeat (apply conj);
-  try solve
-      [neq01
-      |trivial
-      |apply Ring.opp_nonzero_nonzero;trivial].
-
-Ltac field_algebra :=
-  intros;
-  common_denominator_all;
-  try (nsatz; dropRingSyntax);
-  repeat (apply conj);
-  try solve
-      [neq01
-      |trivial
-      |apply Ring.opp_nonzero_nonzero;trivial].
-
-Ltac split_field_inequalities_step :=
-  match goal with
-  | [ H : not (?R (?mul ?x ?y) ?zero) |- _ ]
-    => apply IntegralDomain.mul_nonzero_nonzero_iff in H; destruct H
-  end.
-Ltac split_field_inequalities :=
-  canonicalize_field_inequalities;
-  repeat split_field_inequalities_step;
-  clear_duplicates.
-
 Ltac combine_field_inequalities_step :=
   match goal with
   | [ H : not (?R ?x ?zero), H' : not (?R ?x' ?zero) |- _ ]
@@ -937,22 +1138,70 @@ Ltac combine_field_inequalities_step :=
 (** First we split apart the equalities so that we can clear
     duplicates; it's easier for us to do this than to give [nsatz] the
     extra work. *)
+
+Ltac split_field_inequalities_step :=
+  match goal with
+  | [ H : not (?R (?mul ?x ?y) ?zero) |- _ ]
+    => apply IntegralDomain.mul_nonzero_nonzero_iff in H; destruct H
+  end.
+Ltac split_field_inequalities :=
+  canonicalize_field_inequalities;
+  repeat split_field_inequalities_step;
+  clear_duplicates.
+
 Ltac combine_field_inequalities :=
   split_field_inequalities;
   repeat combine_field_inequalities_step.
+(** Handles field inequalities which can be made by splitting multiplications in the goal and the assumptions *)
+Ltac solve_simple_field_inequalities :=
+  repeat (apply conj || split_field_inequalities);
+  try assumption.
 Ltac prensatz_contradict :=
-  combine_field_inequalities;
+  solve_simple_field_inequalities;
+  combine_field_inequalities.
+Ltac nsatz_inequality_to_equality :=
   repeat intro;
   match goal with
   | [ H : not (?R ?x ?zero) |- False ] => apply H
   | [ H : (?R ?x ?zero -> False)%type |- False ] => apply H
   end.
+(** Clean up tactic handling side-conditions *)
+Ltac super_nsatz_post_clean_inequalities :=
+  repeat (apply conj || split_field_inequalities);
+  try assumption;
+  prensatz_contradict; nsatz_inequality_to_equality;
+  try nsatz.
+Ltac nsatz_equality_to_inequality_by_decide_equality :=
+  lazymatch goal with
+  | [ H : not (?R _ _) |- ?R _ _ ] => idtac
+  | [ H : (?R _ _ -> False)%type |- ?R _ _ ] => idtac
+  | [ |- ?R _ _ ] => fail 0 "No hypothesis exists which negates the relation" R
+  | [ |- ?G ] => fail 0 "The goal is not a binary relation:" G
+  end;
+  lazymatch goal with
+  | [ |- ?R ?x ?y ]
+    => destruct (@dec (R x y) _); [ assumption | exfalso ]
+  end.
 (** Handles inequalities and fractions *)
+Ltac super_nsatz_internal nsatz_alternative :=
+  (* [nsatz] gives anomalies on duplicate hypotheses, so we strip them *)
+  clear_algebraic_duplicates;
+  prensatz_contradict;
+  (* Each goal left over by [prensatz_contradict] is separate (and
+     there might not be any), so we handle them all separately *)
+  [ try common_denominator_equality_inequality_all;
+    [ try nsatz_inequality_to_equality;
+      try first [ nsatz;
+                  (* [nstaz] might leave over side-conditions; we handle them if they are inequalities *)
+                  try super_nsatz_post_clean_inequalities
+                | nsatz_alternative ]
+    | super_nsatz_post_clean_inequalities.. ].. ].
+
 Ltac super_nsatz :=
-  try prensatz_contradict;
-  try conservative_common_denominator_all;
-  [ try nsatz
-  | repeat (apply conj || split_field_inequalities); try assumption; prensatz_contradict; try nsatz.. ].
+  super_nsatz_internal
+    (* if [nsatz] fails, we try turning the goal equality into an inequality and trying again *)
+    ltac:(nsatz_equality_to_inequality_by_decide_equality;
+          super_nsatz_internal idtac).
 
 Section ExtraLemmas.
   Context {F eq zero one opp add sub mul inv div} `{F_field:field F eq zero one opp add sub mul inv div}.
@@ -960,13 +1209,11 @@ Section ExtraLemmas.
   Local Notation "0" := zero. Local Notation "1" := one.
   Local Infix "=" := eq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
 
+  Example _only_two_square_roots_test x y : x * x = y * y -> x <> opp y -> x = y.
+  Proof. intros; super_nsatz. Qed.
+
   Lemma only_two_square_roots' x y : x * x = y * y -> x <> y -> x <> opp y -> False.
-  Proof.
-    intros.
-    canonicalize_field_equalities; canonicalize_field_inequalities.
-    assert (H' : (x + y) * (x - y) <> 0) by (apply mul_nonzero_nonzero; assumption).
-    apply H'; nsatz.
-  Qed.
+  Proof. intros; super_nsatz. Qed.
 
   Lemma only_two_square_roots x y z : x * x = z -> y * y = z -> x <> y -> x <> opp y -> False.
   Proof.
@@ -988,17 +1235,37 @@ Section ExtraLemmas.
 End ExtraLemmas.
 
 (** We look for hypotheses of the form [x^2 = y^2] and [x^2 = z] together with [y^2 = z], and prove that [x = y] or [x = opp y] *)
-Ltac pose_proof_only_two_square_roots x y H :=
+Ltac pose_proof_only_two_square_roots x y H eq opp mul :=
   not constr_eq x y;
-  match goal with
-  | [ H' : ?eq (?mul x x) (?mul y y) |- _ ]
-    => pose proof (only_two_square_roots'_choice x y H') as H
-  | [ H0 : ?eq (?mul x x) ?z, H1 : ?eq (?mul y y) ?z |- _ ]
-    => pose proof (only_two_square_roots_choice x y z H0 H1) as H
+  lazymatch x with
+  | opp ?x' => pose_proof_only_two_square_roots x' y H eq opp mul
+  | _
+    => lazymatch y with
+       | opp ?y' => pose_proof_only_two_square_roots x y' H eq opp mul
+       | _
+         => match goal with
+            | [ H' : eq x y |- _ ]
+              => let T := type of H' in fail 1 "The hypothesis" H' "already proves" T
+            | [ H' : eq y x |- _ ]
+              => let T := type of H' in fail 1 "The hypothesis" H' "already proves" T
+            | [ H' : eq x (opp y) |- _ ]
+              => let T := type of H' in fail 1 "The hypothesis" H' "already proves" T
+            | [ H' : eq y (opp x) |- _ ]
+              => let T := type of H' in fail 1 "The hypothesis" H' "already proves" T
+            | [ H' : eq (opp x) y |- _ ]
+              => let T := type of H' in fail 1 "The hypothesis" H' "already proves" T
+            | [ H' : eq (opp y) x |- _ ]
+              => let T := type of H' in fail 1 "The hypothesis" H' "already proves" T
+            | [ H' : eq (mul x x) (mul y y) |- _ ]
+              => pose proof (only_two_square_roots'_choice x y H') as H
+            | [ H0 : eq (mul x x) ?z, H1 : eq (mul y y) ?z |- _ ]
+              => pose proof (only_two_square_roots_choice x y z H0 H1) as H
+            end
+       end
   end.
-Ltac reduce_only_two_square_roots x y :=
+Ltac reduce_only_two_square_roots x y eq opp mul :=
   let H := fresh in
-  pose_proof_only_two_square_roots x y H;
+  pose_proof_only_two_square_roots x y H eq opp mul;
   destruct H;
   try setoid_subst y.
 Ltac pre_clean_only_two_square_roots :=
@@ -1012,21 +1279,25 @@ Ltac post_clean_only_two_square_roots x y :=
        | [ H : (?R ?x ?x -> False)%type |- _ ] => exfalso; apply H; reflexivity
        end);
   try setoid_subst x; try setoid_subst y.
-Ltac only_two_square_roots_step :=
+Ltac only_two_square_roots_step eq opp mul :=
   match goal with
-  | [ H : not (?eq ?x (?opp ?y)) |- _ ]
+  | [ H : not (eq ?x (opp ?y)) |- _ ]
     (* this one comes first, because it the procedure is asymmetric
        with respect to [x] and [y], and this order is more likely to
        lead to solving goals by contradiction. *)
-    => is_var x; is_var y; reduce_only_two_square_roots x y; post_clean_only_two_square_roots x y
-  | [ H : ?eq (?mul ?x ?x) (?mul ?y ?y) |- _ ]
-    => reduce_only_two_square_roots x y; post_clean_only_two_square_roots x y
-  | [ H : ?eq (?mul ?x ?x) ?z, H' : ?eq (?mul ?y ?y) ?z |- _ ]
-    => reduce_only_two_square_roots x y; post_clean_only_two_square_roots x y
+    => is_var x; is_var y; reduce_only_two_square_roots x y eq opp mul; post_clean_only_two_square_roots x y
+  | [ H : eq (mul ?x ?x) (mul ?y ?y) |- _ ]
+    => reduce_only_two_square_roots x y eq opp mul; post_clean_only_two_square_roots x y
+  | [ H : eq (mul ?x ?x) ?z, H' : eq (mul ?y ?y) ?z |- _ ]
+    => reduce_only_two_square_roots x y eq opp mul; post_clean_only_two_square_roots x y
   end.
 Ltac only_two_square_roots :=
   pre_clean_only_two_square_roots;
-  repeat only_two_square_roots_step.
+  let fld := guess_field in
+  lazymatch type of fld with
+  | @field ?F ?eq ?zero ?one ?opp ?add ?sub ?mul ?inv ?div
+    => repeat only_two_square_roots_step eq opp mul
+  end.
 
 Section Example.
   Context {F zero one opp add sub mul inv div} `{F_field:field F eq zero one opp add sub mul inv div}.
@@ -1036,10 +1307,10 @@ Section Example.
   Add Field _ExampleField : (Field.field_theory_for_stdlib_tactic (T:=F)).
 
   Example _example_nsatz x y : 1+1 <> 0 -> x + y = 0 -> x - y = 0 -> x = 0.
-  Proof. field_algebra. Qed.
+  Proof. intros. nsatz. Qed.
 
   Example _example_field_nsatz x y z : y <> 0 -> x/y = z -> z*y + y = x + y.
-  Proof. intros; subst; field_algebra. Qed.
+  Proof. intros. super_nsatz. Qed.
 
   Example _example_nonzero_nsatz_contradict x y : x * y = 1 -> not (x = 0).
   Proof. intros. intro. nsatz_contradict. Qed.

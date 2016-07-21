@@ -43,8 +43,8 @@ Section SignBit.
     pose proof (F_opp_spec x) as opp_spec_x.
     apply F_eq in opp_spec_x.
     rewrite FieldToZ_add in opp_spec_x.
-    rewrite <-opp_spec_x, Z_odd_mod in sign_zero by (pose proof prime_ge_2 m prime_m; omega).
-    replace (Z.odd m) with true in sign_zero by (destruct (ZUtil.prime_odd_or_2 m prime_m); auto || omega).
+    rewrite <-opp_spec_x, Z.odd_mod in sign_zero by (pose proof prime_ge_2 m prime_m; omega).
+    replace (Z.odd m) with true in sign_zero by (destruct (Z.prime_odd_or_2 m prime_m); auto || omega).
     rewrite Z.odd_add, F_FieldToZ_add_opp, Z.div_same, Bool.xorb_true_r in sign_zero by assumption || omega.
     apply Bool.xorb_eq.
     rewrite <-Bool.negb_xorb_l.

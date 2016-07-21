@@ -7,6 +7,9 @@ Tactic Notation "test" tactic3(tac) :=
 (** [not tac] is equivalent to [fail tac "succeeds"] if [tac] succeeds, and is equivalent to [idtac] if [tac] fails *)
 Tactic Notation "not" tactic3(tac) := try ((test tac); fail 1 tac "succeeds").
 
+Ltac get_goal :=
+  match goal with |- ?G => G end.
+
 (** find the head of the given expression *)
 Ltac head expr :=
   match expr with
@@ -39,6 +42,16 @@ Tactic Notation "unique" "assert" constr(T) "by" tactic3(tac) :=
   | [ H : T |- _ ] => fail 1
   | _ => assert T by tac
   end.
+
+Ltac set_evars :=
+  repeat match goal with
+         | [ |- appcontext[?E] ] => is_evar E; let e := fresh "e" in set (e := E)
+         end.
+
+Ltac subst_evars :=
+  repeat match goal with
+         | [ e := ?E |- _ ] => is_evar E; subst e
+         end.
 
 (** destruct discriminees of [match]es in the goal *)
 (* Prioritize breaking apart things in the context, then things which
@@ -228,3 +241,62 @@ Ltac destruct_sig_matcher HT :=
   end.
 Ltac destruct_sig := destruct_all_matches destruct_sig_matcher.
 Ltac destruct_sig' := destruct_all_matches' destruct_sig_matcher.
+
+(** try to specialize all non-dependent hypotheses using [tac] *)
+Ltac specialize_by' tac :=
+  idtac;
+  match goal with
+  | [ H : ?A -> ?B |- _ ] => let H' := fresh in assert (H' : A) by tac; specialize (H H'); clear H'
+  end.
+
+Ltac specialize_by tac := repeat specialize_by' tac.
+
+(** If [tac_in H] operates in [H] and leaves side-conditions before
+    the original goal, then
+    [side_conditions_before_to_side_conditions_after tac_in H] does
+    the same thing to [H], but leaves side-conditions after the
+    original goal. *)
+Ltac side_conditions_before_to_side_conditions_after tac_in H :=
+  let HT := type of H in
+  let HTT := type of HT in
+  let H' := fresh in
+  rename H into H';
+  let HT' := fresh in
+  evar (HT' : HTT);
+  cut HT';
+  [ subst HT'; intro H
+  | tac_in H';
+    [ ..
+    | subst HT'; eexact H' ] ];
+  instantiate; (* required in 8.4 for the [move] to succeed, because evar dependencies *)
+  [ (* We preserve the order of the hypotheses.  We need to do this
+       here, after evars are instantiated, and not above. *)
+    move H after H'; clear H'
+  | .. ].
+
+(** Do something with every hypothesis. *)
+Ltac do_with_hyp' tac :=
+  match goal with
+    | [ H : _ |- _ ] => tac H
+  end.
+
+(** Rewrite with any applicable hypothesis. *)
+Tactic Notation "rewrite_hyp" "*" := do_with_hyp' ltac:(fun H => rewrite H).
+Tactic Notation "rewrite_hyp" "->" "*" := do_with_hyp' ltac:(fun H => rewrite -> H).
+Tactic Notation "rewrite_hyp" "<-" "*" := do_with_hyp' ltac:(fun H => rewrite <- H).
+Tactic Notation "rewrite_hyp" "?*" := repeat do_with_hyp' ltac:(fun H => rewrite !H).
+Tactic Notation "rewrite_hyp" "->" "?*" := repeat do_with_hyp' ltac:(fun H => rewrite -> !H).
+Tactic Notation "rewrite_hyp" "<-" "?*" := repeat do_with_hyp' ltac:(fun H => rewrite <- !H).
+Tactic Notation "rewrite_hyp" "!*" := progress rewrite_hyp ?*.
+Tactic Notation "rewrite_hyp" "->" "!*" := progress rewrite_hyp -> ?*.
+Tactic Notation "rewrite_hyp" "<-" "!*" := progress rewrite_hyp <- ?*.
+
+Tactic Notation "rewrite_hyp" "*" "in" "*" := do_with_hyp' ltac:(fun H => rewrite H in * ).
+Tactic Notation "rewrite_hyp" "->" "*" "in" "*" := do_with_hyp' ltac:(fun H => rewrite -> H in * ).
+Tactic Notation "rewrite_hyp" "<-" "*" "in" "*" := do_with_hyp' ltac:(fun H => rewrite <- H in * ).
+Tactic Notation "rewrite_hyp" "?*" "in" "*" := repeat do_with_hyp' ltac:(fun H => rewrite !H in * ).
+Tactic Notation "rewrite_hyp" "->" "?*" "in" "*" := repeat do_with_hyp' ltac:(fun H => rewrite -> !H in * ).
+Tactic Notation "rewrite_hyp" "<-" "?*" "in" "*" := repeat do_with_hyp' ltac:(fun H => rewrite <- !H in * ).
+Tactic Notation "rewrite_hyp" "!*" "in" "*" := progress rewrite_hyp ?* in *.
+Tactic Notation "rewrite_hyp" "->" "!*" "in" "*" := progress rewrite_hyp -> ?* in *.
+Tactic Notation "rewrite_hyp" "<-" "!*" "in" "*" := progress rewrite_hyp <- ?* in *.

@@ -1,5 +1,5 @@
 Require Import Coq.Classes.Morphisms. Require Coq.Setoids.Setoid.
-Require Import Crypto.Algebra Crypto.Tactics.Nsatz.
+Require Import Crypto.Algebra Crypto.Algebra.
 Require Import Crypto.Util.Notations.
 
 Generalizable All Variables.
@@ -29,6 +29,15 @@ Section Pre.
 
   Ltac use_sqrt_a := destruct a_square as [sqrt_a a_square']; rewrite <-a_square' in *.
 
+  Lemma onCurve_subst : forall x1 x2 y1 y2, and (eq x1 y1) (eq x2 y2) -> onCurve (x1, x2) ->
+    onCurve (y1, y2).
+  Proof.
+    unfold onCurve.
+    intros ? ? ? ? [eq_1 eq_2] ?.
+    rewrite eq_1, eq_2 in *.
+    assumption.
+  Qed.
+
   Lemma edwardsAddComplete' x1 y1 x2 y2 :
     onCurve (pair x1 y1) ->
     onCurve (pair x2 y2) ->
@@ -41,24 +50,25 @@ Section Pre.
         => apply d_nonsquare with (sqrt_d:= (f (sqrt_a * x1) (d * x1 * x2 * y1 * y2 * y1))
                                            /(f (sqrt_a * x2) y2   *   x1 * y1           ))
       | _ => apply a_nonzero
-      end; field_algebra; auto using Ring.opp_nonzero_nonzero; nsatz_contradict.
+      end; super_nsatz.
   Qed.
 
   Lemma edwardsAddCompletePlus x1 y1 x2 y2 :
     onCurve (x1, y1) -> onCurve (x2, y2) -> (1 + d*x1*x2*y1*y2) <> 0.
-  Proof. intros H1 H2 ?. apply (edwardsAddComplete' _ _ _ _ H1 H2); field_algebra. Qed.
+  Proof. intros H1 H2 ?. apply (edwardsAddComplete' _ _ _ _ H1 H2); super_nsatz. Qed.
 
   Lemma edwardsAddCompleteMinus x1 y1 x2 y2 :
     onCurve (x1, y1) -> onCurve (x2, y2) -> (1 - d*x1*x2*y1*y2) <> 0.
-  Proof. intros H1 H2 ?. apply (edwardsAddComplete' _ _ _ _ H1 H2); field_algebra. Qed.
+  Proof. intros H1 H2 ?. apply (edwardsAddComplete' _ _ _ _ H1 H2); super_nsatz. Qed.
 
-  Lemma zeroOnCurve : onCurve (0, 1). Proof. simpl. field_algebra. Qed.
+  Lemma zeroOnCurve : onCurve (0, 1). Proof. simpl. super_nsatz. Qed.
 
   Lemma unifiedAdd'_onCurve : forall P1 P2,
     onCurve P1 -> onCurve P2 -> onCurve (unifiedAdd' P1 P2).
   Proof.
-    unfold onCurve, unifiedAdd'; intros [x1 y1] [x2 y2] H1 H2.
-    field_algebra; auto using edwardsAddCompleteMinus, edwardsAddCompletePlus.
+    unfold onCurve, unifiedAdd'; intros [x1 y1] [x2 y2] ? ?.
+    common_denominator; [ | auto using edwardsAddCompleteMinus, edwardsAddCompletePlus..].
+    nsatz.
   Qed.
 End Pre.
 
@@ -90,14 +100,16 @@ Section RespectsFieldHomomorphism.
        d_ok
        : field_homomorphism.
 
-  Lemma morphism_unidiedAdd' : forall P Q:F*F,
+  Lemma morphism_unifiedAdd' : forall P Q:F*F,
+    (~ EQ (ADD ONE (MUL (MUL (MUL (MUL D (fst P)) (fst Q)) (snd P)) (snd Q))) ZERO) ->
+    (~ EQ (SUB ONE (MUL (MUL (MUL (MUL D (fst P)) (fst Q)) (snd P)) (snd Q))) ZERO) ->
     eqp
       (phip (unifiedAdd'(F:=F)(one:=ONE)(add:=ADD)(sub:=SUB)(mul:=MUL)(div:=DIV)(a:=A)(d:=D) P Q))
             (unifiedAdd'(F:=K)(one:=one)(add:=add)(sub:=sub)(mul:=mul)(div:=div)(a:=a)(d:=d) (phip P) (phip Q)).
   Proof.
-    intros [x1 y1] [x2 y2].
+    intros [x1 y1] [x2 y2] Hnonzero1 Hnonzero2;
     cbv [unifiedAdd' phip eqp];
       apply conj;
-      (rewrite_strat topdown hints field_homomorphism); reflexivity.
+      (rewrite_strat topdown hints field_homomorphism); try assumption; reflexivity.
   Qed.
 End RespectsFieldHomomorphism.

@@ -21,13 +21,6 @@ Section ModularArithmeticPreliminaries.
     eapply UIP_dec, Z.eq_dec.
   Qed.
 
-  Lemma F_opp_spec : forall (a:F m), add a (opp a) = 0.
-    intros a.
-    pose (@opp_with_spec m) as H.
-    change (@opp m) with (proj1_sig H).
-    destruct H; eauto.
-  Qed.
-
   Lemma F_pow_spec : forall (a:F m),
       pow a 0%N = 1%F /\ forall x, pow a (1 + x)%N = mul a (pow a x).
   Proof.
@@ -85,7 +78,6 @@ end.
 
 Ltac Fdefn :=
   intros;
-  rewrite ?F_opp_spec;
   repeat match goal with [ x : F _ |- _ ] => destruct x end;
   try eq_remove_proofs;
   demod;
@@ -155,8 +147,11 @@ Section FandZ.
   Proof.
     repeat split; Fdefn; try apply F_eq_dec.
     { rewrite Z.add_0_r. auto. }
-    { rewrite <-Z.add_sub_swap, <-Z.add_sub_assoc, Z.sub_diag, Z.add_0_r. apply Z_mod_same_full. }
     { rewrite Z.mul_1_r. auto. }
+  Qed.
+
+  Lemma F_opp_spec : forall (a:F m), add a (opp a) = 0.
+    Fdefn.
   Qed.
 
   Lemma ZToField_0 : @ZToField m 0 = 0.
@@ -220,7 +215,7 @@ Section FandZ.
     reflexivity.
   Qed.
 
-  Lemma pow_nat_iter_op_correct: forall (x:F m) n, (nat_iter_op mul 1) (N.to_nat n) x = x^n.
+  Lemma pow_nat_iter_op_correct: forall (x:F m) n, (@nat_iter_op _ mul 1) (N.to_nat n) x = x^n.
   Proof.
     induction n using N.peano_ind;
       destruct (F_pow_spec x) as [pow_0 pow_succ];
@@ -270,7 +265,6 @@ Section FandZ.
       @ZToField m (x - y) = ZToField x - ZToField y.
   Proof.
     Fdefn.
-    apply sub_intersperse_modulus.
   Qed.
 
   (* Compatibility between inject and multiplication *)
@@ -412,13 +406,30 @@ Section RingModuloPre.
     Fdefn; rewrite <-Z.quot_rem'; trivial.
   Qed.
 
+  Lemma Z_mul_mod_modulus_r : forall x m, ((x*m) mod m = 0)%Z.
+    intros.
+    rewrite Zmult_mod, Z_mod_same_full.
+    rewrite Z.mul_0_r, Zmod_0_l.
+    reflexivity.
+  Qed.
+
+  Lemma Z_mod_opp_equiv : forall x y m,  x  mod m = (-y) mod m ->
+                                       (-x) mod m =   y  mod m.
+  Proof.
+    intros.
+    rewrite <-Z.sub_0_l.
+    rewrite Zminus_mod. rewrite H.
+    rewrite ?Zminus_mod_idemp_l, ?Zminus_mod_idemp_r; f_equal.
+    destruct y; auto.
+  Qed.
+
   Lemma Z_opp_opp : forall x : Z, (-(-x)) = x.
     destruct x; auto.
   Qed.
 
   Lemma Z_mod_opp : forall x m, (- x) mod m = (- (x mod m)) mod m.
     intros.
-    apply Pre.mod_opp_equiv.
+    apply Z_mod_opp_equiv.
     rewrite Z_opp_opp.
     demod; auto.
   Qed.
@@ -437,9 +448,7 @@ Section RingModuloPre.
   Proof.
     constructor; intros; try Fdefn; unfold id;
       try (apply gf_eq; simpl; intuition).
-
-    - apply sub_intersperse_modulus.
-    - rewrite Zminus_mod, Z_mod_same_full; simpl. apply Z_mod_opp.
+    - apply Z_mod_opp_equiv; rewrite Z_opp_opp, Zmod_mod; reflexivity.
     - rewrite (proj1 (Z.eqb_eq x y)); trivial.
   Qed.
 
@@ -620,6 +629,7 @@ Section VariousModulo.
   Lemma opp_ZToField : forall x : Z, opp (ZToField x) = @ZToField m (m - x).
   Proof.
     Fdefn.
+    rewrite Zminus_mod, Z_mod_same_full, (Z.sub_0_l (x mod m)); reflexivity.
   Qed.
 
   Lemma F_pow_2_r : forall x : F m, x^2 = x*x.

@@ -18,16 +18,6 @@ Local Open Scope equiv_scope.
 Generalizable All Variables.
 
 
-Local Ltac set_evars :=
-  repeat match goal with
-         | [ |- appcontext[?E] ] => is_evar E; let e := fresh "e" in set (e := E)
-         end.
-
-Local Ltac subst_evars :=
-  repeat match goal with
-         | [ e := ?E |- _ ] => is_evar E; subst e
-         end.
-
 Definition path_sig {A P} {RA:relation A} {Rsig:relation (@sig A P)}
            {HP:Proper (RA==>Basics.impl) P}
            (H:forall (x y:A) (px:P x) (py:P y), RA x y -> Rsig (exist _ x px) (exist _ y py))
@@ -116,7 +106,7 @@ Global Instance Proper_test_and_op {T scalar} `{Requiv:@Equivalence T RT}
       {op:T->T->T} {Proper_op:Proper (RT==>RT==>RT) op}
       {testbit:scalar->nat->bool} {s:scalar} {zero:T} :
   let R := fun x y => fst x = fst y /\ snd x === snd y in
-  Proper (R==>R) (test_and_op op testbit s zero).
+  Proper (R==>R) (@test_and_op _ op _ testbit s zero).
 Proof.
   unfold test_and_op; simpl; repeat intro; intuition;
   repeat match goal with
@@ -129,7 +119,7 @@ Lemma iter_op_proj {T T' S} `{T'Equiv:@Equivalence T' RT'}
       (proj : T -> T') (op : T -> T -> T) (op' : T' -> T' -> T') {Proper_op':Proper (RT' ==> RT' ==> RT') op'} x y z
       (testbit : S -> nat -> bool) (bound : nat)
       (op_proj : forall a b, proj (op a b) === op' (proj a) (proj b))
-  : proj (iter_op op x testbit y z bound) === iter_op op' (proj x) testbit y (proj z) bound.
+  : proj (@iter_op _ op x _ testbit y z bound) === @iter_op _ op' (proj x) _ testbit y (proj z) bound.
 Proof.
   unfold iter_op.
   lazymatch goal with

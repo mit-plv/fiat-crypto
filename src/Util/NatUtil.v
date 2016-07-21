@@ -1,7 +1,59 @@
+Require Coq.Logic.Eqdep_dec.
 Require Import Coq.Numbers.Natural.Peano.NPeano Coq.omega.Omega.
+Require Import Coq.micromega.Psatz.
 Import Nat.
 
+Create HintDb natsimplify discriminated.
+
+Hint Resolve mod_bound_pos plus_le_compat : arith.
+Hint Resolve (fun x y p q => proj1 (@Nat.mod_bound_pos x y p q)) (fun x y p q => proj2 (@Nat.mod_bound_pos x y p q)) : arith.
+
+Hint Rewrite @mod_small @mod_mod @mod_1_l @mod_1_r succ_pred using omega : natsimplify.
+
 Local Open Scope nat_scope.
+
+Lemma min_def {x y} : min x y = x - (x - y).
+Proof. apply Min.min_case_strong; omega. Qed.
+Lemma max_def {x y} : max x y = x + (y - x).
+Proof. apply Max.max_case_strong; omega. Qed.
+Ltac coq_omega := omega.
+Ltac handle_min_max_for_omega_gen min max :=
+  repeat match goal with
+         | [ H : context[min _ _] |- _ ] => rewrite !min_def in H || setoid_rewrite min_def in H
+         | [ H : context[max _ _] |- _ ] => rewrite !max_def in H || setoid_rewrite max_def in H
+         | [ |- context[min _ _] ] => rewrite !min_def || setoid_rewrite min_def
+         | [ |- context[max _ _] ] => rewrite !max_def || setoid_rewrite max_def
+         end.
+Ltac handle_min_max_for_omega_case_gen min max :=
+  repeat match goal with
+         | [ H : context[min _ _] |- _ ] => revert H
+         | [ H : context[max _ _] |- _ ] => revert H
+         | [ |- context[min _ _] ] => apply Min.min_case_strong
+         | [ |- context[max _ _] ] => apply Max.max_case_strong
+         end;
+  intros.
+Ltac handle_min_max_for_omega := handle_min_max_for_omega_gen min max.
+Ltac handle_min_max_for_omega_case := handle_min_max_for_omega_case_gen min max.
+(* In 8.4, Nat.min is a definition, so we need to unfold it *)
+Ltac handle_min_max_for_omega_compat_84 :=
+  let min := (eval cbv [min] in min) in
+  let max := (eval cbv [max] in max) in
+  handle_min_max_for_omega_gen min max.
+Ltac handle_min_max_for_omega_case_compat_84 :=
+  let min := (eval cbv [min] in min) in
+  let max := (eval cbv [max] in max) in
+  handle_min_max_for_omega_case_gen min max.
+Ltac omega_with_min_max :=
+  handle_min_max_for_omega;
+  try handle_min_max_for_omega_compat_84;
+  omega.
+Ltac omega_with_min_max_case :=
+  handle_min_max_for_omega_case;
+  try handle_min_max_for_omega_case_compat_84;
+  omega.
+Tactic Notation "omega" := coq_omega.
+Tactic Notation "omega" "*" := omega_with_min_max_case.
+Tactic Notation "omega" "**" := omega_with_min_max.
 
 Lemma div_minus : forall a b, b <> 0 -> (a + b) / b = a / b + 1.
 Proof.
@@ -10,6 +62,26 @@ Proof.
   rewrite H0 at 1.
   rewrite <- Nat.div_add by auto.
   reflexivity.
+Qed.
+
+Lemma div_add_l' : forall a b c, a <> 0 -> (a * b + c) / a = b + c / a.
+Proof.
+  intros; rewrite Nat.mul_comm; auto using div_add_l.
+Qed.
+
+Lemma mod_add_l : forall a b c, b <> 0 -> (a * b + c) mod b = c mod b.
+Proof.
+  intros; rewrite Nat.add_comm; auto using mod_add.
+Qed.
+
+Lemma mod_add_l' : forall a b c, b <> 0 -> (b * a + c) mod b = c mod b.
+Proof.
+  intros; rewrite Nat.mul_comm; auto using mod_add_l.
+Qed.
+
+Lemma mod_div_eq0 : forall a b, b <> 0 -> a mod b / b = 0.
+Proof.
+  intros; apply Nat.div_small, mod_bound_pos; omega.
 Qed.
 
 Lemma divide2_1mod4_nat : forall c x, c = x / 4 -> x mod 4 = 1 -> exists y, 2 * y = (x / 2).
@@ -78,3 +150,136 @@ Proof.
     [ rewrite (proj2 (@beq_nat_true_iff _ _) H); reflexivity
     | rewrite (proj2 (@beq_nat_false_iff _ _) H); reflexivity ].
 Qed.
+
+Lemma pow_nonzero a k : a <> 0 -> a ^ k <> 0.
+Proof.
+  intro; induction k; simpl; nia.
+Qed.
+
+Hint Resolve pow_nonzero : arith.
+
+Lemma S_pred_nonzero : forall a, (a > 0 -> S (pred a) = a)%nat.
+Proof.
+  destruct a; simpl; omega.
+Qed.
+
+Hint Rewrite S_pred_nonzero using omega : natsimplify.
+
+Lemma mod_same_eq a b : a <> 0 -> a = b -> b mod a = 0.
+Proof. intros; subst; apply mod_same; assumption. Qed.
+
+Hint Rewrite @mod_same_eq using omega : natsimplify.
+Hint Resolve mod_same_eq : arith.
+
+Lemma mod_mod_eq a b c : a <> 0 -> b = c mod a -> b mod a = b.
+Proof. intros; subst; autorewrite with natsimplify; reflexivity. Qed.
+
+Hint Rewrite @mod_mod_eq using (reflexivity || omega) : natsimplify.
+
+Local Arguments minus !_ !_.
+
+Lemma S_mod_full a b : a <> 0 -> (S b) mod a = if eq_nat_dec (S (b mod a)) a
+                                               then 0
+                                               else S (b mod a).
+Proof.
+  change (S b) with (1+b); intros.
+  pose proof (mod_bound_pos b a).
+  rewrite add_mod by assumption.
+  destruct (eq_nat_dec (S (b mod a)) a) as [H'|H'];
+    destruct a as [|[|a]]; autorewrite with natsimplify in *;
+      try congruence; try reflexivity.
+Qed.
+
+Hint Rewrite S_mod_full using omega : natsimplify.
+
+Lemma S_mod a b : a <> 0 -> S (b mod a) <> a -> (S b) mod a = S (b mod a).
+Proof.
+  intros; rewrite S_mod_full by assumption.
+  edestruct eq_nat_dec; omega.
+Qed.
+
+Hint Rewrite S_mod using (omega || autorewrite with natsimplify; omega) : natsimplify.
+
+Lemma eq_nat_dec_refl x : eq_nat_dec x x = left (Logic.eq_refl x).
+Proof.
+  edestruct eq_nat_dec; try congruence.
+  apply f_equal, Eqdep_dec.UIP_dec, eq_nat_dec.
+Qed.
+
+Hint Rewrite eq_nat_dec_refl : natsimplify.
+
+(** Helper to get around the lack of function extensionality *)
+Definition eq_nat_dec_right_val n m (pf0 : n <> m) : { pf | eq_nat_dec n m = right pf }.
+Proof.
+  revert dependent n; induction m; destruct n as [|n]; simpl;
+    intro pf0;
+    [ (exists pf0; exfalso; abstract congruence)
+    | eexists; reflexivity
+    | eexists; reflexivity
+    | ].
+  { specialize (IHm n).
+    destruct IHm as [? IHm]; [ omega | ].
+    eexists; rewrite IHm; reflexivity. }
+Qed.
+
+Lemma eq_nat_dec_S_n n : eq_nat_dec (S n) n = right (proj1_sig (@eq_nat_dec_right_val _ _ (@neq_succ_diag_l n))).
+Proof.
+  edestruct eq_nat_dec_right_val; assumption.
+Qed.
+
+Hint Rewrite eq_nat_dec_S_n : natsimplify.
+
+Lemma eq_nat_dec_n_S n : eq_nat_dec n (S n) = right (proj1_sig (@eq_nat_dec_right_val _ _ (n_Sn n))).
+Proof.
+  edestruct eq_nat_dec_right_val; assumption.
+Qed.
+
+Hint Rewrite eq_nat_dec_n_S : natsimplify.
+
+Hint Rewrite Max.max_0_l Max.max_0_r Max.max_idempotent Min.min_0_l Min.min_0_r Min.min_idempotent : natsimplify.
+
+(** Helper to get around the lack of function extensionality *)
+Definition le_dec_right_val n m (pf0 : ~n <= m) : { pf | le_dec n m = right pf }.
+Proof.
+  destruct (le_dec n m) eqn:Heq; [ | eexists; reflexivity ].
+  exfalso; clear Heq; apply pf0; assumption.
+Qed.
+
+(** Helper to get around the lack of function extensionality *)
+Definition lt_dec_right_val n m (pf0 : ~n < m) : { pf | lt_dec n m = right pf }
+  := @le_dec_right_val _ _ pf0.
+
+Lemma lt_dec_irrefl n : lt_dec n n = right (proj1_sig (@lt_dec_right_val _ _ (lt_irrefl n))).
+Proof. edestruct lt_dec_right_val; assumption. Qed.
+Hint Rewrite lt_dec_irrefl : natsimplify.
+
+Lemma not_lt_n_pred_n n : ~n < pred n.
+Proof. destruct n; simpl; omega. Qed.
+
+Lemma lt_dec_n_pred_n n : lt_dec n (pred n) = right (proj1_sig (@lt_dec_right_val _ _ (not_lt_n_pred_n n))).
+Proof. edestruct lt_dec_right_val; assumption. Qed.
+Hint Rewrite lt_dec_n_pred_n : natsimplify.
+
+Lemma le_dec_refl n : le_dec n n = left (le_refl n).
+Proof.
+  edestruct le_dec; try omega.
+  apply f_equal, le_unique.
+Qed.
+Hint Rewrite le_dec_refl : natsimplify.
+
+Lemma le_dec_pred_l n : le_dec (pred n) n = left (le_pred_l n).
+Proof.
+  edestruct le_dec; [ | destruct n; simpl in *; omega ].
+  apply f_equal, le_unique.
+Qed.
+Hint Rewrite le_dec_pred_l : natsimplify.
+
+Lemma le_pred_plus_same n : n <= pred (n + n).
+Proof. destruct n; simpl; omega. Qed.
+
+Lemma le_dec_pred_plus_same n : le_dec n (pred (n + n)) = left (le_pred_plus_same n).
+Proof.
+  edestruct le_dec; [ | destruct n; simpl in *; omega ].
+  apply f_equal, le_unique.
+Qed.
+Hint Rewrite le_dec_pred_plus_same : natsimplify.

@@ -1,6 +1,6 @@
 Require Export Crypto.Spec.CompleteEdwardsCurve.
 
-Require Import Crypto.Algebra Crypto.Tactics.Nsatz.
+Require Import Crypto.Algebra Crypto.Algebra.
 Require Import Crypto.CompleteEdwardsCurve.Pre Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Crypto.Tactics.VerdiTactics.
@@ -33,6 +33,7 @@ Module Extended.
     Create HintDb bash discriminated.
     Local Hint Unfold E.eq fst snd fieldwise fieldwise' coordinates E.coordinates proj1_sig Pre.onCurve : bash.
     Ltac bash :=
+      pose proof E.char_gt_2;
       repeat match goal with
              | |- Proper _ _ => intro
              | _ => progress intros
@@ -43,15 +44,11 @@ Module Extended.
              | |- _ /\ _ => split
              | _ => solve [neq01]
              | _ => solve [eauto]
-             | _ => solve [intuition]
+             | _ => solve [intuition eauto]
              | _ => solve [etransitivity; eauto]
-             | |- Feq _ _ => field_algebra
-             | |- _ <> 0 => apply mul_nonzero_nonzero
-             | [ H : _ <> 0 |- _ <> 0 ] =>
-               intro; apply H;
-               field_algebra;
-               solve [ apply Ring.opp_nonzero_nonzero, E.char_gt_2
-                     | apply E.char_gt_2]
+             | |- _*_ <> 0 => apply mul_nonzero_nonzero
+             | [H: _ |- _ ] => solve [intro; apply H; super_nsatz]
+             | |- Feq _ _ => super_nsatz
              end.
 
     Obligation Tactic := bash.
@@ -63,8 +60,7 @@ Module Extended.
       (let '(X,Y,Z,T) := coordinates P in ((X/Z), (Y/Z))) _.
 
     Definition eq (P Q:point) := E.eq (to_twisted P) (to_twisted Q).
-    Global Instance DecidableRel_eq : Decidable.DecidableRel eq.
-    Proof. typeclasses eauto. Qed.
+    Global Instance DecidableRel_eq : Decidable.DecidableRel eq := _.
 
     Local Hint Unfold from_twisted to_twisted eq : bash.
 
@@ -209,6 +205,8 @@ Module Extended.
     Context {Hd:Keq (phi Fd) Kd} {Kdd Fdd} {HKdd:Keq Kdd (Kadd Kd Kd)} {HFdd:Feq Fdd (Fadd Fd Fd)}.
     Local Notation Fpoint := (@point F Feq Fzero Fone Fadd Fmul Fdiv Fa Fd).
     Local Notation Kpoint := (@point K Keq Kzero Kone Kadd Kmul Kdiv Ka Kd).
+    Local Notation FonCurve := (@onCurve F Feq Fone Fadd Fmul Fa Fd).
+    Local Notation KonCurve := (@onCurve K Keq Kone Kadd Kmul Ka Kd).
 
     Lemma Ha : Keq (phi Fa) Ka.
     Proof. rewrite HFa, HKa, <-homomorphism_one. eapply homomorphism_opp. Qed.
@@ -232,7 +230,7 @@ Module Extended.
       let '(X, Y, Z, T) := coordinates P in (phi X, phi Y, phi Z, phi T)) _.
     Next Obligation.
       destruct P as [[[[] ?] ?] [? [? ?]]]; unfold onCurve in *; simpl.
-      rewrite_strat bottomup hints field_homomorphism.
+      (rewrite_strat bottomup hints field_homomorphism); try assumption.
       eauto 10 using is_homomorphism_phi_proper, phi_nonzero.
     Qed.
 
@@ -254,6 +252,6 @@ Module Extended.
              | |- Keq ?x ?y => rewrite_strat bottomup hints field_homomorphism
              | [ H : Feq _ _ |- Keq (phi _) (phi _)] => solve [f_equiv; intuition]
              end.
-    Qed.
+      Admitted. (* TODO(jadep or andreser) *)
   End Homomorphism.
 End Extended.

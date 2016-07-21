@@ -66,7 +66,7 @@ Qed.
 
 Lemma p_odd : Z.odd p = true.
 Proof.
-  pose proof (prime_odd_or_2 p prime_p).
+  pose proof (Z.prime_odd_or_2 p prime_p).
   destruct H; auto.
 Qed.
 
@@ -124,12 +124,12 @@ Proof.
   assert (b mod p <> 0) as b_nonzero. {
     intuition.
     rewrite <- Z.pow_2_r in a_square.
-    rewrite mod_exp_0 in a_square by prime_bound.
+    rewrite Z.mod_exp_0 in a_square by prime_bound.
     rewrite <- a_square in a_nonzero.
     auto.
   }
   pose proof (squared_fermat_little b b_nonzero).
-  rewrite mod_pow in * by prime_bound.
+  rewrite Z.mod_pow in * by prime_bound.
   rewrite <- a_square.
   rewrite Z.mod_mod; prime_bound.
 Qed.
@@ -172,10 +172,10 @@ Proof.
   intros.
   destruct (exists_primitive_root_power) as [y [in_ZPGroup_y [y_order gpow_y]]]; auto.
   destruct (gpow_y a a_range) as [j [j_range pow_y_j]]; clear gpow_y.
-  rewrite mod_pow in pow_a_x by prime_bound.
+  rewrite Z.mod_pow in pow_a_x by prime_bound.
   replace a with (a mod p) in pow_y_j by (apply Z.mod_small; omega).
   rewrite <- pow_y_j in pow_a_x.
-  rewrite <- mod_pow in pow_a_x by prime_bound.
+  rewrite <- Z.mod_pow in pow_a_x by prime_bound.
   rewrite <- Z.pow_mul_r in pow_a_x by omega.
   assert (p - 1 | j * x) as divide_mul_j_x. {
     rewrite <- phi_is_order in y_order.
@@ -193,13 +193,13 @@ Proof.
   rewrite <- Z_div_plus by omega.
   rewrite Z.mul_comm.
   rewrite x_id_inv in divide_mul_j_x; auto.
-  apply (divide_mul_div _ j 2) in divide_mul_j_x;
+  apply (Z.divide_mul_div _ j 2) in divide_mul_j_x;
     try (apply prime_pred_divide2 || prime_bound); auto.
   rewrite <- Zdivide_Zdiv_eq by (auto || omega).
   rewrite Zplus_diag_eq_mult_2.
   replace (a mod p) with a in pow_y_j by (symmetry; apply Z.mod_small; omega).
   rewrite Z_div_mult by omega; auto.
-  apply divide2_even_iff.
+  apply Z.divide2_even_iff.
   apply prime_pred_even.
 Qed.
 
@@ -281,7 +281,7 @@ Lemma div2_p_1mod4 : forall (p : Z) (prime_p : prime p) (neq_p_2: p <> 2),
   (p / 2) * 2 + 1 = p.
 Proof.
   intros.
-  destruct (prime_odd_or_2 p prime_p); intuition.
+  destruct (Z.prime_odd_or_2 p prime_p); intuition.
   rewrite <- Zdiv2_div.
   pose proof (Zdiv2_odd_eqn p); break_if; congruence || omega.
 Qed.

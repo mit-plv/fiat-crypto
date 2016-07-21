@@ -1,15 +1,19 @@
-Require Import Crypto.ModularArithmetic.ModularBaseSystem.
-Require Import Crypto.ModularArithmetic.ModularBaseSystemOpt.
+Require Import Crypto.BaseSystem.
+Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
 Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParams.
 Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParamProofs.
-Require Import Crypto.ModularArithmetic.PseudoMersenneBaseRep.
+Require Import Crypto.ModularArithmetic.ModularBaseSystem.
+Require Import Crypto.ModularArithmetic.ModularBaseSystemProofs.
+Require Import Crypto.ModularArithmetic.ModularBaseSystemOpt.
+Require Import Crypto.ModularArithmetic.ModularBaseSystemField.
 Require Import Coq.Lists.List Crypto.Util.ListUtil.
-Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
 Require Import Crypto.Tactics.VerdiTactics.
-Require Import Crypto.BaseSystem.
+Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.Tuple.
+Require Import Crypto.Util.Notations.
+Require Import Crypto.Algebra.
 Import ListNotations.
 Require Import Coq.ZArith.ZArith Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.ZArith.Znumtheory.
-Require Import Crypto.Util.Notations.
 Local Open Scope Z.
 
 (* BEGIN PseudoMersenneBaseParams instance construction. *)
@@ -22,10 +26,15 @@ Instance params25519 : PseudoMersenneBaseParams modulus.
   construct_params prime_modulus 10%nat 255.
 Defined.
 
-Definition mul2modulus := Eval compute in (construct_mul2modulus params25519).
+Definition fe25519 := Eval compute in (tuple Z (length limb_widths)).
+
+Definition mul2modulus : fe25519 :=
+  Eval compute in (from_list_default 0%Z (length limb_widths) (construct_mul2modulus params25519)).
 
 Instance subCoeff : SubtractionCoefficient modulus params25519.
-  apply Build_SubtractionCoefficient with (coeff := mul2modulus); cbv; auto.
+  apply Build_SubtractionCoefficient with (coeff := mul2modulus).
+  apply ZToField_eqmod.
+  cbv; reflexivity.
 Defined.
 
 Definition freezePreconditions25519 : freezePreconditions params25519 int_width.
@@ -38,94 +47,144 @@ Defined.
 (* Precompute k and c *)
 Definition k_ := Eval compute in k.
 Definition c_ := Eval compute in c.
+Definition k_subst : k = k_ := eq_refl k_.
 Definition c_subst : c = c_ := eq_refl c_.
 
-(* Makes Qed not take forever *)
-Opaque Z.shiftr Pos.iter Z.div2 Pos.div2 Pos.div2_up Pos.succ Z.land
-  Z.of_N Pos.land N.ldiff Pos.pred_N Pos.pred_double Z.opp Z.mul Pos.mul
-  Let_In digits Z.add Pos.add Z.pos_sub andb Z.eqb Z.ltb.
+Local Opaque Z.shiftr Z.shiftl Z.land Z.mul Z.add Z.sub Let_In.
 
-Local Open Scope nat_scope.
-Lemma GF25519Base25Point5_mul_reduce_formula :
-  forall f0 f1 f2 f3 f4 f5 f6 f7 f8 f9
-    g0 g1 g2 g3 g4 g5 g6 g7 g8 g9,
-    {ls | forall f g, rep [f0;f1;f2;f3;f4;f5;f6;f7;f8;f9] f
-                      -> rep [g0;g1;g2;g3;g4;g5;g6;g7;g8;g9] g
-                      -> rep ls (f*g)%F}.
+Definition app_5 (f : fe25519) (P : fe25519 -> fe25519) : fe25519.
 Proof.
-  eexists; intros ? ? Hf Hg.
-  pose proof (carry_mul_opt_rep k_ c_ (eq_refl k_) c_subst _ _ _ _ Hf Hg) as Hfg.
-  compute_formula.
-  exact Hfg.
-(*Time*) Defined.
+  cbv [fe25519] in *.
+  set (f0 := f).
+  repeat (let g := fresh "g" in destruct f as [f g]).
+  apply P.
+  apply f0.
+Defined.
 
-(* Uncomment this to see a pretty-printed mulmod
+Definition app_5_correct f (P : fe25519 -> fe25519) : app_5 f P = P f.
+Proof.
+  intros.
+  cbv [fe25519] in *.
+  repeat match goal with [p : (_*Z)%type |- _ ] => destruct p end.
+  reflexivity.
+Qed.
+
+Definition appify2 (op : fe25519 -> fe25519 -> fe25519) (f g : fe25519):= 
+  app_5 f (fun f0 => (app_5 g (fun g0 => op f0 g0))).
+
+Lemma appify2_correct : forall op f g, appify2 op f g = op f g.
+Proof.
+  intros. cbv [appify2].
+  etransitivity; apply app_5_correct.
+Qed.
+
+Definition add_sig (f g : fe25519) :
+  { fg : fe25519 | fg = add_opt f g}.
+Proof.
+  eexists.
+  rewrite <-appify2_correct.
+  cbv.
+  reflexivity.
+Defined.
+
+Definition add (f g : fe25519) : fe25519 :=
+  Eval cbv beta iota delta [proj1_sig add_sig] in
+  proj1_sig (add_sig f g).
+
+Definition add_correct (f g : fe25519)
+  : add f g = add_opt f g :=
+  Eval cbv beta iota delta [proj1_sig add_sig] in
+  proj2_sig (add_sig f g).
+
+Definition sub_sig (f g : fe25519) :
+  { fg : fe25519 | fg = sub_opt f g}.
+Proof.
+  eexists.
+  rewrite <-appify2_correct.
+  cbv.
+  reflexivity.
+Defined.
+
+Definition sub (f g : fe25519) : fe25519 :=
+  Eval cbv beta iota delta [proj1_sig sub_sig] in
+  proj1_sig (sub_sig f g).
+
+Definition sub_correct (f g : fe25519)
+  : sub f g = sub_opt f g :=
+  Eval cbv beta iota delta [proj1_sig sub_sig] in
+  proj2_sig (sub_sig f g).
+
+(* For multiplication, we add another layer of definition so that we can
+   rewrite under the [let] binders. *)
+Definition mul_simpl_sig (f g : fe25519) :
+  { fg : fe25519 | fg = carry_mul_opt k_ c_ f g}.
+Proof.
+  cbv [fe25519] in *.
+  repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
+  eexists.
+  cbv.
+  autorewrite with zsimplify.
+  reflexivity.
+Defined.
+
+Definition mul_simpl (f g : fe25519) : fe25519 :=
+  Eval cbv beta iota delta [proj1_sig mul_simpl_sig] in
+  proj1_sig (mul_simpl_sig f g).
+
+Definition mul_simpl_correct (f g : fe25519)
+  : mul_simpl f g = carry_mul_opt k_ c_ f g :=
+  Eval cbv beta iota delta [proj1_sig mul_simpl_sig] in
+  proj2_sig (mul_simpl_sig f g).
+
+Definition mul_sig (f g : fe25519) :
+  { fg : fe25519 | fg = carry_mul_opt k_ c_ f g}.
+Proof.
+  eexists.
+  rewrite <-mul_simpl_correct.
+  rewrite <-appify2_correct.
+  cbv.
+  reflexivity.
+Defined.
+
+Definition mul (f g : fe25519) : fe25519 :=
+  Eval cbv beta iota delta [proj1_sig mul_sig] in
+  proj1_sig (mul_sig f g).
+
+Definition mul_correct (f g : fe25519)
+  : mul f g = carry_mul_opt k_ c_ f g :=
+  Eval cbv beta iota delta [proj1_sig add_sig] in
+  proj2_sig (mul_sig f g).
+
+Import Morphisms.
+
+Lemma field25519 : @field fe25519 eq zero one opp add sub mul inv div.
+Proof.
+  pose proof (Equivalence_Reflexive : Reflexive eq).
+  eapply (Field.equivalent_operations_field (fieldR := modular_base_system_field k_ c_ k_subst c_subst)).
+  Grab Existential Variables.
+  + reflexivity.
+  + reflexivity.
+  + reflexivity.
+  + intros; rewrite mul_correct. reflexivity.
+  + intros; rewrite sub_correct; reflexivity.
+  + intros; rewrite add_correct; reflexivity.
+  + reflexivity.
+  + reflexivity.
+Qed.
+
+
+(*
 Local Transparent Let_In.
-Infix "<<" := Z.shiftr.
-Infix "&" := Z.land.
-Eval cbv beta iota delta [proj1_sig GF25519Base25Point5_mul_reduce_formula Let_In] in
-  fun f0 f1 f2 f3 f4 f5 f6 f7 f8 f9
-    g0 g1 g2 g3 g4 g5 g6 g7 g8 g9 => proj1_sig (
-    GF25519Base25Point5_mul_reduce_formula f0 f1 f2 f3 f4 f5 f6 f7 f8 f9
-                                           g0 g1 g2 g3 g4 g5 g6 g7 g8 g9).
-Local Opaque Let_In.
+Eval cbv iota beta delta [proj1_sig mul Let_In] in (fun f0 f1 f2 f3 f4  g0 g1 g2 g3 g4 => proj1_sig (mul (f4,f3,f2,f1,f0) (g4,g3,g2,g1,g0))).
 *)
 
-
-Extraction "/tmp/test.ml" GF25519Base25Point5_mul_reduce_formula.
-(* It's easy enough to use extraction to get the proper nice-looking formula.
- * More Ltac acrobatics will be needed to get out that formula for further use in Coq.
- * The easiest fix will be to make the proof script above fully automated,
- * using [abstract] to contain the proof part. *)
-
-
-Lemma GF25519Base25Point5_add_formula :
-  forall f0 f1 f2 f3 f4 f5 f6 f7 f8 f9
-    g0 g1 g2 g3 g4 g5 g6 g7 g8 g9,
-    {ls | forall f g, rep [f0;f1;f2;f3;f4;f5;f6;f7;f8;f9] f
-                   -> rep [g0;g1;g2;g3;g4;g5;g6;g7;g8;g9] g
-                   -> rep ls (f + g)%F}.
-Proof.
-  eexists.
-  intros f g Hf Hg.
-  pose proof (add_opt_rep _ _ _ _ Hf Hg) as Hfg.
-  compute_formula.
-  exact Hfg.
-Defined.
-
-Lemma GF25519Base25Point5_sub_formula :
-  forall f0 f1 f2 f3 f4 f5 f6 f7 f8 f9
-    g0 g1 g2 g3 g4 g5 g6 g7 g8 g9,
-    {ls | forall f g, rep [f0;f1;f2;f3;f4;f5;f6;f7;f8;f9] f
-                   -> rep [g0;g1;g2;g3;g4;g5;g6;g7;g8;g9] g
-                   -> rep ls (f - g)%F}.
-Proof.
-  eexists.
-  intros f g Hf Hg.
-  pose proof (sub_opt_rep _ _ _ _ Hf Hg) as Hfg.
-  compute_formula.
-  exact Hfg.
-Defined.
-
-Lemma GF25519Base25Point5_freeze_formula :
-  forall f0 f1 f2 f3 f4 f5 f6 f7 f8 f9,
-    {ls | forall x, rep [f0;f1;f2;f3;f4;f5;f6;f7;f8;f9] x
-                 -> rep ls x}.
-Proof.
-  eexists.
-  intros x Hf.
-  pose proof (freeze_opt_preserves_rep _ c_subst freezePreconditions25519 _ _ Hf) as Hfreeze_rep.
-  compute_formula.
-  exact Hfreeze_rep.
-Defined.
-
-(* Uncomment the below to see pretty-printed freeze function *)
-(*
-Set Printing Depth 1000.
-Local Transparent Let_In.
-Infix "<<" := Z.shiftr.
-Infix "&" := Z.land.
-Eval cbv beta iota delta [proj1_sig GF25519Base25Point5_freeze_formula Let_In] in
-  fun f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 => proj1_sig (
-    GF25519Base25Point5_freeze_formula f0 f1 f2 f3 f4 f5 f6 f7 f8 f9).
+(* TODO: This file should eventually contain the following operations:
+   toBytes
+   fromBytes
+   inv
+   opp
+   sub
+   zero
+   one
+   eq
 *)

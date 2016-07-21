@@ -24,29 +24,24 @@ Coercion FieldToZ {m} (a:F m) : BinNums.Z := proj1_sig a.
 
 Section FieldOperations.
   Context {m : BinInt.Z}.
-
-  (* Coercion without Context {m} --> non-uniform inheritance --> Anomalies *)
-  Let ZToFm := ZToField : BinNums.Z -> F m. Local Coercion ZToFm : BinNums.Z >-> F.
+  Definition zero : F m := ZToField 0.
+  Definition one : F m := ZToField 1.
 
   Definition add (a b:F m) : F m := ZToField (a + b).
   Definition mul (a b:F m) : F m := ZToField (a * b).
-
-  Definition opp_with_spec : { opp : F m -> F m
-                             | forall x, add x (opp x) = 0
-                             } := Pre.opp_impl.
-  Definition opp : F m -> F m := Eval hnf in proj1_sig opp_with_spec.
+  Definition opp (a : F m) : F m := ZToField (0 - a).
   Definition sub (a b:F m) : F m := add a (opp b).
 
   Definition inv_with_spec : { inv : F m -> F m
-                             | inv 0 = 0
+                             | inv zero = zero
                              /\ ( Znumtheory.prime m ->
-                                 forall (a:F m), a <> 0 -> mul a (inv a) = 1 )
+                                 forall a, a <> zero -> mul a (inv a) = one )
                              } := Pre.inv_impl.
   Definition inv : F m -> F m := Eval hnf in proj1_sig inv_with_spec.
   Definition div (a b:F m) : F m := mul a (inv b).
 
   Definition pow_with_spec : { pow : F m -> BinNums.N -> F m
-                             | forall a, pow a 0%N = 1
+                             | forall a, pow a 0%N = one
                              /\ forall x, pow a (1 + x)%N = mul a (pow a x)
                              } := Pre.pow_impl.
   Definition pow : F m -> BinNums.N -> F m := Eval hnf in proj1_sig pow_with_spec.
