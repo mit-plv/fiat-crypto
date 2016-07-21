@@ -2,9 +2,7 @@ MOD_NAME := Crypto
 SRC_DIR  := src
 
 .PHONY: coq clean update-_CoqProject cleanall install \
-	install-coqprime install-coqprime-8.4 install-coqprime-8.5 \
-	clean-coqprime clean-coqprime-8.4 clean-coqprime-8.5 \
-	coqprime coqprime-8.4 coqprime-8.5
+	install-coqprime clean-coqprime coqprime
 .DEFAULT_GOAL := coq
 
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g'
@@ -19,32 +17,19 @@ COQ_VERSION_PREFIX = The Coq Proof Assistant, version
 COQ_VERSION := $(firstword $(subst $(COQ_VERSION_PREFIX),,$(shell $(COQBIN)coqc --version 2>/dev/null)))
 
 ifneq ($(filter 8.4%,$(COQ_VERSION)),) # 8.4
-coqprime: coqprime-8.4
-clean-coqprime: clean-coqprime-8.4
-install-coqprime: install-coqprime-8.4
+COQPRIME_FOLDER := coqprime-8.4
 else
-coqprime: coqprime-8.5
-clean-coqprime: clean-coqprime-8.5
-install-coqprime: install-coqprime-8.5
+COQPRIME_FOLDER := coqprime
 endif
 
-coqprime-8.4:
-	$(MAKE) -C coqprime-8.4
+coqprime:
+	$(MAKE) -C $(COQPRIME_FOLDER)
 
-coqprime-8.5:
-	$(MAKE) -C coqprime
+clean-coqprime:
+	$(MAKE) -C $(COQPRIME_FOLDER) clean
 
-clean-coqprime-8.4:
-	$(MAKE) -C coqprime-8.4 clean
-
-clean-coqprime-8.5:
-	$(MAKE) -C coqprime clean
-
-install-coqprime-8.4:
-	$(MAKE) -C coqprime-8.4 install
-
-install-coqprime-8.5:
-	$(MAKE) -C coqprime install
+install-coqprime:
+	$(MAKE) -C $(COQPRIME_FOLDER) install
 
 Makefile.coq: Makefile _CoqProject
 	$(Q)$(COQBIN)coq_makefile -f _CoqProject -o Makefile.coq
@@ -54,7 +39,11 @@ clean: Makefile.coq
 	rm -f Makefile.coq
 
 cleanall: clean clean-coqprime
+	rm -f .dir-locals.el
 
 install: coq Makefile.coq
 	$(MAKE) install-coqprime
 	$(MAKE) -f Makefile.coq install
+
+.dir-locals.el::
+	sed 's:@COQPRIME@:$(COQPRIME_FOLDER):g' .dir-locals.el.in > $@
