@@ -1,60 +1,75 @@
 MOD_NAME := Crypto
 SRC_DIR  := src
+TIMED?=
+TIMECMD?=
+STDTIME?=/usr/bin/time -f "$* (real: %e, user: %U, sys: %S, mem: %M ko)"
+TIMER=$(if $(TIMED), $(STDTIME), $(TIMECMD))
+
+VERBOSE?=
+SHOW := $(if $(VERBOSE),@true "",@echo "")
+HIDE := $(if $(VERBOSE),,@)
 
 .PHONY: coq clean update-_CoqProject cleanall install \
-	install-coqprime install-coqprime-8.4 install-coqprime-8.5 \
-	clean-coqprime clean-coqprime-8.4 clean-coqprime-8.5 \
-	coqprime coqprime-8.4 coqprime-8.5
-.DEFAULT_GOAL := coq
+	install-coqprime clean-coqprime coqprime \
+	specific non-specific
 
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g'
 
-update-_CoqProject::
-	$(Q)(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-R Bedrock Bedrock'; (git ls-files 'src/*.v' 'Bedrock/*.v' | $(SORT_COQPROJECT))) > _CoqProject
-
-coq: coqprime Makefile.coq
-	$(MAKE) -f Makefile.coq
+FAST_TARGETS += archclean clean cleanall printenv clean-old update-_CoqProject Makefile.coq
+SUPER_FAST_TARGETS += update-_CoqProject Makefile.coq
 
 COQ_VERSION_PREFIX = The Coq Proof Assistant, version
-COQ_VERSION := $(firstword $(subst $(COQ_VERSION_PREFIX),,$(shell $(COQBIN)coqc --version 2>/dev/null)))
+COQ_VERSION := $(firstword $(subst $(COQ_VERSION_PREFIX),,$(shell "$(COQBIN)coqc" --version 2>/dev/null)))
 
 ifneq ($(filter 8.4%,$(COQ_VERSION)),) # 8.4
-coqprime: coqprime-8.4
-clean-coqprime: clean-coqprime-8.4
-install-coqprime: install-coqprime-8.4
-else
-coqprime: coqprime-8.5
-clean-coqprime: clean-coqprime-8.5
-install-coqprime: install-coqprime-8.5
+# Give us TIMED=1 in Coq 8.4
+COQC?=$(TIMER) "$(COQBIN)coqc"
 endif
 
-coqprime-8.4:
-	$(MAKE) -C coqprime-8.4
+-include Makefile.coq
 
-coqprime-8.5:
-	$(MAKE) -C coqprime
+.DEFAULT_GOAL := coq
 
-clean-coqprime-8.4:
-	$(MAKE) -C coqprime-8.4 clean
+update-_CoqProject::
+	$(SHOW)'ECHO > _CoqProject'
+	$(HIDE)(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-R Bedrock Bedrock'; (git ls-files 'src/*.v' 'Bedrock/*.v' | $(SORT_COQPROJECT))) > _CoqProject
 
-clean-coqprime-8.5:
-	$(MAKE) -C coqprime clean
+$(VOFILES): | coqprime
 
-install-coqprime-8.4:
-	$(MAKE) -C coqprime-8.4 install
+# add files to this list to prevent them from being built by default
+UNMADE_VOFILES :=
 
-install-coqprime-8.5:
-	$(MAKE) -C coqprime install
+COQ_VOFILES := $(filter-out $(UNMADE_VOFILES),$(VOFILES))
+SPECIFIC_VO := $(filter src/Specific/%,$(VOFILES))
+NON_SPECIFIC_VO := $(filter-out $(SPECIFIC_VO),$(VO_FILES))
+
+specific: $(SPECIFIC_VO) coqprime
+non-specific: $(NON_SPECIFIC_VO) coqprime
+coq: $(COQ_VOFILES) coqprime
+
+ifneq ($(filter 8.4%,$(COQ_VERSION)),) # 8.4
+COQPRIME_FOLDER := coqprime-8.4
+else
+COQPRIME_FOLDER := coqprime
+endif
+
+coqprime:
+	$(MAKE) -C $(COQPRIME_FOLDER)
+
+clean-coqprime:
+	$(MAKE) -C $(COQPRIME_FOLDER) clean
+
+install-coqprime:
+	$(MAKE) -C $(COQPRIME_FOLDER) install
 
 Makefile.coq: Makefile _CoqProject
-	$(Q)$(COQBIN)coq_makefile -f _CoqProject -o Makefile.coq
+	$(SHOW)'COQ_MAKEFILE -f _CoqProject > $@'
+	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject | sed s'|^\(-include.*\)$$|ifneq ($$(filter-out $(FAST_TARGETS),$$(MAKECMDGOALS)),)~\1~else~ifeq ($$(MAKECMDGOALS),)~\1~endif~endif|g' | tr '~' '\n' | sed s'/^clean:$$/clean-old::/g' | sed s'/^clean::$$/clean-old::/g' | sed s'/^Makefile: /Makefile-old: /g' > $@
 
-clean: Makefile.coq
-	$(MAKE) -f Makefile.coq clean
-	rm -f Makefile.coq
+cleanall:: clean clean-coqprime
+	rm -f .dir-locals.el
 
-cleanall: clean clean-coqprime
+install: coq install-coqprime
 
-install: coq Makefile.coq
-	$(MAKE) install-coqprime
-	$(MAKE) -f Makefile.coq install
+.dir-locals.el::
+	sed 's:@COQPRIME@:$(COQPRIME_FOLDER):g' .dir-locals.el.in > $@

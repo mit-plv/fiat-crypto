@@ -3,6 +3,8 @@ Require Import Coq.Logic.Eqdep_dec.
 Require Import Coq.Logic.EqdepFacts.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Coq.omega.Omega.
+Require Import Crypto.Util.NumTheoryUtil.
+Require Import Crypto.Tactics.VerdiTactics.
 
 Lemma Z_mod_mod x m : x mod m = (x mod m) mod m.
   symmetry.
@@ -20,29 +22,6 @@ Proof.
   f_equal.
   eapply UIP_dec, Z.eq_dec.
 Qed.
-
-Definition opp_impl:
-  forall {m : BinNums.Z},
-    {opp0 : {z : BinNums.Z | z = z mod m} -> {z : BinNums.Z | z = z mod m} |
-     forall x : {z : BinNums.Z | z = z mod m},
-       exist (fun z : BinNums.Z => z = z mod m)
-             ((proj1_sig x + proj1_sig (opp0 x)) mod m)
-             (Z_mod_mod (proj1_sig x + proj1_sig (opp0 x)) m) =
-       exist (fun z : BinNums.Z => z = z mod m) (0 mod m) (Z_mod_mod 0 m)}.
-  intro m.
-  refine (exist _ (fun x => exist _ ((m-proj1_sig x) mod m) _) _); intros.
-
-  destruct x;
-  simpl;
-  apply exist_reduced_eq;
-  rewrite Zdiv.Zplus_mod_idemp_r;
-  replace (x + (m - x)) with m by omega;
-  apply Zdiv.Z_mod_same_full.
-
-  Grab Existential Variables.
-  destruct x; simpl.
-  rewrite Zdiv.Zmod_mod; reflexivity.
-Defined.
 
 Definition mulmod m := fun a b => a * b mod m.
 Definition powmod_pos m := Pos.iter_op (mulmod m).
@@ -93,17 +72,18 @@ Proof.
   rewrite ?Zdiv.Zmult_mod_idemp_l, ?Zdiv.Zmult_mod_idemp_r; f_equal.
 Qed.
 
-Definition pow_impl_sig {m} : {z : Z | z = z mod m} -> N -> {z : Z | z = z mod m}.
-  intros a x.
-  exists (powmod m (proj1_sig a) x).
-  destruct x; [simpl; rewrite Zmod_mod; reflexivity|].
+Local Obligation Tactic := idtac.
+
+Program Definition pow_impl_sig {m} (a:{z : Z | z = z mod m}) (x:N) : {z : Z | z = z mod m}
+  := powmod m (proj1_sig a) x.
+Next Obligation.
+  intros; destruct x; [simpl; rewrite Zmod_mod; reflexivity|].
   rewrite N_pos_1plus.
   rewrite powmod_1plus.
   rewrite Zmod_mod; reflexivity.
-Defined.
+Qed.
 
-Definition pow_impl:
-   forall {m : BinNums.Z},
+Program Definition pow_impl {m} :
    {pow0
    : {z : BinNums.Z | z = z mod m} -> BinNums.N -> {z : BinNums.Z | z = z mod m}
    |
@@ -114,85 +94,23 @@ Definition pow_impl:
     pow0 a (1 + x)%N =
     exist (fun z : BinNums.Z => z = z mod m)
       ((proj1_sig a * proj1_sig (pow0 a x)) mod m)
-      (Z_mod_mod (proj1_sig a * proj1_sig (pow0 a x)) m))}.
-  intros m. exists pow_impl_sig.
-  split; [eauto using exist_reduced_eq|]; intros.
-  apply exist_reduced_eq.
-  rewrite powmod_1plus.
-  rewrite ?Zdiv.Zmult_mod_idemp_l, ?Zdiv.Zmult_mod_idemp_r; f_equal.
+      (Z_mod_mod (proj1_sig a * proj1_sig (pow0 a x)) m))} := pow_impl_sig.
+Next Obligation.
+  split; intros; apply exist_reduced_eq;
+    rewrite ?powmod_1plus, ?Zdiv.Zmult_mod_idemp_l, ?Zdiv.Zmult_mod_idemp_r; reflexivity.
 Qed.
 
-Lemma mul_mod_modulus_r : forall x m, (x*m) mod m = 0.
-  intros.
-  rewrite Zmult_mod, Z_mod_same_full.
-  rewrite Z.mul_0_r, Zmod_0_l.
-  reflexivity.
+Program Definition mod_inv_sig {m} (a:{z : Z | z = z mod m}) : {z : Z | z = z mod m} :=
+  let (a, _) := a in
+  match a return _ with
+  | 0%Z => 0 (* m = 2 *)
+  | _ => powmod m a (Z.to_N (m-2))
+  end.
+Next Obligation.
+  intros; break_match; rewrite ?powmod_Zpow_mod, ?Zmod_mod, ?Zmod_0_l; reflexivity.
 Qed.
 
-Lemma mod_opp_equiv : forall x y m,  x  mod m = (-y) mod m ->
-                              (-x) mod m =   y  mod m.
-Proof.
-  intros.
-  rewrite <-Z.sub_0_l.
-  rewrite Zminus_mod. rewrite H.
-  rewrite ?Zminus_mod_idemp_l, ?Zminus_mod_idemp_r; f_equal.
-  destruct y; auto.
-Qed.
-
-Definition mod_inv_eucl (a m:Z) : Z.
-  destruct (euclid a m). (* [euclid] is opaque. TODO: reimplement? *)
-  exact ((match a with Z0 => Z0 | _ =>
-                                 (match d with Z.pos _ =>  u | _ => -u end)
-          end) mod m).
-Defined.
-
-Lemma reduced_nonzero_pos:
-  forall a m : Z, m > 0 -> a <> 0 -> a = a mod m -> 0 < a.
-Proof.
-  intros a m m_pos a_nonzero pfa.
-  destruct (Z.eq_dec 0 m); subst_max; try omega.
-  pose proof (Z_mod_lt a m) as H.
-  destruct (Z.eq_dec 0 a); subst_max; try omega.
-Qed.
-
-Lemma mod_inv_eucl_correct : forall a m, a <> 0 -> a = a mod m -> prime m ->
-                                    ((mod_inv_eucl a m) * a) mod m = 1 mod m.
-Proof.
-  intros a m a_nonzero pfa prime_m.
-  pose proof (prime_ge_2 _ prime_m).
-  assert (0 < m) as m_pos by omega.
-  assert (0 <= m) as m_nonneg by omega.
-  assert (0 < a) as a_pos by (eapply reduced_nonzero_pos; eauto; omega).
-  unfold mod_inv_eucl.
-  destruct a as [|a'|a'] eqn:ha; try pose proof (Zlt_neg_0 a') as nnn; try omega; clear nnn.
-  rewrite<- ha in *.
-  lazymatch goal with [ |- context [euclid ?a ?b] ] => destruct (euclid a b) end.
-  lazymatch goal with [H: Zis_gcd _ _ _ |- _ ] => destruct H end.
-  rewrite Z.add_move_r in e.
-  destruct (Z_mod_lt a m ); try omega; rewrite <- pfa in *.
-  destruct (prime_divisors _ prime_m _ H1) as [Ha|[Hb|[Hc|Hd]]]; subst d.
-  + assert ((u * a) mod m = (-1 - v * m) mod m) as Hx by (f_equal; trivial).
-    rewrite Zminus_mod, mul_mod_modulus_r, Z.sub_0_r, Zmod_mod in Hx.
-    rewrite Zmult_mod_idemp_l.
-    rewrite <-Zopp_mult_distr_l.
-    eauto using mod_opp_equiv.
-  + rewrite Zmult_mod_idemp_l.
-    rewrite e, Zminus_mod, mul_mod_modulus_r, Z.sub_0_r, Zmod_mod; reflexivity.
-  + pose proof (Zdivide_le _ _ m_nonneg a_pos H0); omega.
-  + apply Zdivide_opp_l_rev in H0.
-    pose proof (Zdivide_le _ _ m_nonneg a_pos H0); omega.
-Qed.
-
-Lemma mod_inv_eucl_sig : forall {m}, {z : Z | z = z mod m} -> {z : Z | z = z mod m}.
-  intros m a.
-  exists (mod_inv_eucl (proj1_sig a) m).
-  destruct a; unfold mod_inv_eucl.
-  lazymatch goal with [ |- context [euclid ?a ?b] ] => destruct (euclid a b) end.
-  rewrite Zmod_mod; reflexivity.
-Defined.
-
-Definition inv_impl :
-   forall {m : BinNums.Z},
+Program Definition inv_impl {m : BinNums.Z} :
    {inv0 : {z : BinNums.Z | z = z mod m} -> {z : BinNums.Z | z = z mod m} |
    inv0 (exist (fun z : BinNums.Z => z = z mod m) (0 mod m) (Z_mod_mod 0 m)) =
    exist (fun z : BinNums.Z => z = z mod m) (0 mod m) (Z_mod_mod 0 m) /\
@@ -202,20 +120,21 @@ Definition inv_impl :
     exist (fun z : BinNums.Z => z = z mod m)
       ((proj1_sig a * proj1_sig (inv0 a)) mod m)
       (Z_mod_mod (proj1_sig a * proj1_sig (inv0 a)) m) =
-    exist (fun z : BinNums.Z => z = z mod m) (1 mod m) (Z_mod_mod 1 m))}.
-Proof.
-  intros m. exists mod_inv_eucl_sig. split; intros.
-  - simpl.
-    apply exist_reduced_eq; simpl.
-    unfold mod_inv_eucl; simpl.
-    lazymatch goal with [ |- context [euclid ?a ?b] ] => destruct (euclid a b) end.
-    auto.
-  -
-    destruct a.
-    cbv [proj1_sig mod_inv_eucl_sig].
-    rewrite Z.mul_comm.
-    eapply exist_reduced_eq.
-    rewrite mod_inv_eucl_correct; eauto.
-    intro; destruct H0.
-    eapply exist_reduced_eq. congruence.
+    exist (fun z : BinNums.Z => z = z mod m) (1 mod m) (Z_mod_mod 1 m))}
+     := mod_inv_sig.
+Next Obligation.
+  split.
+  { apply exist_reduced_eq; rewrite Zmod_0_l; reflexivity. }
+  intros Hm [a pfa] Ha'. apply exist_reduced_eq.
+  assert (Hm':0 <= m - 2) by (pose proof prime_ge_2 m Hm; omega).
+  assert (Ha:a mod m<>0) by (intro; apply Ha', exist_reduced_eq; congruence).
+  cbv [proj1_sig mod_inv_sig].
+  transitivity ((a*powmod m a (Z.to_N (m - 2))) mod m); [destruct a; congruence|].
+  rewrite !powmod_Zpow_mod.
+  rewrite Z2N.id by assumption.
+  rewrite Zmult_mod_idemp_r.
+  rewrite <-Z.pow_succ_r by assumption.
+  replace (Z.succ (m - 2)) with (m-1) by omega.
+  rewrite (Zmod_small 1) by omega.
+  apply (fermat_little m Hm a Ha).
 Qed.
