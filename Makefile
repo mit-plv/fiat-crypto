@@ -26,7 +26,13 @@ ifneq ($(filter 8.4%,$(COQ_VERSION)),) # 8.4
 COQC?=$(TIMER) "$(COQBIN)coqc"
 endif
 
+ifneq ($(filter-out $(SUPER_FAST_TARGETS),$(MAKECMDGOALS)),)
 -include Makefile.coq
+else
+ifeq ($(MAKECMDGOALS),)
+-include Makefile.coq
+endif
+endif
 
 .DEFAULT_GOAL := coq
 
@@ -64,7 +70,10 @@ install-coqprime:
 
 Makefile.coq: Makefile _CoqProject
 	$(SHOW)'COQ_MAKEFILE -f _CoqProject > $@'
-	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject | sed s'|^\(-include.*\)$$|ifneq ($$(filter-out $(FAST_TARGETS),$$(MAKECMDGOALS)),)~\1~else~ifeq ($$(MAKECMDGOALS),)~\1~endif~endif|g' | tr '~' '\n' | sed s'/^clean:$$/clean-old::/g' | sed s'/^clean::$$/clean-old::/g' | sed s'/^Makefile: /Makefile-old: /g' > $@
+	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject | sed s'|^\(-include.*\)$$|ifneq ($$(filter-out $(FAST_TARGETS),$$(MAKECMDGOALS)),)~\1~else~ifeq ($$(MAKECMDGOALS),)~\1~endif~endif|g' | tr '~' '\n' | sed s'/^clean:$$/clean::/g' | sed s'/^Makefile: /Makefile-old: /g' > $@
+
+clean::
+	rm -f Makefile.coq
 
 cleanall:: clean clean-coqprime
 	rm -f .dir-locals.el
