@@ -984,6 +984,22 @@ Module Z.
   Qed.
 
   Hint Rewrite Z.div_mul_skip Z.div_mul_skip' using lia : zsimplify.
+
+  Lemma div_small_neg x y : 0 < -x < y -> x / y = -1.
+  Proof.
+    intro H; rewrite <- (Z.opp_involutive x).
+    rewrite Z.div_opp_l_complete by lia.
+    generalize dependent (-x); clear x; intros x H.
+    autorewrite with zsimplify; break_match; lia.
+  Qed.
+  Hint Rewrite div_small_neg using lia : zsimplify.
+
+  Lemma div_sub_small x y z : 0 <= x < z -> 0 <= y < z -> (x - y) / z = if x <? y then -1 else 0.
+  Proof.
+    pose proof (Zlt_cases x y).
+    intros; break_match; autorewrite with zsimplify; lia.
+  Qed.
+  Hint Rewrite div_small_neg using lia : zsimplify.
 End Z.
 
 Module Export BoundsTactics.
