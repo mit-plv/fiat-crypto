@@ -132,7 +132,7 @@ Section Carries.
     change @nth_default with @nth_default_opt in *.
     change @set_nth with @set_nth_opt in *.
     lazymatch goal with
-    | [ |- _ = _ (if ?br then ?c else ?d) ]
+    | [ |- _ = ?f (if ?br then ?c else ?d) ]
       => let x := fresh "x" in let y := fresh "y" in evar (x:digits); evar (y:digits); transitivity (if br then x else y); subst x; subst y
     end.
     2:cbv zeta.
