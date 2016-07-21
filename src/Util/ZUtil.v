@@ -603,7 +603,7 @@ Module Z.
     Z.compare_to_sgn; rewrite Z.sgn_opp; simpl.
     pose proof (Zdiv_sgn n m) as H.
     pose proof (Z.sgn_spec (n / m)) as H'.
-    repeat first [ progress intuition
+    repeat first [ progress intuition auto
                  | progress simpl in *
                  | congruence
                  | lia
@@ -627,17 +627,32 @@ Module Z.
     apply Z_div_le; nia.
   Qed.
 
-  Lemma div_mul_diff a b c
+  Hint Resolve mul_div_le : zarith.
+
+  Lemma div_mul_diff_exact a b c
         (Ha : 0 <= a) (Hb : 0 < b) (Hc : 0 <= c)
-    : c * a / b - c * (a / b) <= c.
+    : c * a / b = c * (a / b) + (c * (a mod b)) / b.
   Proof.
-    pose proof (Z.mod_pos_bound a b).
-    etransitivity; [ | apply (mul_div_le c (a mod b) b); lia ].
     rewrite (Z_div_mod_eq a b) at 1 by lia.
     rewrite Z.mul_add_distr_l.
     replace (c * (b * (a / b))) with ((c * (a / b)) * b) by lia.
     rewrite Z.div_add_l by lia.
     lia.
+  Qed.
+
+  Lemma div_mul_diff_exact' a b c
+        (Ha : 0 <= a) (Hb : 0 < b) (Hc : 0 <= c)
+    : c * (a / b) = c * a / b - (c * (a mod b)) / b.
+  Proof.
+    rewrite div_mul_diff_exact by assumption; lia.
+  Qed.
+
+  Lemma div_mul_diff a b c
+        (Ha : 0 <= a) (Hb : 0 < b) (Hc : 0 <= c)
+    : c * a / b - c * (a / b) <= c.
+  Proof.
+    rewrite div_mul_diff_exact by assumption.
+    ring_simplify; auto with zarith.
   Qed.
 
   Lemma div_mul_le_le a b c
