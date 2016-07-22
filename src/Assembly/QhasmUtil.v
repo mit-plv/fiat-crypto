@@ -1,6 +1,7 @@
-Require Import ZArith NArith NPeano.
-Require Import QhasmCommon.
+Require Import Coq.ZArith.ZArith Coq.NArith.NArith Coq.Numbers.Natural.Peano.NPeano.
+Require Import Crypto.Assembly.QhasmCommon.
 Require Export Bedrock.Word.
+Require Export Crypto.Util.FixCoqMistakes.
 
 Delimit Scope nword_scope with w.
 Local Open Scope nword_scope.
@@ -14,12 +15,12 @@ Section Util.
 
   Definition high {k n: nat} (p: (k <= n)%nat) (w: word n): word k.
     refine (split1 k (n - k) (convS w _)).
-    abstract (replace n with (k + (n - k)) by omega; intuition).
+    abstract (replace n with (k + (n - k)) by omega; intuition auto with arith).
   Defined.
 
   Definition low {k n: nat} (p: (k <= n)%nat) (w: word n): word k.
     refine (split2 (n - k) k (convS w _)).
-    abstract (replace n with (k + (n - k)) by omega; intuition).
+    abstract (replace n with (k + (n - k)) by omega; intuition auto with zarith).
   Defined.
 
   Definition extend {k n: nat} (p: (k <= n)%nat) (w: word k): word n.
@@ -61,7 +62,7 @@ Section Util.
     refine match (le_dec m n) with
     | left p => (extend _ (low p x), extend _ (@high (n - m) n _ x))
     | right p => (extend _ x, _)
-    end; try abstract intuition.
+    end; try abstract intuition auto with zarith.
 
     replace (n - m) with O by abstract omega; exact WO.
   Defined.

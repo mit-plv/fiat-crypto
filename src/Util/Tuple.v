@@ -1,6 +1,7 @@
 Require Import Coq.Classes.Morphisms.
 Require Import Relation_Definitions.
 Require Import Crypto.Util.Decidable.
+Require Export Crypto.Util.FixCoqMistakes.
 
 Fixpoint tuple' T n : Type :=
   match n with

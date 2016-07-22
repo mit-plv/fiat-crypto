@@ -5,8 +5,9 @@ Require Import Crypto.CompleteEdwardsCurve.Pre.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Coq.Classes.Morphisms.
-Require Import Relation_Definitions.
+Require Import Coq.Relations.Relation_Definitions.
 Require Import Crypto.Util.Tuple Crypto.Util.Notations Crypto.Util.Tactics.
+Require Export Crypto.Util.FixCoqMistakes.
 
 Module E.
   Import Group ScalarMult Ring Field CompleteEdwardsCurve.E.
@@ -57,7 +58,7 @@ Module E.
       apply H;
       try common_denominator;
       [rewrite <-Hx; ring | ..].
-      
+
     Ltac bash_step :=
       let addCompletePlus := constr:(edwardsAddCompletePlus(char_gt_2:=char_gt_2)(d_nonsquare:=nonsquare_d)(a_square:=square_a)(a_nonzero:=nonzero_a)) in
       let addCompleteMinus := constr:(edwardsAddCompleteMinus(char_gt_2:=char_gt_2)(d_nonsquare:=nonsquare_d)(a_square:=square_a)(a_nonzero:=nonzero_a)) in

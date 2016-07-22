@@ -1,6 +1,7 @@
-Require Import QhasmCommon QhasmUtil State.
-Require Import Language QhasmEvalCommon.
-Require Import List Compare_dec Omega.
+Require Import Crypto.Assembly.QhasmCommon Crypto.Assembly.QhasmUtil Crypto.Assembly.State.
+Require Import Crypto.Assembly.Language Crypto.Assembly.QhasmEvalCommon.
+Require Import Coq.Lists.List Coq.Arith.Compare_dec Coq.omega.Omega.
+Require Export Crypto.Util.FixCoqMistakes.
 
 Module Pseudo <: Language.
   Import EvalUtil ListState.
@@ -96,7 +97,7 @@ Module Pseudo <: Language.
           else pseudoEval r st ))
 
     | PFunExp n p e =>
-      (fix funexpseudo (e': nat) (st': ListState w) := 
+      (fix funexpseudo (e': nat) (st': ListState w) :=
         match e' with
         | O => Some st'
         | S e'' =>
@@ -116,7 +117,7 @@ Module Pseudo <: Language.
   Definition indexize {n: nat} (x: nat): Index n.
     intros; destruct (le_dec n 0).
 
-    - exists 0; abstract intuition.
+    - exists 0; abstract intuition auto with zarith.
     - exists (x mod n)%nat; abstract (
         pose proof (Nat.mod_bound_pos x n); omega).
   Defined.
@@ -179,4 +180,3 @@ Module Pseudo <: Language.
 
   Close Scope pseudo_notations.
 End Pseudo.
-

@@ -1,4 +1,5 @@
 (** * Generic Tactics *)
+Require Export Crypto.Util.FixCoqMistakes.
 
 (** Test if a tactic succeeds, but always roll-back the results *)
 Tactic Notation "test" tactic3(tac) :=

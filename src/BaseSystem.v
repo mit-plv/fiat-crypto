@@ -3,6 +3,7 @@ Require Import Coq.ZArith.ZArith Coq.ZArith.Zdiv.
 Require Import Coq.omega.Omega Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
 Require Import Crypto.Util.ListUtil Crypto.Util.CaseUtil Crypto.Util.ZUtil.
 Require Import Crypto.Util.Notations.
+Require Export Crypto.Util.FixCoqMistakes.
 Import Nat.
 
 Local Open Scope Z.
@@ -140,11 +141,11 @@ Section PolynomialBaseCoefs.
     unfold bi.
     replace (Z.pos b1 ^ Z.of_nat (S i))
       with (Z.pos b1 * (Z.pos b1 ^ Z.of_nat i)) by
-      (rewrite Nat2Z.inj_succ; rewrite <- Z.pow_succ_r; intuition).
+      (rewrite Nat2Z.inj_succ; rewrite <- Z.pow_succ_r; intuition auto with zarith).
     replace (Z.pos b1 * Z.pos b1 ^ Z.of_nat i / Z.pos b1 ^ Z.of_nat i)
       with (Z.pos b1); auto.
     rewrite Z_div_mult_full; auto.
-    apply Z.pow_nonzero; intuition.
+    apply Z.pow_nonzero; intuition auto with lia.
   Qed.
 
   Lemma poly_base_good:

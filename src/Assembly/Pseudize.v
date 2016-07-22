@@ -1,7 +1,8 @@
 Require Export Bedrock.Word Bedrock.Nomega.
-Require Import NArith NPeano List Sumbool Compare_dec Omega.
-Require Import QhasmCommon QhasmEvalCommon QhasmUtil Pseudo State.
-Require Export Wordize Vectorize.
+Require Import Coq.NArith.NArith Coq.Numbers.Natural.Peano.NPeano Coq.Lists.List Coq.Bool.Sumbool Coq.Arith.Compare_dec Coq.omega.Omega.
+Require Import Crypto.Assembly.QhasmCommon Crypto.Assembly.QhasmEvalCommon Crypto.Assembly.QhasmUtil Crypto.Assembly.Pseudo Crypto.Assembly.State.
+Require Export Crypto.Assembly.Wordize Crypto.Assembly.Vectorize.
+Require Export Crypto.Util.FixCoqMistakes.
 
 Import Pseudo ListNotations StateCommon EvalUtil ListState.
 
@@ -34,8 +35,8 @@ Section Conversion.
     replace (k mod n) with k by (
       assert (n <> 0) as NZ by omega;
       pose proof (Nat.div_mod k n NZ);
-      replace (k mod n) with (k - n * (k / n)) by intuition;
-      rewrite (Nat.div_small k n); intuition).
+      replace (k mod n) with (k - n * (k / n)) by intuition auto with zarith;
+      rewrite (Nat.div_small k n); intuition auto with zarith).
 
     autounfold; simpl.
     destruct (nth_error x k); simpl; try inversion H0; intuition.
@@ -48,8 +49,8 @@ Section Conversion.
     intros; autounfold; simpl.
     unfold indexize;
       destruct (le_dec n 0), (le_dec len 0);
-      try replace n with 0 in * by intuition;
-      try replace len with 0 in * by intuition;
+      try replace n with 0 in * by intuition auto with zarith;
+      try replace len with 0 in * by intuition auto with zarith;
       autounfold; simpl in *; rewrite H;
       autounfold; simpl; rewrite NToWord_wordToN;
       intuition.
@@ -247,7 +248,7 @@ Section Conversion.
       simpl; intuition.
   Qed.
 
-  Definition pseudeq {w s} (n m: nat) (f: list (word w) -> list (word w)) : Type := 
+  Definition pseudeq {w s} (n m: nat) (f: list (word w) -> list (word w)) : Type :=
     {p: @Pseudo w s n m | forall x: (list (word w)),
       List.length x = n -> exists m' c',
       pseudoEval p (x, TripleM.empty N, None) = Some (f x, m', c')}.

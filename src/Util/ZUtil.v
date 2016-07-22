@@ -3,6 +3,7 @@ Require Import Coq.omega.Omega Coq.micromega.Psatz Coq.Numbers.Natural.Peano.NPe
 Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.Notations.
 Require Import Coq.Lists.List.
+Require Export Crypto.Util.FixCoqMistakes.
 Import Nat.
 Local Open Scope Z.
 
@@ -68,7 +69,7 @@ Module Z.
   Proof.
     intros; rewrite Z.gt_lt_iff.
     apply Z.div_str_pos.
-    split; intuition.
+    split; intuition auto with omega.
     apply Z.divide_pos_le; try (apply Zmod_divide); omega.
   Qed.
 
@@ -172,7 +173,7 @@ Module Z.
     rewrite div_mul' in divide_a by auto.
     replace (b * k) with (k * b) in divide_a by ring.
     replace (c * k * k0) with (k * (k0 * c)) in divide_a by ring.
-    rewrite Z.mul_cancel_l in divide_a by (intuition; rewrite H in divide_c_a; ring_simplify in divide_a; intuition).
+    rewrite Z.mul_cancel_l in divide_a by (intuition auto with nia; rewrite H in divide_c_a; ring_simplify in divide_a; intuition).
     eapply Zdivide_intro; eauto.
   Qed.
 
@@ -424,7 +425,7 @@ Module Z.
       omega.
     + intros.
       destruct (Z_lt_le_dec x n); try omega.
-      intuition.
+      intuition auto with zarith lia.
       left.
       rewrite shiftr_succ.
       replace (n - Z.succ x) with (Z.pred (n - x)) by omega.
@@ -563,7 +564,7 @@ Module Z.
     destruct (in_inv In_list); subst.
     + apply Z.le_max_l.
     + etransitivity.
-      - apply IHl; auto; intuition.
+      - apply IHl; auto; intuition auto with datatypes.
       - apply Z.le_max_r.
   Qed.
 
