@@ -5,6 +5,33 @@ Require Import SetoidTactics.
 Require Import ProofIrrelevance FunctionalExtensionality.
 Require Import QhasmUtil QhasmEvalCommon.
 
+(* Custom replace-at wrapper for 8.4pl3 compatibility *)
+Definition ltac_nat_from_int (x:BinInt.Z) : nat :=
+  match x with
+  | BinInt.Z0 => 0%nat
+  | BinInt.Zpos p => BinPos.nat_of_P p
+  | BinInt.Zneg p => 0%nat
+  end.
+
+Ltac nat_from_number N :=
+  match type of N with
+  | nat => constr:(N)
+  | BinInt.Z => let N' := constr:(ltac_nat_from_int N) in eval compute in N'
+  end.
+
+Tactic Notation "replace'" constr(x) "with" constr(y) "at" constr(n) "by" tactic(tac) :=
+  let tmp := fresh in (
+  match nat_from_number n with
+  | 1 => set (tmp := x) at 1
+  | 2 => set (tmp := x) at 2
+  | 3 => set (tmp := x) at 3
+  | 4 => set (tmp := x) at 4
+  | 5 => set (tmp := x) at 5
+  end;
+    replace tmp with y by (unfold tmp; tac);
+    clear tmp).
+
+(* Word-shattering tactic *)
 Ltac shatter a :=
   let H := fresh in
   pose proof (shatter_word a) as H; simpl in H;
@@ -310,7 +337,7 @@ Section Conversions.
     repeat rewrite NToWord_nat.
     rewrite N2Nat.inj_add.
     rewrite Npow2_nat.
-    replace (N.to_nat (&x))
+    replace' (N.to_nat (&x))
        with ((N.to_nat (&x) + pow2 n) - 1 * pow2 n)
          at 1 by omega.
     rewrite drop_sub; intuition.
@@ -513,10 +540,10 @@ Section SpecialFunctions.
   Proof.
     intros; symmetry.
 
-    replace a with (Word.split1 _ _ (Word.combine a b)) at 1
+    replace' a with (Word.split1 _ _ (Word.combine a b)) at 1
       by (apply Word.split1_combine).
 
-    replace b with (Word.split2 _ _ (Word.combine a b)) at 1
+    replace' b with (Word.split2 _ _ (Word.combine a b)) at 1
       by (apply Word.split2_combine).
 
     generalize (Word.combine a b); intro x; clear a b.

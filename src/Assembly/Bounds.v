@@ -53,7 +53,7 @@ Section Bounds.
     generalize (N.of_nat (k * pow2 n))%N; intro b.
     clear Heq Hk; clear x y k; clear n.
     replace a with (a - 0)%N by nomega.
-    replace (a - 0)%N with a at 1 by nomega.
+    replace' (a - 0)%N with a at 1 by nomega.
     apply N.sub_le_mono_l.
     apply N_ge_0.
   Qed.
@@ -90,7 +90,7 @@ Section Bounds.
     generalize (N.of_nat (k * pow2 n))%N; intro b.
     clear Heq Hk; clear x y k; clear n.
     replace a with (a - 0)%N by nomega.
-    replace (a - 0)%N with a at 1 by nomega.
+    replace' (a - 0)%N with a at 1 by nomega.
     apply N.sub_le_mono_l.
     apply N_ge_0.
   Qed.
@@ -267,7 +267,7 @@ Section Bounds.
       + apply N.lt_le_incl; assumption.
 
       + rewrite Npow2_succ.
-        replace (Npow2 n1) with (1 * Npow2 n1)%N at 1 by (apply N.mul_1_l).
+        replace' (Npow2 n1) with (1 * Npow2 n1)%N at 1 by (apply N.mul_1_l).
         apply N.mul_lt_mono_pos_r; try abstract (vm_compute; reflexivity).
         apply (N.lt_le_trans _ 1 _); try abstract (vm_compute; reflexivity).
         apply N.lt_le_incl; assumption.
