@@ -1046,6 +1046,16 @@ Module Z.
     auto with zarith.
   Qed.
   Hint Resolve mul_div_lt_by_le : zarith.
+
+  Definition pow_sub_r'
+    := fun a b c y H0 H1 => @Logic.eq_trans _ _ _ y (@Z.pow_sub_r a b c H0 H1).
+  Definition pow_sub_r'_sym
+    := fun a b c y p H0 H1 => Logic.eq_sym (@Logic.eq_trans _ y _ _ (Logic.eq_sym p) (@Z.pow_sub_r a b c H0 H1)).
+  Hint Resolve pow_sub_r' pow_sub_r'_sym Z.eq_le_incl : zarith.
+  Hint Resolve (fun b => f_equal (fun e => b ^ e)) (fun e => f_equal (fun b => b ^ e)) : zarith.
+  Definition mul_div_le'
+    := fun x y z w p H0 H1 H2 H3 => @Z.le_trans _ _ w (@Z.mul_div_le x y z H0 H1 H2 H3) p.
+  Hint Resolve mul_div_le' : zarith.
 End Z.
 
 Module Export BoundsTactics.
