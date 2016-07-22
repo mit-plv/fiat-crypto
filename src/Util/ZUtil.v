@@ -27,15 +27,24 @@ Hint Rewrite Z.div_mul Z.div_1_l Z.div_same Z.mod_same Z.div_small Z.mod_small Z
 (** "push" means transform [-f x] to [f (-x)]; "pull" means go the other way *)
 Create HintDb push_Zopp discriminated.
 Create HintDb pull_Zopp discriminated.
+Create HintDb push_Zpow discriminated.
+Create HintDb pull_Zpow discriminated.
+Create HintDb push_Zmul discriminated.
+Create HintDb pull_Zmul discriminated.
+Hint Extern 1 => autorewrite with push_Zopp in * : push_Zopp.
+Hint Extern 1 => autorewrite with pull_Zopp in * : pull_Zopp.
+Hint Extern 1 => autorewrite with push_Zpow in * : push_Zpow.
+Hint Extern 1 => autorewrite with pull_Zpow in * : pull_Zpow.
+Hint Extern 1 => autorewrite with push_Zmul in * : push_Zmul.
+Hint Extern 1 => autorewrite with pull_Zmul in * : pull_Zmul.
 Hint Rewrite Z.div_opp_l_nz Z.div_opp_l_z using lia : pull_Zopp.
 Hint Rewrite Z.mul_opp_l : pull_Zopp.
 Hint Rewrite <- Z.opp_add_distr : pull_Zopp.
 Hint Rewrite <- Z.div_opp_l_nz Z.div_opp_l_z using lia : push_Zopp.
 Hint Rewrite <- Z.mul_opp_l : push_Zopp.
 Hint Rewrite Z.opp_add_distr : push_Zopp.
-
-Create HintDb push_Zmul discriminated.
-Create HintDb pull_Zmul discriminated.
+Hint Rewrite Z.pow_sub_r Z.pow_div_l using lia : push_Zpow.
+Hint Rewrite <- Z.pow_sub_r Z.pow_div_l using lia : pull_Zpow.
 Hint Rewrite Z.mul_add_distr_l Z.mul_add_distr_r Z.mul_sub_distr_l Z.mul_sub_distr_r : push_Zmul.
 Hint Rewrite <- Z.mul_add_distr_l Z.mul_add_distr_r Z.mul_sub_distr_l Z.mul_sub_distr_r : pull_Zmul.
 
