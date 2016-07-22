@@ -9,22 +9,21 @@ Notation "& x" := (wordToN x) (at level 30) : nword_scope.
 Notation "** x" := (NToWord _ x) (at level 30) : nword_scope.
 
 Section Util.
-  Definition convS {A B: Set} (x: A) (H: A = B): B :=
-    eq_rect A (fun B0 : Set => B0) x B H.
+  Definition convS {n m} (x: word n) (H: n = m): word m.
+    refine (eq_rect _ (fun B0 : Set => B0) x _ _).
+    abstract (subst; intuition).
+  Defined.
 
   Definition low {k n: nat} (p: (k <= n)%nat) (w: word n): word k.
-    refine (split1 k (n - k) (convS w _)).
-    abstract (replace n with (k + (n - k)) by omega; intuition).
+    refine (split1 k (n - k) (convS w _)); abstract omega.
   Defined.
 
   Definition high {k n: nat} (p: (k <= n)%nat) (w: word n): word (n - k).
-    refine (split2 k (n - k) (convS w _)).
-    abstract (replace n with (k + (n - k)) by omega; intuition).
+    refine (split2 k (n - k) (convS w _)); abstract omega.
   Defined.
 
   Definition extend {k n: nat} (p: (k <= n)%nat) (w: word k): word n.
-    refine (convS (zext w (n - k)) _).
-    abstract (replace (k + (n - k)) with n by omega; intuition).
+    refine (convS (zext w (n - k)) _); abstract omega.
   Defined.
 
   Definition shiftr {n} (w: word n) (k: nat): word n.

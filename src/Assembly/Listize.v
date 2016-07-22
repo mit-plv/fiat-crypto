@@ -15,7 +15,7 @@ Section Listize.
     match n with
     | O => unit
     | 1 => A
-    | S m => (Tuple A m) * A
+    | S m => ((Tuple A m) * A)%type
     end.
 
   Lemma tupleToList: forall {A} (k: nat), Tuple A k -> list A.

@@ -28,6 +28,7 @@ Section Conversion.
       rewrite H in H0; inversion H0.
   Qed.
 
+  Set Printing Universes.
   Lemma pseudo_var: forall {w s n} b k x v m m' c c',
       (k < n)%nat -> m = m' -> c = c' -> Datatypes.length x = n
     -> nth_error x k = Some v
@@ -37,21 +38,29 @@ Section Conversion.
     intros until c'.
     intros B r0 r1 H H0; rewrite r0, r1.
 
-    autounfold; simpl; unfold indexize.
-    destruct (le_dec n 0); simpl. {
-      replace k with 0 in * by omega; autounfold; simpl in *.
+    autounfold; simpl; unfold indexize;
+      autounfold; unfold getList; simpl;
+      rewrite H.
+
+    destruct (Nat.eq_dec n n) as [C|C];
+      try (contradict C; reflexivity).
+
+    destruct (le_dec n 0).
+
+    - replace k with 0 in * by omega.
+      autounfold; simpl in *.
       rewrite H0; simpl; intuition.
-    }
 
-    replace (k mod n) with k by (
-      assert (n <> 0) as NZ by omega;
-      pose proof (Nat.div_mod k n NZ);
-      replace (k mod n) with (k - n * (k / n)) by intuition;
-      rewrite (Nat.div_small k n); intuition).
+    - autounfold; simpl.
+      replace (k mod n) with k.
 
-    autounfold; simpl.
-    destruct (nth_error x k); simpl; try inversion H0; intuition.
-    destruct (Nat.eq_dec _ n); intuition.
+      + rewrite H0; simpl; reflexivity.
+
+      + revert B; clear; intro B.
+        assert (n <> 0) as NZ by omega.
+        pose proof (Nat.div_mod k n NZ).
+        replace (k mod n) with (k - n * (k / n)) by omega.
+        rewrite (Nat.div_small k n); omega.
   Qed.
 
   Lemma pseudo_mem: forall {w s} n v m c x name len index,
@@ -60,25 +69,27 @@ Section Conversion.
     -> pseudoEval (@PMem w s n len (indexize name) (indexize index)) (x, m, c) = Some ([v], m, c).
   Proof.
     intros until index; intros H H0; autounfold; simpl.
-    unfold indexize;
-      destruct (le_dec n 0), (le_dec len 0);
-      try replace n with 0 in * by intuition;
-      try replace len with 0 in * by intuition;
-      autounfold; simpl in *; rewrite H0;
-      autounfold; simpl; rewrite NToWord_wordToN;
-      intuition; rewrite H;
-      destruct (Nat.eq_dec _ n); simpl in *;
-      try omega; intuition.
+    unfold indexize.
+    destruct (le_dec n 0), (le_dec len 0); try omega;
+      autounfold; unfold getList; simpl; rewrite H;
+      destruct (Nat.eq_dec n n) as [C|C];
+        try (contradict C; reflexivity);
+      try replace n with 0 in * by omega;
+      try replace len with 0 in * by omega;
+      simpl in H0; try rewrite H0; simpl;
+      try rewrite NToWord_wordToN;
+      reflexivity.
   Qed.
 
   Lemma pseudo_const: forall {w s n} x v m c,
       Datatypes.length x = n
     -> pseudoEval (@PConst w s n v) (x, m, c) = Some ([v], m, c).
   Proof.
-    intros;
-      unfold pseudoEval, ensureLength; autounfold;
-      simpl; rewrite H; intuition.
-    destruct (Nat.eq_dec _ n); simpl; intuition.
+    intros; unfold pseudoEval, ensureLength; autounfold; simpl.
+    rewrite H.
+    destruct (Nat.eq_dec n n) as [C|C];
+      try (contradict C; reflexivity);
+      reflexivity.
   Qed.
 
   Lemma pseudo_plus:
@@ -91,8 +102,10 @@ Section Conversion.
   Proof.
     intros until c1; intro H; simpl; rewrite H; simpl.
 
-    autounfold; simpl; apply eval_in_length in H;
-      destruct (Nat.eq_dec (Datatypes.length x) n);
+    autounfold; unfold getList; simpl;
+      apply eval_in_length in H.
+
+    destruct (Nat.eq_dec (Datatypes.length x) n);
       destruct (Nge_dec _ _);
       try rewrite NToWord_wordToN; simpl; intuition.
   Qed.
@@ -106,7 +119,7 @@ Section Conversion.
   Proof.
     intros until op; intros H H0; simpl; rewrite H0; simpl.
 
-    autounfold; induction op;
+    autounfold; unfold getList; induction op;
       try (contradict H; reflexivity);
       unfold evalIntOp; autounfold; simpl;
 
@@ -123,7 +136,9 @@ Section Conversion.
   Proof.
     intros.
     replace (out0 ^& out1) with (fst (evalIntOp IAnd out0 out1)).
-    - apply pseudo_bin; intuition; inversion H0.
+    - eapply pseudo_bin; try assumption.
+      intro Z; inversion Z.
+
     - unfold evalIntOp; simpl; intuition.
   Qed.
 
@@ -138,12 +153,15 @@ Section Conversion.
     intros until c; intro H; simpl; rewrite H; simpl.
     unfold addWithCarry, evalCarryOp.
 
-    autounfold; simpl; apply eval_in_length in H;
-      destruct (Nat.eq_dec (Datatypes.length x) n);
-      destruct (Nge_dec _ _);
-      destruct (overflows w
-        ((& out0)%w + (& out1)%w + (ind c)));
-      try rewrite NToWord_wordToN; simpl; intuition.
+    autounfold; unfold getList; simpl;
+      apply eval_in_length in H;
+      rewrite H;
+      destruct (Nat.eq_dec n n) as [C|C];
+        try (contradict C; reflexivity);
+      simpl.
+
+    destruct (Nge_dec _ _) as [g|g]; simpl;
+      repeat f_equal.
   Qed.
 
   Lemma pseudo_shiftr:
@@ -152,12 +170,12 @@ Section Conversion.
     -> pseudoEval (PShift n Shr k p) (x, m0, c0) =
         Some ([shiftr out k], m1, c1).
   Proof.
-    intros; simpl; rewrite H; autounfold; simpl.
-    rewrite wordize_shiftr; rewrite NToWord_wordToN; intuition.
+    intros; simpl; autounfold; unfold getList; simpl.
+    rewrite H; apply eval_in_length in H; rewrite H; simpl.
+    destruct (Nat.eq_dec n n) as [C|C];
+      try (contradict C; reflexivity).
 
-    apply eval_in_length in H;
-      destruct (Nat.eq_dec _ n);
-      intuition.
+    rewrite wordize_shiftr; rewrite NToWord_wordToN; intuition.
   Qed.
 
   Lemma pseudo_cons:
@@ -169,12 +187,11 @@ Section Conversion.
   Proof.
     intros until c2; intros H H0; simpl.
 
-    rewrite H; autounfold; simpl.
-    rewrite H0; autounfold; simpl; intuition.
-
-    apply eval_in_length in H;
-      destruct (Nat.eq_dec _ n);
-      intuition.
+    rewrite H; autounfold; unfold getList; simpl.
+    rewrite H0; apply eval_in_length in H0; rewrite H0.
+    destruct (Nat.eq_dec n n) as [C|C];
+      try (contradict C; reflexivity).
+    simpl; reflexivity.
   Qed.
 
   Lemma pseudo_let:
@@ -186,12 +203,11 @@ Section Conversion.
         Some (out1, m2, c2).
   Proof.
     intros; autounfold; simpl.
-    rewrite H; autounfold; simpl.
-    rewrite H0; autounfold; simpl; intuition.
-
-    apply eval_in_length in H;
-      destruct (Nat.eq_dec _ n);
-      intuition.
+    rewrite H; autounfold; unfold getList; simpl.
+    rewrite H0; apply eval_in_length in H; rewrite H.
+    destruct (Nat.eq_dec n n) as [C|C];
+      try (contradict C; reflexivity); simpl;
+      reflexivity.
   Qed.
 
   Lemma pseudo_let_var:
@@ -209,7 +225,7 @@ Section Conversion.
     assert (Datatypes.length input = n) as L by (
       eapply eval_in_length; eassumption).
 
-    rewrite app_nth2; try rewrite L; intuition.
+    rewrite app_nth2; try rewrite L; try omega.
     replace (n - n) with 0 by omega; simpl; intuition.
   Qed.
 
@@ -235,14 +251,16 @@ Section Conversion.
     -> pseudoEval (@PLet w s n 2 m (PDual n Mult p0) p1) (x, m0, c0) =
       Some (Let_In (out0 ^* out1) f, m2, c2).
   Proof.
-    intros until c2; intros H H0; simpl; rewrite H; autounfold; simpl.
+    intros until c2; intros H H0; simpl;
+      rewrite H; autounfold; unfold getList; simpl.
 
-    apply eval_in_length in H;
-      destruct (Nat.eq_dec _ n);
-      simpl; try rewrite H0; simpl; intuition.
+    apply eval_in_length in H; rewrite H.
+    destruct (Nat.eq_dec n n) as [C|C];
+      try (contradict C; reflexivity); simpl.
+    rewrite H0; unfold Let_In; simpl.
 
-    replace (nth n (x ++ _) _) with (out0 ^* out1); simpl; intuition.
-    rewrite app_nth2; try rewrite H; intuition.
+    replace (nth n (x ++ _) _) with (out0 ^* out1); try reflexivity.
+    rewrite app_nth2; try rewrite H; try omega.
     replace (n - n) with 0 by omega.
     simpl; intuition.
   Qed.
@@ -261,22 +279,34 @@ Section Conversion.
             Let_In (out0 ^* out1) (fun y =>
             f y x)), m2, c2).
   Proof.
-    intros until c2; intros H H0; simpl; rewrite H; autounfold; simpl.
+    intros until c2; intros H H0; simpl;
+      rewrite H; autounfold; unfold getList; simpl.
 
-    apply eval_in_length in H;
-      destruct (Nat.eq_dec _ n);
-      simpl; try rewrite H0; simpl; intuition.
+    apply eval_in_length in H; rewrite H.
+    destruct (Nat.eq_dec n n) as [C|C];
+      try (contradict C; reflexivity); simpl.
+    rewrite H0; unfold Let_In; simpl.
 
-    replace (nth n (x ++ _) _) with (out0 ^* out1); simpl; intuition.
-    replace (nth (S n) (x ++ _) _) with (multHigh out0 out1); simpl; intuition.
 
-    - rewrite app_nth2; try rewrite H; intuition.
+    replace (nth n (x ++ _) _) with (out0 ^* out1);
+      try replace (nth (S n) (x ++ _) _) with (multHigh out0 out1);
+      try reflexivity.
+
+    - rewrite app_nth2; try rewrite H; try omega.
       replace (S n - n) with 1 by omega.
       simpl; intuition.
 
-    - rewrite app_nth2; try rewrite H; intuition.
+    - rewrite app_nth2; try rewrite H; try omega.
       replace (n - n) with 0 by omega.
       simpl; intuition.
+  Qed.
+
+  Lemma nth_error_default: forall {T} k (lst: list T),
+    nth_error lst k = nth_default (@None T) (map (@Some T) lst) k.
+  Proof.
+    induction k, lst; intros; simpl;
+      try rewrite IHk; unfold nth_default;
+      simpl; try reflexivity.
   Qed.
 
   Lemma pseudo_mult_low:
@@ -294,9 +324,13 @@ Section Conversion.
 
     - rewrite app_length; rewrite H; simpl; reflexivity.
 
-    - rewrite <- nth_default_eq; unfold nth_default.
-      rewrite nth_error_app2; try rewrite H; intuition.
-      replace (n - n) with 0 by omega; simpl.
+    - rewrite nth_error_default.
+      rewrite nth_default_eq.
+      rewrite map_app.
+      repeat rewrite app_nth2;
+        try rewrite map_length;
+        rewrite H; try omega.
+      replace (n - n) with O by omega; simpl.
       reflexivity.
   Qed.
 
@@ -318,11 +352,15 @@ Section Conversion.
 
     - rewrite app_length; rewrite H; simpl; reflexivity.
 
-    - rewrite <- nth_default_eq; unfold nth_default.
-      repeat rewrite nth_error_app2; try rewrite H; intuition.
+    - rewrite nth_error_default.
+      rewrite nth_default_eq.
+      rewrite map_app.
+      repeat rewrite app_nth2;
+        try rewrite map_length;
+        rewrite H; try omega.
+      replace (S n - n) with 1 by omega.
       replace (n + 1 - n) with 1 by omega.
-      replace (S n - n) with 1 by omega; simpl.
-      reflexivity.
+      simpl; reflexivity.
   Qed.
 
   Lemma pseudo_if_left:
@@ -337,19 +375,34 @@ Section Conversion.
         Some (out0, m1, c1).
   Proof.
     intros until c2; intros L nn0 nn1 T H H0; simpl.
-    rewrite H, H0; autounfold; simpl.
-    rewrite <- L in nn0, nn1.
-    apply nth_error_Some in nn0.
-    apply nth_error_Some in nn1.
+    rewrite H, H0; autounfold; unfold getList; simpl.
+    rewrite L.
+    destruct (Nat.eq_dec n n) as [C|C];
+      try (contradict C; reflexivity); simpl.
+
+    assert (nth_error input i0 <> None) as cc0. {
+      rewrite nth_error_default, nth_default_eq.
+      rewrite nth_indep with (d' := Some (wzero w)).
+
+      - rewrite map_nth; intro Z; inversion Z.
+      - rewrite map_length, L; assumption.
+    }
+
+    assert (nth_error input i1 <> None) as cc1. {
+      rewrite nth_error_default, nth_default_eq.
+      rewrite nth_indep with (d' := Some (wzero w)).
+
+      - rewrite map_nth; intro Z; inversion Z.
+      - rewrite map_length, L; assumption.
+    }
 
     repeat rewrite <- nth_default_eq in T; unfold nth_default in T.
     induction (nth_error input i0),
-              (nth_error input i1),
-              (Nat.eq_dec _ n); simpl;
+              (nth_error input i1); simpl;
       try match goal with
       | [H: ?x <> ?x |- _] => contradict H; reflexivity
       end;
-      try rewrite T; intuition.
+      try rewrite T; try reflexivity.
   Qed.
 
   Lemma pseudo_if_right:
@@ -364,19 +417,34 @@ Section Conversion.
         Some (out1, m2, c2).
   Proof.
     intros until c2; intros L nn0 nn1 T H H0; simpl.
-    rewrite H, H0; autounfold; simpl.
-    rewrite <- L in nn0, nn1.
-    apply nth_error_Some in nn0.
-    apply nth_error_Some in nn1.
+    rewrite H, H0; autounfold; unfold getList; simpl.
+    rewrite L.
+    destruct (Nat.eq_dec n n) as [C|C];
+      try (contradict C; reflexivity); simpl.
+
+    assert (nth_error input i0 <> None) as cc0. {
+      rewrite nth_error_default, nth_default_eq.
+      rewrite nth_indep with (d' := Some (wzero w)).
+
+      - rewrite map_nth; intro Z; inversion Z.
+      - rewrite map_length, L; assumption.
+    }
+
+    assert (nth_error input i1 <> None) as cc1. {
+      rewrite nth_error_default, nth_default_eq.
+      rewrite nth_indep with (d' := Some (wzero w)).
+
+      - rewrite map_nth; intro Z; inversion Z.
+      - rewrite map_length, L; assumption.
+    }
 
     repeat rewrite <- nth_default_eq in T; unfold nth_default in T.
     induction (nth_error input i0),
-              (nth_error input i1),
-              (Nat.eq_dec _ n); simpl;
+              (nth_error input i1); simpl;
       try match goal with
       | [H: ?x <> ?x |- _] => contradict H; reflexivity
       end;
-      try rewrite T; intuition.
+      try rewrite T; try reflexivity.
   Qed.
 
   Lemma pseudo_mask:
@@ -405,8 +473,10 @@ Section Conversion.
           Some (setList (funexp f input e) st)}.
   Proof.
     intros until m0; intros m1 c0 c1 L H.
-    autounfold; simpl; autounfold; simpl.
-    destruct (Nat.eq_dec _ n); intuition.
+    autounfold; simpl; autounfold; unfold getList; simpl.
+    rewrite L.
+    destruct (Nat.eq_dec n n) as [C|C];
+      try (contradict C; reflexivity); simpl.
 
     induction e; eexists; simpl.
 
@@ -432,8 +502,9 @@ Section Conversion.
         Some (input, m, c).
   Proof.
     intros until c; intros H.
-    autounfold; simpl; autounfold; simpl.
-    destruct (Nat.eq_dec _ n); intuition.
+    autounfold; simpl; autounfold; unfold getList; simpl; rewrite H.
+    destruct (Nat.eq_dec n n) as [C|C];
+      try (contradict C; reflexivity); simpl; reflexivity.
   Qed.
 
   Lemma pseudo_funexp_S:
@@ -442,9 +513,10 @@ Section Conversion.
     -> pseudoEval (@PFunExp w s n p (S e)) (input, m, c) =
         omap (pseudoEval (@PFunExp w s n p e) (input, m, c)) (pseudoEval p).
   Proof.
-    intros until c; intro H.
-    simpl; autounfold; simpl.
-    destruct (Nat.eq_dec _ n); intuition.
+    intros until c; intros H.
+    autounfold; simpl; autounfold; unfold getList; simpl; rewrite H.
+    destruct (Nat.eq_dec n n) as [C|C];
+      try (contradict C; reflexivity); simpl; reflexivity.
   Qed.
 
   Lemma pseudo_funexp:
@@ -462,8 +534,9 @@ Section Conversion.
     induction e; intros.
 
     - rewrite pseudo_funexp_O; try assumption.
-      simpl in *; autounfold in He; simpl in He.
-      destruct (Nat.eq_dec (Datatypes.length input) n); intuition.
+      simpl in *; autounfold in He; unfold getList in He; simpl in He.
+      rewrite H in He; destruct (Nat.eq_dec n n) as [C|C];
+        try (contradict C; reflexivity).
       inversion He; subst.
       reflexivity.
 
@@ -481,7 +554,7 @@ Section Conversion.
       destruct Z as [a Z], Z as [b Z], Z as [c Z].
       replace (funexp f input (S e)) with (f (funexp f input e)) by (simpl; intuition).
 
-      erewrite <- Hf.
+      erewrite <- Hf with (x' := input').
 
       + rewrite (IHe _ a _ b _ c); try assumption.
         simpl; reflexivity.
@@ -566,7 +639,7 @@ Ltac pseudo_step :=
 
 Ltac pseudo_solve :=
   repeat eexists;
-  autounfold;
+  autounfold; unfold getList;
   list_destruct;
   repeat pseudo_step;
-  intuition.
+  try reflexivity.

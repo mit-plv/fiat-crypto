@@ -306,7 +306,7 @@ Ltac natize_iter :=
 
 Opaque Z.shiftr Z.shiftl Z.land Z.eqb.
 
-Ltac simpl' := cbn beta delta iota.
+Ltac simpl' := simpl.
 
 Ltac solve_nateq :=
   simpl'; standardize_nateq; simpl';

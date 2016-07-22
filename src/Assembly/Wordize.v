@@ -437,11 +437,13 @@ Section Masked.
       (g: forall x, (wordToN x < Npow2 (hd w masks))%N ->
                maskeq w (f (@wordToN w x)) (tl masks)):
         Curried (word w) (word w) (S m) n.
-    refine (fun x =>
+    intro x.
+    refine (
       match (Nge_dec (wordToN x) (Npow2 (hd w masks))) with
       | right p => proj1_sig (g x p)
       | left _ => proj1_sig (g (wzero _) _)
-      end); abstract (rewrite wordToN_zero; apply Npow2_gt0).
+      end).
+    abstract (intros; rewrite wordToN_zero; apply Npow2_gt0).
   Defined.
 
   Lemma nth_tl: forall {T k} (x: list T) d, nth k (tl x) d = nth (S k) x d.
@@ -700,6 +702,8 @@ Transparent maskeq_kill_arg maskeq_let_const maskeq_debool_ltb
             maskeq_debool_eqb maskeq_debool_andb maskeq_cut_let
             maskeq_break_cons maskeq_kill_arg''.
 
+Opaque Let_In.
+
 Ltac wordize_iter :=
   match goal with
   | [ |- context[@NToWord _ 0%N] ] =>
@@ -724,7 +728,7 @@ Ltac wordize_iter :=
     rewrite NToWord_wordToN
   end.
 
-Ltac simpl' := cbn beta delta iota.
+Ltac simpl' := simpl.
 
 Ltac wordize_intro := repeat eexists; intros.
 
