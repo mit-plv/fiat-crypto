@@ -10,6 +10,7 @@ Require Import Coq.ZArith.BinInt Coq.NArith.BinNat Coq.ZArith.ZArith Coq.ZArith.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Crypto.Util.NumTheoryUtil Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tactics.
+Require Export Crypto.Util.FixCoqMistakes.
 Require Crypto.Algebra.
 
 Existing Class prime.

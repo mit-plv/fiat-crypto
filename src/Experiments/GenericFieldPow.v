@@ -1,5 +1,6 @@
 Require Import Coq.setoid_ring.Cring.
 Require Import Coq.omega.Omega.
+Require Export Crypto.Util.FixCoqMistakes.
 Generalizable All Variables.
 
 

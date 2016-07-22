@@ -4,6 +4,7 @@ Require Import Coq.Lists.List.
 Require Import Crypto.Util.ListUtil Crypto.Util.ZUtil Crypto.Util.NatUtil.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.ModularArithmetic.Pow2Base Crypto.BaseSystemProofs.
+Require Export Crypto.Util.FixCoqMistakes.
 Require Crypto.BaseSystem.
 Local Open Scope Z_scope.
 
@@ -784,7 +785,7 @@ Section carrying.
   (* TODO : move? *)
   Lemma make_chain_lt : forall x i : nat, In i (make_chain x) -> (i < x)%nat.
   Proof.
-    induction x; simpl; intuition.
+    induction x; simpl; intuition auto with arith lia.
   Qed.
 
   Lemma nth_default_carry_gen_full fc fi d i n us

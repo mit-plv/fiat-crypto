@@ -3,6 +3,7 @@ Require Import Coq.omega.Omega Coq.micromega.Psatz Coq.Numbers.Natural.Peano.NPe
 Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.Notations.
 Require Import Coq.Lists.List.
+Require Export Crypto.Util.FixCoqMistakes.
 Import Nat.
 Local Open Scope Z.
 
@@ -27,24 +28,15 @@ Hint Rewrite Z.div_mul Z.div_1_l Z.div_same Z.mod_same Z.div_small Z.mod_small Z
 (** "push" means transform [-f x] to [f (-x)]; "pull" means go the other way *)
 Create HintDb push_Zopp discriminated.
 Create HintDb pull_Zopp discriminated.
-Create HintDb push_Zpow discriminated.
-Create HintDb pull_Zpow discriminated.
-Create HintDb push_Zmul discriminated.
-Create HintDb pull_Zmul discriminated.
-Hint Extern 1 => autorewrite with push_Zopp in * : push_Zopp.
-Hint Extern 1 => autorewrite with pull_Zopp in * : pull_Zopp.
-Hint Extern 1 => autorewrite with push_Zpow in * : push_Zpow.
-Hint Extern 1 => autorewrite with pull_Zpow in * : pull_Zpow.
-Hint Extern 1 => autorewrite with push_Zmul in * : push_Zmul.
-Hint Extern 1 => autorewrite with pull_Zmul in * : pull_Zmul.
 Hint Rewrite Z.div_opp_l_nz Z.div_opp_l_z using lia : pull_Zopp.
 Hint Rewrite Z.mul_opp_l : pull_Zopp.
 Hint Rewrite <- Z.opp_add_distr : pull_Zopp.
 Hint Rewrite <- Z.div_opp_l_nz Z.div_opp_l_z using lia : push_Zopp.
 Hint Rewrite <- Z.mul_opp_l : push_Zopp.
 Hint Rewrite Z.opp_add_distr : push_Zopp.
-Hint Rewrite Z.pow_sub_r Z.pow_div_l using lia : push_Zpow.
-Hint Rewrite <- Z.pow_sub_r Z.pow_div_l using lia : pull_Zpow.
+
+Create HintDb push_Zmul discriminated.
+Create HintDb pull_Zmul discriminated.
 Hint Rewrite Z.mul_add_distr_l Z.mul_add_distr_r Z.mul_sub_distr_l Z.mul_sub_distr_r : push_Zmul.
 Hint Rewrite <- Z.mul_add_distr_l Z.mul_add_distr_r Z.mul_sub_distr_l Z.mul_sub_distr_r : pull_Zmul.
 
@@ -77,7 +69,7 @@ Module Z.
   Proof.
     intros; rewrite Z.gt_lt_iff.
     apply Z.div_str_pos.
-    split; intuition.
+    split; intuition auto with omega.
     apply Z.divide_pos_le; try (apply Zmod_divide); omega.
   Qed.
 
@@ -181,7 +173,7 @@ Module Z.
     rewrite div_mul' in divide_a by auto.
     replace (b * k) with (k * b) in divide_a by ring.
     replace (c * k * k0) with (k * (k0 * c)) in divide_a by ring.
-    rewrite Z.mul_cancel_l in divide_a by (intuition; rewrite H in divide_c_a; ring_simplify in divide_a; intuition).
+    rewrite Z.mul_cancel_l in divide_a by (intuition auto with nia; rewrite H in divide_c_a; ring_simplify in divide_a; intuition).
     eapply Zdivide_intro; eauto.
   Qed.
 
@@ -433,7 +425,7 @@ Module Z.
       omega.
     + intros.
       destruct (Z_lt_le_dec x n); try omega.
-      intuition.
+      intuition auto with zarith lia.
       left.
       rewrite shiftr_succ.
       replace (n - Z.succ x) with (Z.pred (n - x)) by omega.
@@ -572,7 +564,7 @@ Module Z.
     destruct (in_inv In_list); subst.
     + apply Z.le_max_l.
     + etransitivity.
-      - apply IHl; auto; intuition.
+      - apply IHl; auto; intuition auto with datatypes.
       - apply Z.le_max_r.
   Qed.
 

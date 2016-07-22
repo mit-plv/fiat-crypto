@@ -17,6 +17,7 @@ Require Import Crypto.Util.ListUtil Crypto.Util.CaseUtil Crypto.Util.ZUtil Crypt
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
+Require Export Crypto.Util.FixCoqMistakes.
 Local Open Scope Z_scope.
 
 Local Opaque add_to_nth carry_simple.
