@@ -14,14 +14,14 @@ Hint Extern 1 => lia : lia.
 Hint Extern 1 => lra : lra.
 Hint Extern 1 => nia : nia.
 Hint Extern 1 => omega : omega.
-Hint Resolve Z.log2_nonneg Z.div_small Z.mod_small Z.pow_neg_r Z.pow_0_l Z.pow_pos_nonneg Z.lt_le_incl Z.pow_nonzero : zarith.
+Hint Resolve Z.log2_nonneg Z.div_small Z.mod_small Z.pow_neg_r Z.pow_0_l Z.pow_pos_nonneg Z.lt_le_incl Z.pow_nonzero Z.div_le_upper_bound Z_div_exact_full_2 Z.div_same : zarith.
 Hint Resolve (fun a b H => proj1 (Z.mod_pos_bound a b H)) (fun a b H => proj2 (Z.mod_pos_bound a b H)) : zarith.
 
 (** Only hints that are always safe to apply (i.e., reversible), and
     which can reasonably be said to "simplify" the goal, should go in
     this database. *)
 Create HintDb zsimplify discriminated.
-Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r : zsimplify.
+Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r Z_mod_same_full : zsimplify.
 Hint Rewrite Z.div_mul Z.div_1_l Z.div_same Z.mod_same Z.div_small Z.mod_small Z.div_add Z.div_add_l Z.mod_add Z.div_0_l using lia : zsimplify.
 
 (** "push" means transform [-f x] to [f (-x)]; "pull" means go the other way *)
@@ -985,20 +985,45 @@ Module Z.
 
   Hint Rewrite Z.div_mul_skip Z.div_mul_skip' using lia : zsimplify.
 
-  Lemma div_small_neg x y : 0 < -x < y -> x / y = -1.
+  Lemma mod_eq_le_to_eq a b : 0 < a <= b -> a mod b = 0 -> a = b.
+  Proof.
+    intros H H'.
+    assert (a = b * (a / b)) by auto with zarith lia.
+    assert (a / b = 1) by nia.
+    nia.
+  Qed.
+  Hint Resolve mod_eq_le_to_eq : zarith.
+
+  Lemma div_same' a b : b <> 0 -> a = b -> a / b = 1.
+  Proof.
+    intros; subst; auto with zarith.
+  Qed.
+  Hint Resolve div_same' : zarith.
+
+  Lemma mod_eq_le_div_1 a b : 0 < a <= b -> a mod b = 0 -> a / b = 1.
+  Proof. auto with zarith. Qed.
+  Hint Resolve mod_eq_le_div_1 : zarith.
+  Hint Rewrite mod_eq_le_div_1 using lia : zsimplify.
+
+  Lemma mod_neq_0_le_to_neq a b : a mod b <> 0 -> a <> b.
+  Proof. repeat intro; subst; autorewrite with zsimplify in *; lia. Qed.
+  Hint Resolve mod_neq_0_le_to_neq : zarith.
+
+  Lemma div_small_neg x y : 0 < -x <= y -> x / y = -1.
   Proof.
     intro H; rewrite <- (Z.opp_involutive x).
     rewrite Z.div_opp_l_complete by lia.
     generalize dependent (-x); clear x; intros x H.
-    autorewrite with zsimplify; edestruct Z_zerop; lia.
+    pose proof (mod_neq_0_le_to_neq x y).
+    autorewrite with zsimplify; edestruct Z_zerop; autorewrite with zsimplify in *; lia.
   Qed.
   Hint Rewrite div_small_neg using lia : zsimplify.
 
-  Lemma div_sub_small x y z : 0 <= x < z -> 0 <= y < z -> (x - y) / z = if x <? y then -1 else 0.
+  Lemma div_sub_small x y z : 0 <= x < z -> 0 <= y <= z -> (x - y) / z = if x <? y then -1 else 0.
   Proof.
     pose proof (Zlt_cases x y).
     (destruct (x <? y) eqn:?);
-      intros; autorewrite with zsimplify; lia.
+      intros; autorewrite with zsimplify; try lia.
   Qed.
   Hint Rewrite div_sub_small using lia : zsimplify.
 
