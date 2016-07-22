@@ -22,7 +22,7 @@ Hint Resolve (fun a b H => proj1 (Z.mod_pos_bound a b H)) (fun a b H => proj2 (Z
     which can reasonably be said to "simplify" the goal, should go in
     this database. *)
 Create HintDb zsimplify discriminated.
-Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r Z_mod_same_full : zsimplify.
+Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r Z_mod_same_full Z.sub_simpl_r Z.sub_simpl_l : zsimplify.
 Hint Rewrite Z.div_mul Z.div_1_l Z.div_same Z.mod_same Z.div_small Z.mod_small Z.div_add Z.div_add_l Z.mod_add Z.div_0_l using lia : zsimplify.
 
 (** "push" means transform [-f x] to [f (-x)]; "pull" means go the other way *)
@@ -44,7 +44,7 @@ Hint Rewrite <- Z.opp_add_distr : pull_Zopp.
 Hint Rewrite <- Z.div_opp_l_nz Z.div_opp_l_z using lia : push_Zopp.
 Hint Rewrite <- Z.mul_opp_l : push_Zopp.
 Hint Rewrite Z.opp_add_distr : push_Zopp.
-Hint Rewrite Z.pow_sub_r Z.pow_div_l using lia : push_Zpow.
+Hint Rewrite Z.pow_sub_r Z.pow_div_l Z.pow_twice_r using lia : push_Zpow.
 Hint Rewrite <- Z.pow_sub_r Z.pow_div_l using lia : pull_Zpow.
 Hint Rewrite Z.mul_add_distr_l Z.mul_add_distr_r Z.mul_sub_distr_l Z.mul_sub_distr_r : push_Zmul.
 Hint Rewrite <- Z.mul_add_distr_l Z.mul_add_distr_r Z.mul_sub_distr_l Z.mul_sub_distr_r : pull_Zmul.
@@ -1056,6 +1056,14 @@ Module Z.
   Definition mul_div_le'
     := fun x y z w p H0 H1 H2 H3 => @Z.le_trans _ _ w (@Z.mul_div_le x y z H0 H1 H2 H3) p.
   Hint Resolve mul_div_le' : zarith.
+
+  Lemma two_p_two_eq_four : 2^(2) = 4.
+  Proof. reflexivity. Qed.
+  Hint Rewrite <- two_p_two_eq_four : push_Zpow.
+
+  Lemma two_sub_sub_inner_sub x y z : 2 * x - y - (x - z) = x - y + z.
+  Proof. clear; lia. Qed.
+  Hint Rewrite two_sub_sub_inner_sub : zsimplify.
 End Z.
 
 Module Export BoundsTactics.
