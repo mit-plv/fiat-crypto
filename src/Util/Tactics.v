@@ -300,3 +300,10 @@ Tactic Notation "rewrite_hyp" "<-" "?*" "in" "*" := repeat do_with_hyp' ltac:(fu
 Tactic Notation "rewrite_hyp" "!*" "in" "*" := progress rewrite_hyp ?* in *.
 Tactic Notation "rewrite_hyp" "->" "!*" "in" "*" := progress rewrite_hyp -> ?* in *.
 Tactic Notation "rewrite_hyp" "<-" "!*" "in" "*" := progress rewrite_hyp <- ?* in *.
+
+(** Execute [progress tac] on all subterms of the goal.  Useful for things like [ring_simplify]. *)
+Ltac tac_on_subterms tac :=
+  repeat match goal with
+         | [ |- context[?t] ]
+           => progress tac t
+         end.
