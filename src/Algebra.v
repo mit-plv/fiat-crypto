@@ -1307,6 +1307,14 @@ Ltac ring_simplify_subterms := tac_on_subterms ltac:(fun t => ring_simplify t).
 Ltac ring_simplify_subterms_in_all :=
   reverse_nondep; ring_simplify_subterms; intros.
 
+Create HintDb ring_simplify discriminated.
+Create HintDb ring_simplify_subterms discriminated.
+Create HintDb ring_simplify_subterms_in_all discriminated.
+Hint Extern 1 => progress ring_simplify : ring_simplify.
+Hint Extern 1 => progress ring_simplify_subterms : ring_simplify_subterms.
+Hint Extern 1 => progress ring_simplify_subterms_in_all : ring_simplify_subterms_in_all.
+
+
 Section Example.
   Context {F zero one opp add sub mul inv div} `{F_field:field F eq zero one opp add sub mul inv div}.
   Local Infix "+" := add. Local Infix "*" := mul. Local Infix "-" := sub. Local Infix "/" := div.
