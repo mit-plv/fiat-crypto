@@ -44,8 +44,8 @@ Hint Rewrite <- Z.opp_add_distr : pull_Zopp.
 Hint Rewrite <- Z.div_opp_l_nz Z.div_opp_l_z using lia : push_Zopp.
 Hint Rewrite <- Z.mul_opp_l : push_Zopp.
 Hint Rewrite Z.opp_add_distr : push_Zopp.
-Hint Rewrite Z.pow_sub_r Z.pow_div_l Z.pow_twice_r using lia : push_Zpow.
-Hint Rewrite <- Z.pow_sub_r Z.pow_div_l using lia : pull_Zpow.
+Hint Rewrite Z.pow_sub_r Z.pow_div_l Z.pow_twice_r Z.pow_mul_l Z.pow_add_r using lia : push_Zpow.
+Hint Rewrite <- Z.pow_sub_r Z.pow_div_l Z.pow_mul_l Z.pow_add_r Z.pow_twice_r using lia : pull_Zpow.
 Hint Rewrite Z.mul_add_distr_l Z.mul_add_distr_r Z.mul_sub_distr_l Z.mul_sub_distr_r : push_Zmul.
 Hint Rewrite <- Z.mul_add_distr_l Z.mul_add_distr_r Z.mul_sub_distr_l Z.mul_sub_distr_r : pull_Zmul.
 
