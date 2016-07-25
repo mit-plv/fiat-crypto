@@ -57,6 +57,10 @@ ifneq ($(filter 8.4%,$(COQ_VERSION)),) # 8.4
 COQPRIME_FOLDER := coqprime-8.4
 else
 COQPRIME_FOLDER := coqprime
+ifneq ($(filter 8.5%,$(COQ_VERSION)),) # 8.5
+else
+OTHERFLAGS ?= -w "-deprecated-appcontext -notation-overridden"
+endif
 endif
 
 coqprime:
