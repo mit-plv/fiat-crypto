@@ -264,7 +264,7 @@ Section CarryProofs.
       destruct limb_widths; distr_length; congruence).
     repeat break_if; repeat rewrite ?pred_mod, ?Nat.succ_pred,?Nat.mod_same in * by omega;
       try omega.
-    rewrite !nth_default_base by (auto || destruct (length limb_widths); auto). 
+    rewrite !nth_default_base by (auto || destruct (length limb_widths); auto).
     rewrite sum_firstn_0.
     autorewrite with zsimplify.
     match goal with |- appcontext[2 ^ ?a * ?b * 2 ^ ?c] =>
@@ -376,7 +376,7 @@ Section CanonicalizationProofs.
     length us = length limb_widths ->
     nth_default 0 (carry i us) n
     = if lt_dec n (length us)
-      then 
+      then
         if eq_nat_dec i (pred (length limb_widths))
         then (if eq_nat_dec n i
              then Z.pow2_mod (nth_default 0 us n) (log_cap n)
@@ -395,7 +395,7 @@ Section CanonicalizationProofs.
     intros.
     cbv [carry].
     break_if.
-    + subst i. autorewrite with push_nth_default natsimplify. 
+    + subst i. autorewrite with push_nth_default natsimplify.
       destruct (eq_nat_dec (length limb_widths) (length us)); congruence.
     + autorewrite with push_nth_default; reflexivity.
   Qed.
@@ -413,7 +413,7 @@ Section CanonicalizationProofs.
               if lt_dec i (length limb_widths)
               then
                  if lt_dec n i
-                 then 
+                 then
                     if eq_nat_dec n (pred i)
                     then Z.pow2_mod
                           (nth_default 0 (carry_sequence (make_chain (pred i)) us) n)
@@ -442,7 +442,7 @@ Section CanonicalizationProofs.
       apply nth_default_out_of_bounds. omega.
     + replace (make_chain (S i)) with (i :: make_chain i) by reflexivity.
       rewrite fold_right_cons.
-      autorewrite with push_nth_default natsimplify; 
+      autorewrite with push_nth_default natsimplify;
         rewrite ?Nat.pred_succ; fold (carry_sequence (make_chain i) us);
         rewrite length_carry_sequence; auto.
       repeat break_if; try omega; rewrite ?IHi by (omega || auto);
@@ -511,7 +511,7 @@ Section CanonicalizationProofs.
         fold (carry_sequence (make_chain i) us);  rewrite length_carry_sequence; auto.
       repeat (break_if; try omega);
         try solve [rewrite Z.pow2_mod_spec by auto; autorewrite with zsimplify; apply Z.mod_pos_bound; zero_bounds];
-        pose proof (IHi i us); pose proof (IHi n us); specialize_by assumption; specialize_by auto;
+        pose proof (IHi i us); pose proof (IHi n us); specialize_by assumption; specialize_by ltac:(auto with zarith);
         repeat break_if; try omega; pose proof c_pos; (split; try solve [zero_bounds]).
       (* TODO (jadep) : clean up/automate these leftover cases. *)
       - replace (2 * 2 ^ limb_widths [n]) with (2 ^ limb_widths [n] + 2 ^ limb_widths [n]) by ring.
