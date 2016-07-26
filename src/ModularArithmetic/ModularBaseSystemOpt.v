@@ -14,6 +14,7 @@ Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.ListUtil Crypto.Util.ZUtil Crypto.Util.NatUtil Crypto.Util.CaseUtil.
 Import ListNotations.
 Require Import Coq.ZArith.ZArith Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.ZArith.Znumtheory.
+Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Coq.QArith.QArith Coq.QArith.Qround.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Export Crypto.Util.FixCoqMistakes.

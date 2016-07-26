@@ -64,9 +64,10 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma pred_mod : forall m, (0 < m)%nat -> ((pred m) mod m)%nat = Init.Nat.pred m.
+Lemma pred_mod : forall m, (0 < m)%nat -> ((pred m) mod m)%nat = pred m. 
 Proof.
-  intros; apply Nat.mod_small; omega.
+  intros; apply Nat.mod_small.
+  destruct m; try omega; rewrite Nat.pred_succ; auto.
 Qed.
 
 Lemma div_add_l' : forall a b c, a <> 0 -> (a * b + c) / a = b + c / a.

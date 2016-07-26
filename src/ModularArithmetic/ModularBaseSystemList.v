@@ -1,4 +1,5 @@
 Require Import Coq.ZArith.Zpower Coq.ZArith.ZArith.
+Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Coq.Lists.List.
 Require Import Crypto.Util.ListUtil Crypto.Util.CaseUtil Crypto.Util.ZUtil.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.

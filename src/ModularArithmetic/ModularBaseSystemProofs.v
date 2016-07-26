@@ -264,14 +264,14 @@ Section CarryProofs.
       destruct limb_widths; distr_length; congruence).
     repeat break_if; repeat rewrite ?pred_mod, ?Nat.succ_pred,?Nat.mod_same in * by omega;
       try omega.
-    rewrite !nth_default_base by (omega || auto).
+    rewrite !nth_default_base by (auto || destruct (length limb_widths); auto). 
     rewrite sum_firstn_0.
     autorewrite with zsimplify.
-    match goal with |- appcontext [2 ^ ?a * ?b * 2 ^ ?c] =>
+    match goal with |- appcontext[2 ^ ?a * ?b * 2 ^ ?c] =>
       replace (2 ^ a * b * 2 ^ c) with (2 ^ (a + c) * b) end.
-    { rewrite <-sum_firstn_succ by (apply nth_error_Some_nth_default; omega).
+    { rewrite <-sum_firstn_succ by (apply nth_error_Some_nth_default; destruct (length limb_widths); auto).
       rewrite Nat.succ_pred by omega.
-      remember (Init.Nat.pred (length limb_widths)) as pred_len.
+      remember (pred (length limb_widths)) as pred_len.
       fold k.
       rewrite <-Z.mul_sub_distr_r.
       replace (c - 2 ^ k) with (modulus * -1) by (cbv [c]; ring).
@@ -361,7 +361,7 @@ Section CanonicalizationProofs.
         (if eq_nat_dec n (i mod length limb_widths)
         then Z.pow2_mod (nth_default 0 us n) (log_cap n)
         else nth_default 0 us n) +
-          if PeanoNat.Nat.eq_dec n (S (i mod length limb_widths) mod length limb_widths)
+          if eq_nat_dec n (S (i mod length limb_widths) mod length limb_widths)
           then c * nth_default 0 us (i mod length limb_widths) >> log_cap (i mod length limb_widths)
           else 0
       else 0.
@@ -482,7 +482,6 @@ Section CanonicalizationProofs.
   Qed.
   Hint Rewrite @nth_default_carry using (omega || distr_length; omega) : push_nth_default.
 
-  Local Notation pred := Init.Nat.pred.
   Local Notation "u '[' i ']' "  := (nth_default 0 u i) (at level 30).
   Local Notation "u '{{' i '}}' "  := (carry_sequence (make_chain i) u) (at level 30).
 
