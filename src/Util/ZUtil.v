@@ -335,7 +335,6 @@ Module Z.
     reflexivity.
   Qed.
 
-
   Definition shiftl_by n a := Z.shiftl a n.
 
   Lemma shiftl_by_mul_pow2 : forall n a, 0 <= n -> Z.mul (2 ^ n) a = Z.shiftl_by n a.
@@ -398,6 +397,12 @@ Module Z.
     intros.
     rewrite !Z.shiftr_div_pow2, Z.pow_1_r by omega.
     apply Z.div_le_mono; omega.
+  Qed.
+
+  Lemma shiftr_le : forall a b i : Z, 0 <= i -> a <= b -> a >> i <= b >> i.
+  Proof.
+    intros until 1. revert a b. apply natlike_ind with (x := i); intros; auto.
+    rewrite !shiftr_succ, shiftr_1_r_le; eauto. reflexivity.
   Qed.
 
   Lemma ones_pred : forall i, 0 < i -> Z.ones (Z.pred i) = Z.shiftr (Z.ones i) 1.
