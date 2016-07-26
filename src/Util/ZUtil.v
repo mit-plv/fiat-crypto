@@ -1061,6 +1061,11 @@ Module Z.
   Definition mul_div_le'
     := fun x y z w p H0 H1 H2 H3 => @Z.le_trans _ _ w (@Z.mul_div_le x y z H0 H1 H2 H3) p.
   Hint Resolve mul_div_le' : zarith.
+  Lemma mul_div_le'' x y z w : y <= w -> 0 <= x -> 0 <= y -> 0 < z -> x <= z -> x * y / z <= w.
+  Proof.
+    rewrite (Z.mul_comm x y); intros; apply mul_div_le'; assumption.
+  Qed.
+  Hint Resolve mul_div_le'' : zarith.
 
   Lemma two_p_two_eq_four : 2^(2) = 4.
   Proof. reflexivity. Qed.
