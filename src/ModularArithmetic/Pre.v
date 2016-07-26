@@ -5,6 +5,7 @@ Require Import Crypto.Tactics.VerdiTactics.
 Require Import Coq.omega.Omega.
 Require Import Crypto.Util.NumTheoryUtil.
 Require Import Crypto.Tactics.VerdiTactics.
+Require Export Crypto.Util.FixCoqMistakes.
 
 Lemma Z_mod_mod x m : x mod m = (x mod m) mod m.
   symmetry.

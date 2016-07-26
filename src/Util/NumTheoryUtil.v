@@ -3,6 +3,7 @@ Require Import Coq.omega.Omega Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
 Require Import Crypto.Util.NatUtil Crypto.Util.ZUtil.
 Require Import Coqprime.Zp.
 Require Import Crypto.Tactics.VerdiTactics.
+Require Export Crypto.Util.FixCoqMistakes.
 Local Open Scope Z.
 
 (* TODO: move somewhere else for lemmas about Coqprime? *)

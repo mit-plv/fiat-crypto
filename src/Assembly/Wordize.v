@@ -1,9 +1,11 @@
 
 Require Export Bedrock.Word Bedrock.Nomega.
-Require Import NArith PArith Ndigits Nnat NPow NPeano Ndec.
-Require Import Compare_dec Omega.
-Require Import FunctionalExtensionality ProofIrrelevance.
-Require Import QhasmUtil QhasmEvalCommon.
+Require Import Coq.NArith.NArith Coq.PArith.PArith Coq.NArith.Ndigits Coq.NArith.Nnat Coq.Numbers.Natural.Abstract.NPow Coq.Numbers.Natural.Peano.NPeano Coq.NArith.Ndec.
+Require Import Coq.Arith.Compare_dec Coq.omega.Omega.
+Require Import Coq.Logic.FunctionalExtensionality Coq.Logic.ProofIrrelevance.
+Require Import Crypto.Assembly.QhasmUtil Crypto.Assembly.QhasmEvalCommon.
+
+Require Export Crypto.Util.FixCoqMistakes.
 
 Hint Rewrite wordToN_nat Nat2N.inj_add N2Nat.inj_add
              Nat2N.inj_mul N2Nat.inj_mul Npow2_nat : N.
@@ -18,7 +20,7 @@ Section WordizeUtil.
     intros; unfold break in *; destruct (le_dec m n);
       inversion H; subst; clear H; simpl.
   Admitted.
- 
+
   Lemma mask_wand : forall (n: nat) (x: word n) m b,
       (& (mask (N.to_nat m) x) < b)%N
     -> (& (x ^& (@NToWord n (N.ones m))) < b)%N.
@@ -33,7 +35,7 @@ Section WordizeUtil.
   Qed.
 
   Lemma word_param_eq: forall n m, word n = word m -> n = m.
-  Proof. (* TODO: How do we prove this *) Admitted. 
+  Proof. (* TODO: How do we prove this *) Admitted.
 
   Lemma word_conv_eq: forall {n m} (y: word m) p,
       &y = &(@convS (word m) (word n) y p).
@@ -153,7 +155,7 @@ Section WordizeUtil.
     - intros; simpl; replace (a + 0) with a; nomega.
 
     - intros.
-      replace (a + S b) with (S a + b) by intuition.
+      replace (a + S b) with (S a + b) by intuition auto with zarith.
       rewrite (IHb (S a)); simpl; clear IHb.
       induction (Npow2 a), (Npow2 b); simpl; intuition.
       rewrite Pos.mul_xO_r; intuition.
@@ -180,7 +182,7 @@ Section Wordization.
     rewrite wordToN_NToWord; intuition.
     apply (N.lt_le_trans _ (b + &y)%N _).
 
-    - apply N.add_lt_le_mono; try assumption; intuition.
+    - apply N.add_lt_le_mono; try assumption; intuition auto with relations.
 
     - replace (Npow2 n) with (b + Npow2 n - b)%N by nomega.
         replace (b + Npow2 n - b)%N with (b + (Npow2 n - b))%N by (
@@ -402,7 +404,7 @@ Ltac wordize_ast :=
   | [ |- _ = _ ] => reflexivity
   end.
 
-Ltac lt_crush := try abstract (clear; vm_compute; intuition).
+Ltac lt_crush := try abstract (clear; vm_compute; intuition auto with zarith).
 
 (** Bounding Tactics **)
 

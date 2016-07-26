@@ -5,6 +5,7 @@ Require Import Crypto.Util.Notations.
 Require Coq.Numbers.Natural.Peano.NPeano.
 Local Close Scope nat_scope. Local Close Scope type_scope. Local Close Scope core_scope.
 Require Crypto.Tactics.Algebra_syntax.Nsatz.
+Require Export Crypto.Util.FixCoqMistakes.
 
 Module Import ModuloCoq8485.
   Import NPeano Nat.
@@ -1298,6 +1299,21 @@ Ltac only_two_square_roots :=
   | @field ?F ?eq ?zero ?one ?opp ?add ?sub ?mul ?inv ?div
     => repeat only_two_square_roots_step eq opp mul
   end.
+
+(*** Tactics for ring equations *)
+Require Import Coq.setoid_ring.Ring_tac.
+Ltac ring_simplify_subterms := tac_on_subterms ltac:(fun t => ring_simplify t).
+
+Ltac ring_simplify_subterms_in_all :=
+  reverse_nondep; ring_simplify_subterms; intros.
+
+Create HintDb ring_simplify discriminated.
+Create HintDb ring_simplify_subterms discriminated.
+Create HintDb ring_simplify_subterms_in_all discriminated.
+Hint Extern 1 => progress ring_simplify : ring_simplify.
+Hint Extern 1 => progress ring_simplify_subterms : ring_simplify_subterms.
+Hint Extern 1 => progress ring_simplify_subterms_in_all : ring_simplify_subterms_in_all.
+
 
 Section Example.
   Context {F zero one opp add sub mul inv div} `{F_field:field F eq zero one opp add sub mul inv div}.

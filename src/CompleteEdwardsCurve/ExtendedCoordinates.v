@@ -5,9 +5,10 @@ Require Import Crypto.CompleteEdwardsCurve.Pre Crypto.CompleteEdwardsCurve.Compl
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Coq.Classes.Morphisms.
-Require Import Relation_Definitions.
+Require Import Coq.Relations.Relation_Definitions.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Notations.
+Require Export Crypto.Util.FixCoqMistakes.
 
 Module Extended.
   Section ExtendedCoordinates.

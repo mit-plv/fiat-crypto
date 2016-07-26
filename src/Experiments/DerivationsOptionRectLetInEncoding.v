@@ -2,17 +2,18 @@ Require Import Coq.omega.Omega.
 Require Import Bedrock.Word.
 Require Import Crypto.Spec.EdDSA.
 Require Import Crypto.Tactics.VerdiTactics.
-Require Import BinNat BinInt NArith Crypto.Spec.ModularArithmetic.
-Require Import ModularArithmetic.ModularArithmeticTheorems.
-Require Import ModularArithmetic.PrimeFieldTheorems.
+Require Import Coq.NArith.BinNat Coq.ZArith.BinInt Coq.NArith.NArith Crypto.Spec.ModularArithmetic.
+Require Import Crypto.ModularArithmetic.ModularArithmeticTheorems.
+Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
 Require Import Crypto.Spec.CompleteEdwardsCurve.
 Require Import Crypto.Spec.Encoding Crypto.Spec.ModularWordEncoding.
 Require Import Crypto.CompleteEdwardsCurve.ExtendedCoordinates.
 Require Import Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
 Require Import Crypto.Util.IterAssocOp Crypto.Util.WordUtil.
 Require Import Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Classes.Equivalence.
-Require Import Zdiv.
+Require Import Coq.ZArith.Zdiv.
 Require Import Crypto.Util.Tuple.
+Require Export Crypto.Util.FixCoqMistakes.
 Local Open Scope equiv_scope.
 
 Generalizable All Variables.
@@ -98,7 +99,7 @@ Qed.
 
 Global Instance pair_Equivalence {A B} `{@Equivalence A RA} `{@Equivalence B RB} : @Equivalence (A*B) (fun x y => fst x = fst y /\ snd x === snd y).
 Proof.
-  constructor; repeat intro; intuition; try congruence.
+  constructor; repeat intro; intuition auto with relations; try congruence.
   match goal with [H : _ |- _ ] => solve [rewrite H; auto] end.
 Qed.
 
@@ -205,7 +206,7 @@ Proof.
   intros.
   case_eq (eqb a b); intros.
   { eapply eqb_iff; trivial. }
-  { specialize (eqb_iff a b). rewrite H in eqb_iff. intuition. }
+  { specialize (eqb_iff a b). rewrite H in eqb_iff. intuition auto with bool. }
 Qed.
 
 Definition eqb_eq_dec {T} (eqb:T->T->bool) (eqb_iff:forall a b, eqb a b = true <-> a = b) :

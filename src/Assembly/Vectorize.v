@@ -1,6 +1,8 @@
 Require Export Bedrock.Word Bedrock.Nomega.
-Require Import NPeano NArith PArith Ndigits Compare_dec Arith.
-Require Import ProofIrrelevance Ring List Omega.
+Require Import Coq.Numbers.Natural.Peano.NPeano Coq.NArith.NArith Coq.PArith.PArith Coq.NArith.Ndigits Coq.Arith.Compare_dec Coq.Arith.Arith.
+Require Import Coq.Logic.ProofIrrelevance Coq.setoid_ring.Ring Coq.Lists.List Coq.omega.Omega.
+
+Require Export Crypto.Util.FixCoqMistakes.
 
 Definition Let_In {A P} (x : A) (f : forall a : A, P a) : P x :=
   let y := x in f y.

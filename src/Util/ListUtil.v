@@ -5,6 +5,7 @@ Require Import Coq.Classes.Morphisms.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Crypto.Util.NatUtil.
+Require Export Crypto.Util.FixCoqMistakes.
 
 Create HintDb distr_length discriminated.
 Create HintDb simpl_set_nth discriminated.
@@ -72,14 +73,14 @@ Definition splice_nth {T} n (x:T) xs := firstn n xs ++ x :: skipn (S n) xs.
 Hint Unfold splice_nth.
 
 Ltac boring :=
-  simpl; intuition;
+  simpl; intuition auto with zarith datatypes;
   repeat match goal with
            | [ H : _ |- _ ] => rewrite H; clear H
            | [ |- appcontext[match ?pf with end] ] => solve [ case pf ]
            | _ => progress autounfold in *
            | _ => progress autorewrite with core
            | _ => progress simpl in *
-           | _ => progress intuition
+           | _ => progress intuition auto with zarith datatypes
          end; eauto.
 
 Ltac boring_list :=
@@ -1133,7 +1134,7 @@ Proof.
   induction n as [|n IHn]; destruct l as [|? l]; autorewrite with simpl_sum_firstn; simpl; try omega.
   { specialize (IHn l).
     destruct n; simpl; autorewrite with simpl_sum_firstn simpl_nth_default in *;
-      intuition. }
+      intuition auto with zarith. }
 Qed.
 
 Hint Resolve sum_firstn_nonnegative : znonzero.

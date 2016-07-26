@@ -16,6 +16,7 @@ Import ListNotations.
 Require Import Coq.ZArith.ZArith Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.ZArith.Znumtheory.
 Require Import Coq.QArith.QArith Coq.QArith.Qround.
 Require Import Crypto.Tactics.VerdiTactics.
+Require Export Crypto.Util.FixCoqMistakes.
 Local Open Scope Z.
 
 Class SubtractionCoefficient (m : Z) (prm : PseudoMersenneBaseParams m) := {

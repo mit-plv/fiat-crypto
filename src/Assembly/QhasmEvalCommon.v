@@ -1,7 +1,8 @@
-Require Import QhasmCommon QhasmUtil State.
-Require Import ZArith Sumbool.
+Require Import Crypto.Assembly.QhasmCommon Crypto.Assembly.QhasmUtil Crypto.Assembly.State.
+Require Import Coq.ZArith.ZArith Coq.Bool.Sumbool.
 Require Import Bedrock.Word.
-Require Import Logic.Eqdep_dec ProofIrrelevance.
+Require Import Coq.Logic.Eqdep_dec Coq.Logic.ProofIrrelevance.
+Require Export Crypto.Util.FixCoqMistakes.
 
 Module EvalUtil.
   Definition evalTest {n} (o: TestOp) (a b: word n): bool :=
@@ -78,13 +79,13 @@ Module EvalUtil.
   Proof. induction a; unfold getWidth; simpl; intuition. Qed.
 
   Lemma width_eq {n} (a b: Width n): a = b.
-  Proof. 
+  Proof.
     assert (Some a = Some b) as H by (
       replace (Some a) with (getWidth n) by (rewrite getWidth_eq; intuition);
       replace (Some b) with (getWidth n) by (rewrite getWidth_eq; intuition);
       intuition).
     inversion H; intuition.
-  Qed. 
+  Qed.
 
   (* Mapping Conversions *)
 
@@ -102,29 +103,29 @@ Module EvalUtil.
 
   Definition mapping_dec {n} (a b: Mapping n): {a = b} + {a <> b}.
     refine (match (a, b) as p' return (a, b) = p' -> _ with
-    | (regM v, regM v') => fun _ => 
+    | (regM v, regM v') => fun _ =>
         if (Nat.eq_dec (regName v) (regName v'))
         then left _
         else right _
 
-    | (stackM v, stackM v') => fun _ => 
+    | (stackM v, stackM v') => fun _ =>
         if (Nat.eq_dec (stackName v) (stackName v'))
         then left _
         else right _
 
-    | (constM v, constM v') => fun _ => 
+    | (constM v, constM v') => fun _ =>
         if (Nat.eq_dec (constValueN v) (constValueN v'))
         then left _
         else right _
 
-    | (memM _ v i, memM _ v' i') => fun _ => 
-        if (Nat.eq_dec (memName v) (memName v')) 
+    | (memM _ v i, memM _ v' i') => fun _ =>
+        if (Nat.eq_dec (memName v) (memName v'))
         then if (Nat.eq_dec (memLength v) (memLength v'))
         then if (Nat.eq_dec (proj1_sig i) (proj1_sig i'))
         then left _ else right _ else right _ else right _
 
     | _ => fun _ => right _
-    end (eq_refl (a, b))); 
+    end (eq_refl (a, b)));
       try destruct v, v'; subst;
       unfold regName, stackName, constValueN, memName, memLength in *;
       repeat progress (try apply f_equal; subst; match goal with
@@ -158,10 +159,10 @@ Module EvalUtil.
       | [ H: proj1_sig ?a <> proj1_sig ?b |- _ ] =>
         let l0 := fresh in let l1 := fresh in
         destruct a, b; simpl in H; subst
-      | [ H: existT ?a ?b _ = existT ?a ?b _ |- _ ] => 
+      | [ H: existT ?a ?b _ = existT ?a ?b _ |- _ ] =>
         apply (inj_pair2_eq_dec _ Nat.eq_dec) in H;
             subst; intuition
-      | [ H: exist _ _ _ = exist _ _ _ |- _ ] => 
+      | [ H: exist _ _ _ = exist _ _ _ |- _ ] =>
         inversion H; subst; intuition
 
         (* Single specialized wordToNat proof *)
@@ -176,12 +177,12 @@ Module EvalUtil.
 
   Definition dec_lt (a b: nat): {(a < b)%nat} + {(a >= b)%nat}.
     assert ({(a <? b)%nat = true} + {(a <? b)%nat <> true})
-      by abstract (destruct (a <? b)%nat; intuition);
+      by abstract (destruct (a <? b)%nat; intuition auto with bool);
       destruct H.
 
     - left; abstract (apply Nat.ltb_lt; intuition).
 
-    - right; abstract (rewrite Nat.ltb_lt in *; intuition).
+    - right; abstract (rewrite Nat.ltb_lt in *; intuition auto with zarith).
   Defined.
 
   Fixpoint stackNames {n} (lst: list (Mapping n)): list nat :=
@@ -216,12 +217,12 @@ Module QhasmEval.
       omap (getReg r state) (fun v =>
         if (Nat.eq_dec O (wordToNat v))
         then Some true
-        else Some false) 
+        else Some false)
     | CReg n o a b =>
       omap (getReg a state) (fun va =>
         omap (getReg b state) (fun vb =>
           Some (evalTest o va vb)))
-    | CConst n o a c => 
+    | CConst n o a c =>
       omap (getReg a state) (fun va =>
         Some (evalTest o va (constValueW c)))
     end.
@@ -245,35 +246,35 @@ Module QhasmEval.
             let (v', co) := (evalIntOp o va vb) in
             Some (setCarryOpt co (setReg a v' state))))
 
-    | IOpMem _ _ o r m i => 
+    | IOpMem _ _ o r m i =>
       omap (getReg r state) (fun va =>
         omap (getMem m i state) (fun vb =>
             let (v', co) := (evalIntOp o va vb) in
             Some (setCarryOpt co (setReg r v' state))))
 
-    | DOp _ o a b (Some x) => 
+    | DOp _ o a b (Some x) =>
       omap (getReg a state) (fun va =>
         omap (getReg b state) (fun vb =>
             let (low, high) := (evalDualOp o va vb) in
             Some (setReg x high (setReg a low state))))
 
-    | DOp _ o a b None => 
+    | DOp _ o a b None =>
       omap (getReg a state) (fun va =>
         omap (getReg b state) (fun vb =>
             let (low, high) := (evalDualOp o va vb) in
             Some (setReg a low state)))
 
-    | ROp _ o r i => 
+    | ROp _ o r i =>
       omap (getReg r state) (fun v =>
         let v' := (evalRotOp o v i) in
         Some (setReg r v' state))
 
-    | COp _ o a b => 
+    | COp _ o a b =>
       omap (getReg a state) (fun va =>
         omap (getReg b state) (fun vb =>
             match (getCarry state) with
             | None => None
-            | Some c0 => 
+            | Some c0 =>
             let (v', c') := (evalCarryOp o va vb c0) in
             Some (setCarry c' (setReg a v' state))
             end))
@@ -281,7 +282,7 @@ Module QhasmEval.
 
   Definition evalAssignment (a: Assignment) (state: State): option State :=
     match a with
-    | ARegMem _ _ r m i => 
+    | ARegMem _ _ r m i =>
       omap (getMem m i state) (fun v => Some (setReg r v state))
     | AMemReg _ _ m i r =>
       omap (getReg r state) (fun v => Some (setMem m i v state))
@@ -289,7 +290,7 @@ Module QhasmEval.
       omap (getReg b state) (fun v => Some (setStack a v state))
     | ARegStack _ a b =>
       omap (getStack b state) (fun v => Some (setReg a v state))
-    | ARegReg _ a b => 
+    | ARegReg _ a b =>
       omap (getReg b state) (fun v => Some (setReg a v state))
     | AConstInt _ r c =>
       Some (setReg r (constValueW c) state)
