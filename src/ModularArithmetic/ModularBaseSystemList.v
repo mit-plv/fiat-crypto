@@ -31,19 +31,20 @@ Section Defs.
   (* In order to subtract without underflowing, we add a multiple of the modulus first. *)
   Definition sub (us vs : digits) := BaseSystem.sub (add modulus_multiple us) vs.
 
-  (*
+  (* [carry_and_reduce] multiplies the carried value by c, and, if carrying
+     from index [i] in a list [us], adds the value to the digit with index
+     [(S i) mod (length us)] *)
   Definition carry_and_reduce :=
-    carry_gen limb_widths (fun ci => c * ci).
-   *)
-  Definition carry_and_reduce i := fun us =>
-    let di := us [i] in
-    let us' := set_nth i (Z.pow2_mod di (limb_widths [i]))  us in
-    add_to_nth   0  (c * (Z.shiftr   di (limb_widths [i]))) us'.
+    carry_gen limb_widths (fun ci => c * ci) (fun Si => (Si mod (length limb_widths))%nat).
 
   Definition carry i : digits -> digits :=
-    if eq_nat_dec i (pred (length base))
+    if eq_nat_dec i (pred (length limb_widths))
     then carry_and_reduce i
     else carry_simple limb_widths i.
+
+  Definition carry_sequence is (us : digits) : digits := fold_right carry us is.
+
+  Definition carry_full : digits -> digits := carry_sequence (full_carry_chain limb_widths).
 
   Definition modulus_digits := encodeZ limb_widths modulus.
 

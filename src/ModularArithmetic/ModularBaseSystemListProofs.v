@@ -76,6 +76,20 @@ Section LengthProofs.
   Proof. intros; unfold carry; break_if; autorewrite with distr_length; omega. Qed.
   Hint Rewrite @length_carry : distr_length.
 
+  Lemma length_carry_sequence {u i} :
+    length u = length limb_widths
+    -> length (carry_sequence i u) = length limb_widths.
+  Proof.
+   induction i; intros; unfold carry_sequence;
+     simpl; autorewrite with distr_length; auto. Qed.
+  Hint Rewrite @length_carry_sequence : distr_length.
+
+  Lemma length_carry_full {u} :
+    length u = length limb_widths
+    -> length (carry_full u) = length limb_widths.
+  Proof. intros; unfold carry_full; autorewrite with distr_length; congruence. Qed.
+  Hint Rewrite @length_carry_full : distr_length.
+
   Lemma length_modulus_digits : length modulus_digits = length limb_widths.
   Proof.
     intros; unfold modulus_digits, encodeZ.
