@@ -767,11 +767,7 @@ Module Z.
     | _ => let LHS := match goal with |- ?LHS <= ?RHS => LHS end in
            match LHS with
            | context G[?x * (?y / ?z)]
-             => lazymatch x with
-                | context[_ / _] => fail
-                | _ => idtac
-                end;
-                let G' := context G[(x * y) / z] in
+             => let G' := context G[(x * y) / z] in
                 transitivity G'
            end
     end.
