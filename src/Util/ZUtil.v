@@ -759,11 +759,19 @@ Module Z.
   Ltac pre_reorder_fractions_step :=
     match goal with
     | [ |- context[?x / ?y * ?z] ]
-      => rewrite (Z.mul_comm (x / y) z)
+      => lazymatch z with
+         | context[_ / _] => fail
+         | _ => idtac
+         end;
+         rewrite (Z.mul_comm (x / y) z)
     | _ => let LHS := match goal with |- ?LHS <= ?RHS => LHS end in
            match LHS with
            | context G[?x * (?y / ?z)]
-             => let G' := context G[(x * y) / z] in
+             => lazymatch x with
+                | context[_ / _] => fail
+                | _ => idtac
+                end;
+                let G' := context G[(x * y) / z] in
                 transitivity G'
            end
     end.
