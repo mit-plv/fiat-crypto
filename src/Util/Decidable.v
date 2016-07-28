@@ -4,10 +4,13 @@ Require Import Coq.Logic.Eqdep_dec.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.HProp.
 Require Import Crypto.Util.Equality.
+Require Import Coq.ZArith.BinInt.
+Require Import Coq.NArith.BinNat.
 
 Local Open Scope type_scope.
 
 Class Decidable (P : Prop) := dec : {P} + {~P}.
+Arguments dec _%type_scope {_}.
 
 Notation DecidableRel R := (forall x y, Decidable (R x y)).
 
@@ -86,11 +89,13 @@ Hint Extern 0 (Decidable (~?A)) => apply (@dec_not A) : typeclass_instances.
 Global Instance dec_eq_unit : DecidableRel (@eq unit) | 10. exact _. Defined.
 Global Instance dec_eq_bool : DecidableRel (@eq bool) | 10. exact _. Defined.
 Global Instance dec_eq_Empty_set : DecidableRel (@eq Empty_set) | 10. exact _. Defined.
-Global Instance dec_eq_nat : DecidableRel (@eq nat) | 10. exact _. Defined.
 Global Instance dec_eq_prod {A B} `{DecidableRel (@eq A), DecidableRel (@eq B)} : DecidableRel (@eq (A * B)) | 10. exact _. Defined.
 Global Instance dec_eq_sum {A B} `{DecidableRel (@eq A), DecidableRel (@eq B)} : DecidableRel (@eq (A + B)) | 10. exact _. Defined.
 Global Instance dec_eq_sigT_hprop {A P} `{DecidableRel (@eq A), forall a : A, IsHProp (P a)} : DecidableRel (@eq (@sigT A P)) | 10. exact _. Defined.
 Global Instance dec_eq_sig_hprop {A} {P : A -> Prop} `{DecidableRel (@eq A), forall a : A, IsHProp (P a)} : DecidableRel (@eq (@sig A P)) | 10. exact _. Defined.
+Global Instance dec_eq_nat : DecidableRel (@eq nat) | 10. exact _. Defined.
+Global Instance dec_eq_N : DecidableRel (@eq N) | 10 := N.eq_dec.
+Global Instance dec_eq_Z : DecidableRel (@eq Z) | 10 := Z.eq_dec.
 
 Lemma Decidable_respects_iff A B (H : A <-> B) : (Decidable A -> Decidable B) * (Decidable B -> Decidable A).
 Proof. solve_decidable_transparent. Defined.
@@ -100,6 +105,15 @@ Proof. solve_decidable_transparent. Defined.
 
 Lemma Decidable_iff_to_flip_impl A B (H : A <-> B) : Decidable B -> Decidable A.
 Proof. solve_decidable_transparent. Defined.
+
+Lemma dec_bool : forall {P} {Pdec:Decidable P}, (if dec P then true else false) = true -> P.
+Proof. intros. destruct dec; solve [ auto | discriminate ]. Qed.
+
+Ltac vm_decide := apply dec_bool; vm_compute; reflexivity.
+Ltac lazy_decide := apply dec_bool; lazy; reflexivity.
+
+Ltac vm_decide_no_check := apply dec_bool; vm_cast_no_check (eq_refl true).
+Ltac lazy_decide_no_check := apply dec_bool; exact_no_check (eq_refl true).
 
 (** For dubious compatibility with [eauto using]. *)
 Hint Extern 2 (Decidable _) => progress unfold Decidable : typeclass_instances core.

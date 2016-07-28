@@ -119,8 +119,8 @@ Program Definition inv_impl {m : BinNums.Z} :
     forall a : {z : BinNums.Z | z = z mod m},
     a <> exist (fun z : BinNums.Z => z = z mod m) (0 mod m) (Z_mod_mod 0 m) ->
     exist (fun z : BinNums.Z => z = z mod m)
-      ((proj1_sig a * proj1_sig (inv0 a)) mod m)
-      (Z_mod_mod (proj1_sig a * proj1_sig (inv0 a)) m) =
+      ((proj1_sig (inv0 a) * proj1_sig a) mod m)
+      (Z_mod_mod (proj1_sig (inv0 a) * proj1_sig a) m) =
     exist (fun z : BinNums.Z => z = z mod m) (1 mod m) (Z_mod_mod 1 m))}
      := mod_inv_sig.
 Next Obligation.
@@ -130,7 +130,7 @@ Next Obligation.
   assert (Hm':0 <= m - 2) by (pose proof prime_ge_2 m Hm; omega).
   assert (Ha:a mod m<>0) by (intro; apply Ha', exist_reduced_eq; congruence).
   cbv [proj1_sig mod_inv_sig].
-  transitivity ((a*powmod m a (Z.to_N (m - 2))) mod m); [destruct a; congruence|].
+  transitivity ((a*powmod m a (Z.to_N (m - 2))) mod m); [destruct a; f_equal; ring|].
   rewrite !powmod_Zpow_mod.
   rewrite Z2N.id by assumption.
   rewrite Zmult_mod_idemp_r.

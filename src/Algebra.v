@@ -12,16 +12,9 @@ Module Import ModuloCoq8485.
   Infix "mod" := modulo.
 End ModuloCoq8485.
 
-Notation is_eq_dec := (DecidableRel _) (only parsing).
-Notation "@ 'is_eq_dec' T R" := (DecidableRel (R:T->T->Prop)) (only parsing).
-Notation eq_dec x y := (@dec (_ x y) _) (only parsing).
-Notation "x =? y" := (eq_dec x y) : type_scope.
-
 Section Algebra.
   Context {T:Type} {eq:T->T->Prop}.
   Local Infix "=" := eq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
-
-  Local Notation is_eq_dec := (@is_eq_dec T eq).
 
   Section SingleOperation.
     Context {op:T->T->T}.
@@ -41,7 +34,7 @@ Section Algebra.
 
         monoid_op_Proper: Proper (respectful eq (respectful eq eq)) op;
         monoid_Equivalence : Equivalence eq;
-        monoid_is_eq_dec : is_eq_dec
+        monoid_is_eq_dec : DecidableRel eq
       }.
     Global Existing Instance monoid_is_associative.
     Global Existing Instance monoid_is_left_identity.
@@ -364,6 +357,23 @@ Module ScalarMult.
     Global Existing Instance scalarmult_Proper.
     Context `{is_scalarmult}.
 
+    Fixpoint scalarmult_ref (n:nat) (P:G) {struct n} :=
+      match n with
+      | O => zero
+      | S n' => add P (scalarmult_ref n' P)
+      end.
+
+    Global Instance Proper_scalarmult_ref : Proper (Logic.eq==>eq==>eq) scalarmult_ref.
+    Proof.
+      repeat intro; subst.
+      match goal with [n:nat |- _ ] => induction n; simpl @scalarmult_ref; [reflexivity|] end.
+      repeat match goal with [H:_ |- _ ] => rewrite H end; reflexivity.
+    Qed.
+
+    Lemma scalarmult_ext : forall n P, mul n P = scalarmult_ref n P.
+      induction n; simpl @scalarmult_ref; intros; rewrite <-?IHn; (apply scalarmult_0_l || apply scalarmult_S_l).
+    Qed.
+
     Lemma scalarmult_1_l : forall P, 1*P = P.
     Proof. intros. rewrite scalarmult_S_l, scalarmult_0_l, right_identity; reflexivity. Qed.
 
@@ -402,6 +412,10 @@ Module ScalarMult.
         rewrite scalarmult_add_l, scalarmult_1_l, Group.inv_op, scalarmult_S_l, Group.cancel_left; eauto. }
     Qed.
   End ScalarMultProperties.
+
+  Global Instance scalarmult_ref_is_scalarmult {G eq add zero} `{@monoid G eq add zero}
+    : @is_scalarmult G eq add zero (@scalarmult_ref G add zero).
+  Proof. split; try exact _; intros; reflexivity. Qed.
 End ScalarMult.
 
 Require Coq.nsatz.Nsatz.
@@ -588,7 +602,7 @@ Module IntegralDomain.
       : eq (mul x y) zero -> eq x zero \/ eq y zero.
     Proof.
       pose proof mul_nonzero_nonzero x y.
-      destruct (eq_dec x zero); destruct (eq_dec y zero); intuition.
+      destruct (dec (eq x zero)); destruct (dec (eq y zero)); intuition.
     Qed.
 
     Lemma mul_nonzero_nonzero_iff (x y : T)
@@ -663,7 +677,7 @@ Module Field.
 
   Lemma isomorphism_to_subfield_field
         {T EQ ZERO ONE OPP ADD SUB MUL INV DIV}
-        {Equivalence_EQ: @Equivalence T EQ} {eq_dec: forall x y, {EQ x y} + {~ EQ x y} }
+        {Equivalence_EQ: @Equivalence T EQ} {eq_dec: DecidableRel EQ}
         {Proper_OPP:Proper(EQ==>EQ)OPP}
         {Proper_ADD:Proper(EQ==>EQ==>EQ)ADD}
         {Proper_SUB:Proper(EQ==>EQ==>EQ)SUB}
@@ -673,7 +687,7 @@ Module Field.
         {R eq zero one opp add sub mul inv div} {fieldR:@field R eq zero one opp add sub mul inv div}
         {phi}
         {eq_phi_EQ: forall x y, eq (phi x) (phi y) -> EQ x y}
-        {neq_zero_one : (EQ ZERO ONE -> False)}
+        {neq_zero_one : (not (EQ ZERO ONE))}
         {phi_opp : forall a, eq (phi (OPP a)) (opp (phi a))}
         {phi_add : forall a b, eq (phi (ADD a b)) (add (phi a) (phi b))}
         {phi_sub : forall a b, eq (phi (SUB a b)) (sub (phi a) (phi b))}
@@ -753,7 +767,7 @@ Module Field.
        -> phi (INV x) = inv (phi x).
     Proof.
       intros.
-      destruct (eq_dec x ZERO); auto.
+      destruct (dec (EQ x ZERO)); auto.
       assert (phi (MUL (INV x) x) = one) as A. {
         rewrite left_multiplicative_inverse; auto using Ring.homomorphism_one.
       }
@@ -1223,8 +1237,8 @@ Section ExtraLemmas.
   Lemma only_two_square_roots'_choice x y : x * x = y * y -> x = y \/ x = opp y.
   Proof.
     intro H.
-    destruct (eq_dec x y); [ left; assumption | right ].
-    destruct (eq_dec x (opp y)); [ assumption | exfalso ].
+    destruct (dec (eq x y)); [ left; assumption | right ].
+    destruct (dec (eq x (opp y))); [ assumption | exfalso ].
     eapply only_two_square_roots'; eassumption.
   Qed.
 

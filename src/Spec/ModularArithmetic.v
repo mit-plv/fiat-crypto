@@ -35,7 +35,7 @@ Section FieldOperations.
   Definition inv_with_spec : { inv : F m -> F m
                              | inv zero = zero
                              /\ ( Znumtheory.prime m ->
-                                 forall a, a <> zero -> mul a (inv a) = one )
+                                 forall a, a <> zero -> mul (inv a) a = one )
                              } := Pre.inv_impl.
   Definition inv : F m -> F m := Eval hnf in proj1_sig inv_with_spec.
   Definition div (a b:F m) : F m := mul a (inv b).
@@ -49,7 +49,7 @@ End FieldOperations.
 
 Delimit Scope F_scope with F.
 Arguments F _%Z.
-Arguments ZToField {_} _%Z : simpl never.
+Arguments ZToField _%Z _%Z : simpl never, clear implicits.
 Arguments add {_} _%F _%F : simpl never.
 Arguments mul {_} _%F _%F : simpl never.
 Arguments sub {_} _%F _%F : simpl never.
@@ -57,11 +57,10 @@ Arguments div {_} _%F _%F : simpl never.
 Arguments pow {_} _%F _%N : simpl never.
 Arguments inv {_} _%F : simpl never.
 Arguments opp {_} _%F : simpl never.
-Local Open Scope F_scope.
 Infix "+" := add : F_scope.
 Infix "*" := mul : F_scope.
 Infix "-" := sub : F_scope.
 Infix "/" := div : F_scope.
 Infix "^" := pow : F_scope.
-Notation "0" := (ZToField 0) : F_scope.
-Notation "1" := (ZToField 1) : F_scope.
+Notation "0" := (ZToField _ 0) : F_scope.
+Notation "1" := (ZToField _ 1) : F_scope.

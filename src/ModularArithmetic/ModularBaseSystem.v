@@ -37,9 +37,9 @@ Section ModularBaseSystem.
    from_list (sub [[modulus_multiple]] [[us]] [[vs]])
    (length_sub length_to_list length_to_list length_to_list).
 
-  Definition zero : digits := encode (ZToField 0).
+  Definition zero : digits := encode (ZToField _ 0).
 
-  Definition one : digits := encode (ZToField 1).
+  Definition one : digits := encode (ZToField _ 1).
 
   (* Placeholder *)
   Definition opp (x : digits) : digits := encode (ModularArithmetic.opp (decode x)).

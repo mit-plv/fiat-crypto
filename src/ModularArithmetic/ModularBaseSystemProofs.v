@@ -21,6 +21,8 @@ Require Export Crypto.Util.FixCoqMistakes.
 Local Open Scope Z_scope.
 
 Local Opaque add_to_nth carry_simple.
+Local Arguments ZToField {_} _.
+Import ModularArithmeticTheorems.Zmod PrimeFieldTheorems.Zmod.
 
 Section PseudoMersenneProofs.
   Context `{prm :PseudoMersenneBaseParams}.
@@ -232,7 +234,7 @@ Section PseudoMersenneProofs.
     rewrite BaseSystemProofs.sub_rep, BaseSystemProofs.add_rep.
     rewrite ZToField_sub, ZToField_add, ZToField_mod.
     apply Fdecode_decode_mod in mm_spec; cbv [BaseSystem.decode] in *.
-    rewrite mm_spec, F_add_0_l.
+    rewrite mm_spec. rewrite Algebra.left_identity.
     f_equal; assumption.
   Qed.
 
@@ -297,11 +299,11 @@ Section CarryProofs.
     specialize_by eauto.
     cbv [ModularBaseSystemList.carry].
     break_if; subst; eauto.
-    apply F_eq.
+    apply eq_ZToField_iff.
     rewrite to_list_from_list.
     apply carry_decode_eq_reduce. auto.
     cbv [ModularBaseSystemList.decode].
-    apply ZToField_eqmod.
+    apply eq_ZToField_iff.
     rewrite to_list_from_list, carry_simple_decode_eq; try omega; distr_length; auto.
   Qed.
   Hint Resolve carry_rep.

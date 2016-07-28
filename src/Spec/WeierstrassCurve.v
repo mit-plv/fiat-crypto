@@ -11,8 +11,8 @@ Module E.
 
     Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv} `{Algebra.field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}.
     Local Infix "=" := Feq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
-    Local Infix "=?" := Algebra.eq_dec (at level 70, no associativity) : type_scope.
-    Local Notation "x =? y" := (Sumbool.bool_of_sumbool (Algebra.eq_dec x y)) : bool_scope.
+    Local Notation "x =? y" := (Decidable.dec (Feq x y)) (at level 70, no associativity) : type_scope.
+    Local Notation "x =? y" := (Sumbool.bool_of_sumbool (Decidable.dec (Feq x y))) : bool_scope.
     Local Infix "+" := Fadd. Local Infix "*" := Fmul.
     Local Infix "-" := Fsub. Local Infix "/" := Fdiv.
     Local Notation "- x" := (Fopp x).

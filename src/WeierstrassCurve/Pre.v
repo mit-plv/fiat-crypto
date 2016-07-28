@@ -2,6 +2,7 @@ Require Import Coq.Classes.Morphisms. Require Coq.Setoids.Setoid.
 Require Import Crypto.Algebra.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
+Require Import Crypto.Util.Decidable.
 
 Local Open Scope core_scope.
 
@@ -34,8 +35,8 @@ Section Pre.
   Definition unifiedAdd' (P1' P2':F*F + ∞) : F*F + ∞ :=
     match P1', P2' with
     | (x1, y1), (x2, y2)
-      => if x1 =? x2 then
-           if y2 =? -y1 then
+      => if dec (x1 = x2) then
+           if dec (y2 = -y1) then
              ∞
            else ((3*x1^2+a)^2 / (2*y1)^2 - x1 - x1,
                    (2*x1+x1)*(3*x1^2+a) / (2*y1) - (3*x1^2+a)^3/(2*y1)^3-y1)

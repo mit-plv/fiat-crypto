@@ -18,7 +18,7 @@ Section ModularWordEncoding.
   Definition Fm_dec (x_ : word sz) : option (F m) :=
     let z := Z.of_N (wordToN (x_)) in
     if Z_lt_dec z m
-      then Some (ZToField z)
+      then Some (ZToField m z)
       else None
   .
 

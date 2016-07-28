@@ -267,7 +267,7 @@ Lemma unfoldDiv : forall {m} (x y:F m), (x/y = x * inv y)%F. Proof. unfold div. 
 Definition FieldToN {m} (x:F m) := Z.to_N (FieldToZ x).
 Lemma FieldToN_correct {m} (x:F m) : FieldToN (m:=m) x = Z.to_N (FieldToZ x). reflexivity. Qed.
 
-Definition natToField {m} x : F m := ZToField (Z.of_nat x).
+Definition natToField {m} x : F m := ZToField _ (Z.of_nat x).
 Definition FieldToNat {m} (x:F m) : nat := Z.to_nat (FieldToZ x).
 
 Section with_unqualified_modulo2.
@@ -275,11 +275,6 @@ Import NPeano Nat.
 Local Infix "mod" := modulo : nat_scope.
 Lemma FieldToNat_natToField {m} : m <> 0 -> forall x, x mod m = FieldToNat (natToField (m:=Z.of_nat m) x).
   unfold natToField, FieldToNat; intros.
-  rewrite (FieldToZ_ZToField), <-mod_Zmod, Nat2Z.id; trivial.
+  rewrite (Zmod.FieldToZ_ZToField), <-mod_Zmod, Nat2Z.id; trivial.
 Qed.
 End with_unqualified_modulo2.
-
-Lemma F_eqb_iff {q} : forall x y : F q, F_eqb x y = true <-> x = y.
-Proof.
-  split; eauto using F_eqb_eq, F_eqb_complete.
-Qed.
