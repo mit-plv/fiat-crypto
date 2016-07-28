@@ -11,21 +11,22 @@ Require Import Crypto.Algebra.
 
 Require Import Crypto.Spec.Encoding Crypto.Spec.ModularWordEncoding Crypto.Spec.ModularArithmetic.
 
+Require Import Crypto.Util.Notations.
 Require Export Crypto.Util.FixCoqMistakes.
 
 Generalizable All Variables.
 Section PointEncodingPre.
   Context {F eq zero one opp add sub mul inv div} `{field F eq zero one opp add sub mul inv div}.
-  Local Infix "==" := eq (at level 30) : type_scope.
-  Local Notation "a !== b" := (not (a == b)) (at level 30): type_scope.
+  Local Infix "==" := eq : type_scope.
+  Local Notation "a !== b" := (not (a == b)): type_scope.
   Local Notation "0" := zero.  Local Notation "1" := one.
   Local Infix "+" := add. Local Infix "*" := mul.
   Local Infix "-" := sub. Local Infix "/" := div.
-  Local Notation "x '^' 2" := (x*x) (at level 30).
+  Local Notation "x ^ 2" := (x*x).
 
   Add Field EdwardsCurveField : (Field.field_theory_for_stdlib_tactic (T:=F)).
 
-  Context {eq_dec:forall x y : F, {x==y}+{x==y->False}}.
+  Context {eq_dec:forall x y : F, {x==y}+{x==y->False} }.
   Definition F_eqb x y := if eq_dec x y then true else false.
   Lemma F_eqb_iff : forall x y, F_eqb x y = true <-> x == y.
   Proof.
@@ -368,7 +369,7 @@ Proof.
   break_match.
   + f_equal.
     apply option_point_eq_iff.
-    destruct p as [[? ?] ?]; simpl in *.
+    destruct p as [ [ ? ? ] ? ]; simpl in *.
     assumption.
   + exfalso; apply  n.
     eapply option_coordinates_eq_trans; [ | eauto using option_coordinates_eq_sym ].

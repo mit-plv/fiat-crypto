@@ -214,7 +214,7 @@ Module Z.
     rewrite Z.mul_comm in c_id.
     apply Zdivide_intro in c_id.
     apply prime_divisors in c_id; auto.
-    destruct c_id; [omega | destruct H; [omega | destruct H; auto]].
+    destruct c_id; [omega | destruct H; [omega | destruct H; auto] ].
     pose proof (prime_ge_2 p prime_p); omega.
   Qed.
 
@@ -828,9 +828,9 @@ Module Z.
     | _ => lia
     | _ => progress subst
     | [ H : ?n * ?m < 0 |- _ ]
-      => apply (proj1 (Z.lt_mul_0 n m)) in H; destruct H as [[??]|[??]]
+      => apply (proj1 (Z.lt_mul_0 n m)) in H; destruct H as [ [??]|[??] ]
     | [ H : ?n / ?m < 0 |- _ ]
-      => apply (proj1 (lt_div_0 n m)) in H; destruct H as [[[??]|[??]]?]
+      => apply (proj1 (lt_div_0 n m)) in H; destruct H as [ [ [??]|[??] ] ? ]
     | [ H : (?x^?y) <= ?n < _, H' : ?n < 0 |- _ ]
       => assert (0 <= x^y) by zero_bounds; lia
     | [ H : (?x^?y) < 0 |- _ ]
@@ -841,7 +841,7 @@ Module Z.
          assert (x^y = 0) by lia;
          clear H H'
     | [ H : _^_ = 0 |- _ ]
-      => apply Z.pow_eq_0_iff in H; destruct H as [?|[??]]
+      => apply Z.pow_eq_0_iff in H; destruct H as [ ?|[??] ]
     | [ H : 0 <= ?x, H' : ?x - 1 < 0 |- _ ]
       => assert (x = 0) by lia; clear H H'
     | [ |- ?x <= ?y ] => is_evar x; reflexivity

@@ -208,7 +208,7 @@ Section PseudoMersenneProofs.
         split; [ intuition | ].
         destruct Hcarry_done as [Hnth_nonneg Hshiftr_0].
         apply Z.shiftr_eq_0_iff in Hshiftr_0.
-        destruct Hshiftr_0 as [nth_0 | []]; [ rewrite nth_0; zero_bounds | ].
+        destruct Hshiftr_0 as [nth_0 | [] ]; [ rewrite nth_0; zero_bounds | ].
         apply Z.log2_lt_pow2; auto.
       - rewrite nth_default_out_of_bounds by omega.
         split; zero_bounds.
@@ -482,8 +482,8 @@ Section CanonicalizationProofs.
   Qed.
   Hint Rewrite @nth_default_carry using (omega || distr_length; omega) : push_nth_default.
 
-  Local Notation "u '[' i ']' "  := (nth_default 0 u i) (at level 30).
-  Local Notation "u '{{' i '}}' "  := (carry_sequence (make_chain i) u) (at level 30).
+  Local Notation "u [ i ]"  := (nth_default 0 u i).
+  Local Notation "u {{ i }}"  := (carry_sequence (make_chain i) u) (at level 30). (* Can't rely on [Reserved Notation]: https://coq.inria.fr/bugs/show_bug.cgi?id=4970 *)
 
   Lemma bound_during_first_loop : forall i n us,
     length us = length limb_widths ->

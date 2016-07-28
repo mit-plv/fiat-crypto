@@ -14,7 +14,7 @@ Local Open Scope Z_scope.
 Section Defs.
   Context `{prm :PseudoMersenneBaseParams} (modulus_multiple : digits).
   Local Notation base := (base_from_limb_widths limb_widths).
-  Local Notation "u [ i ]" := (nth_default 0 u i) (at level 40).
+  Local Notation "u [ i ]" := (nth_default 0 u i).
 
   Definition decode (us : digits) : F modulus := ZToField (BaseSystem.decode base us).
 

@@ -1,18 +1,19 @@
 Require Import Crypto.Spec.EdDSA Bedrock.Word.
 Require Import Coq.Classes.Morphisms.
 Require Import Crypto.Algebra. Import Group ScalarMult.
-Require Import Util.Decidable Util.Option Util.Tactics.
-Require Import Omega.
+Require Import Crypto.Util.Decidable Crypto.Util.Option Crypto.Util.Tactics.
+Require Import Coq.omega.Omega.
+Require Import Crypto.Util.Notations.
 
 Module Import NotationsFor8485.
   Import NPeano Nat.
-  Infix "mod" := modulo (at level 40).
+  Infix "mod" := modulo.
 End NotationsFor8485.
 
 Section EdDSA.
   Context `{prm:EdDSA}.
   Context {eq_dec:DecidableRel Eeq}.
-  Local Infix "==" := Eeq (at level 69, no associativity).
+  Local Infix "==" := Eeq.
   Local Notation valid := (@valid E Eeq Eadd EscalarMult b H l B Eenc Senc).
   Local Infix "*" := EscalarMult. Local Infix "+" := Eadd. Local Infix "++" := combine.
   Local Notation "P - Q" := (P + Eopp Q).
