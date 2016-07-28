@@ -25,6 +25,11 @@ Reserved Infix "∣" (at level 50).
 Reserved Infix "~=" (at level 70).
 Reserved Infix "==" (at level 70, no associativity).
 Reserved Infix "≡" (at level 70, no associativity).
+Reserved Infix "≢" (at level 70, no associativity).
+Reserved Infix "≡ₙ" (at level 70, no associativity).
+Reserved Infix "≢ₙ" (at level 70, no associativity).
+Reserved Infix "≡ᵣ" (at level 70, no associativity).
+Reserved Infix "≢ᵣ" (at level 70, no associativity).
 Reserved Notation "a !== b" (at level 70, no associativity).
 Reserved Notation "a ≢ b" (at level 70, no associativity).
 Reserved Notation "$$ v" (at level 40).
