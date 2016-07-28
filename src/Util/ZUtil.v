@@ -1,4 +1,6 @@
 Require Import Coq.ZArith.Zpower Coq.ZArith.Znumtheory Coq.ZArith.ZArith Coq.ZArith.Zdiv.
+Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms.
+Require Import Coq.Structures.Equalities.
 Require Import Coq.omega.Omega Coq.micromega.Psatz Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
 Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.Notations.
@@ -58,6 +60,24 @@ Hint Rewrite Z.div_small_iff using lia : zstrip_div.
     We'll put, e.g., [mul_div_eq] into it below. *)
 Create HintDb zstrip_div.
 
+Ltac comes_before ls x y :=
+  match ls with
+  | context[cons x ?xs]
+    => match xs with
+       | context[y] => idtac
+       end
+  end.
+Ltac canonicalize_comm_step mul ls comm comm3 :=
+  match goal with
+  | [ |- appcontext[mul ?x ?y] ]
+    => comes_before ls y x;
+       rewrite (comm x y)
+  | [ |- appcontext[mul ?x (mul ?y ?z)] ]
+    => comes_before ls y x;
+       rewrite (comm3 x y z)
+  end.
+Ltac canonicalize_comm mul ls comm comm3 := repeat canonicalize_comm_step mul ls comm comm3.
+
 Module Z.
   Definition pow2_mod n i := (n & (Z.ones i)).
 
@@ -67,6 +87,11 @@ Module Z.
     unfold Z.pow2_mod.
     rewrite Z.land_ones; auto.
   Qed.
+
+  Lemma mul_comm3 x y z : x * (y * z) = y * (x * z).
+  Proof. lia. Qed.
+
+  Ltac Zcanonicalize_comm ls := canonicalize_comm Z.mul ls Z.mul_comm mul_comm3.
 
   Lemma positive_is_nonzero : forall x, x > 0 -> x <> 0.
   Proof. intros; omega. Qed.
@@ -1078,6 +1103,69 @@ Module Z.
   Lemma two_sub_sub_inner_sub x y z : 2 * x - y - (x - z) = x - y + z.
   Proof. clear; lia. Qed.
   Hint Rewrite two_sub_sub_inner_sub : zsimplify.
+
+  Lemma f_equal_mul_mod x y x' y' m : x mod m = x' mod m -> y mod m = y' mod m -> (x * y) mod m = (x' * y') mod m.
+  Proof.
+    intros H0 H1; rewrite Zmult_mod, H0, H1, <- Zmult_mod; reflexivity.
+  Qed.
+  Hint Resolve f_equal_mul_mod : zarith.
+
+  Lemma f_equal_add_mod x y x' y' m : x mod m = x' mod m -> y mod m = y' mod m -> (x + y) mod m = (x' + y') mod m.
+  Proof.
+    intros H0 H1; rewrite Zplus_mod, H0, H1, <- Zplus_mod; reflexivity.
+  Qed.
+  Hint Resolve f_equal_add_mod : zarith.
+
+  Lemma f_equal_opp_mod x x' m : x mod m = x' mod m -> (-x) mod m = (-x') mod m.
+  Proof.
+    intro H.
+    destruct (Z_zerop (x mod m)) as [H'|H'], (Z_zerop (x' mod m)) as [H''|H''];
+      try congruence.
+    { rewrite !Z_mod_zero_opp_full by assumption; reflexivity. }
+    { rewrite Z_mod_nz_opp_full, H, <- Z_mod_nz_opp_full by assumption; reflexivity. }
+  Qed.
+  Hint Resolve f_equal_opp_mod : zarith.
+
+  Lemma f_equal_sub_mod x y x' y' m : x mod m = x' mod m -> y mod m = y' mod m -> (x - y) mod m = (x' - y') mod m.
+  Proof.
+    rewrite <- !Z.add_opp_r; auto with zarith.
+  Qed.
+  Hint Resolve f_equal_sub_mod : zarith.
+
+  Section equiv_modulo.
+    Context (N : Z).
+    Definition equiv_modulo x y := x mod N = y mod N.
+    Local Infix "==" := equiv_modulo.
+
+    Local Instance equiv_modulo_Reflexive : Reflexive equiv_modulo := fun _ => Logic.eq_refl.
+    Local Instance equiv_modulo_Symmetric : Symmetric equiv_modulo := fun _ _ => @Logic.eq_sym _ _ _.
+    Local Instance equiv_modulo_Transitive : Transitive equiv_modulo := fun _ _ _ => @Logic.eq_trans _ _ _ _.
+
+    Lemma mul_mod_Proper : Proper (equiv_modulo ==> equiv_modulo ==> equiv_modulo) Z.mul.
+    Proof. unfold equiv_modulo, Proper, respectful; auto with zarith. Qed.
+
+    Lemma add_mod_Proper : Proper (equiv_modulo ==> equiv_modulo ==> equiv_modulo) Z.add.
+    Proof. unfold equiv_modulo, Proper, respectful; auto with zarith. Qed.
+
+    Lemma sub_mod_Proper : Proper (equiv_modulo ==> equiv_modulo ==> equiv_modulo) Z.sub.
+    Proof. unfold equiv_modulo, Proper, respectful; auto with zarith. Qed.
+
+    Lemma opp_mod_Proper : Proper (equiv_modulo ==> equiv_modulo) Z.opp.
+    Proof. unfold equiv_modulo, Proper, respectful; auto with zarith. Qed.
+  End equiv_modulo.
+
+  Module EquivModuloInstances (dummy : Nop). (* work around https://coq.inria.fr/bugs/show_bug.cgi?id=4973 *)
+    Existing Instance equiv_modulo_Reflexive.
+    Existing Instance equiv_modulo_Symmetric.
+    Existing Instance equiv_modulo_Transitive.
+    Existing Instance mul_mod_Proper.
+    Existing Instance add_mod_Proper.
+    Existing Instance sub_mod_Proper.
+    Existing Instance opp_mod_Proper.
+  End EquivModuloInstances.
+  Module RemoveEquivModuloInstances (dummy : Nop).
+    Global Remove Hints equiv_modulo_Reflexive equiv_modulo_Symmetric equiv_modulo_Transitive mul_mod_Proper add_mod_Proper sub_mod_Proper opp_mod_Proper : typeclass_instances.
+  End RemoveEquivModuloInstances.
 End Z.
 
 Module Export BoundsTactics.
