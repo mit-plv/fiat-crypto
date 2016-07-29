@@ -1249,7 +1249,7 @@ Module Z.
   End equiv_modulo.
 
   Module EquivModuloInstances (dummy : Nop). (* work around https://coq.inria.fr/bugs/show_bug.cgi?id=4973 *)
-    Existing Instance equiv_modulo_Reflexive.
+    Existing Instance equiv_modulo_Reflexive | 10.
     Existing Instance equiv_modulo_Symmetric.
     Existing Instance equiv_modulo_Transitive.
     Existing Instance mul_mod_Proper.
