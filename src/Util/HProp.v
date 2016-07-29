@@ -17,8 +17,6 @@ Ltac hprop_destruct_trivial_step :=
     => destruct (H x0 x1)
   | [ H : forall a0 (x y : _), x = y, x0 : ?A, x1 : ?A |- _ ]
     => destruct (H _ x0 x1)
-  | [ H : or _ _ |- _ ] => destruct H
-  | [ H : sum _ _ |- _ ] => destruct H
   end.
 Ltac hprop_destruct_trivial := repeat hprop_destruct_trivial_step.
 
