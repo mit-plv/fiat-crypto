@@ -1202,6 +1202,14 @@ Module Z.
 
     Lemma opp_mod_Proper : Proper (equiv_modulo ==> equiv_modulo) Z.opp.
     Proof. unfold equiv_modulo, Proper, respectful; auto with zarith. Qed.
+
+    Lemma modulo_equiv_modulo_Proper
+      : Proper (equiv_modulo ==> (fun x y => x = N /\ N = y) ==> Logic.eq) Z.modulo.
+    Proof.
+      repeat intro; hnf in *; intuition congruence.
+    Qed.
+    Lemma eq_to_ProperProxy : ProperProxy (fun x y : Z => x = N /\ N = y) N.
+    Proof. split; reflexivity. Qed.
   End equiv_modulo.
 
   Module EquivModuloInstances (dummy : Nop). (* work around https://coq.inria.fr/bugs/show_bug.cgi?id=4973 *)
@@ -1212,9 +1220,11 @@ Module Z.
     Existing Instance add_mod_Proper.
     Existing Instance sub_mod_Proper.
     Existing Instance opp_mod_Proper.
+    Existing Instance modulo_equiv_modulo_Proper.
+    Existing Instance eq_to_ProperProxy.
   End EquivModuloInstances.
   Module RemoveEquivModuloInstances (dummy : Nop).
-    Global Remove Hints equiv_modulo_Reflexive equiv_modulo_Symmetric equiv_modulo_Transitive mul_mod_Proper add_mod_Proper sub_mod_Proper opp_mod_Proper : typeclass_instances.
+    Global Remove Hints equiv_modulo_Reflexive equiv_modulo_Symmetric equiv_modulo_Transitive mul_mod_Proper add_mod_Proper sub_mod_Proper opp_mod_Proper modulo_equiv_modulo_Proper eq_to_ProperProxy : typeclass_instances.
   End RemoveEquivModuloInstances.
 End Z.
 
