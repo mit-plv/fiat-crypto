@@ -55,7 +55,8 @@ Hint Rewrite Z.pow_sub_r Z.pow_div_l Z.pow_twice_r Z.pow_mul_l Z.pow_add_r using
 Hint Rewrite <- Z.pow_sub_r Z.pow_div_l Z.pow_mul_l Z.pow_add_r Z.pow_twice_r using lia : pull_Zpow.
 Hint Rewrite Z.mul_add_distr_l Z.mul_add_distr_r Z.mul_sub_distr_l Z.mul_sub_distr_r : push_Zmul.
 Hint Rewrite <- Z.mul_add_distr_l Z.mul_add_distr_r Z.mul_sub_distr_l Z.mul_sub_distr_r : pull_Zmul.
-Hint Rewrite <- Z.mul_mod Z.add_mod using lia : pull_Zmod.
+Hint Rewrite <- Z.mul_mod Z.add_mod Zminus_mod using lia : pull_Zmod.
+Hint Rewrite Zminus_mod_idemp_l Zminus_mod_idemp_r : pull_Zmod.
 
 (** For the occasional lemma that can remove the use of [Z.div] *)
 Create HintDb zstrip_div.
@@ -1160,6 +1161,20 @@ Module Z.
   Qed.
   Hint Rewrite <- mul_mod_r using lia : pull_Zmod.
 
+  Lemma add_mod_l a b n : n <> 0 -> (a + b) mod n = ((a mod n) + b) mod n.
+  Proof.
+    intros; rewrite (Z.add_mod a b), (Z.add_mod (a mod n) b) by lia.
+    autorewrite with zsimplify; reflexivity.
+  Qed.
+  Hint Rewrite <- add_mod_l using lia : pull_Zmod.
+
+  Lemma add_mod_r a b n : n <> 0 -> (a + b) mod n = (a + (b mod n)) mod n.
+  Proof.
+    intros; rewrite (Z.add_mod a b), (Z.add_mod a (b mod n)) by lia.
+    autorewrite with zsimplify; reflexivity.
+  Qed.
+  Hint Rewrite <- add_mod_r using lia : pull_Zmod.
+
   Definition NoZMod (x : Z) := True.
   Ltac NoZMod :=
     lazymatch goal with
@@ -1182,6 +1197,26 @@ Module Z.
   Lemma mul_mod_r_push a b n : n <> 0 -> NoZMod b -> (a * b) mod n = (a * (b mod n)) mod n.
   Proof. intros; apply mul_mod_r; assumption. Qed.
   Hint Rewrite mul_mod_r_push using solve [ NoZMod | lia ] : push_Zmod.
+
+  Lemma add_mod_l_push a b n : n <> 0 -> NoZMod a -> (a + b) mod n = ((a mod n) + b) mod n.
+  Proof. intros; apply add_mod_l; assumption. Qed.
+  Hint Rewrite add_mod_l_push using solve [ NoZMod | lia ] : push_Zmod.
+
+  Lemma add_mod_r_push a b n : n <> 0 -> NoZMod b -> (a + b) mod n = (a + (b mod n)) mod n.
+  Proof. intros; apply add_mod_r; assumption. Qed.
+  Hint Rewrite add_mod_r_push using solve [ NoZMod | lia ] : push_Zmod.
+
+  Lemma sub_mod_push a b n : n <> 0 -> NoZMod a -> NoZMod b -> (a - b) mod n = ((a mod n) - (b mod n)) mod n.
+  Proof. intros; apply Zminus_mod; assumption. Qed.
+  Hint Rewrite sub_mod_push using solve [ NoZMod | lia ] : push_Zmod.
+
+  Lemma sub_mod_l_push a b n : n <> 0 -> NoZMod a -> (a - b) mod n = ((a mod n) - b) mod n.
+  Proof. intros; symmetry; apply Zminus_mod_idemp_l; assumption. Qed.
+  Hint Rewrite sub_mod_l_push using solve [ NoZMod | lia ] : push_Zmod.
+
+  Lemma sub_mod_r_push a b n : n <> 0 -> NoZMod b -> (a - b) mod n = (a - (b mod n)) mod n.
+  Proof. intros; symmetry; apply Zminus_mod_idemp_r; assumption. Qed.
+  Hint Rewrite sub_mod_r_push using solve [ NoZMod | lia ] : push_Zmod.
 
   Section equiv_modulo.
     Context (N : Z).
