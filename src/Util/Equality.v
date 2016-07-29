@@ -1,4 +1,6 @@
 (** * Lemmas about [eq] *)
+Require Import Crypto.Util.Isomorphism.
+Require Import Crypto.Util.HProp.
 
 Definition concat_1p {A x y} (p : x = y :> A) : eq_trans eq_refl p = p.
 Proof. case p; reflexivity. Defined.
@@ -23,3 +25,54 @@ Proof. case q; case p; reflexivity. Defined.
 Lemma inv_V {A x y} (p : x = y :> A)
 : eq_sym (eq_sym p) = p.
 Proof. case p; reflexivity. Defined.
+
+Section gen.
+  Context {A : Type} {x : A} (code : A -> Type)
+          (encode : forall y, x = y -> code y)
+          {code_hprop : IsHProp { a : A & code a } }.
+
+  Definition decode' {y} (p : code y) : x = y
+    := f_equal (@projT1 _ _) (code_hprop (existT _ x (encode x eq_refl)) (existT _ y p)).
+
+  Definition decode {y} (H : code y) : x = y
+    := eq_trans (eq_sym (decode' (encode x eq_refl))) (decode' H).
+
+  Definition deencode {y} (H : x = y) : decode (encode y H) = H.
+  Proof.
+    destruct H.
+    unfold decode.
+    edestruct decode'.
+    reflexivity.
+  Defined.
+
+  Global Instance isiso_encode {y} : IsIso (encode y).
+  Proof.
+    exists (@decode y).
+    { intro H.
+      unfold decode.
+      set (yH := (existT _ y H)).
+      change H with (projT2 yH).
+      change y with (projT1 yH).
+      clearbody yH; clear y H.
+      destruct (code_hprop (existT _ x (encode x eq_refl)) yH); simpl.
+      abstract (rewrite concat_Vp; reflexivity). }
+    { intro p.
+      apply deencode. }
+  Defined.
+End gen.
+
+Section hprop.
+  Context {A} `{IsHProp A}.
+
+  Let hprop_encode {x y : A} (p : x = y) : unit := tt.
+
+  Local Hint Resolve (fun x => @isiso_encode A x (fun _ => unit)) : typeclass_instances.
+
+  Global Instance ishprop_path_hprop : IsHPropRel (@eq A).
+  Proof.
+    intros x y p q.
+    pose proof (is_left_inv (@hprop_encode x y)) as H'.
+    rewrite <- (H' p), <- (H' q).
+    apply f_equal, allpath_hprop.
+  Qed.
+End hprop.
