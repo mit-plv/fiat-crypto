@@ -71,8 +71,9 @@ Module Zmod.
 
     Lemma Fq_inv_fermat (x:F q) : inv x = x ^ Z.to_N (q - 2)%Z.
     Proof.
-      destruct (dec (x = 0%F)) as [?|Hnz]; [subst x; rewrite inv_0|].
-      { admit. }
+      destruct (dec (x = 0%F)) as [?|Hnz].
+      { subst x; rewrite inv_0, pow_0_l; trivial.
+        change (0%N) with (Z.to_N 0%Z); rewrite Z2N.inj_iff; omega. }
       erewrite <-Algebra.Field.inv_unique; try reflexivity.
       rewrite eq_FieldToZ_iff, FieldToZ_mul, FieldToZ_pow, Z2N.id, FieldToZ_1 by omega.
       apply (fermat_inv q _ (FieldToZ x)); rewrite mod_FieldToZ; eapply FieldToZ_nonzero; trivial.
