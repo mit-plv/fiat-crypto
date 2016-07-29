@@ -1,5 +1,6 @@
 (** * Reserved Notations *)
 Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.GlobalSettings.
 
 (** Putting them all together in one file prevents conflicts.  Coq's
     parser (camlpX) is really bad at conflicting notation levels and
@@ -20,7 +21,7 @@ Reserved Notation "'canonical' 'encoding' 'of' T 'as' B" (at level 50).
 Reserved Notation "@ 'is_eq_dec' T R" (at level 10, T at level 8, R at level 8).
 Reserved Infix "<<" (at level 30, no associativity).
 Reserved Infix ">>" (at level 30, no associativity).
-Reserved Infix "&" (at level 50).
+Reserved Infix "&" (at level 50). (* N.B. This conflicts with [{ a : T & P}] for [sigT] *)
 Reserved Infix "∣" (at level 50).
 Reserved Infix "~=" (at level 70).
 Reserved Infix "==" (at level 70, no associativity).

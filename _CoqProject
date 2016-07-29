@@ -64,13 +64,16 @@ src/Tactics/Algebra_syntax/Nsatz.v
 src/Util/AdditionChainExponentiation.v
 src/Util/CaseUtil.v
 src/Util/Decidable.v
+src/Util/Equality.v
 src/Util/FixCoqMistakes.v
+src/Util/GlobalSettings.v
 src/Util/IterAssocOp.v
 src/Util/ListUtil.v
 src/Util/NatUtil.v
 src/Util/Notations.v
 src/Util/NumTheoryUtil.v
 src/Util/Option.v
+src/Util/Sigma.v
 src/Util/Sum.v
 src/Util/Tactics.v
 src/Util/Tuple.v
