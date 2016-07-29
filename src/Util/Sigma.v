@@ -162,3 +162,23 @@ Section ex.
     destruct H, u; reflexivity.
   Defined.
 End ex.
+
+Ltac simpl_proj_exist_in H :=
+  repeat match type of H with
+         | context G[proj1_sig (exist _ ?x ?p)]
+           => let G' := context G[x] in change G' in H
+         | context G[proj2_sig (exist _ ?x ?p)]
+           => let G' := context G[p] in change G' in H
+         | context G[projT1 (existT _ ?x ?p)]
+           => let G' := context G[x] in change G' in H
+         | context G[projT2 (existT _ ?x ?p)]
+           => let G' := context G[p] in change G' in H
+         end.
+Ltac inversion_sigma_step :=
+  match goal with
+  | [ H : exist _ _ _ = exist _ _ _ |- _ ]
+    => apply path_sig_uncurried_iff in H; simpl_proj_exist_in H; destruct H
+  | [ H : existT _ _ _ = existT _ _ _ |- _ ]
+    => apply path_sigT_uncurried_iff in H; simpl_proj_exist_in H; destruct H
+  end.
+Ltac inversion_sigma := repeat inversion_sigma_step.
