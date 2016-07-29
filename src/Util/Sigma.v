@@ -39,6 +39,13 @@ Section sigT.
     : u = v
     := path_sigT u v p (P_hprop _ _ _).
 
+  Definition path_sigT_iff {A P} (P_hprop : forall (x : A) (p q : P x), p = q)
+             (u v : @sigT A P)
+    : u = v <-> (sigT (fun p : projT1 u = projT1 v => eq_rect _ _ (projT2 u) _ p = projT2 v)).
+  Proof.
+    split; [ intro; subst; exists eq_refl; reflexivity | apply path_sigT_uncurried ].
+  Defined.
+
   Definition path_sigT_hprop_iff {A P} (P_hprop : forall (x : A) (p q : P x), p = q)
              (u v : @sigT A P)
     : u = v <-> (projT1 u = projT1 v)
@@ -93,6 +100,13 @@ Section sig.
              (p : proj1_sig u = proj1_sig v)
     : u = v
     := path_sig u v p (P_hprop _ _ _).
+
+  Definition path_sig_iff {A} {P : A -> Prop} (P_hprop : forall (x : A) (p q : P x), p = q)
+             (u v : @sig A P)
+    : u = v <-> (sig (fun p : proj1_sig u = proj1_sig v => eq_rect _ _ (proj2_sig u) _ p = proj2_sig v)).
+  Proof.
+    split; [ intro; subst; exists eq_refl; reflexivity | apply path_sig_uncurried ].
+  Defined.
 
   Definition path_sig_hprop_iff {A} {P : A -> Prop} (P_hprop : forall (x : A) (p q : P x), p = q)
              (u v : @sig A P)
