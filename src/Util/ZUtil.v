@@ -1132,6 +1132,14 @@ Module Z.
   Qed.
   Hint Resolve f_equal_sub_mod : zarith.
 
+  Lemma div_sub_mod_exact a b : b <> 0 -> a / b = (a - a mod b) / b.
+  Proof.
+    intro.
+    rewrite (Z.div_mod a b) at 2 by lia.
+    autorewrite with zsimplify.
+    reflexivity.
+  Qed.
+
   Section equiv_modulo.
     Context (N : Z).
     Definition equiv_modulo x y := x mod N = y mod N.
