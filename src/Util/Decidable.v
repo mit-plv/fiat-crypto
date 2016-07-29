@@ -1,6 +1,9 @@
 (** Typeclass for decidable propositions *)
 
 Require Import Coq.Logic.Eqdep_dec.
+Require Import Crypto.Util.Sigma.
+Require Import Crypto.Util.HProp.
+Require Import Crypto.Util.Equality.
 
 Local Open Scope type_scope.
 
@@ -8,19 +11,48 @@ Class Decidable (P : Prop) := dec : {P} + {~P}.
 
 Notation DecidableRel R := (forall x y, Decidable (R x y)).
 
+Global Instance hprop_eq_dec {A} `{DecidableRel (@eq A)} : IsHPropRel (@eq A) | 10.
+Proof. repeat intro; apply UIP_dec; trivial with nocore. Qed.
+
+Global Instance eq_dec_hprop {A} {x y : A} `{hp : IsHProp A} : Decidable (@eq A x y) | 5.
+Proof. left; apply hp. Qed.
+
+Ltac no_equalities_about x0 y0 :=
+  lazymatch goal with
+  | [ H' : x0 = y0 |- _ ] => fail
+  | [ H' : y0 = x0 |- _ ] => fail
+  | [ H' : x0 <> y0 |- _ ] => fail
+  | [ H' : y0 <> x0 |- _ ] => fail
+  | _ => idtac
+  end.
+
 Ltac destruct_decidable_step :=
   match goal with
   | [ H : Decidable _ |- _ ] => destruct H
+  | [ H : forall x y : ?A, Decidable (x = y), x0 : ?A, y0 : ?A  |- _ ]
+    => no_equalities_about x0 y0; destruct (H x0 y0)
+  | [ H : forall a0 (x y : _), Decidable (x = y), x0 : ?A, y0 : ?A  |- _ ]
+    => no_equalities_about x0 y0; destruct (H _ x0 y0)
   end.
 Ltac destruct_decidable := repeat destruct_decidable_step.
 
+Ltac pre_decide_destruct_sigma_step :=
+  match goal with
+  | [ H : sigT _ |- _ ] => destruct H
+  | [ H : sig _ |- _ ] => destruct H
+  | [ H : ex _ |- _ ] => destruct H
+  end.
+Ltac pre_decide_destruct_sigma := repeat pre_decide_destruct_sigma_step.
+
 Ltac pre_decide :=
   repeat (intros
-          || destruct_decidable
           || subst
+          || destruct_decidable
           || split
+          || pre_decide_destruct_sigma
           || unfold Decidable in *
-          || hnf ).
+          || hnf
+          || pre_hprop).
 
 Ltac solve_decidable_transparent_with tac :=
   pre_decide;
@@ -31,6 +63,7 @@ Ltac solve_decidable_transparent_with tac :=
 Ltac solve_decidable_transparent := solve_decidable_transparent_with firstorder.
 
 Local Hint Extern 0 => solve [ solve_decidable_transparent ] : typeclass_instances.
+Local Hint Extern 1 => progress inversion_sigma : core.
 
 Global Instance dec_True : Decidable True | 10 := left I.
 Global Instance dec_False : Decidable False | 10 := right (fun x => x).
@@ -50,6 +83,8 @@ Global Instance dec_eq_Empty_set : DecidableRel (@eq Empty_set) | 10. exact _. D
 Global Instance dec_eq_nat : DecidableRel (@eq nat) | 10. exact _. Defined.
 Global Instance dec_eq_prod {A B} `{DecidableRel (@eq A), DecidableRel (@eq B)} : DecidableRel (@eq (A * B)) | 10. exact _. Defined.
 Global Instance dec_eq_sum {A B} `{DecidableRel (@eq A), DecidableRel (@eq B)} : DecidableRel (@eq (A + B)) | 10. exact _. Defined.
+Global Instance dec_eq_sigT_hprop {A P} `{DecidableRel (@eq A), forall a : A, IsHProp (P a)} : DecidableRel (@eq (@sigT A P)) | 10. exact _. Defined.
+Global Instance dec_eq_sig_hprop {A} {P : A -> Prop} `{DecidableRel (@eq A), forall a : A, IsHProp (P a)} : DecidableRel (@eq (@sig A P)) | 10. exact _. Defined.
 
 Lemma Decidable_respects_iff A B (H : A <-> B) : (Decidable A -> Decidable B) * (Decidable B -> Decidable A).
 Proof. solve_decidable_transparent. Defined.
