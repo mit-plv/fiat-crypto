@@ -1268,3 +1268,25 @@ Module Export BoundsTactics.
   Ltac prime_bound := Z.prime_bound.
   Ltac zero_bounds := Z.zero_bounds.
 End BoundsTactics.
+
+Ltac push_Zmod :=
+  repeat match goal with
+         | _ => progress autorewrite with push_Zmod
+         | [ |- context[(?x * ?y) mod ?z] ]
+           => rewrite (Z.mul_mod_push x y z) by (Z.NoZMod || lia)
+         | [ |- context[(?x * ?y) mod ?z] ]
+           => rewrite (Z.mul_mod_l_push x y z) by (Z.NoZMod || lia)
+         | [ |- context[(?x * ?y) mod ?z] ]
+           => rewrite (Z.mul_mod_r_push x y z) by (Z.NoZMod || lia)
+         end.
+
+Ltac push_Zmod_hyps :=
+  repeat match goal with
+         | _ => progress autorewrite with push_Zmod in * |-
+         | [ H : context[(?x * ?y) mod ?z] |- _ ]
+           => rewrite (Z.mul_mod_push x y z) in H by (Z.NoZMod || lia)
+         | [ H : context[(?x * ?y) mod ?z] |- _ ]
+           => rewrite (Z.mul_mod_l_push x y z) in H by (Z.NoZMod || lia)
+         | [ H : context[(?x * ?y) mod ?z] |- _ ]
+           => rewrite (Z.mul_mod_r_push x y z) in H by (Z.NoZMod || lia)
+         end.
