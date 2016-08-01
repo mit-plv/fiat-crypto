@@ -1,20 +1,21 @@
 Require Export Bedrock.Word Bedrock.Nomega.
 Require Import Coq.Numbers.Natural.Peano.NPeano Coq.NArith.NArith Coq.PArith.PArith Coq.NArith.Ndigits Coq.Arith.Compare_dec Coq.Arith.Arith.
 Require Import Coq.Logic.ProofIrrelevance Coq.setoid_ring.Ring Coq.Lists.List Coq.omega.Omega.
+Require Import Crypto.Util.Notations.
 
 Require Export Crypto.Util.FixCoqMistakes.
 
 Definition Let_In {A P} (x : A) (f : forall a : A, P a) : P x :=
   let y := x in f y.
 
-Notation "'plet' x := y 'in' z" := (Let_In y (fun x => z)) (at level 60).
+Notation "'plet' x := y 'in' z" := (Let_In y (fun x => z)).
 
 Section Vector.
   Import ListNotations.
 
   Definition vec T n := {x: list T | length x = n}.
 
-  Definition vget {n T} (x: vec T n) (i: {v: nat | (v < n)%nat}): T.
+  Definition vget {n T} (x: vec T n) (i: {v: nat | (v < n)%nat}) : T.
     refine (
       match (proj1_sig x) as x' return (proj1_sig x) = x' -> _ with
       | [] => fun _ => _

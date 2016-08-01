@@ -1,8 +1,9 @@
 Require Import Bedrock.Word.
-Require Import QhasmCommon QhasmEvalCommon.
-Require Import Pseudo Qhasm AlmostQhasm Conversion Language.
-Require Import PseudoConversion AlmostConversion StringConversion.
-Require Import Wordize Vectorize Pseudize.
+Require Import Crypto.Assembly.QhasmCommon Crypto.Assembly.QhasmEvalCommon.
+Require Import Crypto.Assembly.Pseudo Crypto.Assembly.Qhasm Crypto.Assembly.AlmostQhasm Crypto.Assembly.Conversion Crypto.Assembly.Language.
+Require Import Crypto.Assembly.PseudoConversion Crypto.Assembly.AlmostConversion Crypto.Assembly.StringConversion.
+Require Import Crypto.Assembly.Wordize Crypto.Assembly.Vectorize Crypto.Assembly.Pseudize.
+Require Import Crypto.Util.Notations.
 
 Module Pipeline.
   Export AlmostQhasm Qhasm QhasmString.
@@ -24,8 +25,8 @@ End Pipeline.
 Module PipelineExamples.
   Import Pipeline ListNotations StateCommon EvalUtil ListState.
 
-  Local Notation "v [[ i ]]" := (nth i v (wzero _)) (at level 40).
-  Local Notation "$$ v" := (natToWord _ v) (at level 40).
+  Local Notation "v [[ i ]]" := (nth i v (wzero _)).
+  Local Notation "$$ v" := (natToWord _ v).
 
   (*
   Definition add_example: @pseudeq 32 W32 1 1 (fun v =>
@@ -53,7 +54,7 @@ Module PipelineExamples.
       plet b := v[[0]] in
 
       (* NOTE: we want the lets in this format to unify with
-               pseudo_mult_dual *)  
+               pseudo_mult_dual *)
       plet c := multHigh a b in
       plet d := a ^* b in
 

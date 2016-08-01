@@ -34,7 +34,7 @@ Module E.
                let x := fresh "x" p in
                let y := fresh "y" p in
                let pf := fresh "pf" p in
-               destruct p as [[x y] pf]
+               destruct p as [ [x y] pf]
              end.
 
     Local Obligation Tactic := intros; destruct_points; simpl; super_nsatz.
@@ -155,7 +155,7 @@ Module E.
     Program Definition ref_phi (P:Fpoint) : Kpoint := exist _ (
       let (x, y) := coordinates P in (phi x, phi y)) _.
     Next Obligation.
-      destruct P as [[? ?] ?]; simpl.
+      destruct P as [ [? ?] ?]; simpl.
       rewrite_strat bottomup hints field_homomorphism.
       eauto using is_homomorphism_phi_proper; assumption.
     Qed.
@@ -171,7 +171,7 @@ Module E.
              | |- _ => intro
              | |-  _ /\ _ => split
              | [H: _ /\ _ |- _ ] => destruct H
-             | [p: point |- _ ] => destruct p as [[??]?]
+             | [p: point |- _ ] => destruct p as [ [??]?]
              | |- context[point_phi] => setoid_rewrite point_phi_correct
              | |- _ => progress cbv [fst snd coordinates proj1_sig eq fieldwise fieldwise' add zero opp ref_phi] in *
              | |- Keq ?x ?x => reflexivity
