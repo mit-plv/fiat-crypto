@@ -43,7 +43,8 @@ Ltac unwrap_F :=
   try apply eqsig_eq;
   demod.
 
-Global Instance eq_dec {m} : DecidableRel (@eq (F m)). exact _. Defined.
+(* FIXME: remove the pose proof once [monoid] no longer contains decidable equality *)
+Global Instance eq_dec {m} : DecidableRel (@eq (F m)). pose proof dec_eq_Z. exact _. Defined.
 
 Global Instance commutative_ring_modulo m
   : @Algebra.commutative_ring (F m) Logic.eq 0%F 1%F opp add sub mul.
