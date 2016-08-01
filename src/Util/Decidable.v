@@ -97,6 +97,10 @@ Global Instance dec_eq_nat : DecidableRel (@eq nat) | 10. exact _. Defined.
 Global Instance dec_eq_N : DecidableRel (@eq N) | 10 := N.eq_dec.
 Global Instance dec_eq_Z : DecidableRel (@eq Z) | 10 := Z.eq_dec.
 
+Lemma eqsig_eq {T} {U} {Udec:DecidableRel (@eq U)} (f g:T->U) (x x':T) pf pf' :
+  (exist (fun x => f x = g x) x pf) = (exist (fun x => f x = g x) x' pf') <-> (x = x').
+Proof. apply path_sig_hprop_iff; auto using UIP_dec, Udec. Qed.
+
 Lemma Decidable_respects_iff A B (H : A <-> B) : (Decidable A -> Decidable B) * (Decidable B -> Decidable A).
 Proof. solve_decidable_transparent. Defined.
 
