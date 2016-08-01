@@ -620,14 +620,23 @@ Module Z.
     etransitivity; [ apply IHl | apply Z.le_max_r ].
   Qed.
 
+  Ltac ltb_to_lt_with_hyp H lem :=
+    let H' := fresh in
+    rename H into H';
+    pose proof lem as H;
+    rewrite H' in H;
+    clear H'.
+
   Ltac ltb_to_lt :=
     repeat match goal with
            | [ H : (?x <? ?y) = ?b |- _ ]
-             => let H' := fresh in
-                rename H into H';
-                pose proof (Zlt_cases x y) as H;
-                rewrite H' in H;
-                clear H'
+             => ltb_to_lt_with_hyp H (Zlt_cases x y)
+           | [ H : (?x <=? ?y) = ?b |- _ ]
+             => ltb_to_lt_with_hyp H (Zle_cases x y)
+           | [ H : (?x >? ?y) = ?b |- _ ]
+             => ltb_to_lt_with_hyp H (Zgt_cases x y)
+           | [ H : (?x >=? ?y) = ?b |- _ ]
+             => ltb_to_lt_with_hyp H (Zge_cases x y)
            end.
 
   Ltac compare_to_sgn :=
