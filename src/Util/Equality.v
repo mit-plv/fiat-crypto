@@ -41,7 +41,7 @@ Section gen.
   Proof.
     destruct H.
     unfold decode.
-    edestruct decode'.
+    edestruct (@decode' x _).
     reflexivity.
   Defined.
 
@@ -73,6 +73,6 @@ Section hprop.
     intros x y p q.
     pose proof (is_left_inv (@hprop_encode x y)) as H'.
     rewrite <- (H' p), <- (H' q).
-    apply f_equal, allpath_hprop.
+    apply f_equal; apply allpath_hprop.
   Qed.
 End hprop.
