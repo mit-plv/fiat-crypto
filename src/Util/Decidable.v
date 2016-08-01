@@ -46,18 +46,21 @@ Ltac pre_decide_destruct_sigma := repeat pre_decide_destruct_sigma_step.
 
 Ltac pre_decide :=
   repeat (intros
-          || subst
           || destruct_decidable
           || split
           || pre_decide_destruct_sigma
           || unfold Decidable in *
-          || hnf
+          || hnf).
+
+Ltac post_decide :=
+  repeat (intros
+          || subst
           || pre_hprop).
 
 Ltac solve_decidable_transparent_with tac :=
   pre_decide;
-  try solve [ left; abstract tac
-            | right; abstract tac
+  try solve [ left; abstract (post_decide; tac)
+            | right; abstract (post_decide; tac)
             | decide equality; eauto with nocore ].
 
 Ltac solve_decidable_transparent := solve_decidable_transparent_with firstorder.
