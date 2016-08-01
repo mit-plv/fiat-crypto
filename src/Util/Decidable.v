@@ -52,6 +52,9 @@ Ltac pre_decide :=
           || unfold Decidable in *
           || hnf).
 
+(** Put the [subst] and reasoning about equalities after the [left]
+    and [right]; opaque equality proofs should not block decidability
+    proofs. *)
 Ltac post_decide :=
   repeat (intros
           || subst
