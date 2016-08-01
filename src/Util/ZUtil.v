@@ -1227,26 +1227,38 @@ Module Z.
     Local Instance equiv_modulo_Symmetric : Symmetric equiv_modulo := fun _ _ => @Logic.eq_sym _ _ _.
     Local Instance equiv_modulo_Transitive : Transitive equiv_modulo := fun _ _ _ => @Logic.eq_trans _ _ _ _.
 
-    Lemma mul_mod_Proper : Proper (equiv_modulo ==> equiv_modulo ==> equiv_modulo) Z.mul.
+    Local Instance mul_mod_Proper : Proper (equiv_modulo ==> equiv_modulo ==> equiv_modulo) Z.mul.
     Proof. unfold equiv_modulo, Proper, respectful; auto with zarith. Qed.
 
-    Lemma add_mod_Proper : Proper (equiv_modulo ==> equiv_modulo ==> equiv_modulo) Z.add.
+    Local Instance add_mod_Proper : Proper (equiv_modulo ==> equiv_modulo ==> equiv_modulo) Z.add.
     Proof. unfold equiv_modulo, Proper, respectful; auto with zarith. Qed.
 
-    Lemma sub_mod_Proper : Proper (equiv_modulo ==> equiv_modulo ==> equiv_modulo) Z.sub.
+    Local Instance sub_mod_Proper : Proper (equiv_modulo ==> equiv_modulo ==> equiv_modulo) Z.sub.
     Proof. unfold equiv_modulo, Proper, respectful; auto with zarith. Qed.
 
-    Lemma opp_mod_Proper : Proper (equiv_modulo ==> equiv_modulo) Z.opp.
+    Local Instance opp_mod_Proper : Proper (equiv_modulo ==> equiv_modulo) Z.opp.
     Proof. unfold equiv_modulo, Proper, respectful; auto with zarith. Qed.
 
-    Lemma modulo_equiv_modulo_Proper
+    Local Instance modulo_equiv_modulo_Proper
       : Proper (equiv_modulo ==> (fun x y => x = N /\ N = y) ==> Logic.eq) Z.modulo.
     Proof.
       repeat intro; hnf in *; intuition congruence.
     Qed.
-    Lemma eq_to_ProperProxy : ProperProxy (fun x y : Z => x = N /\ N = y) N.
+    Local Instance eq_to_ProperProxy : ProperProxy (fun x y : Z => x = N /\ N = y) N.
     Proof. split; reflexivity. Qed.
+
+    Lemma div_to_inv_modulo a x x' : x > 0 -> x * x' mod N = 1 mod N -> (a / x) == ((a - a mod x) * x').
+    Proof.
+      intros H xinv.
+      replace (a / x) with ((a / x) * 1) by lia.
+      change (x * x' == 1) in xinv.
+      rewrite <- xinv.
+      replace ((a / x) * (x * x')) with ((x * (a / x)) * x') by lia.
+      rewrite Z.mul_div_eq by assumption.
+      reflexivity.
+    Qed.
   End equiv_modulo.
+  Hint Rewrite div_to_inv_modulo using lia : zstrip_div.
 
   Module EquivModuloInstances (dummy : Nop). (* work around https://coq.inria.fr/bugs/show_bug.cgi?id=4973 *)
     Existing Instance equiv_modulo_Reflexive.
