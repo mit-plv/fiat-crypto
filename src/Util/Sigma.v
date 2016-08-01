@@ -1,3 +1,10 @@
+(** * Classification of the Σ Type *)
+(** In this file, we classify the basic structure of Σ types ([sigT],
+    [sig], and [ex], in Coq).  In particular, we classify equalities
+    of dependent pairs (inhabitants of Σ types), so that when we have
+    an equality between two such pairs, or when we want such an
+    equality, we have a systematic way of reducing such equalities to
+    equalities at simpler types. *)
 Require Import Crypto.Util.Equality.
 Require Import Crypto.Util.GlobalSettings.
 
@@ -7,17 +14,21 @@ Local Arguments proj1_sig {_ _} _.
 Local Arguments proj1_sig {_ _} _.
 Local Arguments f_equal {_ _} _ {_ _} _.
 
+(** ** Equality for [sigT] *)
 Section sigT.
+  (** *** Projecting an equality of a pair to equality of the first components *)
   Definition pr1_path {A} {P : A -> Type} {u v : sigT P} (p : u = v)
   : projT1 u = projT1 v
     := f_equal (@projT1 _ _) p.
 
+  (** *** Projecting an equality of a pair to equality of the second components *)
   Definition pr2_path {A} {P : A -> Type} {u v : sigT P} (p : u = v)
   : eq_rect _ _ (projT2 u) _ (pr1_path p) = projT2 v.
   Proof.
     destruct p; reflexivity.
   Defined.
 
+  (** *** Equality of [sigT] is itself a [sigT] *)
   Definition path_sigT_uncurried {A : Type} {P : A -> Type} (u v : sigT P)
              (pq : sigT (fun p : projT1 u = projT1 v => eq_rect _ _ (projT2 u) _ p = projT2 v))
   : u = v.
@@ -28,17 +39,23 @@ Section sigT.
     destruct p; reflexivity.
   Defined.
 
+  (** *** Curried version of proving equality of sigma types *)
   Definition path_sigT {A : Type} {P : A -> Type} (u v : sigT P)
              (p : projT1 u = projT1 v) (q : eq_rect _ _ (projT2 u) _ p = projT2 v)
   : u = v
     := path_sigT_uncurried u v (existT _ p q).
 
+  (** *** Equality of [sigT] when the property is an hProp *)
   Definition path_sigT_hprop {A P} (P_hprop : forall (x : A) (p q : P x), p = q)
              (u v : @sigT A P)
              (p : projT1 u = projT1 v)
     : u = v
     := path_sigT u v p (P_hprop _ _ _).
 
+  (** *** Equivalence of equality of [sigT] with a [sigT] of equality *)
+  (** We could actually use [IsIso] here, but for simplicity, we
+      don't.  If we wanted to deal with proofs of equality of Σ types
+      in dependent positions, we'd need it. *)
   Definition path_sigT_uncurried_iff {A P}
              (u v : @sigT A P)
     : u = v <-> (sigT (fun p : projT1 u = projT1 v => eq_rect _ _ (projT2 u) _ p = projT2 v)).
@@ -46,16 +63,19 @@ Section sigT.
     split; [ intro; subst; exists eq_refl; reflexivity | apply path_sigT_uncurried ].
   Defined.
 
+  (** *** Equivalence of equality of [sigT] involving hProps with equality of the first components *)
   Definition path_sigT_hprop_iff {A P} (P_hprop : forall (x : A) (p q : P x), p = q)
              (u v : @sigT A P)
     : u = v <-> (projT1 u = projT1 v)
     := conj (f_equal projT1) (path_sigT_hprop P_hprop u v).
 
+  (** *** Non-dependent classification of equality of [sigT] *)
   Definition path_sigT_nondep {A B : Type} (u v : @sigT A (fun _ => B))
              (p : projT1 u = projT1 v) (q : projT2 u = projT2 v)
   : u = v
     := @path_sigT _ _ u v p (eq_trans (transport_const _ _) q).
 
+  (** *** Classification of transporting across an equality of [sigT]s *)
   Lemma eq_rect_sigT {A x} {P : A -> Type} (Q : forall a, P a -> Prop) (u : sigT (Q x)) {y} (H : x = y)
   : eq_rect x (fun a => sigT (Q a)) u y H
     = existT
@@ -69,6 +89,7 @@ Section sigT.
   Defined.
 End sigT.
 
+(** ** Equality for [sig] *)
 Section sig.
   Definition proj1_sig_path {A} {P : A -> Prop} {u v : sig P} (p : u = v)
   : proj1_sig u = proj1_sig v
@@ -126,6 +147,7 @@ Section sig.
   Defined.
 End sig.
 
+(** ** Equality for [ex] *)
 Section ex.
   Definition path_ex_uncurried' {A : Type} (P : A -> Prop) {u1 v1 : A} {u2 : P u1} {v2 : P v1}
              (pq : exists p : u1 = v1, eq_rect _ _ u2 _ p = v2)
@@ -163,6 +185,16 @@ Section ex.
   Defined.
 End ex.
 
+(** ** Useful Tactics *)
+(** *** [inversion_sigma] *)
+(** The built-in [inversion] will frequently leave equalities of
+    dependent pairs.  When the first type in the pair is an hProp or
+    otherwise simplifies, [inversion_sigma] is useful; it will replace
+    the equality of pairs with a pair of equalities, one involving a
+    term casted along the other.  This might also prove useful for
+    writing a version of [inversion] / [dependent destruction] which
+    does not lose information, i.e., does not turn a goal which is
+    provable into one which requires axiom K / UIP.  *)
 Ltac simpl_proj_exist_in H :=
   repeat match type of H with
          | context G[proj1_sig (exist _ ?x ?p)]

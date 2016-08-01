@@ -1,3 +1,10 @@
+(** * Homotopy Propositions *)
+(** A homotopy proposition, or hProp, is a subsingleton type, i.e., a
+    type with at most one inhabitant.  The property of being an hProp,
+    i.e., being irrelevant when considering propositional equality
+    ([eq]) of terms, comes up frequently.  Since it is frequently
+    automatically inferrable from the structure of the type, we make a
+    typeclass for it. *)
 Class IsHProp T := allpath_hprop : forall x y : T, x = y.
 
 Notation IsHPropRel R := (forall x y, IsHProp (R x y)).
