@@ -1258,7 +1258,7 @@ Module Z.
       reflexivity.
     Qed.
   End equiv_modulo.
-  Hint Rewrite div_to_inv_modulo using lia : zstrip_div.
+  Hint Rewrite div_to_inv_modulo using solve [ eassumption | lia ] : zstrip_div.
 
   Module EquivModuloInstances (dummy : Nop). (* work around https://coq.inria.fr/bugs/show_bug.cgi?id=4973 *)
     Existing Instance equiv_modulo_Reflexive.
