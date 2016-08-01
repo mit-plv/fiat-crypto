@@ -1312,3 +1312,22 @@ Ltac push_Zmod_hyps :=
          | [ H : context[(?x * ?y) mod ?z] |- _ ]
            => rewrite (Z.mul_mod_r_push x y z) in H by (Z.NoZMod || lia)
          end.
+
+Ltac has_no_mod x z :=
+  lazymatch x with
+  | context[_ mod z] => fail
+  | _ => idtac
+  end.
+Ltac pull_Zmod :=
+  repeat match goal with
+         | [ |- context[((?x mod ?z) * (?y mod ?z)) mod ?z] ]
+           => has_no_mod x z; has_no_mod y z;
+              rewrite <- (Z.mul_mod x y z) by lia
+         | [ |- context[((?x mod ?z) * ?y) mod ?z] ]
+           => has_no_mod x z; has_no_mod y z;
+              rewrite <- (Z.mul_mod_l x y z) by lia
+         | [ |- context[(?x * (?y mod ?z)) mod ?z] ]
+           => has_no_mod x z; has_no_mod y z;
+              rewrite <- (Z.mul_mod_r x y z) by lia
+         | _ => progress autorewrite with pull_Zmod
+         end.
