@@ -21,7 +21,7 @@ Class IsEquiv {A B : Type} (f : A -> B) := BuildIsEquiv {
   eisadj : forall x : A, eisretr (f x) = ap f (eissect x)
 }.
 >> *)
-(** - Contratible fibers: [∀ y : B, Contr { x : A | f x = y }] where
+(** - Contractible fibers: [∀ y : B, Contr { x : A | f x = y }] where
       [Contr T := { center : T | forall y, center = y }] *)
 
 (** This is useful for classifying equalities in a theoretically nice

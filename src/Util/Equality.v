@@ -7,14 +7,17 @@
 Require Import Crypto.Util.Isomorphism.
 Require Import Crypto.Util.HProp.
 
-(** The J-rule ([eq_rect]) shows that [eq] forms a weak ∞-groupoid.
-    The first level of this groupoid is given by the identity
-    [eq_refl], the binary operation [eq_trans], and the inverse of [p
-    : x = y] given by [eq_sym p : y = x].  The second level, which we
-    provide here, says that [id ∘ p = p = p ∘ id], that [(p ∘ q)⁻¹ =
-    q⁻¹ ∘ p⁻¹], that [(p⁻¹)⁻¹ = p], and that [p ∘ p⁻¹ = p⁻¹ ∘ p = id].
-    We prove these here, as well as a few lemmas about functoriality
-    of functions over equality. *)
+(** Most of the structure of proofs of equalities fits into what
+    mathematicians call a weak ∞-groupoid.  (In fact, one way of
+    *defining* a weak ∞-groupoid is via what's called the J-rule,
+    which exactly matches the eliminator [eq_rect] for the equality
+    type [eq].)  The first level of this groupoid is given by the
+    identity [eq_refl], the binary operation [eq_trans], and the
+    inverse of [p : x = y] given by [eq_sym p : y = x].  The second
+    level, which we provide here, says that [id ∘ p = p = p ∘ id],
+    that [(p ∘ q)⁻¹ = q⁻¹ ∘ p⁻¹], that [(p⁻¹)⁻¹ = p], and that [p ∘
+    p⁻¹ = p⁻¹ ∘ p = id].  We prove these here, as well as a few lemmas
+    about functoriality of functions over equality. *)
 Definition concat_1p {A x y} (p : x = y :> A) : eq_trans eq_refl p = p.
 Proof. case p; reflexivity. Defined.
 Definition concat_p1 {A x y} (p : x = y :> A) : eq_trans p eq_refl = p.
