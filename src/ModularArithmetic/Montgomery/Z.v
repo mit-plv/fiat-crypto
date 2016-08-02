@@ -80,11 +80,11 @@ Section montgomery.
     Lemma add_correct_naive x y : from_montgomery_naive (x + y) = from_montgomery_naive x + from_montgomery_naive y.
     Proof. unfold from_montgomery_naive, add; lia. Qed.
     Lemma add_correct_naive_to x y : to_montgomery_naive (x + y) = (to_montgomery_naive x + to_montgomery_naive y)%montgomery.
-    Proof. unfold to_montgomery_naive, add; lia. Qed.
+    Proof. unfold to_montgomery_naive, add; autorewrite with push_Zmul; reflexivity. Qed.
     Lemma sub_correct_naive x y : from_montgomery_naive (x - y) = from_montgomery_naive x - from_montgomery_naive y.
     Proof. unfold from_montgomery_naive, sub; lia. Qed.
     Lemma sub_correct_naive_to x y : to_montgomery_naive (x - y) = (to_montgomery_naive x - to_montgomery_naive y)%montgomery.
-    Proof. unfold to_montgomery_naive, sub; lia. Qed.
+    Proof. unfold to_montgomery_naive, sub; autorewrite with push_Zmul; reflexivity. Qed.
 
     (** Multiplication in Montgomery form, however, is seemingly more
         complicated. The usual product of [aR] and [bR] does not
