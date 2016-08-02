@@ -147,8 +147,7 @@ end function
             (N'_in_range : 0 <= N' < R)
             (N'_good : N * N' ≡ᵣ -1).
     Section redc.
-      Context (T : Z)
-              (T_in_range : 0 <= T < R * N).
+      Context (T : Z).
 
       Lemma N'_good' : N' * N ≡ᵣ -1.
       Proof. rewrite <- N'_good; apply f_equal2; lia. Qed.
@@ -186,8 +185,9 @@ end function
           autorewrite with push_Zmod zsimplify; reflexivity.
       Qed.
 
-      Lemma reduce_in_range : 0 <= reduce < N.
+      Lemma reduce_in_range : 0 <= T < R * N -> 0 <= reduce < N.
       Proof.
+        intro.
         assert (0 <= m < R) by (subst m; auto with zarith).
         assert (0 <= T + m * N < 2 * R * N) by nia.
         assert (0 <= t < 2 * N) by (subst t; auto with zarith lia).
