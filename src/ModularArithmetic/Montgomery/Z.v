@@ -1,14 +1,9 @@
 (*** Montgomery Multiplication *)
 (** This file implements Montgomery Form, Montgomery Reduction, and
     Montgomery Multiplication on [Z].  We follow Wikipedia. *)
-Require Import Coq.ZArith.ZArith Coq.micromega.Psatz Coq.Structures.Equalities.
-Require Import Crypto.Util.ZUtil Crypto.Util.Tactics.
+Require Import Coq.ZArith.ZArith.
+Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Notations.
-
-Declare Module Nop : Nop.
-Module Import ImportEquivModuloInstances := Z.EquivModuloInstances Nop.
-
-Local Existing Instance eq_Reflexive. (* speed up setoid_rewrite as per https://coq.inria.fr/bugs/show_bug.cgi?id=4978 *)
 
 Local Open Scope Z_scope.
 Delimit Scope montgomery_naive_scope with montgomery_naive.
@@ -18,13 +13,10 @@ Bind Scope montgomery_scope with montgomeryZ.
 
 Section montgomery.
   Context (N : Z)
-          (N_reasonable : N <> 0)
           (R : Z)
-          (R_good : Z.gcd N R = 1).
+          (R' : Z). (* R' is R⁻¹ mod N *)
   Local Notation "x ≡ y" := (Z.equiv_modulo N x y) : type_scope.
   Local Notation "x ≡ᵣ y" := (Z.equiv_modulo R x y) : type_scope.
-  Context (R' : Z)
-          (R'_good : R * R' ≡ 1).
   (** Quoting Wikipedia <https://en.wikipedia.org/wiki/Montgomery_modular_multiplication>: *)
   (** In modular arithmetic computation, Montgomery modular
       multiplication, more commonly referred to as Montgomery
@@ -43,23 +35,8 @@ Section montgomery.
       Montgomery product. Transforming the result out of Montgomery
       form yields the classical modular product [ab mod N]. *)
 
-  Lemma R'_good' : R' * R ≡ 1.
-  Proof. rewrite <- R'_good; apply f_equal2; lia. Qed.
-
   Definition to_montgomery_naive (x : Z) : montgomeryZ := x * R.
   Definition from_montgomery_naive (x : montgomeryZ) : Z := x * R'.
-  Lemma to_from_montgomery_naive x : to_montgomery_naive (from_montgomery_naive x) ≡ x.
-  Proof.
-    unfold to_montgomery_naive, from_montgomery_naive.
-    rewrite <- Z.mul_assoc, R'_good'.
-    autorewrite with zsimplify; reflexivity.
-  Qed.
-  Lemma from_to_montgomery_naive x : from_montgomery_naive (to_montgomery_naive x) ≡ x.
-  Proof.
-    unfold to_montgomery_naive, from_montgomery_naive.
-    rewrite <- Z.mul_assoc, R'_good.
-    autorewrite with zsimplify; reflexivity.
-  Qed.
 
   (** * Modular arithmetic and Montgomery form *)
   Section general.
@@ -74,17 +51,6 @@ Section montgomery.
 
     Definition add : montgomeryZ -> montgomeryZ -> montgomeryZ := fun aR bR => aR + bR.
     Definition sub : montgomeryZ -> montgomeryZ -> montgomeryZ := fun aR bR => aR - bR.
-    Local Infix "+" := add : montgomery_scope.
-    Local Infix "-" := sub : montgomery_scope.
-
-    Lemma add_correct_naive x y : from_montgomery_naive (x + y) = from_montgomery_naive x + from_montgomery_naive y.
-    Proof. unfold from_montgomery_naive, add; lia. Qed.
-    Lemma add_correct_naive_to x y : to_montgomery_naive (x + y) = (to_montgomery_naive x + to_montgomery_naive y)%montgomery.
-    Proof. unfold to_montgomery_naive, add; autorewrite with push_Zmul; reflexivity. Qed.
-    Lemma sub_correct_naive x y : from_montgomery_naive (x - y) = from_montgomery_naive x - from_montgomery_naive y.
-    Proof. unfold from_montgomery_naive, sub; lia. Qed.
-    Lemma sub_correct_naive_to x y : to_montgomery_naive (x - y) = (to_montgomery_naive x - to_montgomery_naive y)%montgomery.
-    Proof. unfold to_montgomery_naive, sub; autorewrite with push_Zmul; reflexivity. Qed.
 
     (** Multiplication in Montgomery form, however, is seemingly more
         complicated. The usual product of [aR] and [bR] does not
@@ -104,16 +70,6 @@ Section montgomery.
 
     Definition mul_naive : montgomeryZ -> montgomeryZ -> montgomeryZ
       := fun aR bR => aR * bR * R'.
-    Local Infix "*" := mul_naive : montgomery_scope.
-
-    Theorem mul_correct_naive x y : from_montgomery_naive (x * y) = from_montgomery_naive x * from_montgomery_naive y.
-    Proof. unfold from_montgomery_naive, mul_naive; lia. Qed.
-    Theorem mul_correct_naive_to x y : to_montgomery_naive (x * y) ≡ (to_montgomery_naive x * to_montgomery_naive y)%montgomery.
-    Proof.
-      unfold to_montgomery_naive, mul_naive.
-      rewrite <- !Z.mul_assoc, R'_good.
-      autorewrite with zsimplify; apply (f_equal2 Z.modulo); lia.
-    Qed.
   End general.
 
   (** * The REDC algorithm *)
@@ -143,56 +99,24 @@ function REDC is
     end if
 end function
 >> *)
-    Context (N' : Z)
-            (N'_in_range : 0 <= N' < R)
-            (N'_good : N * N' ≡ᵣ -1).
+    Context (N' : Z). (* N' is N⁻¹ mod R *)
     Section redc.
       Context (T : Z).
 
-      Lemma N'_good' : N' * N ≡ᵣ -1.
-      Proof. rewrite <- N'_good; apply f_equal2; lia. Qed.
-
       Let m := ((T mod R) * N') mod R.
       Let t := (T + m * N) / R.
+      Definition prereduce : montgomeryZ := t.
       Definition reduce : montgomeryZ
         := if N <=? t then
-             t - N
+             prereduce - N
            else
-             t.
+             prereduce.
 
-      Lemma N'_good'_alt x : (((x mod R) * (N' mod R)) mod R) * (N mod R) ≡ᵣ x * -1.
-      Proof.
-        rewrite <- N'_good', Z.mul_assoc.
-        unfold Z.equiv_modulo; push_Zmod.
-        reflexivity.
-      Qed.
-
-      Lemma reduce_correct_helper : t ≡ T * R'.
-      Proof.
-        transitivity ((T + m * N) * R').
-        { subst t m.
-          autorewrite with zstrip_div; push_Zmod.
-          rewrite N'_good'_alt.
-          autorewrite with zsimplify pull_Zmod.
-          reflexivity. }
-        unfold Z.equiv_modulo; push_Zmod; autorewrite with zsimplify; reflexivity.
-      Qed.
-
-      Lemma reduce_correct : reduce ≡ T * R'.
-      Proof.
-        unfold reduce.
-        break_match; rewrite reduce_correct_helper; unfold Z.equiv_modulo;
-          autorewrite with push_Zmod zsimplify; reflexivity.
-      Qed.
-
-      Lemma reduce_in_range : 0 <= T < R * N -> 0 <= reduce < N.
-      Proof.
-        intro.
-        assert (0 <= m < R) by (subst m; auto with zarith).
-        assert (0 <= T + m * N < 2 * R * N) by nia.
-        assert (0 <= t < 2 * N) by (subst t; auto with zarith lia).
-        unfold reduce; break_match; Z.ltb_to_lt; nia.
-      Qed.
+      Definition partial_reduce : montgomeryZ
+        := if R <=? t then
+             prereduce - N
+           else
+             prereduce.
     End redc.
 
     (** * Arithmetic in Montgomery form *)
@@ -212,7 +136,6 @@ end function
           multiplication. *)
       Definition mul : montgomeryZ -> montgomeryZ -> montgomeryZ
         := fun aR bR => reduce (aR * bR).
-      Local Infix "*" := mul : montgomery_scope.
 
       (** Conversion into Montgomery form is done by computing
           [REDC((a mod N)(R² mod N))]. Conversion out of Montgomery
@@ -225,44 +148,6 @@ end function
           Montgomery multiplies. *)
       Definition to_montgomery (a : Z) : montgomeryZ := reduce (a * (R*R mod N)).
       Definition from_montgomery (aR : montgomeryZ) : Z := reduce aR.
-      Lemma to_from_montgomery a : to_montgomery (from_montgomery a) ≡ a.
-      Proof.
-        unfold to_montgomery, from_montgomery.
-        transitivity ((a * 1) * 1); [ | apply f_equal2; lia ].
-        rewrite <- !R'_good, !reduce_correct.
-        unfold Z.equiv_modulo; push_Zmod; pull_Zmod.
-        apply f_equal2; lia.
-      Qed.
-      Lemma from_to_montgomery a : from_montgomery (to_montgomery a) ≡ a.
-      Proof.
-        unfold to_montgomery, from_montgomery.
-        rewrite !reduce_correct.
-        transitivity (a * ((R * (R * R' mod N) * R') mod N)).
-        { unfold Z.equiv_modulo; push_Zmod; pull_Zmod.
-          apply f_equal2; lia. }
-        { repeat first [ rewrite R'_good
-                       | reflexivity
-                       | push_Zmod; pull_Zmod; progress autorewrite with zsimplify
-                       | progress unfold Z.equiv_modulo ]. }
-      Qed.
-
-      Theorem mul_correct x y : from_montgomery (x * y) ≡ from_montgomery x * from_montgomery y.
-      Proof.
-        unfold from_montgomery, mul.
-        rewrite !reduce_correct; apply f_equal2; lia.
-      Qed.
-      Theorem mul_correct_to x y : to_montgomery (x * y) ≡ (to_montgomery x * to_montgomery y)%montgomery.
-      Proof.
-        unfold to_montgomery, mul.
-        rewrite !reduce_correct.
-        transitivity (x * y * R * 1 * 1 * 1);
-          [ rewrite <- R'_good at 1
-          | rewrite <- R'_good at 1 2 3 ];
-          autorewrite with zsimplify;
-          unfold Z.equiv_modulo; push_Zmod; pull_Zmod.
-        { apply f_equal2; lia. }
-        { apply f_equal2; lia. }
-      Qed.
     End arithmetic.
   End redc.
 End montgomery.
@@ -271,5 +156,3 @@ Infix "+" := add : montgomery_scope.
 Infix "-" := sub : montgomery_scope.
 Infix "*" := mul_naive : montgomery_naive_scope.
 Infix "*" := mul : montgomery_scope.
-
-Module Import LocalizeEquivModuloInstances := Z.RemoveEquivModuloInstances Nop.
