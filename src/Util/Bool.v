@@ -13,7 +13,7 @@ Hint Extern 1 => progress autorewrite with bool_congr in * : bool_congr.
 Hint Extern 1 => progress autorewrite with bool_congr_setoid in * : bool_congr_setoid.
 Hint Extern 2 => progress rewrite_strat topdown hints bool_congr_setoid : bool_congr_setoid.
 
-Hint Rewrite Bool.andb_diag Bool.orb_diag Bool.eqb_reflx Bool.negb_involutive Bool.eqb_negb1 Bool.eqb_negb2 Bool.orb_true_r Bool.orb_true_l Bool.orb_false_r Bool.orb_false_l Bool.orb_negb_r Bool.andb_false_r Bool.andb_false_l Bool.andb_true_r Bool.andb_false_r Bool.andb_negb_r Bool.absorption_andb Bool.absorption_orb Bool.xorb_false_r Bool.xorb_false_l Bool.xorb_true_r Bool.xorb_true_l Bool.xorb_nilpotent : bool_congr.
+Hint Rewrite Bool.andb_diag Bool.orb_diag Bool.eqb_reflx Bool.negb_involutive Bool.eqb_negb1 Bool.eqb_negb2 Bool.orb_true_r Bool.orb_true_l Bool.orb_false_r Bool.orb_false_l Bool.orb_negb_r Bool.andb_false_r Bool.andb_false_l Bool.andb_true_r Bool.andb_false_r Bool.andb_negb_r Bool.xorb_false_r Bool.xorb_false_l Bool.xorb_true_r Bool.xorb_true_l Bool.xorb_nilpotent : bool_congr.
 Hint Rewrite Bool.negb_if : boolsimplify.
 Hint Rewrite <- Bool.andb_if Bool.andb_lazy_alt Bool.orb_lazy_alt : boolsimplify.
 Hint Rewrite Bool.not_true_iff_false Bool.not_false_iff_true Bool.eqb_true_iff Bool.eqb_false_iff Bool.negb_true_iff Bool.negb_false_iff Bool.orb_true_iff Bool.orb_false_iff Bool.andb_true_iff Bool.andb_false_iff Bool.xorb_negb_negb : bool_congr_setoid.
