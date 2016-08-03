@@ -35,6 +35,8 @@ Create HintDb push_Zpow discriminated.
 Create HintDb pull_Zpow discriminated.
 Create HintDb push_Zmul discriminated.
 Create HintDb pull_Zmul discriminated.
+Create HintDb push_Zdiv discriminated.
+Create HintDb pull_Zdiv discriminated.
 Create HintDb pull_Zmod discriminated.
 Create HintDb push_Zmod discriminated.
 Hint Extern 1 => autorewrite with push_Zopp in * : push_Zopp.
@@ -43,6 +45,8 @@ Hint Extern 1 => autorewrite with push_Zpow in * : push_Zpow.
 Hint Extern 1 => autorewrite with pull_Zpow in * : pull_Zpow.
 Hint Extern 1 => autorewrite with push_Zmul in * : push_Zmul.
 Hint Extern 1 => autorewrite with pull_Zmul in * : pull_Zmul.
+Hint Extern 1 => autorewrite with push_Zdiv in * : push_Zmul.
+Hint Extern 1 => autorewrite with pull_Zdiv in * : pull_Zmul.
 Hint Extern 1 => autorewrite with pull_Zmod in * : pull_Zmod.
 Hint Extern 1 => autorewrite with push_Zmod in * : push_Zmod.
 Hint Rewrite Z.div_opp_l_nz Z.div_opp_l_z using lia : pull_Zopp.
@@ -55,6 +59,8 @@ Hint Rewrite Z.pow_sub_r Z.pow_div_l Z.pow_twice_r Z.pow_mul_l Z.pow_add_r using
 Hint Rewrite <- Z.pow_sub_r Z.pow_div_l Z.pow_mul_l Z.pow_add_r Z.pow_twice_r using lia : pull_Zpow.
 Hint Rewrite Z.mul_add_distr_l Z.mul_add_distr_r Z.mul_sub_distr_l Z.mul_sub_distr_r : push_Zmul.
 Hint Rewrite <- Z.mul_add_distr_l Z.mul_add_distr_r Z.mul_sub_distr_l Z.mul_sub_distr_r : pull_Zmul.
+Hint Rewrite Z.div_div using lia : pull_Zdiv.
+Hint Rewrite <- Z.div_div using lia : push_Zdiv.
 Hint Rewrite <- Z.mul_mod Z.add_mod Zminus_mod using lia : pull_Zmod.
 Hint Rewrite Zminus_mod_idemp_l Zminus_mod_idemp_r : pull_Zmod.
 
