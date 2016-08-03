@@ -1235,6 +1235,31 @@ Module Z.
   Proof. lia. Qed.
   Hint Rewrite simplify_twice_sub_add : zsimplify.
 
+  Lemma simplify_once_add_add_add x y z : x + y + (x + z) = 2 * x + y + z.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_once_add_add_add : zsimplify.
+  Lemma simplify_once_add_add_sub x y z : x + y + (x - z) = 2 * x + y - z.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_once_add_add_sub : zsimplify.
+  Lemma simplify_once_add_sub_add x y z : x + y - (x + z) = y - z.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_once_add_sub_add : zsimplify.
+  Lemma simplify_once_add_sub_sub x y z : x + y - (x - z) = y + z.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_once_add_sub_sub : zsimplify.
+  Lemma simplify_once_sub_add_add x y z : x - y + (x + z) = 2 * x - y + z.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_once_sub_add_add : zsimplify.
+  Lemma simplify_once_sub_add_sub x y z : x - y + (x - z) = 2 * x - y - z.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_once_sub_add_sub : zsimplify.
+  Lemma simplify_once_sub_sub_add x y z : x - y - (x + z) = -y - z.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_once_sub_sub_add : zsimplify.
+  Lemma simplify_once_sub_sub_sub x y z : x - y - (x - z) = z - y.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_once_sub_sub_sub : zsimplify.
+
   Section equiv_modulo.
     Context (N : Z).
     Definition equiv_modulo x y := x mod N = y mod N.
