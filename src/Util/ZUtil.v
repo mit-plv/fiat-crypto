@@ -24,7 +24,7 @@ Hint Resolve (fun a b H => proj1 (Z.mod_pos_bound a b H)) (fun a b H => proj2 (Z
     which can reasonably be said to "simplify" the goal, should go in
     this database. *)
 Create HintDb zsimplify discriminated.
-Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r Z_mod_same_full Z.sub_simpl_r Z.sub_simpl_l Z.add_opp_diag_r Z.add_opp_diag_l Zmod_0_l Z.add_simpl_r Z.add_simpl_l Z.opp_0 : zsimplify.
+Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r Z_mod_same_full Z.sub_simpl_r Z.sub_simpl_l Z.add_opp_diag_r Z.add_opp_diag_l Zmod_0_l Z.add_simpl_r Z.add_simpl_l Z.opp_0 Zmod_0_r : zsimplify.
 Hint Rewrite Z.div_mul Z.div_1_l Z.div_same Z.mod_same Z.div_small Z.mod_small Z.div_add Z.div_add_l Z.mod_add Z.div_0_l Z.mod_mod using lia : zsimplify.
 Hint Rewrite <- Z.opp_eq_mul_m1 : zsimplify.
 
@@ -1170,6 +1170,13 @@ Module Z.
   Proof. reflexivity. Qed.
   Hint Rewrite minus_minus_one : zsimplify.
 
+  Lemma div_add_exact x y d : d <> 0 -> x mod d = 0 -> (x + y) / d = x / d + y / d.
+  Proof.
+    intros; rewrite (Z_div_exact_full_2 x d) at 1 by assumption.
+    rewrite Z.div_add_l' by assumption; lia.
+  Qed.
+  Hint Rewrite div_add_exact using lia : zsimplify.
+
   Lemma mul_mod_l a b n : n <> 0 -> (a * b) mod n = ((a mod n) * b) mod n.
   Proof.
     intros; rewrite (Z.mul_mod a b), (Z.mul_mod (a mod n) b) by lia.
@@ -1240,6 +1247,25 @@ Module Z.
   Lemma sub_mod_r_push a b n : n <> 0 -> NoZMod b -> (a - b) mod n = (a - (b mod n)) mod n.
   Proof. intros; symmetry; apply Zminus_mod_idemp_r; assumption. Qed.
   Hint Rewrite sub_mod_r_push using solve [ NoZMod | lia ] : push_Zmod.
+
+  Lemma sub_mod_mod_0 x d : (x - x mod d) mod d = 0.
+  Proof.
+    destruct (Z_zerop d); subst; autorewrite with push_Zmod zsimplify; reflexivity.
+  Qed.
+  Hint Resolve sub_mod_mod_0 : zarith.
+  Hint Rewrite sub_mod_mod_0 : zsimplify.
+
+  Lemma div_sub_mod_cond x y d
+    : d <> 0
+      -> (x - y) / d
+         = x / d + ((x mod d - y) / d).
+  Proof. clear.
+         intro.
+         replace (x - y) with ((x - x mod d) + (x mod d - y)) by lia.
+         rewrite div_add_exact by auto with zarith.
+         rewrite <- Z.div_sub_mod_exact by lia; lia.
+  Qed.
+  Hint Resolve div_sub_mod_cond : zarith.
 
   Lemma simplify_twice_sub_sub x y : 2 * x - (x - y) = x + y.
   Proof. lia. Qed.
