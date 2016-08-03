@@ -1051,7 +1051,7 @@ Module Z.
 
   Hint Rewrite Z.div_mul_skip Z.div_mul_skip' using lia : zsimplify.
 
-  Lemma div_mul_skip_pow base e0 e1 x y : 0 < x -> 0 < y -> 0 < base -> 0 <= e1 <= e0 -> x * base^e0 / y / base^e1 = x * base^(e0 - e1) / y.
+  Lemma div_mul_skip_pow base e0 e1 x y : 0 < y -> 0 < base -> 0 <= e1 <= e0 -> x * base^e0 / y / base^e1 = x * base^(e0 - e1) / y.
   Proof.
     intros.
     assert (0 < base^e1) by auto with zarith.
@@ -1061,7 +1061,7 @@ Module Z.
   Qed.
   Hint Rewrite div_mul_skip_pow using lia : zsimplify.
 
-  Lemma div_mul_skip_pow' base e0 e1 x y : 0 < x -> 0 < y -> 0 < base -> 0 <= e1 <= e0 -> base^e0 * x / y / base^e1 = base^(e0 - e1) * x / y.
+  Lemma div_mul_skip_pow' base e0 e1 x y : 0 < y -> 0 < base -> 0 <= e1 <= e0 -> base^e0 * x / y / base^e1 = base^(e0 - e1) * x / y.
   Proof.
     intros.
     rewrite (Z.mul_comm (base^e0) x), div_mul_skip_pow by lia.
