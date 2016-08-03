@@ -24,7 +24,7 @@ Hint Resolve (fun a b H => proj1 (Z.mod_pos_bound a b H)) (fun a b H => proj2 (Z
     which can reasonably be said to "simplify" the goal, should go in
     this database. *)
 Create HintDb zsimplify discriminated.
-Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r Z_mod_same_full Z.sub_simpl_r Z.sub_simpl_l Z.add_opp_diag_r Z.add_opp_diag_l Zmod_0_l Z.add_simpl_r Z.add_simpl_l : zsimplify.
+Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r Z_mod_same_full Z.sub_simpl_r Z.sub_simpl_l Z.add_opp_diag_r Z.add_opp_diag_l Zmod_0_l Z.add_simpl_r Z.add_simpl_l Z.opp_0 : zsimplify.
 Hint Rewrite Z.div_mul Z.div_1_l Z.div_same Z.mod_same Z.div_small Z.mod_small Z.div_add Z.div_add_l Z.mod_add Z.div_0_l Z.mod_mod using lia : zsimplify.
 Hint Rewrite <- Z.opp_eq_mul_m1 : zsimplify.
 
@@ -1161,6 +1161,14 @@ Module Z.
     autorewrite with zsimplify.
     reflexivity.
   Qed.
+
+  Lemma minus_distr_if (b : bool) x y : -(if b then x else y) = if b then -x else -y.
+  Proof. destruct b; reflexivity. Qed.
+  Hint Rewrite minus_distr_if : push_Zopp.
+
+  Lemma minus_minus_one : - -1 = 1.
+  Proof. reflexivity. Qed.
+  Hint Rewrite minus_minus_one : zsimplify.
 
   Lemma mul_mod_l a b n : n <> 0 -> (a * b) mod n = ((a mod n) * b) mod n.
   Proof.
