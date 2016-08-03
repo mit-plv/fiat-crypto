@@ -59,7 +59,7 @@ Section montgomery.
     Proof. unfold Z.to_montgomery_naive, sub; autorewrite with push_Zmul; reflexivity. Qed.
 
     Theorem mul_correct_naive x y : from_montgomery_naive (x * y) = from_montgomery_naive x * from_montgomery_naive y.
-    Proof. unfold from_montgomery_naive, mul_naive; lia. Qed.
+    Proof. unfold Z.from_montgomery_naive, mul_naive; lia. Qed.
     Theorem mul_correct_naive_to x y : to_montgomery_naive (x * y) ≡ (to_montgomery_naive x * to_montgomery_naive y)%montgomery.
     Proof.
       unfold Z.to_montgomery_naive, mul_naive.
@@ -162,7 +162,7 @@ Section montgomery.
             -> 0 <= reduce N R N' T < R.
         Proof.
           intro H; pose proof (prereduce_in_range_small_enough H).
-          unfold reduce, prereduce in *; break_match; Z.ltb_to_lt; nia.
+          unfold reduce, Z.prereduce in *; break_match; Z.ltb_to_lt; nia.
         Qed.
 
         Lemma partial_reduce_in_range_R
@@ -170,7 +170,7 @@ Section montgomery.
             -> 0 <= partial_reduce N R N' T < R.
         Proof.
           intro H; pose proof (prereduce_in_range_small_enough H).
-          unfold partial_reduce, prereduce in *; break_match; Z.ltb_to_lt; nia.
+          unfold partial_reduce, Z.prereduce in *; break_match; Z.ltb_to_lt; nia.
         Qed.
       End N_small_enough.
 
@@ -185,7 +185,7 @@ Section montgomery.
           -> 0 <= reduce N R N' T < N.
         Proof.
           intro H; pose proof (prereduce_in_range H).
-          unfold reduce, prereduce in *; break_match; Z.ltb_to_lt; nia.
+          unfold reduce, Z.prereduce in *; break_match; Z.ltb_to_lt; nia.
         Qed.
 
         Lemma partial_reduce_in_range
@@ -193,7 +193,7 @@ Section montgomery.
           -> Z.min 0 (R - N) <= partial_reduce N R N' T < 2 * N.
         Proof.
           intro H; pose proof (prereduce_in_range H).
-          unfold partial_reduce, prereduce in *; break_match; Z.ltb_to_lt;
+          unfold partial_reduce, Z.prereduce in *; break_match; Z.ltb_to_lt;
             apply Z.min_case_strong; nia.
         Qed.
       End unconstrained.
