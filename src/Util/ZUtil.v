@@ -1227,6 +1227,14 @@ Module Z.
   Proof. intros; symmetry; apply Zminus_mod_idemp_r; assumption. Qed.
   Hint Rewrite sub_mod_r_push using solve [ NoZMod | lia ] : push_Zmod.
 
+  Lemma simplify_twice_sub_sub x y : 2 * x - (x - y) = x + y.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_twice_sub_sub : zsimplify.
+
+  Lemma simplify_twice_sub_add x y : 2 * x - (x + y) = x - y.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_twice_sub_add : zsimplify.
+
   Section equiv_modulo.
     Context (N : Z).
     Definition equiv_modulo x y := x mod N = y mod N.
