@@ -1303,30 +1303,117 @@ Module Z.
   Proof. lia. Qed.
   Hint Rewrite simplify_twice_sub_add : zsimplify.
 
-  Lemma simplify_once_add_add_add x y z : x + y + (x + z) = 2 * x + y + z.
+  (* Naming convention: [X] for thing being aggregated, [p] for plus,
+     [m] for minus, [_] for parentheses *)
+  (* Python code to generate these hints:
+<<
+#!/usr/bin/env python
+
+def to_eqn(name):
+    vars_left = list('abcdefghijklmnopqrstuvwxyz')
+    ret = ''
+    close = ''
+    while name:
+        if name[0] == 'X':
+            ret += ' X'
+            name = name[1:]
+        else:
+            ret += ' ' + vars_left[0]
+            vars_left = vars_left[1:]
+        if name:
+            if name[0] == 'm': ret += ' -'
+            elif name[0] == 'p': ret += ' +'
+            name = name[1:]
+        if name and name[0] == '_':
+            ret += ' ('
+            close += ')'
+            name = name[1:]
+    if ret[-1] != 'X':
+        ret += ' ' + vars_left[0]
+    return (ret + close).strip().replace('( ', '(')
+
+def simplify(eqn):
+    counts = {}
+    sign_stack = [1, 1]
+    for i in eqn:
+        if i == ' ': continue
+        elif i == '(': sign_stack.append(sign_stack[-1])
+        elif i == ')': sign_stack.pop()
+        elif i == '+': sign_stack.append(sign_stack[-1])
+        elif i == '-': sign_stack.append(-sign_stack[-1])
+        else:
+            counts[i] = counts.get(i,0) + sign_stack.pop()
+    ret = ''
+    for k in sorted(counts.keys()):
+        if counts[k] == 1: ret += ' + %s' % k
+        elif counts[k] == -1: ret += ' - %s' % k
+        elif counts[k] < 0: ret += ' - %d * %s' % (abs(counts[k]), k)
+        elif counts[k] > 0: ret += ' + %d * %s' % (abs(counts[k]), k)
+    if ret == '': ret = '0'
+    return ret.strip(' +')
+
+
+def to_def(name):
+    eqn = to_eqn(name)
+    return r'''  Lemma simplify_%s %s X : %s = %s.
   Proof. lia. Qed.
-  Hint Rewrite simplify_once_add_add_add : zsimplify.
-  Lemma simplify_once_add_add_sub x y z : x + y + (x - z) = 2 * x + y - z.
+  Hint Rewrite simplify_%s : zsimplify.''' % (name, ' '.join(sorted(set(eqn) - set('+-() X'))), eqn, simplify(eqn), name)
+
+names = []
+names += ['%sX%s%sX' % (a, b, c) for a in 'mp' for b in 'mp' for c in 'mp']
+names += ['X%s%s_X%s' % (a, b, c) for a in 'mp' for b in 'mp' for c in 'mp']
+
+for name in names:
+    print(to_def(name))
+>> *)
+  Lemma simplify_mXmmX a b X : a - X - b - X = - 2 * X + a - b.
   Proof. lia. Qed.
-  Hint Rewrite simplify_once_add_add_sub : zsimplify.
-  Lemma simplify_once_add_sub_add x y z : x + y - (x + z) = y - z.
+  Hint Rewrite simplify_mXmmX : zsimplify.
+  Lemma simplify_mXmpX a b X : a - X - b + X = a - b.
   Proof. lia. Qed.
-  Hint Rewrite simplify_once_add_sub_add : zsimplify.
-  Lemma simplify_once_add_sub_sub x y z : x + y - (x - z) = y + z.
+  Hint Rewrite simplify_mXmpX : zsimplify.
+  Lemma simplify_mXpmX a b X : a - X + b - X = - 2 * X + a + b.
   Proof. lia. Qed.
-  Hint Rewrite simplify_once_add_sub_sub : zsimplify.
-  Lemma simplify_once_sub_add_add x y z : x - y + (x + z) = 2 * x - y + z.
+  Hint Rewrite simplify_mXpmX : zsimplify.
+  Lemma simplify_mXppX a b X : a - X + b + X = a + b.
   Proof. lia. Qed.
-  Hint Rewrite simplify_once_sub_add_add : zsimplify.
-  Lemma simplify_once_sub_add_sub x y z : x - y + (x - z) = 2 * x - y - z.
+  Hint Rewrite simplify_mXppX : zsimplify.
+  Lemma simplify_pXmmX a b X : a + X - b - X = a - b.
   Proof. lia. Qed.
-  Hint Rewrite simplify_once_sub_add_sub : zsimplify.
-  Lemma simplify_once_sub_sub_add x y z : x - y - (x + z) = -y - z.
+  Hint Rewrite simplify_pXmmX : zsimplify.
+  Lemma simplify_pXmpX a b X : a + X - b + X = 2 * X + a - b.
   Proof. lia. Qed.
-  Hint Rewrite simplify_once_sub_sub_add : zsimplify.
-  Lemma simplify_once_sub_sub_sub x y z : x - y - (x - z) = z - y.
+  Hint Rewrite simplify_pXmpX : zsimplify.
+  Lemma simplify_pXpmX a b X : a + X + b - X = a + b.
   Proof. lia. Qed.
-  Hint Rewrite simplify_once_sub_sub_sub : zsimplify.
+  Hint Rewrite simplify_pXpmX : zsimplify.
+  Lemma simplify_pXppX a b X : a + X + b + X = 2 * X + a + b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_pXppX : zsimplify.
+  Lemma simplify_Xmm_Xm a b X : X - a - (X - b) = - a + b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_Xmm_Xm : zsimplify.
+  Lemma simplify_Xmm_Xp a b X : X - a - (X + b) = - a - b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_Xmm_Xp : zsimplify.
+  Lemma simplify_Xmp_Xm a b X : X - a + (X - b) = 2 * X - a - b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_Xmp_Xm : zsimplify.
+  Lemma simplify_Xmp_Xp a b X : X - a + (X + b) = 2 * X - a + b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_Xmp_Xp : zsimplify.
+  Lemma simplify_Xpm_Xm a b X : X + a - (X - b) = a + b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_Xpm_Xm : zsimplify.
+  Lemma simplify_Xpm_Xp a b X : X + a - (X + b) = a - b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_Xpm_Xp : zsimplify.
+  Lemma simplify_Xpp_Xm a b X : X + a + (X - b) = 2 * X + a - b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_Xpp_Xm : zsimplify.
+  Lemma simplify_Xpp_Xp a b X : X + a + (X + b) = 2 * X + a + b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_Xpp_Xp : zsimplify.
 
   Section equiv_modulo.
     Context (N : Z).
