@@ -1,5 +1,13 @@
 (*** Barrett Reduction *)
-(** This file implements a slightly-generalized version of Barrett Reduction on [Z]. *)
+(** This file implements a slightly-generalized version of Barrett
+    Reduction on [Z].  This version follows the Handbook of Applied
+    Cryptography (Algorithm 14.42) rather closely; the only deviations
+    are that we generalize from [k ± 1] to [k ± offset] for an
+    arbitrary offset, and we weaken the conditions on the base [b] in
+    [bᵏ] slightly.  Contrasted with some other versions, this version
+    does reduction modulo [b^(k+offset)] early (ensuring that we don't
+    have to carry around extra precision), but requires more stringint
+    conditions on the base ([b]), exponent ([k]), and the [offset]. *)
 Require Import Coq.ZArith.ZArith Coq.micromega.Psatz.
 Require Import Crypto.Util.ZUtil Crypto.Util.Tactics Crypto.Algebra.
 
