@@ -46,18 +46,24 @@ Ltac pre_decide_destruct_sigma := repeat pre_decide_destruct_sigma_step.
 
 Ltac pre_decide :=
   repeat (intros
-          || subst
           || destruct_decidable
           || split
           || pre_decide_destruct_sigma
           || unfold Decidable in *
-          || hnf
+          || hnf).
+
+(** Put the [subst] and reasoning about equalities after the [left]
+    and [right]; opaque equality proofs should not block decidability
+    proofs. *)
+Ltac post_decide :=
+  repeat (intros
+          || subst
           || pre_hprop).
 
 Ltac solve_decidable_transparent_with tac :=
   pre_decide;
-  try solve [ left; abstract tac
-            | right; abstract tac
+  try solve [ left; abstract (post_decide; tac)
+            | right; abstract (post_decide; tac)
             | decide equality; eauto with nocore ].
 
 Ltac solve_decidable_transparent := solve_decidable_transparent_with firstorder.
