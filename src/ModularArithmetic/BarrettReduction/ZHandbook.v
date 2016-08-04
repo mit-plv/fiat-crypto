@@ -128,14 +128,12 @@ Section barrett.
     Qed.
 
     Theorem barrett_reduction_small
-      : x mod m = if r <? m
-                  then r
-                  else if r <? 2 * m
-                       then r - m
-                       else r - 2 * m.
+      : x mod m = let r := if r <? m then r else r-m in
+                  let r := if r <? m then r else r-m in
+                  r.
     Proof.
-      pose proof r_small.
-      destruct (r <? m) eqn:?, (r <? 2 * m) eqn:?; Z.ltb_to_lt; rewrite !r_eq_alt' in *; try lia.
+      pose proof r_small. cbv zeta.
+      destruct (r <? m) eqn:Hr, (r-m <? m) eqn:?; rewrite !r_eq_alt', ?Hr in *; Z.ltb_to_lt; try lia.
       { symmetry; eapply (Zmod_unique x m q3); lia. }
       { symmetry; eapply (Zmod_unique x m (q3 + 1)); lia. }
       { symmetry; eapply (Zmod_unique x m (q3 + 2)); lia. }
