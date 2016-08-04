@@ -120,14 +120,12 @@ Section barrett.
 
     (** In that case, we have *)
     Theorem barrett_reduction_small
-      : a mod n = if r <? n
-                  then r
-                  else if r <? 2 * n
-                       then r - n
-                       else r - 2 * n.
+      : a mod n = let r := if r <? n then r else r-n in
+                  let r := if r <? n then r else r-n in
+                  r.
     Proof.
-      pose proof r_small. pose proof qn_small.
-      destruct (r <? n) eqn:?, (r <? 2 * n) eqn:?; Z.ltb_to_lt; try lia.
+      pose proof r_small. pose proof qn_small. cbv zeta.
+      destruct (r <? n) eqn:Hr, (r-n <? n) eqn:?; try rewrite Hr; Z.ltb_to_lt; try lia.
       { symmetry; apply (Zmod_unique a n q); subst r; lia. }
       { symmetry; apply (Zmod_unique a n (q + 1)); subst r; lia. }
       { symmetry; apply (Zmod_unique a n (q + 2)); subst r; lia. }
