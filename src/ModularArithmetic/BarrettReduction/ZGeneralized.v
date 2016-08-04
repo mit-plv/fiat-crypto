@@ -1,5 +1,13 @@
 (*** Barrett Reduction *)
-(** This file implements a slightly-generalized version of Barrett Reduction on [Z]. *)
+(** This file implements a slightly-generalized version of Barrett
+    Reduction on [Z].  This version follows a middle path between the
+    Handbook of Applied Cryptography (Algorithm 14.42) and Wikipedia.
+    We split up the shifting and the multiplication so that we don't
+    need to store numbers that are quite so large, but we don't do
+    early reduction modulo [b^(k+offset)] (we generalize from HAC's [k
+    ± 1] to [k ± offset]).  This leads to weaker conditions on the
+    base ([b]), exponent ([k]), and the [offset] than those given in
+    the HAC. *)
 Require Import Coq.ZArith.ZArith Coq.micromega.Psatz.
 Require Import Crypto.Util.ZUtil Crypto.Util.Tactics Crypto.Algebra.
 
@@ -62,7 +70,11 @@ Section barrett.
     Context (n_pos : 0 < n) (* or just [0 <= n], since we have [n <> 0] above *)
             (a_nonneg : 0 <= a).
 
-    Context (k_big_enough : offset <= k).
+    Context (k_big_enough : offset <= k)
+            (a_small : a < b^(2*k))
+            (** We also need that [n] is large enough; [n] larger than
+                [bᵏ⁻¹] works, but we ask for something more precise. *)
+            (n_large : a mod b^(k-offset) <= n).
 
     (** Now *)
 
@@ -89,12 +101,6 @@ Section barrett.
       autorewrite with pull_Zpow pull_Zdiv zsimplify; reflexivity.
     Qed.
 
-    (** Also, if [a < n²] then [r < 2n]. *)
-    (** N.B. It turns out that it is sufficient to assume [a < b²ᵏ]. *)
-    Context (a_small : a < b^(2*k)).
-    (** We also need that [n] is large enough; [n] larger than bᵏ⁻¹
-        works, but we ask for something more precise. *)
-    Context (n_large : a mod b^(k-offset) <= n).
     Lemma q_nice : { b : bool * bool | q = a / n + (if fst b then -1 else 0) + (if snd b then -1 else 0) }.
     Proof.
       assert (0 < b^(k+offset)) by zero_bounds.
