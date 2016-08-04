@@ -48,17 +48,23 @@ Section barrett.
 
     Let q1 := x / b^(k-offset). Let q2 := q1 * μ. Let q3 := q2 / b^(k+offset).
     Let r1 := x mod b^(k+offset). Let r2 := (q3 * m) mod b^(k+offset).
-    Let r := let r := r1 - r2 in
-             if r <? 0 then r + b^(k+offset) else r.
+    (** At this point, the HAC says "If [r < 0] then [r ← r + bᵏ⁺¹]".
+        This is equivalent to reduction modulo [b^(k+offset)], as we
+        prove below.  The version involving modular reduction has the
+        benefit of being cheaper to implement, and making the proofs
+        simpler, so we primarily use that version. *)
+    Let r_mod_3m      := (r1 - r2) mod b^(k+offset).
+    Let r_mod_3m_orig := let r := r1 - r2 in
+                         if r <? 0 then r + b^(k+offset) else r.
 
-    Lemma r_eq_alt : r = (r1 - r2) mod b^(k+offset).
+    Lemma r_mod_3m_eq_orig : r_mod_3m = r_mod_3m_orig.
     Proof.
       assert (0 <= r1 < b^(k+offset)) by (subst r1; auto with zarith).
       assert (0 <= r2 < b^(k+offset)) by (subst r2; auto with zarith).
-      subst r; cbv zeta.
+      subst r_mod_3m r_mod_3m_orig; cbv zeta.
       break_match; Z.ltb_to_lt.
-      { apply (Zmod_unique (r1 - r2) _ (-1)); lia. }
-      { apply (Zmod_unique (r1 - r2) _ 0); lia. }
+      { symmetry; apply (Zmod_unique (r1 - r2) _ (-1)); lia. }
+      { symmetry; apply (Zmod_unique (r1 - r2) _ 0); lia. }
     Qed.
 
     Context (x_small : x < b^(2*k)).
@@ -79,7 +85,7 @@ Section barrett.
       assert (0 < b^(k-offset)) by zero_bounds.
       assert (x / b^(k-offset) <= b^(2*k) / b^(k-offset)) by auto with zarith lia.
       assert (x / b^(k-offset) <= b^(k+offset)) by (autorewrite with pull_Zpow zsimplify in *; assumption).
-      subst q1 q2 q3 Q r r1 r2 R μ.
+      subst q1 q2 q3 Q r_mod_3m r_mod_3m_orig r1 r2 R μ.
       rewrite (Z.div_mul_diff_exact' (b^(2*k)) m (x/b^(k-offset))) by auto with lia zero_bounds.
       rewrite (Z_div_mod_eq (_ * b^(2*k) / m) (b^(k+offset))) by lia.
       autorewrite with push_Zmul push_Zopp zsimplify zstrip_div zdiv_to_mod.
@@ -108,19 +114,26 @@ Section barrett.
       subst Q R; autorewrite with push_Zmul zdiv_to_mod in *; lia.
     Qed.
 
-    Lemma r_eq_alt' : r = x - q3 * m.
+    Lemma r_mod_3m_eq_alt : r_mod_3m = x - q3 * m.
     Proof.
       pose proof x_minus_q3_m_in_range.
-      rewrite r_eq_alt; subst r1 r2.
+      subst r_mod_3m r_mod_3m_orig r1 r2.
       autorewrite with pull_Zmod zsimplify; reflexivity.
     Qed.
 
+    (** This version uses reduction modulo [b^(k+offset)]. *)
     Theorem barrett_reduction_equivalent
-      : r mod m = x mod m.
+      : r_mod_3m mod m = x mod m.
     Proof.
-      rewrite r_eq_alt'.
+      rewrite r_mod_3m_eq_alt.
       autorewrite with zsimplify push_Zmod; reflexivity.
     Qed.
+
+    (** This version, which matches the original in the HAC, uses
+        conditional addition of [b^(k+offset)]. *)
+    Theorem barrett_reduction_orig_equivalent
+      : r_mod_3m_orig mod m = x mod m.
+    Proof. rewrite <- r_mod_3m_eq_orig; apply barrett_reduction_equivalent. Qed.
 
     (** (ii) In step 2, observe that [-bᵏ⁺¹ < r₁ - r₂ < bᵏ⁺¹], [r₁ -
              r₂ ≡ (Q - q₃)m + R (mod bᵏ⁺¹)], and [0 ≤ (Q - q₃)m + R <
@@ -128,23 +141,33 @@ Section barrett.
              - r₂ = (Q - q₃)m + R]. If [r₁ - r₂ < 0], then [r₁ - r₂ + bᵏ⁺¹
              = (Q - q₃)m + R]. In either case, step 4 is repeated at
              most twice since [0 ≤ r < 3 m] *)
-    Lemma r_small : 0 <= r < 3 * m.
+    Lemma r_small : 0 <= r_mod_3m < 3 * m.
     Proof.
       pose proof x_minus_q3_m_in_range.
-      rewrite r_eq_alt; subst Q R r1 r2.
+      subst Q R r_mod_3m r_mod_3m_orig r1 r2.
       autorewrite with pull_Zmod zsimplify; lia.
     Qed.
 
-    Theorem barrett_reduction_small
+
+    (** This version uses reduction modulo [b^(k+offset)]. *)
+    Theorem barrett_reduction_small (r := r_mod_3m)
       : x mod m = let r := if r <? m then r else r-m in
                   let r := if r <? m then r else r-m in
                   r.
     Proof.
       pose proof r_small. cbv zeta.
-      destruct (r <? m) eqn:Hr, (r-m <? m) eqn:?; rewrite !r_eq_alt', ?Hr in *; Z.ltb_to_lt; try lia.
+      destruct (r <? m) eqn:Hr, (r-m <? m) eqn:?; subst r; rewrite !r_mod_3m_eq_alt, ?Hr in *; Z.ltb_to_lt; try lia.
       { symmetry; eapply (Zmod_unique x m q3); lia. }
       { symmetry; eapply (Zmod_unique x m (q3 + 1)); lia. }
       { symmetry; eapply (Zmod_unique x m (q3 + 2)); lia. }
     Qed.
+
+    (** This version, which matches the original in the HAC, uses
+        conditional addition of [b^(k+offset)]. *)
+    Theorem barrett_reduction_small_orig (r := r_mod_3m_orig)
+      : x mod m = let r := if r <? m then r else r-m in
+                  let r := if r <? m then r else r-m in
+                  r.
+    Proof. subst r; rewrite <- r_mod_3m_eq_orig; apply barrett_reduction_small. Qed.
   End barrett_modular_reduction.
 End barrett.
