@@ -78,13 +78,6 @@ Module Zmod.
       rewrite eq_FieldToZ_iff, FieldToZ_mul, FieldToZ_pow, Z2N.id, FieldToZ_1 by omega.
       apply (fermat_inv q _ (FieldToZ x)); rewrite mod_FieldToZ; eapply FieldToZ_nonzero; trivial.
     Qed.
-
-    (* TODO: move to number thoery util *)
-    Lemma odd_as_div a : Z.odd a = true -> a = (2*(a/2) + 1)%Z.
-    Proof.
-      rewrite Zodd_mod, <-Zeq_is_eq_bool; intro H_1; rewrite <-H_1.
-      apply Z_div_mod_eq; reflexivity.
-    Qed.
     
     Lemma euler_criterion (a : F q) (a_nonzero : a <> 0) :
       (a ^ (Z.to_N (q / 2)) = 1) <-> (exists b, b*b = a).

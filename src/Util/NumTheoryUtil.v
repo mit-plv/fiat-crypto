@@ -298,3 +298,10 @@ Proof.
   + prime_bound.
   + apply minus1_even_pow; [apply divide2_1mod4 | | apply Z_div_pos]; prime_bound.
 Qed.
+
+
+Lemma odd_as_div a : Z.odd a = true -> a = (2*(a/2) + 1)%Z.
+Proof.
+  rewrite Zodd_mod, <-Zeq_is_eq_bool; intro H_1; rewrite <-H_1.
+  apply Z_div_mod_eq; reflexivity.
+Qed.

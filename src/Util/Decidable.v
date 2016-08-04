@@ -1,6 +1,7 @@
 (** Typeclass for decidable propositions *)
 
 Require Import Coq.Logic.Eqdep_dec.
+Require Import Crypto.Util.FixCoqMistakes.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.HProp.
 Require Import Crypto.Util.Equality.
@@ -96,6 +97,15 @@ Global Instance dec_eq_sig_hprop {A} {P : A -> Prop} `{DecidableRel (@eq A), for
 Global Instance dec_eq_nat : DecidableRel (@eq nat) | 10. exact _. Defined.
 Global Instance dec_eq_N : DecidableRel (@eq N) | 10 := N.eq_dec.
 Global Instance dec_eq_Z : DecidableRel (@eq Z) | 10 := Z.eq_dec.
+
+Lemma not_not P {d:Decidable P} : not (not P) <-> P.
+Proof. destruct (dec P); intuition. Qed.
+  
+Global Instance dec_ex_forall_not T (P:T->Prop) {d:Decidable (exists b, P b)} : Decidable (forall b, ~ P b).
+Proof.
+  destruct (dec (~ exists b, P b)) as [Hd|Hd]; [left|right];
+    [abstract eauto | abstract (rewrite not_not in Hd by eauto; destruct Hd; eauto) ].
+Defined.
 
 Lemma eqsig_eq {T} {U} {Udec:DecidableRel (@eq U)} (f g:T->U) (x x':T) pf pf' :
   (exist (fun x => f x = g x) x pf) = (exist (fun x => f x = g x) x' pf') <-> (x = x').

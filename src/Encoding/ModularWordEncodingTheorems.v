@@ -6,6 +6,7 @@ Require Import Bedrock.Word.
 Require Import Crypto.Tactics.VerdiTactics Crypto.Util.Tactics.
 Require Import Crypto.Spec.Encoding.
 Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.FixCoqMistakes.
 Require Import Crypto.Spec.ModularWordEncoding.
 
 
@@ -35,13 +36,11 @@ Section SignBit.
     rewrite sign_bit_parity; auto.
   Qed.
 
-  Lemma odd_m : Z.odd m = true. Admitted.
-
   Lemma sign_bit_opp (x : F m) (Hnz:x <> 0) : negb (@sign_bit m sz x) = @sign_bit m sz (opp x).
   Proof.
     pose proof Zmod.FieldToZ_nonzero_range x Hnz; specialize_by omega.
-    rewrite !sign_bit_parity, Zmod.FieldToZ_opp, Z_mod_nz_opp_full,
-      Zmod_small, Z.odd_sub, odd_m, (Bool.xorb_true_l (Z.odd x)) by
-       (omega || rewrite Zmod_small by omega; auto using Zmod.FieldToZ_nonzero); trivial.
+    rewrite !sign_bit_parity, Zmod.FieldToZ_opp, Z_mod_nz_opp_full, Zmod_small,
+      Z.odd_sub, (NumTheoryUtil.p_odd m), (Bool.xorb_true_l (Z.odd x));
+      try eapply Zrel_prime_neq_mod_0, rel_prime_le_prime; intuition omega.
   Qed.
 End SignBit.

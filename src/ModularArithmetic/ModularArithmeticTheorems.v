@@ -9,52 +9,51 @@ Require Export Coq.setoid_ring.Ring_theory Coq.setoid_ring.Ring_tac.
 Require Import Crypto.Algebra Crypto.Util.Decidable.
 Require Export Crypto.Util.FixCoqMistakes.
 
-(* Fails iff the input term does some arithmetic with mod'd values. *)
-Ltac notFancy E :=
-  match E with
-  | - (_ mod _) => idtac
-  | context[_ mod _] => fail 1
-  | _ => idtac
-  end.
-
-(* Remove redundant [mod] operations from the conclusion. *)
-Ltac demod :=
-  repeat match goal with
-         | [ |- context[(?x mod _ + _) mod _] ] =>
-           notFancy x; rewrite (Zplus_mod_idemp_l x)
-         | [ |- context[(_ + ?y mod _) mod _] ] =>
-           notFancy y; rewrite (Zplus_mod_idemp_r y)
-         | [ |- context[(?x mod _ - _) mod _] ] =>
-           notFancy x; rewrite (Zminus_mod_idemp_l x)
-         | [ |- context[(_ - ?y mod _) mod _] ] =>
-           notFancy y; rewrite (Zminus_mod_idemp_r _ y)
-         | [ |- context[(?x mod _ * _) mod _] ] =>
-           notFancy x; rewrite (Zmult_mod_idemp_l x)
-         | [ |- context[(_ * (?y mod _)) mod _] ] =>
-           notFancy y; rewrite (Zmult_mod_idemp_r y)
-         | [ |- context[(?x mod _) mod _] ] =>
-           notFancy x; rewrite (Zmod_mod x)
-         end.
-
-Ltac unwrap_F :=
-  intros;
-  repeat match goal with [ x : F _ |- _ ] => destruct x end;
-  lazy iota beta delta [add sub mul opp FieldToZ ZToField proj1_sig] in *;
-  try apply eqsig_eq;
-  demod.
-
-(* FIXME: remove the pose proof once [monoid] no longer contains decidable equality *)
-Global Instance eq_dec {m} : DecidableRel (@eq (F m)). pose proof dec_eq_Z. exact _. Defined.
-
-Global Instance commutative_ring_modulo m
-  : @Algebra.commutative_ring (F m) Logic.eq 0%F 1%F opp add sub mul.
-Proof.
-  repeat (split || intro); unwrap_F;
-    autorewrite with zsimplify; solve [ exact _ | auto with zarith | congruence].
-Qed.
-
-
 Module Zmod.
+  (* Fails iff the input term does some arithmetic with mod'd values. *)
+  Ltac notFancy E :=
+    match E with
+    | - (_ mod _) => idtac
+    | context[_ mod _] => fail 1
+    | _ => idtac
+    end.
+  
+  (* Remove redundant [mod] operations from the conclusion. *)
+  Ltac demod :=
+    repeat match goal with
+           | [ |- context[(?x mod _ + _) mod _] ] =>
+             notFancy x; rewrite (Zplus_mod_idemp_l x)
+           | [ |- context[(_ + ?y mod _) mod _] ] =>
+             notFancy y; rewrite (Zplus_mod_idemp_r y)
+           | [ |- context[(?x mod _ - _) mod _] ] =>
+             notFancy x; rewrite (Zminus_mod_idemp_l x)
+           | [ |- context[(_ - ?y mod _) mod _] ] =>
+             notFancy y; rewrite (Zminus_mod_idemp_r _ y)
+           | [ |- context[(?x mod _ * _) mod _] ] =>
+             notFancy x; rewrite (Zmult_mod_idemp_l x)
+           | [ |- context[(_ * (?y mod _)) mod _] ] =>
+             notFancy y; rewrite (Zmult_mod_idemp_r y)
+           | [ |- context[(?x mod _) mod _] ] =>
+             notFancy x; rewrite (Zmod_mod x)
+           end.
+  
+  Ltac unwrap_F :=
+    intros;
+    repeat match goal with [ x : F _ |- _ ] => destruct x end;
+    lazy iota beta delta [add sub mul opp FieldToZ ZToField proj1_sig] in *;
+    try apply eqsig_eq;
+    demod.
+  
+  (* FIXME: remove the pose proof once [monoid] no longer contains decidable equality *)
+  Global Instance eq_dec {m} : DecidableRel (@eq (F m)). pose proof dec_eq_Z. exact _. Defined.
+  
+  Global Instance commutative_ring_modulo m
+    : @Algebra.commutative_ring (F m) Logic.eq 0%F 1%F opp add sub mul.
+  Proof.
+    repeat (split || intro); unwrap_F;
+      autorewrite with zsimplify; solve [ exact _ | auto with zarith | congruence].
+  Qed.
+
   Lemma pow_spec {m} a : pow a 0%N = 1%F :> F m /\ forall x, pow a (1 + x)%N = mul a (pow a x).
   Proof. change (@pow m) with (proj1_sig (@pow_with_spec m)); destruct (@pow_with_spec m); eauto. Qed.
 
@@ -164,17 +163,6 @@ Module Zmod.
       setoid_rewrite eq_FieldToZ_iff; setoid_rewrite FieldToZ_mul; split; intro H; destruct H as [x' H].
       - eauto.
       - exists (ZToField _ x'); rewrite !FieldToZ_ZToField; demod; auto.
-    Qed.
-
-    (* TODO: move to ZUtil *)
-    Lemma sub_intersperse_modulus : forall x y, ((x - y) mod m = (x + (m - y)) mod m)%Z.
-    Proof.
-      intros.
-      replace (x + (m - y))%Z with (m+(x-y))%Z by omega.
-      rewrite Zplus_mod.
-      rewrite Z_mod_same_full; simpl Z.add.
-      rewrite Zmod_mod.
-      reflexivity.
     Qed.
   End FandZ.
 

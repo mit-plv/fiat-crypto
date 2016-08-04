@@ -12,7 +12,7 @@ Require Import Coq.Logic.Decidable Crypto.Util.Decidable.
 Require Import Coq.omega.Omega.
 
 (* TODO: move to PrimeFieldTheorems *)
-Lemma minus1_is_square {q} :  prime q -> (q mod 4)%Z = 1%Z -> (exists y, y*y  = opp (ZToField q 1))%F.
+Lemma minus1_is_square {q} : prime q -> (q mod 4)%Z = 1%Z -> (exists y, y*y = opp (ZToField q 1))%F.
   intros; pose proof prime_ge_2 q _.
   rewrite Zmod.square_iff.
   destruct (minus1_square_1mod4 q) as [b b_id]; trivial; exists b.
@@ -30,16 +30,6 @@ Lemma nonzero_a : a <> 0%F. Proof. vm_decide_no_check. Qed.
 Lemma square_a : exists b, (b*b=a)%F.
 Proof. pose (@Zmod.Decidable_square q _ two_lt_q a); vm_decide_no_check. Qed.
 Definition d : F q := (opp (ZToField _ 121665) / (ZToField _ 121666))%F.
-
-(* TODO: move to Decidable *)
-Lemma not_not P {d:Decidable P} : not (not P) <-> P.
-Proof. destruct (dec P); intuition. Qed.
-  
-Global Instance dec_ex_forall_not T (P:T->Prop) {d:Decidable (exists b, P b)} : Decidable (forall b, ~ P b).
-Proof.
-  destruct (dec (~ exists b, P b)) as [Hd|Hd]; [left|right];
-    [abstract eauto | abstract (rewrite not_not in Hd by eauto; destruct Hd; eauto) ].
-Defined.
 
 Lemma nonsquare_d : forall x, (x*x <> d)%F.
 Proof. pose (@Zmod.Decidable_square q _ two_lt_q d). vm_decide_no_check. Qed.
