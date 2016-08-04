@@ -35,16 +35,12 @@ Section barrett.
             (μ_good : μ = b^(2*k) / m) (* [/] is [Z.div], which is truncated *)
             (x_nonneg : 0 <= x)
             (offset_nonneg : 0 <= offset)
-            (k_big_enough : offset <= k).
-    (** N.B. We generalize to [k ± offset] from [k ± 1]. *)
-    (** INPUT: positive integers [x = (x₂ₖ₋₁···x₁x₀)_b], [m =
-        (mₖ₋₁···m₁m₀)_b] (with [mₖ₋₁ ≠ 0]), and [µ = ⌊b²ᵏ/m⌋. *)
-    (** OUTPUT: [r = x mod m] *)
-    (** 1. [q₁ ← ⌊x/bᵏ⁻¹⌋], [q₂ ← q₁ · µ], [q₃ ← ⌊q₂/bᵏ⁺¹⌋].
-        2. [r₁ ← x mod bᵏ⁺¹], [r₂ ← q₃ · m mod bᵏ⁺¹], [r ← r₁ - r₂].
-        3. If [r < 0] then [r ← r + bᵏ⁺¹].
-        4. While [r ≥ m] do: [r ← r - m].
-        5. Return([r]). *)
+            (k_big_enough : offset <= k)
+            (x_small : x < b^(2*k))
+            (m_small : 3 * m <= b^(k+offset))
+            (** We also need that [m] is large enough; [m] larger than
+                [bᵏ⁻¹] works, but we ask for something more precise. *)
+            (m_large : x mod b^(k-offset) <= m).
 
     Let q1 := x / b^(k-offset). Let q2 := q1 * μ. Let q3 := q2 / b^(k+offset).
     Let r1 := x mod b^(k+offset). Let r2 := (q3 * m) mod b^(k+offset).
@@ -67,16 +63,11 @@ Section barrett.
       { symmetry; apply (Zmod_unique (r1 - r2) _ 0); lia. }
     Qed.
 
-    Context (x_small : x < b^(2*k)).
-    (** We also need that [m] is large enough; [m] larger than bᵏ⁻¹
-        works, but we ask for something more precise. *)
-    Context (m_large : x mod b^(k-offset) <= m)
-            (m_small : 3 * m <= b^(k+offset)).
-
     (** 14.43 Fact By the division algorithm (Definition 2.82), there
         exist integers [Q] and [R] such that [x = Qm + R] and [0 ≤ R <
         m]. In step 1 of Algorithm 14.42 (Barrett modular reduction),
         the following inequality is satisfied: [Q - 2 ≤ q₃ ≤ Q]. *)
+    (** We prove this by providing a more useful form for [q₃]. *)
     Let Q := x / m.
     Let R := x mod m.
     Lemma q3_nice : { b : bool * bool | q3 = Q + (if fst b then -1 else 0) + (if snd b then -1 else 0) }.
@@ -135,12 +126,6 @@ Section barrett.
       : r_mod_3m_orig mod m = x mod m.
     Proof. rewrite <- r_mod_3m_eq_orig; apply barrett_reduction_equivalent. Qed.
 
-    (** (ii) In step 2, observe that [-bᵏ⁺¹ < r₁ - r₂ < bᵏ⁺¹], [r₁ -
-             r₂ ≡ (Q - q₃)m + R (mod bᵏ⁺¹)], and [0 ≤ (Q - q₃)m + R <
-             3m < bᵏ⁺¹] since [m < bᵏ] and [3 < b]. If [r₁ - r₂ ≥ 0], then [r₁
-             - r₂ = (Q - q₃)m + R]. If [r₁ - r₂ < 0], then [r₁ - r₂ + bᵏ⁺¹
-             = (Q - q₃)m + R]. In either case, step 4 is repeated at
-             most twice since [0 ≤ r < 3 m] *)
     Lemma r_small : 0 <= r_mod_3m < 3 * m.
     Proof.
       pose proof x_minus_q3_m_in_range.
