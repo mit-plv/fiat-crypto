@@ -17,15 +17,15 @@ Hint Extern 1 => lia : lia.
 Hint Extern 1 => lra : lra.
 Hint Extern 1 => nia : nia.
 Hint Extern 1 => omega : omega.
-Hint Resolve Z.log2_nonneg Z.div_small Z.mod_small Z.pow_neg_r Z.pow_0_l Z.pow_pos_nonneg Z.lt_le_incl Z.pow_nonzero Z.div_le_upper_bound Z_div_exact_full_2 Z.div_same Z.div_lt_upper_bound Z.div_le_lower_bound : zarith.
+Hint Resolve Z.log2_nonneg Z.div_small Z.mod_small Z.pow_neg_r Z.pow_0_l Z.pow_pos_nonneg Z.lt_le_incl Z.pow_nonzero Z.div_le_upper_bound Z_div_exact_full_2 Z.div_same Z.div_lt_upper_bound Z.div_le_lower_bound Zplus_minus : zarith.
 Hint Resolve (fun a b H => proj1 (Z.mod_pos_bound a b H)) (fun a b H => proj2 (Z.mod_pos_bound a b H)) : zarith.
 
 (** Only hints that are always safe to apply (i.e., reversible), and
     which can reasonably be said to "simplify" the goal, should go in
     this database. *)
 Create HintDb zsimplify discriminated.
-Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r Z_mod_same_full Z.sub_simpl_r Z.sub_simpl_l Z.add_opp_diag_r Z.add_opp_diag_l Zmod_0_l : zsimplify.
-Hint Rewrite Z.div_mul Z.div_1_l Z.div_same Z.mod_same Z.div_small Z.mod_small Z.div_add Z.div_add_l Z.mod_add Z.div_0_l Z.mod_mod using lia : zsimplify.
+Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r Z_mod_same_full Z.sub_simpl_r Z.sub_simpl_l Z.add_opp_diag_r Z.add_opp_diag_l Zmod_0_l Z.add_simpl_r Z.add_simpl_l Z.opp_0 Zmod_0_r : zsimplify.
+Hint Rewrite Z.div_mul Z.div_1_l Z.div_same Z.mod_same Z.div_small Z.mod_small Z.div_add Z.div_add_l Z.mod_add Z.div_0_l Z.mod_mod Z.mod_small using lia : zsimplify.
 Hint Rewrite <- Z.opp_eq_mul_m1 : zsimplify.
 
 (** "push" means transform [-f x] to [f (-x)]; "pull" means go the other way *)
@@ -35,6 +35,8 @@ Create HintDb push_Zpow discriminated.
 Create HintDb pull_Zpow discriminated.
 Create HintDb push_Zmul discriminated.
 Create HintDb pull_Zmul discriminated.
+Create HintDb push_Zdiv discriminated.
+Create HintDb pull_Zdiv discriminated.
 Create HintDb pull_Zmod discriminated.
 Create HintDb push_Zmod discriminated.
 Hint Extern 1 => autorewrite with push_Zopp in * : push_Zopp.
@@ -43,6 +45,8 @@ Hint Extern 1 => autorewrite with push_Zpow in * : push_Zpow.
 Hint Extern 1 => autorewrite with pull_Zpow in * : pull_Zpow.
 Hint Extern 1 => autorewrite with push_Zmul in * : push_Zmul.
 Hint Extern 1 => autorewrite with pull_Zmul in * : pull_Zmul.
+Hint Extern 1 => autorewrite with push_Zdiv in * : push_Zmul.
+Hint Extern 1 => autorewrite with pull_Zdiv in * : pull_Zmul.
 Hint Extern 1 => autorewrite with pull_Zmod in * : pull_Zmod.
 Hint Extern 1 => autorewrite with push_Zmod in * : push_Zmod.
 Hint Rewrite Z.div_opp_l_nz Z.div_opp_l_z using lia : pull_Zopp.
@@ -55,6 +59,8 @@ Hint Rewrite Z.pow_sub_r Z.pow_div_l Z.pow_twice_r Z.pow_mul_l Z.pow_add_r using
 Hint Rewrite <- Z.pow_sub_r Z.pow_div_l Z.pow_mul_l Z.pow_add_r Z.pow_twice_r using lia : pull_Zpow.
 Hint Rewrite Z.mul_add_distr_l Z.mul_add_distr_r Z.mul_sub_distr_l Z.mul_sub_distr_r : push_Zmul.
 Hint Rewrite <- Z.mul_add_distr_l Z.mul_add_distr_r Z.mul_sub_distr_l Z.mul_sub_distr_r : pull_Zmul.
+Hint Rewrite Z.div_div using lia : pull_Zdiv.
+Hint Rewrite <- Z.div_div using lia : push_Zdiv.
 Hint Rewrite <- Z.mul_mod Z.add_mod Zminus_mod using lia : pull_Zmod.
 Hint Rewrite Zminus_mod_idemp_l Zminus_mod_idemp_r : pull_Zmod.
 
@@ -1045,6 +1051,24 @@ Module Z.
 
   Hint Rewrite Z.div_mul_skip Z.div_mul_skip' using lia : zsimplify.
 
+  Lemma div_mul_skip_pow base e0 e1 x y : 0 < y -> 0 < base -> 0 <= e1 <= e0 -> x * base^e0 / y / base^e1 = x * base^(e0 - e1) / y.
+  Proof.
+    intros.
+    assert (0 < base^e1) by auto with zarith.
+    replace (base^e0) with (base^(e0 - e1) * base^e1) by (autorewrite with pull_Zpow zsimplify; reflexivity).
+    rewrite !Z.mul_assoc.
+    autorewrite with zsimplify; lia.
+  Qed.
+  Hint Rewrite div_mul_skip_pow using lia : zsimplify.
+
+  Lemma div_mul_skip_pow' base e0 e1 x y : 0 < y -> 0 < base -> 0 <= e1 <= e0 -> base^e0 * x / y / base^e1 = base^(e0 - e1) * x / y.
+  Proof.
+    intros.
+    rewrite (Z.mul_comm (base^e0) x), div_mul_skip_pow by lia.
+    auto using f_equal2 with lia.
+  Qed.
+  Hint Rewrite div_mul_skip_pow' using lia : zsimplify.
+
   Lemma mod_eq_le_to_eq a b : 0 < a <= b -> a mod b = 0 -> a = b.
   Proof.
     intros H H'.
@@ -1156,6 +1180,21 @@ Module Z.
     reflexivity.
   Qed.
 
+  Lemma minus_distr_if (b : bool) x y : -(if b then x else y) = if b then -x else -y.
+  Proof. destruct b; reflexivity. Qed.
+  Hint Rewrite minus_distr_if : push_Zopp.
+
+  Lemma minus_minus_one : - -1 = 1.
+  Proof. reflexivity. Qed.
+  Hint Rewrite minus_minus_one : zsimplify.
+
+  Lemma div_add_exact x y d : d <> 0 -> x mod d = 0 -> (x + y) / d = x / d + y / d.
+  Proof.
+    intros; rewrite (Z_div_exact_full_2 x d) at 1 by assumption.
+    rewrite Z.div_add_l' by assumption; lia.
+  Qed.
+  Hint Rewrite div_add_exact using lia : zsimplify.
+
   Lemma mul_mod_l a b n : n <> 0 -> (a * b) mod n = ((a mod n) * b) mod n.
   Proof.
     intros; rewrite (Z.mul_mod a b), (Z.mul_mod (a mod n) b) by lia.
@@ -1183,6 +1222,16 @@ Module Z.
     autorewrite with zsimplify; reflexivity.
   Qed.
   Hint Rewrite <- add_mod_r using lia : pull_Zmod.
+
+  (** Give alternate names for the next three lemmas, for consistency *)
+  Lemma sub_mod a b n : n <> 0 -> (a - b) mod n = ((a mod n) - (b mod n)) mod n.
+  Proof. auto using Zminus_mod. Qed.
+
+  Lemma sub_mod_l a b n : n <> 0 -> (a - b) mod n = ((a mod n) - b) mod n.
+  Proof. auto using Zminus_mod_idemp_l. Qed.
+
+  Lemma sub_mod_r a b n : n <> 0 -> (a - b) mod n = (a - (b mod n)) mod n.
+  Proof. auto using Zminus_mod_idemp_r. Qed.
 
   Definition NoZMod (x : Z) := True.
   Ltac NoZMod :=
@@ -1226,6 +1275,145 @@ Module Z.
   Lemma sub_mod_r_push a b n : n <> 0 -> NoZMod b -> (a - b) mod n = (a - (b mod n)) mod n.
   Proof. intros; symmetry; apply Zminus_mod_idemp_r; assumption. Qed.
   Hint Rewrite sub_mod_r_push using solve [ NoZMod | lia ] : push_Zmod.
+
+  Lemma sub_mod_mod_0 x d : (x - x mod d) mod d = 0.
+  Proof.
+    destruct (Z_zerop d); subst; autorewrite with push_Zmod zsimplify; reflexivity.
+  Qed.
+  Hint Resolve sub_mod_mod_0 : zarith.
+  Hint Rewrite sub_mod_mod_0 : zsimplify.
+
+  Lemma div_sub_mod_cond x y d
+    : d <> 0
+      -> (x - y) / d
+         = x / d + ((x mod d - y) / d).
+  Proof. clear.
+         intro.
+         replace (x - y) with ((x - x mod d) + (x mod d - y)) by lia.
+         rewrite div_add_exact by auto with zarith.
+         rewrite <- Z.div_sub_mod_exact by lia; lia.
+  Qed.
+  Hint Resolve div_sub_mod_cond : zarith.
+
+  Lemma simplify_twice_sub_sub x y : 2 * x - (x - y) = x + y.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_twice_sub_sub : zsimplify.
+
+  Lemma simplify_twice_sub_add x y : 2 * x - (x + y) = x - y.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_twice_sub_add : zsimplify.
+
+  (* Naming convention: [X] for thing being aggregated, [p] for plus,
+     [m] for minus, [_] for parentheses *)
+  (* Python code to generate these hints:
+<<
+#!/usr/bin/env python
+
+def to_eqn(name):
+    vars_left = list('abcdefghijklmnopqrstuvwxyz')
+    ret = ''
+    close = ''
+    while name:
+        if name[0] == 'X':
+            ret += ' X'
+            name = name[1:]
+        else:
+            ret += ' ' + vars_left[0]
+            vars_left = vars_left[1:]
+        if name:
+            if name[0] == 'm': ret += ' -'
+            elif name[0] == 'p': ret += ' +'
+            name = name[1:]
+        if name and name[0] == '_':
+            ret += ' ('
+            close += ')'
+            name = name[1:]
+    if ret[-1] != 'X':
+        ret += ' ' + vars_left[0]
+    return (ret + close).strip().replace('( ', '(')
+
+def simplify(eqn):
+    counts = {}
+    sign_stack = [1, 1]
+    for i in eqn:
+        if i == ' ': continue
+        elif i == '(': sign_stack.append(sign_stack[-1])
+        elif i == ')': sign_stack.pop()
+        elif i == '+': sign_stack.append(sign_stack[-1])
+        elif i == '-': sign_stack.append(-sign_stack[-1])
+        else:
+            counts[i] = counts.get(i,0) + sign_stack.pop()
+    ret = ''
+    for k in sorted(counts.keys()):
+        if counts[k] == 1: ret += ' + %s' % k
+        elif counts[k] == -1: ret += ' - %s' % k
+        elif counts[k] < 0: ret += ' - %d * %s' % (abs(counts[k]), k)
+        elif counts[k] > 0: ret += ' + %d * %s' % (abs(counts[k]), k)
+    if ret == '': ret = '0'
+    return ret.strip(' +')
+
+
+def to_def(name):
+    eqn = to_eqn(name)
+    return r'''  Lemma simplify_%s %s X : %s = %s.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_%s : zsimplify.''' % (name, ' '.join(sorted(set(eqn) - set('+-() X'))), eqn, simplify(eqn), name)
+
+names = []
+names += ['%sX%s%sX' % (a, b, c) for a in 'mp' for b in 'mp' for c in 'mp']
+names += ['X%s%s_X%s' % (a, b, c) for a in 'mp' for b in 'mp' for c in 'mp']
+
+for name in names:
+    print(to_def(name))
+>> *)
+  Lemma simplify_mXmmX a b X : a - X - b - X = - 2 * X + a - b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_mXmmX : zsimplify.
+  Lemma simplify_mXmpX a b X : a - X - b + X = a - b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_mXmpX : zsimplify.
+  Lemma simplify_mXpmX a b X : a - X + b - X = - 2 * X + a + b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_mXpmX : zsimplify.
+  Lemma simplify_mXppX a b X : a - X + b + X = a + b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_mXppX : zsimplify.
+  Lemma simplify_pXmmX a b X : a + X - b - X = a - b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_pXmmX : zsimplify.
+  Lemma simplify_pXmpX a b X : a + X - b + X = 2 * X + a - b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_pXmpX : zsimplify.
+  Lemma simplify_pXpmX a b X : a + X + b - X = a + b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_pXpmX : zsimplify.
+  Lemma simplify_pXppX a b X : a + X + b + X = 2 * X + a + b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_pXppX : zsimplify.
+  Lemma simplify_Xmm_Xm a b X : X - a - (X - b) = - a + b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_Xmm_Xm : zsimplify.
+  Lemma simplify_Xmm_Xp a b X : X - a - (X + b) = - a - b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_Xmm_Xp : zsimplify.
+  Lemma simplify_Xmp_Xm a b X : X - a + (X - b) = 2 * X - a - b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_Xmp_Xm : zsimplify.
+  Lemma simplify_Xmp_Xp a b X : X - a + (X + b) = 2 * X - a + b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_Xmp_Xp : zsimplify.
+  Lemma simplify_Xpm_Xm a b X : X + a - (X - b) = a + b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_Xpm_Xm : zsimplify.
+  Lemma simplify_Xpm_Xp a b X : X + a - (X + b) = a - b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_Xpm_Xp : zsimplify.
+  Lemma simplify_Xpp_Xm a b X : X + a + (X - b) = 2 * X + a - b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_Xpp_Xm : zsimplify.
+  Lemma simplify_Xpp_Xp a b X : X + a + (X + b) = 2 * X + a + b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_Xpp_Xp : zsimplify.
 
   Section equiv_modulo.
     Context (N : Z).
@@ -1295,22 +1483,34 @@ Ltac push_Zmod :=
   repeat match goal with
          | _ => progress autorewrite with push_Zmod
          | [ |- context[(?x * ?y) mod ?z] ]
-           => rewrite (Z.mul_mod_push x y z) by (Z.NoZMod || lia)
-         | [ |- context[(?x * ?y) mod ?z] ]
-           => rewrite (Z.mul_mod_l_push x y z) by (Z.NoZMod || lia)
-         | [ |- context[(?x * ?y) mod ?z] ]
-           => rewrite (Z.mul_mod_r_push x y z) by (Z.NoZMod || lia)
+           => first [ rewrite (Z.mul_mod_push x y z) by (Z.NoZMod || lia)
+                    | rewrite (Z.mul_mod_l_push x y z) by (Z.NoZMod || lia)
+                    | rewrite (Z.mul_mod_r_push x y z) by (Z.NoZMod || lia) ]
+         | [ |- context[(?x + ?y) mod ?z] ]
+           => first [ rewrite (Z.add_mod_push x y z) by (Z.NoZMod || lia)
+                    | rewrite (Z.add_mod_l_push x y z) by (Z.NoZMod || lia)
+                    | rewrite (Z.add_mod_r_push x y z) by (Z.NoZMod || lia) ]
+         | [ |- context[(?x - ?y) mod ?z] ]
+           => first [ rewrite (Z.sub_mod_push x y z) by (Z.NoZMod || lia)
+                    | rewrite (Z.sub_mod_l_push x y z) by (Z.NoZMod || lia)
+                    | rewrite (Z.sub_mod_r_push x y z) by (Z.NoZMod || lia) ]
          end.
 
 Ltac push_Zmod_hyps :=
   repeat match goal with
          | _ => progress autorewrite with push_Zmod in * |-
          | [ H : context[(?x * ?y) mod ?z] |- _ ]
-           => rewrite (Z.mul_mod_push x y z) in H by (Z.NoZMod || lia)
-         | [ H : context[(?x * ?y) mod ?z] |- _ ]
-           => rewrite (Z.mul_mod_l_push x y z) in H by (Z.NoZMod || lia)
-         | [ H : context[(?x * ?y) mod ?z] |- _ ]
-           => rewrite (Z.mul_mod_r_push x y z) in H by (Z.NoZMod || lia)
+           => first [ rewrite (Z.mul_mod_push x y z) in H by (Z.NoZMod || lia)
+                    | rewrite (Z.mul_mod_l_push x y z) in H by (Z.NoZMod || lia)
+                    | rewrite (Z.mul_mod_r_push x y z) in H by (Z.NoZMod || lia) ]
+         | [ H : context[(?x + ?y) mod ?z] |- _ ]
+           => first [ rewrite (Z.add_mod_push x y z) in H by (Z.NoZMod || lia)
+                    | rewrite (Z.add_mod_l_push x y z) in H by (Z.NoZMod || lia)
+                    | rewrite (Z.add_mod_r_push x y z) in H by (Z.NoZMod || lia) ]
+         | [ H : context[(?x - ?y) mod ?z] |- _ ]
+           => first [ rewrite (Z.sub_mod_push x y z) in H by (Z.NoZMod || lia)
+                    | rewrite (Z.sub_mod_l_push x y z) in H by (Z.NoZMod || lia)
+                    | rewrite (Z.sub_mod_r_push x y z) in H by (Z.NoZMod || lia) ]
          end.
 
 Ltac has_no_mod x z :=
@@ -1329,5 +1529,23 @@ Ltac pull_Zmod :=
          | [ |- context[(?x * (?y mod ?z)) mod ?z] ]
            => has_no_mod x z; has_no_mod y z;
               rewrite <- (Z.mul_mod_r x y z) by lia
+         | [ |- context[((?x mod ?z) + (?y mod ?z)) mod ?z] ]
+           => has_no_mod x z; has_no_mod y z;
+              rewrite <- (Z.add_mod x y z) by lia
+         | [ |- context[((?x mod ?z) + ?y) mod ?z] ]
+           => has_no_mod x z; has_no_mod y z;
+              rewrite <- (Z.add_mod_l x y z) by lia
+         | [ |- context[(?x + (?y mod ?z)) mod ?z] ]
+           => has_no_mod x z; has_no_mod y z;
+              rewrite <- (Z.add_mod_r x y z) by lia
+         | [ |- context[((?x mod ?z) - (?y mod ?z)) mod ?z] ]
+           => has_no_mod x z; has_no_mod y z;
+              rewrite <- (Z.sub_mod x y z) by lia
+         | [ |- context[((?x mod ?z) - ?y) mod ?z] ]
+           => has_no_mod x z; has_no_mod y z;
+              rewrite <- (Z.sub_mod_l x y z) by lia
+         | [ |- context[(?x - (?y mod ?z)) mod ?z] ]
+           => has_no_mod x z; has_no_mod y z;
+              rewrite <- (Z.sub_mod_r x y z) by lia
          | _ => progress autorewrite with pull_Zmod
          end.
