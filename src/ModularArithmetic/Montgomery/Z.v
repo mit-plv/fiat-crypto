@@ -99,7 +99,7 @@ function REDC is
     end if
 end function
 >> *)
-    Context (N' : Z). (* N' is N⁻¹ mod R *)
+    Context (N' : Z). (* N' is (-N⁻¹) mod R *)
     Section redc.
       Context (T : Z).
 
