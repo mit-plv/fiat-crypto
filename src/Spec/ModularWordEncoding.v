@@ -13,12 +13,12 @@ Local Open Scope nat_scope.
 Section ModularWordEncoding.
   Context {m : Z} {sz : nat} {m_pos : (0 < m)%Z} {bound_check : Z.to_nat m < 2 ^ sz}.
 
-  Definition Fm_enc (x : F m) : word sz := NToWord sz (Z.to_N (FieldToZ x)).
+  Definition Fm_enc (x : F m) : word sz := NToWord sz (Z.to_N (F.to_Z x)).
 
   Definition Fm_dec (x_ : word sz) : option (F m) :=
     let z := Z.of_N (wordToN (x_)) in
     if Z_lt_dec z m
-      then Some (ZToField m z)
+      then Some (F.of_Z m z)
       else None
   .
 

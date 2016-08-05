@@ -21,8 +21,6 @@ Require Export Crypto.Util.FixCoqMistakes.
 Local Open Scope Z_scope.
 
 Local Opaque add_to_nth carry_simple.
-Local Arguments ZToField {_} _.
-Import ModularArithmeticTheorems.Zmod PrimeFieldTheorems.Zmod.
 
 Section PseudoMersenneProofs.
   Context `{prm :PseudoMersenneBaseParams}.
@@ -79,7 +77,7 @@ Section PseudoMersenneProofs.
   Qed.
 
   Lemma encode_eq : forall x : F modulus,
-    ModularBaseSystemList.encode x = BaseSystem.encode base x (2 ^ k).
+    ModularBaseSystemList.encode x = BaseSystem.encode base (F.to_Z x) (2 ^ k).
   Proof.
     cbv [ModularBaseSystemList.encode BaseSystem.encode encodeZ]; intros.
     rewrite base_length.
@@ -91,9 +89,9 @@ Section PseudoMersenneProofs.
     autounfold; cbv [encode]; intros.
     rewrite to_list_from_list; autounfold.
     rewrite encode_eq, encode_rep.
-    + apply ZToField_FieldToZ.
+    + apply F.of_Z_to_Z.
     + apply bv.
-    + split; [ | etransitivity]; try (apply FieldToZ_range; auto using modulus_pos); auto.
+    + split; [ | etransitivity]; try (apply F.to_Z_range; auto using modulus_pos); auto.
     + eauto using base_upper_bound_compatible, limb_widths_nonneg.
   Qed.
 
@@ -102,7 +100,7 @@ Section PseudoMersenneProofs.
   Proof.
     autounfold; cbv [add]; intros.
     rewrite to_list_from_list; autounfold.
-    rewrite add_rep, ZToField_add.
+    rewrite add_rep, F.of_Z_add.
     f_equal; assumption.
   Qed.
 
@@ -161,12 +159,12 @@ Section PseudoMersenneProofs.
     intuition idtac; subst.
     rewrite to_list_from_list.
     cbv [ModularBaseSystemList.mul ModularBaseSystemList.decode].
-    rewrite ZToField_mod, reduce_rep, <-ZToField_mod.
+    rewrite F.of_Z_mod, reduce_rep, <-F.of_Z_mod.
     pose proof (@base_from_limb_widths_length limb_widths).
     rewrite mul_rep by (auto using ExtBaseVector || rewrite extended_base_length, !length_to_list; omega).
     rewrite 2decode_short by (rewrite ?base_from_limb_widths_length;
       auto using Nat.eq_le_incl, length_to_list with omega).
-    apply ZToField_mul.
+    apply F.of_Z_mul.
   Qed.
 
   Lemma nth_default_base_positive : forall i, (i < length base)%nat ->
@@ -191,11 +189,11 @@ Section PseudoMersenneProofs.
   Qed.
 
   Lemma Fdecode_decode_mod : forall us x,
-    decode us = x -> BaseSystem.decode base (to_list us) mod modulus = x.
+    decode us = x -> BaseSystem.decode base (to_list us) mod modulus = F.to_Z x.
   Proof.
     autounfold; intros.
     rewrite <-H.
-    apply FieldToZ_ZToField.
+    apply F.to_Z_of_Z.
   Qed.
 
   Definition carry_done us := forall i, (i < length base)%nat ->
@@ -232,7 +230,7 @@ Section PseudoMersenneProofs.
     rewrite to_list_from_list; autounfold.
     cbv [ModularBaseSystemList.sub].
     rewrite BaseSystemProofs.sub_rep, BaseSystemProofs.add_rep.
-    rewrite ZToField_sub, ZToField_add, ZToField_mod.
+    rewrite F.of_Z_sub, F.of_Z_add, F.of_Z_mod.
     apply Fdecode_decode_mod in mm_spec; cbv [BaseSystem.decode] in *.
     rewrite mm_spec. rewrite Algebra.left_identity.
     f_equal; assumption.
@@ -299,11 +297,11 @@ Section CarryProofs.
     specialize_by eauto.
     cbv [ModularBaseSystemList.carry].
     break_if; subst; eauto.
-    apply eq_ZToField_iff.
+    apply F.eq_of_Z_iff.
     rewrite to_list_from_list.
     apply carry_decode_eq_reduce. auto.
     cbv [ModularBaseSystemList.decode].
-    apply eq_ZToField_iff.
+    apply F.eq_of_Z_iff.
     rewrite to_list_from_list, carry_simple_decode_eq; try omega; distr_length; auto.
   Qed.
   Hint Resolve carry_rep.

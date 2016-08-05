@@ -37,18 +37,18 @@ Section ModularBaseSystem.
    from_list (sub [[modulus_multiple]] [[us]] [[vs]])
    (length_sub length_to_list length_to_list length_to_list).
 
-  Definition zero : digits := encode (ZToField _ 0).
+  Definition zero : digits := encode (F.of_Z _ 0).
 
-  Definition one : digits := encode (ZToField _ 1).
-
-  (* Placeholder *)
-  Definition opp (x : digits) : digits := encode (ModularArithmetic.opp (decode x)).
+  Definition one : digits := encode (F.of_Z _ 1).
 
   (* Placeholder *)
-  Definition inv (x : digits) : digits := encode (ModularArithmetic.inv (decode x)).
+  Definition opp (x : digits) : digits := encode (F.opp (decode x)).
 
   (* Placeholder *)
-  Definition div (x y : digits) : digits := encode (ModularArithmetic.div (decode x) (decode y)).
+  Definition inv (x : digits) : digits := encode (F.inv (decode x)).
+
+  (* Placeholder *)
+  Definition div (x y : digits) : digits := encode (F.div (decode x) (decode y)).
 
   Definition rep (us : digits) (x : F modulus) := decode us = x.
   Local Notation "u ~= x" := (rep u x).

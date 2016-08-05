@@ -12,11 +12,11 @@ Require Import Coq.Logic.Decidable Crypto.Util.Decidable.
 Require Import Coq.omega.Omega.
 
 (* TODO: move to PrimeFieldTheorems *)
-Lemma minus1_is_square {q} : prime q -> (q mod 4)%Z = 1%Z -> (exists y, y*y = opp (ZToField q 1))%F.
+Lemma minus1_is_square {q} : prime q -> (q mod 4)%Z = 1%Z -> (exists y, y*y = F.opp (F.of_Z q 1))%F.
   intros; pose proof prime_ge_2 q _.
-  rewrite Zmod.square_iff.
+  rewrite F.square_iff.
   destruct (minus1_square_1mod4 q) as [b b_id]; trivial; exists b.
-  rewrite b_id, Zmod.FieldToZ_opp, Zmod.FieldToZ_ZToField, Z.mod_opp_l_nz, !Zmod_small;
+  rewrite b_id, F.to_Z_opp, F.to_Z_of_Z, Z.mod_opp_l_nz, !Zmod_small;
     (repeat (omega || rewrite Zmod_small)).
 Qed.
 
@@ -25,16 +25,16 @@ Global Instance prime_q : prime q. Admitted.
 Lemma two_lt_q : (2 < q)%Z. Proof. reflexivity. Qed.
 Lemma char_gt_2 : (1 + 1 <> (0:F q))%F. vm_decide_no_check. Qed.
 
-Definition a : F q := opp 1%F.
+Definition a : F q := F.opp 1%F.
 Lemma nonzero_a : a <> 0%F. Proof. vm_decide_no_check. Qed.
 Lemma square_a : exists b, (b*b=a)%F.
-Proof. pose (@Zmod.Decidable_square q _ two_lt_q a); vm_decide_no_check. Qed.
-Definition d : F q := (opp (ZToField _ 121665) / (ZToField _ 121666))%F.
+Proof. pose (@F.Decidable_square q _ two_lt_q a); vm_decide_no_check. Qed.
+Definition d : F q := (F.opp (F.of_Z _ 121665) / (F.of_Z _ 121666))%F.
 
 Lemma nonsquare_d : forall x, (x*x <> d)%F.
-Proof. pose (@Zmod.Decidable_square q _ two_lt_q d). vm_decide_no_check. Qed.
+Proof. pose (@F.Decidable_square q _ two_lt_q d). vm_decide_no_check. Qed.
 
-Instance curve25519params : @E.twisted_edwards_params (F q) eq 0%F 1%F add mul a d :=
+Instance curve25519params : @E.twisted_edwards_params (F q) eq 0%F 1%F F.add F.mul a d :=
   {
     nonzero_a := nonzero_a;
     char_gt_2 := char_gt_2;
@@ -100,11 +100,11 @@ Definition FlEncoding : canonical encoding of F (Z.of_nat l) as word b :=
 
 Lemma q_5mod8 : (q mod 8 = 5)%Z. cbv; reflexivity. Qed.
 
-Lemma sqrt_minus1_valid : ((@ZToField q 2 ^ Z.to_N (q / 4)) ^ 2 = opp 1)%F.
+Lemma sqrt_minus1_valid : ((F.of_Z q 2 ^ Z.to_N (q / 4)) ^ 2 = F.opp 1)%F.
 Proof. vm_decide_no_check. Qed.
 
-Local Notation point := (@E.point (F q) eq 1%F add mul a d).
-Local Notation zero := (E.zero(H:=Zmod.field_modulo q)).
+Local Notation point := (@E.point (F q) eq 1%F F.add F.mul a d).
+Local Notation zero := (E.zero(H:=F.field_modulo q)).
 Local Notation add := (E.add(H0:=curve25519params)).
 Local Infix "*" := (E.mul(H0:=curve25519params)).
 Axiom H : forall n : nat, word n -> word (b + b).

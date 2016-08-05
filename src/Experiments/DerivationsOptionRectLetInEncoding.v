@@ -261,20 +261,3 @@ Proof.
     eapply decode_failed_neq_encoding in Hdec.
     destruct (B_eqb P_ (enc Q)) eqn:Heq; [rewrite B_eqb_iff in Heq; eauto | trivial]. }
 Qed.
-
-Lemma unfoldDiv : forall {m} (x y:F m), (x/y = x * inv y)%F. Proof. unfold div. congruence. Qed.
-
-Definition FieldToN {m} (x:F m) := Z.to_N (FieldToZ x).
-Lemma FieldToN_correct {m} (x:F m) : FieldToN (m:=m) x = Z.to_N (FieldToZ x). reflexivity. Qed.
-
-Definition natToField {m} x : F m := ZToField _ (Z.of_nat x).
-Definition FieldToNat {m} (x:F m) : nat := Z.to_nat (FieldToZ x).
-
-Section with_unqualified_modulo2.
-Import NPeano Nat.
-Local Infix "mod" := modulo : nat_scope.
-Lemma FieldToNat_natToField {m} : m <> 0 -> forall x, x mod m = FieldToNat (natToField (m:=Z.of_nat m) x).
-  unfold natToField, FieldToNat; intros.
-  rewrite (Zmod.FieldToZ_ZToField), <-mod_Zmod, Nat2Z.id; trivial.
-Qed.
-End with_unqualified_modulo2.
