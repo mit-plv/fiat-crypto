@@ -5,15 +5,15 @@ Require Import Crypto.Util.Notations.
 Require Coq.Numbers.Natural.Peano.NPeano.
 Local Close Scope nat_scope. Local Close Scope type_scope. Local Close Scope core_scope.
 Require Crypto.Tactics.Algebra_syntax.Nsatz.
+Require Export Crypto.Util.FixCoqMistakes.
 
 Module Import ModuloCoq8485.
   Import NPeano Nat.
-  Infix "mod" := modulo (at level 40, no associativity).
+  Infix "mod" := modulo.
 End ModuloCoq8485.
 
 Notation is_eq_dec := (DecidableRel _) (only parsing).
-Notation "@ 'is_eq_dec' T R" := (DecidableRel (R:T->T->Prop))
-                                  (at level 10, T at level 8, R at level 8, only parsing).
+Notation "@ 'is_eq_dec' T R" := (DecidableRel (R:T->T->Prop)) (only parsing).
 Notation eq_dec x y := (@dec (_ x y) _) (only parsing).
 Notation "x =? y" := (eq_dec x y) : type_scope.
 
@@ -304,7 +304,7 @@ Module Group.
     Lemma surjective_homomorphism_from_group
           {G EQ OP ID INV} {groupG:@group G EQ OP ID INV}
           {H eq op id inv}
-          {Equivalence_eq: @Equivalence H eq} {eq_dec: forall x y, {eq x y} + {~ eq x y}}
+          {Equivalence_eq: @Equivalence H eq} {eq_dec: forall x y, {eq x y} + {~ eq x y} }
           {Proper_op:Proper(eq==>eq==>eq)op}
           {Proper_inv:Proper(eq==>eq)inv}
           {phi iph} {Proper_phi:Proper(EQ==>eq)phi} {Proper_iph:Proper(eq==>EQ)iph}
@@ -329,7 +329,7 @@ Module Group.
 
     Lemma isomorphism_to_subgroup_group
           {G EQ OP ID INV}
-          {Equivalence_EQ: @Equivalence G EQ} {eq_dec: forall x y, {EQ x y} + {~ EQ x y}}
+          {Equivalence_EQ: @Equivalence G EQ} {eq_dec: forall x y, {EQ x y} + {~ EQ x y} }
           {Proper_OP:Proper(EQ==>EQ==>EQ)OP}
           {Proper_INV:Proper(EQ==>EQ)INV}
           {H eq op id inv} {groupG:@group H eq op id inv}
@@ -533,7 +533,7 @@ Module Ring.
 
   Lemma isomorphism_to_subring_ring
         {T EQ ZERO ONE OPP ADD SUB MUL}
-        {Equivalence_EQ: @Equivalence T EQ} {eq_dec: forall x y, {EQ x y} + {~ EQ x y}}
+        {Equivalence_EQ: @Equivalence T EQ} {eq_dec: forall x y, {EQ x y} + {~ EQ x y} }
         {Proper_OPP:Proper(EQ==>EQ)OPP}
         {Proper_ADD:Proper(EQ==>EQ==>EQ)ADD}
         {Proper_SUB:Proper(EQ==>EQ==>EQ)SUB}
@@ -663,7 +663,7 @@ Module Field.
 
   Lemma isomorphism_to_subfield_field
         {T EQ ZERO ONE OPP ADD SUB MUL INV DIV}
-        {Equivalence_EQ: @Equivalence T EQ} {eq_dec: forall x y, {EQ x y} + {~ EQ x y}}
+        {Equivalence_EQ: @Equivalence T EQ} {eq_dec: forall x y, {EQ x y} + {~ EQ x y} }
         {Proper_OPP:Proper(EQ==>EQ)OPP}
         {Proper_ADD:Proper(EQ==>EQ==>EQ)ADD}
         {Proper_SUB:Proper(EQ==>EQ==>EQ)SUB}
@@ -1298,6 +1298,21 @@ Ltac only_two_square_roots :=
   | @field ?F ?eq ?zero ?one ?opp ?add ?sub ?mul ?inv ?div
     => repeat only_two_square_roots_step eq opp mul
   end.
+
+(*** Tactics for ring equations *)
+Require Import Coq.setoid_ring.Ring_tac.
+Ltac ring_simplify_subterms := tac_on_subterms ltac:(fun t => ring_simplify t).
+
+Ltac ring_simplify_subterms_in_all :=
+  reverse_nondep; ring_simplify_subterms; intros.
+
+Create HintDb ring_simplify discriminated.
+Create HintDb ring_simplify_subterms discriminated.
+Create HintDb ring_simplify_subterms_in_all discriminated.
+Hint Extern 1 => progress ring_simplify : ring_simplify.
+Hint Extern 1 => progress ring_simplify_subterms : ring_simplify_subterms.
+Hint Extern 1 => progress ring_simplify_subterms_in_all : ring_simplify_subterms_in_all.
+
 
 Section Example.
   Context {F zero one opp add sub mul inv div} `{F_field:field F eq zero one opp add sub mul inv div}.

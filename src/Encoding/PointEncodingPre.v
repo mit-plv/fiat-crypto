@@ -11,19 +11,22 @@ Require Import Crypto.Algebra.
 
 Require Import Crypto.Spec.Encoding Crypto.Spec.ModularWordEncoding Crypto.Spec.ModularArithmetic.
 
+Require Import Crypto.Util.Notations.
+Require Export Crypto.Util.FixCoqMistakes.
+
 Generalizable All Variables.
 Section PointEncodingPre.
   Context {F eq zero one opp add sub mul inv div} `{field F eq zero one opp add sub mul inv div}.
-  Local Infix "==" := eq (at level 30) : type_scope.
-  Local Notation "a !== b" := (not (a == b)) (at level 30): type_scope.
+  Local Infix "==" := eq : type_scope.
+  Local Notation "a !== b" := (not (a == b)): type_scope.
   Local Notation "0" := zero.  Local Notation "1" := one.
   Local Infix "+" := add. Local Infix "*" := mul.
   Local Infix "-" := sub. Local Infix "/" := div.
-  Local Notation "x '^' 2" := (x*x) (at level 30).
+  Local Notation "x ^ 2" := (x*x).
 
   Add Field EdwardsCurveField : (Field.field_theory_for_stdlib_tactic (T:=F)).
-  
-  Context {eq_dec:forall x y : F, {x==y}+{x==y->False}}.
+
+  Context {eq_dec:forall x y : F, {x==y}+{x==y->False} }.
   Definition F_eqb x y := if eq_dec x y then true else false.
   Lemma F_eqb_iff : forall x y, F_eqb x y = true <-> x == y.
   Proof.
@@ -64,7 +67,7 @@ Section PointEncodingPre.
     symmetry.
     apply E.solve_correct; eassumption.
   Qed.
- 
+
   (* TODO : move? *)
   Lemma square_opp : forall x : F, (opp x ^2) == (x ^2).
   Proof.
@@ -97,7 +100,7 @@ Section PointEncodingPre.
           let p := (if Bool.eqb (whd w) (sign_bit x) then x else opp x, y) in
           if (andb (F_eqb x 0) (whd w))
           then None (* special case for 0, since its opposite has the same sign; if the sign bit of 0 is 1, produce None.*)
-          else Some p 
+          else Some p
         else None
     end.
 
@@ -112,7 +115,7 @@ Section PointEncodingPre.
     destruct x as [x1 x2].
     destruct y as [y1 y2].
     match goal with
-    | |- {prod_eq _ _ (?x1, ?x2) (?y1,?y2)} + {not (prod_eq _ _ (?x1, ?x2) (?y1,?y2))} => 
+    | |- {prod_eq _ _ (?x1, ?x2) (?y1,?y2)} + {not (prod_eq _ _ (?x1, ?x2) (?y1,?y2))} =>
       destruct (A_eq_dec x1 y1); destruct (A_eq_dec x2 y2) end;
       unfold prod_eq; intuition.
   Qed.
@@ -162,7 +165,7 @@ Section PointEncodingPre.
 
   Definition point_eq (p q : point) : Prop := prod_eq eq eq (proj1_sig p) (proj1_sig q).
   Definition option_point_eq := option_eq (point_eq).
-  
+
   Lemma option_point_eq_iff : forall p q,
     option_point_eq (Some p) (Some q) <->
     option_coordinates_eq (Some (proj1_sig p)) (Some (proj1_sig q)).
@@ -214,7 +217,7 @@ Section PointEncodingPre.
   Proof.
     unfold prod_eq; intros.
     repeat break_let.
-    intuition; etransitivity; eauto.
+    intuition auto with relations; etransitivity; eauto.
   Qed.
 
   Lemma option_coordinates_eq_sym : forall p q, option_coordinates_eq p q ->
@@ -366,7 +369,7 @@ Proof.
   break_match.
   + f_equal.
     apply option_point_eq_iff.
-    destruct p as [[? ?] ?]; simpl in *.
+    destruct p as [ [ ? ? ] ? ]; simpl in *.
     assumption.
   + exfalso; apply  n.
     eapply option_coordinates_eq_trans; [ | eauto using option_coordinates_eq_sym ].

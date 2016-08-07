@@ -122,6 +122,7 @@ Section ExtendedBaseVector.
         rewrite (map_nth_default _ _ _ _ 0) by omega.
         apply base_matches_modulus; auto using limb_widths_nonnegative, limb_widths_match_modulus;
         distr_length.
+        assumption.
       } { (* i < length base, j >= length base, i + j >= length base *)
         do 2 rewrite map_nth_default_base_high by omega.
         remember (j - length base)%nat as j'.

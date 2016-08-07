@@ -1,7 +1,15 @@
 (*** Barrett Reduction *)
-(** This file implements Barrett Reduction on [Z].  We follow Wikipedia. *)
+(** This file implements a slightly-generalized version of Barrett
+    Reduction on [Z].  This version follows a middle path between the
+    Handbook of Applied Cryptography (Algorithm 14.42) and Wikipedia.
+    We split up the shifting and the multiplication so that we don't
+    need to store numbers that are quite so large, but we don't do
+    early reduction modulo [b^(k+offset)] (we generalize from HAC's [k
+    ± 1] to [k ± offset]).  This leads to weaker conditions on the
+    base ([b]), exponent ([k]), and the [offset] than those given in
+    the HAC. *)
 Require Import Coq.ZArith.ZArith Coq.micromega.Psatz.
-Require Import Crypto.Util.ZUtil Crypto.Util.Tactics.
+Require Import Crypto.Util.ZUtil Crypto.Util.Tactics Crypto.Algebra.
 
 Local Open Scope Z_scope.
 
@@ -45,10 +53,16 @@ Section barrett.
         ⌊4ᵏ / n⌋]. Then [m] represents the fixed-point number
         [m 2⁻ᵏ ≈ (n 2⁻ᵏ)⁻¹]. *)
     (** N.B. We don't need [k] to be the smallest such integer. *)
-    Context (k : Z)
-            (k_good : n < 2 ^ k)
+    (** N.B. We generalize to an arbitrary base. *)
+    (** N.B. We generalize from [k ± 1] to [k ± offset]. *)
+    Context (b : Z)
+            (base_good : 0 < b)
+            (k : Z)
+            (k_good : n < b ^ k)
             (m : Z)
-            (m_good : m = 4^k / n). (* [/] is [Z.div], which is truncated *)
+            (m_good : m = b^(2*k) / n) (* [/] is [Z.div], which is truncated *)
+            (offset : Z)
+            (offset_nonneg : 0 <= offset).
     (** Wikipedia neglects to mention non-negativity, but we need it.
         It might be possible to do with a relaxed assumption, such as
         the sign of [a] and the sign of [n] being the same; but I
@@ -56,14 +70,15 @@ Section barrett.
     Context (n_pos : 0 < n) (* or just [0 <= n], since we have [n <> 0] above *)
             (a_nonneg : 0 <= a).
 
-    Lemma k_nonnegative : 0 <= k.
-    Proof.
-      destruct (Z_lt_le_dec k 0); try assumption.
-      rewrite !Z.pow_neg_r in * by lia; lia.
-    Qed.
+    Context (k_big_enough : offset <= k)
+            (a_small : a < b^(2*k))
+            (** We also need that [n] is large enough; [n] larger than
+                [bᵏ⁻¹] works, but we ask for something more precise. *)
+            (n_large : a mod b^(k-offset) <= n).
 
     (** Now *)
-    Let q := (m * a) / 4^k.
+
+    Let q := (m * (a / b^(k-offset))) / b^(k+offset).
     Let r := a - q * n.
     (** Because of the floor function (in Coq, because [/] means
         truncated division), [q] is an integer and [r ≡ a mod n]. *)
@@ -78,26 +93,29 @@ Section barrett.
     Lemma qn_small
       : q * n <= a.
     Proof.
-      pose proof k_nonnegative; subst q r m.
-      assert (0 <= 2^(k-1)) by zero_bounds.
-      Z.simplify_fractions_le.
-    Qed.
-
-    (** Also, if [a < n²] then [r < 2n]. *)
-    (** N.B. It turns out that it is sufficient to assume [a < 4ᵏ]. *)
-    Context (a_small : a < 4^k).
-    Lemma q_nice : { b : bool | q = a / n + if b then -1 else 0 }.
-    Proof.
-      assert (0 <= (4 ^ k * a / n) mod 4 ^ k < 4 ^ k) by auto with zarith lia.
-      assert (0 <= a * (4 ^ k mod n) / n < 4 ^ k) by (auto with zero_bounds zarith lia).
       subst q r m.
-      rewrite (Z.div_mul_diff_exact''' (4^k) n a) by lia.
-      rewrite (Z_div_mod_eq (4^k * _ / n) (4^k)) by lia.
-      autorewrite with push_Zmul push_Zopp zsimplify zstrip_div.
-      eexists; reflexivity.
+      assert (0 < b^(k-offset)). zero_bounds.
+      assert (0 < b^(k+offset)) by zero_bounds.
+      assert (0 < b^(2 * k)) by zero_bounds.
+      Z.simplify_fractions_le.
+      autorewrite with pull_Zpow pull_Zdiv zsimplify; reflexivity.
     Qed.
 
-    Lemma r_small : r < 2 * n.
+    Lemma q_nice : { b : bool * bool | q = a / n + (if fst b then -1 else 0) + (if snd b then -1 else 0) }.
+    Proof.
+      assert (0 < b^(k+offset)) by zero_bounds.
+      assert (0 < b^(k-offset)) by zero_bounds.
+      assert (a / b^(k-offset) <= b^(2*k) / b^(k-offset)) by auto with zarith lia.
+      assert (a / b^(k-offset) <= b^(k+offset)) by (autorewrite with pull_Zpow zsimplify in *; assumption).
+      subst q r m.
+      rewrite (Z.div_mul_diff_exact''' (b^(2*k)) n (a/b^(k-offset))) by auto with lia zero_bounds.
+      rewrite (Z_div_mod_eq (b^(2*k) * _ / n) (b^(k+offset))) by lia.
+      autorewrite with push_Zmul push_Zopp zsimplify zstrip_div zdiv_to_mod.
+      rewrite Z.div_sub_mod_cond, !Z.div_sub_small by auto with zero_bounds zarith.
+      eexists (_, _); reflexivity.
+    Qed.
+
+    Lemma r_small : r < 3 * n.
     Proof.
       Hint Rewrite (Z.mul_div_eq' a n) using lia : zstrip_div.
       assert (a mod n < n) by auto with zarith lia.
@@ -108,14 +126,15 @@ Section barrett.
 
     (** In that case, we have *)
     Theorem barrett_reduction_small
-      : a mod n = if r <? n
-                  then r
-                  else r - n.
+      : a mod n = let r := if r <? n then r else r-n in
+                  let r := if r <? n then r else r-n in
+                  r.
     Proof.
-      pose proof r_small. pose proof qn_small.
-      destruct (r <? n) eqn:rlt; Z.ltb_to_lt.
+      pose proof r_small. pose proof qn_small. cbv zeta.
+      destruct (r <? n) eqn:Hr, (r-n <? n) eqn:?; try rewrite Hr; Z.ltb_to_lt; try lia.
       { symmetry; apply (Zmod_unique a n q); subst r; lia. }
       { symmetry; apply (Zmod_unique a n (q + 1)); subst r; lia. }
+      { symmetry; apply (Zmod_unique a n (q + 2)); subst r; lia. }
     Qed.
   End barrett_algorithm.
 End barrett.

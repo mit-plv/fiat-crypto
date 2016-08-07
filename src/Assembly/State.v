@@ -1,12 +1,14 @@
-Require Export String List Logic.
+Require Export Coq.Strings.String Coq.Lists.List Coq.Init.Logic.
 Require Export Bedrock.Word.
 
-Require Import ZArith NArith NPeano Ndec.
-Require Import Compare_dec Omega.
-Require Import OrderedType Coq.Structures.OrderedTypeEx.
-Require Import FMapPositive FMapFullAVL JMeq.
+Require Import Coq.ZArith.ZArith Coq.NArith.NArith Coq.Numbers.Natural.Peano.NPeano Coq.NArith.Ndec.
+Require Import Coq.Arith.Compare_dec Coq.omega.Omega.
+Require Import Coq.Structures.OrderedType Coq.Structures.OrderedTypeEx.
+Require Import Coq.FSets.FMapPositive Coq.FSets.FMapFullAVL Coq.Logic.JMeq.
 
-Require Import QhasmUtil QhasmCommon.
+Require Import Crypto.Assembly.QhasmUtil Crypto.Assembly.QhasmCommon.
+
+Require Export Crypto.Util.FixCoqMistakes.
 
 (* We want to use pairs and triples as map keys: *)
 
@@ -50,16 +52,16 @@ Module Pair_as_OT <: UsualOrderedType.
       destruct (Nat_as_OT.compare x0 y0);
       unfold Nat_as_OT.lt, Nat_as_OT.eq in *.
 
-    - apply LT; abstract (unfold lt; simpl; destruct (Nat.eq_dec x0 y0); intuition).
+    - apply LT; abstract (unfold lt; simpl; destruct (Nat.eq_dec x0 y0); intuition auto with zarith).
 
     - destruct (Nat_as_OT.compare x1 y1);
         unfold Nat_as_OT.lt, Nat_as_OT.eq in *.
 
       + apply LT; abstract (unfold lt; simpl; destruct (Nat.eq_dec x0 y0); intuition).
-      + apply EQ; abstract (unfold lt; simpl; subst; intuition).
-      + apply GT; abstract (unfold lt; simpl; destruct (Nat.eq_dec y0 x0); intuition).
+      + apply EQ; abstract (unfold lt; simpl; subst; intuition auto with relations).
+      + apply GT; abstract (unfold lt; simpl; destruct (Nat.eq_dec y0 x0); intuition auto with zarith).
 
-    - apply GT; abstract (unfold lt; simpl; destruct (Nat.eq_dec y0 x0); intuition).
+    - apply GT; abstract (unfold lt; simpl; destruct (Nat.eq_dec y0 x0); intuition auto with zarith).
   Defined.
 
   Definition eq_dec (a b: t): {a = b} + {a <> b}.
@@ -69,14 +71,14 @@ Module Pair_as_OT <: UsualOrderedType.
     - right; abstract (
         unfold lt in *; simpl in *;
         destruct (Nat.eq_dec a0 b0); intuition;
-        inversion H; intuition).
+        inversion H; intuition auto with zarith).
 
     - left; abstract (inversion e; intuition).
 
     - right; abstract (
         unfold lt in *; simpl in *;
         destruct (Nat.eq_dec b0 a0); intuition;
-        inversion H; intuition).
+        inversion H; intuition auto with zarith).
   Defined.
 End Pair_as_OT.
 
@@ -132,7 +134,7 @@ Module Triple_as_OT <: UsualOrderedType.
       unfold Nat_as_OT.lt, Nat_as_OT.eq, lt, eq in *;
       destruct (Nat.eq_dec (get0 x) (get0 y));
       destruct (Nat.eq_dec (get1 x) (get1 y));
-      simpl; intuition).
+      simpl; intuition auto with zarith).
 
   Ltac compare_eq x y :=
     abstract (
@@ -163,14 +165,14 @@ Module Triple_as_OT <: UsualOrderedType.
     - right; abstract (
         unfold lt, get0, get1, get2 in *; simpl in *;
         destruct (Nat.eq_dec a0 b0), (Nat.eq_dec a1 b1);
-        intuition; inversion H; intuition).
+        intuition; inversion H; intuition auto with zarith).
 
     - left; abstract (inversion e; intuition).
 
     - right; abstract (
         unfold lt, get0, get1, get2 in *; simpl in *;
         destruct (Nat.eq_dec b0 a0), (Nat.eq_dec b1 a1);
-        intuition; inversion H; intuition).
+        intuition; inversion H; intuition auto with zarith).
   Defined.
 End Triple_as_OT.
 

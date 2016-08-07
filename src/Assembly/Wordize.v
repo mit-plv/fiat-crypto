@@ -1,11 +1,10 @@
 Require Export Bedrock.Word Bedrock.Nomega.
-Require Import NArith PArith Ndigits Nnat NPow NPeano Ndec.
-Require Import Compare_dec Omega Bool.
-Require Import FunctionalExtensionality ProofIrrelevance.
-Require Import QhasmUtil QhasmEvalCommon.
-Require Import WordizeUtil Bounds List Listize Natize.
+Require Import Coq.NArith.NArith Coq.PArith.PArith Coq.NArith.Ndigits Coq.NArith.Nnat Coq.Numbers.Natural.Abstract.NPow Coq.Numbers.Natural.Peano.NPeano Coq.NArith.Ndec.
+Require Import Coq.Arith.Compare_dec Coq.omega.Omega.
+Require Import Coq.Logic.FunctionalExtensionality Coq.Logic.ProofIrrelevance.
+Require Import Crypto.Assembly.QhasmUtil Crypto.Assembly.QhasmEvalCommon.
 
-Import EvalUtil ListNotations.
+Require Export Crypto.Util.FixCoqMistakes.
 
 Hint Rewrite wordToN_nat Nat2N.inj_add N2Nat.inj_add
              Nat2N.inj_mul N2Nat.inj_mul Npow2_nat : N.
@@ -680,17 +679,7 @@ Ltac standardize_wordeq :=
   | [|- @wordeq O _ _ (cons _ _)] => apply wordeq_break_cons
   end.
 
-Ltac standardize_maskeq :=
-  repeat match goal with
-  | [|- @maskeq (S ?m) _ _ _ _] => apply maskeq_kill_arg; intro
-  | [|- @maskeq O _ _ (Let_In true _) _] => apply maskeq_let_const
-  | [|- @maskeq O _ _(Let_In false _) _] => apply maskeq_let_const
-  | [|- @maskeq O _ _ (Let_In (_ <? _)%N _) _] => apply maskeq_debool_ltb
-  | [|- @maskeq O _ _ (Let_In (_ =? _)%N _) _] => apply maskeq_debool_eqb
-  | [|- @maskeq O _ _ (Let_In (andb _ _) _) _] => apply maskeq_debool_andb
-  | [|- @maskeq O _ _ (Let_In _ _) _] => apply maskeq_cut_let
-  | [|- @maskeq O _ _ (cons _ _) _] => apply maskeq_break_cons
-  end.
+Ltac lt_crush := try abstract (clear; vm_compute; intuition auto with zarith).
 
 Transparent curriedToListF curriedToListF'. 
 

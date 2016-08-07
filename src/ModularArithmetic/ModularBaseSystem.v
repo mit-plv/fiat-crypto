@@ -50,16 +50,12 @@ Section ModularBaseSystem.
   (* Placeholder *)
   Definition div (x y : digits) : digits := encode (ModularArithmetic.div (decode x) (decode y)).
 
-  Definition carry i (us : digits) : digits := from_list (carry i [[us]])
-    (length_carry length_to_list).
-
   Definition rep (us : digits) (x : F modulus) := decode us = x.
   Local Notation "u ~= x" := (rep u x).
   Local Hint Unfold rep.
 
-  Definition carry_sequence is (us : digits) : digits := fold_right carry us is.
-
-  Definition carry_full : digits -> digits := carry_sequence (full_carry_chain limb_widths).
+  Definition carry_full (us : digits) : digits := from_list (carry_full [[us]])
+    (length_carry_full length_to_list).
 
   Definition carry_mul (us vs : digits) : digits := carry_full (mul us vs).
 

@@ -1,4 +1,5 @@
 (** * Generic Tactics *)
+Require Export Crypto.Util.FixCoqMistakes.
 
 (** Test if a tactic succeeds, but always roll-back the results *)
 Tactic Notation "test" tactic3(tac) :=
@@ -300,3 +301,24 @@ Tactic Notation "rewrite_hyp" "<-" "?*" "in" "*" := repeat do_with_hyp' ltac:(fu
 Tactic Notation "rewrite_hyp" "!*" "in" "*" := progress rewrite_hyp ?* in *.
 Tactic Notation "rewrite_hyp" "->" "!*" "in" "*" := progress rewrite_hyp -> ?* in *.
 Tactic Notation "rewrite_hyp" "<-" "!*" "in" "*" := progress rewrite_hyp <- ?* in *.
+
+(** Execute [progress tac] on all subterms of the goal.  Useful for things like [ring_simplify]. *)
+Ltac tac_on_subterms tac :=
+  repeat match goal with
+         | [ |- context[?t] ]
+           => progress tac t
+         end.
+
+(** Like [Coq.Program.Tactics.revert_last], but only for non-dependent hypotheses *)
+Ltac revert_last_nondep :=
+  match goal with
+  | [ H : _ |- _ ]
+    => lazymatch goal with
+       | [ H' : appcontext[H] |- _ ] => fail
+       | [ |- appcontext[H] ] => fail
+       | _ => idtac
+       end;
+       revert H
+  end.
+
+Ltac reverse_nondep := repeat revert_last_nondep.

@@ -5,9 +5,10 @@ Require Import Crypto.CompleteEdwardsCurve.Pre Crypto.CompleteEdwardsCurve.Compl
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Coq.Classes.Morphisms.
-Require Import Relation_Definitions.
+Require Import Coq.Relations.Relation_Definitions.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Notations.
+Require Export Crypto.Util.FixCoqMistakes.
 
 Module Extended.
   Section ExtendedCoordinates.
@@ -38,8 +39,8 @@ Module Extended.
              | |- Proper _ _ => intro
              | _ => progress intros
              | [ H: _ /\ _ |- _ ] => destruct H
-             | [ p:E.point |- _ ] => destruct p as [[??]?]
-             | [ p:point |- _ ] => destruct p as [[[[??]?]?]?]
+             | [ p:E.point |- _ ] => destruct p as [ [??] ? ]
+             | [ p:point |- _ ] => destruct p as [ [ [ [??] ? ] ? ] ? ]
              | _ => progress autounfold with bash in *
              | |- _ /\ _ => split
              | _ => solve [neq01]
@@ -97,7 +98,7 @@ Module Extended.
         let (x, y) := E.coordinates (E.add (to_twisted P) (to_twisted Q)) in
         (fieldwise (n:=2) Feq) (x, y) (X/Z, Y/Z).
       Proof.
-        destruct P as [[[[]?]?][HP []]]; destruct Q as [[[[]?]?][HQ []]].
+        destruct P as [ [ [ [ ] ? ] ? ] [ HP [ ] ] ]; destruct Q as [ [ [ [ ] ? ] ? ] [ HQ [ ] ] ].
         pose proof edwardsAddCompletePlus (a_nonzero:=E.nonzero_a)(a_square:=E.square_a)(d_nonsquare:=E.nonsquare_d)(char_gt_2:=E.char_gt_2) _ _ _ _ HP HQ.
         pose proof edwardsAddCompleteMinus (a_nonzero:=E.nonzero_a)(a_square:=E.square_a)(d_nonsquare:=E.nonsquare_d)(char_gt_2:=E.char_gt_2) _ _ _ _ HP HQ.
         bash.
@@ -109,7 +110,7 @@ Module Extended.
         intros.
         pose proof (add_coordinates_correct P Q) as Hrep.
         pose proof Pre.unifiedAdd'_onCurve(a_nonzero:=E.nonzero_a)(a_square:=E.square_a)(d_nonsquare:=E.nonsquare_d)(char_gt_2:=E.char_gt_2) (E.coordinates (to_twisted P)) (E.coordinates (to_twisted Q)) as Hon.
-        destruct P as [[[[]?]?][HP []]]; destruct Q as [[[[]?]?][HQ []]].
+        destruct P as [ [ [ [ ] ? ] ? ] [ HP [ ] ] ]; destruct Q as [ [ [ [ ] ? ] ? ] [ HQ [ ] ] ].
         pose proof edwardsAddCompletePlus (a_nonzero:=E.nonzero_a)(a_square:=E.square_a)(d_nonsquare:=E.nonsquare_d)(char_gt_2:=E.char_gt_2) _ _ _ _ HP HQ as Hnz1.
         pose proof edwardsAddCompleteMinus (a_nonzero:=E.nonzero_a)(a_square:=E.square_a)(d_nonsquare:=E.nonsquare_d)(char_gt_2:=E.char_gt_2) _ _ _ _ HP HQ as Hnz2.
         autounfold with bash in *; simpl in *.
@@ -121,7 +122,7 @@ Module Extended.
       Lemma to_twisted_add P Q : E.eq (to_twisted (add P Q)) (E.add (to_twisted P) (to_twisted Q)).
       Proof.
         pose proof (add_coordinates_correct P Q) as Hrep.
-        destruct P as [[[[]?]?][HP []]]; destruct Q as [[[[]?]?][HQ []]].
+        destruct P as [ [ [ [ ] ? ] ? ] [ HP [ ] ] ]; destruct Q as [ [ [ [ ] ? ] ? ] [ HQ [ ] ] ].
         autounfold with bash in *; simpl in *.
         destruct Hrep as [HA HB]. rewrite <-!HA, <-!HB; clear HA HB.
         split; reflexivity.
@@ -229,7 +230,7 @@ Module Extended.
     Program Definition ref_phi (P:Fpoint) : Kpoint := exist _ (
       let '(X, Y, Z, T) := coordinates P in (phi X, phi Y, phi Z, phi T)) _.
     Next Obligation.
-      destruct P as [[[[] ?] ?] [? [? ?]]]; unfold onCurve in *; simpl.
+      destruct P as [ [ [ [ ] ? ] ? ] [ ? [ ? ? ] ] ]; unfold onCurve in *; simpl.
       (rewrite_strat bottomup hints field_homomorphism); try assumption.
       eauto 10 using is_homomorphism_phi_proper, phi_nonzero.
     Qed.
@@ -245,7 +246,7 @@ Module Extended.
              | |- _ => intro
              | |-  _ /\ _ => split
              | [H: _ /\ _ |- _ ] => destruct H
-             | [p: point |- _ ] => destruct p as [[[[] ?] ?] [? [? ?]]]
+             | [p: point |- _ ] => destruct p as [ [ [ [ ] ? ] ? ] [ ? [ ? ? ] ] ]
              | |- context[point_phi] => setoid_rewrite point_phi_correct
              | |- _ => progress cbv [fst snd coordinates proj1_sig eq to_twisted E.eq E.coordinates fieldwise fieldwise' add add_coordinates ref_phi] in *
              | |- Keq ?x ?x => reflexivity

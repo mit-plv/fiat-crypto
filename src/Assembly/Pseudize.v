@@ -1,8 +1,8 @@
 Require Export Bedrock.Word Bedrock.Nomega.
-Require Import NArith NPeano List Sumbool Compare_dec Omega.
-Require Import QhasmCommon QhasmEvalCommon QhasmUtil Pseudo State.
-Require Export WordizeUtil Wordize Listize.
-Require Import Crypto.Util.IterAssocOp.
+Require Import Coq.NArith.NArith Coq.Numbers.Natural.Peano.NPeano Coq.Lists.List Coq.Bool.Sumbool Coq.Arith.Compare_dec Coq.omega.Omega.
+Require Import Crypto.Assembly.QhasmCommon Crypto.Assembly.QhasmEvalCommon Crypto.Assembly.QhasmUtil Crypto.Assembly.Pseudo Crypto.Assembly.State.
+Require Export Crypto.Assembly.Wordize Crypto.Assembly.Vectorize.
+Require Export Crypto.Util.FixCoqMistakes.
 
 Import Pseudo ListNotations StateCommon EvalUtil ListState.
 

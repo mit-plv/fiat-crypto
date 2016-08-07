@@ -9,6 +9,8 @@ Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
 Require Export Coq.setoid_ring.Ring_theory Coq.setoid_ring.Field_theory Coq.setoid_ring.Field_tac.
 Require Export Crypto.Util.IterAssocOp.
 
+Require Export Crypto.Util.FixCoqMistakes.
+
 Section ModularArithmeticPreliminaries.
   Context {m:Z}.
   Let ZToFm := ZToField : BinNums.Z -> F m. Hint Unfold ZToFm. Local Coercion ZToFm : Z >-> F.
@@ -76,13 +78,16 @@ Ltac eq_remove_proofs := lazymatch goal with
     simpl in *; apply Q; clear Q
 end.
 
+(** TODO FIXME(from jgross): This tactic is way too powerful for
+    arcane reasons.  It should not be using so many databases with
+    [intuition]. *)
 Ltac Fdefn :=
   intros;
   repeat match goal with [ x : F _ |- _ ] => destruct x end;
   try eq_remove_proofs;
   demod;
   rewrite ?Z.mul_1_l;
-  intuition; demod; try solve [ f_equal; intuition ].
+  intuition auto with zarith lia relations typeclass_instances; demod; try solve [ f_equal; intuition auto with zarith lia relations typeclass_instances ].
 
 Local Open Scope F_scope.
 
@@ -139,7 +144,7 @@ Section FandZ.
 
   Lemma ZToField_small_nonzero : forall z, (0 < z < m)%Z -> ZToField z <> (0:F m).
   Proof.
-    intuition; find_inversion; rewrite ?Z.mod_0_l, ?Z.mod_small in *; intuition.
+    intuition; find_inversion; rewrite ?Z.mod_0_l, ?Z.mod_small in *; intuition auto with zarith.
   Qed.
 
   Require Crypto.Algebra.
@@ -448,7 +453,6 @@ Section RingModuloPre.
   Proof.
     constructor; intros; try Fdefn; unfold id;
       try (apply gf_eq; simpl; intuition).
-    - apply Z_mod_opp_equiv; rewrite Z_opp_opp, Zmod_mod; reflexivity.
     - rewrite (proj1 (Z.eqb_eq x y)); trivial.
   Qed.
 

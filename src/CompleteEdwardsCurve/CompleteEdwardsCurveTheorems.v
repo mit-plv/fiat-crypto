@@ -5,8 +5,9 @@ Require Import Crypto.CompleteEdwardsCurve.Pre.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Coq.Classes.Morphisms.
-Require Import Relation_Definitions.
+Require Import Coq.Relations.Relation_Definitions.
 Require Import Crypto.Util.Tuple Crypto.Util.Notations Crypto.Util.Tactics.
+Require Export Crypto.Util.FixCoqMistakes.
 
 Module E.
   Import Group ScalarMult Ring Field CompleteEdwardsCurve.E.
@@ -33,7 +34,7 @@ Module E.
                let x := fresh "x" p in
                let y := fresh "y" p in
                let pf := fresh "pf" p in
-               destruct p as [[x y] pf]
+               destruct p as [ [x y] pf]
              end.
 
     Local Obligation Tactic := intros; destruct_points; simpl; super_nsatz.
@@ -57,7 +58,7 @@ Module E.
       apply H;
       try common_denominator;
       [rewrite <-Hx; ring | ..].
-      
+
     Ltac bash_step :=
       let addCompletePlus := constr:(edwardsAddCompletePlus(char_gt_2:=char_gt_2)(d_nonsquare:=nonsquare_d)(a_square:=square_a)(a_nonzero:=nonzero_a)) in
       let addCompleteMinus := constr:(edwardsAddCompleteMinus(char_gt_2:=char_gt_2)(d_nonsquare:=nonsquare_d)(a_square:=square_a)(a_nonzero:=nonzero_a)) in
@@ -154,7 +155,7 @@ Module E.
     Program Definition ref_phi (P:Fpoint) : Kpoint := exist _ (
       let (x, y) := coordinates P in (phi x, phi y)) _.
     Next Obligation.
-      destruct P as [[? ?] ?]; simpl.
+      destruct P as [ [? ?] ?]; simpl.
       rewrite_strat bottomup hints field_homomorphism.
       eauto using is_homomorphism_phi_proper; assumption.
     Qed.
@@ -170,7 +171,7 @@ Module E.
              | |- _ => intro
              | |-  _ /\ _ => split
              | [H: _ /\ _ |- _ ] => destruct H
-             | [p: point |- _ ] => destruct p as [[??]?]
+             | [p: point |- _ ] => destruct p as [ [??]?]
              | |- context[point_phi] => setoid_rewrite point_phi_correct
              | |- _ => progress cbv [fst snd coordinates proj1_sig eq fieldwise fieldwise' add zero opp ref_phi] in *
              | |- Keq ?x ?x => reflexivity
