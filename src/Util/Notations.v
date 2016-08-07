@@ -36,23 +36,6 @@ Reserved Infix "≢ᵣ" (at level 70, no associativity).
 Reserved Notation "a !== b" (at level 70, no associativity).
 Reserved Notation "a ≢ b" (at level 70, no associativity).
 Reserved Notation "$$ v" (at level 40).
-Reserved Notation "% A" (at level 20, right associativity).
-Reserved Notation "$ A" (at level 20, right associativity).
-Reserved Notation "A :[ B ]:" (at level 20, right associativity).
-Reserved Notation "# A" (at level 20, right associativity).
-Reserved Notation "A :+: B" (at level 60, right associativity).
-Reserved Notation "A :+c: B" (at level 60, right associativity).
-Reserved Notation "A :-: B" (at level 60, right associativity).
-Reserved Notation "A :&: B" (at level 45, right associativity).
-Reserved Notation "A :^: B" (at level 45, right associativity).
-Reserved Notation "A :>>: B" (at level 60, right associativity).
-Reserved Notation "A :<<: B" (at level 60, right associativity).
-Reserved Notation "A :*: B" (at level 55, right associativity).
-(*Reserved Notation "O :( A , B ): :?: L ::: R" (at level 70, right associativity).*) (* breaks everything *)
-Reserved Notation "F :**: e" (at level 70, right associativity).
-Reserved Notation "E :->: F" (at level 70, right associativity).
-Reserved Notation "A :|: B" (at level 65, left associativity).
-Reserved Notation "n ::: A :():" (at level 65, left associativity).
 Reserved Notation "& x" (at level 30).
 Reserved Notation "** x" (at level 30).
 Reserved Notation "A <- X ; B" (at level 70, right associativity).
