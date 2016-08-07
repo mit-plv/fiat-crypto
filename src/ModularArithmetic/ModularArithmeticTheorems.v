@@ -453,7 +453,6 @@ Section RingModuloPre.
   Proof.
     constructor; intros; try Fdefn; unfold id;
       try (apply gf_eq; simpl; intuition).
-    - apply Z_mod_opp_equiv; rewrite Z_opp_opp, Zmod_mod; reflexivity.
     - rewrite (proj1 (Z.eqb_eq x y)); trivial.
   Qed.
 

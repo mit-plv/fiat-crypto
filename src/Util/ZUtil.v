@@ -24,8 +24,8 @@ Hint Resolve (fun a b H => proj1 (Z.mod_pos_bound a b H)) (fun a b H => proj2 (Z
     which can reasonably be said to "simplify" the goal, should go in
     this database. *)
 Create HintDb zsimplify discriminated.
-Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r Z_mod_same_full Z.sub_simpl_r Z.sub_simpl_l Z.add_opp_diag_r Z.add_opp_diag_l Zmod_0_l Z.add_simpl_r Z.add_simpl_l Z.opp_0 Zmod_0_r : zsimplify.
-Hint Rewrite Z.div_mul Z.div_1_l Z.div_same Z.mod_same Z.div_small Z.mod_small Z.div_add Z.div_add_l Z.mod_add Z.div_0_l Z.mod_mod Z.mod_small using lia : zsimplify.
+Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r Z_mod_same_full Z.sub_simpl_r Z.sub_simpl_l Z.add_opp_diag_r Z.add_opp_diag_l Zmod_0_l Z.add_simpl_r Z.add_simpl_l Z.opp_0 Zmod_0_r Zmod_mod : zsimplify.
+Hint Rewrite Z.div_mul Z.div_1_l Z.div_same Z.mod_same Z.div_small Z.mod_small Z.div_add Z.div_add_l Z.mod_add Z.div_0_l Z.mod_mod Z.mod_small Z_mod_zero_opp_full using lia : zsimplify.
 Hint Rewrite <- Z.opp_eq_mul_m1 : zsimplify.
 
 (** "push" means transform [-f x] to [f (-x)]; "pull" means go the other way *)
@@ -63,6 +63,7 @@ Hint Rewrite Z.div_div using lia : pull_Zdiv.
 Hint Rewrite <- Z.div_div using lia : push_Zdiv.
 Hint Rewrite <- Z.mul_mod Z.add_mod Zminus_mod using lia : pull_Zmod.
 Hint Rewrite Zminus_mod_idemp_l Zminus_mod_idemp_r : pull_Zmod.
+Hint Rewrite Z_mod_nz_opp_full using lia : push_Zmod.
 
 (** For the occasional lemma that can remove the use of [Z.div] *)
 Create HintDb zstrip_div.
@@ -1195,43 +1196,73 @@ Module Z.
   Qed.
   Hint Rewrite div_add_exact using lia : zsimplify.
 
-  Lemma mul_mod_l a b n : n <> 0 -> (a * b) mod n = ((a mod n) * b) mod n.
-  Proof.
-    intros; rewrite (Z.mul_mod a b), (Z.mul_mod (a mod n) b) by lia.
-    autorewrite with zsimplify; reflexivity.
-  Qed.
-  Hint Rewrite <- mul_mod_l using lia : pull_Zmod.
+  (** Version without the [n <> 0] assumption *)
+  Lemma mul_mod_full a b n : (a * b) mod n = ((a mod n) * (b mod n)) mod n.
+  Proof. auto using Zmult_mod. Qed.
+  Hint Rewrite <- mul_mod_full : pull_Zmod.
+  Hint Resolve mul_mod_full : zarith.
 
-  Lemma mul_mod_r a b n : n <> 0 -> (a * b) mod n = (a * (b mod n)) mod n.
+  Lemma mul_mod_l a b n : (a * b) mod n = ((a mod n) * b) mod n.
   Proof.
-    intros; rewrite (Z.mul_mod a b), (Z.mul_mod a (b mod n)) by lia.
+    intros; rewrite (mul_mod_full a b), (mul_mod_full (a mod n) b).
     autorewrite with zsimplify; reflexivity.
   Qed.
-  Hint Rewrite <- mul_mod_r using lia : pull_Zmod.
+  Hint Rewrite <- mul_mod_l : pull_Zmod.
+  Hint Resolve mul_mod_l : zarith.
 
-  Lemma add_mod_l a b n : n <> 0 -> (a + b) mod n = ((a mod n) + b) mod n.
+  Lemma mul_mod_r a b n : (a * b) mod n = (a * (b mod n)) mod n.
   Proof.
-    intros; rewrite (Z.add_mod a b), (Z.add_mod (a mod n) b) by lia.
+    intros; rewrite (mul_mod_full a b), (mul_mod_full a (b mod n)).
     autorewrite with zsimplify; reflexivity.
   Qed.
-  Hint Rewrite <- add_mod_l using lia : pull_Zmod.
+  Hint Rewrite <- mul_mod_r : pull_Zmod.
+  Hint Resolve mul_mod_r : zarith.
 
-  Lemma add_mod_r a b n : n <> 0 -> (a + b) mod n = (a + (b mod n)) mod n.
+  Lemma add_mod_full a b n : (a + b) mod n = ((a mod n) + (b mod n)) mod n.
+  Proof. auto using Zplus_mod. Qed.
+  Hint Rewrite <- add_mod_full : pull_Zmod.
+  Hint Resolve add_mod_full : zarith.
+
+  Lemma add_mod_l a b n : (a + b) mod n = ((a mod n) + b) mod n.
   Proof.
-    intros; rewrite (Z.add_mod a b), (Z.add_mod a (b mod n)) by lia.
+    intros; rewrite (add_mod_full a b), (add_mod_full (a mod n) b).
     autorewrite with zsimplify; reflexivity.
   Qed.
-  Hint Rewrite <- add_mod_r using lia : pull_Zmod.
+  Hint Rewrite <- add_mod_l : pull_Zmod.
+  Hint Resolve add_mod_l : zarith.
+
+  Lemma add_mod_r a b n : (a + b) mod n = (a + (b mod n)) mod n.
+  Proof.
+    intros; rewrite (add_mod_full a b), (add_mod_full a (b mod n)).
+    autorewrite with zsimplify; reflexivity.
+  Qed.
+  Hint Rewrite <- add_mod_r : pull_Zmod.
+  Hint Resolve add_mod_r : zarith.
+
+  Lemma opp_mod_mod a n : (-a) mod n = (-(a mod n)) mod n.
+  Proof.
+    intros; destruct (Z_zerop (a mod n)) as [H'|H']; [ rewrite H' | ];
+      [ | rewrite !Z_mod_nz_opp_full ];
+      autorewrite with zsimplify; lia.
+  Qed.
+  Hint Rewrite <- opp_mod_mod : pull_Zmod.
+  Hint Resolve opp_mod_mod : zarith.
 
   (** Give alternate names for the next three lemmas, for consistency *)
-  Lemma sub_mod a b n : n <> 0 -> (a - b) mod n = ((a mod n) - (b mod n)) mod n.
+  Lemma sub_mod_full a b n : (a - b) mod n = ((a mod n) - (b mod n)) mod n.
   Proof. auto using Zminus_mod. Qed.
+  Hint Rewrite <- sub_mod_full : pull_Zmod.
+  Hint Resolve sub_mod_full : zarith.
 
-  Lemma sub_mod_l a b n : n <> 0 -> (a - b) mod n = ((a mod n) - b) mod n.
+  Lemma sub_mod_l a b n : (a - b) mod n = ((a mod n) - b) mod n.
   Proof. auto using Zminus_mod_idemp_l. Qed.
+  Hint Rewrite <- sub_mod_l : pull_Zmod.
+  Hint Resolve sub_mod_l : zarith.
 
-  Lemma sub_mod_r a b n : n <> 0 -> (a - b) mod n = (a - (b mod n)) mod n.
+  Lemma sub_mod_r a b n : (a - b) mod n = (a - (b mod n)) mod n.
   Proof. auto using Zminus_mod_idemp_r. Qed.
+  Hint Rewrite <- sub_mod_r : pull_Zmod.
+  Hint Resolve sub_mod_r : zarith.
 
   Definition NoZMod (x : Z) := True.
   Ltac NoZMod :=
@@ -1240,41 +1271,45 @@ Module Z.
     | [ |- NoZMod _ ] => constructor
     end.
 
-  Lemma mul_mod_push a b n : n <> 0 -> NoZMod a -> NoZMod b -> (a * b) mod n = ((a mod n) * (b mod n)) mod n.
-  Proof. intros; apply Z.mul_mod; assumption. Qed.
-  Hint Rewrite mul_mod_push using solve [ NoZMod | lia ] : push_Zmod.
+  Lemma mul_mod_push a b n : NoZMod a -> NoZMod b -> (a * b) mod n = ((a mod n) * (b mod n)) mod n.
+  Proof. intros; apply mul_mod_full; assumption. Qed.
+  Hint Rewrite mul_mod_push using solve [ NoZMod ] : push_Zmod.
 
-  Lemma add_mod_push a b n : n <> 0 -> NoZMod a -> NoZMod b -> (a + b) mod n = ((a mod n) + (b mod n)) mod n.
-  Proof. intros; apply Z.add_mod; assumption. Qed.
-  Hint Rewrite add_mod_push using solve [ NoZMod | lia ] : push_Zmod.
+  Lemma add_mod_push a b n : NoZMod a -> NoZMod b -> (a + b) mod n = ((a mod n) + (b mod n)) mod n.
+  Proof. intros; apply add_mod_full; assumption. Qed.
+  Hint Rewrite add_mod_push using solve [ NoZMod ] : push_Zmod.
 
-  Lemma mul_mod_l_push a b n : n <> 0 -> NoZMod a -> (a * b) mod n = ((a mod n) * b) mod n.
+  Lemma mul_mod_l_push a b n : NoZMod a -> (a * b) mod n = ((a mod n) * b) mod n.
   Proof. intros; apply mul_mod_l; assumption. Qed.
-  Hint Rewrite mul_mod_l_push using solve [ NoZMod | lia ] : push_Zmod.
+  Hint Rewrite mul_mod_l_push using solve [ NoZMod ] : push_Zmod.
 
-  Lemma mul_mod_r_push a b n : n <> 0 -> NoZMod b -> (a * b) mod n = (a * (b mod n)) mod n.
+  Lemma mul_mod_r_push a b n : NoZMod b -> (a * b) mod n = (a * (b mod n)) mod n.
   Proof. intros; apply mul_mod_r; assumption. Qed.
-  Hint Rewrite mul_mod_r_push using solve [ NoZMod | lia ] : push_Zmod.
+  Hint Rewrite mul_mod_r_push using solve [ NoZMod ] : push_Zmod.
 
-  Lemma add_mod_l_push a b n : n <> 0 -> NoZMod a -> (a + b) mod n = ((a mod n) + b) mod n.
+  Lemma add_mod_l_push a b n : NoZMod a -> (a + b) mod n = ((a mod n) + b) mod n.
   Proof. intros; apply add_mod_l; assumption. Qed.
-  Hint Rewrite add_mod_l_push using solve [ NoZMod | lia ] : push_Zmod.
+  Hint Rewrite add_mod_l_push using solve [ NoZMod ] : push_Zmod.
 
-  Lemma add_mod_r_push a b n : n <> 0 -> NoZMod b -> (a + b) mod n = (a + (b mod n)) mod n.
+  Lemma add_mod_r_push a b n : NoZMod b -> (a + b) mod n = (a + (b mod n)) mod n.
   Proof. intros; apply add_mod_r; assumption. Qed.
-  Hint Rewrite add_mod_r_push using solve [ NoZMod | lia ] : push_Zmod.
+  Hint Rewrite add_mod_r_push using solve [ NoZMod ] : push_Zmod.
 
-  Lemma sub_mod_push a b n : n <> 0 -> NoZMod a -> NoZMod b -> (a - b) mod n = ((a mod n) - (b mod n)) mod n.
+  Lemma sub_mod_push a b n : NoZMod a -> NoZMod b -> (a - b) mod n = ((a mod n) - (b mod n)) mod n.
   Proof. intros; apply Zminus_mod; assumption. Qed.
-  Hint Rewrite sub_mod_push using solve [ NoZMod | lia ] : push_Zmod.
+  Hint Rewrite sub_mod_push using solve [ NoZMod ] : push_Zmod.
 
-  Lemma sub_mod_l_push a b n : n <> 0 -> NoZMod a -> (a - b) mod n = ((a mod n) - b) mod n.
+  Lemma sub_mod_l_push a b n : NoZMod a -> (a - b) mod n = ((a mod n) - b) mod n.
   Proof. intros; symmetry; apply Zminus_mod_idemp_l; assumption. Qed.
-  Hint Rewrite sub_mod_l_push using solve [ NoZMod | lia ] : push_Zmod.
+  Hint Rewrite sub_mod_l_push using solve [ NoZMod ] : push_Zmod.
 
-  Lemma sub_mod_r_push a b n : n <> 0 -> NoZMod b -> (a - b) mod n = (a - (b mod n)) mod n.
+  Lemma sub_mod_r_push a b n : NoZMod b -> (a - b) mod n = (a - (b mod n)) mod n.
   Proof. intros; symmetry; apply Zminus_mod_idemp_r; assumption. Qed.
-  Hint Rewrite sub_mod_r_push using solve [ NoZMod | lia ] : push_Zmod.
+  Hint Rewrite sub_mod_r_push using solve [ NoZMod ] : push_Zmod.
+
+  Lemma opp_mod_mod_push a n : NoZMod a -> (-a) mod n = (-(a mod n)) mod n.
+  Proof. intros; apply opp_mod_mod; assumption. Qed.
+  Hint Rewrite opp_mod_mod using solve [ NoZMod ] : push_Zmod.
 
   Lemma sub_mod_mod_0 x d : (x - x mod d) mod d = 0.
   Proof.
@@ -1483,34 +1518,38 @@ Ltac push_Zmod :=
   repeat match goal with
          | _ => progress autorewrite with push_Zmod
          | [ |- context[(?x * ?y) mod ?z] ]
-           => first [ rewrite (Z.mul_mod_push x y z) by (Z.NoZMod || lia)
-                    | rewrite (Z.mul_mod_l_push x y z) by (Z.NoZMod || lia)
-                    | rewrite (Z.mul_mod_r_push x y z) by (Z.NoZMod || lia) ]
+           => first [ rewrite (Z.mul_mod_push x y z) by Z.NoZMod
+                    | rewrite (Z.mul_mod_l_push x y z) by Z.NoZMod
+                    | rewrite (Z.mul_mod_r_push x y z) by Z.NoZMod ]
          | [ |- context[(?x + ?y) mod ?z] ]
-           => first [ rewrite (Z.add_mod_push x y z) by (Z.NoZMod || lia)
-                    | rewrite (Z.add_mod_l_push x y z) by (Z.NoZMod || lia)
-                    | rewrite (Z.add_mod_r_push x y z) by (Z.NoZMod || lia) ]
+           => first [ rewrite (Z.add_mod_push x y z) by Z.NoZMod
+                    | rewrite (Z.add_mod_l_push x y z) by Z.NoZMod
+                    | rewrite (Z.add_mod_r_push x y z) by Z.NoZMod ]
          | [ |- context[(?x - ?y) mod ?z] ]
-           => first [ rewrite (Z.sub_mod_push x y z) by (Z.NoZMod || lia)
-                    | rewrite (Z.sub_mod_l_push x y z) by (Z.NoZMod || lia)
-                    | rewrite (Z.sub_mod_r_push x y z) by (Z.NoZMod || lia) ]
+           => first [ rewrite (Z.sub_mod_push x y z) by Z.NoZMod
+                    | rewrite (Z.sub_mod_l_push x y z) by Z.NoZMod
+                    | rewrite (Z.sub_mod_r_push x y z) by Z.NoZMod ]
+         | [ |- context[(-?y) mod ?z] ]
+           => rewrite (Z.opp_mod_mod_push y z) by Z.NoZMod
          end.
 
 Ltac push_Zmod_hyps :=
   repeat match goal with
          | _ => progress autorewrite with push_Zmod in * |-
          | [ H : context[(?x * ?y) mod ?z] |- _ ]
-           => first [ rewrite (Z.mul_mod_push x y z) in H by (Z.NoZMod || lia)
-                    | rewrite (Z.mul_mod_l_push x y z) in H by (Z.NoZMod || lia)
-                    | rewrite (Z.mul_mod_r_push x y z) in H by (Z.NoZMod || lia) ]
+           => first [ rewrite (Z.mul_mod_push x y z) in H by Z.NoZMod
+                    | rewrite (Z.mul_mod_l_push x y z) in H by Z.NoZMod
+                    | rewrite (Z.mul_mod_r_push x y z) in H by Z.NoZMod ]
          | [ H : context[(?x + ?y) mod ?z] |- _ ]
-           => first [ rewrite (Z.add_mod_push x y z) in H by (Z.NoZMod || lia)
-                    | rewrite (Z.add_mod_l_push x y z) in H by (Z.NoZMod || lia)
-                    | rewrite (Z.add_mod_r_push x y z) in H by (Z.NoZMod || lia) ]
+           => first [ rewrite (Z.add_mod_push x y z) in H by Z.NoZMod
+                    | rewrite (Z.add_mod_l_push x y z) in H by Z.NoZMod
+                    | rewrite (Z.add_mod_r_push x y z) in H by Z.NoZMod ]
          | [ H : context[(?x - ?y) mod ?z] |- _ ]
-           => first [ rewrite (Z.sub_mod_push x y z) in H by (Z.NoZMod || lia)
-                    | rewrite (Z.sub_mod_l_push x y z) in H by (Z.NoZMod || lia)
-                    | rewrite (Z.sub_mod_r_push x y z) in H by (Z.NoZMod || lia) ]
+           => first [ rewrite (Z.sub_mod_push x y z) in H by Z.NoZMod
+                    | rewrite (Z.sub_mod_l_push x y z) in H by Z.NoZMod
+                    | rewrite (Z.sub_mod_r_push x y z) in H by Z.NoZMod ]
+         | [ H : context[(-?y) mod ?z] |- _ ]
+           => rewrite (Z.opp_mod_mod_push y z) in H by Z.NoZMod
          end.
 
 Ltac has_no_mod x z :=
@@ -1522,30 +1561,35 @@ Ltac pull_Zmod :=
   repeat match goal with
          | [ |- context[((?x mod ?z) * (?y mod ?z)) mod ?z] ]
            => has_no_mod x z; has_no_mod y z;
-              rewrite <- (Z.mul_mod x y z) by lia
+              rewrite <- (Z.mul_mod_full x y z)
          | [ |- context[((?x mod ?z) * ?y) mod ?z] ]
            => has_no_mod x z; has_no_mod y z;
-              rewrite <- (Z.mul_mod_l x y z) by lia
+              rewrite <- (Z.mul_mod_l x y z)
          | [ |- context[(?x * (?y mod ?z)) mod ?z] ]
            => has_no_mod x z; has_no_mod y z;
-              rewrite <- (Z.mul_mod_r x y z) by lia
+              rewrite <- (Z.mul_mod_r x y z)
          | [ |- context[((?x mod ?z) + (?y mod ?z)) mod ?z] ]
            => has_no_mod x z; has_no_mod y z;
-              rewrite <- (Z.add_mod x y z) by lia
+              rewrite <- (Z.add_mod_full x y z)
          | [ |- context[((?x mod ?z) + ?y) mod ?z] ]
            => has_no_mod x z; has_no_mod y z;
-              rewrite <- (Z.add_mod_l x y z) by lia
+              rewrite <- (Z.add_mod_l x y z)
          | [ |- context[(?x + (?y mod ?z)) mod ?z] ]
            => has_no_mod x z; has_no_mod y z;
-              rewrite <- (Z.add_mod_r x y z) by lia
+              rewrite <- (Z.add_mod_r x y z)
          | [ |- context[((?x mod ?z) - (?y mod ?z)) mod ?z] ]
            => has_no_mod x z; has_no_mod y z;
-              rewrite <- (Z.sub_mod x y z) by lia
+              rewrite <- (Z.sub_mod_full x y z)
          | [ |- context[((?x mod ?z) - ?y) mod ?z] ]
            => has_no_mod x z; has_no_mod y z;
-              rewrite <- (Z.sub_mod_l x y z) by lia
+              rewrite <- (Z.sub_mod_l x y z)
          | [ |- context[(?x - (?y mod ?z)) mod ?z] ]
            => has_no_mod x z; has_no_mod y z;
-              rewrite <- (Z.sub_mod_r x y z) by lia
+              rewrite <- (Z.sub_mod_r x y z)
+         | [ |- context[(((-?y) mod ?z)) mod ?z] ]
+           => has_no_mod y z;
+              rewrite <- (Z.opp_mod_mod y z)
+         | [ |- context[(?x mod ?z) mod ?z] ]
+           => rewrite (Zmod_mod x z)
          | _ => progress autorewrite with pull_Zmod
          end.
