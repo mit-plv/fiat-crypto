@@ -1,10 +1,13 @@
 Require Export Bedrock.Word Bedrock.Nomega.
 Require Import Coq.NArith.NArith Coq.PArith.PArith Coq.NArith.Ndigits Coq.NArith.Nnat Coq.Numbers.Natural.Abstract.NPow Coq.Numbers.Natural.Peano.NPeano Coq.NArith.Ndec.
-Require Import Coq.Arith.Compare_dec Coq.omega.Omega.
+Require Import Coq.Arith.Compare_dec Coq.omega.Omega Coq.Lists.List.
 Require Import Coq.Logic.FunctionalExtensionality Coq.Logic.ProofIrrelevance.
 Require Import Crypto.Assembly.QhasmUtil Crypto.Assembly.QhasmEvalCommon.
-
+Require Import Crypto.Assembly.WordizeUtil Crypto.Assembly.Bounds.
+Require Import Crypto.Assembly.Listize Crypto.Assembly.Natize.
 Require Export Crypto.Util.FixCoqMistakes.
+
+Import ListNotations.
 
 Hint Rewrite wordToN_nat Nat2N.inj_add N2Nat.inj_add
              Nat2N.inj_mul N2Nat.inj_mul Npow2_nat : N.
@@ -748,7 +751,6 @@ Ltac unfold_bounds :=
   end.
 
 Ltac wordize_masked :=
-  standardize_maskeq;
   wordize_intro;
   unfold_bounds;
   simpl in *;

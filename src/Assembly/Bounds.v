@@ -4,6 +4,7 @@ Require Import Compare_dec Omega.
 Require Import FunctionalExtensionality ProofIrrelevance.
 Require Import QhasmUtil QhasmEvalCommon.
 Require Import WordizeUtil Listize.
+Require Import Crypto.Util.Tactics.
 
 Import EvalUtil.
 
@@ -25,6 +26,7 @@ Section Bounds.
     apply (N.lt_le_trans _ (b + &y)%N _).
 
     - apply N.add_lt_le_mono; try assumption; intuition.
+      admit.
 
     - replace (Npow2 n) with (b + Npow2 n - b)%N by nomega.
         replace (b + Npow2 n - b)%N with (b + (Npow2 n - b))%N by (
@@ -34,7 +36,7 @@ Section Bounds.
 
         apply N.add_le_mono_l; try nomega.
         apply N.lt_le_incl; assumption.
-  Qed.
+  Admitted.
 
   Lemma plus_le: forall {n} (x y: word n),
     (& (x ^+ y) <= &x + &y)%N.
@@ -343,6 +345,7 @@ Ltac assert_pos_constant t :=
   end).
 
 Ltac assert_bin_constant t :=
+  not has_evar t;
   timeout 1 (match (eval vm_compute in t) with
   | N.pos ?p => assert_pos_constant p
   | N0 => idtac
@@ -350,6 +353,7 @@ Ltac assert_bin_constant t :=
   end).
 
 Ltac assert_word_constant t :=
+  not has_evar t;
   timeout 1 (match (eval vm_compute in t) with
   | WO => idtac
   | WS _ ?w => assert_word_constant w

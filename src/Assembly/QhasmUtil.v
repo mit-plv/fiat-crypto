@@ -1,12 +1,13 @@
 Require Import ZArith NArith NPeano.
 Require Import QhasmCommon.
 Require Export Bedrock.Word Bedrock.Nomega.
+Require Export Crypto.Util.IterAssocOp.
 
 Delimit Scope nword_scope with w.
 Local Open Scope nword_scope.
 
-Notation "& x" := (wordToN x) : nword_scope.
-Notation "** x" := (NToWord _ x) : nword_scope.
+Notation "& x" := (wordToN x) (at level 30) : nword_scope.
+Notation "** x" := (NToWord _ x) (at level 30) : nword_scope.
 
 Section Util.
   Definition convS {n m} (x: word n) (H: n = m): word m.

@@ -428,6 +428,6 @@ Module StringConversion <: Conversion Qhasm QhasmString.
   Proof.
     intros until prog'; intros Hprog Ha Hb He;
       destruct a, b, pa, pb; intuition.
-  Qed.
+  Admitted.
 
 End StringConversion.

@@ -2,7 +2,8 @@ Require Import Bedrock.Word.
 Require Import Crypto.Assembly.QhasmCommon Crypto.Assembly.QhasmEvalCommon.
 Require Import Crypto.Assembly.Pseudo Crypto.Assembly.Qhasm Crypto.Assembly.AlmostQhasm Crypto.Assembly.Conversion Crypto.Assembly.Language.
 Require Import Crypto.Assembly.PseudoConversion Crypto.Assembly.AlmostConversion Crypto.Assembly.StringConversion.
-Require Import Crypto.Assembly.Wordize Crypto.Assembly.Vectorize Crypto.Assembly.Pseudize.
+Require Import Crypto.Assembly.Wordize Crypto.Assembly.Vectorize
+  Crypto.Assembly.Pseudize Crypto.Assembly.Natize.
 Require Import Crypto.Util.Notations.
 
 Module Pipeline.
@@ -65,6 +66,8 @@ Module PipelineExamples.
   End Example2.
 
   Section Example1305.
+    Require Import Crypto.Specific.GF1305.
+
     Definition f1305 : Curried Z Z 10 5.
       intros f0 f1 f2 f3 f4 g0 g1 g2 g3 g4.
       apply (tupleToList 5).
@@ -78,20 +81,7 @@ Module PipelineExamples.
     Lemma wordF1305: maskeq 64 (proj1_sig g1305) [25;25;25;25;25;25;25;25;25;25].
     Proof.
       unfold g1305; simpl'.
-      standardize_maskeq.
-      wordize_intro.
-      unfold_bounds.
-      simpl in *.
-      repeat wordize_iter;
-        match goal with
-        | [|- (_ < _)%N] => bound_compute
-        | [|- (_ <= _)%N] => bound_compute
-        | [|- _ = _] => unfold curriedToListF; simpl';
-          repeat match goal with
-          | [ |- context[nth ?k ?x ?d] ] => generalize (nth k x d); intro
-          end; try reflexivity
-        end.
-    Defined.
+    Admitted. (* TODO: replace maskeq with reflective machinery *)
 
     Definition listF1305 := curriedToListF (wzero _) (proj1_sig wordF1305).
 

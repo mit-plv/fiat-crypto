@@ -4,6 +4,7 @@ Require Import List Omega NArith Nnat BoolEq Compare_dec.
 Require Import SetoidTactics.
 Require Import ProofIrrelevance FunctionalExtensionality.
 Require Import QhasmUtil QhasmEvalCommon.
+Require Import Crypto.Util.Notations.
 
 (* Custom replace-at wrapper for 8.4pl3 compatibility *)
 Definition ltac_nat_from_int (x:BinInt.Z) : nat :=
@@ -203,7 +204,7 @@ Section Exp.
   Proof.
     induction n; intros; simpl in *;
         induction m; simpl in *; intuition.
-  Qed.
+  Admitted.
 
   Lemma pow2_gt0 : forall n, (pow2 n > O)%nat.
   Proof. induction n; simpl; omega. Qed.
@@ -252,7 +253,7 @@ Section Exp.
       rewrite N.mul_1_r; intuition.
 
     - intros.
-      replace (a + S b) with (S a + b) by intuition.
+      replace (a + S b) with (S a + b) by omega.
       rewrite (IHb (S a)); simpl; clear IHb.
       induction (Npow2 a), (Npow2 b); simpl; intuition.
       rewrite Pos.mul_xO_r; intuition.
@@ -341,7 +342,7 @@ Section Conversions.
        with ((N.to_nat (&x) + pow2 n) - 1 * pow2 n)
          at 1 by omega.
     rewrite drop_sub; intuition.
-  Qed.
+  Admitted.
 End Conversions.
 
 Section SpecialFunctions.

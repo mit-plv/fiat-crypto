@@ -1,7 +1,7 @@
 Require Import Crypto.Assembly.QhasmCommon Crypto.Assembly.QhasmUtil Crypto.Assembly.State.
 Require Import Crypto.Assembly.Language Crypto.Assembly.QhasmEvalCommon.
 Require Import Coq.Lists.List Coq.Arith.Compare_dec Coq.omega.Omega.
-Require Import Crypto.Util.Notations.
+Require Import Crypto.Util.Notations Crypto.Util.IterAssocOp.
 Require Export Crypto.Util.FixCoqMistakes.
 
 Module Pseudo <: Language.
@@ -111,77 +111,11 @@ Module Pseudo <: Language.
   Definition evaluatesTo (p: Params) (prog: Program p) (st st': State p) :=
       pseudoEval prog st = Some st'.
 
-  Delimit Scope pseudo_notations with p.
-  Local Open Scope pseudo_notations.
-
   Definition indexize {n: nat} (x: nat): Index n.
     intros; destruct (le_dec n 0).
 
-    - exists 0; abstract intuition.
+    - exists 0; abstract omega.
     - exists (x mod n)%nat; abstract (
         pose proof (Nat.mod_bound_pos x n); omega).
   Defined.
-
-  Notation "% A" := (PVar _ (Some false) (indexize A))
-    : pseudo_notations.
-
-  Notation "$ A" := (PVar _ (Some true) (indexize A))
-    : pseudo_notations.
-
-  Notation "A :[ B ]:" :=  (PMem _ _ (indexize A) (indexize B))
-    : pseudo_notations.
-
-  Notation "# A" := (PConst _ (natToWord _ A))
-    : pseudo_notations.
-
-  Notation "A :+: B" := (PBin _ IAdd (PComb _ _ _ A B))
-    : pseudo_notations.
-
-  Notation "A :+c: B" := (PCarry _ AddWithCarry (PComb _ _ _ A B))
-    : pseudo_notations.
-
-  Notation "A :-: B" := (PBin _ ISub (PComb _ _ _ A B))
-    : pseudo_notations.
-
-  Notation "A :&: B" := (PBin _ IAnd (PComb _ _ _ A B))
-    : pseudo_notations.
-
-  Notation "A :^: B" := (PBin _ IXor (PComb _ _ _ A B))
-    : pseudo_notations.
-
-  Notation "A :>>: B" := (PShift _ Shr (indexize B) A)
-    : pseudo_notations.
-
-  Notation "A :<<: B" := (PShift _ Shl (indexize B) A)
-    : pseudo_notations.
-
-  Notation "A :*: B" := (PDual _ Mult (PComb _ _ _ A B))
-    : pseudo_notations.
-
-  (* TODO(rsloan, from jgross): This notation is not okay.  It breaks
-     [constr:(nat)] and [((1):nat)].  Please remove all frowny faces
-     from notations, and then move [Reserved Notation] line to
-     Fiat.Crypto.Util.Notations. *)
-  Reserved Notation "O :( A , B ): :?: L ::: R" (at level 70, right associativity).
-  Notation "O :( A , B ): :?: L ::: R" :=
-    (PIf _ _ O (indexize A) (indexize B) L R)
-    : pseudo_notations.
-
-  Notation "F :**: e" :=
-    (PFunExp _ F e)
-    : pseudo_notations.
-
-  Notation "E :->: F" :=
-    (PLet _ _ _ E F)
-    : pseudo_notations.
-
-  Notation "A :|: B" :=
-    (PComb _ _ _ A B)
-    : pseudo_notations.
-
-  Notation "n ::: A :():" :=
-    (PCall _ _ n A)
-    : pseudo_notations.
-
-  Close Scope pseudo_notations.
 End Pseudo.
