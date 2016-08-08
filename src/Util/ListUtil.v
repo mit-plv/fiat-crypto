@@ -1234,3 +1234,10 @@ Proof.
   + repeat intro; rewrite !nth_default_nil; assumption.
   + repeat intro; subst; destruct y0; rewrite ?nth_default_cons, ?nth_default_cons_S; auto.
 Qed.
+
+Lemma fold_right_andb_true_map_iff A (ls : list A) f
+  : List.fold_right andb true (List.map f ls) = true <-> forall i, List.In i ls -> f i = true.
+Proof.
+  induction ls; simpl; [ | rewrite Bool.andb_true_iff, IHls ]; try tauto.
+  intuition (congruence || eauto).
+Qed.
