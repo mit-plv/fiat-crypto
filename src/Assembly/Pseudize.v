@@ -287,7 +287,7 @@ Ltac pseudo_step :=
   | [ |- pseudoEval ?p _ = Some (cons ?x (cons _ _), _, _) ] =>
     is_evar p; eapply pseudo_cons; try reflexivity
 
-  | [ |- pseudoEval ?p _ = Some ([natToWord _ ?x], _, _)%p ] =>
+  | [ |- pseudoEval ?p _ = Some ([natToWord _ ?x], _, _) ] =>
     is_evar p; eapply pseudo_const
 
   | [ |- pseudoEval ?p _ = Some ((Let_In ?a ?f), _, _) ] =>
@@ -299,7 +299,7 @@ Ltac pseudo_step :=
     end
 
   | [ |- @pseudoEval ?n _ _ _ ?P _ =
-        Some ([nth ?i ?lst _], _, _)%p ] =>
+        Some ([nth ?i ?lst _], _, _) ] =>
     eapply (pseudo_var None i); simpl; intuition
   end.
 
