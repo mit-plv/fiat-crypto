@@ -22,7 +22,7 @@ Local Open Scope Z_scope.
 
 Module F.
   Definition F (m : BinInt.Z) := { z : BinInt.Z | z = z mod m }.
-  Local Obligation Tactic := auto using Pre.Z_mod_mod.
+  Local Obligation Tactic := cbv beta; auto using Pre.Z_mod_mod.
   Program Definition of_Z  m  (a:BinNums.Z) : F m := a mod m.
   Definition to_Z {m} (a:F m) : BinNums.Z := proj1_sig a.
 
