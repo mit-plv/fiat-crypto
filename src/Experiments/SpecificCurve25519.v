@@ -270,6 +270,7 @@ Module Output.
       | Some (a1, a2) => (a1, a2)
       | None => _ (* impossible *)
       end.
+    Global Arguments match_arg_Prod / : simpl nomatch.
 
     Definition match_arg_Prod_Pair {t1 t2} (a1:arg var t1) (a2:arg var t2) :
       match_arg_Prod (Pair a1 a2) = (a1, a2) := eq_refl.
@@ -296,6 +297,12 @@ Module Output.
     Proof.
       pose proof (match_arg_Prod_correct_helper a) as H; simpl in H; rewrite H; reflexivity.
     Qed.
+
+    Lemma Pair_eq t0 t1 x0 x1 x0' x1' : @Pair var t0 x0 t1 x1 = @Pair var t0 x0' t1 x1' <-> (x0, x1) = (x0', x1').
+    Proof.
+      split; intro H; try congruence.
+      apply (f_equal match_arg_Prod) in H; assumption.
+    Qed.
   End match_arg.
 
   Fixpoint uninterp_arg {t} {struct t} : interp_type t -> arg Z t :=
@@ -304,10 +311,15 @@ Module Output.
     | Prod t1 t2 => fun x => let (x1, x2) := x in Pair (@uninterp_arg t1 x1) (@uninterp_arg t2 x2)
     end.
 
-  Lemma uninterp_arg_interp_arg : forall t (a:interp_type t), interp_arg (uninterp_arg a) = a.
+  Lemma interp_arg_uninterp_arg : forall t (a:interp_type t), interp_arg (uninterp_arg a) = a.
   Proof.
     induction t; simpl; intros; [|break_match; subst; simpl]; intuition congruence.
   Qed.
+
+  Lemma interp_under_lets {t} (e:expr _ t) {tC} (C:arg _ t -> expr _ tC)
+   (C_Proper : forall a1 a2, interp_arg a1 = interp_arg a2 -> interp (C a1) = interp (C a2)) :
+   interp (under_lets e C) = interp (C (uninterp_arg (interp e))).
+  Proof. intros; apply under_lets_correct; [ assumption | rewrite interp_arg_uninterp_arg; reflexivity ]. Qed.
 End Output.
 
 Section compile.
@@ -340,31 +352,24 @@ Lemma compile_correct {t} e1 e2 G (wf:Input.wf G e1 e2) :
 Proof.
   induction wf;
     repeat match goal with
-           | [HIn:In ?x ?l, HForall:Forall _ ?l |- _ ] =>
-             unique pose proof (proj1 (Forall_forall _ _) HForall _ HIn)
-           | _ => break_match
+           | [HIn:In ?x ?l, HForall:Forall _ ?l |- _ ]
+             => (pose proof (proj1 (Forall_forall _ _) HForall _ HIn); clear HIn)
+           | [ H : Output.match_arg_Prod _ = (_, _) |- _ ]
+             => apply Output.match_arg_Prod_correct in H
+           | [ H : Output.Pair _ _ = Output.Pair _ _ |- _ ]
+             => apply Output.Pair_eq in H
+           | [ H : (_, _) = (_, _) |- _ ] => inversion H; clear H
            | _ => progress intros
-           | _ => progress simpl
-           | _ => erewrite !Output.under_lets_correct
-           | _ => rewrite !Output.uninterp_arg_interp_arg
-           | _ => rewrite_hyp !*
-           | [H:_ |- _] => erewrite H
-           | _ => solve [intuition (congruence || eauto)]
-           end;
-    (* TODO: why does joining these matches not work? *)
-    repeat match goal with
-           | _ => eapply Forall_cons
            | _ => progress simpl in *
-           (* WHY do we need both the next case and the one after that? *)
-           | [H:_ |- _] =>
-             rewrite Output.match_arg_Prod_Pair in H
-           | [H: context[Output.match_arg_Prod ?a] |- _ ] =>
-             rewrite (Output.match_arg_Prod_correct a) in H
-           | [H: (_, _) = (_, _) |- _] => injection H; clear H; intros
            | _ => progress subst
-           | _ => rewrite !Output.uninterp_arg_interp_arg
+           | _ => progress specialize_by assumption
+           | _ => progress break_match
+           | _ => rewrite !Output.interp_under_lets
+           | _ => rewrite !Output.interp_arg_uninterp_arg
+           | _ => progress erewrite_hyp !*
+           | _ => apply Forall_cons
            | _ => solve [intuition (congruence || eauto)]
-    end.
+           end.
 Qed.
 
 Lemma Compile_correct {t} (E:Input.Expr t) (WfE:Input.Wf E) :
@@ -372,7 +377,6 @@ Lemma Compile_correct {t} (E:Input.Expr t) (WfE:Input.Wf E) :
 Proof. eapply compile_correct; eauto. Qed.
 
 Import Input.
-Eval simpl in (compile (Let (Let (Const 5) (fun v => Binop OPZadd (Var v) (Var v))) (fun v => Var v)))%Z.
 
 Section Curve25519.
   Local Infix "<<" := Z.shiftr.
@@ -383,7 +387,7 @@ Section Curve25519.
   Require Import Crypto.Specific.GF25519.
   Require Import Crypto.Experiments.SpecEd25519.
 
-  (* Computing the length first is necessary to make this run in tolerable on 8.6 *)
+  (* Computing the length first is necessary to make this run in tolerable time on 8.6 *)
   Definition twice_d' := Eval cbv [length params25519 ModularBaseSystemOpt.limb_widths_from_len ModularBaseSystem.encode ModularBaseSystemList.encode PseudoMersenneBaseParams.limb_widths] in ModularBaseSystem.encode(modulus:=q) (d + d)%F.
   Definition twice_d : fe25519 := Eval vm_compute in twice_d'.
 
@@ -399,7 +403,7 @@ let '((Q_X_0, Q_X_1, Q_X_2, Q_X_3, Q_X_4, Q_X_5, Q_X_6, Q_X_7, Q_X_8, Q_X_9), (Q
 _).
     repeat match goal with
              [x:?T |- _] =>
-             match T with
+             lazymatch T with
              | Z => fail
              | _ => clear x
              end
