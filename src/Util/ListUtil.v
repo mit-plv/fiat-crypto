@@ -1241,3 +1241,17 @@ Proof.
   induction ls; simpl; [ | rewrite Bool.andb_true_iff, IHls ]; try tauto.
   intuition (congruence || eauto).
 Qed.
+
+Module Export List.
+  (* From the 8.6 Standard Library *)
+  Lemma in_seq len start n :
+    In n (seq start len) <-> start <= n < start+len.
+  Proof.
+   revert start. induction len; simpl; intros.
+   - rewrite <- plus_n_O. split;[easy|].
+     intros (H,H'). apply (Lt.lt_irrefl _ (Lt.le_lt_trans _ _ _ H H')).
+   - rewrite IHlen, <- plus_n_Sm; simpl; split.
+     * intros [H|H]; subst; intuition auto with arith.
+     * intros (H,H'). destruct (Lt.le_lt_or_eq _ _ H); intuition.
+  Qed.
+End List.
