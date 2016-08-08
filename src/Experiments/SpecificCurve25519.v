@@ -379,7 +379,7 @@ Proof. eapply compile_correct; eauto. Qed.
 Import Input.
 
 Section Curve25519.
-  Local Infix "<<" := Z.shiftr.
+  Local Infix ">>" := Z.shiftr.
   Local Infix "&" := Z.land.
   Local Open Scope Z_scope.
   Require Import Crypto.Spec.ModularArithmetic.
