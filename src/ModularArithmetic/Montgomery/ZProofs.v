@@ -116,6 +116,12 @@ Section montgomery.
         break_match; rewrite prereduce_correct; t_fin_correct.
       Qed.
 
+      Lemma reduce_via_partial_correct : reduce_via_partial N R N' T ≡ T * R'.
+      Proof.
+        unfold reduce_via_partial.
+        break_match; rewrite partial_reduce_correct; t_fin_correct.
+      Qed.
+
       Let m_small : 0 <= m < R. Proof. auto with zarith. Qed.
 
       Section generic.
@@ -172,6 +178,14 @@ Section montgomery.
           intro H; pose proof (prereduce_in_range_small_enough H).
           unfold partial_reduce, Z.prereduce in *; break_match; Z.ltb_to_lt; nia.
         Qed.
+
+        Lemma reduce_via_partial_in_range_R
+          : 0 <= T <= R * R
+            -> 0 <= reduce_via_partial N R N' T < R.
+        Proof.
+          intro H; pose proof (prereduce_in_range_small_enough H).
+          unfold reduce_via_partial, partial_reduce, Z.prereduce in *; break_match; Z.ltb_to_lt; nia.
+        Qed.
       End N_small_enough.
 
       Section unconstrained.
@@ -195,6 +209,14 @@ Section montgomery.
           intro H; pose proof (prereduce_in_range H).
           unfold partial_reduce, Z.prereduce in *; break_match; Z.ltb_to_lt;
             apply Z.min_case_strong; nia.
+        Qed.
+
+        Lemma reduce_via_partial_in_range
+        : 0 <= T <= R * N
+          -> Z.min 0 (R - N) <= reduce_via_partial N R N' T < N.
+        Proof.
+          intro H; pose proof (partial_reduce_in_range H).
+          unfold reduce_via_partial in *; break_match; Z.ltb_to_lt; lia.
         Qed.
       End unconstrained.
     End redc.
