@@ -6,43 +6,16 @@ Require Import Coq.ZArith.BinInt Coq.ZArith.Zdiv Coq.ZArith.Znumtheory Coq.NArit
 Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
 Require Export Coq.setoid_ring.Ring_theory Coq.setoid_ring.Ring_tac.
 
-Require Import Crypto.Algebra Crypto.Util.Decidable.
+Require Import Crypto.Algebra Crypto.Util.Decidable Crypto.Util.ZUtil.
 Require Export Crypto.Util.FixCoqMistakes.
 
 Module F.
-  (* Fails iff the input term does some arithmetic with mod'd values. *)
-  Ltac notFancy E :=
-    match E with
-    | - (_ mod _) => idtac
-    | context[_ mod _] => fail 1
-    | _ => idtac
-    end.
-  
-  (* Remove redundant [mod] operations from the conclusion. *)
-  Ltac demod :=
-    repeat match goal with
-           | [ |- context[(?x mod _ + _) mod _] ] =>
-             notFancy x; rewrite (Zplus_mod_idemp_l x)
-           | [ |- context[(_ + ?y mod _) mod _] ] =>
-             notFancy y; rewrite (Zplus_mod_idemp_r y)
-           | [ |- context[(?x mod _ - _) mod _] ] =>
-             notFancy x; rewrite (Zminus_mod_idemp_l x)
-           | [ |- context[(_ - ?y mod _) mod _] ] =>
-             notFancy y; rewrite (Zminus_mod_idemp_r _ y)
-           | [ |- context[(?x mod _ * _) mod _] ] =>
-             notFancy x; rewrite (Zmult_mod_idemp_l x)
-           | [ |- context[(_ * (?y mod _)) mod _] ] =>
-             notFancy y; rewrite (Zmult_mod_idemp_r y)
-           | [ |- context[(?x mod _) mod _] ] =>
-             notFancy x; rewrite (Zmod_mod x)
-           end.
-  
   Ltac unwrap_F :=
     intros;
     repeat match goal with [ x : F _ |- _ ] => destruct x end;
     lazy iota beta delta [F.add F.sub F.mul F.opp F.to_Z F.of_Z proj1_sig] in *;
     try apply eqsig_eq;
-    demod.
+    pull_Zmod.
   
   (* FIXME: remove the pose proof once [monoid] no longer contains decidable equality *)
   Global Instance eq_dec {m} : DecidableRel (@eq (F m)). pose proof dec_eq_Z. exact _. Defined.
@@ -162,7 +135,7 @@ Module F.
     Proof.
       setoid_rewrite eq_to_Z_iff; setoid_rewrite to_Z_mul; split; intro H; destruct H as [x' H].
       - eauto.
-      - exists (F.of_Z _ x'); rewrite !to_Z_of_Z; demod; auto.
+      - exists (F.of_Z _ x'); rewrite !to_Z_of_Z; pull_Zmod; auto.
     Qed.
   End FandZ.
 
