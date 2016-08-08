@@ -202,27 +202,6 @@ Module F.
       unwrap_F; rewrite <-Z.quot_rem'; trivial.
     Qed.
 
-    Lemma Z_mod_opp_equiv : forall x y m,  x  mod m = (-y) mod m ->
-                                           (-x) mod m =   y  mod m.
-    Proof.
-      intros.
-      rewrite <-Z.sub_0_l.
-      rewrite Zminus_mod. rewrite H.
-      rewrite ?Zminus_mod_idemp_l, ?Zminus_mod_idemp_r; f_equal.
-      destruct y; auto.
-    Qed.
-
-    Lemma Z_opp_opp : forall x : Z, (-(-x)) = x.
-      destruct x; auto.
-    Qed.
-
-    Lemma Z_mod_opp : forall x m, (- x) mod m = (- (x mod m)) mod m.
-      intros.
-      apply Z_mod_opp_equiv.
-      rewrite Z_opp_opp.
-      demod; auto.
-    Qed.
-
     (* Define a "ring morphism" between GF and Z, i.e. an equivalence
      * between 'inject (ZFunction (X))' and 'GFFunction (inject (X))'.
      *
