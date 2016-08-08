@@ -16,9 +16,9 @@ Section Defs.
   Local Notation base := (base_from_limb_widths limb_widths).
   Local Notation "u [ i ]" := (nth_default 0 u i).
 
-  Definition decode (us : digits) : F modulus := ZToField (BaseSystem.decode base us).
+  Definition decode (us : digits) := F.of_Z modulus (BaseSystem.decode base us).
 
-  Definition encode (x : F modulus) := encodeZ limb_widths x.
+  Definition encode (x : F modulus) := encodeZ limb_widths (F.to_Z x).
 
   (* Converts from length of extended base to length of base by reduction modulo M.*)
   Definition reduce (us : digits) : digits :=

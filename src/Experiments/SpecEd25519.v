@@ -8,44 +8,33 @@ Require Import Crypto.ModularArithmetic.PrimeFieldTheorems Crypto.ModularArithme
 Require Import Crypto.Util.NatUtil Crypto.Util.ZUtil Crypto.Util.WordUtil Crypto.Util.NumTheoryUtil.
 Require Import Bedrock.Word.
 Require Import Crypto.Tactics.VerdiTactics.
-Require Import Coq.Logic.Decidable.
+Require Import Coq.Logic.Decidable Crypto.Util.Decidable.
 Require Import Coq.omega.Omega.
 
 (* TODO: move to PrimeFieldTheorems *)
-Lemma minus1_is_square {q} :  prime q -> (q mod 4)%Z = 1%Z -> isSquare (opp 1 : F q)%F.
+Lemma minus1_is_square {q} : prime q -> (q mod 4)%Z = 1%Z -> (exists y, y*y = F.opp (F.of_Z q 1))%F.
   intros; pose proof prime_ge_2 q _.
-  apply square_Zmod_F.
-  destruct (minus1_square_1mod4 q) as [b b_id]; trivial.
-  exists b; rewrite b_id.
-  rewrite opp_ZToField, !FieldToZ_ZToField, !Z.mod_small; omega.
-Qed.
-
-Lemma euler_criterion_nonsquare {q} (prime_q:prime q) (two_lt_q:(2<q)%Z) (d:F q) : 
-  ((d =? 0)%Z || (Pre.powmod q d (Z.to_N (q / 2)) =? 1)%Z)%bool = false -> 
-   forall x : F q, (x ^ 2)%F <> d.
-Proof.
-  pose proof @euler_criterion_if q prime_q d two_lt_q;
-    break_if; intros; try discriminate; eauto.
+  rewrite F.square_iff.
+  destruct (minus1_square_1mod4 q) as [b b_id]; trivial; exists b.
+  rewrite b_id, F.to_Z_opp, F.to_Z_of_Z, Z.mod_opp_l_nz, !Zmod_small;
+    (repeat (omega || rewrite Zmod_small)).
 Qed.
 
 Definition q : Z := (2 ^ 255 - 19)%Z.
 Global Instance prime_q : prime q. Admitted.
 Lemma two_lt_q : (2 < q)%Z. Proof. reflexivity. Qed.
-Lemma char_gt_2 : (1 + 1 <> (0:F q))%F. Proof. rewrite F_eq; compute; discriminate. Qed.
+Lemma char_gt_2 : (1 + 1 <> (0:F q))%F. vm_decide_no_check. Qed.
 
-Definition a : F q := opp 1%F.
-Lemma nonzero_a : a <> 0%F. Proof. rewrite F_eq; compute; discriminate. Qed.
+Definition a : F q := F.opp 1%F.
+Lemma nonzero_a : a <> 0%F. Proof. vm_decide_no_check. Qed.
 Lemma square_a : exists b, (b*b=a)%F.
-Proof. setoid_rewrite <-F_pow_2_r. apply (minus1_is_square _); reflexivity. Qed.
+Proof. pose (@F.Decidable_square q _ two_lt_q a); vm_decide_no_check. Qed.
+Definition d : F q := (F.opp (F.of_Z _ 121665) / (F.of_Z _ 121666))%F.
 
-Definition d : F q := (opp (ZToField 121665) / (ZToField 121666))%F.
 Lemma nonsquare_d : forall x, (x*x <> d)%F.
-Proof.
-  intros; rewrite <-F_pow_2_r.
-  apply (euler_criterion_nonsquare prime_q two_lt_q); vm_cast_no_check (eq_refl false).
-Qed. (* 3s *)
+Proof. pose (@F.Decidable_square q _ two_lt_q d). vm_decide_no_check. Qed.
 
-Instance curve25519params : @E.twisted_edwards_params (F q) eq (ZToField 0) (ZToField 1) add mul a d :=
+Instance curve25519params : @E.twisted_edwards_params (F q) eq 0%F 1%F F.add F.mul a d :=
   {
     nonzero_a := nonzero_a;
     char_gt_2 := char_gt_2;
@@ -111,11 +100,11 @@ Definition FlEncoding : canonical encoding of F (Z.of_nat l) as word b :=
 
 Lemma q_5mod8 : (q mod 8 = 5)%Z. cbv; reflexivity. Qed.
 
-Lemma sqrt_minus1_valid : ((@ZToField q 2 ^ Z.to_N (q / 4)) ^ 2 = opp 1)%F.
-Proof. apply F_eq; vm_compute; reflexivity. Qed.
+Lemma sqrt_minus1_valid : ((F.of_Z q 2 ^ Z.to_N (q / 4)) ^ 2 = F.opp 1)%F.
+Proof. vm_decide_no_check. Qed.
 
-Local Notation point := (@E.point (F q) eq (ZToField 1) add mul a d).
-Local Notation zero := (E.zero(H:=field_modulo)).
+Local Notation point := (@E.point (F q) eq 1%F F.add F.mul a d).
+Local Notation zero := (E.zero(H:=F.field_modulo q)).
 Local Notation add := (E.add(H0:=curve25519params)).
 Local Infix "*" := (E.mul(H0:=curve25519params)).
 Axiom H : forall n : nat, word n -> word (b + b).

@@ -73,7 +73,7 @@ Section gen.
   Proof.
     destruct H.
     unfold decode.
-    edestruct (@decode' x _).
+    edestruct (decode' (encode x eq_refl)).
     reflexivity.
   Defined.
 

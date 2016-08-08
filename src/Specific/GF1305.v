@@ -11,6 +11,7 @@ Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Notations.
+Require Import Crypto.Util.Decidable.
 Require Import Crypto.Algebra.
 Import ListNotations.
 Require Import Coq.ZArith.ZArith Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.ZArith.Znumtheory.
@@ -35,8 +36,7 @@ Definition mul2modulus : fe1305 :=
 
 Instance subCoeff : SubtractionCoefficient modulus params1305.
   apply Build_SubtractionCoefficient with (coeff := mul2modulus).
-  apply ZToField_eqmod.
-  cbv; reflexivity.
+  vm_decide.
 Defined.
 
 Definition freezePreconditions1305 : freezePreconditions params1305 int_width.

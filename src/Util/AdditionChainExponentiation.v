@@ -5,98 +5,53 @@ Require Import VerdiTactics.
 Require Import Crypto.Util.Option.
 
 Section AddChainExp.
-  Function add_chain (is:list (nat*nat)) : list nat :=
+  Function fold_chain {T} (id:T) (op:T->T->T) (is:list (nat*nat)) (acc:list T) {struct is} : T :=
     match is with
-    | nil => nil
+    | nil =>
+      match acc with
+      | nil => id
+      | ret::_ => ret
+      end
     | (i,j)::is' =>
-      let chain' := add_chain is' in
-      nth_default 1 chain' i + nth_default 1 chain' j::chain'
+      let ijx := op (nth_default id acc i) (nth_default id acc j) in
+      fold_chain id op is' (ijx::acc)
     end.
 
-Example wikipedia_addition_chain : add_chain (rev [
-(0, 0); (* 2 = 1 + 1 *) (* the indices say how far back the chain to look *)
-(0, 1); (* 3 = 2 + 1 *)
-(0, 0); (* 6 = 3 + 3 *)
-(0, 0); (* 12 = 6 + 6 *)
-(0, 0); (* 24 = 12 + 12 *)
-(0, 2); (* 30 = 24 + 6 *)
-(0, 6)] (* 31 = 30 + 1 *)
-) = [31; 30; 24; 12; 6; 3; 2]. reflexivity. Qed.
+  Example wikipedia_addition_chain : fold_chain 0 plus [
+  (0, 0); (* 2 = 1 + 1 *) (* the indices say how far back the chain to look *)
+  (0, 1); (* 3 = 2 + 1 *)
+  (0, 0); (* 6 = 3 + 3 *)
+  (0, 0); (* 12 = 6 + 6 *)
+  (0, 0); (* 24 = 12 + 12 *)
+  (0, 2); (* 30 = 24 + 6 *)
+  (0, 6)] (* 31 = 30 + 1 *)
+  [1] = 31. reflexivity. Qed.
 
   Context {G eq op id} {monoid:@Algebra.monoid G eq op id}.
+  Context {scalarmult} {is_scalarmult:@ScalarMult.is_scalarmult G eq op id scalarmult}.
   Local Infix "=" := eq : type_scope.
 
-  Function add_chain_exp (is : list (nat*nat)) (x : G) : list G :=
-    match is with
-    | nil => nil
-    | (i,j)::is' =>
-      let chain' := add_chain_exp is' x in
-      op (nth_default x chain' i) (nth_default x chain' j) ::chain'
-    end.
-
-  Fixpoint scalarmult n (x : G) : G := match n with
-    | O    => id
-    | S n' => op x (scalarmult n' x)
-    end.
-
-  Lemma add_chain_exp_step : forall i j is x,
-    (forall n, nth_default x (add_chain_exp is x) n = scalarmult (nth_default 1 (add_chain is) n) x) ->
-    (eqlistA eq)
-    (add_chain_exp ((i,j) :: is) x)
-      (op (scalarmult (nth_default 1 (add_chain is) i) x)
-         (scalarmult (nth_default 1 (add_chain is) j) x) :: add_chain_exp is x).
+  Lemma fold_chain_exp' : forall (x:G) is acc ref
+      (H:forall i, nth_default id acc i = scalarmult (nth_default 0 ref i) x)
+      (Hl:Logic.eq (length acc) (length ref)),
+      fold_chain id op is acc = scalarmult (fold_chain 0 plus is ref) x.
   Proof.
-    intros.
-    unfold add_chain_exp; fold add_chain_exp.
-    apply eqlistA_cons; [ | reflexivity].
-    f_equiv; auto.
+    induction is; intros; simpl @fold_chain.
+    { repeat break_match; specialize (H 0); rewrite ?nth_default_cons, ?nth_default_cons_S in H;
+      solve [ simpl length in *; discriminate | apply H | rewrite scalarmult_0_l; reflexivity ]. }
+    { repeat break_match. eapply IHis; intros.
+      { match goal with
+          [H:context [nth_default _ ?l _] |- context[nth_default _ (?h::?l) ?i] ]
+          => destruct i; rewrite ?nth_default_cons, ?nth_default_cons_S;
+             solve [ apply H | rewrite !H, <-scalarmult_add_l; reflexivity ]
+        end. }
+      { auto with distr_length. } }
   Qed.
 
-  Lemma scalarmult_same : forall c x y, eq x y -> eq (scalarmult c x) (scalarmult c y).
+  Lemma fold_chain_exp x is: fold_chain id op is [x] = scalarmult (fold_chain 0 plus is [1]) x.
   Proof.
-    induction c; intros.
-    + reflexivity.
-    + simpl. f_equiv; auto.
+    eapply fold_chain_exp'; intros; trivial.
+    destruct i; try destruct i; rewrite ?nth_default_cons_S, ?nth_default_cons, ?nth_default_nil;
+      rewrite ?scalarmult_1_l, ?scalarmult_0_l; reflexivity.
   Qed.
-
-  Lemma scalarmult_pow_add : forall a b x, scalarmult (a + b) x = op (scalarmult a x) (scalarmult b x).
-  Proof.
-    intros; eapply scalarmult_add_l.
-    Grab Existential Variables.
-    2:eauto.
-    econstructor; try reflexivity.
-    repeat intro; subst.
-    auto using scalarmult_same.
-  Qed.
-
-  Lemma add_chain_exp_spec : forall is x,
-    (forall n, nth_default x (add_chain_exp is x) n = scalarmult (nth_default 1 (add_chain is) n) x).
-  Proof.
-    induction is; intros.
-    + simpl; rewrite !nth_default_nil. cbv.
-      symmetry; apply right_identity.
-    + destruct a.
-      rewrite add_chain_exp_step by auto.
-      unfold add_chain; fold add_chain.
-      destruct n.
-      - rewrite !nth_default_cons, scalarmult_pow_add. reflexivity.
-      - rewrite !nth_default_cons_S; auto.
-  Qed.
-
-  Lemma add_chain_exp_answer : forall is x n, Logic.eq (head (add_chain is)) (Some n) ->
-    option_eq eq (Some (scalarmult n x)) (head (add_chain_exp is x)).
-  Proof.
-    intros.
-    change head with (fun {T} (xs : list T) => nth_error xs 0) in *.
-    cbv beta in *.
-    cbv [option_eq].
-    destruct is; [ discriminate | ].
-    destruct p.
-    simpl in *.
-    injection H; clear H; intro H.
-    subst n.
-    rewrite !add_chain_exp_spec.
-    apply scalarmult_pow_add.
-  Qed.
-
 End AddChainExp.

@@ -1,6 +1,6 @@
 Require Import Coq.Classes.Morphisms. Require Coq.Setoids.Setoid.
 Require Import Crypto.Algebra Crypto.Algebra.
-Require Import Crypto.Util.Notations.
+Require Import Crypto.Util.Notations Crypto.Util.Decidable.
 
 Generalizable All Variables.
 Section Pre.
@@ -44,7 +44,7 @@ Section Pre.
     (d*x1*x2*y1*y2)^2 <> 1.
   Proof.
     unfold onCurve, not; use_sqrt_a; intros.
-    destruct (eq_dec (sqrt_a*x2 + y2) 0); destruct (eq_dec (sqrt_a*x2 - y2) 0);
+    destruct (dec ((sqrt_a*x2 + y2) = 0)); destruct (dec ((sqrt_a*x2 - y2) = 0));
       lazymatch goal with
       | [H: not (eq (?f (sqrt_a * x2)  y2) 0) |- _ ]
         => apply d_nonsquare with (sqrt_d:= (f (sqrt_a * x1) (d * x1 * x2 * y1 * y2 * y1))
