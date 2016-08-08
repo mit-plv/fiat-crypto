@@ -1330,6 +1330,18 @@ Module Z.
   Qed.
   Hint Resolve div_sub_mod_cond : zarith.
 
+  Lemma div_between n a b : 0 <= n -> b <> 0 -> n * b <= a < (1 + n) * b -> a / b = n.
+  Proof.
+    intros.
+    replace a with ((a - n * b) + n * b) by lia.
+    autorewrite with zsimplify; reflexivity.
+  Qed.
+  Hint Rewrite div_between using lia : zsimplify.
+
+  Lemma div_between_1 a b : b <> 0 -> b <= a < 2 * b -> a / b = 1.
+  Proof. intros; rewrite (div_between 1) by lia; reflexivity. Qed.
+  Hint Rewrite div_between_1 using lia : zsimplify.
+
   Lemma simplify_twice_sub_sub x y : 2 * x - (x - y) = x + y.
   Proof. lia. Qed.
   Hint Rewrite simplify_twice_sub_sub : zsimplify.
