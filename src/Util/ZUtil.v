@@ -39,6 +39,10 @@ Create HintDb push_Zmul discriminated.
 Create HintDb pull_Zmul discriminated.
 Create HintDb push_Zdiv discriminated.
 Create HintDb pull_Zdiv discriminated.
+Create HintDb push_Zadd discriminated.
+Create HintDb pull_Zadd discriminated.
+Create HintDb push_Zsub discriminated.
+Create HintDb pull_Zsub discriminated.
 Create HintDb pull_Zmod discriminated.
 Create HintDb push_Zmod discriminated.
 Hint Extern 1 => autorewrite with push_Zopp in * : push_Zopp.
@@ -47,6 +51,10 @@ Hint Extern 1 => autorewrite with push_Zpow in * : push_Zpow.
 Hint Extern 1 => autorewrite with pull_Zpow in * : pull_Zpow.
 Hint Extern 1 => autorewrite with push_Zmul in * : push_Zmul.
 Hint Extern 1 => autorewrite with pull_Zmul in * : pull_Zmul.
+Hint Extern 1 => autorewrite with push_Zadd in * : push_Zadd.
+Hint Extern 1 => autorewrite with pull_Zadd in * : pull_Zadd.
+Hint Extern 1 => autorewrite with push_Zsub in * : push_Zsub.
+Hint Extern 1 => autorewrite with pull_Zsub in * : pull_Zsub.
 Hint Extern 1 => autorewrite with push_Zdiv in * : push_Zmul.
 Hint Extern 1 => autorewrite with pull_Zdiv in * : pull_Zmul.
 Hint Extern 1 => autorewrite with pull_Zmod in * : pull_Zmod.
@@ -1183,9 +1191,60 @@ Module Z.
     reflexivity.
   Qed.
 
-  Lemma minus_distr_if (b : bool) x y : -(if b then x else y) = if b then -x else -y.
+  Definition opp_distr_if (b : bool) x y : -(if b then x else y) = if b then -x else -y.
   Proof. destruct b; reflexivity. Qed.
-  Hint Rewrite minus_distr_if : push_Zopp.
+  Hint Rewrite opp_distr_if : push_Zopp.
+  Hint Rewrite <- opp_distr_if : pull_Zopp.
+
+  Lemma mul_r_distr_if (b : bool) x y z : z * (if b then x else y) = if b then z * x else z * y.
+  Proof. destruct b; reflexivity. Qed.
+  Hint Rewrite mul_r_distr_if : push_Zmul.
+  Hint Rewrite <- mul_r_distr_if : pull_Zmul.
+
+  Lemma mul_l_distr_if (b : bool) x y z : (if b then x else y) * z = if b then x * z else y * z.
+  Proof. destruct b; reflexivity. Qed.
+  Hint Rewrite mul_l_distr_if : push_Zmul.
+  Hint Rewrite <- mul_l_distr_if : pull_Zmul.
+
+  Lemma add_r_distr_if (b : bool) x y z : z + (if b then x else y) = if b then z + x else z + y.
+  Proof. destruct b; reflexivity. Qed.
+  Hint Rewrite add_r_distr_if : push_Zadd.
+  Hint Rewrite <- add_r_distr_if : pull_Zadd.
+
+  Lemma add_l_distr_if (b : bool) x y z : (if b then x else y) + z = if b then x + z else y + z.
+  Proof. destruct b; reflexivity. Qed.
+  Hint Rewrite add_l_distr_if : push_Zadd.
+  Hint Rewrite <- add_l_distr_if : pull_Zadd.
+
+  Lemma sub_r_distr_if (b : bool) x y z : z - (if b then x else y) = if b then z - x else z - y.
+  Proof. destruct b; reflexivity. Qed.
+  Hint Rewrite sub_r_distr_if : push_Zsub.
+  Hint Rewrite <- sub_r_distr_if : pull_Zsub.
+
+  Lemma sub_l_distr_if (b : bool) x y z : (if b then x else y) - z = if b then x - z else y - z.
+  Proof. destruct b; reflexivity. Qed.
+  Hint Rewrite sub_l_distr_if : push_Zsub.
+  Hint Rewrite <- sub_l_distr_if : pull_Zsub.
+
+  Lemma div_r_distr_if (b : bool) x y z : z / (if b then x else y) = if b then z / x else z / y.
+  Proof. destruct b; reflexivity. Qed.
+  Hint Rewrite div_r_distr_if : push_Zdiv.
+  Hint Rewrite <- div_r_distr_if : pull_Zdiv.
+
+  Lemma div_l_distr_if (b : bool) x y z : (if b then x else y) / z = if b then x / z else y / z.
+  Proof. destruct b; reflexivity. Qed.
+  Hint Rewrite div_l_distr_if : push_Zdiv.
+  Hint Rewrite <- div_l_distr_if : pull_Zdiv.
+
+  Lemma mod_r_distr_if (b : bool) x y z : z mod (if b then x else y) = if b then z mod x else z mod y.
+  Proof. destruct b; reflexivity. Qed.
+  Hint Rewrite mod_r_distr_if : push_Zmod.
+  Hint Rewrite <- mod_r_distr_if : pull_Zmod.
+
+  Lemma mod_l_distr_if (b : bool) x y z : (if b then x else y) mod z = if b then x mod z else y mod z.
+  Proof. destruct b; reflexivity. Qed.
+  Hint Rewrite mod_l_distr_if : push_Zmod.
+  Hint Rewrite <- mod_l_distr_if : pull_Zmod.
 
   Lemma minus_minus_one : - -1 = 1.
   Proof. reflexivity. Qed.
@@ -1343,6 +1402,22 @@ Module Z.
   Lemma div_between_1 a b : b <> 0 -> b <= a < 2 * b -> a / b = 1.
   Proof. intros; rewrite (div_between 1) by lia; reflexivity. Qed.
   Hint Rewrite div_between_1 using zutil_arith : zsimplify.
+
+  Lemma leb_add_same x y : (x <=? y + x) = (0 <=? y).
+  Proof. destruct (x <=? y + x) eqn:?, (0 <=? y) eqn:?; ltb_to_lt; try reflexivity; omega. Qed.
+  Hint Rewrite leb_add_same : zsimplify.
+
+  Lemma ltb_add_same x y : (x <? y + x) = (0 <? y).
+  Proof. destruct (x <? y + x) eqn:?, (0 <? y) eqn:?; ltb_to_lt; try reflexivity; omega. Qed.
+  Hint Rewrite ltb_add_same : zsimplify.
+
+  Lemma geb_add_same x y : (x >=? y + x) = (0 >=? y).
+  Proof. destruct (x >=? y + x) eqn:?, (0 >=? y) eqn:?; ltb_to_lt; try reflexivity; omega. Qed.
+  Hint Rewrite geb_add_same : zsimplify.
+
+  Lemma gtb_add_same x y : (x >? y + x) = (0 >? y).
+  Proof. destruct (x >? y + x) eqn:?, (0 >? y) eqn:?; ltb_to_lt; try reflexivity; omega. Qed.
+  Hint Rewrite gtb_add_same : zsimplify.
 
   Lemma simplify_twice_sub_sub x y : 2 * x - (x - y) = x + y.
   Proof. lia. Qed.
