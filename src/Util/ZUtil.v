@@ -1034,6 +1034,14 @@ Module Z.
 
   Hint Rewrite div_add_l' div_add' using zutil_arith : zsimplify.
 
+  Lemma div_sub a b c : c <> 0 -> (a - b * c) / c = a / c - b.
+  Proof. intros; rewrite <- !Z.add_opp_r, <- Z.div_add by lia; apply f_equal2; lia. Qed.
+
+  Lemma div_sub' a b c : c <> 0 -> (a - c * b) / c = a / c - b.
+  Proof. intro; rewrite <- div_sub, (Z.mul_comm c); try lia. Qed.
+
+  Hint Rewrite div_sub div_sub' using zutil_arith : zsimplify.
+
   Lemma div_add_sub_l a b c d : b <> 0 -> (a * b + c - d) / b = a + (c - d) / b.
   Proof. rewrite <- Z.add_sub_assoc; apply Z.div_add_l. Qed.
 
