@@ -238,7 +238,7 @@ Section montgomery.
           simplify_repeated_ifs.
           set (m' := m) in *.
           autorewrite with zsimplify; push_Zmod; autorewrite with zsimplify; pull_Zmod.
-          break_match; Z.ltb_to_lt; autorewrite with zsimplify; lia.
+          break_match; Z.ltb_to_lt; autorewrite with zsimplify; try reflexivity; lia.
         Qed.
       End alt.
     End redc.
