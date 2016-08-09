@@ -39,6 +39,13 @@ Instance subCoeff : SubtractionCoefficient modulus params1305.
   vm_decide.
 Defined.
 
+Instance carryChain : CarryChain limb_widths.
+  apply Build_CarryChain with (carry_chain := ([0;1;2;3;4;0])%nat).
+  intros;
+    repeat (destruct H as [|H]; [subst; vm_compute; repeat constructor | ]).
+  contradiction H.
+Defined.
+
 Definition freezePreconditions1305 : freezePreconditions params1305 int_width.
 Proof.
   constructor; compute_preconditions.
@@ -150,7 +157,7 @@ Defined.
 
 Definition mul (f g : fe1305) : fe1305 :=
   Eval cbv beta iota delta [proj1_sig mul_sig] in
-  proj1_sig (mul_sig f g).
+    proj1_sig (mul_sig f g).
 
 Definition mul_correct (f g : fe1305)
   : mul f g = carry_mul_opt k_ c_ f g :=

@@ -50,14 +50,15 @@ Section ModularBaseSystem.
   (* Placeholder *)
   Definition div (x y : digits) : digits := encode (F.div (decode x) (decode y)).
 
+  Definition carry_mul (carry_chain : list nat) (us vs : digits) : digits :=
+    from_list (carry_sequence carry_chain [[mul us vs]]) (length_carry_sequence length_to_list).
+  
   Definition rep (us : digits) (x : F modulus) := decode us = x.
   Local Notation "u ~= x" := (rep u x).
   Local Hint Unfold rep.
 
   Definition carry_full (us : digits) : digits := from_list (carry_full [[us]])
     (length_carry_full length_to_list).
-
-  Definition carry_mul (us vs : digits) : digits := carry_full (mul us vs).
 
   Definition freeze (us : digits) : digits :=
     let us' := carry_full (carry_full (carry_full us)) in

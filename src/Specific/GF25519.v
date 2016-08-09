@@ -37,6 +37,13 @@ Instance subCoeff : SubtractionCoefficient modulus params25519.
   vm_decide.
 Defined.
 
+Instance carryChain : CarryChain limb_widths.
+  apply Build_CarryChain with (carry_chain := ([0;1;2;3;4;5;6;7;8;9;0;1])%nat).
+  intros.
+  repeat (destruct H as [|H]; [subst; vm_compute; repeat constructor | ]).
+  contradiction H.
+Defined.
+
 Definition freezePreconditions25519 : freezePreconditions params25519 int_width.
 Proof.
   constructor; compute_preconditions.

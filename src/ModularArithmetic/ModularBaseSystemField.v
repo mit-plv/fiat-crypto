@@ -9,7 +9,7 @@ Require Import Crypto.Util.Tuple Crypto.Util.Notations.
 Local Open Scope Z_scope.
 
 Section ModularBaseSystemField.
-  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient modulus prm}
+  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient modulus prm} {cc : CarryChain limb_widths}
     (k_ c_ : Z) (k_subst : k = k_) (c_subst : c = c_).
   Local Existing Instance prime_modulus.
   Local Notation base := (Pow2Base.base_from_limb_widths limb_widths).

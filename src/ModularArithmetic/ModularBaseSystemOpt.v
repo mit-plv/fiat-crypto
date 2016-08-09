@@ -439,7 +439,7 @@ Section Subtraction.
 End Subtraction.
 
 Section Multiplication.
-  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient modulus prm}
+  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient modulus prm} {cc : CarryChain limb_widths}
     (* allows caller to precompute k and c *)
     (k_ c_ : Z) (k_subst : k = k_) (c_subst : c = c_).
   Local Notation digits := (tuple Z (length limb_widths)).
@@ -587,13 +587,15 @@ Section Multiplication.
     := proj2_sig (mul_opt_sig us vs).
 
   Definition carry_mul_opt_sig {T} (f:digits -> T)
-    (us vs : digits) : { x | x = f (carry_mul us vs) }.
+    (us vs : digits) : { x | x = f (carry_mul carry_chain us vs) }.
   Proof.
     eexists.
     cbv [carry_mul].
-    erewrite <-carry_full_opt_cps_correct by eauto.
+    rewrite <- from_list_default_eq with (d := 0%Z).
+    change @from_list_default with @from_list_default_opt.
+    erewrite <-carry_sequence_opt_cps_correct by eauto using carry_chain_valid, length_to_list.
     erewrite <-mul_opt_correct.
-    cbv [carry_full_opt_cps mul_opt].
+    cbv [carry_sequence_opt_cps mul_opt].
     erewrite from_list_default_eq.
     rewrite to_list_from_list.
     reflexivity.
@@ -609,13 +611,13 @@ Section Multiplication.
     := Eval cbv [proj1_sig carry_mul_opt_sig] in proj1_sig (carry_mul_opt_sig f us vs).
 
   Definition carry_mul_opt_cps_correct {T} (f:digits -> T) (us vs : digits)
-    : carry_mul_opt_cps f us vs = f (carry_mul us vs)
+    : carry_mul_opt_cps f us vs = f (carry_mul carry_chain us vs)
     := proj2_sig (carry_mul_opt_sig f us vs).
 
   Definition carry_mul_opt := carry_mul_opt_cps id.
 
   Definition carry_mul_opt_correct (us vs : digits)
-    : carry_mul_opt us vs = carry_mul us vs :=
+    : carry_mul_opt us vs = carry_mul carry_chain us vs :=
     carry_mul_opt_cps_correct id us vs.
 
 End Multiplication.

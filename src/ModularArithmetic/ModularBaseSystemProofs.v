@@ -22,6 +22,12 @@ Local Open Scope Z_scope.
 
 Local Opaque add_to_nth carry_simple.
 
+Class CarryChain (limb_widths : list Z) :=
+  {
+    carry_chain : list nat;
+    carry_chain_valid : forall i, In i carry_chain -> (i < length limb_widths)%nat
+  }.
+
 Section PseudoMersenneProofs.
   Context `{prm :PseudoMersenneBaseParams}.
 
@@ -286,7 +292,7 @@ Section CarryProofs.
 
   Lemma carry_rep : forall i us x,
     (length us = length limb_widths)%nat ->
-    (i < length limb_widths)%nat ->
+    (i < length limb_widths)%nat -> 
     forall pf1 pf2,
     from_list _ us pf1 ~= x -> from_list _ (carry i us) pf2 ~= x.
   Proof.
@@ -326,12 +332,14 @@ Section CarryProofs.
   Qed.
 
   Opaque carry_full.
-
-  Lemma carry_mul_rep : forall us vs x y, rep us x -> rep vs y ->
-    rep (carry_mul us vs) (x * y)%F.
+  
+  Context `{cc : CarryChain limb_widths}.
+  Lemma carry_mul_rep : forall us vs x y,
+    rep us x -> rep vs y ->
+    rep (carry_mul carry_chain us vs) (x * y)%F.
   Proof.
-    unfold carry_mul; intros; apply carry_full_preserves_rep.
-    auto using mul_rep.
+    cbv [carry_mul]; intros; apply carry_sequence_rep;
+      auto using carry_chain_valid,  mul_rep.
   Qed.
 
 End CarryProofs.
