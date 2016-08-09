@@ -1399,9 +1399,17 @@ Module Z.
   Qed.
   Hint Rewrite div_between using zutil_arith : zsimplify.
 
+  Lemma mod_small_n n a b : 0 <= n -> b <> 0 -> n * b <= a < (1 + n) * b -> a mod b = a - n * b.
+  Proof. intros; erewrite Zmod_eq_full, div_between by eassumption. reflexivity. Qed.
+  Hint Rewrite mod_small_n using zutil_arith : zsimplify.
+
   Lemma div_between_1 a b : b <> 0 -> b <= a < 2 * b -> a / b = 1.
   Proof. intros; rewrite (div_between 1) by lia; reflexivity. Qed.
   Hint Rewrite div_between_1 using zutil_arith : zsimplify.
+
+  Lemma mod_small_1 a b : b <> 0 -> b <= a < 2 * b -> a mod b = a - b.
+  Proof. intros; rewrite (mod_small_n 1) by lia; lia. Qed.
+  Hint Rewrite mod_small_1 using zutil_arith : zsimplify.
 
   Lemma leb_add_same x y : (x <=? y + x) = (0 <=? y).
   Proof. destruct (x <=? y + x) eqn:?, (0 <=? y) eqn:?; ltb_to_lt; try reflexivity; omega. Qed.
