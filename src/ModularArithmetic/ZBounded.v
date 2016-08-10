@@ -96,25 +96,6 @@ Existing Class medium_valid.
 Existing Class small_valid.
 Existing Instances Mod_SmallBound_valid DivBy_SmallerBound_valid DivBy_SmallBound_valid Mul_valid CarryAdd_valid CarrySubSmall_valid ConditionalSubtract_valid ConditionalSubtractModulus_valid modulus_digits_valid medium_to_large_valid.
 
-(** TODO: Remove me *)
-Lemma CarryAdd_correct {small_bound smaller_bound modulus} {Zops : ZLikeOps small_bound smaller_bound modulus} {_ : ZLikeProperties Zops}
-  : forall x y, large_valid x -> large_valid y ->
-                decode_large (snd (CarryAdd x y)) + (small_bound * small_bound) * (if fst (CarryAdd x y) then 1 else 0)
-                = decode_large x + decode_large y.
-Proof.
-  intros x y Hx Hy; rewrite CarryAdd_correct_fst, CarryAdd_correct_snd by assumption.
-  apply decode_large_valid in Hx. apply decode_large_valid in Hy.
-  rewrite (Z.add_comm (_ mod _)).
-  symmetry; etransitivity; [ eapply Z.div_mod | apply f_equal2; [ | reflexivity ] ];
-    [ omega | ].
-  generalize dependent (decode_large x); clear x; intro x.
-  generalize dependent (decode_large y); clear y; intro y.
-  intros.
-  assert (x + y < 2 * (small_bound * small_bound)) by omega.
-  break_match; Z.ltb_to_lt;
-    autorewrite with zsimplify; reflexivity.
-Abort.
-
 Lemma modulus_nonneg {small_bound smaller_bound modulus} (Zops : ZLikeOps small_bound smaller_bound modulus) {_ : ZLikeProperties Zops} : 0 <= modulus.
 Proof.
   pose proof (decode_small_valid _ modulus_digits_valid) as H.
