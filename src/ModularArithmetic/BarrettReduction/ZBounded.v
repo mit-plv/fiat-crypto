@@ -42,7 +42,7 @@ Section barrett.
     assert ((decode_large x) mod b^(k-offset) < b^(k-offset)) by auto with zarith omega.
     rewrite (barrett_reduction_small m b (decode_large x) k μ offset) by omega.
     rewrite <- μ'_eq.
-    pull_zlike_decode.
+    pull_zlike_decode; cbv zeta; pull_zlike_decode. (* Extra [cbv iota; pull_zlike_decode] to work around bug #4165 (https://coq.inria.fr/bugs/show_bug.cgi?id=4165) in 8.4 *)
     subst pr; split; [ reflexivity | exact _ ].
   Defined.
 End barrett.
