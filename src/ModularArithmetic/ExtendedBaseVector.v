@@ -76,6 +76,13 @@ Section ExtendedBaseVector.
     intros ? [?|?]; auto.
   Qed.
 
+  Lemma ext_limb_widths_upper_bound
+    : upper_bound ext_limb_widths = upper_bound limb_widths * upper_bound limb_widths.
+  Proof.
+    unfold ext_limb_widths.
+    autorewrite with push_upper_bound; reflexivity.
+  Qed.
+
   Section base_good.
     Context (two_k_nonzero : 2^k <> 0)
             (base_good : forall i j, (i+j < length base)%nat ->
@@ -188,3 +195,6 @@ Section ExtendedBaseVector.
 End ExtendedBaseVector.
 
 Hint Rewrite @extended_base_length : distr_length.
+Hint Resolve ext_limb_widths_nonneg : znonzero.
+Hint Rewrite @ext_limb_widths_upper_bound using solve [ eauto with znonzero ] : push_upper_bound.
+Hint Rewrite <- @ext_limb_widths_upper_bound using solve [ eauto with znonzero ] : pull_upper_bound.

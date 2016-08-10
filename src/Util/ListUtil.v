@@ -1072,6 +1072,16 @@ Qed.
 
 Hint Rewrite @sum_firstn_all_succ using omega : simpl_sum_firstn.
 
+Lemma sum_firstn_all : forall n l, (length l <= n)%nat ->
+  sum_firstn l n = sum_firstn l (length l).
+Proof.
+  unfold sum_firstn; intros.
+  rewrite !firstn_all_strong by omega.
+  congruence.
+Qed.
+
+Hint Rewrite @sum_firstn_all using omega : simpl_sum_firstn.
+
 Lemma sum_firstn_succ_default : forall l i,
   sum_firstn l (S i) = (nth_default 0 l i + sum_firstn l i)%Z.
 Proof.
@@ -1138,6 +1148,40 @@ Proof.
 Qed.
 
 Hint Resolve sum_firstn_nonnegative : znonzero.
+
+Lemma sum_firstn_app : forall xs ys n,
+  sum_firstn (xs ++ ys) n = (sum_firstn xs n + sum_firstn ys (n - length xs))%Z.
+Proof.
+  induction xs; simpl.
+  { intros ys n; autorewrite with simpl_sum_firstn; simpl.
+    f_equal; omega. }
+  { intros ys [|n]; autorewrite with simpl_sum_firstn; simpl; [ reflexivity | ].
+    rewrite IHxs; omega. }
+Qed.
+
+Lemma sum_firstn_app_sum : forall xs ys n,
+  sum_firstn (xs ++ ys) (length xs + n) = (sum_firstn xs (length xs) + sum_firstn ys n)%Z.
+Proof.
+  intros; rewrite sum_firstn_app; autorewrite with simpl_sum_firstn.
+  do 2 f_equal; omega.
+Qed.
+
+Hint Rewrite @sum_firstn_app_sum : simpl_sum_firstn.
+
+Definition NotSum {T} (xs : list T) (v : nat) := True.
+
+Ltac NotSum :=
+  lazymatch goal with
+  | [ |- NotSum ?xs (length ?xs + _)%nat ] => fail
+  | [ |- NotSum _ _ ] => exact I
+  end.
+
+Lemma sum_firstn_app_hint : forall xs ys n, NotSum xs n ->
+  sum_firstn (xs ++ ys) n = (sum_firstn xs n + sum_firstn ys (n - length xs))%Z.
+Proof. auto using sum_firstn_app. Qed.
+
+Hint Rewrite sum_firstn_app_hint using solve [ NotSum ] : simpl_sum_firstn.
+
 
 Lemma nth_default_map2 : forall {A B C} (f : A -> B -> C) ls1 ls2 i d d1 d2,
   nth_default d (map2 f ls1 ls2) i =
