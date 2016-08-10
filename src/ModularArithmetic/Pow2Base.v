@@ -81,6 +81,8 @@ Section Pow2Base.
 
     Definition carry_simple_add us vs := carry_simple_full (BaseSystem.add us vs).
 
+    Definition carry_simple_sub us vs := carry_simple_full (BaseSystem.sub us vs).
+
     Definition carry_simple_mul out_base us vs := carry_simple_full (BaseSystem.mul out_base us vs).
   End carrying.
 
