@@ -68,6 +68,14 @@ Section ExtendedBaseVector.
     erewrite map_nth_default; auto.
   Qed.
 
+  Lemma ext_limb_widths_nonneg
+        (limb_widths_nonneg : forall w : Z, In w limb_widths -> 0 <= w)
+    : forall w : Z, In w ext_limb_widths -> 0 <= w.
+  Proof.
+    unfold ext_limb_widths; setoid_rewrite in_app_iff.
+    intros ? [?|?]; auto.
+  Qed.
+
   Section base_good.
     Context (two_k_nonzero : 2^k <> 0)
             (base_good : forall i j, (i+j < length base)%nat ->
