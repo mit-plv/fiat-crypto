@@ -22,7 +22,8 @@ Create HintDb simpl_add_to_nth discriminated.
   Qed.
 
 (* TODO : move to ZUtil *)
-Create HintDb Ztestbit discriminated.
+  Create HintDb Ztestbit discriminated.
+Hint Rewrite Z.testbit_0_l : Ztestbit.
 Hint Rewrite Z.land_spec Z.lor_spec Z.shiftl_spec Z.shiftr_spec ones_spec using omega : Ztestbit.
 Hint Rewrite Z.testbit_neg_r using omega : Ztestbit.
 Hint Rewrite Bool.andb_true_r Bool.andb_false_r Bool.orb_true_r Bool.orb_false_r
@@ -193,12 +194,6 @@ Section Pow2BaseProofs.
     { simpl; intros; rewrite !IHl0, !map_app, map_map, sum_firstn_succ_cons, two_p_is_exp by auto with znonzero.
       do 2 f_equal; apply map_ext; intros; lia. }
   Qed.
-
-  Lemma pow2_mod_decode_first : forall us n,
-    (n <= nth_default 0 limb_widths 0) ->
-    Z.pow2_mod (BaseSystem.decode base us) n = Z.pow2_mod (nth_default 0 us 0) n.
-  Proof.
-  Admitted.
 
   (* TODO : move *)
   Lemma pow2_mod_split : forall a n m, 0 <= n -> 0 <= m ->
@@ -446,58 +441,6 @@ Section Pow2BaseProofs.
            | |- _ => erewrite <-pow2_mod_bounded by eauto; rewrite testbit_pow2_mod
            end.
   Qed.
-
-  Lemma pow2_mod_decode_last : forall us vs i n,
-    (sum_firstn limb_widths i <= n <= sum_firstn limb_widths (S i)) ->
-    firstn i us = firstn i vs ->
-    Z.pow2_mod (nth_default 0 us i) (n - sum_firstn limb_widths i) = Z.pow2_mod (nth_default 0 vs i) (n - sum_firstn limb_widths i) ->
-    Z.pow2_mod (BaseSystem.decode base us) n = Z.pow2_mod (BaseSystem.decode base vs) n.
-  Proof.
-  Admitted.
-(*
-  Lemma pow2_mod_decode_last : forall us i n,
-    (bounded limb_widths us) ->
-    (sum_firstn limb_widths i <= n <= sum_firstn limb_widths (S i)) ->
-    Z.pow2_mod (BaseSystem.decode base us) n = BaseSystem.decode base (firstn i us) +
-                                               (Z.pow2_mod (nth_default 0 us i) (n - (sum_firstn limb_widths i))) << (sum_firstn limb_widths i).
-  Proof.
-    induction i; intros.
-    + rewrite sum_firstn_succ_default, sum_firstn_0 in *.
-      rewrite firstn_0, decode_nil, Z.shiftl_0_r.
-      ring_simplify.
-      rewrite pow2_mod_decode_first; [f_equal; try ring | ].
-      omega.
-    + replace n with (sum_firstn limb_widths (S i) + (n - sum_firstn limb_widths (S i))) by ring.
-      rewrite pow2_mod_split by (auto using sum_firstn_limb_widths_nonneg; omega).
-      rewrite Z.lor_shiftl by (auto; rewrite Z.pow2_mod_spec by auto; apply Z.mod_pos_bound; zero_bounds).
-      f_equal.
-    - rewrite IHi; auto.
-      Focus 2. {
-        rewrite sum_firstn_succ_default.
-        split; try omega.
-        apply nth_default_preserves_properties; try omega; intros ? A.
-        apply limb_widths_nonneg in A. omega.
-      } Unfocus.
-      rewrite decode_firstn_succ.
-      rewrite sum_firstn_succ_default.
-      repeat f_equal.
-      etransitivity; [ | apply pow2_mod_bounded;try eassumption ].
-      f_equal; ring.
-    - f_equal.
-      rewrite digit_select by assumption.
-      rewrite pow2_mod_pow2_mod by
-        (omega || apply nth_default_preserves_properties; try omega; intros ? A; apply limb_widths_nonneg in A; omega).
-      rewrite sum_firstn_succ_default with (i := S i) in *.
-      f_equal; try ring.
-      apply Z.min_case_strong; intros; omega.
-  Qed. *)
-
-  Lemma pow2_mod_decode_select : forall us i n m,
-    sum_firstn limb_widths i <= n <= sum_firstn limb_widths (S i) ->
-    sum_firstn limb_widths i <= n + m <= sum_firstn limb_widths (S i) ->
-    Z.pow2_mod (BaseSystem.decode base us >> n) m =
-    Z.pow2_mod (nth_default 0 us i >> (n - sum_firstn limb_widths i)) m.
-  Admitted.
 
   Lemma decode_shift : forall us u0, (length (u0 :: us) <= length limb_widths)%nat ->
     BaseSystem.decode base (u0 :: us) = u0 + ((BaseSystem.decode (base_from_limb_widths (tl limb_widths)) us) << nth_default 0 limb_widths 0).
@@ -819,7 +762,37 @@ Section TestbitDecode.
              | |- _ => progress (simpl fst; simpl snd)
              end.
   Qed.
-  
+
+  Lemma snd_split_index'_nonneg : forall i index lw, (0 <= i) ->
+                                                     (0 <= snd (split_index' i index lw)).
+  Proof.
+    intros; functional induction (split_index' i index lw);
+      repeat match goal with
+             | |- _ => omega
+             | H : ?P -> ?G |- ?G => apply H
+             | |- _ => progress (simpl fst; simpl snd)
+             end.
+  Qed.
+
+  Lemma snd_split_index'_small : forall i index lw, 0 <= i < sum_firstn lw (length lw) ->
+      (snd (split_index' i index lw) < lw # (fst (split_index' i index lw) - index)).
+  Proof.
+    intros; functional induction (split_index' i index lw);
+      try match goal with |- appcontext [split_index' ?a ?b ?c] =>
+                    pose proof (split_index'_ge_index a b c) end;
+      repeat match goal with
+             | |- _ => progress autorewrite with push_nth_default distr_length in *
+             | |- _ => rewrite Nat.sub_diag
+             | |- _ => rewrite sum_firstn_nil in *
+             | |- _ => rewrite sum_firstn_succ_cons in * 
+             | |- _ => progress (simpl fst; simpl snd)
+             | H : _ -> ?x < _ |- ?x < _ => eapply Z.lt_le_trans; [ apply H; omega | ]
+             | |- ?xs # (?a - S ?b) <= (_ :: ?xs) # (?a - ?b) =>
+               replace (a - b)%nat with (S (a - S b))%nat
+             | |- _ => omega
+             end.
+  Qed.
+
   Lemma split_index'_correct : forall i index lw,
     sum_firstn lw (fst (split_index' i index lw) - index) + (snd (split_index' i index lw)) = i.
   Proof.
@@ -844,34 +817,34 @@ Section TestbitDecode.
   Definition digit_index i := fst (split_index i).
   Definition bit_index i := snd (split_index i).
 
-  Print decode_bitwise'.
-
-  Lemma testbit_decode_bitwise' : forall us i acc n,
+  Lemma testbit_decode : forall us n,
+    0 <= n ->
     length us = length limb_widths ->
     bounded limb_widths us ->
-    Z.testbit (decode_bitwise' limb_widths us i acc) n =
-    Z.testbit (BaseSystem.decode base us) (bit_index n).
+    Z.testbit (BaseSystem.decode base us) n = Z.testbit (us # digit_index n) (bit_index n).
   Proof.
-
-  SearchAbout decode_bitwise.
-  Hint Rewrite Z.testbit_0_l : Ztestbit.
-
-    Lemma testbit_decode_bitwise : forall us n,
-    length us = length limb_widths ->
-    bounded limb_widths us ->
-    Z.testbit (decode_bitwise limb_widths us) n = Z.testbit (us # digit_index n) (bit_index n).
-  Proof.
-    cbv [digit_index bit_index split_index]; induction us; intros.
+    cbv [digit_index bit_index split_index]; intros.
+    pose proof (split_index'_correct n 0 limb_widths).
+    pose proof (snd_split_index'_nonneg n 0 limb_widths).
+    specialize_by assumption.
     repeat match goal with
-           | |- _ => reflexivity
-           | |- _ => progress autorewrite with Ztestbit push_nth_default
-           | |- _ => progress rewrite decode_bitwise_nil
+           | |- _ => progress autorewrite with Ztestbit natsimplify in *
+           | |- _ => erewrite digit_select by eassumption
+           | |- _ => break_if 
+           | |- _ => rewrite testbit_pow2_mod by auto using nth_default_limb_widths_nonneg
+           | |- _ => omega
+           | |- _ => f_equal; omega
            end.
-    SearchAbout decode_bitwise'.
-    rewrite decode_bitwise_spec; auto.
-    rewrite decode_shift.
-    SearchAbout (BaseSystem.decode _ (_ :: _)).
-    cbv [decode_bitwise]. simpl.
+    destruct (Z_lt_dec n (sum_firstn limb_widths (length limb_widths))). {
+      assert (0 <= n < sum_firstn limb_widths (length limb_widths)) as Hn by omega.
+      pose proof (snd_split_index'_small n 0 limb_widths Hn).
+      rewrite Nat.sub_0_r in *.
+      omega.
+    } {
+      apply testbit_decode_high; auto.
+      replace (length us) with (length limb_widths) in *.
+      omega.
+    }
   Qed.
 
 End TestbitDecode.
