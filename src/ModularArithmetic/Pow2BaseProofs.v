@@ -325,7 +325,7 @@ Section Pow2BaseProofs.
            | |- _ => rewrite nth_default_base
            | |- _ => rewrite IHi
            | |- _ => rewrite <-Z.lor_shiftl by (rewrite ?Z.pow2_mod_spec; try apply Z.mod_pos_bound; zero_bounds)
-           | |- appcontext[Nat.min ?x ?y] => (rewrite Nat.min_l by omega || rewrite Nat.min_r by omega)
+           | |- appcontext[min ?x ?y] => (rewrite Nat.min_l by omega || rewrite Nat.min_r by omega)
            | |- appcontext[2 ^ ?a * _] => rewrite (Z.mul_comm (2 ^ a)); rewrite <-Z.shiftl_mul_pow2
            | |- _ => solve [auto]
            | |- _ => lia
@@ -343,6 +343,7 @@ Section Pow2BaseProofs.
            | |- _ => rewrite sum_firstn_succ_default in *;
                        pose proof (nth_default_limb_widths_nonneg i); omega
            end.
+    
   Qed.
 
   Lemma testbit_decode_firstn_high : forall us i n,
@@ -861,7 +862,6 @@ Section TestbitDecode.
   Qed.
 
 End TestbitDecode.
-
 
 Section carrying_helper.
   Context {limb_widths} (limb_widths_nonneg : forall w, In w limb_widths -> 0 <= w).

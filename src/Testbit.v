@@ -46,7 +46,7 @@ Section Testbit.
              | |- _ => rewrite nth_default_out_of_bounds by omega
              | |- _ => rewrite nth_default_uniform_base by omega
              | |- false = Z.testbit (decode _ _) _ => rewrite testbit_decode_high
-             | |- _ => rewrite sum_firstn_uniform_base by (eassumption || omega)
+             | |- _ => rewrite (@sum_firstn_uniform_base width) by (eassumption || omega)
              | |- _ => rewrite sum_firstn_succ_default
              | |- Z.testbit (nth_default _ _ ?x) _ = Z.testbit (decode _ _) _ =>
                 destruct (lt_dec x (length limb_widths));
