@@ -219,6 +219,28 @@ Section montgomery.
           unfold reduce_via_partial in *; break_match; Z.ltb_to_lt; lia.
         Qed.
       End unconstrained.
+
+      Section alt.
+        Context (N_in_range : 0 <= N < R)
+                (T_representable : 0 <= T < R * R).
+        Lemma partial_reduce_alt_eq : partial_reduce_alt N R N' T = partial_reduce N R N' T.
+        Proof.
+          assert (0 <= T + m * N < 2 * (R * R)) by nia.
+          assert (0 <= T + m * N < R * (R + N)) by nia.
+          assert (0 <= (T + m * N) / R < R + N) by auto with zarith.
+          assert ((T + m * N) / R - N < R) by lia.
+          assert (R * R <= T + m * N -> R <= (T + m * N) / R) by auto with zarith.
+          assert (T + m * N < R * R -> (T + m * N) / R < R) by auto with zarith.
+          assert (H' : (T + m * N) mod (R * R) = if R * R <=? T + m * N then T + m * N - R * R else T + m * N)
+            by (break_match; Z.ltb_to_lt; autorewrite with zsimplify; lia).
+          unfold partial_reduce, partial_reduce_alt, Z.prereduce.
+          rewrite H'; clear H'.
+          simplify_repeated_ifs.
+          set (m' := m) in *.
+          autorewrite with zsimplify; push_Zmod; autorewrite with zsimplify; pull_Zmod.
+          break_match; Z.ltb_to_lt; autorewrite with zsimplify; try reflexivity; lia.
+        Qed.
+      End alt.
     End redc.
 
     (** * Arithmetic in Montgomery form *)

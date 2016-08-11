@@ -113,6 +113,14 @@ end function
            else
              prereduce.
 
+      Definition partial_reduce_alt : montgomeryZ
+        := let v0 := (T + m * N) in
+           let v := (v0 mod (R * R)) / R in
+           if R * R <=? v0 then
+             (v - N) mod R
+           else
+             v.
+
       Definition reduce : montgomeryZ
         := if N <=? t then
              prereduce - N
@@ -120,6 +128,12 @@ end function
              prereduce.
 
       Definition reduce_via_partial : montgomeryZ
+        := if N <=? partial_reduce then
+             partial_reduce - N
+           else
+             partial_reduce.
+
+      Definition reduce_via_partial_alt : montgomeryZ
         := if N <=? partial_reduce then
              partial_reduce - N
            else

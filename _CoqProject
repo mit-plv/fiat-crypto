@@ -50,10 +50,13 @@ src/ModularArithmetic/PrimeFieldTheorems.v
 src/ModularArithmetic/PseudoMersenneBaseParamProofs.v
 src/ModularArithmetic/PseudoMersenneBaseParams.v
 src/ModularArithmetic/Tutorial.v
+src/ModularArithmetic/ZBounded.v
 src/ModularArithmetic/BarrettReduction/Z.v
+src/ModularArithmetic/BarrettReduction/ZBounded.v
 src/ModularArithmetic/BarrettReduction/ZGeneralized.v
 src/ModularArithmetic/BarrettReduction/ZHandbook.v
 src/ModularArithmetic/Montgomery/Z.v
+src/ModularArithmetic/Montgomery/ZBounded.v
 src/ModularArithmetic/Montgomery/ZProofs.v
 src/Spec/CompleteEdwardsCurve.v
 src/Spec/EdDSA.v

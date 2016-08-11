@@ -1034,6 +1034,14 @@ Module Z.
 
   Hint Rewrite div_add_l' div_add' using zutil_arith : zsimplify.
 
+  Lemma div_sub a b c : c <> 0 -> (a - b * c) / c = a / c - b.
+  Proof. intros; rewrite <- !Z.add_opp_r, <- Z.div_add by lia; apply f_equal2; lia. Qed.
+
+  Lemma div_sub' a b c : c <> 0 -> (a - c * b) / c = a / c - b.
+  Proof. intro; rewrite <- div_sub, (Z.mul_comm c); try lia. Qed.
+
+  Hint Rewrite div_sub div_sub' using zutil_arith : zsimplify.
+
   Lemma div_add_sub_l a b c d : b <> 0 -> (a * b + c - d) / b = a + (c - d) / b.
   Proof. rewrite <- Z.add_sub_assoc; apply Z.div_add_l. Qed.
 
@@ -1399,9 +1407,17 @@ Module Z.
   Qed.
   Hint Rewrite div_between using zutil_arith : zsimplify.
 
+  Lemma mod_small_n n a b : 0 <= n -> b <> 0 -> n * b <= a < (1 + n) * b -> a mod b = a - n * b.
+  Proof. intros; erewrite Zmod_eq_full, div_between by eassumption. reflexivity. Qed.
+  Hint Rewrite mod_small_n using zutil_arith : zsimplify.
+
   Lemma div_between_1 a b : b <> 0 -> b <= a < 2 * b -> a / b = 1.
   Proof. intros; rewrite (div_between 1) by lia; reflexivity. Qed.
   Hint Rewrite div_between_1 using zutil_arith : zsimplify.
+
+  Lemma mod_small_1 a b : b <> 0 -> b <= a < 2 * b -> a mod b = a - b.
+  Proof. intros; rewrite (mod_small_n 1) by lia; lia. Qed.
+  Hint Rewrite mod_small_1 using zutil_arith : zsimplify.
 
   Lemma leb_add_same x y : (x <=? y + x) = (0 <=? y).
   Proof. destruct (x <=? y + x) eqn:?, (0 <=? y) eqn:?; ltb_to_lt; try reflexivity; omega. Qed.

@@ -11,6 +11,11 @@ Require Crypto.BaseSystem.
 Local Open Scope Z_scope.
 
 Create HintDb simpl_add_to_nth discriminated.
+Create HintDb push_upper_bound discriminated.
+Create HintDb pull_upper_bound discriminated.
+
+Hint Extern 1 => progress autorewrite with push_upper_bound in * : push_upper_bound.
+Hint Extern 1 => progress autorewrite with pull_upper_bound in * : pull_upper_bound.
 
 (* TODO : move to ZUtil *)
   Lemma ones_spec : forall n m, 0 <= n -> 0 <= m -> Z.testbit (Z.ones n) m = if Z_lt_dec m n then true else false.
@@ -460,6 +465,25 @@ Section Pow2BaseProofs.
             end.
   Qed.
 
+  Lemma upper_bound_nil : upper_bound nil = 1.
+  Proof. reflexivity. Qed.
+
+  Lemma upper_bound_cons x xs : 0 <= x -> 0 <= sum_firstn xs (length xs) -> upper_bound (x::xs) = 2^x * upper_bound xs.
+  Proof.
+    intros Hx Hxs.
+    unfold upper_bound; simpl.
+    autorewrite with simpl_sum_firstn pull_Zpow.
+    reflexivity.
+  Qed.
+
+  Lemma upper_bound_app xs ys : 0 <= sum_firstn xs (length xs) -> 0 <= sum_firstn ys (length ys) -> upper_bound (xs ++ ys) = upper_bound xs * upper_bound ys.
+  Proof.
+    intros Hxs Hys.
+    unfold upper_bound; simpl.
+    autorewrite with distr_length simpl_sum_firstn pull_Zpow.
+    reflexivity.
+  Qed.
+
   Section make_base_vector.
     Local Notation k := (sum_firstn limb_widths (length limb_widths)).
     Context (limb_widths_match_modulus : forall i j,
@@ -521,6 +545,8 @@ Section Pow2BaseProofs.
   End make_base_vector.
 End Pow2BaseProofs.
 Hint Rewrite @base_from_limb_widths_length : distr_length.
+Hint Rewrite @upper_bound_nil @upper_bound_cons @upper_bound_app using solve [ eauto with znonzero ] : push_upper_bound.
+Hint Rewrite <- @upper_bound_cons @upper_bound_app using solve [ eauto with znonzero ] : pull_upper_bound.
 
 Section BitwiseDecodeEncode.
   Context {limb_widths} (bv : BaseSystem.BaseVector (base_from_limb_widths limb_widths))
