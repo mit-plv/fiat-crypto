@@ -252,6 +252,12 @@ Ltac specialize_by' tac :=
 
 Ltac specialize_by tac := repeat specialize_by' tac.
 
+(** [specialize_by auto] should not mean [specialize_by ltac:( auto
+    with * )]!!!!!!! (see
+    https://coq.inria.fr/bugs/show_bug.cgi?id=4966) We fix this design
+    flaw. *)
+Tactic Notation "specialize_by" tactic3(tac) := specialize_by tac.
+
 (** If [tac_in H] operates in [H] and leaves side-conditions before
     the original goal, then
     [side_conditions_before_to_side_conditions_after tac_in H] does
