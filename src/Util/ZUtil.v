@@ -29,6 +29,7 @@ Create HintDb zsimplify discriminated.
 Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r Z_mod_same_full Z.sub_simpl_r Z.sub_simpl_l Z.add_opp_diag_r Z.add_opp_diag_l Zmod_0_l Z.add_simpl_r Z.add_simpl_l Z.opp_0 Zmod_0_r Zmod_mod : zsimplify.
 Hint Rewrite Z.div_mul Z.div_1_l Z.div_same Z.mod_same Z.div_small Z.mod_small Z.div_add Z.div_add_l Z.mod_add Z.div_0_l Z.mod_mod Z.mod_small Z_mod_zero_opp_full using zutil_arith : zsimplify.
 Hint Rewrite <- Z.opp_eq_mul_m1 Z.one_succ Z.two_succ : zsimplify.
+Hint Rewrite <- Z.div_mod using zutil_arith : zsimplify.
 
 (** "push" means transform [-f x] to [f (-x)]; "pull" means go the other way *)
 Create HintDb push_Zopp discriminated.
@@ -1200,6 +1201,18 @@ Module Z.
     rewrite <- !Z.add_opp_r; auto with zarith.
   Qed.
   Hint Resolve f_equal_sub_mod : zarith.
+
+  Lemma div_mod' a b : b <> 0 -> a = (a / b) * b + a mod b.
+  Proof. intro; etransitivity; [ apply (Z.div_mod a b); assumption | lia ]. Qed.
+  Hint Rewrite <- div_mod' using zutil_arith : zsimplify.
+
+  Lemma div_mod'' a b : b <> 0 -> a = a mod b + b * (a / b).
+  Proof. intro; etransitivity; [ apply (Z.div_mod a b); assumption | lia ]. Qed.
+  Hint Rewrite <- div_mod'' using zutil_arith : zsimplify.
+
+  Lemma div_mod''' a b : b <> 0 -> a = a mod b + (a / b) * b.
+  Proof. intro; etransitivity; [ apply (Z.div_mod a b); assumption | lia ]. Qed.
+  Hint Rewrite <- div_mod''' using zutil_arith : zsimplify.
 
   Lemma div_sub_mod_exact a b : b <> 0 -> a / b = (a - a mod b) / b.
   Proof.
