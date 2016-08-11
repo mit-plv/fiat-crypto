@@ -10,6 +10,8 @@ Hint Resolve (fun x y p q => proj1 (@Nat.mod_bound_pos x y p q)) (fun x y p q =>
 
 Hint Rewrite @mod_small @mod_mod @mod_1_l @mod_1_r succ_pred using omega : natsimplify.
 
+Hint Rewrite sub_diag add_0_l add_0_r sub_0_r : natsimplify.
+
 Local Open Scope nat_scope.
 
 Lemma min_def {x y} : min x y = x - (x - y).

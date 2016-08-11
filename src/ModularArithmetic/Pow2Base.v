@@ -23,7 +23,7 @@ Section Pow2Base.
 
   Definition upper_bound := 2 ^ (sum_firstn limb_widths (length limb_widths)).
 
-  Fixpoint decode_bitwise' us i acc :=
+  Function decode_bitwise' us i acc :=
     match i with
     | O => acc
     | S i' => decode_bitwise' us i' (Z.lor (nth_default 0 us i') (Z.shiftl acc w[i']))
