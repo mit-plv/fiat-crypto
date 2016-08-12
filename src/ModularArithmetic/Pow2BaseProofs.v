@@ -692,8 +692,8 @@ Section BitwiseDecodeEncode.
 End BitwiseDecodeEncode.
 
 Section UniformBase.
-  Context {width : Z} (limb_width_pos : 0 < width).
-  Context (limb_widths : list Z) (limb_widths_nonnil : limb_widths <> nil)
+  Context {width : Z} (limb_width_nonneg : 0 <= width).
+  Context (limb_widths : list Z)
     (limb_widths_uniform : forall w, In w limb_widths -> w = width).
   Local Notation base := (base_from_limb_widths limb_widths).
 
@@ -721,7 +721,6 @@ Section UniformBase.
   Lemma uniform_limb_widths_nonneg : forall w, In w limb_widths -> 0 <= w.
   Proof.
     intros.
-    apply Z.lt_le_incl.
     replace w with width by (symmetry; auto).
     assumption.
   Qed.

@@ -33,7 +33,7 @@ Section Testbit.
            | H : ~ (_ = _ :> nat) |- _ => unique pose proof (fun x => H (Nat2Z.inj _ _ x))
            | H : (_ = _ :> nat) |- _ => unique pose proof (proj2 (Nat2Z.inj_iff _ _) H)
            end.
-  
+
   Lemma testbit_spec' : forall a b us, (0 <= b < width) ->
     bounded limb_widths us -> (length us = length limb_widths)%nat ->
     Z.testbit (nth_default 0 us a) b = Z.testbit (decode base us) (Z.of_nat a * width + b).
@@ -42,6 +42,8 @@ Section Testbit.
              | |- _ => progress intros
              | |- _ => progress autorewrite with push_nth_default Ztestbit zsimplify in *
              | |- _ => progress change (Z.of_nat 0) with 0 in *
+             | [ H : In ?x ?ls, H' : forall x', In x' ?ls -> x' = _ |- _ ]
+               => is_var x; apply H' in H
              | |- _ => rewrite Nat2Z.inj_succ, Z.mul_succ_l
              | |- _ => rewrite nth_default_out_of_bounds by omega
              | |- _ => rewrite nth_default_uniform_base by omega
