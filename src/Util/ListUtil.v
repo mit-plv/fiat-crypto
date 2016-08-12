@@ -1286,6 +1286,15 @@ Proof.
   intuition (congruence || eauto).
 Qed.
 
+Lemma nth_error_repeat {T} x n i v : nth_error (@repeat T x n) i = Some v -> v = x.
+Proof.
+  revert n x v; induction i as [|i IHi]; destruct n; simpl in *; eauto; congruence.
+Qed.
+
+Lemma length_repeat T x n : length (@repeat T x n) = n.
+Proof. induction n; boring. Qed.
+Hint Rewrite length_repeat : distr_length.
+
 Module Export List.
   (* From the 8.6 Standard Library *)
   Lemma in_seq len start n :

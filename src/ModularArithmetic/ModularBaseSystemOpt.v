@@ -603,7 +603,7 @@ Section Multiplication.
     rewrite mul'_opt_correct.
     distr_length.
     assert (0 < length limb_widths)%nat by (pose proof limb_widths_nonnil; destruct limb_widths; congruence || simpl; omega).
-    rewrite Min.min_l; rewrite !length_to_list; break_match; try omega.
+    rewrite Min.min_l; break_match; try omega.
     rewrite Max.max_l; omega.
   Defined.
 
