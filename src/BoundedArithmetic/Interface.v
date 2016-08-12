@@ -11,121 +11,92 @@ Definition size := nat.
 
 Local Coercion Z.of_nat : nat >-> Z.
 
-Class ArchitectureBoundedOps (n : size) :=
-  { BoundedType : Type (* [n]-bit word *);
-    decode : BoundedType -> Z;
-    encode : Z -> BoundedType;
-    ShiftRight : forall a : size, BoundedType * BoundedType -> BoundedType;
-    (** given [(high, low)], constructs [(high << (n - a)) + (low >>
-          a)], i.e., shifts [high * 2ⁿ + low] down by [a] bits *)
-    ShiftLeft : forall a : size, BoundedType -> BoundedType * BoundedType;
-    (** given [x], constructs [(((x << a) / 2ⁿ) mod 2ⁿ, (x << a) mod
-        2ⁿ], i.e., shifts [x] up by [a] bits, and takes the low [2n]
-        bits of the result *)
-    Mod2Pow : forall a : size, BoundedType -> BoundedType (* [mod 2ᵃ] *);
-    CarryAdd : forall (carry : bool) (x y : BoundedType), bool * BoundedType;
-    (** Ouputs [(x + y + if carry then 1 else 0) mod 2ⁿ], together
-          with a boolean that's [true] if the sum is ≥ 2ⁿ, and [false]
-          if there is no carry *)
-    CarrySub : forall (carry : bool) (x y : BoundedType), bool * BoundedType;
-  (** Ouputs [(x - y - if carry then 1 else 0) mod 2ⁿ], together
-          with a boolean that's [true] if the sum is negative, and [false]
-          if there is no borrow *) }.
+Section InstructionGallery.
+  Context (n:Z) (* bit-width of width of W *)
+          {W : Type}(* previously [BoundedType], [W] for word *)
+          (decode : W -> Z).
+  Local Notation imm := Z (only parsing). (* immediate (compile-time) argument *)
 
-Inductive BoundedHalfType {n} {ops : ArchitectureBoundedOps n} :=
-| UpperHalf (_ : BoundedType)
-| LowerHalf (_ : BoundedType).
+  Class is_load_immediate (ldi:imm->W) :=
+    decode_load_immediate : forall x, 0 <= x < 2^n -> decode (ldi x) = x.
 
-Definition UnderlyingBounded {n} {ops : ArchitectureBoundedOps n} (x : BoundedHalfType)
-  := match x with
-     | UpperHalf v => v
-     | LowerHalf v => v
-     end.
+  Class is_shift_right_doubleword_immediate (shrd:W->W->imm->W) :=
+    decode_shift_right_doubleword :
+      forall high low count,
+        0 <= count < n
+        -> decode (shrd high low count) = (((decode high << n) + decode low) >> count) mod 2^n.
 
-Definition decode_half {n_over_two : size} {ops : ArchitectureBoundedOps (2 * n_over_two)%nat} (x : BoundedHalfType) : Z
-  := match x with
-     | UpperHalf v => decode v / 2^n_over_two
-     | LowerHalf v => (decode v) mod 2^n_over_two
-     end.
+  Class is_shift_left_immediate (shl:W->imm->W) :=
+    decode_shift_left_immediate :
+      forall r count, 0 <= count < n -> decode (shl r count) = (decode r << count) mod 2^n.
 
-Class ArchitectureBoundedFullMulOps n {ops : ArchitectureBoundedOps n} :=
-  { Mul : BoundedType -> BoundedType -> BoundedType * BoundedType
-  (** Outputs [(high, low)] *) }.
-Class ArchitectureBoundedHalfWidthMulOps n {ops : ArchitectureBoundedOps n} :=
-  { HalfWidthMul : BoundedHalfType -> BoundedHalfType -> BoundedType }.
+  Class is_spread_left_immediate (sprl:W->imm->W*W(*high, low*)) :=
+    {
+      fst_spread_left_immediate : forall r count, 0 <= count < n ->
+        decode (fst (sprl r count)) = (decode r << count) >> n;
+      snd_spread_left_immediate : forall r count, 0 <= count < n ->
+          decode (snd (sprl r count)) = (decode r << count) mod 2^n
+    }.
 
-Class ArchitectureBoundedProperties {n} (ops : ArchitectureBoundedOps n) :=
-  { bounded_valid : BoundedType -> Prop;
-    decode_valid : forall v,
-        bounded_valid v
-        -> 0 <= decode v < 2^n;
-    encode_valid : forall z,
-        0 <= z < 2^n
-        -> bounded_valid (encode z);
-    encode_correct : forall z,
-        0 <= z < 2^n
-        -> decode (encode z) = z;
-    ShiftRight_valid : forall a high_low,
-        bounded_valid (fst high_low) -> bounded_valid (snd high_low)
-        -> bounded_valid (ShiftRight a high_low);
-    ShiftRight_correct : forall a high_low,
-        bounded_valid (fst high_low) -> bounded_valid (snd high_low)
-        -> decode (ShiftRight a high_low) = (decode (fst high_low) * 2^n + decode (snd high_low)) / 2^a;
-    ShiftLeft_fst_valid : forall a v,
-        bounded_valid v
-        -> bounded_valid (fst (ShiftLeft a v));
-    ShiftLeft_snd_valid : forall a v,
-        bounded_valid v
-        -> bounded_valid (snd (ShiftLeft a v));
-    ShiftLeft_fst_correct : forall a v,
-        bounded_valid v
-        -> decode (fst (ShiftLeft a v)) = (decode v * 2^a) mod 2^n;
-    ShiftLeft_snd_correct : forall a v,
-        bounded_valid v
-        -> decode (snd (ShiftLeft a v)) = ((decode v * 2^a) / 2^n) mod 2^n;
-    Mod2Pow_valid : forall a v,
-        bounded_valid v
-        -> bounded_valid (Mod2Pow a v);
-    Mod2Pow_correct : forall a v,
-        bounded_valid v
-        -> decode (Mod2Pow a v) = (decode v) mod 2^a;
-    CarryAdd_valid : forall c x y,
-        bounded_valid x -> bounded_valid y
-        -> bounded_valid (snd (CarryAdd c x y));
-    CarryAdd_fst_correct : forall c x y,
-        bounded_valid x -> bounded_valid y
-        -> fst (CarryAdd c x y) = (2^n <=? (decode x + decode y + if c then 1 else 0));
-    CarryAdd_snd_correct : forall c x y,
-        bounded_valid x -> bounded_valid y
-        -> decode (snd (CarryAdd c x y)) = (decode x + decode y + if c then 1 else 0) mod 2^n;
-    CarrySub_valid : forall c x y,
-        bounded_valid x -> bounded_valid y
-        -> bounded_valid (snd (CarrySub c x y));
-    CarrySub_fst_correct : forall c x y,
-        bounded_valid x -> bounded_valid y
-        -> fst (CarrySub c x y) = ((decode x - decode y - if c then 1 else 0) <? 0);
-    CarrySub_snd_correct : forall c x y,
-        bounded_valid x -> bounded_valid y
-        -> decode (snd (CarrySub c x y)) = (decode x - decode y - if c then 1 else 0) mod 2^n }.
+  Class is_mask_keep_low (mkl:W->imm->W) :=
+    decode_mask_keep_low : forall r count,
+      0 <= count < n -> decode (mkl r count) = decode r mod 2^count.
 
-Class ArchitectureBoundedFullMulProperties {n ops} (mops : @ArchitectureBoundedFullMulOps n ops) {props : ArchitectureBoundedProperties ops} :=
-  { Mul_fst_valid : forall x y,
-      bounded_valid x -> bounded_valid y
-      -> bounded_valid (fst (Mul x y));
-    Mul_snd_valid : forall x y,
-        bounded_valid x -> bounded_valid y
-        -> bounded_valid (snd (Mul x y));
-    Mul_high_correct : forall x y,
-        bounded_valid x -> bounded_valid y
-        -> decode (fst (Mul x y)) = (decode x * decode y) / 2^n;
-    Mul_low_correct : forall x y,
-        bounded_valid x -> bounded_valid y
-        -> decode (snd (Mul x y)) = (decode x * decode y) mod 2^n }.
+  Local Notation bit b := (if b then 1 else 0).
+  Class is_add_with_carry (adc:W->W->bool->bool*W) :=
+    {
+      fst_add_with_carry : forall x y c, bit (fst (adc x y c)) = (decode x + decode y + bit c) >> n;
+      snd_add_with_carry : forall x y c, decode (snd (adc x y c)) = (decode x + decode y + bit c) mod (2^n)
+    }.
 
-Class ArchitectureBoundedHalfWidthMulProperties {n_over_two ops} (mops : @ArchitectureBoundedHalfWidthMulOps (2 * n_over_two)%nat ops) {props : ArchitectureBoundedProperties ops} :=
-  { HalfWidthMul_valid : forall x y,
-      bounded_valid (UnderlyingBounded x) -> bounded_valid (UnderlyingBounded y)
-      -> bounded_valid (HalfWidthMul x y);
-    HalfWidthMul_correct : forall x y,
-        bounded_valid (UnderlyingBounded x) -> bounded_valid (UnderlyingBounded y)
-        -> decode (HalfWidthMul x y) = (decode_half x * decode_half y)%Z }.
+  Class is_sub_with_carry (subc:W->W->bool->bool*W) :=
+    {
+    fst_sub_with_carry : forall x y c, fst (subc x y c) = ((decode x - decode y - bit c) <? 0);
+    snd_sub_with_carry : forall x y c, decode (snd (subc x y c)) = (decode x - decode y - bit c) mod 2^n
+    }.
+
+  Class is_mul (mul:W->W->W) :=
+    decode_mul : forall x y, decode (mul x y) = decode x * decode y mod 2^n.
+
+  Class is_mul_low_low (w:Z) (mulhwll:W->W->W) :=
+    decode_mul_low_low :
+      forall x y, decode (mulhwll x y) = ((decode x mod 2^w) * (decode y mod 2^w)) mod 2^n.
+  Class is_mul_high_low (w:Z) (mulhwhl:W->W->W) :=
+    decode_mul_high_low :
+      forall x y, decode (mulhwhl x y) = ((decode x >> w) * (decode y mod 2^w)) mod 2^n.
+  Class is_mul_high_high (w:Z) (mulhwhh:W->W->W) :=
+    decode_mul_high_high :
+      forall x y, decode (mulhwhh x y) = ((decode x >> w) * (decode y >> w)) mod 2^n.
+End InstructionGallery.
+
+Module fancy_machine.
+  Local Notation imm := Z (only parsing).
+  Class instructions (n:Z) :=
+    {
+      W : Type (* [n]-bit word *);
+      ldi : imm -> W;
+      shrd : W->W->imm -> W;
+      sprl : W->imm -> W*W;
+      mkl : W->imm -> W;
+      adc : W->W->bool -> bool*W;
+      subc : W->W->bool -> bool*W
+    }.
+
+  Class arithmetic {n} (ops:instructions n) :=
+    {
+      decode : W -> Z;
+      decode_range : forall x, 0 <= decode x < 2^n;
+      load_immediate : is_load_immediate n decode ldi;
+      shift_right_doubleword_immediate : is_shift_right_doubleword_immediate n decode shrd;
+      spread_left_immediate : is_spread_left_immediate n decode sprl;
+      mask_keep_low : is_mask_keep_low n decode mkl;
+      add_with_carry : is_add_with_carry n decode adc;
+      sub_with_carry : is_sub_with_carry n decode subc
+    }.
+  Global Existing Instance load_immediate.
+  Global Existing Instance shift_right_doubleword_immediate.
+  Global Existing Instance spread_left_immediate.
+  Global Existing Instance mask_keep_low.
+  Global Existing Instance add_with_carry.
+  Global Existing Instance sub_with_carry.
+End fancy_machine.
