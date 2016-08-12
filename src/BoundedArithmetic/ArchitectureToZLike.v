@@ -13,8 +13,8 @@ Local Open Scope type_scope.
 Local Coercion Z.of_nat : nat >-> Z.
 
 Section fancy_machine_p256_montgomery_foundation.
-  Context {n_over_two : size}.
-  Local Notation n := (2 * n_over_two)%nat.
+  Context {n_over_two : Z}.
+  Local Notation n := (2 * n_over_two)%Z.
   Context (ops : fancy_machine.instructions n) (modulus : Z).
 
   Definition two_list_to_tuple {A B} (x : A * list B)
@@ -26,7 +26,7 @@ Section fancy_machine_p256_montgomery_foundation.
        | (a, [b0; b1]) => (a, (b0, b1))
        | _ => I
        end.
-
+(*
   (* make all machine-specific constructions here, preferrably as
   thing wrappers around generic constructions *)
     Local Instance DoubleArchitectureBoundedOps : ArchitectureBoundedOps (2 * n)%nat
@@ -103,24 +103,23 @@ Section fancy_machine_p256_montgomery_foundation.
   End full_from_half.
 
   Local Existing Instance DoubleArchitectureBoundedFullMulOpsOfHalfWidthMulOps.
-
+*)
   Axiom admit : forall {T}, T.
 
-  Global Instance ZLikeOps_of_ArchitectureBoundedOps (smaller_bound_exp : size)
+  Global Instance ZLikeOps_of_ArchitectureBoundedOps (smaller_bound_exp : Z)
     : ZLikeOps (2^n) (2^smaller_bound_exp) modulus :=
-    { LargeT := @BoundedType (2 * n)%nat _;
-      SmallT := @BoundedType n _;
-      modulus_digits := encode modulus;
-      decode_large := decode;
+    { LargeT := fancy_machine.W * fancy_machine.W;
+      SmallT := fancy_machine.W;
+      modulus_digits := ldi modulus;
+      decode_large := _;
       decode_small := decode;
       Mod_SmallBound v := snd v;
       DivBy_SmallBound v := fst v;
-      DivBy_SmallerBound v := ShiftRight smaller_bound_exp v;
-      Mul x y := @Interface.Mul n _ _ x y;
-      CarryAdd x y := Interface.CarryAdd false x y;
-      CarrySubSmall x y := Interface.CarrySub false x y;
-      ConditionalSubtract b x := admit;
-      ConditionalSubtractModulus y := admit }.
-End ops.
-
-End with_single_ops.
+      DivBy_SmallerBound v := shrd (fst v) (snd v) smaller_bound_exp;
+      Mul x y := _  (*mulhwll (ldi 0, x) (ldi 0, y)*);
+      CarryAdd x y := _ (*adc x y false*);
+      CarrySubSmall x y := subc x y false;
+      ConditionalSubtract b x := let v := selc b (ldi 0) (ldi modulus) in snd (subc x v false);
+      ConditionalSubtractModulus y := addm y (ldi 0) (ldi modulus) }.
+  Abort.
+End fancy_machine_p256_montgomery_foundation.

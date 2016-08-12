@@ -1,6 +1,8 @@
 (*** Implementing Large Bounded Arithmetic via pairs *)
 Require Import Coq.ZArith.ZArith Coq.Lists.List.
 Require Import Crypto.BoundedArithmetic.Interface.
+Require Import Crypto.BaseSystem.
+Require Import Crypto.BaseSystemProofs.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Notations.
 
@@ -15,7 +17,7 @@ Local Notation eta x := (fst x, snd x).
 
 Section generic_constructions.
   Definition ripple_carry {T} (f : T -> T -> bool -> bool * T)
-             (carry : bool) (xs ys : list T) : bool * list T
+             (xs ys : list T) (carry : bool) : bool * list T
     := List.fold_right
          (fun x_y carry_zs => let '(x, y) := eta x_y in
                               let '(carry, zs) := eta carry_zs in
@@ -23,6 +25,16 @@ Section generic_constructions.
                               (carry, z :: zs))
          (carry, nil)
          (List.combine xs ys).
+
+  Section ripple_carry_adc.
+    Context {n W} {decode : decoder n W} (adc : add_with_carry W).
+
+    Global Instance ripple_carry_add_with_carry : add_with_carry (list W)
+      := {| Interface.adc := ripple_carry adc |}.
+    (*
+    Global Instance ripple_carry_is_add_with_carry {is_adc : is_add_with_carry adc}
+      : is_add_with_carry ripple_carry_add_with_carry.*)
+  End ripple_carry_adc.
 
   (* TODO: Would it made sense to make generic-width shift operations here? *)
 
