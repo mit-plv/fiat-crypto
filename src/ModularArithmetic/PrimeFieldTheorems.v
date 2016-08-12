@@ -19,7 +19,7 @@ Existing Class prime.
 Module F.
   Section Field.
     Context (q:Z) {prime_q:prime q}.
-    Lemma inv_spec : F.inv 0%F = (0%F : F q) 
+    Lemma inv_spec : F.inv 0%F = (0%F : F q)
                      /\ (prime q -> forall x : F q, x <> 0%F -> (F.inv x * x)%F = 1%F).
     Proof. change (@F.inv q) with (proj1_sig (@F.inv_with_spec q)); destruct (@F.inv_with_spec q); eauto. Qed.
 
@@ -78,12 +78,12 @@ Module F.
       rewrite F.eq_to_Z_iff, F.to_Z_mul, F.to_Z_pow, Z2N.id, to_Z_1 by omega.
       apply (fermat_inv q _ (F.to_Z x)); rewrite F.mod_to_Z; eapply F.to_Z_nonzero; trivial.
     Qed.
-    
+
     Lemma euler_criterion (a : F q) (a_nonzero : a <> 0) :
       (a ^ (Z.to_N (q / 2)) = 1) <-> (exists b, b*b = a).
     Proof.
       pose proof F.to_Z_nonzero_range a; pose proof (odd_as_div q).
-      specialize_by ltac:(destruct (Z.prime_odd_or_2 _ prime_q); try omega; trivial).
+      specialize_by (destruct (Z.prime_odd_or_2 _ prime_q); try omega; trivial).
       rewrite F.eq_to_Z_iff, !F.to_Z_pow, !to_Z_1, !Z2N.id by omega.
       rewrite F.square_iff, <-(euler_criterion (q/2)) by (trivial || omega); reflexivity.
     Qed.
@@ -124,7 +124,7 @@ Module F.
       if dec (b ^ 2 = a)
       then b
       else sqrt_minus1 * b.
-    
+
     Lemma eq_b4_a2 (x : F q) (Hex:exists y, y*y = x) :
       ((x ^ Z.to_N (q / 8 + 1)) ^ 2) ^ 2 = x ^ 2.
     Proof.

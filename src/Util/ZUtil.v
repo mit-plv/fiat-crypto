@@ -28,7 +28,8 @@ Ltac zutil_arith := solve [ omega | lia ].
 Create HintDb zsimplify discriminated.
 Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r Z_mod_same_full Z.sub_simpl_r Z.sub_simpl_l Z.add_opp_diag_r Z.add_opp_diag_l Zmod_0_l Z.add_simpl_r Z.add_simpl_l Z.opp_0 Zmod_0_r Zmod_mod : zsimplify.
 Hint Rewrite Z.div_mul Z.div_1_l Z.div_same Z.mod_same Z.div_small Z.mod_small Z.div_add Z.div_add_l Z.mod_add Z.div_0_l Z.mod_mod Z.mod_small Z_mod_zero_opp_full using zutil_arith : zsimplify.
-Hint Rewrite <- Z.opp_eq_mul_m1 : zsimplify.
+Hint Rewrite <- Z.opp_eq_mul_m1 Z.one_succ Z.two_succ : zsimplify.
+Hint Rewrite <- Z.div_mod using zutil_arith : zsimplify.
 
 (** "push" means transform [-f x] to [f (-x)]; "pull" means go the other way *)
 Create HintDb push_Zopp discriminated.
@@ -45,6 +46,8 @@ Create HintDb push_Zsub discriminated.
 Create HintDb pull_Zsub discriminated.
 Create HintDb pull_Zmod discriminated.
 Create HintDb push_Zmod discriminated.
+Create HintDb pull_Zof_nat discriminated.
+Create HintDb push_Zof_nat discriminated.
 Hint Extern 1 => autorewrite with push_Zopp in * : push_Zopp.
 Hint Extern 1 => autorewrite with pull_Zopp in * : pull_Zopp.
 Hint Extern 1 => autorewrite with push_Zpow in * : push_Zpow.
@@ -59,6 +62,8 @@ Hint Extern 1 => autorewrite with push_Zdiv in * : push_Zmul.
 Hint Extern 1 => autorewrite with pull_Zdiv in * : pull_Zmul.
 Hint Extern 1 => autorewrite with pull_Zmod in * : pull_Zmod.
 Hint Extern 1 => autorewrite with push_Zmod in * : push_Zmod.
+Hint Extern 1 => autorewrite with pull_Zof_nat in * : pull_Zof_nat.
+Hint Extern 1 => autorewrite with push_Zof_nat in * : push_Zof_nat.
 Hint Rewrite Z.div_opp_l_nz Z.div_opp_l_z using zutil_arith : pull_Zopp.
 Hint Rewrite Z.mul_opp_l : pull_Zopp.
 Hint Rewrite <- Z.opp_add_distr : pull_Zopp.
@@ -74,6 +79,10 @@ Hint Rewrite <- Z.div_div using zutil_arith : push_Zdiv.
 Hint Rewrite <- Z.mul_mod Z.add_mod Zminus_mod using zutil_arith : pull_Zmod.
 Hint Rewrite Zminus_mod_idemp_l Zminus_mod_idemp_r : pull_Zmod.
 Hint Rewrite Z_mod_nz_opp_full using zutil_arith : push_Zmod.
+Hint Rewrite Nat2Z.id : zsimplify.
+Hint Rewrite Nat2Z.id : push_Zof_nat.
+Hint Rewrite Nat2Z.inj_0 Nat2Z.inj_succ Nat2Z.inj_abs_nat Nat2Z.inj_add Nat2Z.inj_mul Nat2Z.inj_sub_max Nat2Z.inj_pred_max Nat2Z.inj_min Nat2Z.inj_max Zabs2Nat.id_abs Zabs2Nat.id : push_Zof_nat.
+Hint Rewrite <- Nat2Z.inj_0 Nat2Z.inj_succ Nat2Z.inj_abs_nat Nat2Z.inj_add Nat2Z.inj_mul Nat2Z.inj_sub_max Nat2Z.inj_pred_max Nat2Z.inj_min Nat2Z.inj_max Zabs2Nat.id_abs Zabs2Nat.id : pull_Zof_nat.
 
 (** For the occasional lemma that can remove the use of [Z.div] *)
 Create HintDb zstrip_div.
@@ -177,6 +186,8 @@ Module Z.
     intros; apply Z2Nat.inj...
     rewrite <- pow_Z2N_Zpow, !Nat2Z.id...
   Qed.
+  Hint Rewrite pow_Zpow : push_Zof_nat.
+  Hint Rewrite <- pow_Zpow : pull_Zof_nat.
 
   Lemma mod_exp_0 : forall a x m, x > 0 -> m > 1 -> a mod m = 0 ->
     a ^ x mod m = 0.
@@ -1190,6 +1201,18 @@ Module Z.
     rewrite <- !Z.add_opp_r; auto with zarith.
   Qed.
   Hint Resolve f_equal_sub_mod : zarith.
+
+  Lemma div_mod' a b : b <> 0 -> a = (a / b) * b + a mod b.
+  Proof. intro; etransitivity; [ apply (Z.div_mod a b); assumption | lia ]. Qed.
+  Hint Rewrite <- div_mod' using zutil_arith : zsimplify.
+
+  Lemma div_mod'' a b : b <> 0 -> a = a mod b + b * (a / b).
+  Proof. intro; etransitivity; [ apply (Z.div_mod a b); assumption | lia ]. Qed.
+  Hint Rewrite <- div_mod'' using zutil_arith : zsimplify.
+
+  Lemma div_mod''' a b : b <> 0 -> a = a mod b + (a / b) * b.
+  Proof. intro; etransitivity; [ apply (Z.div_mod a b); assumption | lia ]. Qed.
+  Hint Rewrite <- div_mod''' using zutil_arith : zsimplify.
 
   Lemma div_sub_mod_exact a b : b <> 0 -> a / b = (a - a mod b) / b.
   Proof.

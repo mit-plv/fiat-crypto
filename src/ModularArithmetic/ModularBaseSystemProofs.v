@@ -292,7 +292,7 @@ Section CarryProofs.
 
   Lemma carry_rep : forall i us x,
     (length us = length limb_widths)%nat ->
-    (i < length limb_widths)%nat -> 
+    (i < length limb_widths)%nat ->
     forall pf1 pf2,
     from_list _ us pf1 ~= x -> from_list _ (carry i us) pf2 ~= x.
   Proof.
@@ -332,7 +332,7 @@ Section CarryProofs.
   Qed.
 
   Opaque carry_full.
-  
+
   Context `{cc : CarryChain limb_widths}.
   Lemma carry_mul_rep : forall us vs x y,
     rep us x -> rep vs y ->
@@ -519,7 +519,7 @@ Section CanonicalizationProofs.
         fold (carry_sequence (make_chain i) us);  rewrite length_carry_sequence; auto.
       repeat (break_if; try omega);
         try solve [rewrite Z.pow2_mod_spec by auto; autorewrite with zsimplify; apply Z.mod_pos_bound; zero_bounds];
-        pose proof (IHi i us); pose proof (IHi n us); specialize_by assumption; specialize_by ltac:(auto with zarith);
+        pose proof (IHi i us); pose proof (IHi n us); specialize_by assumption; specialize_by auto with zarith;
         repeat break_if; try omega; pose proof c_pos; (split; try solve [zero_bounds]).
       (* TODO (jadep) : clean up/automate these leftover cases. *)
       - replace (2 * 2 ^ limb_widths [n]) with (2 ^ limb_widths [n] + 2 ^ limb_widths [n]) by ring.
