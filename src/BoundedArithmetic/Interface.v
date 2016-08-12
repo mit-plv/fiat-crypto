@@ -36,7 +36,7 @@ Section InstructionGallery.
 
   Record load_immediate := { ldi :> imm -> W }.
 
-  Class is_load_immediate {ldi : load_immediate}  :=
+  Class is_load_immediate {ldi : load_immediate} :=
     decode_load_immediate : forall x, 0 <= x < 2^n -> decode (ldi x) = x.
 
   Record shift_right_doubleword_immediate := { shrd :> W -> W -> imm -> W }.
@@ -83,7 +83,7 @@ Section InstructionGallery.
 
   Record sub_with_carry := { subc :> W -> W -> bool -> bool * W }.
 
-  Class is_sub_with_carry (subc:W->W->bool->bool*W) :=
+  Class is_sub_with_carry (subc : sub_with_carry) :=
     {
       fst_sub_with_carry : forall x y c, fst (subc x y c) = ((decode x - decode y - bit c) <? 0);
       decode_snd_sub_with_carry : forall x y c, decode (snd (subc x y c)) = (decode x - decode y - bit c) mod 2^n
