@@ -11,6 +11,15 @@ Create HintDb pull_decode discriminated.
 Hint Extern 1 => progress autorewrite with push_decode in * : push_decode.
 Hint Extern 1 => progress autorewrite with pull_decode in * : pull_decode.
 
+(* TODO(from jgross): Try dropping the record wrappers.  See
+   https://github.com/mit-plv/fiat-crypto/pull/52#discussion_r74627992
+   and
+   https://github.com/mit-plv/fiat-crypto/pull/52#discussion_r74658417
+   and
+   https://github.com/mit-plv/fiat-crypto/pull/52#issuecomment-239536847.
+   The wrappers are here to make [autorewrite] databases feasable and
+   fast, based on design patterns learned from past experience.  There
+   might be better ways. *)
 Class decoder (n : Z) W :=
   { decode : W -> Z }.
 Coercion decode : decoder >-> Funclass.

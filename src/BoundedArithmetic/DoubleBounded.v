@@ -3,6 +3,7 @@ Require Import Coq.ZArith.ZArith Coq.Lists.List.
 Require Import Crypto.BoundedArithmetic.Interface.
 Require Import Crypto.BaseSystem.
 Require Import Crypto.BaseSystemProofs.
+Require Import Crypto.ModularArithmetic.Pow2Base.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Notations.
 
