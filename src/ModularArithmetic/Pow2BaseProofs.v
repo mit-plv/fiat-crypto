@@ -381,6 +381,31 @@ Section Pow2BaseProofs.
     auto using testbit_decode_firstn_high.
   Qed.
 
+  (* TODO : move to ZUtil *)
+  Lemma testbit_false_bound : forall a x, 0 <= x ->
+    (forall n, ~ (n < x) -> Z.testbit a n = false) ->
+    a < 2 ^ x.
+  Proof.
+    intros.
+    assert (a = Z.pow2_mod a x). {
+     apply Z.bits_inj'; intros.
+     rewrite testbit_pow2_mod by omega; break_if; auto.
+    }
+    rewrite H1.
+    rewrite Z.pow2_mod_spec; try apply Z.mod_pos_bound; zero_bounds.
+  Qed.
+
+  Lemma decode_upper_bound : forall us,
+    length us = length limb_widths ->
+    bounded limb_widths us ->
+    BaseSystem.decode base us < upper_bound limb_widths.
+  Proof.
+    cbv [upper_bound]; intros.
+    apply testbit_false_bound; auto; intros.
+    rewrite testbit_decode_high; auto;
+      replace (length us) with (length limb_widths); try omega.
+  Qed.
+
   Lemma decode_firstn_succ : forall us i,
       (S i <= length us)%nat ->
       bounded limb_widths us ->
