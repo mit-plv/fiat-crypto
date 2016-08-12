@@ -1202,6 +1202,12 @@ Module Z.
   Qed.
   Hint Resolve f_equal_sub_mod : zarith.
 
+  Lemma base_pow_neg b n : n < 0 -> b^n = 0.
+  Proof.
+    destruct n; intro H; try reflexivity; compute in H; congruence.
+  Qed.
+  Hint Rewrite base_pow_neg using zutil_arith : zsimplify.
+
   Lemma div_mod' a b : b <> 0 -> a = (a / b) * b + a mod b.
   Proof. intro; etransitivity; [ apply (Z.div_mod a b); assumption | lia ]. Qed.
   Hint Rewrite <- div_mod' using zutil_arith : zsimplify.
