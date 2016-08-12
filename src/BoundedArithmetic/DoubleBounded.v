@@ -4,6 +4,7 @@ Require Import Crypto.BoundedArithmetic.Interface.
 Require Import Crypto.BaseSystem.
 Require Import Crypto.BaseSystemProofs.
 Require Import Crypto.ModularArithmetic.Pow2Base.
+Require Import Crypto.ModularArithmetic.Pow2BaseProofs.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Notations.
 
@@ -16,7 +17,39 @@ Local Open Scope type_scope.
 Local Coercion Z.of_nat : nat >-> Z.
 Local Notation eta x := (fst x, snd x).
 
+(** TODO(jgross): Split off proofs *)
 Section generic_constructions.
+  Section decode.
+    Context {n W} {decode : decoder n W} {k : Z}
+            {validity : word_validity n W}.
+    Let limb_widths := repeat n (Z.to_nat k).
+    (** The list is low to high *)
+    Global Instance list_decoder : decoder (k * n) (list W)
+      := { decode w := BaseSystem.decode (base_from_limb_widths limb_widths) (List.map decode w) }.
+
+    Global Instance list_word_validity
+      : word_validity (k * n) (list W)
+      := { word_valid w := 0 <= k
+                           /\ List.length w = Z.to_nat k
+                           /\ forall i v, nth_error w i = Some v -> word_valid (nth_default (List.fold_right and True (List.map word_valid w) }.
+
+    Global Instance list_is_decode : is_decode list_decoder.
+    Proof.
+      unfold list_decoder, list_word_validity; hnf; simpl.
+      Print bounded.
+      SearchAbout (BaseSystem.decode _ _).
+
+About Z.shiftr_spec.
+      hnf.
+      simpl.
+  decode_range : forall x, word_valid x -> 0 <= decode x < 2^n.
+
+
+
+
+
+
+
   Definition ripple_carry {T} (f : T -> T -> bool -> bool * T)
              (xs ys : list T) (carry : bool) : bool * list T
     := List.fold_right

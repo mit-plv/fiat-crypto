@@ -25,51 +25,82 @@ Class decoder (n : Z) W :=
 Coercion decode : decoder >-> Funclass.
 Global Arguments decode {n W _} _.
 
-Class is_decode {n W} (decode : decoder n W) :=
-  decode_range : forall x, 0 <= decode x < 2^n.
+Class word_validity (n : Z) W :=
+  { word_valid : W -> Prop }.
+Existing Class word_valid.
+Global Arguments word_valid {n W _} _.
+
+Class is_decode {n W} (decode : decoder n W) {validity : word_validity n W} :=
+  decode_range : forall x, word_valid x -> 0 <= decode x < 2^n.
 
 Section InstructionGallery.
   Context (n : Z) (* bit-width of width of [W] *)
           {W : Type} (* bounded type, [W] for word *)
-          (Wdecoder : decoder n W).
+          (Wdecoder : decoder n W)
+          {validity : word_validity n W}.
   Local Notation imm := Z (only parsing). (* immediate (compile-time) argument *)
 
   Record load_immediate := { ldi :> imm -> W }.
 
   Class is_load_immediate {ldi : load_immediate} :=
-    decode_load_immediate : forall x, 0 <= x < 2^n -> decode (ldi x) = x.
+    {
+      load_immediate_valid :> forall x, 0 <= x < 2^n -> word_valid (ldi x);
+      decode_load_immediate : forall x, 0 <= x < 2^n -> decode (ldi x) = x
+    }.
 
   Record shift_right_doubleword_immediate := { shrd :> W -> W -> imm -> W }.
 
   Class is_shift_right_doubleword_immediate (shrd : shift_right_doubleword_immediate) :=
-    decode_shift_right_doubleword :
-      forall high low count,
-        0 <= count < n
-        -> decode (shrd high low count) = (((decode high << n) + decode low) >> count) mod 2^n.
+    {
+      shift_right_doubleword_valid :> forall high low count,
+          word_valid high -> word_valid low -> 0 <= count < n
+          -> word_valid (shrd high low count);
+      decode_shift_right_doubleword : forall high low count,
+          word_valid high -> word_valid low -> 0 <= count < n
+          -> decode (shrd high low count) = (((decode high << n) + decode low) >> count) mod 2^n
+    }.
 
   Record shift_left_immediate := { shl :> W -> imm -> W }.
 
   Class is_shift_left_immediate (shl : shift_left_immediate) :=
-    decode_shift_left_immediate :
-      forall r count, 0 <= count < n -> decode (shl r count) = (decode r << count) mod 2^n.
+    {
+      shift_left_immediate_valid :> forall r count,
+          word_valid r -> 0 <= count < n
+          -> word_valid (shl r count);
+      decode_shift_left_immediate : forall r count,
+          word_valid r -> 0 <= count < n
+          -> decode (shl r count) = (decode r << count) mod 2^n
+    }.
 
   Record spread_left_immediate := { sprl :> W -> imm -> W * W (* [(high, low)] *) }.
 
   Class is_spread_left_immediate (sprl : spread_left_immediate) :=
     {
+      fst_spread_left_immediate_valid : forall r count,
+        word_valid r -> 0 <= count < n
+        -> word_valid (fst (sprl r count));
+      snd_spread_left_immediate_valid : forall r count,
+          word_valid r -> 0 <= count < n
+          -> word_valid (snd (sprl r count));
       decode_fst_spread_left_immediate : forall r count,
-        0 <= count < n
-        -> decode (fst (sprl r count)) = (decode r << count) >> n;
+          word_valid r -> 0 <= count < n
+          -> decode (fst (sprl r count)) = (decode r << count) >> n;
       decode_snd_spread_left_immediate : forall r count,
-          0 <= count < n
+          word_valid r -> 0 <= count < n
           -> decode (snd (sprl r count)) = (decode r << count) mod 2^n
     }.
 
   Record mask_keep_low := { mkl :> W -> imm -> W }.
 
   Class is_mask_keep_low (mkl : mask_keep_low) :=
-    decode_mask_keep_low : forall r count,
-      0 <= count < n -> decode (mkl r count) = decode r mod 2^count.
+    {
+      mask_keep_low_valid :> forall r count,
+          word_valid r -> 0 <= count < n
+          -> word_valid (mkl r count);
+      decode_mask_keep_low : forall r count,
+          word_valid r -> 0 <= count < n
+          -> decode (mkl r count) = decode r mod 2^count
+    }.
 
   Local Notation bit b := (if b then 1 else 0).
 
@@ -77,48 +108,99 @@ Section InstructionGallery.
 
   Class is_add_with_carry (adc : add_with_carry) :=
     {
-      bit_fst_add_with_carry : forall x y c, bit (fst (adc x y c)) = (decode x + decode y + bit c) >> n;
-      decode_snd_add_with_carry : forall x y c, decode (snd (adc x y c)) = (decode x + decode y + bit c) mod (2^n)
+      snd_add_with_carry_valid :> forall x y c,
+          word_valid x -> word_valid y
+          -> word_valid (snd (adc x y c));
+      bit_fst_add_with_carry : forall x y c,
+          word_valid x -> word_valid y
+          -> bit (fst (adc x y c)) = (decode x + decode y + bit c) >> n;
+      decode_snd_add_with_carry : forall x y c,
+          word_valid x -> word_valid y
+          -> decode (snd (adc x y c)) = (decode x + decode y + bit c) mod (2^n)
     }.
 
   Record sub_with_carry := { subc :> W -> W -> bool -> bool * W }.
 
   Class is_sub_with_carry (subc : sub_with_carry) :=
     {
-      fst_sub_with_carry : forall x y c, fst (subc x y c) = ((decode x - decode y - bit c) <? 0);
-      decode_snd_sub_with_carry : forall x y c, decode (snd (subc x y c)) = (decode x - decode y - bit c) mod 2^n
+      snd_sub_with_carry_valid :> forall x y c,
+          word_valid x -> word_valid y
+          -> word_valid (snd (subc x y c));
+      fst_sub_with_carry : forall x y c,
+          word_valid x -> word_valid y
+          -> fst (subc x y c) = ((decode x - decode y - bit c) <? 0);
+      decode_snd_sub_with_carry : forall x y c,
+          word_valid x -> word_valid y
+          -> decode (snd (subc x y c)) = (decode x - decode y - bit c) mod 2^n
     }.
 
   Record multiply := { mul :> W -> W -> W }.
 
   Class is_mul (mul : multiply) :=
-    decode_mul : forall x y, decode (mul x y) = (decode x * decode y) mod 2^n.
+    {
+      mul_valid :> forall x y,
+          word_valid x -> word_valid y
+          -> word_valid (mul x y);
+      decode_mul : forall x y,
+          word_valid x -> word_valid y
+          -> decode (mul x y) = (decode x * decode y) mod 2^n
+    }.
 
   Record multiply_low_low := { mulhwll :> W -> W -> W }.
   Record multiply_high_low := { mulhwhl :> W -> W -> W }.
   Record multiply_high_high := { mulhwhh :> W -> W -> W }.
 
   Class is_mul_low_low (w:Z) (mulhwll : multiply_low_low) :=
-    decode_mul_low_low :
-      forall x y, decode (mulhwll x y) = ((decode x mod 2^w) * (decode y mod 2^w)) mod 2^n.
+    {
+      mul_low_low_valid :> forall x y,
+          word_valid x -> word_valid y
+          -> word_valid (mulhwll x y);
+      decode_mul_low_low : forall x y,
+          word_valid x -> word_valid y
+          -> decode (mulhwll x y) = ((decode x mod 2^w) * (decode y mod 2^w)) mod 2^n
+    }.
   Class is_mul_high_low (w:Z) (mulhwhl : multiply_high_low) :=
-    decode_mul_high_low :
-      forall x y, decode (mulhwhl x y) = ((decode x >> w) * (decode y mod 2^w)) mod 2^n.
+    {
+      mul_high_low_valid :> forall x y,
+          word_valid x -> word_valid y
+          -> word_valid (mulhwhl x y);
+      decode_mul_high_low : forall x y,
+          word_valid x -> word_valid y
+          -> decode (mulhwhl x y) = ((decode x >> w) * (decode y mod 2^w)) mod 2^n
+    }.
   Class is_mul_high_high (w:Z) (mulhwhh : multiply_high_high) :=
-    decode_mul_high_high :
-      forall x y, decode (mulhwhh x y) = ((decode x >> w) * (decode y >> w)) mod 2^n.
+    {
+      mul_high_high_valid :> forall x y,
+          word_valid x -> word_valid y
+          -> word_valid (mulhwhh x y);
+      decode_mul_high_high : forall x y,
+          word_valid x -> word_valid y
+          -> decode (mulhwhh x y) = ((decode x >> w) * (decode y >> w)) mod 2^n
+    }.
 
   Record select_conditional := { selc :> bool -> W -> W -> W }.
 
   Class is_select_conditional (selc : select_conditional) :=
-    decode_select_conditional : forall b x y,
-      decode (selc b x y) = if b then decode x else decode y.
+    {
+      select_conditional_valid : forall b x y,
+        word_valid x -> word_valid y
+        -> word_valid (selc b x y);
+      decode_select_conditional : forall b x y,
+          word_valid x -> word_valid y
+          -> decode (selc b x y) = if b then decode x else decode y
+    }.
 
   Record add_modulo := { addm :> W -> W -> W (* modulus *) -> W }.
 
   Class is_add_modulo (addm : add_modulo) :=
-    decode_add_modulo : forall x y modulus,
-      decode (addm x y modulus) = (decode x + decode y) mod (decode modulus).
+    {
+      add_modulo_valid : forall x y modulus,
+        word_valid x -> word_valid y -> word_valid modulus
+        -> word_valid (addm x y modulus);
+      decode_add_modulo : forall x y modulus,
+          word_valid x -> word_valid y -> word_valid modulus
+          -> decode (addm x y modulus) = (decode x + decode y) mod (decode modulus)
+    }.
 End InstructionGallery.
 
 Global Arguments load_immediate : clear implicits.
@@ -162,20 +244,20 @@ Existing Class multiply_high_high.
 Existing Class select_conditional.
 Existing Class add_modulo.
 
-Global Arguments is_decode {_ _} _.
-Global Arguments is_load_immediate {_ _ _} _.
-Global Arguments is_shift_right_doubleword_immediate {_ _ _} _.
-Global Arguments is_shift_left_immediate {_ _ _} _.
-Global Arguments is_spread_left_immediate {_ _ _} _.
-Global Arguments is_mask_keep_low {_ _ _} _.
-Global Arguments is_add_with_carry {_ _ _} _.
-Global Arguments is_sub_with_carry {_ _ _} _.
-Global Arguments is_mul {_ _ _} _.
-Global Arguments is_mul_low_low {_ _ _} _ _.
-Global Arguments is_mul_high_low {_ _ _} _ _.
-Global Arguments is_mul_high_high {_ _ _} _ _.
-Global Arguments is_select_conditional {_ _ _} _.
-Global Arguments is_add_modulo {_ _ _} _.
+Global Arguments is_decode {_ _} _ {_}.
+Global Arguments is_load_immediate {_ _ _ _} _.
+Global Arguments is_shift_right_doubleword_immediate {_ _ _ _} _.
+Global Arguments is_shift_left_immediate {_ _ _ _} _.
+Global Arguments is_spread_left_immediate {_ _ _ _} _.
+Global Arguments is_mask_keep_low {_ _ _ _} _.
+Global Arguments is_add_with_carry {_ _ _ _} _.
+Global Arguments is_sub_with_carry {_ _ _ _} _.
+Global Arguments is_mul {_ _ _ _} _.
+Global Arguments is_mul_low_low {_ _ _ _} _ _.
+Global Arguments is_mul_high_low {_ _ _ _} _ _.
+Global Arguments is_mul_high_high {_ _ _ _} _ _.
+Global Arguments is_select_conditional {_ _ _ _} _.
+Global Arguments is_add_modulo {_ _ _ _} _.
 
 Ltac bounded_sovlver_tac :=
   solve [ eassumption | typeclasses eauto | omega | auto 6 using decode_range with typeclass_instances omega ].
@@ -239,6 +321,7 @@ Module fancy_machine.
 
   Class arithmetic {n_over_two} (ops:instructions (2 * n_over_two)) :=
     {
+      word_validity :> word_validity (2 * n_over_two) W;
       decode_range :> is_decode decode;
       load_immediate :> is_load_immediate ldi;
       shift_right_doubleword_immediate :> is_shift_right_doubleword_immediate shrd;
