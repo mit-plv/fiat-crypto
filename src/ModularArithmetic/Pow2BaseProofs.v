@@ -732,11 +732,27 @@ Section UniformBase.
 
   Lemma sum_firstn_uniform_base : forall i, (i <= length limb_widths)%nat ->
                                             sum_firstn limb_widths i = Z.of_nat i * width.
-  Admitted.
+  Proof.
+    clear limb_width_nonneg. (* clear this before induction so we don't depend on this *)
+    induction limb_widths as [|x xs IHxs]; (intros [|i] ?);
+      simpl @length in *;
+      autorewrite with simpl_sum_firstn push_Zof_nat zsimplify;
+      try reflexivity;
+      try omega.
+    assert (x = width) by auto with datatypes; subst.
+    rewrite IHxs by auto with datatypes omega; omega.
+  Qed.
 
   Lemma sum_firstn_uniform_base_strong : forall i, (length limb_widths <= i)%nat ->
                                             sum_firstn limb_widths i = Z.of_nat (length limb_widths) * width.
-  Admitted.
+  Proof.
+    intros; rewrite sum_firstn_all, sum_firstn_uniform_base by omega; reflexivity.
+  Qed.
+
+  Lemma upper_bound_uniform : upper_bound limb_widths = 2^(Z.of_nat (length limb_widths) * width).
+  Proof.
+    unfold upper_bound; rewrite sum_firstn_uniform_base_strong by omega; reflexivity.
+  Qed.
 
   (* TODO : move *)
   Lemma decode_truncate_base : forall bs us, BaseSystem.decode bs us = BaseSystem.decode (firstn (length us) bs) us.
@@ -806,6 +822,8 @@ Section UniformBase.
   Qed.
 
 End UniformBase.
+
+Hint Rewrite @upper_bound_uniform using solve [ auto with datatypes ] : push_upper_bound.
 
 Section TestbitDecode.
   Local Notation "u # i" := (nth_default 0 u i) (at level 30).
