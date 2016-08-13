@@ -395,15 +395,47 @@ Section Pow2BaseProofs.
     rewrite Z.pow2_mod_spec; try apply Z.mod_pos_bound; zero_bounds.
   Qed.
 
+  (** TODO: Figure out how to automate and clean up this proof *)
+  Lemma decode_nonneg : forall us,
+    length us = length limb_widths ->
+    bounded limb_widths us ->
+    0 <= BaseSystem.decode base us.
+  Proof.
+    intros.
+    unfold bounded, BaseSystem.decode, BaseSystem.decode' in *; simpl in *.
+    pose 0 as zero.
+    assert (0 <= zero) by reflexivity.
+    replace base with (map (Z.mul (two_p zero)) base)
+      by (etransitivity; [ | apply map_id ]; apply map_ext; auto with zarith).
+    clearbody zero.
+    revert dependent zero.
+    generalize dependent limb_widths.
+    induction us as [|u us IHus]; intros [|w limb_widths'] ?? Hbounded ??; simpl in *;
+      try (reflexivity || congruence).
+    pose proof (Hbounded 0%nat) as Hbounded0.
+    pose proof (fun n => Hbounded (S n)) as HboundedS.
+    unfold nth_default, nth_error in Hbounded0.
+    unfold nth_default in HboundedS.
+    rewrite map_map.
+    unfold BaseSystem.accumulate at 1; simpl.
+    assert (0 < two_p zero) by (rewrite two_p_equiv; auto with zarith).
+    replace (map (fun x => two_p zero * (two_p w * x)) (base_from_limb_widths limb_widths')) with (map (Z.mul (two_p (zero + w))) (base_from_limb_widths limb_widths'))
+      by (apply map_ext; rewrite two_p_is_exp by auto with zarith omega; auto with zarith).
+    change 0 with (0 + 0) at 1.
+    apply Z.add_le_mono; auto with zarith.
+  Qed.
+
   Lemma decode_upper_bound : forall us,
     length us = length limb_widths ->
     bounded limb_widths us ->
-    BaseSystem.decode base us < upper_bound limb_widths.
+    0 <= BaseSystem.decode base us < upper_bound limb_widths.
   Proof.
     cbv [upper_bound]; intros.
-    apply testbit_false_bound; auto; intros.
-    rewrite testbit_decode_high; auto;
-      replace (length us) with (length limb_widths); try omega.
+    split.
+    { apply decode_nonneg; auto. }
+    { apply testbit_false_bound; auto; intros.
+      rewrite testbit_decode_high; auto;
+        replace (length us) with (length limb_widths); try omega. }
   Qed.
 
   Lemma decode_firstn_succ : forall us i,
