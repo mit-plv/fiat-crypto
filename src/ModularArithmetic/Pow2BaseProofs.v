@@ -997,12 +997,6 @@ Section ConversionHelper.
 
   Definition update_by_concat_bits num_low_bits bits x := concat_bits num_low_bits x bits. 
   
-  Ltac pair_destruct := 
-    match goal with H : ?t = (?f,?s) |- _ =>
-                    replace t with (fst t, snd t) in H by (destruct t; reflexivity);
-                    inversion H; subst; clear H
-    end.
-  
 End ConversionHelper.
 
 Section Conversion.
@@ -1053,7 +1047,10 @@ Section Conversion.
   Definition convert'_invariant inp i out :=
     length out = length limb_widthsB
     /\ bounded limb_widthsB out
+    /\ Z.of_nat i <= bitsIn limb_widthsA
     /\ forall n, Z.testbit (decodeB out) n = if Z_lt_dec n (Z.of_nat i) then Z.testbit (decodeA inp) n else false.
+  
+  Ltac subst_lia := repeat match goal with | x := _ |- _ => subst x end; subst; lia.
   
   Lemma convert'_bounded_step : forall inp i out,
     bounded limb_widthsB out ->
@@ -1064,12 +1061,58 @@ Section Conversion.
     let dist := Z.min (limb_widthsA # digitA - indexA)
                       (limb_widthsB # digitB - indexB) in
     let bitsA := Z.pow2_mod ((inp # digitA) >> indexA) dist in
+    0 < dist ->
     bounded limb_widthsB (update_nth digitB (update_by_concat_bits indexB bitsA) out).
   Proof.
-  Admitted.
+    repeat match goal with
+           | |- _ => progress intros
+           | |- _ => progress autorewrite with Ztestbit
+           | |- _ => rewrite update_nth_nth_default_full
+           | |- _ => rewrite testbit_pow2_mod
+           | |- _ => break_if
+           | H : forall x : Z, In x ?lw -> x = ?y, H0 : 0 < ?y |- _ =>
+              unique pose proof (uniform_limb_widths_nonneg H0 lw H)
+           | |- _ =>  progress cbv [update_by_concat_bits];
+                        rewrite concat_bits_spec by (apply bit_index_nonneg, Nat2Z.is_nonneg)
+           | |- bounded _ _ => apply pow2_mod_bounded_iff
+           | |- Z.pow2_mod _ _ = _ => apply Z.bits_inj'
+           | |- false = Z.testbit _ _ => symmetry
+           | x := _ |- Z.testbit ?x _ = _ => subst x
+           | |- Z.testbit _ _ = false => eapply testbit_bounded_high; eauto; lia
+           | |- _ => solve [auto using nth_default_limb_widths_nonneg]
+           | |- _ => subst_lia
+    end.
+  Qed.
 
-  Ltac subst_lia := repeat match goal with | x := _ |- _ => subst x end; lia.
-  
+  Lemma convert'_index_step : forall inp i out,
+    bounded limb_widthsB out ->
+    let digitA := digit_index limb_widthsA (Z.of_nat i) in
+    let digitB := digit_index limb_widthsB (Z.of_nat i) in
+    let indexA :=   bit_index limb_widthsA (Z.of_nat i) in
+    let indexB :=   bit_index limb_widthsB (Z.of_nat i) in
+    let dist := Z.min (limb_widthsA # digitA - indexA)
+                      (limb_widthsB # digitB - indexB) in
+    let bitsA := Z.pow2_mod ((inp # digitA) >> indexA) dist in
+    0 < dist ->
+    Z.of_nat i + dist <= bitsIn limb_widthsA.
+  Proof.
+    pose proof (le_remaining_bits limb_widthsA).
+    pose proof (le_remaining_bits limb_widthsB).
+    repeat match goal with
+           | |- _ => progress intros
+           | H : forall x : Z, In x ?lw -> x = ?y, H0 : 0 < ?y |- _ =>
+              unique pose proof (uniform_limb_widths_nonneg H0 lw H)
+           | |- _ => progress specialize_by assumption
+           | H : _ /\ _ |- _ => destruct H
+           | |- _ => break_if 
+           | |- _ => split 
+           | a := digit_index _ ?i, H : forall x, 0 <= x < bitsIn _ -> _ |- _ => specialize (H i); forward H
+           | |- _ => subst_lia
+           | |- _ => apply bit_index_pos_iff; auto using Nat2Z.is_nonneg
+           | |- _ => apply Nat2Z.is_nonneg
+    end.
+  Qed.
+
   Lemma convert'_invariant_step : forall inp i out,
     length inp = length limb_widthsA ->
     bounded limb_widthsA inp ->
@@ -1081,7 +1124,7 @@ Section Conversion.
     let dist := Z.min (limb_widthsA # digitA - indexA)
                       (limb_widthsB # digitB - indexB) in
     let bitsA := Z.pow2_mod ((inp # digitA) >> indexA) dist in
-    0 <= dist ->
+    0 < dist ->
     convert'_invariant inp (i + Z.to_nat dist)%nat
                        (update_nth digitB (update_by_concat_bits indexB bitsA) out).
   Proof.
@@ -1116,6 +1159,7 @@ Section Conversion.
               destruct (Z_le_dec 0 n)
            | |- _ => solve [distr_length]
            | |- _ => eapply convert'_bounded_step; solve [eauto]
+           | |- _ => eapply convert'_index_step; solve [eauto]
            | |- _ => lia
            | x := ?y |- Z.testbit ?x _ =  _ => subst x
            | d1 := digit_index ?lw _ |-digit_index ?lw _ = ?d1 =>
@@ -1145,10 +1189,21 @@ Section Conversion.
     let indexB :=   bit_index limb_widthsB i in
     let dist := Z.min (limb_widthsA # digitA - indexA)
                       (limb_widthsB # digitB - indexB) in
-    dist <= 0  -> bitsIn limb_widthsA = i.
+    dist <= 0  -> bitsIn limb_widthsA <= i.
   Proof.
-    
-  Admitted.
+    pose proof (split_index_done_case limb_widthsA).
+    pose proof (split_index_done_case limb_widthsB).
+    repeat match goal with
+           | |- _ => progress intros
+           | H : forall x : Z, In x ?lw -> x = ?y, H0 : 0 < ?y |- _ =>
+              unique pose proof (uniform_limb_widths_nonneg H0 lw H)
+           | |- _ => progress specialize_by assumption
+           | H : _ /\ _ |- _ => destruct H
+           | |- _ => break_if 
+           | H : 0 <= ?i, H0 : forall x, 0 <= x -> if _ then _ else _ |- _ => specialize (H0 i H)
+           | |- _ => repeat match goal with x := _ |- _ => subst x end; subst; lia
+           end.
+  Qed.
   
   Lemma convert'_invariant_holds : forall inp i out,
     length inp = length limb_widthsA ->
@@ -1164,11 +1219,13 @@ Section Conversion.
            | H : convert'_invariant _ _ ?out |- convert'_invariant _ _ ?out => progress cbv [convert'_invariant] in *
            | |- _ => rewrite Z2Nat.id
            | H : _ /\ _ |- _ => destruct H
-           | |- _ => erewrite convert'_termination_condition by (eassumption || eauto using Nat2Z.is_nonneg)
+           | |- _ => split
+           | |- _ => apply Z.le_antisymm; [ assumption | apply convert'_termination_condition; lia ]
            | |- _ => assumption
            | |- _ => lia
            | |- _ => solve [eauto]
-             end.
+           | |- _ => progress replace (bitsIn limb_widthsA) with (Z.of_nat i)
+           end.
   Qed.
 
   Definition convert us := convert' us 0 (BaseSystem.zeros (length limb_widthsB)).
