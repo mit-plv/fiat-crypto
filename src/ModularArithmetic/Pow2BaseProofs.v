@@ -933,10 +933,10 @@ Section SplitIndex.
     exact (snd_split_index'_nonneg _ _).
   Qed.
 
-  Lemma digit_index_done_case : forall i, 0 <= i ->
+  Lemma split_index_done_case : forall i, 0 <= i ->
     if Z_lt_dec i (sum_firstn limb_widths (length limb_widths))
-    then (digit_index i < length limb_widths)%nat
-    else (digit_index i = length limb_widths).
+    then (digit_index i < length limb_widths)%nat /\ 0 < limb_widths # (digit_index i) - bit_index i
+    else (digit_index i = length limb_widths) /\ limb_widths # (digit_index i) - bit_index i <= 0.
   Admitted.
 
   Lemma digit_index_not_done : forall i, 0 <= i ->
@@ -950,9 +950,19 @@ Section SplitIndex.
                                  
   Admitted.
 
+  Lemma digit_index_not_lt_length : forall i, 0 <= i ->
+                                              ~ (digit_index i < length limb_widths)%nat ->
+                                              sum_firstn limb_widths (length limb_widths) <= i.
+  Admitted.
+
+  
   Lemma le_remaining_bits : forall i, 0 <= i < sum_firstn limb_widths (length limb_widths) ->
                                       0 <= sum_firstn limb_widths (length limb_widths)
                                            - (i + (limb_widths # (digit_index i) - bit_index i)).
+  Admitted.
+
+  Lemma same_digit : forall i j, 0 <= i <= j -> j < i + (limb_widths # (digit_index i) - bit_index i) ->
+                                 digit_index i = digit_index j.
   Admitted.
 
   Lemma same_digit_bit_index_sub : forall i j, 0 <= i <= j ->
@@ -1057,8 +1067,11 @@ Section Conversion.
     bounded limb_widthsB (update_nth digitB (update_by_concat_bits indexB bitsA) out).
   Proof.
   Admitted.
+
+  Ltac subst_lia := repeat match goal with | x := _ |- _ => subst x end; lia.
   
   Lemma convert'_invariant_step : forall inp i out,
+    length inp = length limb_widthsA ->
     bounded limb_widthsA inp ->
     convert'_invariant inp i out ->
     let digitA := digit_index limb_widthsA (Z.of_nat i) in
@@ -1072,17 +1085,21 @@ Section Conversion.
     convert'_invariant inp (i + Z.to_nat dist)%nat
                        (update_nth digitB (update_by_concat_bits indexB bitsA) out).
   Proof.
-    Check testbit_decode.
-    SearchAbout update_nth.
-    Time repeat match goal with
+    repeat match goal with
            | |- _ => progress intros; cbv [convert'_invariant] in *
+           | |- _ => progress autorewrite with Ztestbit
+           | H : forall x : Z, In x ?lw -> x = ?y, H0 : 0 < ?y |- _ =>
+              unique pose proof (uniform_limb_widths_nonneg H0 lw H)
            | H : length _ = length limb_widthsB |- _ => rewrite H
            | |- _ => rewrite Z.testbit_neg_r by omega
            | |- _ => rewrite Nat2Z.inj_add
            | |- _ => rewrite Z2Nat.id in *
            | |- _ => rewrite update_nth_nth_default_full
            | |- _ => rewrite nth_default_out_of_bounds by omega
-           | |- _ => rewrite testbit_decode by eauto using uniform_limb_widths_nonneg
+           | |- false = Z.testbit _ _ =>
+             rewrite testbit_decode_high; auto;
+               match goal with H : length _ = length limb_widthsA |- _ => rewrite H end;
+                 etransitivity; [ apply bits_fit | ]; apply digit_index_not_lt_length; auto
            | |- _ =>  progress cbv [update_by_concat_bits];
                         rewrite concat_bits_spec by (apply bit_index_nonneg, Nat2Z.is_nonneg)
            | H : _ /\ _ |- _ => destruct H
@@ -1094,24 +1111,31 @@ Section Conversion.
              rewrite <-H
            | H : 0 <= ?n |- appcontext[Z.testbit (BaseSystem.decode _ _) ?n] =>
              rewrite testbit_decode by
-                 (distr_length; eauto using uniform_limb_widths_nonneg, convert'_bounded_step)
-           | |- Z.testbit (decodeB _) ?n = Z.testbit _ ?n =>
+                 (distr_length; eauto using convert'_bounded_step)
+           | |- Z.testbit (decodeB _) ?n = _ =>
               destruct (Z_le_dec 0 n)
            | |- _ => solve [distr_length]
            | |- _ => eapply convert'_bounded_step; solve [eauto]
            | |- _ => lia
-                end.
-    match goal with
-    | d := digit_index ?lw ?j,
-               b := bit_index ?lw ?j,
-               H : digit_index ?lw ?i = ?d |- _ =>
-               let A := fresh "H" in
-               let B := fresh "H" in
-               (   (assert (0 <= i <= j) as A by omega)
-                || (assert (0 <= j <= i) as A by omega; symmetry in H));
-               assert (forall w, In w lw -> 0 <= w) as B by eauto using uniform_limb_widths_nonneg;
-               pose proof (same_digit_bit_index_sub lw B _ _ A H); subst b; lia
-                                                                              end.
+           | x := ?y |- Z.testbit ?x _ =  _ => subst x
+           | d1 := digit_index ?lw _ |-digit_index ?lw _ = ?d1 =>
+                   symmetry; apply same_digit; eauto; subst_lia
+           | d1 := digit_index ?lw _ |- Z.testbit (?a # ?d1) _ = Z.testbit (?a # ?d2) _ =>
+                   assert (d2 = d1); [ | repeat f_equal]
+           | H : ~ (?n < ?i), H0 : ?n < ?i + ?d,
+               d1 := digit_index ?lw ?i, H1 : digit_index ?lw ?n <> ?d1 |- _ => exfalso; apply H1  
+           | d := digit_index ?lw ?j,
+                   b := bit_index ?lw ?j,
+                   H : digit_index ?lw ?i = ?d |- _ =>
+                   let A := fresh "H" in
+                   let B := fresh "H" in
+                   (   (assert (0 <= i <= j) as A by omega)
+                       || (assert (0 <= j <= i) as A by omega; symmetry in H));
+                   assert (forall w, In w lw -> 0 <= w) as B by auto;
+                   pose proof (same_digit_bit_index_sub lw B _ _ A H); subst b
+           | |- _ => rewrite <- testbit_decode by
+                 (distr_length; eauto using convert'_bounded_step); assumption
+    end.
   Qed.
 
   Lemma convert'_termination_condition : forall i, 0 <= i ->
@@ -1123,27 +1147,28 @@ Section Conversion.
                       (limb_widthsB # digitB - indexB) in
     dist <= 0  -> bitsIn limb_widthsA = i.
   Proof.
+    
   Admitted.
   
   Lemma convert'_invariant_holds : forall inp i out,
+    length inp = length limb_widthsA ->
     bounded limb_widthsA inp ->
     convert'_invariant inp i out ->
     convert'_invariant inp (Z.to_nat (bitsIn limb_widthsA)) (convert' inp i out).
   Proof.
-    intros until 1; functional induction (convert' inp i out);
+    intros until 2; functional induction (convert' inp i out);
       repeat match goal with
            | |- _ => progress intros
            | H : convert'_invariant _ _ _ |- convert'_invariant _ _ (convert' _ _ _) =>
-             eapply convert'_invariant_step in H; solve [eauto]
+             eapply convert'_invariant_step in H; solve [auto; lia]
            | H : convert'_invariant _ _ ?out |- convert'_invariant _ _ ?out => progress cbv [convert'_invariant] in *
            | |- _ => rewrite Z2Nat.id
            | H : _ /\ _ |- _ => destruct H
-           | |- _ => split
            | |- _ => erewrite convert'_termination_condition by (eassumption || eauto using Nat2Z.is_nonneg)
            | |- _ => assumption
            | |- _ => lia
            | |- _ => solve [eauto]
-           end.
+             end.
   Qed.
 
   Definition convert us := convert' us 0 (BaseSystem.zeros (length limb_widthsB)).
@@ -1157,8 +1182,11 @@ Section Conversion.
            | |- _ => progress cbv [convert convert'_invariant] in *
            | |- _ => progress change (Z.of_nat 0) with 0 in *
            | |- _ => progress rewrite ?length_zeros, ?zeros_rep, ?Z.testbit_0_l
+           | H : forall x : Z, In x ?lw -> x = ?y, H0 : 0 < ?y |- _ =>
+              unique pose proof (uniform_limb_widths_nonneg H0 lw H)
            | H : length _ = length limb_widthsA |- _ => rewrite H
            | |- _ => rewrite Z.testbit_neg_r by omega
+           | |- _ => rewrite nth_default_zeros
            | |- _ => break_if
            | |- _ => split
            | H : _ /\ _ |- _ => destruct H
@@ -1169,7 +1197,10 @@ Section Conversion.
            | |- _ => reflexivity
            | |- _ => lia
            | |- _ => solve [auto using sum_firstn_limb_widths_nonneg]
+           | |- _ => solve [apply nth_default_preserves_properties; auto; lia]
            | |- _ => rewrite Z2Nat.id in *
+           | |- bounded _ _ => apply bounded_iff
+           | |- 0 < 2 ^ _ => zero_bounds
            end.
   Qed.
 End Conversion.
