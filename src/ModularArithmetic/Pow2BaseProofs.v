@@ -832,11 +832,10 @@ Section UniformBase.
     eauto using tl_repeat.
   Qed.
 
-  Lemma decode_shift_uniform : forall us u0, (length (u0 :: us) <= length limb_widths)%nat ->
-    BaseSystem.decode base (u0 :: us) = u0 + ((BaseSystem.decode base us) << width).
+  Lemma decode_shift_uniform_tl : forall us u0, (length (u0 :: us) <= length limb_widths)%nat ->
+    BaseSystem.decode base (u0 :: us) = u0 + ((BaseSystem.decode (base_from_limb_widths (tl limb_widths)) us) << width).
   Proof.
     intros.
-    rewrite decode_tl_base with (us := us) by distr_length.
     rewrite decode_shift; auto using uniform_limb_widths_nonneg.
     destruct limb_widths; try congruence;
       repeat match goal with
@@ -851,6 +850,14 @@ Section UniformBase.
              | |- _ => solve [auto using in_eq, Z.mul_comm]
             end.
     f_equal; eauto using in_eq.
+  Qed.
+
+  Lemma decode_shift_uniform : forall us u0, (length (u0 :: us) <= length limb_widths)%nat ->
+    BaseSystem.decode base (u0 :: us) = u0 + ((BaseSystem.decode base us) << width).
+  Proof.
+    intros.
+    rewrite decode_tl_base with (us := us) by distr_length.
+    apply decode_shift_uniform_tl; assumption.
   Qed.
 
 End UniformBase.
