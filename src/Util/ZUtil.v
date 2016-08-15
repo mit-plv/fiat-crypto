@@ -26,7 +26,7 @@ Ltac zutil_arith := solve [ omega | lia ].
     which can reasonably be said to "simplify" the goal, should go in
     this database. *)
 Create HintDb zsimplify discriminated.
-Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r Z_mod_same_full Z.sub_simpl_r Z.sub_simpl_l Z.add_opp_diag_r Z.add_opp_diag_l Zmod_0_l Z.add_simpl_r Z.add_simpl_l Z.opp_0 Zmod_0_r Zmod_mod Z.mul_succ_l Z.mul_succ_r : zsimplify.
+Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r Z_mod_same_full Z.sub_simpl_r Z.sub_simpl_l Z.add_opp_diag_r Z.add_opp_diag_l Zmod_0_l Z.add_simpl_r Z.add_simpl_l Z.opp_0 Zmod_0_r Zmod_mod Z.mul_succ_l Z.mul_succ_r Z.shiftr_0_r Z.shiftr_0_l : zsimplify.
 Hint Rewrite Z.div_mul Z.div_1_l Z.div_same Z.mod_same Z.div_small Z.mod_small Z.div_add Z.div_add_l Z.mod_add Z.div_0_l Z.mod_mod Z.mod_small Z_mod_zero_opp_full using zutil_arith : zsimplify.
 Hint Rewrite <- Z.opp_eq_mul_m1 Z.one_succ Z.two_succ : zsimplify.
 Hint Rewrite <- Z.div_mod using zutil_arith : zsimplify.
@@ -48,6 +48,10 @@ Create HintDb pull_Zmod discriminated.
 Create HintDb push_Zmod discriminated.
 Create HintDb pull_Zof_nat discriminated.
 Create HintDb push_Zof_nat discriminated.
+Create HintDb pull_Zshift discriminated.
+Create HintDb push_Zshift discriminated.
+Create HintDb Zshift_to_pow discriminated.
+Create HintDb Zpow_to_shift discriminated.
 Hint Extern 1 => autorewrite with push_Zopp in * : push_Zopp.
 Hint Extern 1 => autorewrite with pull_Zopp in * : pull_Zopp.
 Hint Extern 1 => autorewrite with push_Zpow in * : push_Zpow.
@@ -64,6 +68,10 @@ Hint Extern 1 => autorewrite with pull_Zmod in * : pull_Zmod.
 Hint Extern 1 => autorewrite with push_Zmod in * : push_Zmod.
 Hint Extern 1 => autorewrite with pull_Zof_nat in * : pull_Zof_nat.
 Hint Extern 1 => autorewrite with push_Zof_nat in * : push_Zof_nat.
+Hint Extern 1 => autorewrite with pull_Zshift in * : pull_Zshift.
+Hint Extern 1 => autorewrite with push_Zshift in * : push_Zshift.
+Hint Extern 1 => autorewrite with Zshift_to_pow in * : Zshift_to_pow.
+Hint Extern 1 => autorewrite with Zpow_to_shift in * : Zpow_to_shift.
 Hint Rewrite Z.div_opp_l_nz Z.div_opp_l_z using zutil_arith : pull_Zopp.
 Hint Rewrite Z.mul_opp_l : pull_Zopp.
 Hint Rewrite <- Z.opp_add_distr : pull_Zopp.
@@ -83,6 +91,13 @@ Hint Rewrite Nat2Z.id : zsimplify.
 Hint Rewrite Nat2Z.id : push_Zof_nat.
 Hint Rewrite Nat2Z.inj_0 Nat2Z.inj_succ Nat2Z.inj_abs_nat Nat2Z.inj_add Nat2Z.inj_mul Nat2Z.inj_sub_max Nat2Z.inj_pred_max Nat2Z.inj_min Nat2Z.inj_max Zabs2Nat.id_abs Zabs2Nat.id : push_Zof_nat.
 Hint Rewrite <- Nat2Z.inj_0 Nat2Z.inj_succ Nat2Z.inj_abs_nat Nat2Z.inj_add Nat2Z.inj_mul Nat2Z.inj_sub_max Nat2Z.inj_pred_max Nat2Z.inj_min Nat2Z.inj_max Zabs2Nat.id_abs Zabs2Nat.id : pull_Zof_nat.
+Hint Rewrite Z.shiftr_shiftl_l Z.shiftr_shiftl_r Z.shiftr_shiftr using zutil_arith : pull_Zshift.
+Hint Rewrite <- Z.shiftr_lxor Z.shiftr_land Z.shiftr_lor Z.shiftr_ldiff Z.lnot_shiftr Z.ldiff_ones_r using zutil_arith : pull_Zshift.
+Hint Rewrite Z.shiftr_lxor Z.shiftr_land Z.shiftr_lor Z.shiftr_ldiff Z.lnot_shiftr Z.ldiff_ones_r using zutil_arith : push_Zshift.
+Hint Rewrite <- Z.shiftr_shiftl_l Z.shiftr_shiftl_r Z.shiftr_shiftr using zutil_arith : push_Zshift.
+Hint Rewrite Z.shiftr_opp_r Z.shiftl_opp_r Z.shiftr_0_r Z.shiftr_0_l : push_Zshift.
+Hint Rewrite Z.shiftr_div_pow2 Z.shiftr_mul_pow2 using zutil_arith : Zshift_to_pow.
+Hint Rewrite <- Z.shiftr_div_pow2 Z.shiftr_mul_pow2 using zutil_arith : Zpow_to_shift.
 
 (** For the occasional lemma that can remove the use of [Z.div] *)
 Create HintDb zstrip_div.
@@ -339,6 +354,8 @@ Module Z.
       [assumption || apply Z.pow_nonzero || apply Z.pow_pos_nonneg; omega].
     f_equal; ring.
   Qed.
+  Hint Rewrite Z.shiftr_add_shiftl_high using zutil_arith : pull_Zshift.
+  Hint Rewrite <- Z.shiftr_add_shiftl_high using zutil_arith : push_Zshift.
 
   Lemma shiftr_add_shiftl_low : forall n m a b, 0 <= m <= n -> 0 <= a < 2 ^ n ->
     Z.shiftr (a + (Z.shiftl b n)) m = Z.shiftr a m + Z.shiftr b (m - n).
@@ -350,6 +367,8 @@ Module Z.
     rewrite Z.mul_assoc, Z.div_add by (apply Z.pow_nonzero; omega).
     repeat f_equal; ring.
   Qed.
+  Hint Rewrite Z.shiftr_add_shiftl_low using zutil_arith : pull_Zshift.
+  Hint Rewrite <- Z.shiftr_add_shiftl_low using zutil_arith : push_Zshift.
 
   Lemma testbit_add_shiftl_high : forall i, (0 <= i) -> forall a b n, (0 <= n <= i) ->
     0 <= a < 2 ^ n ->
@@ -404,6 +423,8 @@ Module Z.
     rewrite Z.shiftr_shiftr by omega.
     reflexivity.
   Qed.
+  Hint Rewrite Z.shiftr_succ using zutil_arith : push_Zshift.
+  Hint Rewrite <- Z.shiftr_succ using zutil_arith : pull_Zshift.
 
   Definition shiftl_by n a := Z.shiftl a n.
 
@@ -468,12 +489,14 @@ Module Z.
     rewrite !Z.shiftr_div_pow2, Z.pow_1_r by omega.
     apply Z.div_le_mono; omega.
   Qed.
+  Hint Resolve shiftr_1_r_le : zarith.
 
   Lemma shiftr_le : forall a b i : Z, 0 <= i -> a <= b -> a >> i <= b >> i.
   Proof.
     intros until 1. revert a b. apply natlike_ind with (x := i); intros; auto.
     rewrite !shiftr_succ, shiftr_1_r_le; eauto. reflexivity.
   Qed.
+  Hint Resolve shiftr_le : zarith.
 
   Lemma ones_pred : forall i, 0 < i -> Z.ones (Z.pred i) = Z.shiftr (Z.ones i) 1.
   Proof.
@@ -488,6 +511,7 @@ Module Z.
     rewrite <-Z.pow_add_r by (pose proof (Pos2Z.is_pos p); omega).
     f_equal. omega.
   Qed.
+  Hint Rewrite <- ones_pred using zutil_arith : push_Zshift.
 
   Lemma shiftr_ones' : forall a n, 0 <= a < 2 ^ n -> forall i, (0 <= i) ->
     Z.shiftr a i <= Z.ones (n - i) \/ n <= i.
@@ -520,6 +544,7 @@ Module Z.
       - rewrite Z.shiftr_eq_0; try omega; try reflexivity.
         apply Z.log2_lt_pow2; omega.
   Qed.
+  Hint Resolve shiftr_ones : zarith.
 
   Lemma shiftr_upper_bound : forall a n, 0 <= n -> 0 <= a <= 2 ^ n -> Z.shiftr a n <= 1.
   Proof.
@@ -536,6 +561,7 @@ Module Z.
       assert (0 < 2 ^ n) by (apply Z.pow_pos_nonneg; omega).
       omega.
   Qed.
+  Hint Resolve shiftr_upper_bound : zarith.
 
   Lemma lor_shiftl : forall a b n, 0 <= n -> 0 <= a < 2 ^ n ->
     Z.lor a (Z.shiftl b n) = a + (Z.shiftl b n).
