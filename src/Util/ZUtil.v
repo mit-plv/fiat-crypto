@@ -108,6 +108,75 @@ Hint Rewrite Z.div_small_iff using zutil_arith : zstrip_div.
     We'll put, e.g., [mul_div_eq] into it below. *)
 Create HintDb zstrip_div.
 
+(** Work around bug #5019, that [zify] loops on dependent types.  We
+    copy/paste [zify_nat_op] from the standard library and add a case
+    to each of the [match isnat with ... end]. *)
+Ltac zify_nat_op ::=
+ match goal with
+  (* misc type conversions: positive/N/Z to nat *)
+  | H : context [ Z.of_nat (Pos.to_nat ?a) ] |- _ => rewrite (positive_nat_Z a) in H
+  | |- context [ Z.of_nat (Pos.to_nat ?a) ] => rewrite (positive_nat_Z a)
+  | H : context [ Z.of_nat (N.to_nat ?a) ] |- _ => rewrite (N_nat_Z a) in H
+  | |- context [ Z.of_nat (N.to_nat ?a) ] => rewrite (N_nat_Z a)
+  | H : context [ Z.of_nat (Z.abs_nat ?a) ] |- _ => rewrite (Zabs2Nat.id_abs a) in H
+  | |- context [ Z.of_nat (Z.abs_nat ?a) ] => rewrite (Zabs2Nat.id_abs a)
+
+  (* plus -> Z.add *)
+  | H : context [ Z.of_nat (plus ?a ?b) ] |- _ => rewrite (Nat2Z.inj_add a b) in H
+  | |- context [ Z.of_nat (plus ?a ?b) ] => rewrite (Nat2Z.inj_add a b)
+
+  (* min -> Z.min *)
+  | H : context [ Z.of_nat (min ?a ?b) ] |- _ => rewrite (Nat2Z.inj_min a b) in H
+  | |- context [ Z.of_nat (min ?a ?b) ] => rewrite (Nat2Z.inj_min a b)
+
+  (* max -> Z.max *)
+  | H : context [ Z.of_nat (max ?a ?b) ] |- _ => rewrite (Nat2Z.inj_max a b) in H
+  | |- context [ Z.of_nat (max ?a ?b) ] => rewrite (Nat2Z.inj_max a b)
+
+  (* minus -> Z.max (Z.sub ... ...) 0 *)
+  | H : context [ Z.of_nat (minus ?a ?b) ] |- _ => rewrite (Nat2Z.inj_sub_max a b) in H
+  | |- context [ Z.of_nat (minus ?a ?b) ] => rewrite (Nat2Z.inj_sub_max a b)
+
+  (* pred -> minus ... -1 -> Z.max (Z.sub ... -1) 0 *)
+  | H : context [ Z.of_nat (pred ?a) ] |- _ => rewrite (pred_of_minus a) in H
+  | |- context [ Z.of_nat (pred ?a) ] => rewrite (pred_of_minus a)
+
+  (* mult -> Z.mul and a positivity hypothesis *)
+  | H : context [ Z.of_nat (mult ?a ?b) ] |- _ =>
+        pose proof (Nat2Z.is_nonneg (mult a b));
+        rewrite (Nat2Z.inj_mul a b) in *
+  | |- context [ Z.of_nat (mult ?a ?b) ] =>
+        pose proof (Nat2Z.is_nonneg (mult a b));
+        rewrite (Nat2Z.inj_mul a b) in *
+
+  (* O -> Z0 *)
+  | H : context [ Z.of_nat O ] |- _ => simpl (Z.of_nat O) in H
+  | |- context [ Z.of_nat O ] => simpl (Z.of_nat O)
+
+  (* S -> number or Z.succ *)
+  | H : context [ Z.of_nat (S ?a) ] |- _ =>
+     let isnat := isnatcst a in
+     match isnat with
+      | true => simpl (Z.of_nat (S a)) in H
+      | _ => rewrite (Nat2Z.inj_succ a) in H
+      | _ => change (Z.of_nat (S a)) with (Z_of_nat' (S a)) in H
+     end
+  | |- context [ Z.of_nat (S ?a) ] =>
+     let isnat := isnatcst a in
+     match isnat with
+      | true => simpl (Z.of_nat (S a))
+      | _ => rewrite (Nat2Z.inj_succ a)
+      | _ => change (Z.of_nat (S a)) with (Z_of_nat' (S a))
+     end
+
+  (* atoms of type nat : we add a positivity condition (if not already there) *)
+  | _ : 0 <= Z.of_nat ?a |- _ => hide_Z_of_nat a
+  | _ : context [ Z.of_nat ?a ] |- _ =>
+    pose proof (Nat2Z.is_nonneg a); hide_Z_of_nat a
+  | |- context [ Z.of_nat ?a ] =>
+    pose proof (Nat2Z.is_nonneg a); hide_Z_of_nat a
+ end.
+
 Ltac comes_before ls x y :=
   match ls with
   | context[cons x ?xs]
