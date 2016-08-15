@@ -96,7 +96,8 @@ Hint Rewrite <- Z.shiftr_lxor Z.shiftr_land Z.shiftr_lor Z.shiftr_ldiff Z.lnot_s
 Hint Rewrite Z.shiftr_lxor Z.shiftr_land Z.shiftr_lor Z.shiftr_ldiff Z.lnot_shiftr Z.ldiff_ones_r using zutil_arith : push_Zshift.
 Hint Rewrite <- Z.shiftr_shiftl_l Z.shiftr_shiftl_r Z.shiftr_shiftr using zutil_arith : push_Zshift.
 Hint Rewrite Z.shiftr_opp_r Z.shiftl_opp_r Z.shiftr_0_r Z.shiftr_0_l : push_Zshift.
-Hint Rewrite Z.shiftr_div_pow2 Z.shiftr_mul_pow2 using zutil_arith : Zshift_to_pow.
+Hint Rewrite Z.shiftr_div_pow2 Z.shiftr_mul_pow2 Z.shiftl_opp_r using zutil_arith : Zshift_to_pow.
+Hint Rewrite <- Z.shiftr_opp_r using zutil_arith : Zshift_to_pow.
 Hint Rewrite <- Z.shiftr_div_pow2 Z.shiftr_mul_pow2 using zutil_arith : Zpow_to_shift.
 
 (** For the occasional lemma that can remove the use of [Z.div] *)
