@@ -181,6 +181,9 @@ Proof.
   omega.
 Qed.
 
+Lemma map_nil : forall A B (f : A -> B), map f nil = nil.
+Proof. reflexivity. Qed.
+
 (* Note: this is a duplicate of a lemma that exists in 8.5, included for
    8.4 support *)
 Lemma In_nth : forall {A} (x : A) d xs, In x xs ->
