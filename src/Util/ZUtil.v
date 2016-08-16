@@ -1568,6 +1568,90 @@ Module Z.
   Proof. lia. Qed.
   Hint Rewrite simplify_twice_sub_add : zsimplify.
 
+  Local Ltac simplify_div_tac :=
+    intros; rewrite <- ?Z_div_plus_full_l, <- ?Z_div_plus_full by assumption;
+    try (apply f_equal2; [ | reflexivity ]);
+    try zutil_arith.
+
+  (* Naming Convention: [X] for thing being divided by, [p] for plus,
+     [m] for minus, [d] for div, and [_] to separate parentheses and
+     multiplication. *)
+  (* Mathematica code to generate these hints:
+<<
+ClearAll[minus, plus, div, mul, combine, parens, ExprToString,
+  ExprToExpr, ExprToName, SymbolsIn, a, b, c, d, e, f, g, h, i, j, k,
+  l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, X];
+Exprs = {div[combine["a", mul["b", "X"], "c", "d"], "X"]};
+ExprToString[div[x_, y_], withparen_: False] :=
+ With[{v := ExprToString[x, True] <> " / " <> ExprToString[y, True]},
+  If[withparen, "(" <> v <> ")", v]]
+ExprToString[combine[x_], withparen_: False] :=
+ ExprToString[x, withparen]
+ExprToString[combine[x_, minus, y__], withparen_: False] :=
+ With[{v :=
+    ExprToString[x, False] <> " - " <>
+     ExprToString[combine[y], False]},
+  If[withparen, "(" <> v <> ")", v]]
+ExprToString[combine[minus, y__], withparen_: False] :=
+ With[{v := "-" <> ExprToString[combine[y], False]},
+  If[withparen, "(" <> v <> ")", v]]
+ExprToString[combine[x_, y__], withparen_: False] :=
+ With[{v :=
+    ExprToString[x, False] <> " + " <>
+     ExprToString[combine[y], False]},
+  If[withparen, "(" <> v <> ")", v]]
+ExprToString[mul[x_], withparen_: False] := ExprToString[x]
+ExprToString[mul[x_, y__], withparen_: False] :=
+ With[{v :=
+    ExprToString[x, False] <> " * " <> ExprToString[mul[y], False]},
+  If[withparen, "(" <> v <> ")", v]]
+ExprToString[parens[x__], withparen_: False] :=
+ "(" <> ExprToString[combine[x]] <> ")"
+ExprToString[x_String, withparen_: False] := x
+ExprToExpr[div[x__]] := Divide @@ Map[ExprToExpr, {x}]
+ExprToExpr[mul[x__]] := Times @@ Map[ExprToExpr, {x}]
+ExprToExpr[combine[]] := 0
+ExprToExpr[combine[minus, y_, z___]] := -ExprToExpr[y] +
+  ExprToExpr[combine[z]]
+ExprToExpr[combine[x_, y___]] := ExprToExpr[x] + ExprToExpr[combine[y]]
+ExprToExpr[parens[x__]] := ExprToExpr[combine[x]]
+ExprToExpr[x_String] := Symbol[x]
+ExprToName["X", ispos_: True] := If[ispos, "X", "mX"]
+ExprToName[x_String, ispos_: True] := If[ispos, "p", "m"]
+ExprToName[div[x_, y_], ispos_: True] :=
+ If[ispos, "p", "m"] <> ExprToName[x] <> "d" <> ExprToName[y]
+ExprToName[mul[x_], ispos_: True] :=
+ If[ispos, "", "m_"] <> ExprToName[x] <> "_"
+ExprToName[mul[x_, y__], ispos_: True] :=
+ If[ispos, "", "m_"] <> ExprToName[x] <> ExprToName[mul[y]]
+ExprToName[combine[x_], ispos_: True] := ExprToName[x, ispos]
+ExprToName[combine[x_, minus, mul[y__], z___], ispos_: True] :=
+ ExprToName[x, ispos] <> "m_" <> ExprToName[mul[y], True] <>
+  ExprToName[combine[z], True]
+ExprToName[combine[x_, mul[y__], z___], ispos_: True] :=
+ ExprToName[x, ispos] <> "p_" <> ExprToName[mul[y], True] <>
+  ExprToName[combine[z], True]
+ExprToName[combine[x_, y__], ispos_: True] :=
+ ExprToName[x, ispos] <> ExprToName[combine[y], True]
+ExprToName[combine[x_, minus, y__], ispos_: True] :=
+ ExprToName[x, ispos] <> ExprToName[combine[y], True]
+ExprToName[combine[x_, y__], ispos_: True] :=
+ ExprToName[x, ispos] <> ExprToName[combine[y], True]
+SymbolsIn[x_String] := {x <> " "}
+SymbolsIn[f_[y___]] := Join @@ Map[SymbolsIn, {y}]
+StringJoin @@
+ Map[{"  Lemma simplify_div_" <> ExprToName[#1] <> " " <>
+     StringJoin @@ Sort[DeleteDuplicates[SymbolsIn[#1]]] <>
+     ": X <> 0 -> " <> ExprToString[#1] <> " = " <>
+     StringReplace[(FullSimplify[ExprToExpr[#1]] // InputForm //
+        ToString), "/" -> " / "] <> "." <>
+     "\n  Proof. simplify_div_tac. Qed.\n  Hint Rewrite \
+simplify_div_" <> ExprToName[#1] <> " : zsimplify.\n"} &, Exprs]
+>> *)
+  Lemma simplify_div_ppp_pX_ppdX a b c d X : X <> 0 -> (a + b * X + c + d) / X = b + (a + c + d) / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_ppp_pX_ppdX : zsimplify.
+
   (* Naming convention: [X] for thing being aggregated, [p] for plus,
      [m] for minus, [_] for parentheses *)
   (* Python code to generate these hints:
