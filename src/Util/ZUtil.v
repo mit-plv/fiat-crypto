@@ -1581,7 +1581,9 @@ Module Z.
 ClearAll[minus, plus, div, mul, combine, parens, ExprToString,
   ExprToExpr, ExprToName, SymbolsIn, a, b, c, d, e, f, g, h, i, j, k,
   l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, X];
-Exprs = {div[combine["a", mul["b", "X"], "c", "d"], "X"]};
+Exprs = {div[combine["a", mul["b", "X"], "c", "d"], "X"],
+   div[combine["a", parens["b", parens["c", mul["d", "X"]], "e"]],
+    "X"]};
 ExprToString[div[x_, y_], withparen_: False] :=
  With[{v := ExprToString[x, True] <> " / " <> ExprToString[y, True]},
   If[withparen, "(" <> v <> ")", v]]
@@ -1624,6 +1626,7 @@ ExprToName[mul[x_], ispos_: True] :=
  If[ispos, "", "m_"] <> ExprToName[x] <> "_"
 ExprToName[mul[x_, y__], ispos_: True] :=
  If[ispos, "", "m_"] <> ExprToName[x] <> ExprToName[mul[y]]
+ExprToName[combine[], ispos_: True] := ""
 ExprToName[combine[x_], ispos_: True] := ExprToName[x, ispos]
 ExprToName[combine[x_, minus, mul[y__], z___], ispos_: True] :=
  ExprToName[x, ispos] <> "m_" <> ExprToName[mul[y], True] <>
@@ -1637,6 +1640,8 @@ ExprToName[combine[x_, minus, y__], ispos_: True] :=
  ExprToName[x, ispos] <> ExprToName[combine[y], True]
 ExprToName[combine[x_, y__], ispos_: True] :=
  ExprToName[x, ispos] <> ExprToName[combine[y], True]
+ExprToName[parens[x__], ispos_: True] :=
+ "_o_" <> ExprToName[combine[x], ispos] <> "_c_"
 SymbolsIn[x_String] := {x <> " "}
 SymbolsIn[f_[y___]] := Join @@ Map[SymbolsIn, {y}]
 StringJoin @@
@@ -1646,11 +1651,14 @@ StringJoin @@
      StringReplace[(FullSimplify[ExprToExpr[#1]] // InputForm //
         ToString), "/" -> " / "] <> "." <>
      "\n  Proof. simplify_div_tac. Qed.\n  Hint Rewrite \
-simplify_div_" <> ExprToName[#1] <> " : zsimplify.\n"} &, Exprs]
+simplify_div_" <> ExprToName[#1] <> " using zutil_arith : zsimplify.\n"} &, Exprs]
 >> *)
   Lemma simplify_div_ppp_pX_ppdX a b c d X : X <> 0 -> (a + b * X + c + d) / X = b + (a + c + d) / X.
   Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppp_pX_ppdX : zsimplify.
+  Hint Rewrite simplify_div_ppp_pX_ppdX using zutil_arith : zsimplify.
+  Lemma simplify_div_pp_o_p_o_pp_pX__c_p_c_dX a b c d e X : X <> 0 -> (a + (b + (c + d * X) + e)) / X = d + (a + b + c + e) / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_pp_o_p_o_pp_pX__c_p_c_dX using zutil_arith : zsimplify.
 
   (* Naming convention: [X] for thing being aggregated, [p] for plus,
      [m] for minus, [_] for parentheses *)
