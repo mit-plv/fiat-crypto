@@ -1560,6 +1560,26 @@ Module Z.
   Proof. destruct (x >? y + x) eqn:?, (0 >? y) eqn:?; ltb_to_lt; try reflexivity; omega. Qed.
   Hint Rewrite gtb_add_same : zsimplify.
 
+  Lemma shiftl_add x y z : 0 <= z -> (x + y) << z = (x << z) + (y << z).
+  Proof. intros; autorewrite with Zshift_to_pow; lia. Qed.
+  Hint Rewrite shiftl_add using zutil_arith : push_Zshift.
+  Hint Rewrite <- shiftl_add using zutil_arith : pull_Zshift.
+
+  Lemma shiftr_add x y z : z <= 0 -> (x + y) >> z = (x >> z) + (y >> z).
+  Proof. intros; autorewrite with Zshift_to_pow; lia. Qed.
+  Hint Rewrite shiftr_add using zutil_arith : push_Zshift.
+  Hint Rewrite <- shiftr_add using zutil_arith : pull_Zshift.
+
+  Lemma shiftl_sub x y z : 0 <= z -> (x - y) << z = (x << z) - (y << z).
+  Proof. intros; autorewrite with Zshift_to_pow; lia. Qed.
+  Hint Rewrite shiftl_sub using zutil_arith : push_Zshift.
+  Hint Rewrite <- shiftl_sub using zutil_arith : pull_Zshift.
+
+  Lemma shiftr_sub x y z : z <= 0 -> (x - y) >> z = (x >> z) - (y >> z).
+  Proof. intros; autorewrite with Zshift_to_pow; lia. Qed.
+  Hint Rewrite shiftr_sub using zutil_arith : push_Zshift.
+  Hint Rewrite <- shiftr_sub using zutil_arith : pull_Zshift.
+
   Lemma simplify_twice_sub_sub x y : 2 * x - (x - y) = x + y.
   Proof. lia. Qed.
   Hint Rewrite simplify_twice_sub_sub : zsimplify.
