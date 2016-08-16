@@ -50,7 +50,7 @@ Proof.
 Defined.
 
 (* Wire format for [pack] and [unpack] *)
-Definition wire_widths := Eval compute in (repeat Z 32 7 ++ 31 :: nil).
+Definition wire_widths := Eval compute in (repeat 32 7 ++ 31 :: nil).
 
 Definition wire_digits := Eval compute in (tuple Z (length wire_widths)).
 

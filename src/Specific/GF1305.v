@@ -48,9 +48,8 @@ Definition freezePreconditions1305 : freezePreconditions params1305 int_width.
 Proof.
   constructor; compute_preconditions.
 Defined.
-
 (* Wire format for [pack] and [unpack] *)
-Definition wire_widths := Eval compute in (repeat Z 32 4 ++ 2 :: nil).
+Definition wire_widths := Eval compute in (repeat 32 4 ++ 2 :: nil).
 
 Definition wire_digits := Eval compute in (tuple Z (length wire_widths)).
 
