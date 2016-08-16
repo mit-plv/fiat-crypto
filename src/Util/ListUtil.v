@@ -1290,6 +1290,7 @@ Proof.
 Qed.
 
 Module Export List.
+  Local Set Implicit Arguments.
   Import ListNotations.
   (* From the 8.6 Standard Library *)
   Lemma in_seq len start n :
