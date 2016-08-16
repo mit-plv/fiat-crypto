@@ -22,6 +22,7 @@ Local Open Scope Z_scope.
 
 Module F.
   Definition F (m : BinInt.Z) := { z : BinInt.Z | z = z mod m }.
+  Bind Scope F_scope with F.
   Local Obligation Tactic := cbv beta; auto using Pre.Z_mod_mod.
   Program Definition of_Z  m  (a:BinNums.Z) : F m := a mod m.
   Definition to_Z {m} (a:F m) : BinNums.Z := proj1_sig a.
@@ -50,6 +51,16 @@ Module F.
                                } := Pre.pow_impl.
     Definition pow : F m -> BinNums.N -> F m := Eval hnf in proj1_sig pow_with_spec.
   End FieldOperations.
+
+  Definition of_nat m (n:nat) := F.of_Z m (BinInt.Z.of_nat n).
+  Definition to_nat {m} (x:F m) := BinInt.Z.to_nat (F.to_Z x).
+  Notation nat_mod := of_nat (only parsing).
+
+  Definition of_N m n := F.of_Z m (BinInt.Z.of_N n).
+  Definition to_N {m} (x:F m) := BinInt.Z.to_N (F.to_Z x).
+  Notation N_mod := of_N (only parsing).
+
+  Notation Z_mod := of_Z (only parsing).
 End F.
 
 Notation F := F.F.

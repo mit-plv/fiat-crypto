@@ -11,6 +11,8 @@ Require Import Crypto.Util.Notations.
 Require Export Crypto.Util.FixCoqMistakes.
 
 Module Extended.
+  Local Ltac uninv := repeat rewrite <-field_div_definition;
+                      repeat match goal with [H:_|-_] => rewrite <-field_div_definition in H end.
   Section ExtendedCoordinates.
     Import Group Ring Field.
     Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv a d}
@@ -50,16 +52,17 @@ Module Extended.
              | _ => solve [etransitivity; eauto]
              | |- _*_ <> 0 => apply Ring.zero_product_iff_zero_factor
              | [H: _ |- _ ] => solve [intro; apply H; super_nsatz]
+             | _ => progress uninv
              | |- Feq _ _ => super_nsatz
              end.
 
-    Obligation Tactic := bash.
+    Local Obligation Tactic := bash.
 
     Program Definition from_twisted (P:Epoint) : point := exist _
       (let (x,y) := E.coordinates P in (x, y, 1, x*y)) _.
 
     Program Definition to_twisted (P:point) : Epoint := exist _
-      (let '(X,Y,Z,T) := coordinates P in ((X/Z), (Y/Z))) _.
+      (let '(X,Y,Z,T) := coordinates P in let iZ := Finv Z in ((X*iZ), (Y*iZ))) _.
 
     Definition eq (P Q:point) := E.eq (to_twisted P) (to_twisted Q).
     Global Instance DecidableRel_eq : Decidable.DecidableRel eq := _.
@@ -125,6 +128,7 @@ Module Extended.
         pose proof (add_coordinates_correct P Q) as Hrep.
         destruct P as [ [ [ [ ] ? ] ? ] [ HP [ ] ] ]; destruct Q as [ [ [ [ ] ? ] ? ] [ HQ [ ] ] ].
         autounfold with bash in *; simpl in *.
+        repeat rewrite field_div_definition; repeat rewrite field_div_definition in Hrep.
         destruct Hrep as [HA HB]. rewrite <-!HA, <-!HB; clear HA HB.
         split; reflexivity.
       Qed.
@@ -159,36 +163,6 @@ Module Extended.
         - unfold opp; intros; rewrite to_twisted_from_twisted; reflexivity.
         - unfold zero; intros; rewrite to_twisted_from_twisted; reflexivity.
       Qed.
-
-      (* TODO: decide whether we still need those, then port *)
-    (*
-    Lemma unifiedAddM1_0_r : forall P, unifiedAddM1 P (mkExtendedPoint E.zero) === P.
-      unfold equiv, extendedPoint_eq; intros.
-      rewrite <-!unifiedAddM1_rep, unExtendedPoint_mkExtendedPoint, E.add_0_r; auto.
-    Qed.
-
-    Lemma unifiedAddM1_0_l : forall P, unifiedAddM1 (mkExtendedPoint E.zero) P === P.
-      unfold equiv, extendedPoint_eq; intros.
-      rewrite <-!unifiedAddM1_rep, E.add_comm, unExtendedPoint_mkExtendedPoint, E.add_0_r; auto.
-    Qed.
-
-    Lemma unifiedAddM1_assoc : forall a b c, unifiedAddM1 a (unifiedAddM1 b c) === unifiedAddM1 (unifiedAddM1 a b) c.
-    Proof.
-      unfold equiv, extendedPoint_eq; intros.
-      rewrite <-!unifiedAddM1_rep, E.add_assoc; auto.
-    Qed.
-
-    Lemma testbit_conversion_identity : forall x i, N.testbit_nat x i = N.testbit_nat ((fun a => a) x) i.
-    Proof.
-      trivial.
-    Qed.
-
-    Lemma scalarMultM1_rep : forall n P, unExtendedPoint (nat_iter_op unifiedAddM1 (mkExtendedPoint E.zero) n P) = E.mul n (unExtendedPoint P).
-      induction n; [simpl; rewrite !unExtendedPoint_mkExtendedPoint; reflexivity|]; intros.
-      unfold E.mul; fold E.mul.
-      rewrite <-IHn, unifiedAddM1_rep; auto.
-    Qed.
-     *)
     End TwistMinus1.
   End ExtendedCoordinates.
 
@@ -224,6 +198,7 @@ Module Extended.
          homomorphism_add
          homomorphism_sub
          homomorphism_mul
+         homomorphism_inv
          homomorphism_div
          Ha
          Hd
@@ -238,6 +213,13 @@ Module Extended.
       eauto 10 using is_homomorphism_phi_proper, phi_nonzero.
     Qed.
 
+    Global Instance Proper_ref_phi : Proper (eq==>eq) ref_phi.
+    Proof.
+      intros [P ?] [Q ?] [H1 H2]; repeat match goal with [x:prod _ _ |- _ ] => destruct x end.
+      cbv in H1, H2; cbv; split; uninv;
+        (rewrite_strat bottomup hints field_homomorphism); rewrite ?H1, ?H2; try reflexivity.
+    Admitted.
+      
     Context {point_phi:Fpoint->Kpoint}
             {point_phi_Proper:Proper (eq==>eq) point_phi}
             {point_phi_correct: forall (P:Fpoint), eq (point_phi P) (ref_phi P)}.
@@ -252,6 +234,7 @@ Module Extended.
              | [p: point |- _ ] => destruct p as [ [ [ [ ] ? ] ? ] [ ? [ ? ? ] ] ]
              | |- context[point_phi] => setoid_rewrite point_phi_correct
              | |- _ => progress cbv [fst snd coordinates proj1_sig eq to_twisted E.eq E.coordinates fieldwise fieldwise' add add_coordinates ref_phi] in *
+             | _ => progress uninv
              | |- Keq ?x ?x => reflexivity
              | |- Keq ?x ?y => rewrite_strat bottomup hints field_homomorphism
              | [ H : Feq _ _ |- Keq (phi _) (phi _)] => solve [f_equiv; intuition]

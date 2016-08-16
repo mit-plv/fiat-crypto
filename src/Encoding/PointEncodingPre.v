@@ -87,7 +87,7 @@ Section PointEncodingPre.
   Definition point_enc_coordinates (p : (F * F)) : Word.word (S sz) := let '(x,y) := p in
     Word.WS (sign_bit x) (enc y).
 
-  Let point_enc (p : point) : Word.word (S sz) := point_enc_coordinates (E.coordinates p).
+  Definition point_enc (p : point) : Word.word (S sz) := point_enc_coordinates (E.coordinates p).
 
   Definition point_dec_coordinates (w : Word.word (S sz)) : option (F * F) :=
     match dec (Word.wtl w) with

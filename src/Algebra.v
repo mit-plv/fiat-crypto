@@ -287,9 +287,11 @@ Module Group.
       rewrite cancel_left in Hii; exact Hii.
     Qed.
 
-    Lemma homomorphism_inv : forall x, phi (INV x) = inv (phi x).
+    Lemma homomorphism_inv x : phi (INV x) = inv (phi x).
     Proof.
-    Admitted.
+      apply inv_unique.
+      rewrite <- homomorphism, left_inverse, homomorphism_id; reflexivity.
+    Qed.
   End Homomorphism.
 
   Section GroupByHomomorphism.
@@ -618,6 +620,7 @@ Module IntegralDomain.
 End IntegralDomain.
 
 Module Field.
+  Require Coq.setoid_ring.Field_theory.
   Section Field.
     Context {T eq zero one opp add mul sub inv div} `{@field T eq zero one opp add sub mul inv div}.
     Local Infix "=" := eq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
@@ -639,7 +642,6 @@ Module Field.
         apply zero_neq_one. assumption.
     Qed.
 
-    Require Coq.setoid_ring.Field_theory.
     Lemma field_theory_for_stdlib_tactic : Field_theory.field_theory 0 1 add mul sub opp div inv eq.
     Proof.
       constructor.
@@ -1339,8 +1341,9 @@ Section Example.
   Proof. intros. intro. nsatz_contradict. Qed.
 End Example.
 
+Require ZArith.
 Section Z.
-  Require Import ZArith.
+  Import ZArith.
   Global Instance ring_Z : @ring Z Logic.eq 0%Z 1%Z Z.opp Z.add Z.sub Z.mul.
   Proof. repeat split; auto using Z.eq_dec with zarith typeclass_instances. Qed.
 

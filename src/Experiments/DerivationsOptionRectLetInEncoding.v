@@ -120,7 +120,7 @@ Lemma iter_op_proj {T T' S} `{T'Equiv:@Equivalence T' RT'}
       (proj : T -> T') (op : T -> T -> T) (op' : T' -> T' -> T') {Proper_op':Proper (RT' ==> RT' ==> RT') op'} x y z
       (testbit : S -> nat -> bool) (bound : nat)
       (op_proj : forall a b, proj (op a b) === op' (proj a) (proj b))
-  : proj (@iter_op _ op x _ testbit y z bound) === @iter_op _ op' (proj x) _ testbit y (proj z) bound.
+  : proj (@iter_op _ op x _ testbit bound y z) === @iter_op _ op' (proj x) _ testbit bound y (proj z).
 Proof.
   unfold iter_op.
   lazymatch goal with
