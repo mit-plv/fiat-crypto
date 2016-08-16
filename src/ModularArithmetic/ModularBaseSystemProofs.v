@@ -97,7 +97,11 @@ Section PseudoMersenneProofs.
     rewrite encode_eq, encode_rep.
     + apply F.of_Z_to_Z.
     + apply bv.
-    + split; [ | etransitivity]; try (apply F.to_Z_range; auto using modulus_pos); auto.
+    + rewrite <-F.mod_to_Z.
+      match goal with |- appcontext [?a mod modulus] =>
+                      pose proof (Z.mod_pos_bound a modulus modulus_pos) end.
+      pose proof lt_modulus_2k.
+      omega.
     + eauto using base_upper_bound_compatible, limb_widths_nonneg.
   Qed.
 
@@ -167,7 +171,7 @@ Section PseudoMersenneProofs.
     cbv [ModularBaseSystemList.mul ModularBaseSystemList.decode].
     rewrite F.of_Z_mod, reduce_rep, <-F.of_Z_mod.
     pose proof (@base_from_limb_widths_length limb_widths).
-    rewrite mul_rep by (auto using ExtBaseVector || rewrite extended_base_length, !length_to_list; omega).
+    rewrite @mul_rep by (eauto using ExtBaseVector || rewrite extended_base_length, !length_to_list; omega).
     rewrite 2decode_short by (rewrite ?base_from_limb_widths_length;
       auto using Nat.eq_le_incl, length_to_list with omega).
     apply F.of_Z_mul.

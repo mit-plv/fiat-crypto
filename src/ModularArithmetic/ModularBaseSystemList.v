@@ -5,6 +5,7 @@ Require Import Crypto.Util.ListUtil Crypto.Util.CaseUtil Crypto.Util.ZUtil.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
 Require Import Crypto.BaseSystem.
 Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParams.
+Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParamProofs.
 Require Import Crypto.ModularArithmetic.ExtendedBaseVector.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.Util.Notations.
@@ -68,4 +69,16 @@ Section Defs.
        Otherwise, it's all zeroes, and the subtractions do nothing. *)
      map2 (fun x y => x - y) us (map (Z.land and_term) modulus_digits).
 
+  Context {target_widths} (target_widths_nonneg : forall x, In x target_widths -> 0 <= x)
+          (bits_eq : sum_firstn limb_widths   (length limb_widths) =
+                     sum_firstn target_widths (length target_widths)).
+  
+  Definition pack := @Pow2BaseProofs.convert limb_widths limb_widths_nonneg
+                                             target_widths target_widths_nonneg
+                                             (Z.eq_le_incl _ _ bits_eq).
+
+  Definition unpack := @Pow2BaseProofs.convert target_widths target_widths_nonneg
+                                               limb_widths limb_widths_nonneg
+                                               (Z.eq_le_incl _ _ (Z.eq_sym bits_eq)).
+  
 End Defs.
