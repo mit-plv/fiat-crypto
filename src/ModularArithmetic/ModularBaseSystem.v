@@ -6,6 +6,7 @@ Require Import Crypto.BaseSystemProofs.
 Require Import Crypto.ModularArithmetic.ExtendedBaseVector.
 Require Import Crypto.ModularArithmetic.Pow2Base.
 Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParams.
+Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParamProofs.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemList.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemListProofs.
 Require Import Crypto.Util.ListUtil Crypto.Util.CaseUtil Crypto.Util.ZUtil.
@@ -72,5 +73,16 @@ Section ModularBaseSystem.
   Proof.
     split; cbv [eq]; repeat intro; congruence.
   Qed.
+
+  Context {target_widths} (target_widths_nonneg : forall x, In x target_widths -> 0 <= x)
+          (bits_eq : sum_firstn limb_widths   (length limb_widths) =
+                     sum_firstn target_widths (length target_widths)).
+  Local Notation target_digits := (tuple Z (length target_widths)).
+
+  Definition pack (x : digits) : target_digits :=
+    from_list (pack target_widths_nonneg bits_eq [[x]]) length_pack.
+  
+  Definition unpack (x : target_digits) : digits :=
+    from_list (unpack target_widths_nonneg bits_eq [[x]]) length_unpack.
 
 End ModularBaseSystem.

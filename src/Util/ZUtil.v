@@ -6,6 +6,7 @@ Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.Notations.
 Require Import Coq.Lists.List.
 Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Tactics.VerdiTactics.
 Import Nat.
 Local Open Scope Z.
 
@@ -178,6 +179,13 @@ Ltac zify_nat_op ::=
     pose proof (Nat2Z.is_nonneg a); hide_Z_of_nat a
  end.
 
+Create HintDb Ztestbit discriminated.
+Hint Rewrite Z.testbit_0_l : Ztestbit.
+Hint Rewrite Z.land_spec Z.lor_spec Z.shiftl_spec Z.shiftr_spec using omega : Ztestbit.
+Hint Rewrite Z.testbit_neg_r using omega : Ztestbit.
+Hint Rewrite Bool.andb_true_r Bool.andb_false_r Bool.orb_true_r Bool.orb_false_r
+             Bool.andb_true_l Bool.andb_false_l Bool.orb_true_l Bool.orb_false_l : Ztestbit.
+
 Ltac comes_before ls x y :=
   match ls with
   | context[cons x ?xs]
@@ -204,6 +212,66 @@ Module Z.
     intros.
     unfold Z.pow2_mod.
     rewrite Z.land_ones; auto.
+  Qed.
+  
+  Lemma ones_spec : forall n m, 0 <= n -> 0 <= m -> Z.testbit (Z.ones n) m = if Z_lt_dec m n then true else false.
+  Proof.
+    intros.
+    break_if.
+    + apply Z.ones_spec_low. omega.
+    + apply Z.ones_spec_high. omega.
+  Qed.
+  Hint Rewrite ones_spec using omega : Ztestbit.
+
+  Lemma testbit_pow2_mod : forall a n i, 0 <= n ->
+  Z.testbit (Z.pow2_mod a n) i = if Z_lt_dec i n then Z.testbit a i else false.
+  Proof.
+  cbv [Z.pow2_mod]; intros; destruct (Z_le_dec 0 i);
+      repeat match goal with
+          | |- _ => rewrite Z.testbit_neg_r by omega
+          | |- _ => break_if
+          | |- _ => omega
+          | |- _ => reflexivity
+          | |- _ => progress autorewrite with Ztestbit
+          end.
+  Qed.
+  Hint Rewrite testbit_pow2_mod using omega : Ztestbit.
+  
+  Lemma pow2_mod_0_r : forall a, Z.pow2_mod a 0 = 0.
+  Proof.
+    intros; rewrite Z.pow2_mod_spec, Z.mod_1_r; reflexivity. 
+  Qed.
+  
+  Lemma pow2_mod_0_l : forall n, 0 <= n -> Z.pow2_mod 0 n = 0.
+  Proof.
+    intros; rewrite Z.pow2_mod_spec, Z.mod_0_l; try reflexivity; try apply Z.pow_nonzero; omega.
+  Qed.
+
+  Lemma pow2_mod_split : forall a n m, 0 <= n -> 0 <= m ->
+                                       Z.pow2_mod a (n + m) = Z.lor (Z.pow2_mod a n) ((Z.pow2_mod (a >> n) m) << n).
+  Proof.
+    intros; cbv [Z.pow2_mod].
+    apply Z.bits_inj'; intros.
+    repeat progress (try break_if; autorewrite with Ztestbit zsimplify; try reflexivity).
+    try match goal with H : ?a < ?b |- appcontext[Z.testbit _ (?a - ?b)] =>
+      rewrite !Z.testbit_neg_r with (n := a - b) by omega end.
+    autorewrite with Ztestbit; reflexivity.
+  Qed.
+
+  Lemma pow2_mod_pow2_mod : forall a n m, 0 <= n -> 0 <= m ->
+                                          Z.pow2_mod (Z.pow2_mod a n) m = Z.pow2_mod a (Z.min n m).
+  Proof.
+    intros; cbv [Z.pow2_mod].
+    apply Z.bits_inj'; intros.
+    apply Z.min_case_strong; intros; repeat progress (try break_if; autorewrite with Ztestbit zsimplify; try reflexivity).
+  Qed.
+
+  Lemma land_same_r : forall a b, (a & b) & b = a & b.
+  Proof.
+  intros; apply Z.bits_inj'; intros.
+  rewrite !Z.land_spec.
+  case_eq (Z.testbit b n); intros;
+      rewrite ?Bool.andb_true_r, ?Bool.andb_false_r; reflexivity.
   Qed.
 
   Lemma mul_comm3 x y z : x * (y * z) = y * (x * z).

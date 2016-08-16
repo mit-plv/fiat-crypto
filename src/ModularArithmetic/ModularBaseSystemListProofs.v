@@ -48,8 +48,19 @@ Section LengthProofs.
     apply length_reduce.
     destruct u; try congruence.
     + rewrite @nil_length0 in *; omega.
-    + rewrite mul_length_exact, extended_base_length, base_from_limb_widths_length; try omega.
-      congruence.
+    + rewrite mul_length_exact, extended_base_length, base_from_limb_widths_length; try omega;
+        repeat match goal with
+               | |- _ => progress intros
+               | |- nth_default _ (ext_base _) 0 = 1 => apply b0_1
+               | x := nth_default _ (ext_base _) |- _ => apply ext_base_good
+               | x := nth_default _ base |- _ => apply base_good
+               | x := nth_default _ base |- _ => apply limb_widths_good
+               | |- 2 ^ _ <> 0 => apply Z.pow_nonzero
+               | |- _ => solve [apply BaseSystem.b0_1]
+               | |- _ => solve [auto using limb_widths_nonneg, sum_firstn_limb_widths_nonneg, limb_widths_match_modulus]
+               | |- _ => omega 
+               | |- _ => congruence 
+               end.
   Qed.
 
   Section Sub.
@@ -104,6 +115,24 @@ Section LengthProofs.
     intros; unfold conditional_subtract_modulus.
     rewrite map2_length, map_length, length_modulus_digits.
     apply Min.min_case; omega.
+  Qed.
+
+  Lemma length_pack : forall {target_widths}
+                             {target_widths_nonneg : forall x, In x target_widths -> 0 <= x}
+                             {pf us},
+      length (pack target_widths_nonneg pf us) = length target_widths.
+  Proof.
+    cbv [pack]; intros.
+    apply Pow2BaseProofs.length_convert.
+  Qed.
+  
+  Lemma length_unpack : forall {target_widths}
+                             {target_widths_nonneg : forall x, In x target_widths -> 0 <= x}
+                             {pf us},
+      length (unpack target_widths_nonneg pf us) = length limb_widths.
+  Proof.
+    cbv [pack]; intros.
+    apply Pow2BaseProofs.length_convert.
   Qed.
 
 End LengthProofs.
