@@ -181,6 +181,9 @@ Proof.
   omega.
 Qed.
 
+Lemma map_nil : forall A B (f : A -> B), map f nil = nil.
+Proof. reflexivity. Qed.
+
 (* Note: this is a duplicate of a lemma that exists in 8.5, included for
    8.4 support *)
 Lemma In_nth : forall {A} (x : A) d xs, In x xs ->
@@ -1290,6 +1293,7 @@ Proof.
 Qed.
 
 Module Export List.
+  Local Set Implicit Arguments.
   Import ListNotations.
   (* From the 8.6 Standard Library *)
   Lemma in_seq len start n :

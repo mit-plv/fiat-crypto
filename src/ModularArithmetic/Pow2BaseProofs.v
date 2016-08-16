@@ -441,21 +441,51 @@ Section Pow2BaseProofs.
            end.
   Qed.
 
-  Lemma decode_shift : forall us u0, (length (u0 :: us) <= length limb_widths)%nat ->
-    BaseSystem.decode base (u0 :: us) = u0 + ((BaseSystem.decode (base_from_limb_widths (tl limb_widths)) us) << nth_default 0 limb_widths 0).
+  Lemma decode_shift_app : forall us0 us1, (length (us0 ++ us1) <= length limb_widths)%nat ->
+    BaseSystem.decode base (us0 ++ us1) = (BaseSystem.decode (base_from_limb_widths (firstn (length us0) limb_widths)) us0) + ((BaseSystem.decode (base_from_limb_widths (skipn (length us0) limb_widths)) us1) << sum_firstn limb_widths (length us0)).
   Proof.
-    induction limb_widths; intros;
+    induction limb_widths as [|l ls IHls]; intros;
       repeat match goal with
-             | |- _ => rewrite base_from_limb_widths_cons, peel_decode
-             | |- _ => rewrite two_p_correct, Z.shiftl_mul_pow2
-             | |- _ => apply Z.add_cancel_l
+             | _ => progress simpl @app
+             | [ |- context[BaseSystem.decode (base_from_limb_widths ?xs) ?ys] ]
+               => match constr:((xs, ys)) with
+                  | (nil, _) => is_var ys; destruct ys
+                  | (_::_, _) => is_var ys; destruct ys
+                  | (nil, ?y ++ _) => is_var y; destruct y
+                  | (_::_, ?y ++ _) => is_var y; destruct y
+                  end
+             | _ => rewrite base_from_limb_widths_cons, peel_decode
+             | _ => rewrite !two_p_correct, !(Z.mul_comm (2^_)), <- !Z.shiftl_mul_pow2
+             | _ => rewrite <- ?Z.add_assoc; apply Z.add_cancel_l
+             | [ H : forall w, In w (?x :: ?xs) -> @?P w |- _ ]
+               => assert (forall w, In w xs -> P w) by auto using in_cons;
+                    try assert (forall len, 0 <= sum_firstn xs len) by auto using sum_firstn_nonnegative;
+                    assert (P x) by auto using in_eq;
+                    clear H;
+                    cbv beta in *
+             | [ H : forall len, 0 <= sum_firstn ?ls len |- context[sum_firstn ?ls ?len'] ]
+               => specialize (H len')
              | |- appcontext[tl (_ :: _)] => cbv [tl]
              | |- appcontext[map (Z.mul ?a) _] => fold (BaseSystem.mul_each a);
                                                     rewrite <-!mul_each_base, !mul_each_rep
-             | |- _ => progress distr_length
-             | |- _ => progress autorewrite with push_nth_default zsimplify
-             | |- _ => solve [auto using in_eq, Z.mul_comm]
+             | _ => progress distr_length
+             | _ => progress specialize_by auto using in_eq, in_cons
+             | _ => progress specialize_by omega
+             | _ => setoid_rewrite IHls; clear IHls
+             | _ => progress autorewrite with push_nth_default zsimplify simpl_skipn simpl_firstn simpl_sum_firstn
+             | _ => progress unfold BaseSystem.decode
+             | _ => progress autorewrite with push_Zshift Zshift_to_pow zsimplify
+             | _ => solve [auto using in_eq, Z.mul_comm]
+             | _ => nia
             end.
+  Qed.
+
+  Lemma decode_shift : forall us u0, (length (u0 :: us) <= length limb_widths)%nat ->
+    BaseSystem.decode base (u0 :: us) = u0 + ((BaseSystem.decode (base_from_limb_widths (tl limb_widths)) us) << (nth_default 0 limb_widths 0)).
+  Proof.
+    intros; etransitivity; [ apply (decode_shift_app (u0::nil)); assumption | ].
+    transitivity (u0 * 1 + 0 + ((BaseSystem.decode (base_from_limb_widths (tl limb_widths)) us) << (nth_default 0 limb_widths 0 + 0))); [ | autorewrite with zsimplify; reflexivity ].
+    destruct limb_widths; distr_length; reflexivity.
   Qed.
 
   Lemma upper_bound_nil : upper_bound nil = 1.
@@ -711,6 +741,13 @@ Section UniformBase.
                                     then width else 0.
   Admitted.
 
+  Lemma nth_default_uniform_base : forall i, (i < length limb_widths)%nat ->
+      nth_default 0 limb_widths i = width.
+  Proof.
+    intros; rewrite nth_default_uniform_base_full.
+    edestruct lt_dec; omega.
+  Qed.
+
   Lemma sum_firstn_uniform_base : forall i, (i <= length limb_widths)%nat ->
                                             sum_firstn limb_widths i = Z.of_nat i * width.
   Proof.
@@ -785,20 +822,18 @@ Section UniformBase.
     BaseSystem.decode base (u0 :: us) = u0 + ((BaseSystem.decode (base_from_limb_widths (tl limb_widths)) us) << width).
   Proof.
     intros.
-    rewrite decode_shift; auto using uniform_limb_widths_nonneg.
-    destruct limb_widths; try congruence;
-      repeat match goal with
-             | |- _ => rewrite base_from_limb_widths_cons
-             | |- _ => rewrite two_p_correct, Z.shiftl_mul_pow2
-             | |- _ => apply Z.add_cancel_l
-             | |- appcontext[tl (_ :: _)] => cbv [tl]
-             | |- appcontext[map (Z.mul ?a) _] => fold (BaseSystem.mul_each a);
-                                                    rewrite <-!mul_each_base, !mul_each_rep
-             | |- _ => progress distr_length
-             | |- _ => progress autorewrite with push_nth_default zsimplify
-             | |- _ => solve [auto using in_eq, Z.mul_comm]
-            end.
-    f_equal; eauto using in_eq.
+    rewrite <- (nth_default_uniform_base 0) by distr_length.
+    rewrite decode_shift by auto using uniform_limb_widths_nonneg.
+    reflexivity.
+  Qed.
+
+  Lemma decode_shift_uniform_app : forall us0 us1, (length (us0 ++ us1) <= length limb_widths)%nat ->
+    BaseSystem.decode base (us0 ++ us1) = (BaseSystem.decode (base_from_limb_widths (firstn (length us0) limb_widths)) us0) + ((BaseSystem.decode (base_from_limb_widths (skipn (length us0) limb_widths)) us1) << (Z.of_nat (length us0) * width)).
+  Proof.
+    intros.
+    rewrite <- sum_firstn_uniform_base by (distr_length; omega).
+    rewrite decode_shift_app by auto using uniform_limb_widths_nonneg.
+    reflexivity.
   Qed.
 
   Lemma decode_shift_uniform : forall us u0, (length (u0 :: us) <= length limb_widths)%nat ->
