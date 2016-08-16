@@ -41,6 +41,9 @@ Hint Rewrite
 
 Hint Extern 1 => progress autorewrite with distr_length in * : distr_length.
 
+Local Arguments value / .
+Local Arguments error / .
+
 Definition sum_firstn l n := fold_right Z.add 0%Z (firstn n l).
 
 Fixpoint map2 {A B C} (f : A -> B -> C) (la : list A) (lb : list B) : list C :=
@@ -1286,16 +1289,8 @@ Proof.
   intuition (congruence || eauto).
 Qed.
 
-Lemma nth_error_repeat {T} x n i v : nth_error (@repeat T x n) i = Some v -> v = x.
-Proof.
-  revert n x v; induction i as [|i IHi]; destruct n; simpl in *; eauto; congruence.
-Qed.
-
-Lemma length_repeat T x n : length (@repeat T x n) = n.
-Proof. induction n; boring. Qed.
-Hint Rewrite length_repeat : distr_length.
-
 Module Export List.
+  Import ListNotations.
   (* From the 8.6 Standard Library *)
   Lemma in_seq len start n :
     In n (seq start len) <-> start <= n < start+len.
@@ -1307,4 +1302,35 @@ Module Export List.
      * intros [H|H]; subst; intuition auto with arith.
      * intros (H,H'). destruct (Lt.le_lt_or_eq _ _ H); intuition.
   Qed.
+
+  Section Repeat.
+
+    Variable A : Type.
+    Fixpoint repeat (x : A) (n: nat ) :=
+      match n with
+      | O => []
+      | S k => x::(repeat x k)
+      end.
+
+    Theorem repeat_length x n:
+      length (repeat x n) = n.
+    Proof.
+      induction n as [| k Hrec]; simpl; rewrite ?Hrec; reflexivity.
+    Qed.
+
+    Theorem repeat_spec n x y:
+      In y (repeat x n) -> y=x.
+    Proof.
+      induction n as [|k Hrec]; simpl; destruct 1; auto.
+    Qed.
+
+  End Repeat.
+
 End List.
+
+Lemma nth_error_repeat {T} x n i v : nth_error (@repeat T x n) i = Some v -> v = x.
+Proof.
+  revert n x v; induction i as [|i IHi]; destruct n; simpl in *; eauto; congruence.
+Qed.
+
+Hint Rewrite repeat_length : distr_length.
