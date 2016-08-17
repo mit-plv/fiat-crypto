@@ -1,7 +1,7 @@
 Require Export Bedrock.Word Bedrock.Nomega.
 Require Import Coq.NArith.NArith Coq.Numbers.Natural.Peano.NPeano Coq.Lists.List Coq.Bool.Sumbool Coq.Arith.Compare_dec Coq.omega.Omega.
 Require Import Crypto.Assembly.QhasmCommon Crypto.Assembly.QhasmEvalCommon Crypto.Assembly.QhasmUtil Crypto.Assembly.Pseudo Crypto.Assembly.State.
-Require Export Crypto.Assembly.Wordize Crypto.Assembly.Vectorize Crypto.Assembly.Listize.
+Require Export Crypto.Assembly.Wordize Crypto.Assembly.Listize.
 Require Export Crypto.Assembly.Pseudo Crypto.Assembly.WordizeUtil.
 Require Export Crypto.Util.FixCoqMistakes.
 
@@ -629,7 +629,6 @@ Ltac pseudo_step :=
       try reflexivity; list_destruct;
       simpl; intuition
 
-  (* implifications *)
   | [ |- context [@NToWord ?x (@wordToN ?x _)]] =>
     rewrite NToWord_wordToN
 

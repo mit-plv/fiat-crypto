@@ -22,6 +22,12 @@ Local Open Scope Z_scope.
 
 Local Opaque add_to_nth carry_simple.
 
+Class CarryChain (limb_widths : list Z) :=
+  {
+    carry_chain : list nat;
+    carry_chain_valid : forall i, In i carry_chain -> (i < length limb_widths)%nat
+  }.
+
 Section PseudoMersenneProofs.
   Context `{prm :PseudoMersenneBaseParams}.
 
@@ -77,7 +83,7 @@ Section PseudoMersenneProofs.
   Qed.
 
   Lemma encode_eq : forall x : F modulus,
-    ModularBaseSystemList.encode x = BaseSystem.encode base x (2 ^ k).
+    ModularBaseSystemList.encode x = BaseSystem.encode base (F.to_Z x) (2 ^ k).
   Proof.
     cbv [ModularBaseSystemList.encode BaseSystem.encode encodeZ]; intros.
     rewrite base_length.
@@ -89,9 +95,13 @@ Section PseudoMersenneProofs.
     autounfold; cbv [encode]; intros.
     rewrite to_list_from_list; autounfold.
     rewrite encode_eq, encode_rep.
-    + apply ZToField_FieldToZ.
+    + apply F.of_Z_to_Z.
     + apply bv.
-    + split; [ | etransitivity]; try (apply FieldToZ_range; auto using modulus_pos); auto.
+    + rewrite <-F.mod_to_Z.
+      match goal with |- appcontext [?a mod modulus] =>
+                      pose proof (Z.mod_pos_bound a modulus modulus_pos) end.
+      pose proof lt_modulus_2k.
+      omega.
     + eauto using base_upper_bound_compatible, limb_widths_nonneg.
   Qed.
 
@@ -100,7 +110,7 @@ Section PseudoMersenneProofs.
   Proof.
     autounfold; cbv [add]; intros.
     rewrite to_list_from_list; autounfold.
-    rewrite add_rep, ZToField_add.
+    rewrite add_rep, F.of_Z_add.
     f_equal; assumption.
   Qed.
 
@@ -159,12 +169,12 @@ Section PseudoMersenneProofs.
     intuition idtac; subst.
     rewrite to_list_from_list.
     cbv [ModularBaseSystemList.mul ModularBaseSystemList.decode].
-    rewrite ZToField_mod, reduce_rep, <-ZToField_mod.
+    rewrite F.of_Z_mod, reduce_rep, <-F.of_Z_mod.
     pose proof (@base_from_limb_widths_length limb_widths).
-    rewrite mul_rep by (auto using ExtBaseVector || rewrite extended_base_length, !length_to_list; omega).
+    rewrite @mul_rep by (eauto using ExtBaseVector || rewrite extended_base_length, !length_to_list; omega).
     rewrite 2decode_short by (rewrite ?base_from_limb_widths_length;
       auto using Nat.eq_le_incl, length_to_list with omega).
-    apply ZToField_mul.
+    apply F.of_Z_mul.
   Qed.
 
   Lemma nth_default_base_positive : forall i, (i < length base)%nat ->
@@ -189,11 +199,11 @@ Section PseudoMersenneProofs.
   Qed.
 
   Lemma Fdecode_decode_mod : forall us x,
-    decode us = x -> BaseSystem.decode base (to_list us) mod modulus = x.
+    decode us = x -> BaseSystem.decode base (to_list us) mod modulus = F.to_Z x.
   Proof.
     autounfold; intros.
     rewrite <-H.
-    apply FieldToZ_ZToField.
+    apply F.to_Z_of_Z.
   Qed.
 
   Definition carry_done us := forall i, (i < length base)%nat ->
@@ -230,9 +240,9 @@ Section PseudoMersenneProofs.
     rewrite to_list_from_list; autounfold.
     cbv [ModularBaseSystemList.sub].
     rewrite BaseSystemProofs.sub_rep, BaseSystemProofs.add_rep.
-    rewrite ZToField_sub, ZToField_add, ZToField_mod.
+    rewrite F.of_Z_sub, F.of_Z_add, F.of_Z_mod.
     apply Fdecode_decode_mod in mm_spec; cbv [BaseSystem.decode] in *.
-    rewrite mm_spec, F_add_0_l.
+    rewrite mm_spec. rewrite Algebra.left_identity.
     f_equal; assumption.
   Qed.
 
@@ -297,11 +307,11 @@ Section CarryProofs.
     specialize_by eauto.
     cbv [ModularBaseSystemList.carry].
     break_if; subst; eauto.
-    apply F_eq.
+    apply F.eq_of_Z_iff.
     rewrite to_list_from_list.
     apply carry_decode_eq_reduce. auto.
     cbv [ModularBaseSystemList.decode].
-    apply ZToField_eqmod.
+    apply F.eq_of_Z_iff.
     rewrite to_list_from_list, carry_simple_decode_eq; try omega; distr_length; auto.
   Qed.
   Hint Resolve carry_rep.
@@ -327,11 +337,13 @@ Section CarryProofs.
 
   Opaque carry_full.
 
-  Lemma carry_mul_rep : forall us vs x y, rep us x -> rep vs y ->
-    rep (carry_mul us vs) (x * y)%F.
+  Context `{cc : CarryChain limb_widths}.
+  Lemma carry_mul_rep : forall us vs x y,
+    rep us x -> rep vs y ->
+    rep (carry_mul carry_chain us vs) (x * y)%F.
   Proof.
-    unfold carry_mul; intros; apply carry_full_preserves_rep.
-    auto using mul_rep.
+    cbv [carry_mul]; intros; apply carry_sequence_rep;
+      auto using carry_chain_valid,  mul_rep.
   Qed.
 
 End CarryProofs.
@@ -511,7 +523,7 @@ Section CanonicalizationProofs.
         fold (carry_sequence (make_chain i) us);  rewrite length_carry_sequence; auto.
       repeat (break_if; try omega);
         try solve [rewrite Z.pow2_mod_spec by auto; autorewrite with zsimplify; apply Z.mod_pos_bound; zero_bounds];
-        pose proof (IHi i us); pose proof (IHi n us); specialize_by assumption; specialize_by ltac:(auto with zarith);
+        pose proof (IHi i us); pose proof (IHi n us); specialize_by assumption; specialize_by auto with zarith;
         repeat break_if; try omega; pose proof c_pos; (split; try solve [zero_bounds]).
       (* TODO (jadep) : clean up/automate these leftover cases. *)
       - replace (2 * 2 ^ limb_widths [n]) with (2 ^ limb_widths [n] + 2 ^ limb_widths [n]) by ring.

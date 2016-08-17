@@ -111,7 +111,7 @@ Module Pseudo <: Language.
   Definition evaluatesTo (p: Params) (prog: Program p) (st st': State p) :=
       pseudoEval prog st = Some st'.
 
-  Definition indexize {n: nat} (x: nat): Index n.
+  Definition indexize {n: nat} (x: nat) : Index n.
     intros; destruct (le_dec n 0).
 
     - exists 0; abstract omega.

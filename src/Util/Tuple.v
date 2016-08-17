@@ -62,11 +62,12 @@ Proof.
   induction xs; simpl in *; intros; congruence.
 Qed.
 
+Lemma length_to_list' T n t : length (@to_list' T n t) = S n.
+Proof. induction n; simpl in *; trivial; destruct t; simpl; congruence. Qed.
+
 Lemma length_to_list : forall {T} {n} (xs:tuple T n), length (to_list n xs) = n.
 Proof.
-  destruct n; auto; intros; simpl in *.
-  induction n; auto; intros; simpl in *.
-  destruct xs; simpl in *; eauto.
+  destruct n; [ reflexivity | apply length_to_list' ].
 Qed.
 
 Lemma from_list'_to_list' : forall T n (xs:tuple' T n),
@@ -196,3 +197,6 @@ Definition apply {R T} (n:nat) : function R T n -> tuple T n -> R :=
   | O => fun r _ => r
   | S n' => fun f x =>  apply' n' f x
   end.
+
+Require Import Crypto.Util.ListUtil. (* To initialize [distr_length] database *)
+Hint Rewrite length_to_list' @length_to_list : distr_length.

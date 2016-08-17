@@ -41,6 +41,9 @@ Hint Rewrite
 
 Hint Extern 1 => progress autorewrite with distr_length in * : distr_length.
 
+Local Arguments value / .
+Local Arguments error / .
+
 Definition sum_firstn l n := fold_right Z.add 0%Z (firstn n l).
 
 Fixpoint map2 {A B C} (f : A -> B -> C) (la : list A) (lb : list B) : list C :=
@@ -177,6 +180,9 @@ Proof.
   pose proof (nth_error_error_length A n l H0).
   omega.
 Qed.
+
+Lemma map_nil : forall A B (f : A -> B), map f nil = nil.
+Proof. reflexivity. Qed.
 
 (* Note: this is a duplicate of a lemma that exists in 8.5, included for
    8.4 support *)
@@ -1072,6 +1078,16 @@ Qed.
 
 Hint Rewrite @sum_firstn_all_succ using omega : simpl_sum_firstn.
 
+Lemma sum_firstn_all : forall n l, (length l <= n)%nat ->
+  sum_firstn l n = sum_firstn l (length l).
+Proof.
+  unfold sum_firstn; intros.
+  rewrite !firstn_all_strong by omega.
+  congruence.
+Qed.
+
+Hint Rewrite @sum_firstn_all using omega : simpl_sum_firstn.
+
 Lemma sum_firstn_succ_default : forall l i,
   sum_firstn l (S i) = (nth_default 0 l i + sum_firstn l i)%Z.
 Proof.
@@ -1138,6 +1154,40 @@ Proof.
 Qed.
 
 Hint Resolve sum_firstn_nonnegative : znonzero.
+
+Lemma sum_firstn_app : forall xs ys n,
+  sum_firstn (xs ++ ys) n = (sum_firstn xs n + sum_firstn ys (n - length xs))%Z.
+Proof.
+  induction xs; simpl.
+  { intros ys n; autorewrite with simpl_sum_firstn; simpl.
+    f_equal; omega. }
+  { intros ys [|n]; autorewrite with simpl_sum_firstn; simpl; [ reflexivity | ].
+    rewrite IHxs; omega. }
+Qed.
+
+Lemma sum_firstn_app_sum : forall xs ys n,
+  sum_firstn (xs ++ ys) (length xs + n) = (sum_firstn xs (length xs) + sum_firstn ys n)%Z.
+Proof.
+  intros; rewrite sum_firstn_app; autorewrite with simpl_sum_firstn.
+  do 2 f_equal; omega.
+Qed.
+
+Hint Rewrite @sum_firstn_app_sum : simpl_sum_firstn.
+
+Definition NotSum {T} (xs : list T) (v : nat) := True.
+
+Ltac NotSum :=
+  lazymatch goal with
+  | [ |- NotSum ?xs (length ?xs + _)%nat ] => fail
+  | [ |- NotSum _ _ ] => exact I
+  end.
+
+Lemma sum_firstn_app_hint : forall xs ys n, NotSum xs n ->
+  sum_firstn (xs ++ ys) n = (sum_firstn xs n + sum_firstn ys (n - length xs))%Z.
+Proof. auto using sum_firstn_app. Qed.
+
+Hint Rewrite sum_firstn_app_hint using solve [ NotSum ] : simpl_sum_firstn.
+
 
 Lemma nth_default_map2 : forall {A B C} (f : A -> B -> C) ls1 ls2 i d d1 d2,
   nth_default d (map2 f ls1 ls2) i =
@@ -1234,3 +1284,57 @@ Proof.
   + repeat intro; rewrite !nth_default_nil; assumption.
   + repeat intro; subst; destruct y0; rewrite ?nth_default_cons, ?nth_default_cons_S; auto.
 Qed.
+
+Lemma fold_right_andb_true_map_iff A (ls : list A) f
+  : List.fold_right andb true (List.map f ls) = true <-> forall i, List.In i ls -> f i = true.
+Proof.
+  induction ls; simpl; [ | rewrite Bool.andb_true_iff, IHls ]; try tauto.
+  intuition (congruence || eauto).
+Qed.
+
+Module Export List.
+  Local Set Implicit Arguments.
+  Import ListNotations.
+  (* From the 8.6 Standard Library *)
+  Lemma in_seq len start n :
+    In n (seq start len) <-> start <= n < start+len.
+  Proof.
+   revert start. induction len; simpl; intros.
+   - rewrite <- plus_n_O. split;[easy|].
+     intros (H,H'). apply (Lt.lt_irrefl _ (Lt.le_lt_trans _ _ _ H H')).
+   - rewrite IHlen, <- plus_n_Sm; simpl; split.
+     * intros [H|H]; subst; intuition auto with arith.
+     * intros (H,H'). destruct (Lt.le_lt_or_eq _ _ H); intuition.
+  Qed.
+
+  Section Repeat.
+
+    Variable A : Type.
+    Fixpoint repeat (x : A) (n: nat ) :=
+      match n with
+      | O => []
+      | S k => x::(repeat x k)
+      end.
+
+    Theorem repeat_length x n:
+      length (repeat x n) = n.
+    Proof.
+      induction n as [| k Hrec]; simpl; rewrite ?Hrec; reflexivity.
+    Qed.
+
+    Theorem repeat_spec n x y:
+      In y (repeat x n) -> y=x.
+    Proof.
+      induction n as [|k Hrec]; simpl; destruct 1; auto.
+    Qed.
+
+  End Repeat.
+
+End List.
+
+Lemma nth_error_repeat {T} x n i v : nth_error (@repeat T x n) i = Some v -> v = x.
+Proof.
+  revert n x v; induction i as [|i IHi]; destruct n; simpl in *; eauto; congruence.
+Qed.
+
+Hint Rewrite repeat_length : distr_length.

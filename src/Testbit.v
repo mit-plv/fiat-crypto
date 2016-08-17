@@ -5,6 +5,8 @@ Require Import Crypto.ModularArithmetic.Pow2Base Crypto.ModularArithmetic.Pow2Ba
 Require Import Coq.ZArith.ZArith Coq.ZArith.Zdiv.
 Require Import Coq.omega.Omega Coq.Numbers.Natural.Peano.NPeano.
 Require Import Coq.micromega.Psatz.
+Require Import Crypto.Tactics.VerdiTactics.
+Require Import Crypto.Util.Tactics.
 Require Coq.Arith.Arith.
 Import Nat.
 Local Open Scope Z.
@@ -18,24 +20,47 @@ Section Testbit.
   Definition testbit (us : list Z) (n : nat) :=
     Z.testbit (nth_default 0 us (n / (Z.to_nat width))) (Z.of_nat (n mod Z.to_nat width)%nat).
 
-  Local Hint Resolve (uniform_limb_widths_nonneg limb_width_pos _ limb_widths_uniform).
+  Ltac zify_nat_hyp :=
+    repeat match goal with
+           | H : ~ (_ < _)%nat |- _ => rewrite nlt_ge in H
+           | H : ~ (_ <= _)%nat |- _ => rewrite nle_gt in H
+           | H : ~ (_ > _)%nat |- _ => apply not_gt in H
+           | H : ~ (_ >= _)%nat |- _ => apply not_ge in H
+           | H : (_ < _)%nat |- _ => unique pose proof (proj1 (Nat2Z.inj_lt _ _) H)
+           | H : (_ <= _)%nat |- _ => unique pose proof (proj1 (Nat2Z.inj_le _ _) H)
+           | H : (_ > _)%nat |- _ => unique pose proof (proj1 (Nat2Z.inj_gt _ _) H)
+           | H : (_ >= _)%nat |- _ => unique pose proof (proj1 (Nat2Z.inj_ge _ _) H)
+           | H : ~ (_ = _ :> nat) |- _ => unique pose proof (fun x => H (Nat2Z.inj _ _ x))
+           | H : (_ = _ :> nat) |- _ => unique pose proof (proj2 (Nat2Z.inj_iff _ _) H)
+           end.
 
   Lemma testbit_spec' : forall a b us, (0 <= b < width) ->
-    bounded limb_widths us -> (length us <= length limb_widths)%nat ->
+    bounded limb_widths us -> (length us = length limb_widths)%nat ->
     Z.testbit (nth_default 0 us a) b = Z.testbit (decode base us) (Z.of_nat a * width + b).
   Proof.
-    induction a; destruct us; intros;
-      match goal with H : bounded _ _ |- _ =>
-        erewrite bounded_uniform in H by (omega || eauto) end;
-      rewrite ?Z.mul_0_l, ?Z.add_0_l, ?nth_default_nil, ?decode_nil,
-              ?nth_default_cons, ?decode_shift, ?Z.testbit_0_l by eauto;
-      try reflexivity.
-    + rewrite Z.testbit_add_shiftl_low by omega; reflexivity.
-    + rewrite nth_default_cons_S, Nat2Z.inj_succ.
-      rewrite Z.testbit_add_shiftl_high by (nia || auto using in_eq).
-      replace (Z.succ (Z.of_nat a) * width + b - width) with (Z.of_nat a * width + b) by ring.
-      apply IHa; erewrite ?bounded_uniform; eauto using in_cons;
-        simpl in *; omega.
+      repeat match goal with
+             | |- _ => progress intros
+             | |- _ => progress autorewrite with push_nth_default Ztestbit zsimplify in *
+             | |- _ => progress change (Z.of_nat 0) with 0 in *
+             | [ H : In ?x ?ls, H' : forall x', In x' ?ls -> x' = _ |- _ ]
+               => is_var x; apply H' in H
+             | |- _ => rewrite Nat2Z.inj_succ, Z.mul_succ_l
+             | |- _ => rewrite nth_default_out_of_bounds by omega
+             | |- _ => rewrite nth_default_uniform_base by omega
+             | |- false = Z.testbit (decode _ _) _ => rewrite testbit_decode_high
+             | |- _ => rewrite (@sum_firstn_uniform_base width) by (eassumption || omega)
+             | |- _ => rewrite sum_firstn_succ_default
+             | |- Z.testbit (nth_default _ _ ?x) _ = Z.testbit (decode _ _) _ =>
+                destruct (lt_dec x (length limb_widths));
+                  [ erewrite testbit_decode_digit_select with (i := x); eauto | ]
+             | |- _ => reflexivity
+             | |- _ => assumption
+             | |- _ => zify_nat_hyp; omega
+             | |- ?a * ?b <= ?c * ?b + ?d => transitivity (c * b); [ | omega ]
+             | |- ?a * ?b <= ?c * ?b => apply Z.mul_le_mono_pos_r
+             | |- _ => solve [auto]
+             | |- _ => solve [eapply uniform_limb_widths_nonneg; eauto]
+             end.
   Qed.
 
   Hint Rewrite div_add_l' mod_add_l mod_add_l' mod_div_eq0 add_0_r mod_mod : nat_mod_div.

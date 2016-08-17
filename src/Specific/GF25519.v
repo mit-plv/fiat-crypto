@@ -11,12 +11,13 @@ Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Notations.
+Require Import Crypto.Util.Decidable.
 Require Import Crypto.Algebra.
 Import ListNotations.
 Require Import Coq.ZArith.ZArith Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.ZArith.Znumtheory.
 Local Open Scope Z.
 
-(* BEGIN PseudoMersenneBaseParams instance construction. *)
+(* BEGIN precomputation. *)
 
 Definition modulus : Z := 2^255 - 19.
 Lemma prime_modulus : prime modulus. Admitted.
@@ -33,8 +34,14 @@ Definition mul2modulus : fe25519 :=
 
 Instance subCoeff : SubtractionCoefficient modulus params25519.
   apply Build_SubtractionCoefficient with (coeff := mul2modulus).
-  apply ZToField_eqmod.
-  cbv; reflexivity.
+  vm_decide.
+Defined.
+
+Instance carryChain : CarryChain limb_widths.
+  apply Build_CarryChain with (carry_chain := ([0;1;2;3;4;5;6;7;8;9;0;1])%nat).
+  intros.
+  repeat (destruct H as [|H]; [subst; vm_compute; repeat constructor | ]).
+  contradiction H.
 Defined.
 
 Definition freezePreconditions25519 : freezePreconditions params25519 int_width.
@@ -42,7 +49,24 @@ Proof.
   constructor; compute_preconditions.
 Defined.
 
-(* END PseudoMersenneBaseParams instance construction. *)
+(* Wire format for [pack] and [unpack] *)
+Definition wire_widths := Eval compute in (repeat 32 7 ++ 31 :: nil).
+
+Definition wire_digits := Eval compute in (tuple Z (length wire_widths)).
+
+Lemma wire_widths_nonneg : forall w, In w wire_widths -> 0 <= w.
+Proof.
+  intros.
+  repeat (destruct H as [|H]; [subst; vm_compute; congruence | ]).
+  contradiction H.
+Qed.
+
+Lemma bits_eq : sum_firstn limb_widths (length limb_widths) = sum_firstn wire_widths (length wire_widths).
+Proof.
+  reflexivity.
+Qed.
+
+(* END precomputation *)
 
 (* Precompute k and c *)
 Definition k_ := Eval compute in k.
@@ -50,9 +74,26 @@ Definition c_ := Eval compute in c.
 Definition k_subst : k = k_ := eq_refl k_.
 Definition c_subst : c = c_ := eq_refl c_.
 
-Local Opaque Z.shiftr Z.shiftl Z.land Z.mul Z.add Z.sub Let_In.
+Local Opaque Z.shiftr Z.shiftl Z.land Z.mul Z.add Z.sub Z.lor Let_In.
 
-Definition app_5 (f : fe25519) (P : fe25519 -> fe25519) : fe25519.
+Definition app_7 {T} (f : wire_digits) (P : wire_digits -> T) : T.
+Proof.
+  cbv [wire_digits] in *.
+  set (f0 := f).
+  repeat (let g := fresh "g" in destruct f as [f g]).
+  apply P.
+  apply f0.
+Defined.
+
+Definition app_7_correct {T} f (P : wire_digits -> T) : app_7 f P = P f.
+Proof.
+  intros.
+  cbv [wire_digits] in *.
+  repeat match goal with [p : (_*Z)%type |- _ ] => destruct p end.
+  reflexivity.
+Qed.
+
+Definition app_10 {T} (f : fe25519) (P : fe25519 -> T) : T.
 Proof.
   cbv [fe25519] in *.
   set (f0 := f).
@@ -61,7 +102,7 @@ Proof.
   apply f0.
 Defined.
 
-Definition app_5_correct f (P : fe25519 -> fe25519) : app_5 f P = P f.
+Definition app_10_correct {T} f (P : fe25519 -> T) : app_10 f P = P f.
 Proof.
   intros.
   cbv [fe25519] in *.
@@ -69,20 +110,20 @@ Proof.
   reflexivity.
 Qed.
 
-Definition appify2 (op : fe25519 -> fe25519 -> fe25519) (f g : fe25519):= 
-  app_5 f (fun f0 => (app_5 g (fun g0 => op f0 g0))).
+Definition appify2 {T} (op : fe25519 -> fe25519 -> T) (f g : fe25519) := 
+  app_10 f (fun f0 => (app_10 g (fun g0 => op f0 g0))).
 
-Lemma appify2_correct : forall op f g, appify2 op f g = op f g.
+Lemma appify2_correct : forall {T} op f g, @appify2 T op f g = op f g.
 Proof.
   intros. cbv [appify2].
-  etransitivity; apply app_5_correct.
+  etransitivity; apply app_10_correct.
 Qed.
 
 Definition add_sig (f g : fe25519) :
   { fg : fe25519 | fg = add_opt f g}.
 Proof.
   eexists.
-  rewrite <-appify2_correct.
+  rewrite <-(@appify2_correct fe25519).
   cbv.
   reflexivity.
 Defined.
@@ -100,7 +141,7 @@ Definition sub_sig (f g : fe25519) :
   { fg : fe25519 | fg = sub_opt f g}.
 Proof.
   eexists.
-  rewrite <-appify2_correct.
+  rewrite <-(@appify2_correct fe25519).
   cbv.
   reflexivity.
 Defined.
@@ -141,7 +182,7 @@ Definition mul_sig (f g : fe25519) :
 Proof.
   eexists.
   rewrite <-mul_simpl_correct.
-  rewrite <-appify2_correct.
+  rewrite <-(@appify2_correct fe25519).
   cbv.
   reflexivity.
 Defined.
@@ -172,18 +213,89 @@ Proof.
   + reflexivity.
 Qed.
 
+Definition pack_simpl_sig (f : fe25519) :
+  { f' | f' = pack_opt params25519 wire_widths_nonneg bits_eq f }.
+Proof.
+  cbv [fe25519] in *.
+  repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
+  eexists.
+  cbv [pack_opt].
+  repeat (
+      rewrite <-convert'_opt_correct;
+      cbv - [from_list_default_opt Pow2BaseProofs.convert'];
+      repeat progress rewrite ?Z.shiftl_0_r, ?Z.shiftr_0_r, ?Z.land_0_l, ?Z.lor_0_l, ?Z.land_same_r).
+  cbv [from_list_default_opt].
+  reflexivity.
+Defined.
 
-(*
-Local Transparent Let_In.
-Eval cbv iota beta delta [proj1_sig mul Let_In] in (fun f0 f1 f2 f3 f4  g0 g1 g2 g3 g4 => proj1_sig (mul (f4,f3,f2,f1,f0) (g4,g3,g2,g1,g0))).
-*)
+Definition pack_simpl (f : fe25519) :=
+  Eval cbv beta iota delta [proj1_sig pack_simpl_sig] in
+    proj1_sig (pack_simpl_sig f).
+
+Definition pack_simpl_correct (f : fe25519)
+  : pack_simpl f = pack_opt params25519 wire_widths_nonneg bits_eq f
+  := Eval cbv beta iota delta [proj2_sig pack_simpl_sig] in proj2_sig (pack_simpl_sig f).
+
+Definition pack_sig (f : fe25519) :
+  { f' | f' = pack_opt params25519 wire_widths_nonneg bits_eq f }.
+Proof.
+  eexists.
+  rewrite <-pack_simpl_correct.
+  rewrite <-(@app_10_correct wire_digits).
+  cbv.
+  reflexivity.
+Defined.
+
+Definition pack (f : fe25519) : wire_digits :=
+  Eval cbv beta iota delta [proj1_sig pack_sig] in proj1_sig (pack_sig f).
+
+Definition pack_correct (f : fe25519)
+  : pack f = pack_opt params25519 wire_widths_nonneg bits_eq f
+  := Eval cbv beta iota delta [proj2_sig pack_sig] in proj2_sig (pack_sig f).
+
+Definition unpack_simpl_sig (f : wire_digits) :
+  { f' | f' = unpack_opt params25519 wire_widths_nonneg bits_eq f }.
+Proof.
+  cbv [wire_digits] in *.
+  repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
+  eexists.
+  cbv [unpack_opt].
+  repeat (
+      rewrite <-convert'_opt_correct;
+      cbv - [from_list_default_opt Pow2BaseProofs.convert'];
+      repeat progress rewrite ?Z.shiftl_0_r, ?Z.shiftr_0_r, ?Z.land_0_l, ?Z.lor_0_l, ?Z.land_same_r).
+  cbv [from_list_default_opt].
+  reflexivity.
+Defined.
+
+Definition unpack_simpl (f : wire_digits) : fe25519 :=
+  Eval cbv beta iota delta [proj1_sig unpack_simpl_sig] in
+    proj1_sig (unpack_simpl_sig f).
+
+Definition unpack_simpl_correct (f : wire_digits)
+  : unpack_simpl f = unpack_opt params25519 wire_widths_nonneg bits_eq f
+  := Eval cbv beta iota delta [proj2_sig unpack_simpl_sig] in proj2_sig (unpack_simpl_sig f).
+
+Definition unpack_sig (f : wire_digits) :
+  { f' | f' = unpack_opt params25519 wire_widths_nonneg bits_eq f }.
+Proof.
+  eexists.
+  rewrite <-unpack_simpl_correct.
+  rewrite <-(@app_7_correct fe25519).
+  cbv.
+  reflexivity.
+Defined.
+
+Definition unpack (f : wire_digits) : fe25519 :=
+  Eval cbv beta iota delta [proj1_sig unpack_sig] in proj1_sig (unpack_sig f).
+
+Definition unpack_correct (f : wire_digits)
+  : unpack f = unpack_opt params25519 wire_widths_nonneg bits_eq f
+  := Eval cbv beta iota delta [proj2_sig pack_sig] in proj2_sig (unpack_sig f).
 
 (* TODO: This file should eventually contain the following operations:
-   toBytes
-   fromBytes
    inv
    opp
-   sub
    zero
    one
    eq

@@ -116,6 +116,12 @@ Section montgomery.
         break_match; rewrite prereduce_correct; t_fin_correct.
       Qed.
 
+      Lemma reduce_via_partial_correct : reduce_via_partial N R N' T ≡ T * R'.
+      Proof.
+        unfold reduce_via_partial.
+        break_match; rewrite partial_reduce_correct; t_fin_correct.
+      Qed.
+
       Let m_small : 0 <= m < R. Proof. auto with zarith. Qed.
 
       Section generic.
@@ -172,6 +178,14 @@ Section montgomery.
           intro H; pose proof (prereduce_in_range_small_enough H).
           unfold partial_reduce, Z.prereduce in *; break_match; Z.ltb_to_lt; nia.
         Qed.
+
+        Lemma reduce_via_partial_in_range_R
+          : 0 <= T <= R * R
+            -> 0 <= reduce_via_partial N R N' T < R.
+        Proof.
+          intro H; pose proof (prereduce_in_range_small_enough H).
+          unfold reduce_via_partial, partial_reduce, Z.prereduce in *; break_match; Z.ltb_to_lt; nia.
+        Qed.
       End N_small_enough.
 
       Section unconstrained.
@@ -196,7 +210,37 @@ Section montgomery.
           unfold partial_reduce, Z.prereduce in *; break_match; Z.ltb_to_lt;
             apply Z.min_case_strong; nia.
         Qed.
+
+        Lemma reduce_via_partial_in_range
+        : 0 <= T <= R * N
+          -> Z.min 0 (R - N) <= reduce_via_partial N R N' T < N.
+        Proof.
+          intro H; pose proof (partial_reduce_in_range H).
+          unfold reduce_via_partial in *; break_match; Z.ltb_to_lt; lia.
+        Qed.
       End unconstrained.
+
+      Section alt.
+        Context (N_in_range : 0 <= N < R)
+                (T_representable : 0 <= T < R * R).
+        Lemma partial_reduce_alt_eq : partial_reduce_alt N R N' T = partial_reduce N R N' T.
+        Proof.
+          assert (0 <= T + m * N < 2 * (R * R)) by nia.
+          assert (0 <= T + m * N < R * (R + N)) by nia.
+          assert (0 <= (T + m * N) / R < R + N) by auto with zarith.
+          assert ((T + m * N) / R - N < R) by lia.
+          assert (R * R <= T + m * N -> R <= (T + m * N) / R) by auto with zarith.
+          assert (T + m * N < R * R -> (T + m * N) / R < R) by auto with zarith.
+          assert (H' : (T + m * N) mod (R * R) = if R * R <=? T + m * N then T + m * N - R * R else T + m * N)
+            by (break_match; Z.ltb_to_lt; autorewrite with zsimplify; lia).
+          unfold partial_reduce, partial_reduce_alt, Z.prereduce.
+          rewrite H'; clear H'.
+          simplify_repeated_ifs.
+          set (m' := m) in *.
+          autorewrite with zsimplify; push_Zmod; autorewrite with zsimplify; pull_Zmod.
+          break_match; Z.ltb_to_lt; autorewrite with zsimplify; try reflexivity; lia.
+        Qed.
+      End alt.
     End redc.
 
     (** * Arithmetic in Montgomery form *)

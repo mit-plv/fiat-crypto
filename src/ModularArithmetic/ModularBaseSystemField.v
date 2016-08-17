@@ -9,8 +9,9 @@ Require Import Crypto.Util.Tuple Crypto.Util.Notations.
 Local Open Scope Z_scope.
 
 Section ModularBaseSystemField.
-  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient modulus prm}
+  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient modulus prm} {cc : CarryChain limb_widths}
     (k_ c_ : Z) (k_subst : k = k_) (c_subst : c = c_).
+  Local Existing Instance prime_modulus.
   Local Notation base := (Pow2Base.base_from_limb_widths limb_widths).
   Local Notation digits := (tuple Z (length limb_widths)).
 
@@ -35,17 +36,13 @@ Section ModularBaseSystemField.
     apply carry_mul_rep; apply decode_rep.
   Qed.
 
-  Lemma zero_neq_one : eq zero one -> False.
-  Proof.
-   cbv [eq zero one]. erewrite !encode_rep. intro A.
-   eapply (PrimeFieldTheorems.Fq_1_neq_0 (prime_q := prime_modulus)).
-   congruence.
-  Qed.
+  Lemma _zero_neq_one : not (eq zero one).
+  Proof. cbv [eq zero one]. erewrite !encode_rep; apply zero_neq_one. Qed.
 
   Lemma modular_base_system_field :
     @field digits eq zero one opp add_opt sub_opt (carry_mul_opt k_ c_) inv div.
   Proof.
-    eapply (Field.isomorphism_to_subfield_field (phi := decode) (fieldR := PrimeFieldTheorems.field_modulo  (prime_q := prime_modulus))).
+    eapply (Field.isomorphism_to_subfield_field (phi := decode)).
     Grab Existential Variables.
     + intros; eapply encode_rep.
     + intros; eapply encode_rep.
@@ -55,9 +52,7 @@ Section ModularBaseSystemField.
     + intros; eapply sub_decode.
     + intros; eapply add_decode.
     + intros; eapply encode_rep.
-    + cbv [eq zero one]. erewrite !encode_rep. intro A.
-      eapply (PrimeFieldTheorems.Fq_1_neq_0 (prime_q := prime_modulus)).
-      congruence.
+    + eapply _zero_neq_one.
     + trivial.
     + repeat intro. cbv [div]. congruence.
     + repeat intro. cbv [inv]. congruence.
@@ -65,7 +60,6 @@ Section ModularBaseSystemField.
     + repeat intro. cbv [eq]. erewrite !sub_decode. congruence.
     + repeat intro. cbv [eq]. erewrite !add_decode. congruence.
     + repeat intro. cbv [opp]. congruence.
-    + cbv [eq]. auto using ModularArithmeticTheorems.F_eq_dec.
   Qed.
 
 End ModularBaseSystemField.

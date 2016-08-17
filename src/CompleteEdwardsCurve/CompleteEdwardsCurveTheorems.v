@@ -1,6 +1,6 @@
 Require Export Crypto.Spec.CompleteEdwardsCurve.
 
-Require Import Crypto.Algebra Crypto.Algebra.
+Require Import Crypto.Algebra Crypto.Algebra Crypto.Util.Decidable.
 Require Import Crypto.CompleteEdwardsCurve.Pre.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Crypto.Tactics.VerdiTactics.
@@ -115,7 +115,7 @@ Module E.
       Proof.
         intros ? eq_zero.
         destruct square_a as [sqrt_a sqrt_a_id]; rewrite <- sqrt_a_id in eq_zero.
-        destruct (eq_dec y 0); [apply nonzero_a | apply nonsquare_d with (sqrt_a/y)]; super_nsatz.
+        destruct (dec (y=0)); [apply nonzero_a | apply nonsquare_d with (sqrt_a/y)]; super_nsatz.
       Qed.
 
       Lemma solve_correct : forall x y, onCurve (x, y) <-> (x^2 = solve_for_x2 y).

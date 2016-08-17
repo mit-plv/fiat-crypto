@@ -2,745 +2,298 @@ Require Import Coq.omega.Omega.
 Require Import Crypto.Spec.ModularArithmetic.
 Require Import Crypto.ModularArithmetic.Pre.
 
-Require Import Coq.Logic.Eqdep_dec.
-Require Import Crypto.Tactics.VerdiTactics.
 Require Import Coq.ZArith.BinInt Coq.ZArith.Zdiv Coq.ZArith.Znumtheory Coq.NArith.NArith. (* import Zdiv before Znumtheory *)
 Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
-Require Export Coq.setoid_ring.Ring_theory Coq.setoid_ring.Field_theory Coq.setoid_ring.Field_tac.
-Require Export Crypto.Util.IterAssocOp.
+Require Export Coq.setoid_ring.Ring_theory Coq.setoid_ring.Ring_tac.
 
+Require Import Crypto.Algebra Crypto.Util.Decidable Crypto.Util.ZUtil.
 Require Export Crypto.Util.FixCoqMistakes.
 
-Section ModularArithmeticPreliminaries.
-  Context {m:Z}.
-  Let ZToFm := ZToField : BinNums.Z -> F m. Hint Unfold ZToFm. Local Coercion ZToFm : Z >-> F.
-
-  Theorem F_eq: forall (x y : F m), x = y <-> FieldToZ x = FieldToZ y.
-  Proof.
-    destruct x, y; intuition; simpl in *; try congruence.
-    subst_max.
-    f_equal.
-    eapply UIP_dec, Z.eq_dec.
-  Qed.
-
-  Lemma F_pow_spec : forall (a:F m),
-      pow a 0%N = 1%F /\ forall x, pow a (1 + x)%N = mul a (pow a x).
-  Proof.
-    intros a.
-    pose (@pow_with_spec m) as H.
-    change (@pow m) with (proj1_sig H).
-    destruct H; eauto.
-  Qed.
-End ModularArithmeticPreliminaries.
-
-(* Fails iff the input term does some arithmetic with mod'd values. *)
-Ltac notFancy E :=
-match E with
-| - (_ mod _) => idtac
-| context[_ mod _] => fail 1
-| _ => idtac
-end.
-
-Lemma Zplus_neg : forall n m, n + -m = n - m.
-Proof.
-  auto.
-Qed.
-
-Lemma Zmod_eq : forall a b n, a = b -> a mod n = b mod n.
-Proof.
-  intros; rewrite H; trivial.
-Qed.
-
-(* Remove redundant [mod] operations from the conclusion. *)
-Ltac demod :=
-  repeat match goal with
-         | [ |- context[(?x mod _ + _) mod _] ] =>
-           notFancy x; rewrite (Zplus_mod_idemp_l x)
-         | [ |- context[(_ + ?y mod _) mod _] ] =>
-           notFancy y; rewrite (Zplus_mod_idemp_r y)
-         | [ |- context[(?x mod _ - _) mod _] ] =>
-           notFancy x; rewrite (Zminus_mod_idemp_l x)
-         | [ |- context[(_ - ?y mod _) mod _] ] =>
-           notFancy y; rewrite (Zminus_mod_idemp_r _ y)
-         | [ |- context[(?x mod _ * _) mod _] ] =>
-           notFancy x; rewrite (Zmult_mod_idemp_l x)
-         | [ |- context[(_ * (?y mod _)) mod _] ] =>
-           notFancy y; rewrite (Zmult_mod_idemp_r y)
-         | [ |- context[(?x mod _) mod _] ] =>
-           notFancy x; rewrite (Zmod_mod x)
-         | _ => rewrite Zplus_neg in * || rewrite Z.sub_diag in *
-         end.
-
-(* Remove exists under equals: we do this a lot *)
-Ltac eq_remove_proofs := lazymatch goal with
-| [ |- @eq (F _) ?a ?b ] =>
-    assert (Q := F_eq a b);
-    simpl in *; apply Q; clear Q
-end.
-
-(** TODO FIXME(from jgross): This tactic is way too powerful for
-    arcane reasons.  It should not be using so many databases with
-    [intuition]. *)
-Ltac Fdefn :=
-  intros;
-  repeat match goal with [ x : F _ |- _ ] => destruct x end;
-  try eq_remove_proofs;
-  demod;
-  rewrite ?Z.mul_1_l;
-  intuition auto with zarith lia relations typeclass_instances; demod; try solve [ f_equal; intuition auto with zarith lia relations typeclass_instances ].
-
-Local Open Scope F_scope.
-
-Section FEquality.
-  Context {m:Z}.
-
-  (** Equality **)
-  Definition F_eqb (x y : F m) : bool :=  Z.eqb x y.
-
-  Lemma F_eqb_eq x y : F_eqb x y = true -> x = y.
-  Proof.
-    unfold F_eqb; Fdefn; apply Z.eqb_eq; trivial.
-  Qed.
-
-  Lemma F_eqb_complete : forall x y: F m, x = y -> F_eqb x y = true.
-  Proof.
-    intros; subst; apply Z.eqb_refl.
-  Qed.
-
-  Lemma F_eqb_refl : forall x, F_eqb x x = true.
-  Proof.
-    intros; apply F_eqb_complete; trivial.
-  Qed.
-
-  Lemma F_eqb_neq x y : F_eqb x y = false -> x <> y.
-  Proof.
-    intuition; subst y.
-    pose proof (F_eqb_refl x).
-    congruence.
-  Qed.
-
-  Lemma F_eqb_neq_complete x y : x <> y -> F_eqb x y = false.
-  Proof.
-    intros.
-    case_eq (F_eqb x y); intros; trivial.
-    pose proof (F_eqb_eq x y); intuition.
-  Qed.
-
-  Lemma F_eq_dec : forall x y : F m, {x = y} + {x <> y}.
-  Proof.
-    intros; case_eq (F_eqb x y); [left|right]; auto using F_eqb_eq, F_eqb_neq.
-  Qed.
-
-  Lemma if_F_eq_dec_if_F_eqb : forall {T} x y (a b:T), (if F_eq_dec x y then a else b) = (if F_eqb x y then a else b).
-  Proof.
-    intros; intuition; break_if.
-    - rewrite F_eqb_complete; trivial.
-    - rewrite F_eqb_neq_complete; trivial.
-  Defined.
-End FEquality.
-
-Section FandZ.
-  Context {m:Z}.
-
-  Lemma ZToField_small_nonzero : forall z, (0 < z < m)%Z -> ZToField z <> (0:F m).
-  Proof.
-    intuition; find_inversion; rewrite ?Z.mod_0_l, ?Z.mod_small in *; intuition auto with zarith.
-  Qed.
-
-  Require Crypto.Algebra.
-  Global Instance commutative_ring_modulo : @Algebra.commutative_ring (F m) Logic.eq (ZToField 0) (ZToField 1) opp add sub mul.
-  Proof.
-    repeat split; Fdefn; try apply F_eq_dec.
-    { rewrite Z.add_0_r. auto. }
-    { rewrite Z.mul_1_r. auto. }
-  Qed.
-
-  Lemma F_opp_spec : forall (a:F m), add a (opp a) = 0.
-    Fdefn.
-  Qed.
-
-  Lemma ZToField_0 : @ZToField m 0 = 0.
-  Proof.
-    Fdefn.
-  Qed.
-
-  Lemma FieldToZ_ZToField : forall z, FieldToZ (@ZToField m z) = z mod m.
-  Proof.
-    Fdefn.
-  Qed.
-
-  Lemma mod_FieldToZ : forall x,  (@FieldToZ m x) mod m = FieldToZ x.
-  Proof.
-    Fdefn.
-  Qed.
-
-  (** ZToField distributes over operations **)
-  Lemma ZToField_add : forall (x y : Z),
-      @ZToField m (x + y) = ZToField x + ZToField y.
-  Proof.
-    Fdefn.
-  Qed.
-
-  Lemma FieldToZ_add : forall x y : F m,
-      FieldToZ (x + y) = ((FieldToZ x + FieldToZ y) mod m)%Z.
-  Proof.
-    Fdefn.
-  Qed.
-
-  Lemma FieldToZ_mul : forall x y : F m,
-      FieldToZ (x * y) = ((FieldToZ x * FieldToZ y) mod m)%Z.
-  Proof.
-    Fdefn.
-  Qed.
-
-  Lemma FieldToZ_pow_Zpow_mod : forall (x : F m) n,
-    (FieldToZ x ^ Z.of_N n mod m = FieldToZ (x ^ n)%F)%Z.
-  Proof.
-    intros.
-    induction n using N.peano_ind;
-      destruct (F_pow_spec x) as [pow_0 pow_succ] . {
-      rewrite pow_0.
-      rewrite Z.pow_0_r; auto.
-    } {
-      rewrite N2Z.inj_succ.
-      rewrite Z.pow_succ_r by apply N2Z.is_nonneg.
-      rewrite <- N.add_1_l.
-      rewrite pow_succ.
-      rewrite <- Zmult_mod_idemp_r.
-      rewrite IHn.
-      apply FieldToZ_mul.
-    }
-  Qed.
-
-  Lemma FieldToZ_pow_efficient : forall (x : F m) n, FieldToZ (x^n) = powmod m (FieldToZ x) n.
-  Proof.
-    intros.
-    rewrite powmod_Zpow_mod.
-    rewrite <-FieldToZ_pow_Zpow_mod.
-    reflexivity.
-  Qed.
-
-  Lemma pow_nat_iter_op_correct: forall (x:F m) n, (@nat_iter_op _ mul 1) (N.to_nat n) x = x^n.
-  Proof.
-    induction n using N.peano_ind;
-      destruct (F_pow_spec x) as [pow_0 pow_succ];
-      rewrite ?N2Nat.inj_succ, ?pow_0, <-?N.add_1_l, ?pow_succ;
-      simpl; congruence.
-  Qed.
-
-  Lemma mod_plus_zero_subproof a b : 0 mod m = (a + b) mod m ->
-                                     b mod m =  (- a)  mod m.
-  Proof.
-    rewrite <-Z.sub_0_l; intros.
-    replace (0-a)%Z with (b-(a + b))%Z by omega.
-    rewrite Zminus_mod.
-    rewrite <- H.
-    rewrite Zmod_0_l.
-    replace (b mod m - 0)%Z with (b mod m) by omega.
-    rewrite Zmod_mod.
-    reflexivity.
-  Qed.
-
-  Lemma FieldToZ_opp' : forall x, FieldToZ (@opp m x) mod m = -x mod m.
-  Proof.
-    intros.
-    pose proof (FieldToZ_add x (opp x)) as H.
-    rewrite F_opp_spec, FieldToZ_ZToField in H.
-    auto using mod_plus_zero_subproof.
-  Qed.
-
-  Lemma FieldToZ_opp : forall x, FieldToZ (@opp m x) = -x mod m.
-  Proof.
-    intros.
-    pose proof (FieldToZ_opp' x) as H; rewrite mod_FieldToZ in H; trivial.
-  Qed.
-
-  Lemma sub_intersperse_modulus : forall x y, ((x - y) mod m = (x + (m - y)) mod m)%Z.
-  Proof.
-    intros.
-    replace (x + (m - y))%Z with (m+(x-y))%Z by omega.
-    rewrite Zplus_mod.
-    rewrite Z_mod_same_full; simpl Z.add.
-    rewrite Zmod_mod.
-    reflexivity.
-  Qed.
-
-  (* Compatibility between inject and subtraction *)
-  Lemma ZToField_sub : forall (x y : Z),
-      @ZToField m (x - y) = ZToField x - ZToField y.
-  Proof.
-    Fdefn.
-  Qed.
-
-  (* Compatibility between inject and multiplication *)
-  Lemma ZToField_mul : forall (x y : Z),
-      @ZToField m (x * y) = ZToField x * ZToField y.
-  Proof.
-    Fdefn.
-  Qed.
-
-  (* Compatibility between inject and GFtoZ *)
-  Lemma ZToField_idempotent : forall (x : F m), ZToField x = x.
-  Proof.
-    Fdefn.
-  Qed.
-  Definition ZToField_FieldToZ := ZToField_idempotent. (* alias *)
-
-  (* Compatibility between inject and mod *)
-  Lemma ZToField_mod : forall x, @ZToField m x = ZToField (x mod m).
-  Proof.
-    Fdefn.
-  Qed.
-
-  (* Compatibility between inject and pow *)
-  Lemma ZToField_pow : forall x n,
-    @ZToField m x ^ n = ZToField (x ^ (Z.of_N n) mod m).
-  Proof.
-    intros.
-    induction n using N.peano_ind;
-      destruct (F_pow_spec (@ZToField m x)) as [pow_0 pow_succ] . {
-      rewrite pow_0.
-      Fdefn.
-    } {
-      rewrite N2Z.inj_succ.
-      rewrite Z.pow_succ_r by apply N2Z.is_nonneg.
-      rewrite <- N.add_1_l.
-      rewrite pow_succ.
-      rewrite IHn.
-      Fdefn.
-    }
-  Qed.
-
-  Lemma ZToField_eqmod : forall x y : Z, x mod m = y mod m -> ZToField x = @ZToField m y.
-    Fdefn.
-  Qed.
-
-  Lemma FieldToZ_nonzero:
-    forall x0 : F m, x0 <> 0 -> FieldToZ x0 <> 0%Z.
-  Proof.
-    intros x0 Hnz Hz.
-    rewrite <- Hz, ZToField_FieldToZ in Hnz; auto.
-  Qed.
-
-End FandZ.
-
-Section RingModuloPre.
-  Context {m:Z}.
-  Let ZToFm := ZToField : Z -> F m. Hint Unfold ZToFm. Local Coercion ZToFm : Z >-> F.
-  (* Substitution to prove all Compats *)
-  Ltac compat := repeat intro; subst; trivial.
-
-  Instance Fplus_compat : Proper (eq==>eq==>eq) (@add m).
-  Proof.
-    compat.
-  Qed.
-
-  Instance Fminus_compat : Proper (eq==>eq==>eq) (@sub m).
-  Proof.
-    compat.
-  Qed.
-
-  Instance Fmult_compat : Proper (eq==>eq==>eq) (@mul m).
-  Proof.
-    compat.
-  Qed.
-
-  Instance Fopp_compat : Proper (eq==>eq) (@opp m).
-  Proof.
-    compat.
-  Qed.
-
-  Instance Finv_compat : Proper (eq==>eq) (@inv m).
-  Proof.
-    compat.
-  Qed.
-
-  Instance Fdiv_compat : Proper (eq==>eq==>eq) (@div m).
-  Proof.
-    compat.
-  Qed.
-
-  (***** Ring Theory *****)
-  Definition Fring_theory : ring_theory 0%F 1%F (@add m) (@mul m) (@sub m) (@opp m) eq.
-  Proof.
-    constructor; Fdefn.
-  Qed.
-
-  Lemma F_mul_1_r:
-    forall x : F m, x * 1 = x.
-  Proof.
-    Fdefn; rewrite Z.mul_1_r; auto.
-  Qed.
-
-  Lemma F_mul_assoc:
-    forall x y z : F m, x * (y * z) = x * y * z.
-  Proof.
-    Fdefn.
-  Qed.
-
-  Lemma F_pow_pow_N (x : F m) : forall (n : N), (x ^ id n)%F = pow_N 1%F mul x n.
-  Proof.
-    destruct (F_pow_spec x) as [HO HS]; intros.
-    destruct n; auto; unfold id.
-    rewrite Pre.N_pos_1plus at 1.
-    rewrite HS.
-    simpl.
-    induction p using Pos.peano_ind.
-    - simpl. rewrite HO; apply F_mul_1_r.
-    - rewrite (@pow_pos_succ (F m) (@mul m) eq _ _ F_mul_assoc x).
-      rewrite <-IHp, Pos.pred_N_succ, Pre.N_pos_1plus, HS.
-      f_equal.
-  Qed.
-
-  (***** Power theory *****)
-  Lemma Fpower_theory : power_theory 1%F (@mul m) eq id (@pow m).
-  Proof.
-    constructor; apply F_pow_pow_N.
-  Qed.
-
-  (***** Division Theory *****)
-  Definition Fquotrem(a b: F m): F m * F m :=
-    let '(q, r) := (Z.quotrem a b) in (q : F m, r : F m).
-  Lemma Fdiv_theory : div_theory eq (@add m) (@mul m) (@id _) Fquotrem.
-  Proof.
-    constructor; intros; unfold Fquotrem, id.
-
-    replace (Z.quotrem a b) with (Z.quot a b, Z.rem a b) by
-      try (unfold Z.quot, Z.rem; rewrite <- surjective_pairing; trivial).
-
-    Fdefn; rewrite <-Z.quot_rem'; trivial.
-  Qed.
-
-  Lemma Z_mul_mod_modulus_r : forall x m, ((x*m) mod m = 0)%Z.
-    intros.
-    rewrite Zmult_mod, Z_mod_same_full.
-    rewrite Z.mul_0_r, Zmod_0_l.
-    reflexivity.
-  Qed.
-
-  Lemma Z_mod_opp_equiv : forall x y m,  x  mod m = (-y) mod m ->
-                                       (-x) mod m =   y  mod m.
-  Proof.
-    intros.
-    rewrite <-Z.sub_0_l.
-    rewrite Zminus_mod. rewrite H.
-    rewrite ?Zminus_mod_idemp_l, ?Zminus_mod_idemp_r; f_equal.
-    destruct y; auto.
-  Qed.
-
-  Lemma Z_opp_opp : forall x : Z, (-(-x)) = x.
-    destruct x; auto.
-  Qed.
-
-  Lemma Z_mod_opp : forall x m, (- x) mod m = (- (x mod m)) mod m.
-    intros.
-    apply Z_mod_opp_equiv.
-    rewrite Z_opp_opp.
-    demod; auto.
-  Qed.
-
-  (* Define a "ring morphism" between GF and Z, i.e. an equivalence
-   * between 'inject (ZFunction (X))' and 'GFFunction (inject (X))'.
-   *
-   * Doing this allows us to do our coefficient manipulations in Z
-   * rather than GF, because we know it's equivalent to inject the
-   * result afterward.
-   *)
-  Lemma Fring_morph:
-      ring_morph 0%F 1%F (@add m) (@mul m) (@sub m) (@opp m) eq
-                 0%Z 1%Z Z.add    Z.mul    Z.sub    Z.opp  Z.eqb
-                 (@ZToField m).
-  Proof.
-    constructor; intros; try Fdefn; unfold id;
-      try (apply gf_eq; simpl; intuition).
-    - rewrite (proj1 (Z.eqb_eq x y)); trivial.
-  Qed.
-
-  (* Redefine our division theory under the ring morphism *)
-  Lemma Fmorph_div_theory:
-      div_theory eq Zplus Zmult (@ZToField m) Z.quotrem.
-  Proof.
-    constructor; intros; intuition.
-    replace (Z.quotrem a b) with (Z.quot a b, Z.rem a b);
-      try (unfold Z.quot, Z.rem; rewrite <- surjective_pairing; trivial).
-
-    eq_remove_proofs; demod;
-      rewrite <- (Z.quot_rem' a b);
-      destruct a; simpl; trivial.
-  Qed.
-
-  Lemma ZToField_1 : @ZToField m 1 = 1.
-  Proof.
-    Fdefn.
-  Qed.
-End RingModuloPre.
-
-Ltac Fconstant t := match t with @ZToField _ ?x => x | _ => NotConstant end.
-Ltac Fexp_tac t := Ncst t.
-Ltac Fpreprocess := rewrite <-?ZToField_0, ?ZToField_1.
-Ltac Fpostprocess := repeat split;
-  repeat match goal with [ |- context[exist ?a ?b (Pre.Z_mod_mod ?x ?q)] ] =>
-    change (exist a b (Pre.Z_mod_mod x q)) with (@ZToField q x%Z) end;
-  rewrite ?ZToField_0, ?ZToField_1.
-
-Module Type Modulus.
-  Parameter modulus : Z.
-End Modulus.
-
-(* Example of how to instantiate the ring tactic *)
-Module RingModulo (Export M : Modulus).
-  Definition ring_theory_modulo := @Fring_theory modulus.
-  Definition ring_morph_modulo := @Fring_morph modulus.
-  Definition morph_div_theory_modulo := @Fmorph_div_theory modulus.
-  Definition power_theory_modulo := @Fpower_theory modulus.
-
-  Add Ring GFring_Z : ring_theory_modulo
-    (morphism ring_morph_modulo,
-     constants [Fconstant],
-     div morph_div_theory_modulo,
-     power_tac power_theory_modulo [Fexp_tac]).
-End RingModulo.
-
-Section VariousModulo.
-  Context {m:Z}.
-
-  Add Ring GFring_Z : (@Fring_theory m)
-    (morphism (@Fring_morph m),
-     constants [Fconstant],
-     div (@Fmorph_div_theory m),
-     power_tac (@Fpower_theory m) [Fexp_tac]).
-
-  Lemma F_mul_0_l : forall x : F m, 0 * x = 0.
-  Proof.
-    intros; ring.
-  Qed.
-
-  Lemma F_mul_0_r : forall x : F m, x * 0 = 0.
-  Proof.
-    intros; ring.
-  Qed.
-
-  Lemma F_mul_nonzero_l : forall a b : F m, a*b <> 0 -> a <> 0.
-    intros; intuition; subst.
-    assert (0 * b = 0) by ring; intuition.
-  Qed.
-
-  Lemma F_mul_nonzero_r : forall a b : F m, a*b <> 0 -> b <> 0.
-    intros; intuition; subst.
-    assert (a * 0 = 0) by ring; intuition.
-  Qed.
-
-  Lemma F_pow_distr_mul : forall (x y:F m) z, (0 <= z)%N ->
-    (x ^ z) * (y ^ z) = (x * y) ^ z.
-  Proof.
-    intros.
-    replace z with (Z.to_N (Z.of_N z)) by apply N2Z.id.
-    apply natlike_ind with (x := Z.of_N z); simpl; [ ring | |
-      replace 0%Z with (Z.of_N 0%N) by auto; apply N2Z.inj_le; auto].
-    intros z' z'_nonneg IHz'.
-    rewrite Z2N.inj_succ by auto.
-    rewrite <-N.add_1_l.
-    rewrite !(proj2 (@F_pow_spec m _) _).
-    rewrite <- IHz'.
-    ring.
-  Qed.
-
-  Lemma F_opp_0 : opp (0 : F m) = 0%F.
-  Proof.
-    intros; ring.
-  Qed.
-
-  Lemma F_opp_swap : forall x y : F m, opp x = y <-> x = opp y.
-  Proof.
-    split; intro; subst; ring.
-  Qed.
-
-  Lemma F_opp_involutive : forall x : F m, opp (opp x) = x.
-  Proof.
-    intros; ring.
-  Qed.
-
-  Lemma F_square_opp : forall x : F m, (opp x ^ 2 = x ^ 2)%F.
-  Proof.
-    intros; ring.
-  Qed.
-
-  Lemma F_mul_opp_r : forall x y : F m, (x * opp y = opp (x * y))%F.
-    intros; ring.
-  Qed.
-
-  Lemma F_mul_opp_l : forall x y : F m, (opp x * y = opp (x * y))%F.
-    intros; ring.
-  Qed.
-
-  Lemma F_mul_opp_both : forall x y : F m, (opp x * opp y = x * y)%F.
-    intros; ring.
-  Qed.
-
-  Lemma F_add_0_r : forall x : F m, (x + 0)%F = x.
-  Proof.
-    intros; ring.
-  Qed.
-
-  Lemma F_add_0_l : forall x : F m, (0 + x)%F = x.
-  Proof.
-    intros; ring.
-  Qed.
-
-  Lemma F_add_reg_r : forall x y z : F m, y + x = z + x -> y = z.
-  Proof.
-    intros ? ? ? A.
-    replace y with (y + x - x) by ring.
-    rewrite A; ring.
-  Qed.
-
-  Lemma F_add_reg_l : forall x y z : F m, x + y = x + z -> y = z.
-  Proof.
-    intros ? ? ? A.
-    replace y with (x + y - x) by ring.
-    rewrite A; ring.
-  Qed.
-
-  Lemma F_sub_0_r : forall x : F m, (x - 0)%F = x.
-  Proof.
-    intros; ring.
-  Qed.
-
-  Lemma F_sub_0_l : forall x : F m, (0 - x)%F = opp x.
-  Proof.
-    intros; ring.
-  Qed.
-
-  Lemma F_mul_1_l : forall x : F m, (1 * x)%F = x.
-  Proof.
-    intros; ring.
-  Qed.
-
-  Lemma F_ZToField_m : ZToField m = @ZToField m 0.
-  Proof.
-    Fdefn.
-    rewrite Zmod_0_l.
-    apply Z_mod_same_full.
-  Qed.
-
-  Lemma F_sub_m_l : forall x : F m, opp x = ZToField m - x.
-  Proof.
-    rewrite F_ZToField_m.
-    symmetry.
-    apply F_sub_0_l.
-  Qed.
-
-  Lemma opp_ZToField : forall x : Z, opp (ZToField x) = @ZToField m (m - x).
-  Proof.
-    Fdefn.
-    rewrite Zminus_mod, Z_mod_same_full, (Z.sub_0_l (x mod m)); reflexivity.
-  Qed.
-
-  Lemma F_pow_2_r : forall x : F m, x^2 = x*x.
-  Proof.
-    intros. ring.
-  Qed.
-
-  Lemma F_pow_3_r : forall x : F m, x^3 = x*x*x.
-  Proof.
-    intros. ring.
-  Qed.
-
-  Lemma F_pow_add : forall (x : F m) k j, x ^ j * x ^ k = x ^ (j + k).
-  Proof.
-    intros.
-    destruct (F_pow_spec x) as [exp_zero exp_succ].
-    induction j using N.peano_ind.
-    + rewrite exp_zero.
-      ring_simplify; eauto.
-    +
-    rewrite N.add_succ_l.
-    do 2 rewrite <- N.add_1_l.
-    do 2 rewrite exp_succ by apply N.neq_succ_0.
-    rewrite <- IHj.
-    ring.
-  Qed.
-
-  Lemma F_pow_compose : forall (x : F m) k j, (x ^ j) ^ k = x ^ (k * j).
-  Proof.
-    intros.
-    induction k using N.peano_ind; [rewrite Nmult_0_l; ring | ].
-    rewrite Nmult_Sn_m.
-    rewrite <- F_pow_add.
-    rewrite <- IHk.
-    rewrite <- N.add_1_l.
-    rewrite (proj2 (F_pow_spec _)).
-    ring.
-  Qed.
-
-  Lemma F_sub_add_swap : forall w x y z : F m, w - x = y - z <-> w + z = y + x.
-  Proof.
-    split; intro A;
-      [ replace w with (w - x + x) by ring
-      | replace w with (w + z - z) by ring ]; rewrite A; ring.
-  Qed.
-
-  Definition isSquare (x : F m) := exists sqrt_x, sqrt_x ^ 2 = x.
-
-  Lemma square_Zmod_F : forall (a : F m), isSquare a <->
-    (exists b : Z, ((b * b) mod m)%Z = a).
-  Proof.
-    split; intro A; destruct A as [sqrt_a sqrt_a_id]. {
-      exists sqrt_a.
-      rewrite <- FieldToZ_mul.
-      apply F_eq.
-      ring_simplify; auto.
-    } {
-      exists (ZToField sqrt_a).
-      rewrite ZToField_pow.
-      replace (Z.of_N 2) with 2%Z by auto.
-      rewrite Z.pow_2_r.
-      rewrite sqrt_a_id.
-      apply ZToField_FieldToZ.
-    }
-  Qed.
-
-  Lemma FieldToZ_range : forall x : F m, 0 < m -> 0 <= x < m.
-  Proof.
-    intros.
-    rewrite <- mod_FieldToZ.
-    apply Z.mod_pos_bound.
-    omega.
-  Qed.
-
-  Lemma FieldToZ_nonzero_range : forall x : F m, (x <> 0) -> 0 < m ->
-    (1 <= x < m)%Z.
-  Proof.
-    intros.
-    pose proof (FieldToZ_range x).
-    unfold not in *.
-    rewrite F_eq in H.
-    replace (FieldToZ 0) with 0%Z in H by auto.
-    omega.
-  Qed.
-
-  Lemma F_mul_comm : forall x y : F m, x*y = y*x.
-    intros; ring.
-  Qed.
-
-  Lemma Fq_sub_eq : forall x y a b : F m, a = b -> x-a = y-b -> x = y.
-  Proof.
-    intros x y a b Hab Hxayb; subst.
-    replace x with ((x - b) + b) by ring.
-    replace y with ((y - b) + b) by ring.
-    rewrite Hxayb; ring.
-  Qed.
-
-  Lemma F_FieldToZ_add_opp : forall x : F m, x <> 0 -> (FieldToZ x + FieldToZ (opp x) = m)%Z.
-  Proof.
-    intros.
-    rewrite FieldToZ_opp.
-    rewrite Z_mod_nz_opp_full, mod_FieldToZ; try omega.
-    rewrite mod_FieldToZ.
-    replace 0%Z with (@FieldToZ m 0) by auto.
-    intro false_eq.
-    rewrite <-F_eq in false_eq.
-    congruence.
-  Qed.
-
-End VariousModulo.
+Module F.
+  Ltac unwrap_F :=
+    intros;
+    repeat match goal with [ x : F _ |- _ ] => destruct x end;
+    lazy iota beta delta [F.add F.sub F.mul F.opp F.to_Z F.of_Z proj1_sig] in *;
+    try apply eqsig_eq;
+    pull_Zmod.
+  
+  (* FIXME: remove the pose proof once [monoid] no longer contains decidable equality *)
+  Global Instance eq_dec {m} : DecidableRel (@eq (F m)). pose proof dec_eq_Z. exact _. Defined.
+  
+  Global Instance commutative_ring_modulo m
+    : @Algebra.commutative_ring (F m) Logic.eq 0%F 1%F F.opp F.add F.sub F.mul.
+  Proof.
+    repeat (split || intro); unwrap_F;
+      autorewrite with zsimplify; solve [ exact _ | auto with zarith | congruence].
+  Qed.
+
+  Lemma pow_spec {m} a : F.pow a 0%N = 1%F :> F m /\ forall x, F.pow a (1 + x)%N = F.mul a (F.pow a x).
+  Proof. change (@F.pow m) with (proj1_sig (@F.pow_with_spec m)); destruct (@F.pow_with_spec m); eauto. Qed.
+
+  Section FandZ.
+    Context {m:Z}.
+    Local Open Scope F_scope.
+
+    Theorem eq_to_Z_iff (x y : F m) : x = y <-> F.to_Z x = F.to_Z y.
+    Proof. destruct x, y; intuition; simpl in *; try apply (eqsig_eq _ _); congruence. Qed.
+
+    Lemma eq_of_Z_iff : forall x y : Z, x mod m = y mod m <-> F.of_Z m x = F.of_Z m y.
+    Proof. split; unwrap_F; congruence. Qed.
+
+    
+    Lemma to_Z_of_Z : forall z, F.to_Z (F.of_Z m z) = z mod m.
+    Proof. unwrap_F; trivial. Qed.
+
+    Lemma of_Z_to_Z x : F.of_Z m (F.to_Z x) = x :> F m.
+    Proof. unwrap_F; congruence. Qed.
+
+    
+    Lemma of_Z_mod : forall x, F.of_Z m x = F.of_Z m (x mod m).
+    Proof. unwrap_F; trivial. Qed.
+
+    Lemma mod_to_Z : forall (x:F m),  F.to_Z x mod m = F.to_Z x.
+    Proof. unwrap_F. congruence. Qed.
+
+    Lemma to_Z_0 : F.to_Z (0:F m) = 0%Z.
+    Proof. unwrap_F. apply Zmod_0_l. Qed.
+
+    Lemma of_Z_small_nonzero z : (0 < z < m)%Z -> F.of_Z m z <> 0.
+    Proof. intros Hrange Hnz. inversion Hnz. rewrite Zmod_small, Zmod_0_l in *; omega. Qed.
+
+    Lemma to_Z_nonzero (x:F m) : x <> 0 -> F.to_Z x <> 0%Z.
+    Proof. intros Hnz Hz. rewrite <- Hz, of_Z_to_Z in Hnz; auto. Qed.
+
+    Lemma to_Z_range (x : F m) : 0 < m -> 0 <= F.to_Z x < m.
+    Proof. intros. rewrite <- mod_to_Z. apply Z.mod_pos_bound. trivial. Qed.
+
+    Lemma to_Z_nonzero_range (x : F m) : (x <> 0) -> 0 < m -> (1 <= F.to_Z x < m)%Z.
+    Proof.
+      unfold not; intros Hnz Hlt.
+      rewrite eq_to_Z_iff, to_Z_0 in Hnz; pose proof (to_Z_range x Hlt).
+      omega.
+    Qed.
+
+    Lemma of_Z_add : forall (x y : Z),
+        F.of_Z m (x + y) = F.of_Z m x + F.of_Z m y.
+    Proof. unwrap_F; trivial. Qed.
+
+    Lemma to_Z_add : forall x y : F m,
+        F.to_Z (x + y) = ((F.to_Z x + F.to_Z y) mod m)%Z.
+    Proof. unwrap_F; trivial. Qed.
+
+    Lemma of_Z_mul x y : F.of_Z m (x * y) = F.of_Z _ x * F.of_Z _ y :> F m.
+    Proof. unwrap_F. trivial. Qed.
+
+    Lemma to_Z_mul : forall x y : F m,
+        F.to_Z (x * y) = ((F.to_Z x * F.to_Z y) mod m)%Z.
+    Proof. unwrap_F; trivial. Qed.
+    
+    Lemma of_Z_sub x y : F.of_Z _ (x - y) = F.of_Z _ x - F.of_Z _ y :> F m.
+    Proof. unwrap_F. trivial. Qed.
+
+    Lemma to_Z_opp : forall x : F m, F.to_Z (F.opp x) = (- F.to_Z x) mod m.
+    Proof. unwrap_F; trivial. Qed.
+
+    Lemma of_Z_pow x n : F.of_Z _ x ^ n = F.of_Z _ (x ^ (Z.of_N n) mod m) :> F m.
+    Proof.
+      intros.
+      induction n using N.peano_ind;
+        destruct (pow_spec (F.of_Z m x)) as [pow_0 pow_succ] . {
+        rewrite pow_0.
+        unwrap_F; trivial.
+      } {
+        rewrite N2Z.inj_succ.
+        rewrite Z.pow_succ_r by apply N2Z.is_nonneg.
+        rewrite <- N.add_1_l.
+        rewrite pow_succ.
+        rewrite IHn.
+        unwrap_F; trivial.
+      }
+    Qed.
+
+    Lemma to_Z_pow : forall (x : F m) n,
+        F.to_Z (x ^ n)%F = (F.to_Z x ^ Z.of_N n mod m)%Z.
+    Proof.
+      intros.
+      symmetry.
+      induction n using N.peano_ind;
+        destruct (pow_spec x) as [pow_0 pow_succ] . {
+        rewrite pow_0, Z.pow_0_r; auto.
+      } {
+        rewrite N2Z.inj_succ.
+        rewrite Z.pow_succ_r by apply N2Z.is_nonneg.
+        rewrite <- N.add_1_l.
+        rewrite pow_succ.
+        rewrite <- Zmult_mod_idemp_r.
+        rewrite IHn.
+        apply to_Z_mul.
+      }
+    Qed.
+
+    Lemma square_iff (x:F m) :
+      (exists y : F m, y * y = x) <-> (exists y : Z, y * y mod m = F.to_Z x)%Z.
+    Proof.
+      setoid_rewrite eq_to_Z_iff; setoid_rewrite to_Z_mul; split; intro H; destruct H as [x' H].
+      - eauto.
+      - exists (F.of_Z _ x'); rewrite !to_Z_of_Z; pull_Zmod; auto.
+    Qed.
+  End FandZ.
+
+  Section RingTacticGadgets.
+    Context (m:Z).
+
+    Definition ring_theory : ring_theory 0%F 1%F (@F.add m) (@F.mul m) (@F.sub m) (@F.opp m) eq
+      := Algebra.Ring.ring_theory_for_stdlib_tactic.
+
+    Lemma pow_pow_N (x : F m) : forall (n : N), (x ^ id n)%F = pow_N 1%F F.mul x n.
+    Proof.
+      destruct (pow_spec x) as [HO HS]; intros.
+      destruct n; auto; unfold id.
+      rewrite Pre.N_pos_1plus at 1.
+      rewrite HS.
+      simpl.
+      induction p using Pos.peano_ind.
+      - simpl. rewrite HO. apply Algebra.right_identity.
+      - rewrite (@pow_pos_succ (F m) (@F.mul m) eq _ _ associative x).
+        rewrite <-IHp, Pos.pred_N_succ, Pre.N_pos_1plus, HS.
+        trivial.
+    Qed.
+
+    Lemma power_theory : power_theory 1%F (@F.mul m) eq id (@F.pow m).
+    Proof. split; apply pow_pow_N. Qed.
+
+    (***** Division Theory *****)
+    Definition quotrem(a b: F m): F m * F m :=
+      let '(q, r) := (Z.quotrem (F.to_Z a) (F.to_Z b)) in (F.of_Z _ q , F.of_Z _ r).
+    Lemma div_theory : div_theory eq (@F.add m) (@F.mul m) (@id _) quotrem.
+    Proof.
+      constructor; intros; unfold quotrem, id.
+
+      replace (Z.quotrem (F.to_Z a) (F.to_Z b)) with (Z.quot (F.to_Z a) (F.to_Z b), Z.rem (F.to_Z a) (F.to_Z b)) by
+          try (unfold Z.quot, Z.rem; rewrite <- surjective_pairing; trivial).
+
+      unwrap_F; rewrite <-Z.quot_rem'; trivial.
+    Qed.
+
+    (* Define a "ring morphism" between GF and Z, i.e. an equivalence
+     * between 'inject (ZFunction (X))' and 'GFFunction (inject (X))'.
+     *
+     * Doing this allows the [ring] tactic to do coefficient
+     * manipulations in Z rather than F, because we know it's equivalent
+     * to inject the result afterward. *)
+    Lemma ring_morph: ring_morph 0%F 1%F F.add F.mul F.sub F.opp   eq
+                                 0%Z 1%Z Z.add Z.mul Z.sub Z.opp Z.eqb  (F.of_Z m).
+    Proof. split; intros; unwrap_F; solve [ auto | rewrite (proj1 (Z.eqb_eq x y)); trivial]. Qed.
+
+    (* Redefine our division theory under the ring morphism *)
+    Lemma morph_div_theory:
+      Ring_theory.div_theory eq Zplus Zmult (F.of_Z m) Z.quotrem.
+    Proof.
+      split; intros.
+      replace (Z.quotrem a b) with (Z.quot a b, Z.rem a b);
+        try (unfold Z.quot, Z.rem; rewrite <- surjective_pairing; trivial).
+      unwrap_F; rewrite <- (Z.quot_rem' a b); trivial.
+    Qed.
+
+  End RingTacticGadgets.
+
+  Ltac is_constant t := match t with F.of_Z _ ?x => x | _ => NotConstant end.
+  Ltac is_pow_constant t := Ncst t.
+
+  Module Type Modulus. Parameter modulus : Z. End Modulus.
+
+  (* Example of how to instantiate the ring tactic *)
+  Module RingModulo (Export M : Modulus).
+    Add Ring _theory : (ring_theory modulus)
+                         (morphism (ring_morph modulus),
+                          constants [is_constant],
+                          div (morph_div_theory modulus),
+                          power_tac (power_theory modulus) [is_pow_constant]).
+
+    Example ring_modulo_example : forall x y z, x*z + z*y = z*(x+y).
+    Proof. intros. ring. Qed.
+  End RingModulo.
+
+  Section VariousModulo.
+    Context {m:Z}.
+    Local Open Scope F_scope.
+
+    Add Ring _theory : (ring_theory m)
+                         (morphism (ring_morph m),
+                          constants [is_constant],
+                          div (morph_div_theory m),
+                          power_tac (power_theory m) [is_pow_constant]).
+
+    Lemma mul_nonzero_l : forall a b : F m, a*b <> 0 -> a <> 0.
+    Proof. intros a b Hnz Hz. rewrite Hz in Hnz; apply Hnz; ring. Qed.
+
+    Lemma mul_nonzero_r : forall a b : F m, a*b <> 0 -> b <> 0.
+    Proof. intros a b Hnz Hz. rewrite Hz in Hnz; apply Hnz; ring. Qed.
+  End VariousModulo.
+
+  Section Pow.
+    Context {m:Z}.
+    Add Ring _theory' : (ring_theory m)
+                          (morphism (ring_morph m),
+                           constants [is_constant],
+                           div (morph_div_theory m),
+                           power_tac (power_theory m) [is_pow_constant]).
+    Local Open Scope F_scope.
+
+    Import Algebra.ScalarMult.
+    Global Instance pow_is_scalarmult
+      : is_scalarmult (G:=F m) (eq:=eq) (add:=F.mul) (zero:=1%F) (mul := fun n x => x ^ (N.of_nat n)).
+    Proof.
+      split; intros; rewrite ?Nat2N.inj_succ, <-?N.add_1_l;
+        match goal with
+        | [x:F m |- _ ] => solve [destruct (@pow_spec m P); auto]
+        | |- Proper _ _ => solve_proper
+        end.
+    Qed.
+
+    (* TODO: move this somewhere? *)
+    Create HintDb nat2N discriminated.
+    Hint Rewrite Nat2N.inj_iff
+         (eq_refl _ : (0%N = N.of_nat 0))
+         (eq_refl _ : (1%N = N.of_nat 1))
+         (eq_refl _ : (2%N = N.of_nat 2))
+         (eq_refl _ : (3%N = N.of_nat 3))
+      : nat2N.
+    Hint Rewrite <- Nat2N.inj_double Nat2N.inj_succ_double Nat2N.inj_succ
+         Nat2N.inj_add Nat2N.inj_mul Nat2N.inj_sub Nat2N.inj_pred
+         Nat2N.inj_div2 Nat2N.inj_max Nat2N.inj_min Nat2N.id
+      : nat2N.
+
+    Ltac pow_to_scalarmult_ref :=
+      repeat (autorewrite with nat2N;
+              match goal with
+              | |- context [ (_^?n)%F ] =>
+                rewrite <-(N2Nat.id n); generalize (N.to_nat n); clear n;
+                let m := fresh n in intro m
+              | |- context [ (_^N.of_nat ?n)%F ] =>
+                let rw := constr:(scalarmult_ext(zero:=F.of_Z m 1) n) in
+                setoid_rewrite rw (* rewriting moduloa reduction *)
+              end).
+
+    Lemma pow_0_r (x:F m) : x^0 = 1.
+    Proof. pow_to_scalarmult_ref. apply scalarmult_0_l. Qed.
+
+    Lemma pow_add_r (x:F m) (a b:N) : x^(a+b) = x^a * x^b.
+    Proof. pow_to_scalarmult_ref; apply scalarmult_add_l. Qed.
+
+    Lemma pow_0_l (n:N) : n <> 0%N -> 0^n = 0 :> F m.
+    Proof. pow_to_scalarmult_ref; destruct n; simpl; intros; [congruence|ring]. Qed.
+
+    Lemma pow_pow_l (x:F m) (a b:N) : (x^a)^b = x^(a*b).
+    Proof. pow_to_scalarmult_ref. apply scalarmult_assoc. Qed.
+
+    Lemma pow_1_r (x:F m) : x^1 = x.
+    Proof. pow_to_scalarmult_ref; simpl; ring. Qed.
+
+    Lemma pow_2_r (x:F m) : x^2 = x*x.
+    Proof. pow_to_scalarmult_ref; simpl; ring. Qed.
+
+    Lemma pow_3_r (x:F m) : x^3 = x*x*x.
+    Proof. pow_to_scalarmult_ref; simpl; ring. Qed.
+  End Pow.
+End F.

@@ -95,13 +95,13 @@ Proof.
   apply in_mod_ZPGroup; auto.
 Qed.
 
-Lemma fermat_inv : forall a, a mod p <> 0 -> (a * (a^(p-2) mod p)) mod p = 1.
+Lemma fermat_inv : forall a, a mod p <> 0 -> ((a^(p-2) mod p) * a) mod p = 1.
 Proof.
   intros.
   pose proof (prime_ge_2 _ prime_p).
-  rewrite Zmult_mod_idemp_r.
-  replace (a * a ^ (p - 2)) with (a^(p-1)).
-    2:replace (a * a ^ (p - 2)) with (a^1 * a ^ (p - 2)) by ring.
+  rewrite Zmult_mod_idemp_l.
+  replace (a ^ (p - 2) * a) with (a^(p-1)).
+    2:replace (a ^ (p - 2) * a) with (a^1 * a ^ (p - 2)) by ring.
     2:rewrite <-Zpower_exp; try f_equal; omega.
   auto using fermat_little.
 Qed.
@@ -297,4 +297,11 @@ Proof.
   + apply div2_p_1mod4; auto.
   + prime_bound.
   + apply minus1_even_pow; [apply divide2_1mod4 | | apply Z_div_pos]; prime_bound.
+Qed.
+
+
+Lemma odd_as_div a : Z.odd a = true -> a = (2*(a/2) + 1)%Z.
+Proof.
+  rewrite Zodd_mod, <-Zeq_is_eq_bool; intro H_1; rewrite <-H_1.
+  apply Z_div_mod_eq; reflexivity.
 Qed.

@@ -27,13 +27,19 @@ Class SubtractionCoefficient (m : Z) (prm : PseudoMersenneBaseParams m) := {
 
 (* Computed versions of some functions. *)
 
+Definition plus_opt := Eval compute in plus.
+
 Definition Z_add_opt := Eval compute in Z.add.
 Definition Z_sub_opt := Eval compute in Z.sub.
 Definition Z_mul_opt := Eval compute in Z.mul.
 Definition Z_div_opt := Eval compute in Z.div.
 Definition Z_pow_opt := Eval compute in Z.pow.
 Definition Z_opp_opt := Eval compute in Z.opp.
+Definition Z_min_opt := Eval compute in Z.min.
 Definition Z_ones_opt := Eval compute in Z.ones.
+Definition Z_of_nat_opt := Eval compute in Z.of_nat.
+Definition Z_le_dec_opt := Eval compute in Z_le_dec.
+Definition Z_lt_dec_opt := Eval compute in Z_lt_dec.
 Definition Z_shiftl_opt := Eval compute in Z.shiftl.
 Definition Z_shiftl_by_opt := Eval compute in Z.shiftl_by.
 
@@ -47,6 +53,10 @@ Definition base_from_limb_widths_opt := Eval compute in @Pow2Base.base_from_limb
 Definition minus_opt := Eval compute in minus.
 Definition max_ones_opt := Eval compute in @max_ones.
 Definition from_list_default_opt {A} := Eval compute in (@from_list_default A).
+Definition sum_firstn_opt {A} := Eval compute in (@sum_firstn A).
+Definition zeros_opt := Eval compute in (@zeros).
+Definition bit_index_opt := Eval compute in bit_index.
+Definition digit_index_opt := Eval compute in digit_index.
 
 Definition Let_In {A P} (x : A) (f : forall y : A, P y)
   := let y := x in f y.
@@ -59,39 +69,81 @@ Ltac opt_step :=
        destruct e
   end.
 
-Ltac brute_force_indices limb_widths :=
-  intros; unfold sum_firstn, limb_widths;  cbv [length limb_widths] in *;
-  repeat match goal with
-  | _ => progress simpl in *
-  | [H : (0 + _ < _)%nat |- _ ] => simpl in H
-  | [H : (S _ + _ < S _)%nat |- _ ] => simpl in H
-  | [H : (S _ < S _)%nat |- _ ] => apply lt_S_n in H
-  | [H : (?x + _ < _)%nat |- _ ] => is_var x; destruct x
-  | [H : (?x < _)%nat |- _ ] => is_var x; destruct x
-  | _ => omega
-  end.
-
-
-Definition limb_widths_from_len len k := Eval compute in
-  (fix loop i prev :=
+Definition limb_widths_from_len_step loop len k :=
+  (fun i prev =>
     match i with
     | O => nil
-    | S i' => let x := (if (Z.eq_dec ((k * Z.of_nat (len - i + 1)) mod (Z.of_nat len)) 0)
+    | S i' => let x := (if (Z.eqb ((k * Z.of_nat (len - i + 1)) mod (Z.of_nat len)) 0)
                         then (k * Z.of_nat (len - i + 1)) / Z.of_nat len
                         else (k * Z.of_nat (len - i + 1)) / Z.of_nat len + 1)in
       x - prev:: (loop i' x)
-    end) len 0.
+    end).
+Definition limb_widths_from_len len k :=
+  (fix loop i prev := limb_widths_from_len_step loop len k i prev) len 0.
+
+Definition brute_force_indices0 lw : bool
+  := List.fold_right
+       andb true
+       (List.map
+          (fun i
+           => List.fold_right
+                andb true
+                (List.map
+                   (fun j
+                    => sum_firstn lw (i + j) <=? sum_firstn lw i + sum_firstn lw j)
+                   (seq 0 (length lw - i))))
+          (seq 0 (length lw))).
+
+Lemma brute_force_indices_correct0 lw
+  : brute_force_indices0 lw = true -> forall i j : nat,
+      (i + j < length lw)%nat -> sum_firstn lw (i + j) <= sum_firstn lw i + sum_firstn lw j.
+Proof.
+  unfold brute_force_indices0.
+  progress repeat setoid_rewrite fold_right_andb_true_map_iff.
+  setoid_rewrite in_seq.
+  setoid_rewrite Z.leb_le.
+  eauto with omega.
+Qed.
+
+Definition brute_force_indices1 lw : bool
+  := List.fold_right
+       andb true
+       (List.map
+          (fun i
+           => List.fold_right
+                andb true
+                (List.map
+                   (fun j
+                    => let w_sum := sum_firstn lw in
+                       sum_firstn lw (length lw) + w_sum (i + j - length lw)%nat <=? w_sum i + w_sum j)
+                   (seq (length lw - i) (length lw - (length lw - i)))))
+          (seq 1 (length lw - 1))).
+
+Lemma brute_force_indices_correct1 lw
+  : brute_force_indices1 lw = true -> forall i j : nat,
+  (i < length lw)%nat ->
+  (j < length lw)%nat ->
+  (i + j >= length lw)%nat ->
+  let w_sum := sum_firstn lw in
+  sum_firstn lw (length lw) + w_sum (i + j - length lw)%nat <= w_sum i + w_sum j.
+Proof.
+  unfold brute_force_indices1.
+  progress repeat setoid_rewrite fold_right_andb_true_map_iff.
+  setoid_rewrite in_seq.
+  setoid_rewrite Z.leb_le.
+  eauto with omega.
+Qed.
 
 Ltac construct_params prime_modulus len k :=
-  let lw := fresh "lw" in set (lw := limb_widths_from_len len k);
-  cbv in lw;
+  let lwv := (eval cbv in (limb_widths_from_len len k)) in
+  let lw := fresh "lw" in pose lwv as lw;
   eapply Build_PseudoMersenneBaseParams with (limb_widths := lw);
   [ abstract (apply fold_right_and_True_forall_In_iff; simpl; repeat (split; [omega |]); auto)
   | abstract (cbv; congruence)
-  | abstract brute_force_indices lw
+  | abstract (refine (@brute_force_indices_correct0 lw _); vm_cast_no_check (eq_refl true))
   | abstract apply prime_modulus
   | abstract (cbv; congruence)
-  | abstract brute_force_indices lw].
+  | abstract (refine (@brute_force_indices_correct1 lw _); vm_cast_no_check (eq_refl true))].
 
 Definition construct_mul2modulus {m} (prm : PseudoMersenneBaseParams m) : digits :=
   match limb_widths with
@@ -217,7 +269,7 @@ Section Carries.
     eexists. intros H.
     rewrite <-carry_gen_opt_correct by assumption.
     cbv beta iota delta [carry_gen_opt].
-    match goal with |- appcontext[?a & Z_ones_opt _] => 
+    match goal with |- appcontext[?a & Z_ones_opt _] =>
     let LHS := match goal with |- ?LHS = ?RHS => LHS end in
     let RHS := match goal with |- ?LHS = ?RHS => RHS end in
     let RHSf := match (eval pattern (a) in RHS) with ?RHSf _ => RHSf end in
@@ -365,7 +417,6 @@ Section Addition.
   Definition add_opt_sig (us vs : digits) : { b : digits | b = add us vs }.
   Proof.
     eexists.
-    cbv [BaseSystem.add].
     reflexivity.
   Defined.
 
@@ -397,7 +448,7 @@ Section Subtraction.
 End Subtraction.
 
 Section Multiplication.
-  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient modulus prm}
+  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient modulus prm} {cc : CarryChain limb_widths}
     (* allows caller to precompute k and c *)
     (k_ c_ : Z) (k_subst : k = k_) (c_subst : c = c_).
   Local Notation digits := (tuple Z (length limb_widths)).
@@ -545,13 +596,15 @@ Section Multiplication.
     := proj2_sig (mul_opt_sig us vs).
 
   Definition carry_mul_opt_sig {T} (f:digits -> T)
-    (us vs : digits) : { x | x = f (carry_mul us vs) }.
+    (us vs : digits) : { x | x = f (carry_mul carry_chain us vs) }.
   Proof.
     eexists.
     cbv [carry_mul].
-    erewrite <-carry_full_opt_cps_correct by eauto.
+    rewrite <- from_list_default_eq with (d := 0%Z).
+    change @from_list_default with @from_list_default_opt.
+    erewrite <-carry_sequence_opt_cps_correct by eauto using carry_chain_valid, length_to_list.
     erewrite <-mul_opt_correct.
-    cbv [carry_full_opt_cps mul_opt].
+    cbv [carry_sequence_opt_cps mul_opt].
     erewrite from_list_default_eq.
     rewrite to_list_from_list.
     reflexivity.
@@ -559,7 +612,7 @@ Section Multiplication.
     rewrite mul'_opt_correct.
     distr_length.
     assert (0 < length limb_widths)%nat by (pose proof limb_widths_nonnil; destruct limb_widths; congruence || simpl; omega).
-    rewrite Min.min_l; rewrite !length_to_list; break_match; try omega.
+    rewrite Min.min_l; break_match; try omega.
     rewrite Max.max_l; omega.
   Defined.
 
@@ -567,16 +620,105 @@ Section Multiplication.
     := Eval cbv [proj1_sig carry_mul_opt_sig] in proj1_sig (carry_mul_opt_sig f us vs).
 
   Definition carry_mul_opt_cps_correct {T} (f:digits -> T) (us vs : digits)
-    : carry_mul_opt_cps f us vs = f (carry_mul us vs)
+    : carry_mul_opt_cps f us vs = f (carry_mul carry_chain us vs)
     := proj2_sig (carry_mul_opt_sig f us vs).
 
   Definition carry_mul_opt := carry_mul_opt_cps id.
 
   Definition carry_mul_opt_correct (us vs : digits)
-    : carry_mul_opt us vs = carry_mul us vs :=
+    : carry_mul_opt us vs = carry_mul carry_chain us vs :=
     carry_mul_opt_cps_correct id us vs.
 
 End Multiplication.
+
+Section Conversion.
+
+  Definition convert'_opt_sig {lwA lwB}
+             (nonnegA : forall x, In x lwA -> 0 <= x)
+             (nonnegB : forall x, In x lwB -> 0 <= x)
+             bits_fit inp i out :
+    { y | y = convert' nonnegA nonnegB bits_fit inp i out}.
+  Proof.
+    eexists.
+    rewrite convert'_equation.
+    change sum_firstn with @sum_firstn_opt.
+    change length with length_opt.
+    change Z_le_dec with Z_le_dec_opt.
+    change Z.of_nat with Z_of_nat_opt.
+    change digit_index with digit_index_opt.
+    change bit_index with bit_index_opt.
+    change Z.min with Z_min_opt.
+    change (nth_default 0 lwA) with (nth_default_opt 0 lwA).
+    change (nth_default 0 lwB) with (nth_default_opt 0 lwB).
+    cbv [update_by_concat_bits concat_bits Z.pow2_mod].
+    change Z.ones with Z_ones_opt.
+    change @update_nth with @update_nth_opt.
+    change plus with plus_opt.
+    change Z.sub with Z_sub_opt.
+    reflexivity.
+  Defined.
+
+  Definition convert'_opt {lwA lwB}
+             (nonnegA : forall x, In x lwA -> 0 <= x)
+             (nonnegB : forall x, In x lwB -> 0 <= x)
+             bits_fit inp i out := 
+    Eval cbv [proj1_sig convert'_opt_sig] in
+      proj1_sig (convert'_opt_sig nonnegA nonnegB bits_fit inp i out).
+
+  Definition convert'_opt_correct {lwA lwB}
+             (nonnegA : forall x, In x lwA -> 0 <= x)
+             (nonnegB : forall x, In x lwB -> 0 <= x)
+             bits_fit inp i out :
+    convert'_opt nonnegA nonnegB bits_fit inp i out = convert' nonnegA nonnegB bits_fit inp i out := 
+    Eval cbv [proj2_sig convert'_opt_sig] in
+      proj2_sig (convert'_opt_sig nonnegA nonnegB bits_fit inp i out).
+    
+  Context {modulus} (prm : PseudoMersenneBaseParams modulus)
+          {target_widths} (target_widths_nonneg : forall x, In x target_widths -> 0 <= x) (bits_eq : sum_firstn limb_widths (length limb_widths) = sum_firstn target_widths (length target_widths)).
+  Local Notation digits := (tuple Z (length limb_widths)).
+  Local Notation target_digits := (tuple Z (length target_widths)).
+
+  Definition pack_opt_sig (x : digits) : { y | y = pack target_widths_nonneg bits_eq x}.
+  Proof.
+    eexists.
+    cbv [pack].
+    rewrite <- from_list_default_eq with (d := 0%Z).
+    change @from_list_default with @from_list_default_opt.
+    cbv [ModularBaseSystemList.pack convert].
+    change length with length_opt.
+    change sum_firstn with @sum_firstn_opt.
+    change zeros with zeros_opt.
+    reflexivity.
+  Defined.
+
+  Definition pack_opt (x : digits) : target_digits :=
+    Eval cbv [proj1_sig pack_opt_sig] in proj1_sig (pack_opt_sig x).
+
+  Definition pack_correct (x : digits) :
+    pack_opt x = pack target_widths_nonneg bits_eq x
+    := Eval cbv [proj2_sig pack_opt_sig] in proj2_sig (pack_opt_sig x).
+
+  Definition unpack_opt_sig (x : target_digits) : { y | y = unpack target_widths_nonneg bits_eq x}.
+  Proof.
+    eexists.
+    cbv [unpack].
+    rewrite <- from_list_default_eq with (d := 0%Z).
+    change @from_list_default with @from_list_default_opt.
+    cbv [ModularBaseSystemList.unpack convert].
+    change length with length_opt.
+    change sum_firstn with @sum_firstn_opt.
+    change zeros with zeros_opt.
+    reflexivity.
+  Defined.
+
+  Definition unpack_opt (x : target_digits) : digits :=
+    Eval cbv [proj1_sig unpack_opt_sig] in proj1_sig (unpack_opt_sig x).
+  
+  Definition unpack_correct (x : target_digits) :
+    unpack_opt x = unpack target_widths_nonneg bits_eq x
+    := Eval cbv [proj2_sig unpack_opt_sig] in proj2_sig (unpack_opt_sig x).
+
+End Conversion.
 
 Section with_base.
   Context {modulus} (prm : PseudoMersenneBaseParams modulus).

@@ -6,6 +6,7 @@ Require Import Crypto.BaseSystemProofs.
 Require Import Crypto.ModularArithmetic.ExtendedBaseVector.
 Require Import Crypto.ModularArithmetic.Pow2Base.
 Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParams.
+Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParamProofs.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemList.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemListProofs.
 Require Import Crypto.Util.ListUtil Crypto.Util.CaseUtil Crypto.Util.ZUtil.
@@ -37,27 +38,28 @@ Section ModularBaseSystem.
    from_list (sub [[modulus_multiple]] [[us]] [[vs]])
    (length_sub length_to_list length_to_list length_to_list).
 
-  Definition zero : digits := encode (ZToField 0).
+  Definition zero : digits := encode (F.of_Z _ 0).
 
-  Definition one : digits := encode (ZToField 1).
-
-  (* Placeholder *)
-  Definition opp (x : digits) : digits := encode (ModularArithmetic.opp (decode x)).
+  Definition one : digits := encode (F.of_Z _ 1).
 
   (* Placeholder *)
-  Definition inv (x : digits) : digits := encode (ModularArithmetic.inv (decode x)).
+  Definition opp (x : digits) : digits := encode (F.opp (decode x)).
 
   (* Placeholder *)
-  Definition div (x y : digits) : digits := encode (ModularArithmetic.div (decode x) (decode y)).
+  Definition inv (x : digits) : digits := encode (F.inv (decode x)).
 
+  (* Placeholder *)
+  Definition div (x y : digits) : digits := encode (F.div (decode x) (decode y)).
+
+  Definition carry_mul (carry_chain : list nat) (us vs : digits) : digits :=
+    from_list (carry_sequence carry_chain [[mul us vs]]) (length_carry_sequence length_to_list).
+  
   Definition rep (us : digits) (x : F modulus) := decode us = x.
   Local Notation "u ~= x" := (rep u x).
   Local Hint Unfold rep.
 
   Definition carry_full (us : digits) : digits := from_list (carry_full [[us]])
     (length_carry_full length_to_list).
-
-  Definition carry_mul (us vs : digits) : digits := carry_full (mul us vs).
 
   Definition freeze (us : digits) : digits :=
     let us' := carry_full (carry_full (carry_full us)) in
@@ -71,5 +73,16 @@ Section ModularBaseSystem.
   Proof.
     split; cbv [eq]; repeat intro; congruence.
   Qed.
+
+  Context {target_widths} (target_widths_nonneg : forall x, In x target_widths -> 0 <= x)
+          (bits_eq : sum_firstn limb_widths   (length limb_widths) =
+                     sum_firstn target_widths (length target_widths)).
+  Local Notation target_digits := (tuple Z (length target_widths)).
+
+  Definition pack (x : digits) : target_digits :=
+    from_list (pack target_widths_nonneg bits_eq [[x]]) length_pack.
+  
+  Definition unpack (x : target_digits) : digits :=
+    from_list (unpack target_widths_nonneg bits_eq [[x]]) length_unpack.
 
 End ModularBaseSystem.

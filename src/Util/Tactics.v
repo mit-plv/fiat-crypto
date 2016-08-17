@@ -252,6 +252,12 @@ Ltac specialize_by' tac :=
 
 Ltac specialize_by tac := repeat specialize_by' tac.
 
+(** [specialize_by auto] should not mean [specialize_by ltac:( auto
+    with * )]!!!!!!! (see
+    https://coq.inria.fr/bugs/show_bug.cgi?id=4966) We fix this design
+    flaw. *)
+Tactic Notation "specialize_by" tactic3(tac) := specialize_by tac.
+
 (** If [tac_in H] operates in [H] and leaves side-conditions before
     the original goal, then
     [side_conditions_before_to_side_conditions_after tac_in H] does
@@ -302,6 +308,26 @@ Tactic Notation "rewrite_hyp" "!*" "in" "*" := progress rewrite_hyp ?* in *.
 Tactic Notation "rewrite_hyp" "->" "!*" "in" "*" := progress rewrite_hyp -> ?* in *.
 Tactic Notation "rewrite_hyp" "<-" "!*" "in" "*" := progress rewrite_hyp <- ?* in *.
 
+Tactic Notation "erewrite_hyp" "*" := do_with_hyp' ltac:(fun H => erewrite H).
+Tactic Notation "erewrite_hyp" "->" "*" := do_with_hyp' ltac:(fun H => erewrite -> H).
+Tactic Notation "erewrite_hyp" "<-" "*" := do_with_hyp' ltac:(fun H => erewrite <- H).
+Tactic Notation "erewrite_hyp" "?*" := repeat do_with_hyp' ltac:(fun H => erewrite !H).
+Tactic Notation "erewrite_hyp" "->" "?*" := repeat do_with_hyp' ltac:(fun H => erewrite -> !H).
+Tactic Notation "erewrite_hyp" "<-" "?*" := repeat do_with_hyp' ltac:(fun H => erewrite <- !H).
+Tactic Notation "erewrite_hyp" "!*" := progress erewrite_hyp ?*.
+Tactic Notation "erewrite_hyp" "->" "!*" := progress erewrite_hyp -> ?*.
+Tactic Notation "erewrite_hyp" "<-" "!*" := progress erewrite_hyp <- ?*.
+
+Tactic Notation "erewrite_hyp" "*" "in" "*" := do_with_hyp' ltac:(fun H => erewrite H in * ).
+Tactic Notation "erewrite_hyp" "->" "*" "in" "*" := do_with_hyp' ltac:(fun H => erewrite -> H in * ).
+Tactic Notation "erewrite_hyp" "<-" "*" "in" "*" := do_with_hyp' ltac:(fun H => erewrite <- H in * ).
+Tactic Notation "erewrite_hyp" "?*" "in" "*" := repeat do_with_hyp' ltac:(fun H => erewrite !H in * ).
+Tactic Notation "erewrite_hyp" "->" "?*" "in" "*" := repeat do_with_hyp' ltac:(fun H => erewrite -> !H in * ).
+Tactic Notation "erewrite_hyp" "<-" "?*" "in" "*" := repeat do_with_hyp' ltac:(fun H => erewrite <- !H in * ).
+Tactic Notation "erewrite_hyp" "!*" "in" "*" := progress erewrite_hyp ?* in *.
+Tactic Notation "erewrite_hyp" "->" "!*" "in" "*" := progress erewrite_hyp -> ?* in *.
+Tactic Notation "erewrite_hyp" "<-" "!*" "in" "*" := progress erewrite_hyp <- ?* in *.
+
 (** Execute [progress tac] on all subterms of the goal.  Useful for things like [ring_simplify]. *)
 Ltac tac_on_subterms tac :=
   repeat match goal with
@@ -322,3 +348,46 @@ Ltac revert_last_nondep :=
   end.
 
 Ltac reverse_nondep := repeat revert_last_nondep.
+
+Ltac simplify_repeated_ifs_step :=
+  match goal with
+  | [ |- context G[if ?b then ?x else ?y] ]
+    => let x' := match x with
+                 | context x'[b] => let x'' := context x'[true] in x''
+                 end in
+       let G' := context G[if b then x' else y] in
+       cut G'; [ destruct b; exact (fun z => z) | cbv iota ]
+  | [ |- context G[if ?b then ?x else ?y] ]
+    => let y' := match y with
+                 | context y'[b] => let y'' := context y'[false] in y''
+                 end in
+       let G' := context G[if b then x else y'] in
+       cut G'; [ destruct b; exact (fun z => z) | cbv iota ]
+  end.
+Ltac simplify_repeated_ifs := repeat simplify_repeated_ifs_step.
+
+(** Like [specialize] but allows holes that get filled with evars. *)
+Tactic Notation "especialize" open_constr(H) := specialize H.
+
+(** [forward H] specializes non-dependent binders in a hypothesis [H]
+    with side-conditions.  Side-conditions come after the main goal,
+    like with [replace] and [rewrite].
+
+    [eforward H] is like [forward H], but also specializes dependent
+    binders with evars.
+
+    Both tactics do nothing on hypotheses they cannot handle. *)
+Ltac forward_step H :=
+  match type of H with
+  | ?A -> ?B => let a := fresh in cut A; [ intro a; specialize (H a); clear a | ]
+  end.
+Ltac eforward_step H :=
+  match type of H with
+  | _ => forward_step H
+  | forall x : ?A, _
+    => let x_or_fresh := fresh x in
+       evar (x_or_fresh : A);
+       specialize (H x_or_fresh); subst x_or_fresh
+  end.
+Ltac forward H := try (forward_step H; [ forward H | .. ]).
+Ltac eforward H := try (eforward_step H; [ eforward H | .. ]).
