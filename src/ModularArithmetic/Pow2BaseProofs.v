@@ -1102,9 +1102,9 @@ Section Conversion.
            | H : forall x : Z, In x ?lw -> x = ?y, H0 : 0 < ?y |- _ =>
             unique pose proof (uniform_limb_widths_nonneg H0 lw H)
            | H : forall x : Z, In x ?lw -> 0 <= x |- appcontext [bit_index ?lw ?i] =>
-             unique pose proof (bit_index_not_done lw H i)
+             unique assert (0 <= i < bitsIn lw -> bit_index lw i < lw # digit_index lw i) by auto using bit_index_not_done
            | H : forall x : Z, In x ?lw -> 0 <= x |- appcontext [bit_index ?lw ?i] =>
-             unique pose proof (rem_bits_in_digit_le_rem_bits lw H i)
+             unique assert (0 <= i < bitsIn lw -> i + (lw # digit_index lw i - bit_index lw i) <= bitsIn lw) by auto using rem_bits_in_digit_le_rem_bits
            | |- _ => rewrite Z2Nat.id
            | |- _ => rewrite Nat2Z.inj_add
            | |- (Z.to_nat _ < Z.to_nat _)%nat => apply Z2Nat.inj_lt
@@ -1242,7 +1242,9 @@ Section Conversion.
                    (   (assert (0 <= i <= j) as A by omega)
                        || (assert (0 <= j <= i) as A by omega; symmetry in H));
                    assert (forall w, In w lw -> 0 <= w) as B by auto;
-                   pose proof (same_digit_bit_index_sub lw B _ _ A H); subst b
+                   ((assert (bit_index lw j - bit_index lw i = j - i) by auto using same_digit_bit_index_sub)
+                    || (assert (bit_index lw i - bit_index lw j = i - j) by auto using same_digit_bit_index_sub));
+                   subst b
            | |- _ => rewrite <- testbit_decode by
                  (distr_length; eauto using convert'_bounded_step); assumption
     end.
@@ -1279,7 +1281,7 @@ Section Conversion.
       repeat match goal with
            | |- _ => progress intros
            | H : forall x : Z, In x ?lw -> 0 <= x |- appcontext [bit_index ?lw ?i] =>
-              unique pose proof (bit_index_not_done lw H i)
+              unique assert (0 <= i < bitsIn lw -> bit_index lw i < lw # digit_index lw i) by auto using bit_index_not_done
            | H : convert'_invariant _ _ _ |- convert'_invariant _ _ (convert' _ _ _) =>
              eapply convert'_invariant_step in H; solve [auto; specialize_by lia; lia]
            | H : convert'_invariant _ _ ?out |- convert'_invariant _ _ ?out => progress cbv [convert'_invariant] in *
