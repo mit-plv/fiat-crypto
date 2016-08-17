@@ -20,6 +20,13 @@ Ltac head expr :=
 
 Ltac head_hnf expr := let expr' := eval hnf in expr in head expr'.
 
+(** [contains x expr] succeeds iff [x] appears in [expr] *)
+Ltac contains search_for in_term :=
+  idtac;
+  lazymatch in_term with
+  | appcontext[search_for] => idtac
+  end.
+
 (* [pose proof defn], but only if no hypothesis of the same type exists.
    most useful for proofs of a proposition *)
 Tactic Notation "unique" "pose" "proof" constr(defn) :=
