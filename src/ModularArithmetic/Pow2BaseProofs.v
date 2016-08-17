@@ -390,7 +390,7 @@ Section Pow2BaseProofs.
     replace (map (fun x => two_p zero * (two_p w * x)) (base_from_limb_widths limb_widths')) with (map (Z.mul (two_p (zero + w))) (base_from_limb_widths limb_widths'))
       by (apply map_ext; rewrite two_p_is_exp by auto with zarith omega; auto with zarith).
     change 0 with (0 + 0) at 1.
-    apply Z.add_le_mono; auto with zarith.
+    apply Z.add_le_mono; simpl in *; auto with zarith.
   Qed.
 
   Lemma decode_upper_bound : forall us,
@@ -1571,7 +1571,7 @@ Section carrying.
   Proof.
     unfold carry_simple; intros; rewrite carry_gen_decode_eq by assumption.
     autorewrite with natsimplify.
-    break_match; lia.
+    break_match; try lia; autorewrite with zsimplify; lia.
   Qed.
 
 
