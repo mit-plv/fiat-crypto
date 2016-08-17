@@ -1722,6 +1722,31 @@ Module Z.
            | [ v : Z |- _ ] => linear_substitute v
            end.
 
+  (** [div_mod_to_quot_rem] replaces [x / y] and [x mod y] with new
+      variables [q] and [r] while simultaneously adding facts that
+      uniquely specify [q] and [r] to the context (roughly, that [y *
+      q + r = x] and that [0 <= r < y]. *)
+  Ltac generalize_div_eucl x y :=
+    let H := fresh in
+    let H' := fresh in
+    assert (H' : y <> 0) by omega;
+    generalize (Z.div_mod x y H'); clear H';
+    assert (H' : 0 < y) by omega;
+    generalize (Z.mod_pos_bound x y H'); clear H';
+    let q := fresh "q" in
+    let r := fresh "r" in
+    set (q := x / y);
+    set (r := x mod y);
+    clearbody q r.
+
+  Ltac div_mod_to_quot_rem_step :=
+    match goal with
+    | [ |- context[?x / ?y] ] => generalize_div_eucl x y
+    | [ |- context[?x mod ?y] ] => generalize_div_eucl x y
+    end.
+
+  Ltac div_mod_to_quot_rem := repeat div_mod_to_quot_rem_step; intros.
+
   Local Ltac simplify_div_tac :=
     intros; autorewrite with zsimplify; rewrite <- ?Z_div_plus_full_l, <- ?Z_div_plus_full by assumption;
     try (apply f_equal2; [ | reflexivity ]);
