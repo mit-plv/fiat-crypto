@@ -49,8 +49,10 @@ Section Pow2BaseProofs.
     induction limb_widths as [|l ls IHls]; intros [|n]; try reflexivity.
     autorewrite with push_base_from_limb_widths push_firstn; boring.
   Qed.
-  Hint Rewrite <- @firstn_base_from_limb_widths : push_base_from_limb_widths pull_firstn.
-  Hint Rewrite @firstn_base_from_limb_widths : pull_base_from_limb_widths push_firstn.
+  Hint Rewrite <- @firstn_base_from_limb_widths : push_base_from_limb_widths.
+  Hint Rewrite <- @firstn_base_from_limb_widths : pull_firstn.
+  Hint Rewrite @firstn_base_from_limb_widths : pull_base_from_limb_widths.
+  Hint Rewrite @firstn_base_from_limb_widths : push_firstn.
 
   Lemma sum_firstn_limb_widths_nonneg : forall n, 0 <= sum_firstn limb_widths n.
   Proof.
@@ -198,8 +200,10 @@ Section Pow2BaseProofs.
       unfold sum_firstn; autorewrite with natsimplify simpl_skipn simpl_firstn;
         reflexivity.
   Qed.
-  Hint Rewrite <- @skipn_base_from_limb_widths : push_base_from_limb_widths pull_skipn.
-  Hint Rewrite @skipn_base_from_limb_widths : pull_base_from_limb_widths push_skipn.
+  Hint Rewrite <- @skipn_base_from_limb_widths : push_base_from_limb_widths.
+  Hint Rewrite <- @skipn_base_from_limb_widths : pull_skipn.
+  Hint Rewrite @skipn_base_from_limb_widths : pull_base_from_limb_widths.
+  Hint Rewrite @skipn_base_from_limb_widths : push_skipn.
 
   Lemma pow2_mod_bounded :forall lw us i, (forall w, In w lw -> 0 <= w) -> bounded lw us ->
                                           Z.pow2_mod (nth_default 0 us i) (nth_default 0 lw i) = nth_default 0 us i.
@@ -574,10 +578,14 @@ End Pow2BaseProofs.
 Hint Rewrite base_from_limb_widths_cons base_from_limb_widths_nil : push_base_from_limb_widths.
 Hint Rewrite <- base_from_limb_widths_cons : pull_base_from_limb_widths.
 
-Hint Rewrite <- @firstn_base_from_limb_widths : push_base_from_limb_widths pull_firstn.
-Hint Rewrite @firstn_base_from_limb_widths : pull_base_from_limb_widths push_firstn.
-Hint Rewrite <- @skipn_base_from_limb_widths : push_base_from_limb_widths pull_skipn.
-Hint Rewrite @skipn_base_from_limb_widths : pull_base_from_limb_widths push_skipn.
+Hint Rewrite <- @firstn_base_from_limb_widths : push_base_from_limb_widths.
+Hint Rewrite <- @firstn_base_from_limb_widths : pull_firstn.
+Hint Rewrite @firstn_base_from_limb_widths : pull_base_from_limb_widths.
+Hint Rewrite @firstn_base_from_limb_widths : push_firstn.
+Hint Rewrite <- @skipn_base_from_limb_widths : push_base_from_limb_widths.
+Hint Rewrite <- @skipn_base_from_limb_widths : pull_skipn.
+Hint Rewrite @skipn_base_from_limb_widths : pull_base_from_limb_widths.
+Hint Rewrite @skipn_base_from_limb_widths : push_skipn.
 
 Hint Rewrite @base_from_limb_widths_length : distr_length.
 Hint Rewrite @upper_bound_nil @upper_bound_cons @upper_bound_app using solve [ eauto with znonzero ] : push_upper_bound.
