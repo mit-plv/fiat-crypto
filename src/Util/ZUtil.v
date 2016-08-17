@@ -1678,7 +1678,7 @@ Chars = StringSplit["abcdefghijklmnopqrstuvwxyz", ""];
 RestFrom[i_, len_] :=
  Join[{mul[Chars[[i]], "X"]}, Take[Drop[Chars, i], len]]
 Exprs = Flatten[
-   Map[{#1, #1 /. mul[a_, "X"] :> mul["X", a]} &, Flatten[{
+   Map[{#1, #1 /. mul[a_, "X", b___] :> mul["X", a, b]} &, Flatten[{
       Table[
        Table[div[
          combine @@
@@ -1688,12 +1688,18 @@ Exprs = Flatten[
        Table[div[
          combine["a",
           parens @@
-           Join[Take[Chars, 1 + start - 1],
+           Join[Take[Drop[Chars, 1], start - 1],
             RestFrom[1 + start, len]]], "X"], {len, 0,
          10 - start}], {start, 1, 2}],
       div[combine["a", parens["b", parens["c", mul["d", "X"]], "e"]],
        "X"],
-      div[combine["a", "b", parens["c", mul["d", "X"]], "e"], "X"]}]]];
+      div[combine["a", "b", parens["c", mul["d", "X"]], "e"], "X"],
+      div[combine["a", "b", mul["c", "X", "d"], "e", "f"], "X"],
+      div[combine["a", mul["b", "X", "c"], "d", "e"], "X"],
+      div[
+       combine["a",
+        parens["b", parens["c", mul["d", "X", "e"]], "f"]], "X"],
+      div[combine["a", parens["b", mul["c", "X", "d"]], "e"], "X"]}]]];
 ExprToString[div[x_, y_], withparen_: False] :=
  With[{v := ExprToString[x, True] <> " / " <> ExprToString[y, True]},
   If[withparen, "(" <> v <> ")", v]]
@@ -1878,120 +1884,120 @@ simplify_div_" <> ExprToName[#1] <>
   Lemma simplify_div_ppp_Xp_ppppppppdX a b c d e f g h i j X : X <> 0 -> (a + X * b + c + d + e + f + g + h + i + j) / X = b + (a + c + d + e + f + g + h + i + j) / X.
   Proof. simplify_div_tac. Qed.
   Hint Rewrite simplify_div_ppp_Xp_ppppppppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_pX__c_dX a b X : X <> 0 -> (a + (a + b * X)) / X = b + (2*a) / X.
+  Lemma simplify_div_pp_o_pX__c_dX a b X : X <> 0 -> (a + (b * X)) / X = b + a / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_pp_o_pX__c_dX using zutil_arith : zsimplify.
+  Lemma simplify_div_pp_o_Xp__c_dX a b X : X <> 0 -> (a + (X * b)) / X = b + a / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_pp_o_Xp__c_dX using zutil_arith : zsimplify.
+  Lemma simplify_div_pp_o_pX_p_c_dX a b c X : X <> 0 -> (a + (b * X + c)) / X = b + (a + c) / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_pp_o_pX_p_c_dX using zutil_arith : zsimplify.
+  Lemma simplify_div_pp_o_Xp_p_c_dX a b c X : X <> 0 -> (a + (X * b + c)) / X = b + (a + c) / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_pp_o_Xp_p_c_dX using zutil_arith : zsimplify.
+  Lemma simplify_div_pp_o_pX_pp_c_dX a b c d X : X <> 0 -> (a + (b * X + c + d)) / X = b + (a + c + d) / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_pp_o_pX_pp_c_dX using zutil_arith : zsimplify.
+  Lemma simplify_div_pp_o_Xp_pp_c_dX a b c d X : X <> 0 -> (a + (X * b + c + d)) / X = b + (a + c + d) / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_pp_o_Xp_pp_c_dX using zutil_arith : zsimplify.
+  Lemma simplify_div_pp_o_pX_ppp_c_dX a b c d e X : X <> 0 -> (a + (b * X + c + d + e)) / X = b + (a + c + d + e) / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_pp_o_pX_ppp_c_dX using zutil_arith : zsimplify.
+  Lemma simplify_div_pp_o_Xp_ppp_c_dX a b c d e X : X <> 0 -> (a + (X * b + c + d + e)) / X = b + (a + c + d + e) / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_pp_o_Xp_ppp_c_dX using zutil_arith : zsimplify.
+  Lemma simplify_div_pp_o_pX_pppp_c_dX a b c d e f X : X <> 0 -> (a + (b * X + c + d + e + f)) / X = b + (a + c + d + e + f) / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_pp_o_pX_pppp_c_dX using zutil_arith : zsimplify.
+  Lemma simplify_div_pp_o_Xp_pppp_c_dX a b c d e f X : X <> 0 -> (a + (X * b + c + d + e + f)) / X = b + (a + c + d + e + f) / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_pp_o_Xp_pppp_c_dX using zutil_arith : zsimplify.
+  Lemma simplify_div_pp_o_pX_ppppp_c_dX a b c d e f g X : X <> 0 -> (a + (b * X + c + d + e + f + g)) / X = b + (a + c + d + e + f + g) / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_pp_o_pX_ppppp_c_dX using zutil_arith : zsimplify.
+  Lemma simplify_div_pp_o_Xp_ppppp_c_dX a b c d e f g X : X <> 0 -> (a + (X * b + c + d + e + f + g)) / X = b + (a + c + d + e + f + g) / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_pp_o_Xp_ppppp_c_dX using zutil_arith : zsimplify.
+  Lemma simplify_div_pp_o_pX_pppppp_c_dX a b c d e f g h X : X <> 0 -> (a + (b * X + c + d + e + f + g + h)) / X = b + (a + c + d + e + f + g + h) / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_pp_o_pX_pppppp_c_dX using zutil_arith : zsimplify.
+  Lemma simplify_div_pp_o_Xp_pppppp_c_dX a b c d e f g h X : X <> 0 -> (a + (X * b + c + d + e + f + g + h)) / X = b + (a + c + d + e + f + g + h) / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_pp_o_Xp_pppppp_c_dX using zutil_arith : zsimplify.
+  Lemma simplify_div_pp_o_pX_ppppppp_c_dX a b c d e f g h i X : X <> 0 -> (a + (b * X + c + d + e + f + g + h + i)) / X = b + (a + c + d + e + f + g + h + i) / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_pp_o_pX_ppppppp_c_dX using zutil_arith : zsimplify.
+  Lemma simplify_div_pp_o_Xp_ppppppp_c_dX a b c d e f g h i X : X <> 0 -> (a + (X * b + c + d + e + f + g + h + i)) / X = b + (a + c + d + e + f + g + h + i) / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_pp_o_Xp_ppppppp_c_dX using zutil_arith : zsimplify.
+  Lemma simplify_div_pp_o_pX_pppppppp_c_dX a b c d e f g h i j X : X <> 0 -> (a + (b * X + c + d + e + f + g + h + i + j)) / X = b + (a + c + d + e + f + g + h + i + j) / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_pp_o_pX_pppppppp_c_dX using zutil_arith : zsimplify.
+  Lemma simplify_div_pp_o_Xp_pppppppp_c_dX a b c d e f g h i j X : X <> 0 -> (a + (X * b + c + d + e + f + g + h + i + j)) / X = b + (a + c + d + e + f + g + h + i + j) / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_pp_o_Xp_pppppppp_c_dX using zutil_arith : zsimplify.
+  Lemma simplify_div_pp_o_pX_ppppppppp_c_dX a b c d e f g h i j k X : X <> 0 -> (a + (b * X + c + d + e + f + g + h + i + j + k)) / X = b + (a + c + d + e + f + g + h + i + j + k) / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_pp_o_pX_ppppppppp_c_dX using zutil_arith : zsimplify.
+  Lemma simplify_div_pp_o_Xp_ppppppppp_c_dX a b c d e f g h i j k X : X <> 0 -> (a + (X * b + c + d + e + f + g + h + i + j + k)) / X = b + (a + c + d + e + f + g + h + i + j + k) / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_pp_o_Xp_ppppppppp_c_dX using zutil_arith : zsimplify.
+  Lemma simplify_div_pp_o_pp_pX__c_dX a b c X : X <> 0 -> (a + (b + c * X)) / X = c + (a + b) / X.
   Proof. simplify_div_tac. Qed.
   Hint Rewrite simplify_div_pp_o_pp_pX__c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_Xp__c_dX a b X : X <> 0 -> (a + (a + X * b)) / X = b + (2*a) / X.
+  Lemma simplify_div_pp_o_pp_Xp__c_dX a b c X : X <> 0 -> (a + (b + X * c)) / X = c + (a + b) / X.
   Proof. simplify_div_tac. Qed.
   Hint Rewrite simplify_div_pp_o_pp_Xp__c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_pX_p_c_dX a b c X : X <> 0 -> (a + (a + b * X + c)) / X = b + (2*a + c) / X.
+  Lemma simplify_div_pp_o_pp_pX_p_c_dX a b c d X : X <> 0 -> (a + (b + c * X + d)) / X = c + (a + b + d) / X.
   Proof. simplify_div_tac. Qed.
   Hint Rewrite simplify_div_pp_o_pp_pX_p_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_Xp_p_c_dX a b c X : X <> 0 -> (a + (a + X * b + c)) / X = b + (2*a + c) / X.
+  Lemma simplify_div_pp_o_pp_Xp_p_c_dX a b c d X : X <> 0 -> (a + (b + X * c + d)) / X = c + (a + b + d) / X.
   Proof. simplify_div_tac. Qed.
   Hint Rewrite simplify_div_pp_o_pp_Xp_p_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_pX_pp_c_dX a b c d X : X <> 0 -> (a + (a + b * X + c + d)) / X = b + (2*a + c + d) / X.
+  Lemma simplify_div_pp_o_pp_pX_pp_c_dX a b c d e X : X <> 0 -> (a + (b + c * X + d + e)) / X = c + (a + b + d + e) / X.
   Proof. simplify_div_tac. Qed.
   Hint Rewrite simplify_div_pp_o_pp_pX_pp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_Xp_pp_c_dX a b c d X : X <> 0 -> (a + (a + X * b + c + d)) / X = b + (2*a + c + d) / X.
+  Lemma simplify_div_pp_o_pp_Xp_pp_c_dX a b c d e X : X <> 0 -> (a + (b + X * c + d + e)) / X = c + (a + b + d + e) / X.
   Proof. simplify_div_tac. Qed.
   Hint Rewrite simplify_div_pp_o_pp_Xp_pp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_pX_ppp_c_dX a b c d e X : X <> 0 -> (a + (a + b * X + c + d + e)) / X = b + (2*a + c + d + e) / X.
+  Lemma simplify_div_pp_o_pp_pX_ppp_c_dX a b c d e f X : X <> 0 -> (a + (b + c * X + d + e + f)) / X = c + (a + b + d + e + f) / X.
   Proof. simplify_div_tac. Qed.
   Hint Rewrite simplify_div_pp_o_pp_pX_ppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_Xp_ppp_c_dX a b c d e X : X <> 0 -> (a + (a + X * b + c + d + e)) / X = b + (2*a + c + d + e) / X.
+  Lemma simplify_div_pp_o_pp_Xp_ppp_c_dX a b c d e f X : X <> 0 -> (a + (b + X * c + d + e + f)) / X = c + (a + b + d + e + f) / X.
   Proof. simplify_div_tac. Qed.
   Hint Rewrite simplify_div_pp_o_pp_Xp_ppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_pX_pppp_c_dX a b c d e f X : X <> 0 -> (a + (a + b * X + c + d + e + f)) / X = b + (2*a + c + d + e + f) / X.
+  Lemma simplify_div_pp_o_pp_pX_pppp_c_dX a b c d e f g X : X <> 0 -> (a + (b + c * X + d + e + f + g)) / X = c + (a + b + d + e + f + g) / X.
   Proof. simplify_div_tac. Qed.
   Hint Rewrite simplify_div_pp_o_pp_pX_pppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_Xp_pppp_c_dX a b c d e f X : X <> 0 -> (a + (a + X * b + c + d + e + f)) / X = b + (2*a + c + d + e + f) / X.
+  Lemma simplify_div_pp_o_pp_Xp_pppp_c_dX a b c d e f g X : X <> 0 -> (a + (b + X * c + d + e + f + g)) / X = c + (a + b + d + e + f + g) / X.
   Proof. simplify_div_tac. Qed.
   Hint Rewrite simplify_div_pp_o_pp_Xp_pppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_pX_ppppp_c_dX a b c d e f g X : X <> 0 -> (a + (a + b * X + c + d + e + f + g)) / X = b + (2*a + c + d + e + f + g) / X.
+  Lemma simplify_div_pp_o_pp_pX_ppppp_c_dX a b c d e f g h X : X <> 0 -> (a + (b + c * X + d + e + f + g + h)) / X = c + (a + b + d + e + f + g + h) / X.
   Proof. simplify_div_tac. Qed.
   Hint Rewrite simplify_div_pp_o_pp_pX_ppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_Xp_ppppp_c_dX a b c d e f g X : X <> 0 -> (a + (a + X * b + c + d + e + f + g)) / X = b + (2*a + c + d + e + f + g) / X.
+  Lemma simplify_div_pp_o_pp_Xp_ppppp_c_dX a b c d e f g h X : X <> 0 -> (a + (b + X * c + d + e + f + g + h)) / X = c + (a + b + d + e + f + g + h) / X.
   Proof. simplify_div_tac. Qed.
   Hint Rewrite simplify_div_pp_o_pp_Xp_ppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_pX_pppppp_c_dX a b c d e f g h X : X <> 0 -> (a + (a + b * X + c + d + e + f + g + h)) / X = b + (2*a + c + d + e + f + g + h) / X.
+  Lemma simplify_div_pp_o_pp_pX_pppppp_c_dX a b c d e f g h i X : X <> 0 -> (a + (b + c * X + d + e + f + g + h + i)) / X = c + (a + b + d + e + f + g + h + i) / X.
   Proof. simplify_div_tac. Qed.
   Hint Rewrite simplify_div_pp_o_pp_pX_pppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_Xp_pppppp_c_dX a b c d e f g h X : X <> 0 -> (a + (a + X * b + c + d + e + f + g + h)) / X = b + (2*a + c + d + e + f + g + h) / X.
+  Lemma simplify_div_pp_o_pp_Xp_pppppp_c_dX a b c d e f g h i X : X <> 0 -> (a + (b + X * c + d + e + f + g + h + i)) / X = c + (a + b + d + e + f + g + h + i) / X.
   Proof. simplify_div_tac. Qed.
   Hint Rewrite simplify_div_pp_o_pp_Xp_pppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_pX_ppppppp_c_dX a b c d e f g h i X : X <> 0 -> (a + (a + b * X + c + d + e + f + g + h + i)) / X = b + (2*a + c + d + e + f + g + h + i) / X.
+  Lemma simplify_div_pp_o_pp_pX_ppppppp_c_dX a b c d e f g h i j X : X <> 0 -> (a + (b + c * X + d + e + f + g + h + i + j)) / X = c + (a + b + d + e + f + g + h + i + j) / X.
   Proof. simplify_div_tac. Qed.
   Hint Rewrite simplify_div_pp_o_pp_pX_ppppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_Xp_ppppppp_c_dX a b c d e f g h i X : X <> 0 -> (a + (a + X * b + c + d + e + f + g + h + i)) / X = b + (2*a + c + d + e + f + g + h + i) / X.
+  Lemma simplify_div_pp_o_pp_Xp_ppppppp_c_dX a b c d e f g h i j X : X <> 0 -> (a + (b + X * c + d + e + f + g + h + i + j)) / X = c + (a + b + d + e + f + g + h + i + j) / X.
   Proof. simplify_div_tac. Qed.
   Hint Rewrite simplify_div_pp_o_pp_Xp_ppppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_pX_pppppppp_c_dX a b c d e f g h i j X : X <> 0 -> (a + (a + b * X + c + d + e + f + g + h + i + j)) / X = b + (2*a + c + d + e + f + g + h + i + j) / X.
+  Lemma simplify_div_pp_o_pp_pX_pppppppp_c_dX a b c d e f g h i j k X : X <> 0 -> (a + (b + c * X + d + e + f + g + h + i + j + k)) / X = c + (a + b + d + e + f + g + h + i + j + k) / X.
   Proof. simplify_div_tac. Qed.
   Hint Rewrite simplify_div_pp_o_pp_pX_pppppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_Xp_pppppppp_c_dX a b c d e f g h i j X : X <> 0 -> (a + (a + X * b + c + d + e + f + g + h + i + j)) / X = b + (2*a + c + d + e + f + g + h + i + j) / X.
+  Lemma simplify_div_pp_o_pp_Xp_pppppppp_c_dX a b c d e f g h i j k X : X <> 0 -> (a + (b + X * c + d + e + f + g + h + i + j + k)) / X = c + (a + b + d + e + f + g + h + i + j + k) / X.
   Proof. simplify_div_tac. Qed.
   Hint Rewrite simplify_div_pp_o_pp_Xp_pppppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_pX_ppppppppp_c_dX a b c d e f g h i j k X : X <> 0 -> (a + (a + b * X + c + d + e + f + g + h + i + j + k)) / X = b + (2*a + c + d + e + f + g + h + i + j + k) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pp_pX_ppppppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_Xp_ppppppppp_c_dX a b c d e f g h i j k X : X <> 0 -> (a + (a + X * b + c + d + e + f + g + h + i + j + k)) / X = b + (2*a + c + d + e + f + g + h + i + j + k) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pp_Xp_ppppppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_ppp_pX__c_dX a b c X : X <> 0 -> (a + (a + b + c * X)) / X = c + (2*a + b) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_ppp_pX__c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_ppp_Xp__c_dX a b c X : X <> 0 -> (a + (a + b + X * c)) / X = c + (2*a + b) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_ppp_Xp__c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_ppp_pX_p_c_dX a b c d X : X <> 0 -> (a + (a + b + c * X + d)) / X = c + (2*a + b + d) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_ppp_pX_p_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_ppp_Xp_p_c_dX a b c d X : X <> 0 -> (a + (a + b + X * c + d)) / X = c + (2*a + b + d) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_ppp_Xp_p_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_ppp_pX_pp_c_dX a b c d e X : X <> 0 -> (a + (a + b + c * X + d + e)) / X = c + (2*a + b + d + e) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_ppp_pX_pp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_ppp_Xp_pp_c_dX a b c d e X : X <> 0 -> (a + (a + b + X * c + d + e)) / X = c + (2*a + b + d + e) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_ppp_Xp_pp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_ppp_pX_ppp_c_dX a b c d e f X : X <> 0 -> (a + (a + b + c * X + d + e + f)) / X = c + (2*a + b + d + e + f) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_ppp_pX_ppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_ppp_Xp_ppp_c_dX a b c d e f X : X <> 0 -> (a + (a + b + X * c + d + e + f)) / X = c + (2*a + b + d + e + f) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_ppp_Xp_ppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_ppp_pX_pppp_c_dX a b c d e f g X : X <> 0 -> (a + (a + b + c * X + d + e + f + g)) / X = c + (2*a + b + d + e + f + g) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_ppp_pX_pppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_ppp_Xp_pppp_c_dX a b c d e f g X : X <> 0 -> (a + (a + b + X * c + d + e + f + g)) / X = c + (2*a + b + d + e + f + g) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_ppp_Xp_pppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_ppp_pX_ppppp_c_dX a b c d e f g h X : X <> 0 -> (a + (a + b + c * X + d + e + f + g + h)) / X = c + (2*a + b + d + e + f + g + h) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_ppp_pX_ppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_ppp_Xp_ppppp_c_dX a b c d e f g h X : X <> 0 -> (a + (a + b + X * c + d + e + f + g + h)) / X = c + (2*a + b + d + e + f + g + h) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_ppp_Xp_ppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_ppp_pX_pppppp_c_dX a b c d e f g h i X : X <> 0 -> (a + (a + b + c * X + d + e + f + g + h + i)) / X = c + (2*a + b + d + e + f + g + h + i) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_ppp_pX_pppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_ppp_Xp_pppppp_c_dX a b c d e f g h i X : X <> 0 -> (a + (a + b + X * c + d + e + f + g + h + i)) / X = c + (2*a + b + d + e + f + g + h + i) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_ppp_Xp_pppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_ppp_pX_ppppppp_c_dX a b c d e f g h i j X : X <> 0 -> (a + (a + b + c * X + d + e + f + g + h + i + j)) / X = c + (2*a + b + d + e + f + g + h + i + j) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_ppp_pX_ppppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_ppp_Xp_ppppppp_c_dX a b c d e f g h i j X : X <> 0 -> (a + (a + b + X * c + d + e + f + g + h + i + j)) / X = c + (2*a + b + d + e + f + g + h + i + j) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_ppp_Xp_ppppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_ppp_pX_pppppppp_c_dX a b c d e f g h i j k X : X <> 0 -> (a + (a + b + c * X + d + e + f + g + h + i + j + k)) / X = c + (2*a + b + d + e + f + g + h + i + j + k) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_ppp_pX_pppppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_ppp_Xp_pppppppp_c_dX a b c d e f g h i j k X : X <> 0 -> (a + (a + b + X * c + d + e + f + g + h + i + j + k)) / X = c + (2*a + b + d + e + f + g + h + i + j + k) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_ppp_Xp_pppppppp_c_dX using zutil_arith : zsimplify.
   Lemma simplify_div_pp_o_p_o_pp_pX__c_p_c_dX a b c d e X : X <> 0 -> (a + (b + (c + d * X) + e)) / X = d + (a + b + c + e) / X.
   Proof. simplify_div_tac. Qed.
   Hint Rewrite simplify_div_pp_o_p_o_pp_pX__c_p_c_dX using zutil_arith : zsimplify.
@@ -2004,6 +2010,30 @@ simplify_div_" <> ExprToName[#1] <>
   Lemma simplify_div_ppp_o_pp_Xp__c_pdX a b c d e X : X <> 0 -> (a + b + (c + X * d) + e) / X = d + (a + b + c + e) / X.
   Proof. simplify_div_tac. Qed.
   Hint Rewrite simplify_div_ppp_o_pp_Xp__c_pdX using zutil_arith : zsimplify.
+  Lemma simplify_div_pppp_pXp_ppdX a b c d e f X : X <> 0 -> (a + b + c * X * d + e + f) / X = (a + b + e + f + c*d*X) / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_pppp_pXp_ppdX using zutil_arith : zsimplify.
+  Lemma simplify_div_pppp_Xpp_ppdX a b c d e f X : X <> 0 -> (a + b + X * c * d + e + f) / X = (a + b + e + f + c*d*X) / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_pppp_Xpp_ppdX using zutil_arith : zsimplify.
+  Lemma simplify_div_ppp_pXp_ppdX a b c d e X : X <> 0 -> (a + b * X * c + d + e) / X = (a + d + e + b*c*X) / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_ppp_pXp_ppdX using zutil_arith : zsimplify.
+  Lemma simplify_div_ppp_Xpp_ppdX a b c d e X : X <> 0 -> (a + X * b * c + d + e) / X = (a + d + e + b*c*X) / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_ppp_Xpp_ppdX using zutil_arith : zsimplify.
+  Lemma simplify_div_pp_o_p_o_pp_pXp__c_p_c_dX a b c d e f X : X <> 0 -> (a + (b + (c + d * X * e) + f)) / X = (a + b + c + f + d*e*X) / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_pp_o_p_o_pp_pXp__c_p_c_dX using zutil_arith : zsimplify.
+  Lemma simplify_div_pp_o_p_o_pp_Xpp__c_p_c_dX a b c d e f X : X <> 0 -> (a + (b + (c + X * d * e) + f)) / X = (a + b + c + f + d*e*X) / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_pp_o_p_o_pp_Xpp__c_p_c_dX using zutil_arith : zsimplify.
+  Lemma simplify_div_pp_o_pp_pXp__c_pdX a b c d e X : X <> 0 -> (a + (b + c * X * d) + e) / X = (a + b + e + c*d*X) / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_pp_o_pp_pXp__c_pdX using zutil_arith : zsimplify.
+  Lemma simplify_div_pp_o_pp_Xpp__c_pdX a b c d e X : X <> 0 -> (a + (b + X * c * d) + e) / X = (a + b + e + c*d*X) / X.
+  Proof. simplify_div_tac. Qed.
+  Hint Rewrite simplify_div_pp_o_pp_Xpp__c_pdX using zutil_arith : zsimplify.
 
 
   (* Naming convention: [X] for thing being aggregated, [p] for plus,
