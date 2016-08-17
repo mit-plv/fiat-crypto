@@ -13,21 +13,44 @@ Local Open Scope Z_scope.
 Create HintDb simpl_add_to_nth discriminated.
 Create HintDb push_upper_bound discriminated.
 Create HintDb pull_upper_bound discriminated.
+Create HintDb push_base_from_limb_widths discriminated.
+Create HintDb pull_base_from_limb_widths discriminated.
 
 Hint Extern 1 => progress autorewrite with push_upper_bound in * : push_upper_bound.
 Hint Extern 1 => progress autorewrite with pull_upper_bound in * : pull_upper_bound.
+Hint Extern 1 => progress autorewrite with push_base_from_limb_widths in * : push_base_from_limb_widths.
+Hint Extern 1 => progress autorewrite with pull_base_from_limb_widths in * : pull_base_from_limb_widths.
 
 Section Pow2BaseProofs.
   Context {limb_widths} (limb_widths_nonneg : forall w, In w limb_widths -> 0 <= w).
   Local Notation base := (base_from_limb_widths limb_widths).
 
-  Lemma base_from_limb_widths_length : length base = length limb_widths.
+  Lemma base_from_limb_widths_length ls : length (base_from_limb_widths ls) = length ls.
   Proof.
-    clear limb_widths_nonneg.
-    induction limb_widths; [ reflexivity | simpl in * ].
+    clear limb_widths limb_widths_nonneg.
+    induction ls; [ reflexivity | simpl in * ].
     autorewrite with distr_length; auto.
   Qed.
   Hint Rewrite base_from_limb_widths_length : distr_length.
+
+  Lemma base_from_limb_widths_cons : forall l0 l,
+    base_from_limb_widths (l0 :: l) = 1 :: map (Z.mul (two_p l0)) (base_from_limb_widths l).
+  Proof. reflexivity. Qed.
+  Hint Rewrite base_from_limb_widths_cons : push_base_from_limb_widths.
+  Hint Rewrite <- base_from_limb_widths_cons : pull_base_from_limb_widths.
+
+  Lemma base_from_limb_widths_nil : base_from_limb_widths nil = nil.
+  Proof. reflexivity. Qed.
+  Hint Rewrite base_from_limb_widths_nil : push_base_from_limb_widths.
+
+  Lemma firstn_base_from_limb_widths : forall n, firstn n (base_from_limb_widths limb_widths) = base_from_limb_widths (firstn n limb_widths).
+  Proof.
+    clear limb_widths_nonneg. (* don't use this in the inductive hypothesis *)
+    induction limb_widths as [|l ls IHls]; intros [|n]; try reflexivity.
+    autorewrite with push_base_from_limb_widths push_firstn; boring.
+  Qed.
+  Hint Rewrite <- @firstn_base_from_limb_widths : push_base_from_limb_widths pull_firstn.
+  Hint Rewrite @firstn_base_from_limb_widths : pull_base_from_limb_widths push_firstn.
 
   Lemma sum_firstn_limb_widths_nonneg : forall n, 0 <= sum_firstn limb_widths n.
   Proof.
@@ -47,6 +70,7 @@ Section Pow2BaseProofs.
     nth_error limb_widths i = Some w ->
     nth_error base (S i) = Some (two_p w * b).
   Proof.
+    clear limb_widths_nonneg. (* don't use this in the inductive hypothesis *)
     induction limb_widths; intros ? ? ? ? nth_err_w nth_err_b;
       unfold base_from_limb_widths in *; fold base_from_limb_widths in *;
       [rewrite (@nil_length0 Z) in *; omega | ].
@@ -151,12 +175,6 @@ Section Pow2BaseProofs.
      case_eq limb_widths; intros; [congruence | reflexivity].
    Qed.
 
-  Lemma base_from_limb_widths_cons : forall l0 l,
-    base_from_limb_widths (l0 :: l) = 1 :: map (Z.mul (two_p l0)) (base_from_limb_widths l).
-  Proof.
-    reflexivity.
-  Qed.
-
   Lemma base_from_limb_widths_app : forall l0 l
                                            (l0_nonneg : forall x, In x l0 -> 0 <= x)
                                            (l_nonneg : forall x, In x l -> 0 <= x),
@@ -169,6 +187,19 @@ Section Pow2BaseProofs.
       do 2 f_equal; apply map_ext; intros; lia. }
   Qed.
 
+  Lemma skipn_base_from_limb_widths : forall n, skipn n (base_from_limb_widths limb_widths) = map (Z.mul (two_p (sum_firstn limb_widths n))) (base_from_limb_widths (skipn n limb_widths)).
+  Proof.
+    intro n; pose proof (base_from_limb_widths_app (firstn n limb_widths) (skipn n limb_widths)) as H.
+    specialize_by eauto using In_firstn, In_skipn.
+    autorewrite with simpl_firstn simpl_skipn in *.
+    rewrite H, skipn_app, skipn_all by auto with arith distr_length; clear H.
+    simpl; distr_length.
+    apply Min.min_case_strong; intro;
+      unfold sum_firstn; autorewrite with natsimplify simpl_skipn simpl_firstn;
+        reflexivity.
+  Qed.
+  Hint Rewrite <- @skipn_base_from_limb_widths : push_base_from_limb_widths pull_skipn.
+  Hint Rewrite @skipn_base_from_limb_widths : pull_base_from_limb_widths push_skipn.
 
   Lemma pow2_mod_bounded :forall lw us i, (forall w, In w lw -> 0 <= w) -> bounded lw us ->
                                           Z.pow2_mod (nth_default 0 us i) (nth_default 0 lw i) = nth_default 0 us i.
@@ -260,8 +291,9 @@ Section Pow2BaseProofs.
   Proof.
     intros; induction i;
     repeat match goal with
-           | |- _ => rewrite firstn_0, sum_firstn_0, decode_nil, Z.pow2_mod_0_r; reflexivity
+           | |- _ => rewrite sum_firstn_0, decode_nil, Z.pow2_mod_0_r; reflexivity
            | |- _ => progress distr_length
+           | |- _ => progress autorewrite with simpl_firstn
            | |- _ => rewrite firstn_succ with (d := 0)
            | |- _ => rewrite set_higher
            | |- _ => rewrite nth_default_base
@@ -444,40 +476,12 @@ Section Pow2BaseProofs.
   Lemma decode_shift_app : forall us0 us1, (length (us0 ++ us1) <= length limb_widths)%nat ->
     BaseSystem.decode base (us0 ++ us1) = (BaseSystem.decode (base_from_limb_widths (firstn (length us0) limb_widths)) us0) + ((BaseSystem.decode (base_from_limb_widths (skipn (length us0) limb_widths)) us1) << sum_firstn limb_widths (length us0)).
   Proof.
-    induction limb_widths as [|l ls IHls]; intros;
-      repeat match goal with
-             | _ => progress simpl @app
-             | [ |- context[BaseSystem.decode (base_from_limb_widths ?xs) ?ys] ]
-               => match constr:((xs, ys)) with
-                  | (nil, _) => is_var ys; destruct ys
-                  | (_::_, _) => is_var ys; destruct ys
-                  | (nil, ?y ++ _) => is_var y; destruct y
-                  | (_::_, ?y ++ _) => is_var y; destruct y
-                  end
-             | _ => rewrite base_from_limb_widths_cons, peel_decode
-             | _ => rewrite !two_p_correct, !(Z.mul_comm (2^_)), <- !Z.shiftl_mul_pow2
-             | _ => rewrite <- ?Z.add_assoc; apply Z.add_cancel_l
-             | [ H : forall w, In w (?x :: ?xs) -> @?P w |- _ ]
-               => assert (forall w, In w xs -> P w) by auto using in_cons;
-                    try assert (forall len, 0 <= sum_firstn xs len) by auto using sum_firstn_nonnegative;
-                    assert (P x) by auto using in_eq;
-                    clear H;
-                    cbv beta in *
-             | [ H : forall len, 0 <= sum_firstn ?ls len |- context[sum_firstn ?ls ?len'] ]
-               => specialize (H len')
-             | |- appcontext[tl (_ :: _)] => cbv [tl]
-             | |- appcontext[map (Z.mul ?a) _] => fold (BaseSystem.mul_each a);
-                                                    rewrite <-!mul_each_base, !mul_each_rep
-             | _ => progress distr_length
-             | _ => progress specialize_by auto using in_eq, in_cons
-             | _ => progress specialize_by omega
-             | _ => setoid_rewrite IHls; clear IHls
-             | _ => progress autorewrite with push_nth_default zsimplify simpl_skipn simpl_firstn simpl_sum_firstn
-             | _ => progress unfold BaseSystem.decode
-             | _ => progress autorewrite with push_Zshift Zshift_to_pow zsimplify
-             | _ => solve [auto using in_eq, Z.mul_comm]
-             | _ => nia
-            end.
+    unfold BaseSystem.decode; intros us0 us1 ?.
+    assert (0 <= sum_firstn limb_widths (length us0)) by auto using sum_firstn_nonnegative.
+    rewrite decode'_splice; autorewrite with push_firstn.
+    apply Z.add_cancel_l.
+    autorewrite with pull_base_from_limb_widths Zshift_to_pow zsimplify.
+    rewrite decode'_map_mul, two_p_correct; nia.
   Qed.
 
   Lemma decode_shift : forall us u0, (length (u0 :: us) <= length limb_widths)%nat ->
@@ -567,6 +571,14 @@ Section Pow2BaseProofs.
     Qed.
   End make_base_vector.
 End Pow2BaseProofs.
+Hint Rewrite base_from_limb_widths_cons base_from_limb_widths_nil : push_base_from_limb_widths.
+Hint Rewrite <- base_from_limb_widths_cons : pull_base_from_limb_widths.
+
+Hint Rewrite <- @firstn_base_from_limb_widths : push_base_from_limb_widths pull_firstn.
+Hint Rewrite @firstn_base_from_limb_widths : pull_base_from_limb_widths push_firstn.
+Hint Rewrite <- @skipn_base_from_limb_widths : push_base_from_limb_widths pull_skipn.
+Hint Rewrite @skipn_base_from_limb_widths : pull_base_from_limb_widths push_skipn.
+
 Hint Rewrite @base_from_limb_widths_length : distr_length.
 Hint Rewrite @upper_bound_nil @upper_bound_cons @upper_bound_app using solve [ eauto with znonzero ] : push_upper_bound.
 Hint Rewrite <- @upper_bound_cons @upper_bound_app using solve [ eauto with znonzero ] : pull_upper_bound.
@@ -777,34 +789,15 @@ Section UniformBase.
   Admitted.
 
   (* TODO : move *)
-  Lemma firstn_map : forall {A B} n (f : A -> B) ls, firstn n (map f ls) = map f (firstn n ls).
-  Proof.
-    induction n; destruct ls; boring.
-  Qed.
-
-  (* TODO : move *)
-  Lemma firstn_base_from_limb_widths : forall n lw,
-      firstn n (base_from_limb_widths lw) = base_from_limb_widths (firstn n lw).
-  Proof.
-    induction n; destruct lw; boring.
-    f_equal.
-    rewrite <-IHn, firstn_map.
-    reflexivity.
-  Qed.
-
-  (* TODO : move *)
   Lemma tl_repeat : forall {A} xs n (x : A), (forall y, In y xs -> y = x) ->
                                              (n < length xs)%nat ->
                                              firstn n xs = firstn n (tl xs).
   Proof.
-    induction xs; destruct n; try solve [boring]; intros.
-    rewrite firstn_cons_S.
-    erewrite IHxs by (eauto using in_cons; distr_length).
-    destruct xs; distr_length.
-    cbv [tl].
-    rewrite firstn_cons_S.
-    f_equal.
-    transitivity x; [|symmetry]; eauto using in_eq, in_cons.
+    intros.
+    erewrite (repeat_spec_eq xs) by first [ eassumption | reflexivity ].
+    rewrite ListUtil.tl_repeat.
+    autorewrite with push_firstn.
+    apply f_equal; omega *.
   Qed.
 
   Lemma decode_tl_base : forall us, (length us < length limb_widths)%nat ->
@@ -853,7 +846,7 @@ Section SplitIndex.
        splits a bit index in the decoded value into a digit index and a bit
        index within the digit. Examples:
        limb_widths [4;4] : split_index 6 = (1,2)
-       limb_widths [26,25,26] : split_index 30 = (1,4) 
+       limb_widths [26,25,26] : split_index 30 = (1,4)
        limb_widths [26,25,26] : split_index 51 = (2,0)
   *)
   Local Notation "u # i" := (nth_default 0 u i) (at level 30).
@@ -882,10 +875,10 @@ Section SplitIndex.
   Proof.
     intros; functional induction (split_index' i index lw);
       repeat match goal with
-             | |- _ => break_if 
+             | |- _ => break_if
              | |- _ => rewrite sum_firstn_nil in *
              | |- _ => rewrite sum_firstn_succ_cons in *
-             | |- _ => progress distr_length 
+             | |- _ => progress distr_length
              | |- _ => progress (simpl fst; simpl snd)
              | H : appcontext [split_index' ?a ?b ?c] |- _ =>
                unique pose proof (split_index'_ge_index a b c)
@@ -967,7 +960,7 @@ Section SplitIndex.
     repeat match goal with
            | |- _ => progress autorewrite with Ztestbit natsimplify in *
            | |- _ => erewrite digit_select by eassumption
-           | |- _ => break_if 
+           | |- _ => break_if
            | |- _ => rewrite Z.testbit_pow2_mod by auto using nth_default_limb_widths_nonneg
            | |- _ => omega
            | |- _ => f_equal; omega
@@ -1006,7 +999,7 @@ Section SplitIndex.
              pose proof (bit_index_not_done i); specialize_by omega; omega
            end.
   Qed.
-  
+
     Lemma rem_bits_in_digit_le_rem_bits : forall i, 0 <= i < bitsIn limb_widths ->
                                                     i + (limb_widths # digit_index i - bit_index i) <= bitsIn limb_widths.
   Admitted.
@@ -1021,7 +1014,7 @@ Section SplitIndex.
   Lemma bit_index_pos_iff : forall i, 0 <= i ->
                                   0 < limb_widths # (digit_index i) - bit_index i <->
                                   i < sum_firstn limb_widths (length limb_widths).
-                                 
+
   Admitted.
 
   Lemma digit_index_not_lt_length : forall i, 0 <= i ->
@@ -1029,7 +1022,7 @@ Section SplitIndex.
                                               sum_firstn limb_widths (length limb_widths) <= i.
   Admitted.
 
-  
+
   Lemma le_remaining_bits : forall i, 0 <= i < sum_firstn limb_widths (length limb_widths) ->
                                       0 <= sum_firstn limb_widths (length limb_widths)
                                            - (i + (limb_widths # (digit_index i) - bit_index i)).
@@ -1068,8 +1061,8 @@ Section ConversionHelper.
            end.
   Qed.
 
-  Definition update_by_concat_bits num_low_bits bits x := concat_bits num_low_bits x bits. 
-  
+  Definition update_by_concat_bits num_low_bits bits x := concat_bits num_low_bits x bits.
+
 End ConversionHelper.
 
 Section Conversion.
@@ -1104,7 +1097,7 @@ Section Conversion.
              unique pose proof (bit_index_not_done lw H i)
            | H : forall x : Z, In x ?lw -> 0 <= x |- appcontext [bit_index ?lw ?i] =>
              unique pose proof (rem_bits_in_digit_le_rem_bits lw H i)
-           | |- _ => rewrite Z2Nat.id 
+           | |- _ => rewrite Z2Nat.id
            | |- _ => rewrite Nat2Z.inj_add
            | |- (Z.to_nat _ < Z.to_nat _)%nat => apply Z2Nat.inj_lt
            | |- (?a - _ < ?a - _) => apply Z.sub_lt_mono_l
@@ -1118,9 +1111,9 @@ Section Conversion.
     /\ bounded limb_widthsB out
     /\ Z.of_nat i <= bitsIn limb_widthsA
     /\ forall n, Z.testbit (decodeB out) n = if Z_lt_dec n (Z.of_nat i) then Z.testbit (decodeA inp) n else false.
-  
+
   Ltac subst_lia := repeat match goal with | x := _ |- _ => subst x end; subst; lia.
-  
+
   Lemma convert'_bounded_step : forall inp i out,
     bounded limb_widthsB out ->
     let digitA := digit_index limb_widthsA (Z.of_nat i) in
@@ -1171,8 +1164,8 @@ Section Conversion.
               unique pose proof (uniform_limb_widths_nonneg H0 lw H)
            | |- _ => progress specialize_by assumption
            | H : _ /\ _ |- _ => destruct H
-           | |- _ => break_if 
-           | |- _ => split 
+           | |- _ => break_if
+           | |- _ => split
            | a := digit_index _ ?i, H : forall x, 0 <= x < bitsIn _ -> _ |- _ => specialize (H i); forward H
            | |- _ => subst_lia
            | |- _ => apply bit_index_pos_iff; auto
@@ -1232,7 +1225,7 @@ Section Conversion.
            | d1 := digit_index ?lw _ |- Z.testbit (?a # ?d1) _ = Z.testbit (?a # ?d2) _ =>
                    assert (d2 = d1); [ | repeat f_equal]
            | H : ~ (?n < ?i), H0 : ?n < ?i + ?d,
-               d1 := digit_index ?lw ?i, H1 : digit_index ?lw ?n <> ?d1 |- _ => exfalso; apply H1  
+               d1 := digit_index ?lw ?i, H1 : digit_index ?lw ?n <> ?d1 |- _ => exfalso; apply H1
            | d := digit_index ?lw ?j,
                    b := bit_index ?lw ?j,
                    H : digit_index ?lw ?i = ?d |- _ =>
@@ -1262,12 +1255,12 @@ Section Conversion.
            | |- _ => progress intros
            | |- _ => progress specialize_by assumption
            | H : _ /\ _ |- _ => destruct H
-           | |- _ => break_if 
+           | |- _ => break_if
            | H : 0 <= ?i, H0 : forall x, 0 <= x -> if _ then _ else _ |- _ => specialize (H0 i H)
            | |- _ => repeat match goal with x := _ |- _ => subst x end; subst; lia
            end.
   Qed.
-  
+
   Lemma convert'_invariant_holds : forall inp i out,
     length inp = length limb_widthsA ->
     bounded limb_widthsA inp ->

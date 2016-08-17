@@ -1,4 +1,4 @@
-Require Import Coq.Lists.List.
+Require Import Coq.Lists.List Coq.micromega.Psatz.
 Require Import Crypto.Util.ListUtil Crypto.Util.CaseUtil Crypto.Util.ZUtil.
 Require Import Coq.ZArith.ZArith Coq.ZArith.Zdiv.
 Require Import Coq.omega.Omega Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
@@ -71,6 +71,22 @@ Section BaseSystemProofs.
     unfold decode; intros.
     rewrite base_eq_1cons.
     autorewrite with core; ring_simplify; auto.
+  Qed.
+
+  Lemma decode'_map_mul : forall v xs bs,
+    decode' (map (Z.mul v) bs) xs =
+    Z.mul v (decode' bs xs).
+  Proof.
+    unfold decode'.
+    induction xs; destruct bs; boring.
+    unfold accumulate; simpl; nia.
+  Qed.
+
+  Lemma decode_map_mul : forall v xs,
+    decode (map (Z.mul v) base) xs =
+    Z.mul v (decode base xs).
+  Proof.
+    unfold decode; intros; apply decode'_map_mul.
   Qed.
 
   Lemma sub_rep : forall bs us vs, decode' bs (sub us vs) = decode' bs us - decode' bs vs.
