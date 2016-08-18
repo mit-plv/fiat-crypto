@@ -1097,6 +1097,8 @@ Section Conversion.
       let bitsA := Z.pow2_mod ((inp # digitA) >> indexA) dist in
       convert' inp (i + Z.to_nat dist)%nat (update_nth digitB (update_by_concat_bits indexB bitsA) out).
   Proof.
+    generalize limb_widthsA_nonneg; intros _. (* don't drop this from the proof in 8.4 *)
+    generalize limb_widthsB_nonneg; intros _. (* don't drop this from the proof in 8.4 *)
     repeat match goal with
            | |- _ => progress intros
            | H : forall x : Z, In x ?lw -> x = ?y, H0 : 0 < ?y |- _ =>
