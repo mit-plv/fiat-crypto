@@ -735,6 +735,7 @@ Module Z.
       split; try eapply Z.lt_le_trans with (m := 2 ^ n); try omega.
       apply Z.pow_le_mono_r; omega.
   Qed.
+  Hint Rewrite <- Z.lor_shiftl using zutil_arith : convert_to_Ztestbit.
 
   (* prove that combinations of known positive/nonnegative numbers are positive/nonnegative *)
   Ltac zero_bounds' :=
