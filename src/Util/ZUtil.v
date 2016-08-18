@@ -22,7 +22,7 @@ Hint Extern 1 => omega : omega.
 Hint Resolve Z.log2_nonneg Z.div_small Z.mod_small Z.pow_neg_r Z.pow_0_l Z.pow_pos_nonneg Z.lt_le_incl Z.pow_nonzero Z.div_le_upper_bound Z_div_exact_full_2 Z.div_same Z.div_lt_upper_bound Z.div_le_lower_bound Zplus_minus Zplus_gt_compat_l Zplus_gt_compat_r Zmult_gt_compat_l Zmult_gt_compat_r : zarith.
 Hint Resolve (fun a b H => proj1 (Z.mod_pos_bound a b H)) (fun a b H => proj2 (Z.mod_pos_bound a b H)) (fun a b pf => proj1 (Z.pow_gt_1 a b pf)) : zarith.
 
-Ltac zutil_arith := solve [ omega | lia ].
+Ltac zutil_arith := solve [ omega | lia | auto with nocore ].
 
 (** Only hints that are always safe to apply (i.e., reversible), and
     which can reasonably be said to "simplify" the goal, should go in
@@ -110,6 +110,8 @@ Hint Rewrite <- Z.shiftr_div_pow2 Z.shiftr_mul_pow2 Z.shiftl_mul_pow2 Z.shiftl_d
 (** For the occasional lemma that can remove the use of [Z.div] *)
 Create HintDb zstrip_div.
 Hint Rewrite Z.div_small_iff using zutil_arith : zstrip_div.
+
+Hint Rewrite <- Z.shiftr_div_pow2 Z.shiftr_mul_pow2 Z.shiftl_mul_pow2 Z.shiftl_div_pow2 using zutil_arith : convert_to_Ztestbit.
 
 (** It's not clear that [mod] is much easier for [lia] than [Z.div],
     so we separate out the transformations between [mod] and [div].
@@ -219,6 +221,7 @@ Module Z.
     unfold Z.pow2_mod.
     rewrite Z.land_ones; auto.
   Qed.
+  Hint Rewrite <- Z.pow2_mod_spec using zutil_arith : convert_to_Ztestbit.
 
   Lemma ones_spec : forall n m, 0 <= n -> 0 <= m -> Z.testbit (Z.ones n) m = if Z_lt_dec m n then true else false.
   Proof.
@@ -271,6 +274,13 @@ Module Z.
     apply Z.bits_inj'; intros.
     apply Z.min_case_strong; intros; repeat progress (try break_if; autorewrite with Ztestbit zsimplify; try reflexivity).
   Qed.
+
+  Lemma pow2_mod_pos_bound a b : 0 < b -> 0 <= Z.pow2_mod a b < 2^b.
+  Proof.
+    intros; rewrite Z.pow2_mod_spec by omega.
+    auto with zarith.
+  Qed.
+  Hint Resolve pow2_mod_pos_bound : zarith.
 
   Lemma land_same_r : forall a b, (a & b) & b = a & b.
   Proof.
