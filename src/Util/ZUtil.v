@@ -1618,6 +1618,18 @@ Module Z.
   Proof. intros; rewrite (mod_small_n 1) by lia; lia. Qed.
   Hint Rewrite mod_small_1 using zutil_arith : zsimplify.
 
+  Lemma mul_mod_distr_r_full a b c : (a * c) mod (b * c) = (a mod b * c).
+  Proof.
+    destruct (Z_zerop b); [ | destruct (Z_zerop c) ]; subst;
+      autorewrite with zsimplify; auto using Z.mul_mod_distr_r.
+  Qed.
+
+  Lemma mul_mod_distr_l_full a b c : (c * a) mod (c * b) = c * (a mod b).
+  Proof.
+    destruct (Z_zerop b); [ | destruct (Z_zerop c) ]; subst;
+      autorewrite with zsimplify; auto using Z.mul_mod_distr_l.
+  Qed.
+
   Lemma leb_add_same x y : (x <=? y + x) = (0 <=? y).
   Proof. destruct (x <=? y + x) eqn:?, (0 <=? y) eqn:?; ltb_to_lt; try reflexivity; omega. Qed.
   Hint Rewrite leb_add_same : zsimplify.
