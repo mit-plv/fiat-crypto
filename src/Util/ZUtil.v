@@ -1686,6 +1686,10 @@ Module Z.
   Proof. lia. Qed.
   Hint Rewrite simplify_twice_sub_add : zsimplify.
 
+  Lemma simplify_2XmX X : 2 * X - X = X.
+  Proof. omega. Qed.
+  Hint Rewrite simplify_2XmX : zsimplify.
+
   Lemma move_R_pX x y z : x + y = z -> x = z - y.
   Proof. omega. Qed.
   Lemma move_R_mX x y z : x - y = z -> x = z + y.
