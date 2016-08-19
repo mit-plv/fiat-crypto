@@ -23,6 +23,7 @@ Hint Resolve Z.log2_nonneg Z.div_small Z.mod_small Z.pow_neg_r Z.pow_0_l Z.pow_p
 Hint Resolve (fun a b H => proj1 (Z.mod_pos_bound a b H)) (fun a b H => proj2 (Z.mod_pos_bound a b H)) (fun a b pf => proj1 (Z.pow_gt_1 a b pf)) : zarith.
 
 Ltac zutil_arith := solve [ omega | lia | auto with nocore ].
+Ltac zutil_arith_more_inequalities := solve [ zutil_arith | auto with zarith ].
 
 (** Only hints that are always safe to apply (i.e., reversible), and
     which can reasonably be said to "simplify" the goal, should go in
@@ -1754,12 +1755,14 @@ Module Z.
       variables [q] and [r] while simultaneously adding facts that
       uniquely specify [q] and [r] to the context (roughly, that [y *
       q + r = x] and that [0 <= r < y]. *)
+  Ltac div_mod_to_quot_rem_inequality_solver :=
+    zutil_arith_more_inequalities.
   Ltac generalize_div_eucl x y :=
     let H := fresh in
     let H' := fresh in
-    assert (H' : y <> 0) by omega;
+    assert (H' : y <> 0) by div_mod_to_quot_rem_inequality_solver;
     generalize (Z.div_mod x y H'); clear H';
-    assert (H' : 0 < y) by omega;
+    assert (H' : 0 < y) by div_mod_to_quot_rem_inequality_solver;
     generalize (Z.mod_pos_bound x y H'); clear H';
     let q := fresh "q" in
     let r := fresh "r" in
