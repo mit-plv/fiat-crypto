@@ -1778,6 +1778,17 @@ Module Z.
 
   Ltac div_mod_to_quot_rem := repeat div_mod_to_quot_rem_step; intros.
 
+  (** [rewrite_mod_small] is a better version of [rewrite Z.mod_small
+      by rewrite_mod_small_solver]; it backtracks across occurences
+      that the solver fails to solve the side-conditions on. *)
+  Ltac rewrite_mod_small_solver :=
+    zutil_arith_more_inequalities.
+  Ltac rewrite_mod_small :=
+    repeat match goal with
+           | [ |- context[?x mod ?y] ]
+             => rewrite (Z.mod_small x y) by rewrite_mod_small_solver
+           end.
+
   Local Ltac simplify_div_tac :=
     intros; autorewrite with zsimplify; rewrite <- ?Z_div_plus_full_l, <- ?Z_div_plus_full by assumption;
     try (apply f_equal2; [ | reflexivity ]);
