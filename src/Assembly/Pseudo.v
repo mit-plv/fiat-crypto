@@ -1,7 +1,7 @@
 Require Import Crypto.Assembly.QhasmCommon Crypto.Assembly.QhasmUtil Crypto.Assembly.State.
 Require Import Crypto.Assembly.Language Crypto.Assembly.QhasmEvalCommon.
 Require Import Coq.Lists.List Coq.Arith.Compare_dec Coq.omega.Omega.
-Require Import Crypto.Util.Notations.
+Require Import Crypto.Util.Notations Crypto.Util.IterAssocOp.
 Require Export Crypto.Util.FixCoqMistakes.
 
 Module Pseudo <: Language.
@@ -17,7 +17,7 @@ Module Pseudo <: Language.
     | PShift: forall n, RotOp -> Index w -> Pseudo n 1 -> Pseudo n 1
     | PFunExp: forall n, Pseudo n n -> nat -> Pseudo n n
     | PLet: forall n k m, Pseudo n k -> Pseudo (n + k) m -> Pseudo n m
-    | PComb: forall n a b, Pseudo n a -> Pseudo n b -> Pseudo n (a + b)
+    | PCons: forall n m, Pseudo n 1 -> Pseudo n m -> Pseudo n (S m)
     | PCall: forall n m, Label -> Pseudo n m -> Pseudo n m
     | PIf: forall n m, TestOp -> Index n -> Index n ->
                   Pseudo n m -> Pseudo n m -> Pseudo n m.
@@ -32,8 +32,8 @@ Module Pseudo <: Language.
   }.
 
   Definition Params := Params'.
-  Definition State (p: Params) : Type := ListState (width p).
-  Definition Program (p: Params) : Type :=
+  Definition State (p: Params): Type := ListState (width p).
+  Definition Program (p: Params): Type :=
     @Pseudo (width p) (spec p) (inputs p) (outputs p).
 
   Definition Unary32: Params := mkParams 32 W32 1 1.
@@ -41,8 +41,13 @@ Module Pseudo <: Language.
 
   (* Evaluation *)
 
-  Fixpoint pseudoEval {n m w s} (prog: @Pseudo w s n m) (st: ListState w) : option (ListState w) :=
-    match prog with
+  Definition ensureLength {w} (n: nat) (st: ListState w) (x: option (ListState w)) :=
+    if (Nat.eq_dec (Datatypes.length (getList st)) n)
+    then x
+    else None.
+
+  Fixpoint pseudoEval {n m w s} (prog: @Pseudo w s n m) (st: ListState w): option (ListState w) :=
+    ensureLength n st match prog with
     | PVar n _ i => omap (getVar i st) (fun x => Some (setList [x] st))
     | PMem n m v i => omap (getMem v i st) (fun x => Some (setList [x] st))
     | PConst n c => Some (setList [c] st)
@@ -85,7 +90,7 @@ Module Pseudo <: Language.
         omap (pseudoEval g (setList ((getList st) ++ (getList sf)) sf))
           (fun sg => Some sg))
 
-    | PComb n a b f g =>
+    | PCons n m f g =>
       omap (pseudoEval f st) (fun sf =>
         omap (pseudoEval g (setList (getList st) sf)) (fun sg =>
           Some (setList ((getList sf) ++ (getList sg)) sg)))
@@ -98,13 +103,7 @@ Module Pseudo <: Language.
           else pseudoEval r st ))
 
     | PFunExp n p e =>
-      (fix funexpseudo (e': nat) (st': ListState w) :=
-        match e' with
-        | O => Some st'
-        | S e'' =>
-          omap (pseudoEval p st') (fun st'' =>
-            funexpseudo e'' st'')
-        end) e st
+      funexp (fun so => omap so (pseudoEval p)) (Some st) e
 
     | PCall n m _ p => pseudoEval p st
     end.
@@ -115,7 +114,7 @@ Module Pseudo <: Language.
   Definition indexize {n: nat} (x: nat) : Index n.
     intros; destruct (le_dec n 0).
 
-    - exists 0; abstract intuition auto with zarith.
+    - exists 0; abstract omega.
     - exists (x mod n)%nat; abstract (
         pose proof (Nat.mod_bound_pos x n); omega).
   Defined.

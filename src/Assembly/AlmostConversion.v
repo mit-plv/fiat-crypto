@@ -58,7 +58,11 @@ Module AlmostConversion <: Conversion AlmostQhasm Qhasm.
     convertProgram pa pb prog = Some prog' ->
     convertState pa pb a = Some a' ->
     convertState pa pb b = Some b' ->
-    Qhasm.evaluatesTo pb prog' a b <-> AlmostQhasm.evaluatesTo pa prog a' b'.
+    AlmostQhasm.evaluatesTo pa prog a' b' ->
+    Qhasm.evaluatesTo pb prog' a b.
+  Proof.
+    intros until prog'; intros Hprog Ha Hb He;
+      induction pa, pb, a, b.
   Admitted.
 
 End AlmostConversion.

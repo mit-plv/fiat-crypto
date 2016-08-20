@@ -2,7 +2,7 @@ Require Import Bedrock.Word.
 Require Import Crypto.Assembly.QhasmCommon Crypto.Assembly.QhasmEvalCommon.
 Require Import Crypto.Assembly.Pseudo Crypto.Assembly.Qhasm Crypto.Assembly.AlmostQhasm Crypto.Assembly.Conversion Crypto.Assembly.Language.
 Require Import Crypto.Assembly.PseudoConversion Crypto.Assembly.AlmostConversion Crypto.Assembly.StringConversion.
-Require Import Crypto.Assembly.Wordize Crypto.Assembly.Vectorize Crypto.Assembly.Pseudize.
+Require Import Crypto.Assembly.Wordize Crypto.Assembly.Pseudize Crypto.Assembly.Natize.
 Require Import Crypto.Util.Notations.
 
 Module Pipeline.
@@ -28,52 +28,71 @@ Module PipelineExamples.
   Local Notation "v [[ i ]]" := (nth i v (wzero _)).
   Local Notation "$$ v" := (natToWord _ v).
 
-  (*
-  Definition add_example: @pseudeq 32 W32 1 1 (fun v =>
-      plet a := $$ 1 in
-      plet b := v[[0]] in
-      [a ^+ b]).
-    pseudo_solve.
-  Defined.
+  Section Example1.
+    Definition f1 : Curried N N 2 1 := fun x y =>
+      [N.add (N.land x (N.ones 15)) (N.land y (N.ones 15))].
 
-  Definition add_ex_str :=
-    (Pipeline.toString (proj1_sig add_example)).
+    Lemma wordF1: wordeq 64 f1.
+    Proof. unfold f1; wordize. Defined.
 
-  Definition and_example: @pseudeq 32 W32 1 1 (fun v =>
-      plet a := $$ 1 in
-      plet b := v[[0]] in
-      [a ^& b]).
-    pseudo_solve.
-  Defined.
+    Definition listF1 := curriedToListF (wzero _) (proj1_sig wordF1).
 
-  Definition and_ex_str :=
-    (Pipeline.toString (proj1_sig and_example)).
+    Definition pseudo1: @pseudeq 64 W64 2 1 listF1.
+      (* TODO: get this to work on 8.4 *)
+      (* unfold listF1; simpl'; pseudo_solve. *)
+    Admitted.
 
-  Definition mult_example: @pseudeq 32 W32 1 1 (fun v =>
-      plet a := $$ 1 in
-      plet b := v[[0]] in
+    Definition asm1 :=
+      (Pipeline.toString (proj1_sig pseudo1)).
+  End Example1.
 
-      (* NOTE: we want the lets in this format to unify with
-               pseudo_mult_dual *)
-      plet c := multHigh a b in
-      plet d := a ^* b in
+  Section Example2.
+    Definition f2 : Curried N N 2 1 := fun x y =>
+      [N.mul (N.land x (N.ones 15)) (N.land y (N.ones 15))]. 
 
-      [b ^& d]).
-    pseudo_solve.
-  Defined.
+    Lemma wordF2: wordeq 32 f2.
+    Proof. unfold f2; wordize. Defined.
 
-  Definition mult_ex_str :=
-    (Pipeline.toString (proj1_sig mult_example)).
+    Definition listF2 := curriedToListF (wzero _) (proj1_sig wordF2).
 
-  Definition comb_example: @pseudeq 32 W32 1 1 (fun v =>
-      plet a := $$ 7 in
-      plet b := v[[0]] in
-      ([b ^& a; a ^+ b])).
-    pseudo_solve.
-  Admitted.
+    Definition pseudo2: @pseudeq 32 W32 2 1 listF2.
+      (* TODO: get this to work on 8.4 *)
+      (* unfold listF2; simpl'; pseudo_solve. *)
+    Admitted.
 
-  Definition comb_ex_str :=
-    (Pipeline.toString (proj1_sig comb_example)).
-  *)
+    Definition asm2 :=
+      (Pipeline.toString (proj1_sig pseudo2)).
+  End Example2.
+
+  Section Example1305.
+    Require Import Crypto.Specific.GF1305.
+
+    Definition f1305 : Curried Z Z 10 5.
+      intros f0 f1 f2 f3 f4 g0 g1 g2 g3 g4.
+      apply (tupleToList 5).
+      refine (add (f0, f1, f2, f3, f4) (g0, g1, g2, g3, g4)).
+    Defined.
+
+    Definition g1305 : nateq f1305.
+      unfold f1305; solve_nateq.
+    Defined.
+
+    Lemma wordF1305: maskeq 64 (proj1_sig g1305) [25;25;25;25;25;25;25;25;25;25].
+    Proof.
+      unfold g1305; simpl'.
+    Admitted. (* TODO: replace maskeq with reflective machinery *)
+
+    Definition listF1305 := curriedToListF (wzero _) (proj1_sig wordF1305).
+
+    Definition pseudo1305: @pseudeq 64 W64 2 1 listF1305.
+      (* TODO: get this to work on 8.4 *)
+      (* unfold listF1305; simpl.
+        unfold curriedToListF, maskeq_kill_arg''; simpl.
+        pseudo_solve. *)
+    Admitted.
+
+    Definition asm1305 :=
+      (Pipeline.toString (proj1_sig pseudo2)).
+  End Example1305.
 
 End PipelineExamples.

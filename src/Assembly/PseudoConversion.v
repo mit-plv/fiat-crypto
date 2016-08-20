@@ -30,7 +30,7 @@ Module PseudoConversion <: Conversion Pseudo AlmostQhasm.
         | PCall _ _ _ p => getStart' p
         | PIf _ _ _ _ _ l r => (getStart' l) ++ (getStart' r)
         | PLet _ k _ a b => (n + k) :: (getStart' a) ++ (getStart' b)
-        | PComb _ _ _ a b => (getStart' a) ++ (getStart' b)
+        | PCons _ _ a b => (getStart' a) ++ (getStart' b)
         | _ => []
         end) _ _ prog in
 
@@ -157,7 +157,7 @@ Module PseudoConversion <: Conversion Pseudo AlmostQhasm.
           end
         end
 
-      | PComb n a b f g => 
+      | PCons n m f g => 
         match (convertProgram' f start M F) with
         | None => None
         | Some (fp, fm, M', F') =>
@@ -253,6 +253,7 @@ Module PseudoConversion <: Conversion Pseudo AlmostQhasm.
     convertProgram pa pb prog = Some prog' ->
     convertState pa pb a = Some a' ->
     convertState pa pb b = Some b' ->
-    AlmostQhasm.evaluatesTo pb prog' a b <-> evaluatesTo pa prog a' b'.
+    evaluatesTo pa prog a' b' ->
+    AlmostQhasm.evaluatesTo pb prog' a b.
   Admitted.
 End PseudoConversion.

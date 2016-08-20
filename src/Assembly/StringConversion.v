@@ -1,7 +1,7 @@
 Require Export Language Conversion.
-Require Export String Ascii Basics Sumbool.
+Require Export String Ascii Basics Sumbool Sorting Orders.
 Require Import QhasmCommon QhasmEvalCommon QhasmUtil Qhasm.
-Require Import NArith NPeano.
+Require Import NArith NPeano Compare_dec Omega.
 Require Export Bedrock.Word.
 
 Module QhasmString <: Language.
@@ -14,6 +14,40 @@ End QhasmString.
 
 Module StringConversion <: Conversion Qhasm QhasmString.
   Import Qhasm ListNotations.
+
+  Module NatOrder <: TotalLeBool.
+    Definition t := nat.
+
+    Definition leb x y := proj1_sig (bool_of_sumbool (le_dec x y)).
+
+    Theorem leb_total : forall a1 a2, (leb a1 a2 = true) \/ (leb a2 a1 = true).
+    Proof.
+      intros; unfold leb;
+        destruct (le_dec a1 a2), (le_dec a2 a1);
+        try omega; simpl;
+        first [ left; reflexivity | right; reflexivity ].
+    Qed.
+  End NatOrder.
+
+  Module NatSort := Sort NatOrder.
+
+  Definition identifier {n} (x: Mapping n) := 
+    match x with
+    | regM (reg _ _ x) => x
+    | stackM (stack _ _ x) => x
+    | memM _ (mem _ _ _ x) i => (x + 1000 * i)%nat
+    | _ => O
+    end.
+
+  Definition sortBy {T} (f: T -> nat) (x: list T): list T :=
+    let zippedWithIndex := List.combine x (seq O (length x)) in
+    let getId := fun y => (f (fst y)) * (length x) + (snd y) in
+    let sortedIds := NatSort.sort (map getId zippedWithIndex) in
+    let indexes := map (fun y => y mod (length x)) sortedIds in
+    match (hd_error x) with
+    | None => []
+    | Some d => map (fun y => nth y x d) indexes
+    end.
 
   (* The easy one *)
   Definition convertState x y (st: QhasmString.State y): option (Qhasm.State x) := None.
@@ -188,6 +222,7 @@ Module StringConversion <: Conversion Qhasm QhasmString.
   End Elements.
 
   Section Parsing.
+ 
     Definition convM {n m} (x: list (Mapping n)): list (Mapping m).
       destruct (Nat.eq_dec n m); subst. exact x. exact [].
     Defined.
@@ -251,16 +286,16 @@ Module StringConversion <: Conversion Qhasm QhasmString.
       end.
 
     Definition getRegNames (n: nat) (lst: list (Mapping n)): list nat :=
-      flatMapOpt (dedup lst) (fun e =>
-        match e with | regM (reg _ _ x) => Some x | _ => None end).
+      sortBy id (flatMapOpt (dedup lst) (fun e =>
+        match e with | regM (reg _ _ x) => Some x | _ => None end)).
 
     Definition getStackNames (n: nat) (lst: list (Mapping n)): list nat :=
-      flatMapOpt (dedup lst) (fun e =>
-        match e with | stackM (stack _ _ x) => Some x | _ => None end).
+      sortBy id (flatMapOpt (dedup lst) (fun e =>
+        match e with | stackM (stack _ _ x) => Some x | _ => None end)).
 
     Definition getMemNames (n: nat) (lst: list (Mapping n)): list nat :=
-      flatMapOpt (dedup lst) (fun e =>
-        match e with | memM _ (mem _ _ _ x) _ => Some x | _ => None end).
+      sortBy id (flatMapOpt (dedup lst) (fun e =>
+        match e with | memM _ (mem _ _ _ x) _ => Some x | _ => None end)).
 
     Fixpoint getInputs' (n: nat) (prog: list QhasmStatement) (init: list (Mapping n)): list (Mapping n) :=
       let f := fun rs => filter (fun x =>
@@ -303,7 +338,8 @@ Module StringConversion <: Conversion Qhasm QhasmString.
         end
       end.
 
-    Definition getInputs (n: nat) (prog: list QhasmStatement) := getInputs' n prog [].
+    Definition getInputs (n: nat) (prog: list QhasmStatement) :=
+      sortBy identifier (getInputs' n prog []).
 
     Definition mappingDeclaration {n} (x: Mapping n): option string :=
       match x with
@@ -335,8 +371,8 @@ Module StringConversion <: Conversion Qhasm QhasmString.
       | memM _ m i => Some ("input " ++ m)%string
       | _ => None
       end.
-
   End Parsing.
+
 
   (* Macroscopic Conversion Methods *)
   Definition optionToList {A} (o: option A): list A :=
@@ -363,8 +399,9 @@ Module StringConversion <: Conversion Qhasm QhasmString.
   Transparent Qhasm.Program QhasmString.Program.
 
   Definition convertProgram x y (prog: Qhasm.Program x): option (QhasmString.Program y) :=
-    let decls := fun x => flatMapList (dedup (entries x prog))
-      (compose optionToList mappingDeclaration) in
+    let decls := fun x =>
+      flatMapList (sortBy identifier (dedup (entries x prog)))
+        (compose optionToList mappingDeclaration) in
 
     let inputs := fun x => flatMapList (getInputs x prog)
       (compose optionToList inputDeclaration) in
@@ -386,7 +423,11 @@ Module StringConversion <: Conversion Qhasm QhasmString.
     convertProgram pa pb prog = Some prog' ->
     convertState pa pb a = Some a' ->
     convertState pa pb b = Some b' ->
-    QhasmString.evaluatesTo pb prog' a b <-> Qhasm.evaluatesTo pa prog a' b'.
+    Qhasm.evaluatesTo pa prog a' b' ->
+    QhasmString.evaluatesTo pb prog' a b.
+  Proof.
+    intros until prog'; intros Hprog Ha Hb He;
+      destruct a, b, pa, pb; intuition.
   Admitted.
 
 End StringConversion.
