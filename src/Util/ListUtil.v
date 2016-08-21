@@ -1321,8 +1321,81 @@ Proof.
   intros; rewrite sum_firstn_app; autorewrite with simpl_sum_firstn.
   do 2 f_equal; omega.
 Qed.
-
 Hint Rewrite @sum_firstn_app_sum : simpl_sum_firstn.
+
+Lemma nth_error_skipn : forall {A} n (l : list A) m,
+nth_error (skipn n l) m = nth_error l (n + m).
+Proof.
+induction n; destruct l; boring.
+apply nth_error_nil_error.
+Qed.
+
+Lemma nth_default_skipn : forall {A} (l : list A) d n m, nth_default d (skipn n l) m = nth_default d l (n + m).
+Proof.
+cbv [nth_default]; intros.
+rewrite nth_error_skipn.
+reflexivity.
+Qed.
+
+Lemma sum_firstn_skipn : forall l n m, sum_firstn l (n + m) = (sum_firstn l n + sum_firstn (skipn n l) m)%Z.
+Proof.
+induction m; intros.
++ rewrite sum_firstn_0. autorewrite with natsimplify. omega.
++ rewrite <-plus_n_Sm, !sum_firstn_succ_default.
+    rewrite nth_default_skipn.
+    omega.
+Qed.
+
+
+Lemma sum_firstn_prefix_le' : forall l n m, (forall x, In x l -> (0 <= x)%Z) ->
+                                            (sum_firstn l n <= sum_firstn l (n + m))%Z.
+Proof.
+intros.
+rewrite sum_firstn_skipn.
+pose proof (sum_firstn_nonnegative m (skipn n l)) as Hskipn_nonneg.
+match type of Hskipn_nonneg with
+  ?P -> _ => assert P as Q; [ | specialize (Hskipn_nonneg Q); omega ] end.
+intros x HIn_skipn.
+apply In_skipn in HIn_skipn.
+auto.
+Qed.
+
+Lemma sum_firstn_prefix_le : forall l n m, (forall x, In x l -> (0 <= x)%Z) ->
+                                            (n <= m)%nat ->
+                                            (sum_firstn l n <= sum_firstn l m)%Z.
+Proof.
+intros.
+replace m with (n + (m - n))%nat by omega.
+auto using sum_firstn_prefix_le'.
+Qed.
+
+Lemma sum_firstn_pos_lt_succ : forall l n m, (forall x, In x l -> (0 <= x)%Z) ->
+                                        (n < length l)%nat ->
+                                        (sum_firstn l n < sum_firstn l (S m))%Z ->
+                                        (n <= m)%nat.
+Proof.
+intros.
+destruct (le_dec n m); auto.
+replace n with (m + (n - m))%nat in H1 by omega.
+rewrite sum_firstn_skipn in H1.
+rewrite sum_firstn_succ_default in *.
+match goal with H : (?a + ?b < ?c + ?a)%Z |- _ => assert (b < c)%Z by omega end.
+destruct (lt_dec m (length l)). {
+    rewrite skipn_nth_default with (d := 0%Z) in H2 by assumption.
+    replace (n - m)%nat with (S (n - S m))%nat in H2 by omega.
+    rewrite sum_firstn_succ_cons in H2.
+    pose proof (sum_firstn_nonnegative (n - S m) (skipn (S m) l)).
+    match type of H3 with
+      ?P -> _ => assert P as Q; [ | specialize (H3 Q); omega ] end.
+    intros ? A.
+    apply In_skipn in A.
+    apply H in A.
+    omega.
+} {
+    rewrite skipn_all, nth_default_out_of_bounds in H2 by omega.
+    rewrite sum_firstn_nil in H2; omega.
+}
+Qed.
 
 Definition NotSum {T} (xs : list T) (v : nat) := True.
 
