@@ -205,27 +205,82 @@ Section Pow2BaseProofs.
   Hint Rewrite @skipn_base_from_limb_widths : pull_base_from_limb_widths.
   Hint Rewrite @skipn_base_from_limb_widths : push_skipn.
 
+  (* TODO : move to ZUtil *)
+  Lemma testbit_false_bound : forall a x, 0 <= x ->
+    (forall n, ~ (n < x) -> Z.testbit a n = false) ->
+    a < 2 ^ x.
+  Proof.
+    intros.
+    assert (a = Z.pow2_mod a x). {
+     apply Z.bits_inj'; intros.
+     rewrite Z.testbit_pow2_mod by omega; break_if; auto.
+    }
+    rewrite H1.
+    rewrite Z.pow2_mod_spec; try apply Z.mod_pos_bound; zero_bounds.
+  Qed.
+
   Lemma pow2_mod_bounded :forall lw us i, (forall w, In w lw -> 0 <= w) -> bounded lw us ->
                                           Z.pow2_mod (nth_default 0 us i) (nth_default 0 lw i) = nth_default 0 us i.
   Proof.
-    clear limb_widths limb_widths_nonneg.
-  Admitted.
+    clear.
+    repeat match goal with
+           | |- _ => progress (cbv [bounded]; intros)
+           | |- _ => break_if
+           | |- _ => apply Z.bits_inj'
+           | |- _ => rewrite Z.testbit_pow2_mod by (apply nth_default_preserves_properties; auto; omega)
+           | |- _ => reflexivity
+           end.
+    specialize (H0 i).
+    symmetry.
+    rewrite <- (Z.mod_pow2_bits_high (nth_default 0 us i) (nth_default 0 lw i) n);
+      [ rewrite Z.mod_small by omega; reflexivity | ].
+    split; try omega.
+    apply nth_default_preserves_properties; auto; omega.
+  Qed.
 
-  Lemma pow2_mod_bounded_iff :forall lw us, (forall w, In w lw -> 0 <= w) -> bounded lw us <->
-    forall i, Z.pow2_mod (nth_default 0 us i) (nth_default 0 lw i) = nth_default 0 us i.
+  Lemma pow2_mod_bounded_iff :forall lw us, (forall w, In w lw -> 0 <= w) -> (bounded lw us <->
+    (forall i, Z.pow2_mod (nth_default 0 us i) (nth_default 0 lw i) = nth_default 0 us i)).
   Proof.
-    clear limb_widths limb_widths_nonneg.
-  Admitted.
+    clear.
+    split; intros; auto using pow2_mod_bounded.
+    cbv [bounded]; intros.
+    assert (0 <= nth_default 0 lw i) by (apply nth_default_preserves_properties; auto; omega).
+    split.
+    + specialize (H0 i).
+      rewrite Z.pow2_mod_spec in H0 by assumption.
+      apply Z.mod_small_iff in H0; [ | apply Z.pow_nonzero; (assumption || omega)].
+      destruct H0; try omega.
+      pose proof (Z.pow_nonneg 2 (nth_default 0 lw i)).
+      specialize_by omega; omega.
+    + apply testbit_false_bound; auto.
+      intros.
+      rewrite <-H0.
+      rewrite Z.testbit_pow2_mod by assumption.
+      break_if; reflexivity || omega.
+  Qed.
 
   Lemma bounded_nil_iff : forall us, bounded nil us <-> (forall u, In u us -> u = 0).
   Proof.
-    clear limb_widths limb_widths_nonneg.
-  Admitted.
+    clear.
+    split; cbv [bounded]; intros.
+    + edestruct (In_nth_error_value us u); try assumption.
+      specialize (H x).
+      replace u with (nth_default 0 us x) by (auto using nth_error_value_eq_nth_default).
+      rewrite nth_default_nil, Z.pow_0_r in H.
+      omega.
+    + rewrite nth_default_nil, Z.pow_0_r.
+      apply nth_default_preserves_properties; try omega.
+      intros.
+      apply H in H0.
+      omega.
+  Qed.
 
   Lemma bounded_iff : forall lw us, bounded lw us <-> forall i, 0 <= nth_default 0 us i < 2 ^ nth_default 0 lw i.
   Proof.
-    clear limb_widths limb_widths_nonneg.
-  Admitted.
+    clear.
+    cbv [bounded]; intros.
+    reflexivity.
+  Qed.
 
   Lemma digit_select : forall us i, bounded limb_widths us ->
                                     nth_default 0 us i = Z.pow2_mod (BaseSystem.decode base us >> sum_firstn limb_widths i) (nth_default 0 limb_widths i).
@@ -351,20 +406,6 @@ Section Pow2BaseProofs.
     intros.
     erewrite <-(firstn_all _ us) by reflexivity.
     auto using testbit_decode_firstn_high.
-  Qed.
-
-  (* TODO : move to ZUtil *)
-  Lemma testbit_false_bound : forall a x, 0 <= x ->
-    (forall n, ~ (n < x) -> Z.testbit a n = false) ->
-    a < 2 ^ x.
-  Proof.
-    intros.
-    assert (a = Z.pow2_mod a x). {
-     apply Z.bits_inj'; intros.
-     rewrite Z.testbit_pow2_mod by omega; break_if; auto.
-    }
-    rewrite H1.
-    rewrite Z.pow2_mod_spec; try apply Z.mod_pos_bound; zero_bounds.
   Qed.
 
   (** TODO: Figure out how to automate and clean up this proof *)
@@ -793,8 +834,18 @@ Section UniformBase.
   Qed.
 
   (* TODO : move *)
-  Lemma decode_truncate_base : forall bs us, BaseSystem.decode bs us = BaseSystem.decode (firstn (length us) bs) us.
-  Admitted.
+  Lemma decode_truncate_base : forall us bs, BaseSystem.decode bs us = BaseSystem.decode (firstn (length us) bs) us.
+  Proof.
+    clear.
+    induction us; intros.
+    + rewrite !decode_nil; reflexivity.
+    + distr_length.
+      destruct bs.
+      - rewrite firstn_nil, !decode_base_nil; reflexivity.
+      - rewrite firstn_cons, !peel_decode.
+        f_equal.
+        apply IHus.
+  Qed.
 
   (* TODO : move *)
   Lemma tl_repeat : forall {A} xs n (x : A), (forall y, In y xs -> y = x) ->
@@ -813,7 +864,7 @@ Section UniformBase.
   Proof.
     intros.
     match goal with |- BaseSystem.decode ?b1 _ = BaseSystem.decode ?b2 _ =>
-      rewrite (decode_truncate_base b1), (decode_truncate_base b2) end.
+      rewrite (decode_truncate_base _ b1), (decode_truncate_base _ b2) end.
     rewrite !firstn_base_from_limb_widths.
     do 2 f_equal.
     eauto using tl_repeat.
