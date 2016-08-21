@@ -3,6 +3,7 @@ Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 Require Import Coq.Structures.Equalities.
 Require Import Coq.omega.Omega Coq.micromega.Psatz Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
 Require Import Crypto.Util.NatUtil.
+Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
 Require Import Coq.Lists.List.
 Require Export Crypto.Util.FixCoqMistakes.
@@ -18,10 +19,11 @@ Hint Extern 1 => lia : lia.
 Hint Extern 1 => lra : lra.
 Hint Extern 1 => nia : nia.
 Hint Extern 1 => omega : omega.
-Hint Resolve Z.log2_nonneg Z.div_small Z.mod_small Z.pow_neg_r Z.pow_0_l Z.pow_pos_nonneg Z.lt_le_incl Z.pow_nonzero Z.div_le_upper_bound Z_div_exact_full_2 Z.div_same Z.div_lt_upper_bound Z.div_le_lower_bound Zplus_minus Zplus_gt_compat_l Zplus_gt_compat_r Zmult_gt_compat_l Zmult_gt_compat_r : zarith.
-Hint Resolve (fun a b H => proj1 (Z.mod_pos_bound a b H)) (fun a b H => proj2 (Z.mod_pos_bound a b H)) : zarith.
+Hint Resolve Z.log2_nonneg Z.div_small Z.mod_small Z.pow_neg_r Z.pow_0_l Z.pow_pos_nonneg Z.lt_le_incl Z.pow_nonzero Z.div_le_upper_bound Z_div_exact_full_2 Z.div_same Z.div_lt_upper_bound Z.div_le_lower_bound Zplus_minus Zplus_gt_compat_l Zplus_gt_compat_r Zmult_gt_compat_l Zmult_gt_compat_r Z.pow_lt_mono_r Z.pow_lt_mono_l Z.pow_lt_mono Z.mul_lt_mono_nonneg : zarith.
+Hint Resolve (fun a b H => proj1 (Z.mod_pos_bound a b H)) (fun a b H => proj2 (Z.mod_pos_bound a b H)) (fun a b pf => proj1 (Z.pow_gt_1 a b pf)) : zarith.
 
-Ltac zutil_arith := solve [ omega | lia ].
+Ltac zutil_arith := solve [ omega | lia | auto with nocore ].
+Ltac zutil_arith_more_inequalities := solve [ zutil_arith | auto with zarith ].
 
 (** Only hints that are always safe to apply (i.e., reversible), and
     which can reasonably be said to "simplify" the goal, should go in
@@ -36,6 +38,7 @@ Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_
 Hint Rewrite Z.div_mul Z.div_1_l Z.div_same Z.mod_same Z.div_small Z.mod_small Z.div_add Z.div_add_l Z.mod_add Z.div_0_l Z.mod_mod Z.mod_small Z_mod_zero_opp_full Z.mod_1_l using zutil_arith : zsimplify.
 Hint Rewrite <- Z.opp_eq_mul_m1 Z.one_succ Z.two_succ : zsimplify.
 Hint Rewrite <- Z.div_mod using zutil_arith : zsimplify.
+Hint Rewrite (fun x y => proj2 (Z.eqb_neq x y)) using assumption : zsimplify.
 
 (** "push" means transform [-f x] to [f (-x)]; "pull" means go the other way *)
 Create HintDb push_Zopp discriminated.
@@ -102,13 +105,15 @@ Hint Rewrite <- Z.shiftr_lxor Z.shiftr_land Z.shiftr_lor Z.shiftr_ldiff Z.lnot_s
 Hint Rewrite Z.shiftr_lxor Z.shiftr_land Z.shiftr_lor Z.shiftr_ldiff Z.lnot_shiftr Z.ldiff_ones_r Z.shiftl_lxor Z.shiftl_land Z.shiftl_lor Z.shiftl_ldiff using zutil_arith : push_Zshift.
 Hint Rewrite <- Z.shiftr_shiftl_l Z.shiftr_shiftl_r Z.shiftr_shiftr Z.shiftl_shiftl using zutil_arith : push_Zshift.
 Hint Rewrite Z.shiftr_opp_r Z.shiftl_opp_r Z.shiftr_0_r Z.shiftr_0_l Z.shiftl_0_r Z.shiftl_0_l : push_Zshift.
-Hint Rewrite Z.shiftl_1_l Z.shiftr_div_pow2 Z.shiftr_mul_pow2 Z.shiftl_mul_pow2 Z.shiftl_div_pow2 using zutil_arith : Zshift_to_pow.
+Hint Rewrite Z.shiftl_1_l Z.shiftr_div_pow2 Z.shiftr_mul_pow2 Z.shiftl_mul_pow2 Z.shiftl_div_pow2 Z.opp_involutive using zutil_arith : Zshift_to_pow.
 Hint Rewrite <- Z.shiftr_opp_r using zutil_arith : Zshift_to_pow.
 Hint Rewrite <- Z.shiftr_div_pow2 Z.shiftr_mul_pow2 Z.shiftl_mul_pow2 Z.shiftl_div_pow2 using zutil_arith : Zpow_to_shift.
 
 (** For the occasional lemma that can remove the use of [Z.div] *)
 Create HintDb zstrip_div.
 Hint Rewrite Z.div_small_iff using zutil_arith : zstrip_div.
+
+Hint Rewrite <- Z.shiftr_div_pow2 Z.shiftr_mul_pow2 Z.shiftl_mul_pow2 Z.shiftl_div_pow2 using zutil_arith : convert_to_Ztestbit.
 
 (** It's not clear that [mod] is much easier for [lia] than [Z.div],
     so we separate out the transformations between [mod] and [div].
@@ -218,6 +223,7 @@ Module Z.
     unfold Z.pow2_mod.
     rewrite Z.land_ones; auto.
   Qed.
+  Hint Rewrite <- Z.pow2_mod_spec using zutil_arith : convert_to_Ztestbit.
 
   Lemma ones_spec : forall n m, 0 <= n -> 0 <= m -> Z.testbit (Z.ones n) m = if Z_lt_dec m n then true else false.
   Proof.
@@ -270,6 +276,13 @@ Module Z.
     apply Z.bits_inj'; intros.
     apply Z.min_case_strong; intros; repeat progress (try break_if; autorewrite with Ztestbit zsimplify; try reflexivity).
   Qed.
+
+  Lemma pow2_mod_pos_bound a b : 0 < b -> 0 <= Z.pow2_mod a b < 2^b.
+  Proof.
+    intros; rewrite Z.pow2_mod_spec by omega.
+    auto with zarith.
+  Qed.
+  Hint Resolve pow2_mod_pos_bound : zarith.
 
   Lemma land_same_r : forall a b, (a & b) & b = a & b.
   Proof.
@@ -724,6 +737,7 @@ Module Z.
       split; try eapply Z.lt_le_trans with (m := 2 ^ n); try omega.
       apply Z.pow_le_mono_r; omega.
   Qed.
+  Hint Rewrite <- Z.lor_shiftl using zutil_arith : convert_to_Ztestbit.
 
   (* prove that combinations of known positive/nonnegative numbers are positive/nonnegative *)
   Ltac zero_bounds' :=
@@ -1617,6 +1631,18 @@ Module Z.
   Proof. intros; rewrite (mod_small_n 1) by lia; lia. Qed.
   Hint Rewrite mod_small_1 using zutil_arith : zsimplify.
 
+  Lemma mul_mod_distr_r_full a b c : (a * c) mod (b * c) = (a mod b * c).
+  Proof.
+    destruct (Z_zerop b); [ | destruct (Z_zerop c) ]; subst;
+      autorewrite with zsimplify; auto using Z.mul_mod_distr_r.
+  Qed.
+
+  Lemma mul_mod_distr_l_full a b c : (c * a) mod (c * b) = c * (a mod b).
+  Proof.
+    destruct (Z_zerop b); [ | destruct (Z_zerop c) ]; subst;
+      autorewrite with zsimplify; auto using Z.mul_mod_distr_l.
+  Qed.
+
   Lemma leb_add_same x y : (x <=? y + x) = (0 <=? y).
   Proof. destruct (x <=? y + x) eqn:?, (0 <=? y) eqn:?; ltb_to_lt; try reflexivity; omega. Qed.
   Hint Rewrite leb_add_same : zsimplify.
@@ -1660,6 +1686,108 @@ Module Z.
   Lemma simplify_twice_sub_add x y : 2 * x - (x + y) = x - y.
   Proof. lia. Qed.
   Hint Rewrite simplify_twice_sub_add : zsimplify.
+
+  Lemma simplify_2XmX X : 2 * X - X = X.
+  Proof. omega. Qed.
+  Hint Rewrite simplify_2XmX : zsimplify.
+
+  Lemma move_R_pX x y z : x + y = z -> x = z - y.
+  Proof. omega. Qed.
+  Lemma move_R_mX x y z : x - y = z -> x = z + y.
+  Proof. omega. Qed.
+  Lemma move_R_Xp x y z : y + x = z -> x = z - y.
+  Proof. omega. Qed.
+  Lemma move_R_Xm x y z : y - x = z -> x = y - z.
+  Proof. omega. Qed.
+  Lemma move_L_pX x y z : z = x + y -> z - y = x.
+  Proof. omega. Qed.
+  Lemma move_L_mX x y z : z = x - y -> z + y = x.
+  Proof. omega. Qed.
+  Lemma move_L_Xp x y z : z = y + x -> z - y = x.
+  Proof. omega. Qed.
+  Lemma move_L_Xm x y z : z = y - x -> y - z = x.
+  Proof. omega. Qed.
+
+  (** [linear_substitute x] attempts to maipulate equations using only
+      addition and subtraction to put [x] on the left, and then
+      eliminates [x].  Currently, it only handles equations where [x]
+      appears once; it does not yet handle equations like [x - x + x =
+      5]. *)
+  Ltac linear_solve_for_in_step for_var H :=
+    let LHS := match type of H with ?LHS = ?RHS => LHS end in
+    let RHS := match type of H with ?LHS = ?RHS => RHS end in
+    first [ match RHS with
+            | ?a + ?b
+              => first [ contains for_var b; apply move_L_pX in H
+                       | contains for_var a; apply move_L_Xp in H ]
+            | ?a - ?b
+              => first [ contains for_var b; apply move_L_mX in H
+                       | contains for_var a; apply move_L_Xm in H ]
+            | for_var
+              => progress symmetry in H
+            end
+          | match LHS with
+            | ?a + ?b
+              => first [ not contains for_var b; apply move_R_pX in H
+                       | not contains for_var a; apply move_R_Xp in H ]
+            | ?a - ?b
+              => first [ not contains for_var b; apply move_R_mX in H
+                       | not contains for_var a; apply move_R_Xm in H ]
+            end ].
+  Ltac linear_solve_for_in for_var H := repeat linear_solve_for_in_step for_var H.
+  Ltac linear_solve_for for_var :=
+    match goal with
+    | [ H : for_var = _ |- _ ] => idtac
+    | [ H : context[for_var] |- _ ]
+      => linear_solve_for_in for_var H;
+         lazymatch type of H with
+         | for_var = _ => idtac
+         | ?T => fail 0 "Could not fully solve for" for_var "in" T "(hypothesis" H ")"
+         end
+    end.
+  Ltac linear_substitute for_var := linear_solve_for for_var; subst for_var.
+  Ltac linear_substitute_all :=
+    repeat match goal with
+           | [ v : Z |- _ ] => linear_substitute v
+           end.
+
+  (** [div_mod_to_quot_rem] replaces [x / y] and [x mod y] with new
+      variables [q] and [r] while simultaneously adding facts that
+      uniquely specify [q] and [r] to the context (roughly, that [y *
+      q + r = x] and that [0 <= r < y]. *)
+  Ltac div_mod_to_quot_rem_inequality_solver :=
+    zutil_arith_more_inequalities.
+  Ltac generalize_div_eucl x y :=
+    let H := fresh in
+    let H' := fresh in
+    assert (H' : y <> 0) by div_mod_to_quot_rem_inequality_solver;
+    generalize (Z.div_mod x y H'); clear H';
+    assert (H' : 0 < y) by div_mod_to_quot_rem_inequality_solver;
+    generalize (Z.mod_pos_bound x y H'); clear H';
+    let q := fresh "q" in
+    let r := fresh "r" in
+    set (q := x / y);
+    set (r := x mod y);
+    clearbody q r.
+
+  Ltac div_mod_to_quot_rem_step :=
+    match goal with
+    | [ |- context[?x / ?y] ] => generalize_div_eucl x y
+    | [ |- context[?x mod ?y] ] => generalize_div_eucl x y
+    end.
+
+  Ltac div_mod_to_quot_rem := repeat div_mod_to_quot_rem_step; intros.
+
+  (** [rewrite_mod_small] is a better version of [rewrite Z.mod_small
+      by rewrite_mod_small_solver]; it backtracks across occurences
+      that the solver fails to solve the side-conditions on. *)
+  Ltac rewrite_mod_small_solver :=
+    zutil_arith_more_inequalities.
+  Ltac rewrite_mod_small :=
+    repeat match goal with
+           | [ |- context[?x mod ?y] ]
+             => rewrite (Z.mod_small x y) by rewrite_mod_small_solver
+           end.
 
   Local Ltac simplify_div_tac :=
     intros; autorewrite with zsimplify; rewrite <- ?Z_div_plus_full_l, <- ?Z_div_plus_full by assumption;

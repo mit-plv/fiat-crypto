@@ -110,7 +110,7 @@ Proof.
   reflexivity.
 Qed.
 
-Definition appify2 {T} (op : fe25519 -> fe25519 -> T) (f g : fe25519) := 
+Definition appify2 {T} (op : fe25519 -> fe25519 -> T) (f g : fe25519) :=
   app_10 f (fun f0 => (app_10 g (fun g0 => op f0 g0))).
 
 Lemma appify2_correct : forall {T} op f g, @appify2 T op f g = op f g.
@@ -163,19 +163,29 @@ Proof.
   cbv [fe25519] in *.
   repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
   eexists.
-  cbv.
-  autorewrite with zsimplify.
+  cbv. (* N.B. The slow part of this is computing with [Z_div_opt].
+               It would be much faster if we could take advantage of
+               the form of [base_from_limb_widths] when doing
+               division, so we could do subtraction instead. *)
+  autorewrite with zsimplify_fast.
   reflexivity.
 Defined.
 
 Definition mul_simpl (f g : fe25519) : fe25519 :=
   Eval cbv beta iota delta [proj1_sig mul_simpl_sig] in
-  proj1_sig (mul_simpl_sig f g).
+  let '(f0, f1, f2, f3, f4, f5, f6, f7, f8, f9) := f in
+  let '(g0, g1, g2, g3, g4, g5, g6, g7, g8, g9) := g in
+  proj1_sig (mul_simpl_sig (f0, f1, f2, f3, f4, f5, f6, f7, f8, f9)
+                           (g0, g1, g2, g3, g4, g5, g6, g7, g8, g9)).
 
 Definition mul_simpl_correct (f g : fe25519)
-  : mul_simpl f g = carry_mul_opt k_ c_ f g :=
-  Eval cbv beta iota delta [proj1_sig mul_simpl_sig] in
-  proj2_sig (mul_simpl_sig f g).
+  : mul_simpl f g = carry_mul_opt k_ c_ f g.
+Proof.
+  pose proof (proj2_sig (mul_simpl_sig f g)).
+  cbv [fe25519] in *.
+  repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
+  assumption.
+Qed.
 
 Definition mul_sig (f g : fe25519) :
   { fg : fe25519 | fg = carry_mul_opt k_ c_ f g}.
@@ -220,21 +230,26 @@ Proof.
   repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
   eexists.
   cbv [pack_opt].
-  repeat (
-      rewrite <-convert'_opt_correct;
-      cbv - [from_list_default_opt Pow2BaseProofs.convert'];
-      repeat progress rewrite ?Z.shiftl_0_r, ?Z.shiftr_0_r, ?Z.land_0_l, ?Z.lor_0_l, ?Z.land_same_r).
+  repeat (rewrite <-convert'_opt_correct;
+          cbv - [from_list_default_opt Pow2BaseProofs.convert']).
+  repeat progress rewrite ?Z.shiftl_0_r, ?Z.shiftr_0_r, ?Z.land_0_l, ?Z.lor_0_l, ?Z.land_same_r.
   cbv [from_list_default_opt].
   reflexivity.
 Defined.
 
 Definition pack_simpl (f : fe25519) :=
   Eval cbv beta iota delta [proj1_sig pack_simpl_sig] in
-    proj1_sig (pack_simpl_sig f).
+    let '(f0, f1, f2, f3, f4, f5, f6, f7, f8, f9) := f in
+    proj1_sig (pack_simpl_sig (f0, f1, f2, f3, f4, f5, f6, f7, f8, f9)).
 
 Definition pack_simpl_correct (f : fe25519)
-  : pack_simpl f = pack_opt params25519 wire_widths_nonneg bits_eq f
-  := Eval cbv beta iota delta [proj2_sig pack_simpl_sig] in proj2_sig (pack_simpl_sig f).
+  : pack_simpl f = pack_opt params25519 wire_widths_nonneg bits_eq f.
+Proof.
+  pose proof (proj2_sig (pack_simpl_sig f)).
+  cbv [fe25519] in *.
+  repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
+  assumption.
+Qed.
 
 Definition pack_sig (f : fe25519) :
   { f' | f' = pack_opt params25519 wire_widths_nonneg bits_eq f }.
@@ -262,19 +277,25 @@ Proof.
   cbv [unpack_opt].
   repeat (
       rewrite <-convert'_opt_correct;
-      cbv - [from_list_default_opt Pow2BaseProofs.convert'];
-      repeat progress rewrite ?Z.shiftl_0_r, ?Z.shiftr_0_r, ?Z.land_0_l, ?Z.lor_0_l, ?Z.land_same_r).
+      cbv - [from_list_default_opt Pow2BaseProofs.convert']).
+  repeat progress rewrite ?Z.shiftl_0_r, ?Z.shiftr_0_r, ?Z.land_0_l, ?Z.lor_0_l, ?Z.land_same_r.
   cbv [from_list_default_opt].
   reflexivity.
 Defined.
 
 Definition unpack_simpl (f : wire_digits) : fe25519 :=
   Eval cbv beta iota delta [proj1_sig unpack_simpl_sig] in
-    proj1_sig (unpack_simpl_sig f).
+    let '(f0, f1, f2, f3, f4, f5, f6, f7) := f in
+    proj1_sig (unpack_simpl_sig (f0, f1, f2, f3, f4, f5, f6, f7)).
 
 Definition unpack_simpl_correct (f : wire_digits)
-  : unpack_simpl f = unpack_opt params25519 wire_widths_nonneg bits_eq f
-  := Eval cbv beta iota delta [proj2_sig unpack_simpl_sig] in proj2_sig (unpack_simpl_sig f).
+  : unpack_simpl f = unpack_opt params25519 wire_widths_nonneg bits_eq f.
+Proof.
+  pose proof (proj2_sig (unpack_simpl_sig f)).
+  cbv [wire_digits] in *.
+  repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
+  assumption.
+Qed.
 
 Definition unpack_sig (f : wire_digits) :
   { f' | f' = unpack_opt params25519 wire_widths_nonneg bits_eq f }.

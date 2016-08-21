@@ -1205,6 +1205,8 @@ Section Conversion.
       let bitsA := Z.pow2_mod ((inp # digitA) >> indexA) dist in
       convert' inp (i + Z.to_nat dist)%nat (update_nth digitB (update_by_concat_bits indexB bitsA) out).
   Proof.
+    generalize limb_widthsA_nonneg; intros _. (* don't drop this from the proof in 8.4 *)
+    generalize limb_widthsB_nonneg; intros _. (* don't drop this from the proof in 8.4 *)
     repeat match goal with
            | |- _ => progress intros
            | |- appcontext [bit_index (Z.of_nat ?i)] =>
@@ -1212,7 +1214,7 @@ Section Conversion.
            | H : forall x : Z, In x ?lw -> 0 <= x |- appcontext [bit_index ?lw ?i] =>
              unique pose proof (bit_index_not_done lw i)
            | H : forall x : Z, In x ?lw -> 0 <= x |- appcontext [bit_index ?lw ?i] =>
-             unique pose proof (rem_bits_in_digit_le_rem_bits lw H i)
+             unique assert (0 <= i < bitsIn lw -> i + (lw # digit_index lw i - bit_index lw i) <= bitsIn lw) by auto using rem_bits_in_digit_le_rem_bits
            | |- _ => rewrite Z2Nat.id
            | |- _ => rewrite Nat2Z.inj_add
            | |- (Z.to_nat _ < Z.to_nat _)%nat => apply Z2Nat.inj_lt
