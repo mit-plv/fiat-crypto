@@ -39,6 +39,32 @@ Section ModularBaseSystemField.
   Lemma _zero_neq_one : not (eq zero one).
   Proof. cbv [eq zero one]. erewrite !encode_rep; apply zero_neq_one. Qed.
 
+  Lemma encode_Proper : 
+    Morphisms.Proper
+      (Morphisms.respectful Logic.eq eq) encode.
+  Proof.
+    repeat intro.
+    cbv [eq].
+    rewrite !encode_rep.
+    assumption.
+  Qed.
+
+  Lemma modular_base_system_field_homomorphism :
+    @Ring.is_homomorphism
+      (F modulus) Logic.eq F.one F.add F.mul
+      digits eq one add_opt (carry_mul_opt k_ c_)
+      encode.
+  Proof.
+    econstructor.
+    + econstructor; [ | apply encode_Proper].
+      intros; cbv [eq].
+      rewrite add_opt_correct, add_rep; apply encode_rep.
+    + intros; cbv [eq].
+      rewrite carry_mul_opt_correct by auto.
+      rewrite carry_mul_rep; apply encode_rep.
+    + reflexivity.
+  Qed.
+
   Lemma modular_base_system_field :
     @field digits eq zero one opp add_opt sub_opt (carry_mul_opt k_ c_) inv div.
   Proof.
