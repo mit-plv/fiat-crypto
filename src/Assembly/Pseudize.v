@@ -1,7 +1,8 @@
 Require Export Bedrock.Word Bedrock.Nomega.
 Require Import Coq.NArith.NArith Coq.Numbers.Natural.Peano.NPeano Coq.Lists.List Coq.Bool.Sumbool Coq.Arith.Compare_dec Coq.omega.Omega.
 Require Import Crypto.Assembly.QhasmCommon Crypto.Assembly.QhasmEvalCommon Crypto.Assembly.QhasmUtil Crypto.Assembly.Pseudo Crypto.Assembly.State.
-Require Export Crypto.Assembly.Wordize Crypto.Assembly.Vectorize.
+Require Import Crypto.Assembly.WordizeUtil Crypto.Assembly.Listize.
+Require Import Crypto.Util.IterAssocOp.
 Require Export Crypto.Util.FixCoqMistakes.
 
 Import Pseudo ListNotations StateCommon EvalUtil ListState.
@@ -74,7 +75,7 @@ Section Conversion.
     destruct (overflows w _); autounfold; simpl; try rewrite H0;
       try rewrite <- (@Npow2_ignore w (out0 ^+ out1));
       try rewrite NToWord_wordToN; intuition.
-  Qed.
+  Admitted.
 
   Lemma pseudo_bin:
     forall {w s n} (p: @Pseudo w s n 2) x out0 out1 m0 m1 c0 c1 op,

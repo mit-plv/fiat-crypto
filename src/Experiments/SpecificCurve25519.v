@@ -5,56 +5,66 @@ Require Import Crypto.Tactics.VerdiTactics.
 Require Import Coq.ZArith.BinInt.
 Require Import Coq.Lists.List.
 
-Inductive type := TZ | Prod : type -> type -> type.
+Require Import Crypto.Assembly.Evaluables.
 
-Fixpoint interp_type (t:type) :=
-  match t with
-  | TZ => Z
-  | Prod a b => prod (interp_type a) (interp_type b)
-  end.
+Section Types.
+  Context {T: Type}.
+  Context {E: Evaluable T}.
+
+  Inductive type := TN | TT | Prod : type -> type -> type.
+
+  Fixpoint interp_type (t:type): Type :=
+    match t with
+    | TN => nat
+    | TT => T
+    | Prod a b => prod (interp_type a) (interp_type b)
+    end.
+
+  Inductive binop : type -> type -> type -> Type := 
+    | OPadd : binop TT TT TT
+    | OPsub : binop TT TT TT
+    | OPmul : binop TT TT TT
+    | OPmask : binop TT TN TT
+    | OPshiftr : binop TT TN TT.
+    (* TODO: should [Pair] be a [binop]? *)
+
+  Definition interp_binop {t1 t2 t} (op:binop t1 t2 t) : interp_type t1 -> interp_type t2 -> interp_type t :=
+    match op with
+    | OPadd    => @eadd T E 
+    | OPsub    => @esub T E
+    | OPmul    => @emul T E
+    | OPmask   => @emask T E
+    | OPshiftr => @eshiftr T E
+    end.
+End Types.
+
+(* Reification Tactics *)
 
 Ltac reify_type t :=
   lazymatch t with
-  | BinInt.Z => constr:(TZ)
+  | nat => constr:(TN)
+  | BinInt.Z => constr:(TT)
   | prod ?l ?r =>
     let l := reify_type l in
     let r := reify_type r in
     constr:(Prod l r)
   end.
 
-
-Inductive binop : type -> type -> type -> Type := 
-| OPZadd : binop TZ TZ TZ
-| OPZsub : binop TZ TZ TZ
-| OPZmul : binop TZ TZ TZ
-| OPZland : binop TZ TZ TZ
-| OPZshiftr : binop TZ TZ TZ.
-(* TODO: should [Pair] be a [binop]? *)
-
-Definition interp_binop {t1 t2 t} (op:binop t1 t2 t) : interp_type t1 -> interp_type t2 -> interp_type t :=
-  match op with
-  | OPZadd    => Z.add
-  | OPZsub    => Z.sub
-  | OPZmul    => Z.mul
-  | OPZland   => Z.land
-  | OPZshiftr => Z.shiftr
-  end.
-
 Ltac reify_binop op :=
   lazymatch op with
-  | Z.add    => constr:(OPZadd)
-  | Z.sub    => constr:(OPZsub)
-  | Z.mul    => constr:(OPZmul)
-  | Z.land   => constr:(OPZland)
-  | Z.shiftr => constr:(OPZshiftr)
+  | Z.add    => constr:(OPadd)
+  | Z.sub    => constr:(OPsub)
+  | Z.mul    => constr:(OPmul)
+  | Z.land   => constr:(OPmask)
+  | Z.shiftr => constr:(OPshiftr)
   end.
-
 
 Module Input.
   (* a simple expression language with binary operations on Z, [let]-s and [match]-es on pairs *)
 
   Section expr.
     Context {var : type -> Type}.
+
     Inductive expr : type -> Type :=
     | Const : interp_type TZ -> expr TZ
     | Var : forall {t}, var t -> expr t
@@ -63,10 +73,10 @@ Module Input.
     | Pair : forall {t1}, expr t1 -> forall {t2}, expr t2 -> expr (Prod t1 t2)
     | MatchPair : forall {t1 t2}, expr (Prod t1 t2) -> forall {tC}, (var t1 -> var t2 -> expr tC) -> expr tC.
   End expr.
+
   Local Notation ZConst z := (@Const _ z%Z).
   Arguments expr _ _ : clear implicits.
   Definition Expr t : Type := forall var, expr var t.
-
 
   Fixpoint interp {t} (e:expr interp_type t) : interp_type t :=
     match e in expr _ t return interp_type t with

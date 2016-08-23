@@ -8,8 +8,11 @@ src/BaseSystemProofs.v
 src/Testbit.v
 src/Assembly/AlmostConversion.v
 src/Assembly/AlmostQhasm.v
+src/Assembly/Bounds.v
 src/Assembly/Conversion.v
+src/Assembly/Evaluables.v
 src/Assembly/Language.v
+src/Assembly/Listize.v
 src/Assembly/Pipeline.v
 src/Assembly/Pseudize.v
 src/Assembly/Pseudo.v
@@ -20,8 +23,8 @@ src/Assembly/QhasmEvalCommon.v
 src/Assembly/QhasmUtil.v
 src/Assembly/State.v
 src/Assembly/StringConversion.v
-src/Assembly/Vectorize.v
 src/Assembly/Wordize.v
+src/Assembly/WordizeUtil.v
 src/CompleteEdwardsCurve/CompleteEdwardsCurveTheorems.v
 src/CompleteEdwardsCurve/ExtendedCoordinates.v
 src/CompleteEdwardsCurve/Pre.v

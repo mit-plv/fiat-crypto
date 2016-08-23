@@ -2,7 +2,7 @@ Require Import Bedrock.Word.
 Require Import Crypto.Assembly.QhasmCommon Crypto.Assembly.QhasmEvalCommon.
 Require Import Crypto.Assembly.Pseudo Crypto.Assembly.Qhasm Crypto.Assembly.AlmostQhasm Crypto.Assembly.Conversion Crypto.Assembly.Language.
 Require Import Crypto.Assembly.PseudoConversion Crypto.Assembly.AlmostConversion Crypto.Assembly.StringConversion.
-Require Import Crypto.Assembly.Wordize Crypto.Assembly.Vectorize Crypto.Assembly.Pseudize.
+Require Import Crypto.Assembly.Pseudize.
 Require Import Crypto.Util.Notations.
 
 Module Pipeline.
