@@ -1,4 +1,5 @@
 Require Import Coq.Lists.List Coq.Lists.SetoidList. Import ListNotations.
+Require Import Coq.Numbers.BinNums Coq.NArith.BinNat.
 Require Import Crypto.Util.ListUtil.
 Require Import Algebra. Import Monoid ScalarMult.
 Require Import VerdiTactics.
@@ -30,25 +31,27 @@ Section AddChainExp.
   Context {G eq op id} {monoid:@Algebra.monoid G eq op id}.
   Context {scalarmult} {is_scalarmult:@ScalarMult.is_scalarmult G eq op id scalarmult}.
   Local Infix "=" := eq : type_scope.
+  Local Open Scope N_scope.
+  SearchAbout (N -> nat).
+  Local Notation "n * P" := (scalarmult (N.to_nat n) P) (only parsing).
 
   Lemma fold_chain_exp' : forall (x:G) is acc ref
-      (H:forall i, nth_default id acc i = scalarmult (nth_default 0 ref i) x)
+      (H:forall i, nth_default id acc i = (nth_default 0 ref i) * x)
       (Hl:Logic.eq (length acc) (length ref)),
-      fold_chain id op is acc = scalarmult (fold_chain 0 plus is ref) x.
+      fold_chain id op is acc = (fold_chain 0 N.add is ref) * x.
   Proof.
     induction is; intros; simpl @fold_chain.
-    { repeat break_match; specialize (H 0); rewrite ?nth_default_cons, ?nth_default_cons_S in H;
+    { repeat break_match; specialize (H 0%nat); rewrite ?nth_default_cons, ?nth_default_cons_S in H;
       solve [ simpl length in *; discriminate | apply H | rewrite scalarmult_0_l; reflexivity ]. }
-    { repeat break_match. eapply IHis; intros.
-      { match goal with
+    { repeat break_match. eapply IHis; intros; [|auto with distr_length]; [].
+      match goal with
           [H:context [nth_default _ ?l _] |- context[nth_default _ (?h::?l) ?i] ]
           => destruct i; rewrite ?nth_default_cons, ?nth_default_cons_S;
-             solve [ apply H | rewrite !H, <-scalarmult_add_l; reflexivity ]
+             solve [ apply H | rewrite !H, <-scalarmult_add_l, Nnat.N2Nat.inj_add; reflexivity ]
         end. }
-      { auto with distr_length. } }
   Qed.
 
-  Lemma fold_chain_exp x is: fold_chain id op is [x] = scalarmult (fold_chain 0 plus is [1]) x.
+  Lemma fold_chain_exp x is: fold_chain id op is [x] = (fold_chain 0 N.add is [1]) * x.
   Proof.
     eapply fold_chain_exp'; intros; trivial.
     destruct i; try destruct i; rewrite ?nth_default_cons_S, ?nth_default_cons, ?nth_default_nil;
