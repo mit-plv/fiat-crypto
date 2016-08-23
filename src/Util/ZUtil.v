@@ -298,7 +298,7 @@ Module Z.
 
   Lemma div_lt_upper_bound' a b q : 0 < b -> a < q * b -> a / b < q.
   Proof. intros; apply Z.div_lt_upper_bound; nia. Qed.
-  Hint Resolve Z.div_lt_upper_bound : zarith.
+  Hint Resolve div_lt_upper_bound' : zarith.
 
   Lemma mul_comm3 x y z : x * (y * z) = y * (x * z).
   Proof. lia. Qed.
