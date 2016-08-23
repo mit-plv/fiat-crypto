@@ -21,7 +21,9 @@ Section fancy_machine_p256_montgomery_foundation.
       decode_small := decode;
       Mod_SmallBound v := fst v;
       DivBy_SmallBound v := snd v;
-      DivBy_SmallerBound v := shrd (snd v) (fst v) smaller_bound_exp;
+      DivBy_SmallerBound v := if smaller_bound_exp =? n
+                              then snd v
+                              else shrd (snd v) (fst v) smaller_bound_exp;
       Mul x y := mulhwll (W := tuple _ 2) (sprl x 0) (sprl y 0);
       CarryAdd x y := adc x y false;
       CarrySubSmall x y := subc x y false;

@@ -214,6 +214,11 @@ Lemma decode_proj n W (dec : W -> Z)
   : @decode n W {| decode := dec |} = dec.
 Proof. reflexivity. Qed.
 
+Lemma decode_if_bool n W (decode : decoder n W) (b : bool) x y
+  : decode (if b then x else y)
+    = if b then decode x else decode y.
+Proof. destruct b; reflexivity. Qed.
+
 Lemma decode_exponent_nonnegative {n W} (decode : decoder n W) {isdecode : is_decode decode}
       (isinhabited : W)
   : 0 <= n.
@@ -225,10 +230,11 @@ Proof.
   omega.
 Qed.
 
-Hint Rewrite @decode_load_immediate @decode_shift_right_doubleword @decode_shift_left_immediate @decode_shift_right_immediate @decode_fst_spread_left_immediate @decode_snd_spread_left_immediate @decode_mask_keep_low @bit_fst_add_with_carry @decode_snd_add_with_carry @fst_sub_with_carry @decode_snd_sub_with_carry @decode_mul @decode_mul_low_low @decode_mul_high_low @decode_mul_high_high @decode_select_conditional @decode_add_modulo @decode_proj using bounded_solver_tac : push_decode.
+Hint Rewrite @decode_load_immediate @decode_shift_right_doubleword @decode_shift_left_immediate @decode_shift_right_immediate @decode_fst_spread_left_immediate @decode_snd_spread_left_immediate @decode_mask_keep_low @bit_fst_add_with_carry @decode_snd_add_with_carry @fst_sub_with_carry @decode_snd_sub_with_carry @decode_mul @decode_mul_low_low @decode_mul_high_low @decode_mul_high_high @decode_select_conditional @decode_add_modulo @decode_proj @decode_if_bool using bounded_solver_tac : push_decode.
 
 Ltac push_decode_step :=
   first [ rewrite !decode_proj
+        | rewrite !decode_if_bool
         | erewrite !decode_load_immediate by bounded_solver_tac
         | erewrite !decode_shift_right_doubleword by bounded_solver_tac
         | erewrite !decode_shift_left_immediate by bounded_solver_tac

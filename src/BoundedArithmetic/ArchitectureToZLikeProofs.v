@@ -55,6 +55,7 @@ Section fancy_machine_p256_montgomery_foundation.
     | _ => progress push_decode
     | _ => progress autorewrite with push_Zpow in *
     | _ => progress Z.rewrite_mod_small
+    | _ => progress subst
     | [ |- fst ?x = (?a <=? ?b) :> bool ]
       => cut (((if fst x then 1 else 0) = (if a <=? b then 1 else 0))%Z);
          [ destruct (fst x), (a <=? b); intro; congruence | ]
@@ -63,8 +64,11 @@ Section fancy_machine_p256_montgomery_foundation.
     | _ => progress autorewrite with Zshift_to_pow in *
     | _ => progress autorewrite with simpl_tuple_decoder in *
     | _ => progress autorewrite with zsimplify
+    | [ H : (_ =? _) = true |- _ ] => apply Z.eqb_eq in H
+    | [ H : (_ =? _) = false |- _ ] => apply Z.eqb_neq in H
     | [ |- _ / ?y = _ / ?y ] => apply f_equal2; omega
     | [ |- _ / _ = if _ then _ else _ ] => apply Z.div_between_0_if; auto with zarith omega
+    | [ |- context[if ?x =? ?y then _ else _] ] => destruct (x =? y) eqn:?
     end.
   Local Ltac post_t := repeat post_t_step.
   Local Ltac t := pre_t; post_t.
@@ -73,7 +77,8 @@ Section fancy_machine_p256_montgomery_foundation.
          {arith : fancy_machine.arithmetic ops}
          (modulus_in_range : 0 <= modulus < 2^n)
          (smaller_bound_exp : Z)
-         (smaller_bound_smaller : 0 <= smaller_bound_exp < n)
+         (smaller_bound_smaller : 0 <= smaller_bound_exp <= n)
+         (n_pos : 0 < n)
     : ZLikeProperties (ZLikeOps_of_ArchitectureBoundedOps ops modulus smaller_bound_exp)
     := { large_valid v := True;
          medium_valid v := 0 <= decode_large v < 2^n * 2^smaller_bound_exp;
