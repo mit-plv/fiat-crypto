@@ -20,11 +20,6 @@ Require Import Crypto.Tactics.VerdiTactics.
 Require Export Crypto.Util.FixCoqMistakes.
 Local Open Scope Z.
 
-Class SubtractionCoefficient (m : Z) (prm : PseudoMersenneBaseParams m) := {
-  coeff : tuple Z (length limb_widths);
-  coeff_mod: decode coeff = 0%F
-}.
-
 (* Computed versions of some functions. *)
 
 Definition plus_opt := Eval compute in plus.
@@ -411,7 +406,7 @@ Section Carries.
 End Carries.
 
 Section Addition.
-  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient modulus prm}.
+  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient}.
   Local Notation digits := (tuple Z (length limb_widths)).
 
   Definition add_opt_sig (us vs : digits) : { b : digits | b = add us vs }.
@@ -429,7 +424,7 @@ Section Addition.
 End Addition.
 
 Section Subtraction.
-  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient modulus prm}.
+  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient}.
   Local Notation digits := (tuple Z (length limb_widths)).
 
   Definition sub_opt_sig (us vs : digits) : { b : digits | b = sub coeff us vs }.
@@ -448,7 +443,7 @@ Section Subtraction.
 End Subtraction.
 
 Section Multiplication.
-  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient modulus prm} {cc : CarryChain limb_widths}
+  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient} {cc : CarryChain limb_widths}
     (* allows caller to precompute k and c *)
     (k_ c_ : Z) (k_subst : k = k_) (c_subst : c = c_).
   Local Notation digits := (tuple Z (length limb_widths)).
@@ -740,7 +735,7 @@ Local Hint Resolve lt_1_length_base int_width_pos int_width_compat c_pos
     c_reduce1 c_reduce2 two_pow_k_le_2modulus.
 
 Section Canonicalization.
-  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient modulus prm}
+  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient}
     (* allows caller to precompute k and c *)
     (k_ c_ : Z) (k_subst : k = k_) (c_subst : c = c_)
     {int_width} (preconditions : freezePreconditions prm int_width).

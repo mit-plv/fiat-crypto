@@ -5,7 +5,6 @@ Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParamProofs.
 Require Import Crypto.ModularArithmetic.ModularBaseSystem.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemProofs.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemOpt.
-Require Import Crypto.ModularArithmetic.ModularBaseSystemField.
 Require Import Coq.Lists.List Crypto.Util.ListUtil.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.Util.ZUtil.
@@ -32,7 +31,7 @@ Definition fe1305 := Eval compute in (tuple Z (length limb_widths)).
 Definition mul2modulus : fe1305 :=
   Eval compute in (from_list_default 0%Z (length limb_widths) (construct_mul2modulus params1305)).
 
-Instance subCoeff : SubtractionCoefficient modulus params1305.
+Instance subCoeff : @SubtractionCoefficient modulus params1305.
   apply Build_SubtractionCoefficient with (coeff := mul2modulus).
   vm_decide.
 Defined.
@@ -61,9 +60,9 @@ Proof.
 Qed.
 
 Lemma bits_eq : sum_firstn limb_widths (length limb_widths) = sum_firstn wire_widths (length wire_widths).
-Proof.
-  reflexivity.
-Qed.
+Proof. reflexivity. Qed.
+
+Lemma modulus_gt_2 : 2 < modulus. Proof. cbv; congruence. Qed.
 
 (* END precomputation *) 
 
@@ -178,20 +177,45 @@ Definition mul_correct (f g : fe1305)
   Eval cbv beta iota delta [proj1_sig add_sig] in
   proj2_sig (mul_sig f g).
 
+Axiom ic : InvExponentiationChain.
+Definition inv := inv chain chain_correct.
+
+Definition mbs_field := modular_base_system_field modulus_gt_2.
+
 Import Morphisms.
 
 Lemma field1305 : @field fe1305 eq zero one opp add sub mul inv div.
 Proof.
   pose proof (Equivalence_Reflexive : Reflexive eq).
-  eapply (Field.equivalent_operations_field (fieldR := modular_base_system_field k_ c_ k_subst c_subst)).
+  eapply (Field.equivalent_operations_field (fieldR := mbs_field)).
   Grab Existential Variables.
   + reflexivity.
   + reflexivity.
   + reflexivity.
-  + intros; rewrite mul_correct. reflexivity.
-  + intros; rewrite sub_correct; reflexivity.
-  + intros; rewrite add_correct; reflexivity.
+  + intros; rewrite mul_correct.
+    rewrite carry_mul_opt_correct by auto using k_subst, c_subst.
+    cbv [eq].
+    rewrite carry_mul_rep by reflexivity.
+    rewrite mul_rep; reflexivity.
+  + intros; rewrite sub_correct, sub_opt_correct; reflexivity.
+  + intros; rewrite add_correct, add_opt_correct; reflexivity.
+  + admit. (* leaving this for when I have an optimized [inv] *)
   + reflexivity.
+Qed.
+
+Lemma homomorphism_F1305 :
+  @Ring.is_homomorphism
+    (F modulus) Logic.eq F.one F.add F.mul
+    fe1305 eq one add mul encode.
+Proof.
+  econstructor.
+  + econstructor; [ | apply encode_Proper].
+    intros; cbv [eq].
+    rewrite add_correct, add_opt_correct, add_rep; apply encode_rep.
+  + intros; cbv [eq].
+    rewrite mul_correct, carry_mul_opt_correct, carry_mul_rep
+      by auto using k_subst, c_subst, encode_rep.
+    apply encode_rep.
   + reflexivity.
 Qed.
 

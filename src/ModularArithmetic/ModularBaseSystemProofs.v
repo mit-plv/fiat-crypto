@@ -30,6 +30,17 @@ Class CarryChain (limb_widths : list Z) :=
     carry_chain_valid : forall i, In i carry_chain -> (i < length limb_widths)%nat
   }.
 
+  Class SubtractionCoefficient {m : Z} {prm : PseudoMersenneBaseParams m} := {
+    coeff : tuple Z (length limb_widths);
+    coeff_mod: decode coeff = 0%F
+  }.
+
+  Class InvExponentiationChain {m : Z} {prm : PseudoMersenneBaseParams m} := {
+    chain : list (nat * nat);
+    chain_correct : fold_chain 0%N N.add chain (1%N :: nil) = Z.to_N (m - 2)
+  }.
+
+
 Section FieldOperationProofs.
   Context `{prm :PseudoMersenneBaseParams}.
 
@@ -194,7 +205,7 @@ Section FieldOperationProofs.
     f_equal; assumption.
   Qed.
   End Subtraction.
-  
+
   Section PowInv.
   Context (modulus_gt_2 : 2 < modulus).
 
@@ -229,7 +240,67 @@ Section FieldOperationProofs.
     etransitivity; [ apply pow_rep; eassumption | ].
     congruence.
   Qed.
+
   End PowInv.
+
+
+  Import Morphisms.
+
+  Global Instance encode_Proper : Proper (Logic.eq ==> eq) encode.
+  Proof.
+    repeat intro; cbv [eq].
+    rewrite !encode_rep. assumption.
+  Qed.
+
+  Global Instance opp_Proper : Proper (eq ==> eq) opp.
+  Admitted.
+
+  Global Instance add_Proper : Proper (eq ==> eq ==> eq) add.
+  Admitted.
+
+  Global Instance sub_Proper : Proper (eq ==> eq ==> eq ==> eq) sub.
+  Admitted.
+  
+  Global Instance mul_Proper : Proper (eq ==> eq ==> eq) mul.
+  Admitted.
+
+  Global Instance inv_Proper chain chain_correct : Proper (eq ==> eq) (inv chain chain_correct).
+  Admitted.
+
+  Global Instance div_Proper : Proper (eq ==> eq ==> eq) div.
+  Admitted.
+
+
+  Section FieldProofs.
+  Context (modulus_gt_2 : 2 < modulus)
+          {sc : SubtractionCoefficient}
+          {ic : InvExponentiationChain}.
+
+  Lemma _zero_neq_one : not (eq zero one).
+  Proof.
+    cbv [eq zero one]; erewrite !encode_rep.
+    pose proof (@F.field_modulo modulus prime_modulus).
+    apply zero_neq_one.
+  Qed.
+
+  Lemma modular_base_system_field :
+    @field digits eq zero one opp add (sub coeff) mul (inv chain chain_correct) div.
+  Proof.
+    eapply (Field.isomorphism_to_subfield_field (phi := decode) (fieldR := @F.field_modulo modulus prime_modulus)).
+    Grab Existential Variables.
+    + intros; eapply encode_rep.
+    + intros; eapply encode_rep.
+    + intros; eapply encode_rep.
+    + intros; eapply inv_rep; auto.
+    + intros; eapply mul_rep; auto.
+    + intros; eapply sub_rep; auto using coeff_mod.
+    + intros; eapply add_rep; auto.
+    + intros; eapply encode_rep.
+    + eapply _zero_neq_one.
+    + trivial.
+  Qed.
+  End FieldProofs.
+  
 End FieldOperationProofs.
 Opaque encode add mul sub inv pow.
 
