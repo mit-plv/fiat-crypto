@@ -2,6 +2,7 @@ Require Import Coq.ZArith.Zpower Coq.ZArith.ZArith.
 Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Coq.Lists.List.
 Require Import Crypto.Tactics.VerdiTactics.
+Require Import Crypto.Algebra.
 Require Import Crypto.BaseSystem.
 Require Import Crypto.BaseSystemProofs.
 Require Import Crypto.ModularArithmetic.ExtendedBaseVector.
@@ -14,6 +15,7 @@ Require Import Crypto.ModularArithmetic.ModularBaseSystemList.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemListProofs.
 Require Import Crypto.ModularArithmetic.ModularBaseSystem.
 Require Import Crypto.Util.ListUtil Crypto.Util.CaseUtil Crypto.Util.ZUtil Crypto.Util.NatUtil.
+Require Import Crypto.Util.AdditionChainExponentiation.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
@@ -28,7 +30,7 @@ Class CarryChain (limb_widths : list Z) :=
     carry_chain_valid : forall i, In i carry_chain -> (i < length limb_widths)%nat
   }.
 
-Section PseudoMersenneProofs.
+Section FieldOperationProofs.
   Context `{prm :PseudoMersenneBaseParams}.
 
   Local Arguments to_list {_ _} _.
@@ -40,6 +42,7 @@ Section PseudoMersenneProofs.
   Local Hint Resolve (@limb_widths_nonneg _ prm) sum_firstn_limb_widths_nonneg.
 
   Local Hint Resolve log_cap_nonneg.
+  Local Hint Resolve base_from_limb_widths_length.
   Local Notation base := (base_from_limb_widths limb_widths).
   Local Notation log_cap i := (nth_default 0 limb_widths i).
 
@@ -55,39 +58,12 @@ Section PseudoMersenneProofs.
     cbv [rep]; auto.
   Qed.
 
-  Lemma lt_modulus_2k : modulus < 2 ^ k.
-  Proof.
-    replace (2 ^ k) with (modulus + c) by (unfold c; ring).
-    pose proof c_pos; omega.
-  Qed. Hint Resolve lt_modulus_2k.
-
-  Lemma modulus_pos : 0 < modulus.
-  Proof.
-    pose proof (NumTheoryUtil.lt_1_p _ prime_modulus); omega.
-  Qed. Hint Resolve modulus_pos.
-
-  (** TODO(jadep, from jgross): The abstraction barrier of
-      [base]/[limb_widths] is repeatedly broken in the following
-      proofs.  This lemma should almost never be needed, but removing
-      it breaks everything.  (And using [distr_length] is too much of
-      a sledgehammer, and demolishes the abstraction barrier that's
-      currently merely in pieces.) *)
-  Lemma base_length : length base = length limb_widths.
-  Proof. distr_length. Qed.
-
-  Lemma base_length_nonzero : length base <> 0%nat.
-  Proof.
-    distr_length.
-    pose proof limb_widths_nonnil.
-    destruct limb_widths; simpl in *; congruence.
-  Qed.
-
   Lemma encode_eq : forall x : F modulus,
     ModularBaseSystemList.encode x = BaseSystem.encode base (F.to_Z x) (2 ^ k).
   Proof.
     cbv [ModularBaseSystemList.encode BaseSystem.encode encodeZ]; intros.
-    rewrite base_length.
-    apply encode'_spec; auto using Nat.eq_le_incl, base_length.
+    rewrite base_from_limb_widths_length.
+    apply encode'_spec; auto using Nat.eq_le_incl.
   Qed.
 
   Lemma encode_rep : forall x : F modulus, encode x ~= x.
@@ -114,51 +90,47 @@ Section PseudoMersenneProofs.
     f_equal; assumption.
   Qed.
 
+  Lemma eq_rep_iff : forall u v, (eq u v <-> u ~= decode v).
+  Proof.
+    reflexivity.
+  Qed.
+
+  Lemma eq_dec : forall x y, Decidable.Decidable (eq x y).
+  Proof.
+    intros.
+    destruct (F.eq_dec (decode x) (decode y)); [ left | right ]; congruence.
+  Qed.
+
+  Lemma modular_base_system_add_monoid : @monoid digits eq add zero.
+  Proof.
+    repeat match goal with
+           | |- _ => progress intro 
+           | |- _ => cbv [zero]; rewrite encode_rep 
+           | |- _ digits eq add => econstructor
+           | |- _ digits eq add _ => econstructor
+           | |- (_ + _)%F = decode (add ?a ?b) =>  rewrite (add_rep a b) by (try apply add_rep; reflexivity)
+           | |- eq _ _ => apply eq_rep_iff
+           | |- add _ _ ~= _ => apply add_rep
+           | |- decode (add _ _) = _ => apply add_rep
+           | |- add _ _ ~= decode _ => etransitivity
+           | x : digits |- ?x ~= _ => reflexivity
+           | |- _ => apply associative
+           | |- _ => apply left_identity 
+           | |- _ => apply right_identity
+           | |- _ => solve [eauto using eq_Equivalence, eq_dec]
+           | |- _ => congruence
+           end.
+  Qed.
+
   Local Hint Resolve firstn_us_base_ext_base bv ExtBaseVector limb_widths_match_modulus.
   Local Hint Extern 1 => apply limb_widths_match_modulus.
-
-  Lemma modulus_nonzero : modulus <> 0.
-    pose proof (Znumtheory.prime_ge_2 _ prime_modulus); omega.
-  Qed.
-
-  (* a = r + s(2^k) = r + s(2^k - c + c) = r + s(2^k - c) + cs = r + cs *)
-  Lemma pseudomersenne_add: forall x y, (x + ((2^k) * y)) mod modulus = (x + (c * y)) mod modulus.
-  Proof.
-    intros.
-    replace (2^k) with ((2^k - c) + c) by ring.
-    rewrite Z.mul_add_distr_r, Zplus_mod.
-    unfold c.
-    rewrite Z.sub_sub_distr, Z.sub_diag.
-    simpl.
-    rewrite Z.mul_comm, Z.mod_add_l; auto using modulus_nonzero.
-    rewrite <- Zplus_mod; auto.
-  Qed.
-
-  Lemma pseudomersenne_add': forall x y0 y1 z, (z - x + ((2^k) * y0 * y1)) mod modulus = (c * y0 * y1 - x + z) mod modulus.
-  Proof.
-    intros; rewrite <- !Z.add_opp_r, <- !Z.mul_assoc, pseudomersenne_add; apply f_equal2; omega.
-  Qed.
-
-  Lemma extended_shiftadd: forall (us : BaseSystem.digits),
-    BaseSystem.decode (ext_base limb_widths) us =
-      BaseSystem.decode base (firstn (length base) us)
-      + (2^k * BaseSystem.decode base (skipn (length base) us)).
-  Proof.
-    intros.
-    unfold BaseSystem.decode; rewrite <- mul_each_rep.
-    rewrite ext_base_alt by auto.
-    fold k.
-    replace (map (Z.mul (2 ^ k)) base) with (BaseSystem.mul_each (2 ^ k) base) by auto.
-    rewrite base_mul_app.
-    rewrite <- mul_each_rep; auto.
-  Qed.
 
   Lemma reduce_rep : forall us,
     BaseSystem.decode base (reduce us) mod modulus =
     BaseSystem.decode (ext_base limb_widths) us mod modulus.
   Proof.
     cbv [reduce]; intros.
-    rewrite extended_shiftadd, base_length, pseudomersenne_add, BaseSystemProofs.add_rep.
+    rewrite extended_shiftadd, base_from_limb_widths_length, pseudomersenne_add, BaseSystemProofs.add_rep.
     change (map (Z.mul c)) with (BaseSystem.mul_each c).
     rewrite mul_each_rep; auto.
   Qed.
@@ -177,25 +149,25 @@ Section PseudoMersenneProofs.
     apply F.of_Z_mul.
   Qed.
 
-  Lemma nth_default_base_positive : forall i, (i < length base)%nat ->
-    nth_default 0 base i > 0.
+  Lemma modular_base_system_mul_monoid : @monoid digits eq mul one.
   Proof.
-    intros.
-    pose proof (nth_error_length_exists_value _ _ H).
-    destruct H0.
-    pose proof (nth_error_value_In _ _ _ H0).
-    pose proof (BaseSystem.base_positive _ H1).
-    unfold nth_default.
-    rewrite H0; auto.
-  Qed.
-
-  Lemma base_succ_div_mult : forall i, ((S i) < length base)%nat ->
-    nth_default 0 base (S i) = nth_default 0 base i *
-    (nth_default 0 base (S i) / nth_default 0 base i).
-  Proof.
-    intros.
-    apply Z_div_exact_2; try (apply nth_default_base_positive; omega).
-    apply base_succ; distr_length; eauto.
+    repeat match goal with
+           | |- _ => progress intro 
+           | |- _ => cbv [one]; rewrite encode_rep 
+           | |- _ digits eq mul => econstructor
+           | |- _ digits eq mul _ => econstructor
+           | |- (_ * _)%F = decode (mul ?a ?b) =>  rewrite (mul_rep a b) by (try apply mul_rep; reflexivity)
+           | |- eq _ _ => apply eq_rep_iff
+           | |- mul _ _ ~= _ => apply mul_rep
+           | |- decode (mul _ _) = _ => apply mul_rep
+           | |- mul _ _ ~= decode _ => etransitivity
+           | x : digits |- ?x ~= _ => reflexivity
+           | |- _ => apply associative
+           | |- _ => apply left_identity 
+           | |- _ => apply right_identity
+           | |- _ => solve [eauto using eq_Equivalence, eq_dec]
+           | |- _ => congruence
+           end.
   Qed.
 
   Lemma Fdecode_decode_mod : forall us x,
@@ -205,6 +177,76 @@ Section PseudoMersenneProofs.
     rewrite <-H.
     apply F.to_Z_of_Z.
   Qed.
+
+  Section Subtraction.
+  Context (mm : digits) (mm_spec : decode mm = 0%F).
+
+  Lemma sub_rep : forall u v x y, u ~= x -> v ~= y ->
+    ModularBaseSystem.sub mm u v ~= (x-y)%F.
+  Proof.
+    autounfold; cbv [sub]; intros.
+    rewrite to_list_from_list; autounfold.
+    cbv [ModularBaseSystemList.sub].
+    rewrite BaseSystemProofs.sub_rep, BaseSystemProofs.add_rep.
+    rewrite F.of_Z_sub, F.of_Z_add, F.of_Z_mod.
+    apply Fdecode_decode_mod in mm_spec; cbv [BaseSystem.decode] in *.
+    rewrite mm_spec. rewrite Algebra.left_identity.
+    f_equal; assumption.
+  Qed.
+  End Subtraction.
+  
+  Section PowInv.
+  Context (modulus_gt_2 : 2 < modulus).
+
+  Lemma scalarmult_rep : forall u x n, u ~= x ->
+    (@ScalarMult.scalarmult_ref digits mul one n u) ~= (x ^ (N.of_nat n))%F.
+  Proof.
+    induction n; intros.
+    + cbv [N.to_nat ScalarMult.scalarmult_ref]. rewrite F.pow_0_r.
+      apply encode_rep.
+    + unfold ScalarMult.scalarmult_ref.
+      fold (@ScalarMult.scalarmult_ref digits mul one).
+      rewrite Nnat.Nat2N.inj_succ, <-N.add_1_l, F.pow_add_r, F.pow_1_r.
+      apply mul_rep; auto.
+  Qed.
+
+  Lemma pow_rep : forall chain u x, u ~= x ->
+    pow u chain ~= F.pow x (fold_chain 0%N N.add chain (1%N :: nil)).
+  Proof.
+    cbv [pow rep]; intros.
+    erewrite (@fold_chain_exp _ _ _ _ modular_base_system_mul_monoid)
+      by (apply @ScalarMult.scalarmult_ref_is_scalarmult; apply modular_base_system_mul_monoid).
+    etransitivity; [ apply scalarmult_rep; eassumption | ].
+    rewrite Nnat.N2Nat.id.
+    reflexivity.
+  Qed.
+
+  Lemma inv_rep : forall chain pf u x, u ~= x ->
+    inv chain pf u ~= F.inv x.
+  Proof.
+    cbv [inv]; intros.
+    rewrite (@F.Fq_inv_fermat _ prime_modulus modulus_gt_2).
+    etransitivity; [ apply pow_rep; eassumption | ].
+    congruence.
+  Qed.
+  End PowInv.
+End FieldOperationProofs.
+Opaque encode add mul sub inv pow.
+
+Section CarryProofs.
+  Context `{prm : PseudoMersenneBaseParams}.
+  Local Notation base := (base_from_limb_widths limb_widths).
+  Local Notation log_cap i := (nth_default 0 limb_widths i).
+  Local Notation "u ~= x" := (rep u x).
+  Local Hint Resolve (@limb_widths_nonneg _ prm) sum_firstn_limb_widths_nonneg.
+  Local Hint Resolve log_cap_nonneg.
+
+  Lemma base_length_lt_pred : (pred (length base) < length base)%nat.
+  Proof.
+    pose proof limb_widths_nonnil; rewrite base_from_limb_widths_length.
+    destruct limb_widths; congruence || distr_length.
+  Qed.
+  Hint Resolve base_length_lt_pred.
 
   Definition carry_done us := forall i, (i < length base)%nat ->
     0 <= nth_default 0 us i /\ Z.shiftr (nth_default 0 us i) (log_cap i) = 0.
@@ -230,37 +272,6 @@ Section PseudoMersenneProofs.
       right; split; auto.
       apply Z.log2_lt_pow2; auto.
   Qed.
-
-  Context (mm : digits) (mm_spec : decode mm = 0%F).
-
-  Lemma sub_rep : forall u v x y, u ~= x -> v ~= y ->
-    ModularBaseSystem.sub mm u v ~= (x-y)%F.
-  Proof.
-    autounfold; cbv [sub]; intros.
-    rewrite to_list_from_list; autounfold.
-    cbv [ModularBaseSystemList.sub].
-    rewrite BaseSystemProofs.sub_rep, BaseSystemProofs.add_rep.
-    rewrite F.of_Z_sub, F.of_Z_add, F.of_Z_mod.
-    apply Fdecode_decode_mod in mm_spec; cbv [BaseSystem.decode] in *.
-    rewrite mm_spec. rewrite Algebra.left_identity.
-    f_equal; assumption.
-  Qed.
-
-End PseudoMersenneProofs.
-Opaque encode add mul sub.
-
-Section CarryProofs.
-  Context `{prm : PseudoMersenneBaseParams}.
-  Local Notation base := (base_from_limb_widths limb_widths).
-  Local Notation log_cap i := (nth_default 0 limb_widths i).
-  Local Notation "u ~= x" := (rep u x).
-  Local Hint Resolve (@limb_widths_nonneg _ prm) sum_firstn_limb_widths_nonneg.
-
-  Lemma base_length_lt_pred : (pred (length base) < length base)%nat.
-  Proof.
-    pose proof base_length_nonzero; omega.
-  Qed.
-  Hint Resolve base_length_lt_pred.
 
   Lemma carry_decode_eq_reduce : forall us,
     (length us = length limb_widths) ->
