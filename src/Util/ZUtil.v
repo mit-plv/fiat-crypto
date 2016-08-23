@@ -1639,6 +1639,22 @@ Module Z.
   Proof. intros; rewrite (mod_small_n 1) by lia; lia. Qed.
   Hint Rewrite mod_small_1 using zutil_arith : zsimplify.
 
+  Lemma div_between_if n a b : 0 <= n -> b <> 0 -> n * b <= a < (2 + n) * b -> (a / b = if (1 + n) * b <=? a then 1 + n else n)%Z.
+  Proof.
+    intros.
+    break_match; ltb_to_lt;
+      apply div_between; lia.
+  Qed.
+
+  Lemma mod_small_n_if n a b : 0 <= n -> b <> 0 -> n * b <= a < (2 + n) * b -> a mod b = a - (if (1 + n) * b <=? a then (1 + n) else n) * b.
+  Proof. intros; erewrite Zmod_eq_full, div_between_if by eassumption; autorewrite with zsimplify_const. reflexivity. Qed.
+
+  Lemma div_between_0_if a b : b <> 0 -> 0 <= a < 2 * b -> a / b = if b <=? a then 1 else 0.
+  Proof. intros; rewrite (div_between_if 0) by lia; autorewrite with zsimplify_const; reflexivity. Qed.
+
+  Lemma mod_small_0_if a b : b <> 0 -> 0 <= a < 2 * b -> a mod b = a - if b <=? a then b else 0.
+  Proof. intros; rewrite (mod_small_n_if 0) by lia; autorewrite with zsimplify_const. break_match; lia. Qed.
+
   Lemma mul_mod_distr_r_full a b c : (a * c) mod (b * c) = (a mod b * c).
   Proof.
     destruct (Z_zerop b); [ | destruct (Z_zerop c) ]; subst;
