@@ -23,6 +23,7 @@ src/Assembly/StringConversion.v
 src/Assembly/Vectorize.v
 src/Assembly/Wordize.v
 src/BoundedArithmetic/ArchitectureToZLike.v
+src/BoundedArithmetic/ArchitectureToZLikeProofs.v
 src/BoundedArithmetic/DoubleBounded.v
 src/BoundedArithmetic/DoubleBoundedProofs.v
 src/BoundedArithmetic/Interface.v
