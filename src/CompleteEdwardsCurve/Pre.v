@@ -5,7 +5,7 @@ Require Import Crypto.Util.Notations Crypto.Util.Decidable.
 Generalizable All Variables.
 Section Pre.
   Context {F eq zero one opp add sub mul inv div}
-         `{field F eq zero one opp add sub mul inv div}.
+         `{field F eq zero one opp add sub mul inv div} {eq_dec:DecidableRel eq}.
 
   Local Infix "=" := eq. Local Notation "a <> b" := (not (a = b)).
   Local Infix "=" := eq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.

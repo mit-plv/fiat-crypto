@@ -104,9 +104,9 @@ Lemma sqrt_minus1_valid : ((F.of_Z q 2 ^ Z.to_N (q / 4)) ^ 2 = F.opp 1)%F.
 Proof. vm_decide_no_check. Qed.
 
 Local Notation point := (@E.point (F q) eq 1%F F.add F.mul a d).
-Local Notation zero := (E.zero(H:=F.field_modulo q)).
-Local Notation add := (E.add(H0:=curve25519params)).
-Local Infix "*" := (E.mul(H0:=curve25519params)).
+Local Notation zero := (E.zero(field:=F.field_modulo q)).
+Local Notation add := (E.add(H:=curve25519params)).
+Local Infix "*" := (E.mul(H:=curve25519params)).
 Axiom H : forall n : nat, word n -> word (b + b).
 Axiom B : point. (* TODO: B = decodePoint (y=4/5, x="positive") *)
 Axiom B_nonzero : B <> zero.

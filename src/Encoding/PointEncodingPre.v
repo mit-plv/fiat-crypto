@@ -16,7 +16,7 @@ Require Export Crypto.Util.FixCoqMistakes.
 
 Generalizable All Variables.
 Section PointEncodingPre.
-  Context {F eq zero one opp add sub mul inv div} `{field F eq zero one opp add sub mul inv div}.
+  Context {F eq zero one opp add sub mul inv div} `{field F eq zero one opp add sub mul inv div} {eq_dec:DecidableRel eq}.
   Local Infix "==" := eq : type_scope.
   Local Notation "a !== b" := (not (a == b)): type_scope.
   Local Notation "0" := zero.  Local Notation "1" := one.
@@ -26,7 +26,6 @@ Section PointEncodingPre.
 
   Add Field EdwardsCurveField : (Field.field_theory_for_stdlib_tactic (T:=F)).
 
-  Context {eq_dec:forall x y : F, {x==y}+{x==y->False} }.
   Definition F_eqb x y := if eq_dec x y then true else false.
   Lemma F_eqb_iff : forall x y, F_eqb x y = true <-> x == y.
   Proof.
@@ -62,10 +61,10 @@ Section PointEncodingPre.
     onCurve (sqrt (solve_for_x2 y), y).
   Proof.
     intros.
-    apply E.solve_correct.
+    eapply E.solve_correct.
     eapply square_sqrt.
     symmetry.
-    apply E.solve_correct; eassumption.
+    eapply E.solve_correct. eassumption.
   Qed.
 
   (* TODO : move? *)
@@ -239,6 +238,7 @@ Section PointEncodingPre.
     edestruct dec; [ | congruence_option_coord ].
     break_if; [ | congruence_option_coord].
     break_if; [ congruence_option_coord | ].
+    repeat match goal with [H:  _ = _ :> Decidable _ |- _ ] => clear H end.
     apply E.solve_correct in e.
     break_if; eapply prod_eq_onCurve;
       eauto using inversion_option_coordinates_eq, solve_onCurve, solve_opp_onCurve.

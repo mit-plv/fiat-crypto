@@ -1,4 +1,5 @@
 Require Crypto.CompleteEdwardsCurve.Pre.
+Require Crypto.Util.Decidable.
 
 Module E.
   Section TwistedEdwardsCurves.
@@ -8,7 +9,7 @@ Module E.
     * <https://eprint.iacr.org/2015/677.pdf>
     *)
 
-    Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv} `{Algebra.field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}.
+    Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv} `{field:@Algebra.field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv} {Feq_dec:Decidable.DecidableRel Feq}.
     Local Infix "=" := Feq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
     Local Notation "0" := Fzero.  Local Notation "1" := Fone.
     Local Infix "+" := Fadd. Local Infix "*" := Fmul.

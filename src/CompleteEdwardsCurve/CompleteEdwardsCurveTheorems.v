@@ -14,7 +14,8 @@ Module E.
   Section CompleteEdwardsCurveTheorems.
     Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv a d}
             {field:@field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
-            {prm:@twisted_edwards_params F Feq Fzero Fone Fadd Fmul a d}.
+            {prm:@twisted_edwards_params F Feq Fzero Fone Fadd Fmul a d}
+            {Feq_dec:DecidableRel Feq}.
     Local Infix "=" := Feq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
     Local Notation "0" := Fzero.  Local Notation "1" := Fone.
     Local Infix "+" := Fadd. Local Infix "*" := Fmul.
@@ -128,10 +129,12 @@ Module E.
   Section Homomorphism.
     Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv Fa Fd}
             {field:@field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
-            {Fprm:@twisted_edwards_params F Feq Fzero Fone Fadd Fmul Fa Fd}.
+            {Fprm:@twisted_edwards_params F Feq Fzero Fone Fadd Fmul Fa Fd}
+            {Feq_dec:DecidableRel Feq}.
     Context {K Keq Kzero Kone Kopp Kadd Ksub Kmul Kinv Kdiv Ka Kd}
             {fieldK: @Algebra.field K Keq Kzero Kone Kopp Kadd Ksub Kmul Kinv Kdiv}
-            {Kprm:@twisted_edwards_params K Keq Kzero Kone Kadd Kmul Ka Kd}.
+            {Kprm:@twisted_edwards_params K Keq Kzero Kone Kadd Kmul Ka Kd}
+            {Keq_dec:DecidableRel Keq}.
     Context {phi:F->K} {Hphi:@Ring.is_homomorphism F Feq Fone Fadd Fmul
                                                    K Keq Kone Kadd Kmul phi}.
     Context {Ha:Keq (phi Fa) Ka} {Hd:Keq (phi Fd) Kd}.
