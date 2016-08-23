@@ -19,7 +19,7 @@ Hint Extern 1 => lia : lia.
 Hint Extern 1 => lra : lra.
 Hint Extern 1 => nia : nia.
 Hint Extern 1 => omega : omega.
-Hint Resolve Z.log2_nonneg Z.div_small Z.mod_small Z.pow_neg_r Z.pow_0_l Z.pow_pos_nonneg Z.lt_le_incl Z.pow_nonzero Z.div_le_upper_bound Z_div_exact_full_2 Z.div_same Z.div_lt_upper_bound Z.div_le_lower_bound Zplus_minus Zplus_gt_compat_l Zplus_gt_compat_r Zmult_gt_compat_l Zmult_gt_compat_r Z.pow_lt_mono_r Z.pow_lt_mono_l Z.pow_lt_mono Z.mul_lt_mono_nonneg : zarith.
+Hint Resolve Z.log2_nonneg Z.div_small Z.mod_small Z.pow_neg_r Z.pow_0_l Z.pow_pos_nonneg Z.lt_le_incl Z.pow_nonzero Z.div_le_upper_bound Z_div_exact_full_2 Z.div_same Z.div_lt_upper_bound Z.div_le_lower_bound Zplus_minus Zplus_gt_compat_l Zplus_gt_compat_r Zmult_gt_compat_l Zmult_gt_compat_r Z.pow_lt_mono_r Z.pow_lt_mono_l Z.pow_lt_mono Z.mul_lt_mono_nonneg Z.div_lt_upper_bound : zarith.
 Hint Resolve (fun a b H => proj1 (Z.mod_pos_bound a b H)) (fun a b H => proj2 (Z.mod_pos_bound a b H)) (fun a b pf => proj1 (Z.pow_gt_1 a b pf)) : zarith.
 
 Ltac zutil_arith := solve [ omega | lia | auto with nocore ].
@@ -33,12 +33,16 @@ Create HintDb zsimplify discriminated.
     and don't require any side conditions, should go in this
     database. *)
 Create HintDb zsimplify_fast discriminated.
+(** Only hints with no side conditions that strip constants, and
+    nothing else. *)
+Create HintDb zsimplify_const discriminated.
 Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r Z_mod_same_full Z.sub_simpl_r Z.sub_simpl_l Z.add_opp_diag_r Z.add_opp_diag_l Zmod_0_l Z.add_simpl_r Z.add_simpl_l Z.opp_0 Zmod_0_r Zmod_mod Z.mul_succ_l Z.mul_succ_r Z.shiftr_0_r Z.shiftr_0_l Z.mod_1_r Zmod_0_l Zmod_0_r Z.shiftl_0_r Z.shiftl_0_l Z.shiftr_0_r Z.shiftr_0_l : zsimplify_fast.
 Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r Z_mod_same_full Z.sub_simpl_r Z.sub_simpl_l Z.add_opp_diag_r Z.add_opp_diag_l Zmod_0_l Z.add_simpl_r Z.add_simpl_l Z.opp_0 Zmod_0_r Zmod_mod Z.mul_succ_l Z.mul_succ_r Z.shiftr_0_r Z.shiftr_0_l Z.mod_1_r Zmod_0_l Zmod_0_r Z.shiftl_0_r Z.shiftl_0_l Z.shiftr_0_r Z.shiftr_0_l : zsimplify.
 Hint Rewrite Z.div_mul Z.div_1_l Z.div_same Z.mod_same Z.div_small Z.mod_small Z.div_add Z.div_add_l Z.mod_add Z.div_0_l Z.mod_mod Z.mod_small Z_mod_zero_opp_full Z.mod_1_l using zutil_arith : zsimplify.
 Hint Rewrite <- Z.opp_eq_mul_m1 Z.one_succ Z.two_succ : zsimplify.
 Hint Rewrite <- Z.div_mod using zutil_arith : zsimplify.
 Hint Rewrite (fun x y => proj2 (Z.eqb_neq x y)) using assumption : zsimplify.
+Hint Rewrite Z.mul_0_l Z.mul_0_r Z.mul_1_l Z.mul_1_r Z.add_0_l Z.add_0_r Z.sub_0_l Z.sub_0_r Zdiv_0_l Zdiv_0_r Zdiv_1_r Zmod_0_l Zmod_0_r Zmod_1_r Z.opp_0 : zsimplify_const.
 
 (** "push" means transform [-f x] to [f (-x)]; "pull" means go the other way *)
 Create HintDb push_Zopp discriminated.
@@ -291,6 +295,10 @@ Module Z.
   case_eq (Z.testbit b n); intros;
       rewrite ?Bool.andb_true_r, ?Bool.andb_false_r; reflexivity.
   Qed.
+
+  Lemma div_lt_upper_bound' a b q : 0 < b -> a < q * b -> a / b < q.
+  Proof. intros; apply Z.div_lt_upper_bound; nia. Qed.
+  Hint Resolve Z.div_lt_upper_bound : zarith.
 
   Lemma mul_comm3 x y z : x * (y * z) = y * (x * z).
   Proof. lia. Qed.
