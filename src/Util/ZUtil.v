@@ -324,15 +324,27 @@ Module Z.
 
   Hint Resolve elim_mod : zarith.
 
+  Lemma mod_add_full : forall a b c, (a + b * c) mod c = a mod c.
+  Proof. intros; destruct (Z_zerop c); try subst; autorewrite with zsimplify; reflexivity. Qed.
+  Hint Rewrite mod_add_full : zsimplify.
+
+  Lemma mod_add_l_full : forall a b c, (a * b + c) mod b = c mod b.
+  Proof. intros; rewrite (Z.add_comm _ c); autorewrite with zsimplify; reflexivity. Qed.
+  Hint Rewrite mod_add_l_full : zsimplify.
+
+  Lemma mod_add'_full : forall a b c, (a + b * c) mod b = a mod b.
+  Proof. intros; rewrite (Z.mul_comm _ c); autorewrite with zsimplify; reflexivity. Qed.
+  Lemma mod_add_l'_full : forall a b c, (a * b + c) mod a = c mod a.
+  Proof. intros; rewrite (Z.mul_comm _ b); autorewrite with zsimplify; reflexivity. Qed.
+  Hint Rewrite mod_add'_full mod_add_l'_full : zsimplify.
+
   Lemma mod_add_l : forall a b c, b <> 0 -> (a * b + c) mod b = c mod b.
   Proof. intros; rewrite (Z.add_comm _ c); autorewrite with zsimplify; reflexivity. Qed.
-  Hint Rewrite mod_add_l using zutil_arith : zsimplify.
 
   Lemma mod_add' : forall a b c, b <> 0 -> (a + b * c) mod b = a mod b.
   Proof. intros; rewrite (Z.mul_comm _ c); autorewrite with zsimplify; reflexivity. Qed.
   Lemma mod_add_l' : forall a b c, a <> 0 -> (a * b + c) mod a = c mod a.
   Proof. intros; rewrite (Z.mul_comm _ b); autorewrite with zsimplify; reflexivity. Qed.
-  Hint Rewrite mod_add' mod_add_l' using zutil_arith : zsimplify.
 
   Lemma pos_pow_nat_pos : forall x n,
     Z.pos x ^ Z.of_nat n > 0.
