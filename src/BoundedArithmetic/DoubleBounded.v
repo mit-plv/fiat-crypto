@@ -59,7 +59,7 @@ Section generic_constructions.
     Context {n W} {decode : decoder n W} (adc : add_with_carry W).
 
     Global Instance ripple_carry_adc {k} : add_with_carry (tuple W k)
-      := {| Interface.adc := ripple_carry_tuple adc k |}.
+      := { adc := ripple_carry_tuple adc k }.
   End ripple_carry_adc.
 
   (* TODO: Would it made sense to make generic-width shift operations here? *)
@@ -77,7 +77,7 @@ Section generic_constructions.
       (** Require a [decode] instance to aid typeclass search in
           resolving [n] *)
       Global Instance sprl_from_shift {decode : decoder n W} : spread_left_immediate W
-        := {| Interface.sprl := spread_left_from_shift |}.
+        := { sprl := spread_left_from_shift }.
     End spread_left.
 
     Section full_from_half.
@@ -108,13 +108,13 @@ Section generic_constructions.
             typeclass inference of the [half_n] argument *)
         Global Instance mul_double_multiply_low_low {decode : decoder (2 * half_n) W}
           : multiply_low_low (tuple W 2)
-          := {| Interface.mulhwll a b := mul_double half_n (fst a) (fst b) |}.
+          := { mulhwll a b := mul_double half_n (fst a) (fst b) }.
         Global Instance mul_double_multiply_high_low {decode : decoder (2 * half_n) W}
           : multiply_high_low (tuple W 2)
-          := {| Interface.mulhwhl a b := mul_double half_n (snd a) (fst b) |}.
+          := { mulhwhl a b := mul_double half_n (snd a) (fst b) }.
         Global Instance mul_double_multiply_high_high {decode : decoder (2 * half_n) W}
           : multiply_high_high (tuple W 2)
-          := {| Interface.mulhwhh a b := mul_double half_n (snd a) (snd b) |}.
+          := { mulhwhh a b := mul_double half_n (snd a) (snd b) }.
       End instances.
     End full_from_half.
   End tuple2.

@@ -34,12 +34,14 @@ Section InstructionGallery.
           (Wdecoder : decoder n W).
   Local Notation imm := Z (only parsing). (* immediate (compile-time) argument *)
 
-  Record load_immediate := { ldi :> imm -> W }.
+  Class load_immediate := { ldi : imm -> W }.
+  Global Coercion ldi : load_immediate >-> Funclass.
 
   Class is_load_immediate {ldi : load_immediate}  :=
     decode_load_immediate : forall x, 0 <= x < 2^n -> decode (ldi x) = x.
 
-  Record shift_right_doubleword_immediate := { shrd :> W -> W -> imm -> W }.
+  Class shift_right_doubleword_immediate := { shrd : W -> W -> imm -> W }.
+  Global Coercion shrd : shift_right_doubleword_immediate >-> Funclass.
 
   Class is_shift_right_doubleword_immediate (shrd : shift_right_doubleword_immediate) :=
     decode_shift_right_doubleword :
@@ -47,19 +49,22 @@ Section InstructionGallery.
         0 <= count < n
         -> decode (shrd high low count) = (((decode high << n) + decode low) >> count) mod 2^n.
 
-  Record shift_left_immediate := { shl :> W -> imm -> W }.
+  Class shift_left_immediate := { shl : W -> imm -> W }.
+  Global Coercion shl : shift_left_immediate >-> Funclass.
 
   Class is_shift_left_immediate (shl : shift_left_immediate) :=
     decode_shift_left_immediate :
       forall r count, 0 <= count < n -> decode (shl r count) = (decode r << count) mod 2^n.
 
-  Record shift_right_immediate := { shr :> W -> imm -> W }.
+  Class shift_right_immediate := { shr : W -> imm -> W }.
+  Global Coercion shr : shift_right_immediate >-> Funclass.
 
   Class is_shift_right_immediate (shr : shift_right_immediate) :=
     decode_shift_right_immediate :
       forall r count, 0 <= count < n -> decode (shr r count) = (decode r >> count).
 
-  Record spread_left_immediate := { sprl :> W -> imm -> W * W (* [(low, high)] *) }.
+  Class spread_left_immediate := { sprl : W -> imm -> W * W (* [(low, high)] *) }.
+  Global Coercion sprl : spread_left_immediate >-> Funclass.
 
   Class is_spread_left_immediate (sprl : spread_left_immediate) :=
     {
@@ -68,7 +73,7 @@ Section InstructionGallery.
           -> decode (fst (sprl r count)) = (decode r << count) mod 2^n;
       decode_snd_spread_left_immediate : forall r count,
         0 <= count < n
-        -> decode (snd (sprl r count)) = (decode r << count) >> n;
+        -> decode (snd (sprl r count)) = (decode r << count) >> n
 
     }.
 
@@ -79,7 +84,8 @@ Section InstructionGallery.
     := {| decode_fst_spread_left_immediate r count H := proj1 (pf r count H);
           decode_snd_spread_left_immediate r count H := proj2 (pf r count H) |}.
 
-  Record mask_keep_low := { mkl :> W -> imm -> W }.
+  Class mask_keep_low := { mkl :> W -> imm -> W }.
+  Global Coercion mkl : mask_keep_low >-> Funclass.
 
   Class is_mask_keep_low (mkl : mask_keep_low) :=
     decode_mask_keep_low : forall r count,
@@ -87,7 +93,8 @@ Section InstructionGallery.
 
   Local Notation bit b := (if b then 1 else 0).
 
-  Record add_with_carry := { adc :> W -> W -> bool -> bool * W }.
+  Class add_with_carry := { adc : W -> W -> bool -> bool * W }.
+  Global Coercion adc : add_with_carry >-> Funclass.
 
   Class is_add_with_carry (adc : add_with_carry) :=
     {
@@ -100,7 +107,8 @@ Section InstructionGallery.
     := {| bit_fst_add_with_carry x y c := proj1 (pf x y c);
           decode_snd_add_with_carry x y c := proj2 (pf x y c) |}.
 
-  Record sub_with_carry := { subc :> W -> W -> bool -> bool * W }.
+  Class sub_with_carry := { subc : W -> W -> bool -> bool * W }.
+  Global Coercion subc : sub_with_carry >-> Funclass.
 
   Class is_sub_with_carry (subc:W->W->bool->bool*W) :=
     {
@@ -113,14 +121,18 @@ Section InstructionGallery.
     := {| fst_sub_with_carry x y c := proj1 (pf x y c);
           decode_snd_sub_with_carry x y c := proj2 (pf x y c) |}.
 
-  Record multiply := { mul :> W -> W -> W }.
+  Class multiply := { mul : W -> W -> W }.
+  Global Coercion mul : multiply >-> Funclass.
 
   Class is_mul (mul : multiply) :=
     decode_mul : forall x y, decode (mul x y) = (decode x * decode y) mod 2^n.
 
-  Record multiply_low_low := { mulhwll :> W -> W -> W }.
-  Record multiply_high_low := { mulhwhl :> W -> W -> W }.
-  Record multiply_high_high := { mulhwhh :> W -> W -> W }.
+  Class multiply_low_low := { mulhwll : W -> W -> W }.
+  Global Coercion mulhwll : multiply_low_low >-> Funclass.
+  Class multiply_high_low := { mulhwhl : W -> W -> W }.
+  Global Coercion mulhwhl : multiply_high_low >-> Funclass.
+  Class multiply_high_high := { mulhwhh : W -> W -> W }.
+  Global Coercion mulhwhh : multiply_high_high >-> Funclass.
 
   Class is_mul_low_low (w:Z) (mulhwll : multiply_low_low) :=
     decode_mul_low_low :
@@ -132,13 +144,15 @@ Section InstructionGallery.
     decode_mul_high_high :
       forall x y, decode (mulhwhh x y) = ((decode x >> w) * (decode y >> w)) mod 2^n.
 
-  Record select_conditional := { selc :> bool -> W -> W -> W }.
+  Class select_conditional := { selc : bool -> W -> W -> W }.
+  Global Coercion selc : select_conditional >-> Funclass.
 
   Class is_select_conditional (selc : select_conditional) :=
     decode_select_conditional : forall b x y,
       decode (selc b x y) = if b then decode x else decode y.
 
-  Record add_modulo := { addm :> W -> W -> W (* modulus *) -> W }.
+  Class add_modulo := { addm : W -> W -> W (* modulus *) -> W }.
+  Global Coercion addm : add_modulo >-> Funclass.
 
   Class is_add_modulo (addm : add_modulo) :=
     decode_add_modulo : forall x y modulus,
@@ -175,21 +189,6 @@ Global Arguments mulhwhl {_ _} _ _.
 Global Arguments mulhwhh {_ _} _ _.
 Global Arguments selc {_ _} _ _ _.
 Global Arguments addm {_ _} _ _ _.
-
-Existing Class load_immediate.
-Existing Class shift_right_doubleword_immediate.
-Existing Class shift_left_immediate.
-Existing Class shift_right_immediate.
-Existing Class spread_left_immediate.
-Existing Class mask_keep_low.
-Existing Class add_with_carry.
-Existing Class sub_with_carry.
-Existing Class multiply.
-Existing Class multiply_low_low.
-Existing Class multiply_high_low.
-Existing Class multiply_high_high.
-Existing Class select_conditional.
-Existing Class add_modulo.
 
 Global Arguments is_decode {_ _} _.
 Global Arguments is_load_immediate {_ _ _} _.
@@ -279,21 +278,21 @@ Ltac pull_decode := repeat pull_decode_step.
    same. *)
 Ltac set_decode_step check :=
   match goal with
-  | [ |- context G[@Interface.decode ?n ?W ?dr ?w] ]
+  | [ |- context G[@decode ?n ?W ?dr ?w] ]
     => check w;
       first [ match goal with
-              | [ d := @Interface.decode _ _ _ w |- _ ]
-                => change (@Interface.decode n W dr w) with d
+              | [ d := @decode _ _ _ w |- _ ]
+                => change (@decode n W dr w) with d
               end
             | generalize (@decode_range n W dr _ w);
               let d := fresh "d" in
-              set (d := @Interface.decode n W dr w);
+              set (d := @decode n W dr w);
               intro ]
   end.
 Ltac set_decode check := repeat set_decode_step check.
 Ltac clearbody_decode :=
   repeat match goal with
-         | [ H := @Interface.decode _ _ _ _ |- _ ] => clearbody H
+         | [ H := @decode _ _ _ _ |- _ ] => clearbody H
          end.
 Ltac generalize_decode_by check := set_decode check; clearbody_decode.
 Ltac generalize_decode := generalize_decode_by ltac:(fun w => idtac).
