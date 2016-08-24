@@ -1230,7 +1230,6 @@ Section Conversion.
     /\ Z.of_nat i <= bitsIn limb_widthsA
     /\ forall n, Z.testbit (decodeB out) n = if Z_lt_dec n (Z.of_nat i) then Z.testbit (decodeA inp) n else false.
 
-  Ltac subst_let := repeat match goal with | x := _ |- _ => subst x end.
   Ltac subst_lia := subst_let; subst; lia.
 
   Lemma convert'_bounded_step : forall inp i out,
