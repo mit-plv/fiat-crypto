@@ -14,18 +14,15 @@ Local Open Scope type_scope.
 Local Coercion Z.of_nat : nat >-> Z.
 Local Notation eta x := (fst x, snd x).
 
-Section generic_constructions.
-  Section decode.
-    Context {n W} {decode : decoder n W}.
-    Section with_k.
-      Context {k : nat}.
-      Let limb_widths := repeat n k.
-      (** The list is low to high; the tuple is low to high *)
-      Local Instance tuple_decoder : decoder (k * n) (tuple W k)
-        := { decode w := BaseSystem.decode (base_from_limb_widths limb_widths) (List.map decode (List.rev (Tuple.to_list _ w))) }.
-    End with_k.
-  End decode.
+(** The list is low to high; the tuple is low to high *)
+Definition tuple_decoder {n W} {decode : decoder n W} {k : nat} : decoder (k * n) (tuple W k)
+  := {| decode w := BaseSystem.decode (base_from_limb_widths (repeat n k))
+                                      (List.map decode (List.rev (Tuple.to_list _ w))) |}.
+Global Arguments tuple_decoder : simpl never.
+Hint Resolve (fun n W decode => (@tuple_decoder n W decode 2 : decoder (2 * n) (tuple W 2))) : typeclass_instances.
+Hint Extern 3 (decoder _ (tuple ?W ?k)) => let kv := (eval simpl in (Z.of_nat k)) in apply (fun n decode => (@tuple_decoder n W decode k : decoder (kv * n) (tuple W k))) : typeclass_instances.
 
+Section ripple_carry_definitions.
   Definition ripple_carry {T} (f : T -> T -> bool -> bool * T)
              (xs ys : list T) (carry : bool) : bool * list T
     := List.fold_right
@@ -54,73 +51,58 @@ Section generic_constructions.
        | O => fun xs ys carry => (carry, tt)
        | S k' => ripple_carry_tuple' f k'
        end.
+End ripple_carry_definitions.
 
-  Section ripple_carry_adc.
-    Context {n W} {decode : decoder n W} (adc : add_with_carry W).
+Global Instance ripple_carry_adc
+       {W} (adc : add_with_carry W) {k}
+  : add_with_carry (tuple W k)
+  := { adc := ripple_carry_tuple adc k }.
 
-    Global Instance ripple_carry_adc {k} : add_with_carry (tuple W k)
-      := { adc := ripple_carry_tuple adc k }.
-  End ripple_carry_adc.
+(** constructions on [tuple W 2] *)
+Section tuple2.
+  Section spread_left.
+    Context (n : Z) {W}
+            {ldi : load_immediate W}
+            {shl : shift_left_immediate W}
+            {shr : shift_right_immediate W}.
 
-  (* TODO: Would it made sense to make generic-width shift operations here? *)
+    Definition spread_left_from_shift (r : W) (count : Z) : tuple W 2
+      := (shl r count, if count =? 0 then ldi 0 else shr r (n - count)).
 
-  Section tuple2.
-    Section spread_left.
-      Context (n : Z) {W}
-              {ldi : load_immediate W}
-              {shl : shift_left_immediate W}
-              {shr : shift_right_immediate W}.
+    (** Require a [decoder] instance to aid typeclass search in
+        resolving [n] *)
+    Global Instance sprl_from_shift {decode : decoder n W} : spread_left_immediate W
+      := { sprl := spread_left_from_shift }.
+  End spread_left.
 
-      Definition spread_left_from_shift (r : W) (count : Z) : tuple W 2
-        := (shl r count, if count =? 0 then ldi 0 else shr r (n - count)).
+  Section full_from_half.
+    Context {half_n : Z} {W}
+            {mulhwll : multiply_low_low W}
+            {mulhwhl : multiply_high_low W}
+            {mulhwhh : multiply_high_high W}
+            {adc : add_with_carry W}
+            {shl : shift_left_immediate W}
+            {shr : shift_right_immediate W}
+            {ldi : load_immediate W}.
 
-      (** Require a [decode] instance to aid typeclass search in
-          resolving [n] *)
-      Global Instance sprl_from_shift {decode : decoder n W} : spread_left_immediate W
-        := { sprl := spread_left_from_shift }.
-    End spread_left.
+    Definition mul_double (a b : W) : tuple W 2
+      := let out : tuple W 2 := (mulhwll a b, mulhwhh a b) in
+         let tmp             := mulhwhl a b in
+         let '(_, out)   := eta (ripple_carry_adc adc out (shl tmp half_n, shr tmp half_n) false) in
+         let tmp             := mulhwhl b a in
+         let '(_, out)   := eta (ripple_carry_adc adc out (shl tmp half_n, shr tmp half_n) false) in
+         out.
 
-    Section full_from_half.
-      Context {W}
-              {mulhwll : multiply_low_low W}
-              {mulhwhl : multiply_high_low W}
-              {mulhwhh : multiply_high_high W}
-              {adc : add_with_carry W}
-              {shl : shift_left_immediate W}
-              {shr : shift_right_immediate W}.
-
-      Section def.
-        Context (half_n : Z).
-        Definition mul_double (a b : W) : tuple W 2
-          := let out : tuple W 2 := (mulhwll a b, mulhwhh a b) in
-             let tmp             := mulhwhl a b in
-             let '(_, out)   := eta (ripple_carry_adc adc out (shl tmp half_n, shr tmp half_n) false) in
-             let tmp             := mulhwhl b a in
-             let '(_, out)   := eta (ripple_carry_adc adc out (shl tmp half_n, shr tmp half_n) false) in
-             out.
-      End def.
-
-      Section instances.
-        Context {half_n : Z}
-                {ldi : load_immediate W}.
-
-        (** Require a dummy [decoder] for these instances to allow
+    (** Require a dummy [decoder] for these instances to allow
             typeclass inference of the [half_n] argument *)
-        Global Instance mul_double_multiply_low_low {decode : decoder (2 * half_n) W}
-          : multiply_low_low (tuple W 2)
-          := { mulhwll a b := mul_double half_n (fst a) (fst b) }.
-        Global Instance mul_double_multiply_high_low {decode : decoder (2 * half_n) W}
-          : multiply_high_low (tuple W 2)
-          := { mulhwhl a b := mul_double half_n (snd a) (fst b) }.
-        Global Instance mul_double_multiply_high_high {decode : decoder (2 * half_n) W}
-          : multiply_high_high (tuple W 2)
-          := { mulhwhh a b := mul_double half_n (snd a) (snd b) }.
-      End instances.
-    End full_from_half.
-  End tuple2.
-End generic_constructions.
-
-Global Arguments tuple_decoder : simpl never.
-
-Hint Resolve (fun n W decode => (@tuple_decoder n W decode 2 : decoder (2 * n) (tuple W 2))) : typeclass_instances.
-Hint Extern 3 (decoder _ (tuple ?W ?k)) => let kv := (eval simpl in (Z.of_nat k)) in apply (fun n decode => (@tuple_decoder n W decode k : decoder (kv * n) (tuple W k))) : typeclass_instances.
+    Global Instance mul_double_multiply_low_low {decode : decoder (2 * half_n) W}
+      : multiply_low_low (tuple W 2)
+      := { mulhwll a b := mul_double (fst a) (fst b) }.
+    Global Instance mul_double_multiply_high_low {decode : decoder (2 * half_n) W}
+      : multiply_high_low (tuple W 2)
+      := { mulhwhl a b := mul_double (snd a) (fst b) }.
+    Global Instance mul_double_multiply_high_high {decode : decoder (2 * half_n) W}
+      : multiply_high_high (tuple W 2)
+      := { mulhwhh a b := mul_double (snd a) (snd b) }.
+  End full_from_half.
+End tuple2.

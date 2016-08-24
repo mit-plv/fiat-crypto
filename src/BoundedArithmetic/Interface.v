@@ -1,6 +1,7 @@
 (*** Interface for bounded arithmetic *)
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Notations.
 
 Local Open Scope Z_scope.
@@ -63,7 +64,7 @@ Section InstructionGallery.
     decode_shift_right_immediate :
       forall r count, 0 <= count < n -> decode (shr r count) = (decode r >> count).
 
-  Class spread_left_immediate := { sprl : W -> imm -> W * W (* [(low, high)] *) }.
+  Class spread_left_immediate := { sprl : W -> imm -> tuple W 2 (* [(low, high)] *) }.
   Global Coercion sprl : spread_left_immediate >-> Funclass.
 
   Class is_spread_left_immediate (sprl : spread_left_immediate) :=
@@ -133,6 +134,8 @@ Section InstructionGallery.
   Global Coercion mulhwhl : multiply_high_low >-> Funclass.
   Class multiply_high_high := { mulhwhh : W -> W -> W }.
   Global Coercion mulhwhh : multiply_high_high >-> Funclass.
+  Class multiply_double := { muldw : W -> W -> tuple W 2 }.
+  Global Coercion muldw : multiply_double >-> Funclass.
 
   Class is_mul_low_low (w:Z) (mulhwll : multiply_low_low) :=
     decode_mul_low_low :
@@ -143,6 +146,9 @@ Section InstructionGallery.
   Class is_mul_high_high (w:Z) (mulhwhh : multiply_high_high) :=
     decode_mul_high_high :
       forall x y, decode (mulhwhh x y) = ((decode x >> w) * (decode y >> w)) mod 2^n.
+  Class is_mul_double (muldw : multiply_double) :=
+    decode_mul_double :
+      forall x y, (decode (fst (muldw x y)) + decode (snd (muldw x y)) << n = decode x * decode y)%Z.
 
   Class select_conditional := { selc : bool -> W -> W -> W }.
   Global Coercion selc : select_conditional >-> Funclass.
@@ -173,6 +179,7 @@ Global Arguments multiply : clear implicits.
 Global Arguments multiply_low_low : clear implicits.
 Global Arguments multiply_high_low : clear implicits.
 Global Arguments multiply_high_high : clear implicits.
+Global Arguments multiply_double : clear implicits.
 Global Arguments select_conditional : clear implicits.
 Global Arguments add_modulo : clear implicits.
 Global Arguments ldi {_ _} _.
@@ -187,6 +194,7 @@ Global Arguments mul {_ _} _ _.
 Global Arguments mulhwll {_ _} _ _.
 Global Arguments mulhwhl {_ _} _ _.
 Global Arguments mulhwhh {_ _} _ _.
+Global Arguments muldw {_ _} _ _.
 Global Arguments selc {_ _} _ _ _.
 Global Arguments addm {_ _} _ _ _.
 
@@ -203,6 +211,7 @@ Global Arguments is_mul {_ _ _} _.
 Global Arguments is_mul_low_low {_ _ _} _ _.
 Global Arguments is_mul_high_low {_ _ _} _ _.
 Global Arguments is_mul_high_high {_ _ _} _ _.
+Global Arguments is_mul_double {_ _ _} _.
 Global Arguments is_select_conditional {_ _ _} _.
 Global Arguments is_add_modulo {_ _ _} _.
 
@@ -229,7 +238,7 @@ Proof.
   omega.
 Qed.
 
-Hint Rewrite @decode_load_immediate @decode_shift_right_doubleword @decode_shift_left_immediate @decode_shift_right_immediate @decode_fst_spread_left_immediate @decode_snd_spread_left_immediate @decode_mask_keep_low @bit_fst_add_with_carry @decode_snd_add_with_carry @fst_sub_with_carry @decode_snd_sub_with_carry @decode_mul @decode_mul_low_low @decode_mul_high_low @decode_mul_high_high @decode_select_conditional @decode_add_modulo @decode_proj @decode_if_bool using bounded_solver_tac : push_decode.
+Hint Rewrite @decode_load_immediate @decode_shift_right_doubleword @decode_shift_left_immediate @decode_shift_right_immediate @decode_fst_spread_left_immediate @decode_snd_spread_left_immediate @decode_mask_keep_low @bit_fst_add_with_carry @decode_snd_add_with_carry @fst_sub_with_carry @decode_snd_sub_with_carry @decode_mul @decode_mul_low_low @decode_mul_high_low @decode_mul_high_high @decode_mul_double @decode_select_conditional @decode_add_modulo @decode_proj @decode_if_bool using bounded_solver_tac : push_decode.
 
 Ltac push_decode_step :=
   first [ rewrite !decode_proj
@@ -249,6 +258,7 @@ Ltac push_decode_step :=
         | erewrite !decode_mul_low_low by bounded_solver_tac
         | erewrite !decode_mul_high_low by bounded_solver_tac
         | erewrite !decode_mul_high_high by bounded_solver_tac
+        | erewrite !decode_mul_double by bounded_solver_tac
         | erewrite !decode_select_conditional by bounded_solver_tac
         | erewrite !decode_add_modulo by bounded_solver_tac ].
 Ltac pull_decode_step :=
@@ -267,6 +277,7 @@ Ltac pull_decode_step :=
         | erewrite <- !decode_mul_low_low by bounded_solver_tac
         | erewrite <- !decode_mul_high_low by bounded_solver_tac
         | erewrite <- !decode_mul_high_high by bounded_solver_tac
+        | erewrite <- !decode_mul_double by bounded_solver_tac
         | erewrite <- !decode_select_conditional by bounded_solver_tac
         | erewrite <- !decode_add_modulo by bounded_solver_tac ].
 Ltac push_decode := repeat push_decode_step.
