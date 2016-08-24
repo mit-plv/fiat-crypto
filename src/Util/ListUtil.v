@@ -54,7 +54,7 @@ Module Export List.
     Variables (A : Type) (B : Type).
     Variable f : A -> B.
 
-    Lemma map_cons (x:A)(l:list A) : map f (x::l) = (f x) :: (map l).
+    Lemma map_cons (x:A)(l:list A) : map f (x::l) = (f x) :: (map f l).
     Proof.
       reflexivity.
     Qed.
