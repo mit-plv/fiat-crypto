@@ -49,6 +49,17 @@ Module Export List.
   Local Set Implicit Arguments.
   Import ListNotations.
   (** From the 8.6 Standard Library *)
+
+  Section Map.
+    Variables (A : Type) (B : Type).
+    Variable f : A -> B.
+
+    Lemma map_cons (x:A)(l:list A) : map f (x::l) = (f x) :: (map l).
+    Proof.
+      reflexivity.
+    Qed.
+  End Map.
+
   Lemma in_seq len start n :
     In n (seq start len) <-> start <= n < start+len.
   Proof.
