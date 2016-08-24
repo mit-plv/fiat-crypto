@@ -64,13 +64,48 @@ Proof. reflexivity. Qed.
 
 Lemma modulus_gt_2 : 2 < modulus. Proof. cbv; congruence. Qed.
 
+(* Temporarily, we'll use addition chains equivalent to double-and-add. This is pending
+   finding the real, more optimal chains from previous work. *)
+Fixpoint pow2Chain'' p (pow2_index acc_index : nat) chain_acc : list (nat * nat) :=
+  match p with
+  | xI p' => pow2Chain'' p' 1 0
+               (chain_acc ++ (pow2_index, pow2_index) :: (0%nat, S acc_index) :: nil)
+  | xO p' => pow2Chain'' p' 0 (S acc_index)
+               (chain_acc ++ (pow2_index, pow2_index)::nil)
+  | xH => (chain_acc ++ (pow2_index, pow2_index) :: (0%nat, S acc_index) :: nil)
+  end.
+
+Fixpoint pow2Chain' p index  :=
+  match p with
+  | xI p' => pow2Chain'' p' 0 0 (repeat (0,0)%nat index)
+  | xO p' => pow2Chain' p' (S index)
+  | xH => repeat (0,0)%nat index
+  end.
+
+Definition pow2_chain p :=
+  match p with
+  | xH => nil
+  | _ => pow2Chain' p 0
+  end.
+
+Definition invChain := Eval compute in pow2_chain (Z.to_pos (modulus - 2)).
+
+Instance ic : InvExponentiationChain.
+  apply Build_InvExponentiationChain with (chain := invChain).
+  reflexivity.
+Defined.
+
 (* END precomputation *) 
 
-(* Precompute k and c *)
+(* Precompute k, c, zero, and one *)
 Definition k_ := Eval compute in k.
 Definition c_ := Eval compute in c.
+Definition one_ := Eval compute in one.
+Definition zero_ := Eval compute in zero.
 Definition k_subst : k = k_ := eq_refl k_.
 Definition c_subst : c = c_ := eq_refl c_.
+Definition one_subst : one = one_ := eq_refl one_.
+Definition zero_subst : zero = zero_ := eq_refl zero_.
 
 Local Opaque Z.shiftr Z.shiftl Z.land Z.mul Z.add Z.sub Z.lor Let_In.
 
@@ -177,8 +212,30 @@ Definition mul_correct (f g : fe1305)
   Eval cbv beta iota delta [proj1_sig add_sig] in
   proj2_sig (mul_sig f g).
 
-Axiom ic : InvExponentiationChain.
-Definition inv := inv chain chain_correct.
+Definition inv_sig (f : fe1305) :
+  { g : fe1305 | g = inv_opt k_ c_ one_ f }.
+Proof.
+  eexists.
+  cbv [inv_opt pow_opt].
+  transitivity (@fold_chain_opt (tuple Z (length limb_widths)) one_ mul chain [f]).
+  Focus 2. {
+    rewrite fold_chain_opt_correct.
+    rewrite <-one_subst.
+    etransitivity; [ | symmetry; apply fold_chain_opt_correct ].
+    apply Proper_fold_chain; auto.
+    intros; cbv [eq]; subst.
+    apply mul_correct.
+  } Unfocus.
+  cbv - [mul].
+  reflexivity.
+Defined.
+
+Definition inv (f : fe1305) : fe1305
+  := Eval cbv beta iota delta [proj1_sig inv_sig] in proj1_sig (inv_sig f).
+
+Definition inv_correct (f : fe1305)
+  : inv f = inv_opt k_ c_ one_ f
+  := Eval cbv beta iota delta [proj2_sig inv_sig] in proj2_sig (inv_sig f).
 
 Definition mbs_field := modular_base_system_field modulus_gt_2.
 
@@ -199,7 +256,7 @@ Proof.
     rewrite mul_rep; reflexivity.
   + intros; rewrite sub_correct, sub_opt_correct; reflexivity.
   + intros; rewrite add_correct, add_opt_correct; reflexivity.
-  + admit. (* leaving this for when I have an optimized [inv] *)
+  + intros; rewrite inv_correct, inv_opt_correct; reflexivity.
   + reflexivity.
 Qed.
 
