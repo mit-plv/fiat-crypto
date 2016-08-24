@@ -11,6 +11,7 @@ Require Import Crypto.ModularArithmetic.ModularBaseSystemList.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemListProofs.
 Require Import Crypto.Util.ListUtil Crypto.Util.CaseUtil Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tuple.
+Require Import Crypto.Util.AdditionChainExponentiation.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Tactics.VerdiTactics.
 Local Open Scope Z_scope.
@@ -45,8 +46,12 @@ Section ModularBaseSystem.
   (* Placeholder *)
   Definition opp (x : digits) : digits := encode (F.opp (decode x)).
 
-  (* Placeholder *)
-  Definition inv (x : digits) : digits := encode (F.inv (decode x)).
+  Definition pow (x : digits) (chain : list (nat * nat)) : digits :=
+    fold_chain one mul chain (x :: nil).
+
+  Definition inv (chain : list (nat * nat))
+                 (chain_correct : fold_chain 0%N N.add chain (1%N :: nil) = Z.to_N (modulus - 2))
+                 (x : digits) : digits := pow x chain.
 
   (* Placeholder *)
   Definition div (x y : digits) : digits := encode (F.div (decode x) (decode y)).

@@ -364,14 +364,12 @@ Module ScalarMult.
 
     Global Instance Proper_scalarmult_ref : Proper (Logic.eq==>eq==>eq) scalarmult_ref.
     Proof.
-      repeat intro; subst; 
-        match goal with [n:nat |- _ ] =>
-                        solve [induction n; simpl scalarmult_ref; rewrite_hyp ?*; reflexivity]
-        end.
+      repeat intro; subst.
+      match goal with [n:nat |- _ ] => induction n; simpl @scalarmult_ref; [reflexivity|] end.
+      repeat match goal with [H:_ |- _ ] => rewrite H end; reflexivity.
     Qed.
 
     Lemma scalarmult_ext : forall n P, mul n P = scalarmult_ref n P.
-    Proof.
       induction n; simpl @scalarmult_ref; intros; rewrite <-?IHn; (apply scalarmult_0_l || apply scalarmult_S_l).
     Qed.
 

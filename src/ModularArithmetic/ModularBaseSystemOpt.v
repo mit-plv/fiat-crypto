@@ -11,6 +11,7 @@ Require Import Crypto.ModularArithmetic.ModularBaseSystem.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemProofs.
 Require Import Coq.Lists.List.
 Require Import Crypto.Util.Tuple.
+Require Import Crypto.Util.AdditionChainExponentiation.
 Require Import Crypto.Util.ListUtil Crypto.Util.ZUtil Crypto.Util.NatUtil Crypto.Util.CaseUtil.
 Import ListNotations.
 Require Import Coq.ZArith.ZArith Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.ZArith.Znumtheory.
@@ -19,11 +20,6 @@ Require Import Coq.QArith.QArith Coq.QArith.Qround.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Export Crypto.Util.FixCoqMistakes.
 Local Open Scope Z.
-
-Class SubtractionCoefficient (m : Z) (prm : PseudoMersenneBaseParams m) := {
-  coeff : tuple Z (length limb_widths);
-  coeff_mod: decode coeff = 0%F
-}.
 
 (* Computed versions of some functions. *)
 
@@ -411,7 +407,7 @@ Section Carries.
 End Carries.
 
 Section Addition.
-  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient modulus prm}.
+  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient}.
   Local Notation digits := (tuple Z (length limb_widths)).
 
   Definition add_opt_sig (us vs : digits) : { b : digits | b = add us vs }.
@@ -429,7 +425,7 @@ Section Addition.
 End Addition.
 
 Section Subtraction.
-  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient modulus prm}.
+  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient}.
   Local Notation digits := (tuple Z (length limb_widths)).
 
   Definition sub_opt_sig (us vs : digits) : { b : digits | b = sub coeff us vs }.
@@ -448,7 +444,7 @@ Section Subtraction.
 End Subtraction.
 
 Section Multiplication.
-  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient modulus prm} {cc : CarryChain limb_widths}
+  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient} {cc : CarryChain limb_widths}
     (* allows caller to precompute k and c *)
     (k_ c_ : Z) (k_subst : k = k_) (c_subst : c = c_).
   Local Notation digits := (tuple Z (length limb_widths)).
@@ -631,6 +627,91 @@ Section Multiplication.
 
 End Multiplication.
 
+Import Morphisms.
+Global Instance Proper_fold_chain {T} {Teq} {Teq_Equivalence : Equivalence Teq}
+  : Proper (Logic.eq
+              ==> (fun f g => forall x1 x2 y1 y2 : T, Teq x1 x2 -> Teq y1 y2 -> Teq (f x1 y1) (g x2 y2))
+              ==> Logic.eq
+              ==> SetoidList.eqlistA Teq
+              ==> Teq) fold_chain.
+Proof.
+  do 9 intro.
+  subst; induction y1; repeat intro; rewrite !fold_chain_equation.
+  + inversion H; assumption || reflexivity.
+  + destruct a.
+    apply IHy1.
+    econstructor; try assumption.
+    apply H0; rewrite H; reflexivity.
+Qed.
+
+Section PowInv.
+  Context `{prm : PseudoMersenneBaseParams}
+          (k_ c_ : Z) (k_subst : k = k_) (c_subst : c = c_)
+          {cc : CarryChain limb_widths}.
+  Local Notation digits := (tuple Z (length limb_widths)).
+  Context (one_ : digits) (one_subst : one = one_).
+  
+  Fixpoint fold_chain_opt {T} (id : T) op chain acc :=
+  match chain with
+  | [] => match acc with
+          | [] => id
+          | ret :: _ => ret
+          end
+  | (i, j) :: chain' =>
+      Let_In (op (nth_default id acc i) (nth_default id acc j))
+      (fun ijx => fold_chain_opt id op chain' (ijx :: acc))
+  end.
+
+  Lemma fold_chain_opt_correct : forall {T} (id : T) op chain acc,
+    fold_chain_opt id op chain acc = fold_chain id op chain acc.
+  Proof.
+    reflexivity.
+  Qed.
+
+  Definition pow_opt_sig x chain :
+    {y | eq y (ModularBaseSystem.pow x chain)}.
+  Proof.
+    eexists.
+    cbv beta iota delta [ModularBaseSystem.pow].
+    transitivity (fold_chain one_ (carry_mul_opt k_ c_) chain [x]).
+    Focus 2. {
+      apply Proper_fold_chain; auto; try reflexivity.
+      cbv [eq]; intros.
+      rewrite carry_mul_opt_correct by assumption.
+      rewrite carry_mul_rep, mul_rep by reflexivity.
+      congruence.
+    } Unfocus.
+    rewrite <-fold_chain_opt_correct.
+    reflexivity.
+  Defined.
+
+  Definition pow_opt x chain : digits
+    := Eval cbv [proj1_sig pow_opt_sig] in (proj1_sig (pow_opt_sig x chain)).
+
+  Definition pow_opt_correct x chain
+    : eq (pow_opt x chain) (ModularBaseSystem.pow x chain)
+    := Eval cbv [proj2_sig pow_opt_sig] in (proj2_sig (pow_opt_sig x chain)).
+
+  Context {ic : InvExponentiationChain}.
+
+  Definition inv_opt_sig x:
+    {y | eq y (inv chain chain_correct x)}.
+  Proof.
+    eexists.
+    cbv [inv].
+    rewrite <-pow_opt_correct.
+    reflexivity.
+  Defined.
+
+  Definition inv_opt x : digits
+    := Eval cbv [proj1_sig inv_opt_sig] in (proj1_sig (inv_opt_sig x)).
+
+  Definition inv_opt_correct x
+    : eq (inv_opt x) (inv chain chain_correct x)
+    := Eval cbv [proj2_sig inv_opt_sig] in (proj2_sig (inv_opt_sig x)).
+  
+End PowInv.
+
 Section Conversion.
 
   Definition convert'_opt_sig {lwA lwB}
@@ -740,7 +821,7 @@ Local Hint Resolve lt_1_length_base int_width_pos int_width_compat c_pos
     c_reduce1 c_reduce2 two_pow_k_le_2modulus.
 
 Section Canonicalization.
-  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient modulus prm}
+  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient}
     (* allows caller to precompute k and c *)
     (k_ c_ : Z) (k_subst : k = k_) (c_subst : c = c_)
     {int_width} (preconditions : freezePreconditions prm int_width).
