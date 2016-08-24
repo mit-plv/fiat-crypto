@@ -23,7 +23,6 @@ src/Assembly/QhasmEvalCommon.v
 src/Assembly/QhasmUtil.v
 src/Assembly/State.v
 src/Assembly/StringConversion.v
-src/Assembly/Wordize.v
 src/Assembly/WordizeUtil.v
 src/CompleteEdwardsCurve/CompleteEdwardsCurveTheorems.v
 src/CompleteEdwardsCurve/ExtendedCoordinates.v
