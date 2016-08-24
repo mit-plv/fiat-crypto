@@ -147,8 +147,17 @@ Section InstructionGallery.
     decode_mul_high_high :
       forall x y, decode (mulhwhh x y) = ((decode x >> w) * (decode y >> w)) mod 2^n.
   Class is_mul_double (muldw : multiply_double) :=
-    decode_mul_double :
-      forall x y, (decode (fst (muldw x y)) + decode (snd (muldw x y)) << n = decode x * decode y)%Z.
+    {
+      decode_fst_mul_double :
+        forall x y, decode (fst (muldw x y)) = (decode x * decode y) mod 2^n;
+      decode_snd_mul_double :
+        forall x y, decode (snd (muldw x y)) = (decode x * decode y) >> n
+    }.
+  Definition Build_is_mul_double' (muldw : multiply_double)
+             (pf : forall x y, _ /\ _)
+    := {| decode_fst_mul_double x y := proj1 (pf x y);
+          decode_snd_mul_double x y := proj2 (pf x y) |}.
+
 
   Class select_conditional := { selc : bool -> W -> W -> W }.
   Global Coercion selc : select_conditional >-> Funclass.
@@ -238,7 +247,7 @@ Proof.
   omega.
 Qed.
 
-Hint Rewrite @decode_load_immediate @decode_shift_right_doubleword @decode_shift_left_immediate @decode_shift_right_immediate @decode_fst_spread_left_immediate @decode_snd_spread_left_immediate @decode_mask_keep_low @bit_fst_add_with_carry @decode_snd_add_with_carry @fst_sub_with_carry @decode_snd_sub_with_carry @decode_mul @decode_mul_low_low @decode_mul_high_low @decode_mul_high_high @decode_mul_double @decode_select_conditional @decode_add_modulo @decode_proj @decode_if_bool using bounded_solver_tac : push_decode.
+Hint Rewrite @decode_load_immediate @decode_shift_right_doubleword @decode_shift_left_immediate @decode_shift_right_immediate @decode_fst_spread_left_immediate @decode_snd_spread_left_immediate @decode_mask_keep_low @bit_fst_add_with_carry @decode_snd_add_with_carry @fst_sub_with_carry @decode_snd_sub_with_carry @decode_mul @decode_mul_low_low @decode_mul_high_low @decode_mul_high_high @decode_fst_mul_double @decode_snd_mul_double @decode_select_conditional @decode_add_modulo @decode_proj @decode_if_bool using bounded_solver_tac : push_decode.
 
 Ltac push_decode_step :=
   first [ rewrite !decode_proj
@@ -258,7 +267,8 @@ Ltac push_decode_step :=
         | erewrite !decode_mul_low_low by bounded_solver_tac
         | erewrite !decode_mul_high_low by bounded_solver_tac
         | erewrite !decode_mul_high_high by bounded_solver_tac
-        | erewrite !decode_mul_double by bounded_solver_tac
+        | erewrite !decode_fst_mul_double by bounded_solver_tac
+        | erewrite !decode_snd_mul_double by bounded_solver_tac
         | erewrite !decode_select_conditional by bounded_solver_tac
         | erewrite !decode_add_modulo by bounded_solver_tac ].
 Ltac pull_decode_step :=
@@ -277,7 +287,8 @@ Ltac pull_decode_step :=
         | erewrite <- !decode_mul_low_low by bounded_solver_tac
         | erewrite <- !decode_mul_high_low by bounded_solver_tac
         | erewrite <- !decode_mul_high_high by bounded_solver_tac
-        | erewrite <- !decode_mul_double by bounded_solver_tac
+        | erewrite <- !decode_fst_mul_double by bounded_solver_tac
+        | erewrite <- !decode_snd_mul_double by bounded_solver_tac
         | erewrite <- !decode_select_conditional by bounded_solver_tac
         | erewrite <- !decode_add_modulo by bounded_solver_tac ].
 Ltac push_decode := repeat push_decode_step.
