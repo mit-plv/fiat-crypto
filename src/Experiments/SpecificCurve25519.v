@@ -35,9 +35,7 @@ Section Definitions.
     | OPmask   => @emask T E
     | OPshiftr => @eshiftr T E
     end.
-
 End Definitions.
-
 
 Module Input.
   Section Language.
@@ -48,13 +46,13 @@ Module Input.
         Context {var : type -> Type}.
 
         Inductive expr : type -> Type :=
-        | ConstT : @interp_type T TT -> expr TT
-        | ConstN : @interp_type T TN -> expr TN
-        | Var : forall {t}, var t -> expr t
-        | Binop : forall {t1 t2}, binop t1 t2 TT -> expr t1 -> expr t2 -> expr TT
-        | Let : forall {tx}, expr tx -> forall {tC}, (var tx -> expr tC) -> expr tC
-        | Pair : forall {t1}, expr t1 -> forall {t2}, expr t2 -> expr (Prod t1 t2)
-        | MatchPair : forall {t1 t2}, expr (Prod t1 t2) -> forall {tC}, (var t1 -> var t2 -> expr tC) -> expr tC.
+          | ConstT : @interp_type T TT -> expr TT
+          | ConstN : @interp_type T TN -> expr TN
+          | Var : forall {t}, var t -> expr t
+          | Binop : forall {t1 t2}, binop t1 t2 TT -> expr t1 -> expr t2 -> expr TT
+          | Let : forall {tx}, expr tx -> forall {tC}, (var tx -> expr tC) -> expr tC
+          | Pair : forall {t1}, expr t1 -> forall {t2}, expr t2 -> expr (Prod t1 t2)
+          | MatchPair : forall {t1 t2}, expr (Prod t1 t2) -> forall {tC}, (var t1 -> var t2 -> expr tC) -> expr tC.
     End expr.
 
     Local Notation ZConst z := (@ConstT Z ZEvaluable _ z%Z).
@@ -72,9 +70,38 @@ Module Input.
         | MatchPair _ _ ep _ eC => let (v1, v2) := interp ep in interp (eC v1 v2)
         end.
 
-
     Definition Interp {t} (E:Expr t) : interp_type t := interp (E interp_type).
   End Language.
+
+  Section Conversions.
+
+    Definition convertVar {A B: Type} {EA: Evaluable A} {EB: Evaluable B} {t} (a: interp_type (T := A) t): interp_type (T := B) t.
+    Proof.
+      induction t as [| | t3 IHt1 t4 IHt2].
+
+      - assumption.
+
+      - refine (@toT B EB (@fromT A EA _)); assumption.
+
+      - destruct a as [a1 a2]; constructor;
+          [exact (IHt1 a1) | exact (IHt2 a2)].
+    Defined.
+
+    Fixpoint convertExpr {A B: Type} {EA: Evaluable A} {EB: Evaluable B} {t} (a: expr (T := A) (var := interp_type (T := A)) t): expr (T := B) (var := interp_type (T := B)) t :=
+      match a with
+      | ConstT x => ConstT (@toT B EB (@fromT A EA x))
+      | ConstN x => @ConstN B _ x
+      | Var t x => @Var B _ t (@convertVar A B _ _ t x)
+      | Binop t1 t2 o e1 e2 =>
+        @Binop B _ t1 t2 o (convertExpr e1) (convertExpr e2)
+      | Let tx e tC f =>
+        Let (convertExpr e) (fun x =>
+          convertExpr (f (@convertVar B A _ _ tx x)))
+      | Pair t1 e1 t2 e2 => Pair (convertExpr e1) (convertExpr e2)
+      | MatchPair t1 t2 e tC f => MatchPair (convertExpr e) (fun x y =>
+          convertExpr (f (@convertVar B A _ _ _ x) (@convertVar B A _ _ _ y)))
+      end.
+  End Conversions.
 
   Definition ZInterp {t} E := @Interp Z ZEvaluable t E.
 
@@ -487,7 +514,7 @@ _).
 
     eexists.
     cbv beta delta [ge25519_add'].
-    
+ 
     Reify_rhs.
     (* Finished transaction in 14.664 secs (14.639u,0.026s) (successful) in coqc version Coq 8.6 from July 2016, slow interactively *)
 
@@ -499,8 +526,6 @@ _).
     (* Finished transaction in 0.427 secs (0.423u,0.003s) (successful), very slow interactively *)
 
     cbv iota beta delta [Output.Interp Output.interp Output.interp_arg interp_binop interp_type].
-
-    Set Printing Depth 999999.
     reflexivity.
   Defined.
 End Curve25519.
