@@ -636,7 +636,8 @@ Global Instance Proper_fold_chain {T} {Teq} {Teq_Equivalence : Equivalence Teq}
               ==> Teq) fold_chain.
 Proof.
   do 9 intro.
-  subst; induction y1; repeat intro; rewrite !fold_chain_equation.
+  subst; induction y1; repeat intro;
+    unfold fold_chain; fold @fold_chain.
   + inversion H; assumption || reflexivity.
   + destruct a.
     apply IHy1.
