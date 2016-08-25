@@ -7,20 +7,6 @@ Require Import Crypto.Util.Notations.
 Local Open Scope Z_scope.
 Local Open Scope type_scope.
 
-Create HintDb push_decode discriminated.
-Create HintDb pull_decode discriminated.
-Hint Extern 1 => progress autorewrite with push_decode in * : push_decode.
-Hint Extern 1 => progress autorewrite with pull_decode in * : pull_decode.
-
-(* TODO(from jgross): Try dropping the record wrappers.  See
-   https://github.com/mit-plv/fiat-crypto/pull/52#discussion_r74627992
-   and
-   https://github.com/mit-plv/fiat-crypto/pull/52#discussion_r74658417
-   and
-   https://github.com/mit-plv/fiat-crypto/pull/52#issuecomment-239536847.
-   The wrappers are here to make [autorewrite] databases feasable and
-   fast, based on design patterns learned from past experience.  There
-   might be better ways. *)
 Class decoder (n : Z) W :=
   { decode : W -> Z }.
 Coercion decode : decoder >-> Funclass.
@@ -29,52 +15,108 @@ Global Arguments decode {n W _} _.
 Class is_decode {n W} (decode : decoder n W) :=
   decode_range : forall x, 0 <= decode x < 2^n.
 
+Class rewrite_eq {A} (x y : A)
+  := by_rewrite : x = y.
+Arguments by_rewrite {A} _ _ {_}.
+
+Class rewrite_right_to_left_eq {A} (x y : A)
+  := by_rewrite_right_to_left : rewrite_eq x y.
+Arguments by_rewrite_right_to_left {A} _ _ {_}.
+Global Instance unfold_rewrite_right_to_left_eq {A x y} (H : @rewrite_eq A x y)
+  : @rewrite_right_to_left_eq A x y := H.
+
+Class rewrite_left_to_right_eq {A} (x y : A)
+  := by_rewrite_left_to_right : rewrite_eq x y.
+Arguments by_rewrite_left_to_right {A} _ _ {_}.
+Global Instance unfold_rewrite_left_to_right_eq {A x y} (H : @rewrite_eq A x y)
+  : @rewrite_left_to_right_eq A x y := H.
+
+Class bounded_in_range_cls (x y z : Z) := is_bounded_in_range : x <= y < z.
+Ltac bounded_solver_tac :=
+  solve [ eassumption | typeclasses eauto | omega ].
+Hint Extern 0 (bounded_in_range_cls _ _ _) => unfold bounded_in_range_cls; bounded_solver_tac : typeclass_instances.
+Global Arguments bounded_in_range_cls / .
+Global Instance decode_range_bound {n W} {decode : decoder n W} {H : is_decode decode}
+  : forall x, bounded_in_range_cls 0 (decode x) (2^n)
+  := H.
+
+Class bounded_le_cls (x y : Z) := is_bounded_le : x <= y.
+Hint Extern 0 (bounded_le_cls _ _) => unfold bounded_le_cls; bounded_solver_tac : typeclass_instances.
+Global Arguments bounded_le_cls / .
+
+Ltac push_decode_step :=
+  match goal with
+  | [ |- context[@decode ?n ?W ?decoder ?w] ]
+    => let lem := constr:(by_rewrite_left_to_right (A := Z) (@decode n W decoder w) _) in
+       rewrite (lem : @decode n W decoder w = _)
+  | [ |- context[match @fst ?A ?B ?x with true => 1 | false => 0 end] ]
+    => let lem := constr:(by_rewrite_left_to_right (A := Z) (match @fst A B x with true => 1 | false => 0 end) _) in
+       rewrite (lem : _ = _)
+  end.
+Ltac push_decode := repeat push_decode_step.
+Ltac pull_decode_step :=
+  match goal with
+  | [ |- context[?E] ]
+    => first [ let lem := constr:(by_rewrite_right_to_left (A := Z) _ E) in
+               rewrite <- (lem : _ = E)
+             | let lem := constr:(by_rewrite_right_to_left (A := bool) _ E) in
+               rewrite <- (lem : _ = E) ]
+  end.
+Ltac pull_decode := repeat pull_decode_step.
+
+(** This is required for typeclass resolution to be fast. *)
+Typeclasses Opaque decode.
+
 Section InstructionGallery.
   Context (n : Z) (* bit-width of width of [W] *)
           {W : Type} (* bounded type, [W] for word *)
           (Wdecoder : decoder n W).
+  Local Infix "==" := rewrite_eq.
+  Local Infix "=~>" := rewrite_left_to_right_eq.
+  Local Infix "<~=" := rewrite_right_to_left_eq.
+  Local Notation "x <= y < z" := (bounded_in_range_cls x y z).
   Local Notation imm := Z (only parsing). (* immediate (compile-time) argument *)
 
   Class load_immediate := { ldi : imm -> W }.
   Global Coercion ldi : load_immediate >-> Funclass.
 
   Class is_load_immediate {ldi : load_immediate}  :=
-    decode_load_immediate : forall x, 0 <= x < 2^n -> decode (ldi x) = x.
+    decode_load_immediate :> forall x, 0 <= x < 2^n -> decode (ldi x) =~> x.
 
   Class shift_right_doubleword_immediate := { shrd : W -> W -> imm -> W }.
   Global Coercion shrd : shift_right_doubleword_immediate >-> Funclass.
 
   Class is_shift_right_doubleword_immediate (shrd : shift_right_doubleword_immediate) :=
-    decode_shift_right_doubleword :
+    decode_shift_right_doubleword :>
       forall high low count,
         0 <= count < n
-        -> decode (shrd high low count) = (((decode high << n) + decode low) >> count) mod 2^n.
+        -> decode (shrd high low count) == (((decode high << n) + decode low) >> count) mod 2^n.
 
   Class shift_left_immediate := { shl : W -> imm -> W }.
   Global Coercion shl : shift_left_immediate >-> Funclass.
 
   Class is_shift_left_immediate (shl : shift_left_immediate) :=
-    decode_shift_left_immediate :
-      forall r count, 0 <= count < n -> decode (shl r count) = (decode r << count) mod 2^n.
+    decode_shift_left_immediate :>
+      forall r count, 0 <= count < n -> decode (shl r count) == (decode r << count) mod 2^n.
 
   Class shift_right_immediate := { shr : W -> imm -> W }.
   Global Coercion shr : shift_right_immediate >-> Funclass.
 
   Class is_shift_right_immediate (shr : shift_right_immediate) :=
-    decode_shift_right_immediate :
-      forall r count, 0 <= count < n -> decode (shr r count) = (decode r >> count).
+    decode_shift_right_immediate :>
+      forall r count, 0 <= count < n -> decode (shr r count) == (decode r >> count).
 
   Class spread_left_immediate := { sprl : W -> imm -> tuple W 2 (* [(low, high)] *) }.
   Global Coercion sprl : spread_left_immediate >-> Funclass.
 
   Class is_spread_left_immediate (sprl : spread_left_immediate) :=
     {
-      decode_fst_spread_left_immediate : forall r count,
+      decode_fst_spread_left_immediate :> forall r count,
           0 <= count < n
-          -> decode (fst (sprl r count)) = (decode r << count) mod 2^n;
-      decode_snd_spread_left_immediate : forall r count,
+          -> decode (fst (sprl r count)) =~> (decode r << count) mod 2^n;
+      decode_snd_spread_left_immediate :> forall r count,
         0 <= count < n
-        -> decode (snd (sprl r count)) = (decode r << count) >> n
+        -> decode (snd (sprl r count)) =~> (decode r << count) >> n
 
     }.
 
@@ -89,8 +131,8 @@ Section InstructionGallery.
   Global Coercion mkl : mask_keep_low >-> Funclass.
 
   Class is_mask_keep_low (mkl : mask_keep_low) :=
-    decode_mask_keep_low : forall r count,
-      0 <= count < n -> decode (mkl r count) = decode r mod 2^count.
+    decode_mask_keep_low :> forall r count,
+      0 <= count < n -> decode (mkl r count) == decode r mod 2^count.
 
   Local Notation bit b := (if b then 1 else 0).
 
@@ -99,8 +141,8 @@ Section InstructionGallery.
 
   Class is_add_with_carry (adc : add_with_carry) :=
     {
-      bit_fst_add_with_carry : forall x y c, bit (fst (adc x y c)) = (decode x + decode y + bit c) >> n;
-      decode_snd_add_with_carry : forall x y c, decode (snd (adc x y c)) = (decode x + decode y + bit c) mod (2^n)
+      bit_fst_add_with_carry :> forall x y c, bit (fst (adc x y c)) == (decode x + decode y + bit c) >> n;
+      decode_snd_add_with_carry :> forall x y c, decode (snd (adc x y c)) == (decode x + decode y + bit c) mod (2^n)
     }.
 
   Definition Build_is_add_with_carry' (adc : add_with_carry)
@@ -113,8 +155,8 @@ Section InstructionGallery.
 
   Class is_sub_with_carry (subc:W->W->bool->bool*W) :=
     {
-      fst_sub_with_carry : forall x y c, fst (subc x y c) = ((decode x - decode y - bit c) <? 0);
-      decode_snd_sub_with_carry : forall x y c, decode (snd (subc x y c)) = (decode x - decode y - bit c) mod 2^n
+      fst_sub_with_carry :> forall x y c, fst (subc x y c) == ((decode x - decode y - bit c) <? 0);
+      decode_snd_sub_with_carry :> forall x y c, decode (snd (subc x y c)) == (decode x - decode y - bit c) mod 2^n
     }.
 
   Definition Build_is_sub_with_carry' (subc : sub_with_carry)
@@ -126,7 +168,7 @@ Section InstructionGallery.
   Global Coercion mul : multiply >-> Funclass.
 
   Class is_mul (mul : multiply) :=
-    decode_mul : forall x y, decode (mul x y) = (decode x * decode y) mod 2^n.
+    decode_mul :> forall x y, decode (mul x y) == (decode x * decode y)%Z.
 
   Class multiply_low_low := { mulhwll : W -> W -> W }.
   Global Coercion mulhwll : multiply_low_low >-> Funclass.
@@ -138,20 +180,20 @@ Section InstructionGallery.
   Global Coercion muldw : multiply_double >-> Funclass.
 
   Class is_mul_low_low (w:Z) (mulhwll : multiply_low_low) :=
-    decode_mul_low_low :
-      forall x y, decode (mulhwll x y) = ((decode x mod 2^w) * (decode y mod 2^w)) mod 2^n.
+    decode_mul_low_low :>
+      forall x y, decode (mulhwll x y) == ((decode x mod 2^w) * (decode y mod 2^w)) mod 2^n.
   Class is_mul_high_low (w:Z) (mulhwhl : multiply_high_low) :=
-    decode_mul_high_low :
-      forall x y, decode (mulhwhl x y) = ((decode x >> w) * (decode y mod 2^w)) mod 2^n.
+    decode_mul_high_low :>
+      forall x y, decode (mulhwhl x y) == ((decode x >> w) * (decode y mod 2^w)) mod 2^n.
   Class is_mul_high_high (w:Z) (mulhwhh : multiply_high_high) :=
-    decode_mul_high_high :
-      forall x y, decode (mulhwhh x y) = ((decode x >> w) * (decode y >> w)) mod 2^n.
+    decode_mul_high_high :>
+      forall x y, decode (mulhwhh x y) == ((decode x >> w) * (decode y >> w)) mod 2^n.
   Class is_mul_double (muldw : multiply_double) :=
     {
-      decode_fst_mul_double :
-        forall x y, decode (fst (muldw x y)) = (decode x * decode y) mod 2^n;
-      decode_snd_mul_double :
-        forall x y, decode (snd (muldw x y)) = (decode x * decode y) >> n
+      decode_fst_mul_double :>
+        forall x y, decode (fst (muldw x y)) =~> (decode x * decode y) mod 2^n;
+      decode_snd_mul_double :>
+        forall x y, decode (snd (muldw x y)) =~> (decode x * decode y) >> n
     }.
   Definition Build_is_mul_double' (muldw : multiply_double)
              (pf : forall x y, _ /\ _)
@@ -163,17 +205,17 @@ Section InstructionGallery.
   Global Coercion selc : select_conditional >-> Funclass.
 
   Class is_select_conditional (selc : select_conditional) :=
-    decode_select_conditional : forall b x y,
-      decode (selc b x y) = if b then decode x else decode y.
+    decode_select_conditional :> forall b x y,
+      decode (selc b x y) == if b then decode x else decode y.
 
   Class add_modulo := { addm : W -> W -> W (* modulus *) -> W }.
   Global Coercion addm : add_modulo >-> Funclass.
 
   Class is_add_modulo (addm : add_modulo) :=
-    decode_add_modulo : forall x y modulus,
-      decode (addm x y modulus) = (if (decode x + decode y) <? decode modulus
-                                   then (decode x + decode y)
-                                   else (decode x + decode y) - decode modulus)%Z.
+    decode_add_modulo :> forall x y modulus,
+        decode (addm x y modulus) == (if (decode x + decode y) <? decode modulus
+                                      then (decode x + decode y)
+                                      else (decode x + decode y) - decode modulus)%Z.
 End InstructionGallery.
 
 Global Arguments load_immediate : clear implicits.
@@ -223,102 +265,6 @@ Global Arguments is_mul_high_high {_ _ _} _ _.
 Global Arguments is_mul_double {_ _ _} _.
 Global Arguments is_select_conditional {_ _ _} _.
 Global Arguments is_add_modulo {_ _ _} _.
-
-Ltac bounded_solver_tac :=
-  solve [ eassumption | typeclasses eauto | omega ].
-
-Lemma decode_proj n W (dec : W -> Z)
-  : @decode n W {| decode := dec |} = dec.
-Proof. reflexivity. Qed.
-
-Lemma decode_if_bool n W (decode : decoder n W) (b : bool) x y
-  : decode (if b then x else y)
-    = if b then decode x else decode y.
-Proof. destruct b; reflexivity. Qed.
-
-Lemma decode_exponent_nonnegative {n W} (decode : decoder n W) {isdecode : is_decode decode}
-      (isinhabited : W)
-  : 0 <= n.
-Proof.
-  pose proof (decode_range isinhabited).
-  assert (0 < 2^n) by omega.
-  destruct (Z_lt_ge_dec n 0) as [H'|]; [ | omega ].
-  assert (2^n = 0) by auto using Z.pow_neg_r.
-  omega.
-Qed.
-
-Hint Rewrite @decode_load_immediate @decode_shift_right_doubleword @decode_shift_left_immediate @decode_shift_right_immediate @decode_fst_spread_left_immediate @decode_snd_spread_left_immediate @decode_mask_keep_low @bit_fst_add_with_carry @decode_snd_add_with_carry @fst_sub_with_carry @decode_snd_sub_with_carry @decode_mul @decode_mul_low_low @decode_mul_high_low @decode_mul_high_high @decode_fst_mul_double @decode_snd_mul_double @decode_select_conditional @decode_add_modulo @decode_proj @decode_if_bool using bounded_solver_tac : push_decode.
-
-Ltac push_decode_step :=
-  first [ rewrite !decode_proj
-        | rewrite !decode_if_bool
-        | erewrite !decode_load_immediate by bounded_solver_tac
-        | erewrite !decode_shift_right_doubleword by bounded_solver_tac
-        | erewrite !decode_shift_left_immediate by bounded_solver_tac
-        | erewrite !decode_shift_right_immediate by bounded_solver_tac
-        | erewrite !decode_fst_spread_left_immediate by bounded_solver_tac
-        | erewrite !decode_snd_spread_left_immediate by bounded_solver_tac
-        | erewrite !decode_mask_keep_low by bounded_solver_tac
-        | erewrite !bit_fst_add_with_carry by bounded_solver_tac
-        | erewrite !decode_snd_add_with_carry by bounded_solver_tac
-        | erewrite !fst_sub_with_carry by bounded_solver_tac
-        | erewrite !decode_snd_sub_with_carry by bounded_solver_tac
-        | erewrite !decode_mul by bounded_solver_tac
-        | erewrite !decode_mul_low_low by bounded_solver_tac
-        | erewrite !decode_mul_high_low by bounded_solver_tac
-        | erewrite !decode_mul_high_high by bounded_solver_tac
-        | erewrite !decode_fst_mul_double by bounded_solver_tac
-        | erewrite !decode_snd_mul_double by bounded_solver_tac
-        | erewrite !decode_select_conditional by bounded_solver_tac
-        | erewrite !decode_add_modulo by bounded_solver_tac ].
-Ltac pull_decode_step :=
-  first [ erewrite <- !decode_load_immediate by bounded_solver_tac
-        | erewrite <- !decode_shift_right_doubleword by bounded_solver_tac
-        | erewrite <- !decode_shift_left_immediate by bounded_solver_tac
-        | erewrite <- !decode_shift_right_immediate by bounded_solver_tac
-        | erewrite <- !decode_fst_spread_left_immediate by bounded_solver_tac
-        | erewrite <- !decode_snd_spread_left_immediate by bounded_solver_tac
-        | erewrite <- !decode_mask_keep_low by bounded_solver_tac
-        | erewrite <- !bit_fst_add_with_carry by bounded_solver_tac
-        | erewrite <- !decode_snd_add_with_carry by bounded_solver_tac
-        | erewrite <- !fst_sub_with_carry by bounded_solver_tac
-        | erewrite <- !decode_snd_sub_with_carry by bounded_solver_tac
-        | erewrite <- !decode_mul by bounded_solver_tac
-        | erewrite <- !decode_mul_low_low by bounded_solver_tac
-        | erewrite <- !decode_mul_high_low by bounded_solver_tac
-        | erewrite <- !decode_mul_high_high by bounded_solver_tac
-        | erewrite <- !decode_fst_mul_double by bounded_solver_tac
-        | erewrite <- !decode_snd_mul_double by bounded_solver_tac
-        | erewrite <- !decode_select_conditional by bounded_solver_tac
-        | erewrite <- !decode_add_modulo by bounded_solver_tac ].
-Ltac push_decode := repeat push_decode_step.
-Ltac pull_decode := repeat pull_decode_step.
-
-(* We take special care to handle the case where the decoder is
-   syntactically different but the decoded expression is judgmentally
-   the same; we don't want to split apart variables that should be the
-   same. *)
-Ltac set_decode_step check :=
-  match goal with
-  | [ |- context G[@decode ?n ?W ?dr ?w] ]
-    => check w;
-      first [ match goal with
-              | [ d := @decode _ _ _ w |- _ ]
-                => change (@decode n W dr w) with d
-              end
-            | generalize (@decode_range n W dr _ w);
-              let d := fresh "d" in
-              set (d := @decode n W dr w);
-              intro ]
-  end.
-Ltac set_decode check := repeat set_decode_step check.
-Ltac clearbody_decode :=
-  repeat match goal with
-         | [ H := @decode _ _ _ _ |- _ ] => clearbody H
-         end.
-Ltac generalize_decode_by check := set_decode check; clearbody_decode.
-Ltac generalize_decode := generalize_decode_by ltac:(fun w => idtac).
-Ltac generalize_decode_var := generalize_decode_by ltac:(fun w => is_var w).
 
 Module fancy_machine.
   Local Notation imm := Z (only parsing).

@@ -1,6 +1,7 @@
 (*** Implementing Large Bounded Arithmetic via pairs *)
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.BoundedArithmetic.Interface.
+Require Import Crypto.BoundedArithmetic.InterfaceProofs.
 Require Import Crypto.ModularArithmetic.Pow2Base.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.ListUtil.
@@ -19,7 +20,6 @@ Definition tuple_decoder {n W} {decode : decoder n W} {k : nat} : decoder (k * n
   := {| decode w := BaseSystem.decode (base_from_limb_widths (repeat n k))
                                       (List.map decode (List.rev (Tuple.to_list _ w))) |}.
 Global Arguments tuple_decoder : simpl never.
-Hint Resolve (fun n W decode => (@tuple_decoder n W decode 2 : decoder (2 * n) (tuple W 2))) : typeclass_instances.
 Hint Extern 3 (decoder _ (tuple ?W ?k)) => let kv := (eval simpl in (Z.of_nat k)) in apply (fun n decode => (@tuple_decoder n W decode k : decoder (kv * n) (tuple W k))) : typeclass_instances.
 
 Section ripple_carry_definitions.
@@ -75,7 +75,7 @@ Section tuple2.
       := { sprl := spread_left_from_shift }.
   End spread_left.
 
-  Section full_from_half.
+  Section double_from_half.
     Context {half_n : Z} {W}
             {mulhwll : multiply_low_low W}
             {mulhwhl : multiply_high_low W}
@@ -95,14 +95,19 @@ Section tuple2.
 
     (** Require a dummy [decoder] for these instances to allow
             typeclass inference of the [half_n] argument *)
-    Global Instance mul_double_multiply_low_low {decode : decoder (2 * half_n) W}
-      : multiply_low_low (tuple W 2)
-      := { mulhwll a b := mul_double (fst a) (fst b) }.
-    Global Instance mul_double_multiply_high_low {decode : decoder (2 * half_n) W}
-      : multiply_high_low (tuple W 2)
-      := { mulhwhl a b := mul_double (snd a) (fst b) }.
-    Global Instance mul_double_multiply_high_high {decode : decoder (2 * half_n) W}
-      : multiply_high_high (tuple W 2)
-      := { mulhwhh a b := mul_double (snd a) (snd b) }.
-  End full_from_half.
+    Global Instance mul_double_multiply {decode : decoder (2 * half_n) W} : multiply_double W
+      := { muldw a b := mul_double a b }.
+  End double_from_half.
+
+  Global Instance mul_double_multiply_low_low {W} {muldw : multiply_double W}
+    : multiply_low_low (tuple W 2)
+    := { mulhwll a b := muldw (fst a) (fst b) }.
+  Global Instance mul_double_multiply_high_low {W} {muldw : multiply_double W}
+    : multiply_high_low (tuple W 2)
+    := { mulhwhl a b := muldw (snd a) (fst b) }.
+  Global Instance mul_double_multiply_high_high {W} {muldw : multiply_double W}
+    : multiply_high_high (tuple W 2)
+    := { mulhwhh a b := muldw (snd a) (snd b) }.
 End tuple2.
+
+Global Arguments mul_double half_n {_ _ _ _ _ _ _} _ _.

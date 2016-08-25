@@ -1,6 +1,7 @@
 (*** Proving ℤ-Like via Architecture *)
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.BoundedArithmetic.Interface.
+Require Import Crypto.BoundedArithmetic.InterfaceProofs.
 Require Import Crypto.BoundedArithmetic.DoubleBounded.
 Require Import Crypto.BoundedArithmetic.DoubleBoundedProofs.
 Require Import Crypto.BoundedArithmetic.ArchitectureToZLike.
@@ -42,6 +43,7 @@ Section fancy_machine_p256_montgomery_foundation.
     | _ => unique assert (0 <= 2 * n_over_two) by solve [ eauto using decode_exponent_nonnegative with typeclass_instances | omega ]
     | _ => unique assert (0 <= n_over_two) by solve [ eauto using decode_exponent_nonnegative with typeclass_instances | omega ]
     | _ => unique assert (0 <= 2 * (2 * n_over_two)) by (eauto using decode_exponent_nonnegative with typeclass_instances)
+    | [ H : 0 <= ?x < _ |- _ ] => unique pose proof (proj1 H); unique pose proof (proj2 H)
     end.
   Local Ltac pre_t :=
     repeat first [ tauto
@@ -50,25 +52,19 @@ Section fancy_machine_p256_montgomery_foundation.
                  | saturate_context_step ].
   Local Ltac post_t_step :=
     match goal with
-    | _ => tauto
-    | _ => progress autorewrite with zsimplify_const in *
-    | _ => progress push_decode
-    | _ => progress autorewrite with push_Zpow in *
-    | _ => progress Z.rewrite_mod_small
-    | _ => progress subst
+    | _ => reflexivity
+    | _ => progress autorewrite with zsimplify_const
     | [ |- fst ?x = (?a <=? ?b) :> bool ]
       => cut (((if fst x then 1 else 0) = (if a <=? b then 1 else 0))%Z);
          [ destruct (fst x), (a <=? b); intro; congruence | ]
-    | [ |- appcontext[let (a, b) := ?x in _] ]
-      => rewrite (surjective_pairing x); simplify_projections
-    | _ => progress autorewrite with Zshift_to_pow in *
-    | _ => progress autorewrite with simpl_tuple_decoder in *
-    | _ => progress autorewrite with zsimplify
-    | [ H : (_ =? _) = true |- _ ] => apply Z.eqb_eq in H
+    | [ H : (_ =? _) = true |- _ ] => apply Z.eqb_eq in H; subst
     | [ H : (_ =? _) = false |- _ ] => apply Z.eqb_neq in H
-    | [ |- _ / ?y = _ / ?y ] => apply f_equal2; omega
-    | [ |- _ / _ = if _ then _ else _ ] => apply Z.div_between_0_if; auto with zarith omega
+    | _ => autorewrite with push_Zpow in *; solve [ reflexivity | assumption ]
+    | _ => autorewrite with pull_Zpow in *; pull_decode; reflexivity
+    | _ => progress push_decode
+    | _ => rewrite (Z.add_comm (_ << _) _); progress pull_decode
     | [ |- context[if ?x =? ?y then _ else _] ] => destruct (x =? y) eqn:?
+    | _ => autorewrite with Zshift_to_pow; Z.rewrite_mod_small; reflexivity
     end.
   Local Ltac post_t := repeat post_t_step.
   Local Ltac t := pre_t; post_t.
@@ -97,6 +93,7 @@ Section fancy_machine_p256_montgomery_foundation.
     { abstract t. }
     { abstract t. }
     { abstract t. }
+Hint Resolve Z.div_pos : zarith.
     { abstract t. }
     { abstract t. }
     { abstract t. }

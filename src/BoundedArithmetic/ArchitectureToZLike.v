@@ -24,7 +24,7 @@ Section fancy_machine_p256_montgomery_foundation.
       DivBy_SmallerBound v := if smaller_bound_exp =? n
                               then snd v
                               else shrd (snd v) (fst v) smaller_bound_exp;
-      Mul x y := mulhwll (W := tuple _ 2) (sprl x 0) (sprl y 0);
+      Mul x y := muldw x y;
       CarryAdd x y := adc x y false;
       CarrySubSmall x y := subc x y false;
       ConditionalSubtract b x := let v := selc b (ldi modulus) (ldi 0) in snd (subc x v false);
