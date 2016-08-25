@@ -77,6 +77,20 @@ Section ModularBaseSystem.
 
   Definition eq (x y : digits) : Prop := decode x = decode y.
 
+  Definition eqb (x y : digits) : bool := fieldwiseb Z.eqb (freeze x) (freeze y).
+
+  (* Note : both of the following square root definitions will produce garbage output if the input is
+            not square mod [modulus]. The caller should either provably only call them with square input,
+            or test that the output squared is in fact equal to the input and case split. *)
+  Definition sqrt_5mod8 (chain : list (nat * nat))
+                  (chain_correct : fold_chain 0%N N.add chain (1%N :: nil) = Z.to_N (modulus / 8 + 1))
+                  (sqrt_minus1 x : digits) : digits :=
+    let b := pow x chain in if eqb (mul b b) x then b else mul sqrt_minus1 b.
+
+  Definition sqrt_3mod4 (chain : list (nat * nat))
+                  (chain_correct : fold_chain 0%N N.add chain (1%N :: nil) = Z.to_N (modulus / 4 + 1))
+                  (sqrt_minus1 x : digits) : digits := pow x chain.
+
   Import Morphisms.
   Global Instance eq_Equivalence : Equivalence eq.
   Proof.
