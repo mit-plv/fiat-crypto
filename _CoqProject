@@ -74,6 +74,7 @@ src/Specific/GF25519.v
 src/Tactics/VerdiTactics.v
 src/Tactics/Algebra_syntax/Nsatz.v
 src/Util/AdditionChainExponentiation.v
+src/Util/AutoRewrite.v
 src/Util/Bool.v
 src/Util/CaseUtil.v
 src/Util/Decidable.v

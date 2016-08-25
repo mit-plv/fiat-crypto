@@ -16,16 +16,15 @@ Require Import Crypto.Util.Notations.
 Import ListNotations.
 Local Open Scope list_scope.
 Local Open Scope nat_scope.
-Local Open Scope Z_scope.
 Local Open Scope type_scope.
+Local Open Scope Z_scope.
 
 Local Coercion Z.of_nat : nat >-> Z.
 Local Coercion Pos.to_nat : positive >-> nat.
 Local Notation eta x := (fst x, snd x).
 
-Local Infix "==" := rewrite_eq.
-Local Infix "=~>" := rewrite_left_to_right_eq.
-Local Infix "<~=" := rewrite_right_to_left_eq.
+Import BoundedRewriteNotations.
+Local Open Scope Z_scope.
 
 Section decode.
   Context {n W} {decode : decoder n W}.
@@ -99,12 +98,12 @@ Section decode.
   Global Instance tuple_decoder_m1 w : tuple_decoder (k := 0) w =~> 0.
   Proof. reflexivity. Qed.
 
-  Global Instance tuple_decoder_2' w : bounded_le_cls 0 n -> tuple_decoder (k := 2) w <~= (decode (fst w) + decode (snd w) << (1%nat * n))%Z.
+  Global Instance tuple_decoder_2' w : (0 <= n)%bounded_rewrite -> tuple_decoder (k := 2) w <~= (decode (fst w) + decode (snd w) << (1%nat * n))%Z.
   Proof.
     intros; rewrite !tuple_decoder_S, !tuple_decoder_O by assumption.
     reflexivity.
   Qed.
-  Global Instance tuple_decoder_2 w : bounded_le_cls 0 n -> tuple_decoder (k := 2) w <~= (decode (fst w) + decode (snd w) << n)%Z.
+  Global Instance tuple_decoder_2 w : (0 <= n)%bounded_rewrite -> tuple_decoder (k := 2) w <~= (decode (fst w) + decode (snd w) << n)%Z.
   Proof.
     intros; rewrite !tuple_decoder_S, !tuple_decoder_O by assumption.
     autorewrite with zsimplify_const; reflexivity.
@@ -205,8 +204,8 @@ Global Instance decode_is_spread_left_immediate
        {isdecode : is_decode decode}
        {issprl : is_spread_left_immediate sprl}
   : forall r count,
-    0 <= count < n
-    -> tuple_decoder (sprl r count) == decode r << count
+    (0 <= count < n)%bounded_rewrite
+    -> tuple_decoder (sprl r count) <~=~> decode r << count
   := proj1 decode_is_spread_left_immediate_iff _.
 
 Lemma decode_mul_double_iff
@@ -233,7 +232,7 @@ Global Instance decode_mul_double
            {muldw : multiply_double W}
            {isdecode : is_decode decode}
            {ismuldw : is_mul_double muldw}
-  : forall x y, tuple_decoder (muldw x y) == (decode x * decode y)%Z
+  : forall x y, tuple_decoder (muldw x y) <~=~> (decode x * decode y)%Z
   := proj1 decode_mul_double_iff _.
 
 Lemma ripple_carry_tuple_SS {T} f k xss yss carry

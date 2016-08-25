@@ -3,14 +3,13 @@ Require Import Coq.ZArith.ZArith Coq.micromega.Psatz.
 Require Import Crypto.BoundedArithmetic.Interface.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tuple.
+Require Import Crypto.Util.AutoRewrite.
 Require Import Crypto.Util.Notations.
 
 Local Open Scope type_scope.
 Local Open Scope Z_scope.
 
-Local Infix "==" := rewrite_eq.
-Local Infix "=~>" := rewrite_left_to_right_eq.
-Local Infix "<~=" := rewrite_right_to_left_eq.
+Import BoundedRewriteNotations.
 Local Notation bit b := (if b then 1 else 0).
 
 Section InstructionGallery.
@@ -19,11 +18,33 @@ Section InstructionGallery.
           (Wdecoder : decoder n W).
   Local Notation imm := Z (only parsing). (* immediate (compile-time) argument *)
 
+  Definition Build_is_spread_left_immediate' (sprl : spread_left_immediate W)
+             (pf : forall r count, 0 <= count < n
+                                   -> _ /\ _)
+    := {| decode_fst_spread_left_immediate r count H := proj1 (pf r count H);
+          decode_snd_spread_left_immediate r count H := proj2 (pf r count H) |}.
+
+  Definition Build_is_add_with_carry' (adc : add_with_carry W)
+             (pf : forall x y c, _ /\ _)
+    := {| bit_fst_add_with_carry x y c := proj1 (pf x y c);
+          decode_snd_add_with_carry x y c := proj2 (pf x y c) |}.
+
+  Definition Build_is_sub_with_carry' (subc : sub_with_carry W)
+             (pf : forall x y c, _ /\ _)
+    : is_sub_with_carry subc
+    := {| fst_sub_with_carry x y c := proj1 (pf x y c);
+          decode_snd_sub_with_carry x y c := proj2 (pf x y c) |}.
+
+  Definition Build_is_mul_double' (muldw : multiply_double W)
+             (pf : forall x y, _ /\ _)
+    := {| decode_fst_mul_double x y := proj1 (pf x y);
+          decode_snd_mul_double x y := proj2 (pf x y) |}.
+
   Lemma is_spread_left_immediate_alt
         {sprl : spread_left_immediate W}
         {isdecode : is_decode Wdecoder}
     : is_spread_left_immediate sprl
-      <-> (forall r count, 0 <= count < n -> decode (fst (sprl r count)) + decode (snd (sprl r count)) << n = (decode r << count) mod (2^n*2^n)).
+      <-> (forall r count, 0 <= count < n -> decode (fst (sprl r count)) + decode (snd (sprl r count)) << n = (decode r << count) mod (2^n*2^n))%Z.
   Proof.
     split; intro H; [ | apply Build_is_spread_left_immediate' ];
       intros r count Hc;
@@ -31,8 +52,8 @@ Section InstructionGallery.
       unfold bounded_in_range_cls in *;
       pose proof (decode_range r);
       assert (0 < 2^n) by auto with zarith;
-      assert (0 <= 2^count < 2^n) by auto with zarith;
-      assert (0 <= decode r * 2^count < 2^n * 2^n) by (generalize dependent (decode r); intros; nia);
+      assert (0 <= 2^count < 2^n)%Z by auto with zarith;
+      assert (0 <= decode r * 2^count < 2^n * 2^n)%Z by (generalize dependent (decode r); intros; nia);
       rewrite ?decode_fst_spread_left_immediate, ?decode_snd_spread_left_immediate
         by typeclasses eauto with typeclass_instances core;
       autorewrite with Zshift_to_pow zsimplify push_Zpow.
@@ -53,7 +74,7 @@ Section InstructionGallery.
       pose proof (decode_range x);
       pose proof (decode_range y);
       assert (0 < 2^n) by auto with zarith;
-      assert (0 <= decode x * decode y < 2^n * 2^n) by nia;
+      assert (0 <= decode x * decode y < 2^n * 2^n)%Z by nia;
       (destruct (0 <=? n) eqn:?; Z.ltb_to_lt;
        [ | assert (2^n = 0) by auto with zarith; exfalso; omega ]);
       rewrite ?decode_fst_mul_double, ?decode_snd_mul_double
@@ -64,8 +85,6 @@ Section InstructionGallery.
       autorewrite with zsimplify; split; reflexivity. }
   Qed.
 End InstructionGallery.
-
-Local Notation "x <= y < z" := (bounded_in_range_cls x y z).
 
 Global Arguments is_spread_left_immediate_alt {_ _ _ _ _}.
 Global Arguments is_mul_double_alt {_ _ _ _ _}.
@@ -95,7 +114,7 @@ Proof. exact _. Qed.
 
 Lemma decode_exponent_nonnegative {n W} (decode : decoder n W) {isdecode : is_decode decode}
       (isinhabited : W)
-  : 0 <= n.
+  : (0 <= n)%Z.
 Proof.
   pose proof (decode_range isinhabited).
   assert (0 < 2^n) by omega.
@@ -113,13 +132,13 @@ Section adc_subc.
           {isadc : is_add_with_carry adc}
           {issubc : is_sub_with_carry subc}.
   Global Instance bit_fst_add_with_carry_false
-    : forall x y, bit (fst (adc x y false)) == (decode x + decode y) >> n.
+    : forall x y, bit (fst (adc x y false)) <~=~> (decode x + decode y) >> n.
   Proof.
     intros; erewrite bit_fst_add_with_carry by assumption.
     autorewrite with zsimplify_const; reflexivity.
   Qed.
   Global Instance bit_fst_add_with_carry_true
-    : forall x y, bit (fst (adc x y true)) == (decode x + decode y + 1) >> n.
+    : forall x y, bit (fst (adc x y true)) <~=~> (decode x + decode y + 1) >> n.
   Proof.
     intros; erewrite bit_fst_add_with_carry by assumption.
     autorewrite with zsimplify_const; reflexivity.
@@ -128,9 +147,9 @@ Section adc_subc.
     : forall x y c, fst (adc x y c) <~= (2^n <=? (decode x + decode y + bit c)).
   Proof.
     intros x y c; hnf.
-    assert (0 <= n) by eauto using decode_exponent_nonnegative.
+    assert (0 <= n)%Z by eauto using decode_exponent_nonnegative.
     pose proof (decode_range x); pose proof (decode_range y).
-    assert (0 <= bit c <= 1) by (destruct c; omega).
+    assert (0 <= bit c <= 1)%Z by (destruct c; omega).
     lazymatch goal with
     | [ |- fst ?x = (?a <=? ?b) :> bool ]
       => cut (((if fst x then 1 else 0) = (if a <=? b then 1 else 0))%Z);
@@ -148,30 +167,30 @@ Section adc_subc.
     autorewrite with zsimplify_const; reflexivity.
   Qed.
   Global Instance fst_add_with_carry_true_leb
-    : forall x y, fst (adc x y true) == (2^n <=? (decode x + decode y + 1)).
+    : forall x y, fst (adc x y true) <~=~> (2^n <=? (decode x + decode y + 1)).
   Proof.
     intros; erewrite fst_add_with_carry_leb by assumption.
     autorewrite with zsimplify_const; reflexivity.
   Qed.
   Global Instance fst_sub_with_carry_false
-    : forall x y, fst (subc x y false) == ((decode x - decode y) <? 0).
+    : forall x y, fst (subc x y false) <~=~> ((decode x - decode y) <? 0).
   Proof.
     intros; erewrite fst_sub_with_carry by assumption.
     autorewrite with zsimplify_const; reflexivity.
   Qed.
   Global Instance fst_sub_with_carry_true
-    : forall x y, fst (subc x y true) == ((decode x - decode y - 1) <? 0).
+    : forall x y, fst (subc x y true) <~=~> ((decode x - decode y - 1) <? 0).
   Proof.
     intros; erewrite fst_sub_with_carry by assumption.
     autorewrite with zsimplify_const; reflexivity.
   Qed.
 End adc_subc.
 
-Hint Extern 2 (rewrite_right_to_left_eq _ (_ <=? (@decode ?n ?W ?decoder ?x + @decode _ _ _ ?y)))
+Hint Extern 2 (rewrite_right_to_left_eq decode_tag _ (_ <=? (@decode ?n ?W ?decoder ?x + @decode _ _ _ ?y)))
 => apply @fst_add_with_carry_false_leb : typeclass_instances.
-Hint Extern 2 (rewrite_right_to_left_eq _ (_ <=? (@decode ?n ?W ?decoder ?x + @decode _ _ _ ?y + 1)))
+Hint Extern 2 (rewrite_right_to_left_eq decode_tag _ (_ <=? (@decode ?n ?W ?decoder ?x + @decode _ _ _ ?y + 1)))
 => apply @fst_add_with_carry_true_leb : typeclass_instances.
-Hint Extern 2 (rewrite_right_to_left_eq _ (_ <=? (@decode ?n ?W ?decoder ?x + @decode _ _ _ ?y + if ?c then _ else _)))
+Hint Extern 2 (rewrite_right_to_left_eq decode_tag _ (_ <=? (@decode ?n ?W ?decoder ?x + @decode _ _ _ ?y + if ?c then _ else _)))
 => apply @fst_add_with_carry_leb : typeclass_instances.
 
 

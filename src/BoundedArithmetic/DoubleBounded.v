@@ -7,7 +7,6 @@ Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Notations.
 
-Local Open Scope list_scope.
 Local Open Scope nat_scope.
 Local Open Scope Z_scope.
 Local Open Scope type_scope.
@@ -23,16 +22,6 @@ Global Arguments tuple_decoder : simpl never.
 Hint Extern 3 (decoder _ (tuple ?W ?k)) => let kv := (eval simpl in (Z.of_nat k)) in apply (fun n decode => (@tuple_decoder n W decode k : decoder (kv * n) (tuple W k))) : typeclass_instances.
 
 Section ripple_carry_definitions.
-  Definition ripple_carry {T} (f : T -> T -> bool -> bool * T)
-             (xs ys : list T) (carry : bool) : bool * list T
-    := List.fold_right
-         (fun x_y carry_zs => let '(x, y) := eta x_y in
-                              let '(carry, zs) := eta carry_zs in
-                              let '(carry, z) := eta (f x y carry) in
-                              (carry, z :: zs))
-         (carry, nil)
-         (List.combine xs ys).
-
   (** tuple is high to low ([to_list] reverses) *)
   Fixpoint ripple_carry_tuple' {T} (f : T -> T -> bool -> bool * T) k
     : forall (xs ys : tuple' T k) (carry : bool), bool * tuple' T k

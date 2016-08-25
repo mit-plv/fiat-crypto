@@ -93,7 +93,6 @@ Section fancy_machine_p256_montgomery_foundation.
     { abstract t. }
     { abstract t. }
     { abstract t. }
-Hint Resolve Z.div_pos : zarith.
     { abstract t. }
     { abstract t. }
     { abstract t. }
