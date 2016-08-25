@@ -441,6 +441,22 @@ Section Subtraction.
   Definition sub_opt_correct us vs
     : sub_opt us vs = sub coeff us vs
     := proj2_sig (sub_opt_sig us vs).
+
+  Definition opp_opt_sig (us : digits) : { b : digits | b = opp coeff us }.
+  Proof.
+    eexists.
+    cbv [opp].
+    rewrite <-sub_opt_correct.
+    reflexivity.
+  Defined.
+
+  Definition opp_opt (us : digits) : digits
+    := Eval cbv [proj1_sig opp_opt_sig] in proj1_sig (opp_opt_sig us).
+
+  Definition opp_opt_correct us
+    : opp_opt us = opp coeff us
+    := proj2_sig (opp_opt_sig us).
+  
 End Subtraction.
 
 Section Multiplication.

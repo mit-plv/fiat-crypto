@@ -260,6 +260,24 @@ Proof.
   reflexivity.
 Defined.
 
+Definition opp_sig (f : fe25519) :
+  { g : fe25519 | g = opp_opt f }.
+Proof.
+  eexists.
+  cbv [opp_opt].
+  rewrite <-sub_correct.
+  rewrite zero_subst.
+  cbv [sub].
+  reflexivity.
+Defined.
+
+Definition opp (f : fe25519) : fe25519
+  := Eval cbv beta iota delta [proj1_sig opp_sig] in proj1_sig (opp_sig f).
+
+Definition opp_correct (f : fe25519)
+  : opp f = opp_opt f
+  := Eval cbv beta iota delta [proj2_sig add_sig] in proj2_sig (opp_sig f).
+
 Definition inv (f : fe25519) : fe25519
   := Eval cbv beta iota delta [proj1_sig inv_sig] in proj1_sig (inv_sig f).
 
@@ -287,7 +305,7 @@ Proof.
   + intros; rewrite sub_correct, sub_opt_correct; reflexivity.
   + intros; rewrite add_correct, add_opt_correct; reflexivity.
   + intros; rewrite inv_correct, inv_opt_correct; reflexivity.
-  + reflexivity.
+  + intros; rewrite opp_correct, opp_opt_correct; reflexivity.
 Qed.
 
 Lemma homomorphism_F25519 :

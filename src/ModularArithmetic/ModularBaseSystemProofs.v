@@ -204,6 +204,19 @@ Section FieldOperationProofs.
     rewrite mm_spec. rewrite Algebra.left_identity.
     f_equal; assumption.
   Qed.
+
+  Lemma opp_rep : forall u x, u ~= x -> opp mm u ~= F.opp x.
+  Proof.
+    cbv [opp rep]; intros.
+    rewrite sub_rep by (apply encode_rep || eassumption).
+    apply F.eq_to_Z_iff.
+    rewrite F.to_Z_opp.
+    rewrite <-Z.sub_0_l.
+    pose proof @F.of_Z_sub.
+    transitivity (F.to_Z (F.of_Z modulus (0 - F.to_Z x)));
+      [ rewrite F.of_Z_sub, F.of_Z_to_Z; reflexivity | ].
+    rewrite F.to_Z_of_Z. reflexivity.
+  Qed.
   End Subtraction.
 
   Section PowInv.
@@ -252,13 +265,13 @@ Section FieldOperationProofs.
     rewrite !encode_rep. assumption.
   Qed.
 
-  Global Instance opp_Proper : Proper (eq ==> eq) opp.
+  Global Instance opp_Proper : Proper (Logic.eq ==> eq ==> eq) opp.
   Admitted.
 
   Global Instance add_Proper : Proper (eq ==> eq ==> eq) add.
   Admitted.
-
-  Global Instance sub_Proper : Proper (eq ==> eq ==> eq ==> eq) sub.
+  
+  Global Instance sub_Proper : Proper (Logic.eq ==> eq ==> eq ==> eq) sub.
   Admitted.
   
   Global Instance mul_Proper : Proper (eq ==> eq ==> eq) mul.
@@ -284,7 +297,7 @@ Section FieldOperationProofs.
   Qed.
 
   Lemma modular_base_system_field :
-    @field digits eq zero one opp add (sub coeff) mul (inv chain chain_correct) div.
+    @field digits eq zero one (opp coeff) add (sub coeff) mul (inv chain chain_correct) div.
   Proof.
     eapply (Field.isomorphism_to_subfield_field (phi := decode) (fieldR := @F.field_modulo modulus prime_modulus)).
     Grab Existential Variables.
@@ -295,7 +308,7 @@ Section FieldOperationProofs.
     + intros; eapply mul_rep; auto.
     + intros; eapply sub_rep; auto using coeff_mod.
     + intros; eapply add_rep; auto.
-    + intros; eapply encode_rep.
+    + intros; eapply opp_rep; auto using coeff_mod.
     + eapply _zero_neq_one.
     + trivial.
   Qed.

@@ -209,8 +209,26 @@ Definition mul (f g : fe1305) : fe1305 :=
 
 Definition mul_correct (f g : fe1305)
   : mul f g = carry_mul_opt k_ c_ f g :=
-  Eval cbv beta iota delta [proj1_sig add_sig] in
+  Eval cbv beta iota delta [proj2_sig add_sig] in
   proj2_sig (mul_sig f g).
+
+Definition opp_sig (f : fe1305) :
+  { g : fe1305 | g = opp_opt f }.
+Proof.
+  eexists.
+  cbv [opp_opt].
+  rewrite <-sub_correct.
+  rewrite zero_subst.
+  cbv [sub].
+  reflexivity.
+Defined.
+
+Definition opp (f : fe1305) : fe1305
+  := Eval cbv beta iota delta [proj1_sig opp_sig] in proj1_sig (opp_sig f).
+
+Definition opp_correct (f : fe1305)
+  : opp f = opp_opt f
+  := Eval cbv beta iota delta [proj2_sig add_sig] in proj2_sig (opp_sig f).
 
 Definition inv_sig (f : fe1305) :
   { g : fe1305 | g = inv_opt k_ c_ one_ f }.
@@ -257,7 +275,7 @@ Proof.
   + intros; rewrite sub_correct, sub_opt_correct; reflexivity.
   + intros; rewrite add_correct, add_opt_correct; reflexivity.
   + intros; rewrite inv_correct, inv_opt_correct; reflexivity.
-  + reflexivity.
+  + intros; rewrite opp_correct, opp_opt_correct; reflexivity.
 Qed.
 
 Lemma homomorphism_F1305 :

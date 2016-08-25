@@ -43,8 +43,8 @@ Section ModularBaseSystem.
 
   Definition one : digits := encode (F.of_Z _ 1).
 
-  (* Placeholder *)
-  Definition opp (x : digits) : digits := encode (F.opp (decode x)).
+  Definition opp (modulus_multiple x : digits) :
+    digits := sub modulus_multiple zero x.
 
   Definition pow (x : digits) (chain : list (nat * nat)) : digits :=
     fold_chain one mul chain (x :: nil).
