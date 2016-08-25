@@ -3,6 +3,7 @@ Require Import NPeano NArith PArith Ndigits ZArith Znat ZArith_dec Ndec.
 Require Import List Basics Bool Nsatz Sumbool Datatypes.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemOpt.
 Require Import QhasmUtil WordizeUtil Bounds.
+Require Import ProofIrrelevance.
 
 Import ListNotations.
 
@@ -11,8 +12,8 @@ Section Evaluability.
     ezero: T;
 
     (* Conversions *)
-    toT: nat -> T;
-    fromT: T -> nat;
+    toT: Z -> T;
+    fromT: T -> Z;
 
     (* Operations *)
     eadd: T -> T -> T;
@@ -28,25 +29,89 @@ Section Evaluability.
 End Evaluability.
 
 Section Z.
+  Definition Zmask := fun x k => Z.land x (Z.ones (Z.of_nat k)).
+  Definition Zshiftr := fun x k => Z.shiftr x (Z.of_nat k).
+
   Instance ZEvaluable : Evaluable Z := {
     ezero := 0%Z;
 
     (* Conversions *)
-    toT := Z.of_nat;
-    fromT := Z.to_nat;
+    toT := id;
+    fromT := id;
 
     (* Operations *)
     eadd := Z.add;
     esub := Z.sub;
     emul := Z.mul;
-    eshiftr := fun x k => Z.shiftr x (Z.of_nat k);
-    emask := fun x k => Z.land x (Z.ones (Z.of_nat k));
+    eshiftr := Zshiftr;
+    emask := Zmask;
 
     (* Comparisons *)
     eltb := Z.ltb;
     eeqb := Z.eqb;
   }.
+
+  (* Some witch magic *)
+  Section NatOpConversion.
+    Definition getBits (x: Z) := Z.log2 (x + 1).
+
+    Definition Zland_fail_sig: {f: Z->Z->Z | forall x y, f x y = Z.land x y}.
+    Proof. exists Z.land; intros; reflexivity. Qed.
+
+    Definition Zshiftr_fail_sig: {f: Z->Z->Z | forall x y, f x y = Z.shiftr x y}.
+    Proof. exists Z.shiftr; intros; reflexivity. Qed.
+
+    Definition Zland_fail := proj1_sig Zland_fail_sig.
+    Definition Zshiftr_fail := proj1_sig Zshiftr_fail_sig.
+
+    Lemma replace_mask : forall a b,
+      Z.land a b =
+        match Z.eq_dec b (Z.ones (getBits b)) with
+        | left _ => Zmask a (Z.to_nat (getBits b))
+        | right _ => Zland_fail a b
+        end.
+    Proof.
+      intros; unfold Zmask, Zland_fail.
+      destruct Zland_fail_sig as [f p], (Z.eq_dec _ _) as [e|];
+        [| simpl; rewrite p; reflexivity ].
+      f_equal.
+      rewrite Z2Nat.id; [assumption|].
+      apply Z.log2_nonneg.
+    Qed.
+
+    Lemma replace_shiftr : forall a b,
+      Z.shiftr a b =
+        match b as b' return b = b' -> _ with
+        | Zpos _ => fun _ => Zshiftr a (Z.to_nat b)
+        | Z0 => fun _ => a 
+        | _ => fun _ => Zshiftr_fail a b
+        end eq_refl.
+    Proof.
+      intros; unfold Zshiftr, Zshiftr_fail.
+      induction Zshiftr_fail_sig as [f p], b;
+        [cbv; intuition | | simpl; rewrite p; reflexivity].
+      rewrite Z2Nat.id; [reflexivity|].
+      cbv; intro H; inversion H.
+    Qed.
+
+    Lemma kill_eq_dec_refl: forall a,
+        Z.eq_dec a a = left eq_refl.
+    Proof.
+      intros; destruct (Z.eq_dec a a) as [H|H];
+        [ f_equal; apply proof_irrelevance | contradict H; reflexivity ].
+    Qed.
+  End NatOpConversion.
 End Z.
+
+(* Tactic to automagically replace_mask and replace_shiftr *)
+Ltac natize_mask_and_shiftr :=
+  repeat rewrite replace_mask;
+  repeat rewrite replace_shiftr;
+  repeat progress match goal with
+  | [ |- context[Z.eq_dec ?a (Z.ones (getBits ?a))] ] =>
+    replace (Z.ones (getBits a)) with a by (vm_compute; reflexivity);
+      rewrite (kill_eq_dec_refl a)
+  end.
 
 Section Word.
   Context {n: nat}.
@@ -55,8 +120,8 @@ Section Word.
     ezero := wzero n;
 
     (* Conversions *)
-    toT := natToWord n;
-    fromT := @wordToNat n;
+    toT := fun x => @NToWord n (Z.to_N x);
+    fromT := @wordToZ n;
 
     (* Operations *)
     eadd := @wplus n;
@@ -520,8 +585,8 @@ Section WordRange.
     ezero := anyWord;
 
     (* Conversions *)
-    toT := fun x => getOrElse anyWord (makeRangeOpt 0%N (N.of_nat x));
-    fromT := fun x => getOrElse (pow2 n) (option_map N.to_nat (getUpperBoundOpt x));
+    toT := fun x => getOrElse anyWord (makeRangeOpt 0%N (Z.to_N x));
+    fromT := fun x => Z.of_N (getOrElse (Npow2 n) (getUpperBoundOpt x));
 
     (* Operations *)
     eadd := applyBinOp _ _ range_add_valid;

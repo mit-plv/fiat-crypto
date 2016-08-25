@@ -303,8 +303,8 @@ Module Output.
       match e with
       | LetBinop _ _ op a b _ eC =>
         let x := interp_binop op (interp_arg a) (interp_arg b) in interp (eC x)
-        | Return _ a => interp_arg a
-        end.
+      | Return _ a => interp_arg a
+      end.
 
     Definition Interp {t} (E:Expr t) : interp_type t := interp (E T).
   End Language.
