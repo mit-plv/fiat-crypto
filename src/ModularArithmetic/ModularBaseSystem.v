@@ -35,7 +35,9 @@ Section ModularBaseSystem.
   Definition mul (us vs : digits) : digits := from_list (mul [[us]] [[vs]])
     (length_mul length_to_list length_to_list).
 
-  Definition sub (modulus_multiple us vs : digits) : digits :=
+  Definition sub (modulus_multiple: digits)
+                 (modulus_multiple_correct : decode modulus_multiple = 0%F)
+                 (us vs : digits) : digits :=
    from_list (sub [[modulus_multiple]] [[us]] [[vs]])
    (length_sub length_to_list length_to_list length_to_list).
 
@@ -43,8 +45,10 @@ Section ModularBaseSystem.
 
   Definition one : digits := encode (F.of_Z _ 1).
 
-  Definition opp (modulus_multiple x : digits) :
-    digits := sub modulus_multiple zero x.
+  Definition opp (modulus_multiple : digits)
+                 (modulus_multiple_correct : decode modulus_multiple = 0%F)
+                 (x : digits) :
+    digits := sub modulus_multiple modulus_multiple_correct zero x.
 
   Definition pow (x : digits) (chain : list (nat * nat)) : digits :=
     fold_chain one mul chain (x :: nil).

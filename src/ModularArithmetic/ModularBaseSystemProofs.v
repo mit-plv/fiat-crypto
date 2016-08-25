@@ -189,23 +189,20 @@ Section FieldOperationProofs.
     apply F.to_Z_of_Z.
   Qed.
 
-  Section Subtraction.
-  Context (mm : digits) (mm_spec : decode mm = 0%F).
-
-  Lemma sub_rep : forall u v x y, u ~= x -> v ~= y ->
-    ModularBaseSystem.sub mm u v ~= (x-y)%F.
+  Lemma sub_rep : forall mm pf u v x y, u ~= x -> v ~= y ->
+    ModularBaseSystem.sub mm pf u v ~= (x-y)%F.
   Proof.
     autounfold; cbv [sub]; intros.
     rewrite to_list_from_list; autounfold.
     cbv [ModularBaseSystemList.sub].
     rewrite BaseSystemProofs.sub_rep, BaseSystemProofs.add_rep.
     rewrite F.of_Z_sub, F.of_Z_add, F.of_Z_mod.
-    apply Fdecode_decode_mod in mm_spec; cbv [BaseSystem.decode] in *.
-    rewrite mm_spec. rewrite Algebra.left_identity.
+    apply Fdecode_decode_mod in pf; cbv [BaseSystem.decode] in *.
+    rewrite pf. rewrite Algebra.left_identity.
     f_equal; assumption.
   Qed.
 
-  Lemma opp_rep : forall u x, u ~= x -> opp mm u ~= F.opp x.
+  Lemma opp_rep : forall mm pf u x, u ~= x -> opp mm pf u ~= F.opp x.
   Proof.
     cbv [opp rep]; intros.
     rewrite sub_rep by (apply encode_rep || eassumption).
@@ -217,7 +214,6 @@ Section FieldOperationProofs.
       [ rewrite F.of_Z_sub, F.of_Z_to_Z; reflexivity | ].
     rewrite F.to_Z_of_Z. reflexivity.
   Qed.
-  End Subtraction.
 
   Section PowInv.
   Context (modulus_gt_2 : 2 < modulus).
@@ -272,11 +268,16 @@ Section FieldOperationProofs.
     erewrite !add_rep; cbv [rep] in *; try reflexivity; assumption.
   Qed.
   
-  Global Instance sub_Proper : Proper (eq ==> eq ==> eq ==> eq) sub.
+  Global Instance sub_Proper mm mm_correct
+    : Proper (eq ==> eq ==> eq) (sub mm mm_correct).
   Proof.
-  Admitted.
+    repeat intro.
+    cbv beta delta [eq] in *.
+    erewrite !sub_rep; cbv [rep] in *; try reflexivity; assumption.
+  Qed.
   
-  Global Instance opp_Proper : Proper (eq ==> eq ==> eq) opp.
+  Global Instance opp_Proper mm mm_correct
+    : Proper (eq ==> eq) (opp mm mm_correct).
   Proof.
      cbv [opp]; repeat intro.
      apply sub_Proper; assumption || reflexivity.
@@ -289,7 +290,6 @@ Section FieldOperationProofs.
     erewrite !mul_rep; cbv [rep] in *; try reflexivity; assumption.
   Qed.
 
-  Check pow.
   Global Instance pow_Proper : Proper (eq ==> Logic.eq ==> eq) pow.
   Proof.
     repeat intro.
@@ -322,7 +322,7 @@ Section FieldOperationProofs.
   Qed.
 
   Lemma modular_base_system_field :
-    @field digits eq zero one (opp coeff) add (sub coeff) mul (inv chain chain_correct) div.
+    @field digits eq zero one (opp coeff coeff_mod) add (sub coeff coeff_mod) mul (inv chain chain_correct) div.
   Proof.
     eapply (Field.isomorphism_to_subfield_field (phi := decode) (fieldR := @F.field_modulo modulus prime_modulus)).
     Grab Existential Variables.

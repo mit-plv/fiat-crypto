@@ -428,7 +428,7 @@ Section Subtraction.
   Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient}.
   Local Notation digits := (tuple Z (length limb_widths)).
 
-  Definition sub_opt_sig (us vs : digits) : { b : digits | b = sub coeff us vs }.
+  Definition sub_opt_sig (us vs : digits) : { b : digits | b = sub coeff coeff_mod us vs }.
   Proof.
     eexists.
     cbv [BaseSystem.add ModularBaseSystem.sub BaseSystem.sub].
@@ -439,10 +439,10 @@ Section Subtraction.
     := Eval cbv [proj1_sig sub_opt_sig] in proj1_sig (sub_opt_sig us vs).
 
   Definition sub_opt_correct us vs
-    : sub_opt us vs = sub coeff us vs
+    : sub_opt us vs = sub coeff coeff_mod us vs
     := proj2_sig (sub_opt_sig us vs).
 
-  Definition opp_opt_sig (us : digits) : { b : digits | b = opp coeff us }.
+  Definition opp_opt_sig (us : digits) : { b : digits | b = opp coeff coeff_mod us }.
   Proof.
     eexists.
     cbv [opp].
@@ -454,7 +454,7 @@ Section Subtraction.
     := Eval cbv [proj1_sig opp_opt_sig] in proj1_sig (opp_opt_sig us).
 
   Definition opp_opt_correct us
-    : opp_opt us = opp coeff us
+    : opp_opt us = opp coeff coeff_mod us
     := proj2_sig (opp_opt_sig us).
   
 End Subtraction.
