@@ -148,7 +148,7 @@ Module F.
     (* This is always true, but easier to check by computation than to prove *)
     Context (sqrt_minus1_valid : ((F.of_Z q 2 ^ Z.to_N (q / 4)) ^ 2 = F.opp 1)%F).
     Local Open Scope F_scope.
-    Add Field _field2 : (field_theory q)
+    Add Field _field3 : (field_theory q)
                           (morphism (F.ring_morph q),
                            constants [F.is_constant],
                            div (F.morph_div_theory q),
