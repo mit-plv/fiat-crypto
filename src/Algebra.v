@@ -1,11 +1,15 @@
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.Decidable.
+
 Require Import Coq.Classes.Morphisms. Require Coq.Setoids.Setoid.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
-Require Coq.Numbers.Natural.Peano.NPeano.
-Local Close Scope nat_scope. Local Close Scope type_scope. Local Close Scope core_scope.
+
+Require Coq.setoid_ring.Field_theory.
 Require Crypto.Tactics.Algebra_syntax.Nsatz.
-Require Export Crypto.Util.FixCoqMistakes.
-Require Export Crypto.Util.Decidable.
+Require Coq.Numbers.Natural.Peano.NPeano.
+
+Local Close Scope nat_scope. Local Close Scope type_scope. Local Close Scope core_scope.
 
 Module Import ModuloCoq8485.
   Import NPeano Nat.
@@ -627,7 +631,6 @@ Module IntegralDomain.
 End IntegralDomain.
 
 Module Field.
-  Require Coq.setoid_ring.Field_theory.
   Section Field.
     Context {T eq zero one opp add mul sub inv div} `{@field T eq zero one opp add sub mul inv div}.
     Local Infix "=" := eq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.

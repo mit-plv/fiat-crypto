@@ -24,4 +24,5 @@ Global Set Asymmetric Patterns.
 (** Set SimplIsCbn. *)
 
 (* [Program Definition] obligations only use the context variables they need *)
+Global Unset Shrink Abstract.
 Global Unset Shrink Obligations.
