@@ -71,6 +71,19 @@ Section Misc.
       intuition.
   Qed.
 
+  Lemma to_nat_le: forall x b, (x <= b)%N <-> (N.to_nat x <= N.to_nat b)%nat.
+  Proof.
+    intros x b; split; intro H.
+
+    - unfold N.le in H; rewrite N2Nat.inj_compare in H.
+      apply nat_compare_le in H.
+      intuition.
+
+    - unfold N.le; rewrite N2Nat.inj_compare.
+      apply nat_compare_le.
+      intuition.
+  Qed.
+
   Lemma word_size_bound : forall {n} (w: word n), (&w < Npow2 n)%N.
   Proof.
     intros; pose proof (wordToNat_bound w) as B;
@@ -849,6 +862,22 @@ Section TopLevel.
           apply N_ge_0.
 
         * simpl; apply Npow2_gt0.
+  Qed.
+
+  Lemma wordize_and: forall {n} (x y: word n),
+    & (wand x y) = N.land (&x) (&y).
+  Proof.
+    intros.
+    apply N.bits_inj_iff; unfold N.eqf; intro k.
+    rewrite N.land_spec.
+    repeat rewrite wordToN_testbit.
+    revert x y.
+    generalize (N.to_nat k) as k'; clear k.
+    induction n; intros; shatter x; shatter y; simpl; [reflexivity|].
+    induction k'; [reflexivity|].
+    fold wand.
+    rewrite IHn.
+    reflexivity.
   Qed.
 
   Lemma conv_mask: forall {n} (x: word n) (k: nat),

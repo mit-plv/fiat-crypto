@@ -10,21 +10,20 @@ Require Import Crypto.Assembly.Evaluables.
 Section Definitions.
   Context {T: Type} {E: Evaluable T}.
 
-  Inductive type := TN | TT | Prod : type -> type -> type.
+  Inductive type := TT | Prod : type -> type -> type.
 
   Fixpoint interp_type (t:type): Type :=
     match t with
     | TT => T
-    | TN => nat
     | Prod a b => prod (interp_type a) (interp_type b)
     end.
 
   Inductive binop : type -> type -> type -> Type := 
-    | OPadd : binop TT TT TT
-    | OPsub : binop TT TT TT
-    | OPmul : binop TT TT TT
-    | OPmask : binop TT TN TT
-    | OPshiftr : binop TT TN TT.
+    | OPadd    : binop TT TT TT
+    | OPsub    : binop TT TT TT
+    | OPmul    : binop TT TT TT
+    | OPand    : binop TT TT TT
+    | OPshiftr : binop TT TT TT.
     (* TODO: should [Pair] be a [binop]? *)
 
   Definition interp_binop {t1 t2 t} (op:binop t1 t2 t) : interp_type t1 -> interp_type t2 -> interp_type t :=
@@ -32,7 +31,7 @@ Section Definitions.
     | OPadd    => @eadd T E 
     | OPsub    => @esub T E
     | OPmul    => @emul T E
-    | OPmask   => @emask T E
+    | OPand    => @eand T E
     | OPshiftr => @eshiftr T E
     end.
 End Definitions.
@@ -46,8 +45,7 @@ Module Input.
         Context {var : type -> Type}.
 
         Inductive expr : type -> Type :=
-          | ConstT : @interp_type T TT -> expr TT
-          | ConstN : @interp_type T TN -> expr TN
+          | Const : @interp_type T TT -> expr TT
           | Var : forall {t}, var t -> expr t
           | Binop : forall {t1 t2}, binop t1 t2 TT -> expr t1 -> expr t2 -> expr TT
           | Let : forall {tx}, expr tx -> forall {tC}, (var tx -> expr tC) -> expr tC
@@ -55,14 +53,13 @@ Module Input.
           | MatchPair : forall {t1 t2}, expr (Prod t1 t2) -> forall {tC}, (var t1 -> var t2 -> expr tC) -> expr tC.
     End expr.
 
-    Local Notation ZConst z := (@ConstT Z ZEvaluable _ z%Z).
+    Local Notation ZConst z := (@Const Z ZEvaluable _ z%Z).
 
     Definition Expr t : Type := forall var, @expr var t.
 
     Fixpoint interp {t} (e: @expr interp_type t) : interp_type t :=
         match e in @expr _ t return interp_type t with
-        | ConstT n => n
-        | ConstN n => n
+        | Const n => n
         | Var _ n => n
         | Binop _ _ op e1 e2 => interp_binop op (interp e1) (interp e2)
         | Let _ ex _ eC => let x := interp ex in interp (eC x)
@@ -77,9 +74,7 @@ Module Input.
 
     Definition convertVar {A B: Type} {EA: Evaluable A} {EB: Evaluable B} {t} (a: interp_type (T := A) t): interp_type (T := B) t.
     Proof.
-      induction t as [| | t3 IHt1 t4 IHt2].
-
-      - assumption.
+      induction t as [| t3 IHt1 t4 IHt2].
 
       - refine (@toT B EB (@fromT A EA _)); assumption.
 
@@ -89,8 +84,7 @@ Module Input.
 
     Fixpoint convertExpr {A B: Type} {EA: Evaluable A} {EB: Evaluable B} {t} (a: expr (T := A) (var := interp_type (T := A)) t): expr (T := B) (var := interp_type (T := B)) t :=
       match a with
-      | ConstT x => ConstT (@toT B EB (@fromT A EA x))
-      | ConstN x => @ConstN B _ x
+      | Const x => Const (@toT B EB (@fromT A EA x))
       | Var t x => @Var B _ t (@convertVar A B _ _ t x)
       | Binop t1 t2 o e1 e2 =>
         @Binop B _ t1 t2 o (convertExpr e1) (convertExpr e2)
@@ -106,7 +100,7 @@ Module Input.
   Definition ZInterp {t} E := @Interp Z ZEvaluable t E.
 
   Example example_Expr : Expr TT := fun var => (
-    Let (ConstT 7) (fun a =>
+    Let (Const 7) (fun a =>
       Let (Let (Binop OPadd (Var a) (Var a)) (fun b => Pair (Var b) (Var b))) (fun p =>
         MatchPair (Var p) (fun x y =>
           Binop OPadd (Var x) (Var y)))))%Z.
@@ -117,7 +111,6 @@ Module Input.
 
   Ltac reify_type t :=
     lazymatch t with
-    | nat => constr:(TN)
     | BinInt.Z => constr:(TT)
     | prod ?l ?r =>
         let l := reify_type l in
@@ -130,7 +123,7 @@ Module Input.
     | Z.add    => constr:(OPadd)
     | Z.sub    => constr:(OPsub)
     | Z.mul    => constr:(OPmul)
-    | Z.land   => constr:(OPmask)
+    | Z.land   => constr:(OPand)
     | Z.shiftr => constr:(OPshiftr)
     end.
 
@@ -171,10 +164,7 @@ Module Input.
       lazymatch goal with
       | _:reify_var_for_in_is x ?t ?v |- _ => constr:(@Var Z var t v)
       | _ => (* let t := match type of x with ?t => reify_type t end in *)
-        match type of x with
-        | nat => constr:(@ConstN Z var x)
-        | _ => constr:(@ConstT Z var x)
-        end
+        constr:(@Const Z var x)
       end
     end.
   Hint Extern 0 (reify ?var ?e) => (let e := reify var e in eexact e) : typeclass_instances.
@@ -221,8 +211,7 @@ Module Input.
     Definition Texpr var t := @expr T var t.
 
     Inductive wf : list (sigT (fun t => var1 t * var2 t))%type -> forall {t}, Texpr var1 t -> Texpr var2 t -> Prop :=
-    | WfConstT : forall G n, wf G (ConstT n) (ConstT n)
-    | WfConstN : forall G n, wf G (ConstN n) (ConstN n)
+    | WfConst : forall G n, wf G (Const n) (Const n)
     | WfVar : forall G t x x', In (x ≡ x') G -> @wf G t (Var x) (Var x')
     | WfBinop : forall G {t1} {t2} (e1:Texpr var1 t1) (e2:Texpr var1 t2)
                        (e1':Texpr var2 t1) (e2':Texpr var2 t2) op,
@@ -275,8 +264,7 @@ Module Output.
       Context {var : Type}.
 
       Inductive arg : type -> Type :=
-        | ConstT : @interp_type T TT -> arg TT
-        | ConstN : @interp_type T TN -> arg TN
+        | Const : @interp_type T TT -> arg TT
         | Var : var -> arg TT
         | Pair : forall {t1}, arg t1 -> forall {t2}, arg t2 -> arg (Prod t1 t2).
 
@@ -293,8 +281,7 @@ Module Output.
 
     Fixpoint interp_arg {t} (e: arg T t) : interp_type t :=
       match e with
-      | ConstT n => n
-      | ConstN n => n
+      | Const n => n
       | Var n => n
       | Pair _ e1 _ e2 => (interp_arg e1, interp_arg e2)
       end.
@@ -311,7 +298,7 @@ Module Output.
 
   Example example_expr :
     (@interp Z ZEvaluable _
-      (LetBinop OPadd (ConstT 7%Z) (ConstT 8%Z) (fun v => Return (Var v))) = 15)%Z.
+      (LetBinop OPadd (Const 7%Z) (Const 8%Z) (fun v => Return (Var v))) = 15)%Z.
   Proof. reflexivity. Qed.
 
   Section under_lets.
@@ -397,7 +384,7 @@ Module Output.
 
   Fixpoint uninterp_arg {t} {struct t} : interp_type t -> @arg Z Z t :=
     match t with
-    | TT => ConstT | TN => ConstN
+    | TT => Const
     | Prod t1 t2 => fun x => let (x1, x2) := x in
         Pair (@uninterp_arg t1 x1) (@uninterp_arg t2 x2)
     end.
@@ -427,8 +414,7 @@ Section compile.
 
   Fixpoint compile {t} (e:@Input.expr Z (@Output.arg Z ovar) t) : @Output.expr Z ovar t :=
     match e with
-    | Input.ConstT n => Output.Return (Output.ConstT n)
-    | Input.ConstN n => Output.Return (Output.ConstN n)
+    | Input.Const n => Output.Return (Output.Const n)
     | Input.Var _ arg => Output.Return arg
     | Input.Binop t1 t2 op e1 e2 =>
        Output.under_lets (@compile _ e1) (fun arg1 =>
@@ -514,7 +500,7 @@ _).
 
     eexists.
     cbv beta delta [ge25519_add'].
- 
+
     Reify_rhs.
     (* Finished transaction in 14.664 secs (14.639u,0.026s) (successful) in coqc version Coq 8.6 from July 2016, slow interactively *)
 

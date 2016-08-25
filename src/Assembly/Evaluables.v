@@ -19,8 +19,8 @@ Section Evaluability.
     eadd: T -> T -> T;
     esub: T -> T -> T;
     emul: T -> T -> T;
-    eshiftr: T -> nat -> T;
-    emask: T -> nat -> T;
+    eshiftr: T -> T -> T;
+    eand: T -> T -> T;
 
     (* Comparisons *)
     eltb: T -> T -> bool;
@@ -29,9 +29,6 @@ Section Evaluability.
 End Evaluability.
 
 Section Z.
-  Definition Zmask := fun x k => Z.land x (Z.ones (Z.of_nat k)).
-  Definition Zshiftr := fun x k => Z.shiftr x (Z.of_nat k).
-
   Instance ZEvaluable : Evaluable Z := {
     ezero := 0%Z;
 
@@ -43,75 +40,15 @@ Section Z.
     eadd := Z.add;
     esub := Z.sub;
     emul := Z.mul;
-    eshiftr := Zshiftr;
-    emask := Zmask;
+    eshiftr := Z.shiftr;
+    eand := Z.land;
 
     (* Comparisons *)
     eltb := Z.ltb;
     eeqb := Z.eqb;
   }.
 
-  (* Some witch magic *)
-  Section NatOpConversion.
-    Definition getBits (x: Z) := Z.log2 (x + 1).
-
-    Definition Zland_fail_sig: {f: Z->Z->Z | forall x y, f x y = Z.land x y}.
-    Proof. exists Z.land; intros; reflexivity. Qed.
-
-    Definition Zshiftr_fail_sig: {f: Z->Z->Z | forall x y, f x y = Z.shiftr x y}.
-    Proof. exists Z.shiftr; intros; reflexivity. Qed.
-
-    Definition Zland_fail := proj1_sig Zland_fail_sig.
-    Definition Zshiftr_fail := proj1_sig Zshiftr_fail_sig.
-
-    Lemma replace_mask : forall a b,
-      Z.land a b =
-        match Z.eq_dec b (Z.ones (getBits b)) with
-        | left _ => Zmask a (Z.to_nat (getBits b))
-        | right _ => Zland_fail a b
-        end.
-    Proof.
-      intros; unfold Zmask, Zland_fail.
-      destruct Zland_fail_sig as [f p], (Z.eq_dec _ _) as [e|];
-        [| simpl; rewrite p; reflexivity ].
-      f_equal.
-      rewrite Z2Nat.id; [assumption|].
-      apply Z.log2_nonneg.
-    Qed.
-
-    Lemma replace_shiftr : forall a b,
-      Z.shiftr a b =
-        match b as b' return b = b' -> _ with
-        | Zpos _ => fun _ => Zshiftr a (Z.to_nat b)
-        | Z0 => fun _ => a 
-        | _ => fun _ => Zshiftr_fail a b
-        end eq_refl.
-    Proof.
-      intros; unfold Zshiftr, Zshiftr_fail.
-      induction Zshiftr_fail_sig as [f p], b;
-        [cbv; intuition | | simpl; rewrite p; reflexivity].
-      rewrite Z2Nat.id; [reflexivity|].
-      cbv; intro H; inversion H.
-    Qed.
-
-    Lemma kill_eq_dec_refl: forall a,
-        Z.eq_dec a a = left eq_refl.
-    Proof.
-      intros; destruct (Z.eq_dec a a) as [H|H];
-        [ f_equal; apply proof_irrelevance | contradict H; reflexivity ].
-    Qed.
-  End NatOpConversion.
 End Z.
-
-(* Tactic to automagically replace_mask and replace_shiftr *)
-Ltac natize_mask_and_shiftr :=
-  repeat rewrite replace_mask;
-  repeat rewrite replace_shiftr;
-  repeat progress match goal with
-  | [ |- context[Z.eq_dec ?a (Z.ones (getBits ?a))] ] =>
-    replace (Z.ones (getBits a)) with a by (vm_compute; reflexivity);
-      rewrite (kill_eq_dec_refl a)
-  end.
 
 Section Word.
   Context {n: nat}.
@@ -127,8 +64,8 @@ Section Word.
     eadd := @wplus n;
     esub := @wminus n;
     emul := @wmult n;
-    eshiftr := @shiftr n;
-    emask := fun x k => @mask n k x;
+    eshiftr := fun x y => @shiftr n x (wordToNat y);
+    eand := @wand n;
 
     (* Comparisons *)
     eltb := fun x y => N.ltb (wordToN x) (wordToN y);
@@ -388,6 +325,51 @@ Section RangeUpdate.
     Qed.
   End BoundedSub.
 
+  Section LandOnes.
+    Definition getBits (x: N) := N.succ (N.log2 x).
+
+    Lemma land_intro_ones: forall x, x = N.land x (N.ones (getBits x)).
+    Proof.
+      intros.
+      rewrite N.land_ones_low; [reflexivity|].
+      unfold getBits; nomega.
+    Qed.
+
+    Lemma land_lt_Npow2: forall x k, (N.land x (N.ones k) < 2 ^ k)%N.
+    Proof.
+      intros.
+      rewrite N.land_ones.
+      apply N.mod_lt.
+      rewrite <- (N2Nat.id k).
+      rewrite <- Npow2_N.
+      apply N.neq_0_lt_0.
+      apply Npow2_gt0.
+    Qed.
+
+    Lemma land_prop_bound_l: forall a b, (N.land a b < Npow2 (N.to_nat (getBits a)))%N.
+    Proof.
+      intros; rewrite Npow2_N.
+      rewrite (land_intro_ones a).
+      rewrite <- N.land_comm.
+      rewrite N.land_assoc.
+      rewrite N2Nat.id.
+      apply (N.lt_le_trans _ (2 ^ (getBits a))%N _); [apply land_lt_Npow2|].
+      rewrite <- (N2Nat.id (getBits a)).
+      rewrite <- (N2Nat.id (getBits (N.land _ _))).
+      repeat rewrite <- Npow2_N.
+      rewrite N2Nat.id.
+      apply Npow2_ordered.
+      apply to_nat_le.
+      apply N.eq_le_incl; f_equal.
+      apply land_intro_ones.
+    Qed.
+
+    Lemma land_prop_bound_r: forall a b, (N.land a b < Npow2 (N.to_nat (getBits b)))%N.
+    Proof.
+      intros; rewrite N.land_comm; apply land_prop_bound_l.
+    Qed.
+  End LandOnes.
+
   Lemma range_add_valid :
     validBinaryWordOp
       (fun range0 range1 =>
@@ -475,57 +457,99 @@ Section RangeUpdate.
   Qed.
 
   Lemma range_shiftr_valid :
-    validNatWordOp
-      (fun range0 k =>
-         match range0 with
-         | range low high =>
-           Some (range N
-             (N.shiftr low (N.of_nat k))
-             (N.succ (N.shiftr high (N.of_nat k))))
+    validBinaryWordOp
+      (fun range0 range1 =>
+         match (range0, range1) with
+         | (range low0 high0, range low1 high1) =>
+           Some (range N (N.shiftr low0 high1) (N.succ (N.shiftr high0 low1)))%N
           end)
-      (fun x k => extend (Nat.eq_le_incl _ _ eq_refl) (shiftr x k)).
+      (fun x k => extend (Nat.eq_le_incl _ _ eq_refl) (shiftr x (wordToNat k))).
   Proof.
-    unfold validNatWordOp; intros until x; intro H.
-    destruct H as [Ha Hb]; split.
+    unfold validBinaryWordOp; intros until y; intros H0 H1.
+    destruct H0 as [H0a H0b], H1 as [H1a H1b].
+    split; unfold extend; rewrite wordToN_convS, wordToN_zext.
 
-    - unfold extend; rewrite wordToN_convS.
-
-      rewrite wordToN_zext.
-      rewrite <- wordize_shiftr.
+    - rewrite <- wordize_shiftr.
       rewrite <- Nshiftr_equiv_nat.
       repeat rewrite N.shiftr_div_pow2.
-      apply N.div_le_mono; [|assumption].
-      induction k.
+      transitivity (wordToN x / 2 ^ high1)%N.
 
-      + cbv beta delta iota; intro Z; inversion Z.
+      + apply N.div_le_mono; [|assumption].
+        rewrite <- (N2Nat.id high1).
+        rewrite <- Npow2_N.
+        apply N.neq_0_lt_0.
+        apply Npow2_gt0.
 
-      + rewrite <- Npow2_N.
-        pose proof (Npow2_gt0 (S k)).
-        nomega.
+      + apply N.div_le_compat_l; split.
 
-    - unfold extend; rewrite wordToN_convS.
-      rewrite wordToN_zext.
-      rewrite Nshiftr_equiv_nat.
-      eapply N.lt_le_trans.
+        * rewrite <- Npow2_N; apply Npow2_gt0.
+
+        * rewrite <- (N2Nat.id high1).
+          repeat rewrite <- Npow2_N.
+          apply Npow2_ordered.
+          rewrite <- (Nat2N.id (wordToNat y)).
+          apply to_nat_le.
+          rewrite <- wordToN_nat.
+          apply N.lt_le_incl; assumption.
+
+    - eapply N.lt_le_trans.
 
       + apply shiftr_bound; eassumption.
 
-      + apply N.eq_le_incl.
-        reflexivity.
+      + rewrite <- (Nat2N.id (wordToNat y)).
+        rewrite <- Nshiftr_equiv_nat.
+        rewrite N2Nat.id.
+        rewrite <- wordToN_nat.
+        apply N.le_pred_le_succ.
+        rewrite N.pred_succ.
+        repeat rewrite N.shiftr_div_pow2.
+        apply N.div_le_compat_l; split;
+          rewrite <- (N2Nat.id low1);
+          [| rewrite <- (N2Nat.id (wordToN y))];
+          repeat rewrite <- Npow2_N;
+          [apply Npow2_gt0 |].
+        apply Npow2_ordered.
+        apply to_nat_le.
+        assumption.
   Qed.
 
-  Lemma range_mask_valid :
-    validNatWordOp
-      (fun range0 k =>
-         match range0 with
-         | range low high =>
-           Some (range N 0%N (Npow2 k))
+  Lemma range_and_valid :
+    validBinaryWordOp
+      (fun range0 range1 =>
+         match (range0, range1) with
+         | (range low0 high0, range low1 high1) =>
+           Some (range N 0%N (Npow2 (min (N.to_nat (getBits high0)) (N.to_nat (getBits high1))))%N)
           end)
-      (fun x k => mask k x).
+      (@wand n).
   Proof.
-    unfold validNatWordOp; intros until x; intro H.
-    destruct H as [Ha Hb]; split; [apply N_ge_0|].
-    apply mask_bound.
+    unfold validBinaryWordOp; intros until y; intros H0 H1.
+    destruct H0 as [H0a H0b], H1 as [H1a H1b].
+    split; [apply N_ge_0 |].
+    destruct (lt_dec (N.to_nat (getBits high0)) (N.to_nat (getBits high1))).
+
+    - rewrite min_l; [|omega].
+      rewrite wordize_and.
+      apply (N.lt_le_trans _ (Npow2 (N.to_nat (getBits (wordToN x)))) _);
+        [apply land_prop_bound_l|].
+      apply Npow2_ordered.
+      apply to_nat_le.
+      unfold getBits.
+      apply N.le_pred_le_succ.
+      rewrite N.pred_succ.
+      apply N.log2_le_mono.
+      apply N.lt_le_incl; assumption.
+
+    - rewrite min_r; [|omega].
+      rewrite wordize_and.
+      apply (N.lt_le_trans _ (Npow2 (N.to_nat (getBits (wordToN y)))) _);
+        [apply land_prop_bound_r|].
+      apply Npow2_ordered.
+      apply to_nat_le.
+      unfold getBits.
+      apply N.le_pred_le_succ.
+      rewrite N.pred_succ.
+      apply N.log2_le_mono.
+      apply N.lt_le_incl; assumption.
   Qed.
 End RangeUpdate.
 
@@ -592,8 +616,8 @@ Section WordRange.
     eadd := applyBinOp _ _ range_add_valid;
     esub := applyBinOp _ _ range_sub_valid;
     emul := applyBinOp _ _ range_mul_valid;
-    eshiftr := applyNatOp _ _ range_shiftr_valid;
-    emask := applyNatOp _ _ range_mask_valid;
+    eshiftr := applyBinOp _ _ range_shiftr_valid;
+    eand := applyBinOp _ _ range_and_valid;
 
     (* Comparisons just test upper bounds.
        We won't bounds-check Ite in our PHOAS formalism *)
