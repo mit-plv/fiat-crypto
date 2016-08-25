@@ -265,24 +265,49 @@ Section FieldOperationProofs.
     rewrite !encode_rep. assumption.
   Qed.
 
-  Global Instance opp_Proper : Proper (Logic.eq ==> eq ==> eq) opp.
-  Admitted.
-
   Global Instance add_Proper : Proper (eq ==> eq ==> eq) add.
+  Proof.
+    repeat intro.
+    cbv beta delta [eq] in *.
+    erewrite !add_rep; cbv [rep] in *; try reflexivity; assumption.
+  Qed.
+  
+  Global Instance sub_Proper : Proper (eq ==> eq ==> eq ==> eq) sub.
+  Proof.
   Admitted.
   
-  Global Instance sub_Proper : Proper (Logic.eq ==> eq ==> eq ==> eq) sub.
-  Admitted.
-  
+  Global Instance opp_Proper : Proper (eq ==> eq ==> eq) opp.
+  Proof.
+     cbv [opp]; repeat intro.
+     apply sub_Proper; assumption || reflexivity.
+  Qed.
+
   Global Instance mul_Proper : Proper (eq ==> eq ==> eq) mul.
-  Admitted.
+  Proof.
+    repeat intro.
+    cbv beta delta [eq] in *.
+    erewrite !mul_rep; cbv [rep] in *; try reflexivity; assumption.
+  Qed.
+
+  Check pow.
+  Global Instance pow_Proper : Proper (eq ==> Logic.eq ==> eq) pow.
+  Proof.
+    repeat intro.
+    cbv beta delta [eq] in *.
+    erewrite !pow_rep; cbv [rep] in *; subst; try reflexivity.
+    congruence.
+  Qed.
 
   Global Instance inv_Proper chain chain_correct : Proper (eq ==> eq) (inv chain chain_correct).
-  Admitted.
+  Proof.
+     cbv [inv]; repeat intro.
+    apply pow_Proper; assumption || reflexivity.
+  Qed.
 
   Global Instance div_Proper : Proper (eq ==> eq ==> eq) div.
-  Admitted.
-
+  Proof.
+    cbv [div]; repeat intro; congruence.
+  Qed.
 
   Section FieldProofs.
   Context (modulus_gt_2 : 2 < modulus)
