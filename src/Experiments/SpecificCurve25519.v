@@ -71,7 +71,7 @@ Section Curve25519.
     point_enc(F:=fe25519)(eq:=ModularBaseSystem.eq)(one:=ModularBaseSystem.one)
              (add:=GF25519.add)(mul:=GF25519.mul)(a:=a)(d:=d)(sz:=255)(sign_bit:=fe25519_sign_bit) convert_fe25519_to_wire P.
 
-  Definition ge25519_to_wire := fun P => twisted25519_to_wire (Extended.to_twisted(field:=field25519) P).
+  Definition ge25519_to_wire := fun P => twisted25519_to_wire (Extended.to_twisted(field:=field25519)(*8.6: (prm:=prm25519)*) P).
   Lemma ge25519_to_wire_correct : forall P : E.point, Eenc P = ge25519_to_wire (ge25519_from_ref P).
   Admitted.
   Definition ge25519_coords_B := Eval vm_compute in proj1_sig (ge25519_from_ref B).

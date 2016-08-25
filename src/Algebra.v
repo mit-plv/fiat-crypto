@@ -256,6 +256,13 @@ Module Group.
       apply inv_id.
     Qed.
 
+    Lemma eq_r_opp_r_inv a b c : a = op c (inv b) <-> op a b = c.
+    Proof.
+      split; intro Hx; rewrite Hx || rewrite <-Hx;
+        rewrite <-!associative, ?left_inverse, ?right_inverse, right_identity;
+        reflexivity.
+    Qed.
+
     Section ZeroNeqOne.
       Context {one} `{is_zero_neq_one T eq id one}.
       Lemma opp_one_neq_zero : inv one <> id.

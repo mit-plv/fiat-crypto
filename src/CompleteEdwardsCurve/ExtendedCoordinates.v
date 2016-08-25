@@ -1,4 +1,6 @@
 Require Export Crypto.Spec.CompleteEdwardsCurve.
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.GlobalSettings.
 
 Require Import Crypto.Algebra Crypto.Algebra.
 Require Import Crypto.CompleteEdwardsCurve.Pre Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
@@ -8,7 +10,6 @@ Require Import Coq.Classes.Morphisms.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Notations.
-Require Export Crypto.Util.FixCoqMistakes.
 
 Module Extended.
   Local Ltac uninv := repeat rewrite <-field_div_definition;

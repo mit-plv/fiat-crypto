@@ -1,4 +1,5 @@
 Require Export Crypto.Spec.CompleteEdwardsCurve.
+Require Export Crypto.Util.GlobalSettings.
 
 Require Import Crypto.Algebra Crypto.Algebra Crypto.Util.Decidable.
 Require Import Crypto.CompleteEdwardsCurve.Pre.

@@ -81,15 +81,6 @@ Lemma option_rect_false_returns_true_iff {T} (f:T->bool) (o:option T) :
   option_rect (fun _ => bool) f false o = true <-> exists s:T, o = Some s /\ f s = true.
 Proof. unfold option_rect; break_match; logic; congruence. Qed.
 
-Module F.
-  Lemma to_nat_of_nat {m:Z} (n:nat) : F.to_nat (F.of_nat m n) = n mod (Z.to_nat m).
-  Admitted.
-  Lemma of_nat_to_nat {m:Z} x : F.of_nat m (F.to_nat x) = x.
-  Admitted.
-  Lemma of_nat_mod {m} (n:nat) : F.of_nat m (n mod (Z.to_nat m)) = F.of_nat m n.
-  Admitted.
-End F.
-
 Section EdDSA.
   Context `{prm:EdDSA}.
   Local Infix "==" := Eeq. Local Infix "+" := Eadd. Local Infix "*" := EscalarMult.
@@ -106,13 +97,11 @@ Section EdDSA.
     rewrite F.to_nat_of_nat, scalarmult_mod_order, scalarmult_add_l, cancel_left, scalarmult_mod_order, NPeano.Nat.mul_comm, scalarmult_assoc;
       try solve [ reflexivity
                 | setoid_rewrite (*unify 0*) (Z2Nat.inj_iff _ 0); pose proof EdDSA_l_odd; omega
+                                                                                                   | pose proof EdDSA_l_odd; omega
                 | apply EdDSA_l_order_B
                 | rewrite scalarmult_assoc, mult_comm, <-scalarmult_assoc,
                              EdDSA_l_order_B, scalarmult_zero_r; reflexivity ].
   Qed.
-
-  (* TODO: prove in group *)
-  Lemma eq_r_opp_r_inv : forall a b c, a == c + Eopp b <-> a + b == c. Admitted.
 
   Lemma solve_for_R_sig : forall s B R n A, { solution | s * B == R + n * A <-> R == solution }.
   Proof.
@@ -202,6 +191,8 @@ Section EdDSA.
                {mlen} (message:word mlen) (pk:word b) (sig:word (b+b))
                : { answer | answer = verify message pk sig }.
     Proof.
+      pose proof EdDSA_l_odd.
+      assert (l_pos:(0 < l)%Z) by omega.
       eexists.
       cbv [verify].
       repeat (
@@ -212,8 +203,8 @@ Section EdDSA.
           || setoid_rewrite SRepERepMul_correct
           || setoid_rewrite SdecS_correct
           || setoid_rewrite SRepDecModL_correct
-          || setoid_rewrite F.of_nat_to_nat
-          || setoid_rewrite F.of_nat_mod
+          || setoid_rewrite (@F.of_nat_to_nat _ l_pos _)
+          || setoid_rewrite (@F.of_nat_mod _ l_pos _)
         ).
       (* lazymatch goal with |- _ _ (option_rect _ ?some _ _) => idtac some end. *)
         setoid_rewrite (option_rect_option_map EToRep
