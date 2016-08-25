@@ -61,6 +61,8 @@ Ltac subst_evars :=
          | [ e := ?E |- _ ] => is_evar E; subst e
          end.
 
+Ltac subst_let := repeat match goal with | x := _ |- _ => subst x end.
+
 (** destruct discriminees of [match]es in the goal *)
 (* Prioritize breaking apart things in the context, then things which
    don't need equations, then simple matches (which can be displayed

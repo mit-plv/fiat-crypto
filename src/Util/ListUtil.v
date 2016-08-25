@@ -1340,6 +1340,7 @@ Proof.
 induction n; destruct l; boring.
 apply nth_error_nil_error.
 Qed.
+Hint Rewrite @nth_error_skipn : push_nth_error.
 
 Lemma nth_default_skipn : forall {A} (l : list A) d n m, nth_default d (skipn n l) m = nth_default d l (n + m).
 Proof.
@@ -1347,6 +1348,7 @@ cbv [nth_default]; intros.
 rewrite nth_error_skipn.
 reflexivity.
 Qed.
+Hint Rewrite @nth_default_skipn : push_nth_default.
 
 Lemma sum_firstn_skipn : forall l n m, sum_firstn l (n + m) = (sum_firstn l n + sum_firstn (skipn n l) m)%Z.
 Proof.
