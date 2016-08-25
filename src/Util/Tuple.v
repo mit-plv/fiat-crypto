@@ -145,6 +145,46 @@ Proof.
   destruct n; unfold fieldwise; exact _.
 Qed.
 
+Fixpoint fieldwiseb' {A B} (n:nat) (R:A->B->bool) (a:tuple' A n) (b:tuple' B n) {struct n} : bool.
+  destruct n; simpl @tuple' in *.
+  { exact (R a b). }
+  { exact (R (snd a) (snd b) && fieldwiseb' _ _ n R (fst a) (fst b))%bool. }
+Defined.
+
+Definition fieldwiseb {A B} (n:nat) (R:A->B->bool) (a:tuple A n) (b:tuple B n) : bool.
+  destruct n; simpl @tuple in *.
+  { exact true. }
+  { exact (fieldwiseb' _ R a b). }
+Defined.
+
+Arguments fieldwiseb' {A B n} _ _ _.
+Arguments fieldwiseb {A B n} _ _ _.
+
+Lemma fieldwiseb'_fieldwise' :forall {A B} n R Rb
+                                   (a:tuple' A n) (b:tuple' B n),
+  (forall a b, Rb a b = true <-> R a b) -> 
+  (fieldwiseb' Rb a b = true <-> fieldwise' R a b).
+Proof.
+  intros.
+  revert n a b;
+  induction n; intros; simpl @tuple' in *;
+    simpl fieldwiseb'; simpl fieldwise'; auto.
+  cbv beta.
+  rewrite Bool.andb_true_iff.
+  f_equiv; auto.
+Qed.
+
+Lemma fieldwiseb_fieldwise :forall {A B} n R Rb
+                                   (a:tuple A n) (b:tuple B n),
+  (forall a b, Rb a b = true <-> R a b) -> 
+  (fieldwiseb Rb a b = true <-> fieldwise R a b).
+Proof.
+  intros; destruct n; simpl @tuple in *;
+    simpl @fieldwiseb; simpl @fieldwise; try tauto.
+  auto using fieldwiseb'_fieldwise'.
+Qed.
+
+
 Fixpoint from_list_default' {T} (d y:T) (n:nat) (xs:list T) : tuple' T n :=
   match n return tuple' T n with
   | 0 => y (* ignore high digits *)
