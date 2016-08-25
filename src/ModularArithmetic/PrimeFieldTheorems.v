@@ -96,6 +96,52 @@ Module F.
     Defined.
   End NumberThoery.
 
+  Section SquareRootsPrime3Mod4.
+    Context {q:Z} {prime_q: prime q} {q_3mod4 : q mod 4 = 3}.
+
+    Local Open Scope F_scope.
+    Add Field _field2 : (field_theory q)
+                          (morphism (F.ring_morph q),
+                           constants [F.is_constant],
+                           div (F.morph_div_theory q),
+                           power_tac (F.power_theory q) [F.is_pow_constant]).
+
+    Definition sqrt_3mod4 (a : F q) : F q := a ^ Z.to_N (q / 4 + 1).
+
+    Lemma two_lt_q_3mod4 : 2 < q.
+    Proof.
+      pose proof (prime_ge_2 q _) as two_le_q.
+      apply Zle_lt_or_eq in two_le_q.
+      destruct two_le_q; auto.
+      subst_max.
+      discriminate.
+    Qed.
+
+    Lemma sqrt_3mod4_valid : forall x, (exists y, y*y = x) ->
+                                       (sqrt_3mod4 x)*(sqrt_3mod4 x) = x.
+    Proof.
+      cbv [sqrt_3mod4]. intros x square_x.
+      destruct (F.eq_dec x 0).
+      + subst. rewrite !F.pow_0_l. field.
+        replace 0%N with (Z.to_N 0) by reflexivity.
+        rewrite Z2N.inj_iff by zero_bounds.
+        assert (0 < q / 4 + 1)%Z by zero_bounds.
+        omega.
+      + rewrite <-@euler_criterion in square_x by auto using two_lt_q_3mod4.
+        rewrite <-F.pow_add_r, <-Z2N.inj_add by zero_bounds.
+        replace (q / 4 + 1 + (q / 4 + 1))%Z with (2 * (q / 4) + 2)%Z by ring.
+        replace 4%Z with (2 * 2)%Z in q_3mod4 |- * by ring.
+        rewrite <-Z.div_div, Z.mul_div_eq by omega.
+        rewrite Z.rem_mul_r in q_3mod4 by omega.
+        rewrite !Zmod_odd in *.
+        repeat break_if; try omega.
+        replace (q / 2 - 1 + 2)%Z with (q / 2 + 1)%Z by ring.
+        rewrite Z2N.inj_add by zero_bounds.
+        rewrite F.pow_add_r, F.pow_1_r, square_x.
+        field.
+    Qed.
+  End SquareRootsPrime3Mod4.
+
   Section SquareRootsPrime5Mod8.
     Context {q:Z} {prime_q: prime q} {q_5mod8 : q mod 8 = 5}.
 
