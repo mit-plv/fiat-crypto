@@ -507,10 +507,12 @@ Definition KeepAddingOne (n : nat) : Expr (T := Z) TT :=
 
 Definition testCase := Eval vm_compute in KeepAddingOne 5.
 
-Eval vm_compute in RangeInterp (ZToRange 8 testCase).
+Definition v := Eval vm_compute in RangeInterp (ZToRange 6 testCase).
 
 (* This example wasn't starting with a term at the right abstraction level.
  * We don't need to handle tuples in bounds checking. *)
+
+(* Slow code we don't want Jenkins to run.
 Section Curve25519.
   Local Infix ">>" := Z.shiftr.
   Local Infix "&" := (fun x y => Z.land x (Z.of_nat (Z.to_nat y))).
@@ -557,4 +559,4 @@ _).
   Admitted.
 
   Definition ge25519_result_range := RangeInterp (ZToRange 32 ge25519_ast).
-End Curve25519.
+End Curve25519. *)
