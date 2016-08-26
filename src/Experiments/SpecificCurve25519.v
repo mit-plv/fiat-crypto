@@ -494,6 +494,21 @@ Proof. eapply compile_correct; eauto. Qed.
 
 Import Input.
 
+Fixpoint keepAddingOne {var} (x : @expr Z var TT) (n : nat) : @expr Z var TT :=
+  match n with
+  | O => x
+  | S n' => Let (Binop OPadd x (Const 1%Z)) (fun y => keepAddingOne (Var y) n')
+  end.
+
+Definition KeepAddingOne (n : nat) : Expr (T := Z) TT :=
+  fun var => keepAddingOne (Const 1%Z) n.
+
+Definition testCase := Eval vm_compute in KeepAddingOne 5.
+
+Eval vm_compute in RangeInterp (ZToRange 32 testCase).
+
+(* This example wasn't starting with a term at the right abstraction level.
+ * We don't need to handle tuples in bounds checking.
 Section Curve25519.
   Local Infix ">>" := Z.shiftr.
   Local Infix "&" := (fun x y => Z.land x (Z.of_nat (Z.to_nat y))).
@@ -543,4 +558,4 @@ _).
   Definition ge25519_result_range :=
     Eval vm_compute in RangeInterp (ZToRange 32 ge25519_ast).
 
-End Curve25519.
+End Curve25519.*)
