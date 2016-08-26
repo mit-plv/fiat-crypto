@@ -37,8 +37,8 @@ Module Extended.
 
     Create HintDb bash discriminated.
     Local Hint Unfold E.eq fst snd fieldwise fieldwise' coordinates E.coordinates proj1_sig Pre.onCurve : bash.
-    Ltac bash :=
-      pose proof E.char_gt_2;
+    (* split [bash] to work around obligation shrinking bug https://coq.inria.fr/bugs/show_bug.cgi?id=5044 *)
+    Local Ltac bash_workaround :=
       repeat match goal with
              | |- Proper _ _ => intro
              | _ => progress intros
@@ -56,8 +56,9 @@ Module Extended.
              | _ => progress uninv
              | |- Feq _ _ => super_nsatz
              end.
+    Local Ltac bash := pose proof E.char_gt_2; bash_workaround.
 
-    Local Obligation Tactic := bash.
+    Local Obligation Tactic := solve [bash_workaround | bash].
 
     Program Definition from_twisted (P:Epoint) : point := exist _
       (let (x,y) := E.coordinates P in (x, y, 1, x*y)) _.
