@@ -131,7 +131,7 @@ Module Input.
   Proof. reflexivity. Qed.
 
   Example interp_example_range :
-    RangeInterp (ZToRange 32 example_Expr) = Some (range N 28%N 32%N).
+    RangeInterp (ZToRange 32 example_Expr) = Some (range N 28%N 28%N).
   Proof. reflexivity. Qed.
 
   (* Reification assumes the argument type is Z *)
@@ -505,10 +505,10 @@ Definition KeepAddingOne (n : nat) : Expr (T := Z) TT :=
 
 Definition testCase := Eval vm_compute in KeepAddingOne 5.
 
-Eval vm_compute in RangeInterp (ZToRange 32 testCase).
+Eval vm_compute in RangeInterp (ZToRange 8 testCase).
 
 (* This example wasn't starting with a term at the right abstraction level.
- * We don't need to handle tuples in bounds checking.
+ * We don't need to handle tuples in bounds checking. *)
 Section Curve25519.
   Local Infix ">>" := Z.shiftr.
   Local Infix "&" := (fun x y => Z.land x (Z.of_nat (Z.to_nat y))).
