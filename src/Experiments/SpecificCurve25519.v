@@ -118,6 +118,8 @@ Module Input.
 
   Definition ZInterp {t} E := @Interp Z ZEvaluable t E.
 
+  Definition WordInterp {n t} E := @Interp (word n) (@WordEvaluable n) t E.
+
   Definition RangeInterp {n t} E: @interp_type (option (Range N)) t :=
     typeMap evalWordRangeOpt (@Interp (@WordRangeOpt n) (@WordRangeOptEvaluable n) t E).
 

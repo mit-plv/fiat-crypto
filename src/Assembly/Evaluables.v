@@ -548,7 +548,7 @@ Section WordRange.
     | someRange low high _ _ => Some (range N low high)
     | applyBinOp rangeF wordF _ a b =>
       omap (evalWordRangeOpt a) (fun a' =>
-        omap (evalWordRangeOpt a) (fun b' =>
+        omap (evalWordRangeOpt b) (fun b' =>
           rangeF a' b'))
     end.
 
