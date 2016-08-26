@@ -194,6 +194,44 @@ Section Bounds.
 
   Qed.
 
+  Lemma shiftr_bound' : forall {n} (w : word n) b bits,
+      (&w <= b)%N
+    -> (&(shiftr w bits) <= N.shiftr_nat b bits)%N.
+  Proof.
+    intros.
+    transitivity (N.shiftr_nat b bits).
+
+    - unfold shiftr, extend, high.
+      destruct (le_dec bits n); try omega.
+
+      + rewrite wordToN_convS.
+        rewrite wordToN_zext.
+        rewrite wordToN_split2.
+        rewrite wordToN_convS.
+        rewrite <- Nshiftr_equiv_nat.
+        repeat rewrite N.shiftr_div_pow2.
+        apply N.div_le_mono; [|assumption].
+
+        induction bits; try nomega.
+        rewrite Nat2N.inj_succ.
+        rewrite N.pow_succ_r'.
+        assert (bits <= n)%nat as Hc by omega.
+        apply IHbits in Hc.
+        intro Hc'; contradict Hc.
+        apply (N.mul_cancel_l _ _ 2);
+          try rewrite Hc';
+          try assumption;
+          nomega.
+
+      + rewrite wordToN_nat.
+        unfold wzero.
+        rewrite wordToNat_natToWord_idempotent; simpl;
+          try apply N_ge_0;
+          try apply Npow2_gt0.
+
+    - apply N.eq_le_incl; reflexivity.
+  Qed.
+
   Lemma mask_bound : forall {n} (w : word n) m,
     (&(mask m w) < Npow2 m)%N.
   Proof.

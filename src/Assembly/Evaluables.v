@@ -82,22 +82,11 @@ Section RangeUpdate.
         (rangeF: Range N -> Range N -> option (Range N))
         (wordF: word n -> word n -> word n): Prop :=
     forall (low0 high0 low1 high1: N) (x y: word n),
-      (low0 <= wordToN x < high0)%N
-    -> (low1 <= wordToN y < high1)%N
+      (low0 <= wordToN x <= high0)%N
+    -> (low1 <= wordToN y <= high1)%N
     -> match rangeF (range N low0 high0) (range N low1 high1) with
       | Some (range low2 high2) =>
-        (low2 <= @wordToN n (wordF x y) < high2)%N
-      | _ => True 
-      end.
-
-  Definition validNatWordOp
-        (rangeF: Range N -> nat -> option (Range N))
-        (wordF: word n -> nat -> word n): Prop :=
-    forall (low0 high0: N) (k: nat) (x: word n),
-      (low0 <= wordToN x < high0)%N
-    -> match rangeF (range N low0 high0) k with
-      | Some (range low2 high2) =>
-        (low2 <= @wordToN n (wordF x k) < high2)%N
+        (low2 <= @wordToN n (wordF x y) <= high2)%N
       | _ => True 
       end.
 
@@ -114,7 +103,7 @@ Section RangeUpdate.
     Qed.
 
     Lemma bWSub_lem0: forall (x0 x1: word n) (low0 high1: N),
-      (low0 <= wordToN x0)%N -> (wordToN x1 < high1)%N -> 
+      (low0 <= wordToN x0)%N -> (wordToN x1 <= high1)%N -> 
       (low0 - high1 <= & (x0 ^- x1))%N.
     Proof.
       intros.
@@ -123,57 +112,54 @@ Section RangeUpdate.
       destruct (Nge_dec (wordToN x1) (wordToN x0)).
 
       - unfold wminus, wneg.
-        assert (low0 < high1)%N. {
-          apply (N.le_lt_trans _ (wordToN x0) _); [assumption|].
-          apply (N.le_lt_trans _ (wordToN x1) _); [apply N.ge_le|]; assumption.
+        assert (low0 <= high1)%N. {
+          transitivity (wordToN x0); [assumption|].
+          transitivity (wordToN x1); [apply N.ge_le|]; assumption.
         }
 
         replace (low0 - high1)%N with 0%N; [apply N_ge_0|].
         symmetry.
         apply N.sub_0_le.
-        apply N.lt_le_incl.
         assumption.
 
-        - transitivity (wordToN x0 - wordToN x1)%N.
+      - transitivity (wordToN x0 - wordToN x1)%N.
 
-          + transitivity (wordToN x0 - high1)%N.
+        + transitivity (wordToN x0 - high1)%N;
+            [apply N.sub_le_mono_r | apply N.sub_le_mono_l];
+            assumption.
 
-            * apply N.sub_le_mono_r; assumption.
+        + assert (& x0 - & x1 < Npow2 n)%N. {
+            transitivity (wordToN x0);
+              try apply word_size_bound;
+              apply N.sub_lt.
 
-            * apply N.sub_le_mono_l; apply N.lt_le_incl; assumption.
+            + apply N.lt_le_incl; assumption.
 
-          + assert (& x0 - & x1 < Npow2 n)%N. {
-              transitivity (wordToN x0);
-                try apply word_size_bound;
-                apply N.sub_lt.
+            + nomega.
+          }
 
-              + apply N.lt_le_incl; assumption.
+          assert (& x0 - & x1 + & x1 < Npow2 n)%N. {
+            replace (wordToN x0 - wordToN x1 + wordToN x1)%N
+              with (wordToN x0) by nomega.
+            apply word_size_bound.
+          }
 
-              + nomega.
-            }
+          assert (x0 = NToWord n (wordToN x0 - wordToN x1) ^+ x1) as Hv. {
+            apply NToWord_equal.
+            rewrite <- wordize_plus; rewrite wordToN_NToWord;
+              try assumption.
+            nomega.
+          }
 
-            assert (& x0 - & x1 + & x1 < Npow2 n)%N. {
-              replace (wordToN x0 - wordToN x1 + wordToN x1)%N
-                with (wordToN x0) by nomega.
-              apply word_size_bound.
-            }
-
-            assert (x0 = NToWord n (wordToN x0 - wordToN x1) ^+ x1) as Hv. {
-              apply NToWord_equal.
-              rewrite <- wordize_plus; rewrite wordToN_NToWord;
-                try assumption.
-              nomega.
-            }
-
-            apply N.eq_le_incl.
-            rewrite Hv.
-            unfold wminus.
-            rewrite <- wplus_assoc.
-            rewrite wminus_inv.
-            rewrite (wplus_comm (NToWord n (wordToN x0 - wordToN x1)) (wzero n)).
-            rewrite wplus_unit.
-            rewrite <- wordize_plus; [nomega|].
-            rewrite wordToN_NToWord; assumption.
+          apply N.eq_le_incl.
+          rewrite Hv.
+          unfold wminus.
+          rewrite <- wplus_assoc.
+          rewrite wminus_inv.
+          rewrite (wplus_comm (NToWord n (wordToN x0 - wordToN x1)) (wzero n)).
+          rewrite wplus_unit.
+          rewrite <- wordize_plus; [nomega|].
+          rewrite wordToN_NToWord; assumption.
 
       - unfold wminus, wneg.
         assert (wordToN x1 = 0)%N as e' by nomega.
@@ -192,15 +178,14 @@ Section RangeUpdate.
     Qed.
 
     Lemma bWSub_lem1: forall (x0 x1: word n) (low1 high0: N),
-      (low1 <= wordToN x1)%N -> (wordToN x0 < high0)%N -> 
-      (& (x0 ^- x1) < N.succ (high0 + Npow2 n - low1))%N.
+      (low1 <= wordToN x1)%N -> (wordToN x0 <= high0)%N -> 
+      (& (x0 ^- x1) <= high0 + Npow2 n - low1)%N.
     Proof.
       intros; unfold wminus.
       destruct (Nge_dec (wordToN x1) 1)%N as [e|e].
       destruct (Nge_dec (wordToN x0) (wordToN x1)).
 
-      - apply N.lt_succ_r.
-        assert (& x0 - & x1 < Npow2 n)%N. {
+      - assert (& x0 - & x1 < Npow2 n)%N. {
           transitivity (wordToN x0);
           try apply word_size_bound;
           apply N.sub_lt.
@@ -235,21 +220,22 @@ Section RangeUpdate.
           * apply N.sub_le_mono_l; assumption.
 
           * apply N.sub_le_mono_r.
-            transitivity high0; [apply N.lt_le_incl; assumption|].
+            transitivity high0; [assumption|].
             replace' high0 with (high0 + 0)%N at 1 by nomega.
             apply N.add_le_mono_l.
             apply N_ge_0.
 
         + transitivity (wordToN x0); try apply word_size_bound.
-            nomega.
+          nomega.
 
-      - rewrite <- wordize_plus; [apply N.lt_succ_r|].
+      - rewrite <- wordize_plus.
 
         + transitivity (high0 + (wordToN (wneg x1)))%N.
 
-          * apply N.add_le_mono_r; apply N.lt_le_incl; assumption.
+          * apply N.add_le_mono_r; assumption.
 
           * unfold wneg.
+
             rewrite wordToN_NToWord; [|abstract (
               apply N.sub_lt;
               try apply N.lt_le_incl;
@@ -291,8 +277,7 @@ Section RangeUpdate.
             rewrite N.add_sub.
             reflexivity.
 
-      - apply N.lt_succ_r.
-        assert (wordToN x1 = 0)%N as e' by nomega.
+      - assert (wordToN x1 = 0)%N as e' by nomega.
         assert (NToWord n (wordToN x1) = NToWord n 0%N) as E by
             (rewrite e'; reflexivity).
         rewrite NToWord_wordToN in E.
@@ -306,8 +291,7 @@ Section RangeUpdate.
         rewrite wplus_unit.
         transitivity high0.
 
-        + apply N.lt_le_incl.
-          assumption.
+        + assumption.
 
         + rewrite <- N.add_sub_assoc.
 
@@ -387,17 +371,15 @@ Section RangeUpdate.
 
     destruct (overflows n (high0 + high1))%N; split.
 
-    - erewrite <- wordize_plus';
-        try eassumption;
-        try abstract nomega.
+    - rewrite <- wordize_plus.
 
       + apply N.add_le_mono; assumption.
 
-      + apply N.lt_le_incl; nomega.
+      + apply (N.le_lt_trans _ (high0 + high1)%N _); [|assumption].
+        apply N.add_le_mono; assumption.
 
-    - apply (N.le_lt_trans _ (wordToN x + wordToN y)%N _);
-        try apply plus_le.
-      nomega.
+    - transitivity (wordToN x + wordToN y)%N; [apply plus_le|].
+      apply N.add_le_mono; assumption.
   Qed.
 
   Lemma range_sub_valid :
@@ -407,9 +389,9 @@ Section RangeUpdate.
          | (range low0 high0, range low1 high1) =>
            if (Nge_dec low0 high1)
            then Some (range N (low0 - high1)%N
-              (if (Nge_dec high0 (Npow2 n)) then Npow2 n else
-               if (Nge_dec high1 (Npow2 n)) then Npow2 n else
-               N.succ (high0 + Npow2 n - low1))%N)
+              (if (Nge_dec high0 (Npow2 n)) then N.pred (Npow2 n) else
+               if (Nge_dec high1 (Npow2 n)) then N.pred (Npow2 n) else
+               high0 + Npow2 n - low1)%N)
            else None
          end)
       (@wminus n).
@@ -422,11 +404,12 @@ Section RangeUpdate.
              (Nge_dec high1 (Npow2 n)),
              (Nge_dec low0 high1); split;
       repeat match goal with
-      | [|- (_ - ?x <= wordToN _)%N] => apply bWSub_lem0
-      | [|- (wordToN _ < N.succ (?x + _ - _))%N] => apply bWSub_lem1
+      | [|- (wordToN _ <= N.pred _)%N] => apply N.lt_le_pred
       | [|- (wordToN _ < Npow2 _)%N] => apply word_size_bound
+      | [|- (_ - ?x <= wordToN _)%N] => apply bWSub_lem0
+      | [|- (wordToN _ <= ?x + _ - _)%N] => apply bWSub_lem1
       | [|- (0 <= _)%N] => apply N_ge_0
-      end; assumption.
+      end; try assumption.
   Qed.
 
   Lemma range_mul_valid :
@@ -449,11 +432,11 @@ Section RangeUpdate.
 
       + apply N.mul_le_mono; assumption.
 
-      + transitivity (high0 * high1)%N; [|assumption].
-        apply N.mul_lt_mono; assumption.
+      + apply (N.le_lt_trans _ (high0 * high1)%N _); [|assumption].
+        apply N.mul_le_mono; assumption.
 
-    - apply (N.le_lt_trans _ (wordToN x * wordToN y)%N _); [apply mult_le|].
-      apply N.mul_lt_mono; assumption.
+    - transitivity (wordToN x * wordToN y)%N; [apply mult_le|].
+      apply N.mul_le_mono; assumption.
   Qed.
 
   Lemma range_shiftr_valid :
@@ -461,7 +444,7 @@ Section RangeUpdate.
       (fun range0 range1 =>
          match (range0, range1) with
          | (range low0 high0, range low1 high1) =>
-           Some (range N (N.shiftr low0 high1) (N.succ (N.shiftr high0 low1)))%N
+           Some (range N (N.shiftr low0 high1) (N.shiftr high0 low1))%N
           end)
       (fun x k => extend (Nat.eq_le_incl _ _ eq_refl) (shiftr x (wordToNat k))).
   Proof.
@@ -490,27 +473,23 @@ Section RangeUpdate.
           rewrite <- (Nat2N.id (wordToNat y)).
           apply to_nat_le.
           rewrite <- wordToN_nat.
-          apply N.lt_le_incl; assumption.
+          assumption.
 
-    - eapply N.lt_le_trans.
+    - etransitivity; [eapply shiftr_bound'; eassumption|].
 
-      + apply shiftr_bound; eassumption.
-
-      + rewrite <- (Nat2N.id (wordToNat y)).
-        rewrite <- Nshiftr_equiv_nat.
-        rewrite N2Nat.id.
-        rewrite <- wordToN_nat.
-        apply N.le_pred_le_succ.
-        rewrite N.pred_succ.
-        repeat rewrite N.shiftr_div_pow2.
-        apply N.div_le_compat_l; split;
-          rewrite <- (N2Nat.id low1);
-          [| rewrite <- (N2Nat.id (wordToN y))];
-          repeat rewrite <- Npow2_N;
-          [apply Npow2_gt0 |].
-        apply Npow2_ordered.
-        apply to_nat_le.
-        assumption.
+      rewrite <- (Nat2N.id (wordToNat y)).
+      rewrite <- Nshiftr_equiv_nat.
+      rewrite N2Nat.id.
+      rewrite <- wordToN_nat.
+      repeat rewrite N.shiftr_div_pow2.
+      apply N.div_le_compat_l; split;
+        rewrite <- (N2Nat.id low1);
+        [| rewrite <- (N2Nat.id (wordToN y))];
+        repeat rewrite <- Npow2_N;
+        [apply Npow2_gt0 |].
+      apply Npow2_ordered.
+      apply to_nat_le.
+      assumption.
   Qed.
 
   Lemma range_and_valid :
@@ -518,13 +497,14 @@ Section RangeUpdate.
       (fun range0 range1 =>
          match (range0, range1) with
          | (range low0 high0, range low1 high1) =>
-           Some (range N 0%N (Npow2 (min (N.to_nat (getBits high0)) (N.to_nat (getBits high1))))%N)
+           Some (range N 0%N (N.pred (Npow2 (min (N.to_nat (getBits high0)) (N.to_nat (getBits high1)))))%N)
           end)
       (@wand n).
   Proof.
     unfold validBinaryWordOp; intros until y; intros H0 H1.
     destruct H0 as [H0a H0b], H1 as [H1a H1b].
     split; [apply N_ge_0 |].
+    apply N.lt_le_pred.
     destruct (lt_dec (N.to_nat (getBits high0)) (N.to_nat (getBits high1))).
 
     - rewrite min_l; [|omega].
@@ -537,7 +517,7 @@ Section RangeUpdate.
       apply N.le_pred_le_succ.
       rewrite N.pred_succ.
       apply N.log2_le_mono.
-      apply N.lt_le_incl; assumption.
+      assumption.
 
     - rewrite min_r; [|omega].
       rewrite wordize_and.
@@ -549,7 +529,7 @@ Section RangeUpdate.
       apply N.le_pred_le_succ.
       rewrite N.pred_succ.
       apply N.log2_le_mono.
-      apply N.lt_le_incl; assumption.
+      assumption.
   Qed.
 End RangeUpdate.
 
@@ -558,13 +538,10 @@ Section WordRange.
 
   Inductive WordRangeOpt :=
     | someRange: forall (low high: N),
-        (low < high)%N -> (high <= Npow2 n)%N -> WordRangeOpt
+        (low <= high)%N -> (high < Npow2 n)%N -> WordRangeOpt
     | applyBinOp: forall rangeF wordF,
         @validBinaryWordOp n rangeF wordF ->
-        WordRangeOpt -> WordRangeOpt -> WordRangeOpt
-    | applyNatOp: forall rangeF wordF,
-        @validNatWordOp n rangeF wordF ->
-        WordRangeOpt -> nat -> WordRangeOpt.
+        WordRangeOpt -> WordRangeOpt -> WordRangeOpt.
 
   Fixpoint evalWordRangeOpt (r: WordRangeOpt): option (Range N) :=
     match r with
@@ -573,15 +550,14 @@ Section WordRange.
       omap (evalWordRangeOpt a) (fun a' =>
         omap (evalWordRangeOpt a) (fun b' =>
           rangeF a' b'))
-    | applyNatOp rangeF wordF _ x k =>
-      omap (evalWordRangeOpt x) (fun x' =>
-        rangeF x' k)
     end.
 
   Definition anyWord: WordRangeOpt.
-    refine (someRange 0%N (Npow2 n) _ _).
-    - apply Npow2_gt0.
-    - reflexivity.
+    refine (someRange 0%N (N.pred (Npow2 n)) _ _).
+    - apply N.lt_le_pred; apply Npow2_gt0.
+    - apply N.lt_pred_l.
+      apply N.neq_0_lt_0.
+      apply Npow2_gt0.
   Defined.
 
   Definition getLowerBoundOpt (w: WordRangeOpt): option N :=
@@ -594,12 +570,10 @@ Section WordRange.
 
   Definition makeRangeOpt (low high: N): option WordRangeOpt.
     refine (
-      match (Nge_dec low high, Nge_dec high (Npow2 n)) with
-      | (right _, right _) => Some (someRange low high _ _)
+      match (Nge_dec high low, Nge_dec high (Npow2 n)) with
+      | (left _, right _) => Some (someRange low high _ _)
       | _ => None
-      end); [assumption|].
-
-    apply N.lt_le_incl; assumption.
+      end); [apply N.ge_le|]; assumption.
   Defined.
 
   Definition getOrElse {T} (d: T) (o: option T) :=
@@ -609,8 +583,8 @@ Section WordRange.
     ezero := anyWord;
 
     (* Conversions *)
-    toT := fun x => getOrElse anyWord (makeRangeOpt 0%N (Z.to_N x));
-    fromT := fun x => Z.of_N (getOrElse (Npow2 n) (getUpperBoundOpt x));
+    toT := fun x => getOrElse anyWord (makeRangeOpt (Z.to_N x) (Z.to_N x));
+    fromT := fun x => Z.of_N (getOrElse (N.pred (Npow2 n)) (getUpperBoundOpt x));
 
     (* Operations *)
     eadd := applyBinOp _ _ range_add_valid;

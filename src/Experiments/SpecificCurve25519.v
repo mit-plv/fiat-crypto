@@ -131,7 +131,7 @@ Module Input.
   Proof. reflexivity. Qed.
 
   Example interp_example_range :
-    RangeInterp (ZToRange 32 example_Expr) = Some (range N 0%N 28%N).
+    RangeInterp (ZToRange 32 example_Expr) = Some (range N 28%N 32%N).
   Proof. reflexivity. Qed.
 
   (* Reification assumes the argument type is Z *)
@@ -519,7 +519,7 @@ Section Curve25519.
     exact t.
   Defined.
 
-  Definition ge25519_ast' P Q : { r: @Expr Z ResultType | ZInterp r = ge25519_add' P Q }.
+  Definition ge25519_ast P Q : { r: @Expr Z ResultType | ZInterp r = ge25519_add' P Q }.
   Proof.
     refine (
 let '((P_X_0, P_X_1, P_X_2, P_X_3, P_X_4, P_X_5, P_X_6, P_X_7, P_X_8, P_X_9), (P_Y_0, P_Y_1, P_Y_2, P_Y_3, P_Y_4, P_Y_5, P_Y_6, P_Y_7, P_Y_8, P_Y_9), (P_Z_0, P_Z_1, P_Z_2, P_Z_3, P_Z_4, P_Z_5, P_Z_6, P_Z_7, P_Z_8, P_Z_9), (P_T_0, P_T_1, P_T_2, P_T_3, P_T_4, P_T_5, P_T_6, P_T_7, P_T_8, P_T_9)) := P in
@@ -537,10 +537,7 @@ _).
     cbv beta delta [ge25519_add'].
     Reify_rhs.
     reflexivity.
-  Defined.
+  Admitted.
 
-  Definition ge25519_ast := Eval vm_compute in ge25519_ast'.
-  Definition ge25519_result_range :=
-    Eval vm_compute in RangeInterp (ZToRange 32 ge25519_ast).
-
+  Definition ge25519_result_range := RangeInterp (ZToRange 32 ge25519_ast).
 End Curve25519.
