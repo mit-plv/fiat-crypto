@@ -1,3 +1,4 @@
+Require Import Bedrock.Word.
 Require Import Crypto.Util.GlobalSettings.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
@@ -82,22 +83,43 @@ Module Input.
           [exact (IHt1 a1) | exact (IHt2 a2)].
     Defined.
 
-    Fixpoint convertExpr {A B: Type} {EA: Evaluable A} {EB: Evaluable B} {t} (a: expr (T := A) (var := interp_type (T := A)) t): expr (T := B) (var := interp_type (T := B)) t :=
+    Fixpoint convertExpr {A B: Type} {EA: Evaluable A} {EB: Evaluable B} {t v} (a: expr (T := A) (var := v) t): expr (T := B) (var := v) t :=
       match a with
       | Const x => Const (@toT B EB (@fromT A EA x))
-      | Var t x => @Var B _ t (@convertVar A B _ _ t x)
+      | Var t x => @Var B _ t x
       | Binop t1 t2 o e1 e2 =>
         @Binop B _ t1 t2 o (convertExpr e1) (convertExpr e2)
       | Let tx e tC f =>
-        Let (convertExpr e) (fun x =>
-          convertExpr (f (@convertVar B A _ _ tx x)))
+        Let (convertExpr e) (fun x => convertExpr (f x))
       | Pair t1 e1 t2 e2 => Pair (convertExpr e1) (convertExpr e2)
       | MatchPair t1 t2 e tC f => MatchPair (convertExpr e) (fun x y =>
-          convertExpr (f (@convertVar B A _ _ _ x) (@convertVar B A _ _ _ y)))
+          convertExpr (f x y))
       end.
+
+    Definition convertZToWord {t} n v a :=
+      @convertExpr Z (word n) ZEvaluable (@WordEvaluable n) t v a.
+
+    Definition convertZToWordRangeOpt {t} n v a :=
+      @convertExpr Z (@WordRangeOpt n) ZEvaluable (@WordRangeOptEvaluable n) t v a.
+
+    Definition ZToWord {t} n (a: @Expr Z t): @Expr (word n) t :=
+      fun v => convertZToWord n v (a v).
+
+    Definition ZToRange {t} n (a: @Expr Z t): @Expr (@WordRangeOpt n) t :=
+      fun v => convertZToWordRangeOpt n v (a v).
+
+    Definition typeMap {A B t} (f: A -> B) (x: @interp_type A t): @interp_type B t.
+    Proof.
+      induction t; [refine (f x)|].
+      destruct x as [x1 x2].
+      refine (IHt1 x1, IHt2 x2).
+    Defined.
   End Conversions.
 
   Definition ZInterp {t} E := @Interp Z ZEvaluable t E.
+
+  Definition RangeInterp {n t} E: @interp_type (option (Range N)) t :=
+    typeMap evalWordRangeOpt (@Interp (@WordRangeOpt n) (@WordRangeOptEvaluable n) t E).
 
   Example example_Expr : Expr TT := fun var => (
     Let (Const 7) (fun a =>
@@ -105,7 +127,12 @@ Module Input.
         MatchPair (Var p) (fun x y =>
           Binop OPadd (Var x) (Var y)))))%Z.
 
-  Example interp_example_Expr : ZInterp example_Expr = 28%Z. reflexivity. Qed.
+  Example interp_example_Expr : ZInterp example_Expr = 28%Z.
+  Proof. reflexivity. Qed.
+
+  Example interp_example_range :
+    RangeInterp (ZToRange 32 example_Expr) = Some (range N 0%N 28%N).
+  Proof. reflexivity. Qed.
 
   (* Reification assumes the argument type is Z *)
 
@@ -484,8 +511,16 @@ Section Curve25519.
     Eval cbv beta delta [Extended.add_coordinates fe25519 add mul sub ModularBaseSystemOpt.Let_In twice_d] in
       @Extended.add_coordinates fe25519 add sub mul twice_d.
 
-  Definition ge25519_add_sig P Q : { r | r = ge25519_add' P Q }.
-    (* python -c "print ('\n'.join('let \'(' + ', '.join('(' + ', '.join('%s_%s_%d'%(P,c,i) for i in range(10)) + ')' for c in 'XYZT') + ') := %s in'%P for P in 'PQ'))" *)
+  Definition ResultType: type.
+  Proof.
+    let T' := type of (twice_d, twice_d, twice_d, twice_d) in
+    let T := eval vm_compute in T' in
+    let t := reify_type T in
+    exact t.
+  Defined.
+
+  Definition ge25519_ast' P Q : { r: @Expr Z ResultType | ZInterp r = ge25519_add' P Q }.
+  Proof.
     refine (
 let '((P_X_0, P_X_1, P_X_2, P_X_3, P_X_4, P_X_5, P_X_6, P_X_7, P_X_8, P_X_9), (P_Y_0, P_Y_1, P_Y_2, P_Y_3, P_Y_4, P_Y_5, P_Y_6, P_Y_7, P_Y_8, P_Y_9), (P_Z_0, P_Z_1, P_Z_2, P_Z_3, P_Z_4, P_Z_5, P_Z_6, P_Z_7, P_Z_8, P_Z_9), (P_T_0, P_T_1, P_T_2, P_T_3, P_T_4, P_T_5, P_T_6, P_T_7, P_T_8, P_T_9)) := P in
 let '((Q_X_0, Q_X_1, Q_X_2, Q_X_3, Q_X_4, Q_X_5, Q_X_6, Q_X_7, Q_X_8, Q_X_9), (Q_Y_0, Q_Y_1, Q_Y_2, Q_Y_3, Q_Y_4, Q_Y_5, Q_Y_6, Q_Y_7, Q_Y_8, Q_Y_9), (Q_Z_0, Q_Z_1, Q_Z_2, Q_Z_3, Q_Z_4, Q_Z_5, Q_Z_6, Q_Z_7, Q_Z_8, Q_Z_9), (Q_T_0, Q_T_1, Q_T_2, Q_T_3, Q_T_4, Q_T_5, Q_T_6, Q_T_7, Q_T_8, Q_T_9)) := Q in
@@ -500,18 +535,12 @@ _).
 
     eexists.
     cbv beta delta [ge25519_add'].
-
     Reify_rhs.
-    (* Finished transaction in 14.664 secs (14.639u,0.026s) (successful) in coqc version Coq 8.6 from July 2016, slow interactively *)
-
-    rewrite <-Compile_correct by admit_Wf.
-    (* Finished transaction in 0.282 secs (0.283u,0.s) (successful), slow interactively *)
-
-    let E := match goal with |- _ = Output.Interp ?E => E end in
-    set (vm_E := E); vm_compute in vm_E; subst vm_E. 
-    (* Finished transaction in 0.427 secs (0.423u,0.003s) (successful), very slow interactively *)
-
-    cbv iota beta delta [Output.Interp Output.interp Output.interp_arg interp_binop interp_type].
     reflexivity.
   Defined.
+
+  Definition ge25519_ast := Eval vm_compute in ge25519_ast'.
+  Definition ge25519_result_range :=
+    Eval vm_compute in RangeInterp (ZToRange 32 ge25519_ast).
+
 End Curve25519.
