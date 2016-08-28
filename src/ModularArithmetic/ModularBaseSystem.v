@@ -89,7 +89,7 @@ Section ModularBaseSystem.
 
   Definition sqrt_3mod4 (chain : list (nat * nat))
                   (chain_correct : fold_chain 0%N N.add chain (1%N :: nil) = Z.to_N (modulus / 4 + 1))
-                  (sqrt_minus1 x : digits) : digits := pow x chain.
+                  (x : digits) : digits := pow x chain.
 
   Import Morphisms.
   Global Instance eq_Equivalence : Equivalence eq.
