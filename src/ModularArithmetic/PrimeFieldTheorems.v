@@ -147,16 +147,16 @@ Module F.
   Section SquareRootsPrime5Mod8.
     Context {q:Z} {prime_q: prime q} {q_5mod8 : q mod 8 = 5}.
 
-    (* This is always true, but easier to check by computation than to prove *)
-    Context (sqrt_minus1_valid : ((F.of_Z q 2 ^ Z.to_N (q / 4)) ^ 2 = F.opp 1)%F).
     Local Open Scope F_scope.
     Add Field _field3 : (field_theory q)
                           (morphism (F.ring_morph q),
                            constants [F.is_constant],
                            div (F.morph_div_theory q),
                            power_tac (F.power_theory q) [F.is_pow_constant]).
-
-    Let sqrt_minus1 :=  F.of_Z q 2 ^ Z.to_N (q / 4).
+    
+    (* Any nonsquare element raised to (q-1)/4 (real implementations use 2 ^ ((q-1)/4) )
+       would work for sqrt_minus1 *)
+    Context (sqrt_minus1 : F q) (sqrt_minus1_valid : sqrt_minus1 * sqrt_minus1 = F.opp 1).
 
     Lemma two_lt_q_5mod8 : 2 < q.
     Proof.
@@ -210,7 +210,7 @@ Module F.
     Proof.
       intros.
       transitivity (F.opp 1 * (x * x)); [ | field].
-      subst_let; rewrite <-sqrt_minus1_valid.
+      rewrite <-sqrt_minus1_valid.
       field.
     Qed.
 
