@@ -116,29 +116,31 @@ Module F.
       subst_max.
       discriminate.
     Qed.
-
-    Lemma sqrt_3mod4_valid : forall x, (exists y, y*y = x) ->
-                                       (sqrt_3mod4 x)*(sqrt_3mod4 x) = x.
+    Local Hint Resolve two_lt_q_3mod4.
+    
+    Lemma sqrt_3mod4_correct : forall x,
+      ((exists y, y*y = x) <-> (sqrt_3mod4 x)*(sqrt_3mod4 x) = x).
     Proof.
-      cbv [sqrt_3mod4]. intros x square_x.
-      destruct (F.eq_dec x 0).
-      + subst. rewrite !F.pow_0_l. field.
-        replace 0%N with (Z.to_N 0) by reflexivity.
-        rewrite Z2N.inj_iff by zero_bounds.
-        assert (0 < q / 4 + 1)%Z by zero_bounds.
-        omega.
-      + rewrite <-@euler_criterion in square_x by auto using two_lt_q_3mod4.
-        rewrite <-F.pow_add_r, <-Z2N.inj_add by zero_bounds.
-        replace (q / 4 + 1 + (q / 4 + 1))%Z with (2 * (q / 4) + 2)%Z by ring.
-        replace 4%Z with (2 * 2)%Z in q_3mod4 |- * by ring.
-        rewrite <-Z.div_div, Z.mul_div_eq by omega.
-        rewrite Z.rem_mul_r in q_3mod4 by omega.
-        rewrite !Zmod_odd in *.
-        repeat break_if; try omega.
-        replace (q / 2 - 1 + 2)%Z with (q / 2 + 1)%Z by ring.
-        rewrite Z2N.inj_add by zero_bounds.
-        rewrite F.pow_add_r, F.pow_1_r, square_x.
-        field.
+      cbv [sqrt_3mod4]; intros.
+      destruct (F.eq_dec x 0);
+      repeat match goal with
+             | |- _ => progress subst
+             | |- _ => progress rewrite ?F.pow_0_l, <-?F.pow_add_r
+             | |- _ => progress rewrite <-?Z2N.inj_0, <-?Z2N.inj_add by zero_bounds
+             | |- _ => rewrite <-@euler_criterion by auto
+             | |- ?x ^ (?f _) = ?a <-> ?x ^ (?f _) = ?a => do 3 f_equiv; [ ]
+             | |- _ => rewrite !Zmod_odd in *; repeat break_if; omega
+             | |- _ => rewrite Z.rem_mul_r in * by omega
+             | |- (exists x, _) <-> ?B => assert B by field; solve [intuition eauto]
+             | |- (?x ^ Z.to_N ?a = 1) <-> _ =>
+               transitivity (x ^ Z.to_N a * x ^ Z.to_N 1 = x);
+                 [ rewrite F.pow_1_r, Algebra.Field.mul_cancel_l_iff by auto; reflexivity | ]
+             | |- (_ <> _)%N => rewrite Z2N.inj_iff by zero_bounds
+             | |- (?a <> 0)%Z => assert (0 < a) by zero_bounds; omega
+             | |- (_ = _)%Z => replace 4 with (2 * 2)%Z in * by ring;
+                                 rewrite <-Z.div_div by zero_bounds;
+                                 rewrite Z.add_diag, Z.mul_add_distr_l, Z.mul_div_eq by omega
+             end.
     Qed.
   End SquareRootsPrime3Mod4.
 
@@ -164,6 +166,7 @@ Module F.
       subst_max.
       discriminate.
     Qed.
+    Local Hint Resolve two_lt_q_5mod8.
 
     Definition sqrt_5mod8 (a : F q) : F q :=
       let b := a ^ Z.to_N (q / 8 + 1) in
@@ -203,18 +206,57 @@ Module F.
       change (Z.to_N 2) with 2%N; ring.
     Qed.
 
-    Lemma sqrt_5mod8_valid : forall x, (exists y, y*y = x) ->
-                                       (sqrt_5mod8 x)*(sqrt_5mod8 x) = x.
+    Lemma mul_square_sqrt_minus1 : forall x, sqrt_minus1 * x * (sqrt_minus1 * x) = F.opp (x * x).
     Proof.
-      intros x x_square.
-      pose proof (eq_b4_a2 x x_square) as Hyy; rewrite !F.pow_2_r in Hyy.
-      destruct (Algebra.only_two_square_roots_choice _ x (x*x) Hyy eq_refl) as [Hb|Hb]; clear Hyy;
-        unfold sqrt_5mod8; break_if; rewrite !@F.pow_2_r in *; intuition.
-      ring_simplify.
-      unfold sqrt_minus1; rewrite @F.pow_2_r.
-      rewrite sqrt_minus1_valid; rewrite @F.pow_2_r.
-      rewrite Hb.
-      ring.
+      intros.
+      transitivity (F.opp 1 * (x * x)); [ | field].
+      subst_let; rewrite <-sqrt_minus1_valid.
+      field.
+    Qed.
+
+    Lemma eq_b4_a2_iff (x : F q) : x <> 0 ->
+      ((exists y, y*y = x) <-> ((x ^ Z.to_N (q / 8 + 1)) ^ 2) ^ 2 = x ^ 2).
+    Proof.
+      split; try apply eq_b4_a2.
+      intro Hyy.
+      rewrite !@F.pow_2_r in *.
+      destruct (Algebra.only_two_square_roots_choice _ x (x * x) Hyy eq_refl); clear Hyy;
+        [ eexists; eassumption | ].
+      match goal with H : ?a * ?a = F.opp _ |- _ => exists (sqrt_minus1 * a);
+        rewrite mul_square_sqrt_minus1; rewrite H end.
+      field.
+    Qed.
+
+    Lemma sqrt_5mod8_correct : forall x,
+      ((exists y, y*y = x) <-> (sqrt_5mod8 x)*(sqrt_5mod8 x) = x).
+    Proof.
+      cbv [sqrt_5mod8]; intros.
+      destruct (F.eq_dec x 0).
+      {
+        repeat match goal with
+             | |- _ => progress subst
+             | |- _ => progress rewrite ?F.pow_0_l
+             | |- _ => break_if
+             | |- (exists x, _) <-> ?B => assert B by field; solve [intuition eauto]
+             | |- (_ <> _)%N => rewrite <-Z2N.inj_0, Z2N.inj_iff by zero_bounds
+             | |- (?a <> 0)%Z => assert (0 < a) by zero_bounds; omega
+             | |- _ => congruence
+             end.
+      } {
+        rewrite eq_b4_a2_iff by auto.
+        rewrite !@F.pow_2_r in *.
+        break_if.
+        intuition (f_equal; eauto).
+        split; intro A. {
+          destruct (Algebra.only_two_square_roots_choice _ x (x * x) A eq_refl) as [B | B];
+            clear A; try congruence.
+          rewrite mul_square_sqrt_minus1, B; field.
+        } {
+          rewrite mul_square_sqrt_minus1 in A.
+          transitivity (F.opp x * F.opp x); [ | field ].
+          f_equal; rewrite <-A at 3; field.
+        }
+      }
     Qed.
   End SquareRootsPrime5Mod8.
 End F.

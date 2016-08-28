@@ -637,6 +637,19 @@ Module Field.
         apply zero_neq_one. assumption.
     Qed.
 
+    Lemma mul_cancel_l_iff : forall x y, y <> 0 ->
+                                         (x * y = y <-> x = one).
+    Proof.
+      intros.
+      split; intros.
+      + rewrite <-(right_multiplicative_inverse y) by assumption.
+        rewrite <-H1 at 1; rewrite <-associative.
+        rewrite right_multiplicative_inverse by assumption.
+        rewrite right_identity.
+        reflexivity.
+      + rewrite H1; apply left_identity.
+    Qed.
+
     Require Coq.setoid_ring.Field_theory.
     Lemma field_theory_for_stdlib_tactic : Field_theory.field_theory 0 1 add mul sub opp div inv eq.
     Proof.
