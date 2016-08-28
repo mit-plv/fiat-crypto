@@ -32,7 +32,6 @@ Section AddChainExp.
   Context {scalarmult} {is_scalarmult:@ScalarMult.is_scalarmult G eq op id scalarmult}.
   Local Infix "=" := eq : type_scope.
   Local Open Scope N_scope.
-  SearchAbout (N -> nat).
   Local Notation "n * P" := (scalarmult (N.to_nat n) P) (only parsing).
 
   Lemma fold_chain_exp' : forall (x:G) is acc ref
