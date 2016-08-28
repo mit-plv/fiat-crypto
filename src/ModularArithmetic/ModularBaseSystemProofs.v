@@ -696,4 +696,60 @@ Section CanonicalizationProofs.
           in BaseSystem in canonical form, splitting along word capacities)
   *)
 
+  Lemma freeze_canonical : forall u v x y, rep u x -> rep v y ->
+    (x = y <-> fieldwise Logic.eq (freeze u) (freeze v)).
+  Admitted.
+
 End CanonicalizationProofs.
+
+Section SquareRootProofs.
+  Context `{prm : PseudoMersenneBaseParams}.
+  Local Notation "u ~= x" := (rep u x).
+  Local Notation digits := (tuple Z (length limb_widths)).
+  Local Notation base := (base_from_limb_widths limb_widths).
+  Local Hint Resolve (@limb_widths_nonneg _ prm) sum_firstn_limb_widths_nonneg.
+
+  Lemma eqb_correct : forall u v x y, u ~= x -> v ~= y ->
+                                      (x = y <-> eqb u v = true).
+  Proof.
+    cbv [eqb]. intros.
+    rewrite fieldwiseb_fieldwise by (apply Z.eqb_eq).
+    auto using freeze_canonical.
+  Qed.
+
+  Section Sqrt3mod4.
+  Context (modulus_3mod4 : modulus mod 4 = 3). 
+
+  Lemma sqrt_3mod4_correct : forall u x chain pf, u ~= x ->
+    (sqrt_3mod4 chain pf u) ~= F.sqrt_3mod4 x.
+  Proof.
+    repeat match goal with
+           | |- _ => progress (cbv [sqrt_3mod4 F.sqrt_3mod4]; intros)
+           | |- _ => rewrite @F.pow_2_r in *
+           | |- _ => rewrite eqb_correct in * by eassumption
+           | |- _ => rewrite <-pf; apply pow_rep; eassumption
+           end.
+  Qed.
+  End Sqrt3mod4.
+
+  Section Sqrt5mod8.
+  Context (modulus_5mod8 : modulus mod 8 = 5). 
+  Context (sqrt_m1 : digits) (sqrt_m1_correct : mul sqrt_m1 sqrt_m1 ~= F.opp 1%F).
+  
+  Lemma sqrt_5mod8_correct : forall u x chain pf, u ~= x ->
+    (sqrt_5mod8 chain pf sqrt_m1 u) ~= F.sqrt_5mod8 (decode sqrt_m1) x.
+  Proof.
+    repeat match goal with
+           | |- _ => progress (cbv [sqrt_5mod8 F.sqrt_5mod8]; intros)
+           | |- _ => rewrite @F.pow_2_r in *
+           | |- _ => rewrite eqb_correct in * by eassumption
+           | |- (if eqb ?a ?b then _ else _) ~=
+                (if dec (?c = _) then _ else _) =>
+             assert (a ~= c); repeat break_if; try apply mul_rep;
+               try solve [rewrite <-pf; apply pow_rep; eassumption]
+           | |- _ => congruence
+           end.
+  Qed.
+  End Sqrt5mod8.
+
+End SquareRootProofs.
