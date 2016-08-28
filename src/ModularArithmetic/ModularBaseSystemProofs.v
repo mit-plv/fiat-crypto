@@ -697,7 +697,10 @@ Section CanonicalizationProofs.
   *)
 
   Lemma freeze_canonical : forall u v x y, rep u x -> rep v y ->
-    (x = y <-> fieldwise Logic.eq (freeze u) (freeze v)).
+                                           (x = y <-> fieldwise Logic.eq (freeze u) (freeze v)).
+  Proof.
+    clear.
+    (* TODO: bundle these assumptions so they can be more easily passed to square root proofs? *)
   Admitted.
 
 End CanonicalizationProofs.
@@ -714,7 +717,7 @@ Section SquareRootProofs.
   Proof.
     cbv [eqb]. intros.
     rewrite fieldwiseb_fieldwise by (apply Z.eqb_eq).
-    auto using freeze_canonical.
+    eauto using freeze_canonical.
   Qed.
 
   Section Sqrt3mod4.
