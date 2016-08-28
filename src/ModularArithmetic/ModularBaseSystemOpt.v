@@ -709,7 +709,7 @@ Section PowInv.
     : eq (pow_opt x chain) (ModularBaseSystem.pow x chain)
     := Eval cbv [proj2_sig pow_opt_sig] in (proj2_sig (pow_opt_sig x chain)).
 
-  Context {ic : InvExponentiationChain}.
+  Context {ec : ExponentiationChain (modulus - 2)}.
 
   Definition inv_opt_sig x:
     {y | eq y (inv chain chain_correct x)}.

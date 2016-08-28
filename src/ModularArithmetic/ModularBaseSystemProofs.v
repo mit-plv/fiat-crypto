@@ -35,9 +35,9 @@ Class CarryChain (limb_widths : list Z) :=
     coeff_mod: decode coeff = 0%F
   }.
 
-  Class InvExponentiationChain {m : Z} {prm : PseudoMersenneBaseParams m} := {
+  Class ExponentiationChain {m : Z} {prm : PseudoMersenneBaseParams m} (exp : Z) := {
     chain : list (nat * nat);
-    chain_correct : fold_chain 0%N N.add chain (1%N :: nil) = Z.to_N (m - 2)
+    chain_correct : fold_chain 0%N N.add chain (1%N :: nil) = Z.to_N exp
   }.
 
 
@@ -312,7 +312,7 @@ Section FieldOperationProofs.
   Section FieldProofs.
   Context (modulus_gt_2 : 2 < modulus)
           {sc : SubtractionCoefficient}
-          {ic : InvExponentiationChain}.
+          {ec : ExponentiationChain (modulus - 2)}.
 
   Lemma _zero_neq_one : not (eq zero one).
   Proof.
@@ -721,26 +721,28 @@ Section SquareRootProofs.
   Qed.
 
   Section Sqrt3mod4.
-  Context (modulus_3mod4 : modulus mod 4 = 3). 
+  Context (modulus_3mod4 : modulus mod 4 = 3).
+  Context {ec : ExponentiationChain (modulus / 4 + 1)}.
 
-  Lemma sqrt_3mod4_correct : forall u x chain pf, u ~= x ->
-    (sqrt_3mod4 chain pf u) ~= F.sqrt_3mod4 x.
+  Lemma sqrt_3mod4_correct : forall u x, u ~= x ->
+    (sqrt_3mod4 chain chain_correct u) ~= F.sqrt_3mod4 x.
   Proof.
     repeat match goal with
            | |- _ => progress (cbv [sqrt_3mod4 F.sqrt_3mod4]; intros)
            | |- _ => rewrite @F.pow_2_r in *
            | |- _ => rewrite eqb_correct in * by eassumption
-           | |- _ => rewrite <-pf; apply pow_rep; eassumption
+           | |- _ => rewrite <-chain_correct; apply pow_rep; eassumption
            end.
   Qed.
   End Sqrt3mod4.
 
   Section Sqrt5mod8.
-  Context (modulus_5mod8 : modulus mod 8 = 5). 
+  Context (modulus_5mod8 : modulus mod 8 = 5).
+  Context {ec : ExponentiationChain (modulus / 8 + 1)}.
   Context (sqrt_m1 : digits) (sqrt_m1_correct : mul sqrt_m1 sqrt_m1 ~= F.opp 1%F).
   
-  Lemma sqrt_5mod8_correct : forall u x chain pf, u ~= x ->
-    (sqrt_5mod8 chain pf sqrt_m1 u) ~= F.sqrt_5mod8 (decode sqrt_m1) x.
+  Lemma sqrt_5mod8_correct : forall u x, u ~= x ->
+    (sqrt_5mod8 chain chain_correct sqrt_m1 u) ~= F.sqrt_5mod8 (decode sqrt_m1) x.
   Proof.
     repeat match goal with
            | |- _ => progress (cbv [sqrt_5mod8 F.sqrt_5mod8]; intros)
@@ -749,7 +751,7 @@ Section SquareRootProofs.
            | |- (if eqb ?a ?b then _ else _) ~=
                 (if dec (?c = _) then _ else _) =>
              assert (a ~= c); repeat break_if; try apply mul_rep;
-               try solve [rewrite <-pf; apply pow_rep; eassumption]
+               try solve [rewrite <-chain_correct; apply pow_rep; eassumption]
            | |- _ => congruence
            end.
   Qed.
