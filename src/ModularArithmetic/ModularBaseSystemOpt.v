@@ -916,32 +916,6 @@ Section Canonicalization.
   Definition freeze_opt_correct us
     : freeze_opt us = freeze us
     := proj2_sig (freeze_opt_sig us).
-(*
-  Lemma freeze_opt_canonical: forall us vs x,
-    @pre_carry_bounds _ _ int_width us -> rep us x ->
-    @pre_carry_bounds _ _ int_width vs -> rep vs x ->
-    freeze_opt us = freeze_opt vs.
-  Proof.
-    intros.
-    rewrite !freeze_opt_correct.
-    eapply freeze_canonical with (B := int_width); eauto.
-  Qed.
 
-  Lemma freeze_opt_preserves_rep : forall us x, rep us x ->
-    rep (freeze_opt us) x.
-  Proof.
-    intros.
-    rewrite freeze_opt_correct.
-    eapply freeze_preserves_rep; eauto.
-  Qed.
-
-  Lemma freeze_opt_spec : forall us vs x, rep us x -> rep vs x ->
-    @pre_carry_bounds _ _ int_width us ->
-    @pre_carry_bounds _ _ int_width vs ->
-    (rep (freeze_opt us) x /\ freeze_opt us = freeze_opt vs).
-  Proof.
-    split; eauto using freeze_opt_canonical.
-    auto using freeze_opt_preserves_rep.
-  Qed.
-*)
 End Canonicalization.
+
