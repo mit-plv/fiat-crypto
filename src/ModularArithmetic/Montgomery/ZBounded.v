@@ -40,4 +40,24 @@ Section montgomery.
     pull_zlike_decode.
     subst pr; split; [ reflexivity | exact _ ].
   Defined.
+
+  Definition reduce_via_partial : forall v : LargeT,
+      { reduce : SmallT
+      | large_valid v
+        -> decode_small reduce = Montgomery.Z.reduce_via_partial modulus small_bound (decode_small modulus') (decode_large v)
+           /\ small_valid reduce }.
+  Proof.
+    intro T. evar (pr : SmallT); exists pr. intros T_valid.
+    assert (0 <= decode_large T < small_bound * small_bound) by auto using decode_large_valid.
+    assert (0 <= decode_small (Mod_SmallBound T) < small_bound) by auto using decode_small_valid, Mod_SmallBound_valid.
+    assert (0 <= decode_small modulus' < small_bound) by auto using decode_small_valid.
+    assert (0 <= decode_small modulus_digits < small_bound) by auto using decode_small_valid, modulus_digits_valid.
+    assert (0 <= modulus) by apply (modulus_nonneg _).
+    assert (modulus < small_bound) by (rewrite <- modulus_digits_correct; omega).
+    unfold reduce_via_partial.
+    rewrite <- partial_reduce_alt_eq by omega.
+    cbv [Montgomery.Z.partial_reduce Montgomery.Z.partial_reduce_alt Montgomery.Z.prereduce].
+    pull_zlike_decode.
+    subst pr; split; [ reflexivity | exact _ ].
+  Defined.
 End montgomery.

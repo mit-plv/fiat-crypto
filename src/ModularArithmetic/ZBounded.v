@@ -96,6 +96,16 @@ Existing Class medium_valid.
 Existing Class small_valid.
 Existing Instances Mod_SmallBound_valid DivBy_SmallerBound_valid DivBy_SmallBound_valid Mul_valid CarryAdd_valid CarrySubSmall_valid ConditionalSubtract_valid ConditionalSubtractModulus_valid modulus_digits_valid medium_to_large_valid.
 
+Lemma ConditionalSubtractModulus_correct'
+      {small_bound smaller_bound modulus : Z} {Zops : ZLikeOps small_bound smaller_bound modulus}
+      {Zprops : ZLikeProperties Zops}
+  : forall x, small_valid x -> decode_small (ConditionalSubtractModulus x)
+                               = if (decode_small modulus_digits <=? decode_small x) then decode_small x - decode_small modulus_digits else decode_small x.
+Proof.
+  intros; rewrite ConditionalSubtractModulus_correct by assumption.
+  break_match; Z.ltb_to_lt; omega.
+Qed.
+
 Lemma modulus_nonneg {small_bound smaller_bound modulus} (Zops : ZLikeOps small_bound smaller_bound modulus) {_ : ZLikeProperties Zops} : 0 <= modulus.
 Proof.
   pose proof (decode_small_valid _ modulus_digits_valid) as H.
@@ -105,7 +115,7 @@ Qed.
 
 Create HintDb push_zlike_decode discriminated.
 Create HintDb pull_zlike_decode discriminated.
-Hint Rewrite @Mod_SmallBound_correct @DivBy_SmallBound_correct @DivBy_SmallerBound_correct @Mul_correct @CarryAdd_correct_fst @CarryAdd_correct_snd @CarrySubSmall_correct_fst @CarrySubSmall_correct_snd  @ConditionalSubtract_correct @ConditionalSubtractModulus_correct @modulus_digits_correct using solve [ typeclasses eauto ] : push_zlike_decode.
+Hint Rewrite @Mod_SmallBound_correct @DivBy_SmallBound_correct @DivBy_SmallerBound_correct @Mul_correct @CarryAdd_correct_fst @CarryAdd_correct_snd @CarrySubSmall_correct_fst @CarrySubSmall_correct_snd  @ConditionalSubtract_correct @ConditionalSubtractModulus_correct @ConditionalSubtractModulus_correct' @modulus_digits_correct using solve [ typeclasses eauto ] : push_zlike_decode.
 Hint Rewrite <- @Mod_SmallBound_correct @DivBy_SmallBound_correct @DivBy_SmallerBound_correct @Mul_correct @CarryAdd_correct_fst @CarryAdd_correct_snd @CarrySubSmall_correct_fst @CarrySubSmall_correct_snd @ConditionalSubtract_correct @ConditionalSubtractModulus_correct @modulus_digits_correct using solve [ typeclasses eauto ] : pull_zlike_decode.
 
 Ltac get_modulus :=
@@ -125,6 +135,7 @@ Ltac push_zlike_decode :=
                | erewrite !CarrySubSmall_correct_snd by typeclasses eauto
                | erewrite !ConditionalSubtract_correct by typeclasses eauto
                | erewrite !ConditionalSubtractModulus_correct by typeclasses eauto
+               | erewrite !ConditionalSubtractModulus_correct' by typeclasses eauto
                | erewrite !(@modulus_digits_correct _ modulus _ _) by typeclasses eauto ].
 Ltac pull_zlike_decode :=
   let modulus := get_modulus in
@@ -143,4 +154,5 @@ Ltac pull_zlike_decode :=
                | erewrite <- !CarrySubSmall_correct_fst by typeclasses eauto
                | erewrite <- !CarrySubSmall_correct_snd by typeclasses eauto
                | erewrite <- !ConditionalSubtractModulus_correct by typeclasses eauto
+               | erewrite <- !ConditionalSubtractModulus_correct' by typeclasses eauto
                | erewrite <- !(@modulus_digits_correct _ modulus _ _) by typeclasses eauto ].
