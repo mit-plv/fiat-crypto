@@ -572,9 +572,26 @@ Fixpoint keepAddingOne {var} (x : @expr Z var TT) (n : nat) : @expr Z var TT :=
 Definition KeepAddingOne (n : nat) : Expr (T := Z) TT :=
   fun var => keepAddingOne (Const 1%Z) n.
 
-Definition testCase := Eval vm_compute in KeepAddingOne 5.
+Definition testCase := Eval vm_compute in KeepAddingOne 4000.
 
-Definition v := Eval vm_compute in RangeInterp (ZToRange 6 testCase).
+Eval vm_compute in RangeInterp (ZToRange 0 testCase).
+Eval vm_compute in RangeInterp (ZToRange 1 testCase).
+Eval vm_compute in RangeInterp (ZToRange 10 testCase).
+Eval vm_compute in RangeInterp (ZToRange 32 testCase).
+Eval vm_compute in RangeInterp (ZToRange 64 testCase).
+Eval vm_compute in RangeInterp (ZToRange 128 testCase).
+
+Definition nefarious : Expr (T := Z) TT :=
+  fun var => Let (Binop OPadd (Const 10%Z) (Const 20%Z))
+                 (fun y => Binop OPmul (Var y) (Const 0%Z)).
+
+Eval vm_compute in RangeInterp (ZToRange 0 nefarious).
+Eval vm_compute in RangeInterp (ZToRange 1 nefarious).
+Eval vm_compute in RangeInterp (ZToRange 4 nefarious).
+Eval vm_compute in RangeInterp (ZToRange 5 nefarious).
+Eval vm_compute in RangeInterp (ZToRange 32 nefarious).
+Eval vm_compute in RangeInterp (ZToRange 64 nefarious).
+Eval vm_compute in RangeInterp (ZToRange 128 nefarious).
 
 (* This example wasn't starting with a term at the right abstraction level.
  * We don't need to handle tuples in bounds checking. *)
