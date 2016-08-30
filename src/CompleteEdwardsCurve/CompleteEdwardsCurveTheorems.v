@@ -1,4 +1,5 @@
 Require Export Crypto.Spec.CompleteEdwardsCurve.
+Require Export Crypto.Util.GlobalSettings.
 
 Require Import Crypto.Algebra Crypto.Algebra Crypto.Util.Decidable.
 Require Import Crypto.CompleteEdwardsCurve.Pre.
@@ -8,6 +9,7 @@ Require Import Coq.Classes.Morphisms.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Crypto.Util.Tuple Crypto.Util.Notations Crypto.Util.Tactics.
 Require Export Crypto.Util.FixCoqMistakes.
+Require Import Ring_tac Field_tac.
 
 Module E.
   Import Group ScalarMult Ring Field CompleteEdwardsCurve.E.

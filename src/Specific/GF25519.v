@@ -37,7 +37,7 @@ Instance subCoeff : SubtractionCoefficient.
 Defined.
 
 Instance carryChain : CarryChain limb_widths.
-  apply Build_CarryChain with (carry_chain := ([0;1;2;3;4;5;6;7;8;9;0;1])%nat).
+  apply Build_CarryChain with (carry_chain := (rev [0;1;2;3;4;5;6;7;8;9;0;1])%nat).
   intros.
   repeat (destruct H as [|H]; [subst; vm_compute; repeat constructor | ]).
   contradiction H.
