@@ -96,11 +96,30 @@ Module Input.
           convertExpr (f x y))
       end.
 
+    Fixpoint convertExpr' {A B: Type} {EA: Evaluable A} {EB: Evaluable B} {t} (a: expr (T := A) (var := @interp_type A) t): expr (T := B) (var := @interp_type B) t :=
+      match a with
+      | Const x => Const (@toT B EB (@fromT A EA x))
+      | Var t x => @Var B _ t (convertVar x)
+      | Binop t1 t2 o e1 e2 =>
+        @Binop B _ t1 t2 o (convertExpr' e1) (convertExpr' e2)
+      | Let tx e tC f =>
+        Let (convertExpr' e) (fun x => convertExpr' (f (convertVar x)))
+      | Pair t1 e1 t2 e2 => Pair (convertExpr' e1) (convertExpr' e2)
+      | MatchPair t1 t2 e tC f => MatchPair (convertExpr' e) (fun x y =>
+          convertExpr' (f (convertVar x) (convertVar y)))
+      end.
+
     Definition convertZToWord {t} n v a :=
       @convertExpr Z (word n) ZEvaluable (@WordEvaluable n) t v a.
 
     Definition convertZToWordRangeOpt {t} n v a :=
       @convertExpr Z (@WordRangeOpt n) ZEvaluable (@WordRangeOptEvaluable n) t v a.
+
+    Definition convertZToWord' {t} n a :=
+      @convertExpr' Z (word n) ZEvaluable (@WordEvaluable n) t a.
+
+    Definition convertZToWordRangeOpt' {t} n a :=
+      @convertExpr' Z (@WordRangeOpt n) ZEvaluable (@WordRangeOptEvaluable n) t a.
 
     Definition ZToWord {t} n (a: @Expr Z t): @Expr (word n) t :=
       fun v => convertZToWord n v (a v).
@@ -116,12 +135,60 @@ Module Input.
     Defined.
   End Conversions.
 
+  Definition zinterp {t} E := @interp Z ZEvaluable t E.
+
   Definition ZInterp {t} E := @Interp Z ZEvaluable t E.
+
+  Definition wordInterp {n t} E := @interp (word n) (@WordEvaluable n) t E.
 
   Definition WordInterp {n t} E := @Interp (word n) (@WordEvaluable n) t E.
 
+  Definition rangeInterp {n t} E: @interp_type (option (Range N)) t :=
+    typeMap evalWordRangeOpt (@interp (@WordRangeOpt n) (@WordRangeOptEvaluable n) t E).
+
+  Definition rangeInterp' {n t} E: @interp_type (@WordRangeOpt n) t :=
+    @interp (@WordRangeOpt n) (@WordRangeOptEvaluable n) t E.
+
   Definition RangeInterp {n t} E: @interp_type (option (Range N)) t :=
     typeMap evalWordRangeOpt (@Interp (@WordRangeOpt n) (@WordRangeOptEvaluable n) t E).
+
+   Definition RangeInterp' {n t} E: @interp_type (@WordRangeOpt n) t :=
+    @Interp (@WordRangeOpt n) (@WordRangeOptEvaluable n) t E.
+ Section Correctness.
+
+    Definition Expr' T := @expr T (@interp_type T).
+
+    Lemma interp_equiv : forall T ev t E,
+      @Interp T ev t E = @interp T ev t (E (@interp_type T)).
+    Proof. intros; unfold Interp; reflexivity. Qed.
+
+    Fixpoint succeeds n t :=
+      match t as t' return @interp_type (@WordRangeOpt n) t' -> bool with
+      | TT => fun x =>
+        match (evalWordRangeOpt x) with
+        | Some _ => true
+        | _ => false
+        end
+      | Prod a b => fun x =>
+        match x with
+        | (x0, x1) => andb (succeeds n a x0) (succeeds n b x1)
+        end
+      end.
+
+    Arguments succeeds [n] [t] x.
+
+    Lemma RangeInterp_correct: forall {n t} (E: @expr Z (@interp_type Z) t),
+      succeeds (rangeInterp' (convertZToWordRangeOpt' n E)) = true
+      -> typeMap (fun x => NToWord n (Z.to_N x)) (zinterp E) = wordInterp (convertZToWord' n E).
+    Proof.
+      intros n t E H.
+      unfold zinterp, wordInterp, rangeInterp',
+             convertZToWordRangeOpt', convertZToWord' in *.
+      induction E; simpl.
+
+      - reflexivity.
+    Admitted.
+  End Correctness.
 
   Example example_Expr : Expr TT := fun var => (
     Let (Const 7) (fun a =>
@@ -556,7 +623,7 @@ _).
     cbv beta delta [ge25519_add'].
     Reify_rhs.
     reflexivity.
-  Admitted.
+  Defined.
 
   Definition ge25519_result_range := RangeInterp (ZToRange 32 ge25519_ast).
 End Curve25519. *)
