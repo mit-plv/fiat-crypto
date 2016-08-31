@@ -70,10 +70,12 @@ Definition option_eq {A} eq (x y : option A) :=
                end
   end.
 
-Ltac congruence_option :=
-  repeat match goal with
-         | [ H : Some _ = Some _ |- _ ] => inversion H; clear H
-         | [ H : None = Some _ |- _ ] => solve [ inversion H ]
-         | [ H : Some _ = None |- _ ] => solve [ inversion H ]
-         | [ H : None = None |- _ ] => clear H
-         end.
+Ltac inversion_option_step :=
+  match goal with
+  | [ H : Some _ = Some _ |- _ ] => inversion H; clear H
+  | [ H : None = Some _ |- _ ] => solve [ inversion H ]
+  | [ H : Some _ = None |- _ ] => solve [ inversion H ]
+  | [ H : None = None |- _ ] => clear H
+  end.
+
+Ltac inversion_option := repeat inversion_option_step.
