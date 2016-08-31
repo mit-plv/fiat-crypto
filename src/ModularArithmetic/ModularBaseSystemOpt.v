@@ -883,13 +883,37 @@ Section Canonicalization.
     carry_full_3_opt_cps f us = f (carry_full (carry_full (carry_full us))) :=
     proj2_sig (carry_full_3_opt_cps_sig f us).
 
+  Definition conditional_subtract_modulus_opt_sig (f : list Z) (cond : bool) :
+    { g | g = conditional_subtract_modulus f cond}.
+  Proof.
+    eexists.
+    cbv [conditional_subtract_modulus].
+    match goal with |- appcontext[if cond then ?a else ?b] =>
+    let LHS := match goal with |- ?LHS = ?RHS => LHS end in
+    let RHS := match goal with |- ?LHS = ?RHS => RHS end in
+    let RHSf := match (eval pattern (if cond then a else b) in RHS) with ?RHSf _ => RHSf end in
+    change (LHS = Let_In (if cond then a else b) RHSf) end.
+    cbv [map2 map].
+    change modulus_digits with modulus_digits_opt.
+    change @max_ones with max_ones_opt.
+    reflexivity.
+  Defined.
+  
+  Definition conditional_subtract_modulus_opt f cond : list Z
+    := Eval cbv [proj1_sig conditional_subtract_modulus_opt_sig] in proj1_sig (conditional_subtract_modulus_opt_sig f cond).
+
+  Definition conditional_subtract_modulus_opt_correct f cond
+    : conditional_subtract_modulus_opt f cond = conditional_subtract_modulus f cond
+    := Eval cbv [proj2_sig conditional_subtract_modulus_opt_sig] in proj2_sig (conditional_subtract_modulus_opt_sig f cond).
+
   Definition freeze_opt_sig (us : digits) :
     { b : digits | b = freeze us }.
   Proof.
     eexists.
-    cbv [freeze conditional_subtract_modulus].
+    cbv [freeze].
     rewrite <-from_list_default_eq with (d := 0%Z).
     change (@from_list_default Z) with (@from_list_default_opt Z).
+    rewrite <-conditional_subtract_modulus_opt_correct.
     let LHS := match goal with |- ?LHS = ?RHS => LHS end in
     let RHS := match goal with |- ?LHS = ?RHS => RHS end in
     let RHSf := match (eval pattern (to_list (length limb_widths) (carry_full (carry_full (carry_full us)))) in RHS) with ?RHSf _ => RHSf end in
@@ -901,12 +925,8 @@ Section Canonicalization.
     cbv beta iota delta [ge_modulus ge_modulus'].
     change length with length_opt.
     change (nth_default 0 modulus_digits) with (nth_default_opt 0 modulus_digits_opt).
-    change @max_ones with max_ones_opt.
     change @Pow2Base.base_from_limb_widths with base_from_limb_widths_opt.
     change minus with minus_opt.
-    change @map with @map_opt.
-    change Z.sub with Z_sub_opt at 1.
-    rewrite <-modulus_digits_opt_correct.
     reflexivity.
   Defined.
 
@@ -919,3 +939,107 @@ Section Canonicalization.
 
 End Canonicalization.
 
+Section SquareRoots.
+  Context `{prm : PseudoMersenneBaseParams}.
+  Context {cc : CarryChain limb_widths}.
+  Local Notation digits := (tuple Z (length limb_widths)).
+          (* allows caller to precompute k and c *)
+  Context (k_ c_ : Z) (k_subst : k = k_) (c_subst : c = c_)
+          (one_ : digits) (one_subst : one = one_).
+
+  Definition eqb_opt_sig (us vs : digits) :
+    { b | b = ModularBaseSystem.eqb us vs}.
+  Proof.
+    eexists; cbv [ModularBaseSystem.eqb].
+    cbv [fieldwiseb fieldwiseb'].
+    erewrite <-!freeze_opt_correct by eassumption.
+    reflexivity.
+  Defined.
+
+  Definition eqb_opt us vs := Eval cbv [proj1_sig eqb_opt_sig] in proj1_sig (eqb_opt_sig us vs).
+
+  Definition eqb_opt_correct us vs
+    : eqb_opt us vs = ModularBaseSystem.eqb us vs
+    := Eval cbv [proj2_sig eqb_opt_sig] in proj2_sig (eqb_opt_sig us vs).
+
+  (* TODO : where should this lemma go? Alternatively, is there a standard-library
+     tactic/lemma for this? *)
+  Lemma if_equiv : forall {A} (eqA : A -> A -> Prop) (x0 x1 : bool) y0 y1 z0 z1,
+    x0 = x1 -> eqA y0 y1 -> eqA z0 z1 ->
+    eqA (if x0 then y0 else z0) (if x1 then y1 else z1).
+  Proof.
+    intros; repeat break_if; congruence.
+  Qed.
+  
+  Section SquareRoot3mod4.
+  Context {ec : ExponentiationChain (modulus / 4 + 1)}.
+    
+  Definition sqrt_3mod4_opt_sig (us : digits) :
+    { vs : digits | eq vs (sqrt_3mod4 chain chain_correct us)}.
+  Proof.
+    eexists; cbv [sqrt_3mod4].
+    apply @pow_opt_correct; eassumption.
+  Defined.
+
+  Definition sqrt_3mod4_opt us := Eval cbv [proj1_sig sqrt_3mod4_opt_sig] in
+    proj1_sig (sqrt_3mod4_opt_sig us).
+
+  Definition sqrt_3mod4_opt_correct us
+    : eq (sqrt_3mod4_opt us) (sqrt_3mod4 chain chain_correct us)
+    := Eval cbv [proj2_sig sqrt_3mod4_opt_sig] in proj2_sig (sqrt_3mod4_opt_sig us).
+  
+  End SquareRoot3mod4.
+
+  Import Morphisms.
+  Global Instance eqb_Proper : Proper (eq ==> eq ==> Logic.eq) ModularBaseSystem.eqb. Admitted.
+
+  Section SquareRoot5mod8.
+  Context {ec : ExponentiationChain (modulus / 8 + 1)}.
+  Context (sqrt_m1 : digits) (sqrt_m1_correct : rep (mul sqrt_m1 sqrt_m1) (F.opp 1%F)).
+    
+  Definition sqrt_5mod8_opt_sig (us : digits) :
+    { vs : digits | eq vs (sqrt_5mod8 chain chain_correct sqrt_m1 us)}.
+  Proof.
+    eexists; cbv [sqrt_5mod8].
+    etransitivity.
+    Focus 2. {
+      apply if_equiv. {
+        apply eqb_Proper; [ | reflexivity ].
+        transitivity (carry_mul_opt k_ c_ (pow_opt k_ c_ one_ us chain) (pow_opt k_ c_ one_ us chain)); [ reflexivity | ].
+        cbv [eq].
+        rewrite carry_mul_opt_correct by eassumption.
+        rewrite carry_mul_rep by reflexivity.
+        rewrite mul_rep by reflexivity.
+        f_equal; apply pow_opt_correct; auto.
+      } {
+        apply pow_opt_correct; auto.
+      } {
+        match goal with |- eq _ (mul ?a (ModularBaseSystem.pow ?d ?e)) =>
+                        transitivity (carry_mul_opt k_ c_ a (pow_opt k_ c_ one_ us chain)); [ reflexivity | ] end.
+        cbv [eq].
+        rewrite !mul_rep by reflexivity.
+        erewrite <-pow_opt_correct by eassumption.
+        rewrite <-carry_mul_rep by reflexivity.
+        erewrite <-carry_mul_opt_correct by eassumption.
+        reflexivity.
+      }
+    } Unfocus.
+    rewrite <-eqb_opt_correct.
+    rewrite k_subst, c_subst, one_subst.
+    let LHS := match goal with |- eq ?LHS ?RHS => LHS end in
+    let RHS := match goal with |- eq ?LHS ?RHS => RHS end in
+    let RHSf := match (eval pattern (pow_opt k_ c_ one_ us chain) in RHS) with ?RHSf _ => RHSf end in
+    change (eq LHS (Let_In (pow_opt k_ c_ one_ us chain) RHSf)).
+    reflexivity.
+  Defined.
+
+  Definition sqrt_5mod8_opt us := Eval cbv [proj1_sig sqrt_5mod8_opt_sig] in
+    proj1_sig (sqrt_5mod8_opt_sig us).
+
+  Definition sqrt_5mod8_opt_correct us
+    : eq (sqrt_5mod8_opt us) (ModularBaseSystem.sqrt_5mod8 chain chain_correct sqrt_m1 us)
+    := Eval cbv [proj2_sig sqrt_5mod8_opt_sig] in proj2_sig (sqrt_5mod8_opt_sig us).
+  
+  End SquareRoot5mod8.
+
+End SquareRoots.

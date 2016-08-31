@@ -90,10 +90,21 @@ Definition pow2_chain p :=
 
 Definition invChain := Eval compute in pow2_chain (Z.to_pos (modulus - 2)).
 
-Instance ic : InvExponentiationChain.
-  apply Build_InvExponentiationChain with (chain := invChain).
+Instance inv_ec : ExponentiationChain (modulus - 2).
+  apply Build_ExponentiationChain with (chain := invChain).
   reflexivity.
 Defined.
+
+(* Note : use caution copying square root code to other primes. The (modulus / 4 + 1) chains are
+   for primes that are 3 mod 4; if the prime is 5 mod 8 then use (modulus / 8 + 1). *)
+Definition sqrtChain := Eval compute in pow2_chain (Z.to_pos (modulus / 4 + 1)).
+
+Instance sqrt_ec : ExponentiationChain (modulus / 4 + 1).
+  apply Build_ExponentiationChain with (chain := sqrtChain).
+  reflexivity.
+Defined.
+
+Arguments chain {_ _ _} _.
 
 (* END precomputation *) 
 
@@ -230,20 +241,21 @@ Definition opp_correct (f : fe1305)
   : opp f = opp_opt f
   := Eval cbv beta iota delta [proj2_sig add_sig] in proj2_sig (opp_sig f).
 
+Definition pow (f : fe1305) chain := fold_chain_opt one_ mul chain [f].
+
+Lemma pow_correct (f : fe1305) : forall chain, pow f chain = pow_opt k_ c_ one_ f chain.
+Proof.
+  cbv [pow pow_opt]; intros.
+  rewrite !fold_chain_opt_correct.
+  apply Proper_fold_chain; try reflexivity.
+  intros; subst; apply mul_correct.
+Qed.
+
 Definition inv_sig (f : fe1305) :
   { g : fe1305 | g = inv_opt k_ c_ one_ f }.
 Proof.
-  eexists.
-  cbv [inv_opt pow_opt].
-  transitivity (@fold_chain_opt (tuple Z (length limb_widths)) one_ mul chain [f]).
-  Focus 2. {
-    rewrite fold_chain_opt_correct.
-    rewrite <-one_subst.
-    etransitivity; [ | symmetry; apply fold_chain_opt_correct ].
-    apply Proper_fold_chain; auto.
-    intros; cbv [eq]; subst.
-    apply mul_correct.
-  } Unfocus.
+  eexists; cbv [inv_opt].
+  rewrite <-pow_correct.
   cbv - [mul].
   reflexivity.
 Defined.
@@ -374,10 +386,18 @@ Definition unpack_correct (f : wire_digits)
   : unpack f = unpack_opt params1305 wire_widths_nonneg bits_eq f
   := Eval cbv beta iota delta [proj2_sig pack_sig] in proj2_sig (unpack_sig f).
 
-(* TODO: This file should eventually contain the following operations:
-   inv
-   opp
-   zero
-   one
-   eq
-*)
+Definition sqrt_sig (f : fe1305) :
+  { g | g = sqrt_3mod4_opt k_ c_ one_ f}.
+Proof.
+  eexists; cbv [sqrt_3mod4_opt].
+  rewrite <-pow_correct.
+  cbv - [mul].
+  reflexivity.
+Defined.
+
+Definition sqrt (f : fe1305) : fe1305 :=
+  Eval cbv beta iota delta [proj1_sig sqrt_sig] in proj1_sig (sqrt_sig f).
+
+Definition sqrt_correct (f : fe1305)
+  : sqrt f = sqrt_3mod4_opt k_ c_ one_ f
+  := Eval cbv beta iota delta [proj2_sig sqrt_sig] in proj2_sig (sqrt_sig f).
