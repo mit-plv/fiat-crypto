@@ -69,3 +69,11 @@ Definition option_eq {A} eq (x y : option A) :=
                | Some ay => eq ax ay
                end
   end.
+
+Ltac congruence_option :=
+  repeat match goal with
+         | [ H : Some _ = Some _ |- _ ] => inversion H; clear H
+         | [ H : None = Some _ |- _ ] => solve [ inversion H ]
+         | [ H : Some _ = None |- _ ] => solve [ inversion H ]
+         | [ H : None = None |- _ ] => clear H
+         end.
