@@ -18,7 +18,7 @@ Local Open Scope Z.
 
 (* BEGIN precomputation. *)
 
-Definition modulus : Z := 2^255 - 19.
+Definition modulus : Z := Eval compute in 2^255 - 19.
 Lemma prime_modulus : prime modulus. Admitted.
 Definition int_width := 32%Z.
 
@@ -93,10 +93,21 @@ Definition pow2_chain p :=
 
 Definition invChain := Eval compute in pow2_chain (Z.to_pos (modulus - 2)).
 
-Instance ic : InvExponentiationChain.
-  apply Build_InvExponentiationChain with (chain := invChain).
+Instance inv_ec : ExponentiationChain (modulus - 2).
+  apply Build_ExponentiationChain with (chain := invChain).
   reflexivity.
 Defined.
+
+(* Note : use caution copying square root code to other primes. The (modulus / 8 + 1) chains are
+   for primes that are 5 mod 8; if the prime is 3 mod 4 then use (modulus / 4 + 1). *)
+Definition sqrtChain := Eval compute in pow2_chain (Z.to_pos (modulus / 8 + 1)).
+
+Instance sqrt_ec : ExponentiationChain (modulus / 8 + 1).
+  apply Build_ExponentiationChain with (chain := sqrtChain).
+  reflexivity.
+Defined.
+
+Arguments chain {_ _ _} _.
 
 (* END precomputation *) 
 
@@ -242,24 +253,6 @@ Definition mul_correct (f g : fe25519)
   Eval cbv beta iota delta [proj1_sig add_sig] in
   proj2_sig (mul_sig f g).
 
-Definition inv_sig (f : fe25519) :
-  { g : fe25519 | g = inv_opt k_ c_ one_ f }.
-Proof.
-  eexists.
-  cbv [inv_opt pow_opt].
-  transitivity (@fold_chain_opt (tuple Z (length limb_widths)) one_ mul chain [f]).
-  Focus 2. {
-    rewrite fold_chain_opt_correct.
-    rewrite <-one_subst.
-    etransitivity; [ | symmetry; apply fold_chain_opt_correct ].
-    apply Proper_fold_chain; auto.
-    intros; cbv [eq]; subst.
-    apply mul_correct.
-  } Unfocus.
-  cbv - [mul].
-  reflexivity.
-Defined.
-
 Definition opp_sig (f : fe25519) :
   { g : fe25519 | g = opp_opt f }.
 Proof.
@@ -277,6 +270,25 @@ Definition opp (f : fe25519) : fe25519
 Definition opp_correct (f : fe25519)
   : opp f = opp_opt f
   := Eval cbv beta iota delta [proj2_sig add_sig] in proj2_sig (opp_sig f).
+
+Definition pow (f : fe25519) chain := fold_chain_opt one_ mul chain [f].
+
+Lemma pow_correct (f : fe25519) : forall chain, pow f chain = pow_opt k_ c_ one_ f chain.
+Proof.
+  cbv [pow pow_opt]; intros.
+  rewrite !fold_chain_opt_correct.
+  apply Proper_fold_chain; try reflexivity.
+  intros; subst; apply mul_correct.
+Qed.
+
+Definition inv_sig (f : fe25519) :
+  { g : fe25519 | g = inv_opt k_ c_ one_ f }.
+Proof.
+  eexists; cbv [inv_opt].
+  rewrite <-pow_correct.
+  cbv - [mul].
+  reflexivity.
+Defined.
 
 Definition inv (f : fe25519) : fe25519
   := Eval cbv beta iota delta [proj1_sig inv_sig] in proj1_sig (inv_sig f).
@@ -415,11 +427,3 @@ Definition unpack (f : wire_digits) : fe25519 :=
 Definition unpack_correct (f : wire_digits)
   : unpack f = unpack_opt params25519 wire_widths_nonneg bits_eq f
   := Eval cbv beta iota delta [proj2_sig pack_sig] in proj2_sig (unpack_sig f).
-
-(* TODO: This file should eventually contain the following operations:
-   inv
-   opp
-   zero
-   one
-   eq
-*)
