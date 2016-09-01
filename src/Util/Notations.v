@@ -25,6 +25,8 @@ Reserved Infix "&" (at level 50). (* N.B. This conflicts with [{ a : T & P}] for
 Reserved Infix "∣" (at level 50).
 Reserved Infix "~=" (at level 70).
 Reserved Infix "==" (at level 70, no associativity).
+Reserved Notation "x == y  :>  T"
+         (at level 70, y at next level, no associativity).
 Reserved Infix "=~>" (at level 70, no associativity).
 Reserved Infix "<~=" (at level 70, no associativity).
 Reserved Infix "<~=~>" (at level 70, no associativity).
