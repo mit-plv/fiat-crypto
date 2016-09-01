@@ -60,4 +60,33 @@ Section montgomery.
     pull_zlike_decode.
     subst pr; split; [ reflexivity | exact _ ].
   Defined.
+
+  Section correctness.
+    Context (R' : Z)
+            (Hmod : Z.equiv_modulo modulus (small_bound * R') 1)
+            (Hmod' : Z.equiv_modulo small_bound (modulus * (decode_small modulus')) (-1))
+            (v : LargeT)
+            (H : large_valid v)
+            (Hv : 0 <= decode_large v <= small_bound * modulus).
+    Lemma reduce_via_partial_correct'
+      : Z.equiv_modulo modulus
+                       (decode_small (proj1_sig (reduce_via_partial v)))
+                       (decode_large v * R')
+        /\ Z.min 0 (small_bound - modulus) <= (decode_small (proj1_sig (reduce_via_partial v))) < modulus.
+    Proof.
+      rewrite (proj1 (proj2_sig (reduce_via_partial v) H)).
+      eauto 6 using reduce_via_partial_correct, reduce_via_partial_in_range, decode_small_valid.
+    Qed.
+
+    Theorem reduce_via_partial_correct
+      : Z.equiv_modulo modulus
+                       (decode_small (proj1_sig (reduce_via_partial v)))
+                       (decode_large v * R')
+        /\ 0 <= (decode_small (proj1_sig (reduce_via_partial v))) < modulus.
+    Proof.
+      pose proof (proj2 (proj2_sig (reduce_via_partial v) H)) as H'.
+      apply decode_small_valid in H'.
+      destruct reduce_via_partial_correct'; split; eauto; omega.
+    Qed.
+  End correctness.
 End montgomery.
