@@ -36,6 +36,16 @@ Reserved Infix "≡_r" (at level 70, no associativity).
 Reserved Infix "≢_r" (at level 70, no associativity).
 Reserved Infix "≡ᵣ" (at level 70, no associativity).
 Reserved Infix "≢ᵣ" (at level 70, no associativity).
+Reserved Infix "≡₃₂" (at level 70, no associativity).
+Reserved Infix "≢₃₂" (at level 70, no associativity).
+Reserved Infix "≡₆₄" (at level 70, no associativity).
+Reserved Infix "≢₆₄" (at level 70, no associativity).
+Reserved Infix "≡₁₂₈" (at level 70, no associativity).
+Reserved Infix "≢₁₂₈" (at level 70, no associativity).
+Reserved Infix "≡₂₅₆" (at level 70, no associativity).
+Reserved Infix "≢₂₅₆" (at level 70, no associativity).
+Reserved Infix "≡₅₁₂" (at level 70, no associativity).
+Reserved Infix "≢₅₁₂" (at level 70, no associativity).
 Reserved Notation "a !== b" (at level 70, no associativity).
 Reserved Notation "a ≢ b" (at level 70, no associativity).
 Reserved Notation "$$ v" (at level 40).
