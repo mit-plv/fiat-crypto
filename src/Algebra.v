@@ -615,6 +615,7 @@ Module IntegralDomain.
   End IntegralDomain.
 End IntegralDomain.
 
+Require Coq.setoid_ring.Field_theory.
 Module Field.
   Section Field.
     Context {T eq zero one opp add mul sub inv div} `{@field T eq zero one opp add sub mul inv div}.
@@ -650,7 +651,6 @@ Module Field.
       + rewrite H1; apply left_identity.
     Qed.
 
-    Require Coq.setoid_ring.Field_theory.
     Lemma field_theory_for_stdlib_tactic : Field_theory.field_theory 0 1 add mul sub opp div inv eq.
     Proof.
       constructor.
@@ -1350,8 +1350,9 @@ Section Example.
   Proof. intros. intro. nsatz_contradict. Qed.
 End Example.
 
+Require Coq.ZArith.ZArith.
 Section Z.
-  Require Import ZArith.
+  Import ZArith.
   Global Instance ring_Z : @ring Z Logic.eq 0%Z 1%Z Z.opp Z.add Z.sub Z.mul.
   Proof. repeat split; auto using Z.eq_dec with zarith typeclass_instances. Qed.
 
