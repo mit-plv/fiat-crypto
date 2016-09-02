@@ -444,19 +444,19 @@ Hint Extern 0 (cidtac2 ?msg1 ?msg2) => idtac "<infomsg>" msg1 msg2 "</infomsg>";
 Class cidtac3 {T1 T2 T3} (msg1 : T1) (msg2 : T2) (msg3 : T3) := Build_cidtac3 : True.
 Hint Extern 0 (cidtac3 ?msg1 ?msg2 ?msg3) => idtac "<infomsg>" msg1 msg2 msg3 "</infomsg>"; exact I : typeclass_instances.
 
-Class cfail {T} (msg : T) := Build_cfail : False.
-Hint Extern 0 (cfail ?msg) => fail 0 "<infomsg>Error:" msg "</infomsg>" : typeclass_instances.
-Class cfail2 {T1 T2} (msg1 : T1) (msg2 : T2) := Build_cfail2 : False.
-Hint Extern 0 (cfail2 ?msg1 ?msg2) => fail 0 "<infomsg>Error:" msg1 msg2 "</infomsg>" : typeclass_instances.
-Class cfail3 {T1 T2 T3} (msg1 : T1) (msg2 : T2) (msg3 : T3) := Build_cfail3 : False.
-Hint Extern 0 (cfail3 ?msg1 ?msg2 ?msg3) => fail 0 "<infomsg>Error:" msg1 msg2 msg3 "</infomsg>" : typeclass_instances.
+Class cfail {T} (msg : T) := Build_cfail : True.
+Hint Extern 0 (cfail ?msg) => idtac "<infomsg>Error:" msg "</infomsg>"; exact I : typeclass_instances.
+Class cfail2 {T1 T2} (msg1 : T1) (msg2 : T2) := Build_cfail2 : True.
+Hint Extern 0 (cfail2 ?msg1 ?msg2) => idtac "<infomsg>Error:" msg1 msg2 "</infomsg>"; exact I : typeclass_instances.
+Class cfail3 {T1 T2 T3} (msg1 : T1) (msg2 : T2) (msg3 : T3) := Build_cfail3 : True.
+Hint Extern 0 (cfail3 ?msg1 ?msg2 ?msg3) => idtac "<infomsg>Error:" msg1 msg2 msg3 "</infomsg>"; exact I : typeclass_instances.
 
 Ltac cidtac msg := constr:(_ : cidtac msg).
 Ltac cidtac2 msg1 msg2 := constr:(_ : cidtac2 msg1 msg2).
 Ltac cidtac3 msg1 msg2 msg3 := constr:(_ : cidtac2 msg1 msg2 msg3).
-Ltac cfail msg := constr:(_ : cfail msg).
-Ltac cfail2 msg1 msg2 := constr:(_ : cfail2 msg1 msg2).
-Ltac cfail3 msg1 msg2 msg3 := constr:(_ : cfail2 msg1 msg2 msg3).
+Ltac cfail msg := let dummy := constr:(_ : cfail msg) in constr:(I : I).
+Ltac cfail2 msg1 msg2 := let dummy := constr:(_ : cfail2 msg1 msg2) in constr:(I : I).
+Ltac cfail3 msg1 msg2 msg3 := let dummy := constr:(_ : cfail2 msg1 msg2 msg3) in constr:(I : I).
 
 Ltac idtac_goal := lazymatch goal with |- ?G => idtac "<infomsg>Goal:" G "</infomsg>" end.
 Ltac idtac_context :=
