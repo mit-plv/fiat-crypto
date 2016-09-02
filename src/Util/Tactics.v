@@ -439,18 +439,24 @@ Class cidtac {T} (msg : T) := Build_cidtac : True.
 (** Include "infomsg" tags so that messages show up better in Coq 8.4 + PG *)
 Hint Extern 0 (cidtac ?msg) => idtac "<infomsg>" msg "</infomsg>"; exact I : typeclass_instances.
 (** constr-based [idtac] *)
-Class cfail {T} (msg : T) := Build_cfail : False.
-Hint Extern 0 (cfail ?msg) => idtac "<infomsg>Error:" msg "</infomsg>"; fail : typeclass_instances.
-
 Class cidtac2 {T1 T2} (msg1 : T1) (msg2 : T2) := Build_cidtac2 : True.
 Hint Extern 0 (cidtac2 ?msg1 ?msg2) => idtac "<infomsg>" msg1 msg2 "</infomsg>"; exact I : typeclass_instances.
 Class cidtac3 {T1 T2 T3} (msg1 : T1) (msg2 : T2) (msg3 : T3) := Build_cidtac3 : True.
 Hint Extern 0 (cidtac3 ?msg1 ?msg2 ?msg3) => idtac "<infomsg>" msg1 msg2 msg3 "</infomsg>"; exact I : typeclass_instances.
 
-Ltac cfail msg := constr:(_ : cfail msg).
+Class cfail {T} (msg : T) := Build_cfail : False.
+Hint Extern 0 (cfail ?msg) => fail 0 "<infomsg>Error:" msg "</infomsg>" : typeclass_instances.
+Class cfail2 {T1 T2} (msg1 : T1) (msg2 : T2) := Build_cfail2 : False.
+Hint Extern 0 (cfail2 ?msg1 ?msg2) => fail 0 "<infomsg>Error:" msg1 msg2 "</infomsg>" : typeclass_instances.
+Class cfail3 {T1 T2 T3} (msg1 : T1) (msg2 : T2) (msg3 : T3) := Build_cfail3 : False.
+Hint Extern 0 (cfail3 ?msg1 ?msg2 ?msg3) => fail 0 "<infomsg>Error:" msg1 msg2 msg3 "</infomsg>" : typeclass_instances.
+
 Ltac cidtac msg := constr:(_ : cidtac msg).
 Ltac cidtac2 msg1 msg2 := constr:(_ : cidtac2 msg1 msg2).
 Ltac cidtac3 msg1 msg2 msg3 := constr:(_ : cidtac2 msg1 msg2 msg3).
+Ltac cfail msg := constr:(_ : cfail msg).
+Ltac cfail2 msg1 msg2 := constr:(_ : cfail2 msg1 msg2).
+Ltac cfail3 msg1 msg2 msg3 := constr:(_ : cfail2 msg1 msg2 msg3).
 
 Ltac idtac_goal := lazymatch goal with |- ?G => idtac "<infomsg>Goal:" G "</infomsg>" end.
 Ltac idtac_context :=
