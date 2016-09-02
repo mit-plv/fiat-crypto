@@ -1319,7 +1319,7 @@ Ltac only_two_square_roots :=
   end.
 
 (*** Tactics for ring equations *)
-Require Import Coq.setoid_ring.Ring_tac.
+Require Export Coq.setoid_ring.Ring_tac.
 Ltac ring_simplify_subterms := tac_on_subterms ltac:(fun t => ring_simplify t).
 
 Ltac ring_simplify_subterms_in_all :=
