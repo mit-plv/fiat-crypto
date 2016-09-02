@@ -12,6 +12,8 @@ Local Arguments fst {_ _} _.
 Local Arguments snd {_ _} _.
 Local Arguments f_equal {_ _} _ {_ _} _.
 
+Scheme Equality for prod.
+
 (** ** Equality for [prod] *)
 Section prod.
   (** *** Projecting an equality of a pair to equality of the first components *)
