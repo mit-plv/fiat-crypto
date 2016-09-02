@@ -433,3 +433,21 @@ Ltac simplify_projections :=
           || simplify_projection_2Targ_4carg @projT2 @existT
           || simplify_projection_2Targ_4carg @proj1 @conj
           || simplify_projection_2Targ_4carg @proj2 @conj).
+
+(** constr-based [idtac] *)
+Class cidtac {T} (msg : T) := Build_cidtac : True.
+(** Include "infomsg" tags so that messages show up better in Coq 8.4 + PG *)
+Hint Extern 0 (cidtac ?msg) => idtac "<infomsg>" msg "</infomsg>"; exact I : typeclass_instances.
+(** constr-based [idtac] *)
+Class cfail {T} (msg : T) := Build_cfail : False.
+Hint Extern 0 (cfail ?msg) => idtac "<infomsg>Error:" msg "</infomsg>"; fail : typeclass_instances.
+
+Class cidtac2 {T1 T2} (msg1 : T1) (msg2 : T2) := Build_cidtac2 : True.
+Hint Extern 0 (cidtac2 ?msg1 ?msg2) => idtac "<infomsg>" msg1 msg2 "</infomsg>"; exact I : typeclass_instances.
+Class cidtac3 {T1 T2 T3} (msg1 : T1) (msg2 : T2) (msg3 : T3) := Build_cidtac3 : True.
+Hint Extern 0 (cidtac3 ?msg1 ?msg2 ?msg3) => idtac "<infomsg>" msg1 msg2 msg3 "</infomsg>"; exact I : typeclass_instances.
+
+Ltac cfail msg := constr:(_ : cfail msg).
+Ltac cidtac msg := constr:(_ : cidtac msg).
+Ltac cidtac2 msg1 msg2 := constr:(_ : cidtac2 msg1 msg2).
+Ltac cidtac3 msg1 msg2 msg3 := constr:(_ : cidtac2 msg1 msg2 msg3).
