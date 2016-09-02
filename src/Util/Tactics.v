@@ -451,3 +451,10 @@ Ltac cfail msg := constr:(_ : cfail msg).
 Ltac cidtac msg := constr:(_ : cidtac msg).
 Ltac cidtac2 msg1 msg2 := constr:(_ : cidtac2 msg1 msg2).
 Ltac cidtac3 msg1 msg2 msg3 := constr:(_ : cidtac2 msg1 msg2 msg3).
+
+Ltac idtac_goal := lazymatch goal with |- ?G => idtac "<infomsg>Goal:" G "</infomsg>" end.
+Ltac idtac_context :=
+  try (repeat match goal with H : _ |- _ => revert H end;
+       idtac_goal;
+       lazymatch goal with |- ?G => idtac "<infomsg>Context:" G "</infomsg>" end;
+       fail).
