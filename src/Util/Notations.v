@@ -60,3 +60,4 @@ Reserved Notation "v [[ i ]]" (at level 30).
 Reserved Notation "u {{ i }}" (at level 30).
 Reserved Notation "'slet' x := A 'in' b"
          (at level 200, b at level 200, format "'slet'  x  :=  A  'in' '//' b").
+Reserved Notation "'λ'  x .. y , t" (at level 200, x binder, y binder, right associativity).
