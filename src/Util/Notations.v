@@ -58,3 +58,5 @@ Reserved Notation "'plet' x := y 'in' z" (at level 60).
 Reserved Notation "u [ i ]" (at level 30).
 Reserved Notation "v [[ i ]]" (at level 30).
 Reserved Notation "u {{ i }}" (at level 30).
+Reserved Notation "'slet' x := A 'in' b"
+         (at level 200, b at level 200, format "'slet'  x  :=  A  'in' '//' b").
