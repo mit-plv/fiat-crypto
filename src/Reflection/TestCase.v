@@ -1,11 +1,14 @@
 Require Import Crypto.Reflection.Syntax.
 Require Export Crypto.Reflection.Reify.
 Require Import Crypto.Reflection.InputSyntax.
+Require Import Crypto.Reflection.CommonSubexpressionElimination.
 Require Crypto.Reflection.Linearize.
 Require Import Crypto.Reflection.WfReflective.
 
 Import ReifyDebugNotations.
 
+Local Set Boolean Equality Schemes.
+Local Set Decidable Equality Schemes.
 Inductive base_type := Tnat.
 Definition interp_base_type (v : base_type) : Type :=
   match v with
@@ -14,15 +17,18 @@ Definition interp_base_type (v : base_type) : Type :=
 Local Notation tnat := (Tbase Tnat).
 Inductive op : flat_type base_type -> flat_type base_type -> Type :=
 | Add : op (Prod tnat tnat) tnat
-| Mul : op (Prod tnat tnat) tnat.
+| Mul : op (Prod tnat tnat) tnat
+| Sub : op (Prod tnat tnat) tnat.
 Definition interp_op src dst (f : op src dst) : interp_flat_type_gen interp_base_type src -> interp_flat_type_gen interp_base_type dst
   := match f with
      | Add => fun xy => fst xy + snd xy
      | Mul => fun xy => fst xy * snd xy
+     | Sub => fun xy => fst xy - snd xy
      end%nat.
 
 Global Instance: forall x y, reify_op op (x + y)%nat 2 Add := fun _ _ => I.
 Global Instance: forall x y, reify_op op (x * y)%nat 2 Mul := fun _ _ => I.
+Global Instance: forall x y, reify_op op (x - y)%nat 2 Sub := fun _ _ => I.
 Global Instance: reify type nat := Tnat.
 
 Ltac Reify' e := Reify.Reify' base_type interp_base_type op e.
@@ -70,7 +76,7 @@ Abort.
 
 Definition example_expr : Syntax.Expr base_type interp_base_type op (Tbase Tnat).
 Proof.
-  let x := Reify (let x := 1 in let y := 1 in (let a := 1 in let '(c, d) := (2, 3) in a + x + c + d) + y)%nat in
+  let x := Reify (let x := 1 in let y := 1 in (let a := 1 in let '(c, d) := (2, 3) in a + x + (x + x) + (x + x) - (x + x) + c + d) + y)%nat in
   exact x.
 Defined.
 
@@ -89,6 +95,8 @@ Definition op_beq t1 tR : op t1 tR -> op t1 tR -> option pointed_Prop
              | Add, _ => None
              | Mul, Mul => Some trivial
              | Mul, _ => None
+             | Sub, Sub => Some trivial
+             | Sub, _ => None
              end.
 Lemma op_beq_bl t1 tR (x y : op t1 tR)
   : match op_beq t1 tR x y with
@@ -96,9 +104,8 @@ Lemma op_beq_bl t1 tR (x y : op t1 tR)
     | None => False
     end -> x = y.
 Proof.
-  destruct x; simpl.
-  { refine match y with Add => _ | _ => _ end; tauto. }
-  { refine match y with Add => _ | _ => _ end; tauto. }
+  destruct x; simpl;
+    refine match y with Add => _ | _ => _ end; tauto.
 Qed.
 
 Ltac reflect_Wf := WfReflective.reflect_Wf base_type_eq_semidec_is_dec op_beq_bl.
@@ -117,3 +124,21 @@ Qed.
 
 Lemma example_expr_wf : Wf example_expr.
 Proof. Time reflect_Wf. (* 0.008 s *) Qed.
+
+Section cse.
+  Let SConstT := nat.
+  Inductive op_code : Set := SAdd | SMul | SSub.
+  Definition symbolicify_const (t : base_type) : interp_base_type t -> SConstT
+    := match t with
+       | Tnat => fun x => x
+       end.
+  Definition symbolicify_op s d (v : op s d) : op_code
+    := match v with
+       | Add => SAdd
+       | Mul => SMul
+       | Sub => SSub
+       end.
+  Definition CSE {t} e := @CSE base_type SConstT op_code base_type_beq nat_beq op_code_beq internal_base_type_dec_bl interp_base_type op symbolicify_const symbolicify_op t e (fun _ => nil).
+End cse.
+
+Compute CSE (InlineConst (Linearize example_expr)).
