@@ -70,6 +70,7 @@ src/Reflection/ReifyDirect.v
 src/Reflection/ReifyExact.v
 src/Reflection/Syntax.v
 src/Reflection/TestCase.v
+src/Reflection/WfReflective.v
 src/Spec/CompleteEdwardsCurve.v
 src/Spec/EdDSA.v
 src/Spec/Encoding.v

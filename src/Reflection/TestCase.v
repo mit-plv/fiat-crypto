@@ -3,6 +3,7 @@ Require Crypto.Reflection.InputSyntax.
 Require Crypto.Reflection.ReifyDirect.
 Require Crypto.Reflection.ReifyExact.
 Require Crypto.Reflection.Linearize.
+Require Import Crypto.Reflection.WfReflective.
 
 Module Direct.
   Export ReifyDirect.
@@ -96,6 +97,7 @@ Module Exact.
     let x := Reify' (fun x y => (let a := 1 in let '(c, d) := (2, 3) in a + x + c + d) + y)%nat in pose x.
   Abort.
 
+
   Goal (0 = let x := 1+2 in x*3)%nat.
     Reify_rhs.
   Abort.
@@ -111,4 +113,54 @@ Module Exact.
     pose (InlineConst (Linearize x)) as e.
     vm_compute in e.
   Abort.
+
+  Definition example_expr : Syntax.Expr base_type interp_base_type op (Tbase Tnat).
+  Proof.
+    let x := Reify (let x := 1 in let y := 1 in (let a := 1 in let '(c, d) := (2, 3) in a + x + c + d) + y)%nat in
+    exact x.
+  Defined.
+
+  Definition base_type_eq_semidec_transparent : forall t1 t2, option (t1 = t2)
+    := fun t1 t2 => match t1, t2 with
+                 | Tnat, Tnat => Some eq_refl
+                 end.
+  Lemma base_type_eq_semidec_is_dec : forall t1 t2,
+      base_type_eq_semidec_transparent t1 t2 = None -> t1 <> t2.
+  Proof.
+    intros t1 t2; destruct t1, t2; simpl; intros; congruence.
+  Qed.
+  Definition op_beq t1 tR : op t1 tR -> op t1 tR -> option pointed_Prop
+    := fun x y => match x, y with
+               | Add, Add => Some trivial
+               | Add, _ => None
+               | Mul, Mul => Some trivial
+               | Mul, _ => None
+               end.
+  Lemma op_beq_bl t1 tR (x y : op t1 tR)
+    : match op_beq t1 tR x y with
+      | Some p => to_prop p
+      | None => False
+      end -> x = y.
+  Proof.
+    destruct x; simpl.
+    { refine match y with Add => _ | _ => _ end; tauto. }
+    { refine match y with Add => _ | _ => _ end; tauto. }
+  Qed.
+
+  Lemma example_expr_wf : Wf _ _ _ example_expr.
+  Proof.
+    cbv beta delta [example_expr Wf].
+    intros var1 var2.
+    repeat match goal with |- wf _ _ _ _ _ _ => constructor; intros end.
+    revert var1 var2.
+    vm_compute.
+    let Hwf := fresh "Hwf" in
+    lazymatch goal with
+    | [ |- forall var1' var2', @wff ?base_type ?interp_base_type ?op var1' var2' (@?G var1' var2') ?t (@?e1 var1') (@?e2 var2') ]
+      => intros var1 var2; pose proof (@reflect_wff base_type interp_base_type base_type_eq_semidec_transparent base_type_eq_semidec_is_dec op op_beq op_beq_bl var1 var2 (G var1 var2) t t (e1 _) (e2 _)) as Hwf
+    end.
+    revert Hwf; vm_compute.
+    intro Hwf; apply Hwf; clear Hwf.
+    tauto.
+  Qed.
 End Exact.
