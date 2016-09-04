@@ -70,9 +70,12 @@ Definition option_eq {A} eq (x y : option A) :=
                end
   end.
 
+Definition option_leq_to_eq {A} (x y : option A) : x = y -> option_eq eq x y.
+Proof. destruct x; intro; subst; simpl; reflexivity. Qed.
+
 Ltac inversion_option_step :=
   match goal with
-  | [ H : Some _ = Some _ |- _ ] => inversion H; clear H
+  | [ H : Some _ = Some _ |- _ ] => apply option_leq_to_eq in H; unfold option_eq in H
   | [ H : None = Some _ |- _ ] => solve [ inversion H ]
   | [ H : Some _ = None |- _ ] => solve [ inversion H ]
   | [ H : None = None |- _ ] => clear H
