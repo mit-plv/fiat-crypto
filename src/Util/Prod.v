@@ -47,12 +47,16 @@ Section prod.
   (** We could actually use [IsIso] here, but for simplicity, we
       don't.  If we wanted to deal with proofs of equality of × types
       in dependent positions, we'd need it. *)
-  Definition path_prod_uncurried_iff {A P}
-             (u v : @prod A P)
+  Definition path_prod_uncurried_iff {A B}
+             (u v : @prod A B)
     : u = v <-> (prod (fst u = fst v) (snd u = snd v)).
   Proof.
     split; [ intro; subst; split; reflexivity | apply path_prod_uncurried ].
   Defined.
+
+  Definition path_prod_eta {A B} {u v : @prod A B} (p : u = v)
+    : p = path_prod_uncurried u v (fst_path p, snd_path p).
+  Proof. destruct u, p; reflexivity. Defined.
 End prod.
 
 (** ** Useful Tactics *)
