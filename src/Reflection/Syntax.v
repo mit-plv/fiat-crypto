@@ -67,6 +67,16 @@ Section language.
       | Abs {src dst} : (var src -> expr dst) -> expr (Arrow src dst).
       Bind Scope expr_scope with expr.
       Global Coercion Return : exprf >-> expr.
+      (** Sometimes, we want to deal with partially-interpreted
+          expressions, things like [prod (exprf A) (exprf B)] rather
+          than [exprf (Prod A B)], or like [prod (var A) (var B)] when
+          we start with the type [Prod A B].  These convenience
+          functions let us recurse on the type in only one place, and
+          replace one kind of pairing operator (be it [pair] or [Pair]
+          or anything else) with another kind, and simultaneously
+          mapping a function over the base values (e.g., [Var] (for
+          turning [var] into [exprf]) or [Const] (for turning
+          [interp_base_type] into [exprf])). *)
       Fixpoint smart_interp_flat_map {f g}
                (h : forall x, f x -> g (Tbase x))
                (pair : forall A B, g A -> g B -> g (Prod A B))

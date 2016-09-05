@@ -101,19 +101,19 @@ Proof.
   { refine match y with Add => _ | _ => _ end; tauto. }
 Qed.
 
-Lemma example_expr_wf : Wf _ _ _ example_expr.
+Ltac reflect_Wf := WfReflective.reflect_Wf base_type_eq_semidec_is_dec op_beq_bl.
+
+Lemma example_expr_wf_slow : Wf _ _ _ example_expr.
 Proof.
-  cbv beta delta [example_expr Wf].
-  intros var1 var2.
-  repeat match goal with |- wf _ _ _ _ _ _ => constructor; intros end.
-  revert var1 var2.
-  vm_compute.
-  let Hwf := fresh "Hwf" in
-  lazymatch goal with
-  | [ |- forall var1' var2', @wff ?base_type ?interp_base_type ?op var1' var2' (@?G var1' var2') ?t (@?e1 var1') (@?e2 var2') ]
-    => intros var1 var2; pose proof (@reflect_wff base_type interp_base_type base_type_eq_semidec_transparent base_type_eq_semidec_is_dec op op_beq op_beq_bl var1 var2 (G var1 var2) t t (e1 _) (e2 _)) as Hwf
-  end.
-  revert Hwf; vm_compute.
-  intro Hwf; apply Hwf; clear Hwf.
-  tauto.
+  Time (vm_compute; intros;
+          repeat match goal with
+                 | [ |- wf _ _ _ _ _ _ ] => constructor; intros
+                 | [ |- wff _ _ _ _ _ _ ] => constructor; intros
+                 | [ |- List.In _ _ ] => vm_compute
+                 | [ |- ?x = ?x \/ _ ] => left; reflexivity
+                 | [ |- ?x = ?y \/ _ ] => right
+                 end). (* 0.036 s *)
 Qed.
+
+Lemma example_expr_wf : Wf _ _ _ example_expr.
+Proof. Time reflect_Wf. (* 0.008 s *) Qed.
