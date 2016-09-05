@@ -202,6 +202,9 @@ Global Arguments Return {_ _ _ _ _} _.
 Global Arguments Abs {_ _ _ _ _ _} _.
 Global Arguments interp_flat_type_gen {_} _ _.
 Global Arguments interp_type {_} _ _.
+Global Arguments wff {_ _ _ _ _} G {t} _ _.
+Global Arguments wf {_ _ _ _ _} G {t} _ _.
+Global Arguments Wf {_ _ _ t} _.
 
 Notation "'slet' x := A 'in' b" := (Let A (fun x => b)) : expr_scope.
 Notation "'λ'  x .. y , t" := (Abs (fun x => .. (Abs (fun y => t%expr)) ..)) : expr_scope.

@@ -367,9 +367,9 @@ Section language.
     | _ => progress specialize_by tauto
     | [ v : sigT _ |- _ ] => destruct v
     | [ v : prod _ _ |- _ ] => destruct v
-    | [ H : forall x x', _ |- wff _ _ _ (flatten_binding_list _ ?x1 ?x2 ++ _)%list _ _ ]
+    | [ H : forall x x', _ |- wff (flatten_binding_list _ ?x1 ?x2 ++ _)%list _ _ ]
       => specialize (H x1 x2)
-    | [ H : forall x x', _ |- wf _ _ _ (existT _ _ (?x1, ?x2) :: _)%list _ _ ]
+    | [ H : forall x x', _ |- wf (existT _ _ (?x1, ?x2) :: _)%list _ _ ]
       => specialize (H x1 x2)
     | [ H : and _ _ |- _ ] => destruct H
     | [ H : context[duplicate_type (_ ++ _)%list] |- _ ]
@@ -378,17 +378,16 @@ Section language.
       => rewrite duplicate_type_length in H
     | [ H : context[List.length (_ ++ _)%list] |- _ ]
       => rewrite List.app_length in H
-    | [ |- wff _ _ _ _ (unnatize_exprf (fst _) _) (unnatize_exprf (fst _) _) ]
+    | [ |- wff _ (unnatize_exprf (fst _) _) (unnatize_exprf (fst _) _) ]
       => erewrite length_natize_interp_flat_type_gen1, length_natize_interp_flat_type_gen2; eassumption
-    | [ |- wf _ _ _ _ (unnatize_exprf (fst _) _) (unnatize_exprf (fst _) _) ]
+    | [ |- wf _ (unnatize_exprf (fst _) _) (unnatize_exprf (fst _) _) ]
       => erewrite length_natize_interp_flat_type_gen1, length_natize_interp_flat_type_gen2; eassumption
-    | [ |- @wf _ _ _ _ _ _ (Syntax.Tflat _ _) _ _ ] => constructor
-    | [ |- @wf _ _ _ _ _ _ _ (Syntax.Abs _) (Syntax.Abs _) ] => constructor
     | [ H : base_type_eq_semidec_transparent _ _ = None |- False ] => eapply duplicate_type_not_in; eassumption
     | [ H : List.nth_error _ _ = Some _ |- _ ] => apply List.nth_error_In in H
     | [ H : List.In _ (duplicate_type _) |- _ ] => apply duplicae_type_in in H
     | [ H : context[match _ with _ => _ end] |- _ ] => revert H; progress break_match
-    | [ |- wff _ _ _ _ _ _ ] => constructor
+    | [ |- wff _ _ _ ] => constructor
+    | [ |- wf _ _ _ ] => constructor
     | _ => progress unfold and_pointed_Prop in *
     end.
   Local Ltac t := repeat t_step.
@@ -470,7 +469,7 @@ Section Wf.
   Theorem reflect_Wf_unnatize
     : (forall var1 var2,
           prop_of_option (@reflect_wfT base_type_code interp_base_type base_type_eq_semidec_transparent op op_beq var1 var2 nil t t (e _) (e _)))
-      -> Wf _ _ _ (fun var => unnatize_expr base_type_code interp_base_type op 0 (e (fun t => (nat * var t)%type))).
+      -> Wf (fun var => unnatize_expr base_type_code interp_base_type op 0 (e (fun t => (nat * var t)%type))).
   Proof.
     intros H var1 var2; specialize (H var1 var2).
     pose proof (@reflect_wf base_type_code interp_base_type base_type_eq_semidec_transparent base_type_eq_semidec_is_dec op op_beq op_beq_bl var1 var2 nil t t (e _) (e _)) as H'.
@@ -484,7 +483,7 @@ Section Wf.
     : (forall var1 var2,
           unnatize_expr base_type_code interp_base_type op 0 (e (fun t => (nat * var1 t)%type)) = e _
           /\ prop_of_option (@reflect_wfT base_type_code interp_base_type base_type_eq_semidec_transparent op op_beq var1 var2 nil t t (e _) (e _)))
-      -> Wf _ _ _ e.
+      -> Wf e.
   Proof.
     intros H var1 var2.
     rewrite <- (proj1 (H var1 var2)), <- (proj1 (H var2 var2)).

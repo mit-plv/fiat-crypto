@@ -103,17 +103,17 @@ Qed.
 
 Ltac reflect_Wf := WfReflective.reflect_Wf base_type_eq_semidec_is_dec op_beq_bl.
 
-Lemma example_expr_wf_slow : Wf _ _ _ example_expr.
+Lemma example_expr_wf_slow : Wf example_expr.
 Proof.
   Time (vm_compute; intros;
           repeat match goal with
-                 | [ |- wf _ _ _ _ _ _ ] => constructor; intros
-                 | [ |- wff _ _ _ _ _ _ ] => constructor; intros
+                 | [ |- wf _ _ _ ] => constructor; intros
+                 | [ |- wff _ _ _ ] => constructor; intros
                  | [ |- List.In _ _ ] => vm_compute
                  | [ |- ?x = ?x \/ _ ] => left; reflexivity
                  | [ |- ?x = ?y \/ _ ] => right
                  end). (* 0.036 s *)
 Qed.
 
-Lemma example_expr_wf : Wf _ _ _ example_expr.
+Lemma example_expr_wf : Wf example_expr.
 Proof. Time reflect_Wf. (* 0.008 s *) Qed.
