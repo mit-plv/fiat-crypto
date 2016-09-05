@@ -8,6 +8,7 @@ Require Export Crypto.Util.GlobalSettings.
     declarations in other files makes it harder for us to confuse
     Coq's parser. *)
 
+Reserved Notation "x -> y" (at level 99, right associativity, y at level 200).
 Reserved Infix "=?" (at level 70, no associativity).
 Reserved Infix "!=?" (at level 70, no associativity).
 Reserved Infix "?=" (at level 70, no associativity).
