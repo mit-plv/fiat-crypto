@@ -63,6 +63,14 @@ Section sigT.
     split; [ intro; subst; exists eq_refl; reflexivity | apply path_sigT_uncurried ].
   Defined.
 
+  (** *** Induction principle for [@eq (sigT _)] *)
+  Definition path_sigT_rect {A P} {u v : @sigT A P} (Q : u = v -> Type)
+             (f : forall p q, Q (path_sigT u v p q))
+    : forall p, Q p.
+  Proof. intro p; specialize (f (pr1_path p) (pr2_path p)); destruct u, p; exact f. Defined.
+  Definition path_sigT_rec {A P u v} (Q : u = v :> @sigT A P -> Set) := path_sigT_rect Q.
+  Definition path_sigT_ind {A P u v} (Q : u = v :> @sigT A P -> Prop) := path_sigT_rec Q.
+
   (** *** Equivalence of equality of [sigT] involving hProps with equality of the first components *)
   Definition path_sigT_hprop_iff {A P} (P_hprop : forall (x : A) (p q : P x), p = q)
              (u v : @sigT A P)
@@ -115,6 +123,13 @@ Section sig.
              (p : proj1_sig u = proj1_sig v) (q : eq_rect _ _ (proj2_sig u) _ p = proj2_sig v)
   : u = v
     := path_sig_uncurried u v (exist _ p q).
+
+  Definition path_sig_rect {A P} {u v : @sig A P} (Q : u = v -> Type)
+             (f : forall p q, Q (path_sig u v p q))
+    : forall p, Q p.
+  Proof. intro p; specialize (f (proj1_sig_path p) (proj2_sig_path p)); destruct u, p; exact f. Defined.
+  Definition path_sig_rec {A P u v} (Q : u = v :> @sig A P -> Set) := path_sig_rect Q.
+  Definition path_sig_ind {A P u v} (Q : u = v :> @sig A P -> Prop) := path_sig_rec Q.
 
   Definition path_sig_hprop {A} {P : A -> Prop} (P_hprop : forall (x : A) (p q : P x), p = q)
              (u v : @sig A P)
@@ -206,11 +221,21 @@ Ltac simpl_proj_exist_in H :=
          | context G[projT2 (existT _ ?x ?p)]
            => let G' := context G[p] in change G' in H
          end.
+Ltac induction_sigma_in_using H rect :=
+  let H0 := fresh H in
+  let H1 := fresh H in
+  induction H as [H0 H1] using (rect _ _ _ _);
+  simpl_proj_exist_in H0;
+  simpl_proj_exist_in H1.
 Ltac inversion_sigma_step :=
   match goal with
-  | [ H : exist _ _ _ = exist _ _ _ |- _ ]
-    => apply path_sig_uncurried_iff in H; simpl_proj_exist_in H; destruct H
-  | [ H : existT _ _ _ = existT _ _ _ |- _ ]
-    => apply path_sigT_uncurried_iff in H; simpl_proj_exist_in H; destruct H
+  | [ H : _ = exist _ _ _ |- _ ]
+    => induction_sigma_in_using H @path_sig_rect
+  | [ H : _ = existT _ _ _ |- _ ]
+    => induction_sigma_in_using H @path_sigT_rect
+  | [ H : exist _ _ _ = _ |- _ ]
+    => induction_sigma_in_using H @path_sig_rect
+  | [ H : existT _ _ _ = _ |- _ ]
+    => induction_sigma_in_using H @path_sigT_rect
   end.
 Ltac inversion_sigma := repeat inversion_sigma_step.
