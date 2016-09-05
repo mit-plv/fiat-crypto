@@ -14,6 +14,9 @@ Definition to_prop (x : pointed_Prop) : Prop
      | inject p => p
      end.
 
+Coercion option_pointed_Prop_of_bool (x : bool) : option pointed_Prop
+  := if x then Some trivial else None.
+
 Definition and_pointed_Prop (x y : pointed_Prop) : pointed_Prop
   := match x, y with
      | trivial, y => y
