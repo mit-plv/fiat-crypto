@@ -152,7 +152,7 @@ Section language.
       Fixpoint flatten_binding_list {t} (x : interp_flat_type_gen var1 t) (y : interp_flat_type_gen var2 t) : list (sigT eP)
         := (match t return interp_flat_type_gen var1 t -> interp_flat_type_gen var2 t -> list _ with
             | Tbase _ => fun x y => (x == y) :: nil
-            | Prod t0 t1 => fun x y => @flatten_binding_list _ (fst x) (fst y) ++ @flatten_binding_list _ (snd x) (snd y)
+            | Prod t0 t1 => fun x y => @flatten_binding_list _ (snd x) (snd y) ++ @flatten_binding_list _ (fst x) (fst y)
             end x y)%list.
 
       Inductive wff : list (sigT eP) -> forall {t}, @exprf var1 t -> @exprf var2 t -> Prop :=

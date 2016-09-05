@@ -234,12 +234,12 @@ Section language.
   Fixpoint natize_interp_flat_type_gen var t (base : nat) (v : interp_flat_type_gen var t) {struct t}
     : nat * interp_flat_type_gen (fun t : base_type_code => nat * var t)%type t
     := match t return interp_flat_type_gen var t -> nat * interp_flat_type_gen _ t with
-       | Prod A B => fun v => let ret := @natize_interp_flat_type_gen _ B base (snd v) in
-                          let base := fst ret in
-                          let b := snd ret in
-                          let ret := @natize_interp_flat_type_gen _ A base (fst v) in
+       | Prod A B => fun v => let ret := @natize_interp_flat_type_gen _ A base (fst v) in
                           let base := fst ret in
                           let a := snd ret in
+                          let ret := @natize_interp_flat_type_gen _ B base (snd v) in
+                          let base := fst ret in
+                          let b := snd ret in
                           (base, (a, b))
        | Syntax.Tbase t => fun v => (S base, (base, v))
        end v.
