@@ -36,7 +36,7 @@ Section language.
       | MatchPair : forall {t1 t2}, exprf (Prod t1 t2) -> forall {tC}, (var t1 -> var t2 -> exprf tC) -> exprf tC.
       Inductive expr : type -> Type :=
       | Return {t} : exprf t -> expr t
-      | Abs {src dst} : (var (Tbase src) -> expr dst) -> expr (src -> dst).
+      | Abs {src dst} : (var (Tbase src) -> expr dst) -> expr (Arrow src dst).
       Global Coercion Return : exprf >-> expr.
     End expr.
 
@@ -111,7 +111,7 @@ Section language.
         pose (e (interp_flat_type_gen interp_base_type)) as E.
         repeat match goal with |- context[e ?f] => change (e f) with E end.
         refine match E with
-               | Abs _ _ _ => idProp (* small inversions *)
+               | Abs _ _ _ => fun x : Prop => x (* small inversions *)
                | Return _ _ => _
                end.
         apply compilef_correct.

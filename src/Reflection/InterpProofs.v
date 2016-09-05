@@ -8,7 +8,7 @@ Section language.
   Local Notation flat_type := (flat_type base_type_code).
   Local Notation type := (type base_type_code).
   Let Tbase := @Tbase base_type_code.
-  Local Coercion Tbase : base_type_code >-> flat_type.
+  Local Coercion Tbase : base_type_code >-> Syntax.flat_type.
   Context (interp_base_type : base_type_code -> Type).
   Context (op : flat_type (* input tuple *) -> flat_type (* output type *) -> Type).
   Let interp_type := interp_type interp_base_type.

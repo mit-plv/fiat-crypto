@@ -49,7 +49,7 @@
 
 Require Import Coq.Arith.Arith Coq.Logic.Eqdep_dec.
 Require Import Crypto.Reflection.Syntax.
-Require Import Crypto.Util.Notations Crypto.Util.Tactics Crypto.Util.Option Crypto.Util.Sigma Crypto.Util.Prod Crypto.Util.Decidable.
+Require Import Crypto.Util.Notations Crypto.Util.Tactics Crypto.Util.Option Crypto.Util.Sigma Crypto.Util.Prod Crypto.Util.Decidable Crypto.Util.ListUtil.
 Require Export Crypto.Util.PointedProp. (* export for the [bool >-> option pointed_Prop] coercion *)
 Require Export Crypto.Util.FixCoqMistakes.
 
@@ -83,7 +83,7 @@ Section language.
   Local Notation flat_type := (flat_type base_type_code).
   Local Notation type := (type base_type_code).
   Let Tbase := @Tbase base_type_code.
-  Local Coercion Tbase : base_type_code >-> flat_type.
+  Local Coercion Tbase : base_type_code >-> Syntax.flat_type.
   Local Notation interp_type := (interp_type interp_base_type).
   Local Notation interp_flat_type := (interp_flat_type_gen interp_base_type).
   Local Notation exprf := (@exprf base_type_code interp_base_type op).
@@ -231,7 +231,7 @@ Section language.
   Definition flatten_binding_list2 t1 t2 : option (forall (x : interp_flat_type_gen var1 t1) (y : interp_flat_type_gen var2 t2), list (sigT eP))
     := option_map (fun f x y => duplicate_type (f x y)) (preflatten_binding_list2 t1 t2).
   (** This function adds De Bruijn indices to variables *)
-  Fixpoint natize_interp_flat_type_gen {var t} (base : nat) (v : interp_flat_type_gen var t) {struct t}
+  Fixpoint natize_interp_flat_type_gen var t (base : nat) (v : interp_flat_type_gen var t) {struct t}
     : nat * interp_flat_type_gen (fun t : base_type_code => nat * var t)%type t
     := match t return interp_flat_type_gen var t -> nat * interp_flat_type_gen _ t with
        | Prod A B => fun v => let ret := @natize_interp_flat_type_gen _ B base (snd v) in
@@ -243,6 +243,7 @@ Section language.
                           (base, (a, b))
        | Syntax.Tbase t => fun v => (S base, (base, v))
        end v.
+  Arguments natize_interp_flat_type_gen {var t} _ _.
   Lemma length_natize_interp_flat_type_gen1 {t} (base : nat) (v1 : interp_flat_type_gen var1 t) (v2 : interp_flat_type_gen var2 t)
     : fst (natize_interp_flat_type_gen base v1) = length (flatten_binding_list base_type_code v1 v2) + base.
   Proof.
@@ -289,7 +290,7 @@ Section language.
            end
        | Const _ _, _ => None
        | Var t0 x, Var t1 y
-         => match Nat.eqb (fst x) (fst y), List.nth_error G (List.length G - S (fst x)) with
+         => match beq_nat (fst x) (fst y), List.nth_error G (List.length G - S (fst x)) with
            | true, Some v => eq_type_and_var v (existT _ (t0, t1) (snd x, snd y))
            | _, _ => None
            end
@@ -473,7 +474,7 @@ Section Wf.
   Proof.
     intros H var1 var2; specialize (H var1 var2).
     pose proof (@reflect_wf base_type_code interp_base_type base_type_eq_semidec_transparent base_type_eq_semidec_is_dec op op_beq op_beq_bl var1 var2 nil t t (e _) (e _)) as H'.
-    rewrite type_eq_semidec_transparent_refl in H' by assumption.
+    rewrite type_eq_semidec_transparent_refl in H' by assumption; simpl in *.
     edestruct reflect_wfT; simpl in *; tauto.
   Qed.
 
