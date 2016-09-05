@@ -97,6 +97,7 @@ Section language.
     := fun var => inline_const (e _).
 End language.
 
+Global Arguments under_letsf {_ _ _ _ _} _ {tC} _.
 Global Arguments linearizef {_ _ _ _ _} _.
 Global Arguments linearize {_ _ _ _ _} _.
 Global Arguments Linearize {_ _ _ _} _ var.
