@@ -100,7 +100,7 @@ Global Instance dec_eq_Z : DecidableRel (@eq Z) | 10 := Z.eq_dec.
 
 Lemma not_not P {d:Decidable P} : not (not P) <-> P.
 Proof. destruct (dec P); intuition. Qed.
-  
+
 Global Instance dec_ex_forall_not T (P:T->Prop) {d:Decidable (exists b, P b)} : Decidable (forall b, ~ P b).
 Proof.
   destruct (dec (~ exists b, P b)) as [Hd|Hd]; [left|right];
@@ -119,6 +119,13 @@ Proof. solve_decidable_transparent. Defined.
 
 Lemma Decidable_iff_to_flip_impl A B (H : A <-> B) : Decidable B -> Decidable A.
 Proof. solve_decidable_transparent. Defined.
+
+Lemma dec_of_semidec {P : Prop} (H : option P) (H_complete : H = None -> ~P) : Decidable P.
+Proof. destruct H; [ left; assumption | right; apply H_complete, eq_refl ]. Defined.
+
+Lemma dec_rel_of_semidec_rel {A} {R : A -> A -> Prop} (H : forall x y, option (R x y))
+      (H_complete : forall x y, H x y = None -> ~R x y) : DecidableRel R.
+Proof. eauto using dec_of_semidec. Defined.
 
 Lemma dec_bool : forall {P} {Pdec:Decidable P}, (if dec P then true else false) = true -> P.
 Proof. intros. destruct dec; solve [ auto | discriminate ]. Qed.
