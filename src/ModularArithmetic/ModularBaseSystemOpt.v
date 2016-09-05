@@ -991,8 +991,6 @@ Section SquareRoots.
     etransitivity.
     Focus 2. {
       apply if_equiv. {
-        etransitivity.
-        Focus 2. {
         apply eqb_Proper; [ | reflexivity ].
         transitivity (carry_mul_opt k_ c_ (pow_opt k_ c_ one_ us chain) (pow_opt k_ c_ one_ us chain)); [ reflexivity | ].
         cbv [eq].
@@ -1000,11 +998,6 @@ Section SquareRoots.
         rewrite carry_mul_rep by reflexivity.
         rewrite mul_rep by reflexivity.
         f_equal; apply pow_opt_correct; auto.
-        } Unfocus.
-        cbv [ModularBaseSystem.eqb freeze].
-        rewrite <-!from_list_default_eq with (d := 0).
-        erewrite <-!freeze_opt_correct by eauto using length_to_list.
-        reflexivity.
       } {
         apply pow_opt_correct; auto.
       } {

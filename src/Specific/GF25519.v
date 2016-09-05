@@ -394,6 +394,64 @@ Proof.
   assumption.
 Defined.
 
+Definition fieldwiseb_sig (f g : fe25519) :
+  { b | b = @fieldwiseb Z Z 10 Z.eqb f g }.
+Proof.
+  cbv [fe25519] in *.
+  repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
+  eexists.
+  cbv.
+  reflexivity.
+Defined.
+
+Definition fieldwiseb (f g : fe25519) : bool
+  := Eval cbv beta iota delta [proj1_sig fieldwiseb_sig] in proj1_sig (fieldwiseb_sig f g).
+
+Definition fieldwiseb_correct (f g : fe25519)
+  : fieldwiseb f g = @Tuple.fieldwiseb Z Z 10 Z.eqb f g
+  := Eval cbv beta iota delta [proj2_sig fieldwiseb_sig] in proj2_sig (fieldwiseb_sig f g).
+
+Definition eqb_sig (f g : fe25519) :
+  { b | b = eqb f g }.
+Proof.
+  cbv [eqb].
+  cbv [fe25519] in *.
+  repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
+  eexists.
+  cbv [ModularBaseSystem.freeze].
+  rewrite <-!from_list_default_eq with (d := 0).
+  rewrite <-!(freeze_opt_correct c_) by auto using length_to_list.
+  rewrite <-!freeze_correct.
+  rewrite <-fieldwiseb_correct.
+  reflexivity.
+Defined.
+
+Definition eqb (f g : fe25519) : bool
+  := Eval cbv beta iota delta [proj1_sig eqb_sig] in proj1_sig (eqb_sig f g).
+
+Definition eqb_correct (f g : fe25519)
+  : eqb f g = ModularBaseSystem.eqb f g
+  := Eval cbv beta iota delta [proj2_sig eqb_sig] in proj2_sig (eqb_sig f g).
+
+Definition sqrt_sig (f : fe25519) :
+  { f' : fe25519 | f' = sqrt_5mod8_opt k_ c_ one_ sqrt_m1 f}.
+Proof.
+  eexists.
+  cbv [sqrt_5mod8_opt].
+  apply Let_In_ext.
+  intros.
+  do 2 rewrite <-mul_correct.
+  rewrite <-eqb_correct.
+  reflexivity.
+Defined.
+
+Definition sqrt (f : fe25519) : fe25519
+  := Eval cbv beta iota delta [proj1_sig sqrt_sig] in proj1_sig (sqrt_sig f).
+
+Definition sqrt_correct (f : fe25519)
+  : sqrt f = sqrt_5mod8_opt k_ c_ one_ sqrt_m1 f
+  := Eval cbv beta iota delta [proj2_sig sqrt_sig] in proj2_sig (sqrt_sig f).
+
 Definition pack_simpl_sig (f : fe25519) :
   { f' | f' = pack_opt params25519 wire_widths_nonneg bits_eq f }.
 Proof.
