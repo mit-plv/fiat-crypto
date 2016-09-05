@@ -54,7 +54,7 @@ Section language.
     Section expr.
       Context {var : base_type_code -> Type}.
 
-      (** N.B. [Let] destructures pairs *)
+      (** N.B. [Let] binds the components of a pair to separate variables, and does so recursively *)
       Inductive exprf : flat_type -> Type :=
       | Const {t : flat_type} : interp_type t -> exprf t
       | Var {t} : var t -> exprf t
