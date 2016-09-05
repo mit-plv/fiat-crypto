@@ -50,6 +50,19 @@ Module Export List.
   Import ListNotations.
   (** From the 8.6 Standard Library *)
 
+  Section Elts.
+    Variable A : Type.
+
+    (** Results about [nth_error] *)
+
+    Lemma nth_error_In l n (x : A) : nth_error l n = Some x -> In x l.
+    Proof.
+      revert n. induction l as [|a l IH]; intros [|n]; simpl; try easy.
+      - injection 1; auto.
+      - eauto.
+    Qed.
+  End Elts.
+
   Section Map.
     Variables (A : Type) (B : Type).
     Variable f : A -> B.
