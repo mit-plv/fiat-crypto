@@ -37,7 +37,7 @@ Instance subCoeff : SubtractionCoefficient.
 Defined.
 
 Instance carryChain : CarryChain limb_widths.
-  apply Build_CarryChain with (carry_chain := ([0;1;2;3;4;5;6;7;8;9;0;1])%nat).
+  apply Build_CarryChain with (carry_chain := (rev [0;1;2;3;4;5;6;7;8;9;0;1])%nat).
   intros.
   repeat (destruct H as [|H]; [subst; vm_compute; repeat constructor | ]).
   contradiction H.
@@ -111,17 +111,23 @@ Arguments chain {_ _ _} _.
 
 (* END precomputation *) 
 
-(* Precompute k, c, zero, and one *)
+(* Precompute constants *)
 Definition k_ := Eval compute in k.
-Definition c_ := Eval compute in c.
-Definition one_ := Eval compute in one.
-Definition zero_ := Eval compute in zero.
 Definition k_subst : k = k_ := eq_refl k_.
+
+Definition c_ := Eval compute in c.
 Definition c_subst : c = c_ := eq_refl c_.
+
+Definition one_ := Eval compute in one.
 Definition one_subst : one = one_ := eq_refl one_.
+
+Definition zero_ := Eval compute in zero.
 Definition zero_subst : zero = zero_ := eq_refl zero_.
 
-Local Opaque Z.shiftr Z.shiftl Z.land Z.mul Z.add Z.sub Z.lor Let_In.
+Definition modulus_digits_ := Eval compute in ModularBaseSystemList.modulus_digits.
+Definition modulus_digits_subst : ModularBaseSystemList.modulus_digits = modulus_digits_ := eq_refl modulus_digits_.
+
+Local Opaque Z.shiftr Z.shiftl Z.land Z.mul Z.add Z.sub Z.lor Let_In Z.eqb Z.ltb andb.
 
 Definition app_7 {T} (f : wire_digits) (P : wire_digits -> T) : T.
 Proof.
@@ -281,6 +287,23 @@ Proof.
   intros; subst; apply mul_correct.
 Qed.
 
+(* Now that we have [pow], we can compute sqrt of -1 for use
+   in sqrt function (this is not needed unless the prime is
+   5 mod 8) *)
+Local Transparent Z.shiftr Z.shiftl Z.land Z.mul Z.add Z.sub Z.lor Let_In Z.eqb Z.ltb andb.
+
+Definition sqrt_m1 := Eval vm_compute in (pow (encode (F.of_Z _ 2)) (pow2_chain (Z.to_pos ((modulus - 1) / 4)))).
+
+Lemma sqrt_m1_correct : rep (mul sqrt_m1 sqrt_m1) (F.opp 1%F).
+Proof.
+  cbv [rep].
+  apply F.eq_to_Z_iff.
+  vm_compute.
+  reflexivity.
+Qed.
+
+Local Opaque Z.shiftr Z.shiftl Z.land Z.mul Z.add Z.sub Z.lor Let_In Z.eqb Z.ltb andb.
+
 Definition inv_sig (f : fe25519) :
   { g : fe25519 | g = inv_opt k_ c_ one_ f }.
 Proof.
@@ -336,6 +359,40 @@ Proof.
   + reflexivity.
 Qed.
 
+Definition freeze_sig (f : fe25519) :
+  { f' : fe25519 | f' = from_list_default 0 10 (freeze_opt c_ (to_list 10 f)) }.
+Proof.
+  cbv [fe25519] in *.
+  repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
+  eexists; cbv [freeze_opt].
+  cbv [to_list to_list'].
+  cbv [conditional_subtract_modulus_opt].
+  rewrite !modulus_digits_subst.
+  cbv - [from_list_default].
+  rewrite Let_In_push.
+  repeat (erewrite Let_In_ext; [ |
+      repeat match goal with
+             | |- _ => progress intros; try apply Let_In_ext
+             | |- _ = from_list_default _ _ (Let_In _ _) => etransitivity; try (rewrite Let_In_push; reflexivity)
+             | |- from_list_default _ _ (Let_In _ _) = _ => etransitivity; try (rewrite Let_In_push; reflexivity)
+             end; reflexivity ]).
+  cbv [from_list_default from_list_default'].
+  reflexivity.
+Defined.
+
+Definition freeze (f : fe25519) : fe25519 :=
+  Eval cbv beta iota delta [proj1_sig freeze_sig] in
+    let '(f0, f1, f2, f3, f4, f5, f6, f7, f8, f9) := f in
+    proj1_sig (freeze_sig (f0, f1, f2, f3, f4, f5, f6, f7, f8, f9)).
+
+Definition freeze_correct (f : fe25519)
+  : freeze f = from_list_default 0 10 (freeze_opt c_ (to_list 10 f)).
+Proof.
+  pose proof (proj2_sig (freeze_sig f)).
+  cbv [fe25519] in *.
+  repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
+  assumption.
+Defined.
 
 Definition pack_simpl_sig (f : fe25519) :
   { f' | f' = pack_opt params25519 wire_widths_nonneg bits_eq f }.

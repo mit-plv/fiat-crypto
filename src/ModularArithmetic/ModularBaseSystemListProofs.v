@@ -116,6 +116,14 @@ Section LengthProofs.
     rewrite map2_length, map_length, length_modulus_digits.
     apply Min.min_case; omega.
   Qed.
+  Hint Rewrite @length_conditional_subtract_modulus : distr_length.
+  
+  Lemma length_freeze {u} :
+    length u = length limb_widths
+    -> length (freeze u) = length limb_widths.
+  Proof.
+    intros; unfold freeze; repeat autorewrite with distr_length; congruence.
+  Qed.
 
   Lemma length_pack : forall {target_widths}
                              {target_widths_nonneg : forall x, In x target_widths -> 0 <= x}

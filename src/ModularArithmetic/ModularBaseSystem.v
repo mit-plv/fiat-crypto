@@ -67,15 +67,10 @@ Section ModularBaseSystem.
   Local Notation "u ~= x" := (rep u x).
   Local Hint Unfold rep.
 
-  Definition carry_full (us : digits) : digits := from_list (carry_full [[us]])
-    (length_carry_full length_to_list).
-
-  Definition freeze (us : digits) : digits :=
-    let us' := carry_full (carry_full (carry_full us)) in
-     from_list (conditional_subtract_modulus [[us']] (ge_modulus [[us']]))
-     (length_conditional_subtract_modulus length_to_list).
-
   Definition eq (x y : digits) : Prop := decode x = decode y.
+
+  Definition freeze (x : digits) : digits :=
+    from_list (freeze [[x]]) (length_freeze length_to_list).
 
   Definition eqb (x y : digits) : bool := fieldwiseb Z.eqb (freeze x) (freeze y).
 
@@ -90,6 +85,7 @@ Section ModularBaseSystem.
   Definition sqrt_3mod4 (chain : list (nat * nat))
                   (chain_correct : fold_chain 0%N N.add chain (1%N :: nil) = Z.to_N (modulus / 4 + 1))
                   (x : digits) : digits := pow x chain.
+
 
   Import Morphisms.
   Global Instance eq_Equivalence : Equivalence eq.

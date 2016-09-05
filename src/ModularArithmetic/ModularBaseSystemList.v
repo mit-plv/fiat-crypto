@@ -69,6 +69,10 @@ Section Defs.
        Otherwise, it's all zeroes, and the subtractions do nothing. *)
      map2 (fun x y => x - y) us (map (Z.land and_term) modulus_digits).
 
+  Definition freeze (us : digits) : digits :=
+    let us' := carry_full (carry_full (carry_full us)) in
+     conditional_subtract_modulus us' (ge_modulus us').
+
   Context {target_widths} (target_widths_nonneg : forall x, In x target_widths -> 0 <= x)
           (bits_eq : sum_firstn limb_widths   (length limb_widths) =
                      sum_firstn target_widths (length target_widths)).

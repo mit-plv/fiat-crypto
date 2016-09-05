@@ -447,16 +447,6 @@ Section CarryProofs.
       apply IHis; auto using in_cons.
   Qed.
 
-  Lemma carry_full_preserves_rep : forall us x,
-    rep us x -> rep (carry_full us) x.
-  Proof.
-    unfold carry_full; intros.
-    apply carry_sequence_rep; auto.
-    unfold full_carry_chain; apply make_chain_lt.
-  Qed.
-
-  Opaque carry_full.
-
   Context `{cc : CarryChain limb_widths}.
   Lemma carry_mul_rep : forall us vs x y,
     rep us x -> rep vs y ->
