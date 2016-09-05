@@ -67,7 +67,6 @@ src/Reflection/InputSyntax.v
 src/Reflection/InterpProofs.v
 src/Reflection/Linearize.v
 src/Reflection/Reify.v
-src/Reflection/ReifyDirect.v
 src/Reflection/Syntax.v
 src/Reflection/TestCase.v
 src/Reflection/WfReflective.v
