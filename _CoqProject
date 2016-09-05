@@ -89,6 +89,7 @@ src/Util/NatUtil.v
 src/Util/Notations.v
 src/Util/NumTheoryUtil.v
 src/Util/Option.v
+src/Util/PointedProp.v
 src/Util/Prod.v
 src/Util/Sigma.v
 src/Util/Sum.v
