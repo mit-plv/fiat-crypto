@@ -64,7 +64,7 @@ Section language.
       Bind Scope expr_scope with exprf.
       Inductive expr : type -> Type :=
       | Return {t} : exprf t -> expr t
-      | Abs {src dst} : (var src -> expr dst) -> expr (src -> dst).
+      | Abs {src dst} : (var src -> expr dst) -> expr (Arrow src dst).
       Bind Scope expr_scope with expr.
       Global Coercion Return : exprf >-> expr.
       Fixpoint smart_interp_flat_map {f g}
