@@ -4,7 +4,7 @@
     express equality of types. *)
 Require Import Crypto.Util.Notations.
 
-Delimit Scope pointed_prop_scope with pointed_prod.
+Delimit Scope pointed_prop_scope with pointed_prop.
 Inductive pointed_Prop := trivial | inject (_ : Prop).
 Bind Scope pointed_prop_scope with pointed_Prop.
 
