@@ -164,7 +164,7 @@ Section language.
       | WfReturn : forall t G e e', @wff G t e e' -> wf G (Return e) (Return e')
       | WfAbs : forall A B G e e',
           (forall x x', @wf ((x == x') :: G) B (e x) (e' x'))
-          -> @wf G (A -> B) (Abs e) (Abs e').
+          -> @wf G (Arrow A B) (Abs e) (Abs e').
     End wf.
 
     Definition Wf {t} (E : @Expr t) := forall var1 var2, wf nil (E var1) (E var2).
