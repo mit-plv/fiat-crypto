@@ -254,7 +254,7 @@ Section language.
         small_inversion_helper wf G' e2;
         t_fin idtac;
         repeat match goal with
-               | [ H : context[_ -> wff _ (inline_constf ?e) (inline_constf _)], e2 : exprf _ |- _ ]
+               | [ H : context[(_ -> wff _ (inline_constf ?e) (inline_constf _))%type], e2 : exprf _ |- _ ]
                  => is_var e; not constr_eq e e2; specialize (H e2)
                | [ H : context[wff _ (@inline_constf ?A ?B ?C ?D ?E ?e) _] |- context[match @inline_constf ?A ?B ?C ?D ?E ?e with _ => _ end] ]
                  => destruct (@inline_constf A B C D E e)
