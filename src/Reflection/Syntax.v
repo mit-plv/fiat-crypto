@@ -207,6 +207,7 @@ Global Arguments wf {_ _ _ _ _} G {t} _ _.
 Global Arguments Wf {_ _ _ t} _.
 Global Arguments Interp {_ _ _} interp_op {t} _.
 Global Arguments interp {_ _ _} interp_op {t} _.
+Global Arguments interpf {_ _ _} interp_op {t} _.
 
 Notation "'slet' x := A 'in' b" := (Let A (fun x => b)) : expr_scope.
 Notation "'λ'  x .. y , t" := (Abs (fun x => .. (Abs (fun y => t%expr)) ..)) : expr_scope.
