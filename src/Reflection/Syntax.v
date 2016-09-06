@@ -47,10 +47,10 @@ Section language.
         Proof. induction t; repeat intro; reflexivity. Qed.
         Global Instance interp_type_gen_rel_pointwise_Symmetric {H : forall t, Symmetric (R t)}
           : forall t, Symmetric (interp_type_gen_rel_pointwise t).
-        Proof. induction t; repeat intro; symmetry; eauto. Qed.
+        Proof. induction t; simpl; repeat intro; symmetry; eauto. Qed.
         Global Instance interp_type_gen_rel_pointwise_Transitive {H : forall t, Transitive (R t)}
           : forall t, Transitive (interp_type_gen_rel_pointwise t).
-        Proof. induction t; repeat intro; etransitivity; eauto. Qed.
+        Proof. induction t; simpl; repeat intro; etransitivity; eauto. Qed.
       End rel.
     End type.
     Section flat_type.
