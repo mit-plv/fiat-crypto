@@ -209,7 +209,9 @@ Global Arguments Let {_ _ _ _ _} _ {_} _.
 Global Arguments Pair {_ _ _ _ _} _ {_} _.
 Global Arguments Return {_ _ _ _ _} _.
 Global Arguments Abs {_ _ _ _ _ _} _.
+Global Arguments interp_type_gen {_} _ _.
 Global Arguments interp_flat_type_gen {_} _ _.
+Global Arguments interp_type_gen_rel_pointwise {_} _ _ {_} _ _.
 Global Arguments interp_type {_} _ _.
 Global Arguments wff {_ _ _ _ _} G {t} _ _.
 Global Arguments wf {_ _ _ _ _} G {t} _ _.
