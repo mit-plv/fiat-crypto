@@ -105,7 +105,7 @@ Section language.
       Qed.
 
       Lemma Compile_correct {t : flat_type} (e : @Expr t)
-      : Syntax.Interp base_type_code interp_base_type op interp_op (Compile e) = Interp interp_op e.
+      : Syntax.Interp interp_op (Compile e) = Interp interp_op e.
       Proof.
         unfold Interp, Compile, Syntax.Interp; simpl.
         pose (e (interp_flat_type_gen interp_base_type)) as E.

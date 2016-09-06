@@ -226,7 +226,7 @@ Ltac rhs_of_goal := lazymatch goal with |- ?R ?LHS ?RHS => RHS end.
 Ltac Reify_rhs base_type_code interp_base_type op interp_op :=
   let rhs := rhs_of_goal in
   let RHS := Reify base_type_code interp_base_type op rhs in
-  transitivity (Syntax.Interp base_type_code interp_base_type op interp_op RHS);
+  transitivity (Syntax.Interp interp_op RHS);
   [
   | etransitivity; (* first we strip off the [InputSyntax.Compile]
                       bit; Coq is bad at inferring the type, so we
