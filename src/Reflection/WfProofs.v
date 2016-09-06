@@ -22,11 +22,11 @@ Section language.
     Context {var1 var2 : base_type_code -> Type}.
     Local Hint Constructors Syntax.wff.
     Lemma wff_in_impl_Proper G0 G1 {t} e1 e2
-          (H : forall x, List.In x G0 -> List.In x G1)
       : @wff var1 var2 G0 t e1 e2
+        -> (forall x, List.In x G0 -> List.In x G1)
         -> @wff var1 var2 G1 t e1 e2.
     Proof.
-      intro wf; revert G1 H; induction wf;
+      intro wf; revert G1; induction wf;
         repeat match goal with
                | _ => setoid_rewrite List.in_app_iff
                | _ => progress intros
