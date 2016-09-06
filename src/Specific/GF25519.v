@@ -370,7 +370,7 @@ Proof.
   rewrite !modulus_digits_subst.
   cbv - [from_list_default].
   rewrite Let_In_push.
-  repeat (erewrite Let_In_ext; [ |
+  do 20 (erewrite Let_In_ext; [ |
       repeat match goal with
              | |- _ => progress intros; try apply Let_In_ext
              | |- _ = from_list_default _ _ (Let_In _ _) => etransitivity; try (rewrite Let_In_push; reflexivity)
