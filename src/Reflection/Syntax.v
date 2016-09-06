@@ -1,5 +1,5 @@
 (** * PHOAS Representation of Gallina *)
-Require Import Coq.Strings.String.
+Require Import Coq.Strings.String Coq.Classes.RelationClasses.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
@@ -42,6 +42,15 @@ Section language.
           | Tflat t => R t
           | Arrow _ y => fun f g => forall x, interp_type_gen_rel_pointwise y (f x) (g x)
           end.
+        Global Instance interp_type_gen_rel_pointwise_Reflexive {H : forall t, Reflexive (R t)}
+          : forall t, Reflexive (interp_type_gen_rel_pointwise t).
+        Proof. induction t; repeat intro; reflexivity. Qed.
+        Global Instance interp_type_gen_rel_pointwise_Symmetric {H : forall t, Symmetric (R t)}
+          : forall t, Symmetric (interp_type_gen_rel_pointwise t).
+        Proof. induction t; repeat intro; symmetry; eauto. Qed.
+        Global Instance interp_type_gen_rel_pointwise_Transitive {H : forall t, Transitive (R t)}
+          : forall t, Transitive (interp_type_gen_rel_pointwise t).
+        Proof. induction t; repeat intro; etransitivity; eauto. Qed.
       End rel.
     End type.
     Section flat_type.
