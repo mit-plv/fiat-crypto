@@ -34,6 +34,15 @@ Section language.
         | Tflat t => interp_flat_type t
         | Arrow x y => (interp_flat_type x -> interp_type_gen y)%type
         end.
+      Section rel.
+        Context (R : forall t, interp_flat_type t -> interp_flat_type t -> Prop).
+        Fixpoint interp_type_gen_rel_pointwise (t : type)
+          : interp_type_gen t -> interp_type_gen t -> Prop :=
+          match t with
+          | Tflat t => R t
+          | Arrow _ y => fun f g => forall x, interp_type_gen_rel_pointwise y (f x) (g x)
+          end.
+      End rel.
     End type.
     Section flat_type.
       Context (interp_base_type : base_type_code -> Type).

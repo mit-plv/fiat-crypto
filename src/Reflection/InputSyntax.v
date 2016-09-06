@@ -90,7 +90,7 @@ Section language.
       Context (interp_op : forall src dst, op src dst -> interp_flat_type src -> interp_flat_type dst).
 
       Lemma compilef_correct {t} (e : @exprf interp_flat_type t)
-      : Syntax.interpf base_type_code interp_base_type op interp_op (compilef e) = interpf interp_op e.
+      : Syntax.interpf interp_op (compilef e) = interpf interp_op e.
       Proof.
         induction e;
           repeat match goal with

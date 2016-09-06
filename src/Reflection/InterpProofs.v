@@ -16,7 +16,7 @@ Section language.
   Context (interp_op : forall src dst, op src dst -> interp_flat_type src -> interp_flat_type dst).
 
   Lemma interpf_SmartVar t v
-    : Syntax.interpf base_type_code interp_base_type op interp_op (SmartVar (t:=t) v) = v.
+    : Syntax.interpf interp_op (SmartVar (t:=t) v) = v.
   Proof.
     unfold SmartVar; induction t;
       repeat match goal with
