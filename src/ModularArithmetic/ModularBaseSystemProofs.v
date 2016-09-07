@@ -475,6 +475,7 @@ Section CanonicalizationProofs.
    (two_pow_k_le_2modulus : 2 ^ k <= 2 * modulus).
   Local Hint Resolve (@limb_widths_nonneg _ prm) sum_firstn_limb_widths_nonneg.
   Local Hint Resolve log_cap_nonneg.
+  Local Notation pred := Init.Nat.pred.
 
   Lemma nth_default_carry_and_reduce_full : forall n i us,
     nth_default 0 (carry_and_reduce i us) n
@@ -660,9 +661,10 @@ Section CanonicalizationProofs.
         * apply Z.shiftr_le. auto. omega.
   Qed.
 
-  Lemma bound_after_first_loop : forall n us,
+  Lemma bound_after_first_loop : forall us,
     length us = length limb_widths ->
     (forall n, 0 <= nth_default 0 us n < 2 ^ B - if eq_nat_dec n 0 then 0 else ((2 ^ B) >> log_cap (pred n))) ->
+    forall n,
     0 <= (ModularBaseSystemList.carry_full us)[n] <
       if eq_nat_dec n 0
       then 2 * 2 ^ limb_widths [n]
@@ -671,6 +673,67 @@ Section CanonicalizationProofs.
     cbv [ModularBaseSystemList.carry_full full_carry_chain]; intros.
     pose proof (bound_during_first_loop (length limb_widths) n us).
     specialize_by eauto.
+    repeat (break_if; try omega).
+  Qed.
+
+  Lemma lt_mul_2_shiftr : forall a n, 0 <= a < 2 * 2 ^ n -> a >> n = 0 \/ a >> n = 1.
+  Admitted.
+
+  Lemma bound_during_second_loop : forall us,
+    length us = length limb_widths ->
+    (forall n, 0 <= nth_default 0 us n < if eq_nat_dec n 0 then 2 * 2 ^ limb_widths [n] else 2 ^ limb_widths [n]) ->
+    forall i n,
+    (i <= length limb_widths)%nat ->
+    0 <= us{{i}}[n] < if eq_nat_dec i 0 then us[n] + 1 else
+      if lt_dec i (length limb_widths)
+      then
+          if lt_dec n i
+          then 2 ^ (log_cap n)
+          else if eq_nat_dec n i
+               then 2 * 2 ^ limb_widths [n]
+               else us[n] + 1
+      else
+          if eq_nat_dec n 0
+          then 2 ^ limb_widths [n] + c
+          else 2 ^ limb_widths [n].
+  Proof.
+    induction i;
+    repeat match goal with
+           | |- _ => progress (intros; subst)
+           | |- _ => break_if; try omega
+           | |- _ => progress simpl pred in *
+           | |- _ => rewrite Z.add_0_r
+           | |- _ => rewrite nth_default_carry_sequence_make_chain_full by auto
+           | H : forall n, 0 <= _ [n] < _ |- appcontext [ _ [?n] ] => pose proof (H (pred n)); specialize (H n)
+           | |- appcontext [make_chain 0] => simpl make_chain; simpl carry_sequence
+           | IH : forall n, _ -> 0 <= ?u {{ ?i }} [n] < _
+             |- 0 <= ?u {{ ?i }} [?n] < _ => specialize (IH n)
+           | IH : forall n, _ -> 0 <= ?u {{ ?i }} [n] < _
+             |- appcontext [(?u {{ ?i }} [?n]) >> _] => pose proof (IH 0%nat); pose proof (IH (S n)); specialize (IH n); specialize_by omega
+           | H : 0 <= ?a < 2 * 2 ^ ?n |- appcontext [?a >> ?n] =>
+             pose proof c_pos;
+             let A := fresh"H" in
+             apply lt_mul_2_shiftr in H; destruct H as [A | A]; rewrite A; omega
+           | |- _ => apply Z.pow2_mod_pos_bound, limb_widths_pos, nth_default_preserves_properties_length_dep; [tauto | omega]
+           | |- 0 <= 0 < _ => solve[split; zero_bounds]
+           | |- _ => omega
+           end.
+  Qed.
+
+  Lemma bound_after_second_loop : forall n us,
+    length us = length limb_widths ->
+    (forall n, 0 <= nth_default 0 us n < 2 ^ B - if eq_nat_dec n 0 then 0 else ((2 ^ B) >> log_cap (pred n))) ->
+    0 <= (carry_full (carry_full us)) [n] <
+      if eq_nat_dec n 0
+      then 2 ^ limb_widths [n] + c
+      else 2 ^ limb_widths [n].
+  Proof.
+    cbv [carry_full full_carry_chain]; intros ? ? Hlength loop0.
+    pose proof (bound_after_first_loop us) as loop1; specialize_by eauto.
+    pose proof (bound_during_second_loop (carry_full us)) as loop2.
+    specialize_by auto using length_carry_full.
+    specialize (loop2 (length limb_widths) n); specialize_by omega.
+    cbv [carry_full full_carry_chain] in *.
     repeat (break_if; try omega).
   Qed.
 
