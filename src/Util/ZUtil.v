@@ -1170,7 +1170,7 @@ Module Z.
   Qed.
 
   Lemma opp_eq_0_iff a : -a = 0 <-> a = 0.
-  Proof. lia. Qed.
+  Proof. omega. Qed.
 
   Hint Rewrite <- mod_opp_l_z_iff using zutil_arith : zsimplify.
   Hint Rewrite opp_eq_0_iff : zsimplify.
