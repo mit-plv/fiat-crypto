@@ -40,9 +40,9 @@ Ltac Reify_rhs := Reify.Reify_rhs base_type interp_base_type op interp_op.
 Goal (flat_type base_type -> Type) -> False.
   intro var.
   let x := reifyf base_type interp_base_type op var 1%nat in pose x.
-  let x := Reify' 1%nat in unify x (fun var => Const (interp_base_type:=interp_base_type) (var:=var) (t:=Tbase Tnat) (op:=op) 1).
+  let x := Reify' 1%nat in unify x (fun var => Return (Const (interp_base_type:=interp_base_type) (var:=var) (t:=Tbase Tnat) (op:=op) 1)).
   let x := reifyf base_type interp_base_type op var (1 + 1)%nat in pose x.
-  let x := Reify' (1 + 1)%nat in unify x (fun var => Op Add (Pair (Const (interp_base_type:=interp_base_type) (var:=var) (t:=Tbase Tnat) (op:=op) 1) (Const (interp_base_type:=interp_base_type) (var:=var) (t:=Tbase Tnat) (op:=op) 1))).
+  let x := Reify' (1 + 1)%nat in unify x (fun var => Return (Op Add (Pair (Const (interp_base_type:=interp_base_type) (var:=var) (t:=Tbase Tnat) (op:=op) 1) (Const (interp_base_type:=interp_base_type) (var:=var) (t:=Tbase Tnat) (op:=op) 1)))).
   let x := reify_abs base_type interp_base_type op var (fun x => x + 1)%nat in pose x.
   let x := Reify' (fun x => x + 1)%nat in unify x (fun var => Abs (fun y => Op Add (Pair (Var y) (Const (interp_base_type:=interp_base_type) (var:=var) (t:=Tbase Tnat) (op:=op) 1)))).
   let x := reifyf base_type interp_base_type op var (let '(a, b) := (1, 1) in a + b)%nat in pose x.

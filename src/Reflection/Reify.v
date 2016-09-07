@@ -2,19 +2,11 @@
 (** The reification procedure goes through [InputSyntax], which allows
     judgmental equality of the denotation of the reified term. *)
 Require Import Coq.Strings.String.
-Require Crypto.Reflection.Syntax.
-Require Crypto.Reflection.InputSyntax.
+Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.InputSyntax.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
-
-Module Export ReifyCoercions.
-  Global Coercion Syntax.Return : Syntax.exprf >-> Syntax.expr.
-  Global Coercion InputSyntax.Return : InputSyntax.exprf >-> InputSyntax.expr.
-  Global Coercion Syntax.Tflat : Syntax.flat_type >-> Syntax.type.
-End ReifyCoercions.
-
-Import Syntax InputSyntax.
 
 Class reify {varT} (var : varT) {eT} (e : eT) {T : Type} := Build_reify : T.
 Definition reify_var_for_in_is base_type_code {T} (x : T) (t : flat_type base_type_code) {eT} (e : eT) := False.
@@ -224,7 +216,8 @@ Ltac reify_abs base_type_code interp_base_type op var e :=
                         (_ : reify_abs reify_tag C)) (* [C] here is an open term that references "x" by name *)
     with fun _ v _ => @?C v => mkAbs t C end
   | ?x =>
-    reifyf_term x
+    let ret := reifyf_term x in
+    constr:(Return ret)
   end.
 
 Hint Extern 0 (reify_abs (@exprf ?base_type_code ?interp_base_type ?op ?var) ?e)
