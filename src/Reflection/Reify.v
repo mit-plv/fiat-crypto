@@ -3,7 +3,7 @@
     judgmental equality of the denotation of the reified term. *)
 Require Import Coq.Strings.String.
 Require Import Crypto.Reflection.Syntax.
-Require Export Crypto.Reflection.InputSyntax.
+Require Import Crypto.Reflection.InputSyntax.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
@@ -134,7 +134,8 @@ Ltac reifyf base_type_code interp_base_type op var e :=
     let t := lazymatch type of x with ?t => reify_type t end in
     let retv := match constr:(Set) with
                 | _ => let retv := reifyf_var x mkVar in constr:(finished_value retv)
-                | _ => let r := constr:(_ : reify_op op x _ _) in
+                | _ => let op_head := head x in
+                       let r := constr:(_ : reify_op op op_head _ _) in
                        let t := type of r in
                        constr:(op_info t)
                 | _ => let c := mkConst t x in

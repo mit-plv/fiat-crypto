@@ -26,9 +26,9 @@ Definition interp_op src dst (f : op src dst) : interp_flat_type_gen interp_base
      | Sub => fun xy => fst xy - snd xy
      end%nat.
 
-Global Instance: forall x y, reify_op op (x + y)%nat 2 Add := fun _ _ => I.
-Global Instance: forall x y, reify_op op (x * y)%nat 2 Mul := fun _ _ => I.
-Global Instance: forall x y, reify_op op (x - y)%nat 2 Sub := fun _ _ => I.
+Global Instance: reify_op op plus 2 Add := I.
+Global Instance: reify_op op mult 2 Mul := I.
+Global Instance: reify_op op minus 2 Sub := I.
 Global Instance: reify type nat := Tnat.
 
 Ltac Reify' e := Reify.Reify' base_type interp_base_type op e.
