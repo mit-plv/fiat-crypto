@@ -9,6 +9,7 @@ Import ReifyDebugNotations.
 
 Local Set Boolean Equality Schemes.
 Local Set Decidable Equality Schemes.
+Scheme Equality for nat.
 Inductive base_type := Tnat.
 Definition interp_base_type (v : base_type) : Type :=
   match v with
