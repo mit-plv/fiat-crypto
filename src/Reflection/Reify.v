@@ -2,11 +2,19 @@
 (** The reification procedure goes through [InputSyntax], which allows
     judgmental equality of the denotation of the reified term. *)
 Require Import Coq.Strings.String.
-Require Import Crypto.Reflection.Syntax.
-Require Import Crypto.Reflection.InputSyntax.
+Require Crypto.Reflection.Syntax.
+Require Crypto.Reflection.InputSyntax.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
+
+Module Export ReifyCoercions.
+  Global Coercion Syntax.Return : Syntax.exprf >-> Syntax.expr.
+  Global Coercion InputSyntax.Return : InputSyntax.exprf >-> InputSyntax.expr.
+  Global Coercion Syntax.Tflat : Syntax.flat_type >-> Syntax.type.
+End ReifyCoercions.
+
+Import Syntax InputSyntax.
 
 Class reify {varT} (var : varT) {eT} (e : eT) {T : Type} := Build_reify : T.
 Definition reify_var_for_in_is base_type_code {T} (x : T) (t : flat_type base_type_code) {eT} (e : eT) := False.
@@ -23,6 +31,9 @@ Arguments reify_var_for_in_is _ {T} _ _ {eT} _.
 Class reify_op {opTF} (op_family : opTF) {opExprT} (opExpr : opExprT) (nargs : nat) {opT} (reified_op : opT)
   := Build_reify_op : True.
 Ltac strip_type_cast term := lazymatch term with ?term' => term' end.
+(** Override this to get a faster [reify_type] *)
+Ltac base_reify_type T :=
+  strip_type_cast (_ : reify type T).
 Ltac reify_type T :=
   lazymatch T with
   | (?A -> ?B)%type
@@ -34,7 +45,7 @@ Ltac reify_type T :=
        let b := reify_type B in
        constr:(@Prod _ a b)
   | _
-    => let v := strip_type_cast (_ : reify type T) in
+    => let v := base_reify_type T in
        constr:(Tbase v)
   end.
 Ltac reify_base_type T :=
@@ -61,6 +72,14 @@ Inductive reify_result_helper :=
 | finished_value {T} (res : T)
 | op_info {T} (res : T)
 | reification_unsuccessful.
+
+(** Override this to get a faster [reify_op] *)
+Ltac base_reify_op op op_head :=
+  let r := constr:(_ : reify_op op op_head _ _) in
+  type of r.
+Ltac reify_op op op_head :=
+  let t := base_reify_op op op_head in
+  constr:(op_info t).
 
 (** Change this with [Ltac reify_debug_level ::= constr:(1).] to get
     more debugging. *)
@@ -135,9 +154,7 @@ Ltac reifyf base_type_code interp_base_type op var e :=
     let retv := match constr:(Set) with
                 | _ => let retv := reifyf_var x mkVar in constr:(finished_value retv)
                 | _ => let op_head := head x in
-                       let r := constr:(_ : reify_op op op_head _ _) in
-                       let t := type of r in
-                       constr:(op_info t)
+                       reify_op op op_head
                 | _ => let c := mkConst t x in
                        constr:(finished_value c)
                 | _ => constr:(reification_unsuccessful)
