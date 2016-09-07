@@ -37,6 +37,9 @@ src/Encoding/ModularWordEncodingTheorems.v
 src/Encoding/PointEncodingPre.v
 src/Experiments/DerivationsOptionRectLetInEncoding.v
 src/Experiments/EdDSARefinement.v
+src/Experiments/FancyMachine256.v
+src/Experiments/FancyMachineBarrett256.v
+src/Experiments/FancyMachineMontgomery256.v
 src/Experiments/GenericFieldPow.v
 src/Experiments/SpecEd25519.v
 src/Experiments/SpecificCurve25519.v
