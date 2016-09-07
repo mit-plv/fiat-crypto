@@ -78,7 +78,7 @@ Section montgomery.
       eauto 6 using reduce_via_partial_correct, reduce_via_partial_in_range, decode_small_valid.
     Qed.
 
-    Theorem reduce_via_partial_correct
+    Lemma reduce_via_partial_correct''
       : Z.equiv_modulo modulus
                        (decode_small (proj1_sig (reduce_via_partial v)))
                        (decode_large v * R')
@@ -87,6 +87,14 @@ Section montgomery.
       pose proof (proj2 (proj2_sig (reduce_via_partial v) H)) as H'.
       apply decode_small_valid in H'.
       destruct reduce_via_partial_correct'; split; eauto; omega.
+    Qed.
+
+    Theorem reduce_via_partial_correct
+      : decode_small (proj1_sig (reduce_via_partial v)) = (decode_large v * R') mod modulus.
+    Proof.
+      rewrite <- (proj1 reduce_via_partial_correct'').
+      rewrite Z.mod_small by apply reduce_via_partial_correct''.
+      reflexivity.
     Qed.
   End correctness.
 End montgomery.
