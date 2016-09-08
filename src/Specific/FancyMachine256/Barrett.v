@@ -1,4 +1,4 @@
-Require Import Crypto.Experiments.FancyMachine256.
+Require Import Crypto.Specific.FancyMachine256.Core.
 Require Import Crypto.ModularArithmetic.BarrettReduction.ZBounded.
 Require Import Crypto.ModularArithmetic.BarrettReduction.ZHandbook.
 
