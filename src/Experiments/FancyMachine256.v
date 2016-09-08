@@ -1,3 +1,4 @@
+(** * A Fancy Machine with 256-bit registers *)
 Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 Require Export Coq.ZArith.ZArith.
 Require Export Crypto.BoundedArithmetic.Interface.
@@ -17,6 +18,7 @@ Local Notation eta x := (fst x, snd x).
 Local Notation eta3 x := (eta (fst x), snd x).
 Local Notation eta3' x := (fst x, eta (snd x)).
 
+(** ** Reflective Assembly Syntax *)
 Section reflection.
   Context (ops : fancy_machine.instructions (2 * 128)).
   Local Set Boolean Equality Schemes.
@@ -92,24 +94,6 @@ Section reflection.
 
   Definition CSE {t} e := @CSE base_type SConstT op_code base_type_beq SConstT_beq op_code_beq internal_base_type_dec_bl interp_base_type op symbolicify_const symbolicify_op t e (fun _ => nil).
 End reflection.
-Section instances.
-  Context {ops : fancy_machine.instructions (2 * 128)}.
-  Global Instance: reify_op op (@Interface.ldi) 1 OPldi := I.
-  Global Instance: reify_op op (@Interface.shrd) 3 OPshrd := I.
-  Global Instance: reify_op op (@Interface.shl) 2 OPshl := I.
-  Global Instance: reify_op op (@Interface.shr) 2 OPshr := I.
-  Global Instance: reify_op op (@Interface.mkl) 2 OPmkl := I.
-  Global Instance: reify_op op (@Interface.adc) 3 OPadc := I.
-  Global Instance: reify_op op (@Interface.subc) 3 OPsubc := I.
-  Global Instance: reify_op op (@Interface.mulhwll) 2 OPmulhwll := I.
-  Global Instance: reify_op op (@Interface.mulhwhl) 2 OPmulhwhl := I.
-  Global Instance: reify_op op (@Interface.mulhwhh) 2 OPmulhwhh := I.
-  Global Instance: reify_op op (@Interface.selc) 3 OPselc := I.
-  Global Instance: reify_op op (@Interface.addm) 3 OPaddm := I.
-  Global Instance: reify type Z := TZ.
-  Global Instance: reify type bool := Tbool.
-  Global Instance: reify type fancy_machine.W := TW.
-End instances.
 
 Ltac base_reify_op op op_head ::=
      lazymatch op_head with
@@ -139,6 +123,14 @@ Ltac Reify e :=
   constr:(CSE _ (InlineConst (Linearize v))).
 (*Ltac Reify_rhs := Reify.Reify_rhs base_type (interp_base_type _) op (interp_op _).*)
 
+(** ** Raw Syntax Trees *)
+(** These are used solely for pretty-printing the expression tree in a
+    form that can be basically copy-pasted into other languages which
+    can be compiled for the Fancy Machine.  Hypothetically, we could
+    add support for custom named identifiers, by carrying around
+    [string] identifiers and using them for pretty-printing...  It
+    might also be possible to verify this layer, too, by adding a
+    partial interpretation function... *)
 Section syn.
   Context {var : base_type -> Type}.
   Inductive syntax :=
@@ -265,6 +257,8 @@ Notation "'λ'  x .. y , t" := (cAbs (fun x => .. (cAbs (fun y => t)) ..))
 
 Definition Syntax := forall var, @syntax var.
 
+(** Assemble a well-typed easily interpretable expression into a
+    syntax tree we can use for pretty-printing. *)
 Section assemble.
   Context (ops : fancy_machine.instructions (2 * 128)).
 
@@ -291,6 +285,9 @@ Section assemble.
              | Syntax.Var _ x => x
              | Syntax.Op t1 tR op args
                => let v := @assemble_syntaxf t1 args in
+                 (* handle both associativities of pairs in 3-ary
+                    operators, in case we ever change the
+                    associativity *)
                   match op, v with
                   | OPldi    , cConstZ 0 => RegZero
                   | OPldi    , cConstZ v => cINVALID v

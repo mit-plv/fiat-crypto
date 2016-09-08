@@ -2,12 +2,12 @@ Require Import Crypto.Experiments.FancyMachine256.
 Require Import Crypto.ModularArithmetic.BarrettReduction.ZBounded.
 Require Import Crypto.ModularArithmetic.BarrettReduction.ZHandbook.
 
+(** Useful for arithmetic in the field of integers modulo the order of the curve25519 base point *)
 Section expression.
   Let b : Z := 2.
   Let k : Z := 253.
   Let offset : Z := 3.
   Context (ops : fancy_machine.instructions (2 * 128)) (props : fancy_machine.arithmetic ops).
-  (** 25519 dsa *)
   Context (m μ : Z)
           (m_pos : 0 < m).
   Let base_pos : 0 < b. reflexivity. Qed.
@@ -29,7 +29,7 @@ Section expression.
                                   (@ZLikeOps_of_ArchitectureBoundedOps 128 ops m _)).
   Definition ldi' : load_immediate SmallT := _.
   Let isldi : is_load_immediate ldi' := _.
-  Axiom (μ_range : 0 <= b ^ (2 * k) / m < b ^ (k + offset)).
+  Context (μ_range : 0 <= b ^ (2 * k) / m < b ^ (k + offset)).
   Definition μ' : SmallT := ldi' μ.
   Let μ'_eq : ZBounded.decode_small μ' = μ.
   Proof.
@@ -54,7 +54,7 @@ Section expression.
                  let RegZero := fancy_machine.ldi 0 in
                  expression' v.
 
-  Definition expression_eq v H : fancy_machine.decode (expression v) = _
+  Definition expression_eq v (H : 0 <= _ < _) : fancy_machine.decode (expression v) = _
     := proj1 (proj2_sig (pre_f v) H).
 End expression.
 
@@ -88,14 +88,13 @@ Section reflected.
           (H2 : 3 * m <= b^(k + offset))
           (H3 : b^(k - offset) <= m + 1)
           (H4 : 0 <= m < 2^(k + offset))
+          (H5 : 0 <= b^(2 * k) / m < b^(k + offset))
           (v : tuple fancy_machine.W 2)
-          (H5 : 0 <= decode v < b^(2 * k))
+          (H6 : 0 <= decode v < b^(2 * k))
     : fancy_machine.decode (result v) = decode v mod m.
   Proof.
     rewrite sanity; destruct v.
-    eapply expression_eq; assumption.
-    Grab Existential Variables.
-    assumption.
+    apply expression_eq; assumption.
   Qed.
 End reflected.
 
