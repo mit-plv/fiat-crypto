@@ -1,5 +1,5 @@
 
-Require Export Language.
+Require Export Crypto.Assembly.Language.
 
 Module Type Conversion (A B: Language).
 

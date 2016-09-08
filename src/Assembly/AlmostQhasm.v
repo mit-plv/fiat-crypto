@@ -1,6 +1,6 @@
-Require Import QhasmCommon QhasmEvalCommon.
-Require Import Language.
-Require Import List.
+Require Import Crypto.Assembly.QhasmCommon Crypto.Assembly.QhasmEvalCommon.
+Require Import Crypto.Assembly.Language.
+Require Import Coq.Lists.List.
 
 Module AlmostQhasm <: Language.
   Import QhasmEval.

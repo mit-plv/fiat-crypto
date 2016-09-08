@@ -1,7 +1,7 @@
-Require Export Language Conversion.
-Require Export String Ascii Basics Sumbool.
-Require Import QhasmCommon QhasmEvalCommon QhasmUtil Qhasm.
-Require Import NArith NPeano.
+Require Export Crypto.Assembly.Language Crypto.Assembly.Conversion.
+Require Export Coq.Strings.String Coq.Strings.Ascii Coq.Program.Basics Coq.Bool.Sumbool.
+Require Import Crypto.Assembly.QhasmCommon Crypto.Assembly.QhasmEvalCommon Crypto.Assembly.QhasmUtil Crypto.Assembly.Qhasm.
+Require Import Coq.NArith.NArith Coq.Numbers.Natural.Peano.NPeano.
 Require Export Bedrock.Word.
 
 Module QhasmString <: Language.
@@ -55,10 +55,10 @@ Module StringConversion <: Conversion Qhasm QhasmString.
   Section Elements.
     Local Open Scope string_scope.
 
-    Definition nameSuffix (n: nat): string := 
+    Definition nameSuffix (n: nat): string :=
       (nToHex (N.of_nat n)).
 
-    Coercion wordToString {n} (w: word n): string := 
+    Coercion wordToString {n} (w: word n): string :=
       "0x" ++ (nToHex (wordToN w)).
 
     Coercion constToString {n} (c: Const n): string :=
@@ -119,13 +119,13 @@ Module StringConversion <: Conversion Qhasm QhasmString.
       match b with
       | AddWithCarry => "+"
       end.
- 
+
     Coercion rotOpToString (r: RotOp): string :=
       match r with
       | Shl => "<<"
       | Shr => ">>"
       end.
- 
+
     Definition operationToString (op: Operation): option string :=
       let f := fun x => (
         if (Nat.eq_dec x 32)
@@ -135,7 +135,7 @@ Module StringConversion <: Conversion Qhasm QhasmString.
           else "128") in
 
       match op with
-      | IOpConst n o r c => 
+      | IOpConst n o r c =>
         r ++ " " ++ o ++ "= " ++ c
       | IOpReg n o a b =>
         a ++ " " ++ o ++ "= " ++ b
@@ -166,9 +166,9 @@ Module StringConversion <: Conversion Qhasm QhasmString.
 
     Definition conditionalToString (c: Conditional): string * string :=
       match c with
-      | CTrue => ("=? 0", "=") 
+      | CTrue => ("=? 0", "=")
       | CZero n r => ("=? " ++ r, "=")
-      | CReg n t a b => 
+      | CReg n t a b =>
         match (testOpToString t) with
         | (true, s) =>
           (s ++ "? " ++ a ++ " - " ++ b, s)
@@ -176,9 +176,9 @@ Module StringConversion <: Conversion Qhasm QhasmString.
           (s ++ "? " ++ a ++ " - " ++ b, "!" ++ s)
         end
 
-      | CConst n t a b => 
+      | CConst n t a b =>
         match (testOpToString t) with
-        | (true, s) => 
+        | (true, s) =>
           (s ++ "? " ++ a ++ " - " ++ b, s)
         | (false, s) =>
           (s ++ "? " ++ a ++ " - " ++ b, "!" ++ s)

@@ -13,7 +13,7 @@ Require Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
 
 Module Import Notations.
   Import NPeano Nat.
-  
+
   Infix "^" := pow.
   Infix "mod" := modulo (at level 40, no associativity).
   Infix "++" := Word.combine.
@@ -64,7 +64,7 @@ Section EdDSA.
   Local Arguments H {n} _.
   Local Notation wfirstn n w := (@WordUtil.wfirstn n _ w _) (only parsing).
 
-  Require Import Omega.
+  Require Import Coq.omega.Omega.
   Obligation Tactic := simpl; intros; try apply NPeano.Nat.mod_upper_bound; destruct prm; omega.
 
   Program Definition curveKey (sk:secretkey) : nat :=

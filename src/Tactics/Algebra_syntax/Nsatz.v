@@ -1,6 +1,6 @@
 (*** Tactics for manipulating polynomial equations *)
 Require Coq.nsatz.Nsatz.
-Require Import List.
+Require Import Coq.Lists.List.
 
 Generalizable All Variables.
 Lemma cring_sub_diag_iff {R zero eq sub} `{cring:Cring.Cring (R:=R) (ring0:=zero) (ring_eq:=eq) (sub:=sub)}

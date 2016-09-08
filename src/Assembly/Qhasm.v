@@ -1,6 +1,6 @@
-Require Import QhasmCommon QhasmEvalCommon.
-Require Import Language.
-Require Import List NPeano.
+Require Import Crypto.Assembly.QhasmCommon Crypto.Assembly.QhasmEvalCommon.
+Require Import Crypto.Assembly.Language.
+Require Import Coq.Lists.List Coq.Numbers.Natural.Peano.NPeano.
 
 Module Qhasm <: Language.
   Import ListNotations.
@@ -84,4 +84,3 @@ Module Qhasm <: Language.
 
   (* world peace *)
 End Qhasm.
-

@@ -1,7 +1,7 @@
-Require Import Zpower ZArith.
+Require Import Coq.ZArith.Zpower Coq.ZArith.ZArith.
 Require Import Coq.Numbers.Natural.Peano.NPeano.
-Require Import List.
-Require Import VerdiTactics.
+Require Import Coq.Lists.List.
+Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.BaseSystemProofs.
 Require Import Crypto.ModularArithmetic.Pow2Base.
 Require Import Crypto.ModularArithmetic.Pow2BaseProofs.
@@ -58,8 +58,8 @@ Section LengthProofs.
                | |- 2 ^ _ <> 0 => apply Z.pow_nonzero
                | |- _ => solve [apply BaseSystem.b0_1]
                | |- _ => solve [auto using limb_widths_nonneg, sum_firstn_limb_widths_nonneg, limb_widths_match_modulus]
-               | |- _ => omega 
-               | |- _ => congruence 
+               | |- _ => omega
+               | |- _ => congruence
                end.
   Qed.
 
@@ -117,7 +117,7 @@ Section LengthProofs.
     apply Min.min_case; omega.
   Qed.
   Hint Rewrite @length_conditional_subtract_modulus : distr_length.
-  
+
   Lemma length_freeze {u} :
     length u = length limb_widths
     -> length (freeze u) = length limb_widths.
@@ -133,7 +133,7 @@ Section LengthProofs.
     cbv [pack]; intros.
     apply Pow2BaseProofs.length_convert.
   Qed.
-  
+
   Lemma length_unpack : forall {target_widths}
                              {target_widths_nonneg : forall x, In x target_widths -> 0 <= x}
                              {pf us},

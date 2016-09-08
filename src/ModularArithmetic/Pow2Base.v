@@ -1,4 +1,4 @@
-Require Import Zpower ZArith.
+Require Import Coq.ZArith.Zpower Coq.ZArith.ZArith.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ZUtil.
 Require Crypto.BaseSystem.

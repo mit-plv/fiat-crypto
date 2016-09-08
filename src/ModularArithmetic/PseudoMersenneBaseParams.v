@@ -1,5 +1,5 @@
-Require Import ZArith.
-Require Import List.
+Require Import Coq.ZArith.ZArith.
+Require Import Coq.Lists.List.
 Require Import Crypto.Util.ListUtil.
 Require Crypto.BaseSystem.
 Local Open Scope Z_scope.

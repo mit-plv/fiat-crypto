@@ -1,5 +1,5 @@
 Require Import Coq.Classes.Morphisms.
-Require Import Relation_Definitions.
+Require Import Coq.Relations.Relation_Definitions.
 Require Import Crypto.Util.Decidable.
 Require Export Crypto.Util.FixCoqMistakes.
 
@@ -162,7 +162,7 @@ Arguments fieldwiseb {A B n} _ _ _.
 
 Lemma fieldwiseb'_fieldwise' :forall {A B} n R Rb
                                    (a:tuple' A n) (b:tuple' B n),
-  (forall a b, Rb a b = true <-> R a b) -> 
+  (forall a b, Rb a b = true <-> R a b) ->
   (fieldwiseb' Rb a b = true <-> fieldwise' R a b).
 Proof.
   intros.
@@ -176,7 +176,7 @@ Qed.
 
 Lemma fieldwiseb_fieldwise :forall {A B} n R Rb
                                    (a:tuple A n) (b:tuple B n),
-  (forall a b, Rb a b = true <-> R a b) -> 
+  (forall a b, Rb a b = true <-> R a b) ->
   (fieldwiseb Rb a b = true <-> fieldwise R a b).
 Proof.
   intros; destruct n; simpl @tuple in *;

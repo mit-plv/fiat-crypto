@@ -1,9 +1,9 @@
-Require Import Zpower ZArith.
-Require Import List.
+Require Import Coq.ZArith.Zpower Coq.ZArith.ZArith.
+Require Import Coq.Lists.List.
 Require Import Crypto.Util.ListUtil Crypto.Util.CaseUtil Crypto.Util.ZUtil.
 Require Import Crypto.ModularArithmetic.ExtendedBaseVector.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
-Require Import VerdiTactics.
+Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParams.
 Require Import Crypto.BaseSystem.
 Require Import Crypto.BaseSystemProofs.

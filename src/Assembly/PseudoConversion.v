@@ -1,7 +1,7 @@
-Require Export Language Conversion QhasmCommon QhasmEvalCommon QhasmUtil.
-Require Export Pseudo AlmostQhasm State.
-Require Import Bedrock.Word NArith NPeano Euclid.
-Require Import List Sumbool Vector.
+Require Export Crypto.Assembly.Language Crypto.Assembly.Conversion Crypto.Assembly.QhasmCommon Crypto.Assembly.QhasmEvalCommon Crypto.Assembly.QhasmUtil.
+Require Export Crypto.Assembly.Pseudo Crypto.Assembly.AlmostQhasm Crypto.Assembly.State.
+Require Import Bedrock.Word Coq.NArith.NArith Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Euclid.
+Require Import Coq.Lists.List Coq.Bool.Sumbool Coq.Vectors.Vector.
 
 Module PseudoConversion <: Conversion Pseudo AlmostQhasm.
   Import AlmostQhasm EvalUtil ListState Pseudo ListNotations.
@@ -83,7 +83,7 @@ Module PseudoConversion <: Conversion Pseudo AlmostQhasm.
         Some (ASkip, [get i sM M], madd i sM M, F)
 
       | PVar n None i => (* assign to register by default *)
-        Some (ASkip, [get i rM M], madd i rM M, F) 
+        Some (ASkip, [get i rM M], madd i rM M, F)
 
       | PConst n c =>
         Some (AAssign (AConstInt (reg' start) (const' c)),
@@ -157,7 +157,7 @@ Module PseudoConversion <: Conversion Pseudo AlmostQhasm.
           end
         end
 
-      | PComb n a b f g => 
+      | PComb n a b f g =>
         match (convertProgram' f start M F) with
         | None => None
         | Some (fp, fm, M', F') =>
@@ -167,7 +167,7 @@ Module PseudoConversion <: Conversion Pseudo AlmostQhasm.
             end
         end
 
-      | PIf n m o i0 i1 l r => 
+      | PIf n m o i0 i1 l r =>
         match (convertProgram' l start M F) with
         | None => None
         | Some (lp, lr, lM, lF) =>
@@ -187,9 +187,9 @@ Module PseudoConversion <: Conversion Pseudo AlmostQhasm.
             end
         end
 
-      | PFunExp n f e => 
+      | PFunExp n f e =>
         match (convertProgram' f (S start) M F) with
-        | Some (fp, fr, M', F') => 
+        | Some (fp, fr, M', F') =>
             let a := start in
             Some (ASeq
             (AAssign (AConstInt (reg' a) (const' (natToWord _ O))))
@@ -211,7 +211,7 @@ Module PseudoConversion <: Conversion Pseudo AlmostQhasm.
 
   End Conv.
 
-  Definition convertProgram x y (prog: Program x) : option (AlmostQhasm.Program y) := 
+  Definition convertProgram x y (prog: Program x) : option (AlmostQhasm.Program y) :=
     let vs := max (inputs x) (outputs x) in
     let M0 := mempty (width x) in
     let F0 := fempty (width x) in

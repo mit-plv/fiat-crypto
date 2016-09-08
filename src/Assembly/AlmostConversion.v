@@ -1,6 +1,6 @@
 
-Require Import NArith.
-Require Export Qhasm AlmostQhasm Conversion.
+Require Import Coq.NArith.NArith.
+Require Export Crypto.Assembly.Qhasm Crypto.Assembly.AlmostQhasm Crypto.Assembly.Conversion.
 
 Module AlmostConversion <: Conversion AlmostQhasm Qhasm.
   Import QhasmCommon AlmostQhasm Qhasm.

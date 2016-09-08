@@ -1,4 +1,4 @@
-Require Export String List NPeano NArith.
+Require Export Coq.Strings.String Coq.Lists.List Coq.Numbers.Natural.Peano.NPeano Coq.NArith.NArith.
 Require Export Bedrock.Word.
 
 (* Utilities *)
@@ -85,9 +85,9 @@ Inductive TestOp :=
   | TGt: TestOp   | TGe: TestOp.
 
 Inductive Conditional :=
-  | CTrue: Conditional 
-  | CZero: forall n, Reg n -> Conditional 
-  | CReg: forall n, TestOp -> Reg n -> Reg n -> Conditional 
+  | CTrue: Conditional
+  | CZero: forall n, Reg n -> Conditional
+  | CReg: forall n, TestOp -> Reg n -> Reg n -> Conditional
   | CConst: forall n, TestOp -> Reg n -> Const n -> Conditional.
 
 (* Generalized Variable Entry *)
