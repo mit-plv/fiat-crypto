@@ -608,10 +608,11 @@ Section CanonicalizationProofs.
   Local Notation "u [ i ]"  := (nth_default 0 u i).
   Local Notation "u {{ i }}"  := (carry_sequence (make_chain i) u) (at level 30). (* Can't rely on [Reserved Notation]: https://coq.inria.fr/bugs/show_bug.cgi?id=4970 *)
 
-  Lemma bound_during_first_loop : forall i n us,
+  Lemma bound_during_first_loop : forall us,
     length us = length limb_widths ->
-    (i <= length limb_widths)%nat ->
     (forall n, 0 <= nth_default 0 us n < 2 ^ B - if eq_nat_dec n 0 then 0 else ((2 ^ B) >> log_cap (pred n))) ->
+    forall i n,
+    (i <= length limb_widths)%nat ->
     0 <= us{{i}}[n] < if eq_nat_dec i 0 then us[n] + 1 else
       if lt_dec i (length limb_widths)
       then
@@ -625,40 +626,34 @@ Section CanonicalizationProofs.
           then 2 * 2 ^ limb_widths [n]
           else 2 ^ limb_widths [n].
   Proof.
-    induction i; intros; cbv [ModularBaseSystemList.carry_sequence].
-    + break_if; try omega.
-      cbv [make_chain fold_right]. split; try omega. apply H1.
-    + replace (make_chain (S i)) with (i :: make_chain i) by reflexivity.
-      rewrite fold_right_cons.
-      autorewrite with push_nth_default natsimplify; rewrite ?Nat.pred_succ;
-        fold (carry_sequence (make_chain i) us);  rewrite length_carry_sequence; auto.
-      repeat (break_if; try omega);
-        try solve [rewrite Z.pow2_mod_spec by auto; autorewrite with zsimplify; apply Z.mod_pos_bound; zero_bounds];
-        pose proof (IHi i us); pose proof (IHi n us); specialize_by assumption; specialize_by auto with zarith;
-        repeat break_if; try omega; pose proof c_pos; (split; try solve [zero_bounds]).
-      (* TODO (jadep) : clean up/automate these leftover cases. *)
-      - replace (2 * 2 ^ limb_widths [n]) with (2 ^ limb_widths [n] + 2 ^ limb_widths [n]) by ring.
-        apply Z.add_lt_le_mono; subst n. omega.
-        eapply Z.le_trans; eauto.
-        apply Z.mul_le_mono_nonneg_l; try omega. subst i.
-        apply Z.shiftr_le; auto. apply Z.lt_le_incl. apply H2.
-      - replace (2 ^ B) with ((2 ^ B - ((2 ^ B) >> log_cap i)) + ((2 ^ B) >> log_cap i)) by ring.
-        apply Z.add_lt_le_mono.
-        * eapply Z.le_lt_trans with (m := us [n]); try omega.
-          replace i with (pred n) by omega.
-          eapply Z.lt_le_trans; [ apply H1 | ].
-          break_if; omega.
-        * apply Z.shiftr_le. auto.
-          apply Z.le_trans with (m := us [i]); [ omega | ].
-          eapply Z.le_trans. apply Z.lt_le_incl. apply H1.
-          break_if; omega.
-      - replace (2 ^ B) with ((2 ^ B - ((2 ^ B) >> log_cap i)) + ((2 ^ B) >> log_cap i)) by ring.
-        apply Z.add_lt_le_mono.
-        * eapply Z.le_lt_trans with (m := us [n]); try omega.
-          replace i with (pred n) by omega.
-          eapply Z.lt_le_trans; [ apply H1 | ].
-          break_if; omega.
-        * apply Z.shiftr_le. auto. omega.
+    induction i;
+    repeat match goal with
+           | |- _ => progress (intros; subst)
+           | |- _ => break_if; try omega
+           | |- _ => progress simpl pred in *
+           | |- _ => progress rewrite ?Z.add_0_r, ?Z.sub_0_r in *
+           | |- _ => rewrite nth_default_carry_sequence_make_chain_full by auto
+           | H : forall n, 0 <= _ [n] < _ |- appcontext [ _ [?n] ] => pose proof (H (pred n)); specialize (H n)
+           | |- appcontext [make_chain 0] => simpl make_chain; simpl carry_sequence
+           | |- 0 <= ?a + c * ?b < 2 * ?d => unique assert (c * b <= d);
+                                               [ | solve [pose proof c_pos; rewrite <-Z.add_diag; split; zero_bounds] ]
+           | |- c * (?e >> (limb_widths[?i])) <= ?b =>
+             pose proof (Z.shiftr_le e (2 ^ B) (limb_widths [i])); specialize_by (auto || omega);
+               replace (limb_widths [i]) with (limb_widths [pred (length limb_widths)]) in * by (f_equal; omega);
+               etransitivity; [ | apply c_reduce1]; apply Z.mul_le_mono_pos_l; try apply c_pos; omega
+           | H : 0 <= _ < ?b - (?c >> ?d) |- 0 <= _ + (?e >> ?d) < ?b =>
+             pose proof (Z.shiftr_le e c d); specialize_by (auto || omega); solve [split; zero_bounds]
+           | IH : forall n, _ -> 0 <= ?u {{ ?i }} [n] < _
+             |- 0 <= ?u {{ ?i }} [?n] < _ => specialize (IH n)
+           | IH : forall n, _ -> 0 <= ?u {{ ?i }} [n] < _
+             |- appcontext [(?u {{ ?i }} [?n]) >> _] => pose proof (IH 0%nat); pose proof (IH (S n)); specialize (IH n); specialize_by omega
+           | H : 0 <= ?a < 2 * 2 ^ ?n |- appcontext [?a >> ?n] =>
+             pose proof c_pos;
+             apply Z.lt_mul_2_pow_2_shiftr in H; break_if; rewrite H; omega
+           | |- _ => apply Z.pow2_mod_pos_bound, limb_widths_pos, nth_default_preserves_properties_length_dep; [tauto | omega]
+           | |- 0 <= 0 < _ => solve[split; zero_bounds]
+           | |- _ => omega
+           end.
   Qed.
 
   Lemma bound_after_first_loop : forall us,
@@ -671,8 +666,10 @@ Section CanonicalizationProofs.
       else 2 ^ limb_widths [n].
   Proof.
     cbv [ModularBaseSystemList.carry_full full_carry_chain]; intros.
-    pose proof (bound_during_first_loop (length limb_widths) n us).
+    pose proof (bound_during_first_loop us) as loop1.
     specialize_by eauto.
+    specialize (loop1 (length limb_widths) n).
+    specialize_by omega.
     repeat (break_if; try omega).
   Qed.
 
@@ -699,7 +696,7 @@ Section CanonicalizationProofs.
            | |- _ => progress (intros; subst)
            | |- _ => break_if; try omega
            | |- _ => progress simpl pred in *
-           | |- _ => rewrite Z.add_0_r
+           | |- _ => progress rewrite ?Z.add_0_r, ?Z.sub_0_r in *
            | |- _ => rewrite nth_default_carry_sequence_make_chain_full by auto
            | H : forall n, 0 <= _ [n] < _ |- appcontext [ _ [?n] ] => pose proof (H (pred n)); specialize (H n)
            | |- appcontext [make_chain 0] => simpl make_chain; simpl carry_sequence
@@ -771,7 +768,7 @@ Section CanonicalizationProofs.
            | |- _ => progress (intros; subst)
            | |- _ => break_if; try omega
            | |- _ => progress simpl pred in *
-           | |- _ => rewrite Z.add_0_r
+           | |- _ => progress rewrite ?Z.add_0_r, ?Z.sub_0_r in *
            | |- _ => rewrite nth_default_carry_sequence_make_chain_full by auto
            | H : forall n, 0 <= _ [n] < _ |- appcontext [ _ [?n] ] => pose proof (H (pred n)); specialize (H n)
            | |- appcontext [make_chain 0] => simpl make_chain; simpl carry_sequence
