@@ -48,7 +48,7 @@ Module Input.
         Inductive expr : type -> Type :=
           | Const : @interp_type T TT -> expr TT
           | Var : forall {t}, var t -> expr t
-          | Binop : forall {t1 t2}, binop t1 t2 TT -> expr t1 -> expr t2 -> expr TT
+          | Binop : forall {t1 t2 t3}, binop t1 t2 t3 -> expr t1 -> expr t2 -> expr t3 
           | Let : forall {tx}, expr tx -> forall {tC}, (var tx -> expr tC) -> expr tC
           | Pair : forall {t1}, expr t1 -> forall {t2}, expr t2 -> expr (Prod t1 t2)
           | MatchPair : forall {t1 t2}, expr (Prod t1 t2) -> forall {tC}, (var t1 -> var t2 -> expr tC) -> expr tC.
@@ -62,7 +62,7 @@ Module Input.
         match e in @expr _ t return interp_type t with
         | Const n => n
         | Var _ n => n
-        | Binop _ _ op e1 e2 => interp_binop op (interp e1) (interp e2)
+        | Binop _ _ _ op e1 e2 => interp_binop op (interp e1) (interp e2)
         | Let _ ex _ eC => let x := interp ex in interp (eC x)
         | Pair _ e1 _ e2 => (interp e1, interp e2)
         | MatchPair _ _ ep _ eC => let (v1, v2) := interp ep in interp (eC v1 v2)
@@ -87,8 +87,8 @@ Module Input.
       match a with
       | Const x => Const (@toT B EB (@fromT A EA x))
       | Var t x => @Var B _ t x
-      | Binop t1 t2 o e1 e2 =>
-        @Binop B _ t1 t2 o (convertExpr e1) (convertExpr e2)
+      | Binop t1 t2 t3 o e1 e2 =>
+        @Binop B _ t1 t2 t3 o (convertExpr e1) (convertExpr e2)
       | Let tx e tC f =>
         Let (convertExpr e) (fun x => convertExpr (f x))
       | Pair t1 e1 t2 e2 => Pair (convertExpr e1) (convertExpr e2)
@@ -100,8 +100,8 @@ Module Input.
       match a with
       | Const x => Const (@toT B EB (@fromT A EA x))
       | Var t x => @Var B _ t (convertVar x)
-      | Binop t1 t2 o e1 e2 =>
-        @Binop B _ t1 t2 o (convertExpr' e1) (convertExpr' e2)
+      | Binop t1 t2 t3 o e1 e2 =>
+        @Binop B _ t1 t2 t3 o (convertExpr' e1) (convertExpr' e2)
       | Let tx e tC f =>
         Let (convertExpr' e) (fun x => convertExpr' (f (convertVar x)))
       | Pair t1 e1 t2 e2 => Pair (convertExpr' e1) (convertExpr' e2)
@@ -154,41 +154,6 @@ Module Input.
 
    Definition RangeInterp' {n t} E: @interp_type (@WordRangeOpt n) t :=
     @Interp (@WordRangeOpt n) (@WordRangeOptEvaluable n) t E.
- Section Correctness.
-
-    Definition Expr' T := @expr T (@interp_type T).
-
-    Lemma interp_equiv : forall T ev t E,
-      @Interp T ev t E = @interp T ev t (E (@interp_type T)).
-    Proof. intros; unfold Interp; reflexivity. Qed.
-
-    Fixpoint succeeds n t :=
-      match t as t' return @interp_type (@WordRangeOpt n) t' -> bool with
-      | TT => fun x =>
-        match (evalWordRangeOpt x) with
-        | Some _ => true
-        | _ => false
-        end
-      | Prod a b => fun x =>
-        match x with
-        | (x0, x1) => andb (succeeds n a x0) (succeeds n b x1)
-        end
-      end.
-
-    Arguments succeeds [n] [t] x.
-
-    Lemma RangeInterp_correct: forall {n t} (E: @expr Z (@interp_type Z) t),
-      succeeds (rangeInterp' (convertZToWordRangeOpt' n E)) = true
-      -> typeMap (fun x => NToWord n (Z.to_N x)) (zinterp E) = wordInterp (convertZToWord' n E).
-    Proof.
-      intros n t E H.
-      unfold zinterp, wordInterp, rangeInterp',
-             convertZToWordRangeOpt', convertZToWord' in *.
-      induction E; simpl.
-
-      - reflexivity.
-    Admitted.
-  End Correctness.
 
   Example example_Expr : Expr TT := fun var => (
     Let (Const 7) (fun a =>
@@ -309,8 +274,9 @@ Module Input.
     Inductive wf : list (sigT (fun t => var1 t * var2 t))%type -> forall {t}, Texpr var1 t -> Texpr var2 t -> Prop :=
     | WfConst : forall G n, wf G (Const n) (Const n)
     | WfVar : forall G t x x', In (x ≡ x') G -> @wf G t (Var x) (Var x')
-    | WfBinop : forall G {t1} {t2} (e1:Texpr var1 t1) (e2:Texpr var1 t2)
-                       (e1':Texpr var2 t1) (e2':Texpr var2 t2) op,
+    | WfBinop : forall G {t1} {t2} {t3} (e1:Texpr var1 t1) (e2:Texpr var1 t2)
+                  (e1':Texpr var2 t1) (e2':Texpr var2 t2)
+                  (op: binop t1 t2 t3),
         wf G e1 e1'
         -> wf G e2 e2'
         -> wf G (Binop (T := T) op e1 e2) (Binop (T := T) op e1' e2')
@@ -366,7 +332,7 @@ Module Output.
 
       Inductive expr : type -> Type :=
         | LetBinop : forall {t1 t2}, binop t1 t2 TT -> arg t1 -> arg t2 ->
-                                    forall {tC}, (var -> expr tC) -> expr tC
+            forall {tC}, (var -> expr tC) -> expr tC
         | Return : forall {t}, arg t -> expr t.
     End expr.
 
@@ -375,21 +341,21 @@ Module Output.
 
     Definition Expr t : Type := forall var, expr var t.
 
-    Fixpoint interp_arg {t} (e: arg T t) : interp_type t :=
+    Fixpoint interp_arg {t v} (f: v -> T) (e: arg v t) : interp_type t :=
       match e with
-      | Const n => n
-      | Var n => n
-      | Pair _ e1 _ e2 => (interp_arg e1, interp_arg e2)
+      | Const x => x
+      | Var x => f x
+      | Pair _ e1 _ e2 => (interp_arg f e1, interp_arg f e2)
       end.
 
-    Fixpoint interp {t} (e:expr T t) : interp_type t :=
+    Fixpoint interp {t v} (f: v -> T) (e:expr v t) : interp_type t :=
       match e with
       | LetBinop _ _ op a b _ eC =>
-        let x := interp_binop op (interp_arg a) (interp_arg b) in interp (eC x)
-      | Return _ a => interp_arg a
+        let x := interp_binop op (interp_arg f a) (interp_arg f b) in interp f (eC (Const x))
+      | Return _ a => interp_arg f a
       end.
 
-    Definition Interp {t} (E:Expr t) : interp_type t := interp (E T).
+    Definition Interp {t v} (f: v -> T) (E:Expr t) : interp_type t := interp f (E v).
   End Language.
 
   Example example_expr :
@@ -502,6 +468,105 @@ Module Output.
     [ assumption
     | rewrite interp_arg_uninterp_arg; reflexivity ].
   Qed.
+
+  Section Conversions.
+
+    Definition convertVar {A B: Type} {EA: Evaluable A} {EB: Evaluable B} {t} (a: interp_type (T := A) t): interp_type (T := B) t.
+    Proof.
+      induction t as [| t3 IHt1 t4 IHt2].
+
+      - refine (@toT B EB (@fromT A EA _)); assumption.
+
+      - destruct a as [a1 a2]; constructor;
+          [exact (IHt1 a1) | exact (IHt2 a2)].
+    Defined.
+
+    Fixpoint convertArg {A B: Type} {EA: Evaluable A} {EB: Evaluable B} {t v} (x: arg (T := A) (var := v) t): arg (T := B) (var := v) t :=
+      match x with
+      | Const c => Const (convertVar c)
+      | Var v => Var v
+      | Pair t1 a t2 b => Pair (convertArg a) (convertArg b)
+      end.
+
+    Fixpoint convertExpr {A B: Type} {EA: Evaluable A} {EB: Evaluable B} {v t} (a: expr (T := A) (var := v) t): expr (T := B) (var := v) t :=
+      match a with
+      | LetBinop _ _ op a b _ eC =>
+        LetBinop op (convertArg a) (convertArg b) (fun x => convertExpr (eC x))
+      | Return _ a => Return (convertArg a)
+      end.
+
+    Definition convertZToWord {t} n v a :=
+      @convertExpr Z (word n) ZEvaluable (@WordEvaluable n) t v a.
+
+    Definition convertZToWordRangeOpt {t} n v a :=
+      @convertExpr Z (@WordRangeOpt n) ZEvaluable (@WordRangeOptEvaluable n) t v a.
+
+    Definition ZToWord {t} n (a: @Expr Z t): @Expr (word n) t :=
+      fun v => convertZToWord n v (a v).
+
+    Definition ZToRange {t} n (a: @Expr Z t): @Expr (@WordRangeOpt n) t :=
+      fun v => convertZToWordRangeOpt n v (a v).
+
+    Definition typeMap {A B t} (f: A -> B) (x: @interp_type A t): @interp_type B t.
+    Proof.
+      induction t; [refine (f x)|].
+      destruct x as [x1 x2].
+      refine (IHt1 x1, IHt2 x2).
+    Defined.
+  End Conversions.
+
+  Definition zinterp {t} E := @interp Z ZEvaluable t E.
+
+  Definition ZInterp {t} E := @Interp Z ZEvaluable t E.
+
+  Definition wordInterp {n t} E := @interp (word n) (@WordEvaluable n) t E.
+
+  Definition WordInterp {n t} E := @Interp (word n) (@WordEvaluable n) t E.
+
+  Definition rangeInterp {n t} E: @interp_type (@WordRangeOpt n) t :=
+    @interp (@WordRangeOpt n) (@WordRangeOptEvaluable n) t E.
+
+  Definition RangeInterp {n t} E: @interp_type (@WordRangeOpt n) t :=
+    @Interp (@WordRangeOpt n) (@WordRangeOptEvaluable n) t E.
+
+  Section Correctness.
+
+    Lemma interp_equiv : forall T ev t E,
+      @Interp T ev t E = @interp T ev t (E T).
+    Proof. intros; unfold Interp; reflexivity. Qed.
+
+    Fixpoint succeeds n t :=
+      match t as t' return @interp_type (@WordRangeOpt n) t' -> bool with
+      | TT => fun x =>
+        match (evalWordRangeOpt x) with
+        | Some _ => true
+        | _ => false
+        end
+      | Prod a b => fun x =>
+        match x with
+        | (x0, x1) => andb (succeeds n a x0) (succeeds n b x1)
+        end
+      end.
+
+    Arguments succeeds [n] [t] x.
+
+    Lemma RangeInterp_correct: forall {n v t} (E: @expr Z v t),
+      succeeds (rangeInterp (convertZToWordRangeOpt n v E)) = true
+      -> typeMap (fun x => NToWord n (Z.to_N x)) (zinterp E) = wordInterp (convertZToWord n E).
+    Proof.
+      intros n.
+      unfold RangeInterp, ZToRange, ZInterp, WordInterp, ZToWord.
+      unfold Interp, convertZToWord, convertZToWordRangeOpt.
+
+      induction E; intro S; simpl; try reflexivity.
+
+      - induction b; simpl in *.
+        inversion S.
+
+      - 
+
+    Admitted.
+  End Correctness.
 End Output.
 
 Section compile.

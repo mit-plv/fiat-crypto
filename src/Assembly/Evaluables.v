@@ -82,12 +82,14 @@ Section RangeUpdate.
         (rangeF: Range N -> Range N -> option (Range N))
         (wordF: word n -> word n -> word n): Prop :=
     forall (low0 high0 low1 high1: N) (x y: word n),
-      (low0 <= wordToN x <= high0)%N
-    -> (low1 <= wordToN y <= high1)%N
+      (low0 <= wordToN x)%N -> (wordToN x <= high0)%N -> (high0 < Npow2 n)%N
+    -> (low1 <= wordToN y)%N -> (wordToN y <= high1)%N -> (high1 < Npow2 n)%N
     -> match rangeF (range N low0 high0) (range N low1 high1) with
       | Some (range low2 high2) =>
-        (low2 <= @wordToN n (wordF x y) <= high2)%N
-      | _ => True 
+          (low2 <= @wordToN n (wordF x y))%N
+        /\ (@wordToN n (wordF x y) <= high2)%N
+        /\ (high2 < Npow2 n)%N
+      | _ => True
       end.
 
   Section BoundedSub.
@@ -365,11 +367,9 @@ Section RangeUpdate.
          end)%N
       (@wplus n).
   Proof.
-    unfold validBinaryWordOp; intros until y; intros H0 H1.
-    destruct H0 as [H0a H0b].
-    destruct H1 as [H1a H1b].
+    unfold validBinaryWordOp; intros.
 
-    destruct (overflows n (high0 + high1))%N; split.
+    destruct (overflows n (high0 + high1))%N; repeat split; try assumption.
 
     - rewrite <- wordize_plus.
 
@@ -391,19 +391,28 @@ Section RangeUpdate.
            then Some (range N (low0 - high1)%N
               (if (Nge_dec high0 (Npow2 n)) then N.pred (Npow2 n) else
                if (Nge_dec high1 (Npow2 n)) then N.pred (Npow2 n) else
-               high0 + Npow2 n - low1)%N)
+               if (Nge_dec (high0 + Npow2 n - low1) (Npow2 n))
+               then N.pred (Npow2 n)
+               else high0 + Npow2 n - low1)%N)
            else None
          end)
       (@wminus n).
   Proof.
-    unfold validBinaryWordOp; intros until y; intros H0 H1.
-    destruct H0 as [H0a H0b].
-    destruct H1 as [H1a H1b].
+    unfold validBinaryWordOp; intros.
 
     destruct (Nge_dec high0 (Npow2 n)),
              (Nge_dec high1 (Npow2 n)),
-             (Nge_dec low0 high1); split;
+             (Nge_dec low0 high1),
+             (Nge_dec (high0 + Npow2 n - low1) (Npow2 n));
+      repeat split;
       repeat match goal with
+      | [|- (N.pred _ < _)%N] =>
+        rewrite <- (N.pred_succ (Npow2 n));
+          apply -> N.pred_lt_mono;
+          rewrite N.pred_succ;
+        [ apply N.lt_succ_diag_r
+        | apply N.neq_0_lt_0; apply Npow2_gt0]
+
       | [|- (wordToN _ <= N.pred _)%N] => apply N.lt_le_pred
       | [|- (wordToN _ < Npow2 _)%N] => apply word_size_bound
       | [|- (_ - ?x <= wordToN _)%N] => apply bWSub_lem0
@@ -422,11 +431,8 @@ Section RangeUpdate.
           end)
       (@wmult n).
   Proof.
-    unfold validBinaryWordOp; intros until y; intros H0 H1.
-    destruct H0 as [H0a H0b].
-    destruct H1 as [H1a H1b].
-
-    destruct (overflows n (high0 * high1))%N; split.
+    unfold validBinaryWordOp; intros.
+    destruct (overflows n (high0 * high1))%N; repeat split.
 
     - rewrite <- wordize_mult.
 
@@ -437,6 +443,8 @@ Section RangeUpdate.
 
     - transitivity (wordToN x * wordToN y)%N; [apply mult_le|].
       apply N.mul_le_mono; assumption.
+
+    - assumption.
   Qed.
 
   Lemma range_shiftr_valid :
@@ -444,13 +452,15 @@ Section RangeUpdate.
       (fun range0 range1 =>
          match (range0, range1) with
          | (range low0 high0, range low1 high1) =>
-           Some (range N (N.shiftr low0 high1) (N.shiftr high0 low1))%N
+           Some (range N (N.shiftr low0 high1) (
+             if (Nge_dec high0 (Npow2 n))
+             then (N.pred (Npow2 n))
+             else (N.shiftr high0 low1)))%N
           end)
       (fun x k => extend (Nat.eq_le_incl _ _ eq_refl) (shiftr x (wordToNat k))).
   Proof.
-    unfold validBinaryWordOp; intros until y; intros H0 H1.
-    destruct H0 as [H0a H0b], H1 as [H1a H1b].
-    split; unfold extend; rewrite wordToN_convS, wordToN_zext.
+    unfold validBinaryWordOp; intros.
+    repeat split; unfold extend; try rewrite wordToN_convS, wordToN_zext.
 
     - rewrite <- wordize_shiftr.
       rewrite <- Nshiftr_equiv_nat.
@@ -475,13 +485,17 @@ Section RangeUpdate.
           rewrite <- wordToN_nat.
           assumption.
 
-    - etransitivity; [eapply shiftr_bound'; eassumption|].
+    - destruct (Nge_dec high0 (Npow2 n));
+        [apply N.lt_le_pred; apply word_size_bound |].
+
+      etransitivity; [eapply shiftr_bound'; eassumption|].
 
       rewrite <- (Nat2N.id (wordToNat y)).
       rewrite <- Nshiftr_equiv_nat.
       rewrite N2Nat.id.
       rewrite <- wordToN_nat.
       repeat rewrite N.shiftr_div_pow2.
+
       apply N.div_le_compat_l; split;
         rewrite <- (N2Nat.id low1);
         [| rewrite <- (N2Nat.id (wordToN y))];
@@ -490,6 +504,28 @@ Section RangeUpdate.
       apply Npow2_ordered.
       apply to_nat_le.
       assumption.
+
+    - destruct (Nge_dec high0 (Npow2 n)).
+
+      + rewrite <- (N.pred_succ (Npow2 n)).
+        apply -> N.pred_lt_mono;
+          rewrite (N.pred_succ (Npow2 n));
+          [nomega|].
+        apply N.neq_0_lt_0.
+        apply Npow2_gt0.
+
+      + eapply N.le_lt_trans; [|eassumption].
+        rewrite N.shiftr_div_pow2.
+        apply N.div_le_upper_bound.
+
+        * induction low1; simpl; intro Z; inversion Z.
+
+        * replace' high0 with (1 * high0)%N at 1
+            by (rewrite N.mul_comm; nomega).
+          apply N.mul_le_mono; [|reflexivity].
+          rewrite <- (N2Nat.id low1).
+          rewrite <- Npow2_N.
+          apply Npow2_ge1.
   Qed.
 
   Lemma range_and_valid :
@@ -497,15 +533,19 @@ Section RangeUpdate.
       (fun range0 range1 =>
          match (range0, range1) with
          | (range low0 high0, range low1 high1) =>
-           Some (range N 0%N (N.pred (Npow2 (min (N.to_nat (getBits high0)) (N.to_nat (getBits high1)))))%N)
+           let upper := (N.pred (Npow2 (min (N.to_nat (getBits high0)) (N.to_nat (getBits high1)))))%N in
+           Some (range N 0%N (
+             if (Nge_dec upper (Npow2 n))
+             then (N.pred (Npow2 n)) else upper))
           end)
       (@wand n).
   Proof.
-    unfold validBinaryWordOp; intros until y; intros H0 H1.
-    destruct H0 as [H0a H0b], H1 as [H1a H1b].
-    split; [apply N_ge_0 |].
-    apply N.lt_le_pred.
-    destruct (lt_dec (N.to_nat (getBits high0)) (N.to_nat (getBits high1))).
+    unfold validBinaryWordOp; intros.
+    repeat split; [apply N_ge_0 | |].
+    destruct (lt_dec (N.to_nat (getBits high0)) (N.to_nat (getBits high1))),
+             (Nge_dec _ (Npow2 n));
+      try apply N.lt_le_pred;
+      try apply word_size_bound.
 
     - rewrite min_l; [|omega].
       rewrite wordize_and.
@@ -530,27 +570,144 @@ Section RangeUpdate.
       rewrite N.pred_succ.
       apply N.log2_le_mono.
       assumption.
+
+    - destruct (Nge_dec _ (Npow2 n)); [|assumption].
+
+      rewrite <- (N.pred_succ (Npow2 n)).
+      apply -> N.pred_lt_mono;
+        rewrite (N.pred_succ (Npow2 n));
+        [nomega|].
+      apply N.neq_0_lt_0.
+      apply Npow2_gt0.
   Qed.
 End RangeUpdate.
 
 Section WordRange.
   Context {n: nat}.
 
+  (* A tree type evaluable to option (range N) *)
   Inductive WordRangeOpt :=
+    | noRange: WordRangeOpt
     | someRange: forall (low high: N),
         (low <= high)%N -> (high < Npow2 n)%N -> WordRangeOpt
-    | applyBinOp: forall rangeF wordF,
+    | binOpRange: forall rangeF wordF,
         @validBinaryWordOp n rangeF wordF ->
         WordRangeOpt -> WordRangeOpt -> WordRangeOpt.
 
-  Fixpoint evalWordRangeOpt (r: WordRangeOpt): option (Range N) :=
+  Fixpoint rangeEval (r: WordRangeOpt): option (Range N) :=
     match r with
+    | noRange => None
     | someRange low high _ _ => Some (range N low high)
-    | applyBinOp rangeF wordF _ a b =>
-      omap (evalWordRangeOpt a) (fun a' =>
-        omap (evalWordRangeOpt b) (fun b' =>
+    | binOpRange rangeF wordF _ a b =>
+      omap (rangeEval a) (fun a' =>
+        omap (rangeEval b) (fun b' =>
           rangeF a' b'))
     end.
+
+  Definition inRange (r: WordRangeOpt) (w: word n): Prop :=
+    match (rangeEval r) with
+    | None => False
+    | Some (range low high) =>
+        (low <= wordToN w)%N
+      /\ (wordToN w <= high)%N
+      /\ (high < Npow2 n)%N
+    end.
+
+  Lemma rangeEval_Some_spec_low: forall x low high,
+    rangeEval x = Some (range N low high)
+  -> (low <= high)%N.
+  Proof.
+    induction x as [| |f g p x1 E1 x2 E2];
+      intros low' high' H; simpl in H;
+      [ inversion H
+      | inversion H; subst; assumption
+      | unfold validBinaryWordOp in p].
+
+    destruct (rangeEval x1) as [r1|], (rangeEval x2) as [r2|];
+      try destruct r1 as [low1 high1];
+      try destruct r2 as [low2 high2];
+      simpl in H; inversion H.
+
+    refine (_ (p low1 high1 low2 high2
+      (NToWord n low1) (NToWord n low2) _ _ _ _ _ _)).
+
+    - rewrite H; intro H2; destruct H2 as [H2 H3].
+      destruct H3 as [H3 H4].
+      etransitivity; eassumption.
+
+    - rewrite wordToN_NToWord.
+      split; [apply N.eq_le_incl; reflexivity|].
+      apply E1; repeat f_equal; reflexivity.
+
+    - rewrite wordToN_NToWord.
+
+      rewrite H in p';
+      do 2 rewrite wordToN_NToWord in p'.
+    apply p'.
+    admit.
+    admit.
+    admit.
+    admit.
+      try rewrite <- H in *; clear H.
+
+    - 
+    - 
+    - 
+    - 
+  Admitted.
+
+  Lemma rangeEval_Some_spec_high: forall x low high,
+    rangeEval x = Some (range N low high)
+  -> (high < Npow2 n)%N.
+  Proof.
+    intros x low high H.
+  Admitted.
+
+  Definition wreq a b :=
+    rangeEval a = rangeEval b.
+
+  Definition applyBinOp' {rangeF wordF} (a b: WordRangeOpt) 
+        (p: @validBinaryWordOp n rangeF wordF):
+      {c: WordRangeOpt | wreq c (binOpRange _ _ p a b)}.
+
+    unfold wreq; refine (
+      match rangeEval (binOpRange _ _ p a b) as v
+        return rangeEval (binOpRange _ _ p a b) = v
+        -> {b | rangeEval b = v} with
+      | Some (range low high) => fun p =>
+        exist _ (someRange low high
+          (rangeEval_Some_spec_low _ low high p)
+          (rangeEval_Some_spec_high _ low high p)) _
+      | None => fun _ => exist _ noRange _
+      end eq_refl); abstract auto.
+  Defined.
+
+  Definition applyBinOp {f g} (p: @validBinaryWordOp n f g) a b :=
+    Eval simpl in proj1_sig (applyBinOp' a b p).
+
+  Definition canApply {f g} (p: @validBinaryWordOp n f g) a b :=
+    omap (rangeEval a) (fun ra =>
+      omap (rangeEval b) (fun rb =>
+        f ra rb)) <> None.
+
+  Lemma applyBinOp_spec: forall {f g} (p: @validBinaryWordOp n f g) a b x y,
+      inRange a x
+    -> inRange b y
+    -> canApply p a b
+    -> inRange (applyBinOp p a b) (g x y).
+  Proof.
+    intros until y; intros Ha Hb Hp.
+    unfold applyBinOp; destruct (applyBinOp' a b p) as [c H].
+    unfold inRange; cbn; rewrite H; clear H; cbn.
+    unfold inRange in Ha, Hb.
+    unfold canApply in Hp.
+    induction (rangeEval a) as [a'|], (rangeEval b) as [b'|]; auto.
+    destruct a' as [low0 high0], b' as [low1 high1]; simpl in *.
+    pose proof (p low0 high0 low1 high1 x y) as p'.
+    induction (f (range N low0 high0) (range N low1 high1));
+      [|apply Hp; reflexivity].
+    apply p'; assumption.
+  Qed.
 
   Definition anyWord: WordRangeOpt.
     refine (someRange 0%N (N.pred (Npow2 n)) _ _).
@@ -560,21 +717,40 @@ Section WordRange.
       apply Npow2_gt0.
   Defined.
 
+  Lemma anyWord_spec: forall x, inRange anyWord x.
+  Proof.
+    intro; cbn; split; [apply N_ge_0 | ].
+    apply N.lt_le_pred; apply word_size_bound.
+  Qed.
+
   Definition getLowerBoundOpt (w: WordRangeOpt): option N :=
-    omap (evalWordRangeOpt w) (fun r =>
+    omap (rangeEval w) (fun r =>
       match r with | range low high => Some low end).
 
   Definition getUpperBoundOpt (w: WordRangeOpt): option N :=
-    omap (evalWordRangeOpt w) (fun r =>
+    omap (rangeEval w) (fun r =>
       match r with | range low high => Some high end).
 
-  Definition makeRangeOpt (low high: N): option WordRangeOpt.
+  Definition makeRange (low high: N): WordRangeOpt.
     refine (
       match (Nge_dec high low, Nge_dec high (Npow2 n)) with
-      | (left _, right _) => Some (someRange low high _ _)
-      | _ => None
+      | (left _, right _) => someRange low high _ _
+      | _ => noRange
       end); [apply N.ge_le|]; assumption.
   Defined.
+
+  Lemma makeRange_spec: forall x low high,
+      (low <= wordToN x <= high)%N <-> inRange (makeRange low high) x.
+  Proof.
+    intros; split; intro H; [destruct H|]; simpl in *;
+      unfold inRange, makeRange in *;
+      destruct (Nge_dec high low), (Nge_dec high (Npow2 n));
+      simpl in *; try split; intuition.
+
+    admit.
+    admit.
+    admit.
+  Qed.
 
   Definition getOrElse {T} (d: T) (o: option T) :=
     match o with | Some x => x | None => d end.
@@ -587,11 +763,11 @@ Section WordRange.
     fromT := fun x => Z.of_N (getOrElse (N.pred (Npow2 n)) (getUpperBoundOpt x));
 
     (* Operations *)
-    eadd := applyBinOp _ _ range_add_valid;
-    esub := applyBinOp _ _ range_sub_valid;
-    emul := applyBinOp _ _ range_mul_valid;
-    eshiftr := applyBinOp _ _ range_shiftr_valid;
-    eand := applyBinOp _ _ range_and_valid;
+    eadd := fun x y => simplifyRange (applyBinOp _ _ range_add_valid x y);
+    esub := fun x y => simplifyRange (applyBinOp _ _ range_sub_valid x y);
+    emul := fun x y => simplifyRange (applyBinOp _ _ range_mul_valid x y);
+    eshiftr := fun x y => simplifyRange (applyBinOp _ _ range_shiftr_valid x y);
+    eand := fun x y => simplifyRange (applyBinOp _ _ range_and_valid x y);
 
     (* Comparisons just test upper bounds.
        We won't bounds-check Ite in our PHOAS formalism *)
@@ -609,4 +785,5 @@ Section WordRange.
               omap (getLowerBoundOpt y) (fun ylb =>
                 Some (andb (N.eqb xub yub) (N.eqb xlb ylb)))))))
   }.
+
 End WordRange.
