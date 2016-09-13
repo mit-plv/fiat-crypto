@@ -1679,6 +1679,15 @@ Module Z.
       autorewrite with zsimplify; auto using Z.mul_mod_distr_l.
   Qed.
 
+  Lemma lt_mul_2_mod_sub : forall a b, b <> 0 -> b <= a < 2 * b -> a mod b = a - b.
+  Proof.
+    intros; replace a with (1 * b + (a - b)) at 1 by ring.
+    rewrite Z.mod_add_l by auto.
+    apply Z.mod_small.
+    omega.
+  Qed.
+
+
   Lemma leb_add_same x y : (x <=? y + x) = (0 <=? y).
   Proof. destruct (x <=? y + x) eqn:?, (0 <=? y) eqn:?; ltb_to_lt; try reflexivity; omega. Qed.
   Hint Rewrite leb_add_same : zsimplify.
@@ -1714,6 +1723,49 @@ Module Z.
   Proof. intros; autorewrite with Zshift_to_pow; lia. Qed.
   Hint Rewrite shiftr_sub using zutil_arith : push_Zshift.
   Hint Rewrite <- shiftr_sub using zutil_arith : pull_Zshift.
+
+  Lemma lt_pow_2_shiftr : forall a n, 0 <= a < 2 ^ n -> a >> n = 0.
+  Proof.
+    intros.
+    destruct (Z_le_dec 0 n).
+    + rewrite Z.shiftr_div_pow2 by assumption.
+      auto using Z.div_small.
+    + assert (2 ^ n = 0) by (apply Z.pow_neg_r; omega).
+      omega.
+  Qed.
+
+  Hint Rewrite Z.pow2_bits_eqb using omega : Ztestbit.
+  Lemma pow_2_shiftr : forall n, 0 <= n -> (2 ^ n) >> n = 1.
+  Proof.
+    intros; apply Z.bits_inj'; intros.
+    replace 1 with (2 ^ 0) by ring.
+    repeat match goal with
+           | |- _ => progress intros
+           | |- _ => progress rewrite ?Z.eqb_eq, ?Z.eqb_neq in *
+           | |- _ => progress autorewrite with Ztestbit 
+           | |- appcontext[Z.eqb ?a ?b] => case_eq (Z.eqb a b)
+           | |- _ => reflexivity || omega
+           end.
+  Qed.
+
+  Lemma lt_mul_2_pow_2_shiftr : forall a n, 0 <= a < 2 * 2 ^ n ->
+                                            a >> n = if Z_lt_dec a (2 ^ n) then 0 else 1.
+  Proof.
+    intros; break_if; [ apply lt_pow_2_shiftr; omega | ].
+    destruct (Z_le_dec 0 n).
+    + replace (2 * 2 ^ n) with (2 ^ (n + 1)) in *
+        by (rewrite Z.pow_add_r; try omega; ring).
+      pose proof (Z.shiftr_ones a (n + 1) n H).
+      pose proof (Z.shiftr_le (2 ^ n) a n).
+      specialize_by omega.
+      replace (n + 1 - n) with 1 in * by ring.
+      replace (Z.ones 1) with 1 in * by reflexivity.
+      rewrite pow_2_shiftr in * by omega.
+      omega.
+    + assert (2 ^ n = 0) by (apply Z.pow_neg_r; omega).
+      omega.
+  Qed.
+
 
   Lemma simplify_twice_sub_sub x y : 2 * x - (x - y) = x + y.
   Proof. lia. Qed.

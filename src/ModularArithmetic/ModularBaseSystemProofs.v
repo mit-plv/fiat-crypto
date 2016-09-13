@@ -676,48 +676,6 @@ Section CanonicalizationProofs.
     repeat (break_if; try omega).
   Qed.
 
-  Lemma lt_pow_2_shiftr : forall a n, 0 <= a < 2 ^ n -> a >> n = 0.
-  Proof.
-    intros.
-    destruct (Z_le_dec 0 n).
-    + rewrite Z.shiftr_div_pow2 by assumption.
-      auto using Z.div_small.
-    + assert (2 ^ n = 0) by (apply Z.pow_neg_r; omega).
-      omega.
-  Qed.
-
-  Hint Rewrite Z.pow2_bits_eqb using omega : Ztestbit.
-  Lemma pow_2_shiftr : forall n, 0 <= n -> (2 ^ n) >> n = 1.
-  Proof.
-    intros; apply Z.bits_inj'; intros.
-    replace 1 with (2 ^ 0) by ring.
-    repeat match goal with
-           | |- _ => progress intros
-           | |- _ => progress rewrite ?Z.eqb_eq, ?Z.eqb_neq in *
-           | |- _ => progress autorewrite with Ztestbit 
-           | |- appcontext[Z.eqb ?a ?b] => case_eq (Z.eqb a b)
-           | |- _ => reflexivity || omega
-           end.
-  Qed.
-
-  Lemma lt_mul_2_pow_2_shiftr : forall a n, 0 <= a < 2 * 2 ^ n ->
-                                            a >> n = if Z_lt_dec a (2 ^ n) then 0 else 1.
-  Proof.
-    intros; break_if; [ apply lt_pow_2_shiftr; omega | ].
-    destruct (Z_le_dec 0 n).
-    + replace (2 * 2 ^ n) with (2 ^ (n + 1)) in *
-        by (rewrite Z.pow_add_r; try omega; ring).
-      pose proof (Z.shiftr_ones a (n + 1) n H).
-      pose proof (Z.shiftr_le (2 ^ n) a n).
-      specialize_by omega.
-      replace (n + 1 - n) with 1 in * by ring.
-      replace (Z.ones 1) with 1 in * by reflexivity.
-      rewrite pow_2_shiftr in * by omega.
-      omega.
-    + assert (2 ^ n = 0) by (apply Z.pow_neg_r; omega).
-      omega.
-  Qed.
-
   Lemma bound_during_second_loop : forall us,
     length us = length limb_widths ->
     (forall n, 0 <= nth_default 0 us n < if eq_nat_dec n 0 then 2 * 2 ^ limb_widths [n] else 2 ^ limb_widths [n]) ->
@@ -751,7 +709,7 @@ Section CanonicalizationProofs.
              |- appcontext [(?u {{ ?i }} [?n]) >> _] => pose proof (IH 0%nat); pose proof (IH (S n)); specialize (IH n); specialize_by omega
            | H : 0 <= ?a < 2 * 2 ^ ?n |- appcontext [?a >> ?n] =>
              pose proof c_pos;
-             apply lt_mul_2_pow_2_shiftr in H; break_if; rewrite H; omega
+             apply Z.lt_mul_2_pow_2_shiftr in H; break_if; rewrite H; omega
            | |- _ => apply Z.pow2_mod_pos_bound, limb_widths_pos, nth_default_preserves_properties_length_dep; [tauto | omega]
            | |- 0 <= 0 < _ => solve[split; zero_bounds]
            | |- _ => omega
@@ -783,15 +741,6 @@ Section CanonicalizationProofs.
     apply Z.pow_gt_1; try omega.
     apply nth_default_preserves_properties_length_dep; intros; try omega.
     auto using limb_widths_pos.
-  Qed.
-
-  Lemma lt_mul_2_mod_sub : forall a b, b <> 0 -> b <= a < 2 * b -> a mod b = a - b.
-  Proof.
-    intros.
-    replace a with (1 * b + (a - b)) at 1 by ring.
-    rewrite Z.mod_add_l by auto.
-    apply Z.mod_small.
-    omega.
   Qed.
 
   Lemma bound_during_third_loop : forall us,
@@ -835,16 +784,16 @@ Section CanonicalizationProofs.
                unique assert (0 <= a < 2 * 2 ^ n) by omega
            | H : 0 <= ?a < 2 ^ ?n |- appcontext [?a >> ?n] =>
              pose proof c_pos;
-             apply lt_pow_2_shiftr in H; rewrite H; omega
+             apply Z.lt_pow_2_shiftr in H; rewrite H; omega
            | H : 0 <= ?a < 2 * 2 ^ ?n |- appcontext [?a >> ?n] =>
              pose proof c_pos;
-             apply lt_mul_2_pow_2_shiftr in H; break_if; rewrite H; omega
+             apply Z.lt_mul_2_pow_2_shiftr in H; break_if; rewrite H; omega
            | |- _ => apply Z.pow2_mod_pos_bound, limb_widths_pos, nth_default_preserves_properties_length_dep; [tauto | omega]
            | |- 0 <= 0 < _ => solve[split; zero_bounds]
            | |- _ => omega
            end.
     rewrite Z.pow2_mod_spec by auto.
-    rewrite lt_mul_2_mod_sub; omega.
+    rewrite Z.lt_mul_2_mod_sub; omega.
   Qed.
 
   Lemma bound_after_third_loop : forall n us,
