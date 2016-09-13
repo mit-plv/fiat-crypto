@@ -677,11 +677,46 @@ Section CanonicalizationProofs.
   Qed.
 
   Lemma lt_pow_2_shiftr : forall a n, 0 <= a < 2 ^ n -> a >> n = 0.
-  Admitted.
+  Proof.
+    intros.
+    destruct (Z_le_dec 0 n).
+    + rewrite Z.shiftr_div_pow2 by assumption.
+      auto using Z.div_small.
+    + assert (2 ^ n = 0) by (apply Z.pow_neg_r; omega).
+      omega.
+  Qed.
+
+  Hint Rewrite Z.pow2_bits_eqb using omega : Ztestbit.
+  Lemma pow_2_shiftr : forall n, 0 <= n -> (2 ^ n) >> n = 1.
+  Proof.
+    intros; apply Z.bits_inj'; intros.
+    replace 1 with (2 ^ 0) by ring.
+    repeat match goal with
+           | |- _ => progress intros
+           | |- _ => progress rewrite ?Z.eqb_eq, ?Z.eqb_neq in *
+           | |- _ => progress autorewrite with Ztestbit 
+           | |- appcontext[Z.eqb ?a ?b] => case_eq (Z.eqb a b)
+           | |- _ => reflexivity || omega
+           end.
+  Qed.
 
   Lemma lt_mul_2_pow_2_shiftr : forall a n, 0 <= a < 2 * 2 ^ n ->
-                                      a >> n = if Z_lt_dec a (2 ^ n) then 0 else 1.
-  Admitted.
+                                            a >> n = if Z_lt_dec a (2 ^ n) then 0 else 1.
+  Proof.
+    intros; break_if; [ apply lt_pow_2_shiftr; omega | ].
+    destruct (Z_le_dec 0 n).
+    + replace (2 * 2 ^ n) with (2 ^ (n + 1)) in *
+        by (rewrite Z.pow_add_r; try omega; ring).
+      pose proof (Z.shiftr_ones a (n + 1) n H).
+      pose proof (Z.shiftr_le (2 ^ n) a n).
+      specialize_by omega.
+      replace (n + 1 - n) with 1 in * by ring.
+      replace (Z.ones 1) with 1 in * by reflexivity.
+      rewrite pow_2_shiftr in * by omega.
+      omega.
+    + assert (2 ^ n = 0) by (apply Z.pow_neg_r; omega).
+      omega.
+  Qed.
 
   Lemma bound_during_second_loop : forall us,
     length us = length limb_widths ->
