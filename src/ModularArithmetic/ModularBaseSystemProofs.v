@@ -747,7 +747,7 @@ Section CanonicalizationProofs.
 
   Lemma bound_after_third_loop : forall us,
     length us = length limb_widths ->
-    (forall n, 0 <= us [n] < 2 ^ B - if eq_nat_dec n 0 then 0 else ((2 ^ B) >> (limb_widths [pred n])) ->
+    (forall n, 0 <= us [n] < 2 ^ B - if eq_nat_dec n 0 then 0 else ((2 ^ B) >> (limb_widths [pred n]))) ->
     forall n,
     0 <= (carry_full (carry_full (carry_full us))) [n] < 2 ^ limb_widths [n].
   Proof.
