@@ -463,28 +463,30 @@ Hint Rewrite @length_carry_and_reduce @length_carry : distr_length.
 Section CanonicalizationProofs.
   Context `{prm : PseudoMersenneBaseParams}.
   Local Notation base := (base_from_limb_widths limb_widths).
-  Local Notation log_cap i := (nth_default 0 limb_widths i).
+  Local Notation digits := (tuple Z (length limb_widths)).
   Context (lt_1_length_base : (1 < length limb_widths)%nat)
    {B} (B_pos : 0 < B) (B_compat : forall w, In w limb_widths -> w <= B)
    (* on the first reduce step, we add at most one bit of width to the first digit *)
-   (c_reduce1 : c * ((2 ^ B) >> log_cap (pred (length limb_widths))) <= 2 ^ log_cap 0)
+   (c_reduce1 : c * ((2 ^ B) >> nth_default 0 limb_widths (pred (length limb_widths))) <= 2 ^ (nth_default 0 limb_widths 0))
    (* on the second reduce step, we add at most one bit of width to the first digit,
       and leave room to carry c one more time after the highest bit is carried *)
-   (c_reduce2 : c <= 2 ^ log_cap 0 - c)
+   (c_reduce2 : c <= 2 ^ (nth_default 0 limb_widths 0) - c)
    (* this condition is probably implied by c_reduce2, but is more straighforward to compute than to prove *)
    (two_pow_k_le_2modulus : 2 ^ k <= 2 * modulus).
   Local Hint Resolve (@limb_widths_nonneg _ prm) sum_firstn_limb_widths_nonneg.
   Local Hint Resolve log_cap_nonneg.
+  Local Notation "u [ i ]"  := (nth_default 0 u i).
+  Local Notation "u {{ i }}"  := (carry_sequence (make_chain i) u) (at level 30). (* Can't rely on [Reserved Notation]: https://coq.inria.fr/bugs/show_bug.cgi?id=4970 *)
 
   Lemma nth_default_carry_and_reduce_full : forall n i us,
-    nth_default 0 (carry_and_reduce i us) n
+   (carry_and_reduce i us) [n]
     = if lt_dec n (length us)
       then
         (if eq_nat_dec n (i mod length limb_widths)
-        then Z.pow2_mod (nth_default 0 us n) (log_cap n)
-        else nth_default 0 us n) +
+        then Z.pow2_mod (us [n]) (limb_widths [n])
+        else us [n]) +
           if eq_nat_dec n (S (i mod length limb_widths) mod length limb_widths)
-          then c * nth_default 0 us (i mod length limb_widths) >> log_cap (i mod length limb_widths)
+          then c * (us [i mod length limb_widths]) >> (limb_widths [i mod length limb_widths])
           else 0
       else 0.
   Proof.
@@ -496,21 +498,21 @@ Section CanonicalizationProofs.
 
   Lemma nth_default_carry_full : forall n i us,
     length us = length limb_widths ->
-    nth_default 0 (carry i us) n
+    (carry i us) [n]
     = if lt_dec n (length us)
       then
         if eq_nat_dec i (pred (length limb_widths))
         then (if eq_nat_dec n i
-             then Z.pow2_mod (nth_default 0 us n) (log_cap n)
-             else nth_default 0 us n) +
+             then Z.pow2_mod (us [n]) (limb_widths [n])
+             else us [n]) +
                if eq_nat_dec n 0
-               then c * (nth_default 0 us i >> log_cap i)
+               then c * ((us [i]) >> (limb_widths [i]))
                else 0
         else if eq_nat_dec n i
-             then Z.pow2_mod (nth_default 0 us n) (log_cap n)
-             else nth_default 0 us n +
+             then Z.pow2_mod (us [n]) (limb_widths [n])
+             else us [n] +
                if eq_nat_dec n (S i)
-               then nth_default 0 us i >> log_cap i
+               then (us [i]) >> (limb_widths [i])
                else 0
       else 0.
   Proof.
@@ -526,7 +528,7 @@ Section CanonicalizationProofs.
   Lemma nth_default_carry_sequence_make_chain_full : forall i n us,
     length us = length limb_widths ->
     (i <= length limb_widths)%nat ->
-    nth_default 0 (carry_sequence (make_chain i) us) n
+    us {{ i }} [n]
     = if lt_dec n (length limb_widths)
       then
           if eq_nat_dec i 0
@@ -537,28 +539,22 @@ Section CanonicalizationProofs.
                  if lt_dec n i
                  then
                     if eq_nat_dec n (pred i)
-                    then Z.pow2_mod
-                          (nth_default 0 (carry_sequence (make_chain (pred i)) us) n)
-                          (log_cap n)
-                    else nth_default 0 (carry_sequence (make_chain (pred i)) us) n
-                 else nth_default 0 (carry_sequence (make_chain (pred i)) us) n +
+                    then Z.pow2_mod (us {{ pred i }} [n]) (limb_widths [n])
+                    else us{{ pred i }} [n] 
+                 else us{{ pred i}} [n] +
                     (if eq_nat_dec n i
-                     then (nth_default 0 (carry_sequence (make_chain (pred i)) us) (pred i))
-                            >> log_cap (pred i)
+                      then (us{{ pred i}} [pred i]) >> (limb_widths [pred i])
                      else 0)
               else
                   if lt_dec n (pred i)
-                  then nth_default 0 (carry_sequence (make_chain (pred i)) us) n +
+                  then us {{ pred i }} [n] +
                      (if eq_nat_dec n 0
-                      then c * (nth_default 0 (carry_sequence (make_chain (pred i)) us) (pred i))
-                             >> log_cap (pred i)
+                      then c * (us{{ pred i}} [pred i]) >> (limb_widths [pred i])
                       else 0)
-                  else Z.pow2_mod
-                         (nth_default 0 (carry_sequence (make_chain (pred i)) us) n)
-                         (log_cap n)
+                  else Z.pow2_mod (us {{ pred i }} [n]) (limb_widths [n])
       else 0.
   Proof.
-    induction i; intros; cbv [ModularBaseSystemList.carry_sequence].
+    induction i; intros; cbv [carry_sequence].
     + cbv [pred make_chain fold_right].
       repeat break_if; subst; omega || reflexivity || auto using Z.add_0_r.
       apply nth_default_out_of_bounds. omega.
@@ -571,41 +567,16 @@ Section CanonicalizationProofs.
         rewrite ?Z.add_0_r; try reflexivity.
   Qed.
 
-  Lemma nth_default_carry_full_full : forall n us,
-    length us = length limb_widths ->
-    nth_default 0 (ModularBaseSystemList.carry_full us) n
-    = if lt_dec n (length limb_widths)
-      then
-           if eq_nat_dec n (pred (length limb_widths))
-           then Z.pow2_mod
-                  (nth_default 0 (carry_sequence (make_chain (pred (length limb_widths))) us) n)
-                  (log_cap n)
-           else nth_default 0 (carry_sequence (make_chain (pred (length limb_widths))) us) n +
-              (if eq_nat_dec n 0
-               then c * (nth_default 0 (carry_sequence (make_chain (pred (length limb_widths))) us) (pred (length limb_widths)))
-                      >> log_cap (pred (length limb_widths))
-               else 0)
-      else 0.
-  Proof.
-    intros.
-    cbv [ModularBaseSystemList.carry_full full_carry_chain].
-    rewrite (nth_default_carry_sequence_make_chain_full (length limb_widths)) by omega.
-    repeat break_if; try omega; reflexivity.
-  Qed.
-  Hint Rewrite @nth_default_carry_full_full : push_nth_default.
-
   Lemma nth_default_carry : forall i us,
     length us = length limb_widths ->
     (i < length us)%nat ->
-    nth_default 0 (ModularBaseSystemList.carry i us) i
-    = Z.pow2_mod (nth_default 0 us i) (log_cap i).
+    nth_default 0 (carry i us) i
+    = Z.pow2_mod (us [i]) (limb_widths [i]).
   Proof.
     intros; autorewrite with push_nth_default natsimplify; break_match; omega.
   Qed.
   Hint Rewrite @nth_default_carry using (omega || distr_length; omega) : push_nth_default.
 
-  Local Notation "u [ i ]"  := (nth_default 0 u i).
-  Local Notation "u {{ i }}"  := (carry_sequence (make_chain i) u) (at level 30). (* Can't rely on [Reserved Notation]: https://coq.inria.fr/bugs/show_bug.cgi?id=4970 *)
   Lemma pow_limb_widths_gt_1 : forall i, (i < length limb_widths)%nat ->
                                          1 < 2 ^ limb_widths [i].
   Proof.
@@ -660,14 +631,14 @@ Section CanonicalizationProofs.
 
   Lemma bound_during_first_loop : forall us,
     length us = length limb_widths ->
-    (forall n, 0 <= nth_default 0 us n < 2 ^ B - if eq_nat_dec n 0 then 0 else ((2 ^ B) >> log_cap (pred n))) ->
+    (forall n, 0 <= us [n] < 2 ^ B - if eq_nat_dec n 0 then 0 else ((2 ^ B) >> (limb_widths [pred n]))) ->
     forall i n,
     (i <= length limb_widths)%nat ->
     0 <= us{{i}}[n] < if eq_nat_dec i 0 then us[n] + 1 else
       if lt_dec i (length limb_widths)
       then
           if lt_dec n i
-          then 2 ^ (log_cap n)
+          then 2 ^ (limb_widths [n])
           else if eq_nat_dec n i
                then 2 ^ B
                else us[n] + 1
@@ -704,7 +675,7 @@ Section CanonicalizationProofs.
 
   Lemma bound_after_first_loop : forall us,
     length us = length limb_widths ->
-    (forall n, 0 <= nth_default 0 us n < 2 ^ B - if eq_nat_dec n 0 then 0 else ((2 ^ B) >> log_cap (pred n))) ->
+    (forall n, 0 <= us [n] < 2 ^ B - if eq_nat_dec n 0 then 0 else ((2 ^ B) >> (limb_widths [pred n]))) ->
     forall n,
     0 <= (carry_full us)[n] <
       if eq_nat_dec n 0
@@ -716,14 +687,14 @@ Section CanonicalizationProofs.
 
   Lemma bound_during_second_loop : forall us,
     length us = length limb_widths ->
-    (forall n, 0 <= nth_default 0 us n < if eq_nat_dec n 0 then 2 * 2 ^ limb_widths [n] else 2 ^ limb_widths [n]) ->
+    (forall n, 0 <= us [n] < if eq_nat_dec n 0 then 2 * 2 ^ limb_widths [n] else 2 ^ limb_widths [n]) ->
     forall i n,
     (i <= length limb_widths)%nat ->
     0 <= us{{i}}[n] < if eq_nat_dec i 0 then us[n] + 1 else
       if lt_dec i (length limb_widths)
       then
           if lt_dec n i
-          then 2 ^ (log_cap n)
+          then 2 ^ (limb_widths [n])
           else if eq_nat_dec n i
                then 2 * 2 ^ limb_widths [n]
                else us[n] + 1
@@ -737,7 +708,7 @@ Section CanonicalizationProofs.
 
   Lemma bound_after_second_loop : forall us,
     length us = length limb_widths ->
-    (forall n, 0 <= nth_default 0 us n < 2 ^ B - if eq_nat_dec n 0 then 0 else ((2 ^ B) >> log_cap (pred n))) ->
+    (forall n, 0 <= us [n] < 2 ^ B - if eq_nat_dec n 0 then 0 else ((2 ^ B) >> (limb_widths [pred n]))) ->
     forall n,
     0 <= (carry_full (carry_full us)) [n] <
       if eq_nat_dec n 0
@@ -750,7 +721,7 @@ Section CanonicalizationProofs.
 
   Lemma bound_during_third_loop : forall us,
     length us = length limb_widths ->
-    (forall n, 0 <= nth_default 0 us n < if eq_nat_dec n 0 then 2 ^ limb_widths [n] + c else 2 ^ limb_widths [n]) ->
+    (forall n, 0 <= us [n] < if eq_nat_dec n 0 then 2 ^ limb_widths [n] + c else 2 ^ limb_widths [n]) ->
     forall i n,
     (i <= length limb_widths)%nat ->
     0 <= us{{i}}[n] < if eq_nat_dec i 0 then us[n] + 1 else
@@ -776,7 +747,7 @@ Section CanonicalizationProofs.
 
   Lemma bound_after_third_loop : forall us,
     length us = length limb_widths ->
-    (forall n, 0 <= nth_default 0 us n < 2 ^ B - if eq_nat_dec n 0 then 0 else ((2 ^ B) >> log_cap (pred n))) ->
+    (forall n, 0 <= us [n] < 2 ^ B - if eq_nat_dec n 0 then 0 else ((2 ^ B) >> (limb_widths [pred n])) ->
     forall n,
     0 <= (carry_full (carry_full (carry_full us))) [n] < 2 ^ limb_widths [n].
   Proof.
@@ -784,7 +755,6 @@ Section CanonicalizationProofs.
     apply (bound_after_loop us H (fun x => carry_full (carry_full x)) bound_during_third_loop);
       auto using length_carry_full, bound_after_second_loop.
   Qed.
-
 
   (* TODO(jadep):
      - Proof of correctness for [ge_modulus] and [cond_subtract_modulus]
@@ -796,7 +766,7 @@ Section CanonicalizationProofs.
          (where [canonicalized_BSToWord] uses bitwise operations to concatenate digits
           in BaseSystem in canonical form, splitting along word capacities)
   *)
-
+  
   Lemma freeze_canonical : forall u v x y, rep u x -> rep v y ->
                                            (x = y <-> fieldwise Logic.eq (freeze u) (freeze v)).
   Proof.
