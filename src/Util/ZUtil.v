@@ -1681,7 +1681,8 @@ Module Z.
 
   Lemma lt_mul_2_mod_sub : forall a b, b <> 0 -> b <= a < 2 * b -> a mod b = a - b.
   Proof.
-    intros; replace a with (1 * b + (a - b)) at 1 by ring.
+    intros.
+    replace (a mod b) with ((1 * b + (a - b)) mod b) by (f_equal; ring).
     rewrite Z.mod_add_l by auto.
     apply Z.mod_small.
     omega.
