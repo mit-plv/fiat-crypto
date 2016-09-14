@@ -475,7 +475,6 @@ Section CanonicalizationProofs.
    (two_pow_k_le_2modulus : 2 ^ k <= 2 * modulus).
   Local Hint Resolve (@limb_widths_nonneg _ prm) sum_firstn_limb_widths_nonneg.
   Local Hint Resolve log_cap_nonneg.
-  Local Notation pred := Init.Nat.pred.
 
   Lemma nth_default_carry_and_reduce_full : forall n i us,
     nth_default 0 (carry_and_reduce i us) n
@@ -616,6 +615,11 @@ Section CanonicalizationProofs.
     auto using limb_widths_pos.
   Qed.
 
+  Lemma carry_sequence_nil_l : forall us, carry_sequence nil us = us.
+  Proof.
+    reflexivity.
+  Qed.
+
 
   Ltac bound_during_loop := 
     repeat match goal with
@@ -625,7 +629,7 @@ Section CanonicalizationProofs.
            | |- _ => progress rewrite ?Z.add_0_r, ?Z.sub_0_r in *
            | |- _ => rewrite nth_default_carry_sequence_make_chain_full by auto
            | H : forall n, 0 <= _ [n] < _ |- appcontext [ _ [?n] ] => pose proof (H (pred n)); specialize (H n)
-           | |- appcontext [make_chain 0] => simpl make_chain; simpl carry_sequence
+           | |- appcontext [make_chain 0] => simpl make_chain; rewrite carry_sequence_nil_l
            | |- 0 <= ?a + c * ?b < 2 * ?d => unique assert (c * b <= d);
                                                [ | solve [pose proof c_pos; rewrite <-Z.add_diag; split; zero_bounds] ]
            | |- c * (?e >> (limb_widths[?i])) <= ?b =>
