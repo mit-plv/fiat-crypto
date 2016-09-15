@@ -92,6 +92,91 @@ Section FieldOperationProofs.
     + eauto using base_upper_bound_compatible, limb_widths_nonneg.
   Qed.
 
+  (* TODO : move to Pow2Base *)
+  Lemma bounded_nil_r : forall l, (forall x, In x l -> 0 <= x) -> bounded l nil.
+  Proof.
+    cbv [bounded]; intros.
+    rewrite nth_default_nil.
+    apply nth_default_preserves_properties; intros; split; zero_bounds.
+  Qed.
+
+  (* TODO : move to Pow2Base *)
+  Lemma length_encode' : forall lw z i, length (encode' lw z i) = i.
+  Proof.
+    induction i; intros; simpl encode'; distr_length.
+  Qed.
+  Hint Rewrite length_encode' : distr_length.
+
+  (* TODO : move to ListUtil *)
+  Lemma nth_default_firstn : forall {A} (d : A) l i n,
+    nth_default d (firstn n l) i = if le_dec n (length l)
+                                   then if lt_dec i n then nth_default d l i else d
+                                   else nth_default d l i.
+  Proof.
+    induction n; intros; break_if; autorewrite with push_nth_default; auto; try omega.
+    + rewrite (firstn_succ d) by omega.
+      autorewrite with push_nth_default; repeat (break_if; distr_length);
+        rewrite Min.min_l in * by omega; try omega.
+      - apply IHn; omega.
+      - replace i with n in * by omega.
+        rewrite Nat.sub_diag.
+        autorewrite with push_nth_default; auto.
+      - rewrite nth_default_out_of_bounds; distr_length; auto.
+    + rewrite firstn_all2 by omega.
+      auto.
+  Qed.
+  Hint Rewrite @nth_default_firstn : push_nth_default.
+
+  (* TODO : move to Pow2Base *)
+  Lemma bounded_encode' : forall z i, (0 <= z) ->
+    bounded (firstn i limb_widths) (encode' limb_widths z i).
+  Proof.
+    intros; induction i; simpl encode';
+      repeat match goal with
+             | |- _ => progress intros
+             | |- _ => progress autorewrite with push_nth_default in * 
+             | |- _ => progress autorewrite with Ztestbit
+             | |- _ => progress rewrite ?firstn_O, ?Nat.sub_diag in *
+             | |- _ => rewrite Z.testbit_pow2_mod by auto
+             | |- _ => rewrite Z.ones_spec by zero_bounds
+             | |- _ => rewrite sum_firstn_succ_default
+             | |- _ => rewrite nth_default_out_of_bounds by distr_length
+             | |- _ => break_if; distr_length
+             | |- _ => apply bounded_nil_r
+             | |- appcontext[nth_default _ (_ :: nil) ?i] => case_eq i; intros; autorewrite with push_nth_default
+             | |- Z.pow2_mod (?a >> ?b) _ = (?a >> ?b) => apply Z.bits_inj'
+             | IH : forall i, _ = nth_default 0 (encode' _ _ _) i
+                              |- appcontext[nth_default 0 limb_widths ?i] => specialize (IH i)
+             | H : In _ (firstn _ _) |- _ => apply In_firstn in H
+             | H1 : ~ (?a < ?b)%nat, H2 : (?a < S ?b)%nat |- _ =>
+               progress replace a with b in * by omega
+             | H : bounded _ _ |- bounded _ _ =>
+               apply pow2_mod_bounded_iff; rewrite pow2_mod_bounded_iff in H
+             | |- _ => solve [auto] 
+             | |- _ => contradiction
+             | |- _ => reflexivity
+             end.
+  Qed.
+
+  (* TODO : move to Pow2Base *)
+  Lemma bounded_encodeZ : forall z, (0 <= z) ->
+    bounded limb_widths (encodeZ limb_widths z).
+  Proof.
+    cbv [encodeZ]; intros.
+    pose proof (bounded_encode' z (length limb_widths)) as Hencode'.
+    rewrite firstn_all in Hencode'; auto.
+  Qed.
+
+  Lemma bounded_encode : forall x, bounded limb_widths (to_list (encode x)).
+  Proof.
+    intros.
+    cbv [encode]; rewrite to_list_from_list.
+    cbv [ModularBaseSystemList.encode].
+    apply bounded_encodeZ.
+    apply F.to_Z_range.
+    pose proof prime_modulus; prime_bound.
+  Qed.
+
   Lemma add_rep : forall u v x y, u ~= x -> v ~= y ->
     add u v ~= (x+y)%F.
   Proof.
@@ -460,19 +545,22 @@ End CarryProofs.
 
 Hint Rewrite @length_carry_and_reduce @length_carry : distr_length.
 
-Section CanonicalizationProofs.
-  Context `{prm : PseudoMersenneBaseParams}.
-  Local Notation base := (base_from_limb_widths limb_widths).
-  Local Notation digits := (tuple Z (length limb_widths)).
-  Context (lt_1_length_base : (1 < length limb_widths)%nat)
-   {B} (B_pos : 0 < B) (B_compat : forall w, In w limb_widths -> w <= B)
+Class FreezePreconditions `{prm : PseudoMersenneBaseParams} B :=
+  {
+    lt_1_length_limb_widths : (1 < length limb_widths)%nat;
+    B_pos : 0 < B;
+    B_compat : forall w, In w limb_widths -> w <= B;
    (* on the first reduce step, we add at most one bit of width to the first digit *)
-   (c_reduce1 : c * ((2 ^ B) >> nth_default 0 limb_widths (pred (length limb_widths))) <= 2 ^ (nth_default 0 limb_widths 0))
+   c_reduce1 : c * ((2 ^ B) >> nth_default 0 limb_widths (pred (length limb_widths))) <= 2 ^ (nth_default 0 limb_widths 0);
    (* on the second reduce step, we add at most one bit of width to the first digit,
       and leave room to carry c one more time after the highest bit is carried *)
-   (c_reduce2 : c <= 2 ^ (nth_default 0 limb_widths 0) - c)
-   (* this condition is probably implied by c_reduce2, but is more straighforward to compute than to prove *)
-   (two_pow_k_le_2modulus : 2 ^ k <= 2 * modulus).
+   c_reduce2 : c <= 2 ^ (nth_default 0 limb_widths 0) - c
+  }.
+
+Section CanonicalizationProofs.
+  Context `{freeze_pre : FreezePreconditions}.
+  Local Notation base := (base_from_limb_widths limb_widths).
+  Local Notation digits := (tuple Z (length limb_widths)).
   Local Hint Resolve (@limb_widths_nonneg _ prm) sum_firstn_limb_widths_nonneg.
   Local Hint Resolve log_cap_nonneg.
   Local Notation "u [ i ]"  := (nth_default 0 u i).
@@ -519,7 +607,9 @@ Section CanonicalizationProofs.
     intros.
     cbv [carry].
     break_if.
-    + subst i. autorewrite with push_nth_default natsimplify.
+    + subst i.
+      pose proof lt_1_length_limb_widths.
+      autorewrite with push_nth_default natsimplify.
       destruct (eq_nat_dec (length limb_widths) (length us)); congruence.
     + autorewrite with push_nth_default; reflexivity.
   Qed.
@@ -560,6 +650,7 @@ Section CanonicalizationProofs.
       apply nth_default_out_of_bounds. omega.
     + replace (make_chain (S i)) with (i :: make_chain i) by reflexivity.
       rewrite fold_right_cons.
+      pose proof lt_1_length_limb_widths.
       autorewrite with push_nth_default natsimplify;
         rewrite ?Nat.pred_succ; fold (carry_sequence (make_chain i) us);
         rewrite length_carry_sequence; auto.
@@ -573,7 +664,7 @@ Section CanonicalizationProofs.
     nth_default 0 (carry i us) i
     = Z.pow2_mod (us [i]) (limb_widths [i]).
   Proof.
-    intros; autorewrite with push_nth_default natsimplify; break_match; omega.
+    intros; pose proof lt_1_length_limb_widths; autorewrite with push_nth_default natsimplify; break_match; omega.
   Qed.
   Hint Rewrite @nth_default_carry using (omega || distr_length; omega) : push_nth_default.
 
@@ -591,10 +682,11 @@ Section CanonicalizationProofs.
     reflexivity.
   Qed.
 
-
   Ltac bound_during_loop := 
     repeat match goal with
            | |- _ => progress (intros; subst)
+           | |- _ => unique pose proof lt_1_length_limb_widths
+           | |- _ => unique pose proof c_reduce2 
            | |- _ => break_if; try omega
            | |- _ => progress simpl pred in *
            | |- _ => progress rewrite ?Z.add_0_r, ?Z.sub_0_r in *
@@ -666,6 +758,7 @@ Section CanonicalizationProofs.
      (forall n, 0 <= us [n] < bound us n)
                 -> forall n, 0 <= (carry_full (f us)) [n] < bound'' (f us) n.
   Proof.
+    pose proof lt_1_length_limb_widths.
     cbv [carry_full full_carry_chain]; intros ? ? ? ? ? ? ? ? Hloop Hfbound Hflength Hbound n.
     specialize (Hfbound Hbound).
     specialize (Hloop (f us) Hflength Hfbound (length limb_widths) n).
@@ -766,18 +859,121 @@ Section CanonicalizationProofs.
          (where [canonicalized_BSToWord] uses bitwise operations to concatenate digits
           in BaseSystem in canonical form, splitting along word capacities)
   *)
+
+  (* bounded canonical -> freeze bounded -> freeze canonical *)
+
+      Import SetoidList.
+  (* TODO : move to Tuple *)
+  Lemma fieldwise_to_list_iff : forall {T n} R (s t : tuple T n),
+    (fieldwise R s t <-> Forall2 R (to_list _ s) (to_list _ t)).
+  Admitted.
+  
+  (* convenience notation -- [bounded] for digits rather than lists *)
+  Local Notation minimal_rep u := ((bounded limb_widths (to_list (length limb_widths) u))
+                                   /\ (ge_modulus (to_list _ u) = false)).
+  Import Morphisms.
+  (* TODO : move somewhere *)
+  Check Proper.
+  Lemma decode_Proper : Proper (Logic.eq ==> (Forall2 Logic.eq) ==> Logic.eq) decode'.
+  Proof.
+    repeat intro; subst.
+    revert y y0 H0; induction x0; intros.
+    + inversion H0. rewrite !decode_nil.
+      reflexivity.
+    + inversion H0; subst.
+      destruct y as [|y0 y]; [rewrite !decode_base_nil; reflexivity | ].
+      specialize (IHx0 y _ H4).
+      rewrite !peel_decode.
+      f_equal; auto.
+  Qed.
+
+  (* TODO : move to ListUtil *)
+  Lemma Forall2_forall_iff : forall {A} R (xs ys : list A) d, length xs = length ys ->
+    (Forall2 R xs ys <-> (forall i, (i < length xs)%nat -> R (nth_default d xs i) (nth_default d ys i))).
+  Proof.
+    split; intros.
+    + revert xs ys H H0 H1.
+      induction i; intros; destruct H0; distr_length; autorewrite with push_nth_default; auto.
+      eapply IHi; auto. omega.
+    + revert xs ys H H0; induction xs; intros; destruct ys; distr_length; econstructor.
+      - specialize (H0 0%nat); specialize_by omega.
+        autorewrite with push_nth_default in *; auto.
+      - apply IHxs; try omega.
+        intros.
+        specialize (H0 (S i)); specialize_by omega.
+        autorewrite with push_nth_default in *; auto.
+  Qed.
+  
+  Lemma decode_bitwise_eq_iff : forall u v, minimal_rep u -> minimal_rep v ->
+    (fieldwise Logic.eq u v <->
+     decode_bitwise limb_widths (to_list _ u) = decode_bitwise limb_widths (to_list _ v)).
+  Proof.
+    intros.
+    rewrite !decode_bitwise_spec by (tauto || auto using length_to_list).
+    rewrite fieldwise_to_list_iff.
+    split; intros.
+    + apply decode_Proper; auto.
+    + apply Forall2_forall_iff with (d := 0); intros; repeat rewrite @length_to_list in *; auto.
+      erewrite digit_select with (us := to_list _ u) by intuition eauto.
+      erewrite digit_select with (us := to_list _ v) by intuition eauto.
+      rewrite H1; reflexivity.
+  Qed.
+
+  Lemma minimal_rep_encode : forall x, minimal_rep (encode x).
+  Admitted.
+
+  Lemma ge_modulus_spec : forall u, length u = length limb_widths ->
+                                    ge_modulus u = false ->
+                                    0 <= BaseSystem.decode base u < modulus.
+  Admitted.
+
+  Lemma encode_minimal_rep : forall u x, rep u x -> minimal_rep u ->
+                                         fieldwise Logic.eq u (encode x).
+  Proof.
+    intros.
+    apply decode_bitwise_eq_iff; auto using minimal_rep_encode.
+    rewrite !decode_bitwise_spec by (intuition auto; distr_length; try apply minimal_rep_encode).
+    apply Fdecode_decode_mod in H.
+    pose proof (Fdecode_decode_mod _ _ (encode_rep x)).
+    rewrite Z.mod_small in H by (apply ge_modulus_spec; distr_length; intuition auto).
+    rewrite Z.mod_small in H1 by (apply ge_modulus_spec; distr_length; apply minimal_rep_encode).
+    congruence.
+  Qed.
+
+  Lemma bounded_canonical : forall u v x y, rep u x -> rep v y ->
+                                            minimal_rep u -> minimal_rep v -> 
+                                            (x = y <-> fieldwise Logic.eq u v).
+  Proof.
+    intros.
+    eapply encode_minimal_rep in H1; eauto.
+    eapply encode_minimal_rep in H2; eauto.
+    split; intros; subst.
+    + etransitivity; eauto; symmetry; eauto.
+    + assert (fieldwise Logic.eq (encode x) (encode y)) by
+          (transitivity u; [symmetry; eauto | ]; transitivity v; eauto).
+      apply decode_bitwise_eq_iff in H4; try apply minimal_rep_encode.
+      rewrite !decode_bitwise_spec in H4 by (auto; distr_length; apply minimal_rep_encode).
+      apply F.eq_to_Z_iff.
+      erewrite <-!Fdecode_decode_mod by eapply encode_rep.
+      congruence.
+  Qed.
+
+  Lemma minimal_rep_freeze : forall u, minimal_rep (freeze u).
+  Admitted.
+
+  Lemma freeze_rep : forall u x, rep u x -> rep (freeze u) x.
+  Admitted.
   
   Lemma freeze_canonical : forall u v x y, rep u x -> rep v y ->
                                            (x = y <-> fieldwise Logic.eq (freeze u) (freeze v)).
   Proof.
-    clear.
-    (* TODO: bundle these assumptions so they can be more easily passed to square root proofs? *)
-  Admitted.
+    intros; apply bounded_canonical; auto using freeze_rep, minimal_rep_freeze.
+  Qed.
 
 End CanonicalizationProofs.
 
 Section SquareRootProofs.
-  Context `{prm : PseudoMersenneBaseParams}.
+  Context `{freeze_pre : FreezePreconditions}.
   Local Notation "u ~= x" := (rep u x).
   Local Notation digits := (tuple Z (length limb_widths)).
   Local Notation base := (base_from_limb_widths limb_widths).
