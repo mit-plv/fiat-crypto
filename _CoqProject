@@ -74,6 +74,7 @@ src/Reflection/Syntax.v
 src/Reflection/TestCase.v
 src/Reflection/WfProofs.v
 src/Reflection/WfReflective.v
+src/Reflection/WfRel.v
 src/Spec/CompleteEdwardsCurve.v
 src/Spec/EdDSA.v
 src/Spec/Encoding.v
