@@ -27,11 +27,13 @@ Section expression.
   Local Arguments pre_f / .
   Local Arguments ldi' / .
   Local Arguments reduce_via_partial / .
+  Local Arguments DoubleBounded.mul_double / .
 
   Definition expression'
     := Eval simpl in f.
+  Local Transparent locked_let.
   Definition expression
-    := Eval cbv beta delta [expression' fst snd] in
+    := Eval cbv beta delta [expression' fst snd locked_let] in
         fun v => let RegMod := fancy_machine.ldi modulus in
                  let RegPInv := fancy_machine.ldi m' in
                  let RegZero := fancy_machine.ldi 0 in
@@ -43,7 +45,7 @@ Section expression.
              v
              Hv
     : fancy_machine.decode (expression v) = _
-    := @ZBounded.reduce_via_partial_correct (2^256) modulus _ props' (ldi' m') I Hm R' HR0 HR1 v I Hv.
+    := @ZBounded.reduce_via_partial_correct (2^256) modulus _ props' (ldi' m') I Hm R' HR0 HR1 (fst v, snd v) I Hv.
 End expression.
 
 Section reflected.
@@ -61,7 +63,7 @@ Section reflected.
 
   Definition registers
     := [RegMod; RegPInv; lo; hi; RegMod; RegPInv; RegZero; y; t1; SpecialCarryBit; y;
-       t1; SpecialCarryBit; y; t2; scratch+3; t1; SpecialCarryBit; t1; SpecialCarryBit; t2;
+       t1; SpecialCarryBit; y; t1; t2; scratch+3; SpecialCarryBit; t1; SpecialCarryBit; t2;
        scratch+3; SpecialCarryBit; t1; SpecialCarryBit; t2; SpecialCarryBit; lo; SpecialCarryBit; hi; y;
        SpecialCarryBit; lo; lo].
 
@@ -72,6 +74,7 @@ Section reflected.
           (props : fancy_machine.arithmetic ops).
 
   Let result (v : tuple fancy_machine.W 2) := Syntax.Interp (interp_op _) rexpression_simple modulus m' (fst v) (snd v).
+
   Let assembled_result (v : tuple fancy_machine.W 2) : fancy_machine.W := Core.Interp compiled_syntax modulus m' (fst v) (snd v).
 
   Theorem sanity : result = expression ops modulus m'.
@@ -118,29 +121,29 @@ End reflected.
 Print compiled_syntax.
 (* compiled_syntax =
 fun ops : fancy_machine.instructions (2 * 128) =>
-(λn RegMod RegPInv lo hi,
- slet RegMod := RegMod in
- slet RegPInv := RegPInv in
- slet RegZero := ldi 0 in
- c.Mul128(y, c.LowerHalf(lo), c.LowerHalf(RegPInv)),
- c.Mul128(t1, c.UpperHalf(lo), c.LowerHalf(RegPInv)),
- c.Add(y, y, c.LeftShifted{t1, 128}),
- c.Mul128(t1, c.UpperHalf(RegPInv), c.LowerHalf(lo)),
- c.Add(y, y, c.LeftShifted{t1, 128}),
- c.Mul128(t2, c.UpperHalf(y), c.UpperHalf(RegMod)),
- c.Mul128(scratch+3, c.UpperHalf(y), c.LowerHalf(RegMod)),
- c.Mul128(t1, c.LowerHalf(y), c.LowerHalf(RegMod)),
- c.Add(t1, t1, c.LeftShifted{scratch+3, 128}),
- c.Addc(t2, t2, c.RightShifted{scratch+3, 128}),
- c.Mul128(scratch+3, c.UpperHalf(RegMod), c.LowerHalf(y)),
- c.Add(t1, t1, c.LeftShifted{scratch+3, 128}),
- c.Addc(t2, t2, c.RightShifted{scratch+3, 128}),
- c.Add(lo, lo, t1),
- c.Addc(hi, hi, t2),
- c.Selc(y, RegMod, RegZero),
- c.Sub(lo, hi, y),
- c.Addm(lo, lo, RegZero),
- Return lo)%nexpr
+λn RegMod RegPInv lo hi,
+slet RegMod := RegMod in
+slet RegPInv := RegPInv in
+slet RegZero := ldi 0 in
+c.Mul128(y, c.LowerHalf(lo), c.LowerHalf(RegPInv)),
+c.Mul128(t1, c.UpperHalf(lo), c.LowerHalf(RegPInv)),
+c.Add(y, y, c.LeftShifted{t1, 128}),
+c.Mul128(t1, c.UpperHalf(RegPInv), c.LowerHalf(lo)),
+c.Add(y, y, c.LeftShifted{t1, 128}),
+c.Mul128(t1, c.LowerHalf(y), c.LowerHalf(RegMod)),
+c.Mul128(t2, c.UpperHalf(y), c.UpperHalf(RegMod)),
+c.Mul128(scratch+3, c.UpperHalf(y), c.LowerHalf(RegMod)),
+c.Add(t1, t1, c.LeftShifted{scratch+3, 128}),
+c.Addc(t2, t2, c.RightShifted{scratch+3, 128}),
+c.Mul128(scratch+3, c.UpperHalf(RegMod), c.LowerHalf(y)),
+c.Add(t1, t1, c.LeftShifted{scratch+3, 128}),
+c.Addc(t2, t2, c.RightShifted{scratch+3, 128}),
+c.Add(lo, lo, t1),
+c.Addc(hi, hi, t2),
+c.Selc(y, RegMod, RegZero),
+c.Sub(lo, hi, y),
+c.Addm(lo, lo, RegZero),
+Return lo
      : forall ops : fancy_machine.instructions (2 * 128),
        expr base_type
          (fun v : base_type =>
@@ -148,4 +151,5 @@ fun ops : fancy_machine.instructions (2 * 128) =>
           | TZ => Z
           | Tbool => bool
           | TW => let (W, _, _, _, _, _, _, _, _, _, _, _, _, _) := ops in W
-          end) op Register (TZ -> TZ -> TW -> TW -> Tbase TW)%ctype *)
+          end) op Register (TZ -> TZ -> TW -> TW -> Tbase TW)%ctype
+*)

@@ -43,12 +43,14 @@ Section expression.
 
   Local Arguments μ' / .
   Local Arguments ldi' / .
+  Local Arguments DoubleBounded.mul_double / .
 
   Definition expression'
     := Eval simpl in
         (fun v => proj1_sig (pre_f v)).
+  Local Transparent locked_let.
   Definition expression
-    := Eval cbv beta iota delta [expression' fst snd] in
+    := Eval cbv beta iota delta [expression' fst snd locked_let] in
         fun v => let RegMod := fancy_machine.ldi m in
                  let RegMu := fancy_machine.ldi μ in
                  let RegZero := fancy_machine.ldi 0 in
@@ -72,12 +74,9 @@ Section reflected.
   (*Compute DefaultRegisters rexpression_simple.*)
 
   Definition registers
-    := [RegMod; RegMuLow; x; xHigh; RegMod; RegMuLow; RegZero; tmp;
-          qHigh; scratch+3; q; SpecialCarryBit; q;
-            SpecialCarryBit; qHigh; scratch+3; SpecialCarryBit;
-              q; SpecialCarryBit; qHigh; tmp; scratch+3;
-                SpecialCarryBit; tmp; scratch+3; SpecialCarryBit;
-                  tmp; SpecialCarryBit; tmp; q; out].
+    := [RegMod; RegMuLow; x; xHigh; RegMod; RegMuLow; RegZero; tmp; q; qHigh; scratch+3;
+       SpecialCarryBit; q; SpecialCarryBit; qHigh; scratch+3; SpecialCarryBit; q; SpecialCarryBit; qHigh; tmp;
+       scratch+3; SpecialCarryBit; tmp; scratch+3; SpecialCarryBit; tmp; SpecialCarryBit; tmp; q; out].
 
   Definition compiled_syntax
     := Eval lazy in AssembleSyntax rexpression_simple registers.
@@ -125,30 +124,30 @@ End reflected.
 
 Print compiled_syntax.
 (* compiled_syntax =
-fun ops : fancy_machine.instructions 256 =>
-(λn RegMod RegMuLow x xHigh,
- slet RegMod := RegMod in
- slet RegMuLow := RegMuLow in
- slet RegZero := ldi 0 in
- c.Rshi(tmp, xHigh, x, 250),
- c.Mul128(qHigh, c.UpperHalf(tmp), c.UpperHalf(RegMuLow)),
- c.Mul128(scratch+3, c.UpperHalf(tmp), c.LowerHalf(RegMuLow)),
- c.Mul128(q, c.LowerHalf(tmp), c.LowerHalf(RegMuLow)),
- c.Add(q, q, c.LeftShifted{scratch+3, 128}),
- c.Addc(qHigh, qHigh, c.RightShifted{scratch+3, 128}),
- c.Mul128(scratch+3, c.UpperHalf(RegMuLow), c.LowerHalf(tmp)),
- c.Add(q, q, c.LeftShifted{scratch+3, 128}),
- c.Addc(qHigh, qHigh, c.RightShifted{scratch+3, 128}),
- c.Mul128(tmp, c.LowerHalf(qHigh), c.LowerHalf(RegMod)),
- c.Mul128(scratch+3, c.UpperHalf(qHigh), c.LowerHalf(RegMod)),
- c.Add(tmp, tmp, c.LeftShifted{scratch+3, 128}),
- c.Mul128(scratch+3, c.UpperHalf(RegMod), c.LowerHalf(qHigh)),
- c.Add(tmp, tmp, c.LeftShifted{scratch+3, 128}),
- c.Sub(tmp, x, tmp),
- c.Addm(q, tmp, RegZero),
- c.Addm(out, q, RegZero),
- Return out)%nexpr
-     : forall ops : fancy_machine.instructions 256,
+fun ops : fancy_machine.instructions (2 * 128) =>
+λn RegMod RegMuLow x xHigh,
+slet RegMod := RegMod in
+slet RegMuLow := RegMuLow in
+slet RegZero := ldi 0 in
+c.Rshi(tmp, xHigh, x, 250),
+c.Mul128(q, c.LowerHalf(tmp), c.LowerHalf(RegMuLow)),
+c.Mul128(qHigh, c.UpperHalf(tmp), c.UpperHalf(RegMuLow)),
+c.Mul128(scratch+3, c.UpperHalf(tmp), c.LowerHalf(RegMuLow)),
+c.Add(q, q, c.LeftShifted{scratch+3, 128}),
+c.Addc(qHigh, qHigh, c.RightShifted{scratch+3, 128}),
+c.Mul128(scratch+3, c.UpperHalf(RegMuLow), c.LowerHalf(tmp)),
+c.Add(q, q, c.LeftShifted{scratch+3, 128}),
+c.Addc(qHigh, qHigh, c.RightShifted{scratch+3, 128}),
+c.Mul128(tmp, c.LowerHalf(qHigh), c.LowerHalf(RegMod)),
+c.Mul128(scratch+3, c.UpperHalf(qHigh), c.LowerHalf(RegMod)),
+c.Add(tmp, tmp, c.LeftShifted{scratch+3, 128}),
+c.Mul128(scratch+3, c.UpperHalf(RegMod), c.LowerHalf(qHigh)),
+c.Add(tmp, tmp, c.LeftShifted{scratch+3, 128}),
+c.Sub(tmp, x, tmp),
+c.Addm(q, tmp, RegZero),
+c.Addm(out, q, RegZero),
+Return out
+     : forall ops : fancy_machine.instructions (2 * 128),
        expr base_type
          (fun v : base_type =>
           match v with
