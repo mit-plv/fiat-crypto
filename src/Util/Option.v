@@ -1,18 +1,42 @@
 Require Import Coq.Classes.Morphisms.
+Require Import Coq.Relations.Relation_Definitions.
+Require Import Crypto.Tactics.VerdiTactics.
+Require Import Crypto.Util.Logic.
 
-Global Instance option_rect_Proper_nd {A T}
-  : Proper ((pointwise_relation _ eq) ==> eq  ==> eq ==> eq) (@option_rect A (fun _ => T)).
+Definition option_eq {A} eq (x y : option A) :=
+  match x with
+  | None    => y = None
+  | Some ax => match y with
+               | None => False
+               | Some ay => eq ax ay
+               end
+  end.
+
+Global Instance Equivalence_option_eq {T} {R} {Equivalence_R:@Equivalence T R}
+  : Equivalence (option_eq R).
 Proof.
-  intros ?? H ??? [|]??; subst; simpl; congruence.
+  split; cbv; repeat (break_match || intro || intuition congruence ||
+                      solve [ reflexivity | symmetry; eassumption | etransitivity; eassumption ] ).
 Qed.
 
-Global Instance option_rect_Proper_nd' {A T}
-  : Proper ((pointwise_relation _ eq) ==> eq  ==> forall_relation (fun _ => eq)) (@option_rect A (fun _ => T)).
-Proof.
-  intros ?? H ??? [|]; subst; simpl; congruence.
-Qed.
 
-Hint Extern 1 (Proper _ (@option_rect ?A (fun _ => ?T))) => exact (@option_rect_Proper_nd' A T) : typeclass_instances.
+Global Instance Proper_option_rect_nd_changebody
+      {A B:Type} {RB:relation B} {a:option A}
+  : Proper (pointwise_relation _ RB ==> RB ==> RB) (fun S N => option_rect (fun _ => B) S N a).
+Proof. cbv; repeat (intro || break_match); intuition. Qed.
+
+(* FIXME: there used to be a typeclass resolution hint here, something like
+  Hint Extern 1 (Proper _ (@option_rect ?A (fun _ => ?B))) => exact (@Proper_option_rect_nd_changebody A B _ _) : typeclass_instances.
+ but I could not get it working after generalizing [RB] from [Logic.eq] ~ andreser *)
+
+Global Instance Proper_option_rect_nd_changevalue
+      {A B RA RB} some {Proper_some: Proper (RA==>RB) some}
+  : Proper (RB ==> option_eq RA ==> RB) (@option_rect A (fun _ => B) some).
+Proof. cbv; repeat (intro || break_match || f_equiv || intuition congruence). Qed.
+
+Lemma option_rect_false_returns_true_iff {T} (f:T->bool) (o:option T) :
+  option_rect (fun _ => bool) f false o = true <-> exists s:T, o = Some s /\ f s = true.
+Proof. unfold option_rect; break_match; logic; congruence. Qed.
 
 Lemma option_rect_option_map : forall {A B C} (f:A->B) some none v,
     option_rect (fun _ => C) (fun x => some (f x)) none v = option_rect (fun _ => C) some none (option_map f v).
@@ -42,7 +66,6 @@ Ltac commute_option_rect_Let_In := (* pull let binders out side of option_rect p
   end.
 *)
 
-(** TODO: possibly move me, remove local *)
 Ltac replace_option_match_with_option_rect :=
   idtac;
   lazymatch goal with
@@ -60,15 +83,6 @@ Ltac simpl_option_rect := (* deal with [option_rect _ _ _ None] and [option_rect
          | [ |- context[option_rect ?P ?S ?N (Some ?x) ] ]
            => change (option_rect P S N (Some x)) with (S x); cbv beta
          end.
-
-Definition option_eq {A} eq (x y : option A) :=
-  match x with
-  | None    => y = None
-  | Some ax => match y with
-               | None => False
-               | Some ay => eq ax ay
-               end
-  end.
 
 Definition option_leq_to_eq {A} (x y : option A) : x = y -> option_eq eq x y.
 Proof. destruct x; intro; subst; simpl; reflexivity. Qed.
