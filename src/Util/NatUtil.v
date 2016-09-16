@@ -3,6 +3,8 @@ Require Import Coq.Numbers.Natural.Peano.NPeano Coq.omega.Omega.
 Require Import Coq.micromega.Psatz.
 Import Nat.
 
+Scheme Equality for nat.
+
 Create HintDb natsimplify discriminated.
 
 Hint Resolve mod_bound_pos plus_le_compat : arith.
