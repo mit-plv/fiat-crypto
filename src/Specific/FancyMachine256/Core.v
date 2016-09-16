@@ -8,6 +8,7 @@ Require Export Crypto.Util.Tuple.
 Require Import Crypto.Util.Option Crypto.Util.Sigma Crypto.Util.Prod.
 Require Export Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Linearize.
+Require Import Crypto.Reflection.Inline.
 Require Import Crypto.Reflection.CommonSubexpressionElimination.
 Require Export Crypto.Reflection.Reify.
 Require Export Crypto.Util.ZUtil.

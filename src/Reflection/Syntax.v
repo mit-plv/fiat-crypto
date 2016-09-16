@@ -178,6 +178,14 @@ Section language.
            end.
     End map.
 
+    Section misc.
+      Definition invert_Const {var t} (e : @exprf var t) : option (interp_type t)
+        := match e with
+           | Const _ v => Some v
+           | _ => None
+           end.
+    End misc.
+
     Section wf.
       Context {var1 var2 : base_type_code -> Type}.
 
@@ -246,6 +254,7 @@ Global Arguments Wf {_ _ _ t} _.
 Global Arguments Interp {_ _ _} interp_op {t} _.
 Global Arguments interp {_ _ _} interp_op {t} _.
 Global Arguments interpf {_ _ _} interp_op {t} _.
+Global Arguments invert_Const {_ _ _ _ _} _.
 
 Notation "'slet' x := A 'in' b" := (Let A (fun x => b)) : expr_scope.
 Notation "'λ'  x .. y , t" := (Abs (fun x => .. (Abs (fun y => t%expr)) ..)) : expr_scope.

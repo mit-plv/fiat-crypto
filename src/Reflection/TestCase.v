@@ -2,7 +2,7 @@ Require Import Crypto.Reflection.Syntax.
 Require Export Crypto.Reflection.Reify.
 Require Import Crypto.Reflection.InputSyntax.
 Require Import Crypto.Reflection.CommonSubexpressionElimination.
-Require Crypto.Reflection.Linearize.
+Require Crypto.Reflection.Linearize Crypto.Reflection.Inline.
 Require Import Crypto.Reflection.WfReflective.
 
 Import ReifyDebugNotations.
@@ -67,7 +67,7 @@ Goal (0 = let x := 1 in let y := 2 in x * y)%nat.
   Reify_rhs.
 Abort.
 
-Import Linearize.
+Import Linearize Inline.
 
 Goal True.
   let x := Reify (fun x y => (let a := 1 in let '(c, d) := (2, 3) in a + x + c + d) + y)%nat in

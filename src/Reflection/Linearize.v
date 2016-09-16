@@ -66,35 +66,8 @@ Section language.
          end.
   End with_var.
 
-  Section inline.
-    Context {var : base_type_code -> Type}.
-    Local Notation exprf := (@exprf base_type_code interp_base_type op).
-    Local Notation expr := (@expr base_type_code interp_base_type op).
-
-    Fixpoint inline_constf {t} (e : @exprf (@exprf var) t) : @exprf var t
-      := match e in Syntax.exprf _ _ _ t return @exprf var t with
-         | Let _ ex tC eC
-           => match @inline_constf _ ex in Syntax.exprf _ _ _ t' return (interp_flat_type_gen _ t' -> @exprf var tC) -> @exprf var tC with
-              | Const _ x => fun eC => eC (SmartConst (op:=op) (var:=var) x)
-              | ex => fun eC => Let ex (fun x => eC (SmartVarVar x))
-              end (fun x => @inline_constf _ (eC x))
-         | Var _ x => x
-         | Const _ x => Const x
-         | Pair _ ex _ ey => Pair (@inline_constf _ ex) (@inline_constf _ ey)
-         | Op _ _ op args => Op op (@inline_constf _ args)
-         end.
-
-    Fixpoint inline_const {t} (e : @expr (@exprf var) t) : @expr var t
-      := match e in Syntax.expr _ _ _ t return @expr var t with
-         | Return _ x => Return (inline_constf x)
-         | Abs _ _ f => Abs (fun x => @inline_const _ (f (Var x)))
-         end.
-  End inline.
-
   Definition Linearize {t} (e : Expr t) : Expr t
     := fun var => linearize (e _).
-  Definition InlineConst {t} (e : Expr t) : Expr t
-    := fun var => inline_const (e _).
 End language.
 
 Global Arguments let_bind_const {_ _ _ _ t} _ {tC} _.
@@ -102,6 +75,3 @@ Global Arguments under_letsf {_ _ _ _ _} _ {tC} _.
 Global Arguments linearizef {_ _ _ _ _} _.
 Global Arguments linearize {_ _ _ _ _} _.
 Global Arguments Linearize {_ _ _ _} _ var.
-Global Arguments inline_constf {_ _ _ _ _} _.
-Global Arguments inline_const {_ _ _ _ _} _.
-Global Arguments InlineConst {_ _ _ _} _ var.

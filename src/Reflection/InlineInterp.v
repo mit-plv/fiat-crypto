@@ -1,8 +1,8 @@
-(** * Linearize: Place all and only operations in let binders *)
+(** * Inline: Remove some [Let] expressions *)
 Require Import Crypto.Reflection.Syntax.
-Require Import Crypto.Reflection.LinearizeWf.
+Require Import Crypto.Reflection.InlineWf.
 Require Import Crypto.Reflection.InterpProofs.
-Require Import Crypto.Reflection.Linearize.
+Require Import Crypto.Reflection.Inline.
 Require Import Crypto.Util.Tactics Crypto.Util.Sigma Crypto.Util.Prod.
 
 
@@ -49,48 +49,48 @@ Section language.
            | [ H : _ |- _ ] => rewrite H
            end.
 
-  Lemma interpf_let_bind_const {t tC} ex (eC : _ -> exprf tC)
-    : interpf interp_op (let_bind_const (t:=t) ex eC) = interpf interp_op (eC ex).
+  Lemma interpf_inline_constf G {t} e1 e2
+        (wf : @wff _ _ G t e1 e2)
+        (H : forall t x x',
+            List.In
+              (existT (fun t : base_type_code => (exprf (Syntax.Tbase t) * interp_base_type t)%type) t
+                      (x, x')) G
+            -> interpf interp_op x = x')
+    : interpf interp_op (inline_constf e1) = interpf interp_op e2.
   Proof.
-    clear.
-    revert tC eC; induction t; t_fin.
+    clear -wf H.
+    induction wf; t_fin.
   Qed.
 
-  Lemma interpf_under_letsf {t tC} (ex : exprf t) (eC : _ -> exprf tC)
-    : interpf interp_op (under_letsf ex eC) = let x := interpf interp_op ex in interpf interp_op (eC x).
-  Proof.
-    clear.
-    induction ex; t_fin.
-    rewrite interpf_let_bind_const; reflexivity.
-  Qed.
+  Local Hint Resolve interpf_inline_constf.
 
-  Lemma interpf_linearizef {t} e
-    : interpf interp_op (linearizef (t:=t) e) = interpf interp_op e.
-  Proof.
-    clear.
-    induction e;
-      repeat first [ progress rewrite ?interpf_under_letsf, ?interpf_SmartVar
-                   | progress simpl
-                   | t_fin ].
-  Qed.
-
-  Local Hint Resolve interpf_linearizef.
-
-  Lemma interp_linearize {t} e
+  Lemma interp_inline_const G {t} e1 e2
+        (wf : @wf _ _ G t e1 e2)
+        (H : forall t x x',
+            List.In
+              (existT (fun t : base_type_code => (exprf (Syntax.Tbase t) * interp_base_type t)%type) t
+                      (x, x')) G
+            -> interpf interp_op x = x')
     : interp_type_gen_rel_pointwise interp_flat_type (fun _ => @eq _)
-                                    (interp interp_op (linearize (t:=t) e))
-                                    (interp interp_op e).
+                                    (interp interp_op (inline_const e1))
+                                    (interp interp_op e2).
   Proof.
-    induction e; eauto.
-    eapply interpf_linearizef.
+    induction wf.
+    { eapply interpf_inline_constf; eauto. }
+    { simpl in *; intro.
+      match goal with
+      | [ H : _ |- _ ]
+        => apply H; intuition (inversion_sigma; inversion_prod; subst; eauto)
+      end. }
   Qed.
 
-  Lemma Interp_Linearize {t} (e : Expr t)
+  Lemma Interp_InlineConst {t} (e : Expr t)
+        (wf : Wf e)
     : interp_type_gen_rel_pointwise interp_flat_type (fun _ => @eq _)
-                                    (Interp interp_op (Linearize e))
+                                    (Interp interp_op (InlineConst e))
                                     (Interp interp_op e).
   Proof.
-    unfold Interp, Linearize.
-    eapply interp_linearize.
+    unfold Interp, InlineConst.
+    eapply interp_inline_const with (G := nil); simpl; intuition.
   Qed.
 End language.

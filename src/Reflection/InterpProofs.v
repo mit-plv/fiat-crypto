@@ -1,5 +1,6 @@
 Require Import Crypto.Reflection.Syntax.
-Require Import Crypto.Util.Tactics.
+Require Import Crypto.Reflection.WfProofs.
+Require Import Crypto.Util.Tactics Crypto.Util.Sigma Crypto.Util.Prod.
 
 Local Open Scope ctype_scope.
 Section language.
@@ -25,5 +26,44 @@ Section language.
              | _ => progress rewrite_hyp *
              | _ => rewrite <- surjective_pairing
              end.
+  Qed.
+
+  Lemma interpf_SmartConst {t t'} v x x'
+        (Hin : List.In
+                 (existT (fun t : base_type_code => (exprf base_type_code interp_base_type op (Syntax.Tbase t) * interp_base_type t)%type)
+                         t (x, x'))
+                 (flatten_binding_list (t := t') base_type_code (SmartConst v) v))
+    : interpf interp_op x = x'.
+  Proof.
+    clear -Hin.
+    induction t'; simpl in *.
+    { intuition (inversion_sigma; inversion_prod; subst; eauto). }
+    { apply List.in_app_iff in Hin.
+      intuition (inversion_sigma; inversion_prod; subst; eauto). }
+  Qed.
+
+  Lemma interpf_SmartVarVar {t t'} v x x'
+        (Hin : List.In
+                 (existT (fun t : base_type_code => (exprf base_type_code interp_base_type op (Syntax.Tbase t) * interp_base_type t)%type)
+                         t (x, x'))
+                 (flatten_binding_list (t := t') base_type_code (SmartVarVar v) v))
+    : interpf interp_op x = x'.
+  Proof.
+    clear -Hin.
+    induction t'; simpl in *.
+    { intuition (inversion_sigma; inversion_prod; subst; eauto). }
+    { apply List.in_app_iff in Hin.
+      intuition (inversion_sigma; inversion_prod; subst; eauto). }
+  Qed.
+
+  Lemma interpf_SmartVarVar_eq {t t'} v v' x x'
+        (Heq : v = v')
+        (Hin : List.In
+                 (existT (fun t : base_type_code => (exprf base_type_code interp_base_type op (Syntax.Tbase t) * interp_base_type t)%type)
+                         t (x, x'))
+                 (flatten_binding_list (t := t') base_type_code (SmartVarVar v') v))
+    : interpf interp_op x = x'.
+  Proof.
+    eapply interpf_SmartVarVar; subst; eassumption.
   Qed.
 End language.

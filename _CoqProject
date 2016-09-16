@@ -64,6 +64,8 @@ src/ModularArithmetic/Montgomery/Z.v
 src/ModularArithmetic/Montgomery/ZBounded.v
 src/ModularArithmetic/Montgomery/ZProofs.v
 src/Reflection/CommonSubexpressionElimination.v
+src/Reflection/Inline.v
+src/Reflection/InlineWf.v
 src/Reflection/InputSyntax.v
 src/Reflection/InterpProofs.v
 src/Reflection/Linearize.v
