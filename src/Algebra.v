@@ -1,11 +1,15 @@
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.Decidable.
+
 Require Import Coq.Classes.Morphisms. Require Coq.Setoids.Setoid.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
-Require Coq.Numbers.Natural.Peano.NPeano.
-Local Close Scope nat_scope. Local Close Scope type_scope. Local Close Scope core_scope.
+
+Require Coq.setoid_ring.Field_theory.
 Require Crypto.Tactics.Algebra_syntax.Nsatz.
-Require Export Crypto.Util.FixCoqMistakes.
-Require Export Crypto.Util.Decidable.
+Require Coq.Numbers.Natural.Peano.NPeano.
+
+Local Close Scope nat_scope. Local Close Scope type_scope. Local Close Scope core_scope.
 
 Module Import ModuloCoq8485.
   Import NPeano Nat.
@@ -256,6 +260,13 @@ Module Group.
       apply inv_id.
     Qed.
 
+    Lemma eq_r_opp_r_inv a b c : a = op c (inv b) <-> op a b = c.
+    Proof.
+      split; intro Hx; rewrite Hx || rewrite <-Hx;
+        rewrite <-!associative, ?left_inverse, ?right_inverse, right_identity;
+        reflexivity.
+    Qed.
+
     Section ZeroNeqOne.
       Context {one} `{is_zero_neq_one T eq id one}.
       Lemma opp_one_neq_zero : inv one <> id.
@@ -287,9 +298,11 @@ Module Group.
       rewrite cancel_left in Hii; exact Hii.
     Qed.
 
-    Lemma homomorphism_inv : forall x, phi (INV x) = inv (phi x).
+    Lemma homomorphism_inv x : phi (INV x) = inv (phi x).
     Proof.
-    Admitted.
+      apply inv_unique.
+      rewrite <- homomorphism, left_inverse, homomorphism_id; reflexivity.
+    Qed.
   End Homomorphism.
 
   Section GroupByHomomorphism.
