@@ -121,7 +121,7 @@ Section language.
            | Tbase _ => val _
            | Prod A B => (@SmartVal T val A, @SmartVal T val B)
            end.
-        := @smart_interp_flat_map _ (interp_flat_type_gen exprf) (fun t => Const) (fun A B x y => pair x y) t.
+
       (** [SmartVar] is like [Var], except that it inserts
           pair-projections and [Pair] as necessary to handle
           [flat_type], and not just [base_type_code] *)
