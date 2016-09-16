@@ -116,6 +116,12 @@ Section language.
                                        (@smart_interp_flat_map f g h pair A (fst v))
                                        (@smart_interp_flat_map f g h pair B (snd v))
            end.
+      Fixpoint SmartVal {T} (val : forall t : base_type_code, T t) t : interp_flat_type_gen T t
+        := match t return interp_flat_type_gen T t with
+           | Tbase _ => val _
+           | Prod A B => (@SmartVal T val A, @SmartVal T val B)
+           end.
+        := @smart_interp_flat_map _ (interp_flat_type_gen exprf) (fun t => Const) (fun A B x y => pair x y) t.
       (** [SmartVar] is like [Var], except that it inserts
           pair-projections and [Pair] as necessary to handle
           [flat_type], and not just [base_type_code] *)
