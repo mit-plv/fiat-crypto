@@ -2,6 +2,7 @@
 (** This allows for something between [bool] and [Prop], where we can
     computationally reduce things like [True /\ True], but can still
     express equality of types. *)
+Require Import Coq.Setoids.Setoid.
 Require Import Crypto.Util.Notations.
 
 Delimit Scope pointed_prop_scope with pointed_prop.
@@ -92,3 +93,43 @@ Ltac inversion_pointed_Prop_step :=
   | [ H : inject _ = inject _ |- _ ] => progress (inversion H; clear H)
   end.
 Ltac inversion_pointed_Prop := repeat inversion_pointed_Prop_step.
+
+Create HintDb push_prop_of_option discriminated.
+Create HintDb push_to_prop discriminated.
+Hint Extern 1 => progress autorewrite with push_prop_of_option in * : push_prop_of_option.
+Hint Extern 1 => progress autorewrite with push_to_prop in * : push_to_prop.
+
+Lemma to_prop_and P Q : to_prop (P /\ Q)%pointed_prop
+                        <-> (to_prop P /\ to_prop Q).
+Proof. destruct P, Q; simpl; tauto. Qed.
+Hint Rewrite to_prop_and : push_to_prop.
+
+Lemma to_prop_or P Q : to_prop (P \/ Q)%pointed_prop
+                       <-> (to_prop P \/ to_prop Q).
+Proof. destruct P, Q; simpl; tauto. Qed.
+Hint Rewrite to_prop_or : push_to_prop.
+
+Lemma to_prop_impl P Q : to_prop (impl_pointed_Prop P Q)%pointed_prop
+                         <-> (to_prop P -> to_prop Q).
+Proof. destruct P, Q; simpl; tauto. Qed.
+Hint Rewrite to_prop_impl : push_to_prop.
+
+Lemma prop_of_option_and P Q : prop_of_option (P /\ Q)%option_pointed_prop
+                               <-> (prop_of_option P /\ prop_of_option Q).
+Proof. destruct P, Q; simpl; autorewrite with push_to_prop; tauto. Qed.
+Hint Rewrite prop_of_option_and : push_prop_of_option.
+
+Lemma prop_of_option_or P Q : prop_of_option (P \/ Q)%option_pointed_prop
+                               <-> (prop_of_option P \/ prop_of_option Q).
+Proof. destruct P, Q; simpl; autorewrite with push_to_prop; tauto. Qed.
+Hint Rewrite prop_of_option_or : push_prop_of_option.
+
+Lemma prop_of_option_impl P Q : prop_of_option (impl_option_pointed_Prop P Q)%option_pointed_prop
+                               <-> (prop_of_option P -> prop_of_option Q).
+Proof. destruct P as [ [|P] |], Q as [ [|Q] |]; simpl; tauto. Qed.
+Hint Rewrite prop_of_option_impl : push_prop_of_option.
+
+Lemma prop_of_option_not P : prop_of_option (~P)%option_pointed_prop
+                               <-> (~prop_of_option P).
+Proof. destruct P as [ [|] | ]; simpl; tauto. Qed.
+Hint Rewrite prop_of_option_not : push_prop_of_option.
