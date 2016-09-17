@@ -14,3 +14,7 @@ csdp.cache
 lia.cache
 nlia.cache
 nra.cache
+.csdp.cache
+.lia.cache
+.nlia.cache
+.nra.cache
