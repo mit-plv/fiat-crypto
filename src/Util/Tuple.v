@@ -238,5 +238,28 @@ Definition apply {R T} (n:nat) : function R T n -> tuple T n -> R :=
   | S n' => fun f x =>  apply' n' f x
   end.
 
+Require Import Coq.Lists.SetoidList.
+
+Lemma fieldwise_to_list_iff : forall {T n} R (s t : tuple T n),
+    (fieldwise R s t <-> Forall2 R (to_list _ s) (to_list _ t)).
+Proof.
+  induction n; split; intros.
+  + constructor.
+  + cbv [fieldwise]. auto.
+  + destruct n; cbv [tuple to_list fieldwise] in *.
+    - cbv [to_list']; auto.
+    - simpl in *. destruct s,t; cbv [fst snd] in *.
+      constructor; intuition auto.
+      apply IHn; auto.
+  + destruct n; cbv [tuple to_list fieldwise] in *.
+    - cbv [fieldwise']; auto.
+      cbv [to_list'] in *; inversion H; auto.
+    - simpl in *. destruct s,t; cbv [fst snd] in *.
+      inversion H; subst.
+      split; try assumption.
+      apply IHn; auto.
+Qed.
+  
+
 Require Import Crypto.Util.ListUtil. (* To initialize [distr_length] database *)
 Hint Rewrite length_to_list' @length_to_list : distr_length.

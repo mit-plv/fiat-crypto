@@ -92,87 +92,12 @@ Section FieldOperationProofs.
     + eauto using base_upper_bound_compatible, limb_widths_nonneg.
   Qed.
 
-  (* TODO : move to Pow2Base *)
-  Lemma bounded_nil_r : forall l, (forall x, In x l -> 0 <= x) -> bounded l nil.
-  Proof.
-    cbv [bounded]; intros.
-    rewrite nth_default_nil.
-    apply nth_default_preserves_properties; intros; split; zero_bounds.
-  Qed.
-
-  (* TODO : move to Pow2Base *)
-  Lemma length_encode' : forall lw z i, length (encode' lw z i) = i.
-  Proof.
-    induction i; intros; simpl encode'; distr_length.
-  Qed.
-  Hint Rewrite length_encode' : distr_length.
-
-  (* TODO : move to ListUtil *)
-  Lemma nth_default_firstn : forall {A} (d : A) l i n,
-    nth_default d (firstn n l) i = if le_dec n (length l)
-                                   then if lt_dec i n then nth_default d l i else d
-                                   else nth_default d l i.
-  Proof.
-    induction n; intros; break_if; autorewrite with push_nth_default; auto; try omega.
-    + rewrite (firstn_succ d) by omega.
-      autorewrite with push_nth_default; repeat (break_if; distr_length);
-        rewrite Min.min_l in * by omega; try omega.
-      - apply IHn; omega.
-      - replace i with n in * by omega.
-        rewrite Nat.sub_diag.
-        autorewrite with push_nth_default; auto.
-      - rewrite nth_default_out_of_bounds; distr_length; auto.
-    + rewrite firstn_all2 by omega.
-      auto.
-  Qed.
-  Hint Rewrite @nth_default_firstn : push_nth_default.
-
-  (* TODO : move to Pow2Base *)
-  Lemma bounded_encode' : forall z i, (0 <= z) ->
-    bounded (firstn i limb_widths) (encode' limb_widths z i).
-  Proof.
-    intros; induction i; simpl encode';
-      repeat match goal with
-             | |- _ => progress intros
-             | |- _ => progress autorewrite with push_nth_default in * 
-             | |- _ => progress autorewrite with Ztestbit
-             | |- _ => progress rewrite ?firstn_O, ?Nat.sub_diag in *
-             | |- _ => rewrite Z.testbit_pow2_mod by auto
-             | |- _ => rewrite Z.ones_spec by zero_bounds
-             | |- _ => rewrite sum_firstn_succ_default
-             | |- _ => rewrite nth_default_out_of_bounds by distr_length
-             | |- _ => break_if; distr_length
-             | |- _ => apply bounded_nil_r
-             | |- appcontext[nth_default _ (_ :: nil) ?i] => case_eq i; intros; autorewrite with push_nth_default
-             | |- Z.pow2_mod (?a >> ?b) _ = (?a >> ?b) => apply Z.bits_inj'
-             | IH : forall i, _ = nth_default 0 (encode' _ _ _) i
-                              |- appcontext[nth_default 0 limb_widths ?i] => specialize (IH i)
-             | H : In _ (firstn _ _) |- _ => apply In_firstn in H
-             | H1 : ~ (?a < ?b)%nat, H2 : (?a < S ?b)%nat |- _ =>
-               progress replace a with b in * by omega
-             | H : bounded _ _ |- bounded _ _ =>
-               apply pow2_mod_bounded_iff; rewrite pow2_mod_bounded_iff in H
-             | |- _ => solve [auto] 
-             | |- _ => contradiction
-             | |- _ => reflexivity
-             end.
-  Qed.
-
-  (* TODO : move to Pow2Base *)
-  Lemma bounded_encodeZ : forall z, (0 <= z) ->
-    bounded limb_widths (encodeZ limb_widths z).
-  Proof.
-    cbv [encodeZ]; intros.
-    pose proof (bounded_encode' z (length limb_widths)) as Hencode'.
-    rewrite firstn_all in Hencode'; auto.
-  Qed.
-
   Lemma bounded_encode : forall x, bounded limb_widths (to_list (encode x)).
   Proof.
     intros.
     cbv [encode]; rewrite to_list_from_list.
     cbv [ModularBaseSystemList.encode].
-    apply bounded_encodeZ.
+    apply bounded_encodeZ; auto.
     apply F.to_Z_range.
     pose proof prime_modulus; prime_bound.
   Qed.
@@ -873,55 +798,6 @@ Section CanonicalizationProofs.
       auto using length_carry_full, bound_after_second_loop.
   Qed.
 
-  Lemma ge_modulus_spec : forall u, length u = length limb_widths ->
-    (ge_modulus u = false <-> 0 <= BaseSystem.decode base u < modulus).
-  Proof.
-  Admitted.
-
-  Lemma conditional_subtract_modulus_spec : forall u cond,
-    length u = length limb_widths ->
-    BaseSystem.decode base (conditional_subtract_modulus u cond) =
-    BaseSystem.decode base u - (if cond then 1 else 0) * modulus.
-  Proof.
-  Admitted.
-
-  Lemma conditional_subtract_modulus_preserves_bounded : forall u,
-      bounded limb_widths u ->
-      bounded limb_widths (conditional_subtract_modulus u (ge_modulus u)).
-  Proof.
-  Admitted.
-
-  Lemma conditional_subtract_lt_modulus : forall u,
-    bounded limb_widths u ->
-    ge_modulus (conditional_subtract_modulus u (ge_modulus u)) = false.
-  Proof.
-  Admitted.
-
-  (* bounded canonical -> freeze bounded -> freeze canonical *)
-
-  Import SetoidList.
-  (* TODO : move to Tuple *)
-  Lemma fieldwise_to_list_iff : forall {T n} R (s t : tuple T n),
-      (fieldwise R s t <-> Forall2 R (to_list _ s) (to_list _ t)).
-  Proof.
-    induction n; split; intros.
-    + constructor.
-    + cbv [fieldwise]. auto.
-    + destruct n; cbv [tuple to_list fieldwise] in *.
-      - cbv [to_list']; auto.
-      - simpl in *. destruct s,t; cbv [fst snd] in *.
-        constructor; intuition auto.
-        apply IHn; auto.
-    + destruct n; cbv [tuple to_list fieldwise] in *.
-      - cbv [fieldwise']; auto.
-        cbv [to_list'] in *; inversion H; auto.
-      - simpl in *. destruct s,t; cbv [fst snd] in *.
-        inversion H; subst.
-        split; try assumption.
-        apply IHn; auto.
-  Qed.
-  
-
   Local Notation initial_bounds u := 
       (forall n : nat,
        0 <= to_list (length limb_widths) u [n] <
@@ -931,38 +807,6 @@ Section CanonicalizationProofs.
         else (2 ^ B) >> (limb_widths [Init.Nat.pred n]))).
   Local Notation minimal_rep u := ((bounded limb_widths (to_list (length limb_widths) u))
                                    /\ (ge_modulus (to_list _ u) = false)).
-  Import Morphisms.
-  (* TODO : move somewhere *)
-  Check Proper.
-  Lemma decode_Proper : Proper (Logic.eq ==> (Forall2 Logic.eq) ==> Logic.eq) decode'.
-  Proof.
-    repeat intro; subst.
-    revert y y0 H0; induction x0; intros.
-    + inversion H0. rewrite !decode_nil.
-      reflexivity.
-    + inversion H0; subst.
-      destruct y as [|y0 y]; [rewrite !decode_base_nil; reflexivity | ].
-      specialize (IHx0 y _ H4).
-      rewrite !peel_decode.
-      f_equal; auto.
-  Qed.
-
-  (* TODO : move to ListUtil *)
-  Lemma Forall2_forall_iff : forall {A} R (xs ys : list A) d, length xs = length ys ->
-    (Forall2 R xs ys <-> (forall i, (i < length xs)%nat -> R (nth_default d xs i) (nth_default d ys i))).
-  Proof.
-    split; intros.
-    + revert xs ys H H0 H1.
-      induction i; intros; destruct H0; distr_length; autorewrite with push_nth_default; auto.
-      eapply IHi; auto. omega.
-    + revert xs ys H H0; induction xs; intros; destruct ys; distr_length; econstructor.
-      - specialize (H0 0%nat); specialize_by omega.
-        autorewrite with push_nth_default in *; auto.
-      - apply IHxs; try omega.
-        intros.
-        specialize (H0 (S i)); specialize_by omega.
-        autorewrite with push_nth_default in *; auto.
-  Qed.
   
   Lemma decode_bitwise_eq_iff : forall u v, minimal_rep u -> minimal_rep v ->
     (fieldwise Logic.eq u v <->

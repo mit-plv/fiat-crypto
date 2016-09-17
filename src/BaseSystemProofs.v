@@ -4,6 +4,7 @@ Require Import Coq.ZArith.ZArith Coq.ZArith.Zdiv.
 Require Import Coq.omega.Omega Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
 Require Import Crypto.BaseSystem.
 Require Import Crypto.Util.Notations.
+Import Morphisms.
 Local Open Scope Z.
 
 Local Infix ".+" := add.
@@ -44,6 +45,7 @@ Section BaseSystemProofs.
   Proof.
     intros; rewrite decode'_truncate; auto.
   Qed.
+
   Hint Rewrite decode_base_nil.
 
   Lemma mul_each_rep : forall bs u vs,
@@ -193,6 +195,19 @@ Section BaseSystemProofs.
     boring.
   Qed.
   Hint Rewrite zeros_rep peel_decode.
+
+  Lemma decode_Proper : Proper (Logic.eq ==> (Forall2 Logic.eq) ==> Logic.eq) decode'.
+  Proof.
+    repeat intro; subst.
+    revert y y0 H0; induction x0; intros.
+    + inversion H0. rewrite !decode_nil.
+      reflexivity.
+    + inversion H0; subst.
+      destruct y as [|y0 y]; [rewrite !decode_base_nil; reflexivity | ].
+      specialize (IHx0 y _ H4).
+      rewrite !peel_decode.
+      f_equal; auto.
+  Qed.
 
   Lemma decode_highzeros : forall xs bs n, decode' bs (xs ++ zeros n) = decode' bs xs.
   Proof.

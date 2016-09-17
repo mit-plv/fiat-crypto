@@ -144,3 +144,32 @@ Section LengthProofs.
   Qed.
 
 End LengthProofs.
+
+Section ConditionalSubtractModulusProofs.
+  Context `{prm :PseudoMersenneBaseParams}.
+  Local Notation base := (base_from_limb_widths limb_widths).
+
+  Lemma ge_modulus_spec : forall u, length u = length limb_widths ->
+    (ge_modulus u = false <-> 0 <= BaseSystem.decode base u < modulus).
+  Proof.
+  Admitted.
+
+  Lemma conditional_subtract_modulus_spec : forall u cond,
+    length u = length limb_widths ->
+    BaseSystem.decode base (conditional_subtract_modulus u cond) =
+    BaseSystem.decode base u - (if cond then 1 else 0) * modulus.
+  Proof.
+  Admitted.
+
+  Lemma conditional_subtract_modulus_preserves_bounded : forall u,
+      bounded limb_widths u ->
+      bounded limb_widths (conditional_subtract_modulus u (ge_modulus u)).
+  Proof.
+  Admitted.
+
+  Lemma conditional_subtract_lt_modulus : forall u,
+    bounded limb_widths u ->
+    ge_modulus (conditional_subtract_modulus u (ge_modulus u)) = false.
+  Proof.
+  Admitted.
+End ConditionalSubtractModulusProofs.

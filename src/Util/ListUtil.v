@@ -1541,6 +1541,43 @@ Proof.
   intuition (congruence || eauto).
 Qed.
 
+Lemma Forall2_forall_iff : forall {A} R (xs ys : list A) d, length xs = length ys ->
+  (Forall2 R xs ys <-> (forall i, (i < length xs)%nat -> R (nth_default d xs i) (nth_default d ys i))).
+Proof.
+  split; intros.
+  + revert xs ys H H0 H1.
+    induction i; intros; destruct H0; distr_length; autorewrite with push_nth_default; auto.
+    eapply IHi; auto. omega.
+  + revert xs ys H H0; induction xs; intros; destruct ys; distr_length; econstructor.
+    - specialize (H0 0%nat).
+      autorewrite with push_nth_default in *; auto.
+      apply H0; omega.
+    - apply IHxs; try omega.
+      intros.
+      specialize (H0 (S i)).
+      autorewrite with push_nth_default in *; auto.
+      apply H0; omega.
+Qed.
+
+Lemma nth_default_firstn : forall {A} (d : A) l i n,
+  nth_default d (firstn n l) i = if le_dec n (length l)
+                                 then if lt_dec i n then nth_default d l i else d
+                                 else nth_default d l i.
+Proof.
+  induction n; intros; break_if; autorewrite with push_nth_default; auto; try omega.
+  + rewrite (firstn_succ d) by omega.
+    autorewrite with push_nth_default; repeat (break_if; distr_length);
+      rewrite Min.min_l in * by omega; try omega.
+    - apply IHn; omega.
+    - replace i with n in * by omega.
+      rewrite Nat.sub_diag.
+      autorewrite with push_nth_default; auto.
+    - rewrite nth_default_out_of_bounds; distr_length; auto.
+  + rewrite firstn_all2 by omega.
+    auto.
+Qed.
+Hint Rewrite @nth_default_firstn : push_nth_default.
+
 Lemma nth_error_repeat {T} x n i v : nth_error (@repeat T x n) i = Some v -> v = x.
 Proof.
   revert n x v; induction i as [|i IHi]; destruct n; simpl in *; eauto; congruence.

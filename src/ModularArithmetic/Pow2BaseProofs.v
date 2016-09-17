@@ -555,6 +555,13 @@ Section Pow2BaseProofs.
     autorewrite with distr_length simpl_sum_firstn pull_Zpow.
     reflexivity.
   Qed.
+  
+  Lemma bounded_nil_r : forall l, (forall x, In x l -> 0 <= x) -> bounded l nil.
+  Proof.
+    cbv [bounded]; intros.
+    rewrite nth_default_nil.
+    apply nth_default_preserves_properties; intros; split; zero_bounds.
+  Qed.
 
   Section make_base_vector.
     Local Notation k := (sum_firstn limb_widths (length limb_widths)).
@@ -639,6 +646,8 @@ Section BitwiseDecodeEncode.
                                           sum_firstn limb_widths (i + j) <=
                                           sum_firstn limb_widths i + sum_firstn limb_widths j).
   Local Hint Resolve limb_widths_nonneg.
+  Local Hint Resolve nth_default_limb_widths_nonneg.
+  Local Hint Resolve sum_firstn_limb_widths_nonneg.
   Local Notation "w[ i ]" := (nth_default 0 limb_widths i).
   Local Notation base := (base_from_limb_widths limb_widths).
   Local Notation upper_bound := (upper_bound limb_widths).
@@ -650,7 +659,7 @@ Section BitwiseDecodeEncode.
     + rewrite encode'_zero. reflexivity.
     + rewrite encode'_succ, <-IHi by omega.
       simpl; do 2 f_equal.
-      rewrite Z.land_ones, Z.shiftr_div_pow2 by auto using sum_firstn_limb_widths_nonneg.
+      rewrite Z.land_ones, Z.shiftr_div_pow2 by auto.
       match goal with H : (S _ <= length limb_widths)%nat |- _ =>
         apply le_lt_or_eq in H; destruct H end.
       - repeat f_equal; rewrite nth_default_base by (omega || auto); reflexivity.
@@ -660,6 +669,50 @@ Section BitwiseDecodeEncode.
         congruence.
   Qed.
 
+  Lemma length_encode' : forall lw z i, length (encode' lw z i) = i.
+  Proof.
+    induction i; intros; simpl encode'; distr_length.
+  Qed.
+  Hint Rewrite length_encode' : distr_length.
+
+  Lemma bounded_encode' : forall z i, (0 <= z) ->
+    bounded (firstn i limb_widths) (encode' limb_widths z i).
+  Proof.
+    intros; induction i; simpl encode';
+      repeat match goal with
+             | |- _ => progress intros
+             | |- _ => progress autorewrite with push_nth_default in * 
+             | |- _ => progress autorewrite with Ztestbit
+             | |- _ => progress rewrite ?firstn_O, ?Nat.sub_diag in *
+             | |- _ => rewrite Z.testbit_pow2_mod by auto
+             | |- _ => rewrite Z.ones_spec by zero_bounds
+             | |- _ => rewrite sum_firstn_succ_default
+             | |- _ => rewrite nth_default_out_of_bounds by distr_length
+             | |- _ => break_if; distr_length
+             | |- _ => apply bounded_nil_r
+             | |- appcontext[nth_default _ (_ :: nil) ?i] => case_eq i; intros; autorewrite with push_nth_default
+             | |- Z.pow2_mod (?a >> ?b) _ = (?a >> ?b) => apply Z.bits_inj'
+             | IH : forall i, _ = nth_default 0 (encode' _ _ _) i
+                              |- appcontext[nth_default 0 limb_widths ?i] => specialize (IH i)
+             | H : In _ (firstn _ _) |- _ => apply In_firstn in H
+             | H1 : ~ (?a < ?b)%nat, H2 : (?a < S ?b)%nat |- _ =>
+               progress replace a with b in * by omega
+             | H : bounded _ _ |- bounded _ _ =>
+               apply pow2_mod_bounded_iff; rewrite pow2_mod_bounded_iff in H
+             | |- _ => solve [auto] 
+             | |- _ => contradiction
+             | |- _ => reflexivity
+             end.
+  Qed.
+
+  Lemma bounded_encodeZ : forall z, (0 <= z) ->
+    bounded limb_widths (encodeZ limb_widths z).
+  Proof.
+    cbv [encodeZ]; intros.
+    pose proof (bounded_encode' z (length limb_widths)) as Hencode'.
+    rewrite firstn_all in Hencode'; auto.
+  Qed.
+
   Lemma base_upper_bound_compatible : @base_max_succ_divide base upper_bound.
   Proof.
     unfold base_max_succ_divide; intros i lt_Si_length.
@@ -667,14 +720,14 @@ Section BitwiseDecodeEncode.
     rewrite Nat.lt_eq_cases in lt_Si_length; destruct lt_Si_length;
       rewrite !nth_default_base by (omega || auto).
     + erewrite sum_firstn_succ by (eapply nth_error_Some_nth_default with (x := 0); omega).
-      rewrite Z.pow_add_r; eauto using sum_firstn_limb_widths_nonneg, nth_default_limb_widths_nonneg.
+      rewrite Z.pow_add_r; eauto.
       apply Z.divide_factor_r.
     + rewrite nth_default_out_of_bounds by (distr_length; omega).
       unfold Pow2Base.upper_bound.
       replace (length limb_widths) with (S (pred (length limb_widths))) by omega.
       replace i with (pred (length limb_widths)) by omega.
       erewrite sum_firstn_succ by (eapply nth_error_Some_nth_default with (x := 0); omega).
-      rewrite Z.pow_add_r; eauto using sum_firstn_limb_widths_nonneg, nth_default_limb_widths_nonneg.
+      rewrite Z.pow_add_r; eauto.
       apply Z.divide_factor_r.
   Qed.
   Hint Resolve base_upper_bound_compatible.
@@ -686,7 +739,7 @@ Section BitwiseDecodeEncode.
     assert (length base = length limb_widths) by distr_length.
     unfold encodeZ; rewrite encode'_spec by omega.
     erewrite BaseSystemProofs.encode'_spec; unfold Pow2Base.upper_bound;
-      zero_bounds; intros; eauto using sum_firstn_limb_widths_nonneg, base_positive, b0_1. {
+      zero_bounds; intros; eauto using base_positive, b0_1. {
       rewrite nth_default_out_of_bounds by omega.
       reflexivity.
     } {
