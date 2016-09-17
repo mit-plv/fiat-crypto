@@ -965,33 +965,10 @@ Section SquareRoots.
   Context (sqrt_m1 : digits) (sqrt_m1_correct : rep (mul sqrt_m1 sqrt_m1) (F.opp 1%F)).
     
   Definition sqrt_5mod8_opt_sig (us : digits) :
-    { vs : digits | eq vs (sqrt_5mod8 chain chain_correct sqrt_m1 us)}.
+    { vs : digits |
+      eq vs (sqrt_5mod8 (carry_mul_opt k_ c_) (pow_opt k_ c_ one_) chain chain_correct sqrt_m1 us)}.
   Proof.
     eexists; cbv [sqrt_5mod8].
-    etransitivity.
-    Focus 2. {
-      apply if_equiv. {
-        apply eqb_Proper; [ | reflexivity ].
-        transitivity (carry_mul_opt k_ c_ (pow_opt k_ c_ one_ us chain) (pow_opt k_ c_ one_ us chain)); [ reflexivity | ].
-        cbv [eq].
-        rewrite carry_mul_opt_correct by eassumption.
-        rewrite carry_mul_rep by reflexivity.
-        rewrite mul_rep by reflexivity.
-        f_equal; apply pow_opt_correct; auto.
-      } {
-        apply pow_opt_correct; auto.
-      } {
-        match goal with |- eq _ (mul ?a (ModularBaseSystem.pow ?d ?e)) =>
-                        transitivity (carry_mul_opt k_ c_ a (pow_opt k_ c_ one_ us chain)); [ reflexivity | ] end.
-        cbv [eq].
-        rewrite !mul_rep by reflexivity.
-        erewrite <-pow_opt_correct by eassumption.
-        rewrite <-carry_mul_rep by reflexivity.
-        erewrite <-carry_mul_opt_correct by eassumption.
-        reflexivity.
-      }
-    } Unfocus.
-    rewrite k_subst, c_subst, one_subst.
     let LHS := match goal with |- eq ?LHS ?RHS => LHS end in
     let RHS := match goal with |- eq ?LHS ?RHS => RHS end in
     let RHSf := match (eval pattern (pow_opt k_ c_ one_ us chain) in RHS) with ?RHSf _ => RHSf end in
@@ -1003,7 +980,7 @@ Section SquareRoots.
     proj1_sig (sqrt_5mod8_opt_sig us).
 
   Definition sqrt_5mod8_opt_correct us
-    : eq (sqrt_5mod8_opt us) (ModularBaseSystem.sqrt_5mod8 chain chain_correct sqrt_m1 us)
+    : eq (sqrt_5mod8_opt us) (ModularBaseSystem.sqrt_5mod8 _ _ chain chain_correct sqrt_m1 us)
     := Eval cbv [proj2_sig sqrt_5mod8_opt_sig] in proj2_sig (sqrt_5mod8_opt_sig us).
   
   End SquareRoot5mod8.
