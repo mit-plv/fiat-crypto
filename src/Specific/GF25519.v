@@ -9,6 +9,8 @@ Require Import Coq.Lists.List Crypto.Util.ListUtil.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tuple.
+Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Algebra.
@@ -369,13 +371,10 @@ Proof.
   cbv [conditional_subtract_modulus_opt].
   rewrite !modulus_digits_subst.
   cbv - [from_list_default].
-  rewrite Let_In_push.
-  do 20 (erewrite Let_In_ext; [ |
-      repeat match goal with
-             | |- _ => progress intros; try apply Let_In_ext
-             | |- _ = from_list_default _ _ (Let_In _ _) => etransitivity; try (rewrite Let_In_push; reflexivity)
-             | |- from_list_default _ _ (Let_In _ _) = _ => etransitivity; try (rewrite Let_In_push; reflexivity)
-             end; reflexivity ]).
+  (* TODO(jgross,jadep): use Reflective linearization here? *)
+  repeat (
+       set_evars; rewrite app_Let_In_nd; subst_evars;
+       eapply Proper_Let_In_nd_changebody; [reflexivity|intro]).
   cbv [from_list_default from_list_default'].
   reflexivity.
 Defined.
@@ -438,10 +437,8 @@ Definition sqrt_sig (f : fe25519) :
 Proof.
   eexists.
   cbv [sqrt_5mod8_opt].
-  apply Let_In_ext.
-  intros.
-  do 2 rewrite <-mul_correct.
-  rewrite <-eqb_correct.
+  apply Proper_Let_In_nd_changebody; [reflexivity|intro].
+  set_evars. rewrite <-!mul_correct, <-eqb_correct. subst_evars.
   reflexivity.
 Defined.
 

@@ -4,11 +4,7 @@ Require Import Coq.Logic.ProofIrrelevance Coq.setoid_ring.Ring Coq.Lists.List Co
 Require Import Crypto.Util.Notations.
 
 Require Export Crypto.Util.FixCoqMistakes.
-
-Definition Let_In {A P} (x : A) (f : forall a : A, P a) : P x :=
-  let y := x in f y.
-
-Notation "'plet' x := y 'in' z" := (Let_In y (fun x => z)).
+Require Export Crypto.Util.LetIn.
 
 Section Vector.
   Import ListNotations.

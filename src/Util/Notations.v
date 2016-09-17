@@ -63,3 +63,4 @@ Reserved Notation "'slet' x := A 'in' b"
          (at level 200, b at level 200, format "'slet'  x  :=  A  'in' '//' b").
 Reserved Notation "'λ'  x .. y , t" (at level 200, x binder, y binder, right associativity).
 Reserved Notation "'λn'  x .. y , t" (at level 200, right associativity).
+(* FIXME: breaks Reflection.Syntax: Reserved Notation "'Let' x := y 'in' f" (at level 200, f at level 200). *)

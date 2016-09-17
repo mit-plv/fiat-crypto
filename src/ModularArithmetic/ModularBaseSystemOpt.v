@@ -11,6 +11,7 @@ Require Import Crypto.ModularArithmetic.ModularBaseSystem.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemProofs.
 Require Import Coq.Lists.List.
 Require Import Crypto.Util.Tuple.
+Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.AdditionChainExponentiation.
 Require Import Crypto.Util.ListUtil Crypto.Util.ZUtil Crypto.Util.NatUtil Crypto.Util.CaseUtil.
 Import ListNotations.
@@ -53,9 +54,6 @@ Definition sum_firstn_opt {A} := Eval compute in (@sum_firstn A).
 Definition zeros_opt := Eval compute in (@zeros).
 Definition bit_index_opt := Eval compute in bit_index.
 Definition digit_index_opt := Eval compute in digit_index.
-
-Definition Let_In {A P} (x : A) (f : forall y : A, P y)
-  := let y := x in f y.
 
 (* Some automation that comes in handy when constructing base parameters *)
 Ltac opt_step :=
@@ -159,23 +157,6 @@ end.
 Ltac kill_precondition H :=
   forward H; [abstract (try exact eq_refl; clear; cbv; intros; repeat break_or_hyp; intuition)|];
   subst_precondition.
-
-Lemma Let_In_push : forall {A B C} (g : A -> B) (f : B -> C) x,
-  f (Let_In x g) = Let_In x (fun y => f (g y)).
-Proof.
-  intros.
-  cbv [Let_In].
-  reflexivity.
-Qed.
-
-Lemma Let_In_ext : forall {A B} (f g : A -> B) x,
-  (forall x, f x = g x) ->
-  Let_In x g = Let_In x f.
-Proof.
-  intros.
-  cbv [Let_In].
-  congruence.
-Qed.
 
 Section Carries.
   Context `{prm : PseudoMersenneBaseParams}
@@ -680,7 +661,7 @@ Proof.
   + destruct a.
     apply IHy1.
     econstructor; try assumption.
-    apply H0; rewrite H; reflexivity.
+    apply H0; eapply Proper_nth_default; eauto; reflexivity.
 Qed.
 
 Section PowInv.
@@ -748,7 +729,6 @@ Section PowInv.
   Definition inv_opt_correct x
     : eq (inv_opt x) (inv chain chain_correct x)
     := Eval cbv [proj2_sig inv_opt_sig] in (proj2_sig (inv_opt_sig x)).
-  
 End PowInv.
 
 Section Conversion.

@@ -35,8 +35,8 @@ src/Encoding/EncodingTheorems.v
 src/Encoding/ModularWordEncodingPre.v
 src/Encoding/ModularWordEncodingTheorems.v
 src/Encoding/PointEncodingPre.v
-src/Experiments/DerivationsOptionRectLetInEncoding.v
 src/Experiments/EdDSARefinement.v
+src/Experiments/EncodingLemmas.v
 src/Experiments/GenericFieldPow.v
 src/ModularArithmetic/ExtPow2BaseMulProofs.v
 src/ModularArithmetic/ExtendedBaseVector.v
@@ -63,6 +63,7 @@ src/ModularArithmetic/Montgomery/ZBounded.v
 src/ModularArithmetic/Montgomery/ZProofs.v
 src/Reflection/CommonSubexpressionElimination.v
 src/Reflection/Inline.v
+src/Reflection/InlineInterp.v
 src/Reflection/InlineWf.v
 src/Reflection/InputSyntax.v
 src/Reflection/InterpProofs.v
@@ -99,6 +100,7 @@ src/Util/GlobalSettings.v
 src/Util/HProp.v
 src/Util/Isomorphism.v
 src/Util/IterAssocOp.v
+src/Util/LetIn.v
 src/Util/ListUtil.v
 src/Util/Logic.v
 src/Util/NatUtil.v

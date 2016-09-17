@@ -13,6 +13,7 @@ Require Import Crypto.Util.IterAssocOp Crypto.Util.WordUtil.
 Require Import Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Classes.Equivalence.
 Require Import Coq.ZArith.Zdiv.
 Require Import Crypto.Util.Tuple.
+Require Import Crypto.Util.LetIn.
 Require Export Crypto.Util.FixCoqMistakes.
 Local Open Scope equiv_scope.
 
@@ -26,17 +27,6 @@ Definition path_sig {A P} {RA:relation A} {Rsig:relation (@sig A P)}
 : Rsig x (exist _ y0 (HP _ _ pf (proj2_sig x))).
 Proof. destruct x. eapply H. assumption. Defined.
 
-Definition Let_In {A P} (x : A) (f : forall a : A, P a) : P x := let y := x in f y.
-Global Instance Let_In_Proper_changebody {A P R} {Reflexive_R:@Reflexive P R}
-  : Proper (eq ==> pointwise_relation _ R ==> R) (@Let_In A (fun _ => P)).
-Proof.
-  lazy; intros; try congruence.
-  subst; auto.
-Qed.
-
-Lemma Let_In_Proper_changevalue {A B} RA {RB} (f:A->B) {Proper_f:Proper (RA==>RB) f}
-  : Proper (RA ==> RB) (fun x => Let_In x f).
-Proof. intuition. Qed.
 
 Ltac fold_identity_lambdas :=
   repeat match goal with
@@ -44,45 +34,10 @@ Ltac fold_identity_lambdas :=
            | |- appcontext [fun x => ?f x] => change (fun x => f x) with f in *
          end.
 
-Local Ltac replace_let_in_with_Let_In :=
-  match goal with
-  | [ |- context G[let x := ?y in @?z x] ]
-    => let G' := context G[Let_In y z] in change G'
-  end.
-
-Local Ltac Let_In_app fn :=
-  match goal with
-  | [ |- appcontext G[Let_In (fn ?x) ?f] ]
-    => change (Let_In (fn x) f) with (Let_In x (fun y => f (fn y))); cbv beta
-  end.
-
 Lemma if_map : forall {T U} (f:T->U) (b:bool) (x y:T), (if b then f x else f y) = f (if b then x else y).
 Proof.
   destruct b; trivial.
 Qed.
-
-Lemma pull_Let_In {B C} (f : B -> C) A (v : A) (b : A -> B)
-  : Let_In v (fun v' => f (b v')) = f (Let_In v b).
-Proof.
-  reflexivity.
-Qed.
-
-Lemma Let_app_In {A B T} (g:A->B) (f:B->T) (x:A) :
-    @Let_In _ (fun _ => T) (g x) f =
-    @Let_In _ (fun _ => T) x (fun p => f (g x)).
-Proof. reflexivity. Qed.
-
-Lemma Let_app_In' : forall {A B T} {R} {R_equiv:@Equivalence T R}
-                      (g : A -> B) (f : B -> T) (x : A)
-    f' (f'_ok: forall z, f' z === f (g z)),
-    Let_In (g x) f === Let_In x f'.
-Proof. intros; cbv [Let_In]; rewrite f'_ok; reflexivity. Qed.
-Definition unfold_Let_In {A B} x (f:A->B) : Let_In x f = let y := x in f y := eq_refl.
-
-Lemma Let_app2_In {A B C D T} (g1:A->C) (g2:B->D) (f:C*D->T) (x:A) (y:B) :
-    @Let_In _ (fun _ => T) (g1 x, g2 y) f =
-    @Let_In _ (fun _ => T) (x, y) (fun p => f ((g1 (fst p), g2 (snd p)))).
-Proof. reflexivity. Qed.
 
 Lemma funexp_proj {T T'} `{@Equivalence T' RT'}
       (proj : T -> T')
