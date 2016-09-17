@@ -316,7 +316,7 @@ Section assemble.
                   | OPaddm   , cPair (cPair x y) RegMod => cAddm x y
                   | _, _ => cINVALID op
                   end
-             | Syntax.Let tx ex _ eC
+             | Syntax.LetIn tx ex _ eC
                => let ex' := @assemble_syntaxf _ ex in
                  let eC' := fun x => @assemble_syntaxf _ (eC x) in
                  let special := match ex' with

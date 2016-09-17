@@ -87,7 +87,7 @@ Section language.
       | Const {t : flat_type} : interp_type t -> exprf t
       | Var {t} : var t -> exprf t
       | Op {t1 tR} : op t1 tR -> exprf t1 -> exprf tR
-      | Let : forall {tx}, exprf tx -> forall {tC}, (interp_flat_type_gen var tx -> exprf tC) -> exprf tC
+      | LetIn : forall {tx}, exprf tx -> forall {tC}, (interp_flat_type_gen var tx -> exprf tC) -> exprf tC
       | Pair : forall {t1}, exprf t1 -> forall {t2}, exprf t2 -> exprf (Prod t1 t2).
       Bind Scope expr_scope with exprf.
       Inductive expr : type -> Type :=
@@ -143,7 +143,7 @@ Section language.
            | Const _ x => x
            | Var _ x => x
            | Op _ _ op args => @interp_op _ _ op (@interpf _ args)
-           | Let _ ex _ eC => let x := @interpf _ ex in @interpf _ (eC x)
+           | LetIn _ ex _ eC => let x := @interpf _ ex in @interpf _ (eC x)
            | Pair _ ex _ ey => (@interpf _ ex, @interpf _ ey)
            end.
       Fixpoint interp {t} (e : @expr interp_type t) : interp_type t
@@ -173,7 +173,7 @@ Section language.
            | Const _ x => Const x
            | Var _ x => Var (fvar12 _ x)
            | Op _ _ op args => Op op (@mapf _ args)
-           | Let _ ex _ eC => Let (@mapf _ ex) (fun x => @mapf _ (eC (mapf_interp_flat_type_gen x)))
+           | LetIn _ ex _ eC => LetIn (@mapf _ ex) (fun x => @mapf _ (eC (mapf_interp_flat_type_gen x)))
            | Pair _ ex _ ey => Pair (@mapf _ ex) (@mapf _ ey)
            end.
     End map.
@@ -203,10 +203,10 @@ Section language.
       | WfOp : forall G {t} {tR} (e : @exprf var1 t) (e' : @exprf var2 t) op,
           wff G e e'
           -> wff G (Op (tR := tR) op e) (Op (tR := tR) op e')
-      | WfLet : forall G t1 t2 e1 e1' (e2 : interp_flat_type_gen var1 t1 -> @exprf var1 t2) e2',
+      | WfLetIn : forall G t1 t2 e1 e1' (e2 : interp_flat_type_gen var1 t1 -> @exprf var1 t2) e2',
           wff G e1 e1'
           -> (forall x1 x2, wff (flatten_binding_list x1 x2 ++ G) (e2 x1) (e2' x2))
-          -> wff G (Let e1 e2) (Let e1' e2')
+          -> wff G (LetIn e1 e2) (LetIn e1' e2')
       | WfPair : forall G {t1} {t2} (e1: @exprf var1 t1) (e2: @exprf var1 t2)
                         (e1': @exprf var2 t1) (e2': @exprf var2 t2),
           wff G e1 e1'
@@ -239,7 +239,7 @@ Global Arguments SmartVal {_} T _ t.
 Global Arguments SmartVarVar {_ _ _ _ _} _.
 Global Arguments SmartConst {_ _ _ _ _} _.
 Global Arguments Op {_ _ _ _ _ _} _ _.
-Global Arguments Let {_ _ _ _ _} _ {_} _.
+Global Arguments LetIn {_ _ _ _ _} _ {_} _.
 Global Arguments Pair {_ _ _ _ _} _ {_} _.
 Global Arguments Return {_ _ _ _ _} _.
 Global Arguments Abs {_ _ _ _ _ _} _.
@@ -256,6 +256,6 @@ Global Arguments interp {_ _ _} interp_op {t} _.
 Global Arguments interpf {_ _ _} interp_op {t} _.
 Global Arguments invert_Const {_ _ _ _ _} _.
 
-Notation "'slet' x := A 'in' b" := (Let A (fun x => b)) : expr_scope.
+Notation "'slet' x := A 'in' b" := (LetIn A (fun x => b)) : expr_scope.
 Notation "'λ'  x .. y , t" := (Abs (fun x => .. (Abs (fun y => t%expr)) ..)) : expr_scope.
 Notation "( x , y , .. , z )" := (Pair .. (Pair x%expr y%expr) .. z%expr) : expr_scope.

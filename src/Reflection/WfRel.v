@@ -39,10 +39,10 @@ Section language.
     | RWfOp : forall G {t} {tR} (e : exprf1 t) (e' : exprf2 t) op,
         rel_wff G e e'
         -> rel_wff G (Op (tR := tR) op e) (Op (tR := tR) op e')
-    | RWfLet : forall G t1 t2 e1 e1' (e2 : interp_flat_type_gen var1 t1 -> exprf1 t2) e2',
+    | RWfLetIn : forall G t1 t2 e1 e1' (e2 : interp_flat_type_gen var1 t1 -> exprf1 t2) e2',
         rel_wff G e1 e1'
         -> (forall x1 x2, rel_wff (flatten_binding_list base_type_code x1 x2 ++ G) (e2 x1) (e2' x2))
-        -> rel_wff G (Let e1 e2) (Let e1' e2')
+        -> rel_wff G (LetIn e1 e2) (LetIn e1' e2')
     | RWfPair : forall G {t1} {t2} (e1: exprf1 t1) (e2: exprf1 t2)
                        (e1': exprf2 t1) (e2': exprf2 t2),
         rel_wff G e1 e1'

@@ -31,7 +31,7 @@ Section language.
       | Const {t : flat_type} : interp_type t -> exprf t
       | Var {t} : var t -> exprf t
       | Op {t1 tR} : op t1 tR -> exprf t1 -> exprf tR
-      | Let : forall {tx}, exprf tx -> forall {tC}, (var tx -> exprf tC) -> exprf tC
+      | LetIn : forall {tx}, exprf tx -> forall {tC}, (var tx -> exprf tC) -> exprf tC
       | Pair : forall {t1}, exprf t1 -> forall {t2}, exprf t2 -> exprf (Prod t1 t2)
       | MatchPair : forall {t1 t2}, exprf (Prod t1 t2) -> forall {tC}, (var t1 -> var t2 -> exprf tC) -> exprf tC.
       Inductive expr : type -> Type :=
@@ -50,7 +50,7 @@ Section language.
            | Const _ x => x
            | Var _ x => x
            | Op _ _ op args => @interp_op _ _ op (@interpf _ args)
-           | Let _ ex _ eC => let x := @interpf _ ex in @interpf _ (eC x)
+           | LetIn _ ex _ eC => let x := @interpf _ ex in @interpf _ (eC x)
            | Pair _ ex _ ey => (@interpf _ ex, @interpf _ ey)
            | MatchPair _ _ ex _ eC => match @interpf _ ex with pair x y => @interpf _ (eC x y) end
            end.
@@ -71,9 +71,9 @@ Section language.
            | Const _ x => Syntax.Const x
            | Var _ x => Syntax.SmartVar x
            | Op _ _ op args => Syntax.Op op (@compilef _ args)
-           | Let _ ex _ eC => Syntax.Let (@compilef _ ex) (fun x => @compilef _ (eC x))
+           | LetIn _ ex _ eC => Syntax.LetIn (@compilef _ ex) (fun x => @compilef _ (eC x))
            | Pair _ ex _ ey => Syntax.Pair (@compilef _ ex) (@compilef _ ey)
-           | MatchPair _ _ ex _ eC => Syntax.Let (@compilef _ ex) (fun xy => @compilef _ (eC (fst xy) (snd xy)))
+           | MatchPair _ _ ex _ eC => Syntax.LetIn (@compilef _ ex) (fun xy => @compilef _ (eC (fst xy) (snd xy)))
            end.
 
       Fixpoint compile {t} (e : @expr (interp_flat_type_gen var) t) : @Syntax.expr base_type_code interp_base_type op var t
@@ -123,7 +123,7 @@ End language.
 Global Arguments Const {_ _ _ _ _} _.
 Global Arguments Var {_ _ _ _ _} _.
 Global Arguments Op {_ _ _ _ _ _} _ _.
-Global Arguments Let {_ _ _ _ _} _ {_} _.
+Global Arguments LetIn {_ _ _ _ _} _ {_} _.
 Global Arguments MatchPair {_ _ _ _ _ _} _ {_} _.
 Global Arguments Pair {_ _ _ _ _} _ {_} _.
 Global Arguments Return {_ _ _ _ _} _.

@@ -55,12 +55,17 @@ Reserved Notation "$$ v" (at level 40).
 Reserved Notation "& x" (at level 30).
 Reserved Notation "** x" (at level 30).
 Reserved Notation "A <- X ; B" (at level 70, right associativity).
-Reserved Notation "'plet' x := y 'in' z" (at level 60).
 Reserved Notation "u [ i ]" (at level 30).
 Reserved Notation "v [[ i ]]" (at level 30).
 Reserved Notation "u {{ i }}" (at level 30).
+Reserved Notation "a # b" (at level 55, no associativity). (* match with theories/QArith/QArith_base.v *)
+Reserved Notation "'plet' x := y 'in' z"
+         (at level 200, z at level 200, format "'plet'  x  :=  y  'in' '//' z").
 Reserved Notation "'slet' x := A 'in' b"
          (at level 200, b at level 200, format "'slet'  x  :=  A  'in' '//' b").
+(* TODO(@andres-erbsen): Add a comment about why the syntax below is
+   different from [slet] and [plet], or make it match. *)
+Reserved Notation "'Let' x := y 'in' f"
+         (at level 200, f at level 200, format "'[' 'Let'  x  :=  y  'in'  ']' '/' '[' f ']'").
 Reserved Notation "'λ'  x .. y , t" (at level 200, x binder, y binder, right associativity).
 Reserved Notation "'λn'  x .. y , t" (at level 200, right associativity).
-(* FIXME: breaks Reflection.Syntax: Reserved Notation "'Let' x := y 'in' f" (at level 200, f at level 200). *)

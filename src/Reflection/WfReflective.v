@@ -265,7 +265,7 @@ Section language.
        | Const _ x => Const x
        | Var _ x => Var (snd x)
        | Op _ _ op args => Op op (@unnatize_exprf _ _ base args)
-       | Let _ ex _ eC => Let (@unnatize_exprf _ _ base ex)
+       | LetIn _ ex _ eC => LetIn (@unnatize_exprf _ _ base ex)
                              (fun x => let v := natize_interp_flat_type_gen base x in
                                     @unnatize_exprf _ _ (fst v) (eC (snd v)))
        | Pair _ x _ y => Pair (@unnatize_exprf _ _ base x) (@unnatize_exprf _ _ base y)
@@ -301,7 +301,7 @@ Section language.
            | _, _ => None
            end
        | Op _ _ _ _, _ => None
-       | Let tx ex tC eC, Let tx' ex' tC' eC'
+       | LetIn tx ex tC eC, LetIn tx' ex' tC' eC'
          => match @reflect_wffT G tx tx' ex ex', @flatten_binding_list2 tx tx', flat_type_eq_semidec_transparent tC tC' with
            | Some p, Some G0, Some _
              => Some (p /\ inject (forall (x : interp_flat_type_gen var1 tx) (x' : interp_flat_type_gen var2 tx'),
@@ -313,7 +313,7 @@ Section language.
                                     end))
            | _, _, _ => None
            end
-       | Let _ _ _ _, _ => None
+       | LetIn _ _ _ _, _ => None
        | Pair tx ex ty ey, Pair tx' ex' ty' ey'
          => match @reflect_wffT G tx tx' ex ex', @reflect_wffT G ty ty' ey ey' with
            | Some p, Some q => Some (p /\ q)

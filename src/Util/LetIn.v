@@ -1,10 +1,9 @@
 Require Import Coq.Classes.Morphisms Coq.Relations.Relation_Definitions.
 Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Notations.
 
 Definition Let_In {A P} (x : A) (f : forall a : A, P a) : P x := let y := x in f y.
-Notation "'Let' x := y 'in' f" := (Let_In y (fun x => f))
-                                    (format "'[' 'Let'  x  :=  y  'in'  ']' '/' '[' f ']'",
-                                     at level 200, f at level 200).
+Notation "'Let' x := y 'in' f" := (Let_In y (fun x => f)).
 
 Global Instance Proper_Let_In_nd_changebody {A P R} {Reflexive_R:@Reflexive P R}
   : Proper (eq ==> pointwise_relation _ R ==> R) (@Let_In A (fun _ => P)).
@@ -22,7 +21,7 @@ Proof. intros. cbv [Let_In]. reflexivity. Qed.
 
 Class _call_let_in_to_Let_In {T} (e:T) := _let_in_to_Let_In_return : T.
 (* : forall T, gallina T -> gallina T, structurally recursive in the argument *)
-Ltac let_in_to_Let_In e := 
+Ltac let_in_to_Let_In e :=
   lazymatch e with
   | let x := ?ex in @?eC x =>
     let ex := let_in_to_Let_In ex in

@@ -107,7 +107,7 @@ Section symbolic.
          | Op _ _ op args => option_map
                                (fun sargs => SOp (symbolize_op _ _ op) sargs)
                                (@symbolize_exprf _ args)
-         | Let _ ex _ eC => None
+         | LetIn _ ex _ eC => None
          | Pair _ ex _ ey => match @symbolize_exprf _ ex, @symbolize_exprf _ ey with
                              | Some sx, Some sy => Some (SPair sx sy)
                              | _, _ => None
@@ -155,13 +155,13 @@ Section symbolic.
                {t} (v : @exprf fsvar t) (xs : mapping)
       : @exprf var t
       := match v in @Syntax.exprf _ _ _ _ t return exprf t with
-         | Let tx ex _ eC => let sx := symbolize_exprf ex in
+         | LetIn tx ex _ eC => let sx := symbolize_exprf ex in
                              let ex' := @csef _ ex xs in
                              let sv := smart_lookupo tx sx xs in
                              match sv with
                              | Some v => @csef _ (eC v) xs
                              | None
-                               => Let ex' (fun x => let x' := symbolicify_smart_var xs sx x in
+                               => LetIn ex' (fun x => let x' := symbolicify_smart_var xs sx x in
                                                     @csef _ (eC x') (smart_add_mapping xs x'))
                              end
          | Const _ x => Const x
@@ -177,7 +177,7 @@ Section symbolic.
       : @exprf fsvar t
       := match ls with
          | nil => e
-         | x :: xs => Let (projT2 x) (fun _ => @prepend_prefix _ e xs)
+         | x :: xs => LetIn (projT2 x) (fun _ => @prepend_prefix _ e xs)
          end.
 
     Fixpoint cse {t} (v : @expr fsvar t) (xs : mapping) {struct v} : @expr var t

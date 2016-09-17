@@ -24,11 +24,11 @@ Section language.
 
     Fixpoint inline_const_genf {t} (e : @exprf (@exprf var) t) : @exprf var t
       := match e in Syntax.exprf _ _ _ t return @exprf var t with
-         | Let _ ex tC eC
+         | LetIn _ ex tC eC
            => match postprocess _ (@inline_const_genf _ ex) in Syntax.exprf _ _ _ t' return (interp_flat_type_gen _ t' -> @exprf var tC) -> @exprf var tC with
               | Const _ x => fun eC => eC (SmartConst (op:=op) (var:=var) x)
               | Var _ x => fun eC => eC (Var x)
-              | ex => fun eC => Let ex (fun x => eC (SmartVarVar x))
+              | ex => fun eC => LetIn ex (fun x => eC (SmartVarVar x))
               end (fun x => @inline_const_genf _ (eC x))
          | Var _ x => x
          | Const _ x => Const x

@@ -84,10 +84,10 @@ Section language.
                           end)
                 | refine (match wf in @Syntax.wff _ _ _ _ _ G t v1 v2
                                 return match v1 return Prop with
-                                       | Let _ _ _ _ => retP G t v1 v2
+                                       | LetIn _ _ _ _ => retP G t v1 v2
                                        | _ => forall P : Prop, P -> P
                                        end with
-                          | WfLet _ _ _ _ _ _ _ _ _ => _
+                          | WfLetIn _ _ _ _ _ _ _ _ _ => _
                           | _ => fun _ p => p
                           end)
                 | refine (match wf in @Syntax.wff _ _ _ _ _ G t v1 v2
@@ -118,25 +118,25 @@ Section language.
       destruct e1 as [ | | ? ? ? args | tx ex tC0 eC0 | ? ex ? ey ];
         [ clear wff_inline_constf
         | clear wff_inline_constf
-        | generalize (match e1v return match e1v with Let _ _ _ _ => _ | _ => _ end with
+        | generalize (match e1v return match e1v with LetIn _ _ _ _ => _ | _ => _ end with
                       | Op _ _ _ args => wff_inline_constf _ args
                       | _ => I
                       end);
           clear wff_inline_constf
-        | generalize (match e1v return match e1v with Let _ _ _ _ => _ | _ => _ end with
-                      | Let _ ex _ eC => wff_inline_constf _ ex
+        | generalize (match e1v return match e1v with LetIn _ _ _ _ => _ | _ => _ end with
+                      | LetIn _ ex _ eC => wff_inline_constf _ ex
                       | _ => I
                       end);
-          generalize (match e1v return match e1v with Let _ _ _ _ => _ | _ => _ end with
-                      | Let _ ex _ eC => fun x => wff_inline_constf _ (eC x)
+          generalize (match e1v return match e1v with LetIn _ _ _ _ => _ | _ => _ end with
+                      | LetIn _ ex _ eC => fun x => wff_inline_constf _ (eC x)
                       | _ => I
                       end);
           clear wff_inline_constf
-        | generalize (match e1v return match e1v with Let _ _ _ _ => _ | _ => _ end with
+        | generalize (match e1v return match e1v with LetIn _ _ _ _ => _ | _ => _ end with
                       | Pair _ ex _ ey => wff_inline_constf _ ex
                       | _ => I
                       end);
-          generalize (match e1v return match e1v with Let _ _ _ _ => _ | _ => _ end with
+          generalize (match e1v return match e1v with LetIn _ _ _ _ => _ | _ => _ end with
                       | Pair _ ex _ ey => wff_inline_constf _ ey
                       | _ => I
                       end);

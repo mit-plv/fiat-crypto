@@ -108,7 +108,7 @@ Ltac debug_leave_reify_rec e :=
 
 Ltac reifyf base_type_code interp_base_type op var e :=
   let reify_rec e := reifyf base_type_code interp_base_type op var e in
-  let mkLet ex eC := constr:(Let (base_type_code:=base_type_code) (interp_base_type:=interp_base_type) (op:=op) (var:=var) ex eC) in
+  let mkLetIn ex eC := constr:(LetIn (base_type_code:=base_type_code) (interp_base_type:=interp_base_type) (op:=op) (var:=var) ex eC) in
   let mkPair ex ey := constr:(Pair (base_type_code:=base_type_code) (interp_base_type:=interp_base_type) (op:=op) (var:=var) ex ey) in
   let mkVar T ex := constr:(Var (base_type_code:=base_type_code) (interp_base_type:=interp_base_type) (op:=op) (var:=var) (t:=T) ex) in
   let mkConst T ex := constr:(Const (base_type_code:=base_type_code) (interp_base_type:=interp_base_type) (op:=op) (var:=var) (t:=T) ex) in
@@ -120,7 +120,7 @@ Ltac reifyf base_type_code interp_base_type op var e :=
   | let x := ?ex in @?eC x =>
     let ex := reify_rec ex in
     let eC := reify_rec eC in
-    mkLet ex eC
+    mkLetIn ex eC
   | pair ?a ?b =>
     let a := reify_rec a in
     let b := reify_rec b in

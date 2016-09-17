@@ -6,6 +6,7 @@ Require Import Crypto.Util.ListUtil Crypto.Util.ZUtil Crypto.Util.NatUtil.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.ModularArithmetic.Pow2Base Crypto.BaseSystemProofs.
+Require Import Crypto.Util.Notations.
 Require Export Crypto.Util.FixCoqMistakes.
 Require Crypto.BaseSystem.
 Local Open Scope Z_scope.
@@ -86,7 +87,7 @@ Section Pow2BaseProofs.
       reflexivity.
     + simpl in nth_err_w.
       apply nth_error_map in nth_err_w.
-      destruct nth_err_w as [x [A B]].
+      destruct nth_err_w as [x [A B] ].
       subst.
       replace (two_p w * (two_p a * x)) with (two_p a * (two_p w * x)) by ring.
       apply map_nth_error.
@@ -555,7 +556,7 @@ Section Pow2BaseProofs.
     autorewrite with distr_length simpl_sum_firstn pull_Zpow.
     reflexivity.
   Qed.
-  
+
   Lemma bounded_nil_r : forall l, (forall x, In x l -> 0 <= x) -> bounded l nil.
   Proof.
     cbv [bounded]; intros.
@@ -681,7 +682,7 @@ Section BitwiseDecodeEncode.
     intros; induction i; simpl encode';
       repeat match goal with
              | |- _ => progress intros
-             | |- _ => progress autorewrite with push_nth_default in * 
+             | |- _ => progress autorewrite with push_nth_default in *
              | |- _ => progress autorewrite with Ztestbit
              | |- _ => progress rewrite ?firstn_O, ?Nat.sub_diag in *
              | |- _ => rewrite Z.testbit_pow2_mod by auto
@@ -699,7 +700,7 @@ Section BitwiseDecodeEncode.
                progress replace a with b in * by omega
              | H : bounded _ _ |- bounded _ _ =>
                apply pow2_mod_bounded_iff; rewrite pow2_mod_bounded_iff in H
-             | |- _ => solve [auto] 
+             | |- _ => solve [auto]
              | |- _ => contradiction
              | |- _ => reflexivity
              end.
@@ -961,7 +962,7 @@ Section SplitIndex.
        limb_widths [26,25,26] : split_index 30 = (1,4)
        limb_widths [26,25,26] : split_index 51 = (2,0)
   *)
-  Local Notation "u # i" := (nth_default 0 u i) (at level 30).
+  Local Notation "u # i" := (nth_default 0 u i).
 
   Function split_index' i index lw :=
     match lw with
@@ -1093,7 +1094,7 @@ Section SplitIndex.
   Lemma testbit_decode_full : forall us n,
     length us = length limb_widths ->
     bounded limb_widths us ->
-    Z.testbit (BaseSystem.decode base us) n = 
+    Z.testbit (BaseSystem.decode base us) n =
     if Z_le_dec 0 n
     then (if Z_lt_dec n (bitsIn limb_widths)
           then Z.testbit (us # digit_index n) (bit_index n)
@@ -1140,7 +1141,7 @@ Section SplitIndex.
   Qed.
 
   Lemma rem_bits_in_digit_pos : forall i, 0 <= i < bitsIn limb_widths ->
-                                          0 < limb_widths # digit_index i - bit_index i.
+                                          0 < (limb_widths # digit_index i) - bit_index i.
   Proof.
     repeat match goal with
            | |- _ => progress intros
@@ -1152,7 +1153,7 @@ Section SplitIndex.
 
 
   Lemma rem_bits_in_digit_le_rem_bits : forall i, 0 <= i < bitsIn limb_widths ->
-                                                    i + (limb_widths # digit_index i - bit_index i) <= bitsIn limb_widths.
+                                                    i + ((limb_widths # digit_index i) - bit_index i) <= bitsIn limb_widths.
   Proof.
     intros.
     rewrite <-(split_index_eqn i) at 1 by lia.
@@ -1167,7 +1168,7 @@ Section SplitIndex.
 
   Lemma same_digit : forall i j, 0 <= i <= j ->
                                  j < bitsIn limb_widths ->
-                                 j < i + (limb_widths # (digit_index i) - bit_index i) ->
+                                 j < i + ((limb_widths # (digit_index i)) - bit_index i) ->
                                  (digit_index i = digit_index j)%nat.
   Proof.
     intros.
@@ -1241,7 +1242,7 @@ Section Conversion.
   Context (bits_fit : bitsIn limb_widthsA <=  bitsIn limb_widthsB).
   Local Notation decodeA := (BaseSystem.decode (base_from_limb_widths limb_widthsA)).
   Local Notation decodeB := (BaseSystem.decode (base_from_limb_widths limb_widthsB)).
-  Local Notation "u # i" := (nth_default 0 u i) (at level 30).
+  Local Notation "u # i" := (nth_default 0 u i).
   Local Hint Resolve in_eq in_cons nth_default_limb_widths_nonneg sum_firstn_limb_widths_nonneg Nat2Z.is_nonneg.
   Local Opaque bounded.
 
@@ -1254,7 +1255,7 @@ Section Conversion.
       let digitB := digit_index limb_widthsB (Z.of_nat i) in
       let indexA :=   bit_index limb_widthsA (Z.of_nat i) in
       let indexB :=   bit_index limb_widthsB (Z.of_nat i) in
-      let dist := Z.min (limb_widthsA # digitA - indexA) (limb_widthsB # digitB - indexB) in
+      let dist := Z.min ((limb_widthsA # digitA) - indexA) ((limb_widthsB # digitB) - indexB) in
       let bitsA := Z.pow2_mod ((inp # digitA) >> indexA) dist in
       convert' inp (i + Z.to_nat dist)%nat (update_nth digitB (update_by_concat_bits indexB bitsA) out).
   Proof.
@@ -1267,7 +1268,7 @@ Section Conversion.
            | H : forall x : Z, In x ?lw -> 0 <= x |- appcontext [bit_index ?lw ?i] =>
              unique pose proof (bit_index_not_done lw i)
            | H : forall x : Z, In x ?lw -> 0 <= x |- appcontext [bit_index ?lw ?i] =>
-             unique assert (0 <= i < bitsIn lw -> i + (lw # digit_index lw i - bit_index lw i) <= bitsIn lw) by auto using rem_bits_in_digit_le_rem_bits
+             unique assert (0 <= i < bitsIn lw -> i + ((lw # digit_index lw i) - bit_index lw i) <= bitsIn lw) by auto using rem_bits_in_digit_le_rem_bits
            | |- _ => rewrite Z2Nat.id
            | |- _ => rewrite Nat2Z.inj_add
            | |- (Z.to_nat _ < Z.to_nat _)%nat => apply Z2Nat.inj_lt
@@ -1291,8 +1292,8 @@ Section Conversion.
     let digitB := digit_index limb_widthsB (Z.of_nat i) in
     let indexA :=   bit_index limb_widthsA (Z.of_nat i) in
     let indexB :=   bit_index limb_widthsB (Z.of_nat i) in
-    let dist := Z.min (limb_widthsA # digitA - indexA)
-                      (limb_widthsB # digitB - indexB) in
+    let dist := Z.min ((limb_widthsA # digitA) - indexA)
+                      ((limb_widthsB # digitB) - indexB) in
     let bitsA := Z.pow2_mod ((inp # digitA) >> indexA) dist in
     0 < dist ->
     bounded limb_widthsB (update_nth digitB (update_by_concat_bits indexB bitsA) out).
@@ -1321,8 +1322,8 @@ Section Conversion.
     let digitB := digit_index limb_widthsB (Z.of_nat i) in
     let indexA :=   bit_index limb_widthsA (Z.of_nat i) in
     let indexB :=   bit_index limb_widthsB (Z.of_nat i) in
-    let dist := Z.min (limb_widthsA # digitA - indexA)
-                      (limb_widthsB # digitB - indexB) in
+    let dist := Z.min ((limb_widthsA # digitA) - indexA)
+                      ((limb_widthsB # digitB) - indexB) in
     let bitsA := Z.pow2_mod ((inp # digitA) >> indexA) dist in
     0 < dist ->
     Z.of_nat i < bitsIn limb_widthsA ->
@@ -1353,8 +1354,8 @@ Section Conversion.
     let digitB := digit_index limb_widthsB (Z.of_nat i) in
     let indexA :=   bit_index limb_widthsA (Z.of_nat i) in
     let indexB :=   bit_index limb_widthsB (Z.of_nat i) in
-    let dist := Z.min (limb_widthsA # digitA - indexA)
-                      (limb_widthsB # digitB - indexB) in
+    let dist := Z.min ((limb_widthsA # digitA) - indexA)
+                      ((limb_widthsB # digitB) - indexB) in
     let bitsA := Z.pow2_mod ((inp # digitA) >> indexA) dist in
     0 < dist ->
     Z.of_nat i < bitsIn limb_widthsA ->
@@ -1398,7 +1399,7 @@ Section Conversion.
               H : digit_index ?lw ?i = ?d |- _ =>
                 let X := fresh "H" in
                   ((pose proof (same_digit_bit_index_sub lw i j) as X;
-                      forward X; [ subst_let | subst_lia | lia | lia ]) || 
+                      forward X; [ subst_let | subst_lia | lia | lia ]) ||
                    (pose proof (same_digit_bit_index_sub lw j i) as X;
                       forward X; [ subst_let | subst_lia | lia | lia ]))
            | |- Z.testbit _ (bit_index ?lw _ - bit_index ?lw ?i + _) = false =>
@@ -1406,12 +1407,12 @@ Section Conversion.
                rewrite (same_digit_bit_index_sub) by subst_lia;
                rewrite <-(split_index_eqn limb_widthsA i) at 2 by lia
            | |- ?lw # ?b <= ?a - ((sum_firstn ?lw ?b) + ?c) + ?c => replace (a - (sum_firstn lw b + c) + c) with (a - sum_firstn lw b) by ring; apply Z.le_add_le_sub_r
-           | |- ?lw # ?n + sum_firstn ?lw ?n <= _ =>
+           | |- (?lw # ?n) + sum_firstn ?lw ?n <= _ =>
             rewrite <-sum_firstn_succ_default; transitivity (bitsIn lw); [ | lia];
-            apply sum_firstn_prefix_le; auto; lia 
+            apply sum_firstn_prefix_le; auto; lia
            | |- _ => lia
            | |- _ => assumption
-           | |- _ => solve [auto] 
+           | |- _ => solve [auto]
            | |- _ => rewrite <-testbit_decode by (assumption || lia || auto); assumption
            | |- _ => repeat (f_equal; try congruence); lia
            end.
