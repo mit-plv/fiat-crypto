@@ -16,7 +16,7 @@ Global Instance Equivalence_option_eq {T} {R} {Equivalence_R:@Equivalence T R}
   : Equivalence (option_eq R).
 Proof.
   split; cbv; repeat (break_match || intro || intuition congruence ||
-                      solve [ reflexivity | symmetry; eassumption | etransitivity; eassumption ] ).
+                      solve [ apply reflexivity | apply symmetry; eassumption | eapply transitivity; eassumption ] ).
 Qed.
 
 
