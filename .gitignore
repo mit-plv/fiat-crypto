@@ -13,8 +13,10 @@ Makefile.coq.bak
 csdp.cache
 lia.cache
 nlia.cache
+nia.cache
 nra.cache
 .csdp.cache
 .lia.cache
 .nlia.cache
+.nia.cache
 .nra.cache
