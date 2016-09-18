@@ -240,6 +240,7 @@ Global Arguments Var {_ _ _ _ _} _.
 Global Arguments SmartVar {_ _ _ _ _} _.
 Global Arguments SmartVal {_} T _ t.
 Global Arguments SmartVarVar {_ _ _ _ _} _.
+Global Arguments SmartVarMap {_ _ _ _ _} _.
 Global Arguments SmartConst {_ _ _ _ _} _.
 Global Arguments Op {_ _ _ _ _ _} _ _.
 Global Arguments LetIn {_ _ _ _ _} _ {_} _.
