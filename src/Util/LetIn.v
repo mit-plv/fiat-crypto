@@ -1,3 +1,4 @@
+Require Import Crypto.Util.FixCoqMistakes.
 Require Import Coq.Classes.Morphisms Coq.Relations.Relation_Definitions.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
@@ -9,15 +10,13 @@ Global Instance Proper_Let_In_nd_changebody {A P R} {Reflexive_R:@Reflexive P R}
   : Proper (eq ==> pointwise_relation _ R ==> R) (@Let_In A (fun _ => P)).
 Proof. lazy; intros; subst; auto; congruence. Qed.
 
-(* FIXME: it adding this as a typeclass instance makes typeclass
-   resolution loop in ModularBaseystemOpt *)
-Lemma Proper_Let_In_nd_changevalue {A B} RA {RB} (f:A->B) {Proper_f:Proper (RA==>RB) f}
-  : Proper (RA ==> RB) (fun x => Let_In x f).
-Proof. intuition. Qed.
+Global Instance Proper_Let_In_nd_changevalue {A B} (RA:relation A) {RB:relation B}
+  : Proper (RA ==> (RA ==> RB) ==> RB) (Let_In (P:=fun _=>B)).
+Proof. cbv; intuition. Qed.
 
 Lemma app_Let_In_nd {A B C} (f:B -> C) : forall (e:A) (C:A -> B),
   f (Let_In e C) = Let_In e (fun v => f (C v)).
-Proof. intros. cbv [Let_In]. reflexivity. Qed.
+Proof. cbv; intuition. Qed.
 
 Class _call_let_in_to_Let_In {T} (e:T) := _let_in_to_Let_In_return : T.
 (* : forall T, gallina T -> gallina T, structurally recursive in the argument *)
