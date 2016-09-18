@@ -802,9 +802,9 @@ Section CanonicalizationProofs.
       (forall n : nat,
        0 <= to_list (length limb_widths) u [n] <
        2 ^ B -
-       (if PeanoNat.Nat.eq_dec n 0
+       (if eq_nat_dec n 0
         then 0
-        else (2 ^ B) >> (limb_widths [Init.Nat.pred n]))).
+        else (2 ^ B) >> (limb_widths [pred n]))).
   Local Notation minimal_rep u := ((bounded limb_widths (to_list (length limb_widths) u))
                                    /\ (ge_modulus (to_list _ u) = false)).
   
@@ -934,9 +934,9 @@ Section SquareRootProofs.
 
   Definition freeze_input_bounds n := 
      (2 ^ B -
-       (if PeanoNat.Nat.eq_dec n 0
+       (if eq_nat_dec n 0
         then 0
-        else (2 ^ B) >> (nth_default 0 limb_widths (Init.Nat.pred n)))).
+        else (2 ^ B) >> (nth_default 0 limb_widths (pred n)))).
   Definition bounded_by u bounds := 
       (forall n : nat,
           0 <= nth_default 0 (to_list (length limb_widths) u) n < bounds n).
@@ -956,7 +956,8 @@ Section SquareRootProofs.
   Proof.
     intros.
     case_eq (eqb u v).
-    + rewrite <-eqb_true_iff by eassumption; intros; split; congruence.
+    + rewrite <-eqb_true_iff by eassumption; split; intros;
+        congruence || contradiction.
     + split; intros; auto.
       intro Hfalse_eq;
         rewrite (eqb_true_iff u v) in Hfalse_eq by eassumption.
@@ -1011,13 +1012,14 @@ Section SquareRootProofs.
                        rewrite <-chain_correct; apply pow_rep; eassumption
            | |- _ => rewrite <-chain_correct;  apply pow_rep; eassumption
            | H : eqb ?a ?b = true |- _ =>
-             rewrite <-(eqb_true_iff a b) in Heqb
+             rewrite <-(eqb_true_iff a b) in H
                by (eassumption || rewrite <-mul_equiv, <-pow_equiv;
-                     apply mul_bounded, pow_bounded; auto); congruence
+                     apply mul_bounded, pow_bounded; auto)
            | H : eqb ?a ?b = false |- _ =>
-             rewrite <-(eqb_false_iff a b) in Heqb
+             rewrite <-(eqb_false_iff a b) in H
                by (eassumption || rewrite <-mul_equiv, <-pow_equiv;
-                     apply mul_bounded, pow_bounded; auto); congruence
+                     apply mul_bounded, pow_bounded; auto)
+           | |- _ => congruence
            end.
   Qed.
   End Sqrt5mod8.
