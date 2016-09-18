@@ -127,10 +127,13 @@ Section language.
           [flat_type], and not just [base_type_code] *)
       Definition SmartVar {t} : interp_flat_type_gen var t -> exprf t
         := @smart_interp_flat_map var exprf (fun t => Var) (fun A B x y => Pair x y) t.
+      Definition SmartVarMap {var var'} (f : forall t, var t -> var' t) {t}
+        : interp_flat_type_gen var t -> interp_flat_type_gen var' t
+        := @smart_interp_flat_map var (interp_flat_type_gen var') f (fun A B x y => pair x y) t.
       Definition SmartVarVar {t} : interp_flat_type_gen var t -> interp_flat_type_gen exprf t
-        := @smart_interp_flat_map var (interp_flat_type_gen exprf) (fun t => Var) (fun A B x y => pair x y) t.
+        := SmartVarMap (fun t => Var).
       Definition SmartConst {t} : interp_flat_type t -> interp_flat_type_gen exprf t
-        := @smart_interp_flat_map _ (interp_flat_type_gen exprf) (fun t => Const) (fun A B x y => pair x y) t.
+        := SmartVarMap (fun t => Const (t:=t)).
     End expr.
 
     Definition Expr (t : type) := forall var, @expr var t.
