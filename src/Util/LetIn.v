@@ -3,7 +3,7 @@ Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
 
 Definition Let_In {A P} (x : A) (f : forall a : A, P a) : P x := let y := x in f y.
-Notation "'Let' x := y 'in' f" := (Let_In y (fun x => f)).
+Notation "'dlet' x := y 'in' f" := (Let_In y (fun x => f)).
 
 Global Instance Proper_Let_In_nd_changebody {A P R} {Reflexive_R:@Reflexive P R}
   : Proper (eq ==> pointwise_relation _ R ==> R) (@Let_In A (fun _ => P)).

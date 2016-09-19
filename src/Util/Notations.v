@@ -63,7 +63,8 @@ Reserved Notation "'plet' x := y 'in' z"
          (at level 200, z at level 200, format "'plet'  x  :=  y  'in' '//' z").
 Reserved Notation "'slet' x := A 'in' b"
          (at level 200, b at level 200, format "'slet'  x  :=  A  'in' '//' b").
-Reserved Notation "'Let' x := y 'in' f"
-         (at level 200, f at level 200, format "'Let'  x  :=  y  'in' '//' f").
+(* Note that making [Let] a keyword breaks the vernacular [Let] in Coq 8.4 *)
+Reserved Notation "'dlet' x := y 'in' f"
+         (at level 200, f at level 200, format "'dlet'  x  :=  y  'in' '//' f").
 Reserved Notation "'λ'  x .. y , t" (at level 200, x binder, y binder, right associativity).
 Reserved Notation "'λn'  x .. y , t" (at level 200, right associativity).
