@@ -69,60 +69,91 @@ Section reflected.
 
   Definition rexpression_simple := Eval vm_compute in rexpression.
 
+  (*Compute DefaultRegisters rexpression_simple.*)
+
+  Definition registers
+    := [RegMod; RegMuLow; x; xHigh; RegMod; RegMuLow; RegZero; tmp;
+          qHigh; scratch+3; q; SpecialCarryBit; q;
+            SpecialCarryBit; qHigh; scratch+3; SpecialCarryBit;
+              q; SpecialCarryBit; qHigh; tmp; scratch+3;
+                SpecialCarryBit; tmp; scratch+3; SpecialCarryBit;
+                  tmp; SpecialCarryBit; tmp; q; out].
+
+  Definition compiled_syntax
+    := Eval lazy in AssembleSyntax rexpression_simple registers.
+
   Context (m μ : Z)
           (props : fancy_machine.arithmetic ops).
 
   Let result (v : tuple fancy_machine.W 2) := Syntax.Interp (interp_op _) rexpression_simple m μ (fst v) (snd v).
+  Let assembled_result (v : tuple fancy_machine.W 2) : fancy_machine.W := Core.Interp compiled_syntax m μ (fst v) (snd v).
 
   Theorem sanity : result = expression ops m μ.
   Proof.
     reflexivity.
   Qed.
 
-  Theorem correctness
-          (b : Z := 2)
-          (k : Z := 253)
-          (offset : Z := 3)
-          (H0 : 0 < m)
-          (H1 : μ = b^(2 * k) / m)
-          (H2 : 3 * m <= b^(k + offset))
-          (H3 : b^(k - offset) <= m + 1)
-          (H4 : 0 <= m < 2^(k + offset))
-          (H5 : 0 <= b^(2 * k) / m < b^(k + offset))
-          (v : tuple fancy_machine.W 2)
-          (H6 : 0 <= decode v < b^(2 * k))
-    : fancy_machine.decode (result v) = decode v mod m.
+  Theorem assembled_sanity : assembled_result = expression ops m μ.
   Proof.
-    rewrite sanity; destruct v.
-    apply expression_eq; assumption.
+    reflexivity.
   Qed.
-End reflected.
 
-Definition compiled_syntax
-  := Eval vm_compute in
-      (fun ops => AssembleSyntax ops (rexpression_simple _) (@RegMod :: @RegMuLow :: nil)%list).
+  Section correctness.
+    Let b : Z := 2.
+    Let k : Z := 253.
+    Let offset : Z := 3.
+    Context (H0 : 0 < m)
+            (H1 : μ = b^(2 * k) / m)
+            (H2 : 3 * m <= b^(k + offset))
+            (H3 : b^(k - offset) <= m + 1)
+            (H4 : 0 <= m < 2^(k + offset))
+            (H5 : 0 <= b^(2 * k) / m < b^(k + offset))
+            (v : tuple fancy_machine.W 2)
+            (H6 : 0 <= decode v < b^(2 * k)).
+    Theorem correctness : fancy_machine.decode (result v) = decode v mod m.
+    Proof.
+      rewrite sanity; destruct v.
+      apply expression_eq; assumption.
+    Qed.
+    Theorem assembled_correctness : fancy_machine.decode (assembled_result v) = decode v mod m.
+    Proof.
+      rewrite assembled_sanity; destruct v.
+      apply expression_eq; assumption.
+    Qed.
+  End correctness.
+End reflected.
 
 Print compiled_syntax.
 (* compiled_syntax =
-fun (_ : fancy_machine.instructions (2 * 128)) (var : base_type -> Type) =>
-λ x x0 : var TW,
-c.Rshi(x1, x0, x, 250),
-c.Mul128(x2, c.UpperHalf(x1), c.UpperHalf(RegMuLow)),
-c.Mul128(x3, c.UpperHalf(x1), c.LowerHalf(RegMuLow)),
-c.Mul128(x4, c.LowerHalf(x1), c.LowerHalf(RegMuLow)),
-c.Add(x6, x4, c.LeftShifted{x3, 128}),
-c.Addc(x8, x2, c.RightShifted{x3, 128}),
-c.Mul128(x9, c.UpperHalf(RegMuLow), c.LowerHalf(x1)),
-c.Add(_, x6, c.LeftShifted{x9, 128}),
-c.Addc(x13, x8, c.RightShifted{x9, 128}),
-c.Mul128(x14, c.LowerHalf(x13), c.LowerHalf(RegMod)),
-c.Mul128(x15, c.UpperHalf(x13), c.LowerHalf(RegMod)),
-c.Add(x17, x14, c.LeftShifted{x15, 128}),
-c.Mul128(x18, c.UpperHalf(RegMod), c.LowerHalf(x13)),
-c.Add(x20, x17, c.LeftShifted{x18, 128}),
-c.Sub(x22, x, x20),
-c.Addm(x23, x22, RegZero),
-c.Addm(x24, x23, RegZero),
-Return x24
-     : fancy_machine.instructions (2 * 128) -> forall var : base_type -> Type, syntax
+fun ops : fancy_machine.instructions 256 =>
+(λn RegMod RegMuLow x xHigh,
+ slet RegMod := RegMod in
+ slet RegMuLow := RegMuLow in
+ slet RegZero := ldi 0 in
+ c.Rshi(tmp, xHigh, x, 250),
+ c.Mul128(qHigh, c.UpperHalf(tmp), c.UpperHalf(RegMuLow)),
+ c.Mul128(scratch+3, c.UpperHalf(tmp), c.LowerHalf(RegMuLow)),
+ c.Mul128(q, c.LowerHalf(tmp), c.LowerHalf(RegMuLow)),
+ c.Add(q, q, c.LeftShifted{scratch+3, 128}),
+ c.Addc(qHigh, qHigh, c.RightShifted{scratch+3, 128}),
+ c.Mul128(scratch+3, c.UpperHalf(RegMuLow), c.LowerHalf(tmp)),
+ c.Add(q, q, c.LeftShifted{scratch+3, 128}),
+ c.Addc(qHigh, qHigh, c.RightShifted{scratch+3, 128}),
+ c.Mul128(tmp, c.LowerHalf(qHigh), c.LowerHalf(RegMod)),
+ c.Mul128(scratch+3, c.UpperHalf(qHigh), c.LowerHalf(RegMod)),
+ c.Add(tmp, tmp, c.LeftShifted{scratch+3, 128}),
+ c.Mul128(scratch+3, c.UpperHalf(RegMod), c.LowerHalf(qHigh)),
+ c.Add(tmp, tmp, c.LeftShifted{scratch+3, 128}),
+ c.Sub(tmp, x, tmp),
+ c.Addm(q, tmp, RegZero),
+ c.Addm(out, q, RegZero),
+ Return out)%nexpr
+     : forall ops : fancy_machine.instructions 256,
+       expr base_type
+         (fun v : base_type =>
+          match v with
+          | TZ => Z
+          | Tbool => bool
+          | TW => let (W, _, _, _, _, _, _, _, _, _, _, _, _, _) := ops in W
+          end) op Register (TZ -> TZ -> TW -> TW -> Tbase TW)%ctype
 *)

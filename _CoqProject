@@ -79,7 +79,9 @@ src/Reflection/WfProofs.v
 src/Reflection/WfReflective.v
 src/Reflection/WfRel.v
 src/Reflection/Named/Compile.v
+src/Reflection/Named/ContextOn.v
 src/Reflection/Named/DeadCodeElimination.v
+src/Reflection/Named/EstablishLiveness.v
 src/Reflection/Named/NameUtil.v
 src/Reflection/Named/RegisterAssign.v
 src/Reflection/Named/Syntax.v

@@ -57,12 +57,29 @@ Section reflected.
 
   Definition rexpression_simple := Eval vm_compute in rexpression.
 
+  (*Compute DefaultRegisters rexpression_simple.*)
+
+  Definition registers
+    := [RegMod; RegPInv; lo; hi; RegMod; RegPInv; RegZero; y; t1; SpecialCarryBit; y;
+       t1; SpecialCarryBit; y; t2; scratch+3; t1; SpecialCarryBit; t1; SpecialCarryBit; t2;
+       scratch+3; SpecialCarryBit; t1; SpecialCarryBit; t2; SpecialCarryBit; lo; SpecialCarryBit; hi; y;
+       SpecialCarryBit; lo; lo].
+
+  Definition compiled_syntax
+    := Eval lazy in AssembleSyntax rexpression_simple registers.
+
   Context (modulus m' : Z)
           (props : fancy_machine.arithmetic ops).
 
   Let result (v : tuple fancy_machine.W 2) := Syntax.Interp (interp_op _) rexpression_simple modulus m' (fst v) (snd v).
+  Let assembled_result (v : tuple fancy_machine.W 2) : fancy_machine.W := Core.Interp compiled_syntax modulus m' (fst v) (snd v).
 
   Theorem sanity : result = expression ops modulus m'.
+  Proof.
+    reflexivity.
+  Qed.
+
+  Theorem assembled_sanity : assembled_result = expression ops modulus m'.
   Proof.
     reflexivity.
   Qed.
@@ -70,49 +87,65 @@ Section reflected.
   Local Infix "≡₂₅₆" := (Z.equiv_modulo (2^256)).
   Local Infix "≡" := (Z.equiv_modulo modulus).
 
-  Theorem correctness
-          R' (* modular inverse of 2^256 *)
-          (H0 : modulus <> 0)
-          (H1 : 0 <= modulus < 2^256)
-          (H2 : 0 <= m' < 2^256)
-          (H3 : 2^256 * R' ≡ 1)
-          (H4 : modulus * m' ≡₂₅₆ -1)
-          (v : tuple fancy_machine.W 2)
-          (H5 : 0 <= decode v <= 2^256 * modulus)
-    : fancy_machine.decode (result v) = (decode v * R') mod modulus.
-  Proof.
-    replace m' with (fancy_machine.decode (fancy_machine.ldi m')) in H4
-      by (apply decode_load_immediate; trivial; exact _).
-    rewrite sanity; destruct v; apply expression_correct; assumption.
-  Qed.
+  Section correctness.
+    Context R' (* modular inverse of 2^256 *)
+            (H0 : modulus <> 0)
+            (H1 : 0 <= modulus < 2^256)
+            (H2 : 0 <= m' < 2^256)
+            (H3 : 2^256 * R' ≡ 1)
+            (H4 : modulus * m' ≡₂₅₆ -1)
+            (v : tuple fancy_machine.W 2)
+            (H5 : 0 <= decode v <= 2^256 * modulus).
+    Theorem correctness
+      : fancy_machine.decode (result v) = (decode v * R') mod modulus.
+    Proof.
+      replace m' with (fancy_machine.decode (fancy_machine.ldi m'))
+        in H4
+        by (apply decode_load_immediate; trivial; exact _).
+      rewrite sanity; destruct v; apply expression_correct; assumption.
+    Qed.
+    Theorem assembled_correctness
+      : fancy_machine.decode (assembled_result v) = (decode v * R') mod modulus.
+    Proof.
+      replace m' with (fancy_machine.decode (fancy_machine.ldi m'))
+        in H4
+        by (apply decode_load_immediate; trivial; exact _).
+      rewrite assembled_sanity; destruct v; apply expression_correct; assumption.
+    Qed.
+  End correctness.
 End reflected.
-
-Definition compiled_syntax
-  := Eval vm_compute in
-      (fun ops => AssembleSyntax ops (rexpression_simple _) (@RegMod :: @RegPInv :: nil)%list).
 
 Print compiled_syntax.
 (* compiled_syntax =
-fun (_ : fancy_machine.instructions (2 * 128)) (var : base_type -> Type) =>
-λ x x0 : var TW,
-c.Mul128(x1, c.LowerHalf(x), c.LowerHalf(RegPInv)),
-c.Mul128(x2, c.UpperHalf(x), c.LowerHalf(RegPInv)),
-c.Add(x4, x1, c.LeftShifted{x2, 128}),
-c.Mul128(x5, c.UpperHalf(RegPInv), c.LowerHalf(x)),
-c.Add(x7, x4, c.LeftShifted{x5, 128}),
-c.Mul128(x8, c.UpperHalf(x7), c.UpperHalf(RegMod)),
-c.Mul128(x9, c.UpperHalf(x7), c.LowerHalf(RegMod)),
-c.Mul128(x10, c.LowerHalf(x7), c.LowerHalf(RegMod)),
-c.Add(x12, x10, c.LeftShifted{x9, 128}),
-c.Addc(x14, x8, c.RightShifted{x9, 128}),
-c.Mul128(x15, c.UpperHalf(RegMod), c.LowerHalf(x7)),
-c.Add(x17, x12, c.LeftShifted{x15, 128}),
-c.Addc(x19, x14, c.RightShifted{x15, 128}),
-c.Add(_, x, x17),
-c.Addc(x23, x0, x19),
-c.Selc(x24, RegMod, RegZero),
-c.Sub(x26, x23, x24),
-c.Addm(x27, x26, RegZero),
-Return x27
-     : fancy_machine.instructions (2 * 128) -> forall var : base_type -> Type, syntax
-*)
+fun ops : fancy_machine.instructions (2 * 128) =>
+(λn RegMod RegPInv lo hi,
+ slet RegMod := RegMod in
+ slet RegPInv := RegPInv in
+ slet RegZero := ldi 0 in
+ c.Mul128(y, c.LowerHalf(lo), c.LowerHalf(RegPInv)),
+ c.Mul128(t1, c.UpperHalf(lo), c.LowerHalf(RegPInv)),
+ c.Add(y, y, c.LeftShifted{t1, 128}),
+ c.Mul128(t1, c.UpperHalf(RegPInv), c.LowerHalf(lo)),
+ c.Add(y, y, c.LeftShifted{t1, 128}),
+ c.Mul128(t2, c.UpperHalf(y), c.UpperHalf(RegMod)),
+ c.Mul128(scratch+3, c.UpperHalf(y), c.LowerHalf(RegMod)),
+ c.Mul128(t1, c.LowerHalf(y), c.LowerHalf(RegMod)),
+ c.Add(t1, t1, c.LeftShifted{scratch+3, 128}),
+ c.Addc(t2, t2, c.RightShifted{scratch+3, 128}),
+ c.Mul128(scratch+3, c.UpperHalf(RegMod), c.LowerHalf(y)),
+ c.Add(t1, t1, c.LeftShifted{scratch+3, 128}),
+ c.Addc(t2, t2, c.RightShifted{scratch+3, 128}),
+ c.Add(lo, lo, t1),
+ c.Addc(hi, hi, t2),
+ c.Selc(y, RegMod, RegZero),
+ c.Sub(lo, hi, y),
+ c.Addm(lo, lo, RegZero),
+ Return lo)%nexpr
+     : forall ops : fancy_machine.instructions (2 * 128),
+       expr base_type
+         (fun v : base_type =>
+          match v with
+          | TZ => Z
+          | Tbool => bool
+          | TW => let (W, _, _, _, _, _, _, _, _, _, _, _, _, _) := ops in W
+          end) op Register (TZ -> TZ -> TW -> TW -> Tbase TW)%ctype *)
