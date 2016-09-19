@@ -70,14 +70,14 @@ Abort.
 Import Linearize Inline.
 
 Goal True.
-  let x := Reify (fun x y => (let a := 1 in let '(c, d) := (2, 3) in a + x + c + d) + y)%nat in
+  let x := Reify (fun x y => (let a := 1 in let '(c, d) := (2, 3) in a + x - a + c + d) + y)%nat in
   pose (InlineConst (Linearize x)) as e.
   vm_compute in e.
 Abort.
 
-Definition example_expr : Syntax.Expr base_type interp_base_type op (Tbase Tnat).
+Definition example_expr : Syntax.Expr base_type interp_base_type op (Arrow Tnat (Arrow Tnat (Tflat _ tnat))).
 Proof.
-  let x := Reify (let x := 1 in let y := 1 in (let a := 1 in let '(c, d) := (2, 3) in a + x + (x + x) + (x + x) - (x + x) + c + d) + y)%nat in
+  let x := Reify (fun z w => let x := 1 in let y := 1 in (let a := 1 in let '(c, d) := (2, 3) in a + x + (x + x) + (x + x) - (x + x) - a + c + d) + y + z + w)%nat in
   exact x.
 Defined.
 
@@ -142,4 +142,5 @@ Section cse.
   Definition CSE {t} e := @CSE base_type SConstT op_code base_type_beq nat_beq op_code_beq internal_base_type_dec_bl interp_base_type op symbolicify_const symbolicify_op t e (fun _ => nil).
 End cse.
 
-Compute CSE (InlineConst (Linearize example_expr)).
+Definition example_expr_simplified := Eval vm_compute in InlineConst (Linearize example_expr).
+Compute CSE example_expr_simplified.
