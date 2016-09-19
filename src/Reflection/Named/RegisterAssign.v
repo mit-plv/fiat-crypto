@@ -1,5 +1,4 @@
 (** * Reassign registers *)
-Require Import Coq.Strings.String Coq.Classes.RelationClasses.
 Require Import Coq.FSets.FMapPositive Coq.PArith.BinPos.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Named.Syntax.
@@ -30,8 +29,12 @@ Section language.
             {ReverseContext : Context OutName (fun _ : base_type_code => InName)}
             (InName_beq : InName -> InName -> bool).
 
-    Fixpoint register_reassignf (ctxi : InContext) (ctxr : ReverseContext)
-             {t} (e : exprf InName t) (new_names : list (option OutName))
+    Definition register_reassignf_step
+               (register_reassignf : forall (ctxi : InContext) (ctxr : ReverseContext)
+                                            {t} (e : exprf InName t) (new_names : list (option OutName)),
+                   option (exprf OutName t))
+               (ctxi : InContext) (ctxr : ReverseContext)
+               {t} (e : exprf InName t) (new_names : list (option OutName))
       : option (exprf OutName t)
       := match e in Named.exprf _ _ _ _ t return option (exprf _ t) with
          | Const _ x => Some (Const x)
@@ -55,10 +58,9 @@ Section language.
                 => let ctxi := extend ctxi n n' in
                    let ctxr := extend ctxr n' n in
                    option_map (LetIn tx n' x) (@register_reassignf ctxi ctxr _ eC new_names')
-              | None, Some x
+              | _, _
                 => let ctxi := remove ctxi n in
                    @register_reassignf ctxi ctxr _ eC new_names'
-              | _, None => None
               end
          | Pair _ ex _ ey
            => match @register_reassignf ctxi ctxr _ ex nil, @register_reassignf ctxi ctxr _ ey nil with
@@ -67,6 +69,8 @@ Section language.
               | _, _ => None
               end
          end.
+    Fixpoint register_reassignf ctxi ctxr {t} e new_names
+      := @register_reassignf_step (@register_reassignf) ctxi ctxr t e new_names.
 
     Fixpoint register_reassign (ctxi : InContext) (ctxr : ReverseContext)
              {t} (e : expr InName t) (new_names : list (option OutName))

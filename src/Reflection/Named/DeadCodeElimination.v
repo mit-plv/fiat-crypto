@@ -1,8 +1,13 @@
 (** * PHOAS → Named Representation of Gallina *)
+Require Import Coq.PArith.BinPos Coq.Lists.List.
 Require Import Crypto.Reflection.Named.Syntax.
 Require Import Crypto.Reflection.Named.Compile.
-Require Import Crypto.Reflection.FilterLive.
+Require Import Crypto.Reflection.Named.RegisterAssign.
+Require Import Crypto.Reflection.Named.EstablishLiveness.
+Require Import Crypto.Reflection.CountLets.
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.LetIn.
 
 Local Notation eta x := (fst x, snd x).
 
@@ -13,7 +18,8 @@ Section language.
   Context (base_type_code : Type)
           (interp_base_type : base_type_code -> Type)
           (op : flat_type base_type_code -> flat_type base_type_code -> Type)
-          (Name : Type).
+          (Name : Type)
+          {Context : Context Name (fun _ : base_type_code => positive)}.
 
   Local Notation flat_type := (flat_type base_type_code).
   Local Notation type := (type base_type_code).
@@ -24,12 +30,12 @@ Section language.
   Local Notation exprf := (@exprf base_type_code interp_base_type op (fun _ => Name)).
   Local Notation expr := (@expr base_type_code interp_base_type op (fun _ => Name)).
   Local Notation Expr := (@Expr base_type_code interp_base_type op).
-  Local Notation lexprf := (@Syntax.exprf base_type_code interp_base_type op (fun _ => list (option Name))).
-  Local Notation lexpr := (@Syntax.expr base_type_code interp_base_type op (fun _ => list (option Name))).
+  (*Local Notation lexprf := (@Syntax.exprf base_type_code interp_base_type op (fun _ => list (option Name))).
+  Local Notation lexpr := (@Syntax.expr base_type_code interp_base_type op (fun _ => list (option Name))).*)
   Local Notation nexprf := (@Named.exprf base_type_code interp_base_type op Name).
   Local Notation nexpr := (@Named.expr base_type_code interp_base_type op Name).
 
-  Definition get_live_namesf (names : list Name) {t} (e : lexprf t) : list (option Name)
+  (*Definition get_live_namesf (names : list (option Name)) {t} (e : lexprf t) : list (option Name)
     := filter_live_namesf
          base_type_code interp_base_type op
          (option Name) None
@@ -38,8 +44,8 @@ Section language.
                      | _, Some y => Some y
                      | None, None => None
                      end)
-         nil (List.map (@Some _) names) e.
-  Definition get_live_names (names : list Name) {t} (e : lexpr t) : list (option Name)
+         nil names e.
+  Definition get_live_names (names : list (option Name)) {t} (e : lexpr t) : list (option Name)
     := filter_live_names
          base_type_code interp_base_type op
          (option Name) None
@@ -48,24 +54,17 @@ Section language.
                      | _, Some y => Some y
                      | None, None => None
                      end)
-         nil (List.map (@Some _) names) e.
-
-  Definition compile_and_eliminate_dead_codef
-             {t} (e : exprf t) (e' : lexprf t) (ls : list Name)
-    : option (nexprf t)
-    := ocompilef e (get_live_namesf ls e').
-
-  Definition compile_and_eliminate_dead_code
-             {t} (e : expr t) (e' : lexpr t) (ls : list Name)
-    : option (nexpr t)
-    := ocompile e (get_live_names ls e').
+         nil names e.*)
 
   Definition CompileAndEliminateDeadCode
              {t} (e : Expr t) (ls : list Name)
     : option (nexpr t)
-    := compile_and_eliminate_dead_code (e _) (e _) ls.
+    := let e := compile (Name:=positive) (e _) (List.map Pos.of_nat (seq 1 (CountBinders e))) in
+       match e with
+       | Some e => Let_In (insert_dead_names None e ls) (* help vm_compute by factoring this out *)
+                          (fun names => register_reassign Pos.eqb empty empty e names)
+       | None => None
+       end.
 End language.
 
-Global Arguments compile_and_eliminate_dead_codef {_ _ _ _ t} _ _ ls.
-Global Arguments compile_and_eliminate_dead_code {_ _ _ _ t} _ _ ls.
-Global Arguments CompileAndEliminateDeadCode {_ _ _ _ t} _ ls.
+Global Arguments CompileAndEliminateDeadCode {_ _ _ _ _ t} e ls.
