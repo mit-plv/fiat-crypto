@@ -20,15 +20,27 @@ Section language.
 
   Section with_var.
     Context {var : base_type_code -> Type}.
-    Context (postprocess : forall {t}, @exprf var t -> @exprf var t).
+
+    Inductive inline_directive : flat_type -> Type :=
+    | default_inline {t} (e : @exprf var t) : inline_directive t
+    | inline {t : base_type_code} (e : @exprf var t) : inline_directive t
+    | no_inline {t} (e : @exprf var t) : inline_directive t.
+
+    Context (postprocess : forall {t}, @exprf var t -> inline_directive t).
 
     Fixpoint inline_const_genf {t} (e : @exprf (@exprf var) t) : @exprf var t
       := match e in Syntax.exprf _ _ _ t return @exprf var t with
-         | LetIn _ ex tC eC
-           => match postprocess _ (@inline_const_genf _ ex) in Syntax.exprf _ _ _ t' return (interp_flat_type_gen _ t' -> @exprf var tC) -> @exprf var tC with
-              | Const _ x => fun eC => eC (SmartConst (op:=op) (var:=var) x)
-              | Var _ x => fun eC => eC (Var x)
-              | ex => fun eC => LetIn ex (fun x => eC (SmartVarVar x))
+         | LetIn tx ex tC eC
+           => match postprocess _ (@inline_const_genf _ ex) in inline_directive t' return (interp_flat_type_gen _ t' -> @exprf var tC) -> @exprf var tC with
+              | default_inline _ ex
+                => match ex in Syntax.exprf _ _ _ t' return (interp_flat_type_gen _ t' -> @exprf var tC) -> @exprf var tC with
+                   | Const _ x => fun eC => eC (SmartConst (op:=op) (var:=var) x)
+                   | Var _ x => fun eC => eC (Var x)
+                   | ex => fun eC => LetIn ex (fun x => eC (SmartVarVar x))
+                   end
+              | no_inline _ ex
+                => fun eC => LetIn ex (fun x => eC (SmartVarVar x))
+              | inline _ ex => fun eC => eC ex
               end (fun x => @inline_const_genf _ (eC x))
          | Var _ x => x
          | Const _ x => Const x
@@ -42,15 +54,19 @@ Section language.
          | Abs _ _ f => Abs (fun x => @inline_const_gen _ (f (Var x)))
          end.
   End with_var.
-  Definition inline_constf {var t} := @inline_const_genf var (fun _ x => x) t.
-  Definition inline_const {var t} := @inline_const_gen var (fun _ x => x) t.
+  Definition inline_constf {var t} := @inline_const_genf var (fun _ x => default_inline x) t.
+  Definition inline_const {var t} := @inline_const_gen var (fun _ x => default_inline x) t.
 
-  Definition InlineConstGen (postprocess : forall var t, @exprf var t -> @exprf var t)
+  Definition InlineConstGen (postprocess : forall var t, @exprf var t -> @inline_directive var t)
              {t} (e : Expr t) : Expr t
     := fun var => inline_const_gen (postprocess _) (e _).
-  Definition InlineConst {t} := @InlineConstGen (fun _ _ x => x) t.
+  Definition InlineConst {t} := @InlineConstGen (fun _ _ x => default_inline x) t.
 End language.
 
+Global Arguments inline_directive {_} _ _ _ _, {_ _ _ _} _.
+Global Arguments no_inline {_ _ _ _ _} _.
+Global Arguments inline {_ _ _ _ _} _.
+Global Arguments default_inline {_ _ _ _ _} _.
 Global Arguments inline_const_genf {_ _ _ _} postprocess {_} _.
 Global Arguments inline_const_gen {_ _ _ _} postprocess {_} _.
 Global Arguments InlineConstGen {_ _ _} postprocess {_} _ var.
