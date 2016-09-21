@@ -823,10 +823,17 @@ Section CanonicalizationProofs.
       rewrite H1; reflexivity.
   Qed.
 
+  Lemma c_upper_bound : c - 1 < 2 ^ limb_widths[0].
+  Proof.
+    pose proof c_reduce2. pose proof c_pos.
+    omega.
+  Qed.
+  Hint Resolve c_upper_bound.
+
   Lemma minimal_rep_encode : forall x, minimal_rep (encode x).
   Proof.
     split; intros; auto using bounded_encode.
-    apply ge_modulus_spec; auto using length_to_list.
+    apply ge_modulus_spec; auto using bounded_encode, length_to_list.
     apply encode_range.
   Qed.
 
@@ -839,7 +846,7 @@ Section CanonicalizationProofs.
     apply Fdecode_decode_mod in H.
     pose proof (Fdecode_decode_mod _ _ (encode_rep x)).
     rewrite Z.mod_small in H by (apply ge_modulus_spec; distr_length; intuition auto).
-    rewrite Z.mod_small in H1 by (apply ge_modulus_spec; distr_length; apply minimal_rep_encode).
+    rewrite Z.mod_small in H1 by (apply ge_modulus_spec; distr_length; auto using c_upper_bound; apply minimal_rep_encode).
     congruence.
   Qed.
 

@@ -346,6 +346,13 @@ Module Z.
   Lemma mod_add_l' : forall a b c, a <> 0 -> (a * b + c) mod a = c mod a.
   Proof. intros; rewrite (Z.mul_comm _ b); autorewrite with zsimplify; reflexivity. Qed.
 
+  Lemma add_pow_mod_l : forall a b c, a <> 0 -> 0 < b ->
+                                      ((a ^ b) + c) mod a = c mod a.
+  Proof.
+    intros; replace b with (b - 1 + 1) by ring;
+      rewrite Z.pow_add_r, Z.pow_1_r by omega; auto using Z.mod_add_l.
+  Qed.
+
   Lemma pos_pow_nat_pos : forall x n,
     Z.pos x ^ Z.of_nat n > 0.
   Proof.
@@ -799,6 +806,17 @@ Module Z.
     apply Z.pow_gt_1; omega.
   Qed.
 
+  Lemma pow2_mod_id_iff : forall a n, 0 <= n ->
+                                      (Z.pow2_mod a n = a <-> 0 <= a < 2 ^ n).
+  Proof.
+    intros.
+    rewrite Z.pow2_mod_spec by assumption.
+    assert (0 < 2 ^ n) by zero_bounds.
+    rewrite Z.mod_small_iff by omega.
+    split; intros; intuition omega.
+  Qed.
+
+
   Lemma N_le_1_l : forall p, (1 <= N.pos p)%N.
   Proof.
     destruct p; cbv; congruence.
@@ -849,6 +867,39 @@ Module Z.
   Proof.
     induction l; intros; try reflexivity.
     etransitivity; [ apply IHl | apply Z.le_max_r ].
+  Qed.
+
+  Lemma add_compare_mono_r: forall n m p, (n + p ?= m + p) = (n ?= m).
+  Proof.
+    intros.
+    rewrite <-!(Z.add_comm p).
+    apply Z.add_compare_mono_l.
+  Qed.
+
+  Lemma compare_add_shiftl : forall x1 y1 x2 y2 n, 0 <= n ->
+    Z.pow2_mod x1 n = x1 -> Z.pow2_mod x2 n = x2  -> 
+    x1 + (y1 << n) ?= x2 + (y2 << n) =
+      if Z_eq_dec y1 y2
+      then x1 ?= x2
+      else y1 ?= y2.
+  Proof.
+    repeat match goal with
+           | |- _ => progress intros
+           | |- _ => progress subst y1
+           | |- _ => rewrite Z.shiftl_mul_pow2 by omega
+           | |- _ => rewrite add_compare_mono_r
+           | |- _ => rewrite <-Z.mul_sub_distr_r 
+           | |- _ => break_if
+           | H : Z.pow2_mod _ _ = _ |- _ => rewrite pow2_mod_id_iff in H by omega
+           | H : ?a <> ?b |- _ = (?a ?= ?b) => 
+             case_eq (a ?= b); rewrite ?Z.compare_eq_iff, ?Z.compare_gt_iff, ?Z.compare_lt_iff
+           | |- _ + (_ * _) > _ + (_ * _) => cbv [Z.gt] 
+           | |- _ + (_ * ?x) < _ + (_ * ?x) =>
+             apply Z.lt_sub_lt_add; apply Z.lt_le_trans with (m := 1 * x); [omega|]
+           | |- _ => apply Z.mul_le_mono_nonneg_r; omega
+           | |- _ => reflexivity
+           | |- _ => congruence 
+           end.
   Qed.
 
   Ltac ltb_to_lt_with_hyp H lem :=

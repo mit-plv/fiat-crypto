@@ -147,127 +147,12 @@ Section LengthProofs.
 
 End LengthProofs.
 
-Section ConditionalSubtractModulusProofs.
+Section ModulusDigitsProofs.
   Context `{prm :PseudoMersenneBaseParams}
           (c_upper_bound : c - 1 < 2 ^ nth_default 0 limb_widths 0).
   Local Notation base := (base_from_limb_widths limb_widths).
   Local Hint Resolve sum_firstn_limb_widths_nonneg.
   Local Hint Resolve limb_widths_nonneg.
-
-  Fixpoint compare' us vs i :=
-    match i with
-    | O => Eq
-    | S i' => if Z_eq_dec (nth_default 0 us i') (nth_default 0 vs i')
-              then compare' us vs i'
-              else Z.compare (nth_default 0 us i') (nth_default 0 vs i')
-    end.
-
-  (* Lexicographically compare two vectors of equal length, starting from the END of the list
-     (in our context, this is the most significant end). NOT constant time. *)
-  Definition compare us vs := compare' us vs (length us).
-  
-  (* TODO : move to ZUtil *)
-  Lemma add_compare_mono_r: forall n m p, (n + p ?= m + p) = (n ?= m).
-  Proof.
-    intros.
-    rewrite <-!(Z.add_comm p).
-    apply Z.add_compare_mono_l.
-  Qed.
-
-  (* TODO : move to ZUtil *)
-  Lemma pow2_mod_id_iff : forall a n, 0 <= n ->
-                                      Z.pow2_mod a n = a <-> 0 <= a < 2 ^ n.
-  Proof.
-    intros.
-    rewrite Z.pow2_mod_spec by assumption.
-    assert (0 < 2 ^ n) by zero_bounds.
-    rewrite Z.mod_small_iff by omega.
-    split; intros; intuition omega.
-  Qed.
-
-  (* TODO : move to ZUtil *)
-  Lemma compare_add_shiftl : forall x1 y1 x2 y2 n, 0 <= n ->
-    Z.pow2_mod x1 n = x1 -> Z.pow2_mod x2 n = x2  -> 
-    x1 + (y1 << n) ?= x2 + (y2 << n) =
-      if Z_eq_dec y1 y2
-      then x1 ?= x2
-      else y1 ?= y2.
-  Proof.
-    repeat match goal with
-           | |- _ => progress intros
-           | |- _ => progress subst y1
-           | |- _ => rewrite Z.shiftl_mul_pow2 by omega
-           | |- _ => rewrite add_compare_mono_r
-           | |- _ => rewrite <-Z.mul_sub_distr_r 
-           | |- _ => break_if
-           | H : Z.pow2_mod _ _ = _ |- _ => rewrite pow2_mod_id_iff in H by omega
-           | H : ?a <> ?b |- _ = (?a ?= ?b) => 
-             case_eq (a ?= b); rewrite ?Z.compare_eq_iff, ?Z.compare_gt_iff, ?Z.compare_lt_iff
-           | |- _ + (_ * _) > _ + (_ * _) => cbv [Z.gt] 
-           | |- _ + (_ * ?x) < _ + (_ * ?x) =>
-             apply Z.lt_sub_lt_add; apply Z.lt_le_trans with (m := 1 * x); [omega|]
-           | |- _ => apply Z.mul_le_mono_nonneg_r; omega
-           | |- _ => reflexivity
-           | |- _ => congruence 
-           end.
-  Qed.
-
-  Lemma decode_firstn_compare' : forall us vs i,
-    (i <= length limb_widths)%nat ->
-    length us = length limb_widths -> bounded limb_widths us ->
-    length vs = length limb_widths -> bounded limb_widths vs ->
-    (Z.compare (decode' base (firstn i us)) (decode' base (firstn i vs))
-     = compare' us vs i).
-  Proof.
-    induction i;
-      repeat match goal with
-             | |- _ => progress intros
-             | |- _ => progress (simpl compare')
-             | |- _ => progress specialize_by (assumption || omega)
-             | |- _ => rewrite sum_firstn_0
-             | |- _ => rewrite set_higher 
-             | |- _ => rewrite nth_default_base by eauto 
-             | |- _ => rewrite firstn_length, Min.min_l by omega
-             | |- _ => rewrite firstn_O
-             | |- _ => rewrite firstn_succ with (d := 0) by omega
-             | |- _ => rewrite compare_add_shiftl by
-               (eauto || (rewrite decode_firstn_pow2_mod, Z.pow2_mod_pow2_mod, Z.min_id by
-                  (eauto || omega); reflexivity))
-             | |- appcontext[2 ^ ?x * ?y] => replace (2 ^ x * y) with (y << x) by
-               (rewrite (Z.mul_comm (2 ^ x)); apply Z.shiftl_mul_pow2; eauto)
-             | |- _ => tauto
-             | |- _ => split
-             | |- _ => break_if 
-             end.
-  Qed.
-
-  Lemma decode_compare' : forall us vs,
-    length us = length limb_widths -> bounded limb_widths us ->
-    length vs = length limb_widths -> bounded limb_widths vs ->
-    (Z.compare (decode' base us) (decode' base vs)
-     = compare' us vs (length limb_widths)).
-  Proof.
-    intros.
-    rewrite <-decode_firstn_compare' by (auto || omega).
-    rewrite !firstn_all by auto.
-    reflexivity.
-  Qed.
-
-  Lemma ge_modulus'_false : forall us i,
-    ge_modulus' us false i = false.
-  Proof.
-    induction i; intros; simpl; rewrite Bool.andb_false_r; auto.
-  Qed.
-
-  (* TODO : ZUtil *)
-  Lemma add_pow_mod_l : forall a b c, a <> 0 -> 0 < b ->
-                                      ((a ^ b) + c) mod a = c mod a.
-  Proof.
-    intros.
-    replace b with (b - 1 + 1) by ring.
-    rewrite Z.pow_add_r, Z.pow_1_r by omega.
-    auto using Z.mod_add_l.
-  Qed.
 
   (* TODO : ZUtil *)
   Lemma testbit_sub_pow2 : forall n i x, 0 <= i < n -> 0 < x < 2 ^ n ->
@@ -330,7 +215,75 @@ Section ConditionalSubtractModulusProofs.
     rewrite Z.ones_equiv.
     omega.
   Qed.
-        
+
+End ModulusDigitsProofs.
+
+Section ModulusComparisonProofs.
+  Context `{prm :PseudoMersenneBaseParams}
+          (c_upper_bound : c - 1 < 2 ^ nth_default 0 limb_widths 0).
+  Local Notation base := (base_from_limb_widths limb_widths).
+  Local Hint Resolve sum_firstn_limb_widths_nonneg.
+  Local Hint Resolve limb_widths_nonneg.
+
+  Fixpoint compare' us vs i :=
+    match i with
+    | O => Eq
+    | S i' => if Z_eq_dec (nth_default 0 us i') (nth_default 0 vs i')
+              then compare' us vs i'
+              else Z.compare (nth_default 0 us i') (nth_default 0 vs i')
+    end.
+
+  (* Lexicographically compare two vectors of equal length, starting from the END of the list
+     (in our context, this is the most significant end). NOT constant time. *)
+  Definition compare us vs := compare' us vs (length us).
+  
+  Lemma decode_firstn_compare' : forall us vs i,
+    (i <= length limb_widths)%nat ->
+    length us = length limb_widths -> bounded limb_widths us ->
+    length vs = length limb_widths -> bounded limb_widths vs ->
+    (Z.compare (decode' base (firstn i us)) (decode' base (firstn i vs))
+     = compare' us vs i).
+  Proof.
+    induction i;
+      repeat match goal with
+             | |- _ => progress intros
+             | |- _ => progress (simpl compare')
+             | |- _ => progress specialize_by (assumption || omega)
+             | |- _ => rewrite sum_firstn_0
+             | |- _ => rewrite set_higher 
+             | |- _ => rewrite nth_default_base by eauto 
+             | |- _ => rewrite firstn_length, Min.min_l by omega
+             | |- _ => rewrite firstn_O
+             | |- _ => rewrite firstn_succ with (d := 0) by omega
+             | |- _ => rewrite Z.compare_add_shiftl by
+               (eauto || (rewrite decode_firstn_pow2_mod, Z.pow2_mod_pow2_mod, Z.min_id by
+                  (eauto || omega); reflexivity))
+             | |- appcontext[2 ^ ?x * ?y] => replace (2 ^ x * y) with (y << x) by
+               (rewrite (Z.mul_comm (2 ^ x)); apply Z.shiftl_mul_pow2; eauto)
+             | |- _ => tauto
+             | |- _ => split
+             | |- _ => break_if 
+             end.
+  Qed.
+
+  Lemma decode_compare' : forall us vs,
+    length us = length limb_widths -> bounded limb_widths us ->
+    length vs = length limb_widths -> bounded limb_widths vs ->
+    (Z.compare (decode' base us) (decode' base vs)
+     = compare' us vs (length limb_widths)).
+  Proof.
+    intros.
+    rewrite <-decode_firstn_compare' by (auto || omega).
+    rewrite !firstn_all by auto.
+    reflexivity.
+  Qed.
+
+  Lemma ge_modulus'_false : forall us i,
+    ge_modulus' us false i = false.
+  Proof.
+    induction i; intros; simpl; rewrite Bool.andb_false_r; auto.
+  Qed.
+
   Lemma ge_modulus'_compare' : forall us, length us = length limb_widths -> bounded limb_widths us ->
     forall i, (i < length limb_widths)%nat ->
     (ge_modulus' us true i = false <-> compare' us modulus_digits (S i) = Lt).
@@ -338,10 +291,14 @@ Section ConditionalSubtractModulusProofs.
     induction i;
       repeat match goal with
              | |- _ => progress intros
-             | |- _ => progress (simpl ge_modulus'; simpl compare' in *)
+             | |- _ => progress (simpl compare' in *)
              | |- _ => progress specialize_by omega
              | |- _ => progress rewrite ?Z.compare_eq_iff,
                        ?Z.compare_gt_iff, ?Z.compare_lt_iff in *
+             | |- appcontext[ge_modulus' _ _ 0] =>
+               cbv [ge_modulus']
+             | |- appcontext[ge_modulus' _ _ (S _)] =>
+               unfold ge_modulus'; fold ge_modulus'
              | |- _ => break_if
              | |- _ => rewrite Nat.sub_0_r
              | |- _ => rewrite ge_modulus'_false 
@@ -350,8 +307,8 @@ Section ConditionalSubtractModulusProofs.
              | |- _ => rewrite Z.eqb_compare; break_match
              | |- _ => split; (congruence || omega)
              | |- _ => assumption
-             end;
-      pose proof (bounded_le_modulus_digits us (S i));
+                                 end;
+                                 pose proof (bounded_le_modulus_digits c_upper_bound us (S i));
       specialize_by (auto || omega); omega.
   Qed.
 
@@ -374,6 +331,15 @@ Section ConditionalSubtractModulusProofs.
     cbv [BaseSystem.decode] in *. omega.
   Qed.
 
+End ModulusComparisonProofs.
+
+Section ConditionalSubtractModulusProofs.
+  Context `{prm :PseudoMersenneBaseParams}
+          (c_upper_bound : c - 1 < 2 ^ nth_default 0 limb_widths 0).
+  Local Notation base := (base_from_limb_widths limb_widths).
+  Local Hint Resolve sum_firstn_limb_widths_nonneg.
+  Local Hint Resolve limb_widths_nonneg.
+                                   
   Lemma conditional_subtract_modulus_spec : forall u cond,
     length u = length limb_widths ->
     BaseSystem.decode base (conditional_subtract_modulus u cond) =
