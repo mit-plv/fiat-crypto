@@ -57,11 +57,11 @@ Section Defs.
     are less than 2 ^ their respective limb width. *)
   Fixpoint ge_modulus' us acc i :=
     match i with
-    | O => andb (Z.ltb (modulus_digits [0]) (us [0])) acc
+    | O => andb (Z.leb (modulus_digits [0]) (us [0])) acc
     | S i' => ge_modulus' us (andb (Z.eqb (modulus_digits [i]) (us [i])) acc) i'
     end.
 
-  Definition ge_modulus us := ge_modulus' us true (length base - 1)%nat.
+  Definition ge_modulus us := ge_modulus' us true (length limb_widths - 1)%nat.
 
   Definition conditional_subtract_modulus (us : digits) (cond : bool) :=
      let and_term := if cond then max_ones else 0 in
