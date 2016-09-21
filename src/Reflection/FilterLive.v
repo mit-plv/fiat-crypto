@@ -1,6 +1,7 @@
 (** * Computes a list of live variables *)
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Named.NameUtil.
+Require Import Crypto.Reflection.CountLets.
 Require Import Crypto.Util.ListUtil.
 
 Local Notation eta x := (fst x, snd x).
@@ -34,12 +35,6 @@ Section language.
     | ls1, nil => ls1
     | nil, ls2 => ls2
     end.
-
-  Fixpoint count_pairs (t : flat_type) : nat
-    := match t with
-       | Syntax.Tbase _ => 1
-       | Prod A B => count_pairs A + count_pairs B
-       end%nat.
 
   Definition names_to_list {t} : interp_flat_type_gen (fun _ => Name) t -> list Name
     := smart_interp_flat_map base_type_code (g:=fun _ => list Name) (fun _ x => x :: nil)%list (fun _ _ x y => x ++ y)%list.
