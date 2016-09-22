@@ -44,13 +44,14 @@ Section expression.
   Local Arguments μ' / .
   Local Arguments ldi' / .
   Local Arguments DoubleBounded.mul_double / .
+  Local Opaque Let_In.
 
   Definition expression'
     := Eval simpl in
         (fun v => proj1_sig (pre_f v)).
-  Local Transparent locked_let.
+  Local Transparent Let_In.
   Definition expression
-    := Eval cbv beta iota delta [expression' fst snd locked_let] in
+    := Eval cbv beta iota delta [expression' fst snd Let_In] in
         fun v => let RegMod := fancy_machine.ldi m in
                  let RegMu := fancy_machine.ldi μ in
                  let RegZero := fancy_machine.ldi 0 in

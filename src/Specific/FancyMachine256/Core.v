@@ -20,7 +20,7 @@ Require Export Crypto.Reflection.Reify.
 Require Export Crypto.Util.ZUtil.
 Require Export Crypto.Util.Notations.
 Require Import Crypto.Util.ListUtil.
-Require Export Crypto.Util.LockedLet.
+Require Export Crypto.Util.LetIn.
 Export ListNotations.
 
 Open Scope Z_scope.

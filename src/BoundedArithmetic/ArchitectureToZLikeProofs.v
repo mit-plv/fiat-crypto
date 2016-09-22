@@ -8,7 +8,7 @@ Require Import Crypto.BoundedArithmetic.ArchitectureToZLike.
 Require Import Crypto.ModularArithmetic.ZBounded.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.ZUtil Crypto.Util.Tactics.
-Require Import Crypto.Util.LockedLet.
+Require Import Crypto.Util.LetIn.
 
 Local Open Scope nat_scope.
 Local Open Scope Z_scope.
@@ -54,7 +54,7 @@ Section fancy_machine_p256_montgomery_foundation.
   Local Ltac post_t_step :=
     match goal with
     | _ => reflexivity
-    | _ => rewrite !unlock_let
+    | _ => progress unfold Let_In
     | _ => progress autorewrite with zsimplify_const
     | [ |- fst ?x = (?a <=? ?b) :> bool ]
       => cut (((if fst x then 1 else 0) = (if a <=? b then 1 else 0))%Z);

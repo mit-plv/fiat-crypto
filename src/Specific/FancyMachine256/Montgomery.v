@@ -28,12 +28,13 @@ Section expression.
   Local Arguments ldi' / .
   Local Arguments reduce_via_partial / .
   Local Arguments DoubleBounded.mul_double / .
+  Local Opaque Let_In.
 
   Definition expression'
     := Eval simpl in f.
-  Local Transparent locked_let.
+  Local Transparent Let_In.
   Definition expression
-    := Eval cbv beta delta [expression' fst snd locked_let] in
+    := Eval cbv beta delta [expression' fst snd Let_In] in
         fun v => let RegMod := fancy_machine.ldi modulus in
                  let RegPInv := fancy_machine.ldi m' in
                  let RegZero := fancy_machine.ldi 0 in

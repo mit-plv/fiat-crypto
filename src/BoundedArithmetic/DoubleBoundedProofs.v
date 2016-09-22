@@ -12,7 +12,7 @@ Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
-Require Import Crypto.Util.LockedLet.
+Require Import Crypto.Util.LetIn.
 
 Import ListNotations.
 Local Open Scope list_scope.
@@ -239,20 +239,20 @@ Global Instance decode_mul_double
 
 Lemma ripple_carry_tuple_SS' {T} f k xss yss carry
   : @ripple_carry_tuple T f (S (S k)) xss yss carry
-    = llet xss := xss in
-      llet yss := yss in
+    = dlet xss := xss in
+      dlet yss := yss in
       let '(xs, x) := eta xss in
       let '(ys, y) := eta yss in
-      llet addv := (@ripple_carry_tuple _ f (S k) xs ys carry) in
+      dlet addv := (@ripple_carry_tuple _ f (S k) xs ys carry) in
       let '(carry, zs) := eta addv in
-      llet fxy := (f x y carry) in
+      dlet fxy := (f x y carry) in
       let '(carry, z) := eta fxy in
       (carry, (zs, z)).
 Proof. reflexivity. Qed.
 
 Local Ltac eta_expand :=
   repeat match goal with
-         | _ => rewrite !unlock_let
+         | _ => progress unfold Let_In
          | [ |- context[let '(x, y) := ?e in _] ]
            => rewrite (surjective_pairing e)
          | _ => rewrite <- !surjective_pairing
