@@ -1,3 +1,7 @@
+Require Import Coq.PArith.BinPos Coq.Lists.List.
+Require Import Crypto.Reflection.Named.Syntax.
+Require Import Crypto.Reflection.Named.Compile.
+Require Import Crypto.Reflection.Named.RegisterAssign.
 Require Import Crypto.Reflection.Syntax.
 Require Export Crypto.Reflection.Reify.
 Require Import Crypto.Reflection.InputSyntax.
@@ -77,7 +81,7 @@ Abort.
 
 Definition example_expr : Syntax.Expr base_type interp_base_type op (Arrow Tnat (Arrow Tnat (Tflat _ tnat))).
 Proof.
-  let x := Reify (fun z w => let x := 1 in let y := 1 in (let a := 1 in let '(c, d) := (2, 3) in a + x + (x + x) + (x + x) - (x + x) - a + c + d) + y + z + w)%nat in
+  let x := Reify (fun z w => let unused := 1 + 1 in let x := 1 in let y := 1 in (let a := 1 in let '(c, d) := (2, 3) in a + x + (x + x) + (x + x) - (x + x) - a + c + d) + y + z + w)%nat in
   exact x.
 Defined.
 
@@ -144,3 +148,12 @@ End cse.
 
 Definition example_expr_simplified := Eval vm_compute in InlineConst (Linearize example_expr).
 Compute CSE example_expr_simplified.
+
+Definition example_expr_compiled
+  := Eval vm_compute in
+      match Named.Compile.compile (example_expr_simplified _) (List.map Pos.of_nat (seq 1 20)) as v return match v with Some _ => _ | _ => _ end with
+      | Some v => v
+      | None => True
+      end.
+
+Compute register_reassign Pos.eqb empty empty example_expr_compiled (Some 1%positive :: Some 2%positive :: None :: List.map Some (List.map Pos.of_nat (seq 3 20))).
