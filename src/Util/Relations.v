@@ -27,3 +27,8 @@ Proof.
   logic; try match goal with [H:_|-_] => (rewrite H || rewrite <-H); assumption end.
   repeat (assumption||reflexivity||econstructor); assumption. (* WHY the last [assumption]?*)
 Qed.
+
+Lemma iff_R_R_same_r {T R} {Req:@Equivalence T R} x y ref : R x y -> (R x ref <-> R y ref).
+Proof.
+  intro Hx; rewrite Hx; clear Hx. reflexivity.
+Qed.

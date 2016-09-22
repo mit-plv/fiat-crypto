@@ -21,6 +21,7 @@ Module Import Notations.
   Infix "^" := pow.
   Infix "mod" := modulo (at level 40, no associativity).
   Infix "++" := Word.combine.
+  Notation setbit := setbit.
 End Notations.
 
 Generalizable All Variables.
@@ -73,7 +74,7 @@ Section EdDSA.
   Program Definition curveKey (sk:secretkey) : nat :=
     let x := wfirstn n (H sk) in (* hash the key, use first "half" for secret scalar *)
     let x := x - (x mod (2^c)) in (* it is implicitly 0 mod (2^c) *)
-             x + 2^n. (* and the high bit is always set *)
+             setbit x n. (* and the high bit is always set *)
 
   Local Infix "+" := Eadd.
   Local Infix "*" := EscalarMult.

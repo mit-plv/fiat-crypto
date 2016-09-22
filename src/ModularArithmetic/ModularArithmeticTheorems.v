@@ -173,6 +173,14 @@ Module F.
       rewrite Z2Nat.id by omega.
       rewrite <-F.of_Z_mod; reflexivity.
     Qed.
+
+    Lemma of_nat_add x y :
+      F.of_nat m (x + y) = (F.of_nat m x + F.of_nat m y)%F.
+    Proof. unfold F.of_nat; rewrite Nat2Z.inj_add, F.of_Z_add; reflexivity. Qed.
+
+    Lemma of_nat_mul x y :
+      F.of_nat m (x * y) = (F.of_nat m x * F.of_nat m y)%F.
+    Proof. unfold F.of_nat; rewrite Nat2Z.inj_mul, F.of_Z_mul; reflexivity. Qed.
   End FandNat.
 
   Section RingTacticGadgets.

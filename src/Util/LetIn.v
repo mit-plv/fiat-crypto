@@ -14,9 +14,11 @@ Global Instance Proper_Let_In_nd_changevalue {A B} (RA:relation A) {RB:relation 
   : Proper (RA ==> (RA ==> RB) ==> RB) (Let_In (P:=fun _=>B)).
 Proof. cbv; intuition. Qed.
 
-Lemma app_Let_In_nd {A B C} (f:B -> C) : forall (e:A) (C:A -> B),
-  f (Let_In e C) = Let_In e (fun v => f (C v)).
-Proof. cbv; intuition. Qed.
+Definition app_Let_In_nd {A B T} (f:B->T) (e:A) (C:A->B)
+  : f (Let_In e C) = Let_In e (fun v => f (C v)) := eq_refl.
+
+Definition Let_app_In_nd {A B T} (f:A->B) (e:A) (C:B->T)
+  : Let_In (f e) C = Let_In e (fun v => C (f v)) := eq_refl.
 
 Class _call_let_in_to_Let_In {T} (e:T) := _let_in_to_Let_In_return : T.
 (* : forall T, gallina T -> gallina T, structurally recursive in the argument *)

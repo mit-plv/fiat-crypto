@@ -5,13 +5,10 @@ Require Import Crypto.Algebra. Import Group ScalarMult.
 Require Import Crypto.Util.Decidable Crypto.Util.Option Crypto.Util.Tactics.
 Require Import Coq.omega.Omega.
 Require Import Crypto.Util.Notations.
-Require Import Crypto.Util.Option Crypto.Util.Logic Crypto.Util.Relations Crypto.Util.WordUtil.
+Require Import Crypto.Util.Option Crypto.Util.Logic Crypto.Util.Relations Crypto.Util.WordUtil Util.LetIn.
 Require Import Crypto.Spec.ModularArithmetic Crypto.ModularArithmetic.PrimeFieldTheorems.
 
-Module Import NotationsFor8485.
-  Import NPeano Nat.
-  Infix "mod" := modulo.
-End NotationsFor8485.
+Import Notations.
 
 Section EdDSA.
   Context `{prm:EdDSA}.
@@ -55,7 +52,7 @@ Section EdDSA.
   Context {Sdec:word b-> option (F l)} {eq_enc_S_iff: forall n_ n, Senc n = n_ <-> Sdec n_ = Some n}.
 
   Local Infix "++" := combine.
-  Definition verify_sig : { verify | forall mlen (message:word mlen) (pk:word b) (sig:word (b+b)),
+  Definition verify'_sig : { verify | forall mlen (message:word mlen) (pk:word b) (sig:word (b+b)),
       verify mlen message pk sig = true <-> valid message pk sig }.
   Proof.
     eexists; intros; set_evars.
@@ -91,11 +88,11 @@ Section EdDSA.
          unify f term; reflexivity
     end.
   Defined.
-  Definition verify {mlen} (message:word mlen) (pk:word b) (sig:word (b+b)) : bool :=
-    Eval cbv [proj1_sig verify_sig] in proj1_sig verify_sig mlen message pk sig.
-  Lemma verify_correct : forall {mlen} (message:word mlen) pk sig,
-    verify message pk sig = true <-> valid message pk sig.
-  Proof. exact (proj2_sig verify_sig). Qed.
+  Definition verify' {mlen} (message:word mlen) (pk:word b) (sig:word (b+b)) : bool :=
+    Eval cbv [proj1_sig verify'_sig] in proj1_sig verify'_sig mlen message pk sig.
+  Lemma verify'_correct : forall {mlen} (message:word mlen) pk sig,
+    verify' message pk sig = true <-> valid message pk sig.
+  Proof. exact (proj2_sig verify'_sig). Qed.
 
   Section ChangeRep.
     Context {Erep ErepEq ErepAdd ErepId ErepOpp} {Agroup:@group Erep ErepEq ErepAdd ErepId ErepOpp}.
@@ -121,12 +118,12 @@ Section EdDSA.
 
     Definition verify_using_representation
                {mlen} (message:word mlen) (pk:word b) (sig:word (b+b))
-               : { answer | answer = verify message pk sig }.
+               : { answer | answer = verify' message pk sig }.
     Proof.
+      eexists.
       pose proof EdDSA_l_odd.
       assert (l_pos:(0 < l)%Z) by omega.
-      eexists.
-      cbv [verify].
+      cbv [verify'].
 
       etransitivity. Focus 2. {
         eapply Proper_option_rect_nd_changebody; [intro|reflexivity].
@@ -184,5 +181,102 @@ Section EdDSA.
 
       reflexivity.
     Defined.
+    
+    Definition verify {mlen} (msg:word mlen) pk sig :=
+      Eval cbv beta iota delta [proj1_sig verify_using_representation] in
+      proj1_sig (verify_using_representation msg pk sig).
+    Lemma verify_correct {mlen} (msg:word mlen) pk sig : verify msg pk sig = true <-> valid msg pk sig.
+    Proof.
+      etransitivity; [|eapply (verify'_correct msg pk sig)].
+      eapply iff_R_R_same_r, (proj2_sig (verify_using_representation _ _ _)).
+    Qed.
+
+    Context {SRepEnc : SRep -> word b}
+            {SRepEnc_correct : forall x, Senc x = SRepEnc (S2Rep x)}
+            {Proper_SRepEnc:Proper (SRepEq==>Logic.eq) SRepEnc}.
+    Context {SRepAdd : SRep -> SRep -> SRep}
+            {SRepAdd_correct : forall x y, SRepEq (S2Rep (x+y)%F) (SRepAdd (S2Rep x) (S2Rep y)) }
+            {Proper_SRepAdd:Proper (SRepEq==>SRepEq==>SRepEq) SRepAdd}.
+    Context {SRepMul : SRep -> SRep -> SRep}
+            {SRepMul_correct : forall x y, SRepEq (S2Rep (x*y)%F) (SRepMul (S2Rep x) (S2Rep y)) }
+            {Proper_SRepMul:Proper (SRepEq==>SRepEq==>SRepEq) SRepMul}.
+    Context {ErepB:Erep} {ErepB_correct:ErepEq ErepB (EToRep B)}.
+
+    Context {wbRepKeepLow wbRepClearLow wbRepClearBit wbRepSetBit:nat->word b->word b}.
+    Context {wbRepSetBit_correct : forall n x, wordToNat (wbRepSetBit n x) = setbit (wordToNat x) n}.
+    Context {wbRepClearLow_correct : forall c x, wordToNat (wbRepClearLow c x) = wordToNat x - wordToNat x mod 2 ^ c}.
+    Context {wbRepKeepLow_correct : forall n x, wordToNat (wbRepKeepLow n x) = (wordToNat x) mod (2^n)}.
+    Context {SRepDecModLShort} {SRepDecModLShort_correct: forall (w:word b), SRepEq (S2Rep (F.of_nat _ (wordToNat w))) (SRepDecModLShort w)}.
+
+    (* We would ideally derive the optimized implementations from
+    specifications using `setoid_rewrite`, but doing this without
+    inlining let-bound subexpressions turned out to be quite messy in
+    the current state of Coq: <https://github.com/mit-plv/fiat-crypto/issues/64> *)
+
+    Definition splitSecretPrngCurve (sk:word b) : SRep * word b :=
+      dlet hsk := H _ sk in
+      dlet curveKey := SRepDecModLShort (wbRepSetBit n (wbRepClearLow c (wbRepKeepLow n (split1 b b hsk)))) in
+      dlet prngKey := split2 b b hsk in
+      (curveKey, prngKey).
+
+    (* TODO: prove these, somewhere *)
+    Axiom wordToNat_split1 : forall a b w, wordToNat (split1 a b w) = (wordToNat w) mod (2^a).
+    Axiom wordToNat_wfirstn : forall a b w H, wordToNat (@wfirstn a b w H) = (wordToNat w) mod (2^a).
+    Axiom nat_mod_smaller_power_of_two : forall n b:nat,
+      (n <= b -> forall x:nat, (x mod 2 ^ b) mod 2 ^ n = (x mod 2^n))%nat.
+
+    Lemma splitSecretPrngCurve_correct sk :
+      let (s, r) := splitSecretPrngCurve sk in
+      SRepEq s (S2Rep (F.of_nat l (curveKey sk))) /\ r = prngKey (H:=H) sk.
+    Proof.
+      cbv [splitSecretPrngCurve EdDSA.curveKey EdDSA.prngKey Let_In]; split;
+        repeat (
+            reflexivity
+            || rewrite <-SRepDecModLShort_correct
+            || rewrite wbRepSetBit_correct
+            || rewrite wbRepClearLow_correct
+            || rewrite wbRepKeepLow_correct
+            || rewrite wordToNat_split1
+            || rewrite wordToNat_wfirstn
+            || rewrite nat_mod_smaller_power_of_two by (destruct prm; omega)
+          ).
+    Qed.
+
+    Definition sign (pk sk : word b) {mlen} (msg:word mlen) :=
+      dlet sp := splitSecretPrngCurve sk in
+      dlet s := fst sp in
+      dlet p := snd sp in
+      dlet r := SRepDecModL (H _ (p ++ msg)) in
+      dlet R := SRepERepMul r ErepB in
+      dlet S := SRepAdd r (SRepMul (SRepDecModL (H _ (ERepEnc R ++ pk ++ msg))) s) in
+      ERepEnc R ++ SRepEnc S.
+
+    Lemma sign_correct (pk sk : word b) {mlen} (msg:word mlen)
+               : sign pk sk msg = EdDSA.sign pk sk msg.
+    Proof.
+      cbv [sign EdDSA.sign Let_In].
+
+      let H := fresh "H" in 
+      pose proof (splitSecretPrngCurve_correct sk) as H;
+        destruct (splitSecretPrngCurve sk);
+        destruct H as [curveKey_correct prngKey_correct].
+
+      repeat (
+          reflexivity
+          || rewrite ERepEnc_correct
+          || rewrite SRepEnc_correct
+          || rewrite SRepDecModL_correct
+          || rewrite SRepERepMul_correct
+          || rewrite (F.of_nat_add (m:=l))
+          || rewrite (F.of_nat_mul (m:=l))
+          || rewrite SRepAdd_correct
+          || rewrite SRepMul_correct
+          || rewrite ErepB_correct
+          || rewrite <-prngKey_correct
+          || rewrite <-curveKey_correct
+          || eapply (f_equal2 (fun a b => a ++ b))
+          || f_equiv
+        ).
+    Qed.
   End ChangeRep.
 End EdDSA.
