@@ -105,6 +105,7 @@ src/Util/Isomorphism.v
 src/Util/IterAssocOp.v
 src/Util/LetIn.v
 src/Util/ListUtil.v
+src/Util/LockedLet.v
 src/Util/Logic.v
 src/Util/NatUtil.v
 src/Util/Notations.v
