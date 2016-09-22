@@ -156,4 +156,4 @@ Definition example_expr_compiled
       | None => True
       end.
 
-Compute register_reassign Pos.eqb empty empty example_expr_compiled (Some 1%positive :: Some 2%positive :: None :: List.map Some (List.map Pos.of_nat (seq 3 20))).
+Compute register_reassign Pos.eqb empty empty example_expr_compiled (Some 1%positive :: Some 2%positive :: None :: List.map (@Some _) (List.map Pos.of_nat (seq 3 20))).
