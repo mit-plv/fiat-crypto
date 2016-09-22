@@ -6,16 +6,21 @@ Section expression.
   Context (ops : fancy_machine.instructions (2 * 128)) (props : fancy_machine.arithmetic ops) (modulus : Z) (m' : Z) (Hm : modulus <> 0) (H : 0 <= modulus < 2^256) (Hm' : 0 <= m' < 2^256).
   Let H' : 0 <= 256 <= 256. omega. Qed.
   Let H'' : 0 < 256. omega. Qed.
-  Let props' := ZLikeProperties_of_ArchitectureBoundedOps ops modulus H 256 H' H''.
-  Let ops' := (ZLikeOps_of_ArchitectureBoundedOps ops modulus 256).
-  Local Notation fst' := (@fst fancy_machine.W fancy_machine.W).
-  Local Notation snd' := (@snd fancy_machine.W fancy_machine.W).
   Definition ldi' : load_immediate
                      (@ZBounded.SmallT (2 ^ 256) (2 ^ 256) modulus
                                        (@ZLikeOps_of_ArchitectureBoundedOps 128 ops modulus 256)) := _.
   Let isldi : is_load_immediate ldi' := _.
-  Definition pre_f := (fun v => (reduce_via_partial (2^256) modulus (props := props') (ldi' m') I Hm (fst' v, snd' v))).
-  Definition f := (fun v => proj1_sig (pre_f v)).
+  Let props'
+      ldi_modulus ldi_0 Hldi_modulus Hldi_0
+    := ZLikeProperties_of_ArchitectureBoundedOps_Factored ops modulus ldi_modulus ldi_0 Hldi_modulus Hldi_0 H 256 H' H''.
+  Definition pre_f' ldi_modulus ldi_0 Hldi_modulus Hldi_0 lm'
+    := (fun v => (reduce_via_partial (2^256) modulus (props := props' ldi_modulus ldi_0 Hldi_modulus Hldi_0) lm' I Hm (fst v, snd v))).
+  Definition pre_f := pre_f' _ _ eq_refl eq_refl (ldi' m').
+
+  Definition f := (fun v => pflet ldi_modulus, Hldi_modulus := ldi' modulus in
+                            dlet lm' := ldi' m' in
+                            pflet ldi_0, Hldi_0 := ldi' 0 in
+                            proj1_sig (pre_f' ldi_modulus ldi_0 Hldi_modulus Hldi_0 lm' v)).
 
   Local Arguments proj1_sig _ _ !_ / .
   Local Arguments ZBounded.CarryAdd / .
@@ -24,21 +29,18 @@ Section expression.
   Local Arguments ZLikeOps_of_ArchitectureBoundedOps / .
   Local Arguments ZBounded.DivBy_SmallBound / .
   Local Arguments f / .
-  Local Arguments pre_f / .
+  Local Arguments pre_f' / .
   Local Arguments ldi' / .
   Local Arguments reduce_via_partial / .
   Local Arguments DoubleBounded.mul_double / .
-  Local Opaque Let_In.
+  Local Opaque Let_In Let_In_pf.
 
   Definition expression'
     := Eval simpl in f.
-  Local Transparent Let_In.
+  Local Transparent Let_In Let_In_pf.
   Definition expression
-    := Eval cbv beta delta [expression' fst snd Let_In] in
-        fun v => let RegMod := fancy_machine.ldi modulus in
-                 let RegPInv := fancy_machine.ldi m' in
-                 let RegZero := fancy_machine.ldi 0 in
-                 expression' v.
+    := Eval cbv beta delta [expression' fst snd Let_In Let_In_pf] in expression'.
+
   Definition expression_eq v : fancy_machine.decode (expression v) = _
     := proj1 (proj2_sig (pre_f v) I).
   Definition expression_correct
@@ -46,7 +48,7 @@ Section expression.
              v
              Hv
     : fancy_machine.decode (expression v) = _
-    := @ZBounded.reduce_via_partial_correct (2^256) modulus _ props' (ldi' m') I Hm R' HR0 HR1 (fst v, snd v) I Hv.
+    := @ZBounded.reduce_via_partial_correct (2^256) modulus _ (props' _ _ eq_refl eq_refl) (ldi' m') I Hm R' HR0 HR1 (fst v, snd v) I Hv.
 End expression.
 
 Section reflected.

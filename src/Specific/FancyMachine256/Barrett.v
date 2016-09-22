@@ -20,11 +20,6 @@ Section expression.
   Context (H : 0 <= m < 2^256).
   Let H' : 0 <= 250 <= 256. omega. Qed.
   Let H'' : 0 < 250. omega. Qed.
-  Let props' := ZLikeProperties_of_ArchitectureBoundedOps ops m H 250 H' H''.
-  Let ops' := (ZLikeOps_of_ArchitectureBoundedOps ops m 250).
-  Local Existing Instances props' ops'.
-  Local Notation fst' := (@fst fancy_machine.W fancy_machine.W).
-  Local Notation snd' := (@snd fancy_machine.W fancy_machine.W).
   Local Notation SmallT := (@ZBounded.SmallT (2 ^ 256) (2 ^ 250) m
                                   (@ZLikeOps_of_ArchitectureBoundedOps 128 ops m _)).
   Definition ldi' : load_immediate SmallT := _.
@@ -38,24 +33,29 @@ Section expression.
     rewrite μ_good; apply μ_range.
   Qed.
 
-  Definition pre_f v
-    := (@barrett_reduce m b k μ offset m_pos base_pos μ_good offset_nonneg k_big_enough m_small m_large ops' props' μ' I μ'_eq (fst' v, snd' v)).
+  Let props'
+      ldi_modulus ldi_0 Hldi_modulus Hldi_0
+    := ZLikeProperties_of_ArchitectureBoundedOps_Factored ops m ldi_modulus ldi_0 Hldi_modulus Hldi_0 H 250 H' H''.
+
+  Definition pre_f' ldi_modulus ldi_0 ldi_μ Hldi_modulus Hldi_0 (Hldi_μ : ldi_μ = ldi' μ)
+    := (fun v => (@barrett_reduce m b k μ offset m_pos base_pos μ_good offset_nonneg k_big_enough m_small m_large _ (props' ldi_modulus ldi_0 Hldi_modulus Hldi_0) ldi_μ I (eq_trans (f_equal _ Hldi_μ) μ'_eq)  (fst v, snd v))).
+
+  Definition pre_f := pre_f' _ _ _ eq_refl eq_refl eq_refl.
 
   Local Arguments μ' / .
   Local Arguments ldi' / .
   Local Arguments DoubleBounded.mul_double / .
-  Local Opaque Let_In.
+  Local Opaque Let_In Let_In_pf.
 
   Definition expression'
     := Eval simpl in
-        (fun v => proj1_sig (pre_f v)).
-  Local Transparent Let_In.
+        (fun v => pflet ldi_modulus, Hldi_modulus := fancy_machine.ldi m in
+                  pflet ldi_μ, Hldi_μ := fancy_machine.ldi μ in
+                  pflet ldi_0, Hldi_0 := fancy_machine.ldi 0 in
+                  proj1_sig (pre_f' ldi_modulus ldi_0 ldi_μ Hldi_modulus Hldi_0 Hldi_μ v)).
+  Local Transparent Let_In Let_In_pf.
   Definition expression
-    := Eval cbv beta iota delta [expression' fst snd Let_In] in
-        fun v => let RegMod := fancy_machine.ldi m in
-                 let RegMu := fancy_machine.ldi μ in
-                 let RegZero := fancy_machine.ldi 0 in
-                 expression' v.
+    := Eval cbv beta iota delta [expression' fst snd Let_In Let_In_pf] in expression'.
 
   Definition expression_eq v (H : 0 <= _ < _) : fancy_machine.decode (expression v) = _
     := proj1 (proj2_sig (pre_f v) H).
