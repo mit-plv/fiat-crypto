@@ -1,4 +1,4 @@
-Require Import Zpower ZArith.
+Require Import Coq.ZArith.Zpower Coq.ZArith.ZArith.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ZUtil.
 Require Crypto.BaseSystem.
@@ -23,7 +23,7 @@ Section Pow2Base.
 
   Definition upper_bound := 2 ^ (sum_firstn limb_widths (length limb_widths)).
 
-  Fixpoint decode_bitwise' us i acc :=
+  Function decode_bitwise' us i acc :=
     match i with
     | O => acc
     | S i' => decode_bitwise' us i' (Z.lor (nth_default 0 us i') (Z.shiftl acc w[i']))
@@ -80,6 +80,8 @@ Section Pow2Base.
     Definition carry_simple_full := carry_simple_sequence full_carry_chain.
 
     Definition carry_simple_add us vs := carry_simple_full (BaseSystem.add us vs).
+
+    Definition carry_simple_sub us vs := carry_simple_full (BaseSystem.sub us vs).
 
     Definition carry_simple_mul out_base us vs := carry_simple_full (BaseSystem.mul out_base us vs).
   End carrying.

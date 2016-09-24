@@ -1,5 +1,5 @@
 Require Import Coq.Classes.Morphisms.
-Require Import Relation_Definitions.
+Require Import Coq.Relations.Relation_Definitions.
 Require Import Crypto.Util.Decidable.
 
 Definition sumwise {A B} (RA:relation A) (RB : relation B) : relation (A + B)

@@ -91,6 +91,8 @@ Global Instance dec_eq_unit : DecidableRel (@eq unit) | 10. exact _. Defined.
 Global Instance dec_eq_bool : DecidableRel (@eq bool) | 10. exact _. Defined.
 Global Instance dec_eq_Empty_set : DecidableRel (@eq Empty_set) | 10. exact _. Defined.
 Global Instance dec_eq_prod {A B} `{DecidableRel (@eq A), DecidableRel (@eq B)} : DecidableRel (@eq (A * B)) | 10. exact _. Defined.
+Global Instance dec_eq_option {A} `{DecidableRel (@eq A)} : DecidableRel (@eq (option A)) | 10. exact _. Defined.
+Global Instance dec_eq_list {A} `{DecidableRel (@eq A)} : DecidableRel (@eq (list A)) | 10. exact _. Defined.
 Global Instance dec_eq_sum {A B} `{DecidableRel (@eq A), DecidableRel (@eq B)} : DecidableRel (@eq (A + B)) | 10. exact _. Defined.
 Global Instance dec_eq_sigT_hprop {A P} `{DecidableRel (@eq A), forall a : A, IsHProp (P a)} : DecidableRel (@eq (@sigT A P)) | 10. exact _. Defined.
 Global Instance dec_eq_sig_hprop {A} {P : A -> Prop} `{DecidableRel (@eq A), forall a : A, IsHProp (P a)} : DecidableRel (@eq (@sig A P)) | 10. exact _. Defined.
@@ -100,7 +102,7 @@ Global Instance dec_eq_Z : DecidableRel (@eq Z) | 10 := Z.eq_dec.
 
 Lemma not_not P {d:Decidable P} : not (not P) <-> P.
 Proof. destruct (dec P); intuition. Qed.
-  
+
 Global Instance dec_ex_forall_not T (P:T->Prop) {d:Decidable (exists b, P b)} : Decidable (forall b, ~ P b).
 Proof.
   destruct (dec (~ exists b, P b)) as [Hd|Hd]; [left|right];
@@ -119,6 +121,13 @@ Proof. solve_decidable_transparent. Defined.
 
 Lemma Decidable_iff_to_flip_impl A B (H : A <-> B) : Decidable B -> Decidable A.
 Proof. solve_decidable_transparent. Defined.
+
+Lemma dec_of_semidec {P : Prop} (H : option P) (H_complete : H = None -> ~P) : Decidable P.
+Proof. destruct H; [ left; assumption | right; apply H_complete, eq_refl ]. Defined.
+
+Lemma dec_rel_of_semidec_rel {A} {R : A -> A -> Prop} (H : forall x y, option (R x y))
+      (H_complete : forall x y, H x y = None -> ~R x y) : DecidableRel R.
+Proof. eauto using dec_of_semidec. Defined.
 
 Lemma dec_bool : forall {P} {Pdec:Decidable P}, (if dec P then true else false) = true -> P.
 Proof. intros. destruct dec; solve [ auto | discriminate ]. Qed.

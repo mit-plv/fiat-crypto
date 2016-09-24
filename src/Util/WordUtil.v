@@ -59,3 +59,7 @@ Definition wfirstn n {m} (w : Word.word m) {H : n <= m} : Word.word n.
   refine (Word.split1 n (m - n) (match _ in _ = N return Word.word N with
                             | eq_refl => w
                             end)); abstract omega. Defined.
+
+Lemma combine_eq_iff {a b} (A:word a) (B:word b) C :
+  combine A B = C <-> A = split1 a b C /\ B = split2 a b C.
+Proof. intuition; subst; auto using split1_combine, split2_combine, combine_split. Qed.

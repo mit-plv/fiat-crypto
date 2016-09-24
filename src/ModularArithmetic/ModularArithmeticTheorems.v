@@ -139,6 +139,50 @@ Module F.
     Qed.
   End FandZ.
 
+  Section FandNat.
+    Import NPeano Nat.
+    Local Infix "mod" := modulo : nat_scope.
+    Local Open Scope nat_scope.
+
+    Context {m} (m_pos: (0 < m)%Z).
+    Let to_nat_m_nonzero : Z.to_nat m <> 0.
+      rewrite Z2Nat.inj_lt in m_pos; omega.
+    Qed.
+
+    Lemma to_nat_of_nat (n:nat) : F.to_nat (F.of_nat m n) = (n mod (Z.to_nat m))%nat.
+    Proof.
+      unfold F.to_nat, F.of_nat.
+      rewrite F.to_Z_of_Z.
+      pose proof (mod_Zmod n (Z.to_nat m) to_nat_m_nonzero) as Hmod.
+      rewrite Z2Nat.id in Hmod by omega.
+      rewrite <- Hmod.
+      rewrite <-Nat2Z.id by omega.
+      reflexivity.
+    Qed.
+
+    Lemma of_nat_to_nat x : F.of_nat m (F.to_nat x) = x.
+      unfold F.to_nat, F.of_nat.
+      rewrite Z2Nat.id; [ eapply F.of_Z_to_Z | eapply F.to_Z_range; trivial].
+    Qed.
+
+    Lemma of_nat_mod (n:nat) : F.of_nat m (n mod (Z.to_nat m)) = F.of_nat m n.
+    Proof.
+      unfold F.of_nat.
+      replace (Z.of_nat (n mod Z.to_nat m)) with(Z.of_nat n mod Z.of_nat (Z.to_nat m))%Z
+        by (symmetry; eapply (mod_Zmod n (Z.to_nat m) to_nat_m_nonzero)).
+      rewrite Z2Nat.id by omega.
+      rewrite <-F.of_Z_mod; reflexivity.
+    Qed.
+
+    Lemma of_nat_add x y :
+      F.of_nat m (x + y) = (F.of_nat m x + F.of_nat m y)%F.
+    Proof. unfold F.of_nat; rewrite Nat2Z.inj_add, F.of_Z_add; reflexivity. Qed.
+
+    Lemma of_nat_mul x y :
+      F.of_nat m (x * y) = (F.of_nat m x * F.of_nat m y)%F.
+    Proof. unfold F.of_nat; rewrite Nat2Z.inj_mul, F.of_Z_mul; reflexivity. Qed.
+  End FandNat.
+
   Section RingTacticGadgets.
     Context (m:Z).
 

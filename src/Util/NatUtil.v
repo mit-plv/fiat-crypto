@@ -3,12 +3,16 @@ Require Import Coq.Numbers.Natural.Peano.NPeano Coq.omega.Omega.
 Require Import Coq.micromega.Psatz.
 Import Nat.
 
+Scheme Equality for nat.
+
 Create HintDb natsimplify discriminated.
 
 Hint Resolve mod_bound_pos plus_le_compat : arith.
 Hint Resolve (fun x y p q => proj1 (@Nat.mod_bound_pos x y p q)) (fun x y p q => proj2 (@Nat.mod_bound_pos x y p q)) : arith.
 
 Hint Rewrite @mod_small @mod_mod @mod_1_l @mod_1_r succ_pred using omega : natsimplify.
+
+Hint Rewrite sub_diag add_0_l add_0_r sub_0_r sub_succ : natsimplify.
 
 Local Open Scope nat_scope.
 
@@ -64,7 +68,7 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma pred_mod : forall m, (0 < m)%nat -> ((pred m) mod m)%nat = pred m. 
+Lemma pred_mod : forall m, (0 < m)%nat -> ((pred m) mod m)%nat = pred m.
 Proof.
   intros; apply Nat.mod_small.
   destruct m; try omega; rewrite Nat.pred_succ; auto.
@@ -289,3 +293,15 @@ Proof.
   apply f_equal, le_unique.
 Qed.
 Hint Rewrite le_dec_pred_plus_same : natsimplify.
+
+Lemma minus_S_diag x : (S x - x = 1)%nat.
+Proof. omega. Qed.
+Hint Rewrite minus_S_diag : natsimplify.
+
+Lemma min_idempotent_S_l x : min (S x) x = x.
+Proof. omega *. Qed.
+Hint Rewrite min_idempotent_S_l : natsimplify.
+
+Lemma min_idempotent_S_r x : min x (S x) = x.
+Proof. omega *. Qed.
+Hint Rewrite min_idempotent_S_r : natsimplify.

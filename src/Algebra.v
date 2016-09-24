@@ -1,11 +1,15 @@
+Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.Decidable.
+
 Require Import Coq.Classes.Morphisms. Require Coq.Setoids.Setoid.
 Require Import Crypto.Util.Tactics.
-Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Notations.
-Require Coq.Numbers.Natural.Peano.NPeano.
-Local Close Scope nat_scope. Local Close Scope type_scope. Local Close Scope core_scope.
+
+Require Coq.setoid_ring.Field_theory.
 Require Crypto.Tactics.Algebra_syntax.Nsatz.
-Require Export Crypto.Util.FixCoqMistakes.
+Require Coq.Numbers.Natural.Peano.NPeano.
+
+Local Close Scope nat_scope. Local Close Scope type_scope. Local Close Scope core_scope.
 
 Module Import ModuloCoq8485.
   Import NPeano Nat.
@@ -33,14 +37,12 @@ Section Algebra.
         monoid_is_right_identity : is_right_identity;
 
         monoid_op_Proper: Proper (respectful eq (respectful eq eq)) op;
-        monoid_Equivalence : Equivalence eq;
-        monoid_is_eq_dec : DecidableRel eq
+        monoid_Equivalence : Equivalence eq
       }.
     Global Existing Instance monoid_is_associative.
     Global Existing Instance monoid_is_left_identity.
     Global Existing Instance monoid_is_right_identity.
     Global Existing Instance monoid_Equivalence.
-    Global Existing Instance monoid_is_eq_dec.
     Global Existing Instance monoid_op_Proper.
 
     Context {inv:T->T}.
@@ -109,18 +111,19 @@ Section Algebra.
     Global Existing Instance commutative_ring_ring.
     Global Existing Instance commutative_ring_is_commutative.
 
-    Class is_mul_nonzero_nonzero := { mul_nonzero_nonzero : forall x y, x<>0 -> y<>0 -> x*y<>0 }.
+    Class is_zero_product_zero_factor :=
+      { zero_product_zero_factor : forall x y, x*y = 0 -> x = 0 \/ y = 0 }.
 
     Class is_zero_neq_one := { zero_neq_one : zero <> one }.
 
     Class integral_domain :=
       {
         integral_domain_commutative_ring : commutative_ring;
-        integral_domain_is_mul_nonzero_nonzero : is_mul_nonzero_nonzero;
+        integral_domain_is_zero_product_zero_factor : is_zero_product_zero_factor;
         integral_domain_is_zero_neq_one : is_zero_neq_one
       }.
     Global Existing Instance integral_domain_commutative_ring.
-    Global Existing Instance integral_domain_is_mul_nonzero_nonzero.
+    Global Existing Instance integral_domain_is_zero_product_zero_factor.
     Global Existing Instance integral_domain_is_zero_neq_one.
 
     Context {inv:T->T} {div:T->T->T}.
@@ -130,7 +133,7 @@ Section Algebra.
       {
         field_commutative_ring : commutative_ring;
         field_is_left_multiplicative_inverse : is_left_multiplicative_inverse;
-        field_domain_is_zero_neq_one : is_zero_neq_one;
+        field_is_zero_neq_one : is_zero_neq_one;
 
         field_div_definition : forall x y , div x y = x * inv y;
 
@@ -139,7 +142,7 @@ Section Algebra.
       }.
     Global Existing Instance field_commutative_ring.
     Global Existing Instance field_is_left_multiplicative_inverse.
-    Global Existing Instance field_domain_is_zero_neq_one.
+    Global Existing Instance field_is_zero_neq_one.
     Global Existing Instance field_inv_Proper.
     Global Existing Instance field_div_Proper.
   End AddMul.
@@ -257,6 +260,13 @@ Module Group.
       apply inv_id.
     Qed.
 
+    Lemma eq_r_opp_r_inv a b c : a = op c (inv b) <-> op a b = c.
+    Proof.
+      split; intro Hx; rewrite Hx || rewrite <-Hx;
+        rewrite <-!associative, ?left_inverse, ?right_inverse, right_identity;
+        reflexivity.
+    Qed.
+
     Section ZeroNeqOne.
       Context {one} `{is_zero_neq_one T eq id one}.
       Lemma opp_one_neq_zero : inv one <> id.
@@ -288,9 +298,11 @@ Module Group.
       rewrite cancel_left in Hii; exact Hii.
     Qed.
 
-    Lemma homomorphism_inv : forall x, phi (INV x) = inv (phi x).
+    Lemma homomorphism_inv x : phi (INV x) = inv (phi x).
     Proof.
-    Admitted.
+      apply inv_unique.
+      rewrite <- homomorphism, left_inverse, homomorphism_id; reflexivity.
+    Qed.
   End Homomorphism.
 
   Section GroupByHomomorphism.
@@ -365,14 +377,12 @@ Module ScalarMult.
 
     Global Instance Proper_scalarmult_ref : Proper (Logic.eq==>eq==>eq) scalarmult_ref.
     Proof.
-      repeat intro; subst; 
-        match goal with [n:nat |- _ ] =>
-                        solve [induction n; simpl scalarmult_ref; rewrite_hyp ?*; reflexivity]
-        end.
+      repeat intro; subst.
+      match goal with [n:nat |- _ ] => induction n; simpl @scalarmult_ref; [reflexivity|] end.
+      repeat match goal with [H:_ |- _ ] => rewrite H end; reflexivity.
     Qed.
 
     Lemma scalarmult_ext : forall n P, mul n P = scalarmult_ref n P.
-    Proof.
       induction n; simpl @scalarmult_ref; intros; rewrite <-?IHn; (apply scalarmult_0_l || apply scalarmult_S_l).
     Qed.
 
@@ -505,6 +515,13 @@ Module Ring.
       eapply Group.cancel_left, mul_opp_l.
     Qed.
 
+    Lemma zero_product_iff_zero_factor {Hzpzf:@is_zero_product_zero_factor T eq zero mul} :
+      forall x y : T, eq (mul x y) zero <-> eq x zero \/ eq y zero.
+    Proof.
+      split; eauto using zero_product_zero_factor; [].
+      intros [Hz|Hz]; rewrite Hz; eauto using mul_0_l, mul_0_r.
+    Qed.
+
     Global Instance Ncring_Ring_ops : @Ncring.Ring_ops T zero one add mul sub opp eq.
     Global Instance Ncring_Ring : @Ncring.Ring T zero one add mul sub opp eq Ncring_Ring_ops.
     Proof.
@@ -600,34 +617,18 @@ Module IntegralDomain.
   Section IntegralDomain.
     Context {T eq zero one opp add sub mul} `{@integral_domain T eq zero one opp add sub mul}.
 
-    Lemma mul_nonzero_nonzero_cases (x y : T)
-      : eq (mul x y) zero -> eq x zero \/ eq y zero.
-    Proof.
-      pose proof mul_nonzero_nonzero x y.
-      destruct (dec (eq x zero)); destruct (dec (eq y zero)); intuition.
-    Qed.
-
-    Lemma mul_nonzero_nonzero_iff (x y : T)
-      : ~eq (mul x y) zero <-> ~eq x zero /\ ~eq y zero.
-    Proof.
-      split.
-      { intro H0; split; intro H1; apply H0; rewrite H1.
-        { apply Ring.mul_0_l. }
-        { apply Ring.mul_0_r. } }
-      { intros [? ?] ?; edestruct mul_nonzero_nonzero_cases; eauto with nocore. }
-    Qed.
+    Lemma nonzero_product_iff_nonzero_factors :
+      forall x y : T, ~ eq (mul x y) zero <-> ~ eq x zero /\ ~ eq y zero.
+    Proof. setoid_rewrite Ring.zero_product_iff_zero_factor; intuition. Qed.
 
     Global Instance Integral_domain :
       @Integral_domain.Integral_domain T zero one add mul sub opp eq Ring.Ncring_Ring_ops
                                        Ring.Ncring_Ring Ring.Cring_Cring_commutative_ring.
-    Proof.
-      split; dropRingSyntax.
-      - auto using mul_nonzero_nonzero_cases.
-      - intro bad; symmetry in bad; auto using zero_neq_one.
-    Qed.
+    Proof. split; dropRingSyntax; eauto using zero_product_zero_factor, one_neq_zero. Qed.
   End IntegralDomain.
 End IntegralDomain.
 
+Require Coq.setoid_ring.Field_theory.
 Module Field.
   Section Field.
     Context {T eq zero one opp add mul sub inv div} `{@field T eq zero one opp add sub mul inv div}.
@@ -640,21 +641,6 @@ Module Field.
       intros. rewrite commutative. auto using left_multiplicative_inverse.
     Qed.
 
-    Global Instance is_mul_nonzero_nonzero : @is_mul_nonzero_nonzero T eq 0 mul.
-    Proof.
-      constructor. intros x y Hx Hy Hxy.
-      assert (0 = (inv y * (inv x * x)) * y) as H00. (rewrite <-!associative, Hxy, !Ring.mul_0_r; reflexivity).
-      rewrite left_multiplicative_inverse in H00 by assumption.
-      rewrite right_identity in H00.
-      rewrite left_multiplicative_inverse in H00 by assumption.
-      auto using zero_neq_one.
-    Qed.
-
-    Global Instance integral_domain : @integral_domain T eq zero one opp add sub mul.
-    Proof.
-      split; auto using field_commutative_ring, field_domain_is_zero_neq_one, is_mul_nonzero_nonzero.
-    Qed.
-
     Lemma inv_unique x ix : ix * x = one -> ix = inv x.
     Proof.
       intro Hix.
@@ -665,7 +651,19 @@ Module Field.
         apply zero_neq_one. assumption.
     Qed.
 
-    Require Coq.setoid_ring.Field_theory.
+    Lemma mul_cancel_l_iff : forall x y, y <> 0 ->
+                                         (x * y = y <-> x = one).
+    Proof.
+      intros.
+      split; intros.
+      + rewrite <-(right_multiplicative_inverse y) by assumption.
+        rewrite <-H1 at 1; rewrite <-associative.
+        rewrite right_multiplicative_inverse by assumption.
+        rewrite right_identity.
+        reflexivity.
+      + rewrite H1; apply left_identity.
+    Qed.
+
     Lemma field_theory_for_stdlib_tactic : Field_theory.field_theory 0 1 add mul sub opp div inv eq.
     Proof.
       constructor.
@@ -675,11 +673,27 @@ Module Field.
       { apply left_multiplicative_inverse. }
     Qed.
 
+    Context (eq_dec:DecidableRel eq).
+
+    Global Instance is_mul_nonzero_nonzero : @is_zero_product_zero_factor T eq 0 mul.
+    Proof.
+      split. intros x y Hxy.
+      eapply not_not; try typeclasses eauto; []; intuition idtac; eapply zero_neq_one.
+      transitivity ((inv y * (inv x * x)) * y).
+      - rewrite <-!associative, Hxy, !Ring.mul_0_r; reflexivity.
+      - rewrite left_multiplicative_inverse, right_identity, left_multiplicative_inverse by trivial.
+        reflexivity.
+    Qed.
+
+    Global Instance integral_domain : @integral_domain T eq zero one opp add sub mul.
+    Proof.
+      split; auto using field_commutative_ring, field_is_zero_neq_one, is_mul_nonzero_nonzero.
+    Qed.
   End Field.
 
   Lemma isomorphism_to_subfield_field
         {T EQ ZERO ONE OPP ADD SUB MUL INV DIV}
-        {Equivalence_EQ: @Equivalence T EQ} {eq_dec: DecidableRel EQ}
+        {Equivalence_EQ: @Equivalence T EQ}
         {Proper_OPP:Proper(EQ==>EQ)OPP}
         {Proper_ADD:Proper(EQ==>EQ==>EQ)ADD}
         {Proper_SUB:Proper(EQ==>EQ==>EQ)SUB}
@@ -754,7 +768,7 @@ Module Field.
           field_inv_Proper, field_div_Proper].
       + apply left_multiplicative_inverse.
         symmetry in EQ_zero. rewrite EQ_zero. assumption.
-      + eapply field_domain_is_zero_neq_one; eauto.
+      + eapply field_is_zero_neq_one; eauto.
   Qed.
 
   Section Homomorphism.
@@ -764,39 +778,41 @@ Module Field.
     Local Infix "=" := eq. Local Infix "=" := eq : type_scope.
     Context `{@Ring.is_homomorphism F EQ ONE ADD MUL K eq one add mul phi}.
 
-    Lemma homomorphism_multiplicative_inverse_complete
-       : forall x, (EQ x ZERO -> phi (INV x) = inv (phi x))
-       -> phi (INV x) = inv (phi x).
-    Proof.
-      intros.
-      destruct (dec (EQ x ZERO)); auto.
-      assert (phi (MUL (INV x) x) = one) as A. {
-        rewrite left_multiplicative_inverse; auto using Ring.homomorphism_one.
-      }
-      rewrite Ring.homomorphism_mul in A.
-      apply inv_unique in A. assumption.
-    Qed.
-
     Lemma homomorphism_multiplicative_inverse
       : forall x, not (EQ x ZERO)
       -> phi (INV x) = inv (phi x).
     Proof.
-      intros. apply homomorphism_multiplicative_inverse_complete. contradiction.
+      intros.
+      eapply inv_unique.
+      rewrite <-Ring.homomorphism_mul.
+      rewrite left_multiplicative_inverse; auto using Ring.homomorphism_one.
     Qed.
 
-    Lemma homomorphism_div_complete
-      : forall x y, (EQ y ZERO -> phi (INV y) = inv (phi y))
-      -> phi (DIV x y) = div (phi x) (phi y).
+    Lemma homomorphism_multiplicative_inverse_complete
+          { EQ_dec : DecidableRel EQ }
+       : forall x, (EQ x ZERO -> phi (INV x) = inv (phi x))
+       -> phi (INV x) = inv (phi x).
     Proof.
-      intros. rewrite !field_div_definition.
-      rewrite Ring.homomorphism_mul, homomorphism_multiplicative_inverse_complete. reflexivity. trivial.
+      intros x ?; destruct (dec (EQ x ZERO)); auto using homomorphism_multiplicative_inverse.
     Qed.
 
     Lemma homomorphism_div
       : forall x y, not (EQ y ZERO)
       -> phi (DIV x y) = div (phi x) (phi y).
     Proof.
-      intros. apply homomorphism_div_complete. contradiction.
+      intros. rewrite !field_div_definition.
+      rewrite Ring.homomorphism_mul, homomorphism_multiplicative_inverse;
+        (eauto || reflexivity).
+    Qed.
+
+    Lemma homomorphism_div_complete
+          { EQ_dec : DecidableRel EQ }
+      : forall x y, (EQ y ZERO -> phi (INV y) = inv (phi y))
+      -> phi (DIV x y) = div (phi x) (phi y).
+    Proof.
+      intros. rewrite !field_div_definition.
+      rewrite Ring.homomorphism_mul, homomorphism_multiplicative_inverse_complete;
+        (eauto || reflexivity).
     Qed.
   End Homomorphism.
 End Field.
@@ -824,11 +840,11 @@ Ltac guess_field :=
 Ltac field_nonzero_mul_split :=
   repeat match goal with
          | [ H : ?R (?mul ?x ?y) ?zero |- _ ]
-           => apply IntegralDomain.mul_nonzero_nonzero_cases in H; destruct H
+           => apply zero_product_zero_factor in H; destruct H
          | [ |- not (?R (?mul ?x ?y) ?zero) ]
-           => apply IntegralDomain.mul_nonzero_nonzero_iff; split
+           => apply IntegralDomain.nonzero_product_iff_nonzero_factors; split
          | [ H : not (?R (?mul ?x ?y) ?zero) |- _ ]
-           => apply IntegralDomain.mul_nonzero_nonzero_iff in H; destruct H
+           => apply IntegralDomain.nonzero_product_iff_nonzero_factors in H; destruct H
          end.
 
 Ltac field_simplify_eq_if_div :=
@@ -1146,7 +1162,7 @@ Ltac neq01 :=
 Ltac combine_field_inequalities_step :=
   match goal with
   | [ H : not (?R ?x ?zero), H' : not (?R ?x' ?zero) |- _ ]
-    => pose proof (mul_nonzero_nonzero x x' H H'); clear H H'
+    => pose proof (proj2 (IntegralDomain.nonzero_product_iff_nonzero_factors x x') (conj H H')); clear H H'
   | [ H : (?X -> False)%type |- _ ]
     => change (not X) in H
   end.
@@ -1158,7 +1174,7 @@ Ltac combine_field_inequalities_step :=
 Ltac split_field_inequalities_step :=
   match goal with
   | [ H : not (?R (?mul ?x ?y) ?zero) |- _ ]
-    => apply IntegralDomain.mul_nonzero_nonzero_iff in H; destruct H
+    => apply IntegralDomain.nonzero_product_iff_nonzero_factors in H; destruct H
   end.
 Ltac split_field_inequalities :=
   canonicalize_field_inequalities;
@@ -1220,7 +1236,7 @@ Ltac super_nsatz :=
           super_nsatz_internal idtac).
 
 Section ExtraLemmas.
-  Context {F eq zero one opp add sub mul inv div} `{F_field:field F eq zero one opp add sub mul inv div}.
+  Context {F eq zero one opp add sub mul inv div} `{F_field:field F eq zero one opp add sub mul inv div} {eq_dec:DecidableRel eq}.
   Local Infix "+" := add. Local Infix "*" := mul. Local Infix "-" := sub. Local Infix "/" := div.
   Local Notation "0" := zero. Local Notation "1" := one.
   Local Infix "=" := eq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
@@ -1316,7 +1332,7 @@ Ltac only_two_square_roots :=
   end.
 
 (*** Tactics for ring equations *)
-Require Import Coq.setoid_ring.Ring_tac.
+Require Export Coq.setoid_ring.Ring_tac.
 Ltac ring_simplify_subterms := tac_on_subterms ltac:(fun t => ring_simplify t).
 
 Ltac ring_simplify_subterms_in_all :=
@@ -1331,7 +1347,7 @@ Hint Extern 1 => progress ring_simplify_subterms_in_all : ring_simplify_subterms
 
 
 Section Example.
-  Context {F zero one opp add sub mul inv div} `{F_field:field F eq zero one opp add sub mul inv div}.
+  Context {F zero one opp add sub mul inv div} {F_field:@field F eq zero one opp add sub mul inv div} {eq_dec : DecidableRel (@eq F)}.
   Local Infix "+" := add. Local Infix "*" := mul. Local Infix "-" := sub. Local Infix "/" := div.
   Local Notation "0" := zero. Local Notation "1" := one.
 
@@ -1347,8 +1363,9 @@ Section Example.
   Proof. intros. intro. nsatz_contradict. Qed.
 End Example.
 
+Require Coq.ZArith.ZArith.
 Section Z.
-  Require Import ZArith.
+  Import ZArith.
   Global Instance ring_Z : @ring Z Logic.eq 0%Z 1%Z Z.opp Z.add Z.sub Z.mul.
   Proof. repeat split; auto using Z.eq_dec with zarith typeclass_instances. Qed.
 
@@ -1359,8 +1376,8 @@ Section Z.
   Proof.
     split.
     { apply commutative_ring_Z. }
-    { constructor. intros. apply Z.neq_mul_0; auto. }
-    { constructor. discriminate. }
+    { split. intros. eapply Z.eq_mul_0; assumption. }
+    { split. discriminate. }
   Qed.
 
   Example _example_nonzero_nsatz_contradict_Z x y : Z.mul x y = (Zpos xH) -> not (x = Z0).

@@ -106,17 +106,38 @@ end function
       Let m := ((T mod R) * N') mod R.
       Let t := (T + m * N) / R.
       Definition prereduce : montgomeryZ := t.
-      Definition reduce : montgomeryZ
-        := if N <=? t then
-             prereduce - N
-           else
-             prereduce.
 
       Definition partial_reduce : montgomeryZ
         := if R <=? t then
              prereduce - N
            else
              prereduce.
+
+      Definition partial_reduce_alt : montgomeryZ
+        := let v0 := (T + m * N) in
+           let v := (v0 mod (R * R)) / R in
+           if R * R <=? v0 then
+             (v - N) mod R
+           else
+             v.
+
+      Definition reduce : montgomeryZ
+        := if N <=? t then
+             prereduce - N
+           else
+             prereduce.
+
+      Definition reduce_via_partial : montgomeryZ
+        := if N <=? partial_reduce then
+             partial_reduce - N
+           else
+             partial_reduce.
+
+      Definition reduce_via_partial_alt : montgomeryZ
+        := if N <=? partial_reduce then
+             partial_reduce - N
+           else
+             partial_reduce.
     End redc.
 
     (** * Arithmetic in Montgomery form *)

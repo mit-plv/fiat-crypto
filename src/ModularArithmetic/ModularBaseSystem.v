@@ -6,10 +6,12 @@ Require Import Crypto.BaseSystemProofs.
 Require Import Crypto.ModularArithmetic.ExtendedBaseVector.
 Require Import Crypto.ModularArithmetic.Pow2Base.
 Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParams.
+Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParamProofs.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemList.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemListProofs.
 Require Import Crypto.Util.ListUtil Crypto.Util.CaseUtil Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tuple.
+Require Import Crypto.Util.AdditionChainExponentiation.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Tactics.VerdiTactics.
 Local Open Scope Z_scope.
@@ -33,7 +35,9 @@ Section ModularBaseSystem.
   Definition mul (us vs : digits) : digits := from_list (mul [[us]] [[vs]])
     (length_mul length_to_list length_to_list).
 
-  Definition sub (modulus_multiple us vs : digits) : digits :=
+  Definition sub (modulus_multiple: digits)
+                 (modulus_multiple_correct : decode modulus_multiple = 0%F)
+                 (us vs : digits) : digits :=
    from_list (sub [[modulus_multiple]] [[us]] [[vs]])
    (length_sub length_to_list length_to_list length_to_list).
 
@@ -41,35 +45,65 @@ Section ModularBaseSystem.
 
   Definition one : digits := encode (F.of_Z _ 1).
 
-  (* Placeholder *)
-  Definition opp (x : digits) : digits := encode (F.opp (decode x)).
+  Definition opp (modulus_multiple : digits)
+                 (modulus_multiple_correct : decode modulus_multiple = 0%F)
+                 (x : digits) :
+    digits := sub modulus_multiple modulus_multiple_correct zero x.
 
-  (* Placeholder *)
-  Definition inv (x : digits) : digits := encode (F.inv (decode x)).
+  Definition pow (x : digits) (chain : list (nat * nat)) : digits :=
+    fold_chain one mul chain (x :: nil).
+
+  Definition inv (chain : list (nat * nat))
+                 (chain_correct : fold_chain 0%N N.add chain (1%N :: nil) = Z.to_N (modulus - 2))
+                 (x : digits) : digits := pow x chain.
 
   (* Placeholder *)
   Definition div (x y : digits) : digits := encode (F.div (decode x) (decode y)).
 
+  Definition carry_mul (carry_chain : list nat) (us vs : digits) : digits :=
+    from_list (carry_sequence carry_chain [[mul us vs]]) (length_carry_sequence length_to_list).
+  
   Definition rep (us : digits) (x : F modulus) := decode us = x.
   Local Notation "u ~= x" := (rep u x).
   Local Hint Unfold rep.
 
-  Definition carry_full (us : digits) : digits := from_list (carry_full [[us]])
-    (length_carry_full length_to_list).
-
-  Definition carry_mul (us vs : digits) : digits := carry_full (mul us vs).
-
-  Definition freeze (us : digits) : digits :=
-    let us' := carry_full (carry_full (carry_full us)) in
-     from_list (conditional_subtract_modulus [[us']] (ge_modulus [[us']]))
-     (length_conditional_subtract_modulus length_to_list).
-
   Definition eq (x y : digits) : Prop := decode x = decode y.
+
+  Definition freeze (x : digits) : digits :=
+    from_list (freeze [[x]]) (length_freeze length_to_list).
+
+  Definition eqb (x y : digits) : bool := fieldwiseb Z.eqb (freeze x) (freeze y).
+
+  (* Note : both of the following square root definitions will produce garbage output if the input is
+            not square mod [modulus]. The caller should either provably only call them with square input,
+            or test that the output squared is in fact equal to the input and case split. *)
+  Definition sqrt_3mod4 (chain : list (nat * nat))
+                  (chain_correct : fold_chain 0%N N.add chain (1%N :: nil) = Z.to_N (modulus / 4 + 1))
+                  (x : digits) : digits := pow x chain.
+
+  (* sqrt_5mod8 is parameterized over implementation of [mul] and [pow] because it relies on bounds-checking
+     for these two functions, which is much easier for simplified implementations than the more generalized
+     ones defined here. *)
+  Definition sqrt_5mod8 mul_ pow_ (chain : list (nat * nat))
+                  (chain_correct : fold_chain 0%N N.add chain (1%N :: nil) = Z.to_N (modulus / 8 + 1))
+                  (sqrt_minus1 x : digits) : digits :=
+    let b := pow_ x chain in if eqb (mul_ b b) x then b else mul_ sqrt_minus1 b.
 
   Import Morphisms.
   Global Instance eq_Equivalence : Equivalence eq.
   Proof.
     split; cbv [eq]; repeat intro; congruence.
   Qed.
+
+  Context {target_widths} (target_widths_nonneg : forall x, In x target_widths -> 0 <= x)
+          (bits_eq : sum_firstn limb_widths   (length limb_widths) =
+                     sum_firstn target_widths (length target_widths)).
+  Local Notation target_digits := (tuple Z (length target_widths)).
+
+  Definition pack (x : digits) : target_digits :=
+    from_list (pack target_widths_nonneg bits_eq [[x]]) length_pack.
+  
+  Definition unpack (x : target_digits) : digits :=
+    from_list (unpack target_widths_nonneg bits_eq [[x]]) length_unpack.
 
 End ModularBaseSystem.

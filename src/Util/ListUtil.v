@@ -22,6 +22,8 @@ Create HintDb pull_nth_default discriminated.
 Create HintDb push_nth_default discriminated.
 Create HintDb pull_firstn discriminated.
 Create HintDb push_firstn discriminated.
+Create HintDb pull_skipn discriminated.
+Create HintDb push_skipn discriminated.
 Create HintDb pull_update_nth discriminated.
 Create HintDb push_update_nth discriminated.
 Create HintDb znonzero discriminated.
@@ -40,6 +42,177 @@ Hint Rewrite
   : distr_length.
 
 Hint Extern 1 => progress autorewrite with distr_length in * : distr_length.
+Ltac distr_length := autorewrite with distr_length in *;
+  try solve [simpl in *; omega].
+
+Module Export List.
+  Local Set Implicit Arguments.
+  Import ListNotations.
+  (** From the 8.6 Standard Library *)
+
+  Section Elts.
+    Variable A : Type.
+
+    (** Results about [nth_error] *)
+
+    Lemma nth_error_In l n (x : A) : nth_error l n = Some x -> In x l.
+    Proof.
+      revert n. induction l as [|a l IH]; intros [|n]; simpl; try easy.
+      - injection 1; auto.
+      - eauto.
+    Qed.
+  End Elts.
+
+  Section Map.
+    Variables (A : Type) (B : Type).
+    Variable f : A -> B.
+
+    Lemma map_cons (x:A)(l:list A) : map f (x::l) = (f x) :: (map f l).
+    Proof.
+      reflexivity.
+    Qed.
+  End Map.
+
+  Lemma in_seq len start n :
+    In n (seq start len) <-> start <= n < start+len.
+  Proof.
+   revert start. induction len; simpl; intros.
+   - rewrite <- plus_n_O. split;[easy|].
+     intros (H,H'). apply (Lt.lt_irrefl _ (Lt.le_lt_trans _ _ _ H H')).
+   - rewrite IHlen, <- plus_n_Sm; simpl; split.
+     * intros [H|H]; subst; intuition auto with arith.
+     * intros (H,H'). destruct (Lt.le_lt_or_eq _ _ H); intuition.
+  Qed.
+
+  Section Facts.
+
+    Variable A : Type.
+
+    Theorem length_zero_iff_nil (l : list A):
+      length l = 0 <-> l=[].
+    Proof.
+      split; [now destruct l | now intros ->].
+    Qed.
+  End Facts.
+
+  Section Repeat.
+
+    Variable A : Type.
+    Fixpoint repeat (x : A) (n: nat ) :=
+      match n with
+      | O => []
+      | S k => x::(repeat x k)
+      end.
+
+    Theorem repeat_length x n:
+      length (repeat x n) = n.
+    Proof.
+      induction n as [| k Hrec]; simpl; rewrite ?Hrec; reflexivity.
+    Qed.
+
+    Theorem repeat_spec n x y:
+      In y (repeat x n) -> y=x.
+    Proof.
+      induction n as [|k Hrec]; simpl; destruct 1; auto.
+    Qed.
+
+  End Repeat.
+
+  Section Cutting.
+
+    Variable A : Type.
+
+    Local Notation firstn := (@firstn A).
+
+    Lemma firstn_nil n: firstn n [] = [].
+    Proof. induction n; now simpl. Qed.
+
+    Lemma firstn_cons n a l: firstn (S n) (a::l) = a :: (firstn n l).
+    Proof. now simpl. Qed.
+
+    Lemma firstn_all l: firstn (length l) l = l.
+    Proof. induction l as [| ? ? H]; simpl; [reflexivity | now rewrite H]. Qed.
+
+    Lemma firstn_all2 n: forall (l:list A), (length l) <= n -> firstn n l = l.
+    Proof. induction n as [|k iHk].
+           - intro. inversion 1 as [H1|?].
+             rewrite (length_zero_iff_nil l) in H1. subst. now simpl.
+           - destruct l as [|x xs]; simpl.
+             * now reflexivity.
+             * simpl. intro H. apply Peano.le_S_n in H. f_equal. apply iHk, H.
+    Qed.
+
+    Lemma firstn_O l: firstn 0 l = [].
+    Proof. now simpl. Qed.
+
+    Lemma firstn_le_length n: forall l:list A, length (firstn n l) <= n.
+    Proof.
+      induction n as [|k iHk]; simpl; [auto | destruct l as [|x xs]; simpl].
+      - auto with arith.
+      - apply le_n_S, iHk.
+    Qed.
+
+    Lemma firstn_length_le: forall l:list A, forall n:nat,
+          n <= length l -> length (firstn n l) = n.
+    Proof. induction l as [|x xs Hrec].
+           - simpl. intros n H. apply le_n_0_eq in H. rewrite <- H. now simpl.
+           - destruct n.
+             * now simpl.
+             * simpl. intro H. apply le_S_n in H. now rewrite (Hrec n H).
+    Qed.
+
+    Lemma firstn_app n:
+      forall l1 l2,
+        firstn n (l1 ++ l2) = (firstn n l1) ++ (firstn (n - length l1) l2).
+    Proof. induction n as [|k iHk]; intros l1 l2.
+           - now simpl.
+           - destruct l1 as [|x xs].
+             * unfold List.firstn at 2, length. now rewrite 2!app_nil_l, <- minus_n_O.
+             * rewrite <- app_comm_cons. simpl. f_equal. apply iHk.
+    Qed.
+
+    Lemma firstn_app_2 n:
+      forall l1 l2,
+        firstn ((length l1) + n) (l1 ++ l2) = l1 ++ firstn n l2.
+    Proof. induction n as [| k iHk];intros l1 l2.
+           - unfold List.firstn at 2. rewrite <- plus_n_O, app_nil_r.
+             rewrite firstn_app. rewrite <- minus_diag_reverse.
+             unfold List.firstn at 2. rewrite app_nil_r. apply firstn_all.
+           - destruct l2 as [|x xs].
+             * simpl. rewrite app_nil_r. apply firstn_all2. auto with arith.
+             * rewrite firstn_app. assert (H0 : (length l1 + S k - length l1) = S k).
+               auto with arith.
+               rewrite H0, firstn_all2; [reflexivity | auto with arith].
+    Qed.
+
+    Lemma firstn_firstn:
+      forall l:list A,
+      forall i j : nat,
+        firstn i (firstn j l) = firstn (min i j) l.
+    Proof. induction l as [|x xs Hl].
+           - intros. simpl. now rewrite ?firstn_nil.
+           - destruct i.
+             * intro. now simpl.
+             * destruct j.
+             + now simpl.
+             + simpl. f_equal. apply Hl.
+    Qed.
+
+  End Cutting.
+
+End List.
+
+Hint Rewrite @firstn_skipn : simpl_firstn.
+Hint Rewrite @firstn_skipn : simpl_skipn.
+Hint Rewrite @firstn_nil @firstn_cons @List.firstn_all @firstn_O @firstn_app_2 @List.firstn_firstn : push_firstn.
+Hint Rewrite @firstn_nil @firstn_cons @List.firstn_all @firstn_O @firstn_app_2 @List.firstn_firstn : simpl_firstn.
+Hint Rewrite @firstn_app : push_firstn.
+Hint Rewrite <- @firstn_cons @firstn_app @List.firstn_firstn : pull_firstn.
+Hint Rewrite @firstn_all2 @removelast_firstn @firstn_removelast using omega : push_firstn.
+Hint Rewrite @firstn_all2 @removelast_firstn @firstn_removelast using omega : simpl_firstn.
+
+Local Arguments value / .
+Local Arguments error / .
 
 Definition sum_firstn l n := fold_right Z.add 0%Z (firstn n l).
 
@@ -177,6 +350,9 @@ Proof.
   pose proof (nth_error_error_length A n l H0).
   omega.
 Qed.
+
+Lemma map_nil : forall A B (f : A -> B), map f nil = nil.
+Proof. reflexivity. Qed.
 
 (* Note: this is a duplicate of a lemma that exists in 8.5, included for
    8.4 support *)
@@ -356,9 +532,6 @@ Qed.
 Hint Rewrite @nth_error_value_eq_nth_default using eassumption : simpl_nth_default.
 
 Lemma skipn0 : forall {T} (xs:list T), skipn 0 xs = xs.
-Proof. auto. Qed.
-
-Lemma firstn0 : forall {T} (xs:list T), firstn 0 xs = nil.
 Proof. auto. Qed.
 
 Lemma destruct_repeat : forall {A} xs y, (forall x : A, In x xs -> x = y) ->
@@ -566,41 +739,23 @@ Proof.
   induction xs, xs', ys, ys'; boring; omega.
 Qed.
 
-Lemma firstn_nil : forall {A} n, firstn n nil = @nil A.
-Proof. destruct n; auto. Qed.
-
-Hint Rewrite @firstn_nil : simpl_firstn.
-
 Lemma skipn_nil : forall {A} n, skipn n nil = @nil A.
 Proof. destruct n; auto. Qed.
 
 Hint Rewrite @skipn_nil : simpl_skipn.
-
-Lemma firstn_0 : forall {A} xs, @firstn A 0 xs = nil.
-Proof. reflexivity. Qed.
-
-Hint Rewrite @firstn_0 : simpl_firstn.
+Hint Rewrite @skipn_nil : push_skipn.
 
 Lemma skipn_0 : forall {A} xs, @skipn A 0 xs = xs.
 Proof. reflexivity. Qed.
 
 Hint Rewrite @skipn_0 : simpl_skipn.
-
-Lemma firstn_cons_S : forall {A} n x xs, @firstn A (S n) (x::xs) = x::@firstn A n xs.
-Proof. reflexivity. Qed.
-
-Hint Rewrite @firstn_cons_S : simpl_firstn.
+Hint Rewrite @skipn_0 : push_skipn.
 
 Lemma skipn_cons_S : forall {A} n x xs, @skipn A (S n) (x::xs) = @skipn A n xs.
 Proof. reflexivity. Qed.
 
 Hint Rewrite @skipn_cons_S : simpl_skipn.
-
-Lemma firstn_app : forall {A} n (xs ys : list A),
-  firstn n (xs ++ ys) = firstn n xs ++ firstn (n - length xs) ys.
-Proof.
-  induction n, xs, ys; boring.
-Qed.
+Hint Rewrite @skipn_cons_S : push_skipn.
 
 Lemma skipn_app : forall {A} n (xs ys : list A),
   skipn n (xs ++ ys) = skipn n xs ++ skipn (n - length xs) ys.
@@ -608,11 +763,16 @@ Proof.
   induction n, xs, ys; boring.
 Qed.
 
+Hint Rewrite @skipn_app : push_skipn.
+
 Lemma firstn_app_inleft : forall {A} n (xs ys : list A), (n <= length xs)%nat ->
   firstn n (xs ++ ys) = firstn n xs.
 Proof.
   induction n, xs, ys; boring; try omega.
 Qed.
+
+Hint Rewrite @firstn_app_inleft using solve [ distr_length ] : simpl_firstn.
+Hint Rewrite @firstn_app_inleft using solve [ distr_length ] : push_firstn.
 
 Lemma skipn_app_inleft : forall {A} n (xs ys : list A), (n <= length xs)%nat ->
   skipn n (xs ++ ys) = skipn n xs ++ ys.
@@ -620,10 +780,27 @@ Proof.
   induction n, xs, ys; boring; try omega.
 Qed.
 
+Hint Rewrite @skipn_app_inleft using solve [ distr_length ] : push_skipn.
+
+Lemma firstn_map : forall {A B} (f : A -> B) n (xs : list A), firstn n (map f xs) = map f (firstn n xs).
+Proof. induction n, xs; boring. Qed.
+
+Hint Rewrite @firstn_map : push_firstn.
+Hint Rewrite <- @firstn_map : pull_firstn.
+
+Lemma skipn_map : forall {A B} (f : A -> B) n (xs : list A), skipn n (map f xs) = map f (skipn n xs).
+Proof. induction n, xs; boring. Qed.
+
+Hint Rewrite @skipn_map : push_skipn.
+Hint Rewrite <- @skipn_map : pull_skipn.
+
 Lemma firstn_all : forall {A} n (xs:list A), n = length xs -> firstn n xs = xs.
 Proof.
   induction n, xs; boring; omega.
 Qed.
+
+Hint Rewrite @firstn_all using solve [ distr_length ] : simpl_firstn.
+Hint Rewrite @firstn_all using solve [ distr_length ] : push_firstn.
 
 Lemma skipn_all : forall {T} n (xs:list T),
   (n >= length xs)%nat ->
@@ -631,6 +808,9 @@ Lemma skipn_all : forall {T} n (xs:list T),
 Proof.
   induction n, xs; boring; omega.
 Qed.
+
+Hint Rewrite @skipn_all using solve [ distr_length ] : simpl_skipn.
+Hint Rewrite @skipn_all using solve [ distr_length ] : push_skipn.
 
 Lemma firstn_app_sharp : forall {A} n (l l': list A),
   length l = n ->
@@ -640,6 +820,9 @@ Proof.
   rewrite firstn_app_inleft; auto using firstn_all; omega.
 Qed.
 
+Hint Rewrite @firstn_app_sharp using solve [ distr_length ] : simpl_firstn.
+Hint Rewrite @firstn_app_sharp using solve [ distr_length ] : push_firstn.
+
 Lemma skipn_app_sharp : forall {A} n (l l': list A),
   length l = n ->
   skipn n (l ++ l') = l'.
@@ -648,11 +831,16 @@ Proof.
   rewrite skipn_app_inleft; try rewrite skipn_all; auto; omega.
 Qed.
 
+Hint Rewrite @skipn_app_sharp using solve [ distr_length ] : simpl_skipn.
+Hint Rewrite @skipn_app_sharp using solve [ distr_length ] : push_skipn.
+
 Lemma skipn_length : forall {A} n (xs : list A),
   length (skipn n xs) = (length xs - n)%nat.
 Proof.
   induction n, xs; boring.
 Qed.
+
+Hint Rewrite @skipn_length : distr_length.
 
 Lemma fold_right_cons : forall {A B} (f:B->A->A) a b bs,
   fold_right f a (b::bs) = f b (fold_right f a bs).
@@ -665,6 +853,8 @@ Hint Rewrite @fold_right_cons : simpl_fold_right.
 Lemma length_cons : forall {T} (x:T) xs, length (x::xs) = S (length xs).
   reflexivity.
 Qed.
+
+Hint Rewrite @length_cons : distr_length.
 
 Lemma cons_length : forall A (xs : list A) a, length (a :: xs) = S (length xs).
 Proof.
@@ -688,6 +878,9 @@ Proof.
   induction n, xs, ys; boring.
 Qed.
 
+Hint Rewrite @firstn_combine : push_firstn.
+Hint Rewrite <- @firstn_combine : pull_firstn.
+
 Lemma combine_nil_r : forall {A B} (xs:list A),
   combine xs (@nil B) = nil.
 Proof.
@@ -700,6 +893,9 @@ Proof.
   induction n, xs, ys; boring.
   rewrite combine_nil_r; reflexivity.
 Qed.
+
+Hint Rewrite @skipn_combine : push_skipn.
+Hint Rewrite <- @skipn_combine : pull_skipn.
 
 Lemma break_list_last: forall {T} (xs:list T),
   xs = nil \/ exists xs' y, xs = xs' ++ y :: nil.
@@ -734,6 +930,8 @@ Proof.
   auto.
 Qed.
 
+Hint Rewrite @nil_length0 : distr_length.
+
 Lemma nth_error_Some_nth_default : forall {T} i x (l : list T), (i < length l)%nat ->
   nth_error l i = Some (nth_default x l i).
 Proof.
@@ -753,16 +951,6 @@ Lemma set_nth_cons : forall {T} (x u0 : T) us, set_nth 0 x (u0 :: us) = x :: us.
 Proof. intros; apply update_nth_cons. Qed.
 
 Hint Rewrite @set_nth_cons : simpl_set_nth.
-
-Hint Rewrite
-  @nil_length0
-  @length_cons
-  @skipn_length
-  @length_update_nth
-  @length_set_nth
-  : distr_length.
-Ltac distr_length := autorewrite with distr_length in *;
-  try solve [simpl in *; omega].
 
 Lemma cons_update_nth : forall {T} n f (y : T) us,
   y :: update_nth n f us = update_nth (S n) f (y :: us).
@@ -931,6 +1119,11 @@ Proof.
   induction n; destruct l; boring.
 Qed.
 
+Lemma In_skipn : forall {T} n l (x : T), In x (skipn n l) -> In x l.
+Proof.
+  induction n; destruct l; boring.
+Qed.
+
 Lemma firstn_firstn : forall {A} m n (l : list A), (n <= m)%nat ->
   firstn n (firstn m l) = firstn n l.
 Proof.
@@ -941,6 +1134,8 @@ Proof.
   apply IHm; omega.
 Qed.
 
+Hint Rewrite @firstn_firstn using omega : push_firstn.
+
 Lemma firstn_succ : forall {A} (d : A) n l, (n < length l)%nat ->
   firstn (S n) l = (firstn n l) ++ nth_default d l n :: nil.
 Proof.
@@ -950,19 +1145,6 @@ Proof.
     rewrite nth_default_cons_S.
     rewrite <-IHn by (rewrite cons_length in *; omega).
     reflexivity.
-Qed.
-
-Lemma firstn_all_strong : forall {A} (xs : list A) n, (length xs <= n)%nat ->
-  firstn n xs = xs.
-Proof.
-  induction xs; intros; try apply firstn_nil.
-  destruct n;
-    match goal with H : (length (_ :: _)  <= _)%nat |- _ =>
-      simpl in H; try omega end.
-  simpl.
-  f_equal.
-  apply IHxs.
-  omega.
 Qed.
 
 Lemma update_nth_out_of_bounds : forall {A} n f xs, n >= length xs -> @update_nth A n f xs = xs.
@@ -1066,11 +1248,19 @@ Lemma sum_firstn_all_succ : forall n l, (length l <= n)%nat ->
   sum_firstn l (S n) = sum_firstn l n.
 Proof.
   unfold sum_firstn; intros.
-  rewrite !firstn_all_strong by omega.
-  congruence.
+  autorewrite with push_firstn; reflexivity.
 Qed.
 
 Hint Rewrite @sum_firstn_all_succ using omega : simpl_sum_firstn.
+
+Lemma sum_firstn_all : forall n l, (length l <= n)%nat ->
+  sum_firstn l n = sum_firstn l (length l).
+Proof.
+  unfold sum_firstn; intros.
+  autorewrite with push_firstn; reflexivity.
+Qed.
+
+Hint Rewrite @sum_firstn_all using omega : simpl_sum_firstn.
 
 Lemma sum_firstn_succ_default : forall l i,
   sum_firstn l (S i) = (nth_default 0 l i + sum_firstn l i)%Z.
@@ -1138,6 +1328,115 @@ Proof.
 Qed.
 
 Hint Resolve sum_firstn_nonnegative : znonzero.
+
+Lemma sum_firstn_app : forall xs ys n,
+  sum_firstn (xs ++ ys) n = (sum_firstn xs n + sum_firstn ys (n - length xs))%Z.
+Proof.
+  induction xs; simpl.
+  { intros ys n; autorewrite with simpl_sum_firstn; simpl.
+    f_equal; omega. }
+  { intros ys [|n]; autorewrite with simpl_sum_firstn; simpl; [ reflexivity | ].
+    rewrite IHxs; omega. }
+Qed.
+
+Lemma sum_firstn_app_sum : forall xs ys n,
+  sum_firstn (xs ++ ys) (length xs + n) = (sum_firstn xs (length xs) + sum_firstn ys n)%Z.
+Proof.
+  intros; rewrite sum_firstn_app; autorewrite with simpl_sum_firstn.
+  do 2 f_equal; omega.
+Qed.
+Hint Rewrite @sum_firstn_app_sum : simpl_sum_firstn.
+
+Lemma nth_error_skipn : forall {A} n (l : list A) m,
+nth_error (skipn n l) m = nth_error l (n + m).
+Proof.
+induction n; destruct l; boring.
+apply nth_error_nil_error.
+Qed.
+Hint Rewrite @nth_error_skipn : push_nth_error.
+
+Lemma nth_default_skipn : forall {A} (l : list A) d n m, nth_default d (skipn n l) m = nth_default d l (n + m).
+Proof.
+cbv [nth_default]; intros.
+rewrite nth_error_skipn.
+reflexivity.
+Qed.
+Hint Rewrite @nth_default_skipn : push_nth_default.
+
+Lemma sum_firstn_skipn : forall l n m, sum_firstn l (n + m) = (sum_firstn l n + sum_firstn (skipn n l) m)%Z.
+Proof.
+induction m; intros.
++ rewrite sum_firstn_0. autorewrite with natsimplify. omega.
++ rewrite <-plus_n_Sm, !sum_firstn_succ_default.
+    rewrite nth_default_skipn.
+    omega.
+Qed.
+
+
+Lemma sum_firstn_prefix_le' : forall l n m, (forall x, In x l -> (0 <= x)%Z) ->
+                                            (sum_firstn l n <= sum_firstn l (n + m))%Z.
+Proof.
+intros.
+rewrite sum_firstn_skipn.
+pose proof (sum_firstn_nonnegative m (skipn n l)) as Hskipn_nonneg.
+match type of Hskipn_nonneg with
+  ?P -> _ => assert P as Q; [ | specialize (Hskipn_nonneg Q); omega ] end.
+intros x HIn_skipn.
+apply In_skipn in HIn_skipn.
+auto.
+Qed.
+
+Lemma sum_firstn_prefix_le : forall l n m, (forall x, In x l -> (0 <= x)%Z) ->
+                                            (n <= m)%nat ->
+                                            (sum_firstn l n <= sum_firstn l m)%Z.
+Proof.
+intros.
+replace m with (n + (m - n))%nat by omega.
+auto using sum_firstn_prefix_le'.
+Qed.
+
+Lemma sum_firstn_pos_lt_succ : forall l n m, (forall x, In x l -> (0 <= x)%Z) ->
+                                        (n < length l)%nat ->
+                                        (sum_firstn l n < sum_firstn l (S m))%Z ->
+                                        (n <= m)%nat.
+Proof.
+intros.
+destruct (le_dec n m); auto.
+replace n with (m + (n - m))%nat in H1 by omega.
+rewrite sum_firstn_skipn in H1.
+rewrite sum_firstn_succ_default in *.
+match goal with H : (?a + ?b < ?c + ?a)%Z |- _ => assert (b < c)%Z by omega end.
+destruct (lt_dec m (length l)). {
+    rewrite skipn_nth_default with (d := 0%Z) in H2 by assumption.
+    replace (n - m)%nat with (S (n - S m))%nat in H2 by omega.
+    rewrite sum_firstn_succ_cons in H2.
+    pose proof (sum_firstn_nonnegative (n - S m) (skipn (S m) l)).
+    match type of H3 with
+      ?P -> _ => assert P as Q; [ | specialize (H3 Q); omega ] end.
+    intros ? A.
+    apply In_skipn in A.
+    apply H in A.
+    omega.
+} {
+    rewrite skipn_all, nth_default_out_of_bounds in H2 by omega.
+    rewrite sum_firstn_nil in H2; omega.
+}
+Qed.
+
+Definition NotSum {T} (xs : list T) (v : nat) := True.
+
+Ltac NotSum :=
+  lazymatch goal with
+  | [ |- NotSum ?xs (length ?xs + _)%nat ] => fail
+  | [ |- NotSum _ _ ] => exact I
+  end.
+
+Lemma sum_firstn_app_hint : forall xs ys n, NotSum xs n ->
+  sum_firstn (xs ++ ys) n = (sum_firstn xs n + sum_firstn ys (n - length xs))%Z.
+Proof. auto using sum_firstn_app. Qed.
+
+Hint Rewrite sum_firstn_app_hint using solve [ NotSum ] : simpl_sum_firstn.
+
 
 Lemma nth_default_map2 : forall {A B C} (f : A -> B -> C) ls1 ls2 i d d1 d2,
   nth_default d (map2 f ls1 ls2) i =
@@ -1234,3 +1533,83 @@ Proof.
   + repeat intro; rewrite !nth_default_nil; assumption.
   + repeat intro; subst; destruct y0; rewrite ?nth_default_cons, ?nth_default_cons_S; auto.
 Qed.
+
+Lemma fold_right_andb_true_map_iff A (ls : list A) f
+  : List.fold_right andb true (List.map f ls) = true <-> forall i, List.In i ls -> f i = true.
+Proof.
+  induction ls; simpl; [ | rewrite Bool.andb_true_iff, IHls ]; try tauto.
+  intuition (congruence || eauto).
+Qed.
+
+Lemma Forall2_forall_iff : forall {A} R (xs ys : list A) d, length xs = length ys ->
+  (Forall2 R xs ys <-> (forall i, (i < length xs)%nat -> R (nth_default d xs i) (nth_default d ys i))).
+Proof.
+  split; intros.
+  + revert xs ys H H0 H1.
+    induction i; intros; destruct H0; distr_length; autorewrite with push_nth_default; auto.
+    eapply IHi; auto. omega.
+  + revert xs ys H H0; induction xs; intros; destruct ys; distr_length; econstructor.
+    - specialize (H0 0%nat).
+      autorewrite with push_nth_default in *; auto.
+      apply H0; omega.
+    - apply IHxs; try omega.
+      intros.
+      specialize (H0 (S i)).
+      autorewrite with push_nth_default in *; auto.
+      apply H0; omega.
+Qed.
+
+Lemma nth_default_firstn : forall {A} (d : A) l i n,
+  nth_default d (firstn n l) i = if le_dec n (length l)
+                                 then if lt_dec i n then nth_default d l i else d
+                                 else nth_default d l i.
+Proof.
+  induction n; intros; break_if; autorewrite with push_nth_default; auto; try omega.
+  + rewrite (firstn_succ d) by omega.
+    autorewrite with push_nth_default; repeat (break_if; distr_length);
+      rewrite Min.min_l in * by omega; try omega.
+    - apply IHn; omega.
+    - replace i with n in * by omega.
+      rewrite Nat.sub_diag.
+      autorewrite with push_nth_default; auto.
+    - rewrite nth_default_out_of_bounds; distr_length; auto.
+  + rewrite firstn_all2 by omega.
+    auto.
+Qed.
+Hint Rewrite @nth_default_firstn : push_nth_default.
+
+Lemma nth_error_repeat {T} x n i v : nth_error (@repeat T x n) i = Some v -> v = x.
+Proof.
+  revert n x v; induction i as [|i IHi]; destruct n; simpl in *; eauto; congruence.
+Qed.
+
+Hint Rewrite repeat_length : distr_length.
+
+Lemma repeat_spec_iff : forall {A} (ls : list A) x n,
+    (length ls = n /\ forall y, In y ls -> y = x) <-> ls = repeat x n.
+Proof.
+  split; [ revert A ls x n | intro; subst; eauto using repeat_length, repeat_spec ].
+  induction ls, n; simpl; intros; intuition try congruence.
+  f_equal; auto.
+Qed.
+
+Lemma repeat_spec_eq : forall {A} (ls : list A) x n,
+    length ls = n
+    -> (forall y, In y ls -> y = x)
+    -> ls = repeat x n.
+Proof.
+  intros; apply repeat_spec_iff; auto.
+Qed.
+
+Lemma tl_repeat {A} x n : tl (@repeat A x n) = repeat x (pred n).
+Proof. destruct n; reflexivity. Qed.
+
+Lemma firstn_repeat : forall {A} x n k, firstn k (@repeat A x n) = repeat x (min k n).
+Proof. induction n, k; boring. Qed.
+
+Hint Rewrite @firstn_repeat : push_firstn.
+
+Lemma skipn_repeat : forall {A} x n k, skipn k (@repeat A x n) = repeat x (n - k).
+Proof. induction n, k; boring. Qed.
+
+Hint Rewrite @skipn_repeat : push_skipn.

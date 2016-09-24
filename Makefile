@@ -5,6 +5,7 @@ TIMECMD?=
 STDTIME?=/usr/bin/time -f "$* (real: %e, user: %U, sys: %S, mem: %M ko)"
 TIMER=$(if $(TIMED), $(STDTIME), $(TIMECMD))
 
+PROFILE?=
 VERBOSE?=
 SHOW := $(if $(VERBOSE),@true "",@echo "")
 HIDE := $(if $(VERBOSE),,@)
@@ -59,7 +60,11 @@ else
 COQPRIME_FOLDER := coqprime
 ifneq ($(filter 8.5%,$(COQ_VERSION)),) # 8.5
 else
+ifneq ($(PROFILE),)
+OTHERFLAGS ?= -profile-ltac -w "-deprecated-appcontext -notation-overridden"
+else
 OTHERFLAGS ?= -w "-deprecated-appcontext -notation-overridden"
+endif
 endif
 endif
 

@@ -20,6 +20,13 @@ Ltac head expr :=
 
 Ltac head_hnf expr := let expr' := eval hnf in expr in head expr'.
 
+(** [contains x expr] succeeds iff [x] appears in [expr] *)
+Ltac contains search_for in_term :=
+  idtac;
+  lazymatch in_term with
+  | appcontext[search_for] => idtac
+  end.
+
 (* [pose proof defn], but only if no hypothesis of the same type exists.
    most useful for proofs of a proposition *)
 Tactic Notation "unique" "pose" "proof" constr(defn) :=
@@ -53,6 +60,8 @@ Ltac subst_evars :=
   repeat match goal with
          | [ e := ?E |- _ ] => is_evar E; subst e
          end.
+
+Ltac subst_let := repeat match goal with | x := _ |- _ => subst x end.
 
 (** destruct discriminees of [match]es in the goal *)
 (* Prioritize breaking apart things in the context, then things which
@@ -252,6 +261,12 @@ Ltac specialize_by' tac :=
 
 Ltac specialize_by tac := repeat specialize_by' tac.
 
+(** [specialize_by auto] should not mean [specialize_by ltac:( auto
+    with * )]!!!!!!! (see
+    https://coq.inria.fr/bugs/show_bug.cgi?id=4966) We fix this design
+    flaw. *)
+Tactic Notation "specialize_by" tactic3(tac) := specialize_by tac.
+
 (** If [tac_in H] operates in [H] and leaves side-conditions before
     the original goal, then
     [side_conditions_before_to_side_conditions_after tac_in H] does
@@ -342,3 +357,109 @@ Ltac revert_last_nondep :=
   end.
 
 Ltac reverse_nondep := repeat revert_last_nondep.
+
+Ltac simplify_repeated_ifs_step :=
+  match goal with
+  | [ |- context G[if ?b then ?x else ?y] ]
+    => let x' := match x with
+                 | context x'[b] => let x'' := context x'[true] in x''
+                 end in
+       let G' := context G[if b then x' else y] in
+       cut G'; [ destruct b; exact (fun z => z) | cbv iota ]
+  | [ |- context G[if ?b then ?x else ?y] ]
+    => let y' := match y with
+                 | context y'[b] => let y'' := context y'[false] in y''
+                 end in
+       let G' := context G[if b then x else y'] in
+       cut G'; [ destruct b; exact (fun z => z) | cbv iota ]
+  end.
+Ltac simplify_repeated_ifs := repeat simplify_repeated_ifs_step.
+
+(** Like [specialize] but allows holes that get filled with evars. *)
+Tactic Notation "especialize" open_constr(H) := specialize H.
+
+(** [forward H] specializes non-dependent binders in a hypothesis [H]
+    with side-conditions.  Side-conditions come after the main goal,
+    like with [replace] and [rewrite].
+
+    [eforward H] is like [forward H], but also specializes dependent
+    binders with evars.
+
+    Both tactics do nothing on hypotheses they cannot handle. *)
+Ltac forward_step H :=
+  match type of H with
+  | ?A -> ?B => let a := fresh in cut A; [ intro a; specialize (H a); clear a | ]
+  end.
+Ltac eforward_step H :=
+  match type of H with
+  | _ => forward_step H
+  | forall x : ?A, _
+    => let x_or_fresh := fresh x in
+       evar (x_or_fresh : A);
+       specialize (H x_or_fresh); subst x_or_fresh
+  end.
+Ltac forward H := try (forward_step H; [ forward H | .. ]).
+Ltac eforward H := try (eforward_step H; [ eforward H | .. ]).
+
+(** [simplify_projections] reduces terms of the form [fst (_, _)] (for
+    any projection from [prod], [sig], [sigT], or [and]) *)
+Ltac pre_simplify_projection proj proj' uproj' :=
+  pose proj as proj';
+  pose proj as uproj';
+  unfold proj in uproj';
+  change proj with proj'.
+Ltac do_simplify_projection_2Targ_4carg_step proj proj' uproj' construct :=
+  change proj' with uproj' at 1;
+  lazymatch goal with
+  | [ |- appcontext[uproj' _ _ (construct _ _ _ _)] ]
+    => cbv beta iota delta [uproj']
+  | _ => change uproj' with proj
+  end.
+Ltac do_simplify_projection_2Targ_4carg proj proj' uproj' construct :=
+  repeat do_simplify_projection_2Targ_4carg_step proj proj' uproj' construct.
+Ltac simplify_projection_2Targ_4carg proj construct :=
+  let proj' := fresh "proj" in
+  let uproj' := fresh "proj" in
+  pre_simplify_projection proj proj' uproj';
+  do_simplify_projection_2Targ_4carg proj proj' uproj' construct;
+  clear proj' uproj'.
+
+Ltac simplify_projections :=
+  repeat (simplify_projection_2Targ_4carg @fst @pair
+          || simplify_projection_2Targ_4carg @snd @pair
+          || simplify_projection_2Targ_4carg @proj1_sig @exist
+          || simplify_projection_2Targ_4carg @proj2_sig @exist
+          || simplify_projection_2Targ_4carg @projT1 @existT
+          || simplify_projection_2Targ_4carg @projT2 @existT
+          || simplify_projection_2Targ_4carg @proj1 @conj
+          || simplify_projection_2Targ_4carg @proj2 @conj).
+
+(** constr-based [idtac] *)
+Class cidtac {T} (msg : T) := Build_cidtac : True.
+Hint Extern 0 (cidtac ?msg) => idtac msg; exact I : typeclass_instances.
+(** constr-based [idtac] *)
+Class cidtac2 {T1 T2} (msg1 : T1) (msg2 : T2) := Build_cidtac2 : True.
+Hint Extern 0 (cidtac2 ?msg1 ?msg2) => idtac msg1 msg2; exact I : typeclass_instances.
+Class cidtac3 {T1 T2 T3} (msg1 : T1) (msg2 : T2) (msg3 : T3) := Build_cidtac3 : True.
+Hint Extern 0 (cidtac3 ?msg1 ?msg2 ?msg3) => idtac msg1 msg2 msg3; exact I : typeclass_instances.
+
+Class cfail {T} (msg : T) := Build_cfail : True.
+Hint Extern 0 (cfail ?msg) => idtac "Error:" msg; exact I : typeclass_instances.
+Class cfail2 {T1 T2} (msg1 : T1) (msg2 : T2) := Build_cfail2 : True.
+Hint Extern 0 (cfail2 ?msg1 ?msg2) => idtac "Error:" msg1 msg2; exact I : typeclass_instances.
+Class cfail3 {T1 T2 T3} (msg1 : T1) (msg2 : T2) (msg3 : T3) := Build_cfail3 : True.
+Hint Extern 0 (cfail3 ?msg1 ?msg2 ?msg3) => idtac "Error:" msg1 msg2 msg3; exact I : typeclass_instances.
+
+Ltac cidtac msg := constr:(_ : cidtac msg).
+Ltac cidtac2 msg1 msg2 := constr:(_ : cidtac2 msg1 msg2).
+Ltac cidtac3 msg1 msg2 msg3 := constr:(_ : cidtac2 msg1 msg2 msg3).
+Ltac cfail msg := let dummy := constr:(_ : cfail msg) in constr:(I : I).
+Ltac cfail2 msg1 msg2 := let dummy := constr:(_ : cfail2 msg1 msg2) in constr:(I : I).
+Ltac cfail3 msg1 msg2 msg3 := let dummy := constr:(_ : cfail2 msg1 msg2 msg3) in constr:(I : I).
+
+Ltac idtac_goal := lazymatch goal with |- ?G => idtac "Goal:" G end.
+Ltac idtac_context :=
+  try (repeat match goal with H : _ |- _ => revert H end;
+       idtac_goal;
+       lazymatch goal with |- ?G => idtac "Context:" G end;
+       fail).

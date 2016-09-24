@@ -60,7 +60,7 @@ Section IterAssocOp.
     | S i' => (i', if testbit sc i' then op a acc2 else acc2)
     end.
 
-  Definition iter_op sc a bound : T :=
+  Definition iter_op bound sc a : T :=
     snd (funexp (test_and_op sc a) (bound, id) bound).
 
   Definition test_and_op_inv sc a (s : nat * T) :=
@@ -141,7 +141,7 @@ Section IterAssocOp.
     fst (funexp (test_and_op n a) (x, acc) y) === x - y.
   Proof.
     induction y; simpl; rewrite <- ?Minus.minus_n_O; try reflexivity.
-    destruct (funexp (test_and_op n a) (x, acc) y) as [i acc'].
+    match goal with |- context[funexp ?a ?b ?c] => destruct (funexp a b c) as [i acc'] end.
     simpl in IHy.
     unfold test_and_op.
     destruct i; rewrite Nat.sub_succ_r; subst; rewrite <- IHy; simpl; reflexivity.
@@ -151,7 +151,7 @@ Section IterAssocOp.
     N.size_nat (scToN sc) <= bound ->
     test_and_op_inv sc a
       (funexp (test_and_op sc a) (bound, id) bound) ->
-    iter_op sc a bound === nat_iter_op (N.to_nat (scToN sc)) a.
+    iter_op bound sc a === nat_iter_op (N.to_nat (scToN sc)) a.
   Proof.
     unfold test_and_op_inv, iter_op; simpl; intros ? ? ? ? Hinv.
     rewrite Hinv, funexp_test_and_op_index, Minus.minus_diag.
@@ -182,7 +182,7 @@ Section IterAssocOp.
   Qed.
 
   Lemma iter_op_spec : forall sc a bound, N.size_nat (scToN sc) <= bound ->
-    iter_op sc a bound === nat_iter_op (N.to_nat (scToN sc)) a.
+    iter_op bound sc a === nat_iter_op (N.to_nat (scToN sc)) a.
   Proof.
     intros.
     apply iter_op_termination; auto.

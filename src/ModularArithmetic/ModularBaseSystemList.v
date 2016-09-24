@@ -5,6 +5,7 @@ Require Import Crypto.Util.ListUtil Crypto.Util.CaseUtil Crypto.Util.ZUtil.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
 Require Import Crypto.BaseSystem.
 Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParams.
+Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParamProofs.
 Require Import Crypto.ModularArithmetic.ExtendedBaseVector.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.Util.Notations.
@@ -56,11 +57,11 @@ Section Defs.
     are less than 2 ^ their respective limb width. *)
   Fixpoint ge_modulus' us acc i :=
     match i with
-    | O => andb (Z.ltb (modulus_digits [0]) (us [0])) acc
+    | O => andb (Z.leb (modulus_digits [0]) (us [0])) acc
     | S i' => ge_modulus' us (andb (Z.eqb (modulus_digits [i]) (us [i])) acc) i'
     end.
 
-  Definition ge_modulus us := ge_modulus' us true (length base - 1)%nat.
+  Definition ge_modulus us := ge_modulus' us true (length limb_widths - 1)%nat.
 
   Definition conditional_subtract_modulus (us : digits) (cond : bool) :=
      let and_term := if cond then max_ones else 0 in
@@ -68,4 +69,20 @@ Section Defs.
        Otherwise, it's all zeroes, and the subtractions do nothing. *)
      map2 (fun x y => x - y) us (map (Z.land and_term) modulus_digits).
 
+  Definition freeze (us : digits) : digits :=
+    let us' := carry_full (carry_full (carry_full us)) in
+     conditional_subtract_modulus us' (ge_modulus us').
+
+  Context {target_widths} (target_widths_nonneg : forall x, In x target_widths -> 0 <= x)
+          (bits_eq : sum_firstn limb_widths   (length limb_widths) =
+                     sum_firstn target_widths (length target_widths)).
+  
+  Definition pack := @Pow2BaseProofs.convert limb_widths limb_widths_nonneg
+                                             target_widths target_widths_nonneg
+                                             (Z.eq_le_incl _ _ bits_eq).
+
+  Definition unpack := @Pow2BaseProofs.convert target_widths target_widths_nonneg
+                                               limb_widths limb_widths_nonneg
+                                               (Z.eq_le_incl _ _ (Z.eq_sym bits_eq)).
+  
 End Defs.

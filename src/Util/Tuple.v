@@ -1,5 +1,5 @@
 Require Import Coq.Classes.Morphisms.
-Require Import Relation_Definitions.
+Require Import Coq.Relations.Relation_Definitions.
 Require Import Crypto.Util.Decidable.
 Require Export Crypto.Util.FixCoqMistakes.
 
@@ -62,11 +62,12 @@ Proof.
   induction xs; simpl in *; intros; congruence.
 Qed.
 
+Lemma length_to_list' T n t : length (@to_list' T n t) = S n.
+Proof. induction n; simpl in *; trivial; destruct t; simpl; congruence. Qed.
+
 Lemma length_to_list : forall {T} {n} (xs:tuple T n), length (to_list n xs) = n.
 Proof.
-  destruct n; auto; intros; simpl in *.
-  induction n; auto; intros; simpl in *.
-  destruct xs; simpl in *; eauto.
+  destruct n; [ reflexivity | apply length_to_list' ].
 Qed.
 
 Lemma from_list'_to_list' : forall T n (xs:tuple' T n),
@@ -144,6 +145,46 @@ Proof.
   destruct n; unfold fieldwise; exact _.
 Qed.
 
+Fixpoint fieldwiseb' {A B} (n:nat) (R:A->B->bool) (a:tuple' A n) (b:tuple' B n) {struct n} : bool.
+  destruct n; simpl @tuple' in *.
+  { exact (R a b). }
+  { exact (R (snd a) (snd b) && fieldwiseb' _ _ n R (fst a) (fst b))%bool. }
+Defined.
+
+Definition fieldwiseb {A B} (n:nat) (R:A->B->bool) (a:tuple A n) (b:tuple B n) : bool.
+  destruct n; simpl @tuple in *.
+  { exact true. }
+  { exact (fieldwiseb' _ R a b). }
+Defined.
+
+Arguments fieldwiseb' {A B n} _ _ _.
+Arguments fieldwiseb {A B n} _ _ _.
+
+Lemma fieldwiseb'_fieldwise' :forall {A B} n R Rb
+                                   (a:tuple' A n) (b:tuple' B n),
+  (forall a b, Rb a b = true <-> R a b) ->
+  (fieldwiseb' Rb a b = true <-> fieldwise' R a b).
+Proof.
+  intros.
+  revert n a b;
+  induction n; intros; simpl @tuple' in *;
+    simpl fieldwiseb'; simpl fieldwise'; auto.
+  cbv beta.
+  rewrite Bool.andb_true_iff.
+  f_equiv; auto.
+Qed.
+
+Lemma fieldwiseb_fieldwise :forall {A B} n R Rb
+                                   (a:tuple A n) (b:tuple B n),
+  (forall a b, Rb a b = true <-> R a b) ->
+  (fieldwiseb Rb a b = true <-> fieldwise R a b).
+Proof.
+  intros; destruct n; simpl @tuple in *;
+    simpl @fieldwiseb; simpl @fieldwise; try tauto.
+  auto using fieldwiseb'_fieldwise'.
+Qed.
+
+
 Fixpoint from_list_default' {T} (d y:T) (n:nat) (xs:list T) : tuple' T n :=
   match n return tuple' T n with
   | 0 => y (* ignore high digits *)
@@ -196,3 +237,29 @@ Definition apply {R T} (n:nat) : function R T n -> tuple T n -> R :=
   | O => fun r _ => r
   | S n' => fun f x =>  apply' n' f x
   end.
+
+Require Import Coq.Lists.SetoidList.
+
+Lemma fieldwise_to_list_iff : forall {T n} R (s t : tuple T n),
+    (fieldwise R s t <-> Forall2 R (to_list _ s) (to_list _ t)).
+Proof.
+  induction n; split; intros.
+  + constructor.
+  + cbv [fieldwise]. auto.
+  + destruct n; cbv [tuple to_list fieldwise] in *.
+    - cbv [to_list']; auto.
+    - simpl in *. destruct s,t; cbv [fst snd] in *.
+      constructor; intuition auto.
+      apply IHn; auto.
+  + destruct n; cbv [tuple to_list fieldwise] in *.
+    - cbv [fieldwise']; auto.
+      cbv [to_list'] in *; inversion H; auto.
+    - simpl in *. destruct s,t; cbv [fst snd] in *.
+      inversion H; subst.
+      split; try assumption.
+      apply IHn; auto.
+Qed.
+  
+
+Require Import Crypto.Util.ListUtil. (* To initialize [distr_length] database *)
+Hint Rewrite length_to_list' @length_to_list : distr_length.

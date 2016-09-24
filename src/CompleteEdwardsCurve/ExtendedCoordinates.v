@@ -15,7 +15,8 @@ Module Extended.
     Import Group Ring Field.
     Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv a d}
             {field:@field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
-            {prm:@E.twisted_edwards_params F Feq Fzero Fone Fadd Fmul a d}.
+            {prm:@E.twisted_edwards_params F Feq Fzero Fone Fadd Fmul a d}
+            {Feq_dec:DecidableRel Feq}.
     Local Infix "=" := Feq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
     Local Notation "0" := Fzero.  Local Notation "1" := Fone.
     Local Infix "+" := Fadd. Local Infix "*" := Fmul.
@@ -47,7 +48,7 @@ Module Extended.
              | _ => solve [eauto]
              | _ => solve [intuition eauto]
              | _ => solve [etransitivity; eauto]
-             | |- _*_ <> 0 => apply mul_nonzero_nonzero
+             | |- _*_ <> 0 => apply Ring.zero_product_iff_zero_factor
              | [H: _ |- _ ] => solve [intro; apply H; super_nsatz]
              | |- Feq _ _ => super_nsatz
              end.
@@ -195,10 +196,12 @@ Module Extended.
     Import Group Ring Field.
     Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv Fa Fd}
             {fieldF:@field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
-            {Fprm:@E.twisted_edwards_params F Feq Fzero Fone Fadd Fmul Fa Fd}.
+            {Fprm:@E.twisted_edwards_params F Feq Fzero Fone Fadd Fmul Fa Fd}
+            {Feq_dec:DecidableRel Feq}.
     Context {K Keq Kzero Kone Kopp Kadd Ksub Kmul Kinv Kdiv Ka Kd}
             {fieldK:@field K Keq Kzero Kone Kopp Kadd Ksub Kmul Kinv Kdiv}
-            {Kprm:@E.twisted_edwards_params K Keq Kzero Kone Kadd Kmul Ka Kd}.
+            {Kprm:@E.twisted_edwards_params K Keq Kzero Kone Kadd Kmul Ka Kd}
+            {Keq_dec:DecidableRel Keq}.
     Context {phi:F->K} {Hphi:@Ring.is_homomorphism F Feq Fone Fadd Fmul
                                                    K Keq Kone Kadd Kmul phi}.
     Context {phi_nonzero : forall x, ~ Feq x Fzero -> ~ Keq (phi x) Kzero}.
