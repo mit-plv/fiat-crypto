@@ -58,7 +58,7 @@ Section Word.
 
     (* Conversions *)
     toT := fun x => @NToWord n (Z.to_N x);
-    fromT := @wordToZ n;
+    fromT := fun x => Z.of_N (@wordToN n x);
 
     (* Operations *)
     eadd := @wplus n;
@@ -775,25 +775,52 @@ Section WordRange.
     omap (rangeEval w) (fun r =>
       match r with | range low high => Some high end).
 
-  Definition makeRange (low high: N): WordRangeOpt.
+  Definition makeRange (low high: Z): WordRangeOpt.
     refine (
-      match (Nge_dec high low, Nge_dec high (Npow2 n)) with
-      | (left _, right _) => someRange low high _ _
+      match (Z_le_dec 0%Z low, Z_le_dec low high, Z_lt_dec high (Z.of_N (Npow2 n))) with
+      | (left _, left _, left _) => someRange (Z.to_N low) (Z.to_N high) _ _
       | _ => noRange
-      end); [apply N.ge_le|]; assumption.
+      end).
+
+    - apply Z2N.inj_le; [assumption| |assumption].
+      etransitivity; eassumption.
+
+    - rewrite <- (N2Z.id (Npow2 n)).
+      apply Z2N.inj_lt; [| |eassumption].
+
+      + etransitivity; eassumption.
+      + etransitivity; [eassumption|].
+        etransitivity; [eassumption|].
+        apply Z.lt_le_incl; assumption.
   Defined.
 
   Lemma makeRange_spec: forall x low high,
       (high < Npow2 n)%N /\ (low <= wordToN x <= high)%N
-    <-> inRange (makeRange low high) x.
+    <-> inRange (makeRange (Z.of_N low) (Z.of_N high)) x.
   Proof.
     intros; split; intro H; [destruct H|]; simpl in *;
       unfold inRange, makeRange in *;
-      destruct (Nge_dec high low), (Nge_dec high (Npow2 n));
-      simpl in *; try split; intuition.
+      destruct (Z_le_dec 0%Z (Z.of_N low)),
+               (Z_le_dec (Z.of_N low) (Z.of_N high)),
+               (Z_lt_dec (Z.of_N high) (Z.of_N (Npow2 n))) as [Z|Z];
+      simpl in *; repeat rewrite N2Z.id in *;
+      try abstract (repeat split; intuition);
 
-    assert (low <= high)%N as C by (etransitivity; eassumption).
-    contradict C; apply N.lt_nge; assumption.
+      repeat match goal with
+      | [ Q : _ /\ _ |- _] => destruct Q
+
+      | [ Q : ~ (Z.of_N ?high < Z.of_N (Npow2 ?n))%Z |- _] => 
+        contradict Q; apply N2Z.inj_lt; assumption
+
+      | [ Q : ~ (0 <= Z.of_N ?x)%Z |- _] => 
+        contradict Q; apply N2Z.is_nonneg
+
+      | [ Q : ~ (Z.of_N ?low <= Z.of_N ?high)%Z |- _] =>
+        contradict Q; apply Z2N.inj_le; try assumption;
+        repeat rewrite N2Z.id;
+        try apply N2Z.is_nonneg;
+        etransitivity; eauto
+      end.
   Qed.
 
   Definition getOrElse {T} (d: T) (o: option T) :=
@@ -803,7 +830,7 @@ Section WordRange.
     ezero := anyWord;
 
     (* Conversions *)
-    toT := fun x => makeRange (Z.to_N x) (Z.to_N x);
+    toT := fun x => makeRange x x;
     fromT := fun x => Z.of_N (getOrElse (N.pred (Npow2 n)) (getUpperBoundOpt x));
 
     (* Operations *)

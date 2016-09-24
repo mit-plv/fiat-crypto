@@ -1,16 +1,11 @@
 Require Import QhasmCommon QhasmEvalCommon.
-Require Import Language.
 Require Import List NPeano.
 
-Module Qhasm <: Language.
+Module Qhasm.
   Import ListNotations.
   Import QhasmEval.
 
-  (* A constant upper-bound on the number of operations we run *)
-  Definition Params := unit.
-  Definition State := fun (_: Params) => State.
-
-  Transparent Params.
+  Definition State := State.
 
   (* Program Types *)
   Inductive QhasmStatement :=
@@ -23,25 +18,25 @@ Module Qhasm <: Language.
 
   Hint Constructors QhasmStatement.
 
-  Definition Program := fun (_: Params) => list QhasmStatement.
+  Definition Program := list QhasmStatement.
 
   (* Only execute while loops a fixed number of times.
      TODO (rsloan): can we do any better? *)
 
-  Fixpoint getLabelMap' {x} (prog: Program x) (cur: LabelMap) (index: nat): LabelMap :=
+  Fixpoint getLabelMap' (prog: Program) (cur: LabelMap) (index: nat): LabelMap :=
     match prog with
     | p :: ps =>
       match p with
-      | QLabel label => @getLabelMap' x ps (NatM.add label index cur) (S index)
-      | _ => @getLabelMap' x ps cur (S index)
+      | QLabel label => @getLabelMap' ps (NatM.add label index cur) (S index)
+      | _ => @getLabelMap' ps cur (S index)
       end
     | [] => cur
     end.
 
-  Definition getLabelMap {x} (prog: Program x): LabelMap :=
+  Definition getLabelMap (prog: Program): LabelMap :=
     getLabelMap' prog (NatM.empty nat) O.
 
-  Inductive QhasmEval {x}: nat -> Program x -> LabelMap -> State x -> State x -> Prop :=
+  Inductive QhasmEval: nat -> Program -> LabelMap -> State -> State -> Prop :=
     | QEOver: forall p n m s, (n > (length p))%nat -> QhasmEval n p m s s
     | QEZero: forall p s m, QhasmEval O p m s s
     | QEAssign: forall n p m a s s' s'',
@@ -80,7 +75,7 @@ Module Qhasm <: Language.
       -> QhasmEval (S n) p m s s'
       -> QhasmEval n p m s s'.
 
-  Definition evaluatesTo := fun (x: Params) p => @QhasmEval x O p (getLabelMap p).
+  Definition evaluatesTo := fun p => @QhasmEval O p (getLabelMap p).
 
   (* world peace *)
 End Qhasm.

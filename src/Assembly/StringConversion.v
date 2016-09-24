@@ -1,24 +1,10 @@
-Require Export Language Conversion.
 Require Export String Ascii Basics Sumbool.
 Require Import QhasmCommon QhasmEvalCommon QhasmUtil Qhasm.
 Require Import NArith NPeano.
 Require Export Bedrock.Word.
 
-Module QhasmString <: Language.
-  Definition Params := unit.
-  Definition Program := fun (_: Params) => string.
-  Definition State := fun (_: Params) => unit.
-
-  Definition evaluatesTo x (p: Program x) (i o: State x): Prop := True.
-End QhasmString.
-
-Module StringConversion <: Conversion Qhasm QhasmString.
+Module StringConversion.
   Import Qhasm ListNotations.
-
-  (* The easy one *)
-  Definition convertState x y (st: QhasmString.State y): option (Qhasm.State x) := None.
-
-  (* Hexadecimal Primitives *)
 
   Section Hex.
     Local Open Scope string_scope.
@@ -49,8 +35,6 @@ Module StringConversion <: Conversion Qhasm QhasmString.
       nToHex' n (N.to_nat (div4 size')).
 
   End Hex.
-
-  (* Conversion of elements *)
 
   Section Elements.
     Local Open Scope string_scope.
@@ -360,9 +344,7 @@ Module StringConversion <: Conversion Qhasm QhasmString.
     | QRet => [("pop %eip")%string]
     end.
 
-  Transparent Qhasm.Program QhasmString.Program.
-
-  Definition convertProgram x y (prog: Qhasm.Program x): option (QhasmString.Program y) :=
+  Definition convertProgram (prog: Qhasm.Program): option string :=
     let decls := fun x => flatMapList (dedup (entries x prog))
       (compose optionToList mappingDeclaration) in
 
@@ -381,12 +363,5 @@ Module StringConversion <: Conversion Qhasm QhasmString.
        enter ++ blank ++
        stmts ++ blank ++
        leave ++ blank) EmptyString).
-
-  Lemma convert_spec: forall pa pb a a' b b' prog prog',
-    convertProgram pa pb prog = Some prog' ->
-    convertState pa pb a = Some a' ->
-    convertState pa pb b = Some b' ->
-    QhasmString.evaluatesTo pb prog' a b <-> Qhasm.evaluatesTo pa prog a' b'.
-  Admitted.
 
 End StringConversion.
