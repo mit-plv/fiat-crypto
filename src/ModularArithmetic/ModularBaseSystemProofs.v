@@ -880,7 +880,7 @@ Section CanonicalizationProofs.
            | |- _ => apply conditional_subtract_lt_modulus
            | |- _ => apply conditional_subtract_modulus_preserves_bounded
            | |- bounded _ (carry_full _) => apply bounded_iff
-           | |- _ => solve [auto using length_to_list]
+           | |- _ => solve [auto using lt_1_length_limb_widths, length_carry_full, length_to_list]
            end.
   Qed.
 
@@ -895,7 +895,7 @@ Section CanonicalizationProofs.
            | |- _ => rewrite Z.mod_add by (pose proof prime_modulus; prime_bound)
            | |- _ => rewrite to_list_from_list
            | |- _ => rewrite conditional_subtract_modulus_spec by
-                       auto using length_carry_full, length_to_list
+                       auto using lt_1_length_limb_widths, length_carry_full, length_to_list
            end.
     rewrite !decode_mod_Fdecode by auto using length_carry_full, length_to_list.
     cbv [carry_full].
