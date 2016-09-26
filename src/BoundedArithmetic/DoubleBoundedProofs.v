@@ -250,6 +250,9 @@ Lemma ripple_carry_tuple_SS' {T} f k xss yss carry
       (carry, (zs, z)).
 Proof. reflexivity. Qed.
 
+(* This turns a goal like [x = Let_In p (fun v => let '(x, y) := f v
+   in x + y)] into a goal like [x = fst (f p) + snd (f p)].  Note that
+   it inlines [Let_In] as well as destructuring lets. *)
 Local Ltac eta_expand :=
   repeat match goal with
          | _ => progress unfold Let_In
