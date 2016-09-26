@@ -38,6 +38,7 @@ src/Encoding/ModularWordEncodingTheorems.v
 src/Encoding/PointEncodingPre.v
 src/Experiments/EncodingLemmas.v
 src/Experiments/GenericFieldPow.v
+src/Experiments/MontgomeryCurve.v
 src/ModularArithmetic/ExtPow2BaseMulProofs.v
 src/ModularArithmetic/ExtendedBaseVector.v
 src/ModularArithmetic/ModularArithmeticTheorems.v
