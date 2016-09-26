@@ -48,7 +48,7 @@ Module MxDH. (* from RFC7748 *)
 
     Fixpoint downto_iter (i:nat) : list nat :=
       match i with
-      | Datatypes.S i' => i'::downto_iter i'
+      | Datatypes.S i' => cons i' (downto_iter i')
       | O => nil
       end.
 
