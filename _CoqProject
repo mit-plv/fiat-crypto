@@ -84,6 +84,7 @@ src/Spec/EdDSA.v
 src/Spec/Encoding.v
 src/Spec/ModularArithmetic.v
 src/Spec/ModularWordEncoding.v
+src/Spec/MxDH.v
 src/Spec/WeierstrassCurve.v
 src/Specific/GF1305.v
 src/Specific/GF25519.v
@@ -92,6 +93,7 @@ src/Specific/FancyMachine256/Core.v
 src/Specific/FancyMachine256/Montgomery.v
 src/Tactics/VerdiTactics.v
 src/Tactics/Algebra_syntax/Nsatz.v
+src/Test/Curve25519SpecTestVectors.v
 src/Util/AdditionChainExponentiation.v
 src/Util/AutoRewrite.v
 src/Util/Bool.v
