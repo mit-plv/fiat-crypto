@@ -6,6 +6,7 @@ Require Import Crypto.ModularArithmetic.Pow2Base.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Notations.
+Require Import Crypto.Util.LetIn.
 
 Local Open Scope nat_scope.
 Local Open Scope Z_scope.
@@ -27,10 +28,14 @@ Section ripple_carry_definitions.
     : forall (xs ys : tuple' T k) (carry : bool), bool * tuple' T k
     := match k return forall (xs ys : tuple' T k) (carry : bool), bool * tuple' T k with
        | O => f
-       | S k' => fun xss yss carry => let '(xs, x) := eta xss in
+       | S k' => fun xss yss carry => dlet xss := xss in
+                                      dlet yss := yss in
+                                      let '(xs, x) := eta xss in
                                       let '(ys, y) := eta yss in
-                                      let '(carry, zs) := eta (@ripple_carry_tuple' _ f k' xs ys carry) in
-                                      let '(carry, z) := eta (f x y carry) in
+                                      dlet addv := (@ripple_carry_tuple' _ f k' xs ys carry) in
+                                      let '(carry, zs) := eta addv in
+                                      dlet fxy := (f x y carry) in
+                                      let '(carry, z) := eta fxy in
                                       (carry, (zs, z))
        end.
 
@@ -75,11 +80,16 @@ Section tuple2.
             {ldi : load_immediate W}.
 
     Definition mul_double (a b : W) : tuple W 2
-      := let out : tuple W 2 := (mulhwll a b, mulhwhh a b) in
-         let tmp             := mulhwhl a b in
-         let '(_, out)   := eta (ripple_carry_adc adc out (shl tmp half_n, shr tmp half_n) false) in
-         let tmp             := mulhwhl b a in
-         let '(_, out)   := eta (ripple_carry_adc adc out (shl tmp half_n, shr tmp half_n) false) in
+      := dlet a              := a in
+         dlet b              := b in
+         let out : tuple W 2 := (mulhwll a b, mulhwhh a b) in
+         dlet out            := out in
+         dlet tmp            := mulhwhl a b in
+         dlet addv           := (ripple_carry_adc adc out (shl tmp half_n, shr tmp half_n) false) in
+         let '(_, out)       := eta addv in
+         dlet tmp            := mulhwhl b a in
+         dlet addv           := (ripple_carry_adc adc out (shl tmp half_n, shr tmp half_n) false) in
+         let '(_, out)       := eta addv in
          out.
 
     (** Require a dummy [decoder] for these instances to allow

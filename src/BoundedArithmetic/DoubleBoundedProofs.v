@@ -12,6 +12,7 @@ Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
+Require Import Crypto.Util.LetIn.
 
 Import ListNotations.
 Local Open Scope list_scope.
@@ -235,6 +236,31 @@ Global Instance decode_mul_double
   : forall x y, tuple_decoder (muldw x y) <~=~> (decode x * decode y)%Z
   := proj1 decode_mul_double_iff _.
 
+
+Lemma ripple_carry_tuple_SS' {T} f k xss yss carry
+  : @ripple_carry_tuple T f (S (S k)) xss yss carry
+    = dlet xss := xss in
+      dlet yss := yss in
+      let '(xs, x) := eta xss in
+      let '(ys, y) := eta yss in
+      dlet addv := (@ripple_carry_tuple _ f (S k) xs ys carry) in
+      let '(carry, zs) := eta addv in
+      dlet fxy := (f x y carry) in
+      let '(carry, z) := eta fxy in
+      (carry, (zs, z)).
+Proof. reflexivity. Qed.
+
+(* This turns a goal like [x = Let_In p (fun v => let '(x, y) := f v
+   in x + y)] into a goal like [x = fst (f p) + snd (f p)].  Note that
+   it inlines [Let_In] as well as destructuring lets. *)
+Local Ltac eta_expand :=
+  repeat match goal with
+         | _ => progress unfold Let_In
+         | [ |- context[let '(x, y) := ?e in _] ]
+           => rewrite (surjective_pairing e)
+         | _ => rewrite <- !surjective_pairing
+         end.
+
 Lemma ripple_carry_tuple_SS {T} f k xss yss carry
   : @ripple_carry_tuple T f (S (S k)) xss yss carry
     = let '(xs, x) := eta xss in
@@ -242,7 +268,11 @@ Lemma ripple_carry_tuple_SS {T} f k xss yss carry
       let '(carry, zs) := eta (@ripple_carry_tuple _ f (S k) xs ys carry) in
       let '(carry, z) := eta (f x y carry) in
       (carry, (zs, z)).
-Proof. reflexivity. Qed.
+Proof.
+  rewrite ripple_carry_tuple_SS'.
+  eta_expand.
+  reflexivity.
+Qed.
 
 Lemma carry_is_good (n z0 z1 k : Z)
   : 0 <= n ->
@@ -414,7 +444,7 @@ Section tuple2.
     Proof.
       assert (0 <= 2 * half_n) by eauto using decode_exponent_nonnegative.
       assert (0 <= half_n) by omega.
-      unfold mul_double.
+      unfold mul_double; eta_expand.
       push_decode; autorewrite with simpl_tuple_decoder; simplify_projections.
       autorewrite with zsimplify Zshift_to_pow push_Zpow.
       rewrite !spread_left_from_shift_half_correct.

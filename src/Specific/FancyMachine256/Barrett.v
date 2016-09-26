@@ -20,11 +20,6 @@ Section expression.
   Context (H : 0 <= m < 2^256).
   Let H' : 0 <= 250 <= 256. omega. Qed.
   Let H'' : 0 < 250. omega. Qed.
-  Let props' := ZLikeProperties_of_ArchitectureBoundedOps ops m H 250 H' H''.
-  Let ops' := (ZLikeOps_of_ArchitectureBoundedOps ops m 250).
-  Local Existing Instances props' ops'.
-  Local Notation fst' := (@fst fancy_machine.W fancy_machine.W).
-  Local Notation snd' := (@snd fancy_machine.W fancy_machine.W).
   Local Notation SmallT := (@ZBounded.SmallT (2 ^ 256) (2 ^ 250) m
                                   (@ZLikeOps_of_ArchitectureBoundedOps 128 ops m _)).
   Definition ldi' : load_immediate SmallT := _.
@@ -38,21 +33,29 @@ Section expression.
     rewrite μ_good; apply μ_range.
   Qed.
 
-  Definition pre_f v
-    := (@barrett_reduce m b k μ offset m_pos base_pos μ_good offset_nonneg k_big_enough m_small m_large ops' props' μ' I μ'_eq (fst' v, snd' v)).
+  Let props'
+      ldi_modulus ldi_0 Hldi_modulus Hldi_0
+    := ZLikeProperties_of_ArchitectureBoundedOps_Factored ops m ldi_modulus ldi_0 Hldi_modulus Hldi_0 H 250 H' H''.
+
+  Definition pre_f' ldi_modulus ldi_0 ldi_μ Hldi_modulus Hldi_0 (Hldi_μ : ldi_μ = ldi' μ)
+    := (fun v => (@barrett_reduce m b k μ offset m_pos base_pos μ_good offset_nonneg k_big_enough m_small m_large _ (props' ldi_modulus ldi_0 Hldi_modulus Hldi_0) ldi_μ I (eq_trans (f_equal _ Hldi_μ) μ'_eq)  (fst v, snd v))).
+
+  Definition pre_f := pre_f' _ _ _ eq_refl eq_refl eq_refl.
 
   Local Arguments μ' / .
   Local Arguments ldi' / .
+  Local Arguments DoubleBounded.mul_double / .
+  Local Opaque Let_In Let_In_pf.
 
   Definition expression'
     := Eval simpl in
-        (fun v => proj1_sig (pre_f v)).
+        (fun v => pflet ldi_modulus, Hldi_modulus := fancy_machine.ldi m in
+                  pflet ldi_μ, Hldi_μ := fancy_machine.ldi μ in
+                  pflet ldi_0, Hldi_0 := fancy_machine.ldi 0 in
+                  proj1_sig (pre_f' ldi_modulus ldi_0 ldi_μ Hldi_modulus Hldi_0 Hldi_μ v)).
+  Local Transparent Let_In Let_In_pf.
   Definition expression
-    := Eval cbv beta iota delta [expression' fst snd] in
-        fun v => let RegMod := fancy_machine.ldi m in
-                 let RegMu := fancy_machine.ldi μ in
-                 let RegZero := fancy_machine.ldi 0 in
-                 expression' v.
+    := Eval cbv beta iota delta [expression' fst snd Let_In Let_In_pf] in expression'.
 
   Definition expression_eq v (H : 0 <= _ < _) : fancy_machine.decode (expression v) = _
     := proj1 (proj2_sig (pre_f v) H).
@@ -69,60 +72,88 @@ Section reflected.
 
   Definition rexpression_simple := Eval vm_compute in rexpression.
 
+  (*Compute DefaultRegisters rexpression_simple.*)
+
+  Definition registers
+    := [RegMod; RegMuLow; x; xHigh; RegMod; RegMuLow; RegZero; tmp; q; qHigh; scratch+3;
+       SpecialCarryBit; q; SpecialCarryBit; qHigh; scratch+3; SpecialCarryBit; q; SpecialCarryBit; qHigh; tmp;
+       scratch+3; SpecialCarryBit; tmp; scratch+3; SpecialCarryBit; tmp; SpecialCarryBit; tmp; q; out].
+
+  Definition compiled_syntax
+    := Eval lazy in AssembleSyntax rexpression_simple registers.
+
   Context (m μ : Z)
           (props : fancy_machine.arithmetic ops).
 
   Let result (v : tuple fancy_machine.W 2) := Syntax.Interp (interp_op _) rexpression_simple m μ (fst v) (snd v).
+  Let assembled_result (v : tuple fancy_machine.W 2) : fancy_machine.W := Core.Interp compiled_syntax m μ (fst v) (snd v).
 
   Theorem sanity : result = expression ops m μ.
   Proof.
     reflexivity.
   Qed.
 
-  Theorem correctness
-          (b : Z := 2)
-          (k : Z := 253)
-          (offset : Z := 3)
-          (H0 : 0 < m)
-          (H1 : μ = b^(2 * k) / m)
-          (H2 : 3 * m <= b^(k + offset))
-          (H3 : b^(k - offset) <= m + 1)
-          (H4 : 0 <= m < 2^(k + offset))
-          (H5 : 0 <= b^(2 * k) / m < b^(k + offset))
-          (v : tuple fancy_machine.W 2)
-          (H6 : 0 <= decode v < b^(2 * k))
-    : fancy_machine.decode (result v) = decode v mod m.
+  Theorem assembled_sanity : assembled_result = expression ops m μ.
   Proof.
-    rewrite sanity; destruct v.
-    apply expression_eq; assumption.
+    reflexivity.
   Qed.
-End reflected.
 
-Definition compiled_syntax
-  := Eval vm_compute in
-      (fun ops => AssembleSyntax ops (rexpression_simple _) (@RegMod :: @RegMuLow :: nil)%list).
+  Section correctness.
+    Let b : Z := 2.
+    Let k : Z := 253.
+    Let offset : Z := 3.
+    Context (H0 : 0 < m)
+            (H1 : μ = b^(2 * k) / m)
+            (H2 : 3 * m <= b^(k + offset))
+            (H3 : b^(k - offset) <= m + 1)
+            (H4 : 0 <= m < 2^(k + offset))
+            (H5 : 0 <= b^(2 * k) / m < b^(k + offset))
+            (v : tuple fancy_machine.W 2)
+            (H6 : 0 <= decode v < b^(2 * k)).
+    Theorem correctness : fancy_machine.decode (result v) = decode v mod m.
+    Proof.
+      rewrite sanity; destruct v.
+      apply expression_eq; assumption.
+    Qed.
+    Theorem assembled_correctness : fancy_machine.decode (assembled_result v) = decode v mod m.
+    Proof.
+      rewrite assembled_sanity; destruct v.
+      apply expression_eq; assumption.
+    Qed.
+  End correctness.
+End reflected.
 
 Print compiled_syntax.
 (* compiled_syntax =
-fun (_ : fancy_machine.instructions (2 * 128)) (var : base_type -> Type) =>
-λ x x0 : var TW,
-c.Rshi(x1, x0, x, 250),
-c.Mul128(x2, c.UpperHalf(x1), c.UpperHalf(RegMuLow)),
-c.Mul128(x3, c.UpperHalf(x1), c.LowerHalf(RegMuLow)),
-c.Mul128(x4, c.LowerHalf(x1), c.LowerHalf(RegMuLow)),
-c.Add(x6, x4, c.LeftShifted{x3, 128}),
-c.Addc(x8, x2, c.RightShifted{x3, 128}),
-c.Mul128(x9, c.UpperHalf(RegMuLow), c.LowerHalf(x1)),
-c.Add(_, x6, c.LeftShifted{x9, 128}),
-c.Addc(x13, x8, c.RightShifted{x9, 128}),
-c.Mul128(x14, c.LowerHalf(x13), c.LowerHalf(RegMod)),
-c.Mul128(x15, c.UpperHalf(x13), c.LowerHalf(RegMod)),
-c.Add(x17, x14, c.LeftShifted{x15, 128}),
-c.Mul128(x18, c.UpperHalf(RegMod), c.LowerHalf(x13)),
-c.Add(x20, x17, c.LeftShifted{x18, 128}),
-c.Sub(x22, x, x20),
-c.Addm(x23, x22, RegZero),
-c.Addm(x24, x23, RegZero),
-Return x24
-     : fancy_machine.instructions (2 * 128) -> forall var : base_type -> Type, syntax
+fun ops : fancy_machine.instructions (2 * 128) =>
+λn RegMod RegMuLow x xHigh,
+slet RegMod := RegMod in
+slet RegMuLow := RegMuLow in
+slet RegZero := ldi 0 in
+c.Rshi(tmp, xHigh, x, 250),
+c.Mul128(q, c.LowerHalf(tmp), c.LowerHalf(RegMuLow)),
+c.Mul128(qHigh, c.UpperHalf(tmp), c.UpperHalf(RegMuLow)),
+c.Mul128(scratch+3, c.UpperHalf(tmp), c.LowerHalf(RegMuLow)),
+c.Add(q, q, c.LeftShifted{scratch+3, 128}),
+c.Addc(qHigh, qHigh, c.RightShifted{scratch+3, 128}),
+c.Mul128(scratch+3, c.UpperHalf(RegMuLow), c.LowerHalf(tmp)),
+c.Add(q, q, c.LeftShifted{scratch+3, 128}),
+c.Addc(qHigh, qHigh, c.RightShifted{scratch+3, 128}),
+c.Mul128(tmp, c.LowerHalf(qHigh), c.LowerHalf(RegMod)),
+c.Mul128(scratch+3, c.UpperHalf(qHigh), c.LowerHalf(RegMod)),
+c.Add(tmp, tmp, c.LeftShifted{scratch+3, 128}),
+c.Mul128(scratch+3, c.UpperHalf(RegMod), c.LowerHalf(qHigh)),
+c.Add(tmp, tmp, c.LeftShifted{scratch+3, 128}),
+c.Sub(tmp, x, tmp),
+c.Addm(q, tmp, RegZero),
+c.Addm(out, q, RegZero),
+Return out
+     : forall ops : fancy_machine.instructions (2 * 128),
+       expr base_type
+         (fun v : base_type =>
+          match v with
+          | TZ => Z
+          | Tbool => bool
+          | TW => let (W, _, _, _, _, _, _, _, _, _, _, _, _, _) := ops in W
+          end) op Register (TZ -> TZ -> TW -> TW -> Tbase TW)%ctype
 *)

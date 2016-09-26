@@ -10,6 +10,7 @@ Require Import Crypto.ModularArithmetic.ZBounded.
 Require Import Crypto.BaseSystem.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Notations.
 
 Local Open Scope small_zlike_scope.
@@ -21,6 +22,19 @@ Section montgomery.
           (modulus' : SmallT)
           (modulus'_valid : small_valid modulus')
           (modulus_nonzero : modulus <> 0).
+
+  (** pull out a common subexpression *)
+  Local Ltac cse :=
+    let RHS := match goal with |- _ = ?decode ?RHS /\ _ => RHS end in
+    let v := fresh in
+    match RHS with
+    | context[?e] => not is_var e; set (v := e) at 1 2; test clearbody v
+    end;
+    revert v;
+    match goal with
+    | [ |- let v := ?val in ?LHS = ?decode ?RHS /\ ?P ]
+      => change (LHS = decode (dlet v := val in RHS) /\ P)
+    end.
 
   Definition partial_reduce : forall v : LargeT,
       { partial_reduce : SmallT
@@ -38,6 +52,7 @@ Section montgomery.
     rewrite <- partial_reduce_alt_eq by omega.
     cbv [Montgomery.Z.partial_reduce Montgomery.Z.partial_reduce_alt Montgomery.Z.prereduce].
     pull_zlike_decode.
+    cse.
     subst pr; split; [ reflexivity | exact _ ].
   Defined.
 
@@ -58,6 +73,7 @@ Section montgomery.
     rewrite <- partial_reduce_alt_eq by omega.
     cbv [Montgomery.Z.partial_reduce Montgomery.Z.partial_reduce_alt Montgomery.Z.prereduce].
     pull_zlike_decode.
+    cse.
     subst pr; split; [ reflexivity | exact _ ].
   Defined.
 
