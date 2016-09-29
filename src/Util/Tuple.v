@@ -1,5 +1,6 @@
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.Relations.Relation_Definitions.
+Require Import Coq.Lists.List.
 Require Import Crypto.Util.Decidable.
 Require Export Crypto.Util.FixCoqMistakes.
 
@@ -95,6 +96,9 @@ Definition on_tuple {A B} (f:list A -> list B)
            (xs:tuple A n) : tuple B m :=
   from_list m (f (to_list n xs))
             (H (to_list n xs) (length_to_list xs)).
+
+Definition map {n A B} (f:A -> B) (xs:tuple A n) : tuple B n
+  := on_tuple (List.map f) (fun _ => eq_trans (map_length _ _)) xs.
 
 Definition on_tuple2 {A B C} (f : list A -> list B -> list C) {a b c : nat}
            (Hlength : forall la lb, length la = a -> length lb = b -> length (f la lb) = c)
@@ -259,7 +263,7 @@ Proof.
       split; try assumption.
       apply IHn; auto.
 Qed.
-  
+
 
 Require Import Crypto.Util.ListUtil. (* To initialize [distr_length] database *)
 Hint Rewrite length_to_list' @length_to_list : distr_length.
