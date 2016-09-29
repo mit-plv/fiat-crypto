@@ -43,7 +43,7 @@ Definition Z_shiftl_by_opt := Eval compute in Z.shiftl_by.
 Definition nth_default_opt {A} := Eval compute in @nth_default A.
 Definition set_nth_opt {A} := Eval compute in @set_nth A.
 Definition update_nth_opt {A} := Eval compute in @update_nth A.
-Definition map_opt {A B} := Eval compute in @map A B.
+Definition map_opt {A B} := Eval compute in @List.map A B.
 Definition full_carry_chain_opt := Eval compute in @Pow2Base.full_carry_chain.
 Definition length_opt := Eval compute in length.
 Definition base_from_limb_widths_opt := Eval compute in @Pow2Base.base_from_limb_widths.
@@ -143,7 +143,7 @@ Definition construct_mul2modulus {m} (prm : PseudoMersenneBaseParams m) : digits
   match limb_widths with
   | nil => nil
   | x :: tail =>
-      2 ^ (x + 1) - (2 * c) :: map (fun w => 2 ^ (w + 1) - 2) tail
+      2 ^ (x + 1) - (2 * c) :: List.map (fun w => 2 ^ (w + 1) - 2) tail
   end.
 
 Ltac compute_preconditions :=
@@ -459,7 +459,7 @@ Section Subtraction.
   Definition opp_opt_correct us
     : opp_opt us = opp coeff coeff_mod us
     := proj2_sig (opp_opt_sig us).
-  
+
 End Subtraction.
 
 Section Multiplication.
@@ -532,7 +532,7 @@ Section Multiplication.
        end.
 
   Lemma map_zeros : forall a n l,
-    map (Z.mul a) (zeros n ++ l) = zeros n ++ map (Z.mul a) l.
+    List.map (Z.mul a) (zeros n ++ l) = zeros n ++ List.map (Z.mul a) l.
   Proof.
     induction n; simpl; [ reflexivity | intros; apply f_equal2; [ omega | congruence ] ].
   Qed.
@@ -553,7 +553,7 @@ Section Multiplication.
     { cbv [mul_each mul_bi].
       rewrite <- mul_bi'_opt_correct.
       rewrite map_zeros.
-      change @map with @map_opt.
+      change @List.map with @map_opt.
       cbv [zeros].
       reflexivity. }
   Defined.
@@ -598,7 +598,7 @@ Section Multiplication.
     rewrite Z.map_shiftl by apply k_nonneg.
     rewrite c_subst.
     fold k; rewrite k_subst.
-    change @map with @map_opt.
+    change @List.map with @map_opt.
     change @Z.shiftl_by with @Z_shiftl_by_opt.
     reflexivity.
   Defined.
@@ -670,7 +670,7 @@ Section PowInv.
           {cc : CarryChain limb_widths}.
   Local Notation digits := (tuple Z (length limb_widths)).
   Context (one_ : digits) (one_subst : one = one_).
-  
+
   Fixpoint fold_chain_opt {T} (id : T) op chain acc :=
   match chain with
   | [] => match acc with
@@ -761,7 +761,7 @@ Section Conversion.
   Definition convert'_opt {lwA lwB}
              (nonnegA : forall x, In x lwA -> 0 <= x)
              (nonnegB : forall x, In x lwB -> 0 <= x)
-             bits_fit inp i out := 
+             bits_fit inp i out :=
     Eval cbv [proj1_sig convert'_opt_sig] in
       proj1_sig (convert'_opt_sig nonnegA nonnegB bits_fit inp i out).
 
@@ -769,10 +769,10 @@ Section Conversion.
              (nonnegA : forall x, In x lwA -> 0 <= x)
              (nonnegB : forall x, In x lwB -> 0 <= x)
              bits_fit inp i out :
-    convert'_opt nonnegA nonnegB bits_fit inp i out = convert' nonnegA nonnegB bits_fit inp i out := 
+    convert'_opt nonnegA nonnegB bits_fit inp i out = convert' nonnegA nonnegB bits_fit inp i out :=
     Eval cbv [proj2_sig convert'_opt_sig] in
       proj2_sig (convert'_opt_sig nonnegA nonnegB bits_fit inp i out).
-    
+
   Context {modulus} (prm : PseudoMersenneBaseParams modulus)
           {target_widths} (target_widths_nonneg : forall x, In x target_widths -> 0 <= x) (bits_eq : sum_firstn limb_widths (length limb_widths) = sum_firstn target_widths (length target_widths)).
   Local Notation digits := (tuple Z (length limb_widths)).
@@ -813,7 +813,7 @@ Section Conversion.
 
   Definition unpack_opt (x : target_digits) : digits :=
     Eval cbv [proj1_sig unpack_opt_sig] in proj1_sig (unpack_opt_sig x).
-  
+
   Definition unpack_correct (x : target_digits) :
     unpack_opt x = unpack target_widths_nonneg bits_eq x
     := Eval cbv [proj2_sig unpack_opt_sig] in proj2_sig (unpack_opt_sig x).
@@ -883,7 +883,7 @@ Section Canonicalization.
     change @max_ones with max_ones_opt.
     reflexivity.
   Defined.
-  
+
   Definition conditional_subtract_modulus_opt f cond : list Z
     := Eval cbv [proj1_sig conditional_subtract_modulus_opt_sig] in proj1_sig (conditional_subtract_modulus_opt_sig f cond).
 
@@ -937,10 +937,10 @@ Section SquareRoots.
   Proof.
     intros; repeat break_if; congruence.
   Qed.
-  
+
   Section SquareRoot3mod4.
   Context {ec : ExponentiationChain (modulus / 4 + 1)}.
-    
+
   Definition sqrt_3mod4_opt_sig (us : digits) :
     { vs : digits | eq vs (sqrt_3mod4 chain chain_correct us)}.
   Proof.
@@ -954,7 +954,7 @@ Section SquareRoots.
   Definition sqrt_3mod4_opt_correct us
     : eq (sqrt_3mod4_opt us) (sqrt_3mod4 chain chain_correct us)
     := Eval cbv [proj2_sig sqrt_3mod4_opt_sig] in proj2_sig (sqrt_3mod4_opt_sig us).
-  
+
   End SquareRoot3mod4.
 
   Import Morphisms.
@@ -963,7 +963,7 @@ Section SquareRoots.
   Section SquareRoot5mod8.
   Context {ec : ExponentiationChain (modulus / 8 + 1)}.
   Context (sqrt_m1 : digits) (sqrt_m1_correct : rep (mul sqrt_m1 sqrt_m1) (F.opp 1%F)).
-    
+
   Definition sqrt_5mod8_opt_sig (us : digits) :
     { vs : digits |
       eq vs (sqrt_5mod8 (carry_mul_opt k_ c_) (pow_opt k_ c_ one_) chain chain_correct sqrt_m1 us)}.
@@ -982,7 +982,7 @@ Section SquareRoots.
   Definition sqrt_5mod8_opt_correct us
     : eq (sqrt_5mod8_opt us) (ModularBaseSystem.sqrt_5mod8 _ _ chain chain_correct sqrt_m1 us)
     := Eval cbv [proj2_sig sqrt_5mod8_opt_sig] in proj2_sig (sqrt_5mod8_opt_sig us).
-  
+
   End SquareRoot5mod8.
 
 End SquareRoots.

@@ -138,8 +138,8 @@ Section FieldOperationProofs.
   Lemma modular_base_system_add_monoid : @monoid digits eq add zero.
   Proof.
     repeat match goal with
-           | |- _ => progress intro 
-           | |- _ => cbv [zero]; rewrite encode_rep 
+           | |- _ => progress intro
+           | |- _ => cbv [zero]; rewrite encode_rep
            | |- _ digits eq add => econstructor
            | |- _ digits eq add _ => econstructor
            | |- (_ + _)%F = decode (add ?a ?b) =>  rewrite (add_rep a b) by (try apply add_rep; reflexivity)
@@ -149,7 +149,7 @@ Section FieldOperationProofs.
            | |- add _ _ ~= decode _ => etransitivity
            | x : digits |- ?x ~= _ => reflexivity
            | |- _ => apply associative
-           | |- _ => apply left_identity 
+           | |- _ => apply left_identity
            | |- _ => apply right_identity
            | |- _ => solve [eauto using eq_Equivalence, eq_dec]
            | |- _ => congruence
@@ -165,7 +165,7 @@ Section FieldOperationProofs.
   Proof.
     cbv [reduce]; intros.
     rewrite extended_shiftadd, base_from_limb_widths_length, pseudomersenne_add, BaseSystemProofs.add_rep.
-    change (map (Z.mul c)) with (BaseSystem.mul_each c).
+    change (List.map (Z.mul c)) with (BaseSystem.mul_each c).
     rewrite mul_each_rep; auto.
   Qed.
 
@@ -186,8 +186,8 @@ Section FieldOperationProofs.
   Lemma modular_base_system_mul_monoid : @monoid digits eq mul one.
   Proof.
     repeat match goal with
-           | |- _ => progress intro 
-           | |- _ => cbv [one]; rewrite encode_rep 
+           | |- _ => progress intro
+           | |- _ => cbv [one]; rewrite encode_rep
            | |- _ digits eq mul => econstructor
            | |- _ digits eq mul _ => econstructor
            | |- (_ * _)%F = decode (mul ?a ?b) =>  rewrite (mul_rep a b) by (try apply mul_rep; reflexivity)
@@ -197,7 +197,7 @@ Section FieldOperationProofs.
            | |- mul _ _ ~= decode _ => etransitivity
            | x : digits |- ?x ~= _ => reflexivity
            | |- _ => apply associative
-           | |- _ => apply left_identity 
+           | |- _ => apply left_identity
            | |- _ => apply right_identity
            | |- _ => solve [eauto using eq_Equivalence, eq_dec]
            | |- _ => congruence
@@ -290,7 +290,7 @@ Section FieldOperationProofs.
     cbv beta delta [eq] in *.
     erewrite !add_rep; cbv [rep] in *; try reflexivity; assumption.
   Qed.
-  
+
   Global Instance sub_Proper mm mm_correct
     : Proper (eq ==> eq ==> eq) (sub mm mm_correct).
   Proof.
@@ -298,7 +298,7 @@ Section FieldOperationProofs.
     cbv beta delta [eq] in *.
     erewrite !sub_rep; cbv [rep] in *; try reflexivity; assumption.
   Qed.
-  
+
   Global Instance opp_Proper mm mm_correct
     : Proper (eq ==> eq) (opp mm mm_correct).
   Proof.
@@ -361,7 +361,7 @@ Section FieldOperationProofs.
     + trivial.
   Qed.
   End FieldProofs.
-  
+
 End FieldOperationProofs.
 Opaque encode add mul sub inv pow.
 
@@ -579,7 +579,7 @@ Section CanonicalizationProofs.
                  then
                     if eq_nat_dec n (pred i)
                     then Z.pow2_mod (us {{ pred i }} [n]) (limb_widths [n])
-                    else us{{ pred i }} [n] 
+                    else us{{ pred i }} [n]
                  else us{{ pred i}} [n] +
                     (if eq_nat_dec n i
                       then (us{{ pred i}} [pred i]) >> (limb_widths [pred i])
@@ -631,11 +631,11 @@ Section CanonicalizationProofs.
     reflexivity.
   Qed.
 
-  Ltac bound_during_loop := 
+  Ltac bound_during_loop :=
     repeat match goal with
            | |- _ => progress (intros; subst)
            | |- _ => unique pose proof lt_1_length_limb_widths
-           | |- _ => unique pose proof c_reduce2 
+           | |- _ => unique pose proof c_reduce2
            | |- _ => break_if; try omega
            | |- _ => progress simpl pred in *
            | |- _ => progress rewrite ?Z.add_0_r, ?Z.sub_0_r in *
@@ -770,7 +770,7 @@ Section CanonicalizationProofs.
       if lt_dec i (length limb_widths)
       then
         if Z_lt_dec (us [0]) (2 ^ limb_widths [0])
-        then                      
+        then
           2 ^ limb_widths [n]
         else
           if eq_nat_dec n 0
@@ -798,7 +798,7 @@ Section CanonicalizationProofs.
       auto using length_carry_full, bound_after_second_loop.
   Qed.
 
-  Local Notation initial_bounds u := 
+  Local Notation initial_bounds u :=
       (forall n : nat,
        0 <= to_list (length limb_widths) u [n] <
        2 ^ B -
@@ -807,7 +807,7 @@ Section CanonicalizationProofs.
         else (2 ^ B) >> (limb_widths [pred n]))).
   Local Notation minimal_rep u := ((bounded limb_widths (to_list (length limb_widths) u))
                                    /\ (ge_modulus (to_list _ u) = false)).
-  
+
   Lemma decode_bitwise_eq_iff : forall u v, minimal_rep u -> minimal_rep v ->
     (fieldwise Logic.eq u v <->
      decode_bitwise limb_widths (to_list _ u) = decode_bitwise limb_widths (to_list _ v)).
@@ -851,7 +851,7 @@ Section CanonicalizationProofs.
   Qed.
 
   Lemma bounded_canonical : forall u v x y, rep u x -> rep v y ->
-                                            minimal_rep u -> minimal_rep v -> 
+                                            minimal_rep u -> minimal_rep v ->
                                             (x = y <-> fieldwise Logic.eq u v).
   Proof.
     intros.
@@ -921,7 +921,7 @@ Section CanonicalizationProofs.
     erewrite <-!Fdecode_decode_mod by eauto.
     apply freeze_decode.
   Qed.
-  
+
   Lemma freeze_canonical : forall u v x y, rep u x -> rep v y ->
                                            initial_bounds u ->
                                            initial_bounds v ->
@@ -939,15 +939,15 @@ Section SquareRootProofs.
   Local Notation base := (base_from_limb_widths limb_widths).
   Local Hint Resolve (@limb_widths_nonneg _ prm) sum_firstn_limb_widths_nonneg.
 
-  Definition freeze_input_bounds n := 
+  Definition freeze_input_bounds n :=
      (2 ^ B -
        (if eq_nat_dec n 0
         then 0
         else (2 ^ B) >> (nth_default 0 limb_widths (pred n)))).
-  Definition bounded_by u bounds := 
+  Definition bounded_by u bounds :=
       (forall n : nat,
           0 <= nth_default 0 (to_list (length limb_widths) u) n < bounds n).
-  
+
   Lemma eqb_true_iff : forall u v x y,
     bounded_by u freeze_input_bounds -> bounded_by v freeze_input_bounds ->
     u ~= x -> v ~= y -> (x = y <-> eqb u v = true).
@@ -1002,7 +1002,7 @@ Section SquareRootProofs.
           {pow_input_bounds : nat -> Z}
           (pow_bounded : forall x is, bounded_by x pow_input_bounds ->
                                       bounded_by (pow_ x is) mul_input_bounds).
-  
+
   Lemma sqrt_5mod8_correct : forall u x, u ~= x ->
     bounded_by u pow_input_bounds -> bounded_by u freeze_input_bounds ->
     (sqrt_5mod8 mul_ pow_ chain chain_correct sqrt_m1 u) ~= F.sqrt_5mod8 (decode sqrt_m1) x.
