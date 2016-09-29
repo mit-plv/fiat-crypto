@@ -34,7 +34,7 @@ Section decode.
     Local Notation limb_widths := (repeat n k).
 
     Lemma decode_bounded {isdecode : is_decode decode} w
-      : 0 <= n -> bounded limb_widths (map decode (rev (to_list k w))).
+      : 0 <= n -> bounded limb_widths (List.map decode (rev (to_list k w))).
     Proof.
       intro.
       eapply bounded_uniform; try solve [ eauto using repeat_spec ].
