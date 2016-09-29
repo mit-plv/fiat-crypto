@@ -1,3 +1,4 @@
+Require Import Coq.omega.Omega Coq.micromega.Psatz.
 Require Import Coq.PArith.BinPos Coq.Lists.List.
 Require Import Crypto.Reflection.Named.Syntax.
 Require Import Crypto.Reflection.Named.Compile.
@@ -8,6 +9,7 @@ Require Import Crypto.Reflection.InputSyntax.
 Require Import Crypto.Reflection.CommonSubexpressionElimination.
 Require Crypto.Reflection.Linearize Crypto.Reflection.Inline.
 Require Import Crypto.Reflection.WfReflective.
+Require Import Crypto.Reflection.Conversion.
 
 Import ReifyDebugNotations.
 
@@ -157,3 +159,57 @@ Definition example_expr_compiled
       end.
 
 Compute register_reassign Pos.eqb empty empty example_expr_compiled (Some 1%positive :: Some 2%positive :: None :: List.map (@Some _) (List.map Pos.of_nat (seq 3 20))).
+
+Module bounds.
+  Record bounded := { lower : nat ; value : nat ; upper : nat }.
+  Definition map_bounded_f2 (f : nat -> nat -> nat) (swap_on_arg2 : bool) (x y : bounded)
+    := {| lower := f (lower x) (if swap_on_arg2 then upper y else lower y);
+          value := f (value x) (value y);
+          upper := f (upper x) (if swap_on_arg2 then lower y else upper y) |}.
+  Definition bounded_pf :=  { b : bounded | lower b <= value b <= upper b }.
+  Definition add_bounded_pf (x y : bounded_pf) : bounded_pf.
+  Proof.
+    exists (map_bounded_f2 plus false (proj1_sig x) (proj1_sig y)).
+    simpl; abstract (destruct x, y; simpl; omega).
+  Defined.
+  Definition mul_bounded_pf (x y : bounded_pf) : bounded_pf.
+  Proof.
+    exists (map_bounded_f2 mult false (proj1_sig x) (proj1_sig y)).
+    simpl; abstract (destruct x, y; simpl; nia).
+  Defined.
+  Definition sub_bounded_pf (x y : bounded_pf) : bounded_pf.
+  Proof.
+    exists (map_bounded_f2 minus true (proj1_sig x) (proj1_sig y)).
+    simpl; abstract (destruct x, y; simpl; omega).
+  Defined.
+  Definition interp_base_type_bounds (v : base_type) : Type :=
+    match v with
+    | Tnat => { b : bounded | lower b <= value b <= upper b }
+    end.
+  Definition interp_op_bounds src dst (f : op src dst) : interp_flat_type_gen interp_base_type_bounds src -> interp_flat_type_gen interp_base_type_bounds dst
+    := match f with
+       | Add => fun xy => add_bounded_pf (fst xy) (snd xy)
+       | Mul => fun xy => mul_bounded_pf (fst xy) (snd xy)
+       | Sub => fun xy => sub_bounded_pf (fst xy) (snd xy)
+       end%nat.
+  Definition constant_bounded t (x : interp_base_type t) : interp_base_type_bounds t.
+  Proof.
+    destruct t.
+    exists {| lower := x ; value := x ; upper := x |}.
+    simpl; split; reflexivity.
+  Defined.
+  Fixpoint constant_bounds t
+    : interp_flat_type_gen interp_base_type t -> interp_flat_type_gen interp_base_type_bounds t
+    := match t with
+       | Tbase t => constant_bounded t
+       | Prod _ _ => fun x => (constant_bounds _ (fst x), constant_bounds _ (snd x))
+       end.
+
+  Definition example_expr_bounds : Syntax.Expr base_type interp_base_type_bounds op (Arrow Tnat (Arrow Tnat (Tflat _ tnat))) :=
+    Eval vm_compute in
+      (fun var => map base_type op interp_base_type interp_base_type_bounds constant_bounds (fun _ x => x) (fun _ x => x) (example_expr (fun t => var t))).
+
+  Compute (fun x xpf y ypf => proj1_sig (Syntax.Interp interp_op_bounds example_expr_bounds
+                                         (exist _ {| lower := 0 ; value := x ; upper := 10 |} xpf)
+                                         (exist _ {| lower := 100 ; value := y ; upper := 1000 |} ypf))).
+End bounds.
