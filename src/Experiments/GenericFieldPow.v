@@ -1,6 +1,11 @@
 Require Import Coq.setoid_ring.Cring.
 Require Import Coq.omega.Omega.
 Require Export Crypto.Util.FixCoqMistakes.
+(** TODO: Move some imports up here from below, if it doesn't break things *)
+Require Coq.setoid_ring.Field_theory Coq.setoid_ring.Field_tac.
+Require Coq.setoid_ring.Ring_theory Coq.setoid_ring.NArithRing.
+Require Coq.nsatz.Nsatz.
+Require Crypto.Util.Tactics.
 Generalizable All Variables.
 
 
@@ -83,13 +88,13 @@ Module F.
         repeat (eapply Proper_pow_pos || f_equiv; trivial).
     Qed.
 
-    Require Import Coq.setoid_ring.Field_theory Coq.setoid_ring.Field_tac.
+    Import Coq.setoid_ring.Field_theory Coq.setoid_ring.Field_tac.
     Lemma field_theory_for_tactic : field_theory 0 1 _+_ _*_ _-_ -_ _/_ inv _==_.
     Proof.
       split; repeat constructor; repeat intro; gen_rewrite; try cring;
         eauto using field_one_neq_zero, field_inv_def. Qed.
 
-    Require Import Coq.setoid_ring.Ring_theory Coq.setoid_ring.NArithRing.
+    Import Coq.setoid_ring.Ring_theory Coq.setoid_ring.NArithRing.
     Lemma power_theory_for_tactic : power_theory 1 _*_ _==_ NtoZ power.
     Proof. constructor; destruct n; reflexivity. Qed.
 
@@ -112,7 +117,7 @@ Module F.
       rewrite div_mul_idemp_l in *; auto.
     Qed.
 
-    Require Import Coq.nsatz.Nsatz.
+    Import Coq.nsatz.Nsatz.
     Global Instance Integral_domain_Field : Integral_domain (R:=F).
     Proof.
       constructor; intros; eauto using mul_zero_why, field_one_neq_zero.
@@ -125,7 +130,7 @@ Module F.
       try (exact I);
       try (idtac; []; clear H;intro H).
 
-    Require Import Util.Tactics.
+    Import Util.Tactics.
     Inductive field_simplify_done {x y:F} : (x==y) -> Type :=
       Field_simplify_done : forall (H:x==y), field_simplify_done H.
     Ltac field_nsatz :=
