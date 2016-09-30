@@ -392,6 +392,28 @@ Module Group.
         auto using associative, left_identity, right_identity, left_inverse, right_inverse.
     Qed.
   End GroupByHomomorphism.
+
+  Section HomomorphismComposition.
+    Context {G EQ OP ID INV} {groupG:@group G EQ OP ID INV}.
+    Context {H eq op id inv} {groupH:@group H eq op id inv}.
+    Context {K eqK opK idK invK} {groupK:@group K eqK opK idK invK}.
+    Context {phi:G->H} {phi':H->K}
+            {Hphi:@is_homomorphism G EQ OP H eq op phi}
+            {Hphi':@is_homomorphism H eq op K eqK opK phi'}.
+    Lemma is_homomorphism_compose
+          {phi'':G->K}
+          (Hphi'' : forall x, eqK (phi' (phi x)) (phi'' x))
+      : @is_homomorphism G EQ OP K eqK opK phi''.
+    Proof.
+      split; repeat intro; rewrite <- !Hphi''.
+      { rewrite !homomorphism; reflexivity. }
+      { apply Hphi', Hphi; assumption. }
+    Qed.
+
+    Global Instance is_homomorphism_compose_refl
+      : @is_homomorphism G EQ OP K eqK opK (fun x => phi' (phi x))
+      := is_homomorphism_compose (fun x => reflexivity _).
+  End HomomorphismComposition.
 End Group.
 
 Module ScalarMult.
