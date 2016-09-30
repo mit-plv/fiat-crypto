@@ -305,6 +305,47 @@ Module Group.
     Qed.
   End Homomorphism.
 
+  Section Homomorphism_rev.
+    Context {G EQ OP ID INV} {groupG:@group G EQ OP ID INV}.
+    Context {H} {eq : H -> H -> Prop} {op : H -> H -> H} {id : H} {inv : H -> H}.
+    Context {phi:G->H} {phi':H->G}.
+    Local Infix "=" := EQ. Local Infix "=" := EQ : type_scope.
+    Context (phi'_phi_id : forall A, phi' (phi A) = A)
+            (phi'_eq : forall a b, EQ (phi' a) (phi' b) <-> eq a b)
+            (phi'_op : forall a b, phi' (op a b) = OP (phi' a) (phi' b))
+            {phi'_inv : forall a, phi' (inv a) = INV (phi' a)}
+            {phi'_id : phi' id = ID}.
+
+    Local Instance group_from_redundant_representation
+      : @group H eq op id inv.
+    Proof.
+      repeat match goal with
+             | [ H : group |- _ ] => destruct H; try clear H
+             | [ H : monoid |- _ ] => destruct H; try clear H
+             | [ H : is_associative |- _ ] => destruct H; try clear H
+             | [ H : is_left_identity |- _ ] => destruct H; try clear H
+             | [ H : is_right_identity |- _ ] => destruct H; try clear H
+             | [ H : Equivalence _ |- _ ] => destruct H; try clear H
+             | [ H : is_left_inverse |- _ ] => destruct H; try clear H
+             | [ H : is_right_inverse |- _ ] => destruct H; try clear H
+             | _ => intro
+             | _ => split
+             | [ H : eq _ _ |- _ ] => apply phi'_eq in H
+             | [ |- eq _ _ ] => apply phi'_eq
+             | [ H : EQ _ _ |- _ ] => rewrite H
+             | _ => progress erewrite ?phi'_op, ?phi'_inv, ?phi'_id by reflexivity
+             | [ H : _ |- _ ] => progress erewrite ?phi'_op, ?phi'_inv, ?phi'_id in H by reflexivity
+             | _ => solve [ eauto ]
+             end.
+    Qed.
+
+    Definition homomorphism_from_redundant_representation
+      : @is_homomorphism G EQ OP H eq op phi.
+    Proof.
+      split; repeat intro; apply phi'_eq; rewrite ?phi'_op, ?phi'_phi_id; easy.
+    Qed.
+  End Homomorphism_rev.
+
   Section GroupByHomomorphism.
     Lemma surjective_homomorphism_from_group
           {G EQ OP ID INV} {groupG:@group G EQ OP ID INV}
