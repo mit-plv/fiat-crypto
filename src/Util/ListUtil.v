@@ -211,8 +211,8 @@ Hint Rewrite <- @firstn_cons @firstn_app @List.firstn_firstn : pull_firstn.
 Hint Rewrite @firstn_all2 @removelast_firstn @firstn_removelast using omega : push_firstn.
 Hint Rewrite @firstn_all2 @removelast_firstn @firstn_removelast using omega : simpl_firstn.
 
-Local Arguments value / .
-Local Arguments error / .
+Local Arguments value / _ _.
+Local Arguments error / _.
 
 Definition sum_firstn l n := fold_right Z.add 0%Z (firstn n l).
 
