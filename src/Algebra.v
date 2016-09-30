@@ -313,7 +313,7 @@ Module Group.
           {Proper_op:Proper(eq==>eq==>eq)op}
           {Proper_inv:Proper(eq==>eq)inv}
           {phi iph} {Proper_phi:Proper(EQ==>eq)phi} {Proper_iph:Proper(eq==>EQ)iph}
-          {surj:forall h, phi (iph h) = h}
+          {surj:forall h, eq (phi (iph h)) h}
           {phi_op : forall a b, eq (phi (OP a b)) (op (phi a) (phi b))}
           {phi_inv : forall a, eq (phi (INV a)) (inv (phi a))}
           {phi_id : eq (phi ID) id}
