@@ -203,7 +203,7 @@ Section language.
   Lemma duplicate_type_length ls
     : List.length (duplicate_type ls) = List.length ls.
   Proof. apply List.map_length. Qed.
-  Lemma duplicae_type_in t v ls
+  Lemma duplicate_type_in t v ls
     : List.In (existT _ (t, t) v) (duplicate_type ls) -> List.In (existT _ t v) ls.
   Proof.
     unfold duplicate_type; rewrite List.in_map_iff.
@@ -384,7 +384,7 @@ Section language.
       => erewrite length_natize_interp_flat_type_gen1, length_natize_interp_flat_type_gen2; eassumption
     | [ H : base_type_eq_semidec_transparent _ _ = None |- False ] => eapply duplicate_type_not_in; eassumption
     | [ H : List.nth_error _ _ = Some _ |- _ ] => apply List.nth_error_In in H
-    | [ H : List.In _ (duplicate_type _) |- _ ] => apply duplicae_type_in in H
+    | [ H : List.In _ (duplicate_type _) |- _ ] => apply duplicate_type_in in H
     | [ H : context[match _ with _ => _ end] |- _ ] => revert H; progress break_match
     | [ |- wff _ _ _ ] => constructor
     | [ |- wf _ _ _ ] => constructor
