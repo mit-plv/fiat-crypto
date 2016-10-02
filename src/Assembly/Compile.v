@@ -206,18 +206,33 @@ Module CompileLL.
         end
       end a.
 
-    Definition getOutputSlot {t} (nextRegName: nat) (op: binop TT TT TT) (x y: WArg TT)
-               (eC: WArg TT -> WExpr t) : option nat :=
-      match (makeOp op (regM _ (reg w nextRegName)) (getMapping x) (getMapping y)) with
-      | Some (reg _ _ r, Some a, op') => Some r
-      | Some (reg _ _ r, None, op')   => Some r
-      | _                             => None
+    Definition getOutputSlot (nextReg: nat)
+               (op: binop TT TT TT) (x: WArg TT) (y: WArg TT) : option nat :=
+      match (makeOp op (regM _ (reg w nextReg)) (getMapping x) (getMapping y)) with
+      | Some (reg _ _ r, Some a, _) => Some r
+      | Some (reg _ _ r, None, _)   => Some r
+      | _                           => None
       end.
 
     Section ExprF.
       Context (Out: Type)
-              (update: binop TT TT TT -> WArg TT -> WArg TT -> Out -> option Out)
+              (update: WArg TT -> binop TT TT TT -> WArg TT -> WArg TT -> Out -> option Out)
               (get: forall t', WArg t' -> option Out).
+
+      Definition opToTT {t1 t2 t3} (op: binop t1 t2 t3): option (binop TT TT TT) :=
+        match op with
+        | OPadd => Some OPadd
+        | OPsub => Some OPsub
+        | OPmul => Some OPmul
+        | OPand => Some OPand
+        | OPshiftr => Some OPshiftr
+        end.
+
+      Definition argToTT {t} (a: WArg t): option (WArg TT) :=
+        match t as t' return WArg t' -> _ with
+        | TT => fun a' => Some a'
+        | _ => fun a' => None
+        end a.
 
       Fixpoint zeros (t: type): WArg t :=
         match t with
@@ -225,86 +240,53 @@ Module CompileLL.
         | Prod t0 t1 => Pair (zeros t0) (zeros t1)
         end.
  
-      Fixpoint depth {t} (p: WExpr t) {struct p}: nat :=
+      Fixpoint exprF {t} (nextRegName: nat) (p: WExpr t) {struct p}: option Out :=
         match p with
-        | LetBinop _ _ _ _ _ _ t' eC => S (depth (eC (zeros _)))
-        | Return _ a => O
+        | LetBinop t1 t2 t3 op x y t' eC =>
+          omap (opToTT op) (fun op' =>
+            omap (argToTT x) (fun x' =>
+              omap (argToTT y) (fun y' =>
+                omap (getOutputSlot nextRegName op' x' y') (fun r =>
+                  let var :=
+                    match t3 as t3' return WArg t3' with
+                    | TT => Var (natToWord n r)
+                    | _ => zeros _
+                    end in
+
+                  omap (exprF (S nextRegName) (eC var)) (fun out =>
+                    omap (argToTT var) (fun var' =>
+                      update var' op' x' y' out))))))
+        | Return _ a => get _ a
         end.
+    End ExprF.
 
-      Fixpoint exprF0 t d (nextVar: nat) (p: {e: WExpr t | depth e = d}) {struct d}: option Out.
-        refine (match d as d' return {e: WExpr t | depth e = d'} -> _ with
-        | (S m) => fun p' =>
-          match proj1_sig p' with
-          | LetBinop TT TT TT op x y t' eC =>
-            omap (getOutputSlot nextVar op x y eC) (fun r =>
-              omap (exprF0 t' m (S nextVar) (exist _ (eC (Var (@natToWord n r))) _)) (fun o =>
-                update op x y o))
-          | _ => None
-          end
-        | O => fun p' =>
-          match proj1_sig p' with
-          | Return _ a => get _ a
-          | _ => None
-          end
-        end p).
-
-        destruct p' as [p' D'], p'; simpl in D'.
-        inversion D'; subst.
-      Admitted.
-
-      Fixpoint exprF1 t inputs (args: list nat) (p: LLProgram t inputs): option Out.
-        refine (match inputs as i' return LLProgram t i' -> _ with
-        | (S m) => fun p' => @exprF Out t m update get (cons inputs args)
-                                (p' (@Var (word n) (word n) (@natToWord n nextVar)))
-        | O => fun p' =>
-        end p).
-        Defined.
-    Section ExprF.
-
-    Fixpoint exprF {t Out}
-        
-        t) (e: @LL.expr (word n) nat t) {struct e}: option Out :=
-      match e with
-      | LetBinop TT TT TT op x y t' eC =>
-        omap (getOutputSlot nextRegName op x y eC) (fun r =>
-          omap (exprF update get (S nextRegName) (eC (Var r))) (fun out =>
-            update op x y out))
-      | Return _ a => get _ a
-      | _ => None
-      end.
-
-    Fixpoint getProg {t} :=
-      @exprF t Program
-        (fun op x y out ->
-            match (makeOp op (regM _ (reg w nextRegName)) (@getMapping n w x) (@getMapping n w y)) with
+    Definition getProg :=
+      @exprF Program
+        (fun var op x y out =>
+            match (makeOp op (getMapping var) (getMapping x) (getMapping y)) with
             | Some (reg _ _ r, Some a, op') => Some ((QAssign a) :: (QOp op') :: out)
             | Some (reg _ _ r, None, op')   => Some ((QOp op') :: out)
             | _                             => None
             end)
-        (fun t' a => [])
+        (fun t' a => Some []).
 
-    Fixpoint getOuts {t} :=
-      @exprF t Program
-        (fun op x y out -> Some out)
-        (fun t' a => vars a)
+    Definition getOuts :=
+      @exprF (list nat)
+        (fun var op x y out => Some out)
+        (fun t' a => Some (vars a)).
 
-      match e with
-      | LetBinop TT TT TT op x y t' eC =>
-        if (type_dec t t')
-        then match compile'' nextRegName op x y _ with
-          | Some (progHead, outputVar, nextRegName') =>
-            match compile' nextRegName' (_ op eC) with
-            | Some (progTail, outputs) => Some (progHead ++ progTail, outputs)
-            | None => None
-            end
-          | None => None
-          end
-        else None
-      | Return _ a => Some ([], vars a)
-      | _ => None
-      end.
+    Fixpoint fillInputs {t inputs} (prog: LLProgram t inputs) {struct inputs}: WExpr t :=
+      match inputs as inputs' return LLProgram t inputs' -> LLProgram t O with
+      | O => fun p => p
+      | S inputs'' => fun p => fillInputs (p (Var (natToWord _ inputs)))
+      end prog.
 
-    Definition compile {t inputs} (prog: @LLProgram _ t inputs): option (Program * list nat) :=
-      @compile' t inputs (freeVars prog).
+    Definition compile {t inputs} (p: LLProgram t inputs): option (Program * list nat) :=
+      let p' := fillInputs p in
+
+      omap (getOuts _ (S inputs) p') (fun outs =>
+        omap (getProg _ (S inputs) p') (fun prog =>
+          Some (prog, outs))).
+
   End Compile.
 End CompileLL.

@@ -105,13 +105,25 @@ Module LLConversions.
         [exact (IHt1 a1) | exact (IHt2 a2)].
   Defined.
 
-  Fixpoint convertArg {A B: Type} {EA: Evaluable A} {EB: Evaluable B} {t} (x: arg (T := A) t): arg (T := B) t :=
-    match x with | Arg t' c => Arg t' (convertVar (t := t') c) end.
+  Fixpoint convertArg {A B: Type} {EA: Evaluable A} {EB: Evaluable B} t {struct t}: @arg A A t -> @arg B B t :=
+    match t as t' return @arg A A t' -> @arg B B t' with
+    | TT => fun x =>
+      match x with
+      | Const c => Const (convertVar (t := TT) c)
+      | Var v => Var (convertVar (t := TT) v)
+      end
+    | Prod t0 t1 => fun x =>
+      match (match_arg_Prod x) with
+      | (a, b) => Pair ((convertArg t0) a) ((convertArg t1) b)
+      end
+    end.
+
+  Arguments convertArg [_ _ _ _ _ _].
 
   Fixpoint convertExpr {A B: Type} {EA: Evaluable A} {EB: Evaluable B} {t} (a: expr (T := A) t): expr (T := B) t :=
     match a with
     | LetBinop _ _ out op a b _ eC =>
-      LetBinop (T := B) op (convertArg a) (convertArg b) (fun x: (interp_type (T := B) out) => convertExpr (eC (convertVar x)))
+      LetBinop (T := B) op (convertArg a) (convertArg b) (fun x: (arg out) => convertExpr (eC (convertArg x)))
     | Return _ a => Return (convertArg a)
     end.
 
@@ -162,10 +174,9 @@ Module LLConversions.
                (x: @interp_type _ tx) (y: @interp_type _ ty): @interp_type _ tz :=
       @interp_binop (@WordRangeOpt n) (@WordRangeOptEvaluable n) _ _ _ op x y.
 
-    Definition rangeArg {n t} (x: @arg (@WordRangeOpt n) t) := @interp_arg _ _ x.
+    Definition rangeArg {n t} (x: @arg (@WordRangeOpt n) (@WordRangeOpt n) t) := @interp_arg _ _ x.
 
-    Definition wordArg {n t} (x: @arg (word n) t) := @interp_arg _ _ x.
-
+    Definition wordArg {n t} (x: @arg (word n) (word n) t) := @interp_arg _ _ x.
 
     (* Bounds-checking fixpoint *)
 
@@ -182,21 +193,36 @@ Module LLConversions.
         end
       end x.
 
-    Fixpoint check {n t} (e : @expr (@WordRangeOpt n) t): Prop :=
+    Fixpoint check {n t} (e : @expr (@WordRangeOpt n) (@WordRangeOpt n) t): Prop :=
       match e with
       | LetBinop ta tb tc op a b _ eC =>
           (@checkVar n tc (rangeOp op (interp_arg a) (interp_arg b)))
-        /\ (check (eC (rangeOp op (interp_arg a) (interp_arg b))))
+        /\ (check (eC (uninterp_arg (rangeOp op (interp_arg a) (interp_arg b)))))
       | Return _ a => checkVar (interp_arg a)
       end.
 
     (* Utility Lemmas *)
 
-    Lemma interp_arg_convert : forall {A B t} {EA: Evaluable A} {EB: Evaluable B} (x: @arg A t),
+    Lemma convertArg_interp: forall {A B t} {EA: Evaluable A} {EB: Evaluable B} (x: @arg A A t),
         (interp_arg (@convertArg A B EA EB t x)) = @convertVar A B EA EB t (interp_arg x).
-    Proof. induction x as [t i]; induction t, EA, EB; simpl; reflexivity. Qed.
+    Proof.
+      induction x as [| |t0 t1 i0 i1]; [reflexivity|reflexivity|].
+      induction EA, EB; simpl; f_equal; assumption.
+    Qed.
 
-    Lemma ZToRange_binop_correct : forall {n tx ty tz} (op: binop tx ty tz) (x: @arg _ tx) (y: @arg _ ty) e,
+    Lemma convertArg_var: forall {A B EA EB t} (x: @interp_type A t),
+        @convertArg A B EA EB t (uninterp_arg x) = uninterp_arg (@convertVar A B EA EB t x).
+    Proof.
+      induction t as [|t0 IHt_0 t1 IHt_1]; simpl; intros; [reflexivity|].
+      induction x as [a b]; simpl; f_equal;
+        induction t0 as [|t0a IHt0_0 t0b IHt0_1],
+                  t1 as [|t1a IHt1_0]; simpl in *;
+        try rewrite IHt_0;
+        try rewrite IHt_1;
+        reflexivity.
+    Qed.
+
+    Lemma ZToRange_binop_correct : forall {n tx ty tz} (op: binop tx ty tz) (x: arg tx) (y: arg ty) e,
         check (t := tz) (convertZToWordRangeOpt n (LetBinop op x y e))
       -> zOp op (interp_arg x) (interp_arg y) =
           varRangeToZ (rangeOp (n := n) op (varZToRange (interp_arg x)) (varZToRange (interp_arg y))).
@@ -222,14 +248,14 @@ Module LLConversions.
 
     Admitted.
 
-    Lemma ZToWord_binop_correct : forall {n tx ty tz} (op: binop tx ty tz) (x: @arg _ tx) (y: @arg _ ty) e,
+    Lemma ZToWord_binop_correct : forall {n tx ty tz} (op: binop tx ty tz) (x: arg tx) (y: arg ty) e,
         check (t := tz) (convertZToWordRangeOpt n (LetBinop op x y e))
       -> zOp op (interp_arg x) (interp_arg y) =
           varWordToZ (wordOp (n := n) op (varZToWord (interp_arg x)) (varZToWord (interp_arg y))).
     Proof.
       intros until e; intro H.
       unfold convertZToWordRangeOpt, convertExpr, check, rangeOp in H.
-      repeat rewrite interp_arg_convert in H; simpl in H.
+      repeat rewrite convertArg_interp in H; simpl in H.
       destruct H as [H H0]; clear H0.
 
       induction op; unfold zOp, varRangeToZ, rangeOp.
@@ -264,8 +290,8 @@ Module LLConversions.
 
     (* Main correctness guarantee *)
 
-    Lemma RangeInterp_correct: forall {n t} (E: @expr Z t),
-        check (convertZToWordRangeOpt n E)
+    Lemma RangeInterp_correct: forall {n t} (E: expr t),
+         check (convertZToWordRangeOpt n E)
       -> typeMap (fun x => NToWord n (Z.to_N x)) (zinterp E) = wordInterp (convertZToWord n E).
     Proof.
       intros n t E S.
@@ -276,30 +302,37 @@ Module LLConversions.
 
       - rewrite H.
 
-        + repeat f_equal; unfold id in *.
-          destruct x as [tx' x], y as [ty' y]; simpl.
+        + destruct S as [S0 S1]; unfold convertZToWordRangeOpt in *.
+          repeat f_equal; unfold id in *.
 
-          destruct S as [S0 S1].
+          pose proof (ZToWord_binop_correct (n := n) op x y) as C;
+            unfold zOp, wordOp, varWordToZ, varZToWord in C;
+            simpl in C.
 
-          pose proof (ZToWord_binop_correct (n := n) op (Arg _ x) (Arg _ y)) as C;
-            unfold zOp, wordOp, varWordToZ, varZToWord in C; simpl in C.
+          repeat rewrite convertArg_var, convertArg_interp; f_equal.
+          rewrite convertArg_var, convertArg_interp in C.
 
-          induction op; rewrite (C (fun _ => Return (Arg TT 0%Z)));
-            repeat f_equal; split; try assumption; simpl; unfold makeRange;
+          induction op; rewrite (C (fun _ => Return (Const 0%Z))); clear C H;
+            repeat rewrite convertArg_interp; repeat f_equal; try reflexivity;
+            split; simpl in *;
+            unfold rangeOp, uninterp_arg, makeRange, applyBinOp, id in *;
 
             repeat match goal with
-            | [|- context[Z_le_dec ?a ?b] ] => destruct (Z_le_dec a b)
-            | [|- context[Z_lt_dec ?a ?b] ] => destruct (Z_lt_dec a b)
-            end;
+            | [|- context[Z_le_dec ?A ?B] ] => destruct (Z_le_dec A B)
+            | [|- context[Z_lt_dec ?A ?B] ] => destruct (Z_lt_dec A B)
+            end; clear S0 S1 e; simpl;
 
-            simpl; clear H S0 S1 C e; unfold id in *;
-            pose proof (Npow2_gt0 n) as H;
-            rewrite N2Z.inj_lt in H; simpl in H; intuition;
+            repeat match goal with
+            | [|- context[Nge_dec ?A ?B] ] => destruct (Nge_dec A B)
+            | [|- context[overflows ?N ?X] ] => destruct (overflows N X)
+            end; simpl; intuition;
 
-            match goal with
+            try match goal with
             | [A: (0 <= 0)%Z -> False |- _] =>
               apply A; cbv; intro Q; inversion Q
-            end.
+            end;
+
+            admit.
 
         + destruct S as [S0 S1]; unfold convertZToWordRangeOpt.
 
@@ -307,16 +340,15 @@ Module LLConversions.
              with (varRangeToZ (rangeOp op
                     (rangeArg (@convertArg _ _ ZEvaluable (@WordRangeOptEvaluable n) _ x))
                     (rangeArg (@convertArg _ _ ZEvaluable (@WordRangeOptEvaluable n) _ y))));
-            [unfold varRangeToZ, rangeArg; assumption | clear S1].
+            [unfold varRangeToZ, rangeArg; admit | clear S1].
 
-          destruct x as [tx' x], y as [ty' y]; simpl.
-
-          pose proof (ZToRange_binop_correct (n := n) op (Arg _ x) (Arg _ y)) as C;
+          pose proof (ZToRange_binop_correct (n := n) op x y) as C;
             unfold zOp, wordOp, varZToRange, varRangeToZ, convertZToWordRangeOpt in *;
             simpl in C.
 
-          induction op; rewrite C with (e := fun _ => Return (Arg TT 0%Z));
-            split; try assumption; simpl; unfold makeRange;
+          induction op; rewrite C with (e := fun _ => Return (Const 0%Z)); admit.
+          (* TODO(rsloan): why is this so slow?
+            try split; try assumption; simpl; unfold makeRange;
             repeat match goal with
             | [|- context[Z_le_dec ?a ?b] ] => destruct (Z_le_dec a b)
             | [|- context[Z_lt_dec ?a ?b] ] => destruct (Z_lt_dec a b)
@@ -326,15 +358,15 @@ Module LLConversions.
             pose proof (Npow2_gt0 n) as H;
             rewrite N2Z.inj_lt in H; simpl in H; intuition;
 
-            match goal with
+            try match goal with
             | [A: (0 <= 0)%Z -> False |- _] =>
               apply A; cbv; intro Q; inversion Q
-            end.
-
+            end. *)
 
       - simpl in S.
-        induction a; simpl in *; try reflexivity.
-    Qed.
+        induction a as [| |t0 t1 a0 IHa0 a1 IHa1]; simpl in *; try reflexivity.
+        destruct S; rewrite IHa0, IHa1; try reflexivity; assumption.
+    Admitted.
   End Correctness.
 End LLConversions.
 
