@@ -8,6 +8,7 @@ Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.WordUtil.
+Require Import Crypto.Util.FixCoqMistakes.
 Require Crypto.Encoding.PointEncodingPre.
 
 (* This file should fill in the following context variables from EdDSARepChange.v
@@ -310,10 +311,11 @@ Section PointEncoding.
       {
         destruct (sign_bit); rewrite ?Bool.andb_true_r, ?Bool.andb_false_r; auto.
         cbv [PointEncodingPre.F_eqb].
+        pose proof (@Algebra.Ring.homomorphism_is_homomorphism _ _ _ _ _ _ _ _ _ _ _ phi_homomorphism).
+        pose proof (@Algebra.Group.homomorphism_id _ _  _ _ _ _ _ _  _ _ _ _ _ H).
         match goal with |- (if ?x then _ else _) = _ => destruct x as [keq | keq] end;
-          rewrite phi_solve_for_x2, <-phi_sqrt, <-Algebra.Group.homomorphism_id,
-          phi_bijective in keq; cbv [F.zero]; break_if; try congruence; reflexivity.
-
+        rewrite phi_solve_for_x2, <-phi_sqrt, <-H0 in keq;
+        rewrite phi_bijective in keq; cbv [F.zero]; break_if; try congruence; reflexivity.
       }
       rewrite H.
       break_if; try reflexivity.
