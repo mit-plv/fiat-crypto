@@ -5,13 +5,14 @@ Require Import Crypto.CompleteEdwardsCurve.Pre.
 Require Import Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
 Require Import Bedrock.Word.
 Require Import Crypto.Encoding.ModularWordEncodingTheorems.
-Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Algebra.
 
 Require Import Crypto.Spec.Encoding Crypto.Spec.ModularWordEncoding Crypto.Spec.ModularArithmetic.
 
 Require Import Crypto.Util.Notations.
+Require Import Crypto.Util.Tactics.
+Require Import Crypto.Tactics.VerdiTactics.
 Require Export Crypto.Util.FixCoqMistakes.
 
 Generalizable All Variables.
@@ -39,7 +40,7 @@ Section PointEncodingPre.
 
   Context {sz : nat} (sz_nonzero : (0 < sz)%nat).
   Context {sqrt : F -> F} (sqrt_square : forall x root, x == (root ^2) -> sqrt x == root)
-    (sqrt_subst : forall x y, x == y -> sqrt x == sqrt y).
+          (sqrt_subst : forall x y, x == y -> sqrt x == sqrt y).
   Context (FEncoding : canonical encoding of F as (word sz)).
   Context {sign_bit : F -> bool} (sign_bit_zero : forall x, x == 0 -> Logic.eq (sign_bit x) false)
     (sign_bit_opp : forall x, x !== 0 -> Logic.eq (negb (sign_bit x)) (sign_bit (opp x)))
@@ -89,19 +90,19 @@ Section PointEncodingPre.
 
   Let point_enc (p : point) : Word.word (S sz) := point_enc_coordinates (E.coordinates p).
 
-  Definition point_dec_coordinates (w : Word.word (S sz)) : option (F * F) :=
-    match dec (Word.wtl w) with
-    | None => None
-    | Some y => let x2 := solve_for_x2 y in
-        let x := sqrt x2 in
-        if eq_dec (x ^ 2) x2
-        then
-          let p := (if Bool.eqb (whd w) (sign_bit x) then x else opp x, y) in
-          if (andb (F_eqb x 0) (whd w))
-          then None (* special case for 0, since its opposite has the same sign; if the sign bit of 0 is 1, produce None.*)
-          else Some p
-        else None
-    end.
+  Definition coord_from_y sign (y : F) : option (F * F) :=
+    let x2 := solve_for_x2 y in
+    let x := sqrt x2 in
+    if eq_dec (mul x x) x2
+    then
+        let p := (if Bool.eqb sign (sign_bit x) then x else opp x, y) in
+        if (F_eqb x zero && sign)%bool
+        then None
+        else Some p
+    else None.
+
+  Definition point_dec_coordinates (w : word (S sz)) : option (F * F) :=
+    option_rect (fun _ => _) (coord_from_y (whd w)) None (dec (wtl w)).
 
   (* Definition of product equality parameterized over equality of underlying types *)
   Definition prod_eq {A B} eqA eqB (x y : (A * B)) := let (xA,xB) := x in let (yA,yB) := y in
@@ -209,7 +210,7 @@ Section PointEncodingPre.
     option_coordinates_eq q r -> option_coordinates_eq p r.
   Proof.
     unfold option_coordinates_eq, option_eq; intros.
-    repeat break_match; subst; congruence || eauto using prod_eq_trans.
+    repeat break_match; subst; try destruct p,q; congruence || eauto using prod_eq_trans.
   Qed.
 
   Lemma prod_eq_sym : forall p q, prod_eq eq eq p q -> prod_eq eq eq q p.
@@ -223,7 +224,7 @@ Section PointEncodingPre.
     option_coordinates_eq q p.
   Proof.
     unfold option_coordinates_eq, option_eq; intros.
-    repeat break_match; subst; congruence || eauto using prod_eq_sym; intuition.
+    repeat break_match; subst; try destruct p; congruence || eauto using prod_eq_sym; intuition.
   Qed.
 
   Opaque option_coordinates_eq option_point_eq point_eq option_eq prod_eq.
@@ -232,59 +233,56 @@ Section PointEncodingPre.
 
   Ltac congruence_option_coord := exfalso; eauto using option_coordinates_eq_NS.
 
-  Lemma point_dec_coordinates_onCurve : forall w p, option_coordinates_eq  (point_dec_coordinates w) (Some p) -> onCurve p.
+  Lemma onCurve_eq : forall x y,
+    eq (add (mul a (mul x x)) (mul y y))
+        (add one (mul (mul d (mul x x)) (mul y y))) ->
+    @Pre.onCurve _ eq one add mul a d (x,y).
   Proof.
-    unfold point_dec_coordinates; intros.
-    edestruct dec; [ | congruence_option_coord ].
-    break_if; [ | congruence_option_coord].
-    break_if; [ congruence_option_coord | ].
-    repeat match goal with [H:  _ = _ :> Decidable _ |- _ ] => clear H end.
-    apply E.solve_correct in e.
-    break_if; eapply prod_eq_onCurve;
-      eauto using inversion_option_coordinates_eq, solve_onCurve, solve_opp_onCurve.
+      tauto.
   Qed.
 
-  Definition point_dec' w p : option point :=
-    match (option_coordinates_eq_dec  (point_dec_coordinates w) (Some p)) with
-      | left EQ => Some (exist _ p (point_dec_coordinates_onCurve w p EQ))
-      | right _ => None (* this case is never reached *)
+  Definition point_from_xy (xy : F * F) : option point :=
+    let '(x,y) := xy in
+    match Decidable.dec (eq (add (mul a (mul x x)) (mul y y))
+                  (add one (mul (mul d (mul x x)) (mul y y)))) with
+      | left A => Some (exist _ (x,y) (onCurve_eq x y A))
+      | right _ => None
     end.
 
   Definition point_dec (w : word (S sz)) : option point :=
-    match point_dec_coordinates w with
-    | Some p => point_dec' w p
-    | None => None
-    end.
+    option_rect (fun _ => option point) point_from_xy None (point_dec_coordinates w).
 
   Lemma point_coordinates_encoding_canonical : forall w p,
     point_dec_coordinates w = Some p -> point_enc_coordinates p = w.
   Proof.
-    unfold point_dec_coordinates, point_enc_coordinates; intros ? ? coord_dec_Some.
-    case_eq (dec (wtl w)); [ intros ? dec_Some | intros dec_None; rewrite dec_None in *; congruence ].
-    destruct p.
-    rewrite (shatter_word w).
-    f_equal; rewrite dec_Some in *;
-      do 2 (break_if; try congruence); inversion coord_dec_Some; subst.
-    + destruct (eq_dec (sqrt (solve_for_x2 f1)) 0) as [sqrt_0 | ?].
-      - break_if; rewrite sign_bit_zero in * by (assumption || (rewrite sqrt_0; ring));
-          auto using Bool.eqb_prop.
-        apply F_eqb_iff in sqrt_0.
-        rewrite sqrt_0 in *.
-        destruct (whd w); inversion Heqb0; auto.
-      - break_if.
-        symmetry; auto using Bool.eqb_prop.
-        rewrite <- sign_bit_opp by assumption.
-        destruct (whd w); inversion Heqb0; break_if; auto.
-    + inversion coord_dec_Some; subst.
-      auto using encoding_canonical.
+    repeat match goal with
+           | |- _ => progress cbv [point_dec_coordinates option_rect
+                                   point_enc_coordinates coord_from_y] in *
+           | |- _ => progress intros
+           | |- _ => progress rewrite ?Bool.andb_true_r,
+                     ?Bool.andb_false_r, ?Bool.eqb_false_iff in *
+           | |- _ => rewrite <-sign_bit_opp
+               by ((rewrite <-F_eqb_iff; congruence) ||
+                   (intro A; specialize (sign_bit_zero _ A); congruence))
+           | p : F * F |- _ => destruct p
+           | |- _ => break_match; try discriminate
+           | H : Some _ = Some _ |- _ => inversion H; subst; clear H
+           | w : word (S sz) |- WS _ _ = ?w => rewrite (shatter_word w);
+                                                 f_equal
+           | |- sign_bit _ = whd ?w => destruct (whd w)
+           | |- negb _ = false => apply Bool.negb_false_iff
+           | |- _ => solve [auto using Bool.eqb_prop,
+                            Bool.eq_true_not_negb,
+                            Bool.not_false_is_true, encoding_canonical]
+           end.
   Qed.
 
   Lemma inversion_point_dec : forall w x, point_dec w = Some x ->
     point_dec_coordinates w = Some (E.coordinates x).
   Proof.
-    unfold point_dec, E.coordinates; intros.
+    unfold point_dec, E.coordinates, point_from_xy, option_rect; intros.
     break_match; [ | congruence].
-    unfold point_dec' in *; break_match; [ | congruence].
+    destruct p. break_match; [ | congruence ].
     match goal with [ H : Some _ = Some _ |- _ ] => inversion H end.
     reflexivity.
   Qed.
@@ -302,9 +300,11 @@ Section PointEncodingPre.
     exact (encoding_valid _).
   Qed.
 
-  Lemma F_eqb_false : forall x y, x !== y -> F_eqb x y = false.
+  Lemma F_eqb_false : forall x y, x !== y <-> F_eqb x y = false.
   Proof.
-    intros; unfold F_eqb; destruct (eq_dec x y); congruence.
+    intros; unfold F_eqb; destruct (eq_dec x y).
+    + split; intuition eauto; try discriminate.
+    + tauto.
   Qed.
 
   Lemma eqb_sign_opp_r : forall x y, (y !== 0) ->
@@ -333,7 +333,7 @@ Section PointEncodingPre.
     option_coordinates_eq (point_dec_coordinates (point_enc_coordinates p)) (Some p).
   Proof.
     intros [x y] onCurve_p.
-    unfold point_dec_coordinates.
+    unfold point_dec_coordinates, point_from_xy, coord_from_y, option_rect.
     rewrite y_decode.
     cbv [whd point_enc_coordinates snd].
     pose proof (square_sqrt (solve_for_x2 y) x) as solve_sqrt_ok.
@@ -353,7 +353,7 @@ Section PointEncodingPre.
       apply option_coordinates_eq_iff; split; try reflexivity.
       transitivity (sqrt (x ^2)); auto.
       apply (sqrt_square); reflexivity.
-    + rewrite F_eqb_false, Bool.andb_false_l by (rewrite sqrt_square; [ | eauto]; assumption).
+    + rewrite (proj1 (F_eqb_false _ 0)), Bool.andb_false_l by (rewrite sqrt_square; [ | eauto]; assumption).
       break_if; [ | apply eqb_sign_opp_r in Heqb];
         try (apply option_coordinates_eq_iff; split; try reflexivity);
         try eapply sign_match with (y := solve_for_x2 y); eauto;
@@ -362,37 +362,40 @@ Section PointEncodingPre.
         assumption.
 Qed.
 
-Lemma point_dec'_valid : forall p q, option_coordinates_eq (Some q) (Some (proj1_sig p)) ->
-  option_point_eq (point_dec' (point_enc_coordinates (proj1_sig p)) q) (Some p).
-Proof.
-  unfold point_dec'; intros.
-  break_match.
-  + f_equal.
-    apply option_point_eq_iff.
-    destruct p as [ [ ? ? ] ? ]; simpl in *.
-    assumption.
-  + exfalso; apply  n.
-    eapply option_coordinates_eq_trans; [ | eauto using option_coordinates_eq_sym ].
-    apply point_encoding_coordinates_valid.
-    apply (proj2_sig p).
-Qed.
-
 Lemma point_encoding_valid : forall p,
   option_point_eq (point_dec (point_enc p)) (Some p).
 Proof.
-  intros.
-  unfold point_dec.
-  replace (point_enc p) with (point_enc_coordinates (proj1_sig p)) by reflexivity.
-  break_match.
-  + eapply (point_dec'_valid p).
-    rewrite <-Heqo.
-    apply point_encoding_coordinates_valid.
-    apply (proj2_sig p).
-  + exfalso.
-    eapply option_coordinates_eq_NS.
-    pose proof (point_encoding_coordinates_valid _ (proj2_sig p)).
-    rewrite Heqo in *.
-    eassumption.
+  repeat match goal with
+         | |- _ => progress (cbv [point_dec point_enc E.coordinates
+                                 option_rect point_from_xy]; intros)
+         | |- _ => progress simpl proj1_sig in *
+         | p : point |- _ => destruct p
+         | p : F * F |- _ => destruct p
+         | |- appcontext[proj1_sig (exist ?a ?b ?c)] =>
+           progress replace (proj1_sig (exist a b c)) with b by reflexivity
+         | |- _ => break_match
+         | |- _ => split
+         | |- option_point_eq _ _ => apply option_point_eq_iff
+         | |- option_coordinates_eq _ _ => apply option_coordinates_eq_iff
+         | H : a * ?x^2 + ?y^2 == 1 + d * ?x^2 * ?y^2 |- _ =>
+           unique pose proof (point_encoding_coordinates_valid (_,_) H)
+         | Hpq : point_dec_coordinates (point_enc_coordinates ?p) = Some ?q,
+           Hp : option_coordinates_eq
+                  (point_dec_coordinates (point_enc_coordinates ?p)) (Some ?p)
+           |- _ => unique assert (option_coordinates_eq (Some q) (Some p))
+                                   by (rewrite Hpq in Hp; auto)
+         | H : option_coordinates_eq (Some ?p) (Some ?q) |- _ =>
+           apply option_coordinates_eq_iff in H; destruct H;
+             (assumption || (symmetry; assumption))
+         end.
+  exfalso.
+  apply n.
+  apply option_coordinates_eq_iff in H1; destruct H1.
+  rewrite H1, H2; assumption.
+
+
+  rewrite Heqo in H0.
+  congruence_option_coord.
 Qed.
 
 End PointEncodingPre.

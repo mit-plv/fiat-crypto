@@ -94,6 +94,7 @@ src/Spec/Encoding.v
 src/Spec/ModularArithmetic.v
 src/Spec/ModularWordEncoding.v
 src/Spec/MxDH.v
+src/Spec/PointEncoding.v
 src/Spec/WeierstrassCurve.v
 src/Specific/GF1305.v
 src/Specific/GF25519.v
