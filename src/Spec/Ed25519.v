@@ -43,8 +43,8 @@ Section Ed25519.
   Axiom Senc : Fl -> Word.word b. (* TODO(jadep) *)
 
   (* these 2 proofs can be generated using https://github.com/andres-erbsen/safecurves-primes *)
-  Axiom prime_q : Znumtheory.prime q. Existing Instance prime_q.
-  Axiom prime_l : Znumtheory.prime l. Existing Instance prime_l.
+  Axiom prime_q : Znumtheory.prime q. Global Existing Instance prime_q.
+  Axiom prime_l : Znumtheory.prime l. Global Existing Instance prime_l.
 
   Require Import Crypto.Util.Decidable.
   Definition ed25519 :
