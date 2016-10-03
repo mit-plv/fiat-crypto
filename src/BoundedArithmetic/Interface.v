@@ -288,3 +288,34 @@ Module fancy_machine.
       add_modulo :> is_add_modulo addm
     }.
 End fancy_machine.
+
+Module x86.
+  Local Notation imm := Z (only parsing).
+
+  Class instructions (n : Z) :=
+    {
+      W : Type (* [n]-bit word *);
+      decode :> decoder n W;
+      ldi :> load_immediate W;
+      shrd :> shift_right_doubleword_immediate W;
+      shl :> shift_left_immediate W;
+      shr :> shift_right_immediate W;
+      adc :> add_with_carry W;
+      subc :> sub_with_carry W;
+      muldw :> multiply_double W;
+      and :> bitwise_and W
+    }.
+
+  Class arithmetic {n} (ops:instructions n) :=
+    {
+      decode_range :> is_decode decode;
+      load_immediate :> is_load_immediate ldi;
+      shift_right_doubleword_immediate :> is_shift_right_doubleword_immediate shrd;
+      shift_left_immediate :> is_shift_left_immediate shl;
+      shift_right_immediate :> is_shift_right_immediate shr;
+      add_with_carry :> is_add_with_carry adc;
+      sub_with_carry :> is_sub_with_carry subc;
+      multiply_double :> is_mul_double muldw;
+      bitwise_and :> is_bitwise_and and
+    }.
+End x86.
