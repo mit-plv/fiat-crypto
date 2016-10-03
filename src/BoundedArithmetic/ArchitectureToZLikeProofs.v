@@ -23,7 +23,7 @@ Section fancy_machine_p256_montgomery_foundation.
 
   Local Arguments Z.mul !_ !_.
   Local Arguments BaseSystem.decode !_ !_ / .
-  Local Arguments BaseSystem.accumulate / .
+  Local Arguments BaseSystem.accumulate / _ _.
   Local Arguments BaseSystem.decode' !_ !_ / .
 
   Local Ltac introduce_t_step :=

@@ -23,16 +23,16 @@ Section expression.
                             proj1_sig (pre_f' ldi_modulus ldi_0 Hldi_modulus Hldi_0 lm' v)).
 
   Local Arguments proj1_sig _ _ !_ / .
-  Local Arguments ZBounded.CarryAdd / .
-  Local Arguments ZBounded.ConditionalSubtract / .
-  Local Arguments ZBounded.ConditionalSubtractModulus / .
-  Local Arguments ZLikeOps_of_ArchitectureBoundedOps / .
-  Local Arguments ZBounded.DivBy_SmallBound / .
-  Local Arguments f / .
-  Local Arguments pre_f' / .
+  Local Arguments ZBounded.CarryAdd / _ _ _ _ _ _.
+  Local Arguments ZBounded.ConditionalSubtract / _ _ _ _ _ _.
+  Local Arguments ZBounded.ConditionalSubtractModulus / _ _ _ _ _.
+  Local Arguments ZLikeOps_of_ArchitectureBoundedOps / _ _ _ _.
+  Local Arguments ZBounded.DivBy_SmallBound / _ _ _ _ _.
+  Local Arguments f / _.
+  Local Arguments pre_f' / _ _ _ _ _ _.
   Local Arguments ldi' / .
-  Local Arguments reduce_via_partial / .
-  Local Arguments DoubleBounded.mul_double / .
+  Local Arguments reduce_via_partial / _ _ _ _ _ _ _ _.
+  Local Arguments DoubleBounded.mul_double / _ _ _ _ _ _ _ _ _ _.
   Local Opaque Let_In Let_In_pf.
 
   Definition expression'
