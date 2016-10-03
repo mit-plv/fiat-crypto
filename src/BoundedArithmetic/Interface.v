@@ -124,6 +124,14 @@ Section InstructionGallery.
     decode_mask_keep_low :> forall r count,
       0 <= count < n -> decode (mkl r count) <~=~> decode r mod 2^count.
 
+  Class bitwise_and := { and : W -> W -> W }.
+  Global Coercion and : bitwise_and >-> Funclass.
+
+  Class is_bitwise_and (and : bitwise_and) :=
+    {
+      decode_bitwise_and :> forall x y, decode (and x y) <~=~> Z.land (decode x) (decode y)
+    }.
+
   Local Notation bit b := (if b then 1 else 0).
 
   Class add_with_carry := { adc : W -> W -> bool -> bool * W }.
@@ -199,6 +207,7 @@ Global Arguments shift_left_immediate : clear implicits.
 Global Arguments shift_right_immediate : clear implicits.
 Global Arguments spread_left_immediate : clear implicits.
 Global Arguments mask_keep_low : clear implicits.
+Global Arguments bitwise_and : clear implicits.
 Global Arguments add_with_carry : clear implicits.
 Global Arguments sub_with_carry : clear implicits.
 Global Arguments multiply : clear implicits.
@@ -214,6 +223,7 @@ Global Arguments shl {_ _} _ _.
 Global Arguments shr {_ _} _ _.
 Global Arguments sprl {_ _} _ _.
 Global Arguments mkl {_ _} _ _.
+Global Arguments and {_ _} _ _.
 Global Arguments adc {_ _} _ _ _.
 Global Arguments subc {_ _} _ _ _.
 Global Arguments mul {_ _} _ _.
@@ -231,6 +241,7 @@ Global Arguments is_shift_left_immediate {_ _ _} _.
 Global Arguments is_shift_right_immediate {_ _ _} _.
 Global Arguments is_spread_left_immediate {_ _ _} _.
 Global Arguments is_mask_keep_low {_ _ _} _.
+Global Arguments is_bitwise_and {_ _ _} _.
 Global Arguments is_add_with_carry {_ _ _} _.
 Global Arguments is_sub_with_carry {_ _ _} _.
 Global Arguments is_mul {_ _ _} _.
@@ -252,7 +263,6 @@ Module fancy_machine.
       shrd :> shift_right_doubleword_immediate W;
       shl :> shift_left_immediate W;
       shr :> shift_right_immediate W;
-      mkl :> mask_keep_low W;
       adc :> add_with_carry W;
       subc :> sub_with_carry W;
       mulhwll :> multiply_low_low W;
@@ -269,7 +279,6 @@ Module fancy_machine.
       shift_right_doubleword_immediate :> is_shift_right_doubleword_immediate shrd;
       shift_left_immediate :> is_shift_left_immediate shl;
       shift_right_immediate :> is_shift_right_immediate shr;
-      mask_keep_low :> is_mask_keep_low mkl;
       add_with_carry :> is_add_with_carry adc;
       sub_with_carry :> is_sub_with_carry subc;
       multiply_low_low :> is_mul_low_low n_over_two mulhwll;

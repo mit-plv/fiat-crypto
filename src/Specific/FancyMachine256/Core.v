@@ -51,7 +51,6 @@ Section reflection.
   | OPshrd    : op (tW * tW * tZ) tW
   | OPshl     : op (tW * tZ) tW
   | OPshr     : op (tW * tZ) tW
-  | OPmkl     : op (tW * tZ) tW
   | OPadc     : op (tW * tW * tbool) (tbool * tW)
   | OPsubc    : op (tW * tW * tbool) (tbool * tW)
   | OPmulhwll : op (tW * tW) tW
@@ -67,7 +66,6 @@ Section reflection.
        | OPshrd    => fun xyz => let '(x, y, z) := eta3 xyz in shrd x y z
        | OPshl     => fun xy => let '(x, y) := eta xy in shl x y
        | OPshr     => fun xy => let '(x, y) := eta xy in shr x y
-       | OPmkl     => fun xy => let '(x, y) := eta xy in mkl x y
        | OPadc     => fun xyz => let '(x, y, z) := eta3 xyz in adc x y z
        | OPsubc    => fun xyz => let '(x, y, z) := eta3 xyz in subc x y z
        | OPmulhwll => fun xy => let '(x, y) := eta xy in mulhwll x y
@@ -79,7 +77,7 @@ Section reflection.
 
   Inductive SConstT := ZConst (_ : Z) | BoolConst (_ : bool) | INVALID_CONST.
   Inductive op_code : Set :=
-  | SOPldi | SOPshrd | SOPshl | SOPshr | SOPmkl | SOPadc | SOPsubc
+  | SOPldi | SOPshrd | SOPshl | SOPshr | SOPadc | SOPsubc
   | SOPmulhwll | SOPmulhwhl | SOPmulhwhh | SOPselc | SOPaddm.
 
   Definition symbolicify_const (t : base_type) : interp_base_type t -> SConstT
@@ -94,7 +92,6 @@ Section reflection.
        | OPshrd => SOPshrd
        | OPshl => SOPshl
        | OPshr => SOPshr
-       | OPmkl => SOPmkl
        | OPadc => SOPadc
        | OPsubc => SOPsubc
        | OPmulhwll => SOPmulhwll
@@ -134,7 +131,6 @@ Ltac base_reify_op op op_head ::=
      | @Interface.shrd => constr:(reify_op op op_head 3 OPshrd)
      | @Interface.shl => constr:(reify_op op op_head 2 OPshl)
      | @Interface.shr => constr:(reify_op op op_head 2 OPshr)
-     | @Interface.mkl => constr:(reify_op op op_head 2 OPmkl)
      | @Interface.adc => constr:(reify_op op op_head 3 OPadc)
      | @Interface.subc => constr:(reify_op op op_head 3 OPsubc)
      | @Interface.mulhwll => constr:(reify_op op op_head 2 OPmulhwll)
