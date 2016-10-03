@@ -7,6 +7,7 @@ Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.LetIn.
+Import Bug5107WorkAround.
 
 Local Open Scope nat_scope.
 Local Open Scope Z_scope.

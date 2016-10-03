@@ -8,6 +8,10 @@ Definition Let_In_pf {A P} (x : A) (f : forall a : A, a = x -> P a) : P x := let
 Notation "'dlet' x := y 'in' f" := (Let_In y (fun x => f)).
 Notation "'pflet' x , pf := y 'in' f" := (Let_In_pf y (fun x pf => f)).
 
+Module Bug5107WorkAround.
+  Notation "'dlet' x := y 'in' f" := (Let_In (P:=fun _ => _) y (fun x => f)).
+End Bug5107WorkAround.
+
 Global Instance Proper_Let_In_nd_changebody {A P R} {Reflexive_R:@Reflexive P R}
   : Proper (eq ==> pointwise_relation _ R ==> R) (@Let_In A (fun _ => P)).
 Proof. lazy; intros; subst; auto; congruence. Qed.

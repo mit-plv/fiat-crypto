@@ -13,6 +13,7 @@ Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.LetIn.
+Import Bug5107WorkAround.
 
 Import ListNotations.
 Local Open Scope list_scope.
