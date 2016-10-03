@@ -17,6 +17,16 @@ Require Import Coq.ZArith.Znat.
 Module HLConversions.
   Import HL.
 
+  Fixpoint mapVar {A: Type} {t V0 V1} (f: forall t, V0 t -> V1 t) (g: forall t, V1 t -> V0 t) (a: expr (T := A) (var := V0) t): expr (T := A) (var := V1) t :=
+    match a with
+    | Const x => Const x
+    | Var t x => Var (f _ x)
+    | Binop t1 t2 t3 o e1 e2 => Binop o (mapVar f g e1) (mapVar f g e2)
+    | Let tx e tC h => Let (mapVar f g e) (fun x => mapVar f g (h (g _ x)))
+    | Pair t1 e1 t2 e2 => Pair (mapVar f g e1) (mapVar f g e2)
+    | MatchPair t1 t2 e tC h => MatchPair (mapVar f g e) (fun x y => mapVar f g (h (g _ x) (g _ y)))
+    end.
+
   Definition convertVar {A B: Type} {EA: Evaluable A} {EB: Evaluable B} {t} (a: interp_type (T := A) t): interp_type (T := B) t.
   Proof.
     induction t as [| t3 IHt1 t4 IHt2].

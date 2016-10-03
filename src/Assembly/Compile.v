@@ -72,12 +72,6 @@ Module CompileLL.
     Definition WArg t': Type := @LL.arg (word n) (word n) t'.
     Definition WExpr t': Type := @LL.expr (word n) (word n) t'.
 
-    Fixpoint LLProgram t (inputs: nat): Type :=
-      match inputs with
-      | (S m) => WArg TT -> @LLProgram t m
-      | O => WExpr t
-      end.
-
     Section Mappings.
       Definition indexize (x: nat) : Index n.
         intros; destruct (le_dec n 0).
@@ -275,18 +269,17 @@ Module CompileLL.
         (fun var op x y out => Some out)
         (fun t' a => Some (vars a)).
 
-    Fixpoint fillInputs {t inputs} (prog: LLProgram t inputs) {struct inputs}: WExpr t :=
-      match inputs as inputs' return LLProgram t inputs' -> LLProgram t O with
+    Fixpoint fillInputs {t inputs} (prog: NAry inputs (WArg TT) (WExpr t)) {struct inputs}: WExpr t :=
+      match inputs as inputs' return NAry inputs' (WArg TT) (WExpr t) -> NAry O (WArg TT) (WExpr t) with
       | O => fun p => p
       | S inputs'' => fun p => fillInputs (p (Var (natToWord _ inputs)))
       end prog.
 
-    Definition compile {t inputs} (p: LLProgram t inputs): option (Program * list nat) :=
+    Definition compile {t inputs} (p: NAry inputs (WArg TT) (WExpr t)): option (Program * list nat) :=
       let p' := fillInputs p in
 
       omap (getOuts _ (S inputs) p') (fun outs =>
         omap (getProg _ (S inputs) p') (fun prog =>
           Some (prog, outs))).
-
   End Compile.
 End CompileLL.
