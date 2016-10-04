@@ -361,7 +361,7 @@ Section PointEncoding.
       rewrite option_map_option_rect.
       eapply option_rect_shuffle with (EQD := Keq).
       + apply Algebra.monoid_Equivalence.
-      + apply Tuple.Equivalence_fieldwise.
+      + apply (@Tuple.Equivalence_fieldwise K _ _ 2).
       + apply Proper_Kcoordinates_from_y; auto.
       + cbv [Encoding.dec Fencoding].
         apply phi_decode.
