@@ -877,7 +877,7 @@ Module Z.
   Qed.
 
   Lemma compare_add_shiftl : forall x1 y1 x2 y2 n, 0 <= n ->
-    Z.pow2_mod x1 n = x1 -> Z.pow2_mod x2 n = x2  -> 
+    Z.pow2_mod x1 n = x1 -> Z.pow2_mod x2 n = x2  ->
     x1 + (y1 << n) ?= x2 + (y2 << n) =
       if Z_eq_dec y1 y2
       then x1 ?= x2
@@ -888,18 +888,24 @@ Module Z.
            | |- _ => progress subst y1
            | |- _ => rewrite Z.shiftl_mul_pow2 by omega
            | |- _ => rewrite add_compare_mono_r
-           | |- _ => rewrite <-Z.mul_sub_distr_r 
+           | |- _ => rewrite <-Z.mul_sub_distr_r
            | |- _ => break_if
            | H : Z.pow2_mod _ _ = _ |- _ => rewrite pow2_mod_id_iff in H by omega
-           | H : ?a <> ?b |- _ = (?a ?= ?b) => 
+           | H : ?a <> ?b |- _ = (?a ?= ?b) =>
              case_eq (a ?= b); rewrite ?Z.compare_eq_iff, ?Z.compare_gt_iff, ?Z.compare_lt_iff
-           | |- _ + (_ * _) > _ + (_ * _) => cbv [Z.gt] 
+           | |- _ + (_ * _) > _ + (_ * _) => cbv [Z.gt]
            | |- _ + (_ * ?x) < _ + (_ * ?x) =>
              apply Z.lt_sub_lt_add; apply Z.lt_le_trans with (m := 1 * x); [omega|]
            | |- _ => apply Z.mul_le_mono_nonneg_r; omega
            | |- _ => reflexivity
-           | |- _ => congruence 
+           | |- _ => congruence
            end.
+  Qed.
+
+  Lemma eqb_cases x y : if x =? y then x = y else x <> y.
+  Proof.
+    pose proof (Z.eqb_spec x y) as H.
+    inversion H; trivial.
   Qed.
 
   Ltac ltb_to_lt_with_hyp H lem :=
@@ -919,6 +925,8 @@ Module Z.
              => ltb_to_lt_with_hyp H (Zgt_cases x y)
            | [ H : (?x >=? ?y) = ?b |- _ ]
              => ltb_to_lt_with_hyp H (Zge_cases x y)
+           | [ H : (?x =? ?y) = ?b |- _ ]
+             => ltb_to_lt_with_hyp H (eqb_cases x y)
            end.
 
   Ltac compare_to_sgn :=
@@ -1794,7 +1802,7 @@ Module Z.
     repeat match goal with
            | |- _ => progress intros
            | |- _ => progress rewrite ?Z.eqb_eq, ?Z.eqb_neq in *
-           | |- _ => progress autorewrite with Ztestbit 
+           | |- _ => progress autorewrite with Ztestbit
            | |- appcontext[Z.eqb ?a ?b] => case_eq (Z.eqb a b)
            | |- _ => reflexivity || omega
            end.
