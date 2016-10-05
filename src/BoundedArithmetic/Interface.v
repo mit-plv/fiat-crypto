@@ -196,6 +196,28 @@ Section InstructionGallery.
       fst_bitwise_and_with_CF :> forall x y, fst (andf x y) =~> false
     }.
 
+  Class bitwise_or := { or : W -> W -> W }.
+  Global Coercion or : bitwise_or >-> Funclass.
+
+  Class is_bitwise_or (or : bitwise_or) :=
+    {
+      decode_bitwise_or :> forall x y, decode (or x y) <~=~> Z.lor (decode x) (decode y)
+    }.
+
+  (** Quoting http://www.felixcloutier.com/x86/OR.html:
+
+      The OF or CF flags are cleared; the SF, ZF, or PF flags are set
+      according to the result. The state of the AF flag is
+      undefined. *)
+  Class bitwise_or_with_CF := { orf : W -> W -> bool * W }.
+  Global Coercion orf : bitwise_or_with_CF >-> Funclass.
+
+  Class is_bitwise_or_with_CF (orf : bitwise_or_with_CF) :=
+    {
+      decode_snd_bitwise_or_with_CF :> forall x y, decode (snd (orf x y)) <~=~> Z.lor (decode x) (decode y);
+      fst_bitwise_or_with_CF :> forall x y, fst (orf x y) =~> false
+    }.
+
   Local Notation bit b := (if b then 1 else 0).
 
   Class add_with_carry := { adc : W -> W -> bool -> bool * W }.
@@ -294,6 +316,8 @@ Global Arguments spread_left_immediate : clear implicits.
 Global Arguments mask_keep_low : clear implicits.
 Global Arguments bitwise_and : clear implicits.
 Global Arguments bitwise_and_with_CF : clear implicits.
+Global Arguments bitwise_or : clear implicits.
+Global Arguments bitwise_or_with_CF : clear implicits.
 Global Arguments add_with_carry : clear implicits.
 Global Arguments sub_with_carry : clear implicits.
 Global Arguments multiply : clear implicits.
@@ -315,6 +339,8 @@ Global Arguments sprl {_ _} _ _.
 Global Arguments mkl {_ _} _ _.
 Global Arguments and {_ _} _ _.
 Global Arguments andf {_ _} _ _.
+Global Arguments or {_ _} _ _.
+Global Arguments orf {_ _} _ _.
 Global Arguments adc {_ _} _ _ _.
 Global Arguments subc {_ _} _ _ _.
 Global Arguments mul {_ _} _ _.
@@ -338,6 +364,8 @@ Global Arguments is_spread_left_immediate {_ _ _} _.
 Global Arguments is_mask_keep_low {_ _ _} _.
 Global Arguments is_bitwise_and {_ _ _} _.
 Global Arguments is_bitwise_and_with_CF {_ _ _} _.
+Global Arguments is_bitwise_or {_ _ _} _.
+Global Arguments is_bitwise_or_with_CF {_ _ _} _.
 Global Arguments is_add_with_carry {_ _ _} _.
 Global Arguments is_sub_with_carry {_ _ _} _.
 Global Arguments is_mul {_ _ _} _.
@@ -400,7 +428,7 @@ Module x86.
       adc :> add_with_carry W;
       subc :> sub_with_carry W;
       muldwf :> multiply_double_with_CF W;
-      andf :> bitwise_and_with_CF W
+      selc :> select_conditional W
     }.
 
   Class arithmetic {n} (ops:instructions n) :=
@@ -413,6 +441,6 @@ Module x86.
       add_with_carry :> is_add_with_carry adc;
       sub_with_carry :> is_sub_with_carry subc;
       multiply_double_with_CF :> is_mul_double_with_CF muldwf;
-      bitwise_and_with_CF :> is_bitwise_and_with_CF andf
+      select_conditional :> is_select_conditional selc
     }.
 End x86.
