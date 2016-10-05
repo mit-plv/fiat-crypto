@@ -1829,6 +1829,15 @@ Module Z.
     apply Z.div_small; split; nia.
   Qed.
 
+  Lemma add_mul_mod x y n m
+        (Hx : 0 <= x < 2^n) (Hy : 0 <= y < m)
+        (Hn : 0 <= n)
+    : (x + y * 2^n) mod (m * 2^n) = x + (y mod m) * 2^n.
+  Proof.
+    generalize (add_shift_mod x y n m).
+    autorewrite with Zshift_to_pow; auto.
+  Qed.
+
   Lemma lt_pow_2_shiftr : forall a n, 0 <= a < 2 ^ n -> a >> n = 0.
   Proof.
     intros.
