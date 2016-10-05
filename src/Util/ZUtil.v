@@ -100,6 +100,7 @@ Hint Rewrite <- Z.div_div using zutil_arith : push_Zdiv.
 Hint Rewrite <- Z.mul_mod Z.add_mod Zminus_mod using zutil_arith : pull_Zmod.
 Hint Rewrite Zminus_mod_idemp_l Zminus_mod_idemp_r : pull_Zmod.
 Hint Rewrite Z_mod_nz_opp_full using zutil_arith : push_Zmod.
+Hint Rewrite Z_mod_same_full : push_Zmod.
 Hint Rewrite Nat2Z.id : zsimplify.
 Hint Rewrite Nat2Z.id : push_Zof_nat.
 Hint Rewrite Nat2Z.inj_0 Nat2Z.inj_succ Nat2Z.inj_abs_nat Nat2Z.inj_add Nat2Z.inj_mul Nat2Z.inj_sub_max Nat2Z.inj_pred_max Nat2Z.inj_min Nat2Z.inj_max Zabs2Nat.id_abs Zabs2Nat.id : push_Zof_nat.
@@ -2491,6 +2492,8 @@ End BoundsTactics.
 Ltac push_Zmod :=
   repeat match goal with
          | _ => progress autorewrite with push_Zmod
+         | [ |- context[?x mod ?x] ]
+             => rewrite (Z_mod_same_full x)
          | [ |- context[(?x * ?y) mod ?z] ]
            => first [ rewrite (Z.mul_mod_push x y z) by Z.NoZMod
                     | rewrite (Z.mul_mod_l_push x y z) by Z.NoZMod
@@ -2510,6 +2513,8 @@ Ltac push_Zmod :=
 Ltac push_Zmod_hyps :=
   repeat match goal with
          | _ => progress autorewrite with push_Zmod in * |-
+         | [ H : context[?x mod ?x] |- _ ]
+             => rewrite (Z_mod_same_full x) in H
          | [ H : context[(?x * ?y) mod ?z] |- _ ]
            => first [ rewrite (Z.mul_mod_push x y z) in H by Z.NoZMod
                     | rewrite (Z.mul_mod_l_push x y z) in H by Z.NoZMod
