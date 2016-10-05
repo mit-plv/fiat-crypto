@@ -2369,6 +2369,14 @@ simplify_div_" <> ExprToName[#1] <>
 <<
 #!/usr/bin/env python
 
+def sgn(v):
+    if v < 0:
+        return -1
+    elif v == 0:
+        return 0
+    elif v > 0:
+        return 1
+
 def to_eqn(name):
     vars_left = list('abcdefghijklmnopqrstuvwxyz')
     ret = ''
@@ -2377,12 +2385,13 @@ def to_eqn(name):
         if name[0] == 'X':
             ret += ' X'
             name = name[1:]
-        else:
+        elif not name[0].isdigit():
             ret += ' ' + vars_left[0]
             vars_left = vars_left[1:]
         if name:
             if name[0] == 'm': ret += ' -'
             elif name[0] == 'p': ret += ' +'
+            elif name[0].isdigit(): ret += ' %s *' % name[0]
             name = name[1:]
         if name and name[0] == '_':
             ret += ' ('
@@ -2399,8 +2408,10 @@ def simplify(eqn):
         if i == ' ': continue
         elif i == '(': sign_stack.append(sign_stack[-1])
         elif i == ')': sign_stack.pop()
-        elif i == '+': sign_stack.append(sign_stack[-1])
-        elif i == '-': sign_stack.append(-sign_stack[-1])
+        elif i == '+': sign_stack.append(sgn(sign_stack[-1]))
+        elif i == '-': sign_stack.append(-sgn(sign_stack[-1]))
+        elif i == '*': continue
+        elif i.isdigit(): sign_stack[-1] *= int(i)
         else:
             counts[i] = counts.get(i,0) + sign_stack.pop()
     ret = ''
@@ -2417,11 +2428,12 @@ def to_def(name):
     eqn = to_eqn(name)
     return r'''  Lemma simplify_%s %s X : %s = %s.
   Proof. lia. Qed.
-  Hint Rewrite simplify_%s : zsimplify.''' % (name, ' '.join(sorted(set(eqn) - set('+-() X'))), eqn, simplify(eqn), name)
+  Hint Rewrite simplify_%s : zsimplify.''' % (name, ' '.join(sorted(set(eqn) - set('*+-() 0123456789X'))), eqn, simplify(eqn), name)
 
 names = []
 names += ['%sX%s%sX' % (a, b, c) for a in 'mp' for b in 'mp' for c in 'mp']
 names += ['X%s%s_X%s' % (a, b, c) for a in 'mp' for b in 'mp' for c in 'mp']
+names += ['m2XpX', 'm2XpXpX']
 
 for name in names:
     print(to_def(name))
@@ -2474,6 +2486,12 @@ for name in names:
   Lemma simplify_Xpp_Xp a b X : X + a + (X + b) = 2 * X + a + b.
   Proof. lia. Qed.
   Hint Rewrite simplify_Xpp_Xp : zsimplify.
+  Lemma simplify_m2XpX a X : a - 2 * X + X = - X + a.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_m2XpX : zsimplify.
+  Lemma simplify_m2XpXpX a X : a - 2 * X + X + X = a.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_m2XpXpX : zsimplify.
 
   Section equiv_modulo.
     Context (N : Z).
