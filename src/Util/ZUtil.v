@@ -1806,6 +1806,29 @@ Module Z.
     nia.
   Qed.
 
+  Lemma add_shift_mod x y n m
+        (Hx : 0 <= x < 2^n) (Hy : 0 <= y < m)
+        (Hn : 0 <= n)
+    : (x + y << n) mod (m * 2^n) = x + (y mod m) << n.
+  Proof.
+    pose proof (Z.mod_bound_pos y m).
+    specialize_by omega.
+    destruct (Z_zerop m).
+    { subst; autorewrite with zsimplify; reflexivity. }
+    assert (0 < m) by omega.
+    assert (0 < 2^n) by auto with zarith.
+    autorewrite with Zshift_to_pow.
+    rewrite Zplus_mod, !Zmult_mod_distr_r.
+    rewrite Zplus_mod, !Zmod_mod, <- Zplus_mod.
+    rewrite !(Zmod_eq (_ + _)) by nia.
+    etransitivity; [ | apply Z.add_0_r ].
+    rewrite <- !Z.add_opp_r, <- !Z.add_assoc.
+    repeat apply f_equal.
+    ring_simplify.
+    cut (((x + y mod m * 2 ^ n) / (m * 2 ^ n)) = 0); [ nia | ].
+    apply Z.div_small; split; nia.
+  Qed.
+
   Lemma lt_pow_2_shiftr : forall a n, 0 <= a < 2 ^ n -> a >> n = 0.
   Proof.
     intros.
