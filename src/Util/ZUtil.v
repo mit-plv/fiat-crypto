@@ -1785,6 +1785,27 @@ Module Z.
   Hint Rewrite shiftr_sub using zutil_arith : push_Zshift.
   Hint Rewrite <- shiftr_sub using zutil_arith : pull_Zshift.
 
+  Lemma shl_shr_lt x y n m (Hx : 0 <= x < 2^n) (Hy : 0 <= y < 2^n) (Hm : 0 <= m <= n)
+    : 0 <= (x >> (n - m)) + ((y << m) mod 2^n) < 2^n.
+  Proof.
+    cut (0 <= (x >> (n - m)) + ((y << m) mod 2^n) <= 2^n - 1); [ omega | ].
+    assert (0 <= x <= 2^n - 1) by omega.
+    assert (0 <= y <= 2^n - 1) by omega.
+    assert (0 < 2 ^ (n - m)) by auto with zarith.
+    assert (0 <= y mod 2 ^ (n - m) < 2^(n-m)) by auto with zarith.
+    assert (0 <= y mod 2 ^ (n - m) <= 2 ^ (n - m) - 1) by omega.
+    assert (0 <= (y mod 2 ^ (n - m)) * 2^m <= (2^(n-m) - 1)*2^m) by auto with zarith.
+    assert (0 <= x / 2^(n-m) < 2^n / 2^(n-m)).
+    { split; zero_bounds.
+      apply Z.div_lt_upper_bound; autorewrite with pull_Zpow zsimplify; nia. }
+    autorewrite with Zshift_to_pow.
+    split; Z.zero_bounds.
+    replace (2^n) with (2^(n-m) * 2^m) by (autorewrite with pull_Zpow; f_equal; omega).
+    rewrite Zmult_mod_distr_r.
+    autorewrite with pull_Zpow zsimplify push_Zmul in * |- .
+    nia.
+  Qed.
+
   Lemma lt_pow_2_shiftr : forall a n, 0 <= a < 2 ^ n -> a >> n = 0.
   Proof.
     intros.
