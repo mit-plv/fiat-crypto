@@ -428,7 +428,8 @@ Module x86.
       adc :> add_with_carry W;
       subc :> sub_with_carry W;
       muldwf :> multiply_double_with_CF W;
-      selc :> select_conditional W
+      selc :> select_conditional W;
+      orf :> bitwise_or_with_CF W
     }.
 
   Class arithmetic {n} (ops:instructions n) :=
@@ -441,6 +442,7 @@ Module x86.
       add_with_carry :> is_add_with_carry adc;
       sub_with_carry :> is_sub_with_carry subc;
       multiply_double_with_CF :> is_mul_double_with_CF muldwf;
-      select_conditional :> is_select_conditional selc
+      select_conditional :> is_select_conditional selc;
+      bitwise_or_with_CF :> is_bitwise_or_with_CF orf
     }.
 End x86.

@@ -55,6 +55,17 @@ Global Instance ripple_carry_adc
 
 (** constructions on [tuple W 2] *)
 Section tuple2.
+  Section select_conditional.
+    Context {W}
+            {selc : select_conditional W}.
+
+    Definition select_conditional_double (b : bool) (x : tuple W 2) (y : tuple W 2) : tuple W 2
+      := (selc b (fst x) (fst y), selc b (snd x) (snd y)).
+
+    Global Instance selc_double : select_conditional (tuple W 2)
+      := { selc := select_conditional_double }.
+  End select_conditional.
+
   Section spread_left.
     Context (n : Z) {W}
             {ldi : load_immediate W}
@@ -69,6 +80,72 @@ Section tuple2.
     Global Instance sprl_from_shift {decode : decoder n W} : spread_left_immediate W
       := { sprl := spread_left_from_shift }.
   End spread_left.
+
+  Section shl_shr.
+    Context (n : Z) {W}
+            {ldi : load_immediate W}
+            {shl : shift_left_immediate W}
+            {shr : shift_right_immediate W}
+            {adc : add_with_carry W}.
+
+    Definition shift_left_immediate_double (r : tuple W 2) (count : Z) : tuple W 2
+      := (if count =? 0
+          then fst r
+          else if count <? n
+               then shl (fst r) count
+               else ldi 0,
+          if count =? 0
+          then snd r
+          else if count <? n
+               then snd (adc (shr (fst r) (n - count)) (shl (snd r) count) false)
+               else shl (fst r) (count - n)).
+
+    Definition shift_right_immediate_double (r : tuple W 2) (count : Z) : tuple W 2
+      := (if count =? 0
+          then fst r
+          else if count <? n
+               then snd (adc (shr (fst r) count) (shl (snd r) (n - count)) false)
+               else shr (snd r) (count - n),
+          if count =? 0
+          then snd r
+          else if count <? n
+               then shr (snd r) count
+               else ldi 0).
+
+    (** Require a [decoder] instance to aid typeclass search in
+        resolving [n] *)
+    Global Instance shl_double {decode : decoder n W} : shift_left_immediate (tuple W 2)
+      := { shl := shift_left_immediate_double }.
+    Global Instance shr_double {decode : decoder n W} : shift_right_immediate (tuple W 2)
+      := { shr := shift_right_immediate_double }.
+  End shl_shr.
+
+  Section shrd.
+    Context (n : Z) {W}
+            {ldi : load_immediate W}
+            {shrd : shift_right_doubleword_immediate W}.
+
+    Definition shift_right_doubleword_immediate_double (high low : tuple W 2) (count : Z) : tuple W 2
+      := (if count =? 0
+          then fst low
+          else if count <? n
+               then shrd (snd low) (fst low) count
+               else if count <? 2 * n
+                    then shrd (fst high) (snd low) (count - n)
+                    else shrd (snd high) (fst high) (count - 2 * n),
+          if count =? 0
+          then snd low
+          else if count <? n
+               then shrd (fst high) (snd low) count
+               else if count <? 2 * n
+                    then shrd (snd high) (fst high) (count - n)
+                    else shrd (ldi 0) (snd high) (count - 2 * n)).
+
+    (** Require a [decoder] instance to aid typeclass search in
+        resolving [n] *)
+    Global Instance shrd_double {decode : decoder n W} : shift_right_doubleword_immediate (tuple W 2)
+      := { shrd := shift_right_doubleword_immediate_double }.
+  End shrd.
 
   Section double_from_half.
     Context {half_n : Z} {W}
