@@ -100,7 +100,7 @@ Hint Rewrite <- Z.div_div using zutil_arith : push_Zdiv.
 Hint Rewrite <- Z.mul_mod Z.add_mod Zminus_mod using zutil_arith : pull_Zmod.
 Hint Rewrite Zminus_mod_idemp_l Zminus_mod_idemp_r : pull_Zmod.
 Hint Rewrite Z_mod_nz_opp_full using zutil_arith : push_Zmod.
-Hint Rewrite Z_mod_same_full Zmod_0_l : push_Zmod.
+Hint Rewrite Z_mod_same_full : push_Zmod.
 Hint Rewrite Nat2Z.id : zsimplify.
 Hint Rewrite Nat2Z.id : push_Zof_nat.
 Hint Rewrite Nat2Z.inj_0 Nat2Z.inj_succ Nat2Z.inj_abs_nat Nat2Z.inj_add Nat2Z.inj_mul Nat2Z.inj_sub_max Nat2Z.inj_pred_max Nat2Z.inj_min Nat2Z.inj_max Zabs2Nat.id_abs Zabs2Nat.id : push_Zof_nat.
