@@ -1807,15 +1807,12 @@ Module Z.
   Qed.
 
   Lemma add_shift_mod x y n m
-        (Hx : 0 <= x < 2^n) (Hy : 0 <= y < m)
-        (Hn : 0 <= n)
+        (Hx : 0 <= x < 2^n) (Hy : 0 <= y)
+        (Hn : 0 <= n) (Hm : 0 < m)
     : (x + y << n) mod (m * 2^n) = x + (y mod m) << n.
   Proof.
     pose proof (Z.mod_bound_pos y m).
     specialize_by omega.
-    destruct (Z_zerop m).
-    { subst; autorewrite with zsimplify; reflexivity. }
-    assert (0 < m) by omega.
     assert (0 < 2^n) by auto with zarith.
     autorewrite with Zshift_to_pow.
     rewrite Zplus_mod, !Zmult_mod_distr_r.
@@ -1830,8 +1827,8 @@ Module Z.
   Qed.
 
   Lemma add_mul_mod x y n m
-        (Hx : 0 <= x < 2^n) (Hy : 0 <= y < m)
-        (Hn : 0 <= n)
+        (Hx : 0 <= x < 2^n) (Hy : 0 <= y)
+        (Hn : 0 <= n) (Hm : 0 < m)
     : (x + y * 2^n) mod (m * 2^n) = x + (y mod m) * 2^n.
   Proof.
     generalize (add_shift_mod x y n m).
