@@ -85,6 +85,17 @@ Section decode.
     simpl; hnf.
     omega.
   Qed.
+  Global Instance tuple_decoder_m1 w : tuple_decoder (k := 0) w =~> 0.
+  Proof. reflexivity. Qed.
+
+  Lemma tuple_decoder_n_neg k w {H : is_decode decode} : n <= 0 -> tuple_decoder (k := k) w =~> 0.
+  Proof.
+    pose proof (tuple_is_decode w) as H'; hnf in H'.
+    intro; assert (k * n <= 0) by nia.
+    assert (2^(k * n) <= 2^0) by (apply Z.pow_le_mono_r; omega).
+    simpl in *; hnf.
+    omega.
+  Qed.
   Lemma tuple_decoder_O_ind_prod
          (P : forall n, decoder n W -> Type)
          (P_ext : forall n (a b : decoder n W), (forall x, a x = b x) -> P _ a -> P _ b)
@@ -96,9 +107,6 @@ Section decode.
     rewrite Z.mul_1_l.
     split; apply P_ext; simpl; intro; autorewrite with zsimplify_const; reflexivity.
   Qed.
-
-  Global Instance tuple_decoder_m1 w : tuple_decoder (k := 0) w =~> 0.
-  Proof. reflexivity. Qed.
 
   Global Instance tuple_decoder_2' w : (0 <= n)%bounded_rewrite -> tuple_decoder (k := 2) w <~= (decode (fst w) + decode (snd w) << (1%nat * n))%Z.
   Proof.
@@ -114,6 +122,12 @@ End decode.
 
 Local Arguments tuple_decoder : simpl never.
 Local Opaque tuple_decoder.
+
+Global Instance tuple_decoder_n_O
+      {W} {decode : decoder 0 W}
+      {is_decode : is_decode decode}
+  : forall k w, tuple_decoder (k := k) w =~> 0.
+Proof. intros; apply tuple_decoder_n_neg; easy. Qed.
 
 Lemma is_add_with_carry_1tuple {n W decode adc}
       (H : @is_add_with_carry n W decode adc)
@@ -131,11 +145,12 @@ Hint Extern 1 (@is_add_with_carry _ _ (@tuple_decoder ?n ?W ?decode 1) ?adc)
 Hint Resolve (fun n W decode pf => (@tuple_is_decode n W decode 2 pf : @is_decode (2 * n) (tuple W 2) (@tuple_decoder n W decode 2))) : typeclass_instances.
 Hint Extern 3 (@is_decode _ (tuple ?W ?k) _) => let kv := (eval simpl in (Z.of_nat k)) in apply (fun n decode pf => (@tuple_is_decode n W decode k pf : @is_decode (kv * n) (tuple W k) (@tuple_decoder n W decode k : decoder (kv * n)%Z (tuple W k)))) : typeclass_instances.
 
-Hint Rewrite @tuple_decoder_S @tuple_decoder_O @tuple_decoder_m1 using solve [ auto with zarith ] : simpl_tuple_decoder.
+Hint Rewrite @tuple_decoder_S @tuple_decoder_O @tuple_decoder_m1 @tuple_decoder_n_O using solve [ auto with zarith ] : simpl_tuple_decoder.
 Hint Rewrite Z.mul_1_l : simpl_tuple_decoder.
 Hint Rewrite
      (fun n W (decode : decoder n W) w pf => (@tuple_decoder_S n W decode 0 w pf : @Interface.decode (2 * n) (tuple W 2) (@tuple_decoder n W decode 2) w = _))
      (fun n W (decode : decoder n W) w pf => (@tuple_decoder_S n W decode 0 w pf : @Interface.decode (2 * n) (W * W) (@tuple_decoder n W decode 2) w = _))
+     (fun n W decode w => @tuple_decoder_m1 n W decode w : @Interface.decode (Z.of_nat 0 * n) unit (@tuple_decoder n W decode 0) w = _)
      using solve [ auto with zarith ]
   : simpl_tuple_decoder.
 
@@ -292,6 +307,49 @@ Proof.
   split; [ | apply f_equal2 ];
     Z.div_mod_to_quot_rem; nia.
 Qed.
+Section carry_sub_is_good.
+  Context (n k z0 z1 : Z)
+          (Hn : 0 <= n)
+          (Hk : 0 <= k)
+          (Hz1 : -2^n < z1 < 2^n)
+          (Hz0 : -2^k <= z0 < 2^k).
+
+  Lemma carry_sub_is_good_carry
+    : ((z1 - if z0 <? 0 then 1 else 0) <? 0) = ((z0 + z1 << k) <? 0).
+  Proof.
+    clear n Hn Hz1.
+    assert (0 < 2 ^ k) by auto with zarith.
+    autorewrite with Zshift_to_pow.
+    repeat match goal with
+           | _ => progress break_match
+           | [ |- context[?x <? ?y] ] => destruct (x <? y) eqn:?
+           | _ => reflexivity
+           | _ => progress Z.ltb_to_lt
+           | [ |- true = false ] => exfalso
+           | [ |- false = true ] => exfalso
+           | [ |- False ] => nia
+           end.
+  Qed.
+  Lemma carry_sub_is_good_value
+    : (z0 mod 2 ^ k + ((z1 - if z0 <? 0 then 1 else 0) mod 2 ^ n) << k)%Z
+      = (z0 + z1 << k) mod (2 ^ k * 2 ^ n).
+  Proof.
+    assert (0 < 2 ^ n) by auto with zarith.
+    assert (0 < 2 ^ k) by auto with zarith.
+    assert (0 < 2^n * 2^k) by nia.
+    autorewrite with Zshift_to_pow push_Zpow.
+    rewrite <- (Zmod_small ((z0 mod _) + _) (2^k * 2^n)) by (Z.div_mod_to_quot_rem; nia).
+    rewrite <- !Z.mul_mod_distr_r by lia.
+    rewrite !(Z.mul_comm (2^k)); pull_Zmod.
+    apply f_equal2; Z.div_mod_to_quot_rem; break_match; Z.ltb_to_lt; try reflexivity;
+      match goal with
+      | [ q : Z |- _ = _ :> Z ]
+        => first [ cut (q = -1); [ intro; subst; ring | nia ]
+                 | cut (q = 0); [ intro; subst; ring | nia ]
+                 | cut (q = 1); [ intro; subst; ring | nia ] ]
+      end.
+  Qed.
+End carry_sub_is_good.
 
 Definition carry_is_good_carry n z0 z1 k H0 H1 := proj1 (@carry_is_good n z0 z1 k H0 H1).
 Definition carry_is_good_value n z0 z1 k H0 H1 := proj2 (@carry_is_good n z0 z1 k H0 H1).
@@ -336,9 +394,92 @@ End ripple_carry_adc.
 Hint Extern 2 (@is_add_with_carry _ (tuple ?W ?k) (@tuple_decoder ?n _ ?decode _) (@ripple_carry_adc _ ?adc _))
 => apply (@ripple_carry_is_add_with_carry n W decode adc k) : typeclass_instances.
 
+Section ripple_carry_subc.
+  Context {n W} {decode : decoder n W} (subc : sub_with_carry W).
+
+  Lemma ripple_carry_subc_SS k xss yss carry
+    : ripple_carry_subc (k := S (S k)) subc xss yss carry
+      = let '(xs, x) := eta xss in
+        let '(ys, y) := eta yss in
+        let '(carry, zs) := eta (ripple_carry_subc (k := S k) subc xs ys carry) in
+        let '(carry, z) := eta (subc x y carry) in
+        (carry, (zs, z)).
+  Proof. apply ripple_carry_tuple_SS. Qed.
+
+  Local Opaque Z.of_nat.
+  Global Instance ripple_carry_is_sub_with_carry {k}
+         {isdecode : is_decode decode}
+         {is_subc : is_sub_with_carry subc}
+    : is_sub_with_carry (ripple_carry_subc (k := k) subc).
+  Proof.
+    destruct k as [|k].
+    { constructor; repeat (intros [] || intro); autorewrite with simpl_tuple_decoder zsimplify; reflexivity. }
+    { induction k as [|k IHk].
+      { cbv [ripple_carry_subc ripple_carry_tuple to_list].
+        constructor; simpl @fst; simpl @snd; intros;
+          simpl; push_decode; autorewrite with zsimplify; reflexivity. }
+      { apply Build_is_sub_with_carry'; intros x y c.
+        assert (0 <= n) by (destruct x; eauto using decode_exponent_nonnegative).
+        assert (2^n <> 0) by auto with zarith.
+        assert (0 <= S k * n) by nia.
+        rewrite !tuple_decoder_S, !ripple_carry_subc_SS by assumption.
+        simplify_projections; push_decode; generalize_decode.
+        erewrite (carry_sub_is_good_carry (S k * n)), carry_sub_is_good_value by (break_match; lia).
+        autorewrite with pull_Zpow push_Zof_nat zsimplify Zshift_to_pow.
+        split; apply f_equal2; nia. } }
+  Qed.
+
+End ripple_carry_subc.
+
+Hint Extern 2 (@is_sub_with_carry _ (tuple ?W ?k) (@tuple_decoder ?n _ ?decode _) (@ripple_carry_subc _ ?subc _))
+=> apply (@ripple_carry_is_sub_with_carry n W decode subc k) : typeclass_instances.
+
 Section tuple2.
   Local Arguments Z.pow !_ !_.
   Local Arguments Z.mul !_ !_.
+
+  Section select_conditional.
+    Context {n W}
+            {decode : decoder n W}
+            {is_decode : is_decode decode}
+            {selc : select_conditional W}
+            {is_selc : is_select_conditional selc}.
+
+    Global Instance is_select_conditional_double
+      : is_select_conditional selc_double.
+    Proof.
+      intros b x y.
+      destruct n.
+      { rewrite !(tuple_decoder_n_O (W:=W) 2); now destruct b. }
+      { rewrite (tuple_decoder_2 x), (tuple_decoder_2 y), (tuple_decoder_2 (selc_double b x y))
+          by apply Zle_0_pos.
+        push_decode.
+        now destruct b. }
+      { rewrite !(tuple_decoder_n_neg (W:=W) 2); now destruct b. }
+    Qed.
+  End select_conditional.
+
+  Section load_immediate.
+    Context {n W}
+            {decode : decoder n W}
+            {is_decode : is_decode decode}
+            {ldi : load_immediate W}
+            {is_ldi : is_load_immediate ldi}.
+
+    Global Instance is_load_immediate_double
+      : is_load_immediate (ldi_double n).
+    Proof.
+      intros x H; hnf in H.
+      pose proof (decode_exponent_nonnegative decode (ldi x)).
+      assert (0 <= x mod 2^n < 2^n) by auto with zarith.
+      assert (x / 2^n < 2^n)
+        by (apply Z.div_lt_upper_bound; autorewrite with pull_Zpow zsimplify; auto with zarith).
+      assert (0 <= x / 2^n < 2^n) by (split; Z.zero_bounds).
+      unfold ldi_double, load_immediate_double; simpl.
+      autorewrite with simpl_tuple_decoder Zshift_to_pow; simpl; push_decode.
+      autorewrite with zsimplify; reflexivity.
+    Qed.
+  End load_immediate.
 
   Section spread_left.
     Context (n : Z) {W}

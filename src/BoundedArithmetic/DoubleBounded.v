@@ -53,6 +53,11 @@ Global Instance ripple_carry_adc
   : add_with_carry (tuple W k)
   := { adc := ripple_carry_tuple adc k }.
 
+Global Instance ripple_carry_subc
+       {W} (subc : sub_with_carry W) {k}
+  : sub_with_carry (tuple W k)
+  := { subc := ripple_carry_tuple subc k }.
+
 (** constructions on [tuple W 2] *)
 Section tuple2.
   Section select_conditional.
@@ -65,6 +70,19 @@ Section tuple2.
     Global Instance selc_double : select_conditional (tuple W 2)
       := { selc := select_conditional_double }.
   End select_conditional.
+
+  Section load_immediate.
+    Context (n : Z) {W}
+            {ldi : load_immediate W}.
+
+    Definition load_immediate_double (r : Z) : tuple W 2
+      := (ldi (r mod 2^n), ldi (r / 2^n)).
+
+    (** Require a [decoder] instance to aid typeclass search in
+        resolving [n] *)
+    Global Instance ldi_double {decode : decoder n W} : load_immediate (tuple W 2)
+      := { ldi := load_immediate_double }.
+  End load_immediate.
 
   Section spread_left.
     Context (n : Z) {W}

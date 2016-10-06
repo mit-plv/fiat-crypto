@@ -37,6 +37,8 @@ Ltac push_decode_step :=
     => tc_rewrite (decode_tag) (@decode n W decoder w) ->
   | [ |- context[match @fst ?A ?B ?x with true => 1 | false => 0 end] ]
     => tc_rewrite (decode_tag) (match @fst A B x with true => 1 | false => 0 end) ->
+  | [ |- context[@fst bool ?B ?x] ]
+    => tc_rewrite (decode_tag) (@fst bool B x) ->
   end.
 Ltac push_decode := repeat push_decode_step.
 Ltac pull_decode_step :=
