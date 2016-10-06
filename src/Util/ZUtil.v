@@ -534,6 +534,7 @@ Module Z.
     rewrite Z.mod_add by (pose proof (Z.pow_pos_nonneg 2 n); omega).
     auto using Z.mod_pow2_bits_low.
   Qed.
+  Hint Rewrite testbit_add_shiftl_low using zutil_arith : Ztestbit.
 
   Lemma mod_div_eq0 : forall a b, 0 < b -> (a mod b) / b = 0.
   Proof.
@@ -588,6 +589,25 @@ Module Z.
     rewrite <-Z.pow_add_r by omega.
     replace (1 + (n - 1)) with n by ring; omega.
   Qed.
+  Hint Rewrite testbit_add_shiftl_high using zutil_arith : Ztestbit.
+
+  Lemma nonneg_pow_pos a b : 0 < a -> 0 < a^b -> 0 <= b.
+  Proof.
+    destruct (Z_lt_le_dec b 0); intros; auto.
+    erewrite Z.pow_neg_r in * by eassumption.
+    omega.
+  Qed.
+  Hint Resolve nonneg_pow_pos : zarith.
+
+  Lemma testbit_add_shiftl_full i (Hi : 0 <= i) a b n (Ha : 0 <= a < 2^n)
+    : Z.testbit (a + b << n) i
+      = if (i <? n) then Z.testbit a i else Z.testbit b (i - n).
+  Proof.
+    assert (0 < 2^n) by omega.
+    assert (0 <= n) by eauto 2 with zarith.
+    pose proof (Zlt_cases i n); break_match; autorewrite with Ztestbit; reflexivity.
+  Qed.
+  Hint Rewrite testbit_add_shiftl_full using zutil_arith : Ztestbit.
 
   Lemma land_add_land : forall n m a b, (m <= n)%nat ->
     Z.land ((Z.land a (Z.ones (Z.of_nat n))) + (Z.shiftl b (Z.of_nat n))) (Z.ones (Z.of_nat m)) = Z.land a (Z.ones (Z.of_nat m)).

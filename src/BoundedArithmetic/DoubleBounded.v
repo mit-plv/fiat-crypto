@@ -84,6 +84,17 @@ Section tuple2.
       := { ldi := load_immediate_double }.
   End load_immediate.
 
+  Section bitwise_or.
+    Context {W}
+            {or : bitwise_or W}.
+
+    Definition bitwise_or_double (x : tuple W 2) (y : tuple W 2) : tuple W 2
+      := (or (fst x) (fst y), or (snd x) (snd y)).
+
+    Global Instance or_double : bitwise_or (tuple W 2)
+      := { or := bitwise_or_double }.
+  End bitwise_or.
+
   Section spread_left.
     Context (n : Z) {W}
             {ldi : load_immediate W}
