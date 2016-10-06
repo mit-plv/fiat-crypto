@@ -204,8 +204,8 @@ Ltac zify_nat_op ::=
 
 Create HintDb Ztestbit discriminated.
 Hint Rewrite Z.testbit_0_l : Ztestbit.
-Hint Rewrite Z.land_spec Z.lor_spec Z.shiftl_spec Z.shiftr_spec using omega : Ztestbit.
-Hint Rewrite Z.testbit_neg_r using omega : Ztestbit.
+Hint Rewrite Z.land_spec Z.lor_spec Z.shiftl_spec Z.shiftr_spec using zutil_arith : Ztestbit.
+Hint Rewrite Z.testbit_neg_r using zutil_arith : Ztestbit.
 Hint Rewrite Bool.andb_true_r Bool.andb_false_r Bool.orb_true_r Bool.orb_false_r
              Bool.andb_true_l Bool.andb_false_l Bool.orb_true_l Bool.orb_false_l : Ztestbit.
 
@@ -245,7 +245,7 @@ Module Z.
     + apply Z.ones_spec_low. omega.
     + apply Z.ones_spec_high. omega.
   Qed.
-  Hint Rewrite ones_spec using omega : Ztestbit.
+  Hint Rewrite ones_spec using zutil_arith : Ztestbit.
 
   Lemma testbit_pow2_mod : forall a n i, 0 <= n ->
   Z.testbit (Z.pow2_mod a n) i = if Z_lt_dec i n then Z.testbit a i else false.
@@ -259,7 +259,7 @@ Module Z.
           | |- _ => progress autorewrite with Ztestbit
           end.
   Qed.
-  Hint Rewrite testbit_pow2_mod using omega : Ztestbit.
+  Hint Rewrite testbit_pow2_mod using zutil_arith : Ztestbit.
 
   Lemma bits_above_pow2 a n : 0 <= a < 2^n -> Z.testbit a n = false.
   Proof.
@@ -267,7 +267,7 @@ Module Z.
     destruct (Z_zerop a); subst; autorewrite with Ztestbit; trivial.
     apply Z.bits_above_log2; auto with zarith concl_log2.
   Qed.
-  Hint Rewrite bits_above_pow2 using omega : Ztestbit.
+  Hint Rewrite bits_above_pow2 using zutil_arith : Ztestbit.
 
   Lemma pow2_mod_0_r : forall a, Z.pow2_mod a 0 = 0.
   Proof.
@@ -1850,7 +1850,7 @@ Module Z.
       omega.
   Qed.
 
-  Hint Rewrite Z.pow2_bits_eqb using omega : Ztestbit.
+  Hint Rewrite Z.pow2_bits_eqb using zutil_arith : Ztestbit.
   Lemma pow_2_shiftr : forall n, 0 <= n -> (2 ^ n) >> n = 1.
   Proof.
     intros; apply Z.bits_inj'; intros.
