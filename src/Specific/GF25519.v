@@ -457,7 +457,7 @@ Proof.
   eexists.
   cbv [pack_opt].
   repeat (rewrite <-convert'_opt_correct;
-          cbv - [from_list_default_opt Pow2BaseProofs.convert']).
+          cbv - [from_list_default_opt Conversion.convert']).
   repeat progress rewrite ?Z.shiftl_0_r, ?Z.shiftr_0_r, ?Z.land_0_l, ?Z.lor_0_l, ?Z.land_same_r.
   cbv [from_list_default_opt].
   reflexivity.
@@ -503,7 +503,7 @@ Proof.
   cbv [unpack_opt].
   repeat (
       rewrite <-convert'_opt_correct;
-      cbv - [from_list_default_opt Pow2BaseProofs.convert']).
+      cbv - [from_list_default_opt Conversion.convert']).
   repeat progress rewrite ?Z.shiftl_0_r, ?Z.shiftr_0_r, ?Z.land_0_l, ?Z.lor_0_l, ?Z.land_same_r.
   cbv [from_list_default_opt].
   reflexivity.
