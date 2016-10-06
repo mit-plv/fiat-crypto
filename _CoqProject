@@ -37,6 +37,7 @@ src/Encoding/EncodingTheorems.v
 src/Encoding/ModularWordEncodingPre.v
 src/Encoding/ModularWordEncodingTheorems.v
 src/Encoding/PointEncodingPre.v
+src/Encoding/PointEncoding.v
 src/Experiments/EncodingLemmas.v
 src/Experiments/GenericFieldPow.v
 src/Experiments/MontgomeryCurve.v
@@ -96,7 +97,6 @@ src/Spec/Encoding.v
 src/Spec/ModularArithmetic.v
 src/Spec/ModularWordEncoding.v
 src/Spec/MxDH.v
-src/Spec/PointEncoding.v
 src/Spec/WeierstrassCurve.v
 src/Specific/GF1305.v
 src/Specific/GF25519.v
