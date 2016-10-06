@@ -36,6 +36,10 @@ src/BoundedArithmetic/Double/Proofs/LoadImmediate.v
 src/BoundedArithmetic/Double/Proofs/Multiply.v
 src/BoundedArithmetic/Double/Proofs/RippleCarryAddSub.v
 src/BoundedArithmetic/Double/Proofs/SelectConditional.v
+src/BoundedArithmetic/Double/Proofs/ShiftLeft.v
+src/BoundedArithmetic/Double/Proofs/ShiftLeftRightTactic.v
+src/BoundedArithmetic/Double/Proofs/ShiftRight.v
+src/BoundedArithmetic/Double/Proofs/ShiftRightDoubleWordImmediate.v
 src/BoundedArithmetic/Double/Proofs/SpreadLeftImmediate.v
 src/BoundedArithmetic/Double/Repeated/Core.v
 src/BoundedArithmetic/Double/Repeated/Proofs/BitwiseOr.v
