@@ -104,7 +104,7 @@ Section tuple2.
             {ldi : load_immediate W}
             {shl : shift_left_immediate W}
             {shr : shift_right_immediate W}
-            {adc : add_with_carry W}.
+            {or : bitwise_or W}.
 
     Definition shift_left_immediate_double (r : tuple W 2) (count : Z) : tuple W 2
       := (if count =? 0
@@ -115,14 +115,14 @@ Section tuple2.
           if count =? 0
           then snd r
           else if count <? n
-               then snd (adc (shr (fst r) (n - count)) (shl (snd r) count) false)
+               then or (shr (fst r) (n - count)) (shl (snd r) count)
                else shl (fst r) (count - n)).
 
     Definition shift_right_immediate_double (r : tuple W 2) (count : Z) : tuple W 2
       := (if count =? 0
           then fst r
           else if count <? n
-               then snd (adc (shr (fst r) count) (shl (snd r) (n - count)) false)
+               then or (shr (fst r) count) (shl (snd r) (n - count))
                else shr (snd r) (count - n),
           if count =? 0
           then snd r
