@@ -66,7 +66,7 @@ Section PointEncoding.
     Notation KonCurve := (@Pre.onCurve _ Keq Kone Kadd Kmul Ka Kd).
     Context {Kpoint} {Kcoord_to_point : forall P, KonCurve P -> Kpoint}
             {Kpoint_to_coord : Kpoint -> (K * K)}.
-    Context {Kp2c_c2p : forall P pf, Kpoint_to_coord (Kcoord_to_point P pf) = P}.
+    Context {Kp2c_c2p : forall P pf, Tuple.fieldwise (n := 2) Keq (Kpoint_to_coord (Kcoord_to_point P pf)) P}.
     Context {Kpoint_eq : Kpoint -> Kpoint -> Prop} {Kpoint_add : Kpoint -> Kpoint -> Kpoint}.
     Context {Kpoint_eq_correct : forall p q, Kpoint_eq p q <-> Tuple.fieldwise (n := 2) Keq (Kpoint_to_coord p) (Kpoint_to_coord q)} {Kpoint_eq_Equivalence : Equivalence Kpoint_eq}.
     
@@ -142,8 +142,12 @@ Section PointEncoding.
     Proof.
       cbv [encode_point Kencode_point point_phi]; intros.
       destruct P as [[fx fy]]; cbv [E.coordinates proj1_sig].
-      rewrite Kp2c_c2p.
-      f_equal; auto.
+      break_match.
+      match goal with
+      H: Kpoint_to_coord (Kcoord_to_point (?x, ?y) ?pf) = (_,_) |- _ => let A := fresh "H" in
+      pose proof (Kp2c_c2p (x,y) pf) as A; rewrite Heqp in A;
+        inversion A; cbv [fst snd Tuple.fieldwise'] in * end.
+      f_equal; rewrite ?H0, ?H1; auto.
     Qed.
 
     Lemma Proper_Kencode_point : Proper (Kpoint_eq ==> Logic.eq) Kencode_point.
@@ -395,7 +399,14 @@ Section PointEncoding.
         pose proof k as k'.
         rewrite H, H0 in k'.
         break_match; try congruence.
-        simpl. apply Kpoint_eq_correct; rewrite !Kp2c_c2p; tauto.
+        simpl. apply Kpoint_eq_correct.
+        repeat ( break_match;
+        match goal with
+        H: Kpoint_to_coord (Kcoord_to_point (?x, ?y) ?pf) = (_,_) |- _ => let A := fresh "H" in
+        pose proof (Kp2c_c2p (x,y) pf) as A; rewrite H in A;
+            inversion A; cbv [fst snd Tuple.fieldwise'] in * end;
+            intuition;
+            repeat match goal with H : Keq  _ _ |- _ => rewrite H end; try reflexivity).
       } {
         pose proof n as k'.
         rewrite H, H0 in k'.
