@@ -7,22 +7,21 @@ src/BaseSystem.v
 src/BaseSystemProofs.v
 src/EdDSARepChange.v
 src/Testbit.v
-src/Assembly/AlmostConversion.v
-src/Assembly/AlmostQhasm.v
-src/Assembly/Conversion.v
-src/Assembly/Language.v
+src/Assembly/Bounds.v
+src/Assembly/Compile.v
+src/Assembly/Conversions.v
+src/Assembly/Evaluables.v
+src/Assembly/HL.v
+src/Assembly/LL.v
+src/Assembly/PhoasCommon.v
 src/Assembly/Pipeline.v
-src/Assembly/Pseudize.v
-src/Assembly/Pseudo.v
-src/Assembly/PseudoConversion.v
 src/Assembly/Qhasm.v
 src/Assembly/QhasmCommon.v
 src/Assembly/QhasmEvalCommon.v
 src/Assembly/QhasmUtil.v
 src/Assembly/State.v
 src/Assembly/StringConversion.v
-src/Assembly/Vectorize.v
-src/Assembly/Wordize.v
+src/Assembly/WordizeUtil.v
 src/BoundedArithmetic/ArchitectureToZLike.v
 src/BoundedArithmetic/ArchitectureToZLikeProofs.v
 src/BoundedArithmetic/DoubleBounded.v
@@ -38,7 +37,11 @@ src/Encoding/ModularWordEncodingTheorems.v
 src/Encoding/PointEncodingPre.v
 src/Experiments/EncodingLemmas.v
 src/Experiments/GenericFieldPow.v
+<<<<<<< HEAD
 src/Experiments/MontgomeryCurve.v
+=======
+src/Experiments/SpecEd25519.v
+>>>>>>> bd40805a09cc060531c5a1e7a69329255150f991
 src/ModularArithmetic/ExtPow2BaseMulProofs.v
 src/ModularArithmetic/ExtendedBaseVector.v
 src/ModularArithmetic/ModularArithmeticTheorems.v
