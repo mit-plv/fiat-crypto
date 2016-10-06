@@ -36,6 +36,14 @@ Create HintDb zsimplify_fast discriminated.
 (** Only hints with no side conditions that strip constants, and
     nothing else. *)
 Create HintDb zsimplify_const discriminated.
+(** We create separate databases for two directions of transformations
+      involving [Z.log2]; combining them leads to loops. *)
+(* for hints that take in hypotheses of type [log2 _], and spit out conclusions of type [_ ^ _] *)
+Create HintDb hyp_log2.
+(* for hints that take in hypotheses of type [_ ^ _], and spit out conclusions of type [log2 _] *)
+Create HintDb concl_log2.
+Hint Resolve (fun a b H => proj1 (Z.log2_lt_pow2 a b H)) (fun a b H => proj1 (Z.log2_le_pow2 a b H)) : concl_log2.
+Hint Resolve (fun a b H => proj2 (Z.log2_lt_pow2 a b H)) (fun a b H => proj2 (Z.log2_le_pow2 a b H)) : hyp_log2.
 Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r Z_mod_same_full Z.sub_simpl_r Z.sub_simpl_l Z.add_opp_diag_r Z.add_opp_diag_l Zmod_0_l Z.add_simpl_r Z.add_simpl_l Z.opp_0 Zmod_0_r Zmod_mod Z.mul_succ_l Z.mul_succ_r Z.shiftr_0_r Z.shiftr_0_l Z.mod_1_r Zmod_0_l Zmod_0_r Z.shiftl_0_r Z.shiftl_0_l Z.shiftr_0_r Z.shiftr_0_l : zsimplify_fast.
 Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r Z_mod_same_full Z.sub_simpl_r Z.sub_simpl_l Z.add_opp_diag_r Z.add_opp_diag_l Zmod_0_l Z.add_simpl_r Z.add_simpl_l Z.opp_0 Zmod_0_r Zmod_mod Z.mul_succ_l Z.mul_succ_r Z.shiftr_0_r Z.shiftr_0_l Z.mod_1_r Zmod_0_l Zmod_0_r Z.shiftl_0_r Z.shiftl_0_l Z.shiftr_0_r Z.shiftr_0_l Zplus_minus : zsimplify.
 Hint Rewrite Z.div_mul Z.div_1_l Z.div_same Z.mod_same Z.div_small Z.mod_small Z.div_add Z.div_add_l Z.mod_add Z.div_0_l Z.mod_mod Z.mod_small Z_mod_zero_opp_full Z.mod_1_l using zutil_arith : zsimplify.
@@ -252,6 +260,14 @@ Module Z.
           end.
   Qed.
   Hint Rewrite testbit_pow2_mod using omega : Ztestbit.
+
+  Lemma bits_above_pow2 a n : 0 <= a < 2^n -> Z.testbit a n = false.
+  Proof.
+    intros.
+    destruct (Z_zerop a); subst; autorewrite with Ztestbit; trivial.
+    apply Z.bits_above_log2; auto with zarith concl_log2.
+  Qed.
+  Hint Rewrite bits_above_pow2 using omega : Ztestbit.
 
   Lemma pow2_mod_0_r : forall a, Z.pow2_mod a 0 = 0.
   Proof.
@@ -1199,17 +1215,6 @@ Module Z.
   Qed.
 
   Hint Resolve log2_nonneg' : zarith.
-
-  (** We create separate databases for two directions of transformations
-      involving [Z.log2]; combining them leads to loops. *)
-  (* for hints that take in hypotheses of type [log2 _], and spit out conclusions of type [_ ^ _] *)
-  Create HintDb hyp_log2.
-
-  (* for hints that take in hypotheses of type [_ ^ _], and spit out conclusions of type [log2 _] *)
-  Create HintDb concl_log2.
-
-  Hint Resolve (fun a b H => proj1 (Z.log2_lt_pow2 a b H)) (fun a b H => proj1 (Z.log2_le_pow2 a b H)) : concl_log2.
-  Hint Resolve (fun a b H => proj2 (Z.log2_lt_pow2 a b H)) (fun a b H => proj2 (Z.log2_le_pow2 a b H)) : hyp_log2.
 
   Lemma le_lt_to_log2 x y z : 0 <= z -> 0 < y -> 2^x <= y < 2^z -> x <= Z.log2 y < z.
   Proof.
