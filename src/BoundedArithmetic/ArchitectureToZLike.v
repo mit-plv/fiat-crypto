@@ -1,7 +1,7 @@
 (*** Implementing ℤ-Like via Architecture *)
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.BoundedArithmetic.Interface.
-Require Import Crypto.BoundedArithmetic.DoubleBounded.
+Require Import Crypto.BoundedArithmetic.Double.Core.
 Require Import Crypto.ModularArithmetic.ZBounded.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.LetIn.
