@@ -19,7 +19,7 @@ Hint Extern 1 => lia : lia.
 Hint Extern 1 => lra : lra.
 Hint Extern 1 => nia : nia.
 Hint Extern 1 => omega : omega.
-Hint Resolve Z.log2_nonneg Z.div_small Z.mod_small Z.pow_neg_r Z.pow_0_l Z.pow_pos_nonneg Z.lt_le_incl Z.pow_nonzero Z.div_le_upper_bound Z_div_exact_full_2 Z.div_same Z.div_lt_upper_bound Z.div_le_lower_bound Zplus_minus Zplus_gt_compat_l Zplus_gt_compat_r Zmult_gt_compat_l Zmult_gt_compat_r Z.pow_lt_mono_r Z.pow_lt_mono_l Z.pow_lt_mono Z.mul_lt_mono_nonneg Z.div_lt_upper_bound Z.div_pos Zmult_lt_compat_r Z.pow_le_mono_r Z.pow_le_mono_l : zarith.
+Hint Resolve Z.log2_nonneg Z.div_small Z.mod_small Z.pow_neg_r Z.pow_0_l Z.pow_pos_nonneg Z.lt_le_incl Z.pow_nonzero Z.div_le_upper_bound Z_div_exact_full_2 Z.div_same Z.div_lt_upper_bound Z.div_le_lower_bound Zplus_minus Zplus_gt_compat_l Zplus_gt_compat_r Zmult_gt_compat_l Zmult_gt_compat_r Z.pow_lt_mono_r Z.pow_lt_mono_l Z.pow_lt_mono Z.mul_lt_mono_nonneg Z.div_lt_upper_bound Z.div_pos Zmult_lt_compat_r Z.pow_le_mono_r Z.pow_le_mono_l Z.div_lt : zarith.
 Hint Resolve (fun a b H => proj1 (Z.mod_pos_bound a b H)) (fun a b H => proj2 (Z.mod_pos_bound a b H)) (fun a b pf => proj1 (Z.pow_gt_1 a b pf)) : zarith.
 
 Ltac zutil_arith := solve [ omega | lia | auto with nocore ].
@@ -39,13 +39,13 @@ Create HintDb zsimplify_const discriminated.
 (** We create separate databases for two directions of transformations
       involving [Z.log2]; combining them leads to loops. *)
 (* for hints that take in hypotheses of type [log2 _], and spit out conclusions of type [_ ^ _] *)
-Create HintDb hyp_log2.
+Create HintDb hyp_log2 discriminated.
 (* for hints that take in hypotheses of type [_ ^ _], and spit out conclusions of type [log2 _] *)
-Create HintDb concl_log2.
+Create HintDb concl_log2 discriminated.
 Hint Resolve (fun a b H => proj1 (Z.log2_lt_pow2 a b H)) (fun a b H => proj1 (Z.log2_le_pow2 a b H)) : concl_log2.
 Hint Resolve (fun a b H => proj2 (Z.log2_lt_pow2 a b H)) (fun a b H => proj2 (Z.log2_le_pow2 a b H)) : hyp_log2.
 Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r Z_mod_same_full Z.sub_simpl_r Z.sub_simpl_l Z.add_opp_diag_r Z.add_opp_diag_l Zmod_0_l Z.add_simpl_r Z.add_simpl_l Z.opp_0 Zmod_0_r Zmod_mod Z.mul_succ_l Z.mul_succ_r Z.shiftr_0_r Z.shiftr_0_l Z.mod_1_r Zmod_0_l Zmod_0_r Z.shiftl_0_r Z.shiftl_0_l Z.shiftr_0_r Z.shiftr_0_l : zsimplify_fast.
-Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r Z_mod_same_full Z.sub_simpl_r Z.sub_simpl_l Z.add_opp_diag_r Z.add_opp_diag_l Zmod_0_l Z.add_simpl_r Z.add_simpl_l Z.opp_0 Zmod_0_r Zmod_mod Z.mul_succ_l Z.mul_succ_r Z.shiftr_0_r Z.shiftr_0_l Z.mod_1_r Zmod_0_l Zmod_0_r Z.shiftl_0_r Z.shiftl_0_l Z.shiftr_0_r Z.shiftr_0_l Zplus_minus : zsimplify.
+Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r Z_mod_same_full Z.sub_simpl_r Z.sub_simpl_l Z.add_opp_diag_r Z.add_opp_diag_l Zmod_0_l Z.add_simpl_r Z.add_simpl_l Z.opp_0 Zmod_0_r Zmod_mod Z.mul_succ_l Z.mul_succ_r Z.shiftr_0_r Z.shiftr_0_l Z.mod_1_r Zmod_0_l Zmod_0_r Z.shiftl_0_r Z.shiftl_0_l Z.shiftr_0_r Z.shiftr_0_l Zplus_minus Z.add_diag : zsimplify.
 Hint Rewrite Z.div_mul Z.div_1_l Z.div_same Z.mod_same Z.div_small Z.mod_small Z.div_add Z.div_add_l Z.mod_add Z.div_0_l Z.mod_mod Z.mod_small Z_mod_zero_opp_full Z.mod_1_l using zutil_arith : zsimplify.
 Hint Rewrite <- Z.opp_eq_mul_m1 Z.one_succ Z.two_succ : zsimplify.
 Hint Rewrite <- Z.div_mod using zutil_arith : zsimplify.
@@ -805,6 +805,17 @@ Module Z.
       apply Z.pow_le_mono_r; omega.
   Qed.
   Hint Rewrite <- Z.lor_shiftl using zutil_arith : convert_to_Ztestbit.
+
+  Lemma shiftl_spec_full a n m
+    : Z.testbit (a << n) m = if Z_lt_dec m n
+                             then false
+                             else if Z_le_dec 0 m
+                                  then Z.testbit a (m - n)
+                                  else false.
+  Proof.
+    repeat break_match; auto using Z.shiftl_spec_low, Z.shiftl_spec, Z.testbit_neg_r with omega.
+  Qed.
+  Hint Rewrite shiftl_spec_full : Ztestbit.
 
   (* prove that combinations of known positive/nonnegative numbers are positive/nonnegative *)
   Ltac zero_bounds' :=
@@ -1935,6 +1946,19 @@ Module Z.
       omega.
   Qed.
 
+  Lemma shiftr_nonneg_le : forall a n, 0 <= a -> 0 <= n -> a >> n <= a.
+  Proof.
+    intros.
+    repeat match goal with
+           | [ H : _ <= _ |- _ ]
+             => rewrite Z.lt_eq_cases in H
+           | [ H : _ \/ _ |- _ ] => destruct H
+           | _ => progress subst
+           | _ => progress autorewrite with zsimplify Zshift_to_pow
+           | _ => solve [ auto with zarith omega ]
+           end.
+  Qed.
+  Hint Resolve shiftr_nonneg_le : zarith.
 
   Lemma simplify_twice_sub_sub x y : 2 * x - (x - y) = x + y.
   Proof. lia. Qed.
@@ -2490,11 +2514,21 @@ def to_def(name):
 
 names = []
 names += ['%sX%s%sX' % (a, b, c) for a in 'mp' for b in 'mp' for c in 'mp']
+names += ['%sX%s_X%s' % (a, b, c) for a in 'mp' for b in 'mp' for c in 'mp']
 names += ['X%s%s_X%s' % (a, b, c) for a in 'mp' for b in 'mp' for c in 'mp']
+names += ['%sX%s_%sX' % (a, b, c) for a in 'mp' for b in 'mp' for c in 'mp']
+names += ['X%s%s_%sX' % (a, b, c) for a in 'mp' for b in 'mp' for c in 'mp']
 names += ['m2XpX', 'm2XpXpX']
 
+print(r'''  (* Python code to generate these hints:
+<<''')
+print(open(__file__).read())
+print(r'''
+>> *)''')
 for name in names:
     print(to_def(name))
+
+
 >> *)
   Lemma simplify_mXmmX a b X : a - X - b - X = - 2 * X + a - b.
   Proof. lia. Qed.
@@ -2520,6 +2554,30 @@ for name in names:
   Lemma simplify_pXppX a b X : a + X + b + X = 2 * X + a + b.
   Proof. lia. Qed.
   Hint Rewrite simplify_pXppX : zsimplify.
+  Lemma simplify_mXm_Xm a b X : a - X - (X - b) = - 2 * X + a + b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_mXm_Xm : zsimplify.
+  Lemma simplify_mXm_Xp a b X : a - X - (X + b) = - 2 * X + a - b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_mXm_Xp : zsimplify.
+  Lemma simplify_mXp_Xm a b X : a - X + (X - b) = a - b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_mXp_Xm : zsimplify.
+  Lemma simplify_mXp_Xp a b X : a - X + (X + b) = a + b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_mXp_Xp : zsimplify.
+  Lemma simplify_pXm_Xm a b X : a + X - (X - b) = a + b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_pXm_Xm : zsimplify.
+  Lemma simplify_pXm_Xp a b X : a + X - (X + b) = a - b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_pXm_Xp : zsimplify.
+  Lemma simplify_pXp_Xm a b X : a + X + (X - b) = 2 * X + a - b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_pXp_Xm : zsimplify.
+  Lemma simplify_pXp_Xp a b X : a + X + (X + b) = 2 * X + a + b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_pXp_Xp : zsimplify.
   Lemma simplify_Xmm_Xm a b X : X - a - (X - b) = - a + b.
   Proof. lia. Qed.
   Hint Rewrite simplify_Xmm_Xm : zsimplify.
@@ -2544,6 +2602,54 @@ for name in names:
   Lemma simplify_Xpp_Xp a b X : X + a + (X + b) = 2 * X + a + b.
   Proof. lia. Qed.
   Hint Rewrite simplify_Xpp_Xp : zsimplify.
+  Lemma simplify_mXm_mX a b X : a - X - (b - X) = a - b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_mXm_mX : zsimplify.
+  Lemma simplify_mXm_pX a b X : a - X - (b + X) = - 2 * X + a - b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_mXm_pX : zsimplify.
+  Lemma simplify_mXp_mX a b X : a - X + (b - X) = - 2 * X + a + b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_mXp_mX : zsimplify.
+  Lemma simplify_mXp_pX a b X : a - X + (b + X) = a + b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_mXp_pX : zsimplify.
+  Lemma simplify_pXm_mX a b X : a + X - (b - X) = 2 * X + a - b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_pXm_mX : zsimplify.
+  Lemma simplify_pXm_pX a b X : a + X - (b + X) = a - b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_pXm_pX : zsimplify.
+  Lemma simplify_pXp_mX a b X : a + X + (b - X) = a + b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_pXp_mX : zsimplify.
+  Lemma simplify_pXp_pX a b X : a + X + (b + X) = 2 * X + a + b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_pXp_pX : zsimplify.
+  Lemma simplify_Xmm_mX a b X : X - a - (b - X) = 2 * X - a - b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_Xmm_mX : zsimplify.
+  Lemma simplify_Xmm_pX a b X : X - a - (b + X) = - a - b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_Xmm_pX : zsimplify.
+  Lemma simplify_Xmp_mX a b X : X - a + (b - X) = - a + b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_Xmp_mX : zsimplify.
+  Lemma simplify_Xmp_pX a b X : X - a + (b + X) = 2 * X - a + b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_Xmp_pX : zsimplify.
+  Lemma simplify_Xpm_mX a b X : X + a - (b - X) = 2 * X + a - b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_Xpm_mX : zsimplify.
+  Lemma simplify_Xpm_pX a b X : X + a - (b + X) = a - b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_Xpm_pX : zsimplify.
+  Lemma simplify_Xpp_mX a b X : X + a + (b - X) = a + b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_Xpp_mX : zsimplify.
+  Lemma simplify_Xpp_pX a b X : X + a + (b + X) = 2 * X + a + b.
+  Proof. lia. Qed.
+  Hint Rewrite simplify_Xpp_pX : zsimplify.
   Lemma simplify_m2XpX a X : a - 2 * X + X = - X + a.
   Proof. lia. Qed.
   Hint Rewrite simplify_m2XpX : zsimplify.
@@ -2693,4 +2799,11 @@ Ltac pull_Zmod :=
          | [ |- context[(?x mod ?z) mod ?z] ]
            => rewrite (Zmod_mod x z)
          | _ => progress autorewrite with pull_Zmod
+         end.
+
+Ltac Ztestbit :=
+  repeat match goal with
+         | _ => progress autorewrite with Ztestbit
+         | [ |- context[Z.testbit ?x ?y] ]
+           => rewrite (Z.testbit_neg_r x y) by zutil_arith
          end.

@@ -7,6 +7,7 @@ Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.ModularArithmetic.Pow2Base Crypto.BaseSystemProofs.
 Require Import Crypto.Util.Notations.
+Require Export Crypto.Util.Bool.
 Require Export Crypto.Util.FixCoqMistakes.
 Require Crypto.BaseSystem.
 Local Open Scope Z_scope.
@@ -295,9 +296,10 @@ Section Pow2BaseProofs.
           apply Z.bits_inj'; intros.
           rewrite Z.testbit_pow2_mod by auto using in_eq.
           break_if. {
-            autorewrite with Ztestbit.
-            rewrite Z.testbit_neg_r with (n := n - w) by omega.
-            autorewrite with Ztestbit. f_equal; ring.
+            autorewrite with Ztestbit; break_match;
+              try rewrite Z.testbit_neg_r with (n := n - w) by omega;
+              autorewrite with bool_congr;
+              f_equal; ring.
           } {
             replace a with (a mod 2 ^ w) by (auto using Z.mod_small).
             apply Z.mod_pow2_bits_high. split; auto using in_eq; omega.
@@ -763,6 +765,7 @@ Section BitwiseDecodeEncode.
         erewrite testbit_decode_digit_select with (i0 := i) by
           (eauto; rewrite sum_firstn_succ_default; omega)
       | |- appcontext[Z.testbit _ (?a - ?b)] => destruct (Z_lt_dec a b)
+      | _ => progress break_if
       end.
   Qed.
 
