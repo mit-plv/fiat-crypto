@@ -806,6 +806,13 @@ Module Z.
   Qed.
   Hint Rewrite <- Z.lor_shiftl using zutil_arith : convert_to_Ztestbit.
 
+  Lemma lor_shiftl' : forall a b n, 0 <= n -> 0 <= a < 2 ^ n ->
+    Z.lor (Z.shiftl b n) a = (Z.shiftl b n) + a.
+  Proof.
+    intros; rewrite Z.lor_comm, Z.add_comm; apply lor_shiftl; assumption.
+  Qed.
+  Hint Rewrite <- Z.lor_shiftl' using zutil_arith : convert_to_Ztestbit.
+
   Lemma shiftl_spec_full a n m
     : Z.testbit (a << n) m = if Z_lt_dec m n
                              then false
@@ -2806,4 +2813,8 @@ Ltac Ztestbit :=
          | _ => progress autorewrite with Ztestbit
          | [ |- context[Z.testbit ?x ?y] ]
            => rewrite (Z.testbit_neg_r x y) by zutil_arith
+         | [ |- context[Z.testbit ?x ?y] ]
+           => rewrite (Z.bits_above_pow2 x y) by zutil_arith
+         | [ |- context[Z.testbit ?x ?y] ]
+           => rewrite (Z.bits_above_log2 x y) by zutil_arith
          end.
