@@ -853,6 +853,34 @@ Module Z.
     split; intros; intuition omega.
   Qed.
 
+  Lemma testbit_false_bound : forall a x, 0 <= x ->
+    (forall n, ~ (n < x) -> Z.testbit a n = false) ->
+    a < 2 ^ x.
+  Proof.
+    intros.
+    assert (a = Z.pow2_mod a x). {
+     apply Z.bits_inj'; intros.
+     rewrite Z.testbit_pow2_mod by omega; break_if; auto.
+    }
+    rewrite H1.
+    rewrite Z.pow2_mod_spec; try apply Z.mod_pos_bound; zero_bounds.
+  Qed.
+
+  Lemma lor_range : forall x y n, (0 <= n)%Z -> 0 <= x < 2 ^ n -> 0 <= y < 2 ^ n ->
+                                  0 <= Z.lor x y < 2 ^ n.
+  Proof.
+    repeat match goal with
+           | |- _ => progress intros
+           | |- _ => rewrite Z.lor_spec
+           | |- _ => rewrite Z.testbit_eqb by omega
+           | |- _ => rewrite !Z.div_small by (split; try omega; eapply Z.lt_le_trans;
+                             [ intuition eassumption | apply Z.pow_le_mono_r; omega])
+           | |- _ => split
+           | |- _ => apply testbit_false_bound
+           | |- _ => solve [auto]
+           | |- _ => solve [apply Z.lor_nonneg; intuition auto] 
+           end.
+  Qed.
 
   Lemma N_le_1_l : forall p, (1 <= N.pos p)%N.
   Proof.

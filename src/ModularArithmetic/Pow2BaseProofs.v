@@ -206,20 +206,6 @@ Section Pow2BaseProofs.
   Hint Rewrite @skipn_base_from_limb_widths : pull_base_from_limb_widths.
   Hint Rewrite @skipn_base_from_limb_widths : push_skipn.
 
-  (* TODO : move to ZUtil *)
-  Lemma testbit_false_bound : forall a x, 0 <= x ->
-    (forall n, ~ (n < x) -> Z.testbit a n = false) ->
-    a < 2 ^ x.
-  Proof.
-    intros.
-    assert (a = Z.pow2_mod a x). {
-     apply Z.bits_inj'; intros.
-     rewrite Z.testbit_pow2_mod by omega; break_if; auto.
-    }
-    rewrite H1.
-    rewrite Z.pow2_mod_spec; try apply Z.mod_pos_bound; zero_bounds.
-  Qed.
-
   Lemma pow2_mod_bounded :forall lw us i, (forall w, In w lw -> 0 <= w) -> bounded lw us ->
                                           Z.pow2_mod (nth_default 0 us i) (nth_default 0 lw i) = nth_default 0 us i.
   Proof.
@@ -253,7 +239,7 @@ Section Pow2BaseProofs.
       destruct H0; try omega.
       pose proof (Z.pow_nonneg 2 (nth_default 0 lw i)).
       specialize_by omega; omega.
-    + apply testbit_false_bound; auto.
+    + apply Z.testbit_false_bound; auto.
       intros.
       rewrite <-H0.
       rewrite Z.testbit_pow2_mod by assumption.
@@ -447,7 +433,7 @@ Section Pow2BaseProofs.
     cbv [upper_bound]; intros.
     split.
     { apply decode_nonneg; auto. }
-    { apply testbit_false_bound; auto; intros.
+    { apply Z.testbit_false_bound; auto; intros.
       rewrite testbit_decode_high; auto;
         replace (length us) with (length limb_widths); try omega. }
   Qed.
