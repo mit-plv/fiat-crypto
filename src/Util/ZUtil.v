@@ -597,7 +597,10 @@ Module Z.
     erewrite Z.pow_neg_r in * by eassumption.
     omega.
   Qed.
-  Hint Resolve nonneg_pow_pos : zarith.
+  Hint Resolve nonneg_pow_pos (fun n => nonneg_pow_pos 2 n Z.lt_0_2) : zarith.
+  Lemma nonneg_pow_pos_helper a b dummy : 0 < a -> 0 <= dummy < a^b -> 0 <= b.
+  Proof. eauto with zarith omega. Qed.
+  Hint Resolve nonneg_pow_pos_helper (fun n dummy => nonneg_pow_pos_helper 2 n dummy Z.lt_0_2) : zarith.
 
   Lemma testbit_add_shiftl_full i (Hi : 0 <= i) a b n (Ha : 0 <= a < 2^n)
     : Z.testbit (a + b << n) i
@@ -866,21 +869,23 @@ Module Z.
     rewrite Z.pow2_mod_spec; try apply Z.mod_pos_bound; zero_bounds.
   Qed.
 
-  Lemma lor_range : forall x y n, (0 <= n)%Z -> 0 <= x < 2 ^ n -> 0 <= y < 2 ^ n ->
+  Lemma lor_range : forall x y n, 0 <= x < 2 ^ n -> 0 <= y < 2 ^ n ->
                                   0 <= Z.lor x y < 2 ^ n.
   Proof.
+    intros; assert (0 <= n) by auto with zarith omega.
     repeat match goal with
            | |- _ => progress intros
            | |- _ => rewrite Z.lor_spec
-           | |- _ => rewrite Z.testbit_eqb by omega
+           | |- _ => rewrite Z.testbit_eqb by auto with zarith omega
            | |- _ => rewrite !Z.div_small by (split; try omega; eapply Z.lt_le_trans;
                              [ intuition eassumption | apply Z.pow_le_mono_r; omega])
            | |- _ => split
            | |- _ => apply testbit_false_bound
-           | |- _ => solve [auto]
-           | |- _ => solve [apply Z.lor_nonneg; intuition auto] 
+           | |- _ => solve [auto with zarith]
+           | |- _ => solve [apply Z.lor_nonneg; intuition auto]
            end.
   Qed.
+  Hint Resolve lor_range : zarith.
 
   Lemma N_le_1_l : forall p, (1 <= N.pos p)%N.
   Proof.
