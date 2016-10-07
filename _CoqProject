@@ -36,8 +36,8 @@ src/CompleteEdwardsCurve/Pre.v
 src/Encoding/EncodingTheorems.v
 src/Encoding/ModularWordEncodingPre.v
 src/Encoding/ModularWordEncodingTheorems.v
-src/Encoding/PointEncodingPre.v
 src/Encoding/PointEncoding.v
+src/Encoding/PointEncodingPre.v
 src/Experiments/EncodingLemmas.v
 src/Experiments/GenericFieldPow.v
 src/Experiments/MontgomeryCurve.v
@@ -77,6 +77,7 @@ src/Reflection/InterpProofs.v
 src/Reflection/Linearize.v
 src/Reflection/LinearizeInterp.v
 src/Reflection/LinearizeWf.v
+src/Reflection/MapInterp.v
 src/Reflection/Reify.v
 src/Reflection/Syntax.v
 src/Reflection/TestCase.v
