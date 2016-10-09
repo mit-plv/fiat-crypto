@@ -12,6 +12,9 @@ Local Open Scope Z_scope.
 Import BoundedRewriteNotations.
 Local Notation bit b := (if b then 1 else 0).
 
+Lemma decoder_eta {n W} (decode : decoder n W) : decode = {| Interface.decode := decode |}.
+Proof. destruct decode; reflexivity. Defined.
+
 Section InstructionGallery.
   Context (n : Z) (* bit-width of width of [W] *)
           {W : Type} (* bounded type, [W] for word *)

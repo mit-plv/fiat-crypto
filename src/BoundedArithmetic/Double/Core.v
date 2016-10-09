@@ -95,6 +95,17 @@ Section tuple2.
       := { or := bitwise_or_double }.
   End bitwise_or.
 
+  Section bitwise_and.
+    Context {W}
+            {and : bitwise_and W}.
+
+    Definition bitwise_and_double (x : tuple W 2) (y : tuple W 2) : tuple W 2
+      := (and (fst x) (fst y), and (snd x) (snd y)).
+
+    Global Instance and_double : bitwise_and (tuple W 2)
+      := { and := bitwise_and_double }.
+  End bitwise_and.
+
   Section spread_left.
     Context (n : Z) {W}
             {ldi : load_immediate W}
