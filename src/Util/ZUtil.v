@@ -13,7 +13,7 @@ Local Open Scope Z.
 
 Infix ">>" := Z.shiftr : Z_scope.
 Infix "<<" := Z.shiftl : Z_scope.
-Infix "&" := Z.land : Z_scope.
+Infix "&'" := Z.land : Z_scope.
 
 Hint Extern 1 => lia : lia.
 Hint Extern 1 => lra : lra.
@@ -228,7 +228,7 @@ Ltac canonicalize_comm_step mul ls comm comm3 :=
 Ltac canonicalize_comm mul ls comm comm3 := repeat canonicalize_comm_step mul ls comm comm3.
 
 Module Z.
-  Definition pow2_mod n i := (n & (Z.ones i)).
+  Definition pow2_mod n i := (n &' (Z.ones i)).
 
   Lemma pow2_mod_spec : forall a b, (0 <= b) -> Z.pow2_mod a b = a mod (2 ^ b).
   Proof.
@@ -305,7 +305,7 @@ Module Z.
   Qed.
   Hint Resolve pow2_mod_pos_bound : zarith.
 
-  Lemma land_same_r : forall a b, (a & b) & b = a & b.
+  Lemma land_same_r : forall a b, (a &' b) &' b = a &' b.
   Proof.
   intros; apply Z.bits_inj'; intros.
   rewrite !Z.land_spec.

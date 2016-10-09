@@ -264,7 +264,7 @@ Section Carries.
     eexists. intros H.
     rewrite <-carry_gen_opt_correct by assumption.
     cbv beta iota delta [carry_gen_opt].
-    match goal with |- appcontext[?a & Z_ones_opt _] =>
+    match goal with |- appcontext[?a &' Z_ones_opt _] =>
     let LHS := match goal with |- ?LHS = ?RHS => LHS end in
     let RHS := match goal with |- ?LHS = ?RHS => RHS end in
     let RHSf := match (eval pattern (a) in RHS) with ?RHSf _ => RHSf end in
