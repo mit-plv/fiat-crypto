@@ -28,6 +28,7 @@ src/BoundedArithmetic/ArchitectureToZLikeProofs.v
 src/BoundedArithmetic/Interface.v
 src/BoundedArithmetic/InterfaceProofs.v
 src/BoundedArithmetic/StripCF.v
+src/BoundedArithmetic/X86ToZLike.v
 src/BoundedArithmetic/Double/Core.v
 src/BoundedArithmetic/Double/Proofs/BitwiseOr.v
 src/BoundedArithmetic/Double/Proofs/Decode.v
@@ -36,6 +37,12 @@ src/BoundedArithmetic/Double/Proofs/Multiply.v
 src/BoundedArithmetic/Double/Proofs/RippleCarryAddSub.v
 src/BoundedArithmetic/Double/Proofs/SelectConditional.v
 src/BoundedArithmetic/Double/Proofs/SpreadLeftImmediate.v
+src/BoundedArithmetic/Double/Repeated/Core.v
+src/BoundedArithmetic/Double/Repeated/Proofs/BitwiseOr.v
+src/BoundedArithmetic/Double/Repeated/Proofs/Decode.v
+src/BoundedArithmetic/Double/Repeated/Proofs/LoadImmediate.v
+src/BoundedArithmetic/Double/Repeated/Proofs/RippleCarryAddSub.v
+src/BoundedArithmetic/Double/Repeated/Proofs/SelectConditional.v
 src/CompleteEdwardsCurve/CompleteEdwardsCurveTheorems.v
 src/CompleteEdwardsCurve/ExtendedCoordinates.v
 src/CompleteEdwardsCurve/Pre.v
