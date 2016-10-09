@@ -203,8 +203,10 @@ Ltac zify_nat_op ::=
  end.
 
 Create HintDb Ztestbit discriminated.
-Hint Rewrite Z.testbit_0_l : Ztestbit.
-Hint Rewrite Z.land_spec Z.lor_spec Z.shiftl_spec Z.shiftr_spec using zutil_arith : Ztestbit.
+Create HintDb Ztestbit_full discriminated.
+Hint Rewrite Z.testbit_0_l Z.land_spec Z.lor_spec : Ztestbit.
+Hint Rewrite Z.testbit_0_l Z.land_spec Z.lor_spec : Ztestbit_full.
+Hint Rewrite Z.shiftl_spec Z.shiftr_spec using zutil_arith : Ztestbit.
 Hint Rewrite Z.testbit_neg_r using zutil_arith : Ztestbit.
 Hint Rewrite Bool.andb_true_r Bool.andb_false_r Bool.orb_true_r Bool.orb_false_r
              Bool.andb_true_l Bool.andb_false_l Bool.orb_true_l Bool.orb_false_l : Ztestbit.
@@ -247,6 +249,22 @@ Module Z.
   Qed.
   Hint Rewrite ones_spec using zutil_arith : Ztestbit.
 
+  Lemma ones_spec_full : forall n m, Z.testbit (Z.ones n) m
+                                     = if Z_lt_dec m 0
+                                       then false
+                                       else if Z_lt_dec n 0
+                                            then true
+                                            else if Z_lt_dec m n then true else false.
+  Proof.
+    intros.
+    repeat (break_if || autorewrite with Ztestbit); try reflexivity; try omega.
+    unfold Z.ones.
+    rewrite <- Z.shiftr_opp_r, Z.shiftr_eq_0 by (simpl; omega); simpl.
+    destruct m; simpl in *; try reflexivity.
+    exfalso; auto using Zlt_neg_0.
+  Qed.
+  Hint Rewrite ones_spec_full : Ztestbit_full.
+
   Lemma testbit_pow2_mod : forall a n i, 0 <= n ->
   Z.testbit (Z.pow2_mod a n) i = if Z_lt_dec i n then Z.testbit a i else false.
   Proof.
@@ -260,6 +278,20 @@ Module Z.
           end.
   Qed.
   Hint Rewrite testbit_pow2_mod using zutil_arith : Ztestbit.
+
+  Lemma testbit_pow2_mod_full : forall a n i,
+      Z.testbit (Z.pow2_mod a n) i = if Z_lt_dec n 0
+                                     then if Z_lt_dec i 0 then false else Z.testbit a i
+                                     else if Z_lt_dec i n then Z.testbit a i else false.
+  Proof.
+    intros; destruct (Z_lt_dec n 0); [ | apply testbit_pow2_mod; omega ].
+    unfold pow2_mod.
+    autorewrite with Ztestbit_full;
+      repeat break_match;
+      autorewrite with Ztestbit;
+      reflexivity.
+  Qed.
+  Hint Rewrite testbit_pow2_mod_full : Ztestbit_full.
 
   Lemma bits_above_pow2 a n : 0 <= a < 2^n -> Z.testbit a n = false.
   Proof.
@@ -814,6 +846,17 @@ Module Z.
   Hint Rewrite <- Z.lor_shiftl' using zutil_arith : convert_to_Ztestbit.
 
   Lemma shiftl_spec_full a n m
+    : Z.testbit (a << n) m = if Z_lt_dec m n
+                             then false
+                             else if Z_le_dec 0 m
+                                  then Z.testbit a (m - n)
+                                  else false.
+  Proof.
+    repeat break_match; auto using Z.shiftl_spec_low, Z.shiftl_spec, Z.testbit_neg_r with omega.
+  Qed.
+  Hint Rewrite shiftl_spec_full : Ztestbit.
+
+  Lemma shiftr_spec_full a n m
     : Z.testbit (a << n) m = if Z_lt_dec m n
                              then false
                              else if Z_le_dec 0 m
@@ -2817,4 +2860,5 @@ Ltac Ztestbit :=
            => rewrite (Z.bits_above_pow2 x y) by zutil_arith
          | [ |- context[Z.testbit ?x ?y] ]
            => rewrite (Z.bits_above_log2 x y) by zutil_arith
+         | _ => progress autorewrite with Ztestbit_full
          end.
