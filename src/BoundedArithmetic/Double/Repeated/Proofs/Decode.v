@@ -85,7 +85,7 @@ Ltac is_cls_fixpoint_t_gen decode n exp generalize_is_clsv IH :=
     change (Z.of_nat 2 ^ Z.of_nat 0) with 1;
     generalize (Z.mul_1_l n); generalize (1 * n);
     intro; clear; induction 1;
-    intros; repeat apply pair; assumption
+    intros; repeat apply pair; try assumption
   | specialize (IH exp'); revert IH;
     repeat match goal with
            | [ |- (_ * _)%type -> _ ]
@@ -106,3 +106,9 @@ Ltac is_cls_fixpoint_t decode n exp is_clsv IH :=
 
 Ltac is_cls_fixpoint_t2 decode n exp is_clsv1 is_clsv2 IH :=
   is_cls_fixpoint_t_gen decode n exp ltac:(fun _ => generalize is_clsv1, is_clsv2) IH.
+
+Ltac is_cls_fixpoint_t3 decode n exp is_clsv1 is_clsv2 is_clsv3 IH :=
+  is_cls_fixpoint_t_gen decode n exp ltac:(fun _ => generalize is_clsv1, is_clsv2, is_clsv3) IH.
+
+Ltac is_cls_fixpoint_t4 decode n exp is_clsv1 is_clsv2 is_clsv3 is_clsv4 IH :=
+  is_cls_fixpoint_t_gen decode n exp ltac:(fun _ => generalize is_clsv1, is_clsv2, is_clsv3, is_clsv4) IH.
