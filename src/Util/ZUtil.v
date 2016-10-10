@@ -2851,14 +2851,21 @@ Ltac pull_Zmod :=
          | _ => progress autorewrite with pull_Zmod
          end.
 
-Ltac Ztestbit :=
-  repeat match goal with
-         | _ => progress autorewrite with Ztestbit
-         | [ |- context[Z.testbit ?x ?y] ]
-           => rewrite (Z.testbit_neg_r x y) by zutil_arith
-         | [ |- context[Z.testbit ?x ?y] ]
-           => rewrite (Z.bits_above_pow2 x y) by zutil_arith
-         | [ |- context[Z.testbit ?x ?y] ]
-           => rewrite (Z.bits_above_log2 x y) by zutil_arith
-         | _ => progress autorewrite with Ztestbit_full
-         end.
+Ltac Ztestbit_full_step :=
+  match goal with
+  | _ => progress autorewrite with Ztestbit_full
+  | [ |- context[Z.testbit ?x ?y] ]
+    => rewrite (Z.testbit_neg_r x y) by zutil_arith
+  | [ |- context[Z.testbit ?x ?y] ]
+    => rewrite (Z.bits_above_pow2 x y) by zutil_arith
+  | [ |- context[Z.testbit ?x ?y] ]
+    => rewrite (Z.bits_above_log2 x y) by zutil_arith
+  end.
+Ltac Ztestbit_full := repeat Ztestbit_full_step.
+
+Ltac Ztestbit_step :=
+  match goal with
+  | _ => progress autorewrite with Ztestbit
+  | _ => progress Ztestbit_full_step
+  end.
+Ltac Ztestbit := repeat Ztestbit_step.
