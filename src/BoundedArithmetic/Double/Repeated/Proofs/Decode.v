@@ -76,18 +76,33 @@ Section decode.
   Global Existing Instance is_repeated_tuple_decode.
 End decode.
 
-Ltac is_cls_fixpoint_t decode n exp is_clsv IH :=
+Ltac is_cls_fixpoint_t_gen decode n exp generalize_is_clsv IH :=
   let exp' := fresh exp in
   destruct exp as [|exp'];
   [ clear IH;
-    destruct decode; generalize is_clsv;
+    destruct decode; generalize_is_clsv ();
     simpl;
     change (Z.of_nat 2 ^ Z.of_nat 0) with 1;
     generalize (Z.mul_1_l n); generalize (1 * n);
     intro; clear; induction 1;
-    exact (fun x => x)
-  | specialize (IH exp');
+    intros; repeat apply pair; assumption
+  | specialize (IH exp'); revert IH;
+    repeat match goal with
+           | [ |- (_ * _)%type -> _ ]
+             => let x := fresh in
+                let y := fresh in
+                intros [x y]; revert x y
+           | [ |- _ -> _ ]
+             => intro
+           end;
     simpl @repeated_tuple_decoder; simpl;
     change (Z.of_nat (S exp')) with (Z.of_nat (1 + exp'));
     rewrite (Nat2Z.inj_add 1 exp'), Z.pow_add_r, Z.pow_1_r, <- !Z.mul_assoc, <- decoder_eta by omega;
+    repeat apply pair;
     try exact _ ].
+
+Ltac is_cls_fixpoint_t decode n exp is_clsv IH :=
+  is_cls_fixpoint_t_gen decode n exp ltac:(fun _ => generalize is_clsv) IH.
+
+Ltac is_cls_fixpoint_t2 decode n exp is_clsv1 is_clsv2 IH :=
+  is_cls_fixpoint_t_gen decode n exp ltac:(fun _ => generalize is_clsv1, is_clsv2) IH.
