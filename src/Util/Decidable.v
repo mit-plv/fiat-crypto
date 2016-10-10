@@ -5,7 +5,7 @@ Require Import Crypto.Util.FixCoqMistakes.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.HProp.
 Require Import Crypto.Util.Equality.
-Require Import Coq.ZArith.BinInt.
+Require Import Coq.ZArith.BinInt Coq.ZArith.ZArith_dec.
 Require Import Coq.NArith.BinNat.
 
 Local Open Scope type_scope.
@@ -96,9 +96,20 @@ Global Instance dec_eq_list {A} `{DecidableRel (@eq A)} : DecidableRel (@eq (lis
 Global Instance dec_eq_sum {A B} `{DecidableRel (@eq A), DecidableRel (@eq B)} : DecidableRel (@eq (A + B)) | 10. exact _. Defined.
 Global Instance dec_eq_sigT_hprop {A P} `{DecidableRel (@eq A), forall a : A, IsHProp (P a)} : DecidableRel (@eq (@sigT A P)) | 10. exact _. Defined.
 Global Instance dec_eq_sig_hprop {A} {P : A -> Prop} `{DecidableRel (@eq A), forall a : A, IsHProp (P a)} : DecidableRel (@eq (@sig A P)) | 10. exact _. Defined.
+
 Global Instance dec_eq_nat : DecidableRel (@eq nat) | 10. exact _. Defined.
+Global Instance dec_le_nat : DecidableRel le := Compare_dec.le_dec.
+Global Instance dec_lt_nat : DecidableRel lt := Compare_dec.lt_dec.
+Global Instance dec_ge_nat : DecidableRel ge := Compare_dec.ge_dec.
+Global Instance dec_gt_nat : DecidableRel gt := Compare_dec.gt_dec.
+
 Global Instance dec_eq_N : DecidableRel (@eq N) | 10 := N.eq_dec.
+
 Global Instance dec_eq_Z : DecidableRel (@eq Z) | 10 := Z.eq_dec.
+Global Instance dec_lt_Z : DecidableRel BinInt.Z.lt := ZArith_dec.Z_lt_dec.
+Global Instance dec_le_Z : DecidableRel BinInt.Z.le := ZArith_dec.Z_le_dec.
+Global Instance dec_gt_Z : DecidableRel BinInt.Z.gt := ZArith_dec.Z_gt_dec.
+Global Instance dec_ge_Z : DecidableRel BinInt.Z.ge := ZArith_dec.Z_ge_dec.
 
 Lemma not_not P {d:Decidable P} : not (not P) <-> P.
 Proof. destruct (dec P); intuition. Qed.
@@ -132,11 +143,11 @@ Proof. eauto using dec_of_semidec. Defined.
 Lemma dec_bool : forall {P} {Pdec:Decidable P}, (if dec P then true else false) = true -> P.
 Proof. intros. destruct dec; solve [ auto | discriminate ]. Qed.
 
-Ltac vm_decide := apply dec_bool; vm_compute; reflexivity.
-Ltac lazy_decide := apply dec_bool; lazy; reflexivity.
-
 Ltac vm_decide_no_check := apply dec_bool; vm_cast_no_check (eq_refl true).
 Ltac lazy_decide_no_check := apply dec_bool; exact_no_check (eq_refl true).
+
+Ltac vm_decide := abstract vm_decide_no_check.
+Ltac lazy_decide := abstract lazy_decide_no_check.
 
 (** For dubious compatibility with [eauto using]. *)
 Hint Extern 2 (Decidable _) => progress unfold Decidable : typeclass_instances core.
