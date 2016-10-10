@@ -11,7 +11,7 @@ Section Ed25519.
   Definition q : BinNums.Z := 2^255 - 19.
   Definition Fq : Type := F q.
 
-  Definition l : BinNums.Z := 252 + 27742317777372353535851937790883648493.
+  Definition l : BinNums.Z := 2^252 + 27742317777372353535851937790883648493.
   Definition Fl : Type := F l.
 
   Local Open Scope F_scope.
