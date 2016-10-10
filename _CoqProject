@@ -29,6 +29,7 @@ src/BoundedArithmetic/Interface.v
 src/BoundedArithmetic/InterfaceProofs.v
 src/BoundedArithmetic/StripCF.v
 src/BoundedArithmetic/X86ToZLike.v
+src/BoundedArithmetic/X86ToZLikeProofs.v
 src/BoundedArithmetic/Double/Core.v
 src/BoundedArithmetic/Double/Proofs/BitwiseOr.v
 src/BoundedArithmetic/Double/Proofs/Decode.v
