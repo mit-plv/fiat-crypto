@@ -4,6 +4,25 @@ Require Import Crypto.Spec.EdDSA.
 
 Require ModularArithmetic.PrimeFieldTheorems. (* to know that Z mod p is a field *)
 
+(* TODO: move this to a separate file *)
+Require Crypto.Util.Decidable.
+Require Crypto.Util.Tactics.
+Module Pre.
+  Local Open Scope F_scope.
+  Lemma curve25519_params_ok {prime_q:Znumtheory.prime (2^255-19)} :
+  @E.twisted_edwards_params (F (2 ^ 255 - 19)) (@eq (F (2 ^ 255 - 19))) (@F.zero (2 ^ 255 - 19))
+    (@F.one (2 ^ 255 - 19)) (@F.add (2 ^ 255 - 19)) (@F.mul (2 ^ 255 - 19)) 
+    (@F.opp (2 ^ 255 - 19) 1)
+    (@F.opp (2 ^ 255 - 19) (F.of_Z (2 ^ 255 - 19) 121665) / F.of_Z (2 ^ 255 - 19) 121666).
+  Proof.
+    pose (@PrimeFieldTheorems.F.Decidable_square (2^255-19) _);
+      Tactics.specialize_by Decidable.vm_decide; split; Decidable.vm_decide_no_check.
+  Qed.
+End Pre.
+(* these 2 proofs can be generated using https://github.com/andres-erbsen/safecurves-primes *)
+Axiom prime_q : Znumtheory.prime (2^255-19). Global Existing Instance prime_q.
+Axiom prime_l : Znumtheory.prime (2^252 + 27742317777372353535851937790883648493). Global Existing Instance prime_l.
+
 Section Ed25519.
 
   Local Open Scope Z_scope.
@@ -30,8 +49,7 @@ Section Ed25519.
   Global Instance curve_params :
     E.twisted_edwards_params
       (F:=Fq) (Feq:=Logic.eq) (Fzero:=F.zero) (Fone:=F.one) (Fadd:=F.add) (Fmul:=F.mul)
-      (a:=a) (d:=d).
-  Admitted. (* TODO(andreser): prove in a separate file *)
+      (a:=a) (d:=d). Proof Pre.curve25519_params_ok.
 
   Definition E : Type := E.point
                            (F:=Fq) (Feq:=Logic.eq) (Fone:=F.one) (Fadd:=F.add) (Fmul:=F.mul)
@@ -42,10 +60,6 @@ Section Ed25519.
   Axiom Eenc : E -> Word.word b. (* TODO(jadep) *)
   Axiom Senc : Fl -> Word.word b. (* TODO(jadep) *)
 
-  (* these 2 proofs can be generated using https://github.com/andres-erbsen/safecurves-primes *)
-  Axiom prime_q : Znumtheory.prime q. Global Existing Instance prime_q.
-  Axiom prime_l : Znumtheory.prime l. Global Existing Instance prime_l.
-
   Require Import Crypto.Util.Decidable.
   Definition ed25519 :
     EdDSA (E:=E) (Eadd:=E.add) (Ezero:=E.zero) (EscalarMult:=E.mul) (B:=B)
@@ -53,5 +67,5 @@ Section Ed25519.
           (Eeq:=Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.E.eq) (* TODO: move defn *)
           (l:=l) (b:=b) (n:=n) (c:=c)
           (Eenc:=Eenc) (Senc:=Senc) (H:=H).
-  Admitted. (* TODO(andreser): prove in a separate file *)
+  Admitted.
 End Ed25519.
