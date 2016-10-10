@@ -262,10 +262,13 @@ Ltac specialize_by' tac :=
   idtac;
   match goal with
   | [ H : ?A -> ?B |- _ ] =>
-    let H' := fresh in
-    assert (H' : A) by tac;
-    transparent_specialize_one H H';
-    try clear H' (* if [H] was transparent, [H'] will remain *)
+    match type of A with
+      Prop => 
+      let H' := fresh in
+      assert (H' : A) by tac;
+      transparent_specialize_one H H';
+      try clear H' (* if [H] was transparent, [H'] will remain *)
+    end
   end.
 
 Ltac specialize_by tac := repeat specialize_by' tac.
