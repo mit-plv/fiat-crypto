@@ -858,13 +858,13 @@ Module Z.
   Hint Rewrite shiftl_spec_full : Ztestbit_full.
 
   Lemma shiftr_spec_full a n m
-    : Z.testbit (a << n) m = if Z_lt_dec m n
+    : Z.testbit (a >> n) m = if Z_lt_dec m (-n)
                              then false
                              else if Z_le_dec 0 m
-                                  then Z.testbit a (m - n)
+                                  then Z.testbit a (m + n)
                                   else false.
   Proof.
-    repeat break_match; auto using Z.shiftl_spec_low, Z.shiftl_spec, Z.testbit_neg_r with omega.
+    rewrite <- Z.shiftl_opp_r, shiftl_spec_full, Z.sub_opp_r; reflexivity.
   Qed.
   Hint Rewrite shiftl_spec_full : Ztestbit.
   Hint Rewrite shiftl_spec_full : Ztestbit_full.
