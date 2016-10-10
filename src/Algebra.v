@@ -714,6 +714,12 @@ Module Field.
         apply zero_neq_one. assumption.
     Qed.
 
+    Lemma div_one x : div x one = x.
+    Proof.
+      rewrite field_div_definition.
+      rewrite <-(inv_unique 1 1); apply monoid_is_right_identity.
+    Qed.
+
     Lemma mul_cancel_l_iff : forall x y, y <> 0 ->
                                          (x * y = y <-> x = one).
     Proof.
