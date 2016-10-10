@@ -55,10 +55,17 @@ Section Ed25519.
                            (F:=Fq) (Feq:=Logic.eq) (Fone:=F.one) (Fadd:=F.add) (Fmul:=F.mul)
                            (a:=a) (d:=d).
 
-  Axiom B : E. (* TODO(andreser) *)
+  Local Obligation Tactic := Decidable.vm_decide. (* to prove that B is on curve *)
+
+  Program Definition B : E :=
+    (F.of_Z q 15112221349535400772501151409588531511454012693041857206046113283949847762202,
+     F.of_Z q 4 / F.of_Z q 5).
 
   Axiom Eenc : E -> Word.word b. (* TODO(jadep) *)
   Axiom Senc : Fl -> Word.word b. (* TODO(jadep) *)
+
+  (* TODO(andreser): prove this after we have fast scalar multplication *)
+  Axiom B_order_l : CompleteEdwardsCurveTheorems.E.eq (BinInt.Z.to_nat l * B)%E E.zero.
 
   Require Import Crypto.Util.Decidable.
   Definition ed25519 :
@@ -67,5 +74,5 @@ Section Ed25519.
           (Eeq:=Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.E.eq) (* TODO: move defn *)
           (l:=l) (b:=b) (n:=n) (c:=c)
           (Eenc:=Eenc) (Senc:=Senc) (H:=H).
-  Admitted.
+  Proof. split; try exact _; try exact B_order_l; vm_decide. Qed.
 End Ed25519.

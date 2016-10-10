@@ -142,12 +142,12 @@ Proof.
   { exact _. }
   { intros ??.
     exact _. }
-Qed.
+Defined.
 
 Global Instance dec_fieldwise {A RA} {HA : DecidableRel RA} {n} : DecidableRel (@fieldwise A A n RA) | 10.
 Proof.
   destruct n; unfold fieldwise; exact _.
-Qed.
+Defined.
 
 Fixpoint fieldwiseb' {A B} (n:nat) (R:A->B->bool) (a:tuple' A n) (b:tuple' B n) {struct n} : bool.
   destruct n; simpl @tuple' in *.
