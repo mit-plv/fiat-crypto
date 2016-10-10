@@ -855,6 +855,7 @@ Module Z.
     repeat break_match; auto using Z.shiftl_spec_low, Z.shiftl_spec, Z.testbit_neg_r with omega.
   Qed.
   Hint Rewrite shiftl_spec_full : Ztestbit.
+  Hint Rewrite shiftl_spec_full : Ztestbit_full.
 
   Lemma shiftr_spec_full a n m
     : Z.testbit (a << n) m = if Z_lt_dec m n
@@ -866,6 +867,7 @@ Module Z.
     repeat break_match; auto using Z.shiftl_spec_low, Z.shiftl_spec, Z.testbit_neg_r with omega.
   Qed.
   Hint Rewrite shiftl_spec_full : Ztestbit.
+  Hint Rewrite shiftl_spec_full : Ztestbit_full.
 
   (* prove that combinations of known positive/nonnegative numbers are positive/nonnegative *)
   Ltac zero_bounds' :=
