@@ -45,6 +45,7 @@ src/BoundedArithmetic/Double/Repeated/Core.v
 src/BoundedArithmetic/Double/Repeated/Proofs/BitwiseOr.v
 src/BoundedArithmetic/Double/Repeated/Proofs/Decode.v
 src/BoundedArithmetic/Double/Repeated/Proofs/LoadImmediate.v
+src/BoundedArithmetic/Double/Repeated/Proofs/Multiply.v
 src/BoundedArithmetic/Double/Repeated/Proofs/RippleCarryAddSub.v
 src/BoundedArithmetic/Double/Repeated/Proofs/SelectConditional.v
 src/BoundedArithmetic/Double/Repeated/Proofs/ShiftLeftRight.v
