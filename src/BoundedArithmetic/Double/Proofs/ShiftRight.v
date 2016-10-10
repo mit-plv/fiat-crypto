@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.ZArith Coq.micromega.Psatz.
+Require Import Coq.ZArith.ZArith.
 Require Import Crypto.BoundedArithmetic.Interface.
 Require Import Crypto.BoundedArithmetic.Double.Core.
 Require Import Crypto.BoundedArithmetic.Double.Proofs.Decode.
@@ -36,7 +36,7 @@ Section shr.
     generalize (decode_range r).
     pose proof (decode_range (fst r)).
     pose proof (decode_range (snd r)).
-    assert (forall n', 2^n <= 2^n' -> 0 <= decode (fst r) < 2^n') by auto with zarith.
+    assert (forall n', 2^n <= 2^n' -> 0 <= decode (fst r) < 2^n') by (simpl in *; auto with zarith).
     assert (forall n', n <= n' -> 0 <= decode (fst r) < 2^n') by auto with zarith omega.
     autorewrite with simpl_tuple_decoder; push_decode.
     shift_left_right_t.

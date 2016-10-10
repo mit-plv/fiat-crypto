@@ -24,6 +24,8 @@ Ltac shift_left_right_t :=
          | [ |- context[Z.lor (?x >> ?count) (Z.pow2_mod (?y << (?n - ?count)) ?n)] ]
            => unique assert (0 <= Z.lor (x >> count) (Z.pow2_mod (y << (n - count)) n) < 2 ^ n) by (autorewrite with Zshift_to_pow; auto with zarith nia)
          | _ => progress push_decode
+         | [ |- context[Interface.decode (fst ?x)] ] => is_var x; destruct x; simpl in *
+         | [ |- context[@Interface.decode ?n ?W ?d ?x] ] => is_var x; generalize dependent (@Interface.decode n W d x); intros
          | _ => progress Z.rewrite_mod_small
          | _ => progress autorewrite with convert_to_Ztestbit
          | _ => progress autorewrite with zsimplify_fast
