@@ -61,8 +61,12 @@ Section Ed25519.
     (F.of_Z q 15112221349535400772501151409588531511454012693041857206046113283949847762202,
      F.of_Z q 4 / F.of_Z q 5).
 
-  Axiom Eenc : E -> Word.word b. (* TODO(jadep) *)
-  Axiom Senc : Fl -> Word.word b. (* TODO(jadep) *)
+  Definition Fencode {b : nat} {m} : F m -> Word.word b :=
+    fun x : F m => (Word.NToWord _ (BinIntDef.Z.to_N (F.to_Z x))).
+  Definition sign (x : F q) : bool := BinIntDef.Z.testbit (F.to_Z x) 0.
+  Definition Eenc : E -> Word.word b := fun P =>
+    let '(x,y) := E.coordinates P in Word.WS (sign x) (Fencode y).
+  Definition Senc : Fl -> Word.word b := Fencode.
 
   (* TODO(andreser): prove this after we have fast scalar multplication *)
   Axiom B_order_l : CompleteEdwardsCurveTheorems.E.eq (BinInt.Z.to_nat l * B)%E E.zero.
