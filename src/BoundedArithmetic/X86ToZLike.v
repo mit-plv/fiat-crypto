@@ -7,6 +7,7 @@ Require Import Crypto.BoundedArithmetic.StripCF.
 Require Import Crypto.ModularArithmetic.ZBounded.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.LetIn.
+Import NPeano.
 
 Local Open Scope Z_scope.
 Local Coercion Z.of_nat : nat >-> Z.
