@@ -2,6 +2,7 @@ Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.NatUtil.
 Require Import Bedrock.Word.
+Require Import RelationClasses.
 
 Local Open Scope nat_scope.
 
@@ -63,3 +64,44 @@ Definition wfirstn n {m} (w : Word.word m) {H : n <= m} : Word.word n.
 Lemma combine_eq_iff {a b} (A:word a) (B:word b) C :
   combine A B = C <-> A = split1 a b C /\ B = split2 a b C.
 Proof. intuition; subst; auto using split1_combine, split2_combine, combine_split. Qed.
+
+Definition wordsize_eq_sig
+  : {R : nat -> nat -> Prop | forall a b, R a b <-> a = b}.
+  exact (exist _ eq (fun _ _ => reflexivity _ )). Qed.
+Definition wordsize_eq : nat -> nat -> Prop := proj1_sig wordsize_eq_sig.
+Lemma eq_wordsize_eq a b : a = b -> wordsize_eq a b.
+Proof. exact (proj2 ((proj2_sig wordsize_eq_sig) a b)). Qed.
+Lemma wordsize_eq_eq a b : wordsize_eq a b -> a = b.
+Proof. exact (proj1 ((proj2_sig wordsize_eq_sig) a b)). Qed.
+
+Ltac wordsize_eq_to_eq :=
+  repeat match goal with
+         | [H: wordsize_eq _ _ |- _] => apply wordsize_eq_eq in H
+         | |- wordsize_eq _ _ => apply eq_wordsize_eq
+         end.
+
+Section cast_word.
+  Local Obligation Tactic := repeat (wordsize_eq_to_eq; Tactics.program_simpl).
+  Program Fixpoint cast_word {n m} : forall {pf:wordsize_eq n m}, word n -> word m :=
+    match n, m return wordsize_eq n m -> word n -> word m with
+    | O, O => fun _ _ => WO
+    | S n', S m' => fun _ w => WS (whd w) (@cast_word _ _ _ (wtl w))
+    | _, _ => _ (* impossible *)
+    end.
+  Global Arguments cast_word {_ _ _} _. (* 8.4 does not pick up the forall braces *)
+End cast_word.
+
+Existing Class wordsize_eq.
+Ltac wordsize_eq_tac := wordsize_eq_to_eq; omega.
+Ltac gt84_abstract t := t. (* TODO: when we drop Coq 8.4, use [abstract] here *)
+Hint Extern 100 (wordsize_eq _ _) => gt84_abstract wordsize_eq_tac : typeclass_instances.
+
+Definition keeplow {n b:nat} {H:n <= b} (w:word b) : word b :=
+  (wand (cast_word (zext (wones n) (b-n) )) w).
+
+Local Infix "++" := combine.
+Definition clearlow {n b:nat} {H:n <= b} (w:word b) : word b :=
+  wand (cast_word( wones (b-n) ++ wzero n )) w.
+
+Definition setbit {n b:nat} {H:n < b} (w:word b) : word b :=
+  wor (cast_word( wzero (b-n-1)  ++ wones 1 ++ wzero n )) w.
