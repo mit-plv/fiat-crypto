@@ -1,6 +1,7 @@
 Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.NatUtil.
+Require Import Crypto.Util.Tactics.
 Require Import Bedrock.Word.
 Require Import RelationClasses.
 
@@ -77,6 +78,7 @@ Proof. exact (proj1 ((proj2_sig wordsize_eq_sig) a b)). Qed.
 Ltac wordsize_eq_to_eq :=
   repeat match goal with
          | [H: wordsize_eq _ _ |- _] => apply wordsize_eq_eq in H
+         | [H: wordsize_eq _ _ |- _] => unique pose proof (wordsize_eq_eq _ _ H)
          | |- wordsize_eq _ _ => apply eq_wordsize_eq
          end.
 
@@ -105,3 +107,15 @@ Definition clearlow {n b:nat} {H:n <= b} (w:word b) : word b :=
 
 Definition setbit {n b:nat} {H:n < b} (w:word b) : word b :=
   wor (cast_word( wzero (b-n-1)  ++ wones 1 ++ wzero n )) w.
+
+Lemma wordToNat_cast_word : forall {n} (w:word n) m pf,
+  wordToNat (@cast_word n m pf w) = wordToNat w.
+Proof.
+  induction w; destruct m eqn:Heqm;
+    simpl; intros; wordsize_eq_to_eq;
+      rewrite ?IHw; solve [trivial | discriminate].
+Qed.
+
+Lemma wordToN_cast_word {n} (w:word n) m pf :
+  wordToN (@cast_word n m pf w) = wordToN w.
+Proof. rewrite !wordToN_nat, wordToNat_cast_word; reflexivity. Qed.
