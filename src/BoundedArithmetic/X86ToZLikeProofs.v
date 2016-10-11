@@ -16,6 +16,7 @@ Require Import Crypto.ModularArithmetic.ZBounded.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.ZUtil Crypto.Util.Tactics.
 Require Import Crypto.Util.LetIn.
+Import NPeano.
 
 Local Open Scope Z_scope.
 Local Coercion Z.of_nat : nat >-> Z.
@@ -76,7 +77,7 @@ Section x86_gen_barrett_foundation.
     end.
   Local Ltac post_t := repeat post_t_step.
   Axiom proof_admitted : False.
-  Local Ltac admit := abstract case proof_admitted.
+  Tactic Notation "admit" := abstract case proof_admitted.
   Local Ltac t := admit; pre_t; post_t.
 
   Global Instance ZLikeProperties_of_x86_gen_Factored
