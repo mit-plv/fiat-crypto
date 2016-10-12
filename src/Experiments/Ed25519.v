@@ -70,7 +70,7 @@ Proof.
     reflexivity.
 Defined.
 
-Definition extended_to_coord (P : Erep) : (GF25519.fe25519 * GF25519.fe25519) :=
+Fail Definition extended_to_coord (P : Erep) : (GF25519.fe25519 * GF25519.fe25519) :=
   CompleteEdwardsCurve.E.coordinates (ExtendedCoordinates.Extended.to_twisted P).
 
 Lemma encode_eq_iff :  forall x y : ModularArithmetic.F.F GF25519.modulus,
@@ -96,7 +96,7 @@ Let EToRep := PointEncoding.point_phi
 
 Let ZNWord sz x := Word.NToWord sz (BinInt.Z.to_N x).
 
-Definition feEnc (x : GF25519.fe25519) : Word.word 255 := 
+Definition feEnc (x : GF25519.fe25519) : Word.word 255 :=
   let '(x0, x1, x2, x3, x4, x5, x6, x7) :=
       (GF25519.pack x) in
   Word.combine (ZNWord 32 x0)
@@ -105,12 +105,12 @@ Definition feEnc (x : GF25519.fe25519) : Word.word 255 :=
         (Word.combine (ZNWord 32 x3)
           (Word.combine (ZNWord 32 x4)
             (Word.combine (ZNWord 32 x5)
-              (Word.combine (ZNWord 32 x6) (ZNWord 31 x7))))))). 
+              (Word.combine (ZNWord 32 x6) (ZNWord 31 x7))))))).
 
-Let ERepEnc :=
+Fail Let ERepEnc :=
   (PointEncoding.Kencode_point
          (Ksign := feSign)
-         (Kenc := feEnc) 
+         (Kenc := feEnc)
          (Kpoint := Erep)
          (Kpoint_to_coord :=  fun P => CompleteEdwardsCurve.E.coordinates
                                 (ExtendedCoordinates.Extended.to_twisted P))
@@ -122,11 +122,11 @@ Let S2Rep := fun (x : ModularArithmetic.F.F l) =>
                   (Pow2Base.encodeZ
                   (List.repeat (BinInt.Z.of_nat 32) 8)
                   (ModularArithmetic.F.to_Z x))).
-               
 
 
 
-Check @sign_correct
+
+Fail Check @sign_correct
       (* E := *) E
       (* Eeq := *) CompleteEdwardsCurveTheorems.E.eq
       (* Eadd := *) CompleteEdwardsCurve.E.add
