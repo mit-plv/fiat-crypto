@@ -94,16 +94,8 @@ Definition setbit n {b} {H:n < b} (w:word b) : word b :=
 Definition clearbit n {b} {H:n < b} (w:word b) : word b :=
   wand (cast_word( wones n ++ wzero 1 ++ wones (b-n-1) )) w.
 
-Lemma cast_word_refl {n} (w:word n) : @cast_word n n eq_refl w = w.
-Proof.
-  induction w;
-    repeat match goal with
-           | _ => solve [trivial]
-           | _ => progress (simpl @cast_word;f_equal)
-           | |- context [@cast_word ?n ?n ?pf _ ] =>
-             pattern pf; rewrite (Eqdep_dec.UIP_refl_nat n pf)
-           end.
-Qed.
+Lemma cast_word_refl {n} pf (w:word n) : @cast_word n n pf w = w.
+Proof. induction w; simpl; auto using f_equal. Qed.
 
 Lemma wordToNnat_cast_word {n} (w:word n) m pf :
   wordToN (@cast_word n m pf w) = wordToN w.
