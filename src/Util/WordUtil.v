@@ -1,7 +1,10 @@
 Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.NatUtil.
+Require Import Crypto.Util.Tactics.
 Require Import Bedrock.Word.
+Require Import Coq.Classes.RelationClasses.
+Require Import Coq.Program.Program.
 
 Local Open Scope nat_scope.
 
@@ -63,3 +66,49 @@ Definition wfirstn n {m} (w : Word.word m) {H : n <= m} : Word.word n.
 Lemma combine_eq_iff {a b} (A:word a) (B:word b) C :
   combine A B = C <-> A = split1 a b C /\ B = split2 a b C.
 Proof. intuition; subst; auto using split1_combine, split2_combine, combine_split. Qed.
+
+Class wordsize_eq (x y : nat) := wordsize_eq_to_eq : x = y.
+Ltac wordsize_eq_tac := cbv beta delta [wordsize_eq] in *; omega.
+Ltac gt84_abstract t := t. (* TODO: when we drop Coq 8.4, use [abstract] here *)
+Hint Extern 100 (wordsize_eq _ _) => gt84_abstract wordsize_eq_tac : typeclass_instances.
+
+Program Fixpoint cast_word {n m} : forall {pf:wordsize_eq n m}, word n -> word m :=
+  match n, m return wordsize_eq n m -> word n -> word m with
+  | O, O => fun _ _ => WO
+  | S n', S m' => fun _ w => WS (whd w) (@cast_word _ _ _ (wtl w))
+  | _, _ => fun _ _ => !
+  end.
+Global Arguments cast_word {_ _ _} _. (* 8.4 does not pick up the forall braces *)
+
+Local Infix "++" := combine.
+
+Definition keeplow n {b} {H:n <= b} (w:word b) : word b :=
+  wand (cast_word( wones n ++ wzero (b-n) )) w.
+
+Definition clearlow n {b} {H:n <= b} (w:word b) : word b :=
+  wand (cast_word( wzero n ++ wones (b-n) )) w.
+
+Definition setbit n {b} {H:n < b} (w:word b) : word b :=
+  wor (cast_word( wzero n ++ wones 1 ++ wzero (b-n-1) )) w.
+
+Definition clearbit n {b} {H:n < b} (w:word b) : word b :=
+  wand (cast_word( wones n ++ wzero 1 ++ wones (b-n-1) )) w.
+
+Lemma cast_word_refl {n} (w:word n) : @cast_word n n eq_refl w = w.
+Proof.
+  induction w;
+    repeat match goal with
+           | _ => solve [trivial]
+           | _ => progress (simpl @cast_word;f_equal)
+           | |- context [@cast_word ?n ?n ?pf _ ] =>
+             pattern pf; rewrite (Eqdep_dec.UIP_refl_nat n pf)
+           end.
+Qed.
+
+Lemma wordToNnat_cast_word {n} (w:word n) m pf :
+  wordToN (@cast_word n m pf w) = wordToN w.
+Proof. destruct pf; rewrite cast_word_refl; trivial. Qed.
+
+Lemma wordToN_cast_word {n} (w:word n) m pf :
+  wordToN (@cast_word n m pf w) = wordToN w.
+Proof. destruct pf; rewrite cast_word_refl; trivial. Qed.
