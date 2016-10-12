@@ -3,7 +3,8 @@ Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.Tactics.
 Require Import Bedrock.Word.
-Require Import RelationClasses.
+Require Import Coq.Classes.RelationClasses.
+Require Import Coq.Program.Program.
 
 Local Open Scope nat_scope.
 
@@ -75,7 +76,7 @@ Program Fixpoint cast_word {n m} : forall {pf:wordsize_eq n m}, word n -> word m
   match n, m return wordsize_eq n m -> word n -> word m with
   | O, O => fun _ _ => WO
   | S n', S m' => fun _ w => WS (whd w) (@cast_word _ _ _ (wtl w))
-  | _, _ => _ (* impossible *)
+  | _, _ => fun _ _ => !
   end.
 Global Arguments cast_word {_ _ _} _. (* 8.4 does not pick up the forall braces *)
 
@@ -93,14 +94,21 @@ Definition setbit n {b} {H:n < b} (w:word b) : word b :=
 Definition clearbit n {b} {H:n < b} (w:word b) : word b :=
   wand (cast_word( wones n ++ wzero 1 ++ wones (b-n-1) )) w.
 
-Lemma wordToNat_cast_word : forall {n} (w:word n) m pf,
-    wordToNat (@cast_word n m pf w) = wordToNat w.
+Lemma cast_word_refl {n} (w:word n) : @cast_word n n eq_refl w = w.
 Proof.
-  induction w; destruct m eqn:Heqm;
-    simpl; intros; cbv beta delta [wordsize_eq] in *;
-      rewrite ?IHw; solve [trivial | discriminate].
+  induction w;
+    repeat match goal with
+           | _ => solve [trivial]
+           | _ => progress (simpl @cast_word;f_equal)
+           | |- context [@cast_word ?n ?n ?pf _ ] =>
+             pattern pf; rewrite (Eqdep_dec.UIP_refl_nat n pf)
+           end.
 Qed.
+
+Lemma wordToNnat_cast_word {n} (w:word n) m pf :
+  wordToN (@cast_word n m pf w) = wordToN w.
+Proof. destruct pf; rewrite cast_word_refl; trivial. Qed.
 
 Lemma wordToN_cast_word {n} (w:word n) m pf :
   wordToN (@cast_word n m pf w) = wordToN w.
-Proof. rewrite !wordToN_nat, wordToNat_cast_word; reflexivity. Qed.
+Proof. destruct pf; rewrite cast_word_refl; trivial. Qed.
