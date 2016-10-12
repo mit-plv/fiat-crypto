@@ -66,53 +66,38 @@ Lemma combine_eq_iff {a b} (A:word a) (B:word b) C :
   combine A B = C <-> A = split1 a b C /\ B = split2 a b C.
 Proof. intuition; subst; auto using split1_combine, split2_combine, combine_split. Qed.
 
-Definition wordsize_eq_sig
-  : {R : nat -> nat -> Prop | forall a b, R a b <-> a = b}.
-  exact (exist _ eq (fun _ _ => reflexivity _ )). Qed.
-Definition wordsize_eq : nat -> nat -> Prop := proj1_sig wordsize_eq_sig.
-Lemma eq_wordsize_eq a b : a = b -> wordsize_eq a b.
-Proof. exact (proj2 ((proj2_sig wordsize_eq_sig) a b)). Qed.
-Lemma wordsize_eq_eq a b : wordsize_eq a b -> a = b.
-Proof. exact (proj1 ((proj2_sig wordsize_eq_sig) a b)). Qed.
-
-Ltac wordsize_eq_to_eq :=
-  repeat match goal with
-         | [H: wordsize_eq _ _ |- _] => apply wordsize_eq_eq in H
-         | [H: wordsize_eq _ _ |- _] => unique pose proof (wordsize_eq_eq _ _ H)
-         | |- wordsize_eq _ _ => apply eq_wordsize_eq
-         end.
-
-Section cast_word.
-  Local Obligation Tactic := repeat (wordsize_eq_to_eq; Tactics.program_simpl).
-  Program Fixpoint cast_word {n m} : forall {pf:wordsize_eq n m}, word n -> word m :=
-    match n, m return wordsize_eq n m -> word n -> word m with
-    | O, O => fun _ _ => WO
-    | S n', S m' => fun _ w => WS (whd w) (@cast_word _ _ _ (wtl w))
-    | _, _ => _ (* impossible *)
-    end.
-  Global Arguments cast_word {_ _ _} _. (* 8.4 does not pick up the forall braces *)
-End cast_word.
-
-Existing Class wordsize_eq.
-Ltac wordsize_eq_tac := wordsize_eq_to_eq; omega.
+Class wordsize_eq (x y : nat) := wordsize_eq_to_eq : x = y.
+Ltac wordsize_eq_tac := cbv beta delta [wordsize_eq] in *; omega.
 Ltac gt84_abstract t := t. (* TODO: when we drop Coq 8.4, use [abstract] here *)
 Hint Extern 100 (wordsize_eq _ _) => gt84_abstract wordsize_eq_tac : typeclass_instances.
 
-Definition keeplow {n b:nat} {H:n <= b} (w:word b) : word b :=
-  (wand (cast_word (zext (wones n) (b-n) )) w).
+Program Fixpoint cast_word {n m} : forall {pf:wordsize_eq n m}, word n -> word m :=
+  match n, m return wordsize_eq n m -> word n -> word m with
+  | O, O => fun _ _ => WO
+  | S n', S m' => fun _ w => WS (whd w) (@cast_word _ _ _ (wtl w))
+  | _, _ => _ (* impossible *)
+  end.
+Global Arguments cast_word {_ _ _} _. (* 8.4 does not pick up the forall braces *)
 
 Local Infix "++" := combine.
-Definition clearlow {n b:nat} {H:n <= b} (w:word b) : word b :=
-  wand (cast_word( wones (b-n) ++ wzero n )) w.
 
-Definition setbit {n b:nat} {H:n < b} (w:word b) : word b :=
-  wor (cast_word( wzero (b-n-1)  ++ wones 1 ++ wzero n )) w.
+Definition keeplow n {b} {H:n <= b} (w:word b) : word b :=
+  wand (cast_word( wones n ++ wzero (b-n) )) w.
+
+Definition clearlow n {b} {H:n <= b} (w:word b) : word b :=
+  wand (cast_word( wzero n ++ wones (b-n) )) w.
+
+Definition setbit n {b} {H:n < b} (w:word b) : word b :=
+  wor (cast_word( wzero n ++ wones 1 ++ wzero (b-n-1) )) w.
+
+Definition clearbit n {b} {H:n < b} (w:word b) : word b :=
+  wand (cast_word( wones n ++ wzero 1 ++ wones (b-n-1) )) w.
 
 Lemma wordToNat_cast_word : forall {n} (w:word n) m pf,
-  wordToNat (@cast_word n m pf w) = wordToNat w.
+    wordToNat (@cast_word n m pf w) = wordToNat w.
 Proof.
   induction w; destruct m eqn:Heqm;
-    simpl; intros; wordsize_eq_to_eq;
+    simpl; intros; cbv beta delta [wordsize_eq] in *;
       rewrite ?IHw; solve [trivial | discriminate].
 Qed.
 
