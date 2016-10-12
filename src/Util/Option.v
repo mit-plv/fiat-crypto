@@ -3,22 +3,34 @@ Require Import Coq.Relations.Relation_Definitions.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.Util.Logic.
 
-Definition option_eq {A} eq (x y : option A) :=
-  match x with
-  | None    => y = None
-  | Some ax => match y with
-               | None => False
-               | Some ay => eq ax ay
-               end
-  end.
-
-Global Instance Equivalence_option_eq {T} {R} {Equivalence_R:@Equivalence T R}
-  : Equivalence (option_eq R).
-Proof.
-  split; cbv; repeat (break_match || intro || intuition congruence ||
-                      solve [ apply reflexivity | apply symmetry; eassumption | eapply transitivity; eassumption ] ).
-Qed.
-
+Section Relations.
+  Definition option_eq {A} eq (x y : option A) :=
+    match x with
+    | None    => y = None
+    | Some ax => match y with
+                 | None => False
+                 | Some ay => eq ax ay
+                 end
+    end.
+  
+  Local Ltac t :=
+    cbv; repeat (break_match || intro || intuition congruence ||
+                 solve [ apply reflexivity
+                       | apply symmetry; eassumption
+                       | eapply transitivity; eassumption ] ).
+  
+  Global Instance Reflexive_option_eq {T} {R} {Reflexive_R:@Reflexive T R}
+    : Reflexive (option_eq R). Proof. t. Qed.
+  
+  Global Instance Transitive_option_eq {T} {R} {Transitive_R:@Transitive T R}
+    : Transitive (option_eq R). Proof. t. Qed.
+  
+  Global Instance Symmetric_option_eq {T} {R} {Symmetric_R:@Symmetric T R}
+    : Symmetric (option_eq R). Proof. t. Qed.
+  
+  Global Instance Equivalence_option_eq {T} {R} {Equivalence_R:@Equivalence T R}
+    : Equivalence (option_eq R). Proof. split; exact _. Qed.
+End Relations.
 
 Global Instance Proper_option_rect_nd_changebody
       {A B:Type} {RB:relation B} {a:option A}
@@ -34,8 +46,20 @@ Global Instance Proper_option_rect_nd_changevalue
   : Proper (RB ==> option_eq RA ==> RB) (@option_rect A (fun _ => B) some).
 Proof. cbv; repeat (intro || break_match || f_equiv || intuition congruence). Qed.
 
-Lemma option_rect_false_returns_true_iff {T} (f:T->bool) (o:option T) :
-  option_rect (fun _ => bool) f false o = true <-> exists s:T, o = Some s /\ f s = true.
+Lemma option_rect_false_returns_true_iff
+      {T} {R} {reflexiveR:Reflexive R}
+      (f:T->bool) {Proper_f:Proper(R==>eq)f} (o:option T) :
+  option_rect (fun _ => bool) f false o = true <-> exists s:T, option_eq R o (Some s) /\ f s = true.
+Proof.
+  unfold option_rect; break_match; logic; [ | | congruence .. ].
+  { repeat esplit; easy. }
+  { match goal with [H : f _ = true |- f _ = true ] =>
+                    solve [rewrite <- H; eauto] end. }
+Qed.
+
+Lemma option_rect_false_returns_true_iff_eq
+      {T} (f:T->bool) (o:option T) :
+  option_rect (fun _ => bool) f false o = true <-> exists s:T, Logic.eq o (Some s) /\ f s = true.
 Proof. unfold option_rect; break_match; logic; congruence. Qed.
 
 Lemma option_rect_option_map : forall {A B C} (f:A->B) some none v,

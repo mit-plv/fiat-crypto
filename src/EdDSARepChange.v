@@ -48,7 +48,7 @@ Section EdDSA.
   Global Instance Proper_eq_Eenc ref : Proper (Eeq ==> iff) (fun P => Eenc P = ref).
   Proof. intros ? ? Hx; rewrite Hx; reflexivity. Qed.
 
-  Context {Edec:word b-> option E}   {eq_enc_E_iff: forall P_ P, Eenc P = P_ <-> Edec P_ = Some P}.
+  Context {Edec:word b-> option E}   {eq_enc_E_iff: forall P_ P, Eenc P = P_ <-> option_eq Eeq (Edec P_) (Some P)}.
   Context {Sdec:word b-> option (F l)} {eq_enc_S_iff: forall n_ n, Senc n = n_ <-> Sdec n_ = Some n}.
 
   Local Infix "++" := combine.
@@ -66,9 +66,11 @@ Section EdDSA.
     setoid_rewrite <- (fun A => and_rewriteleft_l (fun x => x) (Eenc A) (fun pk EencA => exists a,
         Sdec (split2 b b sig) = Some a /\
         Eenc (_ * B + wordToNat (H (b + (b + mlen)) (split1 b b sig ++ EencA ++ message)) mod _ * Eopp A)
-        = split1 b b sig)); setoid_rewrite (eq_enc_E_iff pk).
+        = split1 b b sig)). setoid_rewrite (eq_enc_E_iff pk).
     setoid_rewrite <-weqb_true_iff.
-    repeat setoid_rewrite <-option_rect_false_returns_true_iff.
+    setoid_rewrite <-option_rect_false_returns_true_iff_eq.
+    rewrite <-option_rect_false_returns_true_iff by
+     (intros ? ? Hxy; unfold option_rect; break_match; rewrite <-?Hxy; reflexivity).
 
     subst_evars.
     (* TODO: generalize this higher order reflexivity *)
