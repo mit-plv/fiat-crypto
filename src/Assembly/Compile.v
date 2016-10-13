@@ -94,60 +94,57 @@ Module CompileLL.
       Definition getConst (x: Mapping n): option (QhasmCommon.Const n) :=
         match x with | constM c => Some c | _ => None end.
 
-      Definition makeA (output input: Mapping n): option Assignment :=
+      Definition makeA (output input: Mapping n): list Assignment :=
         match (output, input) with
-        | (regM r, constM c) => Some (AConstInt r c)
-        | (regM r0, regM r1) => Some (ARegReg r0 r1)
-        | _ => None
+        | (regM r, constM c) => [AConstInt r c]
+        | (regM r0, regM r1) => [ARegReg r0 r1]
+        | _ => []
         end.
 
-      Definition makeOp {t1 t2 t3} (op: binop t1 t2 t3) (out in1 in2: Mapping n):
-            option (Reg n * option Assignment * Operation) :=
+      Definition makeOp {t1 t2 t3} (op: binop t1 t2 t3) (tmp out: Reg n) (in1 in2: Mapping n):
+            option (Reg n * list Assignment * Operation) :=
         let mov :=
-          if (EvalUtil.mapping_dec out in1)
-          then None
-          else makeA out in1 in
+          if (EvalUtil.mapping_dec (regM _ out) in1)
+          then [] 
+          else makeA (regM _ out) in1 in
 
         match op with
         | OPadd =>
-          omap (getReg out) (fun r0 =>
-            match in2 with
-            | regM r1 => Some (r0, mov, IOpReg IAdd r0 r1)
-            | constM c => Some (r0, mov, IOpConst IAdd r0 c)
-            | _ => None
-            end)
+          match in2 with
+          | regM r1 => Some (out, mov, IOpReg IAdd out r1)
+          | constM c => Some (out, mov, IOpConst IAdd out c)
+          | _ => None
+          end
 
         | OPsub =>
-          omap (getReg out) (fun r0 =>
-            match in2 with
-            | regM r1 => Some (r0, mov, IOpReg ISub r0 r1)
-            | constM c => Some (r0, mov, IOpConst ISub r0 c)
-            | _ => None
-            end)
+          match in2 with
+          | regM r1 => Some (out, mov, IOpReg ISub out r1)
+          | constM c => Some (out, mov, IOpConst ISub out c)
+          | _ => None
+          end
 
         | OPmul => 
-          omap (getReg out) (fun r0 =>
-            match in2 with
-            | regM r1 => Some (r0, mov, DOp Mult r0 r1 None)
-            | _ => None
-            end)
+          match in2 with
+          | regM r1 => Some (out, mov, DOp Mult out r1 None)
+          | constM c => Some (out, mov ++ (makeA (regM _ tmp) in2), DOp Mult out tmp None)
+          | _ => None
+          end
 
         | OPand =>
-          omap (getReg out) (fun r0 =>
-            match in2 with
-            | regM r1 => Some (r0, mov, IOpReg IAnd r0 r1)
-            | constM c => Some (r0, mov, IOpConst IAnd r0 c)
-            | _ => None
-            end)
+          match in2 with
+          | regM r1 => Some (out, mov, IOpReg IAnd out r1)
+          | constM c => Some (out, mov, IOpConst IAnd out c)
+          | _ => None
+          end
 
         | OPshiftr => 
-          omap (getReg out) (fun r0 =>
-            match in2 with
-            | constM (constant _ _ w) =>
-                Some (r0, mov, ROp Shr r0 (indexize (wordToNat w)))
-            | _ => None
-            end)
+          match in2 with
+          | constM (constant _ _ w) =>
+            Some (out, mov, ROp Shr out (indexize (wordToNat w)))
+          | _ => None
+          end
         end.
+
     End Mappings.
 
     Section TypeDec.
@@ -202,15 +199,14 @@ Module CompileLL.
 
     Definition getOutputSlot (nextReg: nat)
                (op: binop TT TT TT) (x: WArg TT) (y: WArg TT) : option nat :=
-      match (makeOp op (regM _ (reg w nextReg)) (getMapping x) (getMapping y)) with
-      | Some (reg _ _ r, Some a, _) => Some r
-      | Some (reg _ _ r, None, _)   => Some r
-      | _                           => None
+      match (makeOp op (reg w nextReg) (reg w (S nextReg)) (getMapping x) (getMapping y)) with
+      | Some (reg _ _ r, _ , _) => Some r
+      | _                       => None
       end.
 
     Section ExprF.
       Context (Out: Type)
-              (update: WArg TT -> binop TT TT TT -> WArg TT -> WArg TT -> Out -> option Out)
+              (update: Reg n -> WArg TT -> binop TT TT TT -> WArg TT -> WArg TT -> Out -> option Out)
               (get: forall t', WArg t' -> option Out).
 
       Definition opToTT {t1 t2 t3} (op: binop t1 t2 t3): option (binop TT TT TT) :=
@@ -247,26 +243,27 @@ Module CompileLL.
                     | _ => zeros _
                     end in
 
-                  omap (exprF (S nextRegName) (eC var)) (fun out =>
+                  omap (exprF (S (S nextRegName)) (eC var)) (fun out =>
                     omap (argToTT var) (fun var' =>
-                      update var' op' x' y' out))))))
+                      update (reg w (S nextRegName)) var' op' x' y' out))))))
         | Return _ a => get _ a
         end.
     End ExprF.
 
     Definition getProg :=
       @exprF Program
-        (fun var op x y out =>
-            match (makeOp op (getMapping var) (getMapping x) (getMapping y)) with
-            | Some (reg _ _ r, Some a, op') => Some ((QAssign a) :: (QOp op') :: out)
-            | Some (reg _ _ r, None, op')   => Some ((QOp op') :: out)
-            | _                             => None
-            end)
+        (fun rt var op x y out =>
+           omap (getReg (getMapping var)) (fun rv =>
+             match (makeOp op rt rv (getMapping x) (getMapping y)) with
+             | Some (reg _ _ r, a, op') =>
+               Some ((map QAssign a) ++ ((QOp op') :: out))
+             | _                        => None
+             end))
         (fun t' a => Some []).
 
     Definition getOuts :=
       @exprF (list nat)
-        (fun var op x y out => Some out)
+        (fun rt var op x y out => Some out)
         (fun t' a => Some (vars a)).
 
     Fixpoint fillInputs {t inputs} (prog: NAry inputs (WArg TT) (WExpr t)) {struct inputs}: WExpr t :=

@@ -33,19 +33,19 @@ Section Z.
     ezero := 0%Z;
 
     (* Conversions *)
-    toT := id;
-    fromT := id;
+    toT     := id;
+    fromT   := id;
 
     (* Operations *)
-    eadd := Z.add;
-    esub := Z.sub;
-    emul := Z.mul;
+    eadd    := Z.add;
+    esub    := Z.sub;
+    emul    := Z.mul;
     eshiftr := Z.shiftr;
-    eand := Z.land;
+    eand    := Z.land;
 
     (* Comparisons *)
-    eltb := Z.ltb;
-    eeqb := Z.eqb;
+    eltb    := Z.ltb;
+    eeqb    := Z.eqb;
   }.
 
 End Z.

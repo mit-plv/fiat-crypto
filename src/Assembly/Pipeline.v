@@ -125,16 +125,17 @@ Module GF25519.
   Defined.
 
   Definition llProg: NAry 80 Z (@LL.expr Z Z ResultType) :=
-    liftN CompileHL.compile hlProg.
+    Eval vm_compute in (liftN CompileHL.compile hlProg).
 
   Definition wordProg: NAry 80 (@CompileLL.WArg bits TT) (@LL.expr _ _ ResultType) :=
-    NArgMap (fun x => Z.of_N (wordToN (LL.interp_arg (t := TT) x))) (
+    Eval vm_compute in NArgMap (fun x => Z.of_N (wordToN (LL.interp_arg (t := TT) x))) (
       liftN (LLConversions.convertZToWord bits) llProg).
 
-  Definition qhasmProg := CompileLL.compile (w := width) wordProg.
+  Definition qhasmProg :=
+    Eval vm_compute in CompileLL.compile (w := width) wordProg.
 
   Definition qhasmString: option string :=
-    match qhasmProg with
+    Eval vm_compute in match qhasmProg with
     | Some (p, _) => StringConversion.convertProgram p
     | None => None
     end.

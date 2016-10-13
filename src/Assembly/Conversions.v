@@ -14,6 +14,8 @@ Require Import Bedrock.Nomega.
 Require Import Coq.ZArith.ZArith_dec.
 Require Import Coq.ZArith.Znat.
 
+Require Import Coq.NArith.Nnat Coq.NArith.Ndigits.
+
 Module HLConversions.
   Import HL.
 
@@ -285,6 +287,30 @@ Module LLConversions.
         reflexivity.
     Qed.
 
+    Ltac kill_N2Z_id :=
+      try match goal with
+      | [H: context[Z.of_N (Z.to_N (interp_arg _))] |- _] => rewrite Z2N.id in H
+      end; try assumption.
+
+    Ltac kill_ineq :=
+      repeat match goal with
+      | [H: context[Z_le_dec ?a ?b] |- _]  => destruct (Z_le_dec a b)
+      | [H: context[Z_lt_dec ?a ?b] |- _]  => destruct (Z_lt_dec a b)
+      end; simpl in *;
+
+      repeat match goal with
+      | [H: context[Nge_dec ?a ?b] |- _]   => destruct (Nge_dec a b)
+      | [H: context[overflows ?a ?b] |- _] => destruct (overflows a b)
+      end; simpl in *; intuition;
+
+      repeat match goal with
+      | [H: (_ >= _)%N |- _] => apply N2Z.inj_ge in H; kill_N2Z_id
+      | [H: (_ < _)%N |- _] => apply N2Z.inj_lt in H; kill_N2Z_id
+      | [H1: (?a < ?b)%Z, H2: (?a >= ?b)%Z |- _] =>
+        unfold Z.lt in H1; unfold Z.ge in H2;
+        apply H2 in H1; intuition
+      end.
+
     Lemma ZToRange_binop_correct : forall {n tx ty tz} (op: binop tx ty tz) (x: arg tx) (y: arg ty) e,
         check (t := tz) (convertZToWordRangeOpt n (LetBinop op x y e))
       -> zOp op (interp_arg x) (interp_arg y) =
@@ -298,16 +324,57 @@ Module LLConversions.
       induction op; unfold zOp, varRangeToZ, rangeOp.
 
       - simpl; unfold getUpperBoundOpt.
-        repeat rewrite interp_arg_convert in H; simpl in H.
-        unfold id, makeRange in *.
-        repeat match goal with
-        | [|- context[Z_le_dec ?a ?b] ] => destruct (Z_le_dec a b)
-        | [|- context[Z_lt_dec ?a ?b] ] => destruct (Z_lt_dec a b)
-        end; simpl in H; intuition.
+        repeat rewrite convertArg_interp in H.
+        unfold interp_binop, eadd, WordRangeOptEvaluable in H.
+        unfold applyBinOp, makeRange in *; simpl in *; unfold id in *.
+        kill_ineq.
+        rewrite N2Z.inj_add.
+        repeat rewrite Z2N.id; try assumption.
+        reflexivity.
 
-        rewrite applyBinOp_constr_spec; simpl.
-        rewrite applyBinOp_constr_spec in H; simpl in H.
-        destruct (overflows n _); [intuition|]; simpl.
+      - simpl; unfold getUpperBoundOpt.
+        repeat rewrite convertArg_interp in H.
+        unfold interp_binop, esub, WordRangeOptEvaluable in H.
+        unfold applyBinOp, makeRange in *; simpl in *; unfold id in *.
+        kill_ineq.
+
+        admit.
+
+        admit.
+
+      - simpl; unfold getUpperBoundOpt.
+        repeat rewrite convertArg_interp in H.
+        unfold interp_binop, emul, WordRangeOptEvaluable in H.
+        unfold applyBinOp, makeRange in *; simpl in *; unfold id in *.
+        kill_ineq.
+
+        rewrite N2Z.inj_mul.
+        repeat rewrite Z2N.id; try assumption.
+        reflexivity.
+
+      - simpl; unfold getUpperBoundOpt.
+        repeat rewrite convertArg_interp in H.
+        unfold interp_binop, eand, WordRangeOptEvaluable in H.
+        unfold applyBinOp, makeRange in *; simpl in *; unfold id in *.
+        kill_ineq.
+
+        admit.
+
+        admit.
+
+      - simpl; unfold getUpperBoundOpt.
+        repeat rewrite convertArg_interp in H.
+        unfold interp_binop, esub, WordRangeOptEvaluable in H.
+        unfold applyBinOp, makeRange in *; simpl in *; unfold id in *.
+        kill_ineq.
+
+        rewrite Z.shiftr_div_pow2; try assumption.
+        rewrite N.shiftr_div_pow2; try assumption.
+        rewrite N2Z.inj_div.
+        rewrite Z2N.id; try assumption.
+        repeat f_equal.
+        rewrite N2Z.inj_pow; simpl; f_equal.
+        rewrite Z2N.id; auto.
 
     Admitted.
 
@@ -327,14 +394,7 @@ Module LLConversions.
         rewrite applyBinOp_constr_spec in H; simpl in H.
 
         unfold makeRange in H.
-        repeat match goal with
-        | [ H : context[Z_le_dec ?a ?b] |- _ ] => destruct (Z_le_dec a b)
-        | [ H : context[Z_lt_dec ?a ?b] |- _ ] => destruct (Z_lt_dec a b)
-        end; simpl in H; intuition.
-
-        unfold id in *.
-        destruct (QhasmUtil.overflows n (Z.to_N (interp_arg x) + Z.to_N (interp_arg y)));
-            [intuition|]; simpl.
+        kill_ineq; unfold id in *.
 
         rewrite <- wordize_plus.
 
@@ -345,10 +405,77 @@ Module LLConversions.
           repeat rewrite Z2N.id; try assumption.
           reflexivity.
 
-        + repeat rewrite wordToN_NToWord; [assumption | |];
-              rewrite N2Z.inj_lt;
-              repeat rewrite Z2N.id;
-              try assumption.
+        + repeat rewrite wordToN_NToWord;
+            apply N2Z.inj_lt;
+            repeat rewrite Z2N.id;
+            assumption.
+
+      - simpl; unfold getUpperBoundOpt; simpl in H.
+        rewrite applyBinOp_constr_spec in H; simpl in H.
+
+        unfold makeRange in H.
+        kill_ineq; unfold id in *.
+
+        admit. (* TODO: wordize_minus *)
+
+      - simpl; unfold getUpperBoundOpt; simpl in H.
+        rewrite applyBinOp_constr_spec in H; simpl in H.
+
+        unfold makeRange in H.
+        kill_ineq; unfold id in *.
+
+        rewrite <- wordize_mult.
+
+        + repeat rewrite wordToN_NToWord; try assumption;
+            try abstract (apply N2Z.inj_lt; rewrite Z2N.id; assumption).
+
+          rewrite N2Z.inj_mul.
+          repeat rewrite Z2N.id; try assumption.
+          reflexivity.
+
+        + repeat rewrite wordToN_NToWord;
+            apply N2Z.inj_lt;
+            repeat rewrite Z2N.id;
+            assumption.
+
+      - simpl; unfold getUpperBoundOpt; simpl in H.
+        rewrite applyBinOp_constr_spec in H; simpl in H.
+
+        unfold makeRange in H.
+        kill_ineq; unfold id in *.
+
+        rewrite wordize_and.
+        repeat rewrite wordToN_NToWord;
+          try (apply N2Z.inj_lt; rewrite Z2N.id; assumption).
+
+        apply Z.bits_inj_iff; unfold Z.eqf; intro k.
+        destruct (Z_ge_dec k 0%Z) as [G|G].
+
+        + apply Z.ge_le in G.
+          rewrite Z.land_spec.
+          rewrite Z2N.inj_testbit; try assumption.
+          rewrite N.land_spec.
+          repeat rewrite <- Z2N.inj_testbit; try assumption.
+          repeat rewrite Z2N.id; try assumption; reflexivity.
+
+        + assert (k < 0)%Z by (
+            unfold Z.lt; unfold Z.ge in G;
+            induction (Z.compare k 0%Z);
+            [| reflexivity |];
+            contradict G; intro G; inversion G).
+
+          repeat rewrite Z.testbit_neg_r; [reflexivity| |]; assumption.
+
+      - simpl; unfold getUpperBoundOpt; simpl in H.
+        rewrite applyBinOp_constr_spec in H; simpl in H.
+
+        unfold makeRange in H.
+        kill_ineq; unfold id in *.
+
+        rewrite <- wordize_shiftr.
+        rewrite <- (Nat2N.id (wordToNat _)).
+        rewrite Nshiftr_nat_equiv.
+
     Admitted.
 
     Lemma check_zero: forall {n}, @check n TT (@convertExpr Z _ ZEvaluable (@WordRangeOptEvaluable n) TT (Return (Const 0%Z))).
