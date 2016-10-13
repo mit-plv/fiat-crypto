@@ -23,10 +23,10 @@ Definition d : GF25519.fe25519 :=
   Eval vm_compute in ModularBaseSystem.encode d.
 Definition twice_d : GF25519.fe25519 :=
   Eval vm_compute in (GF25519.add d d).
-
-Lemma phi_a : ModularBaseSystem.eq (ModularBaseSystem.encode Ed25519.a) a.
+Locate a.
+Lemma phi_a : ModularBaseSystem.eq (ModularBaseSystem.encode Spec.Ed25519.a) a.
 Proof. reflexivity. Qed.
-Lemma phi_d : ModularBaseSystem.eq (ModularBaseSystem.encode Ed25519.d) d.
+Lemma phi_d : ModularBaseSystem.eq (ModularBaseSystem.encode Spec.Ed25519.d) d.
 Proof. vm_decide_no_check. Qed.
 
 Let Erep := (@ExtendedCoordinates.Extended.point
@@ -284,8 +284,8 @@ Let Edec := (@PointEncodingPre.point_dec
                ModularArithmetic.F.mul
                ModularArithmetic.F.div
                _
-               Ed25519.a
-               Ed25519.d
+               Spec.Ed25519.a
+               Spec.Ed25519.d
                _
                Fsqrt
                (PointEncoding.Fencoding (bound_check := bound_check255))
