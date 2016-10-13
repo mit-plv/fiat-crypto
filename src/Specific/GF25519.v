@@ -372,12 +372,19 @@ Proof.
   reflexivity.
 Defined.
 
-Definition ge_modulus (f : fe25519) : bool
-  := Eval cbv beta iota delta [proj1_sig ge_modulus_sig] in proj1_sig (ge_modulus_sig f).
+Definition ge_modulus (f : fe25519) : bool :=
+  Eval cbv beta iota delta [proj1_sig ge_modulus_sig] in
+    let '(f0, f1, f2, f3, f4, f5, f6, f7, f8, f9) := f in
+    proj1_sig (ge_modulus_sig (f0, f1, f2, f3, f4, f5, f6, f7, f8, f9)).
 
 Definition ge_modulus_correct (f : fe25519) :
-  ge_modulus f = ge_modulus_opt (to_list 10 f)
-  := Eval cbv beta iota delta [proj2_sig ge_modulus_sig] in proj2_sig (ge_modulus_sig f).
+  ge_modulus f = ge_modulus_opt (to_list 10 f).
+Proof.
+  pose proof (proj2_sig (ge_modulus_sig f)).
+  cbv [fe25519] in *.
+  repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
+  assumption.
+Defined.
 
 Definition freeze_sig (f : fe25519) :
   { f' : fe25519 | f' = from_list_default 0 10 (freeze_opt c_ (to_list 10 f)) }.
