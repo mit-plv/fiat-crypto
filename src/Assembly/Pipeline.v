@@ -80,7 +80,7 @@ Module GF25519.
       { r: @HL.expr Z (@interp_type Z) ResultType
       | HL.interp (E := ZEvaluable) (t := ResultType) r
         = ge25519_add' P Q }.
-  Proof. Admitted.  (*
+  Proof.
     vm_compute in P, Q; repeat
       match goal with
       | [x:?T |- _] =>
@@ -103,7 +103,7 @@ Module GF25519.
           interp_type interp_binop HL.interp
           Z.land ZEvaluable eadd esub emul eshiftr eand].
     reflexivity.
-  Defined. *)
+  Defined.
 
   Definition ge25519_ast (P Q: @interp_type Z ResultType) :=
     proj1_sig (ge25519_ast' P Q).
