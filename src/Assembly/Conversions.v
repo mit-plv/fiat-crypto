@@ -351,6 +351,31 @@ Module LLConversions.
               try assumption.
     Admitted.
 
+    Lemma check_zero: forall {n}, @check n TT (@convertExpr Z _ ZEvaluable (@WordRangeOptEvaluable n) TT (Return (Const 0%Z))).
+    Proof.
+      intros; simpl; unfold makeRange.
+
+      repeat match goal with
+      | [|- context[Z_le_dec ?A ?B] ] => destruct (Z_le_dec A B)
+      | [|- context[Z_lt_dec ?A ?B] ] => destruct (Z_lt_dec A B)
+      end; simpl; unfold id in *; intuition.
+
+      - match goal with
+        | [A: (0 < Z.of_N (Npow2 n))%Z -> False |- _] =>
+          revert A; intro H
+        end.
+
+        apply H.
+        replace 0%Z with (Z.of_N 0%N) by (cbv; auto).
+        apply -> N2Z.inj_lt.
+        apply Npow2_gt0.
+
+      - match goal with
+        | [A: (0 <= 0)%Z -> False |- _] =>
+          apply A; cbv; intro Q; inversion Q
+        end.
+    Qed.
+
     (* Main correctness guarantee *)
 
     Lemma RangeInterp_correct: forall {n t} (E: expr t),
@@ -363,39 +388,21 @@ Module LLConversions.
 
       induction E as [tx ty tz op x y z|]; simpl; try reflexivity.
 
-      - rewrite H.
+      - rewrite H; clear H.
 
-        + destruct S as [S0 S1]; unfold convertZToWordRangeOpt in *.
-          repeat f_equal; unfold id in *.
+        + rewrite convertArg_var; repeat f_equal.
+          repeat rewrite convertArg_interp.
+          destruct S as [S0 S1]; unfold convertZToWordRangeOpt in *.
 
           pose proof (ZToWord_binop_correct (n := n) op x y) as C;
             unfold zOp, wordOp, varWordToZ, varZToWord in C;
             simpl in C.
 
-          repeat rewrite convertArg_var, convertArg_interp; f_equal.
-          rewrite convertArg_var, convertArg_interp in C.
-
-          induction op; rewrite (C (fun _ => Return (Const 0%Z))); clear C H;
-            repeat rewrite convertArg_interp; repeat f_equal; try reflexivity;
-            split; simpl in *;
-            unfold rangeOp, uninterp_arg, makeRange, applyBinOp, id in *;
-
-            repeat match goal with
-            | [|- context[Z_le_dec ?A ?B] ] => destruct (Z_le_dec A B)
-            | [|- context[Z_lt_dec ?A ?B] ] => destruct (Z_lt_dec A B)
-            end; clear S0 S1 e; simpl;
-
-            repeat match goal with
-            | [|- context[Nge_dec ?A ?B] ] => destruct (Nge_dec A B)
-            | [|- context[overflows ?N ?X] ] => destruct (overflows N X)
-            end; simpl; intuition;
-
-            try match goal with
-            | [A: (0 <= 0)%Z -> False |- _] =>
-              apply A; cbv; intro Q; inversion Q
-            end;
-
-            admit.
+          induction op; apply (C (fun _ => Return (Const 0%Z))); clear C; split;
+            try apply check_zero;
+            repeat rewrite convertArg_interp in S0;
+            repeat rewrite convertArg_interp;
+            assumption.
 
         + destruct S as [S0 S1]; unfold convertZToWordRangeOpt.
 
@@ -403,33 +410,24 @@ Module LLConversions.
              with (varRangeToZ (rangeOp op
                     (rangeArg (@convertArg _ _ ZEvaluable (@WordRangeOptEvaluable n) _ x))
                     (rangeArg (@convertArg _ _ ZEvaluable (@WordRangeOptEvaluable n) _ y))));
-            [unfold varRangeToZ, rangeArg; admit | clear S1].
+            [unfold varRangeToZ, rangeArg; rewrite <- convertArg_var; assumption | clear S1].
 
           pose proof (ZToRange_binop_correct (n := n) op x y) as C;
-            unfold zOp, wordOp, varZToRange, varRangeToZ, convertZToWordRangeOpt in *;
+            unfold rangeArg, zOp, wordOp, varZToRange, varRangeToZ, convertZToWordRangeOpt in *;
             simpl in C.
 
-          induction op; rewrite C with (e := fun _ => Return (Const 0%Z)); admit.
-          (* TODO(rsloan): why is this so slow?
-            try split; try assumption; simpl; unfold makeRange;
-            repeat match goal with
-            | [|- context[Z_le_dec ?a ?b] ] => destruct (Z_le_dec a b)
-            | [|- context[Z_lt_dec ?a ?b] ] => destruct (Z_lt_dec a b)
-            end;
+          repeat rewrite convertArg_interp; symmetry.
 
-            simpl; clear H S0 C e; unfold id in *;
-            pose proof (Npow2_gt0 n) as H;
-            rewrite N2Z.inj_lt in H; simpl in H; intuition;
-
-            try match goal with
-            | [A: (0 <= 0)%Z -> False |- _] =>
-              apply A; cbv; intro Q; inversion Q
-            end. *)
+          induction op; apply (C (fun _ => Return (Const 0%Z))); clear C; split;
+            try apply check_zero;
+            repeat rewrite convertArg_interp in S0;
+            repeat rewrite convertArg_interp;
+            assumption.
 
       - simpl in S.
         induction a as [| |t0 t1 a0 IHa0 a1 IHa1]; simpl in *; try reflexivity.
         destruct S; rewrite IHa0, IHa1; try reflexivity; assumption.
-    Admitted.
+    Qed.
   End Correctness.
 End LLConversions.
 
