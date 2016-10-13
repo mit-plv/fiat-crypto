@@ -7,6 +7,7 @@ Require Import Coq.omega.Omega.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Option Crypto.Util.Logic Crypto.Util.Relations Crypto.Util.WordUtil Util.LetIn Util.NatUtil.
 Require Import Crypto.Spec.ModularArithmetic Crypto.ModularArithmetic.PrimeFieldTheorems.
+Import NPeano.
 
 Import Notations.
 
@@ -170,7 +171,7 @@ Section EdDSA.
                      (SRepERepMul
                         (SRepDecModL (H _ (split1 b b sig ++ pk ++ message)))
                         (ErepOpp _)))) (split1 b b sig))
-            
+
                    false).
         subst_evars.
 
@@ -183,7 +184,7 @@ Section EdDSA.
 
       reflexivity.
     Defined.
-    
+
     Definition verify {mlen} (msg:word mlen) pk sig :=
       Eval cbv beta iota delta [proj1_sig verify_using_representation] in
       proj1_sig (verify_using_representation msg pk sig).
@@ -254,7 +255,7 @@ Section EdDSA.
     Proof.
       cbv [sign EdDSA.sign Let_In].
 
-      let H := fresh "H" in 
+      let H := fresh "H" in
       pose proof (splitSecretPrngCurve_correct sk) as H;
         destruct (splitSecretPrngCurve sk);
         destruct H as [curveKey_correct prngKey_correct].
