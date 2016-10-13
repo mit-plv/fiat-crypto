@@ -25,6 +25,7 @@ src/Assembly/Vectorize.v
 src/Assembly/Wordize.v
 src/BoundedArithmetic/ArchitectureToZLike.v
 src/BoundedArithmetic/ArchitectureToZLikeProofs.v
+src/BoundedArithmetic/Eta.v
 src/BoundedArithmetic/Interface.v
 src/BoundedArithmetic/InterfaceProofs.v
 src/BoundedArithmetic/StripCF.v
