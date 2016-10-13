@@ -5,6 +5,8 @@ Require Import Crypto.Util.Tactics.
 Require Import Bedrock.Word.
 Require Import Coq.Classes.RelationClasses.
 Require Import Coq.Program.Program.
+Require Import Coq.Numbers.Natural.Peano.NPeano Util.NatUtil.
+Require Import Coq.micromega.Psatz.
 
 Local Open Scope nat_scope.
 
@@ -68,7 +70,7 @@ Lemma combine_eq_iff {a b} (A:word a) (B:word b) C :
 Proof. intuition; subst; auto using split1_combine, split2_combine, combine_split. Qed.
 
 Class wordsize_eq (x y : nat) := wordsize_eq_to_eq : x = y.
-Ltac wordsize_eq_tac := cbv beta delta [wordsize_eq] in *; omega.
+Ltac wordsize_eq_tac := cbv beta delta [wordsize_eq] in *; omega*.
 Ltac gt84_abstract t := t. (* TODO: when we drop Coq 8.4, use [abstract] here *)
 Hint Extern 100 (wordsize_eq _ _) => gt84_abstract wordsize_eq_tac : typeclass_instances.
 
@@ -80,27 +82,62 @@ Program Fixpoint cast_word {n m} : forall {pf:wordsize_eq n m}, word n -> word m
   end.
 Global Arguments cast_word {_ _ _} _. (* 8.4 does not pick up the forall braces *)
 
-Local Infix "++" := combine.
-
-Definition keeplow n {b} {H:n <= b} (w:word b) : word b :=
-  wand (cast_word( wones n ++ wzero (b-n) )) w.
-
-Definition clearlow n {b} {H:n <= b} (w:word b) : word b :=
-  wand (cast_word( wzero n ++ wones (b-n) )) w.
-
-Definition setbit n {b} {H:n < b} (w:word b) : word b :=
-  wor (cast_word( wzero n ++ wones 1 ++ wzero (b-n-1) )) w.
-
-Definition clearbit n {b} {H:n < b} (w:word b) : word b :=
-  wand (cast_word( wones n ++ wzero 1 ++ wones (b-n-1) )) w.
-
 Lemma cast_word_refl {n} pf (w:word n) : @cast_word n n pf w = w.
 Proof. induction w; simpl; auto using f_equal. Qed.
 
-Lemma wordToNnat_cast_word {n} (w:word n) m pf :
-  wordToN (@cast_word n m pf w) = wordToN w.
+Lemma wordToNat_cast_word {n} (w:word n) m pf :
+  wordToNat (@cast_word n m pf w) = wordToNat w.
 Proof. destruct pf; rewrite cast_word_refl; trivial. Qed.
 
 Lemma wordToN_cast_word {n} (w:word n) m pf :
   wordToN (@cast_word n m pf w) = wordToN w.
 Proof. destruct pf; rewrite cast_word_refl; trivial. Qed.
+
+Import NPeano Nat.
+Local Infix "++" := combine.
+
+Definition zext_ge n {m} {pf:m <= n} (w:word m) : word n :=
+  cast_word (w ++ wzero (n - m)).
+
+Definition keeplow {b} n (w:word b) : word b :=
+  wand (cast_word( wones (min b n) ++ wzero (b-n) )) w.
+
+Definition clearlow {b} n (w:word b) : word b :=
+  wand (cast_word( wzero (min b n) ++ wones (b-n) )) w.
+
+Definition setbit {b} n {H:n < b} (w:word b) : word b :=
+  wor (cast_word( wzero n ++ wones 1 ++ wzero (b-n-1) )) w.
+
+Definition clearbit {b} n {H:n < b} (w:word b) : word b :=
+  wand (cast_word( wones n ++ wzero 1 ++ wones (b-n-1) )) w.
+
+Lemma wordToNat_wzero {n} : wordToNat (wzero n) = 0.
+Proof.
+  unfold wzero; induction n; simpl; try rewrite_hyp!*; omega.
+Qed.
+
+Lemma wordToNat_combine : forall {a} (wa:word a) {b} (wb:word b),
+  wordToNat (wa ++ wb) = wordToNat wa + 2^a * wordToNat wb.
+Proof.
+  induction wa; intros; simpl; rewrite ?IHwa; break_match; nia.
+Qed.
+
+Lemma wordToNat_zext_ge {n m pf} (w:word m) : wordToNat (@zext_ge n m pf w) = wordToNat w.
+Proof.
+  unfold zext_ge.
+  rewrite wordToNat_cast_word, wordToNat_combine, wordToNat_wzero; nia.
+Qed.
+
+Lemma wordToNat_clearlow {b} (c : nat) (x : Word.word b) :
+  wordToNat (clearlow c x) = wordToNat x - (wordToNat x) mod (2^c).
+Admitted.
+
+Lemma wordToNat_keeplow {b} (c : nat) (x : Word.word b) :
+  wordToNat (keeplow c x) = (wordToNat x) mod (2^c).
+Admitted.
+
+Lemma wordToNat_split1 : forall a b w, wordToNat (split1 a b w) = (wordToNat w) mod (2^a).
+Admitted.
+
+Lemma wordToNat_wfirstn : forall a b w H, wordToNat (@wfirstn a b w H) = (wordToNat w) mod (2^a).
+Admitted.

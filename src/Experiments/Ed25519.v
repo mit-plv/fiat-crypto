@@ -70,7 +70,7 @@ Proof.
     reflexivity.
 Defined.
 
-Fail Definition extended_to_coord (P : Erep) : (GF25519.fe25519 * GF25519.fe25519) :=
+Definition extended_to_coord (P : Erep) : (GF25519.fe25519 * GF25519.fe25519) :=
   CompleteEdwardsCurve.E.coordinates (ExtendedCoordinates.Extended.to_twisted P).
 
 Lemma encode_eq_iff :  forall x y : ModularArithmetic.F.F GF25519.modulus,
@@ -107,7 +107,7 @@ Definition feEnc (x : GF25519.fe25519) : Word.word 255 :=
             (Word.combine (ZNWord 32 x5)
               (Word.combine (ZNWord 32 x6) (ZNWord 31 x7))))))).
 
-Fail Let ERepEnc :=
+Let ERepEnc :=
   (PointEncoding.Kencode_point
          (Ksign := feSign)
          (Kenc := feEnc)
@@ -126,7 +126,7 @@ Let S2Rep := fun (x : ModularArithmetic.F.F l) =>
 
 
 
-Fail Check @sign_correct
+Check @sign_correct
       (* E := *) E
       (* Eeq := *) CompleteEdwardsCurveTheorems.E.eq
       (* Eadd := *) CompleteEdwardsCurve.E.add
@@ -172,15 +172,8 @@ Fail Check @sign_correct
       (* Proper_SRepMul := *) _
       (* ErepB := *) _
       (* ErepB_correct := *) _
-      (* wbRepKeepLow := *) _
-      (* wbRepClearLow := *) _
-      (* wbRepSetBit := *) _
-      (* wbRepSetBit_correct := *) _
-      (* wbRepClearLow_correct := *) _
-      (* wbRepKeepLow_correct := *) _
       (* SRepDecModLShort := *) _
       (* SRepDecModLShort_correct := *) _
       .
-
 
 Check verify_correct.
