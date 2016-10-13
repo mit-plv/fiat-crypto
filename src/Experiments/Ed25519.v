@@ -4,6 +4,7 @@ Require Import Crypto.Util.Decidable.
 Require Crypto.Specific.GF25519.
 Require Crypto.CompleteEdwardsCurve.ExtendedCoordinates.
 Require Crypto.Encoding.PointEncoding.
+Require Crypto.Util.IterAssocOp.
 Import Morphisms.
 
 Context {H: forall n : nat, Word.word n -> Word.word (b + b)}.
@@ -127,6 +128,8 @@ Let ERepEnc :=
                                 (ExtendedCoordinates.Extended.to_twisted P))
   ).
 
+Let SRep := Tuple.tuple (Word.word 32) 8.
+
 Let S2Rep := fun (x : ModularArithmetic.F.F l) =>
                Tuple.map (ZNWord 32)
                (Tuple.from_list_default (BinInt.Z.of_nat 0) 8
@@ -149,6 +152,28 @@ Let ErepAdd :=
   (@ExtendedCoordinates.Extended.add _ _ _ _ _ _ _ _ _ _
                                      a d GF25519.field25519 twedprm_ERep _
                                      eq_a_minus1 twice_d (eq_refl _) ).
+
+Axiom SRep_testbit : SRep -> nat -> bool.
+Axiom ERepSel : bool -> Erep -> Erep -> Erep.
+
+Let SRepERepMul : SRep -> Erep -> Erep := 
+  IterAssocOp.iter_op
+    (op:=ErepAdd)
+    (id:=ExtendedCoordinates.Extended.zero(field:=GF25519.field25519)(prm:=twedprm_ERep))
+    (scalar:=SRep)
+    SRep_testbit
+    (sel:=ERepSel)
+    (BinInt.Z.to_nat (BinInt.Z.log2_up l))
+.
+
+Lemma SRepERepMul_correct n P : 
+  ExtendedCoordinates.Extended.eq
+    (EToRep (CompleteEdwardsCurve.E.mul n P))
+    (SRepERepMul (S2Rep (ModularArithmetic.F.of_nat l n)) (EToRep P)).
+Proof.
+  pose proof @IterAssocOp.iter_op_correct.
+  pose proof @Algebra.ScalarMult.homomorphism_scalarmult.
+Abort.
 
 (* TODO : unclear what we're doing with the placeholder [feEnc] at the moment, so
    leaving this admitted for now *)
@@ -232,13 +257,13 @@ Check @sign_correct
       (* ERepEnc := *) ERepEnc
       (* ERepEnc_correct := *) ERepEnc_correct
       (* Proper_ERepEnc := *) (PointEncoding.Proper_Kencode_point (Kpoint_eq_correct := ext_eq_correct) (Proper_Kenc := Proper_feEnc))
-      (* SRep := *) (Tuple.tuple (Word.word 32) 8)
+      (* SRep := *) SRep
       (* SRepEq := *) (Tuple.fieldwise Logic.eq)
       (* H0 := *) Tuple.Equivalence_fieldwise
       (* S2Rep := *) S2Rep
       (* SRepDecModL := *) _
       (* SRepDecModL_correct := *) _
-      (* SRepERepMul := *) _
+      (* SRepERepMul := *) SRepERepMul
       (* SRepERepMul_correct := *) _
       (* Proper_SRepERepMul := *) _
       (* SRepEnc := *) _
@@ -355,7 +380,7 @@ Check @verify_correct
       (* S2Rep := *) S2Rep
       (* SRepDecModL := *) _
       (* SRepDecModL_correct := *) _
-      (* SRepERepMul := *) _
+      (* SRepERepMul := *) SRepERepMul
       (* SRepERepMul_correct := *) _
       (* Proper_SRepERepMul := *) _
       (* SRepDec := *) _

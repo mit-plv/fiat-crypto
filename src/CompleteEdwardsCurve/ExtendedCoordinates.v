@@ -135,7 +135,7 @@ Module Extended.
         transitivity (to_twisted x + to_twisted x0)%E; rewrite to_twisted_add, ?H, ?H0; reflexivity.
       Qed.
 
-      Lemma homomorphism_to_twisted : @Group.is_homomorphism point eq add Epoint E.eq E.add to_twisted.
+      Lemma homomorphism_to_twisted : @Monoid.is_homomorphism point eq add Epoint E.eq E.add to_twisted.
       Proof. split; trivial using Proper_to_twisted, to_twisted_add. Qed.
 
       Lemma add_from_twisted P Q : eq (from_twisted (P + Q)%E) (add (from_twisted P) (from_twisted Q)).
@@ -145,7 +145,7 @@ Module Extended.
         symmetry; assumption.
       Qed.
 
-      Lemma homomorphism_from_twisted : @Group.is_homomorphism Epoint E.eq E.add point eq add from_twisted.
+      Lemma homomorphism_from_twisted : @Monoid.is_homomorphism Epoint E.eq E.add point eq add from_twisted.
       Proof. split; trivial using Proper_from_twisted, add_from_twisted. Qed.
 
       Definition zero : point := from_twisted E.zero.
@@ -235,17 +235,17 @@ Module Extended.
     Next Obligation.
       destruct P as [ [ [ [ ] ? ] ? ] [ ? [ ? ? ] ] ]; unfold onCurve in *; simpl.
       (rewrite_strat bottomup hints field_homomorphism); try assumption.
-      eauto 10 using is_homomorphism_phi_proper, phi_nonzero.
+      eauto 10 using Monoid.is_homomorphism_phi_proper, phi_nonzero.
     Qed.
 
     Context {point_phi:Fpoint->Kpoint}
             {point_phi_Proper:Proper (eq==>eq) point_phi}
             {point_phi_correct: forall (P:Fpoint), eq (point_phi P) (ref_phi P)}.
 
-    Lemma lift_homomorphism : @Group.is_homomorphism Fpoint eq (add(a_eq_minus1:=HFa)(Htwice_d:=HFdd)) Kpoint eq (add(a_eq_minus1:=HKa)(Htwice_d:=HKdd)) point_phi.
+    Lemma lift_homomorphism : @Monoid.is_homomorphism Fpoint eq (add(a_eq_minus1:=HFa)(Htwice_d:=HFdd)) Kpoint eq (add(a_eq_minus1:=HKa)(Htwice_d:=HKdd)) point_phi.
     Proof.
       repeat match goal with
-             | |- Group.is_homomorphism => split
+             | |- Monoid.is_homomorphism => split
              | |- _ => intro
              | |-  _ /\ _ => split
              | [H: _ /\ _ |- _ ] => destruct H

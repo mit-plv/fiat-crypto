@@ -1,7 +1,7 @@
 Require Import Crypto.Util.FixCoqMistakes.
 Require Import Crypto.Spec.EdDSA Bedrock.Word.
 Require Import Coq.Classes.Morphisms Coq.Relations.Relation_Definitions.
-Require Import Crypto.Algebra. Import Group ScalarMult.
+Require Import Crypto.Algebra. Import Monoid Group ScalarMult.
 Require Import Crypto.Util.Decidable Crypto.Util.Option Crypto.Util.Tactics.
 Require Import Coq.omega.Omega.
 Require Import Crypto.Util.Notations.

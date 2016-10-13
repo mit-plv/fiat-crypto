@@ -126,7 +126,7 @@ Section PointEncoding.
             {phi_sqrt : forall x, Keq (phi (Fsqrt x)) (Ksqrt (phi x))}
             {Fsqrt_square : forall x root, eq x (F.mul root root) -> eq (Fsqrt x) root}.
 
-    Lemma point_phi_homomorphism: @Algebra.Group.is_homomorphism
+    Lemma point_phi_homomorphism: @Algebra.Monoid.is_homomorphism
                                     Fpoint E.eq Fpoint_add
                                     Kpoint Kpoint_eq Kpoint_add point_phi.
     Proof.
