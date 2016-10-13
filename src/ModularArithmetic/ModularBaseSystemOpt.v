@@ -892,6 +892,24 @@ Section Canonicalization.
     : conditional_subtract_modulus_opt f cond = conditional_subtract_modulus f cond
     := Eval cbv [proj2_sig conditional_subtract_modulus_opt_sig] in proj2_sig (conditional_subtract_modulus_opt_sig f cond).
 
+  Definition ge_modulus_opt_sig (us : list Z) :
+    { b : bool | b = ModularBaseSystemList.ge_modulus us }.
+  Proof.
+    eexists.
+    cbv beta iota delta [ge_modulus ge_modulus'].
+    change length with length_opt.
+    change nth_default with @nth_default_opt.
+    change minus with minus_opt.
+    reflexivity.
+  Defined.
+
+  Definition ge_modulus_opt us : bool
+    := Eval cbv [proj1_sig ge_modulus_opt_sig] in proj1_sig (ge_modulus_opt_sig us).
+
+  Definition ge_modulus_opt_correct us :
+    ge_modulus_opt us = ge_modulus us
+    := Eval cbv [proj2_sig ge_modulus_opt_sig] in proj2_sig (ge_modulus_opt_sig us).
+
   Definition freeze_opt_sig (us : list Z) :
     { b : list Z | length us = length limb_widths
                    -> b = ModularBaseSystemList.freeze us }.
