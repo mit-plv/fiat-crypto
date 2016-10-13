@@ -31,12 +31,12 @@ Section ripple_carry_definitions.
        | O => f
        | S k' => fun xss yss carry => dlet xss := xss in
                                       dlet yss := yss in
-                                      let '(xs, x) := eta xss in
-                                      let '(ys, y) := eta yss in
+                                      let (xs, x) := eta xss in
+                                      let (ys, y) := eta yss in
                                       dlet addv := (@ripple_carry_tuple' _ f k' xs ys carry) in
-                                      let '(carry, zs) := eta addv in
+                                      let (carry, zs) := eta addv in
                                       dlet fxy := (f x y carry) in
-                                      let '(carry, z) := eta fxy in
+                                      let (carry, z) := eta fxy in
                                       (carry, (zs, z))
        end.
 
@@ -204,10 +204,10 @@ Section tuple2.
          dlet out            := out in
          dlet tmp            := mulhwhl a b in
          dlet addv           := (ripple_carry_adc adc out (shl tmp half_n, shr tmp half_n) false) in
-         let '(_, out)       := eta addv in
+         let (_, out)        := eta addv in
          dlet tmp            := mulhwhl b a in
          dlet addv           := (ripple_carry_adc adc out (shl tmp half_n, shr tmp half_n) false) in
-         let '(_, out)       := eta addv in
+         let (_, out)        := eta addv in
          out.
 
     (** Require a dummy [decoder] for these instances to allow

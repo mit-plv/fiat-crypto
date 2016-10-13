@@ -33,10 +33,10 @@ Section x86_gen_barrett_foundation.
          CarryAdd x y := adc x y false;
          CarrySubSmall x y := subc x y false;
          ConditionalSubtract b x := let v := selc b (ldi_modulus) (ldi_0) in snd (subc x v false);
-         ConditionalSubtractModulus y := let '(CF, _) := subc y ldi_modulus false in
+         ConditionalSubtractModulus y := let (CF, _) := subc y ldi_modulus false in
                                          let maybe_modulus := ldi_0 in
                                          let maybe_modulus := selc CF maybe_modulus ldi_modulus in
-                                         let '(CF, y) := subc y maybe_modulus false in
+                                         let (CF, y) := subc y maybe_modulus false in
                                          y }.
 
   Local Instance ZLikeOps_of_x86_gen (smaller_bound_exp : Z)
