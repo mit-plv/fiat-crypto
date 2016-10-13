@@ -30,36 +30,41 @@ Section InstructionGallery.
   Definition eta_addm (x : add_modulo W) := {| addm := addm |}.
 End InstructionGallery.
 
+Declare Reduction unfold_eta_bounded_instructions
+  := cbv [eta_decode eta_ldi eta_shrd eta_shrdf eta_shl eta_shlf eta_shr eta_shrf eta_sprl eta_mkl eta_and eta_andf eta_or eta_orf eta_adc eta_subc eta_mul eta_mulhwll eta_mulhwhl eta_mulhwhh eta_muldw eta_muldwf eta_selc eta_addm].
+
 Module fancy_machine.
   Import Interface.fancy_machine.
   Definition eta_instructions {n} (x : fancy_machine.instructions n) : fancy_machine.instructions n
-    := {| W := W;
-          decode := eta_decode decode;
-          ldi := eta_ldi ldi;
-          shrd := eta_shrd shrd;
-          shl := eta_shl shl;
-          shr := eta_shr shr;
-          adc := eta_adc adc;
-          subc := eta_subc subc;
-          mulhwll := eta_mulhwll mulhwll;
-          mulhwhl := eta_mulhwhl mulhwhl;
-          mulhwhh := eta_mulhwhh mulhwhh;
-          selc := eta_selc selc;
-          addm := eta_addm addm |}.
+    := Eval unfold_eta_bounded_instructions in
+        {| W := W;
+           decode := eta_decode decode;
+           ldi := eta_ldi ldi;
+           shrd := eta_shrd shrd;
+           shl := eta_shl shl;
+           shr := eta_shr shr;
+           adc := eta_adc adc;
+           subc := eta_subc subc;
+           mulhwll := eta_mulhwll mulhwll;
+           mulhwhl := eta_mulhwhl mulhwhl;
+           mulhwhh := eta_mulhwhh mulhwhh;
+           selc := eta_selc selc;
+           addm := eta_addm addm |}.
 End fancy_machine.
 
 Module x86.
   Import Interface.x86.
   Definition eta_instructions {n} (x : x86.instructions n) : x86.instructions n
-    := {| W := W;
-          decode := eta_decode decode;
-          ldi := eta_ldi ldi;
-          shrdf := eta_shrdf shrdf;
-          shlf := eta_shlf shlf;
-          shrf := eta_shrf shrf;
-          adc := eta_adc adc;
-          subc := eta_subc subc;
-          muldwf := eta_muldwf muldwf;
-          selc := eta_selc selc;
-          orf := eta_orf orf |}.
+    := Eval unfold_eta_bounded_instructions in
+        {| W := W;
+           decode := eta_decode decode;
+           ldi := eta_ldi ldi;
+           shrdf := eta_shrdf shrdf;
+           shlf := eta_shlf shlf;
+           shrf := eta_shrf shrf;
+           adc := eta_adc adc;
+           subc := eta_subc subc;
+           muldwf := eta_muldwf muldwf;
+           selc := eta_selc selc;
+           orf := eta_orf orf |}.
 End x86.
