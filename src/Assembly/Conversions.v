@@ -211,6 +211,59 @@ Module LLConversions.
       | Return _ a => checkVar (interp_arg a)
       end.
 
+    (* Bounds-checking fixpoint *)
+
+    Fixpoint checkVar' {n t} (x: @interp_type (@WordRangeOpt n) t) :=
+      match t as t' return (interp_type t') -> bool with
+      | TT => fun x' =>
+        match (rangeEval x') with
+        | Some (range low high) => true
+        | None => false
+        end
+      | Prod t0 t1 => fun x' =>
+        match x' with
+        | (x0, x1) => andb (checkVar' (n := n) x0) (checkVar' (n := n) x1)
+        end
+      end x.
+
+    Fixpoint check' {n t} (e : @expr (@WordRangeOpt n) (@WordRangeOpt n) t): bool :=
+      match e with
+      | LetBinop ta tb tc op a b _ eC =>
+        andb (@checkVar' n tc (rangeOp op (interp_arg a) (interp_arg b)))
+             (check' (eC (uninterp_arg (rangeOp op (interp_arg a) (interp_arg b)))))
+      | Return _ a => checkVar' (interp_arg a)
+      end.
+
+    Lemma checkVar'_spec: forall {n t} x, @checkVar' n t x = true <-> @checkVar n t x.
+    Proof.
+      intros; induction t; simpl; split; intro C.
+
+      - induction (rangeEval x) as [|a]; try induction a; auto.
+        inversion C.
+
+      - induction (rangeEval x) as [|a]; try induction a; auto.
+
+      - destruct x.
+        apply andb_true_iff in C; destruct C.
+        split; try apply IHt1; try apply IHt2; assumption.
+
+      - destruct x, C.
+        apply andb_true_iff; split;
+          try apply IHt1; try apply IHt2; assumption.
+    Qed.
+
+    Lemma check'_spec: forall {n t} e, @check' n t e = true <-> @check n t e.
+    Proof.
+      intros; induction e; simpl; split; intro C;
+        try abstract (apply checkVar'_spec; assumption).
+
+      - apply andb_true_iff in C; destruct C as [C0 C1]; split;
+          [apply checkVar'_spec | apply H in C1]; assumption.
+
+      - apply andb_true_iff; destruct C as [C0 C1]; split;
+          [apply checkVar'_spec | apply H]; assumption.
+    Qed.
+
     (* Utility Lemmas *)
 
     Lemma convertArg_interp: forall {A B t} {EA: Evaluable A} {EB: Evaluable B} (x: @arg A A t),

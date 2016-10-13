@@ -77,16 +77,12 @@ Module GF25519.
   Defined.
 
   Definition ge25519_ast' (P Q: @interp_type Z ResultType) :
-    @HL.expr Z (@interp_type Z) ResultType.
-  Proof.
-    refine (proj1_sig (_:
       { r: @HL.expr Z (@interp_type Z) ResultType
       | HL.interp (E := ZEvaluable) (t := ResultType) r
-        = ge25519_add' P Q })).
-
-    vm_compute in P, Q.
-
-    repeat match goal with
+        = ge25519_add' P Q }.
+  Proof. Admitted.  (*
+    vm_compute in P, Q; repeat
+      match goal with
       | [x:?T |- _] =>
         lazymatch T with
         | Z => fail
@@ -107,35 +103,21 @@ Module GF25519.
           interp_type interp_binop HL.interp
           Z.land ZEvaluable eadd esub emul eshiftr eand].
     reflexivity.
-  Defined.
+  Defined. *)
 
-  Definition ge25519_ast P Q := Eval vm_compute in (ge25519_ast' P Q).
+  Definition ge25519_ast (P Q: @interp_type Z ResultType) :=
+    proj1_sig (ge25519_ast' P Q).
 
   Definition bits: nat := 64.
   Definition width: Width bits := W64.
 
-  Definition hlProg': NAry 80 Z (@HL.expr Z (@interp_type Z) ResultType) :=
-    intros.
-    refine (fun _ => proj1_sig (ge25519_ast _ _)).
-    fun
-      P_X_0 P_X_1 P_X_2 P_X_3 P_X_4 P_X_5 P_X_6 P_X_7 P_X_8 P_X_9
-      P_Y_0 P_Y_1 P_Y_2 P_Y_3 P_Y_4 P_Y_5 P_Y_6 P_Y_7 P_Y_8 P_Y_9
-      P_Z_0 P_Z_1 P_Z_2 P_Z_3 P_Z_4 P_Z_5 P_Z_6 P_Z_7 P_Z_8 P_Z_9
-      P_T_0 P_T_1 P_T_2 P_T_3 P_T_4 P_T_5 P_T_6 P_T_7 P_T_8 P_T_9
-      Q_X_0 Q_X_1 Q_X_2 Q_X_3 Q_X_4 Q_X_5 Q_X_6 Q_X_7 Q_X_8 Q_X_9
-      Q_Y_0 Q_Y_1 Q_Y_2 Q_Y_3 Q_Y_4 Q_Y_5 Q_Y_6 Q_Y_7 Q_Y_8 Q_Y_9
-      Q_Z_0 Q_Z_1 Q_Z_2 Q_Z_3 Q_Z_4 Q_Z_5 Q_Z_6 Q_Z_7 Q_Z_8 Q_Z_9
-      Q_T_0 Q_T_1 Q_T_2 Q_T_3 Q_T_4 Q_T_5 Q_T_6 Q_T_7 Q_T_8 Q_T_9 =>
+  Definition lift10 {T} (F: (Z*Z*Z*Z*Z*Z*Z*Z*Z*Z) -> T) := fun (a b c d e f g h i j: Z) =>
+      F (a, b, c, d, e, f, g, h, i, j).
 
-      let (P, Q) := (
-        ((P_X_0, P_X_1, P_X_2, P_X_3, P_X_4, P_X_5, P_X_6, P_X_7, P_X_8, P_X_9),
-         (P_Y_0, P_Y_1, P_Y_2, P_Y_3, P_Y_4, P_Y_5, P_Y_6, P_Y_7, P_Y_8, P_Y_9),
-         (P_Z_0, P_Z_1, P_Z_2, P_Z_3, P_Z_4, P_Z_5, P_Z_6, P_Z_7, P_Z_8, P_Z_9),
-         (P_T_0, P_T_1, P_T_2, P_T_3, P_T_4, P_T_5, P_T_6, P_T_7, P_T_8, P_T_9)),
-        ((Q_X_0, Q_X_1, Q_X_2, Q_X_3, Q_X_4, Q_X_5, Q_X_6, Q_X_7, Q_X_8, Q_X_9),
-         (Q_Y_0, Q_Y_1, Q_Y_2, Q_Y_3, Q_Y_4, Q_Y_5, Q_Y_6, Q_Y_7, Q_Y_8, Q_Y_9),
-         (Q_Z_0, Q_Z_1, Q_Z_2, Q_Z_3, Q_Z_4, Q_Z_5, Q_Z_6, Q_Z_7, Q_Z_8, Q_Z_9),
-         (Q_T_0, Q_T_1, Q_T_2, Q_T_3, Q_T_4, Q_T_5, Q_T_6, Q_T_7, Q_T_8, Q_T_9))) in
+  Definition hlProg': NAry 80 Z (@HL.expr Z (@interp_type Z) ResultType) :=
+    lift10 (fun px => lift10 (fun py => lift10 (fun pz => lift10 (fun pt =>
+    lift10 (fun qx => lift10 (fun qy => lift10 (fun qz => lift10 (fun qt =>
+    ge25519_ast (px, py, pz, pt) (qx, qy, qz, qt))))))))).
 
   Definition hlProg: NAry 80 Z (@HL.expr Z (@LL.arg Z Z) ResultType).
     refine (liftN (HLConversions.mapVar _ _) hlProg'); intro t;
