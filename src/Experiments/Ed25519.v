@@ -7,8 +7,12 @@ Require Crypto.Encoding.PointEncoding.
 Import Morphisms.
 
 Context {H: forall n : nat, Word.word n -> Word.word (b + b)}.
-(* TODO : define feSign *)
-Context {feSign : GF25519.fe25519 -> bool}.
+
+Definition feSign (x :  GF25519.fe25519) : bool :=
+  let '(x0, x1, x2, x3, x4, x5, x6, x7, x8, x9) := x in
+  BinInt.Z.testbit x0 0.
+  
+(* TODO *)
 Context {feSign_correct : forall x,
             PointEncoding.sign x = feSign (ModularBaseSystem.encode x)}.
 Context {Proper_feSign :  Proper (ModularBaseSystem.eq ==> eq) feSign}.
