@@ -33,7 +33,8 @@ Section x86_gen_barrett_foundation.
          CarryAdd x y := adc x y false;
          CarrySubSmall x y := subc x y false;
          ConditionalSubtract b x := let v := selc b (ldi_modulus) (ldi_0) in snd (subc x v false);
-         ConditionalSubtractModulus y := let (CF, _) := subc y ldi_modulus false in
+         ConditionalSubtractModulus y := dlet y := y in
+                                         let (CF, _) := subc y ldi_modulus false in
                                          let maybe_modulus := ldi_0 in
                                          let maybe_modulus := selc CF maybe_modulus ldi_modulus in
                                          let (CF, y) := subc y maybe_modulus false in
@@ -57,7 +58,6 @@ Section x86_64_barrett_foundation.
     : ZLikeOps (2^256) (2^smaller_bound_exp) modulus :=
     @ZLikeOps_of_x86_64_Factored smaller_bound_exp (ldi modulus) (ldi 0).
 End x86_64_barrett_foundation.
-
 Section x86_32_barrett_foundation.
   Local Notation n := 32%nat.
   Context (ops : x86.instructions n) (modulus : Z).
