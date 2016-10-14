@@ -69,7 +69,7 @@ Section tuple2.
          dlet y := y in
          let (x1, x2) := eta x in
          let (y1, y2) := eta y in
-         (selc b x1 x1, selc b x2 y2).
+         (selc b x1 y1, selc b x2 y2).
 
     Global Instance selc_double : select_conditional (tuple W 2)
       := { selc := select_conditional_double }.
@@ -97,7 +97,7 @@ Section tuple2.
          dlet y := y in
          let (x1, x2) := eta x in
          let (y1, y2) := eta y in
-         (or x1 x1, or x2 y2).
+         (or x1 y1, or x2 y2).
 
     Global Instance or_double : bitwise_or (tuple W 2)
       := { or := bitwise_or_double }.
@@ -112,7 +112,7 @@ Section tuple2.
          dlet y := y in
          let (x1, x2) := eta x in
          let (y1, y2) := eta y in
-         (and x1 x1, and x2 y2).
+         (and x1 y1, and x2 y2).
 
     Global Instance and_double : bitwise_and (tuple W 2)
       := { and := bitwise_and_double }.
