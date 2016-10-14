@@ -340,7 +340,6 @@ Module LLConversions.
 
         admit.
 
-        admit.
 
       - simpl; unfold getUpperBoundOpt.
         repeat rewrite convertArg_interp in H.

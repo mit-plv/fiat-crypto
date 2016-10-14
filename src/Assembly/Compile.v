@@ -245,7 +245,7 @@ Module CompileLL.
 
                   omap (exprF (S (S nextRegName)) (eC var)) (fun out =>
                     omap (argToTT var) (fun var' =>
-                      update (reg w (S nextRegName)) var' op' x' y' out))))))
+                      update (reg w nextRegName) var' op' x' y' out))))))
         | Return _ a => get _ a
         end.
     End ExprF.

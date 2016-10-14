@@ -6,11 +6,23 @@ Require Import Crypto.Specific.GF25519.
 Require Import Crypto.Util.Tuple.
 
 Module GF25519.
-  Definition q : Z := (2 ^ 255 - 19)%Z.
-  Definition d : F q := (F.opp (F.of_Z q 121665%Z) / (F.of_Z q 121666%Z))%F.
+  Definition bits: nat := 32.
+  Definition width: Width bits := W32.
 
-  Definition twice_d' := Eval cbv [length params25519 ModularBaseSystemOpt.limb_widths_from_len ModularBaseSystem.encode ModularBaseSystemList.encode PseudoMersenneBaseParams.limb_widths] in ModularBaseSystem.encode(modulus:=q) (d + d)%F.
-  Definition twice_d : fe25519 := Eval vm_compute in twice_d'.
+  Fixpoint makeBoundList {n} k (b: @WordRangeOpt n) :=
+    match k with
+    | O => nil
+    | S k' => cons b (makeBoundList k' b)
+    end.
+
+  Section DefaultBounds.
+    Import ListNotations.
+    Local Notation rr exp := (makeRange 0 (2^exp + 2^exp/10)%Z).
+
+    Definition feBound: list (@WordRangeOpt bits) :=
+      [rr 26; rr 27; rr 26; rr 27; rr 26;
+       rr 27; rr 26; rr 27; rr 26; rr 27].
+  End DefaultBounds.
 
   Definition FE: type.
   Proof.
@@ -22,22 +34,15 @@ Module GF25519.
   Definition liftFE {T} (F: @interp_type Z FE -> T) :=
     fun (a b c d e f g h i j: Z) => F (a, b, c, d, e, f, g, h, i, j).
 
-  Fixpoint makeBoundList {n} k (b: @WordRangeOpt n) :=
-    match k with
-    | O => nil
-    | S k' => cons b (makeBoundList k' b)
-    end.
-
   Module AddExpr <: Expression.
-    Definition bits: nat := 64.
+    Definition bits: nat := bits.
     Definition inputs: nat := 20.
-    Definition width: Width bits := W64.
+    Definition width: Width bits := width.
     Definition ResultType := FE.
-    Definition inputUpperBounds: list (@WordRangeOpt bits) :=
-      makeBoundList 20 (makeRange 0 (Z.of_N (Npow2 28))).
+    Definition inputUpperBounds: list (@WordRangeOpt bits) := feBound ++ feBound.
 
     Definition ge25519_add_expr :=
-        Eval cbv beta delta [fe25519 add mul sub Let_In twice_d] in add.
+        Eval cbv beta delta [fe25519 add mul sub Let_In] in add.
 
     Definition ge25519_add' (P Q: @interp_type Z FE) :
         { r: @HL.expr Z (@interp_type Z) FE
@@ -83,15 +88,14 @@ Module GF25519.
   End AddExpr.
 
   Module SubExpr <: Expression.
-    Definition bits: nat := 64.
+    Definition bits: nat := bits.
     Definition inputs: nat := 20.
-    Definition width: Width bits := W64.
+    Definition width: Width bits := width.
     Definition ResultType := FE.
-    Definition inputUpperBounds: list (@WordRangeOpt bits) :=
-      makeBoundList 20 (makeRange 0 (Z.of_N (Npow2 28))).
+    Definition inputUpperBounds: list (@WordRangeOpt bits) := feBound ++ feBound.
 
     Definition ge25519_sub_expr :=
-        Eval cbv beta delta [fe25519 add mul sub Let_In twice_d] in sub.
+        Eval cbv beta delta [fe25519 add mul sub Let_In] in sub.
 
     Definition ge25519_sub' (P Q: @interp_type Z FE) :
         { r: @HL.expr Z (@interp_type Z) FE
@@ -137,15 +141,14 @@ Module GF25519.
   End SubExpr.
 
   Module MulExpr <: Expression.
-    Definition bits: nat := 64.
+    Definition bits: nat := bits.
     Definition inputs: nat := 20.
-    Definition width: Width bits := W64.
+    Definition width: Width bits := width.
     Definition ResultType := FE.
-    Definition inputUpperBounds: list (@WordRangeOpt bits) :=
-      makeBoundList 20 (makeRange 0 (Z.of_N (Npow2 28))).
+    Definition inputUpperBounds: list (@WordRangeOpt bits) := feBound ++ feBound.
 
     Definition ge25519_mul_expr :=
-        Eval cbv beta delta [fe25519 add mul sub Let_In twice_d] in mul.
+        Eval cbv beta delta [fe25519 add mul sub Let_In] in mul.
 
     Definition ge25519_mul' (P Q: @interp_type Z FE) :
         { r: @HL.expr Z (@interp_type Z) FE
@@ -191,15 +194,14 @@ Module GF25519.
   End MulExpr.
 
   Module OppExpr <: Expression.
-    Definition bits: nat := 64.
+    Definition bits: nat := bits.
     Definition inputs: nat := 10.
-    Definition width: Width bits := W64.
+    Definition width: Width bits := width.
     Definition ResultType := FE.
-    Definition inputUpperBounds: list (@WordRangeOpt bits) :=
-      makeBoundList 10 (makeRange 0 (Z.of_N (Npow2 28))).
+    Definition inputUpperBounds: list (@WordRangeOpt bits) := feBound.
 
     Definition ge25519_opp_expr :=
-        Eval cbv beta delta [fe25519 add mul sub opp Let_In twice_d] in opp.
+        Eval cbv beta delta [fe25519 add mul sub opp Let_In] in opp.
 
     Definition ge25519_opp' (P: @interp_type Z FE) :
         { r: @HL.expr Z (@interp_type Z) FE
