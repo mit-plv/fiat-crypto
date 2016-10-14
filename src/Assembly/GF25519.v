@@ -6,8 +6,8 @@ Require Import Crypto.Specific.GF25519.
 Require Import Crypto.Util.Tuple.
 
 Module GF25519.
-  Definition bits: nat := 32.
-  Definition width: Width bits := W32.
+  Definition bits: nat := 64.
+  Definition width: Width bits := W64.
 
   Fixpoint makeBoundList {n} k (b: @WordRangeOpt n) :=
     match k with
