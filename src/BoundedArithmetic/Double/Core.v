@@ -65,7 +65,11 @@ Section tuple2.
             {selc : select_conditional W}.
 
     Definition select_conditional_double (b : bool) (x : tuple W 2) (y : tuple W 2) : tuple W 2
-      := (selc b (fst x) (fst y), selc b (snd x) (snd y)).
+      := dlet x := x in
+         dlet y := y in
+         let (x1, x2) := eta x in
+         let (y1, y2) := eta y in
+         (selc b x1 x1, selc b x2 y2).
 
     Global Instance selc_double : select_conditional (tuple W 2)
       := { selc := select_conditional_double }.
@@ -89,7 +93,11 @@ Section tuple2.
             {or : bitwise_or W}.
 
     Definition bitwise_or_double (x : tuple W 2) (y : tuple W 2) : tuple W 2
-      := (or (fst x) (fst y), or (snd x) (snd y)).
+      := dlet x := x in
+         dlet y := y in
+         let (x1, x2) := eta x in
+         let (y1, y2) := eta y in
+         (or x1 x1, or x2 y2).
 
     Global Instance or_double : bitwise_or (tuple W 2)
       := { or := bitwise_or_double }.
@@ -100,7 +108,11 @@ Section tuple2.
             {and : bitwise_and W}.
 
     Definition bitwise_and_double (x : tuple W 2) (y : tuple W 2) : tuple W 2
-      := (and (fst x) (fst y), and (snd x) (snd y)).
+      := dlet x := x in
+         dlet y := y in
+         let (x1, x2) := eta x in
+         let (y1, y2) := eta y in
+         (and x1 x1, and x2 y2).
 
     Global Instance and_double : bitwise_and (tuple W 2)
       := { and := bitwise_and_double }.
@@ -113,7 +125,8 @@ Section tuple2.
             {shr : shift_right_immediate W}.
 
     Definition spread_left_from_shift (r : W) (count : Z) : tuple W 2
-      := (shl r count, if count =? 0 then ldi 0 else shr r (n - count)).
+      := dlet r := r in
+         (shl r count, if count =? 0 then ldi 0 else shr r (n - count)).
 
     (** Require a [decoder] instance to aid typeclass search in
         resolving [n] *)
@@ -129,27 +142,31 @@ Section tuple2.
             {or : bitwise_or W}.
 
     Definition shift_left_immediate_double (r : tuple W 2) (count : Z) : tuple W 2
-      := (if count =? 0
-          then fst r
+      := dlet r := r in
+         let (r1, r2) := eta r in
+         (if count =? 0
+          then r1
           else if count <? n
-               then shl (fst r) count
+               then shl r1 count
                else ldi 0,
           if count =? 0
-          then snd r
+          then r2
           else if count <? n
-               then or (shr (fst r) (n - count)) (shl (snd r) count)
-               else shl (fst r) (count - n)).
+               then or (shr r1 (n - count)) (shl r2 count)
+               else shl r1 (count - n)).
 
     Definition shift_right_immediate_double (r : tuple W 2) (count : Z) : tuple W 2
-      := (if count =? 0
-          then fst r
+      := dlet r := r in
+         let (r1, r2) := eta r in
+         (if count =? 0
+          then r1
           else if count <? n
-               then or (shr (fst r) count) (shl (snd r) (n - count))
-               else shr (snd r) (count - n),
+               then or (shr r1 count) (shl r2 (n - count))
+               else shr r2 (count - n),
           if count =? 0
-          then snd r
+          then r2
           else if count <? n
-               then shr (snd r) count
+               then shr r2 count
                else ldi 0).
 
     (** Require a [decoder] instance to aid typeclass search in
@@ -166,20 +183,24 @@ Section tuple2.
             {shrd : shift_right_doubleword_immediate W}.
 
     Definition shift_right_doubleword_immediate_double (high low : tuple W 2) (count : Z) : tuple W 2
-      := (if count =? 0
-          then fst low
+      := dlet high := high in
+         dlet low := low in
+         let (high1, high2) := eta high in
+         let (low1, low2) := eta low in
+         (if count =? 0
+          then low1
           else if count <? n
-               then shrd (snd low) (fst low) count
+               then shrd low2 low1 count
                else if count <? 2 * n
-                    then shrd (fst high) (snd low) (count - n)
-                    else shrd (snd high) (fst high) (count - 2 * n),
+                    then shrd high1 low2 (count - n)
+                    else shrd high2 high1 (count - 2 * n),
           if count =? 0
-          then snd low
+          then low2
           else if count <? n
-               then shrd (fst high) (snd low) count
+               then shrd high1 low2 count
                else if count <? 2 * n
-                    then shrd (snd high) (fst high) (count - n)
-                    else shrd (ldi 0) (snd high) (count - 2 * n)).
+                    then shrd high2 high1 (count - n)
+                    else shrd (ldi 0) high2 (count - 2 * n)).
 
     (** Require a [decoder] instance to aid typeclass search in
         resolving [n] *)
