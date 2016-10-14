@@ -128,17 +128,17 @@ Module GF25519.
     Eval vm_compute in (liftN CompileHL.compile hlProg).
 
   Definition wordProg: NAry 80 (@CompileLL.WArg bits TT) (@LL.expr _ _ ResultType) :=
-    Eval vm_compute in NArgMap (fun x => Z.of_N (wordToN (LL.interp_arg (t := TT) x))) (
-      liftN (LLConversions.convertZToWord bits) llProg).
+    Eval vm_compute in (NArgMap (fun x => Z.of_N (wordToN (LL.interp_arg (t := TT) x))) (
+      liftN (LLConversions.convertZToWord bits) llProg)).
 
   Definition qhasmProg :=
-    Eval vm_compute in CompileLL.compile (w := width) wordProg.
+    Eval vm_compute in (CompileLL.compile (w := width) wordProg).
 
   Definition qhasmString: option string :=
-    Eval vm_compute in match qhasmProg with
+    Eval vm_compute in (match qhasmProg with
     | Some (p, _) => StringConversion.convertProgram p
     | None => None
-    end.
+    end).
 
   Section BoundsCheck.
     Definition R := @WordRangeOpt bits.
