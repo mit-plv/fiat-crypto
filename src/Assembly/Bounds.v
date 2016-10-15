@@ -152,6 +152,57 @@ Section Bounds.
         simpl; intuition.
   Qed.
 
+  Lemma wminus_bound: forall {n} (x y: word n) low0 high0 low1 high1,
+     (low0 <= wordToN x)%N -> (wordToN x <= high0)%N
+   -> (low1 <= wordToN y)%N -> (wordToN y <= high1)%N
+   -> (&x >= &y)%N -> (& (x ^- y) <= high0 - low1)%N.
+  Proof.
+    intros.
+
+    destruct (Nge_dec 0%N (&y)). {
+      unfold wminus, wneg.
+      replace (& y) with 0%N in * by nomega.
+      replace low1 with 0%N by (symmetry; apply N.le_0_r; assumption).
+      replace (Npow2 n - 0)%N with (& (wzero n) + Npow2 n)%N
+        by (rewrite wordToN_zero; nomega).
+      rewrite <- Npow2_ignore.
+      rewrite wplus_comm.
+      rewrite wplus_unit.
+      replace (high0 - 0)%N with high0 by nomega; assumption.
+    }
+
+    assert (& x - & y < Npow2 n)%N. {
+      transitivity (wordToN x);
+        try apply word_size_bound;
+        apply N.sub_lt;
+        [apply N.ge_le|]; assumption.
+    }
+
+    assert (& x - & y + & y < Npow2 n)%N. {
+      replace (& x - & y + & y)%N
+        with (wordToN x) by nomega;
+        apply word_size_bound.
+    }
+
+    assert (x = NToWord n (wordToN x - wordToN y) ^+ y) as Hv. {
+      apply NToWord_equal.
+      rewrite <- wordize_plus; rewrite wordToN_NToWord; try assumption.
+      nomega.
+    }
+
+    rewrite Hv.
+    unfold wminus.
+    rewrite <- wplus_assoc.
+    rewrite wminus_inv.
+    rewrite wplus_comm.
+    rewrite wplus_unit.
+    rewrite wordToN_NToWord; try assumption.
+
+    transitivity (high0 - & y)%N;
+    [apply N.sub_le_mono_r | apply N.sub_le_mono_l];
+    assumption.
+  Qed.
+
   Lemma shiftr_bound : forall {n} (w : word n) b bits,
       (&w < b)%N
     -> (&(shiftr w bits) < N.succ (N.shiftr_nat b bits))%N.

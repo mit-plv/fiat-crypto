@@ -337,9 +337,9 @@ Module LLConversions.
         unfold interp_binop, esub, WordRangeOptEvaluable in H.
         unfold applyBinOp, makeRange in *; simpl in *; unfold id in *.
         kill_ineq.
-
-        admit.
-
+        rewrite <- Z2N.inj_sub; [|assumption].
+        rewrite Z2N.id; [reflexivity|].
+        nomega.
 
       - simpl; unfold getUpperBoundOpt.
         repeat rewrite convertArg_interp in H.
@@ -415,7 +415,20 @@ Module LLConversions.
         unfold makeRange in H.
         kill_ineq; unfold id in *.
 
-        admit. (* TODO: wordize_minus *)
+        rewrite (Z2N.id (interp_arg x)) in *; try assumption.
+        rewrite (Z2N.id (interp_arg y)) in *; try assumption.
+
+        rewrite <- wordize_minus;
+          repeat rewrite wordToN_NToWord;
+          try (apply N2Z.inj_lt; rewrite Z2N.id; assumption).
+
+        + rewrite <- Z2N.inj_sub; try assumption.
+          rewrite Z2N.id; [reflexivity|].
+          nomega.
+
+        + apply N.le_ge.
+          apply -> Z2N.inj_le; try assumption.
+          apply Z.ge_le; assumption.
 
       - simpl; unfold getUpperBoundOpt; simpl in H.
         rewrite applyBinOp_constr_spec in H; simpl in H.
@@ -474,8 +487,30 @@ Module LLConversions.
         rewrite <- wordize_shiftr.
         rewrite <- (Nat2N.id (wordToNat _)).
         rewrite Nshiftr_nat_equiv.
+        apply Z.bits_inj_iff; unfold Z.eqf; intro k.
+        destruct (Z_ge_dec k 0%Z) as [G|G].
 
-    Admitted.
+        + apply Z.ge_le in G.
+          rewrite Z2N.inj_testbit; try assumption.
+          rewrite Z.shiftr_spec; try assumption.
+          rewrite N.shiftr_spec;
+            [|apply N2Z.inj_le; simpl; rewrite Z2N.id; assumption].
+          rewrite <- wordToN_nat.
+          repeat rewrite wordToN_NToWord;
+            try (apply N2Z.inj_lt; rewrite Z2N.id; assumption).
+          rewrite <- N2Z.inj_testbit.
+          rewrite N2Z.inj_add.
+          repeat rewrite Z2N.id; try assumption.
+          reflexivity.
+        
+        + assert (k < 0)%Z by (
+            unfold Z.lt; unfold Z.ge in G;
+            induction (Z.compare k 0%Z);
+            [| reflexivity |];
+            contradict G; intro G; inversion G).
+
+          repeat rewrite Z.testbit_neg_r; [reflexivity| |]; assumption.
+    Qed.
 
     Lemma check_zero: forall {n}, @check n TT (@convertExpr Z _ ZEvaluable (@WordRangeOptEvaluable n) TT (Return (Const 0%Z))).
     Proof.

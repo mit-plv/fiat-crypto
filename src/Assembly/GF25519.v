@@ -48,28 +48,28 @@ Module GF25519.
         { r: @HL.expr Z (@interp_type Z) FE
         | HL.interp (E := ZEvaluable) (t := FE) r = ge25519_add_expr P Q }.
     Proof.
-        vm_compute in P, Q; repeat
+      vm_compute in P, Q; repeat
         match goal with
         | [x:?T |- _] =>
-            lazymatch T with
-            | Z => fail
-            | prod _ _ => destruct x
-            | _ => clear x
-            end
+          lazymatch T with
+          | Z => fail
+          | prod _ _ => destruct x
+          | _ => clear x
+          end
         end.
 
-        eexists.
-        cbv beta delta [ge25519_add_expr].
+      eexists.
+      cbv beta delta [ge25519_add_expr].
 
-        let R := HL.rhs_of_goal in
-        let X := HL.reify (@interp_type Z) R in
-        transitivity (HL.interp (E := ZEvaluable) (t := ResultType) X);
+      let R := HL.rhs_of_goal in
+      let X := HL.reify (@interp_type Z) R in
+      transitivity (HL.interp (E := ZEvaluable) (t := ResultType) X);
         [reflexivity|].
 
-        cbv iota beta delta [
+      cbv iota beta delta [
             interp_type interp_binop HL.interp
             Z.land ZEvaluable eadd esub emul eshiftr eand].
-        reflexivity.
+      reflexivity.
     Defined.
 
     Definition ge25519_add (P Q: @interp_type Z ResultType) :=
@@ -101,28 +101,28 @@ Module GF25519.
         { r: @HL.expr Z (@interp_type Z) FE
         | HL.interp (E := ZEvaluable) (t := FE) r = ge25519_sub_expr P Q }.
     Proof.
-        vm_compute in P, Q; repeat
+      vm_compute in P, Q; repeat
         match goal with
         | [x:?T |- _] =>
-            lazymatch T with
-            | Z => fail
-            | prod _ _ => destruct x
-            | _ => clear x
-            end
+          lazymatch T with
+          | Z => fail
+          | prod _ _ => destruct x
+          | _ => clear x
+          end
         end.
 
-        eexists.
-        cbv beta delta [ge25519_sub_expr].
+      eexists.
+      cbv beta delta [ge25519_sub_expr].
 
-        let R := HL.rhs_of_goal in
-        let X := HL.reify (@interp_type Z) R in
-        transitivity (HL.interp (E := ZEvaluable) (t := ResultType) X);
+      let R := HL.rhs_of_goal in
+      let X := HL.reify (@interp_type Z) R in
+      transitivity (HL.interp (E := ZEvaluable) (t := ResultType) X);
         [reflexivity|].
 
-        cbv iota beta delta [
-            interp_type interp_binop HL.interp
-            Z.land ZEvaluable eadd esub emul eshiftr eand].
-        reflexivity.
+      cbv iota beta delta [
+        interp_type interp_binop HL.interp
+        Z.land ZEvaluable eadd esub emul eshiftr eand].
+      reflexivity.
     Defined.
 
     Definition ge25519_sub (P Q: @interp_type Z ResultType) :=
@@ -154,28 +154,28 @@ Module GF25519.
         { r: @HL.expr Z (@interp_type Z) FE
         | HL.interp (E := ZEvaluable) (t := FE) r = ge25519_mul_expr P Q }.
     Proof.
-        vm_compute in P, Q; repeat
+      vm_compute in P, Q; repeat
         match goal with
         | [x:?T |- _] =>
-            lazymatch T with
-            | Z => fail
-            | prod _ _ => destruct x
-            | _ => clear x
-            end
-        end.
+          lazymatch T with
+          | Z => fail
+          | prod _ _ => destruct x
+          | _ => clear x
+          end
+      end.
 
-        eexists.
-        cbv beta delta [ge25519_mul_expr].
+      eexists.
+      cbv beta delta [ge25519_mul_expr].
 
-        let R := HL.rhs_of_goal in
-        let X := HL.reify (@interp_type Z) R in
-        transitivity (HL.interp (E := ZEvaluable) (t := ResultType) X);
+      let R := HL.rhs_of_goal in
+      let X := HL.reify (@interp_type Z) R in
+      transitivity (HL.interp (E := ZEvaluable) (t := ResultType) X);
         [reflexivity|].
 
-        cbv iota beta delta [
-            interp_type interp_binop HL.interp
-            Z.land ZEvaluable eadd esub emul eshiftr eand].
-        reflexivity.
+      cbv iota beta delta [
+        interp_type interp_binop HL.interp
+        Z.land ZEvaluable eadd esub emul eshiftr eand].
+      reflexivity.
     Defined.
 
     Definition ge25519_mul (P Q: @interp_type Z ResultType) :=
@@ -207,28 +207,28 @@ Module GF25519.
         { r: @HL.expr Z (@interp_type Z) FE
         | HL.interp (E := ZEvaluable) (t := FE) r = ge25519_opp_expr P }.
     Proof.
-        vm_compute in P; repeat
+      vm_compute in P; repeat
         match goal with
         | [x:?T |- _] =>
-            lazymatch T with
-            | Z => fail
-            | prod _ _ => destruct x
-            | _ => clear x
-            end
+          lazymatch T with
+          | Z => fail
+          | prod _ _ => destruct x
+          | _ => clear x
+          end
         end.
 
-        eexists.
-        cbv beta delta [ge25519_opp_expr zero_].
+      eexists.
+      cbv beta delta [ge25519_opp_expr zero_].
 
-        let R := HL.rhs_of_goal in
-        let X := HL.reify (@interp_type Z) R in
-        transitivity (HL.interp (E := ZEvaluable) (t := ResultType) X);
+      let R := HL.rhs_of_goal in
+      let X := HL.reify (@interp_type Z) R in
+      transitivity (HL.interp (E := ZEvaluable) (t := ResultType) X);
         [reflexivity|].
 
-        cbv iota beta delta [
-            interp_type interp_binop HL.interp
-            Z.land ZEvaluable eadd esub emul eshiftr eand].
-        reflexivity.
+      cbv iota beta delta [
+        interp_type interp_binop HL.interp
+        Z.land ZEvaluable eadd esub emul eshiftr eand].
+      reflexivity.
     Defined.
 
     Definition ge25519_opp (P: @interp_type Z ResultType) :=

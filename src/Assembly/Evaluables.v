@@ -286,7 +286,7 @@ Section RangeUpdate.
       | [|- (wordToN _ < Npow2 _)%N] => apply word_size_bound
       | [|- (?x - _ < Npow2)%N] => transitivity x; [nomega|]
       | [|- (_ - ?x <= wordToN _)%N] => apply bWSub_lem
-      | [|- (wordToN _ <= _ - _)%N] => eapply wordize_sub
+      | [|- (wordToN _ <= _ - _)%N] => eapply wminus_bound
       | [|- (0 <= _)%N] => apply N_ge_0
       end; try eassumption.
 

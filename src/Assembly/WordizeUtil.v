@@ -806,23 +806,20 @@ Section TopLevel.
       apply wordize_plus; assumption.
   Qed.
 
-  Lemma wordize_sub: forall {n} (x y: word n) low0 high0 low1 high1,
-     (low0 <= wordToN x)%N -> (wordToN x <= high0)%N
-   -> (low1 <= wordToN y)%N -> (wordToN y <= high1)%N
-   -> (&x >= &y)%N -> (& (x ^- y) <= high0 - low1)%N.
+  Lemma wordize_minus: forall {n} (x y: word n),
+      (&x >= &y)%N -> (&x - &y)%N = &(x ^- y).
   Proof.
-    intros.
+    intros n x y H.
 
     destruct (Nge_dec 0%N (&y)). {
       unfold wminus, wneg.
       replace (& y) with 0%N in * by nomega.
-      replace low1 with 0%N by (symmetry; apply N.le_0_r; assumption).
       replace (Npow2 n - 0)%N with (& (wzero n) + Npow2 n)%N
         by (rewrite wordToN_zero; nomega).
       rewrite <- Npow2_ignore.
       rewrite wplus_comm.
       rewrite wplus_unit.
-      replace (high0 - 0)%N with high0 by nomega; assumption.
+      nomega.
     }
 
     assert (& x - & y < Npow2 n)%N. {
@@ -844,17 +841,15 @@ Section TopLevel.
       nomega.
     }
 
-    rewrite Hv.
+    symmetry.
+    rewrite Hv at 1.
     unfold wminus.
-    rewrite <- wplus_assoc.
+    repeat rewrite <- wplus_assoc.
     rewrite wminus_inv.
     rewrite wplus_comm.
     rewrite wplus_unit.
     rewrite wordToN_NToWord; try assumption.
-
-    transitivity (high0 - & y)%N;
-    [apply N.sub_le_mono_r | apply N.sub_le_mono_l];
-    assumption.
+    reflexivity.
   Qed.
 
   Lemma wordize_mult: forall {n} (x y: word n),
