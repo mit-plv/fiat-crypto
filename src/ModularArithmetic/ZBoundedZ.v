@@ -44,6 +44,7 @@ Local Ltac t_step :=
         | progress autorewrite with push_Zpow Zshift_to_pow in *
         | rewrite Z.pow2_mod_spec by omega
         | progress Z.ltb_to_lt
+        | progress unfold Let_In in *
         | solve [ auto with zarith ]
         | nia
         | progress break_match ].
