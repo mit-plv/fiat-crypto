@@ -3,6 +3,7 @@ Require Import Coq.ZArith.ZArith Coq.micromega.Psatz.
 Require Import Crypto.ModularArithmetic.ZBounded.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Notations.
 
 Local Open Scope Z_scope.
@@ -17,10 +18,11 @@ Global Instance ZZLikeOps small_bound_exp smaller_bound_exp modulus : ZLikeOps (
        DivBy_SmallBound x := Z.shiftr x small_bound_exp;
        DivBy_SmallerBound x := Z.shiftr x smaller_bound_exp;
        Mul x y := (x * y)%Z;
-       CarryAdd x y := ((2^small_bound_exp * 2^small_bound_exp <=? x + y), Z.pow2_mod (x + y) (2 * small_bound_exp));
-       CarrySubSmall x y := (x - y <? 0, Z.pow2_mod (x - y) small_bound_exp);
-       ConditionalSubtract b x := if b then Z.pow2_mod (x - modulus) small_bound_exp else x;
-       ConditionalSubtractModulus x := if x <? modulus then x else x - modulus }.
+       CarryAdd x y := dlet xpy := x + y in
+                       ((2^small_bound_exp * 2^small_bound_exp <=? xpy), Z.pow2_mod xpy (2 * small_bound_exp));
+       CarrySubSmall x y := dlet xmy := x - y in (xmy <? 0, Z.pow2_mod xmy small_bound_exp);
+       ConditionalSubtract b x := dlet x := x in if b then Z.pow2_mod (x - modulus) small_bound_exp else x;
+       ConditionalSubtractModulus x := dlet x := x in if x <? modulus then x else x - modulus }.
 
 Local Arguments Z.mul !_ !_.
 
@@ -28,7 +30,7 @@ Class cls_is_true (x : bool) := build_is_true : x = true.
 Hint Extern 1 (cls_is_true ?b) => vm_compute; reflexivity : typeclass_instances.
 
 Local Ltac pre_t :=
-  unfold cls_is_true in *; Z.ltb_to_lt;
+  unfold cls_is_true, Let_In in *; Z.ltb_to_lt;
   match goal with
   | [ H : ?smaller_bound_exp <= ?small_bound_exp |- _ ]
     => is_var smaller_bound_exp; is_var small_bound_exp;
