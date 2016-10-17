@@ -25,7 +25,7 @@ Require Crypto.Encoding.PointEncodingPre.
    ERepDec_correct := Kdecode_point_correct
 *)
 
-Section PointEncoding. 
+Section PointEncoding.
   Context {b : nat} {m : Z} {Fa Fd : F m} {prime_m : Znumtheory.prime m}
           {bound_check : (Z.to_nat m < 2 ^ b)%nat}.
 
@@ -69,7 +69,7 @@ Section PointEncoding.
     Context {Kp2c_c2p : forall P pf, Tuple.fieldwise (n := 2) Keq (Kpoint_to_coord (Kcoord_to_point P pf)) P}.
     Context {Kpoint_eq : Kpoint -> Kpoint -> Prop} {Kpoint_add : Kpoint -> Kpoint -> Kpoint}.
     Context {Kpoint_eq_correct : forall p q, Kpoint_eq p q <-> Tuple.fieldwise (n := 2) Keq (Kpoint_to_coord p) (Kpoint_to_coord q)} {Kpoint_eq_Equivalence : Equivalence Kpoint_eq}.
-    
+
     Context {Fprm:@E.twisted_edwards_params (F m) eq F.zero F.one F.add F.mul Fa Fd}.
     Context {Kprm:@E.twisted_edwards_params K Keq Kzero Kone Kadd Kmul Ka Kd}.
     Context {phi_bijective : forall x y, Keq (phi x) (phi y) <-> x = y}.
@@ -134,7 +134,7 @@ Section PointEncoding.
       apply Proper_point_phi.
     Qed.
 
-    Definition Kencode_point (P : Kpoint) := 
+    Definition Kencode_point (P : Kpoint) :=
       let '(x,y) := Kpoint_to_coord P in WS (Ksign x) (Kenc y).
 
     Lemma Kencode_point_correct : forall P : Fpoint,
@@ -160,8 +160,8 @@ Section PointEncoding.
       simpl in H; destruct H.
       f_equal; auto.
     Qed.
-      
- 
+
+
     Definition Kcoordinates_from_y sign_bit (y : K) : option (K * K) :=
       let x2 := @E.solve_for_x2 _ Kone Ksub Kmul Kdiv Ka Kd y in
       let x := Ksqrt x2 in
@@ -172,7 +172,7 @@ Section PointEncoding.
           then None
           else Some p
       else None.
- 
+
     Definition Kdecode_coordinates (w : word (S b)) : option (K * K) :=
       option_rect (fun _ => option (K * K))
                   (Kcoordinates_from_y (whd w))
@@ -184,9 +184,9 @@ Section PointEncoding.
           (Kadd Kone (Kmul (Kmul Kd (Kmul x x)) (Kmul y y))) ->
       @Pre.onCurve _ Keq Kone Kadd Kmul Ka Kd (x,y).
     Proof.
-      tauto.
+      clear; tauto.
     Qed.
-        
+
     Definition Kpoint_from_xy (xy : K * K) : option Kpoint :=
       let '(x,y) := xy in
       match Decidable.dec (Keq (Kadd (Kmul Ka (Kmul x x)) (Kmul y y))
@@ -248,7 +248,7 @@ Section PointEncoding.
       repeat break_match; try tauto; try reflexivity; try discriminate;
         etransitivity; eauto.
     Qed.
-    
+
     Notation Fdecode_coordinates :=( @PointEncodingPre.point_dec_coordinates
                            _ eq F.zero F.one F.opp F.sub F.mul F.div
                            _ Fa Fd _ Fsqrt Fencoding sign).
@@ -285,7 +285,7 @@ Section PointEncoding.
         _ Fa Fd Fsqrt sign).
 
     Definition coord_phi (p : F m* F m) := let '(x, y) := p in (phi x, phi y).
- 
+
     Lemma Kcoordinates_from_y_correct : forall sign_bit y,
       option_eq (Tuple.fieldwise (n := 2) Keq)
         (Kcoordinates_from_y sign_bit (phi y))
@@ -345,7 +345,7 @@ Section PointEncoding.
       cbv [Kcoordinates_from_y].
       match goal with |- option_eq _ (if ?A then _ else _) (if ?B then _ else _) =>
                       destruct A as [keq | keq]; rewrite H0 in keq;
-                        destruct B; try congruence; try reflexivity end. 
+                        destruct B; try congruence; try reflexivity end.
       destruct y; rewrite ?Bool.andb_true_r, ?Bool.andb_false_r;
         break_if; repeat break_if;
           rewrite ?@PointEncodingPre.F_eqb_iff, <-?@PointEncodingPre.F_eqb_false,
@@ -355,7 +355,7 @@ Section PointEncoding.
                                                                  congruence end;
         simpl; rewrite H0; intuition reflexivity.
     Qed.
- 
+
     Lemma Kdecode_coordinates_correct : forall w,
       option_eq (Tuple.fieldwise (n := 2) Keq)
       (Kdecode_coordinates w)
@@ -372,7 +372,7 @@ Section PointEncoding.
       + apply Kcoordinates_from_y_correct.
     Qed.
 
-    Lemma Kpoint_from_xy_correct : forall xy, 
+    Lemma Kpoint_from_xy_correct : forall xy,
       option_eq Kpoint_eq
         (Kpoint_from_xy (coord_phi xy))
         (option_map point_phi (PointEncodingPre.point_from_xy xy)).
@@ -413,7 +413,7 @@ Section PointEncoding.
         break_match; congruence.
       }
     Qed.
- 
+
     Lemma Kdecode_point_correct : forall w,
         option_eq Kpoint_eq (Kdecode_point w) (option_map point_phi (Fdecode_point w)).
     Proof.
@@ -429,4 +429,4 @@ Section PointEncoding.
 
   End RepChange.
 
-End PointEncoding. 
+End PointEncoding.
