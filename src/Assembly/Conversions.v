@@ -16,6 +16,13 @@ Require Import Coq.ZArith.Znat.
 
 Require Import Coq.NArith.Nnat Coq.NArith.Ndigits.
 
+Definition typeMap {A B t} (f: A -> B) (x: @interp_type A t): @interp_type B t.
+Proof.
+  induction t; [refine (f x)|].
+  destruct x as [x1 x2].
+  refine (IHt1 x1, IHt2 x2).
+Defined.
+
 Module HLConversions.
   Import HL.
 
@@ -68,30 +75,18 @@ Module HLConversions.
   Definition convertZToWord {t} n v a :=
     @convertExpr Z (word n) ZEvaluable (@WordEvaluable n) t v a.
 
-  Definition convertZToWordRangeOpt {t} n v a :=
-    @convertExpr Z (@WordRangeOpt n) ZEvaluable (@WordRangeOptEvaluable n) t v a.
-
-  Definition convertZToWord' {t} n a :=
-    @convertExpr' Z (word n) ZEvaluable (@WordEvaluable n) t a.
-
-  Definition convertZToWordRangeOpt' {t} n a :=
-    @convertExpr' Z (@WordRangeOpt n) ZEvaluable (@WordRangeOptEvaluable n) t a.
+  Definition convertZToBounded {t} n v a :=
+    @convertExpr Z (option (@BoundedWord n))
+                 ZEvaluable (@BoundedEvaluable n) t v a.
 
   Definition ZToWord {t} n (a: @Expr Z t): @Expr (word n) t :=
     fun v => convertZToWord n v (a v).
 
-  Definition ZToRange {t} n (a: @Expr Z t): @Expr (@WordRangeOpt n) t :=
-    fun v => convertZToWordRangeOpt n v (a v).
+  Definition ZToRange {t} n (a: @Expr Z t): @Expr (option (@BoundedWord n)) t :=
+    fun v => convertZToBounded n v (a v).
 
-  Definition typeMap {A B t} (f: A -> B) (x: @interp_type A t): @interp_type B t.
-  Proof.
-    induction t; [refine (f x)|].
-    destruct x as [x1 x2].
-    refine (IHt1 x1, IHt2 x2).
-  Defined.
-
-  Definition RangeInterp {n t} E: @interp_type (option (Range N)) t :=
-    typeMap rangeEval (@Interp (@WordRangeOpt n) (@WordRangeOptEvaluable n) t E).
+  Definition BInterp {n t} E: @interp_type (option (@BoundedWord n)) t :=
+    @Interp (option (@BoundedWord n)) (@BoundedEvaluable n) t E.
 
   Example example_Expr : Expr TT := fun var => (
     Let (Const 7) (fun a =>
@@ -100,7 +95,7 @@ Module HLConversions.
           Binop OPadd (Var x) (Var y)))))%Z.
 
   Example interp_example_range :
-    RangeInterp (ZToRange 32 example_Expr) = Some (range N 28%N 28%N).
+    option_map high (BInterp (ZToRange 32 example_Expr)) = Some 28%N.
   Proof. reflexivity. Qed.
 End HLConversions.
 
@@ -142,31 +137,24 @@ Module LLConversions.
   Definition convertZToWord {t} n a :=
     @convertExpr Z (word n) ZEvaluable (@WordEvaluable n) t a.
 
-  Definition convertZToWordRangeOpt {t} n a :=
-    @convertExpr Z (@WordRangeOpt n) ZEvaluable (@WordRangeOptEvaluable n) t a.
-
-  Definition typeMap {A B t} (f: A -> B) (x: @interp_type A t): @interp_type B t.
-  Proof.
-    induction t; [refine (f x)|].
-    destruct x as [x1 x2].
-    refine (IHt1 x1, IHt2 x2).
-  Defined.
+  Definition convertZToBounded {t} n a :=
+    @convertExpr Z (option (@BoundedWord n)) ZEvaluable (@BoundedEvaluable n) t a.
 
   Definition zinterp {t} E := @interp Z ZEvaluable t E.
 
   Definition wordInterp {n t} E := @interp (word n) (@WordEvaluable n) t E.
 
-  Definition rangeInterp {n t} E: @interp_type (@WordRangeOpt n) t :=
-    @interp (@WordRangeOpt n) (@WordRangeOptEvaluable n) t E.
+  Definition rangeInterp {n t} E: @interp_type (option (@BoundedWord n)) t :=
+    @interp (option (@BoundedWord n)) (@BoundedEvaluable n) t E.
 
   Section Correctness.
     (* Aliases to make the proofs easier to read. *)
 
-    Definition varZToRange {n t} (v: @interp_type Z t): @interp_type (@WordRangeOpt n) t :=
-      @convertVar Z (@WordRangeOpt n) ZEvaluable (WordRangeOptEvaluable) t v.
+    Definition varZToBounded {n t} (v: @interp_type Z t): @interp_type (option (@BoundedWord n)) t :=
+      @convertVar Z (option (@BoundedWord n)) ZEvaluable BoundedEvaluable t v.
 
-    Definition varRangeToZ {n t} (v: @interp_type (@WordRangeOpt n) t): @interp_type Z t :=
-      @convertVar (@WordRangeOpt n) Z (WordRangeOptEvaluable) ZEvaluable t v.
+    Definition varBoundedToZ {n t} (v: @interp_type _ t): @interp_type Z t :=
+      @convertVar (option (@BoundedWord n)) Z BoundedEvaluable ZEvaluable t v.
 
     Definition varZToWord {n t} (v: @interp_type Z t): @interp_type (@word n) t :=
       @convertVar Z (@word n) ZEvaluable (@WordEvaluable n) t v.
@@ -178,93 +166,41 @@ Module LLConversions.
                (x: @interp_type Z tx) (y: @interp_type Z ty): @interp_type Z tz :=
       @interp_binop Z ZEvaluable _ _ _ op x y.
 
-    Definition wordOp {n} {tx ty tz: type} (op: binop tx ty tz)
+    Definition wOp {n} {tx ty tz: type} (op: binop tx ty tz)
                (x: @interp_type _ tx) (y: @interp_type _ ty): @interp_type _ tz :=
       @interp_binop (word n) (@WordEvaluable n) _ _ _ op x y.
 
-    Definition rangeOp {n} {tx ty tz: type} (op: binop tx ty tz)
+    Definition bOp {n} {tx ty tz: type} (op: binop tx ty tz)
                (x: @interp_type _ tx) (y: @interp_type _ ty): @interp_type _ tz :=
-      @interp_binop (@WordRangeOpt n) (@WordRangeOptEvaluable n) _ _ _ op x y.
+      @interp_binop (option (@BoundedWord n)) BoundedEvaluable _ _ _ op x y.
 
-    Definition rangeArg {n t} (x: @arg (@WordRangeOpt n) (@WordRangeOpt n) t) := @interp_arg _ _ x.
+    Definition boundedArg {n t} (x: @arg (option (@BoundedWord n)) (option (@BoundedWord n)) t) :=
+      @interp_arg _ _ x.
 
     Definition wordArg {n t} (x: @arg (word n) (word n) t) := @interp_arg _ _ x.
 
     (* Bounds-checking fixpoint *)
 
-    Fixpoint checkVar {n t} (x: @interp_type (@WordRangeOpt n) t) :=
-      match t as t' return (interp_type t') -> Prop with
-      | TT => fun x' =>
-        match (rangeEval x') with
-        | Some (range low high) => True
-        | None => False
-        end
-      | Prod t0 t1 => fun x' =>
-        match x' with
-        | (x0, x1) => (checkVar (n := n) x0) /\ (checkVar (n := n) x1)
-        end
-      end x.
-
-    Fixpoint check {n t} (e : @expr (@WordRangeOpt n) (@WordRangeOpt n) t): Prop :=
-      match e with
-      | LetBinop ta tb tc op a b _ eC =>
-          (@checkVar n tc (rangeOp op (interp_arg a) (interp_arg b)))
-        /\ (check (eC (uninterp_arg (rangeOp op (interp_arg a) (interp_arg b)))))
-      | Return _ a => checkVar (interp_arg a)
-      end.
-
-    (* Bounds-checking fixpoint *)
-
-    Fixpoint checkVar' {n t} (x: @interp_type (@WordRangeOpt n) t) :=
+    Fixpoint checkVar {n t} (x: @interp_type (option (@BoundedWord n)) t) :=
       match t as t' return (interp_type t') -> bool with
       | TT => fun x' =>
-        match (rangeEval x') with
-        | Some (range low high) => true
+        match (x') with
+        | Some _ => true
         | None => false
         end
       | Prod t0 t1 => fun x' =>
         match x' with
-        | (x0, x1) => andb (checkVar' (n := n) x0) (checkVar' (n := n) x1)
+        | (x0, x1) => andb (checkVar (n := n) x0) (checkVar (n := n) x1)
         end
       end x.
 
-    Fixpoint check' {n t} (e : @expr (@WordRangeOpt n) (@WordRangeOpt n) t): bool :=
+    Fixpoint check {n t} (e : @expr (option (@BoundedWord n)) (option (@BoundedWord n)) t): bool :=
       match e with
       | LetBinop ta tb tc op a b _ eC =>
-        andb (@checkVar' n tc (rangeOp op (interp_arg a) (interp_arg b)))
-             (check' (eC (uninterp_arg (rangeOp op (interp_arg a) (interp_arg b)))))
-      | Return _ a => checkVar' (interp_arg a)
+        andb (@checkVar n tc (bOp op (interp_arg a) (interp_arg b)))
+             (check (eC (uninterp_arg (bOp op (interp_arg a) (interp_arg b)))))
+      | Return _ a => checkVar (interp_arg a)
       end.
-
-    Lemma checkVar'_spec: forall {n t} x, @checkVar' n t x = true <-> @checkVar n t x.
-    Proof.
-      intros; induction t; simpl; split; intro C.
-
-      - induction (rangeEval x) as [|a]; try induction a; auto.
-        inversion C.
-
-      - induction (rangeEval x) as [|a]; try induction a; auto.
-
-      - destruct x.
-        apply andb_true_iff in C; destruct C.
-        split; try apply IHt1; try apply IHt2; assumption.
-
-      - destruct x, C.
-        apply andb_true_iff; split;
-          try apply IHt1; try apply IHt2; assumption.
-    Qed.
-
-    Lemma check'_spec: forall {n t} e, @check' n t e = true <-> @check n t e.
-    Proof.
-      intros; induction e; simpl; split; intro C;
-        try abstract (apply checkVar'_spec; assumption).
-
-      - apply andb_true_iff in C; destruct C as [C0 C1]; split;
-          [apply checkVar'_spec | apply H in C1]; assumption.
-
-      - apply andb_true_iff; destruct C as [C0 C1]; split;
-          [apply checkVar'_spec | apply H]; assumption.
-    Qed.
 
     (* Utility Lemmas *)
 
@@ -287,299 +223,79 @@ Module LLConversions.
         reflexivity.
     Qed.
 
-    Ltac kill_N2Z_id :=
-      try match goal with
-      | [H: context[Z.of_N (Z.to_N (interp_arg _))] |- _] => rewrite Z2N.id in H
-      end; try assumption.
-
-    Ltac kill_ineq :=
-      repeat match goal with
-      | [H: context[Z_le_dec ?a ?b] |- _]  => destruct (Z_le_dec a b)
-      | [H: context[Z_lt_dec ?a ?b] |- _]  => destruct (Z_lt_dec a b)
-      end; simpl in *;
-
-      repeat match goal with
-      | [H: context[Nge_dec ?a ?b] |- _]   => destruct (Nge_dec a b)
-      | [H: context[overflows ?a ?b] |- _] => destruct (overflows a b)
-      end; simpl in *; intuition;
-
-      repeat match goal with
-      | [H: (_ >= _)%N |- _] => apply N2Z.inj_ge in H; kill_N2Z_id
-      | [H: (_ < _)%N |- _] => apply N2Z.inj_lt in H; kill_N2Z_id
-      | [H1: (?a < ?b)%Z, H2: (?a >= ?b)%Z |- _] =>
-        unfold Z.lt in H1; unfold Z.ge in H2;
-        apply H2 in H1; intuition
-      end.
-
-    Lemma ZToRange_binop_correct : forall {n tx ty tz} (op: binop tx ty tz) (x: arg tx) (y: arg ty) e,
-        check (t := tz) (convertZToWordRangeOpt n (LetBinop op x y e))
+    Lemma ZToBounded_binop_correct : forall {n tx ty tz} (op: binop tx ty tz) (x: arg tx) (y: arg ty) e,
+        check (t := tz) (convertZToBounded n (LetBinop op x y e)) = true
       -> zOp op (interp_arg x) (interp_arg y) =
-          varRangeToZ (rangeOp (n := n) op (varZToRange (interp_arg x)) (varZToRange (interp_arg y))).
+          varBoundedToZ (bOp (n := n) op (varZToBounded (interp_arg x)) (varZToBounded (interp_arg y))).
     Proof.
-      intros until e; intro H.
-      unfold convertZToWordRangeOpt, convertExpr, check, rangeOp in H.
-      repeat rewrite interp_arg_convert in H; simpl in H.
-      destruct H as [H H0]; clear H0.
-
-      induction op; unfold zOp, varRangeToZ, rangeOp.
-
-      - simpl; unfold getUpperBoundOpt.
-        repeat rewrite convertArg_interp in H.
-        unfold interp_binop, eadd, WordRangeOptEvaluable in H.
-        unfold applyBinOp, makeRange in *; simpl in *; unfold id in *.
-        kill_ineq.
-        rewrite N2Z.inj_add.
-        repeat rewrite Z2N.id; try assumption.
-        reflexivity.
-
-      - simpl; unfold getUpperBoundOpt.
-        repeat rewrite convertArg_interp in H.
-        unfold interp_binop, esub, WordRangeOptEvaluable in H.
-        unfold applyBinOp, makeRange in *; simpl in *; unfold id in *.
-        kill_ineq.
-        rewrite <- Z2N.inj_sub; [|assumption].
-        rewrite Z2N.id; [reflexivity|].
-        nomega.
-
-      - simpl; unfold getUpperBoundOpt.
-        repeat rewrite convertArg_interp in H.
-        unfold interp_binop, emul, WordRangeOptEvaluable in H.
-        unfold applyBinOp, makeRange in *; simpl in *; unfold id in *.
-        kill_ineq.
-
-        rewrite N2Z.inj_mul.
-        repeat rewrite Z2N.id; try assumption.
-        reflexivity.
-
-      - simpl; unfold getUpperBoundOpt.
-        repeat rewrite convertArg_interp in H.
-        unfold interp_binop, eand, WordRangeOptEvaluable in H.
-        unfold applyBinOp, makeRange in *; simpl in *; unfold id in *.
-        kill_ineq.
-
-        admit.
-
-        admit.
-
-      - simpl; unfold getUpperBoundOpt.
-        repeat rewrite convertArg_interp in H.
-        unfold interp_binop, esub, WordRangeOptEvaluable in H.
-        unfold applyBinOp, makeRange in *; simpl in *; unfold id in *.
-        kill_ineq.
-
-        rewrite Z.shiftr_div_pow2; try assumption.
-        rewrite N.shiftr_div_pow2; try assumption.
-        rewrite N2Z.inj_div.
-        rewrite Z2N.id; try assumption.
-        repeat f_equal.
-        rewrite N2Z.inj_pow; simpl; f_equal.
-        rewrite Z2N.id; auto.
-
+      intros until e; intro S; simpl in S; apply andb_true_iff in S; destruct S as [S0 S1].
     Admitted.
 
     Lemma ZToWord_binop_correct : forall {n tx ty tz} (op: binop tx ty tz) (x: arg tx) (y: arg ty) e,
-        check (t := tz) (convertZToWordRangeOpt n (LetBinop op x y e))
+        check (t := tz) (convertZToBounded n (LetBinop op x y e)) = true
       -> zOp op (interp_arg x) (interp_arg y) =
-          varWordToZ (wordOp (n := n) op (varZToWord (interp_arg x)) (varZToWord (interp_arg y))).
+          varWordToZ (wOp (n := n) op (varZToWord (interp_arg x)) (varZToWord (interp_arg y))).
     Proof.
-      intros until e; intro H.
-      unfold convertZToWordRangeOpt, convertExpr, check, rangeOp in H.
-      repeat rewrite convertArg_interp in H; simpl in H.
-      destruct H as [H H0]; clear H0.
+      intros until e; intro S; simpl in S; apply andb_true_iff in S; destruct S as [S0 S1].
+    Admitted.
 
-      induction op; unfold zOp, varRangeToZ, rangeOp.
-
-      - simpl; unfold getUpperBoundOpt; simpl in H.
-        rewrite applyBinOp_constr_spec in H; simpl in H.
-
-        unfold makeRange in H.
-        kill_ineq; unfold id in *.
-
-        rewrite <- wordize_plus.
-
-        + repeat rewrite wordToN_NToWord; try assumption;
-            try abstract (apply N2Z.inj_lt; rewrite Z2N.id; assumption).
-
-          rewrite N2Z.inj_add.
-          repeat rewrite Z2N.id; try assumption.
-          reflexivity.
-
-        + repeat rewrite wordToN_NToWord;
-            apply N2Z.inj_lt;
-            repeat rewrite Z2N.id;
-            assumption.
-
-      - simpl; unfold getUpperBoundOpt; simpl in H.
-        rewrite applyBinOp_constr_spec in H; simpl in H.
-
-        unfold makeRange in H.
-        kill_ineq; unfold id in *.
-
-        rewrite (Z2N.id (interp_arg x)) in *; try assumption.
-        rewrite (Z2N.id (interp_arg y)) in *; try assumption.
-
-        rewrite <- wordize_minus;
-          repeat rewrite wordToN_NToWord;
-          try (apply N2Z.inj_lt; rewrite Z2N.id; assumption).
-
-        + rewrite <- Z2N.inj_sub; try assumption.
-          rewrite Z2N.id; [reflexivity|].
-          nomega.
-
-        + apply N.le_ge.
-          apply -> Z2N.inj_le; try assumption.
-          apply Z.ge_le; assumption.
-
-      - simpl; unfold getUpperBoundOpt; simpl in H.
-        rewrite applyBinOp_constr_spec in H; simpl in H.
-
-        unfold makeRange in H.
-        kill_ineq; unfold id in *.
-
-        rewrite <- wordize_mult.
-
-        + repeat rewrite wordToN_NToWord; try assumption;
-            try abstract (apply N2Z.inj_lt; rewrite Z2N.id; assumption).
-
-          rewrite N2Z.inj_mul.
-          repeat rewrite Z2N.id; try assumption.
-          reflexivity.
-
-        + repeat rewrite wordToN_NToWord;
-            apply N2Z.inj_lt;
-            repeat rewrite Z2N.id;
-            assumption.
-
-      - simpl; unfold getUpperBoundOpt; simpl in H.
-        rewrite applyBinOp_constr_spec in H; simpl in H.
-
-        unfold makeRange in H.
-        kill_ineq; unfold id in *.
-
-        rewrite wordize_and.
-        repeat rewrite wordToN_NToWord;
-          try (apply N2Z.inj_lt; rewrite Z2N.id; assumption).
-
-        apply Z.bits_inj_iff; unfold Z.eqf; intro k.
-        destruct (Z_ge_dec k 0%Z) as [G|G].
-
-        + apply Z.ge_le in G.
-          rewrite Z.land_spec.
-          rewrite Z2N.inj_testbit; try assumption.
-          rewrite N.land_spec.
-          repeat rewrite <- Z2N.inj_testbit; try assumption.
-          repeat rewrite Z2N.id; try assumption; reflexivity.
-
-        + assert (k < 0)%Z by (
-            unfold Z.lt; unfold Z.ge in G;
-            induction (Z.compare k 0%Z);
-            [| reflexivity |];
-            contradict G; intro G; inversion G).
-
-          repeat rewrite Z.testbit_neg_r; [reflexivity| |]; assumption.
-
-      - simpl; unfold getUpperBoundOpt; simpl in H.
-        rewrite applyBinOp_constr_spec in H; simpl in H.
-
-        unfold makeRange in H.
-        kill_ineq; unfold id in *.
-
-        rewrite <- wordize_shiftr.
-        rewrite <- (Nat2N.id (wordToNat _)).
-        rewrite Nshiftr_nat_equiv.
-        apply Z.bits_inj_iff; unfold Z.eqf; intro k.
-        destruct (Z_ge_dec k 0%Z) as [G|G].
-
-        + apply Z.ge_le in G.
-          rewrite Z2N.inj_testbit; try assumption.
-          rewrite Z.shiftr_spec; try assumption.
-          rewrite N.shiftr_spec;
-            [|apply N2Z.inj_le; simpl; rewrite Z2N.id; assumption].
-          rewrite <- wordToN_nat.
-          repeat rewrite wordToN_NToWord;
-            try (apply N2Z.inj_lt; rewrite Z2N.id; assumption).
-          rewrite <- N2Z.inj_testbit.
-          rewrite N2Z.inj_add.
-          repeat rewrite Z2N.id; try assumption.
-          reflexivity.
-        
-        + assert (k < 0)%Z by (
-            unfold Z.lt; unfold Z.ge in G;
-            induction (Z.compare k 0%Z);
-            [| reflexivity |];
-            contradict G; intro G; inversion G).
-
-          repeat rewrite Z.testbit_neg_r; [reflexivity| |]; assumption.
-    Qed.
-
-    Lemma check_zero: forall {n}, @check n TT (@convertExpr Z _ ZEvaluable (@WordRangeOptEvaluable n) TT (Return (Const 0%Z))).
+    Lemma check_zero: forall {n}, @check n TT (@convertExpr Z _ ZEvaluable (@BoundedEvaluable n) TT (Return (Const 0%Z))) = true.
     Proof.
-      intros; simpl; unfold makeRange.
+      intros; simpl; unfold make; simpl.
 
       repeat match goal with
-      | [|- context[Z_le_dec ?A ?B] ] => destruct (Z_le_dec A B)
-      | [|- context[Z_lt_dec ?A ?B] ] => destruct (Z_lt_dec A B)
-      end; simpl; unfold id in *; intuition.
+      | [|- context[Nge_dec ?A ?B] ] => destruct (Nge_dec A B)
+      end; simpl; unfold id in *; intuition; try nomega.
 
-      - match goal with
-        | [A: (0 < Z.of_N (Npow2 n))%Z -> False |- _] =>
-          revert A; intro H
-        end.
-
-        apply H.
-        replace 0%Z with (Z.of_N 0%N) by (cbv; auto).
-        apply -> N2Z.inj_lt.
-        apply Npow2_gt0.
-
-      - match goal with
-        | [A: (0 <= 0)%Z -> False |- _] =>
-          apply A; cbv; intro Q; inversion Q
-        end.
+      rewrite wzero'_def in *.
+      rewrite <- NToWord_zero in *.
+      rewrite wordToN_NToWord in *; try apply Npow2_gt0.
+      nomega.
     Qed.
 
     (* Main correctness guarantee *)
 
     Lemma RangeInterp_correct: forall {n t} (E: expr t),
-         check (convertZToWordRangeOpt n E)
+        check (convertZToBounded n E) = true
       -> typeMap (fun x => NToWord n (Z.to_N x)) (zinterp E) = wordInterp (convertZToWord n E).
     Proof.
       intros n t E S.
-      unfold rangeInterp, convertZToWordRangeOpt, zinterp,
+      unfold rangeInterp, convertZToBounded, zinterp,
              convertZToWord, wordInterp.
 
       induction E as [tx ty tz op x y z|]; simpl; try reflexivity.
 
-      - rewrite H; clear H.
+      - repeat rewrite convertArg_var in *.
+        repeat rewrite convertArg_interp in *.
 
-        + rewrite convertArg_var; repeat f_equal.
-          repeat rewrite convertArg_interp.
-          destruct S as [S0 S1]; unfold convertZToWordRangeOpt in *.
+        simpl in S; apply andb_true_iff in S; destruct S as [S0 S1].
 
-          pose proof (ZToWord_binop_correct (n := n) op x y) as C;
-            unfold zOp, wordOp, varWordToZ, varZToWord in C;
+        rewrite H; clear H; repeat f_equal.
+
+        + pose proof (ZToWord_binop_correct (n := n) op x y) as C;
+            unfold zOp, wOp, varWordToZ, varZToWord in C;
             simpl in C.
 
-          induction op; apply (C (fun _ => Return (Const 0%Z))); clear C; split;
+          induction op; apply (C (fun _ => Return (Const 0%Z))); clear C;
+            try apply andb_true_iff; split;
             try apply check_zero;
-            repeat rewrite convertArg_interp in S0;
-            repeat rewrite convertArg_interp;
             assumption.
 
-        + destruct S as [S0 S1]; unfold convertZToWordRangeOpt.
+        + replace (interp_binop op _ _)
+             with (varBoundedToZ (bOp op
+                    (boundedArg (@convertArg _ _ ZEvaluable (@BoundedEvaluable n) _ x))
+                    (boundedArg (@convertArg _ _ ZEvaluable (@BoundedEvaluable n) _ y))));
+            [unfold varBoundedToZ, boundedArg; rewrite <- convertArg_var; assumption | clear S1].
 
-          replace (interp_binop op _ _)
-             with (varRangeToZ (rangeOp op
-                    (rangeArg (@convertArg _ _ ZEvaluable (@WordRangeOptEvaluable n) _ x))
-                    (rangeArg (@convertArg _ _ ZEvaluable (@WordRangeOptEvaluable n) _ y))));
-            [unfold varRangeToZ, rangeArg; rewrite <- convertArg_var; assumption | clear S1].
-
-          pose proof (ZToRange_binop_correct (n := n) op x y) as C;
-            unfold rangeArg, zOp, wordOp, varZToRange, varRangeToZ, convertZToWordRangeOpt in *;
+          pose proof (ZToBounded_binop_correct (n := n) op x y) as C;
+            unfold boundedArg, zOp, wOp, varZToBounded,
+                   varBoundedToZ, convertZToBounded in *;
             simpl in C.
 
           repeat rewrite convertArg_interp; symmetry.
 
-          induction op; apply (C (fun _ => Return (Const 0%Z))); clear C; split;
+          induction op; apply (C (fun _ => Return (Const 0%Z))); clear C;
+            try apply andb_true_iff; repeat split;
             try apply check_zero;
             repeat rewrite convertArg_interp in S0;
             repeat rewrite convertArg_interp;
@@ -587,7 +303,7 @@ Module LLConversions.
 
       - simpl in S.
         induction a as [| |t0 t1 a0 IHa0 a1 IHa1]; simpl in *; try reflexivity.
-        destruct S; rewrite IHa0, IHa1; try reflexivity; assumption.
+        apply andb_true_iff in S; destruct S; rewrite IHa0, IHa1; try reflexivity; assumption.
     Qed.
   End Correctness.
 End LLConversions.
@@ -606,22 +322,24 @@ Section ConversionTest.
 
   Definition testCase := Eval vm_compute in KeepAddingOne 4000.
 
-  Eval vm_compute in RangeInterp (ZToRange 0 testCase).
-  Eval vm_compute in RangeInterp (ZToRange 1 testCase).
-  Eval vm_compute in RangeInterp (ZToRange 10 testCase).
-  Eval vm_compute in RangeInterp (ZToRange 32 testCase).
-  Eval vm_compute in RangeInterp (ZToRange 64 testCase).
-  Eval vm_compute in RangeInterp (ZToRange 128 testCase).
+  (* Test Cases
+  Eval vm_compute in BInterp (ZToRange 0 testCase).
+  Eval vm_compute in BInterp (ZToRange 1 testCase).
+  Eval vm_compute in BInterp (ZToRange 10 testCase).
+  Eval vm_compute in BInterp (ZToRange 32 testCase).
+  Eval vm_compute in BInterp (ZToRange 64 testCase).
+  Eval vm_compute in BInterp (ZToRange 128 testCase). *)
 
   Definition nefarious : Expr (T := Z) TT :=
     fun var => Let (Binop OPadd (Const 10%Z) (Const 20%Z))
                    (fun y => Binop OPmul (Var y) (Const 0%Z)).
 
-  Eval vm_compute in RangeInterp (ZToRange 0 nefarious).
-  Eval vm_compute in RangeInterp (ZToRange 1 nefarious).
-  Eval vm_compute in RangeInterp (ZToRange 4 nefarious).
-  Eval vm_compute in RangeInterp (ZToRange 5 nefarious).
-  Eval vm_compute in RangeInterp (ZToRange 32 nefarious).
-  Eval vm_compute in RangeInterp (ZToRange 64 nefarious).
-  Eval vm_compute in RangeInterp (ZToRange 128 nefarious).
+  (* Test Cases
+  Eval vm_compute in BInterp (ZToRange 0 nefarious).
+  Eval vm_compute in BInterp (ZToRange 1 nefarious).
+  Eval vm_compute in BInterp (ZToRange 4 nefarious).
+  Eval vm_compute in BInterp (ZToRange 5 nefarious).
+  Eval vm_compute in BInterp (ZToRange 32 nefarious).
+  Eval vm_compute in BInterp (ZToRange 64 nefarious).
+  Eval vm_compute in BInterp (ZToRange 128 nefarious). *)
 End ConversionTest.

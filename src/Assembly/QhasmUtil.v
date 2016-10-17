@@ -74,7 +74,10 @@ Section Util.
     x ^+ y ^+ (natToWord _ (if c then 1 else 0)).
 
   Definition omap {A B} (x: option A) (f: A -> option B) :=
-    match x with | Some y => f y | _ => None end.
+    match x with
+    | Some y => f y
+    | _ => None
+    end.
 
   Notation "A <- X ; B" := (omap X (fun A => B)) (at level 70, right associativity).
 End Util.

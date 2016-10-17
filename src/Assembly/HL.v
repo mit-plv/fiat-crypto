@@ -49,12 +49,6 @@ Module HL.
 
   Definition WordInterp {n t} E := @Interp (word n) (@WordEvaluable n) t E.
 
-  Definition rangeInterp {n t} E: @interp_type (option (Range N)) t :=
-    typeMap rangeEval (@interp (@WordRangeOpt n) (@WordRangeOptEvaluable n) t E).
-
-  Definition RangeInterp {n t} E: @interp_type (option (Range N)) t :=
-    typeMap rangeEval (@Interp (@WordRangeOpt n) (@WordRangeOptEvaluable n) t E).
-
   Example example_Expr : Expr TT := fun var => (
     Let (Const 7) (fun a =>
       Let (Let (Binop OPadd (Var a) (Var a)) (fun b => Pair (Var b) (Var b))) (fun p =>

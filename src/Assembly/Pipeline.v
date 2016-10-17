@@ -21,7 +21,7 @@ Module Type Expression.
   Parameter inputs: nat.
   Parameter ResultType: type.
   Parameter hlProg: NAry inputs Z (@HL.expr Z (@LL.arg Z Z) ResultType).
-  Parameter inputUpperBounds: list (@WordRangeOpt bits).
+  Parameter inputBounds: list (@BoundedWord bits).
 End Expression.
 
 Module Pipeline (Input: Expression).
@@ -42,33 +42,34 @@ Module Pipeline (Input: Expression).
     | None => None
     end.
 
-  Definition Range := @WordRangeOpt bits.
+  Definition B: Type := option (@BoundedWord bits).
 
-  Definition rangeProg: NAry inputs Range (@LL.expr Range Range ResultType) :=
+  Definition boundedProg: NAry inputs B (@LL.expr B B ResultType) :=
     NArgMap (fun x =>
-        getOrElse (Z.of_N (N.pred (Npow2 bits)))
-                  (option_map Z.of_N (getUpperBoundOpt x))) (
-      liftN (LLConversions.convertZToWordRangeOpt bits) llProg).
+        orElse (Z.of_N (N.pred (Npow2 bits)))
+               (option_map Z.of_N (option_map Evaluables.high x))) (
+      liftN (LLConversions.convertZToBounded bits) llProg).
 
-  Definition rangeCheck: NAry inputs Range bool :=
-    liftN (LLConversions.check') rangeProg.
+  Fixpoint valid' {T k} ins (f: NAry k B T) :=
+    match k as k' return NAry k' B T -> T with
+    | O => id
+    | S m => fun f' =>
+      match ins with
+      | cons x xs => @valid' _ m xs (f' x)
+      | nil => @valid' _ m nil (f' None)
+      end
+    end f.
 
-  Definition rangeValid: bool :=
-    let F := (fix rangeValid' k ins (f: NAry k Range bool) :=
-        (match k as k' return NAry k' Range bool -> bool with
-        | O => id
-        | S m => fun f' =>
-          match ins with
-          | cons x xs => rangeValid' m xs (f' x)
-          | nil => rangeValid' m nil (f' anyWord)
-          end
-        end f)) in
+  Definition outputBounds := valid' (map (@Some _) inputBounds) boundedProg.
 
-    F _ inputUpperBounds rangeCheck.
+  Definition valid :=
+    valid' (map (@Some _) inputBounds) (liftN (LLConversions.check) boundedProg).
 End Pipeline.
 
 Module SimpleExample.
   Module SimpleExpression <: Expression.
+    Import ListNotations.
+
     Definition bits: nat := 32.
     Definition width: Width bits := W32.
     Definition inputs: nat := 1.
@@ -77,7 +78,7 @@ Module SimpleExample.
     Definition hlProg: NAry 1 Z (@HL.expr Z (@LL.arg Z Z) TT) :=
         Eval vm_compute in (fun x => HL.Binop OPadd (HL.Const x) (HL.Const 5%Z)).
 
-    Definition inputUpperBounds: list (@WordRangeOpt bits) := nil.
+    Definition inputBounds: list (@BoundedWord bits) := [ any ].
   End SimpleExpression.
 
   Module SimplePipeline := Pipeline SimpleExpression.
