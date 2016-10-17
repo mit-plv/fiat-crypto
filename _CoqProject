@@ -124,10 +124,10 @@ src/Spec/MxDH.v
 src/Spec/WeierstrassCurve.v
 src/Specific/GF1305.v
 src/Specific/GF25519.v
+src/Specific/SC25519.v
 src/Specific/FancyMachine256/Barrett.v
 src/Specific/FancyMachine256/Core.v
 src/Specific/FancyMachine256/Montgomery.v
-src/Specific/X86/Exponent25519.v
 src/Tactics/VerdiTactics.v
 src/Tactics/Algebra_syntax/Nsatz.v
 src/Test/Curve25519SpecTestVectors.v
