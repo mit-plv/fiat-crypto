@@ -410,8 +410,32 @@ Section Carries.
 
 End Carries.
 
+Section CarryChain.
+  Context `{prm : PseudoMersenneBaseParams} {cc : CarryChain limb_widths}.
+  Local Notation digits := (tuple Z (length limb_widths)).
+
+  Definition carry__opt_sig {T} (f : digits -> T) (us : digits)
+    : { x | x = f (carry_ carry_chain us) }.
+  Proof.
+    eexists.
+    cbv [carry_].
+    rewrite <- from_list_default_eq with (d := 0%Z).
+    change @from_list_default with @from_list_default_opt.
+    erewrite <-carry_sequence_opt_cps_correct by eauto using carry_chain_valid, length_to_list.
+    cbv [carry_sequence_opt_cps].
+    reflexivity.
+  Defined.
+
+  Definition carry__opt_cps {T} (f:digits -> T) (us : digits) : T
+    := Eval cbv [proj1_sig carry__opt_sig] in proj1_sig (carry__opt_sig f us).
+
+  Definition carry__opt_cps_correct {T} (f:digits -> T) (us : digits)
+    : carry__opt_cps f us = f (carry_ carry_chain us)
+    := proj2_sig (carry__opt_sig f us).
+End CarryChain.
+
 Section Addition.
-  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient}.
+  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient} {cc : CarryChain limb_widths}.
   Local Notation digits := (tuple Z (length limb_widths)).
 
   Definition add_opt_sig (us vs : digits) : { b : digits | b = add us vs }.
@@ -426,10 +450,34 @@ Section Addition.
   Definition add_opt_correct us vs
     : add_opt us vs = add us vs
     := proj2_sig (add_opt_sig us vs).
+
+  Definition carry_add_opt_sig {T} (f:digits -> T)
+    (us vs : digits) : { x | x = f (carry_add carry_chain us vs) }.
+  Proof.
+    eexists.
+    cbv [carry_add].
+    rewrite <-carry__opt_cps_correct, <-add_opt_correct.
+    cbv [carry_sequence_opt_cps carry__opt_cps add_opt add].
+    rewrite to_list_from_list.
+    reflexivity.
+  Defined.
+
+  Definition carry_add_opt_cps {T} (f:digits -> T) (us vs : digits) : T
+    := Eval cbv [proj1_sig carry_add_opt_sig] in proj1_sig (carry_add_opt_sig f us vs).
+
+  Definition carry_add_opt_cps_correct {T} (f:digits -> T) (us vs : digits)
+    : carry_add_opt_cps f us vs = f (carry_add carry_chain us vs)
+    := proj2_sig (carry_add_opt_sig f us vs).
+
+  Definition carry_add_opt := carry_add_opt_cps id.
+
+  Definition carry_add_opt_correct (us vs : digits)
+    : carry_add_opt us vs = carry_add carry_chain us vs :=
+    carry_add_opt_cps_correct id us vs.
 End Addition.
 
 Section Subtraction.
-  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient}.
+  Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient} {cc : CarryChain limb_widths}.
   Local Notation digits := (tuple Z (length limb_widths)).
 
   Definition sub_opt_sig (us vs : digits) : { b : digits | b = sub coeff coeff_mod us vs }.
@@ -446,6 +494,30 @@ Section Subtraction.
     : sub_opt us vs = sub coeff coeff_mod us vs
     := proj2_sig (sub_opt_sig us vs).
 
+  Definition carry_sub_opt_sig {T} (f:digits -> T)
+    (us vs : digits) : { x | x = f (carry_sub carry_chain coeff coeff_mod us vs) }.
+  Proof.
+    eexists.
+    cbv [carry_sub].
+    rewrite <-carry__opt_cps_correct, <-sub_opt_correct.
+    cbv [carry_sequence_opt_cps carry__opt_cps sub_opt].
+    rewrite to_list_from_list.
+    reflexivity.
+  Defined.
+
+  Definition carry_sub_opt_cps {T} (f:digits -> T) (us vs : digits) : T
+    := Eval cbv [proj1_sig carry_sub_opt_sig] in proj1_sig (carry_sub_opt_sig f us vs).
+
+  Definition carry_sub_opt_cps_correct {T} (f:digits -> T) (us vs : digits)
+    : carry_sub_opt_cps f us vs = f (carry_sub carry_chain coeff coeff_mod us vs)
+    := proj2_sig (carry_sub_opt_sig f us vs).
+
+  Definition carry_sub_opt := carry_sub_opt_cps id.
+
+  Definition carry_sub_opt_correct (us vs : digits)
+    : carry_sub_opt us vs = carry_sub carry_chain coeff coeff_mod us vs :=
+    carry_sub_opt_cps_correct id us vs.
+
   Definition opp_opt_sig (us : digits) : { b : digits | b = opp coeff coeff_mod us }.
   Proof.
     eexists.
@@ -460,6 +532,30 @@ Section Subtraction.
   Definition opp_opt_correct us
     : opp_opt us = opp coeff coeff_mod us
     := proj2_sig (opp_opt_sig us).
+
+  Definition carry_opp_opt_sig {T} (f:digits -> T)
+    (us : digits) : { x | x = f (carry_opp carry_chain coeff coeff_mod us) }.
+  Proof.
+    eexists.
+    cbv [carry_opp].
+    rewrite <-carry__opt_cps_correct, <-opp_opt_correct.
+    cbv [carry_sequence_opt_cps carry__opt_cps opp_opt opp sub_opt].
+    rewrite to_list_from_list.
+    reflexivity.
+  Defined.
+
+  Definition carry_opp_opt_cps {T} (f:digits -> T) (us : digits) : T
+    := Eval cbv [proj1_sig carry_opp_opt_sig] in proj1_sig (carry_opp_opt_sig f us).
+
+  Definition carry_opp_opt_cps_correct {T} (f:digits -> T) (us : digits)
+    : carry_opp_opt_cps f us = f (carry_opp carry_chain coeff coeff_mod us)
+    := proj2_sig (carry_opp_opt_sig f us).
+
+  Definition carry_opp_opt := carry_opp_opt_cps id.
+
+  Definition carry_opp_opt_correct (us : digits)
+    : carry_opp_opt us = carry_opp carry_chain coeff coeff_mod us :=
+    carry_opp_opt_cps_correct id us.
 
 End Subtraction.
 
@@ -616,11 +712,8 @@ Section Multiplication.
   Proof.
     eexists.
     cbv [carry_mul].
-    rewrite <- from_list_default_eq with (d := 0%Z).
-    change @from_list_default with @from_list_default_opt.
-    erewrite <-carry_sequence_opt_cps_correct by eauto using carry_chain_valid, length_to_list.
-    erewrite <-mul_opt_correct.
-    cbv [carry_sequence_opt_cps mul_opt].
+    rewrite <-carry__opt_cps_correct, <-mul_opt_correct.
+    cbv [carry_sequence_opt_cps carry__opt_cps mul_opt].
     erewrite from_list_default_eq.
     rewrite to_list_from_list.
     reflexivity.
