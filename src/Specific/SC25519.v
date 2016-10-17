@@ -7,6 +7,7 @@ Require Import Crypto.Spec.ModularArithmetic.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.WordUtil.
 Import NPeano.
 
@@ -16,6 +17,7 @@ Local Notation eta x := (fst x, snd x).
 Local Notation eta3 x := (eta (fst x), snd x).
 Local Notation eta4 x := (eta3 (fst x), snd x).
 Local Notation eta4' x := (eta (fst x), eta (snd x)).
+Local Open Scope Z_scope.
 
 Section Z.
   Definition SRep := Z. (*tuple x86.W (256/n).*)
