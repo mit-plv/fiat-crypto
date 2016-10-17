@@ -34,8 +34,7 @@ Module Extended.
 
     Create HintDb bash discriminated.
     Local Hint Unfold E.eq fst snd fieldwise fieldwise' coordinates E.coordinates proj1_sig Pre.onCurve : bash.
-    Ltac bash :=
-      pose proof E.char_gt_2;
+    Ltac safe_bash :=
       repeat match goal with
              | |- Proper _ _ => intro
              | _ => progress intros
@@ -52,6 +51,10 @@ Module Extended.
              | [H: _ |- _ ] => solve [intro; apply H; super_nsatz]
              | |- Feq _ _ => super_nsatz
              end.
+    (** Using [pose proof E.char_gt_2] causes [E.char_gt_2] to get
+        picked up in the proof term when we don't want it to. *)
+    Ltac unsafe_bash := pose proof E.char_gt_2; safe_bash.
+    Ltac bash := safe_bash; unsafe_bash.
 
     Obligation Tactic := bash.
 
@@ -66,10 +69,10 @@ Module Extended.
 
     Local Hint Unfold from_twisted to_twisted eq : bash.
 
-    Global Instance Equivalence_eq : Equivalence eq. Proof. split; split; bash. Qed.
-    Global Instance Proper_from_twisted : Proper (E.eq==>eq) from_twisted. Proof. bash. Qed.
-    Global Instance Proper_to_twisted : Proper (eq==>E.eq) to_twisted. Proof. bash. Qed.
-    Lemma to_twisted_from_twisted P : E.eq (to_twisted (from_twisted P)) P. Proof. bash. Qed.
+    Global Instance Equivalence_eq : Equivalence eq. Proof. split; split; safe_bash. Qed.
+    Global Instance Proper_from_twisted : Proper (E.eq==>eq) from_twisted. Proof. unsafe_bash. Qed.
+    Global Instance Proper_to_twisted : Proper (eq==>E.eq) to_twisted. Proof. safe_bash. Qed.
+    Lemma to_twisted_from_twisted P : E.eq (to_twisted (from_twisted P)) P. Proof. unsafe_bash. Qed.
 
     Section TwistMinus1.
       Context {a_eq_minus1 : a = Fopp 1}.
@@ -102,7 +105,7 @@ Module Extended.
         destruct P as [ [ [ [ ] ? ] ? ] [ HP [ ] ] ]; destruct Q as [ [ [ [ ] ? ] ? ] [ HQ [ ] ] ].
         pose proof edwardsAddCompletePlus (a_nonzero:=E.nonzero_a)(a_square:=E.square_a)(d_nonsquare:=E.nonsquare_d)(char_gt_2:=E.char_gt_2) _ _ _ _ HP HQ.
         pose proof edwardsAddCompleteMinus (a_nonzero:=E.nonzero_a)(a_square:=E.square_a)(d_nonsquare:=E.nonsquare_d)(char_gt_2:=E.char_gt_2) _ _ _ _ HP HQ.
-        bash.
+        unsafe_bash.
       Qed.
 
       Obligation Tactic := idtac.
@@ -116,7 +119,7 @@ Module Extended.
         pose proof edwardsAddCompleteMinus (a_nonzero:=E.nonzero_a)(a_square:=E.square_a)(d_nonsquare:=E.nonsquare_d)(char_gt_2:=E.char_gt_2) _ _ _ _ HP HQ as Hnz2.
         autounfold with bash in *; simpl in *.
         destruct Hrep as [HA HB]. rewrite <-!HA, <-!HB; clear HA HB.
-        bash.
+        safe_bash.
       Qed.
       Local Hint Unfold add : bash.
 
