@@ -33,6 +33,9 @@ Create HintDb zsimplify discriminated.
     and don't require any side conditions, should go in this
     database. *)
 Create HintDb zsimplify_fast discriminated.
+(** Hints which turn [Z] operations on concrete positives into the
+    corresponding operation on [Pos]. *)
+Create HintDb zsimplify_Z_to_pos discriminated.
 (** Only hints with no side conditions that strip constants, and
     nothing else. *)
 Create HintDb zsimplify_const discriminated.
@@ -44,7 +47,8 @@ Create HintDb hyp_log2 discriminated.
 Create HintDb concl_log2 discriminated.
 Hint Resolve (fun a b H => proj1 (Z.log2_lt_pow2 a b H)) (fun a b H => proj1 (Z.log2_le_pow2 a b H)) : concl_log2.
 Hint Resolve (fun a b H => proj2 (Z.log2_lt_pow2 a b H)) (fun a b H => proj2 (Z.log2_le_pow2 a b H)) : hyp_log2.
-Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r Z_mod_same_full Z.sub_simpl_r Z.sub_simpl_l Z.add_opp_diag_r Z.add_opp_diag_l Zmod_0_l Z.add_simpl_r Z.add_simpl_l Z.opp_0 Zmod_0_r Zmod_mod Z.mul_succ_l Z.mul_succ_r Z.shiftr_0_r Z.shiftr_0_l Z.mod_1_r Zmod_0_l Zmod_0_r Z.shiftl_0_r Z.shiftl_0_l Z.shiftr_0_r Z.shiftr_0_l : zsimplify_fast.
+Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r Z_mod_same_full Z.sub_simpl_r Z.sub_simpl_l Z.add_opp_diag_r Z.add_opp_diag_l Zmod_0_l Z.add_simpl_r Z.add_simpl_l Z.opp_0 Zmod_0_r Zmod_mod Z.mul_succ_l Z.mul_succ_r Z.shiftr_0_r Z.shiftr_0_l Z.mod_1_r Zmod_0_l Zmod_0_r Z.shiftl_0_r Z.shiftl_0_l Z.shiftr_0_r Z.shiftr_0_l Z.sub_diag : zsimplify_fast.
+
 Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r Z_mod_same_full Z.sub_simpl_r Z.sub_simpl_l Z.add_opp_diag_r Z.add_opp_diag_l Zmod_0_l Z.add_simpl_r Z.add_simpl_l Z.opp_0 Zmod_0_r Zmod_mod Z.mul_succ_l Z.mul_succ_r Z.shiftr_0_r Z.shiftr_0_l Z.mod_1_r Zmod_0_l Zmod_0_r Z.shiftl_0_r Z.shiftl_0_l Z.shiftr_0_r Z.shiftr_0_l Zplus_minus Z.add_diag : zsimplify.
 Hint Rewrite Z.div_mul Z.div_1_l Z.div_same Z.mod_same Z.div_small Z.mod_small Z.div_add Z.div_add_l Z.mod_add Z.div_0_l Z.mod_mod Z.mod_small Z_mod_zero_opp_full Z.mod_1_l using zutil_arith : zsimplify.
 Hint Rewrite <- Z.opp_eq_mul_m1 Z.one_succ Z.two_succ : zsimplify.
@@ -2024,18 +2028,23 @@ Module Z.
 
   Lemma simplify_add_pos x y : Z.pos x + Z.pos y = Z.pos (x + y).
   Proof. reflexivity. Qed.
+  Hint Rewrite simplify_add_pos : zsimplify_Z_to_pos.
   Lemma simplify_add_pos10 x0 x1 x2 x3 x4 x5 x6 x7 x8 x9
     : Z.pos x0 + (Z.pos x1 + (Z.pos x2 + (Z.pos x3 + (Z.pos x4 + (Z.pos x5 + (Z.pos x6 + (Z.pos x7 + (Z.pos x8 + Z.pos x9))))))))
       = Z.pos (x0 + (x1 + (x2 + (x3 + (x4 + (x5 + (x6 + (x7 + (x8 + x9))))))))).
   Proof. reflexivity. Qed.
+  Hint Rewrite simplify_add_pos10 : zsimplify_Z_to_pos.
   Lemma simplify_mul_pos x y : Z.pos x * Z.pos y = Z.pos (x * y).
   Proof. reflexivity. Qed.
+  Hint Rewrite simplify_mul_pos : zsimplify_Z_to_pos.
   Lemma simplify_mul_pos10 x0 x1 x2 x3 x4 x5 x6 x7 x8 x9
     : Z.pos x0 * (Z.pos x1 * (Z.pos x2 * (Z.pos x3 * (Z.pos x4 * (Z.pos x5 * (Z.pos x6 * (Z.pos x7 * (Z.pos x8 * Z.pos x9))))))))
       = Z.pos (x0 * (x1 * (x2 * (x3 * (x4 * (x5 * (x6 * (x7 * (x8 * x9))))))))).
   Proof. reflexivity. Qed.
+  Hint Rewrite simplify_mul_pos10 : zsimplify_Z_to_pos.
   Lemma simplify_sub_pos x y : Z.pos x - Z.pos y = Z.pos_sub x y.
   Proof. reflexivity. Qed.
+  Hint Rewrite simplify_sub_pos : zsimplify_Z_to_pos.
 
   Lemma move_R_pX x y z : x + y = z -> x = z - y.
   Proof. omega. Qed.
