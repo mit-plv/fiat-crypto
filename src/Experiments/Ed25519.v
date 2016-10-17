@@ -1,18 +1,21 @@
+Require Import Coq.omega.Omega.
 Require Import Crypto.EdDSARepChange.
 Require Import Crypto.Spec.Ed25519.
 Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.ListUtil.
 Require Crypto.Specific.GF25519.
 Require Crypto.CompleteEdwardsCurve.ExtendedCoordinates.
 Require Crypto.Encoding.PointEncoding.
 Require Crypto.Util.IterAssocOp.
 Import Morphisms.
+Import NPeano.
 
 Context {H: forall n : nat, Word.word n -> Word.word (b + b)}.
 
 Definition feSign (x :  GF25519.fe25519) : bool :=
   let '(x0, x1, x2, x3, x4, x5, x6, x7, x8, x9) := x in
   BinInt.Z.testbit x0 0.
-  
+
 (* TODO *)
 Context {feSign_correct : forall x,
             PointEncoding.sign x = feSign (ModularBaseSystem.encode x)}.
@@ -83,13 +86,13 @@ Let EToRep := PointEncoding.point_phi
 Let ZNWord sz x := Word.NToWord sz (BinInt.Z.to_N x).
 Let WordNZ {sz} (w : Word.word sz) := BinInt.Z.of_N (Word.wordToN w).
 
-(* TODO : 
+(* TODO :
    GF25519.pack does most of the work here, but the spec currently talks
    about 256-bit words and [pack] makes a sequence of short (in this case
    32- and 31-bit) Zs. We should either automate this transformation or change
    the spec.
  *)
-Definition feEnc (x : GF25519.fe25519) : Word.word 255 := 
+Definition feEnc (x : GF25519.fe25519) : Word.word 255 :=
   let '(x0, x1, x2, x3, x4, x5, x6, x7) :=
       (GF25519.pack x) in
   Word.combine (ZNWord 32 x0)
@@ -156,7 +159,7 @@ Let ErepAdd :=
 Axiom SRep_testbit : SRep -> nat -> bool.
 Axiom ERepSel : bool -> Erep -> Erep -> Erep.
 
-Let SRepERepMul : SRep -> Erep -> Erep := 
+Let SRepERepMul : SRep -> Erep -> Erep :=
   IterAssocOp.iter_op
     (op:=ErepAdd)
     (id:=ExtendedCoordinates.Extended.zero(field:=GF25519.field25519)(prm:=twedprm_ERep))
@@ -166,7 +169,7 @@ Let SRepERepMul : SRep -> Erep -> Erep :=
     (BinInt.Z.to_nat (BinInt.Z.log2_up l))
 .
 
-Lemma SRepERepMul_correct n P : 
+Lemma SRepERepMul_correct n P :
   ExtendedCoordinates.Extended.eq
     (EToRep (CompleteEdwardsCurve.E.mul n P))
     (SRepERepMul (S2Rep (ModularArithmetic.F.of_nat l n)) (EToRep P)).
@@ -283,19 +286,19 @@ Check @sign_correct
 
 Definition Fsqrt_minus1 := Eval vm_compute in ModularBaseSystem.decode (GF25519.sqrt_m1).
 Definition Fsqrt := PrimeFieldTheorems.F.sqrt_5mod8 Fsqrt_minus1.
-Lemma bound_check255 : BinInt.Z.to_nat GF25519.modulus < PeanoNat.Nat.pow 2 255.
+Lemma bound_check255 : BinInt.Z.to_nat GF25519.modulus < Nat.pow 2 255.
 Proof.
   cbv [GF25519.modulus].
   rewrite <-(Znat.Nat2Z.id 2) at 1.
-  rewrite ZUtil.Z.pow_Z2N_Zpow by Omega.omega.
+  rewrite ZUtil.Z.pow_Z2N_Zpow by omega.
   apply Znat.Z2Nat.inj_lt; cbv; congruence.
 Qed.
 
-Lemma bound_check256 : BinInt.Z.to_nat GF25519.modulus < PeanoNat.Nat.pow 2 256.
+Lemma bound_check256 : BinInt.Z.to_nat GF25519.modulus < Nat.pow 2 256.
 Proof.
   cbv [GF25519.modulus].
   rewrite <-(Znat.Nat2Z.id 2) at 1.
-  rewrite ZUtil.Z.pow_Z2N_Zpow by Omega.omega.
+  rewrite ZUtil.Z.pow_Z2N_Zpow by omega.
   apply Znat.Z2Nat.inj_lt; cbv; congruence.
 Qed.
 
