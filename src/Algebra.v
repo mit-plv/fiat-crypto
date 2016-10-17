@@ -521,6 +521,59 @@ Module Group.
   End HomomorphismComposition.
 End Group.
 
+Module Field.
+  Section Homomorphism_rev.
+    Print field.
+    Context {F EQ ZERO ONE OPP ADD SUB MUL INV DIV} {fieldF:@field F EQ ZERO ONE OPP ADD SUB MUL INV DIV}.
+    Context {H} {eq : H -> H -> Prop} {zero one : H} {opp : H -> H} {add sub mul : H -> H -> H} {inv : H -> H} {div : H -> H -> H}.
+    Context {phi:F->H} {phi':H->F}.
+    Local Infix "=" := EQ. Local Infix "=" := EQ : type_scope.
+    Context (phi'_phi_id : forall A, phi' (phi A) = A)
+            (phi'_eq : forall a b, EQ (phi' a) (phi' b) <-> eq a b)
+            {phi'_zero : phi' zero = ZERO}
+            {phi'_one : phi' one = ONE}
+            {phi'_opp : forall a, phi' (opp a) = OPP (phi' a)}
+            (phi'_add : forall a b, phi' (add a b) = ADD (phi' a) (phi' b))
+            (phi'_sub : forall a b, phi' (sub a b) = SUB (phi' a) (phi' b))
+            (phi'_mul : forall a b, phi' (mul a b) = MUL (phi' a) (phi' b))
+            {phi'_inv : forall a, phi' (inv a) = INV (phi' a)}
+            (phi'_div : forall a b, phi' (div a b) = DIV (phi' a) (phi' b)).
+
+    Local Instance field_from_redundant_representation
+      : @field H eq zero one opp add sub mul inv div.
+    Proof.
+      repeat match goal with
+             | [ H : field |- _ ] => destruct H; try clear H
+             | [ H : commutative_ring |- _ ] => destruct H; try clear H
+             | [ H : ring |- _ ] => destruct H; try clear H
+             | [ H : abelian_group |- _ ] => destruct H; try clear H
+             | [ H : group |- _ ] => destruct H; try clear H
+             | [ H : monoid |- _ ] => destruct H; try clear H
+             | [ H : is_commutative |- _ ] => destruct H; try clear H
+             | [ H : is_left_multiplicative_inverse |- _ ] => destruct H; try clear H
+             | [ H : is_left_distributive |- _ ] => destruct H; try clear H
+             | [ H : is_right_distributive |- _ ] => destruct H; try clear H
+             | [ H : is_zero_neq_one |- _ ] => destruct H; try clear H
+             | [ H : is_associative |- _ ] => destruct H; try clear H
+             | [ H : is_left_identity |- _ ] => destruct H; try clear H
+             | [ H : is_right_identity |- _ ] => destruct H; try clear H
+             | [ H : Equivalence _ |- _ ] => destruct H; try clear H
+             | [ H : is_left_inverse |- _ ] => destruct H; try clear H
+             | [ H : is_right_inverse |- _ ] => destruct H; try clear H
+             | _ => intro
+             | _ => split
+             | [ H : eq _ _ |- _ ] => apply phi'_eq in H
+             | [ |- eq _ _ ] => apply phi'_eq
+             | [ H : (~eq _ _)%type |- _ ] => pose proof (fun pf => H (proj1 (@phi'_eq _ _) pf)); clear H
+             | [ H : EQ _ _ |- _ ] => rewrite H
+             | _ => progress erewrite ?phi'_zero, ?phi'_one, ?phi'_opp, ?phi'_add, ?phi'_sub, ?phi'_mul, ?phi'_inv, ?phi'_div by reflexivity
+             | [ H : _ |- _ ] => progress erewrite ?phi'_zero, ?phi'_one, ?phi'_opp, ?phi'_add, ?phi'_sub, ?phi'_mul, ?phi'_inv, ?phi'_div in H by reflexivity
+             | _ => solve [ eauto ]
+             end.
+    Qed.
+  End Homomorphism_rev.
+End Field.
+
 Require Coq.nsatz.Nsatz.
 
 Ltac dropAlgebraSyntax :=
