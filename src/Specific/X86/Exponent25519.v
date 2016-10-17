@@ -12,6 +12,7 @@ Require Import Crypto.Spec.ModularArithmetic.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.WordUtil.
 Import NPeano.
 
 Local Notation modulusv := (2^252 + 27742317777372353535851937790883648493)%Z.
@@ -25,26 +26,22 @@ Section Z.
   Definition SRep := Z. (*tuple x86.W (256/n).*)
   Definition SRepEq : Relation_Definitions.relation SRep := Logic.eq.
   Local Instance SRepEquiv : RelationClasses.Equivalence SRepEq := _.
-  Local Notation base := 2%Z (* TODO(@andres-erbsen): Is this the correct base, or are we using something else? *).
-  Local Notation smaller_bound_exp := 250%Z (* TODO(@andres-erbsen): Is this the correct smaller size (2^250), or are we using something else? *).
-  Lemma smaller_bound_smaller : (0 <= smaller_bound_exp <= 256)%Z. Proof. vm_compute; intuition congruence. Qed.
+  Local Notation base := 2%Z.
+  Local Notation kv := 256%Z.
+  Local Notation offsetv := 8%Z.
+  Lemma smaller_bound_smaller : (0 <= kv - offsetv <= 256)%Z. Proof. vm_compute; intuition congruence. Qed.
   Lemma modulusv_in_range : 0 <= modulusv < 2 ^ 256. Proof. vm_compute; intuition congruence. Qed.
   Lemma modulusv_pos : 0 < modulusv. Proof. vm_compute; reflexivity. Qed.
   Section gen.
-    Lemma full_width_pos : (0 < 256)%Z. Proof. omega. Qed.
-    Let offset'0 := Eval compute in ((256 - smaller_bound_exp) / 2)%Z.
-    Let k'0 := Eval compute in ((256 - offset'0) / Z.log2 base)%Z.
     Section params_gen.
       Import BarrettBundled.
-      Let offset' := Eval compute in offset'0.
-      Let k' := Eval compute in k'0.
       Local Instance x86_25519_Barrett : BarrettParameters
         := { m := modulusv;
              b := base;
-             k := k';
-             offset := offset';
+             k := kv;
+             offset := offsetv;
              ops := _;
-             μ' := base ^ (2 * k') / modulusv }.
+             μ' := base ^ (2 * kv) / modulusv }.
       Local Instance x86_25519_BarrettProofs
         : BarrettParametersCorrect x86_25519_Barrett
         := { props := _ }.
@@ -106,26 +103,26 @@ Section Z.
   Check @sign_correct _ _ _ _ _ _ _ _ _ _ _ _ _ _ ed25519.
   Check @verify_correct _ _ _ _ _ _ _ _ _ _ _ _ _ _ ed25519.
   Definition S2Rep : ModularArithmetic.F.F l -> SRep := F.to_Z.
+  (* TODO: Move me to WordUtil and find a better name, or just inline the rewrites below, or make a hintdb for word conversions *)
   Lemma Z_of_nat_of_word_eq_Z_of_N_of_word
     : forall (n : nat) (w : Word.word n), Z.of_nat (Word.wordToNat w) = Z.of_N (Word.wordToN w).
-  Admitted.
+  Proof. intros; rewrite Word.wordToN_nat, nat_N_Z; reflexivity. Qed.
   Lemma SRepDecModL_Correct : forall w : Word.word (b + b), SRepEq (S2Rep (ModularArithmetic.F.of_nat l (Word.wordToNat w))) (SRepDecModL w).
   Proof.
     intro w; change (SRepDecModL w) with (barrett_reduce_function_bundled (Z.of_N (Word.wordToN w))).
     unfold SRepEq, S2Rep, b in *.
     pose proof (barrett_reduce_correct_bundled (Z.of_N (Word.wordToN w))) as H.
+    unfold ZBounded.medium_valid, BarrettBundled.props, x86_25519_BarrettProofs, ZZLikeProperties, BarrettBundled.k in H.
     simpl in H; destruct H as [H _].
     { pose proof (Word.wordToNat_bound w).
       rewrite Word.wordToN_nat, nat_N_Z.
       rewrite WordUtil.pow2_id in H.
-      change (Z.pow_pos 2 506) with (2^(253 + 253))%Z.
       apply inj_lt in H.
       rewrite Z.pow_Zpow, Nat2Z.inj_add in H; simpl @Z.of_nat in *.
-      split; auto with zarith.
-      admit. (* impossible *) }
+      split; auto with zarith. }
     { simpl in *; rewrite H; clear H.
       rewrite Z_of_nat_of_word_eq_Z_of_N_of_word; reflexivity. }
-  Admitted.
+  Qed.
   Definition SRepAdd : SRep -> SRep -> SRep
     := Eval srep in fun x y => barrett_reduce_function_bundled (snd (ZBounded.CarryAdd x y)).
   Lemma SRepAdd_Correct : forall x y : ModularArithmetic.F.F l, SRepEq (S2Rep (ModularArithmetic.F.add x y)) (SRepAdd (S2Rep x) (S2Rep y)).
@@ -141,12 +138,11 @@ Section Z.
     unfold l in *.
     specialize_by auto using modulusv_pos.
     assert (F.to_Z x + F.to_Z y < 2 * modulusv - 1) by omega.
-    assert (2 * modulusv - 1 <= 2 ^ (253 + 253)) by (vm_compute; clear; intuition congruence).
-    assert (2^(253 + 253) < 2^512) by (vm_compute; clear; intuition congruence).
-    assert (0 <= F.to_Z x + F.to_Z y < 2^512) by omega.
+    assert (2 * modulusv - 1 <= 2 ^ (kv + kv)) by (vm_compute; clear; intuition congruence).
+    assert (2^(kv + kv) < 2^((kv + offsetv) + (kv + offsetv))) by (vm_compute; clear; intuition congruence).
+    assert (0 <= F.to_Z x + F.to_Z y < 2^(((kv + offsetv) + (kv + offsetv)))) by omega.
     simpl in H; destruct H as [H _].
-    { change (Z.pow_pos 2 506) with (2^(253 + 253))%Z.
-      rewrite Z.pow2_mod_spec by omega; Z.rewrite_mod_small.
+    { rewrite Z.pow2_mod_spec by omega; Z.rewrite_mod_small.
       simpl in *; omega. }
     { simpl in H |- *; rewrite H; clear H.
       rewrite Z.pow2_mod_spec by omega; Z.rewrite_mod_small.
@@ -169,12 +165,16 @@ Section Z.
     unfold l in *.
     specialize_by auto using modulusv_pos.
     assert (0 <= F.to_Z x * F.to_Z y < modulusv * modulusv) by nia.
-    assert (modulusv * modulusv <= 2 ^ (253 + 253)) by (vm_compute; clear; intuition congruence).
-    assert (2^(253 + 253) < 2^512) by (vm_compute; clear; intuition congruence).
+    assert (modulusv * modulusv <= 2 ^ (kv + kv)) by (vm_compute; clear; intuition congruence).
+    assert (2^(kv + kv) < 2^((kv + offsetv) + (kv + offsetv))) by (vm_compute; clear; intuition congruence).
     simpl in H; destruct H as [H _].
-    { change (Z.pow_pos 2 506) with (2^(253 + 253))%Z.
-      set (k := modulusv) in *; compute in k.
+    { set (k := modulusv) in *; compute in k.
       let v := (eval unfold k in k) in change v with k.
+      match goal with
+      | [ |- context[Z.pow_pos ?b ?e] ]
+        => let e2 := (eval compute in (Z.pos e / 2)%Z) in
+           change (Z.pow_pos b e) with (b^(e2 + e2))
+      end.
       omega. }
     { simpl in H |- *; rewrite H; clear H.
       reflexivity. }
@@ -193,12 +193,10 @@ Section Z.
     { pose proof (Word.wordToNat_bound w).
       rewrite Word.wordToN_nat, nat_N_Z.
       rewrite WordUtil.pow2_id in H.
-      change (Z.pow_pos 2 506) with (2^(253 + 253))%Z.
       apply inj_lt in H.
       rewrite Z.pow_Zpow, Nat2Z.inj_add in H; simpl @Z.of_nat in *.
       split; auto with zarith.
-      assert (2^(254+1) < (2^(253+253))) by (vm_compute; reflexivity).
-      omega. }
+      etransitivity; [ eassumption | vm_compute; reflexivity ]. }
     { simpl in *; rewrite H; clear H.
       rewrite Z_of_nat_of_word_eq_Z_of_N_of_word; reflexivity. }
   Qed.
