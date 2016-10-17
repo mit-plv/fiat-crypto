@@ -2024,6 +2024,18 @@ Module Z.
 
   Lemma simplify_add_pos x y : Z.pos x + Z.pos y = Z.pos (x + y).
   Proof. reflexivity. Qed.
+  Lemma simplify_add_pos10 x0 x1 x2 x3 x4 x5 x6 x7 x8 x9
+    : Z.pos x0 + (Z.pos x1 + (Z.pos x2 + (Z.pos x3 + (Z.pos x4 + (Z.pos x5 + (Z.pos x6 + (Z.pos x7 + (Z.pos x8 + Z.pos x9))))))))
+      = Z.pos (x0 + (x1 + (x2 + (x3 + (x4 + (x5 + (x6 + (x7 + (x8 + x9))))))))).
+  Proof. reflexivity. Qed.
+  Lemma simplify_mul_pos x y : Z.pos x * Z.pos y = Z.pos (x * y).
+  Proof. reflexivity. Qed.
+  Lemma simplify_mul_pos10 x0 x1 x2 x3 x4 x5 x6 x7 x8 x9
+    : Z.pos x0 * (Z.pos x1 * (Z.pos x2 * (Z.pos x3 * (Z.pos x4 * (Z.pos x5 * (Z.pos x6 * (Z.pos x7 * (Z.pos x8 * Z.pos x9))))))))
+      = Z.pos (x0 * (x1 * (x2 * (x3 * (x4 * (x5 * (x6 * (x7 * (x8 * x9))))))))).
+  Proof. reflexivity. Qed.
+  Lemma simplify_sub_pos x y : Z.pos x - Z.pos y = Z.pos_sub x y.
+  Proof. reflexivity. Qed.
 
   Lemma move_R_pX x y z : x + y = z -> x = z - y.
   Proof. omega. Qed.
