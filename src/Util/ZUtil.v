@@ -2022,6 +2022,9 @@ Module Z.
   Proof. omega. Qed.
   Hint Rewrite simplify_2XmX : zsimplify.
 
+  Lemma simplify_add_pos x y : Z.pos x + Z.pos y = Z.pos (x + y).
+  Proof. reflexivity. Qed.
+
   Lemma move_R_pX x y z : x + y = z -> x = z - y.
   Proof. omega. Qed.
   Lemma move_R_mX x y z : x - y = z -> x = z + y.
