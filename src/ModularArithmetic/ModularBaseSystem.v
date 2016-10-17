@@ -60,9 +60,22 @@ Section ModularBaseSystem.
   (* Placeholder *)
   Definition div (x y : digits) : digits := encode (F.div (decode x) (decode y)).
 
+  Definition carry_ (carry_chain : list nat) (us : digits) : digits :=
+    from_list (carry_sequence carry_chain [[us]]) (length_carry_sequence length_to_list).
+
+  Definition carry_add (carry_chain : list nat) (us vs : digits) : digits :=
+    carry_ carry_chain (add us vs).
   Definition carry_mul (carry_chain : list nat) (us vs : digits) : digits :=
-    from_list (carry_sequence carry_chain [[mul us vs]]) (length_carry_sequence length_to_list).
-  
+    carry_ carry_chain (mul us vs).
+  Definition carry_sub (carry_chain : list nat) (modulus_multiple: digits)
+             (modulus_multiple_correct : decode modulus_multiple = 0%F)
+             (us vs : digits) : digits :=
+    carry_ carry_chain (sub modulus_multiple modulus_multiple_correct us vs).
+  Definition carry_opp (carry_chain : list nat) (modulus_multiple : digits)
+             (modulus_multiple_correct : decode modulus_multiple = 0%F)
+             (x : digits) : digits :=
+    carry_ carry_chain (opp modulus_multiple modulus_multiple_correct x).
+
   Definition rep (us : digits) (x : F modulus) := decode us = x.
   Local Notation "u ~= x" := (rep u x).
   Local Hint Unfold rep.
@@ -102,7 +115,7 @@ Section ModularBaseSystem.
 
   Definition pack (x : digits) : target_digits :=
     from_list (pack target_widths_nonneg bits_eq [[x]]) length_pack.
-  
+
   Definition unpack (x : target_digits) : digits :=
     from_list (unpack target_widths_nonneg bits_eq [[x]]) length_unpack.
 

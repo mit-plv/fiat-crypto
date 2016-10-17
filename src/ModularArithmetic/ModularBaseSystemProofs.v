@@ -360,7 +360,7 @@ Section FieldOperationProofs.
     + eapply _zero_neq_one.
     + trivial.
   Qed.
-  End FieldProofs.
+End FieldProofs.
 
 End FieldOperationProofs.
 Opaque encode add mul sub inv pow.
