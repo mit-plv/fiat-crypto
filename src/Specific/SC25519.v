@@ -1,11 +1,6 @@
 Require Import Coq.ZArith.ZArith Coq.micromega.Psatz Coq.Classes.Morphisms Coq.Classes.RelationClasses.
 Require Import Crypto.Spec.Ed25519.
-Require Import Crypto.Specific.X86.Core.
 Require Import Crypto.EdDSARepChange.
-Require Import Crypto.BoundedArithmetic.Interface.
-Require Import Crypto.BoundedArithmetic.X86ToZLike.
-Require Import Crypto.BoundedArithmetic.X86ToZLikeProofs.
-Require Import Crypto.BoundedArithmetic.Eta.
 Require Import Crypto.ModularArithmetic.BarrettReduction.ZBounded.
 Require Import Crypto.ModularArithmetic.ZBoundedZ.
 Require Import Crypto.Spec.ModularArithmetic.
