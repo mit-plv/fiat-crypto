@@ -12,22 +12,22 @@ Section Relations.
                  | Some ay => eq ax ay
                  end
     end.
-  
+
   Local Ltac t :=
     cbv; repeat (break_match || intro || intuition congruence ||
                  solve [ apply reflexivity
                        | apply symmetry; eassumption
                        | eapply transitivity; eassumption ] ).
-  
+
   Global Instance Reflexive_option_eq {T} {R} {Reflexive_R:@Reflexive T R}
     : Reflexive (option_eq R). Proof. t. Qed.
-  
+
   Global Instance Transitive_option_eq {T} {R} {Transitive_R:@Transitive T R}
     : Transitive (option_eq R). Proof. t. Qed.
-  
+
   Global Instance Symmetric_option_eq {T} {R} {Symmetric_R:@Symmetric T R}
     : Symmetric (option_eq R). Proof. t. Qed.
-  
+
   Global Instance Equivalence_option_eq {T} {R} {Equivalence_R:@Equivalence T R}
     : Equivalence (option_eq R). Proof. split; exact _. Qed.
 End Relations.
@@ -52,7 +52,7 @@ Lemma option_rect_false_returns_true_iff
   option_rect (fun _ => bool) f false o = true <-> exists s:T, option_eq R o (Some s) /\ f s = true.
 Proof.
   unfold option_rect; break_match; logic; [ | | congruence .. ].
-  { repeat esplit; easy. }
+  { repeat esplit; simpl; easy. }
   { match goal with [H : f _ = true |- f _ = true ] =>
                     solve [rewrite <- H; eauto] end. }
 Qed.
