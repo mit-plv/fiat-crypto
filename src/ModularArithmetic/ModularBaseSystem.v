@@ -74,7 +74,7 @@ Section ModularBaseSystem.
   Definition carry_opp (carry_chain : list nat) (modulus_multiple : digits)
              (modulus_multiple_correct : decode modulus_multiple = 0%F)
              (x : digits) : digits :=
-    carry_ carry_chain (opp modulus_multiple modulus_multiple_correct x).
+    carry_sub carry_chain modulus_multiple modulus_multiple_correct zero x.
 
   Definition rep (us : digits) (x : F modulus) := decode us = x.
   Local Notation "u ~= x" := (rep u x).
