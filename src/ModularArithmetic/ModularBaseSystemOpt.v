@@ -533,29 +533,20 @@ Section Subtraction.
     : opp_opt us = opp coeff coeff_mod us
     := proj2_sig (opp_opt_sig us).
 
-  Definition carry_opp_opt_sig {T} (f:digits -> T)
-    (us : digits) : { x | x = f (carry_opp carry_chain coeff coeff_mod us) }.
+  Definition carry_opp_opt_sig (us : digits) : { b : digits | b = carry_opp carry_chain coeff coeff_mod us }.
   Proof.
     eexists.
     cbv [carry_opp].
-    rewrite <-carry__opt_cps_correct, <-opp_opt_correct.
-    cbv [carry_sequence_opt_cps carry__opt_cps opp_opt opp sub_opt].
-    rewrite to_list_from_list.
+    rewrite <-carry_sub_opt_correct.
     reflexivity.
   Defined.
 
-  Definition carry_opp_opt_cps {T} (f:digits -> T) (us : digits) : T
-    := Eval cbv [proj1_sig carry_opp_opt_sig] in proj1_sig (carry_opp_opt_sig f us).
+  Definition carry_opp_opt (us : digits) : digits
+    := Eval cbv [proj1_sig carry_opp_opt_sig] in proj1_sig (carry_opp_opt_sig us).
 
-  Definition carry_opp_opt_cps_correct {T} (f:digits -> T) (us : digits)
-    : carry_opp_opt_cps f us = f (carry_opp carry_chain coeff coeff_mod us)
-    := proj2_sig (carry_opp_opt_sig f us).
-
-  Definition carry_opp_opt := carry_opp_opt_cps id.
-
-  Definition carry_opp_opt_correct (us : digits)
-    : carry_opp_opt us = carry_opp carry_chain coeff coeff_mod us :=
-    carry_opp_opt_cps_correct id us.
+  Definition carry_opp_opt_correct us
+    : carry_opp_opt us = carry_opp carry_chain coeff coeff_mod us
+    := proj2_sig (carry_opp_opt_sig us).
 
 End Subtraction.
 

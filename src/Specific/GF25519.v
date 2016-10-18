@@ -325,10 +325,10 @@ Definition carry_opp_sig (f : fe25519) :
   { g : fe25519 | g = carry_opp_opt f }.
 Proof.
   eexists.
-  rewrite <-(@app_10_correct fe25519).
-  cbv.
-  autorewrite with zsimplify_fast zsimplify_Z_to_pos; cbv. (* FIXME: The speed of this rewrite depends on the fact that we have 10 limbs; there are some lemmas in [zsimplify_Z_to_pos] which are specific to 10. *)
-  autorewrite with zsimplify_Z_to_pos; cbv.
+  cbv [carry_opp_opt].
+  rewrite <-carry_sub_correct.
+  rewrite zero_subst.
+  cbv [carry_sub].
   reflexivity.
 Defined.
 
