@@ -4,6 +4,7 @@ Require Import Crypto.Spec.Ed25519.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.ListUtil.
 Require Crypto.Specific.GF25519.
+Require Crypto.Specific.SC25519.
 Require Crypto.CompleteEdwardsCurve.ExtendedCoordinates.
 Require Crypto.Encoding.PointEncoding.
 Require Crypto.Util.IterAssocOp.
@@ -131,14 +132,16 @@ Let ERepEnc :=
                                 (ExtendedCoordinates.Extended.to_twisted P))
   ).
 
-Let SRep := Tuple.tuple (Word.word 32) 8.
+Let SRep := SC25519.SRep.
+Let S2Rep := SC25519.S2Rep.
+(*Let SRep := Tuple.tuple (Word.word 32) 8.
 
 Let S2Rep := fun (x : ModularArithmetic.F.F l) =>
                Tuple.map (ZNWord 32)
                (Tuple.from_list_default (BinInt.Z.of_nat 0) 8
                   (Pow2Base.encodeZ
                   (List.repeat (BinInt.Z.of_nat 32) 8)
-                  (ModularArithmetic.F.to_Z x))).
+                  (ModularArithmetic.F.to_Z x))).*)
 
 Lemma eq_a_minus1 : ModularBaseSystem.eq a (GF25519.opp GF25519.one_).
 Proof.
@@ -156,7 +159,8 @@ Let ErepAdd :=
                                      a d GF25519.field25519 twedprm_ERep _
                                      eq_a_minus1 twice_d (eq_refl _) ).
 
-Axiom SRep_testbit : SRep -> nat -> bool.
+Local Coercion Z.of_nat : nat >-> Z.
+Let SRep_testbit : SRep -> nat -> bool := Z.testbit.
 Axiom ERepSel : bool -> Erep -> Erep -> Erep.
 
 Let SRepERepMul : SRep -> Erep -> Erep :=
@@ -261,27 +265,27 @@ Check @sign_correct
       (* ERepEnc_correct := *) ERepEnc_correct
       (* Proper_ERepEnc := *) (PointEncoding.Proper_Kencode_point (Kpoint_eq_correct := ext_eq_correct) (Proper_Kenc := Proper_feEnc))
       (* SRep := *) SRep
-      (* SRepEq := *) (Tuple.fieldwise Logic.eq)
-      (* H0 := *) Tuple.Equivalence_fieldwise
+      (* SRepEq := *) SC25519.SRepEq (*(Tuple.fieldwise Logic.eq)*)
+      (* H0 := *) SC25519.SRepEquiv (* Tuple.Equivalence_fieldwise*)
       (* S2Rep := *) S2Rep
-      (* SRepDecModL := *) _
-      (* SRepDecModL_correct := *) _
+      (* SRepDecModL := *) SC25519.SRepDecModL
+      (* SRepDecModL_correct := *) SC25519.SRepDecModL_Correct
       (* SRepERepMul := *) SRepERepMul
       (* SRepERepMul_correct := *) _
       (* Proper_SRepERepMul := *) _
       (* SRepEnc := *) _
       (* SRepEnc_correct := *) _
       (* Proper_SRepEnc := *) _
-      (* SRepAdd := *) _
-      (* SRepAdd_correct := *) _
-      (* Proper_SRepAdd := *) _
-      (* SRepMul := *) _
-      (* SRepMul_correct := *) _
-      (* Proper_SRepMul := *) _
+      (* SRepAdd := *) SC25519.SRepAdd
+      (* SRepAdd_correct := *) SC25519.SRepAdd_Correct
+      (* Proper_SRepAdd := *) SC25519.SRepAdd_Proper
+      (* SRepMul := *) SC25519.SRepMul
+      (* SRepMul_correct := *) SC25519.SRepMul_Correct
+      (* Proper_SRepMul := *) SC25519.SRepMul_Proper
       (* ErepB := *) (EToRep B)
       (* ErepB_correct := *) _
-      (* SRepDecModLShort := *) _
-      (* SRepDecModLShort_correct := *) _
+      (* SRepDecModLShort := *) SC25519.SRepDecModLShort
+      (* SRepDecModLShort_correct := *) SC25519.SRepDecModLShort_Correct
 .
 
 Definition Fsqrt_minus1 := Eval vm_compute in ModularBaseSystem.decode (GF25519.sqrt_m1).
@@ -379,12 +383,12 @@ Check @verify_correct
       (* Proper_ERepEnc := *) (PointEncoding.Proper_Kencode_point (Kpoint_eq_correct := ext_eq_correct) (Proper_Kenc := Proper_feEnc))
       (* ERepDec := *) ERepDec
       (* ERepDec_correct := *) _
-      (* SRep := *) (Tuple.tuple (Word.word 32) 8)
-      (* SRepEq := *) (Tuple.fieldwise Logic.eq)
-      (* H0 := *) Tuple.Equivalence_fieldwise
+      (* SRep := *) SRep (*(Tuple.tuple (Word.word 32) 8)*)
+      (* SRepEq := *) SC25519.SRepEq (* (Tuple.fieldwise Logic.eq)*)
+      (* H0 := *) SC25519.SRepEquiv (* Tuple.Equivalence_fieldwise*)
       (* S2Rep := *) S2Rep
-      (* SRepDecModL := *) _
-      (* SRepDecModL_correct := *) _
+      (* SRepDecModL := *) SC25519.SRepDecModL
+      (* SRepDecModL_correct := *) SC25519.SRepDecModL_Correct
       (* SRepERepMul := *) SRepERepMul
       (* SRepERepMul_correct := *) _
       (* Proper_SRepERepMul := *) _
