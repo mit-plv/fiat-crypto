@@ -87,6 +87,7 @@ Section Z.
               => symmetry; etransitivity; [ pose_barrett_bounds H x | ]
             end ];
     [ apply H; clear H | ];
+    instantiate;
     rewrite ?Z.pow2_mod_spec in * by omega;
     fold_modulusv; fold_Z_pow_pos.
   Lemma SRepDecModL_Correct : forall w : Word.word (b + b), SRepEq (S2Rep (ModularArithmetic.F.of_nat l (Word.wordToNat w))) (SRepDecModL w).
@@ -152,7 +153,7 @@ Section Z.
       apply inj_lt in H.
       rewrite Z.pow_Zpow, Nat2Z.inj_add in H; simpl @Z.of_nat in *.
       split; auto with zarith.
-      etransitivity; [ eassumption | vm_compute; reflexivity ]. }
+      etransitivity; [ eassumption | instantiate; vm_compute; reflexivity ]. }
     { rewrite Word.wordToN_nat, nat_N_Z; reflexivity. }
   Qed.
 End Z.
