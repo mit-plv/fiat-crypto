@@ -33,8 +33,8 @@ Section Z.
     ezero := 0%Z;
 
     (* Conversions *)
-    toT     := id;
-    fromT   := id;
+    toT     := fun x => x;
+    fromT   := fun x => x;
 
     (* Operations *)
     eadd    := Z.add;
@@ -474,65 +474,132 @@ Section BoundedWord.
     high_bound: (high < Npow2 n)%N;
   }.
 
-  Definition make (l: N) (v: word n) (h: N): option (BoundedWord).
-    refine
-      match (Nge_dec (wordToN v) l,
-             Nge_dec h (wordToN v),
-             Nge_dec (N.pred (Npow2 n)) h) with
-      | (left p0, left p1, left p2) => Some (bounded l v h _ _ _)
-      | _ => None
-      end; try (apply N.ge_le; assumption); abstract (
-        apply N.ge_le in p2;
-        apply (N.lt_le_trans _ (N.succ h) _); [nomega|];
-        rewrite <- (N.pred_succ h) in p2;
-        apply -> N.le_pred_le_succ in p2;
-        rewrite N.succ_pred in p2; [assumption |];
-        apply N.neq_0_lt_0;
-        apply Npow2_gt0).
-  Defined.
-
-  Lemma make_low_spec: forall l v h b, make l v h = Some b -> low b = l.
-  Proof.
-    intros l v h b H; unfold make in H; simpl;
-      repeat destruct (Nge_dec _ _); inversion_clear H;
-      simpl; reflexivity.
-  Qed.
-  
-  Lemma make_value_spec: forall l v h b, make l v h = Some b -> value b = v.
-  Proof.
-    intros l v h b H; unfold make in H; simpl;
-      repeat destruct (Nge_dec _ _); inversion_clear H;
-      simpl; reflexivity.
-  Qed.
-
-  Lemma make_high_spec: forall l v h b, make l v h = Some b -> high b = h.
-  Proof.
-    intros l v h b H; unfold make in H; simpl;
-      repeat destruct (Nge_dec _ _); inversion_clear H;
-      simpl; reflexivity.
-  Qed.
- 
   Definition bapp {rangeF wordF}
       (op: @validBinaryWordOp n rangeF wordF)
       (X Y: BoundedWord): option BoundedWord.
 
     refine (
-      match (rangeF (range N (low X) (high X))
-                    (range N (low Y) (high Y))) as r'
-          return _ = r' -> _ with
-      | Some (range low high) => fun _ =>
+      let op' := op _ _ _ _ _ _
+        (ge_low X) (le_high X) (high_bound X)
+        (ge_low Y) (le_high Y) (high_bound Y) in
+
+      let result := rangeF
+        (range N (low X) (high X))
+        (range N (low Y) (high Y)) in
+
+      match result as r' return result = r' -> _ with
+      | Some (range low high) => fun e =>
         Some (bounded low (wordF (value X) (value Y)) high _ _ _)
-      | _ => fun _ => None
-      end eq_refl);
+      | None => fun _ => None
+      end eq_refl); abstract (
 
-      pose proof (op _ _ _ _ _ _
-            (ge_low X) (le_high X) (high_bound X)
-            (ge_low Y) (le_high Y) (high_bound Y)) as p';
-
-      rewrite e in p';
-      destruct p' as [p0 p1]; destruct p1 as [p1 p2];
-      assumption.
+      pose proof op' as p; clear op';
+      unfold result in *;
+      rewrite e in p;
+      destruct p as [p0 p1]; destruct p1 as [p1 p2];
+      assumption).
   Defined.
+
+  Definition rapp {rangeF wordF}
+      (op: @validBinaryWordOp n rangeF wordF)
+      (X Y: Range N): option (Range N) :=
+    rangeF X Y.
+
+  Definition vapp {rangeF wordF}
+      (op: @validBinaryWordOp n rangeF wordF)
+      (X Y: word n): option (word n) :=
+    Some (wordF X Y).
+
+  Lemma bapp_value_spec: forall {T rangeF wordF}
+      (op: @validBinaryWordOp n rangeF wordF)
+      (b0 b1: BoundedWord) (f: word n -> T),
+    option_map (fun x => f (value x)) (bapp op b0 b1)
+  = option_map (fun x => f x) (
+      omap (rapp op (range N (low b0) (high b0))
+                    (range N (low b1) (high b1))) (fun _ =>
+        vapp op (value b0) (value b1))).
+  Proof.
+  Admitted.
+
+  Definition toRange (w: BoundedWord): Range N :=
+    range N (low w) (high w).
+
+  Definition fromRange (r: Range N): option (BoundedWord).
+    refine
+      match r with
+      | range l h =>
+        match (Nge_dec h l, Nge_dec (N.pred (Npow2 n)) h) with
+        | (left p0, left p1) => Some (bounded l (NToWord n l) h _ _ _)
+        | _ => None
+        end
+      end; try rewrite wordToN_NToWord;
+
+      assert (N.succ h <= Npow2 n)%N by abstract (
+        apply N.ge_le in p1;
+        rewrite <- (N.pred_succ h) in p1;
+        apply -> N.le_pred_le_succ in p1;
+        rewrite N.succ_pred in p1; [assumption |];
+        apply N.neq_0_lt_0;
+        apply Npow2_gt0);
+
+      try abstract (apply (N.lt_le_trans _ (N.succ h) _);
+        [nomega|assumption]);
+
+      [reflexivity|apply N.ge_le; assumption].
+
+  Defined.
+
+  Definition just (x: N): option (BoundedWord).
+    refine
+      match Nge_dec (N.pred (Npow2 n)) x with
+      | left p => Some (bounded x (NToWord n x) x _ _ _)
+      | right _ => None
+      end; try rewrite wordToN_NToWord; try reflexivity;
+
+    assert (N.succ x <= Npow2 n)%N by abstract (
+        apply N.ge_le in p;
+        rewrite <- (N.pred_succ x) in p;
+        apply -> N.le_pred_le_succ in p;
+        rewrite N.succ_pred in p; [assumption |];
+        apply N.neq_0_lt_0;
+        apply Npow2_gt0);
+
+    try abstract (
+      apply (N.lt_le_trans _ (N.succ x) _);
+        [nomega|assumption]).
+  Defined.
+
+  Lemma just_None_spec: forall x, just x = None -> (x >= Npow2 n)%N.
+  Proof.
+    intros x H; unfold just in *.
+    destruct (Nge_dec (N.pred (Npow2 n)) x) as [p|p]; [inversion H |].
+    rewrite <- (N.pred_succ x) in p.
+    apply N.lt_pred_lt_succ in p.
+    rewrite N.succ_pred in p; [|apply N.neq_0_lt_0; nomega].
+    apply N.le_succ_l in p.
+    apply N.le_ge; apply N.succ_le_mono; assumption.
+  Qed.
+
+  Lemma just_value_spec: forall x b, just x = Some b -> value b = NToWord n x.
+  Proof.
+    intros x b H; destruct b; unfold just in *;
+    destruct (Nge_dec (N.pred (Npow2 n)) x);
+    simpl in *; inversion H; subst; reflexivity.
+  Qed.
+
+  Lemma just_low_spec: forall x b, just x = Some b -> low b = x.
+  Proof.
+    intros x b H; destruct b; unfold just in *;
+    destruct (Nge_dec (N.pred (Npow2 n)) x);
+    simpl in *; inversion H; subst; reflexivity.
+  Qed.
+
+  Lemma just_high_spec: forall x b, just x = Some b -> high b = x.
+  Proof.
+    intros x b H; destruct b; unfold just in *;
+    destruct (Nge_dec (N.pred (Npow2 n)) x);
+    simpl in *; inversion H; subst; reflexivity.
+  Qed.
 
   Definition any: BoundedWord.
     refine (bounded 0%N (wzero n) (N.pred (Npow2 n)) _ _ _);
@@ -552,7 +619,7 @@ Section BoundedWord.
   Instance BoundedEvaluable : Evaluable (option BoundedWord) := {
     ezero := Some any;
 
-    toT := fun x => make (Z.to_N x) (NToWord _ (Z.to_N x)) (Z.to_N x);
+    toT := fun x => just (Z.to_N x);
     fromT := fun x => orElse 0%Z (option_map (fun x' => Z.of_N (wordToN (value x'))) x);
 
     eadd := fun x y => omap x (fun X => omap y (fun Y => bapp range_add_valid X Y));
@@ -571,42 +638,3 @@ Section BoundedWord.
   }.
 
 End BoundedWord.
-
-Section Range.
-  Context {n: nat}.
-
-  Definition rapp {f g} (op: @validBinaryWordOp n f g) (x y: Range N):
-      option (Range N) := f x y.
-
-  Instance RangeEvaluable : Evaluable (option (Range N)) := {
-    ezero := Some (range N 0%N (N.pred (Npow2 n)));
-
-    toT := fun x => Some (range N (Z.to_N x) (Z.to_N x));
-    fromT := fun x => orElse 0%Z (omap x (fun r =>
-      match r with
-      | range low high => Some (Z.of_N high)
-      end));
-
-    eadd := fun x y => omap x (fun X => omap y (fun Y => rapp range_add_valid X Y));
-    esub := fun x y => omap x (fun X => omap y (fun Y => rapp range_sub_valid X Y));
-    emul := fun x y => omap x (fun X => omap y (fun Y => rapp range_mul_valid X Y));
-    eshiftr := fun x y => omap x (fun X => omap y (fun Y => rapp range_shiftr_valid X Y));
-    eand := fun x y => omap x (fun X => omap y (fun Y => rapp range_and_valid X Y));
-
-    eltb := fun x y =>
-      match (x, y) with
-      | (Some (range xlow xhigh), Some (range ylow yhigh)) =>
-        N.ltb xhigh yhigh
-
-      | _ => false 
-      end;
-
-    eeqb := fun x y =>
-      match (x, y) with
-      | (Some (range xlow xhigh), Some (range ylow yhigh)) =>
-        andb (N.eqb xlow ylow) (N.eqb xhigh yhigh)
-
-      | _ => false
-      end;
-  }.
-End Range.

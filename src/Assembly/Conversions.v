@@ -16,6 +16,8 @@ Require Import Coq.ZArith.Znat.
 
 Require Import Coq.NArith.Nnat Coq.NArith.Ndigits.
 
+Require Import Coq.Bool.Sumbool.
+
 Definition typeMap {A B t} (f: A -> B) (x: @interp_type A t): @interp_type B t.
 Proof.
   induction t; [refine (f x)|].
@@ -96,7 +98,7 @@ Module HLConversions.
 
   Example interp_example_range :
     option_map high (BInterp (ZToRange 32 example_Expr)) = Some 28%N.
-  Proof. reflexivity. Qed.
+  Proof. cbv; reflexivity. Qed.
 End HLConversions.
 
 Module LLConversions.
@@ -144,7 +146,7 @@ Module LLConversions.
 
   Definition wordInterp {n t} E := @interp (word n) (@WordEvaluable n) t E.
 
-  Definition rangeInterp {n t} E: @interp_type (option (@BoundedWord n)) t :=
+  Definition boundedInterp {n t} E: @interp_type (option (@BoundedWord n)) t :=
     @interp (option (@BoundedWord n)) (@BoundedEvaluable n) t E.
 
   Section Correctness.
@@ -179,28 +181,25 @@ Module LLConversions.
 
     Definition wordArg {n t} (x: @arg (word n) (word n) t) := @interp_arg _ _ x.
 
-    (* Bounds-checking fixpoint *)
+    (* BoundedWord-based Bounds-checking fixpoint *)
 
-    Fixpoint checkVar {n t} (x: @interp_type (option (@BoundedWord n)) t) :=
+    Definition getBounds {n t} T (E: Evaluable T) (e : @expr T T t): @interp_type (option (@BoundedWord n)) t :=
+      interp (E := BoundedEvaluable) (@convertExpr T (option (@BoundedWord n)) E BoundedEvaluable t e).
+
+    Fixpoint bcheck' {n t} (x: @interp_type (option (@BoundedWord n)) t) :=
       match t as t' return (interp_type t') -> bool with
       | TT => fun x' =>
-        match (x') with
+        match x' with
         | Some _ => true
         | None => false
         end
       | Prod t0 t1 => fun x' =>
         match x' with
-        | (x0, x1) => andb (checkVar (n := n) x0) (checkVar (n := n) x1)
+        | (x0, x1) => andb (bcheck' x0) (bcheck' x1)
         end
       end x.
 
-    Fixpoint check {n t} (e : @expr (option (@BoundedWord n)) (option (@BoundedWord n)) t): bool :=
-      match e with
-      | LetBinop ta tb tc op a b _ eC =>
-        andb (@checkVar n tc (bOp op (interp_arg a) (interp_arg b)))
-             (check (eC (uninterp_arg (bOp op (interp_arg a) (interp_arg b)))))
-      | Return _ a => checkVar (interp_arg a)
-      end.
+    Definition bcheck {n t} T (E: Evaluable T) (e : @expr T T t): bool := bcheck' (n := n) (getBounds T E e).
 
     (* Utility Lemmas *)
 
@@ -223,52 +222,68 @@ Module LLConversions.
         reflexivity.
     Qed.
 
+    Ltac kill_just n :=
+      match goal with
+      | [|- context[just ?x] ] =>
+        let Hvalue := fresh in let Hvalue' := fresh in
+        let Hlow := fresh in let Hlow' := fresh in
+        let Hhigh := fresh in let Hhigh' := fresh in
+        let Hnone := fresh in let Hnone' := fresh in
+
+        let B := fresh in
+
+        pose proof (just_value_spec (n := n) x) as Hvalue;
+        pose proof (just_low_spec (n := n) x) as Hlow;
+        pose proof (just_high_spec (n := n) x) as Hhigh;
+        pose proof (just_None_spec (n := n) x) as Hnone;
+
+        destruct (just x);
+
+        try pose proof (Hlow _ eq_refl) as Hlow';
+        try pose proof (Hvalue _ eq_refl) as Hvalue';
+        try pose proof (Hhigh _ eq_refl) as Hhigh';
+        try pose proof (Hnone eq_refl) as Hnone';
+
+        clear Hlow Hhigh Hvalue Hnone
+      end.
+
+    Ltac kill_dec :=
+      repeat match goal with
+      | [|- context[Nge_dec ?a ?b] ] => destruct (Nge_dec a b)
+      | [H : context[Nge_dec ?a ?b] |- _ ] => destruct (Nge_dec a b)
+      end.
+
     Lemma ZToBounded_binop_correct : forall {n tx ty tz} (op: binop tx ty tz) (x: arg tx) (y: arg ty) e,
-        check (t := tz) (convertZToBounded n (LetBinop op x y e)) = true
+        bcheck (n := n) (t := tz) Z ZEvaluable (LetBinop op x y e) = true
       -> zOp op (interp_arg x) (interp_arg y) =
           varBoundedToZ (bOp (n := n) op (varZToBounded (interp_arg x)) (varZToBounded (interp_arg y))).
     Proof.
-      intros until e; intro S; simpl in S; apply andb_true_iff in S; destruct S as [S0 S1].
     Admitted.
 
     Lemma ZToWord_binop_correct : forall {n tx ty tz} (op: binop tx ty tz) (x: arg tx) (y: arg ty) e,
-        check (t := tz) (convertZToBounded n (LetBinop op x y e)) = true
+        bcheck (n := n) (t := tz) Z ZEvaluable (LetBinop op x y e) = true
       -> zOp op (interp_arg x) (interp_arg y) =
           varWordToZ (wOp (n := n) op (varZToWord (interp_arg x)) (varZToWord (interp_arg y))).
     Proof.
-      intros until e; intro S; simpl in S; apply andb_true_iff in S; destruct S as [S0 S1].
     Admitted.
 
-    Lemma check_zero: forall {n}, @check n TT (@convertExpr Z _ ZEvaluable (@BoundedEvaluable n) TT (Return (Const 0%Z))) = true.
+    Lemma just_zero: forall n, exists x, just (n := n) 0 = Some x.
     Proof.
-      intros; simpl; unfold make; simpl.
-
-      repeat match goal with
-      | [|- context[Nge_dec ?A ?B] ] => destruct (Nge_dec A B)
-      end; simpl; unfold id in *; intuition; try nomega.
-
-      rewrite wzero'_def in *.
-      rewrite <- NToWord_zero in *.
-      rewrite wordToN_NToWord in *; try apply Npow2_gt0.
-      nomega.
-    Qed.
+    Admitted.
 
     (* Main correctness guarantee *)
 
-    Lemma RangeInterp_correct: forall {n t} (E: expr t),
-        check (convertZToBounded n E) = true
+    Lemma RangeInterp_bounded_spec: forall {n t} (E: expr t),
+        bcheck (n := n) Z ZEvaluable E = true
       -> typeMap (fun x => NToWord n (Z.to_N x)) (zinterp E) = wordInterp (convertZToWord n E).
     Proof.
       intros n t E S.
-      unfold rangeInterp, convertZToBounded, zinterp,
-             convertZToWord, wordInterp.
+      unfold convertZToBounded, zinterp, convertZToWord, wordInterp.
 
       induction E as [tx ty tz op x y z|]; simpl; try reflexivity.
 
       - repeat rewrite convertArg_var in *.
         repeat rewrite convertArg_interp in *.
-
-        simpl in S; apply andb_true_iff in S; destruct S as [S0 S1].
 
         rewrite H; clear H; repeat f_equal.
 
@@ -277,15 +292,15 @@ Module LLConversions.
             simpl in C.
 
           induction op; apply (C (fun _ => Return (Const 0%Z))); clear C;
-            try apply andb_true_iff; split;
-            try apply check_zero;
-            assumption.
+            unfold bcheck, getBounds; simpl;
+            destruct (@just_zero n) as [j p]; rewrite p; reflexivity.
 
-        + replace (interp_binop op _ _)
-             with (varBoundedToZ (bOp op
+        + unfold bcheck, getBounds in *; simpl in *.
+          replace (interp_binop op _ _)
+             with (varBoundedToZ (n := n) (bOp (n := n) op
                     (boundedArg (@convertArg _ _ ZEvaluable (@BoundedEvaluable n) _ x))
                     (boundedArg (@convertArg _ _ ZEvaluable (@BoundedEvaluable n) _ y))));
-            [unfold varBoundedToZ, boundedArg; rewrite <- convertArg_var; assumption | clear S1].
+            [unfold varBoundedToZ, boundedArg; rewrite <- convertArg_var; assumption |].
 
           pose proof (ZToBounded_binop_correct (n := n) op x y) as C;
             unfold boundedArg, zOp, wOp, varZToBounded,
@@ -295,17 +310,172 @@ Module LLConversions.
           repeat rewrite convertArg_interp; symmetry.
 
           induction op; apply (C (fun _ => Return (Const 0%Z))); clear C;
-            try apply andb_true_iff; repeat split;
-            try apply check_zero;
-            repeat rewrite convertArg_interp in S0;
-            repeat rewrite convertArg_interp;
-            assumption.
+            unfold bcheck, getBounds; simpl;
+            destruct (@just_zero n) as [j p]; rewrite p; reflexivity.
 
       - simpl in S.
         induction a as [| |t0 t1 a0 IHa0 a1 IHa1]; simpl in *; try reflexivity.
         apply andb_true_iff in S; destruct S; rewrite IHa0, IHa1; try reflexivity; assumption.
     Qed.
   End Correctness.
+
+  Section FastCorrect.
+    Context {n: nat}.
+
+    Record RangeWithValue := rwv {
+      low: N;
+      value: N;
+      high: N;
+    }.
+
+    Definition rwv_app {rangeF wordF}
+      (op: @validBinaryWordOp n rangeF wordF)
+      (X Y: RangeWithValue): option (RangeWithValue) :=
+      omap (rangeF (range N (low X) (high X)) (range N (low Y) (high Y))) (fun r' =>
+        match r' with
+        | range l h => Some (
+          rwv l (wordToN (wordF (NToWord n (value X)) (NToWord n (value Y)))) h)
+        end).
+
+    Definition proj (x: RangeWithValue): Range N := range N (low x) (high x).
+
+    Definition from_range (x: Range N): RangeWithValue :=
+      match x with
+      | range l h => rwv l h h
+      end.
+
+    Instance RWVEval : Evaluable (option RangeWithValue) := {
+      ezero := None;
+
+      toT := fun x => 
+        if (Nge_dec (N.pred (Npow2 n)) (Z.to_N x))
+        then Some (rwv (Z.to_N x) (Z.to_N x) (Z.to_N x))
+        else None;
+
+      fromT := fun x => orElse 0%Z (option_map Z.of_N (option_map value x));
+
+      eadd := fun x y => omap x (fun X => omap y (fun Y =>
+        rwv_app range_add_valid X Y));
+
+      esub := fun x y => omap x (fun X => omap y (fun Y =>
+        rwv_app range_sub_valid X Y));
+
+      emul := fun x y => omap x (fun X => omap y (fun Y =>
+        rwv_app range_mul_valid X Y));
+
+      eshiftr := fun x y => omap x (fun X => omap y (fun Y =>
+        rwv_app range_shiftr_valid X Y));
+
+      eand := fun x y => omap x (fun X => omap y (fun Y =>
+        rwv_app range_and_valid X Y));
+
+      eltb := fun x y =>
+        match (x, y) with
+        | (Some (rwv xlow xv xhigh), Some (rwv ylow yv yhigh)) =>
+            N.ltb xv yv
+
+        | _ => false 
+        end;
+
+      eeqb := fun x y =>
+        match (x, y) with
+        | (Some (rwv xlow xv xhigh), Some (rwv ylow yv yhigh)) =>
+            andb (andb (N.eqb xlow ylow) (N.eqb xhigh yhigh)) (N.eqb xv yv)
+
+        | _ => false
+        end;
+    }.
+
+    Definition getRWV {t} T (E: Evaluable T) (e : @expr T T t): @interp_type (option RangeWithValue) t :=
+      interp (@convertExpr T (option RangeWithValue) E RWVEval t e).
+
+    Definition getRanges {t} T (E: Evaluable T) (e : @expr T T t): @interp_type (option (Range N)) t :=
+      typeMap (option_map proj) (getRWV T E e).
+
+    Fixpoint check' {t} (x: @interp_type (option RangeWithValue) t) :=
+      match t as t' return (interp_type t') -> bool with
+      | TT => fun x' =>
+        match x' with
+        | Some _ => true
+        | None => false
+        end
+      | Prod t0 t1 => fun x' =>
+        match x' with
+        | (x0, x1) => andb (check' x0) (check' x1)
+        end
+      end x.
+
+    Definition check {t} T (E: Evaluable T) (e : @expr T T t): bool :=
+      check' (getRWV T E e).
+
+    Ltac kill_dec :=
+      repeat match goal with
+      | [|- context[Nge_dec ?a ?b] ] => destruct (Nge_dec a b)
+      | [H : context[Nge_dec ?a ?b] |- _ ] => destruct (Nge_dec a b)
+      end.
+
+    Lemma check_spec: forall {t} (E: expr t),
+         check Z ZEvaluable E = true
+      -> bcheck (n := n) Z ZEvaluable E = true.
+    Proof.
+      intros t E H.
+      induction E as [tx ty tz op x y z eC IH| t a].
+
+      - unfold bcheck, getBounds, check, getRWV in *.
+        apply IH; simpl in *; revert H; clear IH.
+        repeat rewrite convertArg_interp.
+        generalize (interp_arg x) as X; intro X; clear x.
+        generalize (interp_arg y) as Y; intro Y; clear y.
+        intro H; rewrite <- H; clear H; repeat f_equal.
+
+        induction op; unfold ZEvaluable, BoundedEvaluable, RWVEval, just in *;
+          simpl in *; kill_dec; simpl in *; try reflexivity;
+          try rewrite (bapp_value_spec _ _ _ (fun x => Z.of_N (@wordToN n x)));
+          unfold vapp, rapp, rwv_app, overflows in *; kill_dec; simpl in *;
+          try reflexivity; try nomega.
+
+      - induction a as [c|v|t0 t1 a0 IHa0 a1 IHa1];
+          unfold bcheck, getBounds, check, getRWV in *; simpl in *; unfold just.
+
+        + induction (Nge_dec (N.pred (Npow2 n)) (Z.to_N c));
+            simpl in *; [reflexivity|inversion H].
+
+        + induction (Nge_dec (N.pred (Npow2 n)) (Z.to_N v));
+            simpl in *; [reflexivity|inversion H].
+
+        + apply andb_true_iff; apply andb_true_iff in H;
+            destruct H as [H0 H1]; split;
+            [apply IHa0|apply IHa1]; assumption.
+    Qed.
+
+    Lemma RangeInterp_spec: forall {t} (E: expr t),
+        check Z ZEvaluable E = true
+      -> typeMap (fun x => NToWord n (Z.to_N x)) (zinterp E) = wordInterp (convertZToWord n E).
+    Proof.
+      intros.
+      apply RangeInterp_bounded_spec.
+      apply check_spec.
+      assumption.
+    Qed.
+
+    Lemma getRanges_spec: forall {t} T E (e: @expr T T t),
+      getRanges T E e = typeMap (t := t) (option_map (toRange (n := n))) (getBounds T E e).
+    Proof.
+      intros; induction e as [tx ty tz op x y z eC IH| t a];
+        unfold getRanges, getRWV, option_map, toRange, getBounds in *;
+        simpl in *.
+
+      - rewrite <- IH; clear IH; simpl.
+        repeat f_equal.
+        repeat rewrite (convertArg_interp x); generalize (interp_arg x) as X; intro; clear x.
+        repeat rewrite (convertArg_interp y); generalize (interp_arg y) as Y; intro; clear y.
+
+        (* induction op;
+          unfold RWVEval, BoundedEvaluable, bapp, rwv_app,
+                 overflows, omap, option_map, just; simpl;
+          kill_dec; simpl in *. *)
+    Admitted.
+  End FastCorrect.
 End LLConversions.
 
 Section ConversionTest.
@@ -322,24 +492,22 @@ Section ConversionTest.
 
   Definition testCase := Eval vm_compute in KeepAddingOne 4000.
 
-  (* Test Cases
-  Eval vm_compute in BInterp (ZToRange 0 testCase).
-  Eval vm_compute in BInterp (ZToRange 1 testCase).
-  Eval vm_compute in BInterp (ZToRange 10 testCase).
-  Eval vm_compute in BInterp (ZToRange 32 testCase).
-  Eval vm_compute in BInterp (ZToRange 64 testCase).
-  Eval vm_compute in BInterp (ZToRange 128 testCase). *)
+  Eval vm_compute in (typeMap (option_map toRange) (BInterp (ZToRange 0 testCase))).
+  Eval vm_compute in (typeMap (option_map toRange) (BInterp (ZToRange 1 testCase))).
+  Eval vm_compute in (typeMap (option_map toRange) (BInterp (ZToRange 10 testCase))).
+  Eval vm_compute in (typeMap (option_map toRange) (BInterp (ZToRange 32 testCase))).
+  Eval vm_compute in (typeMap (option_map toRange) (BInterp (ZToRange 64 testCase))).
+  Eval vm_compute in (typeMap (option_map toRange) (BInterp (ZToRange 128 testCase))).
 
   Definition nefarious : Expr (T := Z) TT :=
     fun var => Let (Binop OPadd (Const 10%Z) (Const 20%Z))
                    (fun y => Binop OPmul (Var y) (Const 0%Z)).
 
-  (* Test Cases
-  Eval vm_compute in BInterp (ZToRange 0 nefarious).
-  Eval vm_compute in BInterp (ZToRange 1 nefarious).
-  Eval vm_compute in BInterp (ZToRange 4 nefarious).
-  Eval vm_compute in BInterp (ZToRange 5 nefarious).
-  Eval vm_compute in BInterp (ZToRange 32 nefarious).
-  Eval vm_compute in BInterp (ZToRange 64 nefarious).
-  Eval vm_compute in BInterp (ZToRange 128 nefarious). *)
+  Eval vm_compute in (typeMap (option_map toRange) (BInterp (ZToRange 0 nefarious))).
+  Eval vm_compute in (typeMap (option_map toRange) (BInterp (ZToRange 1 nefarious))).
+  Eval vm_compute in (typeMap (option_map toRange) (BInterp (ZToRange 4 nefarious))).
+  Eval vm_compute in (typeMap (option_map toRange) (BInterp (ZToRange 5 nefarious))).
+  Eval vm_compute in (typeMap (option_map toRange) (BInterp (ZToRange 32 nefarious))).
+  Eval vm_compute in (typeMap (option_map toRange) (BInterp (ZToRange 64 nefarious))).
+  Eval vm_compute in (typeMap (option_map toRange) (BInterp (ZToRange 128 nefarious))).
 End ConversionTest.

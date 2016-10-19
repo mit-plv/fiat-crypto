@@ -1,4 +1,5 @@
 Require Export Crypto.Assembly.QhasmCommon.
+
 Require Export Crypto.Assembly.PhoasCommon.
 Require Export Crypto.Assembly.HL.
 Require Export Crypto.Assembly.LL.
@@ -21,7 +22,7 @@ Module Type Expression.
   Parameter inputs: nat.
   Parameter ResultType: type.
   Parameter hlProg: NAry inputs Z (@HL.expr Z (@LL.arg Z Z) ResultType).
-  Parameter inputBounds: list (@BoundedWord bits).
+  Parameter inputBounds: list (Range N).
 End Expression.
 
 Module Pipeline (Input: Expression).
@@ -42,28 +43,32 @@ Module Pipeline (Input: Expression).
     | None => None
     end.
 
-  Definition B: Type := option (@BoundedWord bits).
+  Import LLConversions.
 
-  Definition boundedProg: NAry inputs B (@LL.expr B B ResultType) :=
-    NArgMap (fun x =>
-        orElse (Z.of_N (N.pred (Npow2 bits)))
-               (option_map Z.of_N (option_map Evaluables.high x))) (
-      liftN (LLConversions.convertZToBounded bits) llProg).
+  Definition RWV: Type := option RangeWithValue.
 
-  Fixpoint valid' {T k} ins (f: NAry k B T) :=
-    match k as k' return NAry k' B T -> T with
+  Definition rwvProg: NAry inputs RWV (@LL.expr RWV RWV ResultType) :=
+    NArgMap (fun x => orElse 0%Z (option_map (fun v => Z.of_N (value v)) x) ) (
+      liftN (@convertExpr Z RWV ZEvaluable (RWVEval (n := bits)) _) llProg).
+
+  Fixpoint applyProgOn {A B k} ins (f: NAry k (option A) B): B :=
+    match k as k' return NAry k' (option A) B -> B with
     | O => id
     | S m => fun f' =>
       match ins with
-      | cons x xs => @valid' _ m xs (f' x)
-      | nil => @valid' _ m nil (f' None)
+      | cons x xs => @applyProgOn A B m xs (f' x)
+      | nil => @applyProgOn A B m nil (f' None)
       end
     end f.
 
-  Definition outputBounds := valid' (map (@Some _) inputBounds) boundedProg.
+  Definition outputBounds :=
+    applyProgOn (map (@Some _) (map from_range inputBounds)) (
+      liftN (fun e => typeMap (option_map proj) (@LL.interp RWV (@RWVEval bits) _ e))
+        rwvProg).
 
   Definition valid :=
-    valid' (map (@Some _) inputBounds) (liftN (LLConversions.check) boundedProg).
+    applyProgOn (map (@Some _) (map from_range inputBounds)) (
+     liftN (@check bits _ RWV (@RWVEval bits)) rwvProg).
 End Pipeline.
 
 Module SimpleExample.
@@ -78,7 +83,7 @@ Module SimpleExample.
     Definition hlProg: NAry 1 Z (@HL.expr Z (@LL.arg Z Z) TT) :=
         Eval vm_compute in (fun x => HL.Binop OPadd (HL.Const x) (HL.Const 5%Z)).
 
-    Definition inputBounds: list (@BoundedWord bits) := [ any ].
+    Definition inputBounds: list (Range N) := [ range N 0%N (Npow2 31) ].
   End SimpleExpression.
 
   Module SimplePipeline := Pipeline SimpleExpression.

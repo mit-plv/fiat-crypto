@@ -17,10 +17,9 @@ Module GF25519.
 
   Section DefaultBounds.
     Import ListNotations.
-    Local Notation rr exp :=
-      (orElse any (make (n := bits) 0 (wzero _) (2^exp + 2^exp/10)%N)).
+    Local Notation rr exp := (range N 0%N (2^exp + 2^exp/10)%N).
 
-    Definition feBound: list (@BoundedWord bits) :=
+    Definition feBound: list (Range N) :=
       [rr 26; rr 27; rr 26; rr 27; rr 26;
        rr 27; rr 26; rr 27; rr 26; rr 27].
   End DefaultBounds.
@@ -40,7 +39,7 @@ Module GF25519.
     Definition inputs: nat := 20.
     Definition width: Width bits := width.
     Definition ResultType := FE.
-    Definition inputBounds: list (@BoundedWord bits) := feBound ++ feBound.
+    Definition inputBounds := feBound ++ feBound.
 
     Definition ge25519_add_expr :=
         Eval cbv beta delta [fe25519 add mul sub Let_In] in add.
@@ -93,7 +92,7 @@ Module GF25519.
     Definition inputs: nat := 20.
     Definition width: Width bits := width.
     Definition ResultType := FE.
-    Definition inputBounds: list (@BoundedWord bits) := feBound ++ feBound.
+    Definition inputBounds := feBound ++ feBound.
 
     Definition ge25519_sub_expr :=
         Eval cbv beta delta [fe25519 add mul sub Let_In] in sub.
@@ -146,7 +145,7 @@ Module GF25519.
     Definition inputs: nat := 20.
     Definition width: Width bits := width.
     Definition ResultType := FE.
-    Definition inputBounds: list (@BoundedWord bits) := feBound ++ feBound.
+    Definition inputBounds := feBound ++ feBound.
 
     Definition ge25519_mul_expr :=
         Eval cbv beta delta [fe25519 add mul sub Let_In] in mul.
@@ -199,7 +198,7 @@ Module GF25519.
     Definition inputs: nat := 10.
     Definition width: Width bits := width.
     Definition ResultType := FE.
-    Definition inputBounds: list (@BoundedWord bits) := feBound.
+    Definition inputBounds := feBound.
 
     Definition ge25519_opp_expr :=
         Eval cbv beta delta [fe25519 add mul sub opp Let_In] in opp.
