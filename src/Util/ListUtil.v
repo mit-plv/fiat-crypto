@@ -1543,6 +1543,13 @@ Proof.
   intuition (congruence || eauto).
 Qed.
 
+Lemma fold_right_andb_true_iff_fold_right_and_True (ls : list bool)
+  : List.fold_right andb true ls = true <-> List.fold_right and True (List.map (fun b => b = true) ls).
+Proof.
+  rewrite <- (map_id ls) at 1.
+  rewrite fold_right_andb_true_map_iff, fold_right_and_True_forall_In_iff; reflexivity.
+Qed.
+
 Lemma Forall2_forall_iff : forall {A} R (xs ys : list A) d, length xs = length ys ->
   (Forall2 R xs ys <-> (forall i, (i < length xs)%nat -> R (nth_default d xs i) (nth_default d ys i))).
 Proof.
