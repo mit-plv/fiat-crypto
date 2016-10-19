@@ -2,6 +2,7 @@ Require Import Coq.Classes.Morphisms.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.Lists.List.
 Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.ListUtil.
 Require Export Crypto.Util.FixCoqMistakes.
 
 Fixpoint tuple' T n : Type :=
@@ -105,6 +106,9 @@ Definition on_tuple2 {A B C} (f : list A -> list B -> list C) {a b c : nat}
            (ta:tuple A a) (tb:tuple B b) : tuple C c
   := from_list c (f (to_list a ta) (to_list b tb))
                (Hlength (to_list a ta) (to_list b tb) (length_to_list ta) (length_to_list tb)).
+
+Definition map2 {n A B C} (f:A -> B -> C) (xs:tuple A n) (ys:tuple B n) : tuple C n
+  := on_tuple2 (map2 f) (fun la lb pfa pfb => eq_trans (@map2_length _ _ _ _ la lb) (eq_trans (f_equal2 _ pfa pfb) (Min.min_idempotent _))) xs ys.
 
 Fixpoint fieldwise' {A B} (n:nat) (R:A->B->Prop) (a:tuple' A n) (b:tuple' B n) {struct n} : Prop.
   destruct n; simpl @tuple' in *.

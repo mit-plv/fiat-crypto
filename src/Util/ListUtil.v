@@ -1494,6 +1494,8 @@ Proof.
   rewrite map2_cons, !length_cons, IHls1.
   auto.
 Qed.
+Hint Rewrite @map2_length : distr_length.
+
 
 Ltac simpl_list_lengths := repeat match goal with
   | H : appcontext[length (@nil ?A)] |- _ => rewrite (@nil_length0 A) in H
