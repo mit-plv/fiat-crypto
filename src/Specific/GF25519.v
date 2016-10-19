@@ -386,7 +386,7 @@ Definition mbs_field := modular_base_system_field modulus_gt_2.
 
 Import Morphisms.
 
-Lemma field25519 : @field fe25519 eq zero one opp add sub mul inv div.
+Lemma field25519 : @field fe25519 eq zero_ one_ opp add sub mul inv div.
 Proof.
   pose proof (Equivalence_Reflexive : Reflexive eq).
   eapply (Field.equivalent_operations_field (fieldR := mbs_field)).
@@ -407,11 +407,27 @@ Qed.
 
 
 (** TODO(jadep from jgross): Fill me in *)
-Lemma carry_field25519 : @field fe25519 eq zero one carry_opp carry_add carry_sub mul inv div.
+Lemma carry_field25519 : @field fe25519 eq zero_ one_ carry_opp carry_add carry_sub mul inv div.
 Proof.
   pose proof (Equivalence_Reflexive : Reflexive eq).
-  (*eapply (Field.equivalent_operations_field (fieldR := mbs_field)).*)
-Admitted.
+  eapply (Field.equivalent_operations_field (fieldR := mbs_field)).
+  Grab Existential Variables.
+  + reflexivity.
+  + reflexivity.
+  + reflexivity.
+  + intros; rewrite mul_correct.
+    rewrite carry_mul_opt_correct by auto using k_subst, c_subst.
+    cbv [eq].
+    rewrite carry_mul_rep by reflexivity.
+    rewrite mul_rep; reflexivity.
+  + intros; rewrite carry_sub_correct, carry_sub_opt_correct;
+    apply carry_sub_rep.
+  + intros; rewrite carry_add_correct, carry_add_opt_correct;
+    apply carry_add_rep.
+  + intros; rewrite inv_correct, inv_opt_correct; reflexivity.
+  + intros; rewrite carry_opp_correct, carry_opp_opt_correct;
+    apply carry_opp_rep.
+Qed.
 
 Lemma homomorphism_F25519 :
   @Ring.is_homomorphism
@@ -429,7 +445,6 @@ Proof.
   + reflexivity.
 Qed.
 
-(** TODO(jadep from jgross): Remove admits in this proof *)
 Lemma homomorphism_carry_F25519 :
   @Ring.is_homomorphism
     (F modulus) Logic.eq F.one F.add F.mul
@@ -438,13 +453,13 @@ Proof.
   econstructor.
   + econstructor; [ | apply encode_Proper].
     intros; cbv [eq].
-    rewrite carry_add_correct, carry_add_opt_correct; admit; rewrite add_rep; apply encode_rep.
+    rewrite carry_add_correct, carry_add_opt_correct, carry_add_rep, add_rep; apply encode_rep.
   + intros; cbv [eq].
     rewrite mul_correct, carry_mul_opt_correct, carry_mul_rep
       by auto using k_subst, c_subst, encode_rep.
     apply encode_rep.
   + reflexivity.
-Admitted.
+Qed.
 
 Definition ge_modulus_sig (f : fe25519) :
   { b : bool | b = ge_modulus_opt (to_list 10 f) }.
