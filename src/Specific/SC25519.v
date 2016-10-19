@@ -90,6 +90,8 @@ Section Z.
     instantiate;
     rewrite ?Z.pow2_mod_spec in * by omega;
     fold_modulusv; fold_Z_pow_pos.
+  Lemma Z_of_nat_lt_helper x b e : (x < b^e)%nat <-> x < b^e.
+  Proof. rewrite Nat2Z.inj_lt, Z.pow_Zpow; reflexivity. Qed.
   Lemma SRepDecModL_Correct : forall w : Word.word (b + b), SRepEq (S2Rep (ModularArithmetic.F.of_nat l (Word.wordToNat w))) (SRepDecModL w).
   Proof.
     intro w; unfold SRepEq, S2Rep, b in *.
@@ -97,8 +99,8 @@ Section Z.
     transitivity_refl (barrett_reduce_function_bundled (Z.of_N (Word.wordToN w))).
     transitivity_barrett_bounds;
       rewrite ?Word.wordToN_nat, ?nat_N_Z, ?WordUtil.pow2_id in *.
-    { apply inj_lt in H'.
-      rewrite Z.pow_Zpow, Nat2Z.inj_add in H'; simpl @Z.of_nat in *.
+    { apply Z_of_nat_lt_helper in H'.
+      rewrite Nat2Z.inj_add in H'.
       auto with zarith. }
     { reflexivity. }
   Qed.
@@ -150,8 +152,8 @@ Section Z.
     { pose proof (Word.wordToNat_bound w) as H.
       rewrite Word.wordToN_nat, nat_N_Z.
       rewrite WordUtil.pow2_id in H.
-      apply inj_lt in H.
-      rewrite Z.pow_Zpow, Nat2Z.inj_add in H; simpl @Z.of_nat in *.
+      apply Z_of_nat_lt_helper in H.
+      rewrite Nat2Z.inj_add in H; simpl @Z.of_nat in *.
       split; auto with zarith.
       etransitivity; [ eassumption | instantiate; vm_compute; reflexivity ]. }
     { rewrite Word.wordToN_nat, nat_N_Z; reflexivity. }
