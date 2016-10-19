@@ -286,7 +286,7 @@ Check @sign_correct
 
 Definition Fsqrt_minus1 := Eval vm_compute in ModularBaseSystem.decode (GF25519.sqrt_m1).
 Definition Fsqrt := PrimeFieldTheorems.F.sqrt_5mod8 Fsqrt_minus1.
-Lemma bound_check_255_helper x y : (0 <= x)%Z -> BinInt.Z.to_nat x < 2^y <-> (x < 2^(Z.of_nat y))%Z.
+Lemma bound_check_255_helper x y : (0 <= x)%Z -> (BinInt.Z.to_nat x < 2^y <-> (x < 2^(Z.of_nat y))%Z).
 Proof.
   intros.
   rewrite <-(Znat.Nat2Z.id 2) at 1.
