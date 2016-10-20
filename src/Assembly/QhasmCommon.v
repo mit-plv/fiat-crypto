@@ -7,6 +7,24 @@ Definition Label := nat.
 Definition Index (limit: nat) := {x: nat | (x <= (pred limit))%nat}.
 Coercion indexToNat {lim: nat} (i: Index lim): nat := proj1_sig i.
 
+Fixpoint NAry (n: nat) (A: Type) (B: Type): Type :=
+  match n with
+  | (S m) => A -> NAry m A B
+  | O => B
+  end.
+
+Fixpoint liftN {n A B C} (f: B -> C) (x: NAry n A B) {struct n}: NAry n A C :=
+  match n as n' return NAry n' A B -> NAry n' A C with
+  | S m => fun x' => (fun arg => liftN f (x' arg))
+  | O => f
+  end x.
+
+Fixpoint NArgMap {n A B C} (f: A -> B) (x: NAry n B C) {struct n}: NAry n A C :=
+  match n as n' return NAry n' B C -> NAry n' A C with
+  | S m => fun x' => (fun arg => NArgMap f (x' (f arg)))
+  | O => id
+  end x.
+
 Inductive Either A B :=
   | xleft: A -> Either A B
   | xright: B -> Either A B.
