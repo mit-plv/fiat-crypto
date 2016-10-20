@@ -1494,6 +1494,8 @@ Proof.
   rewrite map2_cons, !length_cons, IHls1.
   auto.
 Qed.
+Hint Rewrite @map2_length : distr_length.
+
 
 Ltac simpl_list_lengths := repeat match goal with
   | H : appcontext[length (@nil ?A)] |- _ => rewrite (@nil_length0 A) in H
@@ -1539,6 +1541,13 @@ Lemma fold_right_andb_true_map_iff A (ls : list A) f
 Proof.
   induction ls; simpl; [ | rewrite Bool.andb_true_iff, IHls ]; try tauto.
   intuition (congruence || eauto).
+Qed.
+
+Lemma fold_right_andb_true_iff_fold_right_and_True (ls : list bool)
+  : List.fold_right andb true ls = true <-> List.fold_right and True (List.map (fun b => b = true) ls).
+Proof.
+  rewrite <- (map_id ls) at 1.
+  rewrite fold_right_andb_true_map_iff, fold_right_and_True_forall_In_iff; reflexivity.
 Qed.
 
 Lemma Forall2_forall_iff : forall {A} R (xs ys : list A) d, length xs = length ys ->

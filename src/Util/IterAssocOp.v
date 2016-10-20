@@ -11,19 +11,14 @@ Section IterAssocOp.
   Context {T eq op id} {moinoid : @monoid T eq op id}
           {scalar : Type} (scToN : scalar -> N)
           (testbit : scalar -> nat -> bool)
-          (testbit_spec : forall x i, testbit x i = N.testbit_nat (scToN x) i).
+          (testbit_correct : forall x i, testbit x i = N.testbit_nat (scToN x) i).
+  Local Infix "===" := eq. Local Infix "===" := eq : type_scope.
 
-  Fixpoint nat_iter_op n a : T :=
-    match n with
-    | 0%nat => id
-    | S n' => op a (nat_iter_op n' a)
-    end.
+  Local Notation nat_iter_op := (ScalarMult.scalarmult_ref (add:=op) (zero:=id)).
 
-  Lemma nat_iter_op_plus : forall m n a,
+  Lemma nat_iter_op_plus m n a :
     op (nat_iter_op m a) (nat_iter_op n a) === nat_iter_op (m + n) a.
-  Proof.
-    induction m; intros; simpl; rewrite ?left_identity, <-?IHm, ?associative; reflexivity.
-  Qed.
+  Proof. symmetry; eapply ScalarMult.scalarmult_add_l. Qed.
 
   Definition N_iter_op n a :=
     match n with
@@ -46,6 +41,8 @@ Section IterAssocOp.
     induction n using N.peano_ind; intros; rewrite ?N2Nat.inj_succ, ?N_iter_op_succ, ?IHn; reflexivity.
   Qed.
 
+  Context {sel:bool->T->T->T} {sel_correct:forall b x y, sel b x y = if b then y else x}.
+
   Fixpoint funexp {A} (f : A -> A) (a : A) (exp : nat) : A :=
     match exp with
     | O => a
@@ -55,9 +52,10 @@ Section IterAssocOp.
   Definition test_and_op sc a (state : nat * T) :=
     let '(i, acc) := state in
     let acc2 := op acc acc in
+    let acc2a := op a acc2 in
     match i with
     | O => (0, acc)
-    | S i' => (i', if testbit sc i' then op a acc2 else acc2)
+    | S i' => (i', sel (testbit sc i') acc2 acc2a)
     end.
 
   Definition iter_op bound sc a : T :=
@@ -125,8 +123,9 @@ Section IterAssocOp.
     destruct i; [ apply Hpre | ].
     simpl.
     rewrite Nshiftr_succ.
+    rewrite sel_correct.
     case_eq (testbit sc i); intro testbit_eq; simpl;
-      rewrite testbit_spec in testbit_eq; rewrite testbit_eq;
+      rewrite testbit_correct in testbit_eq; rewrite testbit_eq;
       rewrite Hpre, <- plus_n_O, nat_iter_op_plus; reflexivity.
   Qed.
 
@@ -138,7 +137,7 @@ Section IterAssocOp.
   Qed.
 
   Lemma funexp_test_and_op_index : forall n a x acc y,
-    fst (funexp (test_and_op n a) (x, acc) y) === x - y.
+    fst (funexp (test_and_op n a) (x, acc) y) = x - y.
   Proof.
     induction y; simpl; rewrite <- ?Minus.minus_n_O; try reflexivity.
     match goal with |- context[funexp ?a ?b ?c] => destruct (funexp a b c) as [i acc'] end.
@@ -181,7 +180,7 @@ Section IterAssocOp.
     auto.
   Qed.
 
-  Lemma iter_op_spec : forall sc a bound, N.size_nat (scToN sc) <= bound ->
+  Lemma iter_op_correct : forall sc a bound, N.size_nat (scToN sc) <= bound ->
     iter_op bound sc a === nat_iter_op (N.to_nat (scToN sc)) a.
   Proof.
     intros.
@@ -192,5 +191,4 @@ Section IterAssocOp.
     rewrite Nshiftr_size by auto.
     reflexivity.
   Qed.
-
 End IterAssocOp.

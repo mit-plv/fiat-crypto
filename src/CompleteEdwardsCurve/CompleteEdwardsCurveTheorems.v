@@ -160,17 +160,17 @@ Module E.
     Next Obligation.
       destruct P as [ [? ?] ?]; simpl.
       rewrite_strat bottomup hints field_homomorphism.
-      eauto using is_homomorphism_phi_proper; assumption.
+      eauto using Monoid.is_homomorphism_phi_proper; assumption.
     Qed.
 
     Context {point_phi:Fpoint->Kpoint}
             {point_phi_Proper:Proper (eq==>eq) point_phi}
             {point_phi_correct: forall (P:point), eq (point_phi P) (ref_phi P)}.
 
-    Lemma lift_homomorphism : @Group.is_homomorphism Fpoint eq add Kpoint eq add point_phi.
+    Lemma lift_homomorphism : @Monoid.is_homomorphism Fpoint eq add Kpoint eq add point_phi.
     Proof.
       repeat match goal with
-             | |- Group.is_homomorphism => split
+             | |- Monoid.is_homomorphism => split
              | |- _ => intro
              | |-  _ /\ _ => split
              | [H: _ /\ _ |- _ ] => destruct H

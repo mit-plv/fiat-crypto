@@ -252,11 +252,23 @@ Ltac destruct_sig_matcher HT :=
 Ltac destruct_sig := destruct_all_matches destruct_sig_matcher.
 Ltac destruct_sig' := destruct_all_matches' destruct_sig_matcher.
 
-(** try to specialize all non-dependent hypotheses using [tac] *)
+Ltac transparent_specialize_one H arg :=
+  first [ let test := eval unfold H in H in idtac;
+          let H' := fresh in rename H into H'; pose (H' arg) as H; subst H'
+         | specialize (H arg) ].
+
+(** try to specialize all non-dependent hypotheses using [tac], maintaining transparency *)
 Ltac specialize_by' tac :=
   idtac;
   match goal with
-  | [ H : ?A -> ?B |- _ ] => let H' := fresh in assert (H' : A) by tac; specialize (H H'); clear H'
+  | [ H : ?A -> ?B |- _ ] =>
+    match type of A with
+      Prop => 
+      let H' := fresh in
+      assert (H' : A) by tac;
+      transparent_specialize_one H H';
+      try clear H' (* if [H] was transparent, [H'] will remain *)
+    end
   end.
 
 Ltac specialize_by tac := repeat specialize_by' tac.

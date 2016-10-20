@@ -64,6 +64,6 @@ Section language.
                  (flatten_binding_list (t := t') base_type_code (SmartVarVar v') v))
     : interpf interp_op x = x'.
   Proof.
-    eapply interpf_SmartVarVar; subst; eassumption.
+    subst; eapply interpf_SmartVarVar; eassumption.
   Qed.
 End language.

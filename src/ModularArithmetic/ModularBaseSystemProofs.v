@@ -360,7 +360,7 @@ Section FieldOperationProofs.
     + eapply _zero_neq_one.
     + trivial.
   Qed.
-  End FieldProofs.
+End FieldProofs.
 
 End FieldOperationProofs.
 Opaque encode add mul sub inv pow.
@@ -488,6 +488,33 @@ Section CarryProofs.
   Proof.
     cbv [carry_mul]; intros; apply carry_sequence_rep;
       auto using carry_chain_valid,  mul_rep.
+  Qed.
+
+  Lemma carry_sub_rep : forall coeff coeff_mod a b,
+    eq
+      (carry_sub carry_chain coeff coeff_mod a b)
+      (sub coeff coeff_mod a b).
+  Proof.
+    cbv [carry_sub carry_]; intros.
+    eapply carry_sequence_rep; auto using carry_chain_valid.
+    reflexivity.
+  Qed.
+
+  Lemma carry_add_rep : forall a b,
+    eq (carry_add carry_chain a b) (add a b).
+  Proof.
+    cbv [carry_add carry_]; intros.
+    eapply carry_sequence_rep; auto using carry_chain_valid.
+    reflexivity.
+  Qed.
+
+  Lemma carry_opp_rep : forall coeff coeff_mod a,
+    eq
+      (carry_opp carry_chain coeff coeff_mod a)
+      (opp coeff coeff_mod a).
+  Proof.
+    cbv [carry_opp opp]; intros.
+    apply carry_sub_rep.
   Qed.
 
 End CarryProofs.
