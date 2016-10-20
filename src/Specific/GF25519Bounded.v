@@ -60,7 +60,7 @@ Definition proj1_fe25519W (x : fe25519) : fe25519W
   := let '(x0, x1, x2, x3, x4, x5, x6, x7, x8, x9) := x in
      (proj1_sig x0, proj1_sig x1, proj1_sig x2, proj1_sig x3, proj1_sig x4,
       proj1_sig x5, proj1_sig x6, proj1_sig x7, proj1_sig x8, proj1_sig x9).
-Definition proj1_fe25519 (x : fe25519) : Specific.GF25519.fe25519
+Coercion proj1_fe25519 (x : fe25519) : Specific.GF25519.fe25519
   := fe25519WToZ (proj1_fe25519W x).
 Definition is_bounded (x : Specific.GF25519.fe25519) : bool
   := let res := Tuple.map2
@@ -395,3 +395,5 @@ Proof.
   { rewrite H2; reflexivity. }
   { reflexivity. }
 Qed.
+
+(** TODO: pack, unpack, sqrt *)
