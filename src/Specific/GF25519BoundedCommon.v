@@ -244,3 +244,16 @@ Definition div (f g : fe25519) : fe25519
   := exist_fe25519 (div (proj1_fe25519 f) (proj1_fe25519 g)) (encode_bounded _).
 
 Definition eq (f g : fe25519) : Prop := eq (proj1_fe25519 f) (proj1_fe25519 g).
+
+
+Notation ibinop_correct_and_bounded irop op
+  := (forall x y,
+         is_bounded (fe25519WToZ x) = true
+         -> is_bounded (fe25519WToZ y) = true
+         -> fe25519WToZ (irop x y) = op (fe25519WToZ x) (fe25519WToZ y)
+            /\ is_bounded (fe25519WToZ (irop x y)) = true) (only parsing).
+Notation iunop_correct_and_bounded irop op
+  := (forall x,
+         is_bounded (fe25519WToZ x) = true
+         -> fe25519WToZ (irop x) = op (fe25519WToZ x)
+            /\ is_bounded (fe25519WToZ (irop x)) = true) (only parsing).
