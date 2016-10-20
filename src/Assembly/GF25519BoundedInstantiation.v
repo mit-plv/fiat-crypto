@@ -1,10 +1,8 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Assembly.GF25519.
+Require Import Crypto.Specific.GF25519Bounded.
 Require Import Crypto.Specific.GF25519.
 Require Import Crypto.Util.Tuple.
-
-Axiom is_bounded : forall (x : Specific.GF25519.fe25519), bool. (* Pull from Specific.GF25519Bounded when the latest changes to master are merged into this branch *)
-
 
 (* Totally fine to edit these definitions; DO NOT change the type signatures at all *)
 Definition ExprBinOp : Type
@@ -20,8 +18,16 @@ Definition rsub : ExprBinOp := GF25519.SubExpr.ge25519_sub.
 Definition rmul : ExprBinOp := GF25519.MulExpr.ge25519_mul.
 Definition ropp : ExprUnOp := GF25519.OppExpr.ge25519_opp.
 Axiom rfreeze : ExprUnOp.
-(*Axiom radd_correct : forall x y, interp_bexpr radd x y = carry_add x y.
-Axiom rsub_correct : forall x y, interp_bexpr rsub x y = carry_sub x y.*)
+Lemma radd_correct : forall x y, interp_bexpr radd x y = carry_add x y.
+Proof.
+  cbv [interp_bexpr radd GF25519.AddExpr.ge25519_add]; intros.
+  apply proj2_sig.
+Qed.
+Lemma rsub_correct : forall x y, interp_bexpr rsub x y = carry_sub x y.
+Proof.
+  cbv [interp_bexpr rsub GF25519.SubExpr.ge25519_sub]; intros.
+  apply proj2_sig.
+Qed.
 Lemma rmul_correct : forall x y, interp_bexpr rmul x y = mul x y.
 Proof.
   cbv [interp_bexpr rmul GF25519.MulExpr.ge25519_mul]; intros.

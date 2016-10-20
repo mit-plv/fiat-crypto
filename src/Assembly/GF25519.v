@@ -42,7 +42,7 @@ Module GF25519.
     Definition inputBounds := feBound ++ feBound.
 
     Definition ge25519_add_expr :=
-        Eval cbv beta delta [fe25519 add mul sub Let_In] in add.
+        Eval cbv beta delta [fe25519 carry_add mul carry_sub Let_In] in carry_add.
 
     Definition ge25519_add' (P Q: @interp_type Z FE) :
         { r: @HL.expr Z (@interp_type Z) FE
@@ -95,7 +95,7 @@ Module GF25519.
     Definition inputBounds := feBound ++ feBound.
 
     Definition ge25519_sub_expr :=
-        Eval cbv beta delta [fe25519 add mul sub Let_In] in sub.
+        Eval cbv beta delta [fe25519 carry_add mul carry_sub Let_In] in carry_sub.
 
     Definition ge25519_sub' (P Q: @interp_type Z FE) :
         { r: @HL.expr Z (@interp_type Z) FE
@@ -148,7 +148,7 @@ Module GF25519.
     Definition inputBounds := feBound ++ feBound.
 
     Definition ge25519_mul_expr :=
-        Eval cbv beta delta [fe25519 add mul sub Let_In] in mul.
+        Eval cbv beta delta [fe25519 carry_add mul carry_sub Let_In] in mul.
 
     Definition ge25519_mul' (P Q: @interp_type Z FE) :
         { r: @HL.expr Z (@interp_type Z) FE
@@ -201,7 +201,7 @@ Module GF25519.
     Definition inputBounds := feBound.
 
     Definition ge25519_opp_expr :=
-        Eval cbv beta delta [fe25519 add mul sub opp Let_In] in opp.
+        Eval cbv beta delta [fe25519 carry_add mul carry_sub carry_opp Let_In] in carry_opp.
 
     Definition ge25519_opp' (P: @interp_type Z FE) :
         { r: @HL.expr Z (@interp_type Z) FE
