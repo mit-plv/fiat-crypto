@@ -17,11 +17,11 @@ Module GF25519.
 
   Section DefaultBounds.
     Import ListNotations.
-    Local Notation rr exp := (range N 0%N (2^exp + 2^exp/10)%N).
+    Local Notation rr exp := (range N 0%N (2^exp + 2^(exp-3))%N).
 
     Definition feBound: list (Range N) :=
-      [rr 26; rr 27; rr 26; rr 27; rr 26;
-       rr 27; rr 26; rr 27; rr 26; rr 27].
+      [rr 25; rr 26; rr 25; rr 26; rr 25;
+       rr 26; rr 25; rr 26; rr 25; rr 26].
   End DefaultBounds.
 
   Definition FE: type.

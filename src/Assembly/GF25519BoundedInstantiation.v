@@ -1,7 +1,7 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Assembly.GF25519.
-Require Import Crypto.Specific.GF25519Bounded.
 Require Import Crypto.Specific.GF25519.
+Require Import Crypto.Specific.GF25519BoundedCommon.
 Require Import Crypto.Util.Tuple.
 
 (* Totally fine to edit these definitions; DO NOT change the type signatures at all *)
