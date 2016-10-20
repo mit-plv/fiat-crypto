@@ -406,7 +406,6 @@ Proof.
 Qed.
 
 
-(** TODO(jadep from jgross): Fill me in *)
 Lemma carry_field25519 : @field fe25519 eq zero_ one_ carry_opp carry_add carry_sub mul inv div.
 Proof.
   pose proof (Equivalence_Reflexive : Reflexive eq).

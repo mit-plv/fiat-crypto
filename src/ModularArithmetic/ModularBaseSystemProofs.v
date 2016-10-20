@@ -508,7 +508,6 @@ Section CarryProofs.
     reflexivity.
   Qed.
 
-  Print carry_opp.
   Lemma carry_opp_rep : forall coeff coeff_mod a,
     eq
       (carry_opp carry_chain coeff coeff_mod a)
