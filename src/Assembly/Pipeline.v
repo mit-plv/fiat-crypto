@@ -1,79 +1,92 @@
-Require Import Bedrock.Word.
-Require Import Crypto.Assembly.QhasmCommon Crypto.Assembly.QhasmEvalCommon.
-Require Import Crypto.Assembly.Pseudo Crypto.Assembly.Qhasm Crypto.Assembly.AlmostQhasm Crypto.Assembly.Conversion Crypto.Assembly.Language.
-Require Import Crypto.Assembly.PseudoConversion Crypto.Assembly.AlmostConversion Crypto.Assembly.StringConversion.
-Require Import Crypto.Assembly.Wordize Crypto.Assembly.Vectorize Crypto.Assembly.Pseudize.
-Require Import Crypto.Util.Notations.
+Require Export Crypto.Assembly.QhasmCommon.
 
-Module Pipeline.
-  Export AlmostQhasm Qhasm QhasmString.
-  Export Pseudo.
+Require Export Crypto.Assembly.PhoasCommon.
+Require Export Crypto.Assembly.HL.
+Require Export Crypto.Assembly.LL.
+Require Export Crypto.Assembly.Compile.
+Require Export Crypto.Assembly.Conversions.
+Require Export Crypto.Assembly.StringConversion.
+Require Export Crypto.Assembly.State.
 
-  Transparent Pseudo.Program AlmostQhasm.Program Qhasm.Program QhasmString.Program.
-  Transparent Pseudo.Params AlmostQhasm.Params Qhasm.Params QhasmString.Params.
+Require Export Crypto.Util.Notations.
+Require Export Crypto.Util.LetIn.
 
-  Definition toAlmost {w s n m} (p: @Pseudo w s n m) : option AlmostProgram :=
-    PseudoConversion.convertProgram (mkParams w s n m) tt p.
+Require Export Coq.ZArith.BinInt.
 
-  Definition toQhasm {w s n m} (p: @Pseudo w s n m) : option (list QhasmStatement) :=
-    omap (toAlmost p) (AlmostConversion.convertProgram tt tt).
+Require Export ExtrOcamlBasic.
+Require Export ExtrOcamlString.
 
-  Definition toString {w s n m} (p: @Pseudo w s n m) : option string :=
-    omap (toQhasm p) (StringConversion.convertProgram tt tt).
+Module Type Expression.
+  Parameter bits: nat.
+  Parameter width: Width bits.
+  Parameter inputs: nat.
+  Parameter ResultType: type.
+  Parameter hlProg: NAry inputs Z (@HL.expr Z (@LL.arg Z Z) ResultType).
+  Parameter inputBounds: list (Range N).
+End Expression.
+
+Module Pipeline (Input: Expression).
+  Export Input.
+
+  Definition llProg: NAry inputs Z (@LL.expr Z Z ResultType) :=
+    liftN CompileHL.compile hlProg.
+
+  Definition wordProg: NAry inputs (@CompileLL.WArg bits TT) (@LL.expr _ _ ResultType) :=
+    NArgMap (fun x => Z.of_N (wordToN (LL.interp_arg (t := TT) x))) (
+      liftN (LLConversions.convertZToWord bits) llProg).
+
+  Definition qhasmProg := CompileLL.compile (w := width) wordProg.
+
+  Definition qhasmString : option string :=
+    match qhasmProg with
+    | Some (p, _) => StringConversion.convertProgram p
+    | None => None
+    end.
+
+  Import LLConversions.
+
+  Definition RWV: Type := option RangeWithValue.
+
+  Definition rwvProg: NAry inputs RWV (@LL.expr RWV RWV ResultType) :=
+    NArgMap (fun x => orElse 0%Z (option_map (fun v => Z.of_N (value v)) x) ) (
+      liftN (@convertExpr Z RWV ZEvaluable (RWVEval (n := bits)) _) llProg).
+
+  Fixpoint applyProgOn {A B k} ins (f: NAry k (option A) B): B :=
+    match k as k' return NAry k' (option A) B -> B with
+    | O => id
+    | S m => fun f' =>
+      match ins with
+      | cons x xs => @applyProgOn A B m xs (f' x)
+      | nil => @applyProgOn A B m nil (f' None)
+      end
+    end f.
+
+  Definition outputBounds :=
+    applyProgOn (map (@Some _) (map from_range inputBounds)) (
+      liftN (fun e => typeMap (option_map proj) (@LL.interp RWV (@RWVEval bits) _ e))
+        rwvProg).
+
+  Definition valid :=
+    applyProgOn (map (@Some _) (map from_range inputBounds)) (
+     liftN (@check bits _ RWV (@RWVEval bits)) rwvProg).
 End Pipeline.
 
-Module PipelineExamples.
-  Import Pipeline ListNotations StateCommon EvalUtil ListState.
+Module SimpleExample.
+  Module SimpleExpression <: Expression.
+    Import ListNotations.
 
-  Local Notation "v [[ i ]]" := (nth i v (wzero _)).
-  Local Notation "$$ v" := (natToWord _ v).
+    Definition bits: nat := 32.
+    Definition width: Width bits := W32.
+    Definition inputs: nat := 1.
+    Definition ResultType := TT.
 
-  (*
-  Definition add_example: @pseudeq 32 W32 1 1 (fun v =>
-      plet a := $$ 1 in
-      plet b := v[[0]] in
-      [a ^+ b]).
-    pseudo_solve.
-  Defined.
+    Definition hlProg: NAry 1 Z (@HL.expr Z (@LL.arg Z Z) TT) :=
+        Eval vm_compute in (fun x => HL.Binop OPadd (HL.Const x) (HL.Const 5%Z)).
 
-  Definition add_ex_str :=
-    (Pipeline.toString (proj1_sig add_example)).
+    Definition inputBounds: list (Range N) := [ range N 0%N (Npow2 31) ].
+  End SimpleExpression.
 
-  Definition and_example: @pseudeq 32 W32 1 1 (fun v =>
-      plet a := $$ 1 in
-      plet b := v[[0]] in
-      [a ^& b]).
-    pseudo_solve.
-  Defined.
+  Module SimplePipeline := Pipeline SimpleExpression.
 
-  Definition and_ex_str :=
-    (Pipeline.toString (proj1_sig and_example)).
-
-  Definition mult_example: @pseudeq 32 W32 1 1 (fun v =>
-      plet a := $$ 1 in
-      plet b := v[[0]] in
-
-      (* NOTE: we want the lets in this format to unify with
-               pseudo_mult_dual *)
-      plet c := multHigh a b in
-      plet d := a ^* b in
-
-      [b ^& d]).
-    pseudo_solve.
-  Defined.
-
-  Definition mult_ex_str :=
-    (Pipeline.toString (proj1_sig mult_example)).
-
-  Definition comb_example: @pseudeq 32 W32 1 1 (fun v =>
-      plet a := $$ 7 in
-      plet b := v[[0]] in
-      ([b ^& a; a ^+ b])).
-    pseudo_solve.
-  Admitted.
-
-  Definition comb_ex_str :=
-    (Pipeline.toString (proj1_sig comb_example)).
-  *)
-
-End PipelineExamples.
+  Export SimplePipeline.
+End SimpleExample.
