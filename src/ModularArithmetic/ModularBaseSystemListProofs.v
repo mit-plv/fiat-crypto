@@ -4,6 +4,7 @@ Require Import Coq.Lists.List.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.BaseSystem.
 Require Import Crypto.BaseSystemProofs.
+Require Import Crypto.ModularArithmetic.Conversion.
 Require Import Crypto.ModularArithmetic.Pow2Base.
 Require Import Crypto.ModularArithmetic.Pow2BaseProofs.
 Require Import Crypto.ModularArithmetic.ExtendedBaseVector.
@@ -133,7 +134,7 @@ Section LengthProofs.
       length (pack target_widths_nonneg pf us) = length target_widths.
   Proof.
     cbv [pack]; intros.
-    apply Pow2BaseProofs.length_convert.
+    apply length_convert.
   Qed.
 
   Lemma length_unpack : forall {target_widths}
@@ -142,7 +143,7 @@ Section LengthProofs.
       length (unpack target_widths_nonneg pf us) = length limb_widths.
   Proof.
     cbv [pack]; intros.
-    apply Pow2BaseProofs.length_convert.
+    apply length_convert.
   Qed.
 
 End LengthProofs.

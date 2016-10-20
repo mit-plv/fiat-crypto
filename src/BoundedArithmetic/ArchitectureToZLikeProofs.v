@@ -2,8 +2,9 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.BoundedArithmetic.Interface.
 Require Import Crypto.BoundedArithmetic.InterfaceProofs.
-Require Import Crypto.BoundedArithmetic.DoubleBounded.
-Require Import Crypto.BoundedArithmetic.DoubleBoundedProofs.
+Require Import Crypto.BoundedArithmetic.Double.Core.
+Require Import Crypto.BoundedArithmetic.Double.Proofs.RippleCarryAddSub.
+Require Import Crypto.BoundedArithmetic.Double.Proofs.Multiply.
 Require Import Crypto.BoundedArithmetic.ArchitectureToZLike.
 Require Import Crypto.ModularArithmetic.ZBounded.
 Require Import Crypto.Util.Tuple.

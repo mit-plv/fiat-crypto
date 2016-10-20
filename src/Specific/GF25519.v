@@ -111,7 +111,7 @@ Defined.
 
 Arguments chain {_ _ _} _.
 
-(* END precomputation *) 
+(* END precomputation *)
 
 (* Precompute constants *)
 Definition k_ := Eval compute in k.
@@ -129,7 +129,7 @@ Definition zero_subst : zero = zero_ := eq_refl zero_.
 Definition modulus_digits_ := Eval compute in ModularBaseSystemList.modulus_digits.
 Definition modulus_digits_subst : ModularBaseSystemList.modulus_digits = modulus_digits_ := eq_refl modulus_digits_.
 
-Local Opaque Z.shiftr Z.shiftl Z.land Z.mul Z.add Z.sub Z.lor Let_In Z.eqb Z.ltb andb.
+Local Opaque Z.shiftr Z.shiftl Z.land Z.mul Z.add Z.sub Z.lor Let_In Z.eqb Z.ltb Z.leb andb.
 
 Definition app_7 {T} (f : wire_digits) (P : wire_digits -> T) : T.
 Proof.
@@ -192,6 +192,26 @@ Definition add_correct (f g : fe25519)
   Eval cbv beta iota delta [proj1_sig add_sig] in
   proj2_sig (add_sig f g).
 
+Definition carry_add_sig (f g : fe25519) :
+  { fg : fe25519 | fg = carry_add_opt f g}.
+Proof.
+  eexists.
+  rewrite <-(@appify2_correct fe25519).
+  cbv.
+  autorewrite with zsimplify_fast zsimplify_Z_to_pos; cbv. (* FIXME: The speed of this rewrite depends on the fact that we have 10 limbs; there are some lemmas in [zsimplify_Z_to_pos] which are specific to 10. *)
+  autorewrite with zsimplify_Z_to_pos; cbv.
+  reflexivity.
+Defined.
+
+Definition carry_add (f g : fe25519) : fe25519 :=
+  Eval cbv beta iota delta [proj1_sig carry_add_sig] in
+  proj1_sig (carry_add_sig f g).
+
+Definition carry_add_correct (f g : fe25519)
+  : carry_add f g = carry_add_opt f g :=
+  Eval cbv beta iota delta [proj1_sig carry_add_sig] in
+  proj2_sig (carry_add_sig f g).
+
 Definition sub_sig (f g : fe25519) :
   { fg : fe25519 | fg = sub_opt f g}.
 Proof.
@@ -209,6 +229,26 @@ Definition sub_correct (f g : fe25519)
   : sub f g = sub_opt f g :=
   Eval cbv beta iota delta [proj1_sig sub_sig] in
   proj2_sig (sub_sig f g).
+
+Definition carry_sub_sig (f g : fe25519) :
+  { fg : fe25519 | fg = carry_sub_opt f g}.
+Proof.
+  eexists.
+  rewrite <-(@appify2_correct fe25519).
+  cbv.
+  autorewrite with zsimplify_fast zsimplify_Z_to_pos; cbv. (* FIXME: The speed of this rewrite depends on the fact that we have 10 limbs; there are some lemmas in [zsimplify_Z_to_pos] which are specific to 10. *)
+  autorewrite with zsimplify_Z_to_pos; cbv.
+  reflexivity.
+Defined.
+
+Definition carry_sub (f g : fe25519) : fe25519 :=
+  Eval cbv beta iota delta [proj1_sig carry_sub_sig] in
+  proj1_sig (carry_sub_sig f g).
+
+Definition carry_sub_correct (f g : fe25519)
+  : carry_sub f g = carry_sub_opt f g :=
+  Eval cbv beta iota delta [proj1_sig carry_sub_sig] in
+  proj2_sig (carry_sub_sig f g).
 
 (* For multiplication, we add another layer of definition so that we can
    rewrite under the [let] binders. *)
@@ -249,6 +289,8 @@ Proof.
   rewrite <-mul_simpl_correct.
   rewrite <-(@appify2_correct fe25519).
   cbv.
+  autorewrite with zsimplify_fast zsimplify_Z_to_pos; cbv. (* FIXME: The speed of this rewrite depends on the fact that we have 10 limbs; there are some lemmas in [zsimplify_Z_to_pos] which are specific to 10. *)
+  autorewrite with zsimplify_Z_to_pos; cbv.
   reflexivity.
 Defined.
 
@@ -278,6 +320,24 @@ Definition opp (f : fe25519) : fe25519
 Definition opp_correct (f : fe25519)
   : opp f = opp_opt f
   := Eval cbv beta iota delta [proj2_sig add_sig] in proj2_sig (opp_sig f).
+
+Definition carry_opp_sig (f : fe25519) :
+  { g : fe25519 | g = carry_opp_opt f }.
+Proof.
+  eexists.
+  cbv [carry_opp_opt].
+  rewrite <-carry_sub_correct.
+  rewrite zero_subst.
+  cbv [carry_sub].
+  reflexivity.
+Defined.
+
+Definition carry_opp (f : fe25519) : fe25519
+  := Eval cbv beta iota delta [proj1_sig carry_opp_sig] in proj1_sig (carry_opp_sig f).
+
+Definition carry_opp_correct (f : fe25519)
+  : carry_opp f = carry_opp_opt f
+  := Eval cbv beta iota delta [proj2_sig add_sig] in proj2_sig (carry_opp_sig f).
 
 Definition pow (f : fe25519) chain := fold_chain_opt one_ mul chain [f].
 
@@ -326,7 +386,7 @@ Definition mbs_field := modular_base_system_field modulus_gt_2.
 
 Import Morphisms.
 
-Lemma field25519 : @field fe25519 eq zero one opp add sub mul inv div.
+Lemma field25519 : @field fe25519 eq zero_ one_ opp add sub mul inv div.
 Proof.
   pose proof (Equivalence_Reflexive : Reflexive eq).
   eapply (Field.equivalent_operations_field (fieldR := mbs_field)).
@@ -345,6 +405,29 @@ Proof.
   + intros; rewrite opp_correct, opp_opt_correct; reflexivity.
 Qed.
 
+
+Lemma carry_field25519 : @field fe25519 eq zero_ one_ carry_opp carry_add carry_sub mul inv div.
+Proof.
+  pose proof (Equivalence_Reflexive : Reflexive eq).
+  eapply (Field.equivalent_operations_field (fieldR := mbs_field)).
+  Grab Existential Variables.
+  + reflexivity.
+  + reflexivity.
+  + reflexivity.
+  + intros; rewrite mul_correct.
+    rewrite carry_mul_opt_correct by auto using k_subst, c_subst.
+    cbv [eq].
+    rewrite carry_mul_rep by reflexivity.
+    rewrite mul_rep; reflexivity.
+  + intros; rewrite carry_sub_correct, carry_sub_opt_correct;
+    apply carry_sub_rep.
+  + intros; rewrite carry_add_correct, carry_add_opt_correct;
+    apply carry_add_rep.
+  + intros; rewrite inv_correct, inv_opt_correct; reflexivity.
+  + intros; rewrite carry_opp_correct, carry_opp_opt_correct;
+    apply carry_opp_rep.
+Qed.
+
 Lemma homomorphism_F25519 :
   @Ring.is_homomorphism
     (F modulus) Logic.eq F.one F.add F.mul
@@ -360,6 +443,47 @@ Proof.
     apply encode_rep.
   + reflexivity.
 Qed.
+
+Lemma homomorphism_carry_F25519 :
+  @Ring.is_homomorphism
+    (F modulus) Logic.eq F.one F.add F.mul
+    fe25519 eq one carry_add mul encode.
+Proof.
+  econstructor.
+  + econstructor; [ | apply encode_Proper].
+    intros; cbv [eq].
+    rewrite carry_add_correct, carry_add_opt_correct, carry_add_rep, add_rep; apply encode_rep.
+  + intros; cbv [eq].
+    rewrite mul_correct, carry_mul_opt_correct, carry_mul_rep
+      by auto using k_subst, c_subst, encode_rep.
+    apply encode_rep.
+  + reflexivity.
+Qed.
+
+Definition ge_modulus_sig (f : fe25519) :
+  { b : bool | b = ge_modulus_opt (to_list 10 f) }.
+Proof.
+  cbv [fe25519] in *.
+  repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
+  eexists; cbv [ge_modulus_opt].
+  rewrite !modulus_digits_subst.
+  cbv.
+  reflexivity.
+Defined.
+
+Definition ge_modulus (f : fe25519) : bool :=
+  Eval cbv beta iota delta [proj1_sig ge_modulus_sig] in
+    let '(f0, f1, f2, f3, f4, f5, f6, f7, f8, f9) := f in
+    proj1_sig (ge_modulus_sig (f0, f1, f2, f3, f4, f5, f6, f7, f8, f9)).
+
+Definition ge_modulus_correct (f : fe25519) :
+  ge_modulus f = ge_modulus_opt (to_list 10 f).
+Proof.
+  pose proof (proj2_sig (ge_modulus_sig f)).
+  cbv [fe25519] in *.
+  repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
+  assumption.
+Defined.
 
 Definition freeze_sig (f : fe25519) :
   { f' : fe25519 | f' = from_list_default 0 10 (freeze_opt c_ (to_list 10 f)) }.
@@ -457,7 +581,7 @@ Proof.
   eexists.
   cbv [pack_opt].
   repeat (rewrite <-convert'_opt_correct;
-          cbv - [from_list_default_opt Pow2BaseProofs.convert']).
+          cbv - [from_list_default_opt Conversion.convert']).
   repeat progress rewrite ?Z.shiftl_0_r, ?Z.shiftr_0_r, ?Z.land_0_l, ?Z.lor_0_l, ?Z.land_same_r.
   cbv [from_list_default_opt].
   reflexivity.
@@ -503,7 +627,7 @@ Proof.
   cbv [unpack_opt].
   repeat (
       rewrite <-convert'_opt_correct;
-      cbv - [from_list_default_opt Pow2BaseProofs.convert']).
+      cbv - [from_list_default_opt Conversion.convert']).
   repeat progress rewrite ?Z.shiftl_0_r, ?Z.shiftr_0_r, ?Z.land_0_l, ?Z.lor_0_l, ?Z.land_same_r.
   cbv [from_list_default_opt].
   reflexivity.

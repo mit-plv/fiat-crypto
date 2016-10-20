@@ -44,7 +44,7 @@ Section expression.
 
   Local Arguments μ' / .
   Local Arguments ldi' / .
-  Local Arguments DoubleBounded.mul_double / _ _ _ _ _ _ _ _ _ _.
+  Local Arguments Core.mul_double / _ _ _ _ _ _ _ _ _ _.
   Local Opaque Let_In Let_In_pf.
 
   Definition expression'

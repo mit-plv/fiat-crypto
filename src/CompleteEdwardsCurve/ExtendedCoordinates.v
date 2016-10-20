@@ -34,8 +34,7 @@ Module Extended.
 
     Create HintDb bash discriminated.
     Local Hint Unfold E.eq fst snd fieldwise fieldwise' coordinates E.coordinates proj1_sig Pre.onCurve : bash.
-    Ltac bash :=
-      pose proof E.char_gt_2;
+    Ltac safe_bash :=
       repeat match goal with
              | |- Proper _ _ => intro
              | _ => progress intros
@@ -52,6 +51,10 @@ Module Extended.
              | [H: _ |- _ ] => solve [intro; apply H; super_nsatz]
              | |- Feq _ _ => super_nsatz
              end.
+    (** Using [pose proof E.char_gt_2] causes [E.char_gt_2] to get
+        picked up in the proof term when we don't want it to. *)
+    Ltac unsafe_bash := pose proof E.char_gt_2; safe_bash.
+    Ltac bash := safe_bash; unsafe_bash.
 
     Obligation Tactic := bash.
 
@@ -66,10 +69,10 @@ Module Extended.
 
     Local Hint Unfold from_twisted to_twisted eq : bash.
 
-    Global Instance Equivalence_eq : Equivalence eq. Proof. split; split; bash. Qed.
-    Global Instance Proper_from_twisted : Proper (E.eq==>eq) from_twisted. Proof. bash. Qed.
-    Global Instance Proper_to_twisted : Proper (eq==>E.eq) to_twisted. Proof. bash. Qed.
-    Lemma to_twisted_from_twisted P : E.eq (to_twisted (from_twisted P)) P. Proof. bash. Qed.
+    Global Instance Equivalence_eq : Equivalence eq. Proof. split; split; safe_bash. Qed.
+    Global Instance Proper_from_twisted : Proper (E.eq==>eq) from_twisted. Proof. unsafe_bash. Qed.
+    Global Instance Proper_to_twisted : Proper (eq==>E.eq) to_twisted. Proof. safe_bash. Qed.
+    Lemma to_twisted_from_twisted P : E.eq (to_twisted (from_twisted P)) P. Proof. unsafe_bash. Qed.
 
     Section TwistMinus1.
       Context {a_eq_minus1 : a = Fopp 1}.
@@ -102,7 +105,7 @@ Module Extended.
         destruct P as [ [ [ [ ] ? ] ? ] [ HP [ ] ] ]; destruct Q as [ [ [ [ ] ? ] ? ] [ HQ [ ] ] ].
         pose proof edwardsAddCompletePlus (a_nonzero:=E.nonzero_a)(a_square:=E.square_a)(d_nonsquare:=E.nonsquare_d)(char_gt_2:=E.char_gt_2) _ _ _ _ HP HQ.
         pose proof edwardsAddCompleteMinus (a_nonzero:=E.nonzero_a)(a_square:=E.square_a)(d_nonsquare:=E.nonsquare_d)(char_gt_2:=E.char_gt_2) _ _ _ _ HP HQ.
-        bash.
+        unsafe_bash.
       Qed.
 
       Obligation Tactic := idtac.
@@ -116,7 +119,7 @@ Module Extended.
         pose proof edwardsAddCompleteMinus (a_nonzero:=E.nonzero_a)(a_square:=E.square_a)(d_nonsquare:=E.nonsquare_d)(char_gt_2:=E.char_gt_2) _ _ _ _ HP HQ as Hnz2.
         autounfold with bash in *; simpl in *.
         destruct Hrep as [HA HB]. rewrite <-!HA, <-!HB; clear HA HB.
-        bash.
+        safe_bash.
       Qed.
       Local Hint Unfold add : bash.
 
@@ -135,7 +138,7 @@ Module Extended.
         transitivity (to_twisted x + to_twisted x0)%E; rewrite to_twisted_add, ?H, ?H0; reflexivity.
       Qed.
 
-      Lemma homomorphism_to_twisted : @Group.is_homomorphism point eq add Epoint E.eq E.add to_twisted.
+      Lemma homomorphism_to_twisted : @Monoid.is_homomorphism point eq add Epoint E.eq E.add to_twisted.
       Proof. split; trivial using Proper_to_twisted, to_twisted_add. Qed.
 
       Lemma add_from_twisted P Q : eq (from_twisted (P + Q)%E) (add (from_twisted P) (from_twisted Q)).
@@ -145,7 +148,7 @@ Module Extended.
         symmetry; assumption.
       Qed.
 
-      Lemma homomorphism_from_twisted : @Group.is_homomorphism Epoint E.eq E.add point eq add from_twisted.
+      Lemma homomorphism_from_twisted : @Monoid.is_homomorphism Epoint E.eq E.add point eq add from_twisted.
       Proof. split; trivial using Proper_from_twisted, add_from_twisted. Qed.
 
       Definition zero : point := from_twisted E.zero.
@@ -235,17 +238,17 @@ Module Extended.
     Next Obligation.
       destruct P as [ [ [ [ ] ? ] ? ] [ ? [ ? ? ] ] ]; unfold onCurve in *; simpl.
       (rewrite_strat bottomup hints field_homomorphism); try assumption.
-      eauto 10 using is_homomorphism_phi_proper, phi_nonzero.
+      eauto 10 using Monoid.is_homomorphism_phi_proper, phi_nonzero.
     Qed.
 
     Context {point_phi:Fpoint->Kpoint}
             {point_phi_Proper:Proper (eq==>eq) point_phi}
             {point_phi_correct: forall (P:Fpoint), eq (point_phi P) (ref_phi P)}.
 
-    Lemma lift_homomorphism : @Group.is_homomorphism Fpoint eq (add(a_eq_minus1:=HFa)(Htwice_d:=HFdd)) Kpoint eq (add(a_eq_minus1:=HKa)(Htwice_d:=HKdd)) point_phi.
+    Lemma lift_homomorphism : @Monoid.is_homomorphism Fpoint eq (add(a_eq_minus1:=HFa)(Htwice_d:=HFdd)) Kpoint eq (add(a_eq_minus1:=HKa)(Htwice_d:=HKdd)) point_phi.
     Proof.
       repeat match goal with
-             | |- Group.is_homomorphism => split
+             | |- Monoid.is_homomorphism => split
              | |- _ => intro
              | |-  _ /\ _ => split
              | [H: _ /\ _ |- _ ] => destruct H

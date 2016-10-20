@@ -305,3 +305,6 @@ Hint Rewrite min_idempotent_S_l : natsimplify.
 Lemma min_idempotent_S_r x : min x (S x) = x.
 Proof. omega *. Qed.
 Hint Rewrite min_idempotent_S_r : natsimplify.
+
+Lemma setbit_high : forall x i, (x < 2^i -> setbit x i = x + 2^i)%nat.
+Admitted.
