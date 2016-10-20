@@ -19,7 +19,7 @@ Definition radd : ExprBinOp := GF25519.AddExpr.ge25519_add.
 Definition rsub : ExprBinOp := GF25519.SubExpr.ge25519_sub.
 Definition rmul : ExprBinOp := GF25519.MulExpr.ge25519_mul.
 Definition ropp : ExprUnOp := GF25519.OppExpr.ge25519_opp.
-Axiom rinv : ExprUnOp.
+Axiom rfreeze : ExprUnOp.
 (*Axiom radd_correct : forall x y, interp_bexpr radd x y = carry_add x y.
 Axiom rsub_correct : forall x y, interp_bexpr rsub x y = carry_sub x y.*)
 Lemma rmul_correct : forall x y, interp_bexpr rmul x y = mul x y.
@@ -27,21 +27,18 @@ Proof.
   cbv [interp_bexpr rmul GF25519.MulExpr.ge25519_mul]; intros.
   apply proj2_sig.
 Qed.
-(*Axiom ropp_correct : forall x, interp_uexpr ropp x = carry_opp x.
-Axiom rinv_correct : forall x, interp_uexpr rinv x = inv x.*)
-Axiom check_bbounds : ExprBinOp -> bool.
-Axiom check_ubounds : ExprUnOp -> bool.
-Axiom radd_bounded : check_bbounds radd = true.
-Axiom rsub_bounded : check_bbounds rsub = true.
-Axiom rmul_bounded : check_bbounds rmul = true.
-Axiom ropp_bounded : check_ubounds ropp = true.
-Axiom rinv_bounded : check_ubounds rinv = true.
-Axiom bbounds_correct
-  : forall rexpr, check_bbounds rexpr = true
-                  -> forall x y, is_bounded x = true
-                                 -> is_bounded y = true
-                                 -> is_bounded (interp_bexpr rexpr x y) = true.
-Axiom ubounds_correct
-  : forall rexpr, check_ubounds rexpr = true
-                  -> forall x, is_bounded x = true
-                               -> is_bounded (interp_uexpr rexpr x) = true.
+Axiom rfreeze_correct : forall x, interp_uexpr rfreeze x = freeze x.
+Local Notation binop_bounded op
+  := (forall x y,
+         is_bounded x = true
+         -> is_bounded y = true
+         -> is_bounded (interp_bexpr op x y) = true) (only parsing).
+Local Notation unop_bounded op
+  := (forall x,
+         is_bounded x = true
+         -> is_bounded (interp_uexpr op x) = true) (only parsing).
+Axiom radd_bounded : binop_bounded radd.
+Axiom rsub_bounded : binop_bounded rsub.
+Axiom rmul_bounded : binop_bounded rmul.
+Axiom ropp_bounded : unop_bounded ropp.
+Axiom rfreeze_bounded : unop_bounded rfreeze.
