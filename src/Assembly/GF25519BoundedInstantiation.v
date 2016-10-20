@@ -18,33 +18,24 @@ Definition rsub : ExprBinOp := GF25519.SubExpr.ge25519_sub.
 Definition rmul : ExprBinOp := GF25519.MulExpr.ge25519_mul.
 Definition ropp : ExprUnOp := GF25519.OppExpr.ge25519_opp.
 Axiom rfreeze : ExprUnOp.
-Lemma radd_correct : forall x y, interp_bexpr radd x y = carry_add x y.
-Proof.
-  cbv [interp_bexpr radd GF25519.AddExpr.ge25519_add]; intros.
-  apply proj2_sig.
-Qed.
-Lemma rsub_correct : forall x y, interp_bexpr rsub x y = carry_sub x y.
-Proof.
-  cbv [interp_bexpr rsub GF25519.SubExpr.ge25519_sub]; intros.
-  apply proj2_sig.
-Qed.
-Lemma rmul_correct : forall x y, interp_bexpr rmul x y = mul x y.
-Proof.
-  cbv [interp_bexpr rmul GF25519.MulExpr.ge25519_mul]; intros.
-  apply proj2_sig.
-Qed.
-Axiom rfreeze_correct : forall x, interp_uexpr rfreeze x = freeze x.
-Local Notation binop_bounded op
+
+(*Local Notation ibinop_correct_and_bounded irop op
   := (forall x y,
-         is_bounded x = true
-         -> is_bounded y = true
-         -> is_bounded (interp_bexpr op x y) = true) (only parsing).
-Local Notation unop_bounded op
+         is_bounded (fe25519WToZ x) = true
+         -> is_bounded (fe25519WToZ y) = true
+         -> fe25519WToZ (irop x y) = op (fe25519WToZ x) (fe25519WToZ y)
+            /\ is_bounded (fe25519WToZ (irop x y)) = true) (only parsing).
+Local Notation binop_correct_and_bounded rop op
+  := (ibinop_correct_and_bounded (interp_bexpr rop) op) (only parsing).
+Local Notation iunop_correct_and_bounded irop op
   := (forall x,
-         is_bounded x = true
-         -> is_bounded (interp_uexpr op x) = true) (only parsing).
-Axiom radd_bounded : binop_bounded radd.
-Axiom rsub_bounded : binop_bounded rsub.
-Axiom rmul_bounded : binop_bounded rmul.
-Axiom ropp_bounded : unop_bounded ropp.
-Axiom rfreeze_bounded : unop_bounded rfreeze.
+         is_bounded (fe25519WToZ x) = true
+         -> fe25519WToZ (irop x) = op (fe25519WToZ x)
+            /\ is_bounded (fe25519WToZ (irop x)) = true) (only parsing).
+Local Notation unop_correct_and_bounded rop op
+  := (iunop_correct_and_bounded (interp_uexpr rop) op) (only parsing).
+Axiom radd_correct_and_bounded : binop_correct_and_bounded radd carry_add.
+Axiom rsub_correct_and_bounded : binop_correct_and_bounded rsub carry_sub.
+Axiom rmul_correct_and_bounded : binop_correct_and_bounded rmul mul.
+Axiom ropp_correct_and_bounded : unop_correct_and_bounded ropp carry_opp.
+Axiom rfreeze_correct_and_bounded : unop_correct_and_bounded rfreeze freeze.*)
