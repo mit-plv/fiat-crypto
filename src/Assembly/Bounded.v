@@ -22,7 +22,7 @@ Section BoundedZ.
       | [|- context[(Z.min ?x0 ?x1)%Z]] => is_var x1;
         let A := fresh in let B := fresh in
         destruct (Zmin_spec x0 x1)%Z as [A|A];
-        destruct A as [A B]; 
+        destruct A as [A B];
         rewrite B; clear B
       end; nomega.
 
@@ -51,7 +51,7 @@ Section BoundedZ.
       | [|- context[(Z.max ?x0 ?x1)%Z]] => is_var x1;
         let A := fresh in let B := fresh in
         destruct (Zmax_spec x0 x1)%Z as [A|A];
-        destruct A as [A B]; 
+        destruct A as [A B];
         rewrite B; clear B
       end; try nomega.
 
@@ -387,7 +387,7 @@ Section BoundedWord.
     Qed.
 
     Lemma bWSub_lem0: forall (x0 x1: word n) (low0 high1: N),
-      (low0 <= wordToN x0)%N -> (wordToN x1 < high1)%N -> 
+      (low0 <= wordToN x0)%N -> (wordToN x1 < high1)%N ->
       (low0 - high1 <= & (x0 ^- x1))%N.
     Proof.
       intros.
@@ -465,7 +465,7 @@ Section BoundedWord.
     Qed.
 
     Lemma bWSub_lem1: forall (x0 x1: word n) (low1 high0: N),
-      (low1 <= wordToN x1)%N -> (wordToN x0 < high0)%N -> 
+      (low1 <= wordToN x1)%N -> (wordToN x0 < high0)%N ->
       (& (x0 ^- x1) < N.succ (high0 + Npow2 n - low1))%N.
     Proof.
       intros; unfold wminus.
@@ -694,10 +694,10 @@ Section BoundedWord.
 
     refine match a with
     | boundedWord x low high o plow phigh =>
-      boundedWord (extend _ (shiftr x k))
+      boundedWord (extend (le_n _) (shiftr x k))
         (N.shiftr low (N.of_nat k))
         (N.succ (N.shiftr high (N.of_nat k))) o _ _
-    end.
+           end.
 
     - unfold extend; rewrite wordToN_convS.
 
@@ -717,10 +717,6 @@ Section BoundedWord.
       eapply N.lt_le_trans; [apply shiftr_bound; eassumption|].
       try apply N.eq_le_incl.
       try eassumption; reflexivity.
-
-    (* TODO(rsloan): how do we fix this? *)
-    Unshelve.
-    reflexivity.
   Qed.
 
   Definition bWMask (a: BoundedWord) (k: nat): BoundedWord.

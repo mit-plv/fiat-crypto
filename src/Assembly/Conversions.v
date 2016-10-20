@@ -296,7 +296,7 @@ Module LLConversions.
             destruct (@just_zero n) as [j p]; rewrite p; reflexivity.
 
         + unfold bcheck, getBounds in *; simpl in *.
-          replace (interp_binop op _ _)
+          replace (interp_binop op (interp_arg x) (interp_arg y))
              with (varBoundedToZ (n := n) (bOp (n := n) op
                     (boundedArg (@convertArg _ _ ZEvaluable (@BoundedEvaluable n) _ x))
                     (boundedArg (@convertArg _ _ ZEvaluable (@BoundedEvaluable n) _ y))));
@@ -315,6 +315,7 @@ Module LLConversions.
 
       - simpl in S.
         induction a as [| |t0 t1 a0 IHa0 a1 IHa1]; simpl in *; try reflexivity.
+        cbv [bcheck bcheck' getBounds interp convertExpr interp_arg convertArg match_arg_Prod] in S.
         apply andb_true_iff in S; destruct S; rewrite IHa0, IHa1; try reflexivity; assumption.
     Qed.
   End Correctness.
@@ -325,7 +326,7 @@ Module LLConversions.
     Record RangeWithValue := rwv {
       low: N;
       value: N;
-      high: N;
+      high: N
     }.
 
     Definition rwv_app {rangeF wordF}
@@ -347,7 +348,7 @@ Module LLConversions.
     Instance RWVEval : Evaluable (option RangeWithValue) := {
       ezero := None;
 
-      toT := fun x => 
+      toT := fun x =>
         if (Nge_dec (N.pred (Npow2 n)) (Z.to_N x))
         then Some (rwv (Z.to_N x) (Z.to_N x) (Z.to_N x))
         else None;
@@ -374,7 +375,7 @@ Module LLConversions.
         | (Some (rwv xlow xv xhigh), Some (rwv ylow yv yhigh)) =>
             N.ltb xv yv
 
-        | _ => false 
+        | _ => false
         end;
 
       eeqb := fun x y =>
@@ -383,7 +384,7 @@ Module LLConversions.
             andb (andb (N.eqb xlow ylow) (N.eqb xhigh yhigh)) (N.eqb xv yv)
 
         | _ => false
-        end;
+        end
     }.
 
     Definition getRWV {t} T (E: Evaluable T) (e : @expr T T t): @interp_type (option RangeWithValue) t :=

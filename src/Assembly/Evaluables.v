@@ -45,7 +45,7 @@ Section Z.
 
     (* Comparisons *)
     eltb    := Z.ltb;
-    eeqb    := Z.eqb;
+    eeqb    := Z.eqb
   }.
 
 End Z.
@@ -105,7 +105,7 @@ Section RangeUpdate.
     Qed.
 
     Lemma bWSub_lem: forall (x0 x1: word n) (low0 high1: N),
-      (low0 <= wordToN x0)%N -> (wordToN x1 <= high1)%N -> 
+      (low0 <= wordToN x0)%N -> (wordToN x1 <= high1)%N ->
       (low0 - high1 <= & (x0 ^- x1))%N.
     Proof.
       intros.
@@ -177,7 +177,7 @@ Section RangeUpdate.
         transitivity low0; try assumption.
         apply N.le_sub_le_add_r.
         apply N.le_add_r.
-    Qed. 
+    Qed.
   End BoundedSub.
 
   Section LandOnes.
@@ -267,11 +267,11 @@ Section RangeUpdate.
   Proof.
     unfold validBinaryWordOp; intros.
 
-    Ltac kill_preds := 
+    Ltac kill_preds :=
       repeat match goal with
       | [|- (N.pred _ < _)%N] =>
         rewrite <- (N.pred_succ (Npow2 n));
-          apply -> N.pred_lt_mono;
+          apply -> N.pred_lt_mono; instantiate;
           rewrite N.pred_succ;
         [ apply N.lt_succ_diag_r
         | apply N.neq_0_lt_0; apply Npow2_gt0]
@@ -290,7 +290,7 @@ Section RangeUpdate.
       | [|- (0 <= _)%N] => apply N_ge_0
       end; try eassumption.
 
-    - apply N.le_ge. 
+    - apply N.le_ge.
       transitivity high1; [assumption|].
       transitivity low0; [|assumption].
       apply N.ge_le; assumption.
@@ -389,7 +389,7 @@ Section RangeUpdate.
     - destruct (Nge_dec high0 (Npow2 n)).
 
       + rewrite <- (N.pred_succ (Npow2 n)).
-        apply -> N.pred_lt_mono;
+        apply -> N.pred_lt_mono; instantiate;
           rewrite (N.pred_succ (Npow2 n));
           [nomega|].
         apply N.neq_0_lt_0.
@@ -453,7 +453,7 @@ Section RangeUpdate.
     - destruct (Nge_dec _ (Npow2 n)); [|assumption].
 
       rewrite <- (N.pred_succ (Npow2 n)).
-      apply -> N.pred_lt_mono;
+      apply -> N.pred_lt_mono; instantiate;
         rewrite (N.pred_succ (Npow2 n));
         [nomega|].
       apply N.neq_0_lt_0.
@@ -471,7 +471,7 @@ Section BoundedWord.
 
     ge_low: (low <= wordToN value)%N;
     le_high: (wordToN value <= high)%N;
-    high_bound: (high < Npow2 n)%N;
+    high_bound: (high < Npow2 n)%N
   }.
 
   Definition bapp {rangeF wordF}
@@ -629,11 +629,11 @@ Section BoundedWord.
     eand := fun x y => omap x (fun X => omap y (fun Y => bapp range_and_valid X Y));
 
     eltb := fun x y =>
-      orElse false (omap x (fun X => omap y (fun Y => 
+      orElse false (omap x (fun X => omap y (fun Y =>
         Some (N.ltb (high X) (high Y)))));
 
     eeqb := fun x y =>
-      orElse false (omap x (fun X => omap y (fun Y => 
+      orElse false (omap x (fun X => omap y (fun Y =>
         Some (andb (N.eqb (low X) (low Y)) (N.eqb (high X) (high Y))))))
   }.
 

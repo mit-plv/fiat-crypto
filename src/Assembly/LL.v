@@ -68,7 +68,7 @@ Module LL.
     (C: arg t -> expr tC)
     (C_Proper : forall a1 a2, interp_arg a1 = interp_arg a2 -> interp (C a1) = interp (C a2)) :
     forall a, interp_arg a = interp e -> interp (under_lets e C) = interp (C a).
-  Proof. induction e; repeat (intuition (congruence || eauto) + simpl + rewrite_hyp !*). Qed.
+  Proof. induction e; repeat (intuition (congruence || eauto); simpl). Qed.
 
   Section match_arg.
     Context {T : Type}.
