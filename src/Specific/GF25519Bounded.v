@@ -128,40 +128,37 @@ Axiom radd : ExprBinOp.
 Axiom rsub : ExprBinOp.
 Axiom rmul : ExprBinOp.
 Axiom ropp : ExprUnOp.
-Axiom rinv : ExprUnOp.
+Axiom rfreeze : ExprUnOp.
 Axiom radd_correct : forall x y, interp_bexpr radd x y = carry_add x y.
 Axiom rsub_correct : forall x y, interp_bexpr rsub x y = carry_sub x y.
 Axiom rmul_correct : forall x y, interp_bexpr rmul x y = mul x y.
 Axiom ropp_correct : forall x, interp_uexpr ropp x = carry_opp x.
-Axiom rinv_correct : forall x, interp_uexpr rinv x = inv x.
-Axiom check_bbounds : ExprBinOp -> bool.
-Axiom check_ubounds : ExprUnOp -> bool.
-Axiom radd_bounded : check_bbounds radd = true.
-Axiom rsub_bounded : check_bbounds rsub = true.
-Axiom rmul_bounded : check_bbounds rmul = true.
-Axiom ropp_bounded : check_ubounds ropp = true.
-Axiom rinv_bounded : check_ubounds rinv = true.
-Axiom bbounds_correct
-  : forall rexpr, check_bbounds rexpr = true
-                  -> forall x y, is_bounded x = true
-                                 -> is_bounded y = true
-                                 -> is_bounded (interp_bexpr rexpr x y) = true.
-Axiom ubounds_correct
-  : forall rexpr, check_ubounds rexpr = true
-                  -> forall x, is_bounded x = true
-                               -> is_bounded (interp_uexpr rexpr x) = true.
+Axiom rfreeze_correct : forall x, interp_uexpr rfreeze x = freeze x.
+Local Notation binop_bounded op
+  := (forall x y,
+         is_bounded x = true
+         -> is_bounded y = true
+         -> is_bounded (interp_bexpr op x y) = true) (only parsing).
+Local Notation unop_bounded op
+  := (forall x,
+         is_bounded x = true
+         -> is_bounded (interp_uexpr op x) = true) (only parsing).
+Axiom radd_bounded : binop_bounded radd.
+Axiom rsub_bounded : binop_bounded rsub.
+Axiom rmul_bounded : binop_bounded rmul.
+Axiom ropp_bounded : unop_bounded ropp.
+Axiom rfreeze_bounded : unop_bounded rfreeze.
 
-Local Ltac bounded_t clem blem rblem :=
+Local Ltac bounded_t clem blem :=
   rewrite <- clem;
-  apply blem;
-  [ apply rblem | apply is_bounded_proj1_fe25519.. ].
+  apply blem; apply is_bounded_proj1_fe25519.
 
 Local Ltac define_binop f g op clem blem :=
   refine (exist_fe25519 (op (proj1_fe25519 f) (proj1_fe25519 g)) _);
-  abstract bounded_t clem bbounds_correct blem.
+  abstract bounded_t clem blem.
 Local Ltac define_unop f op clem blem :=
   refine (exist_fe25519 (op (proj1_fe25519 f)) _);
-  abstract bounded_t clem ubounds_correct blem.
+  abstract bounded_t clem blem.
 
 Definition add (f g : fe25519) : fe25519.
 Proof. define_binop f g Specific.GF25519.carry_add radd_correct radd_bounded. Defined.
@@ -171,34 +168,35 @@ Definition mul (f g : fe25519) : fe25519.
 Proof. define_binop f g Specific.GF25519.mul rmul_correct rmul_bounded. Defined.
 Definition opp (f : fe25519) : fe25519.
 Proof. define_unop f Specific.GF25519.carry_opp ropp_correct ropp_bounded. Defined.
-Definition inv (f : fe25519) : fe25519.
-Proof. define_unop f Specific.GF25519.inv rinv_correct rinv_bounded. Defined.
-
-Axiom div : forall (f g : fe25519), fe25519.
-Axiom div_correct : forall a b : fe25519,
-    ModularBaseSystem.eq (proj1_fe25519 (div a b))
-                         (ModularBaseSystem.div (proj1_fe25519 a) (proj1_fe25519 b)).
-
-Definition eq (f g : fe25519) : Prop := eq (proj1_fe25519 f) (proj1_fe25519 g).
-
-Import Morphisms.
-
-Lemma field25519 : @field fe25519 eq zero one opp add sub mul inv div.
+Definition pow (f : fe25519) chain := fold_chain_opt one mul chain [f].
+Lemma fold_chain_opt_proj ls id' op' id op chain
+      (Hid : id = proj1_fe25519 id')
+      (Hop : forall x y, op (proj1_fe25519 x) (proj1_fe25519 y) = proj1_fe25519 (op' x y))
+  : fold_chain_opt id op chain (List.map proj1_fe25519 ls)
+    = proj1_fe25519 (fold_chain_opt id' op' chain ls).
 Proof.
-  assert (Reflexive eq) by (repeat intro; reflexivity).
-  eapply (Field.field_from_redundant_representation
-            (fieldF:=Specific.GF25519.carry_field25519)
-            (phi':=proj1_fe25519)).
-  { reflexivity. }
-  { reflexivity. }
-  { reflexivity. }
-  { cbv [opp]; intros; rewrite proj1_fe25519_exist_fe25519; reflexivity. }
-  { cbv [add]; intros; rewrite proj1_fe25519_exist_fe25519; reflexivity. }
-  { cbv [sub]; intros; rewrite proj1_fe25519_exist_fe25519; reflexivity. }
-  { cbv [mul]; intros; rewrite proj1_fe25519_exist_fe25519; reflexivity. }
-  { cbv [inv]; intros; rewrite proj1_fe25519_exist_fe25519; reflexivity. }
-  { apply div_correct. }
+  rewrite !fold_chain_opt_correct.
+  revert ls; induction chain as [|x xs IHxs]; intros.
+  { destruct ls; simpl; trivial. }
+  { destruct x; simpl; unfold Let_In; simpl.
+    rewrite <- IHxs; simpl.
+    do 2 f_equal.
+    rewrite <- Hop, Hid.
+    rewrite !map_nth_default_always.
+    reflexivity. }
 Qed.
+Definition inv (f : fe25519) : fe25519.
+Proof.
+  refine (exist_fe25519 (inv (proj1_fe25519 f)) _).
+  abstract (
+      rewrite inv_correct; cbv [inv_opt pow_opt]; erewrite (fold_chain_opt_proj [f] one mul);
+      [ apply is_bounded_proj1_fe25519 | reflexivity
+        | cbv [mul]; intros; rewrite proj1_fe25519_exist_fe25519, mul_correct; reflexivity ]
+    ).
+Defined.
+
+Definition freeze (f : fe25519) : fe25519.
+Proof. define_unop f Specific.GF25519.freeze rfreeze_correct rfreeze_bounded. Defined.
 
 Lemma encode_bounded x : is_bounded (encode x) = true.
 Proof.
@@ -221,6 +219,30 @@ Qed.
 
 Definition encode (x : F modulus) : fe25519
   := exist_fe25519 (encode x) (encode_bounded x).
+
+Definition div (f g : fe25519) : fe25519
+  := exist_fe25519 (div (proj1_fe25519 f) (proj1_fe25519 g)) (encode_bounded _).
+
+Definition eq (f g : fe25519) : Prop := eq (proj1_fe25519 f) (proj1_fe25519 g).
+
+Import Morphisms.
+
+Lemma field25519 : @field fe25519 eq zero one opp add sub mul inv div.
+Proof.
+  assert (Reflexive eq) by (repeat intro; reflexivity).
+  eapply (Field.field_from_redundant_representation
+            (fieldF:=Specific.GF25519.carry_field25519)
+            (phi':=proj1_fe25519)).
+  { reflexivity. }
+  { reflexivity. }
+  { reflexivity. }
+  { cbv [opp]; intros; rewrite proj1_fe25519_exist_fe25519; reflexivity. }
+  { cbv [add]; intros; rewrite proj1_fe25519_exist_fe25519; reflexivity. }
+  { cbv [sub]; intros; rewrite proj1_fe25519_exist_fe25519; reflexivity. }
+  { cbv [mul]; intros; rewrite proj1_fe25519_exist_fe25519; reflexivity. }
+  { cbv [inv]; intros; rewrite proj1_fe25519_exist_fe25519; reflexivity. }
+  { cbv [div]; intros; rewrite proj1_fe25519_exist_fe25519; reflexivity. }
+Qed.
 
 Lemma homomorphism_F25519 :
   @Ring.is_homomorphism
