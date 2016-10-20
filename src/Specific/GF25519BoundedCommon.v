@@ -102,7 +102,7 @@ Proof.
 Defined.
 
 (** TODO: Turn this into a lemma to speed up proofs *)
-Local Ltac unfold_is_bounded_in H :=
+Ltac unfold_is_bounded_in H :=
   unfold is_bounded, fe25519WToZ in H;
   cbv [to_list length bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 List.map fold_right List.rev List.app] in H;
   rewrite !Bool.andb_true_iff, !Z.leb_le in H.

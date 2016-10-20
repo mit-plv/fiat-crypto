@@ -2,6 +2,7 @@ Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Assembly.GF25519.
 Require Import Crypto.Specific.GF25519.
 Require Import Crypto.Specific.GF25519BoundedCommon.
+Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Tuple.
 
 (* Totally fine to edit these definitions; DO NOT change the type signatures at all *)
@@ -24,8 +25,43 @@ Local Notation binop_correct_and_bounded rop op
 Local Notation unop_correct_and_bounded rop op
   := (iunop_correct_and_bounded (interp_uexpr rop) op) (only parsing).
 
-Axiom radd_correct_and_bounded : binop_correct_and_bounded radd carry_add.
-Axiom rsub_correct_and_bounded : binop_correct_and_bounded rsub carry_sub.
-Axiom rmul_correct_and_bounded : binop_correct_and_bounded rmul mul.
-Axiom ropp_correct_and_bounded : unop_correct_and_bounded ropp carry_opp.
-Axiom rfreeze_correct_and_bounded : unop_correct_and_bounded rfreeze freeze.
+Local Ltac start_correct_and_bounded_t op op_expr lem :=
+  intros; hnf in *; destruct_head' prod; simpl in * |- ;
+  repeat match goal with H : is_bounded _ = true |- _ => unfold_is_bounded_in H end;
+  change op with op_expr;
+  rewrite <- lem.
+
+Lemma radd_correct_and_bounded : binop_correct_and_bounded radd carry_add.
+Proof.
+  start_correct_and_bounded_t
+    carry_add GF25519.AddExpr.ge25519_add_expr
+    (fun x y => proj2_sig (GF25519.AddExpr.ge25519_add' x y)).
+  simpl @fe25519WToZ.
+Admitted.
+Lemma rsub_correct_and_bounded : binop_correct_and_bounded rsub carry_sub.
+Proof.
+  start_correct_and_bounded_t
+    carry_sub GF25519.SubExpr.ge25519_sub_expr
+    (fun x y => proj2_sig (GF25519.SubExpr.ge25519_sub' x y)).
+  simpl @fe25519WToZ.
+Admitted.
+Lemma rmul_correct_and_bounded : binop_correct_and_bounded rmul mul.
+Proof.
+  start_correct_and_bounded_t
+    Specific.GF25519.mul GF25519.MulExpr.ge25519_mul_expr
+    (fun x y => proj2_sig (GF25519.MulExpr.ge25519_mul' x y)).
+  simpl @fe25519WToZ.
+Admitted.
+Lemma ropp_correct_and_bounded : unop_correct_and_bounded ropp carry_opp.
+Proof.
+  start_correct_and_bounded_t
+    carry_opp GF25519.OppExpr.ge25519_opp_expr
+    (fun x => proj2_sig (GF25519.OppExpr.ge25519_opp' x)).
+  simpl @fe25519WToZ.
+Admitted.
+Lemma rfreeze_correct_and_bounded : unop_correct_and_bounded rfreeze freeze.
+Proof.
+  intros; hnf in *; destruct_head' prod; simpl in * |- ;
+  repeat match goal with H : is_bounded _ = true |- _ => unfold_is_bounded_in H end.
+  simpl @fe25519WToZ.
+Admitted.
