@@ -136,33 +136,6 @@ Proof. unop_correct_t pow pow (powW_correct_and_bounded chain). Qed.
 Lemma inv_correct (f : fe25519) : proj1_fe25519 (inv f) = GF25519.inv (proj1_fe25519 f).
 Proof. unop_correct_t inv inv invW_correct_and_bounded. Qed.
 
-Lemma encode_bounded x : is_bounded (encode x) = true.
-Proof.
-  pose proof (bounded_encode x).
-  generalize dependent (encode x).
-  intro t; compute in t; intros.
-  destruct_head prod.
-  unfold Pow2Base.bounded in H.
-  pose proof (H 0%nat); pose proof (H 1%nat); pose proof (H 2%nat);
-    pose proof (H 3%nat); pose proof (H 4%nat); pose proof (H 5%nat);
-      pose proof (H 6%nat); pose proof (H 7%nat); pose proof (H 8%nat);
-        pose proof (H 9%nat); clear H.
-  simpl in *.
-  cbv [Z.pow_pos Z.mul Pos.mul Pos.iter nth_default nth_error value] in *.
-  unfold is_bounded.
-  apply fold_right_andb_true_iff_fold_right_and_True.
-  cbv [is_bounded proj1_fe25519 to_list length bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 List.map List.rev List.app proj1_sig fold_right].
-  repeat split; rewrite !Bool.andb_true_iff, !Z.leb_le; omega.
-Qed.
-
-Definition encode (x : F modulus) : fe25519
-  := exist_fe25519 (encode x) (encode_bounded x).
-
-Definition div (f g : fe25519) : fe25519
-  := exist_fe25519 (div (proj1_fe25519 f) (proj1_fe25519 g)) (encode_bounded _).
-
-Definition eq (f g : fe25519) : Prop := eq (proj1_fe25519 f) (proj1_fe25519 g).
-
 Import Morphisms.
 
 Lemma field25519 : @field fe25519 eq zero one opp add sub mul inv div.
