@@ -20,6 +20,7 @@ Module GF25519.
 
   Section DefaultBounds.
     Import ListNotations.
+
     Local Notation rr exp := (2^exp + 2^exp/10)%Z.
 
     Definition feBound: list Z :=

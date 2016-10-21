@@ -99,3 +99,21 @@ Module SimpleExample.
 
   Export SimplePipeline.
 End SimpleExample.
+
+Eval cbv in SimpleExample.SimplePipeline.hlProg'.
+Eval cbv in SimpleExample.SimplePipeline.llProg.
+Eval cbv in (liftN (LL.interp' (fun x => NToWord 32 (Z.to_N x))) SimpleExample.SimplePipeline.wordProg).
+Opaque toT fromT LLConversions.convertArg.
+Arguments LLConversions.convertArg _ _ _ _ _ _ _ : clear implicits.
+Eval cbn in SimpleExample.SimplePipeline.rwvProg.
+Eval cbn in (LL.interp' (fun x => Some (rwv 0 666 666)%Z) SimpleExample.SimplePipeline.rwvProg).
+
+Transparent toT fromT LLConversions.convertArg.
+Eval cbv in (LL.interp' (fun x => Some (rwv 0 666 666)%Z) SimpleExample.SimplePipeline.rwvProg).
+
+Eval cbv in (LL.interp' LLConversions.rangeOf (LL.Return (LL.Var 2%Z))).
+
+Eval cbv in (LL.interp' LLConversions.rangeOf SimpleExample.SimplePipeline.rwvProg).
+
+Eval cbv in SimpleExample.SimplePipeline.outputBounds.
+Eval cbv in SimpleExample.SimplePipeline.valid.
