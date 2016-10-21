@@ -47,8 +47,7 @@ Module Extended.
              | _ => solve [eauto]
              | _ => solve [intuition eauto]
              | _ => solve [etransitivity; eauto]
-             | |- context [_ * Finv _] => rewrite <-!(field_div_definition(field:=field))
-             | [H:context [_ * Finv _] |- _] => rewrite <-!(field_div_definition(field:=field)) in H
+             | |- _ => rewrite <-!(field_div_definition(field:=field)) in *
              | |- _*_ <> 0 => apply Ring.zero_product_iff_zero_factor
              | [H: _ |- _ ] => solve [intro; apply H; super_nsatz]
              | |- Feq _ _ => super_nsatz
@@ -262,9 +261,8 @@ Module Extended.
              | [p: point |- _ ] => destruct p as [ [ [ [ ] ? ] ? ] [ ? [ ? ? ] ] ]
              | |- context[point_phi] => setoid_rewrite point_phi_correct
              | |- _ => progress cbv [fst snd coordinates proj1_sig eq to_twisted E.eq E.coordinates fieldwise fieldwise' add add_coordinates ref_phi] in *
-             | |- _ => rewrite<- field_div_definition
-             | |- context [Fmul _ (Finv _)] => rewrite <-!(field_div_definition(field:=fieldF))
-             | [H:context [Fmul _ (Finv _)] |- _] => rewrite <-!(field_div_definition(field:=fieldF)) in H
+             | |- _ => rewrite <-!(field_div_definition(field:=fieldF)) in *
+             | |- _ => rewrite <-!(field_div_definition(field:=fieldK)) in *
              | |- Keq ?x ?y => rewrite_strat bottomup hints field_homomorphism
              | [ H : Feq _ _ |- Keq (phi _) (phi _)] => solve [f_equiv; intuition]
              end.
