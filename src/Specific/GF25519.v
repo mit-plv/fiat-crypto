@@ -129,7 +129,7 @@ Definition zero_subst : zero = zero_ := eq_refl zero_.
 Definition modulus_digits_ := Eval compute in ModularBaseSystemList.modulus_digits.
 Definition modulus_digits_subst : ModularBaseSystemList.modulus_digits = modulus_digits_ := eq_refl modulus_digits_.
 
-Local Opaque Z.shiftr Z.shiftl Z.land Z.mul Z.add Z.sub Z.lor Let_In Z.eqb Z.ltb Z.leb andb.
+Local Opaque Z.shiftr Z.shiftl Z.land Z.mul Z.add Z.sub Z.lor Let_In Z.eqb Z.ltb Z.leb ModularBaseSystemList.neg.
 
 Definition app_7 {T} (f : wire_digits) (P : wire_digits -> T) : T.
 Proof.
@@ -460,8 +460,9 @@ Proof.
   + reflexivity.
 Qed.
 
+(*
 Definition ge_modulus_sig (f : fe25519) :
-  { b : bool | b = ge_modulus_opt (to_list 10 f) }.
+  { b : Z | b = ge_modulus_opt (to_list 10 f) }.
 Proof.
   cbv [fe25519] in *.
   repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
@@ -471,7 +472,7 @@ Proof.
   reflexivity.
 Defined.
 
-Definition ge_modulus (f : fe25519) : bool :=
+Definition ge_modulus (f : fe25519) : Z :=
   Eval cbv beta iota delta [proj1_sig ge_modulus_sig] in
     let '(f0, f1, f2, f3, f4, f5, f6, f7, f8, f9) := f in
     proj1_sig (ge_modulus_sig (f0, f1, f2, f3, f4, f5, f6, f7, f8, f9)).
@@ -484,9 +485,10 @@ Proof.
   repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
   assumption.
 Defined.
+*)
 
 Definition freeze_sig (f : fe25519) :
-  { f' : fe25519 | f' = from_list_default 0 10 (freeze_opt c_ (to_list 10 f)) }.
+  { f' : fe25519 | f' = from_list_default 0 10 (freeze_opt (int_width := int_width) c_ (to_list 10 f)) }.
 Proof.
   cbv [fe25519] in *.
   repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
@@ -509,7 +511,7 @@ Definition freeze (f : fe25519) : fe25519 :=
     proj1_sig (freeze_sig (f0, f1, f2, f3, f4, f5, f6, f7, f8, f9)).
 
 Definition freeze_correct (f : fe25519)
-  : freeze f = from_list_default 0 10 (freeze_opt c_ (to_list 10 f)).
+  : freeze f = from_list_default 0 10 (freeze_opt (int_width := int_width) c_ (to_list 10 f)).
 Proof.
   pose proof (proj2_sig (freeze_sig f)).
   cbv [fe25519] in *.

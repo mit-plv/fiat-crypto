@@ -110,10 +110,11 @@ Section LengthProofs.
     rewrite encode'_spec, encode'_length;
       auto using encode'_length, limb_widths_nonneg, Nat.eq_le_incl, base_from_limb_widths_length.
   Qed.
+  Hint Rewrite @length_modulus_digits : distr_length.
 
-  Lemma length_conditional_subtract_modulus {u cond} :
+  Lemma length_conditional_subtract_modulus {int_width u cond} :
     length u = length limb_widths
-    -> length (conditional_subtract_modulus u cond) = length limb_widths.
+    -> length (conditional_subtract_modulus int_width u cond) = length limb_widths.
   Proof.
     intros; unfold conditional_subtract_modulus.
     rewrite map2_length, map_length, length_modulus_digits.
@@ -121,9 +122,9 @@ Section LengthProofs.
   Qed.
   Hint Rewrite @length_conditional_subtract_modulus : distr_length.
 
-  Lemma length_freeze {u} :
+  Lemma length_freeze {int_width u} :
     length u = length limb_widths
-    -> length (freeze u) = length limb_widths.
+    -> length (freeze int_width u) = length limb_widths.
   Proof.
     intros; unfold freeze; repeat autorewrite with distr_length; congruence.
   Qed.
@@ -285,27 +286,41 @@ Section ModulusComparisonProofs.
     reflexivity.
   Qed.
 
-  Lemma ge_modulus'_false : forall us i,
-    ge_modulus' us false i = false.
+  Lemma ge_modulus'_0 : forall {A} f us i,
+    ge_modulus' (A := A) f us 0 i = f 0.
   Proof.
-    induction i; intros; simpl; rewrite Bool.andb_false_r; auto.
+    induction i; intros; simpl; break_if; auto.
+  Qed.
+
+  Lemma ge_modulus'_01 : forall {A} f us i b,
+    (b = 0 \/ b = 1) ->
+    (ge_modulus' (A := A) f us b i = f 0 \/ ge_modulus' (A := A) f us b i = f 1).
+  Proof.
+    induction i; intros;
+      try intuition (subst; cbv [ge_modulus' LetIn.Let_In]; break_if; tauto).
+    simpl; cbv [LetIn.Let_In].
+    break_if; apply IHi; tauto.
+  Qed.
+
+  Lemma ge_modulus_01 : forall us,
+    (ge_modulus us = 0 \/ ge_modulus us = 1).
+  Proof.
+    cbv [ge_modulus]; intros; apply ge_modulus'_01; tauto.
   Qed.
 
   Lemma ge_modulus'_true_digitwise : forall us,
     length us = length limb_widths ->
-    forall i, (i < length us)%nat -> ge_modulus' us true i = true ->
+    forall i, (i < length us)%nat -> ge_modulus' id us 1 i = 1 ->
               forall j, (j <= i)%nat ->
                         nth_default 0 modulus_digits j <= nth_default 0 us j.
   Proof.
     induction i;
       repeat match goal with
              | |- _ => progress intros; simpl in *
-             | |- _ => rewrite ge_modulus'_false in *
+             | |- _ => progress cbv [LetIn.Let_In] in *
+             | |- _ =>erewrite (ge_modulus'_0 (@id Z)) in *
              | H : (?x <= 0)%nat |- _ => progress replace x with 0%nat in * by omega
-             | H : (?b && true)%bool = true |- _ => let A:= fresh "H" in
-               rewrite Bool.andb_true_r in H; case_eq b; intro A; rewrite A in H
-             | H : ge_modulus' _ (?b && true)%bool _ = true |- _ => let A:= fresh "H" in
-               rewrite Bool.andb_true_r in H; case_eq b; intro A; rewrite A in H
+             | |- _ => break_if
              | |- _ => discriminate 
              | |- _ => solve [rewrite ?Z.leb_le, ?Z.eqb_eq in *; omega]
              end.
@@ -316,35 +331,39 @@ Section ModulusComparisonProofs.
 
   Lemma ge_modulus'_compare' : forall us, length us = length limb_widths -> bounded limb_widths us ->
     forall i, (i < length limb_widths)%nat ->
-    (ge_modulus' us true i = false <-> compare' us modulus_digits (S i) = Lt).
+    (ge_modulus' id us 1 i = 0 <-> compare' us modulus_digits (S i) = Lt).
   Proof.
     induction i;
       repeat match goal with
-             | |- _ => progress intros
-             | |- _ => progress (simpl compare' in *)
+             | |- _ => progress (intros; cbv [LetIn.Let_In id])
+             | |- _ => progress (simpl compare' in * )
              | |- _ => progress specialize_by omega
-             | |- _ => progress rewrite ?Z.compare_eq_iff,
-                       ?Z.compare_gt_iff, ?Z.compare_lt_iff in *
-             | |- appcontext[ge_modulus' _ _ 0] =>
+             | |- _ => (progress rewrite ?Z.compare_eq_iff,
+                       ?Z.compare_gt_iff, ?Z.compare_lt_iff in * )
+             | |- appcontext[ge_modulus' _  _ _ 0] =>
                cbv [ge_modulus']
-             | |- appcontext[ge_modulus' _ _ (S _)] =>
-               unfold ge_modulus'; fold ge_modulus'
+             | |- appcontext[ge_modulus' _ _ _ (S _)] =>
+               unfold ge_modulus'; fold (ge_modulus' (@id Z))
              | |- _ => break_if
              | |- _ => rewrite Nat.sub_0_r
-             | |- _ => rewrite ge_modulus'_false 
+             | |- _ => rewrite (ge_modulus'_0 (@id Z))
              | |- _ => rewrite Bool.andb_true_r
              | |- _ => rewrite Z.leb_compare; break_match
              | |- _ => rewrite Z.eqb_compare; break_match
+             | |- _ => (rewrite Z.leb_le in * )
+             | |- _ => (rewrite Z.leb_gt in * )
+             | |- _ => (rewrite Z.eqb_eq in * )
+             | |- _ => (rewrite Z.eqb_neq in * )
              | |- _ => split; (congruence || omega)
              | |- _ => assumption
-                                 end;
-                                 pose proof (bounded_le_modulus_digits c_upper_bound us (S i));
-      specialize_by (auto || omega); omega.
+             end;
+       pose proof (bounded_le_modulus_digits c_upper_bound us (S i));
+         specialize_by (auto || omega); split; (congruence || omega).
   Qed.
 
    Lemma ge_modulus_spec : forall u, length u = length limb_widths ->
      bounded limb_widths u ->
-    (ge_modulus u = false <-> 0 <= BaseSystem.decode base u < modulus).
+    (ge_modulus u = 0 <-> 0 <= BaseSystem.decode base u < modulus).
   Proof.
     cbv [ge_modulus]; intros.
     assert (0 < length limb_widths)%nat
@@ -365,6 +384,8 @@ End ModulusComparisonProofs.
 
 Section ConditionalSubtractModulusProofs.
   Context `{prm :PseudoMersenneBaseParams}
+          (* B is machine integer width (e.g. 32, 64) *)
+          {B} (B_pos : 0 < B) (B_compat : forall w, In w limb_widths -> w <= B)
           (c_upper_bound : c - 1 < 2 ^ nth_default 0 limb_widths 0)
           (lt_1_length_limb_widths : (1 < length limb_widths)%nat).
   Local Notation base := (base_from_limb_widths limb_widths).
@@ -386,24 +407,33 @@ Section ConditionalSubtractModulusProofs.
     simpl; f_equal; auto using in_eq, in_cons.
   Qed.
 
-  Lemma map_land_max_ones : forall us, length us = length limb_widths ->
-    bounded limb_widths us -> map (Z.land max_ones) us = us.
+  Lemma bounded_digit_fits : forall us,
+    length us = length limb_widths -> bounded limb_widths us ->
+    forall x, In x us -> 0 <= x < 2 ^ B.
   Proof.
-    intros; apply map_id_strong; intros ? HIn.
-    rewrite Z.land_comm.
-    cbv [max_ones].
-    rewrite Z.land_ones by apply Z.le_fold_right_max_initial.
-    apply Z.mod_small.
-    apply In_nth with (d := 0) in HIn.
-    destruct HIn as [i HIn]; destruct HIn; subst.
-    rewrite bounded_iff in H0.
-    specialize (H0 i).
+    intros.
+    let i := fresh "i" in
+    match goal with H : In ?x ?us, Hb : bounded _ _ |- _ =>
+                    apply In_nth with (d := 0) in H; destruct H as [i [? ?] ];
+                      rewrite bounded_iff in Hb; specialize (Hb i);
+                        assert (2 ^ nth i limb_widths 0 <= 2 ^ B) by
+                          (apply Z.pow_le_mono_r; try apply B_compat, nth_In; omega) end.
     rewrite !nth_default_eq in *.
-    split; try omega.
-    eapply Z.lt_le_trans; try intuition eassumption.
-    apply Z.pow_le_mono_r; try omega.
-    apply Z.le_fold_right_max; eauto.
-    apply nth_In. omega.
+    omega.
+  Qed.
+
+  Lemma map_land_max_ones : forall us,
+    length us = length limb_widths ->
+    bounded limb_widths us -> map (Z.land (Z.ones B)) us = us.
+  Proof.
+    repeat match goal with
+           | |- _ => progress intros
+           | |- _ => apply map_id_strong
+           | |- appcontext[Z.ones ?n &' ?x] => rewrite (Z.land_comm _ x);
+                                                 rewrite Z.land_ones by omega
+           | |- _ => apply Z.mod_small
+           | |- _ => solve [eauto using bounded_digit_fits]
+           end.
   Qed.
 
   Lemma map_land_zero : forall us, map (Z.land 0) us = zeros (length us).
@@ -411,32 +441,35 @@ Section ConditionalSubtractModulusProofs.
     induction us; boring.
   Qed.
   
-  Lemma conditional_subtract_modulus_spec : forall u cond,
+  Hint Rewrite @length_modulus_digits @length_zeros : distr_length.
+  Lemma conditional_subtract_modulus_spec : forall u cond
+    (cond_01 : cond = 0 \/ cond = 1),
     length u = length limb_widths ->
-    BaseSystem.decode base (conditional_subtract_modulus u cond) =
-    BaseSystem.decode base u - (if cond then 1 else 0) * modulus.
+    BaseSystem.decode base (conditional_subtract_modulus B u cond) =
+    BaseSystem.decode base u - cond * modulus.
   Proof.
     repeat match goal with
-           | |- _ => progress (cbv [conditional_subtract_modulus]; intros)
+           | |- _ => progress (cbv [conditional_subtract_modulus neg]; intros)
+           | |- _ => destruct cond_01; subst
            | |- _ => break_if
            | |- _ => rewrite map_land_max_ones by auto using bounded_modulus_digits
            | |- _ => rewrite map_land_zero
-           | |- _ => rewrite map2_sub_eq
-                     by (rewrite ?length_modulus_digits, ?length_zeros; congruence)
+           | |- _ => rewrite map2_sub_eq by distr_length
            | |- _ => rewrite sub_rep by auto
            | |- _ => rewrite zeros_rep 
            | |- _ => rewrite decode_modulus_digits by auto
            | |- _ => f_equal; ring
+           | |- _ => discriminate 
            end.
   Qed.
 
   Lemma conditional_subtract_modulus_preserves_bounded : forall u,
       length u = length limb_widths ->
       bounded limb_widths u ->
-      bounded limb_widths (conditional_subtract_modulus u (ge_modulus u)).
+      bounded limb_widths (conditional_subtract_modulus B u (ge_modulus u)).
   Proof.
     repeat match goal with
-           | |- _ => progress (cbv [conditional_subtract_modulus]; intros)
+           | |- _ => progress (cbv [conditional_subtract_modulus neg]; intros)
            | |- _ => unique pose proof bounded_modulus_digits
            | |- _ => rewrite map_land_max_ones by auto using bounded_modulus_digits
            | |- _ => rewrite map_land_zero
@@ -455,11 +488,12 @@ Section ConditionalSubtractModulusProofs.
            | |- _ => omega
            end.
     cbv [ge_modulus] in Heqb.
+    rewrite Z.eqb_eq in *.
     apply ge_modulus'_true_digitwise with (j := i) in Heqb; auto; omega.
   Qed.
 
   Lemma bounded_mul2_modulus : forall u, length u = length limb_widths ->
-    bounded limb_widths u -> ge_modulus u = true ->
+    bounded limb_widths u -> ge_modulus u = 1 ->
     modulus <= BaseSystem.decode base u < 2 * modulus.
   Proof.
     intros.
@@ -494,16 +528,16 @@ Section ConditionalSubtractModulusProofs.
   Lemma conditional_subtract_lt_modulus : forall u,
     length u = length limb_widths ->
     bounded limb_widths u ->
-    ge_modulus (conditional_subtract_modulus u (ge_modulus u)) = false.
+    ge_modulus (conditional_subtract_modulus B u (ge_modulus u)) = 0.
   Proof.
     intros.
-    rewrite ge_modulus_spec by auto using length_conditional_subtract_modulus,
-      conditional_subtract_modulus_preserves_bounded.
+    rewrite ge_modulus_spec by auto using length_conditional_subtract_modulus, conditional_subtract_modulus_preserves_bounded.
+    pose proof (ge_modulus_01 u) as Hgm01.
     rewrite conditional_subtract_modulus_spec by auto.
-    break_if.
-    + pose proof (bounded_mul2_modulus u); specialize_by auto.
+    destruct Hgm01 as [Hgm0 | Hgm1]; rewrite ?Hgm0, ?Hgm1.
+    + apply ge_modulus_spec in Hgm0; auto.
       omega.
-    + apply ge_modulus_spec in Heqb; auto.
+    + pose proof (bounded_mul2_modulus u); specialize_by auto.
       omega.
   Qed.
 End ConditionalSubtractModulusProofs.

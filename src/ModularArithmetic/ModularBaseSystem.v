@@ -82,10 +82,10 @@ Section ModularBaseSystem.
 
   Definition eq (x y : digits) : Prop := decode x = decode y.
 
-  Definition freeze (x : digits) : digits :=
-    from_list (freeze [[x]]) (length_freeze length_to_list).
+  Definition freeze B (x : digits) : digits :=
+    from_list (freeze B [[x]]) (length_freeze length_to_list).
 
-  Definition eqb (x y : digits) : bool := fieldwiseb Z.eqb (freeze x) (freeze y).
+  Definition eqb B (x y : digits) : bool := fieldwiseb Z.eqb (freeze B x) (freeze B y).
 
   (* Note : both of the following square root definitions will produce garbage output if the input is
             not square mod [modulus]. The caller should either provably only call them with square input,
@@ -97,16 +97,20 @@ Section ModularBaseSystem.
   (* sqrt_5mod8 is parameterized over implementation of [mul] and [pow] because it relies on bounds-checking
      for these two functions, which is much easier for simplified implementations than the more generalized
      ones defined here. *)
-  Definition sqrt_5mod8 mul_ pow_ (chain : list (nat * nat))
+  Definition sqrt_5mod8 B mul_ pow_ (chain : list (nat * nat))
                   (chain_correct : fold_chain 0%N N.add chain (1%N :: nil) = Z.to_N (modulus / 8 + 1))
                   (sqrt_minus1 x : digits) : digits :=
-    let b := pow_ x chain in if eqb (mul_ b b) x then b else mul_ sqrt_minus1 b.
+    let b := pow_ x chain in if eqb B (mul_ b b) x then b else mul_ sqrt_minus1 b.
 
   Import Morphisms.
   Global Instance eq_Equivalence : Equivalence eq.
   Proof.
     split; cbv [eq]; repeat intro; congruence.
   Qed.
+
+  Definition select B (b : Z) (x y : digits) :=
+    add (map (Z.land (neg B b)) x)
+        (map (Z.land (neg B (Z.lxor b 1))) x).
 
   Context {target_widths} (target_widths_nonneg : forall x, In x target_widths -> 0 <= x)
           (bits_eq : sum_firstn limb_widths   (length limb_widths) =

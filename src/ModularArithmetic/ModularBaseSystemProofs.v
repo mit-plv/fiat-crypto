@@ -833,7 +833,7 @@ Section CanonicalizationProofs.
         then 0
         else (2 ^ B) >> (limb_widths [pred n]))).
   Local Notation minimal_rep u := ((bounded limb_widths (to_list (length limb_widths) u))
-                                   /\ (ge_modulus (to_list _ u) = false)).
+                                   /\ (ge_modulus (to_list _ u) = 0)).
 
   Lemma decode_bitwise_eq_iff : forall u v, minimal_rep u -> minimal_rep v ->
     (fieldwise Logic.eq u v <->
@@ -896,7 +896,7 @@ Section CanonicalizationProofs.
   Qed.
 
   Lemma minimal_rep_freeze : forall u, initial_bounds u ->
-      minimal_rep (freeze u).
+      minimal_rep (freeze B u).
   Proof.
     repeat match goal with
            | |- _ => progress (cbv [freeze ModularBaseSystemList.freeze])
@@ -907,12 +907,12 @@ Section CanonicalizationProofs.
            | |- _ => apply conditional_subtract_lt_modulus
            | |- _ => apply conditional_subtract_modulus_preserves_bounded
            | |- bounded _ (carry_full _) => apply bounded_iff
-           | |- _ => solve [auto using lt_1_length_limb_widths, length_carry_full, length_to_list]
+           | |- _ => solve [auto using B_pos, B_compat, lt_1_length_limb_widths, length_carry_full, length_to_list]
            end.
   Qed.
 
   Lemma freeze_decode : forall u,
-      BaseSystem.decode base (to_list _ (freeze u)) mod modulus =
+      BaseSystem.decode base (to_list _ (freeze B u)) mod modulus =
       BaseSystem.decode base (to_list _ u) mod modulus.
   Proof.
     repeat match goal with
@@ -922,7 +922,7 @@ Section CanonicalizationProofs.
            | |- _ => rewrite Z.mod_add by (pose proof prime_modulus; prime_bound)
            | |- _ => rewrite to_list_from_list
            | |- _ => rewrite conditional_subtract_modulus_spec by
-                       auto using lt_1_length_limb_widths, length_carry_full, length_to_list
+                       auto using B_pos, B_compat, lt_1_length_limb_widths, length_carry_full, length_to_list, ge_modulus_01
            end.
     rewrite !decode_mod_Fdecode by auto using length_carry_full, length_to_list.
     cbv [carry_full].
@@ -941,7 +941,7 @@ Section CanonicalizationProofs.
     rewrite from_list_to_list; reflexivity.
   Qed.
 
-  Lemma freeze_rep : forall u x, rep u x -> rep (freeze u) x.
+  Lemma freeze_rep : forall u x, rep u x -> rep (freeze B u) x.
   Proof.
     cbv [rep]; intros.
     apply F.eq_to_Z_iff.
@@ -952,7 +952,7 @@ Section CanonicalizationProofs.
   Lemma freeze_canonical : forall u v x y, rep u x -> rep v y ->
                                            initial_bounds u ->
                                            initial_bounds v ->
-    (x = y <-> fieldwise Logic.eq (freeze u) (freeze v)).
+    (x = y <-> fieldwise Logic.eq (freeze B u) (freeze B v)).
   Proof.
     intros; apply bounded_canonical; auto using freeze_rep, minimal_rep_freeze.
   Qed.
@@ -977,7 +977,7 @@ Section SquareRootProofs.
 
   Lemma eqb_true_iff : forall u v x y,
     bounded_by u freeze_input_bounds -> bounded_by v freeze_input_bounds ->
-    u ~= x -> v ~= y -> (x = y <-> eqb u v = true).
+    u ~= x -> v ~= y -> (x = y <-> eqb B u v = true).
   Proof.
     cbv [eqb freeze_input_bounds]. intros.
     rewrite fieldwiseb_fieldwise by (apply Z.eqb_eq).
@@ -986,10 +986,10 @@ Section SquareRootProofs.
 
   Lemma eqb_false_iff : forall u v x y,
     bounded_by u freeze_input_bounds -> bounded_by v freeze_input_bounds ->
-    u ~= x -> v ~= y -> (x <> y <-> eqb u v = false).
+    u ~= x -> v ~= y -> (x <> y <-> eqb B u v = false).
   Proof.
     intros.
-    case_eq (eqb u v).
+    case_eq (eqb B u v).
     + rewrite <-eqb_true_iff by eassumption; split; intros;
         congruence || contradiction.
     + split; intros; auto.
@@ -1032,24 +1032,24 @@ Section SquareRootProofs.
 
   Lemma sqrt_5mod8_correct : forall u x, u ~= x ->
     bounded_by u pow_input_bounds -> bounded_by u freeze_input_bounds ->
-    (sqrt_5mod8 mul_ pow_ chain chain_correct sqrt_m1 u) ~= F.sqrt_5mod8 (decode sqrt_m1) x.
+    (sqrt_5mod8 B mul_ pow_ chain chain_correct sqrt_m1 u) ~= F.sqrt_5mod8 (decode sqrt_m1) x.
   Proof.
     repeat match goal with
            | |- _ => progress (cbv [sqrt_5mod8 F.sqrt_5mod8]; intros)
            | |- _ => rewrite @F.pow_2_r in *
            | |- _ => rewrite eqb_correct in * by eassumption
-           | |- (if eqb ?a ?b then _ else _) ~=
+           | |- (if eqb _ ?a ?b then _ else _) ~=
                 (if dec (?c = _) then _ else _) =>
                assert (a ~= c); rewrite !mul_equiv, pow_equiv in *;
                repeat break_if
            | |- _ => apply mul_rep; try reflexivity;
                        rewrite <-chain_correct; apply pow_rep; eassumption
            | |- _ => rewrite <-chain_correct;  apply pow_rep; eassumption
-           | H : eqb ?a ?b = true |- _ =>
+           | H : eqb _ ?a ?b = true |- _ =>
              rewrite <-(eqb_true_iff a b) in H
                by (eassumption || rewrite <-mul_equiv, <-pow_equiv;
                      apply mul_bounded, pow_bounded; auto)
-           | H : eqb ?a ?b = false |- _ =>
+           | H : eqb _ ?a ?b = false |- _ =>
              rewrite <-(eqb_false_iff a b) in H
                by (eassumption || rewrite <-mul_equiv, <-pow_equiv;
                      apply mul_bounded, pow_bounded; auto)
