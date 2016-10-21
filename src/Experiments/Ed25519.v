@@ -285,39 +285,39 @@ Axiom ERep_group :
              (@ModularBaseSystem.eq GF25519.modulus GF25519.params25519) GF25519.zero_ GF25519.one_ GF25519.add
              GF25519.mul (@ModularBaseSystem.div GF25519.modulus GF25519.params25519) a d) ErepAdd
           (@ExtendedCoordinates.Extended.zero GF25519.fe25519
-             (@ModularBaseSystem.eq GF25519.modulus GF25519.params25519) GF25519.zero_ GF25519.one_ 
+             (@ModularBaseSystem.eq GF25519.modulus GF25519.params25519) GF25519.zero_ GF25519.one_
              GF25519.opp GF25519.add GF25519.sub GF25519.mul GF25519.inv
              (@ModularBaseSystem.div GF25519.modulus GF25519.params25519) a d GF25519.field25519
              twedprm_ERep _)
           (@ExtendedCoordinates.Extended.opp GF25519.fe25519
-             (@ModularBaseSystem.eq GF25519.modulus GF25519.params25519) GF25519.zero_ GF25519.one_ 
+             (@ModularBaseSystem.eq GF25519.modulus GF25519.params25519) GF25519.zero_ GF25519.one_
              GF25519.opp GF25519.add GF25519.sub GF25519.mul GF25519.inv
              (@ModularBaseSystem.div GF25519.modulus GF25519.params25519) a d GF25519.field25519
              twedprm_ERep _).
 
 Let sign := @EdDSARepChange.sign E
          (@CompleteEdwardsCurveTheorems.E.eq Fq (@eq Fq) (@ModularArithmetic.F.one q)
-            (@ModularArithmetic.F.add q) (@ModularArithmetic.F.mul q) Ed25519.a Ed25519.d)
+            (@ModularArithmetic.F.add q) (@ModularArithmetic.F.mul q) Spec.Ed25519.a Spec.Ed25519.d)
          (@CompleteEdwardsCurve.E.add Fq (@eq Fq) (ModularArithmetic.F.of_Z q 0) (@ModularArithmetic.F.one q)
             (@ModularArithmetic.F.opp q) (@ModularArithmetic.F.add q) (@ModularArithmetic.F.sub q)
             (@ModularArithmetic.F.mul q) (@ModularArithmetic.F.inv q) (@ModularArithmetic.F.div q)
-            (@PrimeFieldTheorems.F.field_modulo q prime_q) (@ModularArithmeticTheorems.F.eq_dec q) Ed25519.a
-            Ed25519.d curve_params)
+            (@PrimeFieldTheorems.F.field_modulo q prime_q) (@ModularArithmeticTheorems.F.eq_dec q) Spec.Ed25519.a
+            Spec.Ed25519.d curve_params)
          (@CompleteEdwardsCurve.E.zero Fq (@eq Fq) (ModularArithmetic.F.of_Z q 0) (@ModularArithmetic.F.one q)
             (@ModularArithmetic.F.opp q) (@ModularArithmetic.F.add q) (@ModularArithmetic.F.sub q)
             (@ModularArithmetic.F.mul q) (@ModularArithmetic.F.inv q) (@ModularArithmetic.F.div q)
-            (@PrimeFieldTheorems.F.field_modulo q prime_q) (@ModularArithmeticTheorems.F.eq_dec q) Ed25519.a
-            Ed25519.d curve_params)
+            (@PrimeFieldTheorems.F.field_modulo q prime_q) (@ModularArithmeticTheorems.F.eq_dec q) Spec.Ed25519.a
+            Spec.Ed25519.d curve_params)
          (@CompleteEdwardsCurveTheorems.E.opp Fq (@eq Fq) (ModularArithmetic.F.of_Z q 0)
             (@ModularArithmetic.F.one q) (@ModularArithmetic.F.opp q) (@ModularArithmetic.F.add q)
             (@ModularArithmetic.F.sub q) (@ModularArithmetic.F.mul q) (@ModularArithmetic.F.inv q)
-            (@ModularArithmetic.F.div q) Ed25519.a Ed25519.d (@PrimeFieldTheorems.F.field_modulo q prime_q)
+            (@ModularArithmetic.F.div q) Spec.Ed25519.a Spec.Ed25519.d (@PrimeFieldTheorems.F.field_modulo q prime_q)
             (@ModularArithmeticTheorems.F.eq_dec q))
          (@CompleteEdwardsCurve.E.mul Fq (@eq Fq) (ModularArithmetic.F.of_Z q 0) (@ModularArithmetic.F.one q)
             (@ModularArithmetic.F.opp q) (@ModularArithmetic.F.add q) (@ModularArithmetic.F.sub q)
             (@ModularArithmetic.F.mul q) (@ModularArithmetic.F.inv q) (@ModularArithmetic.F.div q)
-            (@PrimeFieldTheorems.F.field_modulo q prime_q) (@ModularArithmeticTheorems.F.eq_dec q) Ed25519.a
-            Ed25519.d curve_params) b H c n l B Eenc Senc (@ed25519 H) Erep ERepEnc SRep SC25519.SRepDecModL
+            (@PrimeFieldTheorems.F.field_modulo q prime_q) (@ModularArithmeticTheorems.F.eq_dec q) Spec.Ed25519.a
+            Spec.Ed25519.d curve_params) b H c n l B Eenc Senc (@ed25519 H) Erep ERepEnc SRep SC25519.SRepDecModL
          SRepERepMul SRepEnc SC25519.SRepAdd SC25519.SRepMul ERepB SC25519.SRepDecModLShort.
 
 Let sign_correct : forall pk sk {mlen} (msg:Word.word mlen), sign pk sk _ msg = EdDSA.sign pk sk msg :=
