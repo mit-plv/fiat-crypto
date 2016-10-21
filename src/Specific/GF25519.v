@@ -577,6 +577,7 @@ Definition sqrt_sig (f : fe25519) :
 Proof.
   eexists.
   cbv [sqrt_5mod8_opt].
+  rewrite <- pow_correct.
   apply Proper_Let_In_nd_changebody; [reflexivity|intro].
   set_evars. rewrite <-!mul_correct, <-eqb_correct. subst_evars.
   reflexivity.
