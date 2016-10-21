@@ -47,6 +47,8 @@ Module Extended.
              | _ => solve [eauto]
              | _ => solve [intuition eauto]
              | _ => solve [etransitivity; eauto]
+             | |- context [_ * Finv _] => rewrite <-!(field_div_definition(field:=field))
+             | [H:context [_ * Finv _] |- _] => rewrite <-!(field_div_definition(field:=field)) in H
              | |- _*_ <> 0 => apply Ring.zero_product_iff_zero_factor
              | [H: _ |- _ ] => solve [intro; apply H; super_nsatz]
              | |- Feq _ _ => super_nsatz
@@ -62,7 +64,7 @@ Module Extended.
       (let (x,y) := E.coordinates P in (x, y, 1, x*y)) _.
 
     Program Definition to_twisted (P:point) : Epoint := exist _
-      (let '(X,Y,Z,T) := coordinates P in ((X/Z), (Y/Z))) _.
+      (let '(X,Y,Z,T) := coordinates P in let iZ := Finv Z in ((X*iZ), (Y*iZ))) _.
 
     Definition eq (P Q:point) := E.eq (to_twisted P) (to_twisted Q).
     Global Instance DecidableRel_eq : Decidable.DecidableRel eq := _.
@@ -128,7 +130,12 @@ Module Extended.
         pose proof (add_coordinates_correct P Q) as Hrep.
         destruct P as [ [ [ [ ] ? ] ? ] [ HP [ ] ] ]; destruct Q as [ [ [ [ ] ? ] ? ] [ HQ [ ] ] ].
         autounfold with bash in *; simpl in *.
-        destruct Hrep as [HA HB]. rewrite <-!HA, <-!HB; clear HA HB.
+        destruct Hrep as [HA HB].
+        pose proof (field_div_definition(field:=field)) as Hdiv; symmetry in Hdiv;
+          (rewrite_strat bottomup Hdiv);
+          (rewrite_strat bottomup Hdiv in HA);
+          (rewrite_strat bottomup Hdiv in HB).
+        rewrite <-!HA, <-!HB; clear HA HB.
         split; reflexivity.
       Qed.
 
@@ -255,7 +262,9 @@ Module Extended.
              | [p: point |- _ ] => destruct p as [ [ [ [ ] ? ] ? ] [ ? [ ? ? ] ] ]
              | |- context[point_phi] => setoid_rewrite point_phi_correct
              | |- _ => progress cbv [fst snd coordinates proj1_sig eq to_twisted E.eq E.coordinates fieldwise fieldwise' add add_coordinates ref_phi] in *
-             | |- Keq ?x ?x => reflexivity
+             | |- _ => rewrite<- field_div_definition
+             | |- context [Fmul _ (Finv _)] => rewrite <-!(field_div_definition(field:=fieldF))
+             | [H:context [Fmul _ (Finv _)] |- _] => rewrite <-!(field_div_definition(field:=fieldF)) in H
              | |- Keq ?x ?y => rewrite_strat bottomup hints field_homomorphism
              | [ H : Feq _ _ |- Keq (phi _) (phi _)] => solve [f_equiv; intuition]
              end.

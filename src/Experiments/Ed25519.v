@@ -61,7 +61,7 @@ Definition coord_to_extended (xy : GF25519.fe25519 * GF25519.fe25519) pf :=
     (exist Pre.onCurve xy pf).
 
 Definition extended_to_coord (P : Erep) : (GF25519.fe25519 * GF25519.fe25519) :=
-  CompleteEdwardsCurve.E.coordinates (ExtendedCoordinates.Extended.to_twisted P).
+  CompleteEdwardsCurve.E.coordinates (ExtendedCoordinates.Extended.to_twisted P (field:=GF25519.field25519)).
 
 Lemma encode_eq_iff :  forall x y : ModularArithmetic.F.F GF25519.modulus,
                     ModularBaseSystem.eq
@@ -129,7 +129,7 @@ Let ERepEnc :=
          (Kenc := feEnc)
          (Kpoint := Erep)
          (Kpoint_to_coord :=  fun P => CompleteEdwardsCurve.E.coordinates
-                                (ExtendedCoordinates.Extended.to_twisted P))
+                                (ExtendedCoordinates.Extended.to_twisted P (field:=GF25519.field25519)))
   ).
 
 Let SRep := SC25519.SRep.
@@ -175,7 +175,7 @@ Let SRepERepMul : SRep -> Erep -> Erep :=
 .
 
 Lemma SRepERepMul_correct n P :
-  ExtendedCoordinates.Extended.eq
+  ExtendedCoordinates.Extended.eq (field:=GF25519.field25519)
     (EToRep (CompleteEdwardsCurve.E.mul n P))
     (SRepERepMul (S2Rep (ModularArithmetic.F.of_nat l n)) (EToRep P)).
 Proof.
@@ -225,7 +225,7 @@ Proof.
 Qed.
 
 Lemma ext_eq_correct : forall p q : Erep,
-  ExtendedCoordinates.Extended.eq p q <->
+  ExtendedCoordinates.Extended.eq (field:=GF25519.field25519) p q <->
   Tuple.fieldwise (n := 2) ModularBaseSystem.eq (extended_to_coord p) (extended_to_coord q).
 Proof.
   cbv [extended_to_coord]; intros.
@@ -243,10 +243,10 @@ Let SRepEnc : SRep -> Word.word b := (fun x => Word.NToWord _ (Z.to_N x)).
 
 Axiom SRepERepMul_correct:
 forall (n : nat) (P : E),
- ExtendedCoordinates.Extended.eq (EToRep (CompleteEdwardsCurve.E.mul n P))
+ ExtendedCoordinates.Extended.eq (field:=GF25519.field25519) (EToRep (CompleteEdwardsCurve.E.mul n P))
                                  (SRepERepMul (S2Rep (ModularArithmetic.F.of_nat l n)) (EToRep P)).
 
-Axiom Proper_SRepERepMul : Proper (SC25519.SRepEq ==> ExtendedCoordinates.Extended.eq ==> ExtendedCoordinates.Extended.eq) SRepERepMul.
+Axiom Proper_SRepERepMul : Proper (SC25519.SRepEq ==> ExtendedCoordinates.Extended.eq (field:=GF25519.field25519) ==> ExtendedCoordinates.Extended.eq (field:=GF25519.field25519)) SRepERepMul.
 
 Axiom SRepEnc_correct : forall x : ModularArithmetic.F.F l, Senc x = SRepEnc (S2Rep x).
 
@@ -277,23 +277,28 @@ Let ERepB : Erep.
   exists rB. exact onCurve_ERepB.
 Defined.
 
-Let ERepB_correct : ExtendedCoordinates.Extended.eq ERepB (EToRep B). vm_decide_no_check. Qed.
+Let ERepB_correct : ExtendedCoordinates.Extended.eq (field:=GF25519.field25519) ERepB (EToRep B). vm_decide_no_check. Qed.
 
-Axiom ERep_group :
-     @Algebra.group Erep
-          (@ExtendedCoordinates.Extended.eq GF25519.fe25519
-             (@ModularBaseSystem.eq GF25519.modulus GF25519.params25519) GF25519.zero_ GF25519.one_ GF25519.add
-             GF25519.mul (@ModularBaseSystem.div GF25519.modulus GF25519.params25519) a d) ErepAdd
-          (@ExtendedCoordinates.Extended.zero GF25519.fe25519
-             (@ModularBaseSystem.eq GF25519.modulus GF25519.params25519) GF25519.zero_ GF25519.one_
-             GF25519.opp GF25519.add GF25519.sub GF25519.mul GF25519.inv
-             (@ModularBaseSystem.div GF25519.modulus GF25519.params25519) a d GF25519.field25519
-             twedprm_ERep _)
-          (@ExtendedCoordinates.Extended.opp GF25519.fe25519
-             (@ModularBaseSystem.eq GF25519.modulus GF25519.params25519) GF25519.zero_ GF25519.one_
-             GF25519.opp GF25519.add GF25519.sub GF25519.mul GF25519.inv
-             (@ModularBaseSystem.div GF25519.modulus GF25519.params25519) a d GF25519.field25519
-             twedprm_ERep _).
+Axiom ERepGroup :
+  @Algebra.group Erep
+        (@ExtendedCoordinates.Extended.eq GF25519.fe25519
+           (@ModularBaseSystem.eq GF25519.modulus GF25519.params25519) GF25519.zero_ GF25519.one_ GF25519.opp
+           GF25519.add GF25519.sub GF25519.mul GF25519.inv
+           (@ModularBaseSystem.div GF25519.modulus GF25519.params25519) a d GF25519.field25519
+           (fun x y : GF25519.fe25519 =>
+            @ModularArithmeticTheorems.F.eq_dec GF25519.modulus
+              (@ModularBaseSystem.decode GF25519.modulus GF25519.params25519 x)
+              (@ModularBaseSystem.decode GF25519.modulus GF25519.params25519 y))) ErepAdd
+        (@ExtendedCoordinates.Extended.zero GF25519.fe25519
+           (@ModularBaseSystem.eq GF25519.modulus GF25519.params25519) GF25519.zero_ GF25519.one_ 
+           _ GF25519.add _ GF25519.mul _
+           (@ModularBaseSystem.div GF25519.modulus GF25519.params25519) a d GF25519.field25519
+           twedprm_ERep _)
+        (@ExtendedCoordinates.Extended.opp GF25519.fe25519
+           (@ModularBaseSystem.eq GF25519.modulus GF25519.params25519) GF25519.zero_ GF25519.one_ 
+           _ GF25519.add _ GF25519.mul _
+           (@ModularBaseSystem.div GF25519.modulus GF25519.params25519) a d GF25519.field25519
+          twedprm_ERep _).
 
 Let sign := @EdDSARepChange.sign E
          (@CompleteEdwardsCurveTheorems.E.eq Fq (@eq Fq) (@ModularArithmetic.F.one q)
@@ -342,7 +347,7 @@ Let sign_correct : forall pk sk {mlen} (msg:Word.word mlen), sign pk sk _ msg = 
       (* ErepAdd := *) ErepAdd
       (* ErepId := *) ExtendedCoordinates.Extended.zero
       (* ErepOpp := *) ExtendedCoordinates.Extended.opp
-      (* Agroup := *) ERep_group
+      (* Agroup := *) ERepGroup
       (* EToRep := *) EToRep
       (* ERepEnc := *) ERepEnc
       (* ERepEnc_correct := *) ERepEnc_correct
@@ -512,10 +517,11 @@ Extract Inlined Constant eq_rec_r  => "".
 Extract Inductive comparison =>
   "Prelude.Ordering" ["Prelude.EQ" "Prelude.LT" "Prelude.GT"].
 
-(** Bool *)
+(** Bool, sumbool, Decidable *)
 
 Extract Inductive bool    => "Prelude.Bool" ["Prelude.True" "Prelude.False"].
 Extract Inductive sumbool => "Prelude.Bool" ["Prelude.True" "Prelude.False"].
+Extraction Inline Crypto.Util.Decidable.Decidable Crypto.Util.Decidable.dec.
 
 (* Extract Inlined Constant Equality.bool_beq => *)
 (*   "((Prelude.==) :: Prelude.Bool -> Prelude.Bool -> Prelude.Bool)". *)
@@ -647,11 +653,6 @@ Extract Inductive Z => "Prelude.Integer" [ "0" "(\x -> x)" "Prelude.negate" ]
 
 (** Let_In *)
 Extraction Inline LetIn.Let_In.
-Extraction Inline EdDSARepChange.sign EdDSARepChange.splitSecretPrngCurve.
-Extraction Inline SRep_testbit.
-Extraction Inline PointEncoding.Kencode_point.
-Extraction Inline ExtendedCoordinates.Extended.coordinates ExtendedCoordinates.Extended.to_twisted  ExtendedCoordinates.Extended.from_twisted.
-Extraction Inline CompleteEdwardsCurve.E.coordinates.
 
 (* unused functions *)
 Extraction Inline False_rect False_rec and_rect and_rec.
@@ -676,4 +677,82 @@ Extract Inlined Constant Coq.NArith.BinNat.N.sqrt_up => "#error unused".
 Extract Inlined Constant Coq.Numbers.Natural.Peano.NPeano.Nat.sqrt_up => "#error unused".
 Extract Inlined Constant Coq.Arith.PeanoNat.Nat.sqrt_up => "#error unused".
 Extract Inlined Constant Coq.ZArith.BinInt.Z.sqrt_up => "#error unused".
+
+(* inlining *)
+Extraction Inline Erep SRep ZNWord WordNZ.
+Extraction Inline GF25519.fe25519.
+Extraction Inline EdDSARepChange.sign EdDSARepChange.splitSecretPrngCurve.
+Extraction Inline SRep_testbit.
+Extraction Inline Crypto.Util.IterAssocOp.iter_op Crypto.Util.IterAssocOp.test_and_op.
+Extraction Inline PointEncoding.Kencode_point.
+Extraction Inline ExtendedCoordinates.Extended.point ExtendedCoordinates.Extended.coordinates ExtendedCoordinates.Extended.to_twisted  ExtendedCoordinates.Extended.from_twisted ExtendedCoordinates.Extended.add_coordinates ExtendedCoordinates.Extended.add ExtendedCoordinates.Extended.opp ExtendedCoordinates.Extended.zero. (* ExtendedCoordinates.Extended.zero could be precomputed *)
+Extraction Inline CompleteEdwardsCurve.E.coordinates CompleteEdwardsCurve.E.zero.
+
 (* Recursive Extraction sign. *)
+  (* most of the code we want seems to be below [eq_dec1] and there is other stuff above that *)
+  (* TODO: remove branching from [sRep] functions *)
+
+(* fragment of output:
+
+sign :: Word -> Word -> Prelude.Integer -> Word -> Word
+sign pk sk mlen msg =
+  let {
+   sp = let {hsk = h b sk} in
+        (,)
+        (sRepDecModLShort
+          (combine n (clearlow n c (wfirstn n ((Prelude.+) b b) hsk)) (Prelude.succ 0)
+            (wones (Prelude.succ 0)))) (split2 b b hsk)}
+  in
+  let {r = sRepDecModL (h ((Prelude.+) b mlen) (combine b (Prelude.snd sp) mlen msg))} in
+  let {r0 = sRepERepMul r eRepB} in
+  combine b (eRepEnc r0) b
+    (sRepEnc
+      (sRepAdd r
+        (sRepMul
+          (sRepDecModL
+            (h ((Prelude.+) b ((Prelude.+) b mlen))
+              (combine b (eRepEnc r0) ((Prelude.+) b mlen) (combine b pk mlen msg)))) (Prelude.fst sp))))
+
+sRepERepMul :: SRep0 -> Erep -> Erep
+sRepERepMul sc a =
+  Prelude.snd
+    (funexp (\state ->
+      case state of {
+       (,) i acc ->
+        let {acc2 = erepAdd acc acc} in
+        let {acc2a = erepAdd a acc2} in
+        (\fO fS n -> {- match_on_nat -} if n Prelude.== 0 then fO () else fS (n Prelude.- 1))
+          (\_ -> (,) 0
+          acc)
+          (\i' -> (,) i'
+          (eRepSel ((\w n -> Data.Bits.testBit w (Prelude.fromIntegral n)) sc (of_nat i')) acc2 acc2a))
+          i}) ((,) ll
+      (case  ((,) zero_ one_) of {
+        (,) x y -> (,) ((,) ((,) x y) one_) (mul3 x y)})) ll)
+
+erepAdd :: (Point0 Fe25519) -> (Point0 Fe25519) -> Point0 Fe25519
+erepAdd p q =
+  case  p of {
+   (,) y t1 ->
+    case y of {
+     (,) y0 z1 ->
+      case y0 of {
+       (,) x1 y1 ->
+        case  q of {
+         (,) y2 t2 ->
+          case y2 of {
+           (,) y3 z2 ->
+            case y3 of {
+             (,) x2 y4 ->
+              let {a = mul3 (sub2 y1 x1) (sub2 y4 x2)} in
+              let {b0 = mul3 (add2 y1 x1) (add2 y4 x2)} in
+              let {c0 = mul3 (mul3 t1 twice_d) t2} in
+              let {d = mul3 z1 (add2 z2 z2)} in
+              let {e = sub2 b0 a} in
+              let {f = sub2 d c0} in
+              let {g = add2 d c0} in
+              let {h0 = add2 b0 a} in
+              let {x3 = mul3 e f} in
+              let {y5 = mul3 g h0} in
+              let {t3 = mul3 e h0} in let {z3 = mul3 f g} in (,) ((,) ((,) x3 y5) z3) t3}}}}}}
+*)
