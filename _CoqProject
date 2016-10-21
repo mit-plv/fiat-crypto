@@ -3,7 +3,6 @@
 Bedrock/Nomega.v
 Bedrock/Word.v
 src/Algebra.v
-src/Assembly/Bounded.v
 src/Assembly/Bounds.v
 src/Assembly/Compile.v
 src/Assembly/Conversions.v

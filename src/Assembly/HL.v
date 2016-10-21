@@ -1,4 +1,5 @@
 Require Import Crypto.Assembly.PhoasCommon.
+Require Import Coq.setoid_ring.InitialRing.
 
 Module HL.
   Section Language.
@@ -41,9 +42,9 @@ Module HL.
     refine (IHt1 x1, IHt2 x2).
   Defined.
 
-  Definition zinterp {t} E := @interp Z ZEvaluable t E.
+  Definition zinterp {n t} E := @interp Z (@ZEvaluable n) t E.
 
-  Definition ZInterp {t} E := @Interp Z ZEvaluable t E.
+  Definition ZInterp {n t} E := @Interp Z (@ZEvaluable n) t E.
 
   Definition wordInterp {n t} E := @interp (word n) (@WordEvaluable n) t E.
 
@@ -55,7 +56,7 @@ Module HL.
         MatchPair (Var p) (fun x y =>
           Binop OPadd (Var x) (Var y)))))%Z.
 
-  Example interp_example_Expr : ZInterp example_Expr = 28%Z.
+  Example interp_example_Expr : ZInterp (n := 16) example_Expr = 28%Z.
   Proof. reflexivity. Qed.
 
   (* Reification assumes the argument type is Z *)
@@ -114,10 +115,15 @@ Module HL.
     | ?x =>
       lazymatch goal with
       | _:reify_var_for_in_is x ?t ?v |- _ => constr:(@Var Z var t v)
-      | _ => (* let t := match type of x with ?t => reify_type t end in *)
-        constr:(@Const Z var x)
+      | _ =>
+        let x' := eval cbv in x in
+        match isZcst x' with
+        | true => constr:(@Const Z var x)
+        | false => constr:(@Var Z var TT x)
+        end
       end
     end.
+
   Hint Extern 0 (reify ?var ?e) => (let e := reify var e in eexact e) : typeclass_instances.
 
   Ltac Reify e :=
@@ -130,7 +136,7 @@ Module HL.
 
   Goal forall (x : Z) (v : zinterp_type TT) (_:reify_var_for_in_is x TT v), reify(T:=Z) zinterp_type ((fun x => x+x) x)%Z.
     intros.
-    let A := (reify zinterp_type (x + x)%Z) in pose A.
+    let A := (reify zinterp_type (x + x + 1)%Z) in pose A.
   Abort.
 
   Goal False.
@@ -140,18 +146,18 @@ Module HL.
   Ltac lhs_of_goal := match goal with |- ?R ?LHS ?RHS => constr:(LHS) end.
   Ltac rhs_of_goal := match goal with |- ?R ?LHS ?RHS => constr:(RHS) end.
 
-  Ltac Reify_rhs :=
+  Ltac Reify_rhs n :=
     let rhs := rhs_of_goal in
     let RHS := Reify rhs in
-    transitivity (ZInterp RHS);
+    transitivity (ZInterp (n := n) RHS);
     [|cbv iota beta delta [ZInterp Interp interp_type interp_binop interp]; reflexivity].
 
   Goal (0 = let x := 1+2 in x*3)%Z.
-    Reify_rhs.
+    Reify_rhs 32.
   Abort.
 
   Goal (0 = let x := 1 in let y := 2 in x * y)%Z.
-    Reify_rhs.
+    Reify_rhs 32.
   Abort.
 
   Section wf.
