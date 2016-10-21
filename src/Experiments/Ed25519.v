@@ -14,7 +14,7 @@ Import NPeano.
 Context {H: forall n : nat, Word.word n -> Word.word (b + b)}.
 
 Definition feSign (x :  GF25519.fe25519) : bool :=
-  let '(x0, x1, x2, x3, x4, x5, x6, x7, x8, x9) := x in
+  let '(x9, x8, x7, x6, x5, x4, x3, x2, x1, x0) := x in
   BinInt.Z.testbit x0 0.
 
 (* TODO *)
@@ -94,7 +94,7 @@ Let WordNZ {sz} (w : Word.word sz) := BinInt.Z.of_N (Word.wordToN w).
    the spec.
  *)
 Definition feEnc (x : GF25519.fe25519) : Word.word 255 :=
-  let '(x0, x1, x2, x3, x4, x5, x6, x7) :=
+  let '(x7, x6, x5, x4, x3, x2, x1, x0) :=
       (GF25519.pack x) in
   Word.combine (ZNWord 32 x0)
     (Word.combine (ZNWord 32 x1)
@@ -161,8 +161,9 @@ Let ErepAdd :=
 
 Local Coercion Z.of_nat : nat >-> Z.
 Let SRep_testbit : SRep -> nat -> bool := Z.testbit.
-Axiom ERepSel : bool -> Erep -> Erep -> Erep.
+Let ERepSel : bool -> Erep -> Erep -> Erep := fun b x y => if b then x else y.
 
+Let ll := Eval vm_compute in (BinInt.Z.to_nat (BinInt.Z.log2_up l)).
 Let SRepERepMul : SRep -> Erep -> Erep :=
   IterAssocOp.iter_op
     (op:=ErepAdd)
@@ -170,7 +171,7 @@ Let SRepERepMul : SRep -> Erep -> Erep :=
     (scalar:=SRep)
     SRep_testbit
     (sel:=ERepSel)
-    (BinInt.Z.to_nat (BinInt.Z.log2_up l))
+    ll
 .
 
 Lemma SRepERepMul_correct n P :
@@ -238,7 +239,89 @@ Proof.
   tauto.
 Qed.
 
-Check @sign_correct
+Let SRepEnc : SRep -> Word.word b := (fun x => Word.NToWord _ (Z.to_N x)).
+
+Axiom SRepERepMul_correct:
+forall (n : nat) (P : E),
+ ExtendedCoordinates.Extended.eq (EToRep (CompleteEdwardsCurve.E.mul n P))
+                                 (SRepERepMul (S2Rep (ModularArithmetic.F.of_nat l n)) (EToRep P)).
+
+Axiom Proper_SRepERepMul : Proper (SC25519.SRepEq ==> ExtendedCoordinates.Extended.eq ==> ExtendedCoordinates.Extended.eq) SRepERepMul.
+
+Axiom SRepEnc_correct : forall x : ModularArithmetic.F.F l, Senc x = SRepEnc (S2Rep x).
+
+Axiom onCurve_ERepB :
+  @Pre.onCurve GF25519.fe25519 (@ModularBaseSystem.eq GF25519.modulus GF25519.params25519) GF25519.one_
+    GF25519.add GF25519.mul a d
+    (@ModularBaseSystem.div GF25519.modulus GF25519.params25519
+       (8758491%Z, 20764389%Z, 8378388%Z, 40966398%Z, 30858332%Z, 27570973%Z, 17082669%Z, 16144682%Z,
+       25909283%Z, 52811034%Z) (0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 1%Z),
+    @ModularBaseSystem.div GF25519.modulus GF25519.params25519
+      (26843545%Z, 40265318%Z, 13421772%Z, 53687091%Z, 6710886%Z, 26843545%Z, 20132659%Z, 13421772%Z,
+      26843545%Z, 40265304%Z) (0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 1%Z)) /\
+  ~
+  @ModularBaseSystem.eq GF25519.modulus GF25519.params25519 (0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 1%Z)
+    GF25519.zero_ /\
+  @ModularBaseSystem.eq GF25519.modulus GF25519.params25519
+    (GF25519.mul (0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 1%Z)
+       (27139452%Z, 16611511%Z, 13413597%Z, 19351346%Z, 11264893%Z, 8635006%Z, 244362%Z, 39759291%Z,
+       27438313%Z, 28827043%Z))
+    (GF25519.mul
+       (8758491%Z, 20764389%Z, 8378388%Z, 40966398%Z, 30858332%Z, 27570973%Z, 17082669%Z, 16144682%Z,
+       25909283%Z, 52811034%Z)
+       (26843545%Z, 40265318%Z, 13421772%Z, 53687091%Z, 6710886%Z, 26843545%Z, 20132659%Z, 13421772%Z,
+       26843545%Z, 40265304%Z)).
+
+Let ERepB : Erep.
+  let rB := (eval vm_compute in (proj1_sig (EToRep B))) in
+  exists rB. exact onCurve_ERepB.
+Defined.
+
+Let ERepB_correct : ExtendedCoordinates.Extended.eq ERepB (EToRep B). vm_decide_no_check. Qed.
+
+Axiom ERep_group :
+     @Algebra.group Erep
+          (@ExtendedCoordinates.Extended.eq GF25519.fe25519
+             (@ModularBaseSystem.eq GF25519.modulus GF25519.params25519) GF25519.zero_ GF25519.one_ GF25519.add
+             GF25519.mul (@ModularBaseSystem.div GF25519.modulus GF25519.params25519) a d) ErepAdd
+          (@ExtendedCoordinates.Extended.zero GF25519.fe25519
+             (@ModularBaseSystem.eq GF25519.modulus GF25519.params25519) GF25519.zero_ GF25519.one_ 
+             GF25519.opp GF25519.add GF25519.sub GF25519.mul GF25519.inv
+             (@ModularBaseSystem.div GF25519.modulus GF25519.params25519) a d GF25519.field25519
+             twedprm_ERep _)
+          (@ExtendedCoordinates.Extended.opp GF25519.fe25519
+             (@ModularBaseSystem.eq GF25519.modulus GF25519.params25519) GF25519.zero_ GF25519.one_ 
+             GF25519.opp GF25519.add GF25519.sub GF25519.mul GF25519.inv
+             (@ModularBaseSystem.div GF25519.modulus GF25519.params25519) a d GF25519.field25519
+             twedprm_ERep _).
+
+Let sign := @EdDSARepChange.sign E
+         (@CompleteEdwardsCurveTheorems.E.eq Fq (@eq Fq) (@ModularArithmetic.F.one q)
+            (@ModularArithmetic.F.add q) (@ModularArithmetic.F.mul q) Ed25519.a Ed25519.d)
+         (@CompleteEdwardsCurve.E.add Fq (@eq Fq) (ModularArithmetic.F.of_Z q 0) (@ModularArithmetic.F.one q)
+            (@ModularArithmetic.F.opp q) (@ModularArithmetic.F.add q) (@ModularArithmetic.F.sub q)
+            (@ModularArithmetic.F.mul q) (@ModularArithmetic.F.inv q) (@ModularArithmetic.F.div q)
+            (@PrimeFieldTheorems.F.field_modulo q prime_q) (@ModularArithmeticTheorems.F.eq_dec q) Ed25519.a
+            Ed25519.d curve_params)
+         (@CompleteEdwardsCurve.E.zero Fq (@eq Fq) (ModularArithmetic.F.of_Z q 0) (@ModularArithmetic.F.one q)
+            (@ModularArithmetic.F.opp q) (@ModularArithmetic.F.add q) (@ModularArithmetic.F.sub q)
+            (@ModularArithmetic.F.mul q) (@ModularArithmetic.F.inv q) (@ModularArithmetic.F.div q)
+            (@PrimeFieldTheorems.F.field_modulo q prime_q) (@ModularArithmeticTheorems.F.eq_dec q) Ed25519.a
+            Ed25519.d curve_params)
+         (@CompleteEdwardsCurveTheorems.E.opp Fq (@eq Fq) (ModularArithmetic.F.of_Z q 0)
+            (@ModularArithmetic.F.one q) (@ModularArithmetic.F.opp q) (@ModularArithmetic.F.add q)
+            (@ModularArithmetic.F.sub q) (@ModularArithmetic.F.mul q) (@ModularArithmetic.F.inv q)
+            (@ModularArithmetic.F.div q) Ed25519.a Ed25519.d (@PrimeFieldTheorems.F.field_modulo q prime_q)
+            (@ModularArithmeticTheorems.F.eq_dec q))
+         (@CompleteEdwardsCurve.E.mul Fq (@eq Fq) (ModularArithmetic.F.of_Z q 0) (@ModularArithmetic.F.one q)
+            (@ModularArithmetic.F.opp q) (@ModularArithmetic.F.add q) (@ModularArithmetic.F.sub q)
+            (@ModularArithmetic.F.mul q) (@ModularArithmetic.F.inv q) (@ModularArithmetic.F.div q)
+            (@PrimeFieldTheorems.F.field_modulo q prime_q) (@ModularArithmeticTheorems.F.eq_dec q) Ed25519.a
+            Ed25519.d curve_params) b H c n l B Eenc Senc (@ed25519 H) Erep ERepEnc SRep SC25519.SRepDecModL
+         SRepERepMul SRepEnc SC25519.SRepAdd SC25519.SRepMul ERepB SC25519.SRepDecModLShort.
+
+Let sign_correct : forall pk sk {mlen} (msg:Word.word mlen), sign pk sk _ msg = EdDSA.sign pk sk msg :=
+  @sign_correct
       (* E := *) E
       (* Eeq := *) CompleteEdwardsCurveTheorems.E.eq
       (* Eadd := *) CompleteEdwardsCurve.E.add
@@ -259,7 +342,7 @@ Check @sign_correct
       (* ErepAdd := *) ErepAdd
       (* ErepId := *) ExtendedCoordinates.Extended.zero
       (* ErepOpp := *) ExtendedCoordinates.Extended.opp
-      (* Agroup := *) ExtendedCoordinates.Extended.extended_group
+      (* Agroup := *) ERep_group
       (* EToRep := *) EToRep
       (* ERepEnc := *) ERepEnc
       (* ERepEnc_correct := *) ERepEnc_correct
@@ -271,10 +354,10 @@ Check @sign_correct
       (* SRepDecModL := *) SC25519.SRepDecModL
       (* SRepDecModL_correct := *) SC25519.SRepDecModL_Correct
       (* SRepERepMul := *) SRepERepMul
-      (* SRepERepMul_correct := *) _
-      (* Proper_SRepERepMul := *) _
+      (* SRepERepMul_correct := *) SRepERepMul_correct
+      (* Proper_SRepERepMul := *) Proper_SRepERepMul
       (* SRepEnc := *) _
-      (* SRepEnc_correct := *) _
+      (* SRepEnc_correct := *) SRepEnc_correct
       (* Proper_SRepEnc := *) _
       (* SRepAdd := *) SC25519.SRepAdd
       (* SRepAdd_correct := *) SC25519.SRepAdd_Correct
@@ -282,11 +365,12 @@ Check @sign_correct
       (* SRepMul := *) SC25519.SRepMul
       (* SRepMul_correct := *) SC25519.SRepMul_Correct
       (* Proper_SRepMul := *) SC25519.SRepMul_Proper
-      (* ErepB := *) (EToRep B)
-      (* ErepB_correct := *) _
+      (* ErepB := *) ERepB
+      (* ErepB_correct := *) ERepB_correct
       (* SRepDecModLShort := *) SC25519.SRepDecModLShort
       (* SRepDecModLShort_correct := *) SC25519.SRepDecModLShort_Correct
 .
+Print Assumptions sign_correct.
 
 Definition Fsqrt_minus1 := Eval vm_compute in ModularBaseSystem.decode (GF25519.sqrt_m1).
 Definition Fsqrt := PrimeFieldTheorems.F.sqrt_5mod8 Fsqrt_minus1.
@@ -323,7 +407,7 @@ Let Edec := (@PointEncodingPre.point_dec
                _
                Fsqrt
                (PointEncoding.Fencoding (bound_check := bound_check255))
-               sign).
+               Spec.Ed25519.sign).
 
 Let Sdec : Word.word b -> option (ModularArithmetic.F.F l) :=
  fun w =>
@@ -395,4 +479,201 @@ Check @verify_correct
       (* SRepDec := *) _
       (* SRepDec_correct := *) _
       (* mlen := *) _
-      .
+.
+
+
+
+
+(*** Extraction *)
+
+
+
+
+Extraction Language Haskell.
+Unset Extraction KeepSingleton.
+Set Extraction AutoInline.
+Set Extraction Optimize.
+Unset Extraction AccessOpaque.
+
+(** Eq *)
+
+Extraction Implicit eq_rect   [ x y ].
+Extraction Implicit eq_rect_r [ x y ].
+Extraction Implicit eq_rec    [ x y ].
+Extraction Implicit eq_rec_r  [ x y ].
+
+Extract Inlined Constant eq_rect   => "".
+Extract Inlined Constant eq_rect_r => "".
+Extract Inlined Constant eq_rec    => "".
+Extract Inlined Constant eq_rec_r  => "".
+
+(** Ord *)
+
+Extract Inductive comparison =>
+  "Prelude.Ordering" ["Prelude.EQ" "Prelude.LT" "Prelude.GT"].
+
+(** Bool *)
+
+Extract Inductive bool    => "Prelude.Bool" ["Prelude.True" "Prelude.False"].
+Extract Inductive sumbool => "Prelude.Bool" ["Prelude.True" "Prelude.False"].
+
+(* Extract Inlined Constant Equality.bool_beq => *)
+(*   "((Prelude.==) :: Prelude.Bool -> Prelude.Bool -> Prelude.Bool)". *)
+Extract Inlined Constant Bool.bool_dec     =>
+  "((Prelude.==) :: Prelude.Bool -> Prelude.Bool -> Prelude.Bool)".
+
+Extract Inlined Constant Sumbool.sumbool_of_bool => "".
+
+Extract Inlined Constant negb => "Prelude.not".
+Extract Inlined Constant orb  => "(Prelude.||)".
+Extract Inlined Constant andb => "(Prelude.&&)".
+Extract Inlined Constant xorb => "Data.Bits.xor".
+
+(** Maybe *)
+
+Extract Inductive option => "Prelude.Maybe" ["Prelude.Just" "Prelude.Nothing"].
+Extract Inductive sumor  => "Prelude.Maybe" ["Prelude.Just" "Prelude.Nothing"].
+
+(** Either *)
+
+Extract Inductive sum => "Prelude.Either" ["Prelude.Left" "Prelude.Right"].
+
+(** List *)
+
+Extract Inductive list => "[]" ["[]" "(:)"].
+
+Extract Inlined Constant app             => "(Prelude.++)".
+Extract Inlined Constant List.map        => "Prelude.map".
+Extract         Constant List.fold_left  => "\f l z -> Data.List.foldl f z l".
+Extract Inlined Constant List.fold_right => "Data.List.foldr".
+Extract Inlined Constant List.find       => "Data.List.find".
+Extract Inlined Constant List.length     => "Data.List.genericLength".
+
+(** Tuple *)
+
+Extract Inductive prod => "(,)" ["(,)"].
+Extract Inductive sigT => "(,)" ["(,)"].
+
+Extract Inlined Constant fst    => "Prelude.fst".
+Extract Inlined Constant snd    => "Prelude.snd".
+Extract Inlined Constant projT1 => "Prelude.fst".
+Extract Inlined Constant projT2 => "Prelude.snd".
+
+Extract Inlined Constant proj1_sig => "".
+
+(** Unit *)
+
+Extract Inductive unit => "()" ["()"].
+
+(** nat *)
+
+Extract Inlined Constant Nat.add => "(Prelude.+)".
+Extract Inlined Constant Nat.mul => "(Prelude.*)".
+Extract Inlined Constant Nat.max => "Prelude.max".
+Extract Inlined Constant Nat.min => "Prelude.min".
+Extract Inlined Constant Init.Nat.add => "(Prelude.+)".
+Extract Inlined Constant Init.Nat.mul => "(Prelude.*)".
+Extract Inlined Constant Init.Nat.max => "Prelude.max".
+Extract Inlined Constant Init.Nat.min => "Prelude.min".
+Extract Inlined Constant PeanoNat.Nat.add => "(Prelude.+)".
+Extract Inlined Constant PeanoNat.Nat.mul => "(Prelude.*)".
+Extract Inlined Constant PeanoNat.Nat.max => "Prelude.max".
+Extract Inlined Constant PeanoNat.Nat.min => "Prelude.min".
+Extract Inlined Constant Compare_dec.lt_dec => "(Prelude.<)".
+Extract Inlined Constant Compare_dec.leb => "(Prelude.<=)".
+Extract Inlined Constant Compare_dec.le_lt_dec => "(Prelude.<=)".
+Extract Inlined Constant EqNat.beq_nat => "(Prelude.==)".
+Extract Inlined Constant EqNat.eq_nat_decide => "(Prelude.==)".
+Extract Inlined Constant Peano_dec.eq_nat_dec => "(Prelude.==)".
+
+Extract Constant Nat.pred => "(\n -> Prelude.max 0 (Prelude.pred n))".
+Extract Constant Nat.sub => "(\n m -> Prelude.max 0 (n Prelude.- m))".
+Extract Constant Init.Nat.pred => "(\n -> Prelude.max 0 (Prelude.pred n))".
+Extract Constant Init.Nat.sub => "(\n m -> Prelude.max 0 (n Prelude.- m))".
+
+Extract Constant Nat.div => "(\n m -> if m Prelude.== 0 then 0 else Prelude.div n m)".
+Extract Constant Nat.modulo => "(\n m -> if m Prelude.== 0 then 0 else Prelude.mod n m)".
+Extract Constant Init.Nat.div => "(\n m -> if m Prelude.== 0 then 0 else Prelude.div n m)".
+Extract Constant Init.Nat.modulo => "(\n m -> if m Prelude.== 0 then 0 else Prelude.mod n m)".
+
+Extract Inductive nat => "Prelude.Integer" [ "0" "Prelude.succ" ]
+  "(\fO fS n -> {- match_on_nat -} if n Prelude.== 0 then fO () else fS (n Prelude.- 1))".
+
+(** Z *)
+
+Require Import ZArith.
+Require Import EqNat.
+
+Extract Inlined Constant Z.add => "(Prelude.+)".
+Extract Inlined Constant Z.sub => "(Prelude.-)".
+Extract Inlined Constant Z.mul => "(Prelude.*)".
+Extract Inlined Constant Z.max => "Prelude.max".
+Extract Inlined Constant Z.min => "Prelude.min".
+Extract Inlined Constant Z.land => "(Data.Bits..&.)".
+Extract Inlined Constant Z.lor => "(Data.Bits..|.)".
+Extract Inlined Constant Z.shiftr => "(\w n -> Data.Bits.shiftR w (Prelude.fromIntegral n))".
+Extract Inlined Constant Z.shiftl => "(\w n -> Data.Bits.shiftL w (Prelude.fromIntegral n))".
+Extract Inlined Constant Z.testbit => "(\w n -> Data.Bits.testBit w (Prelude.fromIntegral n))".
+Extract Inlined Constant Z.eq_dec => "(Prelude.==)".
+Extract Inlined Constant Z_ge_lt_dec => "(Prelude.>=)".
+Extract Inlined Constant Z_gt_le_dec => "(Prelude.>)".
+Extract Inlined Constant Z.ltb => "(Prelude.<)".
+Extract Inlined Constant Z.leb => "(Prelude.<=)".
+Extract Inlined Constant Z.gtb => "(Prelude.>)".
+Extract Inlined Constant Z.geb => "(Prelude.>=)".
+
+Extract Constant Z.div => "(\n m -> if m Prelude.== 0 then 0 else Prelude.div n m)".
+Extract Constant Z.modulo => "(\n m -> if m Prelude.== 0 then 0 else Prelude.mod n m)".
+
+Extract Inlined Constant BinIntDef.Z.compare => "Prelude.compare".
+Extract Inductive comparison => "Prelude.Ordering" [ "Prelude.EQ" "Prelude.LT" "Prelude.GT" ].
+Extract Inductive CompareSpecT => "Prelude.Ordering" [ "Prelude.EQ" "Prelude.LT" "Prelude.GT" ].
+
+Extract Inductive positive => "Prelude.Integer" [
+  "(\x -> 2 Prelude.* x Prelude.+ 1)"
+  "(\x -> 2 Prelude.* x)"
+  "1" ]
+  "(\fI fO fH n -> {- match_on_positive -}
+                   if n Prelude.== 1 then fH () else
+                   if Prelude.odd n
+                   then fI (n `Prelude.div` 2)
+                   else fO (n `Prelude.div` 2))".
+
+Extract Inductive Z => "Prelude.Integer" [ "0" "(\x -> x)" "Prelude.negate" ]
+  "(\fO fP fN n -> {- match_on_Z -}
+                   if n Prelude.== 0 then fO () else
+                   if n Prelude.> 0 then fP n else
+                   fN (Prelude.negate n))".
+
+(** Let_In *)
+Extraction Inline LetIn.Let_In.
+Extraction Inline EdDSARepChange.sign EdDSARepChange.splitSecretPrngCurve.
+Extraction Inline SRep_testbit.
+Extraction Inline PointEncoding.Kencode_point.
+Extraction Inline ExtendedCoordinates.Extended.coordinates ExtendedCoordinates.Extended.to_twisted  ExtendedCoordinates.Extended.from_twisted.
+Extraction Inline CompleteEdwardsCurve.E.coordinates.
+
+(* unused functions *)
+Extraction Inline False_rect False_rec and_rect and_rec.
+Extraction Inline Z.div_eucl.
+Extraction Inline Tuple.from_list'_obligation_1 Tuple.from_list_obligation_1.
+Extraction Inline Tuple.from_list'_obligation_2 Tuple.from_list_obligation_2.
+Extract Inlined Constant Coq.Numbers.Natural.Peano.NPeano.Nat.max_case_strong => "#error unused".
+Extract Inlined Constant Coq.Numbers.Natural.Peano.NPeano.Nat.max_case => "#error unused".
+Extract Inlined Constant Coq.Arith.Max.max_dec => "#error unused".
+Extract Inlined Constant Coq.NArith.BinNat.N.max_dec => "#error unused".
+Extract Inlined Constant Coq.Numbers.Natural.Peano.NPeano.Nat.max_dec => "#error unused".
+Extract Inlined Constant Coq.Arith.PeanoNat.Nat.max_dec => "#error unused".
+Extract Inlined Constant Coq.PArith.BinPos.Pos.max_dec => "#error unused".
+Extract Inlined Constant Coq.NArith.BinNat.N.Private_Dec.max_dec => "#error unused".
+Extract Inlined Constant Coq.Numbers.Natural.Peano.NPeano.Nat.Private_Dec.max_dec => "#error unused".
+Extract Inlined Constant Coq.Arith.PeanoNat.Nat.Private_Dec.max_dec => "#error unused".
+Extract Inlined Constant Coq.PArith.BinPos.Pos.Private_Dec.max_dec => "#error unused".
+Extract Inlined Constant Coq.ZArith.BinInt.Z.Private_Dec.max_dec => "#error unused".
+Extract Inlined Constant Coq.ZArith.BinInt.Z.max_dec => "#error unused".
+Extract Inlined Constant Nat.divmod => "#error unused".
+Extract Inlined Constant Coq.NArith.BinNat.N.sqrt_up => "#error unused".
+Extract Inlined Constant Coq.Numbers.Natural.Peano.NPeano.Nat.sqrt_up => "#error unused".
+Extract Inlined Constant Coq.Arith.PeanoNat.Nat.sqrt_up => "#error unused".
+Extract Inlined Constant Coq.ZArith.BinInt.Z.sqrt_up => "#error unused".
+(* Recursive Extraction sign. *)
