@@ -550,11 +550,19 @@ Proof.
 Defined.
 
 Definition eqb (f g : fe25519) : bool
-  := Eval cbv beta iota delta [proj1_sig eqb_sig] in proj1_sig (eqb_sig f g).
+  := Eval cbv beta iota delta [proj1_sig eqb_sig] in
+      let '(f0, f1, f2, f3, f4, f5, f6, f7, f8, f9) := f in
+      let '(g0, g1, g2, g3, g4, g5, g6, g7, g8, g9) := g in
+      proj1_sig (eqb_sig (f0, f1, f2, f3, f4, f5, f6, f7, f8, f9)
+                         (g0, g1, g2, g3, g4, g5, g6, g7, g8, g9)).
 
-Definition eqb_correct (f g : fe25519)
-  : eqb f g = ModularBaseSystem.eqb f g
-  := Eval cbv beta iota delta [proj2_sig eqb_sig] in proj2_sig (eqb_sig f g).
+Lemma eqb_correct (f g : fe25519)
+  : eqb f g = ModularBaseSystem.eqb f g.
+Proof.
+  set (f' := f); set (g' := g).
+  hnf in f, g; destruct_head' prod.
+  exact (proj2_sig (eqb_sig f' g')).
+Qed.
 
 Definition sqrt_sig (f : fe25519) :
   { f' : fe25519 | f' = sqrt_5mod8_opt k_ c_ one_ sqrt_m1 f}.
