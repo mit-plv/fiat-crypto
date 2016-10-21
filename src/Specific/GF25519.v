@@ -528,11 +528,19 @@ Proof.
 Defined.
 
 Definition fieldwiseb (f g : fe25519) : bool
-  := Eval cbv beta iota delta [proj1_sig fieldwiseb_sig] in proj1_sig (fieldwiseb_sig f g).
+  := Eval cbv beta iota delta [proj1_sig fieldwiseb_sig] in
+      let '(f0, f1, f2, f3, f4, f5, f6, f7, f8, f9) := f in
+      let '(g0, g1, g2, g3, g4, g5, g6, g7, g8, g9) := g in
+      proj1_sig (fieldwiseb_sig (f0, f1, f2, f3, f4, f5, f6, f7, f8, f9)
+                                (g0, g1, g2, g3, g4, g5, g6, g7, g8, g9)).
 
-Definition fieldwiseb_correct (f g : fe25519)
-  : fieldwiseb f g = @Tuple.fieldwiseb Z Z 10 Z.eqb f g
-  := Eval cbv beta iota delta [proj2_sig fieldwiseb_sig] in proj2_sig (fieldwiseb_sig f g).
+Lemma fieldwiseb_correct (f g : fe25519)
+  : fieldwiseb f g = @Tuple.fieldwiseb Z Z 10 Z.eqb f g.
+Proof.
+  set (f' := f); set (g' := g).
+  hnf in f, g; destruct_head' prod.
+  exact (proj2_sig (fieldwiseb_sig f' g')).
+Qed.
 
 Definition eqb_sig (f g : fe25519) :
   { b | b = eqb f g }.
