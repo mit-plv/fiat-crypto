@@ -1,6 +1,6 @@
 Require Import Coq.Logic.Eqdep.
-Require Import Compare_dec Sumbool.
-Require Import PeanoNat Omega.
+Require Import Coq.Arith.Compare_dec Coq.Bool.Sumbool.
+Require Import Coq.Numbers.Natural.Peano.NPeano Coq.omega.Omega.
 
 Require Import Crypto.Assembly.PhoasCommon.
 Require Import Crypto.Assembly.HL.
@@ -120,7 +120,7 @@ Module CompileLL.
             option (Reg n * list Assignment * Operation) :=
         let mov :=
           if (EvalUtil.mapping_dec (regM _ out) in1)
-          then [] 
+          then []
           else makeA (regM _ out) in1 in
 
         match op with
@@ -138,7 +138,7 @@ Module CompileLL.
           | _ => None
           end
 
-        | OPmul => 
+        | OPmul =>
           match in2 with
           | regM r1 => Some (out, mov, DOp Mult out r1 None)
           | constM c => Some (out, mov ++ (makeA (regM _ tmp) in2), DOp Mult out tmp None)
@@ -152,7 +152,7 @@ Module CompileLL.
           | _ => None
           end
 
-        | OPshiftr => 
+        | OPshiftr =>
           match in2 with
           | constM (constant _ _ w) =>
             Some (out, mov, ROp Shr out (indexize (wordToNat w)))
@@ -244,7 +244,7 @@ Module CompileLL.
         | TT => Const (@wzero n)
         | Prod t0 t1 => Pair (zeros t0) (zeros t1)
         end.
- 
+
       Fixpoint exprF {t} (nextRegName: nat) (p: WExpr t) {struct p}: option Out :=
         match p with
         | LetBinop t1 t2 t3 op x y t' eC =>

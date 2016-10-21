@@ -91,3 +91,20 @@ Ltac inversion_prod_step :=
     => induction_path_prod H
   end.
 Ltac inversion_prod := repeat inversion_prod_step.
+
+(** This turns a goal like [x = let v := p in let '(x, y) := f v in x
+    + y)] into a goal like [x = fst (f p) + snd (f p)].  Note that it
+    inlines [let ... in ...] as well as destructuring lets. *)
+Ltac only_eta_expand_and_contract :=
+  repeat match goal with
+         | [ |- context[let '(x, y) := ?e in _] ]
+           => rewrite (surjective_pairing e)
+         | _ => rewrite <- !surjective_pairing
+         end.
+Ltac eta_expand :=
+  repeat match goal with
+         | _ => progress cbv beta iota zeta
+         | [ |- context[let '(x, y) := ?e in _] ]
+           => rewrite (surjective_pairing e)
+         | _ => rewrite <- !surjective_pairing
+         end.

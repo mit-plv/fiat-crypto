@@ -1,12 +1,13 @@
 Require Import Crypto.Util.FixCoqMistakes.
 Require Import Crypto.Spec.EdDSA Bedrock.Word.
 Require Import Coq.Classes.Morphisms Coq.Relations.Relation_Definitions.
-Require Import Crypto.Algebra. Import Group ScalarMult.
+Require Import Crypto.Algebra. Import Monoid Group ScalarMult.
 Require Import Crypto.Util.Decidable Crypto.Util.Option Crypto.Util.Tactics.
 Require Import Coq.omega.Omega.
 Require Import Crypto.Util.Notations.
-Require Import Crypto.Util.Option Crypto.Util.Logic Crypto.Util.Relations Crypto.Util.WordUtil Util.LetIn.
+Require Import Crypto.Util.Option Crypto.Util.Logic Crypto.Util.Relations Crypto.Util.WordUtil Util.LetIn Util.NatUtil.
 Require Import Crypto.Spec.ModularArithmetic Crypto.ModularArithmetic.PrimeFieldTheorems.
+Import NPeano.
 
 Import Notations.
 
@@ -48,7 +49,7 @@ Section EdDSA.
   Global Instance Proper_eq_Eenc ref : Proper (Eeq ==> iff) (fun P => Eenc P = ref).
   Proof. intros ? ? Hx; rewrite Hx; reflexivity. Qed.
 
-  Context {Edec:word b-> option E}   {eq_enc_E_iff: forall P_ P, Eenc P = P_ <-> Edec P_ = Some P}.
+  Context {Edec:word b-> option E}   {eq_enc_E_iff: forall P_ P, Eenc P = P_ <-> option_eq Eeq (Edec P_) (Some P)}.
   Context {Sdec:word b-> option (F l)} {eq_enc_S_iff: forall n_ n, Senc n = n_ <-> Sdec n_ = Some n}.
 
   Local Infix "++" := combine.
@@ -66,9 +67,11 @@ Section EdDSA.
     setoid_rewrite <- (fun A => and_rewriteleft_l (fun x => x) (Eenc A) (fun pk EencA => exists a,
         Sdec (split2 b b sig) = Some a /\
         Eenc (_ * B + wordToNat (H (b + (b + mlen)) (split1 b b sig ++ EencA ++ message)) mod _ * Eopp A)
-        = split1 b b sig)); setoid_rewrite (eq_enc_E_iff pk).
+        = split1 b b sig)). setoid_rewrite (eq_enc_E_iff pk).
     setoid_rewrite <-weqb_true_iff.
-    repeat setoid_rewrite <-option_rect_false_returns_true_iff.
+    setoid_rewrite <-option_rect_false_returns_true_iff_eq.
+    rewrite <-option_rect_false_returns_true_iff by
+     (intros ? ? Hxy; unfold option_rect; break_match; rewrite <-?Hxy; reflexivity).
 
     subst_evars.
     (* TODO: generalize this higher order reflexivity *)
@@ -168,7 +171,7 @@ Section EdDSA.
                      (SRepERepMul
                         (SRepDecModL (H _ (split1 b b sig ++ pk ++ message)))
                         (ErepOpp _)))) (split1 b b sig))
-            
+
                    false).
         subst_evars.
 
@@ -181,7 +184,7 @@ Section EdDSA.
 
       reflexivity.
     Defined.
-    
+
     Definition verify {mlen} (msg:word mlen) pk sig :=
       Eval cbv beta iota delta [proj1_sig verify_using_representation] in
       proj1_sig (verify_using_representation msg pk sig).
@@ -202,28 +205,20 @@ Section EdDSA.
             {Proper_SRepMul:Proper (SRepEq==>SRepEq==>SRepEq) SRepMul}.
     Context {ErepB:Erep} {ErepB_correct:ErepEq ErepB (EToRep B)}.
 
-    Context {wbRepKeepLow wbRepClearLow wbRepClearBit wbRepSetBit:nat->word b->word b}.
-    Context {wbRepSetBit_correct : forall n x, wordToNat (wbRepSetBit n x) = setbit (wordToNat x) n}.
-    Context {wbRepClearLow_correct : forall c x, wordToNat (wbRepClearLow c x) = wordToNat x - wordToNat x mod 2 ^ c}.
-    Context {wbRepKeepLow_correct : forall n x, wordToNat (wbRepKeepLow n x) = (wordToNat x) mod (2^n)}.
-    Context {SRepDecModLShort} {SRepDecModLShort_correct: forall (w:word b), SRepEq (S2Rep (F.of_nat _ (wordToNat w))) (SRepDecModLShort w)}.
+    Context {SRepDecModLShort} {SRepDecModLShort_correct: forall (w:word (n+1)), SRepEq (S2Rep (F.of_nat _ (wordToNat w))) (SRepDecModLShort w)}.
 
     (* We would ideally derive the optimized implementations from
     specifications using `setoid_rewrite`, but doing this without
     inlining let-bound subexpressions turned out to be quite messy in
     the current state of Coq: <https://github.com/mit-plv/fiat-crypto/issues/64> *)
 
+    Let n_le_bpb : (n <= b+b)%nat. destruct prm. omega. Qed.
+
     Definition splitSecretPrngCurve (sk:word b) : SRep * word b :=
       dlet hsk := H _ sk in
-      dlet curveKey := SRepDecModLShort (wbRepSetBit n (wbRepClearLow c (wbRepKeepLow n (split1 b b hsk)))) in
+      dlet curveKey := SRepDecModLShort (clearlow c (@wfirstn n _ hsk n_le_bpb) ++ wones 1) in
       dlet prngKey := split2 b b hsk in
       (curveKey, prngKey).
-
-    (* TODO: prove these, somewhere *)
-    Axiom wordToNat_split1 : forall a b w, wordToNat (split1 a b w) = (wordToNat w) mod (2^a).
-    Axiom wordToNat_wfirstn : forall a b w H, wordToNat (@wfirstn a b w H) = (wordToNat w) mod (2^a).
-    Axiom nat_mod_smaller_power_of_two : forall n b:nat,
-      (n <= b -> forall x:nat, (x mod 2 ^ b) mod 2 ^ n = (x mod 2^n))%nat.
 
     Lemma splitSecretPrngCurve_correct sk :
       let (s, r) := splitSecretPrngCurve sk in
@@ -233,12 +228,16 @@ Section EdDSA.
         repeat (
             reflexivity
             || rewrite <-SRepDecModLShort_correct
-            || rewrite wbRepSetBit_correct
-            || rewrite wbRepClearLow_correct
-            || rewrite wbRepKeepLow_correct
             || rewrite wordToNat_split1
             || rewrite wordToNat_wfirstn
-            || rewrite nat_mod_smaller_power_of_two by (destruct prm; omega)
+            || rewrite wordToNat_combine
+            || rewrite wordToNat_clearlow
+            || rewrite (eq_refl:wordToNat (wones 1) = 1)
+            || rewrite mult_1_r
+            || rewrite setbit_high by
+              ( pose proof (Nat.pow_nonzero 2 n); specialize_by discriminate;
+                set (x := wordToNat (H b sk));
+                assert (x mod 2 ^ n < 2^n)%nat by (apply Nat.mod_bound_pos; omega); omega)
           ).
     Qed.
 
@@ -256,7 +255,7 @@ Section EdDSA.
     Proof.
       cbv [sign EdDSA.sign Let_In].
 
-      let H := fresh "H" in 
+      let H := fresh "H" in
       pose proof (splitSecretPrngCurve_correct sk) as H;
         destruct (splitSecretPrngCurve sk);
         destruct H as [curveKey_correct prngKey_correct].

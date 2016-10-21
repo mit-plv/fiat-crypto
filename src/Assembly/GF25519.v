@@ -45,7 +45,7 @@ Module GF25519.
     Definition inputBounds := feBound ++ feBound.
 
     Definition ge25519_add_expr :=
-        Eval cbv beta delta [fe25519 add mul sub Let_In] in add.
+        Eval cbv beta delta [fe25519 carry_add mul carry_sub Let_In] in carry_add.
 
     Definition ge25519_add' (P Q: @interp_type Z FE) :
         { r: @HL.expr Z (@interp_type Z) FE | HL.interp (t := FE) r = ge25519_add_expr P Q }.
@@ -88,7 +88,7 @@ Module GF25519.
     Definition inputBounds := feBound.
 
     Definition ge25519_opp_expr :=
-        Eval cbv beta delta [fe25519 add mul sub opp Let_In] in opp.
+        Eval cbv beta delta [fe25519 carry_add mul carry_sub carry_opp Let_In] in carry_opp.
 
     Definition ge25519_opp' (P: @interp_type Z FE) :
         { r: @HL.expr Z (@interp_type Z) FE
@@ -140,13 +140,13 @@ Module GF25519.
       let '(x0, x1, x2, x3, x4, x5, x6, x7, x8, x9) := x in 
       let '(y0, y1, y2, y3, y4, y5, y6, y7, y8, y9) := y in
       let op' := NArgMap (fun v => Z.of_N (@wordToN bits v)) op in
-      let z := LL.interp (op' x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 y0 y1 y2 y3 y4 y5 y6 y7 y8 y9) in
+      let z := LL.interp' (fun x => NToWord bits (Z.to_N x)) (op' x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 y0 y1 y2 y3 y4 y5 y6 y7 y8 y9) in
         z.
 
     Definition interp_uexpr (op: ExprUnOp) (x: tuple (word bits) 10): tuple (word bits) 10 :=
       let '(x0, x1, x2, x3, x4, x5, x6, x7, x8, x9) := x in 
       let op' := NArgMap (fun v => Z.of_N (@wordToN bits v)) op in
-      let z := LL.interp (op' x0 x1 x2 x3 x4 x5 x6 x7 x8 x9) in
+      let z := LL.interp' (fun x => NToWord bits (Z.to_N x)) (op' x0 x1 x2 x3 x4 x5 x6 x7 x8 x9) in
         z.
  
     Definition radd : ExprBinOp := Add.wordProg.
@@ -155,7 +155,4 @@ Module GF25519.
 End GF25519.
 
 Extraction "GF25519Add" GF25519.Add.
-Extraction "GF25519Sub" GF25519.Sub.
-Extraction "GF25519Mul" GF25519.Mul.
 Extraction "GF25519Opp" GF25519.Opp.
-

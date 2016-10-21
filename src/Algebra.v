@@ -148,6 +148,14 @@ Section Algebra.
   End AddMul.
 End Algebra.
 
+Section ZeroNeqOne.
+  Context {T eq zero one} `{@is_zero_neq_one T eq zero one} `{Equivalence T eq}.
+
+  Lemma one_neq_zero : not (eq one zero).
+  Proof.
+    intro HH; symmetry in HH. auto using zero_neq_one.
+  Qed.
+End ZeroNeqOne.
 
 Module Monoid.
   Section Monoid.
@@ -192,16 +200,106 @@ Module Monoid.
     Qed.
 
   End Monoid.
+
+  Section Homomorphism.
+    Context {T  EQ OP ID} {monoidT:  @monoid T  EQ OP ID }.
+    Context {T' eq op id} {monoidT': @monoid T' eq op id }.
+    Context {phi:T->T'}.
+    Local Infix "=" := eq. Local Infix "=" := eq : type_scope.
+    Class is_homomorphism :=
+      {
+        homomorphism : forall a b,  phi (OP a b) = op (phi a) (phi b);
+
+        is_homomorphism_phi_proper : Proper (respectful EQ eq) phi
+      }.
+    Global Existing Instance is_homomorphism_phi_proper.
+  End Homomorphism.
 End Monoid.
 
-Section ZeroNeqOne.
-  Context {T eq zero one} `{@is_zero_neq_one T eq zero one} `{Equivalence T eq}.
+Module ScalarMult.
+  Section ScalarMultProperties.
+    Context {G eq add zero} `{monoidG:@monoid G eq add zero}.
+    Context {mul:nat->G->G}.
+    Local Infix "=" := eq : type_scope. Local Infix "=" := eq.
+    Local Infix "+" := add. Local Infix "*" := mul.
+    Class is_scalarmult :=
+      {
+        scalarmult_0_l : forall P, 0 * P = zero;
+        scalarmult_S_l : forall n P, S n * P = P + n * P;
 
-  Lemma one_neq_zero : not (eq one zero).
-  Proof.
-    intro HH; symmetry in HH. auto using zero_neq_one.
-  Qed.
-End ZeroNeqOne.
+        scalarmult_Proper : Proper (Logic.eq==>eq==>eq) mul
+      }.
+    Global Existing Instance scalarmult_Proper.
+    Context `{mul_is_scalarmult:is_scalarmult}.
+
+    Fixpoint scalarmult_ref (n:nat) (P:G) {struct n} :=
+      match n with
+      | O => zero
+      | S n' => add P (scalarmult_ref n' P)
+      end.
+
+    Global Instance Proper_scalarmult_ref : Proper (Logic.eq==>eq==>eq) scalarmult_ref.
+    Proof.
+      repeat intro; subst.
+      match goal with [n:nat |- _ ] => induction n; simpl @scalarmult_ref; [reflexivity|] end.
+      repeat match goal with [H:_ |- _ ] => rewrite H end; reflexivity.
+    Qed.
+
+    Lemma scalarmult_ext : forall n P, mul n P = scalarmult_ref n P.
+      induction n; simpl @scalarmult_ref; intros; rewrite <-?IHn; (apply scalarmult_0_l || apply scalarmult_S_l).
+    Qed.
+
+    Lemma scalarmult_1_l : forall P, 1*P = P.
+    Proof. intros. rewrite scalarmult_S_l, scalarmult_0_l, right_identity; reflexivity. Qed.
+
+    Lemma scalarmult_add_l : forall (n m:nat) (P:G), ((n + m)%nat * P = n * P + m * P).
+    Proof.
+      induction n; intros;
+        rewrite ?scalarmult_0_l, ?scalarmult_S_l, ?plus_Sn_m, ?plus_O_n, ?scalarmult_S_l, ?left_identity, <-?associative, <-?IHn; reflexivity.
+    Qed.
+
+    Lemma scalarmult_zero_r : forall m, m * zero = zero.
+    Proof. induction m; rewrite ?scalarmult_S_l, ?scalarmult_0_l, ?left_identity, ?IHm; try reflexivity. Qed.
+
+    Lemma scalarmult_assoc : forall (n m : nat) P, n * (m * P) = (m * n)%nat * P.
+    Proof.
+      induction n; intros.
+      { rewrite <-mult_n_O, !scalarmult_0_l. reflexivity. }
+      { rewrite scalarmult_S_l, <-mult_n_Sm, <-Plus.plus_comm, scalarmult_add_l.
+        rewrite IHn. reflexivity. }
+    Qed.
+
+    Lemma scalarmult_times_order : forall l B, l*B = zero -> forall n, (l * n) * B = zero.
+    Proof. intros ? ? Hl ?. rewrite <-scalarmult_assoc, Hl, scalarmult_zero_r. reflexivity. Qed.
+
+    Lemma scalarmult_mod_order : forall l B, l <> 0%nat -> l*B = zero -> forall n, n mod l * B = n * B.
+    Proof.
+      intros ? ? Hnz Hmod ?.
+      rewrite (NPeano.Nat.div_mod n l Hnz) at 2.
+      rewrite scalarmult_add_l, scalarmult_times_order, left_identity by auto. reflexivity.
+    Qed.
+  End ScalarMultProperties.
+
+  Section ScalarMultHomomorphism.
+      Context {G EQ ADD ZERO} {monoidG:@monoid G EQ ADD ZERO}.
+      Context {H eq add zero} {monoidH:@monoid H eq add zero}.
+      Local Infix "=" := eq : type_scope. Local Infix "=" := eq : eq_scope.
+      Context {MUL} {MUL_is_scalarmult:@is_scalarmult G EQ ADD ZERO MUL }.
+      Context {mul} {mul_is_scalarmult:@is_scalarmult H eq add zero mul }.
+      Context {phi} {homom:@Monoid.is_homomorphism G EQ ADD H eq add phi}.
+      Context (phi_ZERO:phi ZERO = zero).
+
+      Lemma homomorphism_scalarmult : forall n P, phi (MUL n P) = mul n (phi P).
+      Proof.
+        setoid_rewrite scalarmult_ext.
+        induction n; intros; simpl; rewrite ?Monoid.homomorphism, ?IHn; easy.
+      Qed.
+  End ScalarMultHomomorphism.
+
+  Global Instance scalarmult_ref_is_scalarmult {G eq add zero} `{@monoid G eq add zero}
+    : @is_scalarmult G eq add zero (@scalarmult_ref G add zero).
+  Proof. split; try exact _; intros; reflexivity. Qed.
+End ScalarMult.
 
 Module Group.
   Section BasicProperties.
@@ -279,30 +377,37 @@ Module Group.
   Section Homomorphism.
     Context {G EQ OP ID INV} {groupG:@group G EQ OP ID INV}.
     Context {H eq op id inv} {groupH:@group H eq op id inv}.
-    Context {phi:G->H}.
+    Context {phi:G->H}`{homom:@Monoid.is_homomorphism G EQ OP H eq op phi}.
     Local Infix "=" := eq. Local Infix "=" := eq : type_scope.
-
-    Class is_homomorphism :=
-      {
-        homomorphism : forall a b,  phi (OP a b) = op (phi a) (phi b);
-
-        is_homomorphism_phi_proper : Proper (respectful EQ eq) phi
-      }.
-    Global Existing Instance is_homomorphism_phi_proper.
-    Context `{is_homomorphism}.
 
     Lemma homomorphism_id : phi ID = id.
     Proof.
       assert (Hii: op (phi ID) (phi ID) = op (phi ID) id) by
-        (rewrite <- homomorphism, left_identity, right_identity; reflexivity).
+          (rewrite <- Monoid.homomorphism, left_identity, right_identity; reflexivity).
       rewrite cancel_left in Hii; exact Hii.
     Qed.
 
     Lemma homomorphism_inv x : phi (INV x) = inv (phi x).
     Proof.
       apply inv_unique.
-      rewrite <- homomorphism, left_inverse, homomorphism_id; reflexivity.
+      rewrite <- Monoid.homomorphism, left_inverse, homomorphism_id; reflexivity.
     Qed.
+
+    Section ScalarMultHomomorphism.
+      Context {MUL} {MUL_is_scalarmult:@ScalarMult.is_scalarmult G EQ OP ID MUL }.
+      Context {mul} {mul_is_scalarmult:@ScalarMult.is_scalarmult H eq op id mul }.
+      Lemma homomorphism_scalarmult n P : phi (MUL n P) = mul n (phi P).
+      Proof. eapply ScalarMult.homomorphism_scalarmult, homomorphism_id. Qed.
+
+      Import ScalarMult.
+      Lemma opp_mul : forall n P, inv (mul n P) = mul n (inv P).
+      Proof.
+        induction n; intros.
+        { rewrite !scalarmult_0_l, Group.inv_id; reflexivity. }
+        { rewrite <-NPeano.Nat.add_1_l, Plus.plus_comm at 1.
+          rewrite scalarmult_add_l, scalarmult_1_l, Group.inv_op, scalarmult_S_l, Group.cancel_left; eauto. }
+      Qed.
+    End ScalarMultHomomorphism.
   End Homomorphism.
 
   Section Homomorphism_rev.
@@ -340,7 +445,7 @@ Module Group.
     Qed.
 
     Definition homomorphism_from_redundant_representation
-      : @is_homomorphism G EQ OP H eq op phi.
+      : @Monoid.is_homomorphism G EQ OP H eq op phi.
     Proof.
       split; repeat intro; apply phi'_eq; rewrite ?phi'_op, ?phi'_phi_id; easy.
     Qed.
@@ -358,7 +463,7 @@ Module Group.
           {phi_op : forall a b, eq (phi (OP a b)) (op (phi a) (phi b))}
           {phi_inv : forall a, eq (phi (INV a)) (inv (phi a))}
           {phi_id : eq (phi ID) id}
-          : @group H eq op id inv.
+    : @group H eq op id inv.
     Proof.
       repeat split; eauto with core typeclass_instances; intros;
         repeat match goal with
@@ -370,7 +475,7 @@ Module Group.
                  end
                end;
         repeat rewrite <-?phi_op, <-?phi_inv, <-?phi_id;
-      f_equiv; auto using associative, left_identity, right_identity, left_inverse, right_inverse.
+        f_equiv; auto using associative, left_identity, right_identity, left_inverse, right_inverse.
     Qed.
 
     Lemma isomorphism_to_subgroup_group
@@ -384,7 +489,7 @@ Module Group.
           {phi_op : forall a b, eq (phi (OP a b)) (op (phi a) (phi b))}
           {phi_inv : forall a, eq (phi (INV a)) (inv (phi a))}
           {phi_id : eq (phi ID) id}
-          : @group G EQ OP ID INV.
+      : @group G EQ OP ID INV.
     Proof.
       repeat split; eauto with core typeclass_instances; intros;
         eapply eq_phi_EQ;
@@ -398,100 +503,23 @@ Module Group.
     Context {H eq op id inv} {groupH:@group H eq op id inv}.
     Context {K eqK opK idK invK} {groupK:@group K eqK opK idK invK}.
     Context {phi:G->H} {phi':H->K}
-            {Hphi:@is_homomorphism G EQ OP H eq op phi}
-            {Hphi':@is_homomorphism H eq op K eqK opK phi'}.
+            {Hphi:@Monoid.is_homomorphism G EQ OP H eq op phi}
+            {Hphi':@Monoid.is_homomorphism H eq op K eqK opK phi'}.
     Lemma is_homomorphism_compose
           {phi'':G->K}
           (Hphi'' : forall x, eqK (phi' (phi x)) (phi'' x))
-      : @is_homomorphism G EQ OP K eqK opK phi''.
+      : @Monoid.is_homomorphism G EQ OP K eqK opK phi''.
     Proof.
       split; repeat intro; rewrite <- !Hphi''.
-      { rewrite !homomorphism; reflexivity. }
+      { rewrite !Monoid.homomorphism; reflexivity. }
       { apply Hphi', Hphi; assumption. }
     Qed.
 
     Global Instance is_homomorphism_compose_refl
-      : @is_homomorphism G EQ OP K eqK opK (fun x => phi' (phi x))
+      : @Monoid.is_homomorphism G EQ OP K eqK opK (fun x => phi' (phi x))
       := is_homomorphism_compose (fun x => reflexivity _).
   End HomomorphismComposition.
 End Group.
-
-Module ScalarMult.
-  Section ScalarMultProperties.
-    Context {G eq add zero} `{@monoid G eq add zero}.
-    Context {mul:nat->G->G}.
-    Local Infix "=" := eq : type_scope. Local Infix "=" := eq.
-    Local Infix "+" := add. Local Infix "*" := mul.
-    Class is_scalarmult :=
-      {
-        scalarmult_0_l : forall P, 0 * P = zero;
-        scalarmult_S_l : forall n P, S n * P = P + n * P;
-
-        scalarmult_Proper : Proper (Logic.eq==>eq==>eq) mul
-      }.
-    Global Existing Instance scalarmult_Proper.
-    Context `{is_scalarmult}.
-
-    Fixpoint scalarmult_ref (n:nat) (P:G) {struct n} :=
-      match n with
-      | O => zero
-      | S n' => add P (scalarmult_ref n' P)
-      end.
-
-    Global Instance Proper_scalarmult_ref : Proper (Logic.eq==>eq==>eq) scalarmult_ref.
-    Proof.
-      repeat intro; subst.
-      match goal with [n:nat |- _ ] => induction n; simpl @scalarmult_ref; [reflexivity|] end.
-      repeat match goal with [H:_ |- _ ] => rewrite H end; reflexivity.
-    Qed.
-
-    Lemma scalarmult_ext : forall n P, mul n P = scalarmult_ref n P.
-      induction n; simpl @scalarmult_ref; intros; rewrite <-?IHn; (apply scalarmult_0_l || apply scalarmult_S_l).
-    Qed.
-
-    Lemma scalarmult_1_l : forall P, 1*P = P.
-    Proof. intros. rewrite scalarmult_S_l, scalarmult_0_l, right_identity; reflexivity. Qed.
-
-    Lemma scalarmult_add_l : forall (n m:nat) (P:G), ((n + m)%nat * P = n * P + m * P).
-    Proof.
-      induction n; intros;
-        rewrite ?scalarmult_0_l, ?scalarmult_S_l, ?plus_Sn_m, ?plus_O_n, ?scalarmult_S_l, ?left_identity, <-?associative, <-?IHn; reflexivity.
-    Qed.
-
-    Lemma scalarmult_zero_r : forall m, m * zero = zero.
-    Proof. induction m; rewrite ?scalarmult_S_l, ?scalarmult_0_l, ?left_identity, ?IHm; try reflexivity. Qed.
-
-    Lemma scalarmult_assoc : forall (n m : nat) P, n * (m * P) = (m * n)%nat * P.
-    Proof.
-      induction n; intros.
-      { rewrite <-mult_n_O, !scalarmult_0_l. reflexivity. }
-      { rewrite scalarmult_S_l, <-mult_n_Sm, <-Plus.plus_comm, scalarmult_add_l.
-        rewrite IHn. reflexivity. }
-    Qed.
-
-    Lemma scalarmult_times_order : forall l B, l*B = zero -> forall n, (l * n) * B = zero.
-    Proof. intros ? ? Hl ?. rewrite <-scalarmult_assoc, Hl, scalarmult_zero_r. reflexivity. Qed.
-
-    Lemma scalarmult_mod_order : forall l B, l <> 0%nat -> l*B = zero -> forall n, n mod l * B = n * B.
-    Proof.
-      intros ? ? Hnz Hmod ?.
-      rewrite (NPeano.Nat.div_mod n l Hnz) at 2.
-      rewrite scalarmult_add_l, scalarmult_times_order, left_identity by auto. reflexivity.
-    Qed.
-    Context {opp} {group:@group G eq add zero opp}.
-
-    Lemma opp_mul : forall n P, opp (n * P) = n * (opp P).
-      induction n; intros.
-      { rewrite !scalarmult_0_l, Group.inv_id; reflexivity. }
-      { rewrite <-NPeano.Nat.add_1_l, Plus.plus_comm at 1.
-        rewrite scalarmult_add_l, scalarmult_1_l, Group.inv_op, scalarmult_S_l, Group.cancel_left; eauto. }
-    Qed.
-  End ScalarMultProperties.
-
-  Global Instance scalarmult_ref_is_scalarmult {G eq add zero} `{@monoid G eq add zero}
-    : @is_scalarmult G eq add zero (@scalarmult_ref G add zero).
-  Proof. split; try exact _; intros; reflexivity. Qed.
-End ScalarMult.
 
 Require Coq.nsatz.Nsatz.
 
@@ -606,7 +634,7 @@ Module Ring.
 
     Class is_homomorphism :=
       {
-        homomorphism_is_homomorphism : Group.is_homomorphism (phi:=phi) (OP:=ADD) (op:=add) (EQ:=EQ) (eq:=eq);
+        homomorphism_is_homomorphism : Monoid.is_homomorphism (phi:=phi) (OP:=ADD) (op:=add) (EQ:=EQ) (eq:=eq);
         homomorphism_mul : forall x y, phi (MUL x y) = mul (phi x) (phi y);
         homomorphism_one : phi ONE = one
       }.
@@ -615,7 +643,7 @@ Module Ring.
     Context `{is_homomorphism}.
 
     Lemma homomorphism_add : forall x y,  phi (ADD x y) = add (phi x) (phi y).
-    Proof. apply Group.homomorphism. Qed.
+    Proof. apply Monoid.homomorphism. Qed.
 
     Definition homomorphism_opp : forall x,  phi (OPP x) = opp (phi x) :=
       (Group.homomorphism_inv (INV:=OPP) (inv:=opp)).
@@ -623,7 +651,7 @@ Module Ring.
     Lemma homomorphism_sub : forall x y, phi (SUB x y) = sub (phi x) (phi y).
     Proof.
       intros.
-      rewrite !ring_sub_definition, Group.homomorphism, homomorphism_opp. reflexivity.
+      rewrite !ring_sub_definition, Monoid.homomorphism, homomorphism_opp. reflexivity.
     Qed.
   End Homomorphism.
 
@@ -712,6 +740,12 @@ Module Field.
       - rewrite <-associative, right_multiplicative_inverse, right_identity in H0; trivial.
         intro eq_x_0. rewrite eq_x_0, Ring.mul_0_r in Hix.
         apply zero_neq_one. assumption.
+    Qed.
+
+    Lemma div_one x : div x one = x.
+    Proof.
+      rewrite field_div_definition.
+      rewrite <-(inv_unique 1 1); apply monoid_is_right_identity.
     Qed.
 
     Lemma mul_cancel_l_iff : forall x y, y <> 0 ->
@@ -878,6 +912,56 @@ Module Field.
         (eauto || reflexivity).
     Qed.
   End Homomorphism.
+
+  Section Homomorphism_rev.
+    Context {F EQ ZERO ONE OPP ADD SUB MUL INV DIV} {fieldF:@field F EQ ZERO ONE OPP ADD SUB MUL INV DIV}.
+    Context {H} {eq : H -> H -> Prop} {zero one : H} {opp : H -> H} {add sub mul : H -> H -> H} {inv : H -> H} {div : H -> H -> H}.
+    Context {phi:F->H} {phi':H->F}.
+    Local Infix "=" := EQ. Local Infix "=" := EQ : type_scope.
+    Context (phi'_phi_id : forall A, phi' (phi A) = A)
+            (phi'_eq : forall a b, EQ (phi' a) (phi' b) <-> eq a b)
+            {phi'_zero : phi' zero = ZERO}
+            {phi'_one : phi' one = ONE}
+            {phi'_opp : forall a, phi' (opp a) = OPP (phi' a)}
+            (phi'_add : forall a b, phi' (add a b) = ADD (phi' a) (phi' b))
+            (phi'_sub : forall a b, phi' (sub a b) = SUB (phi' a) (phi' b))
+            (phi'_mul : forall a b, phi' (mul a b) = MUL (phi' a) (phi' b))
+            {phi'_inv : forall a, phi' (inv a) = INV (phi' a)}
+            (phi'_div : forall a b, phi' (div a b) = DIV (phi' a) (phi' b)).
+
+    Local Instance field_from_redundant_representation
+      : @field H eq zero one opp add sub mul inv div.
+    Proof.
+      repeat match goal with
+             | [ H : field |- _ ] => destruct H; try clear H
+             | [ H : commutative_ring |- _ ] => destruct H; try clear H
+             | [ H : ring |- _ ] => destruct H; try clear H
+             | [ H : abelian_group |- _ ] => destruct H; try clear H
+             | [ H : group |- _ ] => destruct H; try clear H
+             | [ H : monoid |- _ ] => destruct H; try clear H
+             | [ H : is_commutative |- _ ] => destruct H; try clear H
+             | [ H : is_left_multiplicative_inverse |- _ ] => destruct H; try clear H
+             | [ H : is_left_distributive |- _ ] => destruct H; try clear H
+             | [ H : is_right_distributive |- _ ] => destruct H; try clear H
+             | [ H : is_zero_neq_one |- _ ] => destruct H; try clear H
+             | [ H : is_associative |- _ ] => destruct H; try clear H
+             | [ H : is_left_identity |- _ ] => destruct H; try clear H
+             | [ H : is_right_identity |- _ ] => destruct H; try clear H
+             | [ H : Equivalence _ |- _ ] => destruct H; try clear H
+             | [ H : is_left_inverse |- _ ] => destruct H; try clear H
+             | [ H : is_right_inverse |- _ ] => destruct H; try clear H
+             | _ => intro
+             | _ => split
+             | [ H : eq _ _ |- _ ] => apply phi'_eq in H
+             | [ |- eq _ _ ] => apply phi'_eq
+             | [ H : (~eq _ _)%type |- _ ] => pose proof (fun pf => H (proj1 (@phi'_eq _ _) pf)); clear H
+             | [ H : EQ _ _ |- _ ] => rewrite H
+             | _ => progress erewrite ?phi'_zero, ?phi'_one, ?phi'_opp, ?phi'_add, ?phi'_sub, ?phi'_mul, ?phi'_inv, ?phi'_div by reflexivity
+             | [ H : _ |- _ ] => progress erewrite ?phi'_zero, ?phi'_one, ?phi'_opp, ?phi'_add, ?phi'_sub, ?phi'_mul, ?phi'_inv, ?phi'_div in H by reflexivity
+             | _ => solve [ eauto ]
+             end.
+    Qed.
+  End Homomorphism_rev.
 End Field.
 
 (** Tactics *)

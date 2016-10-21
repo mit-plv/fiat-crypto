@@ -32,7 +32,7 @@ Section expression.
   Local Arguments pre_f' / _ _ _ _ _ _.
   Local Arguments ldi' / .
   Local Arguments reduce_via_partial / _ _ _ _ _ _ _ _.
-  Local Arguments DoubleBounded.mul_double / _ _ _ _ _ _ _ _ _ _.
+  Local Arguments Core.mul_double / _ _ _ _ _ _ _ _ _ _.
   Local Opaque Let_In Let_In_pf.
 
   Definition expression'
