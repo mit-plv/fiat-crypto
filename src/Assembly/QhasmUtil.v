@@ -80,6 +80,12 @@ Section Util.
     end.
 
   Notation "A <- X ; B" := (omap X (fun A => B)) (at level 70, right associativity).
+
+  Definition orElse {T} (d: T) (o: option T): T :=
+    match o with
+    | Some v => v
+    | None => d
+    end.
 End Util.
 
 Close Scope nword_scope.

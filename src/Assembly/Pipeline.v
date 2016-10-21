@@ -21,19 +21,34 @@ Module Type Expression.
   Parameter width: Width bits.
   Parameter inputs: nat.
   Parameter ResultType: type.
-  Parameter hlProg: NAry inputs Z (@HL.expr Z (@LL.arg Z Z) ResultType).
-  Parameter inputBounds: list (Range N).
+  Parameter hlProg: NAry inputs Z (@HL.expr Z (@interp_type Z) ResultType).
+  Parameter inputBounds: list Z.
 End Expression.
 
 Module Pipeline (Input: Expression).
   Export Input.
 
-  Definition llProg: NAry inputs Z (@LL.expr Z Z ResultType) :=
-    liftN CompileHL.compile hlProg.
+  Module Util.
+    Fixpoint applyProgOn {A B k} ins (f: NAry k (option A) B): B :=
+      match k as k' return NAry k' (option A) B -> B with
+      | O => id
+      | S m => fun f' =>
+        match ins with
+        | cons x xs => @applyProgOn A B m xs (f' x)
+        | nil => @applyProgOn A B m nil (f' None)
+        end
+      end f.
+  End Util.
 
-  Definition wordProg: NAry inputs (@CompileLL.WArg bits TT) (@LL.expr _ _ ResultType) :=
-    NArgMap (fun x => Z.of_N (wordToN (LL.interp_arg (t := TT) x))) (
-      liftN (LLConversions.convertZToWord bits) llProg).
+  Definition hlProg': NAry inputs Z (@HL.expr Z (@LL.arg Z Z) ResultType) :=
+    liftN (HLConversions.mapVar (fun t => @LL.uninterp_arg_as_var _ _ t)
+                                (fun t => @LL.interp_arg _ t)) hlProg.
+
+  Definition llProg: NAry inputs Z (@LL.expr Z Z ResultType) :=
+    liftN CompileHL.compile hlProg'.
+
+  Definition wordProg: NAry inputs Z (@CompileLL.WExpr bits ResultType) :=
+    liftN (LLConversions.ZToWord (n := bits) Z) llProg.
 
   Definition qhasmProg := CompileLL.compile (w := width) wordProg.
 
@@ -47,28 +62,22 @@ Module Pipeline (Input: Expression).
 
   Definition RWV: Type := option RangeWithValue.
 
-  Definition rwvProg: NAry inputs RWV (@LL.expr RWV RWV ResultType) :=
-    NArgMap (fun x => orElse 0%Z (option_map (fun v => Z.of_N (value v)) x) ) (
-      liftN (@convertExpr Z RWV ZEvaluable (RWVEval (n := bits)) _) llProg).
+  Instance RWVEvaluable : Evaluable RWV := @RWVEvaluable bits.
 
-  Fixpoint applyProgOn {A B k} ins (f: NAry k (option A) B): B :=
-    match k as k' return NAry k' (option A) B -> B with
-    | O => id
-    | S m => fun f' =>
-      match ins with
-      | cons x xs => @applyProgOn A B m xs (f' x)
-      | nil => @applyProgOn A B m nil (f' None)
-      end
-    end f.
+  Existing Instance RWVEvaluable.
+
+  Definition rwvProg: @LL.expr RWV Z ResultType :=
+    Util.applyProgOn (map (@Some _) inputBounds) (
+      NArgMap (orElse 0%Z) (
+        liftN (@convertExpr Z RWV (@ZEvaluable bits) _ _ _)
+          llProg)).
 
   Definition outputBounds :=
-    applyProgOn (map (@Some _) (map from_range inputBounds)) (
-      liftN (fun e => typeMap (option_map proj) (@LL.interp RWV (@RWVEval bits) _ e))
-        rwvProg).
+    typeMap (option_map rwvToRange) (
+      LL.interp' (fun x => Some (rwv 0%N (Z.to_N x) (Z.to_N x))) (
+        rwvProg)).
 
-  Definition valid :=
-    applyProgOn (map (@Some _) (map from_range inputBounds)) (
-     liftN (@check bits _ RWV (@RWVEval bits)) rwvProg).
+  Definition valid := check (n := bits) rwvProg.
 End Pipeline.
 
 Module SimpleExample.
@@ -80,10 +89,10 @@ Module SimpleExample.
     Definition inputs: nat := 1.
     Definition ResultType := TT.
 
-    Definition hlProg: NAry 1 Z (@HL.expr Z (@LL.arg Z Z) TT) :=
-        Eval vm_compute in (fun x => HL.Binop OPadd (HL.Const x) (HL.Const 5%Z)).
+    Definition hlProg: NAry 1 Z (@HL.expr Z (@interp_type Z) TT) :=
+      Eval vm_compute in (fun x => HL.Binop OPadd (HL.Var x) (HL.Const 5%Z)).
 
-    Definition inputBounds: list (Range N) := [ range N 0%N (Npow2 31) ].
+    Definition inputBounds: list Z := [ (2^30)%Z ].
   End SimpleExpression.
 
   Module SimplePipeline := Pipeline SimpleExpression.

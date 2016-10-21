@@ -10,31 +10,46 @@ Require Import Crypto.Assembly.QhasmCommon.
 Require Import Crypto.Assembly.Qhasm.
 
 Module CompileHL.
-  Context {ivar : type -> Type}.
-  Context {ovar : Type}.
+  Section Compilation.
+    Context {T: Type}.
 
-  Fixpoint compile {t} (e:@HL.expr Z (@LL.arg Z Z) t) : @LL.expr Z Z t :=
-    match e with
-    | HL.Const n => LL.Return (LL.Const n)
-    | HL.Var _ arg => LL.Return arg
-    | HL.Binop t1 t2 t3 op e1 e2 =>
-       LL.under_lets (@compile _ e1) (fun arg1 =>
-          LL.under_lets (@compile _ e2) (fun arg2 =>
-            LL.LetBinop op arg1 arg2 (fun v =>
-              LL.Return v)))
-    | HL.Let _ ex _ eC =>
-       LL.under_lets (@compile _ ex) (fun arg => @compile _ (eC arg))
-    | HL.Pair t1 e1 t2 e2 =>
-       LL.under_lets (@compile _ e1) (fun arg1 =>
-          LL.under_lets (@compile _ e2) (fun arg2 =>
-             LL.Return (LL.Pair arg1 arg2)))
-    | HL.MatchPair _ _ ep _ eC =>
-        LL.under_lets (@compile _ ep) (fun arg =>
-          let (a1, a2) := LL.match_arg_Prod arg in @compile _ (eC a1 a2))
-    end.
+    Fixpoint compile {V t} (e:@HL.expr T (@LL.arg T V) t) : @LL.expr T V t :=
+        match e with
+        | HL.Const n => LL.Return (LL.Const n)
+
+        | HL.Var _ arg => LL.Return arg
+
+        | HL.Binop t1 t2 t3 op e1 e2 =>
+          LL.under_lets (compile e1) (fun arg1 =>
+            LL.under_lets (compile e2) (fun arg2 =>
+              LL.LetBinop op arg1 arg2 (fun v =>
+                LL.Return v)))
+
+        | HL.Let _ ex _ eC =>
+          LL.under_lets (compile ex) (fun arg =>
+            compile (eC arg))
+
+        | HL.Pair t1 e1 t2 e2 =>
+          LL.under_lets (compile e1) (fun arg1 =>
+            LL.under_lets (compile e2) (fun arg2 =>
+              LL.Return (LL.Pair arg1 arg2)))
+
+        | HL.MatchPair _ _ ep _ eC =>
+            LL.under_lets (compile ep) (fun arg =>
+              let (a1, a2) := LL.match_arg_Prod arg in
+              compile (eC a1 a2))
+        end.
+
+    Definition Expr' t : Type := forall var, @HL.expr T (@LL.arg T var) t.
+
+    Definition Compile {t} (e:@Expr' t) : @LL.Expr T t :=
+        fun var => compile (e var).
+  End Compilation.
 
   Section Correctness.
-    Lemma compile_correct {_: Evaluable Z} {t} e1 e2 G (wf:HL.wf G e1 e2) :
+    Context {T: Type}.
+
+    Lemma compile_correct {_: Evaluable T} {t} e1 e2 G (wf:HL.wf G e1 e2) :
       List.Forall (fun v => let 'existT _ (x, a) := v in LL.interp_arg a = x) G ->
         LL.interp (compile e2) = HL.interp e1 :> interp_type t.
     Proof.
@@ -69,8 +84,8 @@ Module CompileLL.
   Section Compile.
     Context {n: nat} {w: Width n}.
 
-    Definition WArg t': Type := @LL.arg (word n) (word n) t'.
-    Definition WExpr t': Type := @LL.expr (word n) (word n) t'.
+    Definition WArg t': Type := @LL.arg (word n) Z t'.
+    Definition WExpr t': Type := @LL.expr (word n) Z t'.
 
     Section Mappings.
       Definition indexize (x: nat) : Index n.
@@ -85,7 +100,7 @@ Module CompileLL.
       Definition getMapping (x: WArg TT) :=
         match x with
         | Const v => constM n (@constant n w v)
-        | Var v => regM n (@reg n w (wordToNat v))
+        | Var v => regM n (@reg n w (Z.to_nat v))
         end.
 
       Definition getReg (x: Mapping n): option (Reg n) :=
@@ -188,7 +203,7 @@ Module CompileLL.
       match t as t' return WArg t' -> list nat with
       | TT => fun a' =>
         match a' with
-        | Var v' => [wordToNat v']
+        | Var v' => [Z.to_nat v']
         | _ => @nil nat
         end
       | Prod t0 t1 => fun a' =>
@@ -239,7 +254,7 @@ Module CompileLL.
                 omap (getOutputSlot nextRegName op' x' y') (fun r =>
                   let var :=
                     match t3 as t3' return WArg t3' with
-                    | TT => Var (natToWord n r)
+                    | TT => Var (Z.of_nat r)
                     | _ => zeros _
                     end in
 
@@ -266,13 +281,13 @@ Module CompileLL.
         (fun rt var op x y out => Some out)
         (fun t' a => Some (vars a)).
 
-    Fixpoint fillInputs {t inputs} (prog: NAry inputs (WArg TT) (WExpr t)) {struct inputs}: WExpr t :=
-      match inputs as inputs' return NAry inputs' (WArg TT) (WExpr t) -> NAry O (WArg TT) (WExpr t) with
+    Fixpoint fillInputs {t inputs} (prog: NAry inputs Z (WExpr t)) {struct inputs}: WExpr t :=
+      match inputs as inputs' return NAry inputs' Z (WExpr t) -> NAry O Z (WExpr t) with
       | O => fun p => p
-      | S inputs'' => fun p => fillInputs (p (Var (natToWord _ inputs)))
+      | S inputs'' => fun p => fillInputs (p (Z.of_nat inputs))
       end prog.
 
-    Definition compile {t inputs} (p: NAry inputs (WArg TT) (WExpr t)): option (Program * list nat) :=
+    Definition compile {t inputs} (p: NAry inputs Z (WExpr t)): option (Program * list nat) :=
       let p' := fillInputs p in
 
       omap (getOuts _ (S inputs) p') (fun outs =>
