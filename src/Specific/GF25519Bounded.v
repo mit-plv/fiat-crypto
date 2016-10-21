@@ -7,6 +7,7 @@ Require Import Crypto.ModularArithmetic.ModularBaseSystemProofs.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemOpt.
 Require Import Crypto.Specific.GF25519.
 Require Import Crypto.Specific.GF25519BoundedCommon.
+Require Import Crypto.Assembly.GF25519BoundedInstantiation.
 Require Import Bedrock.Word Crypto.Util.WordUtil.
 Require Import Coq.Lists.List Crypto.Util.ListUtil.
 Require Import Crypto.Tactics.VerdiTactics.
@@ -21,35 +22,6 @@ Import ListNotations.
 Require Import Coq.ZArith.ZArith Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.ZArith.Znumtheory.
 Local Open Scope Z.
 
-Axiom ExprBinOp : Type.
-Axiom ExprUnOp : Type.
-Axiom interp_bexpr : ExprBinOp -> fe25519W -> fe25519W -> fe25519W.
-Axiom interp_uexpr : ExprUnOp -> fe25519W -> fe25519W.
-Axiom radd : ExprBinOp.
-Axiom rsub : ExprBinOp.
-Axiom rmul : ExprBinOp.
-Axiom ropp : ExprUnOp.
-Axiom rfreeze : ExprUnOp.
-Local Notation ibinop_correct_and_bounded irop op
-  := (forall x y,
-         is_bounded (fe25519WToZ x) = true
-         -> is_bounded (fe25519WToZ y) = true
-         -> fe25519WToZ (irop x y) = op (fe25519WToZ x) (fe25519WToZ y)
-            /\ is_bounded (fe25519WToZ (irop x y)) = true) (only parsing).
-Local Notation binop_correct_and_bounded rop op
-  := (ibinop_correct_and_bounded (interp_bexpr rop) op) (only parsing).
-Local Notation iunop_correct_and_bounded irop op
-  := (forall x,
-         is_bounded (fe25519WToZ x) = true
-         -> fe25519WToZ (irop x) = op (fe25519WToZ x)
-            /\ is_bounded (fe25519WToZ (irop x)) = true) (only parsing).
-Local Notation unop_correct_and_bounded rop op
-  := (iunop_correct_and_bounded (interp_uexpr rop) op) (only parsing).
-Axiom radd_correct_and_bounded : binop_correct_and_bounded radd carry_add.
-Axiom rsub_correct_and_bounded : binop_correct_and_bounded rsub carry_sub.
-Axiom rmul_correct_and_bounded : binop_correct_and_bounded rmul mul.
-Axiom ropp_correct_and_bounded : unop_correct_and_bounded ropp carry_opp.
-Axiom rfreeze_correct_and_bounded : unop_correct_and_bounded rfreeze freeze.
 
 Local Ltac bounded_t opW blem :=
   apply blem; apply is_bounded_proj1_fe25519.
