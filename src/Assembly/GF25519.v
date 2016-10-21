@@ -128,32 +128,9 @@ Module GF25519.
 
   Module Add := Pipeline AddExpr.
   Module Opp := Pipeline OppExpr.
-
-  Section Operations.
-    Definition wfe: Type := @interp_type (word bits) FE.
-
-    Definition ExprBinOp : Type := NAry 20 Z (@CompileLL.WExpr bits FE).
-    Definition ExprUnOp : Type := NAry 10 Z (@CompileLL.WExpr bits FE).
-
-    Existing Instance WordEvaluable.
-
-    Definition interp_bexpr (op: ExprBinOp) (x y: tuple (word bits) 10): tuple (word bits) 10 :=
-      let '(x0, x1, x2, x3, x4, x5, x6, x7, x8, x9) := x in 
-      let '(y0, y1, y2, y3, y4, y5, y6, y7, y8, y9) := y in
-      let op' := NArgMap (fun v => Z.of_N (@wordToN bits v)) op in
-      let z := LL.interp' (fun x => NToWord bits (Z.to_N x)) (op' x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 y0 y1 y2 y3 y4 y5 y6 y7 y8 y9) in
-        z.
-
-    Definition interp_uexpr (op: ExprUnOp) (x: tuple (word bits) 10): tuple (word bits) 10 :=
-      let '(x0, x1, x2, x3, x4, x5, x6, x7, x8, x9) := x in 
-      let op' := NArgMap (fun v => Z.of_N (@wordToN bits v)) op in
-      let z := LL.interp' (fun x => NToWord bits (Z.to_N x)) (op' x0 x1 x2 x3 x4 x5 x6 x7 x8 x9) in
-        z.
- 
-    Definition radd : ExprBinOp := Add.wordProg.
-    Definition ropp : ExprUnOp := Opp.wordProg.
-  End Operations.
 End GF25519.
 
 Extraction "GF25519Add" GF25519.Add.
 Extraction "GF25519Opp" GF25519.Opp.
+
+Eval cbv in GF25519.Add.outputBounds.

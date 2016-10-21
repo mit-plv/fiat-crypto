@@ -675,6 +675,15 @@ Section RangeWithValue.
                                 (NToWord n (rwv_value Y)))) h)
       end).
 
+  Definition checkRWV (x: RangeWithValue): bool :=
+    match x with
+    | rwv l v h =>
+      match (Nge_dec h v, Nge_dec v l, Nge_dec (N.pred (Npow2 n)) h) with
+      | (left p0, left p1, left p2) => true
+      | _ => false
+      end
+    end.
+
   Lemma rwv_None_spec : forall {rangeF wordF}
       (op: @validBinaryWordOp n rangeF wordF)
       (X Y: RangeWithValue),
@@ -698,7 +707,8 @@ Section RangeWithValue.
     ezero := None;
 
     toT := fun x => x;
-    fromT := fun x => omap (omap x (bwFromRWV (n := n))) (fun _ => x);
+    fromT := fun x => omap x (fun x' =>
+      if (checkRWV x') then x else None);
 
     eadd := fun x y => omap x (fun X => omap y (fun Y =>
       rwv_app range_add_valid X Y));

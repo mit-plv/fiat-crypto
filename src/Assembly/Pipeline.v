@@ -63,21 +63,33 @@ Module Pipeline (Input: Expression).
   Definition RWV: Type := option RangeWithValue.
 
   Instance RWVEvaluable : Evaluable RWV := @RWVEvaluable bits.
+  Instance ZEvaluable : Evaluable Z := @ZEvaluable bits.
 
   Existing Instance RWVEvaluable.
+  Existing Instance ZEvaluable.
 
-  Definition rwvProg: @LL.expr RWV Z ResultType :=
+  Arguments HL.expr _ _ _ : clear implicits.
+  Arguments LL.arg _ _ _ : clear implicits.
+  Arguments interp_type _ _ : clear implicits.
+  Definition rwvHL: NAry inputs Z (@HL.expr RWV (@LL.arg RWV Z) ResultType) :=
+    liftN (@HLConversions.convertExpr Z RWV _ _ ResultType _) (
+      liftN (HLConversions.mapVar
+        (fun t => @LL.uninterp_arg_as_var RWV Z t)
+        (fun t => fun x => typeMap (fun x => Z.of_N (orElse 0%N (option_map rwv_value x))) (@LL.interp_arg' _ _ t rangeOf x))) (
+
+      hlProg)).
+
+  Definition rwvLL: @LL.expr RWV Z ResultType :=
     Util.applyProgOn (map (@Some _) inputBounds) (
       NArgMap (orElse 0%Z) (
-        liftN (@convertExpr Z RWV (@ZEvaluable bits) _ _ _)
-          llProg)).
+        liftN CompileHL.compile rwvHL)).
 
   Definition outputBounds :=
     typeMap (option_map rwvToRange) (
       LL.interp' (fun x => Some (rwv 0%N (Z.to_N x) (Z.to_N x))) (
-        rwvProg)).
+        rwvLL)).
 
-  Definition valid := check (n := bits) rwvProg.
+  Definition valid := check (n := bits) rwvLL.
 End Pipeline.
 
 Module SimpleExample.
@@ -99,21 +111,3 @@ Module SimpleExample.
 
   Export SimplePipeline.
 End SimpleExample.
-
-Eval cbv in SimpleExample.SimplePipeline.hlProg'.
-Eval cbv in SimpleExample.SimplePipeline.llProg.
-Eval cbv in (liftN (LL.interp' (fun x => NToWord 32 (Z.to_N x))) SimpleExample.SimplePipeline.wordProg).
-Opaque toT fromT LLConversions.convertArg.
-Arguments LLConversions.convertArg _ _ _ _ _ _ _ : clear implicits.
-Eval cbn in SimpleExample.SimplePipeline.rwvProg.
-Eval cbn in (LL.interp' (fun x => Some (rwv 0 666 666)%Z) SimpleExample.SimplePipeline.rwvProg).
-
-Transparent toT fromT LLConversions.convertArg.
-Eval cbv in (LL.interp' (fun x => Some (rwv 0 666 666)%Z) SimpleExample.SimplePipeline.rwvProg).
-
-Eval cbv in (LL.interp' LLConversions.rangeOf (LL.Return (LL.Var 2%Z))).
-
-Eval cbv in (LL.interp' LLConversions.rangeOf SimpleExample.SimplePipeline.rwvProg).
-
-Eval cbv in SimpleExample.SimplePipeline.outputBounds.
-Eval cbv in SimpleExample.SimplePipeline.valid.

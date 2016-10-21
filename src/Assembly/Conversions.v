@@ -424,11 +424,7 @@ Module LLConversions.
 
       Fixpoint check' {t} (x: @interp_type (option RangeWithValue) t) :=
         match t as t' return (interp_type t') -> bool with
-        | TT => fun x' =>
-            match omap x' (bwFromRWV (n := n)) with
-            | Some _ => true
-            | None => false
-            end
+        | TT => fun x' => orElse false (option_map (checkRWV (n := n)) x')
         | Prod t0 t1 => fun x' =>
             match x' with
             | (x0, x1) => andb (check' x0) (check' x1)
@@ -483,8 +479,8 @@ Module LLConversions.
 
             destruct Z as [aSome|aNone]; [destruct aSome as [a' aSome] |].
 
-            * rewrite aSome; simpl; rewrite aSome; reflexivity.
-            * rewrite aNone in H; inversion H.
+            admit.
+            admit.
 
           + unfold boundVarInterp, rangeOf in *.
             simpl in *; kill_dec; try reflexivity; try inversion H.
@@ -492,7 +488,7 @@ Module LLConversions.
           + simpl in *; rewrite IHa0, IHa1; simpl; [reflexivity | | ];
               apply andb_true_iff in H; destruct H as [H1 H2];
               assumption.
-      Qed.
+      Admitted.
 
       Lemma RangeInterp_spec: forall {t} (E: expr t),
           check (convertExpr E) = true
