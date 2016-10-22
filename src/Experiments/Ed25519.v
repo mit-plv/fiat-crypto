@@ -521,6 +521,8 @@ Extract Inductive comparison =>
 
 Extract Inductive bool    => "Prelude.Bool" ["Prelude.True" "Prelude.False"].
 Extract Inductive sumbool => "Prelude.Bool" ["Prelude.True" "Prelude.False"].
+Extract Inductive Bool.reflect => "Prelude.Bool" ["Prelude.True" "Prelude.False"].
+Extract Inlined Constant Bool.iff_reflect => "".
 Extraction Inline Crypto.Util.Decidable.Decidable Crypto.Util.Decidable.dec.
 
 (* Extract Inlined Constant Equality.bool_beq => *)
@@ -534,6 +536,11 @@ Extract Inlined Constant negb => "Prelude.not".
 Extract Inlined Constant orb  => "(Prelude.||)".
 Extract Inlined Constant andb => "(Prelude.&&)".
 Extract Inlined Constant xorb => "Data.Bits.xor".
+
+(** Comparisons *)
+
+Extract Inductive comparison => "Prelude.Ordering" [ "Prelude.EQ" "Prelude.LT" "Prelude.GT" ].
+Extract Inductive CompareSpecT => "Prelude.Ordering" [ "Prelude.EQ" "Prelude.LT" "Prelude.GT" ].
 
 (** Maybe *)
 
@@ -573,10 +580,17 @@ Extract Inductive unit => "()" ["()"].
 
 (** nat *)
 
+Extract Inductive nat => "Prelude.Integer" [ "0" "Prelude.succ" ]
+  "(\fO fS n -> {- match_on_nat -} if n Prelude.== 0 then fO () else fS (n Prelude.- 1))".
+
 Extract Inlined Constant Nat.add => "(Prelude.+)".
 Extract Inlined Constant Nat.mul => "(Prelude.*)".
+Extract Inlined Constant Nat.pow => "(Prelude.^)".
 Extract Inlined Constant Nat.max => "Prelude.max".
 Extract Inlined Constant Nat.min => "Prelude.min".
+Extract Inlined Constant Nat.gcd => "Prelude.gcd".
+Extract Inlined Constant Nat.lcm => "Prelude.lcm".
+Extract Inlined Constant Nat.land => "(Data.Bits..&.)".
 Extract Inlined Constant Init.Nat.add => "(Prelude.+)".
 Extract Inlined Constant Init.Nat.mul => "(Prelude.*)".
 Extract Inlined Constant Init.Nat.max => "Prelude.max".
@@ -585,12 +599,20 @@ Extract Inlined Constant PeanoNat.Nat.add => "(Prelude.+)".
 Extract Inlined Constant PeanoNat.Nat.mul => "(Prelude.*)".
 Extract Inlined Constant PeanoNat.Nat.max => "Prelude.max".
 Extract Inlined Constant PeanoNat.Nat.min => "Prelude.min".
+Extract Inlined Constant Nat.compare => "Prelude.compare".
+Extract Inlined Constant PeanoNat.Nat.compare => "Prelude.compare".
+Extract Inlined Constant nat_compare_alt => "Prelude.compare".
+Extract Inlined Constant Nat.ltb => "(Prelude.<)".
 Extract Inlined Constant Compare_dec.lt_dec => "(Prelude.<)".
+Extract Inlined Constant Nat.leb => "(Prelude.<=)".
 Extract Inlined Constant Compare_dec.leb => "(Prelude.<=)".
 Extract Inlined Constant Compare_dec.le_lt_dec => "(Prelude.<=)".
 Extract Inlined Constant EqNat.beq_nat => "(Prelude.==)".
+Extract Inlined Constant Nat.eqb => "(Prelude.==)".
 Extract Inlined Constant EqNat.eq_nat_decide => "(Prelude.==)".
 Extract Inlined Constant Peano_dec.eq_nat_dec => "(Prelude.==)".
+Extract Inlined Constant Nat.odd => "Prelude.odd".
+Extract Inlined Constant Nat.even => "Prelude.even".
 
 Extract Constant Nat.pred => "(\n -> Prelude.max 0 (Prelude.pred n))".
 Extract Constant Nat.sub => "(\n m -> Prelude.max 0 (n Prelude.- m))".
@@ -602,38 +624,8 @@ Extract Constant Nat.modulo => "(\n m -> if m Prelude.== 0 then 0 else Prelude.m
 Extract Constant Init.Nat.div => "(\n m -> if m Prelude.== 0 then 0 else Prelude.div n m)".
 Extract Constant Init.Nat.modulo => "(\n m -> if m Prelude.== 0 then 0 else Prelude.mod n m)".
 
-Extract Inductive nat => "Prelude.Integer" [ "0" "Prelude.succ" ]
-  "(\fO fS n -> {- match_on_nat -} if n Prelude.== 0 then fO () else fS (n Prelude.- 1))".
-
-(** Z *)
-
-Require Import ZArith.
-Require Import EqNat.
-
-Extract Inlined Constant Z.add => "(Prelude.+)".
-Extract Inlined Constant Z.sub => "(Prelude.-)".
-Extract Inlined Constant Z.mul => "(Prelude.*)".
-Extract Inlined Constant Z.max => "Prelude.max".
-Extract Inlined Constant Z.min => "Prelude.min".
-Extract Inlined Constant Z.land => "(Data.Bits..&.)".
-Extract Inlined Constant Z.lor => "(Data.Bits..|.)".
-Extract Inlined Constant Z.shiftr => "(\w n -> Data.Bits.shiftR w (Prelude.fromIntegral n))".
-Extract Inlined Constant Z.shiftl => "(\w n -> Data.Bits.shiftL w (Prelude.fromIntegral n))".
-Extract Inlined Constant Z.testbit => "(\w n -> Data.Bits.testBit w (Prelude.fromIntegral n))".
-Extract Inlined Constant Z.eq_dec => "(Prelude.==)".
-Extract Inlined Constant Z_ge_lt_dec => "(Prelude.>=)".
-Extract Inlined Constant Z_gt_le_dec => "(Prelude.>)".
-Extract Inlined Constant Z.ltb => "(Prelude.<)".
-Extract Inlined Constant Z.leb => "(Prelude.<=)".
-Extract Inlined Constant Z.gtb => "(Prelude.>)".
-Extract Inlined Constant Z.geb => "(Prelude.>=)".
-
-Extract Constant Z.div => "(\n m -> if m Prelude.== 0 then 0 else Prelude.div n m)".
-Extract Constant Z.modulo => "(\n m -> if m Prelude.== 0 then 0 else Prelude.mod n m)".
-
-Extract Inlined Constant BinIntDef.Z.compare => "Prelude.compare".
-Extract Inductive comparison => "Prelude.Ordering" [ "Prelude.EQ" "Prelude.LT" "Prelude.GT" ].
-Extract Inductive CompareSpecT => "Prelude.Ordering" [ "Prelude.EQ" "Prelude.LT" "Prelude.GT" ].
+(** positive *)
+Require Import BinPos.
 
 Extract Inductive positive => "Prelude.Integer" [
   "(\x -> 2 Prelude.* x Prelude.+ 1)"
@@ -645,40 +637,142 @@ Extract Inductive positive => "Prelude.Integer" [
                    then fI (n `Prelude.div` 2)
                    else fO (n `Prelude.div` 2))".
 
+Extract Inlined Constant Pos.succ => "(1 Prelude.+)".
+Extract Inlined Constant Pos.add => "(Prelude.+)".
+Extract Inlined Constant Pos.mul => "(Prelude.*)".
+Extract Inlined Constant Pos.pow => "(Prelude.^)".
+Extract Inlined Constant Pos.max => "Prelude.max".
+Extract Inlined Constant Pos.min => "Prelude.min".
+Extract Inlined Constant Pos.gcd => "Prelude.gcd".
+Extract Inlined Constant Pos.land => "(Data.Bits..&.)".
+Extract Inlined Constant Pos.lor => "(Data.Bits..|.)".
+Extract Inlined Constant Pos.compare => "Prelude.compare".
+Extract Inlined Constant Pos.ltb => "(Prelude.<)".
+Extract Inlined Constant Pos.leb => "(Prelude.<=)".
+Extract Inlined Constant Pos.eq_dec => "(Prelude.==)".
+Extract Inlined Constant Pos.eqb => "(Prelude.==)".
+
+(* XXX: unsound -- overflow in fromIntegral *)
+Extract Constant Pos.shiftr => "(\w n -> Data.Bits.shiftR w (Prelude.fromIntegral n))".
+Extract Constant Pos.shiftl => "(\w n -> Data.Bits.shiftL w (Prelude.fromIntegral n))".
+Extract Constant Pos.testbit => "(\w n -> Data.Bits.testBit w (Prelude.fromIntegral n))".
+
+Extract Constant Pos.pred => "(\n -> Prelude.max 1 (Prelude.pred n))".
+Extract Constant Pos.sub => "(\n m -> Prelude.max 1 (n Prelude.- m))".
+
+(** N *)
+
+Extract Inlined Constant N.succ => "(1 Prelude.+)".
+Extract Inlined Constant N.add => "(Prelude.+)".
+Extract Inlined Constant N.mul => "(Prelude.*)".
+Extract Inlined Constant N.pow => "(Prelude.^)".
+Extract Inlined Constant N.max => "Prelude.max".
+Extract Inlined Constant N.min => "Prelude.min".
+Extract Inlined Constant N.gcd => "Prelude.gcd".
+Extract Inlined Constant N.lcm => "Prelude.lcm".
+Extract Inlined Constant N.land => "(Data.Bits..&.)".
+Extract Inlined Constant N.lor => "(Data.Bits..|.)".
+Extract Inlined Constant N.lxor => "Data.Bits.xor".
+Extract Inlined Constant N.compare => "Prelude.compare".
+Extract Inlined Constant N.eq_dec => "(Prelude.==)".
+Extract Inlined Constant N.ltb => "(Prelude.<)".
+Extract Inlined Constant N.leb => "(Prelude.<=)".
+Extract Inlined Constant N.eq_dec => "(Prelude.==)".
+Extract Inlined Constant N.odd => "Prelude.odd".
+Extract Inlined Constant N.even => "Prelude.even".
+
+(* XXX: unsound -- overflow in fromIntegral *)
+Extract Constant N.shiftr => "(\w n -> Data.Bits.shiftR w (Prelude.fromIntegral n))".
+Extract Constant N.shiftl => "(\w n -> Data.Bits.shiftL w (Prelude.fromIntegral n))".
+Extract Constant N.testbit => "(\w n -> Data.Bits.testBit w (Prelude.fromIntegral n))".
+
+Extract Constant N.pred => "(\n -> Prelude.max 0 (Prelude.pred n))".
+Extract Constant N.sub => "(\n m -> Prelude.max 0 (n Prelude.- m))".
+Extract Constant N.div => "(\n m -> if m Prelude.== 0 then 0 else Prelude.div n m)".
+Extract Constant N.modulo => "(\n m -> if m Prelude.== 0 then 0 else Prelude.mod n m)".
+
+Extract Inductive N => "Prelude.Integer" [ "0" "(\x -> x)" ]
+  "(\fO fS n -> {- match_on_N -} if n Prelude.== 0 then fO () else fS (n Prelude.- 1))".
+
+(** Z *)
+Require Import ZArith.BinInt.
+
 Extract Inductive Z => "Prelude.Integer" [ "0" "(\x -> x)" "Prelude.negate" ]
   "(\fO fP fN n -> {- match_on_Z -}
                    if n Prelude.== 0 then fO () else
                    if n Prelude.> 0 then fP n else
                    fN (Prelude.negate n))".
 
+Extract Inlined Constant Z.succ => "(1 Prelude.+)".
+Extract Inlined Constant Z.add => "(Prelude.+)".
+Extract Inlined Constant Z.sub => "(Prelude.-)".
+Extract Inlined Constant Z.opp => "Prelude.negate".
+Extract Inlined Constant Z.mul => "(Prelude.*)".
+Extract Inlined Constant Z.pow => "(Prelude.^)".
+Extract Inlined Constant Z.pow_pos => "(Prelude.^)".
+Extract Inlined Constant Z.max => "Prelude.max".
+Extract Inlined Constant Z.min => "Prelude.min".
+Extract Inlined Constant Z.lcm => "Prelude.lcm".
+Extract Inlined Constant Z.land => "(Data.Bits..&.)".
+Extract Inlined Constant Z.pred => "Prelude.pred".
+Extract Inlined Constant Z.land => "(Data.Bits..&.)".
+Extract Inlined Constant Z.lor => "(Data.Bits..|.)".
+Extract Inlined Constant Z.lxor => "Data.Bits.xor".
+Extract Inlined Constant Z.compare => "Prelude.compare".
+Extract Inlined Constant Z.eq_dec => "(Prelude.==)".
+Extract Inlined Constant Z_ge_lt_dec => "(Prelude.>=)".
+Extract Inlined Constant Z_gt_le_dec => "(Prelude.>)".
+Extract Inlined Constant Z.ltb => "(Prelude.<)".
+Extract Inlined Constant Z.leb => "(Prelude.<=)".
+Extract Inlined Constant Z.gtb => "(Prelude.>)".
+Extract Inlined Constant Z.geb => "(Prelude.>=)".
+Extract Inlined Constant Z.odd => "Prelude.odd".
+Extract Inlined Constant Z.even => "Prelude.even".
+
+(* XXX: unsound -- overflow in fromIntegral *)
+Extract Constant Z.shiftr => "(\w n -> Data.Bits.shiftR w (Prelude.fromIntegral n))".
+Extract Constant Z.shiftl => "(\w n -> Data.Bits.shiftL w (Prelude.fromIntegral n))".
+Extract Constant Z.testbit => "(\w n -> Data.Bits.testBit w (Prelude.fromIntegral n))".
+
+Extract Constant Z.div => "(\n m -> if m Prelude.== 0 then 0 else Prelude.div n m)".
+Extract Constant Z.modulo => "(\n m -> if m Prelude.== 0 then 0 else Prelude.mod n m)".
+
+(** Conversions *)
+
+Extract Inlined Constant Z.of_N => "".
+Extract Inlined Constant Z.to_N => "".
+Extract Inlined Constant N.to_nat => "".
+Extract Inlined Constant N.of_nat => "".
+Extract Inlined Constant Z.to_nat => "".
+Extract Inlined Constant Z.of_nat => "".
+Extract Inlined Constant Z.abs_N => "Prelude.abs".
+Extract Inlined Constant Z.abs_nat => "Prelude.abs".
+Extract Inlined Constant Pos.pred_N => "Prelude.pred".
+Extract Inlined Constant Pos.lxor => "Data.Bits.xor".
+
+(** Word *)
+(* do not annotate every bit of a word with the number of bits after it *)
+Extraction Implicit Word.WS [ 2 ].
+Extraction Implicit Word.whd [ 1 ].
+Extraction Implicit Word.wtl [ 1 ].
+Extraction Implicit Word.bitwp [ 2 ].
+Extraction Implicit Word.wand [ 1 ].
+Extraction Implicit Word.wor [ 1 ].
+Extraction Implicit Word.wxor [ 1 ].
+Extraction Implicit Word.wordToN [ 1 ].
+Extraction Implicit Word.wordToNat [ 1 ].
+Extraction Implicit Word.combine [ 1 3 ].
+Extraction Implicit Word.split1 [ 2 ].
+Extraction Implicit Word.split2 [ 2 ].
+Extraction Implicit WordUtil.cast_word [1 2 3].
+Extraction Implicit WordUtil.wfirstn [ 2 4 ].
+Extract Inlined Constant WordUtil.cast_word => "".
+
 (** Let_In *)
 Extraction Inline LetIn.Let_In.
 
-(* unused functions *)
-Extraction Inline False_rect False_rec and_rect and_rec.
-Extraction Inline Z.div_eucl.
-Extraction Inline Tuple.from_list'_obligation_1 Tuple.from_list_obligation_1.
-Extraction Inline Tuple.from_list'_obligation_2 Tuple.from_list_obligation_2.
-Extract Inlined Constant Coq.Numbers.Natural.Peano.NPeano.Nat.max_case_strong => "#error unused".
-Extract Inlined Constant Coq.Numbers.Natural.Peano.NPeano.Nat.max_case => "#error unused".
-Extract Inlined Constant Coq.Arith.Max.max_dec => "#error unused".
-Extract Inlined Constant Coq.NArith.BinNat.N.max_dec => "#error unused".
-Extract Inlined Constant Coq.Numbers.Natural.Peano.NPeano.Nat.max_dec => "#error unused".
-Extract Inlined Constant Coq.Arith.PeanoNat.Nat.max_dec => "#error unused".
-Extract Inlined Constant Coq.PArith.BinPos.Pos.max_dec => "#error unused".
-Extract Inlined Constant Coq.NArith.BinNat.N.Private_Dec.max_dec => "#error unused".
-Extract Inlined Constant Coq.Numbers.Natural.Peano.NPeano.Nat.Private_Dec.max_dec => "#error unused".
-Extract Inlined Constant Coq.Arith.PeanoNat.Nat.Private_Dec.max_dec => "#error unused".
-Extract Inlined Constant Coq.PArith.BinPos.Pos.Private_Dec.max_dec => "#error unused".
-Extract Inlined Constant Coq.ZArith.BinInt.Z.Private_Dec.max_dec => "#error unused".
-Extract Inlined Constant Coq.ZArith.BinInt.Z.max_dec => "#error unused".
-Extract Inlined Constant Nat.divmod => "#error unused".
-Extract Inlined Constant Coq.NArith.BinNat.N.sqrt_up => "#error unused".
-Extract Inlined Constant Coq.Numbers.Natural.Peano.NPeano.Nat.sqrt_up => "#error unused".
-Extract Inlined Constant Coq.Arith.PeanoNat.Nat.sqrt_up => "#error unused".
-Extract Inlined Constant Coq.ZArith.BinInt.Z.sqrt_up => "#error unused".
-
-(* inlining *)
+(* inlining, primarily to reduce polymorphism *)
+Extraction Inline dec_eq_Z dec_eq_N dec_eq_sig_hprop.
 Extraction Inline Erep SRep ZNWord WordNZ.
 Extraction Inline GF25519.fe25519.
 Extraction Inline EdDSARepChange.sign EdDSARepChange.splitSecretPrngCurve.
