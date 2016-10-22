@@ -290,12 +290,12 @@ Axiom ERepGroup :
               (@ModularBaseSystem.decode GF25519.modulus GF25519.params25519 x)
               (@ModularBaseSystem.decode GF25519.modulus GF25519.params25519 y))) ErepAdd
         (@ExtendedCoordinates.Extended.zero GF25519.fe25519
-           (@ModularBaseSystem.eq GF25519.modulus GF25519.params25519) GF25519.zero_ GF25519.one_ 
+           (@ModularBaseSystem.eq GF25519.modulus GF25519.params25519) GF25519.zero_ GF25519.one_
            _ GF25519.add _ GF25519.mul _
            (@ModularBaseSystem.div GF25519.modulus GF25519.params25519) a d GF25519.field25519
            twedprm_ERep _)
         (@ExtendedCoordinates.Extended.opp GF25519.fe25519
-           (@ModularBaseSystem.eq GF25519.modulus GF25519.params25519) GF25519.zero_ GF25519.one_ 
+           (@ModularBaseSystem.eq GF25519.modulus GF25519.params25519) GF25519.zero_ GF25519.one_
            _ GF25519.add _ GF25519.mul _
            (@ModularBaseSystem.div GF25519.modulus GF25519.params25519) a d GF25519.field25519
           twedprm_ERep _).
@@ -580,49 +580,7 @@ Extract Inductive unit => "()" ["()"].
 
 (** nat *)
 
-Extract Inductive nat => "Prelude.Integer" [ "0" "Prelude.succ" ]
-  "(\fO fS n -> {- match_on_nat -} if n Prelude.== 0 then fO () else fS (n Prelude.- 1))".
-
-Extract Inlined Constant Nat.add => "(Prelude.+)".
-Extract Inlined Constant Nat.mul => "(Prelude.*)".
-Extract Inlined Constant Nat.pow => "(Prelude.^)".
-Extract Inlined Constant Nat.max => "Prelude.max".
-Extract Inlined Constant Nat.min => "Prelude.min".
-Extract Inlined Constant Nat.gcd => "Prelude.gcd".
-Extract Inlined Constant Nat.lcm => "Prelude.lcm".
-Extract Inlined Constant Nat.land => "(Data.Bits..&.)".
-Extract Inlined Constant Init.Nat.add => "(Prelude.+)".
-Extract Inlined Constant Init.Nat.mul => "(Prelude.*)".
-Extract Inlined Constant Init.Nat.max => "Prelude.max".
-Extract Inlined Constant Init.Nat.min => "Prelude.min".
-Extract Inlined Constant PeanoNat.Nat.add => "(Prelude.+)".
-Extract Inlined Constant PeanoNat.Nat.mul => "(Prelude.*)".
-Extract Inlined Constant PeanoNat.Nat.max => "Prelude.max".
-Extract Inlined Constant PeanoNat.Nat.min => "Prelude.min".
-Extract Inlined Constant Nat.compare => "Prelude.compare".
-Extract Inlined Constant PeanoNat.Nat.compare => "Prelude.compare".
-Extract Inlined Constant nat_compare_alt => "Prelude.compare".
-Extract Inlined Constant Nat.ltb => "(Prelude.<)".
-Extract Inlined Constant Compare_dec.lt_dec => "(Prelude.<)".
-Extract Inlined Constant Nat.leb => "(Prelude.<=)".
-Extract Inlined Constant Compare_dec.leb => "(Prelude.<=)".
-Extract Inlined Constant Compare_dec.le_lt_dec => "(Prelude.<=)".
-Extract Inlined Constant EqNat.beq_nat => "(Prelude.==)".
-Extract Inlined Constant Nat.eqb => "(Prelude.==)".
-Extract Inlined Constant EqNat.eq_nat_decide => "(Prelude.==)".
-Extract Inlined Constant Peano_dec.eq_nat_dec => "(Prelude.==)".
-Extract Inlined Constant Nat.odd => "Prelude.odd".
-Extract Inlined Constant Nat.even => "Prelude.even".
-
-Extract Constant Nat.pred => "(\n -> Prelude.max 0 (Prelude.pred n))".
-Extract Constant Nat.sub => "(\n m -> Prelude.max 0 (n Prelude.- m))".
-Extract Constant Init.Nat.pred => "(\n -> Prelude.max 0 (Prelude.pred n))".
-Extract Constant Init.Nat.sub => "(\n m -> Prelude.max 0 (n Prelude.- m))".
-
-Extract Constant Nat.div => "(\n m -> if m Prelude.== 0 then 0 else Prelude.div n m)".
-Extract Constant Nat.modulo => "(\n m -> if m Prelude.== 0 then 0 else Prelude.mod n m)".
-Extract Constant Init.Nat.div => "(\n m -> if m Prelude.== 0 then 0 else Prelude.div n m)".
-Extract Constant Init.Nat.modulo => "(\n m -> if m Prelude.== 0 then 0 else Prelude.mod n m)".
+Require Import Crypto.Experiments.ExtrHaskellNats.
 
 (** positive *)
 Require Import BinPos.
