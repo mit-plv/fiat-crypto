@@ -43,8 +43,22 @@ Qed.
 
 (* BEGIN precomputation. *)
 Local Notation b_of exp := (0, 2^exp + 2^(exp-3))%Z (only parsing). (* max is [(0, 2^(exp+2) + 2^exp + 2^(exp-1) + 2^(exp-3) + 2^(exp-4) + 2^(exp-5) + 2^(exp-6) + 2^(exp-10) + 2^(exp-12) + 2^(exp-13) + 2^(exp-14) + 2^(exp-15) + 2^(exp-17) + 2^(exp-23) + 2^(exp-24))%Z] *)
-Local Notation Z_of exp := { v : Z | fst (b_of exp) <= v <= snd (b_of exp) }.
-Local Notation word_of exp := { v : word64 | fst (b_of exp) <= v <= snd (b_of exp) }.
+Record bounded_word (lower upper : Z) :=
+  Build_bounded_word'
+    { proj_word :> word64;
+      word_bounded : andb (lower <=? proj_word)%Z (proj_word <=? upper)%Z = true }.
+Arguments proj_word {_ _} _.
+Arguments word_bounded {_ _} _.
+Arguments Build_bounded_word' {_ _} _ _.
+Definition Build_bounded_word {lower upper} (proj_word : word64) (word_bounded : andb (lower <=? proj_word)%Z (proj_word <=? upper)%Z = true)
+  : bounded_word lower upper
+  := Build_bounded_word'
+       proj_word
+       (match andb (lower <=? proj_word)%Z (proj_word <=? upper)%Z as b return b = true -> b = true with
+        | true => fun _ => eq_refl
+        | false => fun x => x
+        end word_bounded).
+Local Notation word_of exp := (bounded_word (fst (b_of exp)) (snd (b_of exp))).
 Definition bounds : list (Z * Z)
   := Eval compute in
       [b_of 25; b_of 26; b_of 25; b_of 26; b_of 25; b_of 26; b_of 25; b_of 26; b_of 25; b_of 26].
@@ -62,8 +76,8 @@ Definition fe25519 :=
     (word_of 25 * word_of 26 * word_of 25 * word_of 26 * word_of 25 * word_of 26 * word_of 25 * word_of 26 * word_of 25 * word_of 26)%type.
 Definition proj1_fe25519W (x : fe25519) : fe25519W
   := let '(x0, x1, x2, x3, x4, x5, x6, x7, x8, x9) := x in
-     (proj1_sig x0, proj1_sig x1, proj1_sig x2, proj1_sig x3, proj1_sig x4,
-      proj1_sig x5, proj1_sig x6, proj1_sig x7, proj1_sig x8, proj1_sig x9).
+     (proj_word x0, proj_word x1, proj_word x2, proj_word x3, proj_word x4,
+      proj_word x5, proj_word x6, proj_word x7, proj_word x8, proj_word x9).
 Coercion proj1_fe25519 (x : fe25519) : Specific.GF25519.fe25519
   := fe25519WToZ (proj1_fe25519W x).
 Definition is_bounded (x : Specific.GF25519.fe25519) : bool
@@ -76,40 +90,22 @@ Definition is_bounded (x : Specific.GF25519.fe25519) : bool
 
 Lemma is_bounded_proj1_fe25519 (x : fe25519) : is_bounded (proj1_fe25519 x) = true.
 Proof.
-  refine (let '(exist x0 p0, exist x1 p1, exist x2 p2, exist x3 p3, exist x4 p4,
-                exist x5 p5, exist x6 p6, exist x7 p7, exist x8 p8, exist x9 p9)
+  refine (let '(Build_bounded_word' x0 p0, Build_bounded_word' x1 p1, Build_bounded_word' x2 p2, Build_bounded_word' x3 p3, Build_bounded_word' x4 p4,
+                Build_bounded_word' x5 p5, Build_bounded_word' x6 p6, Build_bounded_word' x7 p7, Build_bounded_word' x8 p8, Build_bounded_word' x9 p9)
             as x := x return is_bounded (proj1_fe25519 x) = true in
           _).
-  cbv [is_bounded proj1_fe25519 proj1_fe25519W fe25519WToZ to_list length bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 List.map List.rev List.app proj1_sig].
+  cbv [is_bounded proj1_fe25519 proj1_fe25519W fe25519WToZ to_list length bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 List.map List.rev List.app proj_word].
   apply fold_right_andb_true_iff_fold_right_and_True.
   cbv [fold_right List.map].
   cbv beta in *.
-  repeat split; rewrite !Bool.andb_true_iff, !Z.leb_le;
-    assumption.
+  repeat split; assumption.
 Qed.
-
-(* Make small [vm_computable] versions of proofs *)
-Definition correct_le_le {l v u} : l <= v <= u -> l <= v <= u.
-Proof.
-  intro pf; pose proof (proj1 pf) as pf1; pose proof (proj2 pf) as pf2; clear pf;
-    split; hnf in *;
-      lazymatch goal with
-      | [ H : ?x = Gt -> False |- ?x = Gt -> False ]
-        => revert H;
-             refine match x as y return (y = Gt -> False) -> y = Gt -> False with
-                    | Gt => fun f => f
-                    | _ => fun _ pf => match pf with
-                                       | eq_refl => I
-                                       end
-                    end
-      end.
-Defined.
 
 (** TODO: Turn this into a lemma to speed up proofs *)
 Ltac unfold_is_bounded_in H :=
   unfold is_bounded, fe25519WToZ in H;
   cbv [to_list length bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 List.map fold_right List.rev List.app] in H;
-  rewrite !Bool.andb_true_iff, !Z.leb_le in H.
+  rewrite !Bool.andb_true_iff in H.
 
 Definition Pow2_64 := Eval compute in 2^64.
 Definition unfold_Pow2_64 : 2^64 = Pow2_64 := eq_refl.
@@ -117,8 +113,8 @@ Definition unfold_Pow2_64 : 2^64 = Pow2_64 := eq_refl.
 Definition exist_fe25519W (x : fe25519W) : is_bounded (fe25519WToZ x) = true -> fe25519.
 Proof.
   refine (let '(x0, x1, x2, x3, x4, x5, x6, x7, x8, x9) as x := x return is_bounded (fe25519WToZ x) = true -> fe25519 in
-          fun H => (fun H' => (exist _ x0 _, exist _ x1 _, exist _ x2 _, exist _ x3 _, exist _ x4 _,
-                               exist _ x5 _, exist _ x6 _, exist _ x7 _, exist _ x8 _, exist _ x9 _))
+          fun H => (fun H' => (Build_bounded_word x0 _, Build_bounded_word x1 _, Build_bounded_word x2 _, Build_bounded_word x3 _, Build_bounded_word x4 _,
+                               Build_bounded_word x5 _, Build_bounded_word x6 _, Build_bounded_word x7 _, Build_bounded_word x8 _, Build_bounded_word x9 _))
                      (let H' := proj1 (@fold_right_andb_true_iff_fold_right_and_True _) H in
                       _));
     [
@@ -126,7 +122,8 @@ Proof.
     | clearbody H'; clear H x;
       unfold_is_bounded_in H';
       exact H' ];
-    destruct_head and; auto.
+    destruct_head and; auto;
+      rewrite_hyp !*; reflexivity.
 Defined.
 
 Definition exist_fe25519' (x : Specific.GF25519.fe25519) : is_bounded x = true -> fe25519.
@@ -137,6 +134,7 @@ Proof.
       pose proof H as H';
       unfold_is_bounded_in H;
       destruct_head and;
+      Z.ltb_to_lt;
       rewrite !ZToWord64ToZ by (simpl; omega);
       assumption
     ).
@@ -148,11 +146,11 @@ Proof.
           fun H => _).
   let v := constr:(exist_fe25519' (x0, x1, x2, x3, x4, x5, x6, x7, x8, x9) H) in
   let rec do_refine v :=
-      first [ let v' := (eval cbv [exist_fe25519W fe25519ZToW exist_fe25519' proj1_sig snd fst] in (proj1_sig v)) in
-              refine (exist _ v' (correct_le_le _)); abstract exact (proj2_sig v)
-            | let v' := (eval cbv [exist_fe25519W fe25519ZToW exist_fe25519' proj1_sig snd fst] in (proj1_sig (snd v))) in
-              refine (_, exist _ v' (correct_le_le _));
-              [ do_refine (fst v) | abstract exact (proj2_sig (snd v)) ] ] in
+      first [ let v' := (eval cbv [exist_fe25519W fe25519ZToW exist_fe25519' proj_word Build_bounded_word snd fst] in (proj_word v)) in
+              refine (Build_bounded_word v' _); abstract exact (word_bounded v)
+            | let v' := (eval cbv [exist_fe25519W fe25519ZToW exist_fe25519' proj_word Build_bounded_word snd fst] in (proj_word (snd v))) in
+              refine (_, Build_bounded_word v' _);
+              [ do_refine (fst v) | abstract exact (word_bounded (snd v)) ] ] in
   do_refine v.
 Defined.
 
@@ -175,9 +173,10 @@ Proof.
   revert pf.
   refine (let '(x0, x1, x2, x3, x4, x5, x6, x7, x8, x9) as x := x return forall pf : is_bounded x = true, proj1_fe25519 (exist_fe25519 x pf) = x in
           fun pf => _).
-  cbv [proj1_fe25519 exist_fe25519 proj1_fe25519W fe25519WToZ proj1_sig].
+  cbv [proj1_fe25519 exist_fe25519 proj1_fe25519W fe25519WToZ proj_word Build_bounded_word].
   unfold_is_bounded_in pf.
   destruct_head and.
+  Z.ltb_to_lt.
   rewrite !ZToWord64ToZ by (rewrite unfold_Pow2_64; cbv [Pow2_64]; omega).
   reflexivity.
 Qed.
@@ -186,9 +185,9 @@ Qed.
 
 (* Precompute constants *)
 
-Definition one := Eval cbv -[Z.le] in exist_fe25519 Specific.GF25519.one_ eq_refl.
+Definition one := Eval vm_compute in exist_fe25519 Specific.GF25519.one_ eq_refl.
 
-Definition zero := Eval cbv -[Z.le] in exist_fe25519 Specific.GF25519.zero_ eq_refl.
+Definition zero := Eval vm_compute in exist_fe25519 Specific.GF25519.zero_ eq_refl.
 
 Lemma fold_chain_opt_gen {A B} (F : A -> B) is_bounded ls id' op' id op chain
       (Hid_bounded : is_bounded (F id') = true)
@@ -237,7 +236,7 @@ Proof.
   cbv [Z.pow_pos Z.mul Pos.mul Pos.iter nth_default nth_error value] in *.
   unfold is_bounded.
   apply fold_right_andb_true_iff_fold_right_and_True.
-  cbv [is_bounded proj1_fe25519 to_list length bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 List.map List.rev List.app proj1_sig fold_right].
+  cbv [is_bounded proj1_fe25519 to_list length bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 List.map List.rev List.app proj_word fold_right].
   repeat split; rewrite !Bool.andb_true_iff, !Z.leb_le; omega.
 Qed.
 
