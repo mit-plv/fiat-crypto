@@ -1,6 +1,8 @@
 Require Import Crypto.Assembly.PhoasCommon.
 Require Import Crypto.Util.LetIn.
 
+Local Arguments Let_In / _ _ _ _.
+
 Module LL.
   Section Language.
     Context {T: Type}.
@@ -62,7 +64,7 @@ Module LL.
         match x' with
         | (x0, x1) => Pair (uninterp_arg_as_var x0) (uninterp_arg_as_var x1)
         end
-      | TT => Var 
+      | TT => Var
       end x.
 
     Fixpoint interp' {V t} (f: V -> T) (e:expr t) : interp_type t :=
