@@ -492,7 +492,7 @@ Definition freeze_sig (f : fe25519) :
 Proof.
   cbv [fe25519] in *.
   repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
-  eexists; cbv [freeze_opt].
+  eexists; cbv [freeze_opt int_width].
   cbv [to_list to_list'].
   cbv [conditional_subtract_modulus_opt].
   rewrite !modulus_digits_subst.
@@ -545,13 +545,13 @@ Proof.
 Qed.
 
 Definition eqb_sig (f g : fe25519) :
-  { b | b = eqb f g }.
+  { b | b = eqb int_width f g }.
 Proof.
   cbv [eqb].
   cbv [fe25519] in *.
   repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
   eexists.
-  cbv [ModularBaseSystem.freeze].
+  cbv [ModularBaseSystem.freeze int_width].
   rewrite <-!from_list_default_eq with (d := 0).
   rewrite <-!(freeze_opt_correct c_) by auto using length_to_list.
   rewrite <-!freeze_correct.
@@ -567,7 +567,7 @@ Definition eqb (f g : fe25519) : bool
                          (g0, g1, g2, g3, g4, g5, g6, g7, g8, g9)).
 
 Lemma eqb_correct (f g : fe25519)
-  : eqb f g = ModularBaseSystem.eqb f g.
+  : eqb f g = ModularBaseSystem.eqb int_width f g.
 Proof.
   set (f' := f); set (g' := g).
   hnf in f, g; destruct_head' prod.
@@ -575,10 +575,10 @@ Proof.
 Qed.
 
 Definition sqrt_sig (f : fe25519) :
-  { f' : fe25519 | f' = sqrt_5mod8_opt k_ c_ one_ sqrt_m1 f}.
+  { f' : fe25519 | f' = sqrt_5mod8_opt (int_width := int_width) k_ c_ one_ sqrt_m1 f}.
 Proof.
   eexists.
-  cbv [sqrt_5mod8_opt].
+  cbv [sqrt_5mod8_opt int_width].
   rewrite <- pow_correct.
   apply Proper_Let_In_nd_changebody; [reflexivity|intro].
   set_evars. rewrite <-!mul_correct, <-eqb_correct. subst_evars.
