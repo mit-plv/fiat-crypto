@@ -34,14 +34,18 @@ Local Ltac define_unop f opW blem :=
   refine (exist_fe25519W (opW (proj1_fe25519W f)) _);
   abstract bounded_t opW blem.
 
-Definition addW (f g : fe25519W) : fe25519W
-  := (*Eval cbv [interp_bexpr radd GF25519.GF25519.Add.wordProg GF25519.GF25519.AddExpr.bits GF25519.GF25519.bits GF25519.GF25519.Add.llProg GF25519.GF25519.AddExpr.hlProg QhasmCommon.liftN QhasmCommon.NArgMap GF25519.GF25519.AddExpr.inputs Compile.CompileHL.compile LL.LL.under_lets interp_bexpr' id LL.LL.interp GF25519.GF25519.FE LL.LL.interp_arg LL.LL.match_arg_Prod Conversions.LLConversions.convertZToWord Conversions.LLConversions.convertExpr Conversions.LLConversions.convertArg Conversions.LLConversions.convertVar] in*)
-      interp_bexpr radd f g.
-Print addW.
-Definition subW (f g : fe25519W) : fe25519W := interp_bexpr rsub f g.
-Definition mulW (f g : fe25519W) : fe25519W := interp_bexpr rmul f g.
-Definition oppW (f : fe25519W) : fe25519W := interp_uexpr ropp f.
-Definition freezeW (f : fe25519W) : fe25519W := interp_uexpr rfreeze f.
+Local Opaque Let_In.
+Local Arguments interp_radd / _ _.
+Local Arguments interp_rsub / _ _.
+Local Arguments interp_rmul / _ _.
+Local Arguments interp_ropp / _.
+Local Arguments interp_rfreeze / _.
+Definition addW (f g : fe25519W) : fe25519W := Eval simpl in interp_radd f g.
+Definition subW (f g : fe25519W) : fe25519W := Eval simpl in interp_rsub f g.
+Definition mulW (f g : fe25519W) : fe25519W := Eval simpl in interp_rmul f g.
+Definition oppW (f : fe25519W) : fe25519W := Eval simpl in interp_ropp f.
+Definition freezeW (f : fe25519W) : fe25519W := Eval simpl in interp_rfreeze f.
+Local Transparent Let_In.
 Definition powW (f : fe25519W) chain := fold_chain_opt (proj1_fe25519W one) mulW chain [f].
 Definition invW (f : fe25519W) : fe25519W
   := Eval cbv -[Let_In fe25519W mulW] in powW f (chain inv_ec).
