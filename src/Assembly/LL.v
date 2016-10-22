@@ -156,7 +156,7 @@ Module LL.
     induction t as [|i0 v0 i1 v1]; simpl; intros; try reflexivity.
     break_match; subst; simpl.
     unfold interp_arg in *.
-    cbn; rewrite v0, v1; reflexivity.
+    simpl; rewrite v0, v1; reflexivity.
   Qed.
 
   Lemma interp_under_lets {T} {_: Evaluable T} {t: type} {tC: type}
