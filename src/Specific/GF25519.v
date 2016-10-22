@@ -460,7 +460,6 @@ Proof.
   + reflexivity.
 Qed.
 
-(*
 Definition ge_modulus_sig (f : fe25519) :
   { b : Z | b = ge_modulus_opt (to_list 10 f) }.
 Proof.
@@ -485,7 +484,6 @@ Proof.
   repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
   assumption.
 Defined.
-*)
 
 Definition freeze_sig (f : fe25519) :
   { f' : fe25519 | f' = from_list_default 0 10 (freeze_opt (int_width := int_width) c_ (to_list 10 f)) }.

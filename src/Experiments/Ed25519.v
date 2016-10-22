@@ -103,7 +103,7 @@ Definition feEnc (x : GF25519.fe25519) : Word.word 255 :=
           (Word.combine (ZNWord 32 x4)
             (Word.combine (ZNWord 32 x5)
               (Word.combine (ZNWord 32 x6) (ZNWord 31 x7))))))).
-
+Check GF25519.ge_modulus.
 Definition feDec (w : Word.word 255) : option GF25519.fe25519 :=
   let w0 := Word.split1 32 _ w in
   let a0 := Word.split2 32 _ w in
@@ -120,7 +120,7 @@ Definition feDec (w : Word.word 255) : option GF25519.fe25519 :=
   let w6 := Word.split1 32 _ a5 in
   let w7 := Word.split2 32 _ a5 in
   let result := (GF25519.unpack (WordNZ w0, WordNZ w1, WordNZ w2, WordNZ w3, WordNZ w4, WordNZ w5, WordNZ w6, WordNZ w7)) in
-  if GF25519.ge_modulus result
+  if Z.eqb (GF25519.ge_modulus result) 1
   then None else (Some result).
 
 Let ERepEnc :=

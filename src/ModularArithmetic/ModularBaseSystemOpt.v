@@ -979,9 +979,9 @@ Section Canonicalization.
     induction i; intros; simpl; cbv [Let_In]; break_if; try reflexivity;
       apply IHi.
   Qed.
-(*
-  Definition ge_modulus'_opt_sig {A} (f : Z -> A) (us : list Z) b i :
-    { a : A | a = ModularBaseSystemList.ge_modulus' f us b i}.
+
+  Definition ge_modulus_opt_sig (us : list Z) :
+    { a : Z | a = ge_modulus us}.
   Proof.
     eexists.
     cbv [ge_modulus ge_modulus'].
@@ -991,13 +991,12 @@ Section Canonicalization.
     reflexivity.
   Defined.
 
-  Definition ge_modulus'_opt {A} f us b i : Z
-    := Eval cbv [proj1_sig ge_modulus'_opt_sig] in proj1_sig (@ge_modulus'_opt_sig A f us b i).
+  Definition ge_modulus_opt us : Z
+    := Eval cbv [proj1_sig ge_modulus_opt_sig] in proj1_sig (ge_modulus_opt_sig us).
 
-  Definition ge_modulus'_opt_correct {A} f us :
-    @ge_modulus'_opt A f us b i = @ge_modulus' A f us b i
-    := Eval cbv [proj2_sig ge_modulus_opt_sig] in proj2_sig (@ge_modulus'_opt_sig A f us).
-*)
+  Definition ge_modulus_opt_correct us :
+    ge_modulus_opt us= ge_modulus us
+    := Eval cbv [proj2_sig ge_modulus_opt_sig] in proj2_sig (ge_modulus_opt_sig us).
 
   Definition freeze_opt_sig (us : list Z) :
     { b : list Z | length us = length limb_widths
