@@ -50,22 +50,21 @@ Definition powW (f : fe25519W) chain := fold_chain_opt (proj1_fe25519W one) mulW
 Definition invW (f : fe25519W) : fe25519W
   := Eval cbv -[Let_In fe25519W mulW] in powW f (chain inv_ec).
 
-Local Ltac port_correct_and_bounded interp opW rop rop_cb :=
-  change opW with (interp rop);
+Local Ltac port_correct_and_bounded pre_rewrite opW interp_rop rop_cb :=
+  change opW with (interp_rop);
+  rewrite pre_rewrite;
   intros; apply rop_cb; assumption.
-Local Ltac bport_correct_and_bounded := port_correct_and_bounded interp_bexpr.
-Local Ltac uport_correct_and_bounded := port_correct_and_bounded interp_uexpr.
 
 Lemma addW_correct_and_bounded : ibinop_correct_and_bounded addW carry_add.
-Proof. bport_correct_and_bounded addW radd radd_correct_and_bounded. Qed.
+Proof. port_correct_and_bounded interp_radd_correct addW interp_radd radd_correct_and_bounded. Qed.
 Lemma subW_correct_and_bounded : ibinop_correct_and_bounded subW carry_sub.
-Proof. bport_correct_and_bounded subW rsub rsub_correct_and_bounded. Qed.
+Proof. port_correct_and_bounded interp_rsub_correct subW interp_rsub rsub_correct_and_bounded. Qed.
 Lemma mulW_correct_and_bounded : ibinop_correct_and_bounded mulW mul.
-Proof. bport_correct_and_bounded mulW rmul rmul_correct_and_bounded. Qed.
+Proof. port_correct_and_bounded interp_rmul_correct mulW interp_rmul rmul_correct_and_bounded. Qed.
 Lemma oppW_correct_and_bounded : iunop_correct_and_bounded oppW carry_opp.
-Proof. uport_correct_and_bounded oppW ropp ropp_correct_and_bounded. Qed.
+Proof. port_correct_and_bounded interp_ropp_correct oppW interp_ropp ropp_correct_and_bounded. Qed.
 Lemma freezeW_correct_and_bounded : iunop_correct_and_bounded freezeW freeze.
-Proof. uport_correct_and_bounded freezeW rfreeze rfreeze_correct_and_bounded. Qed.
+Proof. port_correct_and_bounded interp_rfreeze_correct freezeW interp_rfreeze rfreeze_correct_and_bounded. Qed.
 
 Lemma powW_correct_and_bounded chain : iunop_correct_and_bounded (fun x => powW x chain) (fun x => pow x chain).
 Proof.
@@ -76,7 +75,7 @@ Proof.
   { intros; progress rewrite <- ?mul_correct,
             <- ?(fun X Y => proj1 (rmul_correct_and_bounded _ _ X Y)) by assumption.
     apply rmul_correct_and_bounded; assumption. }
-  { intros; symmetry; apply rmul_correct_and_bounded; assumption. }
+  { intros; change mulW with interp_rmul; rewrite interp_rmul_correct; symmetry; apply rmul_correct_and_bounded; assumption. }
   { intros [|?]; autorewrite with simpl_nth_default;
       (assumption || reflexivity). }
 Qed.
@@ -219,15 +218,15 @@ Proof.
 Qed.
 
 Definition add (f g : fe25519) : fe25519.
-Proof. define_binop f g addW radd_correct_and_bounded. Defined.
+Proof. define_binop f g addW addW_correct_and_bounded. Defined.
 Definition sub (f g : fe25519) : fe25519.
-Proof. define_binop f g subW rsub_correct_and_bounded. Defined.
+Proof. define_binop f g subW subW_correct_and_bounded. Defined.
 Definition mul (f g : fe25519) : fe25519.
-Proof. define_binop f g mulW rmul_correct_and_bounded. Defined.
+Proof. define_binop f g mulW mulW_correct_and_bounded. Defined.
 Definition opp (f : fe25519) : fe25519.
-Proof. define_unop f oppW ropp_correct_and_bounded. Defined.
+Proof. define_unop f oppW oppW_correct_and_bounded. Defined.
 Definition freeze (f : fe25519) : fe25519.
-Proof. define_unop f freezeW rfreeze_correct_and_bounded. Defined.
+Proof. define_unop f freezeW freezeW_correct_and_bounded. Defined.
 
 Definition pow (f : fe25519) (chain : list (nat * nat)) : fe25519.
 Proof. define_unop f (fun x => powW x chain) powW_correct_and_bounded. Defined.
@@ -236,31 +235,26 @@ Proof. define_unop f invW invW_correct_and_bounded. Defined.
 Definition sqrt (f : fe25519) : fe25519.
 Proof. define_unop f sqrtW sqrtW_correct_and_bounded. Defined.
 
-Local Ltac unop_correct_t op opW rop_correct_and_bounded :=
-  cbv [op opW]; rewrite proj1_fe25519_exist_fe25519W;
-  rewrite (fun X => proj1 (rop_correct_and_bounded _ X)) by apply is_bounded_proj1_fe25519;
-  try reflexivity.
-Local Ltac binop_correct_t op opW rop_correct_and_bounded :=
-  cbv [op opW]; rewrite proj1_fe25519_exist_fe25519W;
-  rewrite (fun X Y => proj1 (rop_correct_and_bounded _ _ X Y)) by apply is_bounded_proj1_fe25519;
-  try reflexivity.
+Local Ltac op_correct_t op opW_correct_and_bounded :=
+  cbv [op]; rewrite proj1_fe25519_exist_fe25519W;
+  apply opW_correct_and_bounded; apply is_bounded_proj1_fe25519.
 
 Lemma add_correct (f g : fe25519) : proj1_fe25519 (add f g) = carry_add (proj1_fe25519 f) (proj1_fe25519 g).
-Proof. binop_correct_t add addW radd_correct_and_bounded. Qed.
+Proof. op_correct_t add addW_correct_and_bounded. Qed.
 Lemma sub_correct (f g : fe25519) : proj1_fe25519 (sub f g) = carry_sub (proj1_fe25519 f) (proj1_fe25519 g).
-Proof. binop_correct_t sub subW rsub_correct_and_bounded. Qed.
+Proof. op_correct_t sub subW_correct_and_bounded. Qed.
 Lemma mul_correct (f g : fe25519) : proj1_fe25519 (mul f g) = GF25519.mul (proj1_fe25519 f) (proj1_fe25519 g).
-Proof. binop_correct_t mul mulW rmul_correct_and_bounded. Qed.
+Proof. op_correct_t mul mulW_correct_and_bounded. Qed.
 Lemma opp_correct (f : fe25519) : proj1_fe25519 (opp f) = carry_opp (proj1_fe25519 f).
-Proof. unop_correct_t opp oppW ropp_correct_and_bounded. Qed.
+Proof. op_correct_t opp oppW_correct_and_bounded. Qed.
 Lemma freeze_correct (f : fe25519) : proj1_fe25519 (freeze f) = GF25519.freeze (proj1_fe25519 f).
-Proof. unop_correct_t freeze freezeW rfreeze_correct_and_bounded. Qed.
+Proof. op_correct_t freeze freezeW_correct_and_bounded. Qed.
 Lemma pow_correct (f : fe25519) chain : proj1_fe25519 (pow f chain) = GF25519.pow (proj1_fe25519 f) chain.
-Proof. unop_correct_t pow pow (powW_correct_and_bounded chain). Qed.
+Proof. op_correct_t pow (powW_correct_and_bounded chain). Qed.
 Lemma inv_correct (f : fe25519) : proj1_fe25519 (inv f) = GF25519.inv (proj1_fe25519 f).
-Proof. unop_correct_t inv inv invW_correct_and_bounded. Qed.
+Proof. op_correct_t inv invW_correct_and_bounded. Qed.
 Lemma sqrt_correct (f : fe25519) : proj1_fe25519 (sqrt f) = GF25519.sqrt (proj1_fe25519 f).
-Proof. unop_correct_t sqrt sqrt sqrtW_correct_and_bounded. Qed.
+Proof. op_correct_t sqrt sqrtW_correct_and_bounded. Qed.
 
 Import Morphisms.
 
