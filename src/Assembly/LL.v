@@ -1,4 +1,5 @@
 Require Import Crypto.Assembly.PhoasCommon.
+Require Import Crypto.Util.LetIn.
 
 Module LL.
   Section Language.
@@ -43,7 +44,7 @@ Module LL.
     Fixpoint interp {t} (e:expr t) : interp_type t :=
       match e with
       | LetBinop _ _ _ op a b _ eC =>
-        let x := interp_binop op (interp_arg a) (interp_arg b) in interp (eC (uninterp_arg x))
+        dlet x := interp_binop op (interp_arg a) (interp_arg b) in interp (eC (uninterp_arg x))
       | Return _ a => interp_arg a
       end.
   End Language.

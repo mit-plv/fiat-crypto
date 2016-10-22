@@ -9,6 +9,8 @@ Require Import Crypto.Assembly.QhasmEvalCommon.
 Require Import Crypto.Assembly.QhasmCommon.
 Require Import Crypto.Assembly.Qhasm.
 
+Local Arguments LetIn.Let_In _ _ _ _ / .
+
 Module CompileHL.
   Context {ivar : type -> Type}.
   Context {ovar : Type}.

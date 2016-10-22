@@ -18,6 +18,8 @@ Require Import Coq.NArith.Nnat Coq.NArith.Ndigits.
 
 Require Import Coq.Bool.Sumbool.
 
+Local Arguments LetIn.Let_In _ _ _ _ / .
+
 Definition typeMap {A B t} (f: A -> B) (x: @interp_type A t): @interp_type B t.
 Proof.
   induction t; [refine (f x)|].
