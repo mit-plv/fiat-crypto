@@ -13,7 +13,7 @@ Section BaseTypes.
   Record RangeWithValue := rwv {
     rwv_low: N;
     rwv_value: N;
-    rwv_high: N;
+    rwv_high: N
   }.
 
   Record BoundedWord {n} := bounded {
@@ -23,7 +23,7 @@ Section BaseTypes.
 
     ge_low: (bw_low <= wordToN bw_value)%N;
     le_high: (wordToN bw_value <= bw_high)%N;
-    high_bound: (bw_high < Npow2 n)%N;
+    high_bound: (bw_high < Npow2 n)%N
   }.
 End BaseTypes.
 
@@ -652,11 +652,11 @@ Section BoundedWord.
     eand := fun x y => omap x (fun X => omap y (fun Y => bapp range_and_valid X Y));
 
     eltb := fun x y =>
-      orElse false (omap x (fun X => omap y (fun Y => 
+      orElse false (omap x (fun X => omap y (fun Y =>
         Some (N.ltb (wordToN (bw_value X)) (wordToN (bw_value Y))))));
 
     eeqb := fun x y =>
-      orElse false (omap x (fun X => omap y (fun Y => 
+      orElse false (omap x (fun X => omap y (fun Y =>
         Some (N.eqb (wordToN (bw_value X)) (wordToN (bw_value Y))))))
   }.
 End BoundedWord.
@@ -730,7 +730,7 @@ Section RangeWithValue.
       | (Some (rwv xlow xv xhigh), Some (rwv ylow yv yhigh)) =>
           N.ltb xv yv
 
-      | _ => false 
+      | _ => false
       end;
 
     eeqb := fun x y =>
@@ -739,6 +739,6 @@ Section RangeWithValue.
           andb (andb (N.eqb xlow ylow) (N.eqb xhigh yhigh)) (N.eqb xv yv)
 
       | _ => false
-      end;
+      end
   }.
 End RangeWithValue.
