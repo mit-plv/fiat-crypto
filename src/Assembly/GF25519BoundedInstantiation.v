@@ -7,6 +7,7 @@ Require Import Crypto.Assembly.GF25519.
 Require Import Crypto.Specific.GF25519.
 Require Import Crypto.Specific.GF25519BoundedCommon.
 Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Tuple.
 
 (* Totally fine to edit these definitions; DO NOT change the type signatures at all *)
@@ -42,6 +43,39 @@ Definition interp_bexpr : ExprBinOp -> Specific.GF25519BoundedCommon.fe25519W ->
 Definition interp_uexpr : ExprUnOp -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
   := interp_uexpr'.
 Axiom rfreeze : ExprUnOp.
+
+Declare Reduction asm_interp
+  := cbv [id
+            interp_bexpr interp_uexpr interp_bexpr' interp_uexpr'
+            radd rsub rmul ropp (*rfreeze*)
+            GF25519.GF25519.Add.wordProg GF25519.GF25519.AddExpr.bits GF25519.GF25519.Add.llProg GF25519.GF25519.AddExpr.hlProg GF25519.GF25519.AddExpr.inputs
+            GF25519.GF25519.Sub.wordProg GF25519.GF25519.SubExpr.bits GF25519.GF25519.Sub.llProg GF25519.GF25519.SubExpr.hlProg GF25519.GF25519.SubExpr.inputs
+            GF25519.GF25519.Mul.wordProg GF25519.GF25519.MulExpr.bits GF25519.GF25519.Mul.llProg GF25519.GF25519.MulExpr.hlProg GF25519.GF25519.MulExpr.inputs
+            GF25519.GF25519.Opp.wordProg GF25519.GF25519.OppExpr.bits GF25519.GF25519.Opp.llProg GF25519.GF25519.OppExpr.hlProg GF25519.GF25519.OppExpr.inputs
+            (*GF25519.GF25519.Freeze.wordProg GF25519.GF25519.FreezeExpr.bits GF25519.GF25519.Freeze.llProg GF25519.GF25519.FreezeExpr.hlProg GF25519.GF25519.FreezeExpr.inputs *)
+            GF25519.GF25519.bits GF25519.GF25519.FE
+            QhasmCommon.liftN QhasmCommon.NArgMap Compile.CompileHL.compile LL.LL.under_lets LL.LL.interp LL.LL.interp_arg LL.LL.match_arg_Prod Conversions.LLConversions.convertZToWord Conversions.LLConversions.convertExpr Conversions.LLConversions.convertArg Conversions.LLConversions.convertVar PhoasCommon.type_rect PhoasCommon.type_rec PhoasCommon.type_ind PhoasCommon.interp_binop LL.LL.uninterp_arg
+            Evaluables.ezero Evaluables.toT Evaluables.fromT Evaluables.eadd Evaluables.esub Evaluables.emul Evaluables.eshiftr Evaluables.eand Evaluables.eltb Evaluables.eeqb
+            Evaluables.WordEvaluable Evaluables.ZEvaluable].
+
+Definition interp_radd : Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
+  := Eval asm_interp in interp_bexpr radd.
+Print interp_radd.
+Definition interp_radd_correct : interp_radd = interp_bexpr radd := eq_refl.
+Definition interp_rsub : Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
+  := Eval asm_interp in interp_bexpr rsub.
+(*Print interp_rsub.*)
+Definition interp_rsub_correct : interp_rsub = interp_bexpr rsub := eq_refl.
+Definition interp_rmul : Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
+  := Eval asm_interp in interp_bexpr rmul.
+(*Print interp_rmul.*)
+Definition interp_rmul_correct : interp_rmul = interp_bexpr rmul := eq_refl.
+Definition interp_ropp : Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
+  := Eval asm_interp in interp_uexpr ropp.
+Definition interp_ropp_correct : interp_ropp = interp_uexpr ropp := eq_refl.
+Definition interp_rfreeze : Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
+  := Eval asm_interp in interp_uexpr rfreeze.
+Definition interp_rfreeze_correct : interp_rfreeze = interp_uexpr rfreeze := eq_refl.
 
 Local Notation binop_correct_and_bounded rop op
   := (ibinop_correct_and_bounded (interp_bexpr rop) op) (only parsing).
