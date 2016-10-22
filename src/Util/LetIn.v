@@ -20,6 +20,10 @@ Global Instance Proper_Let_In_nd_changevalue {A B} (RA:relation A) {RB:relation 
   : Proper (RA ==> (RA ==> RB) ==> RB) (Let_In (P:=fun _=>B)).
 Proof. cbv; intuition. Qed.
 
+Lemma Proper_Let_In_nd_changebody_eq {A P R} {Reflexive_R:@Reflexive P R} {x}
+  : Proper ((fun f g => forall a, x = a -> R (f a) (g a)) ==> R) (@Let_In A (fun _ => P) x).
+Proof. lazy; intros; subst; auto; congruence. Qed.
+
 Definition app_Let_In_nd {A B T} (f:B->T) (e:A) (C:A->B)
   : f (Let_In e C) = Let_In e (fun v => f (C v)) := eq_refl.
 
