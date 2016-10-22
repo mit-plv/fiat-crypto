@@ -283,11 +283,12 @@ Module CompileLL.
         (fun rt var op x y out => Some out)
         (fun t' a => Some (vars a)).
 
-    Fixpoint fillInputs {t inputs} (prog: NAry inputs Z (WExpr t)) {struct inputs}: WExpr t :=
+    Fixpoint fillInputs t inputs (prog: NAry inputs Z (WExpr t)) {struct inputs}: WExpr t :=
       match inputs as inputs' return NAry inputs' Z (WExpr t) -> NAry O Z (WExpr t) with
       | O => fun p => p
-      | S inputs'' => fun p => fillInputs (p (Z.of_nat inputs))
+      | S inputs'' => fun p => @fillInputs _ _ (p (Z.of_nat inputs))
       end prog.
+    Global Arguments fillInputs {t inputs} _.
 
     Definition compile {t inputs} (p: NAry inputs Z (WExpr t)): option (Program * list nat) :=
       let p' := fillInputs p in
