@@ -80,6 +80,7 @@ Module LL.
     Definition match_arg_Prod {var t1 t2} (a:arg T var (Prod t1 t2)) : (arg T var t1 * arg T var t2) :=
       match a with
       | Pair _ _ a1 a2 => (a1, a2)
+      | Var _ | Const _ => I (* dummy value *)
       end.
 
     Global Arguments match_arg_Prod / : simpl nomatch.
