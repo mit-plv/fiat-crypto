@@ -929,8 +929,10 @@ Module Field.
             {phi'_inv : forall a, phi' (inv a) = INV (phi' a)}
             (phi'_div : forall a b, phi' (div a b) = DIV (phi' a) (phi' b)).
 
-    Local Instance field_from_redundant_representation
-      : @field H eq zero one opp add sub mul inv div.
+    Lemma field_and_homomorphism_from_redundant_representation
+      : @field H eq zero one opp add sub mul inv div
+        /\ @Ring.is_homomorphism F EQ ONE ADD MUL H eq one add mul phi
+        /\ @Ring.is_homomorphism H eq one add mul F EQ ONE ADD MUL phi'.
     Proof.
       repeat match goal with
              | [ H : field |- _ ] => destruct H; try clear H
@@ -956,8 +958,8 @@ Module Field.
              | [ |- eq _ _ ] => apply phi'_eq
              | [ H : (~eq _ _)%type |- _ ] => pose proof (fun pf => H (proj1 (@phi'_eq _ _) pf)); clear H
              | [ H : EQ _ _ |- _ ] => rewrite H
-             | _ => progress erewrite ?phi'_zero, ?phi'_one, ?phi'_opp, ?phi'_add, ?phi'_sub, ?phi'_mul, ?phi'_inv, ?phi'_div by reflexivity
-             | [ H : _ |- _ ] => progress erewrite ?phi'_zero, ?phi'_one, ?phi'_opp, ?phi'_add, ?phi'_sub, ?phi'_mul, ?phi'_inv, ?phi'_div in H by reflexivity
+             | _ => progress erewrite ?phi'_zero, ?phi'_one, ?phi'_opp, ?phi'_add, ?phi'_sub, ?phi'_mul, ?phi'_inv, ?phi'_div, ?phi'_phi_id by reflexivity
+             | [ H : _ |- _ ] => progress erewrite ?phi'_zero, ?phi'_one, ?phi'_opp, ?phi'_add, ?phi'_sub, ?phi'_mul, ?phi'_inv, ?phi'_div, ?phi'_phi_id in H by reflexivity
              | _ => solve [ eauto ]
              end.
     Qed.

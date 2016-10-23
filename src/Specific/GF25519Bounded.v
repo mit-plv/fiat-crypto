@@ -217,6 +217,8 @@ Proof.
   exact (proj2_sig sqrtW_sig f').
 Qed.
 
+
+
 Definition add (f g : fe25519) : fe25519.
 Proof. define_binop f g addW addW_correct_and_bounded. Defined.
 Definition sub (f g : fe25519) : fe25519.
@@ -258,38 +260,33 @@ Proof. op_correct_t sqrt sqrtW_correct_and_bounded. Qed.
 
 Import Morphisms.
 
-Lemma field25519 : @field fe25519 eq zero one opp add sub mul inv div.
+Local Existing Instance prime_modulus.
+
+Lemma field25519_and_homomorphisms
+  : @field fe25519 eq zero one opp add sub mul inv div
+    /\ @Ring.is_homomorphism (F _) (@Logic.eq _) 1%F F.add F.mul fe25519 eq one add mul encode
+    /\ @Ring.is_homomorphism fe25519 eq one add mul (F _) (@Logic.eq _) 1%F F.add F.mul decode.
 Proof.
-  assert (Reflexive eq) by (repeat intro; reflexivity).
-  eapply (Field.field_from_redundant_representation
-            (fieldF:=Specific.GF25519.carry_field25519)
-            (phi':=proj1_fe25519)).
+  eapply @Field.field_and_homomorphism_from_redundant_representation.
+  { exact (F.field_modulo _). }
+  { cbv [decode encode]; intros; rewrite !proj1_fe25519_exist_fe25519; apply encode_rep. }
   { reflexivity. }
   { reflexivity. }
   { reflexivity. }
-  { intros; rewrite opp_correct; reflexivity. }
-  { intros; rewrite add_correct; reflexivity. }
-  { intros; rewrite sub_correct; reflexivity. }
-  { intros; rewrite mul_correct; reflexivity. }
-  { intros; rewrite inv_correct; reflexivity. }
-  { cbv [div]; intros; rewrite proj1_fe25519_exist_fe25519; reflexivity. }
+  { cbv [decode encode]; intros; rewrite opp_correct, carry_opp_correct, carry_opp_opt_correct, carry_opp_rep; apply opp_rep; reflexivity. }
+  { cbv [decode encode]; intros; rewrite add_correct, carry_add_correct, carry_add_opt_correct, carry_add_rep; apply add_rep; reflexivity. }
+  { cbv [decode encode]; intros; rewrite sub_correct, carry_sub_correct, carry_sub_opt_correct, carry_sub_rep; apply sub_rep; reflexivity. }
+  { cbv [decode encode]; intros; rewrite mul_correct, GF25519.mul_correct, carry_mul_opt_correct by reflexivity; apply carry_mul_rep; reflexivity. }
+  { cbv [decode encode]; intros; rewrite inv_correct, GF25519.inv_correct, inv_opt_correct by reflexivity; apply inv_rep; reflexivity. }
+  { cbv [decode encode div]; intros; rewrite !proj1_fe25519_exist_fe25519; apply encode_rep. }
 Qed.
+
+Definition field25519 : @field fe25519 eq zero one opp add sub mul inv div := proj1 field25519_and_homomorphisms.
 
 Local Opaque proj1_fe25519 exist_fe25519 proj1_fe25519W exist_fe25519W.
 Lemma homomorphism_F25519 :
   @Ring.is_homomorphism
     (F modulus) Logic.eq F.one F.add F.mul
     fe25519 eq one add mul encode.
-Proof.
-  pose proof homomorphism_carry_F25519 as H.
-  destruct H as [ [H0 H1] H2 H3].
-  econstructor; [ econstructor | | ];
-    cbv [eq encode]; repeat intro;
-      rewrite ?add_correct, ?mul_correct, ?proj1_fe25519_exist_fe25519, ?proj1_fe25519_exist_fe25519W, ?proj1_fe25519W_exist_fe25519 in *.
-  { rewrite H0; reflexivity. }
-  { apply H1; assumption. }
-  { rewrite H2; reflexivity. }
-  { reflexivity. }
-Qed.
-
+Proof. apply field25519_and_homomorphisms. Qed.
 (** TODO: pack, unpack, ge_modulus *)
