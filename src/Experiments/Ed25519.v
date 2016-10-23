@@ -262,7 +262,7 @@ Axiom Proper_SRepERepMul : Proper (SC25519.SRepEq ==> ExtendedCoordinates.Extend
 
 Axiom SRepEnc_correct : forall x : ModularArithmetic.F.F l, Senc x = SRepEnc (S2Rep x).
 
-Axiom onCurve_ERepB :
+Lemma onCurve_ERepB :
   @Pre.onCurve GF25519.fe25519 (@ModularBaseSystem.eq GF25519.modulus GF25519.params25519) GF25519.one_
     GF25519.add GF25519.mul a d
     (@ModularBaseSystem.div GF25519.modulus GF25519.params25519
@@ -282,7 +282,11 @@ Axiom onCurve_ERepB :
        (8758491%Z, 20764389%Z, 8378388%Z, 40966398%Z, 30858332%Z, 27570973%Z, 17082669%Z, 16144682%Z,
        25909283%Z, 52811034%Z)
        (26843545%Z, 40265318%Z, 13421772%Z, 53687091%Z, 6710886%Z, 26843545%Z, 20132659%Z, 13421772%Z,
-       26843545%Z, 40265304%Z)).
+        26843545%Z, 40265304%Z)).
+Proof.
+  cbv [ModularBaseSystem.eq Pre.onCurve].
+  vm_decide.
+Qed.
 
 Let ERepB : Erep.
   let rB := (eval vm_compute in (proj1_sig (EToRep B))) in
