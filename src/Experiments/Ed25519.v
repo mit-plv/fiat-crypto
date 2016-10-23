@@ -58,7 +58,7 @@ Proof.
   constructor; try vm_decide.
   { destruct CompleteEdwardsCurve.E.square_a as [sqrt_a H].
     exists (ModularBaseSystem.encode sqrt_a).
-    transitivity (ModularBaseSystem.encode Ed25519.a); [ rewrite <- H | vm_decide ].
+    transitivity (ModularBaseSystem.encode Spec.Ed25519.a); [ rewrite <- H | vm_decide ].
     rewrite <- Algebra.Ring.homomorphism_mul; reflexivity. }
   { intros x H.
     pose proof (CompleteEdwardsCurve.E.nonsquare_d (ModularBaseSystem.decode x)) as ns_d.
