@@ -47,13 +47,25 @@ Let Erep := (@ExtendedCoordinates.Extended.point
       ).
 
 (* TODO : prove -- use Ed25519.curve25519_params_ok *)
+Local Existing Instance GF25519.homomorphism_F25519_encode.
+Local Existing Instance GF25519.homomorphism_F25519_decode.
 Lemma twedprm_ERep :
   @CompleteEdwardsCurve.E.twisted_edwards_params
    GF25519.fe25519 ModularBaseSystem.eq
    GF25519.zero_ GF25519.one_
    GF25519.add GF25519.mul a d.
 Proof.
-Admitted.
+  constructor; try vm_decide.
+  { destruct CompleteEdwardsCurve.E.square_a as [sqrt_a H].
+    exists (ModularBaseSystem.encode sqrt_a).
+    transitivity (ModularBaseSystem.encode Ed25519.a); [ rewrite <- H | vm_decide ].
+    rewrite <- Algebra.Ring.homomorphism_mul; reflexivity. }
+  { intros x H.
+    pose proof (CompleteEdwardsCurve.E.nonsquare_d (ModularBaseSystem.decode x)) as ns_d.
+    apply ns_d; clear ns_d.
+    transitivity (ModularBaseSystem.decode d); [ rewrite <- H | vm_decide ].
+    rewrite <- Algebra.Ring.homomorphism_mul; reflexivity. }
+Qed.
 
 Definition coord_to_extended (xy : GF25519.fe25519 * GF25519.fe25519) pf :=
   ExtendedCoordinates.Extended.from_twisted
@@ -76,7 +88,7 @@ Qed.
 
 Let EToRep := PointEncoding.point_phi
       (Kfield := GF25519.field25519)
-      (phi_homomorphism := GF25519.homomorphism_F25519)
+      (phi_homomorphism := GF25519.homomorphism_F25519_encode)
       (Kpoint := Erep)
       (phi_a := phi_a)
       (phi_d := phi_d)
@@ -95,7 +107,7 @@ Let WordNZ {sz} (w : Word.word sz) := BinInt.Z.of_N (Word.wordToN w).
  *)
 Definition feEnc (x : GF25519.fe25519) : Word.word 255 :=
   let '(x7, x6, x5, x4, x3, x2, x1, x0) :=
-      (GF25519.pack (GF25519.freeze x)) in
+      (GF25519.pack x) in
   Word.combine (ZNWord 32 x0)
     (Word.combine (ZNWord 32 x1)
       (Word.combine (ZNWord 32 x2)
@@ -103,7 +115,7 @@ Definition feEnc (x : GF25519.fe25519) : Word.word 255 :=
           (Word.combine (ZNWord 32 x4)
             (Word.combine (ZNWord 32 x5)
               (Word.combine (ZNWord 32 x6) (ZNWord 31 x7))))))).
-
+Check GF25519.ge_modulus.
 Definition feDec (w : Word.word 255) : option GF25519.fe25519 :=
   let w0 := Word.split1 32 _ w in
   let a0 := Word.split2 32 _ w in
@@ -153,6 +165,7 @@ Proof.
   apply ModularBaseSystemProofs.encode_rep.
 Qed.
 
+About ExtendedCoordinates.Extended.add.
 Let ErepAdd :=
   (@ExtendedCoordinates.Extended.add _ _ _ _ _ _ _ _ _ _
                                      a d GF25519.field25519 twedprm_ERep _
@@ -375,7 +388,7 @@ Let sign_correct : forall pk sk {mlen} (msg:Word.word mlen), sign pk sk _ msg = 
       (* SRepDecModLShort_correct := *) SC25519.SRepDecModLShort_Correct
 .
 Print Assumptions sign_correct.
-
+Locate B_order_l.
 Definition Fsqrt_minus1 := Eval vm_compute in ModularBaseSystem.decode (GF25519.sqrt_m1).
 Definition Fsqrt := PrimeFieldTheorems.F.sqrt_5mod8 Fsqrt_minus1.
 Lemma bound_check_255_helper x y : (0 <= x)%Z -> (BinInt.Z.to_nat x < 2^y <-> (x < 2^(Z.of_nat y))%Z).

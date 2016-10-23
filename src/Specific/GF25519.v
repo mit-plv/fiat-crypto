@@ -440,17 +440,21 @@ Qed.
 
 Definition carry_field25519 : @field fe25519 eq zero_ one_ carry_opp carry_add carry_sub mul inv div := proj1 carry_field25519_and_homomorphisms.
 
-Lemma homomorphism_F25519 :
-  @Ring.is_homomorphism
-    (F modulus) Logic.eq F.one F.add F.mul
-    fe25519 eq one add mul encode.
+Lemma homomorphism_F25519_encode
+  : @Ring.is_homomorphism (F modulus) Logic.eq F.one F.add F.mul fe25519 eq one add mul encode.
+Proof. apply field25519_and_homomorphisms. Qed.
+
+Lemma homomorphism_F25519_decode
+  : @Ring.is_homomorphism fe25519 eq one add mul (F modulus) Logic.eq F.one F.add F.mul decode.
 Proof. apply field25519_and_homomorphisms. Qed.
 
 
-Lemma homomorphism_carry_F25519 :
-  @Ring.is_homomorphism
-    (F modulus) Logic.eq F.one F.add F.mul
-    fe25519 eq one carry_add mul encode.
+Lemma homomorphism_carry_F25519_encode
+  : @Ring.is_homomorphism (F modulus) Logic.eq F.one F.add F.mul fe25519 eq one carry_add mul encode.
+Proof. apply carry_field25519_and_homomorphisms. Qed.
+
+Lemma homomorphism_carry_F25519_decode
+  : @Ring.is_homomorphism fe25519 eq one carry_add mul (F modulus) Logic.eq F.one F.add F.mul decode.
 Proof. apply carry_field25519_and_homomorphisms. Qed.
 
 Definition ge_modulus_sig (f : fe25519) :

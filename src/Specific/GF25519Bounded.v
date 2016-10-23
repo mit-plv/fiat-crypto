@@ -284,13 +284,11 @@ Qed.
 Global Instance field25519 : @field fe25519 eq zero one opp add sub mul inv div := proj1 field25519_and_homomorphisms.
 
 Local Opaque proj1_fe25519 exist_fe25519 proj1_fe25519W exist_fe25519W.
-Global Instance homomorphism_F25519 :
-  @Ring.is_homomorphism
-    (F modulus) Logic.eq F.one F.add F.mul
-    fe25519 eq one add mul encode.
+Global Instance homomorphism_F25519_encode
+  : @Ring.is_homomorphism (F modulus) Logic.eq F.one F.add F.mul fe25519 eq one add mul encode.
 Proof. apply field25519_and_homomorphisms. Qed.
 
 Global Instance homomorphism_F25519_decode
-  : @Ring.is_homomorphism fe25519 eq one add mul (F _) (@Logic.eq _) 1%F F.add F.mul decode.
+  : @Ring.is_homomorphism fe25519 eq one add mul (F modulus) Logic.eq F.one F.add F.mul decode.
 Proof. apply field25519_and_homomorphisms. Qed.
 (** TODO: pack, unpack, ge_modulus *)
