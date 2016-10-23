@@ -171,13 +171,19 @@ Proof.
   intro H'; revert x; destruct H'; intro x; rewrite cast_word_refl.
   rewrite <- (combine_split _ _ x) at 2 3.
   rewrite wand_combine, !wordToNat_combine, wand_kill, wand_unit, wordToNat_wzero.
+  repeat match goal with H := _ |- _ => subst H end. (* only needed in 8.4 *)
+  let min := match type of x with word (?min _ _ + _) => min end in
+  repeat match goal with
+         | [ |- context[?min' b c] ]
+           => progress change min' with min
+         end.
   generalize (split1 _ _ x); generalize (split2 _ _ x); clear x; simpl.
   apply Min.min_case_strong; intros Hbc x0 x1;
     pose proof (wordToNat_bound x0); pose proof (wordToNat_bound x1);
       rewrite pow2_id in *.
   { assert (b - c = 0) by omega.
     assert (2^b <= 2^c) by auto using pow_le_mono_r with arith.
-    generalize dependent (b - c); intros; destruct x0; try omega.
+    generalize dependent (b - c); intros; destruct x0; try omega; [].
     simpl; rewrite mul_0_r, add_0_r.
     rewrite mod_small by omega.
     omega. }
@@ -195,6 +201,12 @@ Proof.
     => generalize pf
   end.
   intro H'; revert x; destruct H'; intro x; rewrite cast_word_refl.
+  repeat match goal with H := _ |- _ => subst H end. (* only needed in 8.4 *)
+  let min := match type of x with word (?min _ _ + _) => min end in
+  repeat match goal with
+         | [ |- context[?min' b c] ]
+           => progress change min' with min
+         end.
   rewrite <- (combine_split _ _ x) at 2 3.
   rewrite wand_combine, !wordToNat_combine, wand_kill, wand_unit, wordToNat_wzero.
   generalize (split1 _ _ x); generalize (split2 _ _ x); clear x; simpl.
