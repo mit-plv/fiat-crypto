@@ -128,13 +128,88 @@ Proof.
   rewrite wordToNat_cast_word, wordToNat_combine, wordToNat_wzero; nia.
 Qed.
 
+Lemma bitwp_combine {a b} f (x x' : word a) (y y' : word b)
+  : bitwp f x x' ++ bitwp f y y' = bitwp f (x ++ y) (x' ++ y').
+Proof.
+  revert x' y y'.
+  induction x as [|b' n x IHx]; simpl.
+  { intro x'; intros.
+    refine match x' with
+           | WO => _
+           | _ => I
+           end.
+    reflexivity. }
+  { intros; rewrite IHx; clear IHx; revert x.
+    refine match x' in word Sn return match Sn return word Sn -> _ with
+                                      | 0 => fun _ => True
+                                      | S _ => fun x' => forall x, WS (f b' (whd x')) (bitwp f (x ++ y) (wtl x' ++ y')) = WS (f b' (whd (x' ++ y'))) (bitwp f (x ++ y) (wtl (x' ++ y')))
+                                      end x'
+           with
+           | WO => I
+           | WS _ _ _ => fun _ => Logic.eq_refl
+           end. }
+Qed.
+
+Lemma wand_combine {a b} (x : word a) (y : word b) (z : word (a + b))
+  : (x ++ y) ^& z = ((x ^& split1 _ _ z) ++ (y ^& split2 _ _ z)).
+Proof.
+  rewrite <- (combine_split _ _ z) at 1.
+  unfold wand.
+  rewrite bitwp_combine.
+  reflexivity.
+Qed.
+
 Lemma wordToNat_clearlow {b} (c : nat) (x : Word.word b) :
   wordToNat (clearlow c x) = wordToNat x - (wordToNat x) mod (2^c).
-Admitted.
+Proof.
+  assert (2^c <> 0) by auto with arith.
+  unfold clearlow.
+  match goal with
+  | [ |- context[@cast_word _ _ ?pf ?w] ]
+    => generalize pf
+  end.
+  intro H'; revert x; destruct H'; intro x; rewrite cast_word_refl.
+  rewrite <- (combine_split _ _ x) at 2 3.
+  rewrite wand_combine, !wordToNat_combine, wand_kill, wand_unit, wordToNat_wzero.
+  generalize (split1 _ _ x); generalize (split2 _ _ x); clear x; simpl.
+  apply Min.min_case_strong; intros Hbc x0 x1;
+    pose proof (wordToNat_bound x0); pose proof (wordToNat_bound x1);
+      rewrite pow2_id in *.
+  { assert (b - c = 0) by omega.
+    assert (2^b <= 2^c) by auto using pow_le_mono_r with arith.
+    generalize dependent (b - c); intros; destruct x0; try omega.
+    simpl; rewrite mul_0_r, add_0_r.
+    rewrite mod_small by omega.
+    omega. }
+  { rewrite !(mul_comm (2^c)), mod_add, mod_small by omega.
+    lia. }
+Qed.
 
 Lemma wordToNat_keeplow {b} (c : nat) (x : Word.word b) :
   wordToNat (keeplow c x) = (wordToNat x) mod (2^c).
-Admitted.
+Proof.
+  assert (2^c <> 0) by auto with arith.
+  unfold keeplow.
+  match goal with
+  | [ |- context[@cast_word _ _ ?pf ?w] ]
+    => generalize pf
+  end.
+  intro H'; revert x; destruct H'; intro x; rewrite cast_word_refl.
+  rewrite <- (combine_split _ _ x) at 2 3.
+  rewrite wand_combine, !wordToNat_combine, wand_kill, wand_unit, wordToNat_wzero.
+  generalize (split1 _ _ x); generalize (split2 _ _ x); clear x; simpl.
+  apply Min.min_case_strong; intros Hbc x0 x1;
+    pose proof (wordToNat_bound x0); pose proof (wordToNat_bound x1);
+      rewrite pow2_id in *.
+  { assert (b - c = 0) by omega.
+    assert (2^b <= 2^c) by auto using pow_le_mono_r with arith.
+    generalize dependent (b - c); intros; destruct x0; try omega.
+    simpl; rewrite mul_0_r, add_0_r.
+    rewrite mod_small by omega.
+    omega. }
+  { rewrite !(mul_comm (2^c)), mod_add, mod_small by omega.
+    lia. }
+Qed.
 
 Lemma wordToNat_split1 : forall a b w, wordToNat (split1 a b w) = (wordToNat w) mod (2^a).
 Proof.
