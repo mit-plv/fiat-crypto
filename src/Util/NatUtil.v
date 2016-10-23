@@ -306,5 +306,45 @@ Lemma min_idempotent_S_r x : min x (S x) = x.
 Proof. omega *. Qed.
 Hint Rewrite min_idempotent_S_r : natsimplify.
 
+Lemma mod_pow_same b e : b <> 0 -> e <> 0 -> b^e mod b = 0.
+Proof.
+  intros; destruct e as [|e]; [ omega | simpl ].
+  rewrite mul_comm, mod_mul by omega; omega.
+Qed.
+
 Lemma setbit_high : forall x i, (x < 2^i -> setbit x i = x + 2^i)%nat.
-Admitted.
+Proof.
+  intros x i H; apply bits_inj; intro n.
+  rewrite setbit_eqb.
+  destruct (i =? n) eqn:H'; simpl.
+  { apply beq_nat_true in H'; subst.
+    symmetry; apply testbit_true.
+    rewrite div_minus, div_small by omega.
+    reflexivity. }
+  { assert (H'' : (((x + 2 ^ i) / 2 ^ n) mod 2) = ((x / 2 ^ n) mod 2)).
+    { assert (2^(i-n) <> 0) by auto with arith.
+      assert (2^(i-n) <> 0) by omega.
+      destruct (lt_eq_lt_dec i n) as [ [?|?] | ? ]; [ | subst; rewrite <- beq_nat_refl in H'; congruence | ].
+      { assert (i <= n - 1) by omega.
+        assert (2^i <= 2^n) by auto using pow_le_mono_r with arith.
+        assert (2^i <= 2^(n - 1)) by auto using pow_le_mono_r with arith.
+        assert (2^(n-1) <> 0) by auto with arith.
+        assert (2^(n-1) + 2^(n-1) = 2^n)
+          by (transitivity (2^(S (n - 1))); [ simpl; omega | apply f_equal; omega ]).
+        assert ((2^(n - 1) - 1) + (2^(n - 1)) < 2^n) by omega.
+        rewrite !div_small; try omega. }
+      { replace (2^i) with (2^(i - n) * 2^n)
+          by (rewrite <- pow_add_r, ?le_plus_minus_r, ?sub_add by omega; omega).
+        rewrite div_add by auto with arith.
+        rewrite <- add_mod_idemp_r, mod_pow_same, add_0_r by omega.
+        reflexivity. } }
+    { match goal with
+      | [ |- ?x = ?y ]
+        => destruct x eqn:H0; destruct y eqn:H1; try reflexivity;
+             try apply testbit_true in H0;
+             try apply testbit_true in H1;
+             first [ rewrite <- H0; clear H0 | rewrite <- H1; clear H1 ];
+             first [ symmetry; apply testbit_true | apply testbit_true ]
+      end;
+        rewrite H'' in *; assumption. } }
+Qed.
