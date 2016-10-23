@@ -137,10 +137,25 @@ Lemma wordToNat_keeplow {b} (c : nat) (x : Word.word b) :
 Admitted.
 
 Lemma wordToNat_split1 : forall a b w, wordToNat (split1 a b w) = (wordToNat w) mod (2^a).
-Admitted.
+Proof.
+  intro a; induction a.
+  { reflexivity. }
+  { simpl; intros; rewrite IHa; clear IHa.
+    rewrite (shatter_word w); simpl.
+    change (2^a + (2^a + 0)) with (2 * 2^a).
+    rewrite (mul_comm 2 (2^a)).
+    assert (2^a <> 0) by auto with arith.
+    destruct (whd w); try rewrite S_mod; try rewrite mul_mod_distr_r; omega. }
+Qed.
 
 Lemma wordToNat_wfirstn : forall a b w H, wordToNat (@wfirstn a b w H) = (wordToNat w) mod (2^a).
-Admitted.
+Proof.
+  unfold wfirstn.
+  intros; rewrite wordToNat_split1.
+  match goal with |- appcontext[match ?x with _ => _ end] => generalize x end.
+  intro H'; destruct H'.
+  reflexivity.
+Qed.
 
 Lemma wordeqb_Zeqb {sz} (x y : word sz) : (Z.of_N (wordToN x) =? Z.of_N (wordToN y))%Z = weqb x y.
 Proof.
