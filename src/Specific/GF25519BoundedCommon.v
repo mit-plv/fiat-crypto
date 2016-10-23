@@ -243,6 +243,9 @@ Qed.
 Definition encode (x : F modulus) : fe25519
   := exist_fe25519 (encode x) (encode_bounded x).
 
+Definition decode (x : fe25519) : F modulus
+  := ModularBaseSystem.decode (proj1_fe25519 x).
+
 Definition div (f g : fe25519) : fe25519
   := exist_fe25519 (div (proj1_fe25519 f) (proj1_fe25519 g)) (encode_bounded _).
 
