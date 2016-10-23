@@ -316,7 +316,7 @@ Lemma setbit_high : forall x i, (x < 2^i -> setbit x i = x + 2^i)%nat.
 Proof.
   intros x i H; apply bits_inj; intro n.
   rewrite setbit_eqb.
-  destruct (i =? n) eqn:H'; simpl.
+  destruct (beq_nat i n) eqn:H'; simpl.
   { apply beq_nat_true in H'; subst.
     symmetry; apply testbit_true.
     rewrite div_minus, div_small by omega.
