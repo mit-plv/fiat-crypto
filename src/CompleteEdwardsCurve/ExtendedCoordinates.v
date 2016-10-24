@@ -96,6 +96,10 @@ Module Extended.
         let Z3 := F*G in
         (X3, Y3, Z3, T3).
 
+      Context {add_coordinates_opt}
+              {add_coordinates_opt_correct
+               : forall P1 P2, fieldwise (n:=4) Feq (add_coordinates_opt P1 P2) (add_coordinates P1 P2)}.
+
       Local Hint Unfold E.add E.coordinates add_coordinates : bash.
 
       Lemma add_coordinates_correct (P Q:point) :
@@ -103,6 +107,7 @@ Module Extended.
         let (x, y) := E.coordinates (E.add (to_twisted P) (to_twisted Q)) in
         (fieldwise (n:=2) Feq) (x, y) (X/Z, Y/Z).
       Proof.
+        clear add_coordinates_opt add_coordinates_opt_correct.
         destruct P as [ [ [ [ ] ? ] ? ] [ HP [ ] ] ]; destruct Q as [ [ [ [ ] ? ] ? ] [ HQ [ ] ] ].
         pose proof edwardsAddCompletePlus (a_nonzero:=E.nonzero_a)(a_square:=E.square_a)(d_nonsquare:=E.nonsquare_d)(char_gt_2:=E.char_gt_2) _ _ _ _ HP HQ.
         pose proof edwardsAddCompleteMinus (a_nonzero:=E.nonzero_a)(a_square:=E.square_a)(d_nonsquare:=E.nonsquare_d)(char_gt_2:=E.char_gt_2) _ _ _ _ HP HQ.
@@ -110,15 +115,21 @@ Module Extended.
       Qed.
 
       Obligation Tactic := idtac.
-      Program Definition add (P Q:point) : point := add_coordinates (coordinates P) (coordinates Q).
+      Program Definition add (P Q:point) : point := add_coordinates_opt (coordinates P) (coordinates Q).
       Next Obligation.
         intros.
         pose proof (add_coordinates_correct P Q) as Hrep.
+        pose proof (add_coordinates_opt_correct (coordinates P) (coordinates Q)) as Hopt.
+        destruct (add_coordinates_opt (coordinates P) (coordinates Q)) as [ [ [ X0 X1 ] X2 ] X3 ].
+        clear add_coordinates_opt add_coordinates_opt_correct.
+        simpl in Hopt; destruct Hopt as [Hopt0 [Hopt1 [Hopt2 Hopt3] ] ]; subst.
         pose proof Pre.unifiedAdd'_onCurve(a_nonzero:=E.nonzero_a)(a_square:=E.square_a)(d_nonsquare:=E.nonsquare_d)(char_gt_2:=E.char_gt_2) (E.coordinates (to_twisted P)) (E.coordinates (to_twisted Q)) as Hon.
         destruct P as [ [ [ [ ] ? ] ? ] [ HP [ ] ] ]; destruct Q as [ [ [ [ ] ? ] ? ] [ HQ [ ] ] ].
         pose proof edwardsAddCompletePlus (a_nonzero:=E.nonzero_a)(a_square:=E.square_a)(d_nonsquare:=E.nonsquare_d)(char_gt_2:=E.char_gt_2) _ _ _ _ HP HQ as Hnz1.
         pose proof edwardsAddCompleteMinus (a_nonzero:=E.nonzero_a)(a_square:=E.square_a)(d_nonsquare:=E.nonsquare_d)(char_gt_2:=E.char_gt_2) _ _ _ _ HP HQ as Hnz2.
         autounfold with bash in *; simpl in *.
+        rewrite Hopt0, Hopt1, Hopt2, Hopt3.
+        clear Hopt0 Hopt1 Hopt2 Hopt3 X0 X1 X2 X3.
         destruct Hrep as [HA HB]. rewrite <-!HA, <-!HB; clear HA HB.
         safe_bash.
       Qed.
@@ -127,8 +138,14 @@ Module Extended.
       Lemma to_twisted_add P Q : E.eq (to_twisted (add P Q)) (E.add (to_twisted P) (to_twisted Q)).
       Proof.
         pose proof (add_coordinates_correct P Q) as Hrep.
+        pose proof (add_coordinates_opt_correct (coordinates P) (coordinates Q)) as Hopt.
         destruct P as [ [ [ [ ] ? ] ? ] [ HP [ ] ] ]; destruct Q as [ [ [ [ ] ? ] ? ] [ HQ [ ] ] ].
         autounfold with bash in *; simpl in *.
+        destruct (add_coordinates_opt _ _) as [ [ [ X0 X1 ] X2 ] X3 ].
+        clear add_coordinates_opt add_coordinates_opt_correct.
+        simpl in Hopt; destruct Hopt as [Hopt0 [Hopt1 [Hopt2 Hopt3] ] ]; simpl.
+        rewrite ?Hopt0, ?Hopt1, ?Hopt2, ?Hopt3.
+        clear Hopt0 Hopt1 Hopt2 Hopt3 X0 X1 X2 X3.
         destruct Hrep as [HA HB].
         pose proof (field_div_definition(field:=field)) as Hdiv; symmetry in Hdiv;
           (rewrite_strat bottomup Hdiv);
@@ -250,22 +267,39 @@ Module Extended.
     Context {point_phi:Fpoint->Kpoint}
             {point_phi_Proper:Proper (eq==>eq) point_phi}
             {point_phi_correct: forall (P:Fpoint), eq (point_phi P) (ref_phi P)}.
+    Context {Kadd_coordinates_opt}
+            {Kadd_coordinates_opt_correct
+             : forall P1 P2, fieldwise (n:=4) Keq (Kadd_coordinates_opt P1 P2) (@add_coordinates K Kadd Ksub Kmul Kdd P1 P2)}
+            {Fadd_coordinates_opt}
+            {Fadd_coordinates_opt_correct
+             : forall P1 P2, fieldwise (n:=4) Feq (Fadd_coordinates_opt P1 P2) (@add_coordinates F Fadd Fsub Fmul Fdd P1 P2)}.
 
-    Lemma lift_homomorphism : @Monoid.is_homomorphism Fpoint eq (add(a_eq_minus1:=HFa)(Htwice_d:=HFdd)) Kpoint eq (add(a_eq_minus1:=HKa)(Htwice_d:=HKdd)) point_phi.
+    Lemma lift_homomorphism : @Monoid.is_homomorphism Fpoint eq (add(a_eq_minus1:=HFa)(Htwice_d:=HFdd)(add_coordinates_opt_correct:=Fadd_coordinates_opt_correct)) Kpoint eq (add(a_eq_minus1:=HKa)(Htwice_d:=HKdd)(add_coordinates_opt_correct:=Kadd_coordinates_opt_correct)) point_phi.
     Proof.
-      repeat match goal with
+      admit; repeat match goal with
              | |- Monoid.is_homomorphism => split
              | |- _ => intro
-             | |-  _ /\ _ => split
+             | [ |- context[Fadd_coordinates_opt ?x ?y] ]
+               => pose proof (Fadd_coordinates_opt_correct x y);
+                    generalize dependent (Fadd_coordinates_opt x y)
+             | [ |- context[Kadd_coordinates_opt ?x ?y] ]
+               => pose proof (Kadd_coordinates_opt_correct x y);
+                    generalize dependent (Kadd_coordinates_opt x y)
              | [H: _ /\ _ |- _ ] => destruct H
              | [p: point |- _ ] => destruct p as [ [ [ [ ] ? ] ? ] [ ? [ ? ? ] ] ]
+             | [ p : tuple _ 4 |- _ ] => destruct p as [ [ [ ? ? ] ? ] ? ]
+             | |-  _ /\ _ => split
              | |- context[point_phi] => setoid_rewrite point_phi_correct
              | |- _ => progress cbv [fst snd coordinates proj1_sig eq to_twisted E.eq E.coordinates fieldwise fieldwise' add add_coordinates ref_phi] in *
              | |- _ => rewrite <-!(field_div_definition(field:=fieldF)) in *
              | |- _ => rewrite <-!(field_div_definition(field:=fieldK)) in *
              | |- Keq ?x ?y => rewrite_strat bottomup hints field_homomorphism
              | [ H : Feq _ _ |- Keq (phi _) (phi _)] => solve [f_equiv; intuition]
+             | [ H : Keq ?x _ |- _ ]
+               => is_var x; rewrite ?H; clear x H
+             | [ H : Feq ?x _ |- _ ]
+               => is_var x; rewrite ?H; clear x H
              end.
-      Admitted. (* TODO(jadep or andreser) *)
+    Admitted. (* TODO(jadep or andreser) *)
   End Homomorphism.
 End Extended.
