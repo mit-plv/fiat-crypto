@@ -26,70 +26,105 @@ Module Type Expression.
 End Expression.
 
 Module Pipeline (Input: Expression).
-  Export Input.
+  Definition bits := Input.bits.
+  Definition inputs := Input.inputs.
+  Definition ResultType := Input.ResultType.
+
+  Hint Unfold bits inputs ResultType.
+  Definition width: Width bits := Input.width.
+
+  Definition W: Type := word bits.
+  Definition R: Type := option RangeWithValue.
+  Definition B: Type := option (@BoundedWord bits).
+
+  Instance ZEvaluable : Evaluable Z := @ZEvaluable bits.
+  Instance WEvaluable : Evaluable W := @WordEvaluable bits.
+  Instance REvaluable : Evaluable R := @RWVEvaluable bits.
+  Instance BEvaluable : Evaluable B := @BoundedEvaluable bits.
+
+  Existing Instances ZEvaluable WEvaluable REvaluable BEvaluable.
 
   Module Util.
-    Fixpoint applyProgOn {A B k} ins (f: NAry k (option A) B): B :=
-      match k as k' return NAry k' (option A) B -> B with
+    Fixpoint applyProgOn {A B k} (d: A) ins (f: NAry k A B): B :=
+      match k as k' return NAry k' A B -> B with
       | O => id
       | S m => fun f' =>
         match ins with
-        | cons x xs => @applyProgOn A B m xs (f' x)
-        | nil => @applyProgOn A B m nil (f' None)
+        | cons x xs => @applyProgOn A B m d xs (f' x)
+        | nil => @applyProgOn A B m d nil (f' d)
         end
       end f.
   End Util.
 
-  Definition hlProg': NAry inputs Z (@HL.expr Z (@LL.arg Z Z) ResultType) :=
-    liftN (HLConversions.mapVar (fun t => @LL.uninterp_arg_as_var _ _ t)
-                                (fun t => @LL.interp_arg _ t)) hlProg.
-
-  Definition llProg: NAry inputs Z (@LL.expr Z Z ResultType) :=
-    liftN CompileHL.compile hlProg'.
-
-  Definition wordProg: NAry inputs Z (@CompileLL.WExpr bits ResultType) :=
-    liftN (LLConversions.ZToWord (n := bits) Z) llProg.
-
-  Definition qhasmProg := CompileLL.compile (w := width) wordProg.
-
-  Definition qhasmString : option string :=
-    match qhasmProg with
-    | Some (p, _) => StringConversion.convertProgram p
-    | None => None
-    end.
-
-  Import LLConversions.
-
-  Definition RWV: Type := option RangeWithValue.
-
-  Instance RWVEvaluable : Evaluable RWV := @RWVEvaluable bits.
-  Instance ZEvaluable : Evaluable Z := @ZEvaluable bits.
-
-  Existing Instance RWVEvaluable.
-  Existing Instance ZEvaluable.
-
-  Arguments HL.expr _ _ _ : clear implicits.
-  Arguments LL.arg _ _ _ : clear implicits.
-  Arguments interp_type _ _ : clear implicits.
-  Definition rwvHL: NAry inputs Z (@HL.expr RWV (@LL.arg RWV Z) ResultType) :=
-    liftN (@HLConversions.convertExpr Z RWV _ _ ResultType _) (
+  Module HL.
+    Definition progZ: NAry inputs Z (@HL.expr Z (@LL.arg Z Z) ResultType) :=
       liftN (HLConversions.mapVar
-        (fun t => @LL.uninterp_arg_as_var RWV Z t)
-        (fun t => fun x => typeMap (fun x => Z.of_N (orElse 0%N (option_map rwv_value x))) (@LL.interp_arg' _ _ t rangeOf x))) (
+               (fun t => @LL.uninterp_arg_as_var _ _ t)
+               (fun t => @LL.interp_arg _ t))
+          Input.hlProg.
 
-      hlProg)).
+    Definition progR: NAry inputs Z (@HL.expr R (@LL.arg R Z) ResultType) :=
+      liftN (@HLConversions.convertExpr Z R _ _ ResultType _) (
+        liftN (HLConversions.mapVar
+          (fun t => @LL.uninterp_arg_as_var R Z t)
+          (fun t => fun x => typeMap (fun x =>
+              Z.of_N (orElse 0%N (option_map rwv_value x))) (
+            @LL.interp_arg' _ _ t LLConversions.rangeOf x))) (
 
-  Definition rwvLL: @LL.expr RWV Z ResultType :=
-    Util.applyProgOn (map (@Some _) inputBounds) (
-      NArgMap (orElse 0%Z) (
-        liftN CompileHL.compile rwvHL)).
+        Input.hlProg)).
 
-  Definition outputBounds :=
-    typeMap (option_map rwvToRange) (
-      LL.interp' (fun x => Some (rwv 0%N (Z.to_N x) (Z.to_N x))) (
-        rwvLL)).
+    Definition progW: NAry inputs Z (@HL.expr W (@LL.arg W Z) ResultType) :=
+      liftN (@HLConversions.convertExpr Z W _ _ ResultType _) (
+        liftN (HLConversions.mapVar
+            (fun t => @LL.uninterp_arg_as_var W Z t)
+            (fun t => fun x => typeMap (fun x => Z.of_N (wordToN x)) (
+          @LL.interp_arg' _ _ t (fun x => NToWord bits (Z.to_N x)) x))) (
 
-  Definition valid := check (n := bits) rwvLL.
+        Input.hlProg)).
+  End HL.
+
+  Module LL.
+    Definition progZ: NAry inputs Z (@LL.expr Z Z ResultType) :=
+      liftN CompileHL.compile HL.progZ.
+
+    Definition progR: NAry inputs Z (@LL.expr R Z ResultType) :=
+      liftN CompileHL.compile HL.progR.
+
+    Definition progW: NAry inputs Z (@LL.expr W Z ResultType) :=
+      liftN CompileHL.compile HL.progW.
+  End LL.
+
+  Module AST.
+    Definition progZ: NAry inputs Z (@interp_type Z ResultType) :=
+      liftN (LL.interp' (fun x => x)) LL.progZ.
+
+    Definition progR: NAry inputs Z (@interp_type R ResultType) :=
+      liftN (LL.interp' (fun x => Some (rwv 0%N (Z.to_N x) (Z.to_N x)))) LL.progR.
+
+    Definition progW: NAry inputs Z (@interp_type W ResultType) :=
+      liftN (LL.interp' (fun x => NToWord bits (Z.to_N x))) LL.progW.
+  End AST.
+
+  Module Qhasm.
+    Definition pair := @CompileLL.compile bits width ResultType _ LL.progW.
+
+    Definition prog := option_map fst pair.
+
+    Definition outputRegisters := option_map snd pair.
+
+    Definition code := option_map StringConversion.convertProgram prog.
+  End Qhasm.
+
+  Module Bounds.
+    Definition input := Input.inputBounds.
+
+    Definition prog := Util.applyProgOn (2 ^ (Z.of_nat bits) - 1)%Z input LL.progR.
+
+    Definition valid := LLConversions.check (n := bits) prog.
+
+    Definition output :=
+      LL.interp' (fun x => Some (rwv 0%N (Z.to_N x) (Z.to_N x))) prog.
+  End Bounds.
 End Pipeline.
 
 Module SimpleExample.
@@ -111,3 +146,4 @@ Module SimpleExample.
 
   Export SimplePipeline.
 End SimpleExample.
+

@@ -707,8 +707,7 @@ Section RangeWithValue.
     ezero := None;
 
     toT := fun x => x;
-    fromT := fun x => omap x (fun x' =>
-      if (checkRWV x') then x else None);
+    fromT := fun x => omap x (fun x' => if (checkRWV x') then x else None);
 
     eadd := fun x y => omap x (fun X => omap y (fun Y =>
       rwv_app range_add_valid X Y));
