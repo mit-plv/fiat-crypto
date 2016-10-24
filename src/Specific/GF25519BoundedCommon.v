@@ -59,8 +59,8 @@ Definition Build_bounded_word {lower upper} (proj_word : word64) (word_bounded :
         | false => fun x => x
         end word_bounded).
 Local Notation word_of exp := (bounded_word (fst (b_of exp)) (snd (b_of exp))).
-Local Notation unbounded_word := (bounded_word 0 (2^32-1)%Z).
-Lemma word32_to_unbounded_helper {x e : nat} : (x < pow2 e)%nat -> (Z.of_nat e <= 64)%Z -> ((0 <=? word64ToZ (ZToWord64 (Z.of_nat x))) && (word64ToZ (ZToWord64 (Z.of_nat x)) <=? 2 ^ (Z.of_nat e) - 1))%bool = true.
+Local Notation unbounded_word sz := (bounded_word 0 (2^sz-1)%Z).
+Lemma word_to_unbounded_helper {x e : nat} : (x < pow2 e)%nat -> (Z.of_nat e <= 64)%Z -> ((0 <=? word64ToZ (ZToWord64 (Z.of_nat x))) && (word64ToZ (ZToWord64 (Z.of_nat x)) <=? 2 ^ (Z.of_nat e) - 1))%bool = true.
 Proof.
   rewrite pow2_id; intro H; apply Nat2Z.inj_lt in H; revert H.
   rewrite Z.pow_Zpow; simpl Z.of_nat.
@@ -73,17 +73,21 @@ Proof.
   end;
     intros; omega.
 Qed.
-Definition word32_to_unbounded_word (x : word 32) : unbounded_word.
+Definition word_to_unbounded_word {sz} (x : word sz) : (Z.of_nat sz <=? 64)%Z = true -> unbounded_word (Z.of_nat sz).
 Proof.
-  refine (Build_bounded_word (Z.of_N (wordToN x)) _).
-  abstract (rewrite wordToN_nat, nat_N_Z; apply (word32_to_unbounded_helper (wordToNat_bound x)); simpl; omega).
-Qed.
+  refine (fun pf => Build_bounded_word (Z.of_N (wordToN x)) _).
+  abstract (rewrite wordToN_nat, nat_N_Z; Z.ltb_to_lt; apply (word_to_unbounded_helper (wordToNat_bound x)); simpl; omega).
+Defined.
+Definition word32_to_unbounded_word (x : word 32) : unbounded_word 32.
+Proof. apply (word_to_unbounded_word x); reflexivity. Defined.
+Definition word31_to_unbounded_word (x : word 31) : unbounded_word 31.
+Proof. apply (word_to_unbounded_word x); reflexivity. Defined.
 Definition bounds : list (Z * Z)
   := Eval compute in
       [b_of 25; b_of 26; b_of 25; b_of 26; b_of 25; b_of 26; b_of 25; b_of 26; b_of 25; b_of 26].
 Definition wire_digit_bounds : list (Z * Z)
   := Eval compute in
-      List.repeat (0, 2^32-1)%Z 8.
+      List.repeat (0, 2^32-1)%Z 7 ++ ((0,2^31-1)%Z :: nil).
 
 Definition fe25519W := Eval cbv -[word64] in (tuple word64 (length limb_widths)).
 Definition wire_digitsW := Eval cbv -[word64] in (tuple word64 8).
@@ -105,7 +109,8 @@ Definition fe25519 :=
     (word_of 25 * word_of 26 * word_of 25 * word_of 26 * word_of 25 * word_of 26 * word_of 25 * word_of 26 * word_of 25 * word_of 26)%type.
 Definition wire_digits :=
   Eval cbv [fst snd Tuple.tuple Tuple.tuple'] in
-    Tuple.tuple unbounded_word 8.
+    (unbounded_word 32 * unbounded_word 32 * unbounded_word 32 * unbounded_word 32
+     * unbounded_word 32 * unbounded_word 32 * unbounded_word 32 * unbounded_word 31)%type.
 Definition proj1_fe25519W (x : fe25519) : fe25519W
   := let '(x0, x1, x2, x3, x4, x5, x6, x7, x8, x9) := x in
      (proj_word x0, proj_word x1, proj_word x2, proj_word x3, proj_word x4,
