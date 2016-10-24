@@ -131,7 +131,7 @@ Local Ltac Equivalence_fieldwise'_t :=
          | [ |- Equivalence _ ] => constructor
          end;
   induction n as [|? IHn]; [solve [auto]|];
-  simpl; constructor; repeat intro; intuition eauto.
+  simpl; constructor; repeat intro; repeat intuition eauto.
 
 Section Equivalence.
   Context {A} {R:relation A}.
