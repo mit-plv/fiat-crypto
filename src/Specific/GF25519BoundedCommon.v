@@ -62,18 +62,31 @@ Local Notation word_of exp := (bounded_word (fst (b_of exp)) (snd (b_of exp))).
 Definition bounds : list (Z * Z)
   := Eval compute in
       [b_of 25; b_of 26; b_of 25; b_of 26; b_of 25; b_of 26; b_of 25; b_of 26; b_of 25; b_of 26].
+Definition wire_digit_bounds : list (Z * Z)
+  := Eval compute in
+      [b_of 25; b_of 26; b_of 25; b_of 26; b_of 25; b_of 26; b_of 25; b_of 26].
 
 Definition fe25519W := Eval cbv -[word64] in (tuple word64 (length limb_widths)).
+Definition wire_digitsW := Eval cbv -[word64] in (tuple word64 8).
 Definition fe25519WToZ (x : fe25519W) : Specific.GF25519.fe25519
   := let '(x0, x1, x2, x3, x4, x5, x6, x7, x8, x9) := x in
      (x0 : Z, x1 : Z, x2 : Z, x3 : Z, x4 : Z, x5 : Z, x6 : Z, x7 : Z, x8 : Z, x9 : Z).
 Definition fe25519ZToW (x : Specific.GF25519.fe25519) : fe25519W
   := let '(x0, x1, x2, x3, x4, x5, x6, x7, x8, x9) := x in
      (x0 : word64, x1 : word64, x2 : word64, x3 : word64, x4 : word64, x5 : word64, x6 : word64, x7 : word64, x8 : word64, x9 : word64).
+Definition wire_digitsWToZ (x : wire_digitsW) : Specific.GF25519.wire_digits
+  := let '(x0, x1, x2, x3, x4, x5, x6, x7) := x in
+     (x0 : Z, x1 : Z, x2 : Z, x3 : Z, x4 : Z, x5 : Z, x6 : Z, x7 : Z).
+Definition wire_digitsZToW (x : Specific.GF25519.wire_digits) : wire_digitsW
+  := let '(x0, x1, x2, x3, x4, x5, x6, x7) := x in
+     (x0 : word64, x1 : word64, x2 : word64, x3 : word64, x4 : word64, x5 : word64, x6 : word64, x7 : word64).
 Definition fe25519 :=
   Eval cbv [fst snd] in
     let sanity := eq_refl : length bounds = length limb_widths in
     (word_of 25 * word_of 26 * word_of 25 * word_of 26 * word_of 25 * word_of 26 * word_of 25 * word_of 26 * word_of 25 * word_of 26)%type.
+Definition wire_digits :=
+  Eval cbv [fst snd] in
+    (word_of 25 * word_of 26 * word_of 25 * word_of 26 * word_of 25 * word_of 26 * word_of 25 * word_of 26)%type.
 Definition proj1_fe25519W (x : fe25519) : fe25519W
   := let '(x0, x1, x2, x3, x4, x5, x6, x7, x8, x9) := x in
      (proj_word x0, proj_word x1, proj_word x2, proj_word x3, proj_word x4,
@@ -101,10 +114,37 @@ Proof.
   repeat split; assumption.
 Qed.
 
+Definition proj1_wire_digitsW (x : wire_digits) : wire_digitsW
+  := let '(x0, x1, x2, x3, x4, x5, x6, x7) := x in
+     (proj_word x0, proj_word x1, proj_word x2, proj_word x3, proj_word x4,
+      proj_word x5, proj_word x6, proj_word x7).
+Coercion proj1_wire_digits (x : wire_digits) : Specific.GF25519.wire_digits
+  := wire_digitsWToZ (proj1_wire_digitsW x).
+Definition wire_digits_is_bounded (x : Specific.GF25519.wire_digits) : bool
+  := let res := Tuple.map2
+                  (fun bounds v =>
+                     let '(lower, upper) := bounds in
+                     (lower <=? v) && (v <=? upper))%bool%Z
+                  (Tuple.from_list _ (List.rev wire_digit_bounds) eq_refl) x in
+     List.fold_right andb true (Tuple.to_list _ res).
+
+Lemma is_bounded_proj1_wire_digits (x : wire_digits) : wire_digits_is_bounded (proj1_wire_digits x) = true.
+Proof.
+  refine (let '(Build_bounded_word' x0 p0, Build_bounded_word' x1 p1, Build_bounded_word' x2 p2, Build_bounded_word' x3 p3, Build_bounded_word' x4 p4,
+                Build_bounded_word' x5 p5, Build_bounded_word' x6 p6, Build_bounded_word' x7 p7)
+            as x := x return wire_digits_is_bounded (proj1_wire_digits x) = true in
+          _).
+  cbv [wire_digits_is_bounded proj1_wire_digits proj1_wire_digitsW wire_digitsWToZ to_list length wire_digit_bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 List.map List.rev List.app proj_word].
+  apply fold_right_andb_true_iff_fold_right_and_True.
+  cbv [fold_right List.map].
+  cbv beta in *.
+  repeat split; assumption.
+Qed.
+
 (** TODO: Turn this into a lemma to speed up proofs *)
 Ltac unfold_is_bounded_in H :=
-  unfold is_bounded, fe25519WToZ in H;
-  cbv [to_list length bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 List.map fold_right List.rev List.app] in H;
+  unfold is_bounded, wire_digits_is_bounded, fe25519WToZ, wire_digitsWToZ in H;
+  cbv [to_list length bounds wire_digit_bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 List.map fold_right List.rev List.app] in H;
   rewrite !Bool.andb_true_iff in H.
 
 Definition Pow2_64 := Eval compute in 2^64.
@@ -174,6 +214,77 @@ Proof.
   refine (let '(x0, x1, x2, x3, x4, x5, x6, x7, x8, x9) as x := x return forall pf : is_bounded x = true, proj1_fe25519 (exist_fe25519 x pf) = x in
           fun pf => _).
   cbv [proj1_fe25519 exist_fe25519 proj1_fe25519W fe25519WToZ proj_word Build_bounded_word].
+  unfold_is_bounded_in pf.
+  destruct_head and.
+  Z.ltb_to_lt.
+  rewrite !ZToWord64ToZ by (rewrite unfold_Pow2_64; cbv [Pow2_64]; omega).
+  reflexivity.
+Qed.
+
+Definition exist_wire_digitsW (x : wire_digitsW) : wire_digits_is_bounded (wire_digitsWToZ x) = true -> wire_digits.
+Proof.
+  refine (let '(x0, x1, x2, x3, x4, x5, x6, x7) as x := x return wire_digits_is_bounded (wire_digitsWToZ x) = true -> wire_digits in
+          fun H => (fun H' => (Build_bounded_word x0 _, Build_bounded_word x1 _, Build_bounded_word x2 _, Build_bounded_word x3 _, Build_bounded_word x4 _,
+                               Build_bounded_word x5 _, Build_bounded_word x6 _, Build_bounded_word x7 _))
+                     (let H' := proj1 (@fold_right_andb_true_iff_fold_right_and_True _) H in
+                      _));
+    [
+    | | | | | | |
+    | clearbody H'; clear H x;
+      unfold_is_bounded_in H';
+      exact H' ];
+    destruct_head and; auto;
+      rewrite_hyp !*; reflexivity.
+Defined.
+
+Definition exist_wire_digits' (x : Specific.GF25519.wire_digits) : wire_digits_is_bounded x = true -> wire_digits.
+Proof.
+  intro H; apply (exist_wire_digitsW (wire_digitsZToW x)).
+  abstract (
+      hnf in x; destruct_head prod;
+      pose proof H as H';
+      unfold_is_bounded_in H;
+      destruct_head and;
+      Z.ltb_to_lt;
+      rewrite !ZToWord64ToZ by (simpl; omega);
+      assumption
+    ).
+Defined.
+
+Definition exist_wire_digits (x : Specific.GF25519.wire_digits) : wire_digits_is_bounded x = true -> wire_digits.
+Proof.
+  refine (let '(x0, x1, x2, x3, x4, x5, x6, x7) as x := x return wire_digits_is_bounded x = true -> wire_digits in
+          fun H => _).
+  let v := constr:(exist_wire_digits' (x0, x1, x2, x3, x4, x5, x6, x7) H) in
+  let rec do_refine v :=
+      first [ let v' := (eval cbv [exist_wire_digitsW wire_digitsZToW exist_wire_digits' proj_word Build_bounded_word snd fst] in (proj_word v)) in
+              refine (Build_bounded_word v' _); abstract exact (word_bounded v)
+            | let v' := (eval cbv [exist_wire_digitsW wire_digitsZToW exist_wire_digits' proj_word Build_bounded_word snd fst] in (proj_word (snd v))) in
+              refine (_, Build_bounded_word v' _);
+              [ do_refine (fst v) | abstract exact (word_bounded (snd v)) ] ] in
+  do_refine v.
+Defined.
+
+Lemma proj1_wire_digits_exist_wire_digitsW x pf : proj1_wire_digits (exist_wire_digitsW x pf) = wire_digitsWToZ x.
+Proof.
+  revert pf.
+  refine (let '(x0, x1, x2, x3, x4, x5, x6, x7) as x := x return forall pf : wire_digits_is_bounded (wire_digitsWToZ x) = true, proj1_wire_digits (exist_wire_digitsW x pf) = wire_digitsWToZ x in
+          fun pf => _).
+  reflexivity.
+Qed.
+Lemma proj1_wire_digitsW_exist_wire_digits x pf : proj1_wire_digitsW (exist_wire_digits x pf) = wire_digitsZToW x.
+Proof.
+  revert pf.
+  refine (let '(x0, x1, x2, x3, x4, x5, x6, x7) as x := x return forall pf : wire_digits_is_bounded x = true, proj1_wire_digitsW (exist_wire_digits x pf) = wire_digitsZToW x in
+          fun pf => _).
+  reflexivity.
+Qed.
+Lemma proj1_wire_digits_exist_wire_digits x pf : proj1_wire_digits (exist_wire_digits x pf) = x.
+Proof.
+  revert pf.
+  refine (let '(x0, x1, x2, x3, x4, x5, x6, x7) as x := x return forall pf : wire_digits_is_bounded x = true, proj1_wire_digits (exist_wire_digits x pf) = x in
+          fun pf => _).
+  cbv [proj1_wire_digits exist_wire_digits proj1_wire_digitsW wire_digitsWToZ proj_word Build_bounded_word].
   unfold_is_bounded_in pf.
   destruct_head and.
   Z.ltb_to_lt.
@@ -262,4 +373,18 @@ Notation iunop_correct_and_bounded irop op
   := (forall x,
          is_bounded (fe25519WToZ x) = true
          -> fe25519WToZ (irop x) = op (fe25519WToZ x)
+            /\ is_bounded (fe25519WToZ (irop x)) = true) (only parsing).
+Notation iunop_FEToZ_correct irop op
+  := (forall x,
+         is_bounded (fe25519WToZ x) = true
+         -> word64ToZ (irop x) = op (fe25519WToZ x)) (only parsing).
+Notation iunop_FEToWire_correct_and_bounded irop op
+  := (forall x,
+         is_bounded (fe25519WToZ x) = true
+         -> wire_digitsWToZ (irop x) = op (fe25519WToZ x)
+            /\ wire_digits_is_bounded (wire_digitsWToZ (irop x)) = true) (only parsing).
+Notation iunop_WireToFE_correct_and_bounded irop op
+  := (forall x,
+         wire_digits_is_bounded (wire_digitsWToZ x) = true
+         -> fe25519WToZ (irop x) = op (wire_digitsWToZ x)
             /\ is_bounded (fe25519WToZ (irop x)) = true) (only parsing).

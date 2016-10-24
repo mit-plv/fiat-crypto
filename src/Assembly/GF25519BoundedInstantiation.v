@@ -17,6 +17,9 @@ Section Operations.
 
   Definition ExprBinOp : Type := NAry 20 (@CompileLL.WArg bits TT) (@CompileLL.WExpr bits FE).
   Definition ExprUnOp : Type := NAry 10 (@CompileLL.WArg bits TT) (@CompileLL.WExpr bits FE).
+  Axiom ExprUnOpFEToZ : Type.
+  Axiom ExprUnOpWireToFE : Type.
+  Axiom ExprUnOpFEToWire : Type.
 
   Local Existing Instance WordEvaluable.
 
@@ -38,17 +41,22 @@ Section Operations.
   Definition ropp : ExprUnOp := Opp.wordProg.
 End Operations.
 
-
 Definition interp_bexpr : ExprBinOp -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
   := interp_bexpr'.
 Definition interp_uexpr : ExprUnOp -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
   := interp_uexpr'.
+Axiom interp_uexpr_FEToZ : ExprUnOpFEToZ -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.word64.
+Axiom interp_uexpr_FEToWire : ExprUnOpFEToWire -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.wire_digitsW.
+Axiom interp_uexpr_WireToFE : ExprUnOpWireToFE -> Specific.GF25519BoundedCommon.wire_digitsW -> Specific.GF25519BoundedCommon.fe25519W.
 Axiom rfreeze : ExprUnOp.
+Axiom rge_modulus : ExprUnOpFEToZ.
+Axiom rpack : ExprUnOpFEToWire.
+Axiom runpack : ExprUnOpWireToFE.
 
 Declare Reduction asm_interp
   := cbv [id
             interp_bexpr interp_uexpr interp_bexpr' interp_uexpr'
-            radd rsub rmul ropp (*rfreeze*)
+            radd rsub rmul ropp (*rfreeze rge_modulus rpack runpack*)
             GF25519.GF25519.Add.wordProg GF25519.GF25519.AddExpr.bits GF25519.GF25519.Add.llProg GF25519.GF25519.AddExpr.hlProg GF25519.GF25519.AddExpr.inputs
             GF25519.GF25519.Sub.wordProg GF25519.GF25519.SubExpr.bits GF25519.GF25519.Sub.llProg GF25519.GF25519.SubExpr.hlProg GF25519.GF25519.SubExpr.inputs
             GF25519.GF25519.Mul.wordProg GF25519.GF25519.MulExpr.bits GF25519.GF25519.Mul.llProg GF25519.GF25519.MulExpr.hlProg GF25519.GF25519.MulExpr.inputs
@@ -78,14 +86,33 @@ Definition interp_rfreeze : Specific.GF25519BoundedCommon.fe25519W -> Specific.G
   := Eval asm_interp in interp_uexpr rfreeze.
 Definition interp_rfreeze_correct : interp_rfreeze = interp_uexpr rfreeze := eq_refl.
 
+Definition interp_rge_modulus : Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.word64
+  := Eval asm_interp in interp_uexpr_FEToZ rge_modulus.
+Definition interp_rge_modulus_correct : interp_rge_modulus = interp_uexpr_FEToZ rge_modulus := eq_refl.
+
+Definition interp_rpack : Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.wire_digitsW
+  := Eval asm_interp in interp_uexpr_FEToWire rpack.
+Definition interp_rpack_correct : interp_rpack = interp_uexpr_FEToWire rpack := eq_refl.
+
+Definition interp_runpack : Specific.GF25519BoundedCommon.wire_digitsW -> Specific.GF25519BoundedCommon.fe25519W
+  := Eval asm_interp in interp_uexpr_WireToFE runpack.
+Definition interp_runpack_correct : interp_runpack = interp_uexpr_WireToFE runpack := eq_refl.
+
 Local Notation binop_correct_and_bounded rop op
   := (ibinop_correct_and_bounded (interp_bexpr rop) op) (only parsing).
 Local Notation unop_correct_and_bounded rop op
   := (iunop_correct_and_bounded (interp_uexpr rop) op) (only parsing).
+Local Notation unop_FEToZ_correct rop op
+  := (iunop_FEToZ_correct (interp_uexpr_FEToZ rop) op) (only parsing).
+Local Notation unop_FEToWire_correct_and_bounded rop op
+  := (iunop_FEToWire_correct_and_bounded (interp_uexpr_FEToWire rop) op) (only parsing).
+Local Notation unop_WireToFE_correct_and_bounded rop op
+  := (iunop_WireToFE_correct_and_bounded (interp_uexpr_WireToFE rop) op) (only parsing).
 
 Local Ltac start_correct_and_bounded_t op op_expr lem :=
   intros; hnf in *; destruct_head' prod; simpl in * |- ;
   repeat match goal with H : is_bounded _ = true |- _ => unfold_is_bounded_in H end;
+  repeat match goal with H : wire_digits_is_bounded _ = true |- _ => unfold_is_bounded_in H end;
   change op with op_expr;
   rewrite <- lem.
 
@@ -104,5 +131,14 @@ Lemma ropp_correct_and_bounded : unop_correct_and_bounded ropp carry_opp.
 Proof.
 Admitted.
 Lemma rfreeze_correct_and_bounded : unop_correct_and_bounded rfreeze freeze.
+Proof.
+Admitted.
+Lemma rge_modulus_correct_and_bounded : unop_FEToZ_correct rge_modulus ge_modulus.
+Proof.
+Admitted.
+Lemma rpack_correct_and_bounded : unop_FEToWire_correct_and_bounded rpack pack.
+Proof.
+Admitted.
+Lemma runpack_correct_and_bounded : unop_WireToFE_correct_and_bounded runpack unpack.
 Proof.
 Admitted.

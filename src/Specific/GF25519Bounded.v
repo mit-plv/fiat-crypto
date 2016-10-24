@@ -26,6 +26,8 @@ Local Open Scope Z.
 
 Local Ltac bounded_t opW blem :=
   apply blem; apply is_bounded_proj1_fe25519.
+Local Ltac bounded_wire_digits_t opW blem :=
+  apply blem; apply is_bounded_proj1_wire_digits.
 
 Local Ltac define_binop f g opW blem :=
   refine (exist_fe25519W (opW (proj1_fe25519W f) (proj1_fe25519W g)) _);
@@ -33,6 +35,14 @@ Local Ltac define_binop f g opW blem :=
 Local Ltac define_unop f opW blem :=
   refine (exist_fe25519W (opW (proj1_fe25519W f)) _);
   abstract bounded_t opW blem.
+Local Ltac define_unop_FEToZ f opW :=
+  refine (opW (proj1_fe25519W f)).
+Local Ltac define_unop_FEToWire f opW blem :=
+  refine (exist_wire_digitsW (opW (proj1_fe25519W f)) _);
+  abstract bounded_t opW blem.
+Local Ltac define_unop_WireToFE f opW blem :=
+  refine (exist_fe25519W (opW (proj1_wire_digitsW f)) _);
+  abstract bounded_wire_digits_t opW blem.
 
 Local Opaque Let_In.
 Local Arguments interp_radd / _ _.
@@ -45,6 +55,9 @@ Definition subW (f g : fe25519W) : fe25519W := Eval simpl in interp_rsub f g.
 Definition mulW (f g : fe25519W) : fe25519W := Eval simpl in interp_rmul f g.
 Definition oppW (f : fe25519W) : fe25519W := Eval simpl in interp_ropp f.
 Definition freezeW (f : fe25519W) : fe25519W := Eval simpl in interp_rfreeze f.
+Definition ge_modulusW (f : fe25519W) : word64 := Eval simpl in interp_rge_modulus f.
+Definition packW (f : fe25519W) : wire_digitsW := Eval simpl in interp_rpack f.
+Definition unpackW (f : wire_digitsW) : fe25519W := Eval simpl in interp_runpack f.
 Local Transparent Let_In.
 Definition powW (f : fe25519W) chain := fold_chain_opt (proj1_fe25519W one) mulW chain [f].
 Definition invW (f : fe25519W) : fe25519W
@@ -65,6 +78,12 @@ Lemma oppW_correct_and_bounded : iunop_correct_and_bounded oppW carry_opp.
 Proof. port_correct_and_bounded interp_ropp_correct oppW interp_ropp ropp_correct_and_bounded. Qed.
 Lemma freezeW_correct_and_bounded : iunop_correct_and_bounded freezeW freeze.
 Proof. port_correct_and_bounded interp_rfreeze_correct freezeW interp_rfreeze rfreeze_correct_and_bounded. Qed.
+Lemma ge_modulusW_correct : iunop_FEToZ_correct ge_modulusW ge_modulus.
+Proof. port_correct_and_bounded interp_rge_modulus_correct ge_modulusW interp_rge_modulus rge_modulus_correct_and_bounded. Qed.
+Lemma packW_correct_and_bounded : iunop_FEToWire_correct_and_bounded packW pack.
+Proof. port_correct_and_bounded interp_rpack_correct packW interp_rpack rpack_correct_and_bounded. Qed.
+Lemma unpackW_correct_and_bounded : iunop_WireToFE_correct_and_bounded unpackW unpack.
+Proof. port_correct_and_bounded interp_runpack_correct unpackW interp_runpack runpack_correct_and_bounded. Qed.
 
 Lemma powW_correct_and_bounded chain : iunop_correct_and_bounded (fun x => powW x chain) (fun x => pow x chain).
 Proof.
@@ -229,6 +248,12 @@ Definition opp (f : fe25519) : fe25519.
 Proof. define_unop f oppW oppW_correct_and_bounded. Defined.
 Definition freeze (f : fe25519) : fe25519.
 Proof. define_unop f freezeW freezeW_correct_and_bounded. Defined.
+Definition ge_modulus (f : fe25519) : word64.
+Proof. define_unop_FEToZ f ge_modulusW. Defined.
+Definition pack (f : fe25519) : wire_digits.
+Proof. define_unop_FEToWire f packW packW_correct_and_bounded. Defined.
+Definition unpack (f : wire_digits) : fe25519.
+Proof. define_unop_WireToFE f unpackW unpackW_correct_and_bounded. Defined.
 
 Definition pow (f : fe25519) (chain : list (nat * nat)) : fe25519.
 Proof. define_unop f (fun x => powW x chain) powW_correct_and_bounded. Defined.
@@ -238,8 +263,21 @@ Definition sqrt (f : fe25519) : fe25519.
 Proof. define_unop f sqrtW sqrtW_correct_and_bounded. Defined.
 
 Local Ltac op_correct_t op opW_correct_and_bounded :=
-  cbv [op]; rewrite proj1_fe25519_exist_fe25519W;
-  apply opW_correct_and_bounded; apply is_bounded_proj1_fe25519.
+  cbv [op];
+  lazymatch goal with
+  | [ |- context[proj1_fe25519 (exist_fe25519W _ _)] ]
+    => rewrite proj1_fe25519_exist_fe25519W
+  | [ |- context[proj1_wire_digits (exist_wire_digitsW _ _)] ]
+    => rewrite proj1_wire_digits_exist_wire_digitsW
+  | _ => idtac
+  end;
+  apply opW_correct_and_bounded;
+  lazymatch goal with
+  | [ |- is_bounded _ = true ]
+    => apply is_bounded_proj1_fe25519
+  | [ |- wire_digits_is_bounded _ = true ]
+    => apply is_bounded_proj1_wire_digits
+  end.
 
 Lemma add_correct (f g : fe25519) : proj1_fe25519 (add f g) = carry_add (proj1_fe25519 f) (proj1_fe25519 g).
 Proof. op_correct_t add addW_correct_and_bounded. Qed.
@@ -251,6 +289,12 @@ Lemma opp_correct (f : fe25519) : proj1_fe25519 (opp f) = carry_opp (proj1_fe255
 Proof. op_correct_t opp oppW_correct_and_bounded. Qed.
 Lemma freeze_correct (f : fe25519) : proj1_fe25519 (freeze f) = GF25519.freeze (proj1_fe25519 f).
 Proof. op_correct_t freeze freezeW_correct_and_bounded. Qed.
+Lemma ge_modulus_correct (f : fe25519) : word64ToZ (ge_modulus f) = GF25519.ge_modulus (proj1_fe25519 f).
+Proof. op_correct_t ge_modulus ge_modulusW_correct. Qed.
+Lemma pack_correct (f : fe25519) : proj1_wire_digits (pack f) = GF25519.pack (proj1_fe25519 f).
+Proof. op_correct_t pack packW_correct_and_bounded. Qed.
+Lemma unpack_correct (f : wire_digits) : proj1_fe25519 (unpack f) = GF25519.unpack (proj1_wire_digits f).
+Proof. op_correct_t unpack unpackW_correct_and_bounded. Qed.
 Lemma pow_correct (f : fe25519) chain : proj1_fe25519 (pow f chain) = GF25519.pow (proj1_fe25519 f) chain.
 Proof. op_correct_t pow (powW_correct_and_bounded chain). Qed.
 Lemma inv_correct (f : fe25519) : proj1_fe25519 (inv f) = GF25519.inv (proj1_fe25519 f).
@@ -291,4 +335,3 @@ Proof. apply field25519_and_homomorphisms. Qed.
 Global Instance homomorphism_F25519_decode
   : @Ring.is_homomorphism fe25519 eq one add mul (F modulus) Logic.eq F.one F.add F.mul decode.
 Proof. apply field25519_and_homomorphisms. Qed.
-(** TODO: pack, unpack, ge_modulus *)
