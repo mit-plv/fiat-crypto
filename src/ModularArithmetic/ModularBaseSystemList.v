@@ -8,6 +8,7 @@ Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParams.
 Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParamProofs.
 Require Import Crypto.ModularArithmetic.ExtendedBaseVector.
 Require Import Crypto.Tactics.VerdiTactics.
+Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.ModularArithmetic.Pow2Base.
 Require Import Crypto.ModularArithmetic.Conversion.
@@ -51,28 +52,35 @@ Section Defs.
 
   Definition modulus_digits := encodeZ limb_widths modulus.
 
-  (* compute at compile time *)
-  Definition max_ones := Z.ones (fold_right Z.max 0 limb_widths).
-
   (* Constant-time comparison with modulus; only works if all digits of [us]
     are less than 2 ^ their respective limb width. *)
-  Fixpoint ge_modulus' us acc i :=
-    match i with
-    | O => andb (Z.leb (modulus_digits [0]) (us [0])) acc
-    | S i' => ge_modulus' us (andb (Z.eqb (modulus_digits [i]) (us [i])) acc) i'
+  Fixpoint ge_modulus' {A} (f : Z -> A) us (result : Z) i :=
+    dlet r := result in
+    match i return A with
+    | O => dlet x := if Z.leb (modulus_digits [0]) (us [0])
+           then r
+           else 0 in f x
+    | S i' => ge_modulus' f us
+                          (if Z.eqb (modulus_digits [i]) (us [i])
+                           then r
+                           else 0) i'
     end.
 
-  Definition ge_modulus us := ge_modulus' us true (length limb_widths - 1)%nat.
+  Definition ge_modulus us := ge_modulus' id us 1 (length limb_widths - 1)%nat.
 
-  Definition conditional_subtract_modulus (us : digits) (cond : bool) :=
-     let and_term := if cond then max_ones else 0 in
+  (* analagous to NEG assembly instruction on an integer that is 0 or 1:
+       neg 1 = 2^64 - 1 (on 64-bit; 2^32-1 on 32-bit, etc.) 
+       neg 0 = 0 *)
+  Definition neg (int_width : Z) (b : Z) := if b =? 1 then Z.ones int_width else 0.
+
+  Definition conditional_subtract_modulus int_width (us : digits) (cond : Z) :=
     (* [and_term] is all ones if us' is full, so the subtractions subtract q overall.
        Otherwise, it's all zeroes, and the subtractions do nothing. *)
-     map2 (fun x y => x - y) us (map (Z.land and_term) modulus_digits).
+     map2 (fun x y => x - y) us (map (Z.land (neg int_width cond)) modulus_digits).
 
-  Definition freeze (us : digits) : digits :=
+  Definition freeze int_width (us : digits) : digits :=
     let us' := carry_full (carry_full (carry_full us)) in
-     conditional_subtract_modulus us' (ge_modulus us').
+     conditional_subtract_modulus int_width us' (ge_modulus us').
 
   Context {target_widths} (target_widths_nonneg : forall x, In x target_widths -> 0 <= x)
           (bits_eq : sum_firstn limb_widths   (length limb_widths) =

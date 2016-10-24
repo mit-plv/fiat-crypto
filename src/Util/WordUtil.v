@@ -141,3 +141,20 @@ Admitted.
 
 Lemma wordToNat_wfirstn : forall a b w H, wordToNat (@wfirstn a b w H) = (wordToNat w) mod (2^a).
 Admitted.
+
+Lemma wordeqb_Zeqb {sz} (x y : word sz) : (Z.of_N (wordToN x) =? Z.of_N (wordToN y))%Z = weqb x y.
+Proof.
+  match goal with |- ?LHS = ?RHS => destruct LHS eqn:HL, RHS eqn:HR end;
+    repeat match goal with
+           | _ => reflexivity
+           | _ => progress unfold not in *
+           | [ H : Z.eqb _ _ = true |- _ ] => apply Z.eqb_eq in H
+           | [ |- Z.eqb _ _ = true ] => apply Z.eqb_eq
+           | [ H : context[Z.of_N _ = Z.of_N _] |- _ ] => rewrite N2Z.inj_iff in H
+           | [ H : wordToN _ = wordToN _ |- _ ] => apply wordToN_inj in H
+           | [ H : x = y :> word _ |- _ ] => apply weqb_true_iff in H
+           | [ H : ?x = false |- _ ] => progress rewrite <- H; clear H
+           | _ => congruence
+           | [ H : weqb _ _ = true |- _ ] => apply weqb_true_iff in H; subst
+           end.
+Qed.

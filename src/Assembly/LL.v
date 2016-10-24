@@ -1,4 +1,7 @@
 Require Import Crypto.Assembly.PhoasCommon.
+Require Import Crypto.Util.LetIn.
+
+Local Arguments Let_In / _ _ _ _.
 
 Module LL.
   Section Language.
@@ -61,7 +64,7 @@ Module LL.
         match x' with
         | (x0, x1) => Pair (uninterp_arg_as_var x0) (uninterp_arg_as_var x1)
         end
-      | TT => Var 
+      | TT => Var
       end x.
 
     Fixpoint interp' {V t} (f: V -> T) (e:expr t) : interp_type t :=
@@ -74,7 +77,7 @@ Module LL.
     Fixpoint interp {t} (e:expr t) : interp_type t :=
       match e with
       | LetBinop _ _ _ op a b _ eC =>
-        let x := interp_binop op (interp_arg a) (interp_arg b) in interp (eC (uninterp_arg x))
+        dlet x := interp_binop op (interp_arg a) (interp_arg b) in interp (eC (uninterp_arg x))
       | Return _ a => interp_arg a
       end.
 
@@ -153,7 +156,7 @@ Module LL.
     induction t as [|i0 v0 i1 v1]; simpl; intros; try reflexivity.
     break_match; subst; simpl.
     unfold interp_arg in *.
-    cbn; rewrite v0, v1; reflexivity.
+    simpl; rewrite v0, v1; reflexivity.
   Qed.
 
   Lemma interp_under_lets {T} {_: Evaluable T} {t: type} {tC: type}

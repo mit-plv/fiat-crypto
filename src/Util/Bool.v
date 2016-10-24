@@ -41,3 +41,13 @@ Hint Rewrite Bool.orb_andb_distrib_r Bool.orb_andb_distrib_l : push_orb.
 Hint Rewrite <- Bool.andb_orb_distrib_r Bool.andb_orb_distrib_l : push_orb.
 Hint Rewrite <- Bool.orb_andb_distrib_r Bool.orb_andb_distrib_l : pull_orb.
 Hint Rewrite Bool.andb_orb_distrib_r Bool.andb_orb_distrib_l : pull_orb.
+
+Definition pull_bool_if_dep {A B} (f : forall b : bool, A b -> B b) (b : bool) (x : A true) (y : A false)
+  : (if b return B b then f _ x else f _ y) = f b (if b return A b then x else y)
+  := if b return ((if b return B b then f _ x else f _ y) = f b (if b return A b then x else y))
+     then eq_refl
+     else eq_refl.
+
+Definition pull_bool_if {A B} (f : A -> B) (b : bool) (x : A) (y : A)
+  : (if b then f x else f y) = f (if b then x else y)
+  := @pull_bool_if_dep (fun _ => A) (fun _ => B) (fun _ => f) b x y.

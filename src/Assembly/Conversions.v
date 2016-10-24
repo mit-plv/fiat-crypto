@@ -18,6 +18,8 @@ Require Import Coq.NArith.Nnat Coq.NArith.Ndigits.
 
 Require Import Coq.Bool.Sumbool.
 
+Local Arguments LetIn.Let_In _ _ _ _ / .
+
 Definition typeMap {A B t} (f: A -> B) (x: @interp_type A t): @interp_type B t.
 Proof.
   induction t; [refine (f x)|].
@@ -282,7 +284,7 @@ Module LLConversions.
       Lemma roundTrip_0 : @toT Correctness.B BE (@fromT Z ZE 0%Z) <> None.
       Proof.
         intros; unfold toT, fromT, BE, ZE, BoundedEvaluable, ZEvaluable, bwFromRWV;
-          kill_dec; simpl; kill_dec; simpl; try abstract (intro Z; inversion Z);
+          break_match; simpl; try break_match; simpl; try abstract (intro Z; inversion Z);
           pose proof (Npow2_gt0 n); simpl in *; nomega.
       Qed.
 
@@ -361,7 +363,7 @@ Module LLConversions.
               kill_dec; simpl in *; kill_dec; first [reflexivity|nomega]. *)
 
           + unfold bcheck, getBounds in *.
-            replace (interp_binop op _ _)
+            replace (interp_binop op (interp_arg x) (interp_arg y))
                 with (varBoundedToZ (n := n) (opBounded op
                         (interp_arg' boundVarInterp (convertArg _ x))
                         (interp_arg' boundVarInterp (convertArg _ y)))).

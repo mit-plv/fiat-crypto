@@ -49,7 +49,6 @@ Definition full_carry_chain_opt := Eval compute in @Pow2Base.full_carry_chain.
 Definition length_opt := Eval compute in length.
 Definition base_from_limb_widths_opt := Eval compute in @Pow2Base.base_from_limb_widths.
 Definition minus_opt := Eval compute in minus.
-Definition max_ones_opt := Eval compute in @max_ones.
 Definition from_list_default_opt {A} := Eval compute in (@from_list_default A).
 Definition sum_firstn_opt {A} := Eval compute in (@sum_firstn A).
 Definition zeros_opt := Eval compute in (@zeros).
@@ -954,18 +953,16 @@ Section Canonicalization.
       -> carry_full_3_opt_cps f us = f (carry_full (carry_full (carry_full us)))
     := proj2_sig (carry_full_3_opt_cps_sig f us).
 
-  Definition conditional_subtract_modulus_opt_sig (f : list Z) (cond : bool) :
-    { g | g = conditional_subtract_modulus f cond}.
+  Definition conditional_subtract_modulus_opt_sig (f : list Z) (cond : Z) :
+    { g | g = conditional_subtract_modulus int_width f cond}.
   Proof.
     eexists.
     cbv [conditional_subtract_modulus].
-    match goal with |- appcontext[if cond then ?a else ?b] =>
     let LHS := match goal with |- ?LHS = ?RHS => LHS end in
     let RHS := match goal with |- ?LHS = ?RHS => RHS end in
-    let RHSf := match (eval pattern (if cond then a else b) in RHS) with ?RHSf _ => RHSf end in
-    change (LHS = Let_In (if cond then a else b) RHSf) end.
+    let RHSf := match (eval pattern (neg int_width cond) in RHS) with ?RHSf _ => RHSf end in
+    change (LHS = Let_In (neg int_width cond) RHSf).
     cbv [map2 map].
-    change @max_ones with max_ones_opt.
     reflexivity.
   Defined.
 
@@ -973,39 +970,50 @@ Section Canonicalization.
     := Eval cbv [proj1_sig conditional_subtract_modulus_opt_sig] in proj1_sig (conditional_subtract_modulus_opt_sig f cond).
 
   Definition conditional_subtract_modulus_opt_correct f cond
-    : conditional_subtract_modulus_opt f cond = conditional_subtract_modulus f cond
+    : conditional_subtract_modulus_opt f cond = conditional_subtract_modulus int_width f cond
     := Eval cbv [proj2_sig conditional_subtract_modulus_opt_sig] in proj2_sig (conditional_subtract_modulus_opt_sig f cond).
 
+  Lemma ge_modulus'_cps : forall {A} (f : Z -> A) (us : list Z) i b,
+    f (ge_modulus' id us b i) = ge_modulus' f us b i.
+  Proof.
+    induction i; intros; simpl; cbv [Let_In]; break_if; try reflexivity;
+      apply IHi.
+  Qed.
+
   Definition ge_modulus_opt_sig (us : list Z) :
-    { b : bool | b = ModularBaseSystemList.ge_modulus us }.
+    { a : Z | a = ge_modulus us}.
   Proof.
     eexists.
-    cbv beta iota delta [ge_modulus ge_modulus'].
+    cbv [ge_modulus ge_modulus'].
     change length with length_opt.
     change nth_default with @nth_default_opt.
     change minus with minus_opt.
     reflexivity.
   Defined.
 
-  Definition ge_modulus_opt us : bool
+  Definition ge_modulus_opt us : Z
     := Eval cbv [proj1_sig ge_modulus_opt_sig] in proj1_sig (ge_modulus_opt_sig us).
 
   Definition ge_modulus_opt_correct us :
-    ge_modulus_opt us = ge_modulus us
+    ge_modulus_opt us= ge_modulus us
     := Eval cbv [proj2_sig ge_modulus_opt_sig] in proj2_sig (ge_modulus_opt_sig us).
 
   Definition freeze_opt_sig (us : list Z) :
     { b : list Z | length us = length limb_widths
-                   -> b = ModularBaseSystemList.freeze us }.
+                   -> b = ModularBaseSystemList.freeze int_width us }.
   Proof.
     eexists.
     cbv [ModularBaseSystemList.freeze].
     rewrite <-conditional_subtract_modulus_opt_correct.
     intros.
+    cbv [ge_modulus].
+    rewrite ge_modulus'_cps.
     let LHS := match goal with |- ?LHS = ?RHS => LHS end in
     let RHS := match goal with |- ?LHS = ?RHS => RHS end in
     let RHSf := match (eval pattern (carry_full (carry_full (carry_full us))) in RHS) with ?RHSf _ => RHSf end in
     rewrite <-carry_full_3_opt_cps_correct with (f := RHSf) by auto.
+    cbv [carry_full_3_opt_cps carry_full_opt_cps carry_sequence_opt_cps].
+    cbv [ge_modulus'].
     cbv beta iota delta [ge_modulus ge_modulus'].
     change length with length_opt.
     change nth_default with @nth_default_opt.
@@ -1019,7 +1027,7 @@ Section Canonicalization.
 
   Definition freeze_opt_correct us
     : length us = length limb_widths
-      -> freeze_opt us = ModularBaseSystemList.freeze us
+      -> freeze_opt us = ModularBaseSystemList.freeze int_width us
     := proj2_sig (freeze_opt_sig us).
 
 End Canonicalization.
@@ -1061,15 +1069,16 @@ Section SquareRoots.
   End SquareRoot3mod4.
 
   Import Morphisms.
-  Global Instance eqb_Proper : Proper (eq ==> eq ==> Logic.eq) ModularBaseSystem.eqb. Admitted.
+  Global Instance eqb_Proper : Proper (Logic.eq ==> eq ==> eq ==> Logic.eq) ModularBaseSystem.eqb. Admitted.
 
   Section SquareRoot5mod8.
   Context {ec : ExponentiationChain (modulus / 8 + 1)}.
   Context (sqrt_m1 : digits) (sqrt_m1_correct : rep (mul sqrt_m1 sqrt_m1) (F.opp 1%F)).
+  Context {int_width} (preconditions : freezePreconditions prm int_width).
 
   Definition sqrt_5mod8_opt_sig (us : digits) :
     { vs : digits |
-      eq vs (sqrt_5mod8 (carry_mul_opt k_ c_) (pow_opt k_ c_ one_) chain chain_correct sqrt_m1 us)}.
+      eq vs (sqrt_5mod8 int_width (carry_mul_opt k_ c_) (pow_opt k_ c_ one_) chain chain_correct sqrt_m1 us)}.
   Proof.
     eexists; cbv [sqrt_5mod8].
     let LHS := match goal with |- eq ?LHS ?RHS => LHS end in
@@ -1083,7 +1092,7 @@ Section SquareRoots.
     proj1_sig (sqrt_5mod8_opt_sig us).
 
   Definition sqrt_5mod8_opt_correct us
-    : eq (sqrt_5mod8_opt us) (ModularBaseSystem.sqrt_5mod8 _ _ chain chain_correct sqrt_m1 us)
+    : eq (sqrt_5mod8_opt us) (ModularBaseSystem.sqrt_5mod8 int_width _ _ chain chain_correct sqrt_m1 us)
     := Eval cbv [proj2_sig sqrt_5mod8_opt_sig] in proj2_sig (sqrt_5mod8_opt_sig us).
 
   End SquareRoot5mod8.

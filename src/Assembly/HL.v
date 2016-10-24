@@ -1,5 +1,6 @@
 Require Import Crypto.Assembly.PhoasCommon.
 Require Import Coq.setoid_ring.InitialRing.
+Require Import Crypto.Util.LetIn.
 
 Module HL.
   Section Language.
@@ -27,7 +28,7 @@ Module HL.
         | Const n => n
         | Var _ n => n
         | Binop _ _ _ op e1 e2 => interp_binop op (interp e1) (interp e2)
-        | Let _ ex _ eC => let x := interp ex in interp (eC x)
+        | Let _ ex _ eC => dlet x := interp ex in interp (eC x)
         | Pair _ e1 _ e2 => (interp e1, interp e2)
         | MatchPair _ _ ep _ eC => let (v1, v2) := interp ep in interp (eC v1 v2)
         end.
