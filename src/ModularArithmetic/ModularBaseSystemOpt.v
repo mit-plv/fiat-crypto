@@ -976,7 +976,7 @@ Section Canonicalization.
   Lemma ge_modulus'_cps : forall {A} (f : Z -> A) (us : list Z) i b,
     f (ge_modulus' id us b i) = ge_modulus' f us b i.
   Proof.
-    induction i; intros; simpl; cbv [Let_In]; break_if; try reflexivity;
+    induction i; intros; simpl; cbv [Let_In cmovl cmovne]; break_if; try reflexivity;
       apply IHi.
   Qed.
 

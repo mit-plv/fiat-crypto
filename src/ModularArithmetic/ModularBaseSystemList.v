@@ -52,18 +52,18 @@ Section Defs.
 
   Definition modulus_digits := encodeZ limb_widths modulus.
 
+  Definition cmovl (x y r1 r2 : Z) := if Z.leb x y then r1 else r2.
+  Definition cmovne (x y r1 r2 : Z) := if Z.eqb x y then r1 else r2.
+
   (* Constant-time comparison with modulus; only works if all digits of [us]
     are less than 2 ^ their respective limb width. *)
   Fixpoint ge_modulus' {A} (f : Z -> A) us (result : Z) i :=
     dlet r := result in
     match i return A with
-    | O => dlet x := if Z.leb (modulus_digits [0]) (us [0])
-           then r
-           else 0 in f x
-    | S i' => ge_modulus' f us
-                          (if Z.eqb (modulus_digits [i]) (us [i])
-                           then r
-                           else 0) i'
+    | O =>
+      dlet x := (cmovl (modulus_digits [0]) (us [0]) r 0) in f x
+    | S i' =>
+      ge_modulus' f us (cmovne (modulus_digits [i]) (us [i]) r 0) i'
     end.
 
   Definition ge_modulus us := ge_modulus' id us 1 (length limb_widths - 1)%nat.
