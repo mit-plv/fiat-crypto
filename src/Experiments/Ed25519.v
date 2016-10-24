@@ -86,15 +86,14 @@ Proof.
   reflexivity.
 Qed.
 
-Let EToRep := PointEncoding.point_phi
-      (Kfield := GF25519.field25519)
-      (phi_homomorphism := GF25519.homomorphism_F25519_encode)
-      (Kpoint := Erep)
-      (phi_a := phi_a)
-      (phi_d := phi_d)
-      (Kcoord_to_point := coord_to_extended)
-      (phi_bijective := encode_eq_iff)
-.
+Let EToRep :=
+  PointEncoding.point_phi
+    (Kfield := GF25519.field25519)
+    (phi_homomorphism := GF25519.homomorphism_F25519_encode)
+    (Kpoint := Erep)
+    (phi_a := phi_a)
+    (phi_d := phi_d)
+    (Kcoord_to_point := ExtendedCoordinates.Extended.from_twisted (prm := twedprm_ERep) (field := GF25519.field25519)).
 
 Let ZNWord sz x := Word.NToWord sz (BinInt.Z.to_N x).
 Let WordNZ {sz} (w : Word.word sz) := BinInt.Z.of_N (Word.wordToN w).
@@ -206,6 +205,7 @@ Admitted.
 Lemma Proper_feEnc : Proper (ModularBaseSystem.eq ==> eq) feEnc.
 Admitted.
 
+(*
 Lemma ext_to_coord_coord_to_ext : forall (P : GF25519.fe25519 * GF25519.fe25519)
                                          (pf : Pre.onCurve P),
                Tuple.fieldwise (n := 2)
@@ -221,19 +221,45 @@ Proof.
            (field := GF25519.field25519) (a := a) (d := d)).
   apply ExtendedCoordinates.Extended.to_twisted_from_twisted.
 Qed.
+ *)
+(*
+Lemma to_twist
+      ed_from_twisted_coordinates_eq :
+  forall pt : E,
+ Tuple.fieldwise ModularBaseSystem.eq (n := 2)
+   ((fun P0 : Erep =>
+     CompleteEdwardsCurve.E.coordinates
+       (ExtendedCoordinates.Extended.to_twisted (field := GF25519.field25519) P0))
+      (ExtendedCoordinates.Extended.from_twisted  (field := PrimeFieldTheorems.F.field_modulo GF25519.modulus) pt))
+   (CompleteEdwardsCurve.E.coordinates pt).
+Proof.
+  intros.
+  pose proof ExtendedCoordinates.Extended.to_twisted_from_twisted.
+  specialize (H0 pt).
+*)
 
 Lemma ERepEnc_correct P : Eenc P = ERepEnc (EToRep P).
 Proof.
   cbv [Eenc ERepEnc EToRep sign Fencode].
-  transitivity (PointEncoding.encode_point (b := 255) P);
-    [ | apply (PointEncoding.Kencode_point_correct
+  Check (PointEncoding.Kencode_point_correct
            (Ksign_correct := feSign_correct)
            (Kenc_correct := feEnc_correct)
-           (Kp2c_c2p := ext_to_coord_coord_to_ext)
+           (Proper_Ksign := Proper_feSign)
+           (Proper_Kenc := Proper_feEnc)).
+  transitivity (PointEncoding.encode_point (b := 255) P);
+    [ | eapply (PointEncoding.Kencode_point_correct
+           (Ksign_correct := feSign_correct)
+           (Kenc_correct := feEnc_correct)
            (Proper_Ksign := Proper_feSign)
            (Proper_Kenc := Proper_feEnc))
     ].
   reflexivity.
+  Grab Existential Variables.
+  intros.
+  eapply @CompleteEdwardsCurveTheorems.E.Proper_coordinates.
+  { apply GF25519.field25519. }
+  { exact _. }
+  { apply ExtendedCoordinates.Extended.to_twisted_from_twisted. }
 Qed.
 
 Lemma ext_eq_correct : forall p q : Erep,
@@ -449,7 +475,10 @@ Let ERepDec :=
          GF25519.mul
          ModularBaseSystem.div
          _ a d feSign
-         _ coord_to_extended
+         _ (ExtendedCoordinates.Extended.from_twisted
+              (field := GF25519.field25519)
+              (prm := twedprm_ERep)
+           )
          feDec GF25519.sqrt
        ).
 

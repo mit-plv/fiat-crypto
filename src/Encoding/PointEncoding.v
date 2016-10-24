@@ -64,9 +64,11 @@ Section PointEncoding.
             {Kenc_correct : forall x, Fencode x = Kenc (phi x)}.
 
     Notation KonCurve := (@Pre.onCurve _ Keq Kone Kadd Kmul Ka Kd).
-    Context {Kpoint} {Kcoord_to_point : forall P, KonCurve P -> Kpoint}
+    Context {Kpoint}
+            {Kcoord_to_point : @E.point K Keq Kone Kadd Kmul Ka Kd  -> Kpoint}
             {Kpoint_to_coord : Kpoint -> (K * K)}.
-    Context {Kp2c_c2p : forall P pf, Tuple.fieldwise (n := 2) Keq (Kpoint_to_coord (Kcoord_to_point P pf)) P}.
+    Context {Kp2c_c2p : forall pt : E.point, Tuple.fieldwise (n := 2) Keq (Kpoint_to_coord (Kcoord_to_point pt)) (E.coordinates pt)}.
+        Check Kp2c_c2p.
     Context {Kpoint_eq : Kpoint -> Kpoint -> Prop} {Kpoint_add : Kpoint -> Kpoint -> Kpoint}.
     Context {Kpoint_eq_correct : forall p q, Kpoint_eq p q <-> Tuple.fieldwise (n := 2) Keq (Kpoint_to_coord p) (Kpoint_to_coord q)} {Kpoint_eq_Equivalence : Equivalence Kpoint_eq}.
 
@@ -89,12 +91,7 @@ Section PointEncoding.
       reflexivity.
     Qed.
 
-    Definition point_phi (P : Fpoint) : Kpoint.
-    Proof.
-      destruct P as [[fx fy]].
-      apply (Kcoord_to_point (phi fx, phi fy)).
-      apply phi_onCurve; auto.
-    Defined.
+    Definition point_phi (P : Fpoint) : Kpoint := Kcoord_to_point (E.ref_phi (fieldK := Kfield) (Ha := phi_a) (Hd := phi_d) P).
 
     Lemma Proper_point_phi : Proper (E.eq ==> Kpoint_eq) point_phi.
     Proof.
@@ -102,6 +99,7 @@ Section PointEncoding.
       apply Kpoint_eq_correct; cbv [point_phi].
       destruct x, y.
       repeat break_let.
+      cbv [E.ref_phi].
       rewrite !Kp2c_c2p.
       apply E.Proper_coordinates in H; cbv [E.coordinates proj1_sig] in H.
       inversion H; econstructor; cbv [Tuple.fieldwise' fst snd] in *; subst;
@@ -144,9 +142,10 @@ Section PointEncoding.
       destruct P as [[fx fy]]; cbv [E.coordinates proj1_sig].
       break_match.
       match goal with
-      H: Kpoint_to_coord (Kcoord_to_point (?x, ?y) ?pf) = (_,_) |- _ => let A := fresh "H" in
-      pose proof (Kp2c_c2p (x,y) pf) as A; rewrite Heqp in A;
+      H: Kpoint_to_coord (Kcoord_to_point ?x) = (_,_) |- _ => let A := fresh "H" in
+      pose proof (Kp2c_c2p x) as A; rewrite Heqp in A;
         inversion A; cbv [fst snd Tuple.fieldwise'] in * end.
+      cbv [E.coordinates E.ref_phi proj1_sig] in *.
       f_equal; rewrite ?H0, ?H1; auto.
     Qed.
 
@@ -191,7 +190,7 @@ Section PointEncoding.
       let '(x,y) := xy in
       match Decidable.dec (Keq (Kadd (Kmul Ka (Kmul x x)) (Kmul y y))
                     (Kadd Kone (Kmul (Kmul Kd (Kmul x x)) (Kmul y y)))) with
-        | left A => Some (Kcoord_to_point (x,y) (onCurve_eq x y A))
+        | left A => Some (Kcoord_to_point (exist _ (x,y) (onCurve_eq x y A)))
         | right _ => None
       end.
 
@@ -383,6 +382,7 @@ Section PointEncoding.
       repeat break_match; try tauto; try reflexivity.
       simpl.
       apply Kpoint_eq_correct.
+      cbv [point_phi E.ref_phi].
       rewrite !Kp2c_c2p.
       reflexivity.
     Qed.
@@ -400,13 +400,20 @@ Section PointEncoding.
         rewrite H, H0 in k'.
         break_match; try congruence.
         simpl. apply Kpoint_eq_correct.
-        repeat ( break_match;
-        match goal with
-        H: Kpoint_to_coord (Kcoord_to_point (?x, ?y) ?pf) = (_,_) |- _ => let A := fresh "H" in
-        pose proof (Kp2c_c2p (x,y) pf) as A; rewrite H in A;
-            inversion A; cbv [fst snd Tuple.fieldwise'] in * end;
-            intuition;
-            repeat match goal with H : Keq  _ _ |- _ => rewrite H end; try reflexivity).
+        repeat break_match.
+        do 2 match goal with
+          H: Kpoint_to_coord (Kcoord_to_point ?pt) = (_,_) |- _ =>
+          let A := fresh "H" in
+          pose proof (Kp2c_c2p pt) as A; rewrite H in A;
+            cbv [E.coordinates proj1_sig] in *; inversion A;
+              clear A H
+             end.
+        split;
+        repeat match goal with
+               | |- _ => assumption
+               | |- _ => symmetry; assumption
+               | |- _ => etransitivity; [ eassumption | ]
+               end.
       } {
         pose proof n as k'.
         rewrite H, H0 in k'.
