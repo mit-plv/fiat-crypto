@@ -21,17 +21,14 @@ Require Import Coq.ZArith.ZArith Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.ZArith.
 Local Open Scope Z.
 
 (* BEGIN aliases for word extraction *)
-Definition word64 := Z.
+Definition word64 := Word.word 64.
 Coercion word64ToZ (x : word64) : Z
-  := x.
-Coercion ZToWord64 (x : Z) : word64 := x.
-Definition w64eqb (x y : word64) := Z.eqb x y.
+  := Z.of_N (wordToN x).
+Coercion ZToWord64 (x : Z) : word64 := NToWord _ (Z.to_N x).
+Definition w64eqb (x y : word64) := weqb x y.
 
 Lemma word64eqb_Zeqb x y : (word64ToZ x =? word64ToZ y)%Z = w64eqb x y.
-Proof. reflexivity. Qed.
-
-Arguments word64 : simpl never.
-Global Opaque word64.
+Proof. apply wordeqb_Zeqb. Qed.
 
 (* END aliases for word extraction *)
 
@@ -92,9 +89,8 @@ Definition wire_digit_bounds : list (Z * Z)
   := Eval compute in
       List.repeat (0, 2^32-1)%Z 7 ++ ((0,2^31-1)%Z :: nil).
 
-Local Opaque word64.
-Definition fe25519W := Eval cbv (*-[word64]*) in (tuple word64 (length limb_widths)).
-Definition wire_digitsW := Eval cbv (*-[word64]*) in (tuple word64 8).
+Definition fe25519W := Eval cbv -[word64] in (tuple word64 (length limb_widths)).
+Definition wire_digitsW := Eval cbv -[word64] in (tuple word64 8).
 Definition fe25519WToZ (x : fe25519W) : Specific.GF25519.fe25519
   := let '(x0, x1, x2, x3, x4, x5, x6, x7, x8, x9) := x in
      (x0 : Z, x1 : Z, x2 : Z, x3 : Z, x4 : Z, x5 : Z, x6 : Z, x7 : Z, x8 : Z, x9 : Z).
@@ -203,7 +199,7 @@ Proof.
       unfold_is_bounded_in H;
       destruct_head and;
       Z.ltb_to_lt;
-      rewrite ?ZToWord64ToZ by (simpl; omega);
+      rewrite !ZToWord64ToZ by (simpl; omega);
       assumption
     ).
 Defined.
@@ -245,7 +241,7 @@ Proof.
   unfold_is_bounded_in pf.
   destruct_head and.
   Z.ltb_to_lt.
-  rewrite ?ZToWord64ToZ by (rewrite unfold_Pow2_64; cbv [Pow2_64]; omega).
+  rewrite !ZToWord64ToZ by (rewrite unfold_Pow2_64; cbv [Pow2_64]; omega).
   reflexivity.
 Qed.
 
@@ -274,7 +270,7 @@ Proof.
       unfold_is_bounded_in H;
       destruct_head and;
       Z.ltb_to_lt;
-      rewrite ?ZToWord64ToZ by (simpl; omega);
+      rewrite !ZToWord64ToZ by (simpl; omega);
       assumption
     ).
 Defined.
@@ -316,7 +312,7 @@ Proof.
   unfold_is_bounded_in pf.
   destruct_head and.
   Z.ltb_to_lt.
-  rewrite ?ZToWord64ToZ by (rewrite unfold_Pow2_64; cbv [Pow2_64]; omega).
+  rewrite !ZToWord64ToZ by (rewrite unfold_Pow2_64; cbv [Pow2_64]; omega).
   reflexivity.
 Qed.
 
