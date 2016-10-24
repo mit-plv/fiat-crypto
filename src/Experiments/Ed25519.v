@@ -106,7 +106,7 @@ Let WordNZ {sz} (w : Word.word sz) := BinInt.Z.of_N (Word.wordToN w).
  *)
 Definition feEnc (x : GF25519.fe25519) : Word.word 255 :=
   let '(x7, x6, x5, x4, x3, x2, x1, x0) :=
-      (GF25519.pack x) in
+      (GF25519.pack (GF25519.freeze x)) in
   Word.combine (ZNWord 32 x0)
     (Word.combine (ZNWord 32 x1)
       (Word.combine (ZNWord 32 x2)
@@ -114,7 +114,7 @@ Definition feEnc (x : GF25519.fe25519) : Word.word 255 :=
           (Word.combine (ZNWord 32 x4)
             (Word.combine (ZNWord 32 x5)
               (Word.combine (ZNWord 32 x6) (ZNWord 31 x7))))))).
-Check GF25519.ge_modulus.
+
 Definition feDec (w : Word.word 255) : option GF25519.fe25519 :=
   let w0 := Word.split1 32 _ w in
   let a0 := Word.split2 32 _ w in
