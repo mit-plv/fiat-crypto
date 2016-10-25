@@ -679,7 +679,7 @@ Section RangeWithValue.
     match x with
     | rwv l v h =>
       match (Nge_dec h v, Nge_dec v l, Nge_dec (N.pred (Npow2 n)) h) with
-      | (left p0, left p1, left p2) => true
+      | (left _, left _, left _) => true
       | _ => false
       end
     end.

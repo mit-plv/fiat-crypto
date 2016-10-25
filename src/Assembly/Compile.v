@@ -15,7 +15,7 @@ Module CompileHL.
   Section Compilation.
     Context {T: Type}.
 
-    Fixpoint compile {V t} (e:@HL.expr T (@LL.arg T V) t) : @LL.expr T V t :=
+    Fixpoint compile {t} (e:@HL.expr T (@LL.arg T T) t) : @LL.expr T T t :=
         match e with
         | HL.Const n => LL.Return (LL.Const n)
 
@@ -41,11 +41,6 @@ Module CompileHL.
               let (a1, a2) := LL.match_arg_Prod arg in
               compile (eC a1 a2))
         end.
-
-    Definition Expr' t : Type := forall var, @HL.expr T (@LL.arg T var) t.
-
-    Definition Compile {t} (e:@Expr' t) : @LL.Expr T t :=
-        fun var => compile (e var).
   End Compilation.
 
   Section Correctness.
@@ -86,8 +81,8 @@ Module CompileLL.
   Section Compile.
     Context {n: nat} {w: Width n}.
 
-    Definition WArg t': Type := @LL.arg (word n) Z t'.
-    Definition WExpr t': Type := @LL.expr (word n) Z t'.
+    Definition WArg t': Type := @LL.arg (word n) (word n) t'.
+    Definition WExpr t': Type := @LL.expr (word n) (word n) t'.
 
     Section Mappings.
       Definition indexize (x: nat) : Index n.
@@ -102,7 +97,7 @@ Module CompileLL.
       Definition getMapping (x: WArg TT) :=
         match x with
         | Const v => constM n (@constant n w v)
-        | Var v => regM n (@reg n w (Z.to_nat v))
+        | Var v => regM n (@reg n w (wordToNat v))
         end.
 
       Definition getReg (x: Mapping n): option (Reg n) :=
@@ -205,7 +200,7 @@ Module CompileLL.
       match t as t' return WArg t' -> list nat with
       | TT => fun a' =>
         match a' with
-        | Var v' => [Z.to_nat v']
+        | Var v' => [wordToNat v']
         | _ => @nil nat
         end
       | Prod t0 t1 => fun a' =>
@@ -256,7 +251,7 @@ Module CompileLL.
                 omap (getOutputSlot nextRegName op' x' y') (fun r =>
                   let var :=
                     match t3 as t3' return WArg t3' with
-                    | TT => Var (Z.of_nat r)
+                    | TT => Var (natToWord _ r)
                     | _ => zeros _
                     end in
 

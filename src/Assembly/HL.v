@@ -3,6 +3,13 @@ Require Import Coq.setoid_ring.InitialRing.
 Require Import Crypto.Util.LetIn.
 
 Module HL.
+  Definition typeMap {A B t} (f: A -> B) (x: @interp_type A t): @interp_type B t.
+  Proof.
+    induction t; [refine (f x)|].
+    destruct x as [x1 x2].
+    refine (IHt1 x1, IHt2 x2).
+  Defined.
+
   Section Language.
     Context {T: Type}.
     Context {E: Evaluable T}.
@@ -21,8 +28,6 @@ Module HL.
 
     Local Notation ZConst z := (@Const Z ZEvaluable _ z%Z).
 
-    Definition Expr t : Type := forall var, @expr var t.
-
     Fixpoint interp {t} (e: @expr interp_type t) : interp_type t :=
         match e in @expr _ t return interp_type t with
         | Const n => n
@@ -33,15 +38,15 @@ Module HL.
         | MatchPair _ _ ep _ eC => let (v1, v2) := interp ep in interp (eC v1 v2)
         end.
 
-    Definition Interp {t} (E:Expr t) : interp_type t := interp (E interp_type).
-  End Language.
+    Definition Expr t : Type := forall var, @expr var t.
 
-  Definition typeMap {A B t} (f: A -> B) (x: @interp_type A t): @interp_type B t.
-  Proof.
-    induction t; [refine (f x)|].
-    destruct x as [x1 x2].
-    refine (IHt1 x1, IHt2 x2).
-  Defined.
+    Definition Interp {t} (E: Expr t) : interp_type t := interp (E interp_type).
+
+    Definition Expr' t : Type := forall var, (forall t', @interp_type Z t' -> var t') -> @expr var t.
+
+    Definition Interp' {t} (f: Z -> T) (E: Expr' t) : interp_type t :=
+      interp (E (@interp_type T) (fun t' x => typeMap (t := t') f x)).
+  End Language.
 
   Definition zinterp {n t} E := @interp Z (@ZEvaluable n) t E.
 

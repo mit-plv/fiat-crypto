@@ -21,7 +21,7 @@ Module Type Expression.
   Parameter width: Width bits.
   Parameter inputs: nat.
   Parameter ResultType: type.
-  Parameter hlProg: NAry inputs Z (@HL.expr Z (@interp_type Z) ResultType).
+  Parameter hlProg: NAry inputs Z (@HL.Expr' Z ResultType).
   Parameter inputBounds: list Z.
 End Expression.
 
@@ -57,52 +57,47 @@ Module Pipeline (Input: Expression).
   End Util.
 
   Module HL.
-    Definition progZ: NAry inputs Z (@HL.expr Z (@LL.arg Z Z) ResultType) :=
-      liftN (HLConversions.mapVar
-               (fun t => @LL.uninterp_arg_as_var _ _ t)
-               (fun t => @LL.interp_arg _ t))
-          Input.hlProg.
+    Transparent HL.Expr'.
 
-    Definition progR: NAry inputs Z (@HL.expr R (@LL.arg R Z) ResultType) :=
-      liftN (@HLConversions.convertExpr Z R _ _ ResultType _) (
-        liftN (HLConversions.mapVar
-          (fun t => @LL.uninterp_arg_as_var R Z t)
-          (fun t => fun x => typeMap (fun x =>
-              Z.of_N (orElse 0%N (option_map rwv_value x))) (
-            @LL.interp_arg' _ _ t LLConversions.rangeOf x))) (
+    Definition progZ: NAry inputs Z (@HL.expr Z (@LL.arg Z Z) ResultType).
+      refine (liftN _ Input.hlProg); intro X; apply X.
+      refine (fun t x => @LL.uninterp_arg Z Z t x).
+    Defined.
 
-        Input.hlProg)).
+    Definition progR: NAry inputs Z (@HL.expr R (@LL.arg R R) ResultType).
+      refine (liftN _ _); [eapply (@HLConversions.convertExpr Z R _ _)|].
+      refine (liftN _ Input.hlProg); intro X; apply X.
+      refine (fun t x => @LL.uninterp_arg R R t (typeMap LLConversions.rangeOf x)).
+    Defined.
 
-    Definition progW: NAry inputs Z (@HL.expr W (@LL.arg W Z) ResultType) :=
-      liftN (@HLConversions.convertExpr Z W _ _ ResultType _) (
-        liftN (HLConversions.mapVar
-            (fun t => @LL.uninterp_arg_as_var W Z t)
-            (fun t => fun x => typeMap (fun x => Z.of_N (wordToN x)) (
-          @LL.interp_arg' _ _ t (fun x => NToWord bits (Z.to_N x)) x))) (
-
-        Input.hlProg)).
+    Definition progW: NAry inputs Z (@HL.expr W (@LL.arg W W) ResultType).
+      refine (liftN _ _); [eapply (@HLConversions.convertExpr Z W _ _)|].
+      refine (liftN _ Input.hlProg); intro X; apply X.
+      refine (fun t x => @LL.uninterp_arg W W t (typeMap (fun v =>
+        NToWord bits (Z.to_N v)) x)).
+    Defined.
   End HL.
 
   Module LL.
     Definition progZ: NAry inputs Z (@LL.expr Z Z ResultType) :=
       liftN CompileHL.compile HL.progZ.
 
-    Definition progR: NAry inputs Z (@LL.expr R Z ResultType) :=
+    Definition progR: NAry inputs Z (@LL.expr R R ResultType) :=
       liftN CompileHL.compile HL.progR.
 
-    Definition progW: NAry inputs Z (@LL.expr W Z ResultType) :=
+    Definition progW: NAry inputs Z (@LL.expr W W ResultType) :=
       liftN CompileHL.compile HL.progW.
   End LL.
 
   Module AST.
     Definition progZ: NAry inputs Z (@interp_type Z ResultType) :=
-      liftN (LL.interp' (fun x => x)) LL.progZ.
+      liftN LL.interp LL.progZ.
 
     Definition progR: NAry inputs Z (@interp_type R ResultType) :=
-      liftN (LL.interp' (fun x => Some (rwv 0%N (Z.to_N x) (Z.to_N x)))) LL.progR.
+      liftN LL.interp LL.progR.
 
     Definition progW: NAry inputs Z (@interp_type W ResultType) :=
-      liftN (LL.interp' (fun x => NToWord bits (Z.to_N x))) LL.progW.
+      liftN LL.interp LL.progW.
   End AST.
 
   Module Qhasm.
@@ -120,10 +115,9 @@ Module Pipeline (Input: Expression).
 
     Definition prog := Util.applyProgOn (2 ^ (Z.of_nat bits) - 1)%Z input LL.progR.
 
-    Definition valid := LLConversions.check (n := bits) prog.
+    Definition valid := LLConversions.check (n := bits) (f := id) prog.
 
-    Definition output :=
-      LL.interp' (fun x => Some (rwv 0%N (Z.to_N x) (Z.to_N x))) prog.
+    Definition output := LL.interp prog.
   End Bounds.
 End Pipeline.
 
@@ -136,8 +130,13 @@ Module SimpleExample.
     Definition inputs: nat := 1.
     Definition ResultType := TT.
 
-    Definition hlProg: NAry 1 Z (@HL.expr Z (@interp_type Z) TT) :=
-      Eval vm_compute in (fun x => HL.Binop OPadd (HL.Var x) (HL.Const 5%Z)).
+    Definition hlProg': NAry 1 Z (@HL.Expr' Z TT).
+      intros x t f.
+      refine (HL.Binop OPadd (HL.Var (f TT x)) (HL.Const 5%Z)).
+    Defined.
+
+    Definition hlProg: NAry 1 Z (@HL.Expr' Z TT) :=
+      Eval vm_compute in hlProg'.
 
     Definition inputBounds: list Z := [ (2^30)%Z ].
   End SimpleExpression.

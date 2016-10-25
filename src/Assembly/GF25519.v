@@ -205,6 +205,11 @@ Module GF25519.
   Module Opp := Pipeline OppExpr.
 End GF25519.
 
+Set Printing All.
+Opaque eadd esub emul eshiftr eand toT fromT.
+Eval cbv iota beta delta in GF25519.Add.HL.progZ.
+Eval cbv iota beta delta in GF25519.Add.AST.progZ.
+
 Extraction "GF25519Add" GF25519.Add.
 Extraction "GF25519Sub" GF25519.Sub.
 Extraction "GF25519Mul" GF25519.Mul.

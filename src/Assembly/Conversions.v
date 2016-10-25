@@ -17,6 +17,7 @@ Require Import Coq.ZArith.Znat.
 Require Import Coq.NArith.Nnat Coq.NArith.Ndigits.
 
 Require Import Coq.Bool.Sumbool.
+Require Import Coq.Program.Basics.
 
 Local Arguments LetIn.Let_In _ _ _ _ / .
 
@@ -182,6 +183,7 @@ Module LLConversions.
                  (x: @interp_type Bounded tx) (y: @interp_type Bounded ty): @interp_type Bounded tz :=
         @interp_binop Bounded _ _ _ _ op x y.
 
+
       Definition opWord (op: binop tx ty tz)
                  (x: @interp_type Word tx) (y: @interp_type Word ty): @interp_type Word tz :=
         @interp_binop Word _ _ _ _ op x y.
@@ -190,6 +192,11 @@ Module LLConversions.
                  (x: @interp_type RWV tx) (y: @interp_type RWV ty): @interp_type RWV tz :=
         @interp_binop RWV _ _ _ _ op x y.
     End Operations.
+
+    Definition rangeOf := fun x =>
+      Some (rwv 0%N (Z.to_N x) (Z.to_N x)).
+
+    Definition ZtoB := fun x => omap (rangeOf x) (bwFromRWV (n := n)).
   End Defaults.
 
   Section Correctness.
@@ -218,12 +225,10 @@ Module LLConversions.
       end.
 
     Section BoundsChecking.
-      Context {T: Type} {E: Evaluable T}.
+      Context {T: Type} {E: Evaluable T} {f : T -> B}.
 
-      Definition boundVarInterp := fun x => bwFromRWV (n := n) (rwv 0%N (Z.to_N x) (Z.to_N x)).
-
-      Definition getBounds {t} (e : @expr T Z t): @interp_type B t :=
-        interp' boundVarInterp (@convertExpr T B _ _ t _ e).
+      Definition getBounds {t} (e : @expr T T t): @interp_type B t :=
+        interp' f (@convertExpr T B _ _ t _ e).
 
       Fixpoint bcheck' {t} (x: @interp_type B t) :=
         match t as t' return (interp_type t') -> bool with
@@ -265,17 +270,17 @@ Module LLConversions.
             reflexivity.
       Qed.
 
-      Lemma ZToBounded_binop_correct : forall {tx ty tz} (op: binop tx ty tz) (x: @arg Z Z tx) (y: @arg Z Z ty) e,
-          bcheck (t := tz) (LetBinop op x y e) = true
+      Lemma ZToBounded_binop_correct : forall {tx ty tz} (op: binop tx ty tz) (x: @arg Z Z tx) (y: @arg Z Z ty) e f,
+          bcheck (t := tz) (f := f) (LetBinop op x y e) = true
         -> opZ (n := n) op (interp_arg x) (interp_arg y) =
           varBoundedToZ (n := n) (opBounded op
-             (interp_arg' boundVarInterp (convertArg _ x))
-             (interp_arg' boundVarInterp (convertArg _ y))).
+             (interp_arg' f (convertArg _ x))
+             (interp_arg' f (convertArg _ y))).
       Proof.
       Admitted.
 
-      Lemma ZToWord_binop_correct : forall {tx ty tz} (op: binop tx ty tz) (x: arg tx) (y: arg ty) e,
-          bcheck (t := tz) (LetBinop op x y e) = true
+      Lemma ZToWord_binop_correct : forall {tx ty tz} (op: binop tx ty tz) (x: arg tx) (y: arg ty) e f,
+          bcheck (t := tz) (f := f) (LetBinop op x y e) = true
         -> opZ (n := n) op (interp_arg x) (interp_arg y) =
             varWordToZ (opWord (n := n) op (varZToWord (interp_arg x)) (varZToWord (interp_arg y))).
       Proof.
@@ -330,8 +335,8 @@ Module LLConversions.
             clear Hlow Hhigh Hvalue Hnone
         end.
 
-      Lemma RangeInterp_bounded_spec: forall {t} (E: expr t),
-          bcheck (@convertExpr Z R _ _ _ _ E) = true
+      Lemma RangeInterp_bounded_spec: forall {t} (E: @expr Z Z t),
+          bcheck (f := ZtoB) E = true
         -> typeMap (fun x => NToWord n (Z.to_N x)) (zinterp (n := n) E) = wordInterp (ZToWord _ E).
       Proof.
         intros t E S.
@@ -365,31 +370,29 @@ Module LLConversions.
           + unfold bcheck, getBounds in *.
             replace (interp_binop op (interp_arg x) (interp_arg y))
                 with (varBoundedToZ (n := n) (opBounded op
-                        (interp_arg' boundVarInterp (convertArg _ x))
-                        (interp_arg' boundVarInterp (convertArg _ y)))).
+                        (interp_arg' ZtoB (convertArg _ x))
+                        (interp_arg' ZtoB (convertArg _ y)))).
 
             * rewrite <- S; f_equal; clear S.
               simpl; repeat f_equal.
               unfold varBoundedToZ, opBounded.
               repeat rewrite convertArg_var.
               Arguments convertArg _ _ _ _ _ _ _ : clear implicits.
-              rewrite double_conv_var.
-              repeat rewrite double_conv_arg.
-              reflexivity.
+              admit.
 
             * pose proof (ZToBounded_binop_correct op x y) as C;
                 unfold opZ, opWord, varZToBounded,
                     varBoundedToZ in *;
                 simpl in C.
 
-              Local Opaque boundVarInterp toT fromT.
+              Local Opaque toT fromT.
 
-              induction op; rewrite (C (fun _ => Return (Const 0%Z))); clear C; try reflexivity;
+              induction op; erewrite (C (fun _ => Return (Const 0%Z))); clear C; try reflexivity;
                 unfold bcheck, getBounds; simpl;
                 pose proof roundTrip_0 as H;
                 induction (toT (fromT _)); first [reflexivity|contradict H; reflexivity].
 
-              Local Transparent boundVarInterp toT fromT.
+              Local Transparent toT fromT.
 
         - simpl in S.
           induction a as [| |t0 t1 a0 IHa0 a1 IHa1]; simpl in *; try reflexivity.
@@ -415,25 +418,23 @@ Module LLConversions.
     End Spec.
 
     Section RWVSpec.
-      Definition rangeOf := fun x =>
-        Some (rwv 0%N (Z.to_N x) (Z.to_N x)).
+      Section Defs.
+        Context {V} {f : V -> R}.
 
-      Definition getRWV {t} (e : @expr R Z t): @interp_type R t :=
-        interp' rangeOf e.
+        Definition getRanges {t} (e : @expr R V t): @interp_type (option (Range N)) t :=
+            typeMap (option_map rwvToRange) (interp' f e).
 
-      Definition getRanges {t} (e : @expr R Z t): @interp_type (option (Range N)) t :=
-        typeMap (option_map rwvToRange) (getRWV e).
+        Fixpoint check' {t} (x: @interp_type (option RangeWithValue) t) :=
+            match t as t' return (interp_type t') -> bool with
+            | TT => fun x' => orElse false (option_map (checkRWV (n := n)) x')
+            | Prod t0 t1 => fun x' =>
+                match x' with
+                | (x0, x1) => andb (check' x0) (check' x1)
+                end
+            end x.
 
-      Fixpoint check' {t} (x: @interp_type (option RangeWithValue) t) :=
-        match t as t' return (interp_type t') -> bool with
-        | TT => fun x' => orElse false (option_map (checkRWV (n := n)) x')
-        | Prod t0 t1 => fun x' =>
-            match x' with
-            | (x0, x1) => andb (check' x0) (check' x1)
-            end
-        end x.
-
-      Definition check {t} (e : @expr R Z t): bool := check' (getRWV e).
+        Definition check {t} (e : @expr R V t): bool := check' (interp' f e).
+      End Defs.
 
       Ltac kill_dec :=
         repeat match goal with
@@ -443,8 +444,8 @@ Module LLConversions.
 
       Lemma check_spec' : forall {rangeF wordF} (op: @validBinaryWordOp n rangeF wordF) x y,
         @convertVar B R _ _ TT (
-          omap (interp_arg' boundVarInterp (convertArg TT x)) (fun X =>
-            omap (interp_arg' boundVarInterp (convertArg TT y)) (fun Y =>
+          omap (interp_arg' ZtoB (convertArg TT x)) (fun X =>
+            omap (interp_arg' ZtoB (convertArg TT y)) (fun Y =>
               bapp op X Y))) =
           omap (interp_arg' rangeOf x) (fun X =>
             omap (interp_arg' rangeOf y) (fun Y =>
@@ -452,12 +453,14 @@ Module LLConversions.
       Proof.
       Admitted.
 
-      Lemma check_spec: forall {t} (E: @expr R Z t), check E = true -> bcheck E = true.
+      Lemma check_spec: forall {t} (E: @expr Z Z t),
+          check (f := rangeOf) (@convertExpr Z R _ _ _ _ E) = true
+        -> bcheck (f := ZtoB) E = true.
       Proof.
         intros t E H.
         induction E as [tx ty tz op x y z eC IH| t a].
 
-        - unfold bcheck, getBounds, check, getRWV in *.
+        - unfold bcheck, getBounds, check in *.
 
           simpl; apply IH; clear IH; rewrite <- H; clear H.
           simpl; rewrite convertArg_var; repeat f_equal.
@@ -466,34 +469,28 @@ Module LLConversions.
               BoundedEvaluable, RWVEvaluable, ZEvaluable,
               eadd, emul, esub, eshiftr, eand.
 
-          induction op; rewrite check_spec'; reflexivity.
+          admit.
 
-        - unfold bcheck, getBounds, check, getRWV in *.
+          (*induction op; rewrite check_spec'; reflexivity. *)
+
+        - unfold bcheck, getBounds, check in *.
 
           induction a as [a|a|t0 t1 a0 IHa0 a1 IHa1].
 
-          + induction a as [a|]; [| inversion H]; simpl in *.
+          + admit.
 
-            assert (Z : (exists a', bwFromRWV (n := n) a = Some a')
-                  \/ bwFromRWV (n := n) a = None) by (
-              destruct (bwFromRWV a);
-              [left; eexists; reflexivity | right; reflexivity]).
 
-            destruct Z as [aSome|aNone]; [destruct aSome as [a' aSome] |].
-
-            admit.
-            admit.
-
-          + unfold boundVarInterp, rangeOf in *.
+          + unfold rangeOf in *.
             simpl in *; kill_dec; try reflexivity; try inversion H.
+            admit.
 
           + simpl in *; rewrite IHa0, IHa1; simpl; [reflexivity | | ];
               apply andb_true_iff in H; destruct H as [H1 H2];
               assumption.
       Admitted.
 
-      Lemma RangeInterp_spec: forall {t} (E: expr t),
-          check (convertExpr E) = true
+      Lemma RangeInterp_spec: forall {t} (E: @expr Z Z t),
+          check (f := rangeOf) (@convertExpr Z R _ _ _ _ E) = true
         -> typeMap (fun x => NToWord n (Z.to_N x)) (zinterp (n := n) E)
             = wordInterp (ZToWord _ E).
       Proof.
