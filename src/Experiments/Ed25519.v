@@ -434,7 +434,37 @@ Let ERepDec :=
               (prm := twedprm_ERep)
            )
          feDec GF25519.sqrt
-       ).
+    ).
+
+Lemma Ahomom :
+      @Algebra.Monoid.is_homomorphism E
+           CompleteEdwardsCurveTheorems.E.eq
+           CompleteEdwardsCurve.E.add Erep
+           (ExtendedCoordinates.Extended.eq
+              (field := GF25519.field25519)) ErepAdd EToRep.
+Proof.
+  eapply (Algebra.Group.is_homomorphism_compose
+           (Hphi := CompleteEdwardsCurveTheorems.E.lift_homomorphism
+                (field := PrimeFieldTheorems.F.field_modulo GF25519.modulus)
+                (Ha := phi_a) (Hd := phi_d)
+                (Kprm := twedprm_ERep)
+                (point_phi := CompleteEdwardsCurveTheorems.E.ref_phi
+                                (Ha := phi_a) (Hd := phi_d)
+                                (fieldK := GF25519.field25519))
+                (fieldK := GF25519.field25519))
+           (Hphi' :=  ExtendedCoordinates.Extended.homomorphism_from_twisted)).
+  cbv [EToRep PointEncoding.point_phi].
+  reflexivity.
+  Grab Existential Variables.
+  cbv [CompleteEdwardsCurveTheorems.E.eq].
+  intros.
+  match goal with |- @Tuple.fieldwise _ _ ?n ?R _ _ =>
+                  let A := fresh "H" in
+                  assert (Equivalence R) as A by (exact _);
+                    pose proof (@Tuple.Equivalence_fieldwise _ R A n)
+  end.
+  reflexivity.
+Qed.
 
 Check verify_correct.
 Check @verify_correct
@@ -465,7 +495,7 @@ Check @verify_correct
       (* ErepOpp := *) ExtendedCoordinates.Extended.opp
       (* Agroup := *) ExtendedCoordinates.Extended.extended_group
       (* EToRep := *) EToRep
-      (* Ahomom := *) _
+      (* Ahomom := *) Ahomom
       (* ERepEnc := *) ERepEnc
       (* ERepEnc_correct := *) ERepEnc_correct
       (* Proper_ERepEnc := *) (PointEncoding.Proper_Kencode_point (Kpoint_eq_correct := ext_eq_correct) (Proper_Kenc := Proper_feEnc))
