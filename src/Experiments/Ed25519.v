@@ -52,7 +52,6 @@ Let Erep := (@ExtendedCoordinates.Extended.point
          d
       ).
 
-(* TODO : prove -- use Ed25519.curve25519_params_ok *)
 Local Existing Instance GF25519.homomorphism_F25519_encode.
 Local Existing Instance GF25519.homomorphism_F25519_decode.
 Lemma twedprm_ERep :
