@@ -286,61 +286,16 @@ forall (n : nat) (P : E),
 
 Axiom Proper_SRepERepMul : Proper (SC25519.SRepEq ==> ExtendedCoordinates.Extended.eq (field:=GF25519.field25519) ==> ExtendedCoordinates.Extended.eq (field:=GF25519.field25519)) SRepERepMul.
 
-Axiom SRepEnc_correct : forall x : ModularArithmetic.F.F l, Senc x = SRepEnc (S2Rep x).
-
-Lemma onCurve_ERepB :
-  @Pre.onCurve GF25519.fe25519 (@ModularBaseSystem.eq GF25519.modulus GF25519.params25519) GF25519.one_
-    GF25519.add GF25519.mul a d
-    (@ModularBaseSystem.div GF25519.modulus GF25519.params25519
-       (8758491%Z, 20764389%Z, 8378388%Z, 40966398%Z, 30858332%Z, 27570973%Z, 17082669%Z, 16144682%Z,
-       25909283%Z, 52811034%Z) (0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 1%Z),
-    @ModularBaseSystem.div GF25519.modulus GF25519.params25519
-      (26843545%Z, 40265318%Z, 13421772%Z, 53687091%Z, 6710886%Z, 26843545%Z, 20132659%Z, 13421772%Z,
-      26843545%Z, 40265304%Z) (0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 1%Z)) /\
-  ~
-  @ModularBaseSystem.eq GF25519.modulus GF25519.params25519 (0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 1%Z)
-    GF25519.zero_ /\
-  @ModularBaseSystem.eq GF25519.modulus GF25519.params25519
-    (GF25519.mul (0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 0%Z, 1%Z)
-       (27139452%Z, 16611511%Z, 13413597%Z, 19351346%Z, 11264893%Z, 8635006%Z, 244362%Z, 39759291%Z,
-       27438313%Z, 28827043%Z))
-    (GF25519.mul
-       (8758491%Z, 20764389%Z, 8378388%Z, 40966398%Z, 30858332%Z, 27570973%Z, 17082669%Z, 16144682%Z,
-       25909283%Z, 52811034%Z)
-       (26843545%Z, 40265318%Z, 13421772%Z, 53687091%Z, 6710886%Z, 26843545%Z, 20132659%Z, 13421772%Z,
-        26843545%Z, 40265304%Z)).
-Proof.
-  cbv [ModularBaseSystem.eq Pre.onCurve].
-  vm_decide.
+Lemma SRepEnc_correct : forall x : ModularArithmetic.F.F l, Senc x = SRepEnc (S2Rep x).
+  unfold SRepEnc, Senc, Fencode; intros; f_equal.
 Qed.
 
 Let ERepB : Erep.
   let rB := (eval vm_compute in (proj1_sig (EToRep B))) in
-  exists rB. exact onCurve_ERepB.
+  exists rB. cbv [ModularBaseSystem.eq Pre.onCurve]. vm_decide_no_check.
 Defined.
 
 Let ERepB_correct : ExtendedCoordinates.Extended.eq (field:=GF25519.field25519) ERepB (EToRep B). vm_decide_no_check. Qed.
-
-Axiom ERepGroup :
-  @Algebra.group Erep
-        (@ExtendedCoordinates.Extended.eq GF25519.fe25519
-           (@ModularBaseSystem.eq GF25519.modulus GF25519.params25519) GF25519.zero_ GF25519.one_ GF25519.opp
-           GF25519.add GF25519.sub GF25519.mul GF25519.inv
-           (@ModularBaseSystem.div GF25519.modulus GF25519.params25519) a d GF25519.field25519
-           (fun x y : GF25519.fe25519 =>
-            @ModularArithmeticTheorems.F.eq_dec GF25519.modulus
-              (@ModularBaseSystem.decode GF25519.modulus GF25519.params25519 x)
-              (@ModularBaseSystem.decode GF25519.modulus GF25519.params25519 y))) ErepAdd
-        (@ExtendedCoordinates.Extended.zero GF25519.fe25519
-           (@ModularBaseSystem.eq GF25519.modulus GF25519.params25519) GF25519.zero_ GF25519.one_
-           _ GF25519.add _ GF25519.mul _
-           (@ModularBaseSystem.div GF25519.modulus GF25519.params25519) a d GF25519.field25519
-           twedprm_ERep _)
-        (@ExtendedCoordinates.Extended.opp GF25519.fe25519
-           (@ModularBaseSystem.eq GF25519.modulus GF25519.params25519) GF25519.zero_ GF25519.one_
-           _ GF25519.add _ GF25519.mul _
-           (@ModularBaseSystem.div GF25519.modulus GF25519.params25519) a d GF25519.field25519
-          twedprm_ERep _).
 
 Let sign := @EdDSARepChange.sign E
          (@CompleteEdwardsCurveTheorems.E.eq Fq (@eq Fq) (@ModularArithmetic.F.one q)
@@ -389,7 +344,7 @@ Let sign_correct : forall pk sk {mlen} (msg:Word.word mlen), sign pk sk _ msg = 
       (* ErepAdd := *) ErepAdd
       (* ErepId := *) ExtendedCoordinates.Extended.zero
       (* ErepOpp := *) ExtendedCoordinates.Extended.opp
-      (* Agroup := *) ERepGroup
+      (* Agroup := *) ExtendedCoordinates.Extended.extended_group
       (* EToRep := *) EToRep
       (* ERepEnc := *) ERepEnc
       (* ERepEnc_correct := *) ERepEnc_correct
@@ -418,7 +373,6 @@ Let sign_correct : forall pk sk {mlen} (msg:Word.word mlen), sign pk sk _ msg = 
       (* SRepDecModLShort_correct := *) SC25519.SRepDecModLShort_Correct
 .
 Print Assumptions sign_correct.
-Locate B_order_l.
 Definition Fsqrt_minus1 := Eval vm_compute in ModularBaseSystem.decode (GF25519.sqrt_m1).
 Definition Fsqrt := PrimeFieldTheorems.F.sqrt_5mod8 Fsqrt_minus1.
 Lemma bound_check_255_helper x y : (0 <= x)%Z -> (BinInt.Z.to_nat x < 2^y <-> (x < 2^(Z.of_nat y))%Z).
