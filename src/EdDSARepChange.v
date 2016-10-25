@@ -11,6 +11,11 @@ Import NPeano.
 
 Import Notations.
 
+Module F.
+  Lemma to_nat_mod {m} (x:F m) : F.to_nat x mod (Z.to_nat m) = F.to_nat x.
+  Admitted.
+End F.
+
 Section EdDSA.
   Context `{prm:EdDSA}.
   Local Infix "==" := Eeq. Local Infix "+" := Eadd. Local Infix "*" := EscalarMult.
@@ -113,12 +118,12 @@ Section EdDSA.
     Context {SRepDecModL} {SRepDecModL_correct: forall (w:word (b+b)), SRepEq (S2Rep (F.of_nat _ (wordToNat w))) (SRepDecModL w)}.
 
     Context {SRepERepMul:SRep->Erep->Erep}
-            {SRepERepMul_correct:forall n P, ErepEq (EToRep (n*P)) (SRepERepMul (S2Rep (F.of_nat _ n)) (EToRep P))}
+            {SRepERepMul_correct:forall n P, ErepEq (EToRep ((n mod Z.to_nat l)*P)) (SRepERepMul (S2Rep (F.of_nat _ n)) (EToRep P))}
             {Proper_SRepERepMul: Proper (SRepEq==>ErepEq==>ErepEq) SRepERepMul}.
 
     Context {SRepDec: word b -> option SRep}
             {SRepDec_correct : forall w, option_eq SRepEq (option_map S2Rep (Sdec w)) (SRepDec w)}.
-
+    
     Definition verify_using_representation
                {mlen} (message:word mlen) (pk:word b) (sig:word (b+b))
                : { answer | answer = verify' message pk sig }.
@@ -131,6 +136,7 @@ Section EdDSA.
       etransitivity. Focus 2. {
         eapply Proper_option_rect_nd_changebody; [intro|reflexivity].
         eapply Proper_option_rect_nd_changebody; [intro|reflexivity].
+        rewrite <-F.to_nat_mod.
         repeat (
             rewrite ERepEnc_correct
             || rewrite homomorphism
@@ -250,6 +256,11 @@ Section EdDSA.
       dlet S := SRepAdd r (SRepMul (SRepDecModL (H _ (ERepEnc R ++ pk ++ msg))) s) in
       ERepEnc R ++ SRepEnc S.
 
+    Lemma to_nat_l_nonzero : Z.to_nat l <> 0.
+      intro Hx; change 0 with (Z.to_nat 0) in Hx.
+      destruct prm; rewrite Z2Nat.inj_iff in Hx; omega.
+    Qed.
+
     Lemma sign_correct (pk sk : word b) {mlen} (msg:word mlen)
                : sign pk sk msg = EdDSA.sign pk sk msg.
     Proof.
@@ -275,6 +286,7 @@ Section EdDSA.
           || rewrite <-curveKey_correct
           || eapply (f_equal2 (fun a b => a ++ b))
           || f_equiv
+          || rewrite <-(@scalarmult_mod_order _ _ _ _ _ _ _ _ B to_nat_l_nonzero EdDSA_l_order_B)
         ).
     Qed.
   End ChangeRep.
