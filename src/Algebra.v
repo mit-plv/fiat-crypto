@@ -326,6 +326,26 @@ Module Group.
       - rewrite Hix, left_identity; reflexivity.
     Qed.
 
+    Lemma move_leftL x y : inv y * x = id -> x = y.
+    Proof.
+      intro; rewrite <- (inv_inv y), (inv_unique x (inv y)), inv_inv by assumption; reflexivity.
+    Qed.
+
+    Lemma move_leftR x y : x * inv y = id -> x = y.
+    Proof.
+      intro; rewrite (inv_unique (inv y) x), inv_inv by assumption; reflexivity.
+    Qed.
+
+    Lemma move_rightR x y : id = y * inv x -> x = y.
+    Proof.
+      intro; rewrite <- (inv_inv x), (inv_unique (inv x) y), inv_inv by (symmetry; assumption); reflexivity.
+    Qed.
+
+    Lemma move_rightL x y : id = inv x * y -> x = y.
+    Proof.
+      intro; rewrite <- (inv_inv x), (inv_unique y (inv x)), inv_inv by (symmetry; assumption); reflexivity.
+    Qed.
+
     Lemma inv_op x y : inv (x*y) = inv y*inv x.
     Proof.
       symmetry. etransitivity.
@@ -612,6 +632,14 @@ Module Ring.
       split; eauto using zero_product_zero_factor; [].
       intros [Hz|Hz]; rewrite Hz; eauto using mul_0_l, mul_0_r.
     Qed.
+
+    Lemma nonzero_product_iff_nonzero_factor {Hzpzf:@is_zero_product_zero_factor T eq zero mul} :
+      forall x y : T, not (eq (mul x y) zero) <-> (not (eq x zero) /\ not (eq y zero)).
+    Proof. intros; rewrite zero_product_iff_zero_factor; tauto. Qed.
+
+    Lemma nonzero_hypothesis_to_goal {Hzpzf:@is_zero_product_zero_factor T eq zero mul} :
+      forall x y : T, (not (eq x zero) -> eq y zero) <-> (eq (mul x y) zero).
+    Proof. intros; rewrite zero_product_iff_zero_factor; tauto. Qed.
 
     Global Instance Ncring_Ring_ops : @Ncring.Ring_ops T zero one add mul sub opp eq.
     Global Instance Ncring_Ring : @Ncring.Ring T zero one add mul sub opp eq Ncring_Ring_ops.
