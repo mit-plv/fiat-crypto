@@ -1264,14 +1264,14 @@ Ltac nsatz_strip_fractions_on inv :=
 Ltac nsatz_strip_fractions :=
   match goal with
   | [ |- ?eq ?x ?y ]
-    => let F := constr:(_ : Algebra.field (eq:=eq)) in
+    => let F := constr:(_ : field (eq:=eq)) in
        lazymatch type of F with
-       | Algebra.field (inv:=?inv) => nsatz_strip_fractions_on inv
+       | field (inv:=?inv) => nsatz_strip_fractions_on inv
        end
   | [ H : ?eq ?x ?y |- False ]
-    => let F := constr:(_ : Algebra.field (eq:=eq)) in
+    => let F := constr:(_ : field (eq:=eq)) in
        lazymatch type of F with
-       | Algebra.field (inv:=?inv) => nsatz_strip_fractions_on inv
+       | field (inv:=?inv) => nsatz_strip_fractions_on inv
        end
   end.
 
@@ -1281,13 +1281,13 @@ Ltac nsatz_aggregate_inequalities :=
          | [ H : ((?R ?x ?zero) -> False)%type |- False ] => apply H; clear H
          | [ |- ((?R ?x ?zero) -> False)%type ] => intro
          | [ H : (?eq ?x ?zero -> False)%type |- ?eq ?y ?zero ]
-           => revert H; apply (proj2 (nonzero_hypothesis_to_goal x y))
+           => revert H; apply (proj2 (Ring.nonzero_hypothesis_to_goal x y))
          end.
 
 Ltac nsatz_goal_to_canonical :=
   try match goal with
       | [ |- ?eq ?x ?y ]
-        => apply (move_leftR (eq:=eq)); rewrite <- ring_sub_definition;
+        => apply (Group.move_leftR (eq:=eq)); rewrite <- ring_sub_definition;
            lazymatch goal with
            | [ |- eq _ y ] => fail 0 "should not subtract 0"
            | _ => idtac
