@@ -1244,6 +1244,71 @@ Ltac field_simplify_eq_hyps :=
 
 Ltac field_simplify_eq_all := field_simplify_eq_hyps; try field_simplify_eq.
 
+(** *** Tactics that remove division by rewriting *)
+Ltac rewrite_field_div_definition inv :=
+  let lem := constr:(field_div_definition (inv:=inv)) in
+  let div := lazymatch lem with field_div_definition (div:=?div) => div end in
+  repeat match goal with
+         | [ |- context[div _ _] ] => rewrite !lem
+         | [ H : context[div _ _] |- _ ] => rewrite !lem in H
+         end.
+Ltac generalize_inv inv :=
+  let lem := constr:(left_multiplicative_inverse (inv:=inv)) in
+  repeat match goal with
+         | [ |- context[inv ?x] ]
+           => pose proof (lem x); generalize dependent (inv x); intros
+         end.
+Ltac nsatz_strip_fractions_on inv :=
+  rewrite_field_div_definition inv; generalize_inv inv; specialize_by_assumption.
+
+Ltac nsatz_strip_fractions :=
+  match goal with
+  | [ |- ?eq ?x ?y ]
+    => let F := constr:(_ : Algebra.field (eq:=eq)) in
+       lazymatch type of F with
+       | Algebra.field (inv:=?inv) => nsatz_strip_fractions_on inv
+       end
+  | [ H : ?eq ?x ?y |- False ]
+    => let F := constr:(_ : Algebra.field (eq:=eq)) in
+       lazymatch type of F with
+       | Algebra.field (inv:=?inv) => nsatz_strip_fractions_on inv
+       end
+  end.
+
+Ltac nsatz_aggregate_inequalities :=
+  repeat match goal with
+         | _ => progress unfold not in *
+         | [ H : ((?R ?x ?zero) -> False)%type |- False ] => apply H; clear H
+         | [ |- ((?R ?x ?zero) -> False)%type ] => intro
+         | [ H : (?eq ?x ?zero -> False)%type |- ?eq ?y ?zero ]
+           => revert H; apply (proj2 (nonzero_hypothesis_to_goal x y))
+         end.
+
+Ltac nsatz_goal_to_canonical :=
+  try match goal with
+      | [ |- ?eq ?x ?y ]
+        => apply (move_leftR (eq:=eq)); rewrite <- ring_sub_definition;
+           lazymatch goal with
+           | [ |- eq _ y ] => fail 0 "should not subtract 0"
+           | _ => idtac
+           end
+      end.
+
+Ltac nsatz_specialize_by_cut :=
+  match goal with
+  | [ H : ((?eq ?x ?zero -> False) -> ?eq _ _)%type |- ?eq _ ?zero ]
+    => cut (not (eq x zero));
+       [ unfold not; intro; specialize_by_assumption; nsatz_specialize_by_cut
+       | clear H ]
+  | _ => idtac
+  end.
+
+Ltac nsatz_strip_fractions_and_aggregate_inequalities :=
+  nsatz_strip_fractions;
+  nsatz_goal_to_canonical;
+  nsatz_specialize_by_cut;
+  [ nsatz_aggregate_inequalities | .. ].
+
 (** Clear duplicate hypotheses, and hypotheses of the form [R x x] for a reflexive relation [R], and similarly for symmetric relations *)
 Ltac clear_algebraic_duplicates_step R :=
   match goal with

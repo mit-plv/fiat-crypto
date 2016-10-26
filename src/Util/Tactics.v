@@ -263,7 +263,7 @@ Ltac specialize_by' tac :=
   match goal with
   | [ H : ?A -> ?B |- _ ] =>
     match type of A with
-      Prop => 
+      Prop =>
       let H' := fresh in
       assert (H' : A) by tac;
       transparent_specialize_one H H';
@@ -278,6 +278,12 @@ Ltac specialize_by tac := repeat specialize_by' tac.
     https://coq.inria.fr/bugs/show_bug.cgi?id=4966) We fix this design
     flaw. *)
 Tactic Notation "specialize_by" tactic3(tac) := specialize_by tac.
+
+(** A marginally faster version of [specialize_by assumption] *)
+Ltac specialize_by_assumption :=
+  repeat match goal with
+         | [ H : ?T, H' : (?T -> ?U)%type |- _ ] => specialize (H' H)
+         end.
 
 (** If [tac_in H] operates in [H] and leaves side-conditions before
     the original goal, then
