@@ -1282,9 +1282,15 @@ Ltac nsatz_aggregate_inequalities :=
          | _ => progress unfold not in *
          | [ H : ((?R ?x ?zero) -> False)%type |- False ] => apply H; clear H
          | [ |- ((?R ?x ?zero) -> False)%type ] => intro
-         | [ H : (?eq ?x ?zero -> False)%type |- ?eq ?y ?zero ]
-           => revert H; apply (proj2 (Ring.nonzero_hypothesis_to_goal x y))
+         | [ H : (?eq ?x ?zero -> False)%type, H' : (?eq ?y ?zero -> False)%type |- _ ]
+           => pose proof (proj2 (Ring.nonzero_product_iff_nonzero_factor x y) (conj H H'));
+              clear H H'
          end.
+Ltac nsatz_final_inequality_to_goal :=
+  try match goal with
+      | [ H : (?eq ?x ?zero -> False)%type |- ?eq ?y ?zero ]
+        => generalize H; apply (proj2 (Ring.nonzero_hypothesis_to_goal x y))
+      end.
 
 Ltac nsatz_goal_to_canonical :=
   try match goal with
@@ -1297,6 +1303,7 @@ Ltac nsatz_goal_to_canonical :=
       end.
 
 Ltac nsatz_specialize_by_cut :=
+  try unfold not in *;
   match goal with
   | [ H : ((?eq ?x ?zero -> False) -> ?eq _ _)%type |- ?eq _ ?zero ]
     => cut (not (eq x zero));
@@ -1309,7 +1316,7 @@ Ltac nsatz_strip_fractions_and_aggregate_inequalities :=
   nsatz_strip_fractions;
   nsatz_goal_to_canonical;
   nsatz_specialize_by_cut;
-  [ nsatz_aggregate_inequalities | .. ].
+  [ nsatz_aggregate_inequalities; nsatz_final_inequality_to_goal | .. ].
 
 (** Clear duplicate hypotheses, and hypotheses of the form [R x x] for a reflexive relation [R], and similarly for symmetric relations *)
 Ltac clear_algebraic_duplicates_step R :=
