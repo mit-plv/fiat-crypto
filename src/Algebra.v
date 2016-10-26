@@ -1263,18 +1263,19 @@ Ltac generalize_inv inv :=
 Ltac nsatz_strip_fractions_on inv :=
   rewrite_field_div_definition inv; generalize_inv inv; specialize_by_assumption.
 
+Ltac nsatz_strip_fractions_with_eq eq :=
+  let F := constr:(_ : field (eq:=eq)) in
+  lazymatch type of F with
+  | field (inv:=?inv) => nsatz_strip_fractions_on inv
+  end.
 Ltac nsatz_strip_fractions :=
   match goal with
-  | [ |- ?eq ?x ?y ]
-    => let F := constr:(_ : field (eq:=eq)) in
-       lazymatch type of F with
-       | field (inv:=?inv) => nsatz_strip_fractions_on inv
-       end
-  | [ H : ?eq ?x ?y |- False ]
-    => let F := constr:(_ : field (eq:=eq)) in
-       lazymatch type of F with
-       | field (inv:=?inv) => nsatz_strip_fractions_on inv
-       end
+  | [ |- ?eq ?x ?y ] => nsatz_strip_fractions_with_eq eq
+  | [ |- not (?eq ?x ?y) ] => nsatz_strip_fractions_with_eq eq
+  | [ |- (?eq ?x ?y -> False)%type ] => nsatz_strip_fractions_with_eq eq
+  | [ H : ?eq ?x ?y |- _ ] => nsatz_strip_fractions_with_eq eq
+  | [ H : not (?eq ?x ?y) |- _ ] => nsatz_strip_fractions_with_eq eq
+  | [ H : (?eq ?x ?y -> False)%type |- _ ] => nsatz_strip_fractions_with_eq eq
   end.
 
 Ltac nsatz_final_inequality_to_goal :=
