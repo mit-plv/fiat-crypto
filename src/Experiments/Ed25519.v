@@ -241,7 +241,7 @@ Section SRepERepMul.
     { etransitivity.
       apply (@Group.homomorphism_scalarmult _ _ _ _ _ _ _ _ _ _ _ _ EToRep Ahomom ScalarMult.scalarmult_ref _ ScalarMult.scalarmult_ref _ _ _).
       unfold S2Rep, SC25519.S2Rep, ModularArithmetic.F.of_nat.
-      f_equiv.
+      apply (_ : Proper (_ ==> _ ==> _) ScalarMult.scalarmult_ref); [ | reflexivity ].
       rewrite ModularArithmeticTheorems.F.to_Z_of_Z.
       apply Nat2Z.inj_iff.
       rewrite N_nat_Z, Z2N.id by (refine (proj1 (Zdiv.Z_mod_lt _ _ _)); vm_decide).
