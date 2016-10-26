@@ -138,4 +138,3 @@ Module SimpleExample.
 
   Module SimplePipeline := Pipeline SimpleExpression.
 End SimpleExample.
-
