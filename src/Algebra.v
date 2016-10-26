@@ -1257,6 +1257,8 @@ Ltac generalize_inv inv :=
   repeat match goal with
          | [ |- context[inv ?x] ]
            => pose proof (lem x); generalize dependent (inv x); intros
+         | [ H : context[inv ?x] |- _ ]
+           => pose proof (lem x); generalize dependent (inv x); intros
          end.
 Ltac nsatz_strip_fractions_on inv :=
   rewrite_field_div_definition inv; generalize_inv inv; specialize_by_assumption.
