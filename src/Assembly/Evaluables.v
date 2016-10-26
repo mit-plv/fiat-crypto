@@ -50,7 +50,27 @@ End Evaluability.
 
 Section Z.
   Context {n: nat}.
+
   Instance ZEvaluable : Evaluable Z := {
+    ezero := 0%Z;
+
+    (* Conversions *)
+    toT     := fun x => Z.of_N (orElse 0%N (option_map rwv_value x));
+    fromT   := fun x => Some (rwv (Z.to_N x) (Z.to_N x) (Z.to_N x));
+
+    (* Operations *)
+    eadd    := Z.add;
+    esub    := Z.sub;
+    emul    := Z.mul;
+    eshiftr := Z.shiftr;
+    eand    := Z.land;
+
+    (* Comparisons *)
+    eltb    := Z.ltb;
+    eeqb    := Z.eqb
+  }.
+
+  Instance ConstEvaluable : Evaluable Z := {
     ezero := 0%Z;
 
     (* Conversions *)
@@ -59,6 +79,25 @@ Section Z.
       if (Nge_dec (N.pred (Npow2 n)) (Z.to_N x))
       then Some (rwv (Z.to_N x) (Z.to_N x) (Z.to_N x))
       else None;
+
+    (* Operations *)
+    eadd    := Z.add;
+    esub    := Z.sub;
+    emul    := Z.mul;
+    eshiftr := Z.shiftr;
+    eand    := Z.land;
+
+    (* Comparisons *)
+    eltb    := Z.ltb;
+    eeqb    := Z.eqb
+  }.
+
+  Instance InputEvaluable : Evaluable Z := {
+    ezero := 0%Z;
+
+    (* Conversions *)
+    toT     := fun x => Z.of_N (orElse 0%N (option_map rwv_value x));
+    fromT   := fun x => Some (rwv 0%N (Z.to_N x) (Z.to_N x));
 
     (* Operations *)
     eadd    := Z.add;

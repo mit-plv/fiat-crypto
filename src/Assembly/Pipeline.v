@@ -20,9 +20,10 @@ Module Type Expression.
   Parameter bits: nat.
   Parameter width: Width bits.
   Parameter inputs: nat.
-  Parameter ResultType: type.
-  Parameter hlProg: NAry inputs Z (@HL.Expr' Z ResultType).
   Parameter inputBounds: list Z.
+  Parameter ResultType: type.
+
+  Parameter prog: NAry inputs Z (@HL.Expr Z ResultType).
 End Expression.
 
 Module Pipeline (Input: Expression).
@@ -37,7 +38,7 @@ Module Pipeline (Input: Expression).
   Definition R: Type := option RangeWithValue.
   Definition B: Type := option (@BoundedWord bits).
 
-  Instance ZEvaluable : Evaluable Z := @ZEvaluable bits.
+  Instance ZEvaluable : Evaluable Z := ZEvaluable.
   Instance WEvaluable : Evaluable W := @WordEvaluable bits.
   Instance REvaluable : Evaluable R := @RWVEvaluable bits.
   Instance BEvaluable : Evaluable B := @BoundedEvaluable bits.
@@ -57,36 +58,25 @@ Module Pipeline (Input: Expression).
   End Util.
 
   Module HL.
-    Transparent HL.Expr'.
+    Definition progZ: NAry inputs Z (@HL.Expr Z ResultType) :=
+      Input.prog.
 
-    Definition progZ: NAry inputs Z (@HL.expr Z (@LL.arg Z Z) ResultType).
-      refine (liftN _ Input.hlProg); intro X; apply X.
-      refine (fun t x => @LL.uninterp_arg Z Z t x).
-    Defined.
+    Definition progR: NAry inputs Z (@HL.Expr R ResultType) :=
+      liftN (fun x v => @HLConversions.convertExpr Z R _ _ _ (x v)) Input.prog.
 
-    Definition progR: NAry inputs Z (@HL.expr R (@LL.arg R R) ResultType).
-      refine (liftN _ _); [eapply (@HLConversions.convertExpr Z R _ _)|].
-      refine (liftN _ Input.hlProg); intro X; apply X.
-      refine (fun t x => @LL.uninterp_arg R R t (typeMap LLConversions.rangeOf x)).
-    Defined.
-
-    Definition progW: NAry inputs Z (@HL.expr W (@LL.arg W W) ResultType).
-      refine (liftN _ _); [eapply (@HLConversions.convertExpr Z W _ _)|].
-      refine (liftN _ Input.hlProg); intro X; apply X.
-      refine (fun t x => @LL.uninterp_arg W W t (typeMap (fun v =>
-        NToWord bits (Z.to_N v)) x)).
-    Defined.
+    Definition progW: NAry inputs Z (@HL.Expr W ResultType) :=
+      liftN (fun x v => @HLConversions.convertExpr Z W _ _ _ (x v)) Input.prog.
   End HL.
 
   Module LL.
     Definition progZ: NAry inputs Z (@LL.expr Z Z ResultType) :=
-      liftN CompileHL.compile HL.progZ.
+      liftN CompileHL.Compile HL.progZ.
 
     Definition progR: NAry inputs Z (@LL.expr R R ResultType) :=
-      liftN CompileHL.compile HL.progR.
+      liftN CompileHL.Compile HL.progR.
 
     Definition progW: NAry inputs Z (@LL.expr W W ResultType) :=
-      liftN CompileHL.compile HL.progW.
+      liftN CompileHL.Compile HL.progW.
   End LL.
 
   Module AST.
@@ -101,7 +91,8 @@ Module Pipeline (Input: Expression).
   End AST.
 
   Module Qhasm.
-    Definition pair := @CompileLL.compile bits width ResultType _ LL.progW.
+    Definition pair :=
+      @CompileLL.compile bits width ResultType _ LL.progW.
 
     Definition prog := option_map fst pair.
 
@@ -111,13 +102,18 @@ Module Pipeline (Input: Expression).
   End Qhasm.
 
   Module Bounds.
-    Definition input := Input.inputBounds.
+    Definition input := map (fun x => range N 0%N (Z.to_N x)) Input.inputBounds.
 
-    Definition prog := Util.applyProgOn (2 ^ (Z.of_nat bits) - 1)%Z input LL.progR.
+    Definition upper := Z.of_N (wordToN (wones bits)).
+
+    Definition prog :=
+      Util.applyProgOn upper Input.inputBounds LL.progR.
 
     Definition valid := LLConversions.check (n := bits) (f := id) prog.
 
-    Definition output := LL.interp prog.
+    Definition output :=
+      typeMap (option_map (fun x => range N (rwv_low x) (rwv_high x)))
+              (LL.interp prog).
   End Bounds.
 End Pipeline.
 
@@ -130,19 +126,16 @@ Module SimpleExample.
     Definition inputs: nat := 1.
     Definition ResultType := TT.
 
-    Definition hlProg': NAry 1 Z (@HL.Expr' Z TT).
-      intros x t f.
-      refine (HL.Binop OPadd (HL.Var (f TT x)) (HL.Const 5%Z)).
-    Defined.
-
-    Definition hlProg: NAry 1 Z (@HL.Expr' Z TT) :=
-      Eval vm_compute in hlProg'.
-
     Definition inputBounds: list Z := [ (2^30)%Z ].
+
+    Existing Instance ZEvaluable.
+
+    Definition prog: NAry 1 Z (@HL.Expr Z TT).
+      intros x var.
+      refine (HL.Binop OPadd (HL.Const x) (HL.Const 5%Z)).
+    Defined.
   End SimpleExpression.
 
   Module SimplePipeline := Pipeline SimpleExpression.
-
-  Export SimplePipeline.
 End SimpleExample.
 

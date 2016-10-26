@@ -92,7 +92,7 @@ Module LL.
   Transparent interp interp_arg.
 
   Example example_expr :
-    (@interp Z (ZEvaluable (n := 32)) _
+    (@interp Z (ZEvaluable) _
       (LetBinop OPadd (Const 7%Z) (Const 8%Z) (fun v => Return v)) = 15)%Z.
   Proof. reflexivity. Qed.
 

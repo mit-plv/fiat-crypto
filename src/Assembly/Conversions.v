@@ -31,29 +31,9 @@ Defined.
 Module HLConversions.
   Import HL.
 
-  Fixpoint mapVar {A: Type} {t V0 V1} (f: forall t, V0 t -> V1 t) (g: forall t, V1 t -> V0 t) (a: expr (T := A) (var := V0) t): expr (T := A) (var := V1) t :=
+  Fixpoint convertExpr {A B: Type} {EB: Evaluable B} {t v} (a: expr (T := A) (var := v) t): expr (T := B) (var := v) t :=
     match a with
-    | Const x => Const x
-    | Var t x => Var (f _ x)
-    | Binop t1 t2 t3 o e1 e2 => Binop o (mapVar f g e1) (mapVar f g e2)
-    | Let tx e tC h => Let (mapVar f g e) (fun x => mapVar f g (h (g _ x)))
-    | Pair t1 e1 t2 e2 => Pair (mapVar f g e1) (mapVar f g e2)
-    | MatchPair t1 t2 e tC h => MatchPair (mapVar f g e) (fun x y => mapVar f g (h (g _ x) (g _ y)))
-    end.
-
-  Definition convertVar {A B: Type} {EA: Evaluable A} {EB: Evaluable B} {t} (a: interp_type (T := A) t): interp_type (T := B) t.
-  Proof.
-    induction t as [| t3 IHt1 t4 IHt2].
-
-    - refine (@toT B EB (@fromT A EA _)); assumption.
-
-    - destruct a as [a1 a2]; constructor;
-        [exact (IHt1 a1) | exact (IHt2 a2)].
-  Defined.
-
-  Fixpoint convertExpr {A B: Type} {EA: Evaluable A} {EB: Evaluable B} {t v} (a: expr (T := A) (var := v) t): expr (T := B) (var := v) t :=
-    match a with
-    | Const x => Const (@toT B EB (@fromT A EA x))
+    | Const E x => Const (@toT B EB (@fromT A E x))
     | Var t x => @Var B _ t x
     | Binop t1 t2 t3 o e1 e2 =>
       @Binop B _ t1 t2 t3 o (convertExpr e1) (convertExpr e2)
@@ -63,32 +43,6 @@ Module HLConversions.
     | MatchPair t1 t2 e tC f => MatchPair (convertExpr e) (fun x y =>
         convertExpr (f x y))
     end.
-
-  Definition convertZToWord {t} n v a :=
-    @convertExpr Z (word n) (@ZEvaluable n) (@WordEvaluable n) t v a.
-
-  Definition convertZToBounded {t} n v a :=
-    @convertExpr Z (option (@BoundedWord n))
-                 (@ZEvaluable n) (@BoundedEvaluable n) t v a.
-
-  Definition ZToWord {t} n (a: @Expr Z t): @Expr (word n) t :=
-    fun v => convertZToWord n v (a v).
-
-  Definition ZToRange {t} n (a: @Expr Z t): @Expr (option (@BoundedWord n)) t :=
-    fun v => convertZToBounded n v (a v).
-
-  Definition BInterp {n t} E: @interp_type (option (@BoundedWord n)) t :=
-    @Interp (option (@BoundedWord n)) (@BoundedEvaluable n) t E.
-
-  Example example_Expr : Expr TT := fun var => (
-    Let (Const 7) (fun a =>
-      Let (Let (Binop OPadd (Var a) (Var a)) (fun b => Pair (Var b) (Var b))) (fun p =>
-        MatchPair (Var p) (fun x y =>
-          Binop OPadd (Var x) (Var y)))))%Z.
-
-  Example interp_example_range :
-    option_map bw_high (BInterp (ZToRange 32 example_Expr)) = Some 28%N.
-  Proof. cbv; reflexivity. Qed.
 End HLConversions.
 
 Module LLConversions.
@@ -148,7 +102,7 @@ Module LLConversions.
     Transparent Word Bounded RWV.
 
     Instance RWVEvaluable' : Evaluable RWV := @RWVEvaluable n.
-    Instance ZEvaluable' : Evaluable Z := @ZEvaluable n.
+    Instance ZEvaluable' : Evaluable Z := ZEvaluable.
 
     Existing Instance ZEvaluable'.
     Existing Instance WordEvaluable.
@@ -207,7 +161,7 @@ Module LLConversions.
     Definition R := (option RangeWithValue).
 
     Instance RE : Evaluable R := @RWVEvaluable n.
-    Instance ZE : Evaluable Z := @ZEvaluable n.
+    Instance ZE : Evaluable Z := ZEvaluable.
     Instance WE : Evaluable W := @WordEvaluable n.
     Instance BE : Evaluable B := @BoundedEvaluable n.
 
@@ -272,7 +226,7 @@ Module LLConversions.
 
       Lemma ZToBounded_binop_correct : forall {tx ty tz} (op: binop tx ty tz) (x: @arg Z Z tx) (y: @arg Z Z ty) e f,
           bcheck (t := tz) (f := f) (LetBinop op x y e) = true
-        -> opZ (n := n) op (interp_arg x) (interp_arg y) =
+        -> opZ op (interp_arg x) (interp_arg y) =
           varBoundedToZ (n := n) (opBounded op
              (interp_arg' f (convertArg _ x))
              (interp_arg' f (convertArg _ y))).
@@ -281,7 +235,7 @@ Module LLConversions.
 
       Lemma ZToWord_binop_correct : forall {tx ty tz} (op: binop tx ty tz) (x: arg tx) (y: arg ty) e f,
           bcheck (t := tz) (f := f) (LetBinop op x y e) = true
-        -> opZ (n := n) op (interp_arg x) (interp_arg y) =
+        -> opZ op (interp_arg x) (interp_arg y) =
             varWordToZ (opWord (n := n) op (varZToWord (interp_arg x)) (varZToWord (interp_arg y))).
       Proof.
       Admitted.
@@ -289,7 +243,7 @@ Module LLConversions.
       Lemma roundTrip_0 : @toT Correctness.B BE (@fromT Z ZE 0%Z) <> None.
       Proof.
         intros; unfold toT, fromT, BE, ZE, BoundedEvaluable, ZEvaluable, bwFromRWV;
-          break_match; simpl; try break_match; simpl; try abstract (intro Z; inversion Z);
+          simpl; try break_match; simpl; try abstract (intro Z; inversion Z);
           pose proof (Npow2_gt0 n); simpl in *; nomega.
       Qed.
 
@@ -337,7 +291,7 @@ Module LLConversions.
 
       Lemma RangeInterp_bounded_spec: forall {t} (E: @expr Z Z t),
           bcheck (f := ZtoB) E = true
-        -> typeMap (fun x => NToWord n (Z.to_N x)) (zinterp (n := n) E) = wordInterp (ZToWord _ E).
+        -> typeMap (fun x => NToWord n (Z.to_N x)) (zinterp E) = wordInterp (ZToWord _ E).
       Proof.
         intros t E S.
         unfold zinterp, ZToWord, wordInterp.
@@ -491,7 +445,7 @@ Module LLConversions.
 
       Lemma RangeInterp_spec: forall {t} (E: @expr Z Z t),
           check (f := rangeOf) (@convertExpr Z R _ _ _ _ E) = true
-        -> typeMap (fun x => NToWord n (Z.to_N x)) (zinterp (n := n) E)
+        -> typeMap (fun x => NToWord n (Z.to_N x)) (zinterp E)
             = wordInterp (ZToWord _ E).
       Proof.
         intros.
@@ -502,37 +456,3 @@ Module LLConversions.
     End RWVSpec.
   End Correctness.
 End LLConversions.
-
-Section ConversionTest.
-  Import HL HLConversions.
-
-  Fixpoint keepAddingOne {var} (x : @expr Z var TT) (n : nat) : @expr Z var TT :=
-    match n with
-    | O => x
-    | S n' => Let (Binop OPadd x (Const 1%Z)) (fun y => keepAddingOne (Var y) n')
-    end.
-
-  Definition KeepAddingOne (n : nat) : Expr (T := Z) TT :=
-    fun var => keepAddingOne (Const 1%Z) n.
-
-  Definition testCase := Eval vm_compute in KeepAddingOne 4000.
-
-  Eval vm_compute in (typeMap (option_map bwToRange) (BInterp (ZToRange 0 testCase))).
-  Eval vm_compute in (typeMap (option_map bwToRange) (BInterp (ZToRange 1 testCase))).
-  Eval vm_compute in (typeMap (option_map bwToRange) (BInterp (ZToRange 10 testCase))).
-  Eval vm_compute in (typeMap (option_map bwToRange) (BInterp (ZToRange 32 testCase))).
-  Eval vm_compute in (typeMap (option_map bwToRange) (BInterp (ZToRange 64 testCase))).
-  Eval vm_compute in (typeMap (option_map bwToRange) (BInterp (ZToRange 128 testCase))).
-
-  Definition nefarious : Expr (T := Z) TT :=
-    fun var => Let (Binop OPadd (Const 10%Z) (Const 20%Z))
-                   (fun y => Binop OPmul (Var y) (Const 0%Z)).
-
-  Eval vm_compute in (typeMap (option_map bwToRange) (BInterp (ZToRange 0 nefarious))).
-  Eval vm_compute in (typeMap (option_map bwToRange) (BInterp (ZToRange 1 nefarious))).
-  Eval vm_compute in (typeMap (option_map bwToRange) (BInterp (ZToRange 4 nefarious))).
-  Eval vm_compute in (typeMap (option_map bwToRange) (BInterp (ZToRange 5 nefarious))).
-  Eval vm_compute in (typeMap (option_map bwToRange) (BInterp (ZToRange 32 nefarious))).
-  Eval vm_compute in (typeMap (option_map bwToRange) (BInterp (ZToRange 64 nefarious))).
-  Eval vm_compute in (typeMap (option_map bwToRange) (BInterp (ZToRange 128 nefarious))).
-End ConversionTest.

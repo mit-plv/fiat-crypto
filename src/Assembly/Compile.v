@@ -15,9 +15,9 @@ Module CompileHL.
   Section Compilation.
     Context {T: Type}.
 
-    Fixpoint compile {t} (e:@HL.expr T (@LL.arg T T) t) : @LL.expr T T t :=
+    Fixpoint compile {T t} (e:@HL.expr T (@LL.arg T T) t) : @LL.expr T T t :=
         match e with
-        | HL.Const n => LL.Return (LL.Const n)
+        | HL.Const _ n => LL.Return (LL.Const n)
 
         | HL.Var _ arg => LL.Return arg
 
@@ -41,6 +41,9 @@ Module CompileHL.
               let (a1, a2) := LL.match_arg_Prod arg in
               compile (eC a1 a2))
         end.
+
+    Definition Compile {T t} (e:@HL.Expr T t) : @LL.expr T T t :=
+      compile (e (@LL.arg T T)).
   End Compilation.
 
   Section Correctness.
