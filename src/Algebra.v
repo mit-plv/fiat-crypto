@@ -1277,19 +1277,13 @@ Ltac nsatz_strip_fractions :=
        end
   end.
 
-Ltac nsatz_aggregate_inequalities :=
-  repeat match goal with
-         | _ => progress unfold not in *
-         | [ H : ((?R ?x ?zero) -> False)%type |- False ] => apply H; clear H
-         | [ |- ((?R ?x ?zero) -> False)%type ] => intro
-         | [ H : (?eq ?x ?zero -> False)%type, H' : (?eq ?y ?zero -> False)%type |- _ ]
-           => pose proof (proj2 (Ring.nonzero_product_iff_nonzero_factor x y) (conj H H'));
-              clear H H'
-         end.
 Ltac nsatz_final_inequality_to_goal :=
+  try unfold not in *;
   try match goal with
       | [ H : (?eq ?x ?zero -> False)%type |- ?eq ?y ?zero ]
         => generalize H; apply (proj2 (Ring.nonzero_hypothesis_to_goal x y))
+      | [ H : (?eq ?x ?zero -> False)%type |- False ]
+        => apply H
       end.
 
 Ltac nsatz_goal_to_canonical :=
@@ -1311,12 +1305,6 @@ Ltac nsatz_specialize_by_cut :=
        | clear H ]
   | _ => idtac
   end.
-
-Ltac nsatz_strip_fractions_and_aggregate_inequalities :=
-  nsatz_strip_fractions;
-  nsatz_goal_to_canonical;
-  nsatz_specialize_by_cut;
-  [ nsatz_aggregate_inequalities; nsatz_final_inequality_to_goal | .. ].
 
 (** Clear duplicate hypotheses, and hypotheses of the form [R x x] for a reflexive relation [R], and similarly for symmetric relations *)
 Ltac clear_algebraic_duplicates_step R :=
@@ -1439,6 +1427,12 @@ Ltac combine_field_inequalities :=
 Ltac solve_simple_field_inequalities :=
   repeat (apply conj || split_field_inequalities);
   try assumption.
+Ltac nsatz_strip_fractions_and_aggregate_inequalities :=
+  nsatz_strip_fractions;
+  nsatz_goal_to_canonical;
+  split_field_inequalities (* this will make solving side conditions easier *);
+  nsatz_specialize_by_cut;
+  [ combine_field_inequalities; nsatz_final_inequality_to_goal | .. ].
 Ltac prensatz_contradict :=
   solve_simple_field_inequalities;
   combine_field_inequalities.
