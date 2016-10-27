@@ -110,6 +110,7 @@ src/Reflection/Syntax.v
 src/Reflection/TestCase.v
 src/Reflection/WfProofs.v
 src/Reflection/WfReflective.v
+src/Reflection/WfReflectiveGen.v
 src/Reflection/WfRel.v
 src/Reflection/Named/Compile.v
 src/Reflection/Named/ContextOn.v
