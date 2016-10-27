@@ -7,13 +7,33 @@ Require Import ProofIrrelevance.
 
 Import ListNotations.
 
+Section BaseTypes.
+  Inductive Range T := | range: forall (low high: T), Range T.
+
+  Record RangeWithValue := rwv {
+    rwv_low: N;
+    rwv_value: N;
+    rwv_high: N
+  }.
+
+  Record BoundedWord {n} := bounded {
+    bw_low: N;
+    bw_value: word n;
+    bw_high: N;
+
+    ge_low: (bw_low <= wordToN bw_value)%N;
+    le_high: (wordToN bw_value <= bw_high)%N;
+    high_bound: (bw_high < Npow2 n)%N
+  }.
+End BaseTypes.
+
 Section Evaluability.
   Class Evaluable T := evaluator {
     ezero: T;
 
     (* Conversions *)
-    toT: Z -> T;
-    fromT: T -> Z;
+    toT: option RangeWithValue -> T;
+    fromT: T -> option RangeWithValue;
 
     (* Operations *)
     eadd: T -> T -> T;
@@ -29,12 +49,14 @@ Section Evaluability.
 End Evaluability.
 
 Section Z.
+  Context {n: nat}.
+
   Instance ZEvaluable : Evaluable Z := {
     ezero := 0%Z;
 
     (* Conversions *)
-    toT     := fun x => x;
-    fromT   := fun x => x;
+    toT     := fun x => Z.of_N (orElse 0%N (option_map rwv_value x));
+    fromT   := fun x => Some (rwv (Z.to_N x) (Z.to_N x) (Z.to_N x));
 
     (* Operations *)
     eadd    := Z.add;
@@ -48,6 +70,46 @@ Section Z.
     eeqb    := Z.eqb
   }.
 
+  Instance ConstEvaluable : Evaluable Z := {
+    ezero := 0%Z;
+
+    (* Conversions *)
+    toT     := fun x => Z.of_N (orElse 0%N (option_map rwv_value x));
+    fromT   := fun x =>
+      if (Nge_dec (N.pred (Npow2 n)) (Z.to_N x))
+      then Some (rwv (Z.to_N x) (Z.to_N x) (Z.to_N x))
+      else None;
+
+    (* Operations *)
+    eadd    := Z.add;
+    esub    := Z.sub;
+    emul    := Z.mul;
+    eshiftr := Z.shiftr;
+    eand    := Z.land;
+
+    (* Comparisons *)
+    eltb    := Z.ltb;
+    eeqb    := Z.eqb
+  }.
+
+  Instance InputEvaluable : Evaluable Z := {
+    ezero := 0%Z;
+
+    (* Conversions *)
+    toT     := fun x => Z.of_N (orElse 0%N (option_map rwv_value x));
+    fromT   := fun x => Some (rwv 0%N (Z.to_N x) (Z.to_N x));
+
+    (* Operations *)
+    eadd    := Z.add;
+    esub    := Z.sub;
+    emul    := Z.mul;
+    eshiftr := Z.shiftr;
+    eand    := Z.land;
+
+    (* Comparisons *)
+    eltb    := Z.ltb;
+    eeqb    := Z.eqb
+  }.
 End Z.
 
 Section Word.
@@ -57,8 +119,8 @@ Section Word.
     ezero := wzero n;
 
     (* Conversions *)
-    toT := fun x => @NToWord n (Z.to_N x);
-    fromT := fun x => Z.of_N (@wordToN n x);
+    toT := fun x => @NToWord n (orElse 0%N (option_map rwv_value x));
+    fromT := fun x => let v := @wordToN n x in (Some (rwv v v v));
 
     (* Operations *)
     eadd := @wplus n;
@@ -75,8 +137,6 @@ End Word.
 
 Section RangeUpdate.
   Context {n: nat}.
-
-  Inductive Range T := | range: forall (low high: T), Range T.
 
   Definition validBinaryWordOp
         (rangeF: Range N -> Range N -> option (Range N))
@@ -464,19 +524,12 @@ End RangeUpdate.
 Section BoundedWord.
   Context {n: nat}.
 
-  Record BoundedWord := bounded {
-    low: N;
-    value: word n;
-    high: N;
-
-    ge_low: (low <= wordToN value)%N;
-    le_high: (wordToN value <= high)%N;
-    high_bound: (high < Npow2 n)%N
-  }.
+  Definition BW := @BoundedWord n.
+  Transparent BW.
 
   Definition bapp {rangeF wordF}
       (op: @validBinaryWordOp n rangeF wordF)
-      (X Y: BoundedWord): option BoundedWord.
+      (X Y: BW): option BW.
 
     refine (
       let op' := op _ _ _ _ _ _
@@ -484,12 +537,12 @@ Section BoundedWord.
         (ge_low Y) (le_high Y) (high_bound Y) in
 
       let result := rangeF
-        (range N (low X) (high X))
-        (range N (low Y) (high Y)) in
+        (range N (bw_low X) (bw_high X))
+        (range N (bw_low Y) (bw_high Y)) in
 
       match result as r' return result = r' -> _ with
       | Some (range low high) => fun e =>
-        Some (bounded low (wordF (value X) (value Y)) high _ _ _)
+        Some (@bounded n low (wordF (bw_value X) (bw_value Y)) high _ _ _)
       | None => fun _ => None
       end eq_refl); abstract (
 
@@ -510,26 +563,42 @@ Section BoundedWord.
       (X Y: word n): option (word n) :=
     Some (wordF X Y).
 
-  Lemma bapp_value_spec: forall {T rangeF wordF}
-      (op: @validBinaryWordOp n rangeF wordF)
-      (b0 b1: BoundedWord) (f: word n -> T),
-    option_map (fun x => f (value x)) (bapp op b0 b1)
-  = option_map (fun x => f x) (
-      omap (rapp op (range N (low b0) (high b0))
-                    (range N (low b1) (high b1))) (fun _ =>
-        vapp op (value b0) (value b1))).
-  Proof.
-  Admitted.
+  Definition bwToRWV (w: BW): RangeWithValue :=
+    rwv (bw_low w) (wordToN (bw_value w)) (bw_high w).
 
-  Definition toRange (w: BoundedWord): Range N :=
-    range N (low w) (high w).
+  Definition bwFromRWV (r: RangeWithValue): option BW.
+    refine
+      match r with
+      | rwv l v h =>
+        match (Nge_dec h v, Nge_dec v l, Nge_dec (N.pred (Npow2 n)) h) with
+        | (left p0, left p1, left p2) => Some (@bounded n l (NToWord n l) h _ _ _)
+        | _ => None
+        end
+      end; try rewrite wordToN_NToWord;
 
-  Definition fromRange (r: Range N): option (BoundedWord).
+      assert (N.succ h <= Npow2 n)%N by abstract (
+        apply N.ge_le in p2;
+        rewrite <- (N.pred_succ h) in p2;
+        apply -> N.le_pred_le_succ in p2;
+        rewrite N.succ_pred in p2; [assumption |];
+        apply N.neq_0_lt_0;
+        apply Npow2_gt0);
+
+      try abstract (apply (N.lt_le_trans _ (N.succ h) _);
+        [nomega|assumption]);
+
+      [reflexivity| etransitivity; apply N.ge_le; eassumption].
+  Defined.
+
+  Definition bwToRange (w: BW): Range N :=
+    range N (bw_low w) (bw_high w).
+
+  Definition bwFromRange (r: Range N): option BW.
     refine
       match r with
       | range l h =>
         match (Nge_dec h l, Nge_dec (N.pred (Npow2 n)) h) with
-        | (left p0, left p1) => Some (bounded l (NToWord n l) h _ _ _)
+        | (left p0, left p1) => Some (@bounded n l (NToWord n l) h _ _ _)
         | _ => None
         end
       end; try rewrite wordToN_NToWord;
@@ -546,13 +615,12 @@ Section BoundedWord.
         [nomega|assumption]);
 
       [reflexivity|apply N.ge_le; assumption].
-
   Defined.
 
-  Definition just (x: N): option (BoundedWord).
+  Definition just (x: N): option BW.
     refine
       match Nge_dec (N.pred (Npow2 n)) x with
-      | left p => Some (bounded x (NToWord n x) x _ _ _)
+      | left p => Some (@bounded n x (NToWord n x) x _ _ _)
       | right _ => None
       end; try rewrite wordToN_NToWord; try reflexivity;
 
@@ -580,29 +648,29 @@ Section BoundedWord.
     apply N.le_ge; apply N.succ_le_mono; assumption.
   Qed.
 
-  Lemma just_value_spec: forall x b, just x = Some b -> value b = NToWord n x.
+  Lemma just_value_spec: forall x b, just x = Some b -> bw_value b = NToWord n x.
   Proof.
     intros x b H; destruct b; unfold just in *;
     destruct (Nge_dec (N.pred (Npow2 n)) x);
     simpl in *; inversion H; subst; reflexivity.
   Qed.
 
-  Lemma just_low_spec: forall x b, just x = Some b -> low b = x.
+  Lemma just_low_spec: forall x b, just x = Some b -> bw_low b = x.
   Proof.
     intros x b H; destruct b; unfold just in *;
     destruct (Nge_dec (N.pred (Npow2 n)) x);
     simpl in *; inversion H; subst; reflexivity.
   Qed.
 
-  Lemma just_high_spec: forall x b, just x = Some b -> high b = x.
+  Lemma just_high_spec: forall x b, just x = Some b -> bw_high b = x.
   Proof.
     intros x b H; destruct b; unfold just in *;
     destruct (Nge_dec (N.pred (Npow2 n)) x);
     simpl in *; inversion H; subst; reflexivity.
   Qed.
 
-  Definition any: BoundedWord.
-    refine (bounded 0%N (wzero n) (N.pred (Npow2 n)) _ _ _);
+  Definition any: BW.
+    refine (@bounded n 0%N (wzero n) (N.pred (Npow2 n)) _ _ _);
       try rewrite wordToN_zero;
       try reflexivity;
       try abstract (apply N.lt_le_pred; apply Npow2_gt0).
@@ -610,17 +678,11 @@ Section BoundedWord.
     apply N.lt_pred_l; apply N.neq_0_lt_0; apply Npow2_gt0.
   Defined.
 
-  Definition orElse {T} (d: T) (o: option T): T :=
-    match o with
-    | Some v => v
-    | None => d
-    end.
-
-  Instance BoundedEvaluable : Evaluable (option BoundedWord) := {
+  Instance BoundedEvaluable : Evaluable (option BW) := {
     ezero := Some any;
 
-    toT := fun x => just (Z.to_N x);
-    fromT := fun x => orElse 0%Z (option_map (fun x' => Z.of_N (wordToN (value x'))) x);
+    toT := fun x => omap x bwFromRWV;
+    fromT := option_map bwToRWV;
 
     eadd := fun x y => omap x (fun X => omap y (fun Y => bapp range_add_valid X Y));
     esub := fun x y => omap x (fun X => omap y (fun Y => bapp range_sub_valid X Y));
@@ -630,11 +692,91 @@ Section BoundedWord.
 
     eltb := fun x y =>
       orElse false (omap x (fun X => omap y (fun Y =>
-        Some (N.ltb (high X) (high Y)))));
+        Some (N.ltb (wordToN (bw_value X)) (wordToN (bw_value Y))))));
 
     eeqb := fun x y =>
       orElse false (omap x (fun X => omap y (fun Y =>
-        Some (andb (N.eqb (low X) (low Y)) (N.eqb (high X) (high Y))))))
+        Some (N.eqb (wordToN (bw_value X)) (wordToN (bw_value Y))))))
   }.
-
 End BoundedWord.
+
+Section RangeWithValue.
+  Context {n: nat}.
+
+  Definition rwv_app {rangeF wordF}
+    (op: @validBinaryWordOp n rangeF wordF)
+    (X Y: RangeWithValue): option (RangeWithValue) :=
+    omap (rangeF (range N (rwv_low X) (rwv_high X))
+                 (range N (rwv_low Y) (rwv_high Y))) (fun r' =>
+      match r' with
+      | range l h => Some (
+          rwv l (wordToN (wordF (NToWord n (rwv_value X))
+                                (NToWord n (rwv_value Y)))) h)
+      end).
+
+  Definition checkRWV (x: RangeWithValue): bool :=
+    match x with
+    | rwv l v h =>
+      match (Nge_dec h v, Nge_dec v l, Nge_dec (N.pred (Npow2 n)) h) with
+      | (left _, left _, left _) => true
+      | _ => false
+      end
+    end.
+
+  Lemma rwv_None_spec : forall {rangeF wordF}
+      (op: @validBinaryWordOp n rangeF wordF)
+      (X Y: RangeWithValue),
+    omap (rwv_app op X Y) (bwFromRWV (n := n)) <> None.
+  Proof.
+  Admitted.
+
+  Definition rwvToRange (x: RangeWithValue): Range N :=
+    range N (rwv_low x) (rwv_high x).
+
+  Definition rwvFromRange (x: Range N): RangeWithValue :=
+    match x with
+    | range l h => rwv l h h
+    end.
+
+  Lemma bwToFromRWV: forall x, option_map (@bwToRWV n) (omap x bwFromRWV) = x.
+  Proof.
+  Admitted.
+
+  Instance RWVEvaluable : Evaluable (option RangeWithValue) := {
+    ezero := None;
+
+    toT := fun x => x;
+    fromT := fun x => omap x (fun x' => if (checkRWV x') then x else None);
+
+    eadd := fun x y => omap x (fun X => omap y (fun Y =>
+      rwv_app range_add_valid X Y));
+
+    esub := fun x y => omap x (fun X => omap y (fun Y =>
+      rwv_app range_sub_valid X Y));
+
+    emul := fun x y => omap x (fun X => omap y (fun Y =>
+      rwv_app range_mul_valid X Y));
+
+    eshiftr := fun x y => omap x (fun X => omap y (fun Y =>
+      rwv_app range_shiftr_valid X Y));
+
+    eand := fun x y => omap x (fun X => omap y (fun Y =>
+      rwv_app range_and_valid X Y));
+
+    eltb := fun x y =>
+      match (x, y) with
+      | (Some (rwv xlow xv xhigh), Some (rwv ylow yv yhigh)) =>
+          N.ltb xv yv
+
+      | _ => false
+      end;
+
+    eeqb := fun x y =>
+      match (x, y) with
+      | (Some (rwv xlow xv xhigh), Some (rwv ylow yv yhigh)) =>
+          andb (andb (N.eqb xlow ylow) (N.eqb xhigh yhigh)) (N.eqb xv yv)
+
+      | _ => false
+      end
+  }.
+End RangeWithValue.

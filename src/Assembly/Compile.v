@@ -12,31 +12,44 @@ Require Import Crypto.Assembly.Qhasm.
 Local Arguments LetIn.Let_In _ _ _ _ / .
 
 Module CompileHL.
-  Context {ivar : type -> Type}.
-  Context {ovar : Type}.
+  Section Compilation.
+    Context {T: Type}.
 
-  Fixpoint compile {t} (e:@HL.expr Z (@LL.arg Z Z) t) : @LL.expr Z Z t :=
-    match e with
-    | HL.Const n => LL.Return (LL.Const n)
-    | HL.Var _ arg => LL.Return arg
-    | HL.Binop t1 t2 t3 op e1 e2 =>
-       LL.under_lets (@compile _ e1) (fun arg1 =>
-          LL.under_lets (@compile _ e2) (fun arg2 =>
-            LL.LetBinop op arg1 arg2 (fun v =>
-              LL.Return v)))
-    | HL.Let _ ex _ eC =>
-       LL.under_lets (@compile _ ex) (fun arg => @compile _ (eC arg))
-    | HL.Pair t1 e1 t2 e2 =>
-       LL.under_lets (@compile _ e1) (fun arg1 =>
-          LL.under_lets (@compile _ e2) (fun arg2 =>
-             LL.Return (LL.Pair arg1 arg2)))
-    | HL.MatchPair _ _ ep _ eC =>
-        LL.under_lets (@compile _ ep) (fun arg =>
-          let (a1, a2) := LL.match_arg_Prod arg in @compile _ (eC a1 a2))
-    end.
+    Fixpoint compile {T t} (e:@HL.expr T (@LL.arg T T) t) : @LL.expr T T t :=
+        match e with
+        | HL.Const _ n => LL.Return (LL.Const n)
+
+        | HL.Var _ arg => LL.Return arg
+
+        | HL.Binop t1 t2 t3 op e1 e2 =>
+          LL.under_lets (compile e1) (fun arg1 =>
+            LL.under_lets (compile e2) (fun arg2 =>
+              LL.LetBinop op arg1 arg2 (fun v =>
+                LL.Return v)))
+
+        | HL.Let _ ex _ eC =>
+          LL.under_lets (compile ex) (fun arg =>
+            compile (eC arg))
+
+        | HL.Pair t1 e1 t2 e2 =>
+          LL.under_lets (compile e1) (fun arg1 =>
+            LL.under_lets (compile e2) (fun arg2 =>
+              LL.Return (LL.Pair arg1 arg2)))
+
+        | HL.MatchPair _ _ ep _ eC =>
+            LL.under_lets (compile ep) (fun arg =>
+              let (a1, a2) := LL.match_arg_Prod arg in
+              compile (eC a1 a2))
+        end.
+
+    Definition Compile {T t} (e:@HL.Expr T t) : @LL.expr T T t :=
+      compile (e (@LL.arg T T)).
+  End Compilation.
 
   Section Correctness.
-    Lemma compile_correct {_: Evaluable Z} {t} e1 e2 G (wf:HL.wf G e1 e2) :
+    Context {T: Type}.
+
+    Lemma compile_correct {_: Evaluable T} {t} e1 e2 G (wf:HL.wf G e1 e2) :
       List.Forall (fun v => let 'existT _ (x, a) := v in LL.interp_arg a = x) G ->
         LL.interp (compile e2) = HL.interp e1 :> interp_type t.
     Proof.
@@ -196,7 +209,7 @@ Module CompileLL.
       | Prod t0 t1 => fun a' =>
         match a' with
         | Pair _ _ a0 a1 => (vars a0) ++ (vars a1)
-        | _ => I (* dummy value *)
+        | _ => I (* dummy *)
         end
       end a.
 
@@ -242,7 +255,7 @@ Module CompileLL.
                 omap (getOutputSlot nextRegName op' x' y') (fun r =>
                   let var :=
                     match t3 as t3' return WArg t3' with
-                    | TT => Var (natToWord n r)
+                    | TT => Var (natToWord _ r)
                     | _ => zeros _
                     end in
 
@@ -269,14 +282,14 @@ Module CompileLL.
         (fun rt var op x y out => Some out)
         (fun t' a => Some (vars a)).
 
-    Fixpoint fillInputs t inputs (prog: NAry inputs (WArg TT) (WExpr t)) {struct inputs}: WExpr t :=
-      match inputs as inputs' return NAry inputs' (WArg TT) (WExpr t) -> NAry O (WArg TT) (WExpr t) with
+    Fixpoint fillInputs t inputs (prog: NAry inputs Z (WExpr t)) {struct inputs}: WExpr t :=
+      match inputs as inputs' return NAry inputs' Z (WExpr t) -> NAry O Z (WExpr t) with
       | O => fun p => p
-      | S inputs'' => fun p => @fillInputs _ _ (p (Var (natToWord _ inputs)))
+      | S inputs'' => fun p => @fillInputs _ _ (p (Z.of_nat inputs))
       end prog.
     Global Arguments fillInputs {t inputs} _.
 
-    Definition compile {t inputs} (p: NAry inputs (WArg TT) (WExpr t)): option (Program * list nat) :=
+    Definition compile {t inputs} (p: NAry inputs Z (WExpr t)): option (Program * list nat) :=
       let p' := fillInputs p in
 
       omap (getOuts _ (S inputs) p') (fun outs =>

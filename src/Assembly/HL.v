@@ -1,7 +1,15 @@
 Require Import Crypto.Assembly.PhoasCommon.
+Require Import Coq.setoid_ring.InitialRing.
 Require Import Crypto.Util.LetIn.
 
 Module HL.
+  Definition typeMap {A B t} (f: A -> B) (x: @interp_type A t): @interp_type B t.
+  Proof.
+    induction t; [refine (f x)|].
+    destruct x as [x1 x2].
+    refine (IHt1 x1, IHt2 x2).
+  Defined.
+
   Section Language.
     Context {T: Type}.
     Context {E: Evaluable T}.
@@ -10,7 +18,7 @@ Module HL.
         Context {var : type -> Type}.
 
         Inductive expr : type -> Type :=
-          | Const : @interp_type T TT -> expr TT
+          | Const : forall {_ : Evaluable T}, @interp_type T TT -> expr TT
           | Var : forall {t}, var t -> expr t
           | Binop : forall {t1 t2 t3}, binop t1 t2 t3 -> expr t1 -> expr t2 -> expr t3
           | Let : forall {tx}, expr tx -> forall {tC}, (var tx -> expr tC) -> expr tC
@@ -18,13 +26,11 @@ Module HL.
           | MatchPair : forall {t1 t2}, expr (Prod t1 t2) -> forall {tC}, (var t1 -> var t2 -> expr tC) -> expr tC.
     End expr.
 
-    Local Notation ZConst z := (@Const Z ZEvaluable _ z%Z).
+    Local Notation ZConst z := (@Const Z ConstEvaluable _ z%Z).
 
-    Definition Expr t : Type := forall var, @expr var t.
-
-    Fixpoint interp {t} (e: @expr interp_type t) : interp_type t :=
+    Fixpoint interp {t} (e: @expr interp_type t) : @interp_type T t :=
         match e in @expr _ t return interp_type t with
-        | Const n => n
+        | Const _ x => x
         | Var _ n => n
         | Binop _ _ _ op e1 e2 => interp_binop op (interp e1) (interp e2)
         | Let _ ex _ eC => dlet x := interp ex in interp (eC x)
@@ -32,15 +38,10 @@ Module HL.
         | MatchPair _ _ ep _ eC => let (v1, v2) := interp ep in interp (eC v1 v2)
         end.
 
-    Definition Interp {t} (E:Expr t) : interp_type t := interp (E interp_type).
-  End Language.
+    Definition Expr t : Type := forall var, @expr var t.
 
-  Definition typeMap {A B t} (f: A -> B) (x: @interp_type A t): @interp_type B t.
-  Proof.
-    induction t; [refine (f x)|].
-    destruct x as [x1 x2].
-    refine (IHt1 x1, IHt2 x2).
-  Defined.
+    Definition Interp {t} (e: Expr t) : interp_type t := interp (e interp_type).
+  End Language.
 
   Definition zinterp {t} E := @interp Z ZEvaluable t E.
 
@@ -49,6 +50,8 @@ Module HL.
   Definition wordInterp {n t} E := @interp (word n) (@WordEvaluable n) t E.
 
   Definition WordInterp {n t} E := @Interp (word n) (@WordEvaluable n) t E.
+
+  Existing Instance ZEvaluable.
 
   Example example_Expr : Expr TT := fun var => (
     Let (Const 7) (fun a =>
@@ -79,80 +82,85 @@ Module HL.
     | Z.shiftr => constr:(OPshiftr)
     end.
 
-  Class reify {varT} (var:varT) {eT} (e:eT) {T:Type} := Build_reify : T.
+  Class reify (n: nat) {varT} (var:varT) {eT} (e:eT) {T:Type} := Build_reify : T.
   Definition reify_var_for_in_is {T} (x:T) (t:type) {eT} (e:eT) := False.
 
-  Ltac reify var e :=
+  Ltac reify n var e :=
     lazymatch e with
     | let x := ?ex in @?eC x =>
-      let ex := reify var ex in
-      let eC := reify var eC in
-      constr:(Let (T := Z) (var:=var) ex eC)
+      let ex := reify n var ex in
+      let eC := reify n var eC in
+      constr:(Let (T:=Z) (var:=var) ex eC)
     | match ?ep with (v1, v2) => @?eC v1 v2 end =>
-      let ep := reify var ep in
-      let eC := reify var eC in
-      constr:(MatchPair (T := Z) (var:=var) ep eC)
+      let ep := reify n var ep in
+      let eC := reify n var eC in
+      constr:(MatchPair (T:=Z) (var:=var) ep eC)
     | pair ?a ?b =>
-      let a := reify var a in
-      let b := reify var b in
-      constr:(Pair (T := Z) (var:=var) a b)
+      let a := reify n var a in
+      let b := reify n var b in
+      constr:(Pair (T:=Z) (var:=var) a b)
     | ?op ?a ?b =>
       let op := reify_binop op in
-      let b := reify var b in
-      let a := reify var a in
-      constr:(Binop (T := Z) (var:=var) op a b)
+      let b := reify n var b in
+      let a := reify n var a in
+      constr:(Binop (T:=Z) (var:=var) op a b)
     | (fun x : ?T => ?C) =>
       let t := reify_type T in
       (* Work around Coq 8.5 and 8.6 bug *)
       (* <https://coq.inria.fr/bugs/show_bug.cgi?id=4998> *)
       (* Avoid re-binding the Gallina variable referenced by Ltac [x] *)
       (* even if its Gallina name matches a Ltac in this tactic. *)
+      (* [C] here is an open term that references "x" by name *)
       let maybe_x := fresh x in
       let not_x := fresh x in
       lazymatch constr:(fun (x : T) (not_x : var t) (_:reify_var_for_in_is x t not_x) =>
-                          (_ : reify var C)) (* [C] here is an open term that references "x" by name *)
+                          (_ : reify n var C))
       with fun _ v _ => @?C v => C end
     | ?x =>
       lazymatch goal with
       | _:reify_var_for_in_is x ?t ?v |- _ => constr:(@Var Z var t v)
-      | _ => (* let t := match type of x with ?t => reify_type t end in *)
-        constr:(@Const Z var x)
+      | _ => let x' := eval cbv in x in
+        match isZcst x with
+        | true => constr:(@Const Z var (@ConstEvaluable n) x)
+        | false => constr:(@Const Z var InputEvaluable x)
+        end
       end
     end.
-  Hint Extern 0 (reify ?var ?e) => (let e := reify var e in eexact e) : typeclass_instances.
+
+  Hint Extern 0 (reify ?n ?var ?e) => (let e := reify n var e in eexact e) : typeclass_instances.
 
   Ltac Reify e :=
-    lazymatch constr:(fun (var:type->Type) => (_:reify var e)) with
-      (fun var => ?C) => constr:(fun (var:type->Type) => C) (* copy the term but not the type cast *)
+    lazymatch constr:(fun (n: nat) (var:type->Type) => (_:reify n var e)) with
+      (fun n var => ?C) => constr:(fun (n: nat) (var:type->Type) => C) (* copy the term but not the type cast *)
     end.
 
   Definition zinterp_type := @interp_type Z.
   Transparent zinterp_type.
 
-  Goal forall (x : Z) (v : zinterp_type TT) (_:reify_var_for_in_is x TT v), reify(T:=Z) zinterp_type ((fun x => x+x) x)%Z.
+  Goal forall (x : Z) (v : zinterp_type TT) (_:reify_var_for_in_is x TT v), reify (T:=Z) 16 zinterp_type ((fun x => x+x) x)%Z.
     intros.
-    let A := (reify zinterp_type (x + x)%Z) in pose A.
+    let A := (reify 16 zinterp_type (x + x + 1)%Z) in idtac A.
   Abort.
 
   Goal False.
-    let z := reify zinterp_type (let x := 0 in x)%Z in pose z.
+    let z := (reify 16 zinterp_type (let x := 0 in x)%Z) in pose z.
   Abort.
 
   Ltac lhs_of_goal := match goal with |- ?R ?LHS ?RHS => constr:(LHS) end.
   Ltac rhs_of_goal := match goal with |- ?R ?LHS ?RHS => constr:(RHS) end.
 
-  Ltac Reify_rhs :=
+  Ltac Reify_rhs n :=
     let rhs := rhs_of_goal in
     let RHS := Reify rhs in
-    transitivity (ZInterp RHS);
+    transitivity (ZInterp (RHS n));
     [|cbv iota beta delta [ZInterp Interp interp_type interp_binop interp]; reflexivity].
 
   Goal (0 = let x := 1+2 in x*3)%Z.
-    Reify_rhs.
+    Reify_rhs 32.
   Abort.
 
   Goal (0 = let x := 1 in let y := 2 in x * y)%Z.
-    Reify_rhs.
+    Reify_rhs 32.
   Abort.
 
   Section wf.
@@ -160,7 +168,7 @@ Module HL.
 
     Local Notation "x ≡ y" := (existT _ _ (x, y)).
 
-    Definition Texpr var t := @expr T var t.
+    Definition Texpr var t := @expr Z var t.
 
     Inductive wf : list (sigT (fun t => var1 t * var2 t))%type -> forall {t}, Texpr var1 t -> Texpr var2 t -> Prop :=
     | WfConst : forall G n, wf G (Const n) (Const n)
@@ -170,25 +178,25 @@ Module HL.
                   (op: binop t1 t2 t3),
         wf G e1 e1'
         -> wf G e2 e2'
-        -> wf G (Binop (T := T) op e1 e2) (Binop (T := T) op e1' e2')
+        -> wf G (Binop op e1 e2) (Binop op e1' e2')
     | WfLet : forall G t1 t2 e1 e1' (e2 : _ t1 -> Texpr _ t2) e2',
         wf G e1 e1'
         -> (forall x1 x2, wf ((x1 ≡ x2) :: G) (e2 x1) (e2' x2))
-        -> wf G (Let (T := T) e1 e2) (Let (T := T) e1' e2')
+        -> wf G (Let e1 e2) (Let e1' e2')
     | WfPair : forall G {t1} {t2} (e1: Texpr var1 t1) (e2: Texpr var1 t2)
                       (e1': Texpr var2 t1) (e2': Texpr var2 t2),
         wf G e1 e1'
         -> wf G e2 e2'
-        -> wf G (Pair (T := T) e1 e2) (Pair (T := T) e1' e2')
+        -> wf G (Pair e1 e2) (Pair e1' e2')
     | WfMatchPair : forall G t1 t2 tC ep ep' (eC : _ t1 -> _ t2 -> Texpr _ tC) eC',
         wf G ep ep'
         -> (forall x1 x2 y1 y2, wf ((x1 ≡ x2) :: (y1 ≡ y2) :: G) (eC x1 y1) (eC' x2 y2))
-        -> wf G (MatchPair (T := T) ep eC) (MatchPair (T := T) ep' eC').
+        -> wf G (MatchPair ep eC) (MatchPair ep' eC').
   End wf.
 
-  Definition Wf {T: Type} {t} (E : @Expr T t) := forall var1 var2, wf nil (E var1) (E var2).
+  Definition Wf {T: Type} {t} (E : Expr t) := forall var1 var2, wf nil (E var1) (E var2).
 
-  Example example_Expr_Wf : Wf example_Expr.
+  Example example_Expr_Wf : Wf (T := Z) example_Expr.
   Proof.
     unfold Wf; repeat match goal with
     | [ |- wf _ _ _ ] => constructor

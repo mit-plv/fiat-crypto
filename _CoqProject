@@ -7,7 +7,6 @@ src/BaseSystem.v
 src/BaseSystemProofs.v
 src/EdDSARepChange.v
 src/Testbit.v
-src/Assembly/Bounded.v
 src/Assembly/Bounds.v
 src/Assembly/Compile.v
 src/Assembly/Conversions.v

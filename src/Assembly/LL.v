@@ -1,6 +1,8 @@
 Require Import Crypto.Assembly.PhoasCommon.
 Require Import Crypto.Util.LetIn.
 
+Local Arguments Let_In / _ _ _ _.
+
 Module LL.
   Section Language.
     Context {T: Type}.
@@ -25,12 +27,27 @@ Module LL.
         | Return : forall {t}, arg t -> expr t.
     End expr.
 
+    Definition Expr t := forall var, @expr var t.
+
+    Fixpoint interp_arg' {V t} (f: V -> T) (e: arg t) : interp_type t :=
+      match e with
+      | Pair _ _ x y => (interp_arg' f x, interp_arg' f y)
+      | Const x => x
+      | Var x => f x
+      end.
+
     Fixpoint interp_arg {t} (e: arg t) : interp_type t :=
       match e with
       | Pair _ _ x y => (interp_arg x, interp_arg y)
       | Const x => x
       | Var x => x
       end.
+
+    Lemma interp_arg_spec: forall {t} (x: arg t), interp_arg x = interp_arg' id x.
+    Proof.
+      intros; induction x; unfold id in *; simpl; repeat f_equal;
+        first [reflexivity| assumption].
+    Qed.
 
     Fixpoint uninterp_arg {var t} (x: interp_type t) : @arg var t :=
       match t as t' return interp_type t' -> arg t' with
@@ -41,16 +58,41 @@ Module LL.
       | TT => Const
       end x.
 
+    Fixpoint uninterp_arg_as_var {var t} (x: @interp_type var t) : @arg var t :=
+      match t as t' return @interp_type var t' -> @arg var t' with
+      | Prod t0 t1 => fun x' =>
+        match x' with
+        | (x0, x1) => Pair (uninterp_arg_as_var x0) (uninterp_arg_as_var x1)
+        end
+      | TT => Var
+      end x.
+
+    Fixpoint interp' {V t} (f: V -> T) (e:expr t) : interp_type t :=
+      match e with
+      | LetBinop _ _ _ op a b _ eC =>
+        let x := interp_binop op (interp_arg' f a) (interp_arg' f b) in interp' f (eC (uninterp_arg x))
+      | Return _ a => interp_arg' f a
+      end.
+
     Fixpoint interp {t} (e:expr t) : interp_type t :=
       match e with
       | LetBinop _ _ _ op a b _ eC =>
         dlet x := interp_binop op (interp_arg a) (interp_arg b) in interp (eC (uninterp_arg x))
       | Return _ a => interp_arg a
       end.
+
+    Lemma interp_spec: forall {t} (e: expr t), interp e = interp' id e.
+    Proof.
+      intros; induction e; unfold id in *; simpl; repeat f_equal;
+        try rewrite H; simpl; repeat f_equal;
+        rewrite interp_arg_spec; repeat f_equal.
+    Qed.
   End Language.
 
+  Transparent interp interp_arg.
+
   Example example_expr :
-    (@interp Z ZEvaluable _
+    (@interp Z (ZEvaluable) _
       (LetBinop OPadd (Const 7%Z) (Const 8%Z) (fun v => Return v)) = 15)%Z.
   Proof. reflexivity. Qed.
 
@@ -80,7 +122,7 @@ Module LL.
     Definition match_arg_Prod {var t1 t2} (a:arg T var (Prod t1 t2)) : (arg T var t1 * arg T var t2) :=
       match a with
       | Pair _ _ a1 a2 => (a1, a2)
-      | Var _ | Const _ => I (* dummy value *)
+      | _ => I (* dummy *)
       end.
 
     Global Arguments match_arg_Prod / : simpl nomatch.
@@ -114,7 +156,8 @@ Module LL.
   Proof.
     induction t as [|i0 v0 i1 v1]; simpl; intros; try reflexivity.
     break_match; subst; simpl.
-    rewrite v0, v1; reflexivity.
+    unfold interp_arg in *.
+    simpl; rewrite v0, v1; reflexivity.
   Qed.
 
   Lemma interp_under_lets {T} {_: Evaluable T} {t: type} {tC: type}
