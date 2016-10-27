@@ -9,6 +9,7 @@ Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Tactics.
 Require Import Bedrock.Word.
+Require Import Crypto.Util.WordUtil.
 Export Reflection.Syntax.Notations.
 
 Local Notation eta x := (fst x, snd x).
@@ -57,6 +58,32 @@ Module Word64.
   Infix ">>" := w64shr : word64_scope.
   Infix "&'" := w64land : word64_scope.
 
+  Local Ltac w64ToZ_t :=
+    intros;
+    try match goal with
+        | [ |- ?wordToZ (?op ?x ?y) = _ ]
+          => cbv [wordToZ op] in *
+        end;
+    autorewrite with push_Zto_N push_Zof_N push_wordToN; try reflexivity.
+
+  Local Notation bounds_2statement wop Zop
+    := (forall x y,
+           (0 <= Zop (word64ToZ x) (word64ToZ y)
+            -> Z.log2 (Zop (word64ToZ x) (word64ToZ y)) < Z.of_nat bit_width
+            -> word64ToZ (wop x y) = (Zop (word64ToZ x) (word64ToZ y)))%Z).
+
+  Lemma word64ToZ_w64plus : bounds_2statement w64plus Z.add. Proof. w64ToZ_t. Qed.
+  Lemma word64ToZ_w64minus : bounds_2statement w64minus Z.sub. Proof. w64ToZ_t. Qed.
+  Lemma word64ToZ_w64mul : bounds_2statement w64mul Z.mul. Proof. w64ToZ_t. Qed.
+  Lemma word64ToZ_w64shl : bounds_2statement w64shl Z.shiftl.
+  Proof. w64ToZ_t. admit. Admitted.
+  Lemma word64ToZ_w64shr : bounds_2statement w64shr Z.shiftr.
+  Proof. admit. Admitted.
+  Lemma word64ToZ_w64land : bounds_2statement w64land Z.land.
+  Proof. w64ToZ_t. Qed.
+  Lemma word64ToZ_w64lor : bounds_2statement w64lor Z.lor.
+  Proof. w64ToZ_t. Qed.
+
   Definition interp_base_type (t : base_type) : Type
     := match t with
        | TZ => word64
@@ -83,6 +110,25 @@ Module Word64.
     := match ty return interp_base_type ty -> Z.interp_base_type ty with
        | TZ => word64ToZ
        end.
+
+  Module Export Rewrites.
+    Ltac word64_util_arith := omega.
+
+    Hint Rewrite word64ToZ_w64plus using word64_util_arith : push_word64ToZ.
+    Hint Rewrite <- word64ToZ_w64plus using word64_util_arith : pull_word64ToZ.
+    Hint Rewrite word64ToZ_w64minus using word64_util_arith : push_word64ToZ.
+    Hint Rewrite <- word64ToZ_w64minus using word64_util_arith : pull_word64ToZ.
+    Hint Rewrite word64ToZ_w64mul using word64_util_arith : push_word64ToZ.
+    Hint Rewrite <- word64ToZ_w64mul using word64_util_arith : pull_word64ToZ.
+    Hint Rewrite word64ToZ_w64shl using word64_util_arith : push_word64ToZ.
+    Hint Rewrite <- word64ToZ_w64shl using word64_util_arith : pull_word64ToZ.
+    Hint Rewrite word64ToZ_w64shr using word64_util_arith : push_word64ToZ.
+    Hint Rewrite <- word64ToZ_w64shr using word64_util_arith : pull_word64ToZ.
+    Hint Rewrite word64ToZ_w64land using word64_util_arith : push_word64ToZ.
+    Hint Rewrite <- word64ToZ_w64land using word64_util_arith : pull_word64ToZ.
+    Hint Rewrite word64ToZ_w64lor using word64_util_arith : push_word64ToZ.
+    Hint Rewrite <- word64ToZ_w64lor using word64_util_arith : pull_word64ToZ.
+  End Rewrites.
 End Word64.
 
 Module ZBounds.
@@ -293,6 +339,7 @@ Module BoundedWord64.
                  | progress Z.ltb_to_lt
                  | assumption
                  | progress destruct_head' BoundedWord; simpl in *
+                 | progress autorewrite with push_word64ToZ
                  | progress repeat apply conj ].
 
   Tactic Notation "admit" := abstract case proof_admitted.

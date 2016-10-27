@@ -273,9 +273,7 @@ Qed.
 
 Local Notation bounds_2statement wop Zop
   := (forall {sz} (x y : word sz),
-         (Z.log2 (Z.of_N (wordToN x)) < Z.of_nat sz
-          -> Z.log2 (Z.of_N (wordToN y)) < Z.of_nat sz
-          -> 0 <= Zop (Z.of_N (wordToN x)) (Z.of_N (wordToN y))
+         (0 <= Zop (Z.of_N (wordToN x)) (Z.of_N (wordToN y))
           -> Z.log2 (Zop (Z.of_N (wordToN x)) (Z.of_N (wordToN y))) < Z.of_nat sz
           -> Z.of_N (wordToN (wop x y)) = (Zop (Z.of_N (wordToN x)) (Z.of_N (wordToN y))))%Z).
 
@@ -299,3 +297,17 @@ Proof.
 Admitted.
 Hint Rewrite @wordToN_wmult using word_util_arith : push_wordToN.
 Hint Rewrite <- @wordToN_wmult using word_util_arith : pull_wordToN.
+
+Lemma wordToN_wand : bounds_2statement (@wand _) Z.land.
+Proof.
+  admit.
+Admitted.
+Hint Rewrite @wordToN_wand using word_util_arith : push_wordToN.
+Hint Rewrite <- @wordToN_wand using word_util_arith : pull_wordToN.
+
+Lemma wordToN_wor : bounds_2statement (@wor _) Z.lor.
+Proof.
+  admit.
+Admitted.
+Hint Rewrite @wordToN_wor using word_util_arith : push_wordToN.
+Hint Rewrite <- @wordToN_wor using word_util_arith : pull_wordToN.
