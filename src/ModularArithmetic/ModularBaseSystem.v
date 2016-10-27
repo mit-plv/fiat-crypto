@@ -7,6 +7,7 @@ Require Import Crypto.ModularArithmetic.ExtendedBaseVector.
 Require Import Crypto.ModularArithmetic.Pow2Base.
 Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParams.
 Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParamProofs.
+Require Import Crypto.ModularArithmetic.ModularBaseSystemListZOperations.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemList.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemListProofs.
 Require Import Crypto.Util.ListUtil Crypto.Util.CaseUtil Crypto.Util.ZUtil.
