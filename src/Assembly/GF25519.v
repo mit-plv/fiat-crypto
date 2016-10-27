@@ -43,7 +43,7 @@ Module GF25519.
     Defined.
 
     Definition unflatten {T}:
-      (forall a b c d e f g h i j, T (a, b, c, d, e, f, g, h, i, j))
+      (forall a b c d e f g h i j : Z, T (a, b, c, d, e, f, g, h, i, j))
     -> (forall x: @interp_type Z FE, T x).
     Proof.
       intro F; refine (fun (x: @interp_type Z FE) =>
@@ -264,29 +264,38 @@ Module GF25519.
       NToWord posToWord natToWord wordToNat wordToN wzero'
       Nat.mul Nat.add].
 
-    Ltac lift :=
-      repeat (apply functional_extensionality; intro).
-
     Ltac kill_conv := let p := fresh in
       pose proof N2Z.id as p; unfold Z.to_N in p;
       repeat rewrite p; clear p;
       repeat rewrite NToWord_wordToN.
 
-    Definition add' : {f: Binary |
-      f = NArgMap (fun x => Z.of_N (wordToN x)) Add.AST.progW }.
-    Proof. eexists; ast_simpl; lift; kill_conv; reflexivity. Defined.
+    Local Notation unary_eq f g
+      := (forall x0 x1 x2 x3 x4 x5 x6 x7 x8 x9,
+             f x0 x1 x2 x3 x4 x5 x6 x7 x8 x9
+             = g x0 x1 x2 x3 x4 x5 x6 x7 x8 x9).
+    Local Notation binary_eq f g
+      := (forall x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 y0 y1 y2 y3 y4 y5 y6 y7 y8 y9,
+             f x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 y0 y1 y2 y3 y4 y5 y6 y7 y8 y9
+             = g x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 y0 y1 y2 y3 y4 y5 y6 y7 y8 y9).
 
-    Definition sub' : {f: Binary |
-      f = NArgMap (fun x => Z.of_N (wordToN x)) Sub.AST.progW }.
-    Proof. eexists; ast_simpl; lift; kill_conv; reflexivity. Defined.
+    Definition add'
+      : {f: Binary |
+         binary_eq f (NArgMap (fun x => Z.of_N (wordToN x)) Add.AST.progW) }.
+    Proof. eexists; intros; ast_simpl; kill_conv; reflexivity. Defined.
 
-    Definition mul' : {f: Binary |
-      f = NArgMap (fun x => Z.of_N (wordToN x)) Mul.AST.progW }.
-    Proof. eexists; ast_simpl; lift; kill_conv; reflexivity. Defined.
+    Definition sub'
+      : {f: Binary |
+         binary_eq f (NArgMap (fun x => Z.of_N (wordToN x)) Sub.AST.progW) }.
+    Proof. eexists; ast_simpl; kill_conv; reflexivity. Defined.
+
+    Definition mul'
+      : {f: Binary |
+         binary_eq f (NArgMap (fun x => Z.of_N (wordToN x)) Mul.AST.progW) }.
+    Proof. eexists; ast_simpl; kill_conv; reflexivity. Defined.
 
     Definition opp' : {f: Unary |
-      f = NArgMap (fun x => Z.of_N (wordToN x)) Opp.AST.progW }.
-    Proof. eexists; ast_simpl; lift; kill_conv; reflexivity. Defined.
+      unary_eq f (NArgMap (fun x => Z.of_N (wordToN x)) Opp.AST.progW) }.
+    Proof. eexists; ast_simpl; kill_conv; reflexivity. Defined.
 
     Definition add := Eval simpl in proj1_sig add'.
     Definition sub := Eval simpl in proj1_sig sub'.
@@ -299,4 +308,3 @@ Extraction "GF25519Add" GF25519.Add.
 Extraction "GF25519Sub" GF25519.Sub.
 Extraction "GF25519Mul" GF25519.Mul.
 Extraction "GF25519Opp" GF25519.Opp.
-

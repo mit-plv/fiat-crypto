@@ -58,17 +58,19 @@ Print interp_radd.
 Definition interp_radd_correct : interp_radd = interp_bexpr radd := eq_refl.
 Definition interp_rsub : Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
   := Eval asm_interp in interp_bexpr rsub.
-(*Print interp_rsub.*)
+Print interp_rsub.
 Definition interp_rsub_correct : interp_rsub = interp_bexpr rsub := eq_refl.
 Definition interp_rmul : Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
   := Eval asm_interp in interp_bexpr rmul.
-(*Print interp_rmul.*)
+Print interp_rmul.
 Definition interp_rmul_correct : interp_rmul = interp_bexpr rmul := eq_refl.
 Definition interp_ropp : Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
   := Eval asm_interp in interp_uexpr ropp.
+Print interp_ropp.
 Definition interp_ropp_correct : interp_ropp = interp_uexpr ropp := eq_refl.
 Definition interp_rfreeze : Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
   := Eval asm_interp in interp_uexpr rfreeze.
+Print interp_rfreeze.
 Definition interp_rfreeze_correct : interp_rfreeze = interp_uexpr rfreeze := eq_refl.
 
 Local Notation binop_correct_and_bounded rop op
