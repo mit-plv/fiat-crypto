@@ -1278,16 +1278,27 @@ Ltac nsatz_strip_fractions :=
   | [ H : (?eq ?x ?y -> False)%type |- _ ] => nsatz_strip_fractions_with_eq eq
   end.
 
+Ltac nsatz_fold_or_intro_not :=
+  repeat match goal with
+         | [ |- not _ ] => intro
+         | [ |- (_ -> _)%type ] => intro
+         | [ H : (?X -> False)%type |- _ ]
+           => change (not X) in H
+         | [ H : ((?X -> False) -> ?T)%type |- _ ]
+           => change (not X -> T)%type in H
+         end.
+
 Ltac nsatz_final_inequality_to_goal :=
-  try unfold not in *;
+  nsatz_fold_or_intro_not;
   try match goal with
-      | [ H : (?eq ?x ?zero -> False)%type |- ?eq ?y ?zero ]
+      | [ H : not (?eq ?x ?zero) |- ?eq ?y ?zero ]
         => generalize H; apply (proj2 (Ring.nonzero_hypothesis_to_goal x y))
-      | [ H : (?eq ?x ?zero -> False)%type |- False ]
+      | [ H : not (?eq ?x ?zero) |- False ]
         => apply H
       end.
 
 Ltac nsatz_goal_to_canonical :=
+  nsatz_fold_or_intro_not;
   try match goal with
       | [ |- ?eq ?x ?y ]
         => apply (Group.move_leftR (eq:=eq)); rewrite <- ring_sub_definition;
@@ -1297,13 +1308,23 @@ Ltac nsatz_goal_to_canonical :=
            end
       end.
 
+Ltac nsatz_specialize_by_cut_using cont H eq x zero a b :=
+  change (not (eq x zero) -> eq a b)%type in H;
+  cut (not (eq x zero));
+  [ intro; specialize_by_assumption; cont ()
+  | clear H ].
+
 Ltac nsatz_specialize_by_cut :=
-  try unfold not in *;
+  specialize_by_assumption;
   match goal with
-  | [ H : ((?eq ?x ?zero -> False) -> ?eq _ _)%type |- ?eq _ ?zero ]
-    => cut (not (eq x zero));
-       [ unfold not; intro; specialize_by_assumption; nsatz_specialize_by_cut
-       | clear H ]
+  | [ H : ((?eq ?x ?zero -> False) -> ?eq ?a ?b)%type |- ?eq _ ?zero ]
+    => nsatz_specialize_by_cut_using ltac:(fun _ => nsatz_specialize_by_cut) H eq x zero a b
+  | [ H : (not (?eq ?x ?zero) -> ?eq ?a ?b)%type |- ?eq _ ?zero ]
+    => nsatz_specialize_by_cut_using ltac:(fun _ => nsatz_specialize_by_cut) H eq x zero a b
+  | [ H : ((?eq ?x ?zero -> False) -> ?eq ?a ?b)%type |- False ]
+    => nsatz_specialize_by_cut_using ltac:(fun _ => nsatz_specialize_by_cut) H eq x zero a b
+  | [ H : (not (?eq ?x ?zero) -> ?eq ?a ?b)%type |- False ]
+    => nsatz_specialize_by_cut_using ltac:(fun _ => nsatz_specialize_by_cut) H eq x zero a b
   | _ => idtac
   end.
 
@@ -1426,7 +1447,7 @@ Ltac combine_field_inequalities :=
   repeat combine_field_inequalities_step.
 (** Handles field inequalities which can be made by splitting multiplications in the goal and the assumptions *)
 Ltac solve_simple_field_inequalities :=
-  repeat (apply conj || split_field_inequalities);
+  repeat (apply conj || specialize_by_assumption || split_field_inequalities);
   try assumption.
 Ltac nsatz_strip_fractions_and_aggregate_inequalities :=
   nsatz_strip_fractions;
