@@ -385,6 +385,18 @@ Definition encode (x : F modulus) : fe25519
 Definition decode (x : fe25519) : F modulus
   := ModularBaseSystem.decode (proj1_fe25519 x).
 
+Lemma proj1_fe25519_encode x
+  : proj1_fe25519 (encode x) = ModularBaseSystem.encode x.
+Proof.
+  hnf in x; destruct_head' prod; reflexivity.
+Qed.
+
+Lemma decode_exist_fe25519 x pf
+  : decode (exist_fe25519 x pf) = ModularBaseSystem.decode x.
+Proof.
+  hnf in x; destruct_head' prod; reflexivity.
+Qed.
+
 Definition div (f g : fe25519) : fe25519
   := exist_fe25519 (div (proj1_fe25519 f) (proj1_fe25519 g)) (encode_bounded _).
 
