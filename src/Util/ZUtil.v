@@ -77,6 +77,8 @@ Create HintDb pull_Zshift discriminated.
 Create HintDb push_Zshift discriminated.
 Create HintDb pull_Zof_N discriminated.
 Create HintDb push_Zof_N discriminated.
+Create HintDb pull_Zto_N discriminated.
+Create HintDb push_Zto_N discriminated.
 Create HintDb Zshift_to_pow discriminated.
 Create HintDb Zpow_to_shift discriminated.
 Hint Extern 1 => autorewrite with push_Zopp in * : push_Zopp.
@@ -101,6 +103,8 @@ Hint Extern 1 => autorewrite with Zshift_to_pow in * : Zshift_to_pow.
 Hint Extern 1 => autorewrite with Zpow_to_shift in * : Zpow_to_shift.
 Hint Extern 1 => autorewrite with pull_Zof_N in * : pull_Zof_N.
 Hint Extern 1 => autorewrite with push_Zof_N in * : push_Zof_N.
+Hint Extern 1 => autorewrite with pull_Zto_N in * : pull_Zto_N.
+Hint Extern 1 => autorewrite with push_Zto_N in * : push_Zto_N.
 Hint Rewrite Z.div_opp_l_nz Z.div_opp_l_z using zutil_arith : pull_Zopp.
 Hint Rewrite Z.mul_opp_l : pull_Zopp.
 Hint Rewrite <- Z.opp_add_distr : pull_Zopp.
@@ -119,6 +123,7 @@ Hint Rewrite Z_mod_nz_opp_full using zutil_arith : push_Zmod.
 Hint Rewrite Z_mod_same_full : push_Zmod.
 Hint Rewrite Nat2Z.id N2Z.id : zsimplify.
 Hint Rewrite Nat2Z.id : push_Zof_nat.
+Hint Rewrite N2Z.id : push_Zto_N.
 Hint Rewrite N2Z.id : pull_Zof_N.
 Hint Rewrite N2Z.inj_pos N2Z.inj_abs_N N2Z.inj_add N2Z.inj_mul N2Z.inj_sub_max N2Z.inj_succ N2Z.inj_pred_max N2Z.inj_min N2Z.inj_max N2Z.inj_div N2Z.inj_quot N2Z.inj_rem N2Z.inj_div2 N2Z.inj_pow N2Z.inj_0 : push_Zof_N.
 Hint Rewrite N2Z.inj_compare N2Z.inj_testbit : pull_Zof_N.

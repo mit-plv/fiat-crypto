@@ -15,6 +15,8 @@ Create HintDb push_wordToN discriminated.
 Hint Extern 1 => autorewrite with pull_wordToN in * : pull_wordToN.
 Hint Extern 1 => autorewrite with push_wordToN in * : push_wordToN.
 
+Ltac word_util_arith := omega.
+
 Lemma pow2_id : forall n, pow2 n = 2 ^ n.
 Proof.
   induction n; intros; simpl; auto.
@@ -268,3 +270,32 @@ Proof.
            | [ H : weqb _ _ = true |- _ ] => apply weqb_true_iff in H; subst
            end.
 Qed.
+
+Local Notation bounds_2statement wop Zop
+  := (forall {sz} (x y : word sz),
+         (Z.log2 (Z.of_N (wordToN x)) < Z.of_nat sz
+          -> Z.log2 (Z.of_N (wordToN y)) < Z.of_nat sz
+          -> 0 <= Zop (Z.of_N (wordToN x)) (Z.of_N (wordToN y))
+          -> Z.log2 (Zop (Z.of_N (wordToN x)) (Z.of_N (wordToN y))) < Z.of_nat sz
+          -> Z.of_N (wordToN (wop x y)) = (Zop (Z.of_N (wordToN x)) (Z.of_N (wordToN y))))%Z).
+
+Lemma wordToN_wplus : bounds_2statement (@wplus _) Z.add.
+Proof.
+  admit.
+Admitted.
+Hint Rewrite @wordToN_wplus using word_util_arith : push_wordToN.
+Hint Rewrite <- @wordToN_wplus using word_util_arith : pull_wordToN.
+
+Lemma wordToN_wminus : bounds_2statement (@wminus _) Z.sub.
+Proof.
+  admit.
+Admitted.
+Hint Rewrite @wordToN_wminus using word_util_arith : push_wordToN.
+Hint Rewrite <- @wordToN_wminus using word_util_arith : pull_wordToN.
+
+Lemma wordToN_wmult : bounds_2statement (@wmult _) Z.mul.
+Proof.
+  admit.
+Admitted.
+Hint Rewrite @wordToN_wmult using word_util_arith : push_wordToN.
+Hint Rewrite <- @wordToN_wmult using word_util_arith : pull_wordToN.
