@@ -10,6 +10,11 @@ Require Import Coq.micromega.Psatz.
 
 Local Open Scope nat_scope.
 
+Create HintDb pull_wordToN discriminated.
+Create HintDb push_wordToN discriminated.
+Hint Extern 1 => autorewrite with pull_wordToN in * : pull_wordToN.
+Hint Extern 1 => autorewrite with push_wordToN in * : push_wordToN.
+
 Lemma pow2_id : forall n, pow2 n = 2 ^ n.
 Proof.
   induction n; intros; simpl; auto.
@@ -41,6 +46,8 @@ Proof.
   rewrite wordToN_nat, NToWord_nat, Nnat.Nat2N.id.
   apply natToWord_wordToNat.
 Qed.
+
+Hint Rewrite NToWord_wordToN : pull_wordToN.
 
 Lemma bound_check_nat_N : forall x n, (Z.to_nat x < 2 ^ n)%nat -> (Z.to_N x < Npow2 n)%N.
 Proof.
@@ -92,6 +99,7 @@ Proof. destruct pf; rewrite cast_word_refl; trivial. Qed.
 Lemma wordToN_cast_word {n} (w:word n) m pf :
   wordToN (@cast_word n m pf w) = wordToN w.
 Proof. destruct pf; rewrite cast_word_refl; trivial. Qed.
+Hint Rewrite @wordToN_cast_word : push_wordToN.
 
 Import NPeano Nat.
 Local Infix "++" := combine.
