@@ -62,6 +62,7 @@ Section language.
     := forall var1 var2, rel_wf nil (E1 var1) (E2 var2).
 End language.
 
+Global Arguments interp_flat_type_gen_rel_pointwise2 {_ _ _} R {t} _ _.
 Global Arguments rel_wff {_ _ _ _} R {_ _} G {t} _ _.
 Global Arguments rel_wf {_ _ _ _} R {_ _} G {t} _ _.
 Global Arguments RelWf {_ _ _ _} R {t} _ _.
