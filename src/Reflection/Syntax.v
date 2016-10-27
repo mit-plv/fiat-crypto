@@ -273,6 +273,8 @@ Global Arguments interp {_ _ _} interp_op {t} _.
 Global Arguments interpf {_ _ _} interp_op {t} _.
 Global Arguments invert_Const {_ _ _ _ _} _.
 
-Notation "'slet' x := A 'in' b" := (LetIn A (fun x => b)) : expr_scope.
-Notation "'λ'  x .. y , t" := (Abs (fun x => .. (Abs (fun y => t%expr)) ..)) : expr_scope.
-Notation "( x , y , .. , z )" := (Pair .. (Pair x%expr y%expr) .. z%expr) : expr_scope.
+Module Export Notations.
+  Notation "'slet' x := A 'in' b" := (LetIn A (fun x => b)) : expr_scope.
+  Notation "'λ'  x .. y , t" := (Abs (fun x => .. (Abs (fun y => t%expr)) ..)) : expr_scope.
+  Notation "( x , y , .. , z )" := (Pair .. (Pair x%expr y%expr) .. z%expr) : expr_scope.
+End Notations.
