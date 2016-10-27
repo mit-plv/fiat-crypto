@@ -708,11 +708,25 @@ Let Sdec : Word.word b -> option (ModularArithmetic.F.F l) :=
 Lemma eq_enc_S_iff : forall (n_ : Word.word b) (n : ModularArithmetic.F.F l),
  Senc n = n_ <-> Sdec n_ = Some n.
 Proof.
-  (*
+  assert (0 < Ed25519.l)%Z as l_pos by (cbv; congruence).
+  intros.
+  pose proof (ModularArithmeticTheorems.F.to_Z_range n l_pos).
   unfold Senc, Fencode, Sdec; intros;
-    split; break_match; intros; inversion_option; subst; f_equal.
-   *)
-Admitted.
+    split; break_match; intros; inversion_option; subst; f_equal;
+  repeat match goal with
+         | |- _ => rewrite !WordUtil.wordToN_NToWord_idempotent in *
+             by (apply ZToN_NPow2_lt; split; try omega; eapply Z.lt_le_trans;
+                 [ intuition eassumption | ]; cbv; congruence)
+         | |- _ => rewrite WordUtil.NToWord_wordToN
+         | |- _ => rewrite Z2N.id in * by omega
+         | |- _ => rewrite N2Z.id in * by omega
+         | |- _ => rewrite Z.mod_small by (split; try omega; apply N2Z.is_nonneg)
+         | |- _ => rewrite ModularArithmeticTheorems.F.of_Z_to_Z in *
+         | |- _ => rewrite @ModularArithmeticTheorems.F.to_Z_of_Z in *
+         | |- _ => reflexivity
+         | |- _ => omega 
+         end.
+Qed.
 
 Let SRepDec : Word.word b -> option SRep := fun w => option_map ModularArithmetic.F.to_Z (Sdec w).
 
