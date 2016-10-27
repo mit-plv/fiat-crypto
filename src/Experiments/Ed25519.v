@@ -534,39 +534,6 @@ Qed.
 Lemma Proper_feEnc : Proper (GF25519BoundedCommon.eq ==> eq) feEnc.
 Admitted.
 
-(*
-Lemma ext_to_coord_coord_to_ext : forall (P : GF25519BoundedCommon.fe25519 * GF25519BoundedCommon.fe25519)
-                                         (pf : Pre.onCurve P),
-               Tuple.fieldwise (n := 2)
-                 GF25519BoundedCommon.eq
-                 (extended_to_coord (coord_to_extended P pf))
-                 P.
-Proof.
-  cbv [extended_to_coord coord_to_extended].
-  intros.
-  transitivity (CompleteEdwardsCurve.E.coordinates (exist _ P pf));
-    [ | reflexivity].
-  apply (CompleteEdwardsCurveTheorems.E.Proper_coordinates
-           (field := GF25519Bounded.field25519) (a := a) (d := d)).
-  apply ExtendedCoordinates.Extended.to_twisted_from_twisted.
-Qed.
- *)
-(*
-Lemma to_twist
-      ed_from_twisted_coordinates_eq :
-  forall pt : E,
- Tuple.fieldwise ModularBaseSystem.eq (n := 2)
-   ((fun P0 : Erep =>
-     CompleteEdwardsCurve.E.coordinates
-       (ExtendedCoordinates.Extended.to_twisted (field := GF25519.field25519) P0))
-      (ExtendedCoordinates.Extended.from_twisted  (field := PrimeFieldTheorems.F.field_modulo GF25519.modulus) pt))
-   (CompleteEdwardsCurve.E.coordinates pt).
-Proof.
-  intros.
-  pose proof ExtendedCoordinates.Extended.to_twisted_from_twisted.
-  specialize (H0 pt).
-*)
-
 Lemma ERepEnc_correct P : Eenc P = ERepEnc (EToRep P).
 Proof.
   cbv [Eenc ERepEnc EToRep sign Fencode].
