@@ -209,6 +209,7 @@ Module CompileLL.
       | Prod t0 t1 => fun a' =>
         match a' with
         | Pair _ _ a0 a1 => (vars a0) ++ (vars a1)
+        | _ => I (* dummy *)
         end
       end a.
 

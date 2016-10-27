@@ -94,9 +94,9 @@ Module Pipeline (Input: Expression).
     Definition pair :=
       @CompileLL.compile bits width ResultType _ LL.progW.
 
-    Definition prog := option_map fst pair.
+    Definition prog := option_map (@fst _ _) pair.
 
-    Definition outputRegisters := option_map snd pair.
+    Definition outputRegisters := option_map (@snd _ _) pair.
 
     Definition code := option_map StringConversion.convertProgram prog.
   End Qhasm.
