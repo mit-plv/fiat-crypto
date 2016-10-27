@@ -12,16 +12,6 @@ Section language.
   Context (op : flat_type base_type_code -> flat_type base_type_code -> Type).
   Context (R : forall t, interp_base_type1 t -> interp_base_type2 t -> Prop).
 
-  Section rel_pointwise.
-    Fixpoint interp_flat_type_gen_rel_pointwise2 (t : flat_type base_type_code)
-    : interp_flat_type_gen interp_base_type1 t -> interp_flat_type_gen interp_base_type2 t -> Prop :=
-      match t with
-      | Tbase t => R t
-      | Prod _ _ => fun x y => interp_flat_type_gen_rel_pointwise2 _ (fst x) (fst y)
-                               /\ interp_flat_type_gen_rel_pointwise2 _ (snd x) (snd y)
-      end.
-  End rel_pointwise.
-
   Section wf.
     Context {var1 var2 : base_type_code -> Type}.
 
@@ -34,7 +24,7 @@ Section language.
     Notation expr2 := (@expr base_type_code interp_base_type2 op var2).
 
     Inductive rel_wff : list (sigT eP) -> forall {t}, exprf1 t -> exprf2 t -> Prop :=
-    | RWfConst : forall t G n n', interp_flat_type_gen_rel_pointwise2 t n n' -> @rel_wff G t (Const n) (Const n')
+    | RWfConst : forall t G n n', interp_flat_type_gen_rel_pointwise2 R n n' -> @rel_wff G t (Const n) (Const n')
     | RWfVar : forall G (t : base_type_code) x x', List.In (x == x') G -> @rel_wff G (Tbase t) (Var x) (Var x')
     | RWfOp : forall G {t} {tR} (e : exprf1 t) (e' : exprf2 t) op,
         rel_wff G e e'
@@ -62,7 +52,6 @@ Section language.
     := forall var1 var2, rel_wf nil (E1 var1) (E2 var2).
 End language.
 
-Global Arguments interp_flat_type_gen_rel_pointwise2 {_ _ _} R {t} _ _.
 Global Arguments rel_wff {_ _ _ _} R {_ _} G {t} _ _.
 Global Arguments rel_wf {_ _ _ _} R {_ _} G {t} _ _.
 Global Arguments RelWf {_ _ _ _} R {t} _ _.

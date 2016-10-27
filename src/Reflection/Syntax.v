@@ -72,6 +72,17 @@ Section language.
           end.
       End rel.
     End flat_type.
+    Section rel_pointwise.
+      Context (interp_base_type1 interp_base_type2 : base_type_code -> Type)
+              (R : forall t, interp_base_type1 t -> interp_base_type2 t -> Prop).
+      Fixpoint interp_flat_type_gen_rel_pointwise2 (t : flat_type)
+      : interp_flat_type_gen interp_base_type1 t -> interp_flat_type_gen interp_base_type2 t -> Prop :=
+        match t with
+        | Tbase t => R t
+        | Prod _ _ => fun x y => interp_flat_type_gen_rel_pointwise2 _ (fst x) (fst y)
+                                 /\ interp_flat_type_gen_rel_pointwise2 _ (snd x) (snd y)
+        end.
+    End rel_pointwise.
   End interp.
 
   Section expr_param.
@@ -247,6 +258,7 @@ Global Arguments LetIn {_ _ _ _ _} _ {_} _.
 Global Arguments Pair {_ _ _ _ _} _ {_} _.
 Global Arguments Return {_ _ _ _ _} _.
 Global Arguments Abs {_ _ _ _ _ _} _.
+Global Arguments interp_flat_type_gen_rel_pointwise2 {_ _ _} R {t} _ _.
 Global Arguments mapf_interp_flat_type_gen {_ _ _} _ {t} _.
 Global Arguments interp_type_gen {_} _ _.
 Global Arguments interp_flat_type_gen {_} _ _.
