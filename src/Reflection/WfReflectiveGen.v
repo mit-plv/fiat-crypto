@@ -358,3 +358,6 @@ Section language.
        | Abs _ _ _, _ => None
        end%pointed_prop.
 End language.
+
+Global Arguments reflect_wffT {_ _ _} _ {op} R _ {var1 var2} G {t1 t2} _ _.
+Global Arguments reflect_wfT {_ _ _} _ {op} R _ {var1 var2} G {t1 t2} _ _.
