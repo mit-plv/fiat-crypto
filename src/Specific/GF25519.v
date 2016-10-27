@@ -129,7 +129,7 @@ Definition zero_subst : zero = zero_ := eq_refl zero_.
 Definition modulus_digits_ := Eval compute in ModularBaseSystemList.modulus_digits.
 Definition modulus_digits_subst : ModularBaseSystemList.modulus_digits = modulus_digits_ := eq_refl modulus_digits_.
 
-Local Opaque Z.shiftr Z.shiftl Z.land Z.mul Z.add Z.sub Z.lor Let_In Z.eqb Z.ltb Z.leb ModularBaseSystemList.neg ModularBaseSystemList.cmovl ModularBaseSystemList.cmovne.
+Local Opaque Z.shiftr Z.shiftl Z.land Z.mul Z.add Z.sub Z.lor Let_In Z.eqb Z.ltb Z.leb ModularBaseSystemListZOperations.neg ModularBaseSystemListZOperations.cmovl ModularBaseSystemListZOperations.cmovne.
 
 Definition app_7 {T} (f : wire_digits) (P : wire_digits -> T) : T.
 Proof.

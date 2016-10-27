@@ -6,6 +6,7 @@ Require Import Crypto.ModularArithmetic.Conversion.
 Require Import Crypto.ModularArithmetic.Pow2Base.
 Require Import Crypto.ModularArithmetic.Pow2BaseProofs.
 Require Import Crypto.BaseSystem.
+Require Import Crypto.ModularArithmetic.ModularBaseSystemListZOperations.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemList.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemListProofs.
 Require Import Crypto.ModularArithmetic.ModularBaseSystem.

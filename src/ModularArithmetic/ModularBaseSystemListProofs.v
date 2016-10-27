@@ -16,6 +16,7 @@ Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Notations.
 
+Require Import Crypto.ModularArithmetic.ModularBaseSystemListZOperations.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemList.
 Local Open Scope Z_scope.
 
@@ -189,7 +190,7 @@ Section ModulusDigitsProofs.
            | |- _ => unique pose proof modulus_pos
            | |- _ => unique assert (modulus = 2 ^ k - c) by (cbv [c]; ring)
            | |- _ => break_if
-           | |- _ => rewrite decode_modulus_digits 
+           | |- _ => rewrite decode_modulus_digits
            | |- _ => rewrite Z.testbit_pow2_mod
                        by eauto using nth_default_limb_widths_nonneg
            | |- _ => rewrite Z.ones_spec by eauto using nth_default_limb_widths_nonneg
@@ -204,7 +205,7 @@ Section ModulusDigitsProofs.
            | |- Z.testbit modulus ?i = true => transitivity (Z.testbit (2 ^ k - c) i)
            | |- _ => congruence
            end.
-    
+
     replace (c - 1) with ((c - 1) mod 2 ^ nth_default 0 limb_widths 0) by (apply Z.mod_small; omega).
     rewrite Z.mod_pow2_bits_high; auto.
     pose proof (sum_firstn_prefix_le limb_widths 1 i).
@@ -244,7 +245,7 @@ Section ModulusComparisonProofs.
   (* Lexicographically compare two vectors of equal length, starting from the END of the list
      (in our context, this is the most significant end). NOT constant time. *)
   Definition compare us vs := compare' us vs (length us).
-  
+
   Lemma decode_firstn_compare' : forall us vs i,
     (i <= length limb_widths)%nat ->
     length us = length limb_widths -> bounded limb_widths us ->
@@ -258,8 +259,8 @@ Section ModulusComparisonProofs.
              | |- _ => progress (simpl compare')
              | |- _ => progress specialize_by (assumption || omega)
              | |- _ => rewrite sum_firstn_0
-             | |- _ => rewrite set_higher 
-             | |- _ => rewrite nth_default_base by eauto 
+             | |- _ => rewrite set_higher
+             | |- _ => rewrite nth_default_base by eauto
              | |- _ => rewrite firstn_length, Min.min_l by omega
              | |- _ => rewrite firstn_O
              | |- _ => rewrite firstn_succ with (d := 0) by omega
@@ -270,7 +271,7 @@ Section ModulusComparisonProofs.
                (rewrite (Z.mul_comm (2 ^ x)); apply Z.shiftl_mul_pow2; eauto)
              | |- _ => tauto
              | |- _ => split
-             | |- _ => break_if 
+             | |- _ => break_if
              end.
   Qed.
 
@@ -321,7 +322,7 @@ Section ModulusComparisonProofs.
              | |- _ =>erewrite (ge_modulus'_0 (@id Z)) in *
              | H : (?x <= 0)%nat |- _ => progress replace x with 0%nat in * by omega
              | |- _ => break_if
-             | |- _ => discriminate 
+             | |- _ => discriminate
              | |- _ => solve [rewrite ?Z.leb_le, ?Z.eqb_eq in *; omega]
              end.
     destruct (le_dec j i).
@@ -440,7 +441,7 @@ Section ConditionalSubtractModulusProofs.
   Proof.
     induction us; boring.
   Qed.
-  
+
   Hint Rewrite @length_modulus_digits @length_zeros : distr_length.
   Lemma conditional_subtract_modulus_spec : forall u cond
     (cond_01 : cond = 0 \/ cond = 1),
@@ -456,10 +457,10 @@ Section ConditionalSubtractModulusProofs.
            | |- _ => rewrite map_land_zero
            | |- _ => rewrite map2_sub_eq by distr_length
            | |- _ => rewrite sub_rep by auto
-           | |- _ => rewrite zeros_rep 
+           | |- _ => rewrite zeros_rep
            | |- _ => rewrite decode_modulus_digits by auto
            | |- _ => f_equal; ring
-           | |- _ => discriminate 
+           | |- _ => discriminate
            end.
   Qed.
 
@@ -475,7 +476,7 @@ Section ConditionalSubtractModulusProofs.
            | |- _ => rewrite map_land_zero
            | |- _ => rewrite length_modulus_digits in *
            | |- _ => rewrite length_zeros in *
-           | |- _ => rewrite Min.min_l in * by omega 
+           | |- _ => rewrite Min.min_l in * by omega
            | |- _ => rewrite nth_default_zeros
            | |- _ => rewrite nth_default_map2 with (d1 := 0) (d2 := 0)
            | |- _ => break_if
