@@ -525,7 +525,7 @@ Class FreezePreconditions `{prm : PseudoMersenneBaseParams} B :=
   {
     lt_1_length_limb_widths : (1 < length limb_widths)%nat;
     B_pos : 0 < B;
-    B_compat : forall w, In w limb_widths -> w <= B;
+    B_compat : forall w, In w limb_widths -> w < B;
    (* on the first reduce step, we add at most one bit of width to the first digit *)
    c_reduce1 : c * ((2 ^ B) >> nth_default 0 limb_widths (pred (length limb_widths))) <= 2 ^ (nth_default 0 limb_widths 0);
    (* on the second reduce step, we add at most one bit of width to the first digit,
@@ -666,8 +666,10 @@ Section CanonicalizationProofs.
            | |- _ => break_if; try omega
            | |- _ => progress simpl pred in *
            | |- _ => progress rewrite ?Z.add_0_r, ?Z.sub_0_r in *
+           | |- _ => rewrite nth_default_out_of_bounds by omega
            | |- _ => rewrite nth_default_carry_sequence_make_chain_full by auto
            | H : forall n, 0 <= _ [n] < _ |- appcontext [ _ [?n] ] => pose proof (H (pred n)); specialize (H n)
+           | H : forall n, (n < ?m)%nat -> 0 <= _ [n] < _ |- appcontext [ _ [?n] ] => pose proof (H (pred n)); specialize (H n); specialize_by omega
            | |- appcontext [make_chain 0] => simpl make_chain; rewrite carry_sequence_nil_l
            | |- 0 <= ?a + c * ?b < 2 * ?d => unique assert (c * b <= d);
                                                [ | solve [pose proof c_pos; rewrite <-Z.add_diag; split; zero_bounds] ]
@@ -699,7 +701,7 @@ Section CanonicalizationProofs.
 
   Lemma bound_during_first_loop : forall us,
     length us = length limb_widths ->
-    (forall n, 0 <= us [n] < 2 ^ B - if eq_nat_dec n 0 then 0 else ((2 ^ B) >> (limb_widths [pred n]))) ->
+    (forall n, (n < length limb_widths)%nat -> 0 <= us [n] < 2 ^ B - if eq_nat_dec n 0 then 0 else ((2 ^ B) >> (limb_widths [pred n]))) ->
     forall i n,
     (i <= length limb_widths)%nat ->
     0 <= us{{i}}[n] < if eq_nat_dec i 0 then us[n] + 1 else
@@ -718,6 +720,30 @@ Section CanonicalizationProofs.
     induction i; bound_during_loop.
   Qed.
 
+  Lemma bound_after_loop_length_preconditions : forall us (Hlength : length us = length limb_widths)
+                                  {bound bound' bound'' : list Z -> nat -> Z}
+                                  {X Y : list Z -> nat -> nat -> Z} f,
+    (forall us, length us = length limb_widths
+                -> (forall n, (n < length limb_widths)%nat -> 0 <= us [n] < bound' us n)
+                -> forall i n, (i <= length limb_widths)%nat
+                               -> 0 <= us{{i}}[n] < if eq_nat_dec i 0 then X us i n else
+                                                      if lt_dec i (length limb_widths)
+                                                      then Y us i n
+                                                      else bound'' us n) ->
+     ((forall n, (n < length limb_widths)%nat -> 0 <= us [n] < bound us n)
+                -> forall n, (n < length limb_widths)%nat -> 0 <= (f us) [n] < bound' (f us) n) ->
+     length (f us) = length limb_widths ->
+     (forall n, (n < length limb_widths)%nat -> 0 <= us [n] < bound us n)
+                -> forall n, (n < length limb_widths)%nat -> 0 <= (carry_full (f us)) [n] < bound'' (f us) n.
+  Proof.
+    pose proof lt_1_length_limb_widths.
+    cbv [carry_full full_carry_chain]; intros ? ? ? ? ? ? ? ? Hloop Hfbound Hflength Hbound n.
+    specialize (Hfbound Hbound).
+    specialize (Hloop (f us) Hflength Hfbound (length limb_widths) n).
+    specialize_by omega.
+    repeat (break_if; try omega).
+  Qed.
+
   Lemma bound_after_loop : forall us (Hlength : length us = length limb_widths)
                                   {bound bound' bound'' : list Z -> nat -> Z}
                                   {X Y : list Z -> nat -> nat -> Z} f,
@@ -728,10 +754,10 @@ Section CanonicalizationProofs.
                                                       if lt_dec i (length limb_widths)
                                                       then Y us i n
                                                       else bound'' us n) ->
-     ((forall n, 0 <= us [n] < bound us n)
-                -> forall n, 0 <= (f us) [n] < bound' (f us) n) ->
-     length (f us) = length limb_widths ->
-     (forall n, 0 <= us [n] < bound us n)
+     ((forall n, (n < length limb_widths)%nat -> 0 <= us [n] < bound us n)
+                -> forall n, 0 <= (f us) [n] < bound' (f us) n)
+     -> length (f us) = length limb_widths
+     -> (forall n, (n < length limb_widths)%nat -> 0 <= us [n] < bound us n)
                 -> forall n, 0 <= (carry_full (f us)) [n] < bound'' (f us) n.
   Proof.
     pose proof lt_1_length_limb_widths.
@@ -742,16 +768,35 @@ Section CanonicalizationProofs.
     repeat (break_if; try omega).
   Qed.
 
+  Lemma bound_after_first_loop_pre : forall us,
+    length us = length limb_widths ->
+    (forall n, (n < length limb_widths)%nat -> 0 <= us [n] < 2 ^ B - if eq_nat_dec n 0 then 0 else ((2 ^ B) >> (limb_widths [pred n]))) ->
+    forall n, (n < length limb_widths)%nat ->
+    0 <= (carry_full us)[n] <
+      if eq_nat_dec n 0
+      then 2 * 2 ^ limb_widths [n]
+      else 2 ^ limb_widths [n].
+  Proof.
+    intros ? ?.
+    apply (bound_after_loop_length_preconditions us H id bound_during_first_loop); auto.
+  Qed.
+
   Lemma bound_after_first_loop : forall us,
     length us = length limb_widths ->
-    (forall n, 0 <= us [n] < 2 ^ B - if eq_nat_dec n 0 then 0 else ((2 ^ B) >> (limb_widths [pred n]))) ->
+    (forall n, (n < length limb_widths)%nat -> 0 <= us [n] < 2 ^ B - if eq_nat_dec n 0 then 0 else ((2 ^ B) >> (limb_widths [pred n]))) ->
     forall n,
     0 <= (carry_full us)[n] <
       if eq_nat_dec n 0
       then 2 * 2 ^ limb_widths [n]
       else 2 ^ limb_widths [n].
   Proof.
-    intros ? ?; apply (bound_after_loop us H id bound_during_first_loop); auto.
+    intros.
+    destruct (lt_dec n (length limb_widths));
+      auto using bound_after_first_loop_pre.
+    rewrite !nth_default_out_of_bounds by (rewrite ?length_carry_full; omega).
+    autorewrite with zsimplify.
+    rewrite Z.pow_0_r.
+    break_if; omega.
   Qed.
 
   Lemma bound_during_second_loop : forall us,
@@ -777,7 +822,7 @@ Section CanonicalizationProofs.
 
   Lemma bound_after_second_loop : forall us,
     length us = length limb_widths ->
-    (forall n, 0 <= us [n] < 2 ^ B - if eq_nat_dec n 0 then 0 else ((2 ^ B) >> (limb_widths [pred n]))) ->
+    (forall n, (n < length limb_widths)%nat -> 0 <= us [n] < 2 ^ B - if eq_nat_dec n 0 then 0 else ((2 ^ B) >> (limb_widths [pred n]))) ->
     forall n,
     0 <= (carry_full (carry_full us)) [n] <
       if eq_nat_dec n 0
@@ -816,7 +861,7 @@ Section CanonicalizationProofs.
 
   Lemma bound_after_third_loop : forall us,
     length us = length limb_widths ->
-    (forall n, 0 <= us [n] < 2 ^ B - if eq_nat_dec n 0 then 0 else ((2 ^ B) >> (limb_widths [pred n]))) ->
+    (forall n, (n < length limb_widths)%nat -> 0 <= us [n] < 2 ^ B - if eq_nat_dec n 0 then 0 else ((2 ^ B) >> (limb_widths [pred n]))) ->
     forall n,
     0 <= (carry_full (carry_full (carry_full us))) [n] < 2 ^ limb_widths [n].
   Proof.
@@ -826,7 +871,7 @@ Section CanonicalizationProofs.
   Qed.
 
   Local Notation initial_bounds u :=
-      (forall n : nat,
+      (forall n : nat, (n < length limb_widths)%nat ->
        0 <= to_list (length limb_widths) u [n] <
        2 ^ B -
        (if eq_nat_dec n 0
@@ -907,7 +952,7 @@ Section CanonicalizationProofs.
            | |- _ => apply conditional_subtract_lt_modulus
            | |- _ => apply conditional_subtract_modulus_preserves_bounded
            | |- bounded _ (carry_full _) => apply bounded_iff
-           | |- _ => solve [auto using B_pos, B_compat, lt_1_length_limb_widths, length_carry_full, length_to_list]
+           | |- _ => solve [auto using Z.lt_le_incl, B_pos, B_compat, lt_1_length_limb_widths, length_carry_full, length_to_list]
            end.
   Qed.
 
@@ -922,7 +967,7 @@ Section CanonicalizationProofs.
            | |- _ => rewrite Z.mod_add by (pose proof prime_modulus; prime_bound)
            | |- _ => rewrite to_list_from_list
            | |- _ => rewrite conditional_subtract_modulus_spec by
-                       auto using B_pos, B_compat, lt_1_length_limb_widths, length_carry_full, length_to_list, ge_modulus_01
+                       auto using Z.lt_le_incl, B_pos, B_compat, lt_1_length_limb_widths, length_carry_full, length_to_list, ge_modulus_01
            end.
     rewrite !decode_mod_Fdecode by auto using length_carry_full, length_to_list.
     cbv [carry_full].

@@ -913,7 +913,7 @@ Section with_base.
     mkFreezePreconditions {
         lt_1_length_base : (1 < length base)%nat;
         int_width_pos : 0 < int_width;
-        int_width_compat : forall w, In w limb_widths -> w <= int_width;
+        int_width_compat : forall w, In w limb_widths -> w < int_width;
         c_pos : 0 < c;
         c_reduce1 : c * (Z.ones (int_width - log_cap (pred (length base)))) < 2 ^ log_cap 0;
         c_reduce2 : c < 2 ^ log_cap 0 - c;
