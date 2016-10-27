@@ -30,16 +30,30 @@ Section language.
 
     Lemma wff_mapf_interp {t e1 e2} G
           (Hwf : @wff base_type_code interp_base_type op var1 var2 G t e1 e2)
+      : wff G (mapf_interp f1 e1) (mapf_interp f1 e2).
+    Proof. induction Hwf; constructor; auto. Qed.
+
+    Lemma rel_wff_mapf_interp {t e1 e2} G
+          (Hwf : @wff base_type_code interp_base_type op var1 var2 G t e1 e2)
       : rel_wff R G (mapf_interp f1 e1) (mapf_interp f2 e2).
     Proof. induction Hwf; constructor; auto using flat_rel_pointwise2_mapf. Qed.
 
     Lemma wf_map_interp {t e1 e2} G
           (Hwf : @wf base_type_code interp_base_type op var1 var2 G t e1 e2)
-      : rel_wf R G (map_interp f1 e1) (map_interp f2 e2).
+      : wf G (map_interp f1 e1) (map_interp f1 e2).
     Proof. induction Hwf; constructor; auto using wff_mapf_interp. Qed.
+
+    Lemma rel_wf_map_interp {t e1 e2} G
+          (Hwf : @wf base_type_code interp_base_type op var1 var2 G t e1 e2)
+      : rel_wf R G (map_interp f1 e1) (map_interp f2 e2).
+    Proof. induction Hwf; constructor; auto using rel_wff_mapf_interp. Qed.
   End with_var.
 
   Lemma WfMapInterp {t e} (Hwf : @Wf base_type_code interp_base_type op t e)
-    : RelWf R (MapInterp f1 e) (MapInterp f2 e).
+    : Wf (MapInterp f1 e).
   Proof. repeat intro; apply wf_map_interp, Hwf. Qed.
+
+  Lemma RelWfMapInterp {t e} (Hwf : @Wf base_type_code interp_base_type op t e)
+    : RelWf R (MapInterp f1 e) (MapInterp f2 e).
+  Proof. repeat intro; apply rel_wf_map_interp, Hwf. Qed.
 End language.
