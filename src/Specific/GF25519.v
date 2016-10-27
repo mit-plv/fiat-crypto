@@ -175,6 +175,15 @@ Proof.
   etransitivity; apply app_10_correct.
 Qed.
 
+Definition uncurry_unop_fe25519 {T} (op : fe25519 -> T)
+  := Eval compute in Tuple.uncurry (n:=length_fe25519) op.
+Definition curry_unop_fe25519 {T} op : fe25519 -> T
+  := Eval compute in fun f => app_10 f (Tuple.curry (n:=length_fe25519) op).
+Definition uncurry_binop_fe25519 {T} (op : fe25519 -> fe25519 -> T)
+  := Eval compute in uncurry_unop_fe25519 (fun f => uncurry_unop_fe25519 (op f)).
+Definition curry_binop_fe25519 {T} op : fe25519 -> fe25519 -> T
+  := Eval compute in appify2 (fun f => curry_unop_fe25519 (curry_unop_fe25519 op f)).
+
 Definition add_sig (f g : fe25519) :
   { fg : fe25519 | fg = add_opt f g}.
 Proof.
