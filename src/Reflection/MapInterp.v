@@ -19,7 +19,7 @@ Section language.
     Fixpoint mapf_interp {t} (e : @exprf base_type_code interp_base_type1 op var t)
       : @exprf base_type_code interp_base_type2 op var t
       := match e in exprf _ _ _ t return exprf _ _ _ t with
-         | Const tx x => Const (mapf_interp_flat_type_gen _ f x)
+         | Const tx x => Const (mapf_interp_flat_type_gen f x)
          | Var _ x => Var x
          | Op _ _ op args => Op op (@mapf_interp _ args)
          | LetIn _ ex _ eC => LetIn (@mapf_interp _ ex) (fun x => @mapf_interp _ (eC x))

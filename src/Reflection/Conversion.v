@@ -23,7 +23,7 @@ Section language.
          | Var _ x => Var (f_var12 _ x)
          | Op _ _ op args => Op op (@mapf _ args)
          | LetIn _ ex _ eC => LetIn (@mapf _ ex)
-                               (fun x => @mapf _ (eC (mapf_interp_flat_type_gen base_type_code f_var21 x)))
+                               (fun x => @mapf _ (eC (mapf_interp_flat_type_gen f_var21 x)))
          | Pair _ ex _ ey => Pair (@mapf _ ex)
                                  (@mapf _ ey)
          end.
