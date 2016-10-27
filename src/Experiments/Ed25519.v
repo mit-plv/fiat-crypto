@@ -270,11 +270,42 @@ Section SRepERepMul.
   Qed.
 End SRepERepMul.
 
+Lemma ZToN_NPow2_lt : forall z n, (0 <= z < 2 ^ Z.of_nat n)%Z ->
+                                  (Z.to_N z < Word.Npow2 n)%N.
+Proof.
+  intros.
+  apply WordUtil.bound_check_nat_N.
+  apply Znat.Nat2Z.inj_lt.
+  rewrite Znat.Z2Nat.id by omega.
+  rewrite ZUtil.Z.pow_Zpow.
+  replace (Z.of_nat 2) with 2%Z by reflexivity.
+  omega.
+Qed.
   
 Lemma combine_ZNWord : forall sz1 sz2 z1 z2,
+  (0 <= Z.of_nat sz1)%Z -> 
+  (0 <= Z.of_nat sz2)%Z -> 
+  (0 <= z1 < 2 ^ (Z.of_nat sz1))%Z ->
+  (0 <= z2 < 2 ^ (Z.of_nat sz2))%Z ->
   Word.combine (ZNWord sz1 z1) (ZNWord sz2 z2) =
     ZNWord (sz1 + sz2) (Z.lor z1 (Z.shiftl z2 sz1)).
-Admitted.
+Proof.
+  cbv [ZNWord]; intros.
+  rewrite !Word.NToWord_nat.
+  match goal with |- ?a = _ => rewrite <- (Word.natToWord_wordToNat a) end.
+  rewrite WordUtil.wordToNat_combine.
+  rewrite !Word.wordToNat_natToWord_idempotent by (rewrite Nnat.N2Nat.id; auto using ZToN_NPow2_lt).
+  f_equal.
+  rewrite ZUtil.Z.lor_shiftl by auto.
+  rewrite !Z_N_nat.
+  rewrite Znat.Z2Nat.inj_add by (try apply Z.shiftl_nonneg; omega).
+  f_equal.
+  rewrite Z.shiftl_mul_pow2 by auto.
+  rewrite Znat.Z2Nat.inj_mul by omega.
+  rewrite <-ZUtil.Z.pow_Z2N_Zpow by omega.
+  rewrite Nat.mul_comm.
+  f_equal.
+Qed.
 
 Lemma nth_default_B_compat : forall i,
   (nth_default 0 PseudoMersenneBaseParams.limb_widths i <
@@ -404,7 +435,26 @@ Proof.
   pose proof (minrep_freeze x).
   intuition assumption.
 Qed.
-  
+
+Lemma lor_shiftl_bounds : forall x y n m,
+  (0 <= n)%Z -> (0 <= m)%Z ->
+  (0 <= x < 2 ^ m)%Z ->
+  (0 <= y < 2 ^ n)%Z ->
+  (0 <= Z.lor y (Z.shiftl x n) < 2 ^ (n + m))%Z.
+Proof.
+  intros.
+  apply ZUtil.Z.lor_range.
+  { split; try omega.
+    apply Z.lt_le_trans with (m := (2 ^ n)%Z); try omega.
+    apply Z.pow_le_mono_r; omega. }
+  { rewrite Z.shiftl_mul_pow2 by omega.
+    rewrite Z.pow_add_r by omega.
+    split; ZUtil.Z.zero_bounds.
+    rewrite Z.mul_comm.
+    apply Z.mul_lt_mono_pos_l; omega. }
+Qed.
+
+Set Printing Coercions.
 Lemma feEnc_correct : forall x,
     PointEncoding.Fencode x = feEnc (ModularBaseSystem.encode x).
 Proof.
@@ -450,13 +500,33 @@ Proof.
       rewrite Tuple.to_list_from_list.
       rewrite Z.mod_small by (apply ModularBaseSystemListProofs.ge_modulus_spec; auto; cbv; congruence).
       f_equal. }
-  { destruct w;
+  { Locate convert_bounded.
+    assert (Pow2Base.bounded GF25519.wire_widths (Tuple.to_list 8 w)).
+    { subst w.
+      rewrite GF25519.pack_correct, ModularBaseSystemOpt.pack_correct.
+      cbv [ModularBaseSystem.pack ModularBaseSystemList.pack].
+      rewrite Tuple.to_list_from_list.
+      apply Conversion.convert_bounded. }
+    { destruct w;
       repeat match goal with p : _ * Z |- _ => destruct p end.
-    repeat rewrite combine_ZNWord.
-    cbv - [ZNWord Z.lor Z.shiftl].
-    rewrite Z.shiftl_0_l.
-    rewrite Z.lor_0_r.
-    reflexivity. }
+      simpl Tuple.to_list in *.
+      rewrite Pow2BaseProofs.bounded_iff in *.
+      (* TODO : Is there a better way to do this? *)
+      pose proof (H0 0).
+      pose proof (H0 1).
+      pose proof (H0 2).
+      pose proof (H0 3).
+      pose proof (H0 4).
+      pose proof (H0 5).
+      pose proof (H0 6).
+      pose proof (H0 7).
+      clear H0.
+      cbv [GF25519.wire_widths nth_default nth_error] in *.
+      repeat rewrite combine_ZNWord by (rewrite ?Znat.Nat2Z.inj_add; simpl Z.of_nat; repeat apply lor_shiftl_bounds; omega).
+      cbv - [ZNWord Z.lor Z.shiftl].
+      rewrite Z.shiftl_0_l.
+      rewrite Z.lor_0_r.
+      reflexivity. } }
 Qed.
 >>>>>>> most of feEnc correctness proof
 
