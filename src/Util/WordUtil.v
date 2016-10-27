@@ -311,3 +311,10 @@ Proof.
 Admitted.
 Hint Rewrite @wordToN_wor using word_util_arith : push_wordToN.
 Hint Rewrite <- @wordToN_wor using word_util_arith : pull_wordToN.
+
+Axiom wlast : forall sz, word (sz+1) -> bool. Arguments wlast {_} _.
+Axiom winit : forall sz, word (sz+1) -> word sz. Arguments winit {_} _.
+Axiom combine_winit_wlast : forall {sz} a b (c:word (sz+1)),
+    @combine sz a 1 b = c <-> a = winit c /\ b = (WS (wlast c) WO).
+Axiom winit_combine : forall sz a b, @winit sz (combine a b) = a.
+Axiom wlast_combine : forall sz a b, @wlast sz (combine a (WS b WO)) = b.

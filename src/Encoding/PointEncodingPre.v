@@ -3,7 +3,7 @@ Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Coq.Program.Equality.
 Require Import Crypto.CompleteEdwardsCurve.Pre.
 Require Import Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
-Require Import Bedrock.Word.
+Require Import Bedrock.Word Crypto.Util.WordUtil.
 Require Import Crypto.Encoding.ModularWordEncodingTheorems.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Algebra.
@@ -39,7 +39,6 @@ Section PointEncodingPre.
   Local Notation point := (@E.point F eq one add mul a d).
   Local Notation onCurve := (@onCurve F eq one add mul a d).
   Local Notation solve_for_x2 := (@E.solve_for_x2 F one sub mul div a d).
-  Check PrimeFieldTheorems.F.sqrt_5mod8_correct.
 
   Context {sz : nat} (sz_nonzero : (0 < sz)%nat).
   Context {sqrt : F -> F} {Proper_sqrt : Proper (eq ==>eq) sqrt}
@@ -92,10 +91,10 @@ Section PointEncodingPre.
     apply E.solve_correct; eassumption.
   Qed.
 
-  Definition point_enc_coordinates (p : (F * F)) : Word.word (S sz) := let '(x,y) := p in
-    Word.WS (sign_bit x) (enc y).
+  Definition point_enc_coordinates (p : (F * F)) : Word.word (sz+1) := let '(x,y) := p in
+    combine (enc y) (WS (sign_bit x) WO).
 
-  Let point_enc (p : point) : Word.word (S sz) := point_enc_coordinates (E.coordinates p).
+  Let point_enc (p : point) : Word.word (sz+1) := point_enc_coordinates (E.coordinates p).
 
   Definition coord_from_y sign (y : F) : option (F * F) :=
     let x2 := solve_for_x2 y in
@@ -108,8 +107,8 @@ Section PointEncodingPre.
         else Some p
     else None.
 
-  Definition point_dec_coordinates (w : word (S sz)) : option (F * F) :=
-    option_rect (fun _ => _) (coord_from_y (whd w)) None (dec (wtl w)).
+  Definition point_dec_coordinates (w : word (sz+1)) : option (F * F) :=
+    option_rect (fun _ => _) (coord_from_y (wlast w)) None (dec (winit w)).
 
   (* Definition of product equality parameterized over equality of underlying types *)
   Definition prod_eq {A B} eqA eqB (x y : (A * B)) := let (xA,xB) := x in let (yA,yB) := y in
@@ -247,8 +246,12 @@ Section PointEncodingPre.
       | right _ => None
     end.
 
-  Definition point_dec (w : word (S sz)) : option point :=
+  Definition point_dec (w : word (sz+1)) : option point :=
     option_rect (fun _ => option point) point_from_xy None (point_dec_coordinates w).
+
+  Lemma bool_neq_negb x y : x <> y <-> x = negb y.
+    destruct x, y; split; (discriminate||tauto).
+  Qed.
 
   Lemma point_coordinates_encoding_canonical : forall w p,
     option_eq (Tuple.fieldwise (n := 2) eq) (point_dec_coordinates w) (Some p) ->
@@ -279,15 +282,19 @@ Section PointEncodingPre.
                             Bool.eq_true_not_negb,
                             Bool.not_false_is_true, encoding_canonical]
            end;
-      try solve [apply enc_canonical_equiv; rewrite Heqo; auto];
+      rewrite combine_winit_wlast; split;
+        try apply (f_equal2 (fun a b => WS a b));
+        try solve
+            [ trivial
+            | apply enc_canonical_equiv; rewrite Heqo; auto];
         erewrite <-sign_bit_subst by eassumption.
-    { rewrite <-sign_bit_opp
-        by (intro A; apply F_eqb_iff in A; congruence).
-      auto using Bool.eq_true_not_negb. }
-    { rewrite <-sign_bit_opp
-        by (intro A; apply sign_bit_zero in A; congruence).
-      apply Bool.negb_false_iff, Bool.not_false_is_true.
-      auto. }
+    { intuition. }
+    { apply bool_neq_negb in Heqb0. rewrite <-sign_bit_opp.
+      { congruence. }
+      { rewrite Bool.andb_false_iff in *.
+        unfold not; intro Hx; destruct Heqb;
+          [apply F_eqb_iff in Hx; congruence
+          |rewrite (sign_bit_zero _ Hx) in *; simpl negb in *; congruence]. } }
   Qed.
 
   Lemma inversion_point_dec : forall w x,
@@ -311,9 +318,11 @@ Section PointEncodingPre.
     auto using inversion_point_dec.
   Qed.
 
-  Lemma y_decode : forall p, dec (wtl (point_enc_coordinates p)) = Some (snd p).
+
+  Lemma y_decode : forall p, dec (winit (point_enc_coordinates p)) = Some (snd p).
   Proof.
     intros; destruct p. cbv [point_enc_coordinates wtl snd].
+    rewrite winit_combine.
     exact (encoding_valid _).
   Qed.
 
@@ -372,6 +381,7 @@ Section PointEncodingPre.
       rewrite zero_square in *.
       assert (sqrt (solve_for_x2 y) == 0) by (rewrite solve_correct; tauto).
       rewrite !sign_bit_zero by (tauto || eauto).
+      rewrite wlast_combine.
       rewrite Bool.andb_false_r, Bool.eqb_reflx.
       apply option_coordinates_eq_iff; split; try reflexivity.
       etransitivity; eauto.
@@ -388,6 +398,7 @@ Section PointEncodingPre.
         rewrite H0, zero_square in sqrt_square.
         rewrite Ring.zero_product_iff_zero_factor in sqrt_square.
         tauto. } Unfocus.
+      rewrite wlast_combine.
       break_if; [ | apply eqb_sign_opp_r in Heqb];
         try (apply option_coordinates_eq_iff; split; try reflexivity);
         try eapply sign_match with (y := solve_for_x2 y); eauto;

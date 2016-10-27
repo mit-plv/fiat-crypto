@@ -3,7 +3,7 @@ Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
 Require Import Crypto.Spec.CompleteEdwardsCurve.
 Require Import Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
-Require Import Bedrock.Word.
+Require Import Bedrock.Word Crypto.Util.WordUtil.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.NatUtil.
@@ -30,14 +30,16 @@ Section PointEncoding.
           {two_lt_m : (2 < m)%Z}
           {bound_check : (Z.to_nat m < 2 ^ b)%nat}.
 
-  Definition sign (x : F m) : bool := Z.testbit (F.to_Z x) 0.
+  Local Infix "++" := Word.combine.
+  Local Notation bit b := (Word.WS b Word.WO : Word.word 1).
 
+  Definition sign (x : F m) : bool := Z.testbit (F.to_Z x) 0.
   Definition Fencode (x : F m) : word b := NToWord b (Z.to_N (F.to_Z x)).
 
   Let Fpoint := @E.point (F m) Logic.eq F.one F.add F.mul Fa Fd.
 
   Definition encode_point (P : Fpoint) :=
-    let '(x,y) := E.coordinates P in WS (sign x) (Fencode y).
+    let '(x,y) := E.coordinates P in Fencode y ++ bit (sign x).
 
   Import Morphisms.
   Lemma Proper_encode_point : Proper (E.eq ==> Logic.eq) encode_point.
@@ -69,7 +71,6 @@ Section PointEncoding.
             {Kcoord_to_point : @E.point K Keq Kone Kadd Kmul Ka Kd  -> Kpoint}
             {Kpoint_to_coord : Kpoint -> (K * K)}.
     Context {Kp2c_c2p : forall pt : E.point, Tuple.fieldwise (n := 2) Keq (Kpoint_to_coord (Kcoord_to_point pt)) (E.coordinates pt)}.
-        Check Kp2c_c2p.
     Context {Kpoint_eq : Kpoint -> Kpoint -> Prop} {Kpoint_add : Kpoint -> Kpoint -> Kpoint}.
     Context {Kpoint_eq_correct : forall p q, Kpoint_eq p q <-> Tuple.fieldwise (n := 2) Keq (Kpoint_to_coord p) (Kpoint_to_coord q)} {Kpoint_eq_Equivalence : Equivalence Kpoint_eq}.
 
@@ -135,7 +136,7 @@ Section PointEncoding.
     Qed.
 
     Definition Kencode_point (P : Kpoint) :=
-      let '(x,y) := Kpoint_to_coord P in WS (Ksign x) (Kenc y).
+      let '(x,y) := Kpoint_to_coord P in (Kenc y) ++ bit (Ksign x).
 
     Lemma Kencode_point_correct : forall P : Fpoint,
         encode_point P = Kencode_point (point_phi P).
@@ -148,7 +149,9 @@ Section PointEncoding.
       pose proof (Kp2c_c2p x) as A; rewrite Heqp in A;
         inversion A; cbv [fst snd Tuple.fieldwise'] in * end.
       cbv [E.coordinates E.ref_phi proj1_sig] in *.
-      f_equal; rewrite ?H0, ?H1; auto.
+      apply (f_equal2 (fun a b => a ++ b));
+        try apply (f_equal2 (fun a b => WS a b));
+        rewrite ?H0, ?H1; auto.
     Qed.
 
     Lemma Proper_Kencode_point : Proper (Kpoint_eq ==> Logic.eq) Kencode_point.
@@ -159,7 +162,9 @@ Section PointEncoding.
       destruct (Kpoint_to_coord x).
       destruct (Kpoint_to_coord y).
       simpl in H; destruct H.
-      f_equal; auto.
+      apply (f_equal2 (fun a b => a ++ b));
+        try apply (f_equal2 (fun a b => WS a b));
+        rewrite ?H0, ?H1; auto.
     Qed.
 
 
@@ -174,11 +179,11 @@ Section PointEncoding.
           else Some p
       else None.
 
-    Definition Kdecode_coordinates (w : word (S b)) : option (K * K) :=
+    Definition Kdecode_coordinates (w : word (b + 1)) : option (K * K) :=
       option_rect (fun _ => option (K * K))
-                  (Kcoordinates_from_y (whd w))
+                  (Kcoordinates_from_y (wlast w))
                   None
-                  (Kdec (wtl w)).
+                  (Kdec (winit w)).
 
     Lemma onCurve_eq : forall x y,
       Keq (Kadd (Kmul Ka (Kmul x x)) (Kmul y y))
@@ -196,7 +201,7 @@ Section PointEncoding.
         | right _ => None
       end.
 
-    Definition Kdecode_point (w : word (S b)) : option Kpoint :=
+    Definition Kdecode_point (w : word (b+1)) : option Kpoint :=
       option_rect (fun _ => option Kpoint) Kpoint_from_xy None (Kdecode_coordinates w).
 
     Definition Fencoding : Encoding.CanonicalEncoding (F m) (word b).

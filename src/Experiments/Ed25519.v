@@ -1357,7 +1357,7 @@ Lemma eq_enc_E_iff : forall (P_ : Word.word b) (P : E),
  Option.option_eq CompleteEdwardsCurveTheorems.E.eq (Edec P_) (Some P).
 Proof.
   cbv [Eenc].
-  eapply @PointEncoding.encode_point_decode_point_iff; try (exact iff_equivalence || exact curve_params); [].
+  eapply (@PointEncoding.encode_point_decode_point_iff (b-1)); try (exact iff_equivalence || exact curve_params); [].
   intros.
   apply (@PrimeFieldTheorems.F.sqrt_5mod8_correct GF25519.modulus _ eq_refl Fsqrt_minus1 Fsqrt_minus1_correct).
   eexists.
@@ -1397,7 +1397,7 @@ Let verify_correct :
       (* Eenc := *) Eenc
       (* Senc := *) Senc
       (* prm := *) ed25519
-      (* Proper_Eenc := *) PointEncoding.Proper_encode_point
+      (* Proper_Eenc := *) (PointEncoding.Proper_encode_point (b:=b-1))
       (* Edec := *) Edec
       (* eq_enc_E_iff := *) eq_enc_E_iff
       (* Sdec := *) Sdec
