@@ -277,6 +277,29 @@ Section Conversion.
   Qed.
 
   (* This is part of convert'_invariant, but proving it separately strips preconditions *)
+  Lemma convert'_bounded : forall inp i out,
+    bounded limb_widthsB out ->
+    bounded limb_widthsB (convert' inp i out).
+  Proof.
+    intros; functional induction (convert' inp i out); auto.
+    apply IHl.
+    apply convert'_bounded_step; auto.
+    clear IHl.
+    pose proof (bit_index_not_done limb_widthsA (Z.of_nat i)).
+    pose proof (bit_index_not_done limb_widthsB (Z.of_nat i)).
+    specialize_by lia.
+    lia.
+  Qed.
+
+  Lemma convert_bounded : forall us, bounded limb_widthsB (convert us).
+  Proof.
+    intros; apply convert'_bounded.
+    apply bounded_iff; intros.
+    rewrite nth_default_zeros.
+    split; zero_bounds.
+  Qed.
+    
+  (* This is part of convert'_invariant, but proving it separately strips preconditions *)
   Lemma length_convert' : forall inp i out,
     length (convert' inp i out) = length out.
   Proof.
