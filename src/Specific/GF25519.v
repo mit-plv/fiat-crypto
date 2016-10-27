@@ -184,6 +184,11 @@ Definition uncurry_binop_fe25519 {T} (op : fe25519 -> fe25519 -> T)
 Definition curry_binop_fe25519 {T} op : fe25519 -> fe25519 -> T
   := Eval compute in appify2 (fun f => curry_unop_fe25519 (curry_unop_fe25519 op f)).
 
+Definition uncurry_unop_wire_digits {T} (op : wire_digits -> T)
+  := Eval compute in Tuple.uncurry (n:=length wire_widths) op.
+Definition curry_unop_wire_digits {T} op : wire_digits -> T
+  := Eval compute in fun f => app_7 f (Tuple.curry (n:=length wire_widths) op).
+
 Definition add_sig (f g : fe25519) :
   { fg : fe25519 | fg = add_opt f g}.
 Proof.
