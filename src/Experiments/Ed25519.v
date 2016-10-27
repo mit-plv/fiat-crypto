@@ -1,4 +1,6 @@
 Require Import Coq.omega.Omega.
+Require Import Coq.Lists.List.
+Import ListNotations.
 Require Import Crypto.EdDSARepChange.
 Require Import Crypto.Spec.Ed25519.
 Require Import Crypto.Util.Decidable.
@@ -268,11 +270,195 @@ Section SRepERepMul.
   Qed.
 End SRepERepMul.
 
-(* TODO : unclear what we're doing with the placeholder [feEnc] at the moment, so
-   leaving this admitted for now *)
-Lemma feEnc_correct : forall x,
-    PointEncoding.Fencode x = feEnc (GF25519BoundedCommon.encode x).
+  
+Lemma combine_ZNWord : forall sz1 sz2 z1 z2,
+  Word.combine (ZNWord sz1 z1) (ZNWord sz2 z2) =
+    ZNWord (sz1 + sz2) (Z.lor z1 (Z.shiftl z2 sz1)).
 Admitted.
+
+Lemma nth_default_B_compat : forall i,
+  (nth_default 0 PseudoMersenneBaseParams.limb_widths i <
+   GF25519.int_width)%Z.
+Proof.
+    assert (@ModularBaseSystemProofs.FreezePreconditions
+                 GF25519.modulus GF25519.params25519 
+                 GF25519.int_width) by
+     (let A := fresh "H" in
+            pose proof GF25519.freezePreconditions25519 as A;
+            inversion A;  econstructor; eauto).
+    intros.
+    destruct (lt_dec i (length PseudoMersenneBaseParams.limb_widths)).
+    { apply ModularBaseSystemProofs.B_compat.
+      rewrite nth_default_eq.
+      auto using nth_In. }
+    { rewrite nth_default_out_of_bounds by omega.
+      cbv; congruence. }
+Qed.
+
+Lemma minrep_freeze : forall x,
+            Pow2Base.bounded
+              PseudoMersenneBaseParams.limb_widths
+              (Tuple.to_list
+                 (length
+                    PseudoMersenneBaseParams.limb_widths)
+                 (ModularBaseSystem.freeze
+                    GF25519.int_width
+                    (ModularBaseSystem.encode x))) /\
+            ModularBaseSystemList.ge_modulus
+              (Tuple.to_list
+                 (length
+                    PseudoMersenneBaseParams.limb_widths)
+                 (ModularBaseSystem.freeze
+                    GF25519.int_width
+                    (ModularBaseSystem.encode x))) =
+            0%Z.
+Proof.
+    assert (@ModularBaseSystemProofs.FreezePreconditions
+                 GF25519.modulus GF25519.params25519 
+                 GF25519.int_width)
+      by (let A := fresh "H" in
+            pose proof GF25519.freezePreconditions25519 as A;
+            inversion A;  econstructor; eauto).
+    intros.
+    match goal with
+      |- appcontext [ModularBaseSystem.freeze _ ?x] =>
+      pose proof (ModularBaseSystemProofs.minimal_rep_freeze x) as Hminrep end.
+    match type of Hminrep with ?P -> _ => assert P end.
+    { intros i ?.
+      let A := fresh "H" in
+      pose proof (ModularBaseSystemProofs.bounded_encode x) as A;
+          rewrite Pow2BaseProofs.bounded_iff in A; specialize (A i).
+      split; [ omega | ].
+      eapply Z.lt_le_trans; [ solve [intuition eauto] | ].
+      match goal with |- appcontext [if ?a then _ else _] => destruct a end.
+      { apply Z.pow_le_mono_r; try omega.
+          apply Z.lt_le_incl, nth_default_B_compat. }
+      { transitivity (2 ^ (Z.pred GF25519.int_width))%Z.
+          { apply Z.pow_le_mono; try omega.
+          apply Z.lt_le_pred.
+          apply nth_default_B_compat. }
+          { rewrite Z.shiftr_div_pow2 by (auto using Pow2BaseProofs.nth_default_limb_widths_nonneg, PseudoMersenneBaseParamProofs.limb_widths_nonneg).
+          rewrite <- Z.pow_sub_r by (try omega; split; auto using Pow2BaseProofs.nth_default_limb_widths_nonneg, PseudoMersenneBaseParamProofs.limb_widths_nonneg, Z.lt_le_incl, nth_default_B_compat).
+          replace (2 ^ GF25519.int_width)%Z
+          with (2 ^ (Z.pred GF25519.int_width + 1))%Z by (f_equal; omega).
+          rewrite Z.pow_add_r by (omega || (cbv; congruence)).
+          rewrite <-Zplus_diag_eq_mult_2.
+          match goal with |- (?a <= ?a + ?b - ?c)%Z =>
+                          assert (c <= b)%Z; [ | omega ] end.
+          apply Z.pow_le_mono; try omega.
+          rewrite <-Z.sub_1_r.
+          apply Z.sub_le_mono_l.
+          replace 1%Z with (Z.succ 0) by reflexivity.
+          rewrite Z.le_succ_l.
+          apply PseudoMersenneBaseParams.limb_widths_pos.
+          rewrite nth_default_eq; apply nth_In.
+          omega. } } }
+    { apply Hminrep. assumption. }
+Qed.
+
+Lemma convert_freezes: forall x,
+  (ModularBaseSystemList.freeze GF25519.int_width
+       (Tuple.to_list
+          (length PseudoMersenneBaseParams.limb_widths)
+          (ModularBaseSystem.encode x))) = 
+              (Tuple.to_list
+                 (length
+                    PseudoMersenneBaseParams.limb_widths)
+                 (ModularBaseSystem.freeze
+                    GF25519.int_width
+                    (ModularBaseSystem.encode x))).
+Proof.
+  cbv [ModularBaseSystem.freeze].
+  intros.
+  rewrite Tuple.to_list_from_list.
+  reflexivity.
+Qed.
+
+Lemma bounded_freeze : forall x,
+  Pow2Base.bounded
+         PseudoMersenneBaseParams.limb_widths
+         (ModularBaseSystemList.freeze
+            GF25519.int_width
+            (Tuple.to_list
+               (length
+                  PseudoMersenneBaseParams.limb_widths)
+               (ModularBaseSystem.encode x))).
+Proof.
+  intro.
+  rewrite convert_freezes.
+  pose proof (minrep_freeze x).
+  intuition assumption.
+Qed.
+
+Lemma ge_modulus_freeze : forall x,
+  ModularBaseSystemList.ge_modulus
+         (ModularBaseSystemList.freeze
+            GF25519.int_width
+            (Tuple.to_list
+               (length
+                  PseudoMersenneBaseParams.limb_widths)
+               (ModularBaseSystem.encode x))) = 0%Z.
+Proof.
+  intro.
+  rewrite convert_freezes.
+  pose proof (minrep_freeze x).
+  intuition assumption.
+Qed.
+  
+Lemma feEnc_correct : forall x,
+    PointEncoding.Fencode x = feEnc (ModularBaseSystem.encode x).
+Proof.
+  cbv [feEnc PointEncoding.Fencode]; intros.
+  match goal with |- appcontext [GF25519.pack ?x] =>
+                  remember (GF25519.pack x) end.
+  transitivity (ZNWord 255 (Pow2Base.decode_bitwise GF25519.wire_widths (Tuple.to_list 8 w))).
+  { cbv [ZNWord].
+    do 2 f_equal.
+    subst w.
+    assert (@ModularBaseSystemProofs.FreezePreconditions
+                 GF25519.modulus GF25519.params25519 
+                 GF25519.int_width)
+      by (let A := fresh "H" in
+            pose proof GF25519.freezePreconditions25519 as A;
+            inversion A;  econstructor; eauto).
+    match goal with
+      |- appcontext [GF25519.freeze ?x ] =>
+      let A := fresh "H" in
+      pose proof (ModularBaseSystemProofs.freeze_decode x) as A end.
+    pose proof (ge_modulus_freeze x); pose proof (bounded_freeze x).
+    repeat match goal with
+           | |- _ => rewrite Tuple.to_list_from_list
+           | |- _ => progress cbv [ModularBaseSystem.pack ModularBaseSystemList.pack]
+           | |- _ => progress rewrite ?GF25519.pack_correct, ?GF25519.freeze_correct,
+             ?ModularBaseSystemOpt.pack_correct,
+             ?ModularBaseSystemOpt.freeze_opt_correct by reflexivity
+           | |- _ => rewrite Pow2BaseProofs.decode_bitwise_spec
+               by (auto using Conversion.convert_bounded,
+                   Conversion.length_convert; cbv [In GF25519.wire_widths];
+                   intuition omega)
+           | H : length ?ls = ?n |- appcontext [Tuple.from_list_default _ ?n ?ls] =>
+               rewrite Tuple.from_list_default_eq with (pf := H)
+           | |- appcontext [Tuple.from_list_default _ ?n ?ls] =>
+               assert (length ls = n) by
+               (rewrite ModularBaseSystemListProofs.length_freeze;
+               try rewrite Tuple.length_to_list; reflexivity)
+           | |- _ => rewrite <-Conversion.convert_correct by auto
+           end.
+      rewrite <-ModularBaseSystemProofs.Fdecode_decode_mod with (us := ModularBaseSystem.encode x) by apply ModularBaseSystemProofs.encode_rep.
+      match goal with H : _ = ?b |- ?b = _ => rewrite <-H; clear H end.
+      cbv [ModularBaseSystem.freeze].
+      rewrite Tuple.to_list_from_list.
+      rewrite Z.mod_small by (apply ModularBaseSystemListProofs.ge_modulus_spec; auto; cbv; congruence).
+      f_equal. }
+  { destruct w;
+      repeat match goal with p : _ * Z |- _ => destruct p end.
+    repeat rewrite combine_ZNWord.
+    cbv - [ZNWord Z.lor Z.shiftl].
+    rewrite Z.shiftl_0_l.
+    rewrite Z.lor_0_r.
+    reflexivity. }
+Qed.
+>>>>>>> most of feEnc correctness proof
 
 (* TODO : unclear what we're doing with the placeholder [feEnc] at the moment, so
    leaving this admitted for now *)
