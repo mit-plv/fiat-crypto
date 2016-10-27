@@ -361,3 +361,6 @@ End language.
 
 Global Arguments reflect_wffT {_ _ _} _ {op} R _ {var1 var2} G {t1 t2} _ _.
 Global Arguments reflect_wfT {_ _ _} _ {op} R _ {var1 var2} G {t1 t2} _ _.
+Global Arguments unnatize_exprf {_ _ _ _ _} _ _.
+Global Arguments unnatize_expr {_ _ _ _ _} _ _.
+Global Arguments natize_interp_flat_type_gen {_ _ t} _ _.
