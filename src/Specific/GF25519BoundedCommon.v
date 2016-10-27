@@ -387,9 +387,7 @@ Definition decode (x : fe25519) : F modulus
 
 Lemma proj1_fe25519_encode x
   : proj1_fe25519 (encode x) = ModularBaseSystem.encode x.
-Proof.
-  hnf in x; destruct_head' prod; reflexivity.
-Qed.
+Proof. reflexivity. Qed.
 
 Lemma decode_exist_fe25519 x pf
   : decode (exist_fe25519 x pf) = ModularBaseSystem.decode x.
