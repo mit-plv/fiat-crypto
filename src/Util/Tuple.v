@@ -122,19 +122,37 @@ Definition fieldwise {A B} (n:nat) (R:A->B->Prop) (a:tuple A n) (b:tuple B n) : 
   { exact (fieldwise' _ R a b). }
 Defined.
 
-Global Instance Equivalence_fieldwise' {A} {R:relation A} {R_equiv:Equivalence R} {n:nat}:
-    Equivalence (fieldwise' n R).
-Proof.
-  induction n as [|? IHn]; [solve [auto]|].
+Local Ltac Equivalence_fieldwise'_t :=
+  let n := match goal with |- ?R (fieldwise' ?n _) => n end in
+  let IHn := fresh in
   (* could use [dintuition] in 8.5 only, and remove the [destruct] *)
-  destruct IHn, R_equiv; simpl; constructor; repeat intro; intuition eauto.
-Qed.
+  repeat match goal with
+         | [ H : Equivalence _ |- _ ] => destruct H
+         | [ |- Equivalence _ ] => constructor
+         end;
+  induction n as [|? IHn]; [solve [auto]|];
+  simpl; constructor; repeat intro; repeat intuition eauto.
 
-Global Instance Equivalence_fieldwise {A} {R:relation A} {R_equiv:Equivalence R} {n:nat}:
-    Equivalence (fieldwise n R).
-Proof.
-  destruct n; (repeat constructor || apply Equivalence_fieldwise').
-Qed.
+Section Equivalence.
+  Context {A} {R:relation A}.
+  Global Instance Reflexive_fieldwise' {R_Reflexive:Reflexive R} {n:nat} : Reflexive (fieldwise' n R) | 5.
+  Proof. Equivalence_fieldwise'_t. Qed.
+  Global Instance Symmetric_fieldwise' {R_Symmetric:Symmetric R} {n:nat} : Symmetric (fieldwise' n R) | 5.
+  Proof. Equivalence_fieldwise'_t. Qed.
+  Global Instance Transitive_fieldwise' {R_Transitive:Transitive R} {n:nat} : Transitive (fieldwise' n R) | 5.
+  Proof. Equivalence_fieldwise'_t. Qed.
+  Global Instance Equivalence_fieldwise' {R_equiv:Equivalence R} {n:nat} : Equivalence (fieldwise' n R).
+  Proof. constructor; exact _. Qed.
+
+  Global Instance Reflexive_fieldwise {R_Reflexive:Reflexive R} {n:nat} : Reflexive (fieldwise n R) | 5.
+  Proof. destruct n; (repeat constructor || exact _). Qed.
+  Global Instance Symmetric_fieldwise {R_Symmetric:Symmetric R} {n:nat} : Symmetric (fieldwise n R) | 5.
+  Proof. destruct n; (repeat constructor || exact _). Qed.
+  Global Instance Transitive_fieldwise {R_Transitive:Transitive R} {n:nat} : Transitive (fieldwise n R) | 5.
+  Proof. destruct n; (repeat constructor || exact _). Qed.
+  Global Instance Equivalence_fieldwise {R_equiv:Equivalence R} {n:nat} : Equivalence (fieldwise n R).
+  Proof. constructor; exact _. Qed.
+End Equivalence.
 
 Arguments fieldwise' {A B n} _ _ _.
 Arguments fieldwise {A B n} _ _ _.

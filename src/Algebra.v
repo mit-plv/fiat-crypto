@@ -326,6 +326,26 @@ Module Group.
       - rewrite Hix, left_identity; reflexivity.
     Qed.
 
+    Lemma move_leftL x y : inv y * x = id -> x = y.
+    Proof.
+      intro; rewrite <- (inv_inv y), (inv_unique x (inv y)), inv_inv by assumption; reflexivity.
+    Qed.
+
+    Lemma move_leftR x y : x * inv y = id -> x = y.
+    Proof.
+      intro; rewrite (inv_unique (inv y) x), inv_inv by assumption; reflexivity.
+    Qed.
+
+    Lemma move_rightR x y : id = y * inv x -> x = y.
+    Proof.
+      intro; rewrite <- (inv_inv x), (inv_unique (inv x) y), inv_inv by (symmetry; assumption); reflexivity.
+    Qed.
+
+    Lemma move_rightL x y : id = inv x * y -> x = y.
+    Proof.
+      intro; rewrite <- (inv_inv x), (inv_unique y (inv x)), inv_inv by (symmetry; assumption); reflexivity.
+    Qed.
+
     Lemma inv_op x y : inv (x*y) = inv y*inv x.
     Proof.
       symmetry. etransitivity.
@@ -612,6 +632,14 @@ Module Ring.
       split; eauto using zero_product_zero_factor; [].
       intros [Hz|Hz]; rewrite Hz; eauto using mul_0_l, mul_0_r.
     Qed.
+
+    Lemma nonzero_product_iff_nonzero_factor {Hzpzf:@is_zero_product_zero_factor T eq zero mul} :
+      forall x y : T, not (eq (mul x y) zero) <-> (not (eq x zero) /\ not (eq y zero)).
+    Proof. intros; rewrite zero_product_iff_zero_factor; tauto. Qed.
+
+    Lemma nonzero_hypothesis_to_goal {Hzpzf:@is_zero_product_zero_factor T eq zero mul} :
+      forall x y : T, (not (eq x zero) -> eq y zero) <-> (eq (mul x y) zero).
+    Proof. intros; rewrite zero_product_iff_zero_factor; tauto. Qed.
 
     Global Instance Ncring_Ring_ops : @Ncring.Ring_ops T zero one add mul sub opp eq.
     Global Instance Ncring_Ring : @Ncring.Ring T zero one add mul sub opp eq Ncring_Ring_ops.
@@ -929,8 +957,10 @@ Module Field.
             {phi'_inv : forall a, phi' (inv a) = INV (phi' a)}
             (phi'_div : forall a b, phi' (div a b) = DIV (phi' a) (phi' b)).
 
-    Local Instance field_from_redundant_representation
-      : @field H eq zero one opp add sub mul inv div.
+    Lemma field_and_homomorphism_from_redundant_representation
+      : @field H eq zero one opp add sub mul inv div
+        /\ @Ring.is_homomorphism F EQ ONE ADD MUL H eq one add mul phi
+        /\ @Ring.is_homomorphism H eq one add mul F EQ ONE ADD MUL phi'.
     Proof.
       repeat match goal with
              | [ H : field |- _ ] => destruct H; try clear H
@@ -956,8 +986,8 @@ Module Field.
              | [ |- eq _ _ ] => apply phi'_eq
              | [ H : (~eq _ _)%type |- _ ] => pose proof (fun pf => H (proj1 (@phi'_eq _ _) pf)); clear H
              | [ H : EQ _ _ |- _ ] => rewrite H
-             | _ => progress erewrite ?phi'_zero, ?phi'_one, ?phi'_opp, ?phi'_add, ?phi'_sub, ?phi'_mul, ?phi'_inv, ?phi'_div by reflexivity
-             | [ H : _ |- _ ] => progress erewrite ?phi'_zero, ?phi'_one, ?phi'_opp, ?phi'_add, ?phi'_sub, ?phi'_mul, ?phi'_inv, ?phi'_div in H by reflexivity
+             | _ => progress erewrite ?phi'_zero, ?phi'_one, ?phi'_opp, ?phi'_add, ?phi'_sub, ?phi'_mul, ?phi'_inv, ?phi'_div, ?phi'_phi_id by reflexivity
+             | [ H : _ |- _ ] => progress erewrite ?phi'_zero, ?phi'_one, ?phi'_opp, ?phi'_add, ?phi'_sub, ?phi'_mul, ?phi'_inv, ?phi'_div, ?phi'_phi_id in H by reflexivity
              | _ => solve [ eauto ]
              end.
     Qed.
@@ -1214,6 +1244,90 @@ Ltac field_simplify_eq_hyps :=
 
 Ltac field_simplify_eq_all := field_simplify_eq_hyps; try field_simplify_eq.
 
+(** *** Tactics that remove division by rewriting *)
+Ltac rewrite_field_div_definition inv :=
+  let lem := constr:(field_div_definition (inv:=inv)) in
+  let div := lazymatch lem with field_div_definition (div:=?div) => div end in
+  repeat match goal with
+         | [ |- context[div _ _] ] => rewrite !lem
+         | [ H : context[div _ _] |- _ ] => rewrite !lem in H
+         end.
+Ltac generalize_inv inv :=
+  let lem := constr:(left_multiplicative_inverse (inv:=inv)) in
+  repeat match goal with
+         | [ |- context[inv ?x] ]
+           => pose proof (lem x); generalize dependent (inv x); intros
+         | [ H : context[inv ?x] |- _ ]
+           => pose proof (lem x); generalize dependent (inv x); intros
+         end.
+Ltac nsatz_strip_fractions_on inv :=
+  rewrite_field_div_definition inv; generalize_inv inv; specialize_by_assumption.
+
+Ltac nsatz_strip_fractions_with_eq eq :=
+  let F := constr:(_ : field (eq:=eq)) in
+  lazymatch type of F with
+  | field (inv:=?inv) => nsatz_strip_fractions_on inv
+  end.
+Ltac nsatz_strip_fractions :=
+  match goal with
+  | [ |- ?eq ?x ?y ] => nsatz_strip_fractions_with_eq eq
+  | [ |- not (?eq ?x ?y) ] => nsatz_strip_fractions_with_eq eq
+  | [ |- (?eq ?x ?y -> False)%type ] => nsatz_strip_fractions_with_eq eq
+  | [ H : ?eq ?x ?y |- _ ] => nsatz_strip_fractions_with_eq eq
+  | [ H : not (?eq ?x ?y) |- _ ] => nsatz_strip_fractions_with_eq eq
+  | [ H : (?eq ?x ?y -> False)%type |- _ ] => nsatz_strip_fractions_with_eq eq
+  end.
+
+Ltac nsatz_fold_or_intro_not :=
+  repeat match goal with
+         | [ |- not _ ] => intro
+         | [ |- (_ -> _)%type ] => intro
+         | [ H : (?X -> False)%type |- _ ]
+           => change (not X) in H
+         | [ H : ((?X -> False) -> ?T)%type |- _ ]
+           => change (not X -> T)%type in H
+         end.
+
+Ltac nsatz_final_inequality_to_goal :=
+  nsatz_fold_or_intro_not;
+  try match goal with
+      | [ H : not (?eq ?x ?zero) |- ?eq ?y ?zero ]
+        => generalize H; apply (proj2 (Ring.nonzero_hypothesis_to_goal x y))
+      | [ H : not (?eq ?x ?zero) |- False ]
+        => apply H
+      end.
+
+Ltac nsatz_goal_to_canonical :=
+  nsatz_fold_or_intro_not;
+  try match goal with
+      | [ |- ?eq ?x ?y ]
+        => apply (Group.move_leftR (eq:=eq)); rewrite <- ring_sub_definition;
+           lazymatch goal with
+           | [ |- eq _ y ] => fail 0 "should not subtract 0"
+           | _ => idtac
+           end
+      end.
+
+Ltac nsatz_specialize_by_cut_using cont H eq x zero a b :=
+  change (not (eq x zero) -> eq a b)%type in H;
+  cut (not (eq x zero));
+  [ intro; specialize_by_assumption; cont ()
+  | clear H ].
+
+Ltac nsatz_specialize_by_cut :=
+  specialize_by_assumption;
+  match goal with
+  | [ H : ((?eq ?x ?zero -> False) -> ?eq ?a ?b)%type |- ?eq _ ?zero ]
+    => nsatz_specialize_by_cut_using ltac:(fun _ => nsatz_specialize_by_cut) H eq x zero a b
+  | [ H : (not (?eq ?x ?zero) -> ?eq ?a ?b)%type |- ?eq _ ?zero ]
+    => nsatz_specialize_by_cut_using ltac:(fun _ => nsatz_specialize_by_cut) H eq x zero a b
+  | [ H : ((?eq ?x ?zero -> False) -> ?eq ?a ?b)%type |- False ]
+    => nsatz_specialize_by_cut_using ltac:(fun _ => nsatz_specialize_by_cut) H eq x zero a b
+  | [ H : (not (?eq ?x ?zero) -> ?eq ?a ?b)%type |- False ]
+    => nsatz_specialize_by_cut_using ltac:(fun _ => nsatz_specialize_by_cut) H eq x zero a b
+  | _ => idtac
+  end.
+
 (** Clear duplicate hypotheses, and hypotheses of the form [R x x] for a reflexive relation [R], and similarly for symmetric relations *)
 Ltac clear_algebraic_duplicates_step R :=
   match goal with
@@ -1333,8 +1447,14 @@ Ltac combine_field_inequalities :=
   repeat combine_field_inequalities_step.
 (** Handles field inequalities which can be made by splitting multiplications in the goal and the assumptions *)
 Ltac solve_simple_field_inequalities :=
-  repeat (apply conj || split_field_inequalities);
+  repeat (apply conj || specialize_by_assumption || split_field_inequalities);
   try assumption.
+Ltac nsatz_strip_fractions_and_aggregate_inequalities :=
+  nsatz_strip_fractions;
+  nsatz_goal_to_canonical;
+  split_field_inequalities (* this will make solving side conditions easier *);
+  nsatz_specialize_by_cut;
+  [ combine_field_inequalities; nsatz_final_inequality_to_goal | .. ].
 Ltac prensatz_contradict :=
   solve_simple_field_inequalities;
   combine_field_inequalities.

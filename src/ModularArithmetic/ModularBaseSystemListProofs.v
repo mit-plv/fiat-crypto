@@ -289,7 +289,7 @@ Section ModulusComparisonProofs.
   Lemma ge_modulus'_0 : forall {A} f us i,
     ge_modulus' (A := A) f us 0 i = f 0.
   Proof.
-    induction i; intros; simpl; break_if; auto.
+    induction i; intros; simpl; cbv [cmovne cmovl]; break_if; auto.
   Qed.
 
   Lemma ge_modulus'_01 : forall {A} f us i b,
@@ -297,8 +297,8 @@ Section ModulusComparisonProofs.
     (ge_modulus' (A := A) f us b i = f 0 \/ ge_modulus' (A := A) f us b i = f 1).
   Proof.
     induction i; intros;
-      try intuition (subst; cbv [ge_modulus' LetIn.Let_In]; break_if; tauto).
-    simpl; cbv [LetIn.Let_In].
+      try intuition (subst; cbv [ge_modulus' LetIn.Let_In cmovl cmovne]; break_if; tauto).
+    simpl; cbv [LetIn.Let_In cmovl cmovne].
     break_if; apply IHi; tauto.
   Qed.
 
@@ -317,7 +317,7 @@ Section ModulusComparisonProofs.
     induction i;
       repeat match goal with
              | |- _ => progress intros; simpl in *
-             | |- _ => progress cbv [LetIn.Let_In] in *
+             | |- _ => progress cbv [LetIn.Let_In cmovne cmovl] in *
              | |- _ =>erewrite (ge_modulus'_0 (@id Z)) in *
              | H : (?x <= 0)%nat |- _ => progress replace x with 0%nat in * by omega
              | |- _ => break_if
@@ -335,7 +335,7 @@ Section ModulusComparisonProofs.
   Proof.
     induction i;
       repeat match goal with
-             | |- _ => progress (intros; cbv [LetIn.Let_In id])
+             | |- _ => progress (intros; cbv [LetIn.Let_In id cmovne cmovl])
              | |- _ => progress (simpl compare' in * )
              | |- _ => progress specialize_by omega
              | |- _ => (progress rewrite ?Z.compare_eq_iff,

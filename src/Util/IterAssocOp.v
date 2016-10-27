@@ -8,10 +8,7 @@ Local Open Scope equiv_scope.
 
 Generalizable All Variables.
 Section IterAssocOp.
-  Context {T eq op id} {moinoid : @monoid T eq op id}
-          {scalar : Type} (scToN : scalar -> N)
-          (testbit : scalar -> nat -> bool)
-          (testbit_correct : forall x i, testbit x i = N.testbit_nat (scToN x) i).
+  Context {T eq op id} {moinoid : @monoid T eq op id} (testbit : nat -> bool).
   Local Infix "===" := eq. Local Infix "===" := eq : type_scope.
 
   Local Notation nat_iter_op := (ScalarMult.scalarmult_ref (add:=op) (zero:=id)).
@@ -49,20 +46,23 @@ Section IterAssocOp.
     | S exp' => f (funexp f a exp')
     end.
 
-  Definition test_and_op sc a (state : nat * T) :=
+  Definition test_and_op a (state : nat * T) :=
     let '(i, acc) := state in
     let acc2 := op acc acc in
     let acc2a := op a acc2 in
     match i with
     | O => (0, acc)
-    | S i' => (i', sel (testbit sc i') acc2 acc2a)
+    | S i' => (i', sel (testbit i') acc2 acc2a)
     end.
 
-  Definition iter_op bound sc a : T :=
-    snd (funexp (test_and_op sc a) (bound, id) bound).
+  Definition iter_op bound a : T :=
+    snd (funexp (test_and_op a) (bound, id) bound).
 
-  Definition test_and_op_inv sc a (s : nat * T) :=
-    snd s === nat_iter_op (N.to_nat (N.shiftr_nat (scToN sc) (fst s))) a.
+  (* correctness reference *)
+  Context {x:N} {testbit_correct : forall i, testbit i = N.testbit_nat x i}.
+
+  Definition test_and_op_inv a (s : nat * T) :=
+    snd s === nat_iter_op (N.to_nat (N.shiftr_nat x (fst s))) a.
 
   Hint Rewrite
     N.succ_double_spec
@@ -114,9 +114,9 @@ Section IterAssocOp.
       apply N2Nat.id.
   Qed.
 
-  Lemma test_and_op_inv_step : forall sc a s,
-    test_and_op_inv sc a s ->
-    test_and_op_inv sc a (test_and_op sc a s).
+  Lemma test_and_op_inv_step : forall a s,
+    test_and_op_inv a s ->
+    test_and_op_inv a (test_and_op a s).
   Proof.
     destruct s as [i acc].
     unfold test_and_op_inv, test_and_op; simpl; intro Hpre.
@@ -124,20 +124,20 @@ Section IterAssocOp.
     simpl.
     rewrite Nshiftr_succ.
     rewrite sel_correct.
-    case_eq (testbit sc i); intro testbit_eq; simpl;
+    case_eq (testbit i); intro testbit_eq; simpl;
       rewrite testbit_correct in testbit_eq; rewrite testbit_eq;
       rewrite Hpre, <- plus_n_O, nat_iter_op_plus; reflexivity.
   Qed.
 
-  Lemma test_and_op_inv_holds : forall sc a i s,
-    test_and_op_inv sc a s ->
-    test_and_op_inv sc a (funexp (test_and_op sc a) s i).
+  Lemma test_and_op_inv_holds : forall a i s,
+    test_and_op_inv a s ->
+    test_and_op_inv a (funexp (test_and_op a) s i).
   Proof.
     induction i; intros; auto; simpl; apply test_and_op_inv_step; auto.
   Qed.
 
-  Lemma funexp_test_and_op_index : forall n a x acc y,
-    fst (funexp (test_and_op n a) (x, acc) y) = x - y.
+  Lemma funexp_test_and_op_index : forall a x acc y,
+    fst (funexp (test_and_op a) (x, acc) y) = x - y.
   Proof.
     induction y; simpl; rewrite <- ?Minus.minus_n_O; try reflexivity.
     match goal with |- context[funexp ?a ?b ?c] => destruct (funexp a b c) as [i acc'] end.
@@ -146,13 +146,13 @@ Section IterAssocOp.
     destruct i; rewrite Nat.sub_succ_r; subst; rewrite <- IHy; simpl; reflexivity.
   Qed.
 
-  Lemma iter_op_termination : forall sc a bound,
-    N.size_nat (scToN sc) <= bound ->
-    test_and_op_inv sc a
-      (funexp (test_and_op sc a) (bound, id) bound) ->
-    iter_op bound sc a === nat_iter_op (N.to_nat (scToN sc)) a.
+  Lemma iter_op_termination : forall a bound,
+    N.size_nat x <= bound ->
+    test_and_op_inv a
+      (funexp (test_and_op a) (bound, id) bound) ->
+    iter_op bound a === nat_iter_op (N.to_nat x) a.
   Proof.
-    unfold test_and_op_inv, iter_op; simpl; intros ? ? ? ? Hinv.
+    unfold test_and_op_inv, iter_op; simpl; intros ? ? ? Hinv.
     rewrite Hinv, funexp_test_and_op_index, Minus.minus_diag.
     reflexivity.
   Qed.
@@ -180,8 +180,8 @@ Section IterAssocOp.
     auto.
   Qed.
 
-  Lemma iter_op_correct : forall sc a bound, N.size_nat (scToN sc) <= bound ->
-    iter_op bound sc a === nat_iter_op (N.to_nat (scToN sc)) a.
+  Lemma iter_op_correct : forall a bound, N.size_nat x <= bound ->
+    iter_op bound a === nat_iter_op (N.to_nat x) a.
   Proof.
     intros.
     apply iter_op_termination; auto.
