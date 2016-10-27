@@ -454,11 +454,12 @@ Proof.
     apply Z.mul_lt_mono_pos_l; omega. }
 Qed.
 
-Set Printing Coercions.
 Lemma feEnc_correct : forall x,
-    PointEncoding.Fencode x = feEnc (ModularBaseSystem.encode x).
+    PointEncoding.Fencode x = feEnc (GF25519BoundedCommon.encode x).
 Proof.
   cbv [feEnc PointEncoding.Fencode]; intros.
+  rewrite GF25519Bounded.pack_correct, GF25519Bounded.freeze_correct.
+  rewrite GF25519BoundedCommon.proj1_fe25519_encode.
   match goal with |- appcontext [GF25519.pack ?x] =>
                   remember (GF25519.pack x) end.
   transitivity (ZNWord 255 (Pow2Base.decode_bitwise GF25519.wire_widths (Tuple.to_list 8 w))).
@@ -500,8 +501,7 @@ Proof.
       rewrite Tuple.to_list_from_list.
       rewrite Z.mod_small by (apply ModularBaseSystemListProofs.ge_modulus_spec; auto; cbv; congruence).
       f_equal. }
-  { Locate convert_bounded.
-    assert (Pow2Base.bounded GF25519.wire_widths (Tuple.to_list 8 w)).
+  { assert (Pow2Base.bounded GF25519.wire_widths (Tuple.to_list 8 w)).
     { subst w.
       rewrite GF25519.pack_correct, ModularBaseSystemOpt.pack_correct.
       cbv [ModularBaseSystem.pack ModularBaseSystemList.pack].
@@ -528,7 +528,6 @@ Proof.
       rewrite Z.lor_0_r.
       reflexivity. } }
 Qed.
->>>>>>> most of feEnc correctness proof
 
 (* TODO : unclear what we're doing with the placeholder [feEnc] at the moment, so
    leaving this admitted for now *)
