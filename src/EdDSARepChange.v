@@ -11,11 +11,6 @@ Import NPeano.
 
 Import Notations.
 
-Module F.
-  Lemma to_nat_mod {m} (x:F m) : F.to_nat x mod (Z.to_nat m) = F.to_nat x.
-  Admitted.
-End F.
-
 Section EdDSA.
   Context `{prm:EdDSA}.
   Local Infix "==" := Eeq. Local Infix "+" := Eadd. Local Infix "*" := EscalarMult.
@@ -136,7 +131,7 @@ Section EdDSA.
       etransitivity. Focus 2. {
         eapply Proper_option_rect_nd_changebody; [intro|reflexivity].
         eapply Proper_option_rect_nd_changebody; [intro|reflexivity].
-        rewrite <-F.to_nat_mod.
+        rewrite <-F.to_nat_mod by omega.
         repeat (
             rewrite ERepEnc_correct
             || rewrite homomorphism

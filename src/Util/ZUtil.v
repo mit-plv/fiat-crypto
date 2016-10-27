@@ -479,6 +479,13 @@ Module Z.
     reflexivity.
   Qed.
 
+  Lemma mod_to_nat x m (Hm:(0 < m)%Z) (Hx:(0 <= x)%Z) : (Z.to_nat x mod Z.to_nat m = Z.to_nat (x mod m))%nat.
+    pose proof Zdiv.mod_Zmod (Z.to_nat x) (Z.to_nat m) as H;
+      rewrite !Z2Nat.id in H by omega.
+    rewrite <-H by (change 0%nat with (Z.to_nat 0); rewrite Z2Nat.inj_iff; omega).
+    rewrite !Nat2Z.id; reflexivity.
+  Qed.
+
   Ltac divide_exists_mul := let k := fresh "k" in
   match goal with
   | [ H : (?a | ?b) |- _ ] => apply Z.mod_divide in H; try apply Zmod_divides in H; destruct H as [k H]

@@ -174,6 +174,13 @@ Module F.
       rewrite <-F.of_Z_mod; reflexivity.
     Qed.
 
+    Lemma to_nat_mod (x:F m) (Hm:(0 < m)%Z) : F.to_nat x mod (Z.to_nat m) = F.to_nat x.
+      unfold F.to_nat.
+      rewrite <-F.mod_to_Z at 2.
+      apply Z.mod_to_nat; [assumption|].
+      apply F.to_Z_range; assumption.
+    Qed.
+
     Lemma of_nat_add x y :
       F.of_nat m (x + y) = (F.of_nat m x + F.of_nat m y)%F.
     Proof. unfold F.of_nat; rewrite Nat2Z.inj_add, F.of_Z_add; reflexivity. Qed.
