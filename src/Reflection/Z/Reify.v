@@ -2,6 +2,7 @@ Require Import Coq.ZArith.ZArith.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemListZOperations.
 Require Import Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Reflection.Reify.
+Require Import Crypto.Reflection.Inline.
 Require Import Crypto.Reflection.Linearize.
 
 Ltac base_reify_op op op_head ::=
