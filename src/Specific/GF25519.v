@@ -28,7 +28,8 @@ Instance params25519 : PseudoMersenneBaseParams modulus.
   construct_params prime_modulus 10%nat 255.
 Defined.
 
-Definition fe25519 := Eval compute in (tuple Z (length limb_widths)).
+Definition length_fe25519 := Eval compute in length limb_widths.
+Definition fe25519 := Eval compute in (tuple Z length_fe25519).
 
 Definition mul2modulus : fe25519 :=
   Eval compute in (from_list_default 0%Z (length limb_widths) (construct_mul2modulus params25519)).
