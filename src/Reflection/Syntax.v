@@ -238,11 +238,9 @@ Section language.
     Axiom Wf_admitted : forall {t} (E:Expr t), @Wf t E.
   End expr_param.
 End language.
-Global Arguments Prod {_} _ _.
-Global Arguments Arrow {_} _ _.
-Global Arguments Tbase {_} _.
-Infix "*" := (@Prod _) : ctype_scope.
-Notation "A -> B" := (@Arrow _ A B) : ctype_scope.
+Global Arguments Prod {_}%type_scope (_ _)%ctype_scope.
+Global Arguments Arrow {_}%type_scope (_ _)%ctype_scope.
+Global Arguments Tbase {_}%type_scope _%ctype_scope.
 
 Ltac admit_Wf := apply Wf_admitted.
 
@@ -274,7 +272,11 @@ Global Arguments interpf {_ _ _} interp_op {t} _.
 Global Arguments invert_Const {_ _ _ _ _} _.
 
 Module Export Notations.
+  Notation "A * B" := (@Prod _ A B) : ctype_scope.
+  Notation "A -> B" := (@Arrow _ A B) : ctype_scope.
   Notation "'slet' x := A 'in' b" := (LetIn A (fun x => b)) : expr_scope.
   Notation "'λ'  x .. y , t" := (Abs (fun x => .. (Abs (fun y => t%expr)) ..)) : expr_scope.
   Notation "( x , y , .. , z )" := (Pair .. (Pair x%expr y%expr) .. z%expr) : expr_scope.
+  Bind Scope ctype_scope with flat_type.
+  Bind Scope ctype_scope with type.
 End Notations.
