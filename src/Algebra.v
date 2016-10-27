@@ -1447,7 +1447,7 @@ Ltac combine_field_inequalities :=
   repeat combine_field_inequalities_step.
 (** Handles field inequalities which can be made by splitting multiplications in the goal and the assumptions *)
 Ltac solve_simple_field_inequalities :=
-  repeat (apply conj || specialize_by_assumption || split_field_inequalities);
+  repeat (apply conj || split_field_inequalities);
   try assumption.
 Ltac nsatz_strip_fractions_and_aggregate_inequalities :=
   nsatz_strip_fractions;
