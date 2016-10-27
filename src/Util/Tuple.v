@@ -92,6 +92,41 @@ Proof.
     eapply from_list'_to_list'; assumption. }
 Qed.
 
+Fixpoint curry'T (R T : Type) (n : nat) : Type
+  := match n with
+     | 0 => T -> R
+     | S n' => curry'T (T -> R) T n'
+     end.
+Definition curryT (R T : Type) (n : nat) : Type
+  := match n with
+     | 0 => R
+     | S n' => curry'T R T n'
+     end.
+
+Fixpoint uncurry' R {T n} : (tuple' T n -> R) -> curry'T R T n
+  := match n return (tuple' T n -> R) -> curry'T R T n with
+     | 0 => fun f x => f x
+     | S n' => fun f => @uncurry' (T -> R) T n' (fun xs x => f (xs, x))
+     end.
+
+Fixpoint uncurry R {T n} : (tuple T n -> R) -> curryT R T n
+  := match n return (tuple T n -> R) -> curryT R T n with
+     | 0 => fun f => f tt
+     | S n' => @uncurry' R T n'
+     end.
+
+Fixpoint curry' R {T n} : curry'T R T n -> (tuple' T n -> R)
+  := match n return curry'T R T n -> (tuple' T n -> R) with
+     | 0 => fun f x => f x
+     | S n' => fun f xs_x => @curry' (T -> R) T n' f (fst xs_x) (snd xs_x)
+     end.
+
+Fixpoint curry R {T n} : curryT R T n -> (tuple T n -> R)
+  := match n return curryT R T n -> (tuple T n -> R) with
+     | 0 => fun r _ => r
+     | S n' => @curry' R T n'
+     end.
+
 Definition on_tuple {A B} (f:list A -> list B)
            {n m:nat} (H:forall xs, length xs = n -> length (f xs) = m)
            (xs:tuple A n) : tuple B m :=
