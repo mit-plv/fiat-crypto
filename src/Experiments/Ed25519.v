@@ -390,14 +390,12 @@ Qed.
 Lemma convert_freezes: forall x,
   (ModularBaseSystemList.freeze GF25519.int_width
        (Tuple.to_list
-          (length PseudoMersenneBaseParams.limb_widths)
-          (ModularBaseSystem.encode x))) = 
+          (length PseudoMersenneBaseParams.limb_widths) x)) = 
               (Tuple.to_list
                  (length
                     PseudoMersenneBaseParams.limb_widths)
                  (ModularBaseSystem.freeze
-                    GF25519.int_width
-                    (ModularBaseSystem.encode x))).
+                    GF25519.int_width x)).
 Proof.
   cbv [ModularBaseSystem.freeze].
   intros.
@@ -454,6 +452,14 @@ Proof.
     apply Z.mul_lt_mono_pos_l; omega. }
 Qed.
 
+Definition freezePre :
+  @ModularBaseSystemProofs.FreezePreconditions
+    GF25519.modulus GF25519.params25519 GF25519.int_width.
+Proof.
+  pose proof GF25519.freezePreconditions25519 as A.
+  inversion A;  econstructor; eauto.
+Defined.
+
 Lemma feEnc_correct : forall x,
     PointEncoding.Fencode x = feEnc (GF25519BoundedCommon.encode x).
 Proof.
@@ -466,12 +472,7 @@ Proof.
   { cbv [ZNWord].
     do 2 f_equal.
     subst w.
-    assert (@ModularBaseSystemProofs.FreezePreconditions
-                 GF25519.modulus GF25519.params25519 
-                 GF25519.int_width)
-      by (let A := fresh "H" in
-            pose proof GF25519.freezePreconditions25519 as A;
-            inversion A;  econstructor; eauto).
+    pose proof freezePre.
     match goal with
       |- appcontext [GF25519.freeze ?x ] =>
       let A := fresh "H" in
@@ -529,10 +530,100 @@ Proof.
       reflexivity. } }
 Qed.
 
-(* TODO : unclear what we're doing with the placeholder [feEnc] at the moment, so
-   leaving this admitted for now *)
+Lemma initial_bounds : forall x n,
+  n < length PseudoMersenneBaseParams.limb_widths ->
+  (0 <=
+   nth_default 0
+     (Tuple.to_list (length PseudoMersenneBaseParams.limb_widths)
+        (GF25519BoundedCommon.proj1_fe25519 x)) n <
+   2 ^ GF25519.int_width -
+   (if PeanoNat.Nat.eq_dec n 0
+    then 0
+    else
+     Z.shiftr (2 ^ GF25519.int_width)
+       (nth_default 0 PseudoMersenneBaseParams.limb_widths
+                    (Init.Nat.pred n))))%Z.
+Proof.
+  intros.
+  cbv [GF25519BoundedCommon.fe25519] in *.
+  repeat match goal with p : _ * _ |- _ => destruct p end.
+  cbv [GF25519BoundedCommon.proj1_fe25519].
+  cbv [GF25519BoundedCommon.fe25519WToZ
+         GF25519BoundedCommon.proj1_fe25519W
+         PseudoMersenneBaseParams.limb_widths
+         GF25519.params25519 length
+         Tuple.to_list Tuple.to_list'] in *.
+  (* TODO (jgross) : this should probably be Ltac'ed *)
+  assert (n = 0 \/ n = 1 \/ n = 2 \/ n = 3 \/ n = 4 \/ n = 5 \/ n = 6 \/ n = 7 \/ n = 8 \/ n = 9) by omega.
+  repeat match goal with H : _ \/ _ |- _ => destruct H end;
+    subst; cbv [nth_default nth_error pred];
+      match goal with |- appcontext [if ?x then _ else _] =>
+                      destruct x end; try congruence;
+        cbv - [GF25519BoundedCommon.proj_word Z.le Z.lt] in *;
+  match goal with
+  |- appcontext [GF25519BoundedCommon.proj_word ?b] =>
+  let A := fresh "H" in
+  pose proof (@GF25519BoundedCommon.word_bounded _ _ b) as A;
+    rewrite Bool.andb_true_iff in A; destruct A end;
+  rewrite !Z.leb_le in *;
+  omega.
+Qed.
+
+Lemma Proper_pack :
+  Proper (Tuple.fieldwise (n := length PseudoMersenneBaseParams.limb_widths) eq ==>
+                          Tuple.fieldwise (n := length GF25519.wire_widths) eq) GF25519.pack.
+Proof.
+  repeat intro.
+  cbv [PseudoMersenneBaseParams.limb_widths GF25519.params25519 length] in *.
+  cbv [Tuple.tuple] in *.
+  repeat match goal with
+         | p : Tuple.tuple' Z (S ?n) |- _ => destruct p
+         | p : Tuple.tuple' Z 0 |- _ => cbv [Tuple.tuple'] in p
+         end.
+  cbv [GF25519.pack].
+  cbv [GF25519.wire_widths length Tuple.fieldwise Tuple.fieldwise' fst snd] in *;
+    intuition subst; reflexivity.
+Qed.
+  
 Lemma Proper_feEnc : Proper (GF25519BoundedCommon.eq ==> eq) feEnc.
-Admitted.
+Proof.
+  pose proof freezePre.
+  repeat intro; cbv [feEnc].
+  rewrite !GF25519Bounded.pack_correct, !GF25519Bounded.freeze_correct.
+  rewrite !GF25519.freeze_correct, !ModularBaseSystemOpt.freeze_opt_correct
+    by (rewrite ?Tuple.length_to_list; reflexivity).
+  cbv [GF25519BoundedCommon.eq ModularBaseSystem.eq] in *.
+  match goal with
+  H : ModularBaseSystem.decode ?x = ModularBaseSystem.decode ?y |- _ =>
+  let A := fresh "H" in
+  let HP := fresh "H" in
+  let HQ := fresh "H" in
+    pose proof (ModularBaseSystemProofs.freeze_canonical
+                (freeze_pre := freezePre)  x y (ModularBaseSystem.decode x)
+                (ModularBaseSystem.decode y) eq_refl eq_refl);
+      match type of A with ?P -> ?Q -> _ =>
+                           assert P as HP by apply initial_bounds;
+                             assert Q as HQ by apply initial_bounds end;
+      specialize (A HP HQ); clear HP HQ; apply A in H
+  end.
+  repeat match goal with |- appcontext [GF25519.pack ?x] => remember (GF25519.pack x) end.
+  match goal with x : GF25519.wire_digits, y : GF25519.wire_digits |- _ =>
+                  assert (Tuple.fieldwise (n := length GF25519.wire_widths) eq x y) as Heqxy end.
+  { subst.
+    rewrite !convert_freezes.
+    erewrite !Tuple.from_list_default_eq.
+    rewrite !Tuple.from_list_to_list.
+    apply Proper_pack.
+    assumption. }
+  { cbv [length GF25519.wire_digits] in *.
+    repeat match goal with p : _ * _ |- _ => destruct p end.
+    cbv [GF25519.wire_widths length Tuple.fieldwise Tuple.fieldwise' fst snd] in *.
+    repeat match goal with H : _ /\ _ |- _ => destruct H end;
+      subst; reflexivity. }
+  Grab Existential Variables.
+  rewrite Tuple.length_to_list; reflexivity.
+  rewrite Tuple.length_to_list; reflexivity.
+Qed.
 
 Lemma ERepEnc_correct P : Eenc P = ERepEnc (EToRep P).
 Proof.
