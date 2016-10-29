@@ -272,6 +272,7 @@ Global Arguments LetIn {_ _ _ _ _} _ {_} _.
 Global Arguments Pair {_ _ _ _ _} _ {_} _.
 Global Arguments Return {_ _ _ _ _} _.
 Global Arguments Abs {_ _ _ _ _ _} _.
+Global Arguments interp_type_rel_pointwise2 {_ _ _} R {t} _ _.
 Global Arguments interp_type_gen_rel_pointwise2 {_ _ _} R {t} _ _.
 Global Arguments interp_flat_type_rel_pointwise2 {_ _ _} R {t} _ _.
 Global Arguments mapf_interp_flat_type {_ _ _} _ {t} _.

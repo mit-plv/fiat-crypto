@@ -100,6 +100,7 @@ src/Reflection/InlineInterp.v
 src/Reflection/InlineWf.v
 src/Reflection/InputSyntax.v
 src/Reflection/InterpProofs.v
+src/Reflection/InterpWfRel.v
 src/Reflection/Linearize.v
 src/Reflection/LinearizeInterp.v
 src/Reflection/LinearizeWf.v
