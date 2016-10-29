@@ -233,7 +233,7 @@ Section Wf.
     intros H var1 var2; specialize (H var1 var2).
     pose proof (@reflect_wf base_type_code interp_base_type base_type_eq_semidec_transparent base_type_eq_semidec_is_dec op op_beq op_beq_bl var1 var2 nil t t (e _) (e _)) as H'.
     rewrite type_eq_semidec_transparent_refl in H' by assumption; simpl in *.
-    edestruct reflect_wfT; simpl in *; tauto.
+    edestruct @reflect_wfT; simpl in *; tauto.
   Qed.
 
   (** Leads to larger proofs (an extra constant factor which is the

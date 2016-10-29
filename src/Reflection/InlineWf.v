@@ -65,6 +65,7 @@ Section language.
       | [ H : _ |- _ ]
         => pose proof (IHwf _ H) as IHwf'
       end.
+      generalize dependent (inline_constf e1); generalize dependent (inline_constf e1'); intros.
       destruct IHwf'; simpl in *;
         repeat constructor; auto; intros;
           match goal with
