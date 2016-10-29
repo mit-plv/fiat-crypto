@@ -32,3 +32,19 @@ Lemma iff_R_R_same_r {T R} {Req:@Equivalence T R} x y ref : R x y -> (R x ref <-
 Proof.
   intro Hx; rewrite Hx; clear Hx. reflexivity.
 Qed.
+
+Global Instance Equivalence_and {A B RA RB}
+       {Equivalence_RA:@Equivalence A RA}
+       {Equivalence_RB:@Equivalence B RB}
+       : Equivalence (fun ab AB => RA (fst ab) (fst AB) /\ RB (snd ab) (snd AB)).
+Proof.
+  destruct Equivalence_RA as [], Equivalence_RB as []; cbv in *|-.
+  repeat match goal with
+           | _ => intro
+           | _ => split
+           | [p:prod _ _ |- _ ] => destruct p
+           | [p:and _ _ |- _ ] => destruct p
+           | _ => progress (cbv [fst snd] in * )
+           | _ => solve[eauto]
+         end.
+Qed.

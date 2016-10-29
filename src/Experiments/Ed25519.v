@@ -661,7 +661,17 @@ Qed.
 
 Let SRepEnc : SRep -> Word.word b := (fun x => Word.NToWord _ (Z.to_N x)).
 
-Axiom Proper_SRepERepMul : Proper (SC25519.SRepEq ==> ExtendedCoordinates.Extended.eq (field:=GF25519Bounded.field25519) ==> ExtendedCoordinates.Extended.eq (field:=GF25519Bounded.field25519)) SRepERepMul.
+Local Instance Proper_SRepERepMul : Proper (SC25519.SRepEq ==> ExtendedCoordinates.Extended.eq (field:=GF25519Bounded.field25519) ==> ExtendedCoordinates.Extended.eq (field:=GF25519Bounded.field25519)) SRepERepMul.
+  unfold SRepERepMul, SC25519.SRepEq.
+  repeat intro.
+  eapply IterAssocOp.Proper_iter_op.
+  { eapply ExtendedCoordinates.Extended.Proper_add. }
+  { reflexivity. }
+  { repeat intro; subst; reflexivity. }
+  { unfold ERepSel; repeat intro; break_match; solve [ discriminate | eauto ]. }
+  { reflexivity. }
+  { assumption. }
+Qed.
 
 Lemma SRepEnc_correct : forall x : ModularArithmetic.F.F l, Senc x = SRepEnc (S2Rep x).
   unfold SRepEnc, Senc, Fencode; intros; f_equal.

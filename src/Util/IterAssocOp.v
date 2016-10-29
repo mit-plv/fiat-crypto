@@ -192,3 +192,59 @@ Section IterAssocOp.
     reflexivity.
   Qed.
 End IterAssocOp.
+
+Require Import Coq.Classes.Morphisms.
+Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Relations.
+
+Global Instance Proper_funexp {T R} {Equivalence_R:Equivalence R}
+  : Proper ((R==>R) ==> R ==> Logic.eq ==> R) (@funexp T).
+Proof.
+  repeat intro; subst.
+  match goal with [n0 : nat |- _ ] => rename n0 into n; induction n end; [solve [trivial]|].
+  match goal with
+      [H: (_ ==> _)%signature _ _ |- _ ] =>
+      etransitivity; solve [eapply (H _ _ IHn)|reflexivity]
+  end.
+Qed.
+
+Global Instance Proper_test_and_op {T R} {Equivalence_R:@Equivalence T R} :
+  Proper ((R==>R==>R)
+            ==> pointwise_relation _ Logic.eq
+            ==> (Logic.eq==>R==>R==>R)
+            ==> R
+            ==> (fun nt NT => Logic.eq (fst nt) (fst NT) /\ R (snd nt) (snd NT))
+            ==> (fun nt NT => Logic.eq (fst nt) (fst NT) /\ R (snd nt) (snd NT))
+         ) (@test_and_op T).
+Proof.
+  repeat match goal with
+           | _ => intro
+           | _ => split
+           | [p:prod _ _ |- _ ] => destruct p
+           | [p:and _ _ |- _ ] => destruct p
+           | _ => progress (cbv [fst snd test_and_op pointwise_relation respectful] in * )
+           | _ => progress subst
+           | _ => progress break_match
+           | _ => solve [ congruence | eauto 99 ]
+         end.
+Qed.
+
+Global Instance Proper_iter_op {T R} {Equivalence_R:@Equivalence T R} :
+  Proper ((R==>R==>R)
+            ==> R
+            ==> pointwise_relation _ Logic.eq
+            ==> (Logic.eq==>R==>R==>R)
+            ==> Logic.eq
+            ==> R
+            ==> R)
+  (@iter_op T).
+Proof.
+  repeat match goal with
+           | _ => solve [ reflexivity | congruence | eauto 99 ]
+           | _ => progress eapply (Proper_funexp (R:=(fun nt NT => Logic.eq (fst nt) (fst NT) /\ R (snd nt) (snd NT))))
+           | _ => progress eapply Proper_test_and_op
+           | _ => progress eapply conj
+           | _ => progress (cbv [fst snd pointwise_relation respectful] in * )
+           | _ => intro
+         end.
+Qed.
