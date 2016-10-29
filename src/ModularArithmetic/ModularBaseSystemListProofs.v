@@ -157,12 +157,6 @@ Section ModulusDigitsProofs.
   Local Hint Resolve sum_firstn_limb_widths_nonneg.
   Local Hint Resolve limb_widths_nonneg.
 
-  (* TODO : ZUtil *)
-  Lemma testbit_sub_pow2 : forall n i x, 0 <= i < n -> 0 < x < 2 ^ n ->
-    Z.testbit (2 ^ n - x) i = negb (Z.testbit (x - 1)  i).
-  Proof.
-  Admitted.
-
   Lemma decode_modulus_digits : decode' base modulus_digits = modulus.
   Proof.
     cbv [modulus_digits].
@@ -197,7 +191,7 @@ Section ModulusDigitsProofs.
            | |- _ => erewrite digit_select
                         by (eauto; apply bounded_encodeZ; eauto; omega)
            | |- Z.testbit (2 ^ k - c) _ = _ =>
-             rewrite testbit_sub_pow2 by (try omega; cbv [k];
+             rewrite Z.testbit_sub_pow2 by (try omega; cbv [k];
                pose proof (sum_firstn_prefix_le limb_widths (S i) (length limb_widths));
                specialize_by (eauto || omega);
                rewrite sum_firstn_succ_default in *; split; zero_bounds; eauto)

@@ -891,6 +891,26 @@ Module Z.
   Qed.
   Hint Rewrite shiftr_spec_full : Ztestbit_full.
 
+  Lemma lnot_sub1 x : Z.lnot (x-1) = (-x).
+  Proof.
+    replace (-x) with (- (1) - (x - 1)) by omega.
+    rewrite <-(Z.add_lnot_diag (x-1)); omega.
+  Qed.
+
+  Lemma lnot_opp x : Z.lnot (- x) = x-1.
+  Proof.
+    rewrite <-Z.lnot_involutive, lnot_sub1; reflexivity.
+  Qed.
+
+  Lemma testbit_sub_pow2 n i x (i_range:0 <= i < n) (x_range:0 < x < 2 ^ n) :
+    Z.testbit (2 ^ n - x) i = negb (Z.testbit (x - 1)  i).
+  Proof.
+    rewrite <-Z.lnot_spec, lnot_sub1 by omega.
+    rewrite <-(Z.mod_pow2_bits_low (-x) _ _ (proj2 i_range)).
+    f_equal.
+    rewrite Z.mod_opp_l_nz; autorewrite with zsimplify; omega.
+  Qed.
+
   (* prove that combinations of known positive/nonnegative numbers are positive/nonnegative *)
   Ltac zero_bounds' :=
     repeat match goal with
