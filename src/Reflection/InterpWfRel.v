@@ -20,18 +20,18 @@ Section language.
                                             -> interp_flat_type_rel_pointwise2
                                                  R (interp_op1 src dst op sv1) (interp_op2 src dst op sv2)).
 
-  Notation exprf1 := (@exprf base_type_code interp_base_type1 op interp_base_type1).
-  Notation exprf2 := (@exprf base_type_code interp_base_type2 op interp_base_type2).
-  Notation expr1 := (@expr base_type_code interp_base_type1 op interp_base_type1).
-  Notation expr2 := (@expr base_type_code interp_base_type2 op interp_base_type2).
-  Notation Expr1 := (@Expr base_type_code interp_base_type1 op).
-  Notation Expr2 := (@Expr base_type_code interp_base_type2 op).
-  Notation interpf1 := (@interpf base_type_code interp_base_type1 op interp_op1).
-  Notation interpf2 := (@interpf base_type_code interp_base_type2 op interp_op2).
-  Notation interp1 := (@interp base_type_code interp_base_type1 op interp_op1).
-  Notation interp2 := (@interp base_type_code interp_base_type2 op interp_op2).
-  Notation Interp1 := (@Interp base_type_code interp_base_type1 op interp_op1).
-  Notation Interp2 := (@Interp base_type_code interp_base_type2 op interp_op2).
+  Local Notation exprf1 := (@exprf base_type_code interp_base_type1 op interp_base_type1).
+  Local Notation exprf2 := (@exprf base_type_code interp_base_type2 op interp_base_type2).
+  Local Notation expr1 := (@expr base_type_code interp_base_type1 op interp_base_type1).
+  Local Notation expr2 := (@expr base_type_code interp_base_type2 op interp_base_type2).
+  Local Notation Expr1 := (@Expr base_type_code interp_base_type1 op).
+  Local Notation Expr2 := (@Expr base_type_code interp_base_type2 op).
+  Local Notation interpf1 := (@interpf base_type_code interp_base_type1 op interp_op1).
+  Local Notation interpf2 := (@interpf base_type_code interp_base_type2 op interp_op2).
+  Local Notation interp1 := (@interp base_type_code interp_base_type1 op interp_op1).
+  Local Notation interp2 := (@interp base_type_code interp_base_type2 op interp_op2).
+  Local Notation Interp1 := (@Interp base_type_code interp_base_type1 op interp_op1).
+  Local Notation Interp2 := (@Interp base_type_code interp_base_type2 op interp_op2).
 
   Lemma interp_flat_type_rel_pointwise2_flatten_binding_list
         {t x x' T e1 e2}

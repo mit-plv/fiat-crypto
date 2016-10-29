@@ -70,6 +70,8 @@ Section language.
           | Prod _ _ => fun x y => interp_flat_type_rel_pointwise _ (fst x) (fst y)
                                    /\ interp_flat_type_rel_pointwise _ (snd x) (snd y)
           end.
+        Definition interp_type_rel_pointwise
+          := interp_type_gen_rel_pointwise _ interp_flat_type_rel_pointwise.
       End rel.
     End flat_type.
     Section rel_pointwise2.
@@ -278,6 +280,7 @@ Global Arguments interp_flat_type_rel_pointwise2 {_ _ _} R {t} _ _.
 Global Arguments mapf_interp_flat_type {_ _ _} _ {t} _.
 Global Arguments interp_type_gen {_} _ _.
 Global Arguments interp_flat_type {_} _ _.
+Global Arguments interp_type_rel_pointwise {_} _ _ {_} _ _.
 Global Arguments interp_type_gen_rel_pointwise {_} _ _ {_} _ _.
 Global Arguments interp_flat_type_rel_pointwise {_} _ _ {_} _ _.
 Global Arguments interp_type {_} _ _.
