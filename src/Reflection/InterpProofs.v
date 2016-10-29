@@ -13,7 +13,7 @@ Section language.
   Context (interp_base_type : base_type_code -> Type).
   Context (op : flat_type (* input tuple *) -> flat_type (* output type *) -> Type).
   Let interp_type := interp_type interp_base_type.
-  Let interp_flat_type := interp_flat_type_gen interp_base_type.
+  Let interp_flat_type := interp_flat_type interp_base_type.
   Context (interp_op : forall src dst, op src dst -> interp_flat_type src -> interp_flat_type dst).
 
   Lemma interpf_SmartVar t v

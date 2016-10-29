@@ -86,7 +86,7 @@ Section language.
   Let Tbase := @Tbase base_type_code.
   Local Coercion Tbase : base_type_code >-> Syntax.flat_type.
   Local Notation interp_type := (interp_type interp_base_type).
-  Local Notation interp_flat_type := (interp_flat_type_gen interp_base_type).
+  Local Notation interp_flat_type := (interp_flat_type interp_base_type).
   Local Notation exprf := (@exprf base_type_code interp_base_type op).
   Local Notation expr := (@expr base_type_code interp_base_type op).
   Local Notation duplicate_type := (@duplicate_type base_type_code var1 var2).
@@ -96,8 +96,8 @@ Section language.
   Local Notation preflatten_binding_list2 := (@preflatten_binding_list2 base_type_code base_type_eq_semidec_transparent var1 var2).
   Local Notation type_eq_semidec_transparent := (@type_eq_semidec_transparent base_type_code base_type_eq_semidec_transparent).
 
-  Lemma interp_flat_type_gen_rel_pointwise2_eq {t} (x y : interp_flat_type t)
-    : interp_flat_type_gen_rel_pointwise2 (fun _ => eq) x y <-> x = y.
+  Lemma interp_flat_type_rel_pointwise2_eq {t} (x y : interp_flat_type t)
+    : interp_flat_type_rel_pointwise2 (fun _ => eq) x y <-> x = y.
   Proof.
     induction t; simpl in *; [ reflexivity | ].
     rewrite_hyp !*; intuition (simpl in *; try congruence).
@@ -114,8 +114,8 @@ Section language.
     | _ => progress unfold eq_type_and_var, op_beq', flatten_binding_list2, preflatten_binding_list2, option_map, and_option_pointed_Prop, eq_semidec_and_gen in *
     | _ => progress simpl in *
     | _ => progress break_match
-    | [ H : interp_flat_type_gen_rel_pointwise2 (fun _ => eq) _ _ |- _ ]
-      => apply interp_flat_type_gen_rel_pointwise2_eq in H
+    | [ H : interp_flat_type_rel_pointwise2 (fun _ => eq) _ _ |- _ ]
+      => apply interp_flat_type_rel_pointwise2_eq in H
     | _ => progress subst
     | _ => progress inversion_option
     | _ => progress inversion_pointed_Prop
@@ -138,9 +138,9 @@ Section language.
     | [ H : context[List.length (_ ++ _)%list] |- _ ]
       => rewrite List.app_length in H
     | [ |- wff _ (unnatize_exprf (fst _) _) (unnatize_exprf (fst _) _) ]
-      => erewrite length_natize_interp_flat_type_gen1, length_natize_interp_flat_type_gen2; eassumption
+      => erewrite length_natize_interp_flat_type1, length_natize_interp_flat_type2; eassumption
     | [ |- wf _ (unnatize_exprf (fst _) _) (unnatize_exprf (fst _) _) ]
-      => erewrite length_natize_interp_flat_type_gen1, length_natize_interp_flat_type_gen2; eassumption
+      => erewrite length_natize_interp_flat_type1, length_natize_interp_flat_type2; eassumption
     | [ H : base_type_eq_semidec_transparent _ _ = None |- False ] => eapply duplicate_type_not_in; eassumption
     | [ H : List.nth_error _ _ = Some _ |- _ ] => apply List.nth_error_In in H
     | [ H : List.In _ (duplicate_type _) |- _ ] => eapply duplicate_type_in in H; [ | eassumption.. ]
@@ -172,8 +172,8 @@ Section language.
                       | Some G0
                         => reflect_wff
                             (G0 x x' ++ G)%list _ _
-                            (eC (snd (natize_interp_flat_type_gen (length (duplicate_type G)) x)))
-                            (eC' (snd (natize_interp_flat_type_gen (length (duplicate_type G)) x')))
+                            (eC (snd (natize_interp_flat_type (length (duplicate_type G)) x)))
+                            (eC' (snd (natize_interp_flat_type (length (duplicate_type G)) x')))
                       | None => I
                       end);
         clear reflect_wff
@@ -203,8 +203,8 @@ Section language.
                       | Some G0
                         => reflect_wf
                             (G0 x x' ++ G)%list _ _
-                            (f (snd (natize_interp_flat_type_gen (length (duplicate_type G)) x)))
-                            (f' (snd (natize_interp_flat_type_gen (length (duplicate_type G)) x')))
+                            (f (snd (natize_interp_flat_type (length (duplicate_type G)) x)))
+                            (f' (snd (natize_interp_flat_type (length (duplicate_type G)) x')))
                       | None => I
                       end);
         clear reflect_wf ].

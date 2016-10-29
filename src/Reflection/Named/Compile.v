@@ -19,7 +19,7 @@ Section language.
   Let Tbase := @Tbase base_type_code.
   Local Coercion Tbase : base_type_code >-> Syntax.flat_type.
   Local Notation interp_type := (interp_type interp_base_type).
-  Local Notation interp_flat_type := (interp_flat_type_gen interp_base_type).
+  Local Notation interp_flat_type := (interp_flat_type interp_base_type).
   Local Notation exprf := (@exprf base_type_code interp_base_type op (fun _ => Name)).
   Local Notation expr := (@expr base_type_code interp_base_type op (fun _ => Name)).
   Local Notation nexprf := (@Named.exprf base_type_code interp_base_type op Name).

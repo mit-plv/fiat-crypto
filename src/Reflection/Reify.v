@@ -257,4 +257,4 @@ Ltac Reify_rhs base_type_code interp_base_type op interp_op :=
            change interp_base_type with interp_base_type';
            change interp_op with interp_op'
       end;
-      cbv iota beta delta [InputSyntax.Interp interp_type interp_type_gen interp_flat_type_gen interp interpf]; simplify_projections; reflexivity) ] ].
+      cbv iota beta delta [InputSyntax.Interp interp_type interp_type_gen interp_flat_type interp interpf]; simplify_projections; reflexivity) ] ].

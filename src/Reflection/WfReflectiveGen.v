@@ -87,8 +87,8 @@ Section language.
   Local Coercion Tbase : base_type_code >-> Syntax.flat_type.
   Local Notation interp_type1 := (interp_type interp_base_type1).
   Local Notation interp_type2 := (interp_type interp_base_type2).
-  Local Notation interp_flat_type1 := (interp_flat_type_gen interp_base_type1).
-  Local Notation interp_flat_type2 := (interp_flat_type_gen interp_base_type2).
+  Local Notation interp_flat_type1 := (interp_flat_type interp_base_type1).
+  Local Notation interp_flat_type2 := (interp_flat_type interp_base_type2).
   Local Notation exprf1 := (@exprf base_type_code interp_base_type1 op).
   Local Notation exprf2 := (@exprf base_type_code interp_base_type2 op).
   Local Notation expr1 := (@expr base_type_code interp_base_type1 op).
@@ -198,7 +198,7 @@ Section language.
   Definition rel_type_and_const (t t' : flat_type) (x : interp_flat_type1 t) (y : interp_flat_type2 t')
     : option pointed_Prop
     := eq_semidec_and_gen
-         flat_type_eq_semidec_transparent _ _ interp_flat_type1 interp_flat_type2 (fun t => interp_flat_type_gen_rel_pointwise2 R) x y.
+         flat_type_eq_semidec_transparent _ _ interp_flat_type1 interp_flat_type2 (fun t => interp_flat_type_rel_pointwise2 R) x y.
 
   Definition duplicate_type (ls : list (sigT (fun t => var1 t * var2 t)%type)) : list (sigT eP)
     := List.map (fun v => existT eP (projT1 v, projT1 v) (projT2 v)) ls.
@@ -226,39 +226,39 @@ Section language.
       intuition; congruence.
   Qed.
 
-  Definition preflatten_binding_list2 t1 t2 : option (forall (x : interp_flat_type_gen var1 t1) (y : interp_flat_type_gen var2 t2), list (sigT (fun t => var1 t * var2 t)%type))
+  Definition preflatten_binding_list2 t1 t2 : option (forall (x : interp_flat_type var1 t1) (y : interp_flat_type var2 t2), list (sigT (fun t => var1 t * var2 t)%type))
     := match flat_type_eq_semidec_transparent t1 t2 with
        | Some p
          => Some (fun x y
-                 => let x := eq_rect _ (interp_flat_type_gen var1) x _ p in
+                 => let x := eq_rect _ (interp_flat_type var1) x _ p in
                    flatten_binding_list base_type_code x y)
        | None => None
        end.
-  Definition flatten_binding_list2 t1 t2 : option (forall (x : interp_flat_type_gen var1 t1) (y : interp_flat_type_gen var2 t2), list (sigT eP))
+  Definition flatten_binding_list2 t1 t2 : option (forall (x : interp_flat_type var1 t1) (y : interp_flat_type var2 t2), list (sigT eP))
     := option_map (fun f x y => duplicate_type (f x y)) (preflatten_binding_list2 t1 t2).
   (** This function adds De Bruijn indices to variables *)
-  Fixpoint natize_interp_flat_type_gen var t (base : nat) (v : interp_flat_type_gen var t) {struct t}
-    : nat * interp_flat_type_gen (fun t : base_type_code => nat * var t)%type t
-    := match t return interp_flat_type_gen var t -> nat * interp_flat_type_gen _ t with
-       | Prod A B => fun v => let ret := @natize_interp_flat_type_gen _ A base (fst v) in
+  Fixpoint natize_interp_flat_type var t (base : nat) (v : interp_flat_type var t) {struct t}
+    : nat * interp_flat_type (fun t : base_type_code => nat * var t)%type t
+    := match t return interp_flat_type var t -> nat * interp_flat_type _ t with
+       | Prod A B => fun v => let ret := @natize_interp_flat_type _ A base (fst v) in
                           let base := fst ret in
                           let a := snd ret in
-                          let ret := @natize_interp_flat_type_gen _ B base (snd v) in
+                          let ret := @natize_interp_flat_type _ B base (snd v) in
                           let base := fst ret in
                           let b := snd ret in
                           (base, (a, b))
        | Syntax.Tbase t => fun v => (S base, (base, v))
        end v.
-  Arguments natize_interp_flat_type_gen {var t} _ _.
-  Lemma length_natize_interp_flat_type_gen1 {t} (base : nat) (v1 : interp_flat_type_gen var1 t) (v2 : interp_flat_type_gen var2 t)
-    : fst (natize_interp_flat_type_gen base v1) = length (flatten_binding_list base_type_code v1 v2) + base.
+  Arguments natize_interp_flat_type {var t} _ _.
+  Lemma length_natize_interp_flat_type1 {t} (base : nat) (v1 : interp_flat_type var1 t) (v2 : interp_flat_type var2 t)
+    : fst (natize_interp_flat_type base v1) = length (flatten_binding_list base_type_code v1 v2) + base.
   Proof.
     revert base; induction t; simpl; [ reflexivity | ].
     intros; rewrite List.app_length, <- plus_assoc.
     rewrite_hyp <- ?*; reflexivity.
   Qed.
-  Lemma length_natize_interp_flat_type_gen2 {t} (base : nat) (v1 : interp_flat_type_gen var1 t) (v2 : interp_flat_type_gen var2 t)
-    : fst (natize_interp_flat_type_gen base v2) = length (flatten_binding_list base_type_code v1 v2) + base.
+  Lemma length_natize_interp_flat_type2 {t} (base : nat) (v1 : interp_flat_type var1 t) (v2 : interp_flat_type var2 t)
+    : fst (natize_interp_flat_type base v2) = length (flatten_binding_list base_type_code v1 v2) + base.
   Proof.
     revert base; induction t; simpl; [ reflexivity | ].
     intros; rewrite List.app_length, <- plus_assoc.
@@ -274,7 +274,7 @@ Section language.
        | Var _ x => Var (snd x)
        | Op _ _ op args => Op op (@unnatize_exprf _ _ _ base args)
        | LetIn _ ex _ eC => LetIn (@unnatize_exprf _ _ _ base ex)
-                             (fun x => let v := natize_interp_flat_type_gen base x in
+                             (fun x => let v := natize_interp_flat_type base x in
                                     @unnatize_exprf _ _ _ (fst v) (eC (snd v)))
        | Pair _ x _ y => Pair (@unnatize_exprf _ _ _ base x) (@unnatize_exprf _ _ _ base y)
        end.
@@ -283,7 +283,7 @@ Section language.
     : @Syntax.expr base_type_code interp_base_type op var t
     := match e in @Syntax.expr _ _ _ _ t return Syntax.expr _ _ _ t with
        | Return _ x => unnatize_exprf base x
-       | Abs tx tR f => Abs (fun x : var tx => let v := natize_interp_flat_type_gen (t:=tx) base x in
+       | Abs tx tR f => Abs (fun x : var tx => let v := natize_interp_flat_type (t:=tx) base x in
                                            @unnatize_expr _ _ _ (fst v) (f (snd v)))
        end.
 
@@ -296,7 +296,7 @@ Section language.
     := match e1, e2 return option _ with
        | Const t0 x, Const t1 y
          => match flat_type_eq_semidec_transparent t0 t1 with
-           | Some p => Some (inject (interp_flat_type_gen_rel_pointwise2 R (eq_rect _ interp_flat_type1 x _ p) y))
+           | Some p => Some (inject (interp_flat_type_rel_pointwise2 R (eq_rect _ interp_flat_type1 x _ p) y))
            | None => None
            end
        | Const _ _, _ => None
@@ -315,10 +315,10 @@ Section language.
        | LetIn tx ex tC eC, LetIn tx' ex' tC' eC'
          => match @reflect_wffT G tx tx' ex ex', @flatten_binding_list2 tx tx', flat_type_eq_semidec_transparent tC tC' with
            | Some p, Some G0, Some _
-             => Some (p /\ inject (forall (x : interp_flat_type_gen var1 tx) (x' : interp_flat_type_gen var2 tx'),
+             => Some (p /\ inject (forall (x : interp_flat_type var1 tx) (x' : interp_flat_type var2 tx'),
                                     match @reflect_wffT (G0 x x' ++ G)%list _ _
-                                                       (eC (snd (natize_interp_flat_type_gen (List.length G) x)))
-                                                       (eC' (snd (natize_interp_flat_type_gen (List.length G) x'))) with
+                                                       (eC (snd (natize_interp_flat_type (List.length G) x)))
+                                                       (eC' (snd (natize_interp_flat_type (List.length G) x'))) with
                                     | Some p => to_prop p
                                     | None => False
                                     end))
@@ -346,10 +346,10 @@ Section language.
        | Abs tx tR f, Abs tx' tR' f'
          => match @flatten_binding_list2 tx tx', type_eq_semidec_transparent tR tR' with
            | Some G0, Some _
-             => Some (inject (forall (x : interp_flat_type_gen var1 tx) (x' : interp_flat_type_gen var2 tx'),
+             => Some (inject (forall (x : interp_flat_type var1 tx) (x' : interp_flat_type var2 tx'),
                                 match @reflect_wfT (G0 x x' ++ G)%list _ _
-                                                   (f (snd (natize_interp_flat_type_gen (List.length G) x)))
-                                                   (f' (snd (natize_interp_flat_type_gen (List.length G) x'))) with
+                                                   (f (snd (natize_interp_flat_type (List.length G) x)))
+                                                   (f' (snd (natize_interp_flat_type (List.length G) x'))) with
                                 | Some p => to_prop p
                                 | None => False
                                 end))
@@ -363,4 +363,4 @@ Global Arguments reflect_wffT {_ _ _} _ {op} R _ {var1 var2} G {t1 t2} _ _.
 Global Arguments reflect_wfT {_ _ _} _ {op} R _ {var1 var2} G {t1 t2} _ _.
 Global Arguments unnatize_exprf {_ _ _ _ _} _ _.
 Global Arguments unnatize_expr {_ _ _ _ _} _ _.
-Global Arguments natize_interp_flat_type_gen {_ _ t} _ _.
+Global Arguments natize_interp_flat_type {_ _ t} _ _.

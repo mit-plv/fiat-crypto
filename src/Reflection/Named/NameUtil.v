@@ -11,8 +11,8 @@ Section language.
     Context (MName : Type) (force : MName -> option Name).
     Fixpoint split_mnames
              (t : flat_type base_type_code) (ls : list MName)
-      : option (interp_flat_type_gen (fun _ => Name) t) * list MName
-      := match t return option (@interp_flat_type_gen base_type_code (fun _ => Name) t) * _ with
+      : option (interp_flat_type (fun _ => Name) t) * list MName
+      := match t return option (@interp_flat_type base_type_code (fun _ => Name) t) * _ with
          | Syntax.Tbase _
            => match ls with
               | cons n ls'

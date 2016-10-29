@@ -26,7 +26,7 @@ Inductive op : flat_type base_type -> flat_type base_type -> Type :=
 | Add : op (Prod tnat tnat) tnat
 | Mul : op (Prod tnat tnat) tnat
 | Sub : op (Prod tnat tnat) tnat.
-Definition interp_op src dst (f : op src dst) : interp_flat_type_gen interp_base_type src -> interp_flat_type_gen interp_base_type dst
+Definition interp_op src dst (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
   := match f with
      | Add => fun xy => fst xy + snd xy
      | Mul => fun xy => fst xy * snd xy
@@ -186,7 +186,7 @@ Module bounds.
     match v with
     | Tnat => { b : bounded | lower b <= value b <= upper b }
     end.
-  Definition interp_op_bounds src dst (f : op src dst) : interp_flat_type_gen interp_base_type_bounds src -> interp_flat_type_gen interp_base_type_bounds dst
+  Definition interp_op_bounds src dst (f : op src dst) : interp_flat_type interp_base_type_bounds src -> interp_flat_type interp_base_type_bounds dst
     := match f with
        | Add => fun xy => add_bounded_pf (fst xy) (snd xy)
        | Mul => fun xy => mul_bounded_pf (fst xy) (snd xy)
@@ -199,7 +199,7 @@ Module bounds.
     simpl; split; reflexivity.
   Defined.
   Fixpoint constant_bounds t
-    : interp_flat_type_gen interp_base_type t -> interp_flat_type_gen interp_base_type_bounds t
+    : interp_flat_type interp_base_type t -> interp_flat_type interp_base_type_bounds t
     := match t with
        | Tbase t => constant_bounded t
        | Prod _ _ => fun x => (constant_bounds _ (fst x), constant_bounds _ (snd x))

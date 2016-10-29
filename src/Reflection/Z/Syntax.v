@@ -32,8 +32,8 @@ Inductive op : flat_type base_type -> flat_type base_type -> Type :=
 | Cmovne : op (tZ * tZ * tZ * tZ) tZ
 | Cmovle : op (tZ * tZ * tZ * tZ) tZ.
 
-Definition interp_op src dst (f : op src dst) : interp_flat_type_gen interp_base_type src -> interp_flat_type_gen interp_base_type dst
-  := match f in op src dst return interp_flat_type_gen interp_base_type src -> interp_flat_type_gen interp_base_type dst with
+Definition interp_op src dst (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
+  := match f in op src dst return interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst with
      | Add => fun xy => fst xy + snd xy
      | Sub => fun xy => fst xy - snd xy
      | Mul => fun xy => fst xy * snd xy

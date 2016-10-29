@@ -1,5 +1,5 @@
 (** * PHOAS Representation of Gallina *)
-Require Import Coq.Strings.String Coq.Classes.RelationClasses.
+Require Import Coq.Strings.String Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
@@ -55,41 +55,57 @@ Section language.
     End type.
     Section flat_type.
       Context (interp_base_type : base_type_code -> Type).
-      Fixpoint interp_flat_type_gen (t : flat_type) :=
+      Fixpoint interp_flat_type (t : flat_type) :=
         match t with
         | Tbase t => interp_base_type t
-        | Prod x y => prod (interp_flat_type_gen x) (interp_flat_type_gen y)
+        | Prod x y => prod (interp_flat_type x) (interp_flat_type y)
         end.
-      Definition interp_type := interp_type_gen interp_flat_type_gen.
+      Definition interp_type := interp_type_gen interp_flat_type.
       Section rel.
         Context (R : forall t, interp_base_type t -> interp_base_type t -> Prop).
-        Fixpoint interp_flat_type_gen_rel_pointwise (t : flat_type)
-          : interp_flat_type_gen t -> interp_flat_type_gen t -> Prop :=
+        Fixpoint interp_flat_type_rel_pointwise (t : flat_type)
+          : interp_flat_type t -> interp_flat_type t -> Prop :=
           match t with
           | Tbase t => R t
-          | Prod _ _ => fun x y => interp_flat_type_gen_rel_pointwise _ (fst x) (fst y)
-                               /\ interp_flat_type_gen_rel_pointwise _ (snd x) (snd y)
+          | Prod _ _ => fun x y => interp_flat_type_rel_pointwise _ (fst x) (fst y)
+                                   /\ interp_flat_type_rel_pointwise _ (snd x) (snd y)
           end.
       End rel.
     End flat_type.
-    Section rel_pointwise.
-      Context (interp_base_type1 interp_base_type2 : base_type_code -> Type)
-              (R : forall t, interp_base_type1 t -> interp_base_type2 t -> Prop).
-      Fixpoint interp_flat_type_gen_rel_pointwise2 (t : flat_type)
-      : interp_flat_type_gen interp_base_type1 t -> interp_flat_type_gen interp_base_type2 t -> Prop :=
-        match t with
-        | Tbase t => R t
-        | Prod _ _ => fun x y => interp_flat_type_gen_rel_pointwise2 _ (fst x) (fst y)
-                                 /\ interp_flat_type_gen_rel_pointwise2 _ (snd x) (snd y)
-        end.
-    End rel_pointwise.
+    Section rel_pointwise2.
+      Section type.
+        Context (interp_flat_type1 interp_flat_type2 : flat_type -> Type)
+                (R : forall t, interp_flat_type1 t -> interp_flat_type2 t -> Prop).
+
+        Fixpoint interp_type_gen_rel_pointwise2 (t : type)
+          : interp_type_gen interp_flat_type1 t -> interp_type_gen interp_flat_type2 t -> Prop
+          := match t with
+             | Tflat t => R t
+             | Arrow src dst => @respectful_hetero _ _ _ _ (R src) (fun _ _ => interp_type_gen_rel_pointwise2 dst)
+             end.
+      End type.
+      Section flat_type.
+        Context (interp_base_type1 interp_base_type2 : base_type_code -> Type)
+                (R : forall t, interp_base_type1 t -> interp_base_type2 t -> Prop).
+        Fixpoint interp_flat_type_rel_pointwise2 (t : flat_type)
+          : interp_flat_type interp_base_type1 t -> interp_flat_type interp_base_type2 t -> Prop
+          := match t with
+             | Tbase t => R t
+             | Prod x y => fun a b => interp_flat_type_rel_pointwise2 x (fst a) (fst b)
+                                      /\ interp_flat_type_rel_pointwise2 y (snd a) (snd b)
+             end.
+        Definition interp_type_rel_pointwise2
+          := interp_type_gen_rel_pointwise2 _ _ interp_flat_type_rel_pointwise2.
+      End flat_type.
+    End rel_pointwise2.
   End interp.
 
   Section expr_param.
     Context (interp_base_type : base_type_code -> Type).
     Context (op : flat_type (* input tuple *) -> flat_type (* output type *) -> Type).
     Local Notation interp_type := (interp_type interp_base_type).
-    Local Notation interp_flat_type := (interp_flat_type_gen interp_base_type).
+    Local Notation interp_flat_type_gen := interp_flat_type.
+    Local Notation interp_flat_type := (interp_flat_type interp_base_type).
     Section expr.
       Context {var : base_type_code -> Type}.
 
@@ -174,12 +190,12 @@ Section language.
       Context (fvar12 : forall t, var1 t -> var2 t)
               (fvar21 : forall t, var2 t -> var1 t).
 
-      Fixpoint mapf_interp_flat_type_gen {t} (e : interp_flat_type_gen var2 t) {struct t}
+      Fixpoint mapf_interp_flat_type {t} (e : interp_flat_type_gen var2 t) {struct t}
         : interp_flat_type_gen var1 t
         := match t return interp_flat_type_gen _ t -> interp_flat_type_gen _ t with
            | Tbase _ => fvar21 _
-           | Prod x y => fun xy => (@mapf_interp_flat_type_gen _ (fst xy),
-                                    @mapf_interp_flat_type_gen _ (snd xy))
+           | Prod x y => fun xy => (@mapf_interp_flat_type _ (fst xy),
+                                    @mapf_interp_flat_type _ (snd xy))
            end e.
 
       Fixpoint mapf {t} (e : @exprf var1 t) : @exprf var2 t
@@ -187,7 +203,7 @@ Section language.
            | Const _ x => Const x
            | Var _ x => Var (fvar12 _ x)
            | Op _ _ op args => Op op (@mapf _ args)
-           | LetIn _ ex _ eC => LetIn (@mapf _ ex) (fun x => @mapf _ (eC (mapf_interp_flat_type_gen x)))
+           | LetIn _ ex _ eC => LetIn (@mapf _ ex) (fun x => @mapf _ (eC (mapf_interp_flat_type x)))
            | Pair _ ex _ ey => Pair (@mapf _ ex) (@mapf _ ey)
            end.
     End map.
@@ -256,12 +272,13 @@ Global Arguments LetIn {_ _ _ _ _} _ {_} _.
 Global Arguments Pair {_ _ _ _ _} _ {_} _.
 Global Arguments Return {_ _ _ _ _} _.
 Global Arguments Abs {_ _ _ _ _ _} _.
-Global Arguments interp_flat_type_gen_rel_pointwise2 {_ _ _} R {t} _ _.
-Global Arguments mapf_interp_flat_type_gen {_ _ _} _ {t} _.
+Global Arguments interp_type_gen_rel_pointwise2 {_ _ _} R {t} _ _.
+Global Arguments interp_flat_type_rel_pointwise2 {_ _ _} R {t} _ _.
+Global Arguments mapf_interp_flat_type {_ _ _} _ {t} _.
 Global Arguments interp_type_gen {_} _ _.
-Global Arguments interp_flat_type_gen {_} _ _.
+Global Arguments interp_flat_type {_} _ _.
 Global Arguments interp_type_gen_rel_pointwise {_} _ _ {_} _ _.
-Global Arguments interp_flat_type_gen_rel_pointwise {_} _ _ {_} _ _.
+Global Arguments interp_flat_type_rel_pointwise {_} _ _ {_} _ _.
 Global Arguments interp_type {_} _ _.
 Global Arguments wff {_ _ _ _ _} G {t} _ _.
 Global Arguments wf {_ _ _ _ _} G {t} _ _.

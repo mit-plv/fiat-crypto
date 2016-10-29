@@ -9,7 +9,7 @@ Section language.
   Context (op : flat_type base_type_code -> flat_type base_type_code -> Type).
   Section map.
     Context (interp_base_type1 interp_base_type2 : base_type_code -> Type).
-    Context (f_const : forall t, interp_flat_type_gen interp_base_type1 t -> interp_flat_type_gen interp_base_type2 t).
+    Context (f_const : forall t, interp_flat_type interp_base_type1 t -> interp_flat_type interp_base_type2 t).
     Context {var1 var2 : base_type_code -> Type}.
     Context (f_var12 : forall t, var1 t -> var2 t)
             (f_var21 : forall t, var2 t -> var1 t).
@@ -23,7 +23,7 @@ Section language.
          | Var _ x => Var (f_var12 _ x)
          | Op _ _ op args => Op op (@mapf _ args)
          | LetIn _ ex _ eC => LetIn (@mapf _ ex)
-                               (fun x => @mapf _ (eC (mapf_interp_flat_type_gen f_var21 x)))
+                               (fun x => @mapf _ (eC (mapf_interp_flat_type f_var21 x)))
          | Pair _ ex _ ey => Pair (@mapf _ ex)
                                  (@mapf _ ey)
          end.
@@ -75,8 +75,8 @@ Section language.
 
   Section mapf_id_interp.
     Context {interp_base_type : base_type_code -> Type}
-            (interp_op : forall src dst, op src dst -> interp_flat_type_gen interp_base_type src -> interp_flat_type_gen interp_base_type dst)
-            (f_const : forall t, interp_flat_type_gen interp_base_type t -> interp_flat_type_gen interp_base_type t)
+            (interp_op : forall src dst, op src dst -> interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst)
+            (f_const : forall t, interp_flat_type interp_base_type t -> interp_flat_type interp_base_type t)
             (f_var12 f_var21 : forall t, interp_base_type t -> interp_base_type t)
             (f_const_id : forall t x, f_const t x = x)
             (f_var12_id : forall t x, f_var12 t x = x)

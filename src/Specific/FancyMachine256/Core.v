@@ -60,8 +60,8 @@ Section reflection.
   | OPaddm    : op (tW * tW * tW) tW.
 
   Definition interp_op src dst (f : op src dst)
-    : interp_flat_type_gen interp_base_type src -> interp_flat_type_gen interp_base_type dst
-    := match f in op s d return interp_flat_type_gen _ s -> interp_flat_type_gen _ d with
+    : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
+    := match f in op s d return interp_flat_type _ s -> interp_flat_type _ d with
        | OPldi     => ldi
        | OPshrd    => fun xyz => let '(x, y, z) := eta3 xyz in shrd x y z
        | OPshl     => fun xy => let '(x, y) := eta xy in shl x y

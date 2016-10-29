@@ -12,8 +12,7 @@ Section language.
   Local Notation type := (type base_type_code).
   Let Tbase := @Tbase base_type_code.
   Local Coercion Tbase : base_type_code >-> Syntax.flat_type.
-  Let interp_type := interp_type interp_base_type.
-  Let interp_flat_type := interp_flat_type_gen interp_base_type.
+  Local Notation interp_type := (interp_type interp_base_type).
   Local Notation exprf := (@exprf base_type_code interp_base_type op).
   Local Notation expr := (@expr base_type_code interp_base_type op).
   Local Notation Expr := (@Expr base_type_code interp_base_type op).
@@ -31,9 +30,9 @@ Section language.
     Fixpoint inline_const_genf {t} (e : @exprf (@exprf var) t) : @exprf var t
       := match e in Syntax.exprf _ _ _ t return @exprf var t with
          | LetIn tx ex tC eC
-           => match postprocess _ (@inline_const_genf _ ex) in inline_directive t' return (interp_flat_type_gen _ t' -> @exprf var tC) -> @exprf var tC with
+           => match postprocess _ (@inline_const_genf _ ex) in inline_directive t' return (interp_flat_type _ t' -> @exprf var tC) -> @exprf var tC with
               | default_inline _ ex
-                => match ex in Syntax.exprf _ _ _ t' return (interp_flat_type_gen _ t' -> @exprf var tC) -> @exprf var tC with
+                => match ex in Syntax.exprf _ _ _ t' return (interp_flat_type _ t' -> @exprf var tC) -> @exprf var tC with
                    | Const _ x => fun eC => eC (SmartConst (op:=op) (var:=var) x)
                    | Var _ x => fun eC => eC (Var x)
                    | ex => fun eC => LetIn ex (fun x => eC (SmartVarVar x))

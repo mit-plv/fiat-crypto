@@ -22,7 +22,8 @@ Section language.
     Context (interp_base_type : base_type_code -> Type).
     Context (op : flat_type (* input tuple *) -> flat_type (* output type *) -> Type).
     Local Notation interp_type := (interp_type interp_base_type).
-    Local Notation interp_flat_type := (interp_flat_type_gen interp_base_type).
+    Local Notation interp_flat_type_gen := interp_flat_type.
+    Local Notation interp_flat_type := (interp_flat_type interp_base_type).
     Section expr.
       Context {var : flat_type -> Type}.
 
@@ -108,7 +109,7 @@ Section language.
       : Syntax.Interp interp_op (Compile e) = Interp interp_op e.
       Proof.
         unfold Interp, Compile, Syntax.Interp; simpl.
-        pose (e (interp_flat_type_gen interp_base_type)) as E.
+        pose (e interp_flat_type) as E.
         repeat match goal with |- context[e ?f] => change (e f) with E end.
         refine match E with
                | Abs _ _ _ => fun x : Prop => x (* small inversions *)

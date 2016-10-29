@@ -34,7 +34,8 @@ Module Export Named.
     Let Tbase := @Tbase base_type_code.
     Local Coercion Tbase : base_type_code >-> Syntax.flat_type.
     Local Notation interp_type := (interp_type interp_base_type).
-    Local Notation interp_flat_type := (interp_flat_type_gen interp_base_type).
+    Local Notation interp_flat_type_gen := interp_flat_type.
+    Local Notation interp_flat_type := (interp_flat_type interp_base_type).
 
 
     Section expr_param.

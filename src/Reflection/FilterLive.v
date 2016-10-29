@@ -23,7 +23,6 @@ Section language.
   Let Tbase := @Tbase base_type_code.
   Local Coercion Tbase : base_type_code >-> Syntax.flat_type.
   Local Notation interp_type := (interp_type interp_base_type).
-  Local Notation interp_flat_type := (interp_flat_type_gen interp_base_type).
   Local Notation var := (fun t : base_type_code => list Name).
   Local Notation exprf := (@exprf base_type_code interp_base_type op var).
   Local Notation expr := (@expr base_type_code interp_base_type op var).
@@ -36,7 +35,7 @@ Section language.
     | nil, ls2 => ls2
     end.
 
-  Definition names_to_list {t} : interp_flat_type_gen (fun _ => Name) t -> list Name
+  Definition names_to_list {t} : interp_flat_type (fun _ => Name) t -> list Name
     := smart_interp_flat_map base_type_code (g:=fun _ => list Name) (fun _ x => x :: nil)%list (fun _ _ x y => x ++ y)%list.
 
   Fixpoint filter_live_namesf (prefix remaining : list Name) {t} (e : exprf t) : list Name

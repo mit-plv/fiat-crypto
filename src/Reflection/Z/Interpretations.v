@@ -18,7 +18,7 @@ Local Notation eta4 x := (eta3 (fst x), snd x).
 
 Module Z.
   Definition interp_base_type (t : base_type) : Type := interp_base_type t.
-  Definition interp_op {src dst} (f : op src dst) : interp_flat_type_gen interp_base_type src -> interp_flat_type_gen interp_base_type dst
+  Definition interp_op {src dst} (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
     := interp_op src dst f.
 End Z.
 
@@ -88,8 +88,8 @@ Module Word64.
     := match t with
        | TZ => word64
        end.
-  Definition interp_op {src dst} (f : op src dst) : interp_flat_type_gen interp_base_type src -> interp_flat_type_gen interp_base_type dst
-    := match f in op src dst return interp_flat_type_gen interp_base_type src -> interp_flat_type_gen interp_base_type dst with
+  Definition interp_op {src dst} (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
+    := match f in op src dst return interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst with
        | Add => fun xy => fst xy + snd xy
        | Sub => fun xy => fst xy - snd xy
        | Mul => fun xy => fst xy * snd xy
@@ -217,8 +217,8 @@ Module ZBounds.
     := match ty with
        | TZ => t
        end.
-  Definition interp_op {src dst} (f : op src dst) : interp_flat_type_gen interp_base_type src -> interp_flat_type_gen interp_base_type dst
-    := match f in op src dst return interp_flat_type_gen interp_base_type src -> interp_flat_type_gen interp_base_type dst with
+  Definition interp_op {src dst} (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
+    := match f in op src dst return interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst with
        | Add => fun xy => fst xy + snd xy
        | Sub => fun xy => fst xy - snd xy
        | Mul => fun xy => fst xy * snd xy
@@ -415,8 +415,8 @@ Module BoundedWord64.
     Infix "&'" := land : bounded_word_scope.
   End Notations.
 
-  Definition interp_op {src dst} (f : op src dst) : interp_flat_type_gen interp_base_type src -> interp_flat_type_gen interp_base_type dst
-    := match f in op src dst return interp_flat_type_gen interp_base_type src -> interp_flat_type_gen interp_base_type dst with
+  Definition interp_op {src dst} (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
+    := match f in op src dst return interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst with
        | Add => fun xy => fst xy + snd xy
        | Sub => fun xy => fst xy - snd xy
        | Mul => fun xy => fst xy * snd xy

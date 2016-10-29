@@ -42,8 +42,8 @@ Section language.
   Local Coercion Tbase : base_type_code >-> Syntax.flat_type.
   Local Notation interp_type1 := (interp_type interp_base_type1).
   Local Notation interp_type2 := (interp_type interp_base_type2).
-  Local Notation interp_flat_type1 := (interp_flat_type_gen interp_base_type1).
-  Local Notation interp_flat_type2 := (interp_flat_type_gen interp_base_type2).
+  Local Notation interp_flat_type1 := (interp_flat_type interp_base_type1).
+  Local Notation interp_flat_type2 := (interp_flat_type interp_base_type2).
   Local Notation exprf1 := (@exprf base_type_code interp_base_type1 op).
   Local Notation exprf2 := (@exprf base_type_code interp_base_type2 op).
   Local Notation expr1 := (@expr base_type_code interp_base_type1 op).
@@ -88,9 +88,9 @@ Section language.
     | [ H : context[List.length (_ ++ _)%list] |- _ ]
       => rewrite List.app_length in H
     | [ |- rel_wff _ _ (unnatize_exprf (fst _) _) (unnatize_exprf (fst _) _) ]
-      => erewrite length_natize_interp_flat_type_gen1, length_natize_interp_flat_type_gen2; eassumption
+      => erewrite length_natize_interp_flat_type1, length_natize_interp_flat_type2; eassumption
     | [ |- rel_wf _ _ (unnatize_exprf (fst _) _) (unnatize_exprf (fst _) _) ]
-      => erewrite length_natize_interp_flat_type_gen1, length_natize_interp_flat_type_gen2; eassumption
+      => erewrite length_natize_interp_flat_type1, length_natize_interp_flat_type2; eassumption
     | [ H : base_type_eq_semidec_transparent _ _ = None |- False ] => eapply duplicate_type_not_in; eassumption
     | [ H : List.nth_error _ _ = Some _ |- _ ] => apply List.nth_error_In in H
     | [ H : List.In _ (duplicate_type _) |- _ ] => eapply duplicate_type_in in H; [ | eassumption.. ]
@@ -123,8 +123,8 @@ Section language.
                       | Some G0
                         => reflect_rel_wff
                             (G0 x x' ++ G)%list _ _
-                            (eC (snd (natize_interp_flat_type_gen (length (duplicate_type G)) x)))
-                            (eC' (snd (natize_interp_flat_type_gen (length (duplicate_type G)) x')))
+                            (eC (snd (natize_interp_flat_type (length (duplicate_type G)) x)))
+                            (eC' (snd (natize_interp_flat_type (length (duplicate_type G)) x')))
                       | None => I
                       end);
         clear reflect_rel_wff
@@ -155,8 +155,8 @@ Section language.
                       | Some G0
                         => reflect_rel_wf
                             (G0 x x' ++ G)%list _ _
-                            (f (snd (natize_interp_flat_type_gen (length (duplicate_type G)) x)))
-                            (f' (snd (natize_interp_flat_type_gen (length (duplicate_type G)) x')))
+                            (f (snd (natize_interp_flat_type (length (duplicate_type G)) x)))
+                            (f' (snd (natize_interp_flat_type (length (duplicate_type G)) x')))
                       | None => I
                       end);
         clear reflect_rel_wf ].

@@ -24,12 +24,12 @@ Section language.
     Notation expr2 := (@expr base_type_code interp_base_type2 op var2).
 
     Inductive rel_wff : list (sigT eP) -> forall {t}, exprf1 t -> exprf2 t -> Prop :=
-    | RWfConst : forall t G n n', interp_flat_type_gen_rel_pointwise2 R n n' -> @rel_wff G t (Const n) (Const n')
+    | RWfConst : forall t G n n', interp_flat_type_rel_pointwise2 R n n' -> @rel_wff G t (Const n) (Const n')
     | RWfVar : forall G (t : base_type_code) x x', List.In (x == x') G -> @rel_wff G (Tbase t) (Var x) (Var x')
     | RWfOp : forall G {t} {tR} (e : exprf1 t) (e' : exprf2 t) op,
         rel_wff G e e'
         -> rel_wff G (Op (tR := tR) op e) (Op (tR := tR) op e')
-    | RWfLetIn : forall G t1 t2 e1 e1' (e2 : interp_flat_type_gen var1 t1 -> exprf1 t2) e2',
+    | RWfLetIn : forall G t1 t2 e1 e1' (e2 : interp_flat_type var1 t1 -> exprf1 t2) e2',
         rel_wff G e1 e1'
         -> (forall x1 x2, rel_wff (flatten_binding_list base_type_code x1 x2 ++ G) (e2 x1) (e2' x2))
         -> rel_wff G (LetIn e1 e2) (LetIn e1' e2')

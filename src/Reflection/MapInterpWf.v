@@ -21,11 +21,11 @@ Section language.
   Section with_var.
     Context {var1 var2 : base_type_code -> Type}.
 
-    Lemma flat_rel_pointwise2_mapf {t} (v : interp_flat_type_gen interp_base_type t)
-      : interp_flat_type_gen_rel_pointwise2
+    Lemma flat_rel_pointwise2_mapf {t} (v : interp_flat_type interp_base_type t)
+      : interp_flat_type_rel_pointwise2
           R
-          (mapf_interp_flat_type_gen f1 v)
-          (mapf_interp_flat_type_gen f2 v).
+          (mapf_interp_flat_type f1 v)
+          (mapf_interp_flat_type f2 v).
     Proof. induction t; simpl; auto. Qed.
 
     Lemma wff_mapf_interp {t e1 e2} G

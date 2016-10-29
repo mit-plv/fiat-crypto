@@ -10,7 +10,7 @@ Section language.
   Local Notation flat_type := (flat_type base_type_code).
   Local Notation type := (type base_type_code).
   Local Notation interp_type := (interp_type interp_base_type).
-  Local Notation interp_flat_type := (interp_flat_type_gen interp_base_type).
+  Local Notation interp_flat_type := (interp_flat_type interp_base_type).
   Local Notation Expr := (@Expr base_type_code interp_base_type op).
 
   Fixpoint count_pairs (t : flat_type) : nat
