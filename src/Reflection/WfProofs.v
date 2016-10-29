@@ -11,8 +11,8 @@ Section language.
   Local Notation type := (type base_type_code).
   Let Tbase := @Tbase base_type_code.
   Local Coercion Tbase : base_type_code >-> Syntax.flat_type.
-  Let interp_type := interp_type interp_base_type.
-  Let interp_flat_type := interp_flat_type interp_base_type.
+  Local Notation interp_type := (interp_type interp_base_type).
+  Local Notation interp_flat_type := (interp_flat_type interp_base_type).
   Local Notation exprf := (@exprf base_type_code interp_base_type op).
   Local Notation expr := (@expr base_type_code interp_base_type op).
   Local Notation Expr := (@Expr base_type_code interp_base_type op).
@@ -21,6 +21,35 @@ Section language.
   Section with_var.
     Context {var1 var2 : base_type_code -> Type}.
     Local Hint Constructors Syntax.wff.
+
+    Lemma wff_app' {g G0 G1 t e1 e2}
+          (wf : @wff var1 var2 (G0 ++ G1) t e1 e2)
+      : wff (G0 ++ g ++ G1) e1 e2.
+    Proof.
+      rewrite !List.app_assoc.
+      revert wf; remember (G0 ++ G1)%list as G eqn:?; intro wf.
+      revert dependent G0. revert dependent G1.
+      induction wf; simpl in *; constructor; simpl; eauto.
+      { subst; rewrite !List.in_app_iff in *; intuition. }
+      { intros; subst.
+        rewrite !List.app_assoc; eauto using List.app_assoc. }
+    Qed.
+
+    Lemma wff_app_pre {g G t e1 e2}
+          (wf : @wff var1 var2 G t e1 e2)
+      : wff (g ++ G) e1 e2.
+    Proof.
+      apply (@wff_app' _ nil); assumption.
+    Qed.
+
+    Lemma wff_app_post {g G t e1 e2}
+          (wf : @wff var1 var2 G t e1 e2)
+      : wff (G ++ g) e1 e2.
+    Proof.
+      pose proof (@wff_app' g G nil t e1 e2) as H.
+      rewrite !List.app_nil_r in *; auto.
+    Qed.
+
     Lemma wff_in_impl_Proper G0 G1 {t} e1 e2
       : @wff var1 var2 G0 t e1 e2
         -> (forall x, List.In x G0 -> List.In x G1)
@@ -85,5 +114,19 @@ Section language.
     Qed.
 
     Local Hint Resolve wff_SmartConst.
+
+    Lemma wff_SmartVarVar G {t t'} v1 v2 x1 x2
+          (Hin : List.In (existT (fun t : base_type_code => (exprf t * exprf t)%type) t (x1, x2))
+                          (flatten_binding_list base_type_code (SmartVarVar v1) (SmartVarVar v2)))
+      : @wff var1 var2 (flatten_binding_list base_type_code (t:=t') v1 v2 ++ G) t x1 x2.
+    Proof.
+      revert dependent G; induction t'; intros. simpl in *.
+      { intuition (inversion_sigma; inversion_prod; subst; simpl; eauto).
+        constructor; eauto. }
+      { unfold SmartVarVar in *; simpl in *.
+        apply List.in_app_iff in Hin.
+        intuition (inversion_sigma; inversion_prod; subst; eauto).
+        { rewrite <- !List.app_assoc; eauto. } }
+    Qed.
   End with_var.
 End language.
