@@ -25,142 +25,79 @@ Section language.
   Section with_var.
     Context {var1 var2 : base_type_code -> Type}.
 
-    Local Ltac t_fin_step tac :=
-      match goal with
-      | _ => assumption
-      | _ => progress simpl in *
-      | _ => progress subst
-      | _ => progress inversion_sigma
-      | _ => setoid_rewrite List.in_app_iff
-      | [ H : context[List.In _ (_ ++ _)] |- _ ] => setoid_rewrite List.in_app_iff in H
-      | _ => progress intros
-      | _ => solve [ eauto ]
-      | _ => solve [ intuition (subst; eauto) ]
-      | [ H : forall (x : prod _ _) (y : prod _ _), _ |- _ ] => specialize (fun x x' y y' => H (x, x') (y, y'))
-      | _ => rewrite !List.app_assoc
-      | [ H : _ \/ _ |- _ ] => destruct H
-      | [ H : _ |- _ ] => apply H
-      | _ => eapply wff_in_impl_Proper; [ solve [ eauto ] | ]
-      | _ => progress tac
-      | [ |- wff _ _ _ ] => constructor
-      | [ |- wf _ _ _ ] => constructor
-      end.
-    Local Ltac t_fin tac := repeat t_fin_step tac.
-
     Local Hint Constructors Syntax.wff.
     Local Hint Resolve List.in_app_or List.in_or_app.
 
-    Local Ltac small_inversion_helper wf G0 e2 :=
-      let t0 := match type of wf with wff (t:=?t0) _ _ _ => t0 end in
-      let e1 := match goal with
-                | |- context[wff _ (inline_constf ?e1) (inline_constf e2)] => e1
-                end in
-      pattern G0, t0, e1, e2;
-      lazymatch goal with
-      | [ |- ?retP _ _ _ _ ]
-        => first [ refine (match wf in @Syntax.wff _ _ _ _ _ G t v1 v2
-                                return match v1 return Prop with
-                                       | Const _ _ => retP G t v1 v2
-                                       | _ => forall P : Prop, P -> P
-                                       end with
-                          | WfConst _ _ _ => _
-                          | _ => fun _ p => p
-                          end)
-                | refine (match wf in @Syntax.wff _ _ _ _ _ G t v1 v2
-                                return match v1 return Prop with
-                                       | Var _ _ => retP G t v1 v2
-                                       | _ => forall P : Prop, P -> P
-                                       end with
-                          | WfVar _ _ _ _ _ => _
-                          | _ => fun _ p => p
-                          end)
-                | refine (match wf in @Syntax.wff _ _ _ _ _ G t v1 v2
-                                return match v1 return Prop with
-                                       | Op _ _ _ _ => retP G t v1 v2
-                                       | _ => forall P : Prop, P -> P
-                                       end with
-                          | WfOp _ _ _ _ _ _ _ => _
-                          | _ => fun _ p => p
-                          end)
-                | refine (match wf in @Syntax.wff _ _ _ _ _ G t v1 v2
-                                return match v1 return Prop with
-                                       | LetIn _ _ _ _ => retP G t v1 v2
-                                       | _ => forall P : Prop, P -> P
-                                       end with
-                          | WfLetIn _ _ _ _ _ _ _ _ _ => _
-                          | _ => fun _ p => p
-                          end)
-                | refine (match wf in @Syntax.wff _ _ _ _ _ G t v1 v2
-                                return match v1 return Prop with
-                                       | Pair _ _ _ _ => retP G t v1 v2
-                                       | _ => forall P : Prop, P -> P
-                                       end with
-                          | WfPair _ _ _ _ _ _ _ _ _ => _
-                          | _ => fun _ p => p
-                          end) ]
-      end.
-
     Local Hint Constructors or.
+    Local Hint Constructors Syntax.wff.
     Local Hint Extern 1 => progress unfold List.In in *.
     Local Hint Resolve wff_in_impl_Proper.
     Local Hint Resolve wff_SmartVar.
     Local Hint Resolve wff_SmartConst.
 
-    Fixpoint wff_inline_constf {t} e1 e2 G G'
+    Local Ltac t_fin :=
+      repeat first [ intro
+                   | progress inversion_sigma
+                   | progress inversion_prod
+                   | tauto
+                   | progress subst
+                   | solve [ auto with nocore
+                           | eapply (@wff_SmartVarVar _ _ _ _ _ _ _ (_ * _)); auto
+                           | eapply wff_SmartConst; eauto with nocore
+                           | eapply wff_SmartVarVar; eauto with nocore ]
+                   | progress simpl in *
+                   | constructor
+                   | solve [ eauto ] ].
+
+    Lemma wff_inline_constf {t} e1 e2 G G'
              (H : forall t x x', List.In (existT (fun t : base_type_code => (exprf t * exprf t)%type) t (x, x')) G'
                             -> wff G x x')
              (wf : wff G' e1 e2)
-             {struct e1}
       : @wff var1 var2 G t (inline_constf e1) (inline_constf e2).
     Proof.
-      (*revert H.
-      set (e1v := e1) in *.
-      destruct e1 as [ | | ? ? ? args | tx ex tC0 eC0 | ? ex ? ey ];
-        [ clear wff_inline_constf
-        | clear wff_inline_constf
-        | generalize (match e1v return match e1v with LetIn _ _ _ _ => _ | _ => _ end with
-                      | Op _ _ _ args => wff_inline_constf _ args
-                      | _ => I
-                      end);
-          clear wff_inline_constf
-        | generalize (match e1v return match e1v with LetIn _ _ _ _ => _ | _ => _ end with
-                      | LetIn _ ex _ eC => wff_inline_constf _ ex
-                      | _ => I
-                      end);
-          generalize (match e1v return match e1v with LetIn _ _ _ _ => _ | _ => _ end with
-                      | LetIn _ ex _ eC => fun x => wff_inline_constf _ (eC x)
-                      | _ => I
-                      end);
-          clear wff_inline_constf
-        | generalize (match e1v return match e1v with LetIn _ _ _ _ => _ | _ => _ end with
-                      | Pair _ ex _ ey => wff_inline_constf _ ex
-                      | _ => I
-                      end);
-          generalize (match e1v return match e1v with LetIn _ _ _ _ => _ | _ => _ end with
-                      | Pair _ ex _ ey => wff_inline_constf _ ey
-                      | _ => I
-                      end);
-          clear wff_inline_constf ];
-        revert G;
-        (* alas, Coq's refiner isn't smart enough to figure out these small inversions for us *)
-        small_inversion_helper wf G' e2;
-        t_fin idtac;
-        repeat match goal with
-               | [ H : context[(_ -> wff _ (inline_constf ?e) (inline_constf _))%type], e2 : exprf _ |- _ ]
-                 => is_var e; not constr_eq e e2; specialize (H e2)
-               | [ H : context[wff _ (@inline_constf ?A ?B ?C ?D ?E ?e) _] |- context[match @inline_constf ?A ?B ?C ?D ?E ?e with _ => _ end] ]
-                 => destruct (@inline_constf A B C D E e)
-               | [ H : context[wff _ _ (@inline_constf ?A ?B ?C ?D ?E ?e)] |- context[match @inline_constf ?A ?B ?C ?D ?E ?e with _ => _ end] ]
-                 => destruct (@inline_constf A B C D E e)
-               | [ IHwf : forall x y : list _, _, H1 : forall z : _, _, H2 : wff _ _ _ |- _ ]
-                 => solve [ specialize (IHwf _ _ H1 H2); inversion IHwf ]
-               | [ |- wff _ _ _ ] => constructor
-               end.
-      3:t_fin idtac.
-      4:t_fin idtac.
-      { match goal with
-        | [ H : _ |- _ ] => eapply H; [ | solve [ eauto ] ]; t_fin idtac
-        end. }*)
-    Abort.
+      revert dependent G; induction wf; simpl in *; intros; auto;
+        specialize_by auto.
+      repeat match goal with
+             | [ H : context[List.In _ (_ ++ _)] |- _ ]
+               => setoid_rewrite List.in_app_iff in H
+             end.
+      match goal with
+      | [ H : _ |- _ ]
+        => pose proof (IHwf _ H) as IHwf'
+      end.
+      destruct IHwf'; simpl in *;
+        repeat constructor; auto; intros;
+          match goal with
+          | [ H : _ |- _ ]
+            => apply H; intros; progress destruct_head' or
+          end;
+          t_fin.
+    Qed.
+
+    Lemma wf_inline_const {t} e1 e2 G G'
+          (H : forall t x x', List.In (existT (fun t : base_type_code => (exprf t * exprf t)%type) t (x, x')) G'
+                              -> wff G x x')
+          (Hwf : wf G' e1 e2)
+      : @wf var1 var2 G t (inline_const e1) (inline_const e2).
+    Proof.
+      revert dependent G; induction Hwf; simpl; constructor; intros;
+        [ eapply wff_inline_constf; eauto | ].
+      match goal with
+      | [ H : _ |- _ ]
+        => apply H; simpl; intros; progress destruct_head' or
+      end;
+        inversion_sigma; inversion_prod; repeat subst; simpl.
+      { constructor; left; reflexivity. }
+      { eauto. }
+    Qed.
   End with_var.
+
+  Lemma WfInlineConst {t} (e : Expr t)
+        (Hwf : Wf e)
+    : Wf (InlineConst e).
+  Proof.
+    intros var1 var2.
+    apply (@wf_inline_const var1 var2 t (e _) (e _) nil nil); simpl; [ tauto | ].
+    apply Hwf.
+  Qed.
 End language.
