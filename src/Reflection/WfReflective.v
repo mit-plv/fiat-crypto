@@ -111,7 +111,7 @@ Section language.
            end.
   Local Ltac t_step :=
     match goal with
-    | _ => progress unfold eq_type_and_var, op_beq', flatten_binding_list2, preflatten_binding_list2, option_map, and_option_pointed_Prop, eq_semidec_and_gen in *
+    | _ => progress unfold eq_type_and_var, op_beq', flatten_binding_list2, WfReflectiveGen.preflatten_binding_list2, option_map, and_option_pointed_Prop, eq_semidec_and_gen in *
     | _ => progress simpl in *
     | _ => progress break_match
     | [ H : interp_flat_type_rel_pointwise2 (fun _ => eq) _ _ |- _ ]
