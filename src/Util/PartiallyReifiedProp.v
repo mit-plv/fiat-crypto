@@ -25,14 +25,12 @@ Fixpoint to_prop (x : reified_Prop) : Prop
 Coercion reified_Prop_of_bool (x : bool) : reified_Prop
   := if x then rTrue else rFalse.
 
-Fixpoint and_reified_Prop (x y : reified_Prop) : reified_Prop
+Definition and_reified_Prop (x y : reified_Prop) : reified_Prop
   := match x, y with
      | rTrue, y => y
      | x, rTrue => x
      | rFalse, y => rFalse
      | x, rFalse => rFalse
-     | rForall T f, y => rForall (fun x => and_reified_Prop (f x) y)
-     | x, rForall T f => rForall (fun y => rAnd x (f y))
      | rEq T a b, rEq T' a' b' => rEq (a, a') (b, b')
      | x', y' => rAnd x' y'
      end.
@@ -121,12 +119,15 @@ Ltac inversion_reified_Prop_step :=
   match goal with
   | [ H : False |- _ ] => solve [ destruct H ]
   | [ H : (_ = _ :> reified_Prop) /\ (_ = _ :> reified_Prop) |- _ ] => destruct H
+  | [ H : ?x = ?x :> reified_Prop |- _ ] => clear H
   | [ H : exists pf : _ = _ :> Type, forall x, _ = _ :> reified_Prop |- _ ]
     => destruct H as [? H]; subst; simpl @eq_rect in H
   | [ H : ?x = _ :> reified_Prop |- _ ] => is_var x; subst x
   | [ H : _ = ?y :> reified_Prop |- _ ] => is_var y; subst y
-  | [ H : rTrue = _ |- _ ] => do_on H
-  | [ H : rFalse = _ |- _ ] => do_on H
+  | [ H : rTrue = rFalse |- _ ] => solve [ inversion H ]
+  | [ H : rFalse = rTrue |- _ ] => solve [ inversion H ]
+  | [ H : rTrue = _ |- _ ] => do_on H; progress subst
+  | [ H : rFalse = _ |- _ ] => do_on H; progress subst
   | [ H : rAnd _ _ = _ |- _ ] => do_on H
   | [ H : rOr _ _ = _ |- _ ] => do_on H
   | [ H : rImpl _ _ = _ |- _ ] => do_on H
