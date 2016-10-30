@@ -103,6 +103,65 @@ Definition wire_digitsWToZ (x : wire_digitsW) : Specific.GF25519.wire_digits
 Definition wire_digitsZToW (x : Specific.GF25519.wire_digits) : wire_digitsW
   := let '(x0, x1, x2, x3, x4, x5, x6, x7) := x in
      (x0 : word64, x1 : word64, x2 : word64, x3 : word64, x4 : word64, x5 : word64, x6 : word64, x7 : word64).
+
+Definition app_7 {T} (f : wire_digitsW) (P : wire_digitsW -> T) : T.
+Proof.
+  cbv [wire_digitsW] in *.
+  set (f0 := f).
+  repeat (let g := fresh "g" in destruct f as [f g]).
+  apply P.
+  apply f0.
+Defined.
+
+Definition app_7_correct {T} f (P : wire_digitsW -> T) : app_7 f P = P f.
+Proof.
+  intros.
+  cbv [wire_digitsW] in *.
+  destruct_head' prod.
+  reflexivity.
+Qed.
+
+Definition app_10 {T} (f : fe25519W) (P : fe25519W -> T) : T.
+Proof.
+  cbv [fe25519W] in *.
+  set (f0 := f).
+  repeat (let g := fresh "g" in destruct f as [f g]).
+  apply P.
+  apply f0.
+Defined.
+
+Definition app_10_correct {T} f (P : fe25519W -> T) : app_10 f P = P f.
+Proof.
+  intros.
+  cbv [fe25519W] in *.
+  destruct_head' prod.
+  reflexivity.
+Qed.
+
+Definition appify2 {T} (op : fe25519W -> fe25519W -> T) (f g : fe25519W) :=
+  app_10 f (fun f0 => (app_10 g (fun g0 => op f0 g0))).
+
+Lemma appify2_correct : forall {T} op f g, @appify2 T op f g = op f g.
+Proof.
+  intros. cbv [appify2].
+  etransitivity; apply app_10_correct.
+Qed.
+
+Definition uncurry_unop_fe25519W {T} (op : fe25519W -> T)
+  := Eval cbv -[word64] in Tuple.uncurry (n:=length_fe25519) op.
+Definition curry_unop_fe25519W {T} op : fe25519W -> T
+  := Eval cbv -[word64] in fun f => app_10 f (Tuple.curry (n:=length_fe25519) op).
+Definition uncurry_binop_fe25519W {T} (op : fe25519W -> fe25519W -> T)
+  := Eval cbv -[word64] in uncurry_unop_fe25519W (fun f => uncurry_unop_fe25519W (op f)).
+Definition curry_binop_fe25519W {T} op : fe25519W -> fe25519W -> T
+  := Eval cbv -[word64] in appify2 (fun f => curry_unop_fe25519W (curry_unop_fe25519W op f)).
+
+Definition uncurry_unop_wire_digitsW {T} (op : wire_digitsW -> T)
+  := Eval cbv -[word64] in Tuple.uncurry (n:=length wire_widths) op.
+Definition curry_unop_wire_digitsW {T} op : wire_digitsW -> T
+  := Eval cbv -[word64] in fun f => app_7 f (Tuple.curry (n:=length wire_widths) op).
+
+
 Definition fe25519 :=
   Eval cbv [fst snd] in
     let sanity := eq_refl : length bounds = length limb_widths in
