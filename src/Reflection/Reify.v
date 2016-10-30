@@ -265,7 +265,7 @@ Ltac Reify_rhs_gen Reify prove_interp_compile_correct interp_op try_tac :=
                       [hnf] is enough to unfold the interpretation
                       functions that we're parameterized over. *)
                   lazymatch goal with
-                  | [ |- @InputSyntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op ?t ?e = _ ]
+                  | [ |- ?R (@InputSyntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op ?t ?e) _ ]
                     => let interp_base_type' := (eval hnf in interp_base_type) in
                        let interp_op' := (eval hnf in interp_op) in
                        change interp_base_type with interp_base_type';
