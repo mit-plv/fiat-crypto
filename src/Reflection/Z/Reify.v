@@ -22,7 +22,7 @@ Ltac base_reify_type T ::=
      lazymatch T with
      | Z => TZ
      end.
-Ltac Reify' e := Reify.Reify' base_type interp_base_type op e.
+Ltac Reify' e := Reflection.Reify.Reify' base_type interp_base_type op e.
 Ltac Reify e :=
-  let v := Reify.Reify base_type interp_base_type op e in
+  let v := Reflection.Reify.Reify base_type interp_base_type op e in
   constr:((*Inline _*) ((*CSE _*) ((*InlineConst*) (Linearize v)))).
