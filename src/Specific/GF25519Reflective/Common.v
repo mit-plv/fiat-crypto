@@ -9,7 +9,7 @@ Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
 
-Local Notation Expr := (Expr base_type Word64.interp_base_type op).
+Notation Expr := (Expr base_type Word64.interp_base_type op).
 
 Local Ltac make_type_from uncurried_op :=
   let T := (type of uncurried_op) in

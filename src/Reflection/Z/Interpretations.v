@@ -443,9 +443,13 @@ Module Relations.
   Definition related'_Z (x : BoundedWord64.BoundedWord) (y : Z) : Prop
     := Word64.word64ToZ (BoundedWord64.value x) = y.
   Definition related_Z : BoundedWord64.t -> Z -> Prop := lift_relation related'_Z.
+  Definition related_Zi t : BoundedWord64.interp_base_type t -> Z.interp_base_type t -> Prop
+    := match t with TZ => related_Z end.
   Definition related'_word64 (x : BoundedWord64.BoundedWord) (y : Word64.word64) : Prop
     := BoundedWord64.value x = y.
   Definition related_word64 : BoundedWord64.t -> Word64.word64 -> Prop := lift_relation related'_word64.
+  Definition related_word64i t : BoundedWord64.interp_base_type t -> Word64.interp_base_type t -> Prop
+    := match t with TZ => related_word64 end.
   Definition related_bounds (x : BoundedWord64.t) (y : ZBounds.t) : Prop
     := match x, y with
        | Some x, Some y
@@ -455,4 +459,6 @@ Module Relations.
        | None, None => True
        | None, _ => False
        end.
+  Definition related_boundsi t : BoundedWord64.interp_base_type t -> ZBounds.interp_base_type t -> Prop
+    := match t with TZ => related_bounds end.
 End Relations.
