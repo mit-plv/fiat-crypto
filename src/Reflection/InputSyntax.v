@@ -134,3 +134,4 @@ Global Arguments MatchPair {_ _ _ _ _ _} _ {_} _.
 Global Arguments Pair {_ _ _ _ _} _ {_} _.
 Global Arguments Return {_ _ _ _ _} _.
 Global Arguments Abs {_ _ _ _ _ _} _.
+Global Arguments Compile {_ _ _ t} _ _.

@@ -235,7 +235,7 @@ Ltac Reify' base_type_code interp_base_type op e :=
   end.
 Ltac Reify base_type_code interp_base_type op e :=
   let r := Reify' base_type_code interp_base_type op e in
-  constr:(InputSyntax.Compile base_type_code interp_base_type op r).
+  constr:(@InputSyntax.Compile base_type_code interp_base_type op _ r).
 
 Ltac lhs_of_goal := lazymatch goal with |- ?R ?LHS ?RHS => LHS end.
 Ltac rhs_of_goal := lazymatch goal with |- ?R ?LHS ?RHS => RHS end.
