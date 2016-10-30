@@ -247,7 +247,13 @@ Ltac Reify_rhs_gen Reify prove_interp_compile_correct interp_op try_tac :=
   transitivity (Syntax.Interp interp_op RHS');
   [
   | transitivity (Syntax.Interp interp_op RHS);
-    [ apply f_equal; vm_compute; reflexivity
+    [ lazymatch goal with
+      | [ |- ?R ?x ?y ]
+        => cut (x = y)
+      end;
+      [ let H := fresh in
+        intro H; rewrite H; reflexivity
+      | apply f_equal; vm_compute; reflexivity ]
     | etransitivity; (* first we strip off the [InputSyntax.Compile]
                         bit; Coq is bad at inferring the type, so we
                         help it out by providing it *)
