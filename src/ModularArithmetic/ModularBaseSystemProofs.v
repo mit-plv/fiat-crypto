@@ -114,17 +114,7 @@ Section FieldOperationProofs.
       pose proof c_pos; omega.
     + apply base_upper_bound_compatible; auto.
   Qed.
-(*
-  Lemma parity_decode : forall u x,
-    u ~= x -> Z.odd (F.to_Z x) = Z.odd (nth_default 0 (to_list u) 0).
-  Proof.
-    cbv [rep decode] in *.
-    intros.
-    rewrite <-H.
-    cbv [ModularBaseSystemList.decode].
-    rewrite F.to_Z_of_Z.
-  Qed.
-*)
+
   Lemma add_rep : forall u v x y, u ~= x -> v ~= y ->
     add u v ~= (x+y)%F.
   Proof.
