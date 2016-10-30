@@ -240,7 +240,7 @@ Ltac Reify base_type_code interp_base_type op e :=
 Ltac lhs_of_goal := lazymatch goal with |- ?R ?LHS ?RHS => LHS end.
 Ltac rhs_of_goal := lazymatch goal with |- ?R ?LHS ?RHS => RHS end.
 
-Ltac Reify_rhs_gen Reify prove_interp_compile_correct interp_op :=
+Ltac Reify_rhs_gen Reify prove_interp_compile_correct interp_op try_tac :=
   let rhs := rhs_of_goal in
   let RHS := Reify rhs in
   let RHS' := (eval vm_compute in RHS) in
@@ -252,18 +252,20 @@ Ltac Reify_rhs_gen Reify prove_interp_compile_correct interp_op :=
                         bit; Coq is bad at inferring the type, so we
                         help it out by providing it *)
       [ prove_interp_compile_correct ()
-      | ((* now we unfold the interpretation function, including the
-            parameterized bits; we assume that [hnf] is enough to unfold
-            the interpretation functions that we're parameterized
-            over. *)
-        lazymatch goal with
-        | [ |- @InputSyntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op ?t ?e = _ ]
-          => let interp_base_type' := (eval hnf in interp_base_type) in
-             let interp_op' := (eval hnf in interp_op) in
-             change interp_base_type with interp_base_type';
-             change interp_op with interp_op'
-        end;
-        cbv iota beta delta [InputSyntax.Interp interp_type interp_type_gen interp_flat_type interp interpf]; simplify_projections; reflexivity) ] ] ].
+      | try_tac
+          ltac:(fun _
+                => (* now we unfold the interpretation function,
+                      including the parameterized bits; we assume that
+                      [hnf] is enough to unfold the interpretation
+                      functions that we're parameterized over. *)
+                  lazymatch goal with
+                  | [ |- @InputSyntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op ?t ?e = _ ]
+                    => let interp_base_type' := (eval hnf in interp_base_type) in
+                       let interp_op' := (eval hnf in interp_op) in
+                       change interp_base_type with interp_base_type';
+                       change interp_op with interp_op'
+                  end;
+                  cbv iota beta delta [InputSyntax.Interp interp_type interp_type_gen interp_flat_type interp interpf]; simplify_projections; reflexivity) ] ] ].
 
 Ltac Reify_rhs base_type_code interp_base_type op interp_op :=
   Reify_rhs_gen
@@ -271,6 +273,7 @@ Ltac Reify_rhs base_type_code interp_base_type op interp_op :=
            ltac:(fun _
                  => lazymatch goal with
                     | [ |- @Syntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op (@Tflat _ ?t) (@Compile _ _ _ _ ?e) = _ ]
-                      => exact (@InputSyntax.Compile_correct base_type_code interp_base_type op interp_op t e)
+                      => exact (@InputSyntax.Compile_flat_correct base_type_code interp_base_type op interp_op t e)
                     end)
-                  interp_op.
+                  interp_op
+                  ltac:(fun tac => tac ()).

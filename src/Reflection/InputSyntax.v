@@ -105,18 +105,23 @@ Section language.
                  end.
       Qed.
 
-      Lemma Compile_correct {t : flat_type} (e : @Expr t)
-      : Syntax.Interp interp_op (Compile e) = Interp interp_op e.
+      Lemma Compile_correct {t} (e : @Expr t)
+      : interp_type_gen_rel_pointwise (fun _ => @eq _)
+                                      (Syntax.Interp interp_op (Compile e))
+                                      (Interp interp_op e).
       Proof.
         unfold Interp, Compile, Syntax.Interp; simpl.
         pose (e interp_flat_type) as E.
         repeat match goal with |- context[e ?f] => change (e f) with E end.
-        refine match E with
-               | Abs _ _ _ => fun x : Prop => x (* small inversions *)
-               | Return _ _ => _
-               end.
-        apply compilef_correct.
+        clearbody E; clear e.
+        induction E.
+        { apply compilef_correct. }
+        { simpl; auto. }
       Qed.
+
+      Lemma Compile_flat_correct {t : flat_type} (e : @Expr t)
+      : Syntax.Interp interp_op (Compile e) = Interp interp_op e.
+      Proof. exact (@Compile_correct t e). Qed.
     End compile_correct.
   End expr_param.
 End language.
