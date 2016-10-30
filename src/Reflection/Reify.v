@@ -191,6 +191,20 @@ Ltac reifyf base_type_code interp_base_type op var e :=
                    let args := let a01 := mkPair a0 a1 in mkPair a01 a2 in
                    mkOp (@Prod _ (@Prod _ a0T a1T) a2T) tR op_code args
               end
+         | 4%nat
+           => lazymatch x with
+              | ?f ?x0 ?x1 ?x2 ?x3
+                => let a0T := (let t := type of x0 in reify_flat_type t) in
+                   let a0 := reify_rec x0 in
+                   let a1T := (let t := type of x1 in reify_flat_type t) in
+                   let a1 := reify_rec x1 in
+                   let a2T := (let t := type of x2 in reify_flat_type t) in
+                   let a2 := reify_rec x2 in
+                   let a3T := (let t := type of x3 in reify_flat_type t) in
+                   let a3 := reify_rec x3 in
+                   let args := let a01 := mkPair a0 a1 in let a012 := mkPair a01 a2 in mkPair a012 a3 in
+                   mkOp (@Prod _ (@Prod _ (@Prod _ a0T a1T) a2T) a3T) tR op_code args
+              end
          | _ => cfail2 "Unsupported number of operation arguments in reifyf:"%string nargs
          end
     | reification_unsuccessful
