@@ -77,7 +77,7 @@ Section language.
   Local Hint Resolve interpf_linearizef.
 
   Lemma interp_linearize {t} e
-    : interp_type_gen_rel_pointwise interp_flat_type (fun _ => @eq _)
+    : interp_type_gen_rel_pointwise (fun _ => @eq _)
                                     (interp interp_op (linearize (t:=t) e))
                                     (interp interp_op e).
   Proof.
@@ -86,7 +86,7 @@ Section language.
   Qed.
 
   Lemma Interp_Linearize {t} (e : Expr t)
-    : interp_type_gen_rel_pointwise interp_flat_type (fun _ => @eq _)
+    : interp_type_gen_rel_pointwise (fun _ => @eq _)
                                     (Interp interp_op (Linearize e))
                                     (Interp interp_op e).
   Proof.

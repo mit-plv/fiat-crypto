@@ -72,7 +72,7 @@ Section language.
                  List.In (existT (fun t : base_type_code => (interp_base_type t * interp_base_type t)%type) t (x, x')%core) G
                  -> x = x')
              (Rwf : wf G e1 e2)
-    : interp_type_gen_rel_pointwise2 (fun _ => eq) (interp e1) (interp e2).
+    : interp_type_gen_rel_pointwise (fun _ => eq) (interp e1) (interp e2).
     Proof.
       induction Rwf; simpl; repeat intro; simpl in *; subst; eauto.
       match goal with

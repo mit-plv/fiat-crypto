@@ -25,4 +25,6 @@ Ltac base_reify_type T ::=
 Ltac Reify' e := Reflection.Reify.Reify' base_type interp_base_type op e.
 Ltac Reify e :=
   let v := Reflection.Reify.Reify base_type interp_base_type op e in
-  constr:((*Inline _*) ((*CSE _*) ((*InlineConst*) (Linearize v)))).
+  constr:((*Inline _*) ((*CSE _*) (InlineConst (Linearize v)))).
+Ltac Reify_rhs :=
+  etransitivity; [ | Reflection.Reify.Reify_rhs base_type interp_base_type op interp_op ].

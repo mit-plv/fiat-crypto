@@ -4,6 +4,7 @@ Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemListZOperations.
 Require Import Crypto.Util.Equality.
 Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.PointedProp.
 Export Syntax.Notations.
 
 Local Set Boolean Equality Schemes.
@@ -45,3 +46,48 @@ Definition interp_op src dst (f : op src dst) : interp_flat_type interp_base_typ
      | Cmovne => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovne x y z w
      | Cmovle => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovl x y z w
      end%Z.
+
+Definition base_type_eq_semidec_transparent (t1 t2 : base_type)
+  : option (t1 = t2)
+  := Some (match t1, t2 return t1 = t2 with
+           | TZ, TZ => eq_refl
+           end).
+Lemma base_type_eq_semidec_is_dec t1 t2 : base_type_eq_semidec_transparent t1 t2 = None -> t1 <> t2.
+Proof.
+  unfold base_type_eq_semidec_transparent; congruence.
+Qed.
+
+Definition op_beq t1 tR (f g : op t1 tR) : option pointed_Prop
+  := option_pointed_Prop_of_bool match f, g with
+                                 | Add, Add => true
+                                 | Add, _ => false
+                                 | Sub, Sub => true
+                                 | Sub, _ => false
+                                 | Mul, Mul => true
+                                 | Mul, _ => false
+                                 | Shl, Shl => true
+                                 | Shl, _ => false
+                                 | Shr, Shr => true
+                                 | Shr, _ => false
+                                 | Land, Land => true
+                                 | Land, _ => false
+                                 | Lor, Lor => true
+                                 | Lor, _ => false
+                                 | Neg, Neg => true
+                                 | Neg, _ => false
+                                 | Cmovne, Cmovne => true
+                                 | Cmovne, _ => false
+                                 | Cmovle, Cmovle => true
+                                 | Cmovle, _ => false
+                                 end.
+
+Lemma op_beq_bl : forall t1 tR x y, prop_of_option (op_beq t1 tR x y) -> x = y.
+Proof.
+  intros ?? x; destruct x;
+    intro y;
+    refine match y with
+           | Add => _
+           | _ => _
+           end;
+    compute; try (reflexivity || trivial || (intros; exfalso; assumption)).
+Qed.
