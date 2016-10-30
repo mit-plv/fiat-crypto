@@ -22,14 +22,22 @@ Local Set Printing Coercions.
 
 Context {H: forall n : nat, Word.word n -> Word.word (b + b)}.
 
-Definition feSign (x :  GF25519BoundedCommon.fe25519) : bool :=
+Definition feSign (f :  GF25519BoundedCommon.fe25519) : bool :=
+  let x := GF25519Bounded.freeze f in
   let '(x9, x8, x7, x6, x5, x4, x3, x2, x1, x0) := (x : GF25519.fe25519) in
   BinInt.Z.testbit x0 0.
 
-(* TODO *)
-Context {feSign_correct : forall x,
-            PointEncoding.sign x = feSign (GF25519BoundedCommon.encode x)}.
-Context {Proper_feSign :  Proper (GF25519BoundedCommon.eq ==> eq) feSign}.
+Lemma feSign_correct : forall x,
+  PointEncoding.sign x = feSign (GF25519BoundedCommon.encode x).
+Admitted.
+
+Definition freezePre :
+  @ModularBaseSystemProofs.FreezePreconditions
+    GF25519.modulus GF25519.params25519 GF25519.int_width.
+Proof.
+  pose proof GF25519.freezePreconditions25519 as A.
+  inversion A;  econstructor; eauto.
+Defined.
 
 Definition a : GF25519BoundedCommon.fe25519 :=
   Eval vm_compute in GF25519BoundedCommon.encode a.
@@ -452,14 +460,6 @@ Proof.
     apply Z.mul_lt_mono_pos_l; omega. }
 Qed.
 
-Definition freezePre :
-  @ModularBaseSystemProofs.FreezePreconditions
-    GF25519.modulus GF25519.params25519 GF25519.int_width.
-Proof.
-  pose proof GF25519.freezePreconditions25519 as A.
-  inversion A;  econstructor; eauto.
-Defined.
-
 Lemma feEnc_correct : forall x,
     PointEncoding.Fencode x = feEnc (GF25519BoundedCommon.encode x).
 Proof.
@@ -567,6 +567,47 @@ Proof.
     rewrite Bool.andb_true_iff in A; destruct A end;
   rewrite !Z.leb_le in *;
   omega.
+Qed.
+
+Lemma Proper_feSign : Proper (GF25519BoundedCommon.eq ==> eq) feSign.
+Proof.
+  repeat intro; cbv [feSign].
+  rewrite !GF25519Bounded.freeze_correct.
+  repeat match goal with |- appcontext[GF25519.freeze ?x] =>
+                         remember (GF25519.freeze x) end.
+  assert (Tuple.fieldwise (n := 10) eq f f0).
+  { pose proof freezePre.
+    match goal with H1 : _ = GF25519.freeze ?u,
+                    H2 : _ = GF25519.freeze ?v |- _ =>
+    let A := fresh "H" in
+    let HP := fresh "H" in
+    let HQ := fresh "H" in
+        pose proof (ModularBaseSystemProofs.freeze_canonical
+                    (freeze_pre := freezePre) u v _ _ eq_refl eq_refl);
+        match type of A with ?P -> ?Q -> _ =>
+                            assert P as HP by apply initial_bounds;
+                                assert Q as HQ by apply initial_bounds end;
+        specialize (A HP HQ); clear HP HQ end.
+    cbv [ModularBaseSystem.eq] in *.
+    rewrite GF25519.freeze_correct in *.
+    rewrite ModularBaseSystemOpt.freeze_opt_correct in Heqf
+      by (rewrite ?Tuple.length_to_list; reflexivity). 
+    rewrite ModularBaseSystemOpt.freeze_opt_correct in Heqf0
+      by (rewrite ?Tuple.length_to_list; reflexivity).
+    subst.
+    rewrite !convert_freezes.
+    erewrite !Tuple.from_list_default_eq.
+    rewrite !Tuple.from_list_to_list.
+    apply H2.
+    cbv [GF25519BoundedCommon.eq ModularBaseSystem.eq] in *.
+    auto. }
+  { cbv [GF25519.fe25519 ] in *.
+    repeat match goal with p : _ * _ |- _ => destruct p end.
+    cbv [Tuple.fieldwise Tuple.fieldwise' fst snd] in *.
+    intuition congruence. }
+  Grab Existential Variables.
+  rewrite Tuple.length_to_list; reflexivity.
+  rewrite Tuple.length_to_list; reflexivity.
 Qed.
 
 Lemma Proper_pack :
@@ -916,9 +957,6 @@ Let verify_correct :
 .
 Let both_correct := (@sign_correct, @verify_correct).
 Print Assumptions both_correct.
-
-
-
 
 (*** Extraction *)
 
