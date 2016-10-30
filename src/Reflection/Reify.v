@@ -6,6 +6,7 @@ Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.InputSyntax.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Notations.
 
 Class reify {varT} (var : varT) {eT} (e : eT) {T : Type} := Build_reify : T.
@@ -119,6 +120,10 @@ Ltac reifyf base_type_code interp_base_type op var e :=
   let dummy := debug_enter_reifyf e in
   lazymatch e with
   | let x := ?ex in @?eC x =>
+    let ex := reify_rec ex in
+    let eC := reify_rec eC in
+    mkLetIn ex eC
+  | dlet x := ?ex in @?eC x =>
     let ex := reify_rec ex in
     let eC := reify_rec eC in
     mkLetIn ex eC
