@@ -273,13 +273,17 @@ Ltac Reify_rhs_gen Reify prove_interp_compile_correct interp_op try_tac :=
                   end;
                   cbv iota beta delta [InputSyntax.Interp interp_type interp_type_gen interp_flat_type interp interpf]; simplify_projections; reflexivity) ] ] ].
 
+Ltac prove_compile_correct :=
+  fun _ => lazymatch goal with
+           | [ |- @Syntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op (@Tflat _ ?t) (@Compile _ _ _ _ ?e) = _ ]
+             => exact (@InputSyntax.Compile_flat_correct base_type_code interp_base_type op interp_op t e)
+           | [ |- interp_type_gen_rel_pointwise _ (@Syntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op ?t (@Compile _ _ _ _ ?e)) _ ]
+             => exact (@InputSyntax.Compile_correct base_type_code interp_base_type op interp_op t e)
+           end.
+
 Ltac Reify_rhs base_type_code interp_base_type op interp_op :=
   Reify_rhs_gen
     ltac:(Reify base_type_code interp_base_type op)
-           ltac:(fun _
-                 => lazymatch goal with
-                    | [ |- @Syntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op (@Tflat _ ?t) (@Compile _ _ _ _ ?e) = _ ]
-                      => exact (@InputSyntax.Compile_flat_correct base_type_code interp_base_type op interp_op t e)
-                    end)
-                  interp_op
-                  ltac:(fun tac => tac ()).
+           prove_compile_correct
+           interp_op
+           ltac:(fun tac => tac ()).
