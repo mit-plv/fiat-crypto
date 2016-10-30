@@ -142,6 +142,7 @@ src/Specific/SC25519.v
 src/Specific/FancyMachine256/Barrett.v
 src/Specific/FancyMachine256/Core.v
 src/Specific/FancyMachine256/Montgomery.v
+src/Specific/GF25519Reflective/Common.v
 src/Tactics/VerdiTactics.v
 src/Tactics/Algebra_syntax/Nsatz.v
 src/Test/Curve25519SpecTestVectors.v
