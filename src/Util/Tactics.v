@@ -109,6 +109,12 @@ Ltac break_match_hyps_when_head_step T :=
                    constr_eq T T').
 Ltac break_match_when_head T := repeat break_match_when_head_step T.
 Ltac break_match_hyps_when_head T := repeat break_match_hyps_when_head_step T.
+Ltac break_innermost_match_step :=
+  break_match_step ltac:(fun v => lazymatch v with
+                                  | appcontext[match _ with _ => _ end] => fail
+                                  | _ => idtac
+                                  end).
+Ltac break_innermost_match := repeat break_innermost_match_step.
 
 Ltac free_in x y :=
   idtac;
