@@ -244,21 +244,29 @@ Ltac Reify_rhs_gen Reify prove_interp_compile_correct interp_op try_tac :=
   let rhs := rhs_of_goal in
   let RHS := Reify rhs in
   let RHS' := (eval vm_compute in RHS) in
-  transitivity (Syntax.Interp interp_op RHS');
-  [
-  | transitivity (Syntax.Interp interp_op RHS);
-    [ lazymatch goal with
-      | [ |- ?R ?x ?y ]
-        => cut (x = y)
-      end;
-      [ let H := fresh in
-        intro H; rewrite H; reflexivity
-      | apply f_equal; vm_compute; reflexivity ]
-    | etransitivity; (* first we strip off the [InputSyntax.Compile]
+  let RHSH := fresh in
+  let RHSH' := fresh in
+  pose RHS as RHSH;
+  pose RHS' as RHSH';
+  transitivity (Syntax.Interp interp_op RHSH');
+  [ subst RHSH RHSH'
+  | transitivity (Syntax.Interp interp_op RHSH);
+    [ abstract (
+          lazymatch goal with
+          | [ |- ?R ?x ?y ]
+            => cut (x = y)
+          end;
+          [ let H := fresh in
+            intro H; rewrite H; reflexivity
+          | apply f_equal; vm_compute; reflexivity ]
+        )
+    | clear RHSH';
+      etransitivity; (* first we strip off the [InputSyntax.Compile]
                         bit; Coq is bad at inferring the type, so we
                         help it out by providing it *)
-      [ prove_interp_compile_correct ()
-      | try_tac
+      [ subst RHSH; prove_interp_compile_correct ()
+      | subst RHSH;
+        try_tac
           ltac:(fun _
                 => (* now we unfold the interpretation function,
                       including the parameterized bits; we assume that
@@ -272,7 +280,7 @@ Ltac Reify_rhs_gen Reify prove_interp_compile_correct interp_op try_tac :=
                            change interp_base_type with interp_base_type';
                            change interp_op with interp_op'
                       end;
-                      cbv iota beta delta [InputSyntax.Interp interp_type interp_type_gen interp_flat_type interp interpf]; reflexivity)) ] ] ].
+                      cbv iota beta delta [Let_In InputSyntax.Interp interp_type interp_type_gen interp_flat_type interp interpf]; reflexivity)) ] ] ].
 
 Ltac prove_compile_correct :=
   fun _ => lazymatch goal with

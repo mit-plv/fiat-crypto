@@ -33,10 +33,12 @@ Ltac Reify e :=
 Ltac prove_InlineConst_Linearize_Compile_correct :=
   fun _
   => lazymatch goal with
-     | [ |- Syntax.interp_type_gen_rel_pointwise _ (@Syntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op ?t (InlineConst (Linearize _))) _ ]
-       => etransitivity;
+     | [ |- Syntax.interp_type_gen_rel_pointwise _ (@Syntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op ?t (InlineConst (Linearize (InputSyntax.Compile ?e)))) _ ]
+       => let eH := fresh in
+          set (eH := e);
+          etransitivity;
           [ apply (@Interp_InlineConst base_type_code interp_base_type op interp_op t);
-            reflect_Wf base_type_eq_semidec_is_dec op_beq_bl
+            abstract reflect_Wf base_type_eq_semidec_is_dec op_beq_bl
           | etransitivity;
             [ apply (@Interp_Linearize base_type_code interp_base_type op interp_op t)
             | prove_compile_correct () ] ]
