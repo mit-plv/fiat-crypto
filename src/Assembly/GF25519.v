@@ -303,8 +303,9 @@ Module GF25519.
     Definition opp := Eval simpl in proj1_sig opp'.
   End Instantiation.
 End GF25519.
-
+(*
 Extraction "GF25519Add" GF25519.Add.
 Extraction "GF25519Sub" GF25519.Sub.
 Extraction "GF25519Mul" GF25519.Mul.
 Extraction "GF25519Opp" GF25519.Opp.
+*)
