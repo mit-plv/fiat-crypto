@@ -27,10 +27,6 @@ Definition feSign (f :  GF25519BoundedCommon.fe25519) : bool :=
   let '(x9, x8, x7, x6, x5, x4, x3, x2, x1, x0) := (x : GF25519.fe25519) in
   BinInt.Z.testbit x0 0.
 
-Lemma feSign_correct : forall x,
-  PointEncoding.sign x = feSign (GF25519BoundedCommon.encode x).
-Admitted.
-
 Definition freezePre :
   @ModularBaseSystemProofs.FreezePreconditions
     GF25519.modulus GF25519.params25519 GF25519.int_width.
@@ -410,6 +406,11 @@ Proof.
   rewrite Tuple.to_list_from_list.
   reflexivity.
 Qed.
+Ltac to_MBSfreeze H :=
+  rewrite GF25519.freeze_correct in H;
+  rewrite ModularBaseSystemOpt.freeze_opt_correct in H
+    by (rewrite ?Tuple.length_to_list; reflexivity);
+  erewrite convert_freezes,  Tuple.from_list_default_eq, Tuple.from_list_to_list in H.
 
 Lemma bounded_freeze : forall x,
   Pow2Base.bounded
@@ -569,7 +570,46 @@ Proof.
   omega.
 Qed.
 
-Lemma Proper_feSign : Proper (GF25519BoundedCommon.eq ==> eq) feSign.
+Lemma feSign_correct : forall x,
+  PointEncoding.sign x = feSign (GF25519BoundedCommon.encode x).
+Proof.
+  cbv [PointEncoding.sign feSign].
+  intros.
+  rewrite GF25519Bounded.freeze_correct.
+  rewrite GF25519BoundedCommon.proj1_fe25519_encode.
+  match goal with |- appcontext [GF25519.freeze ?x] =>
+                  remember (GF25519.freeze x) end.
+  transitivity (Z.testbit (nth_default 0%Z (Tuple.to_list 10 f) 0) 0).
+  Focus 2. {
+  cbv [GF25519.fe25519] in *.
+  repeat match goal with p : _ * _ |- _ => destruct p end.
+  simpl. reflexivity. } Unfocus.
+
+  rewrite !Z.bit0_odd.
+  rewrite <-@Pow2BaseProofs.parity_decode with (limb_widths := PseudoMersenneBaseParams.limb_widths) by (auto using PseudoMersenneBaseParamProofs.limb_widths_nonneg, Tuple.length_to_list; cbv; congruence).
+  pose proof freezePre.
+  match goal with H : _ = GF25519.freeze ?u |- _ =>
+                  let A := fresh "H" in let B := fresh "H" in
+                  pose proof (ModularBaseSystemProofs.freeze_rep u x) as A;
+                    match type of A with ?P -> _ => assert P as B by apply ModularBaseSystemProofs.encode_rep end;
+                    specialize (A B); clear B
+  end.
+  to_MBSfreeze Heqf.
+  rewrite <-Heqf in *.
+  cbv [ModularBaseSystem.rep ModularBaseSystem.decode ModularBaseSystemList.decode] in *.
+  rewrite <-H1.
+  rewrite ModularArithmeticTheorems.F.to_Z_of_Z.
+  rewrite Z.mod_small; [ f_equal | ].
+  pose proof (minrep_freeze x).
+  apply ModularBaseSystemListProofs.ge_modulus_spec;
+    try solve [inversion H0; auto using Tuple.length_to_list];
+    subst f; intuition auto.
+  Grab Existential Variables.
+  apply Tuple.length_to_list.
+Qed.
+
+
+Local Instance Proper_feSign : Proper (GF25519BoundedCommon.eq ==> eq) feSign.
 Proof.
   repeat intro; cbv [feSign].
   rewrite !GF25519Bounded.freeze_correct.
@@ -589,15 +629,9 @@ Proof.
                                 assert Q as HQ by apply initial_bounds end;
         specialize (A HP HQ); clear HP HQ end.
     cbv [ModularBaseSystem.eq] in *.
-    rewrite GF25519.freeze_correct in *.
-    rewrite ModularBaseSystemOpt.freeze_opt_correct in Heqf
-      by (rewrite ?Tuple.length_to_list; reflexivity). 
-    rewrite ModularBaseSystemOpt.freeze_opt_correct in Heqf0
-      by (rewrite ?Tuple.length_to_list; reflexivity).
+    to_MBSfreeze Heqf0.
+    to_MBSfreeze Heqf.
     subst.
-    rewrite !convert_freezes.
-    erewrite !Tuple.from_list_default_eq.
-    rewrite !Tuple.from_list_to_list.
     apply H2.
     cbv [GF25519BoundedCommon.eq ModularBaseSystem.eq] in *.
     auto. }
