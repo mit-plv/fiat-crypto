@@ -66,9 +66,26 @@ Module Extended.
       (let '(X,Y,Z,T) := coordinates P in let iZ := Finv Z in ((X*iZ), (Y*iZ))) _.
 
     Definition eq (P Q:point) := E.eq (to_twisted P) (to_twisted Q).
-    Global Instance DecidableRel_eq : Decidable.DecidableRel eq := _.
 
-    Local Hint Unfold from_twisted to_twisted eq : bash.
+    Definition eq_noinv (P1 P2:point) :=
+        let '(X1, Y1, Z1, _) := coordinates P1 in
+        let '(X2, Y2, Z2, _) := coordinates P2 in
+        Z2*X1 = Z1*X2 /\ Z2*Y1 = Z1*Y2.
+
+    Local Hint Unfold from_twisted to_twisted eq eq_noinv : bash.
+
+    Lemma eq_noinv_eq P Q : eq P Q <-> eq_noinv P Q.
+    Proof. safe_bash; repeat split; safe_bash.  Qed.
+    Global Instance DecidableRel_eq_noinv : Decidable.DecidableRel eq_noinv.
+    Proof.
+      intros P Q.
+      destruct P as [ [ [ [ ] ? ] ? ] ?], Q as [ [ [ [ ] ? ] ? ] ? ]; simpl; exact _.
+    Defined.
+    Global Instance DecidableRel_eq : Decidable.DecidableRel eq.
+    Proof.
+      intros ? ?.
+      eapply @Decidable_iff_to_flip_impl; [eapply eq_noinv_eq | exact _].
+    Defined.
 
     Global Instance Equivalence_eq : Equivalence eq. Proof. split; split; safe_bash. Qed.
     Global Instance Proper_from_twisted : Proper (E.eq==>eq) from_twisted. Proof. unsafe_bash. Qed.

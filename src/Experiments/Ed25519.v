@@ -216,6 +216,60 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma ERep_eq_E P Q :
+      ExtendedCoordinates.Extended.eq (field:=GF25519Bounded.field25519)
+      (EToRep P) (EToRep Q)
+      -> CompleteEdwardsCurveTheorems.E.eq P Q.
+Proof.
+  destruct P as [[] HP], Q as [[] HQ].
+  cbv [ExtendedCoordinates.Extended.eq EToRep PointEncoding.point_phi CompleteEdwardsCurveTheorems.E.ref_phi CompleteEdwardsCurveTheorems.E.eq CompleteEdwardsCurve.E.coordinates
+                                       ExtendedCoordinates.Extended.coordinates
+                                       ExtendedCoordinates.Extended.to_twisted
+                                       ExtendedCoordinates.Extended.from_twisted
+                                       GF25519BoundedCommon.eq ModularBaseSystem.eq
+  Tuple.fieldwise Tuple.fieldwise' fst snd proj1_sig].
+  intro H.
+  rewrite !GF25519Bounded.mul_correct, !GF25519Bounded.inv_correct, !GF25519BoundedCommon.proj1_fe25519_encode in *.
+  rewrite !Algebra.Ring.homomorphism_mul in H.
+  pose proof (Algebra.Field.homomorphism_multiplicative_inverse (H:=GF25519.field25519)) as Hinv;
+    rewrite Hinv in H by vm_decide; clear Hinv.
+  let e := constr:((ModularBaseSystem.decode (GF25519BoundedCommon.proj1_fe25519 GF25519BoundedCommon.one))) in
+  set e as xe; assert (Hone:xe = ModularArithmetic.F.one) by vm_decide; subst xe; rewrite Hone in *; clear Hone.
+  rewrite <-!(Algebra.field_div_definition(inv:=ModularArithmetic.F.inv)) in H.
+  rewrite !(Algebra.Field.div_one(one:=ModularArithmetic.F.one)) in H.
+  pose proof ModularBaseSystemProofs.encode_rep as Hencode;
+    unfold ModularBaseSystem.rep in Hencode; rewrite !Hencode in H.
+  assumption.
+Qed.
+      
+Module N.
+  Lemma size_le a b : (a <= b -> N.size a <= N.size b)%N.
+  Proof.
+    destruct (dec (a=0)%N), (dec (b=0)%N); subst; auto using N.le_0_l.
+    { destruct a; auto. }
+    { rewrite !N.size_log2 by assumption.
+      rewrite <-N.succ_le_mono.
+      apply N.log2_le_mono. }
+  Qed.
+
+  Lemma le_to_nat a b : (a <= b)%N <-> (N.to_nat a <= N.to_nat b)%nat.
+  Proof.
+    rewrite <-N.lt_succ_r.
+    rewrite <-Nat.lt_succ_r.
+    rewrite <-Nnat.N2Nat.inj_succ.
+    rewrite <-NatUtil.Nat2N_inj_lt.
+    rewrite !Nnat.N2Nat.id.
+    reflexivity.
+  Qed.
+
+  Lemma size_nat_le a b : (a <= b)%N -> (N.size_nat a <= N.size_nat b)%nat.
+  Proof.
+    rewrite !IterAssocOp.Nsize_nat_equiv.
+    rewrite <-le_to_nat.
+    apply size_le.
+  Qed.
+End N.
+
 Section SRepERepMul.
   Import Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Classes.Equivalence.
   Import Coq.NArith.NArith Coq.PArith.BinPosDef.
@@ -232,6 +286,7 @@ Section SRepERepMul.
       (sel:=ERepSel)
       ll
   .
+
 
   Lemma SRepERepMul_correct n P :
     ExtendedCoordinates.Extended.eq (field:=GF25519Bounded.field25519)
@@ -271,6 +326,30 @@ Section SRepERepMul.
       rewrite N.succ_pred; try eassumption.
       vm_decide.
       vm_compute. reflexivity. }
+  Qed.
+
+  Definition NERepMul : N -> Erep -> Erep := fun x =>
+    IterAssocOp.iter_op
+      (op:=ErepAdd)
+      (id:=ExtendedCoordinates.Extended.zero(field:=GF25519Bounded.field25519)(prm:=twedprm_ERep))
+      (N.testbit_nat x)
+      (sel:=ERepSel)
+      ll
+  .
+  Lemma NERepMul_correct n P :
+    (N.size_nat (N.of_nat n) <= ll) ->
+    ExtendedCoordinates.Extended.eq (field:=GF25519Bounded.field25519)
+                                    (EToRep (CompleteEdwardsCurve.E.mul n P))
+                                    (NERepMul (N.of_nat n) (EToRep P)).
+  Proof.
+    rewrite ScalarMult.scalarmult_ext.
+    unfold NERepMul.
+    etransitivity; [|symmetry; eapply iter_op_correct].
+    3: intros; reflexivity.
+    2: intros; reflexivity.
+    { rewrite Nat2N.id.
+      apply (@Group.homomorphism_scalarmult _ _ _ _ _ _ _ _ _ _ _ _ EToRep Ahomom ScalarMult.scalarmult_ref _ ScalarMult.scalarmult_ref _ _ _). }
+    { assumption. }
   Qed.
 End SRepERepMul.
 
@@ -759,8 +838,20 @@ Let ERepB : Erep.
 Defined.
 
 Let ERepB_correct : ExtendedCoordinates.Extended.eq (field:=GF25519Bounded.field25519) ERepB (EToRep B).
-  vm_decide.
+  vm_decide_no_check.
 Qed.
+
+Lemma B_order_l : CompleteEdwardsCurveTheorems.E.eq
+              (CompleteEdwardsCurve.E.mul (Z.to_nat l) B)
+              CompleteEdwardsCurve.E.zero.
+Proof.
+  apply ERep_eq_E.
+  rewrite NERepMul_correct; rewrite Z_nat_N.
+  2:vm_decide.
+  apply dec_bool.
+  vm_cast_no_check (eq_refl true).
+Admitted.
+(* Time Qed. (* Finished transaction in 1646.167 secs (1645.753u,0.339s) (successful) *) *)
 
 Let sign := @EdDSARepChange.sign E
          (@CompleteEdwardsCurveTheorems.E.eq Fq (@eq Fq) (@ModularArithmetic.F.one q)
