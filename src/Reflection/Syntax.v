@@ -87,17 +87,26 @@ Section language.
              end.
       End type.
       Section flat_type.
-        Context (interp_base_type1 interp_base_type2 : base_type_code -> Type)
-                (R : forall t, interp_base_type1 t -> interp_base_type2 t -> Prop).
-        Fixpoint interp_flat_type_rel_pointwise2 (t : flat_type)
-          : interp_flat_type interp_base_type1 t -> interp_flat_type interp_base_type2 t -> Prop
-          := match t with
-             | Tbase t => R t
-             | Prod x y => fun a b => interp_flat_type_rel_pointwise2 x (fst a) (fst b)
-                                      /\ interp_flat_type_rel_pointwise2 y (snd a) (snd b)
-             end.
-        Definition interp_type_rel_pointwise2
-          := interp_type_gen_rel_pointwise2 _ _ interp_flat_type_rel_pointwise2.
+        Context (interp_base_type1 interp_base_type2 : base_type_code -> Type).
+        Section gen_prop.
+          Context (P : Type)
+                  (and : P -> P -> P)
+                  (R : forall t, interp_base_type1 t -> interp_base_type2 t -> P).
+
+          Fixpoint interp_flat_type_rel_pointwise2_gen_Prop (t : flat_type)
+            : interp_flat_type interp_base_type1 t -> interp_flat_type interp_base_type2 t -> P
+            := match t with
+               | Tbase t => R t
+               | Prod x y => fun a b => and (interp_flat_type_rel_pointwise2_gen_Prop x (fst a) (fst b))
+                                            (interp_flat_type_rel_pointwise2_gen_Prop y (snd a) (snd b))
+               end.
+        End gen_prop.
+
+        Definition interp_flat_type_rel_pointwise2
+          := @interp_flat_type_rel_pointwise2_gen_Prop Prop and.
+
+        Definition interp_type_rel_pointwise2 R
+          := interp_type_gen_rel_pointwise2 _ _ (interp_flat_type_rel_pointwise2 R).
       End flat_type.
     End rel_pointwise2.
   End interp.
@@ -276,6 +285,7 @@ Global Arguments Return {_ _ _ _ _} _.
 Global Arguments Abs {_ _ _ _ _ _} _.
 Global Arguments interp_type_rel_pointwise2 {_ _ _} R {t} _ _.
 Global Arguments interp_type_gen_rel_pointwise2 {_ _ _} R {t} _ _.
+Global Arguments interp_flat_type_rel_pointwise2_gen_Prop {_ _ _ P} and R {t} _ _.
 Global Arguments interp_flat_type_rel_pointwise2 {_ _ _} R {t} _ _.
 Global Arguments mapf_interp_flat_type {_ _ _} _ {t} _.
 Global Arguments interp_type_gen {_} _ _.
