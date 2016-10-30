@@ -7,7 +7,7 @@ Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Tactics.
 
 Delimit Scope reified_prop_scope with reified_prop.
-Inductive reified_Prop := rTrue | rFalse | rAnd (x y : reified_Prop) | rOr (x y : reified_Prop) | rImpl (x y : reified_Prop) | rForall {T} (f : T -> reified_Prop) | rEq {T} (x y : T) | inject (_ : Prop).
+Inductive reified_Prop := rTrue | rFalse | rAnd (x y : reified_Prop) | rOr (x y : reified_Prop) | rImpl (x y : reified_Prop) | rForall {T} (f : T -> reified_Prop) | rEq {T} (x y : T) | rEqRefl {T} (x : T) | inject (_ : Prop).
 Bind Scope reified_prop_scope with reified_Prop.
 
 Fixpoint to_prop (x : reified_Prop) : Prop
@@ -19,6 +19,7 @@ Fixpoint to_prop (x : reified_Prop) : Prop
      | rImpl x y => to_prop x -> to_prop y
      | @rForall _ f => forall x, to_prop (f x)
      | @rEq _ x y => x = y
+     | @rEqRefl _ x => x = x
      | inject x => x
      end.
 
@@ -81,6 +82,10 @@ Definition reified_Prop_eq (x y : reified_Prop)
                       eq_rect _ (fun t => t) x0 _ pf = y0
                       /\ eq_rect _ (fun t => t) x1 _ pf = y1
      | rEq _ _ _, _ => False
+     | @rEqRefl Tx x, @rEqRefl Ty y
+       => exists pf : Tx = Ty,
+                      eq_rect _ (fun t => t) x _ pf = y
+     | rEqRefl _ _, _ => False
      | inject x, inject y => x = y
      | inject _, _ => False
      end.
@@ -133,6 +138,13 @@ Ltac inversion_reified_Prop_step :=
   | [ H : rImpl _ _ = _ |- _ ] => do_on H
   | [ H : rForall _ = _ |- _ ] => do_on H
   | [ H : rEq _ _ = _ |- _ ] => do_on H
+  | [ H : rEqRefl _ = _ |- _ ] => do_on H
   | [ H : inject _ = _ |- _ ] => do_on H
   end.
 Ltac inversion_reified_Prop := repeat inversion_reified_Prop_step.
+
+Lemma to_prop_and_reified_Prop x y : to_prop (x /\ y) <-> (to_prop x /\ to_prop y).
+Proof.
+  destruct x, y; simpl; try tauto.
+  { split; intro H; inversion H; subst; repeat split. }
+Qed.
