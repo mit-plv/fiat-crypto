@@ -264,14 +264,15 @@ Ltac Reify_rhs_gen Reify prove_interp_compile_correct interp_op try_tac :=
                       including the parameterized bits; we assume that
                       [hnf] is enough to unfold the interpretation
                       functions that we're parameterized over. *)
-                  lazymatch goal with
-                  | [ |- ?R (@InputSyntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op ?t ?e) _ ]
-                    => let interp_base_type' := (eval hnf in interp_base_type) in
-                       let interp_op' := (eval hnf in interp_op) in
-                       change interp_base_type with interp_base_type';
-                       change interp_op with interp_op'
-                  end;
-                  cbv iota beta delta [InputSyntax.Interp interp_type interp_type_gen interp_flat_type interp interpf]; simplify_projections; reflexivity) ] ] ].
+                  abstract (
+                      lazymatch goal with
+                      | [ |- ?R (@InputSyntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op ?t ?e) _ ]
+                        => let interp_base_type' := (eval hnf in interp_base_type) in
+                           let interp_op' := (eval hnf in interp_op) in
+                           change interp_base_type with interp_base_type';
+                           change interp_op with interp_op'
+                      end;
+                      cbv iota beta delta [InputSyntax.Interp interp_type interp_type_gen interp_flat_type interp interpf]; reflexivity)) ] ] ].
 
 Ltac prove_compile_correct :=
   fun _ => lazymatch goal with
