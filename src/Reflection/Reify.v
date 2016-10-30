@@ -35,7 +35,7 @@ Ltac reify_flat_type T :=
        constr:(@Prod _ a b)
   | _
     => let v := reify_base_type T in
-       constr:(Tbase v)
+       constr:(@Tbase _ v)
   end.
 Ltac reify_type T :=
   lazymatch T with
@@ -45,7 +45,7 @@ Ltac reify_type T :=
        constr:(@Arrow _ a b)
   | _
     => let v := reify_flat_type T in
-       constr:(Tflat v)
+       constr:(@Tflat _ v)
   end.
 
 Ltac reifyf_var x mkVar :=
