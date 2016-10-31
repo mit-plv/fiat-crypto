@@ -963,7 +963,9 @@ Let Edec := (@PointEncodingPre.point_dec
                Spec.Ed25519.d
                _
                Fsqrt
-               (PointEncoding.Fencoding (bound_check := bound_check255))
+               (PointEncoding.Fencoding
+                  (two_lt_m := GF25519.modulus_gt_2)
+                  (bound_check := bound_check255))
                Spec.Ed25519.sign).
 
 Let Sdec : Word.word b -> option (ModularArithmetic.F.F l) :=
@@ -1027,9 +1029,32 @@ Let ERepDec :=
 
 Axiom ERepDec_correct : forall w : Word.word b, ERepDec w = @option_map E Erep EToRep (Edec w).
 
-Axiom eq_enc_E_iff : forall (P_ : Word.word b) (P : E),
+Lemma Fsqrt_minus1_correct : 
+ ModularArithmetic.F.mul Fsqrt_minus1 Fsqrt_minus1 =
+ ModularArithmetic.F.opp
+   (ModularArithmetic.F.of_Z GF25519.modulus 1).
+Proof.
+  replace (Fsqrt_minus1) with (ModularBaseSystem.decode (GF25519.sqrt_m1)) by reflexivity.
+  rewrite <-ModularBaseSystemProofs.carry_mul_rep by reflexivity.
+  rewrite <-ModularBaseSystemOpt.carry_mul_opt_correct
+    with (k_ := GF25519.k_) (c_ := GF25519.c_) by reflexivity.
+  rewrite <-GF25519.mul_correct.
+  apply GF25519.sqrt_m1_correct.
+Qed.
+
+Lemma eq_enc_E_iff : forall (P_ : Word.word b) (P : E),
  Eenc P = P_ <->
  Option.option_eq CompleteEdwardsCurveTheorems.E.eq (Edec P_) (Some P).
+Proof.
+  cbv [Eenc].
+  apply @PointEncoding.encode_point_decode_point_iff.
+  auto using curve_params.
+  cbv [Fsqrt].
+  intros.
+  apply (@PrimeFieldTheorems.F.sqrt_5mod8_correct GF25519.modulus _ eq_refl Fsqrt_minus1 Fsqrt_minus1_correct).
+  eexists.
+  symmetry; eassumption.
+Qed.  
 
 Let verify_correct :
   forall {mlen : nat} (msg : Word.word mlen) (pk : Word.word b)
