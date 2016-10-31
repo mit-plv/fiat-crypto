@@ -6,6 +6,7 @@ Require Import Crypto.Reflection.Z.Interpretations.
 Require Import Crypto.Reflection.Z.Reify.
 Require Export Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Reflection.InterpWfRel.
+Require Import Crypto.Reflection.Application.
 Require Import Crypto.Reflection.MapInterp.
 Require Import Crypto.Reflection.MapInterpWf.
 Require Import Crypto.Reflection.WfReflective.
@@ -36,6 +37,30 @@ Definition ExprUnOp : Type := Expr ExprUnOpT.
 Definition ExprUnOpFEToZ : Type := Expr ExprUnOpFEToZT.
 Definition ExprUnOpWireToFE : Type := Expr ExprUnOpWireToFET.
 Definition ExprUnOpFEToWire : Type := Expr ExprUnOpFEToWireT.
+
+Local Ltac bounds_from_list ls :=
+  lazymatch (eval hnf in ls) with
+  | (?x :: nil)%list => constr:(Some {| ZBounds.lower := fst x ; ZBounds.upper := snd x |})
+  | (?x :: ?xs)%list => let bs := bounds_from_list xs in
+                        constr:((Some {| ZBounds.lower := fst x ; ZBounds.upper := snd x |}, bs))
+  end.
+
+Local Ltac make_bounds ls :=
+  compute;
+  let v := bounds_from_list ls in
+  let v := (eval compute in v) in
+  exact v.
+
+Definition ExprBinOp_bounds : all_binders_for ExprBinOpT ZBounds.interp_base_type.
+Proof. make_bounds (bounds ++ bounds)%list. Defined.
+Definition ExprUnOp_bounds : all_binders_for ExprUnOpT ZBounds.interp_base_type.
+Proof. make_bounds bounds. Defined.
+Definition ExprUnOpFEToZ_bounds : all_binders_for ExprUnOpFEToZT ZBounds.interp_base_type.
+Proof. make_bounds bounds. Defined.
+Definition ExprUnOpFEToWire_bounds : all_binders_for ExprUnOpFEToWireT ZBounds.interp_base_type.
+Proof. make_bounds bounds. Defined.
+Definition ExprUnOpWireToFE_bounds : all_binders_for ExprUnOpWireToFET ZBounds.interp_base_type.
+Proof. make_bounds wire_digit_bounds. Defined.
 
 Definition interp_bexpr : ExprBinOp -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
   := fun e => curry_binop_fe25519W (Interp (@Word64.interp_op) e).
