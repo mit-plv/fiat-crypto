@@ -110,9 +110,11 @@ Proof. apply (word_to_unbounded_word x); reflexivity. Defined.
 Definition bounds : list (Z * Z)
   := Eval compute in
       [b_of 25; b_of 26; b_of 25; b_of 26; b_of 25; b_of 26; b_of 25; b_of 26; b_of 25; b_of 26].
-Definition wire_digit_bounds : list (Z * Z)
+Definition wire_digit_bounds_exp : list Z
   := Eval compute in
-      List.repeat (0, 2^32-1)%Z 7 ++ ((0,2^31-1)%Z :: nil).
+      List.repeat 32 7 ++ [31].
+Definition wire_digit_bounds : list (Z * Z)
+  := Eval compute in List.map (fun e => (0,2^e-1)%Z) wire_digit_bounds_exp.
 
 Local Opaque word64.
 Definition fe25519W := Eval cbv (*-[word64]*) in (tuple word64 (length limb_widths)).
@@ -193,9 +195,16 @@ Definition fe25519 :=
     let sanity := eq_refl : length bounds = length limb_widths in
     (word_of 25 * word_of 26 * word_of 25 * word_of 26 * word_of 25 * word_of 26 * word_of 25 * word_of 26 * word_of 25 * word_of 26)%type.
 Definition wire_digits :=
-  Eval cbv [fst snd Tuple.tuple Tuple.tuple'] in
-    (unbounded_word 32 * unbounded_word 32 * unbounded_word 32 * unbounded_word 32
-     * unbounded_word 32 * unbounded_word 32 * unbounded_word 32 * unbounded_word 31)%type.
+  Eval cbv [list_rect wire_digit_bounds_exp List.rev List.app] in
+    list_rect
+      (fun _ => _) unit
+      (fun e xs es
+       => let t := unbounded_word e in
+          match xs with
+          | nil => t
+          | _::_ => (es * t)%type
+          end)
+      (List.rev wire_digit_bounds_exp).
 Definition proj1_fe25519W (x : fe25519) : fe25519W
   := let '(x0, x1, x2, x3, x4, x5, x6, x7, x8, x9) := x in
      (proj_word x0, proj_word x1, proj_word x2, proj_word x3, proj_word x4,
