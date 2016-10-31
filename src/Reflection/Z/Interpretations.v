@@ -36,27 +36,44 @@ Module Word64.
   Create HintDb push_word64ToZ discriminated.
   Hint Extern 1 => progress autorewrite with push_word64ToZ in * : push_word64ToZ.
 
-  Definition w64plus : word64 -> word64 -> word64 := @wplus _.
-  Definition w64minus : word64 -> word64 -> word64 := @wminus _.
-  Definition w64mul : word64 -> word64 -> word64 := @wmult _.
-  Definition w64shl : word64 -> word64 -> word64
+  Lemma word64ToZ_bound w : (0 <= word64ToZ w < 2^Z.of_nat bit_width)%Z.
+  Proof.
+    pose proof (wordToNat_bound w) as H.
+    apply Nat2Z.inj_lt in H.
+    rewrite Zpow_pow2, Z2Nat.id in H by (apply Z.pow_nonneg; omega).
+    unfold word64ToZ.
+    rewrite wordToN_nat, nat_N_Z; omega.
+  Qed.
+
+  Lemma word64ToZ_log_bound w : (0 <= word64ToZ w /\ Z.log2 (word64ToZ w) < Z.of_nat bit_width)%Z.
+  Proof.
+    pose proof (word64ToZ_bound w) as H.
+    destruct (Z_zerop (word64ToZ w)) as [H'|H'].
+    { rewrite H'; simpl; omega. }
+    { split; [ | apply Z.log2_lt_pow2 ]; try omega. }
+  Qed.
+
+  Definition add : word64 -> word64 -> word64 := @wplus _.
+  Definition sub : word64 -> word64 -> word64 := @wminus _.
+  Definition mul : word64 -> word64 -> word64 := @wmult _.
+  Definition shl : word64 -> word64 -> word64
     := fun x y => NToWord _ (Z.to_N (Z.shiftl (Z.of_N (wordToN x)) (Z.of_N (wordToN x)))).
-  Definition w64shr : word64 -> word64 -> word64
+  Definition shr : word64 -> word64 -> word64
     := fun x y => NToWord _ (Z.to_N (Z.shiftr (Z.of_N (wordToN x)) (Z.of_N (wordToN x)))).
-  Definition w64land : word64 -> word64 -> word64 := @wand _.
-  Definition w64lor : word64 -> word64 -> word64 := @wor _.
-  Definition w64neg : word64 -> word64 -> word64 (* TODO: FIXME? *)
+  Definition land : word64 -> word64 -> word64 := @wand _.
+  Definition lor : word64 -> word64 -> word64 := @wor _.
+  Definition neg : word64 -> word64 -> word64 (* TODO: FIXME? *)
     := fun x y => NToWord _ (Z.to_N (ModularBaseSystemListZOperations.neg (Z.of_N (wordToN x)) (Z.of_N (wordToN x)))).
-  Definition w64cmovne : word64 -> word64 -> word64 -> word64 -> word64 (* TODO: FIXME? *)
+  Definition cmovne : word64 -> word64 -> word64 -> word64 -> word64 (* TODO: FIXME? *)
     := fun x y z w => NToWord _ (Z.to_N (ModularBaseSystemListZOperations.cmovne (Z.of_N (wordToN x)) (Z.of_N (wordToN x)) (Z.of_N (wordToN z)) (Z.of_N (wordToN w)))).
-  Definition w64cmovle : word64 -> word64 -> word64 -> word64 -> word64 (* TODO: FIXME? *)
+  Definition cmovle : word64 -> word64 -> word64 -> word64 -> word64 (* TODO: FIXME? *)
     := fun x y z w => NToWord _ (Z.to_N (ModularBaseSystemListZOperations.cmovl (Z.of_N (wordToN x)) (Z.of_N (wordToN x)) (Z.of_N (wordToN z)) (Z.of_N (wordToN w)))).
-  Infix "+" := w64plus : word64_scope.
-  Infix "-" := w64minus : word64_scope.
-  Infix "*" := w64mul : word64_scope.
-  Infix "<<" := w64shl : word64_scope.
-  Infix ">>" := w64shr : word64_scope.
-  Infix "&'" := w64land : word64_scope.
+  Infix "+" := add : word64_scope.
+  Infix "-" := sub : word64_scope.
+  Infix "*" := mul : word64_scope.
+  Infix "<<" := shl : word64_scope.
+  Infix ">>" := shr : word64_scope.
+  Infix "&'" := land : word64_scope.
 
   Local Ltac w64ToZ_t :=
     intros;
@@ -72,16 +89,16 @@ Module Word64.
             -> Z.log2 (Zop (word64ToZ x) (word64ToZ y)) < Z.of_nat bit_width
             -> word64ToZ (wop x y) = (Zop (word64ToZ x) (word64ToZ y)))%Z).
 
-  Lemma word64ToZ_w64plus : bounds_2statement w64plus Z.add. Proof. w64ToZ_t. Qed.
-  Lemma word64ToZ_w64minus : bounds_2statement w64minus Z.sub. Proof. w64ToZ_t. Qed.
-  Lemma word64ToZ_w64mul : bounds_2statement w64mul Z.mul. Proof. w64ToZ_t. Qed.
-  Lemma word64ToZ_w64shl : bounds_2statement w64shl Z.shiftl.
+  Lemma word64ToZ_add : bounds_2statement add Z.add. Proof. w64ToZ_t. Qed.
+  Lemma word64ToZ_sub : bounds_2statement sub Z.sub. Proof. w64ToZ_t. Qed.
+  Lemma word64ToZ_mul : bounds_2statement mul Z.mul. Proof. w64ToZ_t. Qed.
+  Lemma word64ToZ_shl : bounds_2statement shl Z.shiftl.
   Proof. w64ToZ_t. admit. Admitted.
-  Lemma word64ToZ_w64shr : bounds_2statement w64shr Z.shiftr.
+  Lemma word64ToZ_shr : bounds_2statement shr Z.shiftr.
   Proof. admit. Admitted.
-  Lemma word64ToZ_w64land : bounds_2statement w64land Z.land.
+  Lemma word64ToZ_land : bounds_2statement land Z.land.
   Proof. w64ToZ_t. Qed.
-  Lemma word64ToZ_w64lor : bounds_2statement w64lor Z.lor.
+  Lemma word64ToZ_lor : bounds_2statement lor Z.lor.
   Proof. w64ToZ_t. Qed.
 
   Definition interp_base_type (t : base_type) : Type
@@ -95,11 +112,11 @@ Module Word64.
        | Mul => fun xy => fst xy * snd xy
        | Shl => fun xy => fst xy << snd xy
        | Shr => fun xy => fst xy >> snd xy
-       | Land => fun xy => w64land (fst xy) (snd xy)
-       | Lor => fun xy => w64lor (fst xy) (snd xy)
-       | Neg => fun xy => w64neg (fst xy) (snd xy)
-       | Cmovne => fun xyzw => let '(x, y, z, w) := eta4 xyzw in w64cmovne x y z w
-       | Cmovle => fun xyzw => let '(x, y, z, w) := eta4 xyzw in w64cmovle x y z w
+       | Land => fun xy => land (fst xy) (snd xy)
+       | Lor => fun xy => lor (fst xy) (snd xy)
+       | Neg => fun xy => neg (fst xy) (snd xy)
+       | Cmovne => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovne x y z w
+       | Cmovle => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovle x y z w
        end%word64.
 
   Definition of_Z ty : Z.interp_base_type ty -> interp_base_type ty
@@ -114,20 +131,20 @@ Module Word64.
   Module Export Rewrites.
     Ltac word64_util_arith := omega.
 
-    Hint Rewrite word64ToZ_w64plus using word64_util_arith : push_word64ToZ.
-    Hint Rewrite <- word64ToZ_w64plus using word64_util_arith : pull_word64ToZ.
-    Hint Rewrite word64ToZ_w64minus using word64_util_arith : push_word64ToZ.
-    Hint Rewrite <- word64ToZ_w64minus using word64_util_arith : pull_word64ToZ.
-    Hint Rewrite word64ToZ_w64mul using word64_util_arith : push_word64ToZ.
-    Hint Rewrite <- word64ToZ_w64mul using word64_util_arith : pull_word64ToZ.
-    Hint Rewrite word64ToZ_w64shl using word64_util_arith : push_word64ToZ.
-    Hint Rewrite <- word64ToZ_w64shl using word64_util_arith : pull_word64ToZ.
-    Hint Rewrite word64ToZ_w64shr using word64_util_arith : push_word64ToZ.
-    Hint Rewrite <- word64ToZ_w64shr using word64_util_arith : pull_word64ToZ.
-    Hint Rewrite word64ToZ_w64land using word64_util_arith : push_word64ToZ.
-    Hint Rewrite <- word64ToZ_w64land using word64_util_arith : pull_word64ToZ.
-    Hint Rewrite word64ToZ_w64lor using word64_util_arith : push_word64ToZ.
-    Hint Rewrite <- word64ToZ_w64lor using word64_util_arith : pull_word64ToZ.
+    Hint Rewrite word64ToZ_add using word64_util_arith : push_word64ToZ.
+    Hint Rewrite <- word64ToZ_add using word64_util_arith : pull_word64ToZ.
+    Hint Rewrite word64ToZ_sub using word64_util_arith : push_word64ToZ.
+    Hint Rewrite <- word64ToZ_sub using word64_util_arith : pull_word64ToZ.
+    Hint Rewrite word64ToZ_mul using word64_util_arith : push_word64ToZ.
+    Hint Rewrite <- word64ToZ_mul using word64_util_arith : pull_word64ToZ.
+    Hint Rewrite word64ToZ_shl using word64_util_arith : push_word64ToZ.
+    Hint Rewrite <- word64ToZ_shl using word64_util_arith : pull_word64ToZ.
+    Hint Rewrite word64ToZ_shr using word64_util_arith : push_word64ToZ.
+    Hint Rewrite <- word64ToZ_shr using word64_util_arith : pull_word64ToZ.
+    Hint Rewrite word64ToZ_land using word64_util_arith : push_word64ToZ.
+    Hint Rewrite <- word64ToZ_land using word64_util_arith : pull_word64ToZ.
+    Hint Rewrite word64ToZ_lor using word64_util_arith : push_word64ToZ.
+    Hint Rewrite <- word64ToZ_lor using word64_util_arith : pull_word64ToZ.
   End Rewrites.
 End Word64.
 
@@ -262,15 +279,15 @@ Module BoundedWord64.
        | TZ => t
        end.
 
-
+About Sumbool.sumbool_of_bool.
   Definition word64ToBoundedWord (x : Word64.word64) : t.
   Proof.
     refine (let v := Word64.word64ToZ x in
-            (if (0 <=? v)%Z as Hl return (0 <=? v)%Z = Hl -> t
-             then (if (Z.log2 v <? Z.of_nat Word64.bit_width)%Z as Hu return (Z.log2 v <? Z.of_nat Word64.bit_width)%Z = Hu -> _ -> t
-                   then fun Hu Hl => Some {| lower := Word64.word64ToZ x ; value := x ; upper := Word64.word64ToZ x |}
-                   else fun _ _ => None) eq_refl
-             else fun _ => None) eq_refl).
+            match Sumbool.sumbool_of_bool (0 <=? v)%Z, Sumbool.sumbool_of_bool (Z.log2 v <? Z.of_nat Word64.bit_width)%Z with
+            | left Hl, left Hu
+              => Some {| lower := Word64.word64ToZ x ; value := x ; upper := Word64.word64ToZ x |}
+            | _, _ => None
+            end).
     subst v.
     abstract (Z.ltb_to_lt; repeat split; (assumption || reflexivity)).
   Defined.
@@ -346,63 +363,71 @@ Module BoundedWord64.
 
   Definition add : t -> t -> t.
   Proof.
-    build_binop Word64.w64plus ZBounds.add; t_start;
+    build_binop Word64.add ZBounds.add; t_start;
       admit.
   Defined.
 
   Definition sub : t -> t -> t.
   Proof.
-    build_binop Word64.w64minus ZBounds.sub; t_start;
+    build_binop Word64.sub ZBounds.sub; t_start;
       admit.
   Defined.
 
   Definition mul : t -> t -> t.
   Proof.
-    build_binop Word64.w64mul ZBounds.mul; t_start;
+    build_binop Word64.mul ZBounds.mul; t_start;
       admit.
   Defined.
 
   Definition shl : t -> t -> t.
   Proof.
-    build_binop Word64.w64shl ZBounds.shl; t_start;
+    build_binop Word64.shl ZBounds.shl; t_start;
       admit.
   Defined.
 
   Definition shr : t -> t -> t.
   Proof.
-    build_binop Word64.w64shr ZBounds.shr; t_start;
+    build_binop Word64.shr ZBounds.shr; t_start;
       admit.
   Defined.
 
   Definition land : t -> t -> t.
   Proof.
-    build_binop Word64.w64land ZBounds.land; t_start;
+    build_binop Word64.land ZBounds.land; t_start;
       admit.
   Defined.
 
   Definition lor : t -> t -> t.
   Proof.
-    build_binop Word64.w64lor ZBounds.lor; t_start;
+    build_binop Word64.lor ZBounds.lor; t_start;
       admit.
   Defined.
 
   Definition neg : t -> t -> t.
   Proof.
-    build_binop Word64.w64neg ZBounds.neg; t_start;
+    build_binop Word64.neg ZBounds.neg; t_start;
       admit.
   Defined.
 
   Definition cmovne : t -> t -> t -> t -> t.
   Proof.
-    build_4op Word64.w64cmovne ZBounds.cmovne; t_start;
+    build_4op Word64.cmovne ZBounds.cmovne; t_start;
       admit.
   Defined.
 
   Definition cmovle : t -> t -> t -> t -> t.
   Proof.
-    build_4op Word64.w64cmovle ZBounds.cmovle; t_start;
+    build_4op Word64.cmovle ZBounds.cmovle; t_start;
       admit.
   Defined.
+
+  Local Notation value_binop_correct op opW :=
+    (forall x y v, op (Some x) (Some y) = Some v -> value v = opW (value x) (value y))
+      (only parsing).
+
+  Definition value_add : value_binop_correct add Word64.add.
+  Proof.
+  Admitted.
 
   Module Export Notations.
     Delimit Scope bounded_word_scope with bounded_word.
@@ -461,4 +486,62 @@ Module Relations.
        end.
   Definition related_boundsi t : BoundedWord64.interp_base_type t -> ZBounds.interp_base_type t -> Prop
     := match t with TZ => related_bounds end.
+
+  Local Notation related_op R interp_op1 interp_op2
+    := (forall (src dst : flat_type base_type) (op : op src dst)
+               (sv1 : interp_flat_type _ src) (sv2 : interp_flat_type _ src),
+           interp_flat_type_rel_pointwise2 R sv1 sv2 ->
+           interp_flat_type_rel_pointwise2 R (interp_op1 _ _ op sv1) (interp_op2 _ _ op sv2))
+         (only parsing).
+  Local Notation related_const R interp f g
+    := (forall (t : base_type) (v : interp t), R t (f t v) (g t v))
+         (only parsing).
+
+  Local Ltac related_const_t :=
+    let v := fresh in
+    let t := fresh in
+    intros t v; destruct t; intros; simpl in *; hnf; simpl;
+    cbv [BoundedWord64.word64ToBoundedWord related'_Z related'_word64] in *;
+    break_innermost_match; simpl;
+    first [ tauto
+          | Z.ltb_to_lt;
+            pose proof (Word64.word64ToZ_log_bound v);
+            try omega ].
+
+  Lemma related_Z_const : related_const related_Zi Word64.interp_base_type BoundedWord64.of_word64 Word64.to_Z.
+  Proof. related_const_t. Qed.
+  Lemma related_bounds_const : related_const related_boundsi Word64.interp_base_type BoundedWord64.of_word64 ZBounds.of_word64.
+  Proof. related_const_t. Qed.
+  Lemma related_word64_const : related_const related_word64i Word64.interp_base_type BoundedWord64.of_word64 (fun _ x => x).
+  Proof. related_const_t. Qed.
+
+  Lemma related_Z_op : related_op related_Zi (@BoundedWord64.interp_op) (@Z.interp_op).
+  Proof.
+    let op := fresh in intros ?? op; destruct op; simpl.
+    repeat first [ progress cbv [related_Z lift_relation related'_Z BoundedWord64.value]
+                 | progress intros
+                 | progress destruct_head' prod
+                 | progress destruct_head' and
+                 | progress specialize_by ltac:(exact I)
+                 | progress subst
+                 | progress break_match
+                 | progress break_match_hyps
+                 | progress simpl @fst in *
+                 | progress simpl @snd in *
+                 | destruct_head' BoundedWord64.BoundedWord ].
+    { cbv [related_Z lift_relation related'_Z].
+      intros; break_match.
+      unfold related_Z, BoundedWord64.t, lift_relation, related'_Z, BoundedWord64.value.
+      match goal with
+      | [ H : _ = Some _ |- _ ] => apply BoundedWord64.value_add in H; simpl in H
+      end.
+      subst.
+      apply Word64.word64ToZ_add; auto;
+        admit. }
+  Admitted.
+
+  Lemma related_bounds_op : related_op related_boundsi (@BoundedWord64.interp_op) (@ZBounds.interp_op).
+  Proof. admit. Admitted.
+  Lemma related_word64_op : related_op related_word64i (@BoundedWord64.interp_op) (@Word64.interp_op).
+  Proof. admit. Admitted.
 End Relations.
