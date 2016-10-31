@@ -15,7 +15,7 @@ Require Crypto.Encoding.PointEncodingPre.
    Eenc := encode_point
    Proper_Eenc := Proper_encode_point
    Edec := Fdecode_point (notation)
-   eq_enc_E_iff := Fdecode_encode_iff
+   eq_enc_E_iff := encode_point_decode_point_iff
    EToRep := point_phi
    Ahomom := point_phi_homomorphism
    ERepEnc := Kencode_point
@@ -27,6 +27,7 @@ Require Crypto.Encoding.PointEncodingPre.
 
 Section PointEncoding.
   Context {b : nat} {m : Z} {Fa Fd : F m} {prime_m : Znumtheory.prime m}
+          {two_lt_m : (2 < m)%Z}
           {bound_check : (Z.to_nat m < 2 ^ b)%nat}.
 
   Definition sign (x : F m) : bool := Z.testbit (F.to_Z x) 0.
@@ -122,7 +123,8 @@ Section PointEncoding.
                 option_eq Keq (option_map phi (Fdecode w)) (Kdec w)}.
     Context {Fsqrt : F m -> F m}
             {phi_sqrt : forall x, Keq (phi (Fsqrt x)) (Ksqrt (phi x))}
-            {Fsqrt_square : forall x root, eq x (F.mul root root) -> eq (Fsqrt x) root}.
+            {Fsqrt_square : forall x root, eq x (F.mul root root) ->
+                                        eq (F.mul (Fsqrt x) (Fsqrt x)) x}.
 
     Lemma point_phi_homomorphism: @Algebra.Monoid.is_homomorphism
                                     Fpoint E.eq Fpoint_add
@@ -432,6 +434,82 @@ Section PointEncoding.
       + apply Proper_Kpoint_from_xy.
       + intros. symmetry. apply Kdecode_coordinates_correct.
       + intros. apply Kpoint_from_xy_correct.
+    Qed.
+
+    Lemma sign_zero : forall x, x = F.zero -> sign x = false.
+    Proof.
+      intros; subst.
+      reflexivity.
+    Qed.
+
+    Lemma sign_negb : forall x : F m, x <> F.zero ->
+                                      negb (sign x) = sign (F.opp x).
+    Proof.
+      intros.
+      cbv [sign].
+      rewrite !Z.bit0_odd.
+      rewrite F.to_Z_opp.
+      rewrite F.eq_to_Z_iff in H.
+      replace (@F.to_Z m F.zero) with 0%Z in H by reflexivity.
+      rewrite Z.mod_opp_l_nz by (solve [ZUtil.Z.prime_bound] ||
+                                   rewrite F.mod_to_Z; auto).
+      rewrite F.mod_to_Z.
+      rewrite Z.odd_sub.
+      destruct (ZUtil.Z.prime_odd_or_2 m prime_m) as [? | m_odd];
+        [ omega | rewrite m_odd].
+      rewrite <-Bool.xorb_true_l; auto.
+    Qed.
+
+    Lemma Eeq_point_eq : forall x y : option E.point,
+        option_eq E.eq x y <->
+        option_eq
+          (@PointEncodingPre.point_eq _ eq F.one F.add F.mul Fa Fd) x y.
+    Proof.
+      intros.
+      cbv [option_eq E.eq PointEncodingPre.point_eq
+                     PointEncodingPre.prod_eq]; repeat break_match;
+        try reflexivity.
+      cbv [E.coordinates].
+      subst.
+      rewrite Heqp1, Heqp0.
+      cbv [Tuple.fieldwise Tuple.fieldwise' fst snd].
+      tauto.
+    Qed.
+    
+    Lemma enc_canonical_equiv : forall (x_enc : word b) (x : F m),
+      option_eq eq (Fdecode x_enc) (Some x) ->
+      Fencode x = x_enc.
+    Proof.
+      intros.
+      cbv [option_eq] in *.
+      break_match; try discriminate.
+      subst.
+      apply (@Encoding.encoding_canonical _ _ Fencoding).
+      auto.
+    Qed.
+
+    Lemma encode_point_decode_point_iff : forall P_ P,
+      encode_point P = P_ <->
+      Option.option_eq E.eq (Fdecode_point P_) (Some P).
+    Proof.
+      pose proof (@PointEncodingPre.point_encoding_canonical
+                    _ eq F.zero F.one F.opp F.add F.sub F.mul F.div
+                    _ Fa Fd _ Fsqrt Fencoding enc_canonical_equiv
+                    sign sign_zero sign_negb
+                 ) as Hcanonical.
+      let A := fresh "H" in
+      match type of Hcanonical with
+        ?P -> _ => assert P as A by congruence;
+                     specialize (Hcanonical A); clear A end.
+      intros.
+      rewrite Eeq_point_eq.
+      split; intros; subst.
+      { apply PointEncodingPre.point_encoding_valid;
+          auto using sign_zero, sign_negb;
+          congruence. }
+      { apply Hcanonical.
+        cbv [option_eq PointEncodingPre.point_eq PointEncodingPre.prod_eq] in H |- *.
+        break_match; congruence. }
     Qed.
 
   End RepChange.

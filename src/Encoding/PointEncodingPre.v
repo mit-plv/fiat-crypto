@@ -7,6 +7,8 @@ Require Import Bedrock.Word.
 Require Import Crypto.Encoding.ModularWordEncodingTheorems.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Algebra.
+Require Import Crypto.Util.Option.
+Import Morphisms.
 
 Require Import Crypto.Spec.Encoding Crypto.Spec.ModularWordEncoding Crypto.Spec.ModularArithmetic.
 
@@ -37,11 +39,16 @@ Section PointEncodingPre.
   Local Notation point := (@E.point F eq one add mul a d).
   Local Notation onCurve := (@onCurve F eq one add mul a d).
   Local Notation solve_for_x2 := (@E.solve_for_x2 F one sub mul div a d).
+  Check PrimeFieldTheorems.F.sqrt_5mod8_correct.
 
   Context {sz : nat} (sz_nonzero : (0 < sz)%nat).
-  Context {sqrt : F -> F} (sqrt_square : forall x root, x == (root ^2) -> sqrt x == root)
+  Context {sqrt : F -> F} {Proper_sqrt : Proper (eq ==>eq) sqrt}
+          (sqrt_square : forall x root, x == (root ^2) ->
+                                        (sqrt x *sqrt x == x))
           (sqrt_subst : forall x y, x == y -> sqrt x == sqrt y).
   Context (FEncoding : canonical encoding of F as (word sz)).
+  Context {enc_canonical_equiv : forall x_enc x,
+              option_eq eq (dec x_enc) (Some x) -> enc x = x_enc}.
   Context {sign_bit : F -> bool} (sign_bit_zero : forall x, x == 0 -> Logic.eq (sign_bit x) false)
     (sign_bit_opp : forall x, x !== 0 -> Logic.eq (negb (sign_bit x)) (sign_bit (opp x)))
     (sign_bit_subst : forall x y, x == y -> sign_bit x = sign_bit y).
@@ -55,7 +62,7 @@ Section PointEncodingPre.
     pose proof root2_y.
     apply sqrt_square in root2_y.
     rewrite root2_y.
-    symmetry; assumption.
+    reflexivity.
   Qed.
 
   Lemma solve_onCurve: forall x y : F, onCurve (x,y) ->
@@ -119,15 +126,6 @@ Section PointEncodingPre.
       destruct (A_eq_dec x1 y1); destruct (A_eq_dec x2 y2) end;
       unfold prod_eq; intuition.
   Qed.
-
-  Definition option_eq {A} eq (x y : option A) :=
-    match x with
-    | None    => y = None
-    | Some ax => match y with
-                 | None => False
-                 | Some ay => eq ax ay
-                 end
-    end.
 
   Lemma option_eq_dec : forall {A eq} (A_eq_dec : forall a a' : A, {eq a a'} + {not (eq a a')})
     (x y : option A), {option_eq eq x y} + {not (option_eq eq x y)}.
@@ -227,7 +225,7 @@ Section PointEncodingPre.
     repeat break_match; subst; try destruct p; congruence || eauto using prod_eq_sym; intuition.
   Qed.
 
-  Opaque option_coordinates_eq option_point_eq point_eq option_eq prod_eq.
+  Opaque option_coordinates_eq option_point_eq.
 
   Ltac inversion_Some_eq := match goal with [H: Some ?x = Some ?y |- _] => inversion H; subst end.
 
@@ -253,7 +251,8 @@ Section PointEncodingPre.
     option_rect (fun _ => option point) point_from_xy None (point_dec_coordinates w).
 
   Lemma point_coordinates_encoding_canonical : forall w p,
-    point_dec_coordinates w = Some p -> point_enc_coordinates p = w.
+    option_eq (Tuple.fieldwise (n := 2) eq) (point_dec_coordinates w) (Some p) ->
+    point_enc_coordinates p = w.
   Proof.
     repeat match goal with
            | |- _ => progress cbv [point_dec_coordinates option_rect
@@ -266,28 +265,46 @@ Section PointEncodingPre.
                    (intro A; specialize (sign_bit_zero _ A); congruence))
            | p : F * F |- _ => destruct p
            | |- _ => break_match; try discriminate
-           | H : Some _ = Some _ |- _ => inversion H; subst; clear H
            | w : word (S sz) |- WS _ _ = ?w => rewrite (shatter_word w);
                                                  f_equal
+           | H : option_eq _ (Some _) (Some _) |- _ =>
+             cbv [option_eq Tuple.fieldwise Tuple.fieldwise' fst snd] in H;
+               destruct H
+           | H :  Bool.eqb _ _ = _ |- _  => apply Bool.eqb_prop in H
+           | H : ?b = sign_bit ?x |- sign_bit ?y = ?b => erewrite <-sign_bit_subst by eassumption; congruence
+           | H : ?b <> sign_bit ?x |- sign_bit ?y <> ?b => erewrite <-sign_bit_subst by eassumption; congruence
            | |- sign_bit _ = whd ?w => destruct (whd w)
            | |- negb _ = false => apply Bool.negb_false_iff
            | |- _ => solve [auto using Bool.eqb_prop,
                             Bool.eq_true_not_negb,
                             Bool.not_false_is_true, encoding_canonical]
-           end.
+           end;
+      try solve [apply enc_canonical_equiv; rewrite Heqo; auto];
+        erewrite <-sign_bit_subst by eassumption.
+    { rewrite <-sign_bit_opp
+        by (intro A; apply F_eqb_iff in A; congruence).
+      auto using Bool.eq_true_not_negb. }
+    { rewrite <-sign_bit_opp
+        by (intro A; apply sign_bit_zero in A; congruence).
+      apply Bool.negb_false_iff, Bool.not_false_is_true.
+      auto. }
   Qed.
 
-  Lemma inversion_point_dec : forall w x, point_dec w = Some x ->
-    point_dec_coordinates w = Some (E.coordinates x).
+  Lemma inversion_point_dec : forall w x,
+    option_eq point_eq (point_dec w) (Some x) ->
+    option_eq (Tuple.fieldwise (n := 2) eq) (point_dec_coordinates w) (Some (E.coordinates x)).
   Proof.
     unfold point_dec, E.coordinates, point_from_xy, option_rect; intros.
     break_match; [ | congruence].
     destruct p. break_match; [ | congruence ].
-    match goal with [ H : Some _ = Some _ |- _ ] => inversion H end.
-    reflexivity.
+    destruct x as [xy pf]; destruct xy.
+    cbv [option_eq point_eq] in *.
+    simpl in *.
+    intuition.
   Qed.
 
-  Lemma point_encoding_canonical : forall w x, point_dec w = Some x -> point_enc x = w.
+  Lemma point_encoding_canonical : forall w x,
+      option_eq point_eq (point_dec w) (Some x) -> point_enc x = w.
   Proof.
     unfold point_enc; intros.
     apply point_coordinates_encoding_canonical.
@@ -347,19 +364,38 @@ Section PointEncodingPre.
     break_if; [ |  congruence].
     assert (solve_for_x2 y == (x ^2)) as solve_correct by (symmetry; apply E.solve_correct; assumption).
     destruct (eq_dec x 0) as [eq_x_0 | neq_x_0].
-    + rewrite !sign_bit_zero by
-        (eauto || (rewrite eq_x_0 in *; rewrite sqrt_square; [ | eauto]; reflexivity)).
+    + rewrite eq_x_0 in *.
+      assert (0^2 == 0) as zero_square by apply Ring.mul_0_l.
+      specialize (sqrt_square _ _ solve_correct).
+      rewrite solve_correct, zero_square in sqrt_square.
+      rewrite Ring.zero_product_iff_zero_factor in sqrt_square.
+      rewrite zero_square in *.
+      assert (sqrt (solve_for_x2 y) == 0) by (rewrite solve_correct; tauto).
+      rewrite !sign_bit_zero by (tauto || eauto).
       rewrite Bool.andb_false_r, Bool.eqb_reflx.
       apply option_coordinates_eq_iff; split; try reflexivity.
-      transitivity (sqrt (x ^2)); auto.
-      apply (sqrt_square); reflexivity.
-    + rewrite (proj1 (F_eqb_false _ 0)), Bool.andb_false_l by (rewrite sqrt_square; [ | eauto]; assumption).
+      etransitivity; eauto.
+      symmetry; eauto.
+    + assert (0^2 == 0) as zero_square by apply Ring.mul_0_l.
+      specialize (sqrt_square _ _ solve_correct).
+      rewrite !solve_correct in *.
+      symmetry in sqrt_square.
+      rewrite (proj1 (F_eqb_false _ 0)), Bool.andb_false_l.
+      Focus 2. {
+        rewrite !solve_correct in *.
+        intro.
+        apply neq_x_0.
+        rewrite H0, zero_square in sqrt_square.
+        rewrite Ring.zero_product_iff_zero_factor in sqrt_square.
+        tauto. } Unfocus.
       break_if; [ | apply eqb_sign_opp_r in Heqb];
         try (apply option_coordinates_eq_iff; split; try reflexivity);
         try eapply sign_match with (y := solve_for_x2 y); eauto;
-        try solve [symmetry; auto]; rewrite ?square_opp; auto;
-        (rewrite sqrt_square; [ | eauto]); try apply Ring.opp_nonzero_nonzero;
-        assumption.
+          try solve [symmetry; auto]; rewrite ?square_opp; auto;
+            intro; apply neq_x_0; rewrite solve_correct in *;
+      try apply Group.inv_zero_zero in H0;
+      rewrite H0, zero_square in sqrt_square; 
+        rewrite Ring.zero_product_iff_zero_factor in sqrt_square; tauto.
 Qed.
 
 Lemma point_encoding_valid : forall p,
