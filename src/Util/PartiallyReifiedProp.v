@@ -3,6 +3,7 @@
     computationally reduce things like [True /\ True], but can still
     express equality of types. *)
 Require Import Coq.Setoids.Setoid.
+Require Import Coq.Program.Tactics.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Tactics.
 
@@ -94,7 +95,7 @@ Section rel.
             || intuition try congruence
             || (exists eq_refl)
             || eauto
-            || subst
+            || (subst * )
             || apply conj
             || destruct_head' ex
             || solve [ apply reflexivity
