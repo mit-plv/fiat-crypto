@@ -378,6 +378,13 @@ Module Group.
       apply inv_id.
     Qed.
 
+    Lemma inv_zero_zero : forall x, inv x = id -> x = id.
+    Proof.
+      intros.
+      rewrite <-inv_id, <-H0.
+      symmetry; apply inv_inv.
+    Qed.
+
     Lemma eq_r_opp_r_inv a b c : a = op c (inv b) <-> op a b = c.
     Proof.
       split; intro Hx; rewrite Hx || rewrite <-Hx;
