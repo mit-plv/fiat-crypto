@@ -279,7 +279,6 @@ Module BoundedWord64.
        | TZ => t
        end.
 
-About Sumbool.sumbool_of_bool.
   Definition word64ToBoundedWord (x : Word64.word64) : t.
   Proof.
     refine (let v := Word64.word64ToZ x in
