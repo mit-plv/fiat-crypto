@@ -12,7 +12,6 @@ src/Assembly/Compile.v
 src/Assembly/Conversions.v
 src/Assembly/Evaluables.v
 src/Assembly/GF25519.v
-src/Assembly/GF25519BoundedInstantiation.v
 src/Assembly/HL.v
 src/Assembly/LL.v
 src/Assembly/PhoasCommon.v
@@ -136,7 +135,6 @@ src/Specific/GF1305.v
 src/Specific/GF25519.v
 src/Specific/GF25519Bounded.v
 src/Specific/GF25519BoundedCommon.v
-src/Specific/GF25519BoundedCommonWord.v
 src/Specific/GF25519Reflective.v
 src/Specific/SC25519.v
 src/Specific/FancyMachine256/Barrett.v

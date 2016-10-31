@@ -632,21 +632,19 @@ Proof.
          GF25519BoundedCommon.proj1_fe25519W
          PseudoMersenneBaseParams.limb_widths
          GF25519.params25519 length
-         Tuple.to_list Tuple.to_list'] in *.
-  (* TODO (jgross) : this should probably be Ltac'ed *)
-  assert (n = 0 \/ n = 1 \/ n = 2 \/ n = 3 \/ n = 4 \/ n = 5 \/ n = 6 \/ n = 7 \/ n = 8 \/ n = 9) by omega.
-  repeat match goal with H : _ \/ _ |- _ => destruct H end;
-    subst; cbv [nth_default nth_error pred];
-      match goal with |- appcontext [if ?x then _ else _] =>
-                      destruct x end; try congruence;
-        cbv - [GF25519BoundedCommon.proj_word Z.le Z.lt] in *;
-  match goal with
-  |- appcontext [GF25519BoundedCommon.proj_word ?b] =>
-  let A := fresh "H" in
-  pose proof (@GF25519BoundedCommon.word_bounded _ _ b) as A;
-    rewrite Bool.andb_true_iff in A; destruct A end;
-  rewrite !Z.leb_le in *;
-  omega.
+         Tuple.to_list Tuple.to_list' nth_default] in *.
+  repeat match goal with
+         | [ |- appcontext[nth_error _ ?n] ]
+           => is_var n; destruct n; simpl @nth_error; cbv beta iota
+         end;
+    simpl in *; unfold Z.pow_pos; simpl; try omega;
+      match goal with
+        |- appcontext [GF25519BoundedCommon.proj_word ?b] =>
+        let A := fresh "H" in
+        pose proof (@GF25519BoundedCommon.word_bounded _ _ b) as A;
+          rewrite Bool.andb_true_iff in A; destruct A end;
+      rewrite !Z.leb_le in *;
+      omega.
 Qed.
 
 Lemma feSign_correct : forall x,
