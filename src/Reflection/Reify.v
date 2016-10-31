@@ -286,7 +286,7 @@ Ltac Reify_rhs_gen Reify prove_interp_compile_correct interp_op try_tac :=
                            change interp_base_type with interp_base_type';
                            change interp_op with interp_op'
                       end;
-                      cbv iota beta delta [InputSyntax.Interp interp_type interp_type_gen interp_flat_type interp interpf]; reflexivity)) ] ] ].
+                      cbv iota beta delta [InputSyntax.Interp interp_type interp_type_gen interp_type_gen_hetero interp_flat_type interp interpf]; reflexivity)) ] ] ].
 
 Ltac prove_compile_correct :=
   fun _ => lazymatch goal with

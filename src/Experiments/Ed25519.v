@@ -20,6 +20,10 @@ Local Coercion GF25519BoundedCommon.word64ToZ : GF25519BoundedCommon.word64 >-> 
 Local Coercion GF25519BoundedCommon.proj1_fe25519 : GF25519BoundedCommon.fe25519 >-> GF25519.fe25519.
 Local Set Printing Coercions.
 
+Local Notation eta x := (fst x, snd x).
+Local Notation eta3 x := (eta (fst x), snd x).
+Local Notation eta4 x := (eta3 (fst x), snd x).
+
 Context {H: forall n : nat, Word.word n -> Word.word (b + b)}.
 
 Definition feSign (f :  GF25519BoundedCommon.fe25519) : bool :=
@@ -830,13 +834,20 @@ Lemma SRepEnc_correct : forall x : ModularArithmetic.F.F l, Senc x = SRepEnc (S2
 Qed.
 
 (** TODO: How do we speed up vm_compute here?  I think it's spending most of it's time rechecking boundedness... *)
+Definition ERepB_value := Eval vm_compute in (proj1_sig (EToRep B)).
 Let ERepB : Erep.
-  let rB := (eval vm_compute in (proj1_sig (EToRep B))) in
-  exists rB. cbv [GF25519BoundedCommon.eq ModularBaseSystem.eq Pre.onCurve]. vm_decide_no_check.
+  exists (eta4 ERepB_value).
+  cbv [GF25519BoundedCommon.eq ModularBaseSystem.eq Pre.onCurve].
+  vm_decide_no_check.
 Defined.
 
+Lemma ERepB_value_correct : ERepB_value = proj1_sig (EToRep B).
+Proof. vm_cast_no_check (eq_refl ERepB_value). Qed.
+
 Let ERepB_correct : ExtendedCoordinates.Extended.eq (field:=GF25519Bounded.field25519) ERepB (EToRep B).
-  vm_decide_no_check.
+  pose proof ERepB_value_correct; destruct (EToRep B).
+  cbv [proj1_sig] in *; subst.
+  vm_decide.
 Qed.
 
 Lemma B_order_l : CompleteEdwardsCurveTheorems.E.eq

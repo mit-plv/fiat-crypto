@@ -29,30 +29,37 @@ Section language.
 
   Section interp.
     Section type.
-      Context (interp_flat_type : flat_type -> Type).
-      Fixpoint interp_type_gen (t : type) :=
-        match t with
-        | Tflat t => interp_flat_type t
-        | Arrow x y => (interp_flat_type x -> interp_type_gen y)%type
-        end.
-      Section rel.
-        Context (R : forall t, interp_flat_type t -> interp_flat_type t -> Prop).
-        Fixpoint interp_type_gen_rel_pointwise (t : type)
-          : interp_type_gen t -> interp_type_gen t -> Prop :=
+      Section hetero.
+        Context (interp_src_type : base_type_code -> Type).
+        Context (interp_flat_type : flat_type -> Type).
+        Fixpoint interp_type_gen_hetero (t : type) :=
           match t with
-          | Tflat t => R t
-          | Arrow _ y => fun f g => forall x, interp_type_gen_rel_pointwise y (f x) (g x)
+          | Tflat t => interp_flat_type t
+          | Arrow x y => (interp_src_type x -> interp_type_gen_hetero y)%type
           end.
-        Global Instance interp_type_gen_rel_pointwise_Reflexive {H : forall t, Reflexive (R t)}
-          : forall t, Reflexive (interp_type_gen_rel_pointwise t).
-        Proof. induction t; repeat intro; reflexivity. Qed.
-        Global Instance interp_type_gen_rel_pointwise_Symmetric {H : forall t, Symmetric (R t)}
-          : forall t, Symmetric (interp_type_gen_rel_pointwise t).
-        Proof. induction t; simpl; repeat intro; symmetry; eauto. Qed.
-        Global Instance interp_type_gen_rel_pointwise_Transitive {H : forall t, Transitive (R t)}
-          : forall t, Transitive (interp_type_gen_rel_pointwise t).
-        Proof. induction t; simpl; repeat intro; etransitivity; eauto. Qed.
-      End rel.
+      End hetero.
+      Section homogenous.
+        Context (interp_flat_type : flat_type -> Type).
+        Definition interp_type_gen := interp_type_gen_hetero interp_flat_type interp_flat_type.
+        Section rel.
+          Context (R : forall t, interp_flat_type t -> interp_flat_type t -> Prop).
+          Fixpoint interp_type_gen_rel_pointwise (t : type)
+            : interp_type_gen t -> interp_type_gen t -> Prop :=
+            match t with
+            | Tflat t => R t
+            | Arrow _ y => fun f g => forall x, interp_type_gen_rel_pointwise y (f x) (g x)
+            end.
+          Global Instance interp_type_gen_rel_pointwise_Reflexive {H : forall t, Reflexive (R t)}
+            : forall t, Reflexive (interp_type_gen_rel_pointwise t).
+          Proof. induction t; repeat intro; reflexivity. Qed.
+          Global Instance interp_type_gen_rel_pointwise_Symmetric {H : forall t, Symmetric (R t)}
+            : forall t, Symmetric (interp_type_gen_rel_pointwise t).
+          Proof. induction t; simpl; repeat intro; symmetry; eauto. Qed.
+          Global Instance interp_type_gen_rel_pointwise_Transitive {H : forall t, Transitive (R t)}
+            : forall t, Transitive (interp_type_gen_rel_pointwise t).
+          Proof. induction t; simpl; repeat intro; etransitivity; eauto. Qed.
+        End rel.
+      End homogenous.
     End type.
     Section flat_type.
       Context (interp_base_type : base_type_code -> Type).
@@ -77,15 +84,30 @@ Section language.
     End flat_type.
     Section rel_pointwise2.
       Section type.
-        Context (interp_flat_type1 interp_flat_type2 : flat_type -> Type)
-                (R : forall t, interp_flat_type1 t -> interp_flat_type2 t -> Prop).
+        Section hetero.
+          Context (interp_src1 interp_src2 : base_type_code -> Type)
+                  (interp_flat_type1 interp_flat_type2 : flat_type -> Type)
+                  (Rsrc : forall t, interp_src1 t -> interp_src2 t -> Prop)
+                  (R : forall t, interp_flat_type1 t -> interp_flat_type2 t -> Prop).
 
-        Fixpoint interp_type_gen_rel_pointwise2 (t : type)
-          : interp_type_gen interp_flat_type1 t -> interp_type_gen interp_flat_type2 t -> Prop
-          := match t with
-             | Tflat t => R t
-             | Arrow src dst => @respectful_hetero _ _ _ _ (R src) (fun _ _ => interp_type_gen_rel_pointwise2 dst)
-             end.
+          Fixpoint interp_type_gen_rel_pointwise2_hetero (t : type)
+            : interp_type_gen_hetero interp_src1 interp_flat_type1 t
+              -> interp_type_gen_hetero interp_src2 interp_flat_type2 t
+              -> Prop
+            := match t with
+               | Tflat t => R t
+               | Arrow src dst => @respectful_hetero _ _ _ _ (Rsrc src) (fun _ _ => interp_type_gen_rel_pointwise2_hetero dst)
+               end.
+        End hetero.
+        Section homogenous.
+          Context (interp_flat_type1 interp_flat_type2 : flat_type -> Type)
+                  (R : forall t, interp_flat_type1 t -> interp_flat_type2 t -> Prop).
+
+          Definition interp_type_gen_rel_pointwise2
+            := interp_type_gen_rel_pointwise2_hetero interp_flat_type1 interp_flat_type2
+                                                     interp_flat_type1 interp_flat_type2
+                                                     R R.
+        End homogenous.
       End type.
       Section flat_type.
         Context (interp_base_type1 interp_base_type2 : base_type_code -> Type).
@@ -301,10 +323,12 @@ Global Arguments Pair {_ _ _ _ _} _ {_} _.
 Global Arguments Return {_ _ _ _ _} _.
 Global Arguments Abs {_ _ _ _ _ _} _.
 Global Arguments interp_type_rel_pointwise2 {_ _ _} R {t} _ _.
+Global Arguments interp_type_gen_rel_pointwise2_hetero {_ _ _ _ _} Rsrc R {t} _ _.
 Global Arguments interp_type_gen_rel_pointwise2 {_ _ _} R {t} _ _.
 Global Arguments interp_flat_type_rel_pointwise2_gen_Prop {_ _ _ P} and R {t} _ _.
 Global Arguments interp_flat_type_rel_pointwise2 {_ _ _} R {t} _ _.
 Global Arguments mapf_interp_flat_type {_ _ _} _ {t} _.
+Global Arguments interp_type_gen_hetero {_} _ _ _.
 Global Arguments interp_type_gen {_} _ _.
 Global Arguments interp_flat_type {_} _ _.
 Global Arguments interp_type_rel_pointwise {_} _ _ {_} _ _.

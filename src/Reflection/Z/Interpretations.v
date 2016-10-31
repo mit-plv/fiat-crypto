@@ -289,10 +289,25 @@ Module BoundedWord64.
     abstract (Z.ltb_to_lt; repeat split; (assumption || reflexivity)).
   Defined.
 
+  Definition boundedWordToWord64 (x : t) : Word64.word64
+    := match x with
+       | Some x' => value x'
+       | None => Word64.ZToWord64 0
+       end.
+
   Definition of_word64 ty : Word64.interp_base_type ty -> interp_base_type ty
     := match ty return Word64.interp_base_type ty -> interp_base_type ty with
        | TZ => word64ToBoundedWord
        end.
+  Definition to_word64 ty : interp_base_type ty -> Word64.interp_base_type ty
+    := match ty return interp_base_type ty -> Word64.interp_base_type ty with
+       | TZ => boundedWordToWord64
+       end.
+
+  Definition of_Z ty : Z.interp_base_type ty -> interp_base_type ty
+    := fun x => of_word64 _ (Word64.of_Z _ x).
+  Definition to_Z ty : interp_base_type ty -> Z.interp_base_type ty
+    := fun x => Word64.to_Z _ (to_word64 _ x).
 
   Definition BoundedWordToBounds (x : BoundedWord) : ZBounds.bounds
     := {| ZBounds.lower := lower x ; ZBounds.upper := upper x |}.
