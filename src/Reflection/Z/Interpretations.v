@@ -9,6 +9,7 @@ Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Tactics.
 Require Import Bedrock.Word.
+Require Import Crypto.Assembly.WordizeUtil.
 Require Import Crypto.Util.WordUtil.
 Export Reflection.Syntax.Notations.
 
@@ -40,9 +41,9 @@ Module Word64.
   Definition w64minus : word64 -> word64 -> word64 := @wminus _.
   Definition w64mul : word64 -> word64 -> word64 := @wmult _.
   Definition w64shl : word64 -> word64 -> word64
-    := fun x y => NToWord _ (Z.to_N (Z.shiftl (Z.of_N (wordToN x)) (Z.of_N (wordToN x)))).
+    := fun x y => NToWord _ (Z.to_N (Z.shiftl (Z.of_N (wordToN x)) (Z.of_N (wordToN y)))).
   Definition w64shr : word64 -> word64 -> word64
-    := fun x y => NToWord _ (Z.to_N (Z.shiftr (Z.of_N (wordToN x)) (Z.of_N (wordToN x)))).
+    := fun x y => NToWord _ (Z.to_N (Z.shiftr (Z.of_N (wordToN x)) (Z.of_N (wordToN y)))).
   Definition w64land : word64 -> word64 -> word64 := @wand _.
   Definition w64lor : word64 -> word64 -> word64 := @wor _.
   Definition w64neg : word64 -> word64 -> word64 (* TODO: FIXME? *)
@@ -72,17 +73,69 @@ Module Word64.
             -> Z.log2 (Zop (word64ToZ x) (word64ToZ y)) < Z.of_nat bit_width
             -> word64ToZ (wop x y) = (Zop (word64ToZ x) (word64ToZ y)))%Z).
 
+  Require Import Crypto.Assembly.WordizeUtil.
+
   Lemma word64ToZ_w64plus : bounds_2statement w64plus Z.add. Proof. w64ToZ_t. Qed.
   Lemma word64ToZ_w64minus : bounds_2statement w64minus Z.sub. Proof. w64ToZ_t. Qed.
   Lemma word64ToZ_w64mul : bounds_2statement w64mul Z.mul. Proof. w64ToZ_t. Qed.
+  Lemma word64ToZ_w64land : bounds_2statement w64land Z.land. Proof. w64ToZ_t. Qed.
+  Lemma word64ToZ_w64lor : bounds_2statement w64lor Z.lor. Proof. w64ToZ_t. Qed.
+
   Lemma word64ToZ_w64shl : bounds_2statement w64shl Z.shiftl.
-  Proof. w64ToZ_t. admit. Admitted.
+  Proof.
+    intros x y H H0.
+    w64ToZ_t.
+
+    destruct (N.eq_dec (Z.to_N (Z.of_N (wordToN x) << Z.of_N (wordToN y))) 0%N) as [e|e]; [
+      rewrite e; rewrite wordToN_NToWord; [|apply Npow2_gt0];
+      rewrite <- e; rewrite Z2N.id; [reflexivity|assumption]
+    | apply N.neq_0_lt_0 in e].
+
+    apply Z.bits_inj_iff'; intros k Hpos.
+    rewrite Z.shiftl_spec; [|assumption].
+    rewrite Z2N.inj_testbit; [|assumption].
+    rewrite wordToN_NToWord.
+
+    - rewrite <- N2Z.inj_testbit.
+      rewrite (Z2N.id k); [|assumption].
+      rewrite Z2N.id; [|assumption].
+      rewrite Z.shiftl_spec; [reflexivity|assumption].
+
+    - rewrite Npow2_N.
+      apply N.log2_lt_pow2; [assumption|].
+      apply N2Z.inj_lt.
+      rewrite nat_N_Z.
+      refine (Z.le_lt_trans _ _ _ _ H0).
+      rewrite log2_conv; reflexivity.
+  Qed.
+
   Lemma word64ToZ_w64shr : bounds_2statement w64shr Z.shiftr.
-  Proof. admit. Admitted.
-  Lemma word64ToZ_w64land : bounds_2statement w64land Z.land.
-  Proof. w64ToZ_t. Qed.
-  Lemma word64ToZ_w64lor : bounds_2statement w64lor Z.lor.
-  Proof. w64ToZ_t. Qed.
+  Proof.
+    intros x y H H0.
+    w64ToZ_t.
+
+    destruct (N.eq_dec (Z.to_N (Z.of_N (wordToN x) >> Z.of_N (wordToN y))) 0%N) as [e|e]; [
+      rewrite e; rewrite wordToN_NToWord; [|apply Npow2_gt0];
+      rewrite <- e; rewrite Z2N.id; [reflexivity|assumption]
+    | apply N.neq_0_lt_0 in e].
+
+    apply Z.bits_inj_iff'; intros k Hpos.
+    rewrite Z.shiftr_spec; [|assumption].
+    rewrite Z2N.inj_testbit; [|assumption].
+    rewrite wordToN_NToWord.
+
+    - rewrite <- N2Z.inj_testbit.
+      rewrite (Z2N.id k); [|assumption].
+      rewrite Z2N.id; [|assumption].
+      rewrite Z.shiftr_spec; [reflexivity|assumption].
+
+    - rewrite Npow2_N.
+      apply N.log2_lt_pow2; [assumption|].
+      apply N2Z.inj_lt.
+      rewrite nat_N_Z.
+      refine (Z.le_lt_trans _ _ _ _ H0).
+      rewrite log2_conv; reflexivity.
+  Qed.
 
   Definition interp_base_type (t : base_type) : Type
     := match t with

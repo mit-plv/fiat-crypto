@@ -277,37 +277,92 @@ Local Notation bounds_2statement wop Zop
           -> Z.log2 (Zop (Z.of_N (wordToN x)) (Z.of_N (wordToN y))) < Z.of_nat sz
           -> Z.of_N (wordToN (wop x y)) = (Zop (Z.of_N (wordToN x)) (Z.of_N (wordToN y))))%Z).
 
+
+Require Import Crypto.Assembly.WordizeUtil.
+Require Import Crypto.Assembly.Bounds.
+
 Lemma wordToN_wplus : bounds_2statement (@wplus _) Z.add.
 Proof.
-  admit.
-Admitted.
+  intros.
+  rewrite <- wordize_plus; [rewrite N2Z.inj_add; reflexivity|].
+  destruct (N.eq_dec (wordToN x + wordToN y) 0%N) as [e|e];
+    [rewrite e; apply Npow2_gt0|].
+  apply N.neq_0_lt_0 in e.
+  apply N2Z.inj_lt in e.
+  apply N2Z.inj_lt.
+  rewrite N2Z.inj_add in *.
+  rewrite Npow2_N.
+  rewrite N2Z.inj_pow.
+  replace (Z.of_N 2%N) with 2%Z by auto.
+  apply Z.log2_lt_pow2; [auto|].
+  rewrite nat_N_Z.
+  assumption.
+Qed.
+
 Hint Rewrite @wordToN_wplus using word_util_arith : push_wordToN.
 Hint Rewrite <- @wordToN_wplus using word_util_arith : pull_wordToN.
 
 Lemma wordToN_wminus : bounds_2statement (@wminus _) Z.sub.
 Proof.
-  admit.
-Admitted.
+  intros sz x y H ?.
+  assert (wordToN y <= wordToN x)%N. {
+    apply N2Z.inj_le.
+    rewrite <- (Z.add_0_l (Z.of_N (wordToN y))).
+    apply Z.le_add_le_sub_r; assumption.
+  }
+
+  rewrite <- N2Z.inj_sub; [|assumption].
+  rewrite <- wordize_minus; [reflexivity|apply N.le_ge; assumption].
+Qed.
+
 Hint Rewrite @wordToN_wminus using word_util_arith : push_wordToN.
 Hint Rewrite <- @wordToN_wminus using word_util_arith : pull_wordToN.
 
 Lemma wordToN_wmult : bounds_2statement (@wmult _) Z.mul.
 Proof.
-  admit.
-Admitted.
+  intros.
+  rewrite <- wordize_mult; [rewrite N2Z.inj_mul; reflexivity|].
+  destruct (N.eq_dec (wordToN x * wordToN y) 0%N) as [e|e];
+    [rewrite e; apply Npow2_gt0|].
+  apply N.neq_0_lt_0 in e.
+  apply N2Z.inj_lt in e.
+  apply N2Z.inj_lt.
+  rewrite N2Z.inj_mul in *.
+  rewrite Npow2_N.
+  rewrite N2Z.inj_pow.
+  replace (Z.of_N 2%N) with 2%Z by auto.
+  apply Z.log2_lt_pow2; [auto|].
+  rewrite nat_N_Z.
+  assumption.
+Qed.
+
 Hint Rewrite @wordToN_wmult using word_util_arith : push_wordToN.
 Hint Rewrite <- @wordToN_wmult using word_util_arith : pull_wordToN.
 
 Lemma wordToN_wand : bounds_2statement (@wand _) Z.land.
 Proof.
-  admit.
-Admitted.
+  intros.
+  rewrite wordize_and.
+  apply Z.bits_inj_iff'; intros k Hpos; apply Z.le_ge in Hpos.
+  rewrite Z.land_spec.
+  rewrite Z2N.inj_testbit; [|apply Z.ge_le; assumption].
+  rewrite N.land_spec.
+  repeat (rewrite <- Z2N.inj_testbit; [|apply Z.ge_le; assumption]).
+  reflexivity.
+Qed.
 Hint Rewrite @wordToN_wand using word_util_arith : push_wordToN.
 Hint Rewrite <- @wordToN_wand using word_util_arith : pull_wordToN.
 
 Lemma wordToN_wor : bounds_2statement (@wor _) Z.lor.
 Proof.
-  admit.
-Admitted.
+  intros.
+  rewrite wordize_or.
+  apply Z.bits_inj_iff'; intros k Hpos; apply Z.le_ge in Hpos.
+  rewrite Z.lor_spec.
+  rewrite Z2N.inj_testbit; [|apply Z.ge_le; assumption].
+  rewrite N.lor_spec.
+  repeat (rewrite <- Z2N.inj_testbit; [|apply Z.ge_le; assumption]).
+  reflexivity.
+Qed.
 Hint Rewrite @wordToN_wor using word_util_arith : push_wordToN.
 Hint Rewrite <- @wordToN_wor using word_util_arith : pull_wordToN.
