@@ -4,7 +4,7 @@ Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemListZOperations.
 Require Import Crypto.Util.Equality.
 Require Import Crypto.Util.ZUtil.
-Require Import Crypto.Util.PointedProp.
+Require Import Crypto.Util.PartiallyReifiedProp.
 Export Syntax.Notations.
 
 Local Set Boolean Equality Schemes.
@@ -57,31 +57,31 @@ Proof.
   unfold base_type_eq_semidec_transparent; congruence.
 Qed.
 
-Definition op_beq t1 tR (f g : op t1 tR) : option pointed_Prop
-  := option_pointed_Prop_of_bool match f, g with
-                                 | Add, Add => true
-                                 | Add, _ => false
-                                 | Sub, Sub => true
-                                 | Sub, _ => false
-                                 | Mul, Mul => true
-                                 | Mul, _ => false
-                                 | Shl, Shl => true
-                                 | Shl, _ => false
-                                 | Shr, Shr => true
-                                 | Shr, _ => false
-                                 | Land, Land => true
-                                 | Land, _ => false
-                                 | Lor, Lor => true
-                                 | Lor, _ => false
-                                 | Neg, Neg => true
-                                 | Neg, _ => false
-                                 | Cmovne, Cmovne => true
-                                 | Cmovne, _ => false
-                                 | Cmovle, Cmovle => true
-                                 | Cmovle, _ => false
-                                 end.
+Definition op_beq t1 tR (f g : op t1 tR) : reified_Prop
+  := match f, g return bool with
+     | Add, Add => true
+     | Add, _ => false
+     | Sub, Sub => true
+     | Sub, _ => false
+     | Mul, Mul => true
+     | Mul, _ => false
+     | Shl, Shl => true
+     | Shl, _ => false
+     | Shr, Shr => true
+     | Shr, _ => false
+     | Land, Land => true
+     | Land, _ => false
+     | Lor, Lor => true
+     | Lor, _ => false
+     | Neg, Neg => true
+     | Neg, _ => false
+     | Cmovne, Cmovne => true
+     | Cmovne, _ => false
+     | Cmovle, Cmovle => true
+     | Cmovle, _ => false
+     end.
 
-Lemma op_beq_bl : forall t1 tR x y, prop_of_option (op_beq t1 tR x y) -> x = y.
+Lemma op_beq_bl : forall t1 tR x y, to_prop (op_beq t1 tR x y) -> x = y.
 Proof.
   intros ?? x; destruct x;
     intro y;
