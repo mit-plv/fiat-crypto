@@ -70,14 +70,14 @@ Section language.
     Local Hint Extern 1 => progress unfold List.In in *.
     Local Hint Resolve wff_in_impl_Proper.
 
-    Lemma wff_SmartVar {t} x1 x2
-      : @wff var1 var2 (flatten_binding_list base_type_code x1 x2) t (SmartVar x1) (SmartVar x2).
+    Lemma wff_SmartVarf {t} x1 x2
+      : @wff var1 var2 (flatten_binding_list base_type_code x1 x2) t (SmartVarf x1) (SmartVarf x2).
     Proof.
-      unfold SmartVar.
+      unfold SmartVarf.
       induction t; simpl; constructor; eauto.
     Qed.
 
-    Local Hint Resolve wff_SmartVar.
+    Local Hint Resolve wff_SmartVarf.
 
     Lemma wff_Const_eta G {A B} v1 v2
       : @wff var1 var2 G (Prod A B) (Const v1) (Const v2)
@@ -100,30 +100,30 @@ Section language.
 
     Local Hint Resolve wff_Const_eta_fst wff_Const_eta_snd.
 
-    Lemma wff_SmartConst G {t t'} v1 v2 x1 x2
+    Lemma wff_SmartConstf G {t t'} v1 v2 x1 x2
           (Hin : List.In (existT (fun t : base_type_code => (@exprf var1 t * @exprf var2 t)%type) t (x1, x2))
-                         (flatten_binding_list base_type_code (SmartConst v1) (SmartConst v2)))
+                         (flatten_binding_list base_type_code (SmartConstf v1) (SmartConstf v2)))
           (Hwf : @wff var1 var2 G t' (Const v1) (Const v2))
       : @wff var1 var2 G t x1 x2.
     Proof.
       induction t'. simpl in *.
       { intuition (inversion_sigma; inversion_prod; subst; eauto). }
-      { unfold SmartConst in *; simpl in *.
+      { unfold SmartConstf in *; simpl in *.
         apply List.in_app_iff in Hin.
         intuition (inversion_sigma; inversion_prod; subst; eauto). }
     Qed.
 
-    Local Hint Resolve wff_SmartConst.
+    Local Hint Resolve wff_SmartConstf.
 
-    Lemma wff_SmartVarVar G {t t'} v1 v2 x1 x2
+    Lemma wff_SmartVarVarf G {t t'} v1 v2 x1 x2
           (Hin : List.In (existT (fun t : base_type_code => (exprf t * exprf t)%type) t (x1, x2))
-                          (flatten_binding_list base_type_code (SmartVarVar v1) (SmartVarVar v2)))
+                          (flatten_binding_list base_type_code (SmartVarVarf v1) (SmartVarVarf v2)))
       : @wff var1 var2 (flatten_binding_list base_type_code (t:=t') v1 v2 ++ G) t x1 x2.
     Proof.
       revert dependent G; induction t'; intros. simpl in *.
       { intuition (inversion_sigma; inversion_prod; subst; simpl; eauto).
         constructor; eauto. }
-      { unfold SmartVarVar in *; simpl in *.
+      { unfold SmartVarVarf in *; simpl in *.
         apply List.in_app_iff in Hin.
         intuition (inversion_sigma; inversion_prod; subst; eauto).
         { rewrite <- !List.app_assoc; eauto. } }

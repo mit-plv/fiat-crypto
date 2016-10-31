@@ -161,7 +161,7 @@ Section language.
     Local Hint Constructors or.
     Local Hint Extern 1 => progress unfold List.In in *.
     Local Hint Resolve wff_in_impl_Proper.
-    Local Hint Resolve wff_SmartVar.
+    Local Hint Resolve wff_SmartVarf.
 
     Lemma wff_linearizef G {t} e1 e2
       : @wff var1 var2 G t e1 e2

@@ -62,7 +62,7 @@ Section language.
          | LetIn tx n ex _ eC
            => let lx := @compute_livenessf ctx _ ex prefix in
               let lx := merge_liveness lx (prefix ++ repeat live (count_pairs tx)) in
-              let ctx := extend ctx n (SmartVal _ (fun _ => lx) tx) in
+              let ctx := extend ctx n (SmartValf _ (fun _ => lx) tx) in
               @compute_livenessf ctx _ eC (prefix ++ repeat dead (count_pairs tx))
          | Pair _ ex _ ey
            => merge_liveness (@compute_livenessf ctx _ ex prefix)

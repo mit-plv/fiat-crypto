@@ -33,12 +33,12 @@ Section language.
            => match postprocess _ (@inline_const_genf _ ex) in inline_directive t' return (interp_flat_type _ t' -> @exprf var tC) -> @exprf var tC with
               | default_inline _ ex
                 => match ex in Syntax.exprf _ _ _ t' return (interp_flat_type _ t' -> @exprf var tC) -> @exprf var tC with
-                   | Const _ x => fun eC => eC (SmartConst (op:=op) (var:=var) x)
+                   | Const _ x => fun eC => eC (SmartConstf (op:=op) (var:=var) x)
                    | Var _ x => fun eC => eC (Var x)
-                   | ex => fun eC => LetIn ex (fun x => eC (SmartVarVar x))
+                   | ex => fun eC => LetIn ex (fun x => eC (SmartVarVarf x))
                    end
               | no_inline _ ex
-                => fun eC => LetIn ex (fun x => eC (SmartVarVar x))
+                => fun eC => LetIn ex (fun x => eC (SmartVarVarf x))
               | inline _ ex => fun eC => eC ex
               end (fun x => @inline_const_genf _ (eC x))
          | Var _ x => x

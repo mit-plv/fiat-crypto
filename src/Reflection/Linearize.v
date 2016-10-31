@@ -53,11 +53,11 @@ Section language.
          | Const _ x => Const x
          | Var _ x => Var x
          | Op _ _ op args
-           => under_letsf (@linearizef _ args) (fun args => LetIn (Op op (SmartVar args)) SmartVar)
+           => under_letsf (@linearizef _ args) (fun args => LetIn (Op op (SmartVarf args)) SmartVarf)
          | Pair A ex B ey
            => under_letsf (@linearizef _ ex) (fun x =>
               under_letsf (@linearizef _ ey) (fun y =>
-              SmartVar (t:=Prod A B) (x, y)))
+              SmartVarf (t:=Prod A B) (x, y)))
          end.
 
     Fixpoint linearize {t} (e : expr t) : expr t

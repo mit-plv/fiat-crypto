@@ -25,8 +25,8 @@ Section language.
   Local Notation wff := (@wff base_type_code interp_base_type op).
   Local Notation wf := (@wf base_type_code interp_base_type op).
 
-  Local Hint Extern 1 => eapply interpf_SmartConst.
-  Local Hint Extern 1 => eapply interpf_SmartVarVar.
+  Local Hint Extern 1 => eapply interpf_SmartConstf.
+  Local Hint Extern 1 => eapply interpf_SmartVarVarf.
 
   Local Ltac t_fin :=
     repeat match goal with

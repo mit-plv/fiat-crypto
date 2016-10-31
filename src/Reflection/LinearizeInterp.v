@@ -25,8 +25,8 @@ Section language.
   Local Notation wff := (@wff base_type_code interp_base_type op).
   Local Notation wf := (@wf base_type_code interp_base_type op).
 
-  Local Hint Extern 1 => eapply interpf_SmartConst.
-  Local Hint Extern 1 => eapply interpf_SmartVarVar.
+  Local Hint Extern 1 => eapply interpf_SmartConstf.
+  Local Hint Extern 1 => eapply interpf_SmartVarVarf.
 
   Local Ltac t_fin :=
     repeat match goal with
@@ -70,7 +70,7 @@ Section language.
   Proof.
     clear.
     induction e;
-      repeat first [ progress rewrite ?interpf_under_letsf, ?interpf_SmartVar
+      repeat first [ progress rewrite ?interpf_under_letsf, ?interpf_SmartVarf
                    | progress simpl
                    | t_fin ].
   Qed.

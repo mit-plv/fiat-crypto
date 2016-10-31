@@ -167,27 +167,27 @@ Section language.
            | Arrow A B => fun v => abs _ _
                                        (fun x => @smart_interp_map f g h h' pair abs B (v (h' _ x)))
            end.
-      Fixpoint SmartVal {T} (val : forall t : base_type_code, T t) t : interp_flat_type_gen T t
+      Fixpoint SmartValf {T} (val : forall t : base_type_code, T t) t : interp_flat_type_gen T t
         := match t return interp_flat_type_gen T t with
            | Tbase _ => val _
-           | Prod A B => (@SmartVal T val A, @SmartVal T val B)
+           | Prod A B => (@SmartValf T val A, @SmartValf T val B)
            end.
 
       (** [SmartVar] is like [Var], except that it inserts
           pair-projections and [Pair] as necessary to handle
           [flat_type], and not just [base_type_code] *)
-      Definition SmartVar {t} : interp_flat_type_gen var t -> exprf t
+      Definition SmartVarf {t} : interp_flat_type_gen var t -> exprf t
         := @smart_interp_flat_map var exprf (fun t => Var) (fun A B x y => Pair x y) t.
-      Definition SmartVarMap {var var'} (f : forall t, var t -> var' t) {t}
+      Definition SmartVarfMap {var var'} (f : forall t, var t -> var' t) {t}
         : interp_flat_type_gen var t -> interp_flat_type_gen var' t
         := @smart_interp_flat_map var (interp_flat_type_gen var') f (fun A B x y => pair x y) t.
-      Definition SmartVarMapT {var var'} (f : forall t, var t -> var' t) (f' : forall t, var' t -> var t) {t}
+      Definition SmartVarMap {var var'} (f : forall t, var t -> var' t) (f' : forall t, var' t -> var t) {t}
         : interp_type_gen (interp_flat_type_gen var) t -> interp_type_gen (interp_flat_type_gen var') t
         := @smart_interp_map var (interp_type_gen (interp_flat_type_gen var')) f f' (fun A B x y => pair x y) (fun A B f x => f x) t.
-      Definition SmartVarVar {t} : interp_flat_type_gen var t -> interp_flat_type_gen exprf t
-        := SmartVarMap (fun t => Var).
-      Definition SmartConst {t} : interp_flat_type t -> interp_flat_type_gen exprf t
-        := SmartVarMap (fun t => Const (t:=t)).
+      Definition SmartVarVarf {t} : interp_flat_type_gen var t -> interp_flat_type_gen exprf t
+        := SmartVarfMap (fun t => Var).
+      Definition SmartConstf {t} : interp_flat_type t -> interp_flat_type_gen exprf t
+        := SmartVarfMap (fun t => Const (t:=t)).
     End expr.
 
     Definition Expr (t : type) := forall var, @expr var t.
@@ -289,12 +289,12 @@ Ltac admit_Wf := apply Wf_admitted.
 
 Global Arguments Const {_ _ _ _ _} _.
 Global Arguments Var {_ _ _ _ _} _.
-Global Arguments SmartVar {_ _ _ _ _} _.
-Global Arguments SmartVal {_} T _ t.
-Global Arguments SmartVarVar {_ _ _ _ _} _.
-Global Arguments SmartVarMap {_ _ _} _ {_} _.
-Global Arguments SmartVarMapT {_ _ _} _ _ {_} _.
-Global Arguments SmartConst {_ _ _ _ _} _.
+Global Arguments SmartVarf {_ _ _ _ _} _.
+Global Arguments SmartValf {_} T _ t.
+Global Arguments SmartVarVarf {_ _ _ _ _} _.
+Global Arguments SmartVarfMap {_ _ _} _ {_} _.
+Global Arguments SmartVarMap {_ _ _} _ _ {_} _.
+Global Arguments SmartConstf {_ _ _ _ _} _.
 Global Arguments Op {_ _ _ _ _ _} _ _.
 Global Arguments LetIn {_ _ _ _ _} _ {_} _.
 Global Arguments Pair {_ _ _ _ _} _ {_} _.

@@ -70,7 +70,7 @@ Section language.
       Fixpoint compilef {t} (e : @exprf (interp_flat_type_gen var) t) : @Syntax.exprf base_type_code interp_base_type op var t
         := match e in exprf t return @Syntax.exprf _ _ _ _ t with
            | Const _ x => Syntax.Const x
-           | Var _ x => Syntax.SmartVar x
+           | Var _ x => Syntax.SmartVarf x
            | Op _ _ op args => Syntax.Op op (@compilef _ args)
            | LetIn _ ex _ eC => Syntax.LetIn (@compilef _ ex) (fun x => @compilef _ (eC x))
            | Pair _ ex _ ey => Syntax.Pair (@compilef _ ex) (@compilef _ ey)
@@ -98,7 +98,7 @@ Section language.
                  | _ => reflexivity
                  | _ => progress unfold LetIn.Let_In
                  | _ => progress simpl in *
-                 | _ => rewrite interpf_SmartVar
+                 | _ => rewrite interpf_SmartVarf
                  | _ => rewrite <- surjective_pairing
                  | _ => progress rewrite_hyp *
                  | [ |- context[let (x, y) := ?v in _] ]
