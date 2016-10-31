@@ -56,10 +56,8 @@ Module Word64.
   Definition add : word64 -> word64 -> word64 := @wplus _.
   Definition sub : word64 -> word64 -> word64 := @wminus _.
   Definition mul : word64 -> word64 -> word64 := @wmult _.
-  Definition shl : word64 -> word64 -> word64
-    := fun x y => NToWord _ (N.shiftl (wordToN x) (wordToN y)).
-  Definition shr : word64 -> word64 -> word64
-    := fun x y => NToWord _ (N.shiftr (wordToN x) (wordToN y)).
+  Definition shl : word64 -> word64 -> word64 := @wordBin N.shiftl _.
+  Definition shr : word64 -> word64 -> word64 := @wordBin N.shiftr _.
   Definition land : word64 -> word64 -> word64 := @wand _.
   Definition lor : word64 -> word64 -> word64 := @wor _.
   Definition neg : word64 -> word64 -> word64 (* TODO: FIXME? *)
