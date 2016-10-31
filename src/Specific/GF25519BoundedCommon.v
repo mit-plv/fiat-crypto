@@ -21,14 +21,14 @@ Require Import Coq.ZArith.ZArith Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.ZArith.
 Local Open Scope Z.
 
 (* BEGIN aliases for word extraction *)
-Definition word64 := Word.word 64.
+Definition word64 := Z.
 Coercion word64ToZ (x : word64) : Z
-  := Z.of_N (wordToN x).
-Coercion ZToWord64 (x : Z) : word64 := NToWord _ (Z.to_N x).
-Definition w64eqb (x y : word64) := weqb x y.
+  := x.
+Coercion ZToWord64 (x : Z) : word64 := x.
+Definition w64eqb (x y : word64) := Z.eqb x y.
 
 Lemma word64eqb_Zeqb x y : (word64ToZ x =? word64ToZ y)%Z = w64eqb x y.
-Proof. apply wordeqb_Zeqb. Qed.
+Proof. reflexivity. Qed.
 
 Arguments word64 : simpl never.
 Global Opaque word64.

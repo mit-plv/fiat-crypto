@@ -13,7 +13,7 @@ Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
 
-Notation Expr := (Expr base_type Word64.interp_base_type op).
+Notation Expr := (Expr base_type Z.interp_base_type op).
 
 Local Ltac make_type_from uncurried_op :=
   let T := (type of uncurried_op) in
@@ -38,15 +38,15 @@ Definition ExprUnOpWireToFE : Type := Expr ExprUnOpWireToFET.
 Definition ExprUnOpFEToWire : Type := Expr ExprUnOpFEToWireT.
 
 Definition interp_bexpr : ExprBinOp -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
-  := fun e => curry_binop_fe25519W (Interp (@Word64.interp_op) e).
+  := fun e => curry_binop_fe25519W (Interp (@Z.interp_op) e).
 Definition interp_uexpr : ExprUnOp -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
-  := fun e => curry_unop_fe25519W (Interp (@Word64.interp_op) e).
+  := fun e => curry_unop_fe25519W (Interp (@Z.interp_op) e).
 Definition interp_uexpr_FEToZ : ExprUnOpFEToZ -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.word64
-  := fun e => curry_unop_fe25519W (Interp (@Word64.interp_op) e).
+  := fun e => curry_unop_fe25519W (Interp (@Z.interp_op) e).
 Definition interp_uexpr_FEToWire : ExprUnOpFEToWire -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.wire_digitsW
-  := fun e => curry_unop_fe25519W (Interp (@Word64.interp_op) e).
+  := fun e => curry_unop_fe25519W (Interp (@Z.interp_op) e).
 Definition interp_uexpr_WireToFE : ExprUnOpWireToFE -> Specific.GF25519BoundedCommon.wire_digitsW -> Specific.GF25519BoundedCommon.fe25519W
-  := fun e => curry_unop_wire_digitsW (Interp (@Word64.interp_op) e).
+  := fun e => curry_unop_wire_digitsW (Interp (@Z.interp_op) e).
 
 Notation binop_correct_and_bounded rop op
   := (ibinop_correct_and_bounded (interp_bexpr rop) op) (only parsing).
@@ -84,7 +84,7 @@ Notation rexpr_unop_FEToWire_sig op := (rexpr_sig ExprUnOpFEToWireT (uncurry_uno
 Notation rexpr_unop_WireToFE_sig op := (rexpr_sig ExprUnOpWireToFET (uncurry_unop_wire_digits op)) (only parsing).
 
 Notation correct_and_bounded_genT ropW'v ropZ_sigv
-  := (let ropW' := ropW'v in
+  := (let ropW' := MapInterp Word64.of_Z ropW'v in
       let ropZ_sig := ropZ_sigv in
       let ropW := MapInterp (fun _ x => x) ropW' in
       let ropZ := MapInterp Word64.to_Z ropW' in
@@ -108,4 +108,4 @@ Ltac rexpr_correct :=
     [ | apply @RelWfMapInterp, wf_ropW ].. ];
   auto with interp_related.
 
-Notation rword_of_Z rexprZ_sig := (MapInterp Word64.of_Z (proj1_sig rexprZ_sig)) (only parsing).
+Notation rword_of_Z rexprZ_sig := ((*MapInterp Word64.of_Z*) (proj1_sig rexprZ_sig)) (only parsing).
