@@ -241,7 +241,7 @@ Proof.
     unfold ModularBaseSystem.rep in Hencode; rewrite !Hencode in H.
   assumption.
 Qed.
-      
+
 Module N.
   Lemma size_le a b : (a <= b -> N.size a <= N.size b)%N.
   Proof.
@@ -364,10 +364,10 @@ Proof.
   replace (Z.of_nat 2) with 2%Z by reflexivity.
   omega.
 Qed.
-  
+
 Lemma combine_ZNWord : forall sz1 sz2 z1 z2,
-  (0 <= Z.of_nat sz1)%Z -> 
-  (0 <= Z.of_nat sz2)%Z -> 
+  (0 <= Z.of_nat sz1)%Z ->
+  (0 <= Z.of_nat sz2)%Z ->
   (0 <= z1 < 2 ^ (Z.of_nat sz1))%Z ->
   (0 <= z2 < 2 ^ (Z.of_nat sz2))%Z ->
   Word.combine (ZNWord sz1 z1) (ZNWord sz2 z2) =
@@ -395,7 +395,7 @@ Lemma nth_default_B_compat : forall i,
    GF25519.int_width)%Z.
 Proof.
     assert (@ModularBaseSystemProofs.FreezePreconditions
-                 GF25519.modulus GF25519.params25519 
+                 GF25519.modulus GF25519.params25519
                  GF25519.int_width) by
      (let A := fresh "H" in
             pose proof GF25519.freezePreconditions25519 as A;
@@ -428,7 +428,7 @@ Lemma minrep_freeze : forall x,
             0%Z.
 Proof.
     assert (@ModularBaseSystemProofs.FreezePreconditions
-                 GF25519.modulus GF25519.params25519 
+                 GF25519.modulus GF25519.params25519
                  GF25519.int_width)
       by (let A := fresh "H" in
             pose proof GF25519.freezePreconditions25519 as A;
@@ -473,7 +473,7 @@ Qed.
 Lemma convert_freezes: forall x,
   (ModularBaseSystemList.freeze GF25519.int_width
        (Tuple.to_list
-          (length PseudoMersenneBaseParams.limb_widths) x)) = 
+          (length PseudoMersenneBaseParams.limb_widths) x)) =
               (Tuple.to_list
                  (length
                     PseudoMersenneBaseParams.limb_widths)
@@ -738,7 +738,7 @@ Proof.
   cbv [GF25519.wire_widths length Tuple.fieldwise Tuple.fieldwise' fst snd] in *;
     intuition subst; reflexivity.
 Qed.
-  
+
 Lemma Proper_feEnc : Proper (GF25519BoundedCommon.eq ==> eq) feEnc.
 Proof.
   pose proof freezePre.
@@ -993,7 +993,7 @@ Proof.
          | |- _ => rewrite ModularArithmeticTheorems.F.of_Z_to_Z in *
          | |- _ => rewrite @ModularArithmeticTheorems.F.to_Z_of_Z in *
          | |- _ => reflexivity
-         | |- _ => omega 
+         | |- _ => omega
          end.
 Qed.
 
@@ -1029,7 +1029,7 @@ Let ERepDec :=
 
 Axiom ERepDec_correct : forall w : Word.word b, ERepDec w = @option_map E Erep EToRep (Edec w).
 
-Lemma Fsqrt_minus1_correct : 
+Lemma Fsqrt_minus1_correct :
  ModularArithmetic.F.mul Fsqrt_minus1 Fsqrt_minus1 =
  ModularArithmetic.F.opp
    (ModularArithmetic.F.of_Z GF25519.modulus 1).
@@ -1054,7 +1054,7 @@ Proof.
   apply (@PrimeFieldTheorems.F.sqrt_5mod8_correct GF25519.modulus _ eq_refl Fsqrt_minus1 Fsqrt_minus1_correct).
   eexists.
   symmetry; eassumption.
-Qed.  
+Qed.
 
 Let verify_correct :
   forall {mlen : nat} (msg : Word.word mlen) (pk : Word.word b)
@@ -1357,6 +1357,7 @@ Extraction Inline Crypto.Util.IterAssocOp.iter_op Crypto.Util.IterAssocOp.test_a
 Extraction Inline PointEncoding.Kencode_point.
 Extraction Inline ExtendedCoordinates.Extended.point ExtendedCoordinates.Extended.coordinates ExtendedCoordinates.Extended.to_twisted  ExtendedCoordinates.Extended.from_twisted ExtendedCoordinates.Extended.add_coordinates ExtendedCoordinates.Extended.add ExtendedCoordinates.Extended.opp ExtendedCoordinates.Extended.zero. (* ExtendedCoordinates.Extended.zero could be precomputed *)
 Extraction Inline CompleteEdwardsCurve.E.coordinates CompleteEdwardsCurve.E.zero.
+Extraction Inline GF25519BoundedCommon.proj_word GF25519BoundedCommon.Build_bounded_word GF25519BoundedCommon.Build_bounded_word'.
 
 (* Recursive Extraction sign. *)
   (* most of the code we want seems to be below [eq_dec1] and there is other stuff above that *)
