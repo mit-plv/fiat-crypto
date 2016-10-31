@@ -5,6 +5,10 @@ Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Z.Interpretations.
 Require Import Crypto.Reflection.Z.Reify.
 Require Export Crypto.Reflection.Z.Syntax.
+Require Import Crypto.Reflection.InterpWfRel.
+Require Import Crypto.Reflection.MapInterp.
+Require Import Crypto.Reflection.MapInterpWf.
+Require Import Crypto.Reflection.WfReflective.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
@@ -78,3 +82,30 @@ Notation rexpr_unop_sig op := (rexpr_sig ExprUnOpT (uncurry_unop_fe25519 op)) (o
 Notation rexpr_unop_FEToZ_sig op := (rexpr_sig ExprUnOpFEToZT (uncurry_unop_fe25519 op)) (only parsing).
 Notation rexpr_unop_FEToWire_sig op := (rexpr_sig ExprUnOpFEToWireT (uncurry_unop_fe25519 op)) (only parsing).
 Notation rexpr_unop_WireToFE_sig op := (rexpr_sig ExprUnOpWireToFET (uncurry_unop_wire_digits op)) (only parsing).
+
+Notation correct_and_bounded_genT ropW'v ropZ_sigv
+  := (let ropW' := ropW'v in
+      let ropZ_sig := ropZ_sigv in
+      let ropW := MapInterp (fun _ x => x) ropW' in
+      let ropZ := MapInterp Word64.to_Z ropW' in
+      let ropBounds := MapInterp ZBounds.of_word64 ropW' in
+      let ropBoundedWord64 := MapInterp BoundedWord64.of_word64 ropW' in
+      ropZ = proj1_sig ropZ_sig
+      /\ interp_type_rel_pointwise2 Relations.related_Zi (Interp (@BoundedWord64.interp_op) ropBoundedWord64) (Interp (@Z.interp_op) ropZ)
+      /\ interp_type_rel_pointwise2 Relations.related_boundsi (Interp (@BoundedWord64.interp_op) ropBoundedWord64) (Interp (@ZBounds.interp_op) ropBounds)
+      /\ interp_type_rel_pointwise2 Relations.related_word64i (Interp (@BoundedWord64.interp_op) ropBoundedWord64) (Interp (@Word64.interp_op) ropW))
+       (only parsing).
+
+Ltac rexpr_correct :=
+  let ropW' := fresh in
+  let ropZ_sig := fresh in
+  intros ropW' ropZ_sig;
+  let wf_ropW := fresh "wf_ropW" in
+  assert (wf_ropW : Wf ropW') by (subst ropW' ropZ_sig; reflect_Wf base_type_eq_semidec_is_dec op_beq_bl);
+  cbv zeta; repeat apply conj;
+  [ vm_compute; reflexivity
+  | apply @InterpRelWf;
+    [ | apply @RelWfMapInterp, wf_ropW ].. ];
+  auto with interp_related.
+
+Notation rword_of_Z rexprZ_sig := (MapInterp Word64.of_Z (proj1_sig rexprZ_sig)) (only parsing).

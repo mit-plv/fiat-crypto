@@ -543,4 +543,7 @@ Module Relations.
   Proof. admit. Admitted.
   Lemma related_word64_op : related_op related_word64i (@BoundedWord64.interp_op) (@Word64.interp_op).
   Proof. admit. Admitted.
+
+  Create HintDb interp_related discriminated.
+  Hint Resolve related_Z_op related_bounds_op related_word64_op related_Z_const related_bounds_const related_word64_const : interp_related.
 End Relations.
