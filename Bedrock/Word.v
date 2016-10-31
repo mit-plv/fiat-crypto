@@ -48,8 +48,8 @@ Fixpoint natToWord (sz n : nat) : word sz :=
 Fixpoint wordToN sz (w : word sz) : N :=
   match w with
     | WO => 0
-    | WS false _ w' => 2 * wordToN w'
-    | WS true _ w' => Nsucc (2 * wordToN w')
+    | WS false _ w' => N.double (wordToN w')
+    | WS true _ w' => N.succ_double (wordToN w')
   end%N.
 
 Definition Nmod2 (n : N) : bool :=
@@ -506,6 +506,8 @@ Theorem wordToN_nat : forall sz (w : word sz), wordToN w = N_of_nat (wordToNat w
   rewrite N_of_mult.
   rewrite <- IHw.
   rewrite Nmult_comm.
+  rewrite N.succ_double_spec.
+  rewrite N.add_1_r.
   reflexivity.
 
   rewrite N_of_mult.
@@ -1038,12 +1040,12 @@ Proof.
   induction a; intro b0; rewrite (shatter_word b0); intuition.
   simpl in H.
   destruct b; destruct (whd b0); intros.
-  f_equal. eapply IHa. eapply Nsucc_inj in H.
+  f_equal. eapply IHa. eapply N.succ_double_inj in H.
   destruct (wordToN a); destruct (wordToN (wtl b0)); try congruence.
   destruct (wordToN (wtl b0)); destruct (wordToN a); inversion H.
   destruct (wordToN (wtl b0)); destruct (wordToN a); inversion H.
   f_equal. eapply IHa.
-  destruct (wordToN a); destruct (wordToN (wtl b0)); try congruence.
+  destruct (wordToN a); destruct (wordToN (wtl b0)); simpl in *; try congruence.
 Qed.
 Lemma unique_inverse : forall sz (a b1 b2 : word sz),
   a ^+ b1 = wzero _ ->
