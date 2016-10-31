@@ -177,12 +177,23 @@ Section language.
                                        (@smart_interp_flat_map f g h pair A (fst v))
                                        (@smart_interp_flat_map f g h pair B (snd v))
            end.
-      Fixpoint smart_interp_map {f g}
+      Fixpoint smart_interp_map_hetero {f g g'}
                (h : forall x, f x -> g (Tflat (Tbase x)))
-               (h' : forall x, g (Tflat (Tbase x)) -> f x)
                (pair : forall A B, g (Tflat A) -> g (Tflat B) -> g (Prod A B))
-               (abs : forall A B, (g (Tflat (Tbase A)) -> g B) -> g (Arrow A B))
+               (abs : forall A B, (g' A -> g B) -> g (Arrow A B))
                {t}
+        : interp_type_gen_hetero g' (interp_flat_type_gen f) t -> g t
+        := match t return interp_type_gen_hetero g' (interp_flat_type_gen f) t -> g t with
+           | Tflat _ => @smart_interp_flat_map f (fun x => g (Tflat x)) h pair _
+           | Arrow A B => fun v => abs _ _
+                                       (fun x => @smart_interp_map_hetero f g g' h pair abs B (v x))
+           end.
+      Fixpoint smart_interp_map {f g}
+                 (h : forall x, f x -> g (Tflat (Tbase x)))
+                 (h' : forall x, g (Tflat (Tbase x)) -> f x)
+                 (pair : forall A B, g (Tflat A) -> g (Tflat B) -> g (Prod A B))
+                 (abs : forall A B, (g (Tflat (Tbase A)) -> g B) -> g (Arrow A B))
+                 {t}
         : interp_type_gen (interp_flat_type_gen f) t -> g t
         := match t return interp_type_gen (interp_flat_type_gen f) t -> g t with
            | Tflat _ => @smart_interp_flat_map f (fun x => g (Tflat x)) h pair _
@@ -206,6 +217,9 @@ Section language.
       Definition SmartVarMap {var var'} (f : forall t, var t -> var' t) (f' : forall t, var' t -> var t) {t}
         : interp_type_gen (interp_flat_type_gen var) t -> interp_type_gen (interp_flat_type_gen var') t
         := @smart_interp_map var (interp_type_gen (interp_flat_type_gen var')) f f' (fun A B x y => pair x y) (fun A B f x => f x) t.
+      Definition SmartVarMap_hetero {vars vars' var var'} (f : forall t, var t -> var' t) (f' : forall t, vars' t -> vars t) {t}
+        : interp_type_gen_hetero vars (interp_flat_type_gen var) t -> interp_type_gen_hetero vars' (interp_flat_type_gen var') t
+        := @smart_interp_map_hetero var (interp_type_gen_hetero vars' (interp_flat_type_gen var')) vars f (fun A B x y => pair x y) (fun A B f x => f (f' _ x)) t.
       Definition SmartVarVarf {t} : interp_flat_type_gen var t -> interp_flat_type_gen exprf t
         := SmartVarfMap (fun t => Var).
       Definition SmartConstf {t} : interp_flat_type t -> interp_flat_type_gen exprf t
@@ -315,6 +329,7 @@ Global Arguments SmartVarf {_ _ _ _ _} _.
 Global Arguments SmartValf {_} T _ t.
 Global Arguments SmartVarVarf {_ _ _ _ _} _.
 Global Arguments SmartVarfMap {_ _ _} _ {_} _.
+Global Arguments SmartVarMap_hetero {_ _ _ _ _} _ _ {_} _.
 Global Arguments SmartVarMap {_ _ _} _ _ {_} _.
 Global Arguments SmartConstf {_ _ _ _ _} _.
 Global Arguments Op {_ _ _ _ _ _} _ _.
