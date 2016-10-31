@@ -130,6 +130,10 @@ Definition feEnc (x : GF25519BoundedCommon.fe25519) : Word.word 255 :=
           (Word.combine (ZNWord 32 x4)
             (Word.combine (ZNWord 32 x5)
               (Word.combine (ZNWord 32 x6) (ZNWord 31 x7))))))).
+Check GF25519Bounded.unpack.
+Print GF25519BoundedCommon.wire_digits.
+Eval compute in GF25519.wire_widths.
+Eval compute in (Tuple.from_list 8 GF25519.wire_widths _).
 
 (** TODO(jadep or andreser, from jgross): Is the reversal on the words passed in correct? *)
 Definition feDec (w : Word.word 255) : option GF25519BoundedCommon.fe25519 :=
@@ -841,6 +845,7 @@ Let ERepB : Erep.
   cbv [GF25519BoundedCommon.eq ModularBaseSystem.eq Pre.onCurve].
   vm_decide_no_check.
 Defined.
+(* TODO(jgross) : since the wire bounds were fixed, the above [Defined] takes way too long and uses lots of memory (runs out if I have a web browser open). *)
 
 Lemma ERepB_value_correct : ERepB_value = proj1_sig (EToRep B).
 Proof. vm_cast_no_check (eq_refl ERepB_value). Qed.
