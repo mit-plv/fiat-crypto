@@ -1,6 +1,7 @@
 (** * PHOAS Representation of Gallina *)
 Require Import Coq.Strings.String Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 Require Import Crypto.Util.Tuple.
+Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
 
@@ -184,7 +185,7 @@ Section language.
            | Const _ x => x
            | Var _ x => x
            | Op _ _ op args => @interp_op _ _ op (@interpf _ args)
-           | LetIn _ ex _ eC => let x := @interpf _ ex in @interpf _ (eC x)
+           | LetIn _ ex _ eC => dlet x := @interpf _ ex in @interpf _ (eC x)
            | Pair _ ex _ ey => (@interpf _ ex, @interpf _ ey)
            end.
       Fixpoint interp {t} (e : @expr interp_type t) : interp_type t

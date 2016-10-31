@@ -31,6 +31,7 @@ Section language.
   Local Ltac t_fin :=
     repeat match goal with
            | _ => reflexivity
+           | _ => progress unfold LetIn.Let_In
            | _ => progress simpl in *
            | _ => progress intros
            | _ => progress inversion_sigma

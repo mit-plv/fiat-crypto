@@ -96,6 +96,7 @@ Section language.
         induction e;
           repeat match goal with
                  | _ => reflexivity
+                 | _ => progress unfold LetIn.Let_In
                  | _ => progress simpl in *
                  | _ => rewrite interpf_SmartVar
                  | _ => rewrite <- surjective_pairing

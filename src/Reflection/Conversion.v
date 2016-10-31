@@ -93,6 +93,7 @@ Section language.
     Proof.
       induction e;
         repeat match goal with
+               | _ => progress unfold LetIn.Let_In
                | _ => reflexivity
                | _ => progress simpl in *
                | _ => rewrite_hyp !*
