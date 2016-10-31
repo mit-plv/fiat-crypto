@@ -3,7 +3,8 @@ Require Import Crypto.Reflection.Syntax.
 Section language.
   Context {base_type : Type}
           {interp_base_type : base_type -> Type}
-          {op : flat_type base_type -> flat_type base_type -> Type}.
+          {op : flat_type base_type -> flat_type base_type -> Type}
+          {interp_op : forall src dst, op src dst -> interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst}.
   Fixpoint count_binders (t : type base_type) : nat
     := match t with
        | Arrow A B => S (count_binders B)
@@ -55,6 +56,26 @@ Section language.
        | 0 => fun _ => x
        | S n' => @Apply' n' var t x
        end.
+
+  Fixpoint ApplyInterped' n {t} {struct t}
+    : forall (x : interp_type interp_base_type t)
+             (args : binders_for' n t interp_base_type),
+      interp_type interp_base_type (remove_binders' n t)
+    := match t, n return (forall (x : interp_type interp_base_type t)
+                                 (args : binders_for' n t interp_base_type),
+                             interp_type interp_base_type (remove_binders' n t)) with
+       | Tflat _, _ => fun x _ => x
+       | Arrow s d, 0 => fun x => x
+       | Arrow s d, S n' => fun f args => @ApplyInterped' n' d (f (fst args)) (snd args)
+       end.
+
+  Definition ApplyInterped (n : nat) {t} (x : interp_type interp_base_type t)
+    : forall (args : binders_for n t interp_base_type),
+      interp_type interp_base_type (remove_binders n t)
+    := match n return (binders_for n t interp_base_type -> interp_type interp_base_type (remove_binders n t)) with
+       | 0 => fun _ => x
+       | S n' => @ApplyInterped' n' t x
+       end.
 End language.
 
 Arguments all_binders_for {_} !_ _ / .
@@ -62,3 +83,4 @@ Arguments count_binders {_} !_ / .
 Arguments binders_for {_} !_ !_ _ / .
 Arguments remove_binders {_} !_ !_ / .
 Arguments Apply {_ _ _ !_ _ _} !_ !_ / , {_ _ _} !_ {_ _} !_ !_ / .
+Arguments ApplyInterped {_ _ !_ !_} _ _ / .
