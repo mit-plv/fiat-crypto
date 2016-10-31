@@ -7,6 +7,8 @@ Require Import Crypto.ModularArithmetic.ModularBaseSystem.
 Require Import Crypto.Specific.GF25519.
 Require Import Crypto.Util.Tuple.
 
+Require InitialRing.
+
 Module GF25519.
   Definition bits: nat := 64.
   Definition width: Width bits := W64.
@@ -226,7 +228,7 @@ Module GF25519.
   Module Opp := Pipeline OppExpr.
 
   Section Instantiation.
-    Require Import InitialRing.
+    Import InitialRing.
 
     Definition Binary : Type := NAry 20 (word bits) (@interp_type (word bits) FE).
     Definition Unary : Type := NAry 10 (word bits) (@interp_type (word bits) FE).
