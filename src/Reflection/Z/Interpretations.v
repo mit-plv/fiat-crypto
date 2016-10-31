@@ -521,7 +521,7 @@ Module Relations.
                  | progress intros
                  | progress destruct_head' prod
                  | progress destruct_head' and
-                 | progress specialize_by ltac:(exact I)
+                 | progress specialize_by (exact I)
                  | progress subst
                  | progress break_match
                  | progress break_match_hyps
