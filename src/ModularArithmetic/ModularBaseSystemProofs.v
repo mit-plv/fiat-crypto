@@ -1017,7 +1017,7 @@ Section SquareRootProofs.
         then 0
         else (2 ^ B) >> (nth_default 0 limb_widths (pred n)))).
   Definition bounded_by u bounds :=
-      (forall n : nat,
+      (forall n : nat, (n < length limb_widths)%nat ->
           0 <= nth_default 0 (to_list (length limb_widths) u) n < bounds n).
 
   Lemma eqb_true_iff : forall u v x y,
@@ -1063,48 +1063,32 @@ Section SquareRootProofs.
   Context (modulus_5mod8 : modulus mod 8 = 5).
   Context {ec : ExponentiationChain (modulus / 8 + 1)}.
   Context (sqrt_m1 : digits) (sqrt_m1_correct : mul sqrt_m1 sqrt_m1 ~= F.opp 1%F).
-  Context (mul_ : digits -> digits -> digits)
-          (mul_equiv : forall x y, ModularBaseSystem.eq (mul_ x y) (mul x y))
-          {mul_input_bounds : nat -> Z}
-          (mul_bounded : forall x y, bounded_by x mul_input_bounds ->
-                                     bounded_by y mul_input_bounds ->
-                                     bounded_by (mul_ x y) freeze_input_bounds).
-  Context (pow_ : digits -> list (nat * nat) -> digits)
-          (pow_equiv : forall x is, ModularBaseSystem.eq (pow_ x is) (pow x is))
-          {pow_input_bounds : nat -> Z}
-          (pow_bounded : forall x is, bounded_by x pow_input_bounds ->
-                                      bounded_by (pow_ x is) mul_input_bounds).
 
-  Lemma sqrt_5mod8_correct : forall u x, u ~= x ->
-    bounded_by u pow_input_bounds -> bounded_by u freeze_input_bounds ->
-    (sqrt_5mod8 B mul_ pow_ chain chain_correct sqrt_m1 u) ~= F.sqrt_5mod8 (decode sqrt_m1) x.
+  Lemma sqrt_5mod8_correct : forall u x powx powx_squared, u ~= x ->
+    bounded_by u freeze_input_bounds ->
+    bounded_by powx_squared freeze_input_bounds ->
+    ModularBaseSystem.eq powx (pow u chain) ->
+    ModularBaseSystem.eq powx_squared (mul powx powx) ->
+    (sqrt_5mod8 B powx powx_squared chain chain_correct sqrt_m1 u) ~= F.sqrt_5mod8 (decode sqrt_m1) x.
   Proof.
     cbv [sqrt_5mod8 F.sqrt_5mod8].
     intros.
     repeat match goal with
            | |- _ => progress (cbv [sqrt_5mod8 F.sqrt_5mod8]; intros)
            | |- _ => rewrite @F.pow_2_r in *
-           | |- _ => rewrite mul_equiv
-           | |- _ => rewrite pow_equiv
            | |- _ => rewrite eqb_correct in * by eassumption
            | |- (if eqb _ ?a ?b then _ else _) ~=
                 (if dec (?c = _) then _ else _) =>
-             assert (a ~= c) by (cbv [rep]; rewrite mul_equiv;
-                                 apply mul_rep; cbv [rep];
-                                 rewrite pow_equiv, <-chain_correct;
-                                 apply pow_rep; auto);
-               cbv [rep]; rewrite ?mul_equiv, ?pow_equiv;
-                 repeat break_if
+             assert (a ~= c) by
+                 (cbv [rep]; rewrite <-chain_correct, <-pow_rep, <-mul_rep;
+                  eassumption); repeat break_if
            | |- _ => apply mul_rep; try reflexivity;
-                       rewrite <-chain_correct; cbv [rep];
-                         rewrite pow_equiv; apply pow_rep; eassumption
-           | |- _ => rewrite <-chain_correct; apply pow_rep; eassumption
+                       rewrite <-chain_correct, <-pow_rep; eassumption
+           | |- _ => rewrite <-chain_correct, <-pow_rep; eassumption
            | H : eqb _ ?a ?b = true, H1 : ?b ~= ?y, H2 : ?a ~= ?x |- _ =>
-             rewrite <-(eqb_true_iff a b x y) in H
-               by (eassumption || apply mul_bounded, pow_bounded; auto)
+             rewrite <-(eqb_true_iff a b x y) in H by eassumption
            | H : eqb _ ?a ?b = false, H1 : ?b ~= ?y, H2 : ?a ~= ?x |- _ =>
-             rewrite <-(eqb_false_iff a b x y) in H
-               by (eassumption || apply mul_bounded, pow_bounded; auto)
+             rewrite <-(eqb_false_iff a b x y) in H by eassumption
            | |- _ => congruence
            end.
   Qed.

@@ -95,13 +95,10 @@ Section ModularBaseSystem.
                   (chain_correct : fold_chain 0%N N.add chain (1%N :: nil) = Z.to_N (modulus / 4 + 1))
                   (x : digits) : digits := pow x chain.
 
-  (* sqrt_5mod8 is parameterized over implementation of [mul] and [pow] because it relies on bounds-checking
-     for these two functions, which is much easier for simplified implementations than the more generalized
-     ones defined here. *)
-  Definition sqrt_5mod8 B mul_ pow_ (chain : list (nat * nat))
+  Definition sqrt_5mod8 B powx powx_squared (chain : list (nat * nat))
                   (chain_correct : fold_chain 0%N N.add chain (1%N :: nil) = Z.to_N (modulus / 8 + 1))
                   (sqrt_minus1 x : digits) : digits :=
-    let b := pow_ x chain in if eqb B (mul_ b b) x then b else mul_ sqrt_minus1 b.
+    if eqb B powx_squared x then powx else mul sqrt_minus1 powx.
 
   Import Morphisms.
   Global Instance eq_Equivalence : Equivalence eq.

@@ -1069,32 +1069,41 @@ Section SquareRoots.
 
   End SquareRoot3mod4.
 
-  Import Morphisms.
-  Global Instance eqb_Proper : Proper (Logic.eq ==> eq ==> eq ==> Logic.eq) ModularBaseSystem.eqb. Admitted.
-
   Section SquareRoot5mod8.
   Context {ec : ExponentiationChain (modulus / 8 + 1)}.
   Context (sqrt_m1 : digits) (sqrt_m1_correct : rep (mul sqrt_m1 sqrt_m1) (F.opp 1%F)).
   Context {int_width} (preconditions : freezePreconditions prm int_width).
 
-  Definition sqrt_5mod8_opt_sig (us : digits) :
+  Definition sqrt_5mod8_opt_sig (powx powx_squared us : digits) :
     { vs : digits |
-      eq vs (sqrt_5mod8 int_width (carry_mul_opt k_ c_) (pow_opt k_ c_ one_) chain chain_correct sqrt_m1 us)}.
+      eq vs (sqrt_5mod8 int_width powx powx_squared chain chain_correct sqrt_m1 us)}.
   Proof.
-    eexists; cbv [sqrt_5mod8].
-    let LHS := match goal with |- eq ?LHS ?RHS => LHS end in
-    let RHS := match goal with |- eq ?LHS ?RHS => RHS end in
-    let RHSf := match (eval pattern (pow_opt k_ c_ one_ us chain) in RHS) with ?RHSf _ => RHSf end in
-    change (eq LHS (Let_In (pow_opt k_ c_ one_ us chain) RHSf)).
-    reflexivity.
+    cbv [sqrt_5mod8].
+    match goal with
+      |- appcontext[(if ?P then ?t else mul ?a ?b)] =>
+      assert (eq (carry_mul_opt k_ c_ a b) (mul a b))
+        by (rewrite carry_mul_opt_correct by auto;
+           cbv [eq]; rewrite carry_mul_rep, mul_rep; reflexivity)
+    end.
+    let RHS := match goal with |- {vs | eq ?vs ?RHS} => RHS end in
+    let RHSf := match (eval pattern powx in RHS) with ?RHSf _ => RHSf end in
+    change ({vs | eq vs (Let_In powx RHSf)}).
+    match goal with
+    | H : eq (?g powx) (?f powx)
+    |- {vs | eq vs (Let_In powx (fun x => if ?P then x else ?f x))} =>
+      exists (Let_In powx (fun x => if P then x else g x))
+    end.
+    break_if; try reflexivity.
+    cbv [Let_In].
+    auto.
   Defined.
 
-  Definition sqrt_5mod8_opt us := Eval cbv [proj1_sig sqrt_5mod8_opt_sig] in
-    proj1_sig (sqrt_5mod8_opt_sig us).
+  Definition sqrt_5mod8_opt powx powx_squared us := Eval cbv [proj1_sig sqrt_5mod8_opt_sig] in
+    proj1_sig (sqrt_5mod8_opt_sig powx powx_squared us).
 
-  Definition sqrt_5mod8_opt_correct us
-    : eq (sqrt_5mod8_opt us) (ModularBaseSystem.sqrt_5mod8 int_width _ _ chain chain_correct sqrt_m1 us)
-    := Eval cbv [proj2_sig sqrt_5mod8_opt_sig] in proj2_sig (sqrt_5mod8_opt_sig us).
+  Definition sqrt_5mod8_opt_correct powx powx_squared us
+    : eq (sqrt_5mod8_opt powx powx_squared us) (ModularBaseSystem.sqrt_5mod8 int_width _ _ chain chain_correct sqrt_m1 us)
+    := Eval cbv [proj2_sig sqrt_5mod8_opt_sig] in proj2_sig (sqrt_5mod8_opt_sig powx powx_squared us).
 
   End SquareRoot5mod8.
 

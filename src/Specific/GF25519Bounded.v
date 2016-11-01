@@ -175,8 +175,12 @@ Qed.
 Definition sqrt_m1W : fe25519W :=
   Eval vm_compute in fe25519ZToW sqrt_m1.
 
+Definition GF25519sqrt x : GF25519.fe25519 :=
+  dlet powx := powW (fe25519ZToW x) (chain GF25519.sqrt_ec) in
+  GF25519.sqrt (fe25519WToZ powx) (fe25519WToZ (mulW powx powx)) x.
+
 Definition sqrtW_sig
-  : { sqrtW | iunop_correct_and_bounded sqrtW GF25519.sqrt }.
+  : { sqrtW | iunop_correct_and_bounded sqrtW GF25519sqrt }.
 Proof.
   eexists.
   unfold GF25519.sqrt.
