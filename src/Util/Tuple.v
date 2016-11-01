@@ -17,17 +17,17 @@ Definition tuple T n : Type :=
   | S n' => tuple' T n'
   end.
 
-Fixpoint hlist' n : tuple' Type n -> Type :=
+Fixpoint hlist' T n (f : T -> Type) : tuple' T n -> Type :=
   match n return tuple' Type n -> Type with
-  | 0 => fun T => T
-  | S n' => fun Ts => (hlist' n' (fst Ts) * snd Ts)%type
+  | 0 => fun T => f T
+  | S n' => fun Ts => (hlist' T n' f (fst Ts) * f (snd Ts))%type
   end.
-Global Arguments hlist' {n} _.
+Global Arguments hlist' {T n} f _.
 
-Definition hlist {n} : forall (Ts : tuple Type n), Type :=
+Definition hlist {T n} (f : T -> Type) : forall (Ts : tuple T n), Type :=
   match n return tuple Type n -> Type with
   | 0 => fun _ => unit
-  | S n' => @hlist' n'
+  | S n' => @hlist' T n' f
   end.
 
 Fixpoint to_list' {T} (n:nat) {struct n} : tuple' T n -> list T :=
