@@ -176,21 +176,16 @@ Definition sqrt_m1W : fe25519W :=
   Eval vm_compute in fe25519ZToW sqrt_m1.
 
 Definition GF25519sqrt x : GF25519.fe25519 :=
-  dlet powx := GF25519.pow x (chain GF25519.sqrt_ec) in
-  GF25519.sqrt powx (GF25519.mul powx powx) x.
+  dlet powx := powW (fe25519ZToW x) (chain GF25519.sqrt_ec) in
+  GF25519.sqrt (fe25519WToZ powx) (fe25519WToZ (mulW powx powx)) x.
 
 Definition sqrtW_sig
   : { sqrtW | iunop_correct_and_bounded sqrtW GF25519sqrt }.
 Proof.
   eexists.
   unfold GF25519sqrt, GF25519.sqrt.
-  intros; set_evars; rewrite <- (fun pf => proj1 (powW_correct_and_bounded _ _ pf)) by assumption; subst_evars.
-  match goal with
-  | [ |- context G[dlet x := fe25519WToZ ?v in @?f x] ]
-    => let G' := context G[dlet x := v in f (fe25519WToZ x)] in
-       cut G'; cbv beta;
-         [ cbv [Let_In]; exact (fun x => x) | ]
-  end.
+  intros.
+  rewrite !fe25519WToZToW.
   split.
   { etransitivity.
     Focus 2. {
@@ -201,8 +196,7 @@ Proof.
         => is_var z; change (x = match fe25519WToZ z with y => f end)
       end.
       change sqrt_m1 with (fe25519WToZ sqrt_m1W).
-      rewrite <- (fun X Y => proj1 (mulW_correct_and_bounded a a X Y)),
-      <- (fun X Y => proj1 (mulW_correct_and_bounded sqrt_m1W a X Y)), <- eqbW_correct, (pull_bool_if fe25519WToZ)
+      rewrite <- (fun X Y => proj1 (mulW_correct_and_bounded sqrt_m1W a X Y)), <- eqbW_correct, (pull_bool_if fe25519WToZ)
         by repeat match goal with
                   | _ => progress subst
                   | [ |- is_bounded (fe25519WToZ ?op) = true ]
