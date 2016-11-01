@@ -64,7 +64,7 @@ Let Erep := (@ExtendedCoordinates.Extended.point
 
 Local Existing Instance GF25519.homomorphism_F25519_encode.
 Local Existing Instance GF25519.homomorphism_F25519_decode.
-Lemma twedprm_ERep :
+Local Instance twedprm_ERep :
   @CompleteEdwardsCurve.E.twisted_edwards_params
    GF25519BoundedCommon.fe25519 GF25519BoundedCommon.eq
    GF25519BoundedCommon.zero GF25519BoundedCommon.one
@@ -844,8 +844,7 @@ Let ERepB : Erep.
   exists (eta4 ERepB_value).
   cbv [GF25519BoundedCommon.eq ModularBaseSystem.eq Pre.onCurve].
   vm_decide_no_check.
-Defined.
-(* TODO(jgross) : since the wire bounds were fixed, the above [Defined] takes way too long and uses lots of memory (runs out if I have a web browser open). *)
+Qed.
 
 Lemma ERepB_value_correct : ERepB_value = proj1_sig (EToRep B).
 Proof. vm_cast_no_check (eq_refl ERepB_value). Qed.
@@ -1042,7 +1041,25 @@ Let ERepDec :=
          feDec GF25519Bounded.sqrt
     ).
 
-Axiom ERepDec_correct : forall w : Word.word b, ERepDec w = @option_map E Erep EToRep (Edec w).
+Lemma extended_to_coord_from_twisted: forall pt,
+  Tuple.fieldwise (n := 2) GF25519BoundedCommon.eq
+     (extended_to_coord (ExtendedCoordinates.Extended.from_twisted pt))
+      (CompleteEdwardsCurve.E.coordinates pt).
+Proof.
+  intros; cbv [extended_to_coord].
+  rewrite ExtendedCoordinates.Extended.to_twisted_from_twisted.
+  reflexivity.
+Qed.
+
+Local Instance Proper_sqrt :
+  Proper (GF25519BoundedCommon.eq ==> GF25519BoundedCommon.eq) GF25519Bounded.sqrt.
+Admitted.
+
+Lemma feDec_correct : forall w : Word.word (Init.Nat.pred b),
+        option_eq GF25519BoundedCommon.eq
+          (option_map GF25519BoundedCommon.encode
+                      (PointEncoding.Fdecode w)) (feDec w).
+Admitted.
 
 Lemma Fsqrt_minus1_correct :
  ModularArithmetic.F.mul Fsqrt_minus1 Fsqrt_minus1 =
@@ -1056,6 +1073,79 @@ Proof.
   rewrite <-GF25519.mul_correct.
   apply GF25519.sqrt_m1_correct.
 Qed.
+
+Definition bounds i := snd (nth_default (0,0)%Z GF25519BoundedCommon.bounds i).
+
+Lemma bounded_by_mul_freeze : forall x y,
+  ModularBaseSystemProofs.bounded_by x bounds ->
+  ModularBaseSystemProofs.bounded_by y bounds ->
+  ModularBaseSystemProofs.bounded_by
+    (ModularBaseSystemOpt.carry_mul_opt GF25519.k_ GF25519.c_ x
+       y) (ModularBaseSystemProofs.freeze_input_bounds (B := GF25519.int_width)).
+Admitted.
+
+Lemma bounded_by_pow : forall x is,
+ ModularBaseSystemProofs.bounded_by x bounds ->
+ ModularBaseSystemProofs.bounded_by
+   (ModularBaseSystemOpt.pow_opt GF25519.k_ GF25519.c_
+                                 GF25519.one_ x is) bounds.
+Admitted.
+
+Lemma bounded_by_encode : forall x,
+ ModularBaseSystemProofs.bounded_by (ModularBaseSystem.encode x)
+                                    bounds.
+Admitted.
+
+Lemma bounded_by_encode_freeze : forall x,
+ ModularBaseSystemProofs.bounded_by (ModularBaseSystem.encode x)
+                                    (ModularBaseSystemProofs.freeze_input_bounds (B := GF25519.int_width)).
+Admitted.
+
+Lemma sqrt_correct : forall x : ModularArithmetic.F.F q,
+        GF25519BoundedCommon.eq
+          (GF25519BoundedCommon.encode
+             (PrimeFieldTheorems.F.sqrt_5mod8 Fsqrt_minus1 x))
+          (GF25519Bounded.sqrt (GF25519BoundedCommon.encode x)).
+Proof.
+  intros.
+  cbv [GF25519BoundedCommon.eq].
+  rewrite GF25519Bounded.sqrt_correct.
+  rewrite !GF25519BoundedCommon.proj1_fe25519_encode.
+  rewrite GF25519.sqrt_correct, ModularBaseSystemOpt.sqrt_5mod8_opt_correct.
+  cbv [ModularBaseSystem.eq].
+  rewrite ModularBaseSystemProofs.encode_rep.
+  symmetry.
+  eapply @ModularBaseSystemProofs.sqrt_5mod8_correct;
+    eauto using freezePre, bounded_by_mul_freeze, bounded_by_pow, ModularBaseSystemProofs.encode_rep, bounded_by_encode, bounded_by_encode_freeze;
+    intros; cbv [ModularBaseSystem.eq].
+  { rewrite ModularBaseSystemOpt.carry_mul_opt_correct by reflexivity.
+    rewrite ModularBaseSystemProofs.carry_mul_rep by reflexivity.
+    rewrite ModularBaseSystemProofs.mul_rep by reflexivity.
+    reflexivity. }
+  { rewrite ModularBaseSystemOpt.pow_opt_correct; reflexivity. }
+Qed.
+
+Lemma ERepDec_correct : forall w : Word.word b,
+    ERepDec w = @option_map E Erep EToRep (Edec w).
+Proof.
+  pose proof (@PointEncoding.Kdecode_point_correct
+                (pred b) _ Ed25519.a Ed25519.d _
+                GF25519.modulus_gt_2 bound_check255
+                _ _ _ _ _ _ _ _ _ _ GF25519Bounded.field25519
+                _ _ _ _ _ phi_a phi_d feSign feSign_correct _ 
+                (ExtendedCoordinates.Extended.from_twisted
+                  (field := GF25519Bounded.field25519)
+                  (prm := twedprm_ERep))
+                extended_to_coord
+                extended_to_coord_from_twisted
+                _ ext_eq_correct _ _ encode_eq_iff
+                feDec GF25519Bounded.sqrt _ _ feDec_correct
+                (@PrimeFieldTheorems.F.sqrt_5mod8 _ Fsqrt_minus1)
+                sqrt_correct
+             ).
+  intros; specialize (H0 w).
+  cbv [ERepDec Edec EToRep].
+Admitted.
 
 Lemma eq_enc_E_iff : forall (P_ : Word.word b) (P : E),
  Eenc P = P_ <->
