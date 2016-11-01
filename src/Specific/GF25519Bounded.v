@@ -45,7 +45,7 @@ Local Ltac define_unop_WireToFE f opW blem :=
   abstract bounded_wire_digits_t opW blem.
 
 Local Opaque Let_In.
-Local Opaque Z.add Z.sub Z.mul Z.shiftl Z.shiftr Z.land Z.lor Z.eqb.
+Local Opaque Z.add Z.sub Z.mul Z.shiftl Z.shiftr Z.land Z.lor Z.eqb NToWord64.
 Local Arguments interp_radd / _ _.
 Local Arguments interp_rsub / _ _.
 Local Arguments interp_rmul / _ _.
