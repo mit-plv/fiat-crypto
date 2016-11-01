@@ -131,6 +131,7 @@ Definition feEnc (x : GF25519BoundedCommon.fe25519) : Word.word 255 :=
             (Word.combine (ZNWord 32 x5)
               (Word.combine (ZNWord 32 x6) (ZNWord 31 x7))))))).
 
+(** TODO(jadep or andreser, from jgross): Is the reversal on the words passed in correct? *)
 Definition feDec (w : Word.word 255) : option GF25519BoundedCommon.fe25519 :=
   let w0 := Word.split1 32 _ w in
   let a0 := Word.split2 32 _ w in
@@ -146,14 +147,14 @@ Definition feDec (w : Word.word 255) : option GF25519BoundedCommon.fe25519 :=
   let a5 := Word.split2 32 _ a4 in
   let w6 := Word.split1 32 _ a5 in
   let w7 := Word.split2 32 _ a5 in
-  let result := (GF25519Bounded.unpack (GF25519BoundedCommon.word32_to_unbounded_word w0,
-                                        GF25519BoundedCommon.word32_to_unbounded_word w1,
-                                        GF25519BoundedCommon.word32_to_unbounded_word w2,
-                                        GF25519BoundedCommon.word32_to_unbounded_word w3,
-                                        GF25519BoundedCommon.word32_to_unbounded_word w4,
-                                        GF25519BoundedCommon.word32_to_unbounded_word w5,
+  let result := (GF25519Bounded.unpack (GF25519BoundedCommon.word31_to_unbounded_word w7,
                                         GF25519BoundedCommon.word32_to_unbounded_word w6,
-                                        GF25519BoundedCommon.word31_to_unbounded_word w7)) in
+                                        GF25519BoundedCommon.word32_to_unbounded_word w5,
+                                        GF25519BoundedCommon.word32_to_unbounded_word w4,
+                                        GF25519BoundedCommon.word32_to_unbounded_word w3,
+                                        GF25519BoundedCommon.word32_to_unbounded_word w2,
+                                        GF25519BoundedCommon.word32_to_unbounded_word w1,
+                                        GF25519BoundedCommon.word32_to_unbounded_word w0)) in
   if GF25519BoundedCommon.w64eqb (GF25519Bounded.ge_modulus result) (GF25519BoundedCommon.ZToWord64 1)
   then None else (Some result).
 

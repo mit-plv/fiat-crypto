@@ -52,15 +52,15 @@ Local Ltac make_bounds ls :=
   exact v.
 
 Definition ExprBinOp_bounds : all_binders_for ExprBinOpT ZBounds.interp_base_type.
-Proof. make_bounds (bounds ++ bounds)%list. Defined.
+Proof. make_bounds (Tuple.to_list _ bounds ++ Tuple.to_list _ bounds)%list. Defined.
 Definition ExprUnOp_bounds : all_binders_for ExprUnOpT ZBounds.interp_base_type.
-Proof. make_bounds bounds. Defined.
+Proof. make_bounds (Tuple.to_list _ bounds). Defined.
 Definition ExprUnOpFEToZ_bounds : all_binders_for ExprUnOpFEToZT ZBounds.interp_base_type.
-Proof. make_bounds bounds. Defined.
+Proof. make_bounds (Tuple.to_list _ bounds). Defined.
 Definition ExprUnOpFEToWire_bounds : all_binders_for ExprUnOpFEToWireT ZBounds.interp_base_type.
-Proof. make_bounds bounds. Defined.
+Proof. make_bounds (Tuple.to_list _ bounds). Defined.
 Definition ExprUnOpWireToFE_bounds : all_binders_for ExprUnOpWireToFET ZBounds.interp_base_type.
-Proof. make_bounds wire_digit_bounds. Defined.
+Proof. make_bounds (Tuple.to_list _ wire_digit_bounds). Defined.
 
 Definition interp_bexpr : ExprBinOp -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
   := fun e => curry_binop_fe25519W (Interp (@Word64.interp_op) e).

@@ -126,11 +126,8 @@ Proof.
 Defined.
 
 Definition fieldwisebW (f g : fe25519W) : bool :=
-  Eval cbv beta iota delta [proj1_sig fieldwisebW_sig] in
-    let '(f0, f1, f2, f3, f4, f5, f6, f7, f8, f9) := f in
-    let '(g0, g1, g2, g3, g4, g5, g6, g7, g8, g9) := g in
-    proj1_sig (fieldwisebW_sig (f0, f1, f2, f3, f4, f5, f6, f7, f8, f9)
-                               (g0, g1, g2, g3, g4, g5, g6, g7, g8, g9)).
+  Eval cbv [proj1_sig fieldwisebW_sig appify2 app_fe25519W] in
+    appify2 (fun f g => proj1_sig (fieldwisebW_sig f g)) f g.
 
 Lemma fieldwisebW_correct f g
   : fieldwisebW f g = GF25519.fieldwiseb (fe25519WToZ f) (fe25519WToZ g).
@@ -162,11 +159,8 @@ Proof.
 Defined.
 
 Definition eqbW (f g : fe25519W) : bool :=
-  Eval cbv beta iota delta [proj1_sig eqbW_sig] in
-    let '(f0, f1, f2, f3, f4, f5, f6, f7, f8, f9) := f in
-    let '(g0, g1, g2, g3, g4, g5, g6, g7, g8, g9) := g in
-    proj1_sig (eqbW_sig (f0, f1, f2, f3, f4, f5, f6, f7, f8, f9)
-                               (g0, g1, g2, g3, g4, g5, g6, g7, g8, g9)).
+  Eval cbv [proj1_sig eqbW_sig appify2 app_fe25519W] in
+    appify2 (fun f g => proj1_sig (eqbW_sig f g)) f g.
 
 Lemma eqbW_correct f g
   : is_bounded (fe25519WToZ f) = true
@@ -228,9 +222,8 @@ Proof.
 Defined.
 
 Definition sqrtW (f : fe25519W) : fe25519W :=
-  Eval cbv beta iota delta [proj1_sig sqrtW_sig] in
-    let '(f0, f1, f2, f3, f4, f5, f6, f7, f8, f9) := f in
-    proj1_sig sqrtW_sig (f0, f1, f2, f3, f4, f5, f6, f7, f8, f9).
+  Eval cbv [proj1_sig sqrtW_sig app_fe25519W] in
+    app_fe25519W f (proj1_sig sqrtW_sig).
 
 Lemma sqrtW_correct_and_bounded : iunop_correct_and_bounded sqrtW GF25519.sqrt.
 Proof.
