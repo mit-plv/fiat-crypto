@@ -82,5 +82,7 @@ Arguments all_binders_for {_} !_ _ / .
 Arguments count_binders {_} !_ / .
 Arguments binders_for {_} !_ !_ _ / .
 Arguments remove_binders {_} !_ !_ / .
-Arguments Apply {_ _ _ !_ _ _} !_ !_ / , {_ _ _} !_ {_ _} !_ !_ / .
+(* Work around bug #5175 *)
+Arguments Apply {_ _ _ _ _ _} _ _ , {_ _ _} _ {_ _} _ _.
+Arguments Apply _ _ _ !_ _ _ !_ !_ / .
 Arguments ApplyInterped {_ _ !_ !_} _ _ / .
