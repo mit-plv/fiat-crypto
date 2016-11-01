@@ -18,14 +18,14 @@ Definition tuple T n : Type :=
   end.
 
 Fixpoint hlist' T n (f : T -> Type) : tuple' T n -> Type :=
-  match n return tuple' Type n -> Type with
+  match n return tuple' _ n -> Type with
   | 0 => fun T => f T
   | S n' => fun Ts => (hlist' T n' f (fst Ts) * f (snd Ts))%type
   end.
 Global Arguments hlist' {T n} f _.
 
 Definition hlist {T n} (f : T -> Type) : forall (Ts : tuple T n), Type :=
-  match n return tuple Type n -> Type with
+  match n return tuple _ n -> Type with
   | 0 => fun _ => unit
   | S n' => @hlist' T n' f
   end.
