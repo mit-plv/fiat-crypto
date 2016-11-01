@@ -20,13 +20,13 @@ Definition hlist {T n} (f : T -> Type) : forall (Ts : tuple T n), Type :=
   end.
 
 (* tuple map *)
-Fixpoint mapt' {n A F B} (f : forall x : A, F x -> B) : forall ts : tuple' A n, hlist' F ts -> tuple' B n
+Fixpoint mapt' {n A F B} (f : forall x : A, F x -> B) : forall {ts : tuple' A n}, hlist' F ts -> tuple' B n
   := match n return forall ts : tuple' A n, hlist' F ts -> tuple' B n with
      | 0 => fun ts v => f _ v
      | S n' => fun ts v => (@mapt' n' A F B f _ (fst v), f _ (snd v))
      end.
 Definition mapt {n A F B} (f : forall x : A, F x -> B)
-  : forall ts : tuple A n, hlist F ts -> tuple B n
+  : forall {ts : tuple A n}, hlist F ts -> tuple B n
   := match n return forall ts : tuple A n, hlist F ts -> tuple B n with
      | 0 => fun ts v => tt
      | S n' => @mapt' n' A F B f
