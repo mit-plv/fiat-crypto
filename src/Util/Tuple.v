@@ -17,19 +17,6 @@ Definition tuple T n : Type :=
   | S n' => tuple' T n'
   end.
 
-Fixpoint hlist' T n (f : T -> Type) : tuple' T n -> Type :=
-  match n return tuple' _ n -> Type with
-  | 0 => fun T => f T
-  | S n' => fun Ts => (hlist' T n' f (fst Ts) * f (snd Ts))%type
-  end.
-Global Arguments hlist' {T n} f _.
-
-Definition hlist {T n} (f : T -> Type) : forall (Ts : tuple T n), Type :=
-  match n return tuple _ n -> Type with
-  | 0 => fun _ => unit
-  | S n' => @hlist' T n' f
-  end.
-
 Fixpoint to_list' {T} (n:nat) {struct n} : tuple' T n -> list T :=
   match n with
   | 0 => fun x => (x::nil)%list
