@@ -49,6 +49,11 @@ Proof.
     by (omega || apply N2Z.inj_lt; rewrite ?N2Z.id, ?Z2N.id by omega; simpl in *; omega).
   reflexivity.
 Qed.
+Lemma word64ToZToWord64 x : ZToWord64 (word64ToZ x) = x.
+Proof.
+  intros; unfold word64ToZ, ZToWord64.
+  rewrite N2Z.id, NToWord_wordToN; reflexivity.
+Qed.
 
 (* BEGIN precomputation. *)
 Local Notation b_of exp := (0, 2^exp + 2^(exp-3))%Z (only parsing). (* max is [(0, 2^(exp+2) + 2^exp + 2^(exp-1) + 2^(exp-3) + 2^(exp-4) + 2^(exp-5) + 2^(exp-6) + 2^(exp-10) + 2^(exp-12) + 2^(exp-13) + 2^(exp-14) + 2^(exp-15) + 2^(exp-17) + 2^(exp-23) + 2^(exp-24))%Z] *)
@@ -145,6 +150,12 @@ Definition wire_digitsW_word64ize (x : wire_digitsW) : wire_digitsW
   := Eval cbv [word64ize] in
       let '(x0, x1, x2, x3, x4, x5, x6, x7) := x in
       (word64ize x0, word64ize x1, word64ize x2, word64ize x3, word64ize x4, word64ize x5, word64ize x6, word64ize x7).
+
+Lemma fe25519WToZToW (x : fe25519W) : fe25519ZToW (fe25519WToZ x) = x.
+Proof.
+  hnf in x; destruct_head' prod; cbv [fe25519WToZ fe25519ZToW].
+  rewrite !word64ToZToWord64; reflexivity.
+Qed.
 
 Lemma fe25519W_word64ize_id x : fe25519W_word64ize x = x.
 Proof.
