@@ -252,6 +252,7 @@ Section Misc.
     apply N.sub_le_mono_l.
     apply N_ge_0.
   Qed.
+
   Lemma log2_conv: forall z, Z.log2 z = Z.of_N (N.log2 (Z.to_N z)).
   Proof.
     intro z; induction z as [| |p]; auto.
@@ -353,7 +354,6 @@ Section Exp.
         apply N.mul_le_mono_l.
         assumption.
   Qed.
-
 End Exp.
 
 Section Conversions.

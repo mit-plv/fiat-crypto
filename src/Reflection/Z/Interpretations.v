@@ -1,5 +1,7 @@
 (** * Interpretation of PHOAS syntax for expression trees on ℤ *)
+Require Import Bedrock.Nomega.
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.NArith.NArith.
 Require Import Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemListZOperations.
@@ -8,9 +10,11 @@ Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.WordUtil.
 Require Import Bedrock.Word.
 Require Import Crypto.Assembly.WordizeUtil.
-Require Import Crypto.Util.WordUtil.
+Require Import Crypto.Assembly.Evaluables.
+Require Import Crypto.Assembly.QhasmUtil.
 Export Reflection.Syntax.Notations.
 
 Local Notation eta x := (fst x, snd x).
@@ -217,10 +221,11 @@ Module ZBounds.
   Definition shr : t -> t -> t
     := t_map2 (fun lx ly ux uy => {| lower := lx >> uy ; upper := ux >> ly |}).
   Definition land : t -> t -> t
-    := t_map2 (fun lx ly ux uy => {| lower := 0 ; upper := Z.min ux uy |}).
+    := t_map2 (fun lx ly ux uy => {| lower := 0 ;
+                                     upper := 2^(Z.succ (Z.min (Z.log2 ux) (Z.log2 uy))) |}).
   Definition lor : t -> t -> t
     := t_map2 (fun lx ly ux uy => {| lower := Z.max lx ly;
-                                     upper := 2^(Z.max (Z.log2 (ux+1)) (Z.log2 (uy+1))) - 1 |}).
+                                     upper := 2^(Z.succ (Z.max (Z.log2 ux) (Z.log2 uy))) |}).
   Definition neg : t -> t -> t
     := t_map2 (fun lint_width lb uint_width ub
                => let might_be_one := ((lb <=? 1) && (1 <=? ub))%Z%bool in
@@ -380,7 +385,6 @@ Module BoundedWord64.
     try unfold word_op; try unfold bounds_op;
     cbv [ZBounds.t_map2 BoundedWordToBounds ZBounds.SmartBuildBounds].
 
-  Axiom proof_admitted : False.
   Local Ltac t_start :=
     repeat first [ progress break_match
                  | progress intros
@@ -395,49 +399,203 @@ Module BoundedWord64.
                  | progress autorewrite with push_word64ToZ
                  | progress repeat apply conj ].
 
-  Tactic Notation "admit" := abstract case proof_admitted.
+  Ltac ktrans k := do k (etransitivity; [|eassumption]); assumption.
+  Ltac trans' := first [ assumption | ktrans ltac:1 | ktrans ltac:2 ].
 
   Definition add : t -> t -> t.
   Proof.
+    Ltac add_mono :=
+      etransitivity;
+      [apply Z.add_le_mono_l | apply Z.add_le_mono_r];
+      trans'.
+
     build_binop Word64.w64plus ZBounds.add; t_start;
-      admit.
+      unfold Word64.word64ToZ; rewrite wordToN_wplus; abstract first
+    [ add_mono
+    | transitivity (lower1 + lower0)%Z; [assumption|]; add_mono
+    | eapply Z.le_lt_trans; [|eassumption]; apply Z.log2_le_mono; add_mono ].
   Defined.
 
   Definition sub : t -> t -> t.
   Proof.
+    Ltac sub_mono :=
+      etransitivity;
+      [| apply Z.sub_le_mono_r; eassumption]; first
+      [ apply Z.sub_le_mono_l; assumption
+      | apply Z.le_add_le_sub_l; etransitivity;
+          [|eassumption]; repeat rewrite Z.add_0_r; assumption].
+
     build_binop Word64.w64minus ZBounds.sub; t_start;
-      admit.
+      unfold Word64.word64ToZ; rewrite wordToN_wminus;
+      apply Z.le_add_le_sub_l in H; abstract first
+    [ sub_mono
+    | transitivity (lower1 - lower0)%Z; [assumption|]; sub_mono
+    | eapply Z.le_lt_trans; [|eassumption]; apply Z.log2_le_mono; sub_mono ].
   Defined.
 
   Definition mul : t -> t -> t.
   Proof.
+    Ltac mul_mono :=
+      etransitivity;
+      [apply Z.mul_le_mono_nonneg_l | apply Z.mul_le_mono_nonneg_r];
+      trans'.
+
     build_binop Word64.w64mul ZBounds.mul; t_start;
-      admit.
+      unfold Word64.word64ToZ; rewrite wordToN_wmult; abstract first
+    [ mul_mono
+    | transitivity (lower1 * lower0)%Z; [assumption|]; mul_mono
+    | eapply Z.le_lt_trans; [|eassumption]; apply Z.log2_le_mono; mul_mono ].
   Defined.
 
   Definition shl : t -> t -> t.
   Proof.
-    build_binop Word64.w64shl ZBounds.shl; t_start;
-      admit.
+    Ltac shl_mono := etransitivity;
+      [apply Z.mul_le_mono_nonneg_l | apply Z.mul_le_mono_nonneg_r].
+
+    build_binop Word64.w64shl ZBounds.shl; t_start; abstract (
+      unfold Word64.word64ToZ; repeat rewrite wordToN_NToWord; repeat rewrite Z2N.id;
+      rewrite Z.shiftl_mul_pow2 in *;
+      repeat match goal with
+      | [|- (0 <= 2 ^ _)%Z ] => apply Z.pow_nonneg
+      | [|- (0 <= _ * _)%Z ] => apply Z.mul_nonneg_nonneg
+      | [|- (2 ^ _ <= 2 ^ _)%Z ] => apply Z.pow_le_mono_r
+      | [|- context[(?a << ?b)%Z]] => rewrite Z.shiftl_mul_pow2
+      | [|- (_ < Npow2 _)%N] => 
+        apply N2Z.inj_lt, Z.log2_lt_cancel; simpl;
+        eapply Z.le_lt_trans; [|eassumption]; apply Z.log2_le_mono; rewrite Z2N.id
+
+      | _ => progress shl_mono
+      | _ => progress trans'
+      | _ => progress omega
+      end).
   Defined.
 
   Definition shr : t -> t -> t.
   Proof.
-    build_binop Word64.w64shr ZBounds.shr; t_start;
-      admit.
+    Ltac shr_mono := etransitivity;
+      [apply Z.div_le_compat_l | apply Z.div_le_mono].
+
+    assert (forall x, (0 <= x)%Z -> (0 < 2^x)%Z) as gt0. {
+      intros; rewrite <- (Z2Nat.id x); [|assumption].
+      induction (Z.to_nat x) as [|n]; [cbv; auto|].
+      eapply Z.lt_le_trans; [eassumption|rewrite Nat2Z.inj_succ].
+      apply Z.pow_le_mono_r; [cbv; auto|omega].
+    }
+
+    build_binop Word64.w64shr ZBounds.shr; t_start; abstract (
+      unfold Word64.word64ToZ; repeat rewrite wordToN_NToWord; repeat rewrite Z2N.id;
+      rewrite Z.shiftr_div_pow2 in *;
+      repeat match goal with
+      | [|- _ /\ _ ] => split
+      | [|- (0 <= 2 ^ _)%Z ] => apply Z.pow_nonneg
+      | [|- (0 < 2 ^ ?X)%Z ] => apply gt0
+      | [|- (0 <= _ / _)%Z ] => apply Z.div_le_lower_bound; [|rewrite Z.mul_0_r]
+      | [|- (2 ^ _ <= 2 ^ _)%Z ] => apply Z.pow_le_mono_r
+      | [|- context[(?a >> ?b)%Z]] => rewrite Z.shiftr_div_pow2 in *
+      | [|- (_ < Npow2 _)%N] => 
+        apply N2Z.inj_lt, Z.log2_lt_cancel; simpl;
+        eapply Z.le_lt_trans; [|eassumption]; apply Z.log2_le_mono; rewrite Z2N.id
+
+      | _ => progress shr_mono
+      | _ => progress trans'
+      | _ => progress omega
+      end).
   Defined.
 
   Definition land : t -> t -> t.
   Proof.
-    build_binop Word64.w64land ZBounds.land; t_start;
-      admit.
+    build_binop Word64.w64land ZBounds.land; t_start; [apply N2Z.is_nonneg|];
+      unfold Word64.word64ToZ; repeat rewrite wordToN_NToWord; repeat rewrite Z2N.id;
+      rewrite wordize_and.
+
+    destruct (Z_ge_dec upper1 upper0) as [g|g].
+
+    - rewrite Z.min_r; [|abstract (apply Z.log2_le_mono; omega)].
+      abstract (
+        rewrite (land_intro_ones (wordToN value0));
+        rewrite N.land_assoc;
+        etransitivity; [apply N2Z.inj_le; apply N.lt_le_incl; apply land_lt_Npow2|];
+        rewrite N2Z.inj_pow;
+        apply Z.pow_le_mono; [abstract (split; cbn; [omega|reflexivity])|];
+        unfold getBits; rewrite N2Z.inj_succ;
+        apply -> Z.succ_le_mono;
+        rewrite <- (N2Z.id (wordToN value0)), <- log2_conv;
+        apply Z.log2_le_mono;
+        etransitivity; [eassumption|reflexivity]).
+
+    - rewrite Z.min_l; [|abstract (apply Z.log2_le_mono; omega)].
+      abstract (
+        rewrite (land_intro_ones (wordToN value1));
+        rewrite <- N.land_comm, N.land_assoc;
+        etransitivity; [apply N2Z.inj_le; apply N.lt_le_incl; apply land_lt_Npow2|];
+        rewrite N2Z.inj_pow;
+        apply Z.pow_le_mono; [abstract (split; cbn; [omega|reflexivity])|];
+        unfold getBits; rewrite N2Z.inj_succ;
+        apply -> Z.succ_le_mono;
+        rewrite <- (N2Z.id (wordToN value1)), <- log2_conv;
+        apply Z.log2_le_mono;
+        etransitivity; [eassumption|reflexivity]).
   Defined.
 
   Definition lor : t -> t -> t.
   Proof.
     build_binop Word64.w64lor ZBounds.lor; t_start;
-      admit.
+      unfold Word64.word64ToZ in *; repeat rewrite wordToN_NToWord; repeat rewrite Z2N.id;
+      rewrite wordize_or.
+
+    - transitivity (Z.max (Z.of_N (wordToN value1)) (Z.of_N (wordToN value0)));
+      [ abstract (destruct
+          (Z_ge_dec lower1 lower0) as [l|l],
+          (Z_ge_dec (Z.of_N (& value1)%w) (Z.of_N (& value0)%w)) as [v|v];
+        [ rewrite Z.max_l, Z.max_l | rewrite Z.max_l, Z.max_r
+        | rewrite Z.max_r, Z.max_l | rewrite Z.max_r, Z.max_r ];
+        
+        try (omega || assumption))
+      | ].
+
+      rewrite <- N2Z.inj_max.
+      apply Z2N.inj_le; [apply N2Z.is_nonneg|apply N2Z.is_nonneg|].
+      repeat rewrite N2Z.id.
+
+      abstract (
+        destruct (N.max_dec (wordToN value1) (wordToN value0)) as [v|v];
+        rewrite v;
+        apply N.ldiff_le, N.bits_inj_iff; intros k;
+        rewrite N.ldiff_spec, N.lor_spec;
+        induction (N.testbit (wordToN value1)), (N.testbit (wordToN value0)); simpl;
+        reflexivity).
+
+    - apply Z.lt_le_incl, Z.log2_lt_cancel.
+      rewrite Z.log2_pow2; [| abstract (
+        destruct (Z.max_dec (Z.log2 upper1) (Z.log2 upper0)) as [g|g];
+        rewrite g; apply Z.le_le_succ_r, Z.log2_nonneg)].
+
+      eapply (Z.le_lt_trans _ (Z.log2 (Z.lor _ _)) _).
+
+      + apply Z.log2_le_mono, Z.eq_le_incl.
+        apply Z.bits_inj_iff'; intros k Hpos.
+        rewrite Z2N.inj_testbit, Z.lor_spec, N.lor_spec; [|assumption].
+        repeat (rewrite <- Z2N.inj_testbit; [|assumption]).
+        reflexivity.
+
+      + abstract (
+          rewrite Z.log2_lor; [|trans'|trans'];
+          destruct
+            (Z_ge_dec (Z.of_N (wordToN value1)) (Z.of_N (wordToN value0))) as [g0|g0],
+            (Z_ge_dec upper1 upper0) as [g1|g1];
+            [ rewrite Z.max_l, Z.max_l
+            | rewrite Z.max_l, Z.max_r
+            | rewrite Z.max_r, Z.max_l
+            | rewrite Z.max_r, Z.max_r];
+            try apply Z.log2_le_mono; try omega;
+            apply Z.le_succ_l;
+            apply -> Z.succ_le_mono;
+            apply Z.log2_le_mono;
+            assumption || (etransitivity; [eassumption|]; omega)).
   Defined.
+
+  Axiom proof_admitted : False.
+  Tactic Notation "admit" := abstract case proof_admitted.
 
   Definition neg : t -> t -> t.
   Proof.

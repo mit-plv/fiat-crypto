@@ -271,12 +271,10 @@ Proof.
            end.
 Qed.
 
-Local Notation bounds_2statement wop Zop
-  := (forall {sz} (x y : word sz),
-         (0 <= Zop (Z.of_N (wordToN x)) (Z.of_N (wordToN y))
-          -> Z.log2 (Zop (Z.of_N (wordToN x)) (Z.of_N (wordToN y))) < Z.of_nat sz
-          -> Z.of_N (wordToN (wop x y)) = (Zop (Z.of_N (wordToN x)) (Z.of_N (wordToN y))))%Z).
-
+Local Notation bounds_2statement wop Zop := (forall {sz} (x y : word sz),
+     (0 <= Zop (Z.of_N (wordToN x)) (Z.of_N (wordToN y))
+  -> (Z.log2 (Zop (Z.of_N (wordToN x)) (Z.of_N (wordToN y))) < Z.of_nat sz)
+  -> (Z.of_N (wordToN (wop x y)) = (Zop (Z.of_N (wordToN x)) (Z.of_N (wordToN y)))))%Z).
 
 Require Import Crypto.Assembly.WordizeUtil.
 Require Import Crypto.Assembly.Bounds.
