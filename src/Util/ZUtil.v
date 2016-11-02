@@ -21,6 +21,7 @@ Hint Extern 1 => nia : nia.
 Hint Extern 1 => omega : omega.
 Hint Resolve Z.log2_nonneg Z.div_small Z.mod_small Z.pow_neg_r Z.pow_0_l Z.pow_pos_nonneg Z.lt_le_incl Z.pow_nonzero Z.div_le_upper_bound Z_div_exact_full_2 Z.div_same Z.div_lt_upper_bound Z.div_le_lower_bound Zplus_minus Zplus_gt_compat_l Zplus_gt_compat_r Zmult_gt_compat_l Zmult_gt_compat_r Z.pow_lt_mono_r Z.pow_lt_mono_l Z.pow_lt_mono Z.mul_lt_mono_nonneg Z.div_lt_upper_bound Z.div_pos Zmult_lt_compat_r Z.pow_le_mono_r Z.pow_le_mono_l Z.div_lt : zarith.
 Hint Resolve (fun a b H => proj1 (Z.mod_pos_bound a b H)) (fun a b H => proj2 (Z.mod_pos_bound a b H)) (fun a b pf => proj1 (Z.pow_gt_1 a b pf)) : zarith.
+Hint Resolve -> Z.pred_le_mono : zarith.
 
 Ltac zutil_arith := solve [ omega | lia | auto with nocore ].
 Ltac zutil_arith_more_inequalities := solve [ zutil_arith | auto with zarith ].
@@ -1082,6 +1083,12 @@ Module Z.
     pose proof (Z.eqb_spec x y) as H.
     inversion H; trivial.
   Qed.
+
+  Lemma ones_le x y : x <= y -> Z.ones x <= Z.ones y.
+  Proof.
+    rewrite !Z.ones_equiv; auto with zarith.
+  Qed.
+  Hint Resolve ones_le : zarith.
 
   Ltac ltb_to_lt_with_hyp H lem :=
     let H' := fresh in
