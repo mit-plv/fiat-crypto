@@ -2054,6 +2054,17 @@ Module Z.
   Qed.
   Hint Resolve shiftr_nonneg_le : zarith.
 
+  Lemma log2_pred_pow2_full a : Z.log2 (Z.pred (2^a)) = Z.max 0 (Z.pred a).
+  Proof.
+    destruct (Z_dec 0 a) as [ [?|?] | ?].
+    { rewrite Z.log2_pred_pow2 by assumption.
+      apply Z.max_case_strong; omega. }
+    { autorewrite with zsimplify; simpl.
+      apply Z.max_case_strong; omega. }
+    { subst; compute; reflexivity. }
+  Qed.
+  Hint Rewrite log2_pred_pow2_full : zsimplify.
+
   Lemma simplify_twice_sub_sub x y : 2 * x - (x - y) = x + y.
   Proof. lia. Qed.
   Hint Rewrite simplify_twice_sub_sub : zsimplify.
