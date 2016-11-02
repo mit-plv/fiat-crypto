@@ -1,4 +1,5 @@
 Require Export Coq.ZArith.ZArith.
+Require Export Coq.Strings.String.
 Require Export Crypto.Specific.GF25519.
 Require Import Crypto.Specific.GF25519BoundedCommon.
 Require Import Crypto.Reflection.Reify.
