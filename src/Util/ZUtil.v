@@ -2097,6 +2097,12 @@ Module Z.
   Qed.
   Hint Resolve log2_ones_le : zarith.
 
+  Lemma log2_ones_lt_nonneg x y : 0 < y -> x <= y -> Z.log2 (Z.ones x) < y.
+  Proof.
+    rewrite log2_ones_full; apply Z.max_case_strong; omega.
+  Qed.
+  Hint Resolve log2_ones_lt_nonneg : zarith.
+
   Lemma simplify_twice_sub_sub x y : 2 * x - (x - y) = x + y.
   Proof. lia. Qed.
   Hint Rewrite simplify_twice_sub_sub : zsimplify.
