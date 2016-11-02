@@ -2079,6 +2079,24 @@ Module Z.
   Qed.
   Hint Resolve ones_lt_pow2 : zarith.
 
+  Lemma log2_ones_full x : Z.log2 (Z.ones x) = Z.max 0 (Z.pred x).
+  Proof.
+    rewrite Z.ones_equiv, log2_pred_pow2_full; reflexivity.
+  Qed.
+  Hint Rewrite log2_ones_full : zsimplify.
+
+  Lemma log2_ones_lt x y : 0 < x <= y -> Z.log2 (Z.ones x) < y.
+  Proof.
+    rewrite log2_ones_full; apply Z.max_case_strong; omega.
+  Qed.
+  Hint Resolve log2_ones_lt : zarith.
+
+  Lemma log2_ones_le x y : 0 <= x <= y -> Z.log2 (Z.ones x) <= y.
+  Proof.
+    rewrite log2_ones_full; apply Z.max_case_strong; omega.
+  Qed.
+  Hint Resolve log2_ones_le : zarith.
+
   Lemma simplify_twice_sub_sub x y : 2 * x - (x - y) = x + y.
   Proof. lia. Qed.
   Hint Rewrite simplify_twice_sub_sub : zsimplify.
