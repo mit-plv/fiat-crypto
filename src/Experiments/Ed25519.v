@@ -1056,11 +1056,108 @@ Local Instance Proper_sqrt :
   Proper (GF25519BoundedCommon.eq ==> GF25519BoundedCommon.eq) GF25519Bounded.sqrt.
 Admitted.
 
+Lemma WordNZ_split1 : forall {n m} w,
+    Z.of_N (Word.wordToN (Word.split1 n m w)) = ZUtil.Z.pow2_mod (Z.of_N (Word.wordToN w)) n.
+Admitted.
+
+Lemma WordNZ_split2 : forall {n m} w,
+    Z.of_N (Word.wordToN (Word.split2 n m w)) = Z.shiftr (Z.of_N (Word.wordToN w)) n.
+Admitted.
+
+Lemma WordNZ_range : forall {n} B w,
+  (2 ^ Z.of_nat n <= B)%Z ->
+  (0 <= Z.of_N (@Word.wordToN n w) < B)%Z.
+Admitted.
+
+Lemma WordNZ_range_mono : forall {n} m w,
+  (Z.of_nat n <= m)%Z ->
+  (0 <= Z.of_N (@Word.wordToN n w) < 2 ^ m)%Z.
+Admitted.
+
+(* TODO : move to ZUtil *)
+Lemma pow2_mod_range : forall a n m,
+  (n <= m)%Z ->
+  (0 <= ZUtil.Z.pow2_mod a n < 2 ^ m)%Z.
+Admitted.
+
+(* TODO : move to ZUtil *)
+Lemma shiftr_range : forall a n m,
+  (0 <= a < 2 ^ (n + m))%Z ->
+  (0 <= Z.shiftr a n < 2 ^ m)%Z.
+Admitted.
+
 Lemma feDec_correct : forall w : Word.word (Init.Nat.pred b),
         option_eq GF25519BoundedCommon.eq
           (option_map GF25519BoundedCommon.encode
                       (PointEncoding.Fdecode w)) (feDec w).
-Admitted.
+Proof.
+  intros; cbv [PointEncoding.Fdecode feDec].
+  match goal with
+    |- option_eq _ (option_map _ (if Z_lt_dec ?a ?b then Some _ else None)) (if ?X then None else Some _) =>
+    assert ((a < b)%Z <-> X = false) end.
+  { admit. }
+  do 2 VerdiTactics.break_if;
+  try match goal with H: ?P, Hiff : ?P <-> true = false |- _ =>
+                      exfalso; assert (true = false) by (apply Hiff, H);
+                        discriminate end;
+  try match goal with H: ~ ?P, Hiff : ?P <-> false = false |- _ =>
+                      exfalso; apply H; apply Hiff; solve [auto] end;
+  try reflexivity.
+  cbv [option_map option_eq].
+  cbv [GF25519BoundedCommon.eq].
+  rewrite GF25519Bounded.unpack_correct.
+  rewrite GF25519.unpack_correct, ModularBaseSystemOpt.unpack_correct.
+  rewrite GF25519BoundedCommon.proj1_fe25519_encode.
+  
+  cbv [GF25519BoundedCommon.proj1_wire_digits
+       GF25519BoundedCommon.wire_digitsWToZ
+       GF25519BoundedCommon.proj1_wire_digitsW
+       GF25519BoundedCommon.app_wire_digits
+       HList.mapt HList.mapt'
+       length GF25519.wire_widths
+       fst snd
+      ].
+  
+  cbv [GF25519BoundedCommon.proj_word
+       GF25519BoundedCommon.word31_to_unbounded_word
+       GF25519BoundedCommon.word32_to_unbounded_word
+       GF25519BoundedCommon.word_to_unbounded_word
+       GF25519BoundedCommon.Build_bounded_word
+       GF25519BoundedCommon.Build_bounded_word'
+      ].
+  rewrite !GF25519BoundedCommon.word64ToZ_ZToWord64 by
+    (rewrite GF25519BoundedCommon.unfold_Pow2_64;
+     cbv [GF25519BoundedCommon.Pow2_64];
+     apply WordNZ_range; cbv; congruence).
+  rewrite !WordNZ_split1.
+  rewrite !WordNZ_split2.
+  simpl Z.of_nat.
+  cbv [ModularBaseSystem.eq].
+  match goal with
+    |- appcontext [@ModularBaseSystem.unpack _ _ ?ls _ _ ?t] =>
+    assert (Pow2Base.bounded ls (Tuple.to_list (length ls) t)) end.
+  { cbv [Pow2Base.bounded length].
+    intros.
+    destruct (lt_dec i 8).
+    { cbv [Tuple.to_list Tuple.to_list' fst snd].
+        assert (i = 0 \/ i = 1 \/ i = 2 \/ i = 3 \/ i = 4 \/ i = 5 \/ i = 6 \/ i = 7) by omega.
+        repeat match goal with H : _ \/ _ |- _ => destruct H; subst end;
+        cbv [nth_default nth_error]; try (apply pow2_mod_range; omega);
+            repeat apply shiftr_range; apply WordNZ_range_mono; cbv;
+            congruence. }
+    { rewrite !nth_default_out_of_bounds
+        by (rewrite ?Tuple.length_to_list; cbv [length]; omega).
+        rewrite Z.pow_0_r. omega. } }
+  
+  rewrite ModularBaseSystemProofs.unpack_rep by auto.
+  rewrite ModularBaseSystemProofs.encode_rep.
+  apply f_equal.
+  rewrite <-Pow2BaseProofs.decode_bitwise_spec by (auto || cbv [In]; intuition omega).
+  cbv [Tuple.to_list Tuple.to_list' length fst snd Pow2Base.decode_bitwise Pow2Base.decode_bitwise' nth_default nth_error ].
+  apply Z.bits_inj'.
+  intros.
+      
+Qed.
 
 Lemma Fsqrt_minus1_correct :
  ModularArithmetic.F.mul Fsqrt_minus1 Fsqrt_minus1 =
@@ -1079,6 +1176,7 @@ Lemma bounded_by_encode_freeze : forall x,
   ModularBaseSystemProofs.bounded_by
     (ModularBaseSystem.encode x)
     (ModularBaseSystemProofs.freeze_input_bounds (B := GF25519.int_width)).
+Proof.
 Admitted.
 
 Lemma bounded_by_freeze : forall x, 
