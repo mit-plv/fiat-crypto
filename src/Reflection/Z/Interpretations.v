@@ -83,7 +83,7 @@ Module Word64.
     unfold ZToWord64, word64ToZ; intros [H0 H1].
     pose proof H1 as H1'; apply Z2Nat.inj_lt in H1'; [ | omega.. ].
     rewrite <- Z.pow_Z2N_Zpow in H1' by omega.
-    change (Z.to_nat 2) with 2%nat in H1'.
+    replace (Z.to_nat 2) with 2%nat in H1' by reflexivity.
     rewrite wordToN_NToWord_idempotent, Z2N.id by (omega || auto using bound_check_nat_N).
     reflexivity.
   Qed.
