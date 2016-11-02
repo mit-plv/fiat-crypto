@@ -33,8 +33,25 @@ Module Word64.
   Definition ZToWord64 (x : Z) : word64
     := NToWord _ (Z.to_N x).
 
+  Ltac fold_Word64_Z :=
+    repeat match goal with
+           | [ |- context G[NToWord bit_width (Z.to_N ?x)] ]
+             => let G' := context G [ZToWord64 x] in change G'
+           | [ |- context G[Z.of_N (wordToN ?x)] ]
+             => let G' := context G [word64ToZ x] in change G'
+           | [ H : context G[NToWord bit_width (Z.to_N ?x)] |- _ ]
+             => let G' := context G [ZToWord64 x] in change G' in H
+           | [ H : context G[Z.of_N (wordToN ?x)] |- _ ]
+             => let G' := context G [word64ToZ x] in change G' in H
+           end.
+
   Create HintDb push_word64ToZ discriminated.
   Hint Extern 1 => progress autorewrite with push_word64ToZ in * : push_word64ToZ.
+
+  Lemma bit_width_pos : (0 < Z.of_nat bit_width)%Z.
+  Proof. simpl; omega. Qed.
+
+  Ltac arith := solve [ omega | auto using bit_width_pos with zarith ].
 
   Lemma word64ToZ_bound w : (0 <= word64ToZ w < 2^Z.of_nat bit_width)%Z.
   Proof.
@@ -70,6 +87,7 @@ Module Word64.
     rewrite wordToN_NToWord_idempotent, Z2N.id by (omega || auto using bound_check_nat_N).
     reflexivity.
   Qed.
+  Hint Rewrite word64ToZ_ZToWord64 using arith : push_word64ToZ.
 
   Definition add : word64 -> word64 -> word64 := @wplus _.
   Definition sub : word64 -> word64 -> word64 := @wminus _.
@@ -78,7 +96,7 @@ Module Word64.
   Definition shr : word64 -> word64 -> word64 := @wordBin N.shiftr _.
   Definition land : word64 -> word64 -> word64 := @wand _.
   Definition lor : word64 -> word64 -> word64 := @wor _.
-  Definition neg : word64 -> word64 -> word64 (* TODO: FIXME; the first argument must be within Word64.bit_width, or else we're out of bounds *)
+  Definition neg : word64 -> word64 -> word64 (* TODO: FIXME? *)
     := fun x y => NToWord _ (Z.to_N (ModularBaseSystemListZOperations.neg (Z.of_N (wordToN x)) (Z.of_N (wordToN y)))).
   Definition cmovne : word64 -> word64 -> word64 -> word64 -> word64 (* TODO: FIXME? *)
     := fun x y z w => NToWord _ (Z.to_N (ModularBaseSystemListZOperations.cmovne (Z.of_N (wordToN x)) (Z.of_N (wordToN x)) (Z.of_N (wordToN z)) (Z.of_N (wordToN w)))).
@@ -202,14 +220,20 @@ Module ZBounds.
     := t_map2 (fun lx ly ux uy => {| lower := Z.max lx ly;
                                      upper := 2^(Z.max (Z.log2 (ux+1)) (Z.log2 (uy+1))) - 1 |}).
   Definition neg : t -> t -> t
-    := t_map2 (fun lint_width lb uint_width ub
-               => let might_be_one := ((lb <=? 1) && (1 <=? ub))%Z%bool in
-                  let must_be_one := ((lb =? 1) && (ub =? 1))%Z%bool in
-                  if must_be_one
-                  then {| lower := Z.ones lint_width ; upper := Z.ones uint_width |}
-                  else if might_be_one
-                       then {| lower := 0 ; upper := Z.ones uint_width |}
-                       else {| lower := 0 ; upper := 0 |}).
+    := fun int_width v
+       => match int_width, v with
+          | Some (Build_bounds lint_width uint_width), Some (Build_bounds lb ub)
+            => if ((0 <=? lint_width) && (uint_width <=? Word64.bit_width))%Z%bool
+               then Some (let might_be_one := ((lb <=? 1) && (1 <=? ub))%Z%bool in
+                          let must_be_one := ((lb =? 1) && (ub =? 1))%Z%bool in
+                          if must_be_one
+                          then {| lower := Z.ones lint_width ; upper := Z.ones uint_width |}
+                          else if might_be_one
+                               then {| lower := 0 ; upper := Z.ones uint_width |}
+                               else {| lower := 0 ; upper := 0 |})
+               else None
+          | _, _ => None
+          end.
   Definition cmovne (x y r1 r2 : t) : t
     := t_map2 (fun lr1 lr2 ur1 ur2 => {| lower := Z.min lr1 lr2 ; upper := Z.max ur1 ur2 |}) r1 r2.
   Definition cmovle (x y r1 r2 : t) : t
@@ -355,30 +379,30 @@ Module BoundedWord64.
     cbv [ZBounds.t_map2 BoundedWordToBounds ZBounds.SmartBuildBounds cmovne cmovl].
 
   Axiom proof_admitted : False.
+  Local Opaque Word64.bit_width.
+  Hint Resolve Z.ones_nonneg : zarith.
   Local Ltac t_start :=
     repeat first [ progress break_match
                  | progress intros
                  | progress subst
                  | progress ZBounds.inversion_bounds
                  | progress inversion_option
+                 | progress Word64.fold_Word64_Z
                  | progress autorewrite with bool_congr_setoid in *
                  | progress destruct_head' and
                  | progress Z.ltb_to_lt
                  | assumption
                  | progress destruct_head' BoundedWord; simpl in *
                  | progress autorewrite with push_word64ToZ
+                 | progress repeat apply conj
+                 | solve [ Word64.arith ]
                  | match goal with
-                   | [ |- context G[NToWord Word64.bit_width (Z.to_N ?x)] ]
-                     => let G' := context G [Word64.ZToWord64 x] in change G'
-                   | [ |- context G[Z.of_N (wordToN ?x)] ]
-                     => let G' := context G [Word64.word64ToZ x] in change G'
                    | [ |- appcontext[Z.min ?x ?y] ]
                      => apply (Z.min_case_strong x y)
                    | [ |- appcontext[Z.max ?x ?y] ]
                      => apply (Z.max_case_strong x y)
                    end
-                 | progress repeat apply conj
-                 | omega ].
+                 | progress destruct_head' or ].
 
   Tactic Notation "admit" := abstract case proof_admitted.
 
@@ -425,18 +449,13 @@ Module BoundedWord64.
   Defined.
 
   Definition neg : t -> t -> t.
-  Proof.
-    build_binop Word64.neg ZBounds.neg; t_start;
-      admit.
-    (* unfold ModularBaseSystemListZOperations.neg; t_start.
-      rewrite Word64.word64ToZ_ZToWord64.*)
-  Defined.
+  Proof. build_binop Word64.neg ZBounds.neg; abstract t_start. Defined.
 
   Definition cmovne : t -> t -> t -> t -> t.
-  Proof. build_4op Word64.cmovne ZBounds.cmovne; t_start. Defined.
+  Proof. build_4op Word64.cmovne ZBounds.cmovne; abstract t_start. Defined.
 
   Definition cmovle : t -> t -> t -> t -> t.
-  Proof. build_4op Word64.cmovle ZBounds.cmovle; t_start. Defined.
+  Proof. build_4op Word64.cmovle ZBounds.cmovle; abstract t_start. Defined.
 
   Local Notation value_binop_correct op opW :=
     (forall x y v, op (Some x) (Some y) = Some v -> value v = opW (value x) (value y))
