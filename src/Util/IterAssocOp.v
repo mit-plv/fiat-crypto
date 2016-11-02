@@ -243,7 +243,7 @@ Proof.
            | _ => solve [ reflexivity | congruence | eauto 99 ]
            | _ => progress eapply (Proper_funexp (R:=(fun nt NT => Logic.eq (fst nt) (fst NT) /\ R (snd nt) (snd NT))))
            | _ => progress eapply Proper_test_and_op
-           | _ => progress eapply conj
+           | _ => progress split
            | _ => progress (cbv [fst snd pointwise_relation respectful] in * )
            | _ => intro
          end.

@@ -598,8 +598,8 @@ Proof.
       rewrite Tuple.to_list_from_list.
       apply Conversion.convert_bounded. }
     { destruct w;
-      repeat match goal with p : _ * Z |- _ => destruct p end.
-      simpl Tuple.to_list in *.
+      repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
+      cbv [Tuple.to_list Tuple.to_list'] in *.
       rewrite Pow2BaseProofs.bounded_iff in *.
       (* TODO : Is there a better way to do this? *)
       pose proof (H0 0).
@@ -611,7 +611,7 @@ Proof.
       pose proof (H0 6).
       pose proof (H0 7).
       clear H0.
-      cbv [GF25519.wire_widths nth_default nth_error] in *.
+      cbv [GF25519.wire_widths nth_default nth_error value] in *.
       repeat rewrite combine_ZNWord by (rewrite ?Znat.Nat2Z.inj_add; simpl Z.of_nat; repeat apply lor_shiftl_bounds; omega).
       cbv - [ZNWord Z.lor Z.shiftl].
       rewrite Z.shiftl_0_l.
@@ -626,12 +626,12 @@ Lemma initial_bounds : forall x n,
      (Tuple.to_list (length PseudoMersenneBaseParams.limb_widths)
         (GF25519BoundedCommon.proj1_fe25519 x)) n <
    2 ^ GF25519.int_width -
-   (if PeanoNat.Nat.eq_dec n 0
+   (if Decidable.dec (n=0)%nat
     then 0
     else
      Z.shiftr (2 ^ GF25519.int_width)
        (nth_default 0 PseudoMersenneBaseParams.limb_widths
-                    (Init.Nat.pred n))))%Z.
+                    (pred n))))%Z.
 Proof.
   intros.
   cbv [GF25519BoundedCommon.fe25519] in *.

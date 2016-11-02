@@ -271,8 +271,8 @@ Section PointEncodingPre.
              cbv [option_eq Tuple.fieldwise Tuple.fieldwise' fst snd] in H;
                destruct H
            | H :  Bool.eqb _ _ = _ |- _  => apply Bool.eqb_prop in H
-           | H : ?b = sign_bit ?x |- sign_bit ?y = ?b => erewrite <-sign_bit_subst by eassumption; congruence
-           | H : ?b <> sign_bit ?x |- sign_bit ?y <> ?b => erewrite <-sign_bit_subst by eassumption; congruence
+           | H : ?b = sign_bit ?x |- sign_bit ?y = ?b => erewrite <-sign_bit_subst by eassumption; instantiate; congruence
+           | H : ?b <> sign_bit ?x |- sign_bit ?y <> ?b => erewrite <-sign_bit_subst by eassumption; instantiate; congruence
            | |- sign_bit _ = whd ?w => destruct (whd w)
            | |- negb _ = false => apply Bool.negb_false_iff
            | |- _ => solve [auto using Bool.eqb_prop,
