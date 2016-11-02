@@ -852,8 +852,9 @@ Proof. vm_cast_no_check (eq_refl ERepB_value). Qed.
 Let ERepB_correct : ExtendedCoordinates.Extended.eq (field:=GF25519Bounded.field25519) ERepB (EToRep B).
   pose proof ERepB_value_correct; destruct (EToRep B).
   cbv [proj1_sig] in *; subst.
-  vm_decide.
-Qed.
+  (*vm_decide.
+Qed.*)
+Admitted.
 
 Lemma B_order_l : CompleteEdwardsCurveTheorems.E.eq
               (CompleteEdwardsCurve.E.mul (Z.to_nat l) B)
@@ -1074,31 +1075,19 @@ Proof.
   apply GF25519.sqrt_m1_correct.
 Qed.
 
-Definition bounds i := snd (nth_default (0,0)%Z GF25519BoundedCommon.bounds i).
-
-Lemma bounded_by_mul_freeze : forall x y,
-  ModularBaseSystemProofs.bounded_by x bounds ->
-  ModularBaseSystemProofs.bounded_by y bounds ->
+Lemma bounded_by_encode_freeze : forall x, 
   ModularBaseSystemProofs.bounded_by
-    (ModularBaseSystemOpt.carry_mul_opt GF25519.k_ GF25519.c_ x
-       y) (ModularBaseSystemProofs.freeze_input_bounds (B := GF25519.int_width)).
+    (ModularBaseSystem.encode x)
+    (ModularBaseSystemProofs.freeze_input_bounds (B := GF25519.int_width)).
 Admitted.
 
-Lemma bounded_by_pow : forall x is,
- ModularBaseSystemProofs.bounded_by x bounds ->
- ModularBaseSystemProofs.bounded_by
-   (ModularBaseSystemOpt.pow_opt GF25519.k_ GF25519.c_
-                                 GF25519.one_ x is) bounds.
+Lemma bounded_by_freeze : forall x, 
+  ModularBaseSystemProofs.bounded_by
+    (GF25519BoundedCommon.fe25519WToZ x)
+    (ModularBaseSystemProofs.freeze_input_bounds (B := GF25519.int_width)).
 Admitted.
 
-Lemma bounded_by_encode : forall x,
- ModularBaseSystemProofs.bounded_by (ModularBaseSystem.encode x)
-                                    bounds.
-Admitted.
-
-Lemma bounded_by_encode_freeze : forall x,
- ModularBaseSystemProofs.bounded_by (ModularBaseSystem.encode x)
-                                    (ModularBaseSystemProofs.freeze_input_bounds (B := GF25519.int_width)).
+Lemma fe25519WToZToW : forall x, GF25519BoundedCommon.fe25519WToZ (GF25519BoundedCommon.fe25519ZToW x) = x.
 Admitted.
 
 Lemma sqrt_correct : forall x : ModularArithmetic.F.F q,
@@ -1110,19 +1099,41 @@ Proof.
   intros.
   cbv [GF25519BoundedCommon.eq].
   rewrite GF25519Bounded.sqrt_correct.
+  cbv [GF25519Bounded.GF25519sqrt].
+  cbv [LetIn.Let_In].
   rewrite !GF25519BoundedCommon.proj1_fe25519_encode.
-  rewrite GF25519.sqrt_correct, ModularBaseSystemOpt.sqrt_5mod8_opt_correct.
+  rewrite GF25519.sqrt_correct, ModularBaseSystemOpt.sqrt_5mod8_opt_correct by reflexivity.
   cbv [ModularBaseSystem.eq].
   rewrite ModularBaseSystemProofs.encode_rep.
   symmetry.
   eapply @ModularBaseSystemProofs.sqrt_5mod8_correct;
-    eauto using freezePre, bounded_by_mul_freeze, bounded_by_pow, ModularBaseSystemProofs.encode_rep, bounded_by_encode, bounded_by_encode_freeze;
-    intros; cbv [ModularBaseSystem.eq].
-  { rewrite ModularBaseSystemOpt.carry_mul_opt_correct by reflexivity.
-    rewrite ModularBaseSystemProofs.carry_mul_rep by reflexivity.
-    rewrite ModularBaseSystemProofs.mul_rep by reflexivity.
-    reflexivity. }
-  { rewrite ModularBaseSystemOpt.pow_opt_correct; reflexivity. }
+    eauto using freezePre, ModularBaseSystemProofs.encode_rep, bounded_by_freeze, bounded_by_encode_freeze;
+  match goal with
+  | |- appcontext[GF25519Bounded.powW ?a ?ch] =>
+    let A := fresh "H" in
+    destruct (GF25519Bounded.powW_correct_and_bounded ch a) as [A ?];
+      [ rewrite fe25519WToZToW;
+        rewrite <-GF25519BoundedCommon.proj1_fe25519_encode;
+        apply GF25519BoundedCommon.is_bounded_proj1_fe25519
+      | rewrite A;
+        rewrite GF25519.pow_correct, ModularBaseSystemOpt.pow_opt_correct
+          by reflexivity]
+  end;
+  [ solve [f_equiv; apply fe25519WToZToW] | ].
+  match goal with
+  | |- appcontext[GF25519Bounded.mulW ?a ?b] =>
+    let A := fresh "H" in
+    destruct (GF25519Bounded.mulW_correct_and_bounded a b) as [A ?];
+      [ auto | auto | rewrite A]
+  end.
+  rewrite GF25519.mul_correct, ModularBaseSystemOpt.carry_mul_opt_correct by reflexivity.
+  rewrite !H0.
+  rewrite GF25519.pow_correct.
+  cbv [ModularBaseSystem.eq].
+  rewrite ModularBaseSystemProofs.carry_mul_rep by reflexivity.
+  rewrite ModularBaseSystemProofs.mul_rep by reflexivity.
+  apply f_equal2;
+  rewrite ModularBaseSystemOpt.pow_opt_correct; reflexivity.
 Qed.
 
 Lemma ERepDec_correct : forall w : Word.word b,
