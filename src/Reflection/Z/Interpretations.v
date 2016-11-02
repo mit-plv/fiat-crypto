@@ -53,15 +53,15 @@ Module Word64.
     { split; [ | apply Z.log2_lt_pow2 ]; try omega. }
   Qed.
 
-  Lemma word64ToZToWord64 (x : word64) : ZToWord64 (word64ToZ x) = x.
+  Lemma ZToWord64_word64ToZ (x : word64) : ZToWord64 (word64ToZ x) = x.
   Proof.
     unfold ZToWord64, word64ToZ.
     rewrite N2Z.id, NToWord_wordToN.
     reflexivity.
   Qed.
-  Hint Rewrite word64ToZToWord64 : push_word64ToZ.
+  Hint Rewrite ZToWord64_word64ToZ : push_word64ToZ.
 
-  Lemma ZToWord64ToZ (x : Z) : (0 <= x < 2^Z.of_nat bit_width)%Z -> word64ToZ (ZToWord64 x) = x.
+  Lemma word64ToZ_ZToWord64 (x : Z) : (0 <= x < 2^Z.of_nat bit_width)%Z -> word64ToZ (ZToWord64 x) = x.
   Proof.
     unfold ZToWord64, word64ToZ; intros [H0 H1].
     pose proof H1 as H1'; apply Z2Nat.inj_lt in H1'; [ | omega.. ].
@@ -429,7 +429,7 @@ Module BoundedWord64.
     build_binop Word64.neg ZBounds.neg; t_start;
       admit.
     (* unfold ModularBaseSystemListZOperations.neg; t_start.
-      rewrite Word64.ZToWord64ToZ.*)
+      rewrite Word64.word64ToZ_ZToWord64.*)
   Defined.
 
   Definition cmovne : t -> t -> t -> t -> t.

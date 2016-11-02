@@ -197,14 +197,14 @@ Lemma word64eqb_Zeqb x y : (word64ToZ x =? word64ToZ y)%Z = w64eqb x y.
 Proof. apply wordeqb_Zeqb. Qed.
 
 Local Arguments Z.pow_pos !_ !_ / .
-Lemma ZToWord64ToZ x : 0 <= x < 2^Z.of_nat bit_width -> word64ToZ (ZToWord64 x) = x.
+Lemma word64ToZ_ZToWord64 x : 0 <= x < 2^Z.of_nat bit_width -> word64ToZ (ZToWord64 x) = x.
 Proof.
   intros; unfold word64ToZ, ZToWord64.
   rewrite wordToN_NToWord_idempotent, Z2N.id
     by (omega || apply N2Z.inj_lt; rewrite <- ?(N_nat_Z (Npow2 _)), ?Npow2_nat, ?Zpow_pow2, ?N2Z.id, ?Z2N.id, ?Z2Nat.id by omega; omega).
   reflexivity.
 Qed.
-Lemma word64ToZToWord64 x : ZToWord64 (word64ToZ x) = x.
+Lemma ZToWord64_word64ToZ x : ZToWord64 (word64ToZ x) = x.
 Proof.
   intros; unfold word64ToZ, ZToWord64.
   rewrite N2Z.id, NToWord_wordToN; reflexivity.
@@ -235,7 +235,7 @@ Proof.
   rewrite Z.pow_Zpow; simpl Z.of_nat.
   intros H H'.
   assert (2^Z.of_nat e <= 2^Z.of_nat bit_width) by auto with zarith.
-  rewrite ?ZToWord64ToZ by omega.
+  rewrite ?word64ToZ_ZToWord64 by omega.
   match goal with
   | [ |- context[andb ?x ?y] ]
     => destruct x eqn:?, y eqn:?; try reflexivity; Z.ltb_to_lt
@@ -273,10 +273,34 @@ Definition wire_digitsW_word64ize (x : wire_digitsW) : wire_digitsW
   := Eval app_tuple_map in
       app_wire_digitsW x (Tuple.map word64ize).
 
-Lemma fe25519WToZToW (x : fe25519W) : fe25519ZToW (fe25519WToZ x) = x.
+(** TODO: Turn this into a lemma to speed up proofs *)
+Ltac unfold_is_bounded_in H :=
+  unfold is_bounded, wire_digits_is_bounded, is_bounded_gen, fe25519WToZ, wire_digitsWToZ in H;
+  cbv [to_list length bounds wire_digit_bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 List.map fold_right List.rev List.app length_fe25519 List.length wire_widths] in H;
+  rewrite ?Bool.andb_true_iff in H.
+
+Local Transparent bit_width.
+Definition Pow2_64 := Eval compute in 2^Z.of_nat bit_width.
+Definition unfold_Pow2_64 : 2^Z.of_nat bit_width = Pow2_64 := eq_refl.
+Local Opaque bit_width.
+
+Local Ltac prove_lt_bit_width :=
+  rewrite unfold_Pow2_64; cbv [Pow2_64]; omega.
+
+Lemma fe25519ZToW_WToZ (x : fe25519W) : fe25519ZToW (fe25519WToZ x) = x.
 Proof.
   hnf in x; destruct_head' prod; cbv [fe25519WToZ fe25519ZToW].
-  rewrite !word64ToZToWord64; reflexivity.
+  rewrite !ZToWord64_word64ToZ; reflexivity.
+Qed.
+
+Lemma fe25519WToZ_ZToW x : is_bounded x = true -> fe25519WToZ (fe25519ZToW x) = x.
+Proof.
+  hnf in x; destruct_head' prod; cbv [fe25519WToZ fe25519ZToW].
+  intro H.
+  unfold_is_bounded_in H; destruct_head' and.
+  Z.ltb_to_lt.
+  rewrite !word64ToZ_ZToWord64 by prove_lt_bit_width.
+  reflexivity.
 Qed.
 
 Lemma fe25519W_word64ize_id x : fe25519W_word64ize x = x.
@@ -340,17 +364,6 @@ Proof.
   repeat split; auto using project_is_boundedT.
 Qed.
 
-(** TODO: Turn this into a lemma to speed up proofs *)
-Ltac unfold_is_bounded_in H :=
-  unfold is_bounded, wire_digits_is_bounded, is_bounded_gen, fe25519WToZ, wire_digitsWToZ in H;
-  cbv [to_list length bounds wire_digit_bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 List.map fold_right List.rev List.app length_fe25519 List.length wire_widths] in H;
-  rewrite ?Bool.andb_true_iff in H.
-
-Local Transparent bit_width.
-Definition Pow2_64 := Eval compute in 2^Z.of_nat bit_width.
-Definition unfold_Pow2_64 : 2^Z.of_nat bit_width = Pow2_64 := eq_refl.
-Local Opaque bit_width.
-
 Local Ltac make_exist_W' x app_W_dep :=
   let H := fresh in
   revert x; refine (@app_W_dep _ _ _); intros x H;
@@ -374,8 +387,6 @@ Local Ltac make_exist_W' x app_W_dep :=
   let H' := constr:(H' : T) in
   let v := (eval unfold x' in x') in
   do_refine v H'.
-Local Ltac prove_lt_bit_width :=
-  rewrite unfold_Pow2_64; cbv [Pow2_64]; omega.
 Local Ltac make_exist'' x exist_W ZToW :=
   let H := fresh in
   intro H; apply (exist_W (ZToW x));
@@ -386,7 +397,7 @@ Local Ltac make_exist'' x exist_W ZToW :=
       unfold_is_bounded_in H;
       destruct_head' and; simpl in *;
       Z.ltb_to_lt;
-      rewrite ?ZToWord64ToZ by prove_lt_bit_width;
+      rewrite ?word64ToZ_ZToWord64 by prove_lt_bit_width;
       assumption
     ).
 Local Ltac make_exist' x app_W_dep exist'' exist_W ZToW :=
@@ -428,7 +439,7 @@ Proof.
   unfold_is_bounded_in pf.
   destruct_head' and.
   Z.ltb_to_lt.
-  rewrite ?ZToWord64ToZ by prove_lt_bit_width.
+  rewrite ?word64ToZ_ZToWord64 by prove_lt_bit_width.
   reflexivity.
 Qed.
 
@@ -460,7 +471,7 @@ Proof.
   unfold_is_bounded_in pf.
   destruct_head' and.
   Z.ltb_to_lt.
-  rewrite ?ZToWord64ToZ by prove_lt_bit_width.
+  rewrite ?word64ToZ_ZToWord64 by prove_lt_bit_width.
   reflexivity.
 Qed.
 
@@ -564,7 +575,7 @@ Proof.
   unfold_is_bounded_in pf.
   destruct_head' and.
   Z.ltb_to_lt.
-  rewrite ?ZToWord64ToZ by prove_lt_bit_width.
+  rewrite ?word64ToZ_ZToWord64 by prove_lt_bit_width.
   reflexivity.
 Qed.
 
@@ -576,7 +587,7 @@ Proof.
   unfold_is_bounded_in pf.
   destruct_head' and.
   Z.ltb_to_lt.
-  rewrite ?ZToWord64ToZ by prove_lt_bit_width.
+  rewrite ?word64ToZ_ZToWord64 by prove_lt_bit_width.
   reflexivity.
 Qed.
 
