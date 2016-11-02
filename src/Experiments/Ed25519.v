@@ -559,7 +559,7 @@ Proof.
                   remember (GF25519.pack x) end.
   transitivity (ZNWord 255 (Pow2Base.decode_bitwise GF25519.wire_widths (Tuple.to_list 8 w))).
   { cbv [ZNWord].
-    do 2 f_equal.
+    do 2 apply f_equal.
     subst w.
     pose proof freezePre.
     match goal with
@@ -1106,7 +1106,7 @@ Proof.
   {
     rewrite GF25519Bounded.unpack_correct.
   rewrite GF25519.unpack_correct, ModularBaseSystemOpt.unpack_correct.
-  
+
   cbv [GF25519BoundedCommon.proj1_wire_digits
        GF25519BoundedCommon.wire_digitsWToZ
        GF25519BoundedCommon.proj1_wire_digitsW
@@ -1115,7 +1115,7 @@ Proof.
        length GF25519.wire_widths
        fst snd
       ].
-  
+
   cbv [GF25519BoundedCommon.proj_word
        GF25519BoundedCommon.word31_to_unbounded_word
        GF25519BoundedCommon.word32_to_unbounded_word
@@ -1212,9 +1212,9 @@ Proof.
     intuition; try omega.
     apply Znat.N2Z.is_nonneg.
   }
- 
+
   do 2 VerdiTactics.break_if;
-  [ 
+  [
   match goal with H: ?P, Hiff : ?P <-> ?x = 0%Z |- _ =>
                   let A := fresh "H" in
                   pose proof ((proj1 Hiff) H) as A;
@@ -1228,7 +1228,7 @@ Proof.
     destruct (ModularBaseSystemListProofs.ge_modulus_01 x) as [Hgm | Hgm];
       rewrite Hgm in *; try discriminate; reflexivity
   end ].
-  
+
   cbv [option_map option_eq].
   cbv [GF25519BoundedCommon.eq].
   rewrite GF25519BoundedCommon.proj1_fe25519_encode.
@@ -1240,7 +1240,7 @@ Proof.
     rewrite <-H0.
     reflexivity. } Unfocus.
   apply ModularBaseSystemProofs.encode_rep.
-  
+
 Qed.
 
 Lemma Fsqrt_minus1_correct :
@@ -1256,14 +1256,14 @@ Proof.
   apply GF25519.sqrt_m1_correct.
 Qed.
 
-Lemma bounded_by_encode_freeze : forall x, 
+Lemma bounded_by_encode_freeze : forall x,
   ModularBaseSystemProofs.bounded_by
     (ModularBaseSystem.encode x)
     (ModularBaseSystemProofs.freeze_input_bounds (B := GF25519.int_width)).
 Proof.
 Admitted.
 
-Lemma bounded_by_freeze : forall x, 
+Lemma bounded_by_freeze : forall x,
   ModularBaseSystemProofs.bounded_by
     (GF25519BoundedCommon.fe25519WToZ x)
     (ModularBaseSystemProofs.freeze_input_bounds (B := GF25519.int_width)).
@@ -1326,7 +1326,7 @@ Proof.
                 (pred b) _ Spec.Ed25519.a Spec.Ed25519.d _
                 GF25519.modulus_gt_2 bound_check255
                 _ _ _ _ _ _ _ _ _ _ GF25519Bounded.field25519
-                _ _ _ _ _ phi_a phi_d feSign feSign_correct _ 
+                _ _ _ _ _ phi_a phi_d feSign feSign_correct _
                 (ExtendedCoordinates.Extended.from_twisted
                   (field := GF25519Bounded.field25519)
                   (prm := twedprm_ERep))
@@ -1724,4 +1724,3 @@ erepAdd p q =
               let {y5 = mul3 g h0} in
               let {t3 = mul3 e h0} in let {z3 = mul3 f g} in (,) ((,) ((,) x3 y5) z3) t3}}}}}}
 *)
-
