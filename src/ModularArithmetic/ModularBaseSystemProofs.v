@@ -1095,3 +1095,42 @@ Section SquareRootProofs.
   End Sqrt5mod8.
 
 End SquareRootProofs.
+
+Section ConversionProofs.
+  Context `{prm :PseudoMersenneBaseParams}.
+  Context {target_widths}
+          (target_widths_nonneg : forall x, In x target_widths -> 0 <= x)
+          (bits_eq : sum_firstn limb_widths   (length limb_widths) =
+                     sum_firstn target_widths (length target_widths)).
+  Local Notation target_base := (base_from_limb_widths target_widths).
+
+  Lemma pack_rep : forall w,
+    bounded limb_widths (to_list _ w) ->
+    bounded target_widths (to_list _ w) ->
+    rep w (F.of_Z modulus
+                  (BaseSystem.decode
+                     target_base
+                     (to_list _ (pack target_widths_nonneg bits_eq w)))).
+  Proof.
+    intros; cbv [pack ModularBaseSystemList.pack rep].
+    rewrite Tuple.to_list_from_list.
+    apply F.eq_to_Z_iff.
+    rewrite F.to_Z_of_Z.
+    rewrite <-Conversion.convert_correct; auto using length_to_list.
+  Qed.
+
+  Lemma unpack_rep : forall w,
+    bounded target_widths (to_list _ w) ->
+    rep (unpack target_widths_nonneg bits_eq w)
+        (F.of_Z modulus (BaseSystem.decode target_base (to_list _ w))).
+  Proof.
+    intros; cbv [unpack ModularBaseSystemList.unpack rep].
+    apply F.eq_to_Z_iff.
+    rewrite <-from_list_default_eq with (d := 0).
+    rewrite <-decode_mod_Fdecode by apply Conversion.length_convert.
+    rewrite F.to_Z_of_Z.
+    rewrite <-Conversion.convert_correct; auto using length_to_list.
+  Qed.
+    
+
+End ConversionProofs.
