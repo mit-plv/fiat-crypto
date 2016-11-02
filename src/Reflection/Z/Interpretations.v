@@ -491,6 +491,58 @@ Module BoundedWord64.
        end%bounded_word.
 End BoundedWord64.
 
+Module LiftOption.
+  Section lift_option.
+    Context (T : Type).
+
+    Definition interp_flat_type (t : flat_type base_type)
+      := option (interp_flat_type (fun _ => T) t).
+
+    Definition interp_base_type' (t : base_type)
+      := match t with
+         | TZ => option T
+         end.
+
+    Definition of' {ty} : Syntax.interp_flat_type interp_base_type' ty -> interp_flat_type ty
+      := @smart_interp_flat_map
+           base_type
+           interp_base_type' interp_flat_type
+           (fun t => match t with TZ => fun x => x end)
+           (fun _ _ x y => match x, y with
+                           | Some x', Some y' => Some (x', y')
+                           | _, _ => None
+                           end)
+           ty.
+
+    Fixpoint to' {ty} : interp_flat_type ty -> Syntax.interp_flat_type interp_base_type' ty
+      := match ty return interp_flat_type ty -> Syntax.interp_flat_type interp_base_type' ty with
+         | Tbase TZ => fun x => x
+         | Prod A B => fun x => (@to' A (option_map (@fst _ _) x),
+                                 @to' B (option_map (@snd _ _) x))
+         end.
+  End lift_option.
+End LiftOption.
+
+Module ZBoundsTuple.
+  Definition interp_flat_type (t : flat_type base_type)
+    := LiftOption.interp_flat_type ZBounds.bounds t.
+
+  Definition of_ZBounds {ty} : Syntax.interp_flat_type ZBounds.interp_base_type ty -> interp_flat_type ty
+    := @LiftOption.of' ZBounds.bounds ty.
+  Definition to_ZBounds {ty} : interp_flat_type ty -> Syntax.interp_flat_type ZBounds.interp_base_type ty
+    := @LiftOption.to' ZBounds.bounds ty.
+End ZBoundsTuple.
+
+Module BoundedWord64Tuple.
+  Definition interp_flat_type (t : flat_type base_type)
+    := LiftOption.interp_flat_type BoundedWord64.BoundedWord t.
+
+  Definition of_BoundedWord64 {ty} : Syntax.interp_flat_type BoundedWord64.interp_base_type ty -> interp_flat_type ty
+    := @LiftOption.of' BoundedWord64.BoundedWord ty.
+  Definition to_BoundedWord64 {ty} : interp_flat_type ty -> Syntax.interp_flat_type BoundedWord64.interp_base_type ty
+    := @LiftOption.to' BoundedWord64.BoundedWord ty.
+End BoundedWord64Tuple.
+
 Module Relations.
   Definition lift_relation {T} (R : BoundedWord64.BoundedWord -> T -> Prop) : BoundedWord64.t -> T -> Prop
     := fun x y => match x with
