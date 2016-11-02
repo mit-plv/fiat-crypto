@@ -1,3 +1,4 @@
+Require Export Coq.ZArith.ZArith.
 Require Export Crypto.Specific.GF25519.
 Require Import Crypto.Specific.GF25519BoundedCommon.
 Require Import Crypto.Reflection.Reify.
@@ -134,3 +135,27 @@ Ltac rexpr_correct :=
   auto with interp_related.
 
 Notation rword_of_Z rexprZ_sig := (MapInterp Word64.of_Z (proj1_sig rexprZ_sig)) (only parsing).
+
+Notation compute_bounds opW bounds
+  := (ApplyInterped (Interp (@ZBounds.interp_op) (MapInterp (@ZBounds.of_word64) opW)) bounds)
+       (only parsing).
+
+
+Module Export PrettyPrinting.
+  Inductive bounds_on := overflow | in_range (lower upper : Z).
+
+  Definition ZBounds_to_bounds_on
+    := fun t : base_type
+       => match t return ZBounds.interp_base_type t -> match t with TZ => bounds_on end with
+          | TZ => fun x => match x with
+                           | Some {| ZBounds.lower := l ; ZBounds.upper := u |}
+                             => in_range l u
+                           | None
+                             => overflow
+                           end
+          end.
+
+  (** This gives a slightly easier to read version of the bounds *)
+  Notation compute_bounds_for_display opW bounds
+    := (SmartVarfMap ZBounds_to_bounds_on (compute_bounds opW bounds)) (only parsing).
+End PrettyPrinting.
