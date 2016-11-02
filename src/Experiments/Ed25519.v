@@ -844,7 +844,7 @@ Let ERepB : Erep.
   exists (eta4 ERepB_value).
   cbv [GF25519BoundedCommon.eq ModularBaseSystem.eq Pre.onCurve].
   vm_decide_no_check.
-Qed.
+Defined.
 
 Lemma ERepB_value_correct : ERepB_value = proj1_sig (EToRep B).
 Proof. vm_cast_no_check (eq_refl ERepB_value). Qed.
@@ -852,9 +852,8 @@ Proof. vm_cast_no_check (eq_refl ERepB_value). Qed.
 Let ERepB_correct : ExtendedCoordinates.Extended.eq (field:=GF25519Bounded.field25519) ERepB (EToRep B).
   pose proof ERepB_value_correct; destruct (EToRep B).
   cbv [proj1_sig] in *; subst.
-  (*vm_decide.
-Qed.*)
-Admitted.
+  vm_decide.
+Qed.
 
 Lemma B_order_l : CompleteEdwardsCurveTheorems.E.eq
               (CompleteEdwardsCurve.E.mul (Z.to_nat l) B)
