@@ -185,7 +185,7 @@ Proof.
   eexists.
   unfold GF25519sqrt, GF25519.sqrt.
   intros.
-  rewrite !fe25519WToZToW.
+  rewrite !fe25519ZToW_WToZ.
   split.
   { etransitivity.
     Focus 2. {
