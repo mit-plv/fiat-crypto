@@ -626,7 +626,7 @@ Lemma initial_bounds : forall x n,
      (Tuple.to_list (length PseudoMersenneBaseParams.limb_widths)
         (GF25519BoundedCommon.proj1_fe25519 x)) n <
    2 ^ GF25519.int_width -
-   (if Decidable.dec (n=0)%nat
+   (if eq_nat_dec n 0%nat
     then 0
     else
      Z.shiftr (2 ^ GF25519.int_width)
@@ -635,7 +635,7 @@ Lemma initial_bounds : forall x n,
 Proof.
   intros.
   cbv [GF25519BoundedCommon.fe25519] in *.
-  repeat match goal with p : _ * _ |- _ => destruct p end.
+  repeat match goal with p : (_ * _)%type |- _ => destruct p end.
   cbv [GF25519BoundedCommon.proj1_fe25519].
   cbv [GF25519BoundedCommon.fe25519WToZ
          GF25519BoundedCommon.proj1_fe25519W
@@ -668,7 +668,7 @@ Proof.
   transitivity (Z.testbit (nth_default 0%Z (Tuple.to_list 10 f) 0) 0).
   Focus 2. {
   cbv [GF25519.fe25519] in *.
-  repeat match goal with p : _ * _ |- _ => destruct p end.
+  repeat match goal with p : (_ * _)%type |- _ => destruct p end.
   simpl. reflexivity. } Unfocus.
 
   rewrite !Z.bit0_odd.
@@ -722,7 +722,7 @@ Proof.
     cbv [GF25519BoundedCommon.eq ModularBaseSystem.eq] in *.
     auto. }
   { cbv [GF25519.fe25519 ] in *.
-    repeat match goal with p : _ * _ |- _ => destruct p end.
+    repeat match goal with p : (_ * _)%type |- _ => destruct p end.
     cbv [Tuple.fieldwise Tuple.fieldwise' fst snd] in *.
     intuition congruence. }
   Grab Existential Variables.
@@ -777,7 +777,7 @@ Proof.
     apply Proper_pack.
     assumption. }
   { cbv [length GF25519.wire_digits] in *.
-    repeat match goal with p : _ * _ |- _ => destruct p end.
+    repeat match goal with p : (_ * _)%type |- _ => destruct p end.
     cbv [GF25519.wire_widths length Tuple.fieldwise Tuple.fieldwise' fst snd] in *.
     repeat match goal with H : _ /\ _ |- _ => destruct H end;
       subst; reflexivity. }
@@ -826,7 +826,7 @@ Local Instance Proper_SRepERepMul : Proper (SC25519.SRepEq ==> ExtendedCoordinat
   unfold SRepERepMul, SC25519.SRepEq.
   repeat intro.
   eapply IterAssocOp.Proper_iter_op.
-  { eapply ExtendedCoordinates.Extended.Proper_add. }
+  { eapply @ExtendedCoordinates.Extended.Proper_add. }
   { reflexivity. }
   { repeat intro; subst; reflexivity. }
   { unfold ERepSel; repeat intro; break_match; solve [ discriminate | eauto ]. }
@@ -861,7 +861,7 @@ Lemma B_order_l : CompleteEdwardsCurveTheorems.E.eq
               CompleteEdwardsCurve.E.zero.
 Proof.
   apply ERep_eq_E.
-  rewrite NERepMul_correct; rewrite Z_nat_N.
+  rewrite NERepMul_correct; rewrite (Z_nat_N l).
   2:vm_decide.
   apply dec_bool.
   vm_cast_no_check (eq_refl true).
@@ -1342,9 +1342,7 @@ Lemma eq_enc_E_iff : forall (P_ : Word.word b) (P : E),
  Option.option_eq CompleteEdwardsCurveTheorems.E.eq (Edec P_) (Some P).
 Proof.
   cbv [Eenc].
-  apply @PointEncoding.encode_point_decode_point_iff.
-  auto using curve_params.
-  cbv [Fsqrt].
+  eapply @PointEncoding.encode_point_decode_point_iff; try (exact iff_equivalence || exact curve_params); [].
   intros.
   apply (@PrimeFieldTheorems.F.sqrt_5mod8_correct GF25519.modulus _ eq_refl Fsqrt_minus1 Fsqrt_minus1_correct).
   eexists.
