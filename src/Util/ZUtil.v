@@ -2065,6 +2065,13 @@ Module Z.
   Qed.
   Hint Rewrite log2_pred_pow2_full : zsimplify.
 
+  Lemma ones_lt_pow2 x y : 0 <= x <= y -> Z.ones x < 2^y.
+  Proof.
+    rewrite Z.ones_equiv, Z.lt_pred_le.
+    auto with zarith.
+  Qed.
+  Hint Resolve ones_lt_pow2 : zarith.
+
   Lemma simplify_twice_sub_sub x y : 2 * x - (x - y) = x + y.
   Proof. lia. Qed.
   Hint Rewrite simplify_twice_sub_sub : zsimplify.
