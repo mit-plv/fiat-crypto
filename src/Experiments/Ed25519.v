@@ -685,7 +685,7 @@ Proof.
   cbv [ModularBaseSystem.rep ModularBaseSystem.decode ModularBaseSystemList.decode] in *.
   rewrite <-H1.
   rewrite ModularArithmeticTheorems.F.to_Z_of_Z.
-  rewrite Z.mod_small; [ f_equal | ].
+  rewrite Z.mod_small; [ reflexivity | ].
   pose proof (minrep_freeze x).
   apply ModularBaseSystemListProofs.ge_modulus_spec;
     try solve [inversion H0; auto using Tuple.length_to_list];
