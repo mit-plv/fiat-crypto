@@ -1087,9 +1087,6 @@ Lemma bounded_by_freeze : forall x,
     (ModularBaseSystemProofs.freeze_input_bounds (B := GF25519.int_width)).
 Admitted.
 
-Lemma fe25519WToZToW : forall x, GF25519BoundedCommon.fe25519WToZ (GF25519BoundedCommon.fe25519ZToW x) = x.
-Admitted.
-
 Lemma sqrt_correct : forall x : ModularArithmetic.F.F q,
         GF25519BoundedCommon.eq
           (GF25519BoundedCommon.encode
@@ -1112,14 +1109,15 @@ Proof.
   | |- appcontext[GF25519Bounded.powW ?a ?ch] =>
     let A := fresh "H" in
     destruct (GF25519Bounded.powW_correct_and_bounded ch a) as [A ?];
-      [ rewrite fe25519WToZToW;
+      [ rewrite GF25519BoundedCommon.fe25519WToZ_ZToW;
         rewrite <-GF25519BoundedCommon.proj1_fe25519_encode;
         apply GF25519BoundedCommon.is_bounded_proj1_fe25519
       | rewrite A;
         rewrite GF25519.pow_correct, ModularBaseSystemOpt.pow_opt_correct
           by reflexivity]
-  end;
-  [ solve [f_equiv; apply fe25519WToZToW] | ].
+  end;[ solve [f_equiv; apply GF25519BoundedCommon.fe25519WToZ_ZToW;
+             rewrite <-GF25519BoundedCommon.proj1_fe25519_encode;
+             apply GF25519BoundedCommon.is_bounded_proj1_fe25519] | ].
   match goal with
   | |- appcontext[GF25519Bounded.mulW ?a ?b] =>
     let A := fresh "H" in
