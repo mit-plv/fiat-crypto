@@ -23,7 +23,7 @@ Require Import Coq.ZArith.ZArith Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.ZArith.
 Local Open Scope Z.
 
 (* BEGIN common curve-specific definitions *)
-Definition bit_width : nat := 64.
+Definition bit_width : nat := 64%nat.
 Local Notation b_of exp := (0, 2^exp + 2^(exp-3))%Z (only parsing). (* max is [(0, 2^(exp+2) + 2^exp + 2^(exp-1) + 2^(exp-3) + 2^(exp-4) + 2^(exp-5) + 2^(exp-6) + 2^(exp-10) + 2^(exp-12) + 2^(exp-13) + 2^(exp-14) + 2^(exp-15) + 2^(exp-17) + 2^(exp-23) + 2^(exp-24))%Z] *)
 Definition bounds_exp : tuple Z length_fe25519
   := Eval compute in
@@ -118,7 +118,7 @@ Section generic_destructuring.
        end.
   Lemma app_on'_correct {A n T} f (P : forall x : tuple' A n, T x) : app_on' A n T f P = P f.
   Proof.
-    induction n; simpl in *; destruct_head' prod; [ reflexivity | exact (IHn _ _ _) ].
+    induction n; simpl in *; destruct_head' prod; [ reflexivity | exact (IHn _ _ (fun t => P (t, _))) ].
   Qed.
   Lemma app_on_correct {A n T} f (P : forall x : tuple A n, T x) : app_on f P = P f.
   Proof. destruct n; [ reflexivity | apply app_on'_correct ]. Qed.
@@ -135,7 +135,7 @@ Section generic_destructuring.
        end.
   Lemma app_on_h'_correct {A F n ts T} f P : @app_on_h' A F n ts T f P = P f.
   Proof.
-    induction n; simpl in *; destruct_head' prod; [ reflexivity | exact (IHn _ _ _ _) ].
+    induction n; simpl in *; destruct_head' prod; [ reflexivity | exact (IHn _ _ _ (fun h => P (h, f))) ].
   Qed.
   Lemma app_on_h_correct {A} F {n} ts {T} f P : @app_on_h A F n ts T f P = P f.
   Proof. destruct n; [ reflexivity | apply app_on_h'_correct ]. Qed.
