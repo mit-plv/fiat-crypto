@@ -1092,22 +1092,20 @@ Lemma feDec_correct : forall w : Word.word (Init.Nat.pred b),
                       (PointEncoding.Fdecode w)) (feDec w).
 Proof.
   intros; cbv [PointEncoding.Fdecode feDec].
+  Print GF25519BoundedCommon.eq.
+  rewrite <-GF25519BoundedCommon.word64eqb_Zeqb.
+  rewrite GF25519Bounded.ge_modulus_correct.
+  rewrite GF25519BoundedCommon.word64ToZ_ZToWord64 by
+    (rewrite GF25519BoundedCommon.unfold_Pow2_64;
+     cbv [GF25519BoundedCommon.Pow2_64]; omega).
+  rewrite GF25519.ge_modulus_correct.
+  rewrite ModularBaseSystemOpt.ge_modulus_opt_correct.
   match goal with
-    |- option_eq _ (option_map _ (if Z_lt_dec ?a ?b then Some _ else None)) (if ?X then None else Some _) =>
-    assert ((a < b)%Z <-> X = false) end.
-  { admit. }
-  do 2 VerdiTactics.break_if;
-  try match goal with H: ?P, Hiff : ?P <-> true = false |- _ =>
-                      exfalso; assert (true = false) by (apply Hiff, H);
-                        discriminate end;
-  try match goal with H: ~ ?P, Hiff : ?P <-> false = false |- _ =>
-                      exfalso; apply H; apply Hiff; solve [auto] end;
-  try reflexivity.
-  cbv [option_map option_eq].
-  cbv [GF25519BoundedCommon.eq].
-  rewrite GF25519Bounded.unpack_correct.
+    |- appcontext [GF25519Bounded.unpack ?x] =>
+    assert ((Z.of_N (Word.wordToN w)) = BaseSystem.decode (Pow2Base.base_from_limb_widths PseudoMersenneBaseParams.limb_widths) (Tuple.to_list 10 (GF25519BoundedCommon.proj1_fe25519 (GF25519Bounded.unpack x)))) end.
+  {
+    rewrite GF25519Bounded.unpack_correct.
   rewrite GF25519.unpack_correct, ModularBaseSystemOpt.unpack_correct.
-  rewrite GF25519BoundedCommon.proj1_fe25519_encode.
   
   cbv [GF25519BoundedCommon.proj1_wire_digits
        GF25519BoundedCommon.wire_digitsWToZ
@@ -1147,16 +1145,101 @@ Proof.
             congruence. }
     { rewrite !nth_default_out_of_bounds
         by (rewrite ?Tuple.length_to_list; cbv [length]; omega).
-        rewrite Z.pow_0_r. omega. } }
-  
-  rewrite ModularBaseSystemProofs.unpack_rep by auto.
-  rewrite ModularBaseSystemProofs.encode_rep.
-  apply f_equal.
+      rewrite Z.pow_0_r. omega. } }
+  cbv [ModularBaseSystem.unpack ModularBaseSystemList.unpack].
+  rewrite Tuple.to_list_from_list.
+  rewrite <-Conversion.convert_correct by (auto || rewrite Tuple.to_list; reflexivity).
   rewrite <-Pow2BaseProofs.decode_bitwise_spec by (auto || cbv [In]; intuition omega).
   cbv [Tuple.to_list Tuple.to_list' length fst snd Pow2Base.decode_bitwise Pow2Base.decode_bitwise' nth_default nth_error ].
+  clear.
   apply Z.bits_inj'.
   intros.
-      
+  rewrite Z.shiftl_0_l.
+  rewrite Z.lor_0_r.
+  repeat match goal with |- appcontext[@Word.wordToN (?x + ?y) w] =>
+                  change (@Word.wordToN (x + y) w) with (@Word.wordToN (pred b) w) end.
+  assert (
+      0 <= n < 32 \/
+      32 <= n < 64 \/
+      64 <= n < 96 \/
+      96 <= n < 128 \/
+      128 <= n < 160 \/
+      160 <= n < 192 \/
+      192 <= n < 224 \/
+      224 <= n < 256 \/
+      256 <= n)%Z by omega.
+  repeat match goal with H : _ \/ _ |- _ => destruct H; subst end;
+  repeat match goal with
+         | |- _ => rewrite Z.lor_spec
+         | |- _ => rewrite Z.shiftl_spec by omega
+         | |- _ => rewrite Z.shiftr_spec by omega
+         | |- _ => rewrite Z.testbit_neg_r by omega
+         | |- _ => rewrite ZUtil.Z.testbit_pow2_mod by omega;
+                     VerdiTactics.break_if; try omega
+         end;
+  repeat match goal with
+        | |- _ = (false || _)%bool => rewrite Bool.orb_false_l
+        | |- ?x = (?x || ?y)%bool => replace y with false;
+            [ rewrite Bool.orb_false_r; reflexivity | ]
+        | |- false = (?x || ?y)%bool => replace y with false;
+            [ rewrite Bool.orb_false_r;
+                replace x with false; [ reflexivity | ]
+            | ]
+        | |- false = Z.testbit _ _ =>
+            rewrite Z.testbit_neg_r by omega; reflexivity
+        | |- Z.testbit ?w ?n = Z.testbit ?w ?m =>
+          replace m with n by omega; reflexivity
+        | |- Z.testbit ?w ?n = (Z.testbit ?w ?m || _)%bool =>
+          replace m with n by omega
+         end.
+  }
+  match goal with
+    |- option_eq _ (option_map _ (if Z_lt_dec ?a ?b then Some _ else None)) (if (?X =? 1)%Z then None else Some _) =>
+    assert ((a < b)%Z <-> X = 0%Z) end.
+  {
+    rewrite ModularBaseSystemListProofs.ge_modulus_spec;
+      [ | cbv; congruence | rewrite Tuple.length_to_list; reflexivity | ].
+    Focus 2. {
+      rewrite GF25519Bounded.unpack_correct.
+      rewrite GF25519.unpack_correct, ModularBaseSystemOpt.unpack_correct.
+      cbv [ModularBaseSystem.unpack].
+      rewrite Tuple.to_list_from_list.
+      cbv [ModularBaseSystemList.unpack].
+      apply Conversion.convert_bounded.
+    } Unfocus.
+    rewrite <-H0.
+    intuition; try omega.
+    apply Znat.N2Z.is_nonneg.
+  }
+  
+  do 2 VerdiTactics.break_if;
+  [ 
+  match goal with H: ?P, Hiff : ?P <-> ?x = 0%Z |- _ =>
+                  let A := fresh "H" in
+                  pose proof ((proj1 Hiff) H) as A;
+                    rewrite A in *; discriminate
+  end
+  | | reflexivity |
+  match goal with
+    H: ~ ?P, Hiff : ?P <-> ModularBaseSystemList.ge_modulus ?x = 0%Z
+    |- _ =>
+    exfalso; apply H; apply Hiff;
+    destruct (ModularBaseSystemListProofs.ge_modulus_01 x) as [Hgm | Hgm];
+      rewrite Hgm in *; try discriminate; reflexivity
+  end ].
+  
+  cbv [option_map option_eq].
+  cbv [GF25519BoundedCommon.eq].
+  rewrite GF25519BoundedCommon.proj1_fe25519_encode.
+  cbv [ModularBaseSystem.eq].
+  etransitivity.
+  Focus 2. {
+    cbv [ModularBaseSystem.decode ModularBaseSystemList.decode].
+    cbv [length PseudoMersenneBaseParams.limb_widths GF25519.params25519] in H0 |- *.
+    rewrite <-H0.
+    reflexivity. } Unfocus.
+  apply ModularBaseSystemProofs.encode_rep.
+  
 Qed.
 
 Lemma Fsqrt_minus1_correct :
