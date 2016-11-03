@@ -49,7 +49,7 @@ Local Ltac bounds_from_list ls :=
 
 Local Ltac make_bounds ls :=
   compute;
-  let v := bounds_from_list ls in
+  let v := bounds_from_list (List.rev ls) in
   let v := (eval compute in v) in
   exact v.
 
