@@ -137,7 +137,7 @@ Section language.
        end.
 End language.
 
-Arguments all_binders_for {_} !_ _ / .
+Arguments all_binders_for {_} !_ / .
 Arguments count_binders {_} !_ / .
 Arguments binders_for {_} !_ !_ _ / .
 Arguments remove_binders {_} !_ !_ / .
