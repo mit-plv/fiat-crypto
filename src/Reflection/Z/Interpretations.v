@@ -583,6 +583,36 @@ Module Relations.
        | TZ => related_word64_Z
        end.
 
+  Section lift.
+    Context {interp_base_type1 interp_base_type2 : base_type -> Type}
+            (R : forall t, interp_base_type1 t -> interp_base_type2 t -> Prop).
+
+    Definition interp_type_rel_pointwise2_uncurried
+               {t : type base_type}
+      := match t return interp_type interp_base_type1 t -> interp_type interp_base_type2 t -> _ with
+         | Tflat T => fun f g => interp_flat_type_rel_pointwise2 (t:=T) R f g
+         | Arrow A B
+           => fun f g
+              => forall x y, interp_flat_type_rel_pointwise2 R x y
+                             -> interp_flat_type_rel_pointwise2 R (ApplyInterpedAll f x) (ApplyInterpedAll g y)
+         end.
+
+    Lemma uncurry_interp_type_rel_pointwise2
+          {t f g}
+    : interp_type_rel_pointwise2 (t:=t) R f g
+      <-> interp_type_rel_pointwise2_uncurried (t:=t) f g.
+    Proof.
+      unfold interp_type_rel_pointwise2_uncurried.
+      induction t as [|A B IHt]; [ reflexivity | ].
+      { simpl; unfold Morphisms.respectful_hetero in *; destruct B.
+        { reflexivity. }
+        { setoid_rewrite IHt; clear IHt.
+          split; intro H; intros.
+          { simpl in *; intuition. }
+          { eapply (H (_, _) (_, _)); simpl in *; intuition. } } }
+    Qed.
+  End lift.
+
   Section combine_related.
     Lemma related_flat_transitivity {interp_base_type1 interp_base_type2 interp_base_type3}
           {R1 : forall t : base_type, interp_base_type1 t -> interp_base_type2 t -> Prop}
