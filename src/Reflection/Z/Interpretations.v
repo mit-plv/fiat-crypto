@@ -8,6 +8,7 @@ Require Import Crypto.Util.Equality.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Bool.
+Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.
 Require Import Bedrock.Word.
 Require Import Crypto.Util.WordUtil.
@@ -521,7 +522,15 @@ Module LiftOption.
          | Prod A B => fun x => (@to' A (option_map (@fst _ _) x),
                                  @to' B (option_map (@snd _ _) x))
          end.
+
+    Definition Some {t} (x : T) : interp_base_type' t
+      := match t with
+         | TZ => Some x
+         end.
   End lift_option.
+  Global Arguments of' {T ty} _.
+  Global Arguments to' {T ty} _.
+  Global Arguments Some {T t} _.
 End LiftOption.
 
 Module ZBoundsTuple.
@@ -612,6 +621,62 @@ Module Relations.
           { eapply (H (_, _) (_, _)); simpl in *; intuition. } } }
     Qed.
   End lift.
+
+  Section proj.
+    Context {interp_base_type1 : Type} {interp_base_type2 : base_type -> Type}
+            (proj_option : forall t, interp_base_type1 -> interp_base_type2 t).
+
+    Let R {t : flat_type base_type} f g :=
+      let f' := LiftOption.of' (ty:=t) f in
+      match f' with
+      | Some f' => SmartVarfMap proj_option f' = g
+      | None => True
+      end.
+
+    Definition interp_type_rel_pointwise2_uncurried_proj_option
+               {t : type base_type}
+      : interp_type (LiftOption.interp_base_type' interp_base_type1) t -> interp_type interp_base_type2 t -> Prop
+      := match t return interp_type (LiftOption.interp_base_type' interp_base_type1) t -> interp_type interp_base_type2 t -> Prop  with
+         | Tflat T => R
+         | Arrow A B
+           => fun f g
+              => forall x : interp_flat_type (fun _ => interp_base_type1) (all_binders_for (Arrow A B)),
+                  let y := SmartVarfMap proj_option x in
+                  let fx := ApplyInterpedAll f (LiftOption.to' (Some x)) in
+                  let gy := ApplyInterpedAll g y in
+                  R fx gy
+         end.
+
+    Lemma uncurry_interp_type_rel_pointwise2_proj_option
+          {t : type base_type}
+          {f : interp_type (LiftOption.interp_base_type' interp_base_type1) t}
+          {g}
+    : interp_type_rel_pointwise2 (t:=t) (fun t => R) f g
+      -> interp_type_rel_pointwise2_uncurried_proj_option (t:=t) f g.
+    Proof.
+      unfold interp_type_rel_pointwise2_uncurried_proj_option.
+      induction t as [t|A B IHt]; simpl; unfold Morphisms.respectful_hetero in *.
+      { induction t as [t|A IHA B IHB]; simpl; [ solve [ trivial | reflexivity ] | ].
+        intros [HA HB].
+        specialize (IHA _ _ HA); specialize (IHB _ _ HB).
+        unfold R in *.
+        repeat first [ progress destruct_head_hnf' prod
+                     | progress simpl in *
+                     | progress unfold LiftOption.of' in *
+                     | progress break_match
+                     | progress break_match_hyps
+                     | progress inversion_prod
+                     | progress inversion_option
+                     | reflexivity
+                     | progress intuition subst ]. }
+      { destruct B; intros H ?; apply IHt, H; clear IHt.
+        { repeat first [ progress simpl in *
+                       | progress unfold R, LiftOption.of' in *
+                       | progress break_match
+                       | reflexivity ]. }
+        { simpl in *; break_match; reflexivity. } }
+    Qed.
+  End proj.
 
   Section combine_related.
     Lemma related_flat_transitivity {interp_base_type1 interp_base_type2 interp_base_type3}
