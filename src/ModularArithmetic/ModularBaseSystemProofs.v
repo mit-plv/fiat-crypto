@@ -532,7 +532,7 @@ Class FreezePreconditions `{prm : PseudoMersenneBaseParams} B int_width :=
    c_reduce1 : c * ((2 ^ B) >> nth_default 0 limb_widths (pred (length limb_widths))) <= 2 ^ (nth_default 0 limb_widths 0);
    (* on the second reduce step, we add at most one bit of width to the first digit,
       and leave room to carry c one more time after the highest bit is carried *)
-   c_reduce2 : c <= 2 ^ (nth_default 0 limb_widths 0) - c;
+   c_reduce2 : c <= 2 ^ (nth_default 0 limb_widths 0) - c
   }.
 
 Section CanonicalizationProofs.
