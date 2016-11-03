@@ -53,15 +53,15 @@ Local Ltac make_bounds ls :=
   let v := (eval compute in v) in
   exact v.
 
-Definition ExprBinOp_bounds : all_binders_for ExprBinOpT ZBounds.interp_base_type.
+Definition ExprBinOp_bounds : interp_all_binders_for ExprBinOpT ZBounds.interp_base_type.
 Proof. make_bounds (Tuple.to_list _ bounds ++ Tuple.to_list _ bounds)%list. Defined.
-Definition ExprUnOp_bounds : all_binders_for ExprUnOpT ZBounds.interp_base_type.
+Definition ExprUnOp_bounds : interp_all_binders_for ExprUnOpT ZBounds.interp_base_type.
 Proof. make_bounds (Tuple.to_list _ bounds). Defined.
-Definition ExprUnOpFEToZ_bounds : all_binders_for ExprUnOpFEToZT ZBounds.interp_base_type.
+Definition ExprUnOpFEToZ_bounds : interp_all_binders_for ExprUnOpFEToZT ZBounds.interp_base_type.
 Proof. make_bounds (Tuple.to_list _ bounds). Defined.
-Definition ExprUnOpFEToWire_bounds : all_binders_for ExprUnOpFEToWireT ZBounds.interp_base_type.
+Definition ExprUnOpFEToWire_bounds : interp_all_binders_for ExprUnOpFEToWireT ZBounds.interp_base_type.
 Proof. make_bounds (Tuple.to_list _ bounds). Defined.
-Definition ExprUnOpWireToFE_bounds : all_binders_for ExprUnOpWireToFET ZBounds.interp_base_type.
+Definition ExprUnOpWireToFE_bounds : interp_all_binders_for ExprUnOpWireToFET ZBounds.interp_base_type.
 Proof. make_bounds (Tuple.to_list _ wire_digit_bounds). Defined.
 
 Definition interp_bexpr : ExprBinOp -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
@@ -138,7 +138,7 @@ Ltac rexpr_correct :=
 Notation rword_of_Z rexprZ_sig := (MapInterp Word64.of_Z (proj1_sig rexprZ_sig)) (only parsing).
 
 Notation compute_bounds opW bounds
-  := (ApplyInterped (Interp (@ZBounds.interp_op) (MapInterp (@ZBounds.of_word64) opW)) bounds)
+  := (ApplyInterpedAll (Interp (@ZBounds.interp_op) (MapInterp (@ZBounds.of_word64) opW)) bounds)
        (only parsing).
 
 

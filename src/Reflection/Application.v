@@ -56,7 +56,7 @@ Section language.
             end%ctype (all_binders_for B)
        end.
 
-  Definition interp_all_binders_for var T
+  Definition interp_all_binders_for T var
     := match T return Type with
        | Tflat _ => unit
        | Arrow A B => interp_flat_type var (all_binders_for (Arrow A B))
@@ -68,9 +68,9 @@ Section language.
        | Arrow _ _ => fun x => fst x
        end args.
   Definition snd_binder {A B var} (args : interp_flat_type var (all_binders_for (Arrow A B)))
-    : interp_all_binders_for var B
+    : interp_all_binders_for B var
     := match B return interp_flat_type var (all_binders_for (Arrow A B))
-                      -> interp_all_binders_for var B
+                      -> interp_all_binders_for B var
        with
        | Tflat _ => fun _ => tt
        | Arrow _ _ => fun x => snd x
@@ -94,10 +94,10 @@ Section language.
        end.
 
   Fixpoint ApplyAll {var t} (x : @expr base_type interp_base_type op var t)
-    : forall (args : interp_all_binders_for var t),
+    : forall (args : interp_all_binders_for t var),
       @exprf base_type interp_base_type op var (remove_all_binders t)
     := match x in @expr _ _ _ _ t
-             return (forall (args : interp_all_binders_for var t),
+             return (forall (args : interp_all_binders_for t var),
                         @exprf base_type interp_base_type op var (remove_all_binders t))
        with
        | Return _ x => fun _ => x
@@ -126,10 +126,10 @@ Section language.
 
   Fixpoint ApplyInterpedAll {t}
     : forall  (x : interp_type interp_base_type t)
-              (args : interp_all_binders_for interp_base_type t),
+              (args : interp_all_binders_for t interp_base_type),
       interp_flat_type interp_base_type (remove_all_binders t)
     := match t return (forall (x : interp_type _ t)
-                              (args : interp_all_binders_for _ t),
+                              (args : interp_all_binders_for t _),
                           interp_flat_type _ (remove_all_binders t))
        with
        | Tflat _ => fun x _ => x
@@ -138,6 +138,7 @@ Section language.
 End language.
 
 Arguments all_binders_for {_} !_ / .
+Arguments interp_all_binders_for {_} !_ _ / .
 Arguments count_binders {_} !_ / .
 Arguments binders_for {_} !_ !_ _ / .
 Arguments remove_binders {_} !_ !_ / .
