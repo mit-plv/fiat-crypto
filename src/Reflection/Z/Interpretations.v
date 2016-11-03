@@ -24,6 +24,46 @@ Module Z.
     := interp_op src dst f.
 End Z.
 
+Module LiftOption.
+  Section lift_option.
+    Context (T : Type).
+
+    Definition interp_flat_type (t : flat_type base_type)
+      := option (interp_flat_type (fun _ => T) t).
+
+    Definition interp_base_type' (t : base_type)
+      := match t with
+         | TZ => option T
+         end.
+
+    Definition of' {ty} : Syntax.interp_flat_type interp_base_type' ty -> interp_flat_type ty
+      := @smart_interp_flat_map
+           base_type
+           interp_base_type' interp_flat_type
+           (fun t => match t with TZ => fun x => x end)
+           (fun _ _ x y => match x, y with
+                           | Some x', Some y' => Some (x', y')
+                           | _, _ => None
+                           end)
+           ty.
+
+    Fixpoint to' {ty} : interp_flat_type ty -> Syntax.interp_flat_type interp_base_type' ty
+      := match ty return interp_flat_type ty -> Syntax.interp_flat_type interp_base_type' ty with
+         | Tbase TZ => fun x => x
+         | Prod A B => fun x => (@to' A (option_map (@fst _ _) x),
+                                 @to' B (option_map (@snd _ _) x))
+         end.
+
+    Definition Some {t} (x : T) : interp_base_type' t
+      := match t with
+         | TZ => Some x
+         end.
+  End lift_option.
+  Global Arguments of' {T ty} _.
+  Global Arguments to' {T ty} _.
+  Global Arguments Some {T t} _.
+End LiftOption.
+
 Module Word64.
   Definition bit_width : nat := 64.
   Definition word64 := word bit_width.
@@ -253,9 +293,7 @@ Module ZBounds.
   End Notations.
 
   Definition interp_base_type (ty : base_type) : Type
-    := match ty with
-       | TZ => t
-       end.
+    := LiftOption.interp_base_type' bounds ty.
   Definition interp_op {src dst} (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
     := match f in op src dst return interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst with
        | Add => fun xy => fst xy + snd xy
@@ -296,10 +334,8 @@ Module BoundedWord64.
   Bind Scope bounded_word_scope with t.
   Local Coercion Z.of_nat : nat >-> Z.
 
-  Definition interp_base_type (ty : base_type) : Type
-    := match ty with
-       | TZ => t
-       end.
+  Definition interp_base_type (ty : base_type)
+    := LiftOption.interp_base_type' BoundedWord ty.
 
   Definition word64ToBoundedWord (x : Word64.word64) : t.
   Proof.
@@ -492,46 +528,6 @@ Module BoundedWord64.
        | Cmovle => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovle x y z w
        end%bounded_word.
 End BoundedWord64.
-
-Module LiftOption.
-  Section lift_option.
-    Context (T : Type).
-
-    Definition interp_flat_type (t : flat_type base_type)
-      := option (interp_flat_type (fun _ => T) t).
-
-    Definition interp_base_type' (t : base_type)
-      := match t with
-         | TZ => option T
-         end.
-
-    Definition of' {ty} : Syntax.interp_flat_type interp_base_type' ty -> interp_flat_type ty
-      := @smart_interp_flat_map
-           base_type
-           interp_base_type' interp_flat_type
-           (fun t => match t with TZ => fun x => x end)
-           (fun _ _ x y => match x, y with
-                           | Some x', Some y' => Some (x', y')
-                           | _, _ => None
-                           end)
-           ty.
-
-    Fixpoint to' {ty} : interp_flat_type ty -> Syntax.interp_flat_type interp_base_type' ty
-      := match ty return interp_flat_type ty -> Syntax.interp_flat_type interp_base_type' ty with
-         | Tbase TZ => fun x => x
-         | Prod A B => fun x => (@to' A (option_map (@fst _ _) x),
-                                 @to' B (option_map (@snd _ _) x))
-         end.
-
-    Definition Some {t} (x : T) : interp_base_type' t
-      := match t with
-         | TZ => Some x
-         end.
-  End lift_option.
-  Global Arguments of' {T ty} _.
-  Global Arguments to' {T ty} _.
-  Global Arguments Some {T t} _.
-End LiftOption.
 
 Module ZBoundsTuple.
   Definition interp_flat_type (t : flat_type base_type)
