@@ -89,7 +89,9 @@ Definition reified_Prop_eq (x y : reified_Prop)
 Section rel.
   Local Ltac t :=
     cbv;
-    repeat (break_match
+    repeat (match goal with |- forall x, _ => intro end (* work around broken Ltac [match] in 8.4 that diverges on things under binders *)
+            || break_match
+            || break_match_hyps
             || intro
             || (simpl in * )
             || intuition try congruence
