@@ -623,6 +623,52 @@ Module Relations.
   End lift.
 
   Section proj.
+    Context {interp_base_type1 interp_base_type2}
+            (proj : forall t : base_type, interp_base_type1 t -> interp_base_type2 t).
+
+    Let R {t : flat_type base_type} f g :=
+      SmartVarfMap (t:=t) proj f = g.
+
+    Definition interp_type_rel_pointwise2_uncurried_proj
+               {t : type base_type}
+      : interp_type interp_base_type1 t -> interp_type interp_base_type2 t -> Prop
+      := match t return interp_type interp_base_type1 t -> interp_type interp_base_type2 t -> Prop  with
+         | Tflat T => R
+         | Arrow A B
+           => fun f g
+              => forall x : interp_flat_type interp_base_type1 (all_binders_for (Arrow A B)),
+                  let y := SmartVarfMap proj x in
+                  let fx := ApplyInterpedAll f x in
+                  let gy := ApplyInterpedAll g y in
+                  R fx gy
+         end.
+
+    Lemma uncurry_interp_type_rel_pointwise2_proj
+          {t : type base_type}
+          {f : interp_type interp_base_type1 t}
+          {g}
+    : interp_type_rel_pointwise2 (t:=t) (fun t => R) f g
+      -> interp_type_rel_pointwise2_uncurried_proj (t:=t) f g.
+    Proof.
+      unfold interp_type_rel_pointwise2_uncurried_proj.
+      induction t as [t|A B IHt]; simpl; unfold Morphisms.respectful_hetero in *.
+      { induction t as [t|A IHA B IHB]; simpl; [ solve [ trivial | reflexivity ] | ].
+        intros [HA HB].
+        specialize (IHA _ _ HA); specialize (IHB _ _ HB).
+        unfold R in *.
+        repeat first [ progress destruct_head_hnf' prod
+                     | progress simpl in *
+                     | progress subst
+                     | reflexivity ]. }
+      { destruct B; intros H ?; apply IHt, H; clear IHt;
+          repeat first [ reflexivity
+                       | progress simpl in *
+                       | progress unfold R, LiftOption.of' in *
+                       | progress break_match ]. }
+    Qed.
+  End proj.
+
+  Section proj_option.
     Context {interp_base_type1 : Type} {interp_base_type2 : base_type -> Type}
             (proj_option : forall t, interp_base_type1 -> interp_base_type2 t).
 
@@ -676,7 +722,7 @@ Module Relations.
                        | reflexivity ]. }
         { simpl in *; break_match; reflexivity. } }
     Qed.
-  End proj.
+  End proj_option.
 
   Section combine_related.
     Lemma related_flat_transitivity {interp_base_type1 interp_base_type2 interp_base_type3}
