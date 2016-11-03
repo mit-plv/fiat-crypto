@@ -118,7 +118,7 @@ Section EdDSA.
 
     Context {SRepDec: word b -> option SRep}
             {SRepDec_correct : forall w, option_eq SRepEq (option_map S2Rep (Sdec w)) (SRepDec w)}.
-    
+
     Definition verify_using_representation
                {mlen} (message:word mlen) (pk:word b) (sig:word (b+b))
                : { answer | answer = verify' message pk sig }.
@@ -163,17 +163,19 @@ Section EdDSA.
       (* rewrite with a complicated proper instance for inline code .. *)
       etransitivity;
         [| eapply Proper_option_rect_nd_changevalue;
+           [
+           | reflexivity
+           | eapply ERepDec_correct
+           ];
            [ repeat match goal with
                     | |- _ => intro
                     | |- _ => eapply Proper_option_rect_nd_changebody
                     | |- _ ?x ?x => reflexivity
                     | H : _ |- _ => rewrite H; reflexivity
                     end
-           | reflexivity
-           | eapply ERepDec_correct
            ]
         ].
-      
+
       etransitivity. Focus 2. {
         eapply Proper_option_rect_nd_changebody; [intro|reflexivity].
         set_evars.
