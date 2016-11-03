@@ -31,14 +31,6 @@ Definition feSign (f :  GF25519BoundedCommon.fe25519) : bool :=
   let '(x9, x8, x7, x6, x5, x4, x3, x2, x1, x0) := (x : GF25519.fe25519) in
   BinInt.Z.testbit x0 0.
 
-Definition freezePre :
-  @ModularBaseSystemProofs.FreezePreconditions
-    GF25519.modulus GF25519.params25519 GF25519.int_width.
-Proof.
-  pose proof GF25519.freezePreconditions25519 as A.
-  inversion A;  econstructor; eauto.
-Defined.
-
 Definition a : GF25519BoundedCommon.fe25519 :=
   Eval vm_compute in GF25519BoundedCommon.encode a.
 Definition d : GF25519BoundedCommon.fe25519 :=
@@ -399,24 +391,34 @@ Proof.
   f_equal.
 Qed.
 
-Lemma nth_default_B_compat : forall i,
+Lemma nth_default_freeze_input_bound_compat : forall i,
+  (nth_default 0 PseudoMersenneBaseParams.limb_widths i <
+   GF25519.freeze_input_bound)%Z.
+Proof.
+  pose proof GF25519.freezePreconditions25519.
+  intros.
+  destruct (lt_dec i (length PseudoMersenneBaseParams.limb_widths)).
+  { apply ModularBaseSystemProofs.B_compat.
+    rewrite nth_default_eq.
+    auto using nth_In. }
+  { rewrite nth_default_out_of_bounds by omega.
+    cbv; congruence. }
+Qed.
+(*
+Lemma nth_default_int_width_compat : forall i,
   (nth_default 0 PseudoMersenneBaseParams.limb_widths i <
    GF25519.int_width)%Z.
 Proof.
-    assert (@ModularBaseSystemProofs.FreezePreconditions
-                 GF25519.modulus GF25519.params25519
-                 GF25519.int_width) by
-     (let A := fresh "H" in
-            pose proof GF25519.freezePreconditions25519 as A;
-            inversion A;  econstructor; eauto).
-    intros.
-    destruct (lt_dec i (length PseudoMersenneBaseParams.limb_widths)).
-    { apply ModularBaseSystemProofs.B_compat.
-      rewrite nth_default_eq.
-      auto using nth_In. }
-    { rewrite nth_default_out_of_bounds by omega.
-      cbv; congruence. }
+  pose proof GF25519.freezePreconditions25519.
+  intros.
+  destruct (lt_dec i (length PseudoMersenneBaseParams.limb_widths)).
+  { apply ModularBaseSystemProofs.int_width_compat.
+    rewrite nth_default_eq.
+    auto using nth_In. }
+  { rewrite nth_default_out_of_bounds by omega.
+    cbv; congruence. }
 Qed.
+*)
 
 Lemma minrep_freeze : forall x,
             Pow2Base.bounded
@@ -436,12 +438,7 @@ Lemma minrep_freeze : forall x,
                     (ModularBaseSystem.encode x))) =
             0%Z.
 Proof.
-    assert (@ModularBaseSystemProofs.FreezePreconditions
-                 GF25519.modulus GF25519.params25519
-                 GF25519.int_width)
-      by (let A := fresh "H" in
-            pose proof GF25519.freezePreconditions25519 as A;
-            inversion A;  econstructor; eauto).
+    pose proof GF25519.freezePreconditions25519.
     intros.
     match goal with
       |- appcontext [ModularBaseSystem.freeze _ ?x] =>
@@ -455,15 +452,17 @@ Proof.
       eapply Z.lt_le_trans; [ solve [intuition eauto] | ].
       match goal with |- appcontext [if ?a then _ else _] => destruct a end.
       { apply Z.pow_le_mono_r; try omega.
-          apply Z.lt_le_incl, nth_default_B_compat. }
-      { transitivity (2 ^ (Z.pred GF25519.int_width))%Z.
+        apply Z.lt_le_incl.
+        apply nth_default_freeze_input_bound_compat. }
+      { transitivity (2 ^ (Z.pred GF25519.freeze_input_bound))%Z.
           { apply Z.pow_le_mono; try omega.
-          apply Z.lt_le_pred.
-          apply nth_default_B_compat. }
+            apply Z.lt_le_pred.
+            apply nth_default_freeze_input_bound_compat. }
           { rewrite Z.shiftr_div_pow2 by (auto using Pow2BaseProofs.nth_default_limb_widths_nonneg, PseudoMersenneBaseParamProofs.limb_widths_nonneg).
-          rewrite <- Z.pow_sub_r by (try omega; split; auto using Pow2BaseProofs.nth_default_limb_widths_nonneg, PseudoMersenneBaseParamProofs.limb_widths_nonneg, Z.lt_le_incl, nth_default_B_compat).
-          replace (2 ^ GF25519.int_width)%Z
-          with (2 ^ (Z.pred GF25519.int_width + 1))%Z by (f_equal; omega).
+          rewrite <- Z.pow_sub_r by (try omega; split; auto using Pow2BaseProofs.nth_default_limb_widths_nonneg, PseudoMersenneBaseParamProofs.limb_widths_nonneg, Z.lt_le_incl, nth_default_freeze_input_bound_compat).
+          replace (2 ^ GF25519.freeze_input_bound)%Z
+            with (2 ^ (Z.pred GF25519.freeze_input_bound + 1))%Z
+            by (f_equal; omega).
           rewrite Z.pow_add_r by (omega || (cbv; congruence)).
           rewrite <-Zplus_diag_eq_mult_2.
           match goal with |- (?a <= ?a + ?b - ?c)%Z =>
@@ -561,7 +560,7 @@ Proof.
   { cbv [ZNWord].
     do 2 apply f_equal.
     subst w.
-    pose proof freezePre.
+    pose proof GF25519.freezePreconditions25519.
     match goal with
       |- appcontext [GF25519.freeze ?x ] =>
       let A := fresh "H" in
@@ -625,11 +624,11 @@ Lemma initial_bounds : forall x n,
    nth_default 0
      (Tuple.to_list (length PseudoMersenneBaseParams.limb_widths)
         (GF25519BoundedCommon.proj1_fe25519 x)) n <
-   2 ^ GF25519.int_width -
+   2 ^ GF25519.freeze_input_bound -
    (if eq_nat_dec n 0%nat
     then 0
     else
-     Z.shiftr (2 ^ GF25519.int_width)
+     Z.shiftr (2 ^ GF25519.freeze_input_bound)
        (nth_default 0 PseudoMersenneBaseParams.limb_widths
                     (pred n))))%Z.
 Proof.
@@ -673,7 +672,7 @@ Proof.
 
   rewrite !Z.bit0_odd.
   rewrite <-@Pow2BaseProofs.parity_decode with (limb_widths := PseudoMersenneBaseParams.limb_widths) by (auto using PseudoMersenneBaseParamProofs.limb_widths_nonneg, Tuple.length_to_list; cbv; congruence).
-  pose proof freezePre.
+  pose proof GF25519.freezePreconditions25519.
   match goal with H : _ = GF25519.freeze ?u |- _ =>
                   let A := fresh "H" in let B := fresh "H" in
                   pose proof (ModularBaseSystemProofs.freeze_rep u x) as A;
@@ -702,14 +701,14 @@ Proof.
   repeat match goal with |- appcontext[GF25519.freeze ?x] =>
                          remember (GF25519.freeze x) end.
   assert (Tuple.fieldwise (n := 10) eq f f0).
-  { pose proof freezePre.
+  { pose proof GF25519.freezePreconditions25519.
     match goal with H1 : _ = GF25519.freeze ?u,
                     H2 : _ = GF25519.freeze ?v |- _ =>
     let A := fresh "H" in
     let HP := fresh "H" in
     let HQ := fresh "H" in
         pose proof (ModularBaseSystemProofs.freeze_canonical
-                    (freeze_pre := freezePre) u v _ _ eq_refl eq_refl);
+                      (freeze_pre := GF25519.freezePreconditions25519) u v _ _ eq_refl eq_refl);
         match type of A with ?P -> ?Q -> _ =>
                             assert P as HP by apply initial_bounds;
                                 assert Q as HQ by apply initial_bounds end;
@@ -748,7 +747,7 @@ Qed.
 
 Lemma Proper_feEnc : Proper (GF25519BoundedCommon.eq ==> eq) feEnc.
 Proof.
-  pose proof freezePre.
+  pose proof GF25519.freezePreconditions25519.
   repeat intro; cbv [feEnc].
   rewrite !GF25519Bounded.pack_correct, !GF25519Bounded.freeze_correct.
   rewrite !GF25519.freeze_correct, !ModularBaseSystemOpt.freeze_opt_correct
@@ -760,7 +759,8 @@ Proof.
   let HP := fresh "H" in
   let HQ := fresh "H" in
     pose proof (ModularBaseSystemProofs.freeze_canonical
-                (freeze_pre := freezePre)  x y (ModularBaseSystem.decode x)
+                  (freeze_pre := GF25519.freezePreconditions25519)
+                  x y (ModularBaseSystem.decode x)
                 (ModularBaseSystem.decode y) eq_refl eq_refl);
       match type of A with ?P -> ?Q -> _ =>
                            assert P as HP by apply initial_bounds;
@@ -1258,14 +1258,14 @@ Qed.
 Lemma bounded_by_encode_freeze : forall x,
   ModularBaseSystemProofs.bounded_by
     (ModularBaseSystem.encode x)
-    (ModularBaseSystemProofs.freeze_input_bounds (B := GF25519.int_width)).
+    (ModularBaseSystemProofs.freeze_input_bounds (B := GF25519.freeze_input_bound)).
 Proof.
 Admitted.
 
 Lemma bounded_by_freeze : forall x,
   ModularBaseSystemProofs.bounded_by
     (GF25519BoundedCommon.fe25519WToZ x)
-    (ModularBaseSystemProofs.freeze_input_bounds (B := GF25519.int_width)).
+    (ModularBaseSystemProofs.freeze_input_bounds (B := GF25519.freeze_input_bound)).
 Admitted.
 
 Lemma sqrt_correct : forall x : ModularArithmetic.F.F q,
@@ -1288,7 +1288,7 @@ Proof.
   rewrite ModularBaseSystemProofs.encode_rep.
   symmetry.
   eapply @ModularBaseSystemProofs.sqrt_5mod8_correct;
-    eauto using freezePre, ModularBaseSystemProofs.encode_rep, bounded_by_freeze, bounded_by_encode_freeze;
+    eauto using GF25519.freezePreconditions25519, ModularBaseSystemProofs.encode_rep, bounded_by_freeze, bounded_by_encode_freeze;
   match goal with
   | |- appcontext[GF25519Bounded.powW ?a ?ch] =>
     let A := fresh "H" in

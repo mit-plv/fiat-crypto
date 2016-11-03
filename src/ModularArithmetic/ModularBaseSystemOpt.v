@@ -905,30 +905,15 @@ Section Conversion.
 
 End Conversion.
 
-Section with_base.
-  Context {modulus} (prm : PseudoMersenneBaseParams modulus).
-  Local Notation base := (Pow2Base.base_from_limb_widths limb_widths).
-  Local Notation log_cap i := (nth_default 0 limb_widths i).
-
-  Record freezePreconditions int_width :=
-    mkFreezePreconditions {
-        lt_1_length_base : (1 < length base)%nat;
-        int_width_pos : 0 < int_width;
-        int_width_compat : forall w, In w limb_widths -> w < int_width;
-        c_pos : 0 < c;
-        c_reduce1 : c * (Z.ones (int_width - log_cap (pred (length base)))) < 2 ^ log_cap 0;
-        c_reduce2 : c < 2 ^ log_cap 0 - c;
-        two_pow_k_le_2modulus : 2 ^ k <= 2 * modulus
-      }.
-End with_base.
-Local Hint Resolve lt_1_length_base int_width_pos int_width_compat c_pos
-    c_reduce1 c_reduce2 two_pow_k_le_2modulus.
+Local Hint Resolve lt_1_length_limb_widths int_width_pos B_pos B_compat
+  c_reduce1 c_reduce2.
 
 Section Canonicalization.
   Context `{prm : PseudoMersenneBaseParams} {sc : SubtractionCoefficient}
     (* allows caller to precompute k and c *)
     (k_ c_ : Z) (k_subst : k = k_) (c_subst : c = c_)
-    {int_width} (preconditions : freezePreconditions prm int_width).
+    {int_width freeze_input_bound}
+    (preconditions : FreezePreconditions freeze_input_bound int_width).
   Local Notation digits := (tuple Z (length limb_widths)).
 
   Definition carry_full_3_opt_cps_sig
@@ -1072,7 +1057,8 @@ Section SquareRoots.
   Section SquareRoot5mod8.
   Context {ec : ExponentiationChain (modulus / 8 + 1)}.
   Context (sqrt_m1 : digits) (sqrt_m1_correct : rep (mul sqrt_m1 sqrt_m1) (F.opp 1%F)).
-  Context {int_width} (preconditions : freezePreconditions prm int_width).
+  Context {int_width freeze_input_bound}
+          (preconditions : FreezePreconditions freeze_input_bound int_width).
 
   Definition sqrt_5mod8_opt_sig (powx powx_squared us : digits) :
     { vs : digits |

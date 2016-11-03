@@ -521,16 +521,18 @@ End CarryProofs.
 
 Hint Rewrite @length_carry_and_reduce @length_carry : distr_length.
 
-Class FreezePreconditions `{prm : PseudoMersenneBaseParams} B :=
+Class FreezePreconditions `{prm : PseudoMersenneBaseParams} B int_width :=
   {
     lt_1_length_limb_widths : (1 < length limb_widths)%nat;
+    int_width_pos : 0 < int_width;
+    B_le_int_width : B <= int_width;
     B_pos : 0 < B;
     B_compat : forall w, In w limb_widths -> w < B;
    (* on the first reduce step, we add at most one bit of width to the first digit *)
    c_reduce1 : c * ((2 ^ B) >> nth_default 0 limb_widths (pred (length limb_widths))) <= 2 ^ (nth_default 0 limb_widths 0);
    (* on the second reduce step, we add at most one bit of width to the first digit,
       and leave room to carry c one more time after the highest bit is carried *)
-   c_reduce2 : c <= 2 ^ (nth_default 0 limb_widths 0) - c
+   c_reduce2 : c <= 2 ^ (nth_default 0 limb_widths 0) - c;
   }.
 
 Section CanonicalizationProofs.
@@ -940,8 +942,14 @@ Section CanonicalizationProofs.
       congruence.
   Qed.
 
+  Lemma int_width_compat : forall x, In x limb_widths -> x < int_width.
+  Proof.
+    intros. apply B_compat in H.
+    eapply Z.lt_le_trans; eauto using B_le_int_width.
+  Qed.
+
   Lemma minimal_rep_freeze : forall u, initial_bounds u ->
-      minimal_rep (freeze B u).
+      minimal_rep (freeze int_width u).
   Proof.
     repeat match goal with
            | |- _ => progress (cbv [freeze ModularBaseSystemList.freeze])
@@ -952,12 +960,12 @@ Section CanonicalizationProofs.
            | |- _ => apply conditional_subtract_lt_modulus
            | |- _ => apply conditional_subtract_modulus_preserves_bounded
            | |- bounded _ (carry_full _) => apply bounded_iff
-           | |- _ => solve [auto using Z.lt_le_incl, B_pos, B_compat, lt_1_length_limb_widths, length_carry_full, length_to_list]
+           | |- _ => solve [auto using Z.lt_le_incl, int_width_pos, int_width_compat, lt_1_length_limb_widths, length_carry_full, length_to_list]
            end.
   Qed.
 
   Lemma freeze_decode : forall u,
-      BaseSystem.decode base (to_list _ (freeze B u)) mod modulus =
+      BaseSystem.decode base (to_list _ (freeze int_width u)) mod modulus =
       BaseSystem.decode base (to_list _ u) mod modulus.
   Proof.
     repeat match goal with
@@ -967,7 +975,7 @@ Section CanonicalizationProofs.
            | |- _ => rewrite Z.mod_add by (pose proof prime_modulus; prime_bound)
            | |- _ => rewrite to_list_from_list
            | |- _ => rewrite conditional_subtract_modulus_spec by
-                       auto using Z.lt_le_incl, B_pos, B_compat, lt_1_length_limb_widths, length_carry_full, length_to_list, ge_modulus_01
+                       (auto using Z.lt_le_incl, int_width_pos, int_width_compat, lt_1_length_limb_widths, length_carry_full, length_to_list, ge_modulus_01)
            end.
     rewrite !decode_mod_Fdecode by auto using length_carry_full, length_to_list.
     cbv [carry_full].
@@ -986,7 +994,7 @@ Section CanonicalizationProofs.
     rewrite from_list_to_list; reflexivity.
   Qed.
 
-  Lemma freeze_rep : forall u x, rep u x -> rep (freeze B u) x.
+  Lemma freeze_rep : forall u x, rep u x -> rep (freeze int_width u) x.
   Proof.
     cbv [rep]; intros.
     apply F.eq_to_Z_iff.
@@ -997,7 +1005,7 @@ Section CanonicalizationProofs.
   Lemma freeze_canonical : forall u v x y, rep u x -> rep v y ->
                                            initial_bounds u ->
                                            initial_bounds v ->
-    (x = y <-> fieldwise Logic.eq (freeze B u) (freeze B v)).
+    (x = y <-> fieldwise Logic.eq (freeze int_width u) (freeze int_width v)).
   Proof.
     intros; apply bounded_canonical; auto using freeze_rep, minimal_rep_freeze.
   Qed.
@@ -1022,7 +1030,7 @@ Section SquareRootProofs.
 
   Lemma eqb_true_iff : forall u v x y,
     bounded_by u freeze_input_bounds -> bounded_by v freeze_input_bounds ->
-    u ~= x -> v ~= y -> (x = y <-> eqb B u v = true).
+    u ~= x -> v ~= y -> (x = y <-> eqb int_width u v = true).
   Proof.
     cbv [eqb freeze_input_bounds]. intros.
     rewrite fieldwiseb_fieldwise by (apply Z.eqb_eq).
@@ -1031,10 +1039,10 @@ Section SquareRootProofs.
 
   Lemma eqb_false_iff : forall u v x y,
     bounded_by u freeze_input_bounds -> bounded_by v freeze_input_bounds ->
-    u ~= x -> v ~= y -> (x <> y <-> eqb B u v = false).
+    u ~= x -> v ~= y -> (x <> y <-> eqb int_width u v = false).
   Proof.
     intros.
-    case_eq (eqb B u v).
+    case_eq (eqb int_width u v).
     + rewrite <-eqb_true_iff by eassumption; split; intros;
         congruence || contradiction.
     + split; intros; auto.
@@ -1069,7 +1077,7 @@ Section SquareRootProofs.
     bounded_by powx_squared freeze_input_bounds ->
     ModularBaseSystem.eq powx (pow u chain) ->
     ModularBaseSystem.eq powx_squared (mul powx powx) ->
-    (sqrt_5mod8 B powx powx_squared chain chain_correct sqrt_m1 u) ~= F.sqrt_5mod8 (decode sqrt_m1) x.
+    (sqrt_5mod8 int_width powx powx_squared chain chain_correct sqrt_m1 u) ~= F.sqrt_5mod8 (decode sqrt_m1) x.
   Proof.
     cbv [sqrt_5mod8 F.sqrt_5mod8].
     intros.

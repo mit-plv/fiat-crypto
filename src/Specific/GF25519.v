@@ -22,7 +22,8 @@ Local Open Scope Z.
 
 Definition modulus : Z := Eval compute in 2^255 - 19.
 Lemma prime_modulus : prime modulus. Admitted.
-Definition int_width := 32%Z.
+Definition int_width := 64%Z.
+Definition freeze_input_bound := 32%Z.
 
 Instance params25519 : PseudoMersenneBaseParams modulus.
   construct_params prime_modulus 10%nat 255.
@@ -46,7 +47,7 @@ Instance carryChain : CarryChain limb_widths.
   contradiction H.
 Defined.
 
-Definition freezePreconditions25519 : freezePreconditions params25519 int_width.
+Definition freezePreconditions25519 : FreezePreconditions freeze_input_bound int_width.
 Proof.
   constructor; compute_preconditions.
 Defined.
@@ -584,7 +585,6 @@ Proof.
   exact (proj2_sig (eqb_sig f' g')).
 Qed.
 
-Print sqrt_5mod8_opt.
 Definition sqrt_sig (powf powf_squared f : fe25519) :
   { f' : fe25519 | f' = sqrt_5mod8_opt (int_width := int_width) k_ c_ sqrt_m1 powf powf_squared f}.
 Proof.

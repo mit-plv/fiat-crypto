@@ -83,10 +83,10 @@ Section ModularBaseSystem.
 
   Definition eq (x y : digits) : Prop := decode x = decode y.
 
-  Definition freeze B (x : digits) : digits :=
-    from_list (freeze B [[x]]) (length_freeze length_to_list).
+  Definition freeze int_width (x : digits) : digits :=
+    from_list (freeze int_width [[x]]) (length_freeze length_to_list).
 
-  Definition eqb B (x y : digits) : bool := fieldwiseb Z.eqb (freeze B x) (freeze B y).
+  Definition eqb int_width (x y : digits) : bool := fieldwiseb Z.eqb (freeze int_width x) (freeze int_width y).
 
   (* Note : both of the following square root definitions will produce garbage output if the input is
             not square mod [modulus]. The caller should either provably only call them with square input,
@@ -95,10 +95,10 @@ Section ModularBaseSystem.
                   (chain_correct : fold_chain 0%N N.add chain (1%N :: nil) = Z.to_N (modulus / 4 + 1))
                   (x : digits) : digits := pow x chain.
 
-  Definition sqrt_5mod8 B powx powx_squared (chain : list (nat * nat))
+  Definition sqrt_5mod8 int_width powx powx_squared (chain : list (nat * nat))
                   (chain_correct : fold_chain 0%N N.add chain (1%N :: nil) = Z.to_N (modulus / 8 + 1))
                   (sqrt_minus1 x : digits) : digits :=
-    if eqb B powx_squared x then powx else mul sqrt_minus1 powx.
+    if eqb int_width powx_squared x then powx else mul sqrt_minus1 powx.
 
   Import Morphisms.
   Global Instance eq_Equivalence : Equivalence eq.
@@ -106,9 +106,9 @@ Section ModularBaseSystem.
     split; cbv [eq]; repeat intro; congruence.
   Qed.
 
-  Definition select B (b : Z) (x y : digits) :=
-    add (map (Z.land (neg B b)) x)
-        (map (Z.land (neg B (Z.lxor b 1))) x).
+  Definition select int_width (b : Z) (x y : digits) :=
+    add (map (Z.land (neg int_width b)) x)
+        (map (Z.land (neg int_width (Z.lxor b 1))) x).
 
   Context {target_widths} (target_widths_nonneg : forall x, In x target_widths -> 0 <= x)
           (bits_eq : sum_firstn limb_widths   (length limb_widths) =

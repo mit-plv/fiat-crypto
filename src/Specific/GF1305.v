@@ -44,7 +44,7 @@ Instance carryChain : CarryChain limb_widths.
   contradiction H.
 Defined.
 
-Definition freezePreconditions1305 : freezePreconditions params1305 int_width.
+Definition freezePreconditions1305 : FreezePreconditions int_width int_width.
 Proof.
   constructor; compute_preconditions.
 Defined.
