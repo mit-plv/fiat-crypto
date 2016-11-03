@@ -1319,9 +1319,9 @@ Proof.
 Qed.
 
 Lemma ERepDec_correct : forall w : Word.word b,
-    ERepDec w = @option_map E Erep EToRep (Edec w).
+    option_eq ExtendedCoordinates.Extended.eq (ERepDec w) (@option_map E Erep EToRep (Edec w)).
 Proof.
-  pose proof (@PointEncoding.Kdecode_point_correct
+  exact (@PointEncoding.Kdecode_point_correct
                 (pred b) _ Spec.Ed25519.a Spec.Ed25519.d _
                 GF25519.modulus_gt_2 bound_check255
                 _ _ _ _ _ _ _ _ _ _ GF25519Bounded.field25519
@@ -1336,9 +1336,7 @@ Proof.
                 (@PrimeFieldTheorems.F.sqrt_5mod8 _ Fsqrt_minus1)
                 sqrt_correct
              ).
-  intros; specialize (H0 w).
-  cbv [ERepDec Edec EToRep].
-Admitted.
+Qed.
 
 Lemma eq_enc_E_iff : forall (P_ : Word.word b) (P : E),
  Eenc P = P_ <->
