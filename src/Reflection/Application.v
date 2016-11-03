@@ -43,23 +43,35 @@ Section language.
        | S n' => binders_for' n' t var
        end.
 
-  Fixpoint all_binders_for (t : type base_type) (var : base_type -> Type)
-    := match t return Type with
-       | Tflat T => unit
+  Fixpoint all_binders_for (t : type base_type)
+    := match t return match t with
+                      | Tflat _ => unit
+                      | _ => flat_type base_type
+                      end with
+       | Tflat T => tt
        | Arrow A B
-         => match B with
-            | Tflat T => var A
-            | Arrow _ _ => var A * all_binders_for B var
-            end%type
+         => match B return match B with Tflat _ => _ | _ => _ end -> _ with
+            | Tflat T => fun _ => Tbase A
+            | Arrow _ _ => fun T => Tbase A * T
+            end%ctype (all_binders_for B)
        end.
 
-  Definition fst_binder {A B var} (args : all_binders_for (Arrow A B) var) : var A
-    := match B return all_binders_for (Arrow A B) var -> var A with
+  Definition interp_all_binders_for var T
+    := match T return Type with
+       | Tflat _ => unit
+       | Arrow A B => interp_flat_type var (all_binders_for (Arrow A B))
+       end.
+
+  Definition fst_binder {A B var} (args : interp_flat_type var (all_binders_for (Arrow A B))) : var A
+    := match B return interp_flat_type var (all_binders_for (Arrow A B)) -> var A with
        | Tflat _ => fun x => x
        | Arrow _ _ => fun x => fst x
        end args.
-  Definition snd_binder {A B var} (args : all_binders_for (Arrow A B) var) : all_binders_for B var
-    := match B return all_binders_for (Arrow A B) var -> all_binders_for B var with
+  Definition snd_binder {A B var} (args : interp_flat_type var (all_binders_for (Arrow A B)))
+    : interp_all_binders_for var B
+    := match B return interp_flat_type var (all_binders_for (Arrow A B))
+                      -> interp_all_binders_for var B
+       with
        | Tflat _ => fun _ => tt
        | Arrow _ _ => fun x => snd x
        end args.
@@ -82,10 +94,10 @@ Section language.
        end.
 
   Fixpoint ApplyAll {var t} (x : @expr base_type interp_base_type op var t)
-    : forall (args : all_binders_for t var),
+    : forall (args : interp_all_binders_for var t),
       @exprf base_type interp_base_type op var (remove_all_binders t)
     := match x in @expr _ _ _ _ t
-             return (forall (args : all_binders_for t var),
+             return (forall (args : interp_all_binders_for var t),
                         @exprf base_type interp_base_type op var (remove_all_binders t))
        with
        | Return _ x => fun _ => x
@@ -114,10 +126,10 @@ Section language.
 
   Fixpoint ApplyInterpedAll {t}
     : forall  (x : interp_type interp_base_type t)
-              (args : all_binders_for t interp_base_type),
+              (args : interp_all_binders_for interp_base_type t),
       interp_flat_type interp_base_type (remove_all_binders t)
     := match t return (forall (x : interp_type _ t)
-                              (args : all_binders_for t _),
+                              (args : interp_all_binders_for _ t),
                           interp_flat_type _ (remove_all_binders t))
        with
        | Tflat _ => fun x _ => x
