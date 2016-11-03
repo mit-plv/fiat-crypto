@@ -2,6 +2,7 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.Application.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemListZOperations.
 Require Import Crypto.Util.Equality.
 Require Import Crypto.Util.ZUtil.
@@ -574,6 +575,40 @@ Module Relations.
        end.
   Definition related_boundsi t : BoundedWord64.interp_base_type t -> ZBounds.interp_base_type t -> Prop
     := match t with TZ => related_bounds end.
+
+  Definition related_word64_Z : Word64.word64 -> Z -> Prop
+    := fun x y => Word64.word64ToZ x = y.
+  Definition related_word64_Zi t : Word64.interp_base_type t -> Z.interp_base_type t -> Prop
+    := match t with
+       | TZ => related_word64_Z
+       end.
+
+  Section combine_related.
+    Lemma related_flat_transitivity {interp_base_type1 interp_base_type2 interp_base_type3}
+          {R1 : forall t : base_type, interp_base_type1 t -> interp_base_type2 t -> Prop}
+          {R2 : forall t : base_type, interp_base_type1 t -> interp_base_type3 t -> Prop}
+          {R3 : forall t : base_type, interp_base_type2 t -> interp_base_type3 t -> Prop}
+          {t x y z}
+    : (forall t a b c, (R1 t a b : Prop) -> (R2 t a c : Prop) -> (R3 t b c : Prop))
+      -> interp_flat_type_rel_pointwise2 (t:=t) R1 x y
+      -> interp_flat_type_rel_pointwise2 (t:=t) R2 x z
+      -> interp_flat_type_rel_pointwise2 (t:=t) R3 y z.
+    Proof.
+      intro HRel; induction t; simpl; intuition eauto.
+    Qed.
+  End combine_related.
+
+  Definition related'_word64_bounds : Word64.word64 -> ZBounds.bounds -> Prop
+    := fun value b => (0 <= ZBounds.lower b /\ ZBounds.lower b <= Word64.word64ToZ value <= ZBounds.upper b /\ Z.log2 (ZBounds.upper b) < Z.of_nat Word64.bit_width)%Z.
+  Definition related_word64_bounds : Word64.word64 -> ZBounds.t -> Prop
+    := fun value b => match b with
+                      | Some b => related'_word64_bounds value b
+                      | None => True
+                      end.
+  Definition related_word64_boundsi (t : base_type) : Word64.interp_base_type t -> ZBounds.interp_base_type t -> Prop
+    := match t with
+       | TZ => related_word64_bounds
+       end.
 
   Local Notation related_op R interp_op1 interp_op2
     := (forall (src dst : flat_type base_type) (op : op src dst)
