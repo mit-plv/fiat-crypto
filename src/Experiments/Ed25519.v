@@ -31,12 +31,18 @@ Definition feSign (f :  GF25519BoundedCommon.fe25519) : bool :=
   let '(x9, x8, x7, x6, x5, x4, x3, x2, x1, x0) := (x : GF25519.fe25519) in
   BinInt.Z.testbit x0 0.
 
-Definition a : GF25519BoundedCommon.fe25519 :=
-  Eval vm_compute in GF25519BoundedCommon.encode a.
-Definition d : GF25519BoundedCommon.fe25519 :=
-  Eval vm_compute in GF25519BoundedCommon.encode d.
-Definition twice_d : GF25519BoundedCommon.fe25519 :=
-  Eval vm_compute in (GF25519Bounded.add d d).
+Section Constants.
+  Import GF25519BoundedCommon.
+  Definition a : GF25519BoundedCommon.fe25519 :=
+    Eval vm_compute in GF25519BoundedCommon.encode a.
+  Definition d : GF25519BoundedCommon.fe25519 :=
+    Eval vm_compute in GF25519BoundedCommon.encode d.
+  Definition twice_d' : GF25519BoundedCommon.fe25519 :=
+    Eval vm_compute in (GF25519Bounded.add d d).
+  Definition twice_d : GF25519BoundedCommon.fe25519 :=
+    Eval cbv [twice_d' fe25519_word64ize word64ize andb opt.word64ToZ opt.word64ize opt.Zleb Z.compare CompOpp Pos.compare Pos.compare_cont] in (fe25519_word64ize twice_d').
+End Constants.
+
 Lemma phi_a : GF25519BoundedCommon.eq (GF25519BoundedCommon.encode Spec.Ed25519.a) a.
 Proof. reflexivity. Qed.
 Lemma phi_d : GF25519BoundedCommon.eq (GF25519BoundedCommon.encode Spec.Ed25519.d) d.
@@ -838,22 +844,26 @@ Lemma SRepEnc_correct : forall x : ModularArithmetic.F.F l, Senc x = SRepEnc (S2
   unfold SRepEnc, Senc, Fencode; intros; f_equal.
 Qed.
 
-(** TODO: How do we speed up vm_compute here?  I think it's spending most of it's time rechecking boundedness... *)
-Definition ERepB_value := Eval vm_compute in (proj1_sig (EToRep B)).
-Let ERepB : Erep.
-  exists (eta4 ERepB_value).
-  cbv [GF25519BoundedCommon.eq ModularBaseSystem.eq Pre.onCurve].
-  vm_decide_no_check.
-Defined.
+Section ConstantPoints.
+  Import GF25519BoundedCommon.
+  Let proj1_sig_ERepB' := Eval vm_compute in proj1_sig (EToRep B).
+  Let tmap4 := Eval vm_compute in @Tuple.map 4. Arguments tmap4 {_ _} _ _.
+  Let proj1_sig_ERepB := Eval cbv [tmap4 proj1_sig_ERepB' fe25519_word64ize word64ize andb opt.word64ToZ opt.word64ize opt.Zleb Z.compare CompOpp Pos.compare Pos.compare_cont] in (tmap4 fe25519_word64ize proj1_sig_ERepB').
+  Let proj1_sig_ERepB_correct : proj1_sig_ERepB = proj1_sig (EToRep B).
+  Proof. vm_cast_no_check (eq_refl proj1_sig_ERepB). Qed.
 
-Lemma ERepB_value_correct : ERepB_value = proj1_sig (EToRep B).
-Proof. vm_cast_no_check (eq_refl ERepB_value). Qed.
+  Definition ERepB : Erep.
+    exists (eta4 proj1_sig_ERepB).
+    cbv [GF25519BoundedCommon.eq ModularBaseSystem.eq Pre.onCurve].
+    vm_decide_no_check.
+  Defined.
 
-Let ERepB_correct : ExtendedCoordinates.Extended.eq (field:=GF25519Bounded.field25519) ERepB (EToRep B).
-  pose proof ERepB_value_correct; destruct (EToRep B).
-  cbv [proj1_sig] in *; subst.
-  vm_decide.
-Qed.
+  Lemma ERepB_correct : ExtendedCoordinates.Extended.eq (field:=GF25519Bounded.field25519) ERepB (EToRep B).
+    generalize proj1_sig_ERepB_correct as H; destruct (EToRep B) as [B ?] in |- *.
+    cbv [proj1_sig] in |- *. intro. subst B.
+    vm_decide.
+  Qed.
+End ConstantPoints.
 
 Lemma B_order_l : CompleteEdwardsCurveTheorems.E.eq
               (CompleteEdwardsCurve.E.mul (Z.to_nat l) B)
@@ -1638,9 +1648,29 @@ Extraction Implicit Word.split2 [ 2 ].
 Extraction Implicit WordUtil.cast_word [1 2 3].
 Extraction Implicit WordUtil.wfirstn [ 2 4 ].
 Extract Inlined Constant WordUtil.cast_word => "".
+Extract Inductive Word.word => "[Prelude.Bool]" [ "[]" "(:)" ]
+  "(\fWO fWS w -> {- match_on_word -} case w of {[] -> fWO (); (b:w') -> fWS b w' } )".
 
 (** Let_In *)
 Extraction Inline LetIn.Let_In.
+
+(* Word64 *)
+Import Crypto.Reflection.Z.Interpretations.
+Extract Inlined Constant Word64.word64 => "Data.Word.Word64".
+Extract Inlined Constant GF25519BoundedCommon.word64 => "Data.Word.Word64".
+Extract Inlined Constant Word64.word64ToZ => "Prelude.fromIntegral".
+Extract Inlined Constant GF25519BoundedCommon.word64ToZ => "Prelude.fromIntegral".
+Extract Inlined Constant GF25519BoundedCommon.NToWord64 => "".
+Extract Inlined Constant Word64.add => "(Prelude.+)".
+Extract Inlined Constant Word64.mul => "(Prelude.*)".
+Extract Inlined Constant Word64.sub => "(Prelude.-)".
+Extract Inlined Constant Word64.land => "(Data.Bits..&.)".
+Extract Inlined Constant Word64.lor => "(Data.Bits..|.)".
+Extract Constant Word64.neg => "(\_ w -> Prelude.negate w)". (* FIXME: reification: drop arg1 *)
+Extract Constant Word64.shl => "(\w n -> Data.Bits.shiftR w (Prelude.fromIntegral n))".
+Extract Constant Word64.shr => "(\w n -> Data.Bits.shiftL w (Prelude.fromIntegral n))".
+Extract Constant Word64.cmovle => "(\x y r1 r2 -> if x Prelude.<= y then r1 else r2)".
+Extract Constant Word64.cmovne => "(\x y r1 r2 -> if x Prelude.== y then r1 else r2)".
 
 (* inlining, primarily to reduce polymorphism *)
 Extraction Inline dec_eq_Z dec_eq_N dec_eq_sig_hprop.
@@ -1652,72 +1682,27 @@ Extraction Inline PointEncoding.Kencode_point.
 Extraction Inline ExtendedCoordinates.Extended.point ExtendedCoordinates.Extended.coordinates ExtendedCoordinates.Extended.to_twisted  ExtendedCoordinates.Extended.from_twisted ExtendedCoordinates.Extended.add_coordinates ExtendedCoordinates.Extended.add ExtendedCoordinates.Extended.opp ExtendedCoordinates.Extended.zero. (* ExtendedCoordinates.Extended.zero could be precomputed *)
 Extraction Inline CompleteEdwardsCurve.E.coordinates CompleteEdwardsCurve.E.zero.
 Extraction Inline GF25519BoundedCommon.proj_word GF25519BoundedCommon.Build_bounded_word GF25519BoundedCommon.Build_bounded_word'.
+Extraction Inline GF25519BoundedCommon.app_wire_digits GF25519BoundedCommon.wire_digit_bounds_exp.
+Extraction Inline Crypto.Util.HList.mapt' Crypto.Util.HList.mapt Crypto.Util.Tuple.map.
 
-(* Recursive Extraction sign. *)
-  (* most of the code we want seems to be below [eq_dec1] and there is other stuff above that *)
-  (* TODO: remove branching from [sRep] functions *)
+Extraction Implicit H [ 1 ].
+Extract Constant H =>
+"let { b2i b = case b of { Prelude.True -> 1 ; Prelude.False -> 0 } } in
+let { leBitsToBytes [] = [] :: [Data.Word.Word8] ;
+      leBitsToBytes (a:b:c:d:e:f:g:h:bs) = (b2i a Data.Bits..|. (b2i b `Data.Bits.shiftL` 1) Data.Bits..|. (b2i c `Data.Bits.shiftL` 2) Data.Bits..|. (b2i d `Data.Bits.shiftL` 3) Data.Bits..|. (b2i e `Data.Bits.shiftL` 4) Data.Bits..|. (b2i f `Data.Bits.shiftL` 5) Data.Bits..|. (b2i g `Data.Bits.shiftL` 6) Data.Bits..|. (b2i h `Data.Bits.shiftL` 7)) : leBitsToBytes bs ;
+      leBitsToBytes bs = Prelude.error ('b':'s':'l':[]) } in
+let { bytesToLEBits [] = [] :: [Prelude.Bool] ;
+      bytesToLEBits (x:xs) = (x `Data.Bits.testBit` 0) : (x `Data.Bits.testBit` 1) : (x `Data.Bits.testBit` 2) : (x `Data.Bits.testBit` 3) : (x `Data.Bits.testBit` 4) : (x `Data.Bits.testBit` 5) : (x `Data.Bits.testBit` 6) : (x `Data.Bits.testBit` 7) : bytesToLEBits xs } in
+(bytesToLEBits Prelude.. B.unpack Prelude.. SHA.bytestringDigest Prelude.. SHA.sha512 Prelude.. B.pack Prelude.. leBitsToBytes)".
 
-(* fragment of output:
+(* invW makes GHC compile very slow *)
+Extract Constant GF25519Bounded.invW => "Prelude.error ('i':'n':'v':'W':[])".
 
-sign :: Word -> Word -> Prelude.Integer -> Word -> Word
-sign pk sk mlen msg =
-  let {
-   sp = let {hsk = h b sk} in
-        (,)
-        (sRepDecModLShort
-          (combine n (clearlow n c (wfirstn n ((Prelude.+) b b) hsk)) (Prelude.succ 0)
-            (wones (Prelude.succ 0)))) (split2 b b hsk)}
-  in
-  let {r = sRepDecModL (h ((Prelude.+) b mlen) (combine b (Prelude.snd sp) mlen msg))} in
-  let {r0 = sRepERepMul r eRepB} in
-  combine b (eRepEnc r0) b
-    (sRepEnc
-      (sRepAdd r
-        (sRepMul
-          (sRepDecModL
-            (h ((Prelude.+) b ((Prelude.+) b mlen))
-              (combine b (eRepEnc r0) ((Prelude.+) b mlen) (combine b pk mlen msg)))) (Prelude.fst sp))))
-
-sRepERepMul :: SRep0 -> Erep -> Erep
-sRepERepMul sc a =
-  Prelude.snd
-    (funexp (\state ->
-      case state of {
-       (,) i acc ->
-        let {acc2 = erepAdd acc acc} in
-        let {acc2a = erepAdd a acc2} in
-        (\fO fS n -> {- match_on_nat -} if n Prelude.== 0 then fO () else fS (n Prelude.- 1))
-          (\_ -> (,) 0
-          acc)
-          (\i' -> (,) i'
-          (eRepSel ((\w n -> Data.Bits.testBit w (Prelude.fromIntegral n)) sc (of_nat i')) acc2 acc2a))
-          i}) ((,) ll
-      (case  ((,) zero_ one_) of {
-        (,) x y -> (,) ((,) ((,) x y) one_) (mul3 x y)})) ll)
-
-erepAdd :: (Point0 Fe25519) -> (Point0 Fe25519) -> Point0 Fe25519
-erepAdd p q =
-  case  p of {
-   (,) y t1 ->
-    case y of {
-     (,) y0 z1 ->
-      case y0 of {
-       (,) x1 y1 ->
-        case  q of {
-         (,) y2 t2 ->
-          case y2 of {
-           (,) y3 z2 ->
-            case y3 of {
-             (,) x2 y4 ->
-              let {a = mul3 (sub2 y1 x1) (sub2 y4 x2)} in
-              let {b0 = mul3 (add2 y1 x1) (add2 y4 x2)} in
-              let {c0 = mul3 (mul3 t1 twice_d) t2} in
-              let {d = mul3 z1 (add2 z2 z2)} in
-              let {e = sub2 b0 a} in
-              let {f = sub2 d c0} in
-              let {g = add2 d c0} in
-              let {h0 = add2 b0 a} in
-              let {x3 = mul3 e f} in
-              let {y5 = mul3 g h0} in
-              let {t3 = mul3 e h0} in let {z3 = mul3 f g} in (,) ((,) ((,) x3 y5) z3) t3}}}}}}
+Extraction "/tmp/Sign.hs" sign.
+(*
+import qualified Data.List
+import qualified Data.Bits
+import qualified Data.Word (Word8, Word64)
+import qualified Data.ByteString.Lazy as B
+import qualified Data.Digest.Pure.SHA as SHA
 *)
