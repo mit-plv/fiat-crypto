@@ -25,6 +25,12 @@ Section language.
        | S n' => remove_binders' n' t
        end.
 
+  Fixpoint remove_all_binders (t : type base_type) : flat_type base_type
+    := match t with
+       | Tflat T => T
+       | Arrow A B => remove_all_binders B
+       end.
+
   Fixpoint binders_for' (n : nat) (t : type base_type) (var : base_type -> Type) {struct t}
     := match n, t return Type with
        | 0, Arrow A B => var A
@@ -37,8 +43,26 @@ Section language.
        | S n' => binders_for' n' t var
        end.
 
-  Definition all_binders_for (t : type base_type) (var : base_type -> Type)
-    := binders_for (count_binders t) t var.
+  Fixpoint all_binders_for (t : type base_type) (var : base_type -> Type)
+    := match t return Type with
+       | Tflat T => unit
+       | Arrow A B
+         => match B with
+            | Tflat T => var A
+            | Arrow _ _ => var A * all_binders_for B var
+            end%type
+       end.
+
+  Definition fst_binder {A B var} (args : all_binders_for (Arrow A B) var) : var A
+    := match B return all_binders_for (Arrow A B) var -> var A with
+       | Tflat _ => fun x => x
+       | Arrow _ _ => fun x => fst x
+       end args.
+  Definition snd_binder {A B var} (args : all_binders_for (Arrow A B) var) : all_binders_for B var
+    := match B return all_binders_for (Arrow A B) var -> all_binders_for B var with
+       | Tflat _ => fun _ => tt
+       | Arrow _ _ => fun x => snd x
+       end args.
 
   Fixpoint Apply' n {var t} (x : @expr base_type interp_base_type op var t)
     : forall (args : binders_for' n t var),
@@ -55,6 +79,17 @@ Section language.
     := match n return binders_for n t var -> @expr _ _ _ _ (remove_binders n t) with
        | 0 => fun _ => x
        | S n' => @Apply' n' var t x
+       end.
+
+  Fixpoint ApplyAll {var t} (x : @expr base_type interp_base_type op var t)
+    : forall (args : all_binders_for t var),
+      @exprf base_type interp_base_type op var (remove_all_binders t)
+    := match x in @expr _ _ _ _ t
+             return (forall (args : all_binders_for t var),
+                        @exprf base_type interp_base_type op var (remove_all_binders t))
+       with
+       | Return _ x => fun _ => x
+       | Abs src dst f => fun args => @ApplyAll var dst (f (fst_binder args)) (snd_binder args)
        end.
 
   Fixpoint ApplyInterped' n {t} {struct t}
@@ -76,6 +111,18 @@ Section language.
        | 0 => fun _ => x
        | S n' => @ApplyInterped' n' t x
        end.
+
+  Fixpoint ApplyInterpedAll {t}
+    : forall  (x : interp_type interp_base_type t)
+              (args : all_binders_for t interp_base_type),
+      interp_flat_type interp_base_type (remove_all_binders t)
+    := match t return (forall (x : interp_type _ t)
+                              (args : all_binders_for t _),
+                          interp_flat_type _ (remove_all_binders t))
+       with
+       | Tflat _ => fun x _ => x
+       | Arrow A B => fun f x => @ApplyInterpedAll B (f (fst_binder x)) (snd_binder x)
+       end.
 End language.
 
 Arguments all_binders_for {_} !_ _ / .
@@ -86,3 +133,5 @@ Arguments remove_binders {_} !_ !_ / .
 Arguments Apply {_ _ _ _ _ _} _ _ , {_ _ _} _ {_ _} _ _.
 Arguments Apply _ _ _ !_ _ _ !_ !_ / .
 Arguments ApplyInterped {_ _ !_ !_} _ _ / .
+Arguments ApplyAll {_ _ _ _ !_} !_ _ / .
+Arguments ApplyInterpedAll {_ _ !_} _ _ / .
