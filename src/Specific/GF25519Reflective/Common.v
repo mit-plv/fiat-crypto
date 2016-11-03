@@ -118,9 +118,9 @@ Notation correct_and_bounded_genT ropW'v ropZ_sigv
       let ropBounds := MapInterp ZBounds.of_word64 ropW' in
       let ropBoundedWord64 := MapInterp BoundedWord64.of_word64 ropW' in
       ropZ = proj1_sig ropZ_sig
-      /\ interp_type_rel_pointwise2 Relations.related_Zi (Interp (@BoundedWord64.interp_op) ropBoundedWord64) (Interp (@Z.interp_op) ropZ)
-      /\ interp_type_rel_pointwise2 Relations.related_boundsi (Interp (@BoundedWord64.interp_op) ropBoundedWord64) (Interp (@ZBounds.interp_op) ropBounds)
-      /\ interp_type_rel_pointwise2 Relations.related_word64i (Interp (@BoundedWord64.interp_op) ropBoundedWord64) (Interp (@Word64.interp_op) ropW))
+      /\ interp_type_rel_pointwise2 Relations.related_Z (Interp (@BoundedWord64.interp_op) ropBoundedWord64) (Interp (@Z.interp_op) ropZ)
+      /\ interp_type_rel_pointwise2 Relations.related_bounds (Interp (@BoundedWord64.interp_op) ropBoundedWord64) (Interp (@ZBounds.interp_op) ropBounds)
+      /\ interp_type_rel_pointwise2 Relations.related_word64 (Interp (@BoundedWord64.interp_op) ropBoundedWord64) (Interp (@Word64.interp_op) ropW))
        (only parsing).
 
 Ltac rexpr_correct :=

@@ -36,7 +36,7 @@ Module LiftOption.
          | TZ => option T
          end.
 
-    Definition of' {ty} : Syntax.interp_flat_type interp_base_type' ty -> interp_flat_type ty
+    Definition of' {t} : Syntax.interp_flat_type interp_base_type' t -> interp_flat_type t
       := @smart_interp_flat_map
            base_type
            interp_base_type' interp_flat_type
@@ -45,23 +45,32 @@ Module LiftOption.
                            | Some x', Some y' => Some (x', y')
                            | _, _ => None
                            end)
-           ty.
+           t.
 
-    Fixpoint to' {ty} : interp_flat_type ty -> Syntax.interp_flat_type interp_base_type' ty
-      := match ty return interp_flat_type ty -> Syntax.interp_flat_type interp_base_type' ty with
+    Fixpoint to' {t} : interp_flat_type t -> Syntax.interp_flat_type interp_base_type' t
+      := match t return interp_flat_type t -> Syntax.interp_flat_type interp_base_type' t with
          | Tbase TZ => fun x => x
          | Prod A B => fun x => (@to' A (option_map (@fst _ _) x),
                                  @to' B (option_map (@snd _ _) x))
          end.
+
+    Definition lift_relation {interp_base_type2}
+               (R : forall t, T -> interp_base_type2 t -> Prop)
+      : forall t, interp_base_type' t -> interp_base_type2 t -> Prop
+      := fun t x y => match of' (t:=Tbase t) x with
+                      | Some x' => R t x' y
+                      | None => True
+                      end.
 
     Definition Some {t} (x : T) : interp_base_type' t
       := match t with
          | TZ => Some x
          end.
   End lift_option.
-  Global Arguments of' {T ty} _.
-  Global Arguments to' {T ty} _.
+  Global Arguments of' {T t} _.
+  Global Arguments to' {T t} _.
   Global Arguments Some {T t} _.
+  Global Arguments lift_relation {T _} R _ _ _.
 End LiftOption.
 
 Module Word64.
@@ -364,6 +373,15 @@ Module BoundedWord64.
        | TZ => boundedWordToWord64
        end.
 
+  (** XXX FIXME(jgross) This is going to break horribly if we need to support any types other than [Z] *)
+  Definition to_word64' ty : BoundedWord -> Word64.interp_base_type ty
+    := match ty return BoundedWord -> Word64.interp_base_type ty with
+       | TZ => fun x => boundedWordToWord64 (Some x)
+       end.
+
+  Definition to_Z' ty : BoundedWord -> Z.interp_base_type ty
+    := fun x => Word64.to_Z _ (to_word64' _ x).
+
   Definition of_Z ty : Z.interp_base_type ty -> interp_base_type ty
     := fun x => of_word64 _ (Word64.of_Z _ x).
   Definition to_Z ty : interp_base_type ty -> Z.interp_base_type ty
@@ -550,43 +568,19 @@ Module BoundedWord64Tuple.
 End BoundedWord64Tuple.
 
 Module Relations.
-  Definition lift_relation {T} (R : BoundedWord64.BoundedWord -> T -> Prop) : BoundedWord64.t -> T -> Prop
-    := fun x y => match x with
-                  | Some _ => True
-                  | None => False
-                  end -> match x with
-                         | Some x' => R x' y
-                         | None => True
-                         end.
+  Definition related'_Z {t} (x : BoundedWord64.BoundedWord) (y : Z.interp_base_type t) : Prop
+    := BoundedWord64.to_Z' _ x = y.
+  Definition related_Z t : BoundedWord64.interp_base_type t -> Z.interp_base_type t -> Prop
+    := LiftOption.lift_relation (@related'_Z) t.
+  Definition related'_word64 {t} (x : BoundedWord64.BoundedWord) (y : Word64.interp_base_type t) : Prop
+    := BoundedWord64.to_word64' _ x = y.
+  Definition related_word64 t : BoundedWord64.interp_base_type t -> Word64.interp_base_type t -> Prop
+    := LiftOption.lift_relation (@related'_word64) t.
+  Definition related_bounds t : BoundedWord64.interp_base_type t -> ZBounds.interp_base_type t -> Prop
+    := fun x y => BoundedWord64.to_bounds _ x = y.
 
-  Definition related'_Z (x : BoundedWord64.BoundedWord) (y : Z) : Prop
-    := Word64.word64ToZ (BoundedWord64.value x) = y.
-  Definition related_Z : BoundedWord64.t -> Z -> Prop := lift_relation related'_Z.
-  Definition related_Zi t : BoundedWord64.interp_base_type t -> Z.interp_base_type t -> Prop
-    := match t with TZ => related_Z end.
-  Definition related'_word64 (x : BoundedWord64.BoundedWord) (y : Word64.word64) : Prop
-    := BoundedWord64.value x = y.
-  Definition related_word64 : BoundedWord64.t -> Word64.word64 -> Prop := lift_relation related'_word64.
-  Definition related_word64i t : BoundedWord64.interp_base_type t -> Word64.interp_base_type t -> Prop
-    := match t with TZ => related_word64 end.
-  Definition related_bounds (x : BoundedWord64.t) (y : ZBounds.t) : Prop
-    := match x, y with
-       | Some x, Some y
-         => BoundedWord64.lower x = ZBounds.lower y /\ BoundedWord64.upper x = ZBounds.upper y
-       | Some _, _
-         => False
-       | None, None => True
-       | None, _ => False
-       end.
-  Definition related_boundsi t : BoundedWord64.interp_base_type t -> ZBounds.interp_base_type t -> Prop
-    := match t with TZ => related_bounds end.
-
-  Definition related_word64_Z : Word64.word64 -> Z -> Prop
-    := fun x y => Word64.word64ToZ x = y.
-  Definition related_word64_Zi t : Word64.interp_base_type t -> Z.interp_base_type t -> Prop
-    := match t with
-       | TZ => related_word64_Z
-       end.
+  Definition related_word64_Z t : Word64.interp_base_type t -> Z.interp_base_type t -> Prop
+    := fun x y => Word64.to_Z _ x = y.
 
   Section lift.
     Context {interp_base_type1 interp_base_type2 : base_type -> Type}
@@ -669,7 +663,7 @@ Module Relations.
             (proj_option : forall t, interp_base_type1 -> interp_base_type2 t).
 
     Let R {t : flat_type base_type} f g :=
-      let f' := LiftOption.of' (ty:=t) f in
+      let f' := LiftOption.of' (t:=t) f in
       match f' with
       | Some f' => SmartVarfMap proj_option f' = g
       | None => True
@@ -761,27 +755,30 @@ Module Relations.
     let v := fresh in
     let t := fresh in
     intros t v; destruct t; intros; simpl in *; hnf; simpl;
-    cbv [BoundedWord64.word64ToBoundedWord related'_Z related'_word64] in *;
+    cbv [BoundedWord64.word64ToBoundedWord related'_Z LiftOption.of' related_Z related_word64 related'_word64] in *;
     break_innermost_match; simpl;
     first [ tauto
           | Z.ltb_to_lt;
             pose proof (Word64.word64ToZ_log_bound v);
             try omega ].
 
-  Lemma related_Z_const : related_const related_Zi Word64.interp_base_type BoundedWord64.of_word64 Word64.to_Z.
+  Lemma related_Z_const : related_const related_Z Word64.interp_base_type BoundedWord64.of_word64 Word64.to_Z.
   Proof. related_const_t. Qed.
-  Lemma related_bounds_const : related_const related_boundsi Word64.interp_base_type BoundedWord64.of_word64 ZBounds.of_word64.
+  Lemma related_bounds_const : related_const related_bounds Word64.interp_base_type BoundedWord64.of_word64 ZBounds.of_word64.
   Proof. related_const_t. Qed.
-  Lemma related_word64_const : related_const related_word64i Word64.interp_base_type BoundedWord64.of_word64 (fun _ x => x).
+  Lemma related_word64_const : related_const related_word64 Word64.interp_base_type BoundedWord64.of_word64 (fun _ x => x).
   Proof. related_const_t. Qed.
 
-  Lemma related_Z_op : related_op related_Zi (@BoundedWord64.interp_op) (@Z.interp_op).
+  Lemma related_Z_op : related_op related_Z (@BoundedWord64.interp_op) (@Z.interp_op).
   Proof.
     let op := fresh in intros ?? op; destruct op; simpl.
-    repeat first [ progress cbv [related_Z lift_relation related'_Z BoundedWord64.value]
+    repeat first [ progress cbv [related_Z LiftOption.lift_relation related'_Z BoundedWord64.value]
+                 | progress unfold LiftOption.of' in *
                  | progress intros
                  | progress destruct_head' prod
                  | progress destruct_head' and
+                 | progress destruct_head' option
+                 | progress inversion_option
                  | progress specialize_by (exact I)
                  | progress subst
                  | progress break_match
@@ -789,20 +786,20 @@ Module Relations.
                  | progress simpl @fst in *
                  | progress simpl @snd in *
                  | destruct_head' BoundedWord64.BoundedWord ].
-    { cbv [related_Z lift_relation related'_Z].
+    { cbv [related_Z LiftOption.lift_relation related'_Z].
       intros; break_match.
-      unfold related_Z, BoundedWord64.t, lift_relation, related'_Z, BoundedWord64.value.
+      unfold related_Z, BoundedWord64.t, LiftOption.lift_relation, related'_Z, BoundedWord64.value.
       match goal with
       | [ H : _ = Some _ |- _ ] => apply BoundedWord64.value_add in H; simpl in H
       end.
       subst.
-      apply Word64.word64ToZ_add; auto;
+      (*apply Word64.word64ToZ_add; auto;*)
         admit. }
   Admitted.
 
-  Lemma related_bounds_op : related_op related_boundsi (@BoundedWord64.interp_op) (@ZBounds.interp_op).
+  Lemma related_bounds_op : related_op related_bounds (@BoundedWord64.interp_op) (@ZBounds.interp_op).
   Proof. admit. Admitted.
-  Lemma related_word64_op : related_op related_word64i (@BoundedWord64.interp_op) (@Word64.interp_op).
+  Lemma related_word64_op : related_op related_word64 (@BoundedWord64.interp_op) (@Word64.interp_op).
   Proof. admit. Admitted.
 
   Create HintDb interp_related discriminated.
