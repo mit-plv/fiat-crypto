@@ -150,6 +150,7 @@ Extract Inlined Constant N.even => "Prelude.even".
 Extract Constant N.shiftr => "(\w n -> Data.Bits.shiftR w (Prelude.fromIntegral n))".
 Extract Constant N.shiftl => "(\w n -> Data.Bits.shiftL w (Prelude.fromIntegral n))".
 Extract Constant N.testbit => "(\w n -> Data.Bits.testBit w (Prelude.fromIntegral n))".
+Extract Constant N.testbit_nat => "(\w n -> Data.Bits.testBit w (Prelude.fromIntegral n))".
 
 Extract Constant N.pred => "(\n -> Prelude.max 0 (Prelude.pred n))".
 Extract Constant N.sub => "(\n m -> Prelude.max 0 (n Prelude.- m))".
@@ -157,7 +158,7 @@ Extract Constant N.div => "(\n m -> if m Prelude.== 0 then 0 else Prelude.div n 
 Extract Constant N.modulo => "(\n m -> if m Prelude.== 0 then 0 else Prelude.mod n m)".
 
 Extract Inductive N => "Prelude.Integer" [ "0" "(\x -> x)" ]
-  "(\fO fS n -> {- match_on_N -} if n Prelude.== 0 then fO () else fS (n Prelude.- 1))".
+  "(\fO fS n -> {- match_on_N -} if n Prelude.== 0 then fO () else fS n)".
 
 (** Z *)
 Require Import ZArith.BinInt.
@@ -246,16 +247,16 @@ Extract Inlined Constant GF25519BoundedCommon.word64 => "Data.Word.Word64".
 Extract Inlined Constant GF25519BoundedCommon.w64eqb => "(Prelude.==)".
 Extract Inlined Constant Word64.word64ToZ => "Prelude.fromIntegral".
 Extract Inlined Constant GF25519BoundedCommon.word64ToZ => "Prelude.fromIntegral".
-Extract Inlined Constant GF25519BoundedCommon.NToWord64 => "".
-Extract Inlined Constant GF25519BoundedCommon.ZToWord64 => "".
+Extract Inlined Constant GF25519BoundedCommon.NToWord64 => "Prelude.fromIntegral".
+Extract Inlined Constant GF25519BoundedCommon.ZToWord64 => "Prelude.fromIntegral".
 Extract Inlined Constant Word64.add => "(Prelude.+)".
 Extract Inlined Constant Word64.mul => "(Prelude.*)".
 Extract Inlined Constant Word64.sub => "(Prelude.-)".
 Extract Inlined Constant Word64.land => "(Data.Bits..&.)".
 Extract Inlined Constant Word64.lor => "(Data.Bits..|.)".
 Extract Constant Word64.neg => "(\_ w -> Prelude.negate w)". (* FIXME: reification: drop arg1 *)
-Extract Constant Word64.shl => "(\w n -> Data.Bits.shiftR w (Prelude.fromIntegral n))".
-Extract Constant Word64.shr => "(\w n -> Data.Bits.shiftL w (Prelude.fromIntegral n))".
+Extract Constant Word64.shr => "(\w n -> Data.Bits.shiftR w (Prelude.fromIntegral n))".
+Extract Constant Word64.shl => "(\w n -> Data.Bits.shiftL w (Prelude.fromIntegral n))".
 Extract Constant Word64.cmovle => "(\x y r1 r2 -> if x Prelude.<= y then r1 else r2)".
 Extract Constant Word64.cmovne => "(\x y r1 r2 -> if x Prelude.== y then r1 else r2)".
 
@@ -282,7 +283,13 @@ Extract Constant Ed25519.H =>
        bytesToLEBits (x:xs) = (x `Data.Bits.testBit` 0) : (x `Data.Bits.testBit` 1) : (x `Data.Bits.testBit` 2) : (x `Data.Bits.testBit` 3) : (x `Data.Bits.testBit` 4) : (x `Data.Bits.testBit` 5) : (x `Data.Bits.testBit` 6) : (x `Data.Bits.testBit` 7) : bytesToLEBits xs } in
  (bytesToLEBits Prelude.. B.unpack Prelude.. SHA.bytestringDigest Prelude.. SHA.sha512 Prelude.. B.pack Prelude.. leBitsToBytes)".
 
-(* invW makes GHC compile very slow *)
-Extract Constant GF25519Bounded.invW => "Prelude.error ('i':'n':'v':'W':[])".
+(* invW makes ghc -XStrict very slow *)
+(* Extract Constant GF25519Bounded.invW => "Prelude.error ('i':'n':'v':'W':[])". *)
 
 Extraction "src/Experiments/Ed25519_noimports.hs" Ed25519.sign (* Ed25519.verify *).
+(*
+*Ed25519 Prelude> and (eRepEnc ((sRepERepMul l eRepB))) == False
+True
+*Ed25519 Prelude> eRepEnc ((sRepERepMul l eRepB) `erepAdd` eRepB) == eRepEnc eRepB
+True
+*)

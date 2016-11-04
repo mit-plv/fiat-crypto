@@ -95,10 +95,10 @@ src/Experiments/Ed25519.hs: src/Experiments/Ed25519_noimports.hs src/Experiments
 		> Ed25519.hs )
 
 src/Experiments/Ed25519.o src/Experiments/Ed25519.core: src/Experiments/Ed25519.hs
-	( cd src/Experiments && ghc -O3 Ed25519.hs -ddump-simpl > Ed25519.core )
+	( cd src/Experiments && ghc -XStrict -O3 Ed25519.hs -ddump-simpl > Ed25519.core )
 
 extraction: src/Experiments/Ed25519.hs
-ghc: src/Experiments/Ed25519.core
+ghc: src/Experiments/Ed25519.core src/Experiments/Ed25519.o
 
 clean::
 	rm -f Makefile.coq
