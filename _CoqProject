@@ -61,6 +61,7 @@ src/Encoding/ModularWordEncodingTheorems.v
 src/Encoding/PointEncoding.v
 src/Encoding/PointEncodingPre.v
 src/Experiments/Ed25519.v
+src/Experiments/Ed25519Extraction.v
 src/Experiments/ExtrHaskellNats.v
 src/Experiments/GenericFieldPow.v
 src/Experiments/MontgomeryCurve.v

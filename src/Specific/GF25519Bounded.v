@@ -172,6 +172,7 @@ Proof.
   exact (proj2_sig (eqbW_sig f' g')).
 Qed.
 
+(* TODO(jgross): use NToWord or such for this constant too *)
 Definition sqrt_m1W : fe25519W :=
   Eval vm_compute in fe25519ZToW sqrt_m1.
 
