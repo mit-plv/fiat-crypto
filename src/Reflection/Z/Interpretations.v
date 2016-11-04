@@ -623,21 +623,21 @@ Module Relations.
                {t : type base_type}
       : interp_type interp_base_type1 t -> interp_type interp_base_type2 t -> Prop
       := match t return interp_type interp_base_type1 t -> interp_type interp_base_type2 t -> Prop  with
-         | Tflat T => R
+         | Tflat T => @R _
          | Arrow A B
            => fun f g
               => forall x : interp_flat_type interp_base_type1 (all_binders_for (Arrow A B)),
                   let y := SmartVarfMap proj x in
                   let fx := ApplyInterpedAll f x in
                   let gy := ApplyInterpedAll g y in
-                  R fx gy
+                  @R _ fx gy
          end.
 
     Lemma uncurry_interp_type_rel_pointwise2_proj
           {t : type base_type}
           {f : interp_type interp_base_type1 t}
           {g}
-    : interp_type_rel_pointwise2 (t:=t) (fun t => R) f g
+    : interp_type_rel_pointwise2 (t:=t) (fun t => @R _) f g
       -> interp_type_rel_pointwise2_uncurried_proj (t:=t) f g.
     Proof.
       unfold interp_type_rel_pointwise2_uncurried_proj.
