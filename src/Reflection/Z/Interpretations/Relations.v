@@ -36,6 +36,10 @@ Definition related_word64_boundsi (t : base_type) : Word64.interp_base_type t ->
   := match t with
      | TZ => related_word64_bounds
      end.
+Definition related_word64_boundsi' (t : base_type) : ZBounds.bounds -> Word64.interp_base_type t -> Prop
+  := match t return ZBounds.bounds -> Word64.interp_base_type t -> Prop with
+     | TZ => fun x y => related'_word64_bounds y x
+     end.
 
 Local Notation related_op R interp_op1 interp_op2
   := (forall (src dst : flat_type base_type) (op : op src dst)
