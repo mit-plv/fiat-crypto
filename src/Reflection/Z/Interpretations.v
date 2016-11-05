@@ -955,9 +955,6 @@ Module Relations.
        | TZ => related_word64_bounds
        end.
 
-
-  (Hbounds_right : interp_flat_type_rel_pointwise2 (fun _ (x : Word64.word64) (y : ZBounds.bounds) => let (lower, upper) := y in ((lower <= Word64.word64ToZ x) /\ (Word64.word64ToZ x <= upper))%Z%bool) (t:=(Tbase TZ * Tbase TZ * Tbase TZ * Tbase TZ * Tbase TZ * Tbase TZ * Tbase TZ * Tbase TZ * Tbase TZ * Tbase TZ)) (Application.ApplyInterpedAll rcarry_addWI (SmartVarfMap BoundedWord64.to_word64' (t:=t') args)) k'')
-
   Local Notation related_op R interp_op1 interp_op2
     := (forall (src dst : flat_type base_type) (op : op src dst)
                (sv1 : interp_flat_type _ src) (sv2 : interp_flat_type _ src),
