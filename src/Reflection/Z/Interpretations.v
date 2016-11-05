@@ -714,6 +714,65 @@ Module Relations.
     Qed.
   End proj_option.
 
+  Section proj_option2.
+    Context {interp_base_type1 : Type} {interp_base_type2 : Type}
+            (proj : interp_base_type1 -> interp_base_type2).
+
+    Let R {t : flat_type base_type} f g :=
+      let f' := LiftOption.of' (t:=t) f in
+      let g' := LiftOption.of' (t:=t) g in
+      match f', g' with
+      | Some f', Some g' => SmartVarfMap (fun _ => proj) f' = g'
+      | None, None => True
+      | Some _, _ => False
+      | None, _ => False
+      end.
+
+    Definition interp_type_rel_pointwise2_uncurried_proj_option2
+               {t : type base_type}
+      : interp_type (LiftOption.interp_base_type' interp_base_type1) t -> interp_type (LiftOption.interp_base_type' interp_base_type2) t -> Prop
+      := match t return interp_type (LiftOption.interp_base_type' interp_base_type1) t -> interp_type (LiftOption.interp_base_type' interp_base_type2) t -> Prop  with
+         | Tflat T => @R _
+         | Arrow A B
+           => fun f g
+              => forall x : interp_flat_type (fun _ => interp_base_type1) (all_binders_for (Arrow A B)),
+                  let y := SmartVarfMap (fun _ => proj) x in
+                  let fx := ApplyInterpedAll f (LiftOption.to' (Some x)) in
+                  let gy := ApplyInterpedAll g (LiftOption.to' (Some y)) in
+                  @R _ fx gy
+         end.
+
+    Lemma uncurry_interp_type_rel_pointwise2_proj_option2
+          {t : type base_type}
+          {f : interp_type (LiftOption.interp_base_type' interp_base_type1) t}
+          {g : interp_type (LiftOption.interp_base_type' interp_base_type2) t}
+    : interp_type_rel_pointwise2 (t:=t) (fun t => @R _) f g
+      -> interp_type_rel_pointwise2_uncurried_proj_option2 (t:=t) f g.
+    Proof.
+      unfold interp_type_rel_pointwise2_uncurried_proj_option2.
+      induction t as [t|A B IHt]; simpl; unfold Morphisms.respectful_hetero in *.
+      { induction t as [t|A IHA B IHB]; simpl; [ solve [ trivial | reflexivity ] | ].
+        intros [HA HB].
+        specialize (IHA _ _ HA); specialize (IHB _ _ HB).
+        unfold R in *.
+        repeat first [ progress destruct_head_hnf' prod
+                     | progress simpl in *
+                     | progress unfold LiftOption.of' in *
+                     | progress break_match
+                     | progress break_match_hyps
+                     | progress inversion_prod
+                     | progress inversion_option
+                     | reflexivity
+                     | progress intuition subst ]. }
+      { destruct B; intros H ?; apply IHt, H; clear IHt.
+        { repeat first [ progress simpl in *
+                       | progress unfold R, LiftOption.of' in *
+                       | progress break_match
+                       | reflexivity ]. }
+        { simpl in *; break_match; reflexivity. } }
+    Qed.
+  End proj_option2.
+
   Section combine_related.
     Lemma related_flat_transitivity {interp_base_type1 interp_base_type2 interp_base_type3}
           {R1 : forall t : base_type, interp_base_type1 t -> interp_base_type2 t -> Prop}
