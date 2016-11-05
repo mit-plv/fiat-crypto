@@ -4,6 +4,7 @@ Require Import Coq.Structures.Equalities.
 Require Import Coq.omega.Omega Coq.micromega.Psatz Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
 Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Notations.
 Require Import Coq.Lists.List.
 Require Export Crypto.Util.FixCoqMistakes.
@@ -1090,12 +1091,25 @@ Module Z.
   Qed.
   Hint Resolve ones_le : zarith.
 
+  Lemma geb_spec0 : forall x y : Z, Bool.reflect (x >= y) (x >=? y).
+  Proof.
+    intros x y; pose proof (Zge_cases x y) as H; destruct (Z.geb x y); constructor; omega.
+  Qed.
+  Lemma gtb_spec0 : forall x y : Z, Bool.reflect (x > y) (x >? y).
+  Proof.
+    intros x y; pose proof (Zgt_cases x y) as H; destruct (Z.gtb x y); constructor; omega.
+  Qed.
+
   Ltac ltb_to_lt_with_hyp H lem :=
     let H' := fresh in
     rename H into H';
     pose proof lem as H;
     rewrite H' in H;
     clear H'.
+
+  Ltac ltb_to_lt_in_goal b' lem :=
+    refine (proj1 (@reflect_iff_gen _ _ lem b') _);
+    cbv beta iota.
 
   Ltac ltb_to_lt :=
     repeat match goal with
@@ -1109,6 +1123,16 @@ Module Z.
              => ltb_to_lt_with_hyp H (Zge_cases x y)
            | [ H : (?x =? ?y) = ?b |- _ ]
              => ltb_to_lt_with_hyp H (eqb_cases x y)
+           | [ |- (?x <? ?y) = ?b ]
+             => ltb_to_lt_in_goal b (Z.ltb_spec0 x y)
+           | [ |- (?x <=? ?y) = ?b ]
+             => ltb_to_lt_in_goal b (Z.leb_spec0 x y)
+           | [ |- (?x >? ?y) = ?b ]
+             => ltb_to_lt_in_goal b (Z.gtb_spec0 x y)
+           | [ |- (?x >=? ?y) = ?b ]
+             => ltb_to_lt_in_goal b (Z.geb_spec0 x y)
+           | [ |- (?x =? ?y) = ?b ]
+             => ltb_to_lt_in_goal b (Z.eqb_spec x y)
            end.
 
   Ltac compare_to_sgn :=
