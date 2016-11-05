@@ -582,19 +582,21 @@ Module BoundedWord64Tuple.
 End BoundedWord64Tuple.
 
 Module Relations.
+  Definition proj_eq_rel {A B} (proj : A -> B) (x : A) (y : B) : Prop
+    := proj x = y.
   Definition related'_Z {t} (x : BoundedWord64.BoundedWord) (y : Z.interp_base_type t) : Prop
-    := BoundedWord64.to_Z' _ x = y.
+    := proj_eq_rel (BoundedWord64.to_Z' _) x y.
   Definition related_Z t : BoundedWord64.interp_base_type t -> Z.interp_base_type t -> Prop
     := LiftOption.lift_relation (@related'_Z) t.
   Definition related'_word64 {t} (x : BoundedWord64.BoundedWord) (y : Word64.interp_base_type t) : Prop
-    := BoundedWord64.to_word64' _ x = y.
+    := proj_eq_rel (BoundedWord64.to_word64' _) x y.
   Definition related_word64 t : BoundedWord64.interp_base_type t -> Word64.interp_base_type t -> Prop
     := LiftOption.lift_relation (@related'_word64) t.
   Definition related_bounds t : BoundedWord64.interp_base_type t -> ZBounds.interp_base_type t -> Prop
-    := LiftOption.lift_relation2 (fun x y => BoundedWord64.to_bounds' x = y) t.
+    := LiftOption.lift_relation2 (proj_eq_rel BoundedWord64.to_bounds') t.
 
   Definition related_word64_Z t : Word64.interp_base_type t -> Z.interp_base_type t -> Prop
-    := fun x y => Word64.to_Z _ x = y.
+    := proj_eq_rel (Word64.to_Z _).
 
   Section lift.
     Context {interp_base_type1 interp_base_type2 : base_type -> Type}
@@ -786,6 +788,73 @@ Module Relations.
         { simpl in *; break_match; reflexivity. } }
     Qed.
   End proj_option2.
+
+  Section proj_from_option2.
+    Context {interp_base_type0 : Type} {interp_base_type1 interp_base_type2 : base_type -> Type}
+            (proj01 : forall t, interp_base_type0 -> interp_base_type1 t)
+            (proj02 : forall t, interp_base_type0 -> interp_base_type2 t)
+            (proj : forall t, interp_base_type1 t -> interp_base_type2 t)
+            (proj012 : forall t x, proj t (proj01 t x) = proj02 t x).
+
+    Let R {t : flat_type base_type} f g :=
+      proj_eq_rel (SmartVarfMap proj (t:=t)) f g.
+
+    Definition interp_type_rel_pointwise2_uncurried_proj_from_option2
+               {t : type base_type}
+      : interp_type (LiftOption.interp_base_type' interp_base_type0) t -> interp_type interp_base_type1 t -> interp_type interp_base_type2 t -> Prop
+      := match t return interp_type _ t -> interp_type _ t -> interp_type _ t -> Prop  with
+         | Tflat T => fun f0 f g => match LiftOption.of' f0 with
+                                    | Some _ => True
+                                    | None => False
+                                    end -> @R _ f g
+         | Arrow A B
+           => fun f0 f g
+              => forall x : interp_flat_type (fun _ => interp_base_type0) (all_binders_for (Arrow A B)),
+                  let x' := SmartVarfMap proj01 x in
+                  let y' := SmartVarfMap proj x' in
+                  let fx := ApplyInterpedAll f x' in
+                  let gy := ApplyInterpedAll g y' in
+                  let f0x := LiftOption.of' (ApplyInterpedAll f0 (LiftOption.to' (Some x))) in
+                  match f0x with
+                  | Some _ => True
+                  | None => False
+                  end
+                  -> @R _ fx gy
+         end.
+
+    Lemma uncurry_interp_type_rel_pointwise2_proj_from_option2
+          {t : type base_type}
+          {f0}
+          {f : interp_type interp_base_type1 t}
+          {g : interp_type interp_base_type2 t}
+    : interp_type_rel_pointwise2 (t:=t) (LiftOption.lift_relation (fun t => proj_eq_rel (proj01 t))) f0 f
+      -> interp_type_rel_pointwise2 (t:=t) (LiftOption.lift_relation (fun t => proj_eq_rel (proj02 t))) f0 g
+      -> interp_type_rel_pointwise2_uncurried_proj_from_option2 (t:=t) f0 f g.
+    Proof.
+      unfold interp_type_rel_pointwise2_uncurried_proj_from_option2.
+      induction t as [t|A B IHt]; simpl; unfold Morphisms.respectful_hetero in *.
+      { induction t as [t|A IHA B IHB]; simpl.
+        { cbv [LiftOption.lift_relation proj_eq_rel R].
+          break_match; try tauto; intros; subst.
+          apply proj012. }
+        { intros [HA HB] [HA' HB'] Hrel.
+          specialize (IHA _ _ _ HA HA'); specialize (IHB _ _ _ HB HB').
+          unfold R, proj_eq_rel in *.
+          repeat first [ progress destruct_head_hnf' prod
+                       | progress simpl in *
+                       | progress unfold LiftOption.of' in *
+                       | progress break_match
+                       | progress break_match_hyps
+                       | progress inversion_prod
+                       | progress inversion_option
+                       | reflexivity
+                       | progress intuition subst ]. } }
+      { destruct B; intros H0 H1 ?; apply IHt; clear IHt; first [ apply H0 | apply H1 ];
+          repeat first [ progress simpl in *
+                       | progress unfold R, LiftOption.of', proj_eq_rel, LiftOption.lift_relation in *
+                       | break_match; rewrite <- ?proj012; reflexivity ]. }
+    Qed.
+  End proj_from_option2.
 
   Section combine_related.
     Lemma related_flat_transitivity {interp_base_type1 interp_base_type2 interp_base_type3}
