@@ -897,7 +897,7 @@ Module Relations.
     let v := fresh in
     let t := fresh in
     intros t v; destruct t; intros; simpl in *; hnf; simpl;
-    cbv [BoundedWord64.word64ToBoundedWord related'_Z LiftOption.of' related_Z related_word64 related'_word64] in *;
+    cbv [BoundedWord64.word64ToBoundedWord related'_Z LiftOption.of' related_Z related_word64 related'_word64 proj_eq_rel] in *;
     break_innermost_match; simpl;
     first [ tauto
           | Z.ltb_to_lt;
