@@ -71,6 +71,18 @@ Module LiftOption.
   Global Arguments to' {T t} _.
   Global Arguments Some {T t} _.
   Global Arguments lift_relation {T _} R _ _ _.
+
+  Section lift_option2.
+    Context (T U : Type).
+    Definition lift_relation2 (R : T -> U -> Prop)
+      : forall t, interp_base_type' T t -> interp_base_type' U t -> Prop
+      := fun t x y => match of' (t:=Tbase t) x, of' (t:=Tbase t) y with
+                      | Datatypes.Some x', Datatypes.Some y' => R x' y'
+                      | None, None => True
+                      | _, _ => False
+                      end.
+  End lift_option2.
+  Global Arguments lift_relation2 {T U} R _ _ _.
 End LiftOption.
 
 Module Word64.
@@ -390,9 +402,11 @@ Module BoundedWord64.
   Definition BoundedWordToBounds (x : BoundedWord) : ZBounds.bounds
     := {| ZBounds.lower := lower x ; ZBounds.upper := upper x |}.
 
+  Definition to_bounds' := BoundedWordToBounds.
+
   Definition to_bounds ty : interp_base_type ty -> ZBounds.interp_base_type ty
     := match ty return interp_base_type ty -> ZBounds.interp_base_type ty with
-       | TZ => option_map BoundedWordToBounds
+       | TZ => option_map to_bounds'
        end.
 
   Local Ltac build_binop word_op bounds_op :=
@@ -577,7 +591,7 @@ Module Relations.
   Definition related_word64 t : BoundedWord64.interp_base_type t -> Word64.interp_base_type t -> Prop
     := LiftOption.lift_relation (@related'_word64) t.
   Definition related_bounds t : BoundedWord64.interp_base_type t -> ZBounds.interp_base_type t -> Prop
-    := fun x y => BoundedWord64.to_bounds _ x = y.
+    := LiftOption.lift_relation2 (fun x y => BoundedWord64.to_bounds' x = y) t.
 
   Definition related_word64_Z t : Word64.interp_base_type t -> Z.interp_base_type t -> Prop
     := fun x y => Word64.to_Z _ x = y.
