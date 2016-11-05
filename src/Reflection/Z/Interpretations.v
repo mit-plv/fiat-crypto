@@ -793,8 +793,7 @@ Module Relations.
     Context {interp_base_type0 : Type} {interp_base_type1 interp_base_type2 : base_type -> Type}
             (proj01 : forall t, interp_base_type0 -> interp_base_type1 t)
             (proj02 : forall t, interp_base_type0 -> interp_base_type2 t)
-            (proj : forall t, interp_base_type1 t -> interp_base_type2 t)
-            (proj012 : forall t x, proj t (proj01 t x) = proj02 t x).
+            (proj : forall t, interp_base_type1 t -> interp_base_type2 t).
 
     Let R {t : flat_type base_type} f g :=
       proj_eq_rel (SmartVarfMap proj (t:=t)) f g.
@@ -827,6 +826,7 @@ Module Relations.
           {f0}
           {f : interp_type interp_base_type1 t}
           {g : interp_type interp_base_type2 t}
+          (proj012 : forall t x, proj t (proj01 t x) = proj02 t x)
     : interp_type_rel_pointwise2 (t:=t) (LiftOption.lift_relation (fun t => proj_eq_rel (proj01 t))) f0 f
       -> interp_type_rel_pointwise2 (t:=t) (LiftOption.lift_relation (fun t => proj_eq_rel (proj02 t))) f0 g
       -> interp_type_rel_pointwise2_uncurried_proj_from_option2 (t:=t) f0 f g.
@@ -855,6 +855,7 @@ Module Relations.
                        | break_match; rewrite <- ?proj012; reflexivity ]. }
     Qed.
   End proj_from_option2.
+  Global Arguments uncurry_interp_type_rel_pointwise2_proj_from_option2 {_ _ _ _} proj02 {_ t f0 f g} _ _ _.
 
   Section combine_related.
     Lemma related_flat_transitivity {interp_base_type1 interp_base_type2 interp_base_type3}
