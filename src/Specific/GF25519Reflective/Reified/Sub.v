@@ -8,3 +8,4 @@ Definition rsub_output_bounds := Eval vm_compute in compute_bounds rsubW ExprBin
 
 Local Open Scope string_scope.
 Compute ("Sub", compute_bounds_for_display rsubW ExprBinOp_bounds).
+(*Compute ("Sub overflows? ", sanity_check rsubW ExprBinOp_bounds).*)

@@ -8,3 +8,4 @@ Definition rcarry_sub_output_bounds := Eval vm_compute in compute_bounds rcarry_
 
 Local Open Scope string_scope.
 Compute ("Carry_Sub", compute_bounds_for_display rcarry_subW ExprBinOp_bounds).
+(*Compute ("Carry_Sub overflows? ", sanity_check rcarry_subW ExprBinOp_bounds).*)

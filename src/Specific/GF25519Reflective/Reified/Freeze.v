@@ -8,3 +8,4 @@ Definition rfreeze_output_bounds := Eval vm_compute in compute_bounds rfreezeW E
 
 Local Open Scope string_scope.
 Compute ("Freeze", compute_bounds_for_display rfreezeW ExprUnOp_bounds).
+(*Compute ("Freeze overflows? ", sanity_check rfreezeW ExprUnOp_bounds).*)

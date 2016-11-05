@@ -8,3 +8,4 @@ Definition rge_modulus_output_bounds := Eval vm_compute in compute_bounds rge_mo
 
 Local Open Scope string_scope.
 Compute ("Ge_Modulus", compute_bounds_for_display rge_modulusW ExprUnOpFEToZ_bounds).
+(*Compute ("Ge_Modulus overflows? ", sanity_check rge_modulusW ExprUnOpFEToZ_bounds).*)

@@ -8,3 +8,4 @@ Definition rpack_output_bounds := Eval vm_compute in compute_bounds rpackW ExprU
 
 Local Open Scope string_scope.
 Compute ("Pack", compute_bounds_for_display rpackW ExprUnOpFEToWire_bounds).
+(*Compute ("Pack overflows? ", sanity_check rpackW ExprUnOpFEToWire_bounds).*)

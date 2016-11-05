@@ -8,3 +8,4 @@ Definition rcarry_opp_output_bounds := Eval vm_compute in compute_bounds rcarry_
 
 Local Open Scope string_scope.
 Compute ("Carry_Opp", compute_bounds_for_display rcarry_oppW ExprUnOp_bounds).
+(*Compute ("Carry_Opp overflows? ", sanity_check rcarry_oppW ExprUnOp_bounds).*)

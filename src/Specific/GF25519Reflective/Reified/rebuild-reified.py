@@ -18,4 +18,5 @@ Definition r%(lname)s_output_bounds := Eval vm_compute in compute_bounds r%(lnam
 
 Local Open Scope string_scope.
 Compute ("%(name)s", compute_bounds_for_display r%(lname)sW Expr%(uopkind)s_bounds).
+(*Compute ("%(name)s overflows? ", sanity_check r%(lname)sW Expr%(uopkind)s_bounds).*)
 """ % locals())

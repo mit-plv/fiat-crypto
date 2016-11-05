@@ -8,3 +8,4 @@ Definition runpack_output_bounds := Eval vm_compute in compute_bounds runpackW E
 
 Local Open Scope string_scope.
 Compute ("Unpack", compute_bounds_for_display runpackW ExprUnOpWireToFE_bounds).
+(*Compute ("Unpack overflows? ", sanity_check runpackW ExprUnOpWireToFE_bounds).*)

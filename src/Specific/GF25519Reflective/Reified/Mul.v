@@ -8,3 +8,4 @@ Definition rmul_output_bounds := Eval vm_compute in compute_bounds rmulW ExprBin
 
 Local Open Scope string_scope.
 Compute ("Mul", compute_bounds_for_display rmulW ExprBinOp_bounds).
+(*Compute ("Mul overflows? ", sanity_check rmulW ExprBinOp_bounds).*)

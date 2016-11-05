@@ -157,7 +157,18 @@ Module Export PrettyPrinting.
                            end
           end.
 
+  Fixpoint no_overflow {t} : interp_flat_type (fun t => match t with TZ => bounds_on end) t -> bool
+    := match t return interp_flat_type (fun t => match t with TZ => bounds_on end) t -> bool with
+       | Tbase TZ => fun v => match v with
+                              | overflow => false
+                              | in_range _ _ => true
+                              end
+       | Prod x y => fun v => andb (@no_overflow _ (fst v)) (@no_overflow _ (snd v))
+       end.
+
   (** This gives a slightly easier to read version of the bounds *)
   Notation compute_bounds_for_display opW bounds
     := (SmartVarfMap ZBounds_to_bounds_on (compute_bounds opW bounds)) (only parsing).
+  Notation sanity_check opW bounds
+    := (eq_refl true <: no_overflow (SmartVarfMap ZBounds_to_bounds_on (compute_bounds opW bounds)) = true) (only parsing).
 End PrettyPrinting.
