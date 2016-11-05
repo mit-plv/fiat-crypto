@@ -279,6 +279,11 @@ Ltac unfold_is_bounded_in H :=
   cbv [to_list length bounds wire_digit_bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 List.map fold_right List.rev List.app length_fe25519 List.length wire_widths] in H;
   rewrite ?Bool.andb_true_iff in H.
 
+Ltac unfold_is_bounded :=
+  unfold is_bounded, wire_digits_is_bounded, is_bounded_gen, fe25519WToZ, wire_digitsWToZ;
+  cbv [to_list length bounds wire_digit_bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 List.map fold_right List.rev List.app length_fe25519 List.length wire_widths];
+  rewrite ?Bool.andb_true_iff.
+
 Local Transparent bit_width.
 Definition Pow2_64 := Eval compute in 2^Z.of_nat bit_width.
 Definition unfold_Pow2_64 : 2^Z.of_nat bit_width = Pow2_64 := eq_refl.
