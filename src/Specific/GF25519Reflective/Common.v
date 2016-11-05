@@ -5,6 +5,7 @@ Require Import Crypto.Specific.GF25519BoundedCommon.
 Require Import Crypto.Reflection.Reify.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Z.Interpretations.
+Require Crypto.Reflection.Z.Interpretations.Relations.
 Require Import Crypto.Reflection.Z.Reify.
 Require Export Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Reflection.InterpWfRel.

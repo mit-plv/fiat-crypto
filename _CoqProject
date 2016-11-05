@@ -125,6 +125,8 @@ src/Reflection/Named/Syntax.v
 src/Reflection/Z/Interpretations.v
 src/Reflection/Z/Reify.v
 src/Reflection/Z/Syntax.v
+src/Reflection/Z/Interpretations/Relations.v
+src/Reflection/Z/Interpretations/RelationsCombinations.v
 src/Spec/CompleteEdwardsCurve.v
 src/Spec/Ed25519.v
 src/Spec/EdDSA.v
