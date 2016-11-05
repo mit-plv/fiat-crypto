@@ -851,7 +851,7 @@ Qed.
 Section ConstantPoints.
   Import GF25519BoundedCommon.
   Let proj1_sig_ERepB' := Eval vm_compute in proj1_sig (EToRep B).
-  Let tmap4 := Eval vm_compute in @Tuple.map 4. Arguments tmap4 {_ _} _ _.
+  Let tmap4 := Eval compute in @Tuple.map 4. Arguments tmap4 {_ _} _ _.
   Let proj1_sig_ERepB := Eval cbv [tmap4 proj1_sig_ERepB' fe25519_word64ize word64ize andb opt.word64ToZ opt.word64ize opt.Zleb Z.compare CompOpp Pos.compare Pos.compare_cont] in (tmap4 fe25519_word64ize proj1_sig_ERepB').
   Let proj1_sig_ERepB_correct : proj1_sig_ERepB = proj1_sig (EToRep B).
   Proof. vm_cast_no_check (eq_refl proj1_sig_ERepB). Qed.
