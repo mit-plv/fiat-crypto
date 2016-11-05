@@ -855,7 +855,7 @@ Module Relations.
                        | break_match; rewrite <- ?proj012; reflexivity ]. }
     Qed.
   End proj_from_option2.
-  Global Arguments uncurry_interp_type_rel_pointwise2_proj_from_option2 {_ _ _ _} proj02 {_ t f0 f g} _ _ _.
+  Global Arguments uncurry_interp_type_rel_pointwise2_proj_from_option2 {_ _ _ _} proj {t f0 f g} _ _ _.
 
   Section proj1_from_option2.
     Context {interp_base_type0 interp_base_type1 : Type} {interp_base_type2 : base_type -> Type}
