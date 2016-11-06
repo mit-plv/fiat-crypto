@@ -148,18 +148,23 @@ Local Ltac make_args x :=
     intro H;
     let xv := (eval hnf in x') in
     args_to_bounded_helper xv;
-    [ destruct_head' and;
+    [ instantiate;
+      destruct_head' and;
       match goal with
-      | [ H : ?T |- _ ] => is_evar T; refine (proj1 H)
+      | [ H : ?T |- _ ]
+        => is_evar T;
+           refine (let c := proj1 H in _); (* work around broken evars in Coq 8.4 *)
+           lazymatch goal with H := proj1 _ |- _ => eexact H end
       end.. ]
-  | repeat match goal with H : is_bounded _ = true |- _ => unfold_is_bounded_in H end;
+  | instantiate;
+    repeat match goal with H : is_bounded _ = true |- _ => unfold_is_bounded_in H end;
     repeat match goal with H : wire_digits_is_bounded _ = true |- _ => unfold_is_bounded_in H end;
     destruct_head' and;
     Z.ltb_to_lt;
     repeat first [ eexact I
                  | apply conj;
                    [ repeat apply conj; [ | eassumption | eassumption | ];
-                     vm_compute; [ refine (fun x => match x with eq_refl => I end) | reflexivity ]
+                     instantiate; vm_compute; [ refine (fun x => match x with eq_refl => I end) | reflexivity ]
                    | ] ] ].
 
 Local Ltac app_tuples x y :=
