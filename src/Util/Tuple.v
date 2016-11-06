@@ -152,6 +152,11 @@ Definition on_tuple2 {A B C} (f : list A -> list B -> list C) {a b c : nat}
 Definition map2 {n A B C} (f:A -> B -> C) (xs:tuple A n) (ys:tuple B n) : tuple C n
   := on_tuple2 (map2 f) (fun la lb pfa pfb => eq_trans (@map2_length _ _ _ _ la lb) (eq_trans (f_equal2 _ pfa pfb) (Min.min_idempotent _))) xs ys.
 
+Lemma map_map2 {n A B C D} (f:A -> B -> C) (g:C -> D) (xs:tuple A n) (ys:tuple B n)
+  : map g (map2 f xs ys) = map2 (fun a b => g (f a b)) xs ys.
+Proof.
+Admitted.
+
 Section monad.
   Context (M : Type -> Type) (bind : forall X Y, M X -> (X -> M Y) -> M Y) (ret : forall X, X -> M X).
   Fixpoint lift_monad' {n A} {struct n}
