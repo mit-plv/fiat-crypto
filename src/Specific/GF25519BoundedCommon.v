@@ -543,6 +543,24 @@ Proof.
     abstract (rewrite wire_digitsW_word64ize_id; apply is_bounded_proj1_wire_digits).
 Defined.
 
+Lemma is_bounded_to_nth_default x (H : is_bounded x = true)
+  : forall n : nat,
+    (n < length limb_widths)%nat
+    -> (0 <= nth_default 0 (Tuple.to_list length_fe25519 x) n <=
+        snd (b_of (nth_default (-1) limb_widths n)))%Z.
+Proof.
+  hnf in x; destruct_head' prod.
+  unfold_is_bounded_in H; destruct_head' and.
+  Z.ltb_to_lt.
+  unfold nth_default; simpl.
+  intros.
+  repeat match goal with
+         | [ |- context[nth_error _ ?x] ]
+           => is_var x; destruct x; simpl
+         end;
+    omega.
+Qed.
+
 (* END precomputation *)
 
 (* Precompute constants *)

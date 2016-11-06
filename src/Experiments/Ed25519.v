@@ -1269,18 +1269,69 @@ Proof.
   apply GF25519.sqrt_m1_correct.
 Qed.
 
+Section bounded_by_from_is_bounded.
+  Local Arguments Z.sub !_ !_.
+  Local Arguments Z.pow_pos !_ !_ / .
+  Lemma bounded_by_from_is_bounded
+    : forall x, GF25519BoundedCommon.is_bounded x = true
+                -> ModularBaseSystemProofs.bounded_by
+                     x
+                     (ModularBaseSystemProofs.freeze_input_bounds (B := GF25519.freeze_input_bound)).
+  Proof.
+    intros x H.
+    pose proof (GF25519BoundedCommon.is_bounded_to_nth_default _ H) as H'; clear H.
+    unfold ModularBaseSystemProofs.bounded_by.
+    intros n pf; specialize (H' n pf).
+    match goal with
+    | [ H : (0 <= ?y <= _)%Z |- (0 <= ?x < _)%Z ]
+      => change y with x in H; generalize dependent x
+    end.
+    intros ? H'.
+    split; [ omega | ].
+    eapply Z.le_lt_trans; [ exact (proj2 H') | ].
+    unfold ModularBaseSystemProofs.freeze_input_bounds, nth_default, GF25519.freeze_input_bound; simpl in *.
+    repeat match goal with
+           | [ |- context[nth_error _ ?n] ]
+             => is_var n; destruct n; simpl
+           end;
+      try (vm_compute; reflexivity);
+      try omega.
+  Qed.
+End bounded_by_from_is_bounded.
+
 Lemma bounded_by_encode_freeze : forall x,
   ModularBaseSystemProofs.bounded_by
     (ModularBaseSystem.encode x)
     (ModularBaseSystemProofs.freeze_input_bounds (B := GF25519.freeze_input_bound)).
 Proof.
-Admitted.
+  intros; apply bounded_by_from_is_bounded, GF25519BoundedCommon.encode_bounded.
+Qed.
 
 Lemma bounded_by_freeze : forall x,
   ModularBaseSystemProofs.bounded_by
-    (GF25519BoundedCommon.fe25519WToZ x)
+    (GF25519BoundedCommon.fe25519WToZ (GF25519BoundedCommon.proj1_fe25519W x))
     (ModularBaseSystemProofs.freeze_input_bounds (B := GF25519.freeze_input_bound)).
-Admitted.
+Proof.
+  intros; apply bounded_by_from_is_bounded, GF25519BoundedCommon.is_bounded_proj1_fe25519.
+Qed.
+
+Local Ltac prove_bounded_by :=
+  repeat match goal with
+         | [ |- ModularBaseSystemProofs.bounded_by _ _ ]
+           => apply bounded_by_from_is_bounded
+         | [ |- GF25519BoundedCommon.is_bounded
+                  (GF25519BoundedCommon.fe25519WToZ
+                     (GF25519Bounded.mulW _ _)) = true ]
+           => apply GF25519Bounded.mulW_correct_and_bounded
+         | [ |- GF25519BoundedCommon.is_bounded
+                  (GF25519BoundedCommon.fe25519WToZ
+                     (GF25519Bounded.powW _ _)) = true ]
+           => apply GF25519Bounded.powW_correct_and_bounded
+         | [ |- context[GF25519BoundedCommon.fe25519WToZ (GF25519BoundedCommon.fe25519ZToW _)] ]
+           => rewrite GF25519BoundedCommon.fe25519WToZ_ZToW
+         | [ |- GF25519BoundedCommon.is_bounded (ModularBaseSystem.encode _) = true ]
+           => apply GF25519BoundedCommon.encode_bounded
+         end.
 
 Lemma sqrt_correct : forall x : ModularArithmetic.F.F q,
         GF25519BoundedCommon.eq
@@ -1303,6 +1354,7 @@ Proof.
   symmetry.
   eapply @ModularBaseSystemProofs.sqrt_5mod8_correct;
     eauto using GF25519.freezePreconditions25519, ModularBaseSystemProofs.encode_rep, bounded_by_freeze, bounded_by_encode_freeze;
+    prove_bounded_by;
   match goal with
   | |- appcontext[GF25519Bounded.powW ?a ?ch] =>
     let A := fresh "H" in
