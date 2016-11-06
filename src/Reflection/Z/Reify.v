@@ -21,6 +21,16 @@ Ltac base_reify_op op op_head extra ::=
      | @ModularBaseSystemListZOperations.neg => constr:(reify_op op op_head 2 Neg)
      | @ModularBaseSystemListZOperations.cmovne => constr:(reify_op op op_head 4 Cmovne)
      | @ModularBaseSystemListZOperations.cmovl => constr:(reify_op op op_head 4 Cmovle)
+     | @ModularBaseSystemListZOperations.conditional_subtract_modulus
+       => lazymatch extra with
+          | @ModularBaseSystemListZOperations.conditional_subtract_modulus ?limb_count _ _ _
+            => lazymatch (eval compute in limb_count) with
+               | 0 => fail 1 "Cannot handle empty limb-list in reifying conditional_subtract_modulus"
+               | S ?pred_limb_count => constr:(reify_op op op_head 3 (ConditionalSubtract pred_limb_count))
+               | ?climb_count => fail 1 "Cannot handle non-ground length of limb-list in reifying conditional_subtract_modulus" "(" limb_count "which computes to" climb_count ")"
+               end
+          | _ => fail 100 "Anomaly: In Reflection.Z.base_reify_op: head is conditional_subtract_modulus but body is wrong:" extra
+          end
      end.
 Ltac base_reify_type T ::=
      lazymatch T with

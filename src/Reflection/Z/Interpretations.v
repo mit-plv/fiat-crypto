@@ -160,11 +160,14 @@ Module Word64.
   Definition land : word64 -> word64 -> word64 := @wand _.
   Definition lor : word64 -> word64 -> word64 := @wor _.
   Definition neg : word64 -> word64 -> word64 (* TODO: FIXME? *)
-    := fun x y => NToWord _ (Z.to_N (ModularBaseSystemListZOperations.neg (Z.of_N (wordToN x)) (Z.of_N (wordToN y)))).
+    := fun x y => ZToWord64 (ModularBaseSystemListZOperations.neg (word64ToZ x) (word64ToZ y)).
   Definition cmovne : word64 -> word64 -> word64 -> word64 -> word64 (* TODO: FIXME? *)
-    := fun x y z w => NToWord _ (Z.to_N (ModularBaseSystemListZOperations.cmovne (Z.of_N (wordToN x)) (Z.of_N (wordToN x)) (Z.of_N (wordToN z)) (Z.of_N (wordToN w)))).
+    := fun x y z w => ZToWord64 (ModularBaseSystemListZOperations.cmovne (word64ToZ x) (word64ToZ x) (word64ToZ z) (word64ToZ w)).
   Definition cmovle : word64 -> word64 -> word64 -> word64 -> word64 (* TODO: FIXME? *)
-    := fun x y z w => NToWord _ (Z.to_N (ModularBaseSystemListZOperations.cmovl (Z.of_N (wordToN x)) (Z.of_N (wordToN x)) (Z.of_N (wordToN z)) (Z.of_N (wordToN w)))).
+    := fun x y z w => ZToWord64 (ModularBaseSystemListZOperations.cmovl (word64ToZ x) (word64ToZ x) (word64ToZ z) (word64ToZ w)).
+  Definition conditional_subtract (pred_limb_count : nat) : word64 -> Tuple.tuple word64 (S pred_limb_count) -> Tuple.tuple word64 (S pred_limb_count) -> Tuple.tuple word64 (S pred_limb_count)
+    := fun x y z => Tuple.map ZToWord64 (@ModularBaseSystemListZOperations.conditional_subtract_modulus
+                                           (S pred_limb_count) (word64ToZ x) (Tuple.map word64ToZ y) (Tuple.map word64ToZ z)).
   Infix "+" := add : word64_scope.
   Infix "-" := sub : word64_scope.
   Infix "*" := mul : word64_scope.
@@ -214,6 +217,9 @@ Module Word64.
        | Neg => fun xy => neg (fst xy) (snd xy)
        | Cmovne => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovne x y z w
        | Cmovle => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovle x y z w
+       | ConditionalSubtract pred_n
+         => fun xyz => let '(x, y, z) := eta3 xyz in
+                       flat_interp_untuple' (T:=Tbase TZ) (@conditional_subtract pred_n x (flat_interp_tuple y) (flat_interp_tuple z))
        end%word64.
 
   Definition of_Z ty : Z.interp_base_type ty -> interp_base_type ty
@@ -315,6 +321,39 @@ Module ZBounds.
   Definition cmovle' (r1 r2 : bounds) : bounds
     := let (lr1, ur1) := r1 in let (lr2, ur2) := r2 in {| lower := Z.min lr1 lr2 ; upper := Z.max ur1 ur2 |}.
   Definition cmovle (x y r1 r2 : t) : t := t_map2 cmovle' r1 r2.
+  (** TODO(jadep): Check that this is correct; it computes the bounds,
+      conditional on the assumption that the entire calculation is
+      valid.  Currently, it says that each limb is upper-bounded by
+      either the original value less the modulus, or by the smaller of
+      the original value and the modulus (in the case that the
+      subtraction is negative).  Feel free to substitute any other
+      bounds you'd like here. *)
+  Definition conditional_subtract' (pred_n : nat) (int_width : bounds)
+             (modulus value : Tuple.tuple bounds (S pred_n))
+    : Tuple.tuple bounds (S pred_n)
+    := Tuple.map2
+         (fun modulus_bounds value_bounds : bounds
+          => let (ml, mu) := modulus_bounds in
+             let (vl, vu) := value_bounds in
+             {| lower := 0 ; upper := Z.max (Z.min vu mu) (vu - ml) |})
+         modulus value.
+  (** TODO(jadep): Fill me in.  This should check that the modulus and
+      value fit within int_width, that the modulus is of the right
+      form, and that the value is small enough.  If not, it should
+      [None]; otherwise, it should delegate to
+      [conditional_subtract']. *)
+  Axiom conditional_subtract_o
+    : forall (pred_n : nat) (int_width : bounds)
+             (modulus value : Tuple.tuple bounds (S pred_n)), option (Tuple.tuple bounds (S pred_n)).
+  Definition conditional_subtract (pred_n : nat) (int_width : t)
+             (modulus value : Tuple.tuple t (S pred_n))
+    : Tuple.tuple t (S pred_n)
+    := Tuple.push_option
+         match int_width, Tuple.lift_option modulus, Tuple.lift_option value with
+         | Some int_width, Some modulus, Some value
+           => conditional_subtract_o pred_n int_width modulus value
+         | _, _, _ => None
+         end.
 
   Module Export Notations.
     Delimit Scope bounds_scope with bounds.
@@ -341,6 +380,9 @@ Module ZBounds.
        | Neg => fun xy => neg (fst xy) (snd xy)
        | Cmovne => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovne x y z w
        | Cmovle => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovle x y z w
+       | ConditionalSubtract pred_n
+         => fun xyz => let '(x, y, z) := eta3 xyz in
+                       flat_interp_untuple' (T:=Tbase TZ) (@conditional_subtract pred_n x (flat_interp_tuple y) (flat_interp_tuple z))
        end%bounds.
 
   Definition of_word64 ty : Word64.interp_base_type ty -> interp_base_type ty
@@ -559,6 +601,38 @@ Module BoundedWord64.
   Definition cmovle : t -> t -> t -> t -> t.
   Proof. build_4op Word64.cmovle ZBounds.cmovle; abstract t_start. Defined.
 
+  Definition conditional_subtract (pred_n : nat) (int_width : t)
+             (modulus val : Tuple.tuple t (S pred_n))
+    : Tuple.tuple t (S pred_n).
+  Proof.
+    refine (match int_width, Tuple.lift_option modulus, Tuple.lift_option val with
+            | Some int_width, Some modulus, Some val
+              => let boundsv := Tuple.push_option
+                                  (ZBounds.conditional_subtract_o
+                                     pred_n (BoundedWordToBounds int_width)
+                                     (Tuple.map BoundedWordToBounds modulus)
+                                     (Tuple.map BoundedWordToBounds val)) in
+                 let wordv := (Word64.conditional_subtract
+                                 pred_n (value int_width)
+                                 (Tuple.map value modulus)
+                                 (Tuple.map value val)) in
+                 let ret_val := Tuple.map2
+                                  (fun bs val
+                                   => option_map (fun bs' : ZBounds.bounds
+                                                  => let (l, u) := bs' in
+                                                     (l, val, u)) bs)
+                                  boundsv wordv in
+                 _
+            | _, _, _ => Tuple.push_option None
+            end).
+    (** TODO(jadep): Use the bounds lemma here to prove that if each
+        component of [ret_val] is [Some (l, v, u)], then we can fill
+        in [pf] and return the tuple of [{| lower := l ; value := v ;
+        upper := u ; in_bounds := pf |}]. *)
+    admit.
+  Defined.
+
+
   Local Notation binop_correct op opW opB :=
     (forall x y v, op (Some x) (Some y) = Some v -> value v = opW (value x) (value y)
                                                     /\ BoundedWordToBounds v = opB (BoundedWordToBounds x) (BoundedWordToBounds y))
@@ -618,6 +692,9 @@ Module BoundedWord64.
   Proof. invert_t. Qed.
   Definition invert_cmovle : op4_correct cmovle Word64.cmovle (fun _ _ => ZBounds.cmovle').
   Proof. invert_t. Qed.
+  (** TODO(jadep): Fill me in *)
+  Definition invert_conditional_subtract : False.
+  Proof. Admitted.
 
   Module Export Notations.
     Delimit Scope bounded_word_scope with bounded_word.
@@ -642,7 +719,10 @@ Module BoundedWord64.
        | Neg => fun xy => neg (fst xy) (snd xy)
        | Cmovne => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovne x y z w
        | Cmovle => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovle x y z w
-       end%bounded_word.
+       | ConditionalSubtract pred_n
+         => fun xyz => let '(x, y, z) := eta3 xyz in
+                       flat_interp_untuple' (T:=Tbase TZ) (@conditional_subtract pred_n x (flat_interp_tuple y) (flat_interp_tuple z))
+     end%bounded_word.
 End BoundedWord64.
 
 Module ZBoundsTuple.

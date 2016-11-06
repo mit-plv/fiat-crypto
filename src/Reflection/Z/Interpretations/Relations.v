@@ -122,6 +122,9 @@ Local Ltac related_word64_op_t_step :=
                  end ].
 Local Ltac related_word64_op_t := repeat related_word64_op_t_step.
 
+Axiom proof_admitted : False.
+Tactic Notation "admit" := abstract case proof_admitted.
+
 Lemma related_word64_op : related_op related_word64 (@BoundedWord64.interp_op) (@Word64.interp_op).
 Proof.
   let op := fresh in intros ?? op; destruct op; simpl.
@@ -135,10 +138,8 @@ Proof.
   { related_word64_op_t. }
   { related_word64_op_t. }
   { related_word64_op_t. }
+  { related_word64_op_t; admit. (** TODO(jadep): Fill me in *) }
 Qed.
-
-Axiom proof_admitted : False.
-Tactic Notation "admit" := abstract case proof_admitted.
 
 Lemma related_Z_op : related_op related_Z (@BoundedWord64.interp_op) (@Z.interp_op).
 Proof.
@@ -153,6 +154,7 @@ Proof.
   { related_word64_op_t; admit. }
   { related_word64_op_t; admit. }
   { related_word64_op_t; admit. }
+  { related_word64_op_t; admit. (** TODO(jadep or jgross): Fill me in *) }
 Qed.
 
 Local Arguments ZBounds.SmartBuildBounds _ _ / .
@@ -169,6 +171,7 @@ Proof.
   { related_word64_op_t. }
   { admit; related_word64_op_t. }
   { admit; related_word64_op_t. }
+  { admit; related_word64_op_t. (** TODO(jadep or jgross): Fill me in *) }
 Qed.
 
 Create HintDb interp_related discriminated.

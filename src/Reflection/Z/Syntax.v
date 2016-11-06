@@ -4,6 +4,8 @@ Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemListZOperations.
 Require Import Crypto.Util.Equality.
 Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.HProp.
+Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.PartiallyReifiedProp.
 Export Syntax.Notations.
 
@@ -16,10 +18,18 @@ Definition interp_base_type (v : base_type) : Type :=
   | TZ => Z
   end.
 
+Global Instance dec_eq_base_type : DecidableRel (@eq base_type)
+  := base_type_eq_dec.
+Global Instance dec_eq_flat_type : DecidableRel (@eq (flat_type base_type)) := _.
+Global Instance dec_eq_type : DecidableRel (@eq (type base_type)) := _.
+
 Local Notation tZ := (Tbase TZ).
 Local Notation eta x := (fst x, snd x).
 Local Notation eta3 x := (eta (fst x), snd x).
 Local Notation eta4 x := (eta3 (fst x), snd x).
+
+Axiom proof_admitted : False.
+Local Notation admit := (match proof_admitted with end).
 
 Inductive op : flat_type base_type -> flat_type base_type -> Type :=
 | Add : op (tZ * tZ) tZ
@@ -31,7 +41,12 @@ Inductive op : flat_type base_type -> flat_type base_type -> Type :=
 | Lor : op (tZ * tZ) tZ
 | Neg : op (tZ * tZ) tZ
 | Cmovne : op (tZ * tZ * tZ * tZ) tZ
-| Cmovle : op (tZ * tZ * tZ * tZ) tZ.
+| Cmovle : op (tZ * tZ * tZ * tZ) tZ
+| ConditionalSubtract (pred_limb_count : nat)
+  : op (tZ (* int_width *)
+        * Syntax.tuple tZ (S pred_limb_count) (* modulus *)
+        * Syntax.tuple tZ (S pred_limb_count) (* value *))
+       (Syntax.tuple tZ (S pred_limb_count)).
 
 Definition interp_op src dst (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
   := match f in op src dst return interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst with
@@ -45,6 +60,9 @@ Definition interp_op src dst (f : op src dst) : interp_flat_type interp_base_typ
      | Neg => fun xy => ModularBaseSystemListZOperations.neg (fst xy) (snd xy)
      | Cmovne => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovne x y z w
      | Cmovle => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovl x y z w
+     | ConditionalSubtract pred_n
+       => fun xyz => let '(x, y, z) := eta3 xyz in
+                     flat_interp_untuple' (T:=tZ) (@ModularBaseSystemListZOperations.conditional_subtract_modulus (S pred_n) x (flat_interp_tuple y) (flat_interp_tuple z))
      end%Z.
 
 Definition base_type_eq_semidec_transparent (t1 t2 : base_type)
@@ -57,7 +75,7 @@ Proof.
   unfold base_type_eq_semidec_transparent; congruence.
 Qed.
 
-Definition op_beq t1 tR (f g : op t1 tR) : reified_Prop
+Definition op_beq_hetero {t1 tR t1' tR'} (f : op t1 tR) (g : op t1' tR') : reified_Prop
   := match f, g return bool with
      | Add, Add => true
      | Add, _ => false
@@ -79,15 +97,53 @@ Definition op_beq t1 tR (f g : op t1 tR) : reified_Prop
      | Cmovne, _ => false
      | Cmovle, Cmovle => true
      | Cmovle, _ => false
+     | ConditionalSubtract n, ConditionalSubtract m => NatUtil.nat_beq n m
+     | ConditionalSubtract _, _ => false
      end.
+
+Definition op_beq t1 tR (f g : op t1 tR) : reified_Prop
+  := Eval cbv [op_beq_hetero] in op_beq_hetero f g.
+
+Definition op_beq_hetero_type_eq {t1 tR t1' tR'} f g : to_prop (@op_beq_hetero t1 tR t1' tR' f g) -> t1 = t1' /\ tR = tR'.
+Proof.
+  destruct f, g; simpl; try solve [ repeat constructor | intros [] ].
+  unfold op_beq_hetero; simpl.
+  match goal with
+  | [ |- context[to_prop (reified_Prop_of_bool ?x)] ]
+    => destruct (Sumbool.sumbool_of_bool x) as [P|P]
+  end.
+  { apply NatUtil.internal_nat_dec_bl in P; subst; repeat constructor. }
+  { intro H'; exfalso; rewrite P in H'; exact H'. }
+Defined.
+
+Definition op_beq_hetero_type_eqs {t1 tR t1' tR'} f g : to_prop (@op_beq_hetero t1 tR t1' tR' f g) -> t1 = t1'
+  := fun H => let (p, q) := @op_beq_hetero_type_eq t1 tR t1' tR' f g H in p.
+Definition op_beq_hetero_type_eqd {t1 tR t1' tR'} f g : to_prop (@op_beq_hetero t1 tR t1' tR' f g) -> tR = tR'
+  := fun H => let (p, q) := @op_beq_hetero_type_eq t1 tR t1' tR' f g H in q.
+
+Definition op_beq_hetero_eq {t1 tR t1' tR'} f g
+  : forall pf : to_prop (@op_beq_hetero t1 tR t1' tR' f g),
+    eq_rect
+      _ (fun src => op src tR')
+      (eq_rect _ (fun dst => op t1 dst) f _ (op_beq_hetero_type_eqd f g pf))
+      _ (op_beq_hetero_type_eqs f g pf)
+    = g.
+Proof.
+  destruct f, g; simpl; try solve [ reflexivity | intros [] ].
+  { unfold op_beq_hetero, op_beq_hetero_type_eqs, op_beq_hetero_type_eqd; simpl.
+    intro pf; edestruct Sumbool.sumbool_of_bool.
+    { simpl; edestruct NatUtil.internal_nat_dec_bl; reflexivity. }
+    { match goal with
+      | [ |- context[False_ind _ ?pf] ]
+        => case pf
+      end. } }
+Qed.
 
 Lemma op_beq_bl : forall t1 tR x y, to_prop (op_beq t1 tR x y) -> x = y.
 Proof.
-  intros ?? x; destruct x;
-    intro y;
-    refine match y with
-           | Add => _
-           | _ => _
-           end;
-    compute; try (reflexivity || trivial || (intros; exfalso; assumption)).
+  intros ?? f g H.
+  pose proof (op_beq_hetero_eq f g H) as H'; subst.
+  generalize dependent (op_beq_hetero_type_eqd f g H).
+  generalize dependent (op_beq_hetero_type_eqs f g H).
+  intros; eliminate_hprop_eq; simpl in *; assumption.
 Qed.
