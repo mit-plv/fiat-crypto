@@ -132,7 +132,12 @@ Proof.
   destruct f, g; simpl; try solve [ reflexivity | intros [] ].
   { unfold op_beq_hetero, op_beq_hetero_type_eqs, op_beq_hetero_type_eqd; simpl.
     intro pf; edestruct Sumbool.sumbool_of_bool.
-    { simpl; edestruct NatUtil.internal_nat_dec_bl; reflexivity. }
+    { simpl;
+        lazymatch goal with
+        | [ |- context[NatUtil.internal_nat_dec_bl ?x ?y ?pf] ]
+          => generalize dependent (NatUtil.internal_nat_dec_bl x y pf); intro; subst
+        end;
+        reflexivity. }
     { match goal with
       | [ |- context[False_ind _ ?pf] ]
         => case pf
@@ -142,7 +147,7 @@ Qed.
 Lemma op_beq_bl : forall t1 tR x y, to_prop (op_beq t1 tR x y) -> x = y.
 Proof.
   intros ?? f g H.
-  pose proof (op_beq_hetero_eq f g H) as H'; subst.
+  pose proof (op_beq_hetero_eq f g H) as H'.
   generalize dependent (op_beq_hetero_type_eqd f g H).
   generalize dependent (op_beq_hetero_type_eqs f g H).
   intros; eliminate_hprop_eq; simpl in *; assumption.
