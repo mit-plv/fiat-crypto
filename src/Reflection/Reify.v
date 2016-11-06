@@ -68,11 +68,11 @@ Inductive reify_result_helper :=
 | reification_unsuccessful.
 
 (** Override this to get a faster [reify_op] *)
-Ltac base_reify_op op op_head :=
+Ltac base_reify_op op op_head expr :=
   let r := constr:(_ : reify_op op op_head _ _) in
   type of r.
-Ltac reify_op op op_head :=
-  let t := base_reify_op op op_head in
+Ltac reify_op op op_head expr :=
+  let t := base_reify_op op op_head expr in
   constr:(op_info t).
 
 (** Change this with [Ltac reify_debug_level ::= constr:(1).] to get
@@ -152,7 +152,7 @@ Ltac reifyf base_type_code interp_base_type op var e :=
     let retv := match constr:(Set) with
                 | _ => let retv := reifyf_var x mkVar in constr:(finished_value retv)
                 | _ => let op_head := head x in
-                       reify_op op op_head
+                       reify_op op op_head x
                 | _ => let c := mkConst t x in
                        constr:(finished_value c)
                 | _ => constr:(reification_unsuccessful)

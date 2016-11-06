@@ -9,7 +9,7 @@ Require Import Crypto.Reflection.InlineInterp.
 Require Import Crypto.Reflection.Linearize.
 Require Import Crypto.Reflection.LinearizeInterp.
 
-Ltac base_reify_op op op_head ::=
+Ltac base_reify_op op op_head extra ::=
      lazymatch op_head with
      | @Z.add => constr:(reify_op op op_head 2 Add)
      | @Z.mul => constr:(reify_op op op_head 2 Mul)
