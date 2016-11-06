@@ -1,6 +1,7 @@
 (** * PHOAS Representation of Gallina *)
 Require Import Coq.Strings.String Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 Require Import Crypto.Util.Tuple.
+Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
@@ -26,6 +27,17 @@ Section language.
   Infix "*" := Prod : ctype_scope.
   Notation "A -> B" := (Arrow A B) : ctype_scope.
   Local Coercion Tbase : base_type_code >-> flat_type.
+
+  Fixpoint tuple' T n :=
+    match n with
+    | O => T
+    | S n' => (tuple' T n' * T)%ctype
+    end.
+  Definition tuple T n :=
+    match n with
+    | O => T (* default value; no empty tuple *)
+    | S n' => tuple' T n'
+    end.
 
   Section interp.
     Section type.
@@ -69,6 +81,21 @@ Section language.
         | Prod x y => prod (interp_flat_type x) (interp_flat_type y)
         end.
       Definition interp_type := interp_type_gen interp_flat_type.
+      Fixpoint flat_interp_tuple' {T n} : interp_flat_type (tuple' T n) -> Tuple.tuple' (interp_flat_type T) n
+        := match n return interp_flat_type (tuple' T n) -> Tuple.tuple' (interp_flat_type T) n with
+           | O => fun x => x
+           | S n' => fun xy => (@flat_interp_tuple' _ n' (fst xy), snd xy)
+           end.
+      Definition flat_interp_tuple {T n} : interp_flat_type (tuple T n) -> Tuple.tuple (interp_flat_type T) n
+        := match n return interp_flat_type (tuple T n) -> Tuple.tuple (interp_flat_type T) n with
+           | O => fun _ => tt
+           | S n' => @flat_interp_tuple' T n'
+           end.
+      Fixpoint flat_interp_untuple' {T n} : Tuple.tuple' (interp_flat_type T) n -> interp_flat_type (tuple' T n)
+        := match n return Tuple.tuple' (interp_flat_type T) n -> interp_flat_type (tuple' T n) with
+           | O => fun x => x
+           | S n' => fun xy => (@flat_interp_untuple' _ n' (fst xy), snd xy)
+           end.
       Section rel.
         Context (R : forall t, interp_base_type t -> interp_base_type t -> Prop).
         Fixpoint interp_flat_type_rel_pointwise (t : flat_type)
@@ -317,11 +344,27 @@ Section language.
     Axiom Wf_admitted : forall {t} (E:Expr t), @Wf t E.
   End expr_param.
 End language.
+Global Arguments tuple' {_}%type_scope _%ctype_scope _%nat_scope.
+Global Arguments tuple {_}%type_scope _%ctype_scope _%nat_scope.
 Global Arguments Prod {_}%type_scope (_ _)%ctype_scope.
 Global Arguments Arrow {_}%type_scope (_ _)%ctype_scope.
 Global Arguments Tbase {_}%type_scope _%ctype_scope.
 
 Ltac admit_Wf := apply Wf_admitted.
+
+Scheme Equality for flat_type.
+Scheme Equality for type.
+
+Global Instance dec_eq_flat_type {base_type_code} `{DecidableRel (@eq base_type_code)}
+  : DecidableRel (@eq (flat_type base_type_code)).
+Proof.
+  repeat intro; hnf; decide equality; apply dec; auto.
+Defined.
+Global Instance dec_eq_type {base_type_code} `{DecidableRel (@eq base_type_code)}
+  : DecidableRel (@eq (type base_type_code)).
+Proof.
+  repeat intro; hnf; decide equality; apply dec; typeclasses eauto.
+Defined.
 
 Global Arguments Const {_ _ _ _ _} _.
 Global Arguments Var {_ _ _ _ _} _.
@@ -337,6 +380,9 @@ Global Arguments LetIn {_ _ _ _ _} _ {_} _.
 Global Arguments Pair {_ _ _ _ _} _ {_} _.
 Global Arguments Return {_ _ _ _ _} _.
 Global Arguments Abs {_ _ _ _ _ _} _.
+Global Arguments flat_interp_tuple' {_ _ _ _} _.
+Global Arguments flat_interp_tuple {_ _ _ _} _.
+Global Arguments flat_interp_untuple' {_ _ _ _} _.
 Global Arguments interp_type_rel_pointwise2 {_ _ _} R {t} _ _.
 Global Arguments interp_type_gen_rel_pointwise2_hetero {_ _ _ _ _} Rsrc R {t} _ _.
 Global Arguments interp_type_gen_rel_pointwise2 {_ _ _} R {t} _ _.

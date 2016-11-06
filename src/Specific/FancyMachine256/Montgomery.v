@@ -76,9 +76,9 @@ Section reflected.
   Context (modulus m' : Z)
           (props : fancy_machine.arithmetic ops).
 
-  Let result (v : tuple fancy_machine.W 2) := Syntax.Interp (interp_op _) rexpression_simple modulus m' (fst v) (snd v).
+  Let result (v : Tuple.tuple fancy_machine.W 2) := Syntax.Interp (interp_op _) rexpression_simple modulus m' (fst v) (snd v).
 
-  Let assembled_result (v : tuple fancy_machine.W 2) : fancy_machine.W := Core.Interp compiled_syntax modulus m' (fst v) (snd v).
+  Let assembled_result (v : Tuple.tuple fancy_machine.W 2) : fancy_machine.W := Core.Interp compiled_syntax modulus m' (fst v) (snd v).
 
   Theorem sanity : result = expression ops modulus m'.
   Proof.
@@ -100,7 +100,7 @@ Section reflected.
             (H2 : 0 <= m' < 2^256)
             (H3 : 2^256 * R' ≡ 1)
             (H4 : modulus * m' ≡₂₅₆ -1)
-            (v : tuple fancy_machine.W 2)
+            (v : Tuple.tuple fancy_machine.W 2)
             (H5 : 0 <= decode v <= 2^256 * modulus).
     Theorem correctness
       : fancy_machine.decode (result v) = (decode v * R') mod modulus.
