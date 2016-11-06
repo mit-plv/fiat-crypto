@@ -310,10 +310,13 @@ Local Opaque Interp.
 Lemma ExprBinOp_correct_and_bounded
       ropW op (ropZ_sig : rexpr_binop_sig op)
       (Hbounds : correct_and_bounded_genT ropW ropZ_sig)
-      (H0 : forall x y
-                   (Hx : is_bounded (fe25519WToZ x) = true)
-                   (Hy : is_bounded (fe25519WToZ y) = true),
-          let args := binop_args_to_bounded (x, y) Hx Hy in
+      (H0 : forall xy
+                   (xy := (eta_fe25519W (fst xy), eta_fe25519W (snd xy)))
+                   (Hxy : is_bounded (fe25519WToZ (fst xy)) = true
+                          /\ is_bounded (fe25519WToZ (snd xy)) = true),
+          let Hx := let (Hx, Hy) := Hxy in Hx in
+          let Hy := let (Hx, Hy) := Hxy in Hy in
+          let args := binop_args_to_bounded xy Hx Hy in
           match LiftOption.of'
                   (ApplyInterpedAll (Interp (@BoundedWord64.interp_op) (MapInterp BoundedWord64.of_word64 ropW))
                                     (LiftOption.to' (Some args)))
@@ -321,10 +324,13 @@ Lemma ExprBinOp_correct_and_bounded
           | Some _ => True
           | None => False
           end)
-      (H1 : forall x y
-                   (Hx : is_bounded (fe25519WToZ x) = true)
-                   (Hy : is_bounded (fe25519WToZ y) = true),
-          let args := binop_args_to_bounded (x, y) Hx Hy in
+      (H1 : forall xy
+                   (xy := (eta_fe25519W (fst xy), eta_fe25519W (snd xy)))
+                   (Hxy : is_bounded (fe25519WToZ (fst xy)) = true
+                          /\ is_bounded (fe25519WToZ (snd xy)) = true),
+          let Hx := let (Hx, Hy) := Hxy in Hx in
+          let Hy := let (Hx, Hy) := Hxy in Hy in
+          let args := binop_args_to_bounded (fst xy, snd xy) Hx Hy in
           let x' := SmartVarfMap (fun _ : base_type => BoundedWord64.to_bounds') args in
           match LiftOption.of'
                   (ApplyInterpedAll (Interp (@ZBounds.interp_op) (MapInterp ZBounds.of_word64 ropW)) (LiftOption.to' (Some x')))
@@ -336,18 +342,18 @@ Lemma ExprBinOp_correct_and_bounded
 Proof.
   intros x y Hx Hy.
   pose x as x'; pose y as y'.
-  specialize (H0 x' y' Hx Hy).
-  specialize (H1 x' y' Hx Hy).
   hnf in x, y; destruct_head' prod.
+  specialize (H0 (x', y') (conj Hx Hy)).
+  specialize (H1 (x', y') (conj Hx Hy)).
   let args := constr:(binop_args_to_bounded (x', y') Hx Hy) in
   t_correct_and_bounded ropZ_sig Hbounds H0 H1 args.
 Qed.
-
 
 Lemma ExprUnOp_correct_and_bounded
       ropW op (ropZ_sig : rexpr_unop_sig op)
       (Hbounds : correct_and_bounded_genT ropW ropZ_sig)
       (H0 : forall x
+                   (x := eta_fe25519W x)
                    (Hx : is_bounded (fe25519WToZ x) = true),
           let args := unop_args_to_bounded x Hx in
           match LiftOption.of'
@@ -358,6 +364,7 @@ Lemma ExprUnOp_correct_and_bounded
           | None => False
           end)
       (H1 : forall x
+                   (x := eta_fe25519W x)
                    (Hx : is_bounded (fe25519WToZ x) = true),
           let args := unop_args_to_bounded x Hx in
           let x' := SmartVarfMap (fun _ : base_type => BoundedWord64.to_bounds') args in
@@ -371,9 +378,9 @@ Lemma ExprUnOp_correct_and_bounded
 Proof.
   intros x Hx.
   pose x as x'.
+  hnf in x; destruct_head' prod.
   specialize (H0 x' Hx).
   specialize (H1 x' Hx).
-  hnf in x; destruct_head' prod.
   let args := constr:(unop_args_to_bounded x' Hx) in
   t_correct_and_bounded ropZ_sig Hbounds H0 H1 args.
 Qed.
@@ -382,6 +389,7 @@ Lemma ExprUnOpFEToWire_correct_and_bounded
       ropW op (ropZ_sig : rexpr_unop_FEToWire_sig op)
       (Hbounds : correct_and_bounded_genT ropW ropZ_sig)
       (H0 : forall x
+                   (x := eta_fe25519W x)
                    (Hx : is_bounded (fe25519WToZ x) = true),
           let args := unop_args_to_bounded x Hx in
           match LiftOption.of'
@@ -392,6 +400,7 @@ Lemma ExprUnOpFEToWire_correct_and_bounded
           | None => False
           end)
       (H1 : forall x
+                   (x := eta_fe25519W x)
                    (Hx : is_bounded (fe25519WToZ x) = true),
           let args := unop_args_to_bounded x Hx in
           let x' := SmartVarfMap (fun _ : base_type => BoundedWord64.to_bounds') args in
@@ -405,9 +414,9 @@ Lemma ExprUnOpFEToWire_correct_and_bounded
 Proof.
   intros x Hx.
   pose x as x'.
+  hnf in x; destruct_head' prod.
   specialize (H0 x' Hx).
   specialize (H1 x' Hx).
-  hnf in x; destruct_head' prod.
   let args := constr:(unop_args_to_bounded x' Hx) in
   t_correct_and_bounded ropZ_sig Hbounds H0 H1 args.
 Qed.
@@ -416,6 +425,7 @@ Lemma ExprUnOpWireToFE_correct_and_bounded
       ropW op (ropZ_sig : rexpr_unop_WireToFE_sig op)
       (Hbounds : correct_and_bounded_genT ropW ropZ_sig)
       (H0 : forall x
+                   (x := eta_wire_digitsW x)
                    (Hx : wire_digits_is_bounded (wire_digitsWToZ x) = true),
           let args := unopWireToFE_args_to_bounded x Hx in
           match LiftOption.of'
@@ -426,6 +436,7 @@ Lemma ExprUnOpWireToFE_correct_and_bounded
           | None => False
           end)
       (H1 : forall x
+                   (x := eta_wire_digitsW x)
                    (Hx : wire_digits_is_bounded (wire_digitsWToZ x) = true),
           let args := unopWireToFE_args_to_bounded x Hx in
           let x' := SmartVarfMap (fun _ : base_type => BoundedWord64.to_bounds') args in
@@ -439,9 +450,9 @@ Lemma ExprUnOpWireToFE_correct_and_bounded
 Proof.
   intros x Hx.
   pose x as x'.
+  hnf in x; destruct_head' prod.
   specialize (H0 x' Hx).
   specialize (H1 x' Hx).
-  hnf in x; destruct_head' prod.
   let args := constr:(unopWireToFE_args_to_bounded x' Hx) in
   t_correct_and_bounded ropZ_sig Hbounds H0 H1 args.
 Qed.
@@ -450,6 +461,7 @@ Lemma ExprUnOpFEToZ_correct_and_bounded
       ropW op (ropZ_sig : rexpr_unop_FEToZ_sig op)
       (Hbounds : correct_and_bounded_genT ropW ropZ_sig)
       (H0 : forall x
+                   (x := eta_fe25519W x)
                    (Hx : is_bounded (fe25519WToZ x) = true),
           let args := unop_args_to_bounded x Hx in
           match LiftOption.of'
@@ -460,6 +472,7 @@ Lemma ExprUnOpFEToZ_correct_and_bounded
           | None => False
           end)
       (H1 : forall x
+                   (x := eta_fe25519W x)
                    (Hx : is_bounded (fe25519WToZ x) = true),
           let args := unop_args_to_bounded x Hx in
           let x' := SmartVarfMap (fun _ : base_type => BoundedWord64.to_bounds') args in
@@ -473,9 +486,9 @@ Lemma ExprUnOpFEToZ_correct_and_bounded
 Proof.
   intros x Hx.
   pose x as x'.
+  hnf in x; destruct_head' prod.
   specialize (H0 x' Hx).
   specialize (H1 x' Hx).
-  hnf in x; destruct_head' prod.
   let args := constr:(unop_args_to_bounded x' Hx) in
   t_correct_and_bounded ropZ_sig Hbounds H0 H1 args.
 Qed.
