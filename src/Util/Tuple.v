@@ -157,6 +157,21 @@ Lemma map_map2 {n A B C D} (f:A -> B -> C) (g:C -> D) (xs:tuple A n) (ys:tuple B
 Proof.
 Admitted.
 
+Lemma map2_fst {n A B C} (f:A -> C) (xs:tuple A n) (ys:tuple B n)
+  : map2 (fun a b => f a) xs ys = map f xs.
+Proof.
+Admitted.
+
+Lemma map2_snd {n A B C} (f:B -> C) (xs:tuple A n) (ys:tuple B n)
+  : map2 (fun a b => f b) xs ys = map f ys.
+Proof.
+Admitted.
+
+Lemma map_id {n A} (xs:tuple A n)
+  : map (fun x => x) xs = xs.
+Proof.
+Admitted.
+
 Section monad.
   Context (M : Type -> Type) (bind : forall X Y, M X -> (X -> M Y) -> M Y) (ret : forall X, X -> M X).
   Fixpoint lift_monad' {n A} {struct n}
