@@ -172,6 +172,11 @@ Lemma map_id {n A} (xs:tuple A n)
 Proof.
 Admitted.
 
+Lemma map_id_ext {n A} (f : A -> A) (xs:tuple A n)
+  : (forall x, f x = x) -> map f xs = xs.
+Proof.
+Admitted.
+
 Section monad.
   Context (M : Type -> Type) (bind : forall X Y, M X -> (X -> M Y) -> M Y) (ret : forall X, X -> M X).
   Fixpoint lift_monad' {n A} {struct n}
