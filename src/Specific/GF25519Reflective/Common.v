@@ -336,7 +336,7 @@ Lemma ExprBinOp_correct_and_bounded
           let Hx := let (Hx, Hy) := Hxy in Hx in
           let Hy := let (Hx, Hy) := Hxy in Hy in
           let args := binop_args_to_bounded (fst xy, snd xy) Hx Hy in
-          let x' := SmartVarfMap (fun _ : base_type => BoundedWord64.to_bounds') args in
+          let x' := SmartVarfMap (fun _ : base_type => BoundedWord64.BoundedWordToBounds) args in
           match LiftOption.of'
                   (ApplyInterpedAll (Interp (@ZBounds.interp_op) (MapInterp ZBounds.of_word64 ropW)) (LiftOption.to' (Some x')))
           with
@@ -372,7 +372,7 @@ Lemma ExprUnOp_correct_and_bounded
                    (x := eta_fe25519W x)
                    (Hx : is_bounded (fe25519WToZ x) = true),
           let args := unop_args_to_bounded x Hx in
-          let x' := SmartVarfMap (fun _ : base_type => BoundedWord64.to_bounds') args in
+          let x' := SmartVarfMap (fun _ : base_type => BoundedWord64.BoundedWordToBounds) args in
           match LiftOption.of'
                   (ApplyInterpedAll (Interp (@ZBounds.interp_op) (MapInterp ZBounds.of_word64 ropW)) (LiftOption.to' (Some x')))
           with
@@ -408,7 +408,7 @@ Lemma ExprUnOpFEToWire_correct_and_bounded
                    (x := eta_fe25519W x)
                    (Hx : is_bounded (fe25519WToZ x) = true),
           let args := unop_args_to_bounded x Hx in
-          let x' := SmartVarfMap (fun _ : base_type => BoundedWord64.to_bounds') args in
+          let x' := SmartVarfMap (fun _ : base_type => BoundedWord64.BoundedWordToBounds) args in
           match LiftOption.of'
                   (ApplyInterpedAll (Interp (@ZBounds.interp_op) (MapInterp ZBounds.of_word64 ropW)) (LiftOption.to' (Some x')))
           with
@@ -444,7 +444,7 @@ Lemma ExprUnOpWireToFE_correct_and_bounded
                    (x := eta_wire_digitsW x)
                    (Hx : wire_digits_is_bounded (wire_digitsWToZ x) = true),
           let args := unopWireToFE_args_to_bounded x Hx in
-          let x' := SmartVarfMap (fun _ : base_type => BoundedWord64.to_bounds') args in
+          let x' := SmartVarfMap (fun _ : base_type => BoundedWord64.BoundedWordToBounds) args in
           match LiftOption.of'
                   (ApplyInterpedAll (Interp (@ZBounds.interp_op) (MapInterp ZBounds.of_word64 ropW)) (LiftOption.to' (Some x')))
           with
@@ -480,7 +480,7 @@ Lemma ExprUnOpFEToZ_correct_and_bounded
                    (x := eta_fe25519W x)
                    (Hx : is_bounded (fe25519WToZ x) = true),
           let args := unop_args_to_bounded x Hx in
-          let x' := SmartVarfMap (fun _ : base_type => BoundedWord64.to_bounds') args in
+          let x' := SmartVarfMap (fun _ : base_type => BoundedWord64.BoundedWordToBounds) args in
           match LiftOption.of'
                   (ApplyInterpedAll (Interp (@ZBounds.interp_op) (MapInterp ZBounds.of_word64 ropW)) (LiftOption.to' (Some x')))
           with
