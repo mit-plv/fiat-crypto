@@ -17,12 +17,12 @@ Program Definition r%(lname)sW_correct_and_bounded
 """ % locals()
     elif name == 'Freeze':
         extra = r"""Local Obligation Tactic := intros; vm_compute; constructor.
-Axiom admit : forall {T}, T.
+Axiom proof_admitted : False.
 (** XXX TODO: Fix bounds analysis on freeze *)
 Definition r%(lname)sW_correct_and_bounded
   := Expr%(uopkind)s_correct_and_bounded
        r%(lname)sW %(lname)s r%(lname)sZ_sig r%(lname)sW_correct_and_bounded_gen
-       admit admit.
+       match proof_admitted with end match proof_admitted with end.
 """ % locals()
     with open(name.replace('_', '') + '.v', 'w') as f:
         f.write(r"""Require Import Crypto.Specific.GF25519Reflective.Common.

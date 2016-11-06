@@ -11,6 +11,8 @@ Require Import Crypto.Reflection.Reify.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.MapInterp.
 Require Import Crypto.Reflection.Z.Interpretations.
+Require Crypto.Reflection.Z.Interpretations.Relations.
+Require Import Crypto.Reflection.Z.Interpretations.RelationsCombinations.
 Require Import Crypto.Reflection.Z.Reify.
 Require Import Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Specific.GF25519Reflective.Common.
@@ -99,47 +101,19 @@ Definition interp_runpack : Specific.GF25519BoundedCommon.wire_digitsW -> Specif
   := Eval asm_interp in interp_uexpr_WireToFE (rword64ize runpack).
 Definition interp_runpack_correct : interp_runpack = interp_uexpr_WireToFE runpack := eq_refl.
 
-Local Notation binop_correct_and_bounded rop op
-  := (ibinop_correct_and_bounded (interp_bexpr rop) op) (only parsing).
-Local Notation unop_correct_and_bounded rop op
-  := (iunop_correct_and_bounded (interp_uexpr rop) op) (only parsing).
-Local Notation unop_FEToZ_correct rop op
-  := (iunop_FEToZ_correct (interp_uexpr_FEToZ rop) op) (only parsing).
-Local Notation unop_FEToWire_correct_and_bounded rop op
-  := (iunop_FEToWire_correct_and_bounded (interp_uexpr_FEToWire rop) op) (only parsing).
-Local Notation unop_WireToFE_correct_and_bounded rop op
-  := (iunop_WireToFE_correct_and_bounded (interp_uexpr_WireToFE rop) op) (only parsing).
-
-Local Ltac start_correct_and_bounded_t op op_expr lem :=
-  intros; hnf in *; destruct_head' prod; simpl in * |- ;
-  repeat match goal with H : is_bounded _ = true |- _ => unfold_is_bounded_in H end;
-  repeat match goal with H : wire_digits_is_bounded _ = true |- _ => unfold_is_bounded_in H end;
-  change op with op_expr;
-  rewrite <- lem.
-
 Lemma radd_correct_and_bounded : binop_correct_and_bounded radd carry_add.
-Proof.
-  intros; hnf in *; destruct_head' prod; simpl in * |- .
-  repeat match goal with H : is_bounded _ = true |- _ => unfold_is_bounded_in H end.
-Admitted.
+Proof. exact rcarry_addW_correct_and_bounded. Qed.
 Lemma rsub_correct_and_bounded : binop_correct_and_bounded rsub carry_sub.
-Proof.
-Admitted.
+Proof. exact rcarry_subW_correct_and_bounded. Qed.
 Lemma rmul_correct_and_bounded : binop_correct_and_bounded rmul mul.
-Proof.
-Admitted.
+Proof. exact rmulW_correct_and_bounded. Qed.
 Lemma ropp_correct_and_bounded : unop_correct_and_bounded ropp carry_opp.
-Proof.
-Admitted.
+Proof. exact rcarry_oppW_correct_and_bounded. Qed.
 Lemma rfreeze_correct_and_bounded : unop_correct_and_bounded rfreeze freeze.
-Proof.
-Admitted.
+Proof. exact rfreezeW_correct_and_bounded. Qed.
 Lemma rge_modulus_correct_and_bounded : unop_FEToZ_correct rge_modulus ge_modulus.
-Proof.
-Admitted.
+Proof. exact rge_modulusW_correct_and_bounded. Qed.
 Lemma rpack_correct_and_bounded : unop_FEToWire_correct_and_bounded rpack pack.
-Proof.
-Admitted.
+Proof. exact rpackW_correct_and_bounded. Qed.
 Lemma runpack_correct_and_bounded : unop_WireToFE_correct_and_bounded runpack unpack.
-Proof.
-Admitted.
+Proof. exact runpackW_correct_and_bounded. Qed.

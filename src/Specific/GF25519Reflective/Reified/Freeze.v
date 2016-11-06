@@ -6,12 +6,12 @@ Lemma rfreezeW_correct_and_bounded_gen : correct_and_bounded_genT rfreezeW rfree
 Proof. rexpr_correct. Qed.
 Definition rfreeze_output_bounds := Eval vm_compute in compute_bounds rfreezeW ExprUnOp_bounds.
 Local Obligation Tactic := intros; vm_compute; constructor.
-Axiom admit : forall {T}, T.
+Axiom proof_admitted : False.
 (** XXX TODO: Fix bounds analysis on freeze *)
 Definition rfreezeW_correct_and_bounded
   := ExprUnOp_correct_and_bounded
        rfreezeW freeze rfreezeZ_sig rfreezeW_correct_and_bounded_gen
-       admit admit.
+       match proof_admitted with end match proof_admitted with end.
 
 Local Open Scope string_scope.
 Compute ("Freeze", compute_bounds_for_display rfreezeW ExprUnOp_bounds).
