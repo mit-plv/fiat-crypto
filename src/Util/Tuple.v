@@ -136,6 +136,13 @@ Definition on_tuple {A B} (f:list A -> list B)
 Definition map {n A B} (f:A -> B) (xs:tuple A n) : tuple B n
   := on_tuple (List.map f) (fun _ => eq_trans (map_length _ _)) xs.
 
+Lemma map_S {n A B} (f:A -> B) (xs:tuple' A n) (x:A)
+  : map (n:=S (S n)) f (xs, x) = (map (n:=S n) f xs, f x).
+Proof.
+  unfold map, on_tuple.
+  simpl @List.map.
+Admitted.
+
 Definition on_tuple2 {A B C} (f : list A -> list B -> list C) {a b c : nat}
            (Hlength : forall la lb, length la = a -> length lb = b -> length (f la lb) = c)
            (ta:tuple A a) (tb:tuple B b) : tuple C c

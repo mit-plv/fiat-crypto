@@ -31,3 +31,21 @@ Definition mapt {n A F B} (f : forall x : A, F x -> B)
      | 0 => fun ts v => tt
      | S n' => @mapt' n' A F B f
      end.
+
+Lemma map'_mapt' {n A F B C} (g : B -> C) (f : forall x : A, F x -> B)
+      {ts : tuple' A n} (ls : hlist' F ts)
+  : Tuple.map (n:=S n) g (mapt' f ls) = mapt' (fun x v => g (f x v)) ls.
+Proof.
+  induction n as [|n IHn]; [ reflexivity | ].
+  { simpl @mapt' in *.
+    rewrite <- IHn.
+    rewrite Tuple.map_S; reflexivity. }
+Qed.
+
+Lemma map_mapt {n A F B C} (g : B -> C) (f : forall x : A, F x -> B)
+      {ts : tuple A n} (ls : hlist F ts)
+  : Tuple.map g (mapt f ls) = mapt (fun x v => g (f x v)) ls.
+Proof.
+  destruct n as [|n]; [ reflexivity | ].
+  apply map'_mapt'.
+Qed.
