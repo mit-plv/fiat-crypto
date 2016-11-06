@@ -69,38 +69,107 @@ Proof. related_const_t. Qed.
 Lemma related_word64_const : related_const related_word64 Word64.interp_base_type BoundedWord64.of_word64 (fun _ x => x).
 Proof. related_const_t. Qed.
 
-Lemma related_Z_op : related_op related_Z (@BoundedWord64.interp_op) (@Z.interp_op).
-Proof.
-  let op := fresh in intros ?? op; destruct op; simpl.
-  repeat first [ progress cbv [related_Z LiftOption.lift_relation related'_Z BoundedWord64.value]
+Local Ltac convoy_destruct_in H :=
+  match type of H with
+  | context G[match ?e with Some x => @?S x | None => ?N end eq_refl]
+    => let e' := fresh in
+       let H' := fresh in
+       pose e as e';
+       pose (eq_refl : e = e') as H';
+       let G' := context G[match e' with Some x => S x | None => N end H'] in
+       change G' in H;
+       clearbody H' e'; destruct e'
+  end.
+
+Local Ltac related_word64_op_t_step :=
+  repeat first [ exact I
+               | reflexivity
+               | progress destruct_head' False
+               | progress cbv [related_Z LiftOption.lift_relation related'_Z BoundedWord64.value proj_eq_rel BoundedWord64.to_Z' Word64.to_Z BoundedWord64.to_word64' BoundedWord64.boundedWordToWord64 smart_interp_flat_map related_word64 related'_word64 BoundedWord64.BoundedWordToBounds BoundedWord64.value BoundedWord64.BoundedWordToBounds BoundedWord64.lower BoundedWord64.upper related_bounds LiftOption.lift_relation2 LiftOption.of' BoundedWord64.to_bounds' ZBounds.SmartBuildBounds] in *
                | progress unfold LiftOption.of' in *
                | progress intros
+               | progress subst; simpl in *
                | progress destruct_head' prod
                | progress destruct_head' and
                | progress destruct_head' option
                | progress inversion_option
+               | progress ZBounds.inversion_bounds
+               | progress BoundedWord64.inversion_BoundedWord
                | progress specialize_by (exact I)
-               | progress subst
                | progress break_match
                | progress break_match_hyps
+               | match goal with
+                 | [ H : context[match _ with _ => _ end eq_refl] |- _ ]
+                   => progress convoy_destruct_in H
+                 end
                | progress simpl @fst in *
                | progress simpl @snd in *
-               | destruct_head' BoundedWord64.BoundedWord ].
-  { cbv [related_Z LiftOption.lift_relation related'_Z].
-    intros; break_match.
-    unfold related_Z, BoundedWord64.t, LiftOption.lift_relation, related'_Z, BoundedWord64.value.
-    match goal with
-    | [ H : _ = Some _ |- _ ] => apply BoundedWord64.value_add in H; simpl in H
-    end.
-    subst.
-    (*apply Word64.word64ToZ_add; auto;*)
-    admit. }
-Admitted.
+               | progress destruct_head' BoundedWord64.BoundedWord
+               | congruence
+               | match goal with
+                 | [ H : ?op (Some _) (Some _) = Some _ |- _ ]
+                   => first [ apply BoundedWord64.invert_add in H
+                            | apply BoundedWord64.invert_sub in H
+                            | apply BoundedWord64.invert_mul in H
+                            | apply BoundedWord64.invert_shl in H
+                            | apply BoundedWord64.invert_shr in H
+                            | apply BoundedWord64.invert_land in H
+                            | apply BoundedWord64.invert_lor in H
+                            | apply BoundedWord64.invert_neg in H
+                            | apply BoundedWord64.invert_cmovne in H
+                            | apply BoundedWord64.invert_cmovle in H ];
+                      simpl in H
+                 end ].
+Local Ltac related_word64_op_t := repeat related_word64_op_t_step.
 
-Lemma related_bounds_op : related_op related_bounds (@BoundedWord64.interp_op) (@ZBounds.interp_op).
-Proof. admit. Admitted.
 Lemma related_word64_op : related_op related_word64 (@BoundedWord64.interp_op) (@Word64.interp_op).
-Proof. admit. Admitted.
+Proof.
+  let op := fresh in intros ?? op; destruct op; simpl.
+  { related_word64_op_t. }
+  { related_word64_op_t. }
+  { related_word64_op_t. }
+  { related_word64_op_t. }
+  { related_word64_op_t. }
+  { related_word64_op_t. }
+  { related_word64_op_t. }
+  { related_word64_op_t. }
+  { related_word64_op_t. }
+  { related_word64_op_t. }
+Qed.
+
+Axiom proof_admitted : False.
+Tactic Notation "admit" := abstract case proof_admitted.
+
+Lemma related_Z_op : related_op related_Z (@BoundedWord64.interp_op) (@Z.interp_op).
+Proof.
+  let op := fresh in intros ?? op; destruct op; simpl.
+  { related_word64_op_t; admit. }
+  { related_word64_op_t; admit. }
+  { related_word64_op_t; admit. }
+  { related_word64_op_t; admit. }
+  { related_word64_op_t; admit. }
+  { related_word64_op_t; admit. }
+  { related_word64_op_t; admit. }
+  { related_word64_op_t; admit. }
+  { related_word64_op_t; admit. }
+  { related_word64_op_t; admit. }
+Qed.
+
+Local Arguments ZBounds.SmartBuildBounds _ _ / .
+Lemma related_bounds_op : related_op related_bounds (@BoundedWord64.interp_op) (@ZBounds.interp_op).
+Proof.
+  let op := fresh in intros ?? op; destruct op; simpl.
+  { related_word64_op_t. }
+  { related_word64_op_t. }
+  { related_word64_op_t. }
+  { related_word64_op_t. }
+  { related_word64_op_t. }
+  { related_word64_op_t. }
+  { related_word64_op_t. }
+  { related_word64_op_t. }
+  { admit; related_word64_op_t. }
+  { admit; related_word64_op_t. }
+Qed.
 
 Create HintDb interp_related discriminated.
 Hint Resolve related_Z_op related_bounds_op related_word64_op related_Z_const related_bounds_const related_word64_const : interp_related.
