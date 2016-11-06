@@ -145,6 +145,44 @@ Definition on_tuple2 {A B C} (f : list A -> list B -> list C) {a b c : nat}
 Definition map2 {n A B C} (f:A -> B -> C) (xs:tuple A n) (ys:tuple B n) : tuple C n
   := on_tuple2 (map2 f) (fun la lb pfa pfb => eq_trans (@map2_length _ _ _ _ la lb) (eq_trans (f_equal2 _ pfa pfb) (Min.min_idempotent _))) xs ys.
 
+Section monad.
+  Context (M : Type -> Type) (bind : forall X Y, M X -> (X -> M Y) -> M Y) (ret : forall X, X -> M X).
+  Fixpoint lift_monad' {n A} {struct n}
+    : tuple' (M A) n -> M (tuple' A n)
+    := match n return tuple' (M A) n -> M (tuple' A n) with
+       | 0 => fun t => t
+       | S n' => fun xy => bind _ _ (@lift_monad' n' _ (fst xy)) (fun x' => bind _ _ (snd xy) (fun y' => ret _ (x', y')))
+       end.
+  Fixpoint push_monad' {n A} {struct n}
+    : M (tuple' A n) -> tuple' (M A) n
+    := match n return M (tuple' A n) -> tuple' (M A) n with
+       | 0 => fun t => t
+       | S n' => fun xy => (@push_monad' n' _ (bind _ _ xy (fun xy' => ret _ (fst xy'))),
+                            bind _ _ xy (fun xy' => ret _ (snd xy')))
+       end.
+  Definition lift_monad {n A}
+    : tuple (M A) n -> M (tuple A n)
+    := match n return tuple (M A) n -> M (tuple A n) with
+       | 0 => ret _
+       | S n' => @lift_monad' n' A
+       end.
+  Definition push_monad {n A}
+    : M (tuple A n) -> tuple (M A) n
+    := match n return M (tuple A n) -> tuple (M A) n with
+       | 0 => fun _ => tt
+       | S n' => @push_monad' n' A
+       end.
+End monad.
+Local Notation option_bind
+  := (fun A B (x : option A) f => match x with
+                                  | Some x' => f x'
+                                  | None => None
+                                  end).
+Definition lift_option {n A} (xs : tuple (option A) n) : option (tuple A n)
+  := lift_monad option option_bind (@Some) xs.
+Definition push_option {n A} (xs : option (tuple A n)) : tuple (option A) n
+  := push_monad option option_bind (@Some) xs.
+
 Fixpoint fieldwise' {A B} (n:nat) (R:A->B->Prop) (a:tuple' A n) (b:tuple' B n) {struct n} : Prop.
   destruct n; simpl @tuple' in *.
   { exact (R a b). }
