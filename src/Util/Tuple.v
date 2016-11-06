@@ -183,6 +183,14 @@ Definition lift_option {n A} (xs : tuple (option A) n) : option (tuple A n)
 Definition push_option {n A} (xs : option (tuple A n)) : tuple (option A) n
   := push_monad option option_bind (@Some) xs.
 
+Lemma lift_push_option {n A} (xs : option (tuple A (S n))) : lift_option (push_option xs) = xs.
+Proof.
+  simpl in *.
+  induction n; [ reflexivity | ].
+  simpl in *; rewrite IHn; clear IHn.
+  destruct xs as [ [? ?] | ]; reflexivity.
+Qed.
+
 Fixpoint fieldwise' {A B} (n:nat) (R:A->B->Prop) (a:tuple' A n) (b:tuple' B n) {struct n} : Prop.
   destruct n; simpl @tuple' in *.
   { exact (R a b). }
