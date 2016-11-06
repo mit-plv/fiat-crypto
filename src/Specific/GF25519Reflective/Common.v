@@ -154,7 +154,7 @@ Local Ltac make_args x :=
       | [ H : ?T |- _ ]
         => is_evar T;
            refine (let c := proj1 H in _); (* work around broken evars in Coq 8.4 *)
-           lazymatch goal with H := proj1 _ |- _ => eexact H end
+           lazymatch goal with H := proj1 _ |- _ => refine H end
       end.. ]
   | instantiate;
     repeat match goal with H : is_bounded _ = true |- _ => unfold_is_bounded_in H end;
