@@ -188,6 +188,21 @@ Section generic_destructuring.
   Qed.
 End generic_destructuring.
 
+Definition eta_fe25519W_sig (x : fe25519W) : { v : fe25519W | v = x }.
+Proof.
+  eexists; symmetry.
+  repeat (etransitivity; [ apply surjective_pairing | apply f_equal2 ]); reflexivity.
+Defined.
+Definition eta_fe25519W (x : fe25519W) : fe25519W
+  := Eval cbv [proj1_sig eta_fe25519W_sig] in proj1_sig (eta_fe25519W_sig x).
+Definition eta_wire_digitsW_sig (x : wire_digitsW) : { v : wire_digitsW | v = x }.
+Proof.
+  eexists; symmetry.
+  repeat (etransitivity; [ apply surjective_pairing | apply f_equal2 ]); reflexivity.
+Defined.
+Definition eta_wire_digitsW (x : wire_digitsW) : wire_digitsW
+  := Eval cbv [proj1_sig eta_wire_digitsW_sig] in proj1_sig (eta_wire_digitsW_sig x).
+
 Local Transparent word64.
 Lemma word64ize_id x : word64ize x = x.
 Proof. apply NToWord_wordToN. Qed.
