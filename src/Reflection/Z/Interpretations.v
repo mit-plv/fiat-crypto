@@ -257,50 +257,64 @@ Module ZBounds.
     := if ((0 <=? l) && (Z.log2 u <? Word64.bit_width))%Z%bool
        then Some {| lower := l ; upper := u |}
        else None.
-  Definition t_map2 (f : Z -> Z -> Z -> Z -> bounds) (x y : t)
+  Definition t_map2 (f : bounds -> bounds -> bounds) (x y : t)
     := match x, y with
-       | Some (Build_bounds lx ux), Some (Build_bounds ly uy)
-         => match f lx ly ux uy with
+       | Some x, Some y
+         => match f x y with
             | Build_bounds l u
               => SmartBuildBounds l u
             end
        | _, _ => None
        end%Z.
-
-  Definition add : t -> t -> t
-    := t_map2 (fun lx ly ux uy => {| lower := lx + ly ; upper := ux + uy |}).
-  Definition sub : t -> t -> t
-    := t_map2 (fun lx ly ux uy => {| lower := lx - uy ; upper := ux - ly |}).
-  Definition mul : t -> t -> t
-    := t_map2 (fun lx ly ux uy => {| lower := lx * ly ; upper := ux * uy |}).
-  Definition shl : t -> t -> t
-    := t_map2 (fun lx ly ux uy => {| lower := lx << ly ; upper := ux << uy |}).
-  Definition shr : t -> t -> t
-    := t_map2 (fun lx ly ux uy => {| lower := lx >> uy ; upper := ux >> ly |}).
-  Definition land : t -> t -> t
-    := t_map2 (fun lx ly ux uy => {| lower := 0 ; upper := Z.min ux uy |}).
-  Definition lor : t -> t -> t
-    := t_map2 (fun lx ly ux uy => {| lower := Z.max lx ly;
-                                     upper := 2^(Z.max (Z.log2 (ux+1)) (Z.log2 (uy+1))) - 1 |}).
+  Definition add' : bounds -> bounds -> bounds
+    := fun x y => let (lx, ux) := x in let (ly, uy) := y in {| lower := lx + ly ; upper := ux + uy |}.
+  Definition add : t -> t -> t := t_map2 add'.
+  Definition sub' : bounds -> bounds -> bounds
+    := fun x y => let (lx, ux) := x in let (ly, uy) := y in {| lower := lx - uy ; upper := ux - ly |}.
+  Definition sub : t -> t -> t := t_map2 sub'.
+  Definition mul' : bounds -> bounds -> bounds
+    := fun x y => let (lx, ux) := x in let (ly, uy) := y in {| lower := lx * ly ; upper := ux * uy |}.
+  Definition mul : t -> t -> t := t_map2 mul'.
+  Definition shl' : bounds -> bounds -> bounds
+    := fun x y => let (lx, ux) := x in let (ly, uy) := y in {| lower := lx << ly ; upper := ux << uy |}.
+  Definition shl : t -> t -> t := t_map2 shl'.
+  Definition shr' : bounds -> bounds -> bounds
+    := fun x y => let (lx, ux) := x in let (ly, uy) := y in {| lower := lx >> uy ; upper := ux >> ly |}.
+  Definition shr : t -> t -> t := t_map2 shr'.
+  Definition land' : bounds -> bounds -> bounds
+    := fun x y => let (lx, ux) := x in let (ly, uy) := y in {| lower := 0 ; upper := Z.min ux uy |}.
+  Definition land : t -> t -> t := t_map2 land'.
+  Definition lor' : bounds -> bounds -> bounds
+    := fun x y => let (lx, ux) := x in let (ly, uy) := y in
+                                       {| lower := Z.max lx ly;
+                                          upper := 2^(Z.max (Z.log2 (ux+1)) (Z.log2 (uy+1))) - 1 |}.
+  Definition lor : t -> t -> t := t_map2 lor'.
+  Definition neg' : bounds -> bounds -> bounds
+    := fun int_width v
+       => let (lint_width, uint_width) := int_width in
+          let (lb, ub) := v in
+          let might_be_one := ((lb <=? 1) && (1 <=? ub))%Z%bool in
+          let must_be_one := ((lb =? 1) && (ub =? 1))%Z%bool in
+          if must_be_one
+          then {| lower := Z.ones lint_width ; upper := Z.ones uint_width |}
+          else if might_be_one
+               then {| lower := 0 ; upper := Z.ones uint_width |}
+               else {| lower := 0 ; upper := 0 |}.
   Definition neg : t -> t -> t
     := fun int_width v
        => match int_width, v with
-          | Some (Build_bounds lint_width uint_width), Some (Build_bounds lb ub)
+          | Some (Build_bounds lint_width uint_width as int_width), Some (Build_bounds lb ub as v)
             => if ((0 <=? lint_width) && (uint_width <=? Word64.bit_width))%Z%bool
-               then Some (let might_be_one := ((lb <=? 1) && (1 <=? ub))%Z%bool in
-                          let must_be_one := ((lb =? 1) && (ub =? 1))%Z%bool in
-                          if must_be_one
-                          then {| lower := Z.ones lint_width ; upper := Z.ones uint_width |}
-                          else if might_be_one
-                               then {| lower := 0 ; upper := Z.ones uint_width |}
-                               else {| lower := 0 ; upper := 0 |})
+               then Some (neg' int_width v)
                else None
           | _, _ => None
           end.
-  Definition cmovne (x y r1 r2 : t) : t
-    := t_map2 (fun lr1 lr2 ur1 ur2 => {| lower := Z.min lr1 lr2 ; upper := Z.max ur1 ur2 |}) r1 r2.
-  Definition cmovle (x y r1 r2 : t) : t
-    := t_map2 (fun lr1 lr2 ur1 ur2 => {| lower := Z.min lr1 lr2 ; upper := Z.max ur1 ur2 |}) r1 r2.
+  Definition cmovne' (r1 r2 : bounds) : bounds
+    := let (lr1, ur1) := r1 in let (lr2, ur2) := r2 in {| lower := Z.min lr1 lr2 ; upper := Z.max ur1 ur2 |}.
+  Definition cmovne (x y r1 r2 : t) : t := t_map2 cmovne' r1 r2.
+  Definition cmovle' (r1 r2 : bounds) : bounds
+    := let (lr1, ur1) := r1 in let (lr2, ur2) := r2 in {| lower := Z.min lr1 lr2 ; upper := Z.max ur1 ur2 |}.
+  Definition cmovle (x y r1 r2 : t) : t := t_map2 cmovle' r1 r2.
 
   Module Export Notations.
     Delimit Scope bounds_scope with bounds.
@@ -354,6 +368,16 @@ Module BoundedWord64.
   Definition t := option BoundedWord.
   Bind Scope bounded_word_scope with t.
   Local Coercion Z.of_nat : nat >-> Z.
+
+  Ltac inversion_BoundedWord :=
+    repeat match goal with
+           | _ => progress subst
+           | [ H : _ = _ :> BoundedWord |- _ ]
+             => pose proof (f_equal lower H);
+                pose proof (f_equal upper H);
+                pose proof (f_equal value H);
+                clear H
+           end.
 
   Definition interp_base_type (ty : base_type)
     := LiftOption.interp_base_type' BoundedWord ty.
@@ -425,7 +449,11 @@ Module BoundedWord64.
                | _, _ => None
                end);
     try unfold bounds_op; try unfold word_op;
-    cbv [ZBounds.t_map2 BoundedWordToBounds ZBounds.SmartBuildBounds ModularBaseSystemListZOperations.neg].
+    repeat match goal with
+           | [ |- appcontext[ZBounds.t_map2 ?op] ] => unfold op
+           | [ |- appcontext[?op (ZBounds.Build_bounds _ _) (ZBounds.Build_bounds _ _)] ] => unfold op
+           | _ => progress cbv [ZBounds.t_map2 BoundedWordToBounds ZBounds.SmartBuildBounds ModularBaseSystemListZOperations.neg]
+           end.
 
   Local Ltac build_4op word_op bounds_op :=
     refine (fun x y z w : t
@@ -446,7 +474,11 @@ Module BoundedWord64.
                | _, _, _, _ => None
                end);
     try unfold bounds_op; try unfold word_op;
-    cbv [ZBounds.t_map2 BoundedWordToBounds ZBounds.SmartBuildBounds cmovne cmovl].
+    repeat match goal with
+           | [ |- appcontext[ZBounds.t_map2 ?op] ] => unfold op
+           | [ |- appcontext[?op (ZBounds.Build_bounds _ _) (ZBounds.Build_bounds _ _)] ] => unfold op
+           | _ => progress cbv [ZBounds.t_map2 BoundedWordToBounds ZBounds.SmartBuildBounds cmovne cmovl]
+           end.
 
   Axiom proof_admitted : False.
   Local Opaque Word64.bit_width.
@@ -527,13 +559,65 @@ Module BoundedWord64.
   Definition cmovle : t -> t -> t -> t -> t.
   Proof. build_4op Word64.cmovle ZBounds.cmovle; abstract t_start. Defined.
 
-  Local Notation value_binop_correct op opW :=
-    (forall x y v, op (Some x) (Some y) = Some v -> value v = opW (value x) (value y))
+  Local Notation binop_correct op opW opB :=
+    (forall x y v, op (Some x) (Some y) = Some v -> value v = opW (value x) (value y)
+                                                    /\ BoundedWordToBounds v = opB (BoundedWordToBounds x) (BoundedWordToBounds y))
       (only parsing).
 
-  Definition value_add : value_binop_correct add Word64.add.
-  Proof.
-  Admitted.
+  Local Notation op4_correct op opW opB :=
+    (forall x y z w v, op (Some x) (Some y) (Some z) (Some w) = Some v
+                       -> value v = opW (value x) (value y) (value z) (value w)
+                          /\ BoundedWordToBounds v = opB (BoundedWordToBounds x) (BoundedWordToBounds y) (BoundedWordToBounds z) (BoundedWordToBounds w))
+      (only parsing).
+
+  Local Ltac convoy_destruct_in H :=
+    match type of H with
+    | context G[match ?e with Some x => @?S x | None => ?N end eq_refl]
+      => let e' := fresh in
+         let H' := fresh in
+         pose e as e';
+         pose (eq_refl : e = e') as H';
+         let G' := context G[match e' with Some x => S x | None => N end H'] in
+         change G' in H;
+         clearbody H' e'; destruct e'
+    end.
+  Local Arguments ZBounds.SmartBuildBounds _ _ / .
+  Local Arguments BoundedWordToBounds _ / .
+  Local Ltac invert_t_step :=
+    match goal with
+    | _ => progress intros
+    | [ |- ?x = ?x ] => reflexivity
+    | [ H : context[match _ with _ => _ end eq_refl] |- _ ] => convoy_destruct_in H
+    | _ => progress destruct_head' BoundedWord
+    | _ => progress destruct_head' ZBounds.bounds
+    | _ => progress inversion_option
+    | _ => progress ZBounds.inversion_bounds
+    | _ => progress inversion_BoundedWord
+    | _ => progress simpl in *
+    | _ => progress break_match_hyps
+    | [ |- _ /\ _ ] => split
+    end.
+  Local Ltac invert_t := repeat invert_t_step.
+  Definition invert_add : binop_correct add Word64.add ZBounds.add'.
+  Proof. invert_t. Qed.
+  Definition invert_sub : binop_correct sub Word64.sub ZBounds.sub'.
+  Proof. invert_t. Qed.
+  Definition invert_mul : binop_correct mul Word64.mul ZBounds.mul'.
+  Proof. invert_t. Qed.
+  Definition invert_shl : binop_correct shl Word64.shl ZBounds.shl'.
+  Proof. invert_t. Qed.
+  Definition invert_shr : binop_correct shr Word64.shr ZBounds.shr'.
+  Proof. invert_t. Qed.
+  Definition invert_land : binop_correct land Word64.land ZBounds.land'.
+  Proof. invert_t. Qed.
+  Definition invert_lor : binop_correct lor Word64.lor ZBounds.lor'.
+  Proof. invert_t. Qed.
+  Definition invert_neg : binop_correct neg Word64.neg ZBounds.neg'.
+  Proof. invert_t. Qed.
+  Definition invert_cmovne : op4_correct cmovne Word64.cmovne (fun _ _ => ZBounds.cmovne').
+  Proof. invert_t. Qed.
+  Definition invert_cmovle : op4_correct cmovle Word64.cmovle (fun _ _ => ZBounds.cmovle').
+  Proof. invert_t. Qed.
 
   Module Export Notations.
     Delimit Scope bounded_word_scope with bounded_word.
