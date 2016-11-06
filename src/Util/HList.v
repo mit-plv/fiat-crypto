@@ -49,3 +49,13 @@ Proof.
   destruct n as [|n]; [ reflexivity | ].
   apply map'_mapt'.
 Qed.
+
+Lemma map_is_mapt {n A F B} (f : A -> B) {ts : tuple A n} (ls : hlist F ts)
+  : Tuple.map f ts = mapt (fun x _ => f x) ls.
+Proof.
+  destruct n as [|n]; [ reflexivity | ].
+  induction n as [|n IHn]; [ reflexivity | ].
+  { unfold mapt in *; simpl @mapt' in *.
+    rewrite <- IHn; clear IHn.
+    rewrite <- (@Tuple.map_S n _ _ f); destruct ts; reflexivity. }
+Qed.
