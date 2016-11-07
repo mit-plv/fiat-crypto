@@ -1,4 +1,5 @@
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.micromega.Psatz.
 Require Import Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Application.
@@ -221,8 +222,8 @@ Qed.
 
 Lemma related_t_map1_tuple2 {n} opW opB pf
       (HN0 : forall x y, opB None x y = Tuple.push_option None)
-      (HN1 : forall x y, Tuple.lift_option (opB x (Tuple.push_option None) y) = None)
-      (HN2 : forall x y, Tuple.lift_option (opB x y (Tuple.push_option None)) = None)
+      (HN1 : forall x y z, Tuple.lift_option y = None -> opB x y z = Tuple.push_option None)
+      (HN2 : forall x y z, Tuple.lift_option z = None -> opB x y z = Tuple.push_option None)
       sv1 sv2
   : interp_flat_type_rel_pointwise2 (t:=Prod (Prod (Tbase TZ) (Syntax.tuple (Tbase TZ) (S n))) (Syntax.tuple (Tbase TZ) (S n))) related_bounds sv1 sv2
     -> interp_flat_type_rel_pointwise2
@@ -256,24 +257,49 @@ Proof.
   { apply related_t_map4; intros; destruct_head' option; reflexivity. }
   { apply related_t_map4; intros; destruct_head' option; reflexivity. }
   { apply related_t_map1_tuple2; intros; destruct_head' option; try reflexivity;
-      unfold ZBounds.conditional_subtract; rewrite ?Tuple.lift_push_option; try reflexivity.
-    break_match; reflexivity. }
+      unfold ZBounds.conditional_subtract; rewrite ?Tuple.lift_push_option; try reflexivity;
+        (rewrite_hyp ?* );
+        break_match; try reflexivity. }
 Qed.
+
+Local Ltac Word64.Rewrites.word64_util_arith ::=
+      solve [ autorewrite with Zshift_to_pow; omega
+            | autorewrite with Zshift_to_pow; nia
+            | autorewrite with Zshift_to_pow; auto with zarith
+            | eapply Z.le_lt_trans; [ eapply Z.log2_le_mono | eassumption ];
+              autorewrite with Zshift_to_pow; auto using Z.mul_le_mono_nonneg with zarith;
+              solve [ omega
+                    | nia
+                    | etransitivity; [ eapply Z.div_le_mono | eapply Z.div_le_compat_l ];
+                      auto with zarith ]
+            | apply Z.land_nonneg; Word64.Rewrites.word64_util_arith
+            | eapply Z.le_lt_trans; [ eapply Z.log2_le_mono | eassumption ];
+              apply Z.min_case_strong; intros;
+              first [ etransitivity; [ apply Z.land_upper_bound_l | ]; omega
+                    | etransitivity; [ apply Z.land_upper_bound_r | ]; omega ] ].
+Local Ltac related_Z_op_t_step :=
+  first [ progress related_word64_op_t_step
+        | progress cbv [related'_Z proj_eq_rel BoundedWord64.to_Z' BoundedWord64.to_word64' Word64.to_Z BoundedWord64.boundedWordToWord64 BoundedWord64.value] in *
+        | autorewrite with push_word64ToZ ].
+Local Ltac related_Z_op_t := repeat related_Z_op_t_step.
 
 Lemma related_Z_op : related_op related_Z (@BoundedWord64.interp_op) (@Z.interp_op).
 Proof.
   let op := fresh in intros ?? op; destruct op; simpl.
-  { related_word64_op_t; admit. }
-  { related_word64_op_t; admit. }
-  { related_word64_op_t; admit. }
-  { related_word64_op_t; admit. }
-  { related_word64_op_t; admit. }
-  { related_word64_op_t; admit. }
-  { related_word64_op_t; admit. }
-  { related_word64_op_t; admit. }
-  { related_word64_op_t; admit. }
-  { related_word64_op_t; admit. }
-  { related_word64_op_t; admit. (** TODO(jadep or jgross): Fill me in *) }
+  { related_Z_op_t. }
+  { related_Z_op_t. }
+  { related_Z_op_t. }
+  { related_Z_op_t. }
+  { related_Z_op_t. }
+  { related_Z_op_t. }
+  { related_Z_op_t.
+    rewrite Word64.word64ToZ_lor; try Word64.Rewrites.word64_util_arith.
+    admit. (* TODO: Fill me in *)
+    admit. (* TODO: Fill me in *) }
+  { related_Z_op_t; admit. }
+  { related_Z_op_t; admit. }
+  { related_Z_op_t; admit. }
+  { related_Z_op_t; admit. (** TODO(jadep or jgross): Fill me in *) }
 Qed.
 
 Create HintDb interp_related discriminated.
