@@ -1,6 +1,9 @@
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.Lists.List.
+Require Import Crypto.Util.Option.
+Require Import Crypto.Util.Prod.
+Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.ListUtil.
 Require Export Crypto.Util.FixCoqMistakes.
@@ -234,6 +237,27 @@ Proof.
   induction n; [ reflexivity | ].
   simpl in *; rewrite IHn; clear IHn.
   destruct xs as [ [? ?] | ]; reflexivity.
+Qed.
+
+Lemma push_lift_option {n A} {xs : tuple (option A) (S n)} {v}
+  : lift_option xs = Some v <-> xs = push_option (Some v).
+Proof.
+  simpl in *.
+  induction n; [ reflexivity | ].
+  specialize (IHn (fst xs) (fst v)).
+  repeat first [ progress destruct_head_hnf' prod
+               | progress destruct_head_hnf' and
+               | progress destruct_head_hnf' iff
+               | progress destruct_head_hnf' option
+               | progress inversion_option
+               | progress inversion_prod
+               | progress subst
+               | progress break_match
+               | progress simpl in *
+               | progress specialize_by exact eq_refl
+               | reflexivity
+               | apply conj
+               | intro ].
 Qed.
 
 Fixpoint fieldwise' {A B} (n:nat) (R:A->B->Prop) (a:tuple' A n) (b:tuple' B n) {struct n} : Prop.
