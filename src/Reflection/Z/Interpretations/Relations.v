@@ -247,6 +247,44 @@ Proof.
       try (simpl @interp_flat_type_rel_pointwise2; tauto). }
 Qed.
 
+Lemma related_tuples_lift_relation2_untuple'_ext
+      {n T U}
+      {R : T -> U -> Prop}
+      {t u}
+      (H : (exists v, Tuple.lift_option (n:=S n) (flat_interp_tuple (T:=Tbase TZ) t) = Some v)
+           \/ (exists v, Tuple.lift_option (n:=S n) (flat_interp_tuple (T:=Tbase TZ) u) = Some v))
+  : interp_flat_type_rel_pointwise2
+      (LiftOption.lift_relation2 R)
+      t u
+    <-> LiftOption.lift_relation2
+          (interp_flat_type_rel_pointwise2 (fun _ => R))
+          TZ
+          (option_map (flat_interp_untuple' (T:=Tbase TZ)) (Tuple.lift_option (flat_interp_tuple (T:=Tbase TZ) t)))
+          (option_map (flat_interp_untuple' (T:=Tbase TZ)) (Tuple.lift_option (flat_interp_tuple (T:=Tbase TZ) u))).
+Proof.
+  induction n.
+  { destruct_head_hnf' option; reflexivity. }
+  { specialize (IHn (fst t) (fst u)).
+    lazymatch type of IHn with
+    | ?T -> _ => let H := fresh in assert (H : T); [ | specialize (IHn H); clear H ]
+    end.
+    { destruct_head' or; [ left | right ]; destruct_head' ex; destruct_head_hnf' prod; eexists;
+        (etransitivity;
+         [ | first [ refine (f_equal (option_map (@fst _ _)) (_ : _ = Some (_, _))); eassumption
+                   | refine (f_equal (option_map (@snd _ _)) (_ : _ = Some (_, _))); eassumption ] ]);
+        simpl in *; break_match; simpl in *; congruence. }
+    destruct_head_hnf' prod;
+      destruct_head_hnf' option;
+      simpl @fst in *; simpl @snd in *;
+        (etransitivity; [ simpl @interp_flat_type_rel_pointwise2 | reflexivity ]);
+        try solve [ repeat first [ progress simpl in *
+                                 | tauto
+                                 | congruence
+                                 | progress destruct_head ex
+                                 | progress destruct_head or
+                                 | progress break_match ] ]. }
+Qed.
+
 Local Arguments LiftOption.lift_relation _ _ _ _ !_ _ / .
 
 Local Ltac t_map1_tuple2_t_step :=
@@ -266,6 +304,11 @@ Local Ltac t_map1_tuple2_t_step :=
             => eapply related_tuples_Some_left_ext in H; [ | eassumption ]
           | [ H : appcontext[proj_eq_rel] |- _ ]
             => apply -> @related_tuples_proj_eq_rel_tuple in H
+          | [ H : appcontext[LiftOption.lift_relation2] |- _ ]
+            => eapply (fun H => proj1 (related_tuples_lift_relation2_untuple'_ext H)) in H;
+               [ | first [ left; eexists; eassumption | right eexists; eassumption ] ]
+          | [ H : Tuple.lift_option ?x = Some _, H' : context[?x] |- _ ]
+            => setoid_rewrite H in H'
           end
         | progress rewrite ?HList.map'_mapt', <- ?HList.map_is_mapt'
         | progress rewrite ?Tuple.map_map2, ?Tuple.map2_fst, ?Tuple.map2_snd, ?Tuple.map_id
@@ -281,6 +324,7 @@ Local Ltac t_map1_tuple2_t_step :=
         | progress simpl @interp_flat_type_rel_pointwise2 in *
         | progress simpl @LiftOption.lift_relation in *
         | progress simpl @LiftOption.lift_relation2 in *
+        | progress simpl @flat_interp_tuple in *
         | rewrite_hyp <- !*; reflexivity
         | progress unfold proj_eq_rel in * ].
 Local Ltac t_map1_tuple2_t := repeat t_map1_tuple2_t_step.
