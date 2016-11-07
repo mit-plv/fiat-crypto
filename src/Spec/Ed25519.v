@@ -71,15 +71,13 @@ Section Ed25519.
     let '(x,y) := E.coordinates P in Fencode (len:=b-1) y ++ bit (sign x).
   Definition Senc : Fl -> Word.word b := Fencode (len:=b).
 
-  (* TODO(andreser): prove this after we have fast scalar multplication *)
-  Axiom B_order_l : CompleteEdwardsCurveTheorems.E.eq (BinInt.Z.to_nat l * B)%E E.zero.
-
   Require Import Crypto.Util.Decidable.
   Definition ed25519 :
+    CompleteEdwardsCurveTheorems.E.eq (BinInt.Z.to_nat l * B)%E E.zero -> (* TODO: prove this earlier than Experiments/Ed25519? *)
     EdDSA (E:=E) (Eadd:=E.add) (Ezero:=E.zero) (EscalarMult:=E.mul) (B:=B)
           (Eopp:=Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.E.opp) (* TODO: move defn *)
           (Eeq:=Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.E.eq) (* TODO: move defn *)
           (l:=l) (b:=b) (n:=n) (c:=c)
           (Eenc:=Eenc) (Senc:=Senc) (H:=H).
-  Proof. split; try exact _; try exact B_order_l; vm_decide. Qed.
+  Proof. split; try (assumption || exact _); vm_decide. Qed.
 End Ed25519.

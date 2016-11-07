@@ -14,6 +14,7 @@ Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Algebra.
+Require Crypto.Spec.Ed25519.
 Import ListNotations.
 Require Import Coq.ZArith.ZArith Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.ZArith.Znumtheory.
 Local Open Scope Z.
@@ -21,7 +22,7 @@ Local Open Scope Z.
 (* BEGIN precomputation. *)
 
 Definition modulus : Z := Eval compute in 2^255 - 19.
-Lemma prime_modulus : prime modulus. Admitted.
+Definition prime_modulus : prime modulus := Crypto.Spec.Ed25519.prime_q.
 Definition int_width := 64%Z.
 Definition freeze_input_bound := 32%Z.
 

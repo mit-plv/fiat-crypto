@@ -878,7 +878,6 @@ Proof.
   2:vm_decide.
   apply dec_bool.
   vm_cast_no_check (eq_refl true).
-Admitted.
 (* Time Qed. (* Finished transaction in 1646.167 secs (1645.753u,0.339s) (successful) *) *)
 
 Definition sign := @EdDSARepChange.sign E
@@ -903,7 +902,7 @@ Definition sign := @EdDSARepChange.sign E
             (@ModularArithmetic.F.opp q) (@ModularArithmetic.F.add q) (@ModularArithmetic.F.sub q)
             (@ModularArithmetic.F.mul q) (@ModularArithmetic.F.inv q) (@ModularArithmetic.F.div q)
             (@PrimeFieldTheorems.F.field_modulo q prime_q) (@ModularArithmeticTheorems.F.eq_dec q) Spec.Ed25519.a
-            Spec.Ed25519.d curve_params) b H c n l B Eenc Senc (@ed25519 H) Erep ERepEnc SRep SC25519.SRepDecModL
+            Spec.Ed25519.d curve_params) b H c n l B Eenc Senc (@ed25519 H B_order_l ) Erep ERepEnc SRep SC25519.SRepDecModL
          SRepERepMul SRepEnc SC25519.SRepAdd SC25519.SRepMul ERepB SC25519.SRepDecModLShort.
 
 Let sign_correct : forall pk sk {mlen} (msg:Word.word mlen), sign pk sk _ msg = EdDSA.sign pk sk msg :=
@@ -922,7 +921,7 @@ Let sign_correct : forall pk sk {mlen} (msg:Word.word mlen), sign pk sk _ msg = 
       (* B := *) B
       (* Eenc := *) Eenc
       (* Senc := *) Senc
-      (* prm := *) ed25519
+      (* prm := *) (ed25519 B_order_l)
       (* Erep := *) Erep
       (* ErepEq := *) ExtendedCoordinates.Extended.eq
       (* ErepAdd := *) ErepAdd
@@ -1448,7 +1447,7 @@ Let verify_correct :
       (* B := *) B
       (* Eenc := *) Eenc
       (* Senc := *) Senc
-      (* prm := *) ed25519
+      (* prm := *) (ed25519 B_order_l)
       (* Proper_Eenc := *) (PointEncoding.Proper_encode_point (b:=b-1))
       (* Edec := *) Edec
       (* eq_enc_E_iff := *) eq_enc_E_iff
