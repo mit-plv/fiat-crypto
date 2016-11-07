@@ -2,6 +2,7 @@ Require Import Coq.omega.Omega.
 Require Import Coq.Lists.List.
 Import ListNotations.
 Require Import Crypto.EdDSARepChange.
+Require Import Crypto.MxDHRepChange. Import MxDH.
 Require Import Crypto.Spec.Ed25519.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.ListUtil.
@@ -879,6 +880,7 @@ Proof.
   apply dec_bool.
   vm_cast_no_check (eq_refl true).
 (* Time Qed. (* Finished transaction in 1646.167 secs (1645.753u,0.339s) (successful) *) *)
+Admitted.
 
 Definition sign := @EdDSARepChange.sign E
          (@CompleteEdwardsCurveTheorems.E.eq Fq (@eq Fq) (@ModularArithmetic.F.one q)
@@ -1478,5 +1480,60 @@ Let verify_correct :
       (* SRepDec := *) SRepDec
       (* SRepDec_correct := *) SRepDec_correct
 .
-Let both_correct := (@sign_correct, @verify_correct).
-Print Assumptions both_correct.
+
+Lemma Fhomom_inv_zero :
+  GF25519BoundedCommon.eq
+    (GF25519BoundedCommon.encode
+       (@ModularArithmetic.F.inv GF25519.modulus
+                                 (ModularArithmetic.F.of_Z GF25519.modulus 0)))
+    (GF25519Bounded.inv GF25519BoundedCommon.zero).
+Proof.
+  vm_decide_no_check.
+Qed.
+
+Import ModularArithmetic.
+Module Spec.
+  Module X25519.
+    Definition a : F q := F.of_Z _ 486662.
+    Definition a24 : F q := ((a - F.of_Z _ 2) / F.of_Z _ 4)%F.
+  End X25519.
+End Spec.
+
+Section X25519Constants.
+  Import GF25519BoundedCommon.
+  Definition a24' : GF25519BoundedCommon.fe25519 :=
+    Eval vm_compute in GF25519BoundedCommon.encode Spec.X25519.a24.
+  Definition a24 : GF25519BoundedCommon.fe25519 :=
+    Eval cbv [a24' fe25519_word64ize word64ize andb opt.word64ToZ opt.word64ize opt.Zleb Z.compare CompOpp Pos.compare Pos.compare_cont] in (fe25519_word64ize a24').
+  Lemma a24_correct : GF25519BoundedCommon.eq
+                        (GF25519BoundedCommon.encode Spec.X25519.a24)
+                        (a24).
+  Proof. vm_decide_no_check. Qed.
+End X25519Constants.
+  
+Definition x25519 (n:N) (x:GF25519BoundedCommon.fe25519) : GF25519BoundedCommon.fe25519 :=
+  @MxDH.montladder GF25519BoundedCommon.fe25519 GF25519BoundedCommon.zero
+                   GF25519BoundedCommon.one GF25519Bounded.add GF25519Bounded.sub
+                   GF25519Bounded.mul GF25519Bounded.inv a24
+                   (fun (H : bool)
+                        (H0
+                           H1 : GF25519BoundedCommon.fe25519 * GF25519BoundedCommon.fe25519)
+                    => if H then (H1, H0) else (H0, H1)) 255 (N.testbit_nat n) x.
+
+Definition x25519_correct' n x :
+  GF25519BoundedCommon.eq
+    (GF25519BoundedCommon.encode (MxDH.montladder 255 (N.testbit_nat n) x))
+    (MxDH.montladder 255 (N.testbit_nat n) (GF25519BoundedCommon.encode x)) :=
+  MxDHRepChange
+      (field:=PrimeFieldTheorems.F.field_modulo GF25519.modulus)
+      (impl_field:=GF25519Bounded.field25519)
+      (homomorphism_inv_zero:=Fhomom_inv_zero)
+      (homomorphism_a24:=a24_correct)
+      (Fcswap_correct:= fun _ _ _ => (reflexivity _))
+      (Kcswap_correct:= fun _ _ _ => (reflexivity _))
+      (tb2_correct:=fun _ => (reflexivity _))
+      255 _.
+
+Print Assumptions x25519_correct'.
+Let three_correct := (@sign_correct, @verify_correct, x25519_correct').
+Print Assumptions three_correct.

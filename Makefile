@@ -94,11 +94,21 @@ src/Experiments/Ed25519.hs: src/Experiments/Ed25519_noimports.hs src/Experiments
 	  sed 's/ Ed25519_noimports / Ed25519 /g' \
 		> Ed25519.hs )
 
+src/Experiments/X25519.hs: src/Experiments/X25519_noimports.hs src/Experiments/Ed25519_imports.hs
+	( cd src/Experiments && \
+		< X25519_noimports.hs \
+		sed "/import qualified Prelude/r Ed25519_imports.hs" | \
+	  sed 's/ X25519_noimports / X25519 /g' \
+		> X25519.hs )
+
 src/Experiments/Ed25519.o src/Experiments/Ed25519.core: src/Experiments/Ed25519.hs
 	( cd src/Experiments && ghc -XStrict -O3 Ed25519.hs -ddump-simpl > Ed25519.core )
 
-extraction: src/Experiments/Ed25519.hs
-ghc: src/Experiments/Ed25519.core src/Experiments/Ed25519.o
+src/Experiments/X25519.o src/Experiments/X25519.core: src/Experiments/X25519.hs
+	( cd src/Experiments && ghc -XStrict -O3 X25519.hs -ddump-simpl > X25519.core )
+
+extraction: src/Experiments/Ed25519.hs src/Experiments/X25519.hs
+ghc: src/Experiments/Ed25519.core src/Experiments/Ed25519.o src/Experiments/X25519.o src/Experiments/X25519.core
 
 clean::
 	rm -f Makefile.coq

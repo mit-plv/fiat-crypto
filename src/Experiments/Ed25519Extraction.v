@@ -293,3 +293,7 @@ True
 *Ed25519 Prelude> eRepEnc ((sRepERepMul l eRepB) `erepAdd` eRepB) == eRepEnc eRepB
 True
 *)
+
+Import Crypto.Spec.MxDH.
+Extraction Inline MxDH.ladderstep MxDH.montladder.
+Extraction "src/Experiments/X25519_noimports.hs" Crypto.Experiments.Ed25519.x25519.

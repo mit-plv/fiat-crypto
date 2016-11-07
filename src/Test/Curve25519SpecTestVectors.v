@@ -6,7 +6,7 @@ Definition F := F (2^255 - 19).
 Definition a : F := F.of_Z _ 486662.
 Definition a24 : F := ((a - F.of_Z _ 2) / F.of_Z _ 4)%F.
 Definition cswap {T} (swap:bool) (a b:T) := if swap then (b, a) else (a, b).
-Definition monty : BinNums.N -> F -> F := @MxDH.montladder F F.zero F.one F.add F.sub F.mul F.div a24 BinNums.N BinNat.N.testbit_nat cswap 255.
+Definition monty s : F -> F := @MxDH.montladder F F.zero F.one F.add F.sub F.mul F.inv a24 cswap 255 (BinNat.N.testbit_nat s).
 
 Example one_basepoint : F.to_Z (monty 1 (F.of_Z _ 9)) = 9%Z.
 Proof. vm_decide_no_check. Qed.

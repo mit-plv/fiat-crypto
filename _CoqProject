@@ -6,6 +6,7 @@ src/Algebra.v
 src/BaseSystem.v
 src/BaseSystemProofs.v
 src/EdDSARepChange.v
+src/MxDHRepChange.v
 src/Testbit.v
 src/Assembly/Bounds.v
 src/Assembly/Compile.v
