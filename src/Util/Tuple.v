@@ -17,6 +17,19 @@ Definition tuple T n : Type :=
   | S n' => tuple' T n'
   end.
 
+Definition tl' {T n} : tuple' T (S n) -> tuple' T n := @fst _ _.
+Definition tl {T n} : tuple T (S n) -> tuple T n :=
+  match n with
+  | O => fun _ => tt
+  | S n' => @tl' T n'
+  end.
+Definition hd' {T n} : tuple' T n -> T :=
+  match n with
+  | O => fun x => x
+  | S n' => @snd _ _
+  end.
+Definition hd {T n} : tuple T (S n) -> T := @hd' _ _.
+
 Fixpoint to_list' {T} (n:nat) {struct n} : tuple' T n -> list T :=
   match n with
   | 0 => fun x => (x::nil)%list
