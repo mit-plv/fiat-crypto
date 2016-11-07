@@ -149,6 +149,25 @@ Proof.
   related_word64_op_t.
 Qed.
 
+Lemma related_tuples_None_left : forall n
+  (i2 : interp_flat_type Word64.interp_base_type (tuple' (Tbase TZ) n)),
+    @interp_flat_type_rel_pointwise2 base_type
+                                     BoundedWord64.interp_base_type Word64.interp_base_type related_word64
+                                     (@tuple' base_type (@Tbase base_type TZ) n)
+                                     (@flat_interp_untuple' base_type BoundedWord64.interp_base_type
+                                                            (@Tbase base_type TZ) n
+                                                            (@Tuple.push_option (S n) BoundedWord64.BoundedWord
+                                                                                (@None (Tuple.tuple BoundedWord64.BoundedWord (S n))))) i2.
+Proof.
+  induction n; simpl; intuition; simpl; constructor.
+Qed.
+
+Definition tuple_tl {T n} : Tuple.tuple T (S n) -> Tuple.tuple T n :=
+  match n with
+  | O => fun _ => tt
+  | S _ => fun p => fst p
+  end.
+
 Lemma related_word64_t_map1_tuple2 {n} opW opB pf
       sv1 sv2
   : interp_flat_type_rel_pointwise2 (t:=Prod (Prod (Tbase TZ) (Syntax.tuple (Tbase TZ) (S n))) (Syntax.tuple (Tbase TZ) (S n))) related_word64 sv1 sv2
@@ -162,11 +181,45 @@ Proof.
   destruct_head_hnf' option; destruct_head_hnf' False.
   Focus 2.
   { destruct_head_hnf' True.
-    unfold BoundedWord64.t_map1_tuple2.
-    admit. (* TODO(jadep (or jgross)): Fill me in *) }
+    apply related_tuples_None_left. }
   Unfocus.
-  admit.  (* TODO(jadep (or jgross)): Fill me in *)
-Admitted.
+  unfold BoundedWord64.t_map1_tuple2.
+  case_eq (@Tuple.lift_option (S n) BoundedWord64.BoundedWord
+             (@flat_interp_tuple' base_type
+               BoundedWord64.interp_base_type (@Tbase base_type TZ) n i4));
+    intros; try apply related_tuples_None_left.
+  case_eq (@Tuple.lift_option (S n) BoundedWord64.BoundedWord
+             (@flat_interp_tuple' base_type
+               BoundedWord64.interp_base_type (@Tbase base_type TZ) n i3));
+    intros; try apply related_tuples_None_left.
+  generalize (pf b t t0); clear pf.
+  generalize (eq_refl (Tuple.lift_option (opB (Some (BoundedWord64.BoundedWordToBounds b))
+                  (Tuple.push_option
+                     (Some (Tuple.map BoundedWord64.BoundedWordToBounds t)))
+                  (Tuple.push_option
+                     (Some
+                        (Tuple.map BoundedWord64.BoundedWordToBounds t0)))))).
+  case_eq (Tuple.lift_option
+              (opB (Some (BoundedWord64.BoundedWordToBounds b))
+                   (Tuple.push_option
+                      (Some (Tuple.map BoundedWord64.BoundedWordToBounds t)))
+                   (Tuple.push_option
+                      (Some
+                         (Tuple.map BoundedWord64.BoundedWordToBounds t0)))));
+    intros; try apply related_tuples_None_left.
+  generalize (h t1 e); clear h e; intro.
+  induction n.
+  unfold related_word64 in *; simpl in *; subst.
+  hnf.
+  simpl in *.
+  hnf in H0; subst.
+  hnf in H1; subst.
+  hnf in H; subst.
+  reflexivity.
+  split.
+  admit.
+  admit.
+Qed.
 
 Lemma related_word64_op : related_op related_word64 (@BoundedWord64.interp_op) (@Word64.interp_op).
 Proof.
