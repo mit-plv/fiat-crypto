@@ -171,6 +171,7 @@ src/Util/FixCoqMistakes.v
 src/Util/GlobalSettings.v
 src/Util/HList.v
 src/Util/HProp.v
+src/Util/IffT.v
 src/Util/Isomorphism.v
 src/Util/IterAssocOp.v
 src/Util/LetIn.v

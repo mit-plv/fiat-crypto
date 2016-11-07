@@ -6,6 +6,7 @@
     a systematic way of reducing such equalities to equalities at
     simpler types. *)
 Require Import Coq.Classes.Morphisms.
+Require Import Crypto.Util.IffT.
 Require Import Crypto.Util.Equality.
 Require Import Crypto.Util.GlobalSettings.
 
@@ -69,9 +70,30 @@ Section prod.
   Definition path_prod_ind {A B u v} (P : u = v :> @prod A B -> Prop) := path_prod_rec P.
 End prod.
 
+Lemma prod_iff_and (A B : Prop) : (A /\ B) <-> (A * B).
+Proof. repeat (intros [? ?] || intro || split); assumption. Defined.
+
 Global Instance iff_prod_Proper
   : Proper (iff ==> iff ==> iff) (fun A B => prod A B).
 Proof. repeat intro; tauto. Defined.
+Global Instance iff_iffT_prod_Proper
+  : Proper (iff ==> iffT ==> iffT) (fun A B => prod A B) | 1.
+Proof.
+  intros ?? [?] ?? [?]; constructor; tauto.
+Defined.
+Global Instance iffT_iff_prod_Proper
+  : Proper (iffT ==> iff ==> iffT) (fun A B => prod A B) | 1.
+Proof.
+  intros ?? [?] ?? [?]; constructor; tauto.
+Defined.
+Global Instance iffT_iffT_prod_Proper
+  : Proper (iffT ==> iffT ==> iffT) (fun A B => prod A B) | 1.
+Proof.
+  intros ?? [?] ?? [?]; constructor; tauto.
+Defined.
+Hint Extern 2 (Proper _ prod) => apply iffT_iffT_prod_Proper : typeclass_instances.
+Hint Extern 2 (Proper _ (fun A => prod A)) => refine iff_iffT_prod_Proper : typeclass_instances.
+Hint Extern 2 (Proper _ (fun A B => prod A B)) => refine iff_prod_Proper : typeclass_instances.
 
 (** ** Useful Tactics *)
 (** *** [inversion_prod] *)
