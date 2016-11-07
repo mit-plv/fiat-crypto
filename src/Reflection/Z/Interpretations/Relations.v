@@ -70,9 +70,6 @@ Proof. related_const_t. Qed.
 Lemma related_word64_const : related_const related_word64 Word64.interp_base_type BoundedWord64.of_word64 (fun _ x => x).
 Proof. related_const_t. Qed.
 
-Axiom proof_admitted : False.
-Tactic Notation "admit" := abstract case proof_admitted.
-
 Local Ltac related_word64_op_t_step :=
   first [ exact I
         | reflexivity
@@ -502,20 +499,59 @@ Local Ltac related_Z_op_t_step :=
         | autorewrite with push_word64ToZ ].
 Local Ltac related_Z_op_t := repeat related_Z_op_t_step.
 
+Local Notation is_bounded_by value lower upper
+  := ((0 <= lower /\ lower <= Word64.word64ToZ value <= upper /\ Z.log2 upper < Z.of_nat Word64.bit_width)%Z)
+       (only parsing).
+Local Notation is_in_bounds value bounds
+  := (is_bounded_by value (ZBounds.lower bounds) (ZBounds.upper bounds))
+       (only parsing).
+
+Lemma related_Z_t_map2 opZ opW opB pf
+      (H : forall x y bxs bys brs,
+          Some brs = opB (Some bxs) (Some bys)
+          -> is_in_bounds x bxs
+          -> is_in_bounds y bys
+          -> is_in_bounds (opW x y) brs
+          -> Word64.word64ToZ (opW x y) = (opZ (Word64.word64ToZ x) (Word64.word64ToZ y)))
+      sv1 sv2
+  : interp_flat_type_rel_pointwise2 (t:=Prod (Tbase TZ) (Tbase TZ)) related_Z sv1 sv2
+    -> @related_Z TZ (BoundedWord64.t_map2 opW opB pf (fst sv1) (snd sv1)) (opZ (fst sv2) (snd sv2)).
+Proof.
+  cbv [interp_flat_type BoundedWord64.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
+  related_Z_op_t.
+  eapply H; eauto.
+Qed.
+
+Local Ltac related_Z_op_fin_t_step :=
+  first [ progress subst
+        | progress destruct_head' ZBounds.bounds
+        | progress destruct_head' and
+        | progress ZBounds.inversion_bounds
+        | progress simpl in * |-
+        | progress break_match_hyps
+        | congruence
+        | progress inversion_option
+        | intro
+        | autorewrite with push_word64ToZ ].
+Local Ltac related_Z_op_fin_t := repeat related_Z_op_fin_t_step.
+
+Axiom proof_admitted : False.
+Tactic Notation "admit" := abstract case proof_admitted.
+
 Lemma related_Z_op : related_op related_Z (@BoundedWord64.interp_op) (@Z.interp_op).
 Proof.
   let op := fresh in intros ?? op; destruct op; simpl.
-  { related_Z_op_t. }
-  { related_Z_op_t. }
-  { related_Z_op_t. }
-  { related_Z_op_t. }
-  { related_Z_op_t. }
-  { related_Z_op_t. }
-  { related_Z_op_t.
+  { apply related_Z_t_map2; related_Z_op_fin_t. }
+  { apply related_Z_t_map2; related_Z_op_fin_t. }
+  { apply related_Z_t_map2; related_Z_op_fin_t. }
+  { apply related_Z_t_map2; related_Z_op_fin_t. }
+  { apply related_Z_t_map2; related_Z_op_fin_t. }
+  { apply related_Z_t_map2; related_Z_op_fin_t. }
+  { apply related_Z_t_map2; related_Z_op_fin_t.
     rewrite Word64.word64ToZ_lor; try Word64.Rewrites.word64_util_arith.
     admit. (* TODO: Fill me in *)
     admit. (* TODO: Fill me in *) }
-  { related_Z_op_t; admit. }
+  { apply related_Z_t_map2; related_Z_op_fin_t; admit. }
   { related_Z_op_t; admit. }
   { related_Z_op_t; admit. }
   { related_Z_op_t; admit. (** TODO(jadep or jgross): Fill me in *) }
