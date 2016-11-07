@@ -5,6 +5,7 @@
     between two such pairs, or when we want such an equality, we have
     a systematic way of reducing such equalities to equalities at
     simpler types. *)
+Require Import Coq.Classes.Morphisms.
 Require Import Crypto.Util.Equality.
 Require Import Crypto.Util.GlobalSettings.
 
@@ -67,6 +68,10 @@ Section prod.
   Definition path_prod_rec {A B u v} (P : u = v :> @prod A B -> Set) := path_prod_rect P.
   Definition path_prod_ind {A B u v} (P : u = v :> @prod A B -> Prop) := path_prod_rec P.
 End prod.
+
+Global Instance iff_prod_Proper
+  : Proper (iff ==> iff ==> iff) (fun A B => prod A B).
+Proof. repeat intro; tauto. Defined.
 
 (** ** Useful Tactics *)
 (** *** [inversion_prod] *)
