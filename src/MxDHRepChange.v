@@ -114,7 +114,7 @@ Section MxDHRepChange.
   Global Instance Proper_loopiter a b c :
    Proper (loopiter_eq ==> eq ==> loopiter_eq) (loopiter K Kzero Kone Kadd Ksub Kmul Kinv Ka24 Kcswap a b c).
   Proof.
-    unfold loopiter; intros [? ?] [? ?] [[[] []] ?] ? ? ?; cbv [fst snd] in * |-; subst.
+    unfold loopiter; intros [? ?] [? ?] [[[] []] ?]; repeat intro ; cbv [fst snd] in * |-; subst.
     repeat VerdiTactics.break_match; subst; repeat (VerdiTactics.find_injection; intros; subst).
     split; [|reflexivity].
     etransitivity; [|etransitivity]; [ | eapply Proper_ladderstep | ];
