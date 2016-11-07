@@ -70,18 +70,6 @@ Proof. related_const_t. Qed.
 Lemma related_word64_const : related_const related_word64 Word64.interp_base_type BoundedWord64.of_word64 (fun _ x => x).
 Proof. related_const_t. Qed.
 
-Local Ltac convoy_destruct_in H :=
-  match type of H with
-  | context G[match ?e with Some x => @?S x | None => ?N end eq_refl]
-    => let e' := fresh in
-       let H' := fresh in
-       pose e as e';
-       pose (eq_refl : e = e') as H';
-       let G' := context G[match e' with Some x => S x | None => N end H'] in
-       change G' in H;
-       clearbody H' e'; destruct e'
-  end.
-
 Axiom proof_admitted : False.
 Tactic Notation "admit" := abstract case proof_admitted.
 
@@ -149,24 +137,153 @@ Proof.
   related_word64_op_t.
 Qed.
 
-Lemma related_tuples_None_left : forall n
-  (i2 : interp_flat_type Word64.interp_base_type (tuple' (Tbase TZ) n)),
-    @interp_flat_type_rel_pointwise2 base_type
-                                     BoundedWord64.interp_base_type Word64.interp_base_type related_word64
-                                     (@tuple' base_type (@Tbase base_type TZ) n)
-                                     (@flat_interp_untuple' base_type BoundedWord64.interp_base_type
-                                                            (@Tbase base_type TZ) n
-                                                            (@Tuple.push_option (S n) BoundedWord64.BoundedWord
-                                                                                (@None (Tuple.tuple BoundedWord64.BoundedWord (S n))))) i2.
+Lemma related_tuples_None_left
+      n T interp_base_type'
+      (R : forall t, LiftOption.interp_base_type' T t -> interp_base_type' t -> Prop)
+      (RNone : forall v, R TZ None v)
+      (v : interp_flat_type interp_base_type' (tuple (Tbase TZ) (S n)))
+  : interp_flat_type_rel_pointwise2
+      R
+      (flat_interp_untuple' (T:=Tbase TZ) (Tuple.push_option (n:=S n) None))
+      v.
 Proof.
-  induction n; simpl; intuition; simpl; constructor.
+  induction n; simpl; intuition.
 Qed.
 
-Definition tuple_tl {T n} : Tuple.tuple T (S n) -> Tuple.tuple T n :=
-  match n with
-  | O => fun _ => tt
-  | S _ => fun p => fst p
-  end.
+Lemma related_tuples_Some_left
+      n T interp_base_type'
+      (R : forall t, T -> interp_base_type' t -> Prop)
+      u
+      (v : interp_flat_type interp_base_type' (tuple (Tbase TZ) (S n)))
+  : interp_flat_type_rel_pointwise2
+      R
+      (flat_interp_untuple' (T:=Tbase TZ) u)
+      v
+    <-> interp_flat_type_rel_pointwise2
+          (LiftOption.lift_relation R)
+          (flat_interp_untuple' (T:=Tbase TZ) (Tuple.push_option (n:=S n) (Some u)))
+          v.
+Proof.
+  induction n; [ reflexivity | ].
+  simpl in *; rewrite <- IHn; clear IHn.
+  reflexivity.
+Qed.
+
+Lemma related_tuples_Some_left_ext
+      {n T interp_base_type'}
+      {R : forall t, T -> interp_base_type' t -> Prop}
+      {u v u'}
+      (H : Tuple.lift_option (flat_interp_tuple (T:=Tbase TZ) (n:=S n) u) = Some u')
+  : interp_flat_type_rel_pointwise2
+      R
+      (flat_interp_untuple' (T:=Tbase TZ) u') v
+    <-> interp_flat_type_rel_pointwise2
+          (LiftOption.lift_relation R)
+          u v.
+Proof.
+  induction n.
+  { simpl in *; subst; reflexivity. }
+  { destruct_head_hnf' prod.
+    simpl in H; break_match_hyps; inversion_option; inversion_prod; subst.
+    simpl; rewrite <- IHn by eassumption; clear IHn.
+    reflexivity. }
+Qed.
+
+Lemma related_tuples_proj_eq_rel_untuple
+      {n T interp_base_type'}
+      {proj : forall t, T -> interp_base_type' t}
+      {u : Tuple.tuple _ (S n)} {v : Tuple.tuple _ (S n)}
+  : interp_flat_type_rel_pointwise2
+      (fun t => proj_eq_rel (proj t))
+      (flat_interp_untuple' (T:=Tbase TZ) u)
+      (flat_interp_untuple' (T:=Tbase TZ) v)
+    <-> (Tuple.map (proj _) u = v).
+Proof.
+  induction n; [ reflexivity | ].
+  destruct_head_hnf' prod.
+  simpl @Tuple.tuple.
+  rewrite !Tuple.map_S, path_prod_uncurried_iff, <- prod_iff_and; unfold fst, snd.
+  rewrite <- IHn.
+  reflexivity.
+Qed.
+
+Lemma related_tuples_proj_eq_rel_tuple
+      {n T interp_base_type'}
+      {proj : forall t, T -> interp_base_type' t}
+      {u v}
+  : interp_flat_type_rel_pointwise2
+      (fun t => proj_eq_rel (proj t))
+      u v
+    <-> (Tuple.map (proj _) (flat_interp_tuple (n:=S n) (T:=Tbase TZ) u)
+         = flat_interp_tuple (T:=Tbase TZ) v).
+Proof.
+  rewrite <- related_tuples_proj_eq_rel_untuple, !flat_interp_untuple'_tuple; reflexivity.
+Qed.
+
+Local Arguments LiftOption.lift_relation2 _ _ _ _ !_ !_ / .
+Lemma related_tuples_lift_relation2_untuple'
+      n T U
+      (R : T -> U -> Prop)
+      (t : option (Tuple.tuple T (S n)))
+      (u : option (Tuple.tuple U (S n)))
+  : interp_flat_type_rel_pointwise2
+      (LiftOption.lift_relation2 R)
+      (flat_interp_untuple' (T:=Tbase TZ) (Tuple.push_option t))
+      (flat_interp_untuple' (T:=Tbase TZ) (Tuple.push_option u))
+    <-> LiftOption.lift_relation2
+          (interp_flat_type_rel_pointwise2 (fun _ => R))
+          TZ
+          (option_map (flat_interp_untuple' (T:=Tbase TZ)) t)
+          (option_map (flat_interp_untuple' (T:=Tbase TZ)) u).
+Proof.
+  induction n.
+  { destruct_head' option; reflexivity. }
+  { specialize (IHn (option_map (@fst _ _) t) (option_map (@fst _ _) u)).
+    destruct_head' option;
+      destruct_head_hnf' prod;
+      simpl @option_map in *;
+      simpl @LiftOption.lift_relation2 in *;
+      try (rewrite <- IHn; reflexivity);
+      try (simpl @interp_flat_type_rel_pointwise2; tauto). }
+Qed.
+
+Local Arguments LiftOption.lift_relation _ _ _ _ !_ _ / .
+
+Local Ltac t_map1_tuple2_t_step :=
+  first [ exact I
+        | progress destruct_head_hnf' False
+        | progress subst
+        | progress destruct_head_hnf' prod
+        | progress destruct_head_hnf' and
+        | progress destruct_head_hnf' option
+        | intro
+        | apply @related_tuples_None_left; constructor
+        | apply -> @related_tuples_Some_left
+        | apply <- @related_tuples_proj_eq_rel_untuple
+        | apply <- @related_tuples_lift_relation2_untuple'
+        | match goal with
+          | [ H : appcontext[LiftOption.lift_relation] |- _ ]
+            => eapply related_tuples_Some_left_ext in H; [ | eassumption ]
+          | [ H : appcontext[proj_eq_rel] |- _ ]
+            => apply -> @related_tuples_proj_eq_rel_tuple in H
+          end
+        | progress rewrite ?HList.map'_mapt', <- ?HList.map_is_mapt'
+        | progress rewrite ?Tuple.map_map2, ?Tuple.map2_fst, ?Tuple.map2_snd, ?Tuple.map_id
+        | progress rewrite ?flat_interp_tuple_untuple' in *
+        | progress unfold BoundedWord64.t_map1_tuple2, HList.mapt
+        | progress unfold related_word64, related'_word64, related_bounds in *
+        | progress simpl @BoundedWord64.to_word64' in *
+        | progress simpl @fst in *
+        | progress simpl @snd in *
+        | progress simpl @option_map in *
+        | progress break_match
+        | progress convoy_destruct
+        | progress simpl @interp_flat_type_rel_pointwise2 in *
+        | progress simpl @LiftOption.lift_relation in *
+        | progress simpl @LiftOption.lift_relation2 in *
+        | rewrite_hyp <- !*; reflexivity
+        | progress unfold proj_eq_rel in * ].
+Local Ltac t_map1_tuple2_t := repeat t_map1_tuple2_t_step.
 
 Lemma related_word64_t_map1_tuple2 {n} opW opB pf
       sv1 sv2
@@ -175,51 +292,7 @@ Lemma related_word64_t_map1_tuple2 {n} opW opB pf
          (t:=Syntax.tuple (Tbase TZ) (S n)) related_word64
          (Syntax.flat_interp_untuple' (n:=n) (T:=Tbase TZ) (BoundedWord64.t_map1_tuple2 (n:=n) opW opB pf (fst (fst sv1)) (Syntax.flat_interp_tuple (snd (fst sv1))) (Syntax.flat_interp_tuple (snd sv1))))
          (Syntax.flat_interp_untuple' (n:=n) (T:=Tbase TZ) (opW (fst (fst sv2)) (Syntax.flat_interp_tuple (snd (fst sv2))) (Syntax.flat_interp_tuple (snd sv2)))).
-Proof.
-  destruct_head_hnf' prod; simpl; intro.
-  destruct_head' and.
-  destruct_head_hnf' option; destruct_head_hnf' False.
-  Focus 2.
-  { destruct_head_hnf' True.
-    apply related_tuples_None_left. }
-  Unfocus.
-  unfold BoundedWord64.t_map1_tuple2.
-  case_eq (@Tuple.lift_option (S n) BoundedWord64.BoundedWord
-             (@flat_interp_tuple' base_type
-               BoundedWord64.interp_base_type (@Tbase base_type TZ) n i4));
-    intros; try apply related_tuples_None_left.
-  case_eq (@Tuple.lift_option (S n) BoundedWord64.BoundedWord
-             (@flat_interp_tuple' base_type
-               BoundedWord64.interp_base_type (@Tbase base_type TZ) n i3));
-    intros; try apply related_tuples_None_left.
-  generalize (pf b t t0); clear pf.
-  generalize (eq_refl (Tuple.lift_option (opB (Some (BoundedWord64.BoundedWordToBounds b))
-                  (Tuple.push_option
-                     (Some (Tuple.map BoundedWord64.BoundedWordToBounds t)))
-                  (Tuple.push_option
-                     (Some
-                        (Tuple.map BoundedWord64.BoundedWordToBounds t0)))))).
-  case_eq (Tuple.lift_option
-              (opB (Some (BoundedWord64.BoundedWordToBounds b))
-                   (Tuple.push_option
-                      (Some (Tuple.map BoundedWord64.BoundedWordToBounds t)))
-                   (Tuple.push_option
-                      (Some
-                         (Tuple.map BoundedWord64.BoundedWordToBounds t0)))));
-    intros; try apply related_tuples_None_left.
-  generalize (h t1 e); clear h e; intro.
-  induction n.
-  unfold related_word64 in *; simpl in *; subst.
-  hnf.
-  simpl in *.
-  hnf in H0; subst.
-  hnf in H1; subst.
-  hnf in H; subst.
-  reflexivity.
-  split.
-  admit.
-  admit.
-Qed.
+Proof. t_map1_tuple2_t. Qed.
 
 Lemma related_word64_op : related_op related_word64 (@BoundedWord64.interp_op) (@Word64.interp_op).
 Proof.
@@ -271,16 +344,11 @@ Lemma related_bounds_t_map1_tuple2 {n} opW opB pf
          (Syntax.flat_interp_untuple' (n:=n) (T:=Tbase TZ) (BoundedWord64.t_map1_tuple2 (n:=n) opW opB pf (fst (fst sv1)) (Syntax.flat_interp_tuple (snd (fst sv1))) (Syntax.flat_interp_tuple (snd sv1))))
          (Syntax.flat_interp_untuple' (n:=n) (T:=Tbase TZ) (opB (fst (fst sv2)) (Syntax.flat_interp_tuple (snd (fst sv2))) (Syntax.flat_interp_tuple (snd sv2)))).
 Proof.
-  destruct_head_hnf' prod; simpl; intro.
-  destruct_head' and.
-  destruct_head_hnf' option; destruct_head_hnf' False.
-  Focus 2.
-  { rewrite HN0.
-    unfold BoundedWord64.t_map1_tuple2.
-    admit. (* TODO(jadep (or jgross)): Fill me in *) }
-  Unfocus.
-  admit.  (* TODO(jadep (or jgross)): Fill me in *)
-Admitted.
+  t_map1_tuple2_t;
+    rewrite ?HN0, ?HN1, ?HN2 by assumption;
+    t_map1_tuple2_t;
+    admit.
+Qed.
 
 Local Arguments ZBounds.SmartBuildBounds _ _ / .
 Lemma related_bounds_op : related_op related_bounds (@BoundedWord64.interp_op) (@ZBounds.interp_op).
