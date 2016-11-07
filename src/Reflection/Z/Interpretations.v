@@ -349,19 +349,19 @@ Module ZBounds.
          modulus value.
   (** TODO(jadep): Fill me in.  This should check that the modulus and
       value fit within int_width, that the modulus is of the right
-      form, and that the value is small enough.  If not, it should
-      [None]; otherwise, it should delegate to
-      [conditional_subtract']. *)
-  Axiom conditional_subtract_o
+      form, and that the value is small enough. *)
+  Axiom check_conditional_subtract_bounds
     : forall (pred_n : nat) (int_width : bounds)
-             (modulus value : Tuple.tuple bounds (S pred_n)), option (Tuple.tuple bounds (S pred_n)).
+             (modulus value : Tuple.tuple bounds (S pred_n)), bool.
   Definition conditional_subtract (pred_n : nat) (int_width : t)
              (modulus value : Tuple.tuple t (S pred_n))
     : Tuple.tuple t (S pred_n)
     := Tuple.push_option
          match int_width, Tuple.lift_option modulus, Tuple.lift_option value with
          | Some int_width, Some modulus, Some value
-           => conditional_subtract_o pred_n int_width modulus value
+           => if check_conditional_subtract_bounds pred_n int_width modulus value
+              then Some (conditional_subtract' pred_n int_width modulus value)
+              else None
          | _, _, _ => None
          end.
 
@@ -612,6 +612,31 @@ Module BoundedWord64.
 
   Tactic Notation "admit" := abstract case proof_admitted.
 
+
+  (** TODO(jadep): Use the bounds lemma here to prove that if each
+      component of [ret_val] is [Some (l, v, u)], then we can fill in
+      [pf] and return the tuple of [{| lower := l ; value := v ; upper
+      := u ; in_bounds := pf |}]. *)
+  Lemma conditional_subtract_bounded
+        (pred_n : nat) (x : BoundedWord)
+        (y z : Tuple.tuple BoundedWord (S pred_n))
+        (H : ZBounds.check_conditional_subtract_bounds
+               pred_n (BoundedWordToBounds x)
+               (Tuple.map BoundedWordToBounds y) (Tuple.map BoundedWordToBounds z) = true)
+    : hlist
+        (fun vlu : Word64.word64 * ZBounds.bounds =>
+           (0 <= ZBounds.lower (snd vlu))%Z /\
+           (ZBounds.lower (snd vlu) <= Word64.word64ToZ (fst vlu) <= ZBounds.upper (snd vlu))%Z /\
+           (Z.log2 (ZBounds.upper (snd vlu)) < Word64.bit_width)%Z)
+        (Tuple.map2 (fun v lu => (v, lu))
+                    (Word64.conditional_subtract
+                       pred_n (value x) (Tuple.map value y) (Tuple.map value z))
+                    (ZBounds.conditional_subtract'
+                       pred_n (BoundedWordToBounds x)
+                       (Tuple.map BoundedWordToBounds y) (Tuple.map BoundedWordToBounds z))).
+  Proof. Admitted.
+
+
   Definition add : t -> t -> t.
   Proof.
     refine (t_map2 Word64.add ZBounds.add _); t_start; admit.
@@ -667,24 +692,17 @@ Module BoundedWord64.
       Tuple.tuple t (S pred_n).
   Proof.
     refine (@t_map1_tuple2 pred_n (@Word64.conditional_subtract _) (@ZBounds.conditional_subtract _) _).
-    (** TODO(jadep): Use the bounds lemma here to prove that if each
-        component of [ret_val] is [Some (l, v, u)], then we can fill
-        in [pf] and return the tuple of [{| lower := l ; value := v ;
-        upper := u ; in_bounds := pf |}]. *)
-    admit.
+    abstract (
+        repeat first [ progress unfold ZBounds.conditional_subtract
+                     | rewrite !Tuple.lift_push_option
+                     | progress break_match
+                     | congruence
+                     | progress subst
+                     | progress inversion_option
+                     | intro
+                     | solve [ auto using conditional_subtract_bounded ] ]
+      ).
   Defined.
-
-  Local Ltac convoy_destruct_in H :=
-    match type of H with
-    | context G[match ?e with Some x => @?S x | None => ?N end eq_refl]
-      => let e' := fresh in
-         let H' := fresh in
-         pose e as e';
-         pose (eq_refl : e = e') as H';
-         let G' := context G[match e' with Some x => S x | None => N end H'] in
-         change G' in H;
-         clearbody H' e'; destruct e'
-    end.
 
   Local Notation binop_correct op opW opB :=
     (forall x y v, op (Some x) (Some y) = Some v

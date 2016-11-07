@@ -285,15 +285,50 @@ Proof.
                                  | progress break_match ] ]. }
 Qed.
 
+Lemma lift_option_flat_interp_tuple'
+      {n T x y}
+  : (Tuple.lift_option (n:=S n) (A:=T) (flat_interp_tuple' (interp_base_type:=LiftOption.interp_base_type' _) (T:=Tbase TZ) x) = Some y)
+    <-> (x = flat_interp_untuple' (T:=Tbase TZ) (n:=n) (Tuple.push_option (n:=S n) (Some y))).
+Proof.
+  rewrite Tuple.push_lift_option; generalize (Tuple.push_option (Some y)); intro.
+  split; intro; subst;
+    rewrite ?flat_interp_tuple'_untuple', ?flat_interp_untuple'_tuple';
+    reflexivity.
+Qed.
+
+Lemma lift_option_None_interp_flat_type_rel_pointwise2_1
+      T U n R x y
+      (H : interp_flat_type_rel_pointwise2 (LiftOption.lift_relation2 R) x y)
+      (HNone : Tuple.lift_option (A:=T) (n:=S n) (flat_interp_tuple' (T:=Tbase TZ) (n:=n) x) = None)
+  : Tuple.lift_option (A:=U) (n:=S n) (flat_interp_tuple' (T:=Tbase TZ) (n:=n) y) = None.
+Proof.
+  induction n; [ | specialize (IHn (fst x) (fst y) (proj1 H)) ];
+    repeat first [ progress destruct_head_hnf' False
+                 | reflexivity
+                 | progress inversion_option
+                 | progress simpl in *
+                 | progress subst
+                 | progress specialize_by congruence
+                 | progress destruct_head_hnf' prod
+                 | progress destruct_head_hnf' and
+                 | progress destruct_head_hnf' option
+                 | progress break_match
+                 | progress break_match_hyps ].
+Qed.
+
 Local Arguments LiftOption.lift_relation _ _ _ _ !_ _ / .
+Local Arguments LiftOption.of' _ _ !_ / .
+Local Arguments BoundedWord64.BoundedWordToBounds !_ / .
 
 Local Ltac t_map1_tuple2_t_step :=
   first [ exact I
+        | reflexivity
         | progress destruct_head_hnf' False
         | progress subst
         | progress destruct_head_hnf' prod
         | progress destruct_head_hnf' and
         | progress destruct_head_hnf' option
+        | progress inversion_option
         | intro
         | apply @related_tuples_None_left; constructor
         | apply -> @related_tuples_Some_left
@@ -309,24 +344,36 @@ Local Ltac t_map1_tuple2_t_step :=
                [ | first [ left; eexists; eassumption | right eexists; eassumption ] ]
           | [ H : Tuple.lift_option ?x = Some _, H' : context[?x] |- _ ]
             => setoid_rewrite H in H'
+          | [ H : proj_eq_rel _ _ _ |- _ ] => hnf in H
+          | [ H : Tuple.lift_option (flat_interp_tuple' ?x) = Some _ |- _ ]
+            => is_var x; apply lift_option_flat_interp_tuple' in H
           end
         | progress rewrite ?HList.map'_mapt', <- ?HList.map_is_mapt'
         | progress rewrite ?Tuple.map_map2, ?Tuple.map2_fst, ?Tuple.map2_snd, ?Tuple.map_id
-        | progress rewrite ?flat_interp_tuple_untuple' in *
+        | progress rewrite Tuple.map_id_ext by repeat (reflexivity || intros [] || intro)
+        | progress rewrite ?flat_interp_tuple_untuple', ?flat_interp_tuple'_untuple' in *
         | progress unfold BoundedWord64.t_map1_tuple2, HList.mapt
         | progress unfold related_word64, related'_word64, related_bounds in *
         | progress simpl @BoundedWord64.to_word64' in *
         | progress simpl @fst in *
         | progress simpl @snd in *
         | progress simpl @option_map in *
+        | progress simpl @BoundedWord64.BoundedWordToBounds in *
         | progress break_match
         | progress convoy_destruct
         | progress simpl @interp_flat_type_rel_pointwise2 in *
         | progress simpl @LiftOption.lift_relation in *
         | progress simpl @LiftOption.lift_relation2 in *
         | progress simpl @flat_interp_tuple in *
+        | progress simpl @LiftOption.of' in *
+        | progress simpl @smart_interp_flat_map in *
         | rewrite_hyp <- !*; reflexivity
-        | progress unfold proj_eq_rel in * ].
+        | solve [ eauto using lift_option_None_interp_flat_type_rel_pointwise2_1 ]
+        | match goal with
+          | [ H : LiftOption.lift_relation2 _ _ _ _ |- _ ] => unfold LiftOption.lift_relation2 in H
+          | [ H : LiftOption.of' _ = _ |- _ ] => unfold LiftOption.of' in H
+          | [ H : option_map _ _ = _ |- _ ] => unfold option_map in H
+          end ].
 Local Ltac t_map1_tuple2_t := repeat t_map1_tuple2_t_step.
 
 Lemma related_word64_t_map1_tuple2 {n} opW opB pf
@@ -377,10 +424,16 @@ Proof.
   related_word64_op_t.
 Qed.
 
+Local Arguments Tuple.lift_option : simpl never.
+Local Arguments Tuple.push_option : simpl never.
+Local Arguments Tuple.map : simpl never.
+Local Arguments Tuple.map2 : simpl never.
+
 Lemma related_bounds_t_map1_tuple2 {n} opW opB pf
       (HN0 : forall x y, opB None x y = Tuple.push_option None)
       (HN1 : forall x y z, Tuple.lift_option y = None -> opB x y z = Tuple.push_option None)
       (HN2 : forall x y z, Tuple.lift_option z = None -> opB x y z = Tuple.push_option None)
+      (HN3 : forall x y z, Tuple.lift_option (opB x y z) = None -> opB x y z = Tuple.push_option None)
       sv1 sv2
   : interp_flat_type_rel_pointwise2 (t:=Prod (Prod (Tbase TZ) (Syntax.tuple (Tbase TZ) (S n))) (Syntax.tuple (Tbase TZ) (S n))) related_bounds sv1 sv2
     -> interp_flat_type_rel_pointwise2
@@ -389,9 +442,21 @@ Lemma related_bounds_t_map1_tuple2 {n} opW opB pf
          (Syntax.flat_interp_untuple' (n:=n) (T:=Tbase TZ) (opB (fst (fst sv2)) (Syntax.flat_interp_tuple (snd (fst sv2))) (Syntax.flat_interp_tuple (snd sv2)))).
 Proof.
   t_map1_tuple2_t;
-    rewrite ?HN0, ?HN1, ?HN2 by assumption;
-    t_map1_tuple2_t;
-    admit.
+    try first [ rewrite HN0 by (assumption || t_map1_tuple2_t)
+              | rewrite HN1 by (assumption || t_map1_tuple2_t)
+              | rewrite HN2 by (assumption || t_map1_tuple2_t)
+              | rewrite HN3 by (assumption || t_map1_tuple2_t) ];
+    t_map1_tuple2_t.
+  { repeat match goal with
+           | [ |- context[HList.mapt' _ ?ls] ]
+             => not is_var ls; generalize ls; intro
+           | [ H : Tuple.lift_option _ = Some _ |- _ ]
+             => apply Tuple.push_lift_option in H; setoid_rewrite H
+           | _ => progress (break_match_hyps; t_map1_tuple2_t)
+           end. }
+  { repeat (break_match_hyps; t_map1_tuple2_t).
+    rewrite HN3 by (assumption || t_map1_tuple2_t).
+    t_map1_tuple2_t. }
 Qed.
 
 Local Arguments ZBounds.SmartBuildBounds _ _ / .
@@ -409,7 +474,9 @@ Proof.
   { apply related_bounds_t_map4; intros; destruct_head' option; reflexivity. }
   { apply related_bounds_t_map4; intros; destruct_head' option; reflexivity. }
   { apply related_bounds_t_map1_tuple2; intros; destruct_head' option; try reflexivity;
-      unfold ZBounds.conditional_subtract; rewrite ?Tuple.lift_push_option; try reflexivity;
+      unfold ZBounds.conditional_subtract in *; rewrite ?Tuple.lift_push_option in *;
+        repeat match goal with H : _ |- _ => rewrite !Tuple.lift_push_option in H end;
+        try reflexivity;
         (rewrite_hyp ?* );
         break_match; try reflexivity. }
 Qed.
