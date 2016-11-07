@@ -59,3 +59,7 @@ Proof.
     rewrite <- IHn; clear IHn.
     rewrite <- (@Tuple.map_S n _ _ f); destruct ts; reflexivity. }
 Qed.
+
+Lemma map_is_mapt' {n A F B} (f : A -> B) {ts : tuple A (S n)} (ls : hlist' F ts)
+  : Tuple.map f ts = mapt' (fun x _ => f x) ls.
+Proof. apply (@map_is_mapt (S n)). Qed.
