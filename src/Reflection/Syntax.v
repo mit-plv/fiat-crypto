@@ -96,6 +96,12 @@ Section language.
            | O => fun x => x
            | S n' => fun xy => (@flat_interp_untuple' _ n' (fst xy), snd xy)
            end.
+      Lemma flat_interp_untuple'_tuple' {T n v}
+        : @flat_interp_untuple' T n (flat_interp_tuple' v) = v.
+      Proof. induction n; [ reflexivity | simpl; rewrite IHn; destruct v; reflexivity ]. Qed.
+      Lemma flat_interp_untuple'_tuple {T n v}
+        : flat_interp_untuple' (@flat_interp_tuple T (S n) v) = v.
+      Proof. apply flat_interp_untuple'_tuple'. Qed.
       Section rel.
         Context (R : forall t, interp_base_type t -> interp_base_type t -> Prop).
         Fixpoint interp_flat_type_rel_pointwise (t : flat_type)
