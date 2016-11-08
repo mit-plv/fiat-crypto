@@ -338,7 +338,7 @@ Local Ltac t_map1_tuple2_t_step :=
             => apply -> @related_tuples_proj_eq_rel_tuple in H
           | [ H : appcontext[LiftOption.lift_relation2] |- _ ]
             => eapply (fun H => proj1 (related_tuples_lift_relation2_untuple'_ext H)) in H;
-               [ | first [ left; eexists; eassumption | right eexists; eassumption ] ]
+               [ | first [ left; eexists; eassumption | right; eexists; eassumption ] ]
           | [ H : Tuple.lift_option ?x = Some _, H' : context[?x] |- _ ]
             => setoid_rewrite H in H'
           | [ H : proj_eq_rel _ _ _ |- _ ] => hnf in H
@@ -525,6 +525,59 @@ Proof.
   eapply H; eauto.
 Qed.
 
+Lemma related_Z_t_map4 opZ opW opB pf
+      (H : forall x y z w bxs bys bzs bws brs,
+          Some brs = opB (Some bxs) (Some bys) (Some bzs) (Some bws)
+          -> is_in_bounds x bxs
+          -> is_in_bounds y bys
+          -> is_in_bounds z bzs
+          -> is_in_bounds w bws
+          -> is_in_bounds (opW x y z w) brs
+          -> Word64.word64ToZ (opW x y z w) = (opZ (Word64.word64ToZ x) (Word64.word64ToZ y) (Word64.word64ToZ z) (Word64.word64ToZ w)))
+      sv1 sv2
+  : interp_flat_type_rel_pointwise2 (t:=(Tbase TZ * Tbase TZ * Tbase TZ * Tbase TZ)%ctype) related_Z sv1 sv2
+    -> @related_Z TZ (BoundedWord64.t_map4 opW opB pf (fst (fst (fst sv1))) (snd (fst (fst sv1))) (snd (fst sv1)) (snd sv1))
+                  (opZ (fst (fst (fst sv2))) (snd (fst (fst sv2))) (snd (fst sv2)) (snd sv2)).
+Proof.
+  cbv [interp_flat_type BoundedWord64.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
+  related_Z_op_t.
+  eapply H; eauto.
+Qed.
+
+Local Arguments related_Z _ !_ _ / .
+Axiom proof_admitted : False.
+Tactic Notation "admit" := abstract case proof_admitted.
+
+Local Arguments related'_Z _ _ _ / .
+Lemma related_Z_t_map1_tuple2 n opZ opW opB pf
+      (H : forall x y z bxs bys bzs brs,
+          Tuple.push_option (Some brs) = opB (Some bxs) (Tuple.push_option (Some bys)) (Tuple.push_option (Some bzs))
+          -> is_in_bounds x bxs
+          (*-> is_in_bounds y bys
+          -> is_in_bounds z bzs
+          -> is_in_bounds (opW x y z) brs*)
+          -> Tuple.map Word64.word64ToZ (opW x y z) = (opZ (Word64.word64ToZ x) (Tuple.map Word64.word64ToZ y) (Tuple.map Word64.word64ToZ z)))
+      sv1 sv2
+  : interp_flat_type_rel_pointwise2 (t:=(Tbase TZ * Syntax.tuple (Tbase TZ) (S n) * Syntax.tuple (Tbase TZ) (S n))%ctype) related_Z sv1 sv2
+    -> interp_flat_type_rel_pointwise2
+         related_Z
+         (flat_interp_untuple' (T:=Tbase TZ) (BoundedWord64.t_map1_tuple2 opW opB pf (fst (fst sv1)) (flat_interp_tuple' (snd (fst sv1))) (flat_interp_tuple' (snd sv1))))
+         (flat_interp_untuple' (T:=Tbase TZ) (opZ (fst (fst sv2)) (flat_interp_tuple' (snd (fst sv2))) (flat_interp_tuple' (snd sv2)))).
+Proof.
+  repeat first [ progress simpl in *
+               | progress intros
+               | progress destruct_head_hnf' and
+               | progress destruct_head_hnf' prod
+               | progress destruct_head_hnf' option
+               | progress (unfold proj_eq_rel in *; subst)
+               | apply @related_tuples_None_left; constructor
+               | apply -> @related_tuples_Some_left
+               | apply <- @related_tuples_proj_eq_rel_untuple
+               | apply <- @related_tuples_lift_relation2_untuple' ].
+  unfold related_Z.
+  admit.
+Qed.
+
 Local Ltac related_Z_op_fin_t_step :=
   first [ progress subst
         | progress destruct_head' ZBounds.bounds
@@ -538,9 +591,6 @@ Local Ltac related_Z_op_fin_t_step :=
         | autorewrite with push_word64ToZ ].
 Local Ltac related_Z_op_fin_t := repeat related_Z_op_fin_t_step.
 
-Axiom proof_admitted : False.
-Tactic Notation "admit" := abstract case proof_admitted.
-
 Local Opaque Word64.bit_width.
 
 Lemma related_Z_op : related_op related_Z (@BoundedWord64.interp_op) (@Z.interp_op).
@@ -553,10 +603,18 @@ Proof.
   { apply related_Z_t_map2; related_Z_op_fin_t. }
   { apply related_Z_t_map2; related_Z_op_fin_t. }
   { apply related_Z_t_map2; related_Z_op_fin_t. }
-  { apply related_Z_t_map2; related_Z_op_fin_t; admit. }
-  { related_Z_op_t; admit. }
-  { related_Z_op_t; admit. }
-  { related_Z_op_t; admit. (** TODO(jadep or jgross): Fill me in *) }
+  { apply related_Z_t_map2; related_Z_op_fin_t;
+      rewrite Word64.word64ToZ_neg; try Word64.Rewrites.word64_util_arith;
+        admit. }
+  { apply related_Z_t_map4; related_Z_op_fin_t;
+      rewrite Word64.word64ToZ_cmovne; try Word64.Rewrites.word64_util_arith;
+        admit. }
+  { apply related_Z_t_map4; related_Z_op_fin_t;
+      rewrite Word64.word64ToZ_cmovle; try Word64.Rewrites.word64_util_arith;
+        admit. }
+  { apply related_Z_t_map1_tuple2; related_Z_op_fin_t;
+      rewrite Word64.word64ToZ_conditional_subtract; try Word64.Rewrites.word64_util_arith;
+        admit. (** TODO(jadep or jgross): Fill me in *) }
 Qed.
 
 Create HintDb interp_related discriminated.

@@ -225,7 +225,7 @@ Module Word64.
   Proof. w64ToZ_t; w64ToZ_extra_t. Qed.
   Lemma word64ToZ_cmovne : bounds_4statement cmovne ModularBaseSystemListZOperations.cmovne.
   Proof. w64ToZ_t; w64ToZ_extra_t. Qed.
-  Lemma word64ToZ_cmovle : bounds_2statement neg ModularBaseSystemListZOperations.neg.
+  Lemma word64ToZ_cmovle : bounds_4statement cmovle ModularBaseSystemListZOperations.cmovl.
   Proof. w64ToZ_t; w64ToZ_extra_t. Qed.
   Lemma word64ToZ_conditional_subtract pred_limb_count
     : bounds_1_tuple2_statement (@conditional_subtract pred_limb_count)
