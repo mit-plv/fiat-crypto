@@ -114,6 +114,7 @@ Module Word64.
 
   Lemma bit_width_pos : (0 < Z.of_nat bit_width)%Z.
   Proof. simpl; omega. Qed.
+  Local Hint Resolve bit_width_pos : zarith.
 
   Ltac arith := solve [ omega | auto using bit_width_pos with zarith ].
 
@@ -163,9 +164,9 @@ Module Word64.
   Definition neg : word64 -> word64 -> word64 (* TODO: FIXME? *)
     := fun x y => ZToWord64 (ModularBaseSystemListZOperations.neg (word64ToZ x) (word64ToZ y)).
   Definition cmovne : word64 -> word64 -> word64 -> word64 -> word64 (* TODO: FIXME? *)
-    := fun x y z w => ZToWord64 (ModularBaseSystemListZOperations.cmovne (word64ToZ x) (word64ToZ x) (word64ToZ z) (word64ToZ w)).
+    := fun x y z w => ZToWord64 (ModularBaseSystemListZOperations.cmovne (word64ToZ x) (word64ToZ y) (word64ToZ z) (word64ToZ w)).
   Definition cmovle : word64 -> word64 -> word64 -> word64 -> word64 (* TODO: FIXME? *)
-    := fun x y z w => ZToWord64 (ModularBaseSystemListZOperations.cmovl (word64ToZ x) (word64ToZ x) (word64ToZ z) (word64ToZ w)).
+    := fun x y z w => ZToWord64 (ModularBaseSystemListZOperations.cmovl (word64ToZ x) (word64ToZ y) (word64ToZ z) (word64ToZ w)).
   Definition conditional_subtract (pred_limb_count : nat) : word64 -> Tuple.tuple word64 (S pred_limb_count) -> Tuple.tuple word64 (S pred_limb_count) -> Tuple.tuple word64 (S pred_limb_count)
     := fun x y z => Tuple.map ZToWord64 (@ModularBaseSystemListZOperations.conditional_subtract_modulus
                                            (S pred_limb_count) (word64ToZ x) (Tuple.map word64ToZ y) (Tuple.map word64ToZ z)).
@@ -176,19 +177,37 @@ Module Word64.
   Infix ">>" := shr : word64_scope.
   Infix "&'" := land : word64_scope.
 
+  (*Local*) Hint Resolve <- Z.log2_lt_pow2_alt : zarith.
+  Local Hint Resolve eq_refl : zarith.
   Local Ltac w64ToZ_t :=
     intros;
     try match goal with
-        | [ |- ?wordToZ (?op ?x ?y) = _ ]
-          => cbv [wordToZ op] in *
+        | [ |- ?wordToZ ?op = _ ]
+          => let op' := head op in
+             cbv [wordToZ op'] in *
         end;
     autorewrite with push_Zto_N push_Zof_N push_wordToN; try reflexivity.
+  Local Ltac w64ToZ_extra_t :=
+    repeat first [ reflexivity
+                 | progress cbv [ModularBaseSystemListZOperations.neg ModularBaseSystemListZOperations.cmovne ModularBaseSystemListZOperations.cmovl (*ModularBaseSystemListZOperations.conditional_subtract_modulus*)] in *
+                 | progress break_match
+                 | progress fold_Word64_Z
+                 | progress intros
+                 | progress autorewrite with push_Zto_N push_Zof_N push_wordToN push_word64ToZ ].
 
+  Local Notation bounds_statement wop Zop
+    := ((0 <= Zop -> Z.log2 Zop < Z.of_nat bit_width -> word64ToZ wop = Zop)%Z).
+  Local Notation bounds_statement_tuple wop Zop
+    := ((HList.hlist (fun v => 0 <= v /\ Z.log2 v < Z.of_nat bit_width) Zop -> Tuple.map word64ToZ wop = Zop)%Z).
   Local Notation bounds_2statement wop Zop
     := (forall x y,
-           (0 <= Zop (word64ToZ x) (word64ToZ y)
-            -> Z.log2 (Zop (word64ToZ x) (word64ToZ y)) < Z.of_nat bit_width
-            -> word64ToZ (wop x y) = (Zop (word64ToZ x) (word64ToZ y)))%Z).
+           bounds_statement (wop x y) (Zop (word64ToZ x) (word64ToZ y))).
+  Local Notation bounds_1_tuple2_statement wop Zop
+    := (forall x y z,
+           bounds_statement_tuple (wop x y z) (Zop (word64ToZ x) (Tuple.map word64ToZ y) (Tuple.map word64ToZ z))).
+  Local Notation bounds_4statement wop Zop
+    := (forall x y z w,
+           bounds_statement (wop x y z w) (Zop (word64ToZ x) (word64ToZ y) (word64ToZ z) (word64ToZ w))).
 
   Lemma word64ToZ_add : bounds_2statement add Z.add. Proof. w64ToZ_t. Qed.
   Lemma word64ToZ_sub : bounds_2statement sub Z.sub. Proof. w64ToZ_t. Qed.
@@ -201,6 +220,26 @@ Module Word64.
   Proof. w64ToZ_t. Qed.
   Lemma word64ToZ_lor : bounds_2statement lor Z.lor.
   Proof. w64ToZ_t. Qed.
+  Lemma word64ToZ_neg : bounds_2statement neg ModularBaseSystemListZOperations.neg.
+  Proof. w64ToZ_t; w64ToZ_extra_t. Qed.
+  Lemma word64ToZ_cmovne : bounds_4statement cmovne ModularBaseSystemListZOperations.cmovne.
+  Proof. w64ToZ_t; w64ToZ_extra_t. Qed.
+  Lemma word64ToZ_cmovle : bounds_2statement neg ModularBaseSystemListZOperations.neg.
+  Proof. w64ToZ_t; w64ToZ_extra_t. Qed.
+  Lemma word64ToZ_conditional_subtract pred_limb_count
+    : bounds_1_tuple2_statement (@conditional_subtract pred_limb_count)
+                                (@ModularBaseSystemListZOperations.conditional_subtract_modulus (S pred_limb_count)).
+  Proof.
+    w64ToZ_t; unfold conditional_subtract; w64ToZ_extra_t.
+    repeat first [ progress w64ToZ_extra_t
+                 | rewrite Tuple.map_map
+                 | rewrite HList.Tuple.map_id_ext
+                 | match goal with
+                   | [ H : hlist _ _ |- hlist _ _ ]
+                     => revert H; apply HList.hlist_impl
+                   end
+                 | apply HList.const ].
+  Qed.
 
   Definition interp_base_type (t : base_type) : Type
     := match t with
