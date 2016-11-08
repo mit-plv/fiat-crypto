@@ -4,6 +4,7 @@ Require Import Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Application.
 Require Import Crypto.Reflection.Z.Interpretations.
+Require Import Crypto.ModularArithmetic.ModularBaseSystemListZOperationsProofs.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.ZUtil.
@@ -495,7 +496,11 @@ Local Ltac Word64.Rewrites.word64_util_arith ::=
                     | etransitivity; [ apply Z.land_upper_bound_r | ]; omega ]
             | rewrite Z.log2_lor by omega;
               apply Z.max_case_strong; intro;
-              (eapply Z.le_lt_trans; [ eapply Z.log2_le_mono; eassumption | assumption ]) ].
+              (eapply Z.le_lt_trans; [ eapply Z.log2_le_mono; eassumption | assumption ])
+            | eapply Z.le_lt_trans; [ eapply Z.log2_le_mono, neg_upperbound | ];
+              Word64.Rewrites.word64_util_arith
+            | (progress unfold ModularBaseSystemListZOperations.cmovne, ModularBaseSystemListZOperations.cmovl); break_match;
+              Word64.Rewrites.word64_util_arith ].
 Local Ltac related_Z_op_t_step :=
   first [ progress related_word64_op_t_step
         | progress cbv [related'_Z proj_eq_rel BoundedWord64.to_Z' BoundedWord64.to_word64' Word64.to_Z BoundedWord64.boundedWordToWord64 BoundedWord64.value] in *
@@ -588,7 +593,9 @@ Local Ltac related_Z_op_fin_t_step :=
         | congruence
         | progress inversion_option
         | intro
-        | autorewrite with push_word64ToZ ].
+        | progress autorewrite with push_word64ToZ
+        | match goal with H : andb _ _ = true |- _ => rewrite Bool.andb_true_iff in H end
+        | progress Z.ltb_to_lt ].
 Local Ltac related_Z_op_fin_t := repeat related_Z_op_fin_t_step.
 
 Local Opaque Word64.bit_width.
@@ -603,18 +610,13 @@ Proof.
   { apply related_Z_t_map2; related_Z_op_fin_t. }
   { apply related_Z_t_map2; related_Z_op_fin_t. }
   { apply related_Z_t_map2; related_Z_op_fin_t. }
-  { apply related_Z_t_map2; related_Z_op_fin_t;
-      rewrite Word64.word64ToZ_neg; try Word64.Rewrites.word64_util_arith;
-        admit. }
-  { apply related_Z_t_map4; related_Z_op_fin_t;
-      rewrite Word64.word64ToZ_cmovne; try Word64.Rewrites.word64_util_arith;
-        admit. }
-  { apply related_Z_t_map4; related_Z_op_fin_t;
-      rewrite Word64.word64ToZ_cmovle; try Word64.Rewrites.word64_util_arith;
-        admit. }
+  { apply related_Z_t_map2; related_Z_op_fin_t. }
+  { apply related_Z_t_map4; related_Z_op_fin_t. }
+  { apply related_Z_t_map4; related_Z_op_fin_t. }
   { apply related_Z_t_map1_tuple2; related_Z_op_fin_t;
-      rewrite Word64.word64ToZ_conditional_subtract; try Word64.Rewrites.word64_util_arith;
-        admit. (** TODO(jadep or jgross): Fill me in *) }
+      rewrite Word64.word64ToZ_conditional_subtract; try Word64.Rewrites.word64_util_arith.
+    pose proof BoundedWord64.conditional_subtract_bounded.
+    admit. (** TODO(jadep or jgross): Fill me in *) }
 Qed.
 
 Create HintDb interp_related discriminated.
