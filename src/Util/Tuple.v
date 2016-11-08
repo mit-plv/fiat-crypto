@@ -193,6 +193,23 @@ Lemma map_id_ext {n A} (f : A -> A) (xs:tuple A n)
 Proof.
 Admitted.
 
+Lemma map2_map {n A B C A' B'} (f:A -> B -> C) (g:A' -> A) (h:B' -> B) (xs:tuple A' n) (ys:tuple B' n)
+  : map2 f (map g xs) (map h ys) = map2 (fun a b => f (g a) (h b)) xs ys.
+Proof.
+Admitted.
+
+Lemma map2_map_fst {n A B C A'} (f:A -> B -> C) (g:A' -> A) (xs:tuple A' n) (ys:tuple B n)
+  : map2 f (map g xs) ys = map2 (fun a b => f (g a) b) xs ys.
+Proof.
+  rewrite <- (map2_map f g (fun x => x)), map_id; reflexivity.
+Qed.
+
+Lemma map2_map_snd {n A B C B'} (f:A -> B -> C) (g:B' -> B) (xs:tuple A n) (ys:tuple B' n)
+  : map2 f xs (map g ys) = map2 (fun a b => f a (g b)) xs ys.
+Proof.
+  rewrite <- (map2_map f (fun x => x) g), map_id; reflexivity.
+Qed.
+
 Lemma map_map {n A B C} (g : B -> C) (f : A -> B) (xs:tuple A n)
   : map g (map f xs) = map (fun x => g (f x)) xs.
 Proof.
