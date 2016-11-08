@@ -1,9 +1,10 @@
 Require Import Coq.Classes.RelationClasses.
-Notation iffT := (fun A B => inhabited ((A -> B) * (B -> A)))%type.
+Notation iffT A B := (((A -> B) * (B -> A)))%type.
+Notation iffTp := (fun A B => inhabited (iffT A B)).
 
-Global Instance iffT_Reflexive : Reflexive iffT | 1.
+Global Instance iffTp_Reflexive : Reflexive iffTp | 1.
 Proof. repeat constructor; intro; assumption. Defined.
-Global Instance iffT_Symmetric : Symmetric iffT | 1.
+Global Instance iffTp_Symmetric : Symmetric iffTp | 1.
 Proof. repeat (intros [?] || intro); constructor; tauto. Defined.
-Global Instance iffT_Transitive : Transitive iffT | 1.
+Global Instance iffTp_Transitive : Transitive iffTp | 1.
 Proof. repeat (intros [?] || intro); constructor; tauto. Defined.

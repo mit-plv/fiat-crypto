@@ -193,6 +193,11 @@ Lemma map_id_ext {n A} (f : A -> A) (xs:tuple A n)
 Proof.
 Admitted.
 
+Lemma map_map {n A B C} (g : B -> C) (f : A -> B) (xs:tuple A n)
+  : map g (map f xs) = map (fun x => g (f x)) xs.
+Proof.
+Admitted.
+
 Section monad.
   Context (M : Type -> Type) (bind : forall X Y, M X -> (X -> M Y) -> M Y) (ret : forall X, X -> M X).
   Fixpoint lift_monad' {n A} {struct n}

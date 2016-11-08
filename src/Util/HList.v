@@ -63,3 +63,23 @@ Qed.
 Lemma map_is_mapt' {n A F B} (f : A -> B) {ts : tuple A (S n)} (ls : hlist' F ts)
   : Tuple.map f ts = mapt' (fun x _ => f x) ls.
 Proof. apply (@map_is_mapt (S n)). Qed.
+
+
+Lemma hlist'_impl {n A F G} (xs:tuple' A n)
+  : (hlist' (fun x => F x -> G x) xs) -> (hlist' F xs -> hlist' G xs).
+Proof.
+  induction n; simpl in *; intuition.
+Defined.
+
+Lemma hlist_impl {n A F G} (xs:tuple A n)
+  : (hlist (fun x => F x -> G x) xs) -> (hlist F xs -> hlist G xs).
+Proof.
+  destruct n; [ constructor | apply hlist'_impl ].
+Defined.
+
+Module Tuple.
+  Lemma map_id_ext {n A} (f : A -> A) (xs:tuple A n)
+  : hlist (fun x => f x = x) xs -> Tuple.map f xs = xs.
+  Proof.
+  Admitted.
+End Tuple.
