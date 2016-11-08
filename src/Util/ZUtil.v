@@ -2128,6 +2128,15 @@ Module Z.
   Qed.
   Hint Resolve log2_ones_lt_nonneg : zarith.
 
+  Lemma log2_lt_pow2_alt a b : 0 < b -> a < 2^b <-> Z.log2 a < b.
+  Proof.
+    destruct (Z_lt_le_dec 0 a); auto using Z.log2_lt_pow2; [].
+    rewrite Z.log2_nonpos by omega.
+    split; auto with zarith; [].
+    intro; eapply le_lt_trans; [ eassumption | ].
+    auto with zarith.
+  Qed.
+
   Lemma simplify_twice_sub_sub x y : 2 * x - (x - y) = x + y.
   Proof. lia. Qed.
   Hint Rewrite simplify_twice_sub_sub : zsimplify.
