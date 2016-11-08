@@ -406,9 +406,9 @@ Module ZBounds.
     : Tuple.tuple t (S pred_n)
     := Tuple.push_option
          match int_width, Tuple.lift_option modulus, Tuple.lift_option value with
-         | Some int_width, Some modulus, Some value'
-           => if check_conditional_subtract_bounds pred_n int_width modulus value'
-              then Some (conditional_subtract' pred_n int_width modulus value')
+         | Some int_width, Some modulus, Some value
+           => if check_conditional_subtract_bounds pred_n int_width modulus value
+              then Some (conditional_subtract' pred_n int_width modulus value)
               else None
          | _, _, _ => None
          end.
@@ -672,6 +672,31 @@ Module BoundedWord64.
                pred_n (BoundedWordToBounds x)
                (Tuple.map BoundedWordToBounds y) (Tuple.map BoundedWordToBounds z) = true)
     : HList.hlist
+        (fun vlu : Z * ZBounds.bounds =>
+           (0 <= ZBounds.lower (snd vlu))%Z /\
+           (ZBounds.lower (snd vlu) <= fst vlu <= ZBounds.upper (snd vlu))%Z /\
+           (Z.log2 (ZBounds.upper (snd vlu)) < Word64.bit_width)%Z)
+        (Tuple.map2 (fun v lu => (v, lu))
+                    (ModularBaseSystemListZOperations.conditional_subtract_modulus
+                       (S pred_n)
+                       (Word64.word64ToZ (value x))
+                       (Tuple.map Word64.word64ToZ (Tuple.map value y))
+                       (Tuple.map Word64.word64ToZ (Tuple.map value z)))
+                    (ZBounds.conditional_subtract'
+                       pred_n (BoundedWordToBounds x)
+                       (Tuple.map BoundedWordToBounds y) (Tuple.map BoundedWordToBounds z))).
+  Proof. Admitted.
+
+  Local Hint Resolve Word64.bit_width_pos : zarith.
+  Local Hint Extern 1 (Z.log2 _ < _)%Z => eapply Z.le_lt_trans; [ eapply Z.log2_le_mono; eassumption | eassumption ] : zarith.
+  (* Local *) Hint Resolve <- Z.log2_lt_pow2_alt : zarith.
+  Lemma conditional_subtract_bounded_word
+        (pred_n : nat) (x : BoundedWord)
+        (y z : Tuple.tuple BoundedWord (S pred_n))
+        (H : ZBounds.check_conditional_subtract_bounds
+               pred_n (BoundedWordToBounds x)
+               (Tuple.map BoundedWordToBounds y) (Tuple.map BoundedWordToBounds z) = true)
+    : HList.hlist
         (fun vlu : Word64.word64 * ZBounds.bounds =>
            (0 <= ZBounds.lower (snd vlu))%Z /\
            (ZBounds.lower (snd vlu) <= Word64.word64ToZ (fst vlu) <= ZBounds.upper (snd vlu))%Z /\
@@ -682,8 +707,68 @@ Module BoundedWord64.
                     (ZBounds.conditional_subtract'
                        pred_n (BoundedWordToBounds x)
                        (Tuple.map BoundedWordToBounds y) (Tuple.map BoundedWordToBounds z))).
-  Proof. Admitted.
+  Proof.
+    generalize (conditional_subtract_bounded pred_n x y z H).
+    unfold Word64.conditional_subtract; rewrite Tuple.map2_map_fst.
+    rewrite <- (Tuple.map_map2 (fun a b => (a, b)) (fun ab => (Word64.ZToWord64 (fst ab), snd ab))).
+    rewrite HList.hlist_map; simpl @fst; simpl @snd.
+    apply HList.hlist_impl, HList.const.
+    intros; destruct_head' and; repeat split;
+      autorewrite with push_word64ToZ; omega.
+  Qed.
 
+  Lemma conditional_subtract_bounded_lite_helper
+        (pred_n : nat) (x : BoundedWord)
+        (y z : Tuple.tuple BoundedWord (S pred_n))
+        (H : ZBounds.check_conditional_subtract_bounds
+               pred_n (BoundedWordToBounds x)
+               (Tuple.map BoundedWordToBounds y) (Tuple.map BoundedWordToBounds z) = true)
+    : HList.hlist
+        (fun v : Z =>
+           (0 <= v)%Z /\
+           (Z.log2 v < Word64.bit_width)%Z)
+        (Tuple.map
+           (@fst _ _)
+           (Tuple.map2 (fun v lu => (v, lu))
+                       (ModularBaseSystemListZOperations.conditional_subtract_modulus
+                          (S pred_n)
+                          (Word64.word64ToZ (value x))
+                          (Tuple.map Word64.word64ToZ (Tuple.map value y))
+                          (Tuple.map Word64.word64ToZ (Tuple.map value z)))
+                       (ZBounds.conditional_subtract'
+                          pred_n (BoundedWordToBounds x)
+                          (Tuple.map BoundedWordToBounds y) (Tuple.map BoundedWordToBounds z)))).
+  Proof.
+    generalize (conditional_subtract_bounded pred_n x y z H).
+    rewrite HList.hlist_map.
+    apply HList.hlist_impl, HList.const; intros.
+    destruct_head' and.
+    split; try omega; [].
+    eapply Z.le_lt_trans; [ eapply Z.log2_le_mono | eassumption ]; omega.
+  Qed.
+
+  Lemma conditional_subtract_bounded_lite
+        (pred_n : nat)
+        (xbw : BoundedWord) (ybw zbw : Tuple.tuple BoundedWord (S pred_n))
+        (x : Word64.word64) (y z : Tuple.tuple Word64.word64 (S pred_n))
+        (xb : ZBounds.bounds)  (yb zb : Tuple.tuple ZBounds.bounds (S pred_n))
+        (Hx : value xbw = x) (Hy : Tuple.map value ybw = y) (Hz : Tuple.map value zbw = z)
+        (Hxb : BoundedWordToBounds xbw = xb)
+        (Hyb : Tuple.map BoundedWordToBounds ybw = yb) (Hzb : Tuple.map BoundedWordToBounds zbw = zb)
+        (Hc : ZBounds.check_conditional_subtract_bounds pred_n xb yb zb = true)
+    : HList.hlist (fun v : Z => (0 <= v)%Z /\ (Z.log2 v < Z.of_nat Word64.bit_width)%Z)
+                  (ModularBaseSystemListZOperations.conditional_subtract_modulus
+                     (S pred_n)
+                     (Word64.word64ToZ x)
+                     (Tuple.map Word64.word64ToZ y)
+                     (Tuple.map Word64.word64ToZ z)).
+  Proof.
+    subst.
+    generalize (conditional_subtract_bounded_lite_helper pred_n xbw ybw zbw Hc).
+    rewrite Tuple.map_map2; simpl @fst.
+    rewrite Tuple.map2_fst, Tuple.map_id.
+    trivial.
+  Qed.
 
   Definition add : t -> t -> t.
   Proof.
@@ -748,7 +833,7 @@ Module BoundedWord64.
                      | progress subst
                      | progress inversion_option
                      | intro
-                     | solve [ auto using conditional_subtract_bounded ] ]
+                     | solve [ auto using conditional_subtract_bounded_word ] ]
       ).
   Defined.
 

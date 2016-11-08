@@ -556,10 +556,15 @@ Tactic Notation "admit" := abstract case proof_admitted.
 Local Arguments related'_Z _ _ _ / .
 Lemma related_Z_t_map1_tuple2 n opZ opW opB pf
       (H : forall x y z bxs bys bzs brs,
-          Tuple.push_option (Some brs) = opB (Some bxs) (Tuple.push_option (Some bys)) (Tuple.push_option (Some bzs))
+          Some brs = Tuple.lift_option (opB (Some bxs) (Tuple.push_option (Some bys)) (Tuple.push_option (Some bzs)))
           -> is_in_bounds x bxs
-          (*-> is_in_bounds y bys
-          -> is_in_bounds z bzs
+          -> { ybw : Tuple.tuple BoundedWord64.BoundedWord _
+             | Tuple.map BoundedWord64.value ybw = y
+               /\ Tuple.map BoundedWord64.BoundedWordToBounds ybw = bys }
+          -> { zbw : Tuple.tuple BoundedWord64.BoundedWord _
+             | Tuple.map BoundedWord64.value zbw = z
+               /\ Tuple.map BoundedWord64.BoundedWordToBounds zbw = bzs }
+          (*
           -> is_in_bounds (opW x y z) brs*)
           -> Tuple.map Word64.word64ToZ (opW x y z) = (opZ (Word64.word64ToZ x) (Tuple.map Word64.word64ToZ y) (Tuple.map Word64.word64ToZ z)))
       sv1 sv2
@@ -594,8 +599,13 @@ Local Ltac related_Z_op_fin_t_step :=
         | progress inversion_option
         | intro
         | progress autorewrite with push_word64ToZ
-        | match goal with H : andb _ _ = true |- _ => rewrite Bool.andb_true_iff in H end
-        | progress Z.ltb_to_lt ].
+        | match goal with
+          | [ H : andb _ _ = true |- _ ] => rewrite Bool.andb_true_iff in H
+          | [ H : context[Tuple.lift_option (Tuple.push_option _)] |- _ ]
+            => rewrite Tuple.lift_push_option in H
+          end
+        | progress Z.ltb_to_lt
+        | (progress unfold ZBounds.conditional_subtract in * ); break_match_hyps ].
 Local Ltac related_Z_op_fin_t := repeat related_Z_op_fin_t_step.
 
 Local Opaque Word64.bit_width.
@@ -614,9 +624,13 @@ Proof.
   { apply related_Z_t_map4; related_Z_op_fin_t. }
   { apply related_Z_t_map4; related_Z_op_fin_t. }
   { apply related_Z_t_map1_tuple2; related_Z_op_fin_t;
-      rewrite Word64.word64ToZ_conditional_subtract; try Word64.Rewrites.word64_util_arith.
-    pose proof BoundedWord64.conditional_subtract_bounded.
-    admit. (** TODO(jadep or jgross): Fill me in *) }
+      rewrite Word64.word64ToZ_conditional_subtract; try Word64.Rewrites.word64_util_arith; [].
+    destruct_head' sig; destruct_head' and; subst.
+    eapply BoundedWord64.conditional_subtract_bounded_lite
+    with (xbw := {| BoundedWord64.value := _ |});
+      [ .. | eassumption ]; reflexivity.
+    Grab Existential Variables.
+    omega. }
 Qed.
 
 Create HintDb interp_related discriminated.
