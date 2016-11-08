@@ -492,7 +492,10 @@ Local Ltac Word64.Rewrites.word64_util_arith ::=
             | eapply Z.le_lt_trans; [ eapply Z.log2_le_mono | eassumption ];
               apply Z.min_case_strong; intros;
               first [ etransitivity; [ apply Z.land_upper_bound_l | ]; omega
-                    | etransitivity; [ apply Z.land_upper_bound_r | ]; omega ] ].
+                    | etransitivity; [ apply Z.land_upper_bound_r | ]; omega ]
+            | rewrite Z.log2_lor by omega;
+              apply Z.max_case_strong; intro;
+              (eapply Z.le_lt_trans; [ eapply Z.log2_le_mono; eassumption | assumption ]) ].
 Local Ltac related_Z_op_t_step :=
   first [ progress related_word64_op_t_step
         | progress cbv [related'_Z proj_eq_rel BoundedWord64.to_Z' BoundedWord64.to_word64' Word64.to_Z BoundedWord64.boundedWordToWord64 BoundedWord64.value] in *
@@ -538,6 +541,8 @@ Local Ltac related_Z_op_fin_t := repeat related_Z_op_fin_t_step.
 Axiom proof_admitted : False.
 Tactic Notation "admit" := abstract case proof_admitted.
 
+Local Opaque Word64.bit_width.
+
 Lemma related_Z_op : related_op related_Z (@BoundedWord64.interp_op) (@Z.interp_op).
 Proof.
   let op := fresh in intros ?? op; destruct op; simpl.
@@ -547,10 +552,7 @@ Proof.
   { apply related_Z_t_map2; related_Z_op_fin_t. }
   { apply related_Z_t_map2; related_Z_op_fin_t. }
   { apply related_Z_t_map2; related_Z_op_fin_t. }
-  { apply related_Z_t_map2; related_Z_op_fin_t.
-    rewrite Word64.word64ToZ_lor; try Word64.Rewrites.word64_util_arith.
-    admit. (* TODO: Fill me in *)
-    admit. (* TODO: Fill me in *) }
+  { apply related_Z_t_map2; related_Z_op_fin_t. }
   { apply related_Z_t_map2; related_Z_op_fin_t; admit. }
   { related_Z_op_t; admit. }
   { related_Z_op_t; admit. }
