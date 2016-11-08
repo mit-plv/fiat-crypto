@@ -2130,7 +2130,7 @@ Module Z.
   Qed.
   Hint Resolve log2_ones_lt_nonneg : zarith.
 
-  Lemma log2_lt_pow2_alt a b : 0 < b -> a < 2^b <-> Z.log2 a < b.
+  Lemma log2_lt_pow2_alt a b : 0 < b -> (a < 2^b <-> Z.log2 a < b).
   Proof.
     destruct (Z_lt_le_dec 0 a); auto using Z.log2_lt_pow2; [].
     rewrite Z.log2_nonpos by omega.
