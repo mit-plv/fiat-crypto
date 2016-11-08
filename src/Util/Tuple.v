@@ -256,7 +256,7 @@ Proof.
                | progress simpl in *
                | progress specialize_by exact eq_refl
                | reflexivity
-               | apply conj
+               | split
                | intro ].
 Qed.
 
