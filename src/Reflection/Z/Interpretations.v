@@ -7,7 +7,8 @@ Require Import Crypto.ModularArithmetic.ModularBaseSystemListZOperations.
 Require Import Crypto.Util.Equality.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Option.
-Require Import Crypto.Util.HList.
+Require Crypto.Util.Tuple.
+Require Crypto.Util.HList.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.
@@ -235,7 +236,7 @@ Module Word64.
                  | rewrite Tuple.map_map
                  | rewrite HList.Tuple.map_id_ext
                  | match goal with
-                   | [ H : hlist _ _ |- hlist _ _ ]
+                   | [ H : HList.hlist _ _ |- HList.hlist _ _ ]
                      => revert H; apply HList.hlist_impl
                    end
                  | apply HList.const ].
@@ -288,6 +289,14 @@ Module Word64.
     Hint Rewrite <- word64ToZ_land using word64_util_arith : pull_word64ToZ.
     Hint Rewrite word64ToZ_lor using word64_util_arith : push_word64ToZ.
     Hint Rewrite <- word64ToZ_lor using word64_util_arith : pull_word64ToZ.
+    Hint Rewrite word64ToZ_neg using word64_util_arith : push_word64ToZ.
+    Hint Rewrite <- word64ToZ_neg using word64_util_arith : pull_word64ToZ.
+    Hint Rewrite word64ToZ_cmovne using word64_util_arith : push_word64ToZ.
+    Hint Rewrite <- word64ToZ_cmovne using word64_util_arith : pull_word64ToZ.
+    Hint Rewrite word64ToZ_cmovle using word64_util_arith : push_word64ToZ.
+    Hint Rewrite <- word64ToZ_cmovle using word64_util_arith : pull_word64ToZ.
+    Hint Rewrite word64ToZ_conditional_subtract using word64_util_arith : push_word64ToZ.
+    Hint Rewrite <- word64ToZ_conditional_subtract using word64_util_arith : pull_word64ToZ.
   End Rewrites.
 End Word64.
 
@@ -662,7 +671,7 @@ Module BoundedWord64.
         (H : ZBounds.check_conditional_subtract_bounds
                pred_n (BoundedWordToBounds x)
                (Tuple.map BoundedWordToBounds y) (Tuple.map BoundedWordToBounds z) = true)
-    : hlist
+    : HList.hlist
         (fun vlu : Word64.word64 * ZBounds.bounds =>
            (0 <= ZBounds.lower (snd vlu))%Z /\
            (ZBounds.lower (snd vlu) <= Word64.word64ToZ (fst vlu) <= ZBounds.upper (snd vlu))%Z /\
