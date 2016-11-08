@@ -19,6 +19,17 @@ Definition hlist {T n} (f : T -> Type) : forall (Ts : tuple T n), Type :=
   | S n' => @hlist' T n' f
   end.
 
+Fixpoint const' {T n F xs} (v : forall x, F x) : @hlist' T n F xs
+  := match n return forall xs, @hlist' T n F xs with
+     | 0 => fun _ => v _
+     | S n' => fun _ => (@const' T n' F _ v, v _)
+     end xs.
+Definition const {T n F xs} (v : forall x, F x) : @hlist T n F xs
+  := match n return forall xs, @hlist T n F xs with
+     | 0 => fun _ => tt
+     | S n' => fun xs => @const' T n' F xs v
+     end xs.
+
 (* tuple map *)
 Fixpoint mapt' {n A F B} (f : forall x : A, F x -> B) : forall {ts : tuple' A n}, hlist' F ts -> tuple' B n
   := match n return forall ts : tuple' A n, hlist' F ts -> tuple' B n with
