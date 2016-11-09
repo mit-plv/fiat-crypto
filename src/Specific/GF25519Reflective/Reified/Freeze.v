@@ -1,4 +1,4 @@
-Require Import Crypto.Specific.GF25519Reflective.Common.
+Require Import Crypto.Specific.GF25519Reflective.CommonUnOp.
 
 Definition rfreezeZ_sig : rexpr_unop_sig freeze. Proof. reify_sig. Defined.
 Definition rfreezeW := Eval vm_compute in rword_of_Z rfreezeZ_sig.

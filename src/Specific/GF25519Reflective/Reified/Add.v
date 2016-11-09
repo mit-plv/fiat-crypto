@@ -1,4 +1,4 @@
-Require Import Crypto.Specific.GF25519Reflective.Common.
+Require Import Crypto.Specific.GF25519Reflective.CommonBinOp.
 
 Definition raddZ_sig : rexpr_binop_sig add. Proof. reify_sig. Defined.
 Definition raddW := Eval vm_compute in rword_of_Z raddZ_sig.

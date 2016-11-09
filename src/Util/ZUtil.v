@@ -944,6 +944,7 @@ Module Z.
       rewrite Z.ones_succ by assumption.
       zero_bounds.
   Qed.
+  Hint Resolve ones_nonneg : zarith.
 
   Lemma ones_pos_pos : forall i, (0 < i) -> 0 < Z.ones i.
   Proof.
@@ -953,6 +954,7 @@ Module Z.
     apply Z.lt_succ_lt_pred.
     apply Z.pow_gt_1; omega.
   Qed.
+  Hint Resolve ones_pos_pos : zarith.
 
   Lemma pow2_mod_id_iff : forall a n, 0 <= n ->
                                       (Z.pow2_mod a n = a <-> 0 <= a < 2 ^ n).
@@ -2128,7 +2130,7 @@ Module Z.
   Qed.
   Hint Resolve log2_ones_lt_nonneg : zarith.
 
-  Lemma log2_lt_pow2_alt a b : 0 < b -> a < 2^b <-> Z.log2 a < b.
+  Lemma log2_lt_pow2_alt a b : 0 < b -> (a < 2^b <-> Z.log2 a < b).
   Proof.
     destruct (Z_lt_le_dec 0 a); auto using Z.log2_lt_pow2; [].
     rewrite Z.log2_nonpos by omega.

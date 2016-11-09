@@ -88,6 +88,18 @@ Proof.
   destruct n; [ constructor | apply hlist'_impl ].
 Defined.
 
+Local Arguments Tuple.map : simpl never.
+Lemma hlist_map {n A B F} {f:A -> B} (xs:tuple A n)
+  : hlist F (Tuple.map f xs) = hlist (fun x => F (f x)) xs.
+Proof.
+  destruct n as [|n]; [ reflexivity | ].
+  induction n; [ reflexivity | ].
+  specialize (IHn (fst xs)).
+  destruct xs; rewrite Tuple.map_S.
+  simpl @hlist in *; rewrite <- IHn.
+  reflexivity.
+Qed.
+
 Module Tuple.
   Lemma map_id_ext {n A} (f : A -> A) (xs:tuple A n)
   : hlist (fun x => f x = x) xs -> Tuple.map f xs = xs.

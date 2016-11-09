@@ -1,4 +1,4 @@
-Require Import Crypto.Specific.GF25519Reflective.Common.
+Require Import Crypto.Specific.GF25519Reflective.CommonBinOp.
 
 Definition rcarry_subZ_sig : rexpr_binop_sig carry_sub. Proof. reify_sig. Defined.
 Definition rcarry_subW := Eval vm_compute in rword_of_Z rcarry_subZ_sig.

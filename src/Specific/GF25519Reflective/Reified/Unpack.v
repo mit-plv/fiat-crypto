@@ -1,4 +1,4 @@
-Require Import Crypto.Specific.GF25519Reflective.Common.
+Require Import Crypto.Specific.GF25519Reflective.CommonUnOpWireToFE.
 
 Definition runpackZ_sig : rexpr_unop_WireToFE_sig unpack. Proof. reify_sig. Defined.
 Definition runpackW := Eval vm_compute in rword_of_Z runpackZ_sig.

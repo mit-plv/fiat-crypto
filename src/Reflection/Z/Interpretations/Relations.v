@@ -231,8 +231,8 @@ Lemma related_tuples_lift_relation2_untuple'
     <-> LiftOption.lift_relation2
           (interp_flat_type_rel_pointwise2 (fun _ => R))
           TZ
-          (option_map (flat_interp_untuple' (T:=Tbase TZ)) t)
-          (option_map (flat_interp_untuple' (T:=Tbase TZ)) u).
+          (option_map (flat_interp_untuple' (interp_base_type:=fun _ => T) (T:=Tbase TZ)) t)
+          (option_map (flat_interp_untuple' (interp_base_type:=fun _ => U) (T:=Tbase TZ)) u).
 Proof.
   induction n.
   { destruct_head' option; reflexivity. }
@@ -257,8 +257,8 @@ Lemma related_tuples_lift_relation2_untuple'_ext
     <-> LiftOption.lift_relation2
           (interp_flat_type_rel_pointwise2 (fun _ => R))
           TZ
-          (option_map (flat_interp_untuple' (T:=Tbase TZ)) (Tuple.lift_option (flat_interp_tuple (T:=Tbase TZ) t)))
-          (option_map (flat_interp_untuple' (T:=Tbase TZ)) (Tuple.lift_option (flat_interp_tuple (T:=Tbase TZ) u))).
+          (option_map (flat_interp_untuple' (interp_base_type:=fun _ => T) (T:=Tbase TZ)) (Tuple.lift_option (flat_interp_tuple (T:=Tbase TZ) t)))
+          (option_map (flat_interp_untuple' (interp_base_type:=fun _ => U) (T:=Tbase TZ)) (Tuple.lift_option (flat_interp_tuple (T:=Tbase TZ) u))).
 Proof.
   induction n.
   { destruct_head_hnf' option; reflexivity. }
@@ -270,7 +270,7 @@ Proof.
         (etransitivity;
          [ | first [ refine (f_equal (option_map (@fst _ _)) (_ : _ = Some (_, _))); eassumption
                    | refine (f_equal (option_map (@snd _ _)) (_ : _ = Some (_, _))); eassumption ] ]);
-        simpl in *; break_match; simpl in *; congruence. }
+        instantiate; simpl in *; break_match; simpl in *; congruence. }
     destruct_head_hnf' prod;
       destruct_head_hnf' option;
       simpl @fst in *; simpl @snd in *;
@@ -319,6 +319,7 @@ Local Arguments LiftOption.of' _ _ !_ / .
 Local Arguments BoundedWord64.BoundedWordToBounds !_ / .
 
 Local Ltac t_map1_tuple2_t_step :=
+  instantiate;
   first [ exact I
         | reflexivity
         | progress destruct_head_hnf' False
@@ -330,7 +331,7 @@ Local Ltac t_map1_tuple2_t_step :=
         | intro
         | apply @related_tuples_None_left; constructor
         | apply -> @related_tuples_Some_left
-        | apply <- @related_tuples_proj_eq_rel_untuple
+        | refine (proj2 (@related_tuples_proj_eq_rel_untuple _ _ _ _ _ _) _)
         | apply <- @related_tuples_lift_relation2_untuple'
         | match goal with
           | [ H : appcontext[LiftOption.lift_relation] |- _ ]
@@ -491,7 +492,7 @@ Local Ltac Word64.Rewrites.word64_util_arith ::=
                       auto with zarith ]
             | apply Z.land_nonneg; Word64.Rewrites.word64_util_arith
             | eapply Z.le_lt_trans; [ eapply Z.log2_le_mono | eassumption ];
-              apply Z.min_case_strong; intros;
+              instantiate; apply Z.min_case_strong; intros;
               first [ etransitivity; [ apply Z.land_upper_bound_l | ]; omega
                     | etransitivity; [ apply Z.land_upper_bound_r | ]; omega ]
             | rewrite Z.log2_lor by omega;
@@ -556,10 +557,15 @@ Tactic Notation "admit" := abstract case proof_admitted.
 Local Arguments related'_Z _ _ _ / .
 Lemma related_Z_t_map1_tuple2 n opZ opW opB pf
       (H : forall x y z bxs bys bzs brs,
-          Tuple.push_option (Some brs) = opB (Some bxs) (Tuple.push_option (Some bys)) (Tuple.push_option (Some bzs))
+          Some brs = Tuple.lift_option (opB (Some bxs) (Tuple.push_option (Some bys)) (Tuple.push_option (Some bzs)))
           -> is_in_bounds x bxs
-          (*-> is_in_bounds y bys
-          -> is_in_bounds z bzs
+          -> { ybw : Tuple.tuple BoundedWord64.BoundedWord _
+             | Tuple.map BoundedWord64.value ybw = y
+               /\ Tuple.map BoundedWord64.BoundedWordToBounds ybw = bys }
+          -> { zbw : Tuple.tuple BoundedWord64.BoundedWord _
+             | Tuple.map BoundedWord64.value zbw = z
+               /\ Tuple.map BoundedWord64.BoundedWordToBounds zbw = bzs }
+          (*
           -> is_in_bounds (opW x y z) brs*)
           -> Tuple.map Word64.word64ToZ (opW x y z) = (opZ (Word64.word64ToZ x) (Tuple.map Word64.word64ToZ y) (Tuple.map Word64.word64ToZ z)))
       sv1 sv2
@@ -594,8 +600,13 @@ Local Ltac related_Z_op_fin_t_step :=
         | progress inversion_option
         | intro
         | progress autorewrite with push_word64ToZ
-        | match goal with H : andb _ _ = true |- _ => rewrite Bool.andb_true_iff in H end
-        | progress Z.ltb_to_lt ].
+        | match goal with
+          | [ H : andb _ _ = true |- _ ] => rewrite Bool.andb_true_iff in H
+          | [ H : context[Tuple.lift_option (Tuple.push_option _)] |- _ ]
+            => rewrite Tuple.lift_push_option in H
+          end
+        | progress Z.ltb_to_lt
+        | (progress unfold ZBounds.conditional_subtract in * ); break_match_hyps ].
 Local Ltac related_Z_op_fin_t := repeat related_Z_op_fin_t_step.
 
 Local Opaque Word64.bit_width.
@@ -614,9 +625,13 @@ Proof.
   { apply related_Z_t_map4; related_Z_op_fin_t. }
   { apply related_Z_t_map4; related_Z_op_fin_t. }
   { apply related_Z_t_map1_tuple2; related_Z_op_fin_t;
-      rewrite Word64.word64ToZ_conditional_subtract; try Word64.Rewrites.word64_util_arith.
-    pose proof BoundedWord64.conditional_subtract_bounded.
-    admit. (** TODO(jadep or jgross): Fill me in *) }
+      rewrite Word64.word64ToZ_conditional_subtract; try Word64.Rewrites.word64_util_arith; [].
+    destruct_head' sig; destruct_head' and; subst.
+    eapply BoundedWord64.conditional_subtract_bounded_lite
+    with (xbw := {| BoundedWord64.value := _ |});
+      [ .. | eassumption ]; reflexivity.
+    Grab Existential Variables.
+    omega. }
 Qed.
 
 Create HintDb interp_related discriminated.

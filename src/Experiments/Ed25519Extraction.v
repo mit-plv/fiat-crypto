@@ -233,7 +233,7 @@ Extraction Implicit Word.split1 [ 2 ].
 Extraction Implicit Word.split2 [ 2 ].
 Extraction Implicit WordUtil.cast_word [1 2 3].
 Extraction Implicit WordUtil.wfirstn [ 2 4 ].
-Extract Inlined Constant WordUtil.cast_word => "".
+Extraction Inline WordUtil.cast_word.
 Extract Inductive Word.word => "[Prelude.Bool]" [ "[]" "(:)" ]
   "(\fWO fWS w -> {- match_on_word -} case w of {[] -> fWO (); (b:w') -> fWS b w' } )".
 

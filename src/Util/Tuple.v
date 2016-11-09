@@ -20,6 +20,42 @@ Definition tuple T n : Type :=
   | S n' => tuple' T n'
   end.
 
+(** right-associated tuples *)
+Fixpoint rtuple' T n : Type :=
+  match n with
+  | O => T
+  | S n' => (T * rtuple' T n')%type
+  end.
+
+Definition rtuple T n : Type :=
+  match n with
+  | O => unit
+  | S n' => rtuple' T n'
+  end.
+
+Fixpoint rsnoc' T n {struct n} : forall (x : rtuple' T n) (y : T), rtuple' T (S n)
+  := match n return forall (x : rtuple' T n) (y : T), rtuple' T (S n) with
+     | O => fun x y => (x, y)
+     | S n' => fun x y => (fst x, @rsnoc' T n' (snd x) y)
+     end.
+Global Arguments rsnoc' {T n} _ _.
+
+Fixpoint assoc_right' {n T} {struct n}
+  : tuple' T n -> rtuple' T n
+  := match n return tuple' T n -> rtuple' T n with
+     | 0 => fun x => x
+     | S n' => fun ts => let xs := @assoc_right' n' T (fst ts) in
+                         let x := snd ts in
+                         rsnoc' xs x
+     end.
+
+Definition assoc_right {n T}
+  : tuple T n -> rtuple T n
+  := match n with
+     | 0 => fun x => x
+     | S n' => @assoc_right' n' T
+     end.
+
 Definition tl' {T n} : tuple' T (S n) -> tuple' T n := @fst _ _.
 Definition tl {T n} : tuple T (S n) -> tuple T n :=
   match n with
@@ -168,6 +204,11 @@ Definition on_tuple2 {A B C} (f : list A -> list B -> list C) {a b c : nat}
 Definition map2 {n A B C} (f:A -> B -> C) (xs:tuple A n) (ys:tuple B n) : tuple C n
   := on_tuple2 (map2 f) (fun la lb pfa pfb => eq_trans (@map2_length _ _ _ _ la lb) (eq_trans (f_equal2 _ pfa pfb) (Min.min_idempotent _))) xs ys.
 
+Lemma map2_S {n A B C} (f:A -> B -> C) (xs:tuple' A n) (ys:tuple' B n) (x:A) (y:B)
+  : map2 (n:=S (S n)) f (xs, x) (ys, y) = (map2 (n:=S n) f xs ys, f x y).
+Proof.
+Admitted.
+
 Lemma map_map2 {n A B C D} (f:A -> B -> C) (g:C -> D) (xs:tuple A n) (ys:tuple B n)
   : map g (map2 f xs ys) = map2 (fun a b => g (f a b)) xs ys.
 Proof.
@@ -192,6 +233,23 @@ Lemma map_id_ext {n A} (f : A -> A) (xs:tuple A n)
   : (forall x, f x = x) -> map f xs = xs.
 Proof.
 Admitted.
+
+Lemma map2_map {n A B C A' B'} (f:A -> B -> C) (g:A' -> A) (h:B' -> B) (xs:tuple A' n) (ys:tuple B' n)
+  : map2 f (map g xs) (map h ys) = map2 (fun a b => f (g a) (h b)) xs ys.
+Proof.
+Admitted.
+
+Lemma map2_map_fst {n A B C A'} (f:A -> B -> C) (g:A' -> A) (xs:tuple A' n) (ys:tuple B n)
+  : map2 f (map g xs) ys = map2 (fun a b => f (g a) b) xs ys.
+Proof.
+  rewrite <- (map2_map f g (fun x => x)), map_id; reflexivity.
+Qed.
+
+Lemma map2_map_snd {n A B C B'} (f:A -> B -> C) (g:B' -> B) (xs:tuple A n) (ys:tuple B' n)
+  : map2 f xs (map g ys) = map2 (fun a b => f a (g b)) xs ys.
+Proof.
+  rewrite <- (map2_map f (fun x => x) g), map_id; reflexivity.
+Qed.
 
 Lemma map_map {n A B C} (g : B -> C) (f : A -> B) (xs:tuple A n)
   : map g (map f xs) = map (fun x => g (f x)) xs.
