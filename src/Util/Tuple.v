@@ -33,11 +33,12 @@ Definition rtuple T n : Type :=
   | S n' => rtuple' T n'
   end.
 
-Fixpoint rsnoc' {T n} {struct n} : forall (x : rtuple' T n) (y : T), rtuple' T (S n)
+Fixpoint rsnoc' T n {struct n} : forall (x : rtuple' T n) (y : T), rtuple' T (S n)
   := match n return forall (x : rtuple' T n) (y : T), rtuple' T (S n) with
      | O => fun x y => (x, y)
      | S n' => fun x y => (fst x, @rsnoc' T n' (snd x) y)
      end.
+Global Arguments rsnoc' {T n} _ _.
 
 Fixpoint assoc_right' {n T} {struct n}
   : tuple' T n -> rtuple' T n
