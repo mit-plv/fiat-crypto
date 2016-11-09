@@ -351,7 +351,7 @@ Module ZBounds.
   Definition lor' : bounds -> bounds -> bounds
     := fun x y => let (lx, ux) := x in let (ly, uy) := y in
                                        {| lower := Z.max lx ly;
-                                          upper := 2^(Z.max (Z.log2 (ux+1)) (Z.log2 (uy+1))) - 1 |}.
+                                          upper := 2^(Z.max (Z.log2_up (ux+1)) (Z.log2_up (uy+1))) - 1 |}.
   Definition lor : t -> t -> t := t_map2 lor'.
   Definition neg' : bounds -> bounds -> bounds
     := fun int_width v
