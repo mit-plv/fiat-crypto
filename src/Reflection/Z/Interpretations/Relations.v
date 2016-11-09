@@ -231,8 +231,8 @@ Lemma related_tuples_lift_relation2_untuple'
     <-> LiftOption.lift_relation2
           (interp_flat_type_rel_pointwise2 (fun _ => R))
           TZ
-          (option_map (flat_interp_untuple' (T:=Tbase TZ)) t)
-          (option_map (flat_interp_untuple' (T:=Tbase TZ)) u).
+          (option_map (flat_interp_untuple' (interp_base_type:=fun _ => T) (T:=Tbase TZ)) t)
+          (option_map (flat_interp_untuple' (interp_base_type:=fun _ => U) (T:=Tbase TZ)) u).
 Proof.
   induction n.
   { destruct_head' option; reflexivity. }
@@ -257,8 +257,8 @@ Lemma related_tuples_lift_relation2_untuple'_ext
     <-> LiftOption.lift_relation2
           (interp_flat_type_rel_pointwise2 (fun _ => R))
           TZ
-          (option_map (flat_interp_untuple' (T:=Tbase TZ)) (Tuple.lift_option (flat_interp_tuple (T:=Tbase TZ) t)))
-          (option_map (flat_interp_untuple' (T:=Tbase TZ)) (Tuple.lift_option (flat_interp_tuple (T:=Tbase TZ) u))).
+          (option_map (flat_interp_untuple' (interp_base_type:=fun _ => T) (T:=Tbase TZ)) (Tuple.lift_option (flat_interp_tuple (T:=Tbase TZ) t)))
+          (option_map (flat_interp_untuple' (interp_base_type:=fun _ => U) (T:=Tbase TZ)) (Tuple.lift_option (flat_interp_tuple (T:=Tbase TZ) u))).
 Proof.
   induction n.
   { destruct_head_hnf' option; reflexivity. }
@@ -270,7 +270,7 @@ Proof.
         (etransitivity;
          [ | first [ refine (f_equal (option_map (@fst _ _)) (_ : _ = Some (_, _))); eassumption
                    | refine (f_equal (option_map (@snd _ _)) (_ : _ = Some (_, _))); eassumption ] ]);
-        simpl in *; break_match; simpl in *; congruence. }
+        instantiate; simpl in *; break_match; simpl in *; congruence. }
     destruct_head_hnf' prod;
       destruct_head_hnf' option;
       simpl @fst in *; simpl @snd in *;
@@ -319,6 +319,7 @@ Local Arguments LiftOption.of' _ _ !_ / .
 Local Arguments BoundedWord64.BoundedWordToBounds !_ / .
 
 Local Ltac t_map1_tuple2_t_step :=
+  instantiate;
   first [ exact I
         | reflexivity
         | progress destruct_head_hnf' False
@@ -330,7 +331,7 @@ Local Ltac t_map1_tuple2_t_step :=
         | intro
         | apply @related_tuples_None_left; constructor
         | apply -> @related_tuples_Some_left
-        | apply <- @related_tuples_proj_eq_rel_untuple
+        | refine (proj2 (@related_tuples_proj_eq_rel_untuple _ _ _ _ _ _) _)
         | apply <- @related_tuples_lift_relation2_untuple'
         | match goal with
           | [ H : appcontext[LiftOption.lift_relation] |- _ ]
@@ -491,7 +492,7 @@ Local Ltac Word64.Rewrites.word64_util_arith ::=
                       auto with zarith ]
             | apply Z.land_nonneg; Word64.Rewrites.word64_util_arith
             | eapply Z.le_lt_trans; [ eapply Z.log2_le_mono | eassumption ];
-              apply Z.min_case_strong; intros;
+              instantiate; apply Z.min_case_strong; intros;
               first [ etransitivity; [ apply Z.land_upper_bound_l | ]; omega
                     | etransitivity; [ apply Z.land_upper_bound_r | ]; omega ]
             | rewrite Z.log2_lor by omega;

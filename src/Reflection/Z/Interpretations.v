@@ -904,18 +904,18 @@ Module BoundedWord64.
     eauto.
   Qed.
 
-  Local Notation binop_correct_None op opW opB :=
+  Local Notation binop_correct_None op opB :=
     (forall x y, op (Some x) (Some y) = None -> opB (Some (BoundedWordToBounds x)) (Some (BoundedWordToBounds y)) = None)
       (only parsing).
 
-  Local Notation op4_correct_None op opW opB :=
+  Local Notation op4_correct_None op opB :=
     (forall x y z w, op (Some x) (Some y) (Some z) (Some w) = None
                      -> opB (Some (BoundedWordToBounds x)) (Some (BoundedWordToBounds y))
                             (Some (BoundedWordToBounds z)) (Some (BoundedWordToBounds w))
                         = None)
       (only parsing).
 
-  Local Notation op1_tuple2_correct_None op opW opB :=
+  Local Notation op1_tuple2_correct_None op opB :=
     (forall x y z,
         Tuple.lift_option (op (Some x) (Tuple.push_option (Some y)) (Tuple.push_option (Some z))) = None
         -> Tuple.lift_option
@@ -926,7 +926,7 @@ Module BoundedWord64.
       (only parsing).
 
   Lemma t_map2_correct_None opW opB pf
-    : binop_correct_None (t_map2 opW opB pf) opW opB.
+    : binop_correct_None (t_map2 opW opB pf) opB.
   Proof.
     intros ?? H.
     unfold t_map2 in H; convoy_destruct_in H; destruct_head' ZBounds.bounds;
@@ -936,7 +936,7 @@ Module BoundedWord64.
   Qed.
 
   Lemma t_map4_correct_None opW opB pf
-    : op4_correct_None (t_map4 opW opB pf) opW opB.
+    : op4_correct_None (t_map4 opW opB pf) opB.
   Proof.
     intros ???? H.
     unfold t_map4 in H; convoy_destruct_in H; destruct_head' ZBounds.bounds;
@@ -946,7 +946,7 @@ Module BoundedWord64.
   Qed.
 
   Lemma t_map1_tuple2_correct_None {n} opW opB pf
-    : op1_tuple2_correct_None (t_map1_tuple2 (n:=n) opW opB pf) opW opB.
+    : op1_tuple2_correct_None (t_map1_tuple2 (n:=n) opW opB pf) opB.
   Proof.
     intros ??? H.
     unfold t_map1_tuple2 in H; unfold BoundedWordToBounds in *.
