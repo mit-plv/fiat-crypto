@@ -23,20 +23,14 @@ Section MxDHRepChange.
   Qed.
 
   Ltac t :=
+    let hom := match goal with H : is_homomorphism |- _ => H end in
+    let mhom := constr:(@homomorphism_is_homomorphism _ _ _ _ _ _ _ _ _ _ _ hom) in
     repeat (
-        (let hom := match goal with H : Monoid.is_homomorphism |- _ => H end in
-         repeat (
-             rewrite (@homomorphism_id _ _ _ _ _ _ _ _ _ _ _ _ _ hom)
-           )
-        ) ||
-        (let hom := match goal with H : is_homomorphism |- _ => H end in
-         repeat (
-             rewrite (@homomorphism_one _ _ _ _ _ _ _ _ _ _ _ hom) ||
-             rewrite (@homomorphism_sub _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hom) ||
-             rewrite (@homomorphism_add _ _ _ _ _ _ _ _ _ _ _ hom) ||
-             rewrite (@homomorphism_mul _ _ _ _ _ _ _ _ _ _ _ hom)
-           )
-        ) ||
+        rewrite (@homomorphism_id _ _ _ _ _ _ _ _ _ _ _ _ _ mhom) ||
+        rewrite (@homomorphism_one _ _ _ _ _ _ _ _ _ _ _ hom) ||
+        rewrite (@homomorphism_sub _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hom) ||
+        rewrite (@homomorphism_add _ _ _ _ _ _ _ _ _ _ _ hom) ||
+        rewrite (@homomorphism_mul _ _ _ _ _ _ _ _ _ _ _ hom) ||
         rewrite homomorphism_a24 ||
         rewrite homomorphism_multiplicative_inverse_complete' ||
         reflexivity
@@ -106,7 +100,9 @@ Section MxDHRepChange.
     generalize dependent init; generalize dependent init'.
     induction xs; [solve [eauto]|].
     repeat intro; simpl; rewrite IHxs by eauto.
-    f_equiv; eapply Proper_step'; eauto.
+    apply (_ : Proper ((R ==> eq ==> R) ==> SetoidList.eqlistA eq ==> R ==> R) (@fold_left _ _));
+      try reflexivity;
+      eapply Proper_step'; eauto.
   Qed.
 
   Global Instance Proper_downto {T R} {Equivalence_R:@Equivalence T R} :
