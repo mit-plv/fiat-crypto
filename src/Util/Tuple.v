@@ -20,6 +20,41 @@ Definition tuple T n : Type :=
   | S n' => tuple' T n'
   end.
 
+(** right-associated tuples *)
+Fixpoint rtuple' T n : Type :=
+  match n with
+  | O => T
+  | S n' => (T * rtuple' T n')%type
+  end.
+
+Definition rtuple T n : Type :=
+  match n with
+  | O => unit
+  | S n' => rtuple' T n'
+  end.
+
+Fixpoint rsnoc' {T n} {struct n} : forall (x : rtuple' T n) (y : T), rtuple' T (S n)
+  := match n return forall (x : rtuple' T n) (y : T), rtuple' T (S n) with
+     | O => fun x y => (x, y)
+     | S n' => fun x y => (fst x, @rsnoc' T n' (snd x) y)
+     end.
+
+Fixpoint assoc_right' {n T} {struct n}
+  : tuple' T n -> rtuple' T n
+  := match n return tuple' T n -> rtuple' T n with
+     | 0 => fun x => x
+     | S n' => fun ts => let xs := @assoc_right' n' T (fst ts) in
+                         let x := snd ts in
+                         rsnoc' xs x
+     end.
+
+Definition assoc_right {n T}
+  : tuple T n -> rtuple T n
+  := match n with
+     | 0 => fun x => x
+     | S n' => @assoc_right' n' T
+     end.
+
 Definition tl' {T n} : tuple' T (S n) -> tuple' T n := @fst _ _.
 Definition tl {T n} : tuple T (S n) -> tuple T n :=
   match n with
