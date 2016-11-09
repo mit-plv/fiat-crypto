@@ -161,12 +161,13 @@ Proof.
                                       (Tuple.map2 (n:=S n) _ bounds (Tuple.map (n:=S n) _ v))) = true
                              -> Type)
           with
-          | 0 => fun v bounds pf0 => forall pf1 : (0 <= fst bounds /\ Z.log2 (snd bounds) < Z.of_nat Word64.bit_width)%Z, res
-          | S n' => fun v bounds pf0 => forall pf1 : (0 <= fst (snd bounds) /\ Z.log2 (snd (snd bounds)) < Z.of_nat Word64.bit_width)%Z, @args_to_bounded_helperT n' (fst v) (fst bounds) _ res
+          | 0 => fun v' bounds' pf0 => forall pf1 : (0 <= fst bounds' /\ Z.log2 (snd bounds') < Z.of_nat Word64.bit_width)%Z, res
+          | S n' => fun v' bounds' pf0 => let t := _ in
+                                        forall pf1 : (0 <= fst (snd bounds') /\ Z.log2 (snd (snd bounds')) < Z.of_nat Word64.bit_width)%Z, @args_to_bounded_helperT n' (fst v') (fst bounds') t res
           end v bounds pf).
   { clear -pf0.
     abstract (
-        destruct v, bounds; simpl @fst;
+        destruct v', bounds'; simpl @fst;
         rewrite Tuple.map_S in pf0;
         simpl in pf0;
         rewrite Tuple.map2_S in pf0;
