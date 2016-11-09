@@ -24,12 +24,20 @@ Section MxDHRepChange.
 
   Ltac t :=
     repeat (
-        rewrite homomorphism_id ||
-        rewrite homomorphism_one ||
+        (let hom := match goal with H : Monoid.is_homomorphism |- _ => H end in
+         repeat (
+             rewrite (@homomorphism_id _ _ _ _ _ _ _ _ _ _ _ _ _ hom)
+           )
+        ) ||
+        (let hom := match goal with H : is_homomorphism |- _ => H end in
+         repeat (
+             rewrite (@homomorphism_one _ _ _ _ _ _ _ _ _ _ _ hom) ||
+             rewrite (@homomorphism_sub _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ hom) ||
+             rewrite (@homomorphism_add _ _ _ _ _ _ _ _ _ _ _ hom) ||
+             rewrite (@homomorphism_mul _ _ _ _ _ _ _ _ _ _ _ hom)
+           )
+        ) ||
         rewrite homomorphism_a24 ||
-        rewrite homomorphism_sub ||
-        rewrite homomorphism_add ||
-        rewrite homomorphism_mul ||
         rewrite homomorphism_multiplicative_inverse_complete' ||
         reflexivity
       ).
@@ -75,7 +83,7 @@ Section MxDHRepChange.
 
   Lemma MxLoopIterRepChange b Fu s i Ku (HKu:Keq (FtoK Fu) Ku) : loopiter_eq
     (loopiter_phi (loopiter F Fzero Fone Fadd Fsub Fmul Finv Fa24 Fcswap b tb1 Fu s i))
-    (loopiter K Kzero Kone Kadd Ksub Kmul Kinv Ka24 Kcswap b tb2 Ku (loopiter_phi s) i).  
+    (loopiter K Kzero Kone Kadd Ksub Kmul Kinv Ka24 Kcswap b tb2 Ku (loopiter_phi s) i).
   Proof.
     destruct_head' prod; break_match.
     simpl.
