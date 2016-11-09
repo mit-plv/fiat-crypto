@@ -125,7 +125,7 @@ Section reflection.
   Definition Inline {t} e := @InlineConstGen base_type interp_base_type op postprocess t e.
 End reflection.
 
-Ltac base_reify_op op op_head ::=
+Ltac base_reify_op op op_head expr ::=
      lazymatch op_head with
      | @Interface.ldi => constr:(reify_op op op_head 1 OPldi)
      | @Interface.shrd => constr:(reify_op op op_head 3 OPshrd)

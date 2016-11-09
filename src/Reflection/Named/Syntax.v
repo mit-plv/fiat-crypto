@@ -183,7 +183,7 @@ Global Arguments Var {_ _ _ _ _} _.
 Global Arguments SmartVar {_ _ _ _ _} _.
 Global Arguments SmartConst {_ _ _ _ _} _.
 Global Arguments Op {_ _ _ _ _ _} _ _.
-Global Arguments LetIn {_ _ _ _} _ {_} _ {_} _.
+Global Arguments LetIn {_ _ _ _} _ _ _ {_} _.
 Global Arguments Pair {_ _ _ _ _} _ {_} _.
 Global Arguments Return {_ _ _ _ _} _.
 Global Arguments Abs {_ _ _ _ _ _} _ _.

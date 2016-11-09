@@ -96,23 +96,20 @@ Lemma base_type_eq_semidec_is_dec : forall t1 t2,
 Proof.
   intros t1 t2; destruct t1, t2; simpl; intros; congruence.
 Qed.
-Definition op_beq t1 tR : op t1 tR -> op t1 tR -> option pointed_Prop
-  := fun x y => match x, y with
-             | Add, Add => Some trivial
-             | Add, _ => None
-             | Mul, Mul => Some trivial
-             | Mul, _ => None
-             | Sub, Sub => Some trivial
-             | Sub, _ => None
-             end.
+Definition op_beq t1 tR : op t1 tR -> op t1 tR -> reified_Prop
+  := fun x y => match x, y return bool with
+                | Add, Add => true
+                | Add, _ => false
+                | Mul, Mul => true
+                | Mul, _ => false
+                | Sub, Sub => true
+                | Sub, _ => false
+                end.
 Lemma op_beq_bl t1 tR (x y : op t1 tR)
-  : match op_beq t1 tR x y with
-    | Some p => to_prop p
-    | None => False
-    end -> x = y.
+  : to_prop (op_beq t1 tR x y) -> x = y.
 Proof.
   destruct x; simpl;
-    refine match y with Add => _ | _ => _ end; tauto.
+    refine match y with Add => _ | _ => _ end; simpl; tauto.
 Qed.
 
 Ltac reflect_Wf := WfReflective.reflect_Wf base_type_eq_semidec_is_dec op_beq_bl.

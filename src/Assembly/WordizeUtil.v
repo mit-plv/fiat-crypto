@@ -162,7 +162,7 @@ Section Misc.
       intros x H.
 
     replace (& wones (S n)) with (2 * & (wones n) + N.b2n true)%N
-      by (simpl; nomega).
+      by (simpl; rewrite ?N.succ_double_spec; simpl; nomega).
 
     rewrite N.testbit_succ_r; reflexivity.
   Qed.
@@ -181,7 +181,7 @@ Section Misc.
 
       + replace (& (wones (S (S n))))
            with (2 * (& (wones (S n))) + N.b2n true)%N
-          by (simpl; nomega).
+          by (simpl; rewrite ?N.succ_double_spec; simpl; nomega).
         rewrite Nat2N.inj_succ.
         rewrite N.testbit_succ_r.
         assumption.
@@ -189,7 +189,7 @@ Section Misc.
     - induction k.
 
       + replace (& (wones (S n))) with (2 * (& (wones n)) + N.b2n true)%N
-          by (simpl; nomega).
+          by (simpl; rewrite ?N.succ_double_spec; simpl; nomega).
         rewrite N.testbit_0_r.
         reflexivity.
 
@@ -203,12 +203,12 @@ Section Misc.
           try rewrite Pos.succ_pred_double;
           intuition).
         replace (& (wones (S n))) with (2 * (& (wones n)) + N.b2n true)%N
-          by (simpl; nomega).
+          by (simpl; rewrite ?N.succ_double_spec; simpl; nomega).
         rewrite N.testbit_succ_r.
         assumption.
   Qed.
 
-  
+
   Lemma plus_le: forall {n} (x y: word n),
     (& (x ^+ y) <= &x + &y)%N.
   Proof.
@@ -335,7 +335,7 @@ Section Exp.
       rewrite <- IHn.
       simpl; intuition.
   Qed.
- 
+
   Lemma Npow2_succ: forall n, (Npow2 (S n) = 2 * (Npow2 n))%N.
   Proof. intros; simpl; induction (Npow2 n); intuition. Qed.
 
@@ -459,12 +459,7 @@ Section SpecialFunctions.
        with (N.double (& (wtl x)))
          by (induction (& (wtl x)); simpl; intuition).
 
-    - rewrite N.double_spec.
-      replace (N.succ (2 * & wtl x))
-         with ((2 * (& wtl x)) + 1)%N
-           by nomega.
-      rewrite <- N.succ_double_spec.
-      rewrite N.div2_succ_double.
+    - rewrite N.div2_succ_double.
       reflexivity.
 
     - induction (& (wtl x)); simpl; intuition.
@@ -509,10 +504,12 @@ Section SpecialFunctions.
       induction k'.
 
       + clear IHn; induction x; simpl; intuition.
-        destruct (& x), b; simpl; intuition. 
+        destruct (& x), b; simpl; intuition.
 
       + clear IHk'.
         shatter x; simpl.
+
+        rewrite N.succ_double_spec; simpl.
 
         rewrite kill_match.
         replace (N.pos (Pos.of_succ_nat k'))
@@ -536,7 +533,7 @@ Section SpecialFunctions.
           rewrite Nat2N.id;
           reflexivity.
   Qed.
- 
+
   Lemma wordToN_split1: forall {n m} x,
     & (@split1 n m x) = N.land (& x) (& (wones n)).
   Proof.
@@ -625,7 +622,7 @@ Section SpecialFunctions.
       rewrite N.shiftr_spec; try apply N_ge_0.
       replace (k - N.of_nat n + N.of_nat n)%N with k by nomega.
       rewrite N.land_spec.
-      induction (N.testbit x k); 
+      induction (N.testbit x k);
         replace (N.testbit (& wones n) k) with false;
         simpl; intuition;
         try apply testbit_wones_false;
@@ -648,7 +645,7 @@ Section SpecialFunctions.
 
     - rewrite Nat2N.inj_succ.
       replace (& wones (S x)) with (2 * & (wones x) + N.b2n true)%N
-        by (simpl; nomega).
+        by (simpl; rewrite ?N.succ_double_spec; simpl; nomega).
       replace (N.ones (N.succ _))
          with (2 * N.ones (N.of_nat x) + N.b2n true)%N.
 
@@ -734,7 +731,7 @@ Section SpecialFunctions.
     - propagate_wordToN.
       rewrite N2Nat.id.
       reflexivity.
-    
+
     - rewrite N.land_ones.
       rewrite N.mod_small; try reflexivity.
       rewrite <- (N2Nat.id m).
@@ -997,4 +994,3 @@ Section TopLevel.
 
   Close Scope nword_scope.
 End TopLevel.
-

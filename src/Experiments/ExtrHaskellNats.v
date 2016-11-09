@@ -51,12 +51,18 @@ Module Export Import_NPeano_Nat.
   Extract Inlined Constant ltb => "(Prelude.<)".
   Extract Inlined Constant leb => "(Prelude.<=)".
   Extract Inlined Constant eqb => "(Prelude.==)".
+  Extract Inlined Constant eq_dec => "(Prelude.==)".
   Extract Inlined Constant odd => "Prelude.odd".
   Extract Inlined Constant even => "Prelude.even".
   Extract Constant pred => "(\n -> Prelude.max 0 (Prelude.pred n))".
   Extract Constant sub => "(\n m -> Prelude.max 0 (n Prelude.- m))".
   Extract Constant div => "(\n m -> if m Prelude.== 0 then 0 else Prelude.div n m)".
   Extract Constant modulo => "(\n m -> if m Prelude.== 0 then 0 else Prelude.mod n m)".
+
+  (* XXX: unsound due to potential overflow in the second argument *)
+  Extract Constant shiftr => "(\w n -> Data.Bits.shiftR w (Prelude.fromIntegral n))".
+  Extract Constant shiftl => "(\w n -> Data.Bits.shiftL w (Prelude.fromIntegral n))".
+  Extract Constant testbit => "(\w n -> Data.Bits.testBit w (Prelude.fromIntegral n))".
 End Import_NPeano_Nat.
 
 
@@ -72,17 +78,28 @@ Module Export Import_Init_Nat.
 
   Extract Constant div => "(\n m -> if m Prelude.== 0 then 0 else Prelude.div n m)".
   Extract Constant modulo => "(\n m -> if m Prelude.== 0 then 0 else Prelude.mod n m)".
+
+  (* XXX: unsound due to potential overflow in the second argument *)
+  Extract Constant shiftr => "(\w n -> Data.Bits.shiftR w (Prelude.fromIntegral n))".
+  Extract Constant shiftl => "(\w n -> Data.Bits.shiftL w (Prelude.fromIntegral n))".
+  Extract Constant testbit => "(\w n -> Data.Bits.testBit w (Prelude.fromIntegral n))".
 End Import_Init_Nat.
 
 
 Module Export Import_PeanoNat_Nat.
   Import Coq.Arith.PeanoNat.Nat.
 
+  Extract Inlined Constant eq_dec => "(Prelude.==)".
   Extract Inlined Constant add => "(Prelude.+)".
   Extract Inlined Constant mul => "(Prelude.*)".
   Extract Inlined Constant max => "Prelude.max".
   Extract Inlined Constant min => "Prelude.min".
   Extract Inlined Constant compare => "Prelude.compare".
+
+  (* XXX: unsound due to potential overflow in the second argument *)
+  Extract Constant shiftr => "(\w n -> Data.Bits.shiftR w (Prelude.fromIntegral n))".
+  Extract Constant shiftl => "(\w n -> Data.Bits.shiftL w (Prelude.fromIntegral n))".
+  Extract Constant testbit => "(\w n -> Data.Bits.testBit w (Prelude.fromIntegral n))".
 End Import_PeanoNat_Nat.
 
 Extract Inlined Constant Compare_dec.nat_compare_alt => "Prelude.compare".

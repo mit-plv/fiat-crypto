@@ -44,7 +44,7 @@ Module MxDH. (* from RFC7748 *)
           ((X4, Z4), (X5, Z5))
         end.
 
-    Context {S:Type} {testbit:S->nat->bool} {cswap:bool->F*F->F*F->(F*F)*(F*F)}.
+    Context {cswap:bool->F*F->F*F->(F*F)*(F*F)}.
 
     Fixpoint downto_iter (i:nat) : list nat :=
       match i with
@@ -59,22 +59,22 @@ Module MxDH. (* from RFC7748 *)
 
     (* Ideally, we would verify that this corresponds to x coordinate
     multiplication *)
-    Definition montladder bound (s:S) (u:F) :=
-      let '(_, _, P1, P2, swap) :=
+    Definition montladder bound (testbit:nat->bool) (u:F) :=
+      let '(P1, P2, swap) :=
           downto
-            (s, u, (1, 0), (u, 1), false)
+            ((1, 0), (u, 1), false)
             bound
             (fun state i =>
-               let '(s, x, P1, P2, swap) := state in
-               let s_i := testbit s i in
+               let '(P1, P2, swap) := state in
+               let s_i := testbit i in
                let swap := xor swap s_i in
                let '(P1, P2) := cswap swap P1 P2 in
                let swap := s_i in
-               let '(P1, P2) := ladderstep x P1 P2 in
-               (s, x, P1, P2, swap)
+               let '(P1, P2) := ladderstep u P1 P2 in
+               (P1, P2, swap)
             ) in
       let '((x, z), _) := cswap swap P1 P2 in
-      x/z.
+      x * Finv z.
   End MontgomeryLadderKeyExchange.
 End MxDH.
 

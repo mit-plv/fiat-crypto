@@ -25,8 +25,8 @@ Section language.
   Local Notation wff := (@wff base_type_code interp_base_type op).
   Local Notation wf := (@wf base_type_code interp_base_type op).
 
-  Local Hint Extern 1 => eapply interpf_SmartConst.
-  Local Hint Extern 1 => eapply interpf_SmartVarVar.
+  Local Hint Extern 1 => eapply interpf_SmartConstf.
+  Local Hint Extern 1 => eapply interpf_SmartVarVarf.
 
   Local Ltac t_fin :=
     repeat match goal with
@@ -71,7 +71,7 @@ Section language.
               (existT (fun t : base_type_code => (exprf (Syntax.Tbase t) * interp_base_type t)%type) t
                       (x, x')) G
             -> interpf interp_op x = x')
-    : interp_type_gen_rel_pointwise interp_flat_type (fun _ => @eq _)
+    : interp_type_gen_rel_pointwise (fun _ => @eq _)
                                     (interp interp_op (inline_const e1))
                                     (interp interp_op e2).
   Proof.
@@ -86,7 +86,7 @@ Section language.
 
   Lemma Interp_InlineConst {t} (e : Expr t)
         (wf : Wf e)
-    : interp_type_gen_rel_pointwise interp_flat_type (fun _ => @eq _)
+    : interp_type_gen_rel_pointwise (fun _ => @eq _)
                                     (Interp interp_op (InlineConst e))
                                     (Interp interp_op e).
   Proof.

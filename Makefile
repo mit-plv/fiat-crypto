@@ -12,7 +12,8 @@ HIDE := $(if $(VERBOSE),,@)
 
 .PHONY: coq clean update-_CoqProject cleanall install \
 	install-coqprime clean-coqprime coqprime \
-	specific non-specific
+	specific non-specific \
+	extraction ghc
 
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g'
 
@@ -83,6 +84,31 @@ install-coqprime:
 Makefile.coq: Makefile _CoqProject
 	$(SHOW)'COQ_MAKEFILE -f _CoqProject > $@'
 	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject | sed s'|^\(-include.*\)$$|ifneq ($$(filter-out $(FAST_TARGETS),$$(MAKECMDGOALS)),)~\1~else~ifeq ($$(MAKECMDGOALS),)~\1~endif~endif|g' | tr '~' '\n' | sed s'/^clean:$$/clean::/g' | sed s'/^Makefile: /Makefile-old: /g' | sed s'/^printenv:$$/printenv::/g' > $@
+
+src/Experiments/Ed25519_noimports.hs: src/Experiments/Ed25519Extraction.vo src/Experiments/Ed25519Extraction.v
+
+src/Experiments/Ed25519.hs: src/Experiments/Ed25519_noimports.hs src/Experiments/Ed25519_imports.hs
+	( cd src/Experiments && \
+		< Ed25519_noimports.hs \
+		sed "/import qualified Prelude/r Ed25519_imports.hs" | \
+	  sed 's/ Ed25519_noimports / Ed25519 /g' \
+		> Ed25519.hs )
+
+src/Experiments/X25519.hs: src/Experiments/X25519_noimports.hs src/Experiments/Ed25519_imports.hs
+	( cd src/Experiments && \
+		< X25519_noimports.hs \
+		sed "/import qualified Prelude/r Ed25519_imports.hs" | \
+	  sed 's/ X25519_noimports / X25519 /g' \
+		> X25519.hs )
+
+src/Experiments/Ed25519.o src/Experiments/Ed25519.core: src/Experiments/Ed25519.hs
+	( cd src/Experiments && ghc -XStrict -O3 Ed25519.hs -ddump-simpl > Ed25519.core )
+
+src/Experiments/X25519.o src/Experiments/X25519.core: src/Experiments/X25519.hs
+	( cd src/Experiments && ghc -XStrict -O3 X25519.hs -ddump-simpl > X25519.core )
+
+extraction: src/Experiments/Ed25519.hs src/Experiments/X25519.hs
+ghc: src/Experiments/Ed25519.core src/Experiments/Ed25519.o src/Experiments/X25519.o src/Experiments/X25519.core
 
 clean::
 	rm -f Makefile.coq

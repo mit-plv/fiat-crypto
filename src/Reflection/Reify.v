@@ -6,6 +6,7 @@ Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.InputSyntax.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Notations.
 
 Class reify {varT} (var : varT) {eT} (e : eT) {T : Type} := Build_reify : T.
@@ -67,11 +68,11 @@ Inductive reify_result_helper :=
 | reification_unsuccessful.
 
 (** Override this to get a faster [reify_op] *)
-Ltac base_reify_op op op_head :=
+Ltac base_reify_op op op_head expr :=
   let r := constr:(_ : reify_op op op_head _ _) in
   type of r.
-Ltac reify_op op op_head :=
-  let t := base_reify_op op op_head in
+Ltac reify_op op op_head expr :=
+  let t := base_reify_op op op_head expr in
   constr:(op_info t).
 
 (** Change this with [Ltac reify_debug_level ::= constr:(1).] to get
@@ -122,6 +123,10 @@ Ltac reifyf base_type_code interp_base_type op var e :=
     let ex := reify_rec ex in
     let eC := reify_rec eC in
     mkLetIn ex eC
+  | dlet x := ?ex in @?eC x =>
+    let ex := reify_rec ex in
+    let eC := reify_rec eC in
+    mkLetIn ex eC
   | pair ?a ?b =>
     let a := reify_rec a in
     let b := reify_rec b in
@@ -147,7 +152,7 @@ Ltac reifyf base_type_code interp_base_type op var e :=
     let retv := match constr:(Set) with
                 | _ => let retv := reifyf_var x mkVar in constr:(finished_value retv)
                 | _ => let op_head := head x in
-                       reify_op op op_head
+                       reify_op op op_head x
                 | _ => let c := mkConst t x in
                        constr:(finished_value c)
                 | _ => constr:(reification_unsuccessful)
@@ -185,6 +190,20 @@ Ltac reifyf base_type_code interp_base_type op var e :=
                    let a2 := reify_rec x2 in
                    let args := let a01 := mkPair a0 a1 in mkPair a01 a2 in
                    mkOp (@Prod _ (@Prod _ a0T a1T) a2T) tR op_code args
+              end
+         | 4%nat
+           => lazymatch x with
+              | ?f ?x0 ?x1 ?x2 ?x3
+                => let a0T := (let t := type of x0 in reify_flat_type t) in
+                   let a0 := reify_rec x0 in
+                   let a1T := (let t := type of x1 in reify_flat_type t) in
+                   let a1 := reify_rec x1 in
+                   let a2T := (let t := type of x2 in reify_flat_type t) in
+                   let a2 := reify_rec x2 in
+                   let a3T := (let t := type of x3 in reify_flat_type t) in
+                   let a3 := reify_rec x3 in
+                   let args := let a01 := mkPair a0 a1 in let a012 := mkPair a01 a2 in mkPair a012 a3 in
+                   mkOp (@Prod _ (@Prod _ (@Prod _ a0T a1T) a2T) a3T) tR op_code args
               end
          | _ => cfail2 "Unsupported number of operation arguments in reifyf:"%string nargs
          end
@@ -230,32 +249,56 @@ Ltac Reify' base_type_code interp_base_type op e :=
   end.
 Ltac Reify base_type_code interp_base_type op e :=
   let r := Reify' base_type_code interp_base_type op e in
-  constr:(InputSyntax.Compile base_type_code interp_base_type op r).
+  constr:(@InputSyntax.Compile base_type_code interp_base_type op _ r).
 
 Ltac lhs_of_goal := lazymatch goal with |- ?R ?LHS ?RHS => LHS end.
 Ltac rhs_of_goal := lazymatch goal with |- ?R ?LHS ?RHS => RHS end.
 
-Ltac Reify_rhs base_type_code interp_base_type op interp_op :=
+Ltac Reify_rhs_gen Reify prove_interp_compile_correct interp_op try_tac :=
   let rhs := rhs_of_goal in
-  let RHS := Reify base_type_code interp_base_type op rhs in
-  transitivity (Syntax.Interp interp_op RHS);
+  let RHS := Reify rhs in
+  let RHS' := (eval vm_compute in RHS) in
+  transitivity (Syntax.Interp interp_op RHS');
   [
-  | etransitivity; (* first we strip off the [InputSyntax.Compile]
-                      bit; Coq is bad at inferring the type, so we
-                      help it out by providing it *)
+  | transitivity (Syntax.Interp interp_op RHS);
     [ lazymatch goal with
-      | [ |- @Syntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op (@Tflat _ ?t) (@Compile _ _ _ _ ?e) = _ ]
-        => exact (@InputSyntax.Compile_correct base_type_code interp_base_type op interp_op t e)
-      end
-    | ((* now we unfold the interpretation function, including the
-          parameterized bits; we assume that [hnf] is enough to unfold
-          the interpretation functions that we're parameterized
-          over. *)
-      lazymatch goal with
-      | [ |- @InputSyntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op ?t ?e = _ ]
-        => let interp_base_type' := (eval hnf in interp_base_type) in
-           let interp_op' := (eval hnf in interp_op) in
-           change interp_base_type with interp_base_type';
-           change interp_op with interp_op'
+      | [ |- ?R ?x ?y ]
+        => cut (x = y)
       end;
-      cbv iota beta delta [InputSyntax.Interp interp_type interp_type_gen interp_flat_type interp interpf]; simplify_projections; reflexivity) ] ].
+      [ let H := fresh in
+        intro H; rewrite H; reflexivity
+      | apply f_equal; vm_compute; reflexivity ]
+    | etransitivity; (* first we strip off the [InputSyntax.Compile]
+                        bit; Coq is bad at inferring the type, so we
+                        help it out by providing it *)
+      [ prove_interp_compile_correct ()
+      | try_tac
+          ltac:(fun _
+                => (* now we unfold the interpretation function,
+                      including the parameterized bits; we assume that
+                      [hnf] is enough to unfold the interpretation
+                      functions that we're parameterized over. *)
+                  abstract (
+                      lazymatch goal with
+                      | [ |- ?R (@InputSyntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op ?t ?e) _ ]
+                        => let interp_base_type' := (eval hnf in interp_base_type) in
+                           let interp_op' := (eval hnf in interp_op) in
+                           change interp_base_type with interp_base_type';
+                           change interp_op with interp_op'
+                      end;
+                      cbv iota beta delta [InputSyntax.Interp interp_type interp_type_gen interp_type_gen_hetero interp_flat_type interp interpf]; reflexivity)) ] ] ].
+
+Ltac prove_compile_correct :=
+  fun _ => lazymatch goal with
+           | [ |- @Syntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op (@Tflat _ ?t) (@Compile _ _ _ _ ?e) = _ ]
+             => exact (@InputSyntax.Compile_flat_correct base_type_code interp_base_type op interp_op t e)
+           | [ |- interp_type_gen_rel_pointwise _ (@Syntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op ?t (@Compile _ _ _ _ ?e)) _ ]
+             => exact (@InputSyntax.Compile_correct base_type_code interp_base_type op interp_op t e)
+           end.
+
+Ltac Reify_rhs base_type_code interp_base_type op interp_op :=
+  Reify_rhs_gen
+    ltac:(Reify base_type_code interp_base_type op)
+           prove_compile_correct
+           interp_op
+           ltac:(fun tac => tac ()).

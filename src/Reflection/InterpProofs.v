@@ -16,10 +16,10 @@ Section language.
   Let interp_flat_type := interp_flat_type interp_base_type.
   Context (interp_op : forall src dst, op src dst -> interp_flat_type src -> interp_flat_type dst).
 
-  Lemma interpf_SmartVar t v
-    : Syntax.interpf interp_op (SmartVar (t:=t) v) = v.
+  Lemma interpf_SmartVarf t v
+    : Syntax.interpf interp_op (SmartVarf (t:=t) v) = v.
   Proof.
-    unfold SmartVar; induction t;
+    unfold SmartVarf; induction t;
       repeat match goal with
              | _ => reflexivity
              | _ => progress simpl in *
@@ -28,11 +28,11 @@ Section language.
              end.
   Qed.
 
-  Lemma interpf_SmartConst {t t'} v x x'
+  Lemma interpf_SmartConstf {t t'} v x x'
         (Hin : List.In
                  (existT (fun t : base_type_code => (exprf base_type_code interp_base_type op (Syntax.Tbase t) * interp_base_type t)%type)
                          t (x, x'))
-                 (flatten_binding_list (t := t') base_type_code (SmartConst v) v))
+                 (flatten_binding_list (t := t') base_type_code (SmartConstf v) v))
     : interpf interp_op x = x'.
   Proof.
     clear -Hin.
@@ -42,11 +42,11 @@ Section language.
       intuition (inversion_sigma; inversion_prod; subst; eauto). }
   Qed.
 
-  Lemma interpf_SmartVarVar {t t'} v x x'
+  Lemma interpf_SmartVarVarf {t t'} v x x'
         (Hin : List.In
                  (existT (fun t : base_type_code => (exprf base_type_code interp_base_type op (Syntax.Tbase t) * interp_base_type t)%type)
                          t (x, x'))
-                 (flatten_binding_list (t := t') base_type_code (SmartVarVar v) v))
+                 (flatten_binding_list (t := t') base_type_code (SmartVarVarf v) v))
     : interpf interp_op x = x'.
   Proof.
     clear -Hin.
@@ -56,14 +56,14 @@ Section language.
       intuition (inversion_sigma; inversion_prod; subst; eauto). }
   Qed.
 
-  Lemma interpf_SmartVarVar_eq {t t'} v v' x x'
+  Lemma interpf_SmartVarVarf_eq {t t'} v v' x x'
         (Heq : v = v')
         (Hin : List.In
                  (existT (fun t : base_type_code => (exprf base_type_code interp_base_type op (Syntax.Tbase t) * interp_base_type t)%type)
                          t (x, x'))
-                 (flatten_binding_list (t := t') base_type_code (SmartVarVar v') v))
+                 (flatten_binding_list (t := t') base_type_code (SmartVarVarf v') v))
     : interpf interp_op x = x'.
   Proof.
-    subst; eapply interpf_SmartVarVar; eassumption.
+    subst; eapply interpf_SmartVarVarf; eassumption.
   Qed.
 End language.

@@ -32,8 +32,8 @@ Section language.
     Local Hint Constructors Syntax.wff.
     Local Hint Extern 1 => progress unfold List.In in *.
     Local Hint Resolve wff_in_impl_Proper.
-    Local Hint Resolve wff_SmartVar.
-    Local Hint Resolve wff_SmartConst.
+    Local Hint Resolve wff_SmartVarf.
+    Local Hint Resolve wff_SmartConstf.
 
     Local Ltac t_fin :=
       repeat first [ intro
@@ -42,9 +42,9 @@ Section language.
                    | tauto
                    | progress subst
                    | solve [ auto with nocore
-                           | eapply (@wff_SmartVarVar _ _ _ _ _ _ _ (_ * _)); auto
-                           | eapply wff_SmartConst; eauto with nocore
-                           | eapply wff_SmartVarVar; eauto with nocore ]
+                           | eapply (@wff_SmartVarVarf _ _ _ _ _ _ _ (_ * _)); auto
+                           | eapply wff_SmartConstf; eauto with nocore
+                           | eapply wff_SmartVarVarf; eauto with nocore ]
                    | progress simpl in *
                    | constructor
                    | solve [ eauto ] ].

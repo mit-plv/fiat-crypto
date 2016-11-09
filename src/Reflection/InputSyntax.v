@@ -70,7 +70,7 @@ Section language.
       Fixpoint compilef {t} (e : @exprf (interp_flat_type_gen var) t) : @Syntax.exprf base_type_code interp_base_type op var t
         := match e in exprf t return @Syntax.exprf _ _ _ _ t with
            | Const _ x => Syntax.Const x
-           | Var _ x => Syntax.SmartVar x
+           | Var _ x => Syntax.SmartVarf x
            | Op _ _ op args => Syntax.Op op (@compilef _ args)
            | LetIn _ ex _ eC => Syntax.LetIn (@compilef _ ex) (fun x => @compilef _ (eC x))
            | Pair _ ex _ ey => Syntax.Pair (@compilef _ ex) (@compilef _ ey)
@@ -96,8 +96,9 @@ Section language.
         induction e;
           repeat match goal with
                  | _ => reflexivity
+                 | _ => progress unfold LetIn.Let_In
                  | _ => progress simpl in *
-                 | _ => rewrite interpf_SmartVar
+                 | _ => rewrite interpf_SmartVarf
                  | _ => rewrite <- surjective_pairing
                  | _ => progress rewrite_hyp *
                  | [ |- context[let (x, y) := ?v in _] ]
@@ -105,18 +106,23 @@ Section language.
                  end.
       Qed.
 
-      Lemma Compile_correct {t : flat_type} (e : @Expr t)
-      : Syntax.Interp interp_op (Compile e) = Interp interp_op e.
+      Lemma Compile_correct {t} (e : @Expr t)
+      : interp_type_gen_rel_pointwise (fun _ => @eq _)
+                                      (Syntax.Interp interp_op (Compile e))
+                                      (Interp interp_op e).
       Proof.
         unfold Interp, Compile, Syntax.Interp; simpl.
         pose (e interp_flat_type) as E.
         repeat match goal with |- context[e ?f] => change (e f) with E end.
-        refine match E with
-               | Abs _ _ _ => fun x : Prop => x (* small inversions *)
-               | Return _ _ => _
-               end.
-        apply compilef_correct.
+        clearbody E; clear e.
+        induction E.
+        { apply compilef_correct. }
+        { simpl; auto. }
       Qed.
+
+      Lemma Compile_flat_correct {t : flat_type} (e : @Expr t)
+      : Syntax.Interp interp_op (Compile e) = Interp interp_op e.
+      Proof. exact (@Compile_correct t e). Qed.
     End compile_correct.
   End expr_param.
 End language.
@@ -129,3 +135,4 @@ Global Arguments MatchPair {_ _ _ _ _ _} _ {_} _.
 Global Arguments Pair {_ _ _ _ _} _ {_} _.
 Global Arguments Return {_ _ _ _ _} _.
 Global Arguments Abs {_ _ _ _ _ _} _.
+Global Arguments Compile {_ _ _ t} _ _.

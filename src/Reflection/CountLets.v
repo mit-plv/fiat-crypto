@@ -33,7 +33,7 @@ Section language.
       Fixpoint count_lets_genf {t} (e : exprf t) : nat
         := match e with
            | LetIn tx _ _ eC
-             => count_type_let tx + @count_lets_genf _ (eC (SmartVal var mkVar tx))
+             => count_type_let tx + @count_lets_genf _ (eC (SmartValf var mkVar tx))
            | _ => 0
            end.
       Fixpoint count_lets_gen {t} (e : expr t) : nat

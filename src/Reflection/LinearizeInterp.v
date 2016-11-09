@@ -25,12 +25,13 @@ Section language.
   Local Notation wff := (@wff base_type_code interp_base_type op).
   Local Notation wf := (@wf base_type_code interp_base_type op).
 
-  Local Hint Extern 1 => eapply interpf_SmartConst.
-  Local Hint Extern 1 => eapply interpf_SmartVarVar.
+  Local Hint Extern 1 => eapply interpf_SmartConstf.
+  Local Hint Extern 1 => eapply interpf_SmartVarVarf.
 
   Local Ltac t_fin :=
     repeat match goal with
            | _ => reflexivity
+           | _ => progress unfold LetIn.Let_In
            | _ => progress simpl in *
            | _ => progress intros
            | _ => progress inversion_sigma
@@ -69,7 +70,7 @@ Section language.
   Proof.
     clear.
     induction e;
-      repeat first [ progress rewrite ?interpf_under_letsf, ?interpf_SmartVar
+      repeat first [ progress rewrite ?interpf_under_letsf, ?interpf_SmartVarf
                    | progress simpl
                    | t_fin ].
   Qed.
@@ -77,7 +78,7 @@ Section language.
   Local Hint Resolve interpf_linearizef.
 
   Lemma interp_linearize {t} e
-    : interp_type_gen_rel_pointwise interp_flat_type (fun _ => @eq _)
+    : interp_type_gen_rel_pointwise (fun _ => @eq _)
                                     (interp interp_op (linearize (t:=t) e))
                                     (interp interp_op e).
   Proof.
@@ -86,7 +87,7 @@ Section language.
   Qed.
 
   Lemma Interp_Linearize {t} (e : Expr t)
-    : interp_type_gen_rel_pointwise interp_flat_type (fun _ => @eq _)
+    : interp_type_gen_rel_pointwise (fun _ => @eq _)
                                     (Interp interp_op (Linearize e))
                                     (Interp interp_op e).
   Proof.

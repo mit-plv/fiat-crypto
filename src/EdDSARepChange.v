@@ -106,7 +106,7 @@ Section EdDSA.
             {Proper_ERepEnc:Proper (ErepEq==>Logic.eq) ERepEnc}.
 
     Context {ERepDec : word b -> option Erep}
-            {ERepDec_correct : forall w, ERepDec w = option_map EToRep (Edec w) }.
+            {ERepDec_correct : forall w, option_eq ErepEq (ERepDec w) (option_map EToRep (Edec w)) }.
 
     Context {SRep SRepEq} `{@Equivalence SRep SRepEq} {S2Rep:F l->SRep}.
 
@@ -118,7 +118,7 @@ Section EdDSA.
 
     Context {SRepDec: word b -> option SRep}
             {SRepDec_correct : forall w, option_eq SRepEq (option_map S2Rep (Sdec w)) (SRepDec w)}.
-    
+
     Definition verify_using_representation
                {mlen} (message:word mlen) (pk:word b) (sig:word (b+b))
                : { answer | answer = verify' message pk sig }.
@@ -159,7 +159,22 @@ Section EdDSA.
                              (H _ (split1 b b sig ++ pk ++ message)))
                           (ErepOpp (s))))) (split1 b b sig)) false
               (Sdec (split2 b b sig)))
-                  false); rewrite <-(ERepDec_correct pk).
+           false).
+      (* rewrite with a complicated proper instance for inline code .. *)
+      etransitivity;
+        [| eapply Proper_option_rect_nd_changevalue;
+           [
+           | reflexivity
+           | eapply ERepDec_correct
+           ];
+           [ repeat match goal with
+                    | |- _ => intro
+                    | |- _ => eapply Proper_option_rect_nd_changebody
+                    | |- _ ?x ?x => reflexivity
+                    | H : _ |- _ => rewrite H; reflexivity
+                    end
+           ]
+        ].
 
       etransitivity. Focus 2. {
         eapply Proper_option_rect_nd_changebody; [intro|reflexivity].

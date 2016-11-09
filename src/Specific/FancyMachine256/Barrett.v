@@ -85,8 +85,8 @@ Section reflected.
   Context (m μ : Z)
           (props : fancy_machine.arithmetic ops).
 
-  Let result (v : tuple fancy_machine.W 2) := Syntax.Interp (interp_op _) rexpression_simple m μ (fst v) (snd v).
-  Let assembled_result (v : tuple fancy_machine.W 2) : fancy_machine.W := Core.Interp compiled_syntax m μ (fst v) (snd v).
+  Let result (v : Tuple.tuple fancy_machine.W 2) := Syntax.Interp (interp_op _) rexpression_simple m μ (fst v) (snd v).
+  Let assembled_result (v : Tuple.tuple fancy_machine.W 2) : fancy_machine.W := Core.Interp compiled_syntax m μ (fst v) (snd v).
 
   Theorem sanity : result = expression ops m μ.
   Proof.
@@ -108,7 +108,7 @@ Section reflected.
             (H3 : b^(k - offset) <= m + 1)
             (H4 : 0 <= m < 2^(k + offset))
             (H5 : 0 <= b^(2 * k) / m < b^(k + offset))
-            (v : tuple fancy_machine.W 2)
+            (v : Tuple.tuple fancy_machine.W 2)
             (H6 : 0 <= decode v < b^(2 * k)).
     Theorem correctness : fancy_machine.decode (result v) = decode v mod m.
     Proof.

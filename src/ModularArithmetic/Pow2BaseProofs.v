@@ -331,6 +331,22 @@ Section Pow2BaseProofs.
     intros; apply nth_default_preserves_properties; auto; omega.
   Qed. Hint Resolve nth_default_limb_widths_nonneg.
 
+  Lemma parity_decode : forall x,
+    (0 < nth_default 0 limb_widths 0) ->
+    length x = length limb_widths ->
+    Z.odd (BaseSystem.decode base x) = Z.odd (nth_default 0 x 0).
+  Proof.
+    intros.
+    destruct limb_widths, x; simpl in *; try discriminate; try reflexivity.
+    rewrite peel_decode, nth_default_cons.
+    fold (BaseSystem.mul_each (two_p z)).
+    rewrite <-mul_each_base, mul_each_rep.
+    rewrite Z.odd_add_mul_even; [ f_equal; ring | ].
+    rewrite <-Z.even_spec, two_p_correct.
+    apply Z.even_pow.
+    rewrite @nth_default_cons in *; auto.
+  Qed.
+
   Lemma decode_firstn_pow2_mod : forall us i,
     (i <= length us)%nat ->
     length us = length limb_widths ->

@@ -51,3 +51,9 @@ Definition pull_bool_if_dep {A B} (f : forall b : bool, A b -> B b) (b : bool) (
 Definition pull_bool_if {A B} (f : A -> B) (b : bool) (x : A) (y : A)
   : (if b then f x else f y) = f (if b then x else y)
   := @pull_bool_if_dep (fun _ => A) (fun _ => B) (fun _ => f) b x y.
+
+Definition reflect_iff_gen {P b} : reflect P b -> forall b' : bool, (if b' then P else ~P) <-> b = b'.
+Proof.
+  intros H; apply reflect_iff in H; intro b'; destruct b, b';
+    intuition congruence.
+Qed.

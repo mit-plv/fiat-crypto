@@ -7,7 +7,7 @@ Require Import Crypto.ModularArithmetic.ModularBaseSystemProofs.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemOpt.
 Require Import Crypto.Specific.GF25519.
 Require Import Crypto.Specific.GF25519BoundedCommon.
-(*Require Import Crypto.Assembly.GF25519BoundedInstantiation.*)
+Require Import Crypto.Specific.GF25519Reflective.
 Require Import Bedrock.Word Crypto.Util.WordUtil.
 Require Import Coq.Lists.List Crypto.Util.ListUtil.
 Require Import Crypto.Tactics.VerdiTactics.
@@ -45,11 +45,15 @@ Local Ltac define_unop_WireToFE f opW blem :=
   abstract bounded_wire_digits_t opW blem.
 
 Local Opaque Let_In.
-(*Local Arguments interp_radd / _ _.
+Local Opaque Z.add Z.sub Z.mul Z.shiftl Z.shiftr Z.land Z.lor Z.eqb NToWord64.
+Local Arguments interp_radd / _ _.
 Local Arguments interp_rsub / _ _.
 Local Arguments interp_rmul / _ _.
 Local Arguments interp_ropp / _.
 Local Arguments interp_rfreeze / _.
+Local Arguments interp_rge_modulus / _.
+Local Arguments interp_rpack / _.
+Local Arguments interp_runpack / _.
 Definition addW (f g : fe25519W) : fe25519W := Eval simpl in interp_radd f g.
 Definition subW (f g : fe25519W) : fe25519W := Eval simpl in interp_rsub f g.
 Definition mulW (f g : fe25519W) : fe25519W := Eval simpl in interp_rmul f g.
@@ -57,15 +61,7 @@ Definition oppW (f : fe25519W) : fe25519W := Eval simpl in interp_ropp f.
 Definition freezeW (f : fe25519W) : fe25519W := Eval simpl in interp_rfreeze f.
 Definition ge_modulusW (f : fe25519W) : word64 := Eval simpl in interp_rge_modulus f.
 Definition packW (f : fe25519W) : wire_digitsW := Eval simpl in interp_rpack f.
-Definition unpackW (f : wire_digitsW) : fe25519W := Eval simpl in interp_runpack f.*)
-Definition addW (f g : fe25519W) : fe25519W := Eval cbv beta delta [carry_add] in carry_add f g.
-Definition subW (f g : fe25519W) : fe25519W := Eval cbv beta delta [carry_sub] in carry_sub f g.
-Definition mulW (f g : fe25519W) : fe25519W := Eval cbv beta delta [mul] in mul f g.
-Definition oppW (f : fe25519W) : fe25519W := Eval cbv beta delta [carry_opp] in carry_opp f.
-Definition freezeW (f : fe25519W) : fe25519W := Eval cbv beta delta [freeze] in freeze f.
-Definition ge_modulusW (f : fe25519W) : word64 := Eval cbv beta delta [ge_modulus] in ge_modulus f.
-Definition packW (f : fe25519W) : wire_digitsW := Eval cbv beta delta [pack] in pack f.
-Definition unpackW (f : wire_digitsW) : fe25519W := Eval cbv beta delta [unpack] in unpack f.
+Definition unpackW (f : wire_digitsW) : fe25519W := Eval simpl in interp_runpack f.
 
 Local Transparent Let_In.
 Definition powW (f : fe25519W) chain := fold_chain_opt (proj1_fe25519W one) mulW chain [f].
@@ -78,21 +74,21 @@ Local Ltac port_correct_and_bounded pre_rewrite opW interp_rop rop_cb :=
   intros; apply rop_cb; assumption.
 
 Lemma addW_correct_and_bounded : ibinop_correct_and_bounded addW carry_add.
-Proof. (*port_correct_and_bounded interp_radd_correct addW interp_radd radd_correct_and_bounded. Qed.*) Admitted.
+Proof. port_correct_and_bounded interp_radd_correct addW interp_radd radd_correct_and_bounded. Qed.
 Lemma subW_correct_and_bounded : ibinop_correct_and_bounded subW carry_sub.
-Proof. (*port_correct_and_bounded interp_rsub_correct subW interp_rsub rsub_correct_and_bounded. Qed.*) Admitted.
+Proof. port_correct_and_bounded interp_rsub_correct subW interp_rsub rsub_correct_and_bounded. Qed.
 Lemma mulW_correct_and_bounded : ibinop_correct_and_bounded mulW mul.
-Proof. (*port_correct_and_bounded interp_rmul_correct mulW interp_rmul rmul_correct_and_bounded. Qed.*) Admitted.
+Proof. port_correct_and_bounded interp_rmul_correct mulW interp_rmul rmul_correct_and_bounded. Qed.
 Lemma oppW_correct_and_bounded : iunop_correct_and_bounded oppW carry_opp.
-Proof. (*port_correct_and_bounded interp_ropp_correct oppW interp_ropp ropp_correct_and_bounded. Qed.*) Admitted.
+Proof. port_correct_and_bounded interp_ropp_correct oppW interp_ropp ropp_correct_and_bounded. Qed.
 Lemma freezeW_correct_and_bounded : iunop_correct_and_bounded freezeW freeze.
-Proof. (*port_correct_and_bounded interp_rfreeze_correct freezeW interp_rfreeze rfreeze_correct_and_bounded. Qed.*) Admitted.
+Proof. port_correct_and_bounded interp_rfreeze_correct freezeW interp_rfreeze rfreeze_correct_and_bounded. Qed.
 Lemma ge_modulusW_correct : iunop_FEToZ_correct ge_modulusW ge_modulus.
-Proof. (*port_correct_and_bounded interp_rge_modulus_correct ge_modulusW interp_rge_modulus rge_modulus_correct_and_bounded. Qed.*) Admitted.
+Proof. port_correct_and_bounded interp_rge_modulus_correct ge_modulusW interp_rge_modulus rge_modulus_correct_and_bounded. Qed.
 Lemma packW_correct_and_bounded : iunop_FEToWire_correct_and_bounded packW pack.
-Proof. (*port_correct_and_bounded interp_rpack_correct packW interp_rpack rpack_correct_and_bounded. Qed.*) Admitted.
+Proof. port_correct_and_bounded interp_rpack_correct packW interp_rpack rpack_correct_and_bounded. Qed.
 Lemma unpackW_correct_and_bounded : iunop_WireToFE_correct_and_bounded unpackW unpack.
-Proof. (*port_correct_and_bounded interp_runpack_correct unpackW interp_runpack runpack_correct_and_bounded. Qed.*) Admitted.
+Proof. port_correct_and_bounded interp_runpack_correct unpackW interp_runpack runpack_correct_and_bounded. Qed.
 
 Lemma powW_correct_and_bounded chain : iunop_correct_and_bounded (fun x => powW x chain) (fun x => pow x chain).
 Proof.
@@ -100,8 +96,7 @@ Proof.
   intro x; intros; apply (fold_chain_opt_gen fe25519WToZ is_bounded [x]).
   { reflexivity. }
   { reflexivity. }
-  { intros; progress rewrite <- ?mul_correct,
-            <- ?(fun X Y => proj1 (mulW_correct_and_bounded _ _ X Y)) by assumption.
+  { intros; progress rewrite <- (fun X Y => proj1 (mulW_correct_and_bounded _ _ X Y)) by assumption.
     apply mulW_correct_and_bounded; assumption. }
   { intros; rewrite (fun X Y => proj1 (mulW_correct_and_bounded _ _ X Y)) by assumption; reflexivity. }
   { intros [|?]; autorewrite with simpl_nth_default;
@@ -131,11 +126,8 @@ Proof.
 Defined.
 
 Definition fieldwisebW (f g : fe25519W) : bool :=
-  Eval cbv beta iota delta [proj1_sig fieldwisebW_sig] in
-    let '(f0, f1, f2, f3, f4, f5, f6, f7, f8, f9) := f in
-    let '(g0, g1, g2, g3, g4, g5, g6, g7, g8, g9) := g in
-    proj1_sig (fieldwisebW_sig (f0, f1, f2, f3, f4, f5, f6, f7, f8, f9)
-                               (g0, g1, g2, g3, g4, g5, g6, g7, g8, g9)).
+  Eval cbv [proj1_sig fieldwisebW_sig appify2 app_fe25519W] in
+    appify2 (fun f g => proj1_sig (fieldwisebW_sig f g)) f g.
 
 Lemma fieldwisebW_correct f g
   : fieldwisebW f g = GF25519.fieldwiseb (fe25519WToZ f) (fe25519WToZ g).
@@ -167,11 +159,8 @@ Proof.
 Defined.
 
 Definition eqbW (f g : fe25519W) : bool :=
-  Eval cbv beta iota delta [proj1_sig eqbW_sig] in
-    let '(f0, f1, f2, f3, f4, f5, f6, f7, f8, f9) := f in
-    let '(g0, g1, g2, g3, g4, g5, g6, g7, g8, g9) := g in
-    proj1_sig (eqbW_sig (f0, f1, f2, f3, f4, f5, f6, f7, f8, f9)
-                               (g0, g1, g2, g3, g4, g5, g6, g7, g8, g9)).
+  Eval cbv [proj1_sig eqbW_sig appify2 app_fe25519W] in
+    appify2 (fun f g => proj1_sig (eqbW_sig f g)) f g.
 
 Lemma eqbW_correct f g
   : is_bounded (fe25519WToZ f) = true
@@ -183,28 +172,32 @@ Proof.
   exact (proj2_sig (eqbW_sig f' g')).
 Qed.
 
+(* TODO(jgross): use NToWord or such for this constant too *)
 Definition sqrt_m1W : fe25519W :=
   Eval vm_compute in fe25519ZToW sqrt_m1.
 
+Definition GF25519sqrt x : GF25519.fe25519 :=
+  dlet powx := powW (fe25519ZToW x) (chain GF25519.sqrt_ec) in
+  GF25519.sqrt (fe25519WToZ powx) (fe25519WToZ (mulW powx powx)) x.
+
 Definition sqrtW_sig
-  : { sqrtW | iunop_correct_and_bounded sqrtW GF25519.sqrt }.
+  : { sqrtW | iunop_correct_and_bounded sqrtW GF25519sqrt }.
 Proof.
   eexists.
-  unfold GF25519.sqrt.
-  intros; set_evars; rewrite <- (fun pf => proj1 (powW_correct_and_bounded _ _ pf)) by assumption; subst_evars.
-  match goal with
-  | [ |- context G[dlet x := fe25519WToZ ?v in @?f x] ]
-    => let G' := context G[dlet x := v in f (fe25519WToZ x)] in
-       cut G'; cbv beta;
-         [ cbv [Let_In]; exact (fun x => x) | ]
-  end.
+  unfold GF25519sqrt, GF25519.sqrt.
+  intros.
+  rewrite !fe25519ZToW_WToZ.
   split.
   { etransitivity.
     Focus 2. {
       apply Proper_Let_In_nd_changebody_eq; intros.
       set_evars.
+      match goal with (* unfold the first dlet ... in, but only if it's binding a var *)
+      | [ |- ?x = dlet y := fe25519WToZ ?z in ?f ]
+        => is_var z; change (x = match fe25519WToZ z with y => f end)
+      end.
       change sqrt_m1 with (fe25519WToZ sqrt_m1W).
-      rewrite <- !(fun X Y => proj1 (mulW_correct_and_bounded _ _ X Y)), <- eqbW_correct, (pull_bool_if fe25519WToZ)
+      rewrite <- (fun X Y => proj1 (mulW_correct_and_bounded sqrt_m1W a X Y)), <- eqbW_correct, (pull_bool_if fe25519WToZ)
         by repeat match goal with
                   | _ => progress subst
                   | [ |- is_bounded (fe25519WToZ ?op) = true ]
@@ -232,11 +225,10 @@ Proof.
 Defined.
 
 Definition sqrtW (f : fe25519W) : fe25519W :=
-  Eval cbv beta iota delta [proj1_sig sqrtW_sig] in
-    let '(f0, f1, f2, f3, f4, f5, f6, f7, f8, f9) := f in
-    proj1_sig sqrtW_sig (f0, f1, f2, f3, f4, f5, f6, f7, f8, f9).
+  Eval cbv [proj1_sig sqrtW_sig app_fe25519W] in
+    app_fe25519W f (proj1_sig sqrtW_sig).
 
-Lemma sqrtW_correct_and_bounded : iunop_correct_and_bounded sqrtW GF25519.sqrt.
+Lemma sqrtW_correct_and_bounded : iunop_correct_and_bounded sqrtW GF25519sqrt.
 Proof.
   intro f.
   set (f' := f).
@@ -310,7 +302,7 @@ Lemma pow_correct (f : fe25519) chain : proj1_fe25519 (pow f chain) = GF25519.po
 Proof. op_correct_t pow (powW_correct_and_bounded chain). Qed.
 Lemma inv_correct (f : fe25519) : proj1_fe25519 (inv f) = GF25519.inv (proj1_fe25519 f).
 Proof. op_correct_t inv invW_correct_and_bounded. Qed.
-Lemma sqrt_correct (f : fe25519) : proj1_fe25519 (sqrt f) = GF25519.sqrt (proj1_fe25519 f).
+Lemma sqrt_correct (f : fe25519) : proj1_fe25519 (sqrt f) = GF25519sqrt (proj1_fe25519 f).
 Proof. op_correct_t sqrt sqrtW_correct_and_bounded. Qed.
 
 Import Morphisms.

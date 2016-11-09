@@ -1,6 +1,8 @@
 (** * PHOAS Representation of Gallina *)
 Require Import Coq.Strings.String Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 Require Import Crypto.Util.Tuple.
+Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
 
@@ -26,32 +28,50 @@ Section language.
   Notation "A -> B" := (Arrow A B) : ctype_scope.
   Local Coercion Tbase : base_type_code >-> flat_type.
 
+  Fixpoint tuple' T n :=
+    match n with
+    | O => T
+    | S n' => (tuple' T n' * T)%ctype
+    end.
+  Definition tuple T n :=
+    match n with
+    | O => T (* default value; no empty tuple *)
+    | S n' => tuple' T n'
+    end.
+
   Section interp.
     Section type.
-      Context (interp_flat_type : flat_type -> Type).
-      Fixpoint interp_type_gen (t : type) :=
-        match t with
-        | Tflat t => interp_flat_type t
-        | Arrow x y => (interp_flat_type x -> interp_type_gen y)%type
-        end.
-      Section rel.
-        Context (R : forall t, interp_flat_type t -> interp_flat_type t -> Prop).
-        Fixpoint interp_type_gen_rel_pointwise (t : type)
-          : interp_type_gen t -> interp_type_gen t -> Prop :=
+      Section hetero.
+        Context (interp_src_type : base_type_code -> Type).
+        Context (interp_flat_type : flat_type -> Type).
+        Fixpoint interp_type_gen_hetero (t : type) :=
           match t with
-          | Tflat t => R t
-          | Arrow _ y => fun f g => forall x, interp_type_gen_rel_pointwise y (f x) (g x)
+          | Tflat t => interp_flat_type t
+          | Arrow x y => (interp_src_type x -> interp_type_gen_hetero y)%type
           end.
-        Global Instance interp_type_gen_rel_pointwise_Reflexive {H : forall t, Reflexive (R t)}
-          : forall t, Reflexive (interp_type_gen_rel_pointwise t).
-        Proof. induction t; repeat intro; reflexivity. Qed.
-        Global Instance interp_type_gen_rel_pointwise_Symmetric {H : forall t, Symmetric (R t)}
-          : forall t, Symmetric (interp_type_gen_rel_pointwise t).
-        Proof. induction t; simpl; repeat intro; symmetry; eauto. Qed.
-        Global Instance interp_type_gen_rel_pointwise_Transitive {H : forall t, Transitive (R t)}
-          : forall t, Transitive (interp_type_gen_rel_pointwise t).
-        Proof. induction t; simpl; repeat intro; etransitivity; eauto. Qed.
-      End rel.
+      End hetero.
+      Section homogenous.
+        Context (interp_flat_type : flat_type -> Type).
+        Definition interp_type_gen := interp_type_gen_hetero interp_flat_type interp_flat_type.
+        Section rel.
+          Context (R : forall t, interp_flat_type t -> interp_flat_type t -> Prop).
+          Fixpoint interp_type_gen_rel_pointwise (t : type)
+            : interp_type_gen t -> interp_type_gen t -> Prop :=
+            match t with
+            | Tflat t => R t
+            | Arrow _ y => fun f g => forall x, interp_type_gen_rel_pointwise y (f x) (g x)
+            end.
+          Global Instance interp_type_gen_rel_pointwise_Reflexive {H : forall t, Reflexive (R t)}
+            : forall t, Reflexive (interp_type_gen_rel_pointwise t).
+          Proof. induction t; repeat intro; reflexivity. Qed.
+          Global Instance interp_type_gen_rel_pointwise_Symmetric {H : forall t, Symmetric (R t)}
+            : forall t, Symmetric (interp_type_gen_rel_pointwise t).
+          Proof. induction t; simpl; repeat intro; symmetry; eauto. Qed.
+          Global Instance interp_type_gen_rel_pointwise_Transitive {H : forall t, Transitive (R t)}
+            : forall t, Transitive (interp_type_gen_rel_pointwise t).
+          Proof. induction t; simpl; repeat intro; etransitivity; eauto. Qed.
+        End rel.
+      End homogenous.
     End type.
     Section flat_type.
       Context (interp_base_type : base_type_code -> Type).
@@ -61,6 +81,33 @@ Section language.
         | Prod x y => prod (interp_flat_type x) (interp_flat_type y)
         end.
       Definition interp_type := interp_type_gen interp_flat_type.
+      Fixpoint flat_interp_tuple' {T n} : interp_flat_type (tuple' T n) -> Tuple.tuple' (interp_flat_type T) n
+        := match n return interp_flat_type (tuple' T n) -> Tuple.tuple' (interp_flat_type T) n with
+           | O => fun x => x
+           | S n' => fun xy => (@flat_interp_tuple' _ n' (fst xy), snd xy)
+           end.
+      Definition flat_interp_tuple {T n} : interp_flat_type (tuple T n) -> Tuple.tuple (interp_flat_type T) n
+        := match n return interp_flat_type (tuple T n) -> Tuple.tuple (interp_flat_type T) n with
+           | O => fun _ => tt
+           | S n' => @flat_interp_tuple' T n'
+           end.
+      Fixpoint flat_interp_untuple' {T n} : Tuple.tuple' (interp_flat_type T) n -> interp_flat_type (tuple' T n)
+        := match n return Tuple.tuple' (interp_flat_type T) n -> interp_flat_type (tuple' T n) with
+           | O => fun x => x
+           | S n' => fun xy => (@flat_interp_untuple' _ n' (fst xy), snd xy)
+           end.
+      Lemma flat_interp_untuple'_tuple' {T n v}
+        : @flat_interp_untuple' T n (flat_interp_tuple' v) = v.
+      Proof. induction n; [ reflexivity | simpl; rewrite IHn; destruct v; reflexivity ]. Qed.
+      Lemma flat_interp_untuple'_tuple {T n v}
+        : flat_interp_untuple' (@flat_interp_tuple T (S n) v) = v.
+      Proof. apply flat_interp_untuple'_tuple'. Qed.
+      Lemma flat_interp_tuple'_untuple' {T n v}
+        : @flat_interp_tuple' T n (flat_interp_untuple' v) = v.
+      Proof. induction n; [ reflexivity | simpl; rewrite IHn; destruct v; reflexivity ]. Qed.
+      Lemma flat_interp_tuple_untuple' {T n v}
+        : @flat_interp_tuple T (S n) (flat_interp_untuple' v) = v.
+      Proof. apply flat_interp_tuple'_untuple'. Qed.
       Section rel.
         Context (R : forall t, interp_base_type t -> interp_base_type t -> Prop).
         Fixpoint interp_flat_type_rel_pointwise (t : flat_type)
@@ -76,28 +123,52 @@ Section language.
     End flat_type.
     Section rel_pointwise2.
       Section type.
-        Context (interp_flat_type1 interp_flat_type2 : flat_type -> Type)
-                (R : forall t, interp_flat_type1 t -> interp_flat_type2 t -> Prop).
+        Section hetero.
+          Context (interp_src1 interp_src2 : base_type_code -> Type)
+                  (interp_flat_type1 interp_flat_type2 : flat_type -> Type)
+                  (Rsrc : forall t, interp_src1 t -> interp_src2 t -> Prop)
+                  (R : forall t, interp_flat_type1 t -> interp_flat_type2 t -> Prop).
 
-        Fixpoint interp_type_gen_rel_pointwise2 (t : type)
-          : interp_type_gen interp_flat_type1 t -> interp_type_gen interp_flat_type2 t -> Prop
-          := match t with
-             | Tflat t => R t
-             | Arrow src dst => @respectful_hetero _ _ _ _ (R src) (fun _ _ => interp_type_gen_rel_pointwise2 dst)
-             end.
+          Fixpoint interp_type_gen_rel_pointwise2_hetero (t : type)
+            : interp_type_gen_hetero interp_src1 interp_flat_type1 t
+              -> interp_type_gen_hetero interp_src2 interp_flat_type2 t
+              -> Prop
+            := match t with
+               | Tflat t => R t
+               | Arrow src dst => @respectful_hetero _ _ _ _ (Rsrc src) (fun _ _ => interp_type_gen_rel_pointwise2_hetero dst)
+               end.
+        End hetero.
+        Section homogenous.
+          Context (interp_flat_type1 interp_flat_type2 : flat_type -> Type)
+                  (R : forall t, interp_flat_type1 t -> interp_flat_type2 t -> Prop).
+
+          Definition interp_type_gen_rel_pointwise2
+            := interp_type_gen_rel_pointwise2_hetero interp_flat_type1 interp_flat_type2
+                                                     interp_flat_type1 interp_flat_type2
+                                                     R R.
+        End homogenous.
       End type.
       Section flat_type.
-        Context (interp_base_type1 interp_base_type2 : base_type_code -> Type)
-                (R : forall t, interp_base_type1 t -> interp_base_type2 t -> Prop).
-        Fixpoint interp_flat_type_rel_pointwise2 (t : flat_type)
-          : interp_flat_type interp_base_type1 t -> interp_flat_type interp_base_type2 t -> Prop
-          := match t with
-             | Tbase t => R t
-             | Prod x y => fun a b => interp_flat_type_rel_pointwise2 x (fst a) (fst b)
-                                      /\ interp_flat_type_rel_pointwise2 y (snd a) (snd b)
-             end.
-        Definition interp_type_rel_pointwise2
-          := interp_type_gen_rel_pointwise2 _ _ interp_flat_type_rel_pointwise2.
+        Context (interp_base_type1 interp_base_type2 : base_type_code -> Type).
+        Section gen_prop.
+          Context (P : Type)
+                  (and : P -> P -> P)
+                  (R : forall t, interp_base_type1 t -> interp_base_type2 t -> P).
+
+          Fixpoint interp_flat_type_rel_pointwise2_gen_Prop (t : flat_type)
+            : interp_flat_type interp_base_type1 t -> interp_flat_type interp_base_type2 t -> P
+            := match t with
+               | Tbase t => R t
+               | Prod x y => fun a b => and (interp_flat_type_rel_pointwise2_gen_Prop x (fst a) (fst b))
+                                            (interp_flat_type_rel_pointwise2_gen_Prop y (snd a) (snd b))
+               end.
+        End gen_prop.
+
+        Definition interp_flat_type_rel_pointwise2
+          := @interp_flat_type_rel_pointwise2_gen_Prop Prop and.
+
+        Definition interp_type_rel_pointwise2 R
+          := interp_type_gen_rel_pointwise2 _ _ (interp_flat_type_rel_pointwise2 R).
       End flat_type.
     End rel_pointwise2.
   End interp.
@@ -145,24 +216,53 @@ Section language.
                                        (@smart_interp_flat_map f g h pair A (fst v))
                                        (@smart_interp_flat_map f g h pair B (snd v))
            end.
-      Fixpoint SmartVal {T} (val : forall t : base_type_code, T t) t : interp_flat_type_gen T t
+      Fixpoint smart_interp_map_hetero {f g g'}
+               (h : forall x, f x -> g (Tflat (Tbase x)))
+               (pair : forall A B, g (Tflat A) -> g (Tflat B) -> g (Prod A B))
+               (abs : forall A B, (g' A -> g B) -> g (Arrow A B))
+               {t}
+        : interp_type_gen_hetero g' (interp_flat_type_gen f) t -> g t
+        := match t return interp_type_gen_hetero g' (interp_flat_type_gen f) t -> g t with
+           | Tflat _ => @smart_interp_flat_map f (fun x => g (Tflat x)) h pair _
+           | Arrow A B => fun v => abs _ _
+                                       (fun x => @smart_interp_map_hetero f g g' h pair abs B (v x))
+           end.
+      Fixpoint smart_interp_map {f g}
+                 (h : forall x, f x -> g (Tflat (Tbase x)))
+                 (h' : forall x, g (Tflat (Tbase x)) -> f x)
+                 (pair : forall A B, g (Tflat A) -> g (Tflat B) -> g (Prod A B))
+                 (abs : forall A B, (g (Tflat (Tbase A)) -> g B) -> g (Arrow A B))
+                 {t}
+        : interp_type_gen (interp_flat_type_gen f) t -> g t
+        := match t return interp_type_gen (interp_flat_type_gen f) t -> g t with
+           | Tflat _ => @smart_interp_flat_map f (fun x => g (Tflat x)) h pair _
+           | Arrow A B => fun v => abs _ _
+                                       (fun x => @smart_interp_map f g h h' pair abs B (v (h' _ x)))
+           end.
+      Fixpoint SmartValf {T} (val : forall t : base_type_code, T t) t : interp_flat_type_gen T t
         := match t return interp_flat_type_gen T t with
            | Tbase _ => val _
-           | Prod A B => (@SmartVal T val A, @SmartVal T val B)
+           | Prod A B => (@SmartValf T val A, @SmartValf T val B)
            end.
 
       (** [SmartVar] is like [Var], except that it inserts
           pair-projections and [Pair] as necessary to handle
           [flat_type], and not just [base_type_code] *)
-      Definition SmartVar {t} : interp_flat_type_gen var t -> exprf t
+      Definition SmartVarf {t} : interp_flat_type_gen var t -> exprf t
         := @smart_interp_flat_map var exprf (fun t => Var) (fun A B x y => Pair x y) t.
-      Definition SmartVarMap {var var'} (f : forall t, var t -> var' t) {t}
+      Definition SmartVarfMap {var var'} (f : forall t, var t -> var' t) {t}
         : interp_flat_type_gen var t -> interp_flat_type_gen var' t
         := @smart_interp_flat_map var (interp_flat_type_gen var') f (fun A B x y => pair x y) t.
-      Definition SmartVarVar {t} : interp_flat_type_gen var t -> interp_flat_type_gen exprf t
-        := SmartVarMap (fun t => Var).
-      Definition SmartConst {t} : interp_flat_type t -> interp_flat_type_gen exprf t
-        := SmartVarMap (fun t => Const (t:=t)).
+      Definition SmartVarMap {var var'} (f : forall t, var t -> var' t) (f' : forall t, var' t -> var t) {t}
+        : interp_type_gen (interp_flat_type_gen var) t -> interp_type_gen (interp_flat_type_gen var') t
+        := @smart_interp_map var (interp_type_gen (interp_flat_type_gen var')) f f' (fun A B x y => pair x y) (fun A B f x => f x) t.
+      Definition SmartVarMap_hetero {vars vars' var var'} (f : forall t, var t -> var' t) (f' : forall t, vars' t -> vars t) {t}
+        : interp_type_gen_hetero vars (interp_flat_type_gen var) t -> interp_type_gen_hetero vars' (interp_flat_type_gen var') t
+        := @smart_interp_map_hetero var (interp_type_gen_hetero vars' (interp_flat_type_gen var')) vars f (fun A B x y => pair x y) (fun A B f x => f (f' _ x)) t.
+      Definition SmartVarVarf {t} : interp_flat_type_gen var t -> interp_flat_type_gen exprf t
+        := SmartVarfMap (fun t => Var).
+      Definition SmartConstf {t} : interp_flat_type t -> interp_flat_type_gen exprf t
+        := SmartVarfMap (fun t => Const (t:=t)).
     End expr.
 
     Definition Expr (t : type) := forall var, @expr var t.
@@ -175,7 +275,7 @@ Section language.
            | Const _ x => x
            | Var _ x => x
            | Op _ _ op args => @interp_op _ _ op (@interpf _ args)
-           | LetIn _ ex _ eC => let x := @interpf _ ex in @interpf _ (eC x)
+           | LetIn _ ex _ eC => dlet x := @interpf _ ex in @interpf _ (eC x)
            | Pair _ ex _ ey => (@interpf _ ex, @interpf _ ey)
            end.
       Fixpoint interp {t} (e : @expr interp_type t) : interp_type t
@@ -256,32 +356,56 @@ Section language.
     Axiom Wf_admitted : forall {t} (E:Expr t), @Wf t E.
   End expr_param.
 End language.
+Global Arguments tuple' {_}%type_scope _%ctype_scope _%nat_scope.
+Global Arguments tuple {_}%type_scope _%ctype_scope _%nat_scope.
 Global Arguments Prod {_}%type_scope (_ _)%ctype_scope.
 Global Arguments Arrow {_}%type_scope (_ _)%ctype_scope.
 Global Arguments Tbase {_}%type_scope _%ctype_scope.
 
 Ltac admit_Wf := apply Wf_admitted.
 
+Scheme Equality for flat_type.
+Scheme Equality for type.
+
+Global Instance dec_eq_flat_type {base_type_code} `{DecidableRel (@eq base_type_code)}
+  : DecidableRel (@eq (flat_type base_type_code)).
+Proof.
+  repeat intro; hnf; decide equality; apply dec; auto.
+Defined.
+Global Instance dec_eq_type {base_type_code} `{DecidableRel (@eq base_type_code)}
+  : DecidableRel (@eq (type base_type_code)).
+Proof.
+  repeat intro; hnf; decide equality; apply dec; typeclasses eauto.
+Defined.
+
 Global Arguments Const {_ _ _ _ _} _.
 Global Arguments Var {_ _ _ _ _} _.
-Global Arguments SmartVar {_ _ _ _ _} _.
-Global Arguments SmartVal {_} T _ t.
-Global Arguments SmartVarVar {_ _ _ _ _} _.
-Global Arguments SmartVarMap {_ _ _} _ {_} _.
-Global Arguments SmartConst {_ _ _ _ _} _.
+Global Arguments SmartVarf {_ _ _ _ _} _.
+Global Arguments SmartValf {_} T _ t.
+Global Arguments SmartVarVarf {_ _ _ _ _} _.
+Global Arguments SmartVarfMap {_ _ _} _ {_} _.
+Global Arguments SmartVarMap_hetero {_ _ _ _ _} _ _ {_} _.
+Global Arguments SmartVarMap {_ _ _} _ _ {_} _.
+Global Arguments SmartConstf {_ _ _ _ _} _.
 Global Arguments Op {_ _ _ _ _ _} _ _.
 Global Arguments LetIn {_ _ _ _ _} _ {_} _.
 Global Arguments Pair {_ _ _ _ _} _ {_} _.
 Global Arguments Return {_ _ _ _ _} _.
 Global Arguments Abs {_ _ _ _ _ _} _.
+Global Arguments flat_interp_tuple' {_ _ _ _} _.
+Global Arguments flat_interp_tuple {_ _ _ _} _.
+Global Arguments flat_interp_untuple' {_ _ _ _} _.
 Global Arguments interp_type_rel_pointwise2 {_ _ _} R {t} _ _.
+Global Arguments interp_type_gen_rel_pointwise2_hetero {_ _ _ _ _} Rsrc R {t} _ _.
 Global Arguments interp_type_gen_rel_pointwise2 {_ _ _} R {t} _ _.
+Global Arguments interp_flat_type_rel_pointwise2_gen_Prop {_ _ _ P} and R {t} _ _.
 Global Arguments interp_flat_type_rel_pointwise2 {_ _ _} R {t} _ _.
 Global Arguments mapf_interp_flat_type {_ _ _} _ {t} _.
+Global Arguments interp_type_gen_hetero {_} _ _ _.
 Global Arguments interp_type_gen {_} _ _.
 Global Arguments interp_flat_type {_} _ _.
 Global Arguments interp_type_rel_pointwise {_} _ _ {_} _ _.
-Global Arguments interp_type_gen_rel_pointwise {_} _ _ {_} _ _.
+Global Arguments interp_type_gen_rel_pointwise {_ _} _ {_} _ _.
 Global Arguments interp_flat_type_rel_pointwise {_} _ _ {_} _ _.
 Global Arguments interp_type {_} _ _.
 Global Arguments wff {_ _ _ _ _} G {t} _ _.

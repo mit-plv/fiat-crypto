@@ -1,6 +1,9 @@
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.Lists.List.
+Require Import Crypto.Util.Option.
+Require Import Crypto.Util.Prod.
+Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.ListUtil.
 Require Export Crypto.Util.FixCoqMistakes.
@@ -16,6 +19,19 @@ Definition tuple T n : Type :=
   | O => unit
   | S n' => tuple' T n'
   end.
+
+Definition tl' {T n} : tuple' T (S n) -> tuple' T n := @fst _ _.
+Definition tl {T n} : tuple T (S n) -> tuple T n :=
+  match n with
+  | O => fun _ => tt
+  | S n' => @tl' T n'
+  end.
+Definition hd' {T n} : tuple' T n -> T :=
+  match n with
+  | O => fun x => x
+  | S n' => @snd _ _
+  end.
+Definition hd {T n} : tuple T (S n) -> T := @hd' _ _.
 
 Fixpoint to_list' {T} (n:nat) {struct n} : tuple' T n -> list T :=
   match n with
@@ -136,6 +152,13 @@ Definition on_tuple {A B} (f:list A -> list B)
 Definition map {n A B} (f:A -> B) (xs:tuple A n) : tuple B n
   := on_tuple (List.map f) (fun _ => eq_trans (map_length _ _)) xs.
 
+Lemma map_S {n A B} (f:A -> B) (xs:tuple' A n) (x:A)
+  : map (n:=S (S n)) f (xs, x) = (map (n:=S n) f xs, f x).
+Proof.
+  unfold map, on_tuple.
+  simpl @List.map.
+Admitted.
+
 Definition on_tuple2 {A B C} (f : list A -> list B -> list C) {a b c : nat}
            (Hlength : forall la lb, length la = a -> length lb = b -> length (f la lb) = c)
            (ta:tuple A a) (tb:tuple B b) : tuple C c
@@ -144,6 +167,103 @@ Definition on_tuple2 {A B C} (f : list A -> list B -> list C) {a b c : nat}
 
 Definition map2 {n A B C} (f:A -> B -> C) (xs:tuple A n) (ys:tuple B n) : tuple C n
   := on_tuple2 (map2 f) (fun la lb pfa pfb => eq_trans (@map2_length _ _ _ _ la lb) (eq_trans (f_equal2 _ pfa pfb) (Min.min_idempotent _))) xs ys.
+
+Lemma map_map2 {n A B C D} (f:A -> B -> C) (g:C -> D) (xs:tuple A n) (ys:tuple B n)
+  : map g (map2 f xs ys) = map2 (fun a b => g (f a b)) xs ys.
+Proof.
+Admitted.
+
+Lemma map2_fst {n A B C} (f:A -> C) (xs:tuple A n) (ys:tuple B n)
+  : map2 (fun a b => f a) xs ys = map f xs.
+Proof.
+Admitted.
+
+Lemma map2_snd {n A B C} (f:B -> C) (xs:tuple A n) (ys:tuple B n)
+  : map2 (fun a b => f b) xs ys = map f ys.
+Proof.
+Admitted.
+
+Lemma map_id {n A} (xs:tuple A n)
+  : map (fun x => x) xs = xs.
+Proof.
+Admitted.
+
+Lemma map_id_ext {n A} (f : A -> A) (xs:tuple A n)
+  : (forall x, f x = x) -> map f xs = xs.
+Proof.
+Admitted.
+
+Lemma map_map {n A B C} (g : B -> C) (f : A -> B) (xs:tuple A n)
+  : map g (map f xs) = map (fun x => g (f x)) xs.
+Proof.
+Admitted.
+
+Section monad.
+  Context (M : Type -> Type) (bind : forall X Y, M X -> (X -> M Y) -> M Y) (ret : forall X, X -> M X).
+  Fixpoint lift_monad' {n A} {struct n}
+    : tuple' (M A) n -> M (tuple' A n)
+    := match n return tuple' (M A) n -> M (tuple' A n) with
+       | 0 => fun t => t
+       | S n' => fun xy => bind _ _ (@lift_monad' n' _ (fst xy)) (fun x' => bind _ _ (snd xy) (fun y' => ret _ (x', y')))
+       end.
+  Fixpoint push_monad' {n A} {struct n}
+    : M (tuple' A n) -> tuple' (M A) n
+    := match n return M (tuple' A n) -> tuple' (M A) n with
+       | 0 => fun t => t
+       | S n' => fun xy => (@push_monad' n' _ (bind _ _ xy (fun xy' => ret _ (fst xy'))),
+                            bind _ _ xy (fun xy' => ret _ (snd xy')))
+       end.
+  Definition lift_monad {n A}
+    : tuple (M A) n -> M (tuple A n)
+    := match n return tuple (M A) n -> M (tuple A n) with
+       | 0 => ret _
+       | S n' => @lift_monad' n' A
+       end.
+  Definition push_monad {n A}
+    : M (tuple A n) -> tuple (M A) n
+    := match n return M (tuple A n) -> tuple (M A) n with
+       | 0 => fun _ => tt
+       | S n' => @push_monad' n' A
+       end.
+End monad.
+Local Notation option_bind
+  := (fun A B (x : option A) f => match x with
+                                  | Some x' => f x'
+                                  | None => None
+                                  end).
+Definition lift_option {n A} (xs : tuple (option A) n) : option (tuple A n)
+  := lift_monad option option_bind (@Some) xs.
+Definition push_option {n A} (xs : option (tuple A n)) : tuple (option A) n
+  := push_monad option option_bind (@Some) xs.
+
+Lemma lift_push_option {n A} (xs : option (tuple A (S n))) : lift_option (push_option xs) = xs.
+Proof.
+  simpl in *.
+  induction n; [ reflexivity | ].
+  simpl in *; rewrite IHn; clear IHn.
+  destruct xs as [ [? ?] | ]; reflexivity.
+Qed.
+
+Lemma push_lift_option {n A} {xs : tuple (option A) (S n)} {v}
+  : lift_option xs = Some v <-> xs = push_option (Some v).
+Proof.
+  simpl in *.
+  induction n; [ reflexivity | ].
+  specialize (IHn (fst xs) (fst v)).
+  repeat first [ progress destruct_head_hnf' prod
+               | progress destruct_head_hnf' and
+               | progress destruct_head_hnf' iff
+               | progress destruct_head_hnf' option
+               | progress inversion_option
+               | progress inversion_prod
+               | progress subst
+               | progress break_match
+               | progress simpl in *
+               | progress specialize_by exact eq_refl
+               | reflexivity
+               | split
+               | intro ].
+Qed.
 
 Fixpoint fieldwise' {A B} (n:nat) (R:A->B->Prop) (a:tuple' A n) (b:tuple' B n) {struct n} : Prop.
   destruct n; simpl @tuple' in *.

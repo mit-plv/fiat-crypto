@@ -50,7 +50,7 @@ Section language.
             | Some n =>
               @filter_live_namesf
                 (prefix ++ repeat dead_name (count_pairs tx))%list remaining' _
-                (eC (SmartVal (fun _ => list Name) (fun _ => namesx ++ names_to_list n)%list _))
+                (eC (SmartValf (fun _ => list Name) (fun _ => namesx ++ names_to_list n)%list _))
             | None => nil
             end
        | Pair _ ex _ ey => merge_name_lists (@filter_live_namesf prefix remaining _ ex)

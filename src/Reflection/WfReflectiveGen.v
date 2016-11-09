@@ -50,7 +50,7 @@
 Require Import Coq.Arith.Arith Coq.Logic.Eqdep_dec.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Util.Notations Crypto.Util.Tactics Crypto.Util.Option Crypto.Util.Sigma Crypto.Util.Prod Crypto.Util.Decidable Crypto.Util.ListUtil.
-Require Export Crypto.Util.PointedProp. (* export for the [bool >-> option pointed_Prop] coercion *)
+Require Export Crypto.Util.PartiallyReifiedProp. (* export for the [bool >-> reified_Prop] coercion *)
 Require Export Crypto.Util.FixCoqMistakes.
 
 
@@ -67,15 +67,15 @@ Section language.
           (base_type_eq_semidec_transparent : forall t1 t2 : base_type_code, option (t1 = t2))
           (base_type_eq_semidec_is_dec : forall t1 t2, base_type_eq_semidec_transparent t1 t2 = None -> t1 <> t2)
           (op : flat_type base_type_code -> flat_type base_type_code -> Type)
-          (R : forall t, interp_base_type1 t -> interp_base_type2 t -> Prop).
+          (R : forall t, interp_flat_type interp_base_type1 t -> interp_flat_type interp_base_type2 t -> reified_Prop).
   (** In practice, semi-deciding equality of operators should either
       return [Some trivial] or [None], and not make use of the
       generality of [pointed_Prop].  However, we need to use
       [pointed_Prop] internally because we need to talk about equality
       of things of type [var t], for [var : base_type_code -> Type].
       It does not hurt to allow extra generality in [op_beq]. *)
-  Context (op_beq : forall t1 tR, op t1 tR -> op t1 tR -> option pointed_Prop).
-  Context (op_beq_bl : forall t1 tR x y, prop_of_option (op_beq t1 tR x y) -> x = y).
+  Context (op_beq : forall t1 tR, op t1 tR -> op t1 tR -> reified_Prop).
+  Context (op_beq_bl : forall t1 tR x y, to_prop (op_beq t1 tR x y) -> x = y).
   Context {var1 var2 : base_type_code -> Type}.
 
   Local Notation eP := (fun t => var1 (fst t) * var2 (snd t))%type (only parsing).
@@ -151,13 +151,13 @@ Section language.
     { rewrite base_type_eq_semidec_transparent_refl; rewrite_hyp !*; reflexivity. }
   Qed.
 
-  Definition op_beq' t1 tR t1' tR' (x : op t1 tR) (y : op t1' tR') : option pointed_Prop
+  Definition op_beq' t1 tR t1' tR' (x : op t1 tR) (y : op t1' tR') : reified_Prop
     := match flat_type_eq_semidec_transparent t1 t1', flat_type_eq_semidec_transparent tR tR' with
        | Some p, Some q
          => match p in (_ = t1'), q in (_ = tR') return op t1' tR' -> _ with
            | eq_refl, eq_refl => fun y => op_beq _ _ x y
            end y
-       | _, _ => None
+       | _, _ => rFalse
        end.
 
   (** While [Syntax.wff] is parameterized over a list of [sigT (fun t
@@ -178,27 +178,27 @@ Section language.
         about [Syntax.wff] itself.  *)
 
   Definition eq_semidec_and_gen {T} (semidec : forall x y : T, option (x = y))
-             (t t' : T) (f g : T -> Type) (R : forall t, f t -> g t -> Prop)
+             (t t' : T) (f g : T -> Type) (R : forall t, f t -> g t -> reified_Prop)
              (x : f t) (x' : g t')
-    : option pointed_Prop
+    : reified_Prop
     := match semidec t t' with
        | Some p
-         => Some (inject (R _ (eq_rect _ f x _ p) x'))
-       | None => None
+         => R _ (eq_rect _ f x _ p) x'
+       | None => rFalse
        end.
 
   (* Here is where we use the generality of [pointed_Prop], to say
      that two things of type [var1] are equal, and two things of type
      [var2] are equal. *)
-  Definition eq_type_and_var : sigT eP -> sigT eP -> option pointed_Prop
+  Definition eq_type_and_var : sigT eP -> sigT eP -> reified_Prop
     := fun x y => (eq_semidec_and_gen
-                  base_type_eq_semidec_transparent _ _ var1 var1 (fun _ => eq) (fst (projT2 x)) (fst (projT2 y))
+                  base_type_eq_semidec_transparent _ _ var1 var1 (fun _ => rEq) (fst (projT2 x)) (fst (projT2 y))
                 /\ eq_semidec_and_gen
-                     base_type_eq_semidec_transparent _ _ var2 var2 (fun _ => eq) (snd (projT2 x)) (snd (projT2 y)))%option_pointed_prop.
+                     base_type_eq_semidec_transparent _ _ var2 var2 (fun _ => rEq) (snd (projT2 x)) (snd (projT2 y)))%reified_prop.
   Definition rel_type_and_const (t t' : flat_type) (x : interp_flat_type1 t) (y : interp_flat_type2 t')
-    : option pointed_Prop
+    : reified_Prop
     := eq_semidec_and_gen
-         flat_type_eq_semidec_transparent _ _ interp_flat_type1 interp_flat_type2 (fun t => interp_flat_type_rel_pointwise2 R) x y.
+         flat_type_eq_semidec_transparent _ _ interp_flat_type1 interp_flat_type2 R x y.
 
   Definition duplicate_type (ls : list (sigT (fun t => var1 t * var2 t)%type)) : list (sigT eP)
     := List.map (fun v => existT eP (projT1 v, projT1 v) (projT2 v)) ls.
@@ -292,71 +292,61 @@ Section language.
            (e1 : @exprf1 (fun t => nat * var1 t)%type t1)
            (e2 : @exprf2 (fun t => nat * var2 t)%type t2)
            {struct e1}
-    : option pointed_Prop
-    := match e1, e2 return option _ with
+    : reified_Prop
+    := match e1, e2 with
        | Const t0 x, Const t1 y
          => match flat_type_eq_semidec_transparent t0 t1 with
-           | Some p => Some (inject (interp_flat_type_rel_pointwise2 R (eq_rect _ interp_flat_type1 x _ p) y))
-           | None => None
+           | Some p => R _ (eq_rect _ interp_flat_type1 x _ p) y
+           | None => rFalse
            end
-       | Const _ _, _ => None
+       | Const _ _, _ => rFalse
        | Var t0 x, Var t1 y
          => match beq_nat (fst x) (fst y), List.nth_error G (List.length G - S (fst x)) with
            | true, Some v => eq_type_and_var v (existT _ (t0, t1) (snd x, snd y))
-           | _, _ => None
+           | _, _ => rFalse
            end
-       | Var _ _, _ => None
+       | Var _ _, _ => rFalse
        | Op t1 tR op args, Op t1' tR' op' args'
-         => match @reflect_wffT G t1 t1' args args', op_beq' t1 tR t1' tR' op op' with
-           | Some p, Some q => Some (p /\ q)%pointed_prop
-           | _, _ => None
-           end
-       | Op _ _ _ _, _ => None
+         => (@reflect_wffT G t1 t1' args args' /\ op_beq' t1 tR t1' tR' op op')%reified_prop
+       | Op _ _ _ _, _ => rFalse
        | LetIn tx ex tC eC, LetIn tx' ex' tC' eC'
-         => match @reflect_wffT G tx tx' ex ex', @flatten_binding_list2 tx tx', flat_type_eq_semidec_transparent tC tC' with
-           | Some p, Some G0, Some _
-             => Some (p /\ inject (forall (x : interp_flat_type var1 tx) (x' : interp_flat_type var2 tx'),
-                                    match @reflect_wffT (G0 x x' ++ G)%list _ _
-                                                       (eC (snd (natize_interp_flat_type (List.length G) x)))
-                                                       (eC' (snd (natize_interp_flat_type (List.length G) x'))) with
-                                    | Some p => to_prop p
-                                    | None => False
-                                    end))
-           | _, _, _ => None
+         => let p := @reflect_wffT G tx tx' ex ex' in
+            match @flatten_binding_list2 tx tx', flat_type_eq_semidec_transparent tC tC' with
+           | Some G0, Some _
+             => p
+                /\ (∀ (x : interp_flat_type var1 tx) (x' : interp_flat_type var2 tx'),
+                       @reflect_wffT (G0 x x' ++ G)%list _ _
+                                     (eC (snd (natize_interp_flat_type (List.length G) x)))
+                                     (eC' (snd (natize_interp_flat_type (List.length G) x'))))
+           | _, _ => rFalse
            end
-       | LetIn _ _ _ _, _ => None
+       | LetIn _ _ _ _, _ => rFalse
        | Pair tx ex ty ey, Pair tx' ex' ty' ey'
-         => match @reflect_wffT G tx tx' ex ex', @reflect_wffT G ty ty' ey ey' with
-           | Some p, Some q => Some (p /\ q)
-           | _, _ => None
-           end
-       | Pair _ _ _ _, _ => None
-       end%pointed_prop.
+         => @reflect_wffT G tx tx' ex ex' /\ @reflect_wffT G ty ty' ey ey'
+       | Pair _ _ _ _, _ => rFalse
+       end%reified_prop.
 
     Fixpoint reflect_wfT (G : list (sigT (fun t => var1 (fst t) * var2 (snd t))%type))
            {t1 t2 : type}
            (e1 : @expr1 (fun t => nat * var1 t)%type t1)
            (e2 : @expr2 (fun t => nat * var2 t)%type t2)
            {struct e1}
-    : option pointed_Prop
-    := match e1, e2 return option _ with
+    : reified_Prop
+    := match e1, e2 with
        | Return _ x, Return _ y
          => reflect_wffT G x y
-       | Return _ _, _ => None
+       | Return _ _, _ => rFalse
        | Abs tx tR f, Abs tx' tR' f'
          => match @flatten_binding_list2 tx tx', type_eq_semidec_transparent tR tR' with
            | Some G0, Some _
-             => Some (inject (forall (x : interp_flat_type var1 tx) (x' : interp_flat_type var2 tx'),
-                                match @reflect_wfT (G0 x x' ++ G)%list _ _
-                                                   (f (snd (natize_interp_flat_type (List.length G) x)))
-                                                   (f' (snd (natize_interp_flat_type (List.length G) x'))) with
-                                | Some p => to_prop p
-                                | None => False
-                                end))
-           | _, _ => None
+             => ∀ (x : interp_flat_type var1 tx) (x' : interp_flat_type var2 tx'),
+               @reflect_wfT (G0 x x' ++ G)%list _ _
+                            (f (snd (natize_interp_flat_type (List.length G) x)))
+                            (f' (snd (natize_interp_flat_type (List.length G) x')))
+           | _, _ => rFalse
            end
-       | Abs _ _ _, _ => None
-       end%pointed_prop.
+       | Abs _ _ _, _ => rFalse
+       end%reified_prop.
 End language.
 
 Global Arguments reflect_wffT {_ _ _} _ {op} R _ {var1 var2} G {t1 t2} _ _.

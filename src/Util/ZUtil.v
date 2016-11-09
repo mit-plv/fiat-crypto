@@ -4,6 +4,7 @@ Require Import Coq.Structures.Equalities.
 Require Import Coq.omega.Omega Coq.micromega.Psatz Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
 Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Notations.
 Require Import Coq.Lists.List.
 Require Export Crypto.Util.FixCoqMistakes.
@@ -21,6 +22,8 @@ Hint Extern 1 => nia : nia.
 Hint Extern 1 => omega : omega.
 Hint Resolve Z.log2_nonneg Z.div_small Z.mod_small Z.pow_neg_r Z.pow_0_l Z.pow_pos_nonneg Z.lt_le_incl Z.pow_nonzero Z.div_le_upper_bound Z_div_exact_full_2 Z.div_same Z.div_lt_upper_bound Z.div_le_lower_bound Zplus_minus Zplus_gt_compat_l Zplus_gt_compat_r Zmult_gt_compat_l Zmult_gt_compat_r Z.pow_lt_mono_r Z.pow_lt_mono_l Z.pow_lt_mono Z.mul_lt_mono_nonneg Z.div_lt_upper_bound Z.div_pos Zmult_lt_compat_r Z.pow_le_mono_r Z.pow_le_mono_l Z.div_lt : zarith.
 Hint Resolve (fun a b H => proj1 (Z.mod_pos_bound a b H)) (fun a b H => proj2 (Z.mod_pos_bound a b H)) (fun a b pf => proj1 (Z.pow_gt_1 a b pf)) : zarith.
+Hint Resolve (fun n m => proj1 (Z.pred_le_mono n m)) : zarith.
+Hint Resolve (fun a b => proj2 (Z.lor_nonneg a b)) : zarith.
 
 Ltac zutil_arith := solve [ omega | lia | auto with nocore ].
 Ltac zutil_arith_more_inequalities := solve [ zutil_arith | auto with zarith ].
@@ -1083,12 +1086,31 @@ Module Z.
     inversion H; trivial.
   Qed.
 
+  Lemma ones_le x y : x <= y -> Z.ones x <= Z.ones y.
+  Proof.
+    rewrite !Z.ones_equiv; auto with zarith.
+  Qed.
+  Hint Resolve ones_le : zarith.
+
+  Lemma geb_spec0 : forall x y : Z, Bool.reflect (x >= y) (x >=? y).
+  Proof.
+    intros x y; pose proof (Zge_cases x y) as H; destruct (Z.geb x y); constructor; omega.
+  Qed.
+  Lemma gtb_spec0 : forall x y : Z, Bool.reflect (x > y) (x >? y).
+  Proof.
+    intros x y; pose proof (Zgt_cases x y) as H; destruct (Z.gtb x y); constructor; omega.
+  Qed.
+
   Ltac ltb_to_lt_with_hyp H lem :=
     let H' := fresh in
     rename H into H';
     pose proof lem as H;
     rewrite H' in H;
     clear H'.
+
+  Ltac ltb_to_lt_in_goal b' lem :=
+    refine (proj1 (@reflect_iff_gen _ _ lem b') _);
+    cbv beta iota.
 
   Ltac ltb_to_lt :=
     repeat match goal with
@@ -1102,6 +1124,16 @@ Module Z.
              => ltb_to_lt_with_hyp H (Zge_cases x y)
            | [ H : (?x =? ?y) = ?b |- _ ]
              => ltb_to_lt_with_hyp H (eqb_cases x y)
+           | [ |- (?x <? ?y) = ?b ]
+             => ltb_to_lt_in_goal b (Z.ltb_spec0 x y)
+           | [ |- (?x <=? ?y) = ?b ]
+             => ltb_to_lt_in_goal b (Z.leb_spec0 x y)
+           | [ |- (?x >? ?y) = ?b ]
+             => ltb_to_lt_in_goal b (Z.gtb_spec0 x y)
+           | [ |- (?x >=? ?y) = ?b ]
+             => ltb_to_lt_in_goal b (Z.geb_spec0 x y)
+           | [ |- (?x =? ?y) = ?b ]
+             => ltb_to_lt_in_goal b (Z.eqb_spec x y)
            end.
 
   Ltac compare_to_sgn :=
@@ -2054,6 +2086,57 @@ Module Z.
   Qed.
   Hint Resolve shiftr_nonneg_le : zarith.
 
+  Lemma log2_pred_pow2_full a : Z.log2 (Z.pred (2^a)) = Z.max 0 (Z.pred a).
+  Proof.
+    destruct (Z_dec 0 a) as [ [?|?] | ?].
+    { rewrite Z.log2_pred_pow2 by assumption.
+      apply Z.max_case_strong; omega. }
+    { autorewrite with zsimplify; simpl.
+      apply Z.max_case_strong; omega. }
+    { subst; compute; reflexivity. }
+  Qed.
+  Hint Rewrite log2_pred_pow2_full : zsimplify.
+
+  Lemma ones_lt_pow2 x y : 0 <= x <= y -> Z.ones x < 2^y.
+  Proof.
+    rewrite Z.ones_equiv, Z.lt_pred_le.
+    auto with zarith.
+  Qed.
+  Hint Resolve ones_lt_pow2 : zarith.
+
+  Lemma log2_ones_full x : Z.log2 (Z.ones x) = Z.max 0 (Z.pred x).
+  Proof.
+    rewrite Z.ones_equiv, log2_pred_pow2_full; reflexivity.
+  Qed.
+  Hint Rewrite log2_ones_full : zsimplify.
+
+  Lemma log2_ones_lt x y : 0 < x <= y -> Z.log2 (Z.ones x) < y.
+  Proof.
+    rewrite log2_ones_full; apply Z.max_case_strong; omega.
+  Qed.
+  Hint Resolve log2_ones_lt : zarith.
+
+  Lemma log2_ones_le x y : 0 <= x <= y -> Z.log2 (Z.ones x) <= y.
+  Proof.
+    rewrite log2_ones_full; apply Z.max_case_strong; omega.
+  Qed.
+  Hint Resolve log2_ones_le : zarith.
+
+  Lemma log2_ones_lt_nonneg x y : 0 < y -> x <= y -> Z.log2 (Z.ones x) < y.
+  Proof.
+    rewrite log2_ones_full; apply Z.max_case_strong; omega.
+  Qed.
+  Hint Resolve log2_ones_lt_nonneg : zarith.
+
+  Lemma log2_lt_pow2_alt a b : 0 < b -> a < 2^b <-> Z.log2 a < b.
+  Proof.
+    destruct (Z_lt_le_dec 0 a); auto using Z.log2_lt_pow2; [].
+    rewrite Z.log2_nonpos by omega.
+    split; auto with zarith; [].
+    intro; eapply le_lt_trans; [ eassumption | ].
+    auto with zarith.
+  Qed.
+
   Lemma simplify_twice_sub_sub x y : 2 * x - (x - y) = x + y.
   Proof. lia. Qed.
   Hint Rewrite simplify_twice_sub_sub : zsimplify.
@@ -2828,6 +2911,44 @@ for name in names:
   Module RemoveEquivModuloInstances (dummy : Nop).
     Global Remove Hints equiv_modulo_Reflexive equiv_modulo_Symmetric equiv_modulo_Transitive mul_mod_Proper add_mod_Proper sub_mod_Proper opp_mod_Proper modulo_equiv_modulo_Proper eq_to_ProperProxy : typeclass_instances.
   End RemoveEquivModuloInstances.
+
+  Module N2Z.
+    Require Import Coq.NArith.NArith.
+
+    Lemma inj_shiftl: forall x y, Z.of_N (N.shiftl x y) = Z.shiftl (Z.of_N x) (Z.of_N y).
+    Proof.
+      intros.
+      apply Z.bits_inj_iff'; intros k Hpos.
+      rewrite Z2N.inj_testbit; [|assumption].
+      rewrite Z.shiftl_spec; [|assumption].
+
+      assert ((Z.to_N k) >= y \/ (Z.to_N k) < y)%N as g by (
+        unfold N.ge, N.lt; induction (N.compare (Z.to_N k) y); [left|auto|left];
+        intro H; inversion H).
+
+      destruct g as [g|g];
+      [ rewrite N.shiftl_spec_high; [|apply N2Z.inj_le; rewrite Z2N.id|apply N.ge_le]
+      | rewrite N.shiftl_spec_low]; try assumption.
+
+      - rewrite <- N2Z.inj_testbit; f_equal.
+        rewrite N2Z.inj_sub, Z2N.id; [reflexivity|assumption|apply N.ge_le; assumption].
+
+      - apply N2Z.inj_lt in g.
+        rewrite Z2N.id in g; [symmetry|assumption].
+        apply Z.testbit_neg_r; omega.
+    Qed.
+
+    Lemma inj_shiftr: forall x y, Z.of_N (N.shiftr x y) = Z.shiftr (Z.of_N x) (Z.of_N y).
+    Proof.
+      intros.
+      apply Z.bits_inj_iff'; intros k Hpos.
+      rewrite Z2N.inj_testbit; [|assumption].
+      rewrite Z.shiftr_spec, N.shiftr_spec; [|apply N2Z.inj_le; rewrite Z2N.id|]; try assumption.
+      rewrite <- N2Z.inj_testbit; f_equal.
+      rewrite N2Z.inj_add; f_equal.
+      apply Z2N.id; assumption.
+    Qed.
+  End N2Z.
 End Z.
 
 Module Export BoundsTactics.

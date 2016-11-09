@@ -14,6 +14,7 @@ Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Algebra.
+Require Crypto.Spec.Ed25519.
 Import ListNotations.
 Require Import Coq.ZArith.ZArith Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.ZArith.Znumtheory.
 Local Open Scope Z.
@@ -21,8 +22,9 @@ Local Open Scope Z.
 (* BEGIN precomputation. *)
 
 Definition modulus : Z := Eval compute in 2^255 - 19.
-Lemma prime_modulus : prime modulus. Admitted.
-Definition int_width := 32%Z.
+Definition prime_modulus : prime modulus := Crypto.Spec.Ed25519.prime_q.
+Definition int_width := 64%Z.
+Definition freeze_input_bound := 32%Z.
 
 Instance params25519 : PseudoMersenneBaseParams modulus.
   construct_params prime_modulus 10%nat 255.
@@ -46,7 +48,7 @@ Instance carryChain : CarryChain limb_widths.
   contradiction H.
 Defined.
 
-Definition freezePreconditions25519 : freezePreconditions params25519 int_width.
+Definition freezePreconditions25519 : FreezePreconditions freeze_input_bound int_width.
 Proof.
   constructor; compute_preconditions.
 Defined.
@@ -584,23 +586,22 @@ Proof.
   exact (proj2_sig (eqb_sig f' g')).
 Qed.
 
-Definition sqrt_sig (f : fe25519) :
-  { f' : fe25519 | f' = sqrt_5mod8_opt (int_width := int_width) k_ c_ one_ sqrt_m1 f}.
+Definition sqrt_sig (powf powf_squared f : fe25519) :
+  { f' : fe25519 | f' = sqrt_5mod8_opt (int_width := int_width) k_ c_ sqrt_m1 powf powf_squared f}.
 Proof.
   eexists.
   cbv [sqrt_5mod8_opt int_width].
-  rewrite <- pow_correct.
   apply Proper_Let_In_nd_changebody; [reflexivity|intro].
   set_evars. rewrite <-!mul_correct, <-eqb_correct. subst_evars.
   reflexivity.
 Defined.
 
-Definition sqrt (f : fe25519) : fe25519
-  := Eval cbv beta iota delta [proj1_sig sqrt_sig] in proj1_sig (sqrt_sig f).
+Definition sqrt (powf powf_squared f : fe25519) : fe25519
+  := Eval cbv beta iota delta [proj1_sig sqrt_sig] in proj1_sig (sqrt_sig powf powf_squared f).
 
-Definition sqrt_correct (f : fe25519)
-  : sqrt f = sqrt_5mod8_opt k_ c_ one_ sqrt_m1 f
-  := Eval cbv beta iota delta [proj2_sig sqrt_sig] in proj2_sig (sqrt_sig f).
+Definition sqrt_correct (powf powf_squared f : fe25519)
+  : sqrt powf powf_squared f = sqrt_5mod8_opt k_ c_ sqrt_m1 powf powf_squared f
+  := Eval cbv beta iota delta [proj2_sig sqrt_sig] in proj2_sig (sqrt_sig powf powf_squared f).
 
 Definition pack_simpl_sig (f : fe25519) :
   { f' | f' = pack_opt params25519 wire_widths_nonneg bits_eq f }.
