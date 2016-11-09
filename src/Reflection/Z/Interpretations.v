@@ -406,9 +406,9 @@ Module ZBounds.
     : Tuple.tuple t (S pred_n)
     := Tuple.push_option
          match int_width, Tuple.lift_option modulus, Tuple.lift_option value with
-         | Some int_width, Some modulus, Some value
-           => if check_conditional_subtract_bounds pred_n int_width modulus value
-              then Some (conditional_subtract' pred_n int_width modulus value)
+         | Some int_width, Some modulus, Some value'
+           => if check_conditional_subtract_bounds pred_n int_width modulus value'
+              then Some (conditional_subtract' pred_n int_width modulus value')
               else None
          | _, _, _ => None
          end.
