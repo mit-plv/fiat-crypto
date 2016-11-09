@@ -25,7 +25,7 @@ Definition r%(lname)sW_correct_and_bounded
        match proof_admitted with end match proof_admitted with end.
 """ % locals()
     with open(name.replace('_', '') + '.v', 'w') as f:
-        f.write(r"""Require Import Crypto.Specific.GF25519Reflective.Common.
+        f.write(r"""Require Import Crypto.Specific.GF25519Reflective.Common%(uopkind)s.
 
 Definition r%(lname)sZ_sig : rexpr_%(lopkind)s_sig %(lname)s. Proof. reify_sig. Defined.
 Definition r%(lname)sW := Eval vm_compute in rword_of_Z r%(lname)sZ_sig.

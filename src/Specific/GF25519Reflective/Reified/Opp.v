@@ -1,4 +1,4 @@
-Require Import Crypto.Specific.GF25519Reflective.Common.
+Require Import Crypto.Specific.GF25519Reflective.CommonUnOp.
 
 Definition roppZ_sig : rexpr_unop_sig opp. Proof. reify_sig. Defined.
 Definition roppW := Eval vm_compute in rword_of_Z roppZ_sig.

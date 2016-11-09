@@ -126,48 +126,7 @@ Notation correct_and_bounded_genT ropW'v ropZ_sigv
       /\ interp_type_rel_pointwise2 Relations.related_word64 (Interp (@BoundedWord64.interp_op) ropBoundedWord64) (Interp (@Word64.interp_op) ropW))
        (only parsing).
 
-Local Ltac args_to_bounded_helper v :=
-  lazymatch v with
-  | (?x, ?xs)
-    => args_to_bounded_helper x; [ .. | args_to_bounded_helper xs ]
-  | ?w
-    => try refine (_, _); [ refine {| BoundedWord64.value := w |} | .. ]
-  end.
-
-Local Ltac make_args x :=
-  let x' := fresh "x'" in
-  pose (x : id _) as x';
-  cbv [fe25519W wire_digitsW] in x; destruct_head' prod;
-  cbv [fst snd] in *;
-  simpl @fe25519WToZ in *;
-  simpl @wire_digitsWToZ in *;
-  let T := fresh in
-  evar (T : Type);
-  cut T; subst T;
-  [ let H := fresh in
-    intro H;
-    let xv := (eval hnf in x') in
-    args_to_bounded_helper xv;
-    [ instantiate;
-      destruct_head' and;
-      match goal with
-      | [ H : ?T |- _ ]
-        => is_evar T;
-           refine (let c := proj1 H in _); (* work around broken evars in Coq 8.4 *)
-           lazymatch goal with H := proj1 _ |- _ => refine H end
-      end.. ]
-  | instantiate;
-    repeat match goal with H : is_bounded _ = true |- _ => unfold_is_bounded_in H end;
-    repeat match goal with H : wire_digits_is_bounded _ = true |- _ => unfold_is_bounded_in H end;
-    destruct_head' and;
-    Z.ltb_to_lt;
-    repeat first [ eexact I
-                 | apply conj;
-                   [ repeat apply conj; [ | eassumption | eassumption | ];
-                     instantiate; vm_compute; [ refine (fun x => match x with eq_refl => I end) | reflexivity ]
-                   | ] ] ].
-
-Local Ltac app_tuples x y :=
+Ltac app_tuples x y :=
   let tx := type of x in
   lazymatch (eval hnf in tx) with
   | prod _ _ => let xs := app_tuples (snd x) y in
@@ -175,15 +134,119 @@ Local Ltac app_tuples x y :=
   | _ => constr:((x, y))
   end.
 
-Class is_evar {T} (x : T) := make_is_evar : True.
-Hint Extern 0 (is_evar ?e) => is_evar e; exact I : typeclass_instances.
+Local Arguments Tuple.map2 : simpl never.
+Local Arguments Tuple.map : simpl never.
+
+Fixpoint args_to_bounded_helperT {n}
+         (v : Tuple.tuple' Word64.word64 n)
+         (bounds : Tuple.tuple' (Z * Z) n)
+         (pf : List.fold_right
+                 andb true
+                 (Tuple.to_list
+                    _
+                    (Tuple.map2
+                       (n:=S n)
+                       (fun bounds v =>
+                          let '(lower, upper) := bounds in ((lower <=? v)%Z && (v <=? upper)%Z)%bool)
+                       bounds
+                       (Tuple.map (n:=S n) Word64.word64ToZ v))) = true)
+         (res : Type)
+         {struct n}
+  : Type.
+Proof.
+  refine (match n return (forall (v : Tuple.tuple' _ n) (bounds : Tuple.tuple' _ n),
+                             List.fold_right
+                               _ _ (Tuple.to_list
+                                      _
+                                      (Tuple.map2 (n:=S n) _ bounds (Tuple.map (n:=S n) _ v))) = true
+                             -> Type)
+          with
+          | 0 => fun v bounds pf0 => forall pf1 : (0 <= fst bounds /\ Z.log2 (snd bounds) < Z.of_nat Word64.bit_width)%Z, res
+          | S n' => fun v bounds pf0 => forall pf1 : (0 <= fst (snd bounds) /\ Z.log2 (snd (snd bounds)) < Z.of_nat Word64.bit_width)%Z, @args_to_bounded_helperT n' (fst v) (fst bounds) _ res
+          end v bounds pf).
+  { clear -pf0.
+    abstract (
+        destruct v, bounds; simpl @fst;
+        rewrite Tuple.map_S in pf0;
+        simpl in pf0;
+        rewrite Tuple.map2_S in pf0;
+        simpl @List.fold_right in *;
+        rewrite Bool.andb_true_iff in pf0; tauto
+      ). }
+Defined.
+
+Fixpoint args_to_bounded_helper {n} res
+         {struct n}
+  : forall v bounds pf, (Tuple.tuple' BoundedWord64.BoundedWord n -> res) -> @args_to_bounded_helperT n v bounds pf res.
+Proof.
+  refine match n return (forall v bounds pf, (Tuple.tuple' BoundedWord64.BoundedWord n -> res) -> @args_to_bounded_helperT n v bounds pf res) with
+         | 0 => fun v bounds pf f pf' => f {| BoundedWord64.lower := fst bounds ; BoundedWord64.value := v ; BoundedWord64.upper := snd bounds |}
+         | S n'
+           => fun v bounds pf f pf'
+              => @args_to_bounded_helper
+                   n' res (fst v) (fst bounds) _
+                   (fun ts => f (ts, {| BoundedWord64.lower := fst (snd bounds) ; BoundedWord64.value := snd v ; BoundedWord64.upper := snd (snd bounds) |}))
+         end.
+  { clear -pf pf'.
+    unfold Tuple.map2, Tuple.map in pf; simpl in *.
+    abstract (
+        destruct bounds;
+        simpl in *;
+        rewrite !Bool.andb_true_iff in pf;
+        destruct_head' and;
+        Z.ltb_to_lt; auto
+      ). }
+  { simpl in *.
+    clear -pf pf'.
+    abstract (
+        destruct bounds as [? [? ?] ], v; simpl in *;
+        rewrite Tuple.map_S in pf; simpl in pf; rewrite Tuple.map2_S in pf;
+        simpl in pf;
+        rewrite !Bool.andb_true_iff in pf;
+        destruct_head' and;
+        Z.ltb_to_lt; auto
+      ). }
+Defined.
+
+Definition assoc_right''
+  := Eval cbv [Tuple.assoc_right' Tuple.rsnoc' fst snd] in @Tuple.assoc_right'.
+
+Definition args_to_bounded {n} v bounds pf
+  := Eval cbv [args_to_bounded_helper assoc_right''] in
+      @args_to_bounded_helper n _ v bounds pf (@assoc_right'' _ _).
+
+Local Ltac get_len T :=
+  match (eval hnf in T) with
+  | prod ?A ?B
+    => let a := get_len A in
+       let b := get_len B in
+       (eval compute in (a + b)%nat)
+  | _ => constr:(1%nat)
+  end.
+
+Local Ltac args_to_bounded x H :=
+  let x' := fresh in
+  set (x' := x);
+  compute in x;
+  let len := (let T := type of x in get_len T) in
+  destruct_head' prod;
+  let c := constr:(args_to_bounded (n:=pred len) x' _ H) in
+  let bounds := lazymatch c with args_to_bounded _ ?bounds _ => bounds end in
+  let c := (eval cbv [all_binders_for ExprUnOpT interp_flat_type args_to_bounded bounds pred fst snd] in c) in
+  apply c; compute; clear;
+  try abstract (
+        repeat split;
+        solve [ reflexivity
+              | refine (fun v => match v with eq_refl => I end) ]
+      ).
 
 Definition unop_args_to_bounded (x : fe25519W) (H : is_bounded (fe25519WToZ x) = true)
   : interp_flat_type (fun _ => BoundedWord64.BoundedWord) (all_binders_for ExprUnOpT).
-Proof. make_args x. Defined.
+Proof. args_to_bounded x H. Defined.
+
 Definition unopWireToFE_args_to_bounded (x : wire_digitsW) (H : wire_digits_is_bounded (wire_digitsWToZ x) = true)
   : interp_flat_type (fun _ => BoundedWord64.BoundedWord) (all_binders_for ExprUnOpWireToFET).
-Proof. make_args x. Defined.
+Proof. args_to_bounded x H. Defined.
 Definition binop_args_to_bounded (x : fe25519W * fe25519W)
            (H : is_bounded (fe25519WToZ (fst x)) = true)
            (H' : is_bounded (fe25519WToZ (snd x)) = true)
@@ -225,7 +288,6 @@ Local Ltac make_bounds_prop bounds orig_bounds :=
              | None => false
              end).
 
-
 Definition unop_bounds_good (bounds : interp_flat_type (fun _ => ZBounds.bounds) (remove_all_binders ExprUnOpT)) : bool.
 Proof. make_bounds_prop bounds ExprUnOp_bounds. Defined.
 Definition binop_bounds_good (bounds : interp_flat_type (fun _ => ZBounds.bounds) (remove_all_binders ExprBinOpT)) : bool.
@@ -244,7 +306,7 @@ Defined.
     various kinds of correct and boundedness, and abstract in Gallina
     rather than Ltac *)
 
-Local Ltac t_correct_and_bounded ropZ_sig Hbounds H0 H1 args :=
+Ltac t_correct_and_bounded ropZ_sig Hbounds H0 H1 args :=
   let Heq := fresh "Heq" in
   let Hbounds0 := fresh "Hbounds0" in
   let Hbounds1 := fresh "Hbounds1" in
@@ -311,192 +373,6 @@ Local Ltac t_correct_and_bounded ropZ_sig Hbounds H0 H1 args :=
   change Word64.word64ToZ with word64ToZ in *;
   repeat apply conj; Z.ltb_to_lt; try omega; try reflexivity.
 
-Local Opaque Interp.
-Lemma ExprBinOp_correct_and_bounded
-      ropW op (ropZ_sig : rexpr_binop_sig op)
-      (Hbounds : correct_and_bounded_genT ropW ropZ_sig)
-      (H0 : forall xy
-                   (xy := (eta_fe25519W (fst xy), eta_fe25519W (snd xy)))
-                   (Hxy : is_bounded (fe25519WToZ (fst xy)) = true
-                          /\ is_bounded (fe25519WToZ (snd xy)) = true),
-          let Hx := let (Hx, Hy) := Hxy in Hx in
-          let Hy := let (Hx, Hy) := Hxy in Hy in
-          let args := binop_args_to_bounded xy Hx Hy in
-          match LiftOption.of'
-                  (ApplyInterpedAll (Interp (@BoundedWord64.interp_op) (MapInterp BoundedWord64.of_word64 ropW))
-                                    (LiftOption.to' (Some args)))
-          with
-          | Some _ => True
-          | None => False
-          end)
-      (H1 : forall xy
-                   (xy := (eta_fe25519W (fst xy), eta_fe25519W (snd xy)))
-                   (Hxy : is_bounded (fe25519WToZ (fst xy)) = true
-                          /\ is_bounded (fe25519WToZ (snd xy)) = true),
-          let Hx := let (Hx, Hy) := Hxy in Hx in
-          let Hy := let (Hx, Hy) := Hxy in Hy in
-          let args := binop_args_to_bounded (fst xy, snd xy) Hx Hy in
-          let x' := SmartVarfMap (fun _ : base_type => BoundedWord64.BoundedWordToBounds) args in
-          match LiftOption.of'
-                  (ApplyInterpedAll (Interp (@ZBounds.interp_op) (MapInterp ZBounds.of_word64 ropW)) (LiftOption.to' (Some x')))
-          with
-          | Some bounds => binop_bounds_good bounds = true
-          | None => False
-          end)
-  : binop_correct_and_bounded (MapInterp (fun _ x => x) ropW) op.
-Proof.
-  intros x y Hx Hy.
-  pose x as x'; pose y as y'.
-  hnf in x, y; destruct_head' prod.
-  specialize (H0 (x', y') (conj Hx Hy)).
-  specialize (H1 (x', y') (conj Hx Hy)).
-  let args := constr:(binop_args_to_bounded (x', y') Hx Hy) in
-  t_correct_and_bounded ropZ_sig Hbounds H0 H1 args.
-Qed.
-
-Lemma ExprUnOp_correct_and_bounded
-      ropW op (ropZ_sig : rexpr_unop_sig op)
-      (Hbounds : correct_and_bounded_genT ropW ropZ_sig)
-      (H0 : forall x
-                   (x := eta_fe25519W x)
-                   (Hx : is_bounded (fe25519WToZ x) = true),
-          let args := unop_args_to_bounded x Hx in
-          match LiftOption.of'
-                  (ApplyInterpedAll (Interp (@BoundedWord64.interp_op) (MapInterp BoundedWord64.of_word64 ropW))
-                                    (LiftOption.to' (Some args)))
-          with
-          | Some _ => True
-          | None => False
-          end)
-      (H1 : forall x
-                   (x := eta_fe25519W x)
-                   (Hx : is_bounded (fe25519WToZ x) = true),
-          let args := unop_args_to_bounded x Hx in
-          let x' := SmartVarfMap (fun _ : base_type => BoundedWord64.BoundedWordToBounds) args in
-          match LiftOption.of'
-                  (ApplyInterpedAll (Interp (@ZBounds.interp_op) (MapInterp ZBounds.of_word64 ropW)) (LiftOption.to' (Some x')))
-          with
-          | Some bounds => unop_bounds_good bounds = true
-          | None => False
-          end)
-  : unop_correct_and_bounded (MapInterp (fun _ x => x) ropW) op.
-Proof.
-  intros x Hx.
-  pose x as x'.
-  hnf in x; destruct_head' prod.
-  specialize (H0 x' Hx).
-  specialize (H1 x' Hx).
-  let args := constr:(unop_args_to_bounded x' Hx) in
-  t_correct_and_bounded ropZ_sig Hbounds H0 H1 args.
-Qed.
-
-Lemma ExprUnOpFEToWire_correct_and_bounded
-      ropW op (ropZ_sig : rexpr_unop_FEToWire_sig op)
-      (Hbounds : correct_and_bounded_genT ropW ropZ_sig)
-      (H0 : forall x
-                   (x := eta_fe25519W x)
-                   (Hx : is_bounded (fe25519WToZ x) = true),
-          let args := unop_args_to_bounded x Hx in
-          match LiftOption.of'
-                  (ApplyInterpedAll (Interp (@BoundedWord64.interp_op) (MapInterp BoundedWord64.of_word64 ropW))
-                                    (LiftOption.to' (Some args)))
-          with
-          | Some _ => True
-          | None => False
-          end)
-      (H1 : forall x
-                   (x := eta_fe25519W x)
-                   (Hx : is_bounded (fe25519WToZ x) = true),
-          let args := unop_args_to_bounded x Hx in
-          let x' := SmartVarfMap (fun _ : base_type => BoundedWord64.BoundedWordToBounds) args in
-          match LiftOption.of'
-                  (ApplyInterpedAll (Interp (@ZBounds.interp_op) (MapInterp ZBounds.of_word64 ropW)) (LiftOption.to' (Some x')))
-          with
-          | Some bounds => unopFEToWire_bounds_good bounds = true
-          | None => False
-          end)
-  : unop_FEToWire_correct_and_bounded (MapInterp (fun _ x => x) ropW) op.
-Proof.
-  intros x Hx.
-  pose x as x'.
-  hnf in x; destruct_head' prod.
-  specialize (H0 x' Hx).
-  specialize (H1 x' Hx).
-  let args := constr:(unop_args_to_bounded x' Hx) in
-  t_correct_and_bounded ropZ_sig Hbounds H0 H1 args.
-Qed.
-
-Lemma ExprUnOpWireToFE_correct_and_bounded
-      ropW op (ropZ_sig : rexpr_unop_WireToFE_sig op)
-      (Hbounds : correct_and_bounded_genT ropW ropZ_sig)
-      (H0 : forall x
-                   (x := eta_wire_digitsW x)
-                   (Hx : wire_digits_is_bounded (wire_digitsWToZ x) = true),
-          let args := unopWireToFE_args_to_bounded x Hx in
-          match LiftOption.of'
-                  (ApplyInterpedAll (Interp (@BoundedWord64.interp_op) (MapInterp BoundedWord64.of_word64 ropW))
-                                    (LiftOption.to' (Some args)))
-          with
-          | Some _ => True
-          | None => False
-          end)
-      (H1 : forall x
-                   (x := eta_wire_digitsW x)
-                   (Hx : wire_digits_is_bounded (wire_digitsWToZ x) = true),
-          let args := unopWireToFE_args_to_bounded x Hx in
-          let x' := SmartVarfMap (fun _ : base_type => BoundedWord64.BoundedWordToBounds) args in
-          match LiftOption.of'
-                  (ApplyInterpedAll (Interp (@ZBounds.interp_op) (MapInterp ZBounds.of_word64 ropW)) (LiftOption.to' (Some x')))
-          with
-          | Some bounds => unopWireToFE_bounds_good bounds = true
-          | None => False
-          end)
-  : unop_WireToFE_correct_and_bounded (MapInterp (fun _ x => x) ropW) op.
-Proof.
-  intros x Hx.
-  pose x as x'.
-  hnf in x; destruct_head' prod.
-  specialize (H0 x' Hx).
-  specialize (H1 x' Hx).
-  let args := constr:(unopWireToFE_args_to_bounded x' Hx) in
-  t_correct_and_bounded ropZ_sig Hbounds H0 H1 args.
-Qed.
-
-Lemma ExprUnOpFEToZ_correct_and_bounded
-      ropW op (ropZ_sig : rexpr_unop_FEToZ_sig op)
-      (Hbounds : correct_and_bounded_genT ropW ropZ_sig)
-      (H0 : forall x
-                   (x := eta_fe25519W x)
-                   (Hx : is_bounded (fe25519WToZ x) = true),
-          let args := unop_args_to_bounded x Hx in
-          match LiftOption.of'
-                  (ApplyInterpedAll (Interp (@BoundedWord64.interp_op) (MapInterp BoundedWord64.of_word64 ropW))
-                                    (LiftOption.to' (Some args)))
-          with
-          | Some _ => True
-          | None => False
-          end)
-      (H1 : forall x
-                   (x := eta_fe25519W x)
-                   (Hx : is_bounded (fe25519WToZ x) = true),
-          let args := unop_args_to_bounded x Hx in
-          let x' := SmartVarfMap (fun _ : base_type => BoundedWord64.BoundedWordToBounds) args in
-          match LiftOption.of'
-                  (ApplyInterpedAll (Interp (@ZBounds.interp_op) (MapInterp ZBounds.of_word64 ropW)) (LiftOption.to' (Some x')))
-          with
-          | Some bounds => unopFEToZ_bounds_good bounds = true
-          | None => False
-          end)
-  : unop_FEToZ_correct (MapInterp (fun _ x => x) ropW) op.
-Proof.
-  intros x Hx.
-  pose x as x'.
-  hnf in x; destruct_head' prod.
-  specialize (H0 x' Hx).
-  specialize (H1 x' Hx).
-  let args := constr:(unop_args_to_bounded x' Hx) in
-  t_correct_and_bounded ropZ_sig Hbounds H0 H1 args.
-Qed.
 
 Ltac rexpr_correct :=
   let ropW' := fresh in

@@ -1,4 +1,4 @@
-Require Import Crypto.Specific.GF25519Reflective.Common.
+Require Import Crypto.Specific.GF25519Reflective.CommonBinOp.
 
 Definition rsubZ_sig : rexpr_binop_sig sub. Proof. reify_sig. Defined.
 Definition rsubW := Eval vm_compute in rword_of_Z rsubZ_sig.

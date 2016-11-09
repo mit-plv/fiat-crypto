@@ -1,4 +1,4 @@
-Require Import Crypto.Specific.GF25519Reflective.Common.
+Require Import Crypto.Specific.GF25519Reflective.CommonUnOp.
 
 Definition rcarry_oppZ_sig : rexpr_unop_sig carry_opp. Proof. reify_sig. Defined.
 Definition rcarry_oppW := Eval vm_compute in rword_of_Z rcarry_oppZ_sig.
