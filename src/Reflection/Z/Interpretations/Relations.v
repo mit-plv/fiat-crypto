@@ -551,8 +551,6 @@ Proof.
 Qed.
 
 Local Arguments related_Z _ !_ _ / .
-Axiom proof_admitted : False.
-Tactic Notation "admit" := abstract case proof_admitted.
 
 Local Arguments related'_Z _ _ _ / .
 Lemma related_Z_t_map1_tuple2 n opZ opW opB pf
@@ -565,8 +563,6 @@ Lemma related_Z_t_map1_tuple2 n opZ opW opB pf
           -> { zbw : Tuple.tuple BoundedWord64.BoundedWord _
              | Tuple.map BoundedWord64.value zbw = z
                /\ Tuple.map BoundedWord64.BoundedWordToBounds zbw = bzs }
-          (*
-          -> is_in_bounds (opW x y z) brs*)
           -> Tuple.map Word64.word64ToZ (opW x y z) = (opZ (Word64.word64ToZ x) (Tuple.map Word64.word64ToZ y) (Tuple.map Word64.word64ToZ z)))
       sv1 sv2
   : interp_flat_type_rel_pointwise2 (t:=(Tbase TZ * Syntax.tuple (Tbase TZ) (S n) * Syntax.tuple (Tbase TZ) (S n))%ctype) related_Z sv1 sv2
@@ -584,9 +580,40 @@ Proof.
                | apply @related_tuples_None_left; constructor
                | apply -> @related_tuples_Some_left
                | apply <- @related_tuples_proj_eq_rel_untuple
-               | apply <- @related_tuples_lift_relation2_untuple' ].
-  unfold related_Z.
-  admit.
+               | apply <- @related_tuples_lift_relation2_untuple'
+               | progress rewrite ?HList.map'_mapt', <- ?HList.map_is_mapt'
+               | progress rewrite ?Tuple.map_map2, ?Tuple.map2_fst, ?Tuple.map2_snd, ?Tuple.map_id
+               | progress convoy_destruct
+               | match goal with
+                 | [ H : interp_flat_type_rel_pointwise2 _ ?u ?v |- _ ]
+                   => let lem := constr:(fun u' H => proj2 (@related_tuples_Some_left_ext _ _ _ (@related'_Z) u v u' H)) in
+                      let H' := fresh in
+                      lazymatch type of lem with
+                      | forall u', ?v = Some u' -> _
+                        => destruct v eqn:H'
+                      end;
+                      unfold BoundedWord64.t_map1_tuple2;
+                      simpl @flat_interp_tuple in *;
+                      simpl @Tuple.lift_option in *;
+                      change (LiftOption.interp_base_type' BoundedWord64.BoundedWord)
+                      with BoundedWord64.interp_base_type in *;
+                      rewrite H';
+                      [ apply (lem _ H') in H
+                      | solve [ break_match; apply @related_tuples_None_left; constructor ] ]
+                 | [ H : interp_flat_type_rel_pointwise2 _ _ ?v |- _ ]
+                   => rewrite <- (@flat_interp_untuple'_tuple' _ _ _ _ v) in H;
+                      let H' := fresh in
+                      rename H into H';
+                      pose proof (proj1 related_tuples_proj_eq_rel_untuple H') as H;
+                      clear H'
+                 end ].
+  etransitivity; [ eapply H | ];
+    [ symmetry; eassumption
+    | destruct_head' BoundedWord64.BoundedWord; assumption
+    | solve [ repeat esplit ]..
+    | (rewrite_hyp <- !* );
+      rewrite !Tuple.map_map;
+      reflexivity ].
 Qed.
 
 Local Ltac related_Z_op_fin_t_step :=
