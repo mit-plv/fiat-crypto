@@ -579,7 +579,7 @@ Proof.
                | progress (unfold proj_eq_rel in *; subst)
                | apply @related_tuples_None_left; constructor
                | apply -> @related_tuples_Some_left
-               | apply <- @related_tuples_proj_eq_rel_untuple
+               | refine (proj2 (@related_tuples_proj_eq_rel_untuple _ _ _ _ _ _) _)
                | apply <- @related_tuples_lift_relation2_untuple'
                | progress rewrite ?HList.map'_mapt', <- ?HList.map_is_mapt'
                | progress rewrite ?Tuple.map_map2, ?Tuple.map2_fst, ?Tuple.map2_snd, ?Tuple.map_id
