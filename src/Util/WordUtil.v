@@ -83,16 +83,26 @@ Ltac wordsize_eq_tac := cbv beta delta [wordsize_eq] in *; omega*.
 Ltac gt84_abstract t := t. (* TODO: when we drop Coq 8.4, use [abstract] here *)
 Hint Extern 100 (wordsize_eq _ _) => gt84_abstract wordsize_eq_tac : typeclass_instances.
 
-Program Fixpoint cast_word {n m} : forall {pf:wordsize_eq n m}, word n -> word m :=
-  match n, m return wordsize_eq n m -> word n -> word m with
-  | O, O => fun _ _ => WO
-  | S n', S m' => fun _ w => WS (whd w) (@cast_word _ _ _ (wtl w))
-  | _, _ => fun _ _ => !
+Fixpoint correct_wordsize_eq (x y : nat) : wordsize_eq x y -> x = y
+  := match x, y with
+     | O, O => fun _ => eq_refl
+     | S x', S y' => fun pf => f_equal S (correct_wordsize_eq x' y' (f_equal pred pf))
+     | _, _ => fun x => x
+     end.
+
+Lemma correct_wordsize_eq_refl n pf : correct_wordsize_eq n n pf = eq_refl.
+Proof.
+  induction n; [ reflexivity | simpl ].
+  rewrite IHn; reflexivity.
+Qed.
+
+Definition cast_word {n m} {pf:wordsize_eq n m} : word n -> word m :=
+  match correct_wordsize_eq n m pf in _ = y return word n -> word y with
+  | eq_refl => fun w => w
   end.
-Global Arguments cast_word {_ _ _} _. (* 8.4 does not pick up the forall braces *)
 
 Lemma cast_word_refl {n} pf (w:word n) : @cast_word n n pf w = w.
-Proof. induction w; simpl; auto using f_equal. Qed.
+Proof. unfold cast_word; rewrite correct_wordsize_eq_refl; reflexivity. Qed.
 
 Lemma wordToNat_cast_word {n} (w:word n) m pf :
   wordToNat (@cast_word n m pf w) = wordToNat w.
