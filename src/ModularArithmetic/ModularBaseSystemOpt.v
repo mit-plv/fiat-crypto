@@ -1071,7 +1071,7 @@ Section SquareRoots.
         by (rewrite carry_mul_opt_correct by auto;
            cbv [eq]; rewrite carry_mul_rep, mul_rep; reflexivity)
     end.
-    let RHS := match goal with |- {vs | eq ?vs ?RHS} => RHS end in
+    let RHS := match goal with |- {vs | eq vs ?RHS} => RHS end in
     let RHSf := match (eval pattern powx in RHS) with ?RHSf _ => RHSf end in
     change ({vs | eq vs (Let_In powx RHSf)}).
     match goal with
