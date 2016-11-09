@@ -8,6 +8,9 @@ Require Import Coq.Program.Program.
 Require Import Coq.Numbers.Natural.Peano.NPeano Util.NatUtil.
 Require Import Coq.micromega.Psatz.
 
+Require Import Crypto.Assembly.WordizeUtil.
+Require Import Crypto.Assembly.Bounds.
+
 Local Open Scope nat_scope.
 
 Create HintDb pull_wordToN discriminated.
@@ -16,6 +19,20 @@ Hint Extern 1 => autorewrite with pull_wordToN in * : pull_wordToN.
 Hint Extern 1 => autorewrite with push_wordToN in * : push_wordToN.
 
 Ltac word_util_arith := omega.
+
+Ltac destruct_min :=
+  match goal with
+  | [|- context[Z.min ?a ?b]] =>
+    let g := fresh in
+    destruct (Z.min_dec a b) as [g|g]; rewrite g; clear g
+  end.
+
+Ltac destruct_max :=
+  match goal with
+  | [|- context[Z.max ?a ?b]] =>
+    let g := fresh in
+    destruct (Z.max_dec a b) as [g|g]; rewrite g; clear g
+  end.
 
 Lemma pow2_id : forall n, pow2 n = 2 ^ n.
 Proof.
@@ -34,6 +51,23 @@ Proof.
   auto.
 Qed.
 
+Lemma Npow2_Zlog2 : forall x n,
+    (Z.log2 (Z.of_N x) < Z.of_nat n)%Z
+ -> (x < Npow2 n)%N.
+Proof.
+  intros.
+  apply N2Z.inj_lt.
+  rewrite Npow2_N, N2Z.inj_pow, nat_N_Z.
+  destruct (N.eq_dec x 0%N) as [e|e].
+
+  - rewrite e.
+    apply Z.pow_pos_nonneg; [cbv; reflexivity|apply Nat2Z.is_nonneg].
+
+  - apply Z.log2_lt_pow2; [|assumption].
+    apply N.neq_0_lt_0, N2Z.inj_lt in e.
+    assumption.
+Qed.
+
 Lemma Z_land_le : forall x y, (0 <= x)%Z -> (Z.land x y <= x)%Z.
 Proof.
   intros; apply Z.ldiff_le; [assumption|].
@@ -41,6 +75,123 @@ Proof.
   rewrite <- Z.land_0_l with (a := y); f_equal.
   rewrite Z.land_comm, Z.land_lnot_diag.
   reflexivity.
+Qed.
+
+Lemma Z_lor_lower : forall x y, (0 <= x)%Z -> (0 <= y)%Z -> (x <= Z.lor x y)%Z.
+Proof.
+  intros; apply Z.ldiff_le; [apply Z.lor_nonneg; auto|].
+  rewrite Z.ldiff_land.
+  apply Z.bits_inj_iff'; intros k Hpos; apply Z.le_ge in Hpos.
+  rewrite Z.testbit_0_l, Z.land_spec, Z.lnot_spec, Z.lor_spec;
+    [|apply Z.ge_le; assumption].
+  induction (Z.testbit x k), (Z.testbit y k); cbv; reflexivity.
+Qed.
+
+Lemma Z_lor_le : forall x y z,
+     (0 <= x)%Z
+  -> (x <= y)%Z
+  -> (y <= z)%Z
+  -> (Z.lor x y <= (2 ^ Z.log2_up (z+1)) - 1)%Z.
+Proof.
+  intros; apply Z.ldiff_le.
+
+  - apply Z.le_add_le_sub_r.
+    replace 1%Z with (2 ^ 0)%Z by (cbv; reflexivity).
+    rewrite Z.add_0_l.
+    apply Z.pow_le_mono_r; [cbv; reflexivity|].
+    apply Z.log2_up_nonneg.
+
+  - destruct (Z_lt_dec 0 z).
+
+    + assert (forall a, a - 1 = Z.pred a)%Z as HP by (intro; omega);
+        rewrite HP, <- Z.ones_equiv; clear HP.
+      apply Z.ldiff_ones_r_low; [apply Z.lor_nonneg; split; omega|].
+      rewrite Z.log2_up_eqn, Z.log2_lor; try omega.
+      apply Z.lt_succ_r.
+      destruct_max; apply Z.log2_le_mono; omega.
+
+    + replace z with 0%Z by omega.
+      replace y with 0%Z by omega.
+      replace x with 0%Z by omega.
+      cbv; reflexivity.
+Qed.
+
+Lemma Z_inj_shiftl: forall x y, Z.of_N (N.shiftl x y) = Z.shiftl (Z.of_N x) (Z.of_N y).
+Proof.
+  intros.
+  apply Z.bits_inj_iff'; intros k Hpos.
+  rewrite Z2N.inj_testbit; [|assumption].
+  rewrite Z.shiftl_spec; [|assumption].
+
+  assert ((Z.to_N k) >= y \/ (Z.to_N k) < y)%N as g by (
+    unfold N.ge, N.lt; induction (N.compare (Z.to_N k) y); [left|auto|left];
+    intro H; inversion H).
+
+  destruct g as [g|g];
+  [ rewrite N.shiftl_spec_high; [|apply N2Z.inj_le; rewrite Z2N.id|apply N.ge_le]
+  | rewrite N.shiftl_spec_low]; try assumption.
+
+  - rewrite <- N2Z.inj_testbit; f_equal.
+    rewrite N2Z.inj_sub, Z2N.id; [reflexivity|assumption|apply N.ge_le; assumption].
+
+  - apply N2Z.inj_lt in g.
+    rewrite Z2N.id in g; [symmetry|assumption].
+    apply Z.testbit_neg_r; omega.
+Qed.
+
+Lemma Z_inj_shiftr: forall x y, Z.of_N (N.shiftr x y) = Z.shiftr (Z.of_N x) (Z.of_N y).
+Proof.
+  intros.
+  apply Z.bits_inj_iff'; intros k Hpos.
+  rewrite Z2N.inj_testbit; [|assumption].
+  rewrite Z.shiftr_spec, N.shiftr_spec; [|apply N2Z.inj_le; rewrite Z2N.id|]; try assumption.
+  rewrite <- N2Z.inj_testbit; f_equal.
+  rewrite N2Z.inj_add; f_equal.
+  apply Z2N.id; assumption.
+Qed.
+
+Lemma Z_pow2_ge_0: forall a, (0 <= 2 ^ a)%Z.
+Proof.
+  intros; apply Z.pow_nonneg; omega.
+Qed.
+
+Lemma Z_pow2_gt_0: forall a, (0 <= a)%Z -> (0 < 2 ^ a)%Z.
+Proof.
+  intros; apply Z.pow_pos_nonneg; [|assumption]; omega.
+Qed.
+
+Local Ltac solve_pow2 :=
+  repeat match goal with
+  | [|- _ /\ _] => split
+  | [|- (0 < 2 ^ _)%Z] => apply Z_pow2_gt_0
+  | [|- (0 <= 2 ^ _)%Z] => apply Z_pow2_ge_0
+  | [|- (2 ^ _ <= 2 ^ _)%Z] => apply Z.pow_le_mono_r
+  | [|- (_ <= _)%Z] => omega
+  | [|- (_ < _)%Z] => omega
+  end.
+
+Lemma Z_shiftr_le_mono: forall a b c d,
+    (0 <= a)%Z
+ -> (0 <= d)%Z
+ -> (a <= c)%Z
+ -> (d <= b)%Z
+ -> (Z.shiftr a b <= Z.shiftr c d)%Z.
+Proof.
+  intros.
+  repeat rewrite Z.shiftr_div_pow2; [|omega|omega].
+  etransitivity; [apply Z.div_le_compat_l | apply Z.div_le_mono]; solve_pow2.
+Qed.
+
+Lemma Z_shiftl_le_mono: forall a b c d,
+    (0 <= a)%Z
+ -> (0 <= b)%Z
+ -> (a <= c)%Z
+ -> (b <= d)%Z
+ -> (Z.shiftl a b <= Z.shiftl c d)%Z.
+Proof.
+  intros.
+  repeat rewrite Z.shiftl_mul_pow2; [|omega|omega].
+  etransitivity; [apply Z.mul_le_mono_nonneg_l|apply Z.mul_le_mono_nonneg_r]; solve_pow2.
 Qed.
 
 Lemma wordToN_NToWord_idempotent : forall sz n, (n < Npow2 sz)%N ->
@@ -285,9 +436,6 @@ Local Notation bounds_2statement wop Zop := (forall {sz} (x y : word sz),
   -> (Z.log2 (Zop (Z.of_N (wordToN x)) (Z.of_N (wordToN y))) < Z.of_nat sz)
   -> (Z.of_N (wordToN (wop x y)) = (Zop (Z.of_N (wordToN x)) (Z.of_N (wordToN y)))))%Z).
 
-Require Import Crypto.Assembly.WordizeUtil.
-Require Import Crypto.Assembly.Bounds.
-
 Lemma wordToN_wplus : bounds_2statement (@wplus _) Z.add.
 Proof.
   intros.
@@ -377,7 +525,8 @@ Hint Rewrite <- @wordToN_wor using word_util_arith : pull_wordToN.
 Local Notation bound n lower value upper := (
     (0 <= lower)%Z
   /\ (lower <= Z.of_N (@wordToN n value))%Z
-  /\ (Z.of_N (@wordToN n value) <= upper)%Z).
+  /\ (Z.of_N (@wordToN n value) <= upper)%Z
+  /\ (Z.log2 upper < Z.of_nat n)%Z).
 
 Definition valid_update n lowerF valueF upperF : Prop :=
   forall lower0 value0 upper0
@@ -400,9 +549,9 @@ Lemma add_valid_update: forall n,
       (@wplus n)
       (fun l0 u0 l1 u1 => u0 + u1)%Z.
 Proof.
-  unfold valid_update; intros until upper1; intros B0 B1.
-  destruct B0 as [? B0], B1 as [? B1], B0, B1.
-  repeat split; [add_mono| |]; (
+  unfold valid_update; intros until upper1; intros B0 B1 H0 H1.
+  do 2 destruct B0 as [? B0], B1 as [? B1]; destruct B0, B1.
+  repeat split; [add_mono| | |assumption]; (
     rewrite wordToN_wplus; [add_mono|add_mono|];
     eapply Z.le_lt_trans; [| eassumption];
     apply Z.log2_le_mono; add_mono).
@@ -423,8 +572,8 @@ Lemma sub_valid_update: forall n,
       (fun l0 u0 l1 u1 => u0 - l1)%Z.
 Proof.
   unfold valid_update; intros until upper1; intros B0 B1.
-  destruct B0 as [? B0], B1 as [? B1], B0, B1.
-  repeat split; [sub_mono| |]; (
+  do 2 destruct B0 as [? B0], B1 as [? B1]; destruct B0, B1.
+  repeat split; [sub_mono| | |assumption]; (
    rewrite wordToN_wminus; [sub_mono|omega|];
    eapply Z.le_lt_trans; [apply Z.log2_le_mono|eassumption]; sub_mono).
 Qed.
@@ -445,8 +594,8 @@ Lemma mul_valid_update: forall n,
       (fun l0 u0 l1 u1 => u0 * u1)%Z.
 Proof.
   unfold valid_update; intros until upper1; intros B0 B1.
-  destruct B0 as [? B0], B1 as [? B1], B0, B1.
-  repeat split; [mul_mono| |]; (
+  do 2 destruct B0 as [? B0], B1 as [? B1]; destruct B0, B1.
+  repeat split; [mul_mono| | |assumption]; (
     rewrite wordToN_wmult; [mul_mono|mul_mono|];
     eapply Z.le_lt_trans; [| eassumption];
     apply Z.log2_le_mono; mul_mono).
@@ -465,123 +614,74 @@ Lemma land_valid_update: forall n,
       (fun l0 u0 l1 u1 => Z.min u0 u1)%Z.
 Proof.
   unfold valid_update; intros until upper1; intros B0 B1.
-  destruct B0 as [? B0], B1 as [? B1], B0, B1.
-  repeat split; [reflexivity| |].
+  do 2 destruct B0 as [? B0], B1 as [? B1]; destruct B0, B1; intros.
+  repeat split; [reflexivity|apply N2Z.is_nonneg| |assumption].
+  rewrite wordToN_wand; [|solve_land_ge0|].
 
-  - rewrite wordToN_wand; [solve_land_ge0|solve_land_ge0|].
-    eapply Z.le_lt_trans; [apply Z.log2_land; land_mono|];
-      eapply Z.le_lt_trans; [| eassumption];
-      repeat match goal with
-      | [|- context[Z.min ?a ?b]] =>
-        destruct (Z.min_dec a b) as [g|g]; rewrite g; clear g
-      end; apply Z.log2_le_mono; try assumption.
+  - destruct_min;
+      (etransitivity; [|eassumption]); [|rewrite Z.land_comm];
+      (apply Z_land_le; land_mono).
 
-    admit. admit.
+  - eapply Z.le_lt_trans; [apply Z.log2_land; land_mono|destruct_min]; (
+      eapply Z.le_lt_trans; [apply Z.log2_le_mono; eassumption|];
+      assumption).
+Qed.
 
-  - rewrite wordToN_wand; [|solve_land_ge0|].
-    eapply Z.le_lt_trans; [apply Z.log2_land; land_mono|];
-      match goal with
-      | [|- (Z.min ?a ?b < _)%Z] =>
-        destruct (Z.min_dec a b) as [g|g]; rewrite g; clear g
-      end.
+Local Ltac lor_mono :=
+  first [assumption | etransitivity; [|eassumption]; assumption].
 
-  .
-  (*
-[apply N2Z.is_nonneg|];
-      unfold Word64.word64ToZ; repeat rewrite wordToN_NToWord; repeat rewrite Z2N.id;
-      rewrite wordize_and.
-
-    destruct (Z_ge_dec upper1 upper0) as [g|g].
-
-    - rewrite Z.min_r; [|abstract (apply Z.log2_le_mono; omega)].
-      abstract (
-        rewrite (land_intro_ones (wordToN value0));
-        rewrite N.land_assoc;
-        etransitivity; [apply N2Z.inj_le; apply N.lt_le_incl; apply land_lt_Npow2|];
-        rewrite N2Z.inj_pow;
-        apply Z.pow_le_mono; [abstract (split; cbn; [omega|reflexivity])|];
-        unfold getBits; rewrite N2Z.inj_succ;
-        apply -> Z.succ_le_mono;
-        rewrite <- (N2Z.id (wordToN value0)), <- log2_conv;
-        apply Z.log2_le_mono;
-        etransitivity; [eassumption|reflexivity]).
-
-    - rewrite Z.min_l; [|abstract (apply Z.log2_le_mono; omega)].
-      abstract (
-        rewrite (land_intro_ones (wordToN value1));
-        rewrite <- N.land_comm, N.land_assoc;
-        etransitivity; [apply N2Z.inj_le; apply N.lt_le_incl; apply land_lt_Npow2|];
-        rewrite N2Z.inj_pow;
-        apply Z.pow_le_mono; [abstract (split; cbn; [omega|reflexivity])|];
-        unfold getBits; rewrite N2Z.inj_succ;
-        apply -> Z.succ_le_mono;
-        rewrite <- (N2Z.id (wordToN value1)), <- log2_conv;
-        apply Z.log2_le_mono;
-        etransitivity; [eassumption|reflexivity]).
-
-*)
-Admitted.
+Local Ltac lor_trans :=
+  destruct_max; (
+    eapply Z.le_lt_trans; [apply Z.log2_le_mono; eassumption|];
+    assumption).
 
 Lemma lor_valid_update: forall n,
     valid_update n
       (fun l0 u0 l1 u1 => Z.max l0 l1)%Z
       (@wor n)
-      (fun l0 u0 l1 u1 => 2^(Z.max (Z.log2 (u0+1)) (Z.log2 (u1+1))) - 1)%Z.
+      (fun l0 u0 l1 u1 => 2^(Z.max (Z.log2_up (u0+1)) (Z.log2_up (u1+1))) - 1)%Z.
 Proof.
-(*      unfold Word64.word64ToZ in *; repeat rewrite wordToN_NToWord; repeat rewrite Z2N.id;
-      rewrite wordize_or.
+  unfold valid_update; intros until upper1; intros B0 B1.
+  do 2 destruct B0 as [? B0], B1 as [? B1]; destruct B0, B1; intros.
+  repeat split; [destruct_max; assumption| | |assumption].
 
-    - transitivity (Z.max (Z.of_N (wordToN value1)) (Z.of_N (wordToN value0)));
-      [ abstract (destruct
-          (Z_ge_dec lower1 lower0) as [l|l],
-          (Z_ge_dec (Z.of_N (& value1)%w) (Z.of_N (& value0)%w)) as [v|v];
-        [ rewrite Z.max_l, Z.max_l | rewrite Z.max_l, Z.max_r
-        | rewrite Z.max_r, Z.max_l | rewrite Z.max_r, Z.max_r ];
-        
-        try (omega || assumption))
-      | ].
+  - rewrite wordToN_wor;
+    [ destruct_max; [|rewrite Z.lor_comm];
+        (etransitivity; [|apply Z_lor_lower]; lor_mono)
+    | apply Z.lor_nonneg; split; lor_mono|].
 
-      rewrite <- N2Z.inj_max.
-      apply Z2N.inj_le; [apply N2Z.is_nonneg|apply N2Z.is_nonneg|].
-      repeat rewrite N2Z.id.
+    rewrite Z.log2_lor; [lor_trans|lor_mono|lor_mono].
 
-      abstract (
-        destruct (N.max_dec (wordToN value1) (wordToN value0)) as [v|v];
-        rewrite v;
-        apply N.ldiff_le, N.bits_inj_iff; intros k;
-        rewrite N.ldiff_spec, N.lor_spec;
-        induction (N.testbit (wordToN value1)), (N.testbit (wordToN value0)); simpl;
-        reflexivity).
+  - rewrite wordToN_wor; [
+    | apply Z.lor_nonneg; split; lor_mono
+    | rewrite Z.log2_lor; [lor_trans|lor_mono|lor_mono]].
 
-    - apply Z.lt_le_incl, Z.log2_lt_cancel.
-      rewrite Z.log2_pow2; [| abstract (
-        destruct (Z.max_dec (Z.log2 upper1) (Z.log2 upper0)) as [g|g];
-        rewrite g; apply Z.le_le_succ_r, Z.log2_nonneg)].
+    destruct (Z_ge_dec upper0 upper1) as [g|g].
 
-      eapply (Z.le_lt_trans _ (Z.log2 (Z.lor _ _)) _).
+    + apply Z.ge_le in g; pose proof g as g'.
+      apply -> (Z.add_le_mono_r upper1 upper0 1) in g'.
+      apply Z.log2_up_le_mono, Z.max_l in g'.
+      rewrite g'; clear g'.
 
-      + apply Z.log2_le_mono, Z.eq_le_incl.
-        apply Z.bits_inj_iff'; intros k Hpos.
-        rewrite Z2N.inj_testbit, Z.lor_spec, N.lor_spec; [|assumption].
-        repeat (rewrite <- Z2N.inj_testbit; [|assumption]).
-        reflexivity.
+      destruct (Z.le_ge_cases (Z.of_N (wordToN value0)) (Z.of_N (wordToN value1)));
+        [|rewrite Z.lor_comm];
+        apply Z_lor_le; lor_mono.
 
-      + abstract (
-          rewrite Z.log2_lor; [|trans'|trans'];
-          destruct
-            (Z_ge_dec (Z.of_N (wordToN value1)) (Z.of_N (wordToN value0))) as [g0|g0],
-            (Z_ge_dec upper1 upper0) as [g1|g1];
-            [ rewrite Z.max_l, Z.max_l
-            | rewrite Z.max_l, Z.max_r
-            | rewrite Z.max_r, Z.max_l
-            | rewrite Z.max_r, Z.max_r];
-            try apply Z.log2_le_mono; try omega;
-            apply Z.le_succ_l;
-            apply -> Z.succ_le_mono;
-            apply Z.log2_le_mono;
-            assumption || (etransitivity; [eassumption|]; omega)).
-*)
-Admitted.
+    + assert (upper1 >= upper0)%Z as g'' by omega; clear g.
+      pose proof g'' as g; pose proof g'' as g'; clear g''.
+      apply Z.ge_le in g; apply Z.ge_le in g'.
+      apply -> (Z.add_le_mono_r upper0 upper1 1) in g'.
+      apply Z.log2_up_le_mono, Z.max_r in g'.
+      rewrite g'; clear g'.
+
+      destruct (Z.le_ge_cases (Z.of_N (wordToN value0)) (Z.of_N (wordToN value1)));
+        [|rewrite Z.lor_comm];
+        apply Z_lor_le; lor_mono.
+Qed.
+
+Local Ltac shift_mono := repeat progress first
+  [ eassumption
+  | etransitivity; [|eassumption]].
 
 Lemma shr_valid_update: forall n,
     valid_update n
@@ -589,38 +689,15 @@ Lemma shr_valid_update: forall n,
       (@wordBin N.shiftr n)
       (fun l0 u0 l1 u1 => Z.shiftr u0 l1)%Z.
 Proof.
-  (*
-    Ltac shr_mono := etransitivity;
-      [apply Z.div_le_compat_l | apply Z.div_le_mono].
+  unfold valid_update, wordBin; intros until upper1; intros B0 B1.
+  do 2 destruct B0 as [? B0], B1 as [? B1]; destruct B0, B1; intros.
 
-    assert (forall x, (0 <= x)%Z -> (0 < 2^x)%Z) as gt0. {
-      intros; rewrite <- (Z2Nat.id x); [|assumption].
-      induction (Z.to_nat x) as [|n]; [cbv; auto|].
-      eapply Z.lt_le_trans; [eassumption|rewrite Nat2Z.inj_succ].
-      apply Z.pow_le_mono_r; [cbv; auto|omega].
-    }
-
-    build_binop Word64.w64shr ZBounds.shr; t_start; abstract (
-      unfold Word64.word64ToZ; repeat rewrite wordToN_NToWord; repeat rewrite Z2N.id;
-      rewrite Z.shiftr_div_pow2 in *;
-      repeat match goal with
-      | [|- _ /\ _ ] => split
-      | [|- (0 <= 2 ^ _)%Z ] => apply Z.pow_nonneg
-      | [|- (0 < 2 ^ ?X)%Z ] => apply gt0
-      | [|- (0 <= _ / _)%Z ] => apply Z.div_le_lower_bound; [|rewrite Z.mul_0_r]
-      | [|- (2 ^ _ <= 2 ^ _)%Z ] => apply Z.pow_le_mono_r
-      | [|- context[(?a >> ?b)%Z]] => rewrite Z.shiftr_div_pow2 in *
-      | [|- (_ < Npow2 _)%N] => 
-        apply N2Z.inj_lt, Z.log2_lt_cancel; simpl;
-        eapply Z.le_lt_trans; [|eassumption]; apply Z.log2_le_mono; rewrite Z2N.id
-
-      | _ => progress shr_mono
-      | _ => progress trans'
-      | _ => progress omega
-      end).
-
-*)
-Admitted.
+  repeat split; [assumption| | |assumption];
+    (rewrite wordToN_NToWord; [|apply Npow2_Zlog2]; rewrite Z_inj_shiftr);
+    [ | eapply Z.le_lt_trans; [apply Z.log2_le_mono|eassumption]
+    | | eapply Z.le_lt_trans; [apply Z.log2_le_mono|eassumption]];
+    apply Z_shiftr_le_mono; shift_mono.
+Qed.
 
 Lemma shl_valid_update: forall n,
     valid_update n
@@ -628,29 +705,15 @@ Lemma shl_valid_update: forall n,
       (@wordBin N.shiftl n)
       (fun l0 u0 l1 u1 => Z.shiftl u0 u1)%Z.
 Proof.
-  (*
-    Ltac shl_mono := etransitivity;
-      [apply Z.mul_le_mono_nonneg_l | apply Z.mul_le_mono_nonneg_r].
+  unfold valid_update, wordBin; intros until upper1; intros B0 B1.
+  do 2 destruct B0 as [? B0], B1 as [? B1]; destruct B0, B1; intros.
 
-    build_binop Word64.w64shl ZBounds.shl; t_start; abstract (
-      unfold Word64.word64ToZ; repeat rewrite wordToN_NToWord; repeat rewrite Z2N.id;
-      rewrite Z.shiftl_mul_pow2 in *;
-      repeat match goal with
-      | [|- (0 <= 2 ^ _)%Z ] => apply Z.pow_nonneg
-      | [|- (0 <= _ * _)%Z ] => apply Z.mul_nonneg_nonneg
-      | [|- (2 ^ _ <= 2 ^ _)%Z ] => apply Z.pow_le_mono_r
-      | [|- context[(?a << ?b)%Z]] => rewrite Z.shiftl_mul_pow2
-      | [|- (_ < Npow2 _)%N] => 
-        apply N2Z.inj_lt, Z.log2_lt_cancel; simpl;
-        eapply Z.le_lt_trans; [|eassumption]; apply Z.log2_le_mono; rewrite Z2N.id
-
-      | _ => progress shl_mono
-      | _ => progress trans'
-      | _ => progress omega
-      end).
-
-*)
-Admitted.
+  repeat split; [assumption| | |assumption];
+    (rewrite wordToN_NToWord; [|apply Npow2_Zlog2]; rewrite Z_inj_shiftl);
+    [ | eapply Z.le_lt_trans; [apply Z.log2_le_mono|eassumption]
+    | | eapply Z.le_lt_trans; [apply Z.log2_le_mono|eassumption]];
+    apply Z_shiftl_le_mono; shift_mono.
+Qed.
 
 
 Axiom wlast : forall sz, word (sz+1) -> bool. Arguments wlast {_} _.

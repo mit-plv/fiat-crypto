@@ -2911,44 +2911,6 @@ for name in names:
   Module RemoveEquivModuloInstances (dummy : Nop).
     Global Remove Hints equiv_modulo_Reflexive equiv_modulo_Symmetric equiv_modulo_Transitive mul_mod_Proper add_mod_Proper sub_mod_Proper opp_mod_Proper modulo_equiv_modulo_Proper eq_to_ProperProxy : typeclass_instances.
   End RemoveEquivModuloInstances.
-
-  Module N2Z.
-    Require Import Coq.NArith.NArith.
-
-    Lemma inj_shiftl: forall x y, Z.of_N (N.shiftl x y) = Z.shiftl (Z.of_N x) (Z.of_N y).
-    Proof.
-      intros.
-      apply Z.bits_inj_iff'; intros k Hpos.
-      rewrite Z2N.inj_testbit; [|assumption].
-      rewrite Z.shiftl_spec; [|assumption].
-
-      assert ((Z.to_N k) >= y \/ (Z.to_N k) < y)%N as g by (
-        unfold N.ge, N.lt; induction (N.compare (Z.to_N k) y); [left|auto|left];
-        intro H; inversion H).
-
-      destruct g as [g|g];
-      [ rewrite N.shiftl_spec_high; [|apply N2Z.inj_le; rewrite Z2N.id|apply N.ge_le]
-      | rewrite N.shiftl_spec_low]; try assumption.
-
-      - rewrite <- N2Z.inj_testbit; f_equal.
-        rewrite N2Z.inj_sub, Z2N.id; [reflexivity|assumption|apply N.ge_le; assumption].
-
-      - apply N2Z.inj_lt in g.
-        rewrite Z2N.id in g; [symmetry|assumption].
-        apply Z.testbit_neg_r; omega.
-    Qed.
-
-    Lemma inj_shiftr: forall x y, Z.of_N (N.shiftr x y) = Z.shiftr (Z.of_N x) (Z.of_N y).
-    Proof.
-      intros.
-      apply Z.bits_inj_iff'; intros k Hpos.
-      rewrite Z2N.inj_testbit; [|assumption].
-      rewrite Z.shiftr_spec, N.shiftr_spec; [|apply N2Z.inj_le; rewrite Z2N.id|]; try assumption.
-      rewrite <- N2Z.inj_testbit; f_equal.
-      rewrite N2Z.inj_add; f_equal.
-      apply Z2N.id; assumption.
-    Qed.
-  End N2Z.
 End Z.
 
 Module Export BoundsTactics.

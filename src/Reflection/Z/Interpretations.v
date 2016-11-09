@@ -224,9 +224,9 @@ Module Word64.
   Lemma word64ToZ_shl : bounds_2statement shl Z.shiftl.
   Proof.
     w64ToZ_t; w64ToZ_extra_t; unfold word64ToZ, wordBin.
-    rewrite wordToN_NToWord; [rewrite <- Z.N2Z.inj_shiftl; reflexivity|].
+    rewrite wordToN_NToWord; [rewrite <- Z_inj_shiftl; reflexivity|].
     apply N2Z.inj_lt.
-    rewrite Z.N2Z.inj_shiftl. 
+    rewrite Z_inj_shiftl. 
     destruct (Z.lt_ge_cases 0 ((word64ToZ x) << (word64ToZ y)))%Z;
       [|eapply Z.le_lt_trans; [|apply N2Z.inj_lt, Npow2_gt0]; assumption].
     rewrite Npow2_N, N2Z.inj_pow.
@@ -236,9 +236,9 @@ Module Word64.
   Lemma word64ToZ_shr : bounds_2statement shr Z.shiftr.
   Proof.
     w64ToZ_t; w64ToZ_extra_t; unfold word64ToZ, wordBin.
-    rewrite wordToN_NToWord; [rewrite <- Z.N2Z.inj_shiftr; reflexivity|].
+    rewrite wordToN_NToWord; [rewrite <- Z_inj_shiftr; reflexivity|].
     apply N2Z.inj_lt.
-    rewrite Z.N2Z.inj_shiftr.
+    rewrite Z_inj_shiftr.
     destruct (Z.lt_ge_cases 0 ((word64ToZ x) >> (word64ToZ y)))%Z;
       [|eapply Z.le_lt_trans; [|apply N2Z.inj_lt, Npow2_gt0]; assumption].
     rewrite Npow2_N, N2Z.inj_pow.
@@ -379,7 +379,7 @@ Module ZBounds.
   Definition lor' : bounds -> bounds -> bounds
     := fun x y => let (lx, ux) := x in let (ly, uy) := y in
                                        {| lower := Z.max lx ly;
-                                          upper := 2^(Z.max (Z.log2 (ux+1)) (Z.log2 (uy+1))) - 1 |}.
+                                          upper := 2^(Z.max (Z.log2_up (ux+1)) (Z.log2_up (uy+1))) - 1 |}.
   Definition lor : t -> t -> t := t_map2 lor'.
   Definition neg' : bounds -> bounds -> bounds
     := fun int_width v
