@@ -13,4 +13,5 @@ Program Definition rmulW_correct_and_bounded
 
 Local Open Scope string_scope.
 Compute ("Mul", compute_bounds_for_display rmulW ExprBinOp_bounds).
-(*Compute ("Mul overflows? ", sanity_check rmulW ExprBinOp_bounds).*)
+Compute ("Mul overflows? ", sanity_compute rmulW ExprBinOp_bounds).
+Compute ("Mul overflows (error if it does)? ", sanity_check rmulW ExprBinOp_bounds).

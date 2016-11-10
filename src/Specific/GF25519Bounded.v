@@ -50,7 +50,7 @@ Local Arguments interp_radd / _ _.
 Local Arguments interp_rsub / _ _.
 Local Arguments interp_rmul / _ _.
 Local Arguments interp_ropp / _.
-Local Arguments interp_rfreeze / _.
+Local Arguments interp_rprefreeze / _.
 Local Arguments interp_rge_modulus / _.
 Local Arguments interp_rpack / _.
 Local Arguments interp_runpack / _.
@@ -58,10 +58,11 @@ Definition addW (f g : fe25519W) : fe25519W := Eval simpl in interp_radd f g.
 Definition subW (f g : fe25519W) : fe25519W := Eval simpl in interp_rsub f g.
 Definition mulW (f g : fe25519W) : fe25519W := Eval simpl in interp_rmul f g.
 Definition oppW (f : fe25519W) : fe25519W := Eval simpl in interp_ropp f.
-Definition freezeW (f : fe25519W) : fe25519W := Eval simpl in interp_rfreeze f.
+Definition prefreezeW (f : fe25519W) : fe25519W := Eval simpl in interp_rprefreeze f.
 Definition ge_modulusW (f : fe25519W) : word64 := Eval simpl in interp_rge_modulus f.
 Definition packW (f : fe25519W) : wire_digitsW := Eval simpl in interp_rpack f.
 Definition unpackW (f : wire_digitsW) : fe25519W := Eval simpl in interp_runpack f.
+Definition freezeW (f : fe25519W) : fe25519W := Eval cbv beta delta [prefreezeW postfreezeW] in postfreezeW (prefreezeW f).
 
 Local Transparent Let_In.
 Definition powW (f : fe25519W) chain := fold_chain_opt (proj1_fe25519W one) mulW chain [f].
@@ -81,14 +82,22 @@ Lemma mulW_correct_and_bounded : ibinop_correct_and_bounded mulW mul.
 Proof. port_correct_and_bounded interp_rmul_correct mulW interp_rmul rmul_correct_and_bounded. Qed.
 Lemma oppW_correct_and_bounded : iunop_correct_and_bounded oppW carry_opp.
 Proof. port_correct_and_bounded interp_ropp_correct oppW interp_ropp ropp_correct_and_bounded. Qed.
-Lemma freezeW_correct_and_bounded : iunop_correct_and_bounded freezeW freeze.
-Proof. port_correct_and_bounded interp_rfreeze_correct freezeW interp_rfreeze rfreeze_correct_and_bounded. Qed.
+Lemma prefreezeW_correct_and_bounded : iunop_correct_and_bounded prefreezeW prefreeze.
+Proof. port_correct_and_bounded interp_rprefreeze_correct prefreezeW interp_rprefreeze rprefreeze_correct_and_bounded. Qed.
 Lemma ge_modulusW_correct : iunop_FEToZ_correct ge_modulusW ge_modulus.
 Proof. port_correct_and_bounded interp_rge_modulus_correct ge_modulusW interp_rge_modulus rge_modulus_correct_and_bounded. Qed.
 Lemma packW_correct_and_bounded : iunop_FEToWire_correct_and_bounded packW pack.
 Proof. port_correct_and_bounded interp_rpack_correct packW interp_rpack rpack_correct_and_bounded. Qed.
 Lemma unpackW_correct_and_bounded : iunop_WireToFE_correct_and_bounded unpackW unpack.
 Proof. port_correct_and_bounded interp_runpack_correct unpackW interp_runpack runpack_correct_and_bounded. Qed.
+Lemma freezeW_correct_and_bounded : iunop_correct_and_bounded freezeW freeze.
+Proof.
+  intros f H; rewrite <- freeze_prepost_freeze.
+  change (freezeW f) with (postfreezeW (prefreezeW f)).
+  destruct (prefreezeW_correct_and_bounded f H) as [H0 H1].
+  destruct (postfreezeW_correct_and_bounded _ H1) as [H0' H1'].
+  rewrite H1', H0', H0; split; reflexivity.
+Qed.
 
 Lemma powW_correct_and_bounded chain : iunop_correct_and_bounded (fun x => powW x chain) (fun x => pow x chain).
 Proof.

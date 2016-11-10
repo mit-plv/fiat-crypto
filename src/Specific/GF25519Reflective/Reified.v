@@ -7,7 +7,7 @@ Require Export Crypto.Specific.GF25519Reflective.Reified.CarrySub.
 Require Export Crypto.Specific.GF25519Reflective.Reified.Mul.
 Require Export Crypto.Specific.GF25519Reflective.Reified.Opp.
 Require Export Crypto.Specific.GF25519Reflective.Reified.CarryOpp.
-Require Export Crypto.Specific.GF25519Reflective.Reified.Freeze.
+Require Export Crypto.Specific.GF25519Reflective.Reified.PreFreeze.
 Require Export Crypto.Specific.GF25519Reflective.Reified.GeModulus.
 Require Export Crypto.Specific.GF25519Reflective.Reified.Pack.
 Require Export Crypto.Specific.GF25519Reflective.Reified.Unpack.
