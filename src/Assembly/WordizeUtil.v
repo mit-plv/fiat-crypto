@@ -252,6 +252,12 @@ Section Misc.
     apply N.sub_le_mono_l.
     apply N_ge_0.
   Qed.
+
+  Lemma log2_conv: forall z, Z.log2 z = Z.of_N (N.log2 (Z.to_N z)).
+  Proof.
+    intro z; induction z as [| |p]; auto.
+    induction p; auto.
+  Qed.
 End Misc.
 
 Section Exp.
@@ -348,7 +354,6 @@ Section Exp.
         apply N.mul_le_mono_l.
         assumption.
   Qed.
-
 End Exp.
 
 Section Conversions.
@@ -919,6 +924,21 @@ Section TopLevel.
     induction n; intros; shatter x; shatter y; simpl; [reflexivity|].
     induction k'; [reflexivity|].
     fold wand.
+    rewrite IHn.
+    reflexivity.
+  Qed.
+
+  Lemma wordize_or: forall {n} (x y: word n),
+    & (wor x y) = N.lor (&x) (&y).
+  Proof.
+    intros.
+    apply N.bits_inj_iff; unfold N.eqf; intro k.
+    rewrite N.lor_spec.
+    repeat rewrite wordToN_testbit.
+    revert x y.
+    generalize (N.to_nat k) as k'; clear k.
+    induction n; intros; shatter x; shatter y; simpl; [reflexivity|].
+    induction k'; [reflexivity|].
     rewrite IHn.
     reflexivity.
   Qed.
