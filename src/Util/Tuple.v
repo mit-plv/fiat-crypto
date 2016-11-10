@@ -195,6 +195,10 @@ Proof.
   simpl @List.map.
 Admitted.
 
+Lemma map_to_list {A B n ts} (f : A -> B)
+  : List.map f (@to_list A n ts) = @to_list B n (map f ts).
+Proof. Admitted.
+
 Definition on_tuple2 {A B C} (f : list A -> list B -> list C) {a b c : nat}
            (Hlength : forall la lb, length la = a -> length lb = b -> length (f la lb) = c)
            (ta:tuple A a) (tb:tuple B b) : tuple C c

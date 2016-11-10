@@ -3,6 +3,7 @@ Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.Lists.List.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.IffT.
 Require Import Crypto.Util.Tuple.
 Require Export Crypto.Util.FixCoqMistakes.
 
@@ -98,6 +99,22 @@ Proof.
   destruct xs; rewrite Tuple.map_S.
   simpl @hlist in *; rewrite <- IHn.
   reflexivity.
+Qed.
+
+Lemma fold_right_and_True_hlist' {n A F} (xs:tuple' A n)
+  : iffT (List.fold_right and True (List.map F (Tuple.to_list' _ xs))) (hlist' F xs).
+Proof.
+  induction n.
+  { simpl; tauto. }
+  { specialize (IHn (fst xs)).
+    destruct xs; simpl in *.
+    tauto. }
+Qed.
+
+Lemma fold_right_and_True_hlist {n A F} (xs:tuple A n)
+  : iffT (List.fold_right and True (List.map F (Tuple.to_list _ xs))) (hlist F xs).
+Proof.
+  destruct n; [ simpl; tauto | apply fold_right_and_True_hlist' ].
 Qed.
 
 Module Tuple.
