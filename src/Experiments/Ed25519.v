@@ -1354,7 +1354,8 @@ Proof.
   rewrite ModularBaseSystemProofs.encode_rep.
   symmetry.
   eapply @ModularBaseSystemProofs.sqrt_5mod8_correct;
-    eauto using GF25519.freezePreconditions25519, ModularBaseSystemProofs.encode_rep, bounded_by_freeze, bounded_by_encode_freeze;
+    [ eauto using GF25519.freezePreconditions25519, ModularBaseSystemProofs.encode_rep, bounded_by_freeze, bounded_by_encode_freeze..
+    | | | ];
     prove_bounded_by;
   match goal with
   | |- appcontext[GF25519Bounded.powW ?a ?ch] =>
@@ -1510,7 +1511,7 @@ Section X25519Constants.
                         (a24).
   Proof. vm_decide_no_check. Qed.
 End X25519Constants.
-  
+
 Definition x25519 (n:N) (x:GF25519BoundedCommon.fe25519) : GF25519BoundedCommon.fe25519 :=
   @MxDH.montladder GF25519BoundedCommon.fe25519 GF25519BoundedCommon.zero
                    GF25519BoundedCommon.one GF25519Bounded.add GF25519Bounded.sub
