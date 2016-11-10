@@ -12,8 +12,8 @@ Require Crypto.Util.HList.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.
-Require Import Crypto.Util.WordUtil.
 Require Import Bedrock.Word.
+Require Import Crypto.Util.WordUtil.
 Export Reflection.Syntax.Notations.
 
 Local Notation eta x := (fst x, snd x).
@@ -218,7 +218,7 @@ Module Word64.
     w64ToZ_t; w64ToZ_extra_t; unfold word64ToZ, wordBin.
     rewrite wordToN_NToWord_idempotent; [rewrite <- Z_inj_shiftl; reflexivity|].
     apply N2Z.inj_lt.
-    rewrite Z_inj_shiftl. 
+    rewrite Z_inj_shiftl.
     destruct (Z.lt_ge_cases 0 ((word64ToZ x) << (word64ToZ y)))%Z;
       [|eapply Z.le_lt_trans; [|apply N2Z.inj_lt, Npow2_gt0]; assumption].
     rewrite Npow2_N, N2Z.inj_pow.
@@ -348,7 +348,6 @@ Module ZBounds.
             end
        | _, _, _, _ => None
        end%Z.
-
   Definition add' : bounds -> bounds -> bounds
     := fun x y => let (lx, ux) := x in let (ly, uy) := y in {| lower := lx + ly ; upper := ux + uy |}.
   Definition add : t -> t -> t := t_map2 add'.
@@ -364,7 +363,6 @@ Module ZBounds.
   Definition shr' : bounds -> bounds -> bounds
     := fun x y => let (lx, ux) := x in let (ly, uy) := y in {| lower := lx >> uy ; upper := ux >> ly |}.
   Definition shr : t -> t -> t := t_map2 shr'.
-
   Definition land' : bounds -> bounds -> bounds
     := fun x y => let (lx, ux) := x in let (ly, uy) := y in {| lower := 0 ; upper := Z.min ux uy |}.
   Definition land : t -> t -> t := t_map2 land'.
@@ -642,11 +640,9 @@ Module BoundedWord64.
             | _, _, _ => None
             end.
 
-  Axiom proof_admitted : False.
   Local Opaque Word64.bit_width.
   Hint Resolve Z.ones_nonneg : zarith.
-
-  Local Ltac t_start :=
+  Local Ltac t_prestart :=
     repeat first [ match goal with
                    | [ |- forall x y l u, ?opB (Some (BoundedWordToBounds x)) (Some (BoundedWordToBounds y)) = Some _ -> let val := ?opW (value x) (value y) in _ ]
                      => try unfold opB; try unfold opW
@@ -672,14 +668,17 @@ Module BoundedWord64.
                  | progress repeat apply conj
                  | solve [ Word64.arith ]
                  | progress destruct_head' or ].
+  Local Ltac t_start :=
+    repeat first [ progress t_prestart
+                 | match goal with
+                   | [ |- appcontext[Z.min ?x ?y] ]
+                     => apply (Z.min_case_strong x y)
+                   | [ |- appcontext[Z.max ?x ?y] ]
+                     => apply (Z.max_case_strong x y)
+                   end ].
 
   Ltac ktrans k := do k (etransitivity; [|eassumption]); assumption.
-  Ltac trans' := first [ assumption | ktrans ltac:1 | ktrans ltac:2 ].
-
-  Local Hint Resolve Word64.bit_width_pos : zarith.
-  Local Hint Extern 1 (Z.log2 _ < _)%Z => eapply Z.le_lt_trans; [ eapply Z.log2_le_mono; eassumption | eassumption ] : zarith.
-  (* Local *) Hint Resolve <- Z.log2_lt_pow2_alt : zarith.
-
+  Ltac trans' := first [ assumption | ktrans ltac:(1) | ktrans ltac:(2) ].
 
   (** TODO(jadep): Use the bounds lemma here to prove that if each
       component of [ret_val] is [Some (l, v, u)], then we can fill in
@@ -706,6 +705,11 @@ Module BoundedWord64.
                        pred_n (BoundedWordToBounds x)
                        (Tuple.map BoundedWordToBounds y) (Tuple.map BoundedWordToBounds z))).
   Proof. Admitted.
+
+  Local Hint Resolve Word64.bit_width_pos : zarith.
+  Local Hint Extern 1 (Z.log2 _ < _)%Z => eapply Z.le_lt_trans; [ eapply Z.log2_le_mono; eassumption | eassumption ] : zarith.
+  (* Local *) Hint Resolve <- Z.log2_lt_pow2_alt : zarith.
+
 
   Lemma conditional_subtract_bounded_word
         (pred_n : nat) (x : BoundedWord)
@@ -787,54 +791,46 @@ Module BoundedWord64.
     trivial.
   Qed.
 
-  (* TODO (rsloan): not entirely sure what's the best way to match on these... *)
-  Local Ltac kill_assumptions :=
-    repeat split; abstract (cbn; assumption).
-
-  Local Ltac apply_update lem lower0 value0 upper0 lower1 value1 upper1 := first
-    [ apply (lem 64 lower1 value1 upper1 lower0 value0 upper0); kill_assumptions
-    | apply (lem 64 lower0 value0 upper0 lower1 value1 upper1); kill_assumptions].
-
   Definition add : t -> t -> t.
   Proof.
-    refine (t_map2 Word64.add ZBounds.add _); t_start;
-    apply_update @add_valid_update lower0 value0 upper0 lower1 value1 upper1.
+    refine (t_map2 Word64.add ZBounds.add _);
+      abstract (t_start; eapply add_valid_update; eauto).
   Defined.
 
   Definition sub : t -> t -> t.
   Proof.
-    refine (t_map2 Word64.sub ZBounds.sub _); t_start;
-    apply_update @sub_valid_update lower0 value0 upper0 lower1 value1 upper1.
+    refine (t_map2 Word64.sub ZBounds.sub _);
+      abstract (t_start; eapply sub_valid_update; eauto).
   Defined.
 
   Definition mul : t -> t -> t.
   Proof.
-    refine (t_map2 Word64.mul ZBounds.mul _); t_start;
-    apply_update @mul_valid_update lower0 value0 upper0 lower1 value1 upper1.
+    refine (t_map2 Word64.mul ZBounds.mul _);
+      abstract (t_start; eapply mul_valid_update; eauto).
   Defined.
 
   Definition land : t -> t -> t.
   Proof.
-    refine (t_map2 Word64.land ZBounds.land _); t_start;
-    apply_update @land_valid_update lower0 value0 upper0 lower1 value1 upper1.
+    refine (t_map2 Word64.land ZBounds.land _);
+      abstract (t_prestart; eapply land_valid_update; eauto).
   Qed.
 
   Definition lor : t -> t -> t.
   Proof.
-    refine (t_map2 Word64.lor ZBounds.lor _); t_start;
-    apply_update @lor_valid_update lower0 value0 upper0 lower1 value1 upper1.
+    refine (t_map2 Word64.lor ZBounds.lor _);
+      abstract (t_prestart; eapply lor_valid_update; eauto).
   Qed.
 
   Definition shl : t -> t -> t.
   Proof.
-    refine (t_map2 Word64.shl ZBounds.shl _); t_start;
-    apply_update @shl_valid_update lower0 value0 upper0 lower1 value1 upper1.
+    refine (t_map2 Word64.shl ZBounds.shl _);
+      abstract (t_start; eapply shl_valid_update; eauto).
   Defined.
 
   Definition shr : t -> t -> t.
   Proof.
-    refine (t_map2 Word64.shr ZBounds.shr _); t_start;
-    apply_update @shr_valid_update lower0 value0 upper0 lower1 value1 upper1.
+    refine (t_map2 Word64.shr ZBounds.shr _);
+      abstract (t_start; eapply shr_valid_update; eauto).
   Defined.
 
   Definition neg : t -> t -> t.
