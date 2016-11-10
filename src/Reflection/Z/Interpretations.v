@@ -237,8 +237,10 @@ Module Word64.
     apply Z.log2_lt_pow2; assumption.
   Qed.
 
-  Lemma word64ToZ_land : bounds_2statement land Z.land. Proof. w64ToZ_t. Qed.
-  Lemma word64ToZ_lor : bounds_2statement lor Z.lor. Proof. w64ToZ_t. Qed.
+  Lemma word64ToZ_land : bounds_2statement land Z.land.
+  Proof. w64ToZ_t. Qed.
+  Lemma word64ToZ_lor : bounds_2statement lor Z.lor.
+  Proof. w64ToZ_t. Qed.
   Lemma word64ToZ_neg : bounds_2statement neg ModularBaseSystemListZOperations.neg.
   Proof. w64ToZ_t; w64ToZ_extra_t. Qed.
   Lemma word64ToZ_cmovne : bounds_4statement cmovne ModularBaseSystemListZOperations.cmovne.
@@ -677,9 +679,6 @@ Module BoundedWord64.
                      => apply (Z.max_case_strong x y)
                    end ].
 
-  Ltac ktrans k := do k (etransitivity; [|eassumption]); assumption.
-  Ltac trans' := first [ assumption | ktrans ltac:(1) | ktrans ltac:(2) ].
-
   (** TODO(jadep): Use the bounds lemma here to prove that if each
       component of [ret_val] is [Some (l, v, u)], then we can fill in
       [pf] and return the tuple of [{| lower := l ; value := v ; upper
@@ -813,13 +812,13 @@ Module BoundedWord64.
   Proof.
     refine (t_map2 Word64.land ZBounds.land _);
       abstract (t_prestart; eapply land_valid_update; eauto).
-  Qed.
+  Defined.
 
   Definition lor : t -> t -> t.
   Proof.
     refine (t_map2 Word64.lor ZBounds.lor _);
       abstract (t_prestart; eapply lor_valid_update; eauto).
-  Qed.
+  Defined.
 
   Definition shl : t -> t -> t.
   Proof.
