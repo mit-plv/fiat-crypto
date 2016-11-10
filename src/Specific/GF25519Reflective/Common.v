@@ -1,7 +1,7 @@
 Require Export Coq.ZArith.ZArith.
 Require Export Coq.Strings.String.
 Require Export Crypto.Specific.GF25519.
-Require Import Crypto.Specific.GF25519BoundedCommon.
+Require Export Crypto.Specific.GF25519BoundedCommon.
 Require Import Crypto.Reflection.Reify.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Z.Interpretations.
@@ -395,7 +395,11 @@ Notation compute_bounds opW bounds
 
 
 Module Export PrettyPrinting.
-  Inductive bounds_on := overflow | in_range (lower upper : Z).
+  Section bounds_not_set.
+    Let T := let T := Type in let enforce := Set : T in T.
+    Inductive bounds_on : T := overflow | in_range (lower upper : Z).
+  End bounds_not_set.
+  Inductive result := yes | no.
 
   Definition ZBounds_to_bounds_on
     := fun t : base_type
@@ -408,18 +412,23 @@ Module Export PrettyPrinting.
                            end
           end.
 
-  Fixpoint no_overflow {t} : interp_flat_type (fun t => match t with TZ => bounds_on end) t -> bool
-    := match t return interp_flat_type (fun t => match t with TZ => bounds_on end) t -> bool with
+  Fixpoint does_it_overflow {t} : interp_flat_type (fun t => match t with TZ => bounds_on end) t -> result
+    := match t return interp_flat_type (fun t => match t with TZ => bounds_on end) t -> result with
        | Tbase TZ => fun v => match v with
-                              | overflow => false
-                              | in_range _ _ => true
+                              | overflow => yes
+                              | in_range _ _ => no
                               end
-       | Prod x y => fun v => andb (@no_overflow _ (fst v)) (@no_overflow _ (snd v))
+       | Prod x y => fun v => match @does_it_overflow _ (fst v), @does_it_overflow _ (snd v) with
+                              | no, no => no
+                              | _, _ => yes
+                              end
        end.
 
   (** This gives a slightly easier to read version of the bounds *)
   Notation compute_bounds_for_display opW bounds
     := (SmartVarfMap ZBounds_to_bounds_on (compute_bounds opW bounds)) (only parsing).
+  Notation sanity_compute opW bounds
+    := (does_it_overflow (SmartVarfMap ZBounds_to_bounds_on (compute_bounds opW bounds))) (only parsing).
   Notation sanity_check opW bounds
-    := (eq_refl true <: no_overflow (SmartVarfMap ZBounds_to_bounds_on (compute_bounds opW bounds)) = true) (only parsing).
+    := (eq_refl (sanity_compute opW bounds) <: no = no) (only parsing).
 End PrettyPrinting.

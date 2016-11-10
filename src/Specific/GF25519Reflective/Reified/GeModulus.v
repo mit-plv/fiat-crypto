@@ -13,4 +13,5 @@ Program Definition rge_modulusW_correct_and_bounded
 
 Local Open Scope string_scope.
 Compute ("Ge_Modulus", compute_bounds_for_display rge_modulusW ExprUnOpFEToZ_bounds).
-(*Compute ("Ge_Modulus overflows? ", sanity_check rge_modulusW ExprUnOpFEToZ_bounds).*)
+Compute ("Ge_Modulus overflows? ", sanity_compute rge_modulusW ExprUnOpFEToZ_bounds).
+Compute ("Ge_Modulus overflows (error if it does)? ", sanity_check rge_modulusW ExprUnOpFEToZ_bounds).
