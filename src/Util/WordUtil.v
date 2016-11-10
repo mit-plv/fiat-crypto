@@ -780,9 +780,6 @@ Section Bounds.
     assumption.
   Qed.
 
-  Hint Rewrite @wordToN_wplus using word_util_arith : push_wordToN.
-  Hint Rewrite <- @wordToN_wplus using word_util_arith : pull_wordToN.
-
   Lemma wordToN_wminus : bounds_2statement (@wminus _) Z.sub.
   Proof.
     intros sz x y H ?.
@@ -795,9 +792,6 @@ Section Bounds.
     rewrite <- N2Z.inj_sub; [|assumption].
     rewrite <- wordize_minus; [reflexivity|apply N.le_ge; assumption].
   Qed.
-
-  Hint Rewrite @wordToN_wminus using word_util_arith : push_wordToN.
-  Hint Rewrite <- @wordToN_wminus using word_util_arith : pull_wordToN.
 
   Lemma wordToN_wmult : bounds_2statement (@wmult _) Z.mul.
   Proof.
@@ -817,9 +811,6 @@ Section Bounds.
     assumption.
   Qed.
 
-  Hint Rewrite @wordToN_wmult using word_util_arith : push_wordToN.
-  Hint Rewrite <- @wordToN_wmult using word_util_arith : pull_wordToN.
-
   Lemma wordToN_wand : bounds_2statement (@wand _) Z.land.
   Proof.
     intros.
@@ -831,8 +822,6 @@ Section Bounds.
     repeat (rewrite <- Z2N.inj_testbit; [|apply Z.ge_le; assumption]).
     reflexivity.
   Qed.
-  Hint Rewrite @wordToN_wand using word_util_arith : push_wordToN.
-  Hint Rewrite <- @wordToN_wand using word_util_arith : pull_wordToN.
 
   Lemma wordToN_wor : bounds_2statement (@wor _) Z.lor.
   Proof.
@@ -845,9 +834,22 @@ Section Bounds.
     repeat (rewrite <- Z2N.inj_testbit; [|apply Z.ge_le; assumption]).
     reflexivity.
   Qed.
-  Hint Rewrite @wordToN_wor using word_util_arith : push_wordToN.
-  Hint Rewrite <- @wordToN_wor using word_util_arith : pull_wordToN.
 End Bounds.
+
+Hint Rewrite @wordToN_wplus using word_util_arith : push_wordToN.
+Hint Rewrite <- @wordToN_wplus using word_util_arith : pull_wordToN.
+
+Hint Rewrite @wordToN_wminus using word_util_arith : push_wordToN.
+Hint Rewrite <- @wordToN_wminus using word_util_arith : pull_wordToN.
+
+Hint Rewrite @wordToN_wmult using word_util_arith : push_wordToN.
+Hint Rewrite <- @wordToN_wmult using word_util_arith : pull_wordToN.
+
+Hint Rewrite @wordToN_wand using word_util_arith : push_wordToN.
+Hint Rewrite <- @wordToN_wand using word_util_arith : pull_wordToN.
+
+Hint Rewrite @wordToN_wor using word_util_arith : push_wordToN.
+Hint Rewrite <- @wordToN_wor using word_util_arith : pull_wordToN.
 
 Section Updates.
   Local Notation bound n lower value upper := (
@@ -868,7 +870,7 @@ Section Updates.
                 (valueF value0 value1)
                 (upperF lower0 upper0 lower1 upper1).
 
-  Local Ltac add_mono := 
+  Local Ltac add_mono :=
     etransitivity; [| apply Z.add_le_mono_r; eassumption]; omega.
 
   Lemma add_valid_update: forall n,
@@ -906,7 +908,7 @@ Section Updates.
     eapply Z.le_lt_trans; [apply Z.log2_le_mono|eassumption]; sub_mono).
   Qed.
 
-  Local Ltac mul_mono := 
+  Local Ltac mul_mono :=
     etransitivity; [|apply Z.mul_le_mono_nonneg_r];
     repeat first
     [ eassumption
