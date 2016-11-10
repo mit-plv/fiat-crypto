@@ -910,12 +910,12 @@ Section Updates.
 
   Local Ltac mul_mono :=
     etransitivity; [|apply Z.mul_le_mono_nonneg_r];
-    repeat first
+    repeat (instantiate; first
     [ eassumption
     | reflexivity
     | apply Z.mul_le_mono_nonneg_l
     | rewrite Z.mul_0_l
-    | omega].
+    | omega]).
 
   Lemma mul_valid_update: forall n,
     valid_update n
