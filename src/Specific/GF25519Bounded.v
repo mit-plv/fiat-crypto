@@ -119,6 +119,21 @@ Proof.
   rewrite Z.ones_equiv.
   omega.
 Qed.
+
+Ltac lower_bound_minus_ge_modulus := 
+  apply Z.le_0_sub;
+  cbv [ge_modulus Let_In ModularBaseSystemListZOperations.cmovl ModularBaseSystemListZOperations.cmovne ModularBaseSystemListZOperations.neg];
+  repeat break_if; Z.ltb_to_lt; subst; try omega;
+    rewrite ?Z.land_0_l; auto;
+    change Interpretations.Word64.word64ToZ with word64ToZ;
+    etransitivity; try apply Z.land_upper_bound_r; try omega;
+    apply Z.ones_nonneg; vm_compute; discriminate.
+
+Ltac upper_bound_minus_ge_modulus :=
+   (apply Z.log2_lt_pow2_alt; [ vm_compute; reflexivity | ]);
+   eapply Z.le_lt_trans; [ apply Z.le_sub_nonneg; apply Z.land_nonneg; right; omega | ];
+   eapply Z.le_lt_trans; [ eassumption | ];
+   vm_compute; reflexivity.
   
 Lemma postfreezeW_correct_and_bounded : iunop_correct_and_bounded postfreezeW postfreeze.
 Proof.
@@ -133,14 +148,14 @@ Proof.
   change word64ToZ with Interpretations.Word64.word64ToZ in *.
   rewrite Hgm.
 
-  split.
-  
   cbv [modulusW Tuple.map].
   cbv [on_tuple List.map to_list to_list' from_list from_list'
                 Tuple.map2 on_tuple2 ListUtil.map2 fe25519WToZ].
   cbv [postfreeze GF25519.postfreeze].
   cbv [Let_In].
-  match goal with
+
+  split. 
+  { match goal with
     |- (_,word64ToZ (_ ^- (Interpretations.Word64.ZToWord64 ?x) ^& _)) = (_,_ - (?y &' _)) => assert (x = y) as Hxy by reflexivity; repeat rewrite <-Hxy; clear Hxy end.
 
   change ZToWord64 with Interpretations.Word64.ZToWord64 in *.
@@ -155,16 +170,38 @@ Proof.
       end;
   try solve [
   (apply Z.log2_lt_pow2_alt; [ vm_compute; reflexivity | ]);
-  eapply Z.le_lt_trans; try apply Z.land_upper_bound_r; try apply neg_range; try (vm_compute; discriminate); reflexivity].
+  eapply Z.le_lt_trans; try apply Z.land_upper_bound_r; try apply neg_range; try (vm_compute; discriminate); reflexivity];
+  match goal with
+  | |- 0 <= _ - _ => lower_bound_minus_ge_modulus
+  | |- Z.log2 (_ - _) < _ => upper_bound_minus_ge_modulus
+  end. }
 
-  { 
-  apply Z.le_0_sub.
-  cbv [ge_modulus Let_In ModularBaseSystemListZOperations.cmovl ModularBaseSystemListZOperations.cmovne ModularBaseSystemListZOperations.neg].
-  repeat break_if; Z.ltb_to_lt; subst; try omega;
-    rewrite ?Z.land_0_l; auto. }
   
-
-Admitted.
+  unfold_is_bounded.
+  change ZToWord64 with Interpretations.Word64.ZToWord64 in *.
+  rewrite !Interpretations.Word64.word64ToZ_sub;
+  rewrite !Interpretations.Word64.word64ToZ_land;
+  rewrite !Interpretations.Word64.word64ToZ_ZToWord64;
+  repeat match goal with |- _ /\ _ => split; Z.ltb_to_lt end;
+  try match goal with
+         | |- 0 <=  ModularBaseSystemListZOperations.neg _ _ < 2 ^ _ => apply neg_range; omega
+         | |- 0 <= _ < 2 ^ Z.of_nat _ => vm_compute; split; [refine (fun x => match x with eq_refl => I end) | reflexivity]
+         | |- 0 <= _ &' _ => apply Z.land_nonneg; right; omega
+      end;
+  try solve [
+  (apply Z.log2_lt_pow2_alt; [ vm_compute; reflexivity | ]);
+  eapply Z.le_lt_trans; try apply Z.land_upper_bound_r; try apply neg_range; try (vm_compute; discriminate); reflexivity];
+  try match goal with
+  | |- 0 <= _ - _ => lower_bound_minus_ge_modulus
+  | |- Z.log2 (_ - _) < _ => upper_bound_minus_ge_modulus
+  | |- _ - _ <= _ => etransitivity; [ apply Z.le_sub_nonneg; apply Z.land_nonneg; right; omega | assumption ]
+  | |- 0 <= ModularBaseSystemListZOperations.neg _ _ =>
+    apply neg_range; vm_compute; discriminate
+  | |- ModularBaseSystemListZOperations.neg _ _ < _ =>
+    apply neg_range; vm_compute; discriminate
+  | |- _ => vm_compute; (discriminate || reflexivity)
+      end.
+Qed.
 
 Lemma freezeW_correct_and_bounded : iunop_correct_and_bounded freezeW freeze.
 Proof.
@@ -174,8 +211,6 @@ Proof.
   destruct (postfreezeW_correct_and_bounded _ H1) as [H0' H1'].
   rewrite H1', H0', H0; split; reflexivity.
 Qed.
-
-
 
 Lemma powW_correct_and_bounded chain : iunop_correct_and_bounded (fun x => powW x chain) (fun x => pow x chain).
 Proof.
