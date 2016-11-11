@@ -13,4 +13,5 @@ Program Definition rcarry_addW_correct_and_bounded
 
 Local Open Scope string_scope.
 Compute ("Carry_Add", compute_bounds_for_display rcarry_addW ExprBinOp_bounds).
-(*Compute ("Carry_Add overflows? ", sanity_check rcarry_addW ExprBinOp_bounds).*)
+Compute ("Carry_Add overflows? ", sanity_compute rcarry_addW ExprBinOp_bounds).
+Compute ("Carry_Add overflows (error if it does)? ", sanity_check rcarry_addW ExprBinOp_bounds).

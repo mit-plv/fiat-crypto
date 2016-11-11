@@ -157,11 +157,11 @@ src/Specific/GF25519Reflective/Reified/Add.v
 src/Specific/GF25519Reflective/Reified/CarryAdd.v
 src/Specific/GF25519Reflective/Reified/CarryOpp.v
 src/Specific/GF25519Reflective/Reified/CarrySub.v
-src/Specific/GF25519Reflective/Reified/Freeze.v
 src/Specific/GF25519Reflective/Reified/GeModulus.v
 src/Specific/GF25519Reflective/Reified/Mul.v
 src/Specific/GF25519Reflective/Reified/Opp.v
 src/Specific/GF25519Reflective/Reified/Pack.v
+src/Specific/GF25519Reflective/Reified/PreFreeze.v
 src/Specific/GF25519Reflective/Reified/Sub.v
 src/Specific/GF25519Reflective/Reified/Unpack.v
 src/Tactics/VerdiTactics.v
