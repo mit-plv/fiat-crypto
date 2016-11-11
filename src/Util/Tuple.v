@@ -251,8 +251,8 @@ Qed.
 Ltac tuple_maps_to_list_maps :=
   try eapply to_list_ext;
   tuples_from_lists;
-  repeat (rewrite <-map_to_list || rewrite <-to_list_map2 ||
-          rewrite to_list_from_list || rewrite from_list_to_list).
+  repeat (rewrite <-@map_to_list || rewrite <-@to_list_map2 ||
+          rewrite @to_list_from_list || rewrite @from_list_to_list).
 
 Lemma map_map2 {n A B C D} (f:A -> B -> C) (g:C -> D) (xs:tuple A n) (ys:tuple B n)
   : map g (map2 f xs ys) = map2 (fun a b => g (f a b)) xs ys.
