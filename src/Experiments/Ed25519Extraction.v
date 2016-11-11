@@ -246,6 +246,7 @@ Extract Inlined Constant Word64.word64 => "Data.Word.Word64".
 Extract Inlined Constant GF25519BoundedCommon.word64 => "Data.Word.Word64".
 Extract Inlined Constant GF25519BoundedCommon.w64eqb => "(Prelude.==)".
 Extract Inlined Constant Word64.word64ToZ => "Prelude.fromIntegral".
+Extract Inlined Constant Word64.ZToWord64 => "Prelude.fromIntegral".
 Extract Inlined Constant GF25519BoundedCommon.word64ToZ => "Prelude.fromIntegral".
 Extract Inlined Constant GF25519BoundedCommon.NToWord64 => "Prelude.fromIntegral".
 Extract Inlined Constant GF25519BoundedCommon.ZToWord64 => "Prelude.fromIntegral".
