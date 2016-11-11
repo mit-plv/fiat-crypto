@@ -11,7 +11,3 @@ Definition cmovne (x y r1 r2 : Z) := if Z.eqb x y then r1 else r2.
    neg 1 = 2^64 - 1 (on 64-bit; 2^32-1 on 32-bit, etc.)
    neg 0 = 0 *)
 Definition neg (int_width : Z) (b : Z) := if Z.eqb b 1 then Z.ones int_width else 0%Z.
-
-(** TODO(jadep): Fill in this stub *)
-Axiom conditional_subtract_modulus
-  : forall (limb_count : nat) (int_width : Z) (modulus value : Tuple.tuple Z limb_count), Tuple.tuple Z limb_count.
