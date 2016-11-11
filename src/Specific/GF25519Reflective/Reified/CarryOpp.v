@@ -13,4 +13,5 @@ Program Definition rcarry_oppW_correct_and_bounded
 
 Local Open Scope string_scope.
 Compute ("Carry_Opp", compute_bounds_for_display rcarry_oppW ExprUnOp_bounds).
-(*Compute ("Carry_Opp overflows? ", sanity_check rcarry_oppW ExprUnOp_bounds).*)
+Compute ("Carry_Opp overflows? ", sanity_compute rcarry_oppW ExprUnOp_bounds).
+Compute ("Carry_Opp overflows (error if it does)? ", sanity_check rcarry_oppW ExprUnOp_bounds).

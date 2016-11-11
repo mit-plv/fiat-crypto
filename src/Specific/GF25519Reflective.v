@@ -36,7 +36,7 @@ Definition radd : ExprBinOp := Eval vm_compute in rcarry_addW.
 Definition rsub : ExprBinOp := Eval vm_compute in rcarry_subW.
 Definition rmul : ExprBinOp := Eval vm_compute in rmulW.
 Definition ropp : ExprUnOp := Eval vm_compute in rcarry_oppW.
-Definition rfreeze : ExprUnOp := Eval vm_compute in rfreezeW.
+Definition rprefreeze : ExprUnOp := Eval vm_compute in rprefreezeW.
 Definition rge_modulus : ExprUnOpFEToZ := Eval vm_compute in rge_modulusW.
 Definition rpack : ExprUnOpFEToWire := Eval vm_compute in rpackW.
 Definition runpack : ExprUnOpWireToFE := Eval vm_compute in runpackW.
@@ -48,7 +48,7 @@ Declare Reduction asm_interp
   := cbv beta iota delta
          [id
             interp_bexpr interp_uexpr interp_uexpr_FEToWire interp_uexpr_FEToZ interp_uexpr_WireToFE
-            radd rsub rmul ropp rfreeze rge_modulus rpack runpack
+            radd rsub rmul ropp rprefreeze rge_modulus rpack runpack
             curry_binop_fe25519W curry_unop_fe25519W curry_unop_wire_digitsW
             Word64.interp_op Word64.interp_base_type
             Z.interp_op Z.interp_base_type
@@ -59,7 +59,7 @@ Ltac asm_interp
   := cbv beta iota delta
          [id
             interp_bexpr interp_uexpr interp_uexpr_FEToWire interp_uexpr_FEToZ interp_uexpr_WireToFE
-            radd rsub rmul ropp rfreeze rge_modulus rpack runpack
+            radd rsub rmul ropp rprefreeze rge_modulus rpack runpack
             curry_binop_fe25519W curry_unop_fe25519W curry_unop_wire_digitsW
             Word64.interp_op Word64.interp_base_type
             Z.interp_op Z.interp_base_type
@@ -84,10 +84,10 @@ Definition interp_ropp : Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25
   := Eval asm_interp in interp_uexpr (rword64ize ropp).
 (*Print interp_ropp.*)
 Definition interp_ropp_correct : interp_ropp = interp_uexpr ropp := eq_refl.
-Definition interp_rfreeze : Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
-  := Eval asm_interp in interp_uexpr (rword64ize rfreeze).
-(*Print interp_rfreeze.*)
-Definition interp_rfreeze_correct : interp_rfreeze = interp_uexpr rfreeze := eq_refl.
+Definition interp_rprefreeze : Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
+  := Eval asm_interp in interp_uexpr (rword64ize rprefreeze).
+(*Print interp_rprefreeze.*)
+Definition interp_rprefreeze_correct : interp_rprefreeze = interp_uexpr rprefreeze := eq_refl.
 
 Definition interp_rge_modulus : Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.word64
   := Eval asm_interp in interp_uexpr_FEToZ (rword64ize rge_modulus).
@@ -109,8 +109,8 @@ Lemma rmul_correct_and_bounded : binop_correct_and_bounded rmul mul.
 Proof. exact rmulW_correct_and_bounded. Qed.
 Lemma ropp_correct_and_bounded : unop_correct_and_bounded ropp carry_opp.
 Proof. exact rcarry_oppW_correct_and_bounded. Qed.
-Lemma rfreeze_correct_and_bounded : unop_correct_and_bounded rfreeze freeze.
-Proof. exact rfreezeW_correct_and_bounded. Qed.
+Lemma rprefreeze_correct_and_bounded : unop_correct_and_bounded rprefreeze prefreeze.
+Proof. exact rprefreezeW_correct_and_bounded. Qed.
 Lemma rge_modulus_correct_and_bounded : unop_FEToZ_correct rge_modulus ge_modulus.
 Proof. exact rge_modulusW_correct_and_bounded. Qed.
 Lemma rpack_correct_and_bounded : unop_FEToWire_correct_and_bounded rpack pack.
