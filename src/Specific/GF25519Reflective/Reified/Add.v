@@ -8,4 +8,5 @@ Definition radd_output_bounds := Eval vm_compute in compute_bounds raddW ExprBin
 
 Local Open Scope string_scope.
 Compute ("Add", compute_bounds_for_display raddW ExprBinOp_bounds).
-(*Compute ("Add overflows? ", sanity_check raddW ExprBinOp_bounds).*)
+Compute ("Add overflows? ", sanity_compute raddW ExprBinOp_bounds).
+Compute ("Add overflows (error if it does)? ", sanity_check raddW ExprBinOp_bounds).

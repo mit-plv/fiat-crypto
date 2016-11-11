@@ -13,4 +13,5 @@ Program Definition rpackW_correct_and_bounded
 
 Local Open Scope string_scope.
 Compute ("Pack", compute_bounds_for_display rpackW ExprUnOpFEToWire_bounds).
-(*Compute ("Pack overflows? ", sanity_check rpackW ExprUnOpFEToWire_bounds).*)
+Compute ("Pack overflows? ", sanity_compute rpackW ExprUnOpFEToWire_bounds).
+Compute ("Pack overflows (error if it does)? ", sanity_check rpackW ExprUnOpFEToWire_bounds).

@@ -8,4 +8,5 @@ Definition ropp_output_bounds := Eval vm_compute in compute_bounds roppW ExprUnO
 
 Local Open Scope string_scope.
 Compute ("Opp", compute_bounds_for_display roppW ExprUnOp_bounds).
-(*Compute ("Opp overflows? ", sanity_check roppW ExprUnOp_bounds).*)
+Compute ("Opp overflows? ", sanity_compute roppW ExprUnOp_bounds).
+Compute ("Opp overflows (error if it does)? ", sanity_check roppW ExprUnOp_bounds).

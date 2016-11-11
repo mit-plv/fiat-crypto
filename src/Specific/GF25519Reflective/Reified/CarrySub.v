@@ -13,4 +13,5 @@ Program Definition rcarry_subW_correct_and_bounded
 
 Local Open Scope string_scope.
 Compute ("Carry_Sub", compute_bounds_for_display rcarry_subW ExprBinOp_bounds).
-(*Compute ("Carry_Sub overflows? ", sanity_check rcarry_subW ExprBinOp_bounds).*)
+Compute ("Carry_Sub overflows? ", sanity_compute rcarry_subW ExprBinOp_bounds).
+Compute ("Carry_Sub overflows (error if it does)? ", sanity_check rcarry_subW ExprBinOp_bounds).
