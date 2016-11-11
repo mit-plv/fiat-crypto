@@ -473,7 +473,7 @@ Section WordToN.
         reflexivity.
   Qed.
 
-  Local Tactic Notation "replaceAt1" constr(x) "with" constr(y) "by" tactic(tac) :=
+  Tactic Notation "replaceAt1" constr(x) "with" constr(y) "by" tactic(tac) :=
     let tmp := fresh in
     set (tmp := x) at 1;
     replace tmp with y by (unfold tmp; tac);
