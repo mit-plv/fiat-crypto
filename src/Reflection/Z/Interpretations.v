@@ -188,7 +188,7 @@ Module Word64.
     autorewrite with push_Zto_N push_Zof_N push_wordToN; try reflexivity.
   Local Ltac w64ToZ_extra_t :=
     repeat first [ reflexivity
-                 | progress cbv [ModularBaseSystemListZOperations.neg ModularBaseSystemListZOperations.cmovne ModularBaseSystemListZOperations.cmovl (*ModularBaseSystemListZOperations.conditional_subtract_modulus*)] in *
+                 | progress cbv [ModularBaseSystemListZOperations.neg ModularBaseSystemListZOperations.cmovne ModularBaseSystemListZOperations.cmovl] in *
                  | progress break_match
                  | progress fold_Word64_Z
                  | progress intros
@@ -375,39 +375,6 @@ Module ZBounds.
   Definition cmovle' (r1 r2 : bounds) : bounds
     := let (lr1, ur1) := r1 in let (lr2, ur2) := r2 in {| lower := Z.min lr1 lr2 ; upper := Z.max ur1 ur2 |}.
   Definition cmovle (x y r1 r2 : t) : t := t_map4 (fun _ _ => cmovle') x y r1 r2.
-  (** TODO(jadep): Check that this is correct; it computes the bounds,
-      conditional on the assumption that the entire calculation is
-      valid.  Currently, it says that each limb is upper-bounded by
-      either the original value less the modulus, or by the smaller of
-      the original value and the modulus (in the case that the
-      subtraction is negative).  Feel free to substitute any other
-      bounds you'd like here. *)
-  Definition conditional_subtract' (pred_n : nat) (int_width : bounds)
-             (modulus value : Tuple.tuple bounds (S pred_n))
-    : Tuple.tuple bounds (S pred_n)
-    := Tuple.map2
-         (fun modulus_bounds value_bounds : bounds
-          => let (ml, mu) := modulus_bounds in
-             let (vl, vu) := value_bounds in
-             {| lower := 0 ; upper := Z.max (Z.min vu mu) (vu - ml) |})
-         modulus value.
-  (** TODO(jadep): Fill me in.  This should check that the modulus and
-      value fit within int_width, that the modulus is of the right
-      form, and that the value is small enough. *)
-  Axiom check_conditional_subtract_bounds
-    : forall (pred_n : nat) (int_width : bounds)
-             (modulus value : Tuple.tuple bounds (S pred_n)), bool.
-  Definition conditional_subtract (pred_n : nat) (int_width : t)
-             (modulus value : Tuple.tuple t (S pred_n))
-    : Tuple.tuple t (S pred_n)
-    := Tuple.push_option
-         match int_width, Tuple.lift_option modulus, Tuple.lift_option value with
-         | Some int_width, Some modulus, Some value'
-           => if check_conditional_subtract_bounds pred_n int_width modulus value'
-              then Some (conditional_subtract' pred_n int_width modulus value')
-              else None
-         | _, _, _ => None
-         end.
 
   Module Export Notations.
     Delimit Scope bounds_scope with bounds.
