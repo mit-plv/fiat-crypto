@@ -1088,14 +1088,14 @@ Proof.
     apply Z2N.inj_le; [apply Nat2Z.is_nonneg|assumption|].
     etransitivity; [|apply N.ge_le; eassumption].
     apply N.eq_le_incl.
-    induction n; cbn; reflexivity.
+    induction n; simpl; reflexivity.
 
   - rewrite Z.ones_spec_low, N.ones_spec_low;
       [reflexivity|assumption|split; [omega|]].
     apply Z2N.inj_lt; [assumption|apply Nat2Z.is_nonneg|].
     eapply N.lt_le_trans; [eassumption|].
     apply N.eq_le_incl.
-    induction n; cbn; reflexivity.
+    induction n; simpl; reflexivity.
 Qed.
 
 Lemma WordNZ_split2 : forall {n m} w,
@@ -1108,7 +1108,7 @@ Proof.
   rewrite Z.shiftr_spec, N.shiftr_spec; [|apply N2Z.inj_le; rewrite Z2N.id|]; try assumption.
   rewrite Z2N.inj_testbit; [f_equal|omega].
   rewrite Z2N.inj_add; [f_equal|assumption|apply Nat2Z.is_nonneg].
-  induction n; cbn; reflexivity.
+  induction n; simpl; reflexivity.
 Qed.
 
 Lemma WordNZ_range : forall {n} B w,
@@ -1131,7 +1131,7 @@ Proof.
   eapply Z.lt_le_trans; [apply N2Z.inj_lt; apply WordUtil.word_size_bound|].
   rewrite WordUtil.Npow2_N, N2Z.inj_pow, nat_N_Z.
   apply Z.pow_le_mono; [|assumption].
-  split; cbn; omega.
+  split; simpl; omega.
 Qed.
 
 (* TODO : move to ZUtil *)
@@ -1145,7 +1145,7 @@ Proof.
   split; [apply Z.mod_pos_bound, WordUtil.Z_pow2_gt_0; assumption|].
   eapply Z.lt_le_trans; [apply Z.mod_pos_bound, WordUtil.Z_pow2_gt_0; assumption|].
   apply Z.pow_le_mono; [|assumption].
-  split; cbn; omega.
+  split; simpl; omega.
 Qed.
 
 (* TODO : move to ZUtil *)
