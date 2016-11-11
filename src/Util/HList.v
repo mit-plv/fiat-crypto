@@ -121,5 +121,9 @@ Module Tuple.
   Lemma map_id_ext {n A} (f : A -> A) (xs:tuple A n)
   : hlist (fun x => f x = x) xs -> Tuple.map f xs = xs.
   Proof.
-  Admitted.
+    destruct n as [|n]; [cbv in *; destruct xs; trivial|].
+    induction n as [|n IHn]; [cbv in *;trivial|].
+    simpl in *. destruct xs. simpl in *; intros [??].
+    rewrite map_S. eauto using f_equal2.
+  Qed.
 End Tuple.
