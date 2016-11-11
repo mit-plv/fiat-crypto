@@ -39,7 +39,7 @@ Inductive op : flat_type base_type -> flat_type base_type -> Type :=
 | Shr : op (tZ * tZ) tZ
 | Land : op (tZ * tZ) tZ
 | Lor : op (tZ * tZ) tZ
-| Neg : op (tZ * tZ) tZ
+| Neg (int_width : Z) : op tZ tZ
 | Cmovne : op (tZ * tZ * tZ * tZ) tZ
 | Cmovle : op (tZ * tZ * tZ * tZ) tZ.
 
@@ -52,7 +52,7 @@ Definition interp_op src dst (f : op src dst) : interp_flat_type interp_base_typ
      | Shr => fun xy => fst xy >> snd xy
      | Land => fun xy => Z.land (fst xy) (snd xy)
      | Lor => fun xy => Z.lor (fst xy) (snd xy)
-     | Neg => fun xy => ModularBaseSystemListZOperations.neg (fst xy) (snd xy)
+     | Neg int_width => fun x => ModularBaseSystemListZOperations.neg int_width x
      | Cmovne => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovne x y z w
      | Cmovle => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovl x y z w
      end%Z.
@@ -83,8 +83,8 @@ Definition op_beq_hetero {t1 tR t1' tR'} (f : op t1 tR) (g : op t1' tR') : reifi
      | Land, _ => false
      | Lor, Lor => true
      | Lor, _ => false
-     | Neg, Neg => true
-     | Neg, _ => false
+     | Neg n, Neg m => Z.eqb n m
+     | Neg _, _ => false
      | Cmovne, Cmovne => true
      | Cmovne, _ => false
      | Cmovle, Cmovle => true
@@ -112,7 +112,22 @@ Definition op_beq_hetero_eq {t1 tR t1' tR'} f g
       _ (op_beq_hetero_type_eqs f g pf)
     = g.
 Proof.
-  destruct f, g; simpl; try solve [ reflexivity | intros [] ].
+  destruct f, g; simpl; try solve [ reflexivity | intros [] ];
+    unfold op_beq_hetero; simpl;
+      repeat match goal with
+             | [ |- context[to_prop (reified_Prop_of_bool ?x)] ]
+               => destruct (Sumbool.sumbool_of_bool x) as [P|P]
+             | [ H : NatUtil.nat_beq _ _ = true |- _ ]
+               => apply NatUtil.internal_nat_dec_bl in H
+             | [ H : Z.eqb _ _ = true |- _ ]
+               => apply Z.eqb_eq in H
+             | _ => progress subst
+             | _ => reflexivity
+             | [ H : ?x = false |- context[reified_Prop_of_bool ?x] ]
+               => rewrite H
+             | _ => progress simpl @to_prop
+             | _ => tauto
+             end.
 Qed.
 
 Lemma op_beq_bl : forall t1 tR x y, to_prop (op_beq t1 tR x y) -> x = y.
