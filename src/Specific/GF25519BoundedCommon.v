@@ -692,7 +692,7 @@ Notation iunop_WireToFE_correct_and_bounded irop op
 
 (** TODO(andreser): Remove me in favor of a GF25519.v definition *)
 Definition prefreeze :=
-fun '(f0, f1, f2, f3, f4, f5, f6, f7, f8, f9) =>
+fun fs => let '(f0, f1, f2, f3, f4, f5, f6, f7, f8, f9) := fs in
 dlet a := f9 in
 dlet a0 := (Z.shiftr a 26 + f8)%Z in
 dlet a1 := (Z.shiftr a0 25 + f7)%Z in
