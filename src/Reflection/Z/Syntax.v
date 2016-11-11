@@ -39,14 +39,9 @@ Inductive op : flat_type base_type -> flat_type base_type -> Type :=
 | Shr : op (tZ * tZ) tZ
 | Land : op (tZ * tZ) tZ
 | Lor : op (tZ * tZ) tZ
-| Neg : op (tZ * tZ) tZ
+| Neg (int_width : Z) : op tZ tZ
 | Cmovne : op (tZ * tZ * tZ * tZ) tZ
-| Cmovle : op (tZ * tZ * tZ * tZ) tZ
-| ConditionalSubtract (pred_limb_count : nat)
-  : op (tZ (* int_width *)
-        * Syntax.tuple tZ (S pred_limb_count) (* modulus *)
-        * Syntax.tuple tZ (S pred_limb_count) (* value *))
-       (Syntax.tuple tZ (S pred_limb_count)).
+| Cmovle : op (tZ * tZ * tZ * tZ) tZ.
 
 Definition interp_op src dst (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
   := match f in op src dst return interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst with
@@ -57,12 +52,9 @@ Definition interp_op src dst (f : op src dst) : interp_flat_type interp_base_typ
      | Shr => fun xy => fst xy >> snd xy
      | Land => fun xy => Z.land (fst xy) (snd xy)
      | Lor => fun xy => Z.lor (fst xy) (snd xy)
-     | Neg => fun xy => ModularBaseSystemListZOperations.neg (fst xy) (snd xy)
+     | Neg int_width => fun x => ModularBaseSystemListZOperations.neg int_width x
      | Cmovne => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovne x y z w
      | Cmovle => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovl x y z w
-     | ConditionalSubtract pred_n
-       => fun xyz => let '(x, y, z) := eta3 xyz in
-                     flat_interp_untuple' (T:=tZ) (@ModularBaseSystemListZOperations.conditional_subtract_modulus (S pred_n) x (flat_interp_tuple y) (flat_interp_tuple z))
      end%Z.
 
 Definition base_type_eq_semidec_transparent (t1 t2 : base_type)
@@ -91,14 +83,12 @@ Definition op_beq_hetero {t1 tR t1' tR'} (f : op t1 tR) (g : op t1' tR') : reifi
      | Land, _ => false
      | Lor, Lor => true
      | Lor, _ => false
-     | Neg, Neg => true
-     | Neg, _ => false
+     | Neg n, Neg m => Z.eqb n m
+     | Neg _, _ => false
      | Cmovne, Cmovne => true
      | Cmovne, _ => false
      | Cmovle, Cmovle => true
      | Cmovle, _ => false
-     | ConditionalSubtract n, ConditionalSubtract m => NatUtil.nat_beq n m
-     | ConditionalSubtract _, _ => false
      end.
 
 Definition op_beq t1 tR (f g : op t1 tR) : reified_Prop
@@ -107,13 +97,6 @@ Definition op_beq t1 tR (f g : op t1 tR) : reified_Prop
 Definition op_beq_hetero_type_eq {t1 tR t1' tR'} f g : to_prop (@op_beq_hetero t1 tR t1' tR' f g) -> t1 = t1' /\ tR = tR'.
 Proof.
   destruct f, g; simpl; try solve [ repeat constructor | intros [] ].
-  unfold op_beq_hetero; simpl.
-  match goal with
-  | [ |- context[to_prop (reified_Prop_of_bool ?x)] ]
-    => destruct (Sumbool.sumbool_of_bool x) as [P|P]
-  end.
-  { apply NatUtil.internal_nat_dec_bl in P; subst; repeat constructor. }
-  { intro H'; exfalso; rewrite P in H'; exact H'. }
 Defined.
 
 Definition op_beq_hetero_type_eqs {t1 tR t1' tR'} f g : to_prop (@op_beq_hetero t1 tR t1' tR' f g) -> t1 = t1'
@@ -129,19 +112,22 @@ Definition op_beq_hetero_eq {t1 tR t1' tR'} f g
       _ (op_beq_hetero_type_eqs f g pf)
     = g.
 Proof.
-  destruct f, g; simpl; try solve [ reflexivity | intros [] ].
-  { unfold op_beq_hetero, op_beq_hetero_type_eqs, op_beq_hetero_type_eqd; simpl.
-    intro pf; edestruct Sumbool.sumbool_of_bool.
-    { simpl;
-        lazymatch goal with
-        | [ |- context[NatUtil.internal_nat_dec_bl ?x ?y ?pf] ]
-          => generalize dependent (NatUtil.internal_nat_dec_bl x y pf); intro; subst
-        end;
-        reflexivity. }
-    { match goal with
-      | [ |- context[False_ind _ ?pf] ]
-        => case pf
-      end. } }
+  destruct f, g; simpl; try solve [ reflexivity | intros [] ];
+    unfold op_beq_hetero; simpl;
+      repeat match goal with
+             | [ |- context[to_prop (reified_Prop_of_bool ?x)] ]
+               => destruct (Sumbool.sumbool_of_bool x) as [P|P]
+             | [ H : NatUtil.nat_beq _ _ = true |- _ ]
+               => apply NatUtil.internal_nat_dec_bl in H
+             | [ H : Z.eqb _ _ = true |- _ ]
+               => apply Z.eqb_eq in H
+             | _ => progress subst
+             | _ => reflexivity
+             | [ H : ?x = false |- context[reified_Prop_of_bool ?x] ]
+               => rewrite H
+             | _ => progress simpl @to_prop
+             | _ => tauto
+             end.
 Qed.
 
 Lemma op_beq_bl : forall t1 tR x y, to_prop (op_beq t1 tR x y) -> x = y.
