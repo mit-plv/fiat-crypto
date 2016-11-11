@@ -1218,7 +1218,7 @@ Proof.
         assert (i = 0 \/ i = 1 \/ i = 2 \/ i = 3 \/ i = 4 \/ i = 5 \/ i = 6 \/ i = 7) by omega.
         repeat match goal with H : (_ \/ _)%type |- _ => destruct H; subst end;
         cbv [nth_default nth_error value]; try (apply pow2_mod_range; omega).
-            repeat apply shiftr_range; apply WordNZ_range_mono; cbv;
+            repeat apply shiftr_range; try omega; apply WordNZ_range_mono; cbv;
             congruence. }
     { rewrite !nth_default_out_of_bounds
         by (rewrite ?Tuple.length_to_list; cbv [length]; omega).
