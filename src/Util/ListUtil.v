@@ -1485,34 +1485,36 @@ Proof.
 Qed.
 Local Hint Resolve map2_nil_r map2_nil_l.
 
-Opaque map2.
-
-Lemma map2_length : forall A B C (f : A -> B -> C) ls1 ls2,
-  length (map2 f ls1 ls2) = min (length ls1) (length ls2).
-Proof.
-  induction ls1, ls2; intros; try solve [cbv; auto].
-  rewrite map2_cons, !length_cons, IHls1.
-  auto.
-Qed.
-Hint Rewrite @map2_length : distr_length.
-
-
 Ltac simpl_list_lengths := repeat match goal with
-  | H : appcontext[length (@nil ?A)] |- _ => rewrite (@nil_length0 A) in H
-  | H : appcontext[length (_ :: _)] |- _ => rewrite length_cons in H
-  | |- appcontext[length (@nil ?A)] => rewrite (@nil_length0 A)
-  | |- appcontext[length (_ :: _)] => rewrite length_cons
-  end.
+                                  | H : appcontext[length (@nil ?A)] |- _ => rewrite (@nil_length0 A) in H
+                                  | H : appcontext[length (_ :: _)] |- _ => rewrite length_cons in H
+                                  | |- appcontext[length (@nil ?A)] => rewrite (@nil_length0 A)
+                                  | |- appcontext[length (_ :: _)] => rewrite length_cons
+                                  end.
 
-Lemma map2_app : forall A B C (f : A -> B -> C) ls1 ls2 ls1' ls2',
-  (length ls1 = length ls2) ->
-  map2 f (ls1 ++ ls1') (ls2 ++ ls2') = map2 f ls1 ls2 ++ map2 f ls1' ls2'.
-Proof.
-  induction ls1, ls2; intros; rewrite ?map2_nil_r, ?app_nil_l; try congruence;
-    simpl_list_lengths; try omega.
-  rewrite <-!app_comm_cons, !map2_cons.
-  rewrite IHls1; auto.
-Qed.
+Section OpaqueMap2.
+  Local Opaque map2.
+
+  Lemma map2_length : forall A B C (f : A -> B -> C) ls1 ls2,
+      length (map2 f ls1 ls2) = min (length ls1) (length ls2).
+  Proof.
+    induction ls1, ls2; intros; try solve [cbv; auto].
+    rewrite map2_cons, !length_cons, IHls1.
+    auto.
+  Qed.
+  Hint Rewrite @map2_length : distr_length.
+
+
+  Lemma map2_app : forall A B C (f : A -> B -> C) ls1 ls2 ls1' ls2',
+      (length ls1 = length ls2) ->
+      map2 f (ls1 ++ ls1') (ls2 ++ ls2') = map2 f ls1 ls2 ++ map2 f ls1' ls2'.
+  Proof.
+    induction ls1, ls2; intros; rewrite ?map2_nil_r, ?app_nil_l; try congruence;
+      simpl_list_lengths; try omega.
+    rewrite <-!app_comm_cons, !map2_cons.
+    rewrite IHls1; auto.
+  Qed.
+End OpaqueMap2.
 
 Lemma firstn_update_nth {A}
   : forall f m n (xs : list A), firstn m (update_nth n f xs) = update_nth n f (firstn m xs).
@@ -1622,3 +1624,51 @@ Lemma skipn_repeat : forall {A} x n k, skipn k (@repeat A x n) = repeat x (n - k
 Proof. induction n, k; boring. Qed.
 
 Hint Rewrite @skipn_repeat : push_skipn.
+
+Global Instance Proper_map {A B} {RA RB} {Equivalence_RB:Equivalence RB}
+  : Proper ((RA==>RB) ==> eqlistA RA ==> eqlistA RB) (@List.map A B).
+Proof.
+  repeat intro.
+  match goal with [H:eqlistA _ _ _ |- _ ] => induction H end; [reflexivity|].
+  cbv [respectful] in *; econstructor; eauto.
+Qed.
+
+Lemma pointwise_map {A B} : Proper ((pointwise_relation _ eq) ==> eq ==> eq) (@List.map A B).
+Proof.
+  repeat intro; cbv [pointwise_relation] in *; subst.
+  match goal with [H:list _ |- _ ] => induction H as [|? IH] end; [reflexivity|].
+  simpl. rewrite IHIH. congruence.
+Qed.
+
+Lemma map_map2 {A B C D} (f:A -> B -> C) (g:C -> D) (xs:list A) (ys:list B) : List.map g (map2 f xs ys) = map2 (fun (a : A) (b : B) => g (f a b)) xs ys.
+Proof.
+  revert ys; induction xs; intros; [reflexivity|].
+  destruct ys; [reflexivity|].
+  simpl. rewrite IHxs. reflexivity.
+Qed.
+
+Lemma map2_fst {A B C} (f:A -> C) (xs:list A) : forall (ys:list B), length xs = length ys ->
+  map2 (fun (a : A) (_ : B) => f a) xs ys = List.map f xs.
+Proof.
+  induction xs; intros; [reflexivity|].
+  destruct ys; [simpl in *; discriminate|].
+  simpl. rewrite IHxs by eauto. reflexivity.
+Qed.
+
+Lemma map2_flip {A B C} (f:A -> B -> C) (xs:list A) : forall (ys: list B),
+   map2 (fun b a => f a b) ys xs = map2 f xs ys.
+Proof.
+  induction xs; destruct ys; try reflexivity; [].
+  simpl. rewrite IHxs. reflexivity.
+Qed.
+
+Lemma map2_snd {A B C} (f:B -> C) (xs:list A) : forall (ys:list B), length xs = length ys ->
+  map2 (fun (_ : A) (b : B) => f b) xs ys = List.map f ys.
+Proof. intros. rewrite map2_flip. eauto using map2_fst. Qed.
+
+Lemma map2_map {A B C A' B'} (f:A -> B -> C) (g:A' -> A) (h:B' -> B) (xs:list A') (ys:list B')
+  : map2 f (List.map g xs) (List.map h ys) = map2 (fun a b => f (g a) (h b)) xs ys.
+Proof.
+  revert ys; induction xs; destruct ys; intros; try reflexivity; [].
+  simpl. rewrite IHxs. reflexivity.
+Qed.

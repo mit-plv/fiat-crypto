@@ -188,17 +188,6 @@ Definition on_tuple {A B} (f:list A -> list B)
 Definition map {n A B} (f:A -> B) (xs:tuple A n) : tuple B n
   := on_tuple (List.map f) (fun _ => eq_trans (map_length _ _)) xs.
 
-Lemma map_S {n A B} (f:A -> B) (xs:tuple' A n) (x:A)
-  : map (n:=S (S n)) f (xs, x) = (map (n:=S n) f xs, f x).
-Proof.
-  unfold map, on_tuple.
-  simpl @List.map.
-Admitted.
-
-Lemma map_to_list {A B n ts} (f : A -> B)
-  : List.map f (@to_list A n ts) = @to_list B n (map f ts).
-Proof. Admitted.
-
 Definition on_tuple2 {A B C} (f : list A -> list B -> list C) {a b c : nat}
            (Hlength : forall la lb, length la = a -> length lb = b -> length (f la lb) = c)
            (ta:tuple A a) (tb:tuple B b) : tuple C c
@@ -208,40 +197,127 @@ Definition on_tuple2 {A B C} (f : list A -> list B -> list C) {a b c : nat}
 Definition map2 {n A B C} (f:A -> B -> C) (xs:tuple A n) (ys:tuple B n) : tuple C n
   := on_tuple2 (map2 f) (fun la lb pfa pfb => eq_trans (@map2_length _ _ _ _ la lb) (eq_trans (f_equal2 _ pfa pfb) (Min.min_idempotent _))) xs ys.
 
-Lemma map2_S {n A B C} (f:A -> B -> C) (xs:tuple' A n) (ys:tuple' B n) (x:A) (y:B)
-  : map2 (n:=S (S n)) f (xs, x) (ys, y) = (map2 (n:=S n) f xs ys, f x y).
+Lemma to_list'_ext {n A} (xs ys:tuple' A n) : to_list' n xs = to_list' n ys -> xs = ys.
 Proof.
-Admitted.
+  induction n; simpl in *; [cbv; congruence|]; destruct_head' prod.
+  intro Hp; injection Hp; clear Hp; intros; subst; eauto using f_equal2.
+Qed.
+
+Lemma to_list_ext {n A} (xs ys:tuple A n) : to_list n xs = to_list n ys -> xs = ys.
+Proof.
+  destruct n; simpl in *; destruct_head unit; eauto using to_list'_ext.
+Qed.
+
+Lemma from_list'_complete {A n} (xs:tuple' A n) : exists x ls pf, xs = from_list' x n ls pf.
+Proof.
+  destruct n; simpl in xs.
+  {  exists xs. exists nil. exists eq_refl. reflexivity. }
+  { destruct xs as [xs' x]. exists x. exists (to_list' _ xs'). eexists (length_to_list' _ _ _).
+    symmetry; eapply from_list'_to_list'. reflexivity. }
+Qed.
+
+Lemma from_list_complete {A n} (xs:tuple A n) : exists ls pf, xs = from_list n ls pf.
+Proof.
+  exists (to_list n xs). exists (length_to_list _). symmetry; eapply from_list_to_list.
+Qed.
+
+Ltac tuples_from_lists :=
+  repeat match goal with
+         | [xs:tuple ?A _ |- _] =>
+           let ls := fresh "l" xs in
+           destruct (from_list_complete xs) as [ls [? ?]]; subst
+         | [xs:tuple' ?A _ |- _] =>
+           let a := fresh A in
+           let ls := fresh "l" xs in
+           destruct (from_list'_complete xs) as [a [ls [? ?]]]; subst
+         end.
+
+Lemma map_to_list {A B n ts} (f : A -> B)
+  : List.map f (@to_list A n ts) = @to_list B n (map f ts).
+Proof.
+  tuples_from_lists; unfold map, on_tuple.
+  repeat (rewrite to_list_from_list || rewrite from_list_to_list).
+  reflexivity.
+Qed.
+
+Lemma to_list_map2 {A B C n xs ys} (f : A -> B -> C)
+  : ListUtil.map2 f (@to_list A n xs) (@to_list B n ys) = @to_list C n (map2 f xs ys).
+Proof.
+  tuples_from_lists; unfold map2, on_tuple2.
+  repeat (rewrite to_list_from_list || rewrite from_list_to_list).
+  reflexivity.
+Qed.
+
+Ltac tuple_maps_to_list_maps :=
+  try eapply to_list_ext;
+  tuples_from_lists;
+  repeat (rewrite <-map_to_list || rewrite <-to_list_map2 ||
+          rewrite to_list_from_list || rewrite from_list_to_list).
 
 Lemma map_map2 {n A B C D} (f:A -> B -> C) (g:C -> D) (xs:tuple A n) (ys:tuple B n)
   : map g (map2 f xs ys) = map2 (fun a b => g (f a b)) xs ys.
 Proof.
-Admitted.
+  tuple_maps_to_list_maps; eauto using ListUtil.map_map2.
+Qed.
 
 Lemma map2_fst {n A B C} (f:A -> C) (xs:tuple A n) (ys:tuple B n)
   : map2 (fun a b => f a) xs ys = map f xs.
 Proof.
-Admitted.
+  tuple_maps_to_list_maps; eauto using ListUtil.map2_fst.
+Qed.
 
 Lemma map2_snd {n A B C} (f:B -> C) (xs:tuple A n) (ys:tuple B n)
   : map2 (fun a b => f b) xs ys = map f ys.
 Proof.
-Admitted.
-
-Lemma map_id {n A} (xs:tuple A n)
-  : map (fun x => x) xs = xs.
-Proof.
-Admitted.
+  tuple_maps_to_list_maps; eauto using ListUtil.map2_snd.
+Qed.
 
 Lemma map_id_ext {n A} (f : A -> A) (xs:tuple A n)
   : (forall x, f x = x) -> map f xs = xs.
 Proof.
-Admitted.
+  intros; tuple_maps_to_list_maps.
+  transitivity (List.map (fun x => x) lxs).
+  { eapply ListUtil.pointwise_map; cbv [pointwise_relation]; eauto. }
+  { eapply List.map_id. }
+Qed.
+
+Lemma map_id {n A} (xs:tuple A n)
+  : map (fun x => x) xs = xs.
+Proof. eapply map_id_ext; intros; reflexivity. Qed.
 
 Lemma map2_map {n A B C A' B'} (f:A -> B -> C) (g:A' -> A) (h:B' -> B) (xs:tuple A' n) (ys:tuple B' n)
   : map2 f (map g xs) (map h ys) = map2 (fun a b => f (g a) (h b)) xs ys.
 Proof.
-Admitted.
+  tuple_maps_to_list_maps; eauto using ListUtil.map2_map.
+Qed.
+
+Lemma map_S' {n A B} (f:A -> B) (xs:tuple A (S n)) (x:A)
+  : map (n:=S (S n)) f (xs, x) = (map (n:=S n) f xs, f x).
+Proof.
+  tuple_maps_to_list_maps.
+  destruct lxs as [|x' lxs']; [simpl in *; discriminate|].
+  change ( f x :: List.map f (to_list (S n) (from_list (S n) (x' :: lxs') x0)) = f x :: to_list (S n) (map f (from_list (S n) (x' :: lxs') x0)) ).
+  tuple_maps_to_list_maps.
+  reflexivity.
+Qed.
+
+Definition map_S {n A B} (f:A -> B) (xs:tuple' A n) (x:A)
+  : map (n:=S (S n)) f (xs, x) = (map (n:=S n) f xs, f x) := map_S' _ _ _.
+
+Lemma map2_S' {n A B C} (f:A -> B -> C) (xs:tuple A (S n)) (ys:tuple B (S n)) (x:A) (y:B)
+  : map2 (n:=S (S n)) f (xs, x) (ys, y) = (map2 (n:=S n) f xs ys, f x y).
+Proof.
+  tuple_maps_to_list_maps.
+  destruct lxs as [|x' lxs']; [simpl in *; discriminate|].
+  destruct lys as [|y' lys']; [simpl in *; discriminate|].
+  change ( f x y ::  ListUtil.map2 f (to_list (S n) (from_list (S n) (x' :: lxs') x1))
+    (to_list (S n) (from_list (S n) (y' :: lys') x0)) = f x y :: to_list (S n) (map2 f (from_list (S n) (x' :: lxs') x1) (from_list (S n) (y' :: lys') x0)) ).
+  tuple_maps_to_list_maps.
+  reflexivity.
+Qed.
+
+Definition map2_S {n A B C} (f:A -> B -> C) (xs:tuple' A n) (ys:tuple' B n) (x:A) (y:B)
+  : map2 (n:=S (S n)) f (xs, x) (ys, y) = (map2 (n:=S n) f xs ys, f x y) := map2_S' _ _ _ _ _.
 
 Lemma map2_map_fst {n A B C A'} (f:A -> B -> C) (g:A' -> A) (xs:tuple A' n) (ys:tuple B n)
   : map2 f (map g xs) ys = map2 (fun a b => f (g a) b) xs ys.
@@ -257,8 +333,7 @@ Qed.
 
 Lemma map_map {n A B C} (g : B -> C) (f : A -> B) (xs:tuple A n)
   : map g (map f xs) = map (fun x => g (f x)) xs.
-Proof.
-Admitted.
+Proof. tuple_maps_to_list_maps; eapply List.map_map. Qed.
 
 Section monad.
   Context (M : Type -> Type) (bind : forall X Y, M X -> (X -> M Y) -> M Y) (ret : forall X, X -> M X).
