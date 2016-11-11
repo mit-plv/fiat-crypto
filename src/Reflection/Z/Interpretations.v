@@ -168,9 +168,7 @@ Module Word64.
     := fun x y z w => ZToWord64 (ModularBaseSystemListZOperations.cmovne (word64ToZ x) (word64ToZ y) (word64ToZ z) (word64ToZ w)).
   Definition cmovle : word64 -> word64 -> word64 -> word64 -> word64 (* TODO: FIXME? *)
     := fun x y z w => ZToWord64 (ModularBaseSystemListZOperations.cmovl (word64ToZ x) (word64ToZ y) (word64ToZ z) (word64ToZ w)).
-  Definition conditional_subtract (pred_limb_count : nat) : word64 -> Tuple.tuple word64 (S pred_limb_count) -> Tuple.tuple word64 (S pred_limb_count) -> Tuple.tuple word64 (S pred_limb_count)
-    := fun x y z => Tuple.map ZToWord64 (@ModularBaseSystemListZOperations.conditional_subtract_modulus
-                                           (S pred_limb_count) (word64ToZ x) (Tuple.map word64ToZ y) (Tuple.map word64ToZ z)).
+
   Infix "+" := add : word64_scope.
   Infix "-" := sub : word64_scope.
   Infix "*" := mul : word64_scope.
@@ -203,9 +201,6 @@ Module Word64.
   Local Notation bounds_2statement wop Zop
     := (forall x y,
            bounds_statement (wop x y) (Zop (word64ToZ x) (word64ToZ y))).
-  Local Notation bounds_1_tuple2_statement wop Zop
-    := (forall x y z,
-           bounds_statement_tuple (wop x y z) (Zop (word64ToZ x) (Tuple.map word64ToZ y) (Tuple.map word64ToZ z))).
   Local Notation bounds_4statement wop Zop
     := (forall x y z w,
            bounds_statement (wop x y z w) (Zop (word64ToZ x) (word64ToZ y) (word64ToZ z) (word64ToZ w))).
@@ -247,20 +242,6 @@ Module Word64.
   Proof. w64ToZ_t; w64ToZ_extra_t. Qed.
   Lemma word64ToZ_cmovle : bounds_4statement cmovle ModularBaseSystemListZOperations.cmovl.
   Proof. w64ToZ_t; w64ToZ_extra_t. Qed.
-  Lemma word64ToZ_conditional_subtract pred_limb_count
-    : bounds_1_tuple2_statement (@conditional_subtract pred_limb_count)
-                                (@ModularBaseSystemListZOperations.conditional_subtract_modulus (S pred_limb_count)).
-  Proof.
-    w64ToZ_t; unfold conditional_subtract; w64ToZ_extra_t.
-    repeat first [ progress w64ToZ_extra_t
-                 | rewrite Tuple.map_map
-                 | rewrite HList.Tuple.map_id_ext
-                 | match goal with
-                   | [ H : HList.hlist _ _ |- HList.hlist _ _ ]
-                     => revert H; apply HList.hlist_impl
-                   end
-                 | apply HList.const ].
-  Qed.
 
   Definition interp_base_type (t : base_type) : Type
     := match t with
@@ -278,9 +259,6 @@ Module Word64.
        | Neg => fun xy => neg (fst xy) (snd xy)
        | Cmovne => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovne x y z w
        | Cmovle => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovle x y z w
-       | ConditionalSubtract pred_n
-         => fun xyz => let '(x, y, z) := eta3 xyz in
-                       flat_interp_untuple' (T:=Tbase TZ) (@conditional_subtract pred_n x (flat_interp_tuple y) (flat_interp_tuple z))
        end%word64.
 
   Definition of_Z ty : Z.interp_base_type ty -> interp_base_type ty
@@ -315,8 +293,6 @@ Module Word64.
     Hint Rewrite <- word64ToZ_cmovne using word64_util_arith : pull_word64ToZ.
     Hint Rewrite word64ToZ_cmovle using word64_util_arith : push_word64ToZ.
     Hint Rewrite <- word64ToZ_cmovle using word64_util_arith : pull_word64ToZ.
-    Hint Rewrite word64ToZ_conditional_subtract using word64_util_arith : push_word64ToZ.
-    Hint Rewrite <- word64ToZ_conditional_subtract using word64_util_arith : pull_word64ToZ.
   End Rewrites.
 End Word64.
 
@@ -458,9 +434,6 @@ Module ZBounds.
        | Neg => fun xy => neg (fst xy) (snd xy)
        | Cmovne => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovne x y z w
        | Cmovle => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovle x y z w
-       | ConditionalSubtract pred_n
-         => fun xyz => let '(x, y, z) := eta3 xyz in
-                       flat_interp_untuple' (T:=Tbase TZ) (@conditional_subtract pred_n x (flat_interp_tuple y) (flat_interp_tuple z))
        end%bounds.
 
   Definition of_word64 ty : Word64.interp_base_type ty -> interp_base_type ty
@@ -604,44 +577,6 @@ Module BoundedWord64.
           | _, _, _, _ => None
           end.
 
-  Definition t_map1_tuple2 {n}
-             (opW : Word64.word64 -> Tuple.tuple Word64.word64 (S n) -> Tuple.tuple Word64.word64 (S n) -> Tuple.tuple Word64.word64 (S n))
-             (opB : ZBounds.t -> Tuple.tuple ZBounds.t (S n) -> Tuple.tuple ZBounds.t (S n) -> Tuple.tuple ZBounds.t (S n))
-             (pf : forall x y z bs,
-                 Tuple.lift_option
-                   (opB (Some (BoundedWordToBounds x)) (Tuple.push_option (Some (Tuple.map BoundedWordToBounds y)))
-                        (Tuple.push_option (Some (Tuple.map BoundedWordToBounds z))))
-                 = Some bs
-                 -> let val := opW (value x) (Tuple.map value y) (Tuple.map value z) in
-                    HList.hlist
-                      (fun vlu => let v := fst vlu in
-                                  let lu : ZBounds.bounds := snd vlu in
-                                  is_bounded_by v (ZBounds.lower lu) (ZBounds.upper lu))
-                      (Tuple.map2 (fun v (lu : ZBounds.bounds) => (v, lu))
-                                  val bs))
-    : t -> Tuple.tuple t (S n) -> Tuple.tuple t (S n) -> Tuple.tuple t (S n)
-    := fun (x : t) (y z : Tuple.tuple t (S n))
-       => Tuple.push_option
-            match x, Tuple.lift_option y, Tuple.lift_option z with
-            | Some x, Some y, Some z
-              => match Tuple.lift_option (opB (Some (BoundedWordToBounds x))
-                                              (Tuple.push_option (Some (Tuple.map BoundedWordToBounds y)))
-                                              (Tuple.push_option (Some (Tuple.map BoundedWordToBounds z))))
-                       as bop return Tuple.lift_option _ = bop -> option (Tuple.tuple _ (S n)) with
-                 | Some bs
-                   => fun Heq
-                      => let v
-                             := HList.mapt
-                                  (fun (vlu : Word64.word64 * ZBounds.bounds) pf
-                                   => {| lower := ZBounds.lower (snd vlu) ; value := fst vlu ; upper := ZBounds.upper (snd vlu) ;
-                                         in_bounds := pf |})
-                                  (pf _ _ _ _ Heq) in
-                         Some v
-                 | None => fun _ => None
-                 end eq_refl
-            | _, _, _ => None
-            end.
-
   Local Opaque Word64.bit_width.
   Hint Resolve Z.ones_nonneg : zarith.
   Local Ltac t_prestart :=
@@ -679,116 +614,10 @@ Module BoundedWord64.
                      => apply (Z.max_case_strong x y)
                    end ].
 
-  (** TODO(jadep): Use the bounds lemma here to prove that if each
-      component of [ret_val] is [Some (l, v, u)], then we can fill in
-      [pf] and return the tuple of [{| lower := l ; value := v ; upper
-      := u ; in_bounds := pf |}]. *)
-  Lemma conditional_subtract_bounded
-        (pred_n : nat) (x : BoundedWord)
-        (y z : Tuple.tuple BoundedWord (S pred_n))
-        (H : ZBounds.check_conditional_subtract_bounds
-               pred_n (BoundedWordToBounds x)
-               (Tuple.map BoundedWordToBounds y) (Tuple.map BoundedWordToBounds z) = true)
-    : HList.hlist
-        (fun vlu : Z * ZBounds.bounds =>
-           (0 <= ZBounds.lower (snd vlu))%Z /\
-           (ZBounds.lower (snd vlu) <= fst vlu <= ZBounds.upper (snd vlu))%Z /\
-           (Z.log2 (ZBounds.upper (snd vlu)) < Word64.bit_width)%Z)
-        (Tuple.map2 (fun v lu => (v, lu))
-                    (ModularBaseSystemListZOperations.conditional_subtract_modulus
-                       (S pred_n)
-                       (Word64.word64ToZ (value x))
-                       (Tuple.map Word64.word64ToZ (Tuple.map value y))
-                       (Tuple.map Word64.word64ToZ (Tuple.map value z)))
-                    (ZBounds.conditional_subtract'
-                       pred_n (BoundedWordToBounds x)
-                       (Tuple.map BoundedWordToBounds y) (Tuple.map BoundedWordToBounds z))).
-  Proof. Admitted.
-
   Local Hint Resolve Word64.bit_width_pos : zarith.
   Local Hint Extern 1 (Z.log2 _ < _)%Z => eapply Z.le_lt_trans; [ eapply Z.log2_le_mono; eassumption | eassumption ] : zarith.
   (* Local *) Hint Resolve <- Z.log2_lt_pow2_alt : zarith.
 
-
-  Lemma conditional_subtract_bounded_word
-        (pred_n : nat) (x : BoundedWord)
-        (y z : Tuple.tuple BoundedWord (S pred_n))
-        (H : ZBounds.check_conditional_subtract_bounds
-               pred_n (BoundedWordToBounds x)
-               (Tuple.map BoundedWordToBounds y) (Tuple.map BoundedWordToBounds z) = true)
-    : HList.hlist
-        (fun vlu : Word64.word64 * ZBounds.bounds =>
-           (0 <= ZBounds.lower (snd vlu))%Z /\
-           (ZBounds.lower (snd vlu) <= Word64.word64ToZ (fst vlu) <= ZBounds.upper (snd vlu))%Z /\
-           (Z.log2 (ZBounds.upper (snd vlu)) < Word64.bit_width)%Z)
-        (Tuple.map2 (fun v lu => (v, lu))
-                    (Word64.conditional_subtract
-                       pred_n (value x) (Tuple.map value y) (Tuple.map value z))
-                    (ZBounds.conditional_subtract'
-                       pred_n (BoundedWordToBounds x)
-                       (Tuple.map BoundedWordToBounds y) (Tuple.map BoundedWordToBounds z))).
-  Proof.
-    generalize (conditional_subtract_bounded pred_n x y z H).
-    unfold Word64.conditional_subtract; rewrite Tuple.map2_map_fst.
-    rewrite <- (Tuple.map_map2 (fun a b => (a, b)) (fun ab => (Word64.ZToWord64 (fst ab), snd ab))).
-    rewrite HList.hlist_map; simpl @fst; simpl @snd.
-    apply HList.hlist_impl, HList.const.
-    intros; destruct_head' and; repeat split;
-      autorewrite with push_word64ToZ; omega.
-  Qed.
-
-  Lemma conditional_subtract_bounded_lite_helper
-        (pred_n : nat) (x : BoundedWord)
-        (y z : Tuple.tuple BoundedWord (S pred_n))
-        (H : ZBounds.check_conditional_subtract_bounds
-               pred_n (BoundedWordToBounds x)
-               (Tuple.map BoundedWordToBounds y) (Tuple.map BoundedWordToBounds z) = true)
-    : HList.hlist
-        (fun v : Z =>
-           (0 <= v)%Z /\
-           (Z.log2 v < Word64.bit_width)%Z)
-        (Tuple.map
-           (@fst _ _)
-           (Tuple.map2 (fun v lu => (v, lu))
-                       (ModularBaseSystemListZOperations.conditional_subtract_modulus
-                          (S pred_n)
-                          (Word64.word64ToZ (value x))
-                          (Tuple.map Word64.word64ToZ (Tuple.map value y))
-                          (Tuple.map Word64.word64ToZ (Tuple.map value z)))
-                       (ZBounds.conditional_subtract'
-                          pred_n (BoundedWordToBounds x)
-                          (Tuple.map BoundedWordToBounds y) (Tuple.map BoundedWordToBounds z)))).
-  Proof.
-    generalize (conditional_subtract_bounded pred_n x y z H).
-    rewrite HList.hlist_map.
-    apply HList.hlist_impl, HList.const; intros.
-    destruct_head' and.
-    split; try omega; [].
-    eapply Z.le_lt_trans; [ eapply Z.log2_le_mono | eassumption ]; omega.
-  Qed.
-
-  Lemma conditional_subtract_bounded_lite
-        (pred_n : nat)
-        (xbw : BoundedWord) (ybw zbw : Tuple.tuple BoundedWord (S pred_n))
-        (x : Word64.word64) (y z : Tuple.tuple Word64.word64 (S pred_n))
-        (xb : ZBounds.bounds)  (yb zb : Tuple.tuple ZBounds.bounds (S pred_n))
-        (Hx : value xbw = x) (Hy : Tuple.map value ybw = y) (Hz : Tuple.map value zbw = z)
-        (Hxb : BoundedWordToBounds xbw = xb)
-        (Hyb : Tuple.map BoundedWordToBounds ybw = yb) (Hzb : Tuple.map BoundedWordToBounds zbw = zb)
-        (Hc : ZBounds.check_conditional_subtract_bounds pred_n xb yb zb = true)
-    : HList.hlist (fun v : Z => (0 <= v)%Z /\ (Z.log2 v < Z.of_nat Word64.bit_width)%Z)
-                  (ModularBaseSystemListZOperations.conditional_subtract_modulus
-                     (S pred_n)
-                     (Word64.word64ToZ x)
-                     (Tuple.map Word64.word64ToZ y)
-                     (Tuple.map Word64.word64ToZ z)).
-  Proof.
-    subst.
-    generalize (conditional_subtract_bounded_lite_helper pred_n xbw ybw zbw Hc).
-    rewrite Tuple.map_map2; simpl @fst.
-    rewrite Tuple.map2_fst, Tuple.map_id.
-    trivial.
-  Qed.
 
   Definition add : t -> t -> t.
   Proof.
@@ -841,23 +670,6 @@ Module BoundedWord64.
   Definition cmovle : t -> t -> t -> t -> t.
   Proof. refine (t_map4 Word64.cmovle ZBounds.cmovle _); abstract t_start. Defined.
 
-  Definition conditional_subtract (pred_n : nat)
-    : forall (int_width : t) (modulus val : Tuple.tuple t (S pred_n)),
-      Tuple.tuple t (S pred_n).
-  Proof.
-    refine (@t_map1_tuple2 pred_n (@Word64.conditional_subtract _) (@ZBounds.conditional_subtract _) _).
-    abstract (
-        repeat first [ progress unfold ZBounds.conditional_subtract
-                     | rewrite !Tuple.lift_push_option
-                     | progress break_match
-                     | congruence
-                     | progress subst
-                     | progress inversion_option
-                     | intro
-                     | solve [ auto using conditional_subtract_bounded_word ] ]
-      ).
-  Defined.
-
   Local Notation binop_correct op opW opB :=
     (forall x y v, op (Some x) (Some y) = Some v
                    -> value v = opW (value x) (value y)
@@ -869,17 +681,6 @@ Module BoundedWord64.
                        -> value v = opW (value x) (value y) (value z) (value w)
                           /\ Some (BoundedWordToBounds v) = opB (Some (BoundedWordToBounds x)) (Some (BoundedWordToBounds y))
                                                                 (Some (BoundedWordToBounds z)) (Some (BoundedWordToBounds w)))
-      (only parsing).
-
-  Local Notation op1_tuple2_correct op opW opB :=
-    (forall x y z v,
-        Tuple.lift_option (op (Some x) (Tuple.push_option (Some y)) (Tuple.push_option (Some z))) = Some v
-        -> Tuple.map value v = opW (value x) (Tuple.map value y) (Tuple.map value z)
-           /\ Some (Tuple.map BoundedWordToBounds v)
-              = Tuple.lift_option
-                  (opB (Some (BoundedWordToBounds x))
-                       (Tuple.push_option (Some (Tuple.map BoundedWordToBounds y)))
-                       (Tuple.push_option (Some (Tuple.map BoundedWordToBounds z)))))
       (only parsing).
 
   Lemma t_map2_correct opW opB pf
@@ -902,29 +703,6 @@ Module BoundedWord64.
     eauto.
   Qed.
 
-  (* TODO: Automate this proof more *)
-  Lemma t_map1_tuple2_correct {n} opW opB pf
-    : op1_tuple2_correct (t_map1_tuple2 (n:=n) opW opB pf) opW opB.
-  Proof.
-    intros ???? H.
-    unfold t_map1_tuple2 in H; unfold BoundedWordToBounds in *.
-    rewrite !Tuple.lift_push_option in H.
-    convoy_destruct_in H; [ | congruence ].
-    rewrite_hyp *.
-    inversion_option.
-    symmetry in H.
-    pose proof (f_equal (Tuple.map value) H) as H0'.
-    pose proof (f_equal (Tuple.map BoundedWordToBounds) H) as H1'.
-    unfold BoundedWordToBounds in *.
-    rewrite_hyp !*.
-    rewrite !HList.map_mapt; simpl @lower; simpl @upper; simpl @value.
-    rewrite <- !HList.map_is_mapt.
-    rewrite !Tuple.map_map2; simpl @fst; simpl @snd.
-    rewrite !Tuple.map2_fst, !Tuple.map2_snd, Tuple.map_id, Tuple.map_id_ext
-      by (intros [? ?]; reflexivity).
-    eauto.
-  Qed.
-
   Local Notation binop_correct_None op opB :=
     (forall x y, op (Some x) (Some y) = None -> opB (Some (BoundedWordToBounds x)) (Some (BoundedWordToBounds y)) = None)
       (only parsing).
@@ -934,16 +712,6 @@ Module BoundedWord64.
                      -> opB (Some (BoundedWordToBounds x)) (Some (BoundedWordToBounds y))
                             (Some (BoundedWordToBounds z)) (Some (BoundedWordToBounds w))
                         = None)
-      (only parsing).
-
-  Local Notation op1_tuple2_correct_None op opB :=
-    (forall x y z,
-        Tuple.lift_option (op (Some x) (Tuple.push_option (Some y)) (Tuple.push_option (Some z))) = None
-        -> Tuple.lift_option
-             (opB (Some (BoundedWordToBounds x))
-                  (Tuple.push_option (Some (Tuple.map BoundedWordToBounds y)))
-                  (Tuple.push_option (Some (Tuple.map BoundedWordToBounds z))))
-           = None)
       (only parsing).
 
   Lemma t_map2_correct_None opW opB pf
@@ -964,15 +732,6 @@ Module BoundedWord64.
       unfold BoundedWordToBounds in *;
       inversion_option; subst; simpl.
     eauto.
-  Qed.
-
-  Lemma t_map1_tuple2_correct_None {n} opW opB pf
-    : op1_tuple2_correct_None (t_map1_tuple2 (n:=n) opW opB pf) opB.
-  Proof.
-    intros ??? H.
-    unfold t_map1_tuple2 in H; unfold BoundedWordToBounds in *.
-    rewrite !Tuple.lift_push_option in H.
-    convoy_destruct_in H; congruence.
   Qed.
 
   Module Export Notations.
@@ -998,9 +757,6 @@ Module BoundedWord64.
        | Neg => fun xy => neg (fst xy) (snd xy)
        | Cmovne => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovne x y z w
        | Cmovle => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovle x y z w
-       | ConditionalSubtract pred_n
-         => fun xyz => let '(x, y, z) := eta3 xyz in
-                       flat_interp_untuple' (T:=Tbase TZ) (@conditional_subtract pred_n x (flat_interp_tuple y) (flat_interp_tuple z))
      end%bounded_word.
 End BoundedWord64.
 
