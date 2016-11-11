@@ -916,48 +916,27 @@ Section Canonicalization.
     (preconditions : FreezePreconditions freeze_input_bound int_width).
   Local Notation digits := (tuple Z (length limb_widths)).
 
-  Definition carry_full_3_opt_cps_sig
-             {T} (f : list Z -> T)
+  Definition carry_full_3_opt_sig
              (us : list Z)
-    : { d : T | length us = length limb_widths
-                 -> d = f (carry_full (carry_full (carry_full us))) }.
+    : { d : list Z | length us = length limb_widths
+                 -> d = carry_full (carry_full (carry_full us)) }.
   Proof.
     eexists.
-    transitivity (carry_full_opt_cps c_ (carry_full_opt_cps c_ (carry_full_opt_cps c_ f)) us).
+    transitivity (carry_full_opt_cps c_ (carry_full_opt_cps c_ (carry_full_opt c_)) us).
     Focus 2. {
-      rewrite !carry_full_opt_cps_correct; repeat (autorewrite with distr_length; rewrite ?length_carry_full; auto).
+      rewrite !carry_full_opt_cps_correct; try rewrite carry_full_opt_correct; repeat (autorewrite with distr_length; rewrite ?length_carry_full; auto).
     }
     Unfocus.
     reflexivity.
   Defined.
 
-  Definition carry_full_3_opt_cps {T} (f : list Z -> T) (us : list Z) : T
-    := Eval cbv [proj1_sig carry_full_3_opt_cps_sig] in proj1_sig (carry_full_3_opt_cps_sig f us).
+  Definition carry_full_3_opt (us : list Z) : list Z
+    := Eval cbv [proj1_sig carry_full_3_opt_sig] in proj1_sig (carry_full_3_opt_sig us).
 
-  Definition carry_full_3_opt_cps_correct {T} (f : list Z -> T) us
+  Definition carry_full_3_opt_correct us
     : length us = length limb_widths
-      -> carry_full_3_opt_cps f us = f (carry_full (carry_full (carry_full us)))
-    := proj2_sig (carry_full_3_opt_cps_sig f us).
-
-  Definition conditional_subtract_modulus_opt_sig (f : list Z) (cond : Z) :
-    { g | g = conditional_subtract_modulus int_width f cond}.
-  Proof.
-    eexists.
-    cbv [conditional_subtract_modulus].
-    let LHS := match goal with |- ?LHS = ?RHS => LHS end in
-    let RHS := match goal with |- ?LHS = ?RHS => RHS end in
-    let RHSf := match (eval pattern (neg int_width cond) in RHS) with ?RHSf _ => RHSf end in
-    change (LHS = Let_In (neg int_width cond) RHSf).
-    cbv [map2 map].
-    reflexivity.
-  Defined.
-
-  Definition conditional_subtract_modulus_opt f cond : list Z
-    := Eval cbv [proj1_sig conditional_subtract_modulus_opt_sig] in proj1_sig (conditional_subtract_modulus_opt_sig f cond).
-
-  Definition conditional_subtract_modulus_opt_correct f cond
-    : conditional_subtract_modulus_opt f cond = conditional_subtract_modulus int_width f cond
-    := Eval cbv [proj2_sig conditional_subtract_modulus_opt_sig] in proj2_sig (conditional_subtract_modulus_opt_sig f cond).
+      -> carry_full_3_opt us = carry_full (carry_full (carry_full us))
+    := proj2_sig (carry_full_3_opt_sig us).
 
   Lemma ge_modulus'_cps : forall {A} (f : Z -> A) (us : list Z) i b,
     f (ge_modulus' id us b i) = ge_modulus' f us b i.
@@ -984,6 +963,33 @@ Section Canonicalization.
     ge_modulus_opt us= ge_modulus us
     := Eval cbv [proj2_sig ge_modulus_opt_sig] in proj2_sig (ge_modulus_opt_sig us).
 
+  Definition conditional_subtract_modulus_opt_sig (f : list Z):
+    { g | g = conditional_subtract_modulus int_width f (ge_modulus f) }.
+  Proof.
+    eexists.
+    cbv [conditional_subtract_modulus].
+    let LHS := match goal with |- ?LHS = ?RHS => LHS end in
+    let RHS := match goal with |- ?LHS = ?RHS => RHS end in
+    let RHSf := match (eval pattern (neg int_width (ge_modulus f)) in RHS) with ?RHSf _ => RHSf end in
+    change (LHS = Let_In (neg int_width (ge_modulus f)) RHSf).
+    cbv [ge_modulus].
+    rewrite ge_modulus'_cps.
+    cbv beta iota delta [ge_modulus ge_modulus'].
+    change length with length_opt.
+    change nth_default with @nth_default_opt.
+    change @Pow2Base.base_from_limb_widths with base_from_limb_widths_opt.
+    change minus with minus_opt.
+    reflexivity.
+  Defined.
+
+  Definition conditional_subtract_modulus_opt f : list Z
+    := Eval cbv [proj1_sig conditional_subtract_modulus_opt_sig] in proj1_sig (conditional_subtract_modulus_opt_sig f).
+
+  Definition conditional_subtract_modulus_opt_correct f
+    : conditional_subtract_modulus_opt f = conditional_subtract_modulus int_width f (ge_modulus f)
+    := Eval cbv [proj2_sig conditional_subtract_modulus_opt_sig] in proj2_sig (conditional_subtract_modulus_opt_sig f).
+
+
   Definition freeze_opt_sig (us : list Z) :
     { b : list Z | length us = length limb_widths
                    -> b = ModularBaseSystemList.freeze int_width us }.
@@ -992,19 +998,11 @@ Section Canonicalization.
     cbv [ModularBaseSystemList.freeze].
     rewrite <-conditional_subtract_modulus_opt_correct.
     intros.
-    cbv [ge_modulus].
-    rewrite ge_modulus'_cps.
+    rewrite <-carry_full_3_opt_correct by auto.
     let LHS := match goal with |- ?LHS = ?RHS => LHS end in
     let RHS := match goal with |- ?LHS = ?RHS => RHS end in
-    let RHSf := match (eval pattern (carry_full (carry_full (carry_full us))) in RHS) with ?RHSf _ => RHSf end in
-    rewrite <-carry_full_3_opt_cps_correct with (f := RHSf) by auto.
-    cbv [carry_full_3_opt_cps carry_full_opt_cps carry_sequence_opt_cps].
-    cbv [ge_modulus'].
-    cbv beta iota delta [ge_modulus ge_modulus'].
-    change length with length_opt.
-    change nth_default with @nth_default_opt.
-    change @Pow2Base.base_from_limb_widths with base_from_limb_widths_opt.
-    change minus with minus_opt.
+    let RHSf := match (eval pattern (carry_full_3_opt us) in RHS) with ?RHSf _ => RHSf end in
+    change (LHS = Let_In (carry_full_3_opt us) RHSf).
     reflexivity.
   Defined.
 
