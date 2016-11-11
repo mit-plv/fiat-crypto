@@ -62,6 +62,24 @@ Definition prefreezeW (f : fe25519W) : fe25519W := Eval simpl in interp_rprefree
 Definition ge_modulusW (f : fe25519W) : word64 := Eval simpl in interp_rge_modulus f.
 Definition packW (f : fe25519W) : wire_digitsW := Eval simpl in interp_rpack f.
 Definition unpackW (f : wire_digitsW) : fe25519W := Eval simpl in interp_runpack f.
+
+Require Import ModularBaseSystemWord.
+Definition modulusW :=
+  Eval cbv - [ZToWord64] in (Tuple.map ZToWord64 (Tuple.from_list_default 0%Z 10 GF25519.modulus_digits_)).
+
+Definition postfreeze : GF25519.fe25519 -> GF25519.fe25519 :=
+  GF25519.postfreeze.
+  
+Lemma freeze_prepost_freeze : forall x, postfreeze (prefreeze x) = GF25519.freeze x. Proof. reflexivity. Qed.
+
+Definition postfreezeW : fe25519W -> fe25519W :=
+      (conditional_subtract_modulusW
+         (num_limbs := 10)
+         modulusW
+         ge_modulusW
+         (Interpretations.Word64.neg GF25519.int_width)
+      ).
+
 Definition freezeW (f : fe25519W) : fe25519W := Eval cbv beta delta [prefreezeW postfreezeW] in postfreezeW (prefreezeW f).
 
 Local Transparent Let_In.
@@ -90,6 +108,64 @@ Lemma packW_correct_and_bounded : iunop_FEToWire_correct_and_bounded packW pack.
 Proof. port_correct_and_bounded interp_rpack_correct packW interp_rpack rpack_correct_and_bounded. Qed.
 Lemma unpackW_correct_and_bounded : iunop_WireToFE_correct_and_bounded unpackW unpack.
 Proof. port_correct_and_bounded interp_runpack_correct unpackW interp_runpack runpack_correct_and_bounded. Qed.
+
+(* TODO : move *)
+Lemma neg_range : forall x y, 0 <= x ->
+  0 <= ModularBaseSystemListZOperations.neg x y < 2 ^ x.
+Proof.
+  intros.
+  split; auto using ModularBaseSystemListZOperationsProofs.neg_nonneg.
+  eapply Z.le_lt_trans; eauto using ModularBaseSystemListZOperationsProofs.neg_upperbound.
+  rewrite Z.ones_equiv.
+  omega.
+Qed.
+  
+Lemma postfreezeW_correct_and_bounded : iunop_correct_and_bounded postfreezeW postfreeze.
+Proof.
+  intros x H.
+  pose proof (ge_modulusW_correct x H) as Hgm.
+  destruct_head_hnf' prod.
+  unfold_is_bounded_in H.
+  destruct_head' and.
+  Z.ltb_to_lt.
+  cbv [postfreezeW].
+  cbv [conditional_subtract_modulusW Interpretations.Word64.neg].
+  change word64ToZ with Interpretations.Word64.word64ToZ in *.
+  rewrite Hgm.
+
+  split.
+  
+  cbv [modulusW Tuple.map].
+  cbv [on_tuple List.map to_list to_list' from_list from_list'
+                Tuple.map2 on_tuple2 ListUtil.map2 fe25519WToZ].
+  cbv [postfreeze GF25519.postfreeze].
+  cbv [Let_In].
+  match goal with
+    |- (_,word64ToZ (_ ^- (Interpretations.Word64.ZToWord64 ?x) ^& _)) = (_,_ - (?y &' _)) => assert (x = y) as Hxy by reflexivity; repeat rewrite <-Hxy; clear Hxy end.
+
+  change ZToWord64 with Interpretations.Word64.ZToWord64 in *.
+  rewrite !Interpretations.Word64.word64ToZ_sub;
+  rewrite !Interpretations.Word64.word64ToZ_land;
+  rewrite !Interpretations.Word64.word64ToZ_ZToWord64;
+  try match goal with
+         | |- 0 <=  ModularBaseSystemListZOperations.neg _ _ < 2 ^ _ => apply neg_range; omega
+         | |- 0 <= _ < 2 ^ Z.of_nat _ => vm_compute; split; [refine (fun x => match x with eq_refl => I end) | reflexivity]
+         | |- 0 <= _ &' _ => apply Z.land_nonneg; right; omega
+         | |- (_,_) = (_,_) => reflexivity
+      end;
+  try solve [
+  (apply Z.log2_lt_pow2_alt; [ vm_compute; reflexivity | ]);
+  eapply Z.le_lt_trans; try apply Z.land_upper_bound_r; try apply neg_range; try (vm_compute; discriminate); reflexivity].
+
+  { 
+  apply Z.le_0_sub.
+  cbv [ge_modulus Let_In ModularBaseSystemListZOperations.cmovl ModularBaseSystemListZOperations.cmovne ModularBaseSystemListZOperations.neg].
+  repeat break_if; Z.ltb_to_lt; subst; try omega;
+    rewrite ?Z.land_0_l; auto. }
+  
+
+Admitted.
+
 Lemma freezeW_correct_and_bounded : iunop_correct_and_bounded freezeW freeze.
 Proof.
   intros f H; rewrite <- freeze_prepost_freeze.
@@ -98,6 +174,8 @@ Proof.
   destruct (postfreezeW_correct_and_bounded _ H1) as [H0' H1'].
   rewrite H1', H0', H0; split; reflexivity.
 Qed.
+
+
 
 Lemma powW_correct_and_bounded chain : iunop_correct_and_bounded (fun x => powW x chain) (fun x => pow x chain).
 Proof.

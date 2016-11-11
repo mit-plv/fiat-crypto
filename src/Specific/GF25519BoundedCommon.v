@@ -23,7 +23,7 @@ Require Import Coq.ZArith.ZArith Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.ZArith.
 Local Open Scope Z.
 
 (* BEGIN common curve-specific definitions *)
-Definition bit_width : nat := 64%nat.
+Definition bit_width : nat := Eval compute in Z.to_nat (GF25519.int_width).
 Local Notation b_of exp := (0, 2^exp + 2^(exp-3))%Z (only parsing). (* max is [(0, 2^(exp+2) + 2^exp + 2^(exp-1) + 2^(exp-3) + 2^(exp-4) + 2^(exp-5) + 2^(exp-6) + 2^(exp-10) + 2^(exp-12) + 2^(exp-13) + 2^(exp-14) + 2^(exp-15) + 2^(exp-17) + 2^(exp-23) + 2^(exp-24))%Z] *)
 Definition bounds_exp : tuple Z length_fe25519
   := Eval compute in
@@ -690,50 +690,4 @@ Notation iunop_WireToFE_correct_and_bounded irop op
          -> fe25519WToZ (irop x) = op (wire_digitsWToZ x)
             /\ is_bounded (fe25519WToZ (irop x)) = true) (only parsing).
 
-(** TODO(andreser): Remove me in favor of a GF25519.v definition *)
-Definition prefreeze :=
-fun fs => let '(f0, f1, f2, f3, f4, f5, f6, f7, f8, f9) := fs in
-dlet a := f9 in
-dlet a0 := (Z.shiftr a 26 + f8)%Z in
-dlet a1 := (Z.shiftr a0 25 + f7)%Z in
-dlet a2 := (Z.shiftr a1 26 + f6)%Z in
-dlet a3 := (Z.shiftr a2 25 + f5)%Z in
-dlet a4 := (Z.shiftr a3 26 + f4)%Z in
-dlet a5 := (Z.shiftr a4 25 + f3)%Z in
-dlet a6 := (Z.shiftr a5 26 + f2)%Z in
-dlet a7 := (Z.shiftr a6 25 + f1)%Z in
-dlet a8 := (Z.shiftr a7 26 + f0)%Z in
-dlet a9 := (19 * Z.shiftr a8 25 + Z.land a 67108863)%Z in
-dlet a10 := (Z.shiftr a9 26 + Z.land a0 33554431)%Z in
-dlet a11 := (Z.shiftr a10 25 + Z.land a1 67108863)%Z in
-dlet a12 := (Z.shiftr a11 26 + Z.land a2 33554431)%Z in
-dlet a13 := (Z.shiftr a12 25 + Z.land a3 67108863)%Z in
-dlet a14 := (Z.shiftr a13 26 + Z.land a4 33554431)%Z in
-dlet a15 := (Z.shiftr a14 25 + Z.land a5 67108863)%Z in
-dlet a16 := (Z.shiftr a15 26 + Z.land a6 33554431)%Z in
-dlet a17 := (Z.shiftr a16 25 + Z.land a7 67108863)%Z in
-dlet a18 := (Z.shiftr a17 26 + Z.land a8 33554431)%Z in
-dlet a19 := (19 * Z.shiftr a18 25 + Z.land a9 67108863)%Z in
-dlet a20 := (Z.shiftr a19 26 + Z.land a10 33554431)%Z in
-dlet a21 := (Z.shiftr a20 25 + Z.land a11 67108863)%Z in
-dlet a22 := (Z.shiftr a21 26 + Z.land a12 33554431)%Z in
-dlet a23 := (Z.shiftr a22 25 + Z.land a13 67108863)%Z in
-dlet a24 := (Z.shiftr a23 26 + Z.land a14 33554431)%Z in
-dlet a25 := (Z.shiftr a24 25 + Z.land a15 67108863)%Z in
-dlet a26 := (Z.shiftr a25 26 + Z.land a16 33554431)%Z in
-dlet a27 := (Z.shiftr a26 25 + Z.land a17 67108863)%Z in
-dlet a28 := (Z.shiftr a27 26 + Z.land a18 33554431)%Z in
-
-((Z.land a28 33554431 )%Z, (Z.land a27 67108863 )%Z,
-(Z.land a26 33554431 )%Z, (Z.land a25 67108863 )%Z,
-(Z.land a24 33554431 )%Z, (Z.land a23 67108863 )%Z,
-(Z.land a22 33554431 )%Z, (Z.land a21 67108863 )%Z,
-(Z.land a20 33554431 )%Z, ( Z.land a19 67108863 )%Z).
-
-Axiom postfreeze : GF25519.fe25519 -> GF25519.fe25519.
-Axiom freeze_prepost_freeze : forall x, postfreeze (prefreeze x) = GF25519.freeze x.
-Axiom proof_admitted : False.
-Tactic Notation "admit" := abstract case proof_admitted.
-Definition postfreezeW : fe25519W -> fe25519W.
-Proof. admit. Defined.
-Axiom postfreezeW_correct_and_bounded : iunop_correct_and_bounded postfreezeW postfreeze.
+Definition prefreeze := GF25519.prefreeze.
