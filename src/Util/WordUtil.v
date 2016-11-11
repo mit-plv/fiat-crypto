@@ -1172,9 +1172,43 @@ Section Updates.
   Qed.
 End Updates.
 
-Axiom wlast : forall sz, word (sz+1) -> bool. Arguments wlast {_} _.
-Axiom winit : forall sz, word (sz+1) -> word sz. Arguments winit {_} _.
-Axiom combine_winit_wlast : forall {sz} a b (c:word (sz+1)),
+Definition winit {sz} (x: word (sz + 1)): word sz :=
+  split1 sz 1 x.
+
+Definition wlast {sz} (x: word (sz + 1)): bool :=
+  whd (split2 sz 1 x).
+
+Arguments winit {_} _.
+Arguments wlast {_} _.
+
+Lemma combine_winit_wlast : forall {sz} a b (c:word (sz+1)),
     @combine sz a 1 b = c <-> a = winit c /\ b = (WS (wlast c) WO).
-Axiom winit_combine : forall sz a b, @winit sz (combine a b) = a.
-Axiom wlast_combine : forall sz a b, @wlast sz (combine a (WS b WO)) = b.
+Proof.
+  intros; split; unfold winit, wlast; intro H.
+
+  - rewrite <- H.
+    rewrite split1_combine, split2_combine.
+    split; [reflexivity|].
+    shatter b; simpl; f_equal.
+    generalize (wtl b) as b'; intro;
+      shatter b'; reflexivity.
+
+  - destruct H as [H0 H1]; rewrite H0.
+    replace b with (split2 sz 1 c); [apply combine_split|].
+    rewrite H1.
+    generalize (split2 sz 1 c) as b'; intro.
+    shatter b'.
+    generalize (wtl b') as b''; intro;
+      shatter b''; reflexivity.
+Qed.
+
+Lemma winit_combine : forall sz a b, @winit sz (combine a b) = a.
+Proof.
+  intros; unfold winit; rewrite split1_combine; reflexivity.
+Qed.
+
+Lemma wlast_combine : forall sz a b, @wlast sz (combine a (WS b WO)) = b.
+Proof.
+  intros; unfold wlast; rewrite split2_combine; cbv; reflexivity.
+Qed.
+
