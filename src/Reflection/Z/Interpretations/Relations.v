@@ -465,8 +465,7 @@ Local Ltac related_Z_op_fin_t_step :=
           | [ H : context[Tuple.lift_option (Tuple.push_option _)] |- _ ]
             => rewrite Tuple.lift_push_option in H
           end
-        | progress Z.ltb_to_lt
-        | (progress unfold ZBounds.conditional_subtract in * ); break_match_hyps ].
+        | progress Z.ltb_to_lt ].
 Local Ltac related_Z_op_fin_t := repeat related_Z_op_fin_t_step.
 
 Local Opaque Word64.bit_width.
