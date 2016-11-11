@@ -395,11 +395,13 @@ Notation compute_bounds opW bounds
 
 
 Module Export PrettyPrinting.
-  Section bounds_not_set.
-    Let T := let T := Type in let enforce := Set : T in T.
-    Inductive bounds_on : T := overflow | in_range (lower upper : Z).
-  End bounds_not_set.
-  Inductive result := yes | no.
+  (* We add [enlargen] to force [bounds_on] to be in [Type] in 8.4 and
+     8.5/8.6.  Because [Set] is special and things break if
+     [bounds_on] ends up in [Set] for reasons jgross hasn't bothered
+     to debug. *)
+  Inductive bounds_on := overflow | in_range (lower upper : Z) | enlargen (_ : Set).
+
+  Inductive result := yes | no | borked.
 
   Definition ZBounds_to_bounds_on
     := fun t : base_type
@@ -417,10 +419,12 @@ Module Export PrettyPrinting.
        | Tbase TZ => fun v => match v with
                               | overflow => yes
                               | in_range _ _ => no
+                              | enlargen _ => borked
                               end
        | Prod x y => fun v => match @does_it_overflow _ (fst v), @does_it_overflow _ (snd v) with
                               | no, no => no
-                              | _, _ => yes
+                              | yes, no | no, yes | yes, yes => yes
+                              | borked, _ | _, borked => borked
                               end
        end.
 
