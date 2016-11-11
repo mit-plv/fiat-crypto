@@ -92,16 +92,18 @@ Local Ltac related_word64_op_t_step :=
         | progress break_match_hyps
         | congruence
         | match goal with
-          | [ H : ?op _ _ = Some _ |- _ ]
+          | [ H : ?op _ = Some _ |- _ ]
             => let H' := fresh in
                rename H into H';
-               first [ pose proof (@BoundedWord64.t_map2_correct _ _ _ _ _ _ H') as H; clear H'
+               first [ pose proof (@BoundedWord64.t_map1_correct _ _ _ _ _ H') as H; clear H'
+                     | pose proof (@BoundedWord64.t_map2_correct _ _ _ _ _ _ H') as H; clear H'
                      | pose proof (@BoundedWord64.t_map4_correct _ _ _ _ _ _ H') as H; clear H' ];
                simpl in H
-          | [ H : ?op _ _ = None |- _ ]
+          | [ H : ?op _ = None |- _ ]
             => let H' := fresh in
                rename H into H';
-               first [ pose proof (@BoundedWord64.t_map2_correct_None _ _ _ _ _ H') as H; clear H'
+               first [ pose proof (@BoundedWord64.t_map1_correct_None _ _ _ _ H') as H; clear H'
+                     | pose proof (@BoundedWord64.t_map2_correct_None _ _ _ _ _ H') as H; clear H'
                      | pose proof (@BoundedWord64.t_map4_correct_None _ _ _ _ _ H') as H; clear H' ];
                simpl in H
           end
@@ -113,6 +115,15 @@ Local Ltac related_word64_op_t_step :=
           | [ H : ?op (Some _) (Some _) = None |- _ ] => progress simpl in H
           end ].
 Local Ltac related_word64_op_t := repeat related_word64_op_t_step.
+
+Lemma related_word64_t_map1 opW opB pf
+      sv1 sv2
+  : interp_flat_type_rel_pointwise2 (t:=Tbase TZ) related_word64 sv1 sv2
+    -> @related_word64 TZ (BoundedWord64.t_map1 opW opB pf sv1) (opW sv2).
+Proof.
+  cbv [interp_flat_type BoundedWord64.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
+  related_word64_op_t.
+Qed.
 
 Lemma related_word64_t_map2 opW opB pf
       sv1 sv2
@@ -319,8 +330,19 @@ Local Arguments BoundedWord64.BoundedWordToBounds !_ / .
 Lemma related_word64_op : related_op related_word64 (@BoundedWord64.interp_op) (@Word64.interp_op).
 Proof.
   (let op := fresh in intros ?? op; destruct op; simpl);
-    try first [ apply related_word64_t_map2
+    try first [ apply related_word64_t_map1
+              | apply related_word64_t_map2
               | apply related_word64_t_map4 ].
+Qed.
+
+Lemma related_bounds_t_map1 opW opB pf
+      (HN : opB None = None)
+      sv1 sv2
+  : interp_flat_type_rel_pointwise2 (t:=Tbase TZ) related_bounds sv1 sv2
+    -> @related_bounds TZ (BoundedWord64.t_map1 opW opB pf sv1) (opB sv2).
+Proof.
+  cbv [interp_flat_type BoundedWord64.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
+  related_word64_op_t.
 Qed.
 
 Lemma related_bounds_t_map2 opW opB pf
@@ -370,7 +392,7 @@ Proof.
   { apply related_bounds_t_map2; intros; destruct_head' option; reflexivity. }
   { apply related_bounds_t_map2; intros; destruct_head' option; reflexivity. }
   { apply related_bounds_t_map2; intros; destruct_head' option; reflexivity. }
-  { apply related_bounds_t_map2; intros; destruct_head' option; destruct_head' ZBounds.bounds; reflexivity. }
+  { apply related_bounds_t_map1; intros; destruct_head' option; unfold ZBounds.neg; break_match; reflexivity. }
   { apply related_bounds_t_map4; intros; destruct_head' option; reflexivity. }
   { apply related_bounds_t_map4; intros; destruct_head' option; reflexivity. }
 Qed.
@@ -395,7 +417,7 @@ Local Ltac Word64.Rewrites.word64_util_arith ::=
               (eapply Z.le_lt_trans; [ eapply Z.log2_le_mono; eassumption | assumption ])
             | eapply Z.le_lt_trans; [ eapply Z.log2_le_mono, neg_upperbound | ];
               Word64.Rewrites.word64_util_arith
-            | (progress unfold ModularBaseSystemListZOperations.cmovne, ModularBaseSystemListZOperations.cmovl); break_match;
+            | (progress unfold ModularBaseSystemListZOperations.cmovne, ModularBaseSystemListZOperations.cmovl, ModularBaseSystemListZOperations.neg); break_match;
               Word64.Rewrites.word64_util_arith ].
 Local Ltac related_Z_op_t_step :=
   first [ progress related_word64_op_t_step
@@ -409,6 +431,21 @@ Local Notation is_bounded_by value lower upper
 Local Notation is_in_bounds value bounds
   := (is_bounded_by value (ZBounds.lower bounds) (ZBounds.upper bounds))
        (only parsing).
+
+Lemma related_Z_t_map1 opZ opW opB pf
+      (H : forall x bxs brs,
+          Some brs = opB (Some bxs)
+          -> is_in_bounds x bxs
+          -> is_in_bounds (opW x) brs
+          -> Word64.word64ToZ (opW x) = (opZ (Word64.word64ToZ x)))
+      sv1 sv2
+  : interp_flat_type_rel_pointwise2 (t:=Tbase TZ) related_Z sv1 sv2
+    -> @related_Z TZ (BoundedWord64.t_map1 opW opB pf sv1) (opZ sv2).
+Proof.
+  cbv [interp_flat_type BoundedWord64.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
+  related_Z_op_t.
+  eapply H; eauto.
+Qed.
 
 Lemma related_Z_t_map2 opZ opW opB pf
       (H : forall x y bxs bys brs,
@@ -470,6 +507,8 @@ Local Ltac related_Z_op_fin_t := repeat related_Z_op_fin_t_step.
 
 Local Opaque Word64.bit_width.
 
+Local Arguments ZBounds.neg _ !_ / .
+
 Lemma related_Z_op : related_op related_Z (@BoundedWord64.interp_op) (@Z.interp_op).
 Proof.
   let op := fresh in intros ?? op; destruct op; simpl.
@@ -480,7 +519,7 @@ Proof.
   { apply related_Z_t_map2; related_Z_op_fin_t. }
   { apply related_Z_t_map2; related_Z_op_fin_t. }
   { apply related_Z_t_map2; related_Z_op_fin_t. }
-  { apply related_Z_t_map2; related_Z_op_fin_t. }
+  { apply related_Z_t_map1; related_Z_op_fin_t. }
   { apply related_Z_t_map4; related_Z_op_fin_t. }
   { apply related_Z_t_map4; related_Z_op_fin_t. }
 Qed.

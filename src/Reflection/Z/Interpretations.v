@@ -162,11 +162,11 @@ Module Word64.
   Definition shr : word64 -> word64 -> word64 := @wordBin N.shiftr _.
   Definition land : word64 -> word64 -> word64 := @wand _.
   Definition lor : word64 -> word64 -> word64 := @wor _.
-  Definition neg : word64 -> word64 -> word64 (* TODO: FIXME? *)
-    := fun x y => ZToWord64 (ModularBaseSystemListZOperations.neg (word64ToZ x) (word64ToZ y)).
-  Definition cmovne : word64 -> word64 -> word64 -> word64 -> word64 (* TODO: FIXME? *)
+  Definition neg (int_width : Z) : word64 -> word64 (* TODO: Is this right? *)
+    := fun x => ZToWord64 (ModularBaseSystemListZOperations.neg int_width (word64ToZ x)).
+  Definition cmovne : word64 -> word64 -> word64 -> word64 -> word64 (* TODO: Is this right? *)
     := fun x y z w => ZToWord64 (ModularBaseSystemListZOperations.cmovne (word64ToZ x) (word64ToZ y) (word64ToZ z) (word64ToZ w)).
-  Definition cmovle : word64 -> word64 -> word64 -> word64 -> word64 (* TODO: FIXME? *)
+  Definition cmovle : word64 -> word64 -> word64 -> word64 -> word64 (* TODO: Is this right? *)
     := fun x y z w => ZToWord64 (ModularBaseSystemListZOperations.cmovl (word64ToZ x) (word64ToZ y) (word64ToZ z) (word64ToZ w)).
 
   Infix "+" := add : word64_scope.
@@ -198,6 +198,9 @@ Module Word64.
     := ((0 <= Zop -> Z.log2 Zop < Z.of_nat bit_width -> word64ToZ wop = Zop)%Z).
   Local Notation bounds_statement_tuple wop Zop
     := ((HList.hlist (fun v => 0 <= v /\ Z.log2 v < Z.of_nat bit_width) Zop -> Tuple.map word64ToZ wop = Zop)%Z).
+  Local Notation bounds_1statement wop Zop
+    := (forall x,
+           bounds_statement (wop x) (Zop (word64ToZ x))).
   Local Notation bounds_2statement wop Zop
     := (forall x y,
            bounds_statement (wop x y) (Zop (word64ToZ x) (word64ToZ y))).
@@ -236,7 +239,7 @@ Module Word64.
   Proof. w64ToZ_t. Qed.
   Lemma word64ToZ_lor : bounds_2statement lor Z.lor.
   Proof. w64ToZ_t. Qed.
-  Lemma word64ToZ_neg : bounds_2statement neg ModularBaseSystemListZOperations.neg.
+  Lemma word64ToZ_neg int_width : bounds_1statement (neg int_width) (ModularBaseSystemListZOperations.neg int_width).
   Proof. w64ToZ_t; w64ToZ_extra_t. Qed.
   Lemma word64ToZ_cmovne : bounds_4statement cmovne ModularBaseSystemListZOperations.cmovne.
   Proof. w64ToZ_t; w64ToZ_extra_t. Qed.
@@ -256,7 +259,7 @@ Module Word64.
        | Shr => fun xy => fst xy >> snd xy
        | Land => fun xy => land (fst xy) (snd xy)
        | Lor => fun xy => lor (fst xy) (snd xy)
-       | Neg => fun xy => neg (fst xy) (snd xy)
+       | Neg int_width => fun x => neg int_width x
        | Cmovne => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovne x y z w
        | Cmovle => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovle x y z w
        end%word64.
@@ -308,6 +311,15 @@ Module ZBounds.
     := if ((0 <=? l) && (Z.log2 u <? Word64.bit_width))%Z%bool
        then Some {| lower := l ; upper := u |}
        else None.
+  Definition t_map1 (f : bounds -> bounds) (x : t)
+    := match x with
+       | Some x
+         => match f x with
+            | Build_bounds l u
+              => SmartBuildBounds l u
+            end
+       | _ => None
+       end%Z.
   Definition t_map2 (f : bounds -> bounds -> bounds) (x y : t)
     := match x, y with
        | Some x, Some y
@@ -349,26 +361,21 @@ Module ZBounds.
                                        {| lower := Z.max lx ly;
                                           upper := 2^(Z.max (Z.log2_up (ux+1)) (Z.log2_up (uy+1))) - 1 |}.
   Definition lor : t -> t -> t := t_map2 lor'.
-  Definition neg' : bounds -> bounds -> bounds
-    := fun int_width v
-       => let (lint_width, uint_width) := int_width in
-          let (lb, ub) := v in
+  Definition neg' (int_width : Z) : bounds -> bounds
+    := fun v
+       => let (lb, ub) := v in
           let might_be_one := ((lb <=? 1) && (1 <=? ub))%Z%bool in
           let must_be_one := ((lb =? 1) && (ub =? 1))%Z%bool in
           if must_be_one
-          then {| lower := Z.ones lint_width ; upper := Z.ones uint_width |}
+          then {| lower := Z.ones int_width ; upper := Z.ones int_width |}
           else if might_be_one
-               then {| lower := 0 ; upper := Z.ones uint_width |}
+               then {| lower := 0 ; upper := Z.ones int_width |}
                else {| lower := 0 ; upper := 0 |}.
-  Definition neg : t -> t -> t
-    := fun int_width v
-       => match int_width, v with
-          | Some (Build_bounds lint_width uint_width as int_width), Some (Build_bounds lb ub as v)
-            => if ((0 <=? lint_width) && (uint_width <=? Word64.bit_width))%Z%bool
-               then Some (neg' int_width v)
-               else None
-          | _, _ => None
-          end.
+  Definition neg (int_width : Z) : t -> t
+    := fun v
+       => if ((0 <=? int_width) && (int_width <=? Word64.bit_width))%Z%bool
+          then t_map1 (neg' int_width) v
+          else None.
   Definition cmovne' (r1 r2 : bounds) : bounds
     := let (lr1, ur1) := r1 in let (lr2, ur2) := r2 in {| lower := Z.min lr1 lr2 ; upper := Z.max ur1 ur2 |}.
   Definition cmovne (x y r1 r2 : t) : t := t_map4 (fun _ _ => cmovne') x y r1 r2.
@@ -398,7 +405,7 @@ Module ZBounds.
        | Shr => fun xy => fst xy >> snd xy
        | Land => fun xy => land (fst xy) (snd xy)
        | Lor => fun xy => lor (fst xy) (snd xy)
-       | Neg => fun xy => neg (fst xy) (snd xy)
+       | Neg int_width => fun x => neg int_width x
        | Cmovne => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovne x y z w
        | Cmovle => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovle x y z w
        end%bounds.
@@ -497,6 +504,29 @@ Module BoundedWord64.
        | TZ => to_bounds'
        end.
 
+  Definition t_map1
+             (opW : Word64.word64 -> Word64.word64)
+             (opB : ZBounds.t -> ZBounds.t)
+             (pf : forall x l u,
+                 opB (Some (BoundedWordToBounds x))
+                 = Some {| ZBounds.lower := l ; ZBounds.upper := u |}
+                 -> let val :=  opW (value x) in
+                    is_bounded_by val l u)
+    : t -> t
+    := fun x : t
+       => match x with
+          | Some x
+            => match opB (Some (BoundedWordToBounds x))
+                     as bop return opB (Some (BoundedWordToBounds x)) = bop -> t
+               with
+               | Some (ZBounds.Build_bounds l u)
+                 => fun Heq => Some {| lower := l ; value := opW (value x) ; upper := u;
+                                       in_bounds := pf _ _ _ Heq |}
+               | None => fun _ => None
+               end eq_refl
+          | _ => None
+          end.
+
   Definition t_map2
              (opW : Word64.word64 -> Word64.word64 -> Word64.word64)
              (opB : ZBounds.t -> ZBounds.t -> ZBounds.t)
@@ -548,11 +578,15 @@ Module BoundedWord64.
   Hint Resolve Z.ones_nonneg : zarith.
   Local Ltac t_prestart :=
     repeat first [ match goal with
+                   | [ |- forall x l u, ?opB (Some (BoundedWordToBounds x)) = Some _ -> let val := ?opW (value x) in _ ]
+                     => let opB' := head opB in let opW' := head opW in progress (try unfold opB'; try unfold opW')
                    | [ |- forall x y l u, ?opB (Some (BoundedWordToBounds x)) (Some (BoundedWordToBounds y)) = Some _ -> let val := ?opW (value x) (value y) in _ ]
-                     => try unfold opB; try unfold opW
+                     => progress (try unfold opB; try unfold opW)
                    | [ |- forall x y z w l u, ?opB _ _ _ _ = Some _ -> let val := ?opW (value x) (value y) (value z) (value w) in _ ]
-                     => try unfold opB; try unfold opW
-                   | [ |- appcontext[ZBounds.t_map2 ?op] ] => unfold op
+                     => progress (try unfold opB; try unfold opW)
+                   | [ |- appcontext[ZBounds.t_map1 ?op] ] => let op' := head op in unfold op'
+                   | [ |- appcontext[ZBounds.t_map2 ?op] ] => let op' := head op in unfold op'
+                   | [ |- appcontext[?op (ZBounds.Build_bounds _ _)] ] => let op' := head op in unfold op'
                    | [ |- appcontext[?op (ZBounds.Build_bounds _ _) (ZBounds.Build_bounds _ _)] ] => unfold op
                    end
                  | progress cbv [BoundedWordToBounds ZBounds.SmartBuildBounds cmovne cmovl ModularBaseSystemListZOperations.neg] in *
@@ -628,14 +662,20 @@ Module BoundedWord64.
       abstract (t_start; eapply shr_valid_update; eauto).
   Defined.
 
-  Definition neg : t -> t -> t.
-  Proof. refine (t_map2 Word64.neg ZBounds.neg _); abstract t_start. Defined.
+  Definition neg (int_width : Z) : t -> t.
+  Proof. refine (t_map1 (Word64.neg int_width) (ZBounds.neg int_width) _); abstract t_start. Defined.
 
   Definition cmovne : t -> t -> t -> t -> t.
   Proof. refine (t_map4 Word64.cmovne ZBounds.cmovne _); abstract t_start. Defined.
 
   Definition cmovle : t -> t -> t -> t -> t.
   Proof. refine (t_map4 Word64.cmovle ZBounds.cmovle _); abstract t_start. Defined.
+
+  Local Notation unop_correct op opW opB :=
+    (forall x v, op (Some x) = Some v
+                 -> value v = opW (value x)
+                    /\ Some (BoundedWordToBounds v) = opB (Some (BoundedWordToBounds x)))
+      (only parsing).
 
   Local Notation binop_correct op opW opB :=
     (forall x y v, op (Some x) (Some y) = Some v
@@ -649,6 +689,16 @@ Module BoundedWord64.
                           /\ Some (BoundedWordToBounds v) = opB (Some (BoundedWordToBounds x)) (Some (BoundedWordToBounds y))
                                                                 (Some (BoundedWordToBounds z)) (Some (BoundedWordToBounds w)))
       (only parsing).
+
+  Lemma t_map1_correct opW opB pf
+    : unop_correct (t_map1 opW opB pf) opW opB.
+  Proof.
+    intros ?? H.
+    unfold t_map1 in H; convoy_destruct_in H; destruct_head' ZBounds.bounds;
+      unfold BoundedWordToBounds in *;
+      inversion_option; subst; simpl.
+    eauto.
+  Qed.
 
   Lemma t_map2_correct opW opB pf
     : binop_correct (t_map2 opW opB pf) opW opB.
@@ -670,6 +720,10 @@ Module BoundedWord64.
     eauto.
   Qed.
 
+  Local Notation unop_correct_None op opB :=
+    (forall x, op (Some x) = None -> opB (Some (BoundedWordToBounds x)) = None)
+      (only parsing).
+
   Local Notation binop_correct_None op opB :=
     (forall x y, op (Some x) (Some y) = None -> opB (Some (BoundedWordToBounds x)) (Some (BoundedWordToBounds y)) = None)
       (only parsing).
@@ -680,6 +734,16 @@ Module BoundedWord64.
                             (Some (BoundedWordToBounds z)) (Some (BoundedWordToBounds w))
                         = None)
       (only parsing).
+
+  Lemma t_map1_correct_None opW opB pf
+    : unop_correct_None (t_map1 opW opB pf) opB.
+  Proof.
+    intros ? H.
+    unfold t_map1 in H; convoy_destruct_in H; destruct_head' ZBounds.bounds;
+      unfold BoundedWordToBounds in *;
+      inversion_option; subst; simpl.
+    eauto.
+  Qed.
 
   Lemma t_map2_correct_None opW opB pf
     : binop_correct_None (t_map2 opW opB pf) opB.
@@ -721,7 +785,7 @@ Module BoundedWord64.
        | Shr => fun xy => fst xy >> snd xy
        | Land => fun xy => land (fst xy) (snd xy)
        | Lor => fun xy => lor (fst xy) (snd xy)
-       | Neg => fun xy => neg (fst xy) (snd xy)
+       | Neg int_width => fun x => neg int_width x
        | Cmovne => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovne x y z w
        | Cmovle => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovle x y z w
      end%bounded_word.
