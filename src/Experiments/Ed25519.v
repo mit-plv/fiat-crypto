@@ -1072,33 +1072,96 @@ Admitted.
 
 Lemma WordNZ_split1 : forall {n m} w,
     Z.of_N (Word.wordToN (Word.split1 n m w)) = ZUtil.Z.pow2_mod (Z.of_N (Word.wordToN w)) n.
-Admitted.
+Proof.
+  intros; unfold ZUtil.Z.pow2_mod.
+  rewrite WordUtil.wordToN_split1.
+  apply Z.bits_inj_iff'; intros k Hpos.
+  rewrite Z.land_spec.
+  repeat (rewrite Z2N.inj_testbit; [|assumption]).
+  rewrite N.land_spec; f_equal.
+  rewrite WordUtil.wordToN_wones.
+
+  destruct (WordUtil.Nge_dec (Z.to_N k) (N.of_nat n)).
+
+  - rewrite Z.ones_spec_high, N.ones_spec_high;
+      [reflexivity|apply N.ge_le; assumption|split; [omega|]].
+    apply Z2N.inj_le; [apply Nat2Z.is_nonneg|assumption|].
+    etransitivity; [|apply N.ge_le; eassumption].
+    apply N.eq_le_incl.
+    induction n; cbn; reflexivity.
+
+  - rewrite Z.ones_spec_low, N.ones_spec_low;
+      [reflexivity|assumption|split; [omega|]].
+    apply Z2N.inj_lt; [assumption|apply Nat2Z.is_nonneg|].
+    eapply N.lt_le_trans; [eassumption|].
+    apply N.eq_le_incl.
+    induction n; cbn; reflexivity.
+Qed.
 
 Lemma WordNZ_split2 : forall {n m} w,
     Z.of_N (Word.wordToN (Word.split2 n m w)) = Z.shiftr (Z.of_N (Word.wordToN w)) n.
-Admitted.
+Proof.
+  intros; unfold ZUtil.Z.pow2_mod.
+  rewrite WordUtil.wordToN_split2.
+  apply Z.bits_inj_iff'; intros k Hpos.
+  rewrite Z2N.inj_testbit; [|assumption].
+  rewrite Z.shiftr_spec, N.shiftr_spec; [|apply N2Z.inj_le; rewrite Z2N.id|]; try assumption.
+  rewrite Z2N.inj_testbit; [f_equal|omega].
+  rewrite Z2N.inj_add; [f_equal|assumption|apply Nat2Z.is_nonneg].
+  induction n; cbn; reflexivity.
+Qed.
 
 Lemma WordNZ_range : forall {n} B w,
   (2 ^ Z.of_nat n <= B)%Z ->
   (0 <= Z.of_N (@Word.wordToN n w) < B)%Z.
-Admitted.
+Proof.
+  intros n B w H.
+  split; [apply N2Z.is_nonneg|].
+  eapply Z.lt_le_trans; [apply N2Z.inj_lt; apply WordUtil.word_size_bound|].
+  rewrite WordUtil.Npow2_N, N2Z.inj_pow, nat_N_Z.
+  assumption.
+Qed.
 
 Lemma WordNZ_range_mono : forall {n} m w,
   (Z.of_nat n <= m)%Z ->
   (0 <= Z.of_N (@Word.wordToN n w) < 2 ^ m)%Z.
-Admitted.
+Proof.
+  intros n m w H.
+  split; [apply N2Z.is_nonneg|].
+  eapply Z.lt_le_trans; [apply N2Z.inj_lt; apply WordUtil.word_size_bound|].
+  rewrite WordUtil.Npow2_N, N2Z.inj_pow, nat_N_Z.
+  apply Z.pow_le_mono; [|assumption].
+  split; cbn; omega.
+Qed.
 
 (* TODO : move to ZUtil *)
 Lemma pow2_mod_range : forall a n m,
+  (0 <= n)%Z ->
   (n <= m)%Z ->
   (0 <= ZUtil.Z.pow2_mod a n < 2 ^ m)%Z.
-Admitted.
+Proof.
+  intros; unfold ZUtil.Z.pow2_mod.
+  rewrite Z.land_ones; [|assumption].
+  split; [apply Z.mod_pos_bound, WordUtil.Z_pow2_gt_0; assumption|].
+  eapply Z.lt_le_trans; [apply Z.mod_pos_bound, WordUtil.Z_pow2_gt_0; assumption|].
+  apply Z.pow_le_mono; [|assumption].
+  split; cbn; omega.
+Qed.
 
 (* TODO : move to ZUtil *)
 Lemma shiftr_range : forall a n m,
+  (0 <= n)%Z ->
+  (0 <= m)%Z ->
   (0 <= a < 2 ^ (n + m))%Z ->
   (0 <= Z.shiftr a n < 2 ^ m)%Z.
-Admitted.
+Proof.
+  intros a n m H0 H1 H2; destruct H2.
+  split; [apply Z.shiftr_nonneg; assumption|].
+  rewrite Z.shiftr_div_pow2; [|assumption].
+  apply Z.div_lt_upper_bound; [apply WordUtil.Z_pow2_gt_0; assumption|].
+  eapply Z.lt_le_trans; [eassumption|apply Z.eq_le_incl].
+  apply Z.pow_add_r; omega.
+Qed.
 
 Lemma feDec_correct : forall w : Word.word (pred b),
         option_eq GF25519BoundedCommon.eq

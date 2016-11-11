@@ -5,6 +5,7 @@ Require Import Coq.Classes.RelationClasses.
 Require Import Coq.Program.Program.
 Require Import Coq.Numbers.Natural.Peano.NPeano Util.NatUtil.
 Require Import Coq.micromega.Psatz.
+Require Import Coq.Bool.Bool.
 
 Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.Tactics.
@@ -384,6 +385,131 @@ Section WordToN.
           rewrite IHn;
           rewrite Nat2N.id;
           reflexivity.
+  Qed.
+
+  Lemma wordToN_split1: forall {n m} x,
+    wordToN (@split1 n m x) = N.land (wordToN x) (wordToN (wones n)).
+  Proof.
+    intros.
+
+    pose proof (Word.combine_split _ _ x) as C; revert C.
+    generalize (split1 n m x) as a, (split2 n m x) as b.
+    intros a b C; rewrite <- C; clear C x.
+
+    apply N.bits_inj_iff; unfold N.eqf; intro x.
+    rewrite N.land_spec.
+    repeat rewrite wordToN_testbit.
+    revert x a b.
+
+    induction n, m; intros;
+      shatter a; shatter b;
+      induction (N.to_nat x) as [|n0];
+      try rewrite <- (Nat2N.id n0);
+      try rewrite andb_false_r;
+      try rewrite andb_true_r;
+      simpl; intuition.
+  Qed.
+
+  Lemma wordToN_split2: forall {n m} x,
+    wordToN (@split2 n m x) = N.shiftr (wordToN x) (N.of_nat n).
+  Proof.
+    intros.
+
+    pose proof (Word.combine_split _ _ x) as C; revert C.
+    generalize (split1 n m x) as a, (split2 n m x) as b.
+    intros a b C.
+    rewrite <- C; clear C x.
+
+    apply N.bits_inj_iff; unfold N.eqf; intro x;
+      rewrite N.shiftr_spec;
+      repeat rewrite wordToN_testbit;
+      try apply N_ge_0.
+
+    revert x a b.
+    induction n, m; intros;
+      shatter a;
+      try apply N_ge_0.
+
+    - simpl; intuition.
+
+    - replace (x + N.of_nat 0)%N with x by nomega.
+      simpl; intuition.
+
+    - rewrite (IHn x (wtl a) b).
+      rewrite <- (N2Nat.id x).
+      repeat rewrite <- Nat2N.inj_add.
+      repeat rewrite Nat2N.id; simpl.
+      replace (N.to_nat x + S n) with (S (N.to_nat x + n)) by omega.
+      reflexivity.
+
+    - rewrite (IHn x (wtl a) b).
+      rewrite <- (N2Nat.id x).
+      repeat rewrite <- Nat2N.inj_add.
+      repeat rewrite Nat2N.id; simpl.
+      replace (N.to_nat x + S n) with (S (N.to_nat x + n)) by omega.
+      reflexivity.
+  Qed.
+
+  Lemma wordToN_wones: forall x, wordToN (wones x) = N.ones (N.of_nat x).
+  Proof.
+    induction x.
+
+    - simpl; intuition.
+
+    - rewrite Nat2N.inj_succ.
+      replace (wordToN (wones (S x))) with (2 * wordToN (wones x) + N.b2n true)%N
+        by (simpl; rewrite ?N.succ_double_spec; simpl; nomega).
+      replace (N.ones (N.succ _))
+         with (2 * N.ones (N.of_nat x) + N.b2n true)%N.
+
+      + rewrite IHx; nomega.
+
+      + replace (N.succ (N.of_nat x)) with (1 + (N.of_nat x))%N by (
+          rewrite N.add_comm; nomega).
+        rewrite N.ones_add.
+        replace (N.ones 1) with 1%N by (
+          unfold N.ones; simpl; intuition).
+        simpl.
+        reflexivity.
+  Qed.
+
+  Local Tactic Notation "replaceAt1" constr(x) "with" constr(y) "by" tactic(tac) :=
+    let tmp := fresh in
+    set (tmp := x) at 1;
+    replace tmp with y by (unfold tmp; tac);
+    clear tmp.
+
+  Lemma wordToN_combine: forall {n m} a b,
+    wordToN (@Word.combine n a m b)
+      = N.lxor (N.shiftl (wordToN b) (N.of_nat n)) (wordToN a).
+  Proof.
+    intros; symmetry.
+
+    replaceAt1 a with (Word.split1 _ _ (Word.combine a b))
+      by (apply Word.split1_combine).
+
+    replaceAt1 b with (Word.split2 _ _ (Word.combine a b))
+      by (apply Word.split2_combine).
+
+    generalize (Word.combine a b); intro x; clear a b.
+
+    rewrite wordToN_split1, wordToN_split2, wordToN_wones.
+    generalize (wordToN x); clear x; intro x.
+    apply N.bits_inj_iff; unfold N.eqf; intro k.
+    rewrite N.lxor_spec.
+
+    destruct (Nge_dec k (N.of_nat n)).
+
+    - rewrite N.shiftl_spec_high; try apply N_ge_0;
+        [|apply N.ge_le; assumption].
+      rewrite N.shiftr_spec; try apply N_ge_0.
+      replace (k - N.of_nat n + N.of_nat n)%N with k by nomega.
+      rewrite N.land_spec, N.ones_spec_high; [|apply N.ge_le; assumption].
+      induction (N.testbit x k); cbv; reflexivity.
+
+    - rewrite N.shiftl_spec_low; try assumption; try apply N_ge_0.
+      rewrite N.land_spec, N.ones_spec_low; [|nomega].
+      induction (N.testbit x k); cbv; reflexivity.
   Qed.
 
   Lemma NToWord_equal: forall n (x y: word n),
