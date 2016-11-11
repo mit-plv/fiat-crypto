@@ -18,9 +18,14 @@ Ltac base_reify_op op op_head extra ::=
      | @Z.shiftr => constr:(reify_op op op_head 2 Shr)
      | @Z.land => constr:(reify_op op op_head 2 Land)
      | @Z.lor => constr:(reify_op op op_head 2 Lor)
-     | @ModularBaseSystemListZOperations.neg => constr:(reify_op op op_head 2 Neg)
      | @ModularBaseSystemListZOperations.cmovne => constr:(reify_op op op_head 4 Cmovne)
      | @ModularBaseSystemListZOperations.cmovl => constr:(reify_op op op_head 4 Cmovle)
+     | @ModularBaseSystemListZOperations.neg
+       => lazymatch extra with
+          | @ModularBaseSystemListZOperations.neg ?int_width _
+            => constr:(reify_op op op_head 1 (Neg int_width))
+          | _ => fail 100 "Anomaly: In Reflection.Z.base_reify_op: head is neg but body is wrong:" extra
+          end
      end.
 Ltac base_reify_type T ::=
      lazymatch T with
