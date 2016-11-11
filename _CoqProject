@@ -71,6 +71,7 @@ src/ModularArithmetic/ExtPow2BaseMulProofs.v
 src/ModularArithmetic/ExtendedBaseVector.v
 src/ModularArithmetic/ModularArithmeticTheorems.v
 src/ModularArithmetic/ModularBaseSystem.v
+src/ModularArithmetic/ModularBaseSystemWord.v
 src/ModularArithmetic/ModularBaseSystemList.v
 src/ModularArithmetic/ModularBaseSystemListProofs.v
 src/ModularArithmetic/ModularBaseSystemListZOperations.v
@@ -164,12 +165,6 @@ src/Specific/GF25519Reflective/Reified/Pack.v
 src/Specific/GF25519Reflective/Reified/PreFreeze.v
 src/Specific/GF25519Reflective/Reified/Sub.v
 src/Specific/GF25519Reflective/Reified/Unpack.v
-src/SpecificGen/GF2213_32.v
-src/SpecificGen/GF2519_32.v
-src/SpecificGen/GF25519_32.v
-src/SpecificGen/GF25519_64.v
-src/SpecificGen/GF41417_32.v
-src/SpecificGen/GF5211_32.v
 src/Tactics/VerdiTactics.v
 src/Tactics/Algebra_syntax/Nsatz.v
 src/Test/Curve25519SpecTestVectors.v
