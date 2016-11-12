@@ -105,11 +105,16 @@ Section Z.
     { reflexivity. }
   Qed.
   Definition SRepAdd : SRep -> SRep -> SRep
-    := Eval srep in fun x y => barrett_reduce_function_bundled (snd (ZBounded.CarryAdd x y)).
+    := Eval srep in
+        let work_around_bug_5198
+            := fun x y => barrett_reduce_function_bundled (snd (ZBounded.CarryAdd x y))
+        in work_around_bug_5198.
   Lemma SRepAdd_Correct : forall x y : ModularArithmetic.F.F l, SRepEq (S2Rep (ModularArithmetic.F.add x y)) (SRepAdd (S2Rep x) (S2Rep y)).
   Proof.
     intros x y; unfold SRepEq, S2Rep, b in *; simpl.
-    transitivity_refl (barrett_reduce_function_bundled (snd (ZBounded.CarryAdd (F.to_Z x) (F.to_Z y)))).
+    transitivity_refl (let work_around_bug_5198
+                           := fun x y => barrett_reduce_function_bundled (snd (ZBounded.CarryAdd x y))
+                       in work_around_bug_5198 (F.to_Z x) (F.to_Z y)).
     pose proof (ModularArithmeticTheorems.F.to_Z_range x).
     pose proof (ModularArithmeticTheorems.F.to_Z_range y).
     unfold l in *; specialize_by auto using modulusv_pos.
@@ -124,11 +129,16 @@ Section Z.
   Global Instance SRepAdd_Proper : Proper (SRepEq ==> SRepEq ==> SRepEq) SRepAdd.
   Proof. unfold SRepEq; repeat intro; subst; reflexivity. Qed.
   Definition SRepMul : SRep -> SRep -> SRep
-    := Eval srep in fun x y => barrett_reduce_function_bundled (ZBounded.Mul x y).
+    := Eval srep in
+        let work_around_bug_5198
+            := fun x y => barrett_reduce_function_bundled (ZBounded.Mul x y)
+        in work_around_bug_5198.
   Lemma SRepMul_Correct : forall x y : ModularArithmetic.F.F l, SRepEq (S2Rep (ModularArithmetic.F.mul x y)) (SRepMul (S2Rep x) (S2Rep y)).
   Proof.
     intros x y; unfold SRepEq, S2Rep, b in *; simpl.
-    transitivity_refl (barrett_reduce_function_bundled (ZBounded.Mul (F.to_Z x) (F.to_Z y))).
+    transitivity_refl (let work_around_bug_5198
+                           := fun x y => barrett_reduce_function_bundled (ZBounded.Mul x y)
+                       in work_around_bug_5198 (F.to_Z x) (F.to_Z y)).
     pose proof (ModularArithmeticTheorems.F.to_Z_range x).
     pose proof (ModularArithmeticTheorems.F.to_Z_range y).
     unfold l in *; specialize_by auto using modulusv_pos.
