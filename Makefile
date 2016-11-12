@@ -45,13 +45,15 @@ update-_CoqProject::
 $(VOFILES): | coqprime
 
 # add files to this list to prevent them from being built by default
-UNMADE_VOFILES :=
+UNMADE_VOFILES := src/SpecificGen/%
 
 COQ_VOFILES := $(filter-out $(UNMADE_VOFILES),$(VOFILES))
 SPECIFIC_VO := $(filter src/Specific/%,$(VOFILES))
+SPECIFIC_GEN_VO := $(filter src/SpecificGen/%,$(VOFILES))
 NON_SPECIFIC_VO := $(filter-out $(SPECIFIC_VO),$(VO_FILES))
 
 specific: $(SPECIFIC_VO) coqprime
+specific-gen: $(SPECIFIC_VO) coqprime
 non-specific: $(NON_SPECIFIC_VO) coqprime
 coq: $(COQ_VOFILES) coqprime
 
