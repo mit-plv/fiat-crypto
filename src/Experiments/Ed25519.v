@@ -1599,5 +1599,5 @@ Definition x25519_correct' n x :
       255 _.
 
 Print Assumptions x25519_correct'.
-Let three_correct := (@sign_correct, @verify_correct, x25519_correct').
-Print Assumptions three_correct.
+Print Assumptions sign_correct.
+Print Assumptions verify_correct.
