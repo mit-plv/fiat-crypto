@@ -170,7 +170,7 @@ Proof.
       end;
   try solve [
   (apply Z.log2_lt_pow2_alt; [ vm_compute; reflexivity | ]);
-  eapply Z.le_lt_trans; try apply Z.land_upper_bound_r; try apply neg_range; instantiate; try (vm_compute; discriminate); reflexivity];
+  eapply Z.le_lt_trans; try apply Z.land_upper_bound_r; try apply neg_range; instantiate; try match goal with |- ?G => not has_evar G; vm_compute; discriminate end; reflexivity];
   match goal with
   | |- 0 <= _ - _ => lower_bound_minus_ge_modulus
   | |- Z.log2 (_ - _) < _ => upper_bound_minus_ge_modulus
