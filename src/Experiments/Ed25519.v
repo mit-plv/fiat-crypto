@@ -1227,7 +1227,7 @@ Proof.
   rewrite Tuple.to_list_from_list.
   rewrite <-Conversion.convert_correct by (auto || rewrite Tuple.to_list; reflexivity).
   rewrite <-Pow2BaseProofs.decode_bitwise_spec by (auto || cbv [In]; intuition omega).
-  cbv [Tuple.to_list Tuple.to_list' length fst snd Pow2Base.decode_bitwise Pow2Base.decode_bitwise' nth_default nth_error ].
+  cbv [Tuple.to_list Tuple.to_list' length fst snd Pow2Base.decode_bitwise Pow2Base.decode_bitwise' nth_default nth_error value ].
   clear.
   apply Z.bits_inj'.
   intros.
@@ -1268,8 +1268,7 @@ Proof.
           replace m with n by omega; reflexivity
         | |- Z.testbit ?w ?n = (Z.testbit ?w ?m || _)%bool =>
           replace m with n by omega
-         end;
-  admit. (* TODO(jadep): there are goal left here on 8.4 *)
+         end.
   }
   match goal with
     |- option_eq _ (option_map _ (if Z_lt_dec ?a ?b then Some _ else None)) (if (?X =? 1)%Z then None else Some _) =>
