@@ -170,7 +170,7 @@ Section EdDSA.
            [ repeat match goal with
                     | |- _ => intro
                     | |- _ => eapply Proper_option_rect_nd_changebody
-                    | |- _ ?x ?x => reflexivity
+                    | |- ?R ?x ?x => reflexivity
                     | H : _ |- _ => rewrite H; reflexivity
                     end
            ]
