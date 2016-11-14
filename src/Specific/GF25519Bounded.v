@@ -83,9 +83,11 @@ Definition postfreezeW : fe25519W -> fe25519W :=
 Definition freezeW (f : fe25519W) : fe25519W := Eval cbv beta delta [prefreezeW postfreezeW] in postfreezeW (prefreezeW f).
 
 Local Transparent Let_In.
-Definition powW (f : fe25519W) chain := fold_chain_opt (proj1_fe25519W one) mulW chain [f].
+(* Wrapper to allow extracted code to not unfold [mulW] *)
+Definition mulW_noinline := mulW.
+Definition powW (f : fe25519W) chain := fold_chain_opt (proj1_fe25519W one) mulW_noinline chain [f].
 Definition invW (f : fe25519W) : fe25519W
-  := Eval cbv -[Let_In fe25519W mulW] in powW f (chain inv_ec).
+  := Eval cbv -[Let_In fe25519W mulW_noinline] in powW f (chain inv_ec).
 
 Local Ltac port_correct_and_bounded pre_rewrite opW interp_rop rop_cb :=
   change opW with (interp_rop);
@@ -229,7 +231,7 @@ Lemma invW_correct_and_bounded : iunop_correct_and_bounded invW inv.
 Proof.
   intro f.
   assert (H : forall f, invW f = powW f (chain inv_ec))
-    by abstract (cbv -[Let_In fe25519W mulW]; reflexivity).
+    by abstract (cbv -[Let_In fe25519W mulW_noinline]; reflexivity).
   rewrite H.
   rewrite inv_correct.
   cbv [inv_opt].
@@ -300,7 +302,7 @@ Definition sqrt_m1W : fe25519W :=
 
 Definition GF25519sqrt x : GF25519.fe25519 :=
   dlet powx := powW (fe25519ZToW x) (chain GF25519.sqrt_ec) in
-  GF25519.sqrt (fe25519WToZ powx) (fe25519WToZ (mulW powx powx)) x.
+  GF25519.sqrt (fe25519WToZ powx) (fe25519WToZ (mulW_noinline powx powx)) x.
 
 Definition sqrtW_sig
   : { sqrtW | iunop_correct_and_bounded sqrtW GF25519sqrt }.
@@ -325,6 +327,7 @@ Proof.
                   | [ |- is_bounded (fe25519WToZ ?op) = true ]
                     => lazymatch op with
                        | mulW _ _ => apply mulW_correct_and_bounded
+                       | mulW_noinline _ _ => apply mulW_correct_and_bounded
                        | powW _ _ => apply powW_correct_and_bounded
                        | sqrt_m1W => vm_compute; reflexivity
                        | _ => assumption

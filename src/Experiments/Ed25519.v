@@ -1382,6 +1382,10 @@ Local Ltac prove_bounded_by :=
            => apply GF25519Bounded.mulW_correct_and_bounded
          | [ |- GF25519BoundedCommon.is_bounded
                   (GF25519BoundedCommon.fe25519WToZ
+                     (GF25519Bounded.mulW_noinline _ _)) = true ]
+           => apply GF25519Bounded.mulW_correct_and_bounded
+         | [ |- GF25519BoundedCommon.is_bounded
+                  (GF25519BoundedCommon.fe25519WToZ
                      (GF25519Bounded.powW _ _)) = true ]
            => apply GF25519Bounded.powW_correct_and_bounded
          | [ |- context[GF25519BoundedCommon.fe25519WToZ (GF25519BoundedCommon.fe25519ZToW _)] ]
@@ -1410,7 +1414,7 @@ Proof.
   rewrite ModularBaseSystemProofs.encode_rep.
   symmetry.
   eapply @ModularBaseSystemProofs.sqrt_5mod8_correct;
-    eauto using GF25519.freezePreconditions25519, ModularBaseSystemProofs.encode_rep, bounded_by_freeze, bounded_by_encode_freeze; prove_bounded_by; eauto using GF25519BoundedCommon.is_bounded_proj1_fe25519; [ reflexivity | 
+    eauto using GF25519.freezePreconditions25519, ModularBaseSystemProofs.encode_rep, bounded_by_freeze, bounded_by_encode_freeze; prove_bounded_by; eauto using GF25519BoundedCommon.is_bounded_proj1_fe25519; [ reflexivity |
   lazymatch goal with
     | |- appcontext[GF25519Bounded.powW ?a ?ch] =>
       let A := fresh "H" in
@@ -1420,8 +1424,9 @@ Proof.
         | rewrite A;
           rewrite GF25519.pow_correct, ModularBaseSystemOpt.pow_opt_correct
             by reflexivity]
-    end..]; 
+    end..];
     [ rewrite GF25519BoundedCommon.fe25519WToZ_ZToW by (eapply GF25519BoundedCommon.is_bounded_proj1_fe25519); reflexivity | ].
+  unfold GF25519Bounded.mulW_noinline.
   match goal with
   | |- appcontext[GF25519Bounded.mulW ?a ?b] =>
     let A := fresh "H" in
@@ -1456,7 +1461,7 @@ Proof.
   intros. pose proof sqrt_correct' (GF25519BoundedCommon.encode x) as H.
   rewrite GF25519BoundedCommon.decode_encode in H; exact H.
 Qed.
-  
+
 
 Local Instance Proper_sqrt :
   Proper (GF25519BoundedCommon.eq ==> GF25519BoundedCommon.eq) GF25519Bounded.sqrt.
