@@ -83,9 +83,11 @@ Definition postfreezeW : fe41417_32W -> fe41417_32W :=
 Definition freezeW (f : fe41417_32W) : fe41417_32W := Eval cbv beta delta [prefreezeW postfreezeW] in postfreezeW (prefreezeW f).
 
 Local Transparent Let_In.
-Definition powW (f : fe41417_32W) chain := fold_chain_opt (proj1_fe41417_32W one) mulW chain [f].
+(* Wrapper to allow extracted code to not unfold [mulW] *)
+Definition mulW_noinline := mulW.
+Definition powW (f : fe41417_32W) chain := fold_chain_opt (proj1_fe41417_32W one) mulW_noinline chain [f].
 Definition invW (f : fe41417_32W) : fe41417_32W
-  := Eval cbv -[Let_In fe41417_32W mulW] in powW f (chain inv_ec).
+  := Eval cbv -[Let_In fe41417_32W mulW_noinline] in powW f (chain inv_ec).
 
 Local Ltac port_correct_and_bounded pre_rewrite opW interp_rop rop_cb :=
   change opW with (interp_rop);
@@ -229,7 +231,7 @@ Lemma invW_correct_and_bounded : iunop_correct_and_bounded invW inv.
 Proof.
   intro f.
   assert (H : forall f, invW f = powW f (chain inv_ec))
-    by abstract (cbv -[Let_In fe41417_32W mulW]; reflexivity).
+    by abstract (cbv -[Let_In fe41417_32W mulW_noinline]; reflexivity).
   rewrite H.
   rewrite inv_correct.
   cbv [inv_opt].
@@ -300,7 +302,7 @@ Definition sqrt_m1W : fe41417_32W :=
 
 Definition GF41417_32sqrt x : GF41417_32.fe41417_32 :=
   dlet powx := powW (fe41417_32ZToW x) (chain GF41417_32.sqrt_ec) in
-  GF41417_32.sqrt (fe41417_32WToZ powx) (fe41417_32WToZ (mulW powx powx)) x.
+  GF41417_32.sqrt (fe41417_32WToZ powx) (fe41417_32WToZ (mulW_noinline powx powx)) x.
 
 Definition sqrtW_sig
   : { sqrtW | iunop_correct_and_bounded sqrtW GF41417_32sqrt }.
@@ -325,6 +327,7 @@ Proof.
                   | [ |- is_bounded (fe41417_32WToZ ?op) = true ]
                     => lazymatch op with
                        | mulW _ _ => apply mulW_correct_and_bounded
+                       | mulW_noinline _ _ => apply mulW_correct_and_bounded
                        | powW _ _ => apply powW_correct_and_bounded
                        | sqrt_m1W => vm_compute; reflexivity
                        | _ => assumption
