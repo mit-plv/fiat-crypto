@@ -256,11 +256,11 @@ Extract Inlined Constant Word64.mul => "(Prelude.*)".
 Extract Inlined Constant Word64.sub => "(Prelude.-)".
 Extract Inlined Constant Word64.land => "(Data.Bits..&.)".
 Extract Inlined Constant Word64.lor => "(Data.Bits..|.)".
-Extract Constant Word64.neg => "(\_ w -> Prelude.negate w)". (* FIXME: reification: drop arg1 *)
-Extract Constant Word64.shr => "(\w n -> Data.Bits.shiftR w (Prelude.fromIntegral n))".
-Extract Constant Word64.shl => "(\w n -> Data.Bits.shiftL w (Prelude.fromIntegral n))".
-Extract Constant Word64.cmovle => "(\x y r1 r2 -> if x Prelude.<= y then r1 else r2)".
-Extract Constant Word64.cmovne => "(\x y r1 r2 -> if x Prelude.== y then r1 else r2)".
+Extract Inlined Constant Word64.neg => "(\_ w -> Prelude.negate w)". (* FIXME: reification: drop arg1 *)
+Extract Inlined Constant Word64.shr => "(\w n -> Data.Bits.shiftR w (Prelude.fromIntegral n))".
+Extract Inlined Constant Word64.shl => "(\w n -> Data.Bits.shiftL w (Prelude.fromIntegral n))".
+Extract Inlined Constant Word64.cmovle => "(\x y r1 r2 -> if x Prelude.<= y then r1 else r2)".
+Extract Inlined Constant Word64.cmovne => "(\x y r1 r2 -> if x Prelude.== y then r1 else r2)".
 
 (* inlining, primarily to reduce polymorphism *)
 Extraction Inline dec_eq_Z dec_eq_N dec_eq_sig_hprop.
@@ -274,6 +274,10 @@ Extraction Inline CompleteEdwardsCurve.E.coordinates CompleteEdwardsCurve.E.zero
 Extraction Inline GF25519BoundedCommon.proj_word GF25519BoundedCommon.Build_bounded_word GF25519BoundedCommon.Build_bounded_word'.
 Extraction Inline GF25519BoundedCommon.app_wire_digits GF25519BoundedCommon.wire_digit_bounds_exp.
 Extraction Inline Crypto.Util.HList.mapt' Crypto.Util.HList.mapt Crypto.Util.Tuple.map.
+
+Extraction Inline GF25519BoundedCommon.exist_fe25519 GF25519BoundedCommon.exist_fe25519W GF25519BoundedCommon.proj1_fe25519W.
+Extraction Inline Crypto.Specific.GF25519Bounded.mulW Crypto.Specific.GF25519Bounded.addW Crypto.Specific.GF25519Bounded.subW.
+(*done-at-haskell-level: Extraction Inline Crypto.Specific.GF25519Bounded.mul Crypto.Specific.GF25519Bounded.add Crypto.Specific.GF25519Bounded.sub Crypto.Specific.GF25519Bounded.inv Crypto.Specific.GF25519Bounded.sqrt. *) 
 
 Extraction Implicit Ed25519.SHA512 [ 1 ].
 Extract Constant Ed25519.SHA512 =>

@@ -91,16 +91,18 @@ src/Experiments/Ed25519_noimports.hs: src/Experiments/Ed25519Extraction.vo src/E
 
 src/Experiments/Ed25519.hs: src/Experiments/Ed25519_noimports.hs src/Experiments/Ed25519_imports.hs
 	( cd src/Experiments && \
-		< Ed25519_noimports.hs \
+		( < Ed25519_noimports.hs \
 		sed "/import qualified Prelude/r Ed25519_imports.hs" | \
 	  sed 's/ Ed25519_noimports / Ed25519 /g' \
+		&& echo -e '{-# INLINE mul1 #-} \n{-# INLINE add2 #-} \n{-# INLINE sub3 #-}' ) \
 		> Ed25519.hs )
 
 src/Experiments/X25519.hs: src/Experiments/X25519_noimports.hs src/Experiments/Ed25519_imports.hs
 	( cd src/Experiments && \
-		< X25519_noimports.hs \
+		( < X25519_noimports.hs \
 		sed "/import qualified Prelude/r Ed25519_imports.hs" | \
 	  sed 's/ X25519_noimports / X25519 /g' \
+		&& echo -e '{-# INLINE mul #-} \n{-# INLINE sub0 #-} \n{-# INLINE add #-}' ) \
 		> X25519.hs )
 
 src/Experiments/Ed25519.o: src/Experiments/Ed25519.hs
