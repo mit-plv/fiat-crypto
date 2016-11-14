@@ -1,4 +1,5 @@
 Require Import Crypto.Experiments.Ed25519.
+Require Import Crypto.Spec.MxDH.
 Import Decidable BinNat BinInt ZArith_dec.
 
 Extraction Language Haskell.
@@ -274,8 +275,8 @@ Extraction Inline GF25519BoundedCommon.proj_word GF25519BoundedCommon.Build_boun
 Extraction Inline GF25519BoundedCommon.app_wire_digits GF25519BoundedCommon.wire_digit_bounds_exp.
 Extraction Inline Crypto.Util.HList.mapt' Crypto.Util.HList.mapt Crypto.Util.Tuple.map.
 
-Extraction Implicit Ed25519.H [ 1 ].
-Extract Constant Ed25519.H =>
+Extraction Implicit Ed25519.SHA512 [ 1 ].
+Extract Constant Ed25519.SHA512 =>
 "let { b2i b = case b of { Prelude.True -> 1 ; Prelude.False -> 0 } } in
  let { leBitsToBytes [] = [] :: [Data.Word.Word8] ;
        leBitsToBytes (a:b:c:d:e:f:g:h:bs) = (b2i a Data.Bits..|. (b2i b `Data.Bits.shiftL` 1) Data.Bits..|. (b2i c `Data.Bits.shiftL` 2) Data.Bits..|. (b2i d `Data.Bits.shiftL` 3) Data.Bits..|. (b2i e `Data.Bits.shiftL` 4) Data.Bits..|. (b2i f `Data.Bits.shiftL` 5) Data.Bits..|. (b2i g `Data.Bits.shiftL` 6) Data.Bits..|. (b2i h `Data.Bits.shiftL` 7)) : leBitsToBytes bs ;
@@ -284,17 +285,7 @@ Extract Constant Ed25519.H =>
        bytesToLEBits (x:xs) = (x `Data.Bits.testBit` 0) : (x `Data.Bits.testBit` 1) : (x `Data.Bits.testBit` 2) : (x `Data.Bits.testBit` 3) : (x `Data.Bits.testBit` 4) : (x `Data.Bits.testBit` 5) : (x `Data.Bits.testBit` 6) : (x `Data.Bits.testBit` 7) : bytesToLEBits xs } in
  (bytesToLEBits Prelude.. B.unpack Prelude.. SHA.bytestringDigest Prelude.. SHA.sha512 Prelude.. B.pack Prelude.. leBitsToBytes)".
 
-(* invW makes ghc -XStrict very slow *)
-(* Extract Constant GF25519Bounded.invW => "Prelude.error ('i':'n':'v':'W':[])". *)
+Extraction Inline MxDH.ladderstep MxDH.montladder.
 
 Extraction "src/Experiments/Ed25519_noimports.hs" Ed25519.sign (* Ed25519.verify *).
-(*
-*Ed25519 Prelude> and (eRepEnc ((sRepERepMul l eRepB))) == False
-True
-*Ed25519 Prelude> eRepEnc ((sRepERepMul l eRepB) `erepAdd` eRepB) == eRepEnc eRepB
-True
-*)
-
-Import Crypto.Spec.MxDH.
-Extraction Inline MxDH.ladderstep MxDH.montladder.
 Extraction "src/Experiments/X25519_noimports.hs" Crypto.Experiments.Ed25519.x25519.

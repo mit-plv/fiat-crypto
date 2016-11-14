@@ -25,7 +25,7 @@ Local Notation eta x := (fst x, snd x).
 Local Notation eta3 x := (eta (fst x), snd x).
 Local Notation eta4 x := (eta3 (fst x), snd x).
 
-Context {H: forall n : nat, Word.word n -> Word.word (b + b)}.
+Context {SHA512: forall n : nat, Word.word n -> Word.word 512}.
 
 Definition feSign (f :  GF25519BoundedCommon.fe25519) : bool :=
   let x := GF25519Bounded.freeze f in
@@ -133,8 +133,6 @@ Definition feEnc (x : GF25519BoundedCommon.fe25519) : Word.word 255 :=
           (Word.combine (ZNWord 32 x4)
             (Word.combine (ZNWord 32 x5)
               (Word.combine (ZNWord 32 x6) (ZNWord 31 x7))))))).
-Check GF25519Bounded.unpack.
-Print GF25519BoundedCommon.wire_digits.
 Eval compute in GF25519.wire_widths.
 Eval compute in (Tuple.from_list 8 GF25519.wire_widths _).
 
@@ -612,15 +610,15 @@ Proof.
       cbv [Tuple.to_list Tuple.to_list'] in *.
       rewrite Pow2BaseProofs.bounded_iff in *.
       (* TODO : Is there a better way to do this? *)
-      pose proof (H0 0).
-      pose proof (H0 1).
-      pose proof (H0 2).
-      pose proof (H0 3).
-      pose proof (H0 4).
-      pose proof (H0 5).
-      pose proof (H0 6).
-      pose proof (H0 7).
-      clear H0.
+      pose proof (H 0).
+      pose proof (H 1).
+      pose proof (H 2).
+      pose proof (H 3).
+      pose proof (H 4).
+      pose proof (H 5).
+      pose proof (H 6).
+      pose proof (H 7).
+      clear H.
       cbv [GF25519.wire_widths nth_default nth_error value] in *.
       repeat rewrite combine_ZNWord by (rewrite ?Znat.Nat2Z.inj_add; simpl Z.of_nat; repeat apply lor_shiftl_bounds; omega).
       cbv - [ZNWord Z.lor Z.shiftl].
@@ -693,12 +691,12 @@ Proof.
   to_MBSfreeze Heqf.
   rewrite <-Heqf in *.
   cbv [ModularBaseSystem.rep ModularBaseSystem.decode ModularBaseSystemList.decode] in *.
-  rewrite <-H1.
+  rewrite <-H0.
   rewrite ModularArithmeticTheorems.F.to_Z_of_Z.
   rewrite Z.mod_small; [ reflexivity | ].
   pose proof (minrep_freeze x).
   apply ModularBaseSystemListProofs.ge_modulus_spec;
-    try solve [inversion H0; auto using Tuple.length_to_list];
+    try solve [inversion H; auto using Tuple.length_to_list];
     subst f; intuition auto.
   Grab Existential Variables.
   apply Tuple.length_to_list.
@@ -728,7 +726,7 @@ Proof.
     to_MBSfreeze Heqf0.
     to_MBSfreeze Heqf.
     subst.
-    apply H2.
+    apply H1.
     cbv [GF25519BoundedCommon.eq ModularBaseSystem.eq] in *.
     auto. }
   { cbv [GF25519.fe25519 ] in *.
@@ -904,7 +902,7 @@ Definition sign := @EdDSARepChange.sign E
             (@ModularArithmetic.F.opp q) (@ModularArithmetic.F.add q) (@ModularArithmetic.F.sub q)
             (@ModularArithmetic.F.mul q) (@ModularArithmetic.F.inv q) (@ModularArithmetic.F.div q)
             (@PrimeFieldTheorems.F.field_modulo q prime_q) (@ModularArithmeticTheorems.F.eq_dec q) Spec.Ed25519.a
-            Spec.Ed25519.d curve_params) b H c n l B Eenc Senc (@ed25519 H B_order_l ) Erep ERepEnc SRep SC25519.SRepDecModL
+            Spec.Ed25519.d curve_params) b SHA512 c n l B Eenc Senc (@ed25519 SHA512 B_order_l ) Erep ERepEnc SRep SC25519.SRepDecModL
          SRepERepMul SRepEnc SC25519.SRepAdd SC25519.SRepMul ERepB SC25519.SRepDecModLShort.
 
 Let sign_correct : forall pk sk {mlen} (msg:Word.word mlen), sign pk sk _ msg = EdDSA.sign pk sk msg :=
@@ -916,7 +914,7 @@ Let sign_correct : forall pk sk {mlen} (msg:Word.word mlen), sign pk sk _ msg = 
       (* Eopp := *) CompleteEdwardsCurveTheorems.E.opp
       (* EscalarMult := *) CompleteEdwardsCurve.E.mul
       (* b := *) b
-      (* H := *) H
+      (* H := *) SHA512
       (* c := *) c
       (* n := *) n
       (* l := *) l
@@ -1065,10 +1063,6 @@ Proof.
   rewrite ExtendedCoordinates.Extended.to_twisted_from_twisted.
   reflexivity.
 Qed.
-
-Local Instance Proper_sqrt :
-  Proper (GF25519BoundedCommon.eq ==> GF25519BoundedCommon.eq) GF25519Bounded.sqrt.
-Admitted.
 
 Lemma WordNZ_split1 : forall {n m} w,
     Z.of_N (Word.wordToN (Word.split1 n m w)) = ZUtil.Z.pow2_mod (Z.of_N (Word.wordToN w)) n.
@@ -1284,7 +1278,7 @@ Proof.
       cbv [ModularBaseSystemList.unpack].
       apply Conversion.convert_bounded.
     } Unfocus.
-    rewrite <-H0.
+    rewrite <-H.
     intuition; try omega.
     apply Znat.N2Z.is_nonneg.
   }
@@ -1312,8 +1306,8 @@ Proof.
   etransitivity.
   Focus 2. {
     cbv [ModularBaseSystem.decode ModularBaseSystemList.decode].
-    cbv [length PseudoMersenneBaseParams.limb_widths GF25519.params25519] in H0 |- *.
-    rewrite <-H0.
+    cbv [length PseudoMersenneBaseParams.limb_widths GF25519.params25519] in H |- *.
+    rewrite <-H.
     reflexivity. } Unfocus.
   apply ModularBaseSystemProofs.encode_rep.
 
@@ -1396,11 +1390,11 @@ Local Ltac prove_bounded_by :=
            => apply GF25519BoundedCommon.encode_bounded
          end.
 
-Lemma sqrt_correct : forall x : ModularArithmetic.F.F q,
+Lemma sqrt_correct' : forall x,
         GF25519BoundedCommon.eq
           (GF25519BoundedCommon.encode
-             (PrimeFieldTheorems.F.sqrt_5mod8 Fsqrt_minus1 x))
-          (GF25519Bounded.sqrt (GF25519BoundedCommon.encode x)).
+             (PrimeFieldTheorems.F.sqrt_5mod8 Fsqrt_minus1 (GF25519BoundedCommon.decode x)))
+          (GF25519Bounded.sqrt x).
 Proof.
   intros.
   cbv [GF25519BoundedCommon.eq].
@@ -1416,22 +1410,18 @@ Proof.
   rewrite ModularBaseSystemProofs.encode_rep.
   symmetry.
   eapply @ModularBaseSystemProofs.sqrt_5mod8_correct;
-    [ eauto using GF25519.freezePreconditions25519, ModularBaseSystemProofs.encode_rep, bounded_by_freeze, bounded_by_encode_freeze..
-    | | | ];
-    prove_bounded_by;
-  match goal with
-  | |- appcontext[GF25519Bounded.powW ?a ?ch] =>
-    let A := fresh "H" in
-    destruct (GF25519Bounded.powW_correct_and_bounded ch a) as [A ?];
-      [ rewrite GF25519BoundedCommon.fe25519WToZ_ZToW;
-        rewrite <-GF25519BoundedCommon.proj1_fe25519_encode;
-        apply GF25519BoundedCommon.is_bounded_proj1_fe25519
-      | rewrite A;
-        rewrite GF25519.pow_correct, ModularBaseSystemOpt.pow_opt_correct
-          by reflexivity]
-  end;[ solve [f_equiv; apply GF25519BoundedCommon.fe25519WToZ_ZToW;
-             rewrite <-GF25519BoundedCommon.proj1_fe25519_encode;
-             apply GF25519BoundedCommon.is_bounded_proj1_fe25519] | ].
+    eauto using GF25519.freezePreconditions25519, ModularBaseSystemProofs.encode_rep, bounded_by_freeze, bounded_by_encode_freeze; prove_bounded_by; eauto using GF25519BoundedCommon.is_bounded_proj1_fe25519; [ reflexivity | 
+  lazymatch goal with
+    | |- appcontext[GF25519Bounded.powW ?a ?ch] =>
+      let A := fresh "H" in
+      destruct (GF25519Bounded.powW_correct_and_bounded ch a) as [A ?];
+        [ rewrite GF25519BoundedCommon.fe25519WToZ_ZToW;
+          solve [eauto using GF25519BoundedCommon.is_bounded_proj1_fe25519]
+        | rewrite A;
+          rewrite GF25519.pow_correct, ModularBaseSystemOpt.pow_opt_correct
+            by reflexivity]
+    end..]; 
+    [ rewrite GF25519BoundedCommon.fe25519WToZ_ZToW by (eapply GF25519BoundedCommon.is_bounded_proj1_fe25519); reflexivity | ].
   match goal with
   | |- appcontext[GF25519Bounded.mulW ?a ?b] =>
     let A := fresh "H" in
@@ -1439,13 +1429,41 @@ Proof.
       [ auto | auto | rewrite A]
   end.
   rewrite GF25519.mul_correct, ModularBaseSystemOpt.carry_mul_opt_correct by reflexivity.
-  rewrite !H0.
+  rewrite !H.
   rewrite GF25519.pow_correct.
   cbv [ModularBaseSystem.eq].
   rewrite ModularBaseSystemProofs.carry_mul_rep by reflexivity.
   rewrite ModularBaseSystemProofs.mul_rep by reflexivity.
   apply f_equal2;
   rewrite ModularBaseSystemOpt.pow_opt_correct; reflexivity.
+Qed.
+
+Module GF25519BoundedCommon.
+  Lemma decode_encode x: GF25519BoundedCommon.decode (GF25519BoundedCommon.encode x) = x.
+  Proof.
+    unfold GF25519BoundedCommon.encode, GF25519BoundedCommon.decode.
+    rewrite GF25519BoundedCommon.proj1_fe25519_exist_fe25519.
+    erewrite ModularBaseSystemProofs.rep_decode; eauto using ModularBaseSystemProofs.encode_rep.
+  Qed.
+End GF25519BoundedCommon.
+
+Lemma sqrt_correct : forall x : ModularArithmetic.F.F q,
+        GF25519BoundedCommon.eq
+          (GF25519BoundedCommon.encode
+             (PrimeFieldTheorems.F.sqrt_5mod8 Fsqrt_minus1 x))
+          (GF25519Bounded.sqrt (GF25519BoundedCommon.encode x)).
+Proof.
+  intros. pose proof sqrt_correct' (GF25519BoundedCommon.encode x) as H.
+  rewrite GF25519BoundedCommon.decode_encode in H; exact H.
+Qed.
+  
+
+Local Instance Proper_sqrt :
+  Proper (GF25519BoundedCommon.eq ==> GF25519BoundedCommon.eq) GF25519Bounded.sqrt.
+Proof.
+  intros x y Hxy.
+  rewrite <-(sqrt_correct' x); symmetry; rewrite <-(sqrt_correct' y); symmetry.
+  eapply f_equal. eapply f_equal. eapply f_equal. rewrite Hxy. reflexivity.
 Qed.
 
 Lemma ERepDec_correct : forall w : Word.word b,
@@ -1480,7 +1498,7 @@ Proof.
   symmetry; eassumption.
 Qed.
 
-Definition verify := @verify E b H B Erep ErepAdd
+Definition verify := @verify E b SHA512 B Erep ErepAdd
          (@ExtendedCoordinates.Extended.opp GF25519BoundedCommon.fe25519
             GF25519BoundedCommon.eq GF25519BoundedCommon.zero
             GF25519BoundedCommon.one GF25519Bounded.opp GF25519Bounded.add
@@ -1505,7 +1523,7 @@ Let verify_correct :
       (* Eopp := *) CompleteEdwardsCurveTheorems.E.opp
       (* EscalarMult := *) CompleteEdwardsCurve.E.mul
       (* b := *) b
-      (* H := *) H
+      (* H := *) SHA512
       (* c := *) c
       (* n := *) n
       (* l := *) l
@@ -1567,7 +1585,7 @@ Section X25519Constants.
   Definition a24' : GF25519BoundedCommon.fe25519 :=
     Eval vm_compute in GF25519BoundedCommon.encode Spec.X25519.a24.
   Definition a24 : GF25519BoundedCommon.fe25519 :=
-    Eval cbv [a24' fe25519_word64ize word64ize andb opt.word64ToZ opt.word64ize opt.Zleb Z.compare CompOpp Pos.compare Pos.compare_cont] in (fe25519_word64ize a24').
+    Eval cbv [a24' GF25519BoundedCommon.fe25519_word64ize GF25519BoundedCommon.word64ize andb GF25519BoundedCommon.opt.word64ToZ GF25519BoundedCommon.opt.word64ize GF25519BoundedCommon.opt.Zleb Z.compare CompOpp Pos.compare Pos.compare_cont] in (GF25519BoundedCommon.fe25519_word64ize a24').
   Lemma a24_correct : GF25519BoundedCommon.eq
                         (GF25519BoundedCommon.encode Spec.X25519.a24)
                         (a24).
@@ -1597,6 +1615,9 @@ Definition x25519_correct' n x :
       (tb2_correct:=fun _ => (reflexivity _))
       255 _.
 
-Print Assumptions x25519_correct'.
-Print Assumptions sign_correct.
-Print Assumptions verify_correct.
+Let three_correct := (@x25519_correct', @sign_correct, @verify_correct).
+Print Assumptions three_correct.
+(* [B_order_l] is proven above in this file, just replace Admitted with Qed, start the build and wait for a couple of hours *)
+(* [prime_q] and [prime_l] have been proven in Coq exactly as stated here, see <https://github.com/andres-erbsen/safecurves-primes> for the (lengthy) proofs *)
+(* [SHA512] is outside the scope of this project, but its type is satisfied by [(fun n bits => Word.wzero 512)] *)
+Definition __check_SHA512_type := [(fun n bits => Word.wzero 512); SHA512].
