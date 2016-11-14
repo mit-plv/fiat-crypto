@@ -22,8 +22,8 @@ Local Open Scope Z.
 
 Definition modulus : Z := Eval compute in 2^{{{k}}} - {{{c}}}.
 Lemma prime_modulus : prime modulus. Admitted.
+Definition int_width := Eval compute in (2 * {{{w}}})%Z.
 Definition freeze_input_bound := {{{w}}}%Z.
-Definition int_width := {{{w}}}%Z.
 
 Instance params{{{k}}}{{{c}}}_{{{w}}} : PseudoMersenneBaseParams modulus.
   construct_params prime_modulus {{{n}}}%nat {{{k}}}.
@@ -481,8 +481,37 @@ Proof.
   assumption.
 Defined.
 
-Definition freeze_sig (f : fe{{{k}}}{{{c}}}_{{{w}}}) :
-  { f' : fe{{{k}}}{{{c}}}_{{{w}}} | f' = from_list_default 0 {{{n}}} (freeze_opt (int_width := int_width) c_ (to_list {{{n}}} f)) }.
+Definition prefreeze_sig (f : fe{{{k}}}{{{c}}}_{{{w}}}) :
+  { f' : fe{{{k}}}{{{c}}}_{{{w}}} | f' = from_list_default 0 {{{n}}} (carry_full_3_opt c_ (to_list {{{n}}} f)) }.
+Proof.
+  cbv [fe{{{k}}}{{{c}}}_{{{w}}}] in *.
+  repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
+  eexists.
+  cbv - [from_list_default].
+  (* TODO(jgross,jadep): use Reflective linearization here? *)
+  repeat (
+       set_evars; rewrite app_Let_In_nd; subst_evars;
+       eapply Proper_Let_In_nd_changebody; [reflexivity|intro]).
+  cbv [from_list_default from_list_default'].
+  reflexivity.
+Defined.
+
+Definition prefreeze (f : fe{{{k}}}{{{c}}}_{{{w}}}) : fe{{{k}}}{{{c}}}_{{{w}}} :=
+  Eval cbv beta iota delta [proj1_sig prefreeze_sig] in
+    let '{{{enum f}}} := f in
+    proj1_sig (prefreeze_sig {{{enum f}}}).
+
+Definition prefreeze_correct (f : fe{{{k}}}{{{c}}}_{{{w}}})
+  : prefreeze f = from_list_default 0 {{{n}}} (carry_full_3_opt c_ (to_list {{{n}}} f)).
+Proof.
+  pose proof (proj2_sig (prefreeze_sig f)).
+  cbv [fe{{{k}}}{{{c}}}_{{{w}}}] in *.
+  repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
+  assumption.
+Defined.
+
+Definition postfreeze_sig (f : fe{{{k}}}{{{c}}}_{{{w}}}) :
+  { f' : fe{{{k}}}{{{c}}}_{{{w}}} | f' = from_list_default 0 {{{n}}} (conditional_subtract_modulus_opt (int_width := int_width) (to_list {{{n}}} f)) }.
 Proof.
   cbv [fe{{{k}}}{{{c}}}_{{{w}}}] in *.
   repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
@@ -499,19 +528,39 @@ Proof.
   reflexivity.
 Defined.
 
-Definition freeze (f : fe{{{k}}}{{{c}}}_{{{w}}}) : fe{{{k}}}{{{c}}}_{{{w}}} :=
-  Eval cbv beta iota delta [proj1_sig freeze_sig] in
+Definition postfreeze (f : fe{{{k}}}{{{c}}}_{{{w}}}) : fe{{{k}}}{{{c}}}_{{{w}}} :=
+  Eval cbv beta iota delta [proj1_sig postfreeze_sig] in
     let '{{{enum f}}} := f in
-    proj1_sig (freeze_sig {{{enum f}}}).
+    proj1_sig (postfreeze_sig {{{enum f}}}).
 
-Definition freeze_correct (f : fe{{{k}}}{{{c}}}_{{{w}}})
-  : freeze f = from_list_default 0 {{{n}}} (freeze_opt (int_width := int_width) c_ (to_list {{{n}}} f)).
+Definition postfreeze_correct (f : fe{{{k}}}{{{c}}}_{{{w}}})
+  : postfreeze f = from_list_default 0 {{{n}}} (conditional_subtract_modulus_opt (int_width := int_width) (to_list {{{n}}} f)).
 Proof.
-  pose proof (proj2_sig (freeze_sig f)).
+  pose proof (proj2_sig (postfreeze_sig f)).
   cbv [fe{{{k}}}{{{c}}}_{{{w}}}] in *.
   repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
   assumption.
 Defined.
+
+Definition freeze (f : fe{{{k}}}{{{c}}}_{{{w}}}) : fe{{{k}}}{{{c}}}_{{{w}}} :=
+  dlet x := prefreeze f in
+  postfreeze x.
+
+Local Transparent Let_In.
+Definition freeze_correct (f : fe{{{k}}}{{{c}}}_{{{w}}})
+  : freeze f = from_list_default 0 {{{n}}} (freeze_opt (int_width := int_width) c_ (to_list {{{n}}} f)).
+Proof.
+  cbv [freeze_opt freeze Let_In].
+  rewrite prefreeze_correct.
+  rewrite postfreeze_correct.
+  match goal with
+    |- appcontext [to_list _ (from_list_default _ ?n ?xs)] =>
+    assert (length xs = n) as pf; [ | rewrite from_list_default_eq with (pf0 := pf) ] end.
+  { rewrite carry_full_3_opt_correct; repeat rewrite ModularBaseSystemListProofs.length_carry_full; auto using length_to_list. }
+  rewrite to_list_from_list.
+  reflexivity.
+Qed.
+Local Opaque Let_In.
 
 Definition fieldwiseb_sig (f g : fe{{{k}}}{{{c}}}_{{{w}}}) :
   { b | b = @fieldwiseb Z Z {{{n}}} Z.eqb f g }.

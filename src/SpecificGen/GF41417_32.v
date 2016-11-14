@@ -22,8 +22,8 @@ Local Open Scope Z.
 
 Definition modulus : Z := Eval compute in 2^414 - 17.
 Lemma prime_modulus : prime modulus. Admitted.
+Definition int_width := Eval compute in (2 * 32)%Z.
 Definition freeze_input_bound := 32%Z.
-Definition int_width := 32%Z.
 
 Instance params41417_32 : PseudoMersenneBaseParams modulus.
   construct_params prime_modulus 18%nat 414.
@@ -481,8 +481,37 @@ Proof.
   assumption.
 Defined.
 
-Definition freeze_sig (f : fe41417_32) :
-  { f' : fe41417_32 | f' = from_list_default 0 18 (freeze_opt (int_width := int_width) c_ (to_list 18 f)) }.
+Definition prefreeze_sig (f : fe41417_32) :
+  { f' : fe41417_32 | f' = from_list_default 0 18 (carry_full_3_opt c_ (to_list 18 f)) }.
+Proof.
+  cbv [fe41417_32] in *.
+  repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
+  eexists.
+  cbv - [from_list_default].
+  (* TODO(jgross,jadep): use Reflective linearization here? *)
+  repeat (
+       set_evars; rewrite app_Let_In_nd; subst_evars;
+       eapply Proper_Let_In_nd_changebody; [reflexivity|intro]).
+  cbv [from_list_default from_list_default'].
+  reflexivity.
+Defined.
+
+Definition prefreeze (f : fe41417_32) : fe41417_32 :=
+  Eval cbv beta iota delta [proj1_sig prefreeze_sig] in
+    let '(f0, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17) := f in
+    proj1_sig (prefreeze_sig (f0, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17)).
+
+Definition prefreeze_correct (f : fe41417_32)
+  : prefreeze f = from_list_default 0 18 (carry_full_3_opt c_ (to_list 18 f)).
+Proof.
+  pose proof (proj2_sig (prefreeze_sig f)).
+  cbv [fe41417_32] in *.
+  repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
+  assumption.
+Defined.
+
+Definition postfreeze_sig (f : fe41417_32) :
+  { f' : fe41417_32 | f' = from_list_default 0 18 (conditional_subtract_modulus_opt (int_width := int_width) (to_list 18 f)) }.
 Proof.
   cbv [fe41417_32] in *.
   repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
@@ -499,19 +528,39 @@ Proof.
   reflexivity.
 Defined.
 
-Definition freeze (f : fe41417_32) : fe41417_32 :=
-  Eval cbv beta iota delta [proj1_sig freeze_sig] in
+Definition postfreeze (f : fe41417_32) : fe41417_32 :=
+  Eval cbv beta iota delta [proj1_sig postfreeze_sig] in
     let '(f0, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17) := f in
-    proj1_sig (freeze_sig (f0, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17)).
+    proj1_sig (postfreeze_sig (f0, f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17)).
 
-Definition freeze_correct (f : fe41417_32)
-  : freeze f = from_list_default 0 18 (freeze_opt (int_width := int_width) c_ (to_list 18 f)).
+Definition postfreeze_correct (f : fe41417_32)
+  : postfreeze f = from_list_default 0 18 (conditional_subtract_modulus_opt (int_width := int_width) (to_list 18 f)).
 Proof.
-  pose proof (proj2_sig (freeze_sig f)).
+  pose proof (proj2_sig (postfreeze_sig f)).
   cbv [fe41417_32] in *.
   repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
   assumption.
 Defined.
+
+Definition freeze (f : fe41417_32) : fe41417_32 :=
+  dlet x := prefreeze f in
+  postfreeze x.
+
+Local Transparent Let_In.
+Definition freeze_correct (f : fe41417_32)
+  : freeze f = from_list_default 0 18 (freeze_opt (int_width := int_width) c_ (to_list 18 f)).
+Proof.
+  cbv [freeze_opt freeze Let_In].
+  rewrite prefreeze_correct.
+  rewrite postfreeze_correct.
+  match goal with
+    |- appcontext [to_list _ (from_list_default _ ?n ?xs)] =>
+    assert (length xs = n) as pf; [ | rewrite from_list_default_eq with (pf0 := pf) ] end.
+  { rewrite carry_full_3_opt_correct; repeat rewrite ModularBaseSystemListProofs.length_carry_full; auto using length_to_list. }
+  rewrite to_list_from_list.
+  reflexivity.
+Qed.
+Local Opaque Let_In.
 
 Definition fieldwiseb_sig (f g : fe41417_32) :
   { b | b = @fieldwiseb Z Z 18 Z.eqb f g }.

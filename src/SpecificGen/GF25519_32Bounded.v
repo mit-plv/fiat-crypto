@@ -10,6 +10,7 @@ Require Import Crypto.SpecificGen.GF25519_32BoundedCommon.
 Require Import Crypto.SpecificGen.GF25519_32Reflective.
 Require Import Bedrock.Word Crypto.Util.WordUtil.
 Require Import Coq.Lists.List Crypto.Util.ListUtil.
+Require Import Crypto.ModularArithmetic.ModularBaseSystemWord.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tuple.
@@ -63,18 +64,18 @@ Definition ge_modulusW (f : fe25519_32W) : word64 := Eval simpl in interp_rge_mo
 Definition packW (f : fe25519_32W) : wire_digitsW := Eval simpl in interp_rpack f.
 Definition unpackW (f : wire_digitsW) : fe25519_32W := Eval simpl in interp_runpack f.
 
-Require Import ModularBaseSystemWord.
 Definition modulusW :=
-  Eval cbv - [ZToWord64] in (Tuple.map ZToWord64 (Tuple.from_list_default 0%Z 10 GF25519_32.modulus_digits_)).
+  Eval cbv - [ZToWord64] in (Tuple.map ZToWord64 (Tuple.from_list_default 0%Z length_fe25519_32 GF25519_32.modulus_digits_)).
 
 Definition postfreeze : GF25519_32.fe25519_32 -> GF25519_32.fe25519_32 :=
   GF25519_32.postfreeze.
 
-Lemma freeze_prepost_freeze : forall x, postfreeze (prefreeze x) = GF25519_32.freeze x. Proof. reflexivity. Qed.
+Lemma freeze_prepost_freeze : forall x, postfreeze (prefreeze x) = GF25519_32.freeze x.
+Proof. reflexivity. Qed.
 
 Definition postfreezeW : fe25519_32W -> fe25519_32W :=
       (conditional_subtract_modulusW
-         (num_limbs := 10)
+         (num_limbs := length_fe25519_32)
          modulusW
          ge_modulusW
          (Interpretations.Word64.neg GF25519_32.int_width)
@@ -110,17 +111,6 @@ Lemma packW_correct_and_bounded : iunop_FEToWire_correct_and_bounded packW pack.
 Proof. port_correct_and_bounded interp_rpack_correct packW interp_rpack rpack_correct_and_bounded. Qed.
 Lemma unpackW_correct_and_bounded : iunop_WireToFE_correct_and_bounded unpackW unpack.
 Proof. port_correct_and_bounded interp_runpack_correct unpackW interp_runpack runpack_correct_and_bounded. Qed.
-
-(* TODO : move *)
-Lemma neg_range : forall x y, 0 <= x ->
-  0 <= ModularBaseSystemListZOperations.neg x y < 2 ^ x.
-Proof.
-  intros.
-  split; auto using ModularBaseSystemListZOperationsProofs.neg_nonneg.
-  eapply Z.le_lt_trans; eauto using ModularBaseSystemListZOperationsProofs.neg_upperbound.
-  rewrite Z.ones_equiv.
-  omega.
-Qed.
 
 Ltac lower_bound_minus_ge_modulus :=
   apply Z.le_0_sub;
@@ -165,14 +155,14 @@ Proof.
   rewrite !Interpretations.Word64.word64ToZ_land;
   rewrite !Interpretations.Word64.word64ToZ_ZToWord64;
   try match goal with
-         | |- 0 <=  ModularBaseSystemListZOperations.neg _ _ < 2 ^ _ => apply neg_range; omega
+         | |- 0 <=  ModularBaseSystemListZOperations.neg _ _ < 2 ^ _ => apply ModularBaseSystemListZOperationsProofs.neg_range; omega
          | |- 0 <= _ < 2 ^ Z.of_nat _ => vm_compute; split; [refine (fun x => match x with eq_refl => I end) | reflexivity]
          | |- 0 <= _ &' _ => apply Z.land_nonneg; right; omega
          | |- (_,_) = (_,_) => reflexivity
       end;
   try solve [
   (apply Z.log2_lt_pow2_alt; [ vm_compute; reflexivity | ]);
-  eapply Z.le_lt_trans; try apply Z.land_upper_bound_r; try apply neg_range; instantiate; try match goal with |- ?G => not has_evar G; vm_compute; discriminate end; reflexivity];
+  eapply Z.le_lt_trans; try apply Z.land_upper_bound_r; try apply ModularBaseSystemListZOperationsProofs.neg_range; instantiate; try match goal with |- ?G => not has_evar G; vm_compute; discriminate end; reflexivity];
   match goal with
   | |- 0 <= _ - _ => lower_bound_minus_ge_modulus
   | |- Z.log2 (_ - _) < _ => upper_bound_minus_ge_modulus
@@ -186,21 +176,21 @@ Proof.
   rewrite !Interpretations.Word64.word64ToZ_ZToWord64;
   repeat match goal with |- _ /\ _ => split; Z.ltb_to_lt end;
   try match goal with
-         | |- 0 <=  ModularBaseSystemListZOperations.neg _ _ < 2 ^ _ => apply neg_range; omega
+         | |- 0 <=  ModularBaseSystemListZOperations.neg _ _ < 2 ^ _ => apply ModularBaseSystemListZOperationsProofs.neg_range; omega
          | |- 0 <= _ < 2 ^ Z.of_nat _ => vm_compute; split; [refine (fun x => match x with eq_refl => I end) | reflexivity]
          | |- 0 <= _ &' _ => apply Z.land_nonneg; right; omega
       end;
   try solve [
   (apply Z.log2_lt_pow2_alt; [ vm_compute; reflexivity | ]);
-  eapply Z.le_lt_trans; try apply Z.land_upper_bound_r; try apply neg_range; instantiate; try match goal with |- ?G => not has_evar G; vm_compute; discriminate end; reflexivity];
+  eapply Z.le_lt_trans; try apply Z.land_upper_bound_r; try apply ModularBaseSystemListZOperationsProofs.neg_range; instantiate; try match goal with |- ?G => not has_evar G; vm_compute; discriminate end; reflexivity];
   try match goal with
   | |- 0 <= _ - _ => lower_bound_minus_ge_modulus
   | |- Z.log2 (_ - _) < _ => upper_bound_minus_ge_modulus
   | |- _ - _ <= _ => etransitivity; [ apply Z.le_sub_nonneg; apply Z.land_nonneg; right; omega | instantiate; assumption ]
   | |- 0 <= ModularBaseSystemListZOperations.neg _ _ =>
-    apply neg_range; vm_compute; discriminate
+    apply ModularBaseSystemListZOperationsProofs.neg_range; vm_compute; discriminate
   | |- ModularBaseSystemListZOperations.neg _ _ < _ =>
-    apply neg_range; vm_compute; discriminate
+    apply ModularBaseSystemListZOperationsProofs.neg_range; vm_compute; discriminate
   | |- _ => vm_compute; (discriminate || reflexivity)
       end.
 Qed.

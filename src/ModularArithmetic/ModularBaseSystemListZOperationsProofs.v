@@ -16,3 +16,13 @@ Proof.
   unfold neg; intros; break_match; auto with zarith.
 Qed.
 Hint Resolve neg_upperbound : zarith.
+
+Lemma neg_range : forall x y, 0 <= x ->
+  0 <= neg x y < 2 ^ x.
+Proof.
+  intros.
+  split; auto using neg_nonneg.
+  eapply Z.le_lt_trans; eauto using neg_upperbound.
+  rewrite Z.ones_equiv.
+  omega.
+Qed.

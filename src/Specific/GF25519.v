@@ -571,7 +571,6 @@ Proof.
   cbv [freeze_opt freeze Let_In].
   rewrite prefreeze_correct.
   rewrite postfreeze_correct.
-  Check from_list_default_eq.
   match goal with
     |- appcontext [to_list _ (from_list_default _ ?n ?xs)] =>
     assert (length xs = n) as pf; [ | rewrite from_list_default_eq with (pf0 := pf) ] end.
@@ -755,7 +754,7 @@ Print edwards_extended_add_coordinates.
 
 Local Existing Instance field25519.
 Create HintDb edwards_extended_add_coordinates_correct discriminated.
-Hint Rewrite 
+Hint Rewrite
      (Ring.homomorphism_mul(is_homomorphism:=homomorphism_F25519_decode))
      (Ring.homomorphism_add(H1             :=homomorphism_F25519_decode))
      (Ring.homomorphism_sub(H1             :=homomorphism_F25519_decode))
