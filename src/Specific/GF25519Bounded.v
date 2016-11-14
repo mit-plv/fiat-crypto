@@ -142,7 +142,7 @@ Proof.
 
   cbv [modulusW Tuple.map].
   cbv [on_tuple List.map to_list to_list' from_list from_list'
-                Tuple.map2 on_tuple2 ListUtil.map2 fe25519WToZ].
+                Tuple.map2 on_tuple2 ListUtil.map2 fe25519WToZ length_fe25519].
   cbv [postfreeze GF25519.postfreeze].
   cbv [Let_In].
 
