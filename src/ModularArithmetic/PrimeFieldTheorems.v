@@ -108,6 +108,9 @@ Module F.
 
     Definition sqrt_3mod4 (a : F q) : F q := a ^ Z.to_N (q / 4 + 1).
 
+    Global Instance Proper_sqrt_3mod4 : Proper (eq ==> eq ) sqrt_3mod4.
+    Proof. repeat intro; subst; reflexivity. Qed.
+
     Lemma two_lt_q_3mod4 : 2 < q.
     Proof.
       pose proof (prime_ge_2 q _) as two_le_q.
@@ -173,6 +176,9 @@ Module F.
       if dec (b ^ 2 = a)
       then b
       else sqrt_minus1 * b.
+
+    Global Instance Proper_sqrt_5mod8 : Proper (eq ==> eq ) sqrt_5mod8.
+    Proof. repeat intro; subst; reflexivity. Qed.
 
     Lemma eq_b4_a2 (x : F q) (Hex:exists y, y*y = x) :
       ((x ^ Z.to_N (q / 8 + 1)) ^ 2) ^ 2 = x ^ 2.
