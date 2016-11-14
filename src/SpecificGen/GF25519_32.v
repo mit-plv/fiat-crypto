@@ -25,15 +25,15 @@ Lemma prime_modulus : prime modulus. Admitted.
 Definition freeze_input_bound := 32%Z.
 Definition int_width := 32%Z.
 
-Instance params : PseudoMersenneBaseParams modulus.
+Instance params25519_32 : PseudoMersenneBaseParams modulus.
   construct_params prime_modulus 10%nat 255.
 Defined.
 
-Definition length_fe := Eval compute in length limb_widths.
-Definition fe := Eval compute in (tuple Z length_fe).
+Definition length_fe25519_32 := Eval compute in length limb_widths.
+Definition fe25519_32 := Eval compute in (tuple Z length_fe25519_32).
 
-Definition mul2modulus : fe :=
-  Eval compute in (from_list_default 0%Z (length limb_widths) (construct_mul2modulus params)).
+Definition mul2modulus : fe25519_32 :=
+  Eval compute in (from_list_default 0%Z (length limb_widths) (construct_mul2modulus params25519_32)).
 
 Instance subCoeff : SubtractionCoefficient.
   apply Build_SubtractionCoefficient with (coeff := mul2modulus).
@@ -150,24 +150,24 @@ Proof.
   reflexivity.
 Qed.
 
-Definition app_n {T} (f : fe) (P : fe -> T) : T.
+Definition app_n {T} (f : fe25519_32) (P : fe25519_32 -> T) : T.
 Proof.
-  cbv [fe] in *.
+  cbv [fe25519_32] in *.
   set (f0 := f).
   repeat (let g := fresh "g" in destruct f as [f g]).
   apply P.
   apply f0.
 Defined.
 
-Definition app_n_correct {T} f (P : fe -> T) : app_n f P = P f.
+Definition app_n_correct {T} f (P : fe25519_32 -> T) : app_n f P = P f.
 Proof.
   intros.
-  cbv [fe] in *.
+  cbv [fe25519_32] in *.
   repeat match goal with [p : (_*Z)%type |- _ ] => destruct p end.
   reflexivity.
 Qed.
 
-Definition appify2 {T} (op : fe -> fe -> T) (f g : fe) :=
+Definition appify2 {T} (op : fe25519_32 -> fe25519_32 -> T) (f g : fe25519_32) :=
   app_n f (fun f0 => (app_n g (fun g0 => op f0 g0))).
 
 Lemma appify2_correct : forall {T} op f g, @appify2 T op f g = op f g.
@@ -176,102 +176,102 @@ Proof.
   etransitivity; apply app_n_correct.
 Qed.
 
-Definition uncurry_unop_fe {T} (op : fe -> T)
-  := Eval compute in Tuple.uncurry (n:=length_fe) op.
-Definition curry_unop_fe {T} op : fe -> T
-  := Eval compute in fun f => app_n f (Tuple.curry (n:=length_fe) op).
-Definition uncurry_binop_fe {T} (op : fe -> fe -> T)
-  := Eval compute in uncurry_unop_fe (fun f => uncurry_unop_fe (op f)).
-Definition curry_binop_fe {T} op : fe -> fe -> T
-  := Eval compute in appify2 (fun f => curry_unop_fe (curry_unop_fe op f)).
+Definition uncurry_unop_fe25519_32 {T} (op : fe25519_32 -> T)
+  := Eval compute in Tuple.uncurry (n:=length_fe25519_32) op.
+Definition curry_unop_fe25519_32 {T} op : fe25519_32 -> T
+  := Eval compute in fun f => app_n f (Tuple.curry (n:=length_fe25519_32) op).
+Definition uncurry_binop_fe25519_32 {T} (op : fe25519_32 -> fe25519_32 -> T)
+  := Eval compute in uncurry_unop_fe25519_32 (fun f => uncurry_unop_fe25519_32 (op f)).
+Definition curry_binop_fe25519_32 {T} op : fe25519_32 -> fe25519_32 -> T
+  := Eval compute in appify2 (fun f => curry_unop_fe25519_32 (curry_unop_fe25519_32 op f)).
 
 Definition uncurry_unop_wire_digits {T} (op : wire_digits -> T)
   := Eval compute in Tuple.uncurry (n:=length wire_widths) op.
 Definition curry_unop_wire_digits {T} op : wire_digits -> T
   := Eval compute in fun f => app_n2 f (Tuple.curry (n:=length wire_widths) op).
 
-Definition add_sig (f g : fe) :
-  { fg : fe | fg = add_opt f g}.
+Definition add_sig (f g : fe25519_32) :
+  { fg : fe25519_32 | fg = add_opt f g}.
 Proof.
   eexists.
-  rewrite <-(@appify2_correct fe).
+  rewrite <-(@appify2_correct fe25519_32).
   cbv.
   reflexivity.
 Defined.
 
-Definition add (f g : fe) : fe :=
+Definition add (f g : fe25519_32) : fe25519_32 :=
   Eval cbv beta iota delta [proj1_sig add_sig] in
   proj1_sig (add_sig f g).
 
-Definition add_correct (f g : fe)
+Definition add_correct (f g : fe25519_32)
   : add f g = add_opt f g :=
   Eval cbv beta iota delta [proj1_sig add_sig] in
   proj2_sig (add_sig f g).
 
-Definition carry_add_sig (f g : fe) :
-  { fg : fe | fg = carry_add_opt f g}.
+Definition carry_add_sig (f g : fe25519_32) :
+  { fg : fe25519_32 | fg = carry_add_opt f g}.
 Proof.
   eexists.
-  rewrite <-(@appify2_correct fe).
+  rewrite <-(@appify2_correct fe25519_32).
   cbv.
   autorewrite with zsimplify_fast zsimplify_Z_to_pos; cbv.
   autorewrite with zsimplify_Z_to_pos; cbv.
   reflexivity.
 Defined.
 
-Definition carry_add (f g : fe) : fe :=
+Definition carry_add (f g : fe25519_32) : fe25519_32 :=
   Eval cbv beta iota delta [proj1_sig carry_add_sig] in
   proj1_sig (carry_add_sig f g).
 
-Definition carry_add_correct (f g : fe)
+Definition carry_add_correct (f g : fe25519_32)
   : carry_add f g = carry_add_opt f g :=
   Eval cbv beta iota delta [proj1_sig carry_add_sig] in
   proj2_sig (carry_add_sig f g).
 
-Definition sub_sig (f g : fe) :
-  { fg : fe | fg = sub_opt f g}.
+Definition sub_sig (f g : fe25519_32) :
+  { fg : fe25519_32 | fg = sub_opt f g}.
 Proof.
   eexists.
-  rewrite <-(@appify2_correct fe).
+  rewrite <-(@appify2_correct fe25519_32).
   cbv.
   reflexivity.
 Defined.
 
-Definition sub (f g : fe) : fe :=
+Definition sub (f g : fe25519_32) : fe25519_32 :=
   Eval cbv beta iota delta [proj1_sig sub_sig] in
   proj1_sig (sub_sig f g).
 
-Definition sub_correct (f g : fe)
+Definition sub_correct (f g : fe25519_32)
   : sub f g = sub_opt f g :=
   Eval cbv beta iota delta [proj1_sig sub_sig] in
   proj2_sig (sub_sig f g).
 
-Definition carry_sub_sig (f g : fe) :
-  { fg : fe | fg = carry_sub_opt f g}.
+Definition carry_sub_sig (f g : fe25519_32) :
+  { fg : fe25519_32 | fg = carry_sub_opt f g}.
 Proof.
   eexists.
-  rewrite <-(@appify2_correct fe).
+  rewrite <-(@appify2_correct fe25519_32).
   cbv.
   autorewrite with zsimplify_fast zsimplify_Z_to_pos; cbv.
   autorewrite with zsimplify_Z_to_pos; cbv.
   reflexivity.
 Defined.
 
-Definition carry_sub (f g : fe) : fe :=
+Definition carry_sub (f g : fe25519_32) : fe25519_32 :=
   Eval cbv beta iota delta [proj1_sig carry_sub_sig] in
   proj1_sig (carry_sub_sig f g).
 
-Definition carry_sub_correct (f g : fe)
+Definition carry_sub_correct (f g : fe25519_32)
   : carry_sub f g = carry_sub_opt f g :=
   Eval cbv beta iota delta [proj1_sig carry_sub_sig] in
   proj2_sig (carry_sub_sig f g).
 
 (* For multiplication, we add another layer of definition so that we can
    rewrite under the [let] binders. *)
-Definition mul_simpl_sig (f g : fe) :
-  { fg : fe | fg = carry_mul_opt k_ c_ f g}.
+Definition mul_simpl_sig (f g : fe25519_32) :
+  { fg : fe25519_32 | fg = carry_mul_opt k_ c_ f g}.
 Proof.
-  cbv [fe] in *.
+  cbv [fe25519_32] in *.
   repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
   eexists.
   cbv. (* N.B. The slow part of this is computing with [Z_div_opt].
@@ -282,45 +282,45 @@ Proof.
   reflexivity.
 Defined.
 
-Definition mul_simpl (f g : fe) : fe :=
+Definition mul_simpl (f g : fe25519_32) : fe25519_32 :=
   Eval cbv beta iota delta [proj1_sig mul_simpl_sig] in
   let '(f0, f1, f2, f3, f4, f5, f6, f7, f8, f9) := f in
   let '(g0, g1, g2, g3, g4, g5, g6, g7, g8, g9) := g in
   proj1_sig (mul_simpl_sig (f0, f1, f2, f3, f4, f5, f6, f7, f8, f9)
                            (g0, g1, g2, g3, g4, g5, g6, g7, g8, g9)).
 
-Definition mul_simpl_correct (f g : fe)
+Definition mul_simpl_correct (f g : fe25519_32)
   : mul_simpl f g = carry_mul_opt k_ c_ f g.
 Proof.
   pose proof (proj2_sig (mul_simpl_sig f g)).
-  cbv [fe] in *.
+  cbv [fe25519_32] in *.
   repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
   assumption.
 Qed.
 
-Definition mul_sig (f g : fe) :
-  { fg : fe | fg = carry_mul_opt k_ c_ f g}.
+Definition mul_sig (f g : fe25519_32) :
+  { fg : fe25519_32 | fg = carry_mul_opt k_ c_ f g}.
 Proof.
   eexists.
   rewrite <-mul_simpl_correct.
-  rewrite <-(@appify2_correct fe).
+  rewrite <-(@appify2_correct fe25519_32).
   cbv.
   autorewrite with zsimplify_fast zsimplify_Z_to_pos; cbv.
   autorewrite with zsimplify_Z_to_pos; cbv.
   reflexivity.
 Defined.
 
-Definition mul (f g : fe) : fe :=
+Definition mul (f g : fe25519_32) : fe25519_32 :=
   Eval cbv beta iota delta [proj1_sig mul_sig] in
   proj1_sig (mul_sig f g).
 
-Definition mul_correct (f g : fe)
+Definition mul_correct (f g : fe25519_32)
   : mul f g = carry_mul_opt k_ c_ f g :=
   Eval cbv beta iota delta [proj1_sig add_sig] in
   proj2_sig (mul_sig f g).
 
-Definition opp_sig (f : fe) :
-  { g : fe | g = opp_opt f }.
+Definition opp_sig (f : fe25519_32) :
+  { g : fe25519_32 | g = opp_opt f }.
 Proof.
   eexists.
   cbv [opp_opt].
@@ -330,15 +330,15 @@ Proof.
   reflexivity.
 Defined.
 
-Definition opp (f : fe) : fe
+Definition opp (f : fe25519_32) : fe25519_32
   := Eval cbv beta iota delta [proj1_sig opp_sig] in proj1_sig (opp_sig f).
 
-Definition opp_correct (f : fe)
+Definition opp_correct (f : fe25519_32)
   : opp f = opp_opt f
   := Eval cbv beta iota delta [proj2_sig add_sig] in proj2_sig (opp_sig f).
 
-Definition carry_opp_sig (f : fe) :
-  { g : fe | g = carry_opp_opt f }.
+Definition carry_opp_sig (f : fe25519_32) :
+  { g : fe25519_32 | g = carry_opp_opt f }.
 Proof.
   eexists.
   cbv [carry_opp_opt].
@@ -348,16 +348,16 @@ Proof.
   reflexivity.
 Defined.
 
-Definition carry_opp (f : fe) : fe
+Definition carry_opp (f : fe25519_32) : fe25519_32
   := Eval cbv beta iota delta [proj1_sig carry_opp_sig] in proj1_sig (carry_opp_sig f).
 
-Definition carry_opp_correct (f : fe)
+Definition carry_opp_correct (f : fe25519_32)
   : carry_opp f = carry_opp_opt f
   := Eval cbv beta iota delta [proj2_sig add_sig] in proj2_sig (carry_opp_sig f).
 
-Definition pow (f : fe) chain := fold_chain_opt one_ mul chain [f].
+Definition pow (f : fe25519_32) chain := fold_chain_opt one_ mul chain [f].
 
-Lemma pow_correct (f : fe) : forall chain, pow f chain = pow_opt k_ c_ one_ f chain.
+Lemma pow_correct (f : fe25519_32) : forall chain, pow f chain = pow_opt k_ c_ one_ f chain.
 Proof.
   cbv [pow pow_opt]; intros.
   rewrite !fold_chain_opt_correct.
@@ -382,8 +382,8 @@ Qed.
 
 Local Opaque Z.shiftr Z.shiftl Z.land Z.mul Z.add Z.sub Z.lor Let_In Z.eqb Z.ltb andb.
 
-Definition inv_sig (f : fe) :
-  { g : fe | g = inv_opt k_ c_ one_ f }.
+Definition inv_sig (f : fe25519_32) :
+  { g : fe25519_32 | g = inv_opt k_ c_ one_ f }.
 Proof.
   eexists; cbv [inv_opt].
   rewrite <-pow_correct.
@@ -391,10 +391,10 @@ Proof.
   reflexivity.
 Defined.
 
-Definition inv (f : fe) : fe
+Definition inv (f : fe25519_32) : fe25519_32
   := Eval cbv beta iota delta [proj1_sig inv_sig] in proj1_sig (inv_sig f).
 
-Definition inv_correct (f : fe)
+Definition inv_correct (f : fe25519_32)
   : inv f = inv_opt k_ c_ one_ f
   := Eval cbv beta iota delta [proj2_sig inv_sig] in proj2_sig (inv_sig f).
 
@@ -405,12 +405,12 @@ Import Morphisms.
 Local Existing Instance prime_modulus.
 
 Lemma field_and_homomorphisms
-  : @field fe eq zero_ one_ opp add sub mul inv div
+  : @field fe25519_32 eq zero_ one_ opp add sub mul inv div
     /\ @Ring.is_homomorphism
          (F modulus) Logic.eq F.one F.add F.mul
-         fe eq one_ add mul encode
+         fe25519_32 eq one_ add mul encode
     /\ @Ring.is_homomorphism
-         fe eq one_ add mul
+         fe25519_32 eq one_ add mul
          (F modulus) Logic.eq F.one F.add F.mul
          decode.
 Proof.
@@ -428,15 +428,15 @@ Proof.
   { intros; apply encode_rep. }
 Qed.
 
-Definition field25519 : @field fe eq zero_ one_ opp add sub mul inv div := proj1 field_and_homomorphisms.
+Definition field25519 : @field fe25519_32 eq zero_ one_ opp add sub mul inv div := proj1 field_and_homomorphisms.
 
 Lemma carry_field_and_homomorphisms
-  : @field fe eq zero_ one_ carry_opp carry_add carry_sub mul inv div
+  : @field fe25519_32 eq zero_ one_ carry_opp carry_add carry_sub mul inv div
     /\ @Ring.is_homomorphism
          (F modulus) Logic.eq F.one F.add F.mul
-         fe eq one_ carry_add mul encode
+         fe25519_32 eq one_ carry_add mul encode
     /\ @Ring.is_homomorphism
-         fe eq one_ carry_add mul
+         fe25519_32 eq one_ carry_add mul
          (F modulus) Logic.eq F.one F.add F.mul
          decode.
 Proof.
@@ -454,29 +454,29 @@ Proof.
   { intros; apply encode_rep. }
 Qed.
 
-Definition carry_field : @field fe eq zero_ one_ carry_opp carry_add carry_sub mul inv div := proj1 carry_field_and_homomorphisms.
+Definition carry_field : @field fe25519_32 eq zero_ one_ carry_opp carry_add carry_sub mul inv div := proj1 carry_field_and_homomorphisms.
 
 Lemma homomorphism_F_encode
-  : @Ring.is_homomorphism (F modulus) Logic.eq F.one F.add F.mul fe eq one add mul encode.
+  : @Ring.is_homomorphism (F modulus) Logic.eq F.one F.add F.mul fe25519_32 eq one add mul encode.
 Proof. apply field_and_homomorphisms. Qed.
 
 Lemma homomorphism_F_decode
-  : @Ring.is_homomorphism fe eq one add mul (F modulus) Logic.eq F.one F.add F.mul decode.
+  : @Ring.is_homomorphism fe25519_32 eq one add mul (F modulus) Logic.eq F.one F.add F.mul decode.
 Proof. apply field_and_homomorphisms. Qed.
 
 
 Lemma homomorphism_carry_F_encode
-  : @Ring.is_homomorphism (F modulus) Logic.eq F.one F.add F.mul fe eq one carry_add mul encode.
+  : @Ring.is_homomorphism (F modulus) Logic.eq F.one F.add F.mul fe25519_32 eq one carry_add mul encode.
 Proof. apply carry_field_and_homomorphisms. Qed.
 
 Lemma homomorphism_carry_F_decode
-  : @Ring.is_homomorphism fe eq one carry_add mul (F modulus) Logic.eq F.one F.add F.mul decode.
+  : @Ring.is_homomorphism fe25519_32 eq one carry_add mul (F modulus) Logic.eq F.one F.add F.mul decode.
 Proof. apply carry_field_and_homomorphisms. Qed.
 
-Definition ge_modulus_sig (f : fe) :
+Definition ge_modulus_sig (f : fe25519_32) :
   { b : Z | b = ge_modulus_opt (to_list 10 f) }.
 Proof.
-  cbv [fe] in *.
+  cbv [fe25519_32] in *.
   repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
   eexists; cbv [ge_modulus_opt].
   rewrite !modulus_digits_subst.
@@ -484,24 +484,24 @@ Proof.
   reflexivity.
 Defined.
 
-Definition ge_modulus (f : fe) : Z :=
+Definition ge_modulus (f : fe25519_32) : Z :=
   Eval cbv beta iota delta [proj1_sig ge_modulus_sig] in
     let '(f0, f1, f2, f3, f4, f5, f6, f7, f8, f9) := f in
     proj1_sig (ge_modulus_sig (f0, f1, f2, f3, f4, f5, f6, f7, f8, f9)).
 
-Definition ge_modulus_correct (f : fe) :
+Definition ge_modulus_correct (f : fe25519_32) :
   ge_modulus f = ge_modulus_opt (to_list 10 f).
 Proof.
   pose proof (proj2_sig (ge_modulus_sig f)).
-  cbv [fe] in *.
+  cbv [fe25519_32] in *.
   repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
   assumption.
 Defined.
 
-Definition freeze_sig (f : fe) :
-  { f' : fe | f' = from_list_default 0 10 (freeze_opt (int_width := int_width) c_ (to_list 10 f)) }.
+Definition freeze_sig (f : fe25519_32) :
+  { f' : fe25519_32 | f' = from_list_default 0 10 (freeze_opt (int_width := int_width) c_ (to_list 10 f)) }.
 Proof.
-  cbv [fe] in *.
+  cbv [fe25519_32] in *.
   repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
   eexists; cbv [freeze_opt int_width].
   cbv [to_list to_list'].
@@ -516,38 +516,38 @@ Proof.
   reflexivity.
 Defined.
 
-Definition freeze (f : fe) : fe :=
+Definition freeze (f : fe25519_32) : fe25519_32 :=
   Eval cbv beta iota delta [proj1_sig freeze_sig] in
     let '(f0, f1, f2, f3, f4, f5, f6, f7, f8, f9) := f in
     proj1_sig (freeze_sig (f0, f1, f2, f3, f4, f5, f6, f7, f8, f9)).
 
-Definition freeze_correct (f : fe)
+Definition freeze_correct (f : fe25519_32)
   : freeze f = from_list_default 0 10 (freeze_opt (int_width := int_width) c_ (to_list 10 f)).
 Proof.
   pose proof (proj2_sig (freeze_sig f)).
-  cbv [fe] in *.
+  cbv [fe25519_32] in *.
   repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
   assumption.
 Defined.
 
-Definition fieldwiseb_sig (f g : fe) :
+Definition fieldwiseb_sig (f g : fe25519_32) :
   { b | b = @fieldwiseb Z Z 10 Z.eqb f g }.
 Proof.
-  cbv [fe] in *.
+  cbv [fe25519_32] in *.
   repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
   eexists.
   cbv.
   reflexivity.
 Defined.
 
-Definition fieldwiseb (f g : fe) : bool
+Definition fieldwiseb (f g : fe25519_32) : bool
   := Eval cbv beta iota delta [proj1_sig fieldwiseb_sig] in
       let '(f0, f1, f2, f3, f4, f5, f6, f7, f8, f9) := f in
       let '(g0, g1, g2, g3, g4, g5, g6, g7, g8, g9) := g in
       proj1_sig (fieldwiseb_sig (f0, f1, f2, f3, f4, f5, f6, f7, f8, f9)
                                 (g0, g1, g2, g3, g4, g5, g6, g7, g8, g9)).
 
-Lemma fieldwiseb_correct (f g : fe)
+Lemma fieldwiseb_correct (f g : fe25519_32)
   : fieldwiseb f g = @Tuple.fieldwiseb Z Z 10 Z.eqb f g.
 Proof.
   set (f' := f); set (g' := g).
@@ -555,11 +555,11 @@ Proof.
   exact (proj2_sig (fieldwiseb_sig f' g')).
 Qed.
 
-Definition eqb_sig (f g : fe) :
+Definition eqb_sig (f g : fe25519_32) :
   { b | b = eqb int_width f g }.
 Proof.
   cbv [eqb].
-  cbv [fe] in *.
+  cbv [fe25519_32] in *.
   repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
   eexists.
   cbv [ModularBaseSystem.freeze int_width].
@@ -570,14 +570,14 @@ Proof.
   reflexivity.
 Defined.
 
-Definition eqb (f g : fe) : bool
+Definition eqb (f g : fe25519_32) : bool
   := Eval cbv beta iota delta [proj1_sig eqb_sig] in
       let '(f0, f1, f2, f3, f4, f5, f6, f7, f8, f9) := f in
       let '(g0, g1, g2, g3, g4, g5, g6, g7, g8, g9) := g in
       proj1_sig (eqb_sig (f0, f1, f2, f3, f4, f5, f6, f7, f8, f9)
                          (g0, g1, g2, g3, g4, g5, g6, g7, g8, g9)).
 
-Lemma eqb_correct (f g : fe)
+Lemma eqb_correct (f g : fe25519_32)
   : eqb f g = ModularBaseSystem.eqb int_width f g.
 Proof.
   set (f' := f); set (g' := g).
@@ -585,8 +585,8 @@ Proof.
   exact (proj2_sig (eqb_sig f' g')).
 Qed.
 
-Definition sqrt_sig (powx powx_squared f : fe) :
-  { f' : fe | f' = sqrt_5mod8_opt (int_width := int_width) k_ c_ sqrt_m1 powx powx_squared f}.
+Definition sqrt_sig (powx powx_squared f : fe25519_32) :
+  { f' : fe25519_32 | f' = sqrt_5mod8_opt (int_width := int_width) k_ c_ sqrt_m1 powx powx_squared f}.
 Proof.
   eexists.
   cbv [sqrt_5mod8_opt int_width].
@@ -595,17 +595,17 @@ Proof.
   reflexivity.
 Defined.
 
-Definition sqrt (powx powx_squared f : fe) : fe
+Definition sqrt (powx powx_squared f : fe25519_32) : fe25519_32
   := Eval cbv beta iota delta [proj1_sig sqrt_sig] in proj1_sig (sqrt_sig powx powx_squared f).
 
-Definition sqrt_correct (powx powx_squared f : fe)
+Definition sqrt_correct (powx powx_squared f : fe25519_32)
   : sqrt powx powx_squared f = sqrt_5mod8_opt k_ c_ sqrt_m1 powx powx_squared f
   := Eval cbv beta iota delta [proj2_sig sqrt_sig] in proj2_sig (sqrt_sig powx powx_squared f).
 
-Definition pack_simpl_sig (f : fe) :
-  { f' | f' = pack_opt params wire_widths_nonneg bits_eq f }.
+Definition pack_simpl_sig (f : fe25519_32) :
+  { f' | f' = pack_opt params25519_32 wire_widths_nonneg bits_eq f }.
 Proof.
-  cbv [fe] in *.
+  cbv [fe25519_32] in *.
   repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
   eexists.
   cbv [pack_opt].
@@ -616,22 +616,22 @@ Proof.
   reflexivity.
 Defined.
 
-Definition pack_simpl (f : fe) :=
+Definition pack_simpl (f : fe25519_32) :=
   Eval cbv beta iota delta [proj1_sig pack_simpl_sig] in
     let '(f0, f1, f2, f3, f4, f5, f6, f7, f8, f9) := f in
     proj1_sig (pack_simpl_sig (f0, f1, f2, f3, f4, f5, f6, f7, f8, f9)).
 
-Definition pack_simpl_correct (f : fe)
-  : pack_simpl f = pack_opt params wire_widths_nonneg bits_eq f.
+Definition pack_simpl_correct (f : fe25519_32)
+  : pack_simpl f = pack_opt params25519_32 wire_widths_nonneg bits_eq f.
 Proof.
   pose proof (proj2_sig (pack_simpl_sig f)).
-  cbv [fe] in *.
+  cbv [fe25519_32] in *.
   repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
   assumption.
 Qed.
 
-Definition pack_sig (f : fe) :
-  { f' | f' = pack_opt params wire_widths_nonneg bits_eq f }.
+Definition pack_sig (f : fe25519_32) :
+  { f' | f' = pack_opt params25519_32 wire_widths_nonneg bits_eq f }.
 Proof.
   eexists.
   rewrite <-pack_simpl_correct.
@@ -640,15 +640,15 @@ Proof.
   reflexivity.
 Defined.
 
-Definition pack (f : fe) : wire_digits :=
+Definition pack (f : fe25519_32) : wire_digits :=
   Eval cbv beta iota delta [proj1_sig pack_sig] in proj1_sig (pack_sig f).
 
-Definition pack_correct (f : fe)
-  : pack f = pack_opt params wire_widths_nonneg bits_eq f
+Definition pack_correct (f : fe25519_32)
+  : pack f = pack_opt params25519_32 wire_widths_nonneg bits_eq f
   := Eval cbv beta iota delta [proj2_sig pack_sig] in proj2_sig (pack_sig f).
 
 Definition unpack_simpl_sig (f : wire_digits) :
-  { f' | f' = unpack_opt params wire_widths_nonneg bits_eq f }.
+  { f' | f' = unpack_opt params25519_32 wire_widths_nonneg bits_eq f }.
 Proof.
   cbv [wire_digits] in *.
   repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
@@ -662,13 +662,13 @@ Proof.
   reflexivity.
 Defined.
 
-Definition unpack_simpl (f : wire_digits) : fe :=
+Definition unpack_simpl (f : wire_digits) : fe25519_32 :=
   Eval cbv beta iota delta [proj1_sig unpack_simpl_sig] in
     let '(f0, f1, f2, f3, f4, f5, f6, f7) := f in
     proj1_sig (unpack_simpl_sig (f0, f1, f2, f3, f4, f5, f6, f7)).
 
 Definition unpack_simpl_correct (f : wire_digits)
-  : unpack_simpl f = unpack_opt params wire_widths_nonneg bits_eq f.
+  : unpack_simpl f = unpack_opt params25519_32 wire_widths_nonneg bits_eq f.
 Proof.
   pose proof (proj2_sig (unpack_simpl_sig f)).
   cbv [wire_digits] in *.
@@ -677,18 +677,18 @@ Proof.
 Qed.
 
 Definition unpack_sig (f : wire_digits) :
-  { f' | f' = unpack_opt params wire_widths_nonneg bits_eq f }.
+  { f' | f' = unpack_opt params25519_32 wire_widths_nonneg bits_eq f }.
 Proof.
   eexists.
   rewrite <-unpack_simpl_correct.
-  rewrite <-(@app_n2_correct fe).
+  rewrite <-(@app_n2_correct fe25519_32).
   cbv.
   reflexivity.
 Defined.
 
-Definition unpack (f : wire_digits) : fe :=
+Definition unpack (f : wire_digits) : fe25519_32 :=
   Eval cbv beta iota delta [proj1_sig unpack_sig] in proj1_sig (unpack_sig f).
 
 Definition unpack_correct (f : wire_digits)
-  : unpack f = unpack_opt params wire_widths_nonneg bits_eq f
+  : unpack f = unpack_opt params25519_32 wire_widths_nonneg bits_eq f
   := Eval cbv beta iota delta [proj2_sig pack_sig] in proj2_sig (unpack_sig f).
