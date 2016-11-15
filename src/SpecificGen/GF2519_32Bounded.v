@@ -294,7 +294,6 @@ Definition sqrt_m1W := Eval cbv [sqrt_m1W' fe2519_32W_word64ize word64ize andb o
 
 Definition GF2519_32sqrt (x : GF2519_32.fe2519_32) : GF2519_32.fe2519_32.
 Proof.
-Print GF2519_32.sqrt.
   lazymatch (eval cbv delta [GF2519_32.sqrt] in GF2519_32.sqrt) with
   | (fun powf powf_squared f => dlet a := powf in _)
     => exact (dlet powx := powW (fe2519_32ZToW x) (chain GF2519_32.sqrt_ec) in
@@ -319,26 +318,26 @@ Proof.
         => apply powW_correct_and_bounded; assumption
       | [ |- _ = (dlet powx := _ in _) ]
         => apply Proper_Let_In_nd_changebody_eq; intros;
-        set_evars;
-        match goal with (* unfold the first dlet ... in, but only if it's binding a var *)
-        | [ |- ?x = dlet y := fe2519_32WToZ ?z in ?f ]
-          => is_var z; change (x = match fe2519_32WToZ z with y => f end)
-        end;
-        change sqrt_m1 with (fe2519_32WToZ sqrt_m1W);
-        rewrite <- (fun X Y => proj1 (mulW_correct_and_bounded sqrt_m1W a X Y)), <- eqbW_correct, (pull_bool_if fe2519_32WToZ)
-          by repeat match goal with
-                    | _ => progress subst
-                    | [ |- is_bounded (fe2519_32WToZ ?op) = true ]
-                      => lazymatch op with
-                         | mulW _ _ => apply mulW_correct_and_bounded
-                         | mulW_noinline _ _ => apply mulW_correct_and_bounded
-                         | powW _ _ => apply powW_correct_and_bounded
-                         | sqrt_m1W => vm_compute; reflexivity
-                         | _ => assumption
-                         end
-                    end;
-        subst_evars; reflexivity
-                       end.
+             set_evars;
+             match goal with (* unfold the first dlet ... in, but only if it's binding a var *)
+             | [ |- ?x = dlet y := fe2519_32WToZ ?z in ?f ]
+               => is_var z; change (x = match fe2519_32WToZ z with y => f end)
+             end;
+             change sqrt_m1 with (fe2519_32WToZ sqrt_m1W);
+             rewrite <- (fun X Y => proj1 (mulW_correct_and_bounded sqrt_m1W a X Y)), <- eqbW_correct, (pull_bool_if fe2519_32WToZ)
+               by repeat match goal with
+                         | _ => progress subst
+                         | [ |- is_bounded (fe2519_32WToZ ?op) = true ]
+                           => lazymatch op with
+                              | mulW _ _ => apply mulW_correct_and_bounded
+                              | mulW_noinline _ _ => apply mulW_correct_and_bounded
+                              | powW _ _ => apply powW_correct_and_bounded
+                              | sqrt_m1W => vm_compute; reflexivity
+                              | _ => assumption
+                              end
+                         end;
+             subst_evars; reflexivity
+      end.
     } Unfocus.
     lazymatch goal with
     | [ |- context G[dlet x := ?v in fe2519_32WToZ (@?f x)] ]
@@ -355,8 +354,7 @@ Proof.
                => apply powW_correct_and_bounded; assumption
              | [ |- is_bounded (?WToZ (mulW _ _)) = true ]
                => apply mulW_correct_and_bounded; [ vm_compute; reflexivity | ]
-             end.
-  }
+             end. }
 Defined.
 
 Definition sqrtW (f : fe2519_32W) : fe2519_32W :=
