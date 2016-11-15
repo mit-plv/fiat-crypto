@@ -352,12 +352,14 @@ Ltac t_correct_and_bounded ropZ_sig Hbounds H0 H1 args :=
          Relations.proj_eq_rel interp_flat_type_rel_pointwise2 SmartVarfMap interp_flat_type smart_interp_flat_map Application.all_binders_for fst snd BoundedWordW.to_wordW' BoundedWordW.boundedWordToWordW BoundedWord.value Application.ApplyInterpedAll Application.fst_binder Application.snd_binder interp_flat_type_rel_pointwise2_gen_Prop Relations.related_wordW_boundsi' Relations.related'_wordW_bounds Bounds.upper Bounds.lower Application.remove_all_binders WordW.to_Z] in Hbounds_left, Hbounds_right;
   match goal with
   | [ |- fe25519_64WToZ ?x = _ /\ _ ]
-    => destruct x; destruct_head_hnf' prod
+    => generalize dependent x; intros
   | [ |- wire_digitsWToZ ?x = _ /\ _ ]
-    => destruct x; destruct_head_hnf' prod
+    => generalize dependent x; intros
   | [ |- _ = _ ]
     => exact Hbounds_left
   end;
+  cbv [interp_flat_type WordW.interp_base_type remove_all_binders] in *;
+  destruct_head' prod;
   change word128ToZ with WordW.wordWToZ in *;
   (split; [ exact Hbounds_left | ]);
   cbv [interp_flat_type] in *;
@@ -367,11 +369,12 @@ Ltac t_correct_and_bounded ropZ_sig Hbounds H0 H1 args :=
   destruct_head' ZBounds.bounds;
   unfold_is_bounded_in H1;
   simpl @fe25519_64WToZ; simpl @wire_digitsWToZ;
-  unfold_is_bounded;
   destruct_head' and;
   Z.ltb_to_lt;
   change WordW.wordWToZ with word128ToZ in *;
-  repeat apply conj; Z.ltb_to_lt; try omega; try reflexivity.
+  unfold_is_bounded;
+  Z.ltb_to_lt;
+  try omega; try reflexivity.
 
 
 Ltac rexpr_correct :=

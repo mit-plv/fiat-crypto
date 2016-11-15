@@ -289,15 +289,29 @@ Definition wire_digitsW_word64ize (x : wire_digitsW) : wire_digitsW
       app_wire_digitsW x (Tuple.map word64ize).
 
 (** TODO: Turn this into a lemma to speed up proofs *)
+Ltac unfold_is_bounded_in' H :=
+  lazymatch type of H with
+  | andb _ _ = true
+    => apply andb_prop in H;
+       let H1 := fresh in
+       let H2 := fresh in
+       destruct H as [H1 H2];
+       unfold_is_bounded_in' H1;
+       unfold_is_bounded_in' H2
+  | _ => idtac
+  end.
 Ltac unfold_is_bounded_in H :=
   unfold is_bounded, wire_digits_is_bounded, is_bounded_gen, fe41417_32WToZ, wire_digitsWToZ in H;
   cbv [to_list length bounds wire_digit_bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 List.map fold_right List.rev List.app length_fe41417_32 List.length wire_widths] in H;
-  rewrite ?Bool.andb_true_iff in H.
+  unfold_is_bounded_in' H.
 
 Ltac unfold_is_bounded :=
   unfold is_bounded, wire_digits_is_bounded, is_bounded_gen, fe41417_32WToZ, wire_digitsWToZ;
   cbv [to_list length bounds wire_digit_bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 List.map fold_right List.rev List.app length_fe41417_32 List.length wire_widths];
-  rewrite ?Bool.andb_true_iff.
+  repeat match goal with
+         | [ |- andb _ _ = true ] => apply andb_true_intro
+         | [ |- and _ _ ] => split
+         end.
 
 Local Transparent bit_width.
 Definition Pow2_64 := Eval compute in 2^Z.of_nat bit_width.
