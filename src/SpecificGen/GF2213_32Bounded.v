@@ -292,9 +292,17 @@ Definition sqrt_m1W' : fe2213_32W :=
   Eval vm_compute in fe2213_32ZToW sqrt_m1.
 Definition sqrt_m1W := Eval cbv [sqrt_m1W' fe2213_32W_word64ize word64ize andb opt.word64ToZ opt.word64ize opt.Zleb Z.compare CompOpp Pos.compare Pos.compare_cont] in fe2213_32W_word64ize sqrt_m1W'.
 
-Definition GF2213_32sqrt x : GF2213_32.fe2213_32 :=
-  dlet powx := powW (fe2213_32ZToW x) (chain GF2213_32.sqrt_ec) in
-  GF2213_32.sqrt (fe2213_32WToZ powx) (fe2213_32WToZ (mulW_noinline powx powx)) x.
+Definition GF2213_32sqrt (x : GF2213_32.fe2213_32) : GF2213_32.fe2213_32.
+Proof.
+Print GF2213_32.sqrt.
+  lazymatch (eval cbv delta [GF2213_32.sqrt] in GF2213_32.sqrt) with
+  | (fun powf powf_squared f => dlet a := powf in _)
+    => exact (dlet powx := powW (fe2213_32ZToW x) (chain GF2213_32.sqrt_ec) in
+              GF2213_32.sqrt (fe2213_32WToZ powx) (fe2213_32WToZ (mulW_noinline powx powx)) x)
+  | (fun f => pow f _)
+    => exact (GF2213_32.sqrt x)
+  end.
+Defined.
 
 Definition sqrtW_sig
   : { sqrtW | iunop_correct_and_bounded sqrtW GF2213_32sqrt }.
@@ -302,43 +310,43 @@ Proof.
   eexists.
   unfold GF2213_32sqrt, GF2213_32.sqrt.
   intros.
-  rewrite !fe2213_32ZToW_WToZ.
+  rewrite ?fe2213_32ZToW_WToZ.
   split.
   { etransitivity.
     Focus 2. {
-      apply Proper_Let_In_nd_changebody_eq; intros.
-      set_evars.
-      match goal with (* unfold the first dlet ... in, but only if it's binding a var *)
-      | [ |- ?x = dlet y := fe2213_32WToZ ?z in ?f ]
-        => is_var z; change (x = match fe2213_32WToZ z with y => f end)
-      end.
-      change sqrt_m1 with (fe2213_32WToZ sqrt_m1W).
-      rewrite <- (fun X Y => proj1 (mulW_correct_and_bounded sqrt_m1W a X Y)), <- eqbW_correct, (pull_bool_if fe2213_32WToZ)
-        by repeat match goal with
-                  | _ => progress subst
-                  | [ |- is_bounded (fe2213_32WToZ ?op) = true ]
-                    => lazymatch op with
-                       | mulW _ _ => apply mulW_correct_and_bounded
-                       | mulW_noinline _ _ => apply mulW_correct_and_bounded
-                       | powW _ _ => apply powW_correct_and_bounded
-                       | sqrt_m1W => vm_compute; reflexivity
-                       | _ => assumption
-                       end
-                  end.
-      subst_evars; reflexivity.
+      apply Proper_Let_In_nd_changebody_eq; intros;
+        set_evars;
+        match goal with (* unfold the first dlet ... in, but only if it's binding a var *)
+        | [ |- ?x = dlet y := fe2213_32WToZ ?z in ?f ]
+          => is_var z; change (x = match fe2213_32WToZ z with y => f end)
+        end;
+        change sqrt_m1 with (fe2213_32WToZ sqrt_m1W);
+        rewrite <- (fun X Y => proj1 (mulW_correct_and_bounded sqrt_m1W a X Y)), <- eqbW_correct, (pull_bool_if fe2213_32WToZ)
+          by repeat match goal with
+                    | _ => progress subst
+                    | [ |- is_bounded (fe2213_32WToZ ?op) = true ]
+                      => lazymatch op with
+                         | mulW _ _ => apply mulW_correct_and_bounded
+                         | mulW_noinline _ _ => apply mulW_correct_and_bounded
+                         | powW _ _ => apply powW_correct_and_bounded
+                         | sqrt_m1W => vm_compute; reflexivity
+                         | _ => assumption
+                         end
+                    end;
+        subst_evars; reflexivity.
     } Unfocus.
     lazymatch goal with
     | [ |- context G[dlet x := ?v in fe2213_32WToZ (@?f x)] ]
       => let G' := context G[fe2213_32WToZ (dlet x := v in f x)] in
          cut G'; cbv beta;
            [ cbv [Let_In]; exact (fun x => x) | apply f_equal ]
-    end.
-    reflexivity. }
-  { cbv [Let_In].
-    break_if.
-    { apply powW_correct_and_bounded; assumption. }
-    { apply mulW_correct_and_bounded; [ vm_compute; reflexivity | ].
-      apply powW_correct_and_bounded; assumption. } }
+    end;
+      reflexivity. }
+  { cbv [Let_In];
+      break_if;
+      [ apply powW_correct_and_bounded; assumption
+      |  apply mulW_correct_and_bounded; [ vm_compute; reflexivity | ];
+         apply powW_correct_and_bounded; assumption ]. }
 Defined.
 
 Definition sqrtW (f : fe2213_32W) : fe2213_32W :=
