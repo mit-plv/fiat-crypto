@@ -314,7 +314,11 @@ Proof.
   split.
   { etransitivity.
     Focus 2. {
-      apply Proper_Let_In_nd_changebody_eq; intros;
+      lazymatch goal with
+      | [ |- _ = pow _ _ ]
+        => apply powW_correct_and_bounded; assumption
+      | [ |- _ = (dlet powx := _ in _) ]
+        => apply Proper_Let_In_nd_changebody_eq; intros;
         set_evars;
         match goal with (* unfold the first dlet ... in, but only if it's binding a var *)
         | [ |- ?x = dlet y := fe2519_32WToZ ?z in ?f ]
@@ -333,20 +337,26 @@ Proof.
                          | _ => assumption
                          end
                     end;
-        subst_evars; reflexivity.
+        subst_evars; reflexivity
+                       end.
     } Unfocus.
     lazymatch goal with
     | [ |- context G[dlet x := ?v in fe2519_32WToZ (@?f x)] ]
       => let G' := context G[fe2519_32WToZ (dlet x := v in f x)] in
          cut G'; cbv beta;
            [ cbv [Let_In]; exact (fun x => x) | apply f_equal ]
+    | _ => idtac
     end;
       reflexivity. }
   { cbv [Let_In];
-      break_if;
-      [ apply powW_correct_and_bounded; assumption
-      |  apply mulW_correct_and_bounded; [ vm_compute; reflexivity | ];
-         apply powW_correct_and_bounded; assumption ]. }
+      try break_if;
+      repeat lazymatch goal with
+             | [ |- is_bounded (?WToZ (powW _ _)) = true ]
+               => apply powW_correct_and_bounded; assumption
+             | [ |- is_bounded (?WToZ (mulW _ _)) = true ]
+               => apply mulW_correct_and_bounded; [ vm_compute; reflexivity | ]
+             end.
+  }
 Defined.
 
 Definition sqrtW (f : fe2519_32W) : fe2519_32W :=
