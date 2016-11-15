@@ -150,7 +150,8 @@ Proof.
   { match goal with
     |- (_,word64ToZ (_ ^- (Interpretations64.WordW.ZToWordW ?x) ^& _)) = (_,_ - (?y &' _)) => assert (x = y) as Hxy by reflexivity; repeat rewrite <-Hxy; clear Hxy end.
 
-  change ZToWord64 with Interpretations64.WordW.ZToWordW in *.
+    change ZToWord64 with Interpretations64.WordW.ZToWordW in *.
+    preunfold_is_bounded.
   rewrite !Interpretations64.WordW.wordWToZ_sub;
   rewrite !Interpretations64.WordW.wordWToZ_land;
   rewrite !Interpretations64.WordW.wordWToZ_ZToWordW;
@@ -169,12 +170,13 @@ Proof.
   end. }
 
 
-  unfold_is_bounded.
-  change ZToWord64 with Interpretations64.WordW.ZToWordW in *.
+  change ZToWord64 with Interpretations64.WordW.ZToWordW in *;
+  preunfold_is_bounded.
   rewrite !Interpretations64.WordW.wordWToZ_sub;
   rewrite !Interpretations64.WordW.wordWToZ_land;
   rewrite !Interpretations64.WordW.wordWToZ_ZToWordW;
   repeat match goal with |- _ /\ _ => split; Z.ltb_to_lt end;
+  Z.ltb_to_lt; unfold_is_bounded; Z.ltb_to_lt;
   try match goal with
          | |- 0 <=  ModularBaseSystemListZOperations.neg _ _ < 2 ^ _ => apply ModularBaseSystemListZOperationsProofs.neg_range; omega
          | |- 0 <= _ < 2 ^ Z.of_nat _ => vm_compute; split; [refine (fun x => match x with eq_refl => I end) | reflexivity]

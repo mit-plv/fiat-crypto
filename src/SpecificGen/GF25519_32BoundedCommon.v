@@ -300,14 +300,19 @@ Ltac unfold_is_bounded_in' H :=
        unfold_is_bounded_in' H2
   | _ => idtac
   end.
-Ltac unfold_is_bounded_in H :=
+Ltac preunfold_is_bounded_in H :=
   unfold is_bounded, wire_digits_is_bounded, is_bounded_gen, fe25519_32WToZ, wire_digitsWToZ in H;
-  cbv [to_list length bounds wire_digit_bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 List.map fold_right List.rev List.app length_fe25519_32 List.length wire_widths] in H;
+  cbv [to_list length bounds wire_digit_bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 List.map fold_right List.rev List.app length_fe25519_32 List.length wire_widths] in H.
+Ltac unfold_is_bounded_in H :=
+  preunfold_is_bounded_in H;
   unfold_is_bounded_in' H.
 
-Ltac unfold_is_bounded :=
+Ltac preunfold_is_bounded :=
   unfold is_bounded, wire_digits_is_bounded, is_bounded_gen, fe25519_32WToZ, wire_digitsWToZ;
-  cbv [to_list length bounds wire_digit_bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 List.map fold_right List.rev List.app length_fe25519_32 List.length wire_widths];
+  cbv [to_list length bounds wire_digit_bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 List.map fold_right List.rev List.app length_fe25519_32 List.length wire_widths].
+
+Ltac unfold_is_bounded :=
+  preunfold_is_bounded;
   repeat match goal with
          | [ |- andb _ _ = true ] => apply andb_true_intro
          | [ |- and _ _ ] => split
