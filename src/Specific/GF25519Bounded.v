@@ -292,9 +292,17 @@ Definition sqrt_m1W' : fe25519W :=
   Eval vm_compute in fe25519ZToW sqrt_m1.
 Definition sqrt_m1W := Eval cbv [sqrt_m1W' fe25519W_word64ize word64ize andb opt.word64ToZ opt.word64ize opt.Zleb Z.compare CompOpp Pos.compare Pos.compare_cont] in fe25519W_word64ize sqrt_m1W'.
 
-Definition GF25519sqrt x : GF25519.fe25519 :=
-  dlet powx := powW (fe25519ZToW x) (chain GF25519.sqrt_ec) in
-  GF25519.sqrt (fe25519WToZ powx) (fe25519WToZ (mulW_noinline powx powx)) x.
+Definition GF25519sqrt (x : GF25519.fe25519) : GF25519.fe25519.
+Proof.
+Print GF25519.sqrt.
+  lazymatch (eval cbv delta [GF25519.sqrt] in GF25519.sqrt) with
+  | (fun powf powf_squared f => dlet a := powf in _)
+    => exact (dlet powx := powW (fe25519ZToW x) (chain GF25519.sqrt_ec) in
+              GF25519.sqrt (fe25519WToZ powx) (fe25519WToZ (mulW_noinline powx powx)) x)
+  | (fun f => pow f _)
+    => exact (GF25519.sqrt x)
+  end.
+Defined.
 
 Definition sqrtW_sig
   : { sqrtW | iunop_correct_and_bounded sqrtW GF25519sqrt }.
@@ -302,43 +310,43 @@ Proof.
   eexists.
   unfold GF25519sqrt, GF25519.sqrt.
   intros.
-  rewrite !fe25519ZToW_WToZ.
+  rewrite ?fe25519ZToW_WToZ.
   split.
   { etransitivity.
     Focus 2. {
-      apply Proper_Let_In_nd_changebody_eq; intros.
-      set_evars.
-      match goal with (* unfold the first dlet ... in, but only if it's binding a var *)
-      | [ |- ?x = dlet y := fe25519WToZ ?z in ?f ]
-        => is_var z; change (x = match fe25519WToZ z with y => f end)
-      end.
-      change sqrt_m1 with (fe25519WToZ sqrt_m1W).
-      rewrite <- (fun X Y => proj1 (mulW_correct_and_bounded sqrt_m1W a X Y)), <- eqbW_correct, (pull_bool_if fe25519WToZ)
-        by repeat match goal with
-                  | _ => progress subst
-                  | [ |- is_bounded (fe25519WToZ ?op) = true ]
-                    => lazymatch op with
-                       | mulW _ _ => apply mulW_correct_and_bounded
-                       | mulW_noinline _ _ => apply mulW_correct_and_bounded
-                       | powW _ _ => apply powW_correct_and_bounded
-                       | sqrt_m1W => vm_compute; reflexivity
-                       | _ => assumption
-                       end
-                  end.
-      subst_evars; reflexivity.
+      apply Proper_Let_In_nd_changebody_eq; intros;
+        set_evars;
+        match goal with (* unfold the first dlet ... in, but only if it's binding a var *)
+        | [ |- ?x = dlet y := fe25519WToZ ?z in ?f ]
+          => is_var z; change (x = match fe25519WToZ z with y => f end)
+        end;
+        change sqrt_m1 with (fe25519WToZ sqrt_m1W);
+        rewrite <- (fun X Y => proj1 (mulW_correct_and_bounded sqrt_m1W a X Y)), <- eqbW_correct, (pull_bool_if fe25519WToZ)
+          by repeat match goal with
+                    | _ => progress subst
+                    | [ |- is_bounded (fe25519WToZ ?op) = true ]
+                      => lazymatch op with
+                         | mulW _ _ => apply mulW_correct_and_bounded
+                         | mulW_noinline _ _ => apply mulW_correct_and_bounded
+                         | powW _ _ => apply powW_correct_and_bounded
+                         | sqrt_m1W => vm_compute; reflexivity
+                         | _ => assumption
+                         end
+                    end;
+        subst_evars; reflexivity.
     } Unfocus.
     lazymatch goal with
     | [ |- context G[dlet x := ?v in fe25519WToZ (@?f x)] ]
       => let G' := context G[fe25519WToZ (dlet x := v in f x)] in
          cut G'; cbv beta;
            [ cbv [Let_In]; exact (fun x => x) | apply f_equal ]
-    end.
-    reflexivity. }
-  { cbv [Let_In].
-    break_if.
-    { apply powW_correct_and_bounded; assumption. }
-    { apply mulW_correct_and_bounded; [ vm_compute; reflexivity | ].
-      apply powW_correct_and_bounded; assumption. } }
+    end;
+      reflexivity. }
+  { cbv [Let_In];
+      break_if;
+      [ apply powW_correct_and_bounded; assumption
+      |  apply mulW_correct_and_bounded; [ vm_compute; reflexivity | ];
+         apply powW_correct_and_bounded; assumption ]. }
 Defined.
 
 Definition sqrtW (f : fe25519W) : fe25519W :=
