@@ -46,7 +46,7 @@ Local Ltac define_unop_WireToFE f opW blem :=
   abstract bounded_wire_digits_t opW blem.
 
 Local Opaque Let_In.
-Local Opaque Z.add Z.sub Z.mul Z.shiftl Z.shiftr Z.land Z.lor Z.eqb NToWord64.
+Local Opaque Z.add Z.sub Z.mul Z.shiftl Z.shiftr Z.land Z.lor Z.eqb NToWord128.
 Local Arguments interp_radd / _ _.
 Local Arguments interp_rsub / _ _.
 Local Arguments interp_rmul / _ _.
@@ -60,12 +60,12 @@ Definition subW (f g : fe25519_64W) : fe25519_64W := Eval simpl in interp_rsub f
 Definition mulW (f g : fe25519_64W) : fe25519_64W := Eval simpl in interp_rmul f g.
 Definition oppW (f : fe25519_64W) : fe25519_64W := Eval simpl in interp_ropp f.
 Definition prefreezeW (f : fe25519_64W) : fe25519_64W := Eval simpl in interp_rprefreeze f.
-Definition ge_modulusW (f : fe25519_64W) : word64 := Eval simpl in interp_rge_modulus f.
+Definition ge_modulusW (f : fe25519_64W) : word128 := Eval simpl in interp_rge_modulus f.
 Definition packW (f : fe25519_64W) : wire_digitsW := Eval simpl in interp_rpack f.
 Definition unpackW (f : wire_digitsW) : fe25519_64W := Eval simpl in interp_runpack f.
 
 Definition modulusW :=
-  Eval cbv - [ZToWord64] in (Tuple.map ZToWord64 (Tuple.from_list_default 0%Z length_fe25519_64 GF25519_64.modulus_digits_)).
+  Eval cbv - [ZToWord128] in (Tuple.map ZToWord128 (Tuple.from_list_default 0%Z length_fe25519_64 GF25519_64.modulus_digits_)).
 
 Definition postfreeze : GF25519_64.fe25519_64 -> GF25519_64.fe25519_64 :=
   GF25519_64.postfreeze.
@@ -78,7 +78,7 @@ Definition postfreezeW : fe25519_64W -> fe25519_64W :=
          (num_limbs := length_fe25519_64)
          modulusW
          ge_modulusW
-         (Interpretations.Word64.neg GF25519_64.int_width)
+         (Interpretations128.WordW.neg GF25519_64.int_width)
       ).
 
 Definition freezeW (f : fe25519_64W) : fe25519_64W := Eval cbv beta delta [prefreezeW postfreezeW] in postfreezeW (prefreezeW f).
@@ -117,7 +117,7 @@ Ltac lower_bound_minus_ge_modulus :=
   cbv [ge_modulus Let_In ModularBaseSystemListZOperations.cmovl ModularBaseSystemListZOperations.cmovne ModularBaseSystemListZOperations.neg];
   repeat break_if; Z.ltb_to_lt; subst; try omega;
     rewrite ?Z.land_0_l; auto;
-    change Interpretations.Word64.word64ToZ with word64ToZ;
+    change Interpretations128.WordW.wordWToZ with word128ToZ;
     etransitivity; try apply Z.land_upper_bound_r; instantiate; try omega;
     apply Z.ones_nonneg; instantiate; vm_compute; discriminate.
 
@@ -136,8 +136,8 @@ Proof.
   destruct_head' and.
   Z.ltb_to_lt.
   cbv [postfreezeW].
-  cbv [conditional_subtract_modulusW Interpretations.Word64.neg].
-  change word64ToZ with Interpretations.Word64.word64ToZ in *.
+  cbv [conditional_subtract_modulusW Interpretations128.WordW.neg].
+  change word128ToZ with Interpretations128.WordW.wordWToZ in *.
   rewrite Hgm.
 
   cbv [modulusW Tuple.map].
@@ -148,12 +148,12 @@ Proof.
 
   split.
   { match goal with
-    |- (_,word64ToZ (_ ^- (Interpretations.Word64.ZToWord64 ?x) ^& _)) = (_,_ - (?y &' _)) => assert (x = y) as Hxy by reflexivity; repeat rewrite <-Hxy; clear Hxy end.
+    |- (_,word128ToZ (_ ^- (Interpretations128.WordW.ZToWordW ?x) ^& _)) = (_,_ - (?y &' _)) => assert (x = y) as Hxy by reflexivity; repeat rewrite <-Hxy; clear Hxy end.
 
-  change ZToWord64 with Interpretations.Word64.ZToWord64 in *.
-  rewrite !Interpretations.Word64.word64ToZ_sub;
-  rewrite !Interpretations.Word64.word64ToZ_land;
-  rewrite !Interpretations.Word64.word64ToZ_ZToWord64;
+  change ZToWord128 with Interpretations128.WordW.ZToWordW in *.
+  rewrite !Interpretations128.WordW.wordWToZ_sub;
+  rewrite !Interpretations128.WordW.wordWToZ_land;
+  rewrite !Interpretations128.WordW.wordWToZ_ZToWordW;
   try match goal with
          | |- 0 <=  ModularBaseSystemListZOperations.neg _ _ < 2 ^ _ => apply ModularBaseSystemListZOperationsProofs.neg_range; omega
          | |- 0 <= _ < 2 ^ Z.of_nat _ => vm_compute; split; [refine (fun x => match x with eq_refl => I end) | reflexivity]
@@ -170,10 +170,10 @@ Proof.
 
 
   unfold_is_bounded.
-  change ZToWord64 with Interpretations.Word64.ZToWord64 in *.
-  rewrite !Interpretations.Word64.word64ToZ_sub;
-  rewrite !Interpretations.Word64.word64ToZ_land;
-  rewrite !Interpretations.Word64.word64ToZ_ZToWord64;
+  change ZToWord128 with Interpretations128.WordW.ZToWordW in *.
+  rewrite !Interpretations128.WordW.wordWToZ_sub;
+  rewrite !Interpretations128.WordW.wordWToZ_land;
+  rewrite !Interpretations128.WordW.wordWToZ_ZToWordW;
   repeat match goal with |- _ /\ _ => split; Z.ltb_to_lt end;
   try match goal with
          | |- 0 <=  ModularBaseSystemListZOperations.neg _ _ < 2 ^ _ => apply ModularBaseSystemListZOperationsProofs.neg_range; omega
@@ -235,7 +235,7 @@ Proof.
   hnf in f, g; destruct_head' prod.
   eexists.
   cbv [GF25519_64.fieldwiseb fe25519_64WToZ].
-  rewrite ?word64eqb_Zeqb.
+  rewrite ?word128eqb_Zeqb.
   reflexivity.
 Defined.
 
@@ -288,7 +288,7 @@ Qed.
 
 Definition sqrt_m1W' : fe25519_64W :=
   Eval vm_compute in fe25519_64ZToW sqrt_m1.
-Definition sqrt_m1W := Eval cbv [sqrt_m1W' fe25519_64W_word64ize word64ize andb opt.word64ToZ opt.word64ize opt.Zleb Z.compare CompOpp Pos.compare Pos.compare_cont] in fe25519_64W_word64ize sqrt_m1W'.
+Definition sqrt_m1W := Eval cbv [sqrt_m1W' fe25519_64W_word128ize word128ize andb opt.word128ToZ opt.word128ize opt.Zleb Z.compare CompOpp Pos.compare Pos.compare_cont] in fe25519_64W_word128ize sqrt_m1W'.
 
 Definition GF25519_64sqrt x : GF25519_64.fe25519_64 :=
   dlet powx := powW (fe25519_64ZToW x) (chain GF25519_64.sqrt_ec) in
@@ -366,7 +366,7 @@ Definition opp (f : fe25519_64) : fe25519_64.
 Proof. define_unop f oppW oppW_correct_and_bounded. Defined.
 Definition freeze (f : fe25519_64) : fe25519_64.
 Proof. define_unop f freezeW freezeW_correct_and_bounded. Defined.
-Definition ge_modulus (f : fe25519_64) : word64.
+Definition ge_modulus (f : fe25519_64) : word128.
 Proof. define_unop_FEToZ f ge_modulusW. Defined.
 Definition pack (f : fe25519_64) : wire_digits.
 Proof. define_unop_FEToWire f packW packW_correct_and_bounded. Defined.
@@ -407,7 +407,7 @@ Lemma opp_correct (f : fe25519_64) : proj1_fe25519_64 (opp f) = carry_opp (proj1
 Proof. op_correct_t opp oppW_correct_and_bounded. Qed.
 Lemma freeze_correct (f : fe25519_64) : proj1_fe25519_64 (freeze f) = GF25519_64.freeze (proj1_fe25519_64 f).
 Proof. op_correct_t freeze freezeW_correct_and_bounded. Qed.
-Lemma ge_modulus_correct (f : fe25519_64) : word64ToZ (ge_modulus f) = GF25519_64.ge_modulus (proj1_fe25519_64 f).
+Lemma ge_modulus_correct (f : fe25519_64) : word128ToZ (ge_modulus f) = GF25519_64.ge_modulus (proj1_fe25519_64 f).
 Proof. op_correct_t ge_modulus ge_modulusW_correct. Qed.
 Lemma pack_correct (f : fe25519_64) : proj1_wire_digits (pack f) = GF25519_64.pack (proj1_fe25519_64 f).
 Proof. op_correct_t pack packW_correct_and_bounded. Qed.

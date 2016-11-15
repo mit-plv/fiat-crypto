@@ -10,9 +10,9 @@ Require Import Crypto.SpecificGen.GF25519_64BoundedCommon.
 Require Import Crypto.Reflection.Reify.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.MapInterp.
-Require Import Crypto.Reflection.Z.Interpretations.
-Require Crypto.Reflection.Z.Interpretations.Relations.
-Require Import Crypto.Reflection.Z.Interpretations.RelationsCombinations.
+Require Import Crypto.Reflection.Z.Interpretations128.
+Require Crypto.Reflection.Z.Interpretations128.Relations.
+Require Import Crypto.Reflection.Z.Interpretations128.RelationsCombinations.
 Require Import Crypto.Reflection.Z.Reify.
 Require Import Crypto.Reflection.Z.Syntax.
 Require Import Crypto.SpecificGen.GF25519_64Reflective.Common.
@@ -41,8 +41,8 @@ Definition rge_modulus : ExprUnOpFEToZ := Eval vm_compute in rge_modulusW.
 Definition rpack : ExprUnOpFEToWire := Eval vm_compute in rpackW.
 Definition runpack : ExprUnOpWireToFE := Eval vm_compute in runpackW.
 
-Definition rword64ize {t} (x : Expr t) : Expr t
-  := MapInterp (fun t => match t with TZ => word64ize end) x.
+Definition rword128ize {t} (x : Expr t) : Expr t
+  := MapInterp (fun t => match t with TZ => word128ize end) x.
 
 Declare Reduction asm_interp
   := cbv beta iota delta
@@ -50,10 +50,10 @@ Declare Reduction asm_interp
             interp_bexpr interp_uexpr interp_uexpr_FEToWire interp_uexpr_FEToZ interp_uexpr_WireToFE
             radd rsub rmul ropp rprefreeze rge_modulus rpack runpack
             curry_binop_fe25519_64W curry_unop_fe25519_64W curry_unop_wire_digitsW
-            Word64.interp_op Word64.interp_base_type
+            WordW.interp_op WordW.interp_base_type
             Z.interp_op Z.interp_base_type
             Z.Syntax.interp_op Z.Syntax.interp_base_type
-            mapf_interp_flat_type map_interp Word64.interp_base_type MapInterp mapf_interp word64ize rword64ize
+            mapf_interp_flat_type map_interp WordW.interp_base_type MapInterp mapf_interp word128ize rword128ize
             Interp interp interp_flat_type interpf interp_flat_type fst snd].
 Ltac asm_interp
   := cbv beta iota delta
@@ -61,44 +61,44 @@ Ltac asm_interp
             interp_bexpr interp_uexpr interp_uexpr_FEToWire interp_uexpr_FEToZ interp_uexpr_WireToFE
             radd rsub rmul ropp rprefreeze rge_modulus rpack runpack
             curry_binop_fe25519_64W curry_unop_fe25519_64W curry_unop_wire_digitsW
-            Word64.interp_op Word64.interp_base_type
+            WordW.interp_op WordW.interp_base_type
             Z.interp_op Z.interp_base_type
             Z.Syntax.interp_op Z.Syntax.interp_base_type
-            mapf_interp_flat_type map_interp Word64.interp_base_type MapInterp mapf_interp word64ize rword64ize
+            mapf_interp_flat_type map_interp WordW.interp_base_type MapInterp mapf_interp word128ize rword128ize
             Interp interp interp_flat_type interpf interp_flat_type fst snd].
 
 
 Definition interp_radd : SpecificGen.GF25519_64BoundedCommon.fe25519_64W -> SpecificGen.GF25519_64BoundedCommon.fe25519_64W -> SpecificGen.GF25519_64BoundedCommon.fe25519_64W
-  := Eval asm_interp in interp_bexpr (rword64ize radd).
+  := Eval asm_interp in interp_bexpr (rword128ize radd).
 (*Print interp_radd.*)
 Definition interp_radd_correct : interp_radd = interp_bexpr radd := eq_refl.
 Definition interp_rsub : SpecificGen.GF25519_64BoundedCommon.fe25519_64W -> SpecificGen.GF25519_64BoundedCommon.fe25519_64W -> SpecificGen.GF25519_64BoundedCommon.fe25519_64W
-  := Eval asm_interp in interp_bexpr (rword64ize rsub).
+  := Eval asm_interp in interp_bexpr (rword128ize rsub).
 (*Print interp_rsub.*)
 Definition interp_rsub_correct : interp_rsub = interp_bexpr rsub := eq_refl.
 Definition interp_rmul : SpecificGen.GF25519_64BoundedCommon.fe25519_64W -> SpecificGen.GF25519_64BoundedCommon.fe25519_64W -> SpecificGen.GF25519_64BoundedCommon.fe25519_64W
-  := Eval asm_interp in interp_bexpr (rword64ize rmul).
+  := Eval asm_interp in interp_bexpr (rword128ize rmul).
 (*Print interp_rmul.*)
 Definition interp_rmul_correct : interp_rmul = interp_bexpr rmul := eq_refl.
 Definition interp_ropp : SpecificGen.GF25519_64BoundedCommon.fe25519_64W -> SpecificGen.GF25519_64BoundedCommon.fe25519_64W
-  := Eval asm_interp in interp_uexpr (rword64ize ropp).
+  := Eval asm_interp in interp_uexpr (rword128ize ropp).
 (*Print interp_ropp.*)
 Definition interp_ropp_correct : interp_ropp = interp_uexpr ropp := eq_refl.
 Definition interp_rprefreeze : SpecificGen.GF25519_64BoundedCommon.fe25519_64W -> SpecificGen.GF25519_64BoundedCommon.fe25519_64W
-  := Eval asm_interp in interp_uexpr (rword64ize rprefreeze).
+  := Eval asm_interp in interp_uexpr (rword128ize rprefreeze).
 (*Print interp_rprefreeze.*)
 Definition interp_rprefreeze_correct : interp_rprefreeze = interp_uexpr rprefreeze := eq_refl.
 
-Definition interp_rge_modulus : SpecificGen.GF25519_64BoundedCommon.fe25519_64W -> SpecificGen.GF25519_64BoundedCommon.word64
-  := Eval asm_interp in interp_uexpr_FEToZ (rword64ize rge_modulus).
+Definition interp_rge_modulus : SpecificGen.GF25519_64BoundedCommon.fe25519_64W -> SpecificGen.GF25519_64BoundedCommon.word128
+  := Eval asm_interp in interp_uexpr_FEToZ (rword128ize rge_modulus).
 Definition interp_rge_modulus_correct : interp_rge_modulus = interp_uexpr_FEToZ rge_modulus := eq_refl.
 
 Definition interp_rpack : SpecificGen.GF25519_64BoundedCommon.fe25519_64W -> SpecificGen.GF25519_64BoundedCommon.wire_digitsW
-  := Eval asm_interp in interp_uexpr_FEToWire (rword64ize rpack).
+  := Eval asm_interp in interp_uexpr_FEToWire (rword128ize rpack).
 Definition interp_rpack_correct : interp_rpack = interp_uexpr_FEToWire rpack := eq_refl.
 
 Definition interp_runpack : SpecificGen.GF25519_64BoundedCommon.wire_digitsW -> SpecificGen.GF25519_64BoundedCommon.fe25519_64W
-  := Eval asm_interp in interp_uexpr_WireToFE (rword64ize runpack).
+  := Eval asm_interp in interp_uexpr_WireToFE (rword128ize runpack).
 Definition interp_runpack_correct : interp_runpack = interp_uexpr_WireToFE runpack := eq_refl.
 
 Lemma radd_correct_and_bounded : binop_correct_and_bounded radd carry_add.

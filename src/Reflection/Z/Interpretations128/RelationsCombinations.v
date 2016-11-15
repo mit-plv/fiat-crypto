@@ -2,8 +2,9 @@ Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Application.
-Require Import Crypto.Reflection.Z.Interpretations.
-Require Import Crypto.Reflection.Z.Interpretations.Relations.
+Require Import Crypto.Reflection.Z.InterpretationsGen.
+Require Import Crypto.Reflection.Z.Interpretations128.
+Require Import Crypto.Reflection.Z.Interpretations128.Relations.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.ZUtil.

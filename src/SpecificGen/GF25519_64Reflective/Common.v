@@ -4,9 +4,9 @@ Require Export Crypto.SpecificGen.GF25519_64.
 Require Export Crypto.SpecificGen.GF25519_64BoundedCommon.
 Require Import Crypto.Reflection.Reify.
 Require Import Crypto.Reflection.Syntax.
-Require Import Crypto.Reflection.Z.Interpretations.
-Require Crypto.Reflection.Z.Interpretations.Relations.
-Require Import Crypto.Reflection.Z.Interpretations.RelationsCombinations.
+Require Import Crypto.Reflection.Z.Interpretations128.
+Require Crypto.Reflection.Z.Interpretations128.Relations.
+Require Import Crypto.Reflection.Z.Interpretations128.RelationsCombinations.
 Require Import Crypto.Reflection.Z.Reify.
 Require Export Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Reflection.InterpWfRel.
@@ -19,7 +19,7 @@ Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
 
-Notation Expr := (Expr base_type Word64.interp_base_type op).
+Notation Expr := (Expr base_type WordW.interp_base_type op).
 
 Local Ltac make_type_from uncurried_op :=
   let T := (type of uncurried_op) in
@@ -45,9 +45,9 @@ Definition ExprUnOpFEToWire : Type := Expr ExprUnOpFEToWireT.
 
 Local Ltac bounds_from_list ls :=
   lazymatch (eval hnf in ls) with
-  | (?x :: nil)%list => constr:(Some {| ZBounds.lower := fst x ; ZBounds.upper := snd x |})
+  | (?x :: nil)%list => constr:(Some {| Bounds.lower := fst x ; Bounds.upper := snd x |})
   | (?x :: ?xs)%list => let bs := bounds_from_list xs in
-                        constr:((Some {| ZBounds.lower := fst x ; ZBounds.upper := snd x |}, bs))
+                        constr:((Some {| Bounds.lower := fst x ; Bounds.upper := snd x |}, bs))
   end.
 
 Local Ltac make_bounds ls :=
@@ -66,17 +66,16 @@ Definition ExprUnOpFEToWire_bounds : interp_all_binders_for ExprUnOpFEToWireT ZB
 Proof. make_bounds (Tuple.to_list _ bounds). Defined.
 Definition ExprUnOpWireToFE_bounds : interp_all_binders_for ExprUnOpWireToFET ZBounds.interp_base_type.
 Proof. make_bounds (Tuple.to_list _ wire_digit_bounds). Defined.
-
 Definition interp_bexpr : ExprBinOp -> SpecificGen.GF25519_64BoundedCommon.fe25519_64W -> SpecificGen.GF25519_64BoundedCommon.fe25519_64W -> SpecificGen.GF25519_64BoundedCommon.fe25519_64W
-  := fun e => curry_binop_fe25519_64W (Interp (@Word64.interp_op) e).
+  := fun e => curry_binop_fe25519_64W (Interp (@WordW.interp_op) e).
 Definition interp_uexpr : ExprUnOp -> SpecificGen.GF25519_64BoundedCommon.fe25519_64W -> SpecificGen.GF25519_64BoundedCommon.fe25519_64W
-  := fun e => curry_unop_fe25519_64W (Interp (@Word64.interp_op) e).
-Definition interp_uexpr_FEToZ : ExprUnOpFEToZ -> SpecificGen.GF25519_64BoundedCommon.fe25519_64W -> SpecificGen.GF25519_64BoundedCommon.word64
-  := fun e => curry_unop_fe25519_64W (Interp (@Word64.interp_op) e).
+  := fun e => curry_unop_fe25519_64W (Interp (@WordW.interp_op) e).
+Definition interp_uexpr_FEToZ : ExprUnOpFEToZ -> SpecificGen.GF25519_64BoundedCommon.fe25519_64W -> SpecificGen.GF25519_64BoundedCommon.word128
+  := fun e => curry_unop_fe25519_64W (Interp (@WordW.interp_op) e).
 Definition interp_uexpr_FEToWire : ExprUnOpFEToWire -> SpecificGen.GF25519_64BoundedCommon.fe25519_64W -> SpecificGen.GF25519_64BoundedCommon.wire_digitsW
-  := fun e => curry_unop_fe25519_64W (Interp (@Word64.interp_op) e).
+  := fun e => curry_unop_fe25519_64W (Interp (@WordW.interp_op) e).
 Definition interp_uexpr_WireToFE : ExprUnOpWireToFE -> SpecificGen.GF25519_64BoundedCommon.wire_digitsW -> SpecificGen.GF25519_64BoundedCommon.fe25519_64W
-  := fun e => curry_unop_wire_digitsW (Interp (@Word64.interp_op) e).
+  := fun e => curry_unop_wire_digitsW (Interp (@WordW.interp_op) e).
 
 Notation binop_correct_and_bounded rop op
   := (ibinop_correct_and_bounded (interp_bexpr rop) op) (only parsing).
@@ -117,13 +116,13 @@ Notation correct_and_bounded_genT ropW'v ropZ_sigv
   := (let ropW' := ropW'v in
       let ropZ_sig := ropZ_sigv in
       let ropW := MapInterp (fun _ x => x) ropW' in
-      let ropZ := MapInterp Word64.to_Z ropW' in
-      let ropBounds := MapInterp ZBounds.of_word64 ropW' in
-      let ropBoundedWord64 := MapInterp BoundedWord64.of_word64 ropW' in
+      let ropZ := MapInterp WordW.to_Z ropW' in
+      let ropBounds := MapInterp ZBounds.of_wordW ropW' in
+      let ropBoundedWordW := MapInterp BoundedWordW.of_wordW ropW' in
       ropZ = proj1_sig ropZ_sig
-      /\ interp_type_rel_pointwise2 Relations.related_Z (Interp (@BoundedWord64.interp_op) ropBoundedWord64) (Interp (@Z.interp_op) ropZ)
-      /\ interp_type_rel_pointwise2 Relations.related_bounds (Interp (@BoundedWord64.interp_op) ropBoundedWord64) (Interp (@ZBounds.interp_op) ropBounds)
-      /\ interp_type_rel_pointwise2 Relations.related_word64 (Interp (@BoundedWord64.interp_op) ropBoundedWord64) (Interp (@Word64.interp_op) ropW))
+      /\ interp_type_rel_pointwise2 Relations.related_Z (Interp (@BoundedWordW.interp_op) ropBoundedWordW) (Interp (@Z.interp_op) ropZ)
+      /\ interp_type_rel_pointwise2 Relations.related_bounds (Interp (@BoundedWordW.interp_op) ropBoundedWordW) (Interp (@ZBounds.interp_op) ropBounds)
+      /\ interp_type_rel_pointwise2 Relations.related_wordW (Interp (@BoundedWordW.interp_op) ropBoundedWordW) (Interp (@WordW.interp_op) ropW))
        (only parsing).
 
 Ltac app_tuples x y :=
@@ -138,7 +137,7 @@ Local Arguments Tuple.map2 : simpl never.
 Local Arguments Tuple.map : simpl never.
 
 Fixpoint args_to_bounded_helperT {n}
-         (v : Tuple.tuple' Word64.word64 n)
+         (v : Tuple.tuple' WordW.wordW n)
          (bounds : Tuple.tuple' (Z * Z) n)
          (pf : List.fold_right
                  andb true
@@ -149,7 +148,7 @@ Fixpoint args_to_bounded_helperT {n}
                        (fun bounds v =>
                           let '(lower, upper) := bounds in ((lower <=? v)%Z && (v <=? upper)%Z)%bool)
                        bounds
-                       (Tuple.map (n:=S n) Word64.word64ToZ v))) = true)
+                       (Tuple.map (n:=S n) WordW.wordWToZ v))) = true)
          (res : Type)
          {struct n}
   : Type.
@@ -161,9 +160,9 @@ Proof.
                                       (Tuple.map2 (n:=S n) _ bounds (Tuple.map (n:=S n) _ v))) = true
                              -> Type)
           with
-          | 0 => fun v' bounds' pf0 => forall pf1 : (0 <= fst bounds' /\ Z.log2 (snd bounds') < Z.of_nat Word64.bit_width)%Z, res
+          | 0 => fun v' bounds' pf0 => forall pf1 : (0 <= fst bounds' /\ Z.log2 (snd bounds') < Z.of_nat WordW.bit_width)%Z, res
           | S n' => fun v' bounds' pf0 => let t := _ in
-                                        forall pf1 : (0 <= fst (snd bounds') /\ Z.log2 (snd (snd bounds')) < Z.of_nat Word64.bit_width)%Z, @args_to_bounded_helperT n' (fst v') (fst bounds') t res
+                                        forall pf1 : (0 <= fst (snd bounds') /\ Z.log2 (snd (snd bounds')) < Z.of_nat WordW.bit_width)%Z, @args_to_bounded_helperT n' (fst v') (fst bounds') t res
           end v bounds pf).
   { clear -pf0.
     abstract (
@@ -178,15 +177,15 @@ Defined.
 
 Fixpoint args_to_bounded_helper {n} res
          {struct n}
-  : forall v bounds pf, (Tuple.tuple' BoundedWord64.BoundedWord n -> res) -> @args_to_bounded_helperT n v bounds pf res.
+  : forall v bounds pf, (Tuple.tuple' BoundedWordW.BoundedWord n -> res) -> @args_to_bounded_helperT n v bounds pf res.
 Proof.
-  refine match n return (forall v bounds pf, (Tuple.tuple' BoundedWord64.BoundedWord n -> res) -> @args_to_bounded_helperT n v bounds pf res) with
-         | 0 => fun v bounds pf f pf' => f {| BoundedWord64.lower := fst bounds ; BoundedWord64.value := v ; BoundedWord64.upper := snd bounds |}
+  refine match n return (forall v bounds pf, (Tuple.tuple' BoundedWordW.BoundedWord n -> res) -> @args_to_bounded_helperT n v bounds pf res) with
+         | 0 => fun v bounds pf f pf' => f {| BoundedWord.lower := fst bounds ; BoundedWord.value := v ; BoundedWord.upper := snd bounds |}
          | S n'
            => fun v bounds pf f pf'
               => @args_to_bounded_helper
                    n' res (fst v) (fst bounds) _
-                   (fun ts => f (ts, {| BoundedWord64.lower := fst (snd bounds) ; BoundedWord64.value := snd v ; BoundedWord64.upper := snd (snd bounds) |}))
+                   (fun ts => f (ts, {| BoundedWord.lower := fst (snd bounds) ; BoundedWord.value := snd v ; BoundedWord.upper := snd (snd bounds) |}))
          end.
   { clear -pf pf'.
     unfold Tuple.map2, Tuple.map in pf; simpl in *.
@@ -242,16 +241,16 @@ Local Ltac args_to_bounded x H :=
       ).
 
 Definition unop_args_to_bounded (x : fe25519_64W) (H : is_bounded (fe25519_64WToZ x) = true)
-  : interp_flat_type (fun _ => BoundedWord64.BoundedWord) (all_binders_for ExprUnOpT).
+  : interp_flat_type (fun _ => BoundedWordW.BoundedWord) (all_binders_for ExprUnOpT).
 Proof. args_to_bounded x H. Defined.
 
 Definition unopWireToFE_args_to_bounded (x : wire_digitsW) (H : wire_digits_is_bounded (wire_digitsWToZ x) = true)
-  : interp_flat_type (fun _ => BoundedWord64.BoundedWord) (all_binders_for ExprUnOpWireToFET).
+  : interp_flat_type (fun _ => BoundedWordW.BoundedWord) (all_binders_for ExprUnOpWireToFET).
 Proof. args_to_bounded x H. Defined.
 Definition binop_args_to_bounded (x : fe25519_64W * fe25519_64W)
            (H : is_bounded (fe25519_64WToZ (fst x)) = true)
            (H' : is_bounded (fe25519_64WToZ (snd x)) = true)
-  : interp_flat_type (fun _ => BoundedWord64.BoundedWord) (all_binders_for ExprBinOpT).
+  : interp_flat_type (fun _ => BoundedWordW.BoundedWord) (all_binders_for ExprBinOpT).
 Proof.
   let v := app_tuples (unop_args_to_bounded (fst x) H) (unop_args_to_bounded (snd x) H') in
   exact v.
@@ -328,13 +327,13 @@ Ltac t_correct_and_bounded ropZ_sig Hbounds H0 H1 args :=
   change interp_base_type with (@Z.interp_base_type) in *;
   rewrite <- Heq; clear Heq;
   destruct Hbounds as [ Hbounds0 [Hbounds1 Hbounds2] ];
-  pose proof (fun pf => Relations.uncurry_interp_type_rel_pointwise2_proj_from_option2 Word64.to_Z pf Hbounds2 Hbounds0) as Hbounds_left;
-  pose proof (fun pf => Relations.uncurry_interp_type_rel_pointwise2_proj1_from_option2 Relations.related_word64_boundsi' pf Hbounds1 Hbounds2) as Hbounds_right;
+  pose proof (fun pf => Relations.uncurry_interp_type_rel_pointwise2_proj_from_option2 WordW.to_Z pf Hbounds2 Hbounds0) as Hbounds_left;
+  pose proof (fun pf => Relations.uncurry_interp_type_rel_pointwise2_proj1_from_option2 Relations.related_wordW_boundsi' pf Hbounds1 Hbounds2) as Hbounds_right;
   specialize_by repeat first [ progress intros
                              | reflexivity
                              | assumption
                              | progress destruct_head' base_type
-                             | progress destruct_head' BoundedWord64.BoundedWord
+                             | progress destruct_head' BoundedWordW.BoundedWord
                              | progress destruct_head' and
                              | progress repeat apply conj ];
   specialize (Hbounds_left args H0);
@@ -350,7 +349,7 @@ Ltac t_correct_and_bounded ropZ_sig Hbounds H0 H1 args :=
   repeat match goal with x := _ |- _ => subst x end;
   cbv [id
          binop_args_to_bounded unop_args_to_bounded unopWireToFE_args_to_bounded
-         Relations.proj_eq_rel interp_flat_type_rel_pointwise2 SmartVarfMap interp_flat_type smart_interp_flat_map Application.all_binders_for fst snd BoundedWord64.to_word64' BoundedWord64.boundedWordToWord64 BoundedWord64.value Application.ApplyInterpedAll Application.fst_binder Application.snd_binder interp_flat_type_rel_pointwise2_gen_Prop Relations.related_word64_boundsi' Relations.related'_word64_bounds ZBounds.upper ZBounds.lower Application.remove_all_binders Word64.to_Z] in Hbounds_left, Hbounds_right;
+         Relations.proj_eq_rel interp_flat_type_rel_pointwise2 SmartVarfMap interp_flat_type smart_interp_flat_map Application.all_binders_for fst snd BoundedWordW.to_wordW' BoundedWordW.boundedWordToWordW BoundedWord.value Application.ApplyInterpedAll Application.fst_binder Application.snd_binder interp_flat_type_rel_pointwise2_gen_Prop Relations.related_wordW_boundsi' Relations.related'_wordW_bounds Bounds.upper Bounds.lower Application.remove_all_binders WordW.to_Z] in Hbounds_left, Hbounds_right;
   match goal with
   | [ |- fe25519_64WToZ ?x = _ /\ _ ]
     => destruct x; destruct_head_hnf' prod
@@ -359,7 +358,7 @@ Ltac t_correct_and_bounded ropZ_sig Hbounds H0 H1 args :=
   | [ |- _ = _ ]
     => exact Hbounds_left
   end;
-  change word64ToZ with Word64.word64ToZ in *;
+  change word128ToZ with WordW.wordWToZ in *;
   (split; [ exact Hbounds_left | ]);
   cbv [interp_flat_type] in *;
   cbv [fst snd
@@ -371,7 +370,7 @@ Ltac t_correct_and_bounded ropZ_sig Hbounds H0 H1 args :=
   unfold_is_bounded;
   destruct_head' and;
   Z.ltb_to_lt;
-  change Word64.word64ToZ with word64ToZ in *;
+  change WordW.wordWToZ with word128ToZ in *;
   repeat apply conj; Z.ltb_to_lt; try omega; try reflexivity.
 
 
@@ -387,10 +386,10 @@ Ltac rexpr_correct :=
     [ | apply @RelWfMapInterp, wf_ropW ].. ];
   auto with interp_related.
 
-Notation rword_of_Z rexprZ_sig := (MapInterp Word64.of_Z (proj1_sig rexprZ_sig)) (only parsing).
+Notation rword_of_Z rexprZ_sig := (MapInterp WordW.of_Z (proj1_sig rexprZ_sig)) (only parsing).
 
 Notation compute_bounds opW bounds
-  := (ApplyInterpedAll (Interp (@ZBounds.interp_op) (MapInterp (@ZBounds.of_word64) opW)) bounds)
+  := (ApplyInterpedAll (Interp (@ZBounds.interp_op) (MapInterp (@ZBounds.of_wordW) opW)) bounds)
        (only parsing).
 
 
@@ -407,7 +406,7 @@ Module Export PrettyPrinting.
     := fun t : base_type
        => match t return ZBounds.interp_base_type t -> match t with TZ => bounds_on end with
           | TZ => fun x => match x with
-                           | Some {| ZBounds.lower := l ; ZBounds.upper := u |}
+                           | Some {| Bounds.lower := l ; Bounds.upper := u |}
                              => in_range l u
                            | None
                              => overflow

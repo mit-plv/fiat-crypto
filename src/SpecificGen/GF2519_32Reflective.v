@@ -10,9 +10,9 @@ Require Import Crypto.SpecificGen.GF2519_32BoundedCommon.
 Require Import Crypto.Reflection.Reify.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.MapInterp.
-Require Import Crypto.Reflection.Z.Interpretations.
-Require Crypto.Reflection.Z.Interpretations.Relations.
-Require Import Crypto.Reflection.Z.Interpretations.RelationsCombinations.
+Require Import Crypto.Reflection.Z.Interpretations64.
+Require Crypto.Reflection.Z.Interpretations64.Relations.
+Require Import Crypto.Reflection.Z.Interpretations64.RelationsCombinations.
 Require Import Crypto.Reflection.Z.Reify.
 Require Import Crypto.Reflection.Z.Syntax.
 Require Import Crypto.SpecificGen.GF2519_32Reflective.Common.
@@ -50,10 +50,10 @@ Declare Reduction asm_interp
             interp_bexpr interp_uexpr interp_uexpr_FEToWire interp_uexpr_FEToZ interp_uexpr_WireToFE
             radd rsub rmul ropp rprefreeze rge_modulus rpack runpack
             curry_binop_fe2519_32W curry_unop_fe2519_32W curry_unop_wire_digitsW
-            Word64.interp_op Word64.interp_base_type
+            WordW.interp_op WordW.interp_base_type
             Z.interp_op Z.interp_base_type
             Z.Syntax.interp_op Z.Syntax.interp_base_type
-            mapf_interp_flat_type map_interp Word64.interp_base_type MapInterp mapf_interp word64ize rword64ize
+            mapf_interp_flat_type map_interp WordW.interp_base_type MapInterp mapf_interp word64ize rword64ize
             Interp interp interp_flat_type interpf interp_flat_type fst snd].
 Ltac asm_interp
   := cbv beta iota delta
@@ -61,10 +61,10 @@ Ltac asm_interp
             interp_bexpr interp_uexpr interp_uexpr_FEToWire interp_uexpr_FEToZ interp_uexpr_WireToFE
             radd rsub rmul ropp rprefreeze rge_modulus rpack runpack
             curry_binop_fe2519_32W curry_unop_fe2519_32W curry_unop_wire_digitsW
-            Word64.interp_op Word64.interp_base_type
+            WordW.interp_op WordW.interp_base_type
             Z.interp_op Z.interp_base_type
             Z.Syntax.interp_op Z.Syntax.interp_base_type
-            mapf_interp_flat_type map_interp Word64.interp_base_type MapInterp mapf_interp word64ize rword64ize
+            mapf_interp_flat_type map_interp WordW.interp_base_type MapInterp mapf_interp word64ize rword64ize
             Interp interp interp_flat_type interpf interp_flat_type fst snd].
 
 

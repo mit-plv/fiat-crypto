@@ -242,25 +242,25 @@ Extract Inductive Word.word => "[Prelude.Bool]" [ "[]" "(:)" ]
 Extraction Inline LetIn.Let_In.
 
 (* Word64 *)
-Import Crypto.Reflection.Z.Interpretations.
-Extract Inlined Constant Word64.word64 => "Data.Word.Word64".
+Import Crypto.Reflection.Z.Interpretations64.
+Extract Inlined Constant WordW.wordW => "Data.Word.Word64".
 Extract Inlined Constant GF25519BoundedCommon.word64 => "Data.Word.Word64".
 Extract Inlined Constant GF25519BoundedCommon.w64eqb => "(Prelude.==)".
-Extract Inlined Constant Word64.word64ToZ => "Prelude.fromIntegral".
-Extract Inlined Constant Word64.ZToWord64 => "Prelude.fromIntegral".
+Extract Inlined Constant WordW.wordWToZ => "Prelude.fromIntegral".
+Extract Inlined Constant WordW.ZToWordW => "Prelude.fromIntegral".
 Extract Inlined Constant GF25519BoundedCommon.word64ToZ => "Prelude.fromIntegral".
 Extract Inlined Constant GF25519BoundedCommon.NToWord64 => "Prelude.fromIntegral".
 Extract Inlined Constant GF25519BoundedCommon.ZToWord64 => "Prelude.fromIntegral".
-Extract Inlined Constant Word64.add => "(Prelude.+)".
-Extract Inlined Constant Word64.mul => "(Prelude.*)".
-Extract Inlined Constant Word64.sub => "(Prelude.-)".
-Extract Inlined Constant Word64.land => "(Data.Bits..&.)".
-Extract Inlined Constant Word64.lor => "(Data.Bits..|.)".
-Extract Inlined Constant Word64.neg => "(\_ w -> Prelude.negate w)". (* FIXME: reification: drop arg1 *)
-Extract Inlined Constant Word64.shr => "(\w n -> Data.Bits.shiftR w (Prelude.fromIntegral n))".
-Extract Inlined Constant Word64.shl => "(\w n -> Data.Bits.shiftL w (Prelude.fromIntegral n))".
-Extract Inlined Constant Word64.cmovle => "(\x y r1 r2 -> if x Prelude.<= y then r1 else r2)".
-Extract Inlined Constant Word64.cmovne => "(\x y r1 r2 -> if x Prelude.== y then r1 else r2)".
+Extract Inlined Constant WordW.add => "(Prelude.+)".
+Extract Inlined Constant WordW.mul => "(Prelude.*)".
+Extract Inlined Constant WordW.sub => "(Prelude.-)".
+Extract Inlined Constant WordW.land => "(Data.Bits..&.)".
+Extract Inlined Constant WordW.lor => "(Data.Bits..|.)".
+Extract Inlined Constant WordW.neg => "(\_ w -> Prelude.negate w)". (* FIXME: reification: drop arg1 *)
+Extract Inlined Constant WordW.shr => "(\w n -> Data.Bits.shiftR w (Prelude.fromIntegral n))".
+Extract Inlined Constant WordW.shl => "(\w n -> Data.Bits.shiftL w (Prelude.fromIntegral n))".
+Extract Inlined Constant WordW.cmovle => "(\x y r1 r2 -> if x Prelude.<= y then r1 else r2)".
+Extract Inlined Constant WordW.cmovne => "(\x y r1 r2 -> if x Prelude.== y then r1 else r2)".
 
 (* inlining, primarily to reduce polymorphism *)
 Extraction Inline dec_eq_Z dec_eq_N dec_eq_sig_hprop.
@@ -277,7 +277,7 @@ Extraction Inline Crypto.Util.HList.mapt' Crypto.Util.HList.mapt Crypto.Util.Tup
 
 Extraction Inline GF25519BoundedCommon.exist_fe25519 GF25519BoundedCommon.exist_fe25519W GF25519BoundedCommon.proj1_fe25519W.
 Extraction Inline Crypto.Specific.GF25519Bounded.mulW Crypto.Specific.GF25519Bounded.addW Crypto.Specific.GF25519Bounded.subW.
-(*done-at-haskell-level: Extraction Inline Crypto.Specific.GF25519Bounded.mul Crypto.Specific.GF25519Bounded.add Crypto.Specific.GF25519Bounded.sub Crypto.Specific.GF25519Bounded.inv Crypto.Specific.GF25519Bounded.sqrt. *) 
+(*done-at-haskell-level: Extraction Inline Crypto.Specific.GF25519Bounded.mul Crypto.Specific.GF25519Bounded.add Crypto.Specific.GF25519Bounded.sub Crypto.Specific.GF25519Bounded.inv Crypto.Specific.GF25519Bounded.sqrt. *)
 
 Extraction Implicit Ed25519.SHA512 [ 1 ].
 Extract Constant Ed25519.SHA512 =>

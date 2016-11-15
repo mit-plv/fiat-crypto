@@ -1,6 +1,6 @@
 Require Export Crypto.Specific.GF25519Reflective.Common.
 Require Import Crypto.Specific.GF25519BoundedCommon.
-Require Import Crypto.Reflection.Z.Interpretations.
+Require Import Crypto.Reflection.Z.Interpretations64.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Application.
 Require Import Crypto.Reflection.MapInterp.
@@ -18,7 +18,7 @@ Lemma ExprBinOp_correct_and_bounded
           let Hy := let (Hx, Hy) := Hxy in Hy in
           let args := binop_args_to_bounded xy Hx Hy in
           match LiftOption.of'
-                  (ApplyInterpedAll (Interp (@BoundedWord64.interp_op) (MapInterp BoundedWord64.of_word64 ropW))
+                  (ApplyInterpedAll (Interp (@BoundedWordW.interp_op) (MapInterp BoundedWordW.of_wordW ropW))
                                     (LiftOption.to' (Some args)))
           with
           | Some _ => True
@@ -31,9 +31,9 @@ Lemma ExprBinOp_correct_and_bounded
           let Hx := let (Hx, Hy) := Hxy in Hx in
           let Hy := let (Hx, Hy) := Hxy in Hy in
           let args := binop_args_to_bounded (fst xy, snd xy) Hx Hy in
-          let x' := SmartVarfMap (fun _ : base_type => BoundedWord64.BoundedWordToBounds) args in
+          let x' := SmartVarfMap (fun _ : base_type => BoundedWordW.BoundedWordToBounds) args in
           match LiftOption.of'
-                  (ApplyInterpedAll (Interp (@ZBounds.interp_op) (MapInterp ZBounds.of_word64 ropW)) (LiftOption.to' (Some x')))
+                  (ApplyInterpedAll (Interp (@ZBounds.interp_op) (MapInterp ZBounds.of_wordW ropW)) (LiftOption.to' (Some x')))
           with
           | Some bounds => binop_bounds_good bounds = true
           | None => False

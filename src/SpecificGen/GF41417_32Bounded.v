@@ -78,7 +78,7 @@ Definition postfreezeW : fe41417_32W -> fe41417_32W :=
          (num_limbs := length_fe41417_32)
          modulusW
          ge_modulusW
-         (Interpretations.Word64.neg GF41417_32.int_width)
+         (Interpretations64.WordW.neg GF41417_32.int_width)
       ).
 
 Definition freezeW (f : fe41417_32W) : fe41417_32W := Eval cbv beta delta [prefreezeW postfreezeW] in postfreezeW (prefreezeW f).
@@ -117,7 +117,7 @@ Ltac lower_bound_minus_ge_modulus :=
   cbv [ge_modulus Let_In ModularBaseSystemListZOperations.cmovl ModularBaseSystemListZOperations.cmovne ModularBaseSystemListZOperations.neg];
   repeat break_if; Z.ltb_to_lt; subst; try omega;
     rewrite ?Z.land_0_l; auto;
-    change Interpretations.Word64.word64ToZ with word64ToZ;
+    change Interpretations64.WordW.wordWToZ with word64ToZ;
     etransitivity; try apply Z.land_upper_bound_r; instantiate; try omega;
     apply Z.ones_nonneg; instantiate; vm_compute; discriminate.
 
@@ -136,8 +136,8 @@ Proof.
   destruct_head' and.
   Z.ltb_to_lt.
   cbv [postfreezeW].
-  cbv [conditional_subtract_modulusW Interpretations.Word64.neg].
-  change word64ToZ with Interpretations.Word64.word64ToZ in *.
+  cbv [conditional_subtract_modulusW Interpretations64.WordW.neg].
+  change word64ToZ with Interpretations64.WordW.wordWToZ in *.
   rewrite Hgm.
 
   cbv [modulusW Tuple.map].
@@ -148,12 +148,12 @@ Proof.
 
   split.
   { match goal with
-    |- (_,word64ToZ (_ ^- (Interpretations.Word64.ZToWord64 ?x) ^& _)) = (_,_ - (?y &' _)) => assert (x = y) as Hxy by reflexivity; repeat rewrite <-Hxy; clear Hxy end.
+    |- (_,word64ToZ (_ ^- (Interpretations64.WordW.ZToWordW ?x) ^& _)) = (_,_ - (?y &' _)) => assert (x = y) as Hxy by reflexivity; repeat rewrite <-Hxy; clear Hxy end.
 
-  change ZToWord64 with Interpretations.Word64.ZToWord64 in *.
-  rewrite !Interpretations.Word64.word64ToZ_sub;
-  rewrite !Interpretations.Word64.word64ToZ_land;
-  rewrite !Interpretations.Word64.word64ToZ_ZToWord64;
+  change ZToWord64 with Interpretations64.WordW.ZToWordW in *.
+  rewrite !Interpretations64.WordW.wordWToZ_sub;
+  rewrite !Interpretations64.WordW.wordWToZ_land;
+  rewrite !Interpretations64.WordW.wordWToZ_ZToWordW;
   try match goal with
          | |- 0 <=  ModularBaseSystemListZOperations.neg _ _ < 2 ^ _ => apply ModularBaseSystemListZOperationsProofs.neg_range; omega
          | |- 0 <= _ < 2 ^ Z.of_nat _ => vm_compute; split; [refine (fun x => match x with eq_refl => I end) | reflexivity]
@@ -170,10 +170,10 @@ Proof.
 
 
   unfold_is_bounded.
-  change ZToWord64 with Interpretations.Word64.ZToWord64 in *.
-  rewrite !Interpretations.Word64.word64ToZ_sub;
-  rewrite !Interpretations.Word64.word64ToZ_land;
-  rewrite !Interpretations.Word64.word64ToZ_ZToWord64;
+  change ZToWord64 with Interpretations64.WordW.ZToWordW in *.
+  rewrite !Interpretations64.WordW.wordWToZ_sub;
+  rewrite !Interpretations64.WordW.wordWToZ_land;
+  rewrite !Interpretations64.WordW.wordWToZ_ZToWordW;
   repeat match goal with |- _ /\ _ => split; Z.ltb_to_lt end;
   try match goal with
          | |- 0 <=  ModularBaseSystemListZOperations.neg _ _ < 2 ^ _ => apply ModularBaseSystemListZOperationsProofs.neg_range; omega

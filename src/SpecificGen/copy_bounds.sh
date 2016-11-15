@@ -6,6 +6,10 @@ cd "$DIR"
 
 FILENAME="$1"
 V_FILE_STEM="${FILENAME%.*}"
+BIT_WIDTH=64
+case "$V_FILE_STEM" in
+    *_64) BIT_WIDTH=128;;
+esac
 
 if [ -z "$V_FILE_STEM" ]; then
     echo "USAGE: $0 JSON_FILE"
@@ -17,5 +21,5 @@ for ORIG in $(git ls-files "../Specific/**GF25519*.v" | grep -v "../Specific/GF2
     echo "$NEW"
     NEW_DIR="$(dirname "$NEW")"
     mkdir -p "$NEW_DIR" || exit $?
-    cat "$ORIG" | sed s'/Specific/SpecificGen/g' | sed s"/25519/${V_FILE_STEM}/g" > "$NEW" || exit $?
+    cat "$ORIG" | sed s"/64/${BIT_WIDTH}/g" | sed s'/Specific/SpecificGen/g' | sed s"/25519/${V_FILE_STEM}/g" > "$NEW" || exit $?
 done

@@ -25,6 +25,18 @@ Module Type BitSize.
   Axiom bit_width_pos : (0 < Z.of_nat bit_width)%Z.
 End BitSize.
 
+Module Import Bounds.
+  Record bounds := { lower : Z ; upper : Z }.
+End Bounds.
+Module Import BoundedWord.
+  Record BoundedWordGen wordW (is_bounded_by : _ -> _ -> _ -> Prop) :=
+    { lower : Z ; value : wordW ; upper : Z ;
+      in_bounds : is_bounded_by value lower upper }.
+  Global Arguments lower {_ _} _.
+  Global Arguments value {_ _} _.
+  Global Arguments upper {_ _} _.
+  Global Arguments in_bounds {_ _} _.
+End BoundedWord.
 Module InterpretationsGen (Bit : BitSize).
   Module Z.
     Definition interp_base_type (t : base_type) : Type := interp_base_type t.
@@ -94,7 +106,7 @@ Module InterpretationsGen (Bit : BitSize).
   End LiftOption.
 
   Module WordW.
-    Include BitSize.
+    Include Bit.
     Definition wordW := word bit_width.
     Delimit Scope wordW_scope with wordW.
     Bind Scope wordW_scope with wordW.
@@ -304,7 +316,8 @@ Module InterpretationsGen (Bit : BitSize).
   End WordW.
 
   Module ZBounds.
-    Record bounds := { lower : Z ; upper : Z }.
+    Export Bounds.
+    Definition bounds := bounds.
     Bind Scope bounds_scope with bounds.
     Definition t := option bounds. (* TODO?: Separate out the bounds computation from the overflow computation? e.g., have [safety := in_bounds | overflow] and [t := bounds * safety]? *)
     Bind Scope bounds_scope with t.
@@ -432,12 +445,11 @@ Module InterpretationsGen (Bit : BitSize).
   End ZBounds.
 
   Module BoundedWordW.
+    Export BoundedWord.
     Local Notation is_bounded_by value lower upper
       := ((0 <= lower /\ lower <= WordW.wordWToZ value <= upper /\ Z.log2 upper < Z.of_nat WordW.bit_width)%Z)
            (only parsing).
-    Record BoundedWord :=
-      { lower : Z ; value : WordW.wordW ; upper : Z ;
-        in_bounds : is_bounded_by value lower upper }.
+    Definition BoundedWord := BoundedWordGen WordW.wordW (fun value lower upper => is_bounded_by value lower upper).
     Bind Scope bounded_word_scope with BoundedWord.
     Definition t := option BoundedWord.
     Bind Scope bounded_word_scope with t.
@@ -498,7 +510,7 @@ Module InterpretationsGen (Bit : BitSize).
       := fun x => WordW.to_Z _ (to_wordW _ x).
 
     Definition BoundedWordToBounds (x : BoundedWord) : ZBounds.bounds
-      := {| ZBounds.lower := lower x ; ZBounds.upper := upper x |}.
+      := {| Bounds.lower := lower x ; Bounds.upper := upper x |}.
 
     Definition to_bounds' : t -> ZBounds.t
       := option_map BoundedWordToBounds.
@@ -513,7 +525,7 @@ Module InterpretationsGen (Bit : BitSize).
                (opB : ZBounds.t -> ZBounds.t)
                (pf : forall x l u,
                    opB (Some (BoundedWordToBounds x))
-                   = Some {| ZBounds.lower := l ; ZBounds.upper := u |}
+                   = Some {| Bounds.lower := l ; Bounds.upper := u |}
                    -> let val :=  opW (value x) in
                       is_bounded_by val l u)
       : t -> t
@@ -523,7 +535,7 @@ Module InterpretationsGen (Bit : BitSize).
               => match opB (Some (BoundedWordToBounds x))
                        as bop return opB (Some (BoundedWordToBounds x)) = bop -> t
                  with
-                 | Some (ZBounds.Build_bounds l u)
+                 | Some (Bounds.Build_bounds l u)
                    => fun Heq => Some {| lower := l ; value := opW (value x) ; upper := u;
                                          in_bounds := pf _ _ _ Heq |}
                  | None => fun _ => None
@@ -536,7 +548,7 @@ Module InterpretationsGen (Bit : BitSize).
                (opB : ZBounds.t -> ZBounds.t -> ZBounds.t)
                (pf : forall x y l u,
                    opB (Some (BoundedWordToBounds x)) (Some (BoundedWordToBounds y))
-                   = Some {| ZBounds.lower := l ; ZBounds.upper := u |}
+                   = Some {| Bounds.lower := l ; Bounds.upper := u |}
                    -> let val :=  opW (value x) (value y) in
                       is_bounded_by val l u)
       : t -> t -> t
@@ -546,7 +558,7 @@ Module InterpretationsGen (Bit : BitSize).
               => match opB (Some (BoundedWordToBounds x)) (Some (BoundedWordToBounds y))
                        as bop return opB (Some (BoundedWordToBounds x)) (Some (BoundedWordToBounds y)) = bop -> t
                  with
-                 | Some (ZBounds.Build_bounds l u)
+                 | Some (Bounds.Build_bounds l u)
                    => fun Heq => Some {| lower := l ; value := opW (value x) (value y) ; upper := u;
                                          in_bounds := pf _ _ _ _ Heq |}
                  | None => fun _ => None
@@ -559,7 +571,7 @@ Module InterpretationsGen (Bit : BitSize).
                (opB : ZBounds.t -> ZBounds.t -> ZBounds.t -> ZBounds.t -> ZBounds.t)
                (pf : forall x y z w l u,
                    opB (Some (BoundedWordToBounds x)) (Some (BoundedWordToBounds y)) (Some (BoundedWordToBounds z)) (Some (BoundedWordToBounds w))
-                   = Some {| ZBounds.lower := l ; ZBounds.upper := u |}
+                   = Some {| Bounds.lower := l ; Bounds.upper := u |}
                    -> let val :=  opW (value x) (value y) (value z) (value w) in
                       is_bounded_by val l u)
       : t -> t -> t -> t -> t
@@ -570,7 +582,7 @@ Module InterpretationsGen (Bit : BitSize).
                            (Some (BoundedWordToBounds z)) (Some (BoundedWordToBounds w))
                        as bop return opB _ _ _ _ = bop -> t
                  with
-                 | Some (ZBounds.Build_bounds l u)
+                 | Some (Bounds.Build_bounds l u)
                    => fun Heq => Some {| lower := l ; value := opW (value x) (value y) (value z) (value w) ; upper := u;
                                          in_bounds := pf _ _ _ _ _ _ Heq |}
                  | None => fun _ => None
@@ -590,8 +602,8 @@ Module InterpretationsGen (Bit : BitSize).
                        => progress (try unfold opB; try unfold opW)
                      | [ |- appcontext[ZBounds.t_map1 ?op] ] => let op' := head op in unfold op'
                      | [ |- appcontext[ZBounds.t_map2 ?op] ] => let op' := head op in unfold op'
-                     | [ |- appcontext[?op (ZBounds.Build_bounds _ _)] ] => let op' := head op in unfold op'
-                     | [ |- appcontext[?op (ZBounds.Build_bounds _ _) (ZBounds.Build_bounds _ _)] ] => unfold op
+                     | [ |- appcontext[?op (Bounds.Build_bounds _ _)] ] => let op' := head op in unfold op'
+                     | [ |- appcontext[?op (Bounds.Build_bounds _ _) (Bounds.Build_bounds _ _)] ] => unfold op
                      end
                    | progress cbv [BoundedWordToBounds ZBounds.SmartBuildBounds cmovne cmovl ModularBaseSystemListZOperations.neg] in *
                    | progress break_match

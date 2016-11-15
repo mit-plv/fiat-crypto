@@ -3,7 +3,8 @@ Require Import Coq.micromega.Psatz.
 Require Import Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Application.
-Require Import Crypto.Reflection.Z.Interpretations.
+Require Import Crypto.Reflection.Z.InterpretationsGen.
+Require Import Crypto.Reflection.Z.Interpretations128.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemListZOperationsProofs.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Bool.
@@ -13,34 +14,34 @@ Require Import Crypto.Util.Tactics.
 
 Definition proj_eq_rel {A B} (proj : A -> B) (x : A) (y : B) : Prop
   := proj x = y.
-Definition related'_Z {t} (x : BoundedWord64.BoundedWord) (y : Z.interp_base_type t) : Prop
-  := proj_eq_rel (BoundedWord64.to_Z' _) x y.
-Definition related_Z t : BoundedWord64.interp_base_type t -> Z.interp_base_type t -> Prop
+Definition related'_Z {t} (x : BoundedWordW.BoundedWord) (y : Z.interp_base_type t) : Prop
+  := proj_eq_rel (BoundedWordW.to_Z' _) x y.
+Definition related_Z t : BoundedWordW.interp_base_type t -> Z.interp_base_type t -> Prop
   := LiftOption.lift_relation (@related'_Z) t.
-Definition related'_word64 {t} (x : BoundedWord64.BoundedWord) (y : Word64.interp_base_type t) : Prop
-  := proj_eq_rel (BoundedWord64.to_word64' _) x y.
-Definition related_word64 t : BoundedWord64.interp_base_type t -> Word64.interp_base_type t -> Prop
-  := LiftOption.lift_relation (@related'_word64) t.
-Definition related_bounds t : BoundedWord64.interp_base_type t -> ZBounds.interp_base_type t -> Prop
-  := LiftOption.lift_relation2 (proj_eq_rel BoundedWord64.BoundedWordToBounds) t.
+Definition related'_wordW {t} (x : BoundedWordW.BoundedWord) (y : WordW.interp_base_type t) : Prop
+  := proj_eq_rel (BoundedWordW.to_wordW' _) x y.
+Definition related_wordW t : BoundedWordW.interp_base_type t -> WordW.interp_base_type t -> Prop
+  := LiftOption.lift_relation (@related'_wordW) t.
+Definition related_bounds t : BoundedWordW.interp_base_type t -> ZBounds.interp_base_type t -> Prop
+  := LiftOption.lift_relation2 (proj_eq_rel BoundedWordW.BoundedWordToBounds) t.
 
-Definition related_word64_Z t : Word64.interp_base_type t -> Z.interp_base_type t -> Prop
-  := proj_eq_rel (Word64.to_Z _).
+Definition related_wordW_Z t : WordW.interp_base_type t -> Z.interp_base_type t -> Prop
+  := proj_eq_rel (WordW.to_Z _).
 
-Definition related'_word64_bounds : Word64.word64 -> ZBounds.bounds -> Prop
-  := fun value b => (0 <= ZBounds.lower b /\ ZBounds.lower b <= Word64.word64ToZ value <= ZBounds.upper b /\ Z.log2 (ZBounds.upper b) < Z.of_nat Word64.bit_width)%Z.
-Definition related_word64_bounds : Word64.word64 -> ZBounds.t -> Prop
+Definition related'_wordW_bounds : WordW.wordW -> ZBounds.bounds -> Prop
+  := fun value b => (0 <= Bounds.lower b /\ Bounds.lower b <= WordW.wordWToZ value <= Bounds.upper b /\ Z.log2 (Bounds.upper b) < Z.of_nat WordW.bit_width)%Z.
+Definition related_wordW_bounds : WordW.wordW -> ZBounds.t -> Prop
   := fun value b => match b with
-                    | Some b => related'_word64_bounds value b
+                    | Some b => related'_wordW_bounds value b
                     | None => True
                     end.
-Definition related_word64_boundsi (t : base_type) : Word64.interp_base_type t -> ZBounds.interp_base_type t -> Prop
+Definition related_wordW_boundsi (t : base_type) : WordW.interp_base_type t -> ZBounds.interp_base_type t -> Prop
   := match t with
-     | TZ => related_word64_bounds
+     | TZ => related_wordW_bounds
      end.
-Definition related_word64_boundsi' (t : base_type) : ZBounds.bounds -> Word64.interp_base_type t -> Prop
-  := match t return ZBounds.bounds -> Word64.interp_base_type t -> Prop with
-     | TZ => fun x y => related'_word64_bounds y x
+Definition related_wordW_boundsi' (t : base_type) : ZBounds.bounds -> WordW.interp_base_type t -> Prop
+  := match t return ZBounds.bounds -> WordW.interp_base_type t -> Prop with
+     | TZ => fun x y => related'_wordW_bounds y x
      end.
 
 Local Notation related_op R interp_op1 interp_op2
@@ -57,21 +58,21 @@ Local Ltac related_const_t :=
   let v := fresh in
   let t := fresh in
   intros t v; destruct t; intros; simpl in *; hnf; simpl;
-  cbv [BoundedWord64.word64ToBoundedWord related'_Z LiftOption.of' related_Z related_word64 related'_word64 proj_eq_rel] in *;
+  cbv [BoundedWordW.wordWToBoundedWord related'_Z LiftOption.of' related_Z related_wordW related'_wordW proj_eq_rel] in *;
   break_innermost_match; simpl;
   first [ tauto
         | Z.ltb_to_lt;
-          pose proof (Word64.word64ToZ_log_bound v);
+          pose proof (WordW.wordWToZ_log_bound v);
           try omega ].
 
-Lemma related_Z_const : related_const related_Z Word64.interp_base_type BoundedWord64.of_word64 Word64.to_Z.
+Lemma related_Z_const : related_const related_Z WordW.interp_base_type BoundedWordW.of_wordW WordW.to_Z.
 Proof. related_const_t. Qed.
-Lemma related_bounds_const : related_const related_bounds Word64.interp_base_type BoundedWord64.of_word64 ZBounds.of_word64.
+Lemma related_bounds_const : related_const related_bounds WordW.interp_base_type BoundedWordW.of_wordW ZBounds.of_wordW.
 Proof. related_const_t. Qed.
-Lemma related_word64_const : related_const related_word64 Word64.interp_base_type BoundedWord64.of_word64 (fun _ x => x).
+Lemma related_wordW_const : related_const related_wordW WordW.interp_base_type BoundedWordW.of_wordW (fun _ x => x).
 Proof. related_const_t. Qed.
 
-Local Ltac related_word64_op_t_step :=
+Local Ltac related_wordW_op_t_step :=
   first [ exact I
         | reflexivity
         | progress intros
@@ -82,12 +83,12 @@ Local Ltac related_word64_op_t_step :=
         | progress destruct_head' prod
         | progress destruct_head' and
         | progress destruct_head' option
-        | progress destruct_head' BoundedWord64.BoundedWord
-        | progress cbv [related_word64 related_bounds related_Z LiftOption.lift_relation LiftOption.lift_relation2 LiftOption.of' smart_interp_flat_map BoundedWord64.BoundedWordToBounds BoundedWord64.to_bounds'] in *
+        | progress destruct_head' BoundedWordW.BoundedWord
+        | progress cbv [related_wordW related_bounds related_Z LiftOption.lift_relation LiftOption.lift_relation2 LiftOption.of' smart_interp_flat_map BoundedWordW.BoundedWordToBounds BoundedWordW.to_bounds'] in *
         | progress simpl @fst in *
         | progress simpl @snd in *
-        | progress simpl @BoundedWord64.upper in *
-        | progress simpl @BoundedWord64.lower in *
+        | progress simpl @BoundedWord.upper in *
+        | progress simpl @BoundedWord.lower in *
         | progress break_match
         | progress break_match_hyps
         | congruence
@@ -95,53 +96,53 @@ Local Ltac related_word64_op_t_step :=
           | [ H : ?op _ = Some _ |- _ ]
             => let H' := fresh in
                rename H into H';
-               first [ pose proof (@BoundedWord64.t_map1_correct _ _ _ _ _ H') as H; clear H'
-                     | pose proof (@BoundedWord64.t_map2_correct _ _ _ _ _ _ H') as H; clear H'
-                     | pose proof (@BoundedWord64.t_map4_correct _ _ _ _ _ _ H') as H; clear H' ];
+               first [ pose proof (@BoundedWordW.t_map1_correct _ _ _ _ _ H') as H; clear H'
+                     | pose proof (@BoundedWordW.t_map2_correct _ _ _ _ _ _ H') as H; clear H'
+                     | pose proof (@BoundedWordW.t_map4_correct _ _ _ _ _ _ H') as H; clear H' ];
                simpl in H
           | [ H : ?op _ = None |- _ ]
             => let H' := fresh in
                rename H into H';
-               first [ pose proof (@BoundedWord64.t_map1_correct_None _ _ _ _ H') as H; clear H'
-                     | pose proof (@BoundedWord64.t_map2_correct_None _ _ _ _ _ H') as H; clear H'
-                     | pose proof (@BoundedWord64.t_map4_correct_None _ _ _ _ _ H') as H; clear H' ];
+               first [ pose proof (@BoundedWordW.t_map1_correct_None _ _ _ _ H') as H; clear H'
+                     | pose proof (@BoundedWordW.t_map2_correct_None _ _ _ _ _ H') as H; clear H'
+                     | pose proof (@BoundedWordW.t_map4_correct_None _ _ _ _ _ H') as H; clear H' ];
                simpl in H
           end
-        | progress cbv [related'_word64 proj_eq_rel BoundedWord64.to_word64' BoundedWord64.boundedWordToWord64 BoundedWord64.value] in *
+        | progress cbv [related'_wordW proj_eq_rel BoundedWordW.to_wordW' BoundedWordW.boundedWordToWordW BoundedWord.value] in *
         | match goal with
           | [ H : ?op None _ = Some _ |- _ ] => progress simpl in H
           | [ H : ?op _ None = Some _ |- _ ] => progress simpl in H
           | [ H : ?op (Some _) (Some _) = Some _ |- _ ] => progress simpl in H
           | [ H : ?op (Some _) (Some _) = None |- _ ] => progress simpl in H
           end ].
-Local Ltac related_word64_op_t := repeat related_word64_op_t_step.
+Local Ltac related_wordW_op_t := repeat related_wordW_op_t_step.
 
-Lemma related_word64_t_map1 opW opB pf
+Lemma related_wordW_t_map1 opW opB pf
       sv1 sv2
-  : interp_flat_type_rel_pointwise2 (t:=Tbase TZ) related_word64 sv1 sv2
-    -> @related_word64 TZ (BoundedWord64.t_map1 opW opB pf sv1) (opW sv2).
+  : interp_flat_type_rel_pointwise2 (t:=Tbase TZ) related_wordW sv1 sv2
+    -> @related_wordW TZ (BoundedWordW.t_map1 opW opB pf sv1) (opW sv2).
 Proof.
-  cbv [interp_flat_type BoundedWord64.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
-  related_word64_op_t.
+  cbv [interp_flat_type BoundedWordW.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
+  related_wordW_op_t.
 Qed.
 
-Lemma related_word64_t_map2 opW opB pf
+Lemma related_wordW_t_map2 opW opB pf
       sv1 sv2
-  : interp_flat_type_rel_pointwise2 (t:=Prod (Tbase TZ) (Tbase TZ)) related_word64 sv1 sv2
-    -> @related_word64 TZ (BoundedWord64.t_map2 opW opB pf (fst sv1) (snd sv1)) (opW (fst sv2) (snd sv2)).
+  : interp_flat_type_rel_pointwise2 (t:=Prod (Tbase TZ) (Tbase TZ)) related_wordW sv1 sv2
+    -> @related_wordW TZ (BoundedWordW.t_map2 opW opB pf (fst sv1) (snd sv1)) (opW (fst sv2) (snd sv2)).
 Proof.
-  cbv [interp_flat_type BoundedWord64.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
-  related_word64_op_t.
+  cbv [interp_flat_type BoundedWordW.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
+  related_wordW_op_t.
 Qed.
 
-Lemma related_word64_t_map4 opW opB pf
+Lemma related_wordW_t_map4 opW opB pf
       sv1 sv2
-  : interp_flat_type_rel_pointwise2 (t:=Prod (Prod (Prod (Tbase TZ) (Tbase TZ)) (Tbase TZ)) (Tbase TZ)) related_word64 sv1 sv2
-    -> @related_word64 TZ (BoundedWord64.t_map4 opW opB pf (fst (fst (fst sv1))) (snd (fst (fst sv1))) (snd (fst sv1)) (snd sv1))
+  : interp_flat_type_rel_pointwise2 (t:=Prod (Prod (Prod (Tbase TZ) (Tbase TZ)) (Tbase TZ)) (Tbase TZ)) related_wordW sv1 sv2
+    -> @related_wordW TZ (BoundedWordW.t_map4 opW opB pf (fst (fst (fst sv1))) (snd (fst (fst sv1))) (snd (fst sv1)) (snd sv1))
                        (opW (fst (fst (fst sv2))) (snd (fst (fst sv2))) (snd (fst sv2)) (snd sv2)).
 Proof.
-  cbv [interp_flat_type BoundedWord64.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
-  related_word64_op_t.
+  cbv [interp_flat_type BoundedWordW.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
+  related_wordW_op_t.
 Qed.
 
 Lemma related_tuples_None_left
@@ -325,24 +326,24 @@ Qed.
 
 Local Arguments LiftOption.lift_relation _ _ _ _ !_ _ / .
 Local Arguments LiftOption.of' _ _ !_ / .
-Local Arguments BoundedWord64.BoundedWordToBounds !_ / .
+Local Arguments BoundedWordW.BoundedWordToBounds !_ / .
 
-Lemma related_word64_op : related_op related_word64 (@BoundedWord64.interp_op) (@Word64.interp_op).
+Lemma related_wordW_op : related_op related_wordW (@BoundedWordW.interp_op) (@WordW.interp_op).
 Proof.
   (let op := fresh in intros ?? op; destruct op; simpl);
-    try first [ apply related_word64_t_map1
-              | apply related_word64_t_map2
-              | apply related_word64_t_map4 ].
+    try first [ apply related_wordW_t_map1
+              | apply related_wordW_t_map2
+              | apply related_wordW_t_map4 ].
 Qed.
 
 Lemma related_bounds_t_map1 opW opB pf
       (HN : opB None = None)
       sv1 sv2
   : interp_flat_type_rel_pointwise2 (t:=Tbase TZ) related_bounds sv1 sv2
-    -> @related_bounds TZ (BoundedWord64.t_map1 opW opB pf sv1) (opB sv2).
+    -> @related_bounds TZ (BoundedWordW.t_map1 opW opB pf sv1) (opB sv2).
 Proof.
-  cbv [interp_flat_type BoundedWord64.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
-  related_word64_op_t.
+  cbv [interp_flat_type BoundedWordW.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
+  related_wordW_op_t.
 Qed.
 
 Lemma related_bounds_t_map2 opW opB pf
@@ -350,10 +351,10 @@ Lemma related_bounds_t_map2 opW opB pf
       (HN1 : forall v, opB v None = None)
       sv1 sv2
   : interp_flat_type_rel_pointwise2 (t:=Prod (Tbase TZ) (Tbase TZ)) related_bounds sv1 sv2
-    -> @related_bounds TZ (BoundedWord64.t_map2 opW opB pf (fst sv1) (snd sv1)) (opB (fst sv2) (snd sv2)).
+    -> @related_bounds TZ (BoundedWordW.t_map2 opW opB pf (fst sv1) (snd sv1)) (opB (fst sv2) (snd sv2)).
 Proof.
-  cbv [interp_flat_type BoundedWord64.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
-  related_word64_op_t.
+  cbv [interp_flat_type BoundedWordW.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
+  related_wordW_op_t.
 Qed.
 
 Lemma related_bounds_t_map4 opW opB pf
@@ -363,17 +364,17 @@ Lemma related_bounds_t_map4 opW opB pf
       (HN3 : forall x y z, opB x y z None = None)
       sv1 sv2
   : interp_flat_type_rel_pointwise2 (t:=Prod (Prod (Prod (Tbase TZ) (Tbase TZ)) (Tbase TZ)) (Tbase TZ)) related_bounds sv1 sv2
-    -> @related_bounds TZ (BoundedWord64.t_map4 opW opB pf (fst (fst (fst sv1))) (snd (fst (fst sv1))) (snd (fst sv1)) (snd sv1))
+    -> @related_bounds TZ (BoundedWordW.t_map4 opW opB pf (fst (fst (fst sv1))) (snd (fst (fst sv1))) (snd (fst sv1)) (snd sv1))
                        (opB (fst (fst (fst sv2))) (snd (fst (fst sv2))) (snd (fst sv2)) (snd sv2)).
 Proof.
-  cbv [interp_flat_type BoundedWord64.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
+  cbv [interp_flat_type BoundedWordW.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
   destruct_head prod.
   intros; destruct_head' prod.
-  progress cbv [related_word64 related_bounds related_Z LiftOption.lift_relation LiftOption.lift_relation2 LiftOption.of' smart_interp_flat_map BoundedWord64.BoundedWordToBounds BoundedWord64.to_bounds' proj_eq_rel] in *.
+  progress cbv [related_wordW related_bounds related_Z LiftOption.lift_relation LiftOption.lift_relation2 LiftOption.of' smart_interp_flat_map BoundedWordW.BoundedWordToBounds BoundedWordW.to_bounds' proj_eq_rel] in *.
   destruct_head' option; destruct_head_hnf' and; destruct_head_hnf' False; subst;
     try solve [ simpl; rewrite ?HN0, ?HN1, ?HN2, ?HN3; tauto ];
     [].
-  related_word64_op_t.
+  related_wordW_op_t.
 Qed.
 
 Local Arguments Tuple.lift_option : simpl never.
@@ -382,7 +383,7 @@ Local Arguments Tuple.map : simpl never.
 Local Arguments Tuple.map2 : simpl never.
 
 Local Arguments ZBounds.SmartBuildBounds _ _ / .
-Lemma related_bounds_op : related_op related_bounds (@BoundedWord64.interp_op) (@ZBounds.interp_op).
+Lemma related_bounds_op : related_op related_bounds (@BoundedWordW.interp_op) (@ZBounds.interp_op).
 Proof.
   let op := fresh in intros ?? op; destruct op; simpl.
   { apply related_bounds_t_map2; intros; destruct_head' option; reflexivity. }
@@ -397,7 +398,7 @@ Proof.
   { apply related_bounds_t_map4; intros; destruct_head' option; reflexivity. }
 Qed.
 
-Local Ltac Word64.Rewrites.word64_util_arith ::=
+Local Ltac WordW.Rewrites.wordW_util_arith ::=
       solve [ autorewrite with Zshift_to_pow; omega
             | autorewrite with Zshift_to_pow; nia
             | autorewrite with Zshift_to_pow; auto with zarith
@@ -407,7 +408,7 @@ Local Ltac Word64.Rewrites.word64_util_arith ::=
                     | nia
                     | etransitivity; [ eapply Z.div_le_mono | eapply Z.div_le_compat_l ];
                       auto with zarith ]
-            | apply Z.land_nonneg; Word64.Rewrites.word64_util_arith
+            | apply Z.land_nonneg; WordW.Rewrites.wordW_util_arith
             | eapply Z.le_lt_trans; [ eapply Z.log2_le_mono | eassumption ];
               instantiate; apply Z.min_case_strong; intros;
               first [ etransitivity; [ apply Z.land_upper_bound_l | ]; omega
@@ -416,20 +417,20 @@ Local Ltac Word64.Rewrites.word64_util_arith ::=
               apply Z.max_case_strong; intro;
               (eapply Z.le_lt_trans; [ eapply Z.log2_le_mono; eassumption | assumption ])
             | eapply Z.le_lt_trans; [ eapply Z.log2_le_mono, neg_upperbound | ];
-              Word64.Rewrites.word64_util_arith
+              WordW.Rewrites.wordW_util_arith
             | (progress unfold ModularBaseSystemListZOperations.cmovne, ModularBaseSystemListZOperations.cmovl, ModularBaseSystemListZOperations.neg); break_match;
-              Word64.Rewrites.word64_util_arith ].
+              WordW.Rewrites.wordW_util_arith ].
 Local Ltac related_Z_op_t_step :=
-  first [ progress related_word64_op_t_step
-        | progress cbv [related'_Z proj_eq_rel BoundedWord64.to_Z' BoundedWord64.to_word64' Word64.to_Z BoundedWord64.boundedWordToWord64 BoundedWord64.value] in *
-        | autorewrite with push_word64ToZ ].
+  first [ progress related_wordW_op_t_step
+        | progress cbv [related'_Z proj_eq_rel BoundedWordW.to_Z' BoundedWordW.to_wordW' WordW.to_Z BoundedWordW.boundedWordToWordW BoundedWord.value] in *
+        | autorewrite with push_wordWToZ ].
 Local Ltac related_Z_op_t := repeat related_Z_op_t_step.
 
 Local Notation is_bounded_by value lower upper
-  := ((0 <= lower /\ lower <= Word64.word64ToZ value <= upper /\ Z.log2 upper < Z.of_nat Word64.bit_width)%Z)
+  := ((0 <= lower /\ lower <= WordW.wordWToZ value <= upper /\ Z.log2 upper < Z.of_nat WordW.bit_width)%Z)
        (only parsing).
 Local Notation is_in_bounds value bounds
-  := (is_bounded_by value (ZBounds.lower bounds) (ZBounds.upper bounds))
+  := (is_bounded_by value (Bounds.lower bounds) (Bounds.upper bounds))
        (only parsing).
 
 Lemma related_Z_t_map1 opZ opW opB pf
@@ -437,12 +438,12 @@ Lemma related_Z_t_map1 opZ opW opB pf
           Some brs = opB (Some bxs)
           -> is_in_bounds x bxs
           -> is_in_bounds (opW x) brs
-          -> Word64.word64ToZ (opW x) = (opZ (Word64.word64ToZ x)))
+          -> WordW.wordWToZ (opW x) = (opZ (WordW.wordWToZ x)))
       sv1 sv2
   : interp_flat_type_rel_pointwise2 (t:=Tbase TZ) related_Z sv1 sv2
-    -> @related_Z TZ (BoundedWord64.t_map1 opW opB pf sv1) (opZ sv2).
+    -> @related_Z TZ (BoundedWordW.t_map1 opW opB pf sv1) (opZ sv2).
 Proof.
-  cbv [interp_flat_type BoundedWord64.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
+  cbv [interp_flat_type BoundedWordW.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
   related_Z_op_t.
   eapply H; eauto.
 Qed.
@@ -453,12 +454,12 @@ Lemma related_Z_t_map2 opZ opW opB pf
           -> is_in_bounds x bxs
           -> is_in_bounds y bys
           -> is_in_bounds (opW x y) brs
-          -> Word64.word64ToZ (opW x y) = (opZ (Word64.word64ToZ x) (Word64.word64ToZ y)))
+          -> WordW.wordWToZ (opW x y) = (opZ (WordW.wordWToZ x) (WordW.wordWToZ y)))
       sv1 sv2
   : interp_flat_type_rel_pointwise2 (t:=Prod (Tbase TZ) (Tbase TZ)) related_Z sv1 sv2
-    -> @related_Z TZ (BoundedWord64.t_map2 opW opB pf (fst sv1) (snd sv1)) (opZ (fst sv2) (snd sv2)).
+    -> @related_Z TZ (BoundedWordW.t_map2 opW opB pf (fst sv1) (snd sv1)) (opZ (fst sv2) (snd sv2)).
 Proof.
-  cbv [interp_flat_type BoundedWord64.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
+  cbv [interp_flat_type BoundedWordW.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
   related_Z_op_t.
   eapply H; eauto.
 Qed.
@@ -471,13 +472,13 @@ Lemma related_Z_t_map4 opZ opW opB pf
           -> is_in_bounds z bzs
           -> is_in_bounds w bws
           -> is_in_bounds (opW x y z w) brs
-          -> Word64.word64ToZ (opW x y z w) = (opZ (Word64.word64ToZ x) (Word64.word64ToZ y) (Word64.word64ToZ z) (Word64.word64ToZ w)))
+          -> WordW.wordWToZ (opW x y z w) = (opZ (WordW.wordWToZ x) (WordW.wordWToZ y) (WordW.wordWToZ z) (WordW.wordWToZ w)))
       sv1 sv2
   : interp_flat_type_rel_pointwise2 (t:=(Tbase TZ * Tbase TZ * Tbase TZ * Tbase TZ)%ctype) related_Z sv1 sv2
-    -> @related_Z TZ (BoundedWord64.t_map4 opW opB pf (fst (fst (fst sv1))) (snd (fst (fst sv1))) (snd (fst sv1)) (snd sv1))
+    -> @related_Z TZ (BoundedWordW.t_map4 opW opB pf (fst (fst (fst sv1))) (snd (fst (fst sv1))) (snd (fst sv1)) (snd sv1))
                   (opZ (fst (fst (fst sv2))) (snd (fst (fst sv2))) (snd (fst sv2)) (snd sv2)).
 Proof.
-  cbv [interp_flat_type BoundedWord64.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
+  cbv [interp_flat_type BoundedWordW.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
   related_Z_op_t.
   eapply H; eauto.
 Qed.
@@ -488,15 +489,17 @@ Local Arguments related'_Z _ _ _ / .
 
 Local Ltac related_Z_op_fin_t_step :=
   first [ progress subst
+        | progress inversion_option
+        | progress ZBounds.inversion_bounds
+        | progress destruct_head' Bounds.bounds
         | progress destruct_head' ZBounds.bounds
         | progress destruct_head' and
-        | progress ZBounds.inversion_bounds
         | progress simpl in * |-
         | progress break_match_hyps
         | congruence
         | progress inversion_option
         | intro
-        | progress autorewrite with push_word64ToZ
+        | progress autorewrite with push_wordWToZ
         | match goal with
           | [ H : andb _ _ = true |- _ ] => rewrite Bool.andb_true_iff in H
           | [ H : context[Tuple.lift_option (Tuple.push_option _)] |- _ ]
@@ -505,11 +508,11 @@ Local Ltac related_Z_op_fin_t_step :=
         | progress Z.ltb_to_lt ].
 Local Ltac related_Z_op_fin_t := repeat related_Z_op_fin_t_step.
 
-Local Opaque Word64.bit_width.
+Local Opaque WordW.bit_width.
 
 Local Arguments ZBounds.neg _ !_ / .
 
-Lemma related_Z_op : related_op related_Z (@BoundedWord64.interp_op) (@Z.interp_op).
+Lemma related_Z_op : related_op related_Z (@BoundedWordW.interp_op) (@Z.interp_op).
 Proof.
   let op := fresh in intros ?? op; destruct op; simpl.
   { apply related_Z_t_map2; related_Z_op_fin_t. }
@@ -525,4 +528,4 @@ Proof.
 Qed.
 
 Create HintDb interp_related discriminated.
-Hint Resolve related_Z_op related_bounds_op related_word64_op related_Z_const related_bounds_const related_word64_const : interp_related.
+Hint Resolve related_Z_op related_bounds_op related_wordW_op related_Z_const related_bounds_const related_wordW_const : interp_related.
