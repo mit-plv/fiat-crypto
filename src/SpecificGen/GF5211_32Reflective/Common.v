@@ -350,7 +350,7 @@ Ltac t_correct_and_bounded ropZ_sig Hbounds H0 H1 args :=
   cbv [id
          binop_args_to_bounded unop_args_to_bounded unopWireToFE_args_to_bounded
          Relations.proj_eq_rel interp_flat_type_rel_pointwise2 SmartVarfMap interp_flat_type smart_interp_flat_map Application.all_binders_for fst snd BoundedWordW.to_wordW' BoundedWordW.boundedWordToWordW BoundedWord.value Application.ApplyInterpedAll Application.fst_binder Application.snd_binder interp_flat_type_rel_pointwise2_gen_Prop Relations.related_wordW_boundsi' Relations.related'_wordW_bounds Bounds.upper Bounds.lower Application.remove_all_binders WordW.to_Z] in Hbounds_left, Hbounds_right;
-  match goal with
+  lazymatch goal with
   | [ |- fe5211_32WToZ ?x = _ /\ _ ]
     => generalize dependent x; intros
   | [ |- wire_digitsWToZ ?x = _ /\ _ ]
@@ -358,7 +358,7 @@ Ltac t_correct_and_bounded ropZ_sig Hbounds H0 H1 args :=
   | [ |- _ = _ ]
     => exact Hbounds_left
   end;
-  cbv [interp_flat_type WordW.interp_base_type remove_all_binders] in *;
+  cbv [interp_type interp_type_gen interp_type_gen_hetero interp_flat_type WordW.interp_base_type remove_all_binders] in *;
   destruct_head' prod;
   change word64ToZ with WordW.wordWToZ in *;
   (split; [ exact Hbounds_left | ]);
