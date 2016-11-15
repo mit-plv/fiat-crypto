@@ -50,10 +50,12 @@ UNMADE_VOFILES := src/SpecificGen/%
 COQ_VOFILES := $(filter-out $(UNMADE_VOFILES),$(VOFILES))
 SPECIFIC_VO := $(filter src/Specific/%,$(VOFILES))
 SPECIFIC_GEN_VO := $(filter src/SpecificGen/%,$(VOFILES))
+SMALL_SPECIFIC_GEN_VO := $(filter-out src/SpecificGen/GF5211_32% src/SpecificGen/GF41417_32%,$(SPECIFIC_GEN_VO))
 NON_SPECIFIC_VO := $(filter-out $(SPECIFIC_VO),$(VO_FILES))
 
 specific: $(SPECIFIC_VO) coqprime
-specific-gen: $(SPECIFIC_VO) coqprime
+specific-gen: $(SPECIFIC_GEN_VO) coqprime
+small-specific-gen: $(SMALL_SPECIFIC_GEN_VO) coqprime
 non-specific: $(NON_SPECIFIC_VO) coqprime
 coq: $(COQ_VOFILES) coqprime
 
