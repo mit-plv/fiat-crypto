@@ -372,14 +372,6 @@ Local Transparent Z.shiftr Z.shiftl Z.land Z.mul Z.add Z.sub Z.lor Let_In Z.eqb 
 
 Definition sqrt_m1 := Eval vm_compute in (pow (encode (F.of_Z _ 2)) (pow2_chain (Z.to_pos ((modulus - 1) / 4)))).
 
-Lemma sqrt_m1_correct : rep (mul sqrt_m1 sqrt_m1) (F.opp 1%F).
-Proof.
-  cbv [rep].
-  apply F.eq_to_Z_iff.
-  vm_compute.
-  reflexivity.
-Qed.
-
 Local Opaque Z.shiftr Z.shiftl Z.land Z.mul Z.add Z.sub Z.lor Let_In Z.eqb Z.ltb andb.
 
 Definition inv_sig (f : fe41417_32) :
