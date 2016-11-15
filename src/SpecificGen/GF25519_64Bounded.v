@@ -286,9 +286,9 @@ Proof.
   exact (proj2_sig (eqbW_sig f' g')).
 Qed.
 
-(* TODO(jgross): use NToWord or such for this constant too *)
-Definition sqrt_m1W : fe25519_64W :=
+Definition sqrt_m1W' : fe25519_64W :=
   Eval vm_compute in fe25519_64ZToW sqrt_m1.
+Definition sqrt_m1W := Eval cbv [sqrt_m1W' fe25519_64W_word64ize word64ize andb opt.word64ToZ opt.word64ize opt.Zleb Z.compare CompOpp Pos.compare Pos.compare_cont] in fe25519_64W_word64ize sqrt_m1W'.
 
 Definition GF25519_64sqrt x : GF25519_64.fe25519_64 :=
   dlet powx := powW (fe25519_64ZToW x) (chain GF25519_64.sqrt_ec) in

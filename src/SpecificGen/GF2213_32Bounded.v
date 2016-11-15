@@ -286,9 +286,9 @@ Proof.
   exact (proj2_sig (eqbW_sig f' g')).
 Qed.
 
-(* TODO(jgross): use NToWord or such for this constant too *)
-Definition sqrt_m1W : fe2213_32W :=
+Definition sqrt_m1W' : fe2213_32W :=
   Eval vm_compute in fe2213_32ZToW sqrt_m1.
+Definition sqrt_m1W := Eval cbv [sqrt_m1W' fe2213_32W_word64ize word64ize andb opt.word64ToZ opt.word64ize opt.Zleb Z.compare CompOpp Pos.compare Pos.compare_cont] in fe2213_32W_word64ize sqrt_m1W'.
 
 Definition GF2213_32sqrt x : GF2213_32.fe2213_32 :=
   dlet powx := powW (fe2213_32ZToW x) (chain GF2213_32.sqrt_ec) in
