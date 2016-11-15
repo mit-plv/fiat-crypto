@@ -195,6 +195,16 @@ Section language.
       | Abs {src dst} : (var src -> expr dst) -> expr (Arrow src dst).
       Bind Scope expr_scope with expr.
       Global Coercion Return : exprf >-> expr.
+      Definition UnReturn {t} (e : expr (Tflat t)) : exprf t
+        := match e with
+           | Return _ v => v
+           | Abs _ _ _ => I
+           end.
+      Definition UnAbs {src dst} (e : expr (Arrow src dst)) : var src -> expr dst
+        := match e with
+           | Return _ _ => I
+           | Abs _ _ f => f
+           end.
       (** Sometimes, we want to deal with partially-interpreted
           expressions, things like [prod (exprf A) (exprf B)] rather
           than [exprf (Prod A B)], or like [prod (var A) (var B)] when
