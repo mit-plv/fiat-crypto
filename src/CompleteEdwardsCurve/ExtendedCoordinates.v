@@ -96,22 +96,35 @@ Module Extended.
       Context {a_eq_minus1 : a = Fopp 1}.
       Context {twice_d:F} {Htwice_d:twice_d = d + d}.
       (** Second equation from <http://eprint.iacr.org/2008/522.pdf> section 3.1, also <https://www.hyperelliptic.org/EFD/g1p/auto-twisted-extended-1.html#addition-add-2008-hwcd-3> and <https://tools.ietf.org/html/draft-josefsson-eddsa-ed25519-03> *)
+      Section generic.
+        Context (F4 : Type)
+                (pair4 : F -> F -> F -> F -> F4)
+                (let_in : F -> (F -> F4) -> F4).
+        Local Notation "'slet' x := y 'in' z" := (let_in y (fun x => z)).
+        Definition add_coordinates_gen P1 P2 : F4 :=
+          let '(X1, Y1, Z1, T1) := P1 in
+          let '(X2, Y2, Z2, T2) := P2 in
+          slet  A := (Y1-X1)*(Y2-X2) in
+          slet  B := (Y1+X1)*(Y2+X2) in
+          slet  C := T1*twice_d*T2 in
+          slet  D := Z1*(Z2+Z2) in
+          slet  E := B-A in
+          slet  F := D-C in
+          slet  G := D+C in
+          slet  H := B+A in
+          slet X3 := E*F in
+          slet Y3 := G*H in
+          slet T3 := E*H in
+          slet Z3 := F*G in
+          pair4 X3 Y3 Z3 T3.
+      End generic.
       Definition add_coordinates P1 P2 : F*F*F*F :=
-        let '(X1, Y1, Z1, T1) := P1 in
-        let '(X2, Y2, Z2, T2) := P2 in
-        let  A := (Y1-X1)*(Y2-X2) in
-        let  B := (Y1+X1)*(Y2+X2) in
-        let  C := T1*twice_d*T2 in
-        let  D := Z1*(Z2+Z2) in
-        let  E := B-A in
-        let  F := D-C in
-        let  G := D+C in
-        let  H := B+A in
-        let X3 := E*F in
-        let Y3 := G*H in
-        let T3 := E*H in
-        let Z3 := F*G in
-        (X3, Y3, Z3, T3).
+        Eval cbv beta delta [add_coordinates_gen] in
+          @add_coordinates_gen
+            (F*F*F*F)
+            (fun X3 Y3 Z3 T3 => (X3, Y3, Z3, T3))
+            (fun x f => let y := x in f y)
+            P1 P2.
 
       Local Hint Unfold E.add E.coordinates add_coordinates : bash.
 
