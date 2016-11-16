@@ -344,28 +344,28 @@ Defined.
 Definition ApplyUnOp {interp_base_type var} (f : exprUnOp interp_base_type var) : exprArg interp_base_type var -> exprArg interp_base_type var
   := fun x
      => LetIn (UnReturn (unop_make_args x))
-              (fun k => UnReturn (Apply (n:=length_fe25519_64) f k)).
+              (fun k => UnReturn (Apply length_fe25519_64 f k)).
 Definition ApplyBinOp {interp_base_type var} (f : exprBinOp interp_base_type var) : exprArg interp_base_type var -> exprArg interp_base_type var -> exprArg interp_base_type var
   := fun x y
      => LetIn (UnReturn (unop_make_args x))
               (fun x'
                => LetIn (UnReturn (unop_make_args y))
                         (fun y'
-                         => UnReturn (Apply (n:=length_fe25519_64)
-                                            (Apply (n:=length_fe25519_64)
+                         => UnReturn (Apply length_fe25519_64
+                                            (Apply length_fe25519_64
                                                    f x') y'))).
 Definition ApplyUnOpFEToWire {interp_base_type var} (f : exprUnOpFEToWire interp_base_type var) : exprArg interp_base_type var -> exprArgWire interp_base_type var
   := fun x
      => LetIn (UnReturn (unop_make_args x))
-              (fun k => UnReturn (Apply (n:=length_fe25519_64) f k)).
+              (fun k => UnReturn (Apply length_fe25519_64 f k)).
 Definition ApplyUnOpWireToFE {interp_base_type var} (f : exprUnOpWireToFE interp_base_type var) : exprArgWire interp_base_type var -> exprArg interp_base_type var
   := fun x
      => LetIn (UnReturn (unop_wire_make_args x))
-              (fun k => UnReturn (Apply (n:=List.length wire_widths) f k)).
+              (fun k => UnReturn (Apply (List.length wire_widths) f k)).
 Definition ApplyUnOpFEToZ {interp_base_type var} (f : exprUnOpFEToZ interp_base_type var) : exprArg interp_base_type var -> exprZ interp_base_type var
   := fun x
      => LetIn (UnReturn (unop_make_args x))
-              (fun k => UnReturn (Apply (n:=length_fe25519_64) f k)).
+              (fun k => UnReturn (Apply length_fe25519_64 f k)).
 
 
 (* FIXME TODO(jgross): This is a horrible tactic.  We should unify the
