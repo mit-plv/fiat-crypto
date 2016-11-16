@@ -54,7 +54,7 @@ Declare Reduction asm_interp
             Z.interp_op Z.interp_base_type
             Z.Syntax.interp_op Z.Syntax.interp_base_type
             mapf_interp_flat_type map_interp WordW.interp_base_type MapInterp mapf_interp word64ize rword64ize
-            Interp interp interp_flat_type interpf interp_flat_type fst snd].
+            Interp interp interp_flat_type interpf interpf_step interp_flat_type fst snd].
 Ltac asm_interp
   := cbv beta iota delta
          [id

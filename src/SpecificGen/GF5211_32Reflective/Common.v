@@ -37,11 +37,34 @@ Definition ExprUnOpWireToFET : type base_type.
 Proof. make_type_from (uncurry_unop_wire_digits unpack). Defined.
 Definition ExprUnOpFEToWireT : type base_type.
 Proof. make_type_from (uncurry_unop_fe5211_32 pack). Defined.
+Definition ExprArgT : flat_type base_type
+  := Eval compute in remove_all_binders ExprUnOpT.
+Definition ExprArgWireT : flat_type base_type
+  := Eval compute in remove_all_binders ExprUnOpFEToWireT.
+Definition ExprArgRevT : flat_type base_type
+  := Eval compute in all_binders_for ExprUnOpT.
+Definition ExprArgWireRevT : flat_type base_type
+  := Eval compute in all_binders_for ExprUnOpWireToFET.
+Definition ExprZ : Type := Expr (Tbase TZ).
 Definition ExprBinOp : Type := Expr ExprBinOpT.
 Definition ExprUnOp : Type := Expr ExprUnOpT.
 Definition ExprUnOpFEToZ : Type := Expr ExprUnOpFEToZT.
 Definition ExprUnOpWireToFE : Type := Expr ExprUnOpWireToFET.
 Definition ExprUnOpFEToWire : Type := Expr ExprUnOpFEToWireT.
+Definition ExprArg : Type := Expr ExprArgT.
+Definition ExprArgWire : Type := Expr ExprArgWireT.
+Definition ExprArgRev : Type := Expr ExprArgRevT.
+Definition ExprArgWireRev : Type := Expr ExprArgWireRevT.
+Definition exprZ interp_base_type var : Type := expr base_type interp_base_type op (var:=var) (Tbase TZ).
+Definition exprBinOp interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprBinOpT.
+Definition exprUnOp interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprUnOpT.
+Definition exprUnOpFEToZ interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprUnOpFEToZT.
+Definition exprUnOpWireToFE interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprUnOpWireToFET.
+Definition exprUnOpFEToWire interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprUnOpFEToWireT.
+Definition exprArg interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprArgT.
+Definition exprArgWire interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprArgWireT.
+Definition exprArgRev interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprArgRevT.
+Definition exprArgWireRev interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprArgWireRevT.
 
 Local Ltac bounds_from_list ls :=
   lazymatch (eval hnf in ls) with
@@ -224,6 +247,33 @@ Local Ltac get_len T :=
   | _ => constr:(1%nat)
   end.
 
+Ltac assoc_right_tuple x so_far :=
+  let t := type of x in
+  lazymatch (eval hnf in t) with
+  | prod _ _ => let so_far := assoc_right_tuple (snd x) so_far in
+                assoc_right_tuple (fst x) so_far
+  | _ => lazymatch so_far with
+         | @None => x
+         | _ => constr:((x, so_far))
+         end
+  end.
+
+Local Ltac make_args x :=
+  let x' := fresh "x'" in
+  compute in x |- *;
+  let t := match type of x with @expr _ _ _ _ (Tflat _ ?t) => t end in
+  let t' := match goal with |- @expr _ _ _ _ (Tflat _ ?t) => t end in
+  refine (LetIn (UnReturn x) _);
+  let x'' := fresh "x''" in
+  intro x'';
+  let xv := assoc_right_tuple x'' (@None) in
+  refine (SmartVarf (xv : interp_flat_type _ t')).
+
+Definition unop_make_args {interp_base_type var} (x : exprArg interp_base_type var) : exprArgRev interp_base_type var.
+Proof. make_args x. Defined.
+Definition unop_wire_make_args {interp_base_type var} (x : exprArgWire interp_base_type var) : exprArgWireRev interp_base_type var.
+Proof. make_args x. Defined.
+
 Local Ltac args_to_bounded x H :=
   let x' := fresh in
   set (x' := x);
@@ -255,17 +305,6 @@ Proof.
   let v := app_tuples (unop_args_to_bounded (fst x) H) (unop_args_to_bounded (snd x) H') in
   exact v.
 Defined.
-
-Ltac assoc_right_tuple x so_far :=
-  let t := type of x in
-  lazymatch (eval hnf in t) with
-  | prod _ _ => let so_far := assoc_right_tuple (snd x) so_far in
-                assoc_right_tuple (fst x) so_far
-  | _ => lazymatch so_far with
-         | @None => x
-         | _ => constr:((x, so_far))
-         end
-  end.
 
 Local Ltac make_bounds_prop bounds orig_bounds :=
   let bounds' := fresh "bounds'" in
@@ -301,6 +340,33 @@ Definition unopFEToZ_bounds_good (bounds : interp_flat_type (fun _ => ZBounds.bo
 Proof.
   refine (let (l, u) := bounds in ((0 <=? l) && (u <=? 1))%Z%bool).
 Defined.
+
+Definition ApplyUnOp {interp_base_type var} (f : exprUnOp interp_base_type var) : exprArg interp_base_type var -> exprArg interp_base_type var
+  := fun x
+     => LetIn (UnReturn (unop_make_args x))
+              (fun k => UnReturn (Apply (n:=length_fe5211_32) f k)).
+Definition ApplyBinOp {interp_base_type var} (f : exprBinOp interp_base_type var) : exprArg interp_base_type var -> exprArg interp_base_type var -> exprArg interp_base_type var
+  := fun x y
+     => LetIn (UnReturn (unop_make_args x))
+              (fun x'
+               => LetIn (UnReturn (unop_make_args y))
+                        (fun y'
+                         => UnReturn (Apply (n:=length_fe5211_32)
+                                            (Apply (n:=length_fe5211_32)
+                                                   f x') y'))).
+Definition ApplyUnOpFEToWire {interp_base_type var} (f : exprUnOpFEToWire interp_base_type var) : exprArg interp_base_type var -> exprArgWire interp_base_type var
+  := fun x
+     => LetIn (UnReturn (unop_make_args x))
+              (fun k => UnReturn (Apply (n:=length_fe5211_32) f k)).
+Definition ApplyUnOpWireToFE {interp_base_type var} (f : exprUnOpWireToFE interp_base_type var) : exprArgWire interp_base_type var -> exprArg interp_base_type var
+  := fun x
+     => LetIn (UnReturn (unop_wire_make_args x))
+              (fun k => UnReturn (Apply (n:=List.length wire_widths) f k)).
+Definition ApplyUnOpFEToZ {interp_base_type var} (f : exprUnOpFEToZ interp_base_type var) : exprArg interp_base_type var -> exprZ interp_base_type var
+  := fun x
+     => LetIn (UnReturn (unop_make_args x))
+              (fun k => UnReturn (Apply (n:=length_fe5211_32) f k)).
+
 
 (* FIXME TODO(jgross): This is a horrible tactic.  We should unify the
     various kinds of correct and boundedness, and abstract in Gallina
