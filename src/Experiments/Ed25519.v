@@ -189,7 +189,8 @@ Proof. vm_decide. Qed.
 Definition ErepAdd :=
   (@ExtendedCoordinates.Extended.add _ _ _ _ _ _ _ _ _ _
                                      a d GF25519Bounded.field25519 twedprm_ERep _
-                                     eq_a_minus1 twice_d (eq_refl _) ).
+                                     eq_a_minus1 twice_d (eq_refl _)
+                                     _ (fun _ _ => reflexivity _)).
 
 Local Coercion Z.of_nat : nat >-> Z.
 Definition ERepSel : bool -> Erep -> Erep -> Erep := fun b x y => if b then y else x.
