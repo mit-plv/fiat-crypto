@@ -205,6 +205,22 @@ Section language.
            | Return _ _ => I
            | Abs _ _ f => f
            end.
+      Definition UnReturn_eta {t} (e : expr (Tflat t)) : Return (UnReturn e) = e
+        := match e in expr T return match T return expr T -> Prop with
+                                    | Tflat _ => fun e => Return (UnReturn e) = e
+                                    | _ => fun _ => I = I
+                                    end e with
+           | Return _ _ => eq_refl
+           | Abs _ _ _ => eq_refl
+           end.
+      Definition UnAbs_eta {src dst} (e : expr (Arrow src dst)) : Abs (UnAbs e) = e
+        := match e in expr T return match T return expr T -> Prop with
+                                    | Arrow src dst => fun e => Abs (UnAbs e) = e
+                                    | _ => fun _ => I = I
+                                    end e with
+           | Return _ _ => eq_refl
+           | Abs _ _ _ => eq_refl
+           end.
       (** Sometimes, we want to deal with partially-interpreted
           expressions, things like [prod (exprf A) (exprf B)] rather
           than [exprf (Prod A B)], or like [prod (var A) (var B)] when
@@ -422,6 +438,8 @@ Global Arguments Abs {_ _ _ _ _ _} _ : assert.
 Global Arguments SmartAbs {_ _ _ _ _ _} _ : assert.
 Global Arguments UnReturn {_ _ _ _ _} _ : assert.
 Global Arguments UnAbs {_ _ _ _ _ _} _ _ : assert.
+Global Arguments UnReturn_eta {_ _ _ _ _} _ : assert.
+Global Arguments UnAbs_eta {_ _ _ _ _ _} _ : assert.
 Global Arguments flat_interp_tuple' {_ _ _ _} _ : assert.
 Global Arguments flat_interp_tuple {_ _ _ _} _ : assert.
 Global Arguments flat_interp_untuple' {_ _ _ _} _ : assert.
