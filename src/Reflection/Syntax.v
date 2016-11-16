@@ -254,6 +254,17 @@ Section language.
            | Tbase _ => val _
            | Prod A B => (@SmartValf T val A, @SmartValf T val B)
            end.
+      Fixpoint SmartArrow (A : flat_type) (B : type) : type
+        := match A with
+           | Tbase A' => Arrow A' B
+           | Prod A0 A1
+             => SmartArrow A0 (SmartArrow A1 B)
+           end.
+      Fixpoint SmartAbs {A B} {struct A} : forall (f : exprf A -> expr B), expr (SmartArrow A B)
+        := match A return (exprf A -> expr B) -> expr (SmartArrow A B) with
+           | Tbase x => fun f => Abs (fun x => f (Var x))
+           | Prod x y => fun f => @SmartAbs x _ (fun x' => @SmartAbs y _ (fun y' => f (Pair x' y')))
+           end.
 
       (** [SmartVar] is like [Var], except that it inserts
           pair-projections and [Pair] as necessary to handle
@@ -280,7 +291,9 @@ Section language.
     Section interp.
       Context (interp_op : forall src dst, op src dst -> interp_flat_type src -> interp_flat_type dst).
 
-      Fixpoint interpf {t} (e : @exprf interp_flat_type t) : interp_flat_type t
+      Definition interpf_step
+                 (interpf : forall {t} (e : @exprf interp_flat_type t), interp_flat_type t)
+                 {t} (e : @exprf interp_flat_type t) : interp_flat_type t
         := match e in exprf t return interp_flat_type t with
            | Const _ x => x
            | Var _ x => x
@@ -288,6 +301,10 @@ Section language.
            | LetIn _ ex _ eC => dlet x := @interpf _ ex in @interpf _ (eC x)
            | Pair _ ex _ ey => (@interpf _ ex, @interpf _ ey)
            end.
+
+      Fixpoint interpf {t} e
+        := @interpf_step (@interpf) t e.
+
       Fixpoint interp {t} (e : @expr interp_type t) : interp_type t
         := match e in expr t return interp_type t with
            | Return _ x => interpf x
@@ -402,6 +419,7 @@ Global Arguments LetIn {_ _ _ _ _} _ {_} _.
 Global Arguments Pair {_ _ _ _ _} _ {_} _.
 Global Arguments Return {_ _ _ _ _} _.
 Global Arguments Abs {_ _ _ _ _ _} _.
+Global Arguments SmartAbs {_ _ _ _ _ _} _.
 Global Arguments UnReturn {_ _ _ _ _} _.
 Global Arguments UnAbs {_ _ _ _ _ _} _.
 Global Arguments flat_interp_tuple' {_ _ _ _} _.

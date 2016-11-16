@@ -55,16 +55,16 @@ Definition ExprArg : Type := Expr ExprArgT.
 Definition ExprArgWire : Type := Expr ExprArgWireT.
 Definition ExprArgRev : Type := Expr ExprArgRevT.
 Definition ExprArgWireRev : Type := Expr ExprArgWireRevT.
-Definition exprZ var : Type := expr base_type WordW.interp_base_type op (var:=var) (Tbase TZ).
-Definition exprBinOp var : Type := expr base_type WordW.interp_base_type op (var:=var) ExprBinOpT.
-Definition exprUnOp var : Type := expr base_type WordW.interp_base_type op (var:=var) ExprUnOpT.
-Definition exprUnOpFEToZ var : Type := expr base_type WordW.interp_base_type op (var:=var) ExprUnOpFEToZT.
-Definition exprUnOpWireToFE var : Type := expr base_type WordW.interp_base_type op (var:=var) ExprUnOpWireToFET.
-Definition exprUnOpFEToWire var : Type := expr base_type WordW.interp_base_type op (var:=var) ExprUnOpFEToWireT.
-Definition exprArg var : Type := expr base_type WordW.interp_base_type op (var:=var) ExprArgT.
-Definition exprArgWire var : Type := expr base_type WordW.interp_base_type op (var:=var) ExprArgWireT.
-Definition exprArgRev var : Type := expr base_type WordW.interp_base_type op (var:=var) ExprArgRevT.
-Definition exprArgWireRev var : Type := expr base_type WordW.interp_base_type op (var:=var) ExprArgWireRevT.
+Definition exprZ interp_base_type var : Type := expr base_type interp_base_type op (var:=var) (Tbase TZ).
+Definition exprBinOp interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprBinOpT.
+Definition exprUnOp interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprUnOpT.
+Definition exprUnOpFEToZ interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprUnOpFEToZT.
+Definition exprUnOpWireToFE interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprUnOpWireToFET.
+Definition exprUnOpFEToWire interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprUnOpFEToWireT.
+Definition exprArg interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprArgT.
+Definition exprArgWire interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprArgWireT.
+Definition exprArgRev interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprArgRevT.
+Definition exprArgWireRev interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprArgWireRevT.
 
 Local Ltac bounds_from_list ls :=
   lazymatch (eval hnf in ls) with
@@ -269,9 +269,9 @@ Local Ltac make_args x :=
   let xv := assoc_right_tuple x'' (@None) in
   refine (SmartVarf (xv : interp_flat_type _ t')).
 
-Definition unop_make_args {var} (x : exprArg var) : exprArgRev var.
+Definition unop_make_args {interp_base_type var} (x : exprArg interp_base_type var) : exprArgRev interp_base_type var.
 Proof. make_args x. Defined.
-Definition unop_wire_make_args {var} (x : exprArgWire var) : exprArgWireRev var.
+Definition unop_wire_make_args {interp_base_type var} (x : exprArgWire interp_base_type var) : exprArgWireRev interp_base_type var.
 Proof. make_args x. Defined.
 
 Local Ltac args_to_bounded x H :=
@@ -341,11 +341,11 @@ Proof.
   refine (let (l, u) := bounds in ((0 <=? l) && (u <=? 1))%Z%bool).
 Defined.
 
-Definition ApplyUnOp {var} (f : exprUnOp var) : exprArg var -> exprArg var
+Definition ApplyUnOp {interp_base_type var} (f : exprUnOp interp_base_type var) : exprArg interp_base_type var -> exprArg interp_base_type var
   := fun x
      => LetIn (UnReturn (unop_make_args x))
               (fun k => UnReturn (Apply (n:=length_fe25519) f k)).
-Definition ApplyBinOp {var} (f : exprBinOp var) : exprArg var -> exprArg var -> exprArg var
+Definition ApplyBinOp {interp_base_type var} (f : exprBinOp interp_base_type var) : exprArg interp_base_type var -> exprArg interp_base_type var -> exprArg interp_base_type var
   := fun x y
      => LetIn (UnReturn (unop_make_args x))
               (fun x'
@@ -354,15 +354,15 @@ Definition ApplyBinOp {var} (f : exprBinOp var) : exprArg var -> exprArg var -> 
                          => UnReturn (Apply (n:=length_fe25519)
                                             (Apply (n:=length_fe25519)
                                                    f x') y'))).
-Definition ApplyUnOpFEToWire {var} (f : exprUnOpFEToWire var) : exprArg var -> exprArgWire var
+Definition ApplyUnOpFEToWire {interp_base_type var} (f : exprUnOpFEToWire interp_base_type var) : exprArg interp_base_type var -> exprArgWire interp_base_type var
   := fun x
      => LetIn (UnReturn (unop_make_args x))
               (fun k => UnReturn (Apply (n:=length_fe25519) f k)).
-Definition ApplyUnOpWireToFE {var} (f : exprUnOpWireToFE var) : exprArgWire var -> exprArg var
+Definition ApplyUnOpWireToFE {interp_base_type var} (f : exprUnOpWireToFE interp_base_type var) : exprArgWire interp_base_type var -> exprArg interp_base_type var
   := fun x
      => LetIn (UnReturn (unop_wire_make_args x))
               (fun k => UnReturn (Apply (n:=List.length wire_widths) f k)).
-Definition ApplyUnOpFEToZ {var} (f : exprUnOpFEToZ var) : exprArg var -> exprZ var
+Definition ApplyUnOpFEToZ {interp_base_type var} (f : exprUnOpFEToZ interp_base_type var) : exprArg interp_base_type var -> exprZ interp_base_type var
   := fun x
      => LetIn (UnReturn (unop_make_args x))
               (fun k => UnReturn (Apply (n:=length_fe25519) f k)).
