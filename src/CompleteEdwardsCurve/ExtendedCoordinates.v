@@ -92,6 +92,35 @@ Module Extended.
     Global Instance Proper_to_twisted : Proper (eq==>E.eq) to_twisted. Proof. safe_bash. Qed.
     Lemma to_twisted_from_twisted P : E.eq (to_twisted (from_twisted P)) P. Proof. unsafe_bash. Qed.
 
+    Section Proper.
+      Global Instance point_Proper : Proper (fieldwise (n:=4) Feq ==> iff)
+                                            (fun P => let '(X,Y,Z,T) := P in onCurve((X/Z), (Y/Z)) /\ Z<>0 /\ Z*T=X*Y).
+      Proof.
+        repeat intro.
+        repeat match goal with
+               | _ => progress simpl in *
+               | [ H : prod _ _ |- _ ] => destruct H
+               | [ H : and _ _ |- _ ] => destruct H
+               | _ => reflexivity
+               | [ H : ?x = ?y |- _ ] => is_var x; rewrite H; clear x H
+               end.
+      Qed.
+      Global Instance point_Proper_impl
+        : Proper (fieldwise (n:=4) Feq ==> Basics.impl)
+                 (fun P => let '(X,Y,Z,T) := P in onCurve((X/Z), (Y/Z)) /\ Z<>0 /\ Z*T=X*Y).
+      Proof.
+        intros A B H H'.
+        apply (@point_Proper A B H); assumption.
+      Qed.
+      Global Instance point_Proper_flip_impl
+        : Proper (fieldwise (n:=4) Feq ==> Basics.flip Basics.impl)
+                 (fun P => let '(X,Y,Z,T) := P in onCurve((X/Z), (Y/Z)) /\ Z<>0 /\ Z*T=X*Y).
+      Proof.
+        intros A B H H'.
+        apply (@point_Proper A B H); assumption.
+      Qed.
+    End Proper.
+
     Section TwistMinus1.
       Context {a_eq_minus1 : a = Fopp 1}.
       Context {twice_d:F} {Htwice_d:twice_d = d + d}.
@@ -139,10 +168,15 @@ Module Extended.
         unsafe_bash.
       Qed.
 
+      Context {add_coordinates_opt}
+              {add_coordinates_opt_correct
+               : forall P1 P2, fieldwise (n:=4) Feq (add_coordinates_opt P1 P2) (add_coordinates P1 P2)}.
+
       Obligation Tactic := idtac.
-      Program Definition add (P Q:point) : point := add_coordinates (coordinates P) (coordinates Q).
+      Program Definition add_unopt (P Q:point) : point := add_coordinates (coordinates P) (coordinates Q).
       Next Obligation.
-        intros.
+        clear add_coordinates_opt add_coordinates_opt_correct.
+        intros P Q.
         pose proof (add_coordinates_correct P Q) as Hrep.
         pose proof Pre.unifiedAdd'_onCurve(a_nonzero:=E.nonzero_a)(a_square:=E.square_a)(d_nonsquare:=E.nonsquare_d)(char_gt_2:=E.char_gt_2) (E.coordinates (to_twisted P)) (E.coordinates (to_twisted Q)) as Hon.
         destruct P as [ [ [ [ ] ? ] ? ] [ HP [ ] ] ]; destruct Q as [ [ [ [ ] ? ] ? ] [ HQ [ ] ] ].
@@ -152,10 +186,19 @@ Module Extended.
         destruct Hrep as [HA HB]. rewrite <-!HA, <-!HB; clear HA HB.
         safe_bash.
       Qed.
+      Local Hint Unfold add_unopt : bash.
+
+      Program Definition add (P Q:point) : point := add_coordinates_opt (coordinates P) (coordinates Q).
+      Next Obligation.
+        intros; eapply point_Proper_flip_impl;
+          [ apply add_coordinates_opt_correct
+          | exact (proj2_sig (add_unopt P Q)) ].
+      Qed.
       Local Hint Unfold add : bash.
 
-      Lemma to_twisted_add P Q : E.eq (to_twisted (add P Q)) (E.add (to_twisted P) (to_twisted Q)).
+      Lemma to_twisted_add_unopt P Q : E.eq (to_twisted (add_unopt P Q)) (E.add (to_twisted P) (to_twisted Q)).
       Proof.
+        clear add_coordinates_opt add_coordinates_opt_correct.
         pose proof (add_coordinates_correct P Q) as Hrep.
         destruct P as [ [ [ [ ] ? ] ? ] [ HP [ ] ] ]; destruct Q as [ [ [ [ ] ? ] ? ] [ HQ [ ] ] ].
         autounfold with bash in *; simpl in *.
@@ -166,6 +209,33 @@ Module Extended.
           (rewrite_strat bottomup Hdiv in HB).
         rewrite <-!HA, <-!HB; clear HA HB.
         split; reflexivity.
+      Qed.
+
+      Lemma to_twisted_add P Q : E.eq (to_twisted (add P Q)) (E.add (to_twisted P) (to_twisted Q)).
+      Proof.
+        rewrite <- to_twisted_add_unopt.
+        { pose proof (add_coordinates_opt_correct (coordinates P) (coordinates Q)).
+          cbv [add add_unopt].
+          match goal with
+          | [ |- context[exist _ ?x ?p] ]
+            => generalize p; generalize dependent x
+          end.
+          match goal with
+          | [ |- context[exist ?P ?x (?p ?k)] ]
+            => generalize (p k);
+                 let H := fresh in intro H; change (P x) in H; revert H; generalize x
+          end.
+          clear add_coordinates_opt add_coordinates_opt_correct.
+          cbv [to_twisted coordinates proj1_sig E.eq E.coordinates fst snd] in *.
+          repeat match goal with
+                 | _ => intro
+                 | [ H : prod _ _ |- _ ] => destruct H
+                 | [ H : and _ _ |- _ ] => destruct H
+                 | _ => progress simpl in *
+                 | [ |- and _ _ ] => split
+                 | [ H : ?x = ?y |- context[?x] ] => is_var x; rewrite H
+                 | _ => reflexivity
+                 end. }
       Qed.
 
       Global Instance Proper_add : Proper (eq==>eq==>eq) add.
