@@ -48,3 +48,6 @@ Proof.
            | _ => solve[eauto]
          end.
 Qed.
+
+Global Instance eq_eta_Reflexive {T} : Reflexive (fun x y : T => x = y) | 1
+  := eq_Reflexive.
