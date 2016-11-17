@@ -130,6 +130,7 @@ Proof.
   etransitivity; [ apply Interp_Linearize | ].
   cbv beta iota delta [apply9 apply9_nd interp_type_gen_rel_pointwise radd_coordinatesT SmartArrow ExprArgT radd_coordinatesZ'' uncurried_add_coordinates uncurry_unop_fe25519 SmartAbs radd_coordinatesZ' exprArg Extended.add_coordinates_gen Interp interp unop_make_args SmartVarf smart_interp_flat_map length_fe25519].
   intros.
+  unfold UnReturn at 13 14 15 16.
   repeat match goal with
          | [ |- appcontext[@proj1_sig ?A ?B ?v] ]
            => let k := fresh "f" in
@@ -138,10 +139,9 @@ Proof.
               set (k := v);
                 set (k' := @proj1_sig A B k);
                 pose proof (proj2_sig k) as H;
-                change (proj1_sig k) with k' in H(*;
-                cbv [interp_type_gen_rel_pointwise ExprBinOpT uncurry_binop_fe25519] in H*)
+                change (proj1_sig k) with k' in H;
+                clearbody k'; clear k
          end.
-  unfold UnReturn at 13 14 15 16.
   unfold interpf; repeat_step_interpf.
   unfold interpf at 13 14 15; unfold interpf_step.
   cbv beta iota delta [Extended.add_coordinates].
