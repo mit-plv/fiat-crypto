@@ -3,7 +3,12 @@ language: generic
 sudo: required
 
 matrix:
+  fast_finish: true
   include:
+    - dist: trusty
+      env: COQ_VERSION="v8.6"   COQ_PACKAGE="coq"                            COQPRIME="coqprime"     PPA="ppa:jgross-h/coq-8.6-daily"
+    - dist: trusty
+      env: COQ_VERSION="v8.5"   COQ_PACKAGE="coq"                            COQPRIME="coqprime"     PPA="ppa:jgross-h/coq-8.5-daily"
     - dist: trusty
       env: COQ_VERSION="8.5pl3" COQ_PACKAGE="coq-8.5pl3 libcoq-ocaml-8.5pl3" COQPRIME="coqprime"     PPA="ppa:jgross-h/many-coq-versions"
     - dist: trusty
@@ -28,6 +33,9 @@ matrix:
 #      env: COQ_VERSION="8.4"    COQ_PACKAGE="coq-8.4 libcoq-ocaml-8.4"    COQPRIME="coqprime-8.4" PPA="ppa:jgross-h/many-coq-versions-ocaml-3-temp-while-over-quota-2"
     - dist: trusty
       env: COQ_VERSION="8.4"    COQ_PACKAGE="coq"        COQPRIME="coqprime-8.4" PPA=""
+  allow_failures:
+    - env: COQ_VERSION="v8.5"   COQ_PACKAGE="coq"                            COQPRIME="coqprime"     PPA="ppa:jgross-h/coq-8.5-daily"
+    - env: COQ_VERSION="v8.6"   COQ_PACKAGE="coq"                            COQPRIME="coqprime"     PPA="ppa:jgross-h/coq-8.6-daily"
 
 before_install:
   - if [ ! -z "$PPA" ]; then sudo add-apt-repository "$PPA" -y; fi
