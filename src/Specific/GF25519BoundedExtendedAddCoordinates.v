@@ -39,3 +39,19 @@ Proof.
   unfold GF25519BoundedCommon.eq.
   pose (add_coordinates_correct).
 Admitted.
+
+Definition add_coordinates twice_d P1 P2
+  := let '(P10, P11, P12, P13) := P1 in
+     let '(P20, P21, P22, P23) := P2 in
+     @GF25519BoundedAddCoordinates.add_coordinates
+       twice_d P10 P11 P12 P13 P20 P21 P22 P23.
+
+Lemma add_coordinates_correct_full twice_d P1 P2
+  : Tuple.fieldwise
+      GF25519BoundedCommon.eq
+      (add_coordinates twice_d P1 P2)
+      (@ExtendedCoordinates.Extended.add_coordinates
+         GF25519BoundedCommon.fe25519
+         GF25519Bounded.add GF25519Bounded.sub GF25519Bounded.mul twice_d P1 P2).
+Proof.
+Admitted.
