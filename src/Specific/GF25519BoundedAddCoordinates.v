@@ -6,9 +6,7 @@ Require Import Crypto.ModularArithmetic.ModularBaseSystem.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemProofs.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemOpt.
 Require Import Crypto.Specific.GF25519.
-Require Import Crypto.Specific.GF25519ExtendedAddCoordinates.
 Require Import Crypto.Specific.GF25519BoundedCommon.
-Require Import Crypto.Specific.GF25519Reflective.
 Require Import Crypto.Specific.GF25519ReflectiveAddCoordinates.
 Require Import Bedrock.Word Crypto.Util.WordUtil.
 Require Import Coq.Lists.List Crypto.Util.ListUtil.
