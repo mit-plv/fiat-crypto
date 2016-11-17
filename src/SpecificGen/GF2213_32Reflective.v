@@ -41,15 +41,12 @@ Definition rge_modulus : ExprUnOpFEToZ := Eval vm_compute in rge_modulusW.
 Definition rpack : ExprUnOpFEToWire := Eval vm_compute in rpackW.
 Definition runpack : ExprUnOpWireToFE := Eval vm_compute in runpackW.
 
-Definition rword64ize {t} (x : Expr t) : Expr t
-  := MapInterp (fun t => match t with TZ => word64ize end) x.
-
 Declare Reduction asm_interp
   := cbv beta iota delta
          [id
-            interp_bexpr interp_uexpr interp_uexpr_FEToWire interp_uexpr_FEToZ interp_uexpr_WireToFE
+            interp_bexpr interp_uexpr interp_uexpr_FEToWire interp_uexpr_FEToZ interp_uexpr_WireToFE interp_9_4expr
             radd rsub rmul ropp rprefreeze rge_modulus rpack runpack
-            curry_binop_fe2213_32W curry_unop_fe2213_32W curry_unop_wire_digitsW
+            curry_binop_fe2213_32W curry_unop_fe2213_32W curry_unop_wire_digitsW curry_9op_fe2213_32W
             WordW.interp_op WordW.interp_base_type
             Z.interp_op Z.interp_base_type
             Z.Syntax.interp_op Z.Syntax.interp_base_type
@@ -58,9 +55,9 @@ Declare Reduction asm_interp
 Ltac asm_interp
   := cbv beta iota delta
          [id
-            interp_bexpr interp_uexpr interp_uexpr_FEToWire interp_uexpr_FEToZ interp_uexpr_WireToFE
+            interp_bexpr interp_uexpr interp_uexpr_FEToWire interp_uexpr_FEToZ interp_uexpr_WireToFE interp_9_4expr
             radd rsub rmul ropp rprefreeze rge_modulus rpack runpack
-            curry_binop_fe2213_32W curry_unop_fe2213_32W curry_unop_wire_digitsW
+            curry_binop_fe2213_32W curry_unop_fe2213_32W curry_unop_wire_digitsW curry_9op_fe2213_32W
             WordW.interp_op WordW.interp_base_type
             Z.interp_op Z.interp_base_type
             Z.Syntax.interp_op Z.Syntax.interp_base_type

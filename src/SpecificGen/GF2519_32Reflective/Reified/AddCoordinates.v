@@ -173,6 +173,6 @@ Program Definition radd_coordinatesW_correct_and_bounded
        _ _.
 
 Local Open Scope string_scope.
-Compute ("Add_Coordinates", compute_bounds_for_display radd_coordinatesW ExprAC_bounds).
-Compute ("Add_Coordinates overflows? ", sanity_compute radd_coordinatesW ExprAC_bounds).
-Compute ("Add_Coordinates overflows (error if it does)? ", sanity_check radd_coordinatesW ExprAC_bounds).
+Compute ("Add_Coordinates", compute_bounds_for_display radd_coordinatesW Expr9Op_bounds).
+Compute ("Add_Coordinates overflows? ", sanity_compute radd_coordinatesW Expr9Op_bounds).
+Compute ("Add_Coordinates overflows (error if it does)? ", sanity_check radd_coordinatesW Expr9Op_bounds).

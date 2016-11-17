@@ -533,6 +533,9 @@ Ltac rexpr_correct :=
 
 Notation rword_of_Z rexprZ_sig := (MapInterp WordW.of_Z (proj1_sig rexprZ_sig)) (only parsing).
 
+Definition rword64ize {t} (x : Expr t) : Expr t
+  := MapInterp (fun t => match t with TZ => word64ize end) x.
+
 Notation compute_bounds opW bounds
   := (ApplyInterpedAll (Interp (@ZBounds.interp_op) (MapInterp (@ZBounds.of_wordW) opW)) bounds)
        (only parsing).
