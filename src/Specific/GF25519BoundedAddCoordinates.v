@@ -1,30 +1,9 @@
-Require Import Crypto.BaseSystem.
-Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
-Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParams.
-Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParamProofs.
-Require Import Crypto.ModularArithmetic.ModularBaseSystem.
-Require Import Crypto.ModularArithmetic.ModularBaseSystemProofs.
-Require Import Crypto.ModularArithmetic.ModularBaseSystemOpt.
+Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Specific.GF25519.
 Require Import Crypto.Specific.GF25519BoundedCommon.
 Require Import Crypto.Specific.GF25519ReflectiveAddCoordinates.
-Require Import Bedrock.Word Crypto.Util.WordUtil.
-Require Import Coq.Lists.List Crypto.Util.ListUtil.
-Require Import Crypto.ModularArithmetic.ModularBaseSystemWord.
-Require Import Crypto.Tactics.VerdiTactics.
-Require Import Crypto.Util.ZUtil.
-Require Import Crypto.Util.HList.
-Require Import Crypto.Util.Tuple.
-Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.LetIn.
-Require Import Crypto.Util.Notations.
-Require Import Crypto.Util.Bool.
-Require Import Crypto.Util.Decidable.
-Require Import Crypto.Algebra.
-Import ListNotations.
-Require Import Coq.ZArith.ZArith Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.ZArith.Znumtheory.
 Local Open Scope Z.
-
 
 Local Ltac bounded_t opW blem :=
   apply blem; apply is_bounded_proj1_fe25519.
