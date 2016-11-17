@@ -209,6 +209,7 @@ src/SpecificGen/GF2213_32Reflective/CommonUnOpFEToZ.v
 src/SpecificGen/GF2213_32Reflective/CommonUnOpWireToFE.v
 src/SpecificGen/GF2213_32Reflective/Reified.v
 src/SpecificGen/GF2213_32Reflective/Reified/Add.v
+src/SpecificGen/GF2213_32Reflective/Reified/AddCoordinates.v
 src/SpecificGen/GF2213_32Reflective/Reified/CarryAdd.v
 src/SpecificGen/GF2213_32Reflective/Reified/CarryOpp.v
 src/SpecificGen/GF2213_32Reflective/Reified/CarrySub.v
@@ -227,6 +228,7 @@ src/SpecificGen/GF2519_32Reflective/CommonUnOpFEToZ.v
 src/SpecificGen/GF2519_32Reflective/CommonUnOpWireToFE.v
 src/SpecificGen/GF2519_32Reflective/Reified.v
 src/SpecificGen/GF2519_32Reflective/Reified/Add.v
+src/SpecificGen/GF2519_32Reflective/Reified/AddCoordinates.v
 src/SpecificGen/GF2519_32Reflective/Reified/CarryAdd.v
 src/SpecificGen/GF2519_32Reflective/Reified/CarryOpp.v
 src/SpecificGen/GF2519_32Reflective/Reified/CarrySub.v
@@ -245,6 +247,7 @@ src/SpecificGen/GF25519_32Reflective/CommonUnOpFEToZ.v
 src/SpecificGen/GF25519_32Reflective/CommonUnOpWireToFE.v
 src/SpecificGen/GF25519_32Reflective/Reified.v
 src/SpecificGen/GF25519_32Reflective/Reified/Add.v
+src/SpecificGen/GF25519_32Reflective/Reified/AddCoordinates.v
 src/SpecificGen/GF25519_32Reflective/Reified/CarryAdd.v
 src/SpecificGen/GF25519_32Reflective/Reified/CarryOpp.v
 src/SpecificGen/GF25519_32Reflective/Reified/CarrySub.v
@@ -263,6 +266,7 @@ src/SpecificGen/GF25519_64Reflective/CommonUnOpFEToZ.v
 src/SpecificGen/GF25519_64Reflective/CommonUnOpWireToFE.v
 src/SpecificGen/GF25519_64Reflective/Reified.v
 src/SpecificGen/GF25519_64Reflective/Reified/Add.v
+src/SpecificGen/GF25519_64Reflective/Reified/AddCoordinates.v
 src/SpecificGen/GF25519_64Reflective/Reified/CarryAdd.v
 src/SpecificGen/GF25519_64Reflective/Reified/CarryOpp.v
 src/SpecificGen/GF25519_64Reflective/Reified/CarrySub.v
@@ -281,6 +285,7 @@ src/SpecificGen/GF41417_32Reflective/CommonUnOpFEToZ.v
 src/SpecificGen/GF41417_32Reflective/CommonUnOpWireToFE.v
 src/SpecificGen/GF41417_32Reflective/Reified.v
 src/SpecificGen/GF41417_32Reflective/Reified/Add.v
+src/SpecificGen/GF41417_32Reflective/Reified/AddCoordinates.v
 src/SpecificGen/GF41417_32Reflective/Reified/CarryAdd.v
 src/SpecificGen/GF41417_32Reflective/Reified/CarryOpp.v
 src/SpecificGen/GF41417_32Reflective/Reified/CarrySub.v
@@ -299,6 +304,7 @@ src/SpecificGen/GF5211_32Reflective/CommonUnOpFEToZ.v
 src/SpecificGen/GF5211_32Reflective/CommonUnOpWireToFE.v
 src/SpecificGen/GF5211_32Reflective/Reified.v
 src/SpecificGen/GF5211_32Reflective/Reified/Add.v
+src/SpecificGen/GF5211_32Reflective/Reified/AddCoordinates.v
 src/SpecificGen/GF5211_32Reflective/Reified/CarryAdd.v
 src/SpecificGen/GF5211_32Reflective/Reified/CarryOpp.v
 src/SpecificGen/GF5211_32Reflective/Reified/CarrySub.v
