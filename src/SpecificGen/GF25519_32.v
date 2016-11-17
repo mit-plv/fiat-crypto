@@ -176,6 +176,25 @@ Proof.
   etransitivity; apply app_n_correct.
 Qed.
 
+Definition appify9 {T} (op : fe25519_32 -> fe25519_32 -> fe25519_32 -> fe25519_32 -> fe25519_32 -> fe25519_32 -> fe25519_32 -> fe25519_32 -> fe25519_32 -> T) (x0 x1 x2 x3 x4 x5 x6 x7 x8 : fe25519_32) :=
+  app_n x0 (fun x0' =>
+  app_n x1 (fun x1' =>
+  app_n x2 (fun x2' =>
+  app_n x3 (fun x3' =>
+  app_n x4 (fun x4' =>
+  app_n x5 (fun x5' =>
+  app_n x6 (fun x6' =>
+  app_n x7 (fun x7' =>
+  app_n x8 (fun x8' =>
+                     op x0' x1' x2' x3' x4' x5' x6' x7' x8'))))))))).
+
+Lemma appify9_correct : forall {T} op x0 x1 x2 x3 x4 x5 x6 x7 x8,
+    @appify9 T op x0 x1 x2 x3 x4 x5 x6 x7 x8 = op x0 x1 x2 x3 x4 x5 x6 x7 x8.
+Proof.
+  intros. cbv [appify9].
+  repeat (etransitivity; [ apply app_n_correct | ]); reflexivity.
+Qed.
+
 Definition uncurry_unop_fe25519_32 {T} (op : fe25519_32 -> T)
   := Eval compute in Tuple.uncurry (n:=length_fe25519_32) op.
 Definition curry_unop_fe25519_32 {T} op : fe25519_32 -> T
@@ -189,6 +208,23 @@ Definition uncurry_unop_wire_digits {T} (op : wire_digits -> T)
   := Eval compute in Tuple.uncurry (n:=length wire_widths) op.
 Definition curry_unop_wire_digits {T} op : wire_digits -> T
   := Eval compute in fun f => app_n2 f (Tuple.curry (n:=length wire_widths) op).
+
+Definition uncurry_9op_fe25519_32 {T} (op : fe25519_32 -> fe25519_32 -> fe25519_32 -> fe25519_32 -> fe25519_32 -> fe25519_32 -> fe25519_32 -> fe25519_32 -> fe25519_32 -> T)
+  := Eval compute in
+      uncurry_unop_fe25519_32 (fun x0 =>
+      uncurry_unop_fe25519_32 (fun x1 =>
+      uncurry_unop_fe25519_32 (fun x2 =>
+      uncurry_unop_fe25519_32 (fun x3 =>
+      uncurry_unop_fe25519_32 (fun x4 =>
+      uncurry_unop_fe25519_32 (fun x5 =>
+      uncurry_unop_fe25519_32 (fun x6 =>
+      uncurry_unop_fe25519_32 (fun x7 =>
+      uncurry_unop_fe25519_32 (fun x8 =>
+                               op x0 x1 x2 x3 x4 x5 x6 x7 x8))))))))).
+Definition curry_9op_fe25519_32 {T} op : fe25519_32 -> fe25519_32 -> fe25519_32 -> fe25519_32 -> fe25519_32 -> fe25519_32 -> fe25519_32 -> fe25519_32 -> fe25519_32 -> T
+  := Eval compute in
+      appify9 (fun x0 x1 x2 x3 x4 x5 x6 x7 x8
+               => curry_unop_fe25519_32 (curry_unop_fe25519_32 (curry_unop_fe25519_32 (curry_unop_fe25519_32 (curry_unop_fe25519_32 (curry_unop_fe25519_32 (curry_unop_fe25519_32 (curry_unop_fe25519_32 (curry_unop_fe25519_32 op x0) x1) x2) x3) x4) x5) x6) x7) x8).
 
 Definition add_sig (f g : fe25519_32) :
   { fg : fe25519_32 | fg = add_opt f g}.

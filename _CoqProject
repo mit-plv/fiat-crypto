@@ -153,6 +153,7 @@ src/Specific/FancyMachine256/Barrett.v
 src/Specific/FancyMachine256/Core.v
 src/Specific/FancyMachine256/Montgomery.v
 src/Specific/GF25519Reflective/Common.v
+src/Specific/GF25519Reflective/Common9_4Op.v
 src/Specific/GF25519Reflective/CommonBinOp.v
 src/Specific/GF25519Reflective/CommonUnOp.v
 src/Specific/GF25519Reflective/CommonUnOpFEToWire.v

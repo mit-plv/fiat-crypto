@@ -177,6 +177,25 @@ Proof.
   etransitivity; apply app_10_correct.
 Qed.
 
+Definition appify9 {T} (op : fe25519 -> fe25519 -> fe25519 -> fe25519 -> fe25519 -> fe25519 -> fe25519 -> fe25519 -> fe25519 -> T) (x0 x1 x2 x3 x4 x5 x6 x7 x8 : fe25519) :=
+  app_10 x0 (fun x0' =>
+  app_10 x1 (fun x1' =>
+  app_10 x2 (fun x2' =>
+  app_10 x3 (fun x3' =>
+  app_10 x4 (fun x4' =>
+  app_10 x5 (fun x5' =>
+  app_10 x6 (fun x6' =>
+  app_10 x7 (fun x7' =>
+  app_10 x8 (fun x8' =>
+                     op x0' x1' x2' x3' x4' x5' x6' x7' x8'))))))))).
+
+Lemma appify9_correct : forall {T} op x0 x1 x2 x3 x4 x5 x6 x7 x8,
+    @appify9 T op x0 x1 x2 x3 x4 x5 x6 x7 x8 = op x0 x1 x2 x3 x4 x5 x6 x7 x8.
+Proof.
+  intros. cbv [appify9].
+  repeat (etransitivity; [ apply app_10_correct | ]); reflexivity.
+Qed.
+
 Definition uncurry_unop_fe25519 {T} (op : fe25519 -> T)
   := Eval compute in Tuple.uncurry (n:=length_fe25519) op.
 Definition curry_unop_fe25519 {T} op : fe25519 -> T
@@ -190,6 +209,23 @@ Definition uncurry_unop_wire_digits {T} (op : wire_digits -> T)
   := Eval compute in Tuple.uncurry (n:=length wire_widths) op.
 Definition curry_unop_wire_digits {T} op : wire_digits -> T
   := Eval compute in fun f => app_7 f (Tuple.curry (n:=length wire_widths) op).
+
+Definition uncurry_9op_fe25519 {T} (op : fe25519 -> fe25519 -> fe25519 -> fe25519 -> fe25519 -> fe25519 -> fe25519 -> fe25519 -> fe25519 -> T)
+  := Eval compute in
+      uncurry_unop_fe25519 (fun x0 =>
+      uncurry_unop_fe25519 (fun x1 =>
+      uncurry_unop_fe25519 (fun x2 =>
+      uncurry_unop_fe25519 (fun x3 =>
+      uncurry_unop_fe25519 (fun x4 =>
+      uncurry_unop_fe25519 (fun x5 =>
+      uncurry_unop_fe25519 (fun x6 =>
+      uncurry_unop_fe25519 (fun x7 =>
+      uncurry_unop_fe25519 (fun x8 =>
+                               op x0 x1 x2 x3 x4 x5 x6 x7 x8))))))))).
+Definition curry_9op_fe25519 {T} op : fe25519 -> fe25519 -> fe25519 -> fe25519 -> fe25519 -> fe25519 -> fe25519 -> fe25519 -> fe25519 -> T
+  := Eval compute in
+      appify9 (fun x0 x1 x2 x3 x4 x5 x6 x7 x8
+               => curry_unop_fe25519 (curry_unop_fe25519 (curry_unop_fe25519 (curry_unop_fe25519 (curry_unop_fe25519 (curry_unop_fe25519 (curry_unop_fe25519 (curry_unop_fe25519 (curry_unop_fe25519 op x0) x1) x2) x3) x4) x5) x6) x7) x8).
 
 Definition add_sig (f g : fe25519) :
   { fg : fe25519 | fg = add_opt f g}.
