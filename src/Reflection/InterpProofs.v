@@ -1,5 +1,6 @@
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.WfProofs.
+Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Tactics Crypto.Util.Sigma Crypto.Util.Prod.
 
 Local Open Scope ctype_scope.
@@ -15,6 +16,12 @@ Section language.
   Let interp_type := interp_type interp_base_type.
   Let interp_flat_type := interp_flat_type interp_base_type.
   Context (interp_op : forall src dst, op src dst -> interp_flat_type src -> interp_flat_type dst).
+
+  Lemma interpf_LetIn tx ex tC eC
+    : Syntax.interpf interp_op (LetIn (tx:=tx) ex (tC:=tC) eC)
+      = dlet x := Syntax.interpf interp_op ex in
+        Syntax.interpf interp_op (eC x).
+  Proof. reflexivity. Qed.
 
   Lemma interpf_SmartVarf t v
     : Syntax.interpf interp_op (SmartVarf (t:=t) v) = v.
