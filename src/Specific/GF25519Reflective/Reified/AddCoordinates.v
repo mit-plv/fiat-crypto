@@ -162,7 +162,7 @@ Defined.
 
 Time Definition radd_coordinatesW := Eval vm_compute in rword_of_Z radd_coordinatesZ_sig.
 Lemma radd_coordinatesW_correct_and_bounded_gen : correct_and_bounded_genT radd_coordinatesW radd_coordinatesZ_sig.
-Proof. (*Time rexpr_correct. Time Qed.*) Admitted.
+Proof. Time rexpr_correct. Time Qed.
 Definition radd_coordinates_output_bounds := Eval vm_compute in compute_bounds radd_coordinatesW Expr9Op_bounds.
 
 Local Obligation Tactic := intros; vm_compute; constructor.

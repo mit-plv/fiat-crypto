@@ -14,6 +14,7 @@ Require Import Crypto.Reflection.Application.
 Require Import Crypto.Reflection.MapInterp.
 Require Import Crypto.Reflection.MapInterpWf.
 Require Import Crypto.Reflection.WfReflective.
+Require Import Crypto.Util.Tower.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tactics.
@@ -21,11 +22,13 @@ Require Import Crypto.Util.Notations.
 
 Notation Expr := (Expr base_type WordW.interp_base_type op).
 
-Local Ltac make_type_from uncurried_op :=
-  let T := (type of uncurried_op) in
+Local Ltac make_type_from' T :=
   let T := (eval compute in T) in
   let rT := reify_type T in
   exact rT.
+Local Ltac make_type_from uncurried_op :=
+  let T := (type of uncurried_op) in
+  make_type_from' T.
 
 Definition ExprBinOpT : type base_type.
 Proof. make_type_from (uncurry_binop_fe5211_32 carry_add). Defined.
@@ -37,6 +40,24 @@ Definition ExprUnOpWireToFET : type base_type.
 Proof. make_type_from (uncurry_unop_wire_digits unpack). Defined.
 Definition ExprUnOpFEToWireT : type base_type.
 Proof. make_type_from (uncurry_unop_fe5211_32 pack). Defined.
+Definition Expr4OpT : type base_type.
+Proof.
+  let T := lazymatch type of (apply4_nd
+                                (B:=GF5211_32.fe5211_32)
+                                (@uncurry_unop_fe5211_32)) with
+           | _ -> ?T => T
+           end in
+  make_type_from' T.
+Defined.
+Definition Expr9_4OpT : type base_type.
+Proof.
+  let T := lazymatch type of (apply9_nd
+                                (B:=Tuple.tuple GF5211_32.fe5211_32 4)
+                                (@uncurry_unop_fe5211_32)) with
+           | _ -> ?T => T
+           end in
+  make_type_from' T.
+Defined.
 Definition ExprArgT : flat_type base_type
   := Eval compute in remove_all_binders ExprUnOpT.
 Definition ExprArgWireT : flat_type base_type
@@ -51,6 +72,8 @@ Definition ExprUnOp : Type := Expr ExprUnOpT.
 Definition ExprUnOpFEToZ : Type := Expr ExprUnOpFEToZT.
 Definition ExprUnOpWireToFE : Type := Expr ExprUnOpWireToFET.
 Definition ExprUnOpFEToWire : Type := Expr ExprUnOpFEToWireT.
+Definition Expr4Op : Type := Expr Expr4OpT.
+Definition Expr9_4Op : Type := Expr Expr9_4OpT.
 Definition ExprArg : Type := Expr ExprArgT.
 Definition ExprArgWire : Type := Expr ExprArgWireT.
 Definition ExprArgRev : Type := Expr ExprArgRevT.
@@ -61,6 +84,8 @@ Definition exprUnOp interp_base_type var : Type := expr base_type interp_base_ty
 Definition exprUnOpFEToZ interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprUnOpFEToZT.
 Definition exprUnOpWireToFE interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprUnOpWireToFET.
 Definition exprUnOpFEToWire interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprUnOpFEToWireT.
+Definition expr4Op interp_base_type var : Type := expr base_type interp_base_type op (var:=var) Expr4OpT.
+Definition expr9_4Op interp_base_type var : Type := expr base_type interp_base_type op (var:=var) Expr9_4OpT.
 Definition exprArg interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprArgT.
 Definition exprArgWire interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprArgWireT.
 Definition exprArgRev interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprArgRevT.
@@ -89,6 +114,14 @@ Definition ExprUnOpFEToWire_bounds : interp_all_binders_for ExprUnOpFEToWireT ZB
 Proof. make_bounds (Tuple.to_list _ bounds). Defined.
 Definition ExprUnOpWireToFE_bounds : interp_all_binders_for ExprUnOpWireToFET ZBounds.interp_base_type.
 Proof. make_bounds (Tuple.to_list _ wire_digit_bounds). Defined.
+Definition Expr4Op_bounds : interp_all_binders_for Expr4OpT ZBounds.interp_base_type.
+Proof.
+  make_bounds (List.fold_right (@List.app _) nil (List.repeat (Tuple.to_list _ bounds) 4)).
+Defined.
+Definition Expr9Op_bounds : interp_all_binders_for Expr9_4OpT ZBounds.interp_base_type.
+Proof.
+  make_bounds (List.fold_right (@List.app _) nil (List.repeat (Tuple.to_list _ bounds) 9)).
+Defined.
 Definition interp_bexpr : ExprBinOp -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W
   := fun e => curry_binop_fe5211_32W (Interp (@WordW.interp_op) e).
 Definition interp_uexpr : ExprUnOp -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W
@@ -99,6 +132,18 @@ Definition interp_uexpr_FEToWire : ExprUnOpFEToWire -> SpecificGen.GF5211_32Boun
   := fun e => curry_unop_fe5211_32W (Interp (@WordW.interp_op) e).
 Definition interp_uexpr_WireToFE : ExprUnOpWireToFE -> SpecificGen.GF5211_32BoundedCommon.wire_digitsW -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W
   := fun e => curry_unop_wire_digitsW (Interp (@WordW.interp_op) e).
+Definition interp_9_4expr : Expr9_4Op
+                            -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W
+                            -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W
+                            -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W
+                            -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W
+                            -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W
+                            -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W
+                            -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W
+                            -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W
+                            -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W
+                            -> Tuple.tuple SpecificGen.GF5211_32BoundedCommon.fe5211_32W 4
+  := fun e => curry_9op_fe5211_32W (Interp (@WordW.interp_op) e).
 
 Notation binop_correct_and_bounded rop op
   := (ibinop_correct_and_bounded (interp_bexpr rop) op) (only parsing).
@@ -110,6 +155,8 @@ Notation unop_FEToWire_correct_and_bounded rop op
   := (iunop_FEToWire_correct_and_bounded (interp_uexpr_FEToWire rop) op) (only parsing).
 Notation unop_WireToFE_correct_and_bounded rop op
   := (iunop_WireToFE_correct_and_bounded (interp_uexpr_WireToFE rop) op) (only parsing).
+Notation op9_4_correct_and_bounded rop op
+  := (i9top_correct_and_bounded 4 (interp_9_4expr rop) op) (only parsing).
 
 Ltac rexpr_cbv :=
   lazymatch goal with
@@ -134,6 +181,7 @@ Notation rexpr_unop_sig op := (rexpr_sig ExprUnOpT (uncurry_unop_fe5211_32 op)) 
 Notation rexpr_unop_FEToZ_sig op := (rexpr_sig ExprUnOpFEToZT (uncurry_unop_fe5211_32 op)) (only parsing).
 Notation rexpr_unop_FEToWire_sig op := (rexpr_sig ExprUnOpFEToWireT (uncurry_unop_fe5211_32 op)) (only parsing).
 Notation rexpr_unop_WireToFE_sig op := (rexpr_sig ExprUnOpWireToFET (uncurry_unop_wire_digits op)) (only parsing).
+Notation rexpr_9_4op_sig op := (rexpr_sig Expr9_4OpT (uncurry_9op_fe5211_32 op)) (only parsing).
 
 Notation correct_and_bounded_genT ropW'v ropZ_sigv
   := (let ropW' := ropW'v in
@@ -305,6 +353,29 @@ Proof.
   let v := app_tuples (unop_args_to_bounded (fst x) H) (unop_args_to_bounded (snd x) H') in
   exact v.
 Defined.
+Definition op9_args_to_bounded (x : fe5211_32W * fe5211_32W * fe5211_32W * fe5211_32W * fe5211_32W * fe5211_32W * fe5211_32W * fe5211_32W * fe5211_32W)
+           (H0 : is_bounded (fe5211_32WToZ (fst (fst (fst (fst (fst (fst (fst (fst x))))))))) = true)
+           (H1 : is_bounded (fe5211_32WToZ (snd (fst (fst (fst (fst (fst (fst (fst x))))))))) = true)
+           (H2 : is_bounded (fe5211_32WToZ (snd (fst (fst (fst (fst (fst (fst x)))))))) = true)
+           (H3 : is_bounded (fe5211_32WToZ (snd (fst (fst (fst (fst (fst x))))))) = true)
+           (H4 : is_bounded (fe5211_32WToZ (snd (fst (fst (fst (fst x)))))) = true)
+           (H5 : is_bounded (fe5211_32WToZ (snd (fst (fst (fst x))))) = true)
+           (H6 : is_bounded (fe5211_32WToZ (snd (fst (fst x)))) = true)
+           (H7 : is_bounded (fe5211_32WToZ (snd (fst x))) = true)
+           (H8 : is_bounded (fe5211_32WToZ (snd x)) = true)
+  : interp_flat_type (fun _ => BoundedWordW.BoundedWord) (all_binders_for Expr9_4OpT).
+Proof.
+  let v := constr:(unop_args_to_bounded _ H8) in
+  let v := app_tuples (unop_args_to_bounded _ H7) v in
+  let v := app_tuples (unop_args_to_bounded _ H6) v in
+  let v := app_tuples (unop_args_to_bounded _ H5) v in
+  let v := app_tuples (unop_args_to_bounded _ H4) v in
+  let v := app_tuples (unop_args_to_bounded _ H3) v in
+  let v := app_tuples (unop_args_to_bounded _ H2) v in
+  let v := app_tuples (unop_args_to_bounded _ H1) v in
+  let v := app_tuples (unop_args_to_bounded _ H0) v in
+  exact v.
+Defined.
 
 Local Ltac make_bounds_prop bounds orig_bounds :=
   let bounds' := fresh "bounds'" in
@@ -340,6 +411,8 @@ Definition unopFEToZ_bounds_good (bounds : interp_flat_type (fun _ => ZBounds.bo
 Proof.
   refine (let (l, u) := bounds in ((0 <=? l) && (u <=? 1))%Z%bool).
 Defined.
+Definition op9_4_bounds_good (bounds : interp_flat_type (fun _ => ZBounds.bounds) (remove_all_binders Expr9_4OpT)) : bool.
+Proof. make_bounds_prop bounds Expr4Op_bounds. Defined.
 
 Definition ApplyUnOp {interp_base_type var} (f : exprUnOp interp_base_type var) : exprArg interp_base_type var -> exprArg interp_base_type var
   := fun x
@@ -378,12 +451,12 @@ Ltac t_correct_and_bounded ropZ_sig Hbounds H0 H1 args :=
   let Hbounds1 := fresh "Hbounds1" in
   let Hbounds2 := fresh "Hbounds2" in
   pose proof (proj2_sig ropZ_sig) as Heq;
-  cbv [interp_bexpr interp_uexpr interp_uexpr_FEToWire interp_uexpr_FEToZ interp_uexpr_WireToFE
-                    curry_binop_fe5211_32W curry_unop_fe5211_32W curry_unop_wire_digitsW
-                    curry_binop_fe5211_32 curry_unop_fe5211_32 curry_unop_wire_digits
-                    uncurry_binop_fe5211_32W uncurry_unop_fe5211_32W uncurry_unop_wire_digitsW
-                    uncurry_binop_fe5211_32 uncurry_unop_fe5211_32 uncurry_unop_wire_digits
-                    ExprBinOpT ExprUnOpFEToWireT ExprUnOpT ExprUnOpFEToZT ExprUnOpWireToFET
+  cbv [interp_bexpr interp_uexpr interp_uexpr_FEToWire interp_uexpr_FEToZ interp_uexpr_WireToFE interp_9_4expr
+                    curry_binop_fe5211_32W curry_unop_fe5211_32W curry_unop_wire_digitsW curry_9op_fe5211_32W
+                    curry_binop_fe5211_32 curry_unop_fe5211_32 curry_unop_wire_digits curry_9op_fe5211_32
+                    uncurry_binop_fe5211_32W uncurry_unop_fe5211_32W uncurry_unop_wire_digitsW uncurry_9op_fe5211_32W
+                    uncurry_binop_fe5211_32 uncurry_unop_fe5211_32 uncurry_unop_wire_digits uncurry_9op_fe5211_32
+                    ExprBinOpT ExprUnOpFEToWireT ExprUnOpT ExprUnOpFEToZT ExprUnOpWireToFET Expr9_4OpT Expr4OpT
                     interp_type_gen_rel_pointwise interp_type_gen_rel_pointwise] in *;
   cbv zeta in *;
   simpl @fe5211_32WToZ; simpl @wire_digitsWToZ;
@@ -414,12 +487,14 @@ Ltac t_correct_and_bounded ropZ_sig Hbounds H0 H1 args :=
   end;
   repeat match goal with x := _ |- _ => subst x end;
   cbv [id
-         binop_args_to_bounded unop_args_to_bounded unopWireToFE_args_to_bounded
+         binop_args_to_bounded unop_args_to_bounded unopWireToFE_args_to_bounded op9_args_to_bounded
          Relations.proj_eq_rel interp_flat_type_rel_pointwise2 SmartVarfMap interp_flat_type smart_interp_flat_map Application.all_binders_for fst snd BoundedWordW.to_wordW' BoundedWordW.boundedWordToWordW BoundedWord.value Application.ApplyInterpedAll Application.fst_binder Application.snd_binder interp_flat_type_rel_pointwise2_gen_Prop Relations.related_wordW_boundsi' Relations.related'_wordW_bounds Bounds.upper Bounds.lower Application.remove_all_binders WordW.to_Z] in Hbounds_left, Hbounds_right;
   lazymatch goal with
   | [ |- fe5211_32WToZ ?x = _ /\ _ ]
     => generalize dependent x; intros
   | [ |- wire_digitsWToZ ?x = _ /\ _ ]
+    => generalize dependent x; intros
+  | [ |- ((Tuple.map fe5211_32WToZ ?x = _) * _)%type ]
     => generalize dependent x; intros
   | [ |- _ = _ ]
     => exact Hbounds_left
@@ -430,15 +505,16 @@ Ltac t_correct_and_bounded ropZ_sig Hbounds H0 H1 args :=
   (split; [ exact Hbounds_left | ]);
   cbv [interp_flat_type] in *;
   cbv [fst snd
-           binop_bounds_good unop_bounds_good unopFEToWire_bounds_good unopWireToFE_bounds_good unopFEToZ_bounds_good
-           ExprUnOp_bounds ExprBinOp_bounds ExprUnOpFEToWire_bounds ExprUnOpFEToZ_bounds ExprUnOpWireToFE_bounds] in H1;
+           binop_bounds_good unop_bounds_good unopFEToWire_bounds_good unopWireToFE_bounds_good unopFEToZ_bounds_good op9_4_bounds_good
+           ExprUnOp_bounds ExprBinOp_bounds ExprUnOpFEToWire_bounds ExprUnOpFEToZ_bounds ExprUnOpWireToFE_bounds Expr9Op_bounds Expr4Op_bounds] in H1;
   destruct_head' ZBounds.bounds;
   unfold_is_bounded_in H1;
   simpl @fe5211_32WToZ; simpl @wire_digitsWToZ;
   destruct_head' and;
   Z.ltb_to_lt;
   change WordW.wordWToZ with word64ToZ in *;
-  unfold_is_bounded;
+  cbv [Tuple.map HList.hlist Tuple.on_tuple Tuple.from_list Tuple.from_list' Tuple.to_list Tuple.to_list' List.map HList.hlist' fst snd];
+  repeat split; unfold_is_bounded;
   Z.ltb_to_lt;
   try omega; try reflexivity.
 

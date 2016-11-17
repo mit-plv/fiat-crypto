@@ -20,29 +20,14 @@ Require Import Crypto.CompleteEdwardsCurve.ExtendedCoordinates.
 Require Import Crypto.SpecificGen.GF2213_32Reflective.Reified.Add.
 Require Import Crypto.SpecificGen.GF2213_32Reflective.Reified.Sub.
 Require Import Crypto.SpecificGen.GF2213_32Reflective.Reified.Mul.
-Require Import Crypto.SpecificGen.GF2213_32Reflective.CommonBinOp.
+Require Import Crypto.SpecificGen.GF2213_32Reflective.Common9_4Op.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.HList.
+Require Import Crypto.Util.Tower.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
 Require Import Bedrock.Word.
-
-Definition apply9 {AK BK PA PB ARR}
-           (F : forall (A : AK) (B : BK), (PA A -> PB B) -> PB (ARR A B))
-           {A0 A1 A2 A3 A4 A5 A6 A7 A8 : AK} {B : BK}
-           (f : PA A0 -> PA A1 -> PA A2 -> PA A3 -> PA A4 -> PA A5 -> PA A6 -> PA A7 -> PA A8 -> PB B)
-  : PB (ARR A0 (ARR A1 (ARR A2 (ARR A3 (ARR A4 (ARR A5 (ARR A6 (ARR A7 (ARR A8 B))))))))).
-Proof.
-  repeat (apply F; intro); apply f; assumption.
-Defined.
-
-Definition apply9_nd {BK PA PB ARR}
-           (F : forall (B : BK), (PA -> PB B) -> PB (ARR B))
-           {B : BK}
-           (f : PA -> PA -> PA -> PA -> PA -> PA -> PA -> PA -> PA -> PB B)
-  : PB (ARR (ARR (ARR (ARR (ARR (ARR (ARR (ARR (ARR B)))))))))
-  := @apply9 unit BK (fun _ => PA) PB (fun _ => ARR) (fun _ => F)
-             tt tt tt tt tt tt tt tt tt B f.
 
 Definition radd_coordinatesZ' var twice_d P1 P2
   := @Extended.add_coordinates_gen
@@ -66,12 +51,16 @@ Definition radd_coordinatesZ'' : Syntax.Expr _ _ _ _
                            (Return P10, Return P11, Return P12, Return P13)
                            (Return P20, Return P21, Return P22, Return P23))).
 
-Definition radd_coordinatesT : type base_type.
-Proof.
-  match type of radd_coordinatesZ'' with
-  | Syntax.Expr _ _ _ ?T => exact T
-  end.
-Defined.
+Definition add_coordinates
+  := fun twice_d P10 P11 P12 P13 P20 P21 P22 P23
+     => @Extended.add_coordinates
+          _ add sub mul
+          twice_d (P10, P11, P12, P13) (P20, P21, P22, P23).
+
+Definition uncurried_add_coordinates
+  := apply9_nd
+       (@uncurry_unop_fe2213_32)
+       add_coordinates.
 
 Local Notation rexpr_sigP T uncurried_op rexprZ :=
   (interp_type_gen_rel_pointwise (fun _ => Logic.eq) (Interp interp_op (t:=T) rexprZ) uncurried_op)
@@ -80,20 +69,6 @@ Local Notation rexpr_sig T uncurried_op :=
   { rexprZ | rexpr_sigP T uncurried_op rexprZ }
     (only parsing).
 
-Definition uncurried_add_coordinates
-  := apply9_nd
-       (@uncurry_unop_fe2213_32)
-       (fun twice_d P10 P11 P12 P13 P20 P21 P22 P23
-        => @Extended.add_coordinates
-             _ add sub mul
-             twice_d (P10, P11, P12, P13) (P20, P21, P22, P23)).
-
-
-Local Ltac fold_interpf_at_1 :=
-  let k := (eval unfold interpf in (@interpf base_type interp_base_type op interp_op)) in
-  change k with (@interpf base_type interp_base_type op interp_op) at 1.
-Local Ltac step_interpf :=
-  unfold interpf_step at 1; fold_interpf_at_1.
 Local Ltac repeat_step_interpf :=
   let k := (eval unfold interpf in (@interpf base_type interp_base_type op interp_op)) in
   let k' := fresh in
@@ -140,12 +115,13 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma radd_coordinatesZ_sigP : rexpr_sigP radd_coordinatesT uncurried_add_coordinates radd_coordinatesZ''.
+Lemma radd_coordinatesZ_sigP : rexpr_sigP Expr9_4OpT uncurried_add_coordinates radd_coordinatesZ''.
 Proof.
   cbv [radd_coordinatesZ''].
   etransitivity; [ apply Interp_Linearize | ].
-  cbv beta iota delta [apply9 apply9_nd interp_type_gen_rel_pointwise radd_coordinatesT SmartArrow ExprArgT radd_coordinatesZ'' uncurried_add_coordinates uncurry_unop_fe2213_32 SmartAbs radd_coordinatesZ' exprArg Extended.add_coordinates_gen Interp interp unop_make_args SmartVarf smart_interp_flat_map length_fe2213_32].
+  cbv beta iota delta [apply9 apply9_nd interp_type_gen_rel_pointwise Expr9_4OpT SmartArrow ExprArgT radd_coordinatesZ'' uncurried_add_coordinates uncurry_unop_fe2213_32 SmartAbs radd_coordinatesZ' exprArg Extended.add_coordinates_gen Interp interp unop_make_args SmartVarf smart_interp_flat_map length_fe2213_32 add_coordinates].
   intros.
+  unfold UnReturn at 13 14 15 16.
   repeat match goal with
          | [ |- appcontext[@proj1_sig ?A ?B ?v] ]
            => let k := fresh "f" in
@@ -154,10 +130,9 @@ Proof.
               set (k := v);
                 set (k' := @proj1_sig A B k);
                 pose proof (proj2_sig k) as H;
-                change (proj1_sig k) with k' in H(*;
-                cbv [interp_type_gen_rel_pointwise ExprBinOpT uncurry_binop_fe2213_32] in H*)
+                change (proj1_sig k) with k' in H;
+                clearbody k'; clear k
          end.
-  unfold UnReturn at 13 14 15 16.
   unfold interpf; repeat_step_interpf.
   unfold interpf at 13 14 15; unfold interpf_step.
   cbv beta iota delta [Extended.add_coordinates].
@@ -179,55 +154,23 @@ Proof.
            end.
 Time Qed.
 
-Definition radd_coordinatesZ_sig : rexpr_sig radd_coordinatesT uncurried_add_coordinates.
+Definition radd_coordinatesZ_sig : rexpr_9_4op_sig add_coordinates.
 Proof.
   eexists.
   apply radd_coordinatesZ_sigP.
 Defined.
 
-Local Ltac bounds_from_list ls :=
-  lazymatch (eval hnf in ls) with
-  | (?x :: nil)%list => constr:(Some {| Bounds.lower := fst x ; Bounds.upper := snd x |})
-  | (?x :: ?xs)%list => let bs := bounds_from_list xs in
-                        constr:((Some {| Bounds.lower := fst x ; Bounds.upper := snd x |}, bs))
-  end.
-
-Local Ltac make_bounds ls :=
-  compute;
-  let v := bounds_from_list (List.rev ls) in
-  let v := (eval compute in v) in
-  exact v.
-
-Definition ExprAC_bounds : interp_all_binders_for radd_coordinatesT ZBounds.interp_base_type.
-Proof.
-  make_bounds ((Tuple.to_list _ bounds)
-                 ++ Tuple.to_list _ bounds ++ Tuple.to_list _ bounds ++ Tuple.to_list _ bounds ++ Tuple.to_list _ bounds
-                 ++ Tuple.to_list _ bounds ++ Tuple.to_list _ bounds ++ Tuple.to_list _ bounds ++ Tuple.to_list _ bounds)%list.
-Defined.
-
 Time Definition radd_coordinatesW := Eval vm_compute in rword_of_Z radd_coordinatesZ_sig.
 Lemma radd_coordinatesW_correct_and_bounded_gen : correct_and_bounded_genT radd_coordinatesW radd_coordinatesZ_sig.
 Proof. Time rexpr_correct. Time Qed.
-Definition radd_coordinates_output_bounds := Eval vm_compute in compute_bounds radd_coordinatesW ExprAC_bounds.
-(*Notation i9op_correct_and_bounded irop op
-  := (forall x0 x1 x2 x3 x4 x5 x6 x7 x8,
-         is_bounded (fe2213_32WToZ x0) = true
-         -> is_bounded (fe2213_32WToZ x1) = true
-         -> is_bounded (fe2213_32WToZ x2) = true
-         -> is_bounded (fe2213_32WToZ x3) = true
-         -> is_bounded (fe2213_32WToZ x4) = true
-         -> is_bounded (fe2213_32WToZ x5) = true
-         -> is_bounded (fe2213_32WToZ x6) = true
-         -> is_bounded (fe2213_32WToZ x7) = true
-         -> is_bounded (fe2213_32WToZ x8) = true
-         -> fe2213_32WToZ (irop x0 x1 x2 x3 x4 x5 x6 x7 x8) = op (fe2213_32WToZ x0) (fe2213_32WToZ x1) (fe2213_32WToZ x2) (fe2213_32WToZ x3) (fe2213_32WToZ x4) (fe2213_32WToZ x5) (fe2213_32WToZ x6) (fe2213_32WToZ x7) (fe2213_32WToZ x8)
-            /\ is_bounded (fe2213_32WToZ (irop x0 x1 x2 x3 x4 x5 x6 x7 x8)) = true) (only parsing).
+Definition radd_coordinates_output_bounds := Eval vm_compute in compute_bounds radd_coordinatesW Expr9Op_bounds.
 
 Local Obligation Tactic := intros; vm_compute; constructor.
+
 Program Definition radd_coordinatesW_correct_and_bounded
-  := ExprBinOp_correct_and_bounded
+  := Expr9_4Op_correct_and_bounded
        radd_coordinatesW add_coordinates radd_coordinatesZ_sig radd_coordinatesW_correct_and_bounded_gen
-       _ _.*)
+       _ _.
 
 Local Open Scope string_scope.
 Compute ("Add_Coordinates", compute_bounds_for_display radd_coordinatesW ExprAC_bounds).
