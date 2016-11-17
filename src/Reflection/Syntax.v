@@ -399,11 +399,11 @@ Section language.
     Axiom Wf_admitted : forall {t} (E:Expr t), @Wf t E.
   End expr_param.
 End language.
-Global Arguments tuple' {_}%type_scope _%ctype_scope _%nat_scope : assert.
-Global Arguments tuple {_}%type_scope _%ctype_scope _%nat_scope : assert.
-Global Arguments Prod {_}%type_scope (_ _)%ctype_scope : assert.
-Global Arguments Arrow {_}%type_scope (_ _)%ctype_scope : assert.
-Global Arguments Tbase {_}%type_scope _%ctype_scope : assert.
+Global Arguments tuple' {_}%type_scope _%ctype_scope _%nat_scope.
+Global Arguments tuple {_}%type_scope _%ctype_scope _%nat_scope.
+Global Arguments Prod {_}%type_scope (_ _)%ctype_scope.
+Global Arguments Arrow {_}%type_scope (_ _)%ctype_scope.
+Global Arguments Tbase {_}%type_scope _%ctype_scope.
 
 Ltac admit_Wf := apply Wf_admitted.
 
@@ -421,48 +421,48 @@ Proof.
   repeat intro; hnf; decide equality; apply dec; typeclasses eauto.
 Defined.
 
-Global Arguments Const {_ _ _ _ _} _ : assert.
-Global Arguments Var {_ _ _ _ _} _ : assert.
-Global Arguments SmartVarf {_ _ _ _ _} _ : assert.
-Global Arguments SmartValf {_} T _ t : assert.
-Global Arguments SmartVarVarf {_ _ _ _ _} _ : assert.
-Global Arguments SmartVarfMap {_ _ _} _ {_} _ : assert.
-Global Arguments SmartVarMap_hetero {_ _ _ _ _} _ _ {_} _ : assert.
-Global Arguments SmartVarMap {_ _ _} _ _ {_} _ : assert.
-Global Arguments SmartConstf {_ _ _ _ _} _ : assert.
-Global Arguments Op {_ _ _ _ _ _} _ _ : assert.
-Global Arguments LetIn {_ _ _ _ _} _ {_} _ : assert.
-Global Arguments Pair {_ _ _ _ _} _ {_} _ : assert.
-Global Arguments Return {_ _ _ _ _} _ : assert.
-Global Arguments Abs {_ _ _ _ _ _} _ : assert.
-Global Arguments SmartAbs {_ _ _ _ _ _} _ : assert.
-Global Arguments UnReturn {_ _ _ _ _} _ : assert.
-Global Arguments UnAbs {_ _ _ _ _ _} _ _ : assert.
-Global Arguments UnReturn_eta {_ _ _ _ _} _ : assert.
-Global Arguments UnAbs_eta {_ _ _ _ _ _} _ : assert.
-Global Arguments flat_interp_tuple' {_ _ _ _} _ : assert.
-Global Arguments flat_interp_tuple {_ _ _ _} _ : assert.
-Global Arguments flat_interp_untuple' {_ _ _ _} _ : assert.
-Global Arguments interp_type_rel_pointwise2 {_ _ _} R {t} _ _ : assert.
-Global Arguments interp_type_gen_rel_pointwise2_hetero {_ _ _ _ _} Rsrc R {t} _ _ : assert.
-Global Arguments interp_type_gen_rel_pointwise2 {_ _ _} R {t} _ _ : assert.
-Global Arguments interp_flat_type_rel_pointwise2_gen_Prop {_ _ _ P} and R {t} _ _ : assert.
-Global Arguments interp_flat_type_rel_pointwise2 {_ _ _} R {t} _ _ : assert.
-Global Arguments mapf_interp_flat_type {_ _ _} _ {t} _ : assert.
-Global Arguments interp_type_gen_hetero {_} _ _ _ : assert.
-Global Arguments interp_type_gen {_} _ _ : assert.
-Global Arguments interp_flat_type {_} _ _ : assert.
-Global Arguments interp_type_rel_pointwise {_} _ _ {_} _ _ : assert.
-Global Arguments interp_type_gen_rel_pointwise {_ _} _ {_} _ _ : assert.
-Global Arguments interp_flat_type_rel_pointwise {_} _ _ {_} _ _ : assert.
-Global Arguments interp_type {_} _ _ : assert.
-Global Arguments wff {_ _ _ _ _} G {t} _ _ : assert.
-Global Arguments wf {_ _ _ _ _} G {t} _ _ : assert.
-Global Arguments Wf {_ _ _ t} _ : assert.
-Global Arguments Interp {_ _ _} interp_op {t} _ : assert.
-Global Arguments interp {_ _ _} interp_op {t} _ : assert.
-Global Arguments interpf {_ _ _} interp_op {t} _ : assert.
-Global Arguments invert_Const {_ _ _ _ _} _ : assert.
+Global Arguments Const {_ _ _ _ _} _.
+Global Arguments Var {_ _ _ _ _} _.
+Global Arguments SmartVarf {_ _ _ _ _} _.
+Global Arguments SmartValf {_} T _ t.
+Global Arguments SmartVarVarf {_ _ _ _ _} _.
+Global Arguments SmartVarfMap {_ _ _} _ {_} _.
+Global Arguments SmartVarMap_hetero {_ _ _ _ _} _ _ {_} _.
+Global Arguments SmartVarMap {_ _ _} _ _ {_} _.
+Global Arguments SmartConstf {_ _ _ _ _} _.
+Global Arguments Op {_ _ _ _ _ _} _ _.
+Global Arguments LetIn {_ _ _ _ _} _ {_} _.
+Global Arguments Pair {_ _ _ _ _} _ {_} _.
+Global Arguments Return {_ _ _ _ _} _.
+Global Arguments Abs {_ _ _ _ _ _} _.
+Global Arguments SmartAbs {_ _ _ _ _ _} _.
+Global Arguments UnReturn {_ _ _ _ _} _.
+Global Arguments UnAbs {_ _ _ _ _ _} _ _.
+Global Arguments UnReturn_eta {_ _ _ _ _} _.
+Global Arguments UnAbs_eta {_ _ _ _ _ _} _.
+Global Arguments flat_interp_tuple' {_ _ _ _} _.
+Global Arguments flat_interp_tuple {_ _ _ _} _.
+Global Arguments flat_interp_untuple' {_ _ _ _} _.
+Global Arguments interp_type_rel_pointwise2 {_ _ _} R {t} _ _.
+Global Arguments interp_type_gen_rel_pointwise2_hetero {_ _ _ _ _} Rsrc R {t} _ _.
+Global Arguments interp_type_gen_rel_pointwise2 {_ _ _} R {t} _ _.
+Global Arguments interp_flat_type_rel_pointwise2_gen_Prop {_ _ _ P} and R {t} _ _.
+Global Arguments interp_flat_type_rel_pointwise2 {_ _ _} R {t} _ _.
+Global Arguments mapf_interp_flat_type {_ _ _} _ {t} _.
+Global Arguments interp_type_gen_hetero {_} _ _ _.
+Global Arguments interp_type_gen {_} _ _.
+Global Arguments interp_flat_type {_} _ _.
+Global Arguments interp_type_rel_pointwise {_} _ _ {_} _ _.
+Global Arguments interp_type_gen_rel_pointwise {_ _} _ {_} _ _.
+Global Arguments interp_flat_type_rel_pointwise {_} _ _ {_} _ _.
+Global Arguments interp_type {_} _ _.
+Global Arguments wff {_ _ _ _ _} G {t} _ _.
+Global Arguments wf {_ _ _ _ _} G {t} _ _.
+Global Arguments Wf {_ _ _ t} _.
+Global Arguments Interp {_ _ _} interp_op {t} _.
+Global Arguments interp {_ _ _} interp_op {t} _.
+Global Arguments interpf {_ _ _} interp_op {t} _.
+Global Arguments invert_Const {_ _ _ _ _} _.
 
 Module Export Notations.
   Notation "A * B" := (@Prod _ A B) : ctype_scope.
