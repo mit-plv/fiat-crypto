@@ -146,6 +146,7 @@ src/Specific/GF1305.v
 src/Specific/GF25519.v
 src/Specific/GF25519Bounded.v
 src/Specific/GF25519BoundedCommon.v
+src/Specific/GF25519ExtendedAddCoordinates.v
 src/Specific/GF25519Reflective.v
 src/Specific/SC25519.v
 src/Specific/FancyMachine256/Barrett.v

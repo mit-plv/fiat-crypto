@@ -13,7 +13,6 @@ Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Decidable.
-Require Import Crypto.Util.Relations.
 Require Import Crypto.Algebra.
 Require Crypto.Spec.Ed25519.
 Import ListNotations.
@@ -743,77 +742,3 @@ Definition unpack (f : wire_digits) : fe25519 :=
 Definition unpack_correct (f : wire_digits)
   : unpack f = unpack_opt params25519 wire_widths_nonneg bits_eq f
   := Eval cbv beta iota delta [proj2_sig pack_sig] in proj2_sig (unpack_sig f).
-
-Require Import Crypto.CompleteEdwardsCurve.ExtendedCoordinates.
-Definition edwards_extended_add_coordinates td P Q :=
-Eval cbv iota beta delta [
-       Extended.add_coordinates
-         add sub mul
-     ] in
-    (@ExtendedCoordinates.Extended.add_coordinates _ add sub mul td P Q).
-Definition edwards_extended_carry_add_coordinates td P Q :=
-Eval cbv iota beta delta [
-       Extended.add_coordinates
-         carry_add carry_sub mul
-     ] in
-    (@ExtendedCoordinates.Extended.add_coordinates _ carry_add carry_sub mul td P Q).
-Print edwards_extended_add_coordinates.
-
-Local Existing Instance field25519.
-Create HintDb edwards_extended_add_coordinates_correct discriminated.
-Section noncarry.
-  Hint Rewrite
-        (Ring.homomorphism_mul(is_homomorphism:=homomorphism_F25519_decode))
-        (Ring.homomorphism_add(H1             :=homomorphism_F25519_decode))
-        (Ring.homomorphism_sub(H1             :=homomorphism_F25519_decode))
-  : edwards_extended_add_coordinates_correct.
-  Lemma edwards_extended_add_coordinates_correct td P Q :
-    Tuple.map (n:=4) decode (edwards_extended_add_coordinates td P Q)
-    = (@ExtendedCoordinates.Extended.add_coordinates _ F.add F.sub F.mul (decode td) (Tuple.map (n:=4) decode P) (Tuple.map (n:=4) decode Q)).
-  Proof.
-    change (edwards_extended_add_coordinates td P Q)
-    with (@ExtendedCoordinates.Extended.add_coordinates _ add sub mul td P Q).
-    destruct_head' prod.
-    simpl.
-    rewrite_strat topdown hints edwards_extended_add_coordinates_correct.
-    reflexivity.
-  Qed.
-End noncarry.
-Section carry.
-  Local Existing Instance carry_field25519.
-  Hint Rewrite
-        (Ring.homomorphism_mul(is_homomorphism:=homomorphism_carry_F25519_decode))
-        (Ring.homomorphism_add(H1             :=homomorphism_carry_F25519_decode))
-        (Ring.homomorphism_sub(H1             :=homomorphism_carry_F25519_decode))
-  : edwards_extended_add_coordinates_correct.
-  Lemma edwards_extended_carry_add_coordinates_correct td P Q :
-    Tuple.map (n:=4) decode (edwards_extended_carry_add_coordinates td P Q)
-    = (@ExtendedCoordinates.Extended.add_coordinates _ F.add F.sub F.mul (decode td) (Tuple.map (n:=4) decode P) (Tuple.map (n:=4) decode Q)).
-  Proof.
-    change (edwards_extended_carry_add_coordinates td P Q)
-    with (@ExtendedCoordinates.Extended.add_coordinates _ carry_add carry_sub mul td P Q).
-    destruct_head' prod.
-    simpl.
-    rewrite_strat topdown hints edwards_extended_add_coordinates_correct.
-    reflexivity.
-  Qed.
-End carry.
-
-Lemma fieldwise_eq_edwards_extended_add_coordinates_carry_nocarry td P Q :
-  Tuple.fieldwise
-    (n:=4) eq
-    (edwards_extended_carry_add_coordinates td P Q)
-    (edwards_extended_add_coordinates td P Q).
-Proof.
-  pose proof (edwards_extended_carry_add_coordinates_correct td P Q) as H0.
-  pose proof (edwards_extended_add_coordinates_correct td P Q) as H1.
-  rewrite <- H0 in H1; clear H0.
-  assert (fieldwise
-            (fun x y => x = y)
-            (Tuple.map (n:=4) decode (edwards_extended_carry_add_coordinates td P Q))
-            (Tuple.map (n:=4) decode (edwards_extended_add_coordinates td P Q)))
-    by (rewrite H1; reflexivity).
-  clear H1.
-  destruct (edwards_extended_carry_add_coordinates td P Q), (edwards_extended_add_coordinates td P Q).
-  destruct_head' prod; simpl; unfold eq; trivial.
-Qed.
