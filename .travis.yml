@@ -11,10 +11,10 @@ matrix:
       env: COQ_VERSION="v8.5"   COQ_PACKAGE="coq"                            COQPRIME="coqprime"     PPA="ppa:jgross-h/coq-8.5-daily"
     - dist: trusty
       env: COQ_VERSION="8.5pl3" COQ_PACKAGE="coq-8.5pl3 libcoq-ocaml-8.5pl3" COQPRIME="coqprime"     PPA="ppa:jgross-h/many-coq-versions"
-    - dist: trusty
-      env: COQ_VERSION="8.5pl2" COQ_PACKAGE="coq-8.5pl2 libcoq-ocaml-8.5pl2" COQPRIME="coqprime"     PPA="ppa:jgross-h/many-coq-versions"
-    - dist: trusty
-      env: COQ_VERSION="8.5pl1" COQ_PACKAGE="coq-8.5pl1"                     COQPRIME="coqprime"     PPA="ppa:jgross-h/many-coq-versions"
+#    - dist: trusty
+#      env: COQ_VERSION="8.5pl2" COQ_PACKAGE="coq-8.5pl2 libcoq-ocaml-8.5pl2" COQPRIME="coqprime"     PPA="ppa:jgross-h/many-coq-versions"
+#    - dist: trusty
+#      env: COQ_VERSION="8.5pl1" COQ_PACKAGE="coq-8.5pl1"                     COQPRIME="coqprime"     PPA="ppa:jgross-h/many-coq-versions"
     - dist: trusty
       env: COQ_VERSION="8.5"    COQ_PACKAGE="coq-8.5"                        COQPRIME="coqprime"     PPA="ppa:jgross-h/many-coq-versions"
     - dist: precise
