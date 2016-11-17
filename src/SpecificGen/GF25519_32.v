@@ -428,7 +428,7 @@ Proof.
   { intros; apply encode_rep. }
 Qed.
 
-Definition field25519 : @field fe25519_32 eq zero_ one_ opp add sub mul inv div := proj1 field_and_homomorphisms.
+Definition field25519_32 : @field fe25519_32 eq zero_ one_ opp add sub mul inv div := proj1 field_and_homomorphisms.
 
 Lemma carry_field_and_homomorphisms
   : @field fe25519_32 eq zero_ one_ carry_opp carry_add carry_sub mul inv div
@@ -454,22 +454,22 @@ Proof.
   { intros; apply encode_rep. }
 Qed.
 
-Definition carry_field : @field fe25519_32 eq zero_ one_ carry_opp carry_add carry_sub mul inv div := proj1 carry_field_and_homomorphisms.
+Definition carry_field25519_32 : @field fe25519_32 eq zero_ one_ carry_opp carry_add carry_sub mul inv div := proj1 carry_field_and_homomorphisms.
 
-Lemma homomorphism_F_encode
+Lemma homomorphism_F25519_32_encode
   : @Ring.is_homomorphism (F modulus) Logic.eq F.one F.add F.mul fe25519_32 eq one add mul encode.
 Proof. apply field_and_homomorphisms. Qed.
 
-Lemma homomorphism_F_decode
+Lemma homomorphism_F25519_32_decode
   : @Ring.is_homomorphism fe25519_32 eq one add mul (F modulus) Logic.eq F.one F.add F.mul decode.
 Proof. apply field_and_homomorphisms. Qed.
 
 
-Lemma homomorphism_carry_F_encode
+Lemma homomorphism_carry_F25519_32_encode
   : @Ring.is_homomorphism (F modulus) Logic.eq F.one F.add F.mul fe25519_32 eq one carry_add mul encode.
 Proof. apply carry_field_and_homomorphisms. Qed.
 
-Lemma homomorphism_carry_F_decode
+Lemma homomorphism_carry_F25519_32_decode
   : @Ring.is_homomorphism fe25519_32 eq one carry_add mul (F modulus) Logic.eq F.one F.add F.mul decode.
 Proof. apply carry_field_and_homomorphisms. Qed.
 
