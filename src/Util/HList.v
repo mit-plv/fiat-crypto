@@ -117,6 +117,17 @@ Proof.
   destruct n; [ simpl; tauto | apply fold_right_and_True_hlist' ].
 Qed.
 
+Global Instance mapt_Proper {n A F B}
+  : Proper
+      ((forall_relation (fun x => pointwise_relation _ Logic.eq))
+         ==> forall_relation (fun ts => Logic.eq ==> Logic.eq))
+      (@HList.mapt n A F B).
+Proof.
+  unfold forall_relation, pointwise_relation, respectful.
+  repeat intro; subst; destruct n as [|n]; [ reflexivity | ].
+  induction n; simpl in *; congruence.
+Qed.
+
 Module Tuple.
   Lemma map_id_ext {n A} (f : A -> A) (xs:tuple A n)
   : hlist (fun x => f x = x) xs -> Tuple.map f xs = xs.
