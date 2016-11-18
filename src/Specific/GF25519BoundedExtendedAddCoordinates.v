@@ -41,11 +41,18 @@ Proof.
            end.
 Qed.
 
-Definition add_coordinates twice_d P1 P2
+Definition add_coordinates' twice_d P1 P2
   := let '(P10, P11, P12, P13) := P1 in
      let '(P20, P21, P22, P23) := P2 in
      @GF25519BoundedAddCoordinates.add_coordinates
        twice_d P10 P11 P12 P13 P20 P21 P22 P23.
+
+Definition add_coordinates twice_d P1 P2
+  := Eval cbv beta iota delta [GF25519BoundedAddCoordinates.add_coordinates HList.mapt HList.mapt'] in
+      let '(P10, P11, P12, P13) := P1 in
+      let '(P20, P21, P22, P23) := P2 in
+      @GF25519BoundedAddCoordinates.add_coordinates
+        twice_d P10 P11 P12 P13 P20 P21 P22 P23.
 
 Lemma add_coordinates_correct_full twice_d P1 P2
   : Tuple.fieldwise

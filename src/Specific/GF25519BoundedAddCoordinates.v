@@ -27,16 +27,16 @@ Lemma add_coordinatesW_correct_and_bounded : i9top_correct_and_bounded 4 add_coo
 Proof. port_correct_and_bounded interp_radd_coordinates_correct add_coordinatesW interp_radd_coordinates radd_coordinates_correct_and_bounded. Qed.
 
 Local Ltac define_9_4op x0 x1 x2 x3 x4 x5 x6 x7 x8 opW blem :=
-  refine (HList.mapt exist_fe25519W
-                     (ts:=opW (proj1_fe25519W x0)
-                              (proj1_fe25519W x1)
-                              (proj1_fe25519W x2)
-                              (proj1_fe25519W x3)
-                              (proj1_fe25519W x4)
-                              (proj1_fe25519W x5)
-                              (proj1_fe25519W x6)
-                              (proj1_fe25519W x7)
-                              (proj1_fe25519W x8)) _);
+  refine (let ts := opW (proj1_fe25519W x0)
+                        (proj1_fe25519W x1)
+                        (proj1_fe25519W x2)
+                        (proj1_fe25519W x3)
+                        (proj1_fe25519W x4)
+                        (proj1_fe25519W x5)
+                        (proj1_fe25519W x6)
+                        (proj1_fe25519W x7)
+                        (proj1_fe25519W x8) in
+          HList.mapt exist_fe25519W (ts:=ts) _);
   abstract (
       rewrite <- (HList.hlist_map (F:=fun x => is_bounded x = true) (f:=fe25519WToZ));
       apply add_coordinatesW_correct_and_bounded; apply is_bounded_proj1_fe25519
