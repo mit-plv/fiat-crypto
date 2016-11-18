@@ -300,4 +300,28 @@ Module Extended.
      *)
     End TwistMinus1.
   End ExtendedCoordinates.
+
+  Lemma add_coordinates_respectful_hetero
+        F Fadd Fsub Fmul twice_d P Q
+        F' Fadd' Fsub' Fmul' twice_d' P' Q'
+        (R : F -> F' -> Prop)
+        (Hadd : forall x x' (Hx : R x x') y y' (Hy : R y y'), R (Fadd x y) (Fadd' x' y'))
+        (Hsub : forall x x' (Hx : R x x') y y' (Hy : R y y'), R (Fsub x y) (Fsub' x' y'))
+        (Hmul : forall x x' (Hx : R x x') y y' (Hy : R y y'), R (Fmul x y) (Fmul' x' y'))
+        (Htwice_d : R twice_d twice_d')
+        (HP : Tuple.fieldwise (n:=4) R P P')
+        (HQ : Tuple.fieldwise (n:=4) R Q Q')
+    : Tuple.fieldwise
+        (n:=4) R
+        (@add_coordinates F Fadd Fsub Fmul twice_d P Q)
+        (@add_coordinates F' Fadd' Fsub' Fmul' twice_d' P' Q').
+  Proof.
+    repeat match goal with
+           | [ H : and _ _ |- _ ] => destruct H
+           | [ H : prod _ _ |- _ ] => destruct H
+           | _ => progress unfold add_coordinates, fieldwise, fieldwise', fst, snd, tuple, tuple' in *
+           | [ |- and _ _ ] => split
+           | _ => solve [ auto ]
+           end.
+  Qed.
 End Extended.
