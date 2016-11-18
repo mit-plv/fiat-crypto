@@ -11,6 +11,7 @@ Require Import Crypto.Util.Option.
 Require Crypto.Specific.GF25519.
 Require Crypto.Specific.GF25519Bounded.
 Require Crypto.Specific.SC25519.
+Require Crypto.Specific.GF25519BoundedExtendedAddCoordinates.
 Require Crypto.CompleteEdwardsCurve.ExtendedCoordinates.
 Require Crypto.Encoding.PointEncoding.
 Require Crypto.Util.IterAssocOp.
@@ -190,7 +191,8 @@ Definition ErepAdd :=
   (@ExtendedCoordinates.Extended.add _ _ _ _ _ _ _ _ _ _
                                      a d GF25519Bounded.field25519 twedprm_ERep _
                                      eq_a_minus1 twice_d (eq_refl _)
-                                     _ (fun _ _ => reflexivity _)).
+                                     (GF25519BoundedExtendedAddCoordinates.add_coordinates twice_d)
+                                     (GF25519BoundedExtendedAddCoordinates.add_coordinates_correct_full _)).
 
 Local Coercion Z.of_nat : nat >-> Z.
 Definition ERepSel : bool -> Erep -> Erep -> Erep := fun b x y => if b then y else x.
