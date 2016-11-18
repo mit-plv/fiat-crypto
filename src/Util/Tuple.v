@@ -463,6 +463,36 @@ Proof.
   destruct n; unfold fieldwise; exact _.
 Defined.
 
+Section fieldwise_map.
+  Local Arguments map : simpl never.
+  Lemma fieldwise'_map_eq {A A' B B' n} R (f:A -> A') (g:B -> B') (t1:tuple' A n) (t2:tuple' B n)
+    : fieldwise' R (map (n:=S n) f t1) (map (n:=S n) g t2)
+      = fieldwise' (fun x y => R (f x) (g y)) t1 t2.
+  Proof.
+    induction n; [ reflexivity | ].
+    destruct t1, t2.
+    rewrite !map_S.
+    simpl @fieldwise'; rewrite IHn; reflexivity.
+  Qed.
+
+  Lemma fieldwise_map_eq {A A' B B' n} R (f:A -> A') (g:B -> B') (t1:tuple A n) (t2:tuple B n)
+    : fieldwise R (map f t1) (map g t2)
+      = fieldwise (fun x y => R (f x) (g y)) t1 t2.
+  Proof.
+    destruct n; [ reflexivity | apply fieldwise'_map_eq ].
+  Qed.
+
+  Lemma fieldwise'_map_iff {A A' B B' n} R (f:A -> A') (g:B -> B') (t1:tuple' A n) (t2:tuple' B n)
+    : fieldwise' R (map (n:=S n) f t1) (map (n:=S n) g t2)
+      <-> fieldwise' (fun x y => R (f x) (g y)) t1 t2.
+  Proof. rewrite fieldwise'_map_eq; reflexivity. Qed.
+
+  Lemma fieldwise_map_iff {A A' B B' n} R (f:A -> A') (g:B -> B') (t1:tuple A n) (t2:tuple B n)
+    : fieldwise R (map f t1) (map g t2)
+      <-> fieldwise (fun x y => R (f x) (g y)) t1 t2.
+  Proof. rewrite fieldwise_map_eq; reflexivity. Qed.
+End fieldwise_map.
+
 Fixpoint fieldwiseb' {A B} (n:nat) (R:A->B->bool) (a:tuple' A n) (b:tuple' B n) {struct n} : bool.
   destruct n; simpl @tuple' in *.
   { exact (R a b). }
