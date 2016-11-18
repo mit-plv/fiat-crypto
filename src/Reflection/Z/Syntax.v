@@ -28,9 +28,6 @@ Local Notation eta x := (fst x, snd x).
 Local Notation eta3 x := (eta (fst x), snd x).
 Local Notation eta4 x := (eta3 (fst x), snd x).
 
-Axiom proof_admitted : False.
-Local Notation admit := (match proof_admitted with end).
-
 Inductive op : flat_type base_type -> flat_type base_type -> Type :=
 | Add : op (tZ * tZ) tZ
 | Sub : op (tZ * tZ) tZ
