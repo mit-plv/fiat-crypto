@@ -10,58 +10,45 @@ Require Import Crypto.SpecificGen.GF2519_32.
 Require Import Crypto.CompleteEdwardsCurve.ExtendedCoordinates.
 
 Definition edwards_extended_add_coordinates td P Q :=
-Eval cbv iota beta delta [
-       Extended.add_coordinates
-         add sub mul
-     ] in
     (@ExtendedCoordinates.Extended.add_coordinates _ add sub mul td P Q).
 Definition edwards_extended_carry_add_coordinates td P Q :=
-Eval cbv iota beta delta [
-       Extended.add_coordinates
-         carry_add carry_sub mul
-     ] in
     (@ExtendedCoordinates.Extended.add_coordinates _ carry_add carry_sub mul td P Q).
-Print edwards_extended_add_coordinates.
 
 Create HintDb edwards_extended_add_coordinates_correct discriminated.
-Section noncarry.
-  Local Existing Instance field2519_32.
-  Hint Rewrite
-        (Ring.homomorphism_mul(is_homomorphism:=homomorphism_F2519_32_decode))
-        (Ring.homomorphism_add(H1             :=homomorphism_F2519_32_decode))
-        (Ring.homomorphism_sub(H1             :=homomorphism_F2519_32_decode))
+Local Existing Instance field2519_32.
+Hint Rewrite
+     (Ring.homomorphism_mul(is_homomorphism:=homomorphism_F2519_32_decode))
+     (Ring.homomorphism_add(H1             :=homomorphism_F2519_32_decode))
+     (Ring.homomorphism_sub(H1             :=homomorphism_F2519_32_decode))
   : edwards_extended_add_coordinates_correct.
-  Lemma edwards_extended_add_coordinates_correct td P Q :
-    Tuple.map (n:=4) decode (edwards_extended_add_coordinates td P Q)
-    = (@ExtendedCoordinates.Extended.add_coordinates _ F.add F.sub F.mul (decode td) (Tuple.map (n:=4) decode P) (Tuple.map (n:=4) decode Q)).
-  Proof.
-    change (edwards_extended_add_coordinates td P Q)
-    with (@ExtendedCoordinates.Extended.add_coordinates _ add sub mul td P Q).
-    destruct_head' prod.
-    simpl.
-    rewrite_strat topdown hints edwards_extended_add_coordinates_correct.
-    reflexivity.
-  Qed.
-End noncarry.
-Section carry.
-  Local Existing Instance carry_field2519_32.
-  Hint Rewrite
-        (Ring.homomorphism_mul(is_homomorphism:=homomorphism_carry_F2519_32_decode))
-        (Ring.homomorphism_add(H1             :=homomorphism_carry_F2519_32_decode))
-        (Ring.homomorphism_sub(H1             :=homomorphism_carry_F2519_32_decode))
+Lemma edwards_extended_add_coordinates_correct td P Q :
+  Tuple.map (n:=4) decode (edwards_extended_add_coordinates td P Q)
+  = (@ExtendedCoordinates.Extended.add_coordinates _ F.add F.sub F.mul (decode td) (Tuple.map (n:=4) decode P) (Tuple.map (n:=4) decode Q)).
+Proof.
+  change (edwards_extended_add_coordinates td P Q)
+  with (@ExtendedCoordinates.Extended.add_coordinates _ add sub mul td P Q).
+  destruct_head' prod.
+  simpl.
+  rewrite_strat topdown hints edwards_extended_add_coordinates_correct.
+  reflexivity.
+Qed.
+Local Existing Instance carry_field2519_32.
+Hint Rewrite
+     (Ring.homomorphism_mul(is_homomorphism:=homomorphism_carry_F2519_32_decode))
+     (Ring.homomorphism_add(H1             :=homomorphism_carry_F2519_32_decode))
+     (Ring.homomorphism_sub(H1             :=homomorphism_carry_F2519_32_decode))
   : edwards_extended_add_coordinates_correct.
-  Lemma edwards_extended_carry_add_coordinates_correct td P Q :
-    Tuple.map (n:=4) decode (edwards_extended_carry_add_coordinates td P Q)
-    = (@ExtendedCoordinates.Extended.add_coordinates _ F.add F.sub F.mul (decode td) (Tuple.map (n:=4) decode P) (Tuple.map (n:=4) decode Q)).
-  Proof.
-    change (edwards_extended_carry_add_coordinates td P Q)
-    with (@ExtendedCoordinates.Extended.add_coordinates _ carry_add carry_sub mul td P Q).
-    destruct_head' prod.
-    simpl.
-    rewrite_strat topdown hints edwards_extended_add_coordinates_correct.
-    reflexivity.
-  Qed.
-End carry.
+Lemma edwards_extended_carry_add_coordinates_correct td P Q :
+  Tuple.map (n:=4) decode (edwards_extended_carry_add_coordinates td P Q)
+  = (@ExtendedCoordinates.Extended.add_coordinates _ F.add F.sub F.mul (decode td) (Tuple.map (n:=4) decode P) (Tuple.map (n:=4) decode Q)).
+Proof.
+  change (edwards_extended_carry_add_coordinates td P Q)
+  with (@ExtendedCoordinates.Extended.add_coordinates _ carry_add carry_sub mul td P Q).
+  destruct_head' prod.
+  simpl.
+  rewrite_strat topdown hints edwards_extended_add_coordinates_correct.
+  reflexivity.
+Qed.
 
 Lemma fieldwise_eq_edwards_extended_add_coordinates_carry_nocarry td P Q :
   Tuple.fieldwise
