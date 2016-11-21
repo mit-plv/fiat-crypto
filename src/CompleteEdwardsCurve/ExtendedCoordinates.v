@@ -216,15 +216,11 @@ Module Extended.
         rewrite <- to_twisted_add_unopt.
         { pose proof (add_coordinates_opt_correct (coordinates P) (coordinates Q)).
           cbv [add add_unopt].
-          match goal with
-          | [ |- context[exist _ ?x ?p] ]
-            => generalize p; generalize dependent x
-          end.
-          match goal with
-          | [ |- context[exist ?P ?x (?p ?k)] ]
-            => generalize (p k);
-                 let H := fresh in intro H; change (P x) in H; revert H; generalize x
-          end.
+          do 2 match goal with
+               | [ |- context[exist _ ?x ?p] ]
+                 => first [ is_var p; fail 1
+                          | generalize p; generalize dependent x ]
+               end.
           clear add_coordinates_opt add_coordinates_opt_correct.
           cbv [to_twisted coordinates proj1_sig E.eq E.coordinates fst snd] in *.
           repeat match goal with
