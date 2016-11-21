@@ -16,6 +16,7 @@ Require Import Crypto.Reflection.MapInterpWf.
 Require Import Crypto.Reflection.WfReflective.
 Require Import Crypto.Util.Tower.
 Require Import Crypto.Util.LetIn.
+Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
