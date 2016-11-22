@@ -1,5 +1,14 @@
 Require Export Crypto.Util.FixCoqMistakes.
 
+Section tower_nd.
+  Context (A : Type) (B : Type).
+  Fixpoint tower_nd (n : nat)
+    := match n with
+       | 0 => B
+       | S n' => A -> tower_nd n'
+       end.
+End tower_nd.
+
 Definition apply4 {AK BK PA PB ARR}
            (F : forall (A : AK) (B : BK), (PA A -> PB B) -> PB (ARR A B))
            {A0 A1 A2 A3 : AK} {B : BK}
@@ -12,7 +21,7 @@ Defined.
 Definition apply4_nd {BK PA PB ARR}
            (F : forall (B : BK), (PA -> PB B) -> PB (ARR B))
            {B : BK}
-           (f : PA -> PA -> PA -> PA -> PB B)
+           (f : tower_nd PA (PB B) 4)
   : PB (ARR (ARR (ARR (ARR B))))
   := @apply4 unit BK (fun _ => PA) PB (fun _ => ARR) (fun _ => F)
              tt tt tt tt B f.
@@ -29,7 +38,7 @@ Defined.
 Definition apply9_nd {BK PA PB ARR}
            (F : forall (B : BK), (PA -> PB B) -> PB (ARR B))
            {B : BK}
-           (f : PA -> PA -> PA -> PA -> PA -> PA -> PA -> PA -> PA -> PB B)
+           (f : tower_nd PA (PB B) 9)
   : PB (ARR (ARR (ARR (ARR (ARR (ARR (ARR (ARR (ARR B)))))))))
   := @apply9 unit BK (fun _ => PA) PB (fun _ => ARR) (fun _ => F)
              tt tt tt tt tt tt tt tt tt B f.
