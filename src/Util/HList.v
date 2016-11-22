@@ -20,6 +20,19 @@ Definition hlist {T n} (f : T -> Type) : forall (Ts : tuple T n), Type :=
   | S n' => @hlist' T n' f
   end.
 
+Fixpoint rhlist' T n (f : T -> Type) : rtuple' T n -> Type :=
+  match n return rtuple' _ n -> Type with
+  | 0 => fun T => f T
+  | S n' => fun Ts => (f (fst Ts) * rhlist' T n' f (snd Ts))%type
+  end.
+Global Arguments rhlist' {T n} f _.
+
+Definition rhlist {T n} (f : T -> Type) : forall (Ts : rtuple T n), Type :=
+  match n return rtuple _ n -> Type with
+  | 0 => fun _ => unit
+  | S n' => @rhlist' T n' f
+  end.
+
 Fixpoint const' {T n F xs} (v : forall x, F x) : @hlist' T n F xs
   := match n return forall xs, @hlist' T n F xs with
      | 0 => fun _ => v _
