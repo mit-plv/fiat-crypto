@@ -98,10 +98,10 @@ Local Ltac bounds_from_list_cps ls :=
                         constr:(fun T extra => (Some {| Bounds.lower := fst x ; Bounds.upper := snd x |}, bs T extra))
   end.
 
-Local Ltac make_bounds_cps ls :=
+Local Ltac make_bounds_cps ls extra :=
   let v := bounds_from_list_cps (List.rev ls) in
   let v := (eval compute in v) in
-  pose v.
+  exact (v _ extra).
 
 Local Ltac bounds_from_list ls :=
   lazymatch (eval hnf in ls) with
@@ -116,36 +116,30 @@ Local Ltac make_bounds ls :=
   let v := (eval compute in v) in
   exact v.
 
-(*Fixpoint Expr_nm_Op_bounds count_in count_out : interp_all_binders_for (Expr_nm_OpT count_in count_out) ZBounds.interp_base_type.
+Fixpoint Expr_nm_Op_bounds count_in count_out : interp_all_binders_for (Expr_nm_OpT count_in count_out) ZBounds.interp_base_type.
 Proof.
   refine match count_in return interp_all_binders_for (Expr_nm_OpT count_in count_out) ZBounds.interp_base_type with
          | 0 => tt
-         | S n => let v := Expr_nm_Op_bounds n count_out in
-                  _
+         | S n => let v := interp_all_binders_for_to' (Expr_nm_Op_bounds n count_out) in
+                  interp_all_binders_for_of' _
          end; simpl.
-  make_bounds_cps (Tuple.to_list _ bounds).
-  pose (p _ v).
-  repeat (split; [ exact (fst p0) | ]; destruct p0 as [_ p0]).
-  exact p0.
-*)
-Definition ExprBinOp_bounds : interp_all_binders_for ExprBinOpT ZBounds.interp_base_type.
-Proof. make_bounds (Tuple.to_list _ bounds ++ Tuple.to_list _ bounds)%list. Defined.
-Definition ExprUnOp_bounds : interp_all_binders_for ExprUnOpT ZBounds.interp_base_type.
-Proof. make_bounds (Tuple.to_list _ bounds). Defined.
-Definition ExprUnOpFEToZ_bounds : interp_all_binders_for ExprUnOpFEToZT ZBounds.interp_base_type.
-Proof. make_bounds (Tuple.to_list _ bounds). Defined.
-Definition ExprUnOpFEToWire_bounds : interp_all_binders_for ExprUnOpFEToWireT ZBounds.interp_base_type.
-Proof. make_bounds (Tuple.to_list _ bounds). Defined.
+  make_bounds_cps (Tuple.to_list _ bounds) v.
+Defined.
+Definition ExprBinOp_bounds : interp_all_binders_for ExprBinOpT ZBounds.interp_base_type
+  := Eval compute in Expr_nm_Op_bounds 2 1.
+Definition ExprUnOp_bounds : interp_all_binders_for ExprUnOpT ZBounds.interp_base_type
+  := Eval compute in Expr_nm_Op_bounds 1 1.
+Definition ExprUnOpFEToZ_bounds : interp_all_binders_for ExprUnOpFEToZT ZBounds.interp_base_type
+  := Eval compute in Expr_nm_Op_bounds 1 1.
+Definition ExprUnOpFEToWire_bounds : interp_all_binders_for ExprUnOpFEToWireT ZBounds.interp_base_type
+  := Eval compute in Expr_nm_Op_bounds 1 1.
+Definition Expr4Op_bounds : interp_all_binders_for Expr4OpT ZBounds.interp_base_type
+  := Eval compute in Expr_nm_Op_bounds 4 1.
+Definition Expr9Op_bounds : interp_all_binders_for Expr9_4OpT ZBounds.interp_base_type
+  := Eval compute in Expr_nm_Op_bounds 9 4.
 Definition ExprUnOpWireToFE_bounds : interp_all_binders_for ExprUnOpWireToFET ZBounds.interp_base_type.
 Proof. make_bounds (Tuple.to_list _ wire_digit_bounds). Defined.
-Definition Expr4Op_bounds : interp_all_binders_for Expr4OpT ZBounds.interp_base_type.
-Proof.
-  make_bounds (List.fold_right (@List.app _) nil (List.repeat (Tuple.to_list _ bounds) 4)).
-Defined.
-Definition Expr9Op_bounds : interp_all_binders_for Expr9_4OpT ZBounds.interp_base_type.
-Proof.
-  make_bounds (List.fold_right (@List.app _) nil (List.repeat (Tuple.to_list _ bounds) 9)).
-Defined.
+
 Definition interp_bexpr : ExprBinOp -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
   := fun e => curry_binop_fe25519W (Interp (@WordW.interp_op) e).
 Definition interp_uexpr : ExprUnOp -> Specific.GF25519BoundedCommon.fe25519W -> Specific.GF25519BoundedCommon.fe25519W
