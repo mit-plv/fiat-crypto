@@ -219,7 +219,7 @@ Module Extended.
           do 2 match goal with
                | [ |- context[exist _ ?x ?p] ]
                  => first [ is_var p; fail 1
-                          | generalize p; generalize dependent x ]
+                          | generalize p; cbv zeta; generalize dependent x ]
                end.
           clear add_coordinates_opt add_coordinates_opt_correct.
           cbv [to_twisted coordinates proj1_sig E.eq E.coordinates fst snd] in *.
