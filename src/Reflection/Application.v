@@ -62,6 +62,42 @@ Section language.
        | Arrow A B => interp_flat_type var (all_binders_for (Arrow A B))
        end.
 
+  Fixpoint interp_all_binders_for' (T : type base_type) var
+    := match T return Type with
+       | Tflat _ => unit
+       | Arrow A B => var A * interp_all_binders_for' B var
+       end%type.
+
+  Fixpoint interp_all_binders_for_of' T var {struct T}
+    : interp_all_binders_for' T var -> interp_all_binders_for T var
+    := match T return interp_all_binders_for' T var -> interp_all_binders_for T var with
+       | Tflat _ => fun x => x
+       | Arrow A B =>
+         match B
+               return (interp_all_binders_for' B var -> interp_all_binders_for B var)
+                      -> interp_all_binders_for' (Arrow A B) var
+                      -> interp_all_binders_for (Arrow A B) var
+         with
+         | Tflat _ => fun _ => @fst _ _
+         | Arrow C D => fun interp x => (fst x, interp (snd x))
+         end (@interp_all_binders_for_of' B var)
+       end.
+
+  Fixpoint interp_all_binders_for_to' T var {struct T}
+    : interp_all_binders_for T var -> interp_all_binders_for' T var
+    := match T return interp_all_binders_for T var -> interp_all_binders_for' T var with
+       | Tflat _ => fun x => x
+       | Arrow A B =>
+         match B
+               return (interp_all_binders_for B var -> interp_all_binders_for' B var)
+                      -> interp_all_binders_for (Arrow A B) var
+                      -> interp_all_binders_for' (Arrow A B) var
+         with
+         | Tflat _ => fun _ x => (x, tt)
+         | Arrow C D => fun interp x => (fst x, interp (snd x))
+         end (@interp_all_binders_for_to' B var)
+       end.
+
   Definition fst_binder {A B var} (args : interp_flat_type var (all_binders_for (Arrow A B))) : var A
     := match B return interp_flat_type var (all_binders_for (Arrow A B)) -> var A with
        | Tflat _ => fun x => x
@@ -139,6 +175,8 @@ End language.
 
 Arguments all_binders_for {_} !_ / .
 Arguments interp_all_binders_for {_} !_ _ / .
+Arguments interp_all_binders_for_of' {_ !_ _} !_ / .
+Arguments interp_all_binders_for_to' {_ !_ _} !_ / .
 Arguments count_binders {_} !_ / .
 Arguments binders_for {_} !_ !_ _ / .
 Arguments remove_binders {_} !_ !_ / .
