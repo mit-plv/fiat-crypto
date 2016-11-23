@@ -160,17 +160,23 @@ Section language.
        | S n' => @ApplyInterped' n' t x
        end.
 
-  Fixpoint ApplyInterpedAll {t}
+  Fixpoint ApplyInterpedAll' {t}
     : forall  (x : interp_type interp_base_type t)
-              (args : interp_all_binders_for t interp_base_type),
+              (args : interp_all_binders_for' t interp_base_type),
       interp_flat_type interp_base_type (remove_all_binders t)
     := match t return (forall (x : interp_type _ t)
-                              (args : interp_all_binders_for t _),
+                              (args : interp_all_binders_for' t _),
                           interp_flat_type _ (remove_all_binders t))
        with
        | Tflat _ => fun x _ => x
-       | Arrow A B => fun f x => @ApplyInterpedAll B (f (fst_binder x)) (snd_binder x)
+       | Arrow A B => fun f x => @ApplyInterpedAll' B (f (fst x)) (snd x)
        end.
+
+  Definition ApplyInterpedAll {t}
+             (x : interp_type interp_base_type t)
+             (args : interp_all_binders_for t interp_base_type)
+    : interp_flat_type interp_base_type (remove_all_binders t)
+    := ApplyInterpedAll' x (interp_all_binders_for_to' _ _ args).
 End language.
 
 Arguments all_binders_for {_} !_ / .
@@ -185,4 +191,5 @@ Arguments Apply {_ _ _ _ _ _} _ _ , {_ _ _} _ {_ _} _ _.
 Arguments Apply _ _ _ !_ _ _ !_ !_ / .
 Arguments ApplyInterped {_ _ !_ !_} _ _ / .
 Arguments ApplyAll {_ _ _ _ !_} !_ _ / .
+Arguments ApplyInterpedAll' {_ _ !_} _ _ / .
 Arguments ApplyInterpedAll {_ _ !_} _ _ / .

@@ -37,7 +37,7 @@ Module Relations.
         { reflexivity. }
         { setoid_rewrite IHt; clear IHt.
           split; intro H; intros.
-          { simpl in *; intuition. }
+          { destruct_head_hnf' prod; simpl in *; intuition. }
           { eapply (H (_, _) (_, _)); simpl in *; intuition. } } }
     Qed.
   End lift.
