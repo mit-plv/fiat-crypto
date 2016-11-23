@@ -1,12 +1,25 @@
 Require Export Crypto.Util.FixCoqMistakes.
 
 Section tower_nd.
-  Context (A : Type) (B : Type).
-  Fixpoint tower_nd (n : nat)
-    := match n with
-       | 0 => B
-       | S n' => A -> tower_nd n'
-       end.
+  Context (A : Type).
+  Section with_B.
+    Context (B : Type).
+    Fixpoint tower_nd (n : nat)
+      := match n with
+         | 0 => B
+         | S n' => A -> tower_nd n'
+         end.
+  End with_B.
+
+  Section with_B2.
+    Context (B B' : Type) (f : B -> B').
+    Fixpoint impl_under_tower_nd (n : nat)
+      : tower_nd B n -> tower_nd B' n
+      := match n with
+         | 0 => f
+         | S n' => fun t x => impl_under_tower_nd n' (t x)
+         end.
+  End with_B2.
 End tower_nd.
 
 Definition apply4 {AK BK PA PB ARR}
