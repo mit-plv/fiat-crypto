@@ -40,6 +40,13 @@ Fixpoint rsnoc' T n {struct n} : forall (x : rtuple' T n) (y : T), rtuple' T (S 
      end.
 Global Arguments rsnoc' {T n} _ _.
 
+Fixpoint cons' T n {struct n} : forall (y : T) (x : tuple' T n), tuple' T (S n)
+  := match n return forall (y : T) (x : tuple' T n), tuple' T (S n) with
+     | O => fun y x => (y, x)
+     | S n' => fun y x => (@cons' T n' y (fst x), snd x)
+     end.
+Global Arguments cons' {T n} _ _.
+
 Fixpoint assoc_right' {n T} {struct n}
   : tuple' T n -> rtuple' T n
   := match n return tuple' T n -> rtuple' T n with
@@ -54,6 +61,22 @@ Definition assoc_right {n T}
   := match n with
      | 0 => fun x => x
      | S n' => @assoc_right' n' T
+     end.
+
+Fixpoint assoc_left' {n T} {struct n}
+  : rtuple' T n -> tuple' T n
+  := match n return rtuple' T n -> tuple' T n with
+     | 0 => fun x => x
+     | S n' => fun ts => let xs := @assoc_left' n' T (snd ts) in
+                         let x := fst ts in
+                         cons' x xs
+     end.
+
+Definition assoc_left {n T}
+  : rtuple T n -> tuple T n
+  := match n with
+     | 0 => fun x => x
+     | S n' => @assoc_left' n' T
      end.
 
 Definition tl' {T n} : tuple' T (S n) -> tuple' T n := @fst _ _.
