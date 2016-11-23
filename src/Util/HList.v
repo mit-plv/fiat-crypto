@@ -20,6 +20,19 @@ Definition hlist {T n} (f : T -> Type) : forall (Ts : tuple T n), Type :=
   | S n' => @hlist' T n' f
   end.
 
+Fixpoint hlistP' T n (f : T -> Prop) : tuple' T n -> Prop :=
+  match n return tuple' _ n -> Prop with
+  | 0 => fun T => f T
+  | S n' => fun Ts => (hlistP' T n' f (fst Ts) /\ f (snd Ts))%type
+  end.
+Global Arguments hlistP' {T n} f _.
+
+Definition hlistP {T n} (f : T -> Prop) : forall (Ts : tuple T n), Prop :=
+  match n return tuple _ n -> Prop with
+  | 0 => fun _ => True
+  | S n' => @hlistP' T n' f
+  end.
+
 Fixpoint rhlist' T n (f : T -> Type) : rtuple' T n -> Type :=
   match n return rtuple' _ n -> Type with
   | 0 => fun T => f T
