@@ -31,34 +31,30 @@ Local Ltac make_type_from uncurried_op :=
   let T := (type of uncurried_op) in
   make_type_from' T.
 
-Definition ExprBinOpT : type base_type.
-Proof. make_type_from (uncurry_binop_fe25519_32 carry_add). Defined.
-Definition ExprUnOpT : type base_type.
-Proof. make_type_from (uncurry_unop_fe25519_32 carry_opp). Defined.
+Definition fe25519_32T : flat_type base_type.
+Proof.
+  let T := (eval compute in GF25519_32.fe25519_32) in
+  let T := reify_flat_type T in
+  exact T.
+Defined.
+Definition Expr_n_OpT (count_out : nat) : flat_type base_type
+  := Eval cbv [Syntax.tuple Syntax.tuple' fe25519_32T] in
+      Syntax.tuple fe25519_32T count_out.
+Fixpoint Expr_nm_OpT (count_in count_out : nat) : type base_type
+  := match count_in with
+     | 0 => Expr_n_OpT count_out
+     | S n => SmartArrow base_type fe25519_32T (Expr_nm_OpT n count_out)
+     end.
+Definition ExprBinOpT : type base_type := Eval compute in Expr_nm_OpT 2 1.
+Definition ExprUnOpT : type base_type := Eval compute in Expr_nm_OpT 1 1.
 Definition ExprUnOpFEToZT : type base_type.
 Proof. make_type_from (uncurry_unop_fe25519_32 ge_modulus). Defined.
 Definition ExprUnOpWireToFET : type base_type.
 Proof. make_type_from (uncurry_unop_wire_digits unpack). Defined.
 Definition ExprUnOpFEToWireT : type base_type.
 Proof. make_type_from (uncurry_unop_fe25519_32 pack). Defined.
-Definition Expr4OpT : type base_type.
-Proof.
-  let T := lazymatch type of (apply4_nd
-                                (B:=GF25519_32.fe25519_32)
-                                (@uncurry_unop_fe25519_32)) with
-           | _ -> ?T => T
-           end in
-  make_type_from' T.
-Defined.
-Definition Expr9_4OpT : type base_type.
-Proof.
-  let T := lazymatch type of (apply9_nd
-                                (B:=Tuple.tuple GF25519_32.fe25519_32 4)
-                                (@uncurry_unop_fe25519_32)) with
-           | _ -> ?T => T
-           end in
-  make_type_from' T.
-Defined.
+Definition Expr4OpT : type base_type := Eval compute in Expr_nm_OpT 4 1.
+Definition Expr9_4OpT : type base_type := Eval compute in Expr_nm_OpT 9 4.
 Definition ExprArgT : flat_type base_type
   := Eval compute in remove_all_binders ExprUnOpT.
 Definition ExprArgWireT : flat_type base_type
@@ -68,29 +64,44 @@ Definition ExprArgRevT : flat_type base_type
 Definition ExprArgWireRevT : flat_type base_type
   := Eval compute in all_binders_for ExprUnOpWireToFET.
 Definition ExprZ : Type := Expr (Tbase TZ).
-Definition ExprBinOp : Type := Expr ExprBinOpT.
-Definition ExprUnOp : Type := Expr ExprUnOpT.
 Definition ExprUnOpFEToZ : Type := Expr ExprUnOpFEToZT.
 Definition ExprUnOpWireToFE : Type := Expr ExprUnOpWireToFET.
 Definition ExprUnOpFEToWire : Type := Expr ExprUnOpFEToWireT.
+Definition Expr_nm_Op count_in count_out : Type := Expr (Expr_nm_OpT count_in count_out).
+Definition ExprBinOp : Type := Expr ExprBinOpT.
+Definition ExprUnOp : Type := Expr ExprUnOpT.
 Definition Expr4Op : Type := Expr Expr4OpT.
 Definition Expr9_4Op : Type := Expr Expr9_4OpT.
 Definition ExprArg : Type := Expr ExprArgT.
 Definition ExprArgWire : Type := Expr ExprArgWireT.
 Definition ExprArgRev : Type := Expr ExprArgRevT.
 Definition ExprArgWireRev : Type := Expr ExprArgWireRevT.
-Definition exprZ interp_base_type var : Type := expr base_type interp_base_type op (var:=var) (Tbase TZ).
+Definition expr_nm_Op count_in count_out interp_base_type var : Type
+  := expr base_type interp_base_type op (var:=var) (Expr_nm_OpT count_in count_out).
 Definition exprBinOp interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprBinOpT.
 Definition exprUnOp interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprUnOpT.
+Definition expr4Op interp_base_type var : Type := expr base_type interp_base_type op (var:=var) Expr4OpT.
+Definition expr9_4Op interp_base_type var : Type := expr base_type interp_base_type op (var:=var) Expr9_4OpT.
+Definition exprZ interp_base_type var : Type := expr base_type interp_base_type op (var:=var) (Tbase TZ).
 Definition exprUnOpFEToZ interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprUnOpFEToZT.
 Definition exprUnOpWireToFE interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprUnOpWireToFET.
 Definition exprUnOpFEToWire interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprUnOpFEToWireT.
-Definition expr4Op interp_base_type var : Type := expr base_type interp_base_type op (var:=var) Expr4OpT.
-Definition expr9_4Op interp_base_type var : Type := expr base_type interp_base_type op (var:=var) Expr9_4OpT.
 Definition exprArg interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprArgT.
 Definition exprArgWire interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprArgWireT.
 Definition exprArgRev interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprArgRevT.
 Definition exprArgWireRev interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprArgWireRevT.
+
+Local Ltac bounds_from_list_cps ls :=
+  lazymatch (eval hnf in ls) with
+  | (?x :: nil)%list => constr:(fun T (extra : T) => (Some {| Bounds.lower := fst x ; Bounds.upper := snd x |}, extra))
+  | (?x :: ?xs)%list => let bs := bounds_from_list_cps xs in
+                        constr:(fun T extra => (Some {| Bounds.lower := fst x ; Bounds.upper := snd x |}, bs T extra))
+  end.
+
+Local Ltac make_bounds_cps ls :=
+  let v := bounds_from_list_cps (List.rev ls) in
+  let v := (eval compute in v) in
+  pose v.
 
 Local Ltac bounds_from_list ls :=
   lazymatch (eval hnf in ls) with
@@ -105,6 +116,18 @@ Local Ltac make_bounds ls :=
   let v := (eval compute in v) in
   exact v.
 
+(*Fixpoint Expr_nm_Op_bounds count_in count_out : interp_all_binders_for (Expr_nm_OpT count_in count_out) ZBounds.interp_base_type.
+Proof.
+  refine match count_in return interp_all_binders_for (Expr_nm_OpT count_in count_out) ZBounds.interp_base_type with
+         | 0 => tt
+         | S n => let v := Expr_nm_Op_bounds n count_out in
+                  _
+         end; simpl.
+  make_bounds_cps (Tuple.to_list _ bounds).
+  pose (p _ v).
+  repeat (split; [ exact (fst p0) | ]; destruct p0 as [_ p0]).
+  exact p0.
+*)
 Definition ExprBinOp_bounds : interp_all_binders_for ExprBinOpT ZBounds.interp_base_type.
 Proof. make_bounds (Tuple.to_list _ bounds ++ Tuple.to_list _ bounds)%list. Defined.
 Definition ExprUnOp_bounds : interp_all_binders_for ExprUnOpT ZBounds.interp_base_type.

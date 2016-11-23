@@ -607,4 +607,3 @@ Module Export PrettyPrinting.
   Notation sanity_check opW bounds
     := (eq_refl (sanity_compute opW bounds) <: no = no) (only parsing).
 End PrettyPrinting.
-G
