@@ -95,6 +95,7 @@ src/ModularArithmetic/Montgomery/Z.v
 src/ModularArithmetic/Montgomery/ZBounded.v
 src/ModularArithmetic/Montgomery/ZProofs.v
 src/Reflection/Application.v
+src/Reflection/ApplicationLemmas.v
 src/Reflection/CommonSubexpressionElimination.v
 src/Reflection/Conversion.v
 src/Reflection/CountLets.v
