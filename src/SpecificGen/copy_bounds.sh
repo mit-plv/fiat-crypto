@@ -22,4 +22,8 @@ for ORIG in $(git ls-files "../Specific/**GF25519*.v" | grep -v "../Specific/GF2
     NEW_DIR="$(dirname "$NEW")"
     mkdir -p "$NEW_DIR" || exit $?
     cat "$ORIG" | sed s"/64/${BIT_WIDTH}/g" | sed s'/Specific/SpecificGen/g' | sed s"/25519/${V_FILE_STEM}/g" > "$NEW" || exit $?
+    if [ -z "$(git ls-files "$NEW")" ]; then
+        echo "git add '$NEW'"
+        git add "$NEW" || exit $?
+    fi
 done
