@@ -718,6 +718,35 @@ Definition div (f g : fe5211_32) : fe5211_32
 Definition eq (f g : fe5211_32) : Prop := eq (proj1_fe5211_32 f) (proj1_fe5211_32 g).
 
 
+Notation in_op_correct_and_bounded k irop op
+  := (((Tuple.map (n:=k) fe5211_32WToZ irop = op)
+       /\ HList.hlistP (fun v => is_bounded v = true) (Tuple.map (n:=k) fe5211_32WToZ irop))%type)
+       (only parsing).
+
+Fixpoint inm_op_correct_and_bounded' (count_in count_out : nat)
+  : forall (irop : Tower.tower_nd fe5211_32W (Tuple.tuple fe5211_32W count_out) count_in)
+           (op : Tower.tower_nd GF5211_32.fe5211_32 (Tuple.tuple GF5211_32.fe5211_32 count_out) count_in)
+           (cont : Prop -> Prop),
+    Prop
+  := match count_in return
+           forall (irop : Tower.tower_nd fe5211_32W (Tuple.tuple fe5211_32W count_out) count_in)
+                  (op : Tower.tower_nd GF5211_32.fe5211_32 (Tuple.tuple GF5211_32.fe5211_32 count_out) count_in)
+                  (cont : Prop -> Prop),
+             Prop
+     with
+     | O => fun irop op cont => cont (in_op_correct_and_bounded count_out irop op)
+     | S n => fun irop op cont
+              => forall x : fe5211_32W,
+                  @inm_op_correct_and_bounded'
+                    n count_out (irop x) (op (fe5211_32WToZ x))
+                    (fun P => cont (is_bounded (fe5211_32WToZ x) = true -> P))
+     end.
+Definition inm_op_correct_and_bounded count_in count_out irop op
+  := Eval cbv [inm_op_correct_and_bounded' Tower.tower_nd Tuple.tuple Tuple.tuple' HList.hlistP HList.hlistP'] in
+      inm_op_correct_and_bounded' count_in count_out irop op (fun P => P).
+Definition inm_op_correct_and_bounded1 count_in  irop op
+  := Eval cbv [inm_op_correct_and_bounded Tuple.map Tuple.to_list Tuple.to_list' Tuple.from_list Tuple.from_list' Tuple.on_tuple List.map] in
+      inm_op_correct_and_bounded count_in 1 irop op.
 Notation ibinop_correct_and_bounded irop op
   := (forall x y,
          is_bounded (fe5211_32WToZ x) = true
