@@ -762,8 +762,7 @@ Fixpoint inm_op_correct_and_bounded_prefix' (count_in count_out : nat)
                        n count_out (irop x) (op (fe25519WToZ x))
      end.
 Definition inm_op_correct_and_bounded_prefix count_in count_out irop op
-  := Eval cbv [inm_op_correct_and_bounded_prefix' Tower.tower_nd Tuple.tuple Tuple.tuple' HList.hlistP HList.hlistP'] in
-      inm_op_correct_and_bounded_prefix' count_in count_out irop op.
+  := inm_op_correct_and_bounded_prefix' count_in count_out irop op.
 
 Lemma inm_op_correct_and_bounded_iff_prefix' count_in count_out irop op
       (cont : Prop -> Prop)
