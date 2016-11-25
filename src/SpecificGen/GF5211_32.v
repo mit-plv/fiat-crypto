@@ -11,6 +11,7 @@ Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.LetIn.
+Require Import Crypto.Util.Tower.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Algebra.
@@ -199,8 +200,20 @@ Definition uncurry_unop_fe5211_32 {T} (op : fe5211_32 -> T)
   := Eval compute in Tuple.uncurry (n:=length_fe5211_32) op.
 Definition curry_unop_fe5211_32 {T} op : fe5211_32 -> T
   := Eval compute in fun f => app_n f (Tuple.curry (n:=length_fe5211_32) op).
+
+Fixpoint uncurry_n_op_fe5211_32 {T} n
+  : forall (op : Tower.tower_nd fe5211_32 T n),
+    Tower.tower_nd Z T (n * length_fe5211_32)
+  := match n
+           return (forall (op : Tower.tower_nd fe5211_32 T n),
+                      Tower.tower_nd Z T (n * length_fe5211_32))
+     with
+     | O => fun x => x
+     | S n' => fun f => uncurry_unop_fe5211_32 (fun x => @uncurry_n_op_fe5211_32 _ n' (f x))
+     end.
+
 Definition uncurry_binop_fe5211_32 {T} (op : fe5211_32 -> fe5211_32 -> T)
-  := Eval compute in uncurry_unop_fe5211_32 (fun f => uncurry_unop_fe5211_32 (op f)).
+  := Eval compute in uncurry_n_op_fe5211_32 2 op.
 Definition curry_binop_fe5211_32 {T} op : fe5211_32 -> fe5211_32 -> T
   := Eval compute in appify2 (fun f => curry_unop_fe5211_32 (curry_unop_fe5211_32 op f)).
 
@@ -210,17 +223,7 @@ Definition curry_unop_wire_digits {T} op : wire_digits -> T
   := Eval compute in fun f => app_n2 f (Tuple.curry (n:=length wire_widths) op).
 
 Definition uncurry_9op_fe5211_32 {T} (op : fe5211_32 -> fe5211_32 -> fe5211_32 -> fe5211_32 -> fe5211_32 -> fe5211_32 -> fe5211_32 -> fe5211_32 -> fe5211_32 -> T)
-  := Eval compute in
-      uncurry_unop_fe5211_32 (fun x0 =>
-      uncurry_unop_fe5211_32 (fun x1 =>
-      uncurry_unop_fe5211_32 (fun x2 =>
-      uncurry_unop_fe5211_32 (fun x3 =>
-      uncurry_unop_fe5211_32 (fun x4 =>
-      uncurry_unop_fe5211_32 (fun x5 =>
-      uncurry_unop_fe5211_32 (fun x6 =>
-      uncurry_unop_fe5211_32 (fun x7 =>
-      uncurry_unop_fe5211_32 (fun x8 =>
-                               op x0 x1 x2 x3 x4 x5 x6 x7 x8))))))))).
+  := Eval compute in uncurry_n_op_fe5211_32 9 op.
 Definition curry_9op_fe5211_32 {T} op : fe5211_32 -> fe5211_32 -> fe5211_32 -> fe5211_32 -> fe5211_32 -> fe5211_32 -> fe5211_32 -> fe5211_32 -> fe5211_32 -> T
   := Eval compute in
       appify9 (fun x0 x1 x2 x3 x4 x5 x6 x7 x8

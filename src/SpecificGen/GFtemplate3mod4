@@ -11,6 +11,7 @@ Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.LetIn.
+Require Import Crypto.Util.Tower.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Algebra.
@@ -199,8 +200,20 @@ Definition uncurry_unop_fe{{{k}}}{{{c}}}_{{{w}}} {T} (op : fe{{{k}}}{{{c}}}_{{{w
   := Eval compute in Tuple.uncurry (n:=length_fe{{{k}}}{{{c}}}_{{{w}}}) op.
 Definition curry_unop_fe{{{k}}}{{{c}}}_{{{w}}} {T} op : fe{{{k}}}{{{c}}}_{{{w}}} -> T
   := Eval compute in fun f => app_n f (Tuple.curry (n:=length_fe{{{k}}}{{{c}}}_{{{w}}}) op).
+
+Fixpoint uncurry_n_op_fe{{{k}}}{{{c}}}_{{{w}}} {T} n
+  : forall (op : Tower.tower_nd fe{{{k}}}{{{c}}}_{{{w}}} T n),
+    Tower.tower_nd Z T (n * length_fe{{{k}}}{{{c}}}_{{{w}}})
+  := match n
+           return (forall (op : Tower.tower_nd fe{{{k}}}{{{c}}}_{{{w}}} T n),
+                      Tower.tower_nd Z T (n * length_fe{{{k}}}{{{c}}}_{{{w}}}))
+     with
+     | O => fun x => x
+     | S n' => fun f => uncurry_unop_fe{{{k}}}{{{c}}}_{{{w}}} (fun x => @uncurry_n_op_fe{{{k}}}{{{c}}}_{{{w}}} _ n' (f x))
+     end.
+
 Definition uncurry_binop_fe{{{k}}}{{{c}}}_{{{w}}} {T} (op : fe{{{k}}}{{{c}}}_{{{w}}} -> fe{{{k}}}{{{c}}}_{{{w}}} -> T)
-  := Eval compute in uncurry_unop_fe{{{k}}}{{{c}}}_{{{w}}} (fun f => uncurry_unop_fe{{{k}}}{{{c}}}_{{{w}}} (op f)).
+  := Eval compute in uncurry_n_op_fe{{{k}}}{{{c}}}_{{{w}}} 2 op.
 Definition curry_binop_fe{{{k}}}{{{c}}}_{{{w}}} {T} op : fe{{{k}}}{{{c}}}_{{{w}}} -> fe{{{k}}}{{{c}}}_{{{w}}} -> T
   := Eval compute in appify2 (fun f => curry_unop_fe{{{k}}}{{{c}}}_{{{w}}} (curry_unop_fe{{{k}}}{{{c}}}_{{{w}}} op f)).
 
@@ -210,17 +223,7 @@ Definition curry_unop_wire_digits {T} op : wire_digits -> T
   := Eval compute in fun f => app_n2 f (Tuple.curry (n:=length wire_widths) op).
 
 Definition uncurry_9op_fe{{{k}}}{{{c}}}_{{{w}}} {T} (op : fe{{{k}}}{{{c}}}_{{{w}}} -> fe{{{k}}}{{{c}}}_{{{w}}} -> fe{{{k}}}{{{c}}}_{{{w}}} -> fe{{{k}}}{{{c}}}_{{{w}}} -> fe{{{k}}}{{{c}}}_{{{w}}} -> fe{{{k}}}{{{c}}}_{{{w}}} -> fe{{{k}}}{{{c}}}_{{{w}}} -> fe{{{k}}}{{{c}}}_{{{w}}} -> fe{{{k}}}{{{c}}}_{{{w}}} -> T)
-  := Eval compute in
-      uncurry_unop_fe{{{k}}}{{{c}}}_{{{w}}} (fun x0 =>
-      uncurry_unop_fe{{{k}}}{{{c}}}_{{{w}}} (fun x1 =>
-      uncurry_unop_fe{{{k}}}{{{c}}}_{{{w}}} (fun x2 =>
-      uncurry_unop_fe{{{k}}}{{{c}}}_{{{w}}} (fun x3 =>
-      uncurry_unop_fe{{{k}}}{{{c}}}_{{{w}}} (fun x4 =>
-      uncurry_unop_fe{{{k}}}{{{c}}}_{{{w}}} (fun x5 =>
-      uncurry_unop_fe{{{k}}}{{{c}}}_{{{w}}} (fun x6 =>
-      uncurry_unop_fe{{{k}}}{{{c}}}_{{{w}}} (fun x7 =>
-      uncurry_unop_fe{{{k}}}{{{c}}}_{{{w}}} (fun x8 =>
-                               op x0 x1 x2 x3 x4 x5 x6 x7 x8))))))))).
+  := Eval compute in uncurry_n_op_fe{{{k}}}{{{c}}}_{{{w}}} 9 op.
 Definition curry_9op_fe{{{k}}}{{{c}}}_{{{w}}} {T} op : fe{{{k}}}{{{c}}}_{{{w}}} -> fe{{{k}}}{{{c}}}_{{{w}}} -> fe{{{k}}}{{{c}}}_{{{w}}} -> fe{{{k}}}{{{c}}}_{{{w}}} -> fe{{{k}}}{{{c}}}_{{{w}}} -> fe{{{k}}}{{{c}}}_{{{w}}} -> fe{{{k}}}{{{c}}}_{{{w}}} -> fe{{{k}}}{{{c}}}_{{{w}}} -> fe{{{k}}}{{{c}}}_{{{w}}} -> T
   := Eval compute in
       appify9 (fun x0 x1 x2 x3 x4 x5 x6 x7 x8

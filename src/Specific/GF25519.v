@@ -11,6 +11,7 @@ Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.LetIn.
+Require Import Crypto.Util.Tower.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Algebra.
@@ -200,8 +201,20 @@ Definition uncurry_unop_fe25519 {T} (op : fe25519 -> T)
   := Eval compute in Tuple.uncurry (n:=length_fe25519) op.
 Definition curry_unop_fe25519 {T} op : fe25519 -> T
   := Eval compute in fun f => app_10 f (Tuple.curry (n:=length_fe25519) op).
+
+Fixpoint uncurry_n_op_fe25519 {T} n
+  : forall (op : Tower.tower_nd fe25519 T n),
+    Tower.tower_nd Z T (n * length_fe25519)
+  := match n
+           return (forall (op : Tower.tower_nd fe25519 T n),
+                      Tower.tower_nd Z T (n * length_fe25519))
+     with
+     | O => fun x => x
+     | S n' => fun f => uncurry_unop_fe25519 (fun x => @uncurry_n_op_fe25519 _ n' (f x))
+     end.
+
 Definition uncurry_binop_fe25519 {T} (op : fe25519 -> fe25519 -> T)
-  := Eval compute in uncurry_unop_fe25519 (fun f => uncurry_unop_fe25519 (op f)).
+  := Eval compute in uncurry_n_op_fe25519 2 op.
 Definition curry_binop_fe25519 {T} op : fe25519 -> fe25519 -> T
   := Eval compute in appify2 (fun f => curry_unop_fe25519 (curry_unop_fe25519 op f)).
 
@@ -211,17 +224,7 @@ Definition curry_unop_wire_digits {T} op : wire_digits -> T
   := Eval compute in fun f => app_7 f (Tuple.curry (n:=length wire_widths) op).
 
 Definition uncurry_9op_fe25519 {T} (op : fe25519 -> fe25519 -> fe25519 -> fe25519 -> fe25519 -> fe25519 -> fe25519 -> fe25519 -> fe25519 -> T)
-  := Eval compute in
-      uncurry_unop_fe25519 (fun x0 =>
-      uncurry_unop_fe25519 (fun x1 =>
-      uncurry_unop_fe25519 (fun x2 =>
-      uncurry_unop_fe25519 (fun x3 =>
-      uncurry_unop_fe25519 (fun x4 =>
-      uncurry_unop_fe25519 (fun x5 =>
-      uncurry_unop_fe25519 (fun x6 =>
-      uncurry_unop_fe25519 (fun x7 =>
-      uncurry_unop_fe25519 (fun x8 =>
-                               op x0 x1 x2 x3 x4 x5 x6 x7 x8))))))))).
+  := Eval compute in uncurry_n_op_fe25519 9 op.
 Definition curry_9op_fe25519 {T} op : fe25519 -> fe25519 -> fe25519 -> fe25519 -> fe25519 -> fe25519 -> fe25519 -> fe25519 -> fe25519 -> T
   := Eval compute in
       appify9 (fun x0 x1 x2 x3 x4 x5 x6 x7 x8
