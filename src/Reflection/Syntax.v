@@ -430,6 +430,7 @@ Global Arguments SmartVarf {_ _ _ _ _} _.
 Global Arguments SmartValf {_} T _ t.
 Global Arguments SmartVarVarf {_ _ _ _ _} _.
 Global Arguments SmartVarfMap {_ _ _} _ {_} _.
+Global Arguments SmartFlatTypeMap {_ _} _ {_} _.
 Global Arguments SmartVarMap_hetero {_ _ _ _ _} _ _ {_} _.
 Global Arguments SmartVarMap {_ _ _} _ _ {_} _.
 Global Arguments SmartConstf {_ _ _ _ _} _.
