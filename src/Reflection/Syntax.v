@@ -290,6 +290,9 @@ Section language.
       Definition SmartVarfMap {var var'} (f : forall t, var t -> var' t) {t}
         : interp_flat_type_gen var t -> interp_flat_type_gen var' t
         := @smart_interp_flat_map var (interp_flat_type_gen var') f (fun A B x y => pair x y) t.
+      Definition SmartFlatTypeMap {var'} (f : forall t, var' t -> base_type_code) {t}
+        : interp_flat_type_gen var' t -> flat_type
+        := @smart_interp_flat_map var' (fun _ => flat_type) f (fun _ _ => Prod) t.
       Definition SmartVarMap {var var'} (f : forall t, var t -> var' t) (f' : forall t, var' t -> var t) {t}
         : interp_type_gen (interp_flat_type_gen var) t -> interp_type_gen (interp_flat_type_gen var') t
         := @smart_interp_map var (interp_type_gen (interp_flat_type_gen var')) f f' (fun A B x y => pair x y) (fun A B f x => f x) t.
