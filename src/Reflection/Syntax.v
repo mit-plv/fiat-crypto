@@ -17,10 +17,10 @@ Local Open Scope expr_scope.
 Section language.
   Context (base_type_code : Type).
 
-  Inductive flat_type := Tbase (_ : base_type_code) | Prod (x y : flat_type).
+  Inductive flat_type := Tbase (T : base_type_code) | Prod (A B : flat_type).
   Bind Scope ctype_scope with flat_type.
 
-  Inductive type := Tflat (_ : flat_type) | Arrow (x : base_type_code) (y : type).
+  Inductive type := Tflat (T : flat_type) | Arrow (A : base_type_code) (B : type).
   Bind Scope ctype_scope with type.
 
   Global Coercion Tflat : flat_type >-> type.
@@ -184,15 +184,15 @@ Section language.
 
       (** N.B. [Let] binds the components of a pair to separate variables, and does so recursively *)
       Inductive exprf : flat_type -> Type :=
-      | Const {t : flat_type} : interp_type t -> exprf t
-      | Var {t} : var t -> exprf t
-      | Op {t1 tR} : op t1 tR -> exprf t1 -> exprf tR
-      | LetIn : forall {tx}, exprf tx -> forall {tC}, (interp_flat_type_gen var tx -> exprf tC) -> exprf tC
-      | Pair : forall {t1}, exprf t1 -> forall {t2}, exprf t2 -> exprf (Prod t1 t2).
+      | Const {t : flat_type} (x : interp_type t) : exprf t
+      | Var {t} (v : var t) : exprf t
+      | Op {t1 tR} (opc : op t1 tR) (args : exprf t1) : exprf tR
+      | LetIn {tx} (ex : exprf tx) {tC} (eC : interp_flat_type_gen var tx -> exprf tC) : exprf tC
+      | Pair {tx} (ex : exprf tx) {ty} (ey : exprf ty) : exprf (Prod tx ty).
       Bind Scope expr_scope with exprf.
       Inductive expr : type -> Type :=
-      | Return {t} : exprf t -> expr t
-      | Abs {src dst} : (var src -> expr dst) -> expr (Arrow src dst).
+      | Return {t} (ex : exprf t) : expr t
+      | Abs {src dst} (f : var src -> expr dst) : expr (Arrow src dst).
       Bind Scope expr_scope with expr.
       Global Coercion Return : exprf >-> expr.
       Definition UnReturn {t} (e : expr (Tflat t)) : exprf t
