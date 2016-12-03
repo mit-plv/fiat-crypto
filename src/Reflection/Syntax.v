@@ -377,8 +377,12 @@ Section language.
 
     Section misc.
       Definition invert_Const {var t} (e : @exprf var t) : option (interp_type t)
-        := match e with
-           | Const _ v => Some v
+        := match e with Const _ v => Some v | _ => None end.
+      Definition invert_Op {var t} (e : @exprf var t) : option { t1 : flat_type & op t1 t * exprf t1 }%type
+        := match e with Op _ _ opc args => Some (existT _ _ (opc, args)) | _ => None end.
+      Definition invert_LetIn {var A} (e : @exprf var A) : option { B : _ & exprf B * (interp_flat_type_gen var B -> exprf A) }%type
+        := match e in @exprf _ t return option { B : _ & _ * (_ -> exprf t) }%type with
+           | LetIn _ ex _ eC => Some (existT _ _ (ex, eC))
            | _ => None
            end.
       Definition invert_Pair {var A B} (e : @exprf var (Prod A B)) : option (exprf A * exprf B)
@@ -387,11 +391,6 @@ Section language.
                                                | _ => unit
                                                end with
            | Pair _ x _ y => Some (x, y)%core
-           | _ => None
-           end.
-      Definition invert_LetIn {var A} (e : @exprf var A) : option { B : _ & exprf B * (interp_flat_type_gen var B -> exprf A) }%type
-        := match e in @exprf _ t return option { B : _ & _ * (_ -> exprf t) }%type with
-           | LetIn _ ex _ eC => Some (existT _ _ (ex, eC))
            | _ => None
            end.
     End misc.
