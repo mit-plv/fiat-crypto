@@ -29,7 +29,10 @@ Proof.
   with (@ExtendedCoordinates.Extended.add_coordinates _ add sub mul td P Q).
   destruct_head' prod.
   simpl.
-  rewrite_strat topdown hints edwards_extended_add_coordinates_correct.
+  (*rewrite_strat topdown hints edwards_extended_add_coordinates_correct.*) (* loops on Coq 8.4 *)
+  repeat (rewrite ?(Ring.homomorphism_mul(is_homomorphism:=homomorphism_F41417_32_decode)),
+          ?(Ring.homomorphism_add(H1             :=homomorphism_F41417_32_decode)),
+          ?(Ring.homomorphism_sub(H1             :=homomorphism_F41417_32_decode))).
   reflexivity.
 Qed.
 Local Existing Instance carry_field41417_32.
@@ -46,7 +49,15 @@ Proof.
   with (@ExtendedCoordinates.Extended.add_coordinates _ carry_add carry_sub mul td P Q).
   destruct_head' prod.
   simpl.
-  rewrite_strat topdown hints edwards_extended_add_coordinates_correct.
+  (*rewrite_strat topdown hints edwards_extended_add_coordinates_correct.*) (* loops on Coq 8.4 *)
+  (* This is an annoying replacement for rewrite_strat loopiness *)
+  generalize (Ring.homomorphism_mul(is_homomorphism:=homomorphism_carry_F41417_32_decode)).
+  generalize (Ring.homomorphism_add(H1             :=homomorphism_carry_F41417_32_decode)).
+  generalize (Ring.homomorphism_sub(H1             :=homomorphism_carry_F41417_32_decode)).
+  generalize mul; generalize carry_sub; generalize carry_add.
+  intros carry_add' carry_sub' mul'.
+  intros H0 H1 H2.
+  repeat rewrite ?H2, ?H1, ?H0.
   reflexivity.
 Qed.
 

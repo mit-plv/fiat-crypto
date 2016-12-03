@@ -1,3 +1,4 @@
+Require Import Coq.Classes.Morphisms.
 Require Import Crypto.BaseSystem.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
 Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParams.
@@ -744,6 +745,51 @@ Fixpoint inm_op_correct_and_bounded' (count_in count_out : nat)
 Definition inm_op_correct_and_bounded count_in count_out irop op
   := Eval cbv [inm_op_correct_and_bounded' Tower.tower_nd Tuple.tuple Tuple.tuple' HList.hlistP HList.hlistP'] in
       inm_op_correct_and_bounded' count_in count_out irop op (fun P => P).
+Fixpoint inm_op_correct_and_bounded_prefix' (count_in count_out : nat)
+  : forall (irop : Tower.tower_nd fe25519_64W (Tuple.tuple fe25519_64W count_out) count_in)
+           (op : Tower.tower_nd GF25519_64.fe25519_64 (Tuple.tuple GF25519_64.fe25519_64 count_out) count_in),
+    Prop
+  := match count_in return
+           forall (irop : Tower.tower_nd fe25519_64W (Tuple.tuple fe25519_64W count_out) count_in)
+                  (op : Tower.tower_nd GF25519_64.fe25519_64 (Tuple.tuple GF25519_64.fe25519_64 count_out) count_in),
+             Prop
+     with
+     | O => fun irop op => in_op_correct_and_bounded count_out irop op
+     | S n => fun irop op
+              => forall x : fe25519_64W,
+                  is_bounded (fe25519_64WToZ x) = true
+                  -> @inm_op_correct_and_bounded_prefix'
+                       n count_out (irop x) (op (fe25519_64WToZ x))
+     end.
+Definition inm_op_correct_and_bounded_prefix count_in count_out irop op
+  := inm_op_correct_and_bounded_prefix' count_in count_out irop op.
+
+Lemma inm_op_correct_and_bounded_iff_prefix' count_in count_out irop op
+      (cont : Prop -> Prop)
+      (cont_forall : forall T (P : T -> Prop), cont (forall x : T, P x) <-> forall x : T, cont (P x))
+  : inm_op_correct_and_bounded' count_in count_out irop op cont <-> cont (inm_op_correct_and_bounded_prefix' count_in count_out irop op).
+Proof.
+  revert dependent cont; induction count_in as [|count_in IHcount_in]; intros.
+  { reflexivity. }
+  { simpl.
+    rewrite cont_forall.
+    split; intros H' x; specialize (H' x);
+      specialize (IHcount_in (irop x) (op (fe25519_64WToZ x)) (fun P => cont (is_bounded (fe25519_64WToZ x) = true -> P)));
+      cbv beta in *;
+      [ erewrite <- IHcount_in; [ assumption | .. ]
+      | erewrite -> IHcount_in; [ assumption | .. ] ];
+      clear IHcount_in.
+    { intros; repeat setoid_rewrite cont_forall; split; eauto. }
+    { intros; repeat setoid_rewrite cont_forall; split; eauto. } }
+Qed.
+
+Lemma inm_op_correct_and_bounded_iff_prefix count_in count_out irop op
+  : inm_op_correct_and_bounded count_in count_out irop op <-> inm_op_correct_and_bounded_prefix count_in count_out irop op.
+Proof.
+  apply (inm_op_correct_and_bounded_iff_prefix' count_in count_out irop op (fun P => P)).
+  reflexivity.
+Qed.
+
 Definition inm_op_correct_and_bounded1 count_in  irop op
   := Eval cbv [inm_op_correct_and_bounded Tuple.map Tuple.to_list Tuple.to_list' Tuple.from_list Tuple.from_list' Tuple.on_tuple List.map] in
       inm_op_correct_and_bounded count_in 1 irop op.
