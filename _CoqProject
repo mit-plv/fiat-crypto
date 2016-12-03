@@ -99,6 +99,7 @@ src/Reflection/ApplicationLemmas.v
 src/Reflection/CommonSubexpressionElimination.v
 src/Reflection/Conversion.v
 src/Reflection/CountLets.v
+src/Reflection/ExprInversion.v
 src/Reflection/FilterLive.v
 src/Reflection/Inline.v
 src/Reflection/InlineInterp.v

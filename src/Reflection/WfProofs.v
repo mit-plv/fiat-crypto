@@ -1,4 +1,5 @@
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.ExprInversion.
 Require Import Crypto.Util.Tactics Crypto.Util.Sigma Crypto.Util.Prod.
 
 Local Open Scope ctype_scope.

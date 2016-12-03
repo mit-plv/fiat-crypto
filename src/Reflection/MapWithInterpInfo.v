@@ -1,4 +1,5 @@
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.ExprInversion.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Option.
