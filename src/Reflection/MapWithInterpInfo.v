@@ -1,5 +1,6 @@
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.ExprInversion.
+Require Import Crypto.Reflection.WfInversion.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Option.
@@ -71,19 +72,9 @@ Section language.
              {t2} (e2 : @exprf base_type_code interp_base_type op interp_base_type t2)
              G
              (wf : { pf : t2 = t1 | wff G e1 (eq_rect _ (exprf _ _ _) e2 _ pf) })
+             {struct e1}
       : @exprf base_type_code interp_base_type op ovar (SmartFlatTypeMap new_type (interpf interp_op e2)).
     Proof.
-      Local Ltac inversion_wff := (* TODO: FIXME *)
-        repeat match goal with
-               | [ H : wff _ ?x ?y |- _ ]
-                 => first [ is_var x; fail 1
-                          | is_var y; fail 1
-                          | inversion H; clear H ]
-               | _ => progress inversion_sigma
-               | [ H : ?x = ?x |- _ ] => assert (eq_refl = H) by exact admit; subst (* This uses UIP, but it's not too hard to fix this by writing an inversion principle for wff *)
-               | _ => progress simpl in *
-               | _ => progress subst
-               end.
       Local Ltac t wf mapf_interp' invert_wff_ex :=
         let mytac := fun _
                      => (try clear mapf_interp';
@@ -91,6 +82,7 @@ Section language.
                          repeat match goal with
                                 | [ H : ex _ |- _ ] => destruct H
                                 | [ H : sig _ |- _ ] => destruct H
+                                | [ H : and _ _ |- _ ] => destruct H
                                 | [ |- ?x = ?x ] => reflexivity
                                 | _ => progress subst
                                 | _ => progress simpl in *
@@ -185,9 +177,13 @@ Section language.
         refine (SmartFlatTypeMapUnInterp
                   (fun t x (p : ovar (new_type t x)) => existT _ x p)
                   v). }
-      { intros; t wf (@mapf_interp') invert_wff_ex. }
+      { intros; t wf (@mapf_interp') invert_wff_ex.
+        match goal with
+        | [ H : ?x = ?x |- _ ] => assert (eq_refl = H) by exact admit; subst (* XXX TODO: FIXME *)
+        end.
+        simpl in *; auto. }
       { t wf mapf_interp' invert_wff_ex. }
-    Admitted.
+    Defined.
 
     (*
     Fixpoint mapf_interp {t} (e : @exprf base_type_code interp_base_type1 op var t)
