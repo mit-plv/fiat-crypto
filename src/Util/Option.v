@@ -109,14 +109,52 @@ Ltac simpl_option_rect := (* deal with [option_rect _ _ _ None] and [option_rect
          end.
 
 Definition option_leq_to_eq {A} (x y : option A) : x = y -> option_eq eq x y.
-Proof. destruct x; intro; subst; simpl; reflexivity. Qed.
+Proof. destruct x; intro; subst; simpl; reflexivity. Defined.
+
+Definition option_eq_to_leq {A} (x y : option A) : option_eq eq x y -> x = y.
+Proof.
+  destruct x, y; simpl;
+    try solve [ intros []
+              | apply f_equal
+              | reflexivity
+              | apply eq_sym ].
+Defined.
+
+Lemma option_leq_to_eq_to_leq {A x y} v : @option_eq_to_leq A x y (@option_leq_to_eq A x y v) = v.
+Proof.
+  destruct x; subst; simpl; reflexivity.
+Qed.
+
+Lemma option_eq_to_leq_to_eq {A x y} v : @option_leq_to_eq A x y (@option_eq_to_leq A x y v) = v.
+Proof.
+  compute in *.
+  repeat first [ progress subst
+               | progress break_match
+               | reflexivity ].
+Qed.
+
+Lemma UIP_None {A} (p q : @None A = @None A) : p = q.
+Proof.
+  rewrite <- (option_leq_to_eq_to_leq p), <- (option_leq_to_eq_to_leq q); simpl; reflexivity.
+Qed.
+
+Lemma invert_eq_Some {A x y} (p : Some x = Some y) : { pf : x = y | @option_eq_to_leq A (Some x) (Some y) pf = p }.
+Proof.
+  eexists; apply option_leq_to_eq_to_leq.
+Qed.
 
 Ltac inversion_option_step :=
   match goal with
   | [ H : Some _ = Some _ |- _ ] => apply option_leq_to_eq in H; unfold option_eq in H
+  | [ H : Some _ = Some _ |- _ ]
+    => let H' := fresh in
+       rename H into H';
+       destruct (invert_eq_Some H') as [H ?]; subst H'
   | [ H : None = Some _ |- _ ] => solve [ inversion H ]
   | [ H : Some _ = None |- _ ] => solve [ inversion H ]
   | [ H : None = None |- _ ] => clear H
+  | [ H : None = None |- _ ]
+    => assert (eq_refl = H) by apply UIP_None; subst H
   end.
 
 Ltac inversion_option := repeat inversion_option_step.

@@ -52,7 +52,8 @@ Section language.
     repeat first [ intro
                  | progress simpl in *
                  | reflexivity
-                 | tauto
+                 | assumption
+                 | progress destruct_head False
                  | progress subst
                  | progress inversion_option
                  | progress inversion_sigma
@@ -70,23 +71,23 @@ Section language.
 
   Lemma invert_Const_Some {t e v}
     : @invert_Const t e = Some v -> e = Const v.
-  Proof. t. Qed.
+  Proof. t. Defined.
 
   Lemma invert_Var_Some {t e v}
     : @invert_Var t e = Some v -> e = Var v.
-  Proof. t. Qed.
+  Proof. t. Defined.
 
   Lemma invert_Op_Some {t e v}
     : @invert_Op t e = Some v -> e = Op (fst (projT2 v)) (snd (projT2 v)).
-  Proof. t. Qed.
+  Proof. t. Defined.
 
   Lemma invert_LetIn_Some {t e v}
     : @invert_LetIn t e = Some v -> e = LetIn (fst (projT2 v)) (snd (projT2 v)).
-  Proof. t. Qed.
+  Proof. t. Defined.
 
   Lemma invert_Pair_Some {A B e v}
     : @invert_Pair A B e = Some v -> e = Pair (fst v) (snd v).
-  Proof. t. Qed.
+  Proof. t. Defined.
 End language.
 
 Global Arguments invert_Const {_ _ _ _ _} _.
