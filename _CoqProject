@@ -117,6 +117,7 @@ src/Reflection/MapWithInterpInfo.v
 src/Reflection/Reify.v
 src/Reflection/Syntax.v
 src/Reflection/TestCase.v
+src/Reflection/WfInversion.v
 src/Reflection/WfProofs.v
 src/Reflection/WfReflective.v
 src/Reflection/WfReflectiveGen.v
