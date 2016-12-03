@@ -293,6 +293,14 @@ Section language.
       Definition SmartFlatTypeMap {var'} (f : forall t, var' t -> base_type_code) {t}
         : interp_flat_type_gen var' t -> flat_type
         := @smart_interp_flat_map var' (fun _ => flat_type) f (fun _ _ => Prod) t.
+      Fixpoint SmartFlatTypeMapInterp {var' var''} (f : forall t, var' t -> base_type_code)
+                 (fv : forall t v, var'' (f t v)) {t} {struct t}
+        : forall v, interp_flat_type_gen var'' (SmartFlatTypeMap f (t:=t) v)
+        := match t return forall v, interp_flat_type_gen var'' (SmartFlatTypeMap f (t:=t) v) with
+           | Tbase x => fv _
+           | Prod A B => fun xy => (@SmartFlatTypeMapInterp _ _ f fv A (fst xy),
+                                    @SmartFlatTypeMapInterp _ _ f fv B (snd xy))
+           end.
       Definition SmartVarMap {var var'} (f : forall t, var t -> var' t) (f' : forall t, var' t -> var t) {t}
         : interp_type_gen (interp_flat_type_gen var) t -> interp_type_gen (interp_flat_type_gen var') t
         := @smart_interp_map var (interp_type_gen (interp_flat_type_gen var')) f f' (fun A B x y => pair x y) (fun A B f x => f x) t.
@@ -431,6 +439,7 @@ Global Arguments SmartValf {_} T _ t.
 Global Arguments SmartVarVarf {_ _ _ _ _} _.
 Global Arguments SmartVarfMap {_ _ _} _ {_} _.
 Global Arguments SmartFlatTypeMap {_ _} _ {_} _.
+Global Arguments SmartFlatTypeMapInterp {_ _ _ _} _ {_} _.
 Global Arguments SmartVarMap_hetero {_ _ _ _ _} _ _ {_} _.
 Global Arguments SmartVarMap {_ _ _} _ _ {_} _.
 Global Arguments SmartConstf {_ _ _ _ _} _.
