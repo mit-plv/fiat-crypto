@@ -59,7 +59,7 @@ Section language.
                | _ => apply functional_extensionality; intro
                end.
       clear e IHe H.
-      revert dependent e0; revert dependent tC; revert dependent x; induction tx; simpl; [ reflexivity | ]; intros.
+      revert dependent tC; induction tx; simpl; [ reflexivity | ]; intros.
       destruct x as [x0 x1]; simpl in *.
       lazymatch goal with
       | [ |- ?e0 (?x0', ?x1')%core = _ ]
@@ -102,7 +102,7 @@ Section language.
                end.
       clear H IHe.
       generalize (interpf interp_op e); intro x; clear e.
-      revert dependent e0; revert dependent tC; revert dependent x; induction tx; simpl;
+      revert dependent tC; induction tx; simpl;
         [ intros; rewrite_hyp ?*; reflexivity | ]; intros.
       destruct x as [x0 x1]; simpl in *.
       lazymatch goal with
