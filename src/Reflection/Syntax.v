@@ -370,6 +370,14 @@ Section language.
            | Const _ v => Some v
            | _ => None
            end.
+      Definition invert_Pair {var A B} (e : @exprf var (Prod A B)) : option (exprf A * exprf B)
+        := match e in @exprf _ t return option match t with
+                                               | Prod _ _ => _
+                                               | _ => unit
+                                               end with
+           | Pair _ x _ y => Some (x, y)%core
+           | _ => None
+           end.
     End misc.
 
     Section wf.
