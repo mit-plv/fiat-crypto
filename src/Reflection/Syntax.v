@@ -500,8 +500,9 @@ Global Arguments Interp {_ _ _} interp_op {t} _.
 Global Arguments interp {_ _ _} interp_op {t} _.
 Global Arguments interpf {_ _ _} interp_op {t} _.
 Global Arguments invert_Const {_ _ _ _ _} _.
-Global Arguments invert_Pair {_ _ _ _ _ _} _.
+Global Arguments invert_Op {_ _ _ _ _} _.
 Global Arguments invert_LetIn {_ _ _ _ _} _.
+Global Arguments invert_Pair {_ _ _ _ _ _} _.
 
 Module Export Notations.
   Notation "A * B" := (@Prod _ A B) : ctype_scope.
