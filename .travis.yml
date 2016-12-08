@@ -12,7 +12,7 @@ matrix:
     - dist: trusty
       env: COQ_VERSION="v8.5"     COQ_PACKAGE="coq libcoq-ocaml libcoq-ocaml-dev"  COQPRIME="coqprime"     PPA="ppa:jgross-h/coq-8.5-daily"
     - dist: trusty
-      env: COQ_VERSION="8.6beta1" COQ_PACKAGE="coq-8.6beta1 libcoq-ocaml-8.6beta1 libcoq-ocaml-dev-8.6beta1" COQPRIME="coqprime"     PPA="ppa:jgross-h/many-coq-versions"
+      env: COQ_VERSION="8.6beta1" COQ_PACKAGE="coq-8.6beta1"                       COQPRIME="coqprime"     PPA="ppa:jgross-h/many-coq-versions"
     - dist: trusty
       env: COQ_VERSION="8.6rc1"   COQ_PACKAGE="coq-8.6rc1"                         COQPRIME="coqprime"     PPA="ppa:jgross-h/many-coq-versions"
 #    - dist: trusty
