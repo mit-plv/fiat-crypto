@@ -103,6 +103,6 @@ Proof.
                  (conj Hx0 (conj Hx1 (conj Hx2 (conj Hx3 (conj Hx4 (conj Hx5 (conj Hx6 (conj Hx7 Hx8))))))))).
   specialize (H1 (x0', x1', x2', x3', x4', x5', x6', x7', x8')
                  (conj Hx0 (conj Hx1 (conj Hx2 (conj Hx3 (conj Hx4 (conj Hx5 (conj Hx6 (conj Hx7 Hx8))))))))).
-  let args := constr:(op9_args_to_bounded (x0', x1', x2', x3', x4', x5', x6', x7', x8') Hx0 Hx1 Hx2 Hx3 Hx4 Hx5 Hx6 Hx7 Hx8) in
-  t_correct_and_bounded ropZ_sig Hbounds H0 H1 args.
-Qed.
+  Time let args := constr:(op9_args_to_bounded (x0', x1', x2', x3', x4', x5', x6', x7', x8') Hx0 Hx1 Hx2 Hx3 Hx4 Hx5 Hx6 Hx7 Hx8) in
+       admit; t_correct_and_bounded ropZ_sig Hbounds H0 H1 args. (* On 8.6beta1, with ~2 GB RAM, Finished transaction in 46.56 secs (46.372u,0.14s) (successful) *)
+Admitted. (*Time Qed. (* On 8.6beta1, with ~4.3 GB RAM, Finished transaction in 67.652 secs (66.932u,0.128s) (successful) *)*)
