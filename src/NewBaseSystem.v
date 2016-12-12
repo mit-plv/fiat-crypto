@@ -58,6 +58,13 @@ Module B.
       rewrite mul_correct', mul_single, eval_cons, IHp, right_distributive; reflexivity.
     Qed.
 
+    Definition add (p q : rep) : rep := p ++ q.
+
+    Lemma add_correct p q : eval (add p q) = Radd (eval p) (eval q).
+    Proof.
+      induction p; simpl; rewrite ?eval_nil, ?eval_cons, ?left_identity, ?IHp, ?associative; reflexivity.
+    Qed.
+
     Definition gather_or_leave b cx gso : rep * R :=
       if dec (Logic.eq ((fst cx) mod b) 0)%Z
       then (fst gso, ZRmul ((fst cx) / b) (snd cx) + snd gso) (* TODO: use a compile-time scaling operation that compile-time checks whether the coefficient is 1 and skips multiplication if so. Maybe use notation scopes for compiletime and runtime. *)
