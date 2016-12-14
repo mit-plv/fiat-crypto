@@ -2,6 +2,7 @@ Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Decidable.
 Require Import Coq.Lists.List.
 Require Import Crypto.Algebra. Import Ring.
+Require Import Coq.omega.Omega.
 Require Import Coq.ZArith.BinInt.
 Require Import Coq.ZArith.ZArith.
 Local Open Scope Z_scope.
@@ -43,7 +44,6 @@ Module B.
                     let gso := gather_single b (fst state) in
                     (fst gso, snd gso::snd state)) (p, nil) base.
     Definition gather b p := snd (gather' b p).
-
 
   (*
     Let base := (1::10::100::1000::10000::100000::1000000::10000000::nil)%Z.
@@ -187,6 +187,33 @@ Module B.
       + econstructor; repeat intro; congruence.
     Qed.
     End Ring.
-    
+
+    Section Split.
+      
+    Definition split coef p : rep * rep :=
+      fold_right (fun cx state =>
+                    if dec (fst cx < coef)
+                    then (cx :: fst state, snd state)
+                    else (fst state, (fst cx / coef, snd cx) :: snd state))
+                 (nil, nil) p.
+
+    Lemma split_correct coef p : coef <> 0 ->
+      (forall cx, In cx p -> fst cx < coef \/ (fst cx) mod coef = 0) ->
+      eval (fst (split coef p)) + coef * eval (snd (split coef p)) = eval p.
+    Proof.
+      induction p; intros; simpl; rewrite ?eval_nil, ?eval_cons; [ring|].
+      break_match; repeat (simpl fst; simpl snd; rewrite ?eval_cons);
+        rewrite <-IHp; auto using associative, in_cons.
+      ring_simplify.
+      rewrite <-Z_div_exact_full_2 by (auto;
+        match goal with H : forall cx, _ -> _ \/ _ |- _ =>
+                      destruct (H a); auto using in_eq; congruence
+        end).
+      destruct (split coef p); destruct a; simpl fst; simpl snd.
+      ring.
+    Qed.
+
+    End Split.
+
   End NewBaseSystem.
 End B.
