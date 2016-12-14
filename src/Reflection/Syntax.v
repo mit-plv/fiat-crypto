@@ -294,7 +294,7 @@ Section language.
         : interp_flat_type_gen var' t -> flat_type
         := @smart_interp_flat_map var' (fun _ => flat_type) f (fun _ _ => Prod) t.
       Fixpoint SmartFlatTypeMapInterp {var' var''} (f : forall t, var' t -> base_type_code)
-                 (fv : forall t v, var'' (f t v)) {t} {struct t}
+                 (fv : forall t v, var'' (f t v)) t {struct t}
         : forall v, interp_flat_type_gen var'' (SmartFlatTypeMap f (t:=t) v)
         := match t return forall v, interp_flat_type_gen var'' (SmartFlatTypeMap f (t:=t) v) with
            | Tbase x => fv _
