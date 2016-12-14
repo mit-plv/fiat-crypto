@@ -140,7 +140,7 @@ Qed.
 
 Lemma invert_eq_Some {A x y} (p : Some x = Some y) : { pf : x = y | @option_eq_to_leq A (Some x) (Some y) pf = p }.
 Proof.
-  eexists; apply option_leq_to_eq_to_leq.
+  refine (exist _ _ (option_leq_to_eq_to_leq _)).
 Qed.
 
 Ltac inversion_option_step :=
