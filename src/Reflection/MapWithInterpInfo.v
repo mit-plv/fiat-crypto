@@ -124,6 +124,7 @@ Section language.
         | [ |- _ = _ ] => mytac ()
         | _ => idtac
         end.
+      revert wf.
       refine (match e1 in exprf _ _ _ t1, e2 in exprf _ _ _ t2
                     return { pf : t2 = t1 | wff _ e1 (eq_rect _ _ e2 _ pf) } -> exprf _ _ _ (SmartFlatTypeMap _ (interpf _ e2)) with
               | Const tx1 x1, Const tx2 x2
@@ -162,8 +163,9 @@ Section language.
               | LetIn _ _ _ _, _
               | Pair _ _ _ _, _
                 => fun wf => match _ : False with end
-              end wf);
-        t wf mapf_interp' invert_wff_ex.
+              end);
+        t wf mapf_interp' invert_wff_ex; admit.
+      (*
       Grab Existential Variables.
       { t wf mapf_interp' invert_wff_ex. }
       { repeat match goal with
@@ -182,8 +184,8 @@ Section language.
         | [ H : ?x = ?x |- _ ] => assert (eq_refl = H) by exact admit; subst (* XXX TODO: FIXME *)
         end.
         simpl in *; auto. }
-      { t wf mapf_interp' invert_wff_ex. }
-    Defined.
+      { t wf mapf_interp' invert_wff_ex. }*)
+    Admitted.
 
     (*
     Fixpoint mapf_interp {t} (e : @exprf base_type_code interp_base_type1 op var t)
