@@ -7,6 +7,7 @@ src/BaseSystem.v
 src/BaseSystemProofs.v
 src/EdDSARepChange.v
 src/MxDHRepChange.v
+src/NewBaseSystem.v
 src/Testbit.v
 src/Assembly/Bounds.v
 src/Assembly/Compile.v
@@ -78,6 +79,7 @@ src/ModularArithmetic/ModularBaseSystemListZOperationsProofs.v
 src/ModularArithmetic/ModularBaseSystemOpt.v
 src/ModularArithmetic/ModularBaseSystemProofs.v
 src/ModularArithmetic/ModularBaseSystemWord.v
+src/ModularArithmetic/NewModularBaseSystem.v
 src/ModularArithmetic/Pow2Base.v
 src/ModularArithmetic/Pow2BaseProofs.v
 src/ModularArithmetic/Pre.v

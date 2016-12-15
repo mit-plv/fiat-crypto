@@ -12,17 +12,15 @@ Module B.
     Let rep : Type := list (Z * Z).
 
     Definition eval (p:rep) : Z :=
-      fold_right Z.add 0 (map (fun t => (fst t) * (snd t)) p).
+      fold_right Z.add 0 (map (fun t => fst t * snd t) p).
 
     Definition add (p q : rep) : rep := p ++ q.
 
     Definition opp (p : rep) : rep :=
-      map (fun cx => (fst cx, - (snd cx))) p.
+      map (fun cx => (fst cx, - snd cx)) p.
 
     Definition mul (p q:rep) : rep :=
-      flat_map (fun t => let '(c, x) := t in
-                         map (fun t' => let '(c', x') := t' in
-                                        (c * c', x * x')) q) p.
+      flat_map (fun t => map (fun t' => (fst t * fst t', snd t * snd t')) q) p.
 
     Definition carry (from next : Z) (p : rep) : rep :=
       let cap := (next / from)%Z in
@@ -59,44 +57,34 @@ Module B.
     Compute gather base (mul f g).
   *)
 
+    (* TODO: move *)
+    Lemma fst_pair {A B} (a:A) (b:B) : fst (a,b) = a. reflexivity. Qed.
+    Lemma snd_pair {A B} (a:A) (b:B) : snd (a,b) = b. reflexivity. Qed.
+    
+
     Section Proofs.
 
     Lemma eval_nil : eval nil = 0. Proof. reflexivity. Qed.
     Lemma eval_cons p q : eval (p::q) = (fst p) * (snd p) + eval q. Proof. reflexivity. Qed.
     Lemma eval_app p q: eval (p++q) = eval p + eval q.
-    Proof.
-      induction p; intros; [rewrite ?app_nil_l, ?eval_nil, ?left_identity; reflexivity|].
-      rewrite <-!app_comm_cons, !eval_cons, IHp; auto using associative.
-    Qed.
-    
-    Lemma add_correct p q : eval (add p q) = eval p + eval q.
-    Proof.
-      induction p; simpl; rewrite ?eval_nil, ?eval_cons, ?left_identity, ?IHp, ?associative; reflexivity.
-    Qed.
+    Proof. induction p; simpl eval; rewrite ?eval_nil, ?eval_cons, ?IHp; ring. Qed.
+    Lemma add_correct p q : eval (add p q) = eval p + eval q. Proof. apply eval_app. Qed.
 
     Lemma opp_correct p : eval (opp p) = - (eval p).
     Proof.
-      induction p; simpl; rewrite ?eval_nil, ?eval_cons; [reflexivity|].
-      simpl fst; simpl snd. rewrite IHp. ring.
+      induction p; simpl opp; rewrite ?eval_nil, ?eval_cons, ?fst_pair, ?snd_pair, ?IHp; ring.
     Qed.
 
-    Lemma mul_single a q : eval (mul (a :: nil) q) = fst a * snd a * eval q.
+    Lemma eval_map_mul a x q : eval (map (fun t => (a * fst t, x * snd t)) q) = a * x * eval q.
     Proof.
-      induction q; intros; simpl mul; destruct_head prod;
-        rewrite ?eval_nil, ?eval_cons, ?app_nil_r, ?mul_0_r in *; try reflexivity.
-      simpl. rewrite IHq, left_distributive. ring. 
-    Qed.
-    
-    Lemma mul_correct' a p q :
-      eval (mul (a :: p) q) = eval (mul (a :: nil) q) + eval (mul p q).
-    Proof.
-      intros; simpl mul; rewrite ?eval_nil, ?eval_cons, ?app_nil_r, <-?eval_app. reflexivity.
+      induction q; simpl map;
+        rewrite ?eval_nil, ?eval_cons, ?fst_pair, ?snd_pair, ?IHq; ring.
     Qed.
 
     Lemma mul_correct p q : eval (mul p q) = eval p * eval q.
     Proof.
-      induction p; [destruct q; simpl; rewrite ?eval_nil, ?mul_0_l; reflexivity |].
-      rewrite mul_correct', mul_single, eval_cons, IHp; ring.
+      induction p; simpl mul;
+        rewrite ?eval_nil, ?eval_cons, ?eval_app, ?eval_map_mul, ?IHp; ring.
     Qed.
 
     Lemma carry_correct from next: from <> 0 ->
