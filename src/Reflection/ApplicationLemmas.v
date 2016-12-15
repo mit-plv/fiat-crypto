@@ -39,7 +39,7 @@ Section language.
     : snd_binder (interp_all_binders_for_of' args) = interp_all_binders_for_of' (snd args).
   Proof.
     destruct B.
-    { edestruct interp_all_binders_for_of'; reflexivity. }
+    { destruct args as [? []]; reflexivity. }
     { destruct args; reflexivity. }
   Qed.
 

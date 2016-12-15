@@ -190,6 +190,7 @@ Arguments remove_binders {_} !_ !_ / .
 Arguments Apply {_ _ _ _ _ _} _ _ , {_ _ _} _ {_ _} _ _.
 Arguments Apply _ _ _ !_ _ _ !_ !_ / .
 Arguments ApplyInterped {_ _ !_ !_} _ _ / .
+Arguments ApplyInterped' {_ _} _ {_} _ _.
 Arguments ApplyAll {_ _ _ _ !_} !_ _ / .
 Arguments ApplyInterpedAll' {_ _ !_} _ _ / .
 Arguments ApplyInterpedAll {_ _ !_} _ _ / .
