@@ -114,6 +114,7 @@ src/Reflection/LinearizeWf.v
 src/Reflection/MapInterp.v
 src/Reflection/MapInterpWf.v
 src/Reflection/MapWithInterpInfo.v
+src/Reflection/MultiSizeTest.v
 src/Reflection/Reify.v
 src/Reflection/Syntax.v
 src/Reflection/TestCase.v
