@@ -1,6 +1,7 @@
-Require Import Omega.
+Require Import Coq.omega.Omega.
 
 Set Implicit Arguments.
+Set Asymmetric Patterns.
 
 (** * Preliminaries: bounded and unbounded number types *)
 
@@ -25,7 +26,7 @@ Section unbounded.
   | LetIn : unbounded -> (var -> unbounded) -> unbounded.
 End unbounded.
 
-Implicit Arguments Const [var].
+Arguments Const [var] _.
 
 Definition Unbounded := forall var, unbounded var.
 
@@ -64,12 +65,12 @@ Section bounded.
   | Bound : forall t, bounded Nat -> bounded t.
 End bounded.
 
-Implicit Arguments BConst [var].
-Implicit Arguments BConst8 [var].
-Implicit Arguments BConst9 [var].
-Implicit Arguments BVar [var t].
-Implicit Arguments Unbound [var t].
-Implicit Arguments Bound [var].
+Arguments BConst [var] _.
+Arguments BConst8 [var] _.
+Arguments BConst9 [var] _.
+Arguments BVar [var t] _.
+Arguments Unbound [var t] _.
+Arguments Bound [var] _ _.
 
 Definition Bounded t := forall var, bounded var t.
 
