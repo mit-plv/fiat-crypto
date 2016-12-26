@@ -421,6 +421,12 @@ Global Arguments Tbase {_}%type_scope _%ctype_scope.
 
 Ltac admit_Wf := apply Wf_admitted.
 
+Fixpoint flatten_flat_type {base_type_code} (t : flat_type (flat_type base_type_code)) : flat_type base_type_code
+  := match t with
+     | Tbase T => T
+     | Prod A B => Prod (@flatten_flat_type _ A) (@flatten_flat_type _ B)
+     end.
+
 Scheme Equality for flat_type.
 Scheme Equality for type.
 
