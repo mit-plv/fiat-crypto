@@ -1,26 +1,83 @@
 Require Import Crypto.Util.Tactics.
+Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.Util.Decidable.
-Require Import Coq.Lists.List.
-Require Import Crypto.Algebra. Import Ring.
 Require Import Coq.omega.Omega.
-Require Import Coq.ZArith.BinInt.
-Require Import Coq.ZArith.ZArith.
-Local Open Scope Z_scope.
+
+Require Import Coq.ZArith.BinIntDef. Local Open Scope Z_scope.
+Require Import Crypto.Algebra. Import Algebra.Ring.
+
+Require Coq.Lists.List. Local Notation list := List.list.
+Require Crypto.Util.Tuple. Local Notation tuple := Tuple.tuple.
+
+Import ZArith. (* for ring *)
+
+    (* TODO: move *)
+    Lemma fst_pair {A B} (a:A) (b:B) : fst (a,b) = a. reflexivity. Qed.
+    Lemma snd_pair {A B} (a:A) (b:B) : snd (a,b) = b. reflexivity. Qed.
 
 Module B.
   Section NewBaseSystem.
-    Let rep : Type := list (Z * Z).
+    Let term := (Z*Z)%type.
+    Let rep : Type := list term.
 
+    Let eval_term (t:term) : Z := fst t * snd t.
     Definition eval (p:rep) : Z :=
-      fold_right Z.add 0 (map (fun t => fst t * snd t) p).
+      List.fold_right Z.add 0%Z (List.map eval_term p).
 
-    Definition add (p q : rep) : rep := p ++ q.
+    Definition add (p q : rep) : rep := List.app p q.
 
     Definition opp (p : rep) : rep :=
-      map (fun cx => (fst cx, - snd cx)) p.
+      List.map (fun cx => (fst cx, - snd cx)) p.
 
     Definition mul (p q:rep) : rep :=
-      flat_map (fun t => map (fun t' => (fst t * fst t', snd t * snd t')) q) p.
+      List.flat_map (fun t => List.map (fun t' => (fst t * fst t', snd t * snd t')) q) p.
+
+    Section Positional.
+      Context (weight : nat -> Z) (weight_0 : weight 0%nat = 1%Z) (weight_nonzero:forall i, weight i <> 0) (n : nat).
+      Definition eval_positional (xs:tuple Z n) : Z :=
+        eval (List.combine (List.map weight (List.seq 0 n)) (Tuple.to_list n xs)).
+
+      Fixpoint place (t:term) (i:nat) : nat * Z :=
+        if dec (fst t mod weight i = 0)
+        then (i, fst t / weight i * snd t)
+        else match i with S i' => place t i' | O => (O, fst t * snd t) end.
+
+      Lemma eval_place t i :
+        weight (fst (place t i)) * snd (place t i) = eval_term t.
+      Proof.
+        induction i; simpl place;
+          repeat match goal with
+                 | _ => rewrite weight_0
+                 | _ => rewrite Z.div_1_r
+                 | _ => rewrite fst_pair
+                 | _ => rewrite snd_pair
+                 | _ => VerdiTactics.break_match
+                 | [H:_ |- _ ] => apply (Z_div_exact_full_2 _ _ (weight_nonzero _)) in H
+                 | _ => nsatz
+                 end.
+      Qed.
+
+      Program Definition add_to_nth i x : tuple Z n -> tuple Z n :=
+        Tuple.on_tuple (ListUtil.update_nth i (Z.add x)) _.
+      Next Obligation. apply ListUtil.length_update_nth. Defined.
+      Lemma eval_positional_add_to_nth i x xs :
+        eval_positional (add_to_nth i x xs) = weight i * x + eval_positional xs.
+      Proof.
+        cbv [add_to_nth Tuple.on_tuple eval_positional].
+        rewrite Tuple.to_list_from_list.
+        (* TODO: List.add_to_nth *)
+      Admitted.
+
+      Definition tplace (t:term) := let p := place t n in add_to_nth (fst p) (snd p).
+      Lemma tplace_correct t xs : eval_positional (tplace t xs) = eval_positional xs + eval_term t.
+      Proof.
+        cbv [tplace]; rewrite eval_positional_add_to_nth, eval_place; nsatz.
+      Qed.
+
+      Definition gather (p:rep) (init:tuple Z n) := List.fold_right tplace init p.
+      Lemma eval_positional_gather p init :
+        eval_positional (gather p init) = eval p + eval_positional init.
+      Proof. induction p; simpl; rewrite ?eval_cons, ?tplace_correct; nsatz. Qed.
 
     Definition carry (from next : Z) (p : rep) : rep :=
       let cap := (next / from)%Z in
@@ -56,10 +113,6 @@ Module B.
     Local Infix "*" := ZRmul.
     Compute gather base (mul f g).
   *)
-
-    (* TODO: move *)
-    Lemma fst_pair {A B} (a:A) (b:B) : fst (a,b) = a. reflexivity. Qed.
-    Lemma snd_pair {A B} (a:A) (b:B) : snd (a,b) = b. reflexivity. Qed.
     
 
     Section Proofs.
@@ -72,7 +125,8 @@ Module B.
 
     Lemma opp_correct p : eval (opp p) = - (eval p).
     Proof.
-      induction p; simpl opp; rewrite ?eval_nil, ?eval_cons, ?fst_pair, ?snd_pair, ?IHp; ring.
+      induction p; simpl opp;
+        rewrite ?eval_nil, ?eval_cons, ?fst_pair, ?snd_pair, ?IHp; ring.
     Qed.
 
     Lemma eval_map_mul a x q : eval (map (fun t => (a * fst t, x * snd t)) q) = a * x * eval q.
