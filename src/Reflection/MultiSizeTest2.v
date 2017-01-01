@@ -1,7 +1,7 @@
 Require Import Coq.omega.Omega.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Application.
-Require Import Crypto.Reflection.MapCast.
+Require Import Crypto.Reflection.MapCastWithCastOp.
 Require Import Crypto.Reflection.MapInterp.
 
 (** * Preliminaries: bounded and unbounded number types *)
@@ -106,84 +106,26 @@ Definition failv t : interp_base_type t
      | Word9 => exist _ 0 (O_lt_S _)
      end.
 
-Fixpoint VarBound {var} T1 T2 : interp_flat_type var T1 -> exprf base_type interp_base_type op (var:=var) T2
-  := match T1, T2 return interp_flat_type var T1 -> exprf base_type interp_base_type op (var:=var) T2 with
-     | Tbase T1', Tbase T2' => fun v : var T1' => Op (Cast _ _) (Var v)
-     | Prod A1 B1, Prod A2 B2
-       => fun xy
-          => Pair (@VarBound _ _ _ (fst xy)) (@VarBound _ _ _ (snd xy))
-     | Tbase _, _
-     | Prod _ _, _
-       => fun _ => Const (SmartValf _ (@failv) _)
-     end.
-
-Fixpoint SmartBound {var t1 t2} (v : @exprf base_type interp_base_type op var t1) : @exprf base_type interp_base_type op var t2.
-Proof.
-  refine (match flat_type_eq_dec _ base_type_beq internal_base_type_dec_bl internal_base_type_dec_lb t1 t2 with
-          | left pf => match pf in (_ = y) return exprf _ _ _ y with
-                       | eq_refl => v
-                       end
-          | right pf => _
-          end).
-  refine (match v in exprf _ _ _ t1, t2 return (exprf _ _ _ _ -> exprf _ _ _ t2) -> exprf _ _ _ t2 with
-          | Op t1 tR (Cast _ _) args, _ => fun _ => @SmartBound _ _ _ args
-          | Pair _ ex _ ey, Prod _ _ => fun _ => Pair (@SmartBound _ _ _ ex) (@SmartBound _ _ _ ey)
-          | v', _ => fun default => default v'
-          end _).
-  refine (match t1, t2 return exprf base_type interp_base_type op t1 -> exprf base_type interp_base_type op t2 with
-          | Tbase t1', Tbase t2' => Op (Cast _ _)
-          | Prod A1 B1, Prod A2 B2 => fun x => LetIn x (VarBound _ _)
-          | Tbase _, _
-          | Prod _ _, _
-            => fun _ => Const (SmartValf _ (@failv) _)
-          end).
-Defined.
 Definition bound_base_const t1 t2 (x1 : interp_base_type t1) (x2 : interp_base_type_bounds t2) : interp_base_type (bound_type _ x2)
   := bound (unbound x1).
 Local Notation new_flat_type (*: forall t, interp_flat_type interp_base_type2 t -> flat_type base_type_code1*)
   := (@SmartFlatTypeMap2 _ _ interp_base_type_bounds (fun t v => Tbase (bound_type t v))).
-Definition bound_op ovar
-           {src1 dst1 src2 dst2}
-           (opc1 : op src1 dst1)
-           (opc2 : op src2 dst2)
-  : forall args2
-           (args' : @exprf base_type interp_base_type op ovar (@new_flat_type _ (interpf (@interp_op_bounds) args2))),
-    @exprf base_type interp_base_type op ovar (@new_flat_type _ (interpf (@interp_op_bounds) (Op opc2 args2)))
+Definition bound_op
+           ovar src1 dst1 src2 dst2 (opc1 : op src1 dst1) (opc2 : op src2 dst2)
+  : forall args2,
+    option { new_src : _ & (@exprf _ interp_base_type op ovar new_src
+                            -> @exprf _ interp_base_type op ovar (new_flat_type (interpf (@interp_op_bounds) (Op opc2 args2))))%type }
   := match opc1 in op src1 dst1, opc2 in op src2 dst2
-           return (forall (args2 : exprf _ _ _ src2)
-                          (args' : @exprf base_type interp_base_type op ovar (@new_flat_type _ (interpf (@interp_op_bounds) args2))),
-                      @exprf base_type interp_base_type op ovar (@new_flat_type _ (interpf (@interp_op_bounds) (Op opc2 args2))))
+           return (forall args2,
+                      option { new_src : _ & (exprf _ _ _ new_src -> exprf _ _ _ (new_flat_type (interpf (@interp_op_bounds) (Op opc2 args2))))%type })
      with
-     | Plus T1, Plus T2 => fun args2 args' => Op (Plus _) (SmartBound args')
-     | Cast t1 t2, Plus _
-     | Cast t1 t2, Cast _ _
-       => fun _ x => SmartBound x
+     | Plus T1, Plus T2 => fun args2 => Some (existT _ _ (Op (Plus (bound_type T2 _))))
+     | Cast _ _, Plus _
+     | Cast _ _, Cast _ _
+       => fun args2 => Some (existT _ _ (fun args' => args'))
      | Plus _, _
-       => fun _ _ => Const (SmartValf _ (@failv) _)
+       => fun _ => None
      end.
-Section with_ovar.
-  Context (ovar : base_type -> Type).
-  Local Notation ivar t := (@exprf base_type interp_base_type op ovar (Tbase t)) (only parsing).
-  Local Notation ivarf := (fun t => ivar t).
-
-  Fixpoint bound_var (tx1 tx2 tC1 : flat_type base_type)
-           {struct tx2}
-    : forall (f : interp_flat_type ivarf tx1 -> exprf base_type interp_base_type op (var:=ovar) tC1)
-             (v : interp_flat_type ivarf tx2),
-      exprf base_type interp_base_type op (var:=ovar) tC1
-    := match tx1, tx2 return (interp_flat_type _ tx1 -> _) -> interp_flat_type _ tx2 -> _ with
-       | Tbase T1, Tbase T2 => fun f v => f (SmartBound v)
-       | Prod A1 B1, Prod A2 B2
-         => fun f v
-            => @bound_var
-                 _ _ _
-                 (fun v1 => @bound_var _ _ _ (fun v2 => f (v1, v2)) (snd v))
-                 (fst v)
-       | Tbase _, _
-       | Prod _ _, _
-         => fun f _ => f (SmartValf _ (fun t => Const (t:=Tbase _) (@failv t)) _)
-       end.
-End with_ovar.
 
 Definition mapf_to_bounds_interp {var t1} (e1 : @exprf base_type interp_base_type op var t1)
   : @exprf base_type interp_base_type_bounds op var t1
@@ -198,13 +140,14 @@ Definition MapToBoundsInterp {t1} (e1 : @Expr base_type interp_base_type op t1)
 Definition Boundify {t1} (e1 : Expr base_type interp_base_type op t1) args2
   : Expr _ _ _ _
   := fun ovar
-     => @map_interp_cast
+     => @map_interp_cast_with_cast_op
           base_type base_type interp_base_type interp_base_type_bounds
-          op op (@interp_op_bounds) (@failv)
-          (@bound_type) bound_base_const bound_op
-          ovar
-          (@bound_var ovar)
-          t1 (e1 _) t1 (MapToBoundsInterp e1 _) args2.
+          op op (@interp_op_bounds) base_type_beq internal_base_type_dec_bl
+          (@failv) (@bound_type) bound_base_const
+          (fun var t1 t2 => Op (Cast t1 t2))
+          (fun _ _ opc => match opc with Cast _ _ => true | _ => false end)
+          bound_op ovar
+          t1 (e1 _) t1 (MapToBoundsInterp e1 _) (interp_all_binders_for_to' args2).
 
 (** * Examples *)
 
@@ -230,5 +173,5 @@ Notation e x := (exist _ x _).
 Definition ex1b := Boundify ex1 tt.
 Eval compute in ex1b.
 
-Definition ex1fb := Boundify ex1f (63, (63, tt))%core.
+Definition ex1fb := Boundify ex1f (63, 63)%core.
 Eval compute in ex1fb.
