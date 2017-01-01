@@ -253,18 +253,26 @@ Section language.
            | Arrow A B => fun v => abs _ _
                                        (fun x => @smart_interp_map_hetero f g g' h pair abs B (v x))
            end.
-      Fixpoint smart_interp_map {f g}
+      Fixpoint smart_interp_map_gen {f g}
+                 (h : forall x, f x -> g (Tflat (Tbase x)))
+                 (h' : forall x, g (Tflat (Tbase x)) -> f x)
+                 (flat_map : forall t, interp_flat_type_gen f t -> g t)
+                 (abs : forall A B, (g (Tflat (Tbase A)) -> g B) -> g (Arrow A B))
+                 {t}
+        : interp_type_gen (interp_flat_type_gen f) t -> g t
+        := match t return interp_type_gen (interp_flat_type_gen f) t -> g t with
+           | Tflat T => flat_map T
+           | Arrow A B => fun v => abs _ _
+                                       (fun x => @smart_interp_map_gen f g h h' flat_map abs B (v (h' _ x)))
+           end.
+      Definition smart_interp_map {f g}
                  (h : forall x, f x -> g (Tflat (Tbase x)))
                  (h' : forall x, g (Tflat (Tbase x)) -> f x)
                  (pair : forall A B, g (Tflat A) -> g (Tflat B) -> g (Prod A B))
                  (abs : forall A B, (g (Tflat (Tbase A)) -> g B) -> g (Arrow A B))
                  {t}
         : interp_type_gen (interp_flat_type_gen f) t -> g t
-        := match t return interp_type_gen (interp_flat_type_gen f) t -> g t with
-           | Tflat _ => @smart_interp_flat_map f (fun x => g (Tflat x)) h pair _
-           | Arrow A B => fun v => abs _ _
-                                       (fun x => @smart_interp_map f g h h' pair abs B (v (h' _ x)))
-           end.
+        := @smart_interp_map_gen f g h h' (@smart_interp_flat_map f (fun x => g (Tflat x)) h pair) abs t.
       Fixpoint SmartValf {T} (val : forall t : base_type_code, T t) t : interp_flat_type_gen T t
         := match t return interp_flat_type_gen T t with
            | Tbase _ => val _
