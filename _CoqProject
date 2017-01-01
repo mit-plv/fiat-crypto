@@ -111,6 +111,7 @@ src/Reflection/InterpWfRel.v
 src/Reflection/Linearize.v
 src/Reflection/LinearizeInterp.v
 src/Reflection/LinearizeWf.v
+src/Reflection/MapCast.v
 src/Reflection/MapInterp.v
 src/Reflection/MapInterpWf.v
 src/Reflection/MapWithInterpInfo.v
