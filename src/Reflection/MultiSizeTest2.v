@@ -195,8 +195,6 @@ Definition MapToBoundsInterp {t1} (e1 : @Expr base_type interp_base_type op t1)
   : @Expr base_type interp_base_type_bounds op t1
   := fun var => map_to_bounds_interp (e1 _).
 
-Print map_interp_cast.
-
 Definition Boundify {t1} (e1 : Expr base_type interp_base_type op t1) args2
   : Expr _ _ _ _
   := fun ovar
