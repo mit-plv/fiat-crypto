@@ -14,12 +14,12 @@ Definition cmovne (x y r1 r2 : Z) := if Z.eqb x y then r1 else r2.
    neg 0 = 0 *)
 Definition neg (int_width : Z) (b : Z) := if Z.eqb b 1 then Z.ones int_width else 0%Z.
 
-Definition wcmovl_gen {logsz} x y r1 r2
-  := @ZToWord logsz (cmovl (@wordToZ logsz x) (@wordToZ logsz y) (@wordToZ logsz r1) (@wordToZ logsz r2)).
-Definition wcmovne_gen {logsz} x y r1 r2
-  := @ZToWord logsz (cmovne (@wordToZ logsz x) (@wordToZ logsz y) (@wordToZ logsz r1) (@wordToZ logsz r2)).
-Definition wneg_gen {logsz} (int_width : Z) b
-  := @ZToWord logsz (neg int_width (@wordToZ logsz b)).
+Definition wcmovl_gen {sz} x y r1 r2
+  := @ZToWord_gen sz (cmovl (@wordToZ_gen sz x) (@wordToZ_gen sz y) (@wordToZ_gen sz r1) (@wordToZ_gen sz r2)).
+Definition wcmovne_gen {sz} x y r1 r2
+  := @ZToWord_gen sz (cmovne (@wordToZ_gen sz x) (@wordToZ_gen sz y) (@wordToZ_gen sz r1) (@wordToZ_gen sz r2)).
+Definition wneg_gen {sz} (int_width : Z) b
+  := @ZToWord_gen sz (neg int_width (@wordToZ_gen sz b)).
 
 Definition wcmovl32 x y r1 r2 := ZToWord32 (cmovl (word32ToZ x) (word32ToZ y) (word32ToZ r1) (word32ToZ r2)).
 Definition wcmovne32 x y r1 r2 := ZToWord32 (cmovne (word32ToZ x) (word32ToZ y) (word32ToZ r1) (word32ToZ r2)).
@@ -34,11 +34,11 @@ Definition wcmovne128 x y r1 r2 := ZToWord128 (cmovne (word128ToZ x) (word128ToZ
 Definition wneg128 (int_width : Z) b := ZToWord128 (neg int_width (word128ToZ b)).
 
 Definition wcmovl {logsz}
-  := word_case (T:=fun sz => word sz -> word sz -> word sz -> word sz -> word sz)
-               logsz wcmovl32 wcmovl64 wcmovl128 (@wcmovl_gen).
+  := word_case_dep (T:=fun _ word => word -> word -> word -> word -> word)
+                   logsz wcmovl32 wcmovl64 wcmovl128 (fun _ => @wcmovl_gen _).
 Definition wcmovne {logsz}
-  := word_case (T:=fun sz => word sz -> word sz -> word sz -> word sz -> word sz)
-               logsz wcmovne32 wcmovne64 wcmovne128 (@wcmovne_gen).
+  := word_case_dep (T:=fun _ word => word -> word -> word -> word -> word)
+                   logsz wcmovne32 wcmovne64 wcmovne128 (fun _ => @wcmovne_gen _).
 Definition wneg {logsz}
-  := word_case (T:=fun sz => Z -> word sz -> word sz)
-               logsz wneg32 wneg64 wneg128 (@wneg_gen).
+  := word_case_dep (T:=fun _ word => Z -> word -> word)
+                   logsz wneg32 wneg64 wneg128 (fun _ => @wneg_gen _).
