@@ -361,6 +361,7 @@ src/Util/CaseUtil.v
 src/Util/Decidable.v
 src/Util/Equality.v
 src/Util/FixCoqMistakes.v
+src/Util/FixedWordSizes.v
 src/Util/GlobalSettings.v
 src/Util/HList.v
 src/Util/HProp.v
