@@ -98,6 +98,7 @@ Section language.
          | Pair _ _ _ _, _
            => @failf _
          end.
+    Arguments mapf_interp_cast {_} _ {_} _. (* 8.4 workaround for bad arguments *)
 
     Fixpoint map_interp_cast
              {t1} (e1 : @expr base_type_code1 interp_base_type1 op1 ivarf t1)

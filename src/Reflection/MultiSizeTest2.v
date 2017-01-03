@@ -157,7 +157,7 @@ Example ex1 : Expr base_type interp_base_type op TNat := fun var =>
   LetIn (Op (tR:=TNat) (Plus Nat) (Pair (Var a) (Var b))) (fun c : var Nat =>
   Op (Plus Nat) (Pair (Var c) (Var c))))).
 
-Example ex1f : Expr base_type interp_base_type op (Nat -> Nat -> TNat) := fun var =>
+Example ex1f : Expr base_type interp_base_type op (Arrow Nat (Arrow Nat TNat)) := fun var =>
   Abs (fun a0 =>
   Abs (fun b0 =>
   LetIn (Var a0) (fun a : var Nat =>
