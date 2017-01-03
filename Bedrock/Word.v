@@ -1,6 +1,6 @@
 (** Fixed precision machine words *)
 
-Require Import Coq.ZArith.ZArith Coq.Arith.Arith Coq.Arith.Div2 Coq.NArith.NArith Coq.Bool.Bool Coq.omega.Omega.
+Require Import Coq.Arith.Arith Coq.Arith.Div2 Coq.NArith.NArith Coq.Bool.Bool Coq.omega.Omega.
 Require Import Bedrock.Nomega.
 
 Set Implicit Arguments.
@@ -83,9 +83,6 @@ Definition NToWord (sz : nat) (n : N) : word sz :=
     | N0 => wzero' sz
     | Npos p => posToWord sz p
   end.
-
-Definition ZToWord sz (n : Z) : word sz := NToWord sz (Z.to_N n).
-Definition wordToZ sz (w : word sz) : Z := Z.of_N (wordToN w).
 
 Fixpoint Npow2 (n : nat) : N :=
   match n with
