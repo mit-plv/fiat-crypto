@@ -75,7 +75,7 @@ endif
 endif
 endif
 
-COQPATH?=$(shell pwd)/$(COQPRIME_FOLDER)
+COQPATH?=${CURDIR}/$(COQPRIME_FOLDER)
 export COQPATH
 
 coqprime:
