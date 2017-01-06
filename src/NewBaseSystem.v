@@ -1,6 +1,7 @@
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.Util.Decidable.
+Require Import Psatz.
 Require Import Coq.omega.Omega.
 
 Require Import Coq.ZArith.BinIntDef. Local Open Scope Z_scope.
@@ -15,69 +16,89 @@ Import ZArith. (* for ring *)
     Lemma fst_pair {A B} (a:A) (b:B) : fst (a,b) = a. reflexivity. Qed.
     Lemma snd_pair {A B} (a:A) (b:B) : snd (a,b) = b. reflexivity. Qed.
 
+    Program Definition add_to_nth {n} i x : tuple Z n -> tuple Z n :=
+      Tuple.on_tuple (ListUtil.update_nth i (Z.add x)) _.
+    Next Obligation. apply ListUtil.length_update_nth. Defined.
+
+    Lemma combine_update_nth_r {A B} (ls:list A) (rs:list B) i f :
+      List.combine ls (ListUtil.update_nth i f rs) =
+      ListUtil.update_nth i (fun p => (fst p, f (snd p))) (List.combine ls rs).
+    Admitted.
+    Lemma update_nth_id {T} i (xs:list T) : ListUtil.update_nth i id xs = xs.
+    Admitted.
+    Lemma map_fst_combine {A B} (xs:list A) (ys:list B) : List.map fst (List.combine xs ys) = List.firstn (length ys) xs.
+    Admitted.
+    Lemma nth_default_seq_inbouns d s n i (H:(i < n)%nat) :
+      List.nth_default d (List.seq s n) i = (s+i)%nat.
+    Proof.
+      progress cbv [List.nth_default].
+      rewrite ListUtil.nth_error_seq.
+      VerdiTactics.break_if; solve [ trivial | omega ].
+    Qed.
+
 Module B.
   Section NewBaseSystem.
-    Let term := (Z*Z)%type.
-    Let rep : Type := list term.
+    Let limb := (Z*Z)%type. (* position coefficient and run-time value *)
+    Definition eval (p:list limb) : Z :=
+      List.fold_right Z.add 0%Z (List.map (fun t => fst t * snd t) p).
+    
+    Lemma eval_nil : eval nil = 0. Proof. reflexivity. Qed.
+    Lemma eval_cons p q : eval (p::q) = (fst p) * (snd p) + eval q. Proof. reflexivity. Qed.
+    Lemma eval_app p q: eval (p++q) = eval p + eval q.
+    Proof. induction p; simpl eval; rewrite ?eval_nil, ?eval_cons; nsatz. Qed.
 
-    Let eval_term (t:term) : Z := fst t * snd t.
-    Definition eval (p:rep) : Z :=
-      List.fold_right Z.add 0%Z (List.map eval_term p).
-
-    Definition add (p q : rep) : rep := List.app p q.
-
-    Definition opp (p : rep) : rep :=
-      List.map (fun cx => (fst cx, - snd cx)) p.
-
-    Definition mul (p q:rep) : rep :=
+    Definition mul (p q:list limb) : list limb :=
       List.flat_map (fun t => List.map (fun t' => (fst t * fst t', snd t * snd t')) q) p.
+    Lemma eval_map_mul a x q : eval (List.map (fun t => (a * fst t, x * snd t)) q) = a * x * eval q.
+    Proof. induction q; simpl List.map;
+             rewrite ?eval_nil, ?eval_cons, ?fst_pair, ?snd_pair; nsatz. Qed.
+    Lemma mul_correct p q : eval (mul p q) = eval p * eval q.
+    Proof. induction p; simpl mul;
+             rewrite ?eval_nil, ?eval_cons, ?eval_app, ?eval_map_mul; nsatz. Qed.
 
     Section Positional.
-      Context (weight : nat -> Z) (weight_0 : weight 0%nat = 1%Z) (weight_nonzero:forall i, weight i <> 0) (n : nat).
-      Definition eval_positional (xs:tuple Z n) : Z :=
+      Context (weight : nat -> Z) (* [weight i] is the weight of position [i] *)
+              (weight_0 : weight 0%nat = 1%Z)
+              (weight_nonzero : forall i, weight i <> 0).
+
+      Definition eval_positional {n:nat} (xs:tuple Z n) : Z :=
         eval (List.combine (List.map weight (List.seq 0 n)) (Tuple.to_list n xs)).
 
-      Fixpoint place (t:term) (i:nat) : nat * Z :=
+      Lemma eval_positional_add_to_nth {n} (i:nat) (H:(i<n)%nat) (x:Z) (xs:tuple Z n) :
+        eval_positional (add_to_nth i x xs) = weight i * x + eval_positional xs.
+      Proof.
+        cbv [eval_positional add_to_nth Tuple.on_tuple]; rewrite !Tuple.to_list_from_list.
+        rewrite combine_update_nth_r at 1.
+        rewrite <-(update_nth_id i (List.combine _ _)) at 2.
+        rewrite <-!(ListUtil.splice_nth_equiv_update_nth_update _ _ (weight 0, 0)) by (autorewrite with distr_length; lia); progress cbv [ListUtil.splice_nth id].
+        repeat match goal with
+        | |- context[?w] => progress (replace w with (weight i); [ring|])
+        | _ => progress rewrite ?eval_app, ?eval_cons, ?fst_pair, ?snd_pair, <-?ListUtil.map_nth_default_always, ?map_fst_combine, ?List.firstn_all2, ?ListUtil.map_nth_default_always, ?nth_default_seq_inbouns by (autorewrite with distr_length; lia)
+        | _ => reflexivity
+        end.
+      Qed.
+
+      Fixpoint place (t:limb) (i:nat) : nat * Z :=
         if dec (fst t mod weight i = 0)
         then (i, fst t / weight i * snd t)
         else match i with S i' => place t i' | O => (O, fst t * snd t) end.
 
+      Lemma place_in_range (t:limb) (n:nat) : (fst (place t n) < S n)%nat.
+      Proof. induction n; simpl; VerdiTactics.break_match; simpl; omega. Qed.
+
       Lemma eval_place t i :
-        weight (fst (place t i)) * snd (place t i) = eval_term t.
-      Proof.
-        induction i; simpl place;
-          repeat match goal with
-                 | _ => rewrite weight_0
-                 | _ => rewrite Z.div_1_r
-                 | _ => rewrite fst_pair
-                 | _ => rewrite snd_pair
-                 | _ => VerdiTactics.break_match
-                 | [H:_ |- _ ] => apply (Z_div_exact_full_2 _ _ (weight_nonzero _)) in H
-                 | _ => nsatz
-                 end.
-      Qed.
+        weight (fst (place t i)) * snd (place t i) = fst t * snd t.
+      Proof. induction i; simpl place; VerdiTactics.break_match;
+               try match goal with H:_ |- _ => pose proof (Z_div_exact_full_2 _ _ (weight_nonzero _) H) end;
+               rewrite ?weight_0, ?Z.div_1_r, ?fst_pair, ?snd_pair; nsatz. Qed.
 
-      Program Definition add_to_nth i x : tuple Z n -> tuple Z n :=
-        Tuple.on_tuple (ListUtil.update_nth i (Z.add x)) _.
-      Next Obligation. apply ListUtil.length_update_nth. Defined.
-      Lemma eval_positional_add_to_nth i x xs :
-        eval_positional (add_to_nth i x xs) = weight i * x + eval_positional xs.
-      Proof.
-        cbv [add_to_nth Tuple.on_tuple eval_positional].
-        rewrite Tuple.to_list_from_list.
-        (* TODO: List.add_to_nth *)
-      Admitted.
-
-      Definition tplace (t:term) := let p := place t n in add_to_nth (fst p) (snd p).
-      Lemma tplace_correct t xs : eval_positional (tplace t xs) = eval_positional xs + eval_term t.
-      Proof.
-        cbv [tplace]; rewrite eval_positional_add_to_nth, eval_place; nsatz.
-      Qed.
-
-      Definition gather (p:rep) (init:tuple Z n) := List.fold_right tplace init p.
-      Lemma eval_positional_gather p init :
-        eval_positional (gather p init) = eval p + eval_positional init.
-      Proof. induction p; simpl; rewrite ?eval_cons, ?tplace_correct; nsatz. Qed.
+      Definition place_all {n} (init:tuple Z n) (p:list limb) :=
+        List.fold_right (fun t => let p := place t (pred n) in add_to_nth (fst p) (snd p)) init p.
+      Lemma eval_positional_place_all {n} p (init:tuple Z n) (n_nonzero:n<>O) :
+        eval_positional (place_all init p) = eval p + eval_positional init.
+      Proof. induction p; simpl; try pose proof place_in_range a (pred n);
+               rewrite ?eval_positional_add_to_nth by omega;
+               rewrite ?eval_cons, ?eval_place; try nsatz. Qed.
 
     Definition carry (from next : Z) (p : rep) : rep :=
       let cap := (next / from)%Z in
@@ -117,28 +138,12 @@ Module B.
 
     Section Proofs.
 
-    Lemma eval_nil : eval nil = 0. Proof. reflexivity. Qed.
-    Lemma eval_cons p q : eval (p::q) = (fst p) * (snd p) + eval q. Proof. reflexivity. Qed.
-    Lemma eval_app p q: eval (p++q) = eval p + eval q.
-    Proof. induction p; simpl eval; rewrite ?eval_nil, ?eval_cons, ?IHp; ring. Qed.
     Lemma add_correct p q : eval (add p q) = eval p + eval q. Proof. apply eval_app. Qed.
 
     Lemma opp_correct p : eval (opp p) = - (eval p).
     Proof.
       induction p; simpl opp;
         rewrite ?eval_nil, ?eval_cons, ?fst_pair, ?snd_pair, ?IHp; ring.
-    Qed.
-
-    Lemma eval_map_mul a x q : eval (map (fun t => (a * fst t, x * snd t)) q) = a * x * eval q.
-    Proof.
-      induction q; simpl map;
-        rewrite ?eval_nil, ?eval_cons, ?fst_pair, ?snd_pair, ?IHq; ring.
-    Qed.
-
-    Lemma mul_correct p q : eval (mul p q) = eval p * eval q.
-    Proof.
-      induction p; simpl mul;
-        rewrite ?eval_nil, ?eval_cons, ?eval_app, ?eval_map_mul, ?IHp; ring.
     Qed.
 
     Lemma carry_correct from next: from <> 0 ->
