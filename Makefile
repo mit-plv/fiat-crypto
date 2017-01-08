@@ -10,6 +10,8 @@ VERBOSE?=
 SHOW := $(if $(VERBOSE),@true "",@echo "")
 HIDE := $(if $(VERBOSE),,@)
 
+PATHSEP?=:
+
 .PHONY: coq clean update-_CoqProject cleanall install \
 	install-coqprime clean-coqprime coqprime \
 	specific non-specific \
@@ -130,4 +132,4 @@ printenv::
 	@echo "COQPATH =        $$COQPATH"
 
 .dir-locals.el::
-	sed 's:@COQPRIME@:$(COQPRIME_FOLDER):g' .dir-locals.el.in > $@
+	sed 's:@COQPRIME@:$(COQPRIME_FOLDER):g' .dir-locals.el.in | sed s'/@PATHSEP@/$(PATHSEP)/g' > $@
