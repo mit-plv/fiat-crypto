@@ -206,26 +206,6 @@ Section generic_destructuring.
     intros. cbv [appify9].
     repeat (etransitivity; [ apply app_fe25519_32W_correct | ]); reflexivity.
   Qed.
-
-  Definition appify10 {T} (op : fe25519_32W -> fe25519_32W -> fe25519_32W -> fe25519_32W -> fe25519_32W -> fe25519_32W -> fe25519_32W -> fe25519_32W -> fe25519_32W -> fe25519_32W -> T) (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 : fe25519_32W) :=
-    app_fe25519_32W x0 (fun x0' =>
-    app_fe25519_32W x1 (fun x1' =>
-    app_fe25519_32W x2 (fun x2' =>
-    app_fe25519_32W x3 (fun x3' =>
-    app_fe25519_32W x4 (fun x4' =>
-    app_fe25519_32W x5 (fun x5' =>
-    app_fe25519_32W x6 (fun x6' =>
-    app_fe25519_32W x7 (fun x7' =>
-    app_fe25519_32W x8 (fun x8' =>
-    app_fe25519_32W x9 (fun x9' =>
-                       op x0' x1' x2' x3' x4' x5' x6' x7' x8' x9')))))))))).
-
-  Lemma appify10_correct : forall {T} op x0 x1 x2 x3 x4 x5 x6 x7 x8 x9,
-      @appify10 T op x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 = op x0 x1 x2 x3 x4 x5 x6 x7 x8 x9.
-  Proof.
-    intros. cbv [appify10].
-    repeat (etransitivity; [ apply app_fe25519_32W_correct | ]); reflexivity.
-  Qed.
 End generic_destructuring.
 
 Definition eta_fe25519_32W_sig (x : fe25519_32W) : { v : fe25519_32W | v = x }.
@@ -425,24 +405,6 @@ Definition curry_9op_fe25519_32W {T} op : fe25519_32W -> fe25519_32W -> fe25519_
   := Eval cbv (*-[word64]*) in
       appify9 (fun x0 x1 x2 x3 x4 x5 x6 x7 x8
                => curry_unop_fe25519_32W (curry_unop_fe25519_32W (curry_unop_fe25519_32W (curry_unop_fe25519_32W (curry_unop_fe25519_32W (curry_unop_fe25519_32W (curry_unop_fe25519_32W (curry_unop_fe25519_32W (curry_unop_fe25519_32W op x0) x1) x2) x3) x4) x5) x6) x7) x8).
-
-Definition uncurry_10op_fe25519_32W {T} (op : fe25519_32W -> fe25519_32W -> fe25519_32W -> fe25519_32W -> fe25519_32W -> fe25519_32W -> fe25519_32W -> fe25519_32W -> fe25519_32W -> fe25519_32W -> T)
-  := Eval cbv (*-[word64]*) in
-      uncurry_unop_fe25519_32W (fun x0 =>
-      uncurry_unop_fe25519_32W (fun x1 =>
-      uncurry_unop_fe25519_32W (fun x2 =>
-      uncurry_unop_fe25519_32W (fun x3 =>
-      uncurry_unop_fe25519_32W (fun x4 =>
-      uncurry_unop_fe25519_32W (fun x5 =>
-      uncurry_unop_fe25519_32W (fun x6 =>
-      uncurry_unop_fe25519_32W (fun x7 =>
-      uncurry_unop_fe25519_32W (fun x8 =>
-      uncurry_unop_fe25519_32W (fun x9 =>
-                               op x0 x1 x2 x3 x4 x5 x6 x7 x8 x9)))))))))).
-Definition curry_10op_fe25519_32W {T} op : fe25519_32W -> fe25519_32W -> fe25519_32W -> fe25519_32W -> fe25519_32W -> fe25519_32W -> fe25519_32W -> fe25519_32W -> fe25519_32W -> fe25519_32W -> T
-  := Eval cbv (*-[word64]*) in
-      appify10 (fun x0 x1 x2 x3 x4 x5 x6 x7 x8 x9
-                => curry_unop_fe25519_32W (curry_unop_fe25519_32W (curry_unop_fe25519_32W (curry_unop_fe25519_32W (curry_unop_fe25519_32W (curry_unop_fe25519_32W (curry_unop_fe25519_32W (curry_unop_fe25519_32W (curry_unop_fe25519_32W (curry_unop_fe25519_32W op x0) x1) x2) x3) x4) x5) x6) x7) x8) x9).
 
 Definition proj1_fe25519_32W (x : fe25519_32) : fe25519_32W
   := Eval app_tuple_map in
@@ -870,22 +832,6 @@ Notation i9top_correct_and_bounded k irop op
           -> (Tuple.map (n:=k) fe25519_32WToZ (irop x0 x1 x2 x3 x4 x5 x6 x7 x8)
               = op (fe25519_32WToZ x0) (fe25519_32WToZ x1) (fe25519_32WToZ x2) (fe25519_32WToZ x3) (fe25519_32WToZ x4) (fe25519_32WToZ x5) (fe25519_32WToZ x6) (fe25519_32WToZ x7) (fe25519_32WToZ x8))
              * HList.hlist (fun v => is_bounded v = true) (Tuple.map (n:=k) fe25519_32WToZ (irop x0 x1 x2 x3 x4 x5 x6 x7 x8)))%type)
-       (only parsing).
-Notation i10top_correct_and_bounded k irop op
-  := ((forall x0 x1 x2 x3 x4 x5 x6 x7 x8 x9,
-          is_bounded (fe25519_32WToZ x0) = true
-          -> is_bounded (fe25519_32WToZ x1) = true
-          -> is_bounded (fe25519_32WToZ x2) = true
-          -> is_bounded (fe25519_32WToZ x3) = true
-          -> is_bounded (fe25519_32WToZ x4) = true
-          -> is_bounded (fe25519_32WToZ x5) = true
-          -> is_bounded (fe25519_32WToZ x6) = true
-          -> is_bounded (fe25519_32WToZ x7) = true
-          -> is_bounded (fe25519_32WToZ x8) = true
-          -> is_bounded (fe25519_32WToZ x9) = true
-          -> (Tuple.map (n:=k) fe25519_32WToZ (irop x0 x1 x2 x3 x4 x5 x6 x7 x8 x9)
-              = op (fe25519_32WToZ x0) (fe25519_32WToZ x1) (fe25519_32WToZ x2) (fe25519_32WToZ x3) (fe25519_32WToZ x4) (fe25519_32WToZ x5) (fe25519_32WToZ x6) (fe25519_32WToZ x7) (fe25519_32WToZ x8) (fe25519_32WToZ x9))
-             * HList.hlist (fun v => is_bounded v = true) (Tuple.map (n:=k) fe25519_32WToZ (irop x0 x1 x2 x3 x4 x5 x6 x7 x8 x9)))%type)
        (only parsing).
 
 Definition prefreeze := GF25519_32.prefreeze.
