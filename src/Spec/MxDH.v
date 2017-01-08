@@ -50,6 +50,15 @@ Module MxDH. (* from RFC7748 *)
         pair4 X4 Z4 X5 Z5.
     End generic.
 
+    (** TODO: Make this the only ladderstep? *)
+    Definition ladderstep_other_assoc (X1:F) (P1 P2:F*F) : F*F*F*F :=
+      Eval cbv beta delta [ladderstep_gen] in
+        @ladderstep_gen
+            (F*F*F*F)
+            (fun X3 Y3 Z3 T3 => (X3, Y3, Z3, T3))
+            (fun x f => let y := x in f y)
+            X1 P1 P2.
+
     Definition ladderstep (X1:F) (P1 P2:F*F) : (F*F)*(F*F) :=
       Eval cbv beta delta [ladderstep_gen] in
         @ladderstep_gen
