@@ -871,5 +871,21 @@ Notation i9top_correct_and_bounded k irop op
               = op (fe41417_32WToZ x0) (fe41417_32WToZ x1) (fe41417_32WToZ x2) (fe41417_32WToZ x3) (fe41417_32WToZ x4) (fe41417_32WToZ x5) (fe41417_32WToZ x6) (fe41417_32WToZ x7) (fe41417_32WToZ x8))
              * HList.hlist (fun v => is_bounded v = true) (Tuple.map (n:=k) fe41417_32WToZ (irop x0 x1 x2 x3 x4 x5 x6 x7 x8)))%type)
        (only parsing).
+Notation i10top_correct_and_bounded k irop op
+  := ((forall x0 x1 x2 x3 x4 x5 x6 x7 x8 x9,
+          is_bounded (fe41417_32WToZ x0) = true
+          -> is_bounded (fe41417_32WToZ x1) = true
+          -> is_bounded (fe41417_32WToZ x2) = true
+          -> is_bounded (fe41417_32WToZ x3) = true
+          -> is_bounded (fe41417_32WToZ x4) = true
+          -> is_bounded (fe41417_32WToZ x5) = true
+          -> is_bounded (fe41417_32WToZ x6) = true
+          -> is_bounded (fe41417_32WToZ x7) = true
+          -> is_bounded (fe41417_32WToZ x8) = true
+          -> is_bounded (fe41417_32WToZ x9) = true
+          -> (Tuple.map (n:=k) fe41417_32WToZ (irop x0 x1 x2 x3 x4 x5 x6 x7 x8 x9)
+              = op (fe41417_32WToZ x0) (fe41417_32WToZ x1) (fe41417_32WToZ x2) (fe41417_32WToZ x3) (fe41417_32WToZ x4) (fe41417_32WToZ x5) (fe41417_32WToZ x6) (fe41417_32WToZ x7) (fe41417_32WToZ x8) (fe41417_32WToZ x9))
+             * HList.hlist (fun v => is_bounded v = true) (Tuple.map (n:=k) fe41417_32WToZ (irop x0 x1 x2 x3 x4 x5 x6 x7 x8 x9)))%type)
+       (only parsing).
 
 Definition prefreeze := GF41417_32.prefreeze.
