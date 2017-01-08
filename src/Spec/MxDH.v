@@ -1,4 +1,5 @@
 Require Crypto.Algebra.
+Require Import Crypto.Util.Notations.
 
 Module MxDH. (* from RFC7748 *)
   Section MontgomeryLadderKeyExchange.
@@ -25,24 +26,37 @@ Module MxDH. (* from RFC7748 *)
        can be, carefully, used with values that are not verified to
        be on the curve *)
     Context {a24:F} {a24_correct:4*a24 = a-2}.
+    Section generic.
+      Context (F4 : Type)
+              (pair4 : F -> F -> F -> F -> F4)
+              (let_in : F -> (F -> F4) -> F4).
+      Local Notation "'slet' x := y 'in' z" := (let_in y (fun x => z)).
+      Definition ladderstep_gen (X1:F) (P1 P2:F * F) : F4 :=
+        let '(X2, Z2) := P1 in
+        let '(X3, Z3) := P2 in
+        slet A := X2+Z2 in
+        slet AA := A^2 in
+        slet B := X2-Z2 in
+        slet BB := B^2 in
+        slet E := AA-BB in
+        slet C := X3+Z3 in
+        slet D := X3-Z3 in
+        slet DA := D*A in
+        slet CB := C*B in
+        slet X5 := (DA+CB)^2 in
+        slet Z5 := X1*(DA-CB)^2 in
+        slet X4 := AA*BB in
+        slet Z4 := E*(AA + a24*E) in
+        pair4 X4 Z4 X5 Z5.
+    End generic.
+
     Definition ladderstep (X1:F) (P1 P2:F*F) : (F*F)*(F*F) :=
-      match P1, P2 return _ with
-        (X2, Z2), (X3, Z3) => 
-          let A := X2+Z2 in
-          let AA := A^2 in
-          let B := X2-Z2 in
-          let BB := B^2 in
-          let E := AA-BB in
-          let C := X3+Z3 in
-          let D := X3-Z3 in
-          let DA := D*A in
-          let CB := C*B in
-          let X5 := (DA+CB)^2 in
-          let Z5 := X1*(DA-CB)^2 in
-          let X4 := AA*BB in
-          let Z4 := E*(AA + a24*E) in
-          ((X4, Z4), (X5, Z5))
-        end.
+      Eval cbv beta delta [ladderstep_gen] in
+        @ladderstep_gen
+            ((F*F)*(F*F))
+            (fun X3 Y3 Z3 T3 => ((X3, Y3), (Z3, T3)))
+            (fun x f => let y := x in f y)
+            X1 P1 P2.
 
     Context {cswap:bool->F*F->F*F->(F*F)*(F*F)}.
 
@@ -54,7 +68,7 @@ Module MxDH. (* from RFC7748 *)
 
     Definition downto {state} init count (step:state->nat->state) : state :=
       List.fold_left step (downto_iter count) init.
-    
+
     Local Notation xor := Coq.Init.Datatypes.xorb.
 
     (* Ideally, we would verify that this corresponds to x coordinate
