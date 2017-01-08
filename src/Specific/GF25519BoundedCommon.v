@@ -206,6 +206,26 @@ Section generic_destructuring.
     intros. cbv [appify9].
     repeat (etransitivity; [ apply app_fe25519W_correct | ]); reflexivity.
   Qed.
+
+  Definition appify10 {T} (op : fe25519W -> fe25519W -> fe25519W -> fe25519W -> fe25519W -> fe25519W -> fe25519W -> fe25519W -> fe25519W -> fe25519W -> T) (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 : fe25519W) :=
+    app_fe25519W x0 (fun x0' =>
+    app_fe25519W x1 (fun x1' =>
+    app_fe25519W x2 (fun x2' =>
+    app_fe25519W x3 (fun x3' =>
+    app_fe25519W x4 (fun x4' =>
+    app_fe25519W x5 (fun x5' =>
+    app_fe25519W x6 (fun x6' =>
+    app_fe25519W x7 (fun x7' =>
+    app_fe25519W x8 (fun x8' =>
+    app_fe25519W x9 (fun x9' =>
+                       op x0' x1' x2' x3' x4' x5' x6' x7' x8' x9')))))))))).
+
+  Lemma appify10_correct : forall {T} op x0 x1 x2 x3 x4 x5 x6 x7 x8 x9,
+      @appify10 T op x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 = op x0 x1 x2 x3 x4 x5 x6 x7 x8 x9.
+  Proof.
+    intros. cbv [appify10].
+    repeat (etransitivity; [ apply app_fe25519W_correct | ]); reflexivity.
+  Qed.
 End generic_destructuring.
 
 Definition eta_fe25519W_sig (x : fe25519W) : { v : fe25519W | v = x }.
@@ -405,6 +425,24 @@ Definition curry_9op_fe25519W {T} op : fe25519W -> fe25519W -> fe25519W -> fe255
   := Eval cbv (*-[word64]*) in
       appify9 (fun x0 x1 x2 x3 x4 x5 x6 x7 x8
                => curry_unop_fe25519W (curry_unop_fe25519W (curry_unop_fe25519W (curry_unop_fe25519W (curry_unop_fe25519W (curry_unop_fe25519W (curry_unop_fe25519W (curry_unop_fe25519W (curry_unop_fe25519W op x0) x1) x2) x3) x4) x5) x6) x7) x8).
+
+Definition uncurry_10op_fe25519W {T} (op : fe25519W -> fe25519W -> fe25519W -> fe25519W -> fe25519W -> fe25519W -> fe25519W -> fe25519W -> fe25519W -> fe25519W -> T)
+  := Eval cbv (*-[word64]*) in
+      uncurry_unop_fe25519W (fun x0 =>
+      uncurry_unop_fe25519W (fun x1 =>
+      uncurry_unop_fe25519W (fun x2 =>
+      uncurry_unop_fe25519W (fun x3 =>
+      uncurry_unop_fe25519W (fun x4 =>
+      uncurry_unop_fe25519W (fun x5 =>
+      uncurry_unop_fe25519W (fun x6 =>
+      uncurry_unop_fe25519W (fun x7 =>
+      uncurry_unop_fe25519W (fun x8 =>
+      uncurry_unop_fe25519W (fun x9 =>
+                               op x0 x1 x2 x3 x4 x5 x6 x7 x8 x9)))))))))).
+Definition curry_10op_fe25519W {T} op : fe25519W -> fe25519W -> fe25519W -> fe25519W -> fe25519W -> fe25519W -> fe25519W -> fe25519W -> fe25519W -> fe25519W -> T
+  := Eval cbv (*-[word64]*) in
+      appify10 (fun x0 x1 x2 x3 x4 x5 x6 x7 x8 x9
+                => curry_unop_fe25519W (curry_unop_fe25519W (curry_unop_fe25519W (curry_unop_fe25519W (curry_unop_fe25519W (curry_unop_fe25519W (curry_unop_fe25519W (curry_unop_fe25519W (curry_unop_fe25519W (curry_unop_fe25519W op x0) x1) x2) x3) x4) x5) x6) x7) x8) x9).
 
 Definition proj1_fe25519W (x : fe25519) : fe25519W
   := Eval app_tuple_map in

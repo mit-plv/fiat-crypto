@@ -196,6 +196,26 @@ Proof.
   repeat (etransitivity; [ apply app_n_correct | ]); reflexivity.
 Qed.
 
+Definition appify10 {T} (op : fe41417_32 -> fe41417_32 -> fe41417_32 -> fe41417_32 -> fe41417_32 -> fe41417_32 -> fe41417_32 -> fe41417_32 -> fe41417_32 -> fe41417_32 -> T) (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 : fe41417_32) :=
+  app_n x0 (fun x0' =>
+  app_n x1 (fun x1' =>
+  app_n x2 (fun x2' =>
+  app_n x3 (fun x3' =>
+  app_n x4 (fun x4' =>
+  app_n x5 (fun x5' =>
+  app_n x6 (fun x6' =>
+  app_n x7 (fun x7' =>
+  app_n x8 (fun x8' =>
+  app_n x9 (fun x9' =>
+                     op x0' x1' x2' x3' x4' x5' x6' x7' x8' x9')))))))))).
+
+Lemma appify10_correct : forall {T} op x0 x1 x2 x3 x4 x5 x6 x7 x8 x9,
+    @appify10 T op x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 = op x0 x1 x2 x3 x4 x5 x6 x7 x8 x9.
+Proof.
+  intros. cbv [appify10].
+  repeat (etransitivity; [ apply app_n_correct | ]); reflexivity.
+Qed.
+
 Definition uncurry_unop_fe41417_32 {T} (op : fe41417_32 -> T)
   := Eval compute in Tuple.uncurry (n:=length_fe41417_32) op.
 Definition curry_unop_fe41417_32 {T} op : fe41417_32 -> T
@@ -228,6 +248,13 @@ Definition curry_9op_fe41417_32 {T} op : fe41417_32 -> fe41417_32 -> fe41417_32 
   := Eval compute in
       appify9 (fun x0 x1 x2 x3 x4 x5 x6 x7 x8
                => curry_unop_fe41417_32 (curry_unop_fe41417_32 (curry_unop_fe41417_32 (curry_unop_fe41417_32 (curry_unop_fe41417_32 (curry_unop_fe41417_32 (curry_unop_fe41417_32 (curry_unop_fe41417_32 (curry_unop_fe41417_32 op x0) x1) x2) x3) x4) x5) x6) x7) x8).
+
+Definition uncurry_10op_fe41417_32 {T} (op : fe41417_32 -> fe41417_32 -> fe41417_32 -> fe41417_32 -> fe41417_32 -> fe41417_32 -> fe41417_32 -> fe41417_32 -> fe41417_32 -> fe41417_32 -> T)
+  := Eval compute in uncurry_n_op_fe41417_32 10 op.
+Definition curry_10op_fe41417_32 {T} op : fe41417_32 -> fe41417_32 -> fe41417_32 -> fe41417_32 -> fe41417_32 -> fe41417_32 -> fe41417_32 -> fe41417_32 -> fe41417_32 -> fe41417_32 -> T
+  := Eval compute in
+      appify10 (fun x0 x1 x2 x3 x4 x5 x6 x7 x8 x9
+               => curry_unop_fe41417_32 (curry_unop_fe41417_32 (curry_unop_fe41417_32 (curry_unop_fe41417_32 (curry_unop_fe41417_32 (curry_unop_fe41417_32 (curry_unop_fe41417_32 (curry_unop_fe41417_32 (curry_unop_fe41417_32 (curry_unop_fe41417_32 op x0) x1) x2) x3) x4) x5) x6) x7) x8) x9).
 
 Definition add_sig (f g : fe41417_32) :
   { fg : fe41417_32 | fg = add_opt f g}.

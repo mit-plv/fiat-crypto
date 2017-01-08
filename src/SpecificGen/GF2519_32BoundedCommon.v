@@ -206,6 +206,26 @@ Section generic_destructuring.
     intros. cbv [appify9].
     repeat (etransitivity; [ apply app_fe2519_32W_correct | ]); reflexivity.
   Qed.
+
+  Definition appify10 {T} (op : fe2519_32W -> fe2519_32W -> fe2519_32W -> fe2519_32W -> fe2519_32W -> fe2519_32W -> fe2519_32W -> fe2519_32W -> fe2519_32W -> fe2519_32W -> T) (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 : fe2519_32W) :=
+    app_fe2519_32W x0 (fun x0' =>
+    app_fe2519_32W x1 (fun x1' =>
+    app_fe2519_32W x2 (fun x2' =>
+    app_fe2519_32W x3 (fun x3' =>
+    app_fe2519_32W x4 (fun x4' =>
+    app_fe2519_32W x5 (fun x5' =>
+    app_fe2519_32W x6 (fun x6' =>
+    app_fe2519_32W x7 (fun x7' =>
+    app_fe2519_32W x8 (fun x8' =>
+    app_fe2519_32W x9 (fun x9' =>
+                       op x0' x1' x2' x3' x4' x5' x6' x7' x8' x9')))))))))).
+
+  Lemma appify10_correct : forall {T} op x0 x1 x2 x3 x4 x5 x6 x7 x8 x9,
+      @appify10 T op x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 = op x0 x1 x2 x3 x4 x5 x6 x7 x8 x9.
+  Proof.
+    intros. cbv [appify10].
+    repeat (etransitivity; [ apply app_fe2519_32W_correct | ]); reflexivity.
+  Qed.
 End generic_destructuring.
 
 Definition eta_fe2519_32W_sig (x : fe2519_32W) : { v : fe2519_32W | v = x }.
@@ -405,6 +425,24 @@ Definition curry_9op_fe2519_32W {T} op : fe2519_32W -> fe2519_32W -> fe2519_32W 
   := Eval cbv (*-[word64]*) in
       appify9 (fun x0 x1 x2 x3 x4 x5 x6 x7 x8
                => curry_unop_fe2519_32W (curry_unop_fe2519_32W (curry_unop_fe2519_32W (curry_unop_fe2519_32W (curry_unop_fe2519_32W (curry_unop_fe2519_32W (curry_unop_fe2519_32W (curry_unop_fe2519_32W (curry_unop_fe2519_32W op x0) x1) x2) x3) x4) x5) x6) x7) x8).
+
+Definition uncurry_10op_fe2519_32W {T} (op : fe2519_32W -> fe2519_32W -> fe2519_32W -> fe2519_32W -> fe2519_32W -> fe2519_32W -> fe2519_32W -> fe2519_32W -> fe2519_32W -> fe2519_32W -> T)
+  := Eval cbv (*-[word64]*) in
+      uncurry_unop_fe2519_32W (fun x0 =>
+      uncurry_unop_fe2519_32W (fun x1 =>
+      uncurry_unop_fe2519_32W (fun x2 =>
+      uncurry_unop_fe2519_32W (fun x3 =>
+      uncurry_unop_fe2519_32W (fun x4 =>
+      uncurry_unop_fe2519_32W (fun x5 =>
+      uncurry_unop_fe2519_32W (fun x6 =>
+      uncurry_unop_fe2519_32W (fun x7 =>
+      uncurry_unop_fe2519_32W (fun x8 =>
+      uncurry_unop_fe2519_32W (fun x9 =>
+                               op x0 x1 x2 x3 x4 x5 x6 x7 x8 x9)))))))))).
+Definition curry_10op_fe2519_32W {T} op : fe2519_32W -> fe2519_32W -> fe2519_32W -> fe2519_32W -> fe2519_32W -> fe2519_32W -> fe2519_32W -> fe2519_32W -> fe2519_32W -> fe2519_32W -> T
+  := Eval cbv (*-[word64]*) in
+      appify10 (fun x0 x1 x2 x3 x4 x5 x6 x7 x8 x9
+                => curry_unop_fe2519_32W (curry_unop_fe2519_32W (curry_unop_fe2519_32W (curry_unop_fe2519_32W (curry_unop_fe2519_32W (curry_unop_fe2519_32W (curry_unop_fe2519_32W (curry_unop_fe2519_32W (curry_unop_fe2519_32W (curry_unop_fe2519_32W op x0) x1) x2) x3) x4) x5) x6) x7) x8) x9).
 
 Definition proj1_fe2519_32W (x : fe2519_32) : fe2519_32W
   := Eval app_tuple_map in
