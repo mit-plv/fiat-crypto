@@ -177,6 +177,7 @@ src/Specific/GF25519Reflective/Reified/CarryAdd.v
 src/Specific/GF25519Reflective/Reified/CarryOpp.v
 src/Specific/GF25519Reflective/Reified/CarrySub.v
 src/Specific/GF25519Reflective/Reified/GeModulus.v
+src/Specific/GF25519Reflective/Reified/LadderStep.v
 src/Specific/GF25519Reflective/Reified/Mul.v
 src/Specific/GF25519Reflective/Reified/Opp.v
 src/Specific/GF25519Reflective/Reified/Pack.v
