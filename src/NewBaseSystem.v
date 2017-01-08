@@ -33,6 +33,14 @@ Require Crypto.Util.Tuple. Local Notation tuple := Tuple.tuple.
       rewrite ListUtil.nth_error_seq.
       break_match; solve [ trivial | omega ].
     Qed.
+    
+    Lemma mod_add_mul_full a b c k m : m <> 0 -> c mod m = k mod m -> 
+                                    (a + b * c) mod m = (a + b * k) mod m.
+    Proof.
+      intros; rewrite Z.add_mod, Z.mul_mod by auto.
+      match goal with H : _ mod _ = _ mod _ |- _ => rewrite H end.
+      rewrite <-Z.mul_mod, <-Z.add_mod by auto; reflexivity.
+    Qed.
 
 Delimit Scope runtime_scope with RT.
 Definition runtime_mul := Z.mul. Global Infix "*" := runtime_mul : runtime_scope.
@@ -141,6 +149,42 @@ Module B.
              rewrite ?eval_positional_add_to_nth by omega;
              rewrite ?eval_cons, ?eval_place; try nsatz. Qed.
   End Positional.
+
+  Section Goldilocks.
+    Context {s p : Z} {p_nonzero : p <> 0} {s_nonzero : s <> 0}
+            {s2_modp : (s^2) mod p = (s+1) mod p}.
+
+    Definition scmul_l x := List.map (fun t => (x * fst t, (1 * snd t)%RT)).
+    Definition opp := mul ((1, -1):: nil).
+
+    
+
+    Definition goldilocks_mul (xs ys : list limb) :=
+      let a_b := split s xs in
+      let c_d := split s ys in
+      let ac := mul (fst a_b) (fst c_d) in
+      (ac ++ (mul (snd a_b) (snd c_d))
+          ++ scmul_l s ((mul ((fst a_b)++(snd a_b)) ((fst c_d)++(snd c_d))) ++ opp ac))%list.
+
+    Lemma goldilocks_mul_correct xs ys :
+      (eval (goldilocks_mul xs ys)) mod p = (eval xs * eval ys) mod p.
+    Proof.
+      cbv [goldilocks_mul scmul_l opp]; intros.
+      repeat rewrite ?eval_app, ?eval_map_mul, ?eval_mul, ?eval_cons, ?eval_nil.
+      rewrite !fst_pair, snd_pair.
+      repeat setoid_rewrite eval_nil.
+      rewrite <-(eval_split s xs s_nonzero).
+      rewrite <-(eval_split s ys s_nonzero).
+      match goal with |- _ = ((?a + s * ?b) * (?c + s * ?d)) mod p =>
+                      transitivity (((a*c) + ((b*c)+(a*d)) * s + (b*d) * s^2) mod p);
+                        [|f_equal; ring]
+      end.
+      erewrite mod_add_mul_full by eauto.
+      f_equal.
+      nsatz.
+    Qed.
+  End Goldilocks.
+
 End B.
 
 Local Coercion Z.of_nat : nat >-> Z.
@@ -191,4 +235,17 @@ Goal let base2_56 i := 2 ^ (56 * i) in forall f0 f1 f2 f3 f4 f5 f6 f7 g0 g1 g2 g
   let t := (eval cbv -[runtime_mul runtime_add] in t) in
   let t := (eval cbv [runtime_mul runtime_add] in t) in
   remember t eqn:Heqt; rewrite !Z.mul_1_l, !Z.add_0_r, !Z.add_assoc, !Z.mul_assoc, !Z.mul_opp_l, !Z.add_opp_r in Heqt.
+Abort.
+
+
+Goal let base2_56 i := 2 ^ (56 * i) in forall f0 f1 f2 f3 f4 f5 f6 f7 g0 g1 g2 g3 g4 g5 g6 g7: Z, False. intros.
+  let t := constr:(B.to_positional base2_56 (zeros 8)
+                                   (B.reduce (2^448) [(2^224,1);(1,-1)] 
+                                   (B.reduce (2^448) [(2^224,1);(1,-1)] 
+                                   (B.goldilocks_mul (s:=2^224)
+                                      (B.from_positional base2_56 (Tuple.from_list _ [f0;f1;f2;f3;f4;f5;f6;f7] eq_refl))
+                                      (B.from_positional base2_56 (Tuple.from_list _ [g0;g1;g2;g3;g4;g5;g6;g7] eq_refl)))))) in
+  let t := (eval cbv -[runtime_mul runtime_add] in t) in
+  let t := (eval cbv [runtime_mul runtime_add] in t) in
+  remember t eqn:Heqt; rewrite !Z.mul_1_l, !Z.add_0_r, !Z.add_assoc, !Z.mul_assoc, !Z.mul_opp_l, !Z.add_opp_r, !Z.sub_opp_r in Heqt.
 Abort.
