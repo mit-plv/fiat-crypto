@@ -22,6 +22,7 @@ Reserved Notation "'canonical' 'encoding' 'of' T 'as' B" (at level 50).
 Reserved Notation "@ 'is_eq_dec' T R" (at level 10, T at level 8, R at level 8).
 Reserved Infix "<<" (at level 30, no associativity).
 Reserved Infix ">>" (at level 30, no associativity).
+Reserved Infix ">>>" (at level 30, no associativity).
 Reserved Infix "&'" (at level 50). (* N.B.  If we used '&', it would conflict with [{ a : T & P}] for [sigT] *)
 Reserved Infix "∣" (at level 50).
 Reserved Infix "~=" (at level 70).
