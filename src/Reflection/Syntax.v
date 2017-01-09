@@ -179,6 +179,13 @@ Section language.
       Lemma flat_interp_tuple_untuple' {T n v}
         : @flat_interp_tuple T (S n) (flat_interp_untuple' v) = v.
       Proof. apply flat_interp_tuple'_untuple'. Qed.
+      Definition tuple_map {A B n} (f : interp_flat_type A -> interp_flat_type B) (v : interp_flat_type (tuple A n))
+        : interp_flat_type (tuple B n)
+        := let fv := Tuple.map f (flat_interp_tuple v) in
+           match n return interp_flat_type (tuple A n) -> Tuple.tuple (interp_flat_type B) n -> interp_flat_type (tuple B n) with
+           | 0 => fun v _ => f v
+           | S _ => fun v fv => flat_interp_untuple' fv
+           end v fv.
       Section rel.
         Context (R : forall t, interp_base_type t -> interp_base_type t -> Prop).
         Fixpoint interp_flat_type_rel_pointwise (t : flat_type)
