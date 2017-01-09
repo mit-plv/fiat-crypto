@@ -13,6 +13,7 @@ HIDE := $(if $(VERBOSE),,@)
 .PHONY: coq clean update-_CoqProject cleanall install \
 	install-coqprime clean-coqprime coqprime \
 	specific non-specific \
+	small-specific-gen medium-specific-gen specific-gen \
 	extraction ghc
 
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g'
