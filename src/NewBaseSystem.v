@@ -48,8 +48,8 @@ Section Goldilocks.
           {s2_modp : (s^2) mod p = (s+1) mod p}.
   Context {T : Type}
           {eval : T -> Z}
-          {opp : T -> T}
-          {eval_opp : forall x, eval (opp x) = - (eval x)}
+          {sub : T -> T -> T}
+          {eval_sub : forall x y, eval (sub x y) = eval x - eval y}
           {mul : T -> T -> T}
           {eval_mul : forall x y, eval (mul x y) = eval x * eval y}
           {add : T -> T -> T}
@@ -57,7 +57,7 @@ Section Goldilocks.
           {scmul : Z -> T -> T}
           {eval_scmul : forall c x, eval (scmul c x) = c * eval x}
           {split : Z -> T -> T * T}
-          {eval_split : forall x, eval x = eval (fst (split s x)) + s * (eval (snd (split s x)))}
+          {eval_split : forall s x, s <> 0 -> eval (fst (split s x)) + s * (eval (snd (split s x))) = eval x}
   .
 
   Definition goldilocks_mul (xs ys : T) : T :=
@@ -65,16 +65,15 @@ Section Goldilocks.
     let c_d := split s ys in
     let ac := mul (fst a_b) (fst c_d) in
     (add (add ac (mul (snd a_b) (snd c_d)))
-         (scmul s (add (mul (add (fst a_b) (snd a_b)) (add (fst c_d) (snd c_d))) (opp ac)))).
+         (scmul s (sub (mul (add (fst a_b) (snd a_b)) (add (fst c_d) (snd c_d))) ac))).
 
   Local Existing Instances Z.equiv_modulo_Reflexive RelationClasses.eq_Reflexive Z.equiv_modulo_Symmetric Z.equiv_modulo_Transitive Z.mul_mod_Proper Z.add_mod_Proper Z.modulo_equiv_modulo_Proper.
   Lemma goldilocks_mul_correct xs ys :
     (eval (goldilocks_mul xs ys)) mod p = (eval xs * eval ys) mod p.
   Proof.
     cbv [goldilocks_mul]; intros.
-    repeat rewrite ?eval_mul, ?eval_add, ?eval_opp, ?eval_scmul.
-    rewrite (eval_split xs).
-    rewrite (eval_split ys).
+    repeat rewrite ?eval_mul, ?eval_add, ?eval_sub, ?eval_scmul.
+    rewrite <-(eval_split s xs), <-(eval_split s ys) by assumption.
     repeat match goal with
            | [ H : ?x mod ?m = ?y mod ?m |- _ ] => change (Z.equiv_modulo m x y) in H
            | [ |- ?x mod ?m = ?y mod ?m ] => change (Z.equiv_modulo m x y)
@@ -84,6 +83,39 @@ Section Goldilocks.
     apply f_equal2; nsatz.
   Qed.
 End Goldilocks.
+
+Section Karatsuba.
+  Context {T : Type} (eval : T -> Z)
+          (sub : T -> T -> T)
+          (eval_sub : forall x y, eval (sub x y) = eval x - eval y)
+          (mul : T -> T -> T)
+          (eval_mul : forall x y, eval (mul x y) = eval x * eval y)
+          (add : T -> T -> T)
+          (eval_add : forall x y, eval (add x y) = eval x + eval y)
+          (scmul : Z -> T -> T)
+          (eval_scmul : forall c x, eval (scmul c x) = c * eval x)
+          (split : Z -> T -> T * T)
+          (eval_split : forall s x, s <> 0 -> eval (fst (split s x)) + s * (eval (snd (split s x))) = eval x)
+  .
+
+  Definition karatsuba_mul s (x y : T) : T :=
+      let xab := split s x in
+      let yab := split s y in
+      let xy0 := mul (fst xab) (fst yab) in
+      let xy2 := mul (snd xab) (snd yab) in
+      let xy1 := sub (mul (add (fst xab) (snd xab)) (add (fst yab) (snd yab))) (add xy2 xy0) in
+      add (add (scmul (s^2) xy2) (scmul s xy1)) xy0.
+
+  Lemma eval_karatsuba_mul s x y : s <> 0 ->
+                                   eval (karatsuba_mul s x y) = eval x * eval y.
+  Proof.
+    cbv [karatsuba_mul]; intros.
+    repeat rewrite ?eval_sub, ?eval_mul, ?eval_add, ?eval_scmul.
+    rewrite <-(eval_split s x), <-(eval_split s y) by assumption.
+    ring.
+  Qed.
+
+End Karatsuba.
 
 Delimit Scope runtime_scope with RT.
 Definition runtime_mul := Z.mul. Global Infix "*" := runtime_mul : runtime_scope.
@@ -245,6 +277,33 @@ Goal let base2_56 i := 2 ^ (56 * i) in forall f0 f1 f2 f3 f4 f5 f6 f7 g0 g1 g2 g
   remember t eqn:Heqt; rewrite !Z.mul_1_l, !Z.add_0_r, !Z.add_assoc, !Z.mul_assoc, !Z.mul_opp_l, !Z.add_opp_r in Heqt.
 Abort.
 
+Check (karatsuba_mul (fun x y => x ++ (List.map (fun t => (fst t, -snd t)) y)) B.mul (@List.app _) (fun x => List.map (fun t => (x * fst t, snd t))) B.split (2^102)).
+Print karatsuba_mul.
+About B.split.
+Require Import Crypto.Algebra.
+Goal let base2_51 i := 2 ^ (51 * i) in forall f0 f1 f2 f3 f4 g0 g1 g2 g3 g4 : Z, False. intros.
+  let t := constr:(B.to_positional base2_51 (zeros 5)
+                                   (B.reduce (2^255) [(1,19)] 
+                                   (karatsuba_mul (fun x y => x ++ (List.map (fun t => (fst t, (-1 * snd t)%RT)) y)) B.mul (@List.app _) (fun x => List.map (fun t => (x * fst t, snd t))) B.split (2^102)                                      (B.from_positional base2_51 (Tuple.from_list _ [f0;f1;f2;f3;f4] eq_refl))
+                                      (B.from_positional base2_51 (Tuple.from_list _ [g0;g1;g2;g3;g4] eq_refl))))) in
+  let t := (eval cbv -[runtime_mul runtime_add] in t) in
+  let t := (eval cbv [runtime_mul runtime_add] in t) in
+    remember t eqn:Heqt; change (Zneg xH) with (Z.opp 1) in Heqt; (* TODO : make this a lemma *)
+  ring_simplify_subterms_in_all.
+Abort.
+
+Goal let base2_25_5 i := 2 ^ (25 * (i / 2) + 26 * (i - i / 2)) in forall f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 g7 g8 g9: Z, False. intros.
+  let t := constr:(B.to_positional base2_25_5 (zeros 10)
+                                   (B.reduce (2^255) [(1,19)] 
+                                   (karatsuba_mul (fun x y => x ++ (List.map (fun t => (fst t, (-1 * snd t)%RT)) y)) B.mul (@List.app _) (fun x => List.map (fun t => (x * fst t, snd t))) B.split (2^102)
+                                      (B.from_positional base2_25_5 (Tuple.from_list _ [f0;f1;f2;f3;f4;f5;f6;f7;f8;f9] eq_refl))
+                                      (B.from_positional base2_25_5 (Tuple.from_list _ [g0;g1;g2;g3;g4;g5;g6;g7;g8;g9] eq_refl))))) in
+  let t := (eval cbv -[runtime_mul runtime_add] in t) in
+  let t := (eval cbv [runtime_mul runtime_add] in t) in
+  remember t eqn:Heqt; change (Zneg xH) with (Z.opp 1) in Heqt; (* TODO : make this a lemma *)
+    ring_simplify_subterms_in_all.
+
+Abort.
 
 Goal let base2_56 i := 2 ^ (56 * i) in forall f0 f1 f2 f3 f4 f5 f6 f7 g0 g1 g2 g3 g4 g5 g6 g7: Z, False. intros.
   let t := constr:(B.to_positional base2_56 (zeros 8)
