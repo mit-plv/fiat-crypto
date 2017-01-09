@@ -3018,3 +3018,12 @@ Ltac Ztestbit_step :=
   | _ => progress Ztestbit_full_step
   end.
 Ltac Ztestbit := repeat Ztestbit_step.
+
+(** Change [_ mod _ = _ mod _] to [Z.equiv_modulo _ _ _] *)
+Ltac Zmod_to_equiv_modulo :=
+  repeat match goal with
+         | [ H : context T[?x mod ?M = ?y mod ?M] |- _ ]
+           => let T' := context T[Z.equiv_modulo M x y] in change T' in H
+         | [ |- context T[?x mod ?M = ?y mod ?M] ]
+           => let T' := context T[Z.equiv_modulo M x y] in change T'
+         end.
