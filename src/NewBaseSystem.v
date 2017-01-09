@@ -2,6 +2,7 @@ Require Import Crypto.Util.Tactics Crypto.Util.Decidable.
 
 Require Import ZArith Nsatz Psatz Coq.omega.Omega.
 Require Import Coq.ZArith.BinIntDef. Local Open Scope Z_scope.
+Require Import Crypto.Util.ZUtil.
 
 Require Coq.Lists.List. Local Notation list := List.list.
 Require Crypto.Util.Tuple. Local Notation tuple := Tuple.tuple.
@@ -31,7 +32,7 @@ Require Crypto.Util.Tuple. Local Notation tuple := Tuple.tuple.
     Proof.
       progress cbv [List.nth_default].
       rewrite ListUtil.nth_error_seq.
-      break_match; solve [ trivial | omega ].
+      break_innermost_match; solve [ trivial | omega ].
     Qed.
     
     Lemma mod_add_mul_full a b c k m : m <> 0 -> c mod m = k mod m -> 
@@ -41,6 +42,48 @@ Require Crypto.Util.Tuple. Local Notation tuple := Tuple.tuple.
       match goal with H : _ mod _ = _ mod _ |- _ => rewrite H end.
       rewrite <-Z.mul_mod, <-Z.add_mod by auto; reflexivity.
     Qed.
+
+Section Goldilocks.
+  Context {s p : Z} {p_nonzero : p <> 0} {s_nonzero : s <> 0}
+          {s2_modp : (s^2) mod p = (s+1) mod p}.
+  Context {T : Type}
+          {eval : T -> Z}
+          {opp : T -> T}
+          {eval_opp : forall x, eval (opp x) = - (eval x)}
+          {mul : T -> T -> T}
+          {eval_mul : forall x y, eval (mul x y) = eval x * eval y}
+          {add : T -> T -> T}
+          {eval_add : forall x y, eval (add x y) = eval x + eval y}
+          {scmul : Z -> T -> T}
+          {eval_scmul : forall c x, eval (scmul c x) = c * eval x}
+          {split : Z -> T -> T * T}
+          {eval_split : forall x, eval x = eval (fst (split s x)) + s * (eval (snd (split s x)))}
+  .
+
+  Definition goldilocks_mul (xs ys : T) : T :=
+    let a_b := split s xs in
+    let c_d := split s ys in
+    let ac := mul (fst a_b) (fst c_d) in
+    (add (add ac (mul (snd a_b) (snd c_d)))
+         (scmul s (add (mul (add (fst a_b) (snd a_b)) (add (fst c_d) (snd c_d))) (opp ac)))).
+
+  Local Existing Instances Z.equiv_modulo_Reflexive RelationClasses.eq_Reflexive Z.equiv_modulo_Symmetric Z.equiv_modulo_Transitive Z.mul_mod_Proper Z.add_mod_Proper Z.modulo_equiv_modulo_Proper.
+  Lemma goldilocks_mul_correct xs ys :
+    (eval (goldilocks_mul xs ys)) mod p = (eval xs * eval ys) mod p.
+  Proof.
+    cbv [goldilocks_mul]; intros.
+    repeat rewrite ?eval_mul, ?eval_add, ?eval_opp, ?eval_scmul.
+    rewrite (eval_split xs).
+    rewrite (eval_split ys).
+    repeat match goal with
+           | [ H : ?x mod ?m = ?y mod ?m |- _ ] => change (Z.equiv_modulo m x y) in H
+           | [ |- ?x mod ?m = ?y mod ?m ] => change (Z.equiv_modulo m x y)
+           end.
+    ring_simplify.
+    setoid_rewrite s2_modp.
+    apply f_equal2; nsatz.
+  Qed.
+End Goldilocks.
 
 Delimit Scope runtime_scope with RT.
 Definition runtime_mul := Z.mul. Global Infix "*" := runtime_mul : runtime_scope.
@@ -149,41 +192,6 @@ Module B.
              rewrite ?eval_positional_add_to_nth by omega;
              rewrite ?eval_cons, ?eval_place; try nsatz. Qed.
   End Positional.
-
-  Section Goldilocks.
-    Context {s p : Z} {p_nonzero : p <> 0} {s_nonzero : s <> 0}
-            {s2_modp : (s^2) mod p = (s+1) mod p}.
-
-    Definition scmul_l x := List.map (fun t => (x * fst t, (1 * snd t)%RT)).
-    Definition opp := mul ((1, -1):: nil).
-
-    
-
-    Definition goldilocks_mul (xs ys : list limb) :=
-      let a_b := split s xs in
-      let c_d := split s ys in
-      let ac := mul (fst a_b) (fst c_d) in
-      (ac ++ (mul (snd a_b) (snd c_d))
-          ++ scmul_l s ((mul ((fst a_b)++(snd a_b)) ((fst c_d)++(snd c_d))) ++ opp ac))%list.
-
-    Lemma goldilocks_mul_correct xs ys :
-      (eval (goldilocks_mul xs ys)) mod p = (eval xs * eval ys) mod p.
-    Proof.
-      cbv [goldilocks_mul scmul_l opp]; intros.
-      repeat rewrite ?eval_app, ?eval_map_mul, ?eval_mul, ?eval_cons, ?eval_nil.
-      rewrite !fst_pair, snd_pair.
-      repeat setoid_rewrite eval_nil.
-      rewrite <-(eval_split s xs s_nonzero).
-      rewrite <-(eval_split s ys s_nonzero).
-      match goal with |- _ = ((?a + s * ?b) * (?c + s * ?d)) mod p =>
-                      transitivity (((a*c) + ((b*c)+(a*d)) * s + (b*d) * s^2) mod p);
-                        [|f_equal; ring]
-      end.
-      erewrite mod_add_mul_full by eauto.
-      f_equal.
-      nsatz.
-    Qed.
-  End Goldilocks.
 
 End B.
 
