@@ -1,4 +1,4 @@
-Require Import Crypto.Util.Tactics Crypto.Util.Decidable.
+Require Import Crypto.Util.Tactics Crypto.Util.Decidable Crypto.Util.LetIn.
 
 Require Import ZArith Nsatz Psatz Coq.omega.Omega.
 Require Import Coq.ZArith.BinIntDef. Local Open Scope Z_scope.
@@ -100,6 +100,16 @@ Module B.
       eval (reduce s c p) mod (s - eval c) = eval p mod (s - eval c).
     Proof. cbv [reduce].
            rewrite eval_app, eval_mul, <-reduction_rule, eval_split; trivial. Qed.
+
+    Definition carry (w fw:Z) : list limb -> list limb :=
+      List.flat_map (fun t => if dec (fst t = w)
+                              then cons (w*fw, snd t / fw) (cons (w, snd t mod fw) nil)
+                              else cons t nil).
+    Lemma eval_carry w fw p (fw_nonzero:fw<>0) : eval (carry w fw p) = eval p.
+    Proof. induction p; simpl carry; repeat break_match;
+             rewrite ?eval_app, ?eval_cons, ?eval_nil, ?fst_pair, ?snd_pair;
+             try pose proof (Z.div_mod (snd a) _ fw_nonzero); pose proof eval_nil;
+             nsatz. Qed.
   End Associational.
 
   Module Positional.
@@ -109,14 +119,25 @@ Module B.
               (weight_0 : weight 0%nat = 1%Z)
               (weight_nonzero : forall i, weight i <> 0).
 
+      (** Converting from positional to associational *)
+
       Definition to_associational {n:nat} (xs:tuple Z n) : list limb :=
         List.combine (List.map weight (List.seq 0 n)) (Tuple.to_list n xs).
       Definition eval {n} x := Associational.eval (@to_associational n x).
+      Lemma eval_to_associational {n} x : Associational.eval (@to_associational n x) = eval x.
+      Proof. reflexivity. Qed.
+
+      (** Converting from associational to positional *)
+
+      Program Definition zeros n : tuple Z n := Tuple.from_list n (List.map (fun _ => 0) (List.seq 0 n)) _.
+      Next Obligation. autorewrite with distr_length; reflexivity. Qed.
+      Lemma eval_zeros n : eval (zeros n) = 0.
+      Proof. cbv [eval Associational.eval to_associational zeros]; rewrite Tuple.to_list_from_list.
+             generalize dependent (List.seq 0 n); intro xs; induction xs; simpl; nsatz. Qed.
 
       Program Definition add_to_nth {n} i x : tuple Z n -> tuple Z n :=
         Tuple.on_tuple (ListUtil.update_nth i (runtime_add x)) _.
       Next Obligation. apply ListUtil.length_update_nth. Defined.
-
       Lemma eval_add_to_nth {n} (i:nat) (H:(i<n)%nat) (x:Z) (xs:tuple Z n) :
         eval (add_to_nth i x xs) = weight i * x + eval xs.
       Proof.
@@ -135,23 +156,51 @@ Module B.
         if dec (fst t mod weight i = 0)
         then (i, let c := fst t / weight i in (c * snd t)%RT)
         else match i with S i' => place t i' | O => (O, fst t * snd t)%RT end.
-
       Lemma place_in_range (t:limb) (n:nat) : (fst (place t n) < S n)%nat.
       Proof. induction n; simpl; break_match; simpl; omega. Qed.
-
       Lemma eval_place t i :
         weight (fst (place t i)) * snd (place t i) = fst t * snd t.
       Proof. induction i; simpl place; break_match;
                repeat match goal with H:_ |- _ => unique pose proof (Z_div_exact_full_2 _ _ (weight_nonzero _) H) end;
                rewrite ?weight_0, ?Z.div_1_r, ?fst_pair, ?snd_pair; nsatz. Qed.
 
-      Definition from_associational {n} (init:tuple Z n) (p:list limb) :=
-        List.fold_right (fun t => let p := place t (pred n) in add_to_nth (fst p) (snd p)) init p.
-      Lemma eval_from_associational {n} p (init:tuple Z n) (n_nonzero:n<>O) :
-        eval (from_associational init p) = Associational.eval p + eval init.
+      Definition from_associational n (p:list limb) :=
+        List.fold_right (fun t => let p := place t (pred n) in add_to_nth (fst p) (snd p)) (zeros n) p.
+      Lemma eval_from_associational {n} p (n_nonzero:n<>O) :
+        eval (from_associational n p) = Associational.eval p.
       Proof. induction p; simpl; try pose proof place_in_range a (pred n);
                rewrite ?eval_add_to_nth by omega;
-               rewrite ?eval_cons, ?eval_place; try nsatz. Qed.
+               rewrite ?eval_zeros, ?eval_cons, ?eval_place; try nsatz. Qed.
+
+      (** Carrying *)
+
+      Definition carry_allowed (i j:nat) : Prop := weight i mod weight j = 0 /\ weight j / weight i <> 0.
+      Definition carry_from_to {n} (i j:nat) (p:tuple Z n) : tuple Z n :=
+        from_associational n (carry (weight i) (weight j / weight i) (to_associational p)).
+      Lemma eval_carry_from_to {n} (n_nonzero:n<>O) i j (H:carry_allowed i j) (p:tuple Z n) :
+        eval (carry_from_to i j p) = eval p.
+      Proof. cbv [carry_from_to carry_allowed] in *; destruct_head and;
+               rewrite ?eval_from_associational, ?eval_carry, ?eval_to_associational; trivial. Qed.
+
+      Definition carry_pick_dst n (i:nat) : nat :=
+        match List.find (fun j => if dec (carry_allowed i j) then true else false) (List.skipn i (List.seq 0 n)) with
+        | None => i
+        | Some j => j
+        end.
+      Lemma carry_valid_refl (i:nat) : carry_allowed i i.
+      Proof. cbv [carry_allowed]; rewrite Z.mod_same, Z.div_same by trivial; omega. Qed.
+      Lemma carry_valid_pick_dst (n i:nat) : carry_allowed i (carry_pick_dst n i).
+      Proof. induction i; cbv [carry_pick_dst];
+               repeat match goal with
+                      | _ => progress break_match
+                      | _ => progress destruct_head and
+                      | H:_ |- _ => apply List.find_some in H
+                      | _ => solve [trivial using carry_valid_refl | discriminate ]
+                      end. Qed.
+
+      Definition carry {n} (i:nat) (p:tuple Z n) := carry_from_to i (carry_pick_dst n i) p.
+      Lemma eval_carry {n} (n_nonzero:n<>O) (i:nat) (p:tuple Z n) : eval (carry i p) = eval p.
+      Proof. cbv [carry]. rewrite ?eval_carry_from_to; auto using carry_valid_pick_dst. Qed.
     End Positional.
   End Positional.
 End B.
@@ -203,12 +252,10 @@ End Karatsuba.
 
 Local Coercion Z.of_nat : nat >-> Z.
 Import Coq.Lists.List.ListNotations. Local Open Scope list_scope.
-Program Definition zeros n : tuple Z n := Tuple.from_list n (List.map (fun _ => 0) (List.seq 0 n)) _.
-Next Obligation. rewrite List.map_length, List.seq_length; reflexivity. Qed.
 Import B.
 
 Goal let base10 i := 10^i in forall f0 f1 f2 f3 g0 g1 g2 g3 : Z, False. intros.
-  let t := constr:(Positional.from_associational base10 (zeros 7)
+  let t := constr:(Positional.from_associational base10 7
                                    (Associational.mul
                                       (Positional.to_associational base10 (Tuple.from_list _ [f0;f1;f2;f3] eq_refl))
                                       (Positional.to_associational base10 (Tuple.from_list _ [g0;g1;g2;g3] eq_refl)))) in
@@ -218,7 +265,7 @@ Goal let base10 i := 10^i in forall f0 f1 f2 f3 g0 g1 g2 g3 : Z, False. intros.
 Abort.
 
 Goal let base2_51 i := 2 ^ (51 * i) in forall f0 f1 f2 f3 f4 g0 g1 g2 g3 g4 : Z, False. intros.
-  let t := constr:(Positional.from_associational base2_51 (zeros 5)
+  let t := constr:(Positional.from_associational base2_51 5
                                    (Associational.reduce (2^255) [(1,19)] 
                                    (Associational.mul
                                       (Positional.to_associational base2_51 (Tuple.from_list _ [f0;f1;f2;f3;f4] eq_refl))
@@ -230,7 +277,7 @@ Abort.
 
 
 Goal let base2_25_5 i := 2 ^ (25 * (i / 2) + 26 * (i - i / 2)) in forall f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 g7 g8 g9: Z, False. intros.
-  let t := constr:(Positional.from_associational base2_25_5 (zeros 10)
+  let t := constr:(Positional.from_associational base2_25_5 10
                                    (Associational.reduce (2^255) [(1,19)] 
                                    (Associational.mul
                                       (Positional.to_associational base2_25_5 (Tuple.from_list _ [f0;f1;f2;f3;f4;f5;f6;f7;f8;f9] eq_refl))
@@ -241,7 +288,7 @@ Goal let base2_25_5 i := 2 ^ (25 * (i / 2) + 26 * (i - i / 2)) in forall f0 f1 f
 Abort.
 
 Goal let base2_56 i := 2 ^ (56 * i) in forall f0 f1 f2 f3 f4 f5 f6 f7 g0 g1 g2 g3 g4 g5 g6 g7: Z, False. intros.
-  let t := constr:(Positional.from_associational base2_56 (zeros 8)
+  let t := constr:(Positional.from_associational base2_56 8
                                    (Associational.reduce (2^448) [(2^224,1);(1,-1)] 
                                    (Associational.reduce (2^448) [(2^224,1);(1,-1)] 
                                    (Associational.mul
@@ -254,7 +301,7 @@ Abort.
 
 Require Import Crypto.Algebra. (* TODO: move ring_simplify_subterms_in_all to a different file? *)
 Goal let base2_25_5 i := 2 ^ (25 * (i / 2) + 26 * (i - i / 2)) in forall f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 g7 g8 g9: Z, False. intros.
-  let t := constr:(Positional.from_associational base2_25_5 (zeros 10)
+  let t := constr:(Positional.from_associational base2_25_5 10
                                    (Associational.reduce (2^255) [(1,19)] 
                                    (karatsuba_mul (fun x y => x ++ (List.map (fun t => (fst t, (-1 * snd t)%RT)) y)) Associational.mul (@List.app _) (fun x => List.map (fun t => (x * fst t, snd t))) Associational.split (2^102)
                                       (Positional.to_associational base2_25_5 (Tuple.from_list _ [f0;f1;f2;f3;f4;f5;f6;f7;f8;f9] eq_refl))
@@ -266,9 +313,9 @@ Goal let base2_25_5 i := 2 ^ (25 * (i / 2) + 26 * (i - i / 2)) in forall f0 f1 f
 Abort.
 
 Goal let base2_56 i := 2 ^ (56 * i) in forall f0 f1 f2 f3 f4 f5 f6 f7 g0 g1 g2 g3 g4 g5 g6 g7: Z, False. intros.
-  let t := constr:(Positional.from_associational base2_56 (zeros 8)
-                                   (Associational.reduce (2^448) [(2^224,1);(1,-1)] 
-                                   (Associational.reduce (2^448) [(2^224,1);(1,-1)] 
+  let t := constr:(Positional.from_associational base2_56 8
+                                   (Associational.reduce (2^448) [(2^224,1);(1,-1)]
+                                   (Associational.reduce (2^448) [(2^224,1);(1,-1)]
                                    (goldilocks_mul (fun x y => x ++ (List.map (fun t => (fst t, (-1 * snd t)%RT)) y)) Associational.mul (@List.app _) (fun x => List.map (fun t => (x * fst t, snd t))) Associational.split (2^224)
                                       (Positional.to_associational base2_56 (Tuple.from_list _ [f0;f1;f2;f3;f4;f5;f6;f7] eq_refl))
                                       (Positional.to_associational base2_56 (Tuple.from_list _ [g0;g1;g2;g3;g4;g5;g6;g7] eq_refl)))))) in
