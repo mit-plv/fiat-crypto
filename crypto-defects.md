@@ -19,4 +19,5 @@ appearing in our code.
 | [ref/sc25519.c:84](https://github.com/floodyberry/supercop/blob/master/crypto_sign/ed25519/ref/sc25519.c#L84) | x mod (order of Curve25519) |  Barrett reduction (code is likely correct) | "XXX" comment |
 | [ic#237002094](https://github.com/mit-plv/fiat-crypto/pull/42#issuecomment-237002094) | Barrett reduction for p256 | 1 conditional subtraction instead of 2 | unkown if ok |
 | [openssl#1593](https://rt.openssl.org/Ticket/Display.html?id=1593&user=guest&pass=guest) | P384 modular reduction | carry handling | [exploitable](https://eprint.iacr.org/2011/633.pdf) |
+| [go#fa09811d](https://github.com/golang/crypto/commit/84e98f45760e87786b7f24603b8166a6fa09811d) | poly1305 reduction | AMD64 asm, missing subtraction of 3 | found quickly |
 Not covered in the above list: memory mismanagement (buffer overrun, use-after-free, uninitialized read, null dereference), timing attacks (branch, cache, instruction). While these issues are very important, there are good programming disciplines for avoiding them without verifying intricate details of the computation.
