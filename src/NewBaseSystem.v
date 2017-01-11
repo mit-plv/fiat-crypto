@@ -10,6 +10,7 @@ Require Crypto.Util.Tuple. Local Notation tuple := Tuple.tuple.
     (* TODO: move *)
     Lemma fst_pair {A B} (a:A) (b:B) : fst (a,b) = a. reflexivity. Qed.
     Lemma snd_pair {A B} (a:A) (b:B) : snd (a,b) = b. reflexivity. Qed.
+    Create HintDb cancel_pair discriminated. Hint Rewrite @fst_pair @snd_pair : cancel_pair.
 
     (* TODO: move to ListUtil *)
     Lemma update_nth_id {T} i (xs:list T) : ListUtil.update_nth i id xs = xs.
@@ -57,15 +58,16 @@ Module B.
     Lemma eval_cons p q : eval (p::q) = (fst p) * (snd p) + eval q. Proof. reflexivity. Qed.
     Lemma eval_app p q: eval (p++q) = eval p + eval q.
     Proof. induction p; simpl eval; rewrite ?eval_nil, ?eval_cons; nsatz. Qed.
+    Create HintDb push_eval discriminated. Hint Rewrite eval_nil eval_cons eval_app : push_eval.
 
     Definition mul (p q:list limb) : list limb :=
       List.flat_map (fun t => List.map (fun t' => (fst t * fst t', (snd t * snd t')%RT)) q) p.
     Lemma eval_map_mul a x q : eval (List.map (fun t => (a * fst t, x * snd t)) q) = a * x * eval q.
-    Proof. induction q; simpl List.map;
-             rewrite ?eval_nil, ?eval_cons, ?fst_pair, ?snd_pair; nsatz. Qed.
+    Proof. induction q; simpl List.map; autorewrite with push_eval cancel_pair; nsatz. Qed.
+    Hint Rewrite eval_map_mul : push_eval.
     Lemma eval_mul p q : eval (mul p q) = eval p * eval q.
-    Proof. induction p; simpl mul;
-             rewrite ?eval_nil, ?eval_cons, ?eval_app, ?eval_map_mul; nsatz. Qed.
+    Proof. induction p; simpl mul; autorewrite with push_eval cancel_pair; try nsatz. Qed.
+    Hint Rewrite eval_mul : push_eval.
 
     Fixpoint split (s:Z) (xs:list limb) : list limb * list limb :=
       match xs with
@@ -81,12 +83,11 @@ Module B.
       eval (fst (split s p)) + s * eval (snd (split s p)) = eval p.
     Proof. induction p;
              repeat match goal with
-                    | H:_ |- _ => unique pose proof (Z_div_exact_full_2 _ _ s_nonzero H)
-                    | _ => progress rewrite ?split_cons, ?eval_cons, ?fst_pair, ?snd_pair
                     | _ => progress simpl split
+                    | _ => progress autorewrite with push_eval cancel_pair
                     | _ => progress break_match
-                    | _ => nsatz
-                    end. Qed.
+                    | H:_ |- _ => unique pose proof (Z_div_exact_full_2 _ _ s_nonzero H)
+                    end; nsatz. Qed.
 
     Definition reduce (s:Z) (c:list limb) (p:list limb) : list limb :=
       let ab := split s p in fst ab ++ mul c (snd ab).
@@ -98,18 +99,16 @@ Module B.
 
     Lemma eval_reduce s c p (s_nonzero:s<>0) (modulus_nonzero:s-eval c<>0) :
       eval (reduce s c p) mod (s - eval c) = eval p mod (s - eval c).
-    Proof. cbv [reduce].
-           rewrite eval_app, eval_mul, <-reduction_rule, eval_split; trivial. Qed.
+    Proof. cbv [reduce]. rewrite eval_app, eval_mul, <-reduction_rule, eval_split; trivial. Qed.
 
     Definition carry (w fw:Z) : list limb -> list limb :=
       List.flat_map (fun t => if dec (fst t = w)
                               then cons (w*fw, snd t / fw) (cons (w, snd t mod fw) nil)
                               else cons t nil).
     Lemma eval_carry w fw p (fw_nonzero:fw<>0) : eval (carry w fw p) = eval p.
-    Proof. induction p; simpl carry; repeat break_match;
-             rewrite ?eval_app, ?eval_cons, ?eval_nil, ?fst_pair, ?snd_pair;
-             try pose proof (Z.div_mod (snd a) _ fw_nonzero); pose proof eval_nil;
-             nsatz. Qed.
+    Proof. induction p; simpl carry; repeat break_match; autorewrite with push_eval cancel_pair;
+             try pose proof (Z.div_mod (snd a) _ fw_nonzero); nsatz.
+    Qed. Hint Rewrite eval_carry eval_reduce : push_eval.
   End Associational.
 
   Module Positional.
@@ -141,16 +140,15 @@ Module B.
       Lemma eval_add_to_nth {n} (i:nat) (H:(i<n)%nat) (x:Z) (xs:tuple Z n) :
         eval (add_to_nth i x xs) = weight i * x + eval xs.
       Proof.
-        cbv [eval to_associational add_to_nth Tuple.on_tuple]; rewrite !Tuple.to_list_from_list.
+        cbv [eval to_associational add_to_nth Tuple.on_tuple runtime_add]; rewrite !Tuple.to_list_from_list.
         rewrite ListUtil.combine_update_nth_r at 1.
         rewrite <-(update_nth_id i (List.combine _ _)) at 2.
-        rewrite <-!(ListUtil.splice_nth_equiv_update_nth_update _ _ (weight 0, 0)) by (autorewrite with distr_length; lia); progress cbv [ListUtil.splice_nth id].
-        repeat match goal with
-               | _ => progress (apply Zminus_eq; ring_simplify)
-               | _ => progress rewrite ?eval_app, ?eval_cons, ?fst_pair, ?snd_pair, <-?ListUtil.map_nth_default_always, ?map_fst_combine, ?List.firstn_all2, ?ListUtil.map_nth_default_always, ?nth_default_seq_inbouns, ?(eq_refl:runtime_add=Z.add), ?((fun _ => eq_refl):forall x, (0+x=x)%nat) by (autorewrite with distr_length; lia)
-               | _ => solve [trivial]
-               end.
-      Qed.
+        rewrite <-!(ListUtil.splice_nth_equiv_update_nth_update _ _ (weight 0, 0)); cbv [ListUtil.splice_nth id];
+          repeat match goal with
+                 | _ => progress (apply Zminus_eq; ring_simplify)
+                 | _ => progress autorewrite with push_eval cancel_pair distr_length
+                 | _ => progress rewrite <-?ListUtil.map_nth_default_always, ?map_fst_combine, ?List.firstn_all2, ?ListUtil.map_nth_default_always, ?nth_default_seq_inbouns, ?plus_O_n
+                 end; trivial; lia. Qed. Hint Rewrite @eval_add_to_nth eval_zeros : push_eval.
 
       Fixpoint place (t:limb) (i:nat) : nat * Z :=
         if dec (fst t mod weight i = 0)
@@ -158,19 +156,18 @@ Module B.
         else match i with S i' => place t i' | O => (O, fst t * snd t)%RT end.
       Lemma place_in_range (t:limb) (n:nat) : (fst (place t n) < S n)%nat.
       Proof. induction n; simpl; break_match; simpl; omega. Qed.
-      Lemma eval_place t i :
-        weight (fst (place t i)) * snd (place t i) = fst t * snd t.
-      Proof. induction i; simpl place; break_match;
-               repeat match goal with H:_ |- _ => unique pose proof (Z_div_exact_full_2 _ _ (weight_nonzero _) H) end;
-               rewrite ?weight_0, ?Z.div_1_r, ?fst_pair, ?snd_pair; nsatz. Qed.
+      Lemma weight_place t i : weight (fst (place t i)) * snd (place t i) = fst t * snd t.
+      Proof. induction i; simpl place; break_match; autorewrite with cancel_pair;
+               try find_apply_lem_hyp Z_div_exact_full_2; nsatz || auto. Qed.
 
       Definition from_associational n (p:list limb) :=
         List.fold_right (fun t => let p := place t (pred n) in add_to_nth (fst p) (snd p)) (zeros n) p.
       Lemma eval_from_associational {n} p (n_nonzero:n<>O) :
         eval (from_associational n p) = Associational.eval p.
+
       Proof. induction p; simpl; try pose proof place_in_range a (pred n);
-               rewrite ?eval_add_to_nth by omega;
-               rewrite ?eval_zeros, ?eval_cons, ?eval_place; try nsatz. Qed.
+               autorewrite with push_eval; rewrite ?weight_place; nsatz || omega.
+      Qed. Hint Rewrite @eval_from_associational : push_eval.
 
       (** Carrying *)
 
@@ -179,28 +176,29 @@ Module B.
         from_associational n (carry (weight i) (weight j / weight i) (to_associational p)).
       Lemma eval_carry_from_to {n} (n_nonzero:n<>O) i j (H:carry_allowed i j) (p:tuple Z n) :
         eval (carry_from_to i j p) = eval p.
-      Proof. cbv [carry_from_to carry_allowed] in *; destruct_head and;
-               rewrite ?eval_from_associational, ?eval_carry, ?eval_to_associational; trivial. Qed.
+      Proof. cbv [carry_from_to carry_allowed] in *;
+                destruct_head and; autorewrite with push_eval; trivial. Qed.
 
       Definition carry_pick_dst n (i:nat) : nat :=
         match List.find (fun j => if dec (carry_allowed i j) then true else false) (List.skipn i (List.seq 0 n)) with
         | None => i
         | Some j => j
         end.
-      Lemma carry_valid_refl (i:nat) : carry_allowed i i.
+      Lemma carry_allowed_refl (i:nat) : carry_allowed i i.
       Proof. cbv [carry_allowed]; rewrite Z.mod_same, Z.div_same by trivial; omega. Qed.
-      Lemma carry_valid_pick_dst (n i:nat) : carry_allowed i (carry_pick_dst n i).
+      Lemma carry_allowed_pick_dst (n i:nat) : carry_allowed i (carry_pick_dst n i).
       Proof. induction i; cbv [carry_pick_dst];
                repeat match goal with
                       | _ => progress break_match
                       | _ => progress destruct_head and
                       | H:_ |- _ => apply List.find_some in H
-                      | _ => solve [trivial using carry_valid_refl | discriminate ]
+                      | _ => solve [trivial using carry_allowed_refl | discriminate ]
                       end. Qed.
 
       Definition carry {n} (i:nat) (p:tuple Z n) := carry_from_to i (carry_pick_dst n i) p.
       Lemma eval_carry {n} (n_nonzero:n<>O) (i:nat) (p:tuple Z n) : eval (carry i p) = eval p.
-      Proof. cbv [carry]. rewrite ?eval_carry_from_to; auto using carry_valid_pick_dst. Qed.
+      Proof. cbv [carry]. rewrite ?eval_carry_from_to; auto using carry_allowed_pick_dst. Qed.
+      Hint Rewrite @eval_carry_from_to @eval_carry : push_eval.
     End Positional.
   End Positional.
 End B.
