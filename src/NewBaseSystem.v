@@ -180,7 +180,7 @@ Module B.
                 destruct_head and; autorewrite with push_eval; trivial. Qed.
 
       Definition carry_pick_dst n (i:nat) : nat :=
-        match List.find (fun j => if dec (carry_allowed i j) then true else false) (List.skipn i (List.seq 0 n)) with
+        match List.find (fun j => if dec (carry_allowed i j) then true else false) (List.skipn i (List.seq (S O) (S n)) with
         | None => i
         | Some j => j
         end.
