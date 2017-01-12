@@ -1,10 +1,15 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.TypeInversion.
 Require Import Crypto.Reflection.Equality.
 Require Import Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.PartiallyReifiedProp.
 Require Import Crypto.Util.HProp.
+Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.FixedWordSizesEquality.
+Require Import Crypto.Util.NatUtil.
 
 Global Instance dec_eq_base_type : DecidableRel (@eq base_type)
   := base_type_eq_dec.
@@ -13,46 +18,69 @@ Global Instance dec_eq_type : DecidableRel (@eq (type base_type)) := _.
 
 Definition base_type_eq_semidec_transparent (t1 t2 : base_type)
   : option (t1 = t2)
-  := Some (match t1, t2 return t1 = t2 with
-           | TZ, TZ => eq_refl
-           end).
+  := match base_type_eq_dec t1 t2 with
+     | left pf => Some pf
+     | right _ => None
+     end.
 Lemma base_type_eq_semidec_is_dec t1 t2 : base_type_eq_semidec_transparent t1 t2 = None -> t1 <> t2.
 Proof.
-  unfold base_type_eq_semidec_transparent; congruence.
+  unfold base_type_eq_semidec_transparent; break_match; congruence.
 Qed.
 
-Definition op_beq_hetero {t1 tR t1' tR'} (f : op t1 tR) (g : op t1' tR') : reified_Prop
+Definition op_beq_hetero {t1 tR t1' tR'} (f : op t1 tR) (g : op t1' tR') : bool
   := match f, g return bool with
-     | OpConst v, OpConst v' => Z.eqb v v'
-     | OpConst _, _ => false
-     | Add, Add => true
-     | Add, _ => false
-     | Sub, Sub => true
-     | Sub, _ => false
-     | Mul, Mul => true
-     | Mul, _ => false
-     | Shl, Shl => true
-     | Shl, _ => false
-     | Shr, Shr => true
-     | Shr, _ => false
-     | Land, Land => true
-     | Land, _ => false
-     | Lor, Lor => true
-     | Lor, _ => false
-     | Neg n, Neg m => Z.eqb n m
-     | Neg _, _ => false
-     | Cmovne, Cmovne => true
-     | Cmovne, _ => false
-     | Cmovle, Cmovle => true
-     | Cmovle, _ => false
-     end.
+     | OpConst TZ v, OpConst TZ v' => Z.eqb v v'
+     | OpConst _ _, _ => false
+     | Add T1, Add T2
+     | Sub T1, Sub T2
+     | Mul T1, Mul T2
+     | Shl T1, Shl T2
+     | Shr T1, Shr T2
+     | Land T1, Land T2
+     | Lor T1, Lor T2
+     | Cmovne T1, Cmovne T2
+     | Cmovle T1, Cmovle T2
+       => base_type_beq T1 T2
+     | Neg T1 n, Neg T2 m
+       => base_type_beq T1 T2 && Z.eqb n m
+     | Cast T1 T2, Cast T1' T2'
+       => base_type_beq T1 T1' && base_type_beq T2 T2'
+     | Add _, _ => false
+     | Sub _, _ => false
+     | Mul _, _ => false
+     | Shl _, _ => false
+     | Shr _, _ => false
+     | Land _, _ => false
+     | Lor _, _ => false
+     | Neg _ _, _ => false
+     | Cmovne _, _ => false
+     | Cmovle _, _ => false
+     | Cast _ _, _ => false
+     end%bool.
 
-Definition op_beq t1 tR (f g : op t1 tR) : reified_Prop
+Definition op_beq t1 tR (f g : op t1 tR) : bool
   := Eval cbv [op_beq_hetero] in op_beq_hetero f g.
 
 Definition op_beq_hetero_type_eq {t1 tR t1' tR'} f g : to_prop (@op_beq_hetero t1 tR t1' tR' f g) -> t1 = t1' /\ tR = tR'.
 Proof.
-  destruct f, g; simpl; try solve [ repeat constructor | intros [] ].
+  destruct f, g;
+    repeat match goal with
+           | _ => progress unfold op_beq_hetero in *
+           | _ => simpl; intro; exfalso; assumption
+           | _ => solve [ repeat constructor ]
+           | _ => progress destruct_head base_type
+           | [ |- context[reified_Prop_of_bool ?b] ]
+             => let H := fresh in destruct (Sumbool.sumbool_of_bool b) as [H|H]; rewrite H
+           | [ H : nat_beq _ _ = true |- _ ] => apply internal_nat_dec_bl in H; subst
+           | [ H : wordT_beq_hetero _ _ = true |- _ ] => apply wordT_beq_bl in H; subst
+           | [ H : wordT_beq_hetero _ _ = true |- _ ] => apply wordT_beq_hetero_bl in H; destruct H; subst
+           | [ H : andb ?x ?y = true |- _ ]
+             => assert (x = true /\ y = true) by (destruct x, y; simpl in *; repeat constructor; exfalso; clear -H; abstract congruence);
+                  clear H
+           | [ H : and _ _ |- _ ] => destruct H
+           | [ H : false = true |- _ ] => exfalso; clear -H; abstract congruence
+           | [ H : true = false |- _ ] => exfalso; clear -H; abstract congruence
+           end.
 Defined.
 
 Definition op_beq_hetero_type_eqs {t1 tR t1' tR'} f g : to_prop (@op_beq_hetero t1 tR t1' tR' f g) -> t1 = t1'
@@ -68,22 +96,29 @@ Definition op_beq_hetero_eq {t1 tR t1' tR'} f g
       _ (op_beq_hetero_type_eqs f g pf)
     = g.
 Proof.
-  destruct f, g; simpl; try solve [ reflexivity | intros [] ];
-    unfold op_beq_hetero; simpl;
-      repeat match goal with
-             | [ |- context[to_prop (reified_Prop_of_bool ?x)] ]
-               => destruct (Sumbool.sumbool_of_bool x) as [P|P]
-             | [ H : NatUtil.nat_beq _ _ = true |- _ ]
-               => apply NatUtil.internal_nat_dec_bl in H
-             | [ H : Z.eqb _ _ = true |- _ ]
-               => apply Z.eqb_eq in H
-             | _ => progress subst
-             | _ => reflexivity
-             | [ H : ?x = false |- context[reified_Prop_of_bool ?x] ]
-               => rewrite H
-             | _ => progress simpl @to_prop
-             | _ => tauto
-             end.
+  destruct f, g;
+    repeat match goal with
+           | _ => solve [ intros [] ]
+           | _ => reflexivity
+           | [ H : False |- _ ] => exfalso; assumption
+           | _ => intro
+           | [ |- context[op_beq_hetero_type_eqd ?f ?g ?pf] ]
+             => generalize (op_beq_hetero_type_eqd f g pf), (op_beq_hetero_type_eqs f g pf)
+           | _ => intro
+           | _ => progress eliminate_hprop_eq
+           | _ => progress inversion_flat_type
+           | _ => progress unfold op_beq_hetero in *
+           | _ => progress simpl in *
+           | [ H : context[andb ?x ?y] |- _ ]
+             => destruct x eqn:?, y eqn:?; simpl in H
+           | [ H : Z.eqb _ _ = true |- _ ] => apply Z.eqb_eq in H
+           | [ H : to_prop (reified_Prop_of_bool ?b) |- _ ] => destruct b eqn:?; compute in H
+           | _ => progress subst
+           | _ => progress break_match_hyps
+           | [ H : wordT_beq_hetero _ _ = true |- _ ] => apply wordT_beq_bl in H; subst
+           | [ H : wordT_beq_hetero _ _ = true |- _ ] => apply wordT_beq_hetero_bl in H; destruct H; subst
+           | _ => congruence
+           end.
 Qed.
 
 Lemma op_beq_bl : forall t1 tR x y, to_prop (op_beq t1 tR x y) -> x = y.

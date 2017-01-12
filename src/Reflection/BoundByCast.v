@@ -1,7 +1,7 @@
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.SmartBound.
 Require Import Crypto.Reflection.InlineCast.
-Require Import Crypto.Reflection.Application.
+Require Import Crypto.Reflection.ExprInversion.
 Require Import Crypto.Reflection.Inline.
 Require Import Crypto.Reflection.Linearize.
 Require Import Crypto.Reflection.MapCast.
@@ -43,6 +43,6 @@ Section language.
                      op (@interp_op_bounds)
                      (@failf)
                      (@bound_op _ _ _ interp_op_bounds bound_base_type _ base_type_bl_transparent base_type_leb Cast genericize_op)
-                     t1 e1 (interp_all_binders_for_to' args2))
-                  (interp_all_binders_for_to' args2)))).
+                     t1 e1 args2)
+                  args2))).
 End language.

@@ -77,27 +77,18 @@ Section language.
 
     Lemma interp_wf
              {t} {e1 : expr1 t} {e2 : expr2 t}
-             {G}
-             (HG : forall t x x',
-                 List.In (existT (fun t : base_type_code => (interp_base_type1 t * interp_base_type2 t)%type) t (x, x')%core) G
-                 -> R t x x')
-             (Rwf : wf G e1 e2)
-    : interp_type_rel_pointwise2 R (interp1 e1) (interp2 e2).
+             (Rwf : wf e1 e2)
+    : interp_type_rel_pointwise R (interp1 e1) (interp2 e2).
     Proof.
-      induction Rwf; simpl; repeat intro; simpl in *; eauto.
-      match goal with
-      | [ H : _ |- _ ]
-        => apply H; intros; progress destruct_head' or; [ | solve [ eauto ] ]
-      end.
-      inversion_sigma; inversion_prod; repeat subst; simpl; auto.
+      destruct Rwf; simpl; repeat intro; eauto.
     Qed.
 
     Lemma InterpWf
              {t} {e : Expr t}
              (Rwf : Wf e)
-    : interp_type_rel_pointwise2 R (Interp1 e) (Interp2 e).
+    : interp_type_rel_pointwise R (Interp1 e) (Interp2 e).
     Proof.
-      unfold Interp, Wf in *; apply (interp_wf (G:=nil)); simpl; intuition.
+      unfold Interp, Wf in *; apply interp_wf; simpl; intuition.
     Qed.
   End wf.
 End language.

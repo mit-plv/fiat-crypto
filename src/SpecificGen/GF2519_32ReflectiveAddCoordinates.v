@@ -32,7 +32,7 @@ Import ListNotations.
 Require Import Coq.ZArith.ZArith Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.ZArith.Znumtheory.
 Local Open Scope Z.
 
-Time Definition radd_coordinates : Expr9_4Op := Eval vm_compute in radd_coordinatesW.
+Time Definition radd_coordinates : Expr _ := Eval vm_compute in radd_coordinatesW.
 
 Declare Reduction asm_interp_add_coordinates
   := cbv beta iota delta
@@ -57,7 +57,7 @@ Ltac asm_interp_add_coordinates
             mapf_interp_flat_type WordW.interp_base_type word64ize
             Interp interp interp_flat_type interpf interp_flat_type fst snd].
 
-
+(*
 Time Definition interp_radd_coordinates : SpecificGen.GF2519_32BoundedCommon.fe2519_32W
                                           -> SpecificGen.GF2519_32BoundedCommon.fe2519_32W
                                           -> SpecificGen.GF2519_32BoundedCommon.fe2519_32W
@@ -74,3 +74,4 @@ Time Definition interp_radd_coordinates_correct : interp_radd_coordinates = inte
 
 Lemma radd_coordinates_correct_and_bounded : op9_4_correct_and_bounded radd_coordinates add_coordinates.
 Proof. exact_no_check radd_coordinatesW_correct_and_bounded. Time Qed.
+*)

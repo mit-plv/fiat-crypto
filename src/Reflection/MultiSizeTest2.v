@@ -151,19 +151,20 @@ Definition Boundify {t1} (e1 : Expr base_type op t1) args2
 
 (** * Examples *)
 
-Example ex1 : Expr base_type op TNat := fun var =>
+Example ex1 : Expr base_type op (Arrow Unit TNat) := fun var =>
+  Abs (fun _ =>
   LetIn (Constf (t:=Nat) 127) (fun a : var Nat =>
   LetIn (Constf (t:=Nat) 63) (fun b : var Nat =>
   LetIn (Op (tR:=TNat) (Plus Nat) (Pair (Var a) (Var b))) (fun c : var Nat =>
-  Op (Plus Nat) (Pair (Var c) (Var c))))).
+  Op (Plus Nat) (Pair (Var c) (Var c)))))).
 
-Example ex1f : Expr base_type op (Arrow Nat (Arrow Nat TNat)) := fun var =>
-  Abs (fun a0 =>
-  Abs (fun b0 =>
+Example ex1f : Expr base_type op (Arrow (TNat * TNat) TNat) := fun var =>
+  Abs (fun a0b0 : interp_flat_type _ (TNat * TNat) =>
+  let a0 := fst a0b0 in let b0 := snd a0b0 in
   LetIn (Var a0) (fun a : var Nat =>
   LetIn (Var b0) (fun b : var Nat =>
   LetIn (Op (tR:=TNat) (Plus Nat) (Pair (Var a) (Var b))) (fun c : var Nat =>
-  Op (Plus Nat) (Pair (Var c) (Var c))))))).
+  Op (Plus Nat) (Pair (Var c) (Var c)))))).
 
 Eval compute in (Interp (@interp_op) ex1).
 Eval cbv -[plus] in (Interp (@interp_op) ex1f).

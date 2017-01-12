@@ -27,16 +27,8 @@ Section language.
 
       Section gen_type.
         Context (exprf_eta : forall {t} (e : exprf t), exprf t).
-        Fixpoint expr_eta_gen {t} (e : expr t) : expr t
-          := match e with
-             | Return _ v => exprf_eta _ v
-             | Abs src dst f => @Abs
-                                  _ _ _
-                                  src dst
-                                  (interp_flat_type_eta_gen
-                                     (fun x : interp_flat_type var (Tbase src)
-                                      => @expr_eta_gen _ (f x)))
-             end.
+        Definition expr_eta_gen {t} (e : expr t) : expr (Arrow (domain t) (codomain t))
+          := Abs (interp_flat_type_eta_gen (fun x => exprf_eta _ (invert_Abs e x))).
       End gen_type.
 
       Fixpoint exprf_eta_gen {t} (e : exprf t) : exprf t
@@ -64,10 +56,10 @@ Section language.
     Definition expr_eta' {t}
       := @expr_eta_gen (fun _ _ x => (fst x, snd x)) (@exprf_eta') t.
   End with_var.
-  Definition ExprEtaGen eta {t} (e : Expr t) : Expr t
+  Definition ExprEtaGen eta {t} (e : Expr t) : Expr (Arrow (domain t) (codomain t))
     := fun var => expr_eta_gen eta (@exprf_eta_gen var eta) (e var).
-  Definition ExprEta {t} (e : Expr t) : Expr t
+  Definition ExprEta {t} (e : Expr t) : Expr (Arrow (domain t) (codomain t))
     := fun var => expr_eta (e var).
-  Definition ExprEta' {t} (e : Expr t) : Expr t
+  Definition ExprEta' {t} (e : Expr t) : Expr (Arrow (domain t) (codomain t))
     := fun var => expr_eta' (e var).
 End language.

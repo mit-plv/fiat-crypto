@@ -1,6 +1,6 @@
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.SmartMap.
-Require Import Crypto.Reflection.Application.
+Require Import Crypto.Reflection.ExprInversion.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Option.
@@ -28,11 +28,6 @@ Section language.
       := (SmartValf _ (@failv _)).
     Local Notation failf t (* {t} : @exprf base_type_code1 op1 ovar t*)
       := (SmartPairf (SmartFail t)).
-    Fixpoint fail t : @expr base_type_code1 op1 ovar t
-      := match t with
-         | Tflat T => @failf _
-         | Arrow A B => Abs (fun _ => @fail B)
-         end.
 
     (** We only ever make use of this when [e1] and [e2] are the same
         type, and, in fact, the same syntax tree instantiated to
@@ -81,24 +76,14 @@ Section language.
          end.
     Arguments mapf_interp_cast {_} _ {_} _. (* 8.4 workaround for bad arguments *)
 
-    Fixpoint map_interp_cast
+    Definition map_interp_cast
              {t1} (e1 : @expr base_type_code1 op1 ovar t1)
              {t2} (e2 : @expr base_type_code2 op2 interp_base_type2 t2)
-             {struct e2}
-      : forall (args2 : interp_all_binders_for' t2 interp_base_type2),
-        @expr base_type_code1 op1 ovar t1
-      := match e1 in expr _ _ t1, e2 in expr _ _ t2
-               return forall (args2 : interp_all_binders_for' t2 _), expr _ _ t1 with
-         | Return t1 ex1, Return t2 ex2
-           => fun _ => mapf_interp_cast ex1 ex2
-         | Abs src1 dst1 f1, Abs src2 dst2 f2
-           => fun args2
-              => Abs (fun x
-                      => @map_interp_cast _ (f1 x) _ (f2 (fst args2)) (snd args2))
-         | Return _ _, _
-         | Abs _ _ _, _
-           => fun _ => @fail _
-         end.
+             (args2 : interp_flat_type interp_base_type2 (domain t2))
+      : @expr base_type_code1 op1 ovar (Arrow (domain t1) (codomain t1))
+      := let f1 := invert_Abs e1 in
+         let f2 := invert_Abs e2 in
+         Abs (fun x => @mapf_interp_cast _ (f1 x) _ (f2 args2)).
   End with_var.
 End language.
 
@@ -114,7 +99,7 @@ Section homogenous.
 
   Definition MapInterpCast
              transfer_op
-             {t} (e : Expr base_type_code op t) args
-    : Expr base_type_code op t
+             {t} (e : Expr base_type_code op t) (args : interp_flat_type interp_base_type2 (domain t))
+    : Expr base_type_code op (Arrow (domain t) (codomain t))
     := fun var => map_interp_cast interp_op2 (@failv) transfer_op (e _) (e _) args.
 End homogenous.

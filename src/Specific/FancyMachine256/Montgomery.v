@@ -53,9 +53,13 @@ End expression.
 
 Section reflected.
   Context (ops : fancy_machine.instructions (2 * 128)).
-  Definition rexpression : Syntax.Expr base_type op (Arrow TZ (Arrow TZ (Arrow TW (Arrow TW (Tbase TW))))).
+  Local Notation tZ := (Tbase TZ).
+  Local Notation tW := (Tbase TW).
+  Definition rexpression : Syntax.Expr base_type op (Arrow (tZ * tZ * tW * tW) tW).
   Proof.
-    let v := (eval cbv beta delta [expression] in (fun modulus m' x y => expression ops modulus m' (x, y))) in
+    let v := (eval cbv beta delta [expression] in
+                 (fun modulus_m'_x_y => let '(modulusv, m'v, xv, yv) := modulus_m'_x_y in
+                                        expression ops modulusv m'v (xv, yv))) in
     let v := Reify v in
     exact v.
   Defined.
@@ -76,9 +80,9 @@ Section reflected.
   Context (modulus m' : Z)
           (props : fancy_machine.arithmetic ops).
 
-  Let result (v : Tuple.tuple fancy_machine.W 2) := Syntax.Interp interp_op rexpression_simple modulus m' (fst v) (snd v).
+  Let result (v : Tuple.tuple fancy_machine.W 2) := Syntax.Interp interp_op rexpression_simple (modulus, m', fst v, snd v).
 
-  Let assembled_result (v : Tuple.tuple fancy_machine.W 2) : fancy_machine.W := Core.Interp compiled_syntax modulus m' (fst v) (snd v).
+  Let assembled_result (v : Tuple.tuple fancy_machine.W 2) : fancy_machine.W := Core.Interp compiled_syntax (modulus, m', fst v, snd v).
 
   Theorem sanity : result = expression ops modulus m'.
   Proof.
@@ -124,7 +128,7 @@ End reflected.
 Print compiled_syntax.
 (* compiled_syntax =
 fun ops : fancy_machine.instructions (2 * 128) =>
-λn RegMod RegPInv lo hi,
+λn (RegMod, RegPInv, lo, hi),
 slet RegMod := RegMod in
 slet RegPInv := RegPInv in
 slet RegZero := ldi 0 in
@@ -147,5 +151,6 @@ c.Selc(y, RegMod, RegZero),
 c.Sub(lo, hi, y),
 c.Addm(lo, lo, RegZero),
 Return lo
-     : forall ops : fancy_machine.instructions (2 * 128), expr base_type op Register (TZ -> TZ -> TW -> TW -> Tbase TW)
+     : forall ops : fancy_machine.instructions (2 * 128),
+       expr base_type op Register (Tbase TZ * Tbase TZ * Tbase TW * Tbase TW -> Tbase TW)
 *)

@@ -322,14 +322,14 @@ Ltac unfold_is_bounded_in' H :=
   end.
 Ltac preunfold_is_bounded_in H :=
   unfold is_bounded, wire_digits_is_bounded, is_bounded_gen, fe25519WToZ, wire_digitsWToZ in H;
-  cbv [to_list length bounds wire_digit_bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 List.map fold_right List.rev List.app length_fe25519 List.length wire_widths] in H.
+  cbv [to_list length bounds wire_digit_bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 Tuple.map List.map fold_right List.rev List.app length_fe25519 List.length wire_widths HList.hlistP HList.hlistP' Tuple.on_tuple] in H.
 Ltac unfold_is_bounded_in H :=
   preunfold_is_bounded_in H;
   unfold_is_bounded_in' H.
 
 Ltac preunfold_is_bounded :=
   unfold is_bounded, wire_digits_is_bounded, is_bounded_gen, fe25519WToZ, wire_digitsWToZ;
-  cbv [to_list length bounds wire_digit_bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 List.map fold_right List.rev List.app length_fe25519 List.length wire_widths].
+  cbv [to_list length bounds wire_digit_bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 Tuple.map List.map fold_right List.rev List.app length_fe25519 List.length wire_widths HList.hlistP HList.hlistP' Tuple.on_tuple].
 
 Ltac unfold_is_bounded :=
   preunfold_is_bounded;
@@ -724,7 +724,7 @@ Notation in_op_correct_and_bounded k irop op
        /\ HList.hlistP (fun v => is_bounded v = true) (Tuple.map (n:=k) fe25519WToZ irop))%type)
        (only parsing).
 
-Fixpoint inm_op_correct_and_bounded' (count_in count_out : nat)
+(*Fixpoint inm_op_correct_and_bounded' (count_in count_out : nat)
   : forall (irop : Tower.tower_nd fe25519W (Tuple.tuple fe25519W count_out) count_in)
            (op : Tower.tower_nd GF25519.fe25519 (Tuple.tuple GF25519.fe25519 count_out) count_in)
            (cont : Prop -> Prop),
@@ -792,18 +792,14 @@ Qed.
 
 Definition inm_op_correct_and_bounded1 count_in  irop op
   := Eval cbv [inm_op_correct_and_bounded Tuple.map Tuple.to_list Tuple.to_list' Tuple.from_list Tuple.from_list' Tuple.on_tuple List.map] in
-      inm_op_correct_and_bounded count_in 1 irop op.
-Notation ibinop_correct_and_bounded irop op
-  := (forall x y,
-         is_bounded (fe25519WToZ x) = true
-         -> is_bounded (fe25519WToZ y) = true
-         -> fe25519WToZ (irop x y) = op (fe25519WToZ x) (fe25519WToZ y)
-            /\ is_bounded (fe25519WToZ (irop x y)) = true) (only parsing).
-Notation iunop_correct_and_bounded irop op
-  := (forall x,
-         is_bounded (fe25519WToZ x) = true
-         -> fe25519WToZ (irop x) = op (fe25519WToZ x)
-            /\ is_bounded (fe25519WToZ (irop x)) = true) (only parsing).
+      inm_op_correct_and_bounded count_in 1 irop op.*)
+Notation inm_op_correct_and_bounded n m irop op
+  := ((forall x,
+          HList.hlistP (fun v => is_bounded v = true) (Tuple.map (n:=n%nat%type) fe25519WToZ x)
+          -> in_op_correct_and_bounded m (irop x) (op (Tuple.map (n:=n) fe25519WToZ x))))
+       (only parsing).
+Notation ibinop_correct_and_bounded irop op := (inm_op_correct_and_bounded 2 1 irop op) (only parsing).
+Notation iunop_correct_and_bounded irop op := (inm_op_correct_and_bounded 1 1 irop op) (only parsing).
 Notation iunop_FEToZ_correct irop op
   := (forall x,
          is_bounded (fe25519WToZ x) = true
@@ -818,20 +814,6 @@ Notation iunop_WireToFE_correct_and_bounded irop op
          wire_digits_is_bounded (wire_digitsWToZ x) = true
          -> fe25519WToZ (irop x) = op (wire_digitsWToZ x)
             /\ is_bounded (fe25519WToZ (irop x)) = true) (only parsing).
-Notation i9top_correct_and_bounded k irop op
-  := ((forall x0 x1 x2 x3 x4 x5 x6 x7 x8,
-          is_bounded (fe25519WToZ x0) = true
-          -> is_bounded (fe25519WToZ x1) = true
-          -> is_bounded (fe25519WToZ x2) = true
-          -> is_bounded (fe25519WToZ x3) = true
-          -> is_bounded (fe25519WToZ x4) = true
-          -> is_bounded (fe25519WToZ x5) = true
-          -> is_bounded (fe25519WToZ x6) = true
-          -> is_bounded (fe25519WToZ x7) = true
-          -> is_bounded (fe25519WToZ x8) = true
-          -> (Tuple.map (n:=k) fe25519WToZ (irop x0 x1 x2 x3 x4 x5 x6 x7 x8)
-              = op (fe25519WToZ x0) (fe25519WToZ x1) (fe25519WToZ x2) (fe25519WToZ x3) (fe25519WToZ x4) (fe25519WToZ x5) (fe25519WToZ x6) (fe25519WToZ x7) (fe25519WToZ x8))
-             * HList.hlist (fun v => is_bounded v = true) (Tuple.map (n:=k) fe25519WToZ (irop x0 x1 x2 x3 x4 x5 x6 x7 x8)))%type)
-       (only parsing).
+Notation i9top_correct_and_bounded k irop op := (inm_op_correct_and_bounded 9 k irop op) (only parsing).
 
-Definition prefreeze := GF25519.prefreeze.
+Notation prefreeze := GF25519.prefreeze.

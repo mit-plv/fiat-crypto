@@ -340,11 +340,12 @@ Local Ltac unfold_related_const :=
 
 Lemma related_wordW_op : related_op related_wordW (@BoundedWordW.interp_op) (@WordW.interp_op).
 Proof.
-  (let op := fresh in intros ?? op; destruct op; simpl);
+  (let op := fresh in intros ?? op; destruct op; simpl); destruct_head' base_type;
     try first [ apply related_wordW_t_map1
               | apply related_wordW_t_map2
               | apply related_wordW_t_map4
-              | unfold_related_const; break_innermost_match; reflexivity ].
+              | unfold_related_const; break_innermost_match; reflexivity
+              | exact (fun _ _ x => x) ].
 Qed.
 
 Lemma related_bounds_t_map1 opW opB pf
@@ -411,7 +412,7 @@ Local Ltac related_const_op_t :=
 
 Lemma related_bounds_op : related_op related_bounds (@BoundedWordW.interp_op) (@ZBounds.interp_op).
 Proof.
-  let op := fresh in intros ?? op; destruct op; simpl.
+  let op := fresh in intros ?? op; destruct op; simpl; destruct_head' base_type.
   { related_const_op_t. }
   { apply related_bounds_t_map2; intros; destruct_head' option; reflexivity. }
   { apply related_bounds_t_map2; intros; destruct_head' option; reflexivity. }
@@ -423,6 +424,7 @@ Proof.
   { apply related_bounds_t_map1; intros; destruct_head' option; unfold ZBounds.neg; break_match; reflexivity. }
   { apply related_bounds_t_map4; intros; destruct_head' option; reflexivity. }
   { apply related_bounds_t_map4; intros; destruct_head' option; reflexivity. }
+  { exact (fun _ _ x => x). }
 Qed.
 
 Local Ltac WordW.Rewrites.wordW_util_arith ::=
@@ -541,7 +543,7 @@ Local Arguments ZBounds.neg _ !_ / .
 
 Lemma related_Z_op : related_op related_Z (@BoundedWordW.interp_op) (@Z.interp_op).
 Proof.
-  let op := fresh in intros ?? op; destruct op; simpl.
+  let op := fresh in intros ?? op; destruct op; simpl; destruct_head' base_type.
   { related_const_op_t. }
   { apply related_Z_t_map2; related_Z_op_fin_t. }
   { apply related_Z_t_map2; related_Z_op_fin_t. }
@@ -553,6 +555,7 @@ Proof.
   { apply related_Z_t_map1; related_Z_op_fin_t. }
   { apply related_Z_t_map4; related_Z_op_fin_t. }
   { apply related_Z_t_map4; related_Z_op_fin_t. }
+  { exact (fun _ _ x => x). }
 Qed.
 
 Create HintDb interp_related discriminated.

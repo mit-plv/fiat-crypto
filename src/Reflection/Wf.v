@@ -50,14 +50,13 @@ Section language.
         wff G e1 e1'
         -> wff G e2 e2'
         -> wff G (Pair e1 e2) (Pair e1' e2').
-    Inductive wf : list (sigT eP) -> forall {t}, @expr var1 t -> @expr var2 t -> Prop :=
-    | WfReturn : forall t G e e', @wff G t e e' -> wf G (Return e) (Return e')
-    | WfAbs : forall A B G e e',
-        (forall x x', @wf ((x == x') :: G) B (e x) (e' x'))
-        -> @wf G (Arrow A B) (Abs e) (Abs e').
+    Inductive wf : forall {t}, @expr var1 t -> @expr var2 t -> Prop :=
+    | WfAbs : forall A B e e',
+        (forall x x', @wff (flatten_binding_list x x') B (e x) (e' x'))
+        -> @wf (Arrow A B) (Abs e) (Abs e').
   End with_var.
 
-  Definition Wf {t} (E : @Expr t) := forall var1 var2, wf nil (E var1) (E var2).
+  Definition Wf {t} (E : @Expr t) := forall var1 var2, wf (E var1) (E var2).
 
   Axiom Wf_admitted : forall {t} (E:Expr t), @Wf t E.
 End language.
@@ -65,7 +64,7 @@ End language.
 Ltac admit_Wf := apply Wf_admitted.
 
 Global Arguments wff {_ _ _ _} G {t} _ _.
-Global Arguments wf {_ _ _ _} G {t} _ _.
+Global Arguments wf {_ _ _ _ t} _ _.
 Global Arguments Wf {_ _ t} _.
 
 Hint Constructors wf wff : wf.

@@ -69,18 +69,13 @@ Section language.
   Local Hint Resolve interpf_linearizef.
 
   Lemma interp_linearize {t} e
-    : interp_type_gen_rel_pointwise (fun _ => @eq _)
-                                    (interp interp_op (linearize (t:=t) e))
-                                    (interp interp_op e).
+    : forall x, interp interp_op (linearize (t:=t) e) x = interp interp_op e x.
   Proof.
-    induction e; eauto.
-    eapply interpf_linearizef.
+    induction e; simpl; eauto.
   Qed.
 
   Lemma InterpLinearize {t} (e : Expr t)
-    : interp_type_gen_rel_pointwise (fun _ => @eq _)
-                                    (Interp interp_op (Linearize e))
-                                    (Interp interp_op e).
+    : forall x, Interp interp_op (Linearize e) x = Interp interp_op e x.
   Proof.
     unfold Interp, Linearize.
     eapply interp_linearize.

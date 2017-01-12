@@ -25,13 +25,23 @@ Require Import Coq.ZArith.ZArith Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.ZArith.
 Local Open Scope Z.
 
 
+Local Ltac cbv_tuple_map :=
+  cbv [Tuple.map Tuple.on_tuple Tuple.to_list Tuple.to_list' List.map Tuple.from_list Tuple.from_list' HList.hlistP HList.hlistP'].
+
+Local Ltac post_bounded_t :=
+  (* much pain and hackery to work around [Defined] taking forever *)
+  cbv_tuple_map;
+  let blem' := fresh "blem'" in
+  let is_bounded_lem := fresh "is_bounded_lem" in
+  intros is_bounded_lem blem';
+  apply blem'; repeat apply conj; apply is_bounded_lem.
 Local Ltac bounded_t opW blem :=
-  apply blem; apply is_bounded_proj1_fe41417_32.
+  generalize blem; generalize is_bounded_proj1_fe41417_32; post_bounded_t.
 Local Ltac bounded_wire_digits_t opW blem :=
-  apply blem; apply is_bounded_proj1_wire_digits.
+  generalize blem; generalize is_bounded_proj1_wire_digits; post_bounded_t.
 
 Local Ltac define_binop f g opW blem :=
-  refine (exist_fe41417_32W (opW (proj1_fe41417_32W f) (proj1_fe41417_32W g)) _);
+  refine (exist_fe41417_32W (opW (proj1_fe41417_32W f, proj1_fe41417_32W g)) _);
   abstract bounded_t opW blem.
 Local Ltac define_unop f opW blem :=
   refine (exist_fe41417_32W (opW (proj1_fe41417_32W f)) _);
@@ -47,17 +57,17 @@ Local Ltac define_unop_WireToFE f opW blem :=
 
 Local Opaque Let_In.
 Local Opaque Z.add Z.sub Z.mul Z.shiftl Z.shiftr Z.land Z.lor Z.eqb NToWord64.
-Local Arguments interp_radd / _ _.
-Local Arguments interp_rsub / _ _.
-Local Arguments interp_rmul / _ _.
+Local Arguments interp_radd / _.
+Local Arguments interp_rsub / _.
+Local Arguments interp_rmul / _.
 Local Arguments interp_ropp / _.
 Local Arguments interp_rprefreeze / _.
 Local Arguments interp_rge_modulus / _.
 Local Arguments interp_rpack / _.
 Local Arguments interp_runpack / _.
-Definition addW (f g : fe41417_32W) : fe41417_32W := Eval simpl in interp_radd f g.
-Definition subW (f g : fe41417_32W) : fe41417_32W := Eval simpl in interp_rsub f g.
-Definition mulW (f g : fe41417_32W) : fe41417_32W := Eval simpl in interp_rmul f g.
+Definition addW (f : fe41417_32W * fe41417_32W) : fe41417_32W := Eval simpl in interp_radd f.
+Definition subW (f : fe41417_32W * fe41417_32W) : fe41417_32W := Eval simpl in interp_rsub f.
+Definition mulW (f : fe41417_32W * fe41417_32W) : fe41417_32W := Eval simpl in interp_rmul f.
 Definition oppW (f : fe41417_32W) : fe41417_32W := Eval simpl in interp_ropp f.
 Definition prefreezeW (f : fe41417_32W) : fe41417_32W := Eval simpl in interp_rprefreeze f.
 Definition ge_modulusW (f : fe41417_32W) : word64 := Eval simpl in interp_rge_modulus f.
@@ -86,7 +96,7 @@ Definition freezeW (f : fe41417_32W) : fe41417_32W := Eval cbv beta delta [prefr
 Local Transparent Let_In.
 (* Wrapper to allow extracted code to not unfold [mulW] *)
 Definition mulW_noinline := mulW.
-Definition powW (f : fe41417_32W) chain := fold_chain_opt (proj1_fe41417_32W one) mulW_noinline chain [f].
+Definition powW (f : fe41417_32W) chain := fold_chain_opt (proj1_fe41417_32W one) (fun f g => mulW_noinline (f, g)) chain [f].
 Definition invW (f : fe41417_32W) : fe41417_32W
   := Eval cbv -[Let_In fe41417_32W mulW_noinline] in powW f (chain inv_ec).
 
@@ -95,11 +105,11 @@ Local Ltac port_correct_and_bounded pre_rewrite opW interp_rop rop_cb :=
   rewrite pre_rewrite;
   intros; apply rop_cb; assumption.
 
-Lemma addW_correct_and_bounded : ibinop_correct_and_bounded addW carry_add.
+Lemma addW_correct_and_bounded : ibinop_correct_and_bounded addW (Curry.curry2 carry_add).
 Proof. port_correct_and_bounded interp_radd_correct addW interp_radd radd_correct_and_bounded. Qed.
-Lemma subW_correct_and_bounded : ibinop_correct_and_bounded subW carry_sub.
+Lemma subW_correct_and_bounded : ibinop_correct_and_bounded subW (Curry.curry2 carry_sub).
 Proof. port_correct_and_bounded interp_rsub_correct subW interp_rsub rsub_correct_and_bounded. Qed.
-Lemma mulW_correct_and_bounded : ibinop_correct_and_bounded mulW mul.
+Lemma mulW_correct_and_bounded : ibinop_correct_and_bounded mulW (Curry.curry2 mul).
 Proof. port_correct_and_bounded interp_rmul_correct mulW interp_rmul rmul_correct_and_bounded. Qed.
 Lemma oppW_correct_and_bounded : iunop_correct_and_bounded oppW carry_opp.
 Proof. port_correct_and_bounded interp_ropp_correct oppW interp_ropp ropp_correct_and_bounded. Qed.
@@ -142,6 +152,7 @@ Proof.
 
   cbv [modulusW Tuple.map].
   cbv [on_tuple List.map to_list to_list' from_list from_list'
+                HList.hlistP HList.hlistP'
                 Tuple.map2 on_tuple2 ListUtil.map2 fe41417_32WToZ length_fe41417_32].
   cbv [postfreeze GF41417_32.postfreeze].
   cbv [Let_In].
@@ -203,7 +214,8 @@ Proof.
   change (freezeW f) with (postfreezeW (prefreezeW f)).
   destruct (prefreezeW_correct_and_bounded f H) as [H0 H1].
   destruct (postfreezeW_correct_and_bounded _ H1) as [H0' H1'].
-  rewrite H1', H0', H0; split; reflexivity.
+  split; [ | assumption ].
+  rewrite H0', H0; reflexivity.
 Qed.
 
 Lemma powW_correct_and_bounded chain : iunop_correct_and_bounded (fun x => powW x chain) (fun x => pow x chain).
@@ -212,9 +224,11 @@ Proof.
   intro x; intros; apply (fold_chain_opt_gen fe41417_32WToZ is_bounded [x]).
   { reflexivity. }
   { reflexivity. }
-  { intros; progress rewrite <- (fun X Y => proj1 (mulW_correct_and_bounded _ _ X Y)) by assumption.
-    apply mulW_correct_and_bounded; assumption. }
-  { intros; rewrite (fun X Y => proj1 (mulW_correct_and_bounded _ _ X Y)) by assumption; reflexivity. }
+  { intros; pose proof (fun k0 k1 X Y => proj1 (mulW_correct_and_bounded (k0, k1) (conj X Y))) as H'.
+    cbv [Curry.curry2 Tuple.map Tuple.on_tuple Tuple.to_list Tuple.to_list' List.map Tuple.from_list Tuple.from_list'] in H'.
+    rewrite <- H' by assumption.
+    apply mulW_correct_and_bounded; split; assumption. }
+  { intros; rewrite (fun X Y => proj1 (mulW_correct_and_bounded (_, _) (conj X Y))) by assumption; reflexivity. }
   { intros [|?]; autorewrite with simpl_nth_default;
       (assumption || reflexivity). }
 Qed.
@@ -269,8 +283,10 @@ Proof.
   unfold GF41417_32.eqb.
   simpl @fe41417_32WToZ in *; cbv beta iota.
   intros.
+  cbv [Tuple.map Tuple.on_tuple Tuple.to_list Tuple.to_list' List.map Tuple.from_list Tuple.from_list' fe41417_32WToZ] in *.
   rewrite <- frf, <- frg by assumption.
-  rewrite <- fieldwisebW_correct.
+  etransitivity; [ eapply fieldwisebW_correct | ].
+  cbv [fe41417_32WToZ].
   reflexivity.
 Defined.
 
@@ -297,7 +313,7 @@ Proof.
   lazymatch (eval cbv delta [GF41417_32.sqrt] in GF41417_32.sqrt) with
   | (fun powf powf_squared f => dlet a := powf in _)
     => exact (dlet powx := powW (fe41417_32ZToW x) (chain GF41417_32.sqrt_ec) in
-              GF41417_32.sqrt (fe41417_32WToZ powx) (fe41417_32WToZ (mulW_noinline powx powx)) x)
+              GF41417_32.sqrt (fe41417_32WToZ powx) (fe41417_32WToZ (mulW_noinline (powx, powx))) x)
   | (fun f => pow f _)
     => exact (GF41417_32.sqrt x)
   end.
@@ -324,21 +340,41 @@ Proof.
                => is_var z; change (x = match fe41417_32WToZ z with y => f end)
              end;
              change sqrt_m1 with (fe41417_32WToZ sqrt_m1W);
-             rewrite <- (fun X Y => proj1 (mulW_correct_and_bounded sqrt_m1W a X Y)), <- eqbW_correct, (pull_bool_if fe41417_32WToZ)
-               by repeat match goal with
-                         | _ => progress subst
-                         | [ |- is_bounded (fe41417_32WToZ ?op) = true ]
-                           => lazymatch op with
-                              | mulW _ _ => apply mulW_correct_and_bounded
-                              | mulW_noinline _ _ => apply mulW_correct_and_bounded
-                              | powW _ _ => apply powW_correct_and_bounded
-                              | sqrt_m1W => vm_compute; reflexivity
-                              | _ => assumption
-                              end
-                         end;
-             subst_evars; reflexivity
+             pose proof (fun X Y => proj1 (mulW_correct_and_bounded (sqrt_m1W, a) (conj X Y))) as correctness;
+             let cbv_in_all _ := (cbv [fe41417_32WToZ Tuple.map Tuple.on_tuple Tuple.to_list Tuple.to_list' List.map Tuple.from_list Tuple.from_list' fe41417_32WToZ Curry.curry2 HList.hlistP HList.hlistP'] in *; idtac) in
+             cbv_in_all ();
+               let solver _ := (repeat match goal with
+                                       | _ => progress subst
+                                       | _ => progress unfold fst, snd
+                                       | _ => progress cbv_in_all ()
+                                       | [ |- ?x /\ ?x ] => cut x; [ intro; split; assumption | ]
+                                       | [ |- is_bounded ?op = true ]
+                                         => let H := fresh in
+                                            lazymatch op with
+                                            | context[mulW (_, _)] => pose proof mulW_correct_and_bounded as H
+                                            | context[mulW_noinline (_, _)] => pose proof mulW_correct_and_bounded as H
+                                            | context[powW _ _] => pose proof powW_correct_and_bounded as H
+                                            | context[sqrt_m1W] => vm_compute; reflexivity
+                                            | _ => assumption
+                                            end;
+                                            cbv_in_all ();
+                                            apply H
+                                       end) in
+               rewrite <- correctness by solver (); clear correctness;
+                 let lem := fresh in
+                 pose proof eqbW_correct as lem; cbv_in_all (); rewrite <- lem by solver (); clear lem;
+                   pose proof (pull_bool_if fe41417_32WToZ) as lem; cbv_in_all (); rewrite lem by solver (); clear lem;
+                     subst_evars; reflexivity
       end.
     } Unfocus.
+    assert (Hfold : forall x, fe41417_32WToZ x = fe41417_32WToZ x) by reflexivity.
+    unfold fe41417_32WToZ at 2 in Hfold.
+    etransitivity.
+    Focus 2. {
+      apply Proper_Let_In_nd_changebody; [ reflexivity | intro ].
+      apply Hfold.
+    } Unfocus.
+    clear Hfold.
     lazymatch goal with
     | [ |- context G[dlet x := ?v in fe41417_32WToZ (@?f x)] ]
       => let G' := context G[fe41417_32WToZ (dlet x := v in f x)] in
@@ -346,15 +382,22 @@ Proof.
            [ cbv [Let_In]; exact (fun x => x) | apply f_equal ]
     | _ => idtac
     end;
-      reflexivity. }
-  { cbv [Let_In];
+      reflexivity.
+  }
+
+  { cbv [Let_In HList.hlistP HList.hlistP'];
       try break_if;
       repeat lazymatch goal with
              | [ |- is_bounded (?WToZ (powW _ _)) = true ]
                => apply powW_correct_and_bounded; assumption
-             | [ |- is_bounded (?WToZ (mulW _ _)) = true ]
-               => apply mulW_correct_and_bounded; [ vm_compute; reflexivity | ]
-             end. }
+             | [ |- is_bounded (snd (?WToZ (_, powW _ _))) = true ]
+               => generalize powW_correct_and_bounded;
+                    cbv [snd Tuple.map Tuple.on_tuple Tuple.to_list Tuple.to_list' List.map Tuple.from_list Tuple.from_list' HList.hlistP HList.hlistP'];
+                    let H := fresh in intro H; apply H; assumption
+             | [ |- is_bounded (?WToZ (mulW (_, _))) = true ]
+               => apply mulW_correct_and_bounded; split; [ vm_compute; reflexivity | ]
+             end.
+  }
 Defined.
 
 Definition sqrtW (f : fe41417_32W) : fe41417_32W :=
@@ -394,7 +437,7 @@ Proof. define_unop_WireToFE f unpackW unpackW_correct_and_bounded. Defined.
 Definition pow (f : fe41417_32) (chain : list (nat * nat)) : fe41417_32.
 Proof. define_unop f (fun x => powW x chain) powW_correct_and_bounded. Defined.
 Definition inv (f : fe41417_32) : fe41417_32.
-Proof. define_unop f invW invW_correct_and_bounded. Defined.
+Proof. define_unop f invW (fun x p => proj2 (invW_correct_and_bounded x p)). Defined.
 Definition sqrt (f : fe41417_32) : fe41417_32.
 Proof. define_unop f sqrtW sqrtW_correct_and_bounded. Defined.
 
@@ -407,7 +450,12 @@ Local Ltac op_correct_t op opW_correct_and_bounded :=
     => rewrite proj1_wire_digits_exist_wire_digitsW
   | _ => idtac
   end;
-  apply opW_correct_and_bounded;
+  generalize opW_correct_and_bounded;
+  cbv_tuple_map;
+  cbv [fst snd];
+  let H := fresh in
+  intro H; apply H;
+  repeat match goal with |- and _ _ => apply conj end;
   lazymatch goal with
   | [ |- is_bounded _ = true ]
     => apply is_bounded_proj1_fe41417_32
@@ -434,7 +482,7 @@ Proof. op_correct_t unpack unpackW_correct_and_bounded. Qed.
 Lemma pow_correct (f : fe41417_32) chain : proj1_fe41417_32 (pow f chain) = GF41417_32.pow (proj1_fe41417_32 f) chain.
 Proof. op_correct_t pow (powW_correct_and_bounded chain). Qed.
 Lemma inv_correct (f : fe41417_32) : proj1_fe41417_32 (inv f) = GF41417_32.inv (proj1_fe41417_32 f).
-Proof. op_correct_t inv invW_correct_and_bounded. Qed.
+Proof. op_correct_t inv (fun x p => proj1 (invW_correct_and_bounded x p)). Qed.
 Lemma sqrt_correct (f : fe41417_32) : proj1_fe41417_32 (sqrt f) = GF41417_32sqrt (proj1_fe41417_32 f).
 Proof. op_correct_t sqrt sqrtW_correct_and_bounded. Qed.
 

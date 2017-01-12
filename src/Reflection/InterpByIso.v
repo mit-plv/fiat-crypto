@@ -1,5 +1,6 @@
 (** * PHOAS interpretation function for any retract of [var:=interp_base_type] *)
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.ExprInversion.
 Require Import Crypto.Reflection.SmartMap.
 
 Section language.
@@ -24,10 +25,9 @@ Section language.
        | Pair tx ex ty ey => (@interpf_retr _ ex, @interpf_retr _ ey)
        end.
 
-  Fixpoint interp_retr {t} (e : @expr base_type_code op var t)
+  Definition interp_retr {t} (e : @expr base_type_code op var t)
     : interp_type interp_base_type t
-    := match e in expr _ _ t return interp_type interp_base_type t with
-       | Return t ex => interpf_retr ex
-       | Abs src dst f => fun x => @interp_retr _ (f (SmartVarfMap var_of_interp x))
-       end.
+    := fun x => interpf_retr (invert_Abs e (SmartVarfMap var_of_interp x)).
 End language.
+
+Global Arguments interp_retr _ _ _ _ _ _ _ _ !_ / _ .

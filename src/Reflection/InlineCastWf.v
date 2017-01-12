@@ -69,7 +69,7 @@ Section language.
              | [ H : forall e, Some _ = Some e -> _ |- _ ]
                => specialize (H _ eq_refl)
              | _ => solve [ auto with wf ]
-             | _ => progress inversion_wff_constr
+             | _ => progress inversion_wf_constr
              | _ => progress inversion_flat_type
              | [ H : context[match ?e with _ => _ end] |- _ ] => invert_one_expr e
              | [ |- context[match ?e with _ => _ end] ] => invert_one_expr e

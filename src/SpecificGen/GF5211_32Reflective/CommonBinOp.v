@@ -3,7 +3,6 @@ Require Import Crypto.SpecificGen.GF5211_32BoundedCommon.
 Require Import Crypto.Reflection.Z.Interpretations64.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.SmartMap.
-Require Import Crypto.Reflection.Application.
 Require Import Crypto.Util.Tactics.
 
 Local Opaque Interp.
@@ -18,8 +17,8 @@ Lemma ExprBinOp_correct_and_bounded
           let Hy := let (Hx, Hy) := Hxy in Hy in
           let args := binop_args_to_bounded xy Hx Hy in
           match LiftOption.of'
-                  (ApplyInterpedAll (Interp (@BoundedWordW.interp_op) ropW)
-                                    (LiftOption.to' (Some args)))
+                  (Interp (@BoundedWordW.interp_op) ropW
+                          (LiftOption.to' (Some args)))
           with
           | Some _ => True
           | None => False
@@ -33,18 +32,19 @@ Lemma ExprBinOp_correct_and_bounded
           let args := binop_args_to_bounded (fst xy, snd xy) Hx Hy in
           let x' := SmartVarfMap (fun _ : base_type => BoundedWordW.BoundedWordToBounds) args in
           match LiftOption.of'
-                  (ApplyInterpedAll (Interp (@ZBounds.interp_op) ropW) (LiftOption.to' (Some x')))
+                  (Interp (@ZBounds.interp_op) ropW (LiftOption.to' (Some x')))
           with
           | Some bounds => binop_bounds_good bounds = true
           | None => False
           end)
   : binop_correct_and_bounded ropW op.
 Proof.
-  intros x y Hx Hy.
-  pose x as x'; pose y as y'.
-  hnf in x, y; destruct_head' prod.
-  specialize (H0 (x', y') (conj Hx Hy)).
-  specialize (H1 (x', y') (conj Hx Hy)).
-  let args := constr:(binop_args_to_bounded (x', y') Hx Hy) in
+  intros xy HxHy.
+  pose xy as xy'.
+  compute in xy; destruct_head' prod.
+  specialize (H0 xy' HxHy).
+  specialize (H1 xy' HxHy).
+  destruct HxHy as [Hx Hy].
+  let args := constr:(binop_args_to_bounded xy' Hx Hy) in
   t_correct_and_bounded ropZ_sig Hbounds H0 H1 args.
 Qed.

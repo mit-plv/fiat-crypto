@@ -14,7 +14,7 @@ Local Ltac define_binop f g opW blem :=
 
 Local Opaque Let_In.
 Local Opaque Z.add Z.sub Z.mul Z.shiftl Z.shiftr Z.land Z.lor Z.eqb NToWord64.
-Local Arguments interp_radd_coordinates / _ _ _ _ _ _ _ _ _.
+(*Local Arguments interp_radd_coordinates / _ _ _ _ _ _ _ _ _.
 Definition add_coordinatesW (x0 x1 x2 x3 x4 x5 x6 x7 x8 : fe25519W) : Tuple.tuple fe25519W 4
   := Eval simpl in interp_radd_coordinates x0 x1 x2 x3 x4 x5 x6 x7 x8.
 
@@ -75,3 +75,4 @@ Lemma add_coordinates_correct (x0 x1 x2 x3 x4 x5 x6 x7 x8 : fe25519)
                                              (proj1_fe25519 x7)
                                              (proj1_fe25519 x8).
 Proof. op_correct_t add_coordinates add_coordinatesW_correct_and_bounded. Qed.
+*)

@@ -45,6 +45,7 @@ Declare Reduction asm_interp
   := cbv beta iota delta
          [id
             interp_bexpr interp_uexpr interp_uexpr_FEToWire interp_uexpr_FEToZ interp_uexpr_WireToFE interp_9_4expr
+            Eta.interp_flat_type_eta Eta.interp_flat_type_eta_gen
             radd rsub rmul ropp rprefreeze rge_modulus rpack runpack
             curry_binop_fe5211_32W curry_unop_fe5211_32W curry_unop_wire_digitsW curry_9op_fe5211_32W
             WordW.interp_op WordW.interp_base_type
@@ -56,6 +57,7 @@ Ltac asm_interp
   := cbv beta iota delta
          [id
             interp_bexpr interp_uexpr interp_uexpr_FEToWire interp_uexpr_FEToZ interp_uexpr_WireToFE interp_9_4expr
+            Eta.interp_flat_type_eta Eta.interp_flat_type_eta_gen
             radd rsub rmul ropp rprefreeze rge_modulus rpack runpack
             curry_binop_fe5211_32W curry_unop_fe5211_32W curry_unop_wire_digitsW curry_9op_fe5211_32W
             WordW.interp_op WordW.interp_base_type
@@ -65,15 +67,15 @@ Ltac asm_interp
             Interp interp interp_flat_type interpf interp_flat_type fst snd].
 
 
-Definition interp_radd : SpecificGen.GF5211_32BoundedCommon.fe5211_32W -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W
+Definition interp_radd : SpecificGen.GF5211_32BoundedCommon.fe5211_32W * SpecificGen.GF5211_32BoundedCommon.fe5211_32W -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W
   := Eval asm_interp in interp_bexpr radd.
 (*Print interp_radd.*)
 Definition interp_radd_correct : interp_radd = interp_bexpr radd := eq_refl.
-Definition interp_rsub : SpecificGen.GF5211_32BoundedCommon.fe5211_32W -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W
+Definition interp_rsub : SpecificGen.GF5211_32BoundedCommon.fe5211_32W * SpecificGen.GF5211_32BoundedCommon.fe5211_32W -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W
   := Eval asm_interp in interp_bexpr rsub.
 (*Print interp_rsub.*)
 Definition interp_rsub_correct : interp_rsub = interp_bexpr rsub := eq_refl.
-Definition interp_rmul : SpecificGen.GF5211_32BoundedCommon.fe5211_32W -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W
+Definition interp_rmul : SpecificGen.GF5211_32BoundedCommon.fe5211_32W * SpecificGen.GF5211_32BoundedCommon.fe5211_32W -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W
   := Eval asm_interp in interp_bexpr rmul.
 (*Print interp_rmul.*)
 Definition interp_rmul_correct : interp_rmul = interp_bexpr rmul := eq_refl.

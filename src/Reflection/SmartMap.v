@@ -24,7 +24,6 @@ Section homogenous_type.
       another kind, and simultaneously mapping a function over the
       base values (e.g., [Var] (for turning [var] into [exprf]) or
       [Const] (for turning [interp_base_type] into [exprf])). *)
-
   Fixpoint smart_interp_flat_map {f g}
            (h : forall x, f x -> g (Tbase x))
            (tt : g Unit)
@@ -51,57 +50,22 @@ Section homogenous_type.
                                        (@smart_interp_flat_map2 f1 f2 g h tt pair A (fst v1) (fst v2))
                                        (@smart_interp_flat_map2 f1 f2 g h tt pair B (snd v1) (snd v2))
        end.
-  Fixpoint smart_interp_map_hetero {f g g'}
-           (h : forall x, f x -> g (Tflat (Tbase x)))
-           (tt : g Unit)
-           (pair : forall A B, g (Tflat A) -> g (Tflat B) -> g (Prod A B))
-           (abs : forall A B, (g' A -> g B) -> g (Arrow A B))
-           {t}
-    : interp_type_gen_hetero g' (interp_flat_type f) t -> g t
-    := match t return interp_type_gen_hetero g' (interp_flat_type f) t -> g t with
-       | Tflat _ => @smart_interp_flat_map f (fun x => g (Tflat x)) h tt pair _
-       | Arrow A B => fun v => abs _ _
-                                   (fun x => @smart_interp_map_hetero f g g' h tt pair abs B (v x))
-       end.
-  Fixpoint smart_interp_map_gen {f g}
-           (h : forall x, f x -> g (Tflat (Tbase x)))
-           (h' : forall x, g (Tflat (Tbase x)) -> f x)
-           (flat_map : forall t, interp_flat_type f t -> g t)
-           (abs : forall A B, (g (Tflat (Tbase A)) -> g B) -> g (Arrow A B))
-           {t}
-    : interp_type_gen (interp_flat_type f) t -> g t
-    := match t return interp_type_gen (interp_flat_type f) t -> g t with
-       | Tflat T => flat_map T
-       | Arrow A B => fun v => abs _ _
-                                   (fun x => @smart_interp_map_gen f g h h' flat_map abs B (v (h' _ x)))
-       end.
-  Definition smart_interp_map {f g}
-             (h : forall x, f x -> g (Tflat (Tbase x)))
-             (h' : forall x, g (Tflat (Tbase x)) -> f x)
+  Definition smart_interp_map_hetero {f g g'}
+             (h : forall x, f x -> g (Tbase x))
              (tt : g Unit)
-             (pair : forall A B, g (Tflat A) -> g (Tflat B) -> g (Prod A B))
-             (abs : forall A B, (g (Tflat (Tbase A)) -> g B) -> g (Arrow A B))
+             (pair : forall A B, g A -> g B -> g (Prod A B))
+             (abs : forall A B, (g A -> g B) -> g' (Arrow A B))
              {t}
-    : interp_type_gen (interp_flat_type f) t -> g t
-    := @smart_interp_map_gen f g h h' (@smart_interp_flat_map f (fun x => g (Tflat x)) h tt pair) abs t.
+    : interp_type_gen_hetero g (interp_flat_type f) t -> g' t
+    := match t return interp_type_gen_hetero g (interp_flat_type f) t -> g' t with
+       | Arrow A B => fun v => abs _ _
+                                   (fun x => @smart_interp_flat_map f g h tt pair _ (v x))
+       end.
   Fixpoint SmartValf {T} (val : forall t : base_type_code, T t) t : interp_flat_type T t
     := match t return interp_flat_type T t with
        | Syntax.Tbase _ => val _
        | Unit => tt
        | Prod A B => (@SmartValf T val A, @SmartValf T val B)
-       end.
-  Fixpoint SmartArrow (A : flat_type) (B : type) : type
-    := match A with
-       | Syntax.Tbase A' => Arrow A' B
-       | Unit => B
-       | Prod A0 A1
-         => SmartArrow A0 (SmartArrow A1 B)
-       end.
-  Fixpoint SmartAbs {A B} {struct A} : forall (f : exprf A -> expr B), expr (SmartArrow A B)
-    := match A return (exprf A -> expr B) -> expr (SmartArrow A B) with
-       | Syntax.Tbase x => fun f => Abs (fun x => f (Var x))
-       | Unit => fun f => f TT
-       | Prod x y => fun f => @SmartAbs x _ (fun x' => @SmartAbs y _ (fun y' => f (Pair x' y')))
        end.
 
   (** [SmartVar] is like [Var], except that it inserts
@@ -209,12 +173,13 @@ Section homogenous_type.
        | Prod A B => fun v xy => (@SmartFlatTypeMapUnInterp _ _ _ f fv A _ (fst xy),
                                   @SmartFlatTypeMapUnInterp _ _ _ f fv B _ (snd xy))
        end.
-  Definition SmartVarMap {var var'} (f : forall t, var t -> var' t) (f' : forall t, var' t -> var t) {t}
-    : interp_type_gen (interp_flat_type var) t -> interp_type_gen (interp_flat_type var') t
-    := @smart_interp_map var (interp_type_gen (interp_flat_type var')) f f' tt (fun A B x y => pair x y) (fun A B f x => f x) t.
-  Definition SmartVarMap_hetero {vars vars' var var'} (f : forall t, var t -> var' t) (f' : forall t, vars' t -> vars t) {t}
-    : interp_type_gen_hetero vars (interp_flat_type var) t -> interp_type_gen_hetero vars' (interp_flat_type var') t
-    := @smart_interp_map_hetero var (interp_type_gen_hetero vars' (interp_flat_type var')) vars f tt (fun A B x y => pair x y) (fun A B f x => f (f' _ x)) t.
+  Definition SmartVarMap {var' var''} (f : forall t, var' t -> var'' t) (f' : forall t, var'' t -> var' t) {t}
+    : interp_type_gen (interp_flat_type var') t -> interp_type_gen (interp_flat_type var'') t
+    := match t return interp_type_gen (interp_flat_type var') t -> interp_type_gen (interp_flat_type var'') t with
+       | Arrow src dst => fun F x => SmartVarfMap f (F (SmartVarfMap f' x))
+       end.
+  Lemma SmartVarMap_id {var' t} x v : @SmartVarMap var' var' (fun _ x => x) (fun _ x => x) t x v = x v.
+  Proof. destruct t; simpl; rewrite !SmartVarfMap_id; reflexivity. Qed.
   Definition SmartVarVarf {t} : interp_flat_type var t -> interp_flat_type exprfb t
     := SmartVarfMap (fun t => Var).
 End homogenous_type.
@@ -233,9 +198,7 @@ Global Arguments SmartFlatTypeMap {_ _} _ {_} _.
 Global Arguments SmartFlatTypeUnMap {_} _.
 Global Arguments SmartFlatTypeMapInterp {_ _ _ _} _ {_} _.
 Global Arguments SmartFlatTypeMapUnInterp {_ _ _ _ _} fv {_ _} _.
-Global Arguments SmartVarMap_hetero {_ _ _ _ _} _ _ {_} _.
 Global Arguments SmartVarMap {_ _ _} _ _ {!_} _ / .
-Global Arguments SmartAbs {_ _ _ _ _} _.
 
 Section hetero_type.
   Fixpoint flatten_flat_type {base_type_code} (t : flat_type (flat_type base_type_code)) : flat_type base_type_code

@@ -69,19 +69,10 @@ Section language.
 
     Lemma interp_wf
              {t} {e1 e2 : expr t}
-             {G}
-             (HG : forall t x x',
-                 List.In (existT (fun t : base_type_code => (interp_base_type t * interp_base_type t)%type) t (x, x')%core) G
-                 -> x = x')
-             (Rwf : wf G e1 e2)
-    : interp_type_gen_rel_pointwise (fun _ => eq) (interp e1) (interp e2).
+             (Rwf : wf e1 e2)
+    : forall x, interp e1 x = interp e2 x.
     Proof.
-      induction Rwf; simpl; repeat intro; simpl in *; subst; eauto.
-      match goal with
-      | [ H : _ |- _ ]
-        => apply H; intros; progress destruct_head' or; [ | solve [ eauto ] ]
-      end.
-      inversion_sigma; inversion_prod; repeat subst; simpl; auto.
+      destruct Rwf; simpl; eauto.
     Qed.
   End wf.
 End language.

@@ -159,11 +159,11 @@ Section language.
 
     Local Hint Resolve wff_linearizef.
 
-    Lemma wf_linearize G {t} e1 e2
-      : @wf var1 var2 G t e1 e2
-        -> @wf var1 var2 G t (linearize e1) (linearize e2).
+    Lemma wf_linearize {t} e1 e2
+      : @wf var1 var2 t e1 e2
+        -> @wf var1 var2 t (linearize e1) (linearize e2).
     Proof.
-      induction 1; t_fin idtac.
+      destruct 1; constructor; auto.
     Qed.
   End with_var.
 

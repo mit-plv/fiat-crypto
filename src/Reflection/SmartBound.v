@@ -1,7 +1,7 @@
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.ExprInversion.
 Require Import Crypto.Reflection.TypeUtil.
 Require Import Crypto.Reflection.SmartCast.
-Require Import Crypto.Reflection.Application.
 Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Util.Notations.
 
@@ -35,16 +35,12 @@ Section language.
   Definition bound_flat_type {t} : interp_flat_type interp_base_type_bounds t
                                    -> flat_type
     := @SmartFlatTypeMap2 _ _ interp_base_type_bounds (fun t v => Tbase (bound_base_type t v)) t.
-  Fixpoint bound_type {t} : forall (e_bounds : interp_type interp_base_type_bounds t)
-                                   (input_bounds : interp_all_binders_for' t interp_base_type_bounds),
-      type
-    := match t return interp_type _ t -> interp_all_binders_for' t _ -> type with
-       | Tflat T => fun e_bounds _ => @bound_flat_type T e_bounds
-       | Arrow A B
-         => fun e_bounds input_bounds
-            => Arrow (@bound_base_type A (fst input_bounds))
-                     (@bound_type B (e_bounds (fst input_bounds)) (snd input_bounds))
-       end.
+  Definition bound_type {t}
+             (e_bounds : interp_type interp_base_type_bounds t)
+             (input_bounds : interp_flat_type interp_base_type_bounds (domain t))
+    : type
+    := Arrow (@bound_flat_type (domain t) input_bounds)
+             (@bound_flat_type (codomain t) (e_bounds input_bounds)).
   Definition bound_op
              ovar src1 dst1 src2 dst2 (opc1 : op src1 dst1) (opc2 : op src2 dst2)
     : exprf (var:=ovar) src1
@@ -117,46 +113,19 @@ Section language.
     Definition smart_boundf {var t1} (e1 : exprf (var:=var) t1) (bounds : interp_flat_type interp_base_type_bounds t1)
       : exprf (var:=var) (bound_flat_type bounds)
       := LetIn e1 (fun e1' => SmartPairf (var:=var) (interpf_smart_bound_exprf e1' bounds)).
-    Fixpoint UnSmartArrow {P t}
-      : forall (e_bounds : interp_type interp_base_type_bounds t)
-               (input_bounds : interp_all_binders_for' t interp_base_type_bounds)
-               (e : P (SmartArrow (bound_flat_type input_bounds)
-                                  (bound_flat_type (ApplyInterpedAll' e_bounds input_bounds)))),
-        P (bound_type e_bounds input_bounds)
-      := match t
-               return (forall (e_bounds : interp_type interp_base_type_bounds t)
-                              (input_bounds : interp_all_binders_for' t interp_base_type_bounds)
-                              (e : P (SmartArrow (bound_flat_type input_bounds)
-                                                 (bound_flat_type (ApplyInterpedAll' e_bounds input_bounds)))),
-                          P (bound_type e_bounds input_bounds))
-         with
-         | Tflat T => fun _ _ x => x
-         | Arrow A B => fun e_bounds input_bounds
-                        => @UnSmartArrow
-                             (fun t => P (Arrow (bound_base_type A (fst input_bounds)) t))
-                             B
-                             (e_bounds (fst input_bounds))
-                             (snd input_bounds)
-         end.
     Definition smart_bound {var t1} (e1 : expr (var:=var) t1)
                (e_bounds : interp_type interp_base_type_bounds t1)
-               (input_bounds : interp_all_binders_for' t1 interp_base_type_bounds)
+               (input_bounds : interp_flat_type interp_base_type_bounds (domain t1))
       : expr (var:=var) (bound_type e_bounds input_bounds)
-      := UnSmartArrow
-           e_bounds
-           input_bounds
-           (SmartAbs
-              (fun args
-               => LetIn
-                    args
-                    (fun args
-                     => LetIn
-                          (SmartPairf (interpf_smart_unbound_exprf input_bounds (SmartVarfMap (fun _ => Var) args)))
-                          (fun v => smart_boundf
-                                      (ApplyAll e1 (interp_all_binders_for_of' v))
-                                      (ApplyInterpedAll' e_bounds input_bounds))))).
+      := Abs
+           (fun args
+            => LetIn
+                 (SmartPairf (interpf_smart_unbound_exprf input_bounds (SmartVarfMap (fun _ => Var) args)))
+                 (fun v => smart_boundf
+                             (invert_Abs e1 v)
+                             (e_bounds input_bounds))).
     Definition SmartBound {t1} (e : Expr t1)
-               (input_bounds : interp_all_binders_for' t1 interp_base_type_bounds)
+               (input_bounds : interp_flat_type interp_base_type_bounds (domain t1))
       : Expr (bound_type _ input_bounds)
       := fun var => smart_bound (e var) (interp (@interp_op_bounds) (e _)) input_bounds.
   End smart_bound.

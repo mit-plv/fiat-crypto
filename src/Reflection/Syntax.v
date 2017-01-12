@@ -16,10 +16,9 @@ Section language.
   Inductive flat_type := Tbase (T : base_type_code) | Unit | Prod (A B : flat_type).
   Bind Scope ctype_scope with flat_type.
 
-  Inductive type := Tflat (T : flat_type) | Arrow (A : base_type_code) (B : type).
+  Inductive type := Arrow (A : flat_type) (B : flat_type).
   Bind Scope ctype_scope with type.
 
-  Global Coercion Tflat : flat_type >-> type.
   Infix "*" := Prod : ctype_scope.
   Notation "A -> B" := (Arrow A B) : ctype_scope.
   Local Coercion Tbase : base_type_code >-> flat_type.
@@ -38,20 +37,16 @@ Section language.
       end.
   End tuple.
 
+  Definition domain (t : type) : flat_type
+    := match t with Arrow src dst => src end.
+  Definition codomain (t : type) : flat_type
+    := match t with Arrow src dst => dst end.
+
   Section interp.
-    Section type.
-      Section hetero.
-        Context (interp_src_type : base_type_code -> Type).
-        Context (interp_flat_type : flat_type -> Type).
-        Fixpoint interp_type_gen_hetero (t : type) :=
-          match t with
-          | Tflat t => interp_flat_type t
-          | Arrow x y => (interp_src_type x -> interp_type_gen_hetero y)%type
-          end.
-      End hetero.
-      Definition interp_type_gen (interp_flat_type : flat_type -> Type)
-        := interp_type_gen_hetero interp_flat_type interp_flat_type.
-    End type.
+    Definition interp_type_gen_hetero (interp_src interp_dst : flat_type -> Type) (t : type) :=
+      (interp_src match t with Arrow x y => x end -> interp_dst match t with Arrow x y => y end)%type.
+    Definition interp_type_gen (interp_flat_type : flat_type -> Type)
+      := interp_type_gen_hetero interp_flat_type interp_flat_type.
     Section flat_type.
       Context (interp_base_type : base_type_code -> Type).
       Fixpoint interp_flat_type (t : flat_type) :=
@@ -82,10 +77,8 @@ Section language.
       | Pair {tx} (ex : exprf tx) {ty} (ey : exprf ty) : exprf (Prod tx ty).
       Bind Scope expr_scope with exprf.
       Inductive expr : type -> Type :=
-      | Return {t} (ex : exprf t) : expr t
-      | Abs {src dst} (f : var src -> expr dst) : expr (Arrow src dst).
+      | Abs {src dst} (f : interp_flat_type_gen var src -> exprf dst) : expr (Arrow src dst).
       Bind Scope expr_scope with expr.
-      Global Coercion Return : exprf >-> expr.
     End expr.
 
     Definition Expr (t : type) := forall var, @expr var t.
@@ -107,11 +100,16 @@ Section language.
       Fixpoint interpf {t} e
         := @interpf_step (@interpf) t e.
 
-      Fixpoint interp {t} (e : @expr interp_type t) : interp_type t
-        := match e in expr t return interp_type t with
-           | Return _ x => interpf x
-           | Abs _ _ f => fun x => @interp _ (f x)
-           end.
+      Definition interp {t} (e : @expr interp_base_type t) : interp_type t
+        := fun x
+           => @interpf
+                _
+                (match e in @expr _ t
+                       return interp_flat_type (domain t)
+                              -> exprf (codomain t)
+                 with
+                 | Abs _ _ f => f
+                 end x).
 
       Definition Interp {t} (E : Expr t) : interp_type t := interp (E _).
     End interp.
@@ -123,14 +121,14 @@ Global Arguments Unit {_}%type_scope.
 Global Arguments Prod {_}%type_scope (_ _)%ctype_scope.
 Global Arguments Arrow {_}%type_scope (_ _)%ctype_scope.
 Global Arguments Tbase {_}%type_scope _%ctype_scope.
-Global Arguments Tflat {_}%type_scope _%ctype_scope.
+Global Arguments domain {_}%type_scope _%ctype_scope.
+Global Arguments codomain {_}%type_scope _%ctype_scope.
 
 Global Arguments Var {_ _ _ _} _.
 Global Arguments TT {_ _ _}.
 Global Arguments Op {_ _ _ _ _} _ _.
 Global Arguments LetIn {_ _ _ _} _ {_} _.
 Global Arguments Pair {_ _ _ _} _ {_} _.
-Global Arguments Return {_ _ _ _} _.
 Global Arguments Abs {_ _ _ _ _} _.
 Global Arguments interp_type_gen_hetero {_} _ _ _.
 Global Arguments interp_type_gen {_} _ _.
@@ -139,6 +137,7 @@ Global Arguments interp_type {_} _ _.
 Global Arguments Interp {_ _ _} interp_op {t} _.
 Global Arguments interp {_ _ _} interp_op {t} _.
 Global Arguments interpf {_ _ _} interp_op {t} _.
+Global Arguments interp _ _ _ _ _ !_ / .
 
 Module Export Notations.
   Notation "()" := (@Unit _) : ctype_scope.

@@ -117,7 +117,7 @@ Section language.
              | _ => progress inversion_sigma
              | _ => progress inversion_prod
              | _ => progress destruct_head' and
-             | _ => inversion_wff_step; progress subst
+             | _ => inversion_wf_step; progress subst
              | _ => progress specialize_by_assumption
              | _ => progress break_match
              | _ => progress invert_inline_directive
@@ -168,7 +168,7 @@ Section language.
                      | progress destruct_head' False
                      | progress simpl in *
                      | progress invert_expr
-                     | progress inversion_wff
+                     | progress inversion_wf
                      | progress break_innermost_match_step
                      | congruence
                      | solve [ auto ] ].
@@ -183,26 +183,20 @@ Section language.
       : @wff var1 var2 G t (inline_constf is_const e1) (inline_constf is_const e2).
     Proof. eapply wff_inline_const_genf; eauto. Qed.
 
-    Lemma wf_inline_const_gen postprocess1 postprocess2 {t} e1 e2 G G'
-          (H : forall t x x', List.In (existT (fun t : base_type_code => (exprf (Tbase t) * exprf (Tbase t))%type) t (x, x')) G'
-                              -> wff G x x')
-          (Hwf : wf G' e1 e2)
+    Lemma wf_inline_const_gen postprocess1 postprocess2 {t} e1 e2
+          (Hwf : wf e1 e2)
           (wf_postprocess : forall G t e1 e2,
               wff G e1 e2
               -> wff_inline_directive G (postprocess1 t e1) (postprocess2 t e2))
-      : @wf var1 var2 G t (inline_const_gen postprocess1 e1) (inline_const_gen postprocess2 e2).
+      : @wf var1 var2 t (inline_const_gen postprocess1 e1) (inline_const_gen postprocess2 e2).
     Proof.
-      revert dependent G; induction Hwf; simpl; constructor; intros.
-      { eapply wff_inline_const_genf; eauto using wff_SmartVarVarf_nil. }
-      { match goal with H : _ |- _ => apply H end.
-        intros; destruct_head_hnf' or; t_fin. }
+      destruct Hwf; constructor; intros.
+      eapply wff_inline_const_genf; eauto using wff_SmartVarVarf_nil.
     Qed.
 
-    Lemma wf_inline_const is_const {t} e1 e2 G G'
-          (H : forall t x x', List.In (existT (fun t : base_type_code => (exprf (Tbase t) * exprf (Tbase t))%type) t (x, x')) G'
-                              -> wff G x x')
-          (Hwf : wf G' e1 e2)
-      : @wf var1 var2 G t (inline_const is_const e1) (inline_const is_const e2).
+    Lemma wf_inline_const is_const {t} e1 e2
+          (Hwf : wf e1 e2)
+      : @wf var1 var2 t (inline_const is_const e1) (inline_const is_const e2).
     Proof. eapply wf_inline_const_gen; eauto. Qed.
   End with_var.
 
@@ -214,7 +208,7 @@ Section language.
     : Wf (InlineConstGen postprocess e).
   Proof.
     intros var1 var2.
-    apply (@wf_inline_const_gen var1 var2 (postprocess _) (postprocess _) t (e _) (e _) nil nil); simpl; auto; tauto.
+    apply (@wf_inline_const_gen var1 var2 (postprocess _) (postprocess _) t (e _) (e _)); simpl; auto.
   Qed.
 
   Lemma Wf_InlineConst is_const {t} (e : Expr t)
@@ -222,7 +216,7 @@ Section language.
     : Wf (InlineConst is_const e).
   Proof.
     intros var1 var2.
-    apply (@wf_inline_const var1 var2 is_const t (e _) (e _) nil nil); simpl; try tauto.
+    apply (@wf_inline_const var1 var2 is_const t (e _) (e _)); simpl.
     apply Hwf.
   Qed.
 End language.

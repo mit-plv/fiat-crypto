@@ -5,7 +5,7 @@ Require Import Crypto.SpecificGen.GF5211_32ExtendedAddCoordinates.
 Require Import Crypto.SpecificGen.GF5211_32BoundedAddCoordinates.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Tactics.
-
+(*
 Lemma fieldwise_eq_extended_add_coordinates_full' twice_d P10 P11 P12 P13 P20 P21 P22 P23
   : Tuple.fieldwise
       (n:=4) GF5211_32BoundedCommon.eq
@@ -65,3 +65,4 @@ Proof.
   destruct_head' prod.
   rewrite <- fieldwise_eq_extended_add_coordinates_full'; reflexivity.
 Qed.
+*)

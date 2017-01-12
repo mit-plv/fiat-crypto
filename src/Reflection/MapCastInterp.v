@@ -2,7 +2,6 @@ Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Wf.
 Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Reflection.ExprInversion.
-Require Import Crypto.Reflection.Application.
 Require Import Crypto.Reflection.MapCast.
 Require Import Crypto.Reflection.Relations.
 Require Import Crypto.Reflection.WfProofs.
@@ -133,7 +132,7 @@ Section language.
 
   Local Ltac break_t
     := first [ progress subst
-             | progress inversion_wff
+             | progress inversion_wf
              | progress invert_expr_subst
              | progress inversion_sigma
              | progress inversion_prod
@@ -243,61 +242,50 @@ Section language.
   Proof. eapply interpf_mapf_interp_cast_and_rel; eassumption. Qed.
 
   Lemma interp_map_interp_cast_and_rel
-        G {t1} e1 ebounds
+        {t1} e1 ebounds
         args2
-        (Hgood : bounds_are_recursively_good bound_is_good (ApplyAll ebounds (interp_all_binders_for_of' args2)))
-        (HG : G_invariant_holds G)
-        (Hwf : wf G e1 ebounds)
+        (Hgood : bounds_are_recursively_good bound_is_good (invert_Abs ebounds args2))
+        (Hwf : wf e1 ebounds)
     : forall x,
       R x args2
-      -> ApplyInterpedAll'
-           (interp interp_op1 (@map_interp_cast interp_base_type1 t1 e1 t1 ebounds args2)) x
-         = ApplyInterpedAll' (interp interp_op1 e1) x
-         /\ R (ApplyInterpedAll'
-                 (interp interp_op1 (@map_interp_cast interp_base_type1 t1 e1 t1 ebounds args2)) x)
-              (ApplyInterpedAll' (interp interp_op2 ebounds) args2).
-  Proof.
-    induction Hwf; intros.
-    { eapply interpf_mapf_interp_cast_and_rel; eauto. }
-    { simpl; match goal with H : _ |- _ => apply H end; eauto.
-      admit.
-      admit.
-      admit. }
-  Admitted.
+      -> interp interp_op1 (@map_interp_cast interp_base_type1 t1 e1 t1 ebounds args2) x
+         = interp interp_op1 e1 x
+         /\ R (interp interp_op1 (@map_interp_cast interp_base_type1 t1 e1 t1 ebounds args2) x)
+              (interp interp_op2 ebounds args2).
+  Proof. destruct Hwf; intros; eapply interpf_mapf_interp_cast_and_rel; eauto. Qed.
 
   Lemma interp_map_interp_cast
-        G {t1} e1 ebounds
+        {t1} e1 ebounds
         args2
-        (Hgood : bounds_are_recursively_good bound_is_good (ApplyAll ebounds (interp_all_binders_for_of' args2)))
-        (HG : G_invariant_holds G)
-        (Hwf : wf G e1 ebounds)
+        (Hgood : bounds_are_recursively_good bound_is_good (invert_Abs ebounds args2))
+        (Hwf : wf e1 ebounds)
     : forall x,
       R x args2
-      -> ApplyInterpedAll' (interp interp_op1 (@map_interp_cast interp_base_type1 t1 e1 t1 ebounds args2)) x
-         = ApplyInterpedAll' (interp interp_op1 e1) x.
+      -> interp interp_op1 (@map_interp_cast interp_base_type1 t1 e1 t1 ebounds args2) x
+         = interp interp_op1 e1 x.
   Proof. intros; eapply interp_map_interp_cast_and_rel; eassumption. Qed.
 
   Lemma InterpMapInterpCastAndRel
         {t} e
         args
         (Hwf : Wf e)
-        (Hgood : bounds_are_recursively_good bound_is_good (ApplyAll (e interp_base_type2) (interp_all_binders_for_of' args)))
+        (Hgood : bounds_are_recursively_good bound_is_good (invert_Abs (e interp_base_type2) args))
     : forall x,
       R x args
-      -> ApplyInterpedAll' (Interp interp_op1 (@MapInterpCast t e args)) x
-         = ApplyInterpedAll' (Interp interp_op1 e) x
-         /\ R (ApplyInterpedAll' (Interp interp_op1 (@MapInterpCast t e args)) x)
-              (ApplyInterpedAll' (Interp interp_op2 e) args).
-  Proof. eapply interp_map_interp_cast_and_rel; eauto; simpl; tauto. Qed.
+      -> Interp interp_op1 (@MapInterpCast t e args) x
+         = Interp interp_op1 e x
+         /\ R (Interp interp_op1 (@MapInterpCast t e args) x)
+              (Interp interp_op2 e args).
+  Proof. apply interp_map_interp_cast_and_rel; auto. Qed.
 
   Lemma InterpMapInterpCast
         {t} e
         args
         (Hwf : Wf e)
-        (Hgood : bounds_are_recursively_good bound_is_good (ApplyAll (e interp_base_type2) (interp_all_binders_for_of' args)))
+        (Hgood : bounds_are_recursively_good bound_is_good (invert_Abs (e interp_base_type2) args))
     : forall x,
       R x args
-      -> ApplyInterpedAll' (Interp interp_op1 (@MapInterpCast t e args)) x
-         = ApplyInterpedAll' (Interp interp_op1 e) x.
-  Proof. eapply interp_map_interp_cast; eauto; simpl; tauto. Qed.
+      -> Interp interp_op1 (@MapInterpCast t e args) x
+         = Interp interp_op1 e x.
+  Proof. apply interp_map_interp_cast; auto. Qed.
 End language.

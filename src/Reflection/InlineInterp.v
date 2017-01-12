@@ -96,39 +96,20 @@ Section language.
 
   Local Hint Resolve interpf_inline_constf.
 
-  Lemma interp_inline_const_gen postprocess G {t} e1 e2
-        (wf : @wf _ _ G t e1 e2)
-        (H : forall t x x',
-            List.In
-              (existT (fun t : base_type_code => (exprf (Tbase t) * interp_base_type t)%type) t
-                      (x, x')) G
-            -> interpf interp_op x = x')
+  Lemma interp_inline_const_gen postprocess {t} e1 e2
+        (wf : @wf _ _ t e1 e2)
         (Hpostprocess : forall t e, interpf interp_op (exprf_of_inline_directive (postprocess t e)) = interpf interp_op e)
-    : interp_type_gen_rel_pointwise (fun _ => @eq _)
-                                    (interp interp_op (inline_const_gen postprocess e1))
-                                    (interp interp_op e2).
+    : forall x, interp interp_op (inline_const_gen postprocess e1) x = interp interp_op e2 x.
   Proof.
-    induction wf.
-    { eapply (interpf_inline_const_genf postprocess); eauto. }
-    { simpl in *; intro.
-      match goal with
-      | [ H : _ |- _ ]
-        => apply H; intuition (inversion_sigma; inversion_prod; subst; eauto)
-      end. }
+    destruct wf.
+    simpl in *; intro; eapply (interpf_inline_const_genf postprocess); eauto.
   Qed.
 
   Local Hint Resolve interp_inline_const_gen.
 
-  Lemma interp_inline_const is_const G {t} e1 e2
-        (wf : @wf _ _ G t e1 e2)
-        (H : forall t x x',
-            List.In
-              (existT (fun t : base_type_code => (exprf (Tbase t) * interp_base_type t)%type) t
-                      (x, x')) G
-            -> interpf interp_op x = x')
-    : interp_type_gen_rel_pointwise (fun _ => @eq _)
-                                    (interp interp_op (inline_const is_const e1))
-                                    (interp interp_op e2).
+  Lemma interp_inline_const is_const {t} e1 e2
+        (wf : @wf _ _ t e1 e2)
+    : forall x, interp interp_op (inline_const is_const e1) x = interp interp_op e2 x.
   Proof.
     eapply interp_inline_const_gen; eauto.
   Qed.
@@ -136,19 +117,15 @@ Section language.
   Lemma InterpInlineConstGen postprocess {t} (e : Expr t)
         (wf : Wf e)
         (Hpostprocess : forall t e, interpf interp_op (exprf_of_inline_directive (postprocess _ t e)) = interpf interp_op e)
-    : interp_type_gen_rel_pointwise (fun _ => @eq _)
-                                    (Interp interp_op (InlineConstGen postprocess e))
-                                    (Interp interp_op e).
+    : forall x, Interp interp_op (InlineConstGen postprocess e) x = Interp interp_op e x.
   Proof.
     unfold Interp, InlineConst.
-    eapply (interp_inline_const_gen (postprocess _)); simpl in *; intuition (simpl in *; intuition eauto).
+    eapply (interp_inline_const_gen (postprocess _)); simpl; intuition.
   Qed.
 
   Lemma InterpInlineConst is_const {t} (e : Expr t)
         (wf : Wf e)
-    : interp_type_gen_rel_pointwise (fun _ => @eq _)
-                                    (Interp interp_op (InlineConst is_const e))
-                                    (Interp interp_op e).
+    : forall x, Interp interp_op (InlineConst is_const e) x = Interp interp_op e x.
   Proof.
     eapply InterpInlineConstGen; eauto.
   Qed.

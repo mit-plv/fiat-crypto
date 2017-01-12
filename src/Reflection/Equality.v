@@ -33,7 +33,6 @@ Section language.
            | [ |- Prod _ _ = Prod _ _ ] => apply f_equal2
            | [ |- Arrow _ _ = Arrow _ _ ] => apply f_equal2
            | [ |- Tbase _ = Tbase _ ] => apply f_equal
-           | [ |- Tflat _ = Tflat _ ] => apply f_equal
            | [ H : forall Y, _ = true -> _ = Y |- _ = ?Y' ]
              => is_var Y'; apply H; solve [ t ]
            | [ H : forall X Y, X = Y -> _ = true |- _ = true ]
@@ -59,13 +58,9 @@ Section language.
        | right pf => right (fun pf' => let pf'' := eq_sym (flat_type_dec_lb _ _ pf') in
                                        Bool.diff_true_false (eq_trans pf'' pf))
        end.
-  Fixpoint type_beq (X Y : type) {struct X} : bool
+  Definition type_beq (X Y : type) : bool
     := match X, Y with
-       | Tflat T, Tflat T0 => flat_type_beq T T0
-       | Arrow A B, Arrow A0 B0 => (eq_base_type_code A A0 && type_beq B B0)%bool
-       | Tflat _, _
-       | Arrow _ _, _
-         => false
+       | Arrow A B, Arrow A0 B0 => (flat_type_beq A A0 && flat_type_beq B B0)%bool
        end.
   Lemma type_dec_bl X : forall Y, type_beq X Y = true -> X = Y.
   Proof. clear base_type_code_lb; pose proof flat_type_dec_bl; induction X, Y; t. Defined.

@@ -68,15 +68,14 @@ Section language.
     Fixpoint compute_livenessf ctx {t} e prefix
       := @compute_livenessf_step (@compute_livenessf) ctx t e prefix.
 
-    Fixpoint compute_liveness (ctx : Context)
+    Definition compute_liveness (ctx : Context)
              {t} (e : expr Name t) (prefix : list liveness)
       : list liveness
       := match e with
-         | Return _ x => compute_livenessf ctx x prefix
          | Abs src _ n f
-           => let prefix := prefix ++ repeat live (count_pairs (Tbase src)) in
-              let ctx := extend (t:=Tbase src) ctx n (SmartValf _ (fun _ => prefix) (Tbase src)) in
-              @compute_liveness ctx _ f prefix
+           => let prefix := prefix ++ repeat live (count_pairs src) in
+              let ctx := extend (t:=src) ctx n (SmartValf _ (fun _ => prefix) src) in
+              compute_livenessf ctx f prefix
          end.
 
     Section insert_dead.
