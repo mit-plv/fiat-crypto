@@ -54,17 +54,16 @@ Section language.
                                             (@filter_live_namesf prefix remaining _ ey)
        end.
 
-  Fixpoint filter_live_names (prefix remaining : list Name) {t} (e : expr t) : list Name
+  Definition filter_live_names (prefix remaining : list Name) {t} (e : expr t) : list Name
     := match e with
-       | Return _ x => filter_live_namesf prefix remaining x
        | Abs src _ ef
-         => let '(ns, remaining') := eta (split_names (Tbase src) remaining) in
+         => let '(ns, remaining') := eta (split_names src remaining) in
             match ns with
             | Some n =>
               let prefix' := (prefix ++ names_to_list n)%list in
-              @filter_live_names
-                prefix' remaining' _
-                (ef (SmartValf _ (fun _ => prefix') (Tbase src)))
+              filter_live_namesf
+                prefix' remaining'
+                (ef (SmartValf _ (fun _ => prefix') src))
             | None => nil
             end
        end.

@@ -3,7 +3,6 @@ Require Import Crypto.SpecificGen.GF41417_32BoundedCommon.
 Require Import Crypto.Reflection.Z.Interpretations64.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.SmartMap.
-Require Import Crypto.Reflection.Application.
 Require Import Crypto.Util.Tactics.
 
 Local Opaque Interp.
@@ -42,8 +41,8 @@ Lemma Expr9_4Op_correct_and_bounded
           let (Hx7, Hx8) := (eta_and Hx78) in
           let args := op9_args_to_bounded x012345678 Hx0 Hx1 Hx2 Hx3 Hx4 Hx5 Hx6 Hx7 Hx8 in
           match LiftOption.of'
-                  (ApplyInterpedAll (Interp (@BoundedWordW.interp_op) ropW)
-                                    (LiftOption.to' (Some args)))
+                  (Interp (@BoundedWordW.interp_op) ropW
+                          (LiftOption.to' (Some args)))
           with
           | Some _ => True
           | None => False
@@ -80,29 +79,24 @@ Lemma Expr9_4Op_correct_and_bounded
           let args := op9_args_to_bounded x012345678 Hx0 Hx1 Hx2 Hx3 Hx4 Hx5 Hx6 Hx7 Hx8 in
           let x' := SmartVarfMap (fun _ : base_type => BoundedWordW.BoundedWordToBounds) args in
           match LiftOption.of'
-                  (ApplyInterpedAll (Interp (@ZBounds.interp_op) ropW) (LiftOption.to' (Some x')))
+                  (Interp (@ZBounds.interp_op) ropW (LiftOption.to' (Some x')))
           with
           | Some bounds => op9_4_bounds_good bounds = true
           | None => False
           end)
   : op9_4_correct_and_bounded ropW op.
 Proof.
-  intros x0 x1 x2 x3 x4 x5 x6 x7 x8.
-  intros Hx0 Hx1 Hx2 Hx3 Hx4 Hx5 Hx6 Hx7 Hx8.
-  pose x0 as x0'.
-  pose x1 as x1'.
-  pose x2 as x2'.
-  pose x3 as x3'.
-  pose x4 as x4'.
-  pose x5 as x5'.
-  pose x6 as x6'.
-  pose x7 as x7'.
-  pose x8 as x8'.
-  hnf in x0, x1, x2, x3, x4, x5, x6, x7, x8; destruct_head' prod.
-  specialize (H0 (x0', x1', x2', x3', x4', x5', x6', x7', x8')
+  intros xs Hxs.
+  pose xs as xs'.
+  compute in xs.
+  destruct_head' prod.
+  cbv [Tuple.map Tuple.on_tuple Tuple.to_list Tuple.to_list' fst snd List.map Tuple.from_list Tuple.from_list' HList.hlistP HList.hlistP'] in Hxs.
+  pose Hxs as Hxs'.
+  destruct Hxs as [ [ [ [ [ [ [ [ Hx0 Hx1 ] Hx2 ] Hx3 ] Hx4 ] Hx5 ] Hx6 ] Hx7 ] Hx8 ].
+  specialize (H0 xs'
                  (conj Hx0 (conj Hx1 (conj Hx2 (conj Hx3 (conj Hx4 (conj Hx5 (conj Hx6 (conj Hx7 Hx8))))))))).
-  specialize (H1 (x0', x1', x2', x3', x4', x5', x6', x7', x8')
+  specialize (H1 xs'
                  (conj Hx0 (conj Hx1 (conj Hx2 (conj Hx3 (conj Hx4 (conj Hx5 (conj Hx6 (conj Hx7 Hx8))))))))).
-  Time let args := constr:(op9_args_to_bounded (x0', x1', x2', x3', x4', x5', x6', x7', x8') Hx0 Hx1 Hx2 Hx3 Hx4 Hx5 Hx6 Hx7 Hx8) in
+  Time let args := constr:(op9_args_to_bounded xs' Hx0 Hx1 Hx2 Hx3 Hx4 Hx5 Hx6 Hx7 Hx8) in
        admit; t_correct_and_bounded ropZ_sig Hbounds H0 H1 args. (* On 8.6beta1, with ~2 GB RAM, Finished transaction in 46.56 secs (46.372u,0.14s) (successful) *)
 Admitted. (*Time Qed. (* On 8.6beta1, with ~4.3 GB RAM, Finished transaction in 67.652 secs (66.932u,0.64s) (successful) *)*)

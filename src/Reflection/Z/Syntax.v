@@ -16,17 +16,18 @@ Definition interp_base_type (v : base_type) : Type :=
   end.
 
 Inductive op : flat_type base_type -> flat_type base_type -> Type :=
-| OpConst (z : Z) : op Unit tZ
-| Add : op (tZ * tZ) tZ
-| Sub : op (tZ * tZ) tZ
-| Mul : op (tZ * tZ) tZ
-| Shl : op (tZ * tZ) tZ
-| Shr : op (tZ * tZ) tZ
-| Land : op (tZ * tZ) tZ
-| Lor : op (tZ * tZ) tZ
-| Neg (int_width : Z) : op tZ tZ
-| Cmovne : op (tZ * tZ * tZ * tZ) tZ
-| Cmovle : op (tZ * tZ * tZ * tZ) tZ.
+| OpConst {T} (z : interp_base_type T) : op Unit (Tbase T)
+| Add T : op (Tbase T * Tbase T) (Tbase T)
+| Sub T : op (Tbase T * Tbase T) (Tbase T)
+| Mul T : op (Tbase T * Tbase T) (Tbase T)
+| Shl T : op (Tbase T * Tbase T) (Tbase T)
+| Shr T : op (Tbase T * Tbase T) (Tbase T)
+| Land T : op (Tbase T * Tbase T) (Tbase T)
+| Lor T : op (Tbase T * Tbase T) (Tbase T)
+| Neg T (int_width : Z) : op (Tbase T) (Tbase T)
+| Cmovne T : op (Tbase T * Tbase T * Tbase T * Tbase T) (Tbase T)
+| Cmovle T : op (Tbase T * Tbase T * Tbase T * Tbase T) (Tbase T)
+| Cast T1 T2 : op (Tbase T1) (Tbase T2).
 
 Definition interpToZ {t} : interp_base_type t -> Z
   := match t with
@@ -45,15 +46,16 @@ Local Notation eta4 x := (eta3 (fst x), snd x).
 
 Definition interp_op src dst (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
   := match f in op src dst return interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst with
-     | OpConst v => fun _ => v
-     | Add => fun xy => fst xy + snd xy
-     | Sub => fun xy => fst xy - snd xy
-     | Mul => fun xy => fst xy * snd xy
-     | Shl => fun xy => Z.shiftl (fst xy) (snd xy)
-     | Shr => fun xy => Z.shiftr (fst xy) (snd xy)
-     | Land => fun xy => Z.land (fst xy) (snd xy)
-     | Lor => fun xy => Z.lor (fst xy) (snd xy)
-     | Neg int_width => fun x => ModularBaseSystemListZOperations.neg int_width x
-     | Cmovne => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovne x y z w
-     | Cmovle => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovl x y z w
+     | OpConst _ v => fun _ => v
+     | Add TZ => fun xy => fst xy + snd xy
+     | Sub TZ => fun xy => fst xy - snd xy
+     | Mul TZ => fun xy => fst xy * snd xy
+     | Shl TZ => fun xy => Z.shiftl (fst xy) (snd xy)
+     | Shr TZ => fun xy => Z.shiftr (fst xy) (snd xy)
+     | Land TZ => fun xy => Z.land (fst xy) (snd xy)
+     | Lor TZ => fun xy => Z.lor (fst xy) (snd xy)
+     | Neg TZ int_width => fun x => ModularBaseSystemListZOperations.neg int_width x
+     | Cmovne TZ => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovne x y z w
+     | Cmovle TZ => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovl x y z w
+     | Cast _ _ => cast_const
      end%Z.

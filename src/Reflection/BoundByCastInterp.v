@@ -89,7 +89,6 @@ Section language.
   Local Notation Boundify := (@Boundify _ _ _ interp_op_bounds bound_base_type _ base_type_bl_transparent base_type_leb Cast is_cast is_const genericize_op failf).
   Local Notation interpf_smart_unbound := (@interpf_smart_unbound _ interp_base_type_bounds bound_base_type interp_base_type cast_val).
 
-  (*
   Lemma InterpBoundifyAndRel {t}
         (e : Expr t)
         (Hwf : Wf e)
@@ -115,5 +114,4 @@ Section language.
       erewrite InterpSmartBound, InterpMapInterpCast by eauto with wf.
       reflexivity. }
   Qed.
-*)
 End language.

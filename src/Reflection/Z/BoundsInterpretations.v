@@ -123,17 +123,18 @@ Module Import Bounds.
 
   Definition interp_op {src dst} (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
     := match f in op src dst return interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst with
-       | OpConst v => fun _ => SmartBuildBounds None v v
-       | Add => fun xy => add (bit_width_of_base_type TZ) (fst xy) (snd xy)
-       | Sub => fun xy => sub (bit_width_of_base_type TZ) (fst xy) (snd xy)
-       | Mul => fun xy => mul (bit_width_of_base_type TZ) (fst xy) (snd xy)
-       | Shl => fun xy => shl (bit_width_of_base_type TZ) (fst xy) (snd xy)
-       | Shr => fun xy => shr (bit_width_of_base_type TZ) (fst xy) (snd xy)
-       | Land => fun xy => land (bit_width_of_base_type TZ) (fst xy) (snd xy)
-       | Lor => fun xy => lor (bit_width_of_base_type TZ) (fst xy) (snd xy)
-       | Neg int_width => fun x => neg (bit_width_of_base_type TZ) int_width x
-       | Cmovne => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovne (bit_width_of_base_type TZ) x y z w
-       | Cmovle => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovle (bit_width_of_base_type TZ) x y z w
+       | OpConst TZ v => fun _ => SmartBuildBounds None v v
+       | Add T => fun xy => add (bit_width_of_base_type T) (fst xy) (snd xy)
+       | Sub T => fun xy => sub (bit_width_of_base_type T) (fst xy) (snd xy)
+       | Mul T => fun xy => mul (bit_width_of_base_type T) (fst xy) (snd xy)
+       | Shl T => fun xy => shl (bit_width_of_base_type T) (fst xy) (snd xy)
+       | Shr T => fun xy => shr (bit_width_of_base_type T) (fst xy) (snd xy)
+       | Land T => fun xy => land (bit_width_of_base_type T) (fst xy) (snd xy)
+       | Lor T => fun xy => lor (bit_width_of_base_type T) (fst xy) (snd xy)
+       | Neg T int_width => fun x => neg (bit_width_of_base_type T) int_width x
+       | Cmovne T => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovne (bit_width_of_base_type T) x y z w
+       | Cmovle T => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovle (bit_width_of_base_type T) x y z w
+       | Cast _ T => fun x => SmartRebuildBounds (bit_width_of_base_type T) x
        end%bounds.
 
   Ltac inversion_bounds :=
@@ -163,12 +164,10 @@ Module Import Bounds.
        | Some b' => bounds_to_base_type' b'
        end.
 
-  (*
   Definition ComputeBounds {t} (e : Expr base_type op t)
              (input_bounds : interp_flat_type interp_base_type (domain t))
     : interp_flat_type interp_base_type (codomain t)
     := Interp (@interp_op) e input_bounds.
-   *)
 
   Definition bound_is_goodb : forall t, interp_base_type t -> bool
     := fun t bs

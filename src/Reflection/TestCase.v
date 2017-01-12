@@ -60,17 +60,26 @@ Goal (flat_type base_type -> Type) -> False.
   let x := reifyf base_type interp_base_type op var (1 + 1)%nat in pose x.
   let x := Reify' (1 + 1)%nat in unify x (fun var => Return (Op Add (Pair (InputSyntax.Const (interp_base_type:=interp_base_type) (var:=var) (t:=Tbase Tnat) (op:=op) 1) (InputSyntax.Const (interp_base_type:=interp_base_type) (var:=var) (t:=Tbase Tnat) (op:=op) 1)))).
   let x := reify_abs base_type interp_base_type op var (fun x => x + 1)%nat in pose x.
-  let x := Reify' (fun x => x + 1)%nat in unify x (fun var => Abs (fun y => Op Add (Pair (Var y) (InputSyntax.Const (interp_base_type:=interp_base_type) (var:=var) (t:=Tbase Tnat) (op:=op) 1)))).
+  let x := Reify' (fun x => x + 1)%nat in unify x (fun var => Abs (fun y => Return (Op Add (Pair (Var y) (InputSyntax.Const (interp_base_type:=interp_base_type) (var:=var) (t:=Tbase Tnat) (op:=op) 1))))).
   let x := reifyf base_type interp_base_type op var (let '(a, b) := (1, 1) in a + b)%nat in pose x.
   let x := reifyf base_type interp_base_type op var (let '(a, b, c) := (1, 1, 1) in a + b + c)%nat in pose x.
   let x := Reify' (fun x => let '(a, b) := (1, 1) in a + x)%nat in let x := (eval vm_compute in x) in pose x.
+  let x := Reify' (fun x => let '(a, b, c, (d, e), f) := x in a + b + c + d + e + f)%nat in let x := (eval vm_compute in x) in pose x.
+  let x := Reify' (fun x => let '(a, b) := x in let '(a, c) := a in let '(a, d) := a in a + b + c + d)%nat in let x := (eval vm_compute in x) in pose x.
+  let x := Reify' (fun ab0 : nat * nat * nat * nat => let (f, g6) := fst ab0 in
+                                                      let (f0, g7) := f in
+                                                      let ab3 := (1, 1) in
+                                                      let ab21 := (1, 1) in
+                                                      let z := snd ab3 + snd ab21 in z + z)%nat in let x := (eval vm_compute in x) in pose x.
+  let x := Reify' (fun ab0 : nat * nat * nat => let (f, g7) := fst ab0 in 1 + 1) in let x := (eval vm_compute in x) in pose x.
   let x := Reify' (fun x => let '(a, b) := (1, 1) in a + x)%nat in
   unify x (fun var => Abs (fun x' =>
                           let c1 := (InputSyntax.Const (interp_base_type:=interp_base_type) (var:=var) (t:=Tbase Tnat) (op:=op) 1) in
-                          MatchPair (tC:=tnat) (Pair c1 c1)
-                                    (fun x0 _ : var tnat => Op Add (Pair (Var x0) (Var x'))))).
+                          Return (MatchPair (tC:=tnat) (Pair c1 c1)
+                                            (fun x0 y0 : var tnat => Op Add (Pair (Var x0) (Var x')))))).
   let x := reifyf base_type interp_base_type op var (let x := 5 in let y := 6 in (let a := 1 in let '(c, d) := (2, 3) in a + x + c + d) + y)%nat in pose x.
-  let x := Reify' (fun x y => (let a := 1 in let '(c, d) := (2, 3) in a + x + c + d) + y)%nat in pose x.
+  let x := Reify' (let x := 1 in let y := 1 in (let a := 1 in let '(c, d) := (2, 3) in a + x + c + d) + y)%nat in pose x.
+  let x := Reify' (fun xy => let '(x, y) := xy in (let a := 1 in let '(c, d) := (2, 3) in a + x + c + d) + y)%nat in pose x.
 Abort.
 
 
@@ -85,14 +94,14 @@ Abort.
 Import Linearize Inline.
 
 Goal True.
-  let x := Reify (fun x y => (let a := 1 in let '(c, d) := (2, 3) in a + x - a + c + d) + y)%nat in
+  let x := Reify (fun xy => let '(x, y) := xy in (let a := 1 in let '(c, d) := (2, 3) in a + x - a + c + d) + y)%nat in
   pose (InlineConst is_const (Linearize x)) as e.
   vm_compute in e.
 Abort.
 
-Definition example_expr : Syntax.Expr base_type op (Arrow Tnat (Arrow Tnat (Tflat tnat))).
+Definition example_expr : Syntax.Expr base_type op (Syntax.Arrow (tnat * tnat) tnat).
 Proof.
-  let x := Reify (fun z w => let unused := 1 + 1 in let x := 1 in let y := 1 in (let a := 1 in let '(c, d) := (2, 3) in a + x + (x + x) + (x + x) - (x + x) - a + c + d) + y + z + w)%nat in
+  let x := Reify (fun zw => let '(z, w) := zw in let unused := 1 + 1 in let x := 1 in let y := 1 in (let a := 1 in let '(c, d) := (2, 3) in a + x + (x + x) + (x + x) - (x + x) - a + c + d) + y + z + w)%nat in
   exact x.
 Defined.
 
@@ -138,7 +147,7 @@ Lemma example_expr_wf_slow : Wf example_expr.
 Proof.
   Time (vm_compute; intros;
           repeat match goal with
-                 | [ |- wf _ _ _ ] => constructor; intros
+                 | [ |- wf _ _ ] => constructor; intros
                  | [ |- wff _ _ _ ] => constructor; intros
                  | [ |- List.In _ _ ] => vm_compute
                  | [ |- ?x = ?x \/ _ ] => left; reflexivity
@@ -222,6 +231,6 @@ Module bounds.
        end.
 
   Compute (fun x xpf y ypf => proj1_sig (Syntax.Interp interp_op_bounds example_expr
-                                         (exist _ {| lower := 0 ; value := x ; upper := 10 |} xpf)
-                                         (exist _ {| lower := 100 ; value := y ; upper := 1000 |} ypf))).
+                                         (exist _ {| lower := 0 ; value := x ; upper := 10 |} xpf,
+                                          exist _ {| lower := 100 ; value := y ; upper := 1000 |} ypf))).
 End bounds.

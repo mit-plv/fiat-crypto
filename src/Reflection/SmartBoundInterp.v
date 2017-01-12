@@ -80,7 +80,6 @@ Section language.
       = interpf_smart_unbound bounds (SmartVarfMap (fun _ e => interpf interp_op e) e).
   Proof. clear -interpf_cast; induction t; t. Qed.
 
-  (*
   Lemma interp_smart_bound_and_rel {t}
         (e : expr t) (ebounds : expr t)
         (Hwf : wf e ebounds)
@@ -142,5 +141,4 @@ Section language.
   Proof.
     intros; eapply InterpSmartBoundAndRel; auto.
   Qed.
-   *)
 End language.

@@ -117,22 +117,8 @@ Section language.
                | _ => progress simpl in *
                | _ => progress destruct_head' or
                | _ => solve [ eauto with nocore ]
-               | _ => progress inversion_wff
+               | _ => progress inversion_wf
                end.
-    Qed.
-
-    Lemma wf_SmartAbs {A B} G e1 e2
-          (Hwf : forall G' x y, wff (G' ++ G) x y -> wf (G' ++ G) (e1 x) (e2 y))
-      : @wf _ op var1 var2 G _ (@SmartAbs _ _ _ A B e1) (@SmartAbs _ _ _ A B e2).
-    Proof.
-      revert dependent G; revert dependent B; induction A; intros.
-      { simpl; constructor; intros.
-        apply (Hwf (_::nil)%list); constructor; left; reflexivity. }
-      { apply (Hwf nil); constructor. }
-      { simpl in *.
-        do 2 match goal with H : _ |- _ => apply H; intros end.
-        rewrite List.app_assoc; apply Hwf; rewrite <- List.app_assoc.
-        eauto with wf. }
     Qed.
   End with_var.
 

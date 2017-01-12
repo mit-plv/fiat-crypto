@@ -132,6 +132,40 @@ Section language.
                end;
         t.
     Qed.
+
+    Definition wf_code {t} (e1 : @expr var1 t) : forall (e2 : @expr var2 t), Prop
+      := match e1 in Syntax.expr _ _ t return expr t -> Prop with
+         | Abs src dst f1
+           => fun e2
+              => let f2 := invert_Abs e2 in
+                 forall (x : interp_flat_type var1 src) (x' : interp_flat_type var2 src),
+                   wff (flatten_binding_list x x') (f1 x) (f2 x')
+         end.
+
+    Definition wf_encode {t e1 e2} (v : @wf var1 var2 t e1 e2) : @wf_code t e1 e2.
+    Proof.
+      destruct v; t.
+    Defined.
+
+    Definition wf_decode {t e1 e2} (v : @wf_code t e1 e2) : @wf var1 var2 t e1 e2.
+    Proof.
+      destruct e1; t.
+    Defined.
+
+    Definition wf_endecode {t e1 e2} v : @wf_decode t e1 e2 (@wf_encode t e1 e2 v) = v.
+    Proof.
+      destruct v; reflexivity.
+    Qed.
+
+    Definition wf_deencode {t e1 e2} v : @wf_encode t e1 e2 (@wf_decode t e1 e2 v) = v.
+    Proof.
+      destruct e1 as [src dst f1].
+      revert dependent f1.
+      refine match e2 with
+             | Abs _ _ f2 => _
+             end.
+      reflexivity.
+    Qed.
   End with_var.
 End language.
 
@@ -143,12 +177,11 @@ Ltac is_expr_constructor arg :=
   | LetIn _ _ => idtac
   | Pair _ _ => idtac
   | Abs _ => idtac
-  | Return _ => idtac
   end.
 
-Ltac inversion_wff_step_gen guard_tac :=
+Ltac inversion_wf_step_gen guard_tac :=
   let postprocess H :=
-      (cbv [wff_code] in H;
+      (cbv [wff_code wf_code] in H;
        simpl in H;
        try match type of H with
            | True => clear H
@@ -158,11 +191,14 @@ Ltac inversion_wff_step_gen guard_tac :=
   | [ H : wff _ ?x ?y |- _ ]
     => guard_tac x y;
        apply wff_encode in H; postprocess H
+  | [ H : wf ?x ?y |- _ ]
+    => guard_tac x y;
+       apply wf_encode in H; postprocess H
   end.
-Ltac inversion_wff_step_constr :=
-  inversion_wff_step_gen ltac:(fun x y => is_expr_constructor x; is_expr_constructor y).
-Ltac inversion_wff_step_var :=
-  inversion_wff_step_gen ltac:(fun x y => first [ is_var x; is_var y; fail 1 | idtac ]).
-Ltac inversion_wff_step := first [ inversion_wff_step_constr | inversion_wff_step_var ].
-Ltac inversion_wff_constr := repeat inversion_wff_step_constr.
-Ltac inversion_wff := repeat inversion_wff_step.
+Ltac inversion_wf_step_constr :=
+  inversion_wf_step_gen ltac:(fun x y => is_expr_constructor x; is_expr_constructor y).
+Ltac inversion_wf_step_var :=
+  inversion_wf_step_gen ltac:(fun x y => first [ is_var x; is_var y; fail 1 | idtac ]).
+Ltac inversion_wf_step := first [ inversion_wf_step_constr | inversion_wf_step_var ].
+Ltac inversion_wf_constr := repeat inversion_wf_step_constr.
+Ltac inversion_wf := repeat inversion_wf_step.

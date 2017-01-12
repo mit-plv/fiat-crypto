@@ -1,6 +1,6 @@
 Require Import Crypto.SpecificGen.GF25519_64Reflective.CommonUnOp.
 
-Definition rprefreezeZ_sig : rexpr_unop_sig prefreeze. Proof. cbv [prefreeze GF25519_64.prefreeze]. reify_sig. Defined.
+Definition rprefreezeZ_sig : rexpr_unop_sig prefreeze. Proof. reify_sig. Defined.
 Definition rprefreezeW := Eval vm_compute in rword_of_Z rprefreezeZ_sig.
 Lemma rprefreezeW_correct_and_bounded_gen : correct_and_bounded_genT rprefreezeW rprefreezeZ_sig.
 Proof. rexpr_correct. Qed.

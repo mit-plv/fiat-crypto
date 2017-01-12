@@ -27,13 +27,10 @@ Section language.
     induction e; simpl; cbv [LetIn.Let_In]; rewrite_hyp ?*; rewrite ?SmartVarfMap_id; reflexivity.
   Qed.
   Lemma interp_retr_id {t} (e : @expr interp_base_type t)
-    : interp_type_gen_rel_pointwise_hetero
-        (fun _ => eq)
-        (fun _ => eq)
-        (interp_retr (fun _ x => x) (fun _ x => x) e)
-        (interp interp_op e).
+    : forall x,
+      interp_retr (fun _ x => x) (fun _ x => x) e x = interp interp_op e x.
   Proof.
-    induction e; simpl; repeat intro; subst; auto using interpf_retr_id.
+    destruct e; simpl; intros; rewrite interpf_retr_id, SmartVarfMap_id; reflexivity.
   Qed.
 
   Section with_var2.
@@ -80,38 +77,17 @@ Section language.
         = interpf_retr var2_of_interp interp_of_var2 e2.
     Proof.
       induction Hwf; simpl; rewrite_hyp ?*; try reflexivity; auto.
-      { match goal with H : _ |- _ => apply H end; intros.
-        repeat first [ progress repeat autorewrite with core in *
-                     | progress subst
-                     | progress inversion_sigma
-                     | progress inversion_prod
-                     | progress simpl in *
-                     | progress destruct_head' ex
-                     | progress destruct_head' and
-                     | progress destruct_head' or
-                     | progress destruct_head' sigT
-                     | progress destruct_head' prod
-                     | progress rewrite_hyp !*
-                     | solve [ auto ] ].
-        do 2 apply f_equal.
-        eapply interp_flat_type_rel_pointwise_flatten_binding_list with (R':=fun _ => eq); [ eassumption | ].
-        apply lift_interp_flat_type_rel_pointwise_f_eq; reflexivity. }
+      { match goal with H : _ |- _ => apply H end.
+        intros ???; rewrite List.in_app_iff.
+        intros [?|?]; eauto. }
     Qed.
-    Lemma wf_interp_retr G {t} (e1 : @expr var1 t) (e2 : @expr var2 t)
-          (HG : forall t x1 x2,
-              List.In (existT _ t (x1, x2)) G
-              -> interp_of_var1 t x1 = interp_of_var2 t x2)
-          (Hwf : wf G e1 e2)
-      : interp_type_gen_rel_pointwise_hetero
-          (fun _ => eq)
-          (fun _ => eq)
-          (interp_retr var1_of_interp interp_of_var1 e1)
-          (interp_retr var2_of_interp interp_of_var2 e2).
+    Lemma wf_interp_retr {t} (e1 : @expr var1 t) (e2 : @expr var2 t)
+          (Hwf : wf e1 e2)
+      : forall x,
+        interp_retr var1_of_interp interp_of_var1 e1 x
+        = interp_retr var2_of_interp interp_of_var2 e2 x.
     Proof.
-      induction Hwf; simpl; repeat intro; subst; eauto using wff_interpf_retr.
-      match goal with H : _ |- _ => apply H end.
-      simpl; intros; destruct_head' or; auto.
-      inversion_sigma; inversion_prod; repeat subst; unfold SmartVarfMap; simpl; auto.
+      destruct Hwf; simpl; repeat intro; subst; eapply wff_interpf_retr; eauto.
     Qed.
   End with_var2.
 
@@ -129,17 +105,13 @@ Section language.
     Proof.
       erewrite wff_interpf_retr, interpf_retr_id; eauto.
     Qed.
-    Lemma wf_interp_retr_correct G {t} (e1 : @expr var t) (e2 : @expr interp_base_type t)
-          (HG : forall t x1 x2,
-              List.In (existT _ t (x1, x2)) G
-              -> interp_of_var t x1 = x2)
-          (Hwf : wf G e1 e2)
-      : interp_type_gen_rel_pointwise_hetero
-          (fun _ => eq)
-          (fun _ => eq)
-          (interp_retr var_of_interp interp_of_var e1)
-          (interp interp_op e2).
+    Lemma wf_interp_retr_correct {t} (e1 : @expr var t) (e2 : @expr interp_base_type t)
+          (Hwf : wf e1 e2)
+          x
+      : interp_retr var_of_interp interp_of_var e1 x
+        = interp interp_op e2 x.
     Proof.
-    Admitted.
+      erewrite wf_interp_retr, interp_retr_id; eauto.
+    Qed.
   End with_var.
 End language.

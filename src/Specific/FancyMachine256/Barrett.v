@@ -63,9 +63,11 @@ End expression.
 
 Section reflected.
   Context (ops : fancy_machine.instructions (2 * 128)).
-  Definition rexpression : Syntax.Expr base_type op (Arrow TZ (Arrow TZ (Arrow TW (Arrow TW (Tbase TW))))).
+  Local Notation tZ := (Tbase TZ).
+  Local Notation tW := (Tbase TW).
+  Definition rexpression : Syntax.Expr base_type op (Arrow (tZ * tZ * tW * tW) tW).
   Proof.
-    let v := (eval cbv beta delta [expression] in (fun m μ x y => expression ops m μ (x, y))) in
+    let v := (eval cbv beta delta [expression] in (fun mμxy => let '(mv, μv, xv, yv) := mμxy in expression ops mv μv (xv, yv))) in
     let v := Reify v in
     exact v.
   Defined.
@@ -85,8 +87,8 @@ Section reflected.
   Context (m μ : Z)
           (props : fancy_machine.arithmetic ops).
 
-  Let result (v : Tuple.tuple fancy_machine.W 2) := Syntax.Interp interp_op rexpression_simple m μ (fst v) (snd v).
-  Let assembled_result (v : Tuple.tuple fancy_machine.W 2) : fancy_machine.W := Core.Interp compiled_syntax m μ (fst v) (snd v).
+  Let result (v : Tuple.tuple fancy_machine.W 2) := Syntax.Interp (@interp_op _) rexpression_simple (m, μ, fst v, snd v).
+  Let assembled_result (v : Tuple.tuple fancy_machine.W 2) : fancy_machine.W := Core.Interp compiled_syntax (m, μ, fst v, snd v).
 
   Theorem sanity : result = expression ops m μ.
   Proof.
@@ -126,7 +128,7 @@ End reflected.
 Print compiled_syntax.
 (* compiled_syntax =
 fun ops : fancy_machine.instructions (2 * 128) =>
-λn RegMod RegMuLow x xHigh,
+λn (RegMod, RegMuLow, x, xHigh),
 slet RegMod := RegMod in
 slet RegMuLow := RegMuLow in
 slet RegZero := ldi 0 in
@@ -148,5 +150,6 @@ c.Sub(tmp, x, tmp),
 c.Addm(q, tmp, RegZero),
 c.Addm(out, q, RegZero),
 Return out
-     : forall ops : fancy_machine.instructions (2 * 128), expr base_type op Register (TZ -> TZ -> TW -> TW -> Tbase TW)
+     : forall ops : fancy_machine.instructions (2 * 128),
+       expr base_type op Register (Tbase TZ * Tbase TZ * Tbase TW * Tbase TW -> Tbase TW)
 *)

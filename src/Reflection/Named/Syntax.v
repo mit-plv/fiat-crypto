@@ -47,10 +47,8 @@ Module Export Named.
         | Pair : forall {t1}, exprf t1 -> forall {t2}, exprf t2 -> exprf (Prod t1 t2).
         Bind Scope nexpr_scope with exprf.
         Inductive expr : type -> Type :=
-        | Return {t} : exprf t -> expr t
-        | Abs {src dst} : Name -> expr dst -> expr (Arrow src dst).
+        | Abs {src dst} : interp_flat_type_gen (fun _ => Name) src -> exprf dst -> expr (Arrow src dst).
         Bind Scope nexpr_scope with expr.
-        Global Coercion Return : exprf >-> expr.
         (** [SmartVar] is like [Var], except that it inserts
           pair-projections and [Pair] as necessary to handle
           [flat_type], and not just [base_type_code] *)
@@ -110,10 +108,9 @@ Module Export Named.
                | Pair _ ex _ ey => @wff ctx _ ex /\ @wff ctx _ ey
                end%option_pointed_prop.
 
-          Fixpoint wf (ctx : Context) {t} (e : expr t) : Prop
+          Definition wf (ctx : Context) {t} (e : expr t) : Prop
             := match e with
-               | Return _ x => prop_of_option (wff ctx x)
-               | Abs src _ n f => forall v, @wf (extend ctx (t:=Tbase src) n v) _ f
+               | Abs src _ n f => forall v, prop_of_option (@wff (extend ctx (t:=src) n v) _ f)
                end.
         End wf.
 
@@ -166,11 +163,10 @@ Module Export Named.
                tt (fun _ x => x) interp_op (fun _ y _ f => let x := y in f x)
                (fun _ x _ y => (x, y)%core).
 
-        Fixpoint interp (ctx : Context) {t} (e : expr t)
+        Definition interp (ctx : Context) {t} (e : expr t)
           : wf ctx e -> interp_type t
           := match e in expr t return wf ctx e -> interp_type t with
-             | Return _ x => interpf ctx x
-             | Abs _ _ n f => fun good v => @interp _ _ f (good v)
+             | Abs _ _ n f => fun good v => @interpf _ _ f (good v)
              end.
       End with_val_context.
     End expr_param.
@@ -183,7 +179,6 @@ Global Arguments SmartVar {_ _ _ _} _.
 Global Arguments Op {_ _ _ _ _} _ _.
 Global Arguments LetIn {_ _ _} _ _ _ {_} _.
 Global Arguments Pair {_ _ _ _} _ {_} _.
-Global Arguments Return {_ _ _ _} _.
 Global Arguments Abs {_ _ _ _ _} _ _.
 Global Arguments extend {_ _ _ _} ctx {_} _ _.
 Global Arguments remove {_ _ _ _} ctx {_} _.

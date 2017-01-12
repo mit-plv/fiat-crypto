@@ -27,11 +27,10 @@ Section language.
                                  (@mapf _ ey)
          end.
 
-    Fixpoint map {t} (e : @expr base_type_code op var1 t)
+    Definition map {t} (e : @expr base_type_code op var1 t)
       : @expr base_type_code op var2 t
       := match e with
-         | Return _ x => Return (mapf x)
-         | Abs _ _ f => Abs (fun x => @map _ (f (f_var21 _ x)))
+         | Abs _ _ f => Abs (fun x => mapf (f (mapf_interp_flat_type f_var21 x)))
          end.
   End map.
 

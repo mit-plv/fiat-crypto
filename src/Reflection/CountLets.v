@@ -27,7 +27,7 @@ Section language.
 
     Section gen.
       Context (count_type_let : flat_type -> nat).
-      Context (count_type_abs : base_type_code -> nat).
+      Context (count_type_abs : flat_type -> nat).
 
       Fixpoint count_lets_genf {t} (e : exprf t) : nat
         := match e with
@@ -35,11 +35,9 @@ Section language.
              => count_type_let tx + @count_lets_genf _ (eC (SmartValf var mkVar tx))
            | _ => 0
            end.
-      Fixpoint count_lets_gen {t} (e : expr t) : nat
+      Definition count_lets_gen {t} (e : expr t) : nat
         := match e with
-           | Return _ x
-             => count_lets_genf x
-           | Abs tx _ f => count_type_abs tx + @count_lets_gen _ (f (mkVar tx))
+           | Abs tx _ f => count_type_abs tx + @count_lets_genf _ (f (SmartValf _ mkVar tx))
            end.
     End gen.
 
@@ -52,10 +50,10 @@ Section language.
     Definition count_lets {t} (e : expr t) : nat
       := count_lets_gen (fun _ => 1) (fun _ => 0) e.
     Definition count_binders {t} (e : expr t) : nat
-      := count_lets_gen count_pairs (fun _ => 1) e.
+      := count_lets_gen count_pairs count_pairs e.
   End with_var.
 
-  Definition CountLetsGen (count_type_let : flat_type -> nat) (count_type_abs : base_type_code -> nat) {t} (e : Expr t) : nat
+  Definition CountLetsGen (count_type_let : flat_type -> nat) (count_type_abs : flat_type -> nat) {t} (e : Expr t) : nat
     := count_lets_gen (fun _ => tt) count_type_let count_type_abs (e _).
   Definition CountLetBinders {t} (e : Expr t) : nat
     := count_let_binders (fun _ => tt) (e _).

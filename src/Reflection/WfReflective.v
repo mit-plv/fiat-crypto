@@ -50,6 +50,7 @@
 Require Import Coq.Arith.Arith Coq.Logic.Eqdep_dec.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Wf.
+Require Import Crypto.Reflection.EtaWf.
 Require Import Crypto.Reflection.WfReflectiveGen.
 Require Import Crypto.Util.Notations Crypto.Util.Tactics Crypto.Util.Option Crypto.Util.Sigma Crypto.Util.Prod Crypto.Util.Decidable Crypto.Util.ListUtil.
 Require Export Crypto.Util.PartiallyReifiedProp. (* export for the [bool >-> reified_Prop] coercion *)
@@ -136,8 +137,10 @@ Section language.
     | [ H : List.In _ (duplicate_type _) |- _ ] => eapply duplicate_type_in in H; [ | eassumption.. ]
     | [ H : context[match _ with _ => _ end] |- _ ] => revert H; progress break_innermost_match
     | [ |- wff _ _ _ ] => constructor
-    | [ |- wf _ _ _ ] => constructor
+    | [ |- wf _ _ ] => constructor
     | _ => progress unfold and_reified_Prop in *
+    | [ |- wff (flatten_binding_list ?x ?y) _ _ ]
+      => rewrite <- (List.app_nil_r (flatten_binding_list x y))
     end.
   Local Ltac t := repeat t_step.
   Fixpoint reflect_wff (G : list (sigT (fun t => var1 t * var2 t)%type))
@@ -177,33 +180,29 @@ Section language.
     { t. }
     { t. }
   Qed.
-  Fixpoint reflect_wf (G : list (sigT (fun t => var1 t * var2 t)%type))
+  Definition reflect_wf
            {t1 t2 : type}
            (e1 : @expr (fun t => nat * var1 t)%type t1) (e2 : @expr (fun t => nat * var2 t)%type t2)
-    : let reflective_obligation := reflect_wfT (duplicate_type G) e1 e2 in
+    : let reflective_obligation := reflect_wfT nil e1 e2 in
       match type_eq_semidec_transparent t1 t2 with
       | Some p
         => to_prop reflective_obligation
-          -> @wf base_type_code op var1 var2 G t2 (eq_rect _ expr (unnatize_expr (List.length G) e1) _ p) (unnatize_expr (List.length G) e2)
+          -> @wf base_type_code op var1 var2 t2 (eq_rect _ expr (unnatize_expr 0 e1) _ p) (unnatize_expr 0 e2)
       | None => True
       end.
   Proof.
-    destruct e1 as [ t1 e1 | tx tR f ],
-                   e2 as [ t2 e2 | tx' tR' f' ]; simpl; try solve [ exact I ];
-      [ clear reflect_wf;
-        pose proof (@reflect_wff G t1 t2 e1 e2)
-      | pose proof (fun x x'
-                    => match preflatten_binding_list2 (Tbase tx) (Tbase tx') as v return match v with Some _ => _ | None => True end with
-                      | Some G0
-                        => reflect_wf
-                            (G0 x x' ++ G)%list _ _
-                            (f (snd (natize_interp_flat_type (length (duplicate_type G)) x)))
-                            (f' (snd (natize_interp_flat_type (length (duplicate_type G)) x')))
-                      | None => I
-                      end);
-        clear reflect_wf ].
-    { t. }
-    { t. }
+    destruct e1 as [ tx tR f ],
+                   e2 as [ tx' tR' f' ]; simpl; try solve [ exact I ].
+    pose proof (fun x x'
+                => match preflatten_binding_list2 tx tx' as v return match v with Some _ => _ | None => True end with
+                   | Some G0
+                     => reflect_wff
+                          (G0 x x' ++ nil)%list
+                          (f (snd (natize_interp_flat_type 0 x)))
+                          (f' (snd (natize_interp_flat_type 0 x')))
+                   | None => I
+                   end).
+    t.
   Qed.
 End language.
 
@@ -224,7 +223,7 @@ Section Wf.
       -> Wf (fun var => unnatize_expr 0 (e (fun t => (nat * var t)%type))).
   Proof.
     intros H var1 var2; specialize (H var1 var2).
-    pose proof (@reflect_wf base_type_code base_type_eq_semidec_transparent base_type_eq_semidec_is_dec op op_beq op_beq_bl var1 var2 nil t t (e _) (e _)) as H'.
+    pose proof (@reflect_wf base_type_code base_type_eq_semidec_transparent base_type_eq_semidec_is_dec op op_beq op_beq_bl var1 var2 t t (e _) (e _)) as H'.
     rewrite type_eq_semidec_transparent_refl in H' by assumption; simpl in *.
     edestruct @reflect_wfT; simpl in *; tauto.
   Qed.
@@ -243,7 +242,13 @@ Section Wf.
   Qed.
 End Wf.
 
-
+(** Using [ExprEta'] ensures that reduction and conversion don't block
+    on destructuring the variable arguments. *)
+Ltac preapply_eta'_Wf :=
+  lazymatch goal with
+  | [ |- @Wf ?base_type_code ?op ?t ?e ]
+    => apply (proj1 (@Wf_ExprEta'_iff base_type_code op t e))
+  end.
 Ltac generalize_reflect_Wf base_type_eq_semidec_is_dec op_beq_bl :=
   lazymatch goal with
   | [ |- @Wf ?base_type_code ?op ?t ?e ]
@@ -268,5 +273,6 @@ Ltac fin_reflect_Wf :=
 (** The tactic [reflect_Wf] is the main tactic of this file, used to
     prove [Syntax.Wf] goals *)
 Ltac reflect_Wf base_type_eq_semidec_is_dec op_beq_bl :=
+  preapply_eta'_Wf;
   generalize_reflect_Wf base_type_eq_semidec_is_dec op_beq_bl;
   use_reflect_Wf; fin_reflect_Wf.

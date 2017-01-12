@@ -83,7 +83,7 @@ Section language.
 
     Local Ltac break_t
       := first [ progress subst
-               | progress inversion_wff
+               | progress inversion_wf
                | progress invert_expr_subst
                | progress inversion_sigma
                | progress inversion_prod
@@ -123,7 +123,7 @@ Section language.
                end.
     Qed.
 
-    (*Lemma wf_map_interp_cast
+    Lemma wf_map_interp_cast
           {t1} e1 e2 ebounds
           args2
           (Hwf_bounds : wf e1 ebounds)
@@ -141,7 +141,7 @@ Section language.
                | [ |- wf _ _ ] => constructor
                | _ => solve [ eauto using wff_SmartVarf, wff_in_impl_Proper ]
                end.
-    Qed.*)
+    Qed.
   End with_var.
 
   Section gen.
@@ -152,7 +152,6 @@ Section language.
                        (@transfer_op ovar1 src1 dst1 src2 dst2 opc1 opc2 e1 args2)
                        (@transfer_op ovar2 src1 dst1 src2 dst2 opc1 opc2 e2 args2)).
 
-    Axiom proof_admitted : False.
     Local Notation MapInterpCast
       := (@MapInterpCast
             base_type_code interp_base_type
@@ -165,9 +164,7 @@ Section language.
           (Hwf : Wf e)
       : Wf (@MapInterpCast t e args).
     Proof.
-      revert wff_transfer_op.
-      case proof_admitted.
-      (*intros ??; apply wf_map_interp_cast; auto.*)
+      intros ??; apply wf_map_interp_cast; auto.
     Qed.
   End gen.
 End language.

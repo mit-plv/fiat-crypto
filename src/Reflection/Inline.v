@@ -53,10 +53,9 @@ Section language.
          | Op _ _ op args => Op op (@inline_const_genf _ args)
          end.
 
-    Fixpoint inline_const_gen {t} (e : @expr (@exprf var) t) : @expr var t
+    Definition inline_const_gen {t} (e : @expr (@exprf var) t) : @expr var t
       := match e in Syntax.expr _ _ t return @expr var t with
-         | Return _ x => Return (inline_const_genf x)
-         | Abs _ _ f => Abs (fun x => @inline_const_gen _ (f (Var x)))
+         | Abs _ _ f => Abs (fun x => inline_const_genf (f (SmartVarVarf x)))
          end.
 
     Section with_is_const.

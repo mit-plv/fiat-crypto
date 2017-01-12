@@ -19,12 +19,6 @@ Section language.
   Local Notation interp_flat_type := (interp_flat_type interp_base_type).
   Local Notation Expr := (@Expr base_type_code op).
 
-  Fixpoint codomain (t : type) : flat_type
-    := match t with
-       | Tflat T => T
-       | Arrow src dst => codomain dst
-       end.
-
   Section with_var.
     Context {var : base_type_code -> Type}.
 
@@ -57,10 +51,8 @@ Section language.
          | Pair _ x _ y => Some (x, y)%core
          | _ => None
          end.
-    Definition invert_Abs {A B} (e : expr (Arrow A B)) : var A -> expr B
+    Definition invert_Abs {T} (e : expr T) : interp_flat_type_gen var (domain T) -> exprf (codomain T)
       := match e with Abs _ _ f => f end.
-    Definition invert_Return {t} (e : expr (Tflat t)) : exprf t
-      := match e with Return _ v => v end.
 
     Definition exprf_code {t} (e : exprf t) : exprf t -> Prop
       := match e with
@@ -71,11 +63,8 @@ Section language.
          | LetIn _ ex _ eC => fun e' => invert_LetIn e' = Some (existT _ _ (ex, eC)%core)
          end.
 
-    Definition expr_code {t} (e : expr t) : expr t -> Prop
-      := match e with
-         | Abs _ _ f => fun e' => invert_Abs e' = f
-         | Return _ v => fun e' => invert_Return e' = v
-         end.
+    Definition expr_code {t} (e1 e2 : expr t) : Prop
+      := invert_Abs e1 = invert_Abs e2.
 
     Definition exprf_encode {t} (x y : exprf t) : x = y -> exprf_code x y.
     Proof. intro p; destruct p, x; reflexivity. Defined.
@@ -104,7 +93,6 @@ Section language.
         => revert v;
            refine match e with
                   | Abs _ _ _ => _
-                  | Return _ _ => _
                   end
       end;
       t'.
@@ -126,11 +114,7 @@ Section language.
     Proof. t. Defined.
 
     Lemma invert_Abs_Some {A B e v}
-      : @invert_Abs A B e = v -> e = Abs v.
-    Proof. t. Defined.
-
-    Lemma invert_Return_Some {t e v}
-      : @invert_Return t e = v -> e = Return v.
+      : @invert_Abs (Arrow A B) e = v -> e = Abs v.
     Proof. t. Defined.
 
     Definition exprf_decode {t} (x y : exprf t) : exprf_code x y -> x = y.
@@ -145,11 +129,10 @@ Section language.
     Defined.
     Definition expr_decode {t} (x y : expr t) : expr_code x y -> x = y.
     Proof.
-      destruct x; simpl;
-        intro H;
-        first [ apply invert_Abs_Some in H
-              | apply invert_Return_Some in H ];
-        symmetry; assumption.
+      destruct x; unfold expr_code; simpl.
+      intro H; symmetry in H.
+      apply invert_Abs_Some in H.
+      symmetry; assumption.
     Defined.
     Definition path_exprf_rect {t} {x y : exprf t} (Q : x = y -> Type)
                (f : forall p, Q (exprf_decode x y p))
@@ -161,31 +144,17 @@ Section language.
     Proof. intro p; specialize (f (expr_encode x y p)); destruct x, p; exact f. Defined.
   End with_var.
 
-  Lemma interpf_invert_Abs interp_op {A B e} x
-    : Syntax.interp interp_op (@invert_Abs interp_base_type A B e x)
+  Lemma interpf_invert_Abs interp_op {T e} x
+    : Syntax.interpf interp_op (@invert_Abs interp_base_type T e x)
       = Syntax.interp interp_op e x.
-  Proof.
-    refine (match e in expr _ _ t
-                  return match t return expr _ _ t -> _ with
-                         | Arrow src dst
-                           => fun e
-                              => (forall x : interp_base_type src,
-                                     interp _ (invert_Abs e x) = interp _ e x)
-                         | Tflat _ => fun _ => True
-                         end e with
-            | Abs _ _ _ => fun _ => eq_refl
-            | Return _ _ => I
-            end x).
-  Qed.
+  Proof. destruct e; reflexivity. Qed.
 End language.
 
-Global Arguments codomain {_} _.
 Global Arguments invert_Var {_ _ _ _} _.
 Global Arguments invert_Op {_ _ _ _} _.
 Global Arguments invert_LetIn {_ _ _ _} _.
 Global Arguments invert_Pair {_ _ _ _ _} _.
-Global Arguments invert_Abs {_ _ _ _ _} _ _.
-Global Arguments invert_Return {_ _ _ _} _.
+Global Arguments invert_Abs {_ _ _ _} _ _.
 
 Ltac invert_one_expr e :=
   preinvert_one_type e;
@@ -198,7 +167,6 @@ Ltac invert_expr_step :=
   | [ e : exprf _ _ (Tbase _) |- _ ] => invert_one_expr e
   | [ e : exprf _ _ (Prod _ _) |- _ ] => invert_one_expr e
   | [ e : exprf _ _ Unit |- _ ] => invert_one_expr e
-  | [ e : expr _ _ (Tflat _) |- _ ] => invert_one_expr e
   | [ e : expr _ _ (Arrow _ _) |- _ ] => invert_one_expr e
   end.
 
@@ -208,11 +176,11 @@ Ltac invert_match_expr_step :=
   match goal with
   | [ |- appcontext[match ?e with TT => _ | _ => _ end] ]
     => invert_one_expr e
-  | [ |- appcontext[match ?e with Abs _ _ _ => _ | _ => _ end] ]
+  | [ |- appcontext[match ?e with Abs _ _ _ => _ end] ]
     => invert_one_expr e
   | [ H : appcontext[match ?e with TT => _ | _ => _ end] |- _ ]
     => invert_one_expr e
-  | [ H : appcontext[match ?e with Abs _ _ _ => _ | _ => _ end] |- _ ]
+  | [ H : appcontext[match ?e with Abs _ _ _ => _ end] |- _ ]
     => invert_one_expr e
   end.
 
@@ -224,7 +192,7 @@ Ltac invert_expr_subst_step_helper guard_tac :=
   | [ H : invert_Op ?e = Some _ |- _ ] => guard_tac H; apply invert_Op_Some in H
   | [ H : invert_LetIn ?e = Some _ |- _ ] => guard_tac H; apply invert_LetIn_Some in H
   | [ H : invert_Pair ?e = Some _ |- _ ] => guard_tac H; apply invert_Pair_Some in H
-  | [ e : expr _ _ (Arrow _ _) |- _ ]
+  | [ e : expr _ _ _ |- _ ]
     => guard_tac e;
        let f := fresh e in
        let H := fresh in
@@ -234,7 +202,6 @@ Ltac invert_expr_subst_step_helper guard_tac :=
        apply invert_Abs_Some in H;
        subst f
   | [ H : invert_Abs ?e = _ |- _ ] => guard_tac H; apply invert_Abs_Some in H
-  | [ H : invert_Return ?e = _ |- _ ] => guard_tac H; apply invert_Return_Some in H
   end.
 Ltac invert_expr_subst_step :=
   first [ invert_expr_subst_step_helper ltac:(fun _ => idtac)
@@ -243,7 +210,7 @@ Ltac invert_expr_subst := repeat invert_expr_subst_step.
 
 Ltac induction_expr_in_using H rect :=
   induction H as [H] using (rect _ _ _);
-  cbv [exprf_code expr_code invert_Var invert_LetIn invert_Pair invert_Op invert_Abs invert_Return] in H;
+  cbv [exprf_code expr_code invert_Var invert_LetIn invert_Pair invert_Op invert_Abs] in H;
   try lazymatch type of H with
       | Some _ = Some _ => apply option_leq_to_eq in H; unfold option_eq in H
       | Some _ = None => exfalso; clear -H; solve [ inversion H ]
@@ -271,8 +238,6 @@ Ltac inversion_expr_step :=
     => induction_expr_in_using H @path_exprf_rect
   | [ H : _ = Abs _ |- _ ]
     => induction_expr_in_using H @path_expr_rect
-  | [ H : _ = Return _ |- _ ]
-    => induction_expr_in_using H @path_expr_rect
   | [ H : Var _ = _ |- _ ]
     => induction_expr_in_using H @path_exprf_rect
   | [ H : TT = _ |- _ ]
@@ -284,8 +249,6 @@ Ltac inversion_expr_step :=
   | [ H : LetIn _ _ = _ |- _ ]
     => induction_expr_in_using H @path_exprf_rect
   | [ H : Abs _ = _ |- _ ]
-    => induction_expr_in_using H @path_expr_rect
-  | [ H : Return _ = _ |- _ ]
     => induction_expr_in_using H @path_expr_rect
   end.
 Ltac inversion_expr := repeat inversion_expr_step.

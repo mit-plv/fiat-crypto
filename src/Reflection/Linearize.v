@@ -47,10 +47,9 @@ Section language.
               SmartVarf (t:=Prod A B) (x, y)))
          end.
 
-    Fixpoint linearize {t} (e : expr t) : expr t
+    Definition linearize {t} (e : expr t) : expr t
       := match e in Syntax.expr _ _ t return expr t with
-         | Return _ x => linearizef x
-         | Abs _ _ f => Abs (fun x => @linearize _ (f x))
+         | Abs _ _ f => Abs (fun x => linearizef (f x))
          end.
   End with_var.
 

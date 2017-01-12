@@ -49,21 +49,10 @@ Section language.
   Definition preinvert_Arrow (P : type base_type_code -> Type) (Q : forall A B, P (Arrow A B) -> Type)
     : (forall t (p : P t), match t return P t -> Type with
                            | Arrow A B => Q A B
-                           | _ => fun _ => True
                            end p)
       -> forall A B p, Q A B p.
   Proof.
     intros H A B p; specialize (H _ p); assumption.
-  Defined.
-
-  Definition preinvert_Tflat (P : type base_type_code -> Type) (Q : forall T, P (Tflat T) -> Type)
-    : (forall t (p : P t), match t return P t -> Type with
-                           | Tflat T => Q T
-                           | _ => fun _ => True
-                           end p)
-      -> forall T p, Q T p.
-  Proof.
-    intros H T p; specialize (H _ p); assumption.
   Defined.
 
   Section encode_decode.
@@ -79,13 +68,7 @@ Section language.
          end.
 
     Definition type_code (t1 t2 : type base_type_code) : Prop
-      := match t1, t2 with
-         | Tflat t1, Tflat t2 => t1 = t2
-         | Arrow A B, Arrow A' B' => A = A' /\ B = B'
-         | Tflat _, _
-         | Arrow _ _, _
-           => False
-         end.
+      := domain t1 = domain t2 /\ codomain t1 = codomain t2.
 
     Definition flat_type_encode (x y : flat_type base_type_code) : x = y -> flat_type_code x y.
     Proof. intro p; destruct p, x; repeat constructor. Defined.
@@ -151,11 +134,6 @@ Ltac preinvert_one_type e :=
   | ?P Unit
     => revert dependent e;
        refine (preinvert_Unit P _ _)
-  | ?P (Tflat ?T)
-    => is_var T;
-       move e at top;
-       revert dependent T;
-       refine (preinvert_Tflat P _ _)
   | ?P (Arrow ?A ?B)
     => is_var A; is_var B;
        move e at top; revert dependent A; intros A e;
@@ -192,10 +170,6 @@ Ltac inversion_flat_type := repeat inversion_flat_type_step.
 
 Ltac inversion_type_step :=
   lazymatch goal with
-  | [ H : _ = Tflat _ |- _ ]
-    => induction_type_in_using H @path_type_rect
-  | [ H : Tflat _ = _ |- _ ]
-    => induction_type_in_using H @path_type_rect
   | [ H : _ = Arrow _ _ |- _ ]
     => induction_type_in_using H @path_type_rect
   | [ H : Arrow _ _ = _ |- _ ]

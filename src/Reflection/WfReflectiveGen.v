@@ -109,18 +109,13 @@ Section language.
            end
        | Prod _ _, _ => None
        end.
-  Fixpoint type_eq_semidec_transparent (t1 t2 : type) : option (t1 = t2)
+  Definition type_eq_semidec_transparent (t1 t2 : type) : option (t1 = t2)
     := match t1, t2 return option (t1 = t2) with
-       | Syntax.Tflat t1, Syntax.Tflat t2
-         => option_map (@f_equal _ _ (@Tflat _) _ _)
-                      (flat_type_eq_semidec_transparent t1 t2)
-       | Syntax.Tflat _, _ => None
        | Arrow A B, Arrow A' B'
-         => match base_type_eq_semidec_transparent A A', type_eq_semidec_transparent B B' with
-           | Some p, Some q => Some (f_equal2 (@Arrow base_type_code) p q)
-           | _, _ => None
-           end
-       | Arrow _ _, _ => None
+         => match flat_type_eq_semidec_transparent A A', flat_type_eq_semidec_transparent B B' with
+            | Some p, Some q => Some (f_equal2 (@Arrow base_type_code) p q)
+            | _, _ => None
+            end
        end.
   Lemma base_type_eq_semidec_transparent_refl t : base_type_eq_semidec_transparent t t = Some eq_refl.
   Proof.
@@ -139,10 +134,9 @@ Section language.
   Lemma type_eq_semidec_transparent_refl t : type_eq_semidec_transparent t t = Some eq_refl.
   Proof.
     clear -base_type_eq_semidec_is_dec.
-    induction t as [t | A B IHt]; simpl.
-    { rewrite flat_type_eq_semidec_transparent_refl; reflexivity. }
-    { rewrite base_type_eq_semidec_transparent_refl; rewrite_hyp !*; reflexivity. }
+    destruct t; simpl; rewrite !flat_type_eq_semidec_transparent_refl; reflexivity.
   Qed.
+
 
   Definition op_beq' t1 tR t1' tR' (x : op t1 tR) (y : op t1' tR') : reified_Prop
     := match flat_type_eq_semidec_transparent t1 t1', flat_type_eq_semidec_transparent tR tR' with
@@ -236,7 +230,7 @@ Section language.
                           let base := fst ret in
                           let b := snd ret in
                           (base, (a, b))
-       | Unit => fun _ => (base, tt)
+       | Unit => fun v => (base, v)
        | Tbase t => fun v => (S base, (base, v))
        end v.
   Arguments natize_interp_flat_type {var t} _ _.
@@ -263,18 +257,20 @@ Section language.
        | TT => TT
        | Var _ x => Var (snd x)
        | Op _ _ op args => Op op (@unnatize_exprf _ _ base args)
-       | LetIn _ ex _ eC => LetIn (@unnatize_exprf _ _ base ex)
-                             (fun x => let v := natize_interp_flat_type base x in
-                                    @unnatize_exprf _ _ (fst v) (eC (snd v)))
-       | Pair _ x _ y => Pair (@unnatize_exprf _ _ base x) (@unnatize_exprf _ _ base y)
+       | LetIn _ ex _ eC
+         => LetIn (@unnatize_exprf _ _ base ex)
+                  (fun x => let v := natize_interp_flat_type base x in
+                            @unnatize_exprf _ _ (fst v) (eC (snd v)))
+       | Pair _ x _ y
+         => Pair (@unnatize_exprf _ _ base x) (@unnatize_exprf _ _ base y)
        end.
-  Fixpoint unnatize_expr {var t} (base : nat)
-           (e : @Syntax.expr base_type_code op (fun t => nat * var t)%type t)
+  Definition unnatize_expr {var t} (base : nat)
+             (e : @Syntax.expr base_type_code op (fun t => nat * var t)%type t)
     : @Syntax.expr base_type_code op var t
     := match e in @Syntax.expr _ _ _ t return Syntax.expr _ _ t with
-       | Return _ x => unnatize_exprf base x
-       | Abs tx tR f => Abs (fun x : var tx => let v := natize_interp_flat_type (t:=Tbase tx) base x in
-                                           @unnatize_expr _ _ (fst v) (f (snd v)))
+       | Abs tx tR f => Abs (fun x : interp_flat_type var tx =>
+                               let v := natize_interp_flat_type (t:=tx) base x in
+                               @unnatize_exprf _ _ (fst v) (f (snd v)))
        end.
 
   Fixpoint reflect_wffT (G : list (sigT (fun t => var1 (fst t) * var2 (snd t))%type))
@@ -312,31 +308,26 @@ Section language.
        | Pair _ _ _ _, _ => rFalse
        end%reified_prop.
 
-    Fixpoint reflect_wfT (G : list (sigT (fun t => var1 (fst t) * var2 (snd t))%type))
+    Definition reflect_wfT (G : list (sigT (fun t => var1 (fst t) * var2 (snd t))%type))
            {t1 t2 : type}
            (e1 : @expr (fun t => nat * var1 t)%type t1)
            (e2 : @expr (fun t => nat * var2 t)%type t2)
-           {struct e1}
     : reified_Prop
     := match e1, e2 with
-       | Return _ x, Return _ y
-         => reflect_wffT G x y
-       | Return _ _, _ => rFalse
        | Abs tx tR f, Abs tx' tR' f'
-         => match @flatten_binding_list2 (Tbase tx) (Tbase tx'), type_eq_semidec_transparent tR tR' with
+         => match @flatten_binding_list2 tx tx', flat_type_eq_semidec_transparent tR tR' with
            | Some G0, Some _
-             => ∀ (x : interp_flat_type var1 (Tbase tx)) (x' : interp_flat_type var2 (Tbase tx')),
-               @reflect_wfT (G0 x x' ++ G)%list _ _
-                            (f (snd (natize_interp_flat_type (List.length G) x)))
-                            (f' (snd (natize_interp_flat_type (List.length G) x')))
+             => ∀ (x : interp_flat_type var1 tx) (x' : interp_flat_type var2 tx'),
+               @reflect_wffT (G0 x x' ++ G)%list _ _
+                             (f (snd (natize_interp_flat_type (List.length G) x)))
+                             (f' (snd (natize_interp_flat_type (List.length G) x')))
            | _, _ => rFalse
            end
-       | Abs _ _ _, _ => rFalse
        end%reified_prop.
 End language.
 
-Global Arguments reflect_wffT {_} _ {op} _ {var1 var2} G {t1 t2} _ _.
-Global Arguments reflect_wfT {_} _ {op} _ {var1 var2} G {t1 t2} _ _.
+Global Arguments reflect_wffT {_} _ {op} op_beq {var1 var2} G {t1 t2} _ _.
+Global Arguments reflect_wfT {_} _ {op} op_beq {var1 var2} G {t1 t2} _ _.
 Global Arguments unnatize_exprf {_ _ _ _} _ _.
 Global Arguments unnatize_expr {_ _ _ _} _ _.
 Global Arguments natize_interp_flat_type {_ _ t} _ _.

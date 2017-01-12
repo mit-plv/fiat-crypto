@@ -174,11 +174,10 @@ Section symbolic.
          | x :: xs => LetIn (projT2 x) (fun _ => @prepend_prefix _ e xs)
          end.
 
-    Fixpoint cse {t} (v : @expr fsvar t) (xs : mapping) {struct v} : @expr var t
+    Definition cse {t} (v : @expr fsvar t) (xs : mapping) : @expr var t
       := match v in @Syntax.expr _ _ _ t return expr t with
-         | Return _ x => Return (csef (prepend_prefix x prefix) xs)
-         | Abs _ _ f => Abs (fun x => let x' := symbolicify_var x xs in
-                                      @cse _ (f (x, x')) (add_mapping x x' xs))
+         | Abs _ _ f => Abs (fun x => let x' := symbolicify_smart_var xs None x in
+                                      csef (prepend_prefix (f x') prefix) (smart_add_mapping xs x'))
          end.
   End with_var.
 

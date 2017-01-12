@@ -40,18 +40,18 @@ Notation "'(int)' x" := (Op (Cast _ (TWord 5)) (Var x)).
 Notation "'M32' & x" := (Op (Cast _ (TWord 6)) (Var x)).
 Notation "'(uint128_t)' x" := (Op (Cast _ (TWord 7)) (Var x)).
 *)
-Notation "x + y" := (Op (Add) (Pair x y)).
-Notation "x + y" := (Op (Add) (Pair (Var x) y)).
-Notation "x + y" := (Op (Add) (Pair x (Var y))).
-Notation "x + y" := (Op (Add) (Pair (Var x) (Var y))).
-Notation "x - y" := (Op (Sub) (Pair x y)).
-Notation "x - y" := (Op (Sub) (Pair (Var x) y)).
-Notation "x - y" := (Op (Sub) (Pair x (Var y))).
-Notation "x - y" := (Op (Sub) (Pair (Var x) (Var y))).
-Notation "x * y" := (Op (Mul) (Pair x y)).
-Notation "x * y" := (Op (Mul) (Pair (Var x) y)).
-Notation "x * y" := (Op (Mul) (Pair x (Var y))).
-Notation "x * y" := (Op (Mul) (Pair (Var x) (Var y))).
+Notation "x + y" := (Op (Add _) (Pair x y)).
+Notation "x + y" := (Op (Add _) (Pair (Var x) y)).
+Notation "x + y" := (Op (Add _) (Pair x (Var y))).
+Notation "x + y" := (Op (Add _) (Pair (Var x) (Var y))).
+Notation "x - y" := (Op (Sub _) (Pair x y)).
+Notation "x - y" := (Op (Sub _) (Pair (Var x) y)).
+Notation "x - y" := (Op (Sub _) (Pair x (Var y))).
+Notation "x - y" := (Op (Sub _) (Pair (Var x) (Var y))).
+Notation "x * y" := (Op (Mul _) (Pair x y)).
+Notation "x * y" := (Op (Mul _) (Pair (Var x) y)).
+Notation "x * y" := (Op (Mul _) (Pair x (Var y))).
+Notation "x * y" := (Op (Mul _) (Pair (Var x) (Var y))).
 (* python:
 <<
 for opn, op in (('*', 'Mul'), ('+', 'Add'), ('&', 'Land')):
@@ -115,20 +115,18 @@ Notation "x + y" := (Op (Add (TWord 7)) (Pair x (Op (Cast _ (TWord 7)) (Var y)))
 Notation "x + y" := (Op (Add (TWord 7)) (Pair (Var x) (Op (Cast _ (TWord 7)) y))).
 Notation "x + y" := (Op (Add (TWord 7)) (Pair (Var x) (Op (Cast _ (TWord 7)) (Var y)))).
 *)
-Notation "x >>> y" := (Op (Shr) (Pair x y)).
-Notation "x >>> y" := (Op (Shr) (Pair (Var x) y)).
-Notation "x >>> y" := (Op (Shr) (Pair x (Var y))).
-Notation "x >>> y" := (Op (Shr) (Pair (Var x) (Var y))).
-(*
+Notation "x >>> y" := (Op (Shr _) (Pair x y)).
+Notation "x >>> y" := (Op (Shr _) (Pair (Var x) y)).
+Notation "x >>> y" := (Op (Shr _) (Pair x (Var y))).
+Notation "x >>> y" := (Op (Shr _) (Pair (Var x) (Var y))).
 Notation "x >>> y" := (Op (Shr _) (Pair x (Op (Cast _ _) y))).
 Notation "x >>> y" := (Op (Shr _) (Pair (Var x) (Op (Cast _ _) y))).
 Notation "x >>> y" := (Op (Shr _) (Pair x (Op (Cast _ _) (Var y)))).
 Notation "x >>> y" := (Op (Shr _) (Pair (Var x) (Op (Cast _ _) (Var y)))).
-*)
-Notation "x & y" := (Op (Land) (Pair x y)).
-Notation "x & y" := (Op (Land) (Pair (Var x) y)).
-Notation "x & y" := (Op (Land) (Pair x (Var y))).
-Notation "x & y" := (Op (Land) (Pair (Var x) (Var y))).
+Notation "x & y" := (Op (Land _) (Pair x y)).
+Notation "x & y" := (Op (Land _) (Pair (Var x) y)).
+Notation "x & y" := (Op (Land _) (Pair x (Var y))).
+Notation "x & y" := (Op (Land _) (Pair (Var x) (Var y))).
 (*
 Notation "x & y" := (Op (Land (TWord 6)) (Pair (Op (Cast _ (TWord 6)) x) y)).
 Notation "x & y" := (Op (Land (TWord 6)) (Pair (Op (Cast _ (TWord 6)) x) (Var y))).

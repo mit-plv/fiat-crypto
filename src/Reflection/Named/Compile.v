@@ -38,14 +38,13 @@ Section language.
                            end
        end.
 
-  Fixpoint ocompile {t} (e : expr t) (ls : list (option Name)) {struct e}
+  Definition ocompile {t} (e : expr t) (ls : list (option Name))
     : option (nexpr t)
     := match e in @Syntax.expr _ _ _ t return option (nexpr t) with
-       | Return _ x => option_map Named.Return (ocompilef x ls)
-       | Abs _ _ f
-         => match ls with
-            | cons (Some n) ls'
-              => option_map (Named.Abs n) (@ocompile _ (f n) ls')
+       | Abs src _ f
+         => match split_onames src ls with
+            | (Some n, ls')%core
+              => option_map (Named.Abs n) (@ocompilef _ (f n) ls')
             | _ => None
             end
        end.

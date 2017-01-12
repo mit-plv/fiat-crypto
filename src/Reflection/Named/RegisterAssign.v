@@ -67,18 +67,17 @@ Section language.
     Fixpoint register_reassignf ctxi ctxr {t} e new_names
       := @register_reassignf_step (@register_reassignf) ctxi ctxr t e new_names.
 
-    Fixpoint register_reassign (ctxi : InContext) (ctxr : ReverseContext)
+    Definition register_reassign (ctxi : InContext) (ctxr : ReverseContext)
              {t} (e : expr InName t) (new_names : list (option OutName))
       : option (expr OutName t)
       := match e in Named.expr _ _ _ t return option (expr _ t) with
-         | Return _ x => option_map Return (register_reassignf ctxi ctxr x new_names)
          | Abs src _ n f
-           => let '(n', new_names') := eta (split_onames (Tbase src) new_names) in
+           => let '(n', new_names') := eta (split_onames src new_names) in
               match n' with
               | Some n'
-                => let ctxi := extendb (t:=src) ctxi n n' in
-                   let ctxr := extendb (t:=src) ctxr n' n in
-                   option_map (Abs n') (@register_reassign ctxi ctxr _ f new_names')
+                => let ctxi := extend (t:=src) ctxi n n' in
+                   let ctxr := extend (t:=src) ctxr n' n in
+                   option_map (Abs n') (register_reassignf ctxi ctxr f new_names')
               | None => None
               end
          end.

@@ -97,9 +97,6 @@ src/ModularArithmetic/BarrettReduction/ZHandbook.v
 src/ModularArithmetic/Montgomery/Z.v
 src/ModularArithmetic/Montgomery/ZBounded.v
 src/ModularArithmetic/Montgomery/ZProofs.v
-src/Reflection/Application.v
-src/Reflection/ApplicationLemmas.v
-src/Reflection/ApplicationRelations.v
 src/Reflection/BoundByCast.v
 src/Reflection/BoundByCastInterp.v
 src/Reflection/BoundByCastWf.v
