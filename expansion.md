@@ -21,8 +21,9 @@ go.crypto ed25519 for reference, or maybe go.crypto p256.
 
 **Weierstrass** or **Montgomery** curves, spec and associativity-commutativity
 proofs. This will most likely include writing a nsatz tactic wrapper that takes
-into account nonzero-ness hypotheses (specified in a Coq Enhancement proposal by
-Jason and Andres) and possibly debugging nsatz itself.
+into account nonzero-ness hypotheses (specified in a [Coq Enhancement proposal by
+Jason and Andres](https://github.com/coq/ceps/blob/master/text/007-nsatz-inequalities.md))
+and possibly debugging nsatz itself.
 
 **homomorphism** from ed25519 to x25519 -- the signing scheme and key agreement
 system use the same curve but in different coordinates. The ed25519
