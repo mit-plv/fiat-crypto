@@ -79,6 +79,10 @@ so the first task would be to figure out how much of them can be reused.
 maybe modeled after Brian Smith's ring library or go.crypto. Note that we would
 first need to have some story for modular multiplication at RSA sizes.
 
+**NewHope-simple** -- study it, see what would be needed to create an implementation.
+
+**McBits** -- study it, see what would be needed to create an implementation.
+
 **verified compilation** of PHOAS straight-line code to Jasmine-lang. This would
 involve register allocation and instruction scheduling.
 
