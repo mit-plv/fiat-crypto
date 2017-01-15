@@ -366,6 +366,7 @@ src/Util/AdditionChainExponentiation.v
 src/Util/AutoRewrite.v
 src/Util/Bool.v
 src/Util/CaseUtil.v
+src/Util/Curry.v
 src/Util/Decidable.v
 src/Util/Equality.v
 src/Util/FixCoqMistakes.v
