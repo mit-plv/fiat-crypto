@@ -392,9 +392,9 @@ Local Notation option_bind
                                   | None => None
                                   end).
 Definition lift_option {n A} (xs : tuple (option A) n) : option (tuple A n)
-  := lift_monad (fun T => option T) option_bind (@Some) xs.
+  := lift_monad (fun T => option T) option_bind (fun T v => @Some T v) xs.
 Definition push_option {n A} (xs : option (tuple A n)) : tuple (option A) n
-  := push_monad (fun T => option T) option_bind (@Some) xs.
+  := push_monad (fun T => option T) option_bind (fun T v => @Some T v) xs.
 
 Lemma lift_push_option {n A} (xs : option (tuple A (S n))) : lift_option (push_option xs) = xs.
 Proof.
