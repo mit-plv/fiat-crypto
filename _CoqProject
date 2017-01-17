@@ -396,4 +396,10 @@ src/Util/Tuple.v
 src/Util/Unit.v
 src/Util/WordUtil.v
 src/Util/ZUtil.v
+src/Util/Tactics/BreakMatch.v
+src/Util/Tactics/DestructHead.v
+src/Util/Tactics/DestructHyps.v
+src/Util/Tactics/Head.v
+src/Util/Tactics/SpecializeBy.v
+src/Util/Tactics/SplitInContext.v
 src/WeierstrassCurve/Pre.v

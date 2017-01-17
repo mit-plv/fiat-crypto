@@ -3,7 +3,9 @@ Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.Lists.List.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Prod.
-Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.ListUtil.
 Require Export Crypto.Util.FixCoqMistakes.

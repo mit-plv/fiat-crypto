@@ -1,5 +1,11 @@
 (** * Generic Tactics *)
 Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.Tactics.BreakMatch.
+Require Export Crypto.Util.Tactics.Head.
+Require Export Crypto.Util.Tactics.DestructHyps.
+Require Export Crypto.Util.Tactics.DestructHead.
+Require Export Crypto.Util.Tactics.SpecializeBy.
+Require Export Crypto.Util.Tactics.SplitInContext.
 
 (** Test if a tactic succeeds, but always roll-back the results *)
 Tactic Notation "test" tactic3(tac) :=
@@ -10,15 +16,6 @@ Tactic Notation "not" tactic3(tac) := try ((test tac); fail 1 tac "succeeds").
 
 Ltac get_goal :=
   match goal with |- ?G => G end.
-
-(** find the head of the given expression *)
-Ltac head expr :=
-  match expr with
-    | ?f _ => head f
-    | _ => expr
-  end.
-
-Ltac head_hnf expr := let expr' := eval hnf in expr in head expr'.
 
 (** [contains x expr] succeeds iff [x] appears in [expr] *)
 Ltac contains search_for in_term :=
@@ -62,59 +59,6 @@ Ltac subst_evars :=
          end.
 
 Ltac subst_let := repeat match goal with | x := _ |- _ => subst x end.
-
-(** destruct discriminees of [match]es in the goal *)
-(* Prioritize breaking apart things in the context, then things which
-   don't need equations, then simple matches (which can be displayed
-   as [if]s), and finally matches in general. *)
-Ltac break_match_step only_when :=
-  match goal with
-  | [ |- appcontext[match ?e with _ => _ end] ]
-    => only_when e; is_var e; destruct e
-  | [ |- appcontext[match ?e with _ => _ end] ]
-    => only_when e;
-       match type of e with
-       | sumbool _ _ => destruct e
-       end
-  | [ |- appcontext[if ?e then _ else _] ]
-    => only_when e; destruct e eqn:?
-  | [ |- appcontext[match ?e with _ => _ end] ]
-    => only_when e; destruct e eqn:?
-  end.
-Ltac break_match_hyps_step only_when :=
-  match goal with
-  | [ H : appcontext[match ?e with _ => _ end] |- _ ]
-    => only_when e; is_var e; destruct e
-  | [ H : appcontext[match ?e with _ => _ end] |- _ ]
-    => only_when e;
-       match type of e with
-       | sumbool _ _ => destruct e
-       end
-  | [ H : appcontext[if ?e then _ else _] |- _ ]
-    => only_when e; destruct e eqn:?
-  | [ H : appcontext[match ?e with _ => _ end] |- _ ]
-    => only_when e; destruct e eqn:?
-  end.
-Ltac break_match := repeat break_match_step ltac:(fun _ => idtac).
-Ltac break_match_hyps := repeat break_match_hyps_step ltac:(fun _ => idtac).
-Ltac break_match_when_head_step T :=
-  break_match_step
-    ltac:(fun e => let T' := type of e in
-                   let T' := head T' in
-                   constr_eq T T').
-Ltac break_match_hyps_when_head_step T :=
-  break_match_hyps_step
-    ltac:(fun e => let T' := type of e in
-                   let T' := head T' in
-                   constr_eq T T').
-Ltac break_match_when_head T := repeat break_match_when_head_step T.
-Ltac break_match_hyps_when_head T := repeat break_match_hyps_when_head_step T.
-Ltac break_innermost_match_step :=
-  break_match_step ltac:(fun v => lazymatch v with
-                                  | appcontext[match _ with _ => _ end] => fail
-                                  | _ => idtac
-                                  end).
-Ltac break_innermost_match := repeat break_innermost_match_step.
 
 Ltac free_in x y :=
   idtac;
@@ -210,86 +154,6 @@ Ltac destruct_all_matches' matcher := destruct_all_matches_then matcher idtac.
 Ltac inversion_all_matches matcher := inversion_all_matches_then matcher ltac:( simpl in * ).
 Ltac inversion_one_match matcher := inversion_one_match_then matcher ltac:( simpl in * ).
 Ltac inversion_all_matches' matcher := inversion_all_matches_then matcher idtac.
-
-(* matches anything whose type has a [T] in it *)
-Ltac destruct_type_matcher T HT :=
-  match HT with
-  | context[T] => idtac
-  end.
-Ltac destruct_type T := destruct_all_matches ltac:(destruct_type_matcher T).
-Ltac destruct_type' T := destruct_all_matches' ltac:(destruct_type_matcher T).
-
-Ltac destruct_head_matcher T HT :=
-  match head HT with
-  | T => idtac
-  end.
-Ltac destruct_head T := destruct_all_matches ltac:(destruct_head_matcher T).
-Ltac destruct_one_head T := destruct_one_match ltac:(destruct_head_matcher T).
-Ltac destruct_head' T := destruct_all_matches' ltac:(destruct_head_matcher T).
-
-Ltac inversion_head T := inversion_all_matches ltac:(destruct_head_matcher T).
-Ltac inversion_one_head T := inversion_one_match ltac:(destruct_head_matcher T).
-Ltac inversion_head' T := inversion_all_matches' ltac:(destruct_head_matcher T).
-
-
-Ltac head_hnf_matcher T HT :=
-  match head_hnf HT with
-  | T => idtac
-  end.
-Ltac destruct_head_hnf T := destruct_all_matches ltac:(head_hnf_matcher T).
-Ltac destruct_one_head_hnf T := destruct_one_match ltac:(head_hnf_matcher T).
-Ltac destruct_head_hnf' T := destruct_all_matches' ltac:(head_hnf_matcher T).
-
-Ltac inversion_head_hnf T := inversion_all_matches ltac:(head_hnf_matcher T).
-Ltac inversion_one_head_hnf T := inversion_one_match ltac:(head_hnf_matcher T).
-Ltac inversion_head_hnf' T := inversion_all_matches' ltac:(head_hnf_matcher T).
-
-Ltac destruct_sig_matcher HT :=
-  match eval hnf in HT with
-  | ex _ => idtac
-  | ex2 _ _ => idtac
-  | sig _ => idtac
-  | sig2 _ _ => idtac
-  | sigT _ => idtac
-  | sigT2 _ _ => idtac
-  | and _ _ => idtac
-  | prod _ _ => idtac
-  end.
-Ltac destruct_sig := destruct_all_matches destruct_sig_matcher.
-Ltac destruct_sig' := destruct_all_matches' destruct_sig_matcher.
-
-Ltac transparent_specialize_one H arg :=
-  first [ let test := eval unfold H in H in idtac;
-          let H' := fresh in rename H into H'; pose (H' arg) as H; subst H'
-         | specialize (H arg) ].
-
-(** try to specialize all non-dependent hypotheses using [tac], maintaining transparency *)
-Ltac specialize_by' tac :=
-  idtac;
-  match goal with
-  | [ H : ?A -> ?B |- _ ] =>
-    match type of A with
-      Prop =>
-      let H' := fresh in
-      assert (H' : A) by tac;
-      transparent_specialize_one H H';
-      try clear H' (* if [H] was transparent, [H'] will remain *)
-    end
-  end.
-
-Ltac specialize_by tac := repeat specialize_by' tac.
-
-(** [specialize_by auto] should not mean [specialize_by ltac:( auto
-    with * )]!!!!!!! (see
-    https://coq.inria.fr/bugs/show_bug.cgi?id=4966) We fix this design
-    flaw. *)
-Tactic Notation "specialize_by" tactic3(tac) := specialize_by tac.
-
-(** A marginally faster version of [specialize_by assumption] *)
-Ltac specialize_by_assumption :=
-  repeat match goal with
-         | [ H : ?T, H' : (?T -> ?U)%type |- _ ] => specialize (H' H)
-         end.
 
 (** If [tac_in H] operates in [H] and leaves side-conditions before
     the original goal, then

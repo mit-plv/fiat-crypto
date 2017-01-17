@@ -5,7 +5,9 @@
 Require Import Coq.Setoids.Setoid.
 Require Import Coq.Program.Tactics.
 Require Import Crypto.Util.Notations.
-Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.Tactics.DestructHyps.
+Require Import Crypto.Util.Tactics.BreakMatch.
 
 Delimit Scope reified_prop_scope with reified_prop.
 Inductive reified_Prop := rTrue | rFalse | rAnd (x y : reified_Prop) | rOr (x y : reified_Prop) | rImpl (x y : reified_Prop) | rForall {T} (f : T -> reified_Prop) | rEq {T} (x y : T) | inject (_ : Prop).

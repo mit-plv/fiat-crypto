@@ -2,7 +2,7 @@
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.WfProofs.
 Require Import Crypto.Reflection.Inline.
-Require Import Crypto.Util.Tactics Crypto.Util.Sigma Crypto.Util.Prod.
+Require Import Crypto.Util.Tactics.SpecializeBy Crypto.Util.Tactics.DestructHead Crypto.Util.Sigma Crypto.Util.Prod.
 
 Local Open Scope ctype_scope.
 Section language.
