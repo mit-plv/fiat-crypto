@@ -169,36 +169,12 @@ Module B.
                autorewrite with push_eval; rewrite ?weight_place; nsatz || omega.
       Qed. Hint Rewrite @eval_from_associational : push_eval.
 
-      (** Carrying *)
-
-      Definition carry_allowed (i j:nat) : Prop := weight i mod weight j = 0 /\ weight j / weight i <> 0.
-      Definition carry_from_to {n} (i j:nat) (p:tuple Z n) : tuple Z n :=
-        from_associational n (carry (weight i) (weight j / weight i) (to_associational p)).
-      Lemma eval_carry_from_to {n} (n_nonzero:n<>O) i j (H:carry_allowed i j) (p:tuple Z n) :
-        eval (carry_from_to i j p) = eval p.
-      Proof. cbv [carry_from_to carry_allowed] in *;
-                destruct_head and; autorewrite with push_eval; trivial. Qed.
-
-      Definition carry_pick_dst n (i:nat) : nat :=
-        match List.find (fun j => if dec (carry_allowed i j) then true else false) (List.skipn i (List.seq (S O) (S n)) with
-        | None => i
-        | Some j => j
-        end.
-      Lemma carry_allowed_refl (i:nat) : carry_allowed i i.
-      Proof. cbv [carry_allowed]; rewrite Z.mod_same, Z.div_same by trivial; omega. Qed.
-      Lemma carry_allowed_pick_dst (n i:nat) : carry_allowed i (carry_pick_dst n i).
-      Proof. induction i; cbv [carry_pick_dst];
-               repeat match goal with
-                      | _ => progress break_match
-                      | _ => progress destruct_head and
-                      | H:_ |- _ => apply List.find_some in H
-                      | _ => solve [trivial using carry_allowed_refl | discriminate ]
-                      end. Qed.
-
-      Definition carry {n} (i:nat) (p:tuple Z n) := carry_from_to i (carry_pick_dst n i) p.
-      Lemma eval_carry {n} (n_nonzero:n<>O) (i:nat) (p:tuple Z n) : eval (carry i p) = eval p.
-      Proof. cbv [carry]. rewrite ?eval_carry_from_to; auto using carry_allowed_pick_dst. Qed.
-      Hint Rewrite @eval_carry_from_to @eval_carry : push_eval.
+      Definition carry (index:nat) (p:list limb) : list limb :=
+        Associational.carry (weight index) (weight (S index) / weight index) p.
+      Lemma eval_carry i p : weight (S i) / weight i <> 0 ->
+        Associational.eval (carry i p) = Associational.eval p.
+      Proof. cbv [carry]; intros; auto using eval_carry. Qed.
+      Hint Rewrite @eval_carry : push_eval.
     End Positional.
   End Positional.
 End B.
