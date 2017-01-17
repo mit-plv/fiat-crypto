@@ -6,17 +6,17 @@ Require ModularArithmetic.PrimeFieldTheorems. (* to know that Z mod p is a field
 
 (* TODO: move this to a separate file *)
 Require Crypto.Util.Decidable.
-Require Crypto.Util.Tactics.
+Require Crypto.Util.Tactics.SpecializeBy.
 Module Pre.
   Local Open Scope F_scope.
   Lemma curve25519_params_ok {prime_q:Znumtheory.prime (2^255-19)} :
   @E.twisted_edwards_params (F (2 ^ 255 - 19)) (@eq (F (2 ^ 255 - 19))) (@F.zero (2 ^ 255 - 19))
-    (@F.one (2 ^ 255 - 19)) (@F.add (2 ^ 255 - 19)) (@F.mul (2 ^ 255 - 19)) 
+    (@F.one (2 ^ 255 - 19)) (@F.add (2 ^ 255 - 19)) (@F.mul (2 ^ 255 - 19))
     (@F.opp (2 ^ 255 - 19) 1)
     (@F.opp (2 ^ 255 - 19) (F.of_Z (2 ^ 255 - 19) 121665) / F.of_Z (2 ^ 255 - 19) 121666).
   Proof.
     pose (@PrimeFieldTheorems.F.Decidable_square (2^255-19) _);
-      Tactics.specialize_by Decidable.vm_decide; split; Decidable.vm_decide_no_check.
+      SpecializeBy.specialize_by Decidable.vm_decide; split; Decidable.vm_decide_no_check.
   Qed.
 End Pre.
 (* these 2 proofs can be generated using https://github.com/andres-erbsen/safecurves-primes *)
