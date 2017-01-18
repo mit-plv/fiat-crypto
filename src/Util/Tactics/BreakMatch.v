@@ -53,7 +53,11 @@ Ltac destruct_rewrite_sumbool e :=
   destruct e as [H|H];
   try lazymatch type of H with
       | ?LHS = ?RHS
-        => rewrite ?H; rewrite ?H in *;
+        => lazymatch RHS with
+           | context[LHS] => fail
+           | _ => idtac
+           end;
+           rewrite ?H; rewrite ?H in *;
            repeat match goal with
                   | [ |- context G[LHS] ]
                     => let LHS' := fresh in
