@@ -1,5 +1,6 @@
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.FixCoqMistakes.
 
 Section language.
   Context (base_type_code : Type)
