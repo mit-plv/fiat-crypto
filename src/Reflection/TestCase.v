@@ -4,6 +4,7 @@ Require Import Crypto.Reflection.Named.Syntax.
 Require Import Crypto.Reflection.Named.Compile.
 Require Import Crypto.Reflection.Named.RegisterAssign.
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.Equality.
 Require Export Crypto.Reflection.Reify.
 Require Import Crypto.Reflection.InputSyntax.
 Require Import Crypto.Reflection.CommonSubexpressionElimination.
@@ -81,7 +82,7 @@ Goal True.
   vm_compute in e.
 Abort.
 
-Definition example_expr : Syntax.Expr base_type interp_base_type op (Arrow Tnat (Arrow Tnat (Tflat _ tnat))).
+Definition example_expr : Syntax.Expr base_type interp_base_type op (Arrow Tnat (Arrow Tnat (Tflat tnat))).
 Proof.
   let x := Reify (fun z w => let unused := 1 + 1 in let x := 1 in let y := 1 in (let a := 1 in let '(c, d) := (2, 3) in a + x + (x + x) + (x + x) - (x + x) - a + c + d) + y + z + w)%nat in
   exact x.
@@ -202,7 +203,7 @@ Module bounds.
        | Prod _ _ => fun x => (constant_bounds _ (fst x), constant_bounds _ (snd x))
        end.
 
-  Definition example_expr_bounds : Syntax.Expr base_type interp_base_type_bounds op (Arrow Tnat (Arrow Tnat (Tflat _ tnat))) :=
+  Definition example_expr_bounds : Syntax.Expr base_type interp_base_type_bounds op (Arrow Tnat (Arrow Tnat (Tflat tnat))) :=
     Eval vm_compute in
       (fun var => map base_type op interp_base_type interp_base_type_bounds constant_bounds (fun _ x => x) (fun _ x => x) (example_expr (fun t => var t))).
 

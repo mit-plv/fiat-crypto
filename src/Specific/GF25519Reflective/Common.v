@@ -327,8 +327,8 @@ Ltac assoc_right_tuple x so_far :=
 Local Ltac make_args x :=
   let x' := fresh "x'" in
   compute in x |- *;
-  let t := match type of x with @expr _ _ _ _ (Tflat _ ?t) => t end in
-  let t' := match goal with |- @expr _ _ _ _ (Tflat _ ?t) => t end in
+  let t := match type of x with @expr _ _ _ _ (Tflat ?t) => t end in
+  let t' := match goal with |- @expr _ _ _ _ (Tflat ?t) => t end in
   refine (LetIn (UnReturn x) _);
   let x'' := fresh "x''" in
   intro x'';

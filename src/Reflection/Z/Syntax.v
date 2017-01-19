@@ -1,6 +1,7 @@
 (** * PHOAS Syntax for expression trees on ℤ *)
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.Equality.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemListZOperations.
 Require Import Crypto.Util.Equality.
 Require Import Crypto.Util.ZUtil.
