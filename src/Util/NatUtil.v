@@ -59,6 +59,24 @@ Tactic Notation "omega" := coq_omega.
 Tactic Notation "omega" "*" := omega_with_min_max_case.
 Tactic Notation "omega" "**" := omega_with_min_max.
 
+Lemma nat_beq_false_iff x y : nat_beq x y = false <-> x <> y.
+Proof.
+  split; intro H; repeat intro; subst.
+  { erewrite internal_nat_dec_lb in H by reflexivity; congruence. }
+  { destruct (nat_beq x y) eqn:H'; [ | reflexivity ].
+    apply internal_nat_dec_bl in H'; subst; congruence. }
+Qed.
+
+Ltac nat_beq_to_eq :=
+  repeat match goal with
+         | [ H : nat_beq _ _ = true |- _ ] => apply internal_nat_dec_bl in H
+         | [ H : is_true (nat_beq _ _) = true |- _ ] => apply internal_nat_dec_bl in H
+         | [ |- nat_beq _ _ = true ] => apply internal_nat_dec_lb
+         | [ |- is_true (nat_beq _ _) ] => apply internal_nat_dec_lb
+         | [ H : nat_beq _ _ = false |- _ ] => apply nat_beq_false_iff in H
+         | [ |- nat_beq _ _ = false ] => apply nat_beq_false_iff
+         end.
+
 Lemma div_minus : forall a b, b <> 0 -> (a + b) / b = a / b + 1.
 Proof.
   intros.
