@@ -2,10 +2,11 @@ Require Import Crypto.Util.Tactics Crypto.Util.Decidable Crypto.Util.LetIn.
 
 Require Import ZArith Nsatz Psatz Coq.omega.Omega.
 Require Import Coq.ZArith.BinIntDef. Local Open Scope Z_scope.
-Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.ZUtil Crypto.Util.ListUtil.
 
 Require Coq.Lists.List. Local Notation list := List.list.
 Require Crypto.Util.Tuple. Local Notation tuple := Tuple.tuple.
+Require Import Recdef.
 
     (* TODO: move *)
     Lemma fst_pair {A B} (a:A) (b:B) : fst (a,b) = a. reflexivity. Qed.
@@ -42,6 +43,77 @@ Require Crypto.Util.Tuple. Local Notation tuple := Tuple.tuple.
       intros; rewrite Z.add_mod, Z.mul_mod by auto.
       match goal with H : _ mod _ = _ mod _ |- _ => rewrite H end.
       rewrite <-Z.mul_mod, <-Z.add_mod by auto; reflexivity.
+    Qed.
+
+    Fixpoint remove_first {A} (dec:forall x y:A, {x = y} + {x<>y}) (x:A) (ls:list A)
+      := match ls with
+         | nil => nil
+         | (a :: ls')%list =>
+           if (dec x a) then ls' else (a :: remove_first dec x ls')%list
+         end.
+
+    Lemma length_remove_first_In {A} dec (x:A) ls:
+      List.In x ls -> length (remove_first dec x ls) = (length ls - 1)%nat.
+    Proof.
+      induction ls; simpl remove_first; intros; [reflexivity|].
+      break_if; simpl length; try omega.
+      destruct H; try congruence. rewrite IHls by assumption.
+      assert (length ls > 0)%nat by (destruct ls; simpl in *; omega).
+      omega.
+    Qed.
+
+    Lemma length_remove_first_notIn {A} dec (x:A) ls:
+      ~List.In x ls -> length (remove_first dec x ls) = length ls.
+    Proof.
+      induction ls; simpl remove_first; intros; [reflexivity|].
+      break_if; simpl length.
+      { simpl in H. intuition. congruence. }
+      { rewrite IHls; auto using List.in_cons. }
+    Qed.
+    
+    Definition find_remove_first {A dec} (f:A -> bool) ls : (option A) * list A
+      := match List.find (fun a => f a) ls with
+         | None => (None, ls)
+         | Some a => (Some a, remove_first dec a ls)
+         end.
+
+    Lemma length_find_remove_first {A dec} (f:A -> bool) ls :
+      length (snd (@find_remove_first _ dec f ls)) =
+        match (fst (@find_remove_first _ dec f ls)) with
+        | None => length ls
+        | Some _ => (length ls - 1)%nat
+        end.
+    Proof.
+      cbv [find_remove_first]; repeat break_match; try discriminate;
+        rewrite ?fst_pair, ?snd_pair in *; auto.
+      apply length_remove_first_In.
+      apply List.find_some in Heqo; tauto.
+    Qed.
+
+    Lemma to_nat_neg : forall x, x < 0 -> Z.to_nat x = 0%nat.
+    Proof. destruct x; try reflexivity; intros. pose proof (Pos2Z.is_pos p). omega. Qed.
+
+    Lemma remove_first_cons {A dec} x (ls:list A) :
+      remove_first dec x (x::ls) = ls.
+    Proof. cbv [remove_first]. break_if;  congruence. Qed.
+    
+    Lemma remove_first_correct {A dec} x (ls:list A) :
+      List.In x ls ->
+      exists hd tl, (hd ++ tl)%list = remove_first dec x ls
+                    /\ (hd ++ x :: tl)%list = ls.
+    Proof.
+      induction ls; intros; [exfalso; auto|].
+      cbv [remove_first].
+      break_if.
+      { exists nil; exists ls.
+        subst; rewrite !List.app_nil_l.
+        tauto. }
+      { destruct IHls as [hd [tl IHls]];[destruct H; congruence||assumption|].
+        exists (a::hd)%list. exists tl.
+        rewrite <-!List.app_comm_cons.
+        destruct IHls as [Hrf Hls].
+        rewrite Hrf, Hls.
+        tauto. }
     Qed.
 
 Delimit Scope runtime_scope with RT.
@@ -109,6 +181,172 @@ Module B.
     Proof. induction p; simpl carry; repeat break_match; autorewrite with push_eval cancel_pair;
              try pose proof (Z.div_mod (snd a) _ fw_nonzero); nsatz.
     Qed. Hint Rewrite eval_carry eval_reduce : push_eval.
+
+    Section Saturated.
+      Context {word_max : Z} {word_max_pos : 1 < word_max}
+              {add : Z -> Z -> Z * Z}
+              {add_correct : forall x y, fst (add x y) + word_max * snd (add x y) = x + y}
+              {end_wt:Z} {end_wt_pos : 0 < end_wt}
+      .
+      
+      Definition has_same_wt (cx:limb) := fun a:limb => if dec (fst cx = fst a) then true else false.
+
+      Lemma find_remove_first_same_wt cx cx' p p':
+        @find_remove_first limb dec_eq_prod (has_same_wt cx) p = (Some cx', p') ->
+        fst cx * (snd cx + snd cx') + eval p' = fst cx * snd cx + eval p.
+      Proof.
+        cbv [find_remove_first].
+        break_match; intros; try discriminate.
+        destruct (List.find_some _ _ Heqo) as [HIn Hwt].
+        destruct (@remove_first_correct limb dec_eq_prod _ _ HIn) as [hd [tl [Hrf Hp]]].
+        inversion H. subst.
+        rewrite <-Hrf; autorewrite with push_eval.
+        cbv [has_same_wt] in Hwt; break_if; try discriminate.
+        nsatz.
+      Qed.
+
+      Fixpoint compact_no_carry' (acc p:list limb) : list limb :=
+        match p with
+        | nil => acc
+        | (cx::tl)%list =>
+          match (@find_remove_first limb dec_eq_prod (has_same_wt cx) acc) with
+          | (None,_) => compact_no_carry' (cx::acc)%list tl
+          | (Some l,acc') => compact_no_carry' ((fst cx, snd cx + snd l)::acc')%list tl
+          end
+        end.
+      Definition compact_no_carry := compact_no_carry' nil.
+      Lemma eval_compact_no_carry' p: forall acc,
+        eval (compact_no_carry' acc p) = eval acc + eval p.
+      Proof.
+        induction p; simpl;
+        repeat match goal with
+               | |- _ => break_match
+               | |- _ => progress (intros;subst)
+               | |- _ => progress autorewrite with push_eval in *
+               | |- _ => progress rewrite ?@fst_pair, ?@snd_pair in *
+               | |- _ => rewrite IHp
+               | H : find_remove_first _ _ = _ |- _ => apply find_remove_first_same_wt in H
+                                                                                          | |- _ => nsatz
+               end.
+      Qed.
+      Lemma eval_compact_no_carry p: eval (compact_no_carry p) = eval p.
+      Proof. cbv [compact_no_carry]. rewrite eval_compact_no_carry'. reflexivity. Qed. Hint Rewrite eval_compact_no_carry : push_eval.
+      
+      Function add_and_carry (cx:limb) (acc p:list limb)
+               {measure (fun cx => Z.to_nat (end_wt - fst cx)) cx}
+        : list limb * list limb * limb :=
+        if dec (fst cx <= 0) then (acc,p,cx) (* never happens *) else 
+        if dec (fst cx >= end_wt) then (acc, p, cx) else
+          match (@find_remove_first limb dec_eq_prod (has_same_wt cx) p) with
+          | (None,_) => add_and_carry (fst cx * word_max, 0) (cx :: acc)%list p
+          | (Some cx',p') =>
+            let '(sum, carry) := add (snd cx) (snd cx') in
+            let new_list := ((fst cx, sum) :: p')%list in
+            let new_limb := (fst cx * word_max, carry) in
+            add_and_carry new_limb acc new_list
+          end.
+      Proof.
+        { intros; simpl.
+          destruct (Z_lt_dec end_wt (fst cx*word_max)).
+          { rewrite to_nat_neg by omega.
+            change 0%nat with (Z.to_nat 0).
+            apply Z2Nat.inj_lt; omega. }
+          { apply Z2Nat.inj_lt; try omega.
+            apply Z.sub_lt_mono_l.
+            apply Z.le_lt_trans with (m := fst cx * 1); try omega.
+            apply Z.mul_lt_mono_pos_l; auto; omega.
+        } }
+        { intros; simpl.
+          destruct (Z_lt_dec end_wt (fst cx*word_max)).
+          { rewrite to_nat_neg by omega.
+            change 0%nat with (Z.to_nat 0).
+            apply Z2Nat.inj_lt; omega. }
+          { apply Z2Nat.inj_lt; try omega.
+            apply Z.sub_lt_mono_l.
+            apply Z.le_lt_trans with (m := fst cx * 1); try omega.
+            apply Z.mul_lt_mono_pos_l; auto; omega.
+        } }
+      Defined.
+
+      Lemma length_add_and_carry cx acc p: length (snd (fst (add_and_carry cx acc p))) = length p.
+      Proof.
+        functional induction (add_and_carry cx acc p); try reflexivity.
+        { rewrite IHp0. reflexivity. }
+        { rewrite IHp0. simpl length.
+          let A := fresh "H" in
+          lazymatch goal with H : @find_remove_first ?T ?dec ?f ?l = (_,_) |- _ =>
+                              pose proof (@length_find_remove_first T dec f l) as A;
+                                rewrite H in A; simpl in A
+          end.
+          assert (length p > 0)%nat by (destruct p; (discriminate || simpl; omega)).
+          omega. }
+      Qed.
+
+      Lemma eval_add_and_carry cx acc p :
+        eval (fst (fst (add_and_carry cx acc p))) + eval (snd (fst (add_and_carry cx acc p))) + eval (snd (add_and_carry cx acc p)::nil)%list = eval (cx::p)%list + eval acc.
+      Proof.
+        functional induction (add_and_carry cx acc p);
+          autorewrite with push_eval in *;
+          rewrite ?@fst_pair, ?@snd_pair in *.
+        { ring. }
+        { omega. }
+        { rewrite IHp0. ring. }
+        { rewrite IHp0. clear IHp0.
+          let A := fresh H in
+          lazymatch goal with H : add ?x ?y = _ |- _ =>
+                          pose proof (add_correct x y) as A;
+                            rewrite H in A
+          end.
+          lazymatch goal with H : find_remove_first _ _ = _ |- _ =>
+                              apply find_remove_first_same_wt in H end.
+          
+          rewrite ?@fst_pair, ?@snd_pair in *.
+          nsatz.
+        }
+      Qed.
+
+      Function compact_rows' (end_carry:list limb) (acc p:list limb)
+               {measure length p}: list limb :=
+        match p with
+        | nil => (acc ++ end_carry)%list
+        | (cx :: p')%list =>
+          let '(new_acc, new_list, new_end_carry) := add_and_carry cx nil p' in
+          compact_rows' (compact_no_carry (new_end_carry :: end_carry)) (compact_no_carry (new_acc ++ acc))%list new_list
+        end.
+      Proof.
+        intros. subst. simpl length.
+        let A := fresh "H" in
+        lazymatch goal with H : add_and_carry ?l ?acc ?p = _ |- _ =>
+                            pose proof (@length_add_and_carry l acc p) as A;
+                              rewrite H in A
+        end.
+        rewrite ?@fst_pair, ?@snd_pair in *. omega.
+      Defined.
+
+      Definition compact_rows (p:list limb) : list limb :=
+        compact_rows' nil nil p.
+
+      Lemma eval_compact_rows' end_carry acc p :
+        eval (compact_rows' end_carry acc p) = eval p + eval acc + eval end_carry.
+      Proof.
+        functional induction (compact_rows' end_carry acc p);
+          autorewrite with push_eval in *.
+        { reflexivity. }
+        { rewrite IHl.
+          let A := fresh "H" in
+          lazymatch goal with H : add_and_carry ?x ?y ?z = _ |- _ =>
+                          pose proof (eval_add_and_carry x y z) as A;
+                            rewrite H in A
+          end.
+          rewrite ?@fst_pair, ?snd_pair in *.
+          autorewrite with push_eval in *.
+          nsatz. }
+      Qed.
+
+      Lemma eval_compact_rows p : eval (compact_rows p) = eval p.
+      Proof. cbv [compact_rows]; rewrite eval_compact_rows'; autorewrite with push_eval; ring. Qed.
+
+    End Saturated.
   End Associational.
 
   Module Positional.
