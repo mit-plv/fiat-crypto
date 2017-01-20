@@ -63,11 +63,9 @@ Section language.
       enforced, but it will block [vm_compute] when trying to use the
       lemma in this file.) *)
   Context (base_type_code : Type)
-          (interp_base_type1 interp_base_type2 : base_type_code -> Type)
           (base_type_eq_semidec_transparent : forall t1 t2 : base_type_code, option (t1 = t2))
           (base_type_eq_semidec_is_dec : forall t1 t2, base_type_eq_semidec_transparent t1 t2 = None -> t1 <> t2)
-          (op : flat_type base_type_code -> flat_type base_type_code -> Type)
-          (R : forall t, interp_flat_type interp_base_type1 t -> interp_flat_type interp_base_type2 t -> reified_Prop).
+          (op : flat_type base_type_code -> flat_type base_type_code -> Type).
   (** In practice, semi-deciding equality of operators should either
       return [Some trivial] or [None], and not make use of the
       generality of [pointed_Prop].  However, we need to use
@@ -83,16 +81,8 @@ Section language.
   (* convenience notations that fill in some arguments used across the section *)
   Local Notation flat_type := (flat_type base_type_code).
   Local Notation type := (type base_type_code).
-  Let Tbase := @Tbase base_type_code.
-  Local Coercion Tbase : base_type_code >-> Syntax.flat_type.
-  Local Notation interp_type1 := (interp_type interp_base_type1).
-  Local Notation interp_type2 := (interp_type interp_base_type2).
-  Local Notation interp_flat_type1 := (interp_flat_type interp_base_type1).
-  Local Notation interp_flat_type2 := (interp_flat_type interp_base_type2).
-  Local Notation exprf1 := (@exprf base_type_code interp_base_type1 op).
-  Local Notation exprf2 := (@exprf base_type_code interp_base_type2 op).
-  Local Notation expr1 := (@expr base_type_code interp_base_type1 op).
-  Local Notation expr2 := (@expr base_type_code interp_base_type2 op).
+  Local Notation exprf := (@exprf base_type_code op).
+  Local Notation expr := (@expr base_type_code op).
 
   Local Ltac inversion_base_type_code_step :=
     match goal with
@@ -105,10 +95,12 @@ Section language.
   (* lift [base_type_eq_semidec_transparent] across [flat_type] *)
   Fixpoint flat_type_eq_semidec_transparent (t1 t2 : flat_type) : option (t1 = t2)
     := match t1, t2 return option (t1 = t2) with
-       | Syntax.Tbase t1, Syntax.Tbase t2
+       | Tbase t1, Tbase t2
          => option_map (@f_equal _ _ Tbase _ _)
-                      (base_type_eq_semidec_transparent t1 t2)
-       | Syntax.Tbase _, _ => None
+                       (base_type_eq_semidec_transparent t1 t2)
+       | Tbase _, _ => None
+       | Unit, Unit => Some eq_refl
+       | Unit, _ => None
        | Prod A B, Prod A' B'
          => match flat_type_eq_semidec_transparent A A', flat_type_eq_semidec_transparent B B' with
            | Some p, Some q => Some (f_equal2 Prod p q)
@@ -139,7 +131,7 @@ Section language.
   Lemma flat_type_eq_semidec_transparent_refl t : flat_type_eq_semidec_transparent t t = Some eq_refl.
   Proof.
     clear -base_type_eq_semidec_is_dec.
-    induction t as [t | A B IHt]; simpl.
+    induction t as [t | | A B IHt]; simpl; try reflexivity.
     { rewrite base_type_eq_semidec_transparent_refl; reflexivity. }
     { rewrite_hyp !*; reflexivity. }
   Qed.
@@ -195,10 +187,6 @@ Section language.
                   base_type_eq_semidec_transparent _ _ var1 var1 (fun _ => rEq) (fst (projT2 x)) (fst (projT2 y))
                 /\ eq_semidec_and_gen
                      base_type_eq_semidec_transparent _ _ var2 var2 (fun _ => rEq) (snd (projT2 x)) (snd (projT2 y)))%reified_prop.
-  Definition rel_type_and_const (t t' : flat_type) (x : interp_flat_type1 t) (y : interp_flat_type2 t')
-    : reified_Prop
-    := eq_semidec_and_gen
-         flat_type_eq_semidec_transparent _ _ interp_flat_type1 interp_flat_type2 R x y.
 
   Definition duplicate_type (ls : list (sigT (fun t => var1 t * var2 t)%type)) : list (sigT eP)
     := List.map (fun v => existT eP (projT1 v, projT1 v) (projT2 v)) ls.
@@ -247,59 +235,56 @@ Section language.
                           let base := fst ret in
                           let b := snd ret in
                           (base, (a, b))
-       | Syntax.Tbase t => fun v => (S base, (base, v))
+       | Unit => fun _ => (base, tt)
+       | Tbase t => fun v => (S base, (base, v))
        end v.
   Arguments natize_interp_flat_type {var t} _ _.
   Lemma length_natize_interp_flat_type1 {t} (base : nat) (v1 : interp_flat_type var1 t) (v2 : interp_flat_type var2 t)
     : fst (natize_interp_flat_type base v1) = length (flatten_binding_list base_type_code v1 v2) + base.
   Proof.
-    revert base; induction t; simpl; [ reflexivity | ].
+    revert base; induction t; simpl; [ reflexivity | reflexivity | ].
     intros; rewrite List.app_length, <- plus_assoc.
     rewrite_hyp <- ?*; reflexivity.
   Qed.
   Lemma length_natize_interp_flat_type2 {t} (base : nat) (v1 : interp_flat_type var1 t) (v2 : interp_flat_type var2 t)
     : fst (natize_interp_flat_type base v2) = length (flatten_binding_list base_type_code v1 v2) + base.
   Proof.
-    revert base; induction t; simpl; [ reflexivity | ].
+    revert base; induction t; simpl; [ reflexivity | reflexivity | ].
     intros; rewrite List.app_length, <- plus_assoc.
     rewrite_hyp <- ?*; reflexivity.
   Qed.
 
   (* This function strips De Bruijn indices from expressions *)
-  Fixpoint unnatize_exprf {interp_base_type var t} (base : nat)
-           (e : @Syntax.exprf base_type_code interp_base_type op (fun t => nat * var t)%type t)
-    : @Syntax.exprf base_type_code interp_base_type op var t
-    := match e in @Syntax.exprf _ _ _ _ t return Syntax.exprf _ _ _ t with
-       | Const _ x => Const x
+  Fixpoint unnatize_exprf {var t} (base : nat)
+           (e : @Syntax.exprf base_type_code op (fun t => nat * var t)%type t)
+    : @Syntax.exprf base_type_code op var t
+    := match e in @Syntax.exprf _ _ _ t return Syntax.exprf _ _ t with
+       | TT => TT
        | Var _ x => Var (snd x)
-       | Op _ _ op args => Op op (@unnatize_exprf _ _ _ base args)
-       | LetIn _ ex _ eC => LetIn (@unnatize_exprf _ _ _ base ex)
+       | Op _ _ op args => Op op (@unnatize_exprf _ _ base args)
+       | LetIn _ ex _ eC => LetIn (@unnatize_exprf _ _ base ex)
                              (fun x => let v := natize_interp_flat_type base x in
-                                    @unnatize_exprf _ _ _ (fst v) (eC (snd v)))
-       | Pair _ x _ y => Pair (@unnatize_exprf _ _ _ base x) (@unnatize_exprf _ _ _ base y)
+                                    @unnatize_exprf _ _ (fst v) (eC (snd v)))
+       | Pair _ x _ y => Pair (@unnatize_exprf _ _ base x) (@unnatize_exprf _ _ base y)
        end.
-  Fixpoint unnatize_expr {interp_base_type var t} (base : nat)
-           (e : @Syntax.expr base_type_code interp_base_type op (fun t => nat * var t)%type t)
-    : @Syntax.expr base_type_code interp_base_type op var t
-    := match e in @Syntax.expr _ _ _ _ t return Syntax.expr _ _ _ t with
+  Fixpoint unnatize_expr {var t} (base : nat)
+           (e : @Syntax.expr base_type_code op (fun t => nat * var t)%type t)
+    : @Syntax.expr base_type_code op var t
+    := match e in @Syntax.expr _ _ _ t return Syntax.expr _ _ t with
        | Return _ x => unnatize_exprf base x
-       | Abs tx tR f => Abs (fun x : var tx => let v := natize_interp_flat_type (t:=tx) base x in
-                                           @unnatize_expr _ _ _ (fst v) (f (snd v)))
+       | Abs tx tR f => Abs (fun x : var tx => let v := natize_interp_flat_type (t:=Tbase tx) base x in
+                                           @unnatize_expr _ _ (fst v) (f (snd v)))
        end.
 
   Fixpoint reflect_wffT (G : list (sigT (fun t => var1 (fst t) * var2 (snd t))%type))
            {t1 t2 : flat_type}
-           (e1 : @exprf1 (fun t => nat * var1 t)%type t1)
-           (e2 : @exprf2 (fun t => nat * var2 t)%type t2)
+           (e1 : @exprf (fun t => nat * var1 t)%type t1)
+           (e2 : @exprf (fun t => nat * var2 t)%type t2)
            {struct e1}
     : reified_Prop
     := match e1, e2 with
-       | Const t0 x, Const t1 y
-         => match flat_type_eq_semidec_transparent t0 t1 with
-           | Some p => R _ (eq_rect _ interp_flat_type1 x _ p) y
-           | None => rFalse
-           end
-       | Const _ _, _ => rFalse
+       | TT, TT => rTrue
+       | TT, _ => rFalse
        | Var t0 x, Var t1 y
          => match beq_nat (fst x) (fst y), List.nth_error G (List.length G - S (fst x)) with
            | true, Some v => eq_type_and_var v (existT _ (t0, t1) (snd x, snd y))
@@ -328,8 +313,8 @@ Section language.
 
     Fixpoint reflect_wfT (G : list (sigT (fun t => var1 (fst t) * var2 (snd t))%type))
            {t1 t2 : type}
-           (e1 : @expr1 (fun t => nat * var1 t)%type t1)
-           (e2 : @expr2 (fun t => nat * var2 t)%type t2)
+           (e1 : @expr (fun t => nat * var1 t)%type t1)
+           (e2 : @expr (fun t => nat * var2 t)%type t2)
            {struct e1}
     : reified_Prop
     := match e1, e2 with
@@ -337,9 +322,9 @@ Section language.
          => reflect_wffT G x y
        | Return _ _, _ => rFalse
        | Abs tx tR f, Abs tx' tR' f'
-         => match @flatten_binding_list2 tx tx', type_eq_semidec_transparent tR tR' with
+         => match @flatten_binding_list2 (Tbase tx) (Tbase tx'), type_eq_semidec_transparent tR tR' with
            | Some G0, Some _
-             => ∀ (x : interp_flat_type var1 tx) (x' : interp_flat_type var2 tx'),
+             => ∀ (x : interp_flat_type var1 (Tbase tx)) (x' : interp_flat_type var2 (Tbase tx')),
                @reflect_wfT (G0 x x' ++ G)%list _ _
                             (f (snd (natize_interp_flat_type (List.length G) x)))
                             (f' (snd (natize_interp_flat_type (List.length G) x')))
@@ -349,8 +334,8 @@ Section language.
        end%reified_prop.
 End language.
 
-Global Arguments reflect_wffT {_ _ _} _ {op} R _ {var1 var2} G {t1 t2} _ _.
-Global Arguments reflect_wfT {_ _ _} _ {op} R _ {var1 var2} G {t1 t2} _ _.
-Global Arguments unnatize_exprf {_ _ _ _ _} _ _.
-Global Arguments unnatize_expr {_ _ _ _ _} _ _.
+Global Arguments reflect_wffT {_} _ {op} _ {var1 var2} G {t1 t2} _ _.
+Global Arguments reflect_wfT {_} _ {op} _ {var1 var2} G {t1 t2} _ _.
+Global Arguments unnatize_exprf {_ _ _ _} _ _.
+Global Arguments unnatize_expr {_ _ _ _} _ _.
 Global Arguments natize_interp_flat_type {_ _ t} _ _.

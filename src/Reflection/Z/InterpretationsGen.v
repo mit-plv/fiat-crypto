@@ -61,6 +61,7 @@ Module InterpretationsGen (Bit : BitSize).
              base_type
              interp_base_type' interp_flat_type
              (fun t => match t with TZ => fun x => x end)
+             (Some tt)
              (fun _ _ x y => match x, y with
                              | Some x', Some y' => Some (x', y')
                              | _, _ => None
@@ -70,6 +71,7 @@ Module InterpretationsGen (Bit : BitSize).
       Fixpoint to' {t} : interp_flat_type t -> Syntax.interp_flat_type interp_base_type' t
         := match t return interp_flat_type t -> Syntax.interp_flat_type interp_base_type' t with
            | Tbase TZ => fun x => x
+           | Unit => fun _ => tt
            | Prod A B => fun x => (@to' A (option_map (@fst _ _) x),
                                    @to' B (option_map (@snd _ _) x))
            end.
@@ -268,6 +270,7 @@ Module InterpretationsGen (Bit : BitSize).
          end.
     Definition interp_op {src dst} (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
       := match f in op src dst return interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst with
+         | OpConst v => fun _ => ZToWordW v
          | Add => fun xy => fst xy + snd xy
          | Sub => fun xy => fst xy - snd xy
          | Mul => fun xy => fst xy * snd xy
@@ -415,6 +418,7 @@ Module InterpretationsGen (Bit : BitSize).
       := LiftOption.interp_base_type' bounds ty.
     Definition interp_op {src dst} (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
       := match f in op src dst return interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst with
+         | OpConst v => fun _ => SmartBuildBounds v v
          | Add => fun xy => fst xy + snd xy
          | Sub => fun xy => fst xy - snd xy
          | Mul => fun xy => fst xy * snd xy
@@ -519,6 +523,11 @@ Module InterpretationsGen (Bit : BitSize).
       := match ty return interp_base_type ty -> ZBounds.interp_base_type ty with
          | TZ => to_bounds'
          end.
+
+    Definition SmartBuildBoundedWord (v : Z) : t
+      := if ((0 <=? v) && (Z.log2 v <? WordW.bit_width))%Z%bool
+         then of_Z TZ v
+         else None.
 
     Definition t_map1
                (opW : WordW.wordW -> WordW.wordW)
@@ -794,6 +803,7 @@ Module InterpretationsGen (Bit : BitSize).
 
     Definition interp_op {src dst} (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
       := match f in op src dst return interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst with
+         | OpConst v => fun _ => SmartBuildBoundedWord v
          | Add => fun xy => fst xy + snd xy
          | Sub => fun xy => fst xy - snd xy
          | Mul => fun xy => fst xy * snd xy

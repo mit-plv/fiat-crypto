@@ -3,11 +3,53 @@
     judgmental equality of the denotation of the reified term. *)
 Require Import Coq.Strings.String.
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.Relations.
 Require Import Crypto.Reflection.InputSyntax.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Notations.
+
+(** Change this with [Ltac reify_debug_level ::= constr:(1).] to get
+    more debugging. *)
+Ltac reify_debug_level := constr:(0).
+Module Import ReifyDebugNotations.
+  Export Reflection.Syntax.Notations.
+  Export Util.LetIn.
+  Open Scope string_scope.
+End ReifyDebugNotations.
+
+Ltac debug_enter_reify_idtac funname e :=
+  let s := (eval compute in (String.append funname ": Attempting to reify:")) in
+  cidtac2 s e.
+Ltac debug_reifyf_case_idtac case :=
+  let s := (eval compute in (String.append "reifyf: " case)) in
+  cidtac s.
+Ltac debug1 tac :=
+  let lvl := reify_debug_level in
+  match lvl with
+  | S _ => tac ()
+  | _ => constr:(Set)
+  end.
+Ltac debug2 tac :=
+  let lvl := reify_debug_level in
+  match lvl with
+  | S (S _) => tac ()
+  | _ => constr:(Set)
+  end.
+Ltac debug3 tac :=
+  let lvl := reify_debug_level in
+  match lvl with
+  | S (S (S _)) => tac ()
+  | _ => constr:(Set)
+  end.
+Ltac debug_enter_reify2 funname e := debug2 ltac:(fun _ => debug_enter_reify_idtac funname e).
+Ltac debug_enter_reify3 funname e := debug2 ltac:(fun _ => debug_enter_reify_idtac funname e).
+Ltac debug_enter_reify_flat_type e := debug_enter_reify3 "reify_flat_type" e.
+Ltac debug_enter_reify_type e := debug_enter_reify3 "reify_type" e.
+Ltac debug_enter_reifyf e := debug_enter_reify2 "reifyf" e.
+Ltac debug_reifyf_case case := debug3 ltac:(fun _ => debug_reifyf_case_idtac case).
+Ltac debug_enter_reify_abs e := debug_enter_reify2 "reify_abs" e.
 
 Class reify {varT} (var : varT) {eT} (e : eT) {T : Type} := Build_reify : T.
 Definition reify_var_for_in_is base_type_code {T} (x : T) (t : flat_type base_type_code) {eT} (e : eT) := False.
@@ -29,6 +71,7 @@ Ltac base_reify_type T :=
   strip_type_cast (_ : reify type T).
 Ltac reify_base_type T := base_reify_type T.
 Ltac reify_flat_type T :=
+  let dummy := debug_enter_reify_flat_type T in
   lazymatch T with
   | prod ?A ?B
     => let a := reify_flat_type A in
@@ -39,6 +82,7 @@ Ltac reify_flat_type T :=
        constr:(@Tbase _ v)
   end.
 Ltac reify_type T :=
+  let dummy := debug_enter_reify_type T in
   lazymatch T with
   | (?A -> ?B)%type
     => let a := reify_base_type A in
@@ -75,26 +119,6 @@ Ltac reify_op op op_head expr :=
   let t := base_reify_op op op_head expr in
   constr:(op_info t).
 
-(** Change this with [Ltac reify_debug_level ::= constr:(1).] to get
-    more debugging. *)
-Ltac reify_debug_level := constr:(0).
-Module Import ReifyDebugNotations.
-  Open Scope string_scope.
-End ReifyDebugNotations.
-
-Ltac debug_enter_reifyf e :=
-  let lvl := reify_debug_level in
-  match lvl with
-  | S (S _) => cidtac2 "reifyf: Attempting to reify:" e
-  | _ => constr:(Set)
-  end.
-Ltac debug_enter_reify_abs e :=
-  let lvl := reify_debug_level in
-  match lvl with
-  | S (S _) => cidtac2 "reify_abs: Attempting to reify:" e
-  | _ => constr:(Set)
-  end.
-
 Ltac debug_enter_reify_rec :=
   let lvl := reify_debug_level in
   match lvl with
@@ -120,18 +144,22 @@ Ltac reifyf base_type_code interp_base_type op var e :=
   let dummy := debug_enter_reifyf e in
   lazymatch e with
   | let x := ?ex in @?eC x =>
+    let dummy := debug_reifyf_case "let in" in
     let ex := reify_rec ex in
     let eC := reify_rec eC in
     mkLetIn ex eC
-  | dlet x := ?ex in @?eC x =>
+  | (dlet x := ?ex in @?eC x) =>
+    let dummy := debug_reifyf_case "dlet in" in
     let ex := reify_rec ex in
     let eC := reify_rec eC in
     mkLetIn ex eC
   | pair ?a ?b =>
+    let dummy := debug_reifyf_case "pair" in
     let a := reify_rec a in
     let b := reify_rec b in
     mkPair a b
   | (fun x : ?T => ?C) =>
+    let dummy := debug_reifyf_case "fun" in
     let t := reify_flat_type T in
     (* Work around Coq 8.5 and 8.6 bug *)
     (* <https://coq.inria.fr/bugs/show_bug.cgi?id=4998> *)
@@ -143,11 +171,13 @@ Ltac reifyf base_type_code interp_base_type op var e :=
                         (_ : reify reify_tag C)) (* [C] here is an open term that references "x" by name *)
     with fun _ v _ => @?C v => C end
   | match ?ev with pair a b => @?eC a b end =>
+    let dummy := debug_reifyf_case "matchpair" in
     let t := (let T := match type of eC with _ -> _ -> ?T => T end in reify_flat_type T) in
     let v := reify_rec ev in
     let C := reify_rec eC in
     mkMatchPair t v C
   | ?x =>
+    let dummy := debug_reifyf_case "generic" in
     let t := lazymatch type of x with ?t => reify_flat_type t end in
     let retv := match constr:(Set) with
                 | _ => let retv := reifyf_var x mkVar in constr:(finished_value retv)
@@ -247,9 +277,9 @@ Ltac Reify' base_type_code interp_base_type op e :=
   lazymatch constr:(fun (var : flat_type base_type_code -> Type) => (_ : reify_abs (@exprf base_type_code interp_base_type op var) e)) with
     (fun var => ?C) => constr:(fun (var : flat_type base_type_code -> Type) => C) (* copy the term but not the type cast *)
   end.
-Ltac Reify base_type_code interp_base_type op e :=
+Ltac Reify base_type_code interp_base_type op make_const e :=
   let r := Reify' base_type_code interp_base_type op e in
-  constr:(@InputSyntax.Compile base_type_code interp_base_type op _ r).
+  constr:(@InputSyntax.Compile base_type_code interp_base_type op make_const _ r).
 
 Ltac lhs_of_goal := lazymatch goal with |- ?R ?LHS ?RHS => LHS end.
 Ltac rhs_of_goal := lazymatch goal with |- ?R ?LHS ?RHS => RHS end.
@@ -290,15 +320,16 @@ Ltac Reify_rhs_gen Reify prove_interp_compile_correct interp_op try_tac :=
 
 Ltac prove_compile_correct :=
   fun _ => lazymatch goal with
-           | [ |- @Syntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op (@Tflat _ ?t) (@Compile _ _ _ _ ?e) = _ ]
-             => exact (@InputSyntax.Compile_flat_correct base_type_code interp_base_type op interp_op t e)
-           | [ |- interp_type_gen_rel_pointwise _ (@Syntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op ?t (@Compile _ _ _ _ ?e)) _ ]
-             => exact (@InputSyntax.Compile_correct base_type_code interp_base_type op interp_op t e)
-           end.
+           | [ |- @Syntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op (@Tflat _ ?t) (@Compile _ _ _ ?make_const _ ?e) = _ ]
+             => apply (fun pf => @InputSyntax.Compile_flat_correct base_type_code interp_base_type op make_const interp_op pf t e)
+           | [ |- interp_type_gen_rel_pointwise _ (@Syntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op ?t (@Compile _ _ _ ?make_const _ ?e)) _ ]
+             => apply (fun pf => @InputSyntax.Compile_correct base_type_code interp_base_type op make_const interp_op pf t e)
+           end;
+           let T := fresh in intro T; destruct T; reflexivity.
 
-Ltac Reify_rhs base_type_code interp_base_type op interp_op :=
+Ltac Reify_rhs base_type_code interp_base_type op make_const interp_op :=
   Reify_rhs_gen
-    ltac:(Reify base_type_code interp_base_type op)
+    ltac:(Reify base_type_code interp_base_type op make_const)
            prove_compile_correct
            interp_op
            ltac:(fun tac => tac ()).

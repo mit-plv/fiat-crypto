@@ -30,6 +30,7 @@ Local Notation eta3 x := (eta (fst x), snd x).
 Local Notation eta4 x := (eta3 (fst x), snd x).
 
 Inductive op : flat_type base_type -> flat_type base_type -> Type :=
+| OpConst (z : Z) : op Unit tZ
 | Add : op (tZ * tZ) tZ
 | Sub : op (tZ * tZ) tZ
 | Mul : op (tZ * tZ) tZ
@@ -41,8 +42,14 @@ Inductive op : flat_type base_type -> flat_type base_type -> Type :=
 | Cmovne : op (tZ * tZ * tZ * tZ) tZ
 | Cmovle : op (tZ * tZ * tZ * tZ) tZ.
 
+Definition make_const t : interp_base_type t -> op Unit (Syntax.Tbase t)
+  := match t with TZ => OpConst end.
+Definition is_const s d (v : op s d) : bool
+  := match v with OpConst _ => true | _ => false end.
+
 Definition interp_op src dst (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
   := match f in op src dst return interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst with
+     | OpConst v => fun _ => v
      | Add => fun xy => fst xy + snd xy
      | Sub => fun xy => fst xy - snd xy
      | Mul => fun xy => fst xy * snd xy
@@ -67,6 +74,8 @@ Qed.
 
 Definition op_beq_hetero {t1 tR t1' tR'} (f : op t1 tR) (g : op t1' tR') : reified_Prop
   := match f, g return bool with
+     | OpConst v, OpConst v' => Z.eqb v v'
+     | OpConst _, _ => false
      | Add, Add => true
      | Add, _ => false
      | Sub, Sub => true

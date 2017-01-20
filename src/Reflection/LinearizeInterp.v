@@ -1,5 +1,6 @@
 (** * Linearize: Place all and only operations in let binders *)
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.Relations.
 Require Import Crypto.Reflection.LinearizeWf.
 Require Import Crypto.Reflection.InterpProofs.
 Require Import Crypto.Reflection.Linearize.
@@ -15,17 +16,14 @@ Section language.
 
   Local Notation flat_type := (flat_type base_type_code).
   Local Notation type := (type base_type_code).
-  Let Tbase := @Tbase base_type_code.
-  Local Coercion Tbase : base_type_code >-> Syntax.flat_type.
-  Let interp_type := interp_type interp_base_type.
-  Let interp_flat_type := interp_flat_type interp_base_type.
-  Local Notation exprf := (@exprf base_type_code interp_base_type op).
-  Local Notation expr := (@expr base_type_code interp_base_type op).
-  Local Notation Expr := (@Expr base_type_code interp_base_type op).
-  Local Notation wff := (@wff base_type_code interp_base_type op).
-  Local Notation wf := (@wf base_type_code interp_base_type op).
+  Local Notation interp_type := (interp_type interp_base_type).
+  Local Notation interp_flat_type := (interp_flat_type interp_base_type).
+  Local Notation exprf := (@exprf base_type_code op).
+  Local Notation expr := (@expr base_type_code op).
+  Local Notation Expr := (@Expr base_type_code op).
+  Local Notation wff := (@wff base_type_code op).
+  Local Notation wf := (@wf base_type_code op).
 
-  Local Hint Extern 1 => eapply interpf_SmartConstf.
   Local Hint Extern 1 => eapply interpf_SmartVarVarf.
 
   Local Ltac t_fin :=
@@ -50,19 +48,11 @@ Section language.
            | [ H : _ |- _ ] => rewrite H
            end.
 
-  Lemma interpf_let_bind_const {t tC} ex (eC : _ -> exprf tC)
-    : interpf interp_op (let_bind_const (t:=t) ex eC) = interpf interp_op (eC ex).
-  Proof.
-    clear.
-    revert tC eC; induction t; t_fin.
-  Qed.
-
   Lemma interpf_under_letsf {t tC} (ex : exprf t) (eC : _ -> exprf tC)
     : interpf interp_op (under_letsf ex eC) = let x := interpf interp_op ex in interpf interp_op (eC x).
   Proof.
     clear.
     induction ex; t_fin.
-    rewrite interpf_let_bind_const; reflexivity.
   Qed.
 
   Lemma interpf_linearizef {t} e

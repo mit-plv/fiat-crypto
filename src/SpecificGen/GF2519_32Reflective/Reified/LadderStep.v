@@ -4,6 +4,8 @@ Require Export Crypto.SpecificGen.GF2519_32.
 Require Export Crypto.SpecificGen.GF2519_32BoundedCommon.
 Require Import Crypto.Reflection.Reify.
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.Relations.
+Require Import Crypto.Reflection.ExprInversion.
 Require Import Crypto.Reflection.Application.
 Require Import Crypto.Reflection.Linearize.
 Require Import Crypto.Reflection.Z.Interpretations64.
@@ -13,8 +15,6 @@ Require Import Crypto.Reflection.Z.Reify.
 Require Export Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Reflection.InterpWfRel.
 Require Import Crypto.Reflection.LinearizeInterp.
-Require Import Crypto.Reflection.MapInterp.
-Require Import Crypto.Reflection.MapInterpWf.
 Require Import Crypto.Reflection.WfReflective.
 Require Import Crypto.Spec.MxDH.
 Require Import Crypto.SpecificGen.GF2519_32Reflective.Reified.Add.
@@ -38,13 +38,13 @@ Definition rladderstepZ' var (T:=_) (dummy0 dummy1 dummy2 a24 x0 : T) P1 P2
        (fun x y => ApplyBinOp (proj1_sig rmulZ_sig var) x y)
        a24
        _
-       (fun x y z w => (UnReturn x, UnReturn y, UnReturn z, UnReturn w)%expr)
-       (fun v f => LetIn (UnReturn v)
+       (fun x y z w => (invert_Return x, invert_Return y, invert_Return z, invert_Return w)%expr)
+       (fun v f => LetIn (invert_Return v)
                          (fun k => f (Return (SmartVarf k))))
        x0
        P1 P2.
 
-Definition rladderstepZ'' : Syntax.Expr _ _ _ _
+Definition rladderstepZ'' : Syntax.Expr _ _ _
   := Linearize (fun var
                 => apply9
                      (fun A B => SmartAbs (A := A) (B := B))
@@ -83,16 +83,16 @@ Local Ltac repeat_step_interpf :=
   clearbody k'; subst k'.
 
 Lemma interp_helper
-      (f : Syntax.Expr base_type interp_base_type op ExprBinOpT)
-      (x y : exprArg interp_base_type interp_base_type)
+      (f : Syntax.Expr base_type op ExprBinOpT)
+      (x y : exprArg interp_base_type)
       (f' : GF2519_32.fe2519_32 -> GF2519_32.fe2519_32 -> GF2519_32.fe2519_32)
       (x' y' : GF2519_32.fe2519_32)
       (H : interp_type_gen_rel_pointwise
              (fun _ => Logic.eq)
              (Interp interp_op f) (uncurry_binop_fe2519_32 f'))
-      (Hx : interpf interp_op (UnReturn x) = x')
-      (Hy : interpf interp_op (UnReturn y) = y')
-  : interpf interp_op (UnReturn (ApplyBinOp (f interp_base_type) x y)) = f' x' y'.
+      (Hx : interpf interp_op (invert_Return x) = x')
+      (Hy : interpf interp_op (invert_Return y) = y')
+  : interpf interp_op (invert_Return (ApplyBinOp (f interp_base_type) x y)) = f' x' y'.
 Proof.
   cbv [interp_type_gen_rel_pointwise ExprBinOpT uncurry_binop_fe2519_32 interp_flat_type] in H.
   simpl @interp_base_type in *.
@@ -107,14 +107,15 @@ Proof.
   change (fun t => interp_base_type t) with interp_base_type in *.
   generalize (f interp_base_type); clear f; intro f.
   cbv [Apply length_fe2519_32 Apply' interp fst snd].
-  rewrite <- (UnAbs_eta f).
+  let f := match goal with f : expr _ _ _ |- _ => f end in
+  rewrite (invert_Abs_Some (e:=f) eq_refl).
   repeat match goal with
-         | [ |- appcontext[UnAbs ?f ?x] ]
-           => generalize (UnAbs f x); clear f;
+         | [ |- appcontext[invert_Abs ?f ?x] ]
+           => generalize (invert_Abs f x); clear f;
                 let f' := fresh "f" in
                 intro f';
-                  first [ rewrite <- (UnAbs_eta f')
-                        | rewrite <- (UnReturn_eta f') ]
+                  first [ rewrite (invert_Abs_Some (e:=f') eq_refl)
+                        | rewrite (invert_Return_Some (e:=f') eq_refl) at 2 ]
          end.
   reflexivity.
 Qed.
@@ -125,7 +126,7 @@ Proof.
   etransitivity; [ apply Interp_Linearize | ].
   cbv beta iota delta [apply9 apply9_nd interp_type_gen_rel_pointwise Expr9_4OpT SmartArrow ExprArgT rladderstepZ'' uncurried_ladderstep uncurry_unop_fe2519_32 SmartAbs rladderstepZ' exprArg MxDH.ladderstep_gen Interp interp unop_make_args SmartVarf smart_interp_flat_map length_fe2519_32 ladderstep].
   intros; cbv beta zeta.
-  unfold UnReturn at 14 15 16 17.
+  unfold invert_Return at 14 15 16 17.
   repeat match goal with
          | [ |- appcontext[@proj1_sig ?A ?B ?v] ]
            => let k := fresh "f" in
@@ -148,9 +149,9 @@ Proof.
                 cbv beta; intros
          end;
     repeat match goal with
-           | [ |- interpf interp_op (UnReturn (ApplyBinOp _ _ _)) = _ ]
+           | [ |- interpf interp_op (invert_Return (ApplyBinOp _ _ _)) = _ ]
              => apply interp_helper; [ assumption | | ]
-           | [ |- interpf interp_op (UnReturn (Return (_, _)%expr)) = (_, _) ]
+           | [ |- interpf interp_op (invert_Return (Return (_, _)%expr)) = (_, _) ]
              => vm_compute; reflexivity
            | [ |- (_, _) = (_, _) ]
              => reflexivity

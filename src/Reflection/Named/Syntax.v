@@ -31,8 +31,6 @@ Module Export Named.
 
     Local Notation flat_type := (flat_type base_type_code).
     Local Notation type := (type base_type_code).
-    Let Tbase := @Tbase base_type_code.
-    Local Coercion Tbase : base_type_code >-> Syntax.flat_type.
     Local Notation interp_type := (interp_type interp_base_type).
     Local Notation interp_flat_type_gen := interp_flat_type.
     Local Notation interp_flat_type := (interp_flat_type interp_base_type).
@@ -41,8 +39,8 @@ Module Export Named.
     Section expr_param.
       Section expr.
         Inductive exprf : flat_type -> Type :=
-        | Const {t : flat_type} : interp_type t -> exprf t
-        | Var {t : base_type_code} : Name -> exprf t
+        | TT : exprf Unit
+        | Var {t : base_type_code} : Name -> exprf (Tbase t)
         | Op {t1 tR} : op t1 tR -> exprf t1 -> exprf tR
         | LetIn : forall {tx}, interp_flat_type_gen (fun _ => Name) tx -> exprf tx -> forall {tC}, exprf tC -> exprf tC
         | Pair : forall {t1}, exprf t1 -> forall {t2}, exprf t2 -> exprf (Prod t1 t2).
@@ -56,9 +54,7 @@ Module Export Named.
           pair-projections and [Pair] as necessary to handle
           [flat_type], and not just [base_type_code] *)
         Definition SmartVar {t} : interp_flat_type_gen (fun _ => Name) t -> exprf t
-          := smart_interp_flat_map (f:=fun _ => Name) (g:=exprf) _ (fun t => Var) (fun A B x y => Pair x y).
-        Definition SmartConst {t} : interp_flat_type t -> @interp_flat_type_gen base_type_code exprf t
-          := smart_interp_flat_map (g:=@interp_flat_type_gen base_type_code exprf) _ (fun t => Const (t:=t)) (fun A B x y => pair x y).
+          := smart_interp_flat_map (f:=fun _ => Name) (g:=exprf) _ (fun t => Var) TT (fun A B x y => Pair x y).
       End expr.
 
       Section with_context.
@@ -69,7 +65,8 @@ Module Export Named.
                  (n : interp_flat_type_gen (fun _ => Name) t) (v : interp_flat_type_gen var t)
           : Context
           := match t return interp_flat_type_gen (fun _ => Name) t -> interp_flat_type_gen var t -> Context with
-             | Syntax.Tbase t => fun n v => extendb ctx n v
+             | Tbase t => fun n v => extendb ctx n v
+             | Unit => fun _ _ => ctx
              | Prod A B => fun n v
                            => let ctx := @extend ctx A (fst n) (fst v) in
                               let ctx := @extend ctx B (snd n) (snd v) in
@@ -80,7 +77,8 @@ Module Export Named.
                  (n : interp_flat_type_gen (fun _ => Name) t)
           : Context
           := match t return interp_flat_type_gen (fun _ => Name) t -> Context with
-             | Syntax.Tbase t => fun n => removeb ctx n t
+             | Tbase t => fun n => removeb ctx n t
+             | Unit => fun _ => ctx
              | Prod A B => fun n
                            => let ctx := @remove ctx A (fst n) in
                               let ctx := @remove ctx B (snd n) in
@@ -93,6 +91,7 @@ Module Export Named.
                base_type_code
                (g := fun t => option (interp_flat_type_gen var t))
                (fun t v => lookupb ctx v)
+               (Some tt)
                (fun A B x y => match x, y with
                                | Some x', Some y' => Some (x', y')%core
                                | _, _ => None
@@ -101,7 +100,7 @@ Module Export Named.
         Section wf.
           Fixpoint wff (ctx : Context) {t} (e : exprf t) : option pointed_Prop
             := match e with
-               | Const _ x => Some trivial
+               | TT => Some trivial
                | Var t n => match lookupb ctx n t return bool with
                             | Some _ => true
                             | None => false
@@ -114,14 +113,14 @@ Module Export Named.
           Fixpoint wf (ctx : Context) {t} (e : expr t) : Prop
             := match e with
                | Return _ x => prop_of_option (wff ctx x)
-               | Abs src _ n f => forall v, @wf (extend ctx (t:=src) n v) _ f
+               | Abs src _ n f => forall v, @wf (extend ctx (t:=Tbase src) n v) _ f
                end.
         End wf.
 
         Section interp_gen.
           Context (output_interp_flat_type : flat_type -> Type)
-                  (interp_const : forall t, interp_flat_type t -> output_interp_flat_type t)
-                  (interp_var : forall t, var t -> output_interp_flat_type t)
+                  (interp_tt : output_interp_flat_type Unit)
+                  (interp_var : forall t, var t -> output_interp_flat_type (Tbase t))
                   (interp_op : forall src dst, op src dst -> output_interp_flat_type src -> output_interp_flat_type dst)
                   (interp_let : forall (tx : flat_type) (ex : output_interp_flat_type tx)
                                        tC (eC : interp_flat_type_gen var tx -> output_interp_flat_type tC),
@@ -133,13 +132,13 @@ Module Export Named.
           Fixpoint interp_genf (ctx : Context) {t} (e : exprf t)
             : prop_of_option (wff ctx e) -> output_interp_flat_type t
             := match e in exprf t return prop_of_option (wff ctx e) -> output_interp_flat_type t with
-               | Const _ x => fun _ => interp_const _ x
+               | TT => fun _ => interp_tt
                | Var t' x => match lookupb ctx x t' as v
                                    return prop_of_option (match v return bool with
                                                           | Some _ => true
                                                           | None => false
                                                           end)
-                                          -> output_interp_flat_type t'
+                                          -> output_interp_flat_type (Tbase t')
                              with
                              | Some v => fun _ => interp_var _ v
                              | None => fun bad => match bad : False with end
@@ -164,7 +163,7 @@ Module Export Named.
             prop_of_option (wff ctx e) -> interp_flat_type t
           := @interp_genf
                interp_base_type Context interp_flat_type
-               (fun _ x => x) (fun _ x => x) interp_op (fun _ y _ f => let x := y in f x)
+               tt (fun _ x => x) interp_op (fun _ y _ f => let x := y in f x)
                (fun _ x _ y => (x, y)%core).
 
         Fixpoint interp (ctx : Context) {t} (e : expr t)
@@ -178,24 +177,24 @@ Module Export Named.
   End language.
 End Named.
 
-Global Arguments Const {_ _ _ _ _} _.
-Global Arguments Var {_ _ _ _ _} _.
-Global Arguments SmartVar {_ _ _ _ _} _.
-Global Arguments SmartConst {_ _ _ _ _} _.
-Global Arguments Op {_ _ _ _ _ _} _ _.
-Global Arguments LetIn {_ _ _ _} _ _ _ {_} _.
-Global Arguments Pair {_ _ _ _ _} _ {_} _.
-Global Arguments Return {_ _ _ _ _} _.
-Global Arguments Abs {_ _ _ _ _ _} _ _.
+Global Arguments TT {_ _ _}.
+Global Arguments Var {_ _ _ _} _.
+Global Arguments SmartVar {_ _ _ _} _.
+Global Arguments Op {_ _ _ _ _} _ _.
+Global Arguments LetIn {_ _ _} _ _ _ {_} _.
+Global Arguments Pair {_ _ _ _} _ {_} _.
+Global Arguments Return {_ _ _ _} _.
+Global Arguments Abs {_ _ _ _ _} _ _.
 Global Arguments extend {_ _ _ _} ctx {_} _ _.
 Global Arguments remove {_ _ _ _} ctx {_} _.
 Global Arguments lookup {_ _ _ _} ctx {_} _, {_ _ _ _} ctx _ _.
-Global Arguments wff {_ _ _ _ _ _} ctx {t} _.
-Global Arguments wf {_ _ _ _ _ _} ctx {t} _.
-Global Arguments interp_genf {_ _ _ _ var _} _ _ _ _ _ _ {ctx t} _ _.
+Global Arguments wff {_ _ _ _ _} ctx {t} _.
+Global Arguments wf {_ _ _ _ _} ctx {t} _.
+Global Arguments interp_genf {_ _ _ var _} _ _ _ _ _ _ {ctx t} _ _.
 Global Arguments interpf {_ _ _ _ _ interp_op ctx t} _ _.
 Global Arguments interp {_ _ _ _ _ interp_op ctx t} _ _.
 
 Notation "'slet' x := A 'in' b" := (LetIn _ x A%nexpr b%nexpr) : nexpr_scope.
 Notation "'λn'  x .. y , t" := (Abs x .. (Abs y t%nexpr) .. ) : nexpr_scope.
 Notation "( x , y , .. , z )" := (Pair .. (Pair x%nexpr y%nexpr) .. z%nexpr) : nexpr_scope.
+Notation "()" := TT : nexpr_scope.

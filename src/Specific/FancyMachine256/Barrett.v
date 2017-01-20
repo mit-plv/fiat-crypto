@@ -63,7 +63,7 @@ End expression.
 
 Section reflected.
   Context (ops : fancy_machine.instructions (2 * 128)).
-  Definition rexpression : Syntax.Expr base_type (interp_base_type _) op (Arrow TZ (Arrow TZ (Arrow TW (Arrow TW (Tbase TW))))).
+  Definition rexpression : Syntax.Expr base_type op (Arrow TZ (Arrow TZ (Arrow TW (Arrow TW (Tbase TW))))).
   Proof.
     let v := (eval cbv beta delta [expression] in (fun m μ x y => expression ops m μ (x, y))) in
     let v := Reify v in
@@ -85,7 +85,7 @@ Section reflected.
   Context (m μ : Z)
           (props : fancy_machine.arithmetic ops).
 
-  Let result (v : Tuple.tuple fancy_machine.W 2) := Syntax.Interp (interp_op _) rexpression_simple m μ (fst v) (snd v).
+  Let result (v : Tuple.tuple fancy_machine.W 2) := Syntax.Interp interp_op rexpression_simple m μ (fst v) (snd v).
   Let assembled_result (v : Tuple.tuple fancy_machine.W 2) : fancy_machine.W := Core.Interp compiled_syntax m μ (fst v) (snd v).
 
   Theorem sanity : result = expression ops m μ.
@@ -148,12 +148,5 @@ c.Sub(tmp, x, tmp),
 c.Addm(q, tmp, RegZero),
 c.Addm(out, q, RegZero),
 Return out
-     : forall ops : fancy_machine.instructions (2 * 128),
-       expr base_type
-         (fun v : base_type =>
-          match v with
-          | TZ => Z
-          | Tbool => bool
-          | TW => let (W, _, _, _, _, _, _, _, _, _, _, _, _, _) := ops in W
-          end) op Register (TZ -> TZ -> TW -> TW -> Tbase TW)%ctype
+     : forall ops : fancy_machine.instructions (2 * 128), expr base_type op Register (TZ -> TZ -> TW -> TW -> Tbase TW)
 *)

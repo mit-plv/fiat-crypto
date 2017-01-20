@@ -9,7 +9,6 @@ Require Export Crypto.SpecificGen.GF5211_32.
 Require Import Crypto.SpecificGen.GF5211_32BoundedCommon.
 Require Import Crypto.Reflection.Reify.
 Require Import Crypto.Reflection.Syntax.
-Require Import Crypto.Reflection.MapInterp.
 Require Import Crypto.Reflection.Z.Interpretations64.
 Require Crypto.Reflection.Z.Interpretations64.Relations.
 Require Import Crypto.Reflection.Z.Interpretations64.RelationsCombinations.
@@ -43,7 +42,7 @@ Declare Reduction asm_interp_add_coordinates
             WordW.interp_op WordW.interp_base_type
             Z.interp_op Z.interp_base_type
             Z.Syntax.interp_op Z.Syntax.interp_base_type
-            mapf_interp_flat_type map_interp WordW.interp_base_type MapInterp mapf_interp word64ize rword64ize
+            mapf_interp_flat_type WordW.interp_base_type word64ize
             Interp interp interp_flat_type interpf interpf_step interp_flat_type fst snd].
 Ltac asm_interp_add_coordinates
   := cbv beta iota delta
@@ -54,7 +53,7 @@ Ltac asm_interp_add_coordinates
             WordW.interp_op WordW.interp_base_type
             Z.interp_op Z.interp_base_type
             Z.Syntax.interp_op Z.Syntax.interp_base_type
-            mapf_interp_flat_type map_interp WordW.interp_base_type MapInterp mapf_interp word64ize rword64ize
+            mapf_interp_flat_type WordW.interp_base_type word64ize
             Interp interp interp_flat_type interpf interp_flat_type fst snd].
 
 
@@ -68,7 +67,7 @@ Time Definition interp_radd_coordinates : SpecificGen.GF5211_32BoundedCommon.fe5
                                           -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W
                                           -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W
                                           -> Tuple.tuple SpecificGen.GF5211_32BoundedCommon.fe5211_32W 4
-  := Eval asm_interp_add_coordinates in interp_9_4expr (rword64ize radd_coordinates).
+  := Eval asm_interp_add_coordinates in interp_9_4expr radd_coordinates.
 (*Print interp_radd_coordinates.*)
 Time Definition interp_radd_coordinates_correct : interp_radd_coordinates = interp_9_4expr radd_coordinates := eq_refl.
 

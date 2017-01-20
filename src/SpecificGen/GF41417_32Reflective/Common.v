@@ -4,6 +4,8 @@ Require Export Crypto.SpecificGen.GF41417_32.
 Require Export Crypto.SpecificGen.GF41417_32BoundedCommon.
 Require Import Crypto.Reflection.Reify.
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.ExprInversion.
+Require Import Crypto.Reflection.Relations.
 Require Import Crypto.Reflection.Z.Interpretations64.
 Require Crypto.Reflection.Z.Interpretations64.Relations.
 Require Import Crypto.Reflection.Z.Interpretations64.RelationsCombinations.
@@ -11,8 +13,6 @@ Require Import Crypto.Reflection.Z.Reify.
 Require Export Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Reflection.InterpWfRel.
 Require Import Crypto.Reflection.Application.
-Require Import Crypto.Reflection.MapInterp.
-Require Import Crypto.Reflection.MapInterpWf.
 Require Import Crypto.Reflection.WfReflective.
 Require Import Crypto.Util.Tower.
 Require Import Crypto.Util.LetIn.
@@ -21,7 +21,7 @@ Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
 
-Notation Expr := (Expr base_type WordW.interp_base_type op).
+Notation Expr := (Expr base_type op).
 
 Local Ltac make_type_from' T :=
   let T := (eval compute in T) in
@@ -76,20 +76,20 @@ Definition ExprArg : Type := Expr ExprArgT.
 Definition ExprArgWire : Type := Expr ExprArgWireT.
 Definition ExprArgRev : Type := Expr ExprArgRevT.
 Definition ExprArgWireRev : Type := Expr ExprArgWireRevT.
-Definition expr_nm_Op count_in count_out interp_base_type var : Type
-  := expr base_type interp_base_type op (var:=var) (Expr_nm_OpT count_in count_out).
-Definition exprBinOp interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprBinOpT.
-Definition exprUnOp interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprUnOpT.
-Definition expr4Op interp_base_type var : Type := expr base_type interp_base_type op (var:=var) Expr4OpT.
-Definition expr9_4Op interp_base_type var : Type := expr base_type interp_base_type op (var:=var) Expr9_4OpT.
-Definition exprZ interp_base_type var : Type := expr base_type interp_base_type op (var:=var) (Tbase TZ).
-Definition exprUnOpFEToZ interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprUnOpFEToZT.
-Definition exprUnOpWireToFE interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprUnOpWireToFET.
-Definition exprUnOpFEToWire interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprUnOpFEToWireT.
-Definition exprArg interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprArgT.
-Definition exprArgWire interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprArgWireT.
-Definition exprArgRev interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprArgRevT.
-Definition exprArgWireRev interp_base_type var : Type := expr base_type interp_base_type op (var:=var) ExprArgWireRevT.
+Definition expr_nm_Op count_in count_out var : Type
+  := expr base_type op (var:=var) (Expr_nm_OpT count_in count_out).
+Definition exprBinOp var : Type := expr base_type op (var:=var) ExprBinOpT.
+Definition exprUnOp var : Type := expr base_type op (var:=var) ExprUnOpT.
+Definition expr4Op var : Type := expr base_type op (var:=var) Expr4OpT.
+Definition expr9_4Op var : Type := expr base_type op (var:=var) Expr9_4OpT.
+Definition exprZ var : Type := expr base_type op (var:=var) (Tbase TZ).
+Definition exprUnOpFEToZ var : Type := expr base_type op (var:=var) ExprUnOpFEToZT.
+Definition exprUnOpWireToFE var : Type := expr base_type op (var:=var) ExprUnOpWireToFET.
+Definition exprUnOpFEToWire var : Type := expr base_type op (var:=var) ExprUnOpFEToWireT.
+Definition exprArg var : Type := expr base_type op (var:=var) ExprArgT.
+Definition exprArgWire var : Type := expr base_type op (var:=var) ExprArgWireT.
+Definition exprArgRev var : Type := expr base_type op (var:=var) ExprArgRevT.
+Definition exprArgWireRev var : Type := expr base_type op (var:=var) ExprArgWireRevT.
 
 Local Ltac bounds_from_list_cps ls :=
   lazymatch (eval hnf in ls) with
@@ -204,10 +204,10 @@ Notation rexpr_9_4op_sig op := (rexpr_sig Expr9_4OpT (uncurry_9op_fe41417_32 op)
 Notation correct_and_bounded_genT ropW'v ropZ_sigv
   := (let ropW' := ropW'v in
       let ropZ_sig := ropZ_sigv in
-      let ropW := MapInterp (fun _ x => x) ropW' in
-      let ropZ := MapInterp WordW.to_Z ropW' in
-      let ropBounds := MapInterp ZBounds.of_wordW ropW' in
-      let ropBoundedWordW := MapInterp BoundedWordW.of_wordW ropW' in
+      let ropW := ropW' in
+      let ropZ := ropW' in
+      let ropBounds := ropW' in
+      let ropBoundedWordW := ropW' in
       ropZ = proj1_sig ropZ_sig
       /\ interp_type_rel_pointwise2 Relations.related_Z (Interp (@BoundedWordW.interp_op) ropBoundedWordW) (Interp (@Z.interp_op) ropZ)
       /\ interp_type_rel_pointwise2 Relations.related_bounds (Interp (@BoundedWordW.interp_op) ropBoundedWordW) (Interp (@ZBounds.interp_op) ropBounds)
@@ -327,17 +327,17 @@ Ltac assoc_right_tuple x so_far :=
 Local Ltac make_args x :=
   let x' := fresh "x'" in
   compute in x |- *;
-  let t := match type of x with @expr _ _ _ _ (Tflat ?t) => t end in
-  let t' := match goal with |- @expr _ _ _ _ (Tflat ?t) => t end in
-  refine (LetIn (UnReturn x) _);
+  let t := match type of x with @expr _ _ _ (Tflat ?t) => t end in
+  let t' := match goal with |- @expr _ _ _ (Tflat ?t) => t end in
+  refine (LetIn (invert_Return x) _);
   let x'' := fresh "x''" in
   intro x'';
   let xv := assoc_right_tuple x'' (@None) in
   refine (SmartVarf (xv : interp_flat_type _ t')).
 
-Definition unop_make_args {interp_base_type var} (x : exprArg interp_base_type var) : exprArgRev interp_base_type var.
+Definition unop_make_args {var} (x : exprArg var) : exprArgRev var.
 Proof. make_args x. Defined.
-Definition unop_wire_make_args {interp_base_type var} (x : exprArgWire interp_base_type var) : exprArgWireRev interp_base_type var.
+Definition unop_wire_make_args {var} (x : exprArgWire var) : exprArgWireRev var.
 Proof. make_args x. Defined.
 
 Local Ltac args_to_bounded x H :=
@@ -432,31 +432,31 @@ Defined.
 Definition op9_4_bounds_good (bounds : interp_flat_type (fun _ => ZBounds.bounds) (remove_all_binders Expr9_4OpT)) : bool.
 Proof. make_bounds_prop bounds Expr4Op_bounds. Defined.
 
-Definition ApplyUnOp {interp_base_type var} (f : exprUnOp interp_base_type var) : exprArg interp_base_type var -> exprArg interp_base_type var
+Definition ApplyUnOp {var} (f : exprUnOp var) : exprArg var -> exprArg var
   := fun x
-     => LetIn (UnReturn (unop_make_args x))
-              (fun k => UnReturn (Apply length_fe41417_32 f k)).
-Definition ApplyBinOp {interp_base_type var} (f : exprBinOp interp_base_type var) : exprArg interp_base_type var -> exprArg interp_base_type var -> exprArg interp_base_type var
+     => LetIn (invert_Return (unop_make_args x))
+              (fun k => invert_Return (Apply length_fe41417_32 f k)).
+Definition ApplyBinOp {var} (f : exprBinOp var) : exprArg var -> exprArg var -> exprArg var
   := fun x y
-     => LetIn (UnReturn (unop_make_args x))
+     => LetIn (invert_Return (unop_make_args x))
               (fun x'
-               => LetIn (UnReturn (unop_make_args y))
+               => LetIn (invert_Return (unop_make_args y))
                         (fun y'
-                         => UnReturn (Apply length_fe41417_32
+                         => invert_Return (Apply length_fe41417_32
                                             (Apply length_fe41417_32
                                                    f x') y'))).
-Definition ApplyUnOpFEToWire {interp_base_type var} (f : exprUnOpFEToWire interp_base_type var) : exprArg interp_base_type var -> exprArgWire interp_base_type var
+Definition ApplyUnOpFEToWire {var} (f : exprUnOpFEToWire var) : exprArg var -> exprArgWire var
   := fun x
-     => LetIn (UnReturn (unop_make_args x))
-              (fun k => UnReturn (Apply length_fe41417_32 f k)).
-Definition ApplyUnOpWireToFE {interp_base_type var} (f : exprUnOpWireToFE interp_base_type var) : exprArgWire interp_base_type var -> exprArg interp_base_type var
+     => LetIn (invert_Return (unop_make_args x))
+              (fun k => invert_Return (Apply length_fe41417_32 f k)).
+Definition ApplyUnOpWireToFE {var} (f : exprUnOpWireToFE var) : exprArgWire var -> exprArg var
   := fun x
-     => LetIn (UnReturn (unop_wire_make_args x))
-              (fun k => UnReturn (Apply (List.length wire_widths) f k)).
-Definition ApplyUnOpFEToZ {interp_base_type var} (f : exprUnOpFEToZ interp_base_type var) : exprArg interp_base_type var -> exprZ interp_base_type var
+     => LetIn (invert_Return (unop_wire_make_args x))
+              (fun k => invert_Return (Apply (List.length wire_widths) f k)).
+Definition ApplyUnOpFEToZ {var} (f : exprUnOpFEToZ var) : exprArg var -> exprZ var
   := fun x
-     => LetIn (UnReturn (unop_make_args x))
-              (fun k => UnReturn (Apply length_fe41417_32 f k)).
+     => LetIn (invert_Return (unop_make_args x))
+              (fun k => invert_Return (Apply length_fe41417_32 f k)).
 
 
 (* FIXME TODO(jgross): This is a horrible tactic.  We should unify the
@@ -545,17 +545,14 @@ Ltac rexpr_correct :=
   assert (wf_ropW : Wf ropW') by (subst ropW' ropZ_sig; reflect_Wf base_type_eq_semidec_is_dec op_beq_bl);
   cbv zeta; repeat apply conj;
   [ vm_compute; reflexivity
-  | apply @InterpRelWf;
-    [ | apply @RelWfMapInterp, wf_ropW ].. ];
+  | apply @InterpWf;
+    [ | apply wf_ropW ].. ];
   auto with interp_related.
 
-Notation rword_of_Z rexprZ_sig := (MapInterp WordW.of_Z (proj1_sig rexprZ_sig)) (only parsing).
-
-Definition rword64ize {t} (x : Expr t) : Expr t
-  := MapInterp (fun t => match t with TZ => word64ize end) x.
+Notation rword_of_Z rexprZ_sig := (proj1_sig rexprZ_sig) (only parsing).
 
 Notation compute_bounds opW bounds
-  := (ApplyInterpedAll (Interp (@ZBounds.interp_op) (MapInterp (@ZBounds.of_wordW) opW)) bounds)
+  := (ApplyInterpedAll (Interp (@ZBounds.interp_op) opW) bounds)
        (only parsing).
 
 
@@ -586,6 +583,7 @@ Module Export PrettyPrinting.
                               | in_range _ _ => no
                               | enlargen _ => borked
                               end
+       | Unit => fun _ => no
        | Prod x y => fun v => match @does_it_overflow _ (fst v), @does_it_overflow _ (snd v) with
                               | no, no => no
                               | yes, no | no, yes | yes, yes => yes

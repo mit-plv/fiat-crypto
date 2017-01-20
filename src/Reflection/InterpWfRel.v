@@ -1,6 +1,6 @@
 Require Import Coq.Strings.String Coq.Classes.RelationClasses.
 Require Import Crypto.Reflection.Syntax.
-Require Import Crypto.Reflection.WfRel.
+Require Import Crypto.Reflection.Relations.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Prod.
@@ -20,12 +20,11 @@ Section language.
                                             -> interp_flat_type_rel_pointwise2
                                                  R (interp_op1 src dst op sv1) (interp_op2 src dst op sv2)).
 
-  Local Notation exprf1 := (@exprf base_type_code interp_base_type1 op interp_base_type1).
-  Local Notation exprf2 := (@exprf base_type_code interp_base_type2 op interp_base_type2).
-  Local Notation expr1 := (@expr base_type_code interp_base_type1 op interp_base_type1).
-  Local Notation expr2 := (@expr base_type_code interp_base_type2 op interp_base_type2).
-  Local Notation Expr1 := (@Expr base_type_code interp_base_type1 op).
-  Local Notation Expr2 := (@Expr base_type_code interp_base_type2 op).
+  Local Notation exprf1 := (@exprf base_type_code op interp_base_type1).
+  Local Notation exprf2 := (@exprf base_type_code op interp_base_type2).
+  Local Notation expr1 := (@expr base_type_code op interp_base_type1).
+  Local Notation expr2 := (@expr base_type_code op interp_base_type2).
+  Local Notation Expr := (@Expr base_type_code op).
   Local Notation interpf1 := (@interpf base_type_code interp_base_type1 op interp_op1).
   Local Notation interpf2 := (@interpf base_type_code interp_base_type2 op interp_op2).
   Local Notation interp1 := (@interp base_type_code interp_base_type1 op interp_op1).
@@ -40,7 +39,7 @@ Section language.
                        (flatten_binding_list base_type_code (t:=T) e1 e2))
     : R t x x'.
   Proof.
-    induction T; simpl in *; [ | rewrite List.in_app_iff in HIn ];
+    induction T; simpl in *; try tauto; [ | rewrite List.in_app_iff in HIn ];
       repeat first [ progress destruct_head or
                    | progress destruct_head False
                    | progress destruct_head and
@@ -53,13 +52,13 @@ Section language.
   Local Hint Resolve List.in_app_or List.in_or_app interp_flat_type_rel_pointwise2_flatten_binding_list.
 
   Section wf.
-    Lemma interpf_rel_wff
+    Lemma interpf_wff
              {t} {e1 : exprf1 t} {e2 : exprf2 t}
              {G}
              (HG : forall t x x',
                  List.In (existT (fun t : base_type_code => (interp_base_type1 t * interp_base_type2 t)%type) t (x, x')%core) G
                  -> R t x x')
-             (Rwf : rel_wff R G e1 e2)
+             (Rwf : wff G e1 e2)
     : interp_flat_type_rel_pointwise2 R (interpf1 e1) (interpf2 e2).
     Proof.
       induction Rwf; simpl; auto.
@@ -73,15 +72,15 @@ Section language.
       end.
     Qed.
 
-    Local Hint Resolve interpf_rel_wff.
+    Local Hint Resolve interpf_wff.
 
-    Lemma interp_rel_wf
+    Lemma interp_wf
              {t} {e1 : expr1 t} {e2 : expr2 t}
              {G}
              (HG : forall t x x',
                  List.In (existT (fun t : base_type_code => (interp_base_type1 t * interp_base_type2 t)%type) t (x, x')%core) G
                  -> R t x x')
-             (Rwf : rel_wf R G e1 e2)
+             (Rwf : wf G e1 e2)
     : interp_type_rel_pointwise2 R (interp1 e1) (interp2 e2).
     Proof.
       induction Rwf; simpl; repeat intro; simpl in *; eauto.
@@ -92,12 +91,12 @@ Section language.
       inversion_sigma; inversion_prod; repeat subst; simpl; auto.
     Qed.
 
-    Lemma InterpRelWf
-             {t} {e1 : Expr1 t} {e2 : Expr2 t}
-             (Rwf : RelWf R e1 e2)
-    : interp_type_rel_pointwise2 R (Interp1 e1) (Interp2 e2).
+    Lemma InterpWf
+             {t} {e : Expr t}
+             (Rwf : Wf e)
+    : interp_type_rel_pointwise2 R (Interp1 e) (Interp2 e).
     Proof.
-      unfold Interp, RelWf in *; apply (interp_rel_wf (G:=nil)); simpl; intuition.
+      unfold Interp, Wf in *; apply (interp_wf (G:=nil)); simpl; intuition.
     Qed.
   End wf.
 End language.

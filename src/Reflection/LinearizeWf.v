@@ -6,22 +6,17 @@ Require Import Crypto.Util.Tactics Crypto.Util.Sigma.
 
 Local Open Scope ctype_scope.
 Section language.
-  Context (base_type_code : Type).
-  Context (interp_base_type : base_type_code -> Type).
-  Context (op : flat_type base_type_code -> flat_type base_type_code -> Type).
+  Context {base_type_code : Type}
+          {op : flat_type base_type_code -> flat_type base_type_code -> Type}.
 
   Local Notation flat_type := (flat_type base_type_code).
   Local Notation type := (type base_type_code).
-  Let Tbase := @Tbase base_type_code.
-  Local Coercion Tbase : base_type_code >-> Syntax.flat_type.
-  Local Notation interp_type := (interp_type interp_base_type).
-  Local Notation interp_flat_type_gen := interp_flat_type.
-  Local Notation interp_flat_type := (interp_flat_type interp_base_type).
-  Local Notation exprf := (@exprf base_type_code interp_base_type op).
-  Local Notation expr := (@expr base_type_code interp_base_type op).
-  Local Notation Expr := (@Expr base_type_code interp_base_type op).
-  Local Notation wff := (@wff base_type_code interp_base_type op).
-  Local Notation wf := (@wf base_type_code interp_base_type op).
+  Local Notation Tbase := (@Tbase base_type_code).
+  Local Notation exprf := (@exprf base_type_code op).
+  Local Notation expr := (@expr base_type_code op).
+  Local Notation Expr := (@Expr base_type_code op).
+  Local Notation wff := (@wff base_type_code op).
+  Local Notation wf := (@wf base_type_code op).
 
   Section with_var.
     Context {var1 var2 : base_type_code -> Type}.
@@ -48,15 +43,6 @@ Section language.
       end.
     Local Ltac t_fin tac := repeat t_fin_step tac.
 
-    Lemma wff_let_bind_const G {t} v {tC} eC1 eC2
-      : (forall (x1 : interp_flat_type_gen var1 t) (x2 : interp_flat_type_gen var2 t),
-            wff (flatten_binding_list base_type_code x1 x2 ++ G) (eC1 x1) (eC2 x2))
-        -> @wff var1 var2 G tC (let_bind_const v eC1) (let_bind_const v eC2).
-    Proof.
-      revert G tC eC1 eC2; induction t; t_fin idtac.
-    Qed.
-
-    Local Hint Resolve wff_let_bind_const.
     Local Hint Constructors Syntax.wff.
     Local Hint Resolve List.in_app_or List.in_or_app.
 
@@ -68,15 +54,15 @@ Section language.
       pattern G0, t0, e1, e2;
       lazymatch goal with
       | [ |- ?retP _ _ _ _ ]
-        => first [ refine (match wf in @Syntax.wff _ _ _ _ _ G t v1 v2
+        => first [ refine (match wf in @Syntax.wff _ _ _ _ G t v1 v2
                                 return match v1 return Prop with
-                                       | Const _ _ => retP G t v1 v2
+                                       | TT => retP G t v1 v2
                                        | _ => forall P : Prop, P -> P
                                        end with
-                          | WfConst _ _ _ => _
+                          | WfTT _ => _
                           | _ => fun _ p => p
                           end)
-                | refine (match wf in @Syntax.wff _ _ _ _ _ G t v1 v2
+                | refine (match wf in @Syntax.wff _ _ _ _ G t v1 v2
                                 return match v1 return Prop with
                                        | Var _ _ => retP G t v1 v2
                                        | _ => forall P : Prop, P -> P
@@ -84,7 +70,7 @@ Section language.
                           | WfVar _ _ _ _ _ => _
                           | _ => fun _ p => p
                           end)
-                | refine (match wf in @Syntax.wff _ _ _ _ _ G t v1 v2
+                | refine (match wf in @Syntax.wff _ _ _ _ G t v1 v2
                                 return match v1 return Prop with
                                        | Op _ _ _ _ => retP G t v1 v2
                                        | _ => forall P : Prop, P -> P
@@ -92,7 +78,7 @@ Section language.
                           | WfOp _ _ _ _ _ _ _ => _
                           | _ => fun _ p => p
                           end)
-                | refine (match wf in @Syntax.wff _ _ _ _ _ G t v1 v2
+                | refine (match wf in @Syntax.wff _ _ _ _ G t v1 v2
                                 return match v1 return Prop with
                                        | LetIn _ _ _ _ => retP G t v1 v2
                                        | _ => forall P : Prop, P -> P
@@ -100,7 +86,7 @@ Section language.
                           | WfLetIn _ _ _ _ _ _ _ _ _ => _
                           | _ => fun _ p => p
                           end)
-                | refine (match wf in @Syntax.wff _ _ _ _ _ G t v1 v2
+                | refine (match wf in @Syntax.wff _ _ _ _ G t v1 v2
                                 return match v1 return Prop with
                                        | Pair _ _ _ _ => retP G t v1 v2
                                        | _ => forall P : Prop, P -> P
@@ -111,7 +97,7 @@ Section language.
       end.
     Fixpoint wff_under_letsf G {t} e1 e2 {tC} eC1 eC2
              (wf : @wff var1 var2 G t e1 e2)
-             (H : forall (x1 : interp_flat_type_gen var1 t) (x2 : interp_flat_type_gen var2 t),
+             (H : forall (x1 : interp_flat_type var1 t) (x2 : interp_flat_type var2 t),
                  wff (flatten_binding_list base_type_code x1 x2 ++ G) (eC1 x1) (eC2 x2))
              {struct e1}
       : @wff var1 var2 G tC (under_letsf e1 eC1) (under_letsf e2 eC2).
@@ -128,15 +114,15 @@ Section language.
                             end);
           generalize (fun G => match e1v return match e1v with
                                                 | LetIn tx0 _ tC1 e0 => (* 8.4's type inferencer is broken, so we copy/paste the term from 8.5.  This entire clause could just be [_], if Coq 8.4 worked *)
-                                                  forall (x : @interp_flat_type_gen base_type_code var1 tx0) (e3 : exprf tC1)
-                                                         (tC2 : flat_type) (eC3 : @interp_flat_type_gen base_type_code var1 tC1 -> exprf tC2)
-                                                         (eC4 : @interp_flat_type_gen base_type_code var2 tC1 -> exprf tC2),
+                                                  forall (x : @interp_flat_type base_type_code var1 tx0) (e3 : exprf tC1)
+                                                         (tC2 : flat_type) (eC3 : @interp_flat_type base_type_code var1 tC1 -> exprf tC2)
+                                                         (eC4 : @interp_flat_type base_type_code var2 tC1 -> exprf tC2),
                                                     wff G (e0 x) e3 ->
-                                                    (forall (x1 : @interp_flat_type_gen base_type_code var1 tC1)
-                                                            (x2 : @interp_flat_type_gen base_type_code var2 tC1),
+                                                    (forall (x1 : @interp_flat_type base_type_code var1 tC1)
+                                                            (x2 : @interp_flat_type base_type_code var2 tC1),
                                                         wff (@flatten_binding_list base_type_code var1 var2 tC1 x1 x2 ++ G) (eC3 x1) (eC4 x2)) ->
-                                                    wff G (@under_letsf base_type_code interp_base_type op var1 tC1 (e0 x) tC2 eC3)
-                                                        (@under_letsf base_type_code interp_base_type op var2 tC1 e3 tC2 eC4)
+                                                    wff G (@under_letsf base_type_code op var1 tC1 (e0 x) tC2 eC3)
+                                                        (@under_letsf base_type_code op var2 tC1 e3 tC2 eC4)
                                                 | _ => _ end with
                                | LetIn _ ex tC' eC => fun x => wff_under_letsf G tC' (eC x)
                                | _ => I

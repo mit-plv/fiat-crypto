@@ -11,17 +11,12 @@ Local Open Scope ctype_scope.
 Delimit Scope nexpr_scope with nexpr.
 Section language.
   Context (base_type_code : Type)
-          (interp_base_type : base_type_code -> Type)
           (op : flat_type base_type_code -> flat_type base_type_code -> Type).
 
   Local Notation flat_type := (flat_type base_type_code).
   Local Notation type := (type base_type_code).
-  Let Tbase := @Tbase base_type_code.
-  Local Coercion Tbase : base_type_code >-> Syntax.flat_type.
-  Local Notation interp_type := (interp_type interp_base_type).
-  Local Notation interp_flat_type := (interp_flat_type interp_base_type).
-  Local Notation exprf := (@exprf base_type_code interp_base_type op).
-  Local Notation expr := (@expr base_type_code interp_base_type op).
+  Local Notation exprf := (@exprf base_type_code op).
+  Local Notation expr := (@expr base_type_code op).
 
   Section internal.
     Context (InName OutName : Type)
@@ -36,8 +31,8 @@ Section language.
                (ctxi : InContext) (ctxr : ReverseContext)
                {t} (e : exprf InName t) (new_names : list (option OutName))
       : option (exprf OutName t)
-      := match e in Named.exprf _ _ _ _ t return option (exprf _ t) with
-         | Const _ x => Some (Const x)
+      := match e in Named.exprf _ _ _ t return option (exprf _ t) with
+         | TT => Some TT
          | Var t' name => match lookupb ctxi name t' with
                           | Some new_name
                             => match lookupb ctxr new_name t' with
@@ -75,10 +70,10 @@ Section language.
     Fixpoint register_reassign (ctxi : InContext) (ctxr : ReverseContext)
              {t} (e : expr InName t) (new_names : list (option OutName))
       : option (expr OutName t)
-      := match e in Named.expr _ _ _ _ t return option (expr _ t) with
+      := match e in Named.expr _ _ _ t return option (expr _ t) with
          | Return _ x => option_map Return (register_reassignf ctxi ctxr x new_names)
          | Abs src _ n f
-           => let '(n', new_names') := eta (split_onames src new_names) in
+           => let '(n', new_names') := eta (split_onames (Tbase src) new_names) in
               match n' with
               | Some n'
                 => let ctxi := extendb (t:=src) ctxi n n' in
@@ -120,5 +115,5 @@ End language.
 
 Global Arguments pos_context {_ _} var.
 Global Arguments pos_context_nd : clear implicits.
-Global Arguments register_reassign {_ _ _ _ _ _ _} _ ctxi ctxr {t} e _.
-Global Arguments register_reassignf {_ _ _ _ _ _ _} _ ctxi ctxr {t} e _.
+Global Arguments register_reassign {_ _ _ _ _ _} _ ctxi ctxr {t} e _.
+Global Arguments register_reassignf {_ _ _ _ _ _} _ ctxi ctxr {t} e _.

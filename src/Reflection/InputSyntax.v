@@ -1,6 +1,7 @@
 (** * PHOAS Representation of Gallina which allows exact denotation *)
 Require Import Coq.Strings.String.
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.Relations.
 Require Import Crypto.Reflection.InterpProofs.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Tactics.
@@ -16,7 +17,6 @@ Section language.
 
   Local Notation flat_type := (flat_type base_type_code).
   Local Notation type := (type base_type_code).
-  Local Notation Tbase := (@Tbase base_type_code).
 
   Section expr_param.
     Context (interp_base_type : base_type_code -> Type).
@@ -29,7 +29,7 @@ Section language.
 
       (** N.B. [Let] destructures pairs *)
       Inductive exprf : flat_type -> Type :=
-      | Const {t : flat_type} : interp_type t -> exprf t
+      | Const {t : flat_type} : interp_flat_type t -> exprf t
       | Var {t} : var t -> exprf t
       | Op {t1 tR} : op t1 tR -> exprf t1 -> exprf tR
       | LetIn : forall {tx}, exprf tx -> forall {tC}, (var tx -> exprf tC) -> exprf tC
@@ -55,7 +55,7 @@ Section language.
            | Pair _ ex _ ey => (@interpf _ ex, @interpf _ ey)
            | MatchPair _ _ ex _ eC => match @interpf _ ex with pair x y => @interpf _ (eC x y) end
            end.
-      Fixpoint interp {t} (e : @expr interp_type t) : interp_type t
+      Fixpoint interp {t} (e : @expr interp_flat_type t) : interp_type t
         := match e in expr t return interp_type t with
            | Return _ x => interpf x
            | Abs _ _ f => fun x => @interp _ (f x)
@@ -65,11 +65,20 @@ Section language.
     End interp.
 
     Section compile.
-      Context {var : base_type_code -> Type}.
+      Context {var : base_type_code -> Type}
+              (make_const : forall t, interp_base_type t -> op Unit (Tbase t)).
 
-      Fixpoint compilef {t} (e : @exprf (interp_flat_type_gen var) t) : @Syntax.exprf base_type_code interp_base_type op var t
-        := match e in exprf t return @Syntax.exprf _ _ _ _ t with
-           | Const _ x => Syntax.Const x
+      Fixpoint SmartConst (t : flat_type) : interp_flat_type t -> Syntax.exprf base_type_code op (var:=var) t
+        := match t return interp_flat_type t -> Syntax.exprf _ _ t with
+           | Unit => fun _ => TT
+           | Tbase _ => fun v => Syntax.Op (make_const _ v) TT
+           | Prod _ _ => fun v => Syntax.Pair (@SmartConst _ (fst v))
+                                              (@SmartConst _ (snd v))
+           end.
+
+      Fixpoint compilef {t} (e : @exprf (interp_flat_type_gen var) t) : @Syntax.exprf base_type_code op var t
+        := match e in exprf t return @Syntax.exprf _ _ _ t with
+           | Const _ x => @SmartConst _ x
            | Var _ x => Syntax.SmartVarf x
            | Op _ _ op args => Syntax.Op op (@compilef _ args)
            | LetIn _ ex _ eC => Syntax.LetIn (@compilef _ ex) (fun x => @compilef _ (eC x))
@@ -77,21 +86,31 @@ Section language.
            | MatchPair _ _ ex _ eC => Syntax.LetIn (@compilef _ ex) (fun xy => @compilef _ (eC (fst xy) (snd xy)))
            end.
 
-      Fixpoint compile {t} (e : @expr (interp_flat_type_gen var) t) : @Syntax.expr base_type_code interp_base_type op var t
-        := match e in expr t return @Syntax.expr _ _ _ _ t with
+      Fixpoint compile {t} (e : @expr (interp_flat_type_gen var) t) : @Syntax.expr base_type_code op var t
+        := match e in expr t return @Syntax.expr _ _ _ t with
            | Return _ x => Syntax.Return (compilef x)
            | Abs a _ f => Syntax.Abs (fun x : var a => @compile _ (f x))
            end.
     End compile.
 
-    Definition Compile {t} (e : Expr t) : Syntax.Expr base_type_code interp_base_type op t
-      := fun var => compile (e _).
+    Definition Compile
+               (make_const : forall t, interp_base_type t -> op Unit (Tbase t))
+               {t} (e : Expr t) : Syntax.Expr base_type_code op t
+      := fun var => compile make_const (e _).
 
     Section compile_correct.
-      Context (interp_op : forall src dst, op src dst -> interp_flat_type src -> interp_flat_type dst).
+      Context (make_const : forall t, interp_base_type t -> op Unit (Tbase t))
+              (interp_op : forall src dst, op src dst -> interp_flat_type src -> interp_flat_type dst)
+              (make_const_correct : forall T v, interp_op Unit (Tbase T) (make_const T v) tt = v).
+
+      Lemma SmartConst_correct t v
+        : Syntax.interpf interp_op (SmartConst make_const t v) = v.
+      Proof.
+        induction t; try destruct v; simpl in *; congruence.
+      Qed.
 
       Lemma compilef_correct {t} (e : @exprf interp_flat_type t)
-      : Syntax.interpf interp_op (compilef e) = interpf interp_op e.
+      : Syntax.interpf interp_op (compilef make_const e) = interpf interp_op e.
       Proof.
         induction e;
           repeat match goal with
@@ -99,6 +118,7 @@ Section language.
                  | _ => progress unfold LetIn.Let_In
                  | _ => progress simpl in *
                  | _ => rewrite interpf_SmartVarf
+                 | _ => rewrite SmartConst_correct
                  | _ => rewrite <- surjective_pairing
                  | _ => progress rewrite_hyp *
                  | [ |- context[let (x, y) := ?v in _] ]
@@ -108,7 +128,7 @@ Section language.
 
       Lemma Compile_correct {t} (e : @Expr t)
       : interp_type_gen_rel_pointwise (fun _ => @eq _)
-                                      (Syntax.Interp interp_op (Compile e))
+                                      (Syntax.Interp interp_op (Compile make_const e))
                                       (Interp interp_op e).
       Proof.
         unfold Interp, Compile, Syntax.Interp; simpl.
@@ -121,7 +141,7 @@ Section language.
       Qed.
 
       Lemma Compile_flat_correct {t : flat_type} (e : @Expr t)
-      : Syntax.Interp interp_op (Compile e) = Interp interp_op e.
+      : Syntax.Interp interp_op (Compile make_const e) = Interp interp_op e.
       Proof. exact (@Compile_correct t e). Qed.
     End compile_correct.
   End expr_param.
@@ -135,4 +155,4 @@ Global Arguments MatchPair {_ _ _ _ _ _} _ {_} _.
 Global Arguments Pair {_ _ _ _ _} _ {_} _.
 Global Arguments Return {_ _ _ _ _} _.
 Global Arguments Abs {_ _ _ _ _ _} _.
-Global Arguments Compile {_ _ _ t} _ _.
+Global Arguments Compile {_ _ _} make_const {t} _ _.

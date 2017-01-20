@@ -30,7 +30,7 @@ Local Notation eta3' x := (fst x, eta (snd x)).
 
 (** ** Reflective Assembly Syntax *)
 Section reflection.
-  Context (ops : fancy_machine.instructions (2 * 128)).
+  Context {ops : fancy_machine.instructions (2 * 128)}.
   Local Set Boolean Equality Schemes.
   Local Set Decidable Equality Schemes.
   Inductive base_type := TZ | Tbool | TW.
@@ -47,6 +47,7 @@ Section reflection.
   Local Notation tW := (Tbase TW).
   Local Open Scope ctype_scope.
   Inductive op : flat_type base_type -> flat_type base_type -> Type :=
+  | OPconst t : interp_base_type t -> op Unit (Tbase t)
   | OPldi     : op tZ tW
   | OPshrd    : op (tW * tW * tZ) tW
   | OPshl     : op (tW * tZ) tW
@@ -59,9 +60,13 @@ Section reflection.
   | OPselc    : op (tbool * tW * tW) tW
   | OPaddm    : op (tW * tW * tW) tW.
 
+  Definition is_const s d (v : op s d) : bool
+    := match v with OPconst _ _ => true | _ => false end.
+
   Definition interp_op src dst (f : op src dst)
     : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
     := match f in op s d return interp_flat_type _ s -> interp_flat_type _ d with
+       | OPconst _ v => fun _ => v
        | OPldi     => ldi
        | OPshrd    => fun xyz => let '(x, y, z) := eta3 xyz in shrd x y z
        | OPshl     => fun xy => let '(x, y) := eta xy in shl x y
@@ -75,19 +80,16 @@ Section reflection.
        | OPaddm    => fun xyz => let '(x, y, z) := eta3 xyz in addm x y z
        end.
 
-  Inductive SConstT := ZConst (_ : Z) | BoolConst (_ : bool) | INVALID_CONST.
-  Inductive op_code : Set :=
+  Inductive op_code : Type :=
+  | SOPconstb (v : bool) | SOPconstZ (v : Z) | SOPconstW
   | SOPldi | SOPshrd | SOPshl | SOPshr | SOPadc | SOPsubc
   | SOPmulhwll | SOPmulhwhl | SOPmulhwhh | SOPselc | SOPaddm.
 
-  Definition symbolicify_const (t : base_type) : interp_base_type t -> SConstT
-    := match t with
-       | TZ => fun x => ZConst x
-       | Tbool => fun x => BoolConst x
-       | TW => fun x => INVALID_CONST
-       end.
   Definition symbolicify_op s d (v : op s d) : op_code
     := match v with
+       | OPconst TZ v => SOPconstZ v
+       | OPconst Tbool v => SOPconstb v
+       | OPconst TW v => SOPconstW
        | OPldi => SOPldi
        | OPshrd => SOPshrd
        | OPshl => SOPshl
@@ -101,28 +103,29 @@ Section reflection.
        | OPaddm => SOPaddm
        end.
 
-  Definition CSE {t} e := @CSE base_type SConstT op_code base_type_beq SConstT_beq op_code_beq internal_base_type_dec_bl interp_base_type op symbolicify_const symbolicify_op t e (fun _ => nil).
+  Definition CSE {t} e := @CSE base_type op_code base_type_beq op_code_beq internal_base_type_dec_bl op symbolicify_op t e (fun _ => nil).
 
   Inductive inline_option := opt_inline | opt_default | opt_noinline.
 
-  Definition postprocess var t (e : @exprf base_type interp_base_type op var t)
-    : @inline_directive base_type interp_base_type op var t
+  Definition postprocess var t (e : @exprf base_type op var t)
+    : @inline_directive base_type op var t
     := let opt : inline_option
            := match e with
               | Op _ _ OPshl _ => opt_inline
               | Op _ _ OPshr _ => opt_inline
+              | Op _ _ (OPconst _ _) _ => opt_inline
               | _ => opt_default
               end in
        match opt with
        | opt_noinline => no_inline e
        | opt_default => default_inline e
-       | opt_inline => match t as t' return exprf _ _ _ t' -> inline_directive t' with
+       | opt_inline => match t as t' return exprf _ _ t' -> inline_directive t' with
                        | Tbase _ => fun e => inline e
                        | _ => fun e => default_inline e
                        end e
        end.
 
-  Definition Inline {t} e := @InlineConstGen base_type interp_base_type op postprocess t e.
+  Definition Inline {t} e := @InlineConstGen base_type op postprocess t e.
 End reflection.
 
 Ltac base_reify_op op op_head expr ::=
@@ -146,10 +149,10 @@ Ltac base_reify_type T ::=
      | fancy_machine.W => TW
      end.
 
-Ltac Reify' e := Reify.Reify' base_type (interp_base_type _) op e.
+Ltac Reify' e := Reify.Reify' base_type (@interp_base_type _) (@op _) e.
 Ltac Reify e :=
-  let v := Reify.Reify base_type (interp_base_type _) op e in
-  constr:(Inline _ ((*CSE _*) (InlineConst (Linearize v)))).
+  let v := Reify.Reify base_type (@interp_base_type _) (@op _) (@OPconst _) e in
+  constr:(Inline ((*CSE _*) (InlineConst (@is_const _) (Linearize v)))).
 (*Ltac Reify_rhs := Reify.Reify_rhs base_type (interp_base_type _) op (interp_op _).*)
 
 (** ** Raw Syntax Trees *)
@@ -207,10 +210,10 @@ Global Instance RegisterContext {var : base_type -> Type} : Context Register var
   := ContextOn pos_of_Register (RegisterAssign.pos_context var).
 
 Definition syntax {ops : fancy_machine.instructions (2 * 128)}
-  := Named.expr base_type (interp_base_type ops) op Register.
+  := Named.expr base_type op Register.
 
-Class wf_empty {ops} {var} {t} (e : Named.expr base_type (interp_base_type ops) op Register t)
-  := mk_wf_empty : @Named.wf base_type (interp_base_type ops) op Register var _ empty t e.
+Class wf_empty {ops} {var} {t} (e : Named.expr base_type (@op ops) Register t)
+  := mk_wf_empty : @Named.wf base_type op Register var _ empty t e.
 Global Hint Extern 0 (wf_empty _) => vm_compute; intros; constructor : typeclass_instances.
 
 (** Assemble a well-typed easily interpretable expression into a
@@ -218,7 +221,7 @@ Global Hint Extern 0 (wf_empty _) => vm_compute; intros; constructor : typeclass
 Section assemble.
   Context {ops : fancy_machine.instructions (2 * 128)}.
 
-  Definition AssembleSyntax' {t} (e : Expr base_type (interp_base_type _) op t) (ls : list Register)
+  Definition AssembleSyntax' {t} (e : Expr base_type op t) (ls : list Register)
     : option (syntax t)
     := CompileAndEliminateDeadCode e ls.
   Definition AssembleSyntax {t} e ls (res := @AssembleSyntax' t e ls)
@@ -229,13 +232,13 @@ Section assemble.
 
   Definition dummy_registers (n : nat) : list Register
     := List.map scratchplus (seq 0 n).
-  Definition DefaultRegisters {t} (e : Expr base_type (interp_base_type _) op t) : list Register
+  Definition DefaultRegisters {t} (e : Expr base_type op t) : list Register
     := dummy_registers (CountBinders e).
 
   Definition DefaultAssembleSyntax {t} e := @AssembleSyntax t e (DefaultRegisters e).
 
   Definition Interp {t} e {wf : wf_empty e}
-    := @Named.interp base_type (interp_base_type _) op Register _ (interp_op _) empty t e wf.
+    := @Named.interp base_type interp_base_type op Register _ interp_op empty t e wf.
 End assemble.
 
 Export Reflection.Named.Syntax.
@@ -245,6 +248,7 @@ Open Scope type_scope.
 Open Scope core_scope.
 
 Notation Return x := (Var x).
+Notation Const z := (Op (@OPconst _ _ z) TT).
 Notation ldi z := (Op OPldi (Const z%Z)).
 Notation "'slet' x := A 'in' b" := (LetIn _ x (Op OPldi (Var A%nexpr)) b%nexpr) : nexpr_scope.
 Notation "'c.Rshi' ( x , A , B , C ) , b" :=

@@ -6,21 +6,17 @@ Require Import Crypto.Util.Tactics.SpecializeBy Crypto.Util.Tactics.DestructHead
 
 Local Open Scope ctype_scope.
 Section language.
-  Context (base_type_code : Type).
-  Context (interp_base_type : base_type_code -> Type).
-  Context (op : flat_type base_type_code -> flat_type base_type_code -> Type).
+  Context {base_type_code : Type}
+          {op : flat_type base_type_code -> flat_type base_type_code -> Type}.
 
   Local Notation flat_type := (flat_type base_type_code).
   Local Notation type := (type base_type_code).
-  Let Tbase := @Tbase base_type_code.
-  Local Coercion Tbase : base_type_code >-> Syntax.flat_type.
-  Let interp_type := interp_type interp_base_type.
-  Let interp_flat_type := interp_flat_type interp_base_type.
-  Local Notation exprf := (@exprf base_type_code interp_base_type op).
-  Local Notation expr := (@expr base_type_code interp_base_type op).
-  Local Notation Expr := (@Expr base_type_code interp_base_type op).
-  Local Notation wff := (@wff base_type_code interp_base_type op).
-  Local Notation wf := (@wf base_type_code interp_base_type op).
+  Local Notation Tbase := (@Tbase base_type_code).
+  Local Notation exprf := (@exprf base_type_code op).
+  Local Notation expr := (@expr base_type_code op).
+  Local Notation Expr := (@Expr base_type_code op).
+  Local Notation wff := (@wff base_type_code op).
+  Local Notation wf := (@wf base_type_code op).
 
   Section with_var.
     Context {var1 var2 : base_type_code -> Type}.
@@ -33,7 +29,7 @@ Section language.
     Local Hint Extern 1 => progress unfold List.In in *.
     Local Hint Resolve wff_in_impl_Proper.
     Local Hint Resolve wff_SmartVarf.
-    Local Hint Resolve wff_SmartConstf.
+    Local Hint Resolve wff_SmartVarVarf.
 
     Local Ltac t_fin :=
       repeat first [ intro
@@ -42,21 +38,20 @@ Section language.
                    | tauto
                    | progress subst
                    | solve [ auto with nocore
-                           | eapply (@wff_SmartVarVarf _ _ _ _ _ _ _ (_ * _)); auto
-                           | eapply wff_SmartConstf; eauto with nocore
+                           | eapply (@wff_SmartVarVarf _ _ _ _ _ _ (_ * _)); auto
                            | eapply wff_SmartVarVarf; eauto with nocore ]
                    | progress simpl in *
                    | constructor
                    | solve [ eauto ] ].
 
-    Lemma wff_inline_constf {t} e1 e2 G G'
-             (H : forall t x x', List.In (existT (fun t : base_type_code => (exprf t * exprf t)%type) t (x, x')) G'
+    Lemma wff_inline_constf is_const {t} e1 e2 G G'
+             (H : forall t x x', List.In (existT (fun t : base_type_code => (exprf (Tbase t) * exprf (Tbase t))%type) t (x, x')) G'
                             -> wff G x x')
              (wf : wff G' e1 e2)
-      : @wff var1 var2 G t (inline_constf e1) (inline_constf e2).
+      : @wff var1 var2 G t (inline_constf is_const e1) (inline_constf is_const e2).
     Proof.
       revert dependent G; induction wf; simpl in *; intros; auto;
-        specialize_by auto.
+        specialize_by auto; unfold postprocess_for_const.
       repeat match goal with
              | [ H : context[List.In _ (_ ++ _)] |- _ ]
                => setoid_rewrite List.in_app_iff in H
@@ -65,40 +60,41 @@ Section language.
       | [ H : _ |- _ ]
         => pose proof (IHwf _ H) as IHwf'
       end.
-      generalize dependent (inline_constf e1); generalize dependent (inline_constf e1'); intros.
+      generalize dependent (inline_constf is_const e1); generalize dependent (inline_constf is_const e1'); intros.
       destruct IHwf'; simpl in *;
+        try match goal with |- context[@is_const ?x ?y ?z] => is_var y; destruct (@is_const x y z), y end;
         repeat constructor; auto; intros;
           match goal with
           | [ H : _ |- _ ]
-            => apply H; intros; progress destruct_head' or
+            => apply H; intros; progress destruct_head_hnf' or
           end;
           t_fin.
     Qed.
 
-    Lemma wf_inline_const {t} e1 e2 G G'
-          (H : forall t x x', List.In (existT (fun t : base_type_code => (exprf t * exprf t)%type) t (x, x')) G'
+    Lemma wf_inline_const is_const {t} e1 e2 G G'
+          (H : forall t x x', List.In (existT (fun t : base_type_code => (exprf (Tbase t) * exprf (Tbase t))%type) t (x, x')) G'
                               -> wff G x x')
           (Hwf : wf G' e1 e2)
-      : @wf var1 var2 G t (inline_const e1) (inline_const e2).
+      : @wf var1 var2 G t (inline_const is_const e1) (inline_const is_const e2).
     Proof.
       revert dependent G; induction Hwf; simpl; constructor; intros;
-        [ eapply wff_inline_constf; eauto | ].
-      match goal with
-      | [ H : _ |- _ ]
-        => apply H; simpl; intros; progress destruct_head' or
-      end;
+        [ eapply (wff_inline_constf is_const); [ | solve [ eauto ] ] | ];
+        match goal with
+        | [ H : _ |- _ ]
+          => apply H; simpl; intros; progress destruct_head' or
+        end;
         inversion_sigma; inversion_prod; repeat subst; simpl.
       { constructor; left; reflexivity. }
       { eauto. }
     Qed.
   End with_var.
 
-  Lemma WfInlineConst {t} (e : Expr t)
+  Lemma WfInlineConst is_const {t} (e : Expr t)
         (Hwf : Wf e)
-    : Wf (InlineConst e).
+    : Wf (InlineConst is_const e).
   Proof.
     intros var1 var2.
-    apply (@wf_inline_const var1 var2 t (e _) (e _) nil nil); simpl; [ tauto | ].
+    apply (@wf_inline_const var1 var2 is_const t (e _) (e _) nil nil); simpl; [ tauto | ].
     apply Hwf.
   Qed.
 End language.

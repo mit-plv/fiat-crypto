@@ -64,7 +64,6 @@ Section language.
       enforced, but it will block [vm_compute] when trying to use the
       lemma in this file.) *)
   Context (base_type_code : Type).
-  Context (interp_base_type : base_type_code -> Type).
   Context (base_type_eq_semidec_transparent : forall t1 t2 : base_type_code, option (t1 = t2)).
   Context (base_type_eq_semidec_is_dec : forall t1 t2, base_type_eq_semidec_transparent t1 t2 = None -> t1 <> t2).
   Context (op : flat_type base_type_code -> flat_type base_type_code -> Type).
@@ -83,25 +82,14 @@ Section language.
   (* convenience notations that fill in some arguments used across the section *)
   Local Notation flat_type := (flat_type base_type_code).
   Local Notation type := (type base_type_code).
-  Let Tbase := @Tbase base_type_code.
-  Local Coercion Tbase : base_type_code >-> Syntax.flat_type.
-  Local Notation interp_type := (interp_type interp_base_type).
-  Local Notation interp_flat_type := (interp_flat_type interp_base_type).
-  Local Notation exprf := (@exprf base_type_code interp_base_type op).
-  Local Notation expr := (@expr base_type_code interp_base_type op).
+  Local Notation exprf := (@exprf base_type_code op).
+  Local Notation expr := (@expr base_type_code op).
   Local Notation duplicate_type := (@duplicate_type base_type_code var1 var2).
-  Local Notation reflect_wffT := (@reflect_wffT base_type_code interp_base_type interp_base_type base_type_eq_semidec_transparent op (fun _ => rEq) op_beq var1 var2).
-  Local Notation reflect_wfT := (@reflect_wfT base_type_code interp_base_type interp_base_type base_type_eq_semidec_transparent op (fun _ => rEq) op_beq var1 var2).
+  Local Notation reflect_wffT := (@reflect_wffT base_type_code base_type_eq_semidec_transparent op op_beq var1 var2).
+  Local Notation reflect_wfT := (@reflect_wfT base_type_code base_type_eq_semidec_transparent op op_beq var1 var2).
   Local Notation flat_type_eq_semidec_transparent := (@flat_type_eq_semidec_transparent base_type_code base_type_eq_semidec_transparent).
   Local Notation preflatten_binding_list2 := (@preflatten_binding_list2 base_type_code base_type_eq_semidec_transparent var1 var2).
   Local Notation type_eq_semidec_transparent := (@type_eq_semidec_transparent base_type_code base_type_eq_semidec_transparent).
-
-  Lemma interp_flat_type_rel_pointwise2_eq {t} (x y : interp_flat_type t)
-    : interp_flat_type_rel_pointwise2 (fun _ => eq) x y <-> x = y.
-  Proof.
-    induction t; simpl in *; [ reflexivity | ].
-    rewrite_hyp !*; intuition (simpl in *; try congruence).
-  Qed.
 
   Local Ltac handle_op_beq_correct :=
     repeat match goal with
@@ -159,7 +147,7 @@ Section language.
       match flat_type_eq_semidec_transparent t1 t2 with
       | Some p
         => to_prop reflective_obligation
-          -> @wff base_type_code interp_base_type op var1 var2 G t2 (eq_rect _ exprf (unnatize_exprf (List.length G) e1) _ p) (unnatize_exprf (List.length G) e2)
+          -> @wff base_type_code op var1 var2 G t2 (eq_rect _ exprf (unnatize_exprf (List.length G) e1) _ p) (unnatize_exprf (List.length G) e2)
       | None => True
       end.
   Proof.
@@ -195,7 +183,7 @@ Section language.
       match type_eq_semidec_transparent t1 t2 with
       | Some p
         => to_prop reflective_obligation
-          -> @wf base_type_code interp_base_type op var1 var2 G t2 (eq_rect _ expr (unnatize_expr (List.length G) e1) _ p) (unnatize_expr (List.length G) e2)
+          -> @wf base_type_code op var1 var2 G t2 (eq_rect _ expr (unnatize_expr (List.length G) e1) _ p) (unnatize_expr (List.length G) e2)
       | None => True
       end.
   Proof.
@@ -204,7 +192,7 @@ Section language.
       [ clear reflect_wf;
         pose proof (@reflect_wff G t1 t2 e1 e2)
       | pose proof (fun x x'
-                    => match preflatten_binding_list2 tx tx' as v return match v with Some _ => _ | None => True end with
+                    => match preflatten_binding_list2 (Tbase tx) (Tbase tx') as v return match v with Some _ => _ | None => True end with
                       | Some G0
                         => reflect_wf
                             (G0 x x' ++ G)%list _ _
@@ -220,23 +208,22 @@ End language.
 
 Section Wf.
   Context (base_type_code : Type)
-          (interp_base_type : base_type_code -> Type)
           (base_type_eq_semidec_transparent : forall t1 t2 : base_type_code, option (t1 = t2))
           (base_type_eq_semidec_is_dec : forall t1 t2, base_type_eq_semidec_transparent t1 t2 = None -> t1 <> t2)
           (op : flat_type base_type_code -> flat_type base_type_code -> Type)
           (op_beq : forall t1 tR, op t1 tR -> op t1 tR -> reified_Prop)
           (op_beq_bl : forall t1 tR x y, to_prop (op_beq t1 tR x y) -> x = y)
           {t : type base_type_code}
-          (e : @Expr base_type_code interp_base_type op t).
+          (e : @Expr base_type_code op t).
 
   (** Leads to smaller proofs, but is less generally applicable *)
   Theorem reflect_Wf_unnatize
     : (forall var1 var2,
-          to_prop (@reflect_wfT base_type_code interp_base_type interp_base_type base_type_eq_semidec_transparent op (fun _ => rEq) op_beq var1 var2 nil t t (e _) (e _)))
+          to_prop (@reflect_wfT base_type_code base_type_eq_semidec_transparent op op_beq var1 var2 nil t t (e _) (e _)))
       -> Wf (fun var => unnatize_expr 0 (e (fun t => (nat * var t)%type))).
   Proof.
     intros H var1 var2; specialize (H var1 var2).
-    pose proof (@reflect_wf base_type_code interp_base_type base_type_eq_semidec_transparent base_type_eq_semidec_is_dec op op_beq op_beq_bl var1 var2 nil t t (e _) (e _)) as H'.
+    pose proof (@reflect_wf base_type_code base_type_eq_semidec_transparent base_type_eq_semidec_is_dec op op_beq op_beq_bl var1 var2 nil t t (e _) (e _)) as H'.
     rewrite type_eq_semidec_transparent_refl in H' by assumption; simpl in *.
     edestruct @reflect_wfT; simpl in *; tauto.
   Qed.
@@ -246,7 +233,7 @@ Section Wf.
   Theorem reflect_Wf
     : (forall var1 var2,
           unnatize_expr 0 (e (fun t => (nat * var1 t)%type)) = e _
-          /\ to_prop (@reflect_wfT base_type_code interp_base_type interp_base_type base_type_eq_semidec_transparent op (fun _ => rEq) op_beq var1 var2 nil t t (e _) (e _)))
+          /\ to_prop (@reflect_wfT base_type_code base_type_eq_semidec_transparent op op_beq var1 var2 nil t t (e _) (e _)))
       -> Wf e.
   Proof.
     intros H var1 var2.
@@ -258,8 +245,8 @@ End Wf.
 
 Ltac generalize_reflect_Wf base_type_eq_semidec_is_dec op_beq_bl :=
   lazymatch goal with
-  | [ |- @Wf ?base_type_code ?interp_base_type ?op ?t ?e ]
-    => generalize (@reflect_Wf_unnatize base_type_code interp_base_type _ base_type_eq_semidec_is_dec op _ op_beq_bl t e)
+  | [ |- @Wf ?base_type_code ?op ?t ?e ]
+    => generalize (@reflect_Wf_unnatize base_type_code _ base_type_eq_semidec_is_dec op _ op_beq_bl t e)
   end.
 Ltac use_reflect_Wf :=
   let H := fresh in

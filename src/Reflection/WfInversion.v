@@ -8,20 +8,16 @@ Require Import Crypto.Util.Notations.
 
 Section language.
   Context {base_type_code : Type}
-          {interp_base_type : base_type_code -> Type}
           {op : flat_type base_type_code -> flat_type base_type_code -> Type}.
 
   Local Notation flat_type := (flat_type base_type_code).
   Local Notation type := (type base_type_code).
-  Local Notation Tbase := (@Tbase base_type_code).
-  Local Notation interp_type := (interp_type interp_base_type).
-  Local Notation interp_flat_type := (interp_flat_type interp_base_type).
-  Local Notation exprf := (@exprf base_type_code interp_base_type op).
-  Local Notation expr := (@expr base_type_code interp_base_type op).
-  Local Notation Expr := (@Expr base_type_code interp_base_type op).
-  Local Notation wff := (@wff base_type_code interp_base_type op).
-  Local Notation wf := (@wf base_type_code interp_base_type op).
-  Local Notation Wf := (@Wf base_type_code interp_base_type op).
+  Local Notation exprf := (@exprf base_type_code op).
+  Local Notation expr := (@expr base_type_code op).
+  Local Notation Expr := (@Expr base_type_code op).
+  Local Notation wff := (@wff base_type_code op).
+  Local Notation wf := (@wf base_type_code op).
+  Local Notation Wf := (@Wf base_type_code op).
 
   Section with_var.
     Context {var1 var2 : base_type_code -> Type}.
@@ -30,10 +26,10 @@ Section language.
     Local Notation "x == y" := (existT eP _ (x, y)).
 
     Definition wff_code (G : list (sigT eP)) {t} (e1 : @exprf var1 t) : forall (e2 : @exprf var2 t), Prop
-      := match e1 in Syntax.exprf _ _ _ t return exprf t -> Prop with
-         | Const t x
+      := match e1 in Syntax.exprf _ _ t return exprf t -> Prop with
+         | TT
            => fun e2
-              => Some x = invert_Const e2
+              => TT = e2
          | Var t v1
            => fun e2
               => match invert_Var e2 with
@@ -86,7 +82,6 @@ Section language.
                | _ => progress subst
                | _ => progress inversion_option
                | [ H : Some _ = _ |- _ ] => symmetry in H
-               | [ H : invert_Const _ = _ |- _ ] => apply invert_Const_Some in H
                | [ H : invert_Var _ = _ |- _ ] => apply invert_Var_Some in H
                | [ H : invert_Op _ = _ |- _ ] => apply invert_Op_Some in H
                | [ H : invert_LetIn _ = _ |- _ ] => apply invert_LetIn_Some in H
@@ -120,6 +115,8 @@ Section language.
       destruct e1; simpl in *;
         move e2 at top;
         lazymatch type of e2 with
+        | exprf Unit
+          => subst; reflexivity
         | exprf (Tbase ?t)
           => revert dependent t;
                intros ? e2
@@ -134,7 +131,7 @@ Section language.
                intros ? e2
         end;
         refine match e2 with
-               | Const _ _ => _
+               | TT => _
                | _ => _
                end;
         t'.

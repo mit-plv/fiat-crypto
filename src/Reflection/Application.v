@@ -112,29 +112,29 @@ Section language.
        | Arrow _ _ => fun x => snd x
        end args.
 
-  Fixpoint Apply' n {var t} (x : @expr base_type interp_base_type op var t)
+  Fixpoint Apply' n {var t} (x : @expr base_type op var t)
     : forall (args : binders_for' n t var),
-      @expr base_type interp_base_type op var (remove_binders' n t)
-    := match x in (@expr _ _ _ _ t), n return (binders_for' n t var -> @expr _ _ _ _ (remove_binders' n t)) with
+      @expr base_type op var (remove_binders' n t)
+    := match x in (@expr _ _ _ t), n return (binders_for' n t var -> @expr _ _ _ (remove_binders' n t)) with
        | Return _ _ as y, _ => fun _ => y
        | Abs _ _ f, 0 => f
        | Abs src dst f, S n' => fun args => @Apply' n' var dst (f (fst args)) (snd args)
        end.
 
-  Definition Apply n {var t} (x : @expr base_type interp_base_type op var t)
+  Definition Apply n {var t} (x : @expr base_type op var t)
     : forall (args : binders_for n t var),
-      @expr base_type interp_base_type op var (remove_binders n t)
-    := match n return binders_for n t var -> @expr _ _ _ _ (remove_binders n t) with
+      @expr base_type op var (remove_binders n t)
+    := match n return binders_for n t var -> @expr _ _ _ (remove_binders n t) with
        | 0 => fun _ => x
        | S n' => @Apply' n' var t x
        end.
 
-  Fixpoint ApplyAll {var t} (x : @expr base_type interp_base_type op var t)
+  Fixpoint ApplyAll {var t} (x : @expr base_type op var t)
     : forall (args : interp_all_binders_for t var),
-      @exprf base_type interp_base_type op var (remove_all_binders t)
-    := match x in @expr _ _ _ _ t
+      @exprf base_type op var (remove_all_binders t)
+    := match x in @expr _ _ _ t
              return (forall (args : interp_all_binders_for t var),
-                        @exprf base_type interp_base_type op var (remove_all_binders t))
+                        @exprf base_type op var (remove_all_binders t))
        with
        | Return _ x => fun _ => x
        | Abs src dst f => fun args => @ApplyAll var dst (f (fst_binder args)) (snd_binder args)
@@ -187,10 +187,10 @@ Arguments count_binders {_} !_ / .
 Arguments binders_for {_} !_ !_ _ / .
 Arguments remove_binders {_} !_ !_ / .
 (* Work around bug #5175 *)
-Arguments Apply {_ _ _ _ _ _} _ _ , {_ _ _} _ {_ _} _ _.
-Arguments Apply _ _ _ !_ _ _ !_ !_ / .
+Arguments Apply {_ _ _ _ _} _ _ , {_ _} _ {_ _} _ _.
+Arguments Apply _ _ !_ _ _ !_ !_ / .
 Arguments ApplyInterped {_ _ !_ !_} _ _ / .
 Arguments ApplyInterped' {_ _} _ {_} _ _.
-Arguments ApplyAll {_ _ _ _ !_} !_ _ / .
+Arguments ApplyAll {_ _ _ !_} !_ _ / .
 Arguments ApplyInterpedAll' {_ _ !_} _ _ / .
 Arguments ApplyInterpedAll {_ _ !_} _ _ / .

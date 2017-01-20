@@ -11,12 +11,12 @@ Require Import Crypto.Reflection.CommonSubexpressionElimination.
 Require Crypto.Reflection.Linearize Crypto.Reflection.Inline.
 Require Import Crypto.Reflection.WfReflective.
 Require Import Crypto.Reflection.Conversion.
+Require Import Crypto.Util.NatUtil.
 
 Import ReifyDebugNotations.
 
 Local Set Boolean Equality Schemes.
 Local Set Decidable Equality Schemes.
-Scheme Equality for nat.
 Inductive base_type := Tnat.
 Definition interp_base_type (v : base_type) : Type :=
   match v with
@@ -24,11 +24,14 @@ Definition interp_base_type (v : base_type) : Type :=
   end.
 Local Notation tnat := (Tbase Tnat).
 Inductive op : flat_type base_type -> flat_type base_type -> Type :=
+| Const (v : nat) : op Unit tnat
 | Add : op (Prod tnat tnat) tnat
 | Mul : op (Prod tnat tnat) tnat
 | Sub : op (Prod tnat tnat) tnat.
+Definition is_const s d (v : op s d) : bool := match v with Const _ => true | _ => false end.
 Definition interp_op src dst (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
   := match f with
+     | Const v => fun _ => v
      | Add => fun xy => fst xy + snd xy
      | Mul => fun xy => fst xy * snd xy
      | Sub => fun xy => fst xy - snd xy
@@ -39,26 +42,30 @@ Global Instance: reify_op op mult 2 Mul := I.
 Global Instance: reify_op op minus 2 Sub := I.
 Global Instance: reify type nat := Tnat.
 
+Definition make_const (t : base_type) : interp_base_type t -> op Unit (Tbase t)
+  := match t with
+     | Tnat => fun v => Const v
+     end.
 Ltac Reify' e := Reify.Reify' base_type interp_base_type op e.
-Ltac Reify e := Reify.Reify base_type interp_base_type op e.
-Ltac Reify_rhs := Reify.Reify_rhs base_type interp_base_type op interp_op.
+Ltac Reify e := Reify.Reify base_type interp_base_type op make_const e.
+Ltac Reify_rhs := Reify.Reify_rhs base_type interp_base_type op make_const interp_op.
 
 (*Ltac reify_debug_level ::= constr:(2).*)
 
 Goal (flat_type base_type -> Type) -> False.
   intro var.
   let x := reifyf base_type interp_base_type op var 1%nat in pose x.
-  let x := Reify' 1%nat in unify x (fun var => Return (Const (interp_base_type:=interp_base_type) (var:=var) (t:=Tbase Tnat) (op:=op) 1)).
+  let x := Reify' 1%nat in unify x (fun var => Return (InputSyntax.Const (interp_base_type:=interp_base_type) (var:=var) (t:=Tbase Tnat) (op:=op) 1)).
   let x := reifyf base_type interp_base_type op var (1 + 1)%nat in pose x.
-  let x := Reify' (1 + 1)%nat in unify x (fun var => Return (Op Add (Pair (Const (interp_base_type:=interp_base_type) (var:=var) (t:=Tbase Tnat) (op:=op) 1) (Const (interp_base_type:=interp_base_type) (var:=var) (t:=Tbase Tnat) (op:=op) 1)))).
+  let x := Reify' (1 + 1)%nat in unify x (fun var => Return (Op Add (Pair (InputSyntax.Const (interp_base_type:=interp_base_type) (var:=var) (t:=Tbase Tnat) (op:=op) 1) (InputSyntax.Const (interp_base_type:=interp_base_type) (var:=var) (t:=Tbase Tnat) (op:=op) 1)))).
   let x := reify_abs base_type interp_base_type op var (fun x => x + 1)%nat in pose x.
-  let x := Reify' (fun x => x + 1)%nat in unify x (fun var => Abs (fun y => Op Add (Pair (Var y) (Const (interp_base_type:=interp_base_type) (var:=var) (t:=Tbase Tnat) (op:=op) 1)))).
+  let x := Reify' (fun x => x + 1)%nat in unify x (fun var => Abs (fun y => Op Add (Pair (Var y) (InputSyntax.Const (interp_base_type:=interp_base_type) (var:=var) (t:=Tbase Tnat) (op:=op) 1)))).
   let x := reifyf base_type interp_base_type op var (let '(a, b) := (1, 1) in a + b)%nat in pose x.
   let x := reifyf base_type interp_base_type op var (let '(a, b, c) := (1, 1, 1) in a + b + c)%nat in pose x.
   let x := Reify' (fun x => let '(a, b) := (1, 1) in a + x)%nat in let x := (eval vm_compute in x) in pose x.
   let x := Reify' (fun x => let '(a, b) := (1, 1) in a + x)%nat in
   unify x (fun var => Abs (fun x' =>
-                          let c1 := (Const (interp_base_type:=interp_base_type) (var:=var) (t:=Tbase Tnat) (op:=op) 1) in
+                          let c1 := (InputSyntax.Const (interp_base_type:=interp_base_type) (var:=var) (t:=Tbase Tnat) (op:=op) 1) in
                           MatchPair (tC:=tnat) (Pair c1 c1)
                                     (fun x0 _ : var tnat => Op Add (Pair (Var x0) (Var x'))))).
   let x := reifyf base_type interp_base_type op var (let x := 5 in let y := 6 in (let a := 1 in let '(c, d) := (2, 3) in a + x + c + d) + y)%nat in pose x.
@@ -78,11 +85,11 @@ Import Linearize Inline.
 
 Goal True.
   let x := Reify (fun x y => (let a := 1 in let '(c, d) := (2, 3) in a + x - a + c + d) + y)%nat in
-  pose (InlineConst (Linearize x)) as e.
+  pose (InlineConst is_const (Linearize x)) as e.
   vm_compute in e.
 Abort.
 
-Definition example_expr : Syntax.Expr base_type interp_base_type op (Arrow Tnat (Arrow Tnat (Tflat tnat))).
+Definition example_expr : Syntax.Expr base_type op (Arrow Tnat (Arrow Tnat (Tflat tnat))).
 Proof.
   let x := Reify (fun z w => let unused := 1 + 1 in let x := 1 in let y := 1 in (let a := 1 in let '(c, d) := (2, 3) in a + x + (x + x) + (x + x) - (x + x) - a + c + d) + y + z + w)%nat in
   exact x.
@@ -99,6 +106,8 @@ Proof.
 Qed.
 Definition op_beq t1 tR : op t1 tR -> op t1 tR -> reified_Prop
   := fun x y => match x, y return bool with
+                | Const a, Const b => NatUtil.nat_beq a b
+                | Const _, _ => false
                 | Add, Add => true
                 | Add, _ => false
                 | Mul, Mul => true
@@ -110,7 +119,16 @@ Lemma op_beq_bl t1 tR (x y : op t1 tR)
   : to_prop (op_beq t1 tR x y) -> x = y.
 Proof.
   destruct x; simpl;
-    refine match y with Add => _ | _ => _ end; simpl; tauto.
+    refine match y with Add => _ | _ => _ end;
+    repeat match goal with
+           | _ => progress simpl in *
+           | _ => progress unfold op_beq in *
+           | [ |- context[reified_Prop_of_bool ?b] ]
+             => destruct b eqn:?; unfold reified_Prop_of_bool
+           | _ => progress nat_beq_to_eq
+           | _ => congruence
+           | _ => tauto
+           end.
 Qed.
 
 Ltac reflect_Wf := WfReflective.reflect_Wf base_type_eq_semidec_is_dec op_beq_bl.
@@ -132,21 +150,18 @@ Proof. Time reflect_Wf. (* 0.008 s *) Qed.
 
 Section cse.
   Let SConstT := nat.
-  Inductive op_code : Set := SAdd | SMul | SSub.
-  Definition symbolicify_const (t : base_type) : interp_base_type t -> SConstT
-    := match t with
-       | Tnat => fun x => x
-       end.
+  Inductive op_code : Set := SConst (v : nat) | SAdd | SMul | SSub.
   Definition symbolicify_op s d (v : op s d) : op_code
     := match v with
+       | Const v => SConst v
        | Add => SAdd
        | Mul => SMul
        | Sub => SSub
        end.
-  Definition CSE {t} e := @CSE base_type SConstT op_code base_type_beq nat_beq op_code_beq internal_base_type_dec_bl interp_base_type op symbolicify_const symbolicify_op t e (fun _ => nil).
+  Definition CSE {t} e := @CSE base_type op_code base_type_beq op_code_beq internal_base_type_dec_bl op symbolicify_op t e (fun _ => nil).
 End cse.
 
-Definition example_expr_simplified := Eval vm_compute in InlineConst (Linearize example_expr).
+Definition example_expr_simplified := Eval vm_compute in InlineConst is_const (Linearize example_expr).
 Compute CSE example_expr_simplified.
 
 Definition example_expr_compiled
@@ -184,30 +199,28 @@ Module bounds.
     match v with
     | Tnat => { b : bounded | lower b <= value b <= upper b }
     end.
-  Definition interp_op_bounds src dst (f : op src dst) : interp_flat_type interp_base_type_bounds src -> interp_flat_type interp_base_type_bounds dst
-    := match f with
-       | Add => fun xy => add_bounded_pf (fst xy) (snd xy)
-       | Mul => fun xy => mul_bounded_pf (fst xy) (snd xy)
-       | Sub => fun xy => sub_bounded_pf (fst xy) (snd xy)
-       end%nat.
   Definition constant_bounded t (x : interp_base_type t) : interp_base_type_bounds t.
   Proof.
     destruct t.
     exists {| lower := x ; value := x ; upper := x |}.
     simpl; split; reflexivity.
   Defined.
+  Definition interp_op_bounds src dst (f : op src dst) : interp_flat_type interp_base_type_bounds src -> interp_flat_type interp_base_type_bounds dst
+    := match f with
+       | Const v => fun _ => constant_bounded Tnat v
+       | Add => fun xy => add_bounded_pf (fst xy) (snd xy)
+       | Mul => fun xy => mul_bounded_pf (fst xy) (snd xy)
+       | Sub => fun xy => sub_bounded_pf (fst xy) (snd xy)
+       end%nat.
   Fixpoint constant_bounds t
     : interp_flat_type interp_base_type t -> interp_flat_type interp_base_type_bounds t
     := match t with
        | Tbase t => constant_bounded t
+       | Unit => fun _ => tt
        | Prod _ _ => fun x => (constant_bounds _ (fst x), constant_bounds _ (snd x))
        end.
 
-  Definition example_expr_bounds : Syntax.Expr base_type interp_base_type_bounds op (Arrow Tnat (Arrow Tnat (Tflat tnat))) :=
-    Eval vm_compute in
-      (fun var => map base_type op interp_base_type interp_base_type_bounds constant_bounds (fun _ x => x) (fun _ x => x) (example_expr (fun t => var t))).
-
-  Compute (fun x xpf y ypf => proj1_sig (Syntax.Interp interp_op_bounds example_expr_bounds
+  Compute (fun x xpf y ypf => proj1_sig (Syntax.Interp interp_op_bounds example_expr
                                          (exist _ {| lower := 0 ; value := x ; upper := 10 |} xpf)
                                          (exist _ {| lower := 100 ; value := y ; upper := 1000 |} ypf))).
 End bounds.

@@ -4,18 +4,16 @@ Require Import Crypto.Reflection.Syntax.
 Local Open Scope ctype_scope.
 Section language.
   Context {base_type_code : Type}
-          {interp_base_type : base_type_code -> Type}
           {op : flat_type base_type_code -> flat_type base_type_code -> Type}.
 
   Local Notation flat_type := (flat_type base_type_code).
   Local Notation type := (type base_type_code).
-  Local Notation interp_type := (interp_type interp_base_type).
-  Local Notation interp_flat_type := (interp_flat_type interp_base_type).
-  Local Notation Expr := (@Expr base_type_code interp_base_type op).
+  Local Notation Expr := (@Expr base_type_code op).
 
   Fixpoint count_pairs (t : flat_type) : nat
     := match t with
        | Tbase _ => 1
+       | Unit => 0
        | Prod A B => count_pairs A + count_pairs B
        end%nat.
 
@@ -23,8 +21,8 @@ Section language.
     Context {var : base_type_code -> Type}
             (mkVar : forall t, var t).
 
-    Local Notation exprf := (@exprf base_type_code interp_base_type op var).
-    Local Notation expr := (@expr base_type_code interp_base_type op var).
+    Local Notation exprf := (@exprf base_type_code op var).
+    Local Notation expr := (@expr base_type_code op var).
 
     Section gen.
       Context (count_type_let : flat_type -> nat).

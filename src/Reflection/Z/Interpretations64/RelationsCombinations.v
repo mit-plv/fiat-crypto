@@ -1,6 +1,7 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.Relations.
 Require Import Crypto.Reflection.Application.
 Require Import Crypto.Reflection.Z.InterpretationsGen.
 Require Import Crypto.Reflection.Z.Interpretations64.
@@ -72,7 +73,8 @@ Module Relations.
     Proof.
       unfold interp_type_rel_pointwise2_uncurried_proj.
       induction t as [t|A B IHt]; simpl; unfold Morphisms.respectful_hetero in *.
-      { induction t as [t|A IHA B IHB]; simpl; [ solve [ trivial | reflexivity ] | ].
+      { induction t as [t| |A IHA B IHB]; simpl; destruct_head_hnf' unit;
+          [ solve [ trivial | reflexivity ] | reflexivity | ].
         intros [HA HB].
         specialize (IHA _ _ HA); specialize (IHB _ _ HB).
         unfold R in *.
@@ -122,7 +124,8 @@ Module Relations.
     Proof.
       unfold interp_type_rel_pointwise2_uncurried_proj_option.
       induction t as [t|A B IHt]; simpl; unfold Morphisms.respectful_hetero in *.
-      { induction t as [t|A IHA B IHB]; simpl; [ solve [ trivial | reflexivity ] | ].
+      { induction t as [t| |A IHA B IHB]; simpl; destruct_head_hnf' unit;
+          [ solve [ trivial | reflexivity ] | reflexivity | ].
         intros [HA HB].
         specialize (IHA _ _ HA); specialize (IHB _ _ HB).
         unfold R in *.
@@ -181,7 +184,8 @@ Module Relations.
     Proof.
       unfold interp_type_rel_pointwise2_uncurried_proj_option2.
       induction t as [t|A B IHt]; simpl; unfold Morphisms.respectful_hetero in *.
-      { induction t as [t|A IHA B IHB]; simpl; [ solve [ trivial | reflexivity ] | ].
+      { induction t as [t| |A IHA B IHB]; simpl; destruct_head_hnf' unit;
+          [ solve [ trivial | reflexivity ] | reflexivity | ].
         intros [HA HB].
         specialize (IHA _ _ HA); specialize (IHB _ _ HB).
         unfold R in *.
@@ -247,7 +251,7 @@ Module Relations.
     Proof.
       unfold interp_type_rel_pointwise2_uncurried_proj_from_option2.
       induction t as [t|A B IHt]; simpl; unfold Morphisms.respectful_hetero in *.
-      { induction t as [t|A IHA B IHB]; simpl.
+      { induction t as [t| |A IHA B IHB]; simpl; destruct_head_hnf' unit; try reflexivity.
         { cbv [LiftOption.lift_relation proj_eq_rel R].
           break_match; try tauto; intros; subst.
           apply proj012. }
@@ -318,7 +322,7 @@ Module Relations.
     Proof.
       unfold interp_type_rel_pointwise2_uncurried_proj1_from_option2.
       induction t as [t|A B IHt]; simpl; unfold Morphisms.respectful_hetero in *.
-      { induction t as [t|A IHA B IHB]; simpl.
+      { induction t as [t| |A IHA B IHB]; simpl; destruct_head_hnf' unit; try reflexivity.
         { cbv [LiftOption.lift_relation proj_eq_rel LiftOption.lift_relation2].
           break_match; try tauto; intros; subst.
           apply proj012R. }

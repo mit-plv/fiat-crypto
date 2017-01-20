@@ -14,9 +14,11 @@ Section language.
   Fixpoint flat_type_beq (X Y : flat_type) {struct X} : bool
     := match X, Y with
        | Tbase T, Tbase T0 => eq_base_type_code T T0
+       | Unit, Unit => true
        | Prod A B, Prod A0 B0 => (flat_type_beq A A0 && flat_type_beq B B0)%bool
        | Tbase _, _
        | Prod _ _, _
+       | Unit, _
          => false
        end.
   Local Ltac t :=

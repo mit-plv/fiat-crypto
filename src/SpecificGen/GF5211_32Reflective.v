@@ -9,7 +9,6 @@ Require Export Crypto.SpecificGen.GF5211_32.
 Require Import Crypto.SpecificGen.GF5211_32BoundedCommon.
 Require Import Crypto.Reflection.Reify.
 Require Import Crypto.Reflection.Syntax.
-Require Import Crypto.Reflection.MapInterp.
 Require Import Crypto.Reflection.Z.Interpretations64.
 Require Crypto.Reflection.Z.Interpretations64.Relations.
 Require Import Crypto.Reflection.Z.Interpretations64.RelationsCombinations.
@@ -50,7 +49,7 @@ Declare Reduction asm_interp
             WordW.interp_op WordW.interp_base_type
             Z.interp_op Z.interp_base_type
             Z.Syntax.interp_op Z.Syntax.interp_base_type
-            mapf_interp_flat_type map_interp WordW.interp_base_type MapInterp mapf_interp word64ize rword64ize
+            mapf_interp_flat_type WordW.interp_base_type word64ize
             Interp interp interp_flat_type interpf interpf_step interp_flat_type fst snd].
 Ltac asm_interp
   := cbv beta iota delta
@@ -61,41 +60,41 @@ Ltac asm_interp
             WordW.interp_op WordW.interp_base_type
             Z.interp_op Z.interp_base_type
             Z.Syntax.interp_op Z.Syntax.interp_base_type
-            mapf_interp_flat_type map_interp WordW.interp_base_type MapInterp mapf_interp word64ize rword64ize
+            mapf_interp_flat_type WordW.interp_base_type word64ize
             Interp interp interp_flat_type interpf interp_flat_type fst snd].
 
 
 Definition interp_radd : SpecificGen.GF5211_32BoundedCommon.fe5211_32W -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W
-  := Eval asm_interp in interp_bexpr (rword64ize radd).
+  := Eval asm_interp in interp_bexpr radd.
 (*Print interp_radd.*)
 Definition interp_radd_correct : interp_radd = interp_bexpr radd := eq_refl.
 Definition interp_rsub : SpecificGen.GF5211_32BoundedCommon.fe5211_32W -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W
-  := Eval asm_interp in interp_bexpr (rword64ize rsub).
+  := Eval asm_interp in interp_bexpr rsub.
 (*Print interp_rsub.*)
 Definition interp_rsub_correct : interp_rsub = interp_bexpr rsub := eq_refl.
 Definition interp_rmul : SpecificGen.GF5211_32BoundedCommon.fe5211_32W -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W
-  := Eval asm_interp in interp_bexpr (rword64ize rmul).
+  := Eval asm_interp in interp_bexpr rmul.
 (*Print interp_rmul.*)
 Definition interp_rmul_correct : interp_rmul = interp_bexpr rmul := eq_refl.
 Definition interp_ropp : SpecificGen.GF5211_32BoundedCommon.fe5211_32W -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W
-  := Eval asm_interp in interp_uexpr (rword64ize ropp).
+  := Eval asm_interp in interp_uexpr ropp.
 (*Print interp_ropp.*)
 Definition interp_ropp_correct : interp_ropp = interp_uexpr ropp := eq_refl.
 Definition interp_rprefreeze : SpecificGen.GF5211_32BoundedCommon.fe5211_32W -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W
-  := Eval asm_interp in interp_uexpr (rword64ize rprefreeze).
+  := Eval asm_interp in interp_uexpr rprefreeze.
 (*Print interp_rprefreeze.*)
 Definition interp_rprefreeze_correct : interp_rprefreeze = interp_uexpr rprefreeze := eq_refl.
 
 Definition interp_rge_modulus : SpecificGen.GF5211_32BoundedCommon.fe5211_32W -> SpecificGen.GF5211_32BoundedCommon.word64
-  := Eval asm_interp in interp_uexpr_FEToZ (rword64ize rge_modulus).
+  := Eval asm_interp in interp_uexpr_FEToZ rge_modulus.
 Definition interp_rge_modulus_correct : interp_rge_modulus = interp_uexpr_FEToZ rge_modulus := eq_refl.
 
 Definition interp_rpack : SpecificGen.GF5211_32BoundedCommon.fe5211_32W -> SpecificGen.GF5211_32BoundedCommon.wire_digitsW
-  := Eval asm_interp in interp_uexpr_FEToWire (rword64ize rpack).
+  := Eval asm_interp in interp_uexpr_FEToWire rpack.
 Definition interp_rpack_correct : interp_rpack = interp_uexpr_FEToWire rpack := eq_refl.
 
 Definition interp_runpack : SpecificGen.GF5211_32BoundedCommon.wire_digitsW -> SpecificGen.GF5211_32BoundedCommon.fe5211_32W
-  := Eval asm_interp in interp_uexpr_WireToFE (rword64ize runpack).
+  := Eval asm_interp in interp_uexpr_WireToFE runpack.
 Definition interp_runpack_correct : interp_runpack = interp_uexpr_WireToFE runpack := eq_refl.
 
 Lemma radd_correct_and_bounded : binop_correct_and_bounded radd carry_add.

@@ -4,20 +4,15 @@ Require Import Crypto.Util.Tactics Crypto.Util.Sigma Crypto.Util.Prod.
 
 Local Open Scope ctype_scope.
 Section language.
-  Context (base_type_code : Type).
-  Context (interp_base_type : base_type_code -> Type).
-  Context (op : flat_type base_type_code -> flat_type base_type_code -> Type).
+  Context {base_type_code : Type}
+          {op : flat_type base_type_code -> flat_type base_type_code -> Type}.
 
   Local Notation flat_type := (flat_type base_type_code).
   Local Notation type := (type base_type_code).
-  Let Tbase := @Tbase base_type_code.
-  Local Coercion Tbase : base_type_code >-> Syntax.flat_type.
-  Local Notation interp_type := (interp_type interp_base_type).
-  Local Notation interp_flat_type := (interp_flat_type interp_base_type).
-  Local Notation exprf := (@exprf base_type_code interp_base_type op).
-  Local Notation expr := (@expr base_type_code interp_base_type op).
-  Local Notation Expr := (@Expr base_type_code interp_base_type op).
-  Local Notation wff := (@wff base_type_code interp_base_type op).
+  Local Notation exprf := (@exprf base_type_code op).
+  Local Notation expr := (@expr base_type_code op).
+  Local Notation Expr := (@Expr base_type_code op).
+  Local Notation wff := (@wff base_type_code op).
 
   Section with_var.
     Context {var1 var2 : base_type_code -> Type}.
@@ -80,48 +75,12 @@ Section language.
 
     Local Hint Resolve wff_SmartVarf.
 
-    Lemma wff_Const_eta G {A B} v1 v2
-      : @wff var1 var2 G (Prod A B) (Const v1) (Const v2)
-        -> (@wff var1 var2 G A (Const (fst v1)) (Const (fst v2))
-           /\ @wff var1 var2 G B (Const (snd v1)) (Const (snd v2))).
-    Proof.
-      intro wf.
-      assert (H : Some v1 = Some v2).
-      { refine match wf in @Syntax.wff _ _ _ _ _ G t e1 e2 return invert_Const e1 = invert_Const e2 with
-               | WfConst _ _ _ => eq_refl
-               | _ => eq_refl
-               end. }
-      inversion H; subst; repeat constructor.
-    Qed.
-
-    Definition wff_Const_eta_fst G {A B} v1 v2 H
-      := proj1 (@wff_Const_eta G A B v1 v2 H).
-    Definition wff_Const_eta_snd G {A B} v1 v2 H
-      := proj2 (@wff_Const_eta G A B v1 v2 H).
-
-    Local Hint Resolve wff_Const_eta_fst wff_Const_eta_snd.
-
-    Lemma wff_SmartConstf G {t t'} v1 v2 x1 x2
-          (Hin : List.In (existT (fun t : base_type_code => (@exprf var1 t * @exprf var2 t)%type) t (x1, x2))
-                         (flatten_binding_list base_type_code (SmartConstf v1) (SmartConstf v2)))
-          (Hwf : @wff var1 var2 G t' (Const v1) (Const v2))
-      : @wff var1 var2 G t x1 x2.
-    Proof.
-      induction t'. simpl in *.
-      { intuition (inversion_sigma; inversion_prod; subst; eauto). }
-      { unfold SmartConstf in *; simpl in *.
-        apply List.in_app_iff in Hin.
-        intuition (inversion_sigma; inversion_prod; subst; eauto). }
-    Qed.
-
-    Local Hint Resolve wff_SmartConstf.
-
     Lemma wff_SmartVarVarf G {t t'} v1 v2 x1 x2
-          (Hin : List.In (existT (fun t : base_type_code => (exprf t * exprf t)%type) t (x1, x2))
+          (Hin : List.In (existT (fun t : base_type_code => (exprf (Tbase t) * exprf (Tbase t))%type) t (x1, x2))
                           (flatten_binding_list base_type_code (SmartVarVarf v1) (SmartVarVarf v2)))
-      : @wff var1 var2 (flatten_binding_list base_type_code (t:=t') v1 v2 ++ G) t x1 x2.
+      : @wff var1 var2 (flatten_binding_list base_type_code (t:=t') v1 v2 ++ G) (Tbase t) x1 x2.
     Proof.
-      revert dependent G; induction t'; intros. simpl in *.
+      revert dependent G; induction t'; intros; simpl in *; try tauto.
       { intuition (inversion_sigma; inversion_prod; subst; simpl; eauto).
         constructor; eauto. }
       { unfold SmartVarVarf in *; simpl in *.

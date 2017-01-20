@@ -1,5 +1,6 @@
 Require Import Coq.Strings.String Coq.Classes.RelationClasses.
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.Relations.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Prod.
@@ -14,9 +15,9 @@ Section language.
           {op : flat_type base_type_code -> flat_type base_type_code -> Type}
           (interp_op : forall src dst, op src dst -> interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst).
 
-  Local Notation exprf := (@exprf base_type_code interp_base_type op interp_base_type).
-  Local Notation expr := (@expr base_type_code interp_base_type op interp_base_type).
-  Local Notation Expr := (@Expr base_type_code interp_base_type op).
+  Local Notation exprf := (@exprf base_type_code op interp_base_type).
+  Local Notation expr := (@expr base_type_code op interp_base_type).
+  Local Notation Expr := (@Expr base_type_code op).
   Local Notation interpf := (@interpf base_type_code interp_base_type op interp_op).
   Local Notation interp := (@interp base_type_code interp_base_type op interp_op).
   Local Notation Interp := (@Interp base_type_code interp_base_type op interp_op).
@@ -27,7 +28,7 @@ Section language.
                        (flatten_binding_list base_type_code (t:=T) e e))
     : x = x'.
   Proof.
-    induction T; simpl in *; [ | rewrite List.in_app_iff in HIn ];
+    induction T; simpl in *; [ | | rewrite List.in_app_iff in HIn ];
       repeat first [ progress destruct_head or
                    | progress destruct_head False
                    | progress destruct_head and

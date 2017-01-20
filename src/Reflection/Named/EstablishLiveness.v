@@ -29,17 +29,12 @@ Fixpoint merge_liveness (ls1 ls2 : list liveness) :=
 
 Section language.
   Context (base_type_code : Type)
-          (interp_base_type : base_type_code -> Type)
           (op : flat_type base_type_code -> flat_type base_type_code -> Type).
 
   Local Notation flat_type := (flat_type base_type_code).
   Local Notation type := (type base_type_code).
-  Let Tbase := @Tbase base_type_code.
-  Local Coercion Tbase : base_type_code >-> Syntax.flat_type.
-  Local Notation interp_type := (interp_type interp_base_type).
-  Local Notation interp_flat_type := (interp_flat_type interp_base_type).
-  Local Notation exprf := (@exprf base_type_code interp_base_type op).
-  Local Notation expr := (@expr base_type_code interp_base_type op).
+  Local Notation exprf := (@exprf base_type_code op).
+  Local Notation expr := (@expr base_type_code op).
 
   Section internal.
     Context (Name : Type)
@@ -52,8 +47,8 @@ Section language.
                {t} (e : exprf Name t) (prefix : list liveness)
       : list liveness
       := match e with
-         | Const _ x => prefix
-         | Var t' name => match lookup ctx t' name with
+         | TT => prefix
+         | Var t' name => match lookup ctx (Tbase t') name with
                           | Some ls => ls
                           | _ => nil
                           end
@@ -78,8 +73,8 @@ Section language.
       := match e with
          | Return _ x => compute_livenessf ctx x prefix
          | Abs src _ n f
-           => let prefix := prefix ++ (live::nil) in
-              let ctx := extendb (t:=src) ctx n prefix in
+           => let prefix := prefix ++ repeat live (count_pairs (Tbase src)) in
+              let ctx := extend (t:=Tbase src) ctx n (SmartValf _ (fun _ => prefix) (Tbase src)) in
               @compute_liveness ctx _ f prefix
          end.
 
@@ -104,6 +99,6 @@ Section language.
   End internal.
 End language.
 
-Global Arguments compute_livenessf {_ _ _ _ _} ctx {t} e prefix.
-Global Arguments compute_liveness {_ _ _ _ _} ctx {t} e prefix.
-Global Arguments insert_dead_names {_ _ _ _ _ _} default_out {t} e lsn.
+Global Arguments compute_livenessf {_ _ _ _} ctx {t} e prefix.
+Global Arguments compute_liveness {_ _ _ _} ctx {t} e prefix.
+Global Arguments insert_dead_names {_ _ _ _ _} default_out {t} e lsn.

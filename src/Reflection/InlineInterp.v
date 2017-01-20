@@ -1,5 +1,6 @@
 (** * Inline: Remove some [Let] expressions *)
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.Relations.
 Require Import Crypto.Reflection.InlineWf.
 Require Import Crypto.Reflection.InterpProofs.
 Require Import Crypto.Reflection.Inline.
@@ -15,23 +16,21 @@ Section language.
 
   Local Notation flat_type := (flat_type base_type_code).
   Local Notation type := (type base_type_code).
-  Let Tbase := @Tbase base_type_code.
-  Local Coercion Tbase : base_type_code >-> Syntax.flat_type.
-  Let interp_type := interp_type interp_base_type.
-  Let interp_flat_type := interp_flat_type interp_base_type.
-  Local Notation exprf := (@exprf base_type_code interp_base_type op).
-  Local Notation expr := (@expr base_type_code interp_base_type op).
-  Local Notation Expr := (@Expr base_type_code interp_base_type op).
-  Local Notation wff := (@wff base_type_code interp_base_type op).
-  Local Notation wf := (@wf base_type_code interp_base_type op).
+  Local Notation interp_type := (interp_type interp_base_type).
+  Local Notation interp_flat_type := (interp_flat_type interp_base_type).
+  Local Notation exprf := (@exprf base_type_code op).
+  Local Notation expr := (@expr base_type_code op).
+  Local Notation Expr := (@Expr base_type_code op).
+  Local Notation wff := (@wff base_type_code op).
+  Local Notation wf := (@wf base_type_code op).
 
-  Local Hint Extern 1 => eapply interpf_SmartConstf.
   Local Hint Extern 1 => eapply interpf_SmartVarVarf.
 
   Local Ltac t_fin :=
     repeat match goal with
            | _ => reflexivity
            | _ => progress simpl in *
+           | _ => progress unfold postprocess_for_const in *
            | _ => progress intros
            | _ => progress inversion_sigma
            | _ => progress inversion_prod
@@ -49,14 +48,14 @@ Section language.
            | [ H : _ |- _ ] => rewrite H
            end.
 
-  Lemma interpf_inline_constf G {t} e1 e2
+  Lemma interpf_inline_constf is_const G {t} e1 e2
         (wf : @wff _ _ G t e1 e2)
         (H : forall t x x',
             List.In
-              (existT (fun t : base_type_code => (exprf (Syntax.Tbase t) * interp_base_type t)%type) t
+              (existT (fun t : base_type_code => (exprf (Tbase t) * interp_base_type t)%type) t
                       (x, x')) G
             -> interpf interp_op x = x')
-    : interpf interp_op (inline_constf e1) = interpf interp_op e2.
+    : interpf interp_op (inline_constf is_const e1) = interpf interp_op e2.
   Proof.
     clear -wf H.
     induction wf; t_fin.
@@ -64,19 +63,19 @@ Section language.
 
   Local Hint Resolve interpf_inline_constf.
 
-  Lemma interp_inline_const G {t} e1 e2
+  Lemma interp_inline_const is_const G {t} e1 e2
         (wf : @wf _ _ G t e1 e2)
         (H : forall t x x',
             List.In
-              (existT (fun t : base_type_code => (exprf (Syntax.Tbase t) * interp_base_type t)%type) t
+              (existT (fun t : base_type_code => (exprf (Tbase t) * interp_base_type t)%type) t
                       (x, x')) G
             -> interpf interp_op x = x')
     : interp_type_gen_rel_pointwise (fun _ => @eq _)
-                                    (interp interp_op (inline_const e1))
+                                    (interp interp_op (inline_const is_const e1))
                                     (interp interp_op e2).
   Proof.
     induction wf.
-    { eapply interpf_inline_constf; eauto. }
+    { eapply (interpf_inline_constf is_const); eauto. }
     { simpl in *; intro.
       match goal with
       | [ H : _ |- _ ]
@@ -84,13 +83,13 @@ Section language.
       end. }
   Qed.
 
-  Lemma Interp_InlineConst {t} (e : Expr t)
+  Lemma Interp_InlineConst is_const {t} (e : Expr t)
         (wf : Wf e)
     : interp_type_gen_rel_pointwise (fun _ => @eq _)
-                                    (Interp interp_op (InlineConst e))
+                                    (Interp interp_op (InlineConst is_const e))
                                     (Interp interp_op e).
   Proof.
     unfold Interp, InlineConst.
-    eapply interp_inline_const with (G := nil); simpl; intuition.
+    eapply (interp_inline_const is_const) with (G := nil); simpl; intuition.
   Qed.
 End language.

@@ -16,28 +16,23 @@ Local Open Scope nexpr_scope.
 Local Open Scope expr_scope.
 Section language.
   Context (base_type_code : Type)
-          (interp_base_type : base_type_code -> Type)
           (op : flat_type base_type_code -> flat_type base_type_code -> Type)
           (Name : Type)
           {Context : Context Name (fun _ : base_type_code => positive)}.
 
   Local Notation flat_type := (flat_type base_type_code).
   Local Notation type := (type base_type_code).
-  Let Tbase := @Tbase base_type_code.
-  Local Coercion Tbase : base_type_code >-> Syntax.flat_type.
-  Local Notation interp_type := (interp_type interp_base_type).
-  Local Notation interp_flat_type := (interp_flat_type interp_base_type).
-  Local Notation exprf := (@exprf base_type_code interp_base_type op (fun _ => Name)).
-  Local Notation expr := (@expr base_type_code interp_base_type op (fun _ => Name)).
-  Local Notation Expr := (@Expr base_type_code interp_base_type op).
-  (*Local Notation lexprf := (@Syntax.exprf base_type_code interp_base_type op (fun _ => list (option Name))).
-  Local Notation lexpr := (@Syntax.expr base_type_code interp_base_type op (fun _ => list (option Name))).*)
-  Local Notation nexprf := (@Named.exprf base_type_code interp_base_type op Name).
-  Local Notation nexpr := (@Named.expr base_type_code interp_base_type op Name).
+  Local Notation exprf := (@exprf base_type_code op (fun _ => Name)).
+  Local Notation expr := (@expr base_type_code op (fun _ => Name)).
+  Local Notation Expr := (@Expr base_type_code op).
+  (*Local Notation lexprf := (@Syntax.exprf base_type_code op (fun _ => list (option Name))).
+  Local Notation lexpr := (@Syntax.expr base_type_code op (fun _ => list (option Name))).*)
+  Local Notation nexprf := (@Named.exprf base_type_code op Name).
+  Local Notation nexpr := (@Named.expr base_type_code op Name).
 
   (*Definition get_live_namesf (names : list (option Name)) {t} (e : lexprf t) : list (option Name)
     := filter_live_namesf
-         base_type_code interp_base_type op
+         base_type_code op
          (option Name) None
          (fun x y => match x, y with
                      | Some x, _ => Some x
@@ -47,7 +42,7 @@ Section language.
          nil names e.
   Definition get_live_names (names : list (option Name)) {t} (e : lexpr t) : list (option Name)
     := filter_live_names
-         base_type_code interp_base_type op
+         base_type_code op
          (option Name) None
          (fun x y => match x, y with
                      | Some x, _ => Some x
@@ -67,4 +62,4 @@ Section language.
        end.
 End language.
 
-Global Arguments CompileAndEliminateDeadCode {_ _ _ _ _ t} e ls.
+Global Arguments CompileAndEliminateDeadCode {_ _ _ _ t} e ls.

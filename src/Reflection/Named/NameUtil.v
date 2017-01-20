@@ -13,7 +13,7 @@ Section language.
              (t : flat_type base_type_code) (ls : list MName)
       : option (interp_flat_type (fun _ => Name) t) * list MName
       := match t return option (@interp_flat_type base_type_code (fun _ => Name) t) * _ with
-         | Syntax.Tbase _
+         | Tbase _
            => match ls with
               | cons n ls'
                 => match force n with
@@ -22,6 +22,7 @@ Section language.
                    end
               | nil => (None, nil)
               end
+         | Unit => (Some tt, ls)
          | Prod A B
            => let '(a, ls) := eta (@split_mnames A ls) in
               let '(b, ls) := eta (@split_mnames B ls) in

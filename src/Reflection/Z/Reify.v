@@ -33,14 +33,15 @@ Ltac base_reify_type T ::=
      end.
 Ltac Reify' e := Reflection.Reify.Reify' base_type interp_base_type op e.
 Ltac Reify e :=
-  let v := Reflection.Reify.Reify base_type interp_base_type op e in
-  constr:((*Inline _*) ((*CSE _*) (InlineConst (Linearize v)))).
+  let v := Reflection.Reify.Reify base_type interp_base_type op make_const e in
+  constr:((*Inline _*) ((*CSE _*) (InlineConst is_const (Linearize v)))).
 Ltac prove_InlineConst_Linearize_Compile_correct :=
   fun _
-  => lazymatch goal with
-     | [ |- Syntax.interp_type_gen_rel_pointwise _ (@Syntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op ?t (InlineConst (Linearize _))) _ ]
+  => intros;
+     lazymatch goal with
+     | [ |- ?R (@Syntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op ?t (InlineConst ?is_const (Linearize _))) _ ]
        => etransitivity;
-          [ apply (@Interp_InlineConst base_type_code interp_base_type op interp_op t);
+          [ apply (@Interp_InlineConst base_type_code interp_base_type op interp_op is_const t);
             reflect_Wf base_type_eq_semidec_is_dec op_beq_bl
           | etransitivity;
             [ apply (@Interp_Linearize base_type_code interp_base_type op interp_op t)

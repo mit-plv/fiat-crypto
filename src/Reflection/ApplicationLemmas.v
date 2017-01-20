@@ -8,7 +8,7 @@ Section language.
           {interp_op : forall src dst, op src dst -> interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst}.
 
   Lemma interp_apply' {n t}
-        (x : @expr base_type interp_base_type op _ t)
+        (x : @expr base_type op _ t)
         (args : binders_for' n t interp_base_type)
     : interp interp_op (Apply' n x args) = ApplyInterped' n (interp interp_op x) args.
   Proof.
@@ -19,7 +19,7 @@ Section language.
   Qed.
 
   Lemma interp_apply {n t}
-        (x : @expr base_type interp_base_type op _ t)
+        (x : @expr base_type op _ t)
         (args : binders_for n t interp_base_type)
     : interp interp_op (Apply n x args) = ApplyInterped (interp interp_op x) args.
   Proof.
@@ -76,7 +76,7 @@ Section language.
   Qed.
 
   Lemma interp_apply_all' {t}
-        (x : @expr base_type interp_base_type op _ t)
+        (x : @expr base_type op _ t)
         (args : interp_all_binders_for' t interp_base_type)
     : interp interp_op (ApplyAll x (interp_all_binders_for_of' args)) = ApplyInterpedAll' (interp interp_op x) args.
   Proof.
@@ -86,7 +86,7 @@ Section language.
   Qed.
 
   Lemma interp_apply_all {t}
-        (x : @expr base_type interp_base_type op _ t)
+        (x : @expr base_type op _ t)
         (args : interp_all_binders_for t interp_base_type)
     : interp interp_op (ApplyAll x args) = ApplyInterpedAll (interp interp_op x) args.
   Proof.
@@ -95,7 +95,7 @@ Section language.
   Qed.
 
   Lemma interp_apply_all_to' {t}
-         (x : @expr base_type interp_base_type op _ t)
+         (x : @expr base_type op _ t)
          (args : interp_all_binders_for t interp_base_type)
     : interp interp_op (ApplyAll x args) = ApplyInterpedAll' (interp interp_op x) (interp_all_binders_for_to' args).
    Proof.
