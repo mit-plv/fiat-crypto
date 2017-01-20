@@ -56,7 +56,7 @@ Reserved Notation "a ≢ b" (at level 70, no associativity).
 Reserved Notation "$$ v" (at level 40).
 Reserved Notation "& x" (at level 30).
 Reserved Notation "** x" (at level 30).
-Reserved Notation "A <- X ; B" (at level 70, right associativity).
+Reserved Notation "A <- X ; B" (at level 70, right associativity, format "'[v' A  <-  X ; '/' B ']'").
 Reserved Notation "u [ i ]" (at level 30).
 Reserved Notation "v [[ i ]]" (at level 30).
 Reserved Notation "u {{ i }}" (at level 30).
@@ -65,6 +65,10 @@ Reserved Notation "'plet' x := y 'in' z"
          (at level 200, z at level 200, format "'plet'  x  :=  y  'in' '//' z").
 Reserved Notation "'slet' x := A 'in' b"
          (at level 200, b at level 200, format "'slet'  x  :=  A  'in' '//' b").
+Reserved Notation "'llet' x := A 'in' b"
+         (at level 200, b at level 200, format "'llet'  x  :=  A  'in' '//' b").
+Reserved Notation "'mlet' x := A 'in' b"
+         (at level 200, b at level 200, format "'mlet'  x  :=  A  'in' '//' b").
 (* Note that making [Let] a keyword breaks the vernacular [Let] in Coq 8.4 *)
 Reserved Notation "'dlet' x := y 'in' f"
          (at level 200, f at level 200, format "'dlet'  x  :=  y  'in' '//' f").
