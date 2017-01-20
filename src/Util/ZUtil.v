@@ -728,6 +728,18 @@ Module Z.
     assumption.
   Qed.
 
+  Lemma pow2_lt_or_divides : forall a b, 0 <= b ->
+    2 ^ a < 2 ^ b \/ (2 ^ a) mod 2 ^ b = 0.
+  Proof.
+    intros.
+    destruct (Z_lt_dec a b); [left|right].
+    { apply Z.pow_lt_mono_r; auto; omega. }
+    { replace a with (a - b + b) by ring.
+      rewrite Z.pow_add_r by omega.
+      apply Z.mod_mul, Z.pow_nonzero; omega. }
+  Qed.
+
+
   Lemma odd_mod : forall a b, (b <> 0)%Z ->
     Z.odd (a mod b) = if Z.odd b then xorb (Z.odd a) (Z.odd (a / b)) else Z.odd a.
   Proof.
