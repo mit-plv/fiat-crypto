@@ -22,6 +22,38 @@ Create HintDb push_wordToN discriminated.
 Hint Extern 1 => autorewrite with pull_wordToN in * : pull_wordToN.
 Hint Extern 1 => autorewrite with push_wordToN in * : push_wordToN.
 
+Module Word.
+  Fixpoint weqb_hetero sz1 sz2 (x : word sz1) (y : word sz2) : bool :=
+    match x, y with
+    | WO, WO => true
+    | WO, _ => false
+    | WS b _ x', WS b' _ y'
+      => eqb b b' && @weqb_hetero _ _ x' y'
+    | WS _ _ _, _
+      => false
+    end%bool.
+  Global Arguments weqb_hetero {_ _} _ _.
+  Theorem weqb_hetero_true_iff : forall sz1 x sz2 y,
+      @weqb_hetero sz1 sz2 x y = true <-> exists pf : sz1 = sz2, eq_rect _ word x _ pf = y.
+  Proof.
+    induction x; intros sz2 y; (split; [ destruct y | ]);
+      repeat first [ progress simpl
+                   | intro
+                   | congruence
+                   | exists eq_refl
+                   | progress destruct_head ex
+                   | progress destruct_head bool
+                   | progress subst
+                   | progress split_andb
+                   | match goal with
+                     | [ IHx : forall sz2 y, weqb_hetero _ y = true <-> _, H : weqb_hetero _ _ = true |- _ ]
+                       => apply IHx in H
+                     | [ IHx : forall sz2 y, weqb_hetero _ y = true <-> _ |- weqb_hetero ?x ?x = true ]
+                       => apply IHx
+                     end ].
+  Qed.
+End Word.
+
 (* Utility Tactics *)
 
 Ltac word_util_arith := omega.
@@ -1211,24 +1243,4 @@ Qed.
 Lemma wlast_combine : forall sz a b, @wlast sz (combine a (WS b WO)) = b.
 Proof.
   intros; unfold wlast; rewrite split2_combine; cbv; reflexivity.
-Qed.
-
-Theorem weqb_hetero_true_iff : forall sz1 x sz2 y,
-    @weqb_hetero sz1 sz2 x y = true <-> exists pf : sz1 = sz2, eq_rect _ word x _ pf = y.
-Proof.
-  induction x; intros sz2 y; (split; [ destruct y | ]);
-    repeat first [ progress simpl
-                 | intro
-                 | congruence
-                 | exists Logic.eq_refl
-                 | progress destruct_head ex
-                 | progress destruct_head bool
-                 | progress subst
-                 | progress split_andb
-                 | match goal with
-                   | [ IHx : forall sz2 y, weqb_hetero _ y = true <-> _, H : weqb_hetero _ _ = true |- _ ]
-                     => apply IHx in H
-                   | [ IHx : forall sz2 y, weqb_hetero _ y = true <-> _ |- weqb_hetero ?x ?x = true ]
-                     => apply IHx
-                   end ].
 Qed.

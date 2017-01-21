@@ -300,16 +300,6 @@ Definition weq : forall sz (x y : word sz), {x = y} + {x <> y}.
   abstract (rewrite (shatter_word y); simpl; intro; injection H; auto).
 Defined.
 
-Fixpoint weqb_hetero sz1 sz2 (x : word sz1) (y : word sz2) : bool :=
-  match x, y with
-  | WO, WO => true
-  | WO, _ => false
-  | WS b _ x', WS b' _ y'
-    => eqb b b' && @weqb_hetero _ _ x' y'
-  | WS _ _ _, _
-    => false
-  end%bool.
-Global Arguments weqb_hetero {_ _} _ _.
 Fixpoint weqb sz (x : word sz) : word sz -> bool :=
   match x in word sz return word sz -> bool with
     | WO => fun _ => true
