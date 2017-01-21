@@ -1220,7 +1220,7 @@ Proof.
     repeat first [ progress simpl
                  | intro
                  | congruence
-                 | exists eq_refl
+                 | exists Logic.eq_refl
                  | progress destruct_head ex
                  | progress destruct_head bool
                  | progress subst
