@@ -57,3 +57,15 @@ Proof.
   intros H; apply reflect_iff in H; intro b'; destruct b, b';
     intuition congruence.
 Qed.
+
+Definition andb_prop : forall a b : bool, a && b = true -> a = true /\ b = true. (* transparent version *)
+Proof. destruct a, b; simpl; split; try reflexivity; assumption. Defined.
+
+Ltac split_andb :=
+  repeat match goal with
+         | [ H : andb _ _ = true |- _ ] => apply andb_prop in H; destruct H
+         | [ H : is_true (andb ?x ?y) |- _ ]
+           => apply andb_prop in H;
+              change (is_true x /\ is_true y) in H;
+              destruct H
+         end.
