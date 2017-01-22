@@ -10,9 +10,12 @@ Require Import Coq.Bool.Bool.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Sigma.
 
 Require Import Bedrock.Word.
 Require Import Bedrock.Nomega.
+
+Require Import Crypto.Util.FixCoqMistakes.
 
 Local Open Scope nat_scope.
 
@@ -51,7 +54,53 @@ Module Word.
                      | [ IHx : forall sz2 y, weqb_hetero _ y = true <-> _ |- weqb_hetero ?x ?x = true ]
                        => apply IHx
                      end ].
-  Qed.
+  Defined.
+  (* oh, the hoops I jump through to make this transparent... *)
+  Theorem weqb_hetero_homo_true_iff : forall sz x y,
+      @weqb_hetero sz sz x y = true <-> x = y.
+  Proof.
+    etransitivity; [ apply weqb_hetero_true_iff | ].
+    split; [ intros [pf H] | intro ]; try (subst y; exists eq_refl; reflexivity).
+    revert y H; induction x as [|b n x IHx]; intros.
+    { subst y;
+        refine match pf in (_ = z)
+                     return match z return 0 = z -> Prop with
+                            | 0 => fun pf => WO = eq_rect 0 word WO 0 pf
+                            | _ => fun pf => True
+                            end pf
+               with
+               | eq_refl => eq_refl
+               end. }
+    { revert x y H IHx.
+      refine (match pf in _ = Sn
+                    return match Sn return S n = Sn -> Prop with
+                           | 0 => fun _ => True
+                           | S n' => fun pf =>
+                                       forall (pfn : n = n')
+                                              (x : word n)
+                                              (y : word (S n'))
+                                              (H : eq_rect (S n) word (WS b x) (S n') pf = y)
+                                              (IHx : forall (pf : n = n') (y : word n'), eq_rect n word x n' pf = y -> eq_rect n word x n' pfn = y),
+                                         WS b (eq_rect n word x n' pfn) = y
+                           end pf
+              with
+              | eq_refl
+                => fun pfn x y H IHx
+                   => eq_trans
+                        (f_equal2 (fun b => @WS b _)
+                                  (f_equal (@whd _) H)
+                                  (IHx eq_refl (wtl y) (f_equal (@wtl _) H)))
+                        _
+              end eq_refl).
+      refine match y in word Sn return match Sn return word Sn -> Prop with
+                                       | 0 => fun _ => True
+                                       | S n => fun y => WS (whd y) (wtl y) = y
+                                       end y
+             with
+             | WS _ _ _ => eq_refl
+             | _ => I
+             end. }
+  Defined.
 End Word.
 
 (* Utility Tactics *)

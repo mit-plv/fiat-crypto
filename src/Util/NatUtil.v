@@ -59,6 +59,32 @@ Tactic Notation "omega" := coq_omega.
 Tactic Notation "omega" "*" := omega_with_min_max_case.
 Tactic Notation "omega" "**" := omega_with_min_max.
 
+Lemma nat_eq_dec_S x y
+  : match nat_eq_dec (S x) (S y), nat_eq_dec x y with
+    | left pfS, left pf => pfS = f_equal S pf
+    | right _, right _ => True
+    | _, _ => False
+    end.
+Proof.
+  unfold nat_eq_dec; simpl.
+  match goal with
+  | [ |- match match ?e with _ => _ end with _ => _ end ]
+    => destruct e
+  end; simpl; try exact I.
+  reflexivity.
+Defined.
+
+Lemma UIP_nat_transparent x y (p1 p2 : x = y :> nat) : p1 = p2.
+Proof.
+  transitivity (match nat_eq_dec x y, nat_eq_dec y y with
+                | left pf1, left pf2 => eq_trans pf1 (eq_sym pf2)
+                | _, _ => p1
+                end);
+    [ revert p2 | revert p1 ];
+    subst y; intro p;
+      destruct (nat_eq_dec x x) as [q|q]; case q; reflexivity.
+Defined.
+
 Lemma nat_beq_false_iff x y : nat_beq x y = false <-> x <> y.
 Proof.
   split; intro H; repeat intro; subst.
