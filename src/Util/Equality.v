@@ -41,6 +41,9 @@ Proof. case q; case p; reflexivity. Defined.
 Lemma inv_V {A x y} (p : x = y :> A)
 : eq_sym (eq_sym p) = p.
 Proof. case p; reflexivity. Defined.
+Definition transport_idmap_ap A (P : A -> Type) x y (p : x = y) (u : P x)
+  : eq_rect _ P u _ p = eq_rect _ (fun T => T) u _ (f_equal P p).
+Proof. case p; reflexivity. Defined.
 
 (** To classify the equalities of a type [A] at a point [a : A], we
     must give a "code" that stands in for the type [a = x] for each
@@ -112,3 +115,10 @@ Section hprop.
     apply f_equal; apply allpath_hprop.
   Qed.
 End hprop.
+
+
+Lemma commute_eq_rect {A} (P Q : A -> Type) (f : forall a, P a -> Q a) a b (H : a = b :> A)
+      (v : P a)
+  : f b (eq_rect _ P v _ H)
+    = eq_rect _ Q (f a v) _ H.
+Proof. destruct H; reflexivity. Defined.
