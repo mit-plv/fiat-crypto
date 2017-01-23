@@ -143,7 +143,7 @@ Ltac invert_expr_subst_step :=
   | _ => progress subst
   | [ H : invert_Var ?e = Some _ |- _ ] => apply invert_Var_Some in H
   | [ H : invert_Op ?e = Some _ |- _ ] => apply invert_Op_Some in H
-  | [ H : invert_LetIn ?e = Some _ |- _ ] => apply invert_LetIn in H
+  | [ H : invert_LetIn ?e = Some _ |- _ ] => apply invert_LetIn_Some in H
   | [ H : invert_Pair ?e = Some _ |- _ ] => apply invert_Pair_Some in H
   | [ H : invert_Abs ?e = _ |- _ ] => apply invert_Abs_Some in H
   | [ H : invert_Return ?e = _ |- _ ] => apply invert_Return_Some in H
