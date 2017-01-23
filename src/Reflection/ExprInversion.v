@@ -144,6 +144,11 @@ Ltac invert_expr_subst_step :=
   | [ H : invert_Op ?e = Some _ |- _ ] => apply invert_Op_Some in H
   | [ H : invert_LetIn ?e = Some _ |- _ ] => apply invert_LetIn_Some in H
   | [ H : invert_Pair ?e = Some _ |- _ ] => apply invert_Pair_Some in H
+  | [ e : expr _ _ (Arrow _ _) |- _ ]
+    => let f := fresh e in
+       let H := fresh in
+       remember (invert_Abs e) as f eqn:H;
+       apply invert_Abs_Some in H
   | [ H : invert_Abs ?e = _ |- _ ] => apply invert_Abs_Some in H
   | [ H : invert_Return ?e = _ |- _ ] => apply invert_Return_Some in H
   | _ => progress subst
