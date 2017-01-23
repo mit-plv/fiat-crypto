@@ -148,6 +148,7 @@ Ltac invert_expr_subst_step :=
     => let f := fresh e in
        let H := fresh in
        remember (invert_Abs e) as f eqn:H;
+       symmetry in H;
        apply invert_Abs_Some in H
   | [ H : invert_Abs ?e = _ |- _ ] => apply invert_Abs_Some in H
   | [ H : invert_Return ?e = _ |- _ ] => apply invert_Return_Some in H
