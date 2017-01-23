@@ -18,7 +18,7 @@ HIDE := $(if $(VERBOSE),,@)
 
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g'
 
-FAST_TARGETS += archclean clean cleanall printenv clean-old update-_CoqProject Makefile.coq
+FAST_TARGETS += archclean clean cleanall clean-coqprime printenv clean-old update-_CoqProject Makefile.coq
 SUPER_FAST_TARGETS += update-_CoqProject Makefile.coq
 
 COQ_VERSION_PREFIX = The Coq Proof Assistant, version
