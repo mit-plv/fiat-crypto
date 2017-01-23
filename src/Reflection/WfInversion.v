@@ -142,8 +142,7 @@ End language.
 Ltac inversion_wff_step :=
   match goal with
   | [ H : wff _ ?x ?y |- _ ]
-    => first [ is_var x; fail 1
-             | is_var y; fail 1
+    => first [ is_var x; is_var y; fail 1
              | idtac ];
        apply wff_encode in H; unfold wff_code in H; simpl in H
   end.
