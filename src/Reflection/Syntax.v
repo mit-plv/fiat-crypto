@@ -111,6 +111,19 @@ Section language.
                                        (@smart_interp_flat_map f g h tt pair A (fst v))
                                        (@smart_interp_flat_map f g h tt pair B (snd v))
            end.
+      Fixpoint smart_interp_flat_map2 {f1 f2 g}
+               (h : forall x, f1 x -> f2 x -> g (Tbase x))
+               (tt : g Unit)
+               (pair : forall A B, g A -> g B -> g (Prod A B))
+               {t}
+        : interp_flat_type_gen f1 t -> interp_flat_type_gen f2 t -> g t
+        := match t return interp_flat_type_gen f1 t -> interp_flat_type_gen f2 t -> g t with
+           | Tbase _ => h _
+           | Unit => fun _ _ => tt
+           | Prod A B => fun v1 v2 => pair _ _
+                                           (@smart_interp_flat_map2 f1 f2 g h tt pair A (fst v1) (fst v2))
+                                           (@smart_interp_flat_map2 f1 f2 g h tt pair B (snd v1) (snd v2))
+           end.
       Fixpoint smart_interp_map_hetero {f g g'}
                (h : forall x, f x -> g (Tflat (Tbase x)))
                (tt : g Unit)
