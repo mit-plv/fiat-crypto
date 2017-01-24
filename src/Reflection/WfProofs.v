@@ -103,4 +103,17 @@ Section language.
     rewrite_hyp <- !*.
     reflexivity.
   Qed.
+
+  Lemma flatten_binding_list_SmartValf
+        {T} f g t
+    : flatten_binding_list base_type_code (SmartValf T f t) (SmartValf T g t)
+      = List.map (fun txy => existT _ (projT1 txy) (f _, g _)%core)
+                 (flatten_binding_list base_type_code (SmartFlatTypeUnMap t) (SmartFlatTypeUnMap t)).
+  Proof.
+    induction t; try reflexivity.
+    simpl in *.
+    rewrite List.map_app.
+    rewrite_hyp !*.
+    reflexivity.
+  Qed.
 End language.
