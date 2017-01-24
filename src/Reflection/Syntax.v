@@ -195,6 +195,18 @@ Section language.
       Definition SmartVarfMap2 {var var' var''} (f : forall t, var t -> var' t -> var'' t) {t}
         : interp_flat_type_gen var t -> interp_flat_type_gen var' t -> interp_flat_type_gen var'' t
         := @smart_interp_flat_map2 var var' (interp_flat_type_gen var'') f tt (fun A B x y => pair x y) t.
+      Definition SmartVarfTypeMap {var} (f : forall t, var t -> Type) {t}
+        : interp_flat_type_gen var t -> Type
+        := @smart_interp_flat_map var (fun _ => Type) f unit (fun _ _ P Q => P * Q)%type t.
+      Definition SmartVarfPropMap {var} (f : forall t, var t -> Prop) {t}
+        : interp_flat_type_gen var t -> Prop
+        := @smart_interp_flat_map var (fun _ => Prop) f True (fun _ _ P Q => P /\ Q)%type t.
+      Definition SmartVarfTypeMap2 {var var'} (f : forall t, var t -> var' t -> Type) {t}
+        : interp_flat_type_gen var t -> interp_flat_type_gen var' t -> Type
+        := @smart_interp_flat_map2 var var' (fun _ => Type) f unit (fun _ _ P Q => P * Q)%type t.
+      Definition SmartVarfPropMap2 {var var'} (f : forall t, var t -> var' t -> Prop) {t}
+        : interp_flat_type_gen var t -> interp_flat_type_gen var' t -> Prop
+        := @smart_interp_flat_map2 var var' (fun _ => Prop) f True (fun _ _ P Q => P /\ Q)%type t.
       Definition SmartFlatTypeMap {var'} (f : forall t, var' t -> base_type_code) {t}
         : interp_flat_type_gen var' t -> flat_type
         := @smart_interp_flat_map var' (fun _ => flat_type) f Unit (fun _ _ => Prod) t.
@@ -339,6 +351,10 @@ Global Arguments SmartValf {_} T _ t.
 Global Arguments SmartVarVarf {_ _ _ _} _.
 Global Arguments SmartVarfMap {_ _ _} _ {_} _.
 Global Arguments SmartVarfMap2 {_ _ _ _} _ {t} _ _.
+Global Arguments SmartVarfTypeMap {_ _} _ {_} _.
+Global Arguments SmartVarfPropMap {_ _} _ {_} _.
+Global Arguments SmartVarfTypeMap2 {_ _ _} _ {t} _ _.
+Global Arguments SmartVarfPropMap2 {_ _ _} _ {t} _ _.
 Global Arguments SmartFlatTypeMap {_ _} _ {_} _.
 Global Arguments SmartFlatTypeMapInterp {_ _ _ _} _ {_} _.
 Global Arguments SmartFlatTypeMapUnInterp {_ _ _ _ _} fv {_ _} _.
