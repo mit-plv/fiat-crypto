@@ -187,6 +187,11 @@ Section language.
       Definition SmartVarfMap {var var'} (f : forall t, var t -> var' t) {t}
         : interp_flat_type_gen var t -> interp_flat_type_gen var' t
         := @smart_interp_flat_map var (interp_flat_type_gen var') f tt (fun A B x y => pair x y) t.
+      Lemma SmartVarfMap_id {var' t} x : @SmartVarfMap var' var' (fun _ x => x) t x = x.
+      Proof.
+        unfold SmartVarfMap; induction t; simpl; destruct_head_hnf unit; destruct_head_hnf prod;
+          rewrite_hyp ?*; congruence.
+      Qed.
       Definition SmartVarfMap2 {var var' var''} (f : forall t, var t -> var' t -> var'' t) {t}
         : interp_flat_type_gen var t -> interp_flat_type_gen var' t -> interp_flat_type_gen var'' t
         := @smart_interp_flat_map2 var var' (interp_flat_type_gen var'') f tt (fun A B x y => pair x y) t.
