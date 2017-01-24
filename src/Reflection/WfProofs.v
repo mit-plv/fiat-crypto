@@ -89,4 +89,18 @@ Section language.
         { rewrite <- !List.app_assoc; eauto. } }
     Qed.
   End with_var.
+
+  Lemma flatten_binding_list_SmartVarfMap
+        {var1 var1' var2 var2' t} f g (x1 : interp_flat_type var1 t) (x2 : interp_flat_type var2 t)
+    : flatten_binding_list (var1:=var1') (var2:=var2') base_type_code (SmartVarfMap f x1) (SmartVarfMap g x2)
+      = List.map (fun txy => existT _ (projT1 txy) (f _ (fst (projT2 txy)), g _ (snd (projT2 txy)))%core)
+                 (flatten_binding_list base_type_code x1 x2).
+  Proof.
+    induction t; try reflexivity.
+    simpl @flatten_binding_list.
+    rewrite List.map_app.
+    simpl in *.
+    rewrite_hyp <- !*.
+    reflexivity.
+  Qed.
 End language.
