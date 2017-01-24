@@ -105,8 +105,8 @@ Section language.
   Qed.
 
   Lemma flatten_binding_list_SmartValf
-        {T} f g t
-    : flatten_binding_list base_type_code (SmartValf T f t) (SmartValf T g t)
+        {T1 T2} f g t
+    : flatten_binding_list base_type_code (SmartValf T1 f t) (SmartValf T2 g t)
       = List.map (fun txy => existT _ (projT1 txy) (f _, g _)%core)
                  (flatten_binding_list base_type_code (SmartFlatTypeUnMap t) (SmartFlatTypeUnMap t)).
   Proof.
