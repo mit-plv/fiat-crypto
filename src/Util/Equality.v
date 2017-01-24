@@ -122,3 +122,19 @@ Lemma commute_eq_rect {A} (P Q : A -> Type) (f : forall a, P a -> Q a) a b (H : 
   : f b (eq_rect _ P v _ H)
     = eq_rect _ Q (f a v) _ H.
 Proof. destruct H; reflexivity. Defined.
+
+Lemma commute_eq_match {A} (P Q : A -> Type) (f : forall a, P a -> Q a) a b (H : a = b :> A)
+      (v : P a)
+  : f b (match H in _ = y return P y with eq_refl => v end)
+    = (match H in _ = y return Q y with eq_refl => f a v end).
+Proof. destruct H; reflexivity. Defined.
+Lemma commute_eq_match2 {A} (P1 P2 Q : A -> Type) (f : forall a, P1 a -> P2 a -> Q a) a b (H : a = b :> A)
+      (v1 : P1 a) (v2 : P2 a)
+  : f b
+      (match H in _ = y return P1 y with eq_refl => v1 end)
+      (match H in _ = y return P2 y with eq_refl => v2 end)
+    = (match H in _ = y return Q y with eq_refl => f a v1 v2 end).
+Proof. destruct H; reflexivity. Defined.
+Lemma eq_match_const {A P x y} (p : x = y :> A) k
+  : match p return P with eq_refl => k end = k.
+Proof. case p; reflexivity. Defined.
