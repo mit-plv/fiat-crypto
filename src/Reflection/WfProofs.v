@@ -90,18 +90,56 @@ Section language.
     Qed.
   End with_var.
 
+  Definition duplicate_type {var1 var2}
+    : { t : base_type_code & (var1 t * var2 t)%type }
+      -> { t1t2 : _ & (var1 (fst t1t2) * var2 (snd t1t2))%type }
+    := fun txy => existT _ (projT1 txy, projT1 txy) (projT2 txy).
+  Definition duplicate_types {var1 var2}
+    := List.map (@duplicate_type var1 var2).
+
+  Lemma flatten_binding_list_flatten_binding_list2
+      {var1 var2 t1} x1 x2
+  : duplicate_types (@flatten_binding_list base_type_code var1 var2 t1 x1 x2)
+    = @flatten_binding_list2 base_type_code var1 var2 t1 t1 x1 x2.
+  Proof.
+    induction t1; simpl; try reflexivity.
+    rewrite_hyp <- !*.
+    unfold duplicate_types; rewrite List.map_app; reflexivity.
+  Qed.
+
+  Local Ltac flatten_t :=
+    repeat first [ reflexivity
+                 | intro
+                 | progress simpl @flatten_binding_list
+                 | progress simpl @flatten_binding_list2
+                 | rewrite !List.map_app
+                 | progress simpl in *
+                 | rewrite_hyp <- !*; reflexivity
+                 | rewrite_hyp !*; reflexivity ].
+
+  Lemma flatten_binding_list2_SmartVarfMap
+        {var1 var1' var2 var2' t1 t2} f g (x1 : interp_flat_type var1 t1) (x2 : interp_flat_type var2 t2)
+    : flatten_binding_list2 (var1:=var1') (var2:=var2') base_type_code (SmartVarfMap f x1) (SmartVarfMap g x2)
+      = List.map (fun txy => existT _ (projT1 txy) (f _ (fst (projT2 txy)), g _ (snd (projT2 txy)))%core)
+                 (flatten_binding_list2 base_type_code x1 x2).
+  Proof.
+    revert dependent t2; induction t1, t2; flatten_t.
+  Qed.
+
   Lemma flatten_binding_list_SmartVarfMap
         {var1 var1' var2 var2' t} f g (x1 : interp_flat_type var1 t) (x2 : interp_flat_type var2 t)
     : flatten_binding_list (var1:=var1') (var2:=var2') base_type_code (SmartVarfMap f x1) (SmartVarfMap g x2)
       = List.map (fun txy => existT _ (projT1 txy) (f _ (fst (projT2 txy)), g _ (snd (projT2 txy)))%core)
                  (flatten_binding_list base_type_code x1 x2).
+  Proof. induction t; flatten_t. Qed.
+
+  Lemma flatten_binding_list2_SmartValf
+        {T1 T2} f g t1 t2
+    : flatten_binding_list2 base_type_code (SmartValf T1 f t1) (SmartValf T2 g t2)
+      = List.map (fun txy => existT _ (projT1 txy) (f _, g _)%core)
+                 (flatten_binding_list2 base_type_code (SmartFlatTypeUnMap t1) (SmartFlatTypeUnMap t2)).
   Proof.
-    induction t; try reflexivity.
-    simpl @flatten_binding_list.
-    rewrite List.map_app.
-    simpl in *.
-    rewrite_hyp <- !*.
-    reflexivity.
+    revert dependent t2; induction t1, t2; flatten_t.
   Qed.
 
   Lemma flatten_binding_list_SmartValf
@@ -109,11 +147,5 @@ Section language.
     : flatten_binding_list base_type_code (SmartValf T1 f t) (SmartValf T2 g t)
       = List.map (fun txy => existT _ (projT1 txy) (f _, g _)%core)
                  (flatten_binding_list base_type_code (SmartFlatTypeUnMap t) (SmartFlatTypeUnMap t)).
-  Proof.
-    induction t; try reflexivity.
-    simpl in *.
-    rewrite List.map_app.
-    rewrite_hyp !*.
-    reflexivity.
-  Qed.
+  Proof. induction t; flatten_t. Qed.
 End language.
