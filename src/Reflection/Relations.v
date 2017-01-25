@@ -52,6 +52,25 @@ Section language.
 
   Section rel_pointwise2.
     Section type.
+      Section hetero_hetero.
+        Context (interp_src1 interp_src2 : base_type_code -> Type)
+                (interp_dst1 interp_dst2 : flat_type -> Type)
+                (Rsrc : forall t1 t2, interp_src1 t1 -> interp_src2 t2 -> Prop)
+                (Rdst : forall t1 t2, interp_dst1 t1 -> interp_dst2 t2 -> Prop).
+
+        Fixpoint interp_type_gen_rel_pointwise2_hetero_hetero (t1 t2 : type)
+          : interp_type_gen_hetero interp_src1 interp_dst1 t1
+            -> interp_type_gen_hetero interp_src2 interp_dst2 t2
+            -> Prop
+          := match t1, t2 with
+             | Tflat t1, Tflat t2 => Rdst t1 t2
+             | Arrow src1 dst1, Arrow src2 dst2
+               => @respectful_hetero _ _ _ _ (Rsrc src1 src2) (fun _ _ => interp_type_gen_rel_pointwise2_hetero_hetero dst1 dst2)
+             | Tflat _, _
+             | Arrow _ _, _
+               => fun _ _ => False
+             end.
+      End hetero_hetero.
       Section hetero.
         Context (interp_src1 interp_src2 : base_type_code -> Type)
                 (interp_dst1 interp_dst2 : flat_type -> Type)
@@ -125,6 +144,12 @@ Section language.
       Definition interp_flat_type_rel_pointwise2
         := @interp_flat_type_rel_pointwise2_gen_Prop Prop and True.
 
+      Definition interp_type_rel_pointwise2_hetero R
+        : forall t1 t2, interp_type interp_base_type1 t1
+                        -> interp_type interp_base_type2 t2
+                        -> Prop
+        := interp_type_gen_rel_pointwise2_hetero_hetero _ _ _ _ (interp_flat_type_rel_pointwise2_hetero R) (interp_flat_type_rel_pointwise2_hetero R).
+
       Definition interp_type_rel_pointwise2 R
         : forall t, interp_type interp_base_type1 t
                     -> interp_type interp_base_type2 t
@@ -185,6 +210,8 @@ Section language.
 End language.
 
 Global Arguments interp_type_rel_pointwise2 {_ _ _} R {t} _ _.
+Global Arguments interp_type_rel_pointwise2_hetero {_ _ _} R {t1 t2} _ _.
+Global Arguments interp_type_gen_rel_pointwise2_hetero_hetero {_ _ _ _ _} Rsrc Rdst {t1 t2} _ _.
 Global Arguments interp_type_gen_rel_pointwise2_hetero {_ _ _ _ _} Rsrc Rdst {t} _ _.
 Global Arguments interp_type_gen_rel_pointwise2 {_ _ _} R {t} _ _.
 Global Arguments interp_flat_type_rel_pointwise2_gen_Prop {_ _ _ P} and True R {t} _ _.
