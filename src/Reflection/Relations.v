@@ -1,6 +1,8 @@
 Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Prod.
+Require Import Crypto.Util.Sigma.
 
 Local Open Scope ctype_scope.
 Section language.
@@ -157,6 +159,29 @@ Section language.
       End RProd_iff.
     End flat_type.
   End lifting.
+
+  Lemma interp_flat_type_rel_pointwise2_hetero_flatten_binding_list2
+        {interp_base_type1 interp_base_type2 t1 t2 T1 T2} R' e1 e2 v1 v2
+        (H : List.In (existT _ (t1, t2)%core (v1, v2)%core) (flatten_binding_list2 base_type_code e1 e2))
+        (HR : interp_flat_type_rel_pointwise2_hetero interp_base_type1 interp_base_type2 R' T1 T2 e1 e2)
+    : R' t1 t2 v1 v2.
+  Proof.
+    revert dependent T2; induction T1, T2;
+      repeat match goal with
+             | _ => intro
+             | [ H : False |- _ ] => exfalso; assumption
+             | _ => progress subst
+             | _ => assumption
+             | _ => progress inversion_sigma
+             | _ => progress inversion_prod
+             | _ => progress simpl in *
+             | _ => progress destruct_head_hnf' and
+             | [ H : context[List.In _ (_ ++ _)] |- _ ]
+               => rewrite List.in_app_iff in H
+             | _ => progress destruct_head' or
+             | _ => solve [ eauto ]
+             end.
+  Qed.
 End language.
 
 Global Arguments interp_type_rel_pointwise2 {_ _ _} R {t} _ _.
