@@ -301,8 +301,20 @@ Section language.
     Section wf.
       Context {var1 var2 : base_type_code -> Type}.
 
+      Local Notation eP2 := (fun t1t2 => var1 (fst t1t2) * var2 (snd t1t2))%type (only parsing).
       Local Notation eP := (fun t => var1 t * var2 t)%type (only parsing).
       Local Notation "x == y" := (existT eP _ (x, y)).
+      Fixpoint flatten_binding_list2 {t1 t2} (x : interp_flat_type_gen var1 t1) (y : interp_flat_type_gen var2 t2) : list (sigT eP2)
+        := (match t1, t2 return interp_flat_type_gen var1 t1 -> interp_flat_type_gen var2 t2 -> list _ with
+            | Tbase t1, Tbase t2 => fun x y => existT eP2 (t1, t2)%core (x, y)%core :: nil
+            | Unit, Unit => fun x y => nil
+            | Prod t0 t1, Prod t0' t1'
+              => fun x y => @flatten_binding_list2 _ _ (snd x) (snd y) ++ @flatten_binding_list2 _ _ (fst x) (fst y)
+            | Tbase _, _
+            | Unit, _
+            | Prod _ _, _
+              => fun _ _ => nil
+            end x y)%list.
       Fixpoint flatten_binding_list {t} (x : interp_flat_type_gen var1 t) (y : interp_flat_type_gen var2 t) : list (sigT eP)
         := (match t return interp_flat_type_gen var1 t -> interp_flat_type_gen var2 t -> list _ with
             | Tbase _ => fun x y => (x == y) :: nil
