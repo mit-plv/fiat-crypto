@@ -85,17 +85,40 @@ Section language.
         Context (P : Type)
                 (and : P -> P -> P)
                 (True : P)
-                (R : forall t, interp_base_type1 t -> interp_base_type2 t -> P).
+                (False : P).
+        Section hetero.
+          Context (R : forall t1 t2, interp_base_type1 t1 -> interp_base_type2 t2 -> P).
 
-        Fixpoint interp_flat_type_rel_pointwise2_gen_Prop (t : flat_type)
-          : interp_flat_type interp_base_type1 t -> interp_flat_type interp_base_type2 t -> P
-          := match t with
-             | Syntax.Tbase t => R t
-             | Unit => fun _ _ => True
-             | Prod x y => fun a b => and (interp_flat_type_rel_pointwise2_gen_Prop x (fst a) (fst b))
-                                          (interp_flat_type_rel_pointwise2_gen_Prop y (snd a) (snd b))
-             end.
+          Fixpoint interp_flat_type_rel_pointwise2_hetero_gen_Prop (t1 t2 : flat_type)
+            : interp_flat_type interp_base_type1 t1 -> interp_flat_type interp_base_type2 t2 -> P
+            := match t1, t2 with
+               | Syntax.Tbase t1, Syntax.Tbase t2 => R t1 t2
+               | Unit, Unit => fun _ _ => True
+               | Prod x1 y1, Prod x2 y2
+                 => fun a b => and (interp_flat_type_rel_pointwise2_hetero_gen_Prop x1 x2 (fst a) (fst b))
+                                   (interp_flat_type_rel_pointwise2_hetero_gen_Prop y1 y2 (snd a) (snd b))
+               | Syntax.Tbase _, _
+               | Unit, _
+               | Prod _ _, _
+                 => fun _ _ => False
+               end.
+        End hetero.
+        Section homogenous.
+          Context (R : forall t, interp_base_type1 t -> interp_base_type2 t -> P).
+
+          Fixpoint interp_flat_type_rel_pointwise2_gen_Prop (t : flat_type)
+            : interp_flat_type interp_base_type1 t -> interp_flat_type interp_base_type2 t -> P
+            := match t with
+               | Syntax.Tbase t => R t
+               | Unit => fun _ _ => True
+               | Prod x y => fun a b => and (interp_flat_type_rel_pointwise2_gen_Prop x (fst a) (fst b))
+                                            (interp_flat_type_rel_pointwise2_gen_Prop y (snd a) (snd b))
+               end.
+        End homogenous.
       End gen_prop.
+
+      Definition interp_flat_type_rel_pointwise2_hetero
+        := @interp_flat_type_rel_pointwise2_hetero_gen_Prop Prop and True False.
 
       Definition interp_flat_type_rel_pointwise2
         := @interp_flat_type_rel_pointwise2_gen_Prop Prop and True.
@@ -140,6 +163,8 @@ Global Arguments interp_type_rel_pointwise2 {_ _ _} R {t} _ _.
 Global Arguments interp_type_gen_rel_pointwise2_hetero {_ _ _ _ _} Rsrc Rdst {t} _ _.
 Global Arguments interp_type_gen_rel_pointwise2 {_ _ _} R {t} _ _.
 Global Arguments interp_flat_type_rel_pointwise2_gen_Prop {_ _ _ P} and True R {t} _ _.
+Global Arguments interp_flat_type_rel_pointwise2_hetero_gen_Prop {_ _ _ P} and True False R {t1 t2} _ _.
+Global Arguments interp_flat_type_rel_pointwise2_hetero {_ _ _} R {t1 t2} _ _.
 Global Arguments interp_flat_type_rel_pointwise2 {_ _ _} R {t} _ _.
 Global Arguments interp_flat_type_rel_pointwise {_} _ _ {_} _ _.
 Global Arguments interp_type_rel_pointwise {_} _ _ {_} _ _.
