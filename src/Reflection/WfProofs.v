@@ -126,6 +126,24 @@ Section language.
     revert dependent t2; induction t1, t2; flatten_t.
   Qed.
 
+  Lemma flatten_binding_list2_SmartVarfMap1
+        {var1 var1' var2' t1 t2} f (x1 : interp_flat_type var1 t1) (x2 : interp_flat_type var2' t2)
+    : flatten_binding_list2 (var1:=var1') (var2:=var2') base_type_code (SmartVarfMap f x1) x2
+      = List.map (fun txy => existT _ (projT1 txy) (f _ (fst (projT2 txy)), snd (projT2 txy))%core)
+                 (flatten_binding_list2 base_type_code x1 x2).
+  Proof.
+    revert dependent t2; induction t1, t2; flatten_t.
+  Qed.
+
+  Lemma flatten_binding_list2_SmartVarfMap2
+        {var1' var2 var2' t1 t2} g (x1 : interp_flat_type var1' t1) (x2 : interp_flat_type var2 t2)
+    : flatten_binding_list2 (var1:=var1') (var2:=var2') base_type_code x1 (SmartVarfMap g x2)
+      = List.map (fun txy => existT _ (projT1 txy) (fst (projT2 txy), g _ (snd (projT2 txy)))%core)
+                 (flatten_binding_list2 base_type_code x1 x2).
+  Proof.
+    revert dependent t2; induction t1, t2; flatten_t.
+  Qed.
+
   Lemma flatten_binding_list_SmartVarfMap
         {var1 var1' var2 var2' t} f g (x1 : interp_flat_type var1 t) (x2 : interp_flat_type var2 t)
     : flatten_binding_list (var1:=var1') (var2:=var2') base_type_code (SmartVarfMap f x1) (SmartVarfMap g x2)
