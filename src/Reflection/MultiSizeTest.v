@@ -1,4 +1,5 @@
 Require Import Coq.omega.Omega.
+Require Import Crypto.Reflection.SmartMap.
 
 Set Implicit Arguments.
 Set Asymmetric Patterns.

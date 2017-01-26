@@ -1,5 +1,6 @@
 (** * Inline: Remove some [Let] expressions *)
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.Wf.
 Require Import Crypto.Reflection.WfProofs.
 Require Import Crypto.Reflection.Inline.
 Require Import Crypto.Util.Tactics.SpecializeBy Crypto.Util.Tactics.DestructHead Crypto.Util.Sigma Crypto.Util.Prod.
@@ -21,11 +22,11 @@ Section language.
   Section with_var.
     Context {var1 var2 : base_type_code -> Type}.
 
-    Local Hint Constructors Syntax.wff.
+    Local Hint Constructors Wf.wff.
     Local Hint Resolve List.in_app_or List.in_or_app.
 
     Local Hint Constructors or.
-    Local Hint Constructors Syntax.wff.
+    Local Hint Constructors Wf.wff.
     Local Hint Extern 1 => progress unfold List.In in *.
     Local Hint Resolve wff_in_impl_Proper.
     Local Hint Resolve wff_SmartVarf.

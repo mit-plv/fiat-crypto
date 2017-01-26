@@ -1,5 +1,6 @@
 (** * Linearize: Place all and only operations in let binders *)
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Util.Tactics.
 
 Local Open Scope ctype_scope.

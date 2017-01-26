@@ -2,6 +2,7 @@ Require Export Crypto.SpecificGen.GF25519_64Reflective.Common.
 Require Import Crypto.SpecificGen.GF25519_64BoundedCommon.
 Require Import Crypto.Reflection.Z.Interpretations128.
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Reflection.Application.
 Require Import Crypto.Util.Tactics.
 

@@ -1,5 +1,6 @@
 (** * Computes a list of live variables *)
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Reflection.Named.NameUtil.
 Require Import Crypto.Reflection.CountLets.
 Require Import Crypto.Util.ListUtil.
@@ -31,8 +32,8 @@ Section language.
     | nil, ls2 => ls2
     end.
 
-  Definition names_to_list {t} : interp_flat_type (fun _ => Name) t -> list Name
-    := smart_interp_flat_map base_type_code (g:=fun _ => list Name) (fun _ x => x :: nil)%list nil (fun _ _ x y => x ++ y)%list.
+  Definition names_to_list {t} : interp_flat_type (fun _ : base_type_code => Name) t -> list Name
+    := smart_interp_flat_map (g:=fun _ => list Name) (fun _ x => x :: nil)%list nil (fun _ _ x y => x ++ y)%list.
 
   Fixpoint filter_live_namesf (prefix remaining : list Name) {t} (e : exprf t) : list Name
     := match e with

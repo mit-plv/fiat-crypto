@@ -4,6 +4,8 @@ Require Export Crypto.SpecificGen.GF2213_32.
 Require Export Crypto.SpecificGen.GF2213_32BoundedCommon.
 Require Import Crypto.Reflection.Reify.
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.SmartMap.
+Require Import Crypto.Reflection.Wf.
 Require Import Crypto.Reflection.ExprInversion.
 Require Import Crypto.Reflection.Relations.
 Require Import Crypto.Reflection.Z.Interpretations64.
@@ -43,7 +45,7 @@ Definition Expr_n_OpT (count_out : nat) : flat_type base_type
 Fixpoint Expr_nm_OpT (count_in count_out : nat) : type base_type
   := match count_in with
      | 0 => Expr_n_OpT count_out
-     | S n => SmartArrow base_type fe2213_32T (Expr_nm_OpT n count_out)
+     | S n => SmartArrow fe2213_32T (Expr_nm_OpT n count_out)
      end.
 Definition ExprBinOpT : type base_type := Eval compute in Expr_nm_OpT 2 1.
 Definition ExprUnOpT : type base_type := Eval compute in Expr_nm_OpT 1 1.

@@ -1,6 +1,7 @@
 (** * Named Representation of Gallina *)
 Require Import Coq.Classes.RelationClasses.
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Util.PointedProp.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Tactics.
@@ -54,7 +55,7 @@ Module Export Named.
           pair-projections and [Pair] as necessary to handle
           [flat_type], and not just [base_type_code] *)
         Definition SmartVar {t} : interp_flat_type_gen (fun _ => Name) t -> exprf t
-          := smart_interp_flat_map (f:=fun _ => Name) (g:=exprf) _ (fun t => Var) TT (fun A B x y => Pair x y).
+          := smart_interp_flat_map (f:=fun _ => Name) (g:=exprf) (fun t => Var) TT (fun A B x y => Pair x y).
       End expr.
 
       Section with_context.
@@ -88,7 +89,6 @@ Module Export Named.
         Definition lookup (ctx : Context) {t}
           : interp_flat_type_gen (fun _ => Name) t -> option (interp_flat_type_gen var t)
           := smart_interp_flat_map
-               base_type_code
                (g := fun t => option (interp_flat_type_gen var t))
                (fun t v => lookupb ctx v)
                (Some tt)

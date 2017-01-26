@@ -1,5 +1,6 @@
 Require Import Coq.Strings.String Coq.Classes.RelationClasses.
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.Wf.
 Require Import Crypto.Reflection.Relations.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Sigma.
@@ -36,7 +37,7 @@ Section language.
         {t x x' T e1 e2}
         (Hpointwise : interp_flat_type_rel_pointwise2 R e1 e2)
         (HIn : List.In (existT (fun t : base_type_code => (interp_base_type1 t * interp_base_type2 t)%type) t (x, x')%core)
-                       (flatten_binding_list base_type_code (t:=T) e1 e2))
+                       (flatten_binding_list (t:=T) e1 e2))
     : R t x x'.
   Proof.
     induction T; simpl in *; try tauto; [ | rewrite List.in_app_iff in HIn ];

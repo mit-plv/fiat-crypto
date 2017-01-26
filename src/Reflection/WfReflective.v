@@ -49,6 +49,7 @@
 
 Require Import Coq.Arith.Arith Coq.Logic.Eqdep_dec.
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.Wf.
 Require Import Crypto.Reflection.WfReflectiveGen.
 Require Import Crypto.Util.Notations Crypto.Util.Tactics Crypto.Util.Option Crypto.Util.Sigma Crypto.Util.Prod Crypto.Util.Decidable Crypto.Util.ListUtil.
 Require Export Crypto.Util.PartiallyReifiedProp. (* export for the [bool >-> reified_Prop] coercion *)
@@ -114,7 +115,7 @@ Section language.
     | [ v : ex _ |- _ ] => destruct v
     | [ v : sigT _ |- _ ] => destruct v
     | [ v : prod _ _ |- _ ] => destruct v
-    | [ H : forall x x', _ |- wff (flatten_binding_list _ ?x1 ?x2 ++ _)%list _ _ ]
+    | [ H : forall x x', _ |- wff (flatten_binding_list ?x1 ?x2 ++ _)%list _ _ ]
       => specialize (H x1 x2)
     | [ H : forall x x', _ |- wf (existT _ _ (?x1, ?x2) :: _)%list _ _ ]
       => specialize (H x1 x2)

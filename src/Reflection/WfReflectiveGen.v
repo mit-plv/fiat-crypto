@@ -50,6 +50,7 @@
 Require Import Coq.Arith.Arith Coq.Logic.Eqdep_dec.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Util.Notations Crypto.Util.Tactics Crypto.Util.Option Crypto.Util.Sigma Crypto.Util.Prod Crypto.Util.Decidable Crypto.Util.ListUtil.
+Require Import Crypto.Reflection.Wf.
 Require Export Crypto.Util.PartiallyReifiedProp. (* export for the [bool >-> reified_Prop] coercion *)
 Require Export Crypto.Util.FixCoqMistakes.
 
@@ -219,7 +220,7 @@ Section language.
        | Some p
          => Some (fun x y
                  => let x := eq_rect _ (interp_flat_type var1) x _ p in
-                   flatten_binding_list base_type_code x y)
+                   flatten_binding_list x y)
        | None => None
        end.
   Definition flatten_binding_list2 t1 t2 : option (forall (x : interp_flat_type var1 t1) (y : interp_flat_type var2 t2), list (sigT eP))
@@ -240,14 +241,14 @@ Section language.
        end v.
   Arguments natize_interp_flat_type {var t} _ _.
   Lemma length_natize_interp_flat_type1 {t} (base : nat) (v1 : interp_flat_type var1 t) (v2 : interp_flat_type var2 t)
-    : fst (natize_interp_flat_type base v1) = length (flatten_binding_list base_type_code v1 v2) + base.
+    : fst (natize_interp_flat_type base v1) = length (flatten_binding_list v1 v2) + base.
   Proof.
     revert base; induction t; simpl; [ reflexivity | reflexivity | ].
     intros; rewrite List.app_length, <- plus_assoc.
     rewrite_hyp <- ?*; reflexivity.
   Qed.
   Lemma length_natize_interp_flat_type2 {t} (base : nat) (v1 : interp_flat_type var1 t) (v2 : interp_flat_type var2 t)
-    : fst (natize_interp_flat_type base v2) = length (flatten_binding_list base_type_code v1 v2) + base.
+    : fst (natize_interp_flat_type base v2) = length (flatten_binding_list v1 v2) + base.
   Proof.
     revert base; induction t; simpl; [ reflexivity | reflexivity | ].
     intros; rewrite List.app_length, <- plus_assoc.

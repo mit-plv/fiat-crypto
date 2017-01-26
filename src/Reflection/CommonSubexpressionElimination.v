@@ -1,6 +1,7 @@
 (** * Common Subexpression Elimination for PHOAS Syntax *)
 Require Import Coq.Lists.List.
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Util.Tactics Crypto.Util.Bool.
 
 Local Open Scope list_scope.
@@ -126,11 +127,11 @@ Section symbolic.
       : interp_flat_type_gen var t -> interp_flat_type_gen fsvar t
       := smart_interp_flat_map
            (g:=interp_flat_type_gen fsvar)
-           base_type_code (fun t v => (v,
-                                       match replacement with
-                                       | Some sv => sv
-                                       | None => symbolicify_var v xs
-                                       end))
+           (fun t v => (v,
+                        match replacement with
+                        | Some sv => sv
+                        | None => symbolicify_var v xs
+                        end))
            tt
            (fun A B => @pair _ _).
     Fixpoint smart_add_mapping {t : flat_type} (xs : mapping) : interp_flat_type_gen fsvar t -> mapping

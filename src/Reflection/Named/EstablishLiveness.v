@@ -1,6 +1,7 @@
 (** * Compute a list of liveness values for each binding *)
 Require Import Coq.Lists.List.
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Reflection.Named.Syntax.
 Require Import Crypto.Reflection.CountLets.
 Require Import Crypto.Util.ListUtil.

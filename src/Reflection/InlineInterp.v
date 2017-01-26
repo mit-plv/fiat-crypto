@@ -1,5 +1,6 @@
 (** * Inline: Remove some [Let] expressions *)
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.Wf.
 Require Import Crypto.Reflection.Relations.
 Require Import Crypto.Reflection.InlineWf.
 Require Import Crypto.Reflection.InterpProofs.

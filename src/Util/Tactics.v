@@ -4,6 +4,8 @@ Require Export Crypto.Util.Tactics.BreakMatch.
 Require Export Crypto.Util.Tactics.Head.
 Require Export Crypto.Util.Tactics.DestructHyps.
 Require Export Crypto.Util.Tactics.DestructHead.
+Require Export Crypto.Util.Tactics.DoWithHyp.
+Require Export Crypto.Util.Tactics.RewriteHyp.
 Require Export Crypto.Util.Tactics.SpecializeBy.
 Require Export Crypto.Util.Tactics.SplitInContext.
 
@@ -177,53 +179,6 @@ Ltac side_conditions_before_to_side_conditions_after tac_in H :=
        here, after evars are instantiated, and not above. *)
     move H after H'; clear H'
   | .. ].
-
-(** Do something with every hypothesis. *)
-Ltac do_with_hyp' tac :=
-  match goal with
-    | [ H : _ |- _ ] => tac H
-  end.
-
-(** Rewrite with any applicable hypothesis. *)
-Tactic Notation "rewrite_hyp" "*" := do_with_hyp' ltac:(fun H => rewrite H).
-Tactic Notation "rewrite_hyp" "->" "*" := do_with_hyp' ltac:(fun H => rewrite -> H).
-Tactic Notation "rewrite_hyp" "<-" "*" := do_with_hyp' ltac:(fun H => rewrite <- H).
-Tactic Notation "rewrite_hyp" "?*" := repeat do_with_hyp' ltac:(fun H => rewrite !H).
-Tactic Notation "rewrite_hyp" "->" "?*" := repeat do_with_hyp' ltac:(fun H => rewrite -> !H).
-Tactic Notation "rewrite_hyp" "<-" "?*" := repeat do_with_hyp' ltac:(fun H => rewrite <- !H).
-Tactic Notation "rewrite_hyp" "!*" := progress rewrite_hyp ?*.
-Tactic Notation "rewrite_hyp" "->" "!*" := progress rewrite_hyp -> ?*.
-Tactic Notation "rewrite_hyp" "<-" "!*" := progress rewrite_hyp <- ?*.
-
-Tactic Notation "rewrite_hyp" "*" "in" "*" := do_with_hyp' ltac:(fun H => rewrite H in * ).
-Tactic Notation "rewrite_hyp" "->" "*" "in" "*" := do_with_hyp' ltac:(fun H => rewrite -> H in * ).
-Tactic Notation "rewrite_hyp" "<-" "*" "in" "*" := do_with_hyp' ltac:(fun H => rewrite <- H in * ).
-Tactic Notation "rewrite_hyp" "?*" "in" "*" := repeat do_with_hyp' ltac:(fun H => rewrite !H in * ).
-Tactic Notation "rewrite_hyp" "->" "?*" "in" "*" := repeat do_with_hyp' ltac:(fun H => rewrite -> !H in * ).
-Tactic Notation "rewrite_hyp" "<-" "?*" "in" "*" := repeat do_with_hyp' ltac:(fun H => rewrite <- !H in * ).
-Tactic Notation "rewrite_hyp" "!*" "in" "*" := progress rewrite_hyp ?* in *.
-Tactic Notation "rewrite_hyp" "->" "!*" "in" "*" := progress rewrite_hyp -> ?* in *.
-Tactic Notation "rewrite_hyp" "<-" "!*" "in" "*" := progress rewrite_hyp <- ?* in *.
-
-Tactic Notation "erewrite_hyp" "*" := do_with_hyp' ltac:(fun H => erewrite H).
-Tactic Notation "erewrite_hyp" "->" "*" := do_with_hyp' ltac:(fun H => erewrite -> H).
-Tactic Notation "erewrite_hyp" "<-" "*" := do_with_hyp' ltac:(fun H => erewrite <- H).
-Tactic Notation "erewrite_hyp" "?*" := repeat do_with_hyp' ltac:(fun H => erewrite !H).
-Tactic Notation "erewrite_hyp" "->" "?*" := repeat do_with_hyp' ltac:(fun H => erewrite -> !H).
-Tactic Notation "erewrite_hyp" "<-" "?*" := repeat do_with_hyp' ltac:(fun H => erewrite <- !H).
-Tactic Notation "erewrite_hyp" "!*" := progress erewrite_hyp ?*.
-Tactic Notation "erewrite_hyp" "->" "!*" := progress erewrite_hyp -> ?*.
-Tactic Notation "erewrite_hyp" "<-" "!*" := progress erewrite_hyp <- ?*.
-
-Tactic Notation "erewrite_hyp" "*" "in" "*" := do_with_hyp' ltac:(fun H => erewrite H in * ).
-Tactic Notation "erewrite_hyp" "->" "*" "in" "*" := do_with_hyp' ltac:(fun H => erewrite -> H in * ).
-Tactic Notation "erewrite_hyp" "<-" "*" "in" "*" := do_with_hyp' ltac:(fun H => erewrite <- H in * ).
-Tactic Notation "erewrite_hyp" "?*" "in" "*" := repeat do_with_hyp' ltac:(fun H => erewrite !H in * ).
-Tactic Notation "erewrite_hyp" "->" "?*" "in" "*" := repeat do_with_hyp' ltac:(fun H => erewrite -> !H in * ).
-Tactic Notation "erewrite_hyp" "<-" "?*" "in" "*" := repeat do_with_hyp' ltac:(fun H => erewrite <- !H in * ).
-Tactic Notation "erewrite_hyp" "!*" "in" "*" := progress erewrite_hyp ?* in *.
-Tactic Notation "erewrite_hyp" "->" "!*" "in" "*" := progress erewrite_hyp -> ?* in *.
-Tactic Notation "erewrite_hyp" "<-" "!*" "in" "*" := progress erewrite_hyp <- ?* in *.
 
 (** Execute [progress tac] on all subterms of the goal.  Useful for things like [ring_simplify]. *)
 Ltac tac_on_subterms tac :=

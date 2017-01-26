@@ -1,4 +1,6 @@
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.Wf.
+Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Reflection.WfProofs.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Tactics Crypto.Util.Sigma Crypto.Util.Prod.
@@ -37,7 +39,7 @@ Section language.
         (Hin : List.In
                  (existT (fun t : base_type_code => (exprf base_type_code op (Tbase t) * interp_base_type t)%type)
                          t (x, x'))
-                 (flatten_binding_list (t := t') base_type_code (SmartVarVarf v) v))
+                 (flatten_binding_list (t := t') (SmartVarVarf v) v))
     : interpf interp_op x = x'.
   Proof.
     clear -Hin.
@@ -52,7 +54,7 @@ Section language.
         (Hin : List.In
                  (existT (fun t : base_type_code => (exprf base_type_code op (Tbase t) * interp_base_type t)%type)
                          t (x, x'))
-                 (flatten_binding_list (t := t') base_type_code (SmartVarVarf v') v))
+                 (flatten_binding_list (t := t') (SmartVarVarf v') v))
     : interpf interp_op x = x'.
   Proof.
     subst; eapply interpf_SmartVarVarf; eassumption.

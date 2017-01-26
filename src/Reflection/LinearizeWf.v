@@ -1,5 +1,6 @@
 (** * Linearize: Place all and only operations in let binders *)
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.Wf.
 Require Import Crypto.Reflection.WfProofs.
 Require Import Crypto.Reflection.Linearize.
 Require Import Crypto.Util.Tactics Crypto.Util.Sigma.
@@ -43,7 +44,7 @@ Section language.
       end.
     Local Ltac t_fin tac := repeat t_fin_step tac.
 
-    Local Hint Constructors Syntax.wff.
+    Local Hint Constructors Wf.wff.
     Local Hint Resolve List.in_app_or List.in_or_app.
 
     Local Ltac small_inversion_helper wf G0 e2 :=
@@ -54,7 +55,7 @@ Section language.
       pattern G0, t0, e1, e2;
       lazymatch goal with
       | [ |- ?retP _ _ _ _ ]
-        => first [ refine (match wf in @Syntax.wff _ _ _ _ G t v1 v2
+        => first [ refine (match wf in @Wf.wff _ _ _ _ G t v1 v2
                                 return match v1 return Prop with
                                        | TT => retP G t v1 v2
                                        | _ => forall P : Prop, P -> P
@@ -62,7 +63,7 @@ Section language.
                           | WfTT _ => _
                           | _ => fun _ p => p
                           end)
-                | refine (match wf in @Syntax.wff _ _ _ _ G t v1 v2
+                | refine (match wf in @Wf.wff _ _ _ _ G t v1 v2
                                 return match v1 return Prop with
                                        | Var _ _ => retP G t v1 v2
                                        | _ => forall P : Prop, P -> P
@@ -70,7 +71,7 @@ Section language.
                           | WfVar _ _ _ _ _ => _
                           | _ => fun _ p => p
                           end)
-                | refine (match wf in @Syntax.wff _ _ _ _ G t v1 v2
+                | refine (match wf in @Wf.wff _ _ _ _ G t v1 v2
                                 return match v1 return Prop with
                                        | Op _ _ _ _ => retP G t v1 v2
                                        | _ => forall P : Prop, P -> P
@@ -78,7 +79,7 @@ Section language.
                           | WfOp _ _ _ _ _ _ _ => _
                           | _ => fun _ p => p
                           end)
-                | refine (match wf in @Syntax.wff _ _ _ _ G t v1 v2
+                | refine (match wf in @Wf.wff _ _ _ _ G t v1 v2
                                 return match v1 return Prop with
                                        | LetIn _ _ _ _ => retP G t v1 v2
                                        | _ => forall P : Prop, P -> P
@@ -86,7 +87,7 @@ Section language.
                           | WfLetIn _ _ _ _ _ _ _ _ _ => _
                           | _ => fun _ p => p
                           end)
-                | refine (match wf in @Syntax.wff _ _ _ _ G t v1 v2
+                | refine (match wf in @Wf.wff _ _ _ _ G t v1 v2
                                 return match v1 return Prop with
                                        | Pair _ _ _ _ => retP G t v1 v2
                                        | _ => forall P : Prop, P -> P
@@ -98,7 +99,7 @@ Section language.
     Fixpoint wff_under_letsf G {t} e1 e2 {tC} eC1 eC2
              (wf : @wff var1 var2 G t e1 e2)
              (H : forall (x1 : interp_flat_type var1 t) (x2 : interp_flat_type var2 t),
-                 wff (flatten_binding_list base_type_code x1 x2 ++ G) (eC1 x1) (eC2 x2))
+                 wff (flatten_binding_list x1 x2 ++ G) (eC1 x1) (eC2 x2))
              {struct e1}
       : @wff var1 var2 G tC (under_letsf e1 eC1) (under_letsf e2 eC2).
     Proof.

@@ -4,6 +4,7 @@ Require Import Crypto.Reflection.Named.Syntax.
 Require Import Crypto.Reflection.Named.Compile.
 Require Import Crypto.Reflection.Named.RegisterAssign.
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.Wf.
 Require Import Crypto.Reflection.Equality.
 Require Export Crypto.Reflection.Reify.
 Require Import Crypto.Reflection.InputSyntax.

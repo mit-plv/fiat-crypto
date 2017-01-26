@@ -1,5 +1,6 @@
-Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms.
+Require Import Coq.Lists.List Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.Wf.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Sigma.
@@ -187,7 +188,7 @@ Section language.
 
   Lemma interp_flat_type_rel_pointwise2_hetero_flatten_binding_list2
         {interp_base_type1 interp_base_type2 t1 t2 T1 T2} R' e1 e2 v1 v2
-        (H : List.In (existT _ (t1, t2)%core (v1, v2)%core) (flatten_binding_list2 base_type_code e1 e2))
+        (H : List.In (existT _ (t1, t2)%core (v1, v2)%core) (flatten_binding_list2 e1 e2))
         (HR : interp_flat_type_rel_pointwise2_hetero interp_base_type1 interp_base_type2 R' T1 T2 e1 e2)
     : R' t1 t2 v1 v2.
   Proof.

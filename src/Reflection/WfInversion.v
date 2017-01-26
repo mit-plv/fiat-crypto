@@ -1,4 +1,5 @@
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.Wf.
 Require Import Crypto.Reflection.ExprInversion.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Option.
@@ -52,7 +53,7 @@ Section language.
                    => { pf : tx1 = tx2
                       | wff G (eq_rect _ exprf ex1 _ pf) ex2
                         /\ (forall x1 x2,
-                               wff (flatten_binding_list base_type_code x1 x2 ++ G)%list
+                               wff (flatten_binding_list x1 x2 ++ G)%list
                                    (eC1 x1) (eC2 (eq_rect _ _ x2 _ pf))) }
                  | None => False
                  end

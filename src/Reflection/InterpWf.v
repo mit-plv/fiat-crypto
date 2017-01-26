@@ -1,5 +1,6 @@
 Require Import Coq.Strings.String Coq.Classes.RelationClasses.
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.Wf.
 Require Import Crypto.Reflection.Relations.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Sigma.
@@ -25,7 +26,7 @@ Section language.
   Lemma eq_in_flatten_binding_list
         {t x x' T e}
         (HIn : List.In (existT (fun t : base_type_code => (interp_base_type t * interp_base_type t)%type) t (x, x')%core)
-                       (flatten_binding_list base_type_code (t:=T) e e))
+                       (flatten_binding_list (t:=T) e e))
     : x = x'.
   Proof.
     induction T; simpl in *; [ | | rewrite List.in_app_iff in HIn ];

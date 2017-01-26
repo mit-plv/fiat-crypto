@@ -1,6 +1,7 @@
 (** * PHOAS Representation of Gallina which allows exact denotation *)
 Require Import Coq.Strings.String.
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Reflection.Relations.
 Require Import Crypto.Reflection.InterpProofs.
 Require Import Crypto.Util.Tuple.
@@ -79,7 +80,7 @@ Section language.
       Fixpoint compilef {t} (e : @exprf (interp_flat_type_gen var) t) : @Syntax.exprf base_type_code op var t
         := match e in exprf t return @Syntax.exprf _ _ _ t with
            | Const _ x => @SmartConst _ x
-           | Var _ x => Syntax.SmartVarf x
+           | Var _ x => SmartMap.SmartVarf x
            | Op _ _ op args => Syntax.Op op (@compilef _ args)
            | LetIn _ ex _ eC => Syntax.LetIn (@compilef _ ex) (fun x => @compilef _ (eC x))
            | Pair _ ex _ ey => Syntax.Pair (@compilef _ ex) (@compilef _ ey)

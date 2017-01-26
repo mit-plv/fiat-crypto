@@ -1,5 +1,6 @@
 (** * Counts how many binders there are *)
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.SmartMap.
 
 Local Open Scope ctype_scope.
 Section language.

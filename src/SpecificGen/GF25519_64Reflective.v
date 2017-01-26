@@ -9,6 +9,7 @@ Require Export Crypto.SpecificGen.GF25519_64.
 Require Import Crypto.SpecificGen.GF25519_64BoundedCommon.
 Require Import Crypto.Reflection.Reify.
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.Map.
 Require Import Crypto.Reflection.Z.Interpretations128.
 Require Crypto.Reflection.Z.Interpretations128.Relations.
 Require Import Crypto.Reflection.Z.Interpretations128.RelationsCombinations.

@@ -2,6 +2,7 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Psatz.
 Require Import Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Reflection.Relations.
 Require Import Crypto.Reflection.Tuple.
 Require Import Crypto.Reflection.Z.InterpretationsGen.
