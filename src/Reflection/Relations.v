@@ -34,6 +34,20 @@ Section language.
     Proof. induction t; simpl; repeat intro; etransitivity; eauto. Qed.
   End type.
 
+  Section flat_type0.
+    Context {interp_base_type : base_type_code -> Type}
+            (R : forall t, interp_base_type t -> Prop).
+    Local Notation interp_flat_type := (interp_flat_type interp_base_type).
+    Fixpoint interp_flat_type_rel_pointwise0 (t : flat_type)
+      : interp_flat_type t -> Prop :=
+      match t with
+      | Tbase t => R t
+      | Unit => fun _ => True
+      | Prod _ _ => fun x => interp_flat_type_rel_pointwise0 _ (fst x)
+                             /\ interp_flat_type_rel_pointwise0 _ (snd x)
+      end.
+  End flat_type0.
+
   Section flat_type.
     Context {interp_base_type : base_type_code -> Type}
             (R : forall t, interp_base_type t -> interp_base_type t -> Prop).
@@ -262,6 +276,7 @@ Global Arguments interp_type_gen_rel_pointwise2 {_ _ _} R {t} _ _.
 Global Arguments interp_flat_type_rel_pointwise2_gen_Prop {_ _ _ P} and True R {t} _ _.
 Global Arguments interp_flat_type_rel_pointwise2_hetero_gen_Prop {_ _ _ P} and True False R {t1 t2} _ _.
 Global Arguments interp_flat_type_rel_pointwise2_hetero {_ _ _} R {t1 t2} _ _.
+Global Arguments interp_flat_type_rel_pointwise0 {_ _} R {t} _.
 Global Arguments interp_flat_type_rel_pointwise2 {_ _ _} R {t} _ _.
 Global Arguments interp_flat_type_rel_pointwise {_} _ _ {_} _ _.
 Global Arguments interp_type_rel_pointwise {_} _ _ {_} _ _.
