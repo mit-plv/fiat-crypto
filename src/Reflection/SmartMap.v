@@ -106,8 +106,8 @@ Section homogenous_type.
        end.
 
   (** [SmartVar] is like [Var], except that it inserts
-          pair-projections and [Pair] as necessary to handle
-          [flat_type], and not just [base_type_code] *)
+      pair-projections and [Pair] as necessary to handle [flat_type],
+      and not just [base_type_code] *)
   Definition SmartPairf {t} : interp_flat_type exprf t -> exprf t
     := @smart_interp_flat_map exprf exprf (fun t x => x) TT (fun A B x y => Pair x y) t.
   Definition SmartVarf {t} : interp_flat_type var t -> exprf t
