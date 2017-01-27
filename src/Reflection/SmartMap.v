@@ -110,7 +110,7 @@ Section homogenous_type.
       and not just [base_type_code] *)
   Definition SmartPairf {t} : interp_flat_type exprf t -> exprf t
     := @smart_interp_flat_map exprf exprf (fun t x => x) TT (fun A B x y => Pair x y) t.
-  Lemma SmartPairf_Pair {A B} e1 e2
+  Lemma SmartPairf_Pair {A B} (e1 : interp_flat_type _ A) (e2 : interp_flat_type _ B)
     : SmartPairf (t:=Prod A B) (e1, e2)%core = Pair (SmartPairf e1) (SmartPairf e2).
   Proof. reflexivity. Qed.
   Definition SmartVarf {t} : interp_flat_type var t -> exprf t
