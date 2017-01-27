@@ -173,8 +173,6 @@ Section homogenous_type.
     := @smart_interp_map_hetero var (interp_type_gen_hetero vars' (interp_flat_type var')) vars f tt (fun A B x y => pair x y) (fun A B f x => f (f' _ x)) t.
   Definition SmartVarVarf {t} : interp_flat_type var t -> interp_flat_type exprf t
     := SmartVarfMap (fun t => Var).
-(*Definition SmartConstf {t} : interp_flat_type t -> interp_flat_type exprf t
-        := SmartVarfMap (fun t => Const (t:=t)).*)
 End homogenous_type.
 
 Global Arguments SmartVarf {_ _ _ _} _.
@@ -193,7 +191,6 @@ Global Arguments SmartFlatTypeMapInterp {_ _ _ _} _ {_} _.
 Global Arguments SmartFlatTypeMapUnInterp {_ _ _ _ _} fv {_ _} _.
 Global Arguments SmartVarMap_hetero {_ _ _ _ _} _ _ {_} _.
 Global Arguments SmartVarMap {_ _ _} _ _ {_} _.
-(*Global Arguments SmartConstf {_ _ _ _ _} _.*)
 Global Arguments SmartAbs {_ _ _ _ _} _.
 
 Section hetero_type.
