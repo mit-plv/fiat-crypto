@@ -1,5 +1,6 @@
 Require Import Coq.Lists.List Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Reflection.Wf.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Prod.
@@ -9,8 +10,6 @@ Local Open Scope ctype_scope.
 Section language.
   Context {base_type_code : Type}.
 
-  Let Tbase := (@Tbase base_type_code).
-  Local Coercion Tbase : base_type_code >-> flat_type.
   Local Notation flat_type := (flat_type base_type_code).
   Local Notation type := (type base_type_code).
 
@@ -42,7 +41,7 @@ Section language.
     Fixpoint interp_flat_type_rel_pointwise (t : flat_type)
       : interp_flat_type t -> interp_flat_type t -> Prop :=
       match t with
-      | Syntax.Tbase t => R t
+      | Tbase t => R t
       | Unit => fun _ _ => True
       | Prod _ _ => fun x y => interp_flat_type_rel_pointwise _ (fst x) (fst y)
                                /\ interp_flat_type_rel_pointwise _ (snd x) (snd y)
@@ -71,6 +70,7 @@ Section language.
              | Arrow _ _, _
                => fun _ _ => False
              end.
+        Global Arguments interp_type_gen_rel_pointwise2_hetero_hetero _ _ _ _ / .
       End hetero_hetero.
       Section hetero.
         Context (interp_src1 interp_src2 : base_type_code -> Type)
@@ -86,10 +86,14 @@ Section language.
              | Tflat t => Rdst t
              | Arrow src dst => @respectful_hetero _ _ _ _ (Rsrc src) (fun _ _ => interp_type_gen_rel_pointwise2_hetero dst)
              end.
+        Global Arguments interp_type_gen_rel_pointwise2_hetero _ _ _ / .
       End hetero.
       Section homogenous.
         Context (interp_flat_type1 interp_flat_type2 : flat_type -> Type)
                 (R : forall t, interp_flat_type1 t -> interp_flat_type2 t -> Prop).
+
+        Let Tbase := (@Tbase base_type_code).
+        Local Coercion Tbase : base_type_code >-> flat_type.
 
         Definition interp_type_gen_rel_pointwise2
           : forall t,
@@ -100,6 +104,7 @@ Section language.
                                                    interp_flat_type1 interp_flat_type2
                                                    R R.
       End homogenous.
+      Global Arguments interp_type_gen_rel_pointwise2 _ _ _ _ _ _ / .
     End type.
     Section flat_type.
       Context (interp_base_type1 interp_base_type2 : base_type_code -> Type).
@@ -114,12 +119,12 @@ Section language.
           Fixpoint interp_flat_type_rel_pointwise2_hetero_gen_Prop (t1 t2 : flat_type)
             : interp_flat_type interp_base_type1 t1 -> interp_flat_type interp_base_type2 t2 -> P
             := match t1, t2 with
-               | Syntax.Tbase t1, Syntax.Tbase t2 => R t1 t2
+               | Tbase t1, Tbase t2 => R t1 t2
                | Unit, Unit => fun _ _ => True
                | Prod x1 y1, Prod x2 y2
                  => fun a b => and (interp_flat_type_rel_pointwise2_hetero_gen_Prop x1 x2 (fst a) (fst b))
                                    (interp_flat_type_rel_pointwise2_hetero_gen_Prop y1 y2 (snd a) (snd b))
-               | Syntax.Tbase _, _
+               | Tbase _, _
                | Unit, _
                | Prod _ _, _
                  => fun _ _ => False
@@ -131,7 +136,7 @@ Section language.
           Fixpoint interp_flat_type_rel_pointwise2_gen_Prop (t : flat_type)
             : interp_flat_type interp_base_type1 t -> interp_flat_type interp_base_type2 t -> P
             := match t with
-               | Syntax.Tbase t => R t
+               | Tbase t => R t
                | Unit => fun _ _ => True
                | Prod x y => fun a b => and (interp_flat_type_rel_pointwise2_gen_Prop x (fst a) (fst b))
                                             (interp_flat_type_rel_pointwise2_gen_Prop y (snd a) (snd b))
@@ -141,25 +146,37 @@ Section language.
 
       Definition interp_flat_type_rel_pointwise2_hetero
         := @interp_flat_type_rel_pointwise2_hetero_gen_Prop Prop and True False.
+      Global Arguments interp_flat_type_rel_pointwise2_hetero _ !_ !_ _ _ / .
 
       Definition interp_flat_type_rel_pointwise2
         := @interp_flat_type_rel_pointwise2_gen_Prop Prop and True.
+      Global Arguments interp_flat_type_rel_pointwise2 _ !_ _ _ / .
 
-      Definition interp_type_rel_pointwise2_hetero R
-        : forall t1 t2, interp_type interp_base_type1 t1
-                        -> interp_type interp_base_type2 t2
-                        -> Prop
-        := interp_type_gen_rel_pointwise2_hetero_hetero _ _ _ _ (interp_flat_type_rel_pointwise2_hetero R) (interp_flat_type_rel_pointwise2_hetero R).
+      Section with_coercion.
+        Let Tbase := (@Tbase base_type_code).
+        Local Coercion Tbase : base_type_code >-> flat_type.
+
+        Definition interp_type_rel_pointwise2_hetero R
+          : forall t1 t2, interp_type interp_base_type1 t1
+                          -> interp_type interp_base_type2 t2
+                          -> Prop
+          := interp_type_gen_rel_pointwise2_hetero_hetero _ _ _ _ (interp_flat_type_rel_pointwise2_hetero R) (interp_flat_type_rel_pointwise2_hetero R).
+      End with_coercion.
+      Global Arguments interp_type_rel_pointwise2_hetero _ !_ !_ _ _ / .
 
       Definition interp_type_rel_pointwise2 R
         : forall t, interp_type interp_base_type1 t
                     -> interp_type interp_base_type2 t
                     -> Prop
         := interp_type_gen_rel_pointwise2 _ _ (interp_flat_type_rel_pointwise2 R).
+      Global Arguments interp_type_rel_pointwise2 _ !_ _ _ / .
     End flat_type.
   End rel_pointwise2.
 
   Section lifting.
+    Let Tbase := (@Tbase base_type_code).
+    Local Coercion Tbase : base_type_code >-> flat_type.
+
     Section flat_type.
       Context {interp_base_type : base_type_code -> Type}.
       Local Notation interp_flat_type := (interp_flat_type interp_base_type).
@@ -184,6 +201,33 @@ Section language.
         Qed.
       End RProd_iff.
     End flat_type.
+    Section flat_type2.
+      Context {interp_base_type1 interp_base_type2 : base_type_code -> Type}.
+      Lemma lift_interp_flat_type_rel_pointwise2_f_eq {T} (f g : forall t, _ -> T t) t x y
+        : interp_flat_type_rel_pointwise2
+            interp_base_type1 interp_base_type2
+            (fun t x y => f t x = g t y)
+            t x y
+          <-> SmartVarfMap f x = SmartVarfMap g y.
+      Proof.
+        induction t; unfold SmartVarfMap in *; simpl in *; destruct_head_hnf unit; try tauto.
+        rewrite_hyp !*; intuition congruence.
+      Qed.
+      Lemma lift_interp_flat_type_rel_pointwise2_f_eq_id1 (f : forall t, _ -> _) t x y
+        : interp_flat_type_rel_pointwise2
+            interp_base_type1 interp_base_type2
+            (fun t x y => x = f t y)
+            t x y
+          <-> x = SmartVarfMap f y.
+      Proof. rewrite lift_interp_flat_type_rel_pointwise2_f_eq, SmartVarfMap_id; reflexivity. Qed.
+      Lemma lift_interp_flat_type_rel_pointwise2_f_eq_id2 (f : forall t, _ -> _) t x y
+        : interp_flat_type_rel_pointwise2
+            interp_base_type1 interp_base_type2
+            (fun t x y => f t x = y)
+            t x y
+          <-> SmartVarfMap f x = y.
+      Proof. rewrite lift_interp_flat_type_rel_pointwise2_f_eq, SmartVarfMap_id; reflexivity. Qed.
+    End flat_type2.
   End lifting.
 
   Lemma interp_flat_type_rel_pointwise2_hetero_flatten_binding_list2

@@ -250,6 +250,7 @@ Class reify_abs {varT} (var : varT) {eT} (e : eT) {T : Type} := Build_reify_abs 
 Ltac reify_abs base_type_code interp_base_type op var e :=
   let reify_rec e := reify_abs base_type_code interp_base_type op var e in
   let reifyf_term e := reifyf base_type_code interp_base_type op var e in
+  let mkReturn ef := constr:(Return (base_type_code:=base_type_code) (interp_base_type:=interp_base_type) (op:=op) (var:=var) ef) in
   let mkAbs src ef := constr:(Abs (base_type_code:=base_type_code) (interp_base_type:=interp_base_type) (op:=op) (var:=var) (src:=src) ef) in
   let reify_tag := constr:(@exprf base_type_code interp_base_type op var) in
   let dummy := debug_enter_reify_abs e in
@@ -266,8 +267,8 @@ Ltac reify_abs base_type_code interp_base_type op var e :=
                         (_ : reify_abs reify_tag C)) (* [C] here is an open term that references "x" by name *)
     with fun _ v _ => @?C v => mkAbs t C end
   | ?x =>
-    let ret := reifyf_term x in
-    constr:(Return ret)
+    let xv := reifyf_term x in
+    mkReturn xv
   end.
 
 Hint Extern 0 (reify_abs (@exprf ?base_type_code ?interp_base_type ?op ?var) ?e)

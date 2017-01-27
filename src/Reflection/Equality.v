@@ -46,7 +46,7 @@ Section language.
            | [ H : ?f ?x = true |- _ ] => destruct (f x); solve [ t ]
            | [ H : ?x = true |- andb _ ?x = true ]
              => destruct x
-           | [ |- andb ?x true = true ]
+           | [ |- andb ?x _ = true ]
              => cut (x = true); [ destruct x; simpl | ]
            end.
   Lemma flat_type_dec_bl X : forall Y, flat_type_beq X Y = true -> X = Y.

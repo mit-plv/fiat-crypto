@@ -65,51 +65,46 @@ Section language.
                  end
          end.
 
+    Local Ltac t :=
+      repeat match goal with
+             | _ => progress simpl in *
+             | _ => progress subst
+             | _ => progress inversion_option
+             | _ => progress invert_expr_subst
+             | [ H : Some _ = _ |- _ ] => symmetry in H
+             | _ => assumption
+             | _ => reflexivity
+             | _ => constructor
+             | _ => progress destruct_head False
+             | _ => progress destruct_head and
+             | _ => progress destruct_head sig
+             | _ => progress break_match_hyps
+             | _ => progress break_match
+             | [ |- and _ _ ] => split
+             | _ => exists eq_refl
+             | _ => intro
+             | [ e : expr (Arrow _ _) |- _ ]
+               => let H := fresh in
+                  let f := fresh in
+                  remember (invert_Abs e) as f eqn:H;
+                  symmetry in H;
+                  apply invert_Abs_Some in H
+             end.
+
     Definition wff_encode {G t e1 e2} (v : @wff var1 var2 G t e1 e2) : @wff_code G t e1 e2.
     Proof.
-      destruct v;
-        repeat first [ reflexivity
-                     | assumption
-                     | progress simpl
-                     | exists eq_refl
-                     | split ].
+      destruct v; t.
     Defined.
 
     Definition wff_decode {G t e1 e2} (v : @wff_code G t e1 e2) : @wff var1 var2 G t e1 e2.
     Proof.
-      destruct e1;
-        repeat match goal with
-               | _ => progress simpl in *
-               | _ => progress subst
-               | _ => progress inversion_option
-               | [ H : Some _ = _ |- _ ] => symmetry in H
-               | [ H : invert_Var _ = _ |- _ ] => apply invert_Var_Some in H
-               | [ H : invert_Op _ = _ |- _ ] => apply invert_Op_Some in H
-               | [ H : invert_LetIn _ = _ |- _ ] => apply invert_LetIn_Some in H
-               | [ H : invert_Pair _ = _ |- _ ] => apply invert_Pair_Some in H
-               | _ => constructor
-               | _ => assumption
-               | _ => progress destruct_head False
-               | _ => progress destruct_head and
-               | _ => progress destruct_head sig
-               | _ => progress break_match_hyps
-               end.
+      destruct e1; t.
     Defined.
 
     Definition wff_endecode {G t e1 e2} v : @wff_decode G t e1 e2 (@wff_encode G t e1 e2 v) = v.
     Proof.
       destruct v; reflexivity.
     Qed.
-
-    Local Ltac t' :=
-      repeat first [ progress simpl in *
-                   | progress subst
-                   | reflexivity
-                   | progress destruct_head and
-                   | progress inversion_option
-                   | intro
-                   | progress break_match
-                   | tauto ].
 
     Definition wff_deencode {G t e1 e2} v : @wff_encode G t e1 e2 (@wff_decode G t e1 e2 v) = v.
     Proof.
@@ -135,7 +130,7 @@ Section language.
                | TT => _
                | _ => _
                end;
-        t'.
+        t.
     Qed.
   End with_var.
 End language.
