@@ -115,6 +115,9 @@ Section homogenous_type.
   Proof. reflexivity. Qed.
   Definition SmartVarf {t} : interp_flat_type var t -> exprf t
     := @smart_interp_flat_map var exprf (fun t => Var) TT (fun A B x y => Pair x y) t.
+  Definition SmartVarf_Pair {A B v}
+    : @SmartVarf (Prod A B) v = Pair (SmartVarf (fst v)) (SmartVarf (snd v))
+    := eq_refl.
   Definition SmartVarfMap {var var'} (f : forall t, var t -> var' t) {t}
     : interp_flat_type var t -> interp_flat_type var' t
     := @smart_interp_flat_map var (interp_flat_type var') f tt (fun A B x y => pair x y) t.

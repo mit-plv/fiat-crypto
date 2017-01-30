@@ -1,5 +1,6 @@
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Wf.
+Require Import Crypto.Reflection.WfInversion.
 Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Reflection.ExprInversion.
 Require Import Crypto.Util.Tactics Crypto.Util.Sigma Crypto.Util.Prod.
@@ -89,6 +90,26 @@ Section language.
         apply List.in_app_iff in Hin.
         intuition (inversion_sigma; inversion_prod; subst; eauto).
         { rewrite <- !List.app_assoc; eauto. } }
+    Qed.
+
+    Lemma In_G_wff_SmartVarf G t v1 v2 e
+          (Hwf : @wff var1 var2 G t (SmartVarf v1) (SmartVarf v2))
+          (Hin : List.In e (flatten_binding_list v1 v2))
+      : List.In e G.
+    Proof.
+      induction t;
+        repeat match goal with
+               | _ => assumption
+               | [ H : False |- _ ] => exfalso; assumption
+               | _ => progress subst
+               | _ => progress destruct_head' and
+               | [ H : context[List.In _ (_ ++ _)] |- _ ] => rewrite List.in_app_iff in H
+               | [ H : context[SmartVarf _] |- _ ] => rewrite SmartVarf_Pair in H
+               | _ => progress simpl in *
+               | _ => progress destruct_head' or
+               | _ => solve [ eauto with nocore ]
+               | _ => progress inversion_wff
+               end.
     Qed.
   End with_var.
 
