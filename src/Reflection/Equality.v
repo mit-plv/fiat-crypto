@@ -93,3 +93,129 @@ Proof.
 Defined.
 Hint Extern 1 (Decidable (@eq (type ?base_type_code) ?x ?y))
 => simple apply (@dec_eq_type base_type_code) : typeclass_instances.
+
+Section encode_decode.
+  Context {base_type_code : Type}.
+  Local Notation flat_type := (flat_type base_type_code).
+  Local Notation type := (type base_type_code).
+
+  Definition flat_type_code (t1 t2 : flat_type)
+    := match t1, t2 with
+       | Tbase T1, Tbase T2 => T1 = T2
+       | Unit, Unit => True
+       | Prod A1 B1, Prod A2 B2 => A1 = A2 /\ B1 = B2
+       | Tbase _, _
+       | Unit, _
+       | Prod _ _, _
+         => False
+       end.
+  Definition flat_type_encode {t1 t2} : t1 = t2 -> flat_type_code t1 t2
+    := match t1, t2 return t1 = t2 -> flat_type_code t1 t2 with
+       | Tbase T1, Tbase T2 => fun H => match H with eq_refl => eq_refl end
+       | Unit, Unit => fun _ => I
+       | Prod A1 B1, Prod A2 B2
+         => fun H => conj (match H with eq_refl => eq_refl end)
+                          (match H with eq_refl => eq_refl end)
+       | Tbase _, _
+       | Unit, _
+       | Prod _ _, _
+         => fun H => match H with eq_refl => I end
+       end.
+  Definition flat_type_decode {t1 t2} : flat_type_code t1 t2 -> t1 = t2
+    := match t1, t2 return flat_type_code t1 t2 -> t1 = t2 with
+       | Tbase T1, Tbase T2 => fun H => f_equal Tbase H
+       | Unit, Unit => fun _ => eq_refl
+       | Prod A1 B1, Prod A2 B2
+         => fun H => f_equal2 Prod (let (a, b) := H in a) (let (a, b) := H in b)
+       | Tbase _, _
+       | Unit, _
+       | Prod _ _, _
+         => fun H : False => match H with end
+       end.
+  Lemma flat_type_endecode {t1 t2} H : flat_type_decode (@flat_type_encode t1 t2 H) = H.
+  Proof. subst t2; destruct t1; reflexivity. Defined.
+  Lemma flat_type_deencode {t1 t2} H : flat_type_encode (@flat_type_decode t1 t2 H) = H.
+  Proof. destruct t1, t2; destruct H; subst; reflexivity. Defined.
+
+  Definition path_flat_type_rect {t1 t2 : flat_type} (P : t1 = t2 -> Type)
+             (f : forall p, P (flat_type_decode p))
+    : forall p, P p.
+  Proof. intro p; specialize (f (flat_type_encode p)); destruct t1, p; exact f. Defined.
+
+  Definition type_code (t1 t2 : type)
+    := match t1, t2 with
+       | Tflat T1, Tflat T2 => T1 = T2
+       | Arrow A1 B1, Arrow A2 B2 => A1 = A2 /\ B1 = B2
+       | Tflat _, _
+       | Arrow _ _, _
+         => False
+       end.
+  Definition type_encode {t1 t2} : t1 = t2 -> type_code t1 t2
+    := match t1, t2 return t1 = t2 -> type_code t1 t2 with
+       | Tflat T1, Tflat T2 => fun H => match H with eq_refl => eq_refl end
+       | Arrow A1 B1, Arrow A2 B2
+         => fun H => conj (match H with eq_refl => eq_refl end)
+                          (match H with eq_refl => eq_refl end)
+       | Tflat _, _
+       | Arrow _ _, _
+         => fun H => match H with eq_refl => I end
+       end.
+  Definition type_decode {t1 t2} : type_code t1 t2 -> t1 = t2
+    := match t1, t2 return type_code t1 t2 -> t1 = t2 with
+       | Tflat T1, Tflat T2 => fun H => f_equal Tflat H
+       | Arrow A1 B1, Arrow A2 B2
+         => fun H => f_equal2 Arrow (let (a, b) := H in a) (let (a, b) := H in b)
+       | Tflat _, _
+       | Arrow _ _, _
+         => fun H : False => match H with end
+       end.
+  Lemma type_endecode {t1 t2} H : type_decode (@type_encode t1 t2 H) = H.
+  Proof. subst t2; destruct t1; reflexivity. Defined.
+  Lemma type_deencode {t1 t2} H : type_encode (@type_decode t1 t2 H) = H.
+  Proof. destruct t1, t2; destruct H; subst; reflexivity. Defined.
+
+  Definition path_type_rect {t1 t2 : type} (P : t1 = t2 -> Type)
+             (f : forall p, P (type_decode p))
+    : forall p, P p.
+  Proof. intro p; specialize (f (type_encode p)); destruct t1, p; exact f. Defined.
+End encode_decode.
+
+Ltac induction_type_in_using H rect :=
+  let H0 := fresh H in
+  let H1 := fresh H in
+  induction H as [H] using (rect _ _ _);
+  cbv [type_code flat_type_code] in H;
+  try match type of H with
+      | False => exfalso; exact H
+      | True => destruct H
+      | _ /\ _ => destruct H as [H0 H1]
+      end.
+Ltac inversion_flat_type_step :=
+  lazymatch goal with
+  | [ H : _ = Tbase _ |- _ ]
+    => induction_type_in_using H @path_flat_type_rect
+  | [ H : Tbase _ = _ |- _ ]
+    => induction_type_in_using H @path_flat_type_rect
+  | [ H : _ = Prod _ _ |- _ ]
+    => induction_type_in_using H @path_flat_type_rect
+  | [ H : Prod _ _ = _ |- _ ]
+    => induction_type_in_using H @path_flat_type_rect
+  | [ H : _ = Unit |- _ ]
+    => induction_type_in_using H @path_flat_type_rect
+  | [ H : Unit = _ |- _ ]
+    => induction_type_in_using H @path_flat_type_rect
+  end.
+Ltac inversion_flat_type := repeat inversion_flat_type_step.
+
+Ltac inversion_type_step :=
+  lazymatch goal with
+  | [ H : _ = Tflat _ |- _ ]
+    => induction_type_in_using H @path_type_rect
+  | [ H : Tflat _ = _ |- _ ]
+    => induction_type_in_using H @path_type_rect
+  | [ H : _ = Arrow _ _ |- _ ]
+    => induction_type_in_using H @path_type_rect
+  | [ H : Arrow _ _ = _ |- _ ]
+    => induction_type_in_using H @path_type_rect
+  end.
+Ltac inversion_type := repeat inversion_type_step.
