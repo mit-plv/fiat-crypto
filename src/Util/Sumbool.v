@@ -57,9 +57,13 @@ Ltac induction_path_sumbool H :=
       end.
 Ltac inversion_sumbool_step :=
   match goal with
-  | [ H : _ = sumbool _ _ |- _ ]
+  | [ H : _ = left _ |- _ ]
     => induction_path_sumbool H
-  | [ H : sumbool _ _ = _ |- _ ]
+  | [ H : left _ = _ |- _ ]
+    => induction_path_sumbool H
+  | [ H : _ = right _ |- _ ]
+    => induction_path_sumbool H
+  | [ H : right _ = _ |- _ ]
     => induction_path_sumbool H
   end.
 Ltac inversion_sumbool := repeat inversion_sumbool_step.

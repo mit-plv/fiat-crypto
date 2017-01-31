@@ -86,9 +86,13 @@ Ltac induction_path_sum H :=
       end.
 Ltac inversion_sum_step :=
   match goal with
-  | [ H : _ = sum _ _ |- _ ]
+  | [ H : _ = inl _ |- _ ]
     => induction_path_sum H
-  | [ H : sum _ _ = _ |- _ ]
+  | [ H : inl _ = _ |- _ ]
+    => induction_path_sum H
+  | [ H : _ = inr _ |- _ ]
+    => induction_path_sum H
+  | [ H : inr _ = _ |- _ ]
     => induction_path_sum H
   end.
 Ltac inversion_sum := repeat inversion_sum_step.
