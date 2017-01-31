@@ -245,5 +245,5 @@ End hetero_type.
 
 Global Arguments SmartFlatTypeMap2 {_ _ _} _ {_} _.
 Global Arguments SmartFlatTypeMapInterp2 {_ _ _ _ _} fv {_} _.
-Global Arguments SmartFlatTypeMap2Interp2 {_ _ _ _ _ _} fv {t v} _.
+Global Arguments SmartFlatTypeMap2Interp2 {_ _ _ _ _ _} fv {t} v _.
 Global Arguments SmartFlatTypeMapUnInterp2 {_ _ _ _ _ _} fv {_ _} _.
