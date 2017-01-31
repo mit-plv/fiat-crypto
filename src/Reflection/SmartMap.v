@@ -231,9 +231,19 @@ Section hetero_type.
          | Prod A B => fun v xy => (@SmartFlatTypeMapUnInterp2 _ _ _ f fv A _ (fst xy),
                                     @SmartFlatTypeMapUnInterp2 _ _ _ f fv B _ (snd xy))
          end.
+    Fixpoint SmartFlatTypeMap2Interp2 {var' var'' var'''} (f : forall t, var' t -> flat_type base_type_code2)
+             (fv : forall t v, var'' t -> interp_flat_type var''' (f t v)) t {struct t}
+      : forall v, interp_flat_type var'' t -> interp_flat_type var''' (SmartFlatTypeMap2 f (t:=t) v)
+      := match t return forall v, interp_flat_type var'' t -> interp_flat_type var''' (SmartFlatTypeMap2 f (t:=t) v) with
+         | Tbase x => fv _
+         | Unit => fun v _ => v
+         | Prod A B => fun xy x'y' => (@SmartFlatTypeMap2Interp2 _ _ _ f fv A (fst xy) (fst x'y'),
+                                       @SmartFlatTypeMap2Interp2 _ _ _ f fv B (snd xy) (snd x'y'))
+         end.
   End smart_flat_type_map2.
 End hetero_type.
 
 Global Arguments SmartFlatTypeMap2 {_ _ _} _ {_} _.
-Global Arguments SmartFlatTypeMapInterp2 {_ _ _ _ _} _ {_} _.
+Global Arguments SmartFlatTypeMapInterp2 {_ _ _ _ _} fv {_} _.
+Global Arguments SmartFlatTypeMap2Interp2 {_ _ _ _ _ _} fv {t v} _.
 Global Arguments SmartFlatTypeMapUnInterp2 {_ _ _ _ _ _} fv {_ _} _.
