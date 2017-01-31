@@ -1,6 +1,7 @@
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.GlobalSettings.
 
 Definition sumwise {A B} (RA:relation A) (RB : relation B) : relation (A + B)
   := fun x y => match x, y with
@@ -32,3 +33,62 @@ Global Instance dec_sumwise {A B RA RB} {HA : DecidableRel RA} {HB : DecidableRe
 Proof.
   intros [x|x] [y|y]; exact _.
 Qed.
+
+(** ** Equality for [sum] *)
+Section sum.
+  Local Notation sum_code u v
+    := (match u, v with
+        | inl u', inl v'
+        | inr u', inr v'
+          => u' = v'
+        | inl _, _
+        | inr _, _
+          => False
+        end).
+
+  (** *** Equality of [sum] is a [match] *)
+  Definition path_sum {A B} (u v : sum A B) (p : sum_code u v)
+    : u = v.
+  Proof. destruct u, v; first [ apply f_equal | exfalso ]; exact p. Defined.
+
+  (** *** Equivalence of equality of [sum] with [sum_code] *)
+  Definition unpath_sum {A B} {u v : sum A B} (p : u = v)
+    : sum_code u v.
+  Proof. subst v; destruct u; reflexivity. Defined.
+
+  Definition path_sum_iff {A B}
+             (u v : @sum A B)
+    : u = v <-> sum_code u v.
+  Proof.
+    split; [ apply unpath_sum | apply path_sum ].
+  Defined.
+
+  (** *** Eta-expansion of [@eq (sum _ _)] *)
+  Definition path_sum_eta {A B} {u v : @sum A B} (p : u = v)
+    : p = path_sum u v (unpath_sum p).
+  Proof. destruct u, p; reflexivity. Defined.
+
+  (** *** Induction principle for [@eq (sum _ _)] *)
+  Definition path_sum_rect {A B} {u v : @sum A B} (P : u = v -> Type)
+             (f : forall p, P (path_sum u v p))
+    : forall p, P p.
+  Proof. intro p; specialize (f (unpath_sum p)); destruct u, p; exact f. Defined.
+  Definition path_sum_rec {A B u v} (P : u = v :> @sum A B -> Set) := path_sum_rect P.
+  Definition path_sum_ind {A B u v} (P : u = v :> @sum A B -> Prop) := path_sum_rec P.
+End sum.
+
+(** ** Useful Tactics *)
+(** *** [inversion_sum] *)
+Ltac induction_path_sum H :=
+  induction H as [H] using path_sum_rect;
+  try match type of H with
+      | False => exfalso; exact H
+      end.
+Ltac inversion_sum_step :=
+  match goal with
+  | [ H : _ = sum _ _ |- _ ]
+    => induction_path_sum H
+  | [ H : sum _ _ = _ |- _ ]
+    => induction_path_sum H
+  end.
+Ltac inversion_sum := repeat inversion_sum_step.
