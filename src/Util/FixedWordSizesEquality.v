@@ -119,6 +119,15 @@ Proof.
   assumption.
 Qed.
 
+Lemma ZToWord_gen_wordToZ_gen_ZToWord_gen : forall {sz1 sz2} v,
+    (sz2 <= sz1)%nat -> @ZToWord_gen sz2 (wordToZ_gen (@ZToWord_gen sz1 v)) = ZToWord_gen v.
+Proof.
+  unfold ZToWord_gen, wordToZ_gen.
+  intros sz1 sz2 v H.
+  rewrite N2Z.id, NToWord_wordToN_NToWord by omega.
+  reflexivity.
+Qed.
+
 Lemma ZToWord_wordToZ : forall {sz} v, ZToWord (@wordToZ sz v) = v.
 Proof.
   unfold wordT, word_case in *.
@@ -130,4 +139,22 @@ Proof.
   unfold wordToZ, ZToWord, word_case_dep.
   intros; break_match; apply wordToZ_gen_ZToWord_gen;
     assumption.
+Qed.
+
+Lemma ZToWord_wordToZ_ZToWord : forall {sz1 sz2} v,
+    (sz2 <= sz1)%nat -> @ZToWord sz2 (wordToZ (@ZToWord sz1 v)) = ZToWord v.
+Proof.
+  unfold wordToZ, ZToWord, word_case_dep.
+  intros sz1 sz2; break_match; intros; apply ZToWord_gen_wordToZ_gen_ZToWord_gen;
+    repeat match goal with
+           | [ |- (S ?a <= 2^?b)%nat ]
+             => change (2^(Nat.log2 (S a)) <= 2^b)%nat
+           | [ |- (2^_ <= 2^_)%nat ]
+             => apply Nat.pow_le_mono_r
+           | [ |- _ <> _ ] => intro; omega
+           | _ => assumption
+           | [ |- (_ <= S _)%nat ]
+             => apply Nat.leb_le; vm_compute; reflexivity
+           | _ => exfalso; omega
+           end.
 Qed.
