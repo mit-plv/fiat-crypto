@@ -140,6 +140,7 @@ src/Reflection/Named/Syntax.v
 src/Reflection/Z/Interpretations128.v
 src/Reflection/Z/Interpretations64.v
 src/Reflection/Z/InterpretationsGen.v
+src/Reflection/Z/OpInversion.v
 src/Reflection/Z/Reify.v
 src/Reflection/Z/Syntax.v
 src/Reflection/Z/Interpretations128/Relations.v
