@@ -16,3 +16,13 @@ Ltac invert_op_step :=
   end.
 
 Ltac invert_op := repeat invert_op_step.
+
+Ltac invert_match_op_step :=
+  match goal with
+  | [ |- appcontext[match ?e with OpConst _ => _ | _ => _ end] ]
+    => invert_one_op e
+  | [ H : appcontext[match ?e with OpConst _ => _ | _ => _ end] |- _ ]
+    => invert_one_op e
+  end.
+
+Ltac invert_match_op := repeat invert_match_op_step.
