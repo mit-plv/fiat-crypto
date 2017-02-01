@@ -8,6 +8,7 @@ Require Export Crypto.Util.Tactics.DoWithHyp.
 Require Export Crypto.Util.Tactics.RewriteHyp.
 Require Export Crypto.Util.Tactics.SpecializeBy.
 Require Export Crypto.Util.Tactics.SplitInContext.
+Require Export Crypto.Util.Tactics.UniquePose.
 
 (** Test if a tactic succeeds, but always roll-back the results *)
 Tactic Notation "test" tactic3(tac) :=
@@ -24,30 +25,6 @@ Ltac contains search_for in_term :=
   idtac;
   lazymatch in_term with
   | appcontext[search_for] => idtac
-  end.
-
-(* [pose proof defn], but only if no hypothesis of the same type exists.
-   most useful for proofs of a proposition *)
-Tactic Notation "unique" "pose" "proof" constr(defn) :=
-  let T := type of defn in
-  match goal with
-  | [ H : T |- _ ] => fail 1
-  | _ => pose proof defn
-  end.
-(* [assert T], but only if no hypothesis of the same type exists.
-   most useful for proofs of a proposition *)
-Tactic Notation "unique" "assert" constr(T) :=
-  match goal with
-  | [ H : T |- _ ] => fail 1
-  | _ => assert T
-  end.
-
-(* [assert T], but only if no hypothesis of the same type exists.
-   most useful for proofs of a proposition *)
-Tactic Notation "unique" "assert" constr(T) "by" tactic3(tac) :=
-  match goal with
-  | [ H : T |- _ ] => fail 1
-  | _ => assert T by tac
   end.
 
 Ltac set_evars :=
