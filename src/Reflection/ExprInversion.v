@@ -1,4 +1,5 @@
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.TypeInversion.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Tactics.DestructHead.
@@ -137,6 +138,23 @@ Global Arguments invert_LetIn {_ _ _ _} _.
 Global Arguments invert_Pair {_ _ _ _ _} _.
 Global Arguments invert_Abs {_ _ _ _ _} _ _.
 Global Arguments invert_Return {_ _ _ _} _.
+
+Ltac invert_one_expr e :=
+  preinvert_one_type e;
+  intros ? e;
+  destruct e;
+  try exact I.
+
+Ltac invert_expr_step :=
+  match goal with
+  | [ e : exprf _ _ (Tbase _) |- _ ] => invert_one_expr e
+  | [ e : exprf _ _ (Prod _ _) |- _ ] => invert_one_expr e
+  | [ e : exprf _ _ Unit |- _ ] => invert_one_expr e
+  | [ e : expr _ _ (Tflat _) |- _ ] => invert_one_expr e
+  | [ e : expr _ _ (Arrow _ _) |- _ ] => invert_one_expr e
+  end.
+
+Ltac invert_expr := repeat invert_expr_step.
 
 Ltac invert_expr_subst_step :=
   match goal with

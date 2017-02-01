@@ -124,6 +124,7 @@ src/Reflection/SmartMap.v
 src/Reflection/Syntax.v
 src/Reflection/TestCase.v
 src/Reflection/Tuple.v
+src/Reflection/TypeInversion.v
 src/Reflection/Wf.v
 src/Reflection/WfInversion.v
 src/Reflection/WfProofs.v
