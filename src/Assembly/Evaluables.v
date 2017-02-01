@@ -1,9 +1,9 @@
 Require Import Bedrock.Word Bedrock.Nomega.
-Require Import NPeano NArith PArith Ndigits ZArith Znat ZArith_dec Ndec.
-Require Import List Basics Bool Nsatz Sumbool Datatypes.
+Require Import Coq.Numbers.Natural.Peano.NPeano Coq.NArith.NArith Coq.PArith.PArith Coq.NArith.Ndigits Coq.ZArith.ZArith Coq.ZArith.Znat Coq.ZArith.ZArith_dec Coq.NArith.Ndec.
+Require Import Coq.Lists.List Coq.Program.Basics Crypto.Util.Bool Crypto.Tactics.Algebra_syntax.Nsatz Coq.Bool.Sumbool Coq.Init.Datatypes.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemOpt.
-Require Import QhasmUtil WordizeUtil Bounds.
-Require Import ProofIrrelevance.
+Require Import Crypto.Assembly.QhasmUtil Crypto.Assembly.WordizeUtil Crypto.Assembly.Bounds.
+Require Import Coq.Logic.ProofIrrelevance.
 
 Import ListNotations.
 
