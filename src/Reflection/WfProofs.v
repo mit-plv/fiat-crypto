@@ -92,6 +92,15 @@ Section language.
         { rewrite <- !List.app_assoc; eauto. } }
     Qed.
 
+    Lemma wff_SmartVarVarf_nil {t t'} v1 v2 x1 x2
+          (Hin : List.In (existT (fun t : base_type_code => (exprf (Tbase t) * exprf (Tbase t))%type) t (x1, x2))
+                          (flatten_binding_list (SmartVarVarf v1) (SmartVarVarf v2)))
+      : @wff var1 var2 (flatten_binding_list (t:=t') v1 v2) (Tbase t) x1 x2.
+    Proof.
+      apply wff_SmartVarVarf with (G:=nil) in Hin.
+      rewrite List.app_nil_r in Hin; assumption.
+    Qed.
+
     Lemma In_G_wff_SmartVarf G t v1 v2 e
           (Hwf : @wff var1 var2 G t (SmartVarf v1) (SmartVarf v2))
           (Hin : List.In e (flatten_binding_list v1 v2))
