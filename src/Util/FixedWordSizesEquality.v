@@ -100,3 +100,34 @@ Proof.
          end;
     try abstract (rewrite wordT_beq_hetero_type_lb_false in pf by omega; clear -pf; congruence).
 Defined.
+
+Lemma ZToWord_gen_wordToZ_gen : forall {sz} v, ZToWord_gen (@wordToZ_gen sz v) = v.
+Proof.
+  unfold ZToWord_gen, wordToZ_gen.
+  intros.
+  rewrite N2Z.id, NToWord_wordToN; reflexivity.
+Qed.
+
+Lemma wordToZ_gen_ZToWord_gen : forall {sz} v, (0 <= v < 2^(Z.of_nat sz))%Z -> @wordToZ_gen sz (ZToWord_gen v) = v.
+Proof.
+  unfold ZToWord_gen, wordToZ_gen.
+  intros ?? [H0 H1].
+  rewrite wordToN_NToWord_idempotent, Z2N.id; try omega.
+  rewrite Npow2_N.
+  apply Z2N.inj_lt in H1; [ | omega.. ].
+  rewrite Z2N.inj_pow, <- nat_N_Z, N2Z.id in H1 by omega.
+  assumption.
+Qed.
+
+Lemma ZToWord_wordToZ : forall {sz} v, ZToWord (@wordToZ sz v) = v.
+Proof.
+  unfold wordT, word_case in *.
+  intro sz; break_match; simpl; apply ZToWord_gen_wordToZ_gen.
+Qed.
+
+Lemma wordToZ_ZToWord : forall {sz} v, (0 <= v < 2^(Z.of_nat (2^sz)))%Z -> @wordToZ sz (ZToWord v) = v.
+Proof.
+  unfold wordToZ, ZToWord, word_case_dep.
+  intros; break_match; apply wordToZ_gen_ZToWord_gen;
+    assumption.
+Qed.
