@@ -156,6 +156,20 @@ Ltac invert_expr_step :=
 
 Ltac invert_expr := repeat invert_expr_step.
 
+Ltac invert_match_expr_step :=
+  match goal with
+  | [ |- appcontext[match ?e with TT => _ | _ => _ end] ]
+    => invert_one_expr e
+  | [ |- appcontext[match ?e with Abs _ _ _ => _ | _ => _ end] ]
+    => invert_one_expr e
+  | [ H : appcontext[match ?e with TT => _ | _ => _ end] |- _ ]
+    => invert_one_expr e
+  | [ H : appcontext[match ?e with Abs _ _ _ => _ | _ => _ end] |- _ ]
+    => invert_one_expr e
+  end.
+
+Ltac invert_match_expr := repeat invert_match_expr_step.
+
 Ltac invert_expr_subst_step :=
   match goal with
   | [ H : invert_Var ?e = Some _ |- _ ] => apply invert_Var_Some in H
