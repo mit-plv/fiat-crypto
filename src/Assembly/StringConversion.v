@@ -1,6 +1,6 @@
-Require Export String Ascii Basics Sumbool.
-Require Import QhasmCommon QhasmEvalCommon QhasmUtil Qhasm.
-Require Import NArith NPeano.
+Require Export Coq.Strings.String Coq.Strings.Ascii Coq.Program.Basics Coq.Bool.Sumbool.
+Require Import Crypto.Assembly.QhasmCommon Crypto.Assembly.QhasmEvalCommon Crypto.Assembly.QhasmUtil Crypto.Assembly.Qhasm.
+Require Import Coq.NArith.NArith Coq.Numbers.Natural.Peano.NPeano.
 Require Export Bedrock.Word.
 
 Module StringConversion.
