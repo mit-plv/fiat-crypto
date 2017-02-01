@@ -221,12 +221,14 @@ Ltac simpl_proj_exist_in H :=
          | context G[projT2 (existT _ ?x ?p)]
            => let G' := context G[p] in change G' in H
          end.
-Ltac induction_sigma_in_using H rect :=
-  let H0 := fresh H in
-  let H1 := fresh H in
+Ltac induction_sigma_in_as_using H H0 H1 rect :=
   induction H as [H0 H1] using (rect _ _ _ _);
   simpl_proj_exist_in H0;
   simpl_proj_exist_in H1.
+Ltac induction_sigma_in_using H rect :=
+  let H0 := fresh H in
+  let H1 := fresh H in
+  induction_sigma_in_as_using H H0 H1 rect.
 Ltac inversion_sigma_step :=
   match goal with
   | [ H : _ = exist _ _ _ |- _ ]

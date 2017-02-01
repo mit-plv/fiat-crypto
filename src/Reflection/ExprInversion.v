@@ -2,6 +2,7 @@ Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.TypeInversion.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Option.
+Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Notations.
@@ -61,6 +62,26 @@ Section language.
     Definition invert_Return {t} (e : expr (Tflat t)) : exprf t
       := match e with Return _ v => v end.
 
+    Definition exprf_code {t} (e : exprf t) : exprf t -> Prop
+      := match e with
+         | TT => fun e' => TT = e'
+         | Var _ v => fun e' => invert_Var e' = Some v
+         | Pair _ x _ y => fun e' => invert_Pair e' = Some (x, y)%core
+         | Op _ _ opc args => fun e' => invert_Op e' = Some (existT _ _ (opc, args)%core)
+         | LetIn _ ex _ eC => fun e' => invert_LetIn e' = Some (existT _ _ (ex, eC)%core)
+         end.
+
+    Definition expr_code {t} (e : expr t) : expr t -> Prop
+      := match e with
+         | Abs _ _ f => fun e' => invert_Abs e' = f
+         | Return _ v => fun e' => invert_Return e' = v
+         end.
+
+    Definition exprf_encode {t} (x y : exprf t) : x = y -> exprf_code x y.
+    Proof. intro p; destruct p, x; reflexivity. Defined.
+    Definition expr_encode {t} (x y : expr t) : x = y -> expr_code x y.
+    Proof. intro p; destruct p, x; reflexivity. Defined.
+
     Local Ltac t' :=
       repeat first [ intro
                    | progress simpl in *
@@ -110,7 +131,34 @@ Section language.
 
     Lemma invert_Return_Some {t e v}
       : @invert_Return t e = v -> e = Return v.
-    Proof. t. Qed.
+    Proof. t. Defined.
+
+    Definition exprf_decode {t} (x y : exprf t) : exprf_code x y -> x = y.
+    Proof.
+      destruct x; simpl; trivial;
+        intro H;
+        first [ apply invert_Var_Some in H
+              | apply invert_Op_Some in H
+              | apply invert_LetIn_Some in H
+              | apply invert_Pair_Some in H ];
+        symmetry; assumption.
+    Defined.
+    Definition expr_decode {t} (x y : expr t) : expr_code x y -> x = y.
+    Proof.
+      destruct x; simpl;
+        intro H;
+        first [ apply invert_Abs_Some in H
+              | apply invert_Return_Some in H ];
+        symmetry; assumption.
+    Defined.
+    Definition path_exprf_rect {t} {x y : exprf t} (Q : x = y -> Type)
+               (f : forall p, Q (exprf_decode x y p))
+      : forall p, Q p.
+    Proof. intro p; specialize (f (exprf_encode x y p)); destruct x, p; exact f. Defined.
+    Definition path_expr_rect {t} {x y : expr t} (Q : x = y -> Type)
+               (f : forall p, Q (expr_decode x y p))
+      : forall p, Q p.
+    Proof. intro p; specialize (f (expr_encode x y p)); destruct x, p; exact f. Defined.
   End with_var.
 
   Lemma interpf_invert_Abs interp_op {A B e} x
@@ -170,22 +218,74 @@ Ltac invert_match_expr_step :=
 
 Ltac invert_match_expr := repeat invert_match_expr_step.
 
-Ltac invert_expr_subst_step :=
+Ltac invert_expr_subst_step_helper guard_tac :=
   match goal with
-  | [ H : invert_Var ?e = Some _ |- _ ] => apply invert_Var_Some in H
-  | [ H : invert_Op ?e = Some _ |- _ ] => apply invert_Op_Some in H
-  | [ H : invert_LetIn ?e = Some _ |- _ ] => apply invert_LetIn_Some in H
-  | [ H : invert_Pair ?e = Some _ |- _ ] => apply invert_Pair_Some in H
+  | [ H : invert_Var ?e = Some _ |- _ ] => guard_tac H; apply invert_Var_Some in H
+  | [ H : invert_Op ?e = Some _ |- _ ] => guard_tac H; apply invert_Op_Some in H
+  | [ H : invert_LetIn ?e = Some _ |- _ ] => guard_tac H; apply invert_LetIn_Some in H
+  | [ H : invert_Pair ?e = Some _ |- _ ] => guard_tac H; apply invert_Pair_Some in H
   | [ e : expr _ _ (Arrow _ _) |- _ ]
-    => let f := fresh e in
+    => guard_tac e;
+       let f := fresh e in
        let H := fresh in
        rename e into f;
        remember (invert_Abs f) as e eqn:H;
        symmetry in H;
        apply invert_Abs_Some in H;
        subst f
-  | [ H : invert_Abs ?e = _ |- _ ] => apply invert_Abs_Some in H
-  | [ H : invert_Return ?e = _ |- _ ] => apply invert_Return_Some in H
-  | _ => progress subst
+  | [ H : invert_Abs ?e = _ |- _ ] => guard_tac H; apply invert_Abs_Some in H
+  | [ H : invert_Return ?e = _ |- _ ] => guard_tac H; apply invert_Return_Some in H
   end.
+Ltac invert_expr_subst_step :=
+  first [ invert_expr_subst_step_helper ltac:(fun _ => idtac)
+        | subst ].
 Ltac invert_expr_subst := repeat invert_expr_subst_step.
+
+Ltac induction_expr_in_using H rect :=
+  induction H as [H] using (rect _ _ _);
+  cbv [exprf_code expr_code invert_Var invert_LetIn invert_Pair invert_Op invert_Abs invert_Return] in H;
+  try lazymatch type of H with
+      | Some _ = Some _ => apply option_leq_to_eq in H; unfold option_eq in H
+      | Some _ = None => exfalso; clear -H; solve [ inversion H ]
+      | None = Some _ => exfalso; clear -H; solve [ inversion H ]
+      end;
+  let H1 := fresh H in
+  let H2 := fresh H in
+  try lazymatch type of H with
+      | existT _ _ _ = existT _ _ _ => induction_sigma_in_using H @path_sigT_rect
+      end;
+  try lazymatch type of H2 with
+      | _ = (_, _)%core => induction_path_prod H2
+      end.
+Ltac inversion_expr_step :=
+  match goal with
+  | [ H : _ = Var _ |- _ ]
+    => induction_expr_in_using H @path_exprf_rect
+  | [ H : _ = TT |- _ ]
+    => induction_expr_in_using H @path_exprf_rect
+  | [ H : _ = Op _ _ |- _ ]
+    => induction_expr_in_using H @path_exprf_rect
+  | [ H : _ = Pair _ _ |- _ ]
+    => induction_expr_in_using H @path_exprf_rect
+  | [ H : _ = LetIn _ _ |- _ ]
+    => induction_expr_in_using H @path_exprf_rect
+  | [ H : _ = Abs _ |- _ ]
+    => induction_expr_in_using H @path_expr_rect
+  | [ H : _ = Return _ |- _ ]
+    => induction_expr_in_using H @path_expr_rect
+  | [ H : Var _ = _ |- _ ]
+    => induction_expr_in_using H @path_exprf_rect
+  | [ H : TT = _ |- _ ]
+    => induction_expr_in_using H @path_exprf_rect
+  | [ H : Op _ _ = _ |- _ ]
+    => induction_expr_in_using H @path_exprf_rect
+  | [ H : Pair _ _ = _ |- _ ]
+    => induction_expr_in_using H @path_exprf_rect
+  | [ H : LetIn _ _ = _ |- _ ]
+    => induction_expr_in_using H @path_exprf_rect
+  | [ H : Abs _ = _ |- _ ]
+    => induction_expr_in_using H @path_expr_rect
+  | [ H : Return _ = _ |- _ ]
+    => induction_expr_in_using H @path_expr_rect
+  end.
+Ltac inversion_expr := repeat inversion_expr_step.
