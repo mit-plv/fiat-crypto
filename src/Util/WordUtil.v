@@ -419,6 +419,70 @@ Section WordToN.
       end
     end x.
 
+  Lemma wbit_inj_iff {n} (x y : word n)
+    : (forall k, wbit x k = wbit y k) <-> x = y.
+  Proof.
+    split; intro H; subst; try reflexivity.
+    induction x.
+    { revert dependent y.
+      let G := match goal with |- forall y, @?G y => G end in
+      intro y;
+        refine (match y in word n return match n with
+                                         | 0 => G
+                                         | _ => fun _ => True
+                                         end y
+                with
+                | WO => fun _ => eq_refl
+                | _ => I
+                end). }
+    { move y at top; revert dependent n.
+      let G := match goal with |- forall n y, @?G n y => G end in
+      intros n y;
+        refine (match y in word n return match n with
+                                         | 0 => fun _ => True
+                                         | S n' => G n'
+                                         end y
+                with
+                | WO => I
+                | _ => _
+                end).
+      intros x H IH.
+      pose proof (H 0) as H0; simpl in H0; subst; f_equal.
+      apply IH; intro k; specialize (H (S k)); apply H. }
+  Qed.
+
+  Lemma wbit_inj_iff_lt {n} (x y : word n)
+    : (forall k, k < n -> wbit x k = wbit y k) <-> x = y.
+  Proof.
+    rewrite <- wbit_inj_iff.
+    induction n.
+    { split; intros H k; specialize (H k); try intro H'; try omega.
+      refine match x, y with
+             | WO, WO => eq_refl
+             | _, _ => I
+             end. }
+    { do 2 let n := match goal with n : nat |- _ => n end in
+           revert dependent n;
+             let G := match goal with |- forall n x, @?G n x => G end in
+             intros n x;
+               refine match x in word n return match n with
+                                               | S n' => G n'
+                                               | _ => fun _ => True
+                                               end x
+                      with
+                      | WO => I
+                      | _ => _
+                      end; clear n x;
+                 intro y; move y at top.
+      intro IH.
+      split; intros H k; pose proof (H k) as Hk; destruct k;
+        simpl in Hk |- *;
+        try solve [ intros; try (first [ apply H | apply Hk ]; omega) ].
+      clear Hk; revert k.
+      apply IH; intros k H'.
+      specialize (H (S k)); apply H; omega. }
+  Qed.
+
   Lemma wordToN_testbit: forall {n} (x: word n) k,
     N.testbit (wordToN x) k = wbit x (N.to_nat k).
   Proof.
@@ -467,6 +531,39 @@ Section WordToN.
           rewrite IHn;
           rewrite Nat2N.id;
           reflexivity.
+  Qed.
+
+  Lemma wbit_NToWord {sz} k v
+    : wbit (NToWord sz v) k = if Nat.ltb k sz
+                              then N.testbit v (N.of_nat k)
+                              else false.
+  Proof.
+    revert k v; induction sz, k; intros; try reflexivity.
+    { destruct v as [|p]; simpl; try reflexivity.
+      destruct p; simpl; reflexivity. }
+    { pose proof (fun v k => IHsz k (Npos v)) as IHszp.
+      pose proof (fun k => IHsz k 0%N) as IHsz0.
+      destruct v as [|p]; simpl in *.
+      { rewrite IHsz0; break_match; reflexivity. }
+      { destruct p; simpl in *; try (rewrite IHsz0; break_match; reflexivity);
+          rewrite IHszp, N.pos_pred_spec;
+          change (N.pos (Pos.of_succ_nat k)) with (N.of_nat (S k));
+          rewrite <- Nat2N.inj_pred; simpl;
+            reflexivity. } }
+  Qed.
+
+  Lemma NToWord_wordToN_NToWord : forall sz1 sz2 w,
+      sz2 <= sz1 -> NToWord sz2 (wordToN (NToWord sz1 w)) = NToWord sz2 w.
+  Proof.
+    intros.
+    apply wbit_inj_iff_lt; intros k Hlt.
+    rewrite !wbit_NToWord, wordToN_testbit, wbit_NToWord, Nat2N.id.
+    break_match; try reflexivity;
+      repeat match goal with
+             | [ H : (_ <? _) = true |- _ ] => apply Nat.ltb_lt in H
+             | [ H : (_ <? _) = false |- _ ] => apply Nat.ltb_ge in H
+             | _ => omega
+             end.
   Qed.
 
   Lemma wordToN_split1: forall {n m} x,
