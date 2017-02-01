@@ -135,6 +135,17 @@ Section language.
   End with_var.
 End language.
 
+Ltac is_expr_constructor arg :=
+  lazymatch arg with
+  | Op _ _ => idtac
+  | TT => idtac
+  | Var _ => idtac
+  | LetIn _ _ => idtac
+  | Pair _ _ => idtac
+  | Abs _ => idtac
+  | Return _ => idtac
+  end.
+
 Ltac inversion_wff_step :=
   let postprocess H :=
       (cbv [wff_code] in H;
@@ -144,6 +155,9 @@ Ltac inversion_wff_step :=
            | False => exfalso; exact H
            end) in
   match goal with
+  | [ H : wff _ ?x ?y |- _ ]
+    => is_expr_constructor x; is_expr_constructor y;
+       apply wff_encode in H; postprocess H
   | [ H : wff _ ?x ?y |- _ ]
     => first [ is_var x; is_var y; fail 1
              | idtac ];
