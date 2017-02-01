@@ -136,10 +136,17 @@ Section language.
 End language.
 
 Ltac inversion_wff_step :=
+  let postprocess H :=
+      (cbv [wff_code] in H;
+       simpl in H;
+       try match type of H with
+           | True => clear H
+           | False => exfalso; exact H
+           end) in
   match goal with
   | [ H : wff _ ?x ?y |- _ ]
     => first [ is_var x; is_var y; fail 1
              | idtac ];
-       apply wff_encode in H; unfold wff_code in H; simpl in H
+       apply wff_encode in H; postprocess H
   end.
 Ltac inversion_wff := repeat inversion_wff_step.
