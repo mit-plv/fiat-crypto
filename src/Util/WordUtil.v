@@ -419,6 +419,13 @@ Section WordToN.
       end
     end x.
 
+  Lemma wbit_large {n} (x: word n) (k: nat)
+    : n <= k -> wbit x k = false.
+  Proof.
+    revert k; induction x, k; intro H; simpl; try reflexivity; try omega.
+    apply IHx; omega.
+  Qed.
+
   Lemma wbit_inj_iff {n} (x y : word n)
     : (forall k, wbit x k = wbit y k) <-> x = y.
   Proof.
@@ -455,32 +462,10 @@ Section WordToN.
     : (forall k, k < n -> wbit x k = wbit y k) <-> x = y.
   Proof.
     rewrite <- wbit_inj_iff.
-    induction n.
-    { split; intros H k; specialize (H k); try intro H'; try omega.
-      refine match x, y with
-             | WO, WO => eq_refl
-             | _, _ => I
-             end. }
-    { do 2 let n := match goal with n : nat |- _ => n end in
-           revert dependent n;
-             let G := match goal with |- forall n x, @?G n x => G end in
-             intros n x;
-               refine match x in word n return match n with
-                                               | S n' => G n'
-                                               | _ => fun _ => True
-                                               end x
-                      with
-                      | WO => I
-                      | _ => _
-                      end; clear n x;
-                 intro y; move y at top.
-      intro IH.
-      split; intros H k; pose proof (H k) as Hk; destruct k;
-        simpl in Hk |- *;
-        try solve [ intros; try (first [ apply H | apply Hk ]; omega) ].
-      clear Hk; revert k.
-      apply IH; intros k H'.
-      specialize (H (S k)); apply H; omega. }
+    split; intros H k; specialize (H k);
+      destruct (le_lt_dec n k);
+      rewrite ?wbit_large by assumption;
+      auto.
   Qed.
 
   Lemma wordToN_testbit: forall {n} (x: word n) k,
@@ -564,6 +549,17 @@ Section WordToN.
              | [ H : (_ <? _) = false |- _ ] => apply Nat.ltb_ge in H
              | _ => omega
              end.
+  Qed.
+
+  Lemma wordToN_NToWord_wordToN : forall sz1 sz2 w, (sz1 <= sz2)%nat -> wordToN (NToWord sz2 (@wordToN sz1 w)) = wordToN w.
+  Proof.
+    intros sz1 sz2 w H.
+    apply N.bits_inj; intro k.
+    rewrite !wordToN_testbit, !wbit_NToWord, wordToN_testbit, N2Nat.id.
+    destruct (N.to_nat k <? sz2) eqn:H'; try reflexivity.
+    apply Nat.ltb_ge in H'.
+    rewrite wbit_large by omega.
+    reflexivity.
   Qed.
 
   Lemma wordToN_split1: forall {n m} x,
