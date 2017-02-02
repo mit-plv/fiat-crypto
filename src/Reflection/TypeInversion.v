@@ -73,11 +73,6 @@ Ltac preinvert_one_type e :=
        move e at top;
        revert dependent T;
        refine (preinvert_Tbase P _ _)
-  | ?P (Prod ?A ?B)
-    => is_var A; is_var B;
-       move e at top; revert dependent A; intros A e;
-       move e at top; revert dependent B; revert A;
-       refine (preinvert_Prod P _ _)
   | ?P (Prod (Tbase ?A) (Tbase ?B))
     => is_var A; is_var B;
        move e at top; revert dependent A; intros A e;
@@ -96,6 +91,11 @@ Ltac preinvert_one_type e :=
        move e at top; revert dependent C; intros C e;
        move e at top; revert dependent D; revert A B C;
        refine (preinvert_Prod4 P _ _)
+  | ?P (Prod ?A ?B)
+    => is_var A; is_var B;
+       move e at top; revert dependent A; intros A e;
+       move e at top; revert dependent B; revert A;
+       refine (preinvert_Prod P _ _)
   | ?P Unit
     => revert dependent e;
        refine (preinvert_Unit P _ _)
