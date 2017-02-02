@@ -199,3 +199,5 @@ Section language.
                  (flatten_binding_list (SmartFlatTypeUnMap t) (SmartFlatTypeUnMap t)).
   Proof. induction t; flatten_t. Qed.
 End language.
+
+Hint Resolve wff_SmartVarf wff_SmartVarVarf wff_SmartVarVarf_nil : wf.

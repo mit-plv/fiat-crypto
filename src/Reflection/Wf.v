@@ -2,6 +2,8 @@ Require Import Coq.Lists.List.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Util.Notations.
 
+Create HintDb wf discriminated.
+
 Section language.
   Context {base_type_code : Type}
           {op : flat_type base_type_code -> flat_type base_type_code -> Type}.
@@ -65,3 +67,5 @@ Ltac admit_Wf := apply Wf_admitted.
 Global Arguments wff {_ _ _ _} G {t} _ _.
 Global Arguments wf {_ _ _ _} G {t} _ _.
 Global Arguments Wf {_ _ t} _.
+
+Hint Constructors wf wff : wf.

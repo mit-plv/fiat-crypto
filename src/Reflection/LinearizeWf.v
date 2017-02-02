@@ -172,3 +172,5 @@ Section language.
     intros wf var1 var2; apply wf_linearize, wf.
   Qed.
 End language.
+
+Hint Resolve Wf_Linearize : wf.

@@ -90,7 +90,7 @@ Section language.
     Qed.
   End with_var.
 
-  Lemma WfInlineConst is_const {t} (e : Expr t)
+  Lemma Wf_InlineConst is_const {t} (e : Expr t)
         (Hwf : Wf e)
     : Wf (InlineConst is_const e).
   Proof.
@@ -99,3 +99,5 @@ Section language.
     apply Hwf.
   Qed.
 End language.
+
+Hint Resolve Wf_InlineConst : wf.
