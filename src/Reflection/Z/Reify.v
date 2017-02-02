@@ -2,6 +2,8 @@ Require Import Coq.ZArith.ZArith.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemListZOperations.
 Require Import Crypto.Reflection.InputSyntax.
 Require Import Crypto.Reflection.Z.Syntax.
+Require Import Crypto.Reflection.Z.Syntax.Equality.
+Require Import Crypto.Reflection.Z.Syntax.Util.
 Require Import Crypto.Reflection.WfReflective.
 Require Import Crypto.Reflection.Reify.
 Require Import Crypto.Reflection.Inline.

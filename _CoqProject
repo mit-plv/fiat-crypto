@@ -147,6 +147,8 @@ src/Reflection/Z/Interpretations128/Relations.v
 src/Reflection/Z/Interpretations128/RelationsCombinations.v
 src/Reflection/Z/Interpretations64/Relations.v
 src/Reflection/Z/Interpretations64/RelationsCombinations.v
+src/Reflection/Z/Syntax/Equality.v
+src/Reflection/Z/Syntax/Util.v
 src/Spec/CompleteEdwardsCurve.v
 src/Spec/Ed25519.v
 src/Spec/EdDSA.v

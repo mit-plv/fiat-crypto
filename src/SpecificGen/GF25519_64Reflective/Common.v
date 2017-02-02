@@ -13,6 +13,7 @@ Require Crypto.Reflection.Z.Interpretations128.Relations.
 Require Import Crypto.Reflection.Z.Interpretations128.RelationsCombinations.
 Require Import Crypto.Reflection.Z.Reify.
 Require Export Crypto.Reflection.Z.Syntax.
+Require Import Crypto.Reflection.Z.Syntax.Equality.
 Require Import Crypto.Reflection.InterpWfRel.
 Require Import Crypto.Reflection.Application.
 Require Import Crypto.Reflection.WfReflective.
