@@ -7,15 +7,8 @@ Export Syntax.Notations.
 Local Set Boolean Equality Schemes.
 Local Set Decidable Equality Schemes.
 Inductive base_type := TZ.
-Definition interp_base_type (v : base_type) : Type :=
-  match v with
-  | TZ => Z
-  end.
 
 Local Notation tZ := (Tbase TZ).
-Local Notation eta x := (fst x, snd x).
-Local Notation eta3 x := (eta (fst x), snd x).
-Local Notation eta4 x := (eta3 (fst x), snd x).
 
 Inductive op : flat_type base_type -> flat_type base_type -> Type :=
 | OpConst (z : Z) : op Unit tZ
@@ -29,6 +22,15 @@ Inductive op : flat_type base_type -> flat_type base_type -> Type :=
 | Neg (int_width : Z) : op tZ tZ
 | Cmovne : op (tZ * tZ * tZ * tZ) tZ
 | Cmovle : op (tZ * tZ * tZ * tZ) tZ.
+
+Definition interp_base_type (v : base_type) : Type :=
+  match v with
+  | TZ => Z
+  end.
+
+Local Notation eta x := (fst x, snd x).
+Local Notation eta3 x := (eta (fst x), snd x).
+Local Notation eta4 x := (eta3 (fst x), snd x).
 
 Definition interp_op src dst (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
   := match f in op src dst return interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst with
