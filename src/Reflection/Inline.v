@@ -24,6 +24,13 @@ Section language.
     | inline {t : base_type_code} (e : @exprf var t) : inline_directive t
     | no_inline {t} (e : @exprf var t) : inline_directive t.
 
+    Definition exprf_of_inline_directive {t} (v : inline_directive t) : @exprf var t
+      := match v with
+         | default_inline t e => e
+         | inline t e => e
+         | no_inline t e => e
+         end.
+
     Context (postprocess : forall {t}, @exprf var t -> inline_directive t).
 
     Fixpoint inline_const_genf {t} (e : @exprf (@exprf var) t) : @exprf var t
