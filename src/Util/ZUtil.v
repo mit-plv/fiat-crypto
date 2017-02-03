@@ -250,6 +250,27 @@ Ltac canonicalize_comm_step mul ls comm comm3 :=
 Ltac canonicalize_comm mul ls comm comm3 := repeat canonicalize_comm_step mul ls comm comm3.
 
 Module Z.
+  Section proper.
+    (** We prove a bunch of [Proper] lemmas, but do not make them
+        instances; making them instances would slow typeclass search
+        unacceptably.  In files where we use these, we add them with
+        [Local Existing Instances]. *)
+    Lemma add_le_Proper : Proper (Z.le ==> Z.le ==> Z.le) Z.add.
+    Proof. repeat (omega || intro). Qed.
+    Lemma sub_le_ge_Proper : Proper (Z.le ==> Z.ge ==> Z.le) Z.sub.
+    Proof. repeat (omega || intro). Qed.
+    Lemma sub_le_eq_Proper : Proper (Z.le ==> Logic.eq ==> Z.le) Z.sub.
+    Proof. repeat (omega || intro). Qed.
+    Lemma log2_up_le_Proper : Proper (Z.le ==> Z.le) Z.log2_up.
+    Proof. intros ???; apply Z.log2_up_le_mono; assumption. Qed.
+    Lemma log2_le_Proper : Proper (Z.le ==> Z.le) Z.log2.
+    Proof. intros ???; apply Z.log2_le_mono; assumption. Qed.
+    Lemma pow_Zpos_le_Proper x : Proper (Z.le ==> Z.le) (Z.pow (Z.pos x)).
+    Proof. intros ???; apply Z.pow_le_mono_r; try reflexivity; try assumption. Qed.
+    Lemma le_Proper_ge_le_flip_impl : Proper (Z.le ==> Z.ge ==> Basics.flip Basics.impl) Z.le.
+    Proof. intros ???????; omega. Qed.
+  End proper.
+
   Definition pow2_mod n i := (n &' (Z.ones i)).
 
   Lemma pow2_mod_spec : forall a b, (0 <= b) -> Z.pow2_mod a b = a mod (2 ^ b).
