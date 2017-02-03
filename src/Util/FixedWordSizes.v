@@ -96,3 +96,15 @@ Definition wland {logsz}
 Definition wlor {logsz}
   := word_case_dep (T:=fun _ word => word -> word -> word)
                    logsz wlor32 wlor64 wlor128 (fun _ => @wor _).
+
+Create HintDb fixed_size_constants discriminated.
+Hint Unfold word32 word64 word128
+     ZToWord ZToWord32 ZToWord64 ZToWord128
+     wordToZ word32ToZ word64ToZ word128ToZ
+     wadd wadd32 wadd64 wadd128
+     wsub wsub32 wsub64 wsub128
+     wmul wmul32 wmul64 wmul128
+     wshl wshl32 wshl64 wshl128
+     wshr wshr32 wshr64 wshr128
+     wland wland32 wland64 wland128
+     wlor wlor32 wlor64 wlor128 : fixed_size_constants.

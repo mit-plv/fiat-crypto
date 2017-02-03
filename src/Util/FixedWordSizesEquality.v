@@ -176,3 +176,41 @@ Proof.
   intros sz1 sz2; break_match; intros; apply wordToZ_gen_ZToWord_gen_wordToZ_gen;
     handle_le.
 Qed.
+
+Local Ltac wordToZ_word_case_dep_t :=
+  let H := fresh in
+  intro H;
+  intros; unfold wordToZ, word_case_dep, wordT, word_case, word32, word64, word128, word32ToZ, word64ToZ, word128ToZ in *;
+  break_innermost_match;
+  change 128%nat with (2^7)%nat in *;
+  change 64%nat with (2^6)%nat in *;
+  change 32%nat with (2^5)%nat in *;
+  apply H.
+
+Lemma wordToZ_word_case_dep_binop' (wop : forall sz, word (2^sz) -> word (2^sz) -> word (2^sz))
+      (P : nat -> Z -> Z -> Z -> Type)
+  : (forall logsz (x y : word (2^logsz)), P logsz (wordToZ_gen x) (wordToZ_gen y) (wordToZ_gen (wop logsz x y)))
+    -> forall logsz (x y : wordT logsz), P logsz (wordToZ x) (wordToZ y) (wordToZ (word_case_dep (T:=fun _ W => W -> W -> W) logsz (wop 5) (wop 6) (wop 7) wop x y)).
+Proof. wordToZ_word_case_dep_t. Qed.
+Lemma wordToZ_word_case_dep_binop (wop : forall sz, word sz -> word sz -> word sz)
+      (P : nat -> Z -> Z -> Z -> Type)
+  : (forall logsz (x y : word (2^logsz)), P logsz (wordToZ_gen x) (wordToZ_gen y) (wordToZ_gen (wop (2^logsz) x y)))
+    -> forall logsz (x y : wordT logsz), P logsz (wordToZ x) (wordToZ y) (wordToZ (word_case_dep (T:=fun _ W => W -> W -> W) logsz (wop 32) (wop 64) (wop 128) (fun _ => wop _) x y)).
+Proof. apply wordToZ_word_case_dep_binop'. Qed.
+
+(** This converts goals involving (currently only binary) [wordT]
+    operations to the corresponding goals involving [word]
+    operations. *)
+Ltac fixed_size_op_to_word :=
+  repeat autounfold with fixed_size_constants in *;
+  lazymatch goal with
+  | [ |- context[wordToZ (word_case_dep (T:=?T) ?logsz (?wop 32) (?wop 64) (?wop 128) ?f ?x ?y)] ]
+    => move y at top; move x at top;
+       revert dependent logsz; intros logsz x y;
+       pattern (wordToZ x), (wordToZ y), (wordToZ (word_case_dep (T:=T) logsz (wop 32) (wop 64) (wop 128) f x y));
+       let P := lazymatch goal with |- ?P _ _ _ => P end in
+       let P := lazymatch (eval pattern logsz in P) with ?P _ => P end in
+       revert logsz x y;
+       refine (@wordToZ_word_case_dep_binop wop P _);
+       intros logsz x y; unfold wordToZ_gen; intros
+  end.
