@@ -166,6 +166,11 @@ Section language.
         := @interp_flat_type_rel_pointwise2_gen_Prop Prop and True.
       Global Arguments interp_flat_type_rel_pointwise2 _ !_ _ _ / .
 
+      Lemma interp_flat_type_rel_pointwise2_hetero_iff {R t} x y
+        : interp_flat_type_rel_pointwise2 (fun t => R t t) t x y
+          <-> interp_flat_type_rel_pointwise2_hetero R t t x y.
+      Proof. induction t; simpl; rewrite_hyp ?*; reflexivity. Qed.
+
       Section with_coercion.
         Let Tbase := (@Tbase base_type_code).
         Local Coercion Tbase : base_type_code >-> flat_type.
