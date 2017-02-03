@@ -99,8 +99,6 @@ Definition wlor {logsz}
 
 Create HintDb fixed_size_constants discriminated.
 Hint Unfold word32 word64 word128
-     ZToWord ZToWord32 ZToWord64 ZToWord128
-     wordToZ word32ToZ word64ToZ word128ToZ
      wadd wadd32 wadd64 wadd128
      wsub wsub32 wsub64 wsub128
      wmul wmul32 wmul64 wmul128
