@@ -2111,6 +2111,13 @@ Module Z.
   Qed.
   Hint Rewrite log2_pred_pow2_full : zsimplify.
 
+  Lemma log2_up_le_full a : a <= 2^Z.log2_up a.
+  Proof.
+    destruct (Z_dec 1 a) as [ [ ? | ? ] | ? ];
+      first [ apply Z.log2_up_spec; assumption
+            | rewrite Z.log2_up_eqn0 by omega; simpl; omega ].
+  Qed.
+
   Lemma ones_lt_pow2 x y : 0 <= x <= y -> Z.ones x < 2^y.
   Proof.
     rewrite Z.ones_equiv, Z.lt_pred_le.
