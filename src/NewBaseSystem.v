@@ -100,6 +100,41 @@ Require Import Recdef.
     Lemma to_nat_neg : forall x, x < 0 -> Z.to_nat x = 0%nat.
     Proof. destruct x; try reflexivity; intros. pose proof (Pos2Z.is_pos p). omega. Qed.
 
+    Fixpoint map_cps {A B} (g : A->B) ls
+             {T} (f:list B->T):=
+      match ls with
+      | nil => f nil
+      | a :: t => map_cps g t (fun r => f (g a :: r))
+      end.
+    Lemma map_cps_correct {A B} g ls: forall {T} f,
+      @map_cps A B g ls T f = f (map g ls).
+    Proof. induction ls; simpl; intros; rewrite ?IHls; reflexivity. Qed.
+
+    Fixpoint flat_map_cps {A B} (g:A->forall {T}, (list B->T)->T) (ls : list A) {T} (f:list B->T)  :=
+      match ls with
+      | nil => f nil
+      | (x::tl)%list => g x (fun r => flat_map_cps g tl (fun rr => f (r ++ rr))%list)
+      end.
+    Lemma flat_map_cps_correct {A B} g ls: forall {T} (f:list B->T) g',
+        (forall x T h, @g x T h = h (g' x)) ->
+        @flat_map_cps A B g ls T f = f (List.flat_map g' ls).
+    Proof.
+      induction ls; intros; [reflexivity|].
+      simpl flat_map_cps. simpl flat_map.
+      rewrite H; erewrite IHls by eassumption.
+      reflexivity.
+    Qed.
+
+Ltac find_continuation :=
+  match goal with |- ?lhs = ?g ?y =>
+                  match eval pattern y in lhs with
+                  ?f _ =>
+                  change (f y = g y)
+                  end
+  end;
+  apply f_equal; reflexivity.
+
+
 Delimit Scope runtime_scope with RT.
 Definition runtime_mul := Z.mul. Global Infix "*" := runtime_mul : runtime_scope.
 Definition runtime_add := Z.add. Global Infix "+" := runtime_add : runtime_scope. 
@@ -120,34 +155,67 @@ Module B.
     Proof. induction p; simpl eval; rewrite ?eval_nil, ?eval_cons; nsatz. Qed.
     Create HintDb push_eval discriminated. Hint Rewrite eval_nil eval_cons eval_app : push_eval.
 
-    Definition mul (p q:list limb) : list limb :=
-      List.flat_map (fun t => List.map (fun t' => (fst t * fst t', (snd t * snd t')%RT)) q) p.
-    Lemma eval_map_mul a x q : eval (List.map (fun t => (a * fst t, x * snd t)) q) = a * x * eval q.
-    Proof. induction q; simpl List.map; autorewrite with push_eval cancel_pair; nsatz. Qed.
-    Hint Rewrite eval_map_mul : push_eval.
-    Lemma eval_mul p q : eval (mul p q) = eval p * eval q.
-    Proof. induction p; simpl mul; autorewrite with push_eval cancel_pair; try nsatz. Qed.
-    Hint Rewrite eval_mul : push_eval.
+    Definition multerm (t t' : limb) : limb :=
+      (fst t * fst t', snd t * snd t')%RT.
+    Definition mul (p q:list limb) {T} (f : list limb->T) :=
+      flat_map_cps (fun t => @map_cps _ _ (multerm t) q) p f.
+    Lemma eval_map_mul (a:limb) (q:list limb) : eval (List.map (multerm a) q) = fst a * snd a * eval q.
+    Proof.
+      induction q; cbv [multerm]; simpl List.map;
+        autorewrite with push_eval cancel_pair; nsatz.
+    Qed. Hint Rewrite eval_map_mul : push_eval.
+    Lemma eval_mul p q:
+      forall {T} f g (H: forall x, f x = g (eval x)),
+      @mul p q T f = g (eval p * eval q).
+    Proof.
+      induction p;intros; autorewrite with push_eval cancel_pair.
+      { cbv. rewrite H. f_equal. }
+      { cbv [mul] in *. simpl. rewrite map_cps_correct.
+        erewrite IHp by (intros; rewrite H; autorewrite with push_eval; find_continuation).
+        simpl; apply f_equal.
+        autorewrite with push_eval; nsatz. }
+    Qed. Hint Rewrite eval_mul : push_eval.
 
-    Fixpoint split (s:Z) (xs:list limb) : list limb * list limb :=
+    Fixpoint split (s:Z) (xs:list limb)
+             {T} (f :list limb*list limb->T) :=
       match xs with
-      | nil => (nil, nil)
+      | nil => f (nil, nil)
       | cons x xs' =>
-        let sxs' := split s xs' in
+        split s xs'
+              (fun sxs' =>
         if dec (fst x mod s = 0)
-        then (fst sxs',          cons (fst x / s, snd x) (snd sxs'))
-        else (cons x (fst sxs'), snd sxs')
+        then f (fst sxs',          cons (fst x / s, snd x) (snd sxs'))
+        else f (cons x (fst sxs'), snd sxs'))
       end.
 
-    Lemma eval_split s p (s_nonzero:s<>0) :
-      eval (fst (split s p)) + s * eval (snd (split s p)) = eval p.
-    Proof. induction p;
-             repeat match goal with
-                    | _ => progress simpl split
-                    | _ => progress autorewrite with push_eval cancel_pair
-                    | _ => progress break_match
-                    | H:_ |- _ => unique pose proof (Z_div_exact_full_2 _ _ s_nonzero H)
-                    end; nsatz. Qed.
+    Lemma eval_split s p (s_nonzero:s<>0): forall {T} f g
+        (H:forall x, f x = g (eval (fst x) + s*eval (snd x))),
+        @split s p T f = g (eval p).
+    Proof.
+      induction p; intros;
+        repeat match goal with
+               | _ => progress simpl
+               | _ => split
+               | _ => progress autorewrite with push_eval cancel_pair
+               | _ => progress break_match
+               | _ => rewrite H
+               | _ => erewrite IHp by
+                     (intros; rewrite H;
+                      autorewrite with push_eval cancel_pair;
+                      let a := fresh "x" in
+                      let Heqa := fresh "Heqx" in
+                      match goal with
+                        |- _ ?x = _ ?y =>
+                        remember (x-y) as a eqn:Heqa;
+                        replace x with (y+a) by (subst a; ring);
+                        ring_simplify in Heqa; subst a
+                      end; find_continuation)
+               | |- ?g _ = ?g _ => apply f_equal
+               | H:_ |- _ =>
+                 unique pose proof (Z_div_exact_full_2 _ _ s_nonzero H)
+               | |- _ => nsatz
+               end.
+    Qed.
 
     Definition reduce (s:Z) (c:list limb) (p:list limb) : list limb :=
       let ab := split s p in fst ab ++ mul c (snd ab).
@@ -179,13 +247,6 @@ Module B.
               {end_wt:Z} {end_wt_pos : 0 < end_wt}
       .
 
-      (* TODO : move *)
-      Fixpoint flat_map_cps {A B} (g:A->forall {T}, (list B->T)->T) (ls : list A) {T} (f:list B->T)  :=
-        match ls with
-        | nil => f nil
-        | (x::tl)%list => g x (fun r => flat_map_cps g tl (fun rr => f (r ++ rr))%list)
-        end.
-      
       Definition multerm (t t' : limb) {T} (f:list limb->T) :=
         dlet tt' := mul (snd t) (snd t') in
         f ((fst t*fst t', runtime_fst tt') :: (fst t*fst t'*word_max, runtime_snd tt') :: nil)%list.
@@ -197,15 +258,6 @@ Module B.
       Lemma multerm_correct t t' : forall {T} (f:list limb->T),
        multerm t t' f = f ([(fst t*fst t', fst (mul (snd t) (snd t'))); (fst t*fst t'*word_max, snd (mul (snd t) (snd t')))]).
       Proof. reflexivity. Qed.
-      Lemma flat_map_cps_correct {A B} g ls: forall {T} (f:list B->T) g',
-        (forall x T h, @g x T h = h (g' x)) ->
-       @flat_map_cps A B g ls T f = f (List.flat_map g' ls).
-      Proof.
-        induction ls; intros; [reflexivity|].
-        simpl flat_map_cps. simpl flat_map.
-        rewrite H; erewrite IHls by eassumption.
-        reflexivity.
-      Qed.
       Lemma eval_map_sat_mul t q :
         flat_map_cps (multerm t) q eval = fst t * snd t * eval q.
       Proof.
@@ -377,34 +429,6 @@ Module B.
                  end)
           end
         end.
-(*
-      Definition p : list limb := [(1,5); (4,2); (4,3); (4,2)].
-      Goal False.
-        remember (sat_mul p p id) as P.
-        cbv - [Let_In runtime_add runtime_mul runtime_fst runtime_snd] in HeqP.
-        cbv [runtime_add runtime_mul runtime_fst runtime_snd] in HeqP.
-      Abort.
-      Goal False.
-        remember (sat_mul p p (fun r => compact_no_carry r id)) as P.
-        cbv - [Let_In runtime_add runtime_mul runtime_fst runtime_snd] in HeqP.
-        cbv [runtime_add runtime_mul runtime_fst runtime_snd] in HeqP.
-      Abort.
-      Goal False.
-        remember (sat_mul p p (fun r => compact_cols_loop1 nil nil r (length r) id)) as P.
-        cbv - [Let_In runtime_add runtime_mul runtime_fst runtime_snd] in HeqP.
-        cbv [runtime_add runtime_mul runtime_fst runtime_snd] in HeqP.
-      Abort.
-      *)
-      Ltac find_continuation H :=
-        intros;
-        rewrite H;
-        match goal with |- ?lhs = ?g ?y =>
-                        match eval pattern y in lhs with
-                          ?f _ =>
-                          change (f y = g y)
-                        end
-        end;
-        apply f_equal; reflexivity.
 
       Lemma eval_compact_cols_loop1 n 
             {T} (f:list limb * list limb ->T) g
