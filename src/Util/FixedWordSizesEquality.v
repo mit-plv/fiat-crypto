@@ -256,5 +256,5 @@ Ltac fixed_size_op_to_word :=
        let P := lazymatch (eval pattern logsz in P) with ?P _ => P end in
        revert logsz x y z w;
        refine (@wordToZ_word_case_dep_quadop wop P _);
-       intros logsz x y z w; unfold wordToZ_gen; intros
+       intros logsz x y z w; intros
   end.
