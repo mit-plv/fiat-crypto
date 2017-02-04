@@ -1137,8 +1137,8 @@ Lemma pow2_mod_range : forall a n m,
 Proof.
   intros; unfold ZUtil.Z.pow2_mod.
   rewrite Z.land_ones; [|assumption].
-  split; [apply Z.mod_pos_bound, WordUtil.Z_pow2_gt_0; assumption|].
-  eapply Z.lt_le_trans; [apply Z.mod_pos_bound, WordUtil.Z_pow2_gt_0; assumption|].
+  split; [apply Z.mod_pos_bound, ZUtil.Z.pow2_gt_0; assumption|].
+  eapply Z.lt_le_trans; [apply Z.mod_pos_bound, ZUtil.Z.pow2_gt_0; assumption|].
   apply Z.pow_le_mono; [|assumption].
   split; simpl; omega.
 Qed.
@@ -1153,7 +1153,7 @@ Proof.
   intros a n m H0 H1 H2; destruct H2.
   split; [apply Z.shiftr_nonneg; assumption|].
   rewrite Z.shiftr_div_pow2; [|assumption].
-  apply Z.div_lt_upper_bound; [apply WordUtil.Z_pow2_gt_0; assumption|].
+  apply Z.div_lt_upper_bound; [apply ZUtil.Z.pow2_gt_0; assumption|].
   eapply Z.lt_le_trans; [eassumption|apply Z.eq_le_incl].
   apply Z.pow_add_r; omega.
 Qed.
