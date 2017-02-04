@@ -4,7 +4,7 @@ Require Import ZArith Nsatz Psatz Coq.omega.Omega.
 Require Import Coq.ZArith.BinIntDef. Local Open Scope Z_scope.
 Require Import Crypto.Util.ZUtil Crypto.Util.ListUtil.
 
-Require Coq.Lists.List. Local Notation list := List.list.
+Require Import Coq.Lists.List. Import ListNotations.
 Require Crypto.Util.Tuple. Local Notation tuple := Tuple.tuple.
 Require Import Recdef.
 
@@ -171,7 +171,7 @@ Module B.
     Qed. Hint Rewrite eval_carry eval_reduce : push_eval.
 
     Section Saturated.
-      Context {word_max : Z} {word_max_pos : 1 < word_max}
+      Context {word_max : Z} {word_max_pos : 1 < word_max} 
               {add : Z -> Z -> Z * Z}
               {add_correct : forall x y, fst (add x y) + word_max * snd (add x y) = x + y}
               {mul : Z -> Z -> Z * Z}
@@ -179,32 +179,98 @@ Module B.
               {end_wt:Z} {end_wt_pos : 0 < end_wt}
       .
 
-      Definition multerm t t' : list limb :=
+      (* TODO : move *)
+      Fixpoint flat_map_cps {A B} (g:A->forall {T}, (list B->T)->T) (ls : list A) {T} (f:list B->T)  :=
+        match ls with
+        | nil => f nil
+        | (x::tl)%list => g x (fun r => flat_map_cps g tl (fun rr => f (r ++ rr))%list)
+        end.
+      
+      Definition multerm (t t' : limb) {T} (f:list limb->T) :=
         dlet tt' := mul (snd t) (snd t') in
-        ((fst t*fst t', runtime_fst tt') :: (fst t*fst t'*word_max, runtime_snd tt') :: nil)%list.
-      Definition sat_mul (p q : list limb) : list limb := 
-        List.flat_map (fun t => List.flat_map (multerm t) q) p.
+        f ((fst t*fst t', runtime_fst tt') :: (fst t*fst t'*word_max, runtime_snd tt') :: nil)%list.
 
-      Lemma eval_map_sat_mul t q :
-        eval (List.flat_map (multerm t) q) = fst t * snd t * eval q.
+      Definition sat_mul (p q : list limb) {T} (f:list limb->T) := 
+        flat_map_cps (fun t => @flat_map_cps _ _ (multerm t) q) p f.
+      (* TODO (jgross): kind of an interesting behavior--it infers the type arguments like this but fails to check if I leave them implicit *)
+
+      Lemma multerm_correct t t' : forall {T} (f:list limb->T),
+       multerm t t' f = f ([(fst t*fst t', fst (mul (snd t) (snd t'))); (fst t*fst t'*word_max, snd (mul (snd t) (snd t')))]).
+      Proof. reflexivity. Qed.
+      Lemma flat_map_cps_correct {A B} g ls: forall {T} (f:list B->T) g',
+        (forall x T h, @g x T h = h (g' x)) ->
+       @flat_map_cps A B g ls T f = f (List.flat_map g' ls).
       Proof.
-        induction q; simpl List.flat_map; cbv [multerm];
-          autorewrite with push_eval cancel_pair;
-          repeat match goal with |- context [mul ?x ?y] =>
-                                 unique pose proof (mul_correct x y) end; nsatz.
+        induction ls; intros; [reflexivity|].
+        simpl flat_map_cps. simpl flat_map.
+        rewrite H; erewrite IHls by eassumption.
+        reflexivity.
+      Qed.
+      Lemma eval_map_sat_mul t q :
+        flat_map_cps (multerm t) q eval = fst t * snd t * eval q.
+      Proof.
+        induction q; intros; simpl flat_map_cps; [autorewrite with push_eval; nsatz|].
+        rewrite multerm_correct.
+        erewrite !@flat_map_cps_correct in * by apply multerm_correct.
+        autorewrite with push_eval cancel_pair.
+        rewrite IHq.
+        repeat match goal with |- context [mul ?x ?y] =>
+                               unique pose proof (mul_correct x y) end.
+        nsatz.
       Qed. Hint Rewrite eval_map_sat_mul : push_eval. 
-      Lemma eval_sat_mul p q : eval (sat_mul p q) = eval p * eval q.
-      Proof.  induction p; simpl sat_mul; autorewrite with push_eval cancel_pair; nsatz.
+      Lemma eval_sat_mul p q : sat_mul p q eval = eval p * eval q.
+      Proof.
+        cbv [sat_mul];  erewrite !@flat_map_cps_correct
+          by (intros; try apply flat_map_cps_correct; apply multerm_correct).
+        induction p; intros; [reflexivity|].
+        simpl flat_map; autorewrite with push_eval cancel_pair.
+        rewrite IHp; erewrite <-flat_map_cps_correct by apply multerm_correct.
+        rewrite eval_map_sat_mul; nsatz.
       Qed. Hint Rewrite eval_sat_mul : push_eval.
 
-      Definition has_same_wt (cx:limb) := fun a:limb => if dec (fst cx = fst a) then true else false.
+      Fixpoint find_remove_first'_cps {A} (g:A->forall {T}, (bool->T)->T) (acc ls:list A)
+               {T} (f:option A * list A ->T) :=
+        match ls with
+        | [] => f (None, acc)
+        | x :: tl =>
+          g x (fun r =>
+          if r
+          then f (Some x, acc ++ tl)
+          else
+            find_remove_first'_cps g (acc ++ [x]) tl f)
+        end.
+      Definition find_remove_first_cps {A} g ls {T} f :=
+        @find_remove_first'_cps A g nil ls T f.
 
-      Lemma find_remove_first'_same_wt cx cx' p: forall acc,
-        fst (find_remove_first' (has_same_wt cx) acc p) = Some cx' ->
-        fst cx' = fst cx /\
-        fst cx * (snd cx + snd cx') + eval (snd (find_remove_first' (has_same_wt cx) acc p)) = fst cx * snd cx + eval acc + eval p.
+      Lemma find_remove_first'_cps_correct
+            {A} (g:A->forall {T}, (bool->T) -> T) ls {T} f
+            (H: forall x {B} h, @g x B h = h (g x id)):
+        forall acc,
+          @find_remove_first'_cps A g acc ls T f =
+          f (find_remove_first' (fun x => g x id) acc ls).
       Proof.
-        induction p; intros; simpl find_remove_first' in *;
+        induction ls; intros; simpl; try (rewrite H, IHls; break_if); reflexivity.
+      Qed.
+      Lemma find_remove_first_cps_correct
+            {A} (g:A->forall {T}, (bool->T) -> T) ls {T} f
+            (H: forall x {B} h, @g x B h = h (g x id)):
+          @find_remove_first_cps A g ls T f =
+          f (find_remove_first (fun x => g x id) ls).
+      Proof. apply find_remove_first'_cps_correct; auto. Qed.
+
+      Definition has_same_wt (cx a:limb) {T} (f:bool->T) :=
+        if dec (fst cx = fst a) then f true else f false.
+      Lemma has_same_wt_correct cx a {T} f:
+        @has_same_wt cx a T f = f (if dec (fst cx = fst a) then true else false).
+      Proof. cbv [has_same_wt]; break_if; reflexivity. Qed.
+
+      Lemma find_remove_first'_cps_same_wt cx cx' p: forall acc,
+        find_remove_first'_cps (has_same_wt cx) acc p fst = Some cx' ->
+        fst cx' = fst cx /\
+        fst cx * (snd cx + snd cx') + find_remove_first'_cps (has_same_wt cx) acc p (fun r =>eval (snd r)) = fst cx * snd cx + eval acc + eval p.
+      Proof.
+        cbv [has_same_wt];
+        induction p; intros; simpl find_remove_first'_cps in *;
             repeat match goal with
                    | |- _ => progress (autorewrite with push_eval cancel_pair in * )
                    | H : Some _ = Some _ |- _ => progress (inversion H; subst)
@@ -212,7 +278,6 @@ Module B.
                    | |- _ => break_if
                    | |- _ => split; subst 
                    | |- _ => discriminate
-                   | H : has_same_wt _ _ = true |- _ => cbv [has_same_wt] in H
                    | |- _ => nsatz
                    end.
         Unshelve.
@@ -220,104 +285,171 @@ Module B.
         2:eassumption.
       Qed.
 
-      Lemma find_remove_first_same_wt cx cx' p
-        (H : fst (@find_remove_first limb (has_same_wt cx) p) = Some cx') :
+      Lemma find_remove_first_cps_same_wt cx cx' p
+        (H : find_remove_first_cps (has_same_wt cx) p fst = Some cx') :
         fst cx' = fst cx /\
-        fst cx * (snd cx + snd cx') + eval (snd (@find_remove_first limb (has_same_wt cx) p)) = fst cx * snd cx + eval p.
+        fst cx * (snd cx + snd cx') + find_remove_first_cps (has_same_wt cx) p (fun r => eval (snd r)) = fst cx * snd cx + eval p.
       Proof.
-        cbv [find_remove_first]; intros.
-        erewrite (proj1 (find_remove_first'_same_wt _ _ _ _ H)) by eauto.
-        erewrite (proj2 (find_remove_first'_same_wt _ _ _ _ H)) by eauto.
+        cbv [find_remove_first_cps]; intros.
+        erewrite (proj1 (find_remove_first'_cps_same_wt _ _ _ _ H)) by eauto.
+        erewrite (proj2 (find_remove_first'_cps_same_wt _ _ _ _ H)) by eauto.
         autorewrite with push_eval; split; try ring.
       Qed.
 
-      Fixpoint compact_no_carry' (acc p:list limb) : list limb :=
+      Fixpoint compact_no_carry' (acc p:list limb) {T} (f:list limb->T) :=
         match p with
-        | nil => acc
+        | nil => f acc
         | (cx::tl)%list =>
-          let found_ls := (find_remove_first (has_same_wt cx) acc) in
-          match (fst found_ls) with
-          | None => compact_no_carry' (cx::acc)%list tl
-          | Some l => compact_no_carry' ((fst cx, (snd cx + snd l)%RT)::snd found_ls)%list tl
-          end
+          find_remove_first_cps
+            (has_same_wt cx) acc
+            (fun r =>
+               match (fst r) with
+               | None => compact_no_carry' (cx::acc)%list tl f
+               | Some l => compact_no_carry' ((fst cx, (snd cx + snd l)%RT)::snd r)%list tl f
+               end)
         end.
-      Definition compact_no_carry := compact_no_carry' nil.
-      Lemma eval_compact_no_carry' p: forall acc,
-        eval (compact_no_carry' acc p) = eval acc + eval p.
+      Definition compact_no_carry p {T} f := @compact_no_carry' nil p T f.
+      
+      Lemma eval_compact_no_carry' p {T} (f:list limb -> T) g
+          (H:forall x, f x = g (eval x)):
+          forall acc,
+        compact_no_carry' acc p f = g (eval acc + eval p).
       Proof.
         induction p; simpl;
           repeat match goal with
+                 | |- _ => rewrite @find_remove_first_cps_correct in *
+                     by apply has_same_wt_correct
+                 | |- _ => rewrite H
                  | |- _ => break_match
                  | |- _ => progress (intros;subst)
-                 | |- _ => progress autorewrite with push_eval in *
-                 | |- _ => progress rewrite ?@fst_pair, ?@snd_pair in *
+                 | |- _ => progress autorewrite with push_eval cancel_pair in *
                  | |- _ => rewrite IHp
-                 | H : fst (find_remove_first _ _) = _ |- _ => destruct (find_remove_first_same_wt _ _ _ H); clear H
+                 | H : fst (find_remove_first _ _) = _ |- _ =>
+                   rewrite <-find_remove_first_cps_correct in H by apply has_same_wt_correct;
+                     destruct (find_remove_first_cps_same_wt _ _ _ H); clear H
+                 | |- g _ = g _ => apply f_equal
                  | |- _ => nsatz
                  end.
       Qed.
       Lemma length_compact_no_carry' p: forall acc,
-        (length (compact_no_carry' acc p) <= length p + length acc)%nat.
+          (compact_no_carry' acc p (@length _) <= length p + length acc)%nat.
       Proof.
         induction p; simpl;
-        repeat match goal with
-               | |- _ => progress intros
-               | |- _ => progress distr_length
-               | |- _ => rewrite IHp
-               | |- _ => break_match
-               end.
+          repeat match goal with
+                 | |- _ => progress intros
+                 | |- _ => progress distr_length
+                 | |- _ => rewrite @find_remove_first_cps_correct in *
+                     by apply has_same_wt_correct
+                 | |- _ => rewrite IHp
+                 | |- _ => break_match
+                 end.
       Qed.
-      Lemma eval_compact_no_carry p: eval (compact_no_carry p) = eval p.
-      Proof. cbv [compact_no_carry]. rewrite eval_compact_no_carry'. reflexivity. Qed. Hint Rewrite eval_compact_no_carry : push_eval.
-      Lemma length_compact_no_carry p: (length (compact_no_carry p) <= length p)%nat. Proof. cbv [compact_no_carry]. rewrite length_compact_no_carry'. distr_length. Qed. Hint Rewrite length_compact_no_carry : distr_length.
+      Lemma eval_compact_no_carry p: forall {T} (f:list limb -> T) g,
+         (forall x, f x = g (eval x)) ->
+         compact_no_carry p f = g (eval p).
+      Proof.
+        cbv [compact_no_carry]; intros.
+        apply eval_compact_no_carry'; assumption.
+      Qed.
+      Lemma length_compact_no_carry p: (compact_no_carry p (@length _) <= length p)%nat. Proof. cbv [compact_no_carry]. rewrite length_compact_no_carry'. distr_length. Qed. Hint Rewrite length_compact_no_carry : distr_length.
 
       (* n is fuel, should be length of inp *)
       Fixpoint compact_cols_loop1 (carries out inp : list limb) (n:nat)
-        : list limb * list limb :=
+               {T} (f:list limb * list limb ->T):=
         match n with
-        | O => (carries, out)
+        | O => f (carries, out)
         | S n' => 
           match inp with
-          | nil => (carries, out)
+          | nil => f (carries, out)
           | cons cx tl =>
-            let found_ls := find_remove_first (has_same_wt cx) tl in
-            match (fst found_ls) with
-            | None => compact_cols_loop1 carries (cx::out) tl n'
-            | Some cx' =>
-              dlet sum_carry := add (snd cx) (snd cx') in
-              compact_cols_loop1
-                (compact_no_carry
-                   ((fst cx * word_max, runtime_snd sum_carry)::carries))
-                out
-                ((fst cx, runtime_fst sum_carry):: snd found_ls)
-                n'
-            end
+            find_remove_first_cps
+              (has_same_wt cx) tl
+              (fun r =>
+                 let found_ls := r in
+                 match (fst found_ls) with
+                 | None => compact_cols_loop1 carries (cx::out) tl n' f
+                 | Some cx' =>
+                   dlet sum_carry := add (snd cx) (snd cx') in
+                   compact_no_carry
+                     ((fst cx * word_max, runtime_snd sum_carry)::carries)
+                              (fun rr =>
+                                 compact_cols_loop1 rr out ((fst cx, runtime_fst sum_carry):: snd found_ls) n' f)
+                 end)
           end
         end.
+(*
+      Definition p : list limb := [(1,5); (4,2); (4,3); (4,2)].
+      Goal False.
+        remember (sat_mul p p id) as P.
+        cbv - [Let_In runtime_add runtime_mul runtime_fst runtime_snd] in HeqP.
+        cbv [runtime_add runtime_mul runtime_fst runtime_snd] in HeqP.
+      Abort.
+      Goal False.
+        remember (sat_mul p p (fun r => compact_no_carry r id)) as P.
+        cbv - [Let_In runtime_add runtime_mul runtime_fst runtime_snd] in HeqP.
+        cbv [runtime_add runtime_mul runtime_fst runtime_snd] in HeqP.
+      Abort.
+      Goal False.
+        remember (sat_mul p p (fun r => compact_cols_loop1 nil nil r (length r) id)) as P.
+        cbv - [Let_In runtime_add runtime_mul runtime_fst runtime_snd] in HeqP.
+        cbv [runtime_add runtime_mul runtime_fst runtime_snd] in HeqP.
+      Abort.
+      *)
+      Ltac find_continuation H :=
+        intros;
+        rewrite H;
+        match goal with |- ?lhs = ?g ?y =>
+                        match eval pattern y in lhs with
+                          ?f _ =>
+                          change (f y = g y)
+                        end
+        end;
+        apply f_equal; reflexivity.
 
-      Lemma eval_compact_cols_loop1 n: forall carries out p,
-        (length p = n)%nat ->
-        eval (snd (compact_cols_loop1 carries out p n))
-        + eval (fst (compact_cols_loop1 carries out p n))
-        = eval p + eval carries + eval out.
+      Lemma eval_compact_cols_loop1 n 
+            {T} (f:list limb * list limb ->T) g
+            (H:forall x, f x = g (eval (fst x) + eval (snd x))):
+        forall p (H0:length p = n) out carries,
+          compact_cols_loop1 carries out p n f
+          = g (eval p + eval out + eval carries).
       Proof.
         induction n; destruct p; intros; distr_length; subst;
           simpl compact_cols_loop1; cbv [Let_In];
-        repeat match goal with
-               | |- _ => rewrite IHn
-               | |- _ => break_match
-               | |- _ => progress subst 
-               | |- _ => progress autorewrite with push_eval cancel_pair distr_length
-               | |- context[add ?x ?y] =>
-                 specialize (add_correct x y)
-               | H : fst (find_remove_first _ ?p) = Some _ |- _ =>
-                 unique assert (length p > 0)%nat by (destruct p; (discriminate || (simpl; omega)))
-               | H : fst (find_remove_first _ _) = _ |- _ =>
-                 destruct (find_remove_first_same_wt _ _ _ H); clear H
-               | |- _ => discriminate 
-               | |- _ => nsatz
-               | |- _ => omega
-               end.
+            repeat match goal with
+                   | |- _ => erewrite eval_compact_no_carry
+                       by find_continuation IHn
+                   | |- _ => (rewrite @find_remove_first_cps_correct in *
+                               by apply has_same_wt_correct )
+                   | |- _ => rewrite H 
+                   | |- _ => rewrite IHn
+                   | |- _ => break_match
+                   | |- _ => progress subst 
+                   | |- _ => progress autorewrite with
+                             push_eval cancel_pair distr_length
+                   | |- context[add ?x ?y] =>
+                     specialize (add_correct x y)
+                   | H : fst (find_remove_first _ ?p) = Some _ |- _ =>
+                     unique assert (length p > 0)%nat
+                       by (destruct p; (discriminate || (simpl; omega)))
+                   | |- context[compact_cols_loop1 _ _ ?p _ _ ] =>
+                     specialize (IHn p);
+                       let H := fresh "H" in
+                       match type of IHn with
+                         ?P -> _ => assert P as H
+                             by (intros; distr_length; break_match;
+                                 (omega || discriminate));
+                                      specialize (IHn H); clear H
+                       end
+                   | H : fst (find_remove_first _ _) = _ |- _ =>
+                     rewrite <-find_remove_first_cps_correct in H
+                       by apply has_same_wt_correct;
+                       destruct (find_remove_first_cps_same_wt _ _ _ H);
+                       clear H
+                   | |- g _ = g _ => apply f_equal 
+                   | |- _ => discriminate 
+                   | |- _ => nsatz
+                   | |- _ => omega
+                   end.
       Qed. Hint Rewrite eval_compact_cols_loop1 : push_eval.
 
       (* TODO : move *)
@@ -343,85 +475,141 @@ Module B.
         inversion H; subst; clear H.
         destruct (fold_right_min ls z); subst; simpl List.In; tauto.
       Qed.
-      
+      Fixpoint fold_right_cps {A B} (g:B->A->A) (a0:A) (l:list B) {T} (f:A->T) :=
+        match l with
+        | nil => f a0
+        | cons a tl => fold_right_cps g a0 tl (fun r => f (g a r))
+        end.
+      Lemma fold_right_cps_correct {A B} g a0 l: forall {T} f,
+        @fold_right_cps A B g a0 l T f = f (List.fold_right g a0 l).
+      Proof. induction l; intros; simpl; rewrite ?IHl; auto. Qed.
+      Definition fold_right_no_starter_cps {A} g ls {T} (f:option A->T) :=
+        match ls with
+        | nil => f None
+        | cons x tl => f (Some (List.fold_right g x tl))
+        end.
+      Lemma fold_right_no_starter_cps_correct {A} g ls {T} f :
+        @fold_right_no_starter_cps A g ls T f = f (fold_right_no_starter g ls).
+      Proof.
+        cbv [fold_right_no_starter_cps fold_right_no_starter]; break_match; reflexivity.
+      Qed.        
+
       (* n is fuel, should be [length carries + length inp] *)
       Fixpoint compact_cols_loop2 (carries out inp :list limb) (n:nat)
-        : list limb :=
+               {T} (f:list limb->T) :=
         match n with
-        | O => out
+        | O => f (out++carries++inp)
         | S n' => 
-          match (fold_right_no_starter Z.min (List.map fst (inp ++ carries))) with
-          | None => out
-          | Some min =>
-            let inp_found_ls := find_remove_first (has_same_wt (min, 0)) inp in
-            let car_found_ls := find_remove_first (has_same_wt (min, 0)) carries in
-            match fst inp_found_ls, fst car_found_ls with
-            | None, None => out (* never happens *)
-            | Some cx, None =>
-              compact_cols_loop2 carries (cx :: out) (snd inp_found_ls) n'
-            | None, Some cx =>
-              compact_cols_loop2 (snd car_found_ls) (cx :: out) inp n'
-            | Some icx, Some ccx =>
-              dlet sum_carry := add (snd icx) (snd ccx) in
-              compact_cols_loop2
-                (compact_no_carry
-                   ((min * word_max, runtime_snd sum_carry)::(snd car_found_ls)))
-                ((min, runtime_fst sum_carry) :: out)
-                (snd inp_found_ls) n'
-            end
-          end
+          fold_right_no_starter_cps
+            Z.min (List.map fst (inp ++ carries))
+            (fun r =>
+               match r with
+               | None => f (out++carries++inp)
+               | Some min =>
+                 find_remove_first_cps
+                   (has_same_wt (min, 0)) inp
+                   (fun rr =>
+                      let inp_found_ls := rr in
+                      find_remove_first_cps
+                        (has_same_wt (min, 0)) carries
+                        (fun rrr =>
+                           let car_found_ls := rrr in
+                           match fst inp_found_ls, fst car_found_ls with
+                           | None, None => f out (* never happens *)
+                           | Some cx, None =>
+                             compact_cols_loop2 carries (cx :: out) (snd inp_found_ls) n' f
+                           | None, Some cx =>
+                             compact_cols_loop2 (snd car_found_ls) (cx :: out) inp n' f
+                           | Some icx, Some ccx =>
+                             dlet sum_carry := add (snd icx) (snd ccx) in
+                                 compact_no_carry 
+                                   ((min * word_max, runtime_snd sum_carry)::(snd car_found_ls))
+                                   (fun rrrr =>
+                                      compact_cols_loop2
+                                        rrrr
+                                        ((min, runtime_fst sum_carry) :: out)
+                                        (snd inp_found_ls) n' f)
+                           end))
+               end)
         end.
 
-      Lemma eval_compact_cols_loop2 n: forall carries out p,
-        (length p + length carries <= n)%nat ->
-        eval (compact_cols_loop2 carries out p n)
-        = eval p + eval carries + eval out.
+      Lemma eval_compact_cols_loop2 n
+        {T} (f:list limb->T) g (H:forall x, f x = g (eval x)):
+        forall out p carries,
+        compact_cols_loop2 carries out p n f
+        = g (eval p + eval carries + eval out).
       Proof.
         induction n; intros; simpl compact_cols_loop2; cbv [Let_In].
-        { destruct p; destruct carries; distr_length. }
+        { destruct p; destruct carries; distr_length;
+            rewrite H; f_equal; autorewrite with push_eval distr_length;
+              ring. }
         {
+          rewrite fold_right_no_starter_cps_correct.
           repeat match goal with
-                  | |- _ => break_match
+                 | |- _ => rewrite @find_remove_first_cps_correct in *
+                     by (try apply find_remove_first_cps_correct;
+                         try apply has_same_wt_correct)
+                 | |- _ => break_match
                  | H : fst (find_remove_first _ ?p) = Some _ |- _ =>
                    unique assert (length p > 0)%nat by (destruct p; (discriminate || (simpl; omega)))
+                 | |- _ => rewrite H
+                 | |- _ => erewrite eval_compact_no_carry by find_continuation IHn
                  | |- _ => rewrite IHn by
-                    (try match goal with
-                       |- context [length (compact_no_carry ?p)] =>
-                       pose proof (length_compact_no_carry p) end;
-                 distr_length; repeat break_match; (omega || congruence))
-                   | |- context[add ?x ?y] =>
-                     specialize (add_correct x y)
-                   | H : fst (find_remove_first _ _) = Some _ |- _ =>
-                     destruct (find_remove_first_same_wt _ _ _ H);
-                       clear H
-                   | |- _ => nsatz
-                   | |- _ => progress (autorewrite with push_eval cancel_pair distr_length in * )
-                   | H : fold_right_no_starter Z.min _ = Some _ |- _ =>
-                     apply fold_right_no_starter_min in H
-                   | H : fst (find_remove_first _ _) = None |- _ =>
-                     apply find_remove_first_None in H
-                   | H : List.In _ (List.map _ _) |- _ =>
-                     apply List.in_map_iff in H;
-                       destruct H as [? [? ?]]; subst
-                   | H : List.In _ (_ ++ _) |- _ => apply List.in_app_or in H; destruct H
-                   | H1 : fst (find_remove_first _ ?p) = None,
-                          H2 : List.In ?x ?p
-                     |- _ =>
-                     apply (find_remove_first_None _ _ H1) in H2;
-                       cbv [has_same_wt] in H2; simpl fst in H2;
-                         break_if; congruence
+                       (try match goal with
+                              |- context [length (compact_no_carry ?p)] =>
+                              pose proof (length_compact_no_carry p) end;
+                        distr_length; repeat break_match; (omega || congruence))
+                 | |- context[add ?x ?y] =>
+                   specialize (add_correct x y)
+                 | H : fst (find_remove_first _ _) = Some _ |- _ =>
+                   rewrite <-find_remove_first_cps_correct in H
+                     by apply has_same_wt_correct;
+                     destruct (find_remove_first_cps_same_wt _ _ _ H);
+                     clear H
+                 | |- _ => nsatz
+                 | |- _ => progress (autorewrite with push_eval cancel_pair distr_length in * )
+                 | H : fold_right_no_starter Z.min _ = Some _ |- _ =>
+                   apply fold_right_no_starter_min in H
+                 | H : fst (find_remove_first _ _) = None |- _ =>
+                   apply find_remove_first_None in H
+                 | H : List.In _ (List.map _ _) |- _ =>
+                   apply List.in_map_iff in H;
+                     destruct H as [? [? ?]]; subst
+                 | H : List.In _ (_ ++ _) |- _ => apply List.in_app_or in H; destruct H
+                 | H1 : fst (find_remove_first _ ?p) = None,
+                        H2 : List.In ?x ?p
+                   |- _ =>
+                   apply (find_remove_first_None _ _ H1) in H2;
+                     cbv [has_same_wt id] in H2; simpl fst in H2;
+                       break_if; congruence
+                 | H : _ \/ _ |- _ => destruct H
+                 | |- g _ = g _ => apply f_equal
                  end.
-          destruct p; destruct carries; simpl in *; congruence. }
+          }
       Qed. Hint Rewrite eval_compact_cols_loop2 : push_eval.
 
-      Definition compact_cols (p:list limb) : list limb :=
-        let carries_out := compact_cols_loop1 nil nil p (length p) in
-        compact_cols_loop2 (fst carries_out) nil (snd carries_out)
-                           (length (fst carries_out ++ snd carries_out)).
+      Definition compact_cols (p:list limb) {T} (f:list limb->T) :=
+        compact_cols_loop1
+          nil nil p (length p)
+          (fun r => compact_cols_loop2
+                      (fst r) nil (snd r) (length (fst r ++ snd r)) f).
 
-      Lemma eval_compact_cols (p:list limb) :
-        eval (compact_cols p) = eval p.
-      Proof. cbv [compact_cols]; autorewrite with push_eval; distr_length. Qed.
+      Lemma eval_compact_cols (p:list limb) {T} (f:list limb->T) g
+        (H: forall x, f x = g (eval x)) :
+        compact_cols p f = g (eval p).
+      Proof.
+        cbv [compact_cols];
+          repeat match goal with
+                 | |- _ => progress intros
+                 | |- _ => progress autorewrite with push_eval cancel_pair
+                 | |- _ => progress distr_length
+                 | |- _ => erewrite eval_compact_cols_loop1
+                 | |- _ => erewrite eval_compact_cols_loop2
+                 | |- _ => rewrite H
+                 | |- _ => apply f_equal; ring
+                 | |- _ => reflexivity
+                 end.
+      Qed.
     End Saturated.
   End Associational.
 
@@ -567,14 +755,20 @@ Axiom add_get_carry : Z -> Z -> Z * Z.
 Axiom mul : Z -> Z -> Z * Z.
 
 Require Import Crypto.Algebra. (* TODO: move ring_simplify_subterms_in_all to a different file? *)
-Goal let base2_32 i := 2 ^ (32 * i) in forall f0 f1 f2 f3 g0 g1 g2 g3: Z, False. intros.
+Goal
+  let base2_32 i := 2 ^ (32 * i) in
+  forall f0 f1 f2 f3 g0 g1 g2 g3: Z, False.
+  intros.
   let t := constr:(
-                                   (@Associational.compact_cols (2^32) add_get_carry
-                                   (@Associational.sat_mul (2^32) mul
-                                      (Positional.to_associational base2_32 (Tuple.from_list _ [f0;f1;f2;f3] eq_refl))
-                                      (Positional.to_associational base2_32 (Tuple.from_list _ [g0;g1;g2;g3] eq_refl))))) in
+             let f := (Positional.to_associational base2_32 (Tuple.from_list _ [f0;f1;f2;f3] eq_refl)) in
+             let g := (Positional.to_associational base2_32 (Tuple.from_list _ [g0;g1;g2;g3] eq_refl)) in
+             @Associational.sat_mul
+               (2^32) mul f g _
+               (fun r =>
+                  (@Associational.compact_cols (2^32) add_get_carry r _ id)))
+                                    in
   
-  let t := (eval cbv -[runtime_mul runtime_add runtime_fst runtime_snd] in t) in
+  let t := (eval cbv -[Let_In runtime_mul runtime_add runtime_fst runtime_snd] in t) in
   let t := (eval cbv [runtime_mul runtime_add runtime_fst runtime_snd] in t) in
   remember t eqn:Heqt; rewrite ?Z.mul_1_l, ?Z.add_0_r, ?Z.add_assoc, ?Z.mul_assoc in Heqt.
 Abort.
