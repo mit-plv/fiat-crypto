@@ -187,7 +187,7 @@ Local Ltac wordToZ_word_case_dep_t :=
   change 32%nat with (2^5)%nat in *;
   apply H.
 
-Lemma wordToZ_word_case_dep_1op (wop : forall sz, word sz -> word sz)
+Lemma wordToZ_word_case_dep_unop (wop : forall sz, word sz -> word sz)
       (P : nat -> Z -> Z -> Type)
   : (forall logsz (x : word (2^logsz)), P logsz (wordToZ_gen x) (wordToZ_gen (wop (2^logsz) x)))
     -> forall logsz (x : wordT logsz), P logsz (wordToZ x) (wordToZ (word_case_dep (T:=fun _ W => W -> W) logsz (wop 32) (wop 64) (wop 128) (fun _ => wop _) x)).
