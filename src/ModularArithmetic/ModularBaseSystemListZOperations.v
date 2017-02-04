@@ -43,6 +43,4 @@ Definition wneg {logsz}
   := word_case_dep (T:=fun _ word => Z -> word -> word)
                    logsz wneg32 wneg64 wneg128 (fun _ => @wneg_gen _).
 
-Hint Unfold wcmovl wcmovl32 wcmovl64 wcmovl128
-     wcmovne wcmovne32 wcmovne64 wcmovne128
-     wneg wneg32 wneg64 wneg128 : fixed_size_constants.
+Hint Unfold wcmovl wcmovne wneg : fixed_size_constants.
