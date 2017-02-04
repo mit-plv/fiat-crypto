@@ -2185,6 +2185,100 @@ Module Z.
     auto with zarith.
   Qed.
 
+  Section ZInequalities.
+    Lemma land_le : forall x y, (0 <= x)%Z -> (Z.land x y <= x)%Z.
+    Proof.
+      intros; apply Z.ldiff_le; [assumption|].
+      rewrite Z.ldiff_land, Z.land_comm, Z.land_assoc.
+      rewrite <- Z.land_0_l with (a := y); f_equal.
+      rewrite Z.land_comm, Z.land_lnot_diag.
+      reflexivity.
+    Qed.
+
+    Lemma lor_lower : forall x y, (0 <= x)%Z -> (0 <= y)%Z -> (x <= Z.lor x y)%Z.
+    Proof.
+      intros; apply Z.ldiff_le; [apply Z.lor_nonneg; auto|].
+      rewrite Z.ldiff_land.
+      apply Z.bits_inj_iff'; intros k Hpos; apply Z.le_ge in Hpos.
+      rewrite Z.testbit_0_l, Z.land_spec, Z.lnot_spec, Z.lor_spec;
+        [|apply Z.ge_le; assumption].
+      induction (Z.testbit x k), (Z.testbit y k); cbv; reflexivity.
+    Qed.
+
+    Lemma lor_le : forall x y z,
+        (0 <= x)%Z
+        -> (x <= y)%Z
+        -> (y <= z)%Z
+        -> (Z.lor x y <= (2 ^ Z.log2_up (z+1)) - 1)%Z.
+    Proof.
+      intros; apply Z.ldiff_le.
+
+      - apply Z.le_add_le_sub_r.
+        replace 1%Z with (2 ^ 0)%Z by (cbv; reflexivity).
+        rewrite Z.add_0_l.
+        apply Z.pow_le_mono_r; [cbv; reflexivity|].
+        apply Z.log2_up_nonneg.
+
+      - destruct (Z_lt_dec 0 z).
+
+        + assert (forall a, a - 1 = Z.pred a)%Z as HP by (intro; omega);
+            rewrite HP, <- Z.ones_equiv; clear HP.
+          apply Z.ldiff_ones_r_low; [apply Z.lor_nonneg; split; omega|].
+          rewrite Z.log2_up_eqn, Z.log2_lor; try omega.
+          apply Z.lt_succ_r.
+          apply Z.max_case_strong; intros; apply Z.log2_le_mono; omega.
+
+        + replace z with 0%Z by omega.
+          replace y with 0%Z by omega.
+          replace x with 0%Z by omega.
+          cbv; reflexivity.
+    Qed.
+
+    Lemma pow2_ge_0: forall a, (0 <= 2 ^ a)%Z.
+    Proof.
+      intros; apply Z.pow_nonneg; omega.
+    Qed.
+
+    Lemma pow2_gt_0: forall a, (0 <= a)%Z -> (0 < 2 ^ a)%Z.
+    Proof.
+      intros; apply Z.pow_pos_nonneg; [|assumption]; omega.
+    Qed.
+
+    Local Ltac solve_pow2 :=
+      repeat match goal with
+             | [|- _ /\ _] => split
+             | [|- (0 < 2 ^ _)%Z] => apply pow2_gt_0
+             | [|- (0 <= 2 ^ _)%Z] => apply pow2_ge_0
+             | [|- (2 ^ _ <= 2 ^ _)%Z] => apply Z.pow_le_mono_r
+             | [|- (_ <= _)%Z] => omega
+             | [|- (_ < _)%Z] => omega
+             end.
+
+    Lemma shiftr_le_mono: forall a b c d,
+        (0 <= a)%Z
+        -> (0 <= d)%Z
+        -> (a <= c)%Z
+        -> (d <= b)%Z
+        -> (Z.shiftr a b <= Z.shiftr c d)%Z.
+    Proof.
+      intros.
+      repeat rewrite Z.shiftr_div_pow2; [|omega|omega].
+      etransitivity; [apply Z.div_le_compat_l | apply Z.div_le_mono]; solve_pow2.
+    Qed.
+
+    Lemma shiftl_le_mono: forall a b c d,
+        (0 <= a)%Z
+        -> (0 <= b)%Z
+        -> (a <= c)%Z
+        -> (b <= d)%Z
+        -> (Z.shiftl a b <= Z.shiftl c d)%Z.
+    Proof.
+      intros.
+      repeat rewrite Z.shiftl_mul_pow2; [|omega|omega].
+      etransitivity; [apply Z.mul_le_mono_nonneg_l|apply Z.mul_le_mono_nonneg_r]; solve_pow2.
+    Qed.
+  End ZInequalities.
+
   Lemma max_log2_up x y : Z.max (Z.log2_up x) (Z.log2_up y) = Z.log2_up (Z.max x y).
   Proof. apply Z.max_monotone; intros ??; apply Z.log2_up_le_mono. Qed.
   Hint Rewrite max_log2_up : push_Zmax.
@@ -2194,8 +2288,8 @@ Module Z.
                          -> Z.max x y <= Z.lor x y <= 2^Z.log2_up (Z.max x y + 1) - 1.
   Proof.
     apply Z.max_case_strong; intros; split;
-      solve [ eauto using Z_lor_lower, Z.le_trans, Z_lor_le with omega
-            | rewrite Z.lor_comm; eauto using Z_lor_lower, Z.le_trans, Z_lor_le with omega ].
+      try solve [ eauto using lor_lower, Z.le_trans, lor_le with omega
+                | rewrite Z.lor_comm; eauto using lor_lower, Z.le_trans, lor_le with omega ].
   Qed.
   Lemma lor_bounds_lower x y : 0 <= x -> 0 <= y
                                -> Z.max x y <= Z.lor x y.

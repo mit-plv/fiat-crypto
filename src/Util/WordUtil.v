@@ -9,6 +9,7 @@ Require Import Coq.Bool.Bool.
 
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.NatUtil.
+Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Sigma.
 
@@ -290,100 +291,6 @@ Section Z2N.
     apply Z2N.id; assumption.
   Qed.
 End Z2N.
-
-Section ZInequalities.
-  Lemma Z_land_le : forall x y, (0 <= x)%Z -> (Z.land x y <= x)%Z.
-  Proof.
-    intros; apply Z.ldiff_le; [assumption|].
-    rewrite Z.ldiff_land, Z.land_comm, Z.land_assoc.
-    rewrite <- Z.land_0_l with (a := y); f_equal.
-    rewrite Z.land_comm, Z.land_lnot_diag.
-    reflexivity.
-  Qed.
-
-  Lemma Z_lor_lower : forall x y, (0 <= x)%Z -> (0 <= y)%Z -> (x <= Z.lor x y)%Z.
-  Proof.
-    intros; apply Z.ldiff_le; [apply Z.lor_nonneg; auto|].
-    rewrite Z.ldiff_land.
-    apply Z.bits_inj_iff'; intros k Hpos; apply Z.le_ge in Hpos.
-    rewrite Z.testbit_0_l, Z.land_spec, Z.lnot_spec, Z.lor_spec;
-        [|apply Z.ge_le; assumption].
-    induction (Z.testbit x k), (Z.testbit y k); cbv; reflexivity.
-    Qed.
-
-  Lemma Z_lor_le : forall x y z,
-       (0 <= x)%Z
-    -> (x <= y)%Z
-    -> (y <= z)%Z
-    -> (Z.lor x y <= (2 ^ Z.log2_up (z+1)) - 1)%Z.
-  Proof.
-    intros; apply Z.ldiff_le.
-
-    - apply Z.le_add_le_sub_r.
-        replace 1%Z with (2 ^ 0)%Z by (cbv; reflexivity).
-        rewrite Z.add_0_l.
-        apply Z.pow_le_mono_r; [cbv; reflexivity|].
-        apply Z.log2_up_nonneg.
-
-    - destruct (Z_lt_dec 0 z).
-
-        + assert (forall a, a - 1 = Z.pred a)%Z as HP by (intro; omega);
-            rewrite HP, <- Z.ones_equiv; clear HP.
-        apply Z.ldiff_ones_r_low; [apply Z.lor_nonneg; split; omega|].
-        rewrite Z.log2_up_eqn, Z.log2_lor; try omega.
-        apply Z.lt_succ_r.
-        destruct_max; apply Z.log2_le_mono; omega.
-
-        + replace z with 0%Z by omega.
-        replace y with 0%Z by omega.
-        replace x with 0%Z by omega.
-        cbv; reflexivity.
-  Qed.
-
-  Lemma Z_pow2_ge_0: forall a, (0 <= 2 ^ a)%Z.
-  Proof.
-    intros; apply Z.pow_nonneg; omega.
-  Qed.
-
-  Lemma Z_pow2_gt_0: forall a, (0 <= a)%Z -> (0 < 2 ^ a)%Z.
-  Proof.
-    intros; apply Z.pow_pos_nonneg; [|assumption]; omega.
-  Qed.
-
-  Local Ltac solve_pow2 :=
-    repeat match goal with
-    | [|- _ /\ _] => split
-    | [|- (0 < 2 ^ _)%Z] => apply Z_pow2_gt_0
-    | [|- (0 <= 2 ^ _)%Z] => apply Z_pow2_ge_0
-    | [|- (2 ^ _ <= 2 ^ _)%Z] => apply Z.pow_le_mono_r
-    | [|- (_ <= _)%Z] => omega
-    | [|- (_ < _)%Z] => omega
-    end.
-
-  Lemma Z_shiftr_le_mono: forall a b c d,
-       (0 <= a)%Z
-    -> (0 <= d)%Z
-    -> (a <= c)%Z
-    -> (d <= b)%Z
-    -> (Z.shiftr a b <= Z.shiftr c d)%Z.
-  Proof.
-    intros.
-    repeat rewrite Z.shiftr_div_pow2; [|omega|omega].
-    etransitivity; [apply Z.div_le_compat_l | apply Z.div_le_mono]; solve_pow2.
-  Qed.
-
-  Lemma Z_shiftl_le_mono: forall a b c d,
-       (0 <= a)%Z
-    -> (0 <= b)%Z
-    -> (a <= c)%Z
-    -> (b <= d)%Z
-    -> (Z.shiftl a b <= Z.shiftl c d)%Z.
-  Proof.
-    intros.
-    repeat rewrite Z.shiftl_mul_pow2; [|omega|omega].
-    etransitivity; [apply Z.mul_le_mono_nonneg_l|apply Z.mul_le_mono_nonneg_r]; solve_pow2.
-  Qed.
-End ZInequalities.
 
 Section WordToN.
   Lemma wordToN_NToWord_idempotent : forall sz n, (n < Npow2 sz)%N ->
@@ -1251,7 +1158,7 @@ Section Updates.
 
     - destruct_min;
         (etransitivity; [|eassumption]); [|rewrite Z.land_comm];
-        (apply Z_land_le; land_mono).
+        (apply Z.land_le; land_mono).
 
     - eapply Z.le_lt_trans; [apply Z.log2_land; land_mono|destruct_min]; (
         eapply Z.le_lt_trans; [apply Z.log2_le_mono; eassumption|];
@@ -1278,7 +1185,7 @@ Section Updates.
 
     - rewrite wordToN_wor;
         [ destruct_max; [|rewrite Z.lor_comm];
-            (etransitivity; [|apply Z_lor_lower]; lor_mono)
+            (etransitivity; [|apply Z.lor_lower]; lor_mono)
         | apply Z.lor_nonneg; split; lor_mono|].
 
         rewrite Z.log2_lor; [lor_trans|lor_mono|lor_mono].
@@ -1296,7 +1203,7 @@ Section Updates.
 
         destruct (Z.le_ge_cases (Z.of_N (wordToN value0)) (Z.of_N (wordToN value1)));
             [|rewrite Z.lor_comm];
-            apply Z_lor_le; lor_mono.
+            apply Z.lor_le; lor_mono.
 
         + assert (upper1 >= upper0)%Z as g'' by omega; clear g.
         pose proof g'' as g; pose proof g'' as g'; clear g''.
@@ -1307,7 +1214,7 @@ Section Updates.
 
         destruct (Z.le_ge_cases (Z.of_N (wordToN value0)) (Z.of_N (wordToN value1)));
             [|rewrite Z.lor_comm];
-            apply Z_lor_le; lor_mono.
+            apply Z.lor_le; lor_mono.
   Qed.
 
   Local Ltac shift_mono := repeat progress first
@@ -1327,7 +1234,7 @@ Section Updates.
         (rewrite wordToN_NToWord_idempotent; [|apply Npow2_Zlog2]; rewrite Z_inj_shiftr);
         [ | eapply Z.le_lt_trans; [apply Z.log2_le_mono|eassumption]
         | | eapply Z.le_lt_trans; [apply Z.log2_le_mono|eassumption]];
-        apply Z_shiftr_le_mono; shift_mono.
+        apply Z.shiftr_le_mono; shift_mono.
   Qed.
 
   Lemma shl_valid_update: forall n,
@@ -1343,7 +1250,7 @@ Section Updates.
         (rewrite wordToN_NToWord_idempotent; [|apply Npow2_Zlog2]; rewrite Z_inj_shiftl);
         [ | eapply Z.le_lt_trans; [apply Z.log2_le_mono|eassumption]
         | | eapply Z.le_lt_trans; [apply Z.log2_le_mono|eassumption]];
-        apply Z_shiftl_le_mono; shift_mono.
+        apply Z.shiftl_le_mono; shift_mono.
   Qed.
 End Updates.
 
