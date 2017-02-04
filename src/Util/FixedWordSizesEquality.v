@@ -215,8 +215,7 @@ Proof. wordToZ_word_case_dep_t. Qed.
 (** This converts goals involving (currently only binary) [wordT]
     operations to the corresponding goals involving [word]
     operations. *)
-Ltac fixed_size_op_to_word :=
-  repeat autounfold with fixed_size_constants in *;
+Ltac syntactic_fixed_size_op_to_word :=
   lazymatch goal with
   | [ |- context[wordToZ (word_case_dep (T:=?T) ?logsz (?wop 32) (?wop 64) (?wop 128) ?f ?x)] ]
     => move x at top;
@@ -258,6 +257,10 @@ Ltac fixed_size_op_to_word :=
        refine (@wordToZ_word_case_dep_quadop wop P _);
        intros logsz x y z w; intros
   end.
+Ltac fixed_size_op_to_word :=
+  repeat autounfold with fixed_size_constants in *;
+  syntactic_fixed_size_op_to_word.
+
 
 Section Updates.
   Local Notation bound n lower value upper := (
