@@ -44,3 +44,17 @@ Definition wneg {logsz}
                    logsz wneg32 wneg64 wneg128 (fun _ => @wneg_gen _).
 
 Hint Unfold wcmovl wcmovne wneg : fixed_size_constants.
+
+(** After unfolding [wneg], [wcmovl], [wcmovne], this tactic adjusts
+    the unfolded form to allow processing by
+    [FixedWordSizesEquality.fixed_size_op_to_word] *)
+Ltac adjust_mbs_wops :=
+  change wcmovl32 with (@wcmovl_gen 32) in *;
+  change wcmovl64 with (@wcmovl_gen 64) in *;
+  change wcmovl128 with (@wcmovl_gen 128) in *;
+  change wcmovne32 with (@wcmovne_gen 32) in *;
+  change wcmovne64 with (@wcmovne_gen 64) in *;
+  change wcmovne128 with (@wcmovne_gen 128) in *;
+  change wneg32 with (@wneg_gen 32) in *;
+  change wneg64 with (@wneg_gen 64) in *;
+  change wneg128 with (@wneg_gen 128) in *.
