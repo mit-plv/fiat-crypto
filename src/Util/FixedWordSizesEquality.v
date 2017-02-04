@@ -258,3 +258,93 @@ Ltac fixed_size_op_to_word :=
        refine (@wordToZ_word_case_dep_quadop wop P _);
        intros logsz x y z w; intros
   end.
+
+Section Updates.
+  Local Notation bound n lower value upper := (
+       (0 <= lower)%Z
+    /\ (lower <= @wordToZ n value)%Z
+    /\ (@wordToZ n value <= upper)%Z
+    /\ (Z.log2 upper < Z.of_nat (2^n))%Z).
+
+  Definition valid_update n lowerF valueF upperF : Prop :=
+    forall lower0 value0 upper0
+          lower1 value1 upper1,
+
+       bound n lower0 value0 upper0
+    -> bound n lower1 value1 upper1
+    -> (0 <= lowerF lower0 upper0 lower1 upper1)%Z
+    -> (Z.log2 (upperF lower0 upper0 lower1 upper1) < Z.of_nat (2^n))%Z
+    -> bound n (lowerF lower0 upper0 lower1 upper1)
+                (valueF value0 value1)
+                (upperF lower0 upper0 lower1 upper1).
+
+  Lemma word_case_dep_valid_update f g wop
+    : (forall n,
+          WordUtil.valid_update
+            n
+            f
+            (wop n)
+            g)
+      -> forall n,
+          valid_update
+            n
+            f
+            (word_case_dep
+               (T:=fun _ W => W -> W -> W)
+               n (wop 32) (wop 64) (wop 128)
+               (fun k : nat => wop (2 ^ k)))
+            g.
+  Proof.
+    intros H n; specialize (H (2^n)%nat).
+    unfold valid_update; intros; fixed_size_op_to_word; auto.
+  Qed.
+
+  Lemma wadd_valid_update: forall n,
+    valid_update n
+        (fun l0 u0 l1 u1 => l0 + l1)%Z
+        (@wadd n)
+        (fun l0 u0 l1 u1 => u0 + u1)%Z.
+  Proof. apply word_case_dep_valid_update, add_valid_update. Qed.
+
+  Lemma wsub_valid_update: forall n,
+    valid_update n
+        (fun l0 u0 l1 u1 => l0 - u1)%Z
+        (@wsub n)
+        (fun l0 u0 l1 u1 => u0 - l1)%Z.
+  Proof. apply word_case_dep_valid_update, sub_valid_update. Qed.
+
+  Lemma wmul_valid_update: forall n,
+    valid_update n
+        (fun l0 u0 l1 u1 => l0 * l1)%Z
+        (@wmul n)
+        (fun l0 u0 l1 u1 => u0 * u1)%Z.
+  Proof. apply word_case_dep_valid_update, mul_valid_update. Qed.
+
+  Lemma wland_valid_update: forall n,
+    valid_update n
+        (fun l0 u0 l1 u1 => 0)%Z
+        (@wland n)
+        (fun l0 u0 l1 u1 => Z.min u0 u1)%Z.
+  Proof. apply word_case_dep_valid_update, land_valid_update. Qed.
+
+  Lemma wlor_valid_update: forall n,
+    valid_update n
+        (fun l0 u0 l1 u1 => Z.max l0 l1)%Z
+        (@wlor n)
+        (fun l0 u0 l1 u1 => 2^(Z.max (Z.log2_up (u0+1)) (Z.log2_up (u1+1))) - 1)%Z.
+  Proof. apply word_case_dep_valid_update, lor_valid_update. Qed.
+
+  Lemma wshr_valid_update: forall n,
+    valid_update n
+        (fun l0 u0 l1 u1 => Z.shiftr l0 u1)%Z
+        (@wshr n)
+        (fun l0 u0 l1 u1 => Z.shiftr u0 l1)%Z.
+  Proof. apply word_case_dep_valid_update, shr_valid_update. Qed.
+
+  Lemma wshl_valid_update: forall n,
+    valid_update n
+        (fun l0 u0 l1 u1 => Z.shiftl l0 l1)%Z
+        (@wshl n)
+        (fun l0 u0 l1 u1 => Z.shiftl u0 u1)%Z.
+  Proof. apply word_case_dep_valid_update, shl_valid_update. Qed.
+End Updates.
