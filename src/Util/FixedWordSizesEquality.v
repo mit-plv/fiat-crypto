@@ -245,7 +245,7 @@ Ltac fixed_size_op_to_word :=
             let P := lazymatch goal with |- ?P _ _ => P end in
             let P := lazymatch (eval pattern logsz in P) with ?P _ => P end in
             revert logsz y;
-            refine (@wordToZ_word_case_dep_11op wop P x _);
+            refine (@wordToZ_word_case_dep_11op _ wop P x _);
             intros logsz y; unfold wordToZ_gen; intros
        end
   | [ |- context[wordToZ (word_case_dep (T:=?T) ?logsz (?wop 32) (?wop 64) (?wop 128) ?f ?x ?y ?z ?w)] ]
