@@ -84,30 +84,34 @@ Create HintDb pull_Zto_N discriminated.
 Create HintDb push_Zto_N discriminated.
 Create HintDb Zshift_to_pow discriminated.
 Create HintDb Zpow_to_shift discriminated.
-Hint Extern 1 => autorewrite with push_Zopp in * : push_Zopp.
-Hint Extern 1 => autorewrite with pull_Zopp in * : pull_Zopp.
-Hint Extern 1 => autorewrite with push_Zpow in * : push_Zpow.
-Hint Extern 1 => autorewrite with pull_Zpow in * : pull_Zpow.
-Hint Extern 1 => autorewrite with push_Zmul in * : push_Zmul.
-Hint Extern 1 => autorewrite with pull_Zmul in * : pull_Zmul.
-Hint Extern 1 => autorewrite with push_Zadd in * : push_Zadd.
-Hint Extern 1 => autorewrite with pull_Zadd in * : pull_Zadd.
-Hint Extern 1 => autorewrite with push_Zsub in * : push_Zsub.
-Hint Extern 1 => autorewrite with pull_Zsub in * : pull_Zsub.
-Hint Extern 1 => autorewrite with push_Zdiv in * : push_Zmul.
-Hint Extern 1 => autorewrite with pull_Zdiv in * : pull_Zmul.
-Hint Extern 1 => autorewrite with pull_Zmod in * : pull_Zmod.
-Hint Extern 1 => autorewrite with push_Zmod in * : push_Zmod.
-Hint Extern 1 => autorewrite with pull_Zof_nat in * : pull_Zof_nat.
-Hint Extern 1 => autorewrite with push_Zof_nat in * : push_Zof_nat.
-Hint Extern 1 => autorewrite with pull_Zshift in * : pull_Zshift.
-Hint Extern 1 => autorewrite with push_Zshift in * : push_Zshift.
-Hint Extern 1 => autorewrite with Zshift_to_pow in * : Zshift_to_pow.
-Hint Extern 1 => autorewrite with Zpow_to_shift in * : Zpow_to_shift.
-Hint Extern 1 => autorewrite with pull_Zof_N in * : pull_Zof_N.
-Hint Extern 1 => autorewrite with push_Zof_N in * : push_Zof_N.
-Hint Extern 1 => autorewrite with pull_Zto_N in * : pull_Zto_N.
-Hint Extern 1 => autorewrite with push_Zto_N in * : push_Zto_N.
+Create HintDb pull_Zmax discriminated.
+Create HintDb push_Zmax discriminated.
+Hint Extern 1 => progress autorewrite with push_Zopp in * : push_Zopp.
+Hint Extern 1 => progress autorewrite with pull_Zopp in * : pull_Zopp.
+Hint Extern 1 => progress autorewrite with push_Zpow in * : push_Zpow.
+Hint Extern 1 => progress autorewrite with pull_Zpow in * : pull_Zpow.
+Hint Extern 1 => progress autorewrite with push_Zmul in * : push_Zmul.
+Hint Extern 1 => progress autorewrite with pull_Zmul in * : pull_Zmul.
+Hint Extern 1 => progress autorewrite with push_Zadd in * : push_Zadd.
+Hint Extern 1 => progress autorewrite with pull_Zadd in * : pull_Zadd.
+Hint Extern 1 => progress autorewrite with push_Zsub in * : push_Zsub.
+Hint Extern 1 => progress autorewrite with pull_Zsub in * : pull_Zsub.
+Hint Extern 1 => progress autorewrite with push_Zdiv in * : push_Zmul.
+Hint Extern 1 => progress autorewrite with pull_Zdiv in * : pull_Zmul.
+Hint Extern 1 => progress autorewrite with pull_Zmod in * : pull_Zmod.
+Hint Extern 1 => progress autorewrite with push_Zmod in * : push_Zmod.
+Hint Extern 1 => progress autorewrite with pull_Zof_nat in * : pull_Zof_nat.
+Hint Extern 1 => progress autorewrite with push_Zof_nat in * : push_Zof_nat.
+Hint Extern 1 => progress autorewrite with pull_Zshift in * : pull_Zshift.
+Hint Extern 1 => progress autorewrite with push_Zshift in * : push_Zshift.
+Hint Extern 1 => progress autorewrite with Zshift_to_pow in * : Zshift_to_pow.
+Hint Extern 1 => progress autorewrite with Zpow_to_shift in * : Zpow_to_shift.
+Hint Extern 1 => progress autorewrite with pull_Zof_N in * : pull_Zof_N.
+Hint Extern 1 => progress autorewrite with push_Zof_N in * : push_Zof_N.
+Hint Extern 1 => progress autorewrite with pull_Zto_N in * : pull_Zto_N.
+Hint Extern 1 => progress autorewrite with push_Zto_N in * : push_Zto_N.
+Hint Extern 1 => progress autorewrite with push_Zmax in * : push_Zmax.
+Hint Extern 1 => progress autorewrite with pull_Zmax in * : pull_Zmax.
 Hint Rewrite Z.div_opp_l_nz Z.div_opp_l_z using zutil_arith : pull_Zopp.
 Hint Rewrite Z.mul_opp_l : pull_Zopp.
 Hint Rewrite <- Z.opp_add_distr : pull_Zopp.
@@ -141,6 +145,8 @@ Hint Rewrite Z.shiftr_opp_r Z.shiftl_opp_r Z.shiftr_0_r Z.shiftr_0_l Z.shiftl_0_
 Hint Rewrite Z.shiftl_1_l Z.shiftr_div_pow2 Z.shiftr_mul_pow2 Z.shiftl_mul_pow2 Z.shiftl_div_pow2 Z.opp_involutive using zutil_arith : Zshift_to_pow.
 Hint Rewrite <- Z.shiftr_opp_r using zutil_arith : Zshift_to_pow.
 Hint Rewrite <- Z.shiftr_div_pow2 Z.shiftr_mul_pow2 Z.shiftl_mul_pow2 Z.shiftl_div_pow2 using zutil_arith : Zpow_to_shift.
+Hint Rewrite Z.add_max_distr_r Z.add_max_distr_l : push_Zmax.
+Hint Rewrite <- Z.add_max_distr_r Z.add_max_distr_l : pull_Zmax.
 
 (** For the occasional lemma that can remove the use of [Z.div] *)
 Create HintDb zstrip_div.
@@ -2178,6 +2184,48 @@ Module Z.
     intro; eapply le_lt_trans; [ eassumption | ].
     auto with zarith.
   Qed.
+
+  Lemma max_log2_up x y : Z.max (Z.log2_up x) (Z.log2_up y) = Z.log2_up (Z.max x y).
+  Proof. apply Z.max_monotone; intros ??; apply Z.log2_up_le_mono. Qed.
+  Hint Rewrite max_log2_up : push_Zmax.
+  Hint Rewrite <- max_log2_up : pull_Zmax.
+
+  Lemma lor_bounds x y : 0 <= x -> 0 <= y
+                         -> Z.max x y <= Z.lor x y <= 2^Z.log2_up (Z.max x y + 1) - 1.
+  Proof.
+    apply Z.max_case_strong; intros; split;
+      solve [ eauto using Z_lor_lower, Z.le_trans, Z_lor_le with omega
+            | rewrite Z.lor_comm; eauto using Z_lor_lower, Z.le_trans, Z_lor_le with omega ].
+  Qed.
+  Lemma lor_bounds_lower x y : 0 <= x -> 0 <= y
+                               -> Z.max x y <= Z.lor x y.
+  Proof. intros; apply lor_bounds; assumption. Qed.
+  Lemma lor_bounds_upper x y : Z.lor x y <= 2^Z.log2_up (Z.max x y + 1) - 1.
+  Proof.
+    pose proof (proj2 (Z.lor_neg x y)).
+    destruct (Z_lt_le_dec x 0), (Z_lt_le_dec y 0);
+      try solve [ intros; apply lor_bounds; assumption ];
+      transitivity (2^0-1);
+      try apply Z.sub_le_mono_r, Z.pow_le_mono_r, Z.log2_up_nonneg;
+      simpl; omega.
+  Qed.
+  Lemma lor_bounds_gen_lower x y l : 0 <= x -> 0 <= y -> l <= Z.max x y
+                                     -> l <= Z.lor x y.
+  Proof.
+    intros; etransitivity;
+      solve [ apply lor_bounds; auto
+            | eauto ].
+  Qed.
+  Lemma lor_bounds_gen_upper x y u : x <= u -> y <= u
+                                     -> Z.lor x y <= 2^Z.log2_up (u + 1) - 1.
+  Proof.
+    intros; etransitivity; [ apply lor_bounds_upper | ].
+    apply Z.sub_le_mono_r, Z.pow_le_mono_r, Z.log2_up_le_mono, Z.max_case_strong;
+      omega.
+  Qed.
+  Lemma lor_bounds_gen x y l u : 0 <= x -> 0 <= y -> l <= Z.max x y -> x <= u -> y <= u
+                                 -> l <= Z.lor x y <= 2^Z.log2_up (u + 1) - 1.
+  Proof. auto using lor_bounds_gen_lower, lor_bounds_gen_upper. Qed.
 
   Lemma simplify_twice_sub_sub x y : 2 * x - (x - y) = x + y.
   Proof. lia. Qed.
