@@ -1262,7 +1262,7 @@ Ltac _field_nsatz_prep_inequalities fld eq zero :=
 Ltac field_nsatz :=
   let fld := guess_field in 
   let eq := match type of fld with field(eq:=?eq) => eq end in
-  let zero := match type of fld with field(zero:=?zero) => eq end in
+  let zero := match type of fld with field(zero:=?zero) => zero end in
   _field_nsatz_prep_goal fld eq;
   common_denominator_equality_inequality_all; [|_field_nsatz_prep_goal fld eq..];
   _field_nsatz_prep_inequalities fld eq zero;
