@@ -633,6 +633,12 @@ Module Ring.
       eapply Group.cancel_left, mul_opp_l.
     Qed.
 
+    Lemma neq_sub_neq_zero x y (Hxy:x<>y) : x-y <> 0.
+    Proof.
+      intro Hsub. apply Hxy. rewrite <-(left_identity y), <-Hsub, ring_sub_definition.
+      rewrite <-associative, left_inverse, right_identity. reflexivity.
+    Qed.
+
     Lemma zero_product_iff_zero_factor {Hzpzf:@is_zero_product_zero_factor T eq zero mul} :
       forall x y : T, eq (mul x y) zero <-> eq x zero \/ eq y zero.
     Proof.
@@ -1233,6 +1239,35 @@ Ltac common_denominator_equality_inequality_all :=
   common_denominator_all;
   [ common_denominator_inequality_all
   | .. ].
+
+(** [nsatz] for fields *)
+Ltac _field_nsatz_prep_goal fld eq :=
+  repeat match goal with
+         | [ |- not (eq ?x ?y) ] => intro
+         | [ |- eq _ _] => idtac
+         | _ => exfalso; apply (field_is_zero_neq_one(field:=fld))
+         end.
+         
+Ltac _field_nsatz_prep_inequalities fld eq zero :=
+  repeat match goal with
+         | [H: not (eq _ _) |- _ ] =>
+           lazymatch type of H with
+             | not (eq _ zero) => unique pose proof (Field.right_multiplicative_inverse(H:=fld) _ H)
+             | not (eq zero _) => unique pose proof (Field.right_multiplicative_inverse(H:=fld) _ (symmetry _ _ H))
+             | _ => unique pose proof (Field.right_multiplicative_inverse(H:=fld) _ (Ring.neq_sub_neq_zero _ _ H))
+           end
+         end.
+
+(* solves all implications between field equalities and field inequalities that are true in all fields (including those without decidable equality) *)
+Ltac field_nsatz :=
+  let fld := guess_field in 
+  let eq := match type of fld with field(eq:=?eq) => eq end in
+  let zero := match type of fld with field(zero:=?zero) => eq end in
+  _field_nsatz_prep_goal fld eq;
+  common_denominator_equality_inequality_all; [|_field_nsatz_prep_goal fld eq..];
+  _field_nsatz_prep_inequalities fld eq zero;
+  nsatz;
+  repeat eapply (proj2 (Ring.nonzero_product_iff_nonzero_factor _ _)); auto. (* nsatz coefficients *)
 
 Inductive field_simplify_done {T} : T -> Type :=
   Field_simplify_done : forall H, field_simplify_done H.
