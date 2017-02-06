@@ -13,7 +13,6 @@ Require Import Recdef.
     Lemma snd_pair {A B} (a:A) (b:B) : snd (a,b) = b. reflexivity. Qed.
     Create HintDb cancel_pair discriminated. Hint Rewrite @fst_pair @snd_pair : cancel_pair.
 
-    (* TODO: move to ListUtil *)
     Lemma update_nth_id {T} i (xs:list T) : ListUtil.update_nth i id xs = xs.
     Proof.
       revert xs; induction i; destruct xs; simpl; solve [ trivial | congruence ].
@@ -38,7 +37,7 @@ Require Import Recdef.
     Qed.
     
     Lemma mod_add_mul_full a b c k m : m <> 0 -> c mod m = k mod m -> 
-                                    (a + b * c) mod m = (a + b * k) mod m.
+                                       (a + b * c) mod m = (a + b * k) mod m.
     Proof.
       intros; rewrite Z.add_mod, Z.mul_mod by auto.
       match goal with H : _ mod _ = _ mod _ |- _ => rewrite H end.
@@ -47,22 +46,22 @@ Require Import Recdef.
     
     Fixpoint find_remove_first' {A} (f : A->bool) (acc ls:list A) : (option A) * list A :=
       (match ls with
-      | nil => (None, acc)
-      | x :: tl =>
-        if f x then (Some x, acc ++ tl) else find_remove_first' f (acc ++ x::nil) tl
-      end)%list.
+       | nil => (None, acc)
+       | x :: tl =>
+         if f x then (Some x, acc ++ tl) else find_remove_first' f (acc ++ x::nil) tl
+       end)%list.
     
     Definition find_remove_first {A} (f:A -> bool) ls : (option A) * list A :=
       find_remove_first' f nil ls.
 
     Lemma find_remove_first_cons {A} f (x:A) tl : f x = true ->
-      find_remove_first f (x::tl) = (Some x, tl).
+                                                  find_remove_first f (x::tl) = (Some x, tl).
     Proof. intros; cbv [find_remove_first]. simpl find_remove_first'.
            break_if; try congruence; reflexivity. Qed.
 
     Lemma find_remove_first'_None {A} (f:A->bool) ls : forall acc,
-      fst (find_remove_first' f acc ls) = None ->
-      forall x, List.In x ls -> f x = false.
+        fst (find_remove_first' f acc ls) = None ->
+        forall x, List.In x ls -> f x = false.
     Proof.
       induction ls; simpl find_remove_first'; simpl List.In; [tauto|].
       break_if; intros; [discriminate|].
@@ -74,7 +73,7 @@ Require Import Recdef.
     Proof. cbv [find_remove_first]. apply find_remove_first'_None. Qed.
 
     Lemma length_find_remove_first' {A} (f:A -> bool) ls : forall acc,
-      length (snd (@find_remove_first' _ f acc ls)) =
+        length (snd (@find_remove_first' _ f acc ls)) =
         match (fst (@find_remove_first' _ f acc ls)) with
         | None => length (acc ++ ls)
         | Some _ => (length (acc ++ ls) - 1)%nat
@@ -91,10 +90,10 @@ Require Import Recdef.
 
     Lemma length_find_remove_first {A} (f:A -> bool) ls :
       length (snd (find_remove_first f ls)) =
-        match (fst (find_remove_first f ls)) with
-        | None => length ls
-        | Some _ => (length ls - 1)%nat
-        end.
+      match (fst (find_remove_first f ls)) with
+      | None => length ls
+      | Some _ => (length ls - 1)%nat
+      end.
     Proof. cbv [find_remove_first]; rewrite length_find_remove_first'; distr_length. Qed. Hint Rewrite @length_find_remove_first : distr_length.
 
     Lemma to_nat_neg : forall x, x < 0 -> Z.to_nat x = 0%nat.
@@ -107,7 +106,7 @@ Require Import Recdef.
       | a :: t => map_cps g t (fun r => f (g a :: r))
       end.
     Lemma map_cps_correct {A B} g ls: forall {T} f,
-      @map_cps A B g ls T f = f (map g ls).
+        @map_cps A B g ls T f = f (map g ls).
     Proof. induction ls; simpl; intros; rewrite ?IHls; reflexivity. Qed.
 
     Fixpoint flat_map_cps {A B} (g:A->forall {T}, (list B->T)->T) (ls : list A) {T} (f:list B->T)  :=
@@ -124,6 +123,155 @@ Require Import Recdef.
       rewrite H; erewrite IHls by eassumption.
       reflexivity.
     Qed.
+    
+    Fixpoint from_list_default'_cps {A} (d y:A) n xs:
+      forall {T}, (Tuple.tuple' A n -> T) -> T:=
+      match n as n0 return (forall {T}, (Tuple.tuple' A n0 ->T) ->T) with
+      | O => fun T f => f y
+      | S n' => fun T f =>
+                  match xs with
+                  | nil => from_list_default'_cps d d n' nil (fun r => f (r, y))
+                  | x :: xs' => from_list_default'_cps d x n' xs' (fun r => f (r, y))
+                  end
+      end.
+    Lemma from_list_default'_cps_correct {A} n : forall d y l {T} f,
+        @from_list_default'_cps A d y n l T f = f (Tuple.from_list_default' d y n l).
+    Proof.
+      induction n; intros; simpl; [reflexivity|].
+      break_match; subst; apply IHn.
+    Qed.
+    Definition from_list_default_cps {A} (d:A) n (xs:list A) :
+      forall {T}, (Tuple.tuple A n -> T) -> T:=
+      match n as n0 return (forall {T}, (Tuple.tuple A n0 ->T) ->T) with
+      | O => fun T f => f tt
+      | S n' => fun T f =>
+                  match xs with
+                  | nil => from_list_default'_cps d d n' nil f
+                  | x :: xs' => from_list_default'_cps d x n' xs' f
+                  end
+      end.
+    Lemma from_list_default_cps_correct {A} n : forall d l {T} f,
+        @from_list_default_cps A d n l T f = f (Tuple.from_list_default d n l).
+    Proof.
+      destruct n; intros; simpl; [reflexivity|].
+      break_match; auto using from_list_default'_cps_correct.
+    Qed.
+    Fixpoint to_list'_cps {A} n
+             {T} (f:list A -> T) : Tuple.tuple' A n -> T :=
+      match n as n0 return (Tuple.tuple' A n0 -> T) with
+      | O => fun x => f [x]
+      | S n' => fun (xs: Tuple.tuple' A (S n')) =>
+                  let (xs', x) := xs in
+                  to_list'_cps n' (fun r => f (x::r)) xs'
+      end.
+    Lemma to_list'_cps_correct {A} n: forall t {T} f,
+        @to_list'_cps A n T f t = f (Tuple.to_list' n t).
+    Proof.
+      induction n; simpl; intros; [reflexivity|].
+      destruct_head prod. apply IHn.
+    Qed.
+    Definition to_list_cps' {A} n {T} (f:list A->T)
+      : Tuple.tuple A n -> T :=
+      match n as n0 return (Tuple.tuple A n0 ->T) with
+      | O => fun _ => f nil
+      | S n' => to_list'_cps n' f
+      end.
+    Definition to_list_cps {A} n t {T} f :=
+      @to_list_cps' A n T f t.
+    Lemma to_list_cps_correct {A} n t {T} f :
+      @to_list_cps A n t T f = f (Tuple.to_list n t).
+    Proof. cbv [to_list_cps to_list_cps' Tuple.to_list]; break_match; auto using to_list'_cps_correct. Qed.
+    
+    Definition on_tuple_cps {A B} (d:B) (g:list A ->forall {T},(list B->T)->T) {n m}
+               (xs : Tuple.tuple A n) {T} (f:tuple B m ->T) :=
+      to_list_cps n xs (fun r => g r (fun rr => from_list_default_cps d m rr f)).
+    Lemma on_tuple_cps_correct {A B} d g {n m} xs {T} f g' H
+          (Hg : forall x {T} h, @g x T h = h (g' x)) : 
+      @on_tuple_cps A B d g n m xs T f = f (@Tuple.on_tuple A B g' n m H xs).
+    Proof.
+      cbv [on_tuple_cps Tuple.on_tuple].
+      rewrite to_list_cps_correct, Hg, from_list_default_cps_correct.
+      rewrite (Tuple.from_list_default_eq _ _ _ (H _ (Tuple.length_to_list _))).
+      reflexivity.
+    Qed.
+
+    Fixpoint update_nth_cps {A} n (g:A->A) xs {T} (f:list A->T) :=
+      match n with
+      | O => 
+        match xs with
+        | [] => f []
+        | x' :: xs' => f (g x' :: xs')
+        end
+      | S n' =>
+        match xs with
+        | [] => f []
+        | x' :: xs' => update_nth_cps n' g xs' (fun r => f (x' :: r))
+        end
+      end.
+    Lemma update_nth_cps_correct {A} n g: forall xs T f,
+        @update_nth_cps A n g xs T f = f (update_nth n g xs).
+    Proof. induction n; intros; simpl; break_match; try apply IHn; reflexivity. Qed.
+
+    Fixpoint combine_cps {A B} (la :list A) (lb : list B)
+             {T} (f:list (A*B)->T) :=
+      match la with
+      | nil => f nil
+      | a :: tla =>
+        match lb with
+        | nil => f nil
+        | b :: tlb => combine_cps tla tlb (fun lab => f ((a,b)::lab))
+        end
+      end.
+    Lemma combine_cps_correct {A B} la: forall lb {T} f,
+        @combine_cps A B la lb T f = f (combine la lb).
+    Proof.
+      induction la; simpl combine_cps; simpl combine; intros;
+        try break_match; try apply IHla; reflexivity.
+    Qed.
+
+
+    
+    Definition fold_right_no_starter {A} (f:A->A->A) ls : option A :=
+      match ls with
+      | nil => None
+      | cons x tl => Some (List.fold_right f x tl)
+      end.
+    Lemma fold_right_min ls x :
+      x = List.fold_right Z.min x ls
+      \/ List.In (List.fold_right Z.min x ls) ls.
+    Proof.
+      induction ls; intros; simpl in *; try tauto.
+      match goal with |- context [Z.min ?x ?y] =>
+                      destruct (Z.min_spec x y) as [[? Hmin]|[? Hmin]]
+      end; rewrite Hmin; tauto.
+    Qed.
+    Lemma fold_right_no_starter_min ls : forall x,
+        fold_right_no_starter Z.min ls = Some x ->
+        List.In x ls.
+    Proof.
+      cbv [fold_right_no_starter]; intros; destruct ls; try discriminate.
+      inversion H; subst; clear H.
+      destruct (fold_right_min ls z); subst; simpl List.In; tauto.
+    Qed.
+    Fixpoint fold_right_cps {A B} (g:B->A->A) (a0:A) (l:list B) {T} (f:A->T) :=
+      match l with
+      | nil => f a0
+      | cons a tl => fold_right_cps g a0 tl (fun r => f (g a r))
+      end.
+    Lemma fold_right_cps_correct {A B} g a0 l: forall {T} f,
+        @fold_right_cps A B g a0 l T f = f (List.fold_right g a0 l).
+    Proof. induction l; intros; simpl; rewrite ?IHl; auto. Qed.
+    Definition fold_right_no_starter_cps {A} g ls {T} (f:option A->T) :=
+      match ls with
+      | nil => f None
+      | cons x tl => f (Some (List.fold_right g x tl))
+      end.
+    Lemma fold_right_no_starter_cps_correct {A} g ls {T} f :
+      @fold_right_no_starter_cps A g ls T f = f (fold_right_no_starter g ls).
+    Proof.
+      cbv [fold_right_no_starter_cps fold_right_no_starter]; break_match; reflexivity.
+    Qed.        
+
 
 Ltac find_continuation :=
   let a := fresh "x" in
@@ -537,48 +685,6 @@ Module B.
                    end.
       Qed. Hint Rewrite eval_compact_cols_loop1 : push_eval.
 
-      (* TODO : move *)
-      Definition fold_right_no_starter {A} (f:A->A->A) ls : option A :=
-        match ls with
-        | nil => None
-        | cons x tl => Some (List.fold_right f x tl)
-        end.
-      Lemma fold_right_min ls x :
-          x = List.fold_right Z.min x ls
-          \/ List.In (List.fold_right Z.min x ls) ls.
-      Proof.
-        induction ls; intros; simpl in *; try tauto.
-        match goal with |- context [Z.min ?x ?y] =>
-                        destruct (Z.min_spec x y) as [[? Hmin]|[? Hmin]]
-        end; rewrite Hmin; tauto.
-      Qed.
-      Lemma fold_right_no_starter_min ls : forall x,
-        fold_right_no_starter Z.min ls = Some x ->
-        List.In x ls.
-      Proof.
-        cbv [fold_right_no_starter]; intros; destruct ls; try discriminate.
-        inversion H; subst; clear H.
-        destruct (fold_right_min ls z); subst; simpl List.In; tauto.
-      Qed.
-      Fixpoint fold_right_cps {A B} (g:B->A->A) (a0:A) (l:list B) {T} (f:A->T) :=
-        match l with
-        | nil => f a0
-        | cons a tl => fold_right_cps g a0 tl (fun r => f (g a r))
-        end.
-      Lemma fold_right_cps_correct {A B} g a0 l: forall {T} f,
-        @fold_right_cps A B g a0 l T f = f (List.fold_right g a0 l).
-      Proof. induction l; intros; simpl; rewrite ?IHl; auto. Qed.
-      Definition fold_right_no_starter_cps {A} g ls {T} (f:option A->T) :=
-        match ls with
-        | nil => f None
-        | cons x tl => f (Some (List.fold_right g x tl))
-        end.
-      Lemma fold_right_no_starter_cps_correct {A} g ls {T} f :
-        @fold_right_no_starter_cps A g ls T f = f (fold_right_no_starter g ls).
-      Proof.
-        cbv [fold_right_no_starter_cps fold_right_no_starter]; break_match; reflexivity.
-      Qed.        
-
       (* n is fuel, should be [length carries + length inp] *)
       Fixpoint compact_cols_loop2 (carries out inp :list limb) (n:nat)
                {T} (f:list limb->T) :=
@@ -705,50 +811,6 @@ Module B.
               (weight_0 : weight 0%nat = 1%Z)
               (weight_nonzero : forall i, weight i <> 0).
 
-      (* TODO : move *)
-      Fixpoint combine_cps {A B} (la :list A) (lb : list B)
-               {T} (f:list (A*B)->T) :=
-        match la with
-        | nil => f nil
-        | a :: tla =>
-          match lb with
-          | nil => f nil
-          | b :: tlb => combine_cps tla tlb (fun lab => f ((a,b)::lab))
-          end
-        end.
-      Lemma combine_cps_correct {A B} la: forall lb {T} f,
-        @combine_cps A B la lb T f = f (combine la lb).
-      Proof.
-        induction la; simpl combine_cps; simpl combine; intros;
-          try break_match; try apply IHla; reflexivity.
-      Qed.
-
-      Fixpoint to_list'_cps {A} n
-               {T} (f:list A -> T) : Tuple.tuple' A n -> T :=
-        match n as n0 return (Tuple.tuple' A n0 -> T) with
-        | O => fun x => f [x]
-        | S n' => fun (xs: Tuple.tuple' A (S n')) =>
-                    let (xs', x) := xs in
-                    to_list'_cps n' (fun r => f (x::r)) xs'
-        end.
-      Lemma to_list'_cps_correct {A} n: forall t {T} f,
-          @to_list'_cps A n T f t = f (Tuple.to_list' n t).
-      Proof.
-        induction n; simpl; intros; [reflexivity|].
-        destruct_head prod. apply IHn.
-      Qed.
-      Definition to_list_cps' {A} n {T} (f:list A->T)
-        : Tuple.tuple A n -> T :=
-        match n as n0 return (Tuple.tuple A n0 ->T) with
-        | O => fun _ => f nil
-        | S n' => to_list'_cps n' f
-        end.
-      Definition to_list_cps {A} n t {T} f :=
-        @to_list_cps' A n T f t.
-      Lemma to_list_cps_correct {A} n t {T} f :
-        @to_list_cps A n t T f = f (Tuple.to_list n t).
-      Proof. cbv [to_list_cps to_list_cps' Tuple.to_list]; break_match; auto using to_list'_cps_correct. Qed.
-
       (** Converting from positional to associational *)
 
       Definition to_associational {n:nat} (xs:tuple Z n)
@@ -772,15 +834,6 @@ Module B.
         rewrite !map_cps_correct, !to_list_cps_correct,
         !combine_cps_correct. reflexivity.
       Qed.
-      (*
-      Lemma eval_to_associational {n} x {T} f g (H:forall x, f x = g (Associational.eval x)):
-        @to_associational n x T f = g (eval x).
-      Proof.
-        cbv [to_associational eval].
-        rewrite !map_cps_correct, !to_list_cps_correct,
-        !combine_cps_correct, H. reflexivity.
-      Qed.
-      *)
 
       (** Converting from associational to positional *)
 
@@ -792,69 +845,6 @@ Module B.
              rewrite Tuple.to_list_from_list.
              generalize dependent (List.seq 0 n); intro xs; induction xs; simpl; nsatz. Qed.
 
-      (* TODO : move *)
-      Fixpoint from_list_default'_cps {A} (d y:A) n xs:
-        forall {T}, (Tuple.tuple' A n -> T) -> T:=
-        match n as n0 return (forall {T}, (Tuple.tuple' A n0 ->T) ->T) with
-        | O => fun T f => f y
-        | S n' => fun T f =>
-                    match xs with
-                    | nil => from_list_default'_cps d d n' nil (fun r => f (r, y))
-                    | x :: xs' => from_list_default'_cps d x n' xs' (fun r => f (r, y))
-                    end
-        end.
-      Lemma from_list_default'_cps_correct {A} n : forall d y l {T} f,
-          @from_list_default'_cps A d y n l T f = f (Tuple.from_list_default' d y n l).
-      Proof.
-        induction n; intros; simpl; [reflexivity|].
-        break_match; subst; apply IHn.
-      Qed.
-      Definition from_list_default_cps {A} (d:A) n (xs:list A) :
-        forall {T}, (Tuple.tuple A n -> T) -> T:=
-        match n as n0 return (forall {T}, (Tuple.tuple A n0 ->T) ->T) with
-        | O => fun T f => f tt
-        | S n' => fun T f =>
-                    match xs with
-                    | nil => from_list_default'_cps d d n' nil f
-                    | x :: xs' => from_list_default'_cps d x n' xs' f
-                    end
-        end.
-      Lemma from_list_default_cps_correct {A} n : forall d l {T} f,
-          @from_list_default_cps A d n l T f = f (Tuple.from_list_default d n l).
-      Proof.
-        destruct n; intros; simpl; [reflexivity|].
-        break_match; auto using from_list_default'_cps_correct.
-      Qed.
-      
-      Definition on_tuple_cps {A B} (d:B) (g:list A ->forall {T},(list B->T)->T) {n m}
-                 (xs : Tuple.tuple A n) {T} (f:tuple B m ->T) :=
-        to_list_cps n xs (fun r => g r (fun rr => from_list_default_cps d m rr f)).
-      Lemma on_tuple_cps_correct {A B} d g {n m} xs {T} f g' H
-        (Hg : forall x {T} h, @g x T h = h (g' x)) : 
-        @on_tuple_cps A B d g n m xs T f = f (@Tuple.on_tuple A B g' n m H xs).
-      Proof.
-        cbv [on_tuple_cps Tuple.on_tuple].
-        rewrite to_list_cps_correct, Hg, from_list_default_cps_correct.
-        rewrite (Tuple.from_list_default_eq _ _ _ (H _ (Tuple.length_to_list _))).
-        reflexivity.
-      Qed.
-
-      Fixpoint update_nth_cps {A} n (g:A->A) xs {T} (f:list A->T) :=
-        match n with
-        | O => 
-          match xs with
-          | [] => f []
-          | x' :: xs' => f (g x' :: xs')
-          end
-        | S n' =>
-          match xs with
-          | [] => f []
-          | x' :: xs' => update_nth_cps n' g xs' (fun r => f (x' :: r))
-          end
-        end.
-      Lemma update_nth_cps_correct {A} n g: forall xs T f,
-        @update_nth_cps A n g xs T f = f (update_nth n g xs).
-      Proof. induction n; intros; simpl; break_match; try apply IHn; reflexivity. Qed.
 
       Definition add_to_nth {n} i x t {T} (f:tuple Z n->T) :=
         @on_tuple_cps _ _ 0 (update_nth_cps i (runtime_add x)) n n t _ f.
@@ -907,10 +897,10 @@ Module B.
       Lemma weight_place t i : weight (fst (place t i id)) * snd (place t i id) = fst t * snd t.
       Proof. induction i; cbv [id]; simpl place; break_match; autorewrite with cancel_pair;
                try find_apply_lem_hyp Z_div_exact_full_2; nsatz || auto. Qed.
-        Lemma place_id t i {T} f :
-          @place t i T f = f (place t i id).
-        Proof.
-        Admitted.
+      Lemma place_id t i {T} f :
+        @place t i T f = f (place t i id).
+      Proof.
+      Admitted.
 
       Definition from_associational n (p:list limb) {T} (f:tuple Z n->T):=
         fold_right_cps (fun t st => place t (pred n) (fun p=> add_to_nth (fst p) (snd p) st id)) (zeros n) p f.
@@ -943,20 +933,6 @@ Module B.
     End Positional.
   End Positional.
 End B.
-
-Definition weight i := 10^(Z.of_nat i).
-Definition p := [(1,5);(10, 7);(100, 1);(1000, 3)].
-Axiom div : Z -> Z -> Z.
-Axiom modulo : Z -> Z -> Z.
-About B.Positional.carry.
-Require Import Crypto.Algebra.
-Goal False.
-  remember (B.Associational.mul p p (fun r => B.Positional.from_associational weight 4 r (fun rr => B.Positional.to_associational weight rr (fun rrr => @B.Positional.carry weight modulo div 0 rrr _ (fun rrrr => B.Positional.from_associational weight 4 rrrr id))))).
-  cbv - [Let_In runtime_add runtime_mul] in Heqy.
-  cbv [runtime_add runtime_mul] in Heqy.
-  ring_simplify_subterms_in_all.
-Abort.
-      
 
 Section Karatsuba.
   Context {T : Type} (eval : T -> Z)
@@ -1013,12 +989,13 @@ Axiom mul : Z -> Z -> Z * Z.
 Axiom modulo : Z -> Z -> Z.
 Axiom div : Z -> Z -> Z.
 
-Local Infix "^" := tuple : type_scope.
 (*
+Local Infix "^" := tuple : type_scope.
 Goal { mul : (Z^4 -> Z^4 -> Z^7)%type &
              let eval {n} x := @Positional.eval (fun i => 10^i) n x in
              forall a b, eval (mul a b) = eval a * eval b }.
 Proof.
+  eexists; cbv zeta beta; intros.
   
 Goal let base10 i := 10^i in forall f0 f1 f2 f3 g0 g1 g2 g3 : Z, False. intros.
   let t := constr:(Positional.from_associational base10 7
