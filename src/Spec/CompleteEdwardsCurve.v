@@ -24,23 +24,19 @@ Module E.
         square_a : exists sqrt_a, sqrt_a^2 = a;
         nonsquare_d : forall x, x^2 <> d
       }.
-    Context `{twisted_edwards_params}.
+    Context `{twisted_edwards_params}. (* TODO: name me *)
 
     Definition point := { P | let '(x,y) := P in a*x^2 + y^2 = 1 + d*x^2*y^2 }.
     Definition coordinates (P:point) : (F*F) := proj1_sig P.
 
-    (** The following points are indeed on the curve -- see [CompleteEdwardsCurve.Pre] for proof *)
-    Local Obligation Tactic := intros;
-      apply (Pre.zeroOnCurve(a_nonzero:=nonzero_a)(char_gt_2:=char_gt_2)) ||
-      apply (Pre.unifiedAdd'_onCurve (char_gt_2:=char_gt_2) (d_nonsquare:=nonsquare_d)
-         (a_nonzero:=nonzero_a) (a_square:=square_a) _ _ (proj2_sig _) (proj2_sig _)).
-
     Program Definition zero : point := (0, 1).
+    Next Obligation. auto using Pre.zeroOnCurve. Defined.
 
-    Program Definition add (P1 P2:point) : point := exist _ (
-      let (x1, y1) := coordinates P1 in
-      let (x2, y2) := coordinates P2 in
-        (((x1*y2  +  y1*x2)/(1 + d*x1*x2*y1*y2)) , ((y1*y2 - a*x1*x2)/(1 - d*x1*x2*y1*y2)))) _.
+    Program Definition add (P1 P2:point) : point :=
+      let x1y1 := coordinates P1 in let x1 := fst x1y1 in let y1 := snd x1y1 in
+      let x2y2 := coordinates P2 in let x2 := fst x2y2 in let y2 := snd x2y2 in
+        (((x1*y2  +  y1*x2)/(1 + d*x1*x2*y1*y2)) , ((y1*y2 - a*x1*x2)/(1 - d*x1*x2*y1*y2))).
+    Next Obligation. destruct P1 as [[??]?], P2 as [[??]?], H; auto using Pre.add_onCurve. Defined.
 
     Fixpoint mul (n:nat) (P : point) : point :=
       match n with

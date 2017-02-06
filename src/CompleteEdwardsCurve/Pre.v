@@ -1,11 +1,12 @@
 Require Import Coq.Classes.Morphisms. Require Coq.Setoids.Setoid.
 Require Import Crypto.Algebra Crypto.Algebra.
-Require Import Crypto.Util.Notations Crypto.Util.Decidable.
+Require Import Crypto.Util.Notations Crypto.Util.Decidable Crypto.Util.Tactics.
 
-Generalizable All Variables.
 Section Pre.
   Context {F eq zero one opp add sub mul inv div}
-         `{field F eq zero one opp add sub mul inv div} {eq_dec:DecidableRel eq}.
+          {field:@Algebra.field F eq zero one opp add sub mul inv div}
+          {eq_dec:DecidableRel eq}.
+  Add Field EdwardsCurveField : (Field.field_theory_for_stdlib_tactic (T:=F)).
 
   Local Infix "=" := eq. Local Notation "a <> b" := (not (a = b)).
   Local Infix "=" := eq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
@@ -14,102 +15,26 @@ Section Pre.
   Local Infix "-" := sub. Local Infix "/" := div.
   Local Notation "x ^ 2" := (x*x).
 
-  Add Field EdwardsCurveField : (Field.field_theory_for_stdlib_tactic (T:=F)).
+  Context (a:F) (a_nonzero : a<>0) (a_square : exists sqrt_a, sqrt_a^2 = a).
+  Context (d:F) (d_nonsquare : forall sqrt_d, sqrt_d^2 <> d).
+  Context (char_gt_2 : 1+1 <> 0).
 
-  Context {a:F} {a_nonzero : a<>0} {a_square : exists sqrt_a, sqrt_a^2 = a}.
-  Context {d:F} {d_nonsquare : forall sqrt_d, sqrt_d^2 <> d}.
-  Context {char_gt_2 : 1+1 <> 0}.
+  Local Notation onCurve x y := (a*x^2 + y^2 = 1 + d*x^2*y^2).
+  Lemma zeroOnCurve : onCurve 0 1. nsatz. Qed.
 
-  (* the canonical definitions are in Spec *)
-  Definition onCurve (P:F*F) := let (x, y) := P in a*x^2 + y^2 = 1 + d*x^2*y^2.
-  Definition unifiedAdd' (P1' P2':F*F) : F*F :=
-    let (x1, y1) := P1' in
-    let (x2, y2) := P2' in
-    pair (((x1*y2  +  y1*x2)/(1 + d*x1*x2*y1*y2))) (((y1*y2 - a*x1*x2)/(1 - d*x1*x2*y1*y2))).
+  Section Addition.
+    Context (x1 y1:F) (P1onCurve: onCurve x1 y1).
+    Context (x2 y2:F) (P2onCurve: onCurve x2 y2).
+    Lemma denominator_nonzero : (d*x1*x2*y1*y2)^2 <> 1.
+    Proof.
+      destruct a_square as [sqrt_a], (dec(sqrt_a*x2+y2 = 0)), (dec(sqrt_a*x2-y2 = 0));
+        try match goal with [H: ?f (sqrt_a * x2) y2 <> 0 |- _ ]
+            => specialize (d_nonsquare ((f (sqrt_a * x1) (d * x1 * x2 * y1 * y2 * y1))
+                                       /(f (sqrt_a * x2) y2     *   x1 * y1        )))
+            end; field_nsatz.
+    Qed.
 
-  Ltac use_sqrt_a := destruct a_square as [sqrt_a a_square']; rewrite <-a_square' in *.
-
-  Lemma onCurve_subst : forall x1 x2 y1 y2, and (eq x1 y1) (eq x2 y2) -> onCurve (x1, x2) ->
-    onCurve (y1, y2).
-  Proof.
-    unfold onCurve.
-    intros ? ? ? ? [eq_1 eq_2] ?.
-    rewrite eq_1, eq_2 in *.
-    assumption.
-  Qed.
-
-  Lemma edwardsAddComplete' x1 y1 x2 y2 :
-    onCurve (pair x1 y1) ->
-    onCurve (pair x2 y2) ->
-    (d*x1*x2*y1*y2)^2 <> 1.
-  Proof.
-    unfold onCurve, not; use_sqrt_a; intros.
-    destruct (dec ((sqrt_a*x2 + y2) = 0)); destruct (dec ((sqrt_a*x2 - y2) = 0));
-      lazymatch goal with
-      | [H: not (eq (?f (sqrt_a * x2)  y2) 0) |- _ ]
-        => apply d_nonsquare with (sqrt_d:= (f (sqrt_a * x1) (d * x1 * x2 * y1 * y2 * y1))
-                                           /(f (sqrt_a * x2) y2   *   x1 * y1           ))
-      | _ => apply a_nonzero
-      end; super_nsatz.
-  Qed.
-
-  Lemma edwardsAddCompletePlus x1 y1 x2 y2 :
-    onCurve (x1, y1) -> onCurve (x2, y2) -> (1 + d*x1*x2*y1*y2) <> 0.
-  Proof. intros H1 H2 ?. apply (edwardsAddComplete' _ _ _ _ H1 H2); super_nsatz. Qed.
-
-  Lemma edwardsAddCompleteMinus x1 y1 x2 y2 :
-    onCurve (x1, y1) -> onCurve (x2, y2) -> (1 - d*x1*x2*y1*y2) <> 0.
-  Proof. intros H1 H2 ?. apply (edwardsAddComplete' _ _ _ _ H1 H2); super_nsatz. Qed.
-
-  Lemma zeroOnCurve : onCurve (0, 1). Proof. simpl. super_nsatz. Qed.
-
-  Lemma unifiedAdd'_onCurve : forall P1 P2,
-    onCurve P1 -> onCurve P2 -> onCurve (unifiedAdd' P1 P2).
-  Proof.
-    unfold onCurve, unifiedAdd'; intros [x1 y1] [x2 y2] ? ?.
-    common_denominator; [ | auto using edwardsAddCompleteMinus, edwardsAddCompletePlus..].
-    nsatz.
-  Qed.
+    Lemma add_onCurve : onCurve ((x1*y2  +  y1*x2)/(1 + d*x1*x2*y1*y2)) ((y1*y2 - a*x1*x2)/(1 - d*x1*x2*y1*y2)).
+    Proof. pose proof denominator_nonzero; field_nsatz. Qed.
+  End Addition.
 End Pre.
-
-Import Group Ring Field.
-
-(* TODO: move -- this does not need to be defined before [point] *)
-Section RespectsFieldHomomorphism.
-  Context {F EQ ZERO ONE OPP ADD MUL SUB INV DIV} `{@field F EQ ZERO ONE OPP ADD SUB MUL INV DIV}.
-  Context {K eq zero one opp add mul sub inv div} `{@field K eq zero one opp add sub mul inv div}.
-  Local Infix "=" := eq. Local Infix "=" := eq : type_scope.
-  Context {phi:F->K} `{@is_homomorphism F EQ ONE ADD MUL K eq one add mul phi}.
-  Context {A D:F} {a d:K} {a_ok:phi A=a} {d_ok:phi D=d}.
-
-  Let phip  := fun (P':F*F) => let (x, y) := P' in (phi x, phi y).
-
-  Let eqp := fun (P1' P2':K*K) =>
-    let (x1, y1) := P1' in
-    let (x2, y2) := P2' in
-    and (eq x1 x2) (eq y1 y2).
-
-  Create HintDb field_homomorphism discriminated.
-  Hint Rewrite
-       homomorphism_one
-       homomorphism_add
-       homomorphism_sub
-       homomorphism_mul
-       homomorphism_div
-       a_ok
-       d_ok
-       : field_homomorphism.
-
-  Lemma morphism_unifiedAdd' : forall P Q:F*F,
-    (~ EQ (ADD ONE (MUL (MUL (MUL (MUL D (fst P)) (fst Q)) (snd P)) (snd Q))) ZERO) ->
-    (~ EQ (SUB ONE (MUL (MUL (MUL (MUL D (fst P)) (fst Q)) (snd P)) (snd Q))) ZERO) ->
-    eqp
-      (phip (unifiedAdd'(F:=F)(one:=ONE)(add:=ADD)(sub:=SUB)(mul:=MUL)(div:=DIV)(a:=A)(d:=D) P Q))
-            (unifiedAdd'(F:=K)(one:=one)(add:=add)(sub:=sub)(mul:=mul)(div:=div)(a:=a)(d:=d) (phip P) (phip Q)).
-  Proof.
-    intros [x1 y1] [x2 y2] Hnonzero1 Hnonzero2;
-    cbv [unifiedAdd' phip eqp];
-      apply conj;
-      (rewrite_strat topdown hints field_homomorphism); try assumption; reflexivity.
-  Qed.
-End RespectsFieldHomomorphism.
