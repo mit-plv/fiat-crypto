@@ -126,6 +126,14 @@ Require Import Recdef.
     Qed.
 
 Ltac find_continuation :=
+  let a := fresh "x" in
+  let Heqa := fresh "Heqx" in
+  match goal with
+    |- _ ?x = _ ?y =>
+    remember (x-y) as a eqn:Heqa;
+    replace x with (y+a) by (subst a; ring);
+    ring_simplify in Heqa; subst a
+  end;
   match goal with |- ?lhs = ?g ?y =>
                   match eval pattern y in lhs with
                   ?f _ =>
@@ -156,7 +164,7 @@ Module B.
     Create HintDb push_eval discriminated. Hint Rewrite eval_nil eval_cons eval_app : push_eval.
 
     Definition multerm (t t' : limb) : limb :=
-      (fst t * fst t', snd t * snd t')%RT.
+      (fst t * fst t', (snd t * snd t')%RT).
     Definition mul (p q:list limb) {T} (f : list limb->T) :=
       flat_map_cps (fun t => @map_cps _ _ (multerm t) q) p f.
     Lemma eval_map_mul (a:limb) (q:list limb) : eval (List.map (multerm a) q) = fst a * snd a * eval q.
@@ -202,14 +210,7 @@ Module B.
                | _ => erewrite IHp by
                      (intros; rewrite H;
                       autorewrite with push_eval cancel_pair;
-                      let a := fresh "x" in
-                      let Heqa := fresh "Heqx" in
-                      match goal with
-                        |- _ ?x = _ ?y =>
-                        remember (x-y) as a eqn:Heqa;
-                        replace x with (y+a) by (subst a; ring);
-                        ring_simplify in Heqa; subst a
-                      end; find_continuation)
+                      find_continuation)
                | |- ?g _ = ?g _ => apply f_equal
                | H:_ |- _ =>
                  unique pose proof (Z_div_exact_full_2 _ _ s_nonzero H)
@@ -217,27 +218,87 @@ Module B.
                end.
     Qed.
 
-    Definition reduce (s:Z) (c:list limb) (p:list limb) : list limb :=
-      let ab := split s p in fst ab ++ mul c (snd ab).
+    Definition reduce (s:Z) (c:list limb) (p:list limb)
+               {T} (f : list limb->T) :=
+      split s p (fun ab => mul c (snd ab) (fun rr =>f (fst ab ++ rr))).
 
     Lemma reduction_rule a b s c (modulus_nonzero:s-c<>0) :
       (a + s * b) mod (s - c) = (a + c * b) mod (s - c).
     Proof. replace (a + s * b) with ((a + c*b) + b*(s-c)) by nsatz.
            rewrite Z.add_mod, Z_mod_mult, Z.add_0_r, Z.mod_mod; trivial. Qed.
 
-    Lemma eval_reduce s c p (s_nonzero:s<>0) (modulus_nonzero:s-eval c<>0) :
-      eval (reduce s c p) mod (s - eval c) = eval p mod (s - eval c).
-    Proof. cbv [reduce]. rewrite eval_app, eval_mul, <-reduction_rule, eval_split; trivial. Qed.
+    Lemma eval_reduce s c p (s_nonzero:s<>0) (modulus_nonzero:s-eval c<>0)
+          {T} f g (H:forall x, f x = g (eval x mod (s - eval c))):
+      @reduce s c p T f = g (eval p mod (s - eval c)).
+    Proof.
+      repeat match goal with
+             | _ => progress intros
+             | _ => progress cbv [reduce]
+             | _ =>  erewrite eval_split
+                     with (g := (fun x => g (x mod (s - eval c))));
+                       auto; [ ]
+             | _ => erewrite eval_mul
+                 by (intros; rewrite H;
+                     autorewrite with push_eval cancel_pair;
+                     find_continuation)
+             | _ => rewrite reduction_rule by auto
+             | |- g _ = g _ => apply f_equal
+             | _ => nsatz
+             end.
+    Qed.
 
-    Definition carry (w fw:Z) : list limb -> list limb :=
-      List.flat_map (fun t => if dec (fst t = w)
-                              then cons (w*fw, snd t / fw) (cons (w, snd t mod fw) nil)
-                              else cons t nil).
-    Lemma eval_carry w fw p (fw_nonzero:fw<>0) : eval (carry w fw p) = eval p.
-    Proof. induction p; simpl carry; repeat break_match; autorewrite with push_eval cancel_pair;
-             try pose proof (Z.div_mod (snd a) _ fw_nonzero); nsatz.
-    Qed. Hint Rewrite eval_carry eval_reduce : push_eval.
+    Section Carries.
+      Context {modulo div:Z->Z->Z}.
+      Context {div_mod : forall a b:Z, b <> 0 ->
+                                       a = b * (div a b) + modulo a b}.
 
+      Definition carryterm (w fw:Z) (t:limb) {T} (f:list limb->T) :=
+        dlet d := div (snd t) fw in
+              dlet m := modulo (snd t) fw in
+                        if dec (fst t = w)
+                        then f ((w*fw, d) :: (w, m) :: @nil limb)
+                        else f [t].
+
+      Definition carry (w fw:Z) (p:list limb) {T} (f:list limb->T) :=
+        flat_map_cps (carryterm w fw) p f.
+
+      Lemma carryterm_uncps w fw t {T} f :
+        @carryterm w fw t T f
+        = f (dlet d := div (snd t) fw in
+                  dlet m := modulo (snd t) fw in
+                  if dec (fst t = w)
+                  then ((w*fw, d) :: (w, m) :: @nil limb)
+                  else [t]).
+      Proof. cbv [carryterm Let_In]; break_if; reflexivity. Qed.
+      Lemma eval_carryterm w fw (t:limb) (fw_nonzero:fw<>0) {T}
+            (f:list limb->T) g (H:forall x, f x = g (eval x)):
+        @carryterm w fw t T f = g (eval [t]).
+      Proof.
+        cbv [carryterm Let_In]. rewrite !H.
+        break_if; f_equal; subst.
+        autorewrite with push_eval cancel_pair.
+        specialize (div_mod (snd t) fw fw_nonzero).
+        nsatz.
+      Qed.
+      
+      Lemma eval_carry w fw p (fw_nonzero:fw<>0) :
+            forall {T} f g (H:forall x, f x = g (eval x)),
+        @carry w fw p T f = g (eval p).
+      Proof.
+        cbv [carry]; induction p; intros; [cbv; rewrite H; reflexivity|].
+        simpl flat_map_cps.
+        erewrite eval_carryterm
+          by (auto; intros;
+              erewrite flat_map_cps_correct by apply carryterm_uncps;
+              rewrite H; autorewrite with push_eval cancel_pair;
+              find_continuation); simpl.
+        erewrite <-flat_map_cps_correct by apply carryterm_uncps.
+        apply f_equal; autorewrite with push_eval cancel_pair.
+        rewrite IHp with (g := fun x => x) by reflexivity.
+        nsatz.
+      Qed. Hint Rewrite eval_carry eval_reduce : push_eval.
+    End Carries.
+    
     Section Saturated.
       Context {word_max : Z} {word_max_pos : 1 < word_max} 
               {add : Z -> Z -> Z * Z}
@@ -247,19 +308,19 @@ Module B.
               {end_wt:Z} {end_wt_pos : 0 < end_wt}
       .
 
-      Definition multerm (t t' : limb) {T} (f:list limb->T) :=
+      Definition sat_multerm (t t' : limb) {T} (f:list limb->T) :=
         dlet tt' := mul (snd t) (snd t') in
-        f ((fst t*fst t', runtime_fst tt') :: (fst t*fst t'*word_max, runtime_snd tt') :: nil)%list.
+              f ((fst t*fst t', runtime_fst tt') :: (fst t*fst t'*word_max, runtime_snd tt') :: nil)%list.
 
       Definition sat_mul (p q : list limb) {T} (f:list limb->T) := 
-        flat_map_cps (fun t => @flat_map_cps _ _ (multerm t) q) p f.
+        flat_map_cps (fun t => @flat_map_cps _ _ (sat_multerm t) q) p f.
       (* TODO (jgross): kind of an interesting behavior--it infers the type arguments like this but fails to check if I leave them implicit *)
 
       Lemma multerm_correct t t' : forall {T} (f:list limb->T),
-       multerm t t' f = f ([(fst t*fst t', fst (mul (snd t) (snd t'))); (fst t*fst t'*word_max, snd (mul (snd t) (snd t')))]).
+       sat_multerm t t' f = f ([(fst t*fst t', fst (mul (snd t) (snd t'))); (fst t*fst t'*word_max, snd (mul (snd t) (snd t')))]).
       Proof. reflexivity. Qed.
       Lemma eval_map_sat_mul t q :
-        flat_map_cps (multerm t) q eval = fst t * snd t * eval q.
+        flat_map_cps (sat_multerm t) q eval = fst t * snd t * eval q.
       Proof.
         induction q; intros; simpl flat_map_cps; [autorewrite with push_eval; nsatz|].
         rewrite multerm_correct.
@@ -441,7 +502,7 @@ Module B.
           simpl compact_cols_loop1; cbv [Let_In];
             repeat match goal with
                    | |- _ => erewrite eval_compact_no_carry
-                       by find_continuation IHn
+                       by (intros; rewrite IHn; find_continuation)
                    | |- _ => (rewrite @find_remove_first_cps_correct in *
                                by apply has_same_wt_correct )
                    | |- _ => rewrite H 
@@ -577,7 +638,7 @@ Module B.
                  | H : fst (find_remove_first _ ?p) = Some _ |- _ =>
                    unique assert (length p > 0)%nat by (destruct p; (discriminate || (simpl; omega)))
                  | |- _ => rewrite H
-                 | |- _ => erewrite eval_compact_no_carry by find_continuation IHn
+                 | |- _ => erewrite eval_compact_no_carry by (intros; rewrite IHn; find_continuation)
                  | |- _ => rewrite IHn by
                        (try match goal with
                               |- context [length (compact_no_carry ?p)] =>
@@ -695,12 +756,20 @@ Module B.
                autorewrite with push_eval; rewrite ?weight_place; nsatz || omega.
       Qed. Hint Rewrite @eval_from_associational : push_eval.
 
-      Definition carry (index:nat) (p:list limb) : list limb :=
-        Associational.carry (weight index) (weight (S index) / weight index) p.
+      Section Carries.
+        Context {modulo div : Z->Z->Z}.
+        Context {div_mod : forall a b:Z, b <> 0 ->
+                                       a = b * (div a b) + modulo a b}.
+      Definition carry (index:nat) (p:list limb) {T} (f:list limb->T) :=
+        @Associational.carry modulo div (weight index) (weight (S index) / weight index) p T f.
       Lemma eval_carry i p : weight (S i) / weight i <> 0 ->
-        Associational.eval (carry i p) = Associational.eval p.
-      Proof. cbv [carry]; intros; auto using eval_carry. Qed.
+        forall {T} f g (H: forall x, f x = g (Associational.eval x)),
+        @carry i p T f = g (Associational.eval p).
+      Proof.
+        cbv [carry]; intros;  eapply @eval_carry; eauto.
+      Qed.
       Hint Rewrite @eval_carry : push_eval.
+      End Carries.
     End Positional.
   End Positional.
 End B.
@@ -753,7 +822,20 @@ End Karatsuba.
 Local Coercion Z.of_nat : nat >-> Z.
 Import Coq.Lists.List.ListNotations. Local Open Scope list_scope.
 Import B.
+Require Import Crypto.Algebra.
 
+Axiom add_get_carry : Z -> Z -> Z * Z.
+Axiom mul : Z -> Z -> Z * Z.
+Axiom modulo : Z -> Z -> Z.
+Axiom div : Z -> Z -> Z.
+
+Local Infix "^" := tuple : type_scope.
+(*
+Goal { mul : (Z^4 -> Z^4 -> Z^7)%type &
+             let eval {n} x := @Positional.eval (fun i => 10^i) n x in
+             forall a b, eval (mul a b) = eval a * eval b }.
+Proof.
+  
 Goal let base10 i := 10^i in forall f0 f1 f2 f3 g0 g1 g2 g3 : Z, False. intros.
   let t := constr:(Positional.from_associational base10 7
                                    (Associational.mul
@@ -774,9 +856,6 @@ Goal let base2_51 i := 2 ^ (51 * i) in forall f0 f1 f2 f3 f4 g0 g1 g2 g3 g4 : Z,
   let t := (eval cbv [runtime_mul runtime_add] in t) in
   remember t eqn:Heqt; rewrite !Z.mul_1_l, !Z.add_0_r, !Z.add_assoc, !Z.mul_assoc in Heqt.
 Abort.
-
-Axiom add_get_carry : Z -> Z -> Z * Z.
-Axiom mul : Z -> Z -> Z * Z.
 
 Require Import Crypto.Algebra. (* TODO: move ring_simplify_subterms_in_all to a different file? *)
 Goal
@@ -843,3 +922,4 @@ Goal let base2_56 i := 2 ^ (56 * i) in forall f0 f1 f2 f3 f4 f5 f6 f7 g0 g1 g2 g
   let t := (eval cbv [runtime_mul runtime_add] in t) in
   remember t eqn:Heqt; rewrite !Z.mul_1_l, !Z.add_0_r, !Z.add_assoc, !Z.mul_assoc, !Z.mul_opp_l, !Z.add_opp_r, !Z.sub_opp_r in Heqt.
 Abort.
+*)
