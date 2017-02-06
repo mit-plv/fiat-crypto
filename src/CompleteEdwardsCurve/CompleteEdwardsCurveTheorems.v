@@ -22,7 +22,7 @@ Module E.
     Local Infix "-" := Fsub. Local Infix "/" := Fdiv.
     Local Notation "x ^ 2" := (x*x).
     Local Notation point := (@point F Feq Fone Fadd Fmul a d).
-    Local Notation onCurve := (@onCurve F Feq Fone Fadd Fmul a d).
+    Local Notation onCurve x y := (a*x^2 + y^2 = 1 + d*x^2*y^2).
 
     Add Field _edwards_curve_theorems_field : (field_theory_for_stdlib_tactic (H:=field)).
 
@@ -119,7 +119,7 @@ Module E.
         destruct (dec (y=0)); [apply nonzero_a | apply nonsquare_d with (sqrt_a/y)]; super_nsatz.
       Qed.
 
-      Lemma solve_correct : forall x y, onCurve (x, y) <-> (x^2 = solve_for_x2 y).
+      Lemma solve_correct : forall x y, onCurve x y <-> (x^2 = solve_for_x2 y).
       Proof.
         unfold solve_for_x2; simpl; split; intros;
           (common_denominator_all; [nsatz | auto using a_d_y2_nonzero]).
