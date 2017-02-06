@@ -253,11 +253,11 @@ Module B.
                                        a = b * (div a b) + modulo a b}.
 
       Definition carryterm (w fw:Z) (t:limb) {T} (f:list limb->T) :=
-        dlet d := div (snd t) fw in
-              dlet m := modulo (snd t) fw in
-                        if dec (fst t = w)
-                        then f ((w*fw, d) :: (w, m) :: @nil limb)
-                        else f [t].
+        if dec (fst t = w)
+        then dlet d := div (snd t) fw in
+             dlet m := modulo (snd t) fw in
+             f ((w*fw, d) :: (w, m) :: @nil limb)
+        else f [t].
 
       Definition carry (w fw:Z) (p:list limb) {T} (f:list limb->T) :=
         flat_map_cps (carryterm w fw) p f.
@@ -705,29 +705,168 @@ Module B.
               (weight_0 : weight 0%nat = 1%Z)
               (weight_nonzero : forall i, weight i <> 0).
 
+      (* TODO : move *)
+      Fixpoint combine_cps {A B} (la :list A) (lb : list B)
+               {T} (f:list (A*B)->T) :=
+        match la with
+        | nil => f nil
+        | a :: tla =>
+          match lb with
+          | nil => f nil
+          | b :: tlb => combine_cps tla tlb (fun lab => f ((a,b)::lab))
+          end
+        end.
+      Lemma combine_cps_correct {A B} la: forall lb {T} f,
+        @combine_cps A B la lb T f = f (combine la lb).
+      Proof.
+        induction la; simpl combine_cps; simpl combine; intros;
+          try break_match; try apply IHla; reflexivity.
+      Qed.
+
+      Fixpoint to_list'_cps {A} n
+               {T} (f:list A -> T) : Tuple.tuple' A n -> T :=
+        match n as n0 return (Tuple.tuple' A n0 -> T) with
+        | O => fun x => f [x]
+        | S n' => fun (xs: Tuple.tuple' A (S n')) =>
+                    let (xs', x) := xs in
+                    to_list'_cps n' (fun r => f (x::r)) xs'
+        end.
+      Lemma to_list'_cps_correct {A} n: forall t {T} f,
+          @to_list'_cps A n T f t = f (Tuple.to_list' n t).
+      Proof.
+        induction n; simpl; intros; [reflexivity|].
+        destruct_head prod. apply IHn.
+      Qed.
+      Definition to_list_cps' {A} n {T} (f:list A->T)
+        : Tuple.tuple A n -> T :=
+        match n as n0 return (Tuple.tuple A n0 ->T) with
+        | O => fun _ => f nil
+        | S n' => to_list'_cps n' f
+        end.
+      Definition to_list_cps {A} n t {T} f :=
+        @to_list_cps' A n T f t.
+      Lemma to_list_cps_correct {A} n t {T} f :
+        @to_list_cps A n t T f = f (Tuple.to_list n t).
+      Proof. cbv [to_list_cps to_list_cps' Tuple.to_list]; break_match; auto using to_list'_cps_correct. Qed.
+
       (** Converting from positional to associational *)
 
-      Definition to_associational {n:nat} (xs:tuple Z n) : list limb :=
-        List.combine (List.map weight (List.seq 0 n)) (Tuple.to_list n xs).
-      Definition eval {n} x := Associational.eval (@to_associational n x).
-      Lemma eval_to_associational {n} x : Associational.eval (@to_associational n x) = eval x.
-      Proof. reflexivity. Qed.
+      Definition to_associational {n:nat} (xs:tuple Z n)
+                 {T} (f:list limb->T) :=
+        map_cps weight (seq 0 n)
+                (fun r =>
+                   to_list_cps n xs (fun rr => combine_cps r rr f)).
+      
+      Definition eval {n} x := @to_associational n x _ Associational.eval.
+      Lemma to_associational_id {n} x {T} f:
+        @to_associational n x T f = f (to_associational x id).
+      Proof.
+        cbv [to_associational eval].
+        rewrite !map_cps_correct, !to_list_cps_correct,
+        !combine_cps_correct. reflexivity.
+      Qed.
+      Lemma eval_to_associational_id {n} x :
+        Associational.eval (@to_associational n x _ id) = eval x.
+      Proof.
+        cbv [to_associational eval].
+        rewrite !map_cps_correct, !to_list_cps_correct,
+        !combine_cps_correct. reflexivity.
+      Qed.
+      (*
+      Lemma eval_to_associational {n} x {T} f g (H:forall x, f x = g (Associational.eval x)):
+        @to_associational n x T f = g (eval x).
+      Proof.
+        cbv [to_associational eval].
+        rewrite !map_cps_correct, !to_list_cps_correct,
+        !combine_cps_correct, H. reflexivity.
+      Qed.
+      *)
 
       (** Converting from associational to positional *)
 
       Program Definition zeros n : tuple Z n := Tuple.from_list n (List.map (fun _ => 0) (List.seq 0 n)) _.
       Next Obligation. autorewrite with distr_length; reflexivity. Qed.
       Lemma eval_zeros n : eval (zeros n) = 0.
-      Proof. cbv [eval Associational.eval to_associational zeros]; rewrite Tuple.to_list_from_list.
+      Proof. cbv [eval Associational.eval to_associational zeros].
+             rewrite map_cps_correct, to_list_cps_correct, combine_cps_correct.
+             rewrite Tuple.to_list_from_list.
              generalize dependent (List.seq 0 n); intro xs; induction xs; simpl; nsatz. Qed.
 
-      Program Definition add_to_nth {n} i x : tuple Z n -> tuple Z n :=
-        Tuple.on_tuple (ListUtil.update_nth i (runtime_add x)) _.
-      Next Obligation. apply ListUtil.length_update_nth. Defined.
-      Lemma eval_add_to_nth {n} (i:nat) (H:(i<n)%nat) (x:Z) (xs:tuple Z n) :
-        eval (add_to_nth i x xs) = weight i * x + eval xs.
+      (* TODO : move *)
+      Fixpoint from_list_default'_cps {A} (d y:A) n xs:
+        forall {T}, (Tuple.tuple' A n -> T) -> T:=
+        match n as n0 return (forall {T}, (Tuple.tuple' A n0 ->T) ->T) with
+        | O => fun T f => f y
+        | S n' => fun T f =>
+                    match xs with
+                    | nil => from_list_default'_cps d d n' nil (fun r => f (r, y))
+                    | x :: xs' => from_list_default'_cps d x n' xs' (fun r => f (r, y))
+                    end
+        end.
+      Lemma from_list_default'_cps_correct {A} n : forall d y l {T} f,
+          @from_list_default'_cps A d y n l T f = f (Tuple.from_list_default' d y n l).
       Proof.
-        cbv [eval to_associational add_to_nth Tuple.on_tuple runtime_add]; rewrite !Tuple.to_list_from_list.
+        induction n; intros; simpl; [reflexivity|].
+        break_match; subst; apply IHn.
+      Qed.
+      Definition from_list_default_cps {A} (d:A) n (xs:list A) :
+        forall {T}, (Tuple.tuple A n -> T) -> T:=
+        match n as n0 return (forall {T}, (Tuple.tuple A n0 ->T) ->T) with
+        | O => fun T f => f tt
+        | S n' => fun T f =>
+                    match xs with
+                    | nil => from_list_default'_cps d d n' nil f
+                    | x :: xs' => from_list_default'_cps d x n' xs' f
+                    end
+        end.
+      Lemma from_list_default_cps_correct {A} n : forall d l {T} f,
+          @from_list_default_cps A d n l T f = f (Tuple.from_list_default d n l).
+      Proof.
+        destruct n; intros; simpl; [reflexivity|].
+        break_match; auto using from_list_default'_cps_correct.
+      Qed.
+      
+      Definition on_tuple_cps {A B} (d:B) (g:list A ->forall {T},(list B->T)->T) {n m}
+                 (xs : Tuple.tuple A n) {T} (f:tuple B m ->T) :=
+        to_list_cps n xs (fun r => g r (fun rr => from_list_default_cps d m rr f)).
+      Lemma on_tuple_cps_correct {A B} d g {n m} xs {T} f g' H
+        (Hg : forall x {T} h, @g x T h = h (g' x)) : 
+        @on_tuple_cps A B d g n m xs T f = f (@Tuple.on_tuple A B g' n m H xs).
+      Proof.
+        cbv [on_tuple_cps Tuple.on_tuple].
+        rewrite to_list_cps_correct, Hg, from_list_default_cps_correct.
+        rewrite (Tuple.from_list_default_eq _ _ _ (H _ (Tuple.length_to_list _))).
+        reflexivity.
+      Qed.
+
+      Fixpoint update_nth_cps {A} n (g:A->A) xs {T} (f:list A->T) :=
+        match n with
+        | O => 
+          match xs with
+          | [] => f []
+          | x' :: xs' => f (g x' :: xs')
+          end
+        | S n' =>
+          match xs with
+          | [] => f []
+          | x' :: xs' => update_nth_cps n' g xs' (fun r => f (x' :: r))
+          end
+        end.
+      Lemma update_nth_cps_correct {A} n g: forall xs T f,
+        @update_nth_cps A n g xs T f = f (update_nth n g xs).
+      Proof. induction n; intros; simpl; break_match; try apply IHn; reflexivity. Qed.
+
+      Definition add_to_nth {n} i x t {T} (f:tuple Z n->T) :=
+        @on_tuple_cps _ _ 0 (update_nth_cps i (runtime_add x)) n n t _ f.
+      Lemma eval_add_to_nth_id {n} (i:nat) (x:Z) (H:(i<n)%nat) (xs:tuple Z n):
+        eval (@add_to_nth n i x xs _ id) = weight i * x + eval xs.
+      Proof.
+        cbv [eval to_associational add_to_nth runtime_add id].
+        rewrite !map_cps_correct, !to_list_cps_correct, !combine_cps_correct.
+        erewrite on_tuple_cps_correct by (intros; rewrite update_nth_cps_correct;
+                                          apply f_equal; reflexivity).
+        cbv [Tuple.on_tuple].
+        rewrite !Tuple.to_list_from_list.
         rewrite ListUtil.combine_update_nth_r at 1.
         rewrite <-(update_nth_id i (List.combine _ _)) at 2.
         rewrite <-!(ListUtil.splice_nth_equiv_update_nth_update _ _ (weight 0, 0)); cbv [ListUtil.splice_nth id];
@@ -735,26 +874,57 @@ Module B.
                  | _ => progress (apply Zminus_eq; ring_simplify)
                  | _ => progress autorewrite with push_eval cancel_pair distr_length
                  | _ => progress rewrite <-?ListUtil.map_nth_default_always, ?map_fst_combine, ?List.firstn_all2, ?ListUtil.map_nth_default_always, ?nth_default_seq_inbouns, ?plus_O_n
-                 end; trivial; lia. Qed. Hint Rewrite @eval_add_to_nth eval_zeros : push_eval.
+                 end; trivial; lia.
+        Unshelve.
+        intros; subst. apply length_update_nth.
+      Qed. Hint Rewrite @eval_add_to_nth_id : push_eval.
+      Lemma add_to_nth_id {n} i x xs {T} f:
+        @add_to_nth n i x xs T f = f (add_to_nth i x xs id).
+      Proof.
+        cbv [add_to_nth].
+        erewrite !on_tuple_cps_correct by (intros; rewrite update_nth_cps_correct;
+                                          apply f_equal; reflexivity).
+        reflexivity.
+        Unshelve.
+        intros; subst. apply length_update_nth.
+      Qed.
+      (* TODO : since this form of the eval lemmas is better expressed as the two lemmas above, rewrite previous stuff. *)
+      Lemma eval_add_to_nth {n} (i:nat) (x:Z) (H:(i<n)%nat) (xs:tuple Z n)
+            {T} f g (Hfg:forall x, f x = g (eval x)):
+        @add_to_nth n i x xs T f = g (weight i * x + eval xs).
+      Proof.
+        rewrite add_to_nth_id.
+        rewrite Hfg. apply f_equal.
+        auto using eval_add_to_nth_id.
+      Qed. Hint Rewrite @eval_add_to_nth eval_zeros : push_eval.
 
-      Fixpoint place (t:limb) (i:nat) : nat * Z :=
+      Fixpoint place (t:limb) (i:nat) {T} (f:nat * Z->T) :=
         if dec (fst t mod weight i = 0)
-        then (i, let c := fst t / weight i in (c * snd t)%RT)
-        else match i with S i' => place t i' | O => (O, fst t * snd t)%RT end.
-      Lemma place_in_range (t:limb) (n:nat) : (fst (place t n) < S n)%nat.
+        then f (i, let c := fst t / weight i in (c * snd t)%RT)
+        else match i with S i' => place t i' f | O => f (O, fst t * snd t)%RT end.
+      Lemma place_in_range (t:limb) (n:nat) : (fst (place t n id) < S n)%nat.
       Proof. induction n; simpl; break_match; simpl; omega. Qed.
-      Lemma weight_place t i : weight (fst (place t i)) * snd (place t i) = fst t * snd t.
-      Proof. induction i; simpl place; break_match; autorewrite with cancel_pair;
+      Lemma weight_place t i : weight (fst (place t i id)) * snd (place t i id) = fst t * snd t.
+      Proof. induction i; cbv [id]; simpl place; break_match; autorewrite with cancel_pair;
                try find_apply_lem_hyp Z_div_exact_full_2; nsatz || auto. Qed.
+        Lemma place_id t i {T} f :
+          @place t i T f = f (place t i id).
+        Proof.
+        Admitted.
 
-      Definition from_associational n (p:list limb) :=
-        List.fold_right (fun t => let p := place t (pred n) in add_to_nth (fst p) (snd p)) (zeros n) p.
-      Lemma eval_from_associational {n} p (n_nonzero:n<>O) :
-        eval (from_associational n p) = Associational.eval p.
-
-      Proof. induction p; simpl; try pose proof place_in_range a (pred n);
-               autorewrite with push_eval; rewrite ?weight_place; nsatz || omega.
-      Qed. Hint Rewrite @eval_from_associational : push_eval.
+      Definition from_associational n (p:list limb) {T} (f:tuple Z n->T):=
+        fold_right_cps (fun t st => place t (pred n) (fun p=> add_to_nth (fst p) (snd p) st id)) (zeros n) p f.
+      Lemma eval_from_associational_id {n} p (n_nonzero:n<>O):
+        eval (@from_associational n p _ id) = Associational.eval p.
+      Proof.
+        induction p; intros; simpl; autorewrite with push_eval;
+          try reflexivity; cbv [from_associational] in *.
+        pose proof (place_in_range a (pred n)).
+        rewrite fold_right_cps_correct in IHp |- *; simpl.
+        rewrite place_id, <-add_to_nth_id, eval_add_to_nth_id by omega.
+        cbv [id] in *; rewrite IHp by omega.
+        rewrite weight_place; nsatz.
+      Qed. Hint Rewrite @eval_from_associational_id : push_eval.
 
       Section Carries.
         Context {modulo div : Z->Z->Z}.
@@ -773,6 +943,20 @@ Module B.
     End Positional.
   End Positional.
 End B.
+
+Definition weight i := 10^(Z.of_nat i).
+Definition p := [(1,5);(10, 7);(100, 1);(1000, 3)].
+Axiom div : Z -> Z -> Z.
+Axiom modulo : Z -> Z -> Z.
+About B.Positional.carry.
+Require Import Crypto.Algebra.
+Goal False.
+  remember (B.Associational.mul p p (fun r => B.Positional.from_associational weight 4 r (fun rr => B.Positional.to_associational weight rr (fun rrr => @B.Positional.carry weight modulo div 0 rrr _ (fun rrrr => B.Positional.from_associational weight 4 rrrr id))))).
+  cbv - [Let_In runtime_add runtime_mul] in Heqy.
+  cbv [runtime_add runtime_mul] in Heqy.
+  ring_simplify_subterms_in_all.
+Abort.
+      
 
 Section Karatsuba.
   Context {T : Type} (eval : T -> Z)
