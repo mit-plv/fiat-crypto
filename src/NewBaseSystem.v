@@ -899,8 +899,7 @@ Module B.
                try find_apply_lem_hyp Z_div_exact_full_2; nsatz || auto. Qed.
       Lemma place_id t i {T} f :
         @place t i T f = f (place t i id).
-      Proof.
-      Admitted.
+      Proof. cbv [id]; induction i; simpl; break_if; auto. Qed.
 
       Definition from_associational n (p:list limb) {T} (f:tuple Z n->T):=
         fold_right_cps (fun t st => place t (pred n) (fun p=> add_to_nth (fst p) (snd p) st id)) (zeros n) p f.
