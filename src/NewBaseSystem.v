@@ -988,14 +988,55 @@ Axiom mul : Z -> Z -> Z * Z.
 Axiom modulo : Z -> Z -> Z.
 Axiom div : Z -> Z -> Z.
 
-(*
+Lemma lift_tuple2 {R S T n} f (g:R->S) : (forall a b, {prod | g prod = f a b}) ->
+                              { op : tuple T n -> tuple T n -> R & forall a b, g (op a b) = f a b }.
+Proof.
+  intros X.
+  exists (fun a b => proj1_sig (X a b)).
+  intros a b. apply (proj2_sig (X a b)).
+Qed.
+
 Local Infix "^" := tuple : type_scope.
 Goal { mul : (Z^4 -> Z^4 -> Z^7)%type &
-             let eval {n} x := @Positional.eval (fun i => 10^i) n x in
-             forall a b, eval (mul a b) = eval a * eval b }.
+             forall a b : Z^4,
+               let eval {n} := Positional.eval (n := n) (fun i => 10^i) in
+               eval (mul a b) = eval a  * eval b }.
 Proof.
+  apply lift_tuple2; intros.
+  cbv [Tuple.tuple Tuple.tuple'] in *.
+  repeat match goal with p : _ * Z |- _ => destruct p end.
   eexists; cbv zeta beta; intros.
+  match goal with |- Positional.eval ?wt _ = Positional.eval ?wt ?a * Positional.eval ?wt ?b =>
+                  transitivity (Positional.eval wt
+                                  (Positional.to_associational (n := 4) wt a
+                                  (fun r => Positional.to_associational (n := 4) wt b
+                                  (fun r0 => Associational.mul r r0
+                                  (fun r1 => Positional.from_associational wt 7 r1
+                                  (fun r2 => Positional.to_associational wt r2
+                                  (fun r3 => @Positional.carry wt modulo div 0 r3 _
+                                  (fun r4 => @Positional.carry wt modulo div 1 r4 _
+                                  (fun r5 => @Positional.carry wt modulo div 2 r5 _
+                                  (fun r6 => @Positional.carry wt modulo div 3 r6 _
+                                  (fun r7 => @Positional.carry wt modulo div 4 r7 _
+                                  (fun r8 => @Positional.carry wt modulo div 5 r8 _
+                                  (fun r9 => @Positional.carry wt modulo div 6 r9 _
+                                  (fun r10 => @Positional.carry wt modulo div 7 r10 _
+                                  (fun r11 => Positional.from_associational wt 7 r11 id
+                               )))))))))))))))
+  end.
+  {
+  apply f_equal.
+  cbv - [runtime_add runtime_mul Let_In].
+  cbv [runtime_add runtime_mul].
+  repeat progress rewrite ?Z.mul_1_l, ?Z.mul_1_r, ?Z.add_0_l, ?Z.add_0_r.
+  reflexivity.
+  }
+  { 
+    rewrite Positional.to_associational_id.
+    rewrite Positional.to_associational_id.
+Admitted.
   
+(*
 Goal let base10 i := 10^i in forall f0 f1 f2 f3 g0 g1 g2 g3 : Z, False. intros.
   let t := constr:(Positional.from_associational base10 7
                                    (Associational.mul
