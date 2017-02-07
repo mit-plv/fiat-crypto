@@ -233,9 +233,9 @@ Module InterpretationsGen (Bit : BitSize).
     Lemma wordWToZ_shl : bounds_2statement shl Z.shiftl.
     Proof.
       wWToZ_t; wWToZ_extra_t; unfold wordWToZ, wordBin.
-      rewrite wordToN_NToWord_idempotent; [rewrite <- Z_inj_shiftl; reflexivity|].
+      rewrite wordToN_NToWord_idempotent; [rewrite <- N2Z.inj_shiftl; reflexivity|].
       apply N2Z.inj_lt.
-      rewrite Z_inj_shiftl.
+      rewrite N2Z.inj_shiftl.
       destruct (Z.lt_ge_cases 0 ((wordWToZ x) << (wordWToZ y)))%Z;
         [|eapply Z.le_lt_trans; [|apply N2Z.inj_lt, Npow2_gt0]; assumption].
       rewrite Npow2_N, N2Z.inj_pow, ?nat_N_Z.
@@ -245,9 +245,9 @@ Module InterpretationsGen (Bit : BitSize).
     Lemma wordWToZ_shr : bounds_2statement shr Z.shiftr.
     Proof.
       wWToZ_t; wWToZ_extra_t; unfold wordWToZ, wordBin.
-      rewrite wordToN_NToWord_idempotent; [rewrite <- Z_inj_shiftr; reflexivity|].
+      rewrite wordToN_NToWord_idempotent; [rewrite <- N2Z.inj_shiftr; reflexivity|].
       apply N2Z.inj_lt.
-      rewrite Z_inj_shiftr.
+      rewrite N2Z.inj_shiftr.
       destruct (Z.lt_ge_cases 0 ((wordWToZ x) >> (wordWToZ y)))%Z;
         [|eapply Z.le_lt_trans; [|apply N2Z.inj_lt, Npow2_gt0]; assumption].
       rewrite Npow2_N, N2Z.inj_pow, nat_N_Z.

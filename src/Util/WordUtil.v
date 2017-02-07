@@ -22,9 +22,13 @@ Local Open Scope nat_scope.
 
 Create HintDb pull_wordToN discriminated.
 Create HintDb push_wordToN discriminated.
+Create HintDb pull_ZToWord discriminated.
+Create HintDb push_ZToWord discriminated.
 
 Hint Extern 1 => autorewrite with pull_wordToN in * : pull_wordToN.
 Hint Extern 1 => autorewrite with push_wordToN in * : push_wordToN.
+Hint Extern 1 => autorewrite with pull_ZToWord in * : pull_ZToWord.
+Hint Extern 1 => autorewrite with push_ZToWord in * : push_ZToWord.
 
 Module Word.
   Fixpoint weqb_hetero sz1 sz2 (x : word sz1) (y : word sz2) : bool :=
@@ -255,42 +259,6 @@ Section Pow2.
         assumption.
   Qed.
 End Pow2.
-
-Section Z2N.
-  Lemma Z_inj_shiftl: forall x y, Z.of_N (N.shiftl x y) = Z.shiftl (Z.of_N x) (Z.of_N y).
-  Proof.
-    intros.
-    apply Z.bits_inj_iff'; intros k Hpos.
-    rewrite Z2N.inj_testbit; [|assumption].
-    rewrite Z.shiftl_spec; [|assumption].
-
-    assert ((Z.to_N k) >= y \/ (Z.to_N k) < y)%N as g by (
-        unfold N.ge, N.lt; induction (N.compare (Z.to_N k) y); [left|auto|left];
-        intro H; inversion H).
-
-    destruct g as [g|g];
-    [ rewrite N.shiftl_spec_high; [|apply N2Z.inj_le; rewrite Z2N.id|apply N.ge_le]
-    | rewrite N.shiftl_spec_low]; try assumption.
-
-    - rewrite <- N2Z.inj_testbit; f_equal.
-        rewrite N2Z.inj_sub, Z2N.id; [reflexivity|assumption|apply N.ge_le; assumption].
-
-    - apply N2Z.inj_lt in g.
-        rewrite Z2N.id in g; [symmetry|assumption].
-        apply Z.testbit_neg_r; omega.
-  Qed.
-
-  Lemma Z_inj_shiftr: forall x y, Z.of_N (N.shiftr x y) = Z.shiftr (Z.of_N x) (Z.of_N y).
-  Proof.
-    intros.
-    apply Z.bits_inj_iff'; intros k Hpos.
-    rewrite Z2N.inj_testbit; [|assumption].
-    rewrite Z.shiftr_spec, N.shiftr_spec; [|apply N2Z.inj_le; rewrite Z2N.id|]; try assumption.
-    rewrite <- N2Z.inj_testbit; f_equal.
-    rewrite N2Z.inj_add; f_equal.
-    apply Z2N.id; assumption.
-  Qed.
-End Z2N.
 
 Section WordToN.
   Lemma wordToN_NToWord_idempotent : forall sz n, (n < Npow2 sz)%N ->
@@ -1231,7 +1199,7 @@ Section Updates.
     do 2 destruct B0 as [? B0], B1 as [? B1]; destruct B0, B1; intros.
 
     repeat split; [assumption| | |assumption];
-        (rewrite wordToN_NToWord_idempotent; [|apply Npow2_Zlog2]; rewrite Z_inj_shiftr);
+        (rewrite wordToN_NToWord_idempotent; [|apply Npow2_Zlog2]; rewrite N2Z.inj_shiftr);
         [ | eapply Z.le_lt_trans; [apply Z.log2_le_mono|eassumption]
         | | eapply Z.le_lt_trans; [apply Z.log2_le_mono|eassumption]];
         apply Z.shiftr_le_mono; shift_mono.
@@ -1247,7 +1215,7 @@ Section Updates.
     do 2 destruct B0 as [? B0], B1 as [? B1]; destruct B0, B1; intros.
 
     repeat split; [assumption| | |assumption];
-        (rewrite wordToN_NToWord_idempotent; [|apply Npow2_Zlog2]; rewrite Z_inj_shiftl);
+        (rewrite wordToN_NToWord_idempotent; [|apply Npow2_Zlog2]; rewrite N2Z.inj_shiftl);
         [ | eapply Z.le_lt_trans; [apply Z.log2_le_mono|eassumption]
         | | eapply Z.le_lt_trans; [apply Z.log2_le_mono|eassumption]];
         apply Z.shiftl_le_mono; shift_mono.

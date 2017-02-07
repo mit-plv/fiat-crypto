@@ -4,6 +4,7 @@ Require Import Coq.Arith.Arith.
 Require Import Bedrock.Word.
 Require Import Crypto.Util.FixedWordSizes.
 Require Import Crypto.Util.WordUtil.
+Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tactics.BreakMatch.
 
 Definition wordT_beq_hetero {logsz1 logsz2} : wordT logsz1 -> wordT logsz2 -> bool
@@ -225,7 +226,7 @@ Ltac syntactic_fixed_size_op_to_word :=
        let P := lazymatch (eval pattern logsz in P) with ?P _ => P end in
        revert logsz x;
        refine (@wordToZ_word_case_dep_unop wop P _);
-       intros logsz x; unfold wordToZ_gen; intros
+       intros logsz x; intros
   | [ |- context[wordToZ (word_case_dep (T:=?T) ?logsz (?wop 32) (?wop 64) (?wop 128) ?f ?x ?y)] ]
     => lazymatch type of x with
        | context[logsz]
@@ -236,7 +237,7 @@ Ltac syntactic_fixed_size_op_to_word :=
             let P := lazymatch (eval pattern logsz in P) with ?P _ => P end in
             revert logsz x y;
             refine (@wordToZ_word_case_dep_binop wop P _);
-            intros logsz x y; unfold wordToZ_gen; intros
+            intros logsz x y; intros
        | _
          => move y at top;
             revert dependent logsz; intros logsz y;
@@ -245,7 +246,7 @@ Ltac syntactic_fixed_size_op_to_word :=
             let P := lazymatch (eval pattern logsz in P) with ?P _ => P end in
             revert logsz y;
             refine (@wordToZ_word_case_dep_11op _ wop P x _);
-            intros logsz y; unfold wordToZ_gen; intros
+            intros logsz y; intros
        end
   | [ |- context[wordToZ (word_case_dep (T:=?T) ?logsz (?wop 32) (?wop 64) (?wop 128) ?f ?x ?y ?z ?w)] ]
     => move w at top; move z at top; move y at top; move x at top;
@@ -299,7 +300,7 @@ Section Updates.
             g.
   Proof.
     intros H n; specialize (H (2^n)%nat).
-    unfold valid_update; intros; fixed_size_op_to_word; auto.
+    unfold valid_update; intros; fixed_size_op_to_word; unfold wordToZ_gen; auto.
   Qed.
 
   Lemma wadd_valid_update: forall n,
@@ -351,3 +352,49 @@ Section Updates.
         (fun l0 u0 l1 u1 => Z.shiftl u0 u1)%Z.
   Proof. apply word_case_dep_valid_update, shl_valid_update. Qed.
 End Updates.
+
+Section pull_ZToWord.
+  Local Ltac t0 :=
+    intros;
+    etransitivity; [ symmetry; apply ZToWord_wordToZ | ]; fixed_size_op_to_word; unfold wordToZ_gen, wordBin;
+    apply f_equal.
+  Local Ltac t1 lem :=
+    let solver := solve [ apply Npow2_Zlog2; autorewrite with push_Zof_N; assumption
+                        | apply N2Z.inj_ge; unfold wordToZ_gen in *; omega ] in
+    first [ rewrite <- lem by solver | rewrite -> lem by solver ].
+  Local Ltac t2 :=
+    autorewrite with push_Zof_N; unfold wordToZ_gen in *;
+    try first [ reflexivity
+              | apply Z.max_case_strong; omega ].
+
+  Local Ltac t lem :=
+    t0; t1 lem; solve [ t2 ].
+
+  Local Notation pull_ZToWordT_2op wop zop
+    := (forall {logsz} (x y : wordT logsz),
+           (Z.log2 (zop (wordToZ x) (wordToZ y)) < Z.of_nat (2^logsz))%Z
+           -> wop logsz x y = ZToWord (zop (wordToZ x) (wordToZ y)))
+         (only parsing).
+  Local Notation pull_ZToWordT_2op' wop zop
+    := (forall {logsz} (x y : wordT logsz),
+           (0 <= zop (wordToZ x) (wordToZ y))%Z
+           -> wop logsz x y = ZToWord (zop (wordToZ x) (wordToZ y)))
+         (only parsing).
+
+  Lemma wadd_def_ZToWord : pull_ZToWordT_2op (@wadd) (@Z.add).
+  Proof. t (@wordize_plus). Qed.
+  Lemma wsub_def_ZToWord : pull_ZToWordT_2op' (@wsub) (@Z.sub).
+  Proof. t (@wordize_minus). Qed.
+  Lemma wmul_def_ZToWord : pull_ZToWordT_2op (@wmul) (@Z.mul).
+  Proof. t (@wordize_mult). Qed.
+  Lemma wland_def_ZToWord : pull_ZToWordT_2op (@wland) (@Z.land).
+  Proof. t (@wordize_and). Qed.
+  Lemma wlor_def_ZToWord : pull_ZToWordT_2op (@wlor) (@Z.lor).
+  Proof. t (@wordize_or). Qed.
+  Lemma wshl_def_ZToWord : pull_ZToWordT_2op (@wshl) (@Z.shiftl).
+  Proof. t (@wordToN_NToWord_idempotent). Qed.
+  Lemma wshr_def_ZToWord : pull_ZToWordT_2op (@wshr) (@Z.shiftr).
+  Proof. t (@wordToN_NToWord_idempotent). Qed.
+End pull_ZToWord.
+Hint Rewrite wadd_def_ZToWord wsub_def_ZToWord wmul_def_ZToWord wland_def_ZToWord wlor_def_ZToWord wshl_def_ZToWord wshr_def_ZToWord : pull_ZToWord.
+Hint Rewrite <- wadd_def_ZToWord wsub_def_ZToWord wmul_def_ZToWord wland_def_ZToWord wlor_def_ZToWord wshl_def_ZToWord wshr_def_ZToWord : push_ZToWord.
