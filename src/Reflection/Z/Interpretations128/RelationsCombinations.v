@@ -21,11 +21,11 @@ Module Relations.
     Definition interp_type_rel_pointwise2_uncurried
                {t : type base_type}
       := match t return interp_type interp_base_type1 t -> interp_type interp_base_type2 t -> _ with
-         | Tflat T => fun f g => interp_flat_type_rel_pointwise2 (t:=T) R f g
+         | Tflat T => fun f g => interp_flat_type_rel_pointwise (t:=T) R f g
          | Arrow A B
            => fun f g
-              => forall x y, interp_flat_type_rel_pointwise2 R x y
-                             -> interp_flat_type_rel_pointwise2 R (ApplyInterpedAll f x) (ApplyInterpedAll g y)
+              => forall x y, interp_flat_type_rel_pointwise R x y
+                             -> interp_flat_type_rel_pointwise R (ApplyInterpedAll f x) (ApplyInterpedAll g y)
          end.
 
     Lemma uncurry_interp_type_rel_pointwise2
@@ -290,7 +290,7 @@ Module Relations.
                                     | Some _ => True
                                     | None => False
                                     end -> match LiftOption.of' f with
-                                           | Some f' => interp_flat_type_rel_pointwise2 (@R) f' g
+                                           | Some f' => interp_flat_type_rel_pointwise (@R) f' g
                                            | None => True
                                            end
          | Arrow A B
@@ -306,7 +306,7 @@ Module Relations.
                   | None => False
                   end
                   -> match fx with
-                     | Some fx' => interp_flat_type_rel_pointwise2 (@R) fx' gy
+                     | Some fx' => interp_flat_type_rel_pointwise (@R) fx' gy
                      | None => True
                      end
          end.
@@ -354,9 +354,9 @@ Module Relations.
           {R3 : forall t : base_type, interp_base_type2 t -> interp_base_type3 t -> Prop}
           {t x y z}
     : (forall t a b c, (R1 t a b : Prop) -> (R2 t a c : Prop) -> (R3 t b c : Prop))
-      -> interp_flat_type_rel_pointwise2 (t:=t) R1 x y
-      -> interp_flat_type_rel_pointwise2 (t:=t) R2 x z
-      -> interp_flat_type_rel_pointwise2 (t:=t) R3 y z.
+      -> interp_flat_type_rel_pointwise (t:=t) R1 x y
+      -> interp_flat_type_rel_pointwise (t:=t) R2 x z
+      -> interp_flat_type_rel_pointwise (t:=t) R3 y z.
     Proof.
       intro HRel; induction t; simpl; intuition eauto.
     Qed.

@@ -17,8 +17,8 @@ Section language.
           (interp_op1 : forall src dst, op src dst -> interp_flat_type interp_base_type1 src -> interp_flat_type interp_base_type1 dst)
           (interp_op2 : forall src dst, op src dst -> interp_flat_type interp_base_type2 src -> interp_flat_type interp_base_type2 dst)
           {R : forall t, interp_base_type1 t -> interp_base_type2 t -> Prop}
-          (Rop : forall src dst op sv1 sv2, interp_flat_type_rel_pointwise2 R sv1 sv2
-                                            -> interp_flat_type_rel_pointwise2
+          (Rop : forall src dst op sv1 sv2, interp_flat_type_rel_pointwise R sv1 sv2
+                                            -> interp_flat_type_rel_pointwise
                                                  R (interp_op1 src dst op sv1) (interp_op2 src dst op sv2)).
 
   Local Notation exprf1 := (@exprf base_type_code op interp_base_type1).
@@ -33,9 +33,9 @@ Section language.
   Local Notation Interp1 := (@Interp base_type_code interp_base_type1 op interp_op1).
   Local Notation Interp2 := (@Interp base_type_code interp_base_type2 op interp_op2).
 
-  Lemma interp_flat_type_rel_pointwise2_flatten_binding_list
+  Lemma interp_flat_type_rel_pointwise_flatten_binding_list
         {t x x' T e1 e2}
-        (Hpointwise : interp_flat_type_rel_pointwise2 R e1 e2)
+        (Hpointwise : interp_flat_type_rel_pointwise R e1 e2)
         (HIn : List.In (existT (fun t : base_type_code => (interp_base_type1 t * interp_base_type2 t)%type) t (x, x')%core)
                        (flatten_binding_list (t:=T) e1 e2))
     : R t x x'.
@@ -50,7 +50,7 @@ Section language.
                    | solve [ eauto ] ].
   Qed.
 
-  Local Hint Resolve List.in_app_or List.in_or_app interp_flat_type_rel_pointwise2_flatten_binding_list.
+  Local Hint Resolve List.in_app_or List.in_or_app interp_flat_type_rel_pointwise_flatten_binding_list.
 
   Section wf.
     Lemma interpf_wff
@@ -60,7 +60,7 @@ Section language.
                  List.In (existT (fun t : base_type_code => (interp_base_type1 t * interp_base_type2 t)%type) t (x, x')%core) G
                  -> R t x x')
              (Rwf : wff G e1 e2)
-    : interp_flat_type_rel_pointwise2 R (interpf1 e1) (interpf2 e2).
+    : interp_flat_type_rel_pointwise R (interpf1 e1) (interpf2 e2).
     Proof.
       induction Rwf; simpl; auto.
       repeat match goal with

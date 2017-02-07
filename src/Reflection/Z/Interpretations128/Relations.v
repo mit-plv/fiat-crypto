@@ -49,8 +49,8 @@ Definition related_wordW_boundsi' (t : base_type) : ZBounds.bounds -> WordW.inte
 Local Notation related_op R interp_op1 interp_op2
   := (forall (src dst : flat_type base_type) (op : op src dst)
              (sv1 : interp_flat_type _ src) (sv2 : interp_flat_type _ src),
-         interp_flat_type_rel_pointwise2 R sv1 sv2 ->
-         interp_flat_type_rel_pointwise2 R (interp_op1 _ _ op sv1) (interp_op2 _ _ op sv2))
+         interp_flat_type_rel_pointwise R sv1 sv2 ->
+         interp_flat_type_rel_pointwise R (interp_op1 _ _ op sv1) (interp_op2 _ _ op sv2))
        (only parsing).
 Local Notation related_const R interp f g
   := (forall (t : base_type) (v : interp t), R t (f t v) (g t v))
@@ -121,29 +121,29 @@ Local Ltac related_wordW_op_t := repeat related_wordW_op_t_step.
 
 Lemma related_wordW_t_map1 opW opB pf
       sv1 sv2
-  : interp_flat_type_rel_pointwise2 (t:=Tbase TZ) related_wordW sv1 sv2
+  : interp_flat_type_rel_pointwise (t:=Tbase TZ) related_wordW sv1 sv2
     -> @related_wordW TZ (BoundedWordW.t_map1 opW opB pf sv1) (opW sv2).
 Proof.
-  cbv [interp_flat_type BoundedWordW.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
+  cbv [interp_flat_type BoundedWordW.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise interp_flat_type_rel_pointwise_gen_Prop] in *.
   related_wordW_op_t.
 Qed.
 
 Lemma related_wordW_t_map2 opW opB pf
       sv1 sv2
-  : interp_flat_type_rel_pointwise2 (t:=Prod (Tbase TZ) (Tbase TZ)) related_wordW sv1 sv2
+  : interp_flat_type_rel_pointwise (t:=Prod (Tbase TZ) (Tbase TZ)) related_wordW sv1 sv2
     -> @related_wordW TZ (BoundedWordW.t_map2 opW opB pf (fst sv1) (snd sv1)) (opW (fst sv2) (snd sv2)).
 Proof.
-  cbv [interp_flat_type BoundedWordW.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
+  cbv [interp_flat_type BoundedWordW.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise interp_flat_type_rel_pointwise_gen_Prop] in *.
   related_wordW_op_t.
 Qed.
 
 Lemma related_wordW_t_map4 opW opB pf
       sv1 sv2
-  : interp_flat_type_rel_pointwise2 (t:=Prod (Prod (Prod (Tbase TZ) (Tbase TZ)) (Tbase TZ)) (Tbase TZ)) related_wordW sv1 sv2
+  : interp_flat_type_rel_pointwise (t:=Prod (Prod (Prod (Tbase TZ) (Tbase TZ)) (Tbase TZ)) (Tbase TZ)) related_wordW sv1 sv2
     -> @related_wordW TZ (BoundedWordW.t_map4 opW opB pf (fst (fst (fst sv1))) (snd (fst (fst sv1))) (snd (fst sv1)) (snd sv1))
                        (opW (fst (fst (fst sv2))) (snd (fst (fst sv2))) (snd (fst sv2)) (snd sv2)).
 Proof.
-  cbv [interp_flat_type BoundedWordW.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
+  cbv [interp_flat_type BoundedWordW.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise interp_flat_type_rel_pointwise_gen_Prop] in *.
   related_wordW_op_t.
 Qed.
 
@@ -152,7 +152,7 @@ Lemma related_tuples_None_left
       (R : forall t, LiftOption.interp_base_type' T t -> interp_base_type' t -> Prop)
       (RNone : forall v, R TZ None v)
       (v : interp_flat_type interp_base_type' (tuple (Tbase TZ) (S n)))
-  : interp_flat_type_rel_pointwise2
+  : interp_flat_type_rel_pointwise
       R
       (flat_interp_untuple (T:=Tbase TZ) (Tuple.push_option None))
       v.
@@ -165,11 +165,11 @@ Lemma related_tuples_Some_left
       (R : forall t, T -> interp_base_type' t -> Prop)
       u
       (v : interp_flat_type interp_base_type' (tuple (Tbase TZ) n))
-  : interp_flat_type_rel_pointwise2
+  : interp_flat_type_rel_pointwise
       R
       (flat_interp_untuple (T:=Tbase TZ) u)
       v
-    <-> interp_flat_type_rel_pointwise2
+    <-> interp_flat_type_rel_pointwise
           (LiftOption.lift_relation R)
           (flat_interp_untuple (T:=Tbase TZ) (Tuple.push_option (Some u)))
           v.
@@ -185,10 +185,10 @@ Lemma related_tuples_Some_left_ext
       {R : forall t, T -> interp_base_type' t -> Prop}
       {u v u'}
       (H : Tuple.lift_option (flat_interp_tuple (T:=Tbase TZ) (n:=n) u) = Some u')
-  : interp_flat_type_rel_pointwise2
+  : interp_flat_type_rel_pointwise
       R
       (flat_interp_untuple (T:=Tbase TZ) u') v
-    <-> interp_flat_type_rel_pointwise2
+    <-> interp_flat_type_rel_pointwise
           (LiftOption.lift_relation R)
           u v.
 Proof.
@@ -205,7 +205,7 @@ Lemma related_tuples_proj_eq_rel_untuple
       {n T interp_base_type'}
       {proj : forall t, T -> interp_base_type' t}
       {u : Tuple.tuple _ n} {v : Tuple.tuple _ n}
-  : interp_flat_type_rel_pointwise2
+  : interp_flat_type_rel_pointwise
       (fun t => proj_eq_rel (proj t))
       (flat_interp_untuple (T:=Tbase TZ) u)
       (flat_interp_untuple (T:=Tbase TZ) v)
@@ -224,7 +224,7 @@ Lemma related_tuples_proj_eq_rel_tuple
       {n T interp_base_type'}
       {proj : forall t, T -> interp_base_type' t}
       {u v}
-  : interp_flat_type_rel_pointwise2
+  : interp_flat_type_rel_pointwise
       (fun t => proj_eq_rel (proj t))
       u v
     <-> (Tuple.map (proj _) (flat_interp_tuple (n:=n) (T:=Tbase TZ) u)
@@ -239,12 +239,12 @@ Lemma related_tuples_lift_relation2_untuple
       (R : T -> U -> Prop)
       (t : option (Tuple.tuple T (S n)))
       (u : option (Tuple.tuple U (S n)))
-  : interp_flat_type_rel_pointwise2
+  : interp_flat_type_rel_pointwise
       (LiftOption.lift_relation2 R)
       (flat_interp_untuple (T:=Tbase TZ) (Tuple.push_option t))
       (flat_interp_untuple (T:=Tbase TZ) (Tuple.push_option u))
     <-> LiftOption.lift_relation2
-          (interp_flat_type_rel_pointwise2 (fun _ => R))
+          (interp_flat_type_rel_pointwise (fun _ => R))
           TZ
           (option_map (flat_interp_untuple (interp_base_type:=fun _ => T) (T:=Tbase TZ)) t)
           (option_map (flat_interp_untuple (interp_base_type:=fun _ => U) (T:=Tbase TZ)) u).
@@ -257,7 +257,7 @@ Proof.
       simpl @option_map in *;
       simpl @LiftOption.lift_relation2 in *;
       try (rewrite <- IHn; reflexivity);
-      try (simpl @interp_flat_type_rel_pointwise2; tauto). }
+      try (simpl @interp_flat_type_rel_pointwise; tauto). }
 Qed.
 
 Lemma related_tuples_lift_relation2_untuple_ext
@@ -266,11 +266,11 @@ Lemma related_tuples_lift_relation2_untuple_ext
       {t u}
       (H : (exists v, Tuple.lift_option (n:=S n) (flat_interp_tuple (T:=Tbase TZ) t) = Some v)
            \/ (exists v, Tuple.lift_option (n:=S n) (flat_interp_tuple (T:=Tbase TZ) u) = Some v))
-  : interp_flat_type_rel_pointwise2
+  : interp_flat_type_rel_pointwise
       (LiftOption.lift_relation2 R)
       t u
     <-> LiftOption.lift_relation2
-          (interp_flat_type_rel_pointwise2 (fun _ => R))
+          (interp_flat_type_rel_pointwise (fun _ => R))
           TZ
           (option_map (flat_interp_untuple (interp_base_type:=fun _ => T) (T:=Tbase TZ)) (Tuple.lift_option (flat_interp_tuple (T:=Tbase TZ) t)))
           (option_map (flat_interp_untuple (interp_base_type:=fun _ => U) (T:=Tbase TZ)) (Tuple.lift_option (flat_interp_tuple (T:=Tbase TZ) u))).
@@ -289,7 +289,7 @@ Proof.
     destruct_head_hnf' prod;
       destruct_head_hnf' option;
       simpl @fst in *; simpl @snd in *;
-        (etransitivity; [ simpl @interp_flat_type_rel_pointwise2 | reflexivity ]);
+        (etransitivity; [ simpl @interp_flat_type_rel_pointwise | reflexivity ]);
         try solve [ repeat first [ progress simpl in *
                                  | tauto
                                  | congruence
@@ -309,9 +309,9 @@ Proof.
     reflexivity.
 Qed.
 
-Lemma lift_option_None_interp_flat_type_rel_pointwise2_1
+Lemma lift_option_None_interp_flat_type_rel_pointwise_1
       T U n R x y
-      (H : interp_flat_type_rel_pointwise2 (LiftOption.lift_relation2 R) x y)
+      (H : interp_flat_type_rel_pointwise (LiftOption.lift_relation2 R) x y)
       (HNone : Tuple.lift_option (A:=T) (n:=S n) (flat_interp_tuple (T:=Tbase TZ) (n:=S n) x) = None)
   : Tuple.lift_option (A:=U) (n:=S n) (flat_interp_tuple (T:=Tbase TZ) (n:=S n) y) = None.
 Proof.
@@ -350,10 +350,10 @@ Qed.
 Lemma related_bounds_t_map1 opW opB pf
       (HN : opB None = None)
       sv1 sv2
-  : interp_flat_type_rel_pointwise2 (t:=Tbase TZ) related_bounds sv1 sv2
+  : interp_flat_type_rel_pointwise (t:=Tbase TZ) related_bounds sv1 sv2
     -> @related_bounds TZ (BoundedWordW.t_map1 opW opB pf sv1) (opB sv2).
 Proof.
-  cbv [interp_flat_type BoundedWordW.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
+  cbv [interp_flat_type BoundedWordW.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise interp_flat_type_rel_pointwise_gen_Prop] in *.
   related_wordW_op_t.
 Qed.
 
@@ -361,10 +361,10 @@ Lemma related_bounds_t_map2 opW opB pf
       (HN0 : forall v, opB None v = None)
       (HN1 : forall v, opB v None = None)
       sv1 sv2
-  : interp_flat_type_rel_pointwise2 (t:=Prod (Tbase TZ) (Tbase TZ)) related_bounds sv1 sv2
+  : interp_flat_type_rel_pointwise (t:=Prod (Tbase TZ) (Tbase TZ)) related_bounds sv1 sv2
     -> @related_bounds TZ (BoundedWordW.t_map2 opW opB pf (fst sv1) (snd sv1)) (opB (fst sv2) (snd sv2)).
 Proof.
-  cbv [interp_flat_type BoundedWordW.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
+  cbv [interp_flat_type BoundedWordW.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise interp_flat_type_rel_pointwise_gen_Prop] in *.
   related_wordW_op_t.
 Qed.
 
@@ -374,11 +374,11 @@ Lemma related_bounds_t_map4 opW opB pf
       (HN2 : forall x y z, opB x y None z = None)
       (HN3 : forall x y z, opB x y z None = None)
       sv1 sv2
-  : interp_flat_type_rel_pointwise2 (t:=Prod (Prod (Prod (Tbase TZ) (Tbase TZ)) (Tbase TZ)) (Tbase TZ)) related_bounds sv1 sv2
+  : interp_flat_type_rel_pointwise (t:=Prod (Prod (Prod (Tbase TZ) (Tbase TZ)) (Tbase TZ)) (Tbase TZ)) related_bounds sv1 sv2
     -> @related_bounds TZ (BoundedWordW.t_map4 opW opB pf (fst (fst (fst sv1))) (snd (fst (fst sv1))) (snd (fst sv1)) (snd sv1))
                        (opB (fst (fst (fst sv2))) (snd (fst (fst sv2))) (snd (fst sv2)) (snd sv2)).
 Proof.
-  cbv [interp_flat_type BoundedWordW.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
+  cbv [interp_flat_type BoundedWordW.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise interp_flat_type_rel_pointwise_gen_Prop] in *.
   destruct_head prod.
   intros; destruct_head' prod.
   progress cbv [related_wordW related_bounds related_Z LiftOption.lift_relation LiftOption.lift_relation2 LiftOption.of' smart_interp_flat_map BoundedWordW.BoundedWordToBounds BoundedWordW.to_bounds' proj_eq_rel] in *.
@@ -467,10 +467,10 @@ Lemma related_Z_t_map1 opZ opW opB pf
           -> is_in_bounds (opW x) brs
           -> WordW.wordWToZ (opW x) = (opZ (WordW.wordWToZ x)))
       sv1 sv2
-  : interp_flat_type_rel_pointwise2 (t:=Tbase TZ) related_Z sv1 sv2
+  : interp_flat_type_rel_pointwise (t:=Tbase TZ) related_Z sv1 sv2
     -> @related_Z TZ (BoundedWordW.t_map1 opW opB pf sv1) (opZ sv2).
 Proof.
-  cbv [interp_flat_type BoundedWordW.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
+  cbv [interp_flat_type BoundedWordW.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise interp_flat_type_rel_pointwise_gen_Prop] in *.
   related_Z_op_t.
   eapply H; eauto.
 Qed.
@@ -483,10 +483,10 @@ Lemma related_Z_t_map2 opZ opW opB pf
           -> is_in_bounds (opW x y) brs
           -> WordW.wordWToZ (opW x y) = (opZ (WordW.wordWToZ x) (WordW.wordWToZ y)))
       sv1 sv2
-  : interp_flat_type_rel_pointwise2 (t:=Prod (Tbase TZ) (Tbase TZ)) related_Z sv1 sv2
+  : interp_flat_type_rel_pointwise (t:=Prod (Tbase TZ) (Tbase TZ)) related_Z sv1 sv2
     -> @related_Z TZ (BoundedWordW.t_map2 opW opB pf (fst sv1) (snd sv1)) (opZ (fst sv2) (snd sv2)).
 Proof.
-  cbv [interp_flat_type BoundedWordW.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
+  cbv [interp_flat_type BoundedWordW.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise interp_flat_type_rel_pointwise_gen_Prop] in *.
   related_Z_op_t.
   eapply H; eauto.
 Qed.
@@ -501,11 +501,11 @@ Lemma related_Z_t_map4 opZ opW opB pf
           -> is_in_bounds (opW x y z w) brs
           -> WordW.wordWToZ (opW x y z w) = (opZ (WordW.wordWToZ x) (WordW.wordWToZ y) (WordW.wordWToZ z) (WordW.wordWToZ w)))
       sv1 sv2
-  : interp_flat_type_rel_pointwise2 (t:=(Tbase TZ * Tbase TZ * Tbase TZ * Tbase TZ)%ctype) related_Z sv1 sv2
+  : interp_flat_type_rel_pointwise (t:=(Tbase TZ * Tbase TZ * Tbase TZ * Tbase TZ)%ctype) related_Z sv1 sv2
     -> @related_Z TZ (BoundedWordW.t_map4 opW opB pf (fst (fst (fst sv1))) (snd (fst (fst sv1))) (snd (fst sv1)) (snd sv1))
                   (opZ (fst (fst (fst sv2))) (snd (fst (fst sv2))) (snd (fst sv2)) (snd sv2)).
 Proof.
-  cbv [interp_flat_type BoundedWordW.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise2 interp_flat_type_rel_pointwise2_gen_Prop] in *.
+  cbv [interp_flat_type BoundedWordW.interp_base_type ZBounds.interp_base_type LiftOption.interp_base_type' interp_flat_type_rel_pointwise interp_flat_type_rel_pointwise_gen_Prop] in *.
   related_Z_op_t.
   eapply H; eauto.
 Qed.
