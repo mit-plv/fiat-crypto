@@ -2321,6 +2321,32 @@ Module Z.
                                  -> l <= Z.lor x y <= 2^Z.log2_up (u + 1) - 1.
   Proof. auto using lor_bounds_gen_lower, lor_bounds_gen_upper. Qed.
 
+  Lemma log2_up_le_full_max a : Z.max a 1 <= 2^Z.log2_up a.
+  Proof.
+    apply Z.max_case_strong; auto using Z.log2_up_le_full.
+    intros; rewrite Z.log2_up_eqn0 by assumption; reflexivity.
+  Qed.
+  Lemma log2_up_le_1 a : Z.log2_up a <= 1 <-> a <= 2.
+  Proof.
+    pose proof (Z.log2_nonneg (Z.pred a)).
+    destruct (Z_dec a 2) as [ [ ? | ? ] | ? ].
+    { rewrite (proj2 (Z.log2_up_null a)) by omega; split; omega. }
+    { rewrite Z.log2_up_eqn by omega.
+      split; try omega; intro.
+      assert (Z.log2 (Z.pred a) = 0) by omega.
+      assert (Z.pred a <= 1) by (apply Z.log2_null; omega).
+      omega. }
+    { subst; cbv -[Z.le]; split; omega. }
+  Qed.
+  Lemma log2_up_1_le a : 1 <= Z.log2_up a <-> 2 <= a.
+  Proof.
+    pose proof (Z.log2_nonneg (Z.pred a)).
+    destruct (Z_dec a 2) as [ [ ? | ? ] | ? ].
+    { rewrite (proj2 (Z.log2_up_null a)) by omega; split; omega. }
+    { rewrite Z.log2_up_eqn by omega; omega. }
+    { subst; cbv -[Z.le]; split; omega. }
+  Qed.
+
   Lemma simplify_twice_sub_sub x y : 2 * x - (x - y) = x + y.
   Proof. lia. Qed.
   Hint Rewrite simplify_twice_sub_sub : zsimplify.
