@@ -249,27 +249,36 @@ Section language.
     End flat_type2.
   End lifting.
 
+  Local Ltac t :=
+    repeat match goal with
+           | _ => intro
+           | [ H : False |- _ ] => exfalso; assumption
+           | _ => progress subst
+           | _ => assumption
+           | _ => progress inversion_sigma
+           | _ => progress inversion_prod
+           | _ => progress simpl in *
+           | _ => progress destruct_head_hnf' and
+           | [ H : context[List.In _ (_ ++ _)] |- _ ]
+             => rewrite List.in_app_iff in H
+           | _ => progress destruct_head' or
+           | _ => solve [ eauto ]
+           end.
+
+  Lemma interp_flat_type_rel_pointwise2_flatten_binding_list
+        {interp_base_type1 interp_base_type2 t T} R' e1 e2 v1 v2
+        (H : List.In (existT _ t (v1, v2)%core) (flatten_binding_list e1 e2))
+        (HR : interp_flat_type_rel_pointwise2 interp_base_type1 interp_base_type2 R' T e1 e2)
+    : R' t v1 v2.
+  Proof. induction T; t. Qed.
+
   Lemma interp_flat_type_rel_pointwise2_hetero_flatten_binding_list2
         {interp_base_type1 interp_base_type2 t1 t2 T1 T2} R' e1 e2 v1 v2
         (H : List.In (existT _ (t1, t2)%core (v1, v2)%core) (flatten_binding_list2 e1 e2))
         (HR : interp_flat_type_rel_pointwise2_hetero interp_base_type1 interp_base_type2 R' T1 T2 e1 e2)
     : R' t1 t2 v1 v2.
   Proof.
-    revert dependent T2; induction T1, T2;
-      repeat match goal with
-             | _ => intro
-             | [ H : False |- _ ] => exfalso; assumption
-             | _ => progress subst
-             | _ => assumption
-             | _ => progress inversion_sigma
-             | _ => progress inversion_prod
-             | _ => progress simpl in *
-             | _ => progress destruct_head_hnf' and
-             | [ H : context[List.In _ (_ ++ _)] |- _ ]
-               => rewrite List.in_app_iff in H
-             | _ => progress destruct_head' or
-             | _ => solve [ eauto ]
-             end.
+    revert dependent T2; induction T1, T2; t.
   Qed.
 End language.
 
