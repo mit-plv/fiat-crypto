@@ -319,7 +319,10 @@ Global Arguments interp_type_gen_rel_pointwise2 {_ _ _} R {t} _ _.
 Global Arguments interp_flat_type_rel_pointwise_gen_Prop {_ _ _ P} and True R {t} _ _.
 Global Arguments interp_flat_type_rel_pointwise_hetero_gen_Prop {_ _ _ P} and True False R {t1 t2} _ _.
 Global Arguments interp_flat_type_rel_pointwise_hetero {_ _ _} R {t1 t2} _ _.
+Global Arguments interp_flat_type_relb_pointwise_hetero {_ _ _} R {t1 t2} _ _.
 Global Arguments interp_flat_type_rel_pointwise1 {_ _} R {t} _.
+Global Arguments interp_flat_type_relb_pointwise1 {_ _} R {t} _.
 Global Arguments interp_flat_type_rel_pointwise {_ _ _} R {t} _ _.
+Global Arguments interp_flat_type_relb_pointwise {_ _ _} R {t} _ _.
 Global Arguments interp_type_rel_pointwise {_} _ _ {_} _ _.
 Global Arguments interp_type_gen_rel_pointwise {_ _} _ {_} _ _.
