@@ -82,6 +82,11 @@ Section language.
     Lemma interp_flat_type_rel_pointwise1_iff_relb {R} t x
       : interp_flat_type_relb_pointwise1 R t x <-> interp_flat_type_rel_pointwise1 R t x.
     Proof. clear; induction t; rel_relb_t. Qed.
+    Definition interp_flat_type_rel_pointwise1_gen_Prop_iff_bool
+      : forall {R} t x,
+        interp_flat_type_rel_pointwise1_gen_Prop bool _ _ R t x
+        <-> interp_flat_type_rel_pointwise1_gen_Prop Prop _ _ R t x
+      := @interp_flat_type_rel_pointwise1_iff_relb.
     Definition interp_flat_type_relb_pointwise
       := @interp_flat_type_rel_pointwise_gen_Prop bool andb true.
     Global Arguments interp_flat_type_relb_pointwise _ !_ _ _ / .
@@ -91,6 +96,11 @@ Section language.
     Lemma interp_flat_type_rel_pointwise_iff_relb {R} t x y
       : interp_flat_type_relb_pointwise R t x y <-> interp_flat_type_rel_pointwise R t x y.
     Proof. clear; induction t; rel_relb_t. Qed.
+    Definition interp_flat_type_rel_pointwise_gen_Prop_iff_bool
+      : forall {R} t x y,
+        interp_flat_type_rel_pointwise_gen_Prop bool _ _ R t x y
+        <-> interp_flat_type_rel_pointwise_gen_Prop Prop _ _ R t x y
+      := @interp_flat_type_rel_pointwise_iff_relb.
     Definition interp_flat_type_relb_pointwise_hetero
       := @interp_flat_type_rel_pointwise_hetero_gen_Prop bool andb true false.
     Global Arguments interp_flat_type_relb_pointwise_hetero _ !_ !_ _ _ / .
@@ -100,6 +110,11 @@ Section language.
     Lemma interp_flat_type_rel_pointwise_hetero_iff_relb {R} t1 t2 x y
       : interp_flat_type_relb_pointwise_hetero R t1 t2 x y <-> interp_flat_type_rel_pointwise_hetero R t1 t2 x y.
     Proof. clear; revert dependent t2; induction t1, t2; rel_relb_t. Qed.
+    Definition interp_flat_type_rel_pointwise_hetero_gen_Prop_iff_bool
+      : forall {R} t1 t2 x y,
+        interp_flat_type_rel_pointwise_hetero_gen_Prop bool _ _ _ R t1 t2 x y
+        <-> interp_flat_type_rel_pointwise_hetero_gen_Prop Prop _ _ _ R t1 t2 x y
+      := @interp_flat_type_rel_pointwise_hetero_iff_relb.
 
     Lemma interp_flat_type_rel_pointwise_hetero_iff {R t} x y
       : interp_flat_type_rel_pointwise (fun t => R t t) t x y
