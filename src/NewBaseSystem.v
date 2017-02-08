@@ -298,9 +298,22 @@ Ltac not_syntactically_equal a b :=
     match a with | b => fail 1 | _ => idtac end.
 
 (* rewrites with a lemma of the form
-                [forall x y {T} f, <op> x y T f = f (<op> x y _ id)]
+                [forall x {T} f, <op> x T f = f (<op> x _ id)]
        only if the argument f is not syntactically equal to [id]
  *)
+Ltac smart_rewrite1 lem :=
+  match type of lem with
+    forall _ _ f, ?op _ _ f = f (?op _ _ id) =>
+    match goal with
+      |- context [op _ _ ?f] =>
+      match type of f with ?A -> _ =>
+                           let t := (eval cbv [id] in f) in
+                           let u := (eval cbv [id] in (@id A)) in
+                           not_syntactically_equal t u;
+                           rewrite (lem _ _ f)
+      end
+    end
+  end.
 Ltac smart_rewrite2 lem :=
   match type of lem with
     forall _ _ _ f, ?op _ _ _ f = f (?op _ _ _ id) =>
@@ -314,7 +327,6 @@ Ltac smart_rewrite2 lem :=
       end
     end
   end.
-
 Ltac smart_rewrite3 lem :=
   match type of lem with
     forall _ _ _ _ f, ?op _ _ _ _ f = f (?op _ _ _ _ id) =>
@@ -325,6 +337,19 @@ Ltac smart_rewrite3 lem :=
                            let u := (eval cbv [id] in (@id A)) in
                            not_syntactically_equal t u;
                            rewrite (lem _ _ _ _ f)
+      end
+    end
+  end.
+Ltac smart_rewrite4 lem :=
+  match type of lem with
+    forall _ _ _ _ _ f, ?op _ _ _ _ _ f = f (?op _ _ _ _ _ id) =>
+    match goal with
+      |- context [op _ _ _ _ _ ?f] =>
+      match type of f with ?A -> _ =>
+                           let t := (eval cbv [id] in f) in
+                           let u := (eval cbv [id] in (@id A)) in
+                           not_syntactically_equal t u;
+                           rewrite (lem _ _ _ _ _ f)
       end
     end
   end.
@@ -707,51 +732,60 @@ Module B.
           end
         end.
 
-      Lemma eval_compact_cols_loop1 n 
-            {T} (f:list limb * list limb ->T) g
-            (H:forall x, f x = g (eval (fst x) + eval (snd x))):
-        forall p (H0:length p = n) out carries,
+      Lemma compact_cols_loop1_id n:
+        forall p out carries {T} (f:list limb * list limb ->T),
           compact_cols_loop1 carries out p n f
-          = g (eval p + eval out + eval carries).
+          = f (compact_cols_loop1 carries out p n id).
       Proof.
-        induction n; destruct p; intros; distr_length; subst;
-          simpl compact_cols_loop1; cbv [Let_In];
-            repeat match goal with
-                   | |- _ => erewrite eval_compact_no_carry
-                       by (intros; rewrite IHn; find_continuation)
-                   | |- _ => (rewrite @find_remove_first_cps_correct in *
+        induction n;
+          repeat match goal with
+                 | _ => progress intros
+                 | _ => progress cbv [Let_In] 
+                 | _ => progress simpl compact_cols_loop1
+                 | _ => (rewrite @find_remove_first_cps_correct in *
+                          by apply has_same_wt_correct )
+                 | _ => smart_rewrite1 compact_no_carry_id
+                 | _ => break_match
+                 | _ => reflexivity
+                 | _ => solve [auto] 
+                 end.
+      Qed.
+        
+      Lemma eval_compact_cols_loop1_id n :
+        forall p (H0:length p = n) out carries,
+          eval (snd (compact_cols_loop1 carries out p n id))
+          + eval (fst (compact_cols_loop1 carries out p n id))
+          = eval p + eval out + eval carries.
+      Proof.
+        induction n; destruct p;
+          repeat match goal with
+                 | _ => progress intros
+                 | _ => progress cbv [Let_In runtime_fst runtime_snd] 
+                 | _ => progress simpl compact_cols_loop1
+                 | _ => progress subst 
+                 | _ => progress (autorewrite with push_id
+                        push_eval cancel_pair distr_length in * )
+                 | _ => (rewrite @find_remove_first_cps_correct in *
                                by apply has_same_wt_correct )
-                   | |- _ => rewrite H 
-                   | |- _ => rewrite IHn
-                   | |- _ => break_match
-                   | |- _ => progress subst 
-                   | |- _ => progress autorewrite with
-                             push_eval cancel_pair distr_length
-                   | |- context[add ?x ?y] =>
+                 | _ => smart_rewrite1 compact_no_carry_id
+                 | _ => break_match
+                 | H : fst (find_remove_first _ ?p) = Some _ |- _ =>
+                   unique assert (length p > 0)%nat
+                     by (destruct p; (discriminate || (simpl; omega)))
+                 | _ => rewrite IHn by (distr_length; break_match; distr_length; discriminate)
+                 | H : fst (find_remove_first _ _) = _ |- _ =>
+                   rewrite <-find_remove_first_cps_correct in H
+                     by apply has_same_wt_correct;
+                     destruct (find_remove_first_cps_same_wt _ _ _ H);
+                     clear H
+                 | |- context[add ?x ?y] =>
                      specialize (add_correct x y)
-                   | H : fst (find_remove_first _ ?p) = Some _ |- _ =>
-                     unique assert (length p > 0)%nat
-                       by (destruct p; (discriminate || (simpl; omega)))
-                   | |- context[compact_cols_loop1 _ _ ?p _ _ ] =>
-                     specialize (IHn p);
-                       let H := fresh "H" in
-                       match type of IHn with
-                         ?P -> _ => assert P as H
-                             by (intros; distr_length; break_match;
-                                 (omega || discriminate));
-                                      specialize (IHn H); clear H
-                       end
-                   | H : fst (find_remove_first _ _) = _ |- _ =>
-                     rewrite <-find_remove_first_cps_correct in H
-                       by apply has_same_wt_correct;
-                       destruct (find_remove_first_cps_same_wt _ _ _ H);
-                       clear H
-                   | |- g _ = g _ => apply f_equal 
-                   | |- _ => discriminate 
-                   | |- _ => nsatz
-                   | |- _ => omega
-                   end.
-      Qed. Hint Rewrite eval_compact_cols_loop1 : push_eval.
+                 | _ => discriminate
+                 | _ => reflexivity
+                 | _ => nsatz 
+                 | _ => solve [auto] 
+                 end.
+      Qed. Hint Rewrite eval_compact_cols_loop1_id : push_eval.
 
       (* n is fuel, should be [length carries + length inp] *)
       Fixpoint compact_cols_loop2 (carries out inp :list limb) (n:nat)
@@ -792,41 +826,63 @@ Module B.
                end)
         end.
 
-      Lemma eval_compact_cols_loop2 n
-        {T} (f:list limb->T) g (H:forall x, f x = g (eval x)):
-        forall out p carries,
+      Lemma compact_cols_loop2_id n:
+        forall out p carries  {T} (f:list limb->T),
         compact_cols_loop2 carries out p n f
-        = g (eval p + eval carries + eval out).
+        = f (compact_cols_loop2 carries out p n id).
       Proof.
-        induction n; intros; simpl compact_cols_loop2; cbv [Let_In].
-        { destruct p; destruct carries; distr_length;
-            rewrite H; f_equal; autorewrite with push_eval distr_length;
-              ring. }
-        {
-          rewrite fold_right_no_starter_cps_correct.
+        induction n;
           repeat match goal with
-                 | |- _ => rewrite @find_remove_first_cps_correct in *
-                     by (try apply find_remove_first_cps_correct;
-                         try apply has_same_wt_correct)
-                 | |- _ => break_match
+                 | _ => progress intros
+                 | _ => progress cbv [Let_In] 
+                 | _ => progress simpl compact_cols_loop2
+                 | _ => rewrite fold_right_no_starter_cps_correct
+                 | _ => (rewrite @find_remove_first_cps_correct in *
+                          by apply has_same_wt_correct )
+                 | _ => smart_rewrite1 compact_no_carry_id
+                 | _ => break_match
+                 | _ => reflexivity
+                 | _ => solve [auto] 
+                 end.
+      Qed.
+
+      Lemma eval_compact_cols_loop2_id n:
+        forall out p carries,
+        eval (compact_cols_loop2 carries out p n id)
+        = eval p + eval carries + eval out.
+      Proof.
+        induction n; 
+          repeat match goal with
+                 | _ => progress intros
+                 | _ => progress cbv [Let_In runtime_fst runtime_snd] 
+                 | _ => progress simpl compact_cols_loop2
+                 | _ => progress subst 
+                 | _ => progress (autorewrite with push_id
+                        push_eval cancel_pair distr_length in * )
+                 | _ => rewrite fold_right_no_starter_cps_correct
+                 | _ => (rewrite @find_remove_first_cps_correct in *
+                               by apply has_same_wt_correct )
+                 | _ => smart_rewrite1 compact_no_carry_id
+                 | _ => break_match
                  | H : fst (find_remove_first _ ?p) = Some _ |- _ =>
-                   unique assert (length p > 0)%nat by (destruct p; (discriminate || (simpl; omega)))
-                 | |- _ => rewrite H
-                 | |- _ => erewrite eval_compact_no_carry by (intros; rewrite IHn; find_continuation)
-                 | |- _ => rewrite IHn by
-                       (try match goal with
-                              |- context [length (compact_no_carry ?p)] =>
-                              pose proof (length_compact_no_carry p) end;
-                        distr_length; repeat break_match; (omega || congruence))
-                 | |- context[add ?x ?y] =>
-                   specialize (add_correct x y)
-                 | H : fst (find_remove_first _ _) = Some _ |- _ =>
+                   unique assert (length p > 0)%nat
+                     by (destruct p; (discriminate || (simpl; omega)))
+                 | _ => rewrite IHn by (distr_length; break_match; distr_length; discriminate)
+                 | H : fst (find_remove_first _ _) = _ |- _ =>
                    rewrite <-find_remove_first_cps_correct in H
                      by apply has_same_wt_correct;
                      destruct (find_remove_first_cps_same_wt _ _ _ H);
                      clear H
-                 | |- _ => nsatz
-                 | |- _ => progress (autorewrite with push_eval cancel_pair distr_length in * )
+                 | |- context[add ?x ?y] =>
+                     specialize (add_correct x y)
+                 | _ => discriminate
+                 | _ => reflexivity
+                 | _ => nsatz 
+                 | _ => solve [auto] 
+                 end.
+        (* TODO : logic here is kinda ugly-- basic idea is "if you found a minimum weight in (p++carries), an element with that weight must be in either carries or p *)
+        exfalso.
+        repeat match goal with
                  | H : fold_right_no_starter Z.min _ = Some _ |- _ =>
                    apply fold_right_no_starter_min in H
                  | H : fst (find_remove_first _ _) = None |- _ =>
@@ -842,10 +898,8 @@ Module B.
                      cbv [has_same_wt id] in H2; simpl fst in H2;
                        break_if; congruence
                  | H : _ \/ _ |- _ => destruct H
-                 | |- g _ = g _ => apply f_equal
-                 end.
-          }
-      Qed. Hint Rewrite eval_compact_cols_loop2 : push_eval.
+               end.
+      Qed. Hint Rewrite eval_compact_cols_loop2_id : push_eval.
 
       Definition compact_cols (p:list limb) {T} (f:list limb->T) :=
         compact_cols_loop1
@@ -853,22 +907,27 @@ Module B.
           (fun r => compact_cols_loop2
                       (fst r) nil (snd r) (length (fst r ++ snd r)) f).
 
-      Lemma eval_compact_cols (p:list limb) {T} (f:list limb->T) g
-        (H: forall x, f x = g (eval x)) :
-        compact_cols p f = g (eval p).
+      Lemma compact_cols_id (p:list limb) {T} (f:list limb->T):
+        compact_cols p f = f (compact_cols p id).
+      Proof.
+        cbv [compact_cols];
+          do 2 smart_rewrite4 compact_cols_loop1_id;
+          smart_rewrite4 compact_cols_loop2_id; reflexivity.
+      Qed.
+      Lemma eval_compact_cols_id (p:list limb):
+        eval (compact_cols p id) = eval p.
       Proof.
         cbv [compact_cols];
           repeat match goal with
                  | |- _ => progress intros
                  | |- _ => progress autorewrite with push_eval cancel_pair
                  | |- _ => progress distr_length
-                 | |- _ => erewrite eval_compact_cols_loop1
-                 | |- _ => erewrite eval_compact_cols_loop2
-                 | |- _ => rewrite H
-                 | |- _ => apply f_equal; ring
+                 | |- _ => smart_rewrite4 compact_cols_loop1_id
+                 | |- _ => smart_rewrite4 eval_compact_cols_loop2_id
                  | |- _ => reflexivity
                  end.
       Qed.
+           
     End Saturated.
   End Associational.
 
