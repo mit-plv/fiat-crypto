@@ -43,6 +43,13 @@ Section language.
        | S n' => binders_for' n' t var
        end.
 
+  Fixpoint all_binders_for' (t : type base_type)
+    := match t return flat_type base_type with
+       | Tflat T => Unit
+       | Arrow A B
+         => (Tbase A * all_binders_for' B)%ctype
+       end.
+
   Fixpoint all_binders_for (t : type base_type)
     := match t return match t with
                       | Tflat _ => unit
@@ -62,11 +69,8 @@ Section language.
        | Arrow A B => interp_flat_type var (all_binders_for (Arrow A B))
        end.
 
-  Fixpoint interp_all_binders_for' (T : type base_type) var
-    := match T return Type with
-       | Tflat _ => unit
-       | Arrow A B => var A * interp_all_binders_for' B var
-       end%type.
+  Definition interp_all_binders_for' (T : type base_type) var
+    := interp_flat_type var (all_binders_for' T).
 
   Fixpoint interp_all_binders_for_of' T var {struct T}
     : interp_all_binders_for' T var -> interp_all_binders_for T var
