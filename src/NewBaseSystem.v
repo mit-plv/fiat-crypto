@@ -1,8 +1,9 @@
-Require Import Crypto.Util.Tactics Crypto.Util.Decidable Crypto.Util.LetIn.
-
+Require Import Crypto.Util.Tactics Crypto.Util.Decidable Crypto.Util.LetIn. 
 Require Import ZArith Nsatz Psatz Coq.omega.Omega.
+
 Require Import Coq.ZArith.BinIntDef. Local Open Scope Z_scope.
 Require Import Crypto.Util.ZUtil Crypto.Util.ListUtil.
+
 
 Require Import Coq.Lists.List. Import ListNotations.
 Require Crypto.Util.Tuple. Local Notation tuple := Tuple.tuple.
@@ -12,6 +13,9 @@ Require Import Recdef.
     Lemma fst_pair {A B} (a:A) (b:B) : fst (a,b) = a. reflexivity. Qed.
     Lemma snd_pair {A B} (a:A) (b:B) : snd (a,b) = b. reflexivity. Qed.
     Create HintDb cancel_pair discriminated. Hint Rewrite @fst_pair @snd_pair : cancel_pair.
+
+    Lemma push_id {A} (a:A) : id a = a. reflexivity. Qed.
+    Create HintDb push_id discriminated. Hint Rewrite @push_id : push_id.
 
     Lemma update_nth_id {T} i (xs:list T) : ListUtil.update_nth i id xs = xs.
     Proof.
@@ -290,6 +294,40 @@ Ltac find_continuation :=
   end;
   apply f_equal; reflexivity.
 
+Ltac not_syntactically_equal a b :=
+    match a with | b => fail 1 | _ => idtac end.
+
+(* rewrites with a lemma of the form
+                [forall x y {T} f, <op> x y T f = f (<op> x y _ id)]
+       only if the argument f is not syntactically equal to [id]
+ *)
+Ltac smart_rewrite2 lem :=
+  match type of lem with
+    forall _ _ _ f, ?op _ _ _ f = f (?op _ _ _ id) =>
+    match goal with
+      |- context [op _ _ _ ?f] =>
+      match type of f with ?A -> _ =>
+                           let t := (eval cbv [id] in f) in
+                           let u := (eval cbv [id] in (@id A)) in
+                           not_syntactically_equal t u;
+                           rewrite (lem _ _ _ f)
+      end
+    end
+  end.
+
+Ltac smart_rewrite3 lem :=
+  match type of lem with
+    forall _ _ _ _ f, ?op _ _ _ _ f = f (?op _ _ _ _ id) =>
+    match goal with
+      |- context [op _ _ _ _ ?f] =>
+      match type of f with ?A -> _ =>
+                           let t := (eval cbv [id] in f) in
+                           let u := (eval cbv [id] in (@id A)) in
+                           not_syntactically_equal t u;
+                           rewrite (lem _ _ _ _ f)
+      end
+    end
+  end.
 
 Delimit Scope runtime_scope with RT.
 Definition runtime_mul := Z.mul. Global Infix "*" := runtime_mul : runtime_scope.
@@ -338,18 +376,6 @@ Module B.
       cbv [id] in *; autorewrite with push_eval.
       rewrite IHp. nsatz.
     Qed. Hint Rewrite eval_mul_id : push_eval.
-    (* TODO : do we still need this? *)
-    Lemma eval_mul p q:
-      forall {T} f g (H: forall x, f x = g (eval x)),
-      @mul p q T f = g (eval p * eval q).
-    Proof.
-      induction p;intros; autorewrite with push_eval cancel_pair.
-      { cbv. rewrite H. f_equal. }
-      { cbv [mul] in *. simpl. rewrite map_cps_correct.
-        erewrite IHp by (intros; rewrite H; autorewrite with push_eval; find_continuation).
-        simpl; apply f_equal.
-        autorewrite with push_eval; nsatz. }
-    Qed. Hint Rewrite eval_mul : push_eval.
 
     Fixpoint split (s:Z) (xs:list limb)
              {T} (f :list limb*list limb->T) :=
@@ -363,27 +389,32 @@ Module B.
         else f (cons x (fst sxs'), snd sxs'))
       end.
 
-    Lemma eval_split s p (s_nonzero:s<>0): forall {T} f g
-        (H:forall x, f x = g (eval (fst x) + s*eval (snd x))),
-        @split s p T f = g (eval p).
+    Lemma split_id s p: forall {T} f,
+        @split s p T f = f (split s p id).
     Proof.
       induction p; intros;
         repeat match goal with
-               | _ => progress simpl
-               | _ => split
-               | _ => progress autorewrite with push_eval cancel_pair
-               | _ => progress break_match
-               | _ => rewrite H
-               | _ => erewrite IHp by
-                     (intros; rewrite H;
-                      autorewrite with push_eval cancel_pair;
-                      find_continuation)
-               | |- ?g _ = ?g _ => apply f_equal
-               | H:_ |- _ =>
-                 unique pose proof (Z_div_exact_full_2 _ _ s_nonzero H)
-               | |- _ => nsatz
+               | _ => progress simpl split
+               | |- split _ _ ?f = _ (split _ _ ?g) =>
+                 rewrite (IHp _ f); rewrite (IHp _ g)
+               | _ => break_if
+               | _ => reflexivity
                end.
     Qed.
+    Lemma eval_split_id s p (s_nonzero:s<>0):
+      eval (fst (split s p id)) + s*eval (snd (split s p id))  = eval p.
+    Proof.
+      induction p; intros;
+        repeat match goal with
+               | _ => progress simpl split
+               | _ => progress (autorewrite with push_eval push_id cancel_pair)
+               | _ => progress (rewrite split_id; autorewrite with push_id)
+               | _ => break_if 
+               | H:_ |- _ =>
+                 unique pose proof (Z_div_exact_full_2 _ _ s_nonzero H)
+               | _ => nsatz
+               end.
+    Qed. Hint Rewrite @eval_split_id : push_eval.
 
     Definition reduce (s:Z) (c:list limb) (p:list limb)
                {T} (f : list limb->T) :=
@@ -394,25 +425,34 @@ Module B.
     Proof. replace (a + s * b) with ((a + c*b) + b*(s-c)) by nsatz.
            rewrite Z.add_mod, Z_mod_mult, Z.add_0_r, Z.mod_mod; trivial. Qed.
 
-    Lemma eval_reduce s c p (s_nonzero:s<>0) (modulus_nonzero:s-eval c<>0)
-          {T} f g (H:forall x, f x = g (eval x mod (s - eval c))):
-      @reduce s c p T f = g (eval p mod (s - eval c)).
+    Lemma reduce_id s c p {T} f:
+      @reduce s c p T f = f (reduce s c p id).
     Proof.
       repeat match goal with
              | _ => progress intros
              | _ => progress cbv [reduce]
-             | _ =>  erewrite eval_split
-                     with (g := (fun x => g (x mod (s - eval c))));
-                       auto; [ ]
-             | _ => erewrite eval_mul
-                 by (intros; rewrite H;
-                     autorewrite with push_eval cancel_pair;
-                     find_continuation)
-             | _ => rewrite reduction_rule by auto
-             | |- g _ = g _ => apply f_equal
+             | _ => progress autorewrite with push_eval cancel_pair 
+             | _ => smart_rewrite2 split_id 
+             | _ => smart_rewrite2 mul_id
+             | _ => reflexivity
              | _ => nsatz
              end.
     Qed.
+    Lemma eval_reduce_id s c p (s_nonzero:s<>0) (modulus_nonzero:s-eval c<>0):
+      eval (reduce s c p id) mod (s - eval c) = eval p mod (s - eval c).
+    Proof.
+      cbv [reduce id].
+      repeat match goal with
+             | _ => progress intros
+             | _ => progress autorewrite with push_eval cancel_pair
+             | _ => smart_rewrite2 split_id; auto 
+             | _ => smart_rewrite2 mul_id; auto
+             | _ => rewrite <-reduction_rule by auto
+             | _ => reflexivity
+             | _ => assumption 
+             | _ => nsatz
+             end.
+    Qed. Hint Rewrite eval_reduce_id : push_eval.
 
     Section Carries.
       Context {modulo div:Z->Z->Z}.
@@ -441,28 +481,28 @@ Module B.
         autorewrite with push_eval cancel_pair.
         specialize (div_mod (snd t) fw fw_nonzero).
         nsatz.
-      Qed.
+      Qed. Hint Rewrite eval_carryterm_id : push_eval.
       
       Lemma carry_id w fw p {T} f:
         @carry w fw p T f = f (carry w fw p id).
       Proof.
-        cbv [carry].
-        erewrite !flat_map_cps_correct by (intros; rewrite carryterm_id; reflexivity).
+        cbv [carry];  erewrite !flat_map_cps_correct
+          by (intros; rewrite carryterm_id; reflexivity).
         reflexivity.
       Qed.
       Lemma eval_carry_id w fw p (fw_nonzero:fw<>0):
         eval (carry w fw p id) = eval p.
       Proof.
         cbv [carry]; induction p; intros; [reflexivity|].
-        simpl flat_map_cps.
-        rewrite carryterm_id.
-        erewrite !@flat_map_cps_correct in IHp |- * by (intros; rewrite carryterm_id; reflexivity).
-        cbv [id] in *.
-        autorewrite with push_eval.
-        rewrite eval_carryterm_id by auto.
-        autorewrite with push_eval.
-        nsatz.
-      Qed. Hint Rewrite eval_carry_id eval_reduce : push_eval.
+        repeat match goal with
+               | _ => progress simpl flat_map_cps
+               | _ => progress (autorewrite with push_eval push_id cancel_pair in * ); auto
+               | _ => erewrite !@flat_map_cps_correct in *
+                   by (intros; rewrite carryterm_id; reflexivity)
+               | _ => smart_rewrite3 carryterm_id
+               | _ => nsatz
+               end.
+      Qed. Hint Rewrite eval_carry_id : push_eval.
     End Carries.
     
     Section Saturated.
@@ -588,25 +628,35 @@ Module B.
                end)
         end.
       Definition compact_no_carry p {T} f := @compact_no_carry' nil p T f.
+
+      Lemma compact_no_carry'_id p: forall acc {T} (f:list limb -> T),
+        @compact_no_carry' acc p T f = f (compact_no_carry' acc p id).
+      Proof.
+        induction p; simpl compact_no_carry';
+          repeat match goal with
+                 | _ => progress intros
+                 | _ => rewrite @find_remove_first_cps_correct in *
+                     by apply has_same_wt_correct
+                 | _ => break_match; subst
+                 | _ => reflexivity
+                 | _ => solve [auto]
+                 end.
+      Qed.
       
-      Lemma eval_compact_no_carry' p {T} (f:list limb -> T) g
-          (H:forall x, f x = g (eval x)):
-          forall acc,
-        compact_no_carry' acc p f = g (eval acc + eval p).
+      Lemma eval_compact_no_carry'_id p: forall acc,
+        eval (compact_no_carry' acc p id) = eval acc + eval p.
       Proof.
         induction p; simpl;
           repeat match goal with
                  | |- _ => rewrite @find_remove_first_cps_correct in *
                      by apply has_same_wt_correct
-                 | |- _ => rewrite H
                  | |- _ => break_match
                  | |- _ => progress (intros;subst)
-                 | |- _ => progress autorewrite with push_eval cancel_pair in *
+                 | |- _ => progress autorewrite with push_eval push_id cancel_pair in *
                  | |- _ => rewrite IHp
                  | H : fst (find_remove_first _ _) = _ |- _ =>
                    rewrite <-find_remove_first_cps_correct in H by apply has_same_wt_correct;
                      destruct (find_remove_first_cps_same_wt _ _ _ H); clear H
-                 | |- g _ = g _ => apply f_equal
                  | |- _ => nsatz
                  end.
       Qed.
@@ -623,13 +673,13 @@ Module B.
                  | |- _ => break_match
                  end.
       Qed.
-      Lemma eval_compact_no_carry p: forall {T} (f:list limb -> T) g,
-         (forall x, f x = g (eval x)) ->
-         compact_no_carry p f = g (eval p).
-      Proof.
-        cbv [compact_no_carry]; intros.
-        apply eval_compact_no_carry'; assumption.
-      Qed.
+      Lemma compact_no_carry_id p {T} f:
+         @compact_no_carry p T f = f (compact_no_carry p id).
+      Proof. cbv [compact_no_carry]; apply compact_no_carry'_id. Qed.
+      Lemma eval_compact_no_carry_id p:
+         eval (compact_no_carry p id) = eval p.
+      Proof. cbv [compact_no_carry]; apply eval_compact_no_carry'_id. Qed.
+      Hint Rewrite eval_compact_no_carry_id : push_eval.
       Lemma length_compact_no_carry p: (compact_no_carry p (@length _) <= length p)%nat. Proof. cbv [compact_no_carry]. rewrite length_compact_no_carry'. distr_length. Qed. Hint Rewrite length_compact_no_carry : distr_length.
 
       (* n is fuel, should be length of inp *)
