@@ -13,8 +13,6 @@ Section homogenous_type.
   Local Notation interp_flat_type := (@interp_flat_type base_type_code).
   Local Notation exprf := (@exprf base_type_code op var).
   Local Notation expr := (@expr base_type_code op var).
-  Let Tbase := (@Tbase base_type_code).
-  Local Coercion Tbase : base_type_code >-> flat_type.
 
   (** Sometimes, we want to deal with partially-interpreted
       expressions, things like [prod (exprf A) (exprf B)] rather than
@@ -108,8 +106,9 @@ Section homogenous_type.
   (** [SmartVar] is like [Var], except that it inserts
       pair-projections and [Pair] as necessary to handle [flat_type],
       and not just [base_type_code] *)
-  Definition SmartPairf {t} : interp_flat_type exprf t -> exprf t
-    := @smart_interp_flat_map exprf exprf (fun t x => x) TT (fun A B x y => Pair x y) t.
+  Local Notation exprfb := (fun t => exprf (Tbase t)).
+  Definition SmartPairf {t} : interp_flat_type exprfb t -> exprf t
+    := @smart_interp_flat_map exprfb exprf (fun t x => x) TT (fun A B x y => Pair x y) t.
   Lemma SmartPairf_Pair {A B} (e1 : interp_flat_type _ A) (e2 : interp_flat_type _ B)
     : SmartPairf (t:=Prod A B) (e1, e2)%core = Pair (SmartPairf e1) (SmartPairf e2).
   Proof. reflexivity. Qed.
@@ -143,7 +142,7 @@ Section homogenous_type.
     := @smart_interp_flat_map2 var var' (fun _ => Prop) f True (fun _ _ P Q => P /\ Q)%type t.
   Definition SmartFlatTypeMap {var'} (f : forall t, var' t -> base_type_code) {t}
     : interp_flat_type var' t -> flat_type
-    := @smart_interp_flat_map var' (fun _ => flat_type) f Unit (fun _ _ => Prod) t.
+    := @smart_interp_flat_map var' (fun _ => flat_type) (fun t v => Tbase (f t v)) Unit (fun _ _ => Prod) t.
   Definition SmartFlatTypeUnMap (t : flat_type)
     : interp_flat_type (fun _ => base_type_code) t
     := SmartValf (fun t => t) t.
@@ -174,7 +173,7 @@ Section homogenous_type.
   Definition SmartVarMap_hetero {vars vars' var var'} (f : forall t, var t -> var' t) (f' : forall t, vars' t -> vars t) {t}
     : interp_type_gen_hetero vars (interp_flat_type var) t -> interp_type_gen_hetero vars' (interp_flat_type var') t
     := @smart_interp_map_hetero var (interp_type_gen_hetero vars' (interp_flat_type var')) vars f tt (fun A B x y => pair x y) (fun A B f x => f (f' _ x)) t.
-  Definition SmartVarVarf {t} : interp_flat_type var t -> interp_flat_type exprf t
+  Definition SmartVarVarf {t} : interp_flat_type var t -> interp_flat_type exprfb t
     := SmartVarfMap (fun t => Var).
 End homogenous_type.
 
