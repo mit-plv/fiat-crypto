@@ -320,6 +320,25 @@ Module B.
       induction q; cbv [multerm]; simpl List.map;
         autorewrite with push_eval cancel_pair; nsatz.
     Qed. Hint Rewrite eval_map_mul : push_eval.
+    Lemma mul_id p q: forall {T} f,
+      @mul p q T f = f (mul p q id).
+    Proof.
+      induction p;intros; autorewrite with push_eval cancel_pair; [reflexivity|].
+      cbv [mul] in *; simpl. rewrite !map_cps_correct, IHp.
+      erewrite !flat_map_cps_correct by (intros; rewrite map_cps_correct; reflexivity).
+      reflexivity.
+    Qed.
+    Lemma eval_mul_id p q:
+      eval (mul p q id) = eval p * eval q.
+    Proof.
+      induction p; intros; autorewrite with push_eval cancel_pair; [reflexivity|].
+      pose proof (@mul_id p q) as Hmul_id.
+      cbv [mul] in *. simpl.
+      rewrite map_cps_correct, Hmul_id.
+      cbv [id] in *; autorewrite with push_eval.
+      rewrite IHp. nsatz.
+    Qed. Hint Rewrite eval_mul_id : push_eval.
+    (* TODO : do we still need this? *)
     Lemma eval_mul p q:
       forall {T} f g (H: forall x, f x = g (eval x)),
       @mul p q T f = g (eval p * eval q).
@@ -410,41 +429,40 @@ Module B.
       Definition carry (w fw:Z) (p:list limb) {T} (f:list limb->T) :=
         flat_map_cps (carryterm w fw) p f.
 
-      Lemma carryterm_uncps w fw t {T} f :
+      Lemma carryterm_id w fw t {T} f :
         @carryterm w fw t T f
-        = f (dlet d := div (snd t) fw in
-                  dlet m := modulo (snd t) fw in
-                  if dec (fst t = w)
-                  then ((w*fw, d) :: (w, m) :: @nil limb)
-                  else [t]).
+        = f (@carryterm w fw t _ id).
       Proof. cbv [carryterm Let_In]; break_if; reflexivity. Qed.
-      Lemma eval_carryterm w fw (t:limb) (fw_nonzero:fw<>0) {T}
-            (f:list limb->T) g (H:forall x, f x = g (eval x)):
-        @carryterm w fw t T f = g (eval [t]).
+      Lemma eval_carryterm_id w fw (t:limb) (fw_nonzero:fw<>0):
+        eval (@carryterm w fw t _ id) = eval [t].
       Proof.
-        cbv [carryterm Let_In]. rewrite !H.
-        break_if; f_equal; subst.
+        cbv [carryterm Let_In id].
+        break_if; subst; [|reflexivity].
         autorewrite with push_eval cancel_pair.
         specialize (div_mod (snd t) fw fw_nonzero).
         nsatz.
       Qed.
       
-      Lemma eval_carry w fw p (fw_nonzero:fw<>0) :
-            forall {T} f g (H:forall x, f x = g (eval x)),
-        @carry w fw p T f = g (eval p).
+      Lemma carry_id w fw p {T} f:
+        @carry w fw p T f = f (carry w fw p id).
       Proof.
-        cbv [carry]; induction p; intros; [cbv; rewrite H; reflexivity|].
+        cbv [carry].
+        erewrite !flat_map_cps_correct by (intros; rewrite carryterm_id; reflexivity).
+        reflexivity.
+      Qed.
+      Lemma eval_carry_id w fw p (fw_nonzero:fw<>0):
+        eval (carry w fw p id) = eval p.
+      Proof.
+        cbv [carry]; induction p; intros; [reflexivity|].
         simpl flat_map_cps.
-        erewrite eval_carryterm
-          by (auto; intros;
-              erewrite flat_map_cps_correct by apply carryterm_uncps;
-              rewrite H; autorewrite with push_eval cancel_pair;
-              find_continuation); simpl.
-        erewrite <-flat_map_cps_correct by apply carryterm_uncps.
-        apply f_equal; autorewrite with push_eval cancel_pair.
-        rewrite IHp with (g := fun x => x) by reflexivity.
+        rewrite carryterm_id.
+        erewrite !@flat_map_cps_correct in IHp |- * by (intros; rewrite carryterm_id; reflexivity).
+        cbv [id] in *.
+        autorewrite with push_eval.
+        rewrite eval_carryterm_id by auto.
+        autorewrite with push_eval.
         nsatz.
-      Qed. Hint Rewrite eval_carry eval_reduce : push_eval.
+      Qed. Hint Rewrite eval_carry_id eval_reduce : push_eval.
     End Carries.
     
     Section Saturated.
@@ -914,6 +932,10 @@ Module B.
         cbv [id] in *; rewrite IHp by omega.
         rewrite weight_place; nsatz.
       Qed. Hint Rewrite @eval_from_associational_id : push_eval.
+      Lemma from_associational_id {n} p (n_nonzero:n<>O) {T} f:
+        @from_associational n p T f = f (@from_associational n p _ id).
+      Proof. cbv [from_associational]; rewrite !@fold_right_cps_correct; simpl; reflexivity. Qed.
+      Hint Rewrite @eval_from_associational_id : push_eval.
 
       Section Carries.
         Context {modulo div : Z->Z->Z}.
@@ -921,13 +943,13 @@ Module B.
                                        a = b * (div a b) + modulo a b}.
       Definition carry (index:nat) (p:list limb) {T} (f:list limb->T) :=
         @Associational.carry modulo div (weight index) (weight (S index) / weight index) p T f.
-      Lemma eval_carry i p : weight (S i) / weight i <> 0 ->
-        forall {T} f g (H: forall x, f x = g (Associational.eval x)),
-        @carry i p T f = g (Associational.eval p).
-      Proof.
-        cbv [carry]; intros;  eapply @eval_carry; eauto.
-      Qed.
-      Hint Rewrite @eval_carry : push_eval.
+      Lemma carry_id i p {T} f:
+        @carry i p T f = f (@carry i p _ id).
+      Proof. cbv [carry]; apply Associational.carry_id; auto. Qed.
+      Lemma eval_carry_id i p: weight (S i) / weight i <> 0 ->
+        Associational.eval (carry i p id) = Associational.eval p.
+      Proof. cbv [carry]; intros; eapply @eval_carry_id; eauto. Qed.
+      Hint Rewrite @eval_carry_id : push_eval.
       End Carries.
     End Positional.
   End Positional.
@@ -987,6 +1009,10 @@ Axiom add_get_carry : Z -> Z -> Z * Z.
 Axiom mul : Z -> Z -> Z * Z.
 Axiom modulo : Z -> Z -> Z.
 Axiom div : Z -> Z -> Z.
+Axiom div_mod :
+ forall a b : Z,
+ b <> 0 ->
+ a = b * div a b + modulo a b.
 
 Lemma lift_tuple2 {R S T n} f (g:R->S) : (forall a b, {prod | g prod = f a b}) ->
                               { op : tuple T n -> tuple T n -> R & forall a b, g (op a b) = f a b }.
@@ -1031,10 +1057,25 @@ Proof.
   repeat progress rewrite ?Z.mul_1_l, ?Z.mul_1_r, ?Z.add_0_l, ?Z.add_0_r.
   reflexivity.
   }
-  { 
-    rewrite Positional.to_associational_id.
-    rewrite Positional.to_associational_id.
-Admitted.
+  { repeat progress (try rewrite Positional.to_associational_id;
+                     try rewrite Associational.mul_id;
+                     try rewrite Positional.from_associational_id by congruence;
+                     try rewrite Positional.carry_id;
+                     cbv [id]; fold @id).
+    rewrite Positional.eval_from_associational_id
+      by (try (intro i; apply Z.pow_nonzero; try congruence; destruct i; omega);
+          cbv; congruence).
+    repeat rewrite Positional.eval_carry_id
+      by (auto using div_mod; rewrite <-Z.pow_sub_r; cbv; try split; congruence).
+    rewrite Positional.eval_to_associational_id.
+    rewrite Positional.eval_from_associational_id
+      by (try (intro i; apply Z.pow_nonzero; try congruence; destruct i; omega);
+          cbv; congruence).
+    rewrite Associational.eval_mul_id.
+    rewrite Positional.eval_to_associational_id.
+    rewrite Positional.eval_to_associational_id.
+    reflexivity. }
+Defined.
   
 (*
 Goal let base10 i := 10^i in forall f0 f1 f2 f3 g0 g1 g2 g3 : Z, False. intros.
