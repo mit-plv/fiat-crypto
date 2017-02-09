@@ -4,7 +4,6 @@ Require Import ZArith Nsatz Psatz Coq.omega.Omega.
 Require Import Coq.ZArith.BinIntDef. Local Open Scope Z_scope.
 Require Import Crypto.Util.ZUtil Crypto.Util.ListUtil.
 
-
 Require Import Coq.Lists.List. Import ListNotations.
 Require Crypto.Util.Tuple. Local Notation tuple := Tuple.tuple.
 Require Import Recdef.
@@ -1185,92 +1184,3 @@ Proof.
     rewrite Positional.eval_to_associational_id.
     reflexivity. }
 Defined.
-  
-(*
-Goal let base10 i := 10^i in forall f0 f1 f2 f3 g0 g1 g2 g3 : Z, False. intros.
-  let t := constr:(Positional.from_associational base10 7
-                                   (Associational.mul
-                                      (Positional.to_associational base10 (Tuple.from_list _ [f0;f1;f2;f3] eq_refl))
-                                      (Positional.to_associational base10 (Tuple.from_list _ [g0;g1;g2;g3] eq_refl)))) in
-  let t := (eval cbv -[runtime_mul runtime_add] in t) in
-  let t := (eval cbv [runtime_mul runtime_add] in t) in
-  remember t eqn:Heqt; rewrite !Z.mul_1_l, !Z.add_0_r, !Z.add_assoc in Heqt.
-Abort.
-
-Goal let base2_51 i := 2 ^ (51 * i) in forall f0 f1 f2 f3 f4 g0 g1 g2 g3 g4 : Z, False. intros.
-  let t := constr:(Positional.from_associational base2_51 5
-                                   (Associational.reduce (2^255) [(1,19)] 
-                                   (Associational.mul
-                                      (Positional.to_associational base2_51 (Tuple.from_list _ [f0;f1;f2;f3;f4] eq_refl))
-                                      (Positional.to_associational base2_51 (Tuple.from_list _ [g0;g1;g2;g3;g4] eq_refl))))) in
-  let t := (eval cbv -[runtime_mul runtime_add] in t) in
-  let t := (eval cbv [runtime_mul runtime_add] in t) in
-  remember t eqn:Heqt; rewrite !Z.mul_1_l, !Z.add_0_r, !Z.add_assoc, !Z.mul_assoc in Heqt.
-Abort.
-
-Require Import Crypto.Algebra. (* TODO: move ring_simplify_subterms_in_all to a different file? *)
-Goal
-  let base2_32 i := 2 ^ (32 * i) in
-  forall f0 f1 f2 f3 g0 g1 g2 g3: Z, False.
-  intros.
-  let t := constr:(
-             let f := (Positional.to_associational base2_32 (Tuple.from_list _ [f0;f1;f2;f3] eq_refl)) in
-             let g := (Positional.to_associational base2_32 (Tuple.from_list _ [g0;g1;g2;g3] eq_refl)) in
-             @Associational.sat_mul
-               (2^32) mul f g _
-               (fun r =>
-                  (@Associational.compact_cols (2^32) add_get_carry r _ id)))
-                                    in
-  
-  let t := (eval cbv -[Let_In runtime_mul runtime_add runtime_fst runtime_snd] in t) in
-  let t := (eval cbv [runtime_mul runtime_add runtime_fst runtime_snd] in t) in
-  remember t eqn:Heqt; rewrite ?Z.mul_1_l, ?Z.add_0_r, ?Z.add_assoc, ?Z.mul_assoc in Heqt.
-Abort.
-
-Goal let base2_25_5 i := 2 ^ (25 * (i / 2) + 26 * (i - i / 2)) in forall f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 g7 g8 g9: Z, False. intros.
-  let t := constr:(Positional.from_associational base2_25_5 10
-                                   (Associational.reduce (2^255) [(1,19)] 
-                                   (Associational.mul
-                                      (Positional.to_associational base2_25_5 (Tuple.from_list _ [f0;f1;f2;f3;f4;f5;f6;f7;f8;f9] eq_refl))
-                                      (Positional.to_associational base2_25_5 (Tuple.from_list _ [g0;g1;g2;g3;g4;g5;g6;g7;g8;g9] eq_refl))))) in
-  let t := (eval cbv -[runtime_mul runtime_add] in t) in
-  let t := (eval cbv [runtime_mul runtime_add] in t) in
-  remember t eqn:Heqt; rewrite !Z.mul_1_l, !Z.add_0_r, !Z.add_assoc, !Z.mul_assoc in Heqt.
-Abort.
-
-Goal let base2_56 i := 2 ^ (56 * i) in forall f0 f1 f2 f3 f4 f5 f6 f7 g0 g1 g2 g3 g4 g5 g6 g7: Z, False. intros.
-  let t := constr:(Positional.from_associational base2_56 8
-                                   (Associational.reduce (2^448) [(2^224,1);(1,-1)] 
-                                   (Associational.reduce (2^448) [(2^224,1);(1,-1)] 
-                                   (Associational.mul
-                                      (Positional.to_associational base2_56 (Tuple.from_list _ [f0;f1;f2;f3;f4;f5;f6;f7] eq_refl))
-                                      (Positional.to_associational base2_56 (Tuple.from_list _ [g0;g1;g2;g3;g4;g5;g6;g7] eq_refl)))))) in
-  let t := (eval cbv -[runtime_mul runtime_add] in t) in
-  let t := (eval cbv [runtime_mul runtime_add] in t) in
-  remember t eqn:Heqt; rewrite !Z.mul_1_l, !Z.add_0_r, !Z.add_assoc, !Z.mul_assoc, !Z.mul_opp_l, !Z.add_opp_r in Heqt.
-Abort.
-
-Goal let base2_25_5 i := 2 ^ (25 * (i / 2) + 26 * (i - i / 2)) in forall f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 g7 g8 g9: Z, False. intros.
-  let t := constr:(Positional.from_associational base2_25_5 10
-                                   (Associational.reduce (2^255) [(1,19)] 
-                                   (karatsuba_mul (fun x y => x ++ (List.map (fun t => (fst t, (-1 * snd t)%RT)) y)) Associational.mul (@List.app _) (fun x => List.map (fun t => (x * fst t, snd t))) Associational.split (2^102)
-                                      (Positional.to_associational base2_25_5 (Tuple.from_list _ [f0;f1;f2;f3;f4;f5;f6;f7;f8;f9] eq_refl))
-                                      (Positional.to_associational base2_25_5 (Tuple.from_list _ [g0;g1;g2;g3;g4;g5;g6;g7;g8;g9] eq_refl))))) in
-  let t := (eval cbv -[runtime_mul runtime_add] in t) in
-  let t := (eval cbv [runtime_mul runtime_add] in t) in
-  remember t eqn:Heqt; change (Zneg xH) with (Z.opp 1) in Heqt; (* TODO : make this a lemma *)
-    ring_simplify_subterms_in_all.
-Abort.
-
-Goal let base2_56 i := 2 ^ (56 * i) in forall f0 f1 f2 f3 f4 f5 f6 f7 g0 g1 g2 g3 g4 g5 g6 g7: Z, False. intros.
-  let t := constr:(Positional.from_associational base2_56 8
-                                   (Associational.reduce (2^448) [(2^224,1);(1,-1)]
-                                   (Associational.reduce (2^448) [(2^224,1);(1,-1)]
-                                   (goldilocks_mul (fun x y => x ++ (List.map (fun t => (fst t, (-1 * snd t)%RT)) y)) Associational.mul (@List.app _) (fun x => List.map (fun t => (x * fst t, snd t))) Associational.split (2^224)
-                                      (Positional.to_associational base2_56 (Tuple.from_list _ [f0;f1;f2;f3;f4;f5;f6;f7] eq_refl))
-                                      (Positional.to_associational base2_56 (Tuple.from_list _ [g0;g1;g2;g3;g4;g5;g6;g7] eq_refl)))))) in
-  let t := (eval cbv -[runtime_mul runtime_add] in t) in
-  let t := (eval cbv [runtime_mul runtime_add] in t) in
-  remember t eqn:Heqt; rewrite !Z.mul_1_l, !Z.add_0_r, !Z.add_assoc, !Z.mul_assoc, !Z.mul_opp_l, !Z.add_opp_r, !Z.sub_opp_r in Heqt.
-Abort.
-*)
