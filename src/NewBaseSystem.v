@@ -254,7 +254,8 @@ Require Import Recdef.
     Proof.
       cbv [fold_right_no_starter]; intros; destruct ls; try discriminate.
       inversion H; subst; clear H.
-      destruct (fold_right_min ls z); subst; simpl List.In; tauto.
+      destruct (fold_right_min ls z);
+      simpl List.In; tauto.
     Qed.
     Fixpoint fold_right_cps {A B} (g:B->A->A) (a0:A) (l:list B) {T} (f:A->T) :=
       match l with
