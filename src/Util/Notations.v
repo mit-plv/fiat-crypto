@@ -11,6 +11,8 @@ Require Export Crypto.Util.GlobalSettings.
 Reserved Notation "x -> y" (at level 99, right associativity, y at level 200).
 Reserved Notation "()" (at level 0).
 Reserved Infix "=?" (at level 70, no associativity).
+Reserved Infix "<?" (at level 70, no associativity).
+Reserved Infix "<=?" (at level 70, no associativity).
 Reserved Infix "!=?" (at level 70, no associativity).
 Reserved Infix "?=" (at level 70, no associativity).
 Reserved Infix "?<" (at level 70, no associativity).
