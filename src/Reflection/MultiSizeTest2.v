@@ -168,7 +168,9 @@ Definition bound_op
                                                      (bound_type T2 (snd args2)))))
                                          (Pair (Op (Cast _ _) (Var (fst args)))
                                                (Op (Cast _ _) (Var (snd args))))))
-     | Const _ _ as e, _
+     | Const _ _ as e, Plus _
+     | Const _ _ as e, Const _ _
+     | Const _ _ as e, Cast _ _
        => fun args args2 => Op e TT
      | Cast _ _ as e, Plus _
      | Cast _ _ as e, Const _ _
