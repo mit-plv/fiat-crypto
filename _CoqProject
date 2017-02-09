@@ -79,7 +79,6 @@ src/ModularArithmetic/ModularBaseSystemListZOperationsProofs.v
 src/ModularArithmetic/ModularBaseSystemOpt.v
 src/ModularArithmetic/ModularBaseSystemProofs.v
 src/ModularArithmetic/ModularBaseSystemWord.v
-src/ModularArithmetic/NewModularBaseSystem.v
 src/ModularArithmetic/Pow2Base.v
 src/ModularArithmetic/Pow2BaseProofs.v
 src/ModularArithmetic/Pre.v
