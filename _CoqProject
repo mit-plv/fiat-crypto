@@ -3,6 +3,7 @@
 Bedrock/Nomega.v
 Bedrock/Word.v
 src/Algebra.v
+src/Algebra/ZToRing.v
 src/BaseSystem.v
 src/BaseSystemProofs.v
 src/EdDSARepChange.v
