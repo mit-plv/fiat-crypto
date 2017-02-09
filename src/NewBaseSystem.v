@@ -879,7 +879,7 @@ Module B.
                  | _ => nsatz 
                  | _ => solve [auto] 
                  end.
-        (* TODO : logic here is kinda ugly-- basic idea is "if you found a minimum weight in (p++carries), an element with that weight must be in either carries or p *)
+        (* TODO : logic here is kinda ugly-- basic idea is "if you found a minimum weight in (p++carries), an element with that weight must be in either carries or p" *)
         exfalso.
         repeat match goal with
                  | H : fold_right_no_starter Z.min _ = Some _ |- _ =>
