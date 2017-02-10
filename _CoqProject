@@ -3,12 +3,12 @@
 Bedrock/Nomega.v
 Bedrock/Word.v
 src/Algebra.v
-src/Algebra/ZToRing.v
 src/BaseSystem.v
 src/BaseSystemProofs.v
 src/EdDSARepChange.v
 src/MxDHRepChange.v
 src/Testbit.v
+src/Algebra/ZToRing.v
 src/Assembly/Bounds.v
 src/Assembly/Compile.v
 src/Assembly/Conversions.v
@@ -138,6 +138,8 @@ src/Reflection/Named/EstablishLiveness.v
 src/Reflection/Named/NameUtil.v
 src/Reflection/Named/RegisterAssign.v
 src/Reflection/Named/Syntax.v
+src/Reflection/Z/BinaryNotationConstants.v
+src/Reflection/Z/HexNotationConstants.v
 src/Reflection/Z/Interpretations128.v
 src/Reflection/Z/Interpretations64.v
 src/Reflection/Z/InterpretationsGen.v
