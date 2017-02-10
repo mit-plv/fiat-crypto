@@ -22,7 +22,7 @@ Section language.
           (Cast : forall var A A', exprf base_type_code op (var:=var) (Tbase A) -> exprf base_type_code op (var:=var) (Tbase A'))
           (is_cast : forall src dst, op src dst -> bool)
           (is_const : forall src dst, op src dst -> bool)
-          (genericize_op : forall src dst (opc : op src dst) (new_bounded_type : base_type_code),
+          (genericize_op : forall src dst (opc : op src dst) (new_bounded_type_in new_bounded_type_out : base_type_code),
               option { src'dst' : _ & op (fst src'dst') (snd src'dst') })
           (failf : forall var t, @exprf base_type_code op var (Tbase t)).
   Local Infix "<=?" := base_type_leb : expr_scope.
@@ -169,10 +169,15 @@ Section language.
        => let output_bounds := interp_op_bounds _ _ opc2 input_bounds in
           let input_ts := SmartVarfMap bound_base_type input_bounds in
           let output_ts := SmartVarfMap bound_base_type output_bounds in
-          let new_type := flat_type_max (t:=Prod _ _) (input_ts, output_ts)%core in
-          let new_opc := option_map (genericize_op _ _ opc1) new_type in
+          let new_type_in := flat_type_max input_ts in
+          let new_type_out := flat_type_max output_ts in
+          let new_opc := match new_type_in, new_type_out with
+                         | Some new_type_in, Some new_type_out
+                           => genericize_op _ _ opc1 new_type_in new_type_out
+                         | None, _ | _, None => None
+                         end in
           match new_opc with
-          | Some (Some (existT _ new_opc))
+          | Some (existT _ new_opc)
             => match SmartCast _ _, SmartCast _ _ with
                | Some SmartCast_args, Some SmartCast_result
                  => LetIn args
@@ -183,7 +188,6 @@ Section language.
                | _, None
                  => Op opc1 args
                end
-          | Some None
           | None
             => Op opc1 args
           end.

@@ -46,10 +46,10 @@ Definition is_cast src dst (opc : op src dst) : bool
 Definition is_const src dst (opc : op src dst) : bool
   := match opc with Const _ _ => true | _ => false end.
 
-Definition genericize_op src dst (opc : op src dst) (new_t : base_type)
+Definition genericize_op src dst (opc : op src dst) (new_t_in new_t_out : base_type)
   : option { src'dst' : _ & op (fst src'dst') (snd src'dst') }
   := match opc with
-     | Plus _ => Some (existT _ (_, _) (Plus new_t))
+     | Plus _ => Some (existT _ (_, _) (Plus (base_type_max base_type_leb new_t_in new_t_out)))
      | Const _ _
      | Cast _ _
        => None
