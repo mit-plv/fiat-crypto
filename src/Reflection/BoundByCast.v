@@ -5,6 +5,7 @@ Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Reflection.Inline.
 Require Import Crypto.Reflection.Linearize.
 Require Import Crypto.Reflection.MapCast.
+Require Import Crypto.Reflection.Eta.
 Require Import Crypto.Util.Notations.
 
 Local Open Scope expr_scope.
@@ -253,15 +254,16 @@ Section language.
 
   Definition Boundify {t1} (e1 : Expr t1) args2
     : Expr _
-    := InlineConstGen
-         (@push_cast)
-         (Linearize
-            (SmartBound
-               (@MapInterpCast
-                  base_type_code interp_base_type_bounds
-                  op (@interp_op_bounds)
-                  (@failf)
-                  (@bound_op)
-                  t1 e1 (interp_all_binders_for_to' args2))
-               (interp_all_binders_for_to' args2))).
+    := ExprEta
+         (InlineConstGen
+            (@push_cast)
+            (Linearize
+               (SmartBound
+                  (@MapInterpCast
+                     base_type_code interp_base_type_bounds
+                     op (@interp_op_bounds)
+                     (@failf)
+                     (@bound_op)
+                     t1 e1 (interp_all_binders_for_to' args2))
+                  (interp_all_binders_for_to' args2)))).
 End language.
