@@ -9,13 +9,14 @@ Require Import Coq.Relations.Relation_Definitions.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Notations.
 Require Export Crypto.Util.FixCoqMistakes.
+Require Import Crypto.Util.Tactics.
 
 Module Extended.
   Section ExtendedCoordinates.
     Import Group Ring Field.
     Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv a d}
             {field:@field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
-            {prm:@E.twisted_edwards_params F Feq Fzero Fone Fadd Fmul a d}
+            {prm:@E.twisted_edwards_params F Feq Fzero Fmul a d}
             {Feq_dec:DecidableRel Feq}.
     Local Infix "=" := Feq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
     Local Notation "0" := Fzero.  Local Notation "1" := Fone.
@@ -23,47 +24,42 @@ Module Extended.
     Local Infix "-" := Fsub. Local Infix "/" := Fdiv.
     Local Notation "x ^ 2" := (x*x).
     Local Notation Epoint := (@E.point F Feq Fone Fadd Fmul a d).
-    Local Notation onCurve := (@Pre.onCurve F Feq Fone Fadd Fmul a d).
+    Local Notation onCurve := (@E.onCurve F Feq Fone Fadd Fmul a d).
 
     Add Field _edwards_curve_extended_field : (field_theory_for_stdlib_tactic (H:=field)).
 
     (** [Extended.point] represents a point on an elliptic curve using extended projective
      * Edwards coordinates with twist a=-1 (see <https://eprint.iacr.org/2008/522.pdf>). *)
-    Definition point := { P | let '(X,Y,Z,T) := P in onCurve((X/Z), (Y/Z)) /\ Z<>0 /\ Z*T=X*Y }.
+    Definition point := { P | let '(X,Y,Z,T) := P in onCurve (X/Z) (Y/Z) /\ Z<>0 /\ Z*T=X*Y }.
     Definition coordinates (P:point) : F*F*F*F := proj1_sig P.
 
-    Create HintDb bash discriminated.
-    Local Hint Unfold E.eq fst snd fieldwise fieldwise' coordinates E.coordinates proj1_sig Pre.onCurve : bash.
-    Ltac safe_bash :=
-      repeat match goal with
-             | |- Proper _ _ => intro
-             | _ => progress intros
-             | [ H: _ /\ _ |- _ ] => destruct H
-             | [ p:E.point |- _ ] => destruct p as [ [??] ? ]
-             | [ p:point |- _ ] => destruct p as [ [ [ [??] ? ] ? ] ? ]
-             | _ => progress autounfold with bash in *
-             | |- _ /\ _ => split
-             | _ => solve [neq01]
-             | _ => solve [eauto]
-             | _ => solve [intuition eauto]
-             | _ => solve [etransitivity; eauto]
-             | |- _ => rewrite <-!(field_div_definition(field:=field)) in *
-             | |- _*_ <> 0 => apply Ring.zero_product_iff_zero_factor
-             | [H: _ |- _ ] => solve [intro; apply H; super_nsatz]
-             | |- Feq _ _ => super_nsatz
-             end.
-    (** Using [pose proof E.char_gt_2] causes [E.char_gt_2] to get
-        picked up in the proof term when we don't want it to. *)
-    Ltac unsafe_bash := pose proof E.char_gt_2; safe_bash.
-    Ltac bash := safe_bash; unsafe_bash.
+    Ltac t_step :=
+      match goal with
+      | |- Proper _ _ => intro
+      | _ => progress intros
+      | _ => progress destruct_head' prod
+      | _ => progress destruct_head' @E.point
+      | _ => progress destruct_head' point
+      | _ => progress destruct_head' and
+      | _ => E._gather_nonzeros
+      | _ => progress cbv [CompleteEdwardsCurve.E.eq E.eq fst snd fieldwise fieldwise' coordinates E.coordinates proj1_sig E.onCurve] in *
+      | |- _ /\ _ => split | |- _ <-> _ => split
+      | _ => rewrite <-!(field_div_definition(field:=field))
+      | _ => solve [fsatz]
+      end.
+    Ltac t := repeat t_step.
 
-    Obligation Tactic := bash.
+    Program Definition from_twisted (P:Epoint) : point :=
+      let xy := E.coordinates P in (fst xy, snd xy, 1, fst xy * snd xy).
+    Next Obligation. t. Qed.
 
-    Program Definition from_twisted (P:Epoint) : point := exist _
-      (let (x,y) := E.coordinates P in (x, y, 1, x*y)) _.
-
-    Program Definition to_twisted (P:point) : Epoint := exist _
-      (let '(X,Y,Z,T) := coordinates P in let iZ := Finv Z in ((X*iZ), (Y*iZ))) _.
+    Program Definition to_twisted (P:point) : Epoint := 
+      let XYZT := coordinates P in let T := snd XYZT in
+      let XYZ  := fst XYZT in      let Z := snd XYZ in
+      let XY   := fst XYZ in       let Y := snd XY in
+      let X    := fst XY in
+      let iZ := Finv Z in ((X*iZ), (Y*iZ)).
+    Next Obligation. t. Qed.
 
     Definition eq (P Q:point) := E.eq (to_twisted P) (to_twisted Q).
 
@@ -72,10 +68,8 @@ Module Extended.
         let '(X2, Y2, Z2, _) := coordinates P2 in
         Z2*X1 = Z1*X2 /\ Z2*Y1 = Z1*Y2.
 
-    Local Hint Unfold from_twisted to_twisted eq eq_noinv : bash.
-
     Lemma eq_noinv_eq P Q : eq P Q <-> eq_noinv P Q.
-    Proof. safe_bash; repeat split; safe_bash.  Qed.
+    Proof. cbv [eq_noinv eq to_twisted from_twisted]; t. Qed.
     Global Instance DecidableRel_eq_noinv : Decidable.DecidableRel eq_noinv.
     Proof.
       intros P Q.
@@ -87,45 +81,31 @@ Module Extended.
       eapply @Decidable_iff_to_flip_impl; [eapply eq_noinv_eq | exact _].
     Defined.
 
-    Global Instance Equivalence_eq : Equivalence eq. Proof. split; split; safe_bash. Qed.
-    Global Instance Proper_from_twisted : Proper (E.eq==>eq) from_twisted. Proof. unsafe_bash. Qed.
-    Global Instance Proper_to_twisted : Proper (eq==>E.eq) to_twisted. Proof. safe_bash. Qed.
-    Lemma to_twisted_from_twisted P : E.eq (to_twisted (from_twisted P)) P. Proof. unsafe_bash. Qed.
+    Global Instance Equivalence_eq : Equivalence eq. Proof. split; split; cbv [eq] in *; t. Qed.
+    Global Instance Proper_from_twisted : Proper (E.eq==>eq) from_twisted. Proof. cbv [eq]; t. Qed.
+    Global Instance Proper_to_twisted : Proper (eq==>E.eq) to_twisted. Proof. cbv [eq to_twisted]; t. Qed.
+    Lemma to_twisted_from_twisted P : E.eq (to_twisted (from_twisted P)) P.
+    Proof. cbv [to_twisted from_twisted]; t. Qed.
 
     Section Proper.
       Global Instance point_Proper : Proper (fieldwise (n:=4) Feq ==> iff)
-                                            (fun P => let '(X,Y,Z,T) := P in onCurve((X/Z), (Y/Z)) /\ Z<>0 /\ Z*T=X*Y).
-      Proof.
-        repeat intro.
-        repeat match goal with
-               | _ => progress simpl in *
-               | [ H : prod _ _ |- _ ] => destruct H
-               | [ H : and _ _ |- _ ] => destruct H
-               | _ => reflexivity
-               | [ H : ?x = ?y |- _ ] => is_var x; rewrite H; clear x H
-               end.
-      Qed.
+                                            (fun P => let '(X,Y,Z,T) := P in onCurve(X/Z) (Y/Z) /\ Z<>0 /\ Z*T=X*Y).
+      Proof. repeat intro; cbv [tuple tuple' fieldwise fieldwise'] in *; t. Qed.
       Global Instance point_Proper_impl
         : Proper (fieldwise (n:=4) Feq ==> Basics.impl)
-                 (fun P => let '(X,Y,Z,T) := P in onCurve((X/Z), (Y/Z)) /\ Z<>0 /\ Z*T=X*Y).
-      Proof.
-        intros A B H H'.
-        apply (@point_Proper A B H); assumption.
-      Qed.
+                 (fun P => let '(X,Y,Z,T) := P in onCurve (X/Z) (Y/Z) /\ Z<>0 /\ Z*T=X*Y).
+      Proof. intros A B H H'; apply (@point_Proper A B H); assumption. Qed.
       Global Instance point_Proper_flip_impl
         : Proper (fieldwise (n:=4) Feq ==> Basics.flip Basics.impl)
-                 (fun P => let '(X,Y,Z,T) := P in onCurve((X/Z), (Y/Z)) /\ Z<>0 /\ Z*T=X*Y).
-      Proof.
-        intros A B H H'.
-        apply (@point_Proper A B H); assumption.
-      Qed.
+                 (fun P => let '(X,Y,Z,T) := P in onCurve (X/Z) (Y/Z) /\ Z<>0 /\ Z*T=X*Y).
+      Proof. intros A B H H'; apply (@point_Proper A B H); assumption. Qed.
     End Proper.
 
     Section TwistMinus1.
       Context {a_eq_minus1 : a = Fopp 1}.
       Context {twice_d:F} {Htwice_d:twice_d = d + d}.
       (** Second equation from <http://eprint.iacr.org/2008/522.pdf> section 3.1, also <https://www.hyperelliptic.org/EFD/g1p/auto-twisted-extended-1.html#addition-add-2008-hwcd-3> and <https://tools.ietf.org/html/draft-josefsson-eddsa-ed25519-03> *)
-      Section generic.
+      Section generic. (* TODO(jgross) what is this section? *)
         Context (F4 : Type)
                 (pair4 : F -> F -> F -> F -> F4)
                 (let_in : F -> (F -> F4) -> F4).
@@ -155,23 +135,20 @@ Module Extended.
             (fun x f => let y := x in f y)
             P1 P2.
 
-      Local Hint Unfold E.add E.coordinates add_coordinates : bash.
-
       Lemma add_coordinates_correct (P Q:point) :
         let '(X,Y,Z,T) := add_coordinates (coordinates P) (coordinates Q) in
         let (x, y) := E.coordinates (E.add (to_twisted P) (to_twisted Q)) in
         (fieldwise (n:=2) Feq) (x, y) (X/Z, Y/Z).
       Proof.
-        destruct P as [ [ [ [ ] ? ] ? ] [ HP [ ] ] ]; destruct Q as [ [ [ [ ] ? ] ? ] [ HQ [ ] ] ].
-        pose proof edwardsAddCompletePlus (a_nonzero:=E.nonzero_a)(a_square:=E.square_a)(d_nonsquare:=E.nonsquare_d)(char_gt_2:=E.char_gt_2) _ _ _ _ HP HQ.
-        pose proof edwardsAddCompleteMinus (a_nonzero:=E.nonzero_a)(a_square:=E.square_a)(d_nonsquare:=E.nonsquare_d)(char_gt_2:=E.char_gt_2) _ _ _ _ HP HQ.
-        unsafe_bash.
+        cbv [E.add add_coordinates to_twisted] in *. destruct prm. t.
+        (* TODO: change [prove_nsatz_nonzero] to use typeclass resolution to look up field characteristic instead of context matching. then we won't need to destruct prm *)
       Qed.
 
       Context {add_coordinates_opt}
               {add_coordinates_opt_correct
                : forall P1 P2, fieldwise (n:=4) Feq (add_coordinates_opt P1 P2) (add_coordinates P1 P2)}.
 
+      (* TODO(jgross): what are these definitions? *)
       Obligation Tactic := idtac.
       Program Definition add_unopt (P Q:point) : point := add_coordinates (coordinates P) (coordinates Q).
       Next Obligation.
@@ -264,36 +241,6 @@ Module Extended.
         - unfold opp; intros; rewrite to_twisted_from_twisted; reflexivity.
         - unfold zero; intros; rewrite to_twisted_from_twisted; reflexivity.
       Qed.
-
-      (* TODO: decide whether we still need those, then port *)
-    (*
-    Lemma unifiedAddM1_0_r : forall P, unifiedAddM1 P (mkExtendedPoint E.zero) === P.
-      unfold equiv, extendedPoint_eq; intros.
-      rewrite <-!unifiedAddM1_rep, unExtendedPoint_mkExtendedPoint, E.add_0_r; auto.
-    Qed.
-
-    Lemma unifiedAddM1_0_l : forall P, unifiedAddM1 (mkExtendedPoint E.zero) P === P.
-      unfold equiv, extendedPoint_eq; intros.
-      rewrite <-!unifiedAddM1_rep, E.add_comm, unExtendedPoint_mkExtendedPoint, E.add_0_r; auto.
-    Qed.
-
-    Lemma unifiedAddM1_assoc : forall a b c, unifiedAddM1 a (unifiedAddM1 b c) === unifiedAddM1 (unifiedAddM1 a b) c.
-    Proof.
-      unfold equiv, extendedPoint_eq; intros.
-      rewrite <-!unifiedAddM1_rep, E.add_assoc; auto.
-    Qed.
-
-    Lemma testbit_conversion_identity : forall x i, N.testbit_nat x i = N.testbit_nat ((fun a => a) x) i.
-    Proof.
-      trivial.
-    Qed.
-
-    Lemma scalarMultM1_rep : forall n P, unExtendedPoint (nat_iter_op unifiedAddM1 (mkExtendedPoint E.zero) n P) = E.mul n (unExtendedPoint P).
-      induction n; [simpl; rewrite !unExtendedPoint_mkExtendedPoint; reflexivity|]; intros.
-      unfold E.mul; fold E.mul.
-      rewrite <-IHn, unifiedAddM1_rep; auto.
-    Qed.
-     *)
     End TwistMinus1.
   End ExtendedCoordinates.
 

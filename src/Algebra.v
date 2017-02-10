@@ -773,7 +773,7 @@ Module Field.
       intros. rewrite commutative. auto using left_multiplicative_inverse.
     Qed.
 
-    Lemma inv_unique x ix : ix * x = one -> ix = inv x.
+    Lemma left_inv_unique x ix : ix * x = one -> ix = inv x.
     Proof.
       intro Hix.
       assert (ix*x*inv x = inv x).
@@ -782,6 +782,10 @@ Module Field.
         intro eq_x_0. rewrite eq_x_0, Ring.mul_0_r in Hix.
         apply zero_neq_one. assumption.
     Qed.
+    Definition inv_unique := left_inv_unique.
+
+    Lemma right_inv_unique x ix : x * ix = one -> ix = inv x.
+    Proof. rewrite commutative. apply left_inv_unique. Qed.
 
     Lemma div_one x : div x one = x.
     Proof.
