@@ -17,7 +17,7 @@ Section ZToRing.
   Definition ZToRing (x:Z) : R :=
     match x with
     | Z0 => Rzero
-    | Zpos p => natToRing (Pos.to_nat p) 
+    | Zpos p => natToRing (Pos.to_nat p)
     | Zneg p => Ropp (natToRing (Pos.to_nat p))
     end.
 
@@ -111,7 +111,7 @@ Section ZToRing.
       rewrite !ring_sub_definition.
       rewrite associative; reflexivity. }
   Qed.
-  
+
   Lemma ZToRing_inj_mul : forall a b,
       ZToRing (Z.mul a b) = Rmul (ZToRing a) (ZToRing b).
   Proof.
@@ -134,8 +134,8 @@ Section ZToRing.
       rewrite Ring.mul_opp_r,right_identity.
       reflexivity. }
   Qed.
-  
-  
+
+
   Lemma ZToRingHomom : @Ring.is_homomorphism
                          Z Z.eq Z.one Z.add Z.mul
                          R Req  Rone  Radd  Rmul
@@ -147,3 +147,4 @@ Section ZToRing.
     { apply ZToRing_inj_mul. }
     { simpl. rewrite left_identity; reflexivity. }
   Qed.
+End ZToRing.
