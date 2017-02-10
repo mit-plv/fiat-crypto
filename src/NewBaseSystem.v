@@ -111,21 +111,25 @@ Require Import Recdef.
     Lemma map_cps_correct {A B} g ls: forall {T} f,
         @map_cps A B g ls T f = f (map g ls).
     Proof. induction ls; simpl; intros; rewrite ?IHls; reflexivity. Qed.
+    Create HintDb uncps discriminated. Hint Rewrite @map_cps_correct : uncps.
 
     Fixpoint flat_map_cps {A B} (g:A->forall {T}, (list B->T)->T) (ls : list A) {T} (f:list B->T)  :=
       match ls with
       | nil => f nil
       | (x::tl)%list => g x (fun r => flat_map_cps g tl (fun rr => f (r ++ rr))%list)
       end.
-    Lemma flat_map_cps_correct {A B} g ls: forall {T} (f:list B->T) g',
-        (forall x T h, @g x T h = h (g' x)) ->
-        @flat_map_cps A B g ls T f = f (List.flat_map g' ls).
+    Lemma flat_map_cps_correct {A B} (g:A->forall {T}, (list B->T)->T) ls :
+      forall {T} (f:list B->T),
+        (forall x T h, @g x T h = h (g x id)) ->
+        @flat_map_cps A B g ls T f = f (List.flat_map (fun x => g x id) ls).
     Proof.
       induction ls; intros; [reflexivity|].
       simpl flat_map_cps. simpl flat_map.
       rewrite H; erewrite IHls by eassumption.
       reflexivity.
     Qed.
+    Hint Rewrite @flat_map_cps_correct using (intros; autorewrite with uncps; auto): uncps.
+
     
     Fixpoint from_list_default'_cps {A} (d y:A) n xs:
       forall {T}, (Tuple.tuple' A n -> T) -> T:=
@@ -159,6 +163,7 @@ Require Import Recdef.
       destruct n; intros; simpl; [reflexivity|].
       break_match; auto using from_list_default'_cps_correct.
     Qed.
+    Hint Rewrite @from_list_default_cps_correct : uncps.
     Fixpoint to_list'_cps {A} n
              {T} (f:list A -> T) : Tuple.tuple' A n -> T :=
       match n as n0 return (Tuple.tuple' A n0 -> T) with
@@ -184,6 +189,7 @@ Require Import Recdef.
     Lemma to_list_cps_correct {A} n t {T} f :
       @to_list_cps A n t T f = f (Tuple.to_list n t).
     Proof. cbv [to_list_cps to_list_cps' Tuple.to_list]; break_match; auto using to_list'_cps_correct. Qed.
+    Hint Rewrite @to_list_cps_correct : uncps.
     
     Definition on_tuple_cps {A B} (d:B) (g:list A ->forall {T},(list B->T)->T) {n m}
                (xs : Tuple.tuple A n) {T} (f:tuple B m ->T) :=
@@ -197,6 +203,7 @@ Require Import Recdef.
       rewrite (Tuple.from_list_default_eq _ _ _ (H _ (Tuple.length_to_list _))).
       reflexivity.
     Qed.
+    Hint Rewrite @on_tuple_cps_correct : uncps.
 
     Fixpoint update_nth_cps {A} n (g:A->A) xs {T} (f:list A->T) :=
       match n with
@@ -214,6 +221,7 @@ Require Import Recdef.
     Lemma update_nth_cps_correct {A} n g: forall xs T f,
         @update_nth_cps A n g xs T f = f (update_nth n g xs).
     Proof. induction n; intros; simpl; break_match; try apply IHn; reflexivity. Qed.
+    Hint Rewrite @update_nth_cps_correct : uncps.
 
     Fixpoint combine_cps {A B} (la :list A) (lb : list B)
              {T} (f:list (A*B)->T) :=
@@ -231,8 +239,7 @@ Require Import Recdef.
       induction la; simpl combine_cps; simpl combine; intros;
         try break_match; try apply IHla; reflexivity.
     Qed.
-
-
+    Hint Rewrite @combine_cps_correct: uncps.
     
     Definition fold_right_no_starter {A} (f:A->A->A) ls : option A :=
       match ls with
@@ -265,6 +272,8 @@ Require Import Recdef.
     Lemma fold_right_cps_correct {A B} g a0 l: forall {T} f,
         @fold_right_cps A B g a0 l T f = f (List.fold_right g a0 l).
     Proof. induction l; intros; simpl; rewrite ?IHl; auto. Qed.
+    Hint Rewrite @fold_right_cps_correct : uncps.
+
     Definition fold_right_no_starter_cps {A} g ls {T} (f:option A->T) :=
       match ls with
       | nil => f None
@@ -275,24 +284,8 @@ Require Import Recdef.
     Proof.
       cbv [fold_right_no_starter_cps fold_right_no_starter]; break_match; reflexivity.
     Qed.        
+    Hint Rewrite @fold_right_no_starter_cps_correct : uncps.
 
-
-Ltac find_continuation :=
-  let a := fresh "x" in
-  let Heqa := fresh "Heqx" in
-  match goal with
-    |- _ ?x = _ ?y =>
-    remember (x-y) as a eqn:Heqa;
-    replace x with (y+a) by (subst a; ring);
-    ring_simplify in Heqa; subst a
-  end;
-  match goal with |- ?lhs = ?g ?y =>
-                  match eval pattern y in lhs with
-                  ?f _ =>
-                  change (f y = g y)
-                  end
-  end;
-  apply f_equal; reflexivity.
 
 Ltac not_syntactically_equal a b :=
     match a with | b => fail 1 | _ => idtac end.
@@ -378,29 +371,23 @@ Module B.
       (fst t * fst t', (snd t * snd t')%RT).
     Definition mul (p q:list limb) {T} (f : list limb->T) :=
       flat_map_cps (fun t => @map_cps _ _ (multerm t) q) p f.
+    Definition mul_noncps (p q:list limb) := mul p q id.
+    Hint Opaque mul_noncps : uncps.
     Lemma eval_map_mul (a:limb) (q:list limb) : eval (List.map (multerm a) q) = fst a * snd a * eval q.
     Proof.
       induction q; cbv [multerm]; simpl List.map;
         autorewrite with push_eval cancel_pair; nsatz.
     Qed. Hint Rewrite eval_map_mul : push_eval.
     Lemma mul_id p q: forall {T} f,
-      @mul p q T f = f (mul p q id).
+      @mul p q T f = f (mul_noncps p q).
+    Proof. cbv [mul mul_noncps]; induction p; intros; autorewrite with uncps; reflexivity. Qed. Hint Rewrite @mul_id : uncps.
+    Lemma eval_mul_noncps p q:
+      eval (mul_noncps p q) = eval p * eval q.
     Proof.
-      induction p;intros; autorewrite with push_eval cancel_pair; [reflexivity|].
-      cbv [mul] in *; simpl. rewrite !map_cps_correct, IHp.
-      erewrite !flat_map_cps_correct by (intros; rewrite map_cps_correct; reflexivity).
-      reflexivity.
-    Qed.
-    Lemma eval_mul_id p q:
-      eval (mul p q id) = eval p * eval q.
-    Proof.
-      induction p; intros; autorewrite with push_eval cancel_pair; [reflexivity|].
-      pose proof (@mul_id p q) as Hmul_id.
-      cbv [mul] in *. simpl.
-      rewrite map_cps_correct, Hmul_id.
-      cbv [id] in *; autorewrite with push_eval.
-      rewrite IHp. nsatz.
-    Qed. Hint Rewrite eval_mul_id : push_eval.
+      cbv [mul_noncps mul]; induction p; intros; simpl;
+        autorewrite with push_eval push_id uncps cancel_pair in * ;
+        try reflexivity; nsatz.
+    Qed. Hint Rewrite eval_mul_noncps : push_eval.
 
     Fixpoint split (s:Z) (xs:list limb)
              {T} (f :list limb*list limb->T) :=
@@ -413,11 +400,12 @@ Module B.
         then f (fst sxs',          cons (fst x / s, snd x) (snd sxs'))
         else f (cons x (fst sxs'), snd sxs'))
       end.
-
+    Definition split_noncps s xs := split s xs id.
+    Hint Opaque split_noncps : uncps.
     Lemma split_id s p: forall {T} f,
-        @split s p T f = f (split s p id).
+        @split s p T f = f (split_noncps s p).
     Proof.
-      induction p; intros;
+      cbv [split_noncps]; induction p; intros;
         repeat match goal with
                | _ => progress simpl split
                | |- split _ _ ?f = _ (split _ _ ?g) =>
@@ -425,59 +413,54 @@ Module B.
                | _ => break_if
                | _ => reflexivity
                end.
-    Qed.
-    Lemma eval_split_id s p (s_nonzero:s<>0):
-      eval (fst (split s p id)) + s*eval (snd (split s p id))  = eval p.
+    Qed. Hint Rewrite split_id : uncps.
+    Lemma eval_split_noncps s p (s_nonzero:s<>0):
+      eval (fst (split_noncps s p)) + s*eval (snd (split_noncps s p))  = eval p.
     Proof.
-      induction p; intros;
+      cbv [split_noncps];  induction p; intros;
         repeat match goal with
                | _ => progress simpl split
-               | _ => progress (autorewrite with push_eval push_id cancel_pair)
-               | _ => progress (rewrite split_id; autorewrite with push_id)
+               | _ => progress (autorewrite with push_eval uncps push_id cancel_pair)
                | _ => break_if 
                | H:_ |- _ =>
                  unique pose proof (Z_div_exact_full_2 _ _ s_nonzero H)
                | _ => nsatz
                end.
-    Qed. Hint Rewrite @eval_split_id : push_eval.
+    Qed. Hint Rewrite @eval_split_noncps : push_eval.
 
     Definition reduce (s:Z) (c:list limb) (p:list limb)
                {T} (f : list limb->T) :=
       split s p (fun ab => mul c (snd ab) (fun rr =>f (fst ab ++ rr))).
-
+    Definition reduce_noncps s c p := reduce s c p id.
+    Hint Opaque reduce_noncps : uncps.
     Lemma reduction_rule a b s c (modulus_nonzero:s-c<>0) :
       (a + s * b) mod (s - c) = (a + c * b) mod (s - c).
     Proof. replace (a + s * b) with ((a + c*b) + b*(s-c)) by nsatz.
            rewrite Z.add_mod, Z_mod_mult, Z.add_0_r, Z.mod_mod; trivial. Qed.
-
     Lemma reduce_id s c p {T} f:
-      @reduce s c p T f = f (reduce s c p id).
+      @reduce s c p T f = f (reduce_noncps s c p).
     Proof.
+      cbv [reduce reduce_noncps];
       repeat match goal with
              | _ => progress intros
-             | _ => progress cbv [reduce]
-             | _ => progress autorewrite with push_eval cancel_pair 
-             | _ => smart_rewrite2 split_id 
-             | _ => smart_rewrite2 mul_id
+             | _ => progress autorewrite with uncps push_id 
              | _ => reflexivity
              | _ => nsatz
              end.
-    Qed.
-    Lemma eval_reduce_id s c p (s_nonzero:s<>0) (modulus_nonzero:s-eval c<>0):
-      eval (reduce s c p id) mod (s - eval c) = eval p mod (s - eval c).
+    Qed. Hint Rewrite reduce_id : uncps.
+    Lemma eval_reduce_noncps s c p (s_nonzero:s<>0) (modulus_nonzero:s-eval c<>0):
+      eval (reduce_noncps s c p) mod (s - eval c) = eval p mod (s - eval c).
     Proof.
-      cbv [reduce id].
+      cbv [reduce_noncps reduce];
       repeat match goal with
              | _ => progress intros
-             | _ => progress autorewrite with push_eval cancel_pair
-             | _ => smart_rewrite2 split_id; auto 
-             | _ => smart_rewrite2 mul_id; auto
+             | _ => progress autorewrite with push_eval push_id cancel_pair uncps
              | _ => rewrite <-reduction_rule by auto
              | _ => reflexivity
              | _ => assumption 
              | _ => nsatz
              end.
-    Qed. Hint Rewrite eval_reduce_id : push_eval.
+    Qed. Hint Rewrite eval_reduce_noncps : push_eval.
 
     Section Carries.
       Context {modulo div:Z->Z->Z}.
