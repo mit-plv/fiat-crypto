@@ -130,7 +130,36 @@ Require Import Recdef.
     Qed.
     Hint Rewrite @flat_map_cps_correct using (intros; autorewrite with uncps; auto): uncps.
 
-    
+      Fixpoint find_remove_first'_cps {A} (g:A->forall {T}, (bool->T)->T) (acc ls:list A)
+               {T} (f:option A * list A ->T) :=
+        match ls with
+        | [] => f (None, acc)
+        | x :: tl =>
+          g x (fun r =>
+          if r
+          then f (Some x, acc ++ tl)
+          else
+            find_remove_first'_cps g (acc ++ [x]) tl f)
+        end.
+      Definition find_remove_first_cps {A} g ls {T} f :=
+        @find_remove_first'_cps A g nil ls T f.
+      Lemma find_remove_first'_cps_correct
+            {A} (g:A->forall {T}, (bool->T) -> T) ls {T} f
+            (H: forall x {B} h, @g x B h = h (g x id)):
+        forall acc,
+          @find_remove_first'_cps A g acc ls T f =
+          f (find_remove_first' (fun x => g x id) acc ls).
+      Proof.
+        induction ls; intros; simpl; try (rewrite H, IHls; break_if); reflexivity.
+      Qed.
+      Lemma find_remove_first_cps_correct
+            {A} (g:A->forall {T}, (bool->T) -> T) ls {T} f
+            (H: forall x {B} h, @g x B h = h (g x id)):
+          @find_remove_first_cps A g ls T f =
+          f (find_remove_first (fun x => g x id) ls).
+      Proof. apply find_remove_first'_cps_correct; auto. Qed.
+      Hint Rewrite @find_remove_first_cps_correct : uncps.
+
     Fixpoint from_list_default'_cps {A} (d y:A) n xs:
       forall {T}, (Tuple.tuple' A n -> T) -> T:=
       match n as n0 return (forall {T}, (Tuple.tuple' A n0 ->T) ->T) with
@@ -286,66 +315,36 @@ Require Import Recdef.
     Qed.        
     Hint Rewrite @fold_right_no_starter_cps_correct : uncps.
 
+    Ltac prove_id :=
+      repeat match goal with
+             | _ => progress intros
+             | _ => progress simpl
+             | _ => progress cbv [Let_In]
+             | _ => progress (autorewrite with uncps push_id in * )
+             | _ => break_if
+             | _ => break_match
+             | _ => contradiction
+             | _ => reflexivity
+             | _ => nsatz
+             | _ => solve [auto]
+             end.
 
-Ltac not_syntactically_equal a b :=
-    match a with | b => fail 1 | _ => idtac end.
-
-(* rewrites with a lemma of the form
-                [forall x {T} f, <op> x T f = f (<op> x _ id)]
-       only if the argument f is not syntactically equal to [id]
- *)
-Ltac smart_rewrite1 lem :=
-  match type of lem with
-    forall _ _ f, ?op _ _ f = f (?op _ _ id) =>
-    match goal with
-      |- context [op _ _ ?f] =>
-      match type of f with ?A -> _ =>
-                           let t := (eval cbv [id] in f) in
-                           let u := (eval cbv [id] in (@id A)) in
-                           not_syntactically_equal t u;
-                           rewrite (lem _ _ f)
-      end
-    end
-  end.
-Ltac smart_rewrite2 lem :=
-  match type of lem with
-    forall _ _ _ f, ?op _ _ _ f = f (?op _ _ _ id) =>
-    match goal with
-      |- context [op _ _ _ ?f] =>
-      match type of f with ?A -> _ =>
-                           let t := (eval cbv [id] in f) in
-                           let u := (eval cbv [id] in (@id A)) in
-                           not_syntactically_equal t u;
-                           rewrite (lem _ _ _ f)
-      end
-    end
-  end.
-Ltac smart_rewrite3 lem :=
-  match type of lem with
-    forall _ _ _ _ f, ?op _ _ _ _ f = f (?op _ _ _ _ id) =>
-    match goal with
-      |- context [op _ _ _ _ ?f] =>
-      match type of f with ?A -> _ =>
-                           let t := (eval cbv [id] in f) in
-                           let u := (eval cbv [id] in (@id A)) in
-                           not_syntactically_equal t u;
-                           rewrite (lem _ _ _ _ f)
-      end
-    end
-  end.
-Ltac smart_rewrite4 lem :=
-  match type of lem with
-    forall _ _ _ _ _ f, ?op _ _ _ _ _ f = f (?op _ _ _ _ _ id) =>
-    match goal with
-      |- context [op _ _ _ _ _ ?f] =>
-      match type of f with ?A -> _ =>
-                           let t := (eval cbv [id] in f) in
-                           let u := (eval cbv [id] in (@id A)) in
-                           not_syntactically_equal t u;
-                           rewrite (lem _ _ _ _ _ f)
-      end
-    end
-  end.
+    Create HintDb push_eval discriminated.
+    Ltac prove_eval := 
+      repeat match goal with
+             | _ => progress intros
+             | _ => progress simpl
+             | _ => progress cbv [Let_In]
+             | _ => progress (autorewrite with push_eval uncps push_id cancel_pair in * )
+             | _ => break_if
+             | _ => break_match
+             | _ => split 
+             | H : _ /\ _ |- _ => destruct H
+             | H : Some _ = Some _ |- _ => progress (inversion H; subst)
+             | _ => discriminate
+             | _ => reflexivity
+             | _ => nsatz
+             end.
 
 Delimit Scope runtime_scope with RT.
 Definition runtime_mul := Z.mul. Global Infix "*" := runtime_mul : runtime_scope.
@@ -365,7 +364,7 @@ Module B.
     Lemma eval_cons p q : eval (p::q) = (fst p) * (snd p) + eval q. Proof. reflexivity. Qed.
     Lemma eval_app p q: eval (p++q) = eval p + eval q.
     Proof. induction p; simpl eval; rewrite ?eval_nil, ?eval_cons; nsatz. Qed.
-    Create HintDb push_eval discriminated. Hint Rewrite eval_nil eval_cons eval_app : push_eval.
+    Hint Rewrite eval_nil eval_cons eval_app : push_eval.
 
     Definition multerm (t t' : limb) : limb :=
       (fst t * fst t', (snd t * snd t')%RT).
@@ -380,14 +379,11 @@ Module B.
     Qed. Hint Rewrite eval_map_mul : push_eval.
     Lemma mul_id p q: forall {T} f,
       @mul p q T f = f (mul_noncps p q).
-    Proof. cbv [mul mul_noncps]; induction p; intros; autorewrite with uncps; reflexivity. Qed. Hint Rewrite @mul_id : uncps.
+    Proof. cbv [mul mul_noncps]; prove_id. Qed. Hint Rewrite @mul_id : uncps.
     Lemma eval_mul_noncps p q:
       eval (mul_noncps p q) = eval p * eval q.
     Proof.
-      cbv [mul_noncps mul]; induction p; intros; simpl;
-        autorewrite with push_eval push_id uncps cancel_pair in * ;
-        try reflexivity; nsatz.
-    Qed. Hint Rewrite eval_mul_noncps : push_eval.
+      cbv [mul_noncps mul]; induction p; prove_eval. Qed. Hint Rewrite eval_mul_noncps : push_eval.
 
     Fixpoint split (s:Z) (xs:list limb)
              {T} (f :list limb*list limb->T) :=
@@ -405,28 +401,20 @@ Module B.
     Lemma split_id s p: forall {T} f,
         @split s p T f = f (split_noncps s p).
     Proof.
-      cbv [split_noncps]; induction p; intros;
+      induction p;
         repeat match goal with
-               | _ => progress simpl split
-               | |- split _ _ ?f = _ (split _ _ ?g) =>
-                 rewrite (IHp _ f); rewrite (IHp _ g)
-               | _ => break_if
-               | _ => reflexivity
+               | _ => rewrite IHp
+               | _ => progress (cbv [split_noncps]; prove_id)
                end.
     Qed. Hint Rewrite split_id : uncps.
     Lemma eval_split_noncps s p (s_nonzero:s<>0):
       eval (fst (split_noncps s p)) + s*eval (snd (split_noncps s p))  = eval p.
     Proof.
-      cbv [split_noncps];  induction p; intros;
-        repeat match goal with
-               | _ => progress simpl split
-               | _ => progress (autorewrite with push_eval uncps push_id cancel_pair)
-               | _ => break_if 
-               | H:_ |- _ =>
-                 unique pose proof (Z_div_exact_full_2 _ _ s_nonzero H)
-               | _ => nsatz
-               end.
-    Qed. Hint Rewrite @eval_split_noncps : push_eval.
+      cbv [split_noncps];  induction p; prove_eval.
+        match goal with H:_ |- _ =>
+                        unique pose proof (Z_div_exact_full_2 _ _ s_nonzero H)
+        end; nsatz.
+    Qed. Hint Rewrite @eval_split_noncps using auto : push_eval.
 
     Definition reduce (s:Z) (c:list limb) (p:list limb)
                {T} (f : list limb->T) :=
@@ -439,27 +427,12 @@ Module B.
            rewrite Z.add_mod, Z_mod_mult, Z.add_0_r, Z.mod_mod; trivial. Qed.
     Lemma reduce_id s c p {T} f:
       @reduce s c p T f = f (reduce_noncps s c p).
-    Proof.
-      cbv [reduce reduce_noncps];
-      repeat match goal with
-             | _ => progress intros
-             | _ => progress autorewrite with uncps push_id 
-             | _ => reflexivity
-             | _ => nsatz
-             end.
-    Qed. Hint Rewrite reduce_id : uncps.
+    Proof. cbv [reduce reduce_noncps]; prove_id. Qed. Hint Rewrite reduce_id : uncps.
     Lemma eval_reduce_noncps s c p (s_nonzero:s<>0) (modulus_nonzero:s-eval c<>0):
       eval (reduce_noncps s c p) mod (s - eval c) = eval p mod (s - eval c).
     Proof.
-      cbv [reduce_noncps reduce];
-      repeat match goal with
-             | _ => progress intros
-             | _ => progress autorewrite with push_eval push_id cancel_pair uncps
-             | _ => rewrite <-reduction_rule by auto
-             | _ => reflexivity
-             | _ => assumption 
-             | _ => nsatz
-             end.
+      cbv [reduce_noncps reduce]; prove_eval;
+        rewrite <-reduction_rule by auto; prove_eval.
     Qed. Hint Rewrite eval_reduce_noncps : push_eval.
 
     Section Carries.
@@ -473,44 +446,30 @@ Module B.
              dlet m := modulo (snd t) fw in
              f ((w*fw, d) :: (w, m) :: @nil limb)
         else f [t].
-
       Definition carry (w fw:Z) (p:list limb) {T} (f:list limb->T) :=
         flat_map_cps (carryterm w fw) p f.
-
+      Definition carryterm_noncps w fw t := carryterm w fw t id.
+      Hint Opaque carryterm_noncps : uncps.
+      Definition carry_noncps w fw p := carry w fw p id.
+      Hint Opaque carry_noncps : uncps.
       Lemma carryterm_id w fw t {T} f :
         @carryterm w fw t T f
-        = f (@carryterm w fw t _ id).
-      Proof. cbv [carryterm Let_In]; break_if; reflexivity. Qed.
-      Lemma eval_carryterm_id w fw (t:limb) (fw_nonzero:fw<>0):
-        eval (@carryterm w fw t _ id) = eval [t].
+        = f (@carryterm_noncps w fw t).
+      Proof. cbv [carryterm carryterm_noncps Let_In]; prove_id. Qed. Hint Rewrite carryterm_id : uncps.
+      Lemma eval_carryterm_noncps w fw (t:limb) (fw_nonzero:fw<>0):
+        eval (carryterm_noncps w fw t) = eval [t].
       Proof.
-        cbv [carryterm Let_In id].
-        break_if; subst; [|reflexivity].
-        autorewrite with push_eval cancel_pair.
+        cbv [carryterm carryterm_noncps Let_In]; prove_eval.
         specialize (div_mod (snd t) fw fw_nonzero).
         nsatz.
-      Qed. Hint Rewrite eval_carryterm_id : push_eval.
-      
+      Qed. Hint Rewrite eval_carryterm_noncps using auto : push_eval.
       Lemma carry_id w fw p {T} f:
-        @carry w fw p T f = f (carry w fw p id).
-      Proof.
-        cbv [carry];  erewrite !flat_map_cps_correct
-          by (intros; rewrite carryterm_id; reflexivity).
-        reflexivity.
-      Qed.
-      Lemma eval_carry_id w fw p (fw_nonzero:fw<>0):
-        eval (carry w fw p id) = eval p.
-      Proof.
-        cbv [carry]; induction p; intros; [reflexivity|].
-        repeat match goal with
-               | _ => progress simpl flat_map_cps
-               | _ => progress (autorewrite with push_eval push_id cancel_pair in * ); auto
-               | _ => erewrite !@flat_map_cps_correct in *
-                   by (intros; rewrite carryterm_id; reflexivity)
-               | _ => smart_rewrite3 carryterm_id
-               | _ => nsatz
-               end.
-      Qed. Hint Rewrite eval_carry_id : push_eval.
+        @carry w fw p T f = f (carry_noncps w fw p).
+      Proof. cbv [carry carry_noncps]; prove_id. Qed. Hint Rewrite carry_id : uncps.
+      Lemma eval_carry_noncps w fw p (fw_nonzero:fw<>0):
+        eval (carry_noncps w fw p) = eval p.
+      Proof. cbv [carry carry_noncps]; induction p; prove_eval. Qed.
+      Hint Rewrite eval_carry_noncps using auto : push_eval.
     End Carries.
     
     Section Saturated.
@@ -525,102 +484,61 @@ Module B.
       Definition sat_multerm (t t' : limb) {T} (f:list limb->T) :=
         dlet tt' := mul (snd t) (snd t') in
               f ((fst t*fst t', runtime_fst tt') :: (fst t*fst t'*word_max, runtime_snd tt') :: nil)%list.
-
       Definition sat_mul (p q : list limb) {T} (f:list limb->T) := 
         flat_map_cps (fun t => @flat_map_cps _ _ (sat_multerm t) q) p f.
       (* TODO (jgross): kind of an interesting behavior--it infers the type arguments like this but fails to check if I leave them implicit *)
-
-      Lemma multerm_correct t t' : forall {T} (f:list limb->T),
-       sat_multerm t t' f = f ([(fst t*fst t', fst (mul (snd t) (snd t'))); (fst t*fst t'*word_max, snd (mul (snd t) (snd t')))]).
-      Proof. reflexivity. Qed.
+      Definition sat_multerm_noncps t t' := sat_multerm t t' id.
+      Definition sat_mul_noncps p q := sat_mul p q id.
+      Hint Opaque sat_multerm_noncps sat_mul_noncps : uncps.
+      Lemma sat_multerm_id t t' : forall {T} (f:list limb->T),
+       sat_multerm t t' f = f (sat_multerm_noncps t t').
+      Proof. reflexivity. Qed. Hint Rewrite sat_multerm_id : uncps.
       Lemma eval_map_sat_mul t q :
-        flat_map_cps (sat_multerm t) q eval = fst t * snd t * eval q.
+        eval (flat_map (fun x => sat_multerm t x id) q) = fst t * snd t * eval q.
       Proof.
-        induction q; intros; simpl flat_map_cps; [autorewrite with push_eval; nsatz|].
-        rewrite multerm_correct.
-        erewrite !@flat_map_cps_correct in * by apply multerm_correct.
-        autorewrite with push_eval cancel_pair.
-        rewrite IHq.
-        repeat match goal with |- context [mul ?x ?y] =>
-                               unique pose proof (mul_correct x y) end.
-        nsatz.
-      Qed. Hint Rewrite eval_map_sat_mul : push_eval. 
-      Lemma eval_sat_mul p q : sat_mul p q eval = eval p * eval q.
-      Proof.
-        cbv [sat_mul];  erewrite !@flat_map_cps_correct
-          by (intros; try apply flat_map_cps_correct; apply multerm_correct).
-        induction p; intros; [reflexivity|].
-        simpl flat_map; autorewrite with push_eval cancel_pair.
-        rewrite IHp; erewrite <-flat_map_cps_correct by apply multerm_correct.
-        rewrite eval_map_sat_mul; nsatz.
-      Qed. Hint Rewrite eval_sat_mul : push_eval.
-
-      Fixpoint find_remove_first'_cps {A} (g:A->forall {T}, (bool->T)->T) (acc ls:list A)
-               {T} (f:option A * list A ->T) :=
-        match ls with
-        | [] => f (None, acc)
-        | x :: tl =>
-          g x (fun r =>
-          if r
-          then f (Some x, acc ++ tl)
-          else
-            find_remove_first'_cps g (acc ++ [x]) tl f)
-        end.
-      Definition find_remove_first_cps {A} g ls {T} f :=
-        @find_remove_first'_cps A g nil ls T f.
-
-      Lemma find_remove_first'_cps_correct
-            {A} (g:A->forall {T}, (bool->T) -> T) ls {T} f
-            (H: forall x {B} h, @g x B h = h (g x id)):
-        forall acc,
-          @find_remove_first'_cps A g acc ls T f =
-          f (find_remove_first' (fun x => g x id) acc ls).
-      Proof.
-        induction ls; intros; simpl; try (rewrite H, IHls; break_if); reflexivity.
-      Qed.
-      Lemma find_remove_first_cps_correct
-            {A} (g:A->forall {T}, (bool->T) -> T) ls {T} f
-            (H: forall x {B} h, @g x B h = h (g x id)):
-          @find_remove_first_cps A g ls T f =
-          f (find_remove_first (fun x => g x id) ls).
-      Proof. apply find_remove_first'_cps_correct; auto. Qed.
+        cbv [sat_multerm_noncps sat_multerm Let_In runtime_fst runtime_snd];
+        induction q; prove_eval;
+          try match goal with |- context [mul ?a ?b] =>
+                              specialize (mul_correct a b) end;
+          nsatz.
+      Qed. Hint Rewrite eval_map_sat_mul : push_eval.
+      Lemma sat_mul_id p q {T} f : @sat_mul p q T f = f (sat_mul_noncps p q).
+      Proof. cbv [sat_mul sat_mul_noncps]; prove_id. Qed. Hint Rewrite sat_mul_id : uncps.
+      Lemma eval_sat_mul_noncps p q : eval (sat_mul_noncps p q) = eval p * eval q.
+      Proof. cbv [sat_mul_noncps sat_mul]; induction p; prove_eval.  Qed.
+      Hint Rewrite eval_sat_mul_noncps : push_eval.
 
       Definition has_same_wt (cx a:limb) {T} (f:bool->T) :=
         if dec (fst cx = fst a) then f true else f false.
-      Lemma has_same_wt_correct cx a {T} f:
-        @has_same_wt cx a T f = f (if dec (fst cx = fst a) then true else false).
-      Proof. cbv [has_same_wt]; break_if; reflexivity. Qed.
+      Definition has_same_wt_noncps cx a := has_same_wt cx a id.
+      Hint Opaque has_same_wt_noncps : uncps.
+      Lemma has_same_wt_id cx a {T} f:
+        @has_same_wt cx a T f = f (has_same_wt_noncps cx a).
+      Proof. cbv [has_same_wt has_same_wt_noncps]; prove_id. Qed.
+      Hint Rewrite has_same_wt_id : uncps.
 
-      Lemma find_remove_first'_cps_same_wt cx cx' p: forall acc,
-        find_remove_first'_cps (has_same_wt cx) acc p fst = Some cx' ->
+      Lemma find_remove_first'_same_wt cx cx' p: forall acc,
+        fst (find_remove_first' (has_same_wt_noncps cx) acc p) = Some cx' ->
         fst cx' = fst cx /\
-        fst cx * (snd cx + snd cx') + find_remove_first'_cps (has_same_wt cx) acc p (fun r =>eval (snd r)) = fst cx * snd cx + eval acc + eval p.
+        fst cx * (snd cx + snd cx') + (eval (snd (find_remove_first' (has_same_wt_noncps cx) acc p))) = fst cx * snd cx + eval acc + eval p.
       Proof.
-        cbv [has_same_wt];
-        induction p; intros; simpl find_remove_first'_cps in *;
+        cbv [has_same_wt has_same_wt_noncps];
+          induction p; simpl find_remove_first' in *;
             repeat match goal with
-                   | |- _ => progress (autorewrite with push_eval cancel_pair in * )
-                   | H : Some _ = Some _ |- _ => progress (inversion H; subst)
-                   | |- _ => erewrite (proj2 (IHp _ _)); erewrite (proj1 (IHp _ _))
-                   | |- _ => break_if
-                   | |- _ => split; subst 
-                   | |- _ => discriminate
-                   | |- _ => nsatz
+                   | H : _ |- _ => erewrite (proj2 (IHp _ H))
+                   | H : _ |- _ => erewrite (proj1 (IHp _ H))
+                   | |- _ => progress prove_eval
                    end.
-        Unshelve.
-        assumption.
-        2:eassumption.
       Qed.
-
-      Lemma find_remove_first_cps_same_wt cx cx' p
-        (H : find_remove_first_cps (has_same_wt cx) p fst = Some cx') :
+      Lemma find_remove_first_same_wt cx cx' p
+        (H : fst (find_remove_first (has_same_wt_noncps cx) p) = Some cx') :
         fst cx' = fst cx /\
-        fst cx * (snd cx + snd cx') + find_remove_first_cps (has_same_wt cx) p (fun r => eval (snd r)) = fst cx * snd cx + eval p.
+        fst cx * (snd cx + snd cx') + eval (snd (find_remove_first (has_same_wt_noncps cx) p)) = fst cx * snd cx + eval p.
       Proof.
-        cbv [find_remove_first_cps]; intros.
-        erewrite (proj1 (find_remove_first'_cps_same_wt _ _ _ _ H)) by eauto.
-        erewrite (proj2 (find_remove_first'_cps_same_wt _ _ _ _ H)) by eauto.
-        autorewrite with push_eval; split; try ring.
+        cbv [find_remove_first]; intros.
+        erewrite (proj1 (find_remove_first'_same_wt _ _ _ _ H)) by eauto.
+        erewrite (proj2 (find_remove_first'_same_wt _ _ _ _ H)) by eauto.
+        prove_eval.
       Qed.
 
       Fixpoint compact_no_carry' (acc p:list limb) {T} (f:list limb->T) :=
@@ -635,60 +553,62 @@ Module B.
                | Some l => compact_no_carry' ((fst cx, (snd cx + snd l)%RT)::snd r)%list tl f
                end)
         end.
+      Definition compact_no_carry'_noncps acc p := compact_no_carry' acc p id.
+      Hint Opaque compact_no_carry'_noncps : uncps.
       Definition compact_no_carry p {T} f := @compact_no_carry' nil p T f.
-
+      Definition compact_no_carry_noncps p := compact_no_carry p id.
+      Hint Opaque compact_no_carry_noncps : uncps.
       Lemma compact_no_carry'_id p: forall acc {T} (f:list limb -> T),
-        @compact_no_carry' acc p T f = f (compact_no_carry' acc p id).
+        @compact_no_carry' acc p T f = f (compact_no_carry'_noncps acc p).
       Proof.
-        induction p; simpl compact_no_carry';
+        cbv [compact_no_carry'_noncps]; induction p; prove_id;
           repeat match goal with
-                 | _ => progress intros
                  | _ => rewrite @find_remove_first_cps_correct in *
                      by apply has_same_wt_correct
-                 | _ => break_match; subst
-                 | _ => reflexivity
-                 | _ => solve [auto]
-                 end.
-      Qed.
-      
-      Lemma eval_compact_no_carry'_id p: forall acc,
-        eval (compact_no_carry' acc p id) = eval acc + eval p.
+                 end; prove_id.
+      Qed. Hint Rewrite compact_no_carry'_id : uncps.
+      Lemma eval_compact_no_carry'_noncps p: forall acc,
+        eval (compact_no_carry'_noncps acc p) = eval acc + eval p.
       Proof.
-        induction p; simpl;
+        induction p;
           repeat match goal with
-                 | |- _ => rewrite @find_remove_first_cps_correct in *
-                     by apply has_same_wt_correct
-                 | |- _ => break_match
-                 | |- _ => progress (intros;subst)
-                 | |- _ => progress autorewrite with push_eval push_id cancel_pair in *
+                 | |- _ => progress (cbv [compact_no_carry'_noncps]; prove_eval)
                  | |- _ => rewrite IHp
                  | H : fst (find_remove_first _ _) = _ |- _ =>
-                   rewrite <-find_remove_first_cps_correct in H by apply has_same_wt_correct;
-                     destruct (find_remove_first_cps_same_wt _ _ _ H); clear H
-                 | |- _ => nsatz
+                   apply find_remove_first_same_wt in H
                  end.
-      Qed.
+      Qed. Hint Rewrite eval_compact_no_carry'_noncps : uncps.
       Lemma length_compact_no_carry' p: forall acc,
-          (compact_no_carry' acc p (@length _) <= length p + length acc)%nat.
+        (length (compact_no_carry'_noncps acc p) <= length p + length acc)%nat.
       Proof.
-        induction p; simpl;
+        induction p;
           repeat match goal with
-                 | |- _ => progress intros
-                 | |- _ => progress distr_length
-                 | |- _ => rewrite @find_remove_first_cps_correct in *
-                     by apply has_same_wt_correct
-                 | |- _ => rewrite IHp
-                 | |- _ => break_match
+                 | _ => progress intros
+                 | _ => progress distr_length
+                 | _ => progress (autorewrite with uncps push_id)
+                 | _ => rewrite IHp
+                 | _ => break_match
+                 | _ => reflexivity
+                 | _ => progress (cbv [compact_no_carry'_noncps]; simpl)
                  end.
       Qed.
       Lemma compact_no_carry_id p {T} f:
-         @compact_no_carry p T f = f (compact_no_carry p id).
-      Proof. cbv [compact_no_carry]; apply compact_no_carry'_id. Qed.
-      Lemma eval_compact_no_carry_id p:
-         eval (compact_no_carry p id) = eval p.
-      Proof. cbv [compact_no_carry]; apply eval_compact_no_carry'_id. Qed.
-      Hint Rewrite eval_compact_no_carry_id : push_eval.
-      Lemma length_compact_no_carry p: (compact_no_carry p (@length _) <= length p)%nat. Proof. cbv [compact_no_carry]. rewrite length_compact_no_carry'. distr_length. Qed. Hint Rewrite length_compact_no_carry : distr_length.
+         @compact_no_carry p T f = f (compact_no_carry_noncps p).
+      Proof. cbv [compact_no_carry]; prove_id. Qed.
+      Hint Rewrite compact_no_carry_id : uncps.
+      Lemma eval_compact_no_carry_noncps p:
+         eval (compact_no_carry_noncps p) = eval p.
+      Proof.
+        cbv [compact_no_carry_noncps compact_no_carry].
+        rewrite compact_no_carry'_id; prove_eval.
+      Qed. Hint Rewrite eval_compact_no_carry_noncps : push_eval.
+      Lemma length_compact_no_carry p:
+        (length (compact_no_carry_noncps p) <= length p)%nat.
+      Proof.
+        cbv [compact_no_carry_noncps compact_no_carry].
+        rewrite compact_no_carry'_id, push_id, length_compact_no_carry'.
+        distr_length.
+      Qed. Hint Rewrite length_compact_no_carry : distr_length.
 
       (* n is fuel, should be length of inp *)
       Fixpoint compact_cols_loop1 (carries out inp : list limb) (n:nat)
@@ -714,61 +634,35 @@ Module B.
                  end)
           end
         end.
-
+      Definition compact_cols_loop1_noncps c o i n := compact_cols_loop1 c o i n id.
+      Hint Opaque compact_cols_loop1_noncps : uncps.
       Lemma compact_cols_loop1_id n:
         forall p out carries {T} (f:list limb * list limb ->T),
           compact_cols_loop1 carries out p n f
-          = f (compact_cols_loop1 carries out p n id).
-      Proof.
-        induction n;
-          repeat match goal with
-                 | _ => progress intros
-                 | _ => progress cbv [Let_In] 
-                 | _ => progress simpl compact_cols_loop1
-                 | _ => (rewrite @find_remove_first_cps_correct in *
-                          by apply has_same_wt_correct )
-                 | _ => smart_rewrite1 compact_no_carry_id
-                 | _ => break_match
-                 | _ => reflexivity
-                 | _ => solve [auto] 
-                 end.
-      Qed.
-        
-      Lemma eval_compact_cols_loop1_id n :
+          = f (compact_cols_loop1_noncps carries out p n).
+      Proof. cbv [compact_cols_loop1_noncps]; induction n; prove_id. Qed.
+      Hint Rewrite compact_cols_loop1_id : uncps.
+      Lemma eval_compact_cols_loop1_noncps n :
         forall p (H0:length p = n) out carries,
-          eval (snd (compact_cols_loop1 carries out p n id))
-          + eval (fst (compact_cols_loop1 carries out p n id))
+          eval (snd (compact_cols_loop1_noncps carries out p n))
+          + eval (fst (compact_cols_loop1_noncps carries out p n))
           = eval p + eval out + eval carries.
       Proof.
         induction n; destruct p;
           repeat match goal with
-                 | _ => progress intros
-                 | _ => progress cbv [Let_In runtime_fst runtime_snd] 
-                 | _ => progress simpl compact_cols_loop1
-                 | _ => progress subst 
-                 | _ => progress (autorewrite with push_id
-                        push_eval cancel_pair distr_length in * )
-                 | _ => (rewrite @find_remove_first_cps_correct in *
-                               by apply has_same_wt_correct )
-                 | _ => smart_rewrite1 compact_no_carry_id
-                 | _ => break_match
                  | H : fst (find_remove_first _ ?p) = Some _ |- _ =>
                    unique assert (length p > 0)%nat
                      by (destruct p; (discriminate || (simpl; omega)))
-                 | _ => rewrite IHn by (distr_length; break_match; distr_length; discriminate)
+                 | _ => rewrite IHn by
+                       (distr_length; break_match; distr_length; discriminate)
                  | H : fst (find_remove_first _ _) = _ |- _ =>
-                   rewrite <-find_remove_first_cps_correct in H
-                     by apply has_same_wt_correct;
-                     destruct (find_remove_first_cps_same_wt _ _ _ H);
-                     clear H
+                   apply find_remove_first_same_wt in H
                  | |- context[add ?x ?y] =>
-                     specialize (add_correct x y)
-                 | _ => discriminate
-                 | _ => reflexivity
-                 | _ => nsatz 
-                 | _ => solve [auto] 
+                   specialize (add_correct x y)
+                 | _ => progress prove_eval
+                 | _ => progress (cbv [compact_cols_loop1_noncps]; simpl)
                  end.
-      Qed. Hint Rewrite eval_compact_cols_loop1_id : push_eval.
+      Qed. Hint Rewrite eval_compact_cols_loop1_noncps : push_eval.
 
       (* n is fuel, should be [length carries + length inp] *)
       Fixpoint compact_cols_loop2 (carries out inp :list limb) (n:nat)
@@ -808,60 +702,33 @@ Module B.
                            end))
                end)
         end.
-
+      Definition compact_cols_loop2_noncps c o i n := compact_cols_loop2 c o i n id.
+      Hint Opaque compact_cols_loop2_noncps : uncps.
       Lemma compact_cols_loop2_id n:
         forall out p carries  {T} (f:list limb->T),
         compact_cols_loop2 carries out p n f
-        = f (compact_cols_loop2 carries out p n id).
-      Proof.
-        induction n;
-          repeat match goal with
-                 | _ => progress intros
-                 | _ => progress cbv [Let_In] 
-                 | _ => progress simpl compact_cols_loop2
-                 | _ => rewrite fold_right_no_starter_cps_correct
-                 | _ => (rewrite @find_remove_first_cps_correct in *
-                          by apply has_same_wt_correct )
-                 | _ => smart_rewrite1 compact_no_carry_id
-                 | _ => break_match
-                 | _ => reflexivity
-                 | _ => solve [auto] 
-                 end.
-      Qed.
-
-      Lemma eval_compact_cols_loop2_id n:
+        = f (compact_cols_loop2_noncps carries out p n).
+      Proof. cbv [compact_cols_loop2_noncps]; induction n; prove_id. Qed.
+      Hint Rewrite compact_cols_loop2_id : uncps.
+      Lemma eval_compact_cols_loop2_noncps n:
         forall out p carries,
-        eval (compact_cols_loop2 carries out p n id)
+        eval (compact_cols_loop2_noncps carries out p n)
         = eval p + eval carries + eval out.
       Proof.
-        induction n; 
+        cbv [compact_cols_loop2_noncps]; induction n;
           repeat match goal with
-                 | _ => progress intros
-                 | _ => progress cbv [Let_In runtime_fst runtime_snd] 
-                 | _ => progress simpl compact_cols_loop2
-                 | _ => progress subst 
-                 | _ => progress (autorewrite with push_id
-                        push_eval cancel_pair distr_length in * )
                  | _ => rewrite fold_right_no_starter_cps_correct
-                 | _ => (rewrite @find_remove_first_cps_correct in *
-                               by apply has_same_wt_correct )
-                 | _ => smart_rewrite1 compact_no_carry_id
-                 | _ => break_match
                  | H : fst (find_remove_first _ ?p) = Some _ |- _ =>
                    unique assert (length p > 0)%nat
                      by (destruct p; (discriminate || (simpl; omega)))
-                 | _ => rewrite IHn by (distr_length; break_match; distr_length; discriminate)
+                 | _ => rewrite IHn
+                     by (distr_length; break_match; distr_length; discriminate)
                  | H : fst (find_remove_first _ _) = _ |- _ =>
-                   rewrite <-find_remove_first_cps_correct in H
-                     by apply has_same_wt_correct;
-                     destruct (find_remove_first_cps_same_wt _ _ _ H);
-                     clear H
+                   apply find_remove_first_same_wt in H
                  | |- context[add ?x ?y] =>
-                     specialize (add_correct x y)
-                 | _ => discriminate
-                 | _ => reflexivity
-                 | _ => nsatz 
-                 | _ => solve [auto] 
+                   specialize (add_correct x y)
+                 | _ => progress prove_eval
+                 | _ => progress (cbv [compact_cols_loop2_noncps]; simpl) 
                  end.
         (* TODO : logic here is kinda ugly-- basic idea is "if you found a minimum weight in (p++carries), an element with that weight must be in either carries or p" *)
         exfalso.
@@ -882,34 +749,23 @@ Module B.
                        break_if; congruence
                  | H : _ \/ _ |- _ => destruct H
                end.
-      Qed. Hint Rewrite eval_compact_cols_loop2_id : push_eval.
+      Qed. Hint Rewrite eval_compact_cols_loop2_noncps : push_eval.
 
       Definition compact_cols (p:list limb) {T} (f:list limb->T) :=
         compact_cols_loop1
           nil nil p (length p)
           (fun r => compact_cols_loop2
                       (fst r) nil (snd r) (length (fst r ++ snd r)) f).
-
+      Definition compact_cols_noncps p := compact_cols p id.
+      Hint Opaque compact_cols_noncps : uncps.
       Lemma compact_cols_id (p:list limb) {T} (f:list limb->T):
-        compact_cols p f = f (compact_cols p id).
-      Proof.
-        cbv [compact_cols];
-          do 2 smart_rewrite4 compact_cols_loop1_id;
-          smart_rewrite4 compact_cols_loop2_id; reflexivity.
-      Qed.
-      Lemma eval_compact_cols_id (p:list limb):
-        eval (compact_cols p id) = eval p.
-      Proof.
-        cbv [compact_cols];
-          repeat match goal with
-                 | |- _ => progress intros
-                 | |- _ => progress autorewrite with push_eval cancel_pair
-                 | |- _ => progress distr_length
-                 | |- _ => smart_rewrite4 compact_cols_loop1_id
-                 | |- _ => smart_rewrite4 eval_compact_cols_loop2_id
-                 | |- _ => reflexivity
-                 end.
-      Qed.
+        compact_cols p f = f (compact_cols_noncps p).
+      Proof. cbv [compact_cols compact_cols_noncps]; prove_id. Qed.
+      Hint Rewrite compact_cols_id : uncps.
+      Lemma eval_compact_cols_noncps (p:list limb):
+        eval (compact_cols_noncps p) = eval p.
+      Proof. cbv [compact_cols_noncps compact_cols]; prove_eval. Qed.
+      Hint Rewrite eval_compact_cols_noncps : push_eval.
            
     End Saturated.
   End Associational.
