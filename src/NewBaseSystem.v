@@ -223,16 +223,16 @@ Require Import Recdef.
     Definition on_tuple_cps {A B} (d:B) (g:list A ->forall {T},(list B->T)->T) {n m}
                (xs : Tuple.tuple A n) {T} (f:tuple B m ->T) :=
       to_list_cps n xs (fun r => g r (fun rr => from_list_default_cps d m rr f)).
-    Lemma on_tuple_cps_correct {A B} d g {n m} xs {T} f g' H
-          (Hg : forall x {T} h, @g x T h = h (g' x)) : 
-      @on_tuple_cps A B d g n m xs T f = f (@Tuple.on_tuple A B g' n m H xs).
+    Lemma on_tuple_cps_correct {A B} d (g:list A -> forall {T}, (list B->T)->T)
+          {n m} xs {T} f
+          (Hg : forall x {T} h, @g x T h = h (g x id)) : forall H,
+      @on_tuple_cps A B d g n m xs T f = f (@Tuple.on_tuple A B (fun x => g x id) n m H xs).
     Proof.
-      cbv [on_tuple_cps Tuple.on_tuple].
+      cbv [on_tuple_cps Tuple.on_tuple]; intros.
       rewrite to_list_cps_correct, Hg, from_list_default_cps_correct.
       rewrite (Tuple.from_list_default_eq _ _ _ (H _ (Tuple.length_to_list _))).
       reflexivity.
-    Qed.
-    Hint Rewrite @on_tuple_cps_correct : uncps.
+    Qed.  Hint Rewrite @on_tuple_cps_correct using (intros; autorewrite with uncps; auto): uncps.
 
     Fixpoint update_nth_cps {A} n (g:A->A) xs {T} (f:list A->T) :=
       match n with
@@ -465,7 +465,8 @@ Module B.
       Qed. Hint Rewrite eval_carryterm_noncps using auto : push_eval.
       Lemma carry_id w fw p {T} f:
         @carry w fw p T f = f (carry_noncps w fw p).
-      Proof. cbv [carry carry_noncps]; prove_id. Qed. Hint Rewrite carry_id : uncps.
+      Proof. cbv [carry carry_noncps]; prove_id. Qed.
+      Hint Rewrite carry_id : uncps.
       Lemma eval_carry_noncps w fw p (fw_nonzero:fw<>0):
         eval (carry_noncps w fw p) = eval p.
       Proof. cbv [carry carry_noncps]; induction p; prove_eval. Qed.
@@ -784,45 +785,49 @@ Module B.
         map_cps weight (seq 0 n)
                 (fun r =>
                    to_list_cps n xs (fun rr => combine_cps r rr f)).
-      
+      Definition to_associational_noncps {n} xs := @to_associational n xs _ id.
       Definition eval {n} x := @to_associational n x _ Associational.eval.
       Lemma to_associational_id {n} x {T} f:
-        @to_associational n x T f = f (to_associational x id).
-      Proof.
-        cbv [to_associational eval].
-        rewrite !map_cps_correct, !to_list_cps_correct,
-        !combine_cps_correct. reflexivity.
-      Qed.
-      Lemma eval_to_associational_id {n} x :
-        Associational.eval (@to_associational n x _ id) = eval x.
-      Proof.
-        cbv [to_associational eval].
-        rewrite !map_cps_correct, !to_list_cps_correct,
-        !combine_cps_correct. reflexivity.
-      Qed.
+        @to_associational n x T f = f (to_associational_noncps x).
+      Proof. cbv [to_associational to_associational_noncps]; prove_id. Qed.
+      Hint Rewrite @to_associational_id : uncps.
+      Lemma eval_to_associational_noncps {n} x :
+        Associational.eval (@to_associational_noncps n x) = eval x.
+      Proof. cbv [to_associational eval to_associational_noncps]; prove_eval. Qed.
+      Hint Rewrite @eval_to_associational_noncps : push_eval.
 
       (** Converting from associational to positional *)
 
       Program Definition zeros n : tuple Z n := Tuple.from_list n (List.map (fun _ => 0) (List.seq 0 n)) _.
       Next Obligation. autorewrite with distr_length; reflexivity. Qed.
       Lemma eval_zeros n : eval (zeros n) = 0.
-      Proof. cbv [eval Associational.eval to_associational zeros].
-             rewrite map_cps_correct, to_list_cps_correct, combine_cps_correct.
-             rewrite Tuple.to_list_from_list.
-             generalize dependent (List.seq 0 n); intro xs; induction xs; simpl; nsatz. Qed.
-
+      Proof.
+        cbv [eval Associational.eval to_associational zeros];
+          autorewrite with uncps; rewrite Tuple.to_list_from_list.
+        generalize dependent (List.seq 0 n); intro xs; induction xs; simpl; nsatz.
+      Qed. Hint Rewrite eval_zeros : push_eval.
 
       Definition add_to_nth {n} i x t {T} (f:tuple Z n->T) :=
         @on_tuple_cps _ _ 0 (update_nth_cps i (runtime_add x)) n n t _ f.
-      Lemma eval_add_to_nth_id {n} (i:nat) (x:Z) (H:(i<n)%nat) (xs:tuple Z n):
-        eval (@add_to_nth n i x xs _ id) = weight i * x + eval xs.
+      Definition add_to_nth_noncps {n} i x t := @add_to_nth n i x t _ id.
+      Hint Opaque add_to_nth_noncps : uncps.
+      Lemma add_to_nth_id {n} i x xs {T} f:
+        @add_to_nth n i x xs T f = f (add_to_nth_noncps i x xs).
       Proof.
-        cbv [eval to_associational add_to_nth runtime_add id].
-        rewrite !map_cps_correct, !to_list_cps_correct, !combine_cps_correct.
-        erewrite on_tuple_cps_correct by (intros; rewrite update_nth_cps_correct;
-                                          apply f_equal; reflexivity).
+        cbv [add_to_nth add_to_nth_noncps]; erewrite !on_tuple_cps_correct
+          by (intros; autorewrite with uncps; reflexivity); prove_id.
+        Unshelve.
+        intros; subst. autorewrite with uncps push_id. distr_length.
+      Qed. Hint Rewrite @add_to_nth_id : uncps.
+      Lemma eval_add_to_nth_noncps {n} (i:nat) (x:Z) (H:(i<n)%nat) (xs:tuple Z n):
+        eval (@add_to_nth_noncps n i x xs) = weight i * x + eval xs.
+      Proof.
+        cbv [eval to_associational add_to_nth_noncps add_to_nth runtime_add].
+        erewrite on_tuple_cps_correct by (intros; autorewrite with uncps; reflexivity).
+        prove_eval.
         cbv [Tuple.on_tuple].
         rewrite !Tuple.to_list_from_list.
+        autorewrite with uncps push_id.
         rewrite ListUtil.combine_update_nth_r at 1.
         rewrite <-(update_nth_id i (List.combine _ _)) at 2.
         rewrite <-!(ListUtil.splice_nth_equiv_update_nth_update _ _ (weight 0, 0)); cbv [ListUtil.splice_nth id];
@@ -832,27 +837,8 @@ Module B.
                  | _ => progress rewrite <-?ListUtil.map_nth_default_always, ?map_fst_combine, ?List.firstn_all2, ?ListUtil.map_nth_default_always, ?nth_default_seq_inbouns, ?plus_O_n
                  end; trivial; lia.
         Unshelve.
-        intros; subst. apply length_update_nth.
-      Qed. Hint Rewrite @eval_add_to_nth_id : push_eval.
-      Lemma add_to_nth_id {n} i x xs {T} f:
-        @add_to_nth n i x xs T f = f (add_to_nth i x xs id).
-      Proof.
-        cbv [add_to_nth].
-        erewrite !on_tuple_cps_correct by (intros; rewrite update_nth_cps_correct;
-                                          apply f_equal; reflexivity).
-        reflexivity.
-        Unshelve.
-        intros; subst. apply length_update_nth.
-      Qed.
-      (* TODO : since this form of the eval lemmas is better expressed as the two lemmas above, rewrite previous stuff. *)
-      Lemma eval_add_to_nth {n} (i:nat) (x:Z) (H:(i<n)%nat) (xs:tuple Z n)
-            {T} f g (Hfg:forall x, f x = g (eval x)):
-        @add_to_nth n i x xs T f = g (weight i * x + eval xs).
-      Proof.
-        rewrite add_to_nth_id.
-        rewrite Hfg. apply f_equal.
-        auto using eval_add_to_nth_id.
-      Qed. Hint Rewrite @eval_add_to_nth eval_zeros : push_eval.
+        intros; subst. autorewrite with uncps push_id. distr_length.
+      Qed. Hint Rewrite @eval_add_to_nth_noncps using omega : push_eval.
 
       Fixpoint place (t:limb) (i:nat) {T} (f:nat * Z->T) :=
         if dec (fst t mod weight i = 0)
@@ -861,29 +847,32 @@ Module B.
       Lemma place_in_range (t:limb) (n:nat) : (fst (place t n id) < S n)%nat.
       Proof. induction n; simpl; break_match; simpl; omega. Qed.
       Lemma weight_place t i : weight (fst (place t i id)) * snd (place t i id) = fst t * snd t.
-      Proof. induction i; cbv [id]; simpl place; break_match; autorewrite with cancel_pair;
-               try find_apply_lem_hyp Z_div_exact_full_2; nsatz || auto. Qed.
+      Proof.
+        induction i; cbv [id]; simpl place; break_match;
+          autorewrite with cancel_pair;
+          try find_apply_lem_hyp Z_div_exact_full_2; nsatz || auto.
+      Qed.
+      Definition place_noncps t i := place t i id.
+      Hint Opaque place_noncps : uncps.
       Lemma place_id t i {T} f :
-        @place t i T f = f (place t i id).
-      Proof. cbv [id]; induction i; simpl; break_if; auto. Qed.
-
+        @place t i T f = f (place_noncps t i).
+      Proof. cbv [place_noncps]; induction i; prove_id. Qed.
+      Hint Rewrite place_id : uncps.
       Definition from_associational n (p:list limb) {T} (f:tuple Z n->T):=
         fold_right_cps (fun t st => place t (pred n) (fun p=> add_to_nth (fst p) (snd p) st id)) (zeros n) p f.
-      Lemma eval_from_associational_id {n} p (n_nonzero:n<>O):
-        eval (@from_associational n p _ id) = Associational.eval p.
-      Proof.
-        induction p; intros; simpl; autorewrite with push_eval;
-          try reflexivity; cbv [from_associational] in *.
-        pose proof (place_in_range a (pred n)).
-        rewrite fold_right_cps_correct in IHp |- *; simpl.
-        rewrite place_id, <-add_to_nth_id, eval_add_to_nth_id by omega.
-        cbv [id] in *; rewrite IHp by omega.
-        rewrite weight_place; nsatz.
-      Qed. Hint Rewrite @eval_from_associational_id : push_eval.
+      Definition from_associational_noncps n p := from_associational n p id.
+      Hint Opaque from_associational_noncps : uncps.
       Lemma from_associational_id {n} p (n_nonzero:n<>O) {T} f:
-        @from_associational n p T f = f (@from_associational n p _ id).
-      Proof. cbv [from_associational]; rewrite !@fold_right_cps_correct; simpl; reflexivity. Qed.
-      Hint Rewrite @eval_from_associational_id : push_eval.
+        @from_associational n p T f = f (from_associational_noncps n p).
+      Proof. cbv [from_associational from_associational_noncps]; prove_id. Qed.
+      Hint Rewrite @from_associational_id using omega : uncps.
+      Lemma eval_from_associational_noncps {n} p (n_nonzero:n<>O):
+        eval (from_associational_noncps n p) = Associational.eval p.
+      Proof.
+        cbv [from_associational from_associational_noncps]; induction p;
+          [|pose proof (place_in_range a (pred n))]; prove_eval.
+        cbv [place_noncps]; rewrite weight_place. nsatz.
+      Qed. Hint Rewrite @eval_from_associational_noncps : push_eval.
 
       Section Carries.
         Context {modulo div : Z->Z->Z}.
@@ -891,13 +880,16 @@ Module B.
                                        a = b * (div a b) + modulo a b}.
       Definition carry (index:nat) (p:list limb) {T} (f:list limb->T) :=
         @Associational.carry modulo div (weight index) (weight (S index) / weight index) p T f.
+      Definition carry_noncps i p := carry i p id.
+      Hint Opaque carry_noncps : uncps.
       Lemma carry_id i p {T} f:
-        @carry i p T f = f (@carry i p _ id).
-      Proof. cbv [carry]; apply Associational.carry_id; auto. Qed.
-      Lemma eval_carry_id i p: weight (S i) / weight i <> 0 ->
-        Associational.eval (carry i p id) = Associational.eval p.
-      Proof. cbv [carry]; intros; eapply @eval_carry_id; eauto. Qed.
-      Hint Rewrite @eval_carry_id : push_eval.
+        @carry i p T f = f (carry_noncps i p).
+      Proof. cbv [carry carry_noncps]; prove_id; rewrite carry_id; reflexivity. Qed.
+      Hint Rewrite carry_id : uncps.
+      Lemma eval_carry_noncps i p: weight (S i) / weight i <> 0 ->
+        Associational.eval (carry_noncps i p) = Associational.eval p.
+      Proof. cbv [carry carry_noncps]; intros; eapply @eval_carry_noncps; eauto. Qed.
+      Hint Rewrite @eval_carry_noncps : push_eval.
       End Carries.
     End Positional.
   End Positional.
@@ -1005,7 +997,8 @@ Proof.
   repeat progress rewrite ?Z.mul_1_l, ?Z.mul_1_r, ?Z.add_0_l, ?Z.add_0_r.
   reflexivity.
   }
-  { repeat progress (try rewrite Positional.to_associational_id;
+  {
+    repeat progress (try rewrite Positional.to_associational_id;
                      try rewrite Associational.mul_id;
                      try rewrite Positional.from_associational_id by congruence;
                      try rewrite Positional.carry_id;
