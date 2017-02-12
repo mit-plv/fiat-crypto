@@ -1,14 +1,15 @@
 Require Import Coq.Classes.Morphisms. Require Coq.Setoids.Setoid.
-Require Import Crypto.Algebra.
+Require Import Crypto.Algebra Crypto.Algebra.Field.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Decidable.
+Import BinNums.
 
 Local Open Scope core_scope.
 
 Generalizable All Variables.
 Section Pre.
-  Context {F eq zero one opp add sub mul inv div} {field:@field F eq zero one opp add sub mul inv div} {eq_dec: DecidableRel eq}.
+  Context {F eq zero one opp add sub mul inv div} {field:@field F eq zero one opp add sub mul inv div} {eq_dec: DecidableRel eq} {char_gt_2:@Ring.char_gt F eq zero one opp add sub mul 2%N}.
   Local Infix "=" := eq. Local Notation "a <> b" := (not (a = b)).
   Local Infix "=" := eq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
   Local Notation "0" := zero.  Local Notation "1" := one.
@@ -20,9 +21,6 @@ Section Pre.
   Local Notation "'∞'" := (inr tt) : core_scope.
   Local Notation "2" := (1+1). Local Notation "3" := (1+2).
   Local Notation "( x , y )" := (inl (pair x y)).
-
-  Add Field WeierstrassCurveField : (Field.field_theory_for_stdlib_tactic (T:=F)).
-  Add Ring WeierstrassCurveRing : (Ring.ring_theory_for_stdlib_tactic (T:=F)).
 
   Context {a:F}.
   Context {b:F}.
@@ -48,10 +46,11 @@ Section Pre.
     | _, ∞ => P1'
     end.
 
-  Lemma unifiedAdd'_onCurve : forall P1 P2,
-    onCurve P1 -> onCurve P2 -> onCurve (unifiedAdd' P1 P2).
+  Lemma unifiedAdd'_onCurve P1 P2 
+    (O1:onCurve P1) (O2:onCurve P2) : onCurve (unifiedAdd' P1 P2).
   Proof.
-    unfold onCurve, unifiedAdd'; intros [ [x1 y1]|] [ [x2 y2]|] H1 H2;
-      break_match; trivial; setoid_subst_rel eq; only_two_square_roots; super_nsatz.
+    destruct_head' sum; destruct_head' prod;
+      cbv [onCurve unifiedAdd'] in *; break_match;
+        trivial; [|]; setoid_subst_rel eq; fsatz.
   Qed.
 End Pre.

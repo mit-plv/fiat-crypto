@@ -11,13 +11,15 @@ Module Pre.
   Local Open Scope F_scope.
   Lemma curve25519_params_ok {prime_q:Znumtheory.prime (2^255-19)} :
   @E.twisted_edwards_params (F (2 ^ 255 - 19)) (@eq (F (2 ^ 255 - 19))) (@F.zero (2 ^ 255 - 19))
-    (@F.one (2 ^ 255 - 19)) (@F.add (2 ^ 255 - 19)) (@F.mul (2 ^ 255 - 19))
+    (@F.one (2 ^ 255 - 19)) (@F.opp (2 ^ 255 - 19)) (@F.add (2 ^ 255 - 19)) (@F.sub (2 ^ 255 - 19)) (@F.mul (2 ^ 255 - 19))
     (@F.opp (2 ^ 255 - 19) 1)
     (@F.opp (2 ^ 255 - 19) (F.of_Z (2 ^ 255 - 19) 121665) / F.of_Z (2 ^ 255 - 19) 121666).
   Proof.
     pose (@PrimeFieldTheorems.F.Decidable_square (2^255-19) _);
-      SpecializeBy.specialize_by Decidable.vm_decide; split; Decidable.vm_decide_no_check.
-  Qed.
+      SpecializeBy.specialize_by Decidable.vm_decide; split; try Decidable.vm_decide_no_check.
+    { intros n one_le_n n_le_two.
+      assert ((n = 1 \/ n = 2)%N) as Hn by admit; destruct Hn; subst; Decidable.vm_decide. }
+  Admitted.
 End Pre.
 (* these 2 proofs can be generated using https://github.com/andres-erbsen/safecurves-primes *)
 Axiom prime_q : Znumtheory.prime (2^255-19). Global Existing Instance prime_q.
@@ -48,7 +50,7 @@ Section Ed25519.
 
   Global Instance curve_params :
     E.twisted_edwards_params
-      (F:=Fq) (Feq:=Logic.eq) (Fzero:=F.zero) (Fone:=F.one) (Fadd:=F.add) (Fmul:=F.mul)
+      (F:=Fq) (Feq:=Logic.eq) (Fzero:=F.zero) (Fone:=F.one) (Fopp:=F.opp) (Fadd:=F.add) (Fsub:=F.sub) (Fmul:=F.mul)
       (a:=a) (d:=d). Proof Pre.curve25519_params_ok.
 
   Definition E : Type := E.point

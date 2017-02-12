@@ -1,7 +1,7 @@
 Require Import Coq.Lists.List Coq.Lists.SetoidList. Import ListNotations.
 Require Import Coq.Numbers.BinNums Coq.NArith.BinNat.
 Require Import Crypto.Util.ListUtil.
-Require Import Crypto.Algebra. Import Monoid ScalarMult.
+Require Import Crypto.Algebra Crypto.Algebra.Monoid Crypto.Algebra.ScalarMult.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.Util.Option.
 

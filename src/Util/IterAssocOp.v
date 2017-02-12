@@ -1,7 +1,7 @@
 Require Import Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Classes.Equivalence.
 Require Import Coq.NArith.NArith Coq.PArith.BinPosDef.
 Require Import Coq.Numbers.Natural.Peano.NPeano.
-Require Import Crypto.Algebra. Import Monoid.
+Require Import Crypto.Algebra Crypto.Algebra.Monoid Crypto.Algebra.ScalarMult.
 Require Import Crypto.Util.NUtil.
 
 Local Open Scope equiv_scope.

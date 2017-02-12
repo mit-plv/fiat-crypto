@@ -51,3 +51,9 @@ Qed.
 
 Global Instance eq_eta_Reflexive {T} : Reflexive (fun x y : T => x = y) | 1
   := eq_Reflexive.
+
+Global Instance Symmetric_not {T:Type} (R:T->T->Prop)
+       {SymmetricR:Symmetric R} : Symmetric (fun a b => not (R a b)).
+Proof. cbv [Symmetric] in *; repeat intro; eauto. Qed.
+
+Lemma not_exfalso (P:Prop) (H:P->False) : not P. auto with nocore. Qed.
