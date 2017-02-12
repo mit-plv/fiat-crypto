@@ -6,7 +6,7 @@ Require Import Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
 Require Import Bedrock.Word Crypto.Util.WordUtil.
 Require Import Crypto.Encoding.ModularWordEncodingTheorems.
 Require Import Crypto.Util.ZUtil.
-Require Import Crypto.Algebra.
+Require Import Crypto.Algebra Crypto.Algebra.Field.
 Require Import Crypto.Util.Option.
 Import Morphisms.
 
@@ -35,9 +35,9 @@ Section PointEncodingPre.
     unfold F_eqb; intros; destruct (eq_dec x y); split; auto; discriminate.
   Qed.
 
-  Context {a d:F} {prm:@E.twisted_edwards_params F eq zero one add mul a d}.
+  Context {a d:F} {prm:@E.twisted_edwards_params F eq zero one opp add sub mul a d}.
   Local Notation point := (@E.point F eq one add mul a d).
-  Local Notation onCurve := (@onCurve F eq one add mul a d).
+  Local Notation onCurve := (@E.onCurve F eq one add mul a d).
   Local Notation solve_for_x2 := (@E.solve_for_x2 F one sub mul div a d).
 
   Context {sz : nat} (sz_nonzero : (0 < sz)%nat).
@@ -64,8 +64,8 @@ Section PointEncodingPre.
     reflexivity.
   Qed.
 
-  Lemma solve_onCurve: forall x y : F, onCurve (x,y) ->
-    onCurve (sqrt (solve_for_x2 y), y).
+  Lemma solve_onCurve: forall x y : F, onCurve x y ->
+    onCurve (sqrt (E.solve_for_x2(Fone:=one)(Fsub:=sub)(Fmul:=mul)(Fdiv:=div)(a:=a)(d:=d) y)) y.
   Proof.
     intros.
     eapply E.solve_correct.
@@ -80,8 +80,8 @@ Section PointEncodingPre.
     intros. ring.
   Qed.
 
-  Lemma solve_opp_onCurve: forall x y : F, onCurve (x,y) ->
-    onCurve (opp (sqrt (solve_for_x2 y)), y).
+  Lemma solve_opp_onCurve: forall x y : F, onCurve x y ->
+    onCurve (opp (sqrt (solve_for_x2 y))) y.
   Proof.
     intros.
     apply E.solve_correct.
@@ -144,14 +144,6 @@ Section PointEncodingPre.
     option_coordinates_eq (Some x) (Some y) -> prod_eq eq eq x y.
   Proof.
     unfold option_coordinates_eq, option_eq; intros; assumption.
-  Qed.
-
-  Lemma prod_eq_onCurve : forall p q : F * F, prod_eq eq eq p q ->
-    onCurve p -> onCurve q.
-  Proof.
-    unfold prod_eq; intros.
-    destruct p; destruct q.
-    eauto using onCurve_subst.
   Qed.
 
   Lemma option_coordinates_eq_iff : forall x1 x2 y1 y2,
@@ -233,7 +225,7 @@ Section PointEncodingPre.
   Lemma onCurve_eq : forall x y,
     eq (add (mul a (mul x x)) (mul y y))
         (add one (mul (mul d (mul x x)) (mul y y))) ->
-    @Pre.onCurve _ eq one add mul a d (x,y).
+    @E.onCurve _ eq one add mul a d x y.
   Proof.
       tauto.
   Qed.
@@ -348,17 +340,17 @@ Section PointEncodingPre.
     sqrt_y == x.
   Proof.
     intros.
-    pose proof (only_two_square_roots_choice x sqrt_y y) as Hchoice.
+    pose proof (Field.only_two_square_roots_choice x sqrt_y y) as Hchoice.
     destruct Hchoice; try assumption; symmetry; try assumption.
     rewrite (sign_bit_subst x (opp sqrt_y)) in * by assumption.
     rewrite <-sign_bit_opp in * by assumption.
     rewrite Bool.eqb_negb1 in *; discriminate.
   Qed.
 
-  Lemma point_encoding_coordinates_valid : forall p, onCurve p ->
-    option_coordinates_eq (point_dec_coordinates (point_enc_coordinates p)) (Some p).
+  Lemma point_encoding_coordinates_valid p (onCurve_p:onCurve (fst p) (snd p))
+    : option_coordinates_eq (point_dec_coordinates (point_enc_coordinates p)) (Some p).
   Proof.
-    intros [x y] onCurve_p.
+    destruct p as [x y].
     unfold point_dec_coordinates, point_from_xy, coord_from_y, option_rect.
     rewrite y_decode.
     cbv [whd point_enc_coordinates snd].

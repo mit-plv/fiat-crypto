@@ -9,6 +9,8 @@ Require Import Coq.Relations.Relation_Definitions.
 Require Import Crypto.Util.Tuple Crypto.Util.Notations Crypto.Util.Tactics.
 Require Export Crypto.Util.FixCoqMistakes.
 
+Global Existing Instance E.char_gt_2.
+
 Module E.
   Import Group ScalarMult Ring Field CompleteEdwardsCurve.E.
 
@@ -37,7 +39,7 @@ Module E.
   Section CompleteEdwardsCurveTheorems.
     Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv a d}
             {field:@field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
-            {prm:@twisted_edwards_params F Feq Fzero Fmul a d}
+            {prm:@twisted_edwards_params F Feq Fzero Fone Fopp Fadd Fsub Fmul a d}
             {Feq_dec:DecidableRel Feq}.
     Local Infix "=" := Feq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
     Local Notation "0" := Fzero.  Local Notation "1" := Fone.
@@ -66,29 +68,23 @@ Module E.
       | _ => _gather_nonzeros
       | _ => progress simpl in *
       | |- _ /\ _ => split | |- _ <-> _ => split
-      | _ => solve [fsatz]
+      | _ => solve [trivial]
       end.
-    Ltac t := repeat t_step.
+    Ltac t := repeat t_step; fsatz.
 
     Program Definition opp (P:point) : point := (Fopp (fst P), (snd P)).
     Next Obligation. t. Qed.
 
     Global Instance associative_add : is_associative(eq:=E.eq)(op:=add).
     Proof.
-      do 17 t_step.
-      (*
-       Ltac debuglevel ::= constr:(1%nat).
-       all: goal_to_field_equality field.
-       all: inequalities_to_inverses field.
-       all: divisions_to_inverses field.
-       nsatz. (* runs out of 6GB of stack space *)
-      *)
-      Add Field EdwardsCurveField : (Field.field_theory_for_stdlib_tactic (T:=F)).
-      all:repeat common_denominator_equality_inequality_all; try nsatz.
-      { revert H5; intro. fsatz. }
-      { revert H1; intro. fsatz. }
-      { revert H6; intro. fsatz. }
-      { revert H2; intro. fsatz. }
+      (* [fsatz] runs out of 6GB of stack space *)
+      Add Field _field : (Algebra.Field.field_theory_for_stdlib_tactic (T:=F)).
+      Import Field_tac.
+      repeat t_step; (field_simplify_eq; [IntegralDomain.nsatz|]); repeat split; trivial.
+      { intro. eapply H5. field_simplify_eq; repeat split; trivial. IntegralDomain.nsatz. }
+      { intro. eapply H1. field_simplify_eq; repeat split; trivial. IntegralDomain.nsatz. }
+      { intro. eapply H6. field_simplify_eq; repeat split; trivial. IntegralDomain.nsatz. }
+      { intro. eapply H2. field_simplify_eq; repeat split; trivial. IntegralDomain.nsatz. }
     Qed.
 
     Global Instance edwards_curve_abelian_group : abelian_group (eq:=E.eq)(op:=add)(id:=zero)(inv:=opp).
@@ -122,11 +118,11 @@ Module E.
   Section Homomorphism.
     Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv Fa Fd}
             {field:@field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
-            {Fprm:@twisted_edwards_params F Feq Fzero Fmul Fa Fd}
+            {Fprm:@twisted_edwards_params F Feq Fzero Fone Fopp Fadd Fsub Fmul Fa Fd}
             {Feq_dec:DecidableRel Feq}.
     Context {K Keq Kzero Kone Kopp Kadd Ksub Kmul Kinv Kdiv Ka Kd}
             {fieldK: @Algebra.field K Keq Kzero Kone Kopp Kadd Ksub Kmul Kinv Kdiv}
-            {Kprm:@twisted_edwards_params K Keq Kzero Kmul Ka Kd}
+            {Kprm:@twisted_edwards_params K Keq Kzero Kone Kopp Kadd Ksub Kmul Ka Kd}
             {Keq_dec:DecidableRel Keq}.
     Context {phi:F->K} {Hphi:@Ring.is_homomorphism F Feq Fone Fadd Fmul
                                                    K Keq Kone Kadd Kmul phi}.
@@ -136,11 +132,11 @@ Module E.
 
     Create HintDb field_homomorphism discriminated.
     Hint Rewrite <-
-         homomorphism_one
-         homomorphism_add
-         homomorphism_sub
-         homomorphism_mul
-         homomorphism_div
+         (homomorphism_one(phi:=phi))
+         (homomorphism_add(phi:=phi))
+         (homomorphism_sub(phi:=phi))
+         (homomorphism_mul(phi:=phi))
+         (homomorphism_div(phi:=phi))
          Ha
          Hd
       : field_homomorphism.

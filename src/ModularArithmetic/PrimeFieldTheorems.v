@@ -12,7 +12,7 @@ Require Import Crypto.Util.NumTheoryUtil Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Decidable.
 Require Export Crypto.Util.FixCoqMistakes.
-Require Crypto.Algebra.
+Require Crypto.Algebra Crypto.Algebra.Field.
 
 Existing Class prime.
 
@@ -226,7 +226,7 @@ Module F.
       split; try apply eq_b4_a2.
       intro Hyy.
       rewrite !@F.pow_2_r in *.
-      destruct (Algebra.only_two_square_roots_choice _ x (x * x) Hyy eq_refl); clear Hyy;
+      destruct (Field.only_two_square_roots_choice _ x (x * x) Hyy eq_refl); clear Hyy;
         [ eexists; eassumption | ].
       match goal with H : ?a * ?a = F.opp _ |- _ => exists (sqrt_minus1 * a);
         rewrite mul_square_sqrt_minus1; rewrite H end.
@@ -254,7 +254,7 @@ Module F.
         break_if.
         intuition (f_equal; eauto).
         split; intro A. {
-          destruct (Algebra.only_two_square_roots_choice _ x (x * x) A eq_refl) as [B | B];
+          destruct (Field.only_two_square_roots_choice _ x (x * x) A eq_refl) as [B | B];
             clear A; try congruence.
           rewrite mul_square_sqrt_minus1, B; field.
         } {

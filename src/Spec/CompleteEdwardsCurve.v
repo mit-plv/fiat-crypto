@@ -20,7 +20,7 @@ Module E.
     Context {a d: F}.
     Class twisted_edwards_params :=
       {
-        char_gt_2 : forall p : BinNums.positive, BinPos.Pos.le p 2 -> Pre.ZtoR (BinNums.Zpos p) <> 0;
+        char_gt_2 : @Ring.char_gt F Feq Fzero Fone Fopp Fadd Fsub Fmul BinNat.N.two;
         nonzero_a : a <> 0;
         square_a : exists sqrt_a, sqrt_a^2 = a;
         nonsquare_d : forall x, x^2 <> d
@@ -34,7 +34,7 @@ Module E.
       snd (coordinates P) = snd (coordinates Q).
 
     Program Definition zero : point := (0, 1).
-    Next Obligation. eauto using Pre.onCurve_zero. Qed.
+    Next Obligation. destruct H; eauto using Pre.onCurve_zero. Qed.
 
     Program Definition add (P1 P2:point) : point :=
       let x1y1 := coordinates P1 in let x1 := fst x1y1 in let y1 := snd x1y1 in

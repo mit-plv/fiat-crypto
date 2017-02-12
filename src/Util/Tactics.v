@@ -28,6 +28,16 @@ Ltac contains search_for in_term :=
   | appcontext[search_for] => idtac
   end.
 
+Ltac debuglevel := constr:(0%nat).
+
+Ltac solve_debugfail tac :=
+  solve [tac] ||
+        let dbg := debuglevel in
+        match dbg with
+        | O => idtac
+        | _ => match goal with |- ?G => idtac "couldn't prove" G end
+        end.
+
 Ltac set_evars :=
   repeat match goal with
          | [ |- appcontext[?E] ] => is_evar E; let e := fresh "e" in set (e := E)

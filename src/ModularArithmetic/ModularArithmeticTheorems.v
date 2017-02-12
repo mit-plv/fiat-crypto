@@ -6,7 +6,8 @@ Require Import Coq.ZArith.BinInt Coq.ZArith.Zdiv Coq.ZArith.Znumtheory Coq.NArit
 Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
 Require Export Coq.setoid_ring.Ring_theory Coq.setoid_ring.Ring_tac.
 
-Require Import Crypto.Algebra Crypto.Util.Decidable Crypto.Util.ZUtil.
+Require Import Crypto.Algebra Crypto.Algebra.Ring Crypto.Algebra.Field.
+Require Import Crypto.Util.Decidable Crypto.Util.ZUtil.
 Require Export Crypto.Util.FixCoqMistakes.
 
 Module F.

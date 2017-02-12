@@ -1,5 +1,5 @@
 Require Import Crypto.Spec.MxDH.
-Require Import Crypto.Algebra. Import Monoid Group Ring Field.
+Require Import Crypto.Algebra Crypto.Algebra.Monoid Crypto.Algebra.Group Crypto.Algebra.Ring Crypto.Algebra.Field.
 Require Import Crypto.Util.Tuple.
 
 Section MxDHRepChange.

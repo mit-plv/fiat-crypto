@@ -10,7 +10,12 @@ src/Karatsuba.v
 src/MxDHRepChange.v
 src/NewBaseSystem.v
 src/Testbit.v
-src/Algebra/ZToRing.v
+src/Algebra/Field.v
+src/Algebra/Group.v
+src/Algebra/IntegralDomain.v
+src/Algebra/Monoid.v
+src/Algebra/Ring.v
+src/Algebra/ScalarMult.v
 src/Assembly/Bounds.v
 src/Assembly/Compile.v
 src/Assembly/Conversions.v
@@ -68,7 +73,6 @@ src/Experiments/Ed25519.v
 src/Experiments/Ed25519Extraction.v
 src/Experiments/ExtrHaskellNats.v
 src/Experiments/GenericFieldPow.v
-src/Experiments/MontgomeryCurve.v
 src/ModularArithmetic/Conversion.v
 src/ModularArithmetic/ExtPow2BaseMulProofs.v
 src/ModularArithmetic/ExtendedBaseVector.v
@@ -179,6 +183,7 @@ src/Spec/EdDSA.v
 src/Spec/Encoding.v
 src/Spec/ModularArithmetic.v
 src/Spec/ModularWordEncoding.v
+src/Spec/MontgomeryCurve.v
 src/Spec/MxDH.v
 src/Spec/WeierstrassCurve.v
 src/Specific/GF1305.v

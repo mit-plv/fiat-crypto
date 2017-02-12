@@ -66,7 +66,7 @@ Section PointEncoding.
             {Ksign_correct : forall x, sign x = Ksign (phi x)}
             {Kenc_correct : forall x, Fencode x = Kenc (phi x)}.
 
-    Notation KonCurve := (@Pre.onCurve _ Keq Kone Kadd Kmul Ka Kd).
+    Notation KonCurve := (@E.onCurve _ Keq Kone Kadd Kmul Ka Kd).
     Context {Kpoint}
             {Kcoord_to_point : @E.point K Keq Kone Kadd Kmul Ka Kd  -> Kpoint}
             {Kpoint_to_coord : Kpoint -> (K * K)}.
@@ -74,8 +74,8 @@ Section PointEncoding.
     Context {Kpoint_eq : Kpoint -> Kpoint -> Prop} {Kpoint_add : Kpoint -> Kpoint -> Kpoint}.
     Context {Kpoint_eq_correct : forall p q, Kpoint_eq p q <-> Tuple.fieldwise (n := 2) Keq (Kpoint_to_coord p) (Kpoint_to_coord q)} {Kpoint_eq_Equivalence : Equivalence Kpoint_eq}.
 
-    Context {Fprm:@E.twisted_edwards_params (F m) eq F.zero F.one F.add F.mul Fa Fd}.
-    Context {Kprm:@E.twisted_edwards_params K Keq Kzero Kone Kadd Kmul Ka Kd}.
+    Context {Fprm:@E.twisted_edwards_params (F m) eq F.zero F.one F.opp F.add F.sub F.mul Fa Fd}.
+    Context {Kprm:@E.twisted_edwards_params K Keq Kzero Kone Kopp Kadd Ksub Kmul Ka Kd}.
     Context {phi_bijective : forall x y, Keq (phi x) (phi y) <-> x = y}.
 
     Lemma phi_onCurve : forall x y,
@@ -86,7 +86,7 @@ Section PointEncoding.
     Proof.
       intros.
       rewrite <-phi_a, <-phi_d.
-      rewrite <-Algebra.Ring.homomorphism_one.
+      rewrite <-(Algebra.Ring.homomorphism_one(phi:=phi)).
       rewrite <-!Algebra.Ring.homomorphism_mul.
       rewrite <-!Algebra.Ring.homomorphism_add.
       rewrite phi_bijective.
@@ -188,7 +188,7 @@ Section PointEncoding.
     Lemma onCurve_eq : forall x y,
       Keq (Kadd (Kmul Ka (Kmul x x)) (Kmul y y))
           (Kadd Kone (Kmul (Kmul Kd (Kmul x x)) (Kmul y y))) ->
-      @Pre.onCurve _ Keq Kone Kadd Kmul Ka Kd (x,y).
+      @E.onCurve _ Keq Kone Kadd Kmul Ka Kd x y.
     Proof.
       clear; tauto.
     Qed.
@@ -471,14 +471,9 @@ Section PointEncoding.
           (@PointEncodingPre.point_eq _ eq F.one F.add F.mul Fa Fd) x y.
     Proof.
       intros.
-      cbv [option_eq E.eq PointEncodingPre.point_eq
+      cbv [option_eq CompleteEdwardsCurve.E.eq E.eq E.coordinates PointEncodingPre.point_eq
                      PointEncodingPre.prod_eq]; repeat break_match;
         try reflexivity.
-      cbv [E.coordinates].
-      subst.
-      rewrite Heqp1, Heqp0.
-      cbv [Tuple.fieldwise Tuple.fieldwise' fst snd].
-      tauto.
     Qed.
     
     Lemma enc_canonical_equiv : forall (x_enc : word b) (x : F m),
