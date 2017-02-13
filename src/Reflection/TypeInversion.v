@@ -170,8 +170,7 @@ Ltac induction_type_in_using H rect :=
   let H2 := fresh H in
   try lazymatch type of H with
       | False => exfalso; exact H
-      | ?x = ?x => clear H
-      | _ = Unit => exfalso; clear -H; solve [ inversion H ]
+      | True => destruct H
       | _ /\ _ => destruct H as [H1 H2]
       end.
 Ltac inversion_type_step :=
