@@ -127,6 +127,8 @@ src/Reflection/Reify.v
 src/Reflection/Relations.v
 src/Reflection/SmartBound.v
 src/Reflection/SmartCast.v
+src/Reflection/SmartCastInterp.v
+src/Reflection/SmartCastWf.v
 src/Reflection/SmartMap.v
 src/Reflection/Syntax.v
 src/Reflection/TestCase.v
