@@ -43,29 +43,26 @@ Module W.
     Local Notation "0" := Fzero.  Local Notation "1" := Fone.
     Local Notation "2" := (1+1). Local Notation "3" := (1+2). 
 
-    Program Definition add (P1 P2:point) : point
-      := exist
-           _
-           (match coordinates P1, coordinates P2 return _ with
-            | (x1, y1), (x2, y2) =>
-              if x1 =? x2
-              then
-                if y2 =? -y1
-                then ∞
-                else let k := (3*x1^2+a)/(2*y1) in
-                     let x3 := k^2-x1-x1 in
-                     let y3 := k*(x1-x3)-y1 in
-                     (x3, y3)
-              else let k := (y2-y1)/(x2-x1) in
-                   let x3 := k^2-x1-x2 in
-                   let y3 := k*(x1-x3)-y1 in
-                   (x3, y3)
-            | ∞, ∞ => ∞
-            | ∞, _ => coordinates P2
-            | _, ∞ => coordinates P1
-            end)
-           _.
-    Next Obligation. Admitted.
+    Program Definition add (P1 P2:point) : point  := exist _
+      (match coordinates P1, coordinates P2 return _ with
+       | (x1, y1), (x2, y2) =>
+         if x1 =? x2
+         then
+           if y2 =? -y1
+           then ∞
+           else let k := (3*x1^2+a)/(2*y1) in
+                let x3 := k^2-x1-x1 in
+                let y3 := k*(x1-x3)-y1 in
+                (x3, y3)
+         else let k := (y2-y1)/(x2-x1) in
+              let x3 := k^2-x1-x2 in
+              let y3 := k*(x1-x3)-y1 in
+              (x3, y3)
+       | ∞, ∞ => ∞
+       | ∞, _ => coordinates P2
+       | _, ∞ => coordinates P1
+       end) _.
+    Next Obligation. exact (Pre.add_onCurve _ _ (proj2_sig _) (proj2_sig _)). Qed.
 
     Fixpoint mul (n:nat) (P : point) : point :=
       match n with
