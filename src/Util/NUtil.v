@@ -1,6 +1,8 @@
 Require Import Coq.NArith.NArith.
 Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Crypto.Util.NatUtil Crypto.Util.Decidable.
+Require Bedrock.Word.
+Require Crypto.Util.WordUtil.
 
 Module N.
   Lemma size_le a b : (a <= b -> N.size a <= N.size b)%N.
@@ -102,5 +104,45 @@ Module N.
       apply N2Nat.id.
   Qed.
 
+  Section ZN.
+    Import Coq.ZArith.ZArith.
+    Lemma ZToN_NPow2_lt : forall z n, (0 <= z < 2 ^ Z.of_nat n)%Z ->
+                                      (Z.to_N z < Word.Npow2 n)%N.
+    Proof.
+      intros.
+      apply WordUtil.bound_check_nat_N.
+      apply Znat.Nat2Z.inj_lt.
+      rewrite Znat.Z2Nat.id by omega.
+      rewrite ZUtil.Z.pow_Zpow.
+      replace (Z.of_nat 2) with 2%Z by reflexivity.
+      omega.
+    Qed.
+ 
+    Let ZNWord sz x := Word.NToWord sz (BinInt.Z.to_N x).
+    Lemma combine_ZNWord : forall sz1 sz2 z1 z2,
+        (0 <= Z.of_nat sz1)%Z ->
+        (0 <= Z.of_nat sz2)%Z ->
+        (0 <= z1 < 2 ^ (Z.of_nat sz1))%Z ->
+        (0 <= z2 < 2 ^ (Z.of_nat sz2))%Z ->
+        Word.combine (ZNWord sz1 z1) (ZNWord sz2 z2) =
+        ZNWord (sz1 + sz2) (Z.lor z1 (Z.shiftl z2 (Z.of_nat sz1))).
+    Proof.
+      cbv [ZNWord]; intros.
+      rewrite !Word.NToWord_nat.
+      match goal with |- ?a = _ => rewrite <- (Word.natToWord_wordToNat a) end.
+      rewrite WordUtil.wordToNat_combine.
+      rewrite !Word.wordToNat_natToWord_idempotent by (rewrite Nnat.N2Nat.id; auto using ZToN_NPow2_lt).
+      f_equal.
+      rewrite ZUtil.Z.lor_shiftl by auto.
+      rewrite !Z_N_nat.
+      rewrite Znat.Z2Nat.inj_add by (try apply Z.shiftl_nonneg; omega).
+      f_equal.
+      rewrite Z.shiftl_mul_pow2 by auto.
+      rewrite Znat.Z2Nat.inj_mul by omega.
+      rewrite <-ZUtil.Z.pow_Z2N_Zpow by omega.
+      rewrite Nat.mul_comm.
+      f_equal.
+    Qed.
+  End ZN.
 
 End N.
