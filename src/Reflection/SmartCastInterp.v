@@ -11,11 +11,11 @@ Section language.
           {op : flat_type base_type_code -> flat_type base_type_code -> Type}
           {interp_base_type : base_type_code -> Type}
           {interp_op : forall src dst, op src dst -> interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst}
-          (base_type_beq : base_type_code -> base_type_code -> bool)
-          (base_type_bl_transparent : forall x y, base_type_beq x y = true -> x = y)
-          (Cast : forall var A A', exprf base_type_code op (var:=var) (Tbase A) -> exprf base_type_code op (var:=var) (Tbase A'))
+          {base_type_beq : base_type_code -> base_type_code -> bool}
+          {base_type_bl_transparent : forall x y, base_type_beq x y = true -> x = y}
+          {Cast : forall var A A', exprf base_type_code op (var:=var) (Tbase A) -> exprf base_type_code op (var:=var) (Tbase A')}
           (interpf_Cast_id : forall A x, interpf interp_op (Cast _ A A x) = interpf interp_op x)
-          (cast_val : forall A A', interp_base_type A -> interp_base_type A')
+          {cast_val : forall A A', interp_base_type A -> interp_base_type A'}
           (interpf_cast : forall A A' e, interpf interp_op (Cast _ A A' e) = cast_val A A' (interpf interp_op e)).
 
   Local Notation exprf := (@exprf base_type_code op).
