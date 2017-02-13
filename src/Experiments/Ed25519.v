@@ -77,7 +77,7 @@ Local Instance twedprm_ERep :
    GF25519BoundedCommon.zero GF25519BoundedCommon.one
    GF25519Bounded.add GF25519Bounded.mul a d.
 Proof.
-  constructor. try vm_decide.
+  constructor; try vm_decide.
   { destruct CompleteEdwardsCurve.E.square_a as [sqrt_a H].
     exists (GF25519BoundedCommon.encode sqrt_a).
     transitivity (GF25519BoundedCommon.encode Spec.Ed25519.a); [ rewrite <- H | vm_decide ].
@@ -955,7 +955,7 @@ Let sign_correct : forall pk sk {mlen} (msg:Word.word mlen), sign pk sk _ msg = 
 Definition Fsqrt_minus1 := Eval vm_compute in ModularBaseSystem.decode (GF25519.sqrt_m1).
 Definition Fsqrt := PrimeFieldTheorems.F.sqrt_5mod8 Fsqrt_minus1.
 
-(* MOVE : maybe make a Pre file? *)
+(* MOVE : maybe make a Pre file for these bound_check things? *)
 Lemma bound_check_255_helper x y : (0 <= x)%Z -> (BinInt.Z.to_nat x < 2^y <-> (x < 2^(Z.of_nat y))%Z).
 Proof.
   intros.
@@ -993,12 +993,14 @@ Definition Edec := (@PointEncodingPre.point_dec
                   (bound_check := bound_check255))
                Spec.Ed25519.sign).
 
+(* MOVE : pre-Specific (general SC files?) *)
 Definition Sdec : Word.word b -> option (ModularArithmetic.F.F l) :=
  fun w =>
  let z := (BinIntDef.Z.of_N (Word.wordToN w)) in
  if ZArith_dec.Z_lt_dec z l
  then Some (ModularArithmetic.F.of_Z l z) else None.
 
+(* MOVE: same place as Sdec *)
 Lemma eq_enc_S_iff : forall (n_ : Word.word b) (n : ModularArithmetic.F.F l),
  Senc n = n_ <-> Sdec n_ = Some n.
 Proof.
@@ -1022,8 +1024,10 @@ Proof.
          end.
 Qed.
 
+(* MOVE : same place as Sdec *)
 Definition SRepDec : Word.word b -> option SRep := fun w => option_map ModularArithmetic.F.to_Z (Sdec w).
 
+(* MOVE : same place as Sdec *)
 Lemma SRepDec_correct : forall w : Word.word b,
  @Option.option_eq SRep SC25519.SRepEq
    (@option_map (ModularArithmetic.F.F l) SRep S2Rep (Sdec w))
@@ -1062,6 +1066,7 @@ Proof.
   reflexivity.
 Qed.
 
+(* MOVE : WordUtil *) (* TODO : automate *)
 Lemma WordNZ_split1 : forall {n m} w,
     Z.of_N (Word.wordToN (Word.split1 n m w)) = ZUtil.Z.pow2_mod (Z.of_N (Word.wordToN w)) n.
 Proof.
@@ -1090,6 +1095,7 @@ Proof.
     induction n; simpl; reflexivity.
 Qed.
 
+(* MOVE : WordUtil *) (* TODO : automate *)
 Lemma WordNZ_split2 : forall {n m} w,
     Z.of_N (Word.wordToN (Word.split2 n m w)) = Z.shiftr (Z.of_N (Word.wordToN w)) n.
 Proof.
@@ -1103,6 +1109,7 @@ Proof.
   induction n; simpl; reflexivity.
 Qed.
 
+(* MOVE : WordUtil *)
 Lemma WordNZ_range : forall {n} B w,
   (2 ^ Z.of_nat n <= B)%Z ->
   (0 <= Z.of_N (@Word.wordToN n w) < B)%Z.
@@ -1114,6 +1121,7 @@ Proof.
   assumption.
 Qed.
 
+(* MOVE : WordUtil *)
 Lemma WordNZ_range_mono : forall {n} m w,
   (Z.of_nat n <= m)%Z ->
   (0 <= Z.of_N (@Word.wordToN n w) < 2 ^ m)%Z.
@@ -1155,6 +1163,7 @@ Proof.
   apply Z.pow_add_r; omega.
 Qed.
 
+(* MOVE : same place as feDec *) (* TODO : automate *)
 Lemma feDec_correct : forall w : Word.word (pred b),
         option_eq GF25519BoundedCommon.eq
           (option_map GF25519BoundedCommon.encode
@@ -1327,6 +1336,7 @@ Qed.
 Section bounded_by_from_is_bounded.
   Local Arguments Z.sub !_ !_.
   Local Arguments Z.pow_pos !_ !_ / .
+  (* TODO : automate?*)
   Lemma bounded_by_from_is_bounded
     : forall x, GF25519BoundedCommon.is_bounded x = true
                 -> ModularBaseSystemProofs.bounded_by
@@ -1392,6 +1402,7 @@ Local Ltac prove_bounded_by :=
            => apply GF25519BoundedCommon.encode_bounded
          end.
 
+(* TODO : automate, make intermediate lemmas? This seems like it should not be so much pain *)
 Lemma sqrt_correct' : forall x,
         GF25519BoundedCommon.eq
           (GF25519BoundedCommon.encode
@@ -1441,6 +1452,7 @@ Proof.
   rewrite ModularBaseSystemOpt.pow_opt_correct; reflexivity.
 Qed.
 
+(* TODO : move to GF25519BoundedCommon *)
 Module GF25519BoundedCommon.
   Lemma decode_encode x: GF25519BoundedCommon.decode (GF25519BoundedCommon.encode x) = x.
   Proof.
@@ -1459,7 +1471,6 @@ Proof.
   intros. pose proof sqrt_correct' (GF25519BoundedCommon.encode x) as H.
   rewrite GF25519BoundedCommon.decode_encode in H; exact H.
 Qed.
-
 
 Local Instance Proper_sqrt :
   Proper (GF25519BoundedCommon.eq ==> GF25519BoundedCommon.eq) GF25519Bounded.sqrt.
