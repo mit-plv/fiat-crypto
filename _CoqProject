@@ -110,6 +110,7 @@ src/Reflection/ExprInversion.v
 src/Reflection/FilterLive.v
 src/Reflection/Inline.v
 src/Reflection/InlineCast.v
+src/Reflection/InlineCastWf.v
 src/Reflection/InlineInterp.v
 src/Reflection/InlineWf.v
 src/Reflection/InputSyntax.v
