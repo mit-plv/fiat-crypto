@@ -69,9 +69,10 @@ Section language.
   Section encode_decode.
     Definition flat_type_code (t1 t2 : flat_type base_type_code) : Prop
       := match t1, t2 with
-         | Unit, _ => Unit = t2
+         | Unit, Unit => True
          | Tbase t1, Tbase t2 => t1 = t2
          | Prod A B, Prod A' B' => A = A' /\ B = B'
+         | Unit, _
          | Tbase _, _
          | Prod _ _, _
            => False
@@ -96,7 +97,6 @@ Section language.
       destruct x, y; simpl in *; intro H;
         try first [ apply f_equal; assumption
                   | exfalso; assumption
-                  | exfalso; abstract congruence
                   | reflexivity
                   | apply f_equal2; destruct H; assumption ].
     Defined.
