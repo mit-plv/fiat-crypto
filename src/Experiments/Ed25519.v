@@ -27,6 +27,7 @@ Local Notation eta4 x := (eta3 (fst x), snd x).
 
 Context {SHA512: forall n : nat, Word.word n -> Word.word 512}.
 
+(* MOVE : pre-Specific, same level as other fe operations *)
 Definition feSign (f :  GF25519BoundedCommon.fe25519) : bool :=
   let x := GF25519Bounded.freeze f in
   let '(x9, x8, x7, x6, x5, x4, x3, x2, x1, x0) := (x : GF25519.fe25519) in
@@ -67,13 +68,16 @@ Definition Erep := (@ExtendedCoordinates.Extended.point
 
 Local Existing Instance GF25519.homomorphism_F25519_encode.
 Local Existing Instance GF25519.homomorphism_F25519_decode.
+(* MOVE : mostly pre-Specific. TODO : narrow down which properties can
+be proven generically and which need to be computed, then maybe create
+a tactic to do the computed ones *)
 Local Instance twedprm_ERep :
   @CompleteEdwardsCurve.E.twisted_edwards_params
    GF25519BoundedCommon.fe25519 GF25519BoundedCommon.eq
    GF25519BoundedCommon.zero GF25519BoundedCommon.one
    GF25519Bounded.add GF25519Bounded.mul a d.
 Proof.
-  constructor; try vm_decide.
+  constructor. try vm_decide.
   { destruct CompleteEdwardsCurve.E.square_a as [sqrt_a H].
     exists (GF25519BoundedCommon.encode sqrt_a).
     transitivity (GF25519BoundedCommon.encode Spec.Ed25519.a); [ rewrite <- H | vm_decide ].
@@ -122,7 +126,7 @@ Definition WordNZ {sz} (w : Word.word sz) := BinInt.Z.of_N (Word.wordToN w).
    32- and 31-bit) Zs. We should either automate this transformation or change
    the spec.
  *)
-
+(* MOVE : pre-Specific *)
 Definition feEnc (x : GF25519BoundedCommon.fe25519) : Word.word 255 :=
   let '(x7, x6, x5, x4, x3, x2, x1, x0) :=
       (GF25519BoundedCommon.proj1_wire_digits (GF25519Bounded.pack (GF25519Bounded.freeze x))) in
@@ -133,10 +137,8 @@ Definition feEnc (x : GF25519BoundedCommon.fe25519) : Word.word 255 :=
           (Word.combine (ZNWord 32 x4)
             (Word.combine (ZNWord 32 x5)
               (Word.combine (ZNWord 32 x6) (ZNWord 31 x7))))))).
-Eval compute in GF25519.wire_widths.
-Eval compute in (Tuple.from_list 8 GF25519.wire_widths _).
 
-(** TODO(jadep or andreser, from jgross): Is the reversal on the words passed in correct? *)
+(* MOVE : pre-Specific *)
 Definition feDec (w : Word.word 255) : option GF25519BoundedCommon.fe25519 :=
   let w0 := Word.split1 32 _ w in
   let a0 := Word.split2 32 _ w in
@@ -174,14 +176,6 @@ Definition ERepEnc :=
 
 Definition SRep := SC25519.SRep.
 Definition S2Rep := SC25519.S2Rep.
-(*Let SRep := Tuple.tuple (Word.word 32) 8.
-
-Let S2Rep := fun (x : ModularArithmetic.F.F l) =>
-               Tuple.map (ZNWord 32)
-               (Tuple.from_list_default (BinInt.Z.of_nat 0) 8
-                  (Pow2Base.encodeZ
-                  (List.repeat (BinInt.Z.of_nat 32) 8)
-                  (ModularArithmetic.F.to_Z x))).*)
 
 Lemma eq_a_minus1 : GF25519BoundedCommon.eq a (GF25519Bounded.opp GF25519BoundedCommon.one).
 Proof. vm_decide. Qed.
@@ -196,7 +190,7 @@ Local Coercion Z.of_nat : nat >-> Z.
 Definition ERepSel : bool -> Erep -> Erep -> Erep := fun b x y => if b then y else x.
 
 Local Existing Instance ExtendedCoordinates.Extended.extended_group.
-
+(* TODO : automate this? *)
 Local Instance Ahomom :
       @Algebra.Monoid.is_homomorphism E
            CompleteEdwardsCurveTheorems.E.eq
@@ -227,6 +221,7 @@ Proof.
   reflexivity.
 Qed.
 
+(* TODO : automate *)
 Lemma ERep_eq_E P Q :
       ExtendedCoordinates.Extended.eq (field:=GF25519Bounded.field25519)
       (EToRep P) (EToRep Q)
@@ -253,6 +248,7 @@ Proof.
   assumption.
 Qed.
 
+(* MOVE: I think this is all just generic N stuff? *)
 Module N.
   Lemma size_le a b : (a <= b -> N.size a <= N.size b)%N.
   Proof.
@@ -298,7 +294,7 @@ Section SRepERepMul.
       ll
   .
 
-
+  (* TODO : automate *)
   Lemma SRepERepMul_correct n P :
     ExtendedCoordinates.Extended.eq (field:=GF25519Bounded.field25519)
                                     (EToRep (CompleteEdwardsCurve.E.mul (n mod (Z.to_nat l))%nat P))
@@ -364,6 +360,7 @@ Section SRepERepMul.
   Qed.
 End SRepERepMul.
 
+(* MOVE : ZUtil *)
 Lemma ZToN_NPow2_lt : forall z n, (0 <= z < 2 ^ Z.of_nat n)%Z ->
                                   (Z.to_N z < Word.Npow2 n)%N.
 Proof.
@@ -376,6 +373,7 @@ Proof.
   omega.
 Qed.
 
+(* MOVE : WordUtil *) (* TODO: automate *)
 Lemma combine_ZNWord : forall sz1 sz2 z1 z2,
   (0 <= Z.of_nat sz1)%Z ->
   (0 <= Z.of_nat sz2)%Z ->
@@ -401,6 +399,7 @@ Proof.
   f_equal.
 Qed.
 
+(* TODO : figure out if and where to move this *)
 Lemma nth_default_freeze_input_bound_compat : forall i,
   (nth_default 0 PseudoMersenneBaseParams.limb_widths i <
    GF25519.freeze_input_bound)%Z.
@@ -414,22 +413,11 @@ Proof.
   { rewrite nth_default_out_of_bounds by omega.
     cbv; congruence. }
 Qed.
-(*
-Lemma nth_default_int_width_compat : forall i,
-  (nth_default 0 PseudoMersenneBaseParams.limb_widths i <
-   GF25519.int_width)%Z.
-Proof.
-  pose proof GF25519.freezePreconditions25519.
-  intros.
-  destruct (lt_dec i (length PseudoMersenneBaseParams.limb_widths)).
-  { apply ModularBaseSystemProofs.int_width_compat.
-    rewrite nth_default_eq.
-    auto using nth_In. }
-  { rewrite nth_default_out_of_bounds by omega.
-    cbv; congruence. }
-Qed.
-*)
 
+(* TODO : This is directly implied by other lemmas and should be
+easier. I'd say automate it, but given that the basesystem stuff is in
+flux maybe we should leave it for now and then do a complete rewrite
+later. *)
 Lemma minrep_freeze : forall x,
             Pow2Base.bounded
               PseudoMersenneBaseParams.limb_widths
@@ -540,6 +528,7 @@ Proof.
   intuition assumption.
 Qed.
 
+(* MOVE : ZUtil *)
 Lemma lor_shiftl_bounds : forall x y n m,
   (0 <= n)%Z -> (0 <= m)%Z ->
   (0 <= x < 2 ^ m)%Z ->
@@ -558,6 +547,7 @@ Proof.
     apply Z.mul_lt_mono_pos_l; omega. }
 Qed.
 
+(* TODO : automate (after moving feEnc) or consider moving this and feSign_correct pre-specific *)
 Lemma feEnc_correct : forall x,
     PointEncoding.Fencode x = feEnc (GF25519BoundedCommon.encode x).
 Proof.
@@ -628,6 +618,7 @@ Proof.
       reflexivity. } }
 Qed.
 
+(* TODO : automate *)
 Lemma initial_bounds : forall x n,
   n < length PseudoMersenneBaseParams.limb_widths ->
   (0 <=
@@ -665,6 +656,7 @@ Proof.
       omega.
 Qed.
 
+(* TODO : automate (after moving feSign) *)
 Lemma feSign_correct : forall x,
   PointEncoding.sign x = feSign (GF25519BoundedCommon.encode x).
 Proof.
@@ -703,7 +695,7 @@ Proof.
   apply Tuple.length_to_list.
 Qed.
 
-
+(* MOVE : to wherever feSign goes*)
 Local Instance Proper_feSign : Proper (GF25519BoundedCommon.eq ==> eq) feSign.
 Proof.
   repeat intro; cbv [feSign].
@@ -739,6 +731,7 @@ Proof.
   rewrite Tuple.length_to_list; reflexivity.
 Qed.
 
+(* MOVE : pre-Specific *)
 Lemma Proper_pack :
   Proper (Tuple.fieldwise (n := length PseudoMersenneBaseParams.limb_widths) eq ==>
                           Tuple.fieldwise (n := length GF25519.wire_widths) eq) GF25519.pack.
@@ -755,6 +748,7 @@ Proof.
     intuition subst; reflexivity.
 Qed.
 
+(* MOVE : wherever feEnc goes *)
 Lemma Proper_feEnc : Proper (GF25519BoundedCommon.eq ==> eq) feEnc.
 Proof.
   pose proof GF25519.freezePreconditions25519.
@@ -832,6 +826,7 @@ Qed.
 
 Definition SRepEnc : SRep -> Word.word b := (fun x => Word.NToWord _ (Z.to_N x)).
 
+(* TODO : automate? *)
 Local Instance Proper_SRepERepMul : Proper (SC25519.SRepEq ==> ExtendedCoordinates.Extended.eq (field:=GF25519Bounded.field25519) ==> ExtendedCoordinates.Extended.eq (field:=GF25519Bounded.field25519)) SRepERepMul.
   unfold SRepERepMul, SC25519.SRepEq.
   repeat intro.
@@ -959,6 +954,8 @@ Let sign_correct : forall pk sk {mlen} (msg:Word.word mlen), sign pk sk _ msg = 
 .
 Definition Fsqrt_minus1 := Eval vm_compute in ModularBaseSystem.decode (GF25519.sqrt_m1).
 Definition Fsqrt := PrimeFieldTheorems.F.sqrt_5mod8 Fsqrt_minus1.
+
+(* MOVE : maybe make a Pre file? *)
 Lemma bound_check_255_helper x y : (0 <= x)%Z -> (BinInt.Z.to_nat x < 2^y <-> (x < 2^(Z.of_nat y))%Z).
 Proof.
   intros.
@@ -1567,6 +1564,8 @@ Let verify_correct :
       (* SRepDec := *) SRepDec
       (* SRepDec_correct := *) SRepDec_correct
 .
+
+(* TODO : make a new file for the stuff below *) 
 
 Lemma Fhomom_inv_zero :
   GF25519BoundedCommon.eq
