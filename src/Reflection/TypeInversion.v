@@ -1,4 +1,5 @@
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Util.FixCoqMistakes.
 
 Section language.
   Context {base_type_code : Type}.
@@ -64,6 +65,57 @@ Section language.
   Proof.
     intros H T p; specialize (H _ p); assumption.
   Defined.
+
+  Section encode_decode.
+    Definition flat_type_code (t1 t2 : flat_type base_type_code) : Prop
+      := match t1, t2 with
+         | Unit, _ => Unit = t2
+         | Tbase t1, Tbase t2 => t1 = t2
+         | Prod A B, Prod A' B' => A = A' /\ B = B'
+         | Tbase _, _
+         | Prod _ _, _
+           => False
+         end.
+
+    Definition type_code (t1 t2 : type base_type_code) : Prop
+      := match t1, t2 with
+         | Tflat t1, Tflat t2 => t1 = t2
+         | Arrow A B, Arrow A' B' => A = A' /\ B = B'
+         | Tflat _, _
+         | Arrow _ _, _
+           => False
+         end.
+
+    Definition flat_type_encode (x y : flat_type base_type_code) : x = y -> flat_type_code x y.
+    Proof. intro p; destruct p, x; repeat constructor. Defined.
+    Definition type_encode (x y : type base_type_code) : x = y -> type_code x y.
+    Proof. intro p; destruct p, x; repeat constructor. Defined.
+
+    Definition flat_type_decode (x y : flat_type base_type_code) : flat_type_code x y -> x = y.
+    Proof.
+      destruct x, y; simpl in *; intro H;
+        try first [ apply f_equal; assumption
+                  | exfalso; assumption
+                  | exfalso; abstract congruence
+                  | reflexivity
+                  | apply f_equal2; destruct H; assumption ].
+    Defined.
+    Definition type_decode (x y : type base_type_code) : type_code x y -> x = y.
+    Proof.
+      destruct x, y; simpl; intro H;
+        try first [ exfalso; assumption
+                  | apply f_equal; assumption
+                  | apply f_equal2; destruct H; assumption ].
+    Defined.
+    Definition path_flat_type_rect {x y : flat_type base_type_code} (Q : x = y -> Type)
+               (f : forall p, Q (flat_type_decode x y p))
+      : forall p, Q p.
+    Proof. intro p; specialize (f (flat_type_encode x y p)); destruct x, p; exact f. Defined.
+    Definition path_type_rect {x y : type base_type_code} (Q : x = y -> Type)
+               (f : forall p, Q (type_decode x y p))
+      : forall p, Q p.
+    Proof. intro p; specialize (f (type_encode x y p)); destruct x, p; exact f. Defined.
+  End encode_decode.
 End language.
 
 Ltac preinvert_one_type e :=
@@ -110,3 +162,39 @@ Ltac preinvert_one_type e :=
        move e at top; revert dependent B; revert A;
        refine (preinvert_Arrow P _ _)
   end.
+
+Ltac induction_type_in_using H rect :=
+  induction H as [H] using (rect _ _ _);
+  cbv [flat_type_code type_code] in H;
+  let H1 := fresh H in
+  let H2 := fresh H in
+  try lazymatch type of H with
+      | False => exfalso; exact H
+      | ?x = ?x => clear H
+      | _ = Unit => exfalso; clear -H; solve [ inversion H ]
+      | _ /\ _ => destruct H as [H1 H2]
+      end.
+Ltac inversion_type_step :=
+  match goal with
+  | [ H : _ = Tbase _ |- _ ]
+    => induction_type_in_using H @path_flat_type_rect
+  | [ H : _ = Unit |- _ ]
+    => induction_type_in_using H @path_flat_type_rect
+  | [ H : _ = Prod _ _ |- _ ]
+    => induction_type_in_using H @path_flat_type_rect
+  | [ H : _ = Arrow _ _ |- _ ]
+    => induction_type_in_using H @path_type_rect
+  | [ H : _ = Tflat _ |- _ ]
+    => induction_type_in_using H @path_type_rect
+  | [ H : Tbase _ = _ |- _ ]
+    => induction_type_in_using H @path_flat_type_rect
+  | [ H : Unit = _ |- _ ]
+    => induction_type_in_using H @path_flat_type_rect
+  | [ H : Prod _ _ = _ |- _ ]
+    => induction_type_in_using H @path_flat_type_rect
+  | [ H : Arrow _ _ = _ |- _ ]
+    => induction_type_in_using H @path_type_rect
+  | [ H : Tflat _ = _ |- _ ]
+    => induction_type_in_using H @path_type_rect
+  end.
+Ltac inversion_type := repeat inversion_type_step.
