@@ -1035,6 +1035,24 @@ Module Z.
   Qed.
   Hint Resolve lor_range : zarith.
 
+  Lemma lor_shiftl_bounds : forall x y n m,
+      (0 <= n)%Z -> (0 <= m)%Z ->
+      (0 <= x < 2 ^ m)%Z ->
+      (0 <= y < 2 ^ n)%Z ->
+      (0 <= Z.lor y (Z.shiftl x n) < 2 ^ (n + m))%Z.
+  Proof.
+    intros.
+    apply Z.lor_range.
+    { split; try omega.
+      apply Z.lt_le_trans with (m := (2 ^ n)%Z); try omega.
+      apply Z.pow_le_mono_r; omega. }
+    { rewrite Z.shiftl_mul_pow2 by omega.
+      rewrite Z.pow_add_r by omega.
+      split; zero_bounds.
+      rewrite Z.mul_comm.
+      apply Z.mul_lt_mono_pos_l; omega. }
+  Qed.
+
   Lemma N_le_1_l : forall p, (1 <= N.pos p)%N.
   Proof.
     destruct p; cbv; congruence.
@@ -2253,6 +2271,34 @@ Module Z.
              | [|- (_ < _)%Z] => omega
              end.
 
+    Lemma pow2_mod_range : forall a n m,
+        (0 <= n) ->
+        (n <= m) ->
+        (0 <= Z.pow2_mod a n < 2 ^ m).
+    Proof.
+      intros; unfold Z.pow2_mod.
+      rewrite Z.land_ones; [|assumption].
+      split; [apply Z.mod_pos_bound, pow2_gt_0; assumption|].
+      eapply Z.lt_le_trans; [apply Z.mod_pos_bound, pow2_gt_0; assumption|].
+      apply Z.pow_le_mono; [|assumption].
+      split; simpl; omega.
+    Qed.
+
+    Lemma shiftr_range : forall a n m,
+        (0 <= n)%Z ->
+        (0 <= m)%Z ->
+        (0 <= a < 2 ^ (n + m))%Z ->
+        (0 <= Z.shiftr a n < 2 ^ m)%Z.
+    Proof.
+      intros a n m H0 H1 H2; destruct H2.
+      split; [apply Z.shiftr_nonneg; assumption|].
+      rewrite Z.shiftr_div_pow2; [|assumption].
+      apply Z.div_lt_upper_bound; [apply pow2_gt_0; assumption|].
+      eapply Z.lt_le_trans; [eassumption|apply Z.eq_le_incl].
+      apply Z.pow_add_r; omega.
+    Qed.
+
+
     Lemma shiftr_le_mono: forall a b c d,
         (0 <= a)%Z
         -> (0 <= d)%Z
@@ -3284,3 +3330,4 @@ Ltac Zmod_to_equiv_modulo :=
          | [ |- context T[?x mod ?M = ?y mod ?M] ]
            => let T' := context T[Z.equiv_modulo M x y] in change T'
          end.
+

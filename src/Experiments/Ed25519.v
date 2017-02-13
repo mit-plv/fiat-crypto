@@ -461,25 +461,6 @@ Proof.
   intuition assumption.
 Qed.
 
-(* MOVE : ZUtil *)
-Lemma lor_shiftl_bounds : forall x y n m,
-  (0 <= n)%Z -> (0 <= m)%Z ->
-  (0 <= x < 2 ^ m)%Z ->
-  (0 <= y < 2 ^ n)%Z ->
-  (0 <= Z.lor y (Z.shiftl x n) < 2 ^ (n + m))%Z.
-Proof.
-  intros.
-  apply ZUtil.Z.lor_range.
-  { split; try omega.
-    apply Z.lt_le_trans with (m := (2 ^ n)%Z); try omega.
-    apply Z.pow_le_mono_r; omega. }
-  { rewrite Z.shiftl_mul_pow2 by omega.
-    rewrite Z.pow_add_r by omega.
-    split; ZUtil.Z.zero_bounds.
-    rewrite Z.mul_comm.
-    apply Z.mul_lt_mono_pos_l; omega. }
-Qed.
-
 (* TODO : automate (after moving feEnc) or consider moving this and feSign_correct pre-specific *)
 Lemma feEnc_correct : forall x,
     PointEncoding.Fencode x = feEnc (GF25519BoundedCommon.encode x).
@@ -1065,35 +1046,6 @@ Proof.
   rewrite WordUtil.Npow2_N, N2Z.inj_pow, nat_N_Z.
   apply Z.pow_le_mono; [|assumption].
   split; simpl; omega.
-Qed.
-
-(* TODO : move to ZUtil *)
-Lemma pow2_mod_range : forall a n m,
-  (0 <= n)%Z ->
-  (n <= m)%Z ->
-  (0 <= ZUtil.Z.pow2_mod a n < 2 ^ m)%Z.
-Proof.
-  intros; unfold ZUtil.Z.pow2_mod.
-  rewrite Z.land_ones; [|assumption].
-  split; [apply Z.mod_pos_bound, ZUtil.Z.pow2_gt_0; assumption|].
-  eapply Z.lt_le_trans; [apply Z.mod_pos_bound, ZUtil.Z.pow2_gt_0; assumption|].
-  apply Z.pow_le_mono; [|assumption].
-  split; simpl; omega.
-Qed.
-
-(* TODO : move to ZUtil *)
-Lemma shiftr_range : forall a n m,
-  (0 <= n)%Z ->
-  (0 <= m)%Z ->
-  (0 <= a < 2 ^ (n + m))%Z ->
-  (0 <= Z.shiftr a n < 2 ^ m)%Z.
-Proof.
-  intros a n m H0 H1 H2; destruct H2.
-  split; [apply Z.shiftr_nonneg; assumption|].
-  rewrite Z.shiftr_div_pow2; [|assumption].
-  apply Z.div_lt_upper_bound; [apply ZUtil.Z.pow2_gt_0; assumption|].
-  eapply Z.lt_le_trans; [eassumption|apply Z.eq_le_incl].
-  apply Z.pow_add_r; omega.
 Qed.
 
 (* MOVE : same place as feDec *) (* TODO : automate *)
