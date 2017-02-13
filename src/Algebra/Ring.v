@@ -60,6 +60,15 @@ Section Ring.
     eapply Group.cancel_left, mul_opp_l.
   Qed.
 
+  Lemma sub_zero_iff x y : x - y = 0 <-> x = y.
+  Proof.
+    split; intro E.
+    { rewrite <-(right_identity y), <- E, ring_sub_definition.
+      rewrite commutative, <-associative, commutative.
+      rewrite left_inverse, left_identity. reflexivity. }
+    { rewrite E, ring_sub_definition, right_inverse; reflexivity. }
+  Qed.
+
   Lemma neq_sub_neq_zero x y (Hxy:x<>y) : x-y <> 0.
   Proof.
     intro Hsub. apply Hxy. rewrite <-(left_identity y), <-Hsub, ring_sub_definition.
