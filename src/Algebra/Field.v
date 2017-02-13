@@ -1,4 +1,4 @@
-Require Import Crypto.Util.Relations Crypto.Util.Tactics.
+Require Import Crypto.Util.Relations Crypto.Util.Tactics Crypto.Util.Notations.
 Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 Require Import Crypto.Algebra Crypto.Algebra.Ring Crypto.Algebra.IntegralDomain.
 Require Coq.setoid_ring.Field_theory.
@@ -385,6 +385,30 @@ Module _fsatz_test.
 
     Lemma fractional_equation_no_solution x (A:x<>1) (B:x<>opp two) (C:x*x+x <> two) (X:nine/(x*x + x - two) = opp three/(x+two) + seven*inv(x-1)) : False.
     Proof. fsatz. Qed.
+
+    Local Notation "x ^ 2" := (x*x). Local Notation "x ^ 3" := (x^2*x).
+    Lemma weierstrass_associativity_main a b x1 y1 x2 y2 x4 y4
+          (A: y1^2=x1^3+a*x1+b)
+          (B: y2^2=x2^3+a*x2+b)
+          (C: y4^2=x4^3+a*x4+b)
+          (Hi3: x2 <> x1)
+          λ3 (Hλ3: λ3 = (y2-y1)/(x2-x1))
+          x3 (Hx3: x3 = λ3^2-x1-x2)
+          y3 (Hy3: y3 = λ3*(x1-x3)-y1)
+          (Hi7: x4 <> x3)
+          λ7 (Hλ7: λ7 = (y4-y3)/(x4-x3))
+          x7 (Hx7: x7 = λ7^2-x3-x4)
+          y7 (Hy7: y7 = λ7*(x3-x7)-y3)
+          (Hi6: x4 <> x2)
+          λ6 (Hλ6: λ6 = (y4-y2)/(x4-x2))
+          x6 (Hx6: x6 = λ6^2-x2-x4)
+          y6 (Hy6: y6 = λ6*(x2-x6)-y2)
+          (Hi9: x6 <> x1)
+          λ9 (Hλ9: λ9 = (y6-y1)/(x6-x1))
+          x9 (Hx9: x9 = λ9^2-x1-x6)
+          y9 (Hy9: y9 = λ9*(x1-x9)-y1)
+      : x7 = x9 /\ y7 = y9.
+    Proof. split; fsatz. Qed.
   End _test.
 End _fsatz_test.
 

@@ -489,3 +489,4 @@ src/Util/Tactics/SplitInContext.v
 src/Util/Tactics/UniquePose.v
 src/Util/Tactics/VM.v
 src/WeierstrassCurve/Pre.v
+src/WeierstrassCurve/WeierstrassCurveTheorems.v
