@@ -146,7 +146,7 @@ Ltac is_expr_constructor arg :=
   | Return _ => idtac
   end.
 
-Ltac inversion_wff_step :=
+Ltac inversion_wff_step_gen guard_tac :=
   let postprocess H :=
       (cbv [wff_code] in H;
        simpl in H;
@@ -156,11 +156,13 @@ Ltac inversion_wff_step :=
            end) in
   match goal with
   | [ H : wff _ ?x ?y |- _ ]
-    => is_expr_constructor x; is_expr_constructor y;
-       apply wff_encode in H; postprocess H
-  | [ H : wff _ ?x ?y |- _ ]
-    => first [ is_var x; is_var y; fail 1
-             | idtac ];
+    => guard_tac x y;
        apply wff_encode in H; postprocess H
   end.
+Ltac inversion_wff_step_constr :=
+  inversion_wff_step_gen ltac:(fun x y => is_expr_constructor x; is_expr_constructor y).
+Ltac inversion_wff_step_var :=
+  inversion_wff_step_gen ltac:(fun x y => first [ is_var x; is_var y; fail 1 | idtac ]).
+Ltac inversion_wff_step := first [ inversion_wff_step_constr | inversion_wff_step_var ].
+Ltac inversion_wff_constr := repeat inversion_wff_step_constr.
 Ltac inversion_wff := repeat inversion_wff_step.
