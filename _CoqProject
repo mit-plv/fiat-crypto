@@ -397,6 +397,7 @@ src/Util/Logic.v
 src/Util/NatUtil.v
 src/Util/Notations.v
 src/Util/NumTheoryUtil.v
+src/Util/NUtil.v
 src/Util/Option.v
 src/Util/PartiallyReifiedProp.v
 src/Util/PointedProp.v

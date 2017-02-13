@@ -8,6 +8,7 @@ Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Option.
+Require Import Crypto.Util.NUtil.
 Require Crypto.Specific.GF25519.
 Require Crypto.Specific.GF25519Bounded.
 Require Crypto.Specific.SC25519.
@@ -248,35 +249,6 @@ Proof.
   assumption.
 Qed.
 
-(* MOVE: I think this is all just generic N stuff? *)
-Module N.
-  Lemma size_le a b : (a <= b -> N.size a <= N.size b)%N.
-  Proof.
-    destruct (dec (a=0)%N), (dec (b=0)%N); subst; auto using N.le_0_l.
-    { destruct a; auto. }
-    { rewrite !N.size_log2 by assumption.
-      rewrite <-N.succ_le_mono.
-      apply N.log2_le_mono. }
-  Qed.
-
-  Lemma le_to_nat a b : (a <= b)%N <-> (N.to_nat a <= N.to_nat b)%nat.
-  Proof.
-    rewrite <-N.lt_succ_r.
-    rewrite <-Nat.lt_succ_r.
-    rewrite <-Nnat.N2Nat.inj_succ.
-    rewrite <-NatUtil.Nat2N_inj_lt.
-    rewrite !Nnat.N2Nat.id.
-    reflexivity.
-  Qed.
-
-  Lemma size_nat_le a b : (a <= b)%N -> (N.size_nat a <= N.size_nat b)%nat.
-  Proof.
-    rewrite !IterAssocOp.Nsize_nat_equiv.
-    rewrite <-le_to_nat.
-    apply size_le.
-  Qed.
-End N.
-
 Section SRepERepMul.
   Import Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Classes.Equivalence.
   Import Coq.NArith.NArith Coq.PArith.BinPosDef.
@@ -323,7 +295,7 @@ Section SRepERepMul.
       apply Z2N.inj_lt in Hu; try (eauto || vm_decide); [];
         apply Z2N.inj_le in Hl; try (eauto || vm_decide); [].
       clear Hl; generalize dependent (Z.to_N z); intro x; intros.
-      rewrite Nsize_nat_equiv.
+      rewrite N.size_nat_equiv.
       destruct (dec (x = 0%N)); subst; try vm_decide; [];
         rewrite N.size_log2 by assumption.
       rewrite N2Nat.inj_succ; assert (N.to_nat (N.log2 x) < ll); try omega.
