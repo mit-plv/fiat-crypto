@@ -109,6 +109,7 @@ src/Reflection/EtaWf.v
 src/Reflection/ExprInversion.v
 src/Reflection/FilterLive.v
 src/Reflection/Inline.v
+src/Reflection/InlineCast.v
 src/Reflection/InlineInterp.v
 src/Reflection/InlineWf.v
 src/Reflection/InputSyntax.v
@@ -124,11 +125,14 @@ src/Reflection/MultiSizeTest.v
 src/Reflection/MultiSizeTest2.v
 src/Reflection/Reify.v
 src/Reflection/Relations.v
+src/Reflection/SmartBound.v
+src/Reflection/SmartCast.v
 src/Reflection/SmartMap.v
 src/Reflection/Syntax.v
 src/Reflection/TestCase.v
 src/Reflection/Tuple.v
 src/Reflection/TypeInversion.v
+src/Reflection/TypeUtil.v
 src/Reflection/Wf.v
 src/Reflection/WfInversion.v
 src/Reflection/WfProofs.v

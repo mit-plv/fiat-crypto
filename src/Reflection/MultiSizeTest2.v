@@ -1,5 +1,6 @@
 Require Import Coq.omega.Omega.
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.TypeUtil.
 Require Import Crypto.Reflection.BoundByCast.
 
 (** * Preliminaries: bounded and unbounded number types *)
