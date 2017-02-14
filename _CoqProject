@@ -99,6 +99,7 @@ src/Reflection/Application.v
 src/Reflection/ApplicationLemmas.v
 src/Reflection/ApplicationRelations.v
 src/Reflection/BoundByCast.v
+src/Reflection/BoundByCastWf.v
 src/Reflection/CommonSubexpressionElimination.v
 src/Reflection/Conversion.v
 src/Reflection/CountLets.v
