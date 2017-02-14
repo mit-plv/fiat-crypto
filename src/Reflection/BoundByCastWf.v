@@ -5,6 +5,7 @@ Require Import Crypto.Reflection.EtaWf.
 Require Import Crypto.Reflection.InlineCastWf.
 Require Import Crypto.Reflection.LinearizeWf.
 Require Import Crypto.Reflection.SmartBoundWf.
+Require Import Crypto.Reflection.MapCastWf.
 
 (*
 Require Import Crypto.Reflection.SmartBound.
@@ -52,5 +53,6 @@ Section language.
     apply Wf_InlineCast; auto.
     apply Wf_Linearize.
     apply Wf_SmartBound; auto.
+    apply Wf_MapInterpCast; auto.
   Admitted.
 End language.
