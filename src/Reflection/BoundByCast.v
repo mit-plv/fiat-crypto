@@ -30,8 +30,8 @@ Section language.
   Definition Boundify {t1} (e1 : Expr t1) args2
     : Expr _
     := ExprEta
-         (InlineConstGen
-            (@push_cast _ _ _ base_type_bl_transparent base_type_leb Cast is_cast is_const)
+         (InlineCast
+            _ base_type_bl_transparent base_type_leb Cast is_cast is_const
             (Linearize
                (SmartBound
                   _

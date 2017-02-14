@@ -93,7 +93,7 @@ Section language.
     Qed.
   End with_var.
 
-  Lemma WfExprEtaGen
+  Lemma Wf_ExprEtaGen
         (eta : forall {A B}, A * B -> A * B)
         (eq_eta : forall A B x, @eta A B x = x)
         {t e}
@@ -104,16 +104,18 @@ Section language.
         symmetry; apply wff_exprf_eta_gen;
           auto.
   Qed.
-  Lemma WfExprEta
+  Lemma Wf_ExprEta
         {t e}
     : Wf (ExprEta e) <-> @Wf base_type_code op t e.
   Proof.
     unfold Wf; setoid_rewrite wf_expr_eta; reflexivity.
   Qed.
-  Lemma WfExprEta'
+  Lemma Wf_ExprEta'
         {t e}
     : Wf (ExprEta' e) <-> @Wf base_type_code op t e.
   Proof.
     unfold Wf; setoid_rewrite wf_expr_eta'; reflexivity.
   Qed.
 End language.
+
+Hint Resolve <- Wf_ExprEta Wf_ExprEta' : wf.
