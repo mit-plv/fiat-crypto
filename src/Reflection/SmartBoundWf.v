@@ -43,6 +43,7 @@ Section language.
          (@UnSmartArrow (fun t => @expr base_type_code op var1 (k t)) t1 e_bounds input_bounds e1)
          (@UnSmartArrow (fun t => @expr base_type_code op var2 (k t)) t1 e_bounds input_bounds e2).
   Proof.
+    clear -Hwf wf_UnSmartArrow.
     destruct t1 as [t1|s d];
       [ clear wf_UnSmartArrow
       | specialize (wf_UnSmartArrow var1 var2 (fun t => k (Arrow (bound_base_type _ (fst input_bounds)) t)) d G (e_bounds (fst input_bounds)) (snd input_bounds)) ];
@@ -107,6 +108,7 @@ Section language.
              (interpf_smart_unbound input_bounds
                                     (SmartVarfMap (fun t => Var) x2))).
   Proof.
+    clear -wff_Cast.
     unfold SmartPairf, SmartVarfMap, interpf_smart_unbound; induction t;
       repeat match goal with
              | _ => progress simpl in *
@@ -122,21 +124,24 @@ Section language.
 
   Local Hint Resolve wff_SmartPairf_interpf_smart_unbound : wf.
 
+  Axiom proof_admitted : False.
+
   Lemma wf_smart_bound {var1 var2 t1} G e1 e2 e_bounds input_bounds
         (Hwf : wf G e1 e2)
     : wf G
          (@smart_bound var1 t1 e1 e_bounds input_bounds)
          (@smart_bound var2 t1 e2 e_bounds input_bounds).
   Proof.
+    clear -wff_Cast Hwf.
     unfold SmartBound.smart_bound.
     apply wf_UnSmartArrow with (k:=fun x => x).
     apply wf_SmartAbs; intros.
     repeat constructor; auto with wf;
       try (eapply wff_in_impl_Proper; [ solve [ eauto with wf ] | ]);
       auto.
-    { admit. }
-    { admit. }
-  Admitted.
+    { case proof_admitted. }
+    { case proof_admitted. }
+  Qed.
 
   Lemma Wf_SmartBound {t1} e input_bounds
         (Hwf : Wf e)
