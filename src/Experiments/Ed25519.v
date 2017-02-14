@@ -121,60 +121,6 @@ Definition EToRep :=
 Definition ZNWord sz x := Word.NToWord sz (BinInt.Z.to_N x).
 Definition WordNZ {sz} (w : Word.word sz) := BinInt.Z.of_N (Word.wordToN w).
 
-(* TODO :
-   GF25519.pack does most of the work here, but the spec currently talks
-   about 256-bit words and [pack] makes a sequence of short (in this case
-   32- and 31-bit) Zs. We should either automate this transformation or change
-   the spec.
- *)
-(* MOVE : pre-Specific *)
-Definition feEnc (x : GF25519BoundedCommon.fe25519) : Word.word 255 :=
-  let '(x7, x6, x5, x4, x3, x2, x1, x0) :=
-      (GF25519BoundedCommon.proj1_wire_digits (GF25519Bounded.pack (GF25519Bounded.freeze x))) in
-  Word.combine (ZNWord 32 x0)
-    (Word.combine (ZNWord 32 x1)
-      (Word.combine (ZNWord 32 x2)
-        (Word.combine (ZNWord 32 x3)
-          (Word.combine (ZNWord 32 x4)
-            (Word.combine (ZNWord 32 x5)
-              (Word.combine (ZNWord 32 x6) (ZNWord 31 x7))))))).
-
-(* MOVE : pre-Specific *)
-Definition feDec (w : Word.word 255) : option GF25519BoundedCommon.fe25519 :=
-  let w0 := Word.split1 32 _ w in
-  let a0 := Word.split2 32 _ w in
-  let w1 := Word.split1 32 _ a0 in
-  let a1 := Word.split2 32 _ a0 in
-  let w2 := Word.split1 32 _ a1 in
-  let a2 := Word.split2 32 _ a1 in
-  let w3 := Word.split1 32 _ a2 in
-  let a3 := Word.split2 32 _ a2 in
-  let w4 := Word.split1 32 _ a3 in
-  let a4 := Word.split2 32 _ a3 in
-  let w5 := Word.split1 32 _ a4 in
-  let a5 := Word.split2 32 _ a4 in
-  let w6 := Word.split1 32 _ a5 in
-  let w7 := Word.split2 32 _ a5 in
-  let result := (GF25519Bounded.unpack (GF25519BoundedCommon.word31_to_unbounded_word w7,
-                                        GF25519BoundedCommon.word32_to_unbounded_word w6,
-                                        GF25519BoundedCommon.word32_to_unbounded_word w5,
-                                        GF25519BoundedCommon.word32_to_unbounded_word w4,
-                                        GF25519BoundedCommon.word32_to_unbounded_word w3,
-                                        GF25519BoundedCommon.word32_to_unbounded_word w2,
-                                        GF25519BoundedCommon.word32_to_unbounded_word w1,
-                                        GF25519BoundedCommon.word32_to_unbounded_word w0)) in
-  if GF25519BoundedCommon.w64eqb (GF25519Bounded.ge_modulus result) (GF25519BoundedCommon.ZToWord64 1)
-  then None else (Some result).
-
-Definition ERepEnc :=
-  (PointEncoding.Kencode_point
-         (Ksign := feSign)
-         (Kenc := feEnc)
-         (Kpoint := Erep)
-         (Kpoint_to_coord :=  fun P => CompleteEdwardsCurve.E.coordinates
-                                (ExtendedCoordinates.Extended.to_twisted P (field:=GF25519Bounded.field25519)))
-  ).
-
 Definition SRep := SC25519.SRep.
 Definition S2Rep := SC25519.S2Rep.
 
@@ -461,76 +407,6 @@ Proof.
   intuition assumption.
 Qed.
 
-(* TODO : automate (after moving feEnc) or consider moving this and feSign_correct pre-specific *)
-Lemma feEnc_correct : forall x,
-    PointEncoding.Fencode x = feEnc (GF25519BoundedCommon.encode x).
-Proof.
-  cbv [feEnc PointEncoding.Fencode]; intros.
-  rewrite GF25519Bounded.pack_correct, GF25519Bounded.freeze_correct.
-  rewrite GF25519BoundedCommon.proj1_fe25519_encode.
-  match goal with |- appcontext [GF25519.pack ?x] =>
-                  remember (GF25519.pack x) end.
-  transitivity (ZNWord 255 (Pow2Base.decode_bitwise GF25519.wire_widths (Tuple.to_list 8 w))).
-  { cbv [ZNWord].
-    do 2 apply f_equal.
-    subst w.
-    pose proof GF25519.freezePreconditions25519.
-    match goal with
-      |- appcontext [GF25519.freeze ?x ] =>
-      let A := fresh "H" in
-      pose proof (ModularBaseSystemProofs.freeze_decode x) as A end.
-    pose proof (ge_modulus_freeze x); pose proof (bounded_freeze x).
-    repeat match goal with
-           | |- _ => rewrite Tuple.to_list_from_list
-           | |- _ => progress cbv [ModularBaseSystem.pack ModularBaseSystemList.pack]
-           | |- _ => progress rewrite ?GF25519.pack_correct, ?GF25519.freeze_correct,
-             ?ModularBaseSystemOpt.pack_correct,
-             ?ModularBaseSystemOpt.freeze_opt_correct by reflexivity
-           | |- _ => rewrite Pow2BaseProofs.decode_bitwise_spec
-               by (auto using Conversion.convert_bounded,
-                   Conversion.length_convert; cbv [In GF25519.wire_widths];
-                   intuition omega)
-           | H : length ?ls = ?n |- appcontext [Tuple.from_list_default _ ?n ?ls] =>
-               rewrite Tuple.from_list_default_eq with (pf := H)
-           | |- appcontext [Tuple.from_list_default _ ?n ?ls] =>
-               assert (length ls = n) by
-               (rewrite ModularBaseSystemListProofs.length_freeze;
-               try rewrite Tuple.length_to_list; reflexivity)
-           | |- _ => rewrite <-Conversion.convert_correct by auto
-           end.
-      rewrite <-ModularBaseSystemProofs.Fdecode_decode_mod with (us := ModularBaseSystem.encode x) by apply ModularBaseSystemProofs.encode_rep.
-      match goal with H : _ = ?b |- ?b = _ => rewrite <-H; clear H end.
-      cbv [ModularBaseSystem.freeze].
-      rewrite Tuple.to_list_from_list.
-      rewrite Z.mod_small by (apply ModularBaseSystemListProofs.ge_modulus_spec; auto; cbv; congruence).
-      f_equal. }
-  { assert (Pow2Base.bounded GF25519.wire_widths (Tuple.to_list 8 w)).
-    { subst w.
-      rewrite GF25519.pack_correct, ModularBaseSystemOpt.pack_correct.
-      cbv [ModularBaseSystem.pack ModularBaseSystemList.pack].
-      rewrite Tuple.to_list_from_list.
-      apply Conversion.convert_bounded. }
-    { destruct w;
-      repeat match goal with p : (_ * Z)%type |- _ => destruct p end.
-      cbv [Tuple.to_list Tuple.to_list'] in *.
-      rewrite Pow2BaseProofs.bounded_iff in *.
-      (* TODO : Is there a better way to do this? *)
-      pose proof (H 0).
-      pose proof (H 1).
-      pose proof (H 2).
-      pose proof (H 3).
-      pose proof (H 4).
-      pose proof (H 5).
-      pose proof (H 6).
-      pose proof (H 7).
-      clear H.
-      cbv [GF25519.wire_widths nth_default nth_error value] in *.
-      repeat rewrite combine_ZNWord by (rewrite ?Znat.Nat2Z.inj_add; simpl Z.of_nat; repeat apply lor_shiftl_bounds; omega).
-      cbv - [ZNWord Z.lor Z.shiftl].
-      rewrite Z.shiftl_0_l.
-      rewrite Z.lor_0_r.
-      reflexivity. } }
-Qed.
 
 (* TODO : automate *)
 Lemma initial_bounds : forall x n,
@@ -662,67 +538,6 @@ Proof.
     intuition subst; reflexivity.
 Qed.
 
-(* MOVE : wherever feEnc goes *)
-Lemma Proper_feEnc : Proper (GF25519BoundedCommon.eq ==> eq) feEnc.
-Proof.
-  pose proof GF25519.freezePreconditions25519.
-  repeat intro; cbv [feEnc].
-  rewrite !GF25519Bounded.pack_correct, !GF25519Bounded.freeze_correct.
-  rewrite !GF25519.freeze_correct, !ModularBaseSystemOpt.freeze_opt_correct
-    by (rewrite ?Tuple.length_to_list; reflexivity).
-  cbv [GF25519BoundedCommon.eq ModularBaseSystem.eq] in *.
-  match goal with
-  H : ModularBaseSystem.decode ?x = ModularBaseSystem.decode ?y |- _ =>
-  let A := fresh "H" in
-  let HP := fresh "H" in
-  let HQ := fresh "H" in
-    pose proof (ModularBaseSystemProofs.freeze_canonical
-                  (freeze_pre := GF25519.freezePreconditions25519)
-                  x y (ModularBaseSystem.decode x)
-                (ModularBaseSystem.decode y) eq_refl eq_refl);
-      match type of A with ?P -> ?Q -> _ =>
-                           assert P as HP by apply initial_bounds;
-                             assert Q as HQ by apply initial_bounds end;
-      specialize (A HP HQ); clear HP HQ; apply A in H
-  end.
-  repeat match goal with |- appcontext [GF25519.pack ?x] => remember (GF25519.pack x) end.
-  match goal with x : GF25519.wire_digits, y : GF25519.wire_digits |- _ =>
-                  assert (Tuple.fieldwise (n := length GF25519.wire_widths) eq x y) as Heqxy end.
-  { subst.
-    rewrite !convert_freezes.
-    erewrite !Tuple.from_list_default_eq.
-    rewrite !Tuple.from_list_to_list.
-    apply Proper_pack.
-    assumption. }
-  { cbv [length GF25519.wire_digits] in *.
-    repeat match goal with p : (_ * _)%type |- _ => destruct p end.
-    cbv [GF25519.wire_widths length Tuple.fieldwise Tuple.fieldwise' fst snd] in *.
-    repeat match goal with H : _ /\ _ |- _ => destruct H end;
-      subst; reflexivity. }
-  Grab Existential Variables.
-  rewrite Tuple.length_to_list; reflexivity.
-  rewrite Tuple.length_to_list; reflexivity.
-Qed.
-
-Lemma ERepEnc_correct P : Eenc P = ERepEnc (EToRep P).
-Proof.
-  cbv [Eenc ERepEnc EToRep sign Fencode].
-  transitivity (PointEncoding.encode_point (b := 255) P);
-    [ | eapply (PointEncoding.Kencode_point_correct
-           (Ksign_correct := feSign_correct)
-           (Kenc_correct := feEnc_correct)
-           (Proper_Ksign := Proper_feSign)
-           (Proper_Kenc := Proper_feEnc))
-    ].
-  reflexivity.
-  Grab Existential Variables.
-  intros.
-  eapply @CompleteEdwardsCurveTheorems.E.Proper_coordinates.
-  { apply GF25519Bounded.field25519. }
-  { exact _. }
-  { apply ExtendedCoordinates.Extended.to_twisted_from_twisted. }
-Qed.
-
 Lemma ext_eq_correct : forall p q : Erep,
   ExtendedCoordinates.Extended.eq (field:=GF25519Bounded.field25519) p q <->
   Tuple.fieldwise (n := 2) GF25519BoundedCommon.eq (extended_to_coord p) (extended_to_coord q).
@@ -790,6 +605,10 @@ Proof.
 (* Time Qed. (* Finished transaction in 1646.167 secs (1645.753u,0.339s) (successful) *) *)
 Admitted.
 
+Axiom ERepEnc : Erep -> Word.word b.
+Axiom ERepEnc_correct : (forall P : E, Eenc P = ERepEnc (EToRep P)).
+Axiom Proper_ERepEnc : Proper (ExtendedCoordinates.Extended.eq ==> eq) ERepEnc.
+
 Definition sign := @EdDSARepChange.sign E
          (@CompleteEdwardsCurveTheorems.E.eq Fq (@eq Fq) (@ModularArithmetic.F.one q)
             (@ModularArithmetic.F.add q) (@ModularArithmetic.F.mul q) Spec.Ed25519.a Spec.Ed25519.d)
@@ -842,7 +661,7 @@ Let sign_correct : forall pk sk {mlen} (msg:Word.word mlen), sign pk sk _ msg = 
       (* Ahomom := *) Ahomom
       (* ERepEnc := *) ERepEnc
       (* ERepEnc_correct := *) ERepEnc_correct
-      (* Proper_ERepEnc := *) (PointEncoding.Proper_Kencode_point (Kpoint_eq_correct := ext_eq_correct) (Proper_Kenc := Proper_feEnc))
+      (* Proper_ERepEnc := *) Proper_ERepEnc
       (* SRep := *) SRep
       (* SRepEq := *) SC25519.SRepEq (*(Tuple.fieldwise Logic.eq)*)
       (* H0 := *) SC25519.SRepEquiv (* Tuple.Equivalence_fieldwise*)
@@ -925,7 +744,7 @@ Proof.
     split; break_match; intros; inversion_option; subst; f_equal;
   repeat match goal with
          | |- _ => rewrite !WordUtil.wordToN_NToWord_idempotent in *
-             by (apply ZToN_NPow2_lt; split; try omega; eapply Z.lt_le_trans;
+             by (apply N.ZToN_NPow2_lt; split; try omega; eapply Z.lt_le_trans;
                  [ intuition eassumption | ]; cbv; congruence)
          | |- _ => rewrite WordUtil.NToWord_wordToN
          | |- _ => rewrite Z2N.id in * by omega
@@ -950,26 +769,6 @@ Proof.
   unfold SRepDec, S2Rep, SC25519.S2Rep; intros; reflexivity.
 Qed.
 
-Definition ERepDec :=
-    (@PointEncoding.Kdecode_point
-         _
-         GF25519BoundedCommon.fe25519
-         GF25519BoundedCommon.eq
-         GF25519BoundedCommon.zero
-         GF25519BoundedCommon.one
-         GF25519Bounded.opp
-         GF25519Bounded.add
-         GF25519Bounded.sub
-         GF25519Bounded.mul
-         GF25519BoundedCommon.div
-         _ a d feSign
-         _ (ExtendedCoordinates.Extended.from_twisted
-              (field := GF25519Bounded.field25519)
-              (prm := twedprm_ERep)
-           )
-         feDec GF25519Bounded.sqrt
-    ).
-
 Lemma extended_to_coord_from_twisted: forall pt,
   Tuple.fieldwise (n := 2) GF25519BoundedCommon.eq
      (extended_to_coord (ExtendedCoordinates.Extended.from_twisted pt))
@@ -978,163 +777,6 @@ Proof.
   intros; cbv [extended_to_coord].
   rewrite ExtendedCoordinates.Extended.to_twisted_from_twisted.
   reflexivity.
-Qed.
-
-(* MOVE : same place as feDec *) (* TODO : automate *)
-Lemma feDec_correct : forall w : Word.word (pred b),
-        option_eq GF25519BoundedCommon.eq
-          (option_map GF25519BoundedCommon.encode
-                      (PointEncoding.Fdecode w)) (feDec w).
-Proof.
-  intros; cbv [PointEncoding.Fdecode feDec].
-  Print GF25519BoundedCommon.eq.
-  rewrite <-GF25519BoundedCommon.word64eqb_Zeqb.
-  rewrite GF25519Bounded.ge_modulus_correct.
-  rewrite GF25519BoundedCommon.word64ToZ_ZToWord64 by
-    (rewrite GF25519BoundedCommon.unfold_Pow2_64;
-     cbv [GF25519BoundedCommon.Pow2_64]; omega).
-  rewrite GF25519.ge_modulus_correct.
-  rewrite ModularBaseSystemOpt.ge_modulus_opt_correct.
-  match goal with
-    |- appcontext [GF25519Bounded.unpack ?x] =>
-    assert ((Z.of_N (Word.wordToN w)) = BaseSystem.decode (Pow2Base.base_from_limb_widths PseudoMersenneBaseParams.limb_widths) (Tuple.to_list 10 (GF25519BoundedCommon.proj1_fe25519 (GF25519Bounded.unpack x)))) end.
-  {
-    rewrite GF25519Bounded.unpack_correct.
-  rewrite GF25519.unpack_correct, ModularBaseSystemOpt.unpack_correct.
-
-  cbv [GF25519BoundedCommon.proj1_wire_digits
-       GF25519BoundedCommon.wire_digitsWToZ
-       GF25519BoundedCommon.proj1_wire_digitsW
-       GF25519BoundedCommon.app_wire_digits
-       HList.mapt HList.mapt'
-       length GF25519.wire_widths
-       fst snd
-      ].
-
-  cbv [GF25519BoundedCommon.proj_word
-       GF25519BoundedCommon.word31_to_unbounded_word
-       GF25519BoundedCommon.word32_to_unbounded_word
-       GF25519BoundedCommon.word_to_unbounded_word
-       GF25519BoundedCommon.Build_bounded_word
-       GF25519BoundedCommon.Build_bounded_word'
-      ].
-  rewrite !GF25519BoundedCommon.word64ToZ_ZToWord64 by
-    (rewrite GF25519BoundedCommon.unfold_Pow2_64;
-     cbv [GF25519BoundedCommon.Pow2_64];
-     apply WordNZ_range; cbv; congruence).
-  rewrite !WordNZ_split1.
-  rewrite !WordNZ_split2.
-  simpl Z.of_nat.
-  cbv [ModularBaseSystem.eq].
-  match goal with
-    |- appcontext [@ModularBaseSystem.unpack _ _ ?ls _ _ ?t] =>
-    assert (Pow2Base.bounded ls (Tuple.to_list (length ls) t)) end.
-  { cbv [Pow2Base.bounded length].
-    intros.
-    destruct (lt_dec i 8).
-    { cbv [Tuple.to_list Tuple.to_list' fst snd].
-        assert (i = 0 \/ i = 1 \/ i = 2 \/ i = 3 \/ i = 4 \/ i = 5 \/ i = 6 \/ i = 7) by omega.
-        repeat match goal with H : (_ \/ _)%type |- _ => destruct H; subst end;
-        cbv [nth_default nth_error value]; try (apply pow2_mod_range; omega).
-            repeat apply shiftr_range; try omega; apply WordNZ_range_mono; cbv;
-            congruence. }
-    { rewrite !nth_default_out_of_bounds
-        by (rewrite ?Tuple.length_to_list; cbv [length]; omega).
-      rewrite Z.pow_0_r. omega. } }
-  cbv [ModularBaseSystem.unpack ModularBaseSystemList.unpack].
-  rewrite Tuple.to_list_from_list.
-  rewrite <-Conversion.convert_correct by (auto || rewrite Tuple.to_list; reflexivity).
-  rewrite <-Pow2BaseProofs.decode_bitwise_spec by (auto || cbv [In]; intuition omega).
-  cbv [Tuple.to_list Tuple.to_list' length fst snd Pow2Base.decode_bitwise Pow2Base.decode_bitwise' nth_default nth_error value ].
-  clear.
-  apply Z.bits_inj'.
-  intros.
-  rewrite Z.shiftl_0_l.
-  rewrite Z.lor_0_r.
-  repeat match goal with |- appcontext[@Word.wordToN (?x + ?y) w] =>
-                  change (@Word.wordToN (x + y) w) with (@Word.wordToN (pred b) w) end.
-  assert (
-      0 <= n < 32 \/
-      32 <= n < 64 \/
-      64 <= n < 96 \/
-      96 <= n < 128 \/
-      128 <= n < 160 \/
-      160 <= n < 192 \/
-      192 <= n < 224 \/
-      224 <= n < 256 \/
-      256 <= n)%Z by omega.
-  repeat match goal with H : (_ \/ _)%type |- _ => destruct H; subst end;
-  repeat match goal with
-         | |- _ => rewrite Z.lor_spec
-         | |- _ => rewrite Z.shiftl_spec by omega
-         | |- _ => rewrite Z.shiftr_spec by omega
-         | |- _ => rewrite Z.testbit_neg_r by omega
-         | |- _ => rewrite ZUtil.Z.testbit_pow2_mod by omega;
-                     VerdiTactics.break_if; try omega
-         end;
-  repeat match goal with
-        | |- _ = (false || _)%bool => rewrite Bool.orb_false_l
-        | |- ?x = (?x || ?y)%bool => replace y with false;
-            [ rewrite Bool.orb_false_r; reflexivity | ]
-        | |- false = (?x || ?y)%bool => replace y with false;
-            [ rewrite Bool.orb_false_r;
-                replace x with false; [ reflexivity | ]
-            | ]
-        | |- false = Z.testbit _ _ =>
-            rewrite Z.testbit_neg_r by omega; reflexivity
-        | |- Z.testbit ?w ?n = Z.testbit ?w ?m =>
-          replace m with n by omega; reflexivity
-        | |- Z.testbit ?w ?n = (Z.testbit ?w ?m || _)%bool =>
-          replace m with n by omega
-         end.
-  }
-  match goal with
-    |- option_eq _ (option_map _ (if Z_lt_dec ?a ?b then Some _ else None)) (if (?X =? 1)%Z then None else Some _) =>
-    assert ((a < b)%Z <-> X = 0%Z) end.
-  {
-    rewrite ModularBaseSystemListProofs.ge_modulus_spec;
-      [ | cbv; congruence | rewrite Tuple.length_to_list; reflexivity | ].
-    Focus 2. {
-      rewrite GF25519Bounded.unpack_correct.
-      rewrite GF25519.unpack_correct, ModularBaseSystemOpt.unpack_correct.
-      cbv [ModularBaseSystem.unpack].
-      rewrite Tuple.to_list_from_list.
-      cbv [ModularBaseSystemList.unpack].
-      apply Conversion.convert_bounded.
-    } Unfocus.
-    rewrite <-H.
-    intuition; try omega.
-    apply Znat.N2Z.is_nonneg.
-  }
-
-  do 2 VerdiTactics.break_if;
-  [
-  match goal with H: ?P, Hiff : ?P <-> ?x = 0%Z |- _ =>
-                  let A := fresh "H" in
-                  pose proof ((proj1 Hiff) H) as A;
-                    rewrite A in *; discriminate
-  end
-  | | reflexivity |
-  match goal with
-    H: ~ ?P, Hiff : ?P <-> ModularBaseSystemList.ge_modulus ?x = 0%Z
-    |- _ =>
-    exfalso; apply H; apply Hiff;
-    destruct (ModularBaseSystemListProofs.ge_modulus_01 x) as [Hgm | Hgm];
-      rewrite Hgm in *; try discriminate; reflexivity
-  end ].
-
-  cbv [option_map option_eq].
-  cbv [GF25519BoundedCommon.eq].
-  rewrite GF25519BoundedCommon.proj1_fe25519_encode.
-  cbv [ModularBaseSystem.eq].
-  etransitivity.
-  Focus 2. {
-    cbv [ModularBaseSystem.decode ModularBaseSystemList.decode].
-    cbv [length PseudoMersenneBaseParams.limb_widths GF25519.params25519] in H |- *.
-    rewrite <-H.
-    reflexivity. } Unfocus.
-  apply ModularBaseSystemProofs.encode_rep.
-
 Qed.
 
 Lemma Fsqrt_minus1_correct :
@@ -1297,26 +939,6 @@ Proof.
   eapply f_equal. eapply f_equal. eapply f_equal. rewrite Hxy. reflexivity.
 Qed.
 
-Lemma ERepDec_correct : forall w : Word.word b,
-    option_eq ExtendedCoordinates.Extended.eq (ERepDec w) (@option_map E Erep EToRep (Edec w)).
-Proof.
-  exact (@PointEncoding.Kdecode_point_correct
-                (pred b) _ Spec.Ed25519.a Spec.Ed25519.d _
-                GF25519.modulus_gt_2 bound_check255
-                _ _ _ _ _ _ _ _ _ _ GF25519Bounded.field25519
-                _ _ _ _ _ phi_a phi_d feSign feSign_correct _
-                (ExtendedCoordinates.Extended.from_twisted
-                  (field := GF25519Bounded.field25519)
-                  (prm := twedprm_ERep))
-                extended_to_coord
-                extended_to_coord_from_twisted
-                _ ext_eq_correct _ _ encode_eq_iff
-                feDec GF25519Bounded.sqrt _ _ feDec_correct
-                (@PrimeFieldTheorems.F.sqrt_5mod8 _ Fsqrt_minus1)
-                sqrt_correct
-             ).
-Qed.
-
 Lemma eq_enc_E_iff : forall (P_ : Word.word b) (P : E),
  Eenc P = P_ <->
  Option.option_eq CompleteEdwardsCurveTheorems.E.eq (Edec P_) (Some P).
@@ -1328,6 +950,10 @@ Proof.
   eexists.
   symmetry; eassumption.
 Qed.
+
+Axiom ERepDec : Word.word b -> option Erep.
+Axiom ERepDec_correct : forall w : Word.word b,
+ option_eq ExtendedCoordinates.Extended.eq (ERepDec w) (option_map EToRep (Edec w)).
 
 Definition verify := @verify E b SHA512 B Erep ErepAdd
          (@ExtendedCoordinates.Extended.opp GF25519BoundedCommon.fe25519
@@ -1377,7 +1003,7 @@ Let verify_correct :
       (* Ahomom := *) Ahomom
       (* ERepEnc := *) ERepEnc
       (* ERepEnc_correct := *) ERepEnc_correct
-      (* Proper_ERepEnc := *) (PointEncoding.Proper_Kencode_point (Kpoint_eq_correct := ext_eq_correct) (Proper_Kenc := Proper_feEnc))
+      (* Proper_ERepEnc := *) Proper_ERepEnc 
       (* ERepDec := *) ERepDec
       (* ERepDec_correct := *) ERepDec_correct
       (* SRep := *) SRep (*(Tuple.tuple (Word.word 32) 8)*)
