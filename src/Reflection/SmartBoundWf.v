@@ -35,6 +35,16 @@ Section language.
   Local Notation UnSmartArrow := (@UnSmartArrow _ interp_base_type_bounds bound_base_type).
   Local Notation interpf_smart_bound := (@interpf_smart_bound _ op interp_base_type_bounds bound_base_type Cast).
   Local Notation interpf_smart_unbound := (@interpf_smart_unbound _ op interp_base_type_bounds bound_base_type Cast).
+  Local Notation bound_op := (@bound_op _ _ _ interp_op_bounds bound_base_type _ base_type_bl_transparent base_type_leb Cast genericize_op).
+
+  Lemma wff_bound_op
+        ovar1 ovar2 G src1 dst1 src2 dst2 opc1 opc2 e1 e2 args2
+        (Hwf : wff G (var1:=ovar1) (var2:=ovar2) e1 e2)
+    : wff G
+          (@bound_op ovar1 src1 dst1 src2 dst2 opc1 opc2 e1 args2)
+          (@bound_op ovar2 src1 dst1 src2 dst2 opc1 opc2 e2 args2).
+  Proof.
+  Admitted.
 
   Fixpoint wf_UnSmartArrow {var1 var2} k t1 G e_bounds input_bounds e1 e2
            (Hwf : wf G e1 e2)
