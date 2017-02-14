@@ -122,25 +122,18 @@ Section language.
     Qed.
 
     Lemma wf_SmartAbs {A B} G e1 e2
-          (Hwf : forall G' x y, wf (G' ++ G) x y -> wf (G' ++ G) (e1 x) (e2 y))
+          (Hwf : forall G' x y, wff (G' ++ G) x y -> wf (G' ++ G) (e1 x) (e2 y))
       : @wf _ op var1 var2 G _ (@SmartAbs _ _ _ A B e1) (@SmartAbs _ _ _ A B e2).
     Proof.
       revert dependent G; revert dependent B; induction A; intros.
       { simpl; constructor; intros.
-        apply (Hwf (_::nil)%list); do 2 constructor; simpl; left; reflexivity. }
-      { apply (Hwf nil); do 2 constructor. }
+        apply (Hwf (_::nil)%list); constructor; left; reflexivity. }
+      { apply (Hwf nil); constructor. }
       { simpl in *.
-        do 2 lazymatch goal with
-             | [ H : forall B (e1 e2 : expr (Tflat ?A) -> _) G H', wf _ (SmartAbs (fun x => e1 (Return x))) (SmartAbs _)
-                                                                   |- wf _ (SmartAbs (fun x' : exprf ?A => @?e1' x'))
-                                                                         (SmartAbs ?e2') ]
-               => apply (H _ (fun k => e1' (invert_Return k)) (fun k => e2' (invert_Return k))); intros
-             end.
+        do 2 match goal with H : _ |- _ => apply H; intros end.
         rewrite List.app_assoc; apply Hwf; rewrite <- List.app_assoc.
-        repeat constructor.
-        { admit. }
-        { admit. } }
-    Admitted.
+        eauto with wf. }
+    Qed.
   End with_var.
 
   Definition duplicate_type {var1 var2}
