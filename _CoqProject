@@ -124,6 +124,7 @@ src/Reflection/LinearizeInterp.v
 src/Reflection/LinearizeWf.v
 src/Reflection/Map.v
 src/Reflection/MapCast.v
+src/Reflection/MapCastWf.v
 src/Reflection/MultiSizeTest.v
 src/Reflection/MultiSizeTest2.v
 src/Reflection/Reify.v
