@@ -171,3 +171,5 @@ Section language.
     Qed.
   End gen.
 End language.
+
+Hint Resolve Wf_MapInterpCast : wf.
