@@ -46,7 +46,7 @@ Section Ring.
     rewrite <-!associative, right_inverse, right_identity; reflexivity.
   Qed.
 
-  Definition opp_nonzero_nonzero : forall x, x <> 0 -> opp x <> 0 := Group.inv_nonzero_nonzero.
+  Definition opp_zero_iff : forall x, opp x = 0 <-> x = 0 := Group.inv_id_iff.
 
   Global Instance is_left_distributive_sub : is_left_distributive (eq:=eq)(add:=sub)(mul:=mul).
   Proof.
@@ -360,7 +360,7 @@ End of_Z.
 Definition char_gt
            {R eq zero one opp add} {sub:R->R->R} {mul:R->R->R}
            C :=
-  @Algebra.char_gt R eq zero (fun n => (@of_Z R zero one opp add) (BinInt.Z.of_N n)) C.
+  @Algebra.char_gt R eq zero (fun p => (@of_Z R zero one opp add) (BinInt.Z.pos p)) C.
 Existing Class char_gt.
 
 (*** Tactics for ring equations *)

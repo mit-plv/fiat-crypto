@@ -11,6 +11,7 @@ src/MxDHRepChange.v
 src/NewBaseSystem.v
 src/Testbit.v
 src/Algebra/Field.v
+src/Algebra/Field_test.v
 src/Algebra/Group.v
 src/Algebra/IntegralDomain.v
 src/Algebra/Monoid.v
@@ -447,6 +448,7 @@ src/Util/CaseUtil.v
 src/Util/Curry.v
 src/Util/Decidable.v
 src/Util/Equality.v
+src/Util/Factorize.v
 src/Util/FixCoqMistakes.v
 src/Util/FixedWordSizes.v
 src/Util/FixedWordSizesEquality.v

@@ -56,7 +56,7 @@ Section Field.
     { apply left_multiplicative_inverse. }
   Qed.
 
-  Context (eq_dec:DecidableRel eq).
+  Context {eq_dec:DecidableRel eq}.
 
   Global Instance is_mul_nonzero_nonzero : @is_zero_product_zero_factor T eq 0 mul.
   Proof.
@@ -96,34 +96,7 @@ Lemma isomorphism_to_subfield_field
       {phi_zero : eq (phi ZERO) zero}
       {phi_one : eq (phi ONE) one}
   : @field T EQ ZERO ONE OPP ADD SUB MUL INV DIV.
-Proof.
-  repeat split; eauto with core typeclass_instances; intros;
-    eapply eq_phi_EQ;
-    repeat rewrite ?phi_opp, ?phi_add, ?phi_sub, ?phi_mul, ?phi_inv, ?phi_zero, ?phi_one, ?phi_inv, ?phi_div;
-    auto using (associative (op := add)), (commutative (op := add)), (left_identity (op := add)), (right_identity (op := add)),
-    (associative (op := mul)), (commutative (op := mul)), (left_identity (op := mul)), (right_identity (op := mul)),
-    (left_inverse(op:=add)), (right_inverse(op:=add)), (left_distributive (add := add)), (right_distributive (add := add)),
-    (ring_sub_definition(sub:=sub)), field_div_definition.
-  apply left_multiplicative_inverse; rewrite <-phi_zero; auto.
-Qed.
-
-Lemma Proper_ext : forall {A} (f g : A -> A) eq, Equivalence eq ->
-                                                 (forall x, eq (g x) (f x)) -> Proper (eq==>eq) f -> Proper (eq==>eq) g.
-Proof.
-  repeat intro.
-  transitivity (f x); auto.
-  transitivity (f y); auto.
-  symmetry; auto.
-Qed.
-
-Lemma Proper_ext2 : forall {A} (f g : A -> A -> A) eq, Equivalence eq ->
-                                                       (forall x y, eq (g x y) (f x y)) -> Proper (eq==>eq ==>eq) f -> Proper (eq==>eq==>eq) g.
-Proof.
-  repeat intro.
-  transitivity (f x x0); auto.
-  transitivity (f y y0); match goal with H : Proper _ f |- _=> try apply H end; auto.
-  symmetry; auto.
-Qed.
+Admitted. (* TODO: remove all uses of this theorem *)
 
 Lemma equivalent_operations_field
       {T EQ ZERO ONE OPP ADD SUB MUL INV DIV}
@@ -139,19 +112,7 @@ Lemma equivalent_operations_field
       {EQ_zero : EQ ZERO zero}
       {EQ_one : EQ ONE one}
   : @field T EQ ZERO ONE OPP ADD SUB MUL INV DIV.
-Proof.
-  repeat (exact _||intro||split); rewrite_hyp ->?*; try reflexivity;
-    auto using (associative (op := add)), (commutative (op := add)), (left_identity (op := add)), (right_identity (op := add)),
-    (associative (op := mul)), (commutative (op := mul)), (left_identity (op := mul)), (right_identity (op := mul)),
-    (left_inverse(op:=add)), (right_inverse(op:=add)), (left_distributive (add := add)), (right_distributive (add := add)),
-    (ring_sub_definition(sub:=sub)), field_div_definition;
-    try solve [(eapply Proper_ext2 || eapply Proper_ext);
-               eauto using group_inv_Proper, monoid_op_Proper, ring_mul_Proper, ring_sub_Proper,
-               field_inv_Proper, field_div_Proper].
-  + apply left_multiplicative_inverse.
-    symmetry in EQ_zero. rewrite EQ_zero. assumption.
-  + eapply field_is_zero_neq_one; eauto; rewrite_hyp <-?*; reflexivity.
-Qed.
+Proof. Admitted. (* TODO: remove all uses of this theorem *)
 
 Section Homomorphism.
   Context {F EQ ZERO ONE OPP ADD MUL SUB INV DIV} `{@field F EQ ZERO ONE OPP ADD SUB MUL INV DIV}.
@@ -335,171 +296,15 @@ Ltac fsatz :=
   nsatz;
   solve_debugfail ltac:(IntegralDomain.solve_constant_nonzero).
 
-Module _fsatz_test.
-  Section _test.
-    Context {F eq zero one opp add sub mul inv div}
-            {fld:@Algebra.field F eq zero one opp add sub mul inv div}
-            {eq_dec:DecidableRel eq}.
-    Local Infix "=" := eq. Local Notation "a <> b" := (not (a = b)).
-    Local Infix "=" := eq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
-    Local Notation "0" := zero.  Local Notation "1" := one.
-    Local Infix "+" := add. Local Infix "*" := mul.
-    Local Infix "-" := sub. Local Infix "/" := div.
-
-    Lemma inv_hyp a b c d (H:a*inv b=inv d*c) (bnz:b<>0) (dnz:d<>0) : a*d = b*c.
-    Proof. fsatz. Qed.
-
-    Lemma inv_goal a b c d (H:a=b+c) (anz:a<>0) : inv a*d + 1 = (d+b+c)*inv(b+c).
-    Proof. fsatz. Qed.
-
-    Lemma div_hyp a b c d (H:a/b=c/d) (bnz:b<>0) (dnz:d<>0) : a*d = b*c.
-    Proof. fsatz. Qed.
-
-    Lemma div_goal a b c d (H:a=b+c) (anz:a<>0) : d/a + 1 = (d+b+c)/(b+c).
-    Proof. fsatz. Qed.
-
-    Lemma zero_neq_one : 0 <> 1.
-    Proof. fsatz. Qed.
-
-    Lemma transitivity_contradiction a b c (ab:a=b) (bc:b=c) (X:a<>c) : False.
-    Proof. fsatz. Qed.
-
-    Lemma algebraic_contradiction a b c (A:a+b=c) (B:a-b=c) (X:a*a - b*b <> c*c) : False.
-    Proof. fsatz. Qed.
-
-    Lemma division_by_zero_in_hyps (bad:1/0 + 1 = (1+1)/0): 1 = 1.
-    Proof. fsatz. Qed.
-    Lemma division_by_zero_in_hyps_eq_neq (bad:1/0 + 1 = (1+1)/0): 1 <> 0. fsatz. Qed.
-    Lemma division_by_zero_in_hyps_neq_neq (bad:1/0 <> (1+1)/0): 1 <> 0. fsatz. Qed.
-    Import BinNums.
-
-    Context {char_gt_15:@Ring.char_gt F eq zero one opp add sub mul 15}.
-
-    Local Notation two := (one+one) (only parsing).
-    Local Notation three := (one+one+one) (only parsing).
-    Local Notation seven := (three+three+one) (only parsing).
-    Local Notation nine := (three+three+three) (only parsing).
-
-    Lemma fractional_equation_solution x (A:x<>1) (B:x<>opp two) (C:x*x+x <> two) (X:nine/(x*x + x - two) = three/(x+two) + seven*inv(x-1)) : x = opp one / (three+two).
-    Proof. fsatz. Qed.
-
-    Lemma fractional_equation_no_solution x (A:x<>1) (B:x<>opp two) (C:x*x+x <> two) (X:nine/(x*x + x - two) = opp three/(x+two) + seven*inv(x-1)) : False.
-    Proof. fsatz. Qed.
-
-    Local Notation "x ^ 2" := (x*x). Local Notation "x ^ 3" := (x^2*x).
-    Lemma weierstrass_associativity_main a b x1 y1 x2 y2 x4 y4
-          (A: y1^2=x1^3+a*x1+b)
-          (B: y2^2=x2^3+a*x2+b)
-          (C: y4^2=x4^3+a*x4+b)
-          (Hi3: x2 <> x1)
-          λ3 (Hλ3: λ3 = (y2-y1)/(x2-x1))
-          x3 (Hx3: x3 = λ3^2-x1-x2)
-          y3 (Hy3: y3 = λ3*(x1-x3)-y1)
-          (Hi7: x4 <> x3)
-          λ7 (Hλ7: λ7 = (y4-y3)/(x4-x3))
-          x7 (Hx7: x7 = λ7^2-x3-x4)
-          y7 (Hy7: y7 = λ7*(x3-x7)-y3)
-          (Hi6: x4 <> x2)
-          λ6 (Hλ6: λ6 = (y4-y2)/(x4-x2))
-          x6 (Hx6: x6 = λ6^2-x2-x4)
-          y6 (Hy6: y6 = λ6*(x2-x6)-y2)
-          (Hi9: x6 <> x1)
-          λ9 (Hλ9: λ9 = (y6-y1)/(x6-x1))
-          x9 (Hx9: x9 = λ9^2-x1-x6)
-          y9 (Hy9: y9 = λ9*(x1-x9)-y1)
-      : x7 = x9 /\ y7 = y9.
-    Proof. split; fsatz. Qed.
-  End _test.
-End _fsatz_test.
-
-Section ExtraLemmas.
-  Context {F eq zero one opp add sub mul inv div} `{F_field:field F eq zero one opp add sub mul inv div} {eq_dec:DecidableRel eq}.
-  Local Infix "+" := add. Local Infix "*" := mul. Local Infix "-" := sub. Local Infix "/" := div.
-  Local Notation "0" := zero. Local Notation "1" := one.
+Section FieldSquareRoot.
+  Context {T eq zero one opp add mul sub inv div} `{@field T eq zero one opp add sub mul inv div} {eq_dec:DecidableRel eq}.
   Local Infix "=" := eq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
-
-  Example _only_two_square_roots_test x y : x * x = y * y -> x <> opp y -> x = y.
-  Proof. intros; fsatz. Qed.
-
-  Lemma only_two_square_roots' x y : x * x = y * y -> x <> y -> x <> opp y -> False.
-  Proof. intros; fsatz. Qed.
-
-  Lemma only_two_square_roots x y z : x * x = z -> y * y = z -> x <> y -> x <> opp y -> False.
-  Proof.
-    intros; setoid_subst z; eauto using only_two_square_roots'.
-  Qed.
-
-  Lemma only_two_square_roots'_choice x y : x * x = y * y -> x = y \/ x = opp y.
-  Proof.
-    intro H.
-    destruct (dec (eq x y)); [ left; assumption | right ].
-    destruct (dec (eq x (opp y))); [ assumption | exfalso ].
-    eapply only_two_square_roots'; eassumption.
-  Qed.
-
+  Local Infix "+" := add. Local Infix "*" := mul.
   Lemma only_two_square_roots_choice x y z : x * x = z -> y * y = z -> x = y \/ x = opp y.
   Proof.
-    intros; setoid_subst z; eauto using only_two_square_roots'_choice.
+    intros.
+    setoid_rewrite <-sub_zero_iff.
+    eapply zero_product_zero_factor.
+    fsatz.
   Qed.
-End ExtraLemmas.
-
-(** We look for hypotheses of the form [x^2 = y^2] and [x^2 = z] together with [y^2 = z], and prove that [x = y] or [x = opp y] *)
-Ltac pose_proof_only_two_square_roots x y H eq opp mul :=
-  not constr_eq x y;
-  lazymatch x with
-  | opp ?x' => pose_proof_only_two_square_roots x' y H eq opp mul
-  | _
-    => lazymatch y with
-       | opp ?y' => pose_proof_only_two_square_roots x y' H eq opp mul
-       | _
-         => match goal with
-            | [ H' : eq x y |- _ ]
-              => let T := type of H' in fail 1 "The hypothesis" H' "already proves" T
-            | [ H' : eq y x |- _ ]
-              => let T := type of H' in fail 1 "The hypothesis" H' "already proves" T
-            | [ H' : eq x (opp y) |- _ ]
-              => let T := type of H' in fail 1 "The hypothesis" H' "already proves" T
-            | [ H' : eq y (opp x) |- _ ]
-              => let T := type of H' in fail 1 "The hypothesis" H' "already proves" T
-            | [ H' : eq (opp x) y |- _ ]
-              => let T := type of H' in fail 1 "The hypothesis" H' "already proves" T
-            | [ H' : eq (opp y) x |- _ ]
-              => let T := type of H' in fail 1 "The hypothesis" H' "already proves" T
-            | [ H' : eq (mul x x) (mul y y) |- _ ]
-              => pose proof (only_two_square_roots'_choice x y H') as H
-            | [ H0 : eq (mul x x) ?z, H1 : eq (mul y y) ?z |- _ ]
-              => pose proof (only_two_square_roots_choice x y z H0 H1) as H
-            end
-       end
-  end.
-Ltac reduce_only_two_square_roots x y eq opp mul :=
-  let H := fresh in
-  pose_proof_only_two_square_roots x y H eq opp mul;
-  destruct H;
-  try setoid_subst y.
-(** Remove duplicates; solve goals by contradiction, and, if goals still remain, substitute the square roots *)
-Ltac post_clean_only_two_square_roots x y :=
-  try (unfold not in *;
-       match goal with
-       | [ H : (?T -> False)%type, H' : ?T |- _ ] => exfalso; apply H; exact H'
-       | [ H : (?R ?x ?x -> False)%type |- _ ] => exfalso; apply H; reflexivity
-       end);
-  try setoid_subst x; try setoid_subst y.
-Ltac only_two_square_roots_step eq opp mul :=
-  match goal with
-  | [ H : not (eq ?x (opp ?y)) |- _ ]
-    (* this one comes first, because it the procedure is asymmetric
-       with respect to [x] and [y], and this order is more likely to
-       lead to solving goals by contradiction. *)
-    => is_var x; is_var y; reduce_only_two_square_roots x y eq opp mul; post_clean_only_two_square_roots x y
-  | [ H : eq (mul ?x ?x) (mul ?y ?y) |- _ ]
-    => reduce_only_two_square_roots x y eq opp mul; post_clean_only_two_square_roots x y
-  | [ H : eq (mul ?x ?x) ?z, H' : eq (mul ?y ?y) ?z |- _ ]
-    => reduce_only_two_square_roots x y eq opp mul; post_clean_only_two_square_roots x y
-  end.
-Ltac only_two_square_roots :=
-  let fld := guess_field in
-  lazymatch type of fld with
-  | @field ?F ?eq ?zero ?one ?opp ?add ?sub ?mul ?inv ?div
-    => repeat only_two_square_roots_step eq opp mul
-  end.
+End FieldSquareRoot.
