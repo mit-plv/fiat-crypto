@@ -32,11 +32,12 @@ Ltac debuglevel := constr:(0%nat).
 
 Ltac solve_debugfail tac :=
   solve [tac] ||
-        let dbg := debuglevel in
-        match dbg with
-        | O => idtac
-        | _ => match goal with |- ?G => idtac "couldn't prove" G end
-        end.
+        ( let dbg := debuglevel in
+          match dbg with
+          | O => idtac
+          | _ => match goal with |- ?G => idtac "couldn't prove" G end
+          end;
+          fail).
 
 Ltac set_evars :=
   repeat match goal with

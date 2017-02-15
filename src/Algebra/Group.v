@@ -1,4 +1,4 @@
-Require Import Coq.Classes.Morphisms.
+Require Import Coq.Classes.Morphisms Crypto.Util.Relations Crypto.Util.Tactics.
 Require Import Crypto.Algebra Crypto.Algebra.Monoid Crypto.Algebra.ScalarMult.
 
 Section BasicProperties.
@@ -25,24 +25,11 @@ Section BasicProperties.
     - rewrite Hix, left_identity; reflexivity.
   Qed.
 
-  Lemma move_leftL x y : inv y * x = id -> x = y.
+  Lemma inv_bijective x y : inv x = inv y <-> x = y.
   Proof.
-    intro; rewrite <- (inv_inv y), (inv_unique x (inv y)), inv_inv by assumption; reflexivity.
-  Qed.
-
-  Lemma move_leftR x y : x * inv y = id -> x = y.
-  Proof.
-    intro; rewrite (inv_unique (inv y) x), inv_inv by assumption; reflexivity.
-  Qed.
-
-  Lemma move_rightR x y : id = y * inv x -> x = y.
-  Proof.
-    intro; rewrite <- (inv_inv x), (inv_unique (inv x) y), inv_inv by (symmetry; assumption); reflexivity.
-  Qed.
-
-  Lemma move_rightL x y : id = inv x * y -> x = y.
-  Proof.
-    intro; rewrite <- (inv_inv x), (inv_unique y (inv x)), inv_inv by (symmetry; assumption); reflexivity.
+    split; intro Hi; rewrite ?Hi; try reflexivity.
+    assert (Hii:inv (inv x) = inv (inv y)) by (rewrite Hi; reflexivity).
+    rewrite 2inv_inv in Hii; exact Hii.
   Qed.
 
   Lemma inv_op x y : inv (x*y) = inv y*inv x.
@@ -56,33 +43,14 @@ Section BasicProperties.
   Lemma inv_id : inv id = id.
   Proof. symmetry. eapply inv_unique, left_identity. Qed.
 
-  Lemma inv_nonzero_nonzero : forall x, x <> id -> inv x <> id.
+  Lemma inv_id_iff x : inv x = id <-> x = id.
   Proof.
-    intros ? Hx Ho.
-    assert (Hxo: x * inv x = id) by (rewrite right_inverse; reflexivity).
-    rewrite Ho, right_identity in Hxo. intuition.
+    split; intro Hi; rewrite ?Hi, ?inv_id; try reflexivity.
+    rewrite <-inv_id, inv_bijective in Hi; exact Hi.
   Qed.
 
-  Lemma neq_inv_nonzero : forall x, x <> inv x -> x <> id.
-  Proof.
-    intros ? Hx Hi; apply Hx.
-    rewrite Hi.
-    symmetry; apply inv_id.
-  Qed.
-
-  Lemma inv_neq_nonzero : forall x, inv x <> x -> x <> id.
-  Proof.
-    intros ? Hx Hi; apply Hx.
-    rewrite Hi.
-    apply inv_id.
-  Qed.
-
-  Lemma inv_zero_zero : forall x, inv x = id -> x = id.
-  Proof.
-    intros.
-    rewrite <-inv_id, <-H0.
-    symmetry; apply inv_inv.
-  Qed.
+  Lemma inv_nonzero_nonzero x : x <> id <-> inv x <> id.
+  Proof. setoid_rewrite inv_id_iff; reflexivity. Qed.
 
   Lemma eq_r_opp_r_inv a b c : a = op c (inv b) <-> op a b = c.
   Proof.
@@ -94,7 +62,7 @@ Section BasicProperties.
   Section ZeroNeqOne.
     Context {one} `{is_zero_neq_one T eq id one}.
     Lemma opp_one_neq_zero : inv one <> id.
-    Proof. apply inv_nonzero_nonzero, one_neq_zero. Qed.
+    Proof. setoid_rewrite inv_id_iff. exact one_neq_zero. Qed.
     Lemma zero_neq_opp_one : id <> inv one.
     Proof. intro Hx. symmetry in Hx. eauto using opp_one_neq_zero. Qed.
   End ZeroNeqOne.

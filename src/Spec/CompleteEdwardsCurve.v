@@ -20,7 +20,7 @@ Module E.
     Context {a d: F}.
     Class twisted_edwards_params :=
       {
-        char_gt_2 : @Ring.char_gt F Feq Fzero Fone Fopp Fadd Fsub Fmul BinNat.N.two;
+        char_gt_2 : @Ring.char_gt F Feq Fzero Fone Fopp Fadd Fsub Fmul (BinNat.N.succ_pos BinNat.N.one);
         nonzero_a : a <> 0;
         square_a : exists sqrt_a, sqrt_a^2 = a;
         nonsquare_d : forall x, x^2 <> d

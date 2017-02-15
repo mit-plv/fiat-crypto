@@ -1,4 +1,5 @@
-Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Tactics Crypto.Util.Relations.
+Require Import Crypto.Util.Factorize.
 Require Import Crypto.Algebra Crypto.Algebra.Ring.
 
 Module IntegralDomain.
@@ -53,40 +54,72 @@ Module IntegralDomain.
           repeat (rewrite_hyp ?*; Ring.push_homomorphism constr:(of_Z)); reflexivity.
       Qed.
 
+      (* TODO: move *)
+      Lemma nonzero_of_Z_abs z : of_Z (Z.abs z) <> zero <-> of_Z z <> zero.
+      Proof.
+        destruct z; simpl Z.abs; [reflexivity..|].
+        simpl of_Z. setoid_rewrite opp_zero_iff. reflexivity.
+      Qed.
+
       Section WithChar.
         Context C (char_gt_C:@Ring.char_gt R eq zero one opp add sub mul C).
+        
+        Definition is_factor_nonzero (n:N) : bool :=
+          match n with N0 => false | N.pos p => BinPos.Pos.leb p C end.
+        Lemma is_factor_nonzero_correct (n:N) (refl:Logic.eq (is_factor_nonzero n) true)
+          : of_Z (Z.of_N n) <> zero.
+        Proof.
+          destruct n; [discriminate|]; rewrite Znat.positive_N_Z; apply char_gt_C, Pos.leb_le, refl.
+        Qed.
+
+        Lemma RZN_product_nonzero l (H : forall x : N, List.In x l -> of_Z (Z.of_N x) <> zero)
+          : of_Z (Z.of_N (List.fold_right N.mul 1%N l)) <> zero.
+        Proof.
+          rewrite <-List.Forall_forall in H; induction H; simpl List.fold_right.
+          { eapply char_gt_C, Pos.le_1_l. }
+          { rewrite Znat.N2Z.inj_mul; Ring.push_homomorphism constr:(of_Z).
+            eapply Ring.nonzero_product_iff_nonzero_factor; eauto. }
+        Qed.
+          
+        Definition is_constant_nonzero (z:Z) : bool :=
+          match factorize_or_fail (Z.abs_N z) with
+          | Some factors => List.forallb is_factor_nonzero factors
+          | None => false
+          end.
+        Lemma is_constant_nonzero_correct z (refl:Logic.eq (is_constant_nonzero z) true)
+          : of_Z z <> zero.
+        Proof.
+            rewrite <-nonzero_of_Z_abs, <-Znat.N2Z.inj_abs_N.
+            repeat match goal with
+                   | _ => progress cbv [is_constant_nonzero] in *
+                   | _ => progress break_match_hyps; try congruence; []
+                   | _ => progress rewrite ?List.forallb_forall in *
+                   |H:_|-_ => apply product_factorize_or_fail in H; rewrite <- H in *
+                   | _ => solve [eauto using RZN_product_nonzero, is_factor_nonzero_correct]
+                   end.
+        Qed.
+
         Fixpoint is_nonzero (c:coef) : bool :=
           match c with
+          | Coef_one => true
           | Coef_opp c => is_nonzero c
           | Coef_mul c1 c2 => andb (is_nonzero c1) (is_nonzero c2)
-          | _ =>
-            match CtoZ c with
-            | Z0 => false
-            | Zpos p => N.leb (N.pos p) C
-            | Zneg p => N.leb (N.pos p) C
-            end
+          | _ => is_constant_nonzero (CtoZ c)
           end.
         Lemma is_nonzero_correct c (refl:Logic.eq (is_nonzero c) true) : denote c <> zero.
         Proof.
           induction c;
             repeat match goal with
-                   | _ => progress unfold Algebra.char_gt, Ring.char_gt in *
+                   | H:_|-_ => progress rewrite Bool.andb_true_iff in H; destruct H
+                   | H:_|-_ => progress apply is_constant_nonzero_correct in H
                    | _ => progress (unfold is_nonzero in *; fold is_nonzero in * )
-                   | _ => progress change (denote (Coef_opp c)) with (opp (denote c)) in *
-                   | _ => progress change (denote (Coef_mul c1 c2)) with (denote c1 * denote c2) in *
-                   | _ => rewrite N.leb_le in *
-                   | _ => rewrite <-Pos2Z.opp_pos in *
-                   | H:@Logic.eq Z (CtoZ ?x) ?y |- _ => rewrite <-(CtoZ_correct x), H
-                   | H: Logic.eq match ?x with _ => _ end true |- _ => destruct x eqn:?
-                   | H:_ |- _ => unique pose proof (proj1 (Bool.andb_true_iff _ _) H)
-                   | H:_/\_|- _ => unique pose proof (proj1 H)
-                   | H:_/\_|- _ => unique pose proof (proj2 H)
-                   | H: _ |- _ => unique pose proof (z_nonzero_correct _ H)
+                   | _ => progress (change (denote (Coef_one)) with (of_Z 1) in * )
+                   | _ => progress (change (denote (Coef_opp c)) with (opp (denote c)) in * )
+                   | _ => progress (change (denote (Coef_mul c1 c2)) with (denote c1 * denote c2) in * )
+                   | |- opp _ <> zero => setoid_rewrite Ring.opp_zero_iff
                    | |- _ * _ <> zero => eapply Ring.nonzero_product_iff_nonzero_factor
-                   | |- opp _ <> zero => eapply Ring.opp_nonzero_nonzero
-                   | _ => rewrite <-!Znat.N2Z.inj_pos
-                   | |- _ => solve [eauto using N_one_le_pos | discriminate]
-                   | _ => progress Ring.push_homomorphism constr:(of_Z)
+                   | _ => solve [eauto using is_constant_nonzero_correct, Pos.le_1_l]
+                   | _ => progress rewrite <-CtoZ_correct
                    end.
         Qed.
       End WithChar.
@@ -110,7 +143,7 @@ Module IntegralDomain.
   End _LargeCharacteristicReflective.
 
   Ltac solve_constant_nonzero :=
-    match goal with (* TODO: change this match to a typeclass resolution *)
+    match goal with
     | |- not (?eq ?x _) =>
       let cg := constr:(_:Ring.char_gt (eq:=eq) _) in
       match type of cg with
