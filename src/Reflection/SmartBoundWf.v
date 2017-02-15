@@ -5,8 +5,7 @@ Require Import Crypto.Reflection.Wf.
 Require Import Crypto.Reflection.WfProofs.
 Require Import Crypto.Reflection.SmartBound.
 Require Import Crypto.Reflection.TypeUtil.
-Require Import Crypto.Reflection.SmartCast.
-Require Import Crypto.Reflection.Application.
+Require Import Crypto.Reflection.SmartCastWf.
 Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Notations.
@@ -36,6 +35,9 @@ Section language.
   Local Notation interpf_smart_bound := (@interpf_smart_bound _ op interp_base_type_bounds bound_base_type Cast).
   Local Notation interpf_smart_unbound := (@interpf_smart_unbound _ op interp_base_type_bounds bound_base_type Cast).
   Local Notation bound_op := (@bound_op _ _ _ interp_op_bounds bound_base_type _ base_type_bl_transparent base_type_leb Cast genericize_op).
+  Local Notation wff_SmartCast_match := (@wff_SmartCast_match _ op _ base_type_bl_transparent Cast wff_Cast).
+
+  Local Hint Resolve List.in_or_app wff_in_impl_Proper.
 
   Lemma wff_bound_op
         ovar1 ovar2 G src1 dst1 src2 dst2 opc1 opc2 e1 e2 args2
@@ -44,7 +46,20 @@ Section language.
           (@bound_op ovar1 src1 dst1 src2 dst2 opc1 opc2 e1 args2)
           (@bound_op ovar2 src1 dst1 src2 dst2 opc1 opc2 e2 args2).
   Proof.
-  Admitted.
+    unfold SmartBound.bound_op;
+      repeat first [ progress break_innermost_match
+                   | assumption
+                   | constructor
+                   | intro
+                   | eapply wff_in_impl_Proper; [ eapply wff_SmartCast; eassumption | ]
+                   | match goal with
+                     | [ H0 : SmartCast.SmartCast _ _ _ ?x ?y = Some _, H1 : SmartCast.SmartCast _ _ _ ?x ?y = None |- _ ]
+                       => let H := fresh in
+                          refine (let H := wff_SmartCast_match x y in _);
+                          erewrite H0, H1 in H; exfalso; exact H
+                     end
+                   | solve [ auto ] ].
+  Qed.
 
   Fixpoint wf_UnSmartArrow {var1 var2} k t1 G e_bounds input_bounds e1 e2
            (Hwf : wf G e1 e2)

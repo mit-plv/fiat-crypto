@@ -36,12 +36,16 @@ Section language.
   Local Hint Resolve List.in_or_app wff_in_impl_Proper.
   Local Hint Extern 1 => progress simpl.
 
-  Lemma wff_SmartCast {var1 var2} A B f1 f2
-    : SmartCast A B = Some f1 -> SmartCast A B = Some f2
-      -> forall e1 e2,
-          wff (var1:=var1) (var2:=var2) (flatten_binding_list e1 e2) (f1 e1) (f2 e2).
+  Lemma wff_SmartCast_match {var1 var2} A B
+    : match SmartCast A B, SmartCast A B with
+      | Some f1, Some f2
+        => forall e1 e2,
+          wff (var1:=var1) (var2:=var2) (flatten_binding_list e1 e2) (f1 e1) (f2 e2)
+      | None, None => True
+      | Some _, None | None, Some _ => False
+      end.
   Proof.
-    revert dependent B; induction A, B;
+    break_innermost_match; revert dependent B; induction A, B;
       repeat match goal with
              | _ => progress simpl in *
              | _ => intro
@@ -50,13 +54,22 @@ Section language.
              | [ |- wff _ (SmartCast_base _) (SmartCast_base _) ]
                => apply wff_SmartCast_base
              | _ => progress break_match_hyps
-             | _ => solve [ auto with wf ]
+             | _ => solve [ eauto with wf ]
              | [ H : forall B f1 f2, SmartCast ?A B = Some f1 -> SmartCast ?A B = Some f2 -> _,
                    H' : SmartCast ?A ?Bv = Some _, H'' : SmartCast ?A ?Bv = Some _ |- _ ]
                => specialize (H _ _ _ H' H'')
              | [ |- wff _ (Pair _ _) (Pair _ _) ] => constructor
              | [ |- wff _ _ _ ] => solve [ eauto with wf ]
              end.
+  Qed.
+
+  Lemma wff_SmartCast {var1 var2} A B f1 f2
+    : SmartCast A B = Some f1 -> SmartCast A B = Some f2
+      -> forall e1 e2,
+          wff (var1:=var1) (var2:=var2) (flatten_binding_list e1 e2) (f1 e1) (f2 e2).
+  Proof.
+    intros H1 H2; generalize (@wff_SmartCast_match var1 var2 A B).
+    rewrite H1, H2; trivial.
   Qed.
 
   Lemma wff_SmartCast_app {var1 var2} G A B f1 f2
