@@ -48,11 +48,8 @@ Section language.
             is_cast is_const genericize_op
             failf t1 e1 args2).
   Proof.
-    unfold Boundify.
-    apply Wf_ExprEta.
-    apply Wf_InlineCast; auto.
-    apply Wf_Linearize.
-    apply Wf_SmartBound; auto.
-    apply Wf_MapInterpCast; auto.
-  Admitted.
+    unfold Boundify; auto 7 with wf.
+  Qed.
 End language.
+
+Hint Resolve Wf_Boundify : wf.

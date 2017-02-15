@@ -104,18 +104,20 @@ Section language.
         symmetry; apply wff_exprf_eta_gen;
           auto.
   Qed.
-  Lemma Wf_ExprEta
+  Lemma Wf_ExprEta_iff
         {t e}
     : Wf (ExprEta e) <-> @Wf base_type_code op t e.
   Proof.
     unfold Wf; setoid_rewrite wf_expr_eta; reflexivity.
   Qed.
-  Lemma Wf_ExprEta'
+  Lemma Wf_ExprEta'_iff
         {t e}
     : Wf (ExprEta' e) <-> @Wf base_type_code op t e.
   Proof.
     unfold Wf; setoid_rewrite wf_expr_eta'; reflexivity.
   Qed.
+  Definition Wf_ExprEta {t e} : Wf e -> Wf (ExprEta e) := proj2 (@Wf_ExprEta_iff t e).
+  Definition Wf_ExprEta' {t e} : Wf e -> Wf (ExprEta' e) := proj2 (@Wf_ExprEta'_iff t e).
 End language.
 
-Hint Resolve <- Wf_ExprEta Wf_ExprEta' : wf.
+Hint Resolve Wf_ExprEta Wf_ExprEta' : wf.

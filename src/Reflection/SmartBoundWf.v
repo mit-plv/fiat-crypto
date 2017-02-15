@@ -177,3 +177,5 @@ Section language.
     apply wf_smart_bound; assumption.
   Qed.
 End language.
+
+Hint Resolve Wf_SmartBound wff_bound_op : wf.
