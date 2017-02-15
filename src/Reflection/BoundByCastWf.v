@@ -7,14 +7,6 @@ Require Import Crypto.Reflection.LinearizeWf.
 Require Import Crypto.Reflection.SmartBoundWf.
 Require Import Crypto.Reflection.MapCastWf.
 
-(*
-Require Import Crypto.Reflection.SmartBound.
-Require Import Crypto.Reflection.Application.
-Require Import Crypto.Reflection.Inline.
-Require Import Crypto.Reflection.Linearize.
-Require Import Crypto.Reflection.MapCast.
-Require Import Crypto.Reflection.Eta.*)
-
 Local Open Scope expr_scope.
 Local Open Scope ctype_scope.
 Section language.
