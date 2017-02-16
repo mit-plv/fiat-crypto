@@ -30,4 +30,4 @@ Section language.
        | Return t ex => interpf_retr ex
        | Abs src dst f => fun x => @interp_retr _ (f (SmartVarfMap var_of_interp x))
        end.
-End langauge.
+End language.
