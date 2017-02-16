@@ -33,7 +33,7 @@ Section language.
   Local Notation smart_bound := (@smart_bound _ _ interp_base_type_bounds bound_base_type Cast).
   Local Notation UnSmartArrow := (@UnSmartArrow _ interp_base_type_bounds bound_base_type).
   Local Notation interpf_smart_bound := (@interpf_smart_bound _ op interp_base_type_bounds bound_base_type Cast).
-  Local Notation interpf_smart_unbound := (@interpf_smart_unbound _ op interp_base_type_bounds bound_base_type Cast).
+  Local Notation interpf_smart_unbound_exprf := (@interpf_smart_unbound_exprf _ op interp_base_type_bounds bound_base_type Cast).
   Local Notation bound_op := (@bound_op _ _ _ interp_op_bounds bound_base_type _ base_type_bl_transparent base_type_leb Cast genericize_op).
   Local Notation wff_SmartCast_match := (@wff_SmartCast_match _ op _ base_type_bl_transparent Cast wff_Cast).
 
@@ -121,20 +121,20 @@ Section language.
 
   Local Hint Resolve List.in_app_or List.in_or_app.
 
-  Lemma wff_SmartPairf_interpf_smart_unbound var1 var2 t input_bounds x1 x2
+  Lemma wff_SmartPairf_interpf_smart_unbound_exprf var1 var2 t input_bounds x1 x2
     : wff (flatten_binding_list x1 x2)
           (SmartPairf
              (var:=var1)
-             (interpf_smart_unbound input_bounds
-                                    (SmartVarfMap (fun t => Var) x1)))
+             (interpf_smart_unbound_exprf input_bounds
+                                          (SmartVarfMap (fun t => Var) x1)))
           (SmartPairf
              (var:=var2)
              (t:=t)
-             (interpf_smart_unbound input_bounds
-                                    (SmartVarfMap (fun t => Var) x2))).
+             (interpf_smart_unbound_exprf input_bounds
+                                          (SmartVarfMap (fun t => Var) x2))).
   Proof.
     clear -wff_Cast.
-    unfold SmartPairf, SmartVarfMap, interpf_smart_unbound; induction t;
+    unfold SmartPairf, SmartVarfMap, interpf_smart_unbound_exprf; induction t;
       repeat match goal with
              | _ => progress simpl in *
              | [ |- wff _ (Cast _ _ _ _) (Cast _ _ _ _) ]
@@ -147,7 +147,7 @@ Section language.
              end.
   Qed.
 
-  Local Hint Resolve wff_SmartPairf_interpf_smart_unbound : wf.
+  Local Hint Resolve wff_SmartPairf_interpf_smart_unbound_exprf : wf.
 
   Axiom proof_admitted : False.
 

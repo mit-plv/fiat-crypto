@@ -85,7 +85,7 @@ Section language.
            (f:=fun t v => Tbase _)
            (fun t bs v => Cast _ t (bound_base_type t bs) (Var v))
            bounds e.
-    Definition interpf_smart_unbound {var t}
+    Definition interpf_smart_unbound_exprf {var t}
                (bounds : interp_flat_type interp_base_type_bounds t)
                (e : interp_flat_type (fun t => exprf (var:=var) (Tbase t)) (bound_flat_type bounds))
       : interp_flat_type (fun t => @exprf var (Tbase t)) t
@@ -93,6 +93,15 @@ Section language.
            (f:=fun t v => Tbase (bound_base_type t _))
            (fun t bs v => Cast _ (bound_base_type t bs) t v)
            e.
+
+    Definition interpf_smart_unbound
+               {interp_base_type}
+               (cast_val : forall A A', interp_base_type A -> interp_base_type A')
+               {t}
+               (bounds : interp_flat_type interp_base_type_bounds t)
+               (e : interp_flat_type interp_base_type (bound_flat_type bounds))
+      : interp_flat_type interp_base_type t
+    := SmartFlatTypeMapUnInterp2 (f:=fun _ _ => Tbase _) (fun t b v => cast_val _ _ v) e.
 
     Definition smart_boundf {var t1} (e1 : exprf (var:=var) t1) (bounds : interp_flat_type interp_base_type_bounds t1)
       : exprf (var:=var) (bound_flat_type bounds)
@@ -131,7 +140,7 @@ Section language.
                     args
                     (fun args
                      => LetIn
-                          (SmartPairf (interpf_smart_unbound input_bounds (SmartVarfMap (fun _ => Var) args)))
+                          (SmartPairf (interpf_smart_unbound_exprf input_bounds (SmartVarfMap (fun _ => Var) args)))
                           (fun v => smart_boundf
                                       (ApplyAll e1 (interp_all_binders_for_of' v))
                                       (ApplyInterpedAll' e_bounds input_bounds))))).
