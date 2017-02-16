@@ -116,6 +116,7 @@ src/Reflection/InlineCastWf.v
 src/Reflection/InlineInterp.v
 src/Reflection/InlineWf.v
 src/Reflection/InputSyntax.v
+src/Reflection/InterpByIso.v
 src/Reflection/InterpProofs.v
 src/Reflection/InterpWf.v
 src/Reflection/InterpWfRel.v
