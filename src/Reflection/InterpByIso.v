@@ -6,11 +6,11 @@ Section language.
   Context {base_type_code : Type}
           {op : flat_type base_type_code -> flat_type base_type_code -> Type}
           {interp_base_type : base_type_code -> Type}
+          (interp_op : forall src dst, op src dst -> interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst)
           {var : base_type_code -> Type}
           (var_of_interp : forall t, interp_base_type t -> var t)
           (interp_of_var : forall t, var t -> interp_base_type t)
-          (var_is_retract : forall t x, interp_of_var t (var_of_interp t x) = x)
-          (interp_op : forall src dst, op src dst -> interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst).
+          (var_is_retract : forall t x, interp_of_var t (var_of_interp t x) = x).
 
   Fixpoint interpf_retr {t} (e : @exprf base_type_code op var t)
     : interp_flat_type interp_base_type t
