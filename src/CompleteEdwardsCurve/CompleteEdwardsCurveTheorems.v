@@ -9,51 +9,44 @@ Require Import Coq.Relations.Relation_Definitions.
 Require Import Crypto.Util.Tuple Crypto.Util.Notations Crypto.Util.Tactics.
 Require Export Crypto.Util.FixCoqMistakes.
 
-Global Existing Instance E.char_gt_2.
-
 Module E.
   Import Group ScalarMult Ring Field CompleteEdwardsCurve.E.
 
   Notation onCurve_zero := Pre.onCurve_zero.
   Notation denominator_nonzero := Pre.denominator_nonzero.
-  Notation denominator_nonzero_x := denominator_nonzero_x.
+  Notation denominator_nonzero_x := Pre.denominator_nonzero_x.
   Notation denominator_nonzero_y := Pre.denominator_nonzero_y.
   Notation onCurve_add := Pre.onCurve_add.
 
-  (* used in Theorems and Homomorphism *)
-  Ltac _gather_nonzeros :=
-    match goal with
-      |- context[?t] =>
-      match type of t with
-        ?T =>
-        match type of T with
-          Prop =>
-          let T := (eval simpl in T) in
-          match T with
-            not (_ _ _) => unique pose proof (t:T)
-          end
-        end
-      end
-    end.
-
   Section CompleteEdwardsCurveTheorems.
-    Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv a d}
+    Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
             {field:@field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
-            {prm:@twisted_edwards_params F Feq Fzero Fone Fopp Fadd Fsub Fmul a d}
+            {char_gt_2 : @Ring.char_gt F Feq Fzero Fone Fopp Fadd Fsub Fmul (BinNat.N.succ_pos BinNat.N.one)}
             {Feq_dec:DecidableRel Feq}.
     Local Infix "=" := Feq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
     Local Notation "0" := Fzero.  Local Notation "1" := Fone.
     Local Infix "+" := Fadd. Local Infix "*" := Fmul.
     Local Infix "-" := Fsub. Local Infix "/" := Fdiv.
     Local Notation "x ^ 2" := (x*x).
-    Local Notation point := (@point F Feq Fone Fadd Fmul a d).
-    Definition onCurve x y := (a*x^2 + y^2 = 1 + d*x^2*y^2).
-    (* TODO: remove uses of this defnition, then make it a local notation *)
-    Definition eq := @E.eq F Feq Fone Fadd Fmul a d.
+
+    Context {a d: F}
+            {nonzero_a : a <> 0}
+            {square_a : exists sqrt_a, sqrt_a^2 = a}
+            {nonsquare_d : forall x, x^2 <> d}.
+    
+    Local Notation onCurve x y := (a*x^2 + y^2 = 1 + d*x^2*y^2).
+    Local Notation point := (@E.point F Feq Fone Fadd Fmul a d).
+    Local Notation eq    := (@E.eq F Feq Fone Fadd Fmul a d).
+    Local Notation zero  := (E.zero(nonzero_a:=nonzero_a)(d:=d)).
+    Local Notation add   := (E.add(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d)).
+    Local Notation mul   := (E.mul(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d)).
+
+    Program Definition opp (P:point) : point := (Fopp (fst P), (snd P)).
+    Next Obligation. destruct P as [ [??]?]; cbv; fsatz. Qed.
 
     Ltac t_step :=
       match goal with
-      | _ => exact _
+      | _ => solve [trivial | exact _ ]
       | _ => intro
       | |- Equivalence _ => split
       | |- abelian_group => split | |- group => split | |- monoid => split
@@ -63,34 +56,32 @@ Module E.
       | _ => progress destruct_head' @E.point
       | _ => progress destruct_head' prod
       | _ => progress destruct_head' and
-      | _ => progress cbv [onCurve eq E.eq E.add E.coordinates proj1_sig] in *
+      | |- context[E.add ?P ?Q] =>
+        unique pose proof (Pre.denominator_nonzero_x _ nonzero_a square_a _ nonsquare_d _ _  (proj2_sig P)  _ _  (proj2_sig Q));
+        unique pose proof (Pre.denominator_nonzero_y _ nonzero_a square_a _ nonsquare_d _ _  (proj2_sig P)  _ _  (proj2_sig Q))
+      | _ => progress cbv [opp E.zero E.eq E.add E.coordinates proj1_sig fieldwise fieldwise'] in *
       (* [_gather_nonzeros] must run before [fst_pair] or [simpl] but after splitting E.eq and unfolding [E.add] *)
-      | _ => _gather_nonzeros
-      | _ => progress simpl in *
       | |- _ /\ _ => split | |- _ <-> _ => split
-      | _ => solve [trivial]
       end.
     Ltac t := repeat t_step; fsatz.
 
-    Program Definition opp (P:point) : point := (Fopp (fst P), (snd P)).
-    Next Obligation. t. Qed.
-
     Global Instance associative_add : is_associative(eq:=E.eq)(op:=add).
     Proof.
-      (* [fsatz] runs out of 6GB of stack space *)
+      (* [nsatz_compute] for a denominator runs out of 6GB of stack space *)
+      (* COQBUG: https://coq.inria.fr/bugs/show_bug.cgi?id=5359 *)
       Add Field _field : (Algebra.Field.field_theory_for_stdlib_tactic (T:=F)).
       Import Field_tac.
       repeat t_step; (field_simplify_eq; [IntegralDomain.nsatz|]); repeat split; trivial.
-      { intro. eapply H5. field_simplify_eq; repeat split; trivial. IntegralDomain.nsatz. }
-      { intro. eapply H1. field_simplify_eq; repeat split; trivial. IntegralDomain.nsatz. }
-      { intro. eapply H6. field_simplify_eq; repeat split; trivial. IntegralDomain.nsatz. }
-      { intro. eapply H2. field_simplify_eq; repeat split; trivial. IntegralDomain.nsatz. }
+      { intro. eapply H3. field_simplify_eq; repeat split; trivial. IntegralDomain.nsatz. }
+      { intro. eapply H. field_simplify_eq; repeat split; trivial. IntegralDomain.nsatz. }
+      { intro. eapply H4. field_simplify_eq; repeat split; trivial. IntegralDomain.nsatz. }
+      { intro. eapply H0. field_simplify_eq; repeat split; trivial. IntegralDomain.nsatz. }
     Qed.
 
-    Global Instance edwards_curve_abelian_group : abelian_group (eq:=E.eq)(op:=add)(id:=zero)(inv:=opp).
+    Global Instance edwards_curve_abelian_group : abelian_group (eq:=eq)(op:=add)(id:=zero)(inv:=opp).
     Proof. t. Qed.
 
-    Global Instance Proper_coordinates : Proper (eq==>fieldwise (n:=2) Feq) coordinates. Proof. t. Qed.
+    Global Instance Proper_coordinates : Proper (eq==>fieldwise (n:=2) Feq) coordinates. Proof. repeat t_step. Qed.
 
     Global Instance Proper_mul : Proper (Logic.eq==>eq==>eq) mul.
     Proof.
@@ -116,19 +107,27 @@ Module E.
     End PointCompression.
   End CompleteEdwardsCurveTheorems.
   Section Homomorphism.
-    Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv Fa Fd}
+    Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
             {field:@field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
-            {Fprm:@twisted_edwards_params F Feq Fzero Fone Fopp Fadd Fsub Fmul Fa Fd}
+            {char_gt_2_F : @Ring.char_gt F Feq Fzero Fone Fopp Fadd Fsub Fmul (BinNat.N.succ_pos BinNat.N.one)}
             {Feq_dec:DecidableRel Feq}.
-    Context {K Keq Kzero Kone Kopp Kadd Ksub Kmul Kinv Kdiv Ka Kd}
+
+    Context {Fa Fd: F}
+            {nonzero_a : not (Feq Fa Fzero)}
+            {square_a : exists sqrt_a, Feq (Fmul sqrt_a sqrt_a) Fa}
+            {nonsquare_d : forall x, not (Feq (Fmul x x) Fd)}.
+    
+    Context {K Keq Kzero Kone Kopp Kadd Ksub Kmul Kinv Kdiv}
             {fieldK: @Algebra.field K Keq Kzero Kone Kopp Kadd Ksub Kmul Kinv Kdiv}
-            {Kprm:@twisted_edwards_params K Keq Kzero Kone Kopp Kadd Ksub Kmul Ka Kd}
+            {char_gt_2_K : @Ring.char_gt F Feq Fzero Fone Fopp Fadd Fsub Fmul (BinNat.N.succ_pos BinNat.N.one)}
             {Keq_dec:DecidableRel Keq}.
     Context {phi:F->K} {Hphi:@Ring.is_homomorphism F Feq Fone Fadd Fmul
                                                    K Keq Kone Kadd Kmul phi}.
-    Context {Ha:Keq (phi Fa) Ka} {Hd:Keq (phi Fd) Kd}.
+    Context {Ka} {Ha:Keq (phi Fa) Ka} {Kd} {Hd:Keq (phi Fd) Kd}.
     Local Notation Fpoint := (@E.point F Feq Fone Fadd Fmul Fa Fd).
     Local Notation Kpoint := (@E.point K Keq Kone Kadd Kmul Ka Kd).
+    Local Notation Fzero  := (E.zero(nonzero_a:=nonzero_a)(d:=Fd)).
+    Local Notation Fadd   := (E.add(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d)).
 
     Create HintDb field_homomorphism discriminated.
     Hint Rewrite <-
@@ -154,7 +153,8 @@ Module E.
             {point_phi_Proper:Proper (eq==>eq) point_phi}
             {point_phi_correct: forall (P:point), eq (point_phi P) (ref_phi P)}.
 
-    Lemma lift_homomorphism : @Monoid.is_homomorphism Fpoint eq add Kpoint eq add point_phi.
+    Lemma lift_homomorphism : @Monoid.is_homomorphism Fpoint eq add
+                                                      Kpoint eq add point_phi.
     Proof.
       repeat match goal with
              | |- _ => intro
