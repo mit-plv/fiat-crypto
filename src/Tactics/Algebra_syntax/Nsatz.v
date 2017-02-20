@@ -125,7 +125,7 @@ Ltac nsatz_power power :=
   let power_N := (eval compute in (BinNat.N.of_nat power)) in
   nsatz_sugar_power BinInt.Z0 power_N.
 
-Ltac nsatz := nsatz_power 1%nat || nsatz_power 2%nat || nsatz_power 3%nat || nsatz_power 4%nat || nsatz_power 5%nat.
+Ltac nsatz := nsatz_power 1%nat.
 
 Tactic Notation "nsatz" := nsatz.
 Tactic Notation "nsatz" constr(n) := nsatz_power n.
