@@ -4,23 +4,6 @@ Require Import Crypto.Spec.EdDSA.
 
 Require ModularArithmetic.PrimeFieldTheorems. (* to know that Z mod p is a field *)
 
-(* TODO: move this to a separate file *)
-Require Crypto.Util.Decidable.
-Require Crypto.Util.Tactics.SpecializeBy.
-Module Pre.
-  Local Open Scope F_scope.
-  Lemma curve25519_params_ok {prime_q:Znumtheory.prime (2^255-19)} :
-  @E.twisted_edwards_params (F (2 ^ 255 - 19)) (@eq (F (2 ^ 255 - 19))) (@F.zero (2 ^ 255 - 19))
-    (@F.one (2 ^ 255 - 19)) (@F.opp (2 ^ 255 - 19)) (@F.add (2 ^ 255 - 19)) (@F.sub (2 ^ 255 - 19)) (@F.mul (2 ^ 255 - 19))
-    (@F.opp (2 ^ 255 - 19) 1)
-    (@F.opp (2 ^ 255 - 19) (F.of_Z (2 ^ 255 - 19) 121665) / F.of_Z (2 ^ 255 - 19) 121666).
-  Proof.
-    pose (@PrimeFieldTheorems.F.Decidable_square (2^255-19) _);
-      SpecializeBy.specialize_by Decidable.vm_decide; split; try Decidable.vm_decide_no_check.
-    { intros n one_le_n n_le_two.
-      assert ((n = 1 \/ n = 2)%N) as Hn by admit; destruct Hn; subst; Decidable.vm_decide. }
-  Admitted.
-End Pre.
 (* these 2 proofs can be generated using https://github.com/andres-erbsen/safecurves-primes *)
 Axiom prime_q : Znumtheory.prime (2^255-19). Global Existing Instance prime_q.
 Axiom prime_l : Znumtheory.prime (2^252 + 27742317777372353535851937790883648493). Global Existing Instance prime_l.
@@ -46,12 +29,7 @@ Section Ed25519.
   Definition n : nat := b - 2.
   Definition c : nat := 3.
 
-  Context {H: forall n : nat, Word.word n -> Word.word (b + b)}.
-
-  Global Instance curve_params :
-    E.twisted_edwards_params
-      (F:=Fq) (Feq:=Logic.eq) (Fzero:=F.zero) (Fone:=F.one) (Fopp:=F.opp) (Fadd:=F.add) (Fsub:=F.sub) (Fmul:=F.mul)
-      (a:=a) (d:=d). Proof Pre.curve25519_params_ok.
+  Context {SHA512: forall n : nat, Word.word n -> Word.word 512}.
 
   Definition E : Type := E.point
                            (F:=Fq) (Feq:=Logic.eq) (Fone:=F.one) (Fadd:=F.add) (Fmul:=F.mul)
@@ -73,13 +51,38 @@ Section Ed25519.
     let '(x,y) := E.coordinates P in Fencode (len:=b-1) y ++ bit (sign x).
   Definition Senc : Fl -> Word.word b := Fencode (len:=b).
 
-  Require Import Crypto.Util.Decidable.
-  Definition ed25519 :
-    CompleteEdwardsCurveTheorems.E.eq (BinInt.Z.to_nat l * B)%E E.zero -> (* TODO: prove this earlier than Experiments/Ed25519? *)
-    EdDSA (E:=E) (Eadd:=E.add) (Ezero:=E.zero) (EscalarMult:=E.mul) (B:=B)
-          (Eopp:=Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.E.opp) (* TODO: move defn *)
-          (Eeq:=Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.E.eq) (* TODO: move defn *)
+  Local Instance char_gt_2 : (* TODO: prove this in PrimeFieldTheorems *)
+    @Ring.char_gt (F.F q) (@eq (F.F q)) (F.of_Z q BinNums.Z0)
+                  (F.of_Z q (BinNums.Zpos BinNums.xH)) (@F.opp q) 
+                  (@F.add q) (@F.sub q) (@F.mul q) (BinNat.N.succ_pos BinNat.N.one).
+  Proof. intros p ?.
+         edestruct (fun p:p = (BinNat.N.succ_pos BinNat.N.zero) \/ p = (BinNat.N.succ_pos BinNat.N.one) => p); subst.
+         { admit. (* 
+           p : BinNums.positive
+           H : BinPos.Pos.le p (BinNat.N.succ_pos BinNat.N.one)
+           ============================
+           p = BinNat.N.succ_pos BinNat.N.zero \/ p = BinNat.N.succ_pos BinNat.N.one *) }
+         { Crypto.Util.Decidable.vm_decide. }
+         { Crypto.Util.Decidable.vm_decide. }
+  Admitted.
+  Lemma nonzero_a : a <> 0%F. Crypto.Util.Decidable.vm_decide. Qed.
+  Lemma square_a : exists sqrt_a : Fq, (sqrt_a * sqrt_a)%F = a.
+    pose (@PrimeFieldTheorems.F.Decidable_square q _ ltac:(Crypto.Util.Decidable.vm_decide) a); Crypto.Util.Decidable.vm_decide. Qed.
+  Lemma nonsquare_d : forall x : Fq, (x * x)%F <> d.
+    pose (@PrimeFieldTheorems.F.Decidable_square q _ ltac:(Crypto.Util.Decidable.vm_decide) d); Crypto.Util.Decidable.vm_decide. Qed.
+
+  Let add := E.add(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d).
+  Let mul := E.mul(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d).
+  Let zero := E.zero(nonzero_a:=nonzero_a)(d:=d).
+
+  Definition ed25519 (l_order_B: E.eq (mul (BinInt.Z.to_nat l) B)%E zero) :
+    EdDSA (E:=E) (Eadd:=add) (Ezero:=zero) (EscalarMult:=mul) (B:=B)
+          (Eopp:=Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.E.opp(nonzero_a:=nonzero_a)) (* TODO: move defn *)
+          (Eeq:=E.eq) (* TODO: move defn *)
           (l:=l) (b:=b) (n:=n) (c:=c)
-          (Eenc:=Eenc) (Senc:=Senc) (H:=H).
-  Proof. split; try (assumption || exact _); vm_decide. Qed.
+          (Eenc:=Eenc) (Senc:=Senc) (H:=SHA512).
+  Proof.
+    split; try exact _.
+    timeout 1 match goal with H:?P |- ?P => idtac end.
+  Admitted.
 End Ed25519.

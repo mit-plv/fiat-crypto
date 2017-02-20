@@ -109,7 +109,7 @@ Module E.
   Section Homomorphism.
     Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
             {field:@field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
-            {char_gt_2_F : @Ring.char_gt F Feq Fzero Fone Fopp Fadd Fsub Fmul (BinNat.N.succ_pos BinNat.N.one)}
+            {Fchar_gt_2 : @Ring.char_gt F Feq Fzero Fone Fopp Fadd Fsub Fmul (BinNat.N.succ_pos BinNat.N.one)}
             {Feq_dec:DecidableRel Feq}.
 
     Context {Fa Fd: F}
@@ -119,42 +119,118 @@ Module E.
     
     Context {K Keq Kzero Kone Kopp Kadd Ksub Kmul Kinv Kdiv}
             {fieldK: @Algebra.field K Keq Kzero Kone Kopp Kadd Ksub Kmul Kinv Kdiv}
-            {char_gt_2_K : @Ring.char_gt F Feq Fzero Fone Fopp Fadd Fsub Fmul (BinNat.N.succ_pos BinNat.N.one)}
             {Keq_dec:DecidableRel Keq}.
-    Context {phi:F->K} {Hphi:@Ring.is_homomorphism F Feq Fone Fadd Fmul
-                                                   K Keq Kone Kadd Kmul phi}.
-    Context {Ka} {Ha:Keq (phi Fa) Ka} {Kd} {Hd:Keq (phi Fd) Kd}.
-    Local Notation Fpoint := (@E.point F Feq Fone Fadd Fmul Fa Fd).
-    Local Notation Kpoint := (@E.point K Keq Kone Kadd Kmul Ka Kd).
-    Local Notation Fzero  := (E.zero(nonzero_a:=nonzero_a)(d:=Fd)).
-    Local Notation Fadd   := (E.add(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d)).
+    Context {FtoK:F->K} {HFtoK:@Ring.is_homomorphism F Feq Fone Fadd Fmul
+                                                     K Keq Kone Kadd Kmul FtoK}.
+    Context {KtoF:K->F} {HKtoF:@Ring.is_homomorphism K Keq Kone Kadd Kmul
+                                                     F Feq Fone Fadd Fmul KtoF}.
+    Context {HisoF:forall x, Feq (KtoF (FtoK x)) x}.
+    Context {Ka} {Ha:Keq (FtoK Fa) Ka} {Kd} {Hd:Keq (FtoK Fd) Kd}.
+    Print Field.
 
-    Create HintDb field_homomorphism discriminated.
-    Hint Rewrite <-
-         (homomorphism_one(phi:=phi))
-         (homomorphism_add(phi:=phi))
-         (homomorphism_sub(phi:=phi))
-         (homomorphism_mul(phi:=phi))
-         (homomorphism_div(phi:=phi))
-         Ha
-         Hd
-      : field_homomorphism.
+    (* for Ring *)
+    Ltac push_homomorphism phi :=
+      let H := constr:(_ : @Ring.is_homomorphism _ _ _ _ _ _ _ _ _ _ phi) in
+      pose proof (@homomorphism_zero _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ H)
+        as _push_homomrphism_0;
+      pose proof (@homomorphism_one _ _ _ _ _ _ _ _ _ _ _ H)
+        as _push_homomrphism_1;
+      pose proof (@homomorphism_add _ _ _ _ _ _ _ _ _ _ _ H)
+        as _push_homomrphism_p;
+      pose proof (@homomorphism_opp _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ H)
+        as _push_homomrphism_o;
+      pose proof (@homomorphism_sub _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ H)
+        as _push_homomrphism_s;
+      pose proof (@homomorphism_mul _ _ _ _ _ _ _ _ _ _ _ H)
+        as _push_homomrphism_m;
+      (rewrite_strat bottomup (terms _push_homomrphism_0 _push_homomrphism_1 _push_homomrphism_p _push_homomrphism_o _push_homomrphism_s _push_homomrphism_m));
+      clear _push_homomrphism_0 _push_homomrphism_1 _push_homomrphism_p _push_homomrphism_o _push_homomrphism_s _push_homomrphism_m.
+        
+    (* for Ring *)
+    Ltac pull_homomorphism phi :=
+      let H := constr:(_ : @Ring.is_homomorphism _ _ _ _ _ _ _ _ _ _ phi) in
+      pose proof (@homomorphism_zero _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ H)
+        as _pull_homomrphism_0;
+      pose proof (@homomorphism_one _ _ _ _ _ _ _ _ _ _ _ H)
+        as _pull_homomrphism_1;
+      pose proof (@homomorphism_add _ _ _ _ _ _ _ _ _ _ _ H)
+        as _pull_homomrphism_p;
+      pose proof (@homomorphism_opp _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ H)
+        as _pull_homomrphism_o;
+      pose proof (@homomorphism_sub _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ H)
+        as _pull_homomrphism_s;
+      pose proof (@homomorphism_mul _ _ _ _ _ _ _ _ _ _ _ H)
+        as _pull_homomrphism_m;
+      symmetry in _pull_homomrphism_0;
+      symmetry in _pull_homomrphism_1;
+      symmetry in _pull_homomrphism_p;
+      symmetry in _pull_homomrphism_o;
+      symmetry in _pull_homomrphism_s;
+      symmetry in _pull_homomrphism_m;
+      (rewrite_strat bottomup (terms _pull_homomrphism_0 _pull_homomrphism_1 _pull_homomrphism_p _pull_homomrphism_o _pull_homomrphism_s _pull_homomrphism_m));
+      clear _pull_homomrphism_0 _pull_homomrphism_1 _pull_homomrphism_p _pull_homomrphism_o _pull_homomrphism_s _pull_homomrphism_m.
 
-    Obligation Tactic := idtac.
-    Program Definition ref_phi (P:Fpoint) : Kpoint := exist _ (
-      let (x, y) := coordinates P in (phi x, phi y)) _.
-    Next Obligation.
-      destruct P as [ [? ?] ?]; simpl.
-      rewrite_strat bottomup hints field_homomorphism.
-      eauto using Monoid.is_homomorphism_phi_proper; assumption.
+    Lemma nonzero_Ka : ~ Keq Ka Kzero.
+    Proof.
+      rewrite <-Ha.
+      pull_homomorphism FtoK.
+      intro X.
+      eapply (Monoid.is_homomorphism_phi_proper(phi:=KtoF)) in X.
+      rewrite 2HisoF in X.
+      auto.
     Qed.
 
-    Context {point_phi:Fpoint->Kpoint}
-            {point_phi_Proper:Proper (eq==>eq) point_phi}
-            {point_phi_correct: forall (P:point), eq (point_phi P) (ref_phi P)}.
+    Lemma square_Ka : exists sqrt_a, Keq (Kmul sqrt_a sqrt_a) Ka.
+    Proof.
+      destruct square_a as [sqrt_a]. exists (FtoK sqrt_a).
+      pull_homomorphism FtoK. rewrite <-Ha.
+      eapply Monoid.is_homomorphism_phi_proper; assumption.
+    Qed.
 
-    Lemma lift_homomorphism : @Monoid.is_homomorphism Fpoint eq add
-                                                      Kpoint eq add point_phi.
+    Lemma nonsquare_Kd : forall x, not (Keq (Kmul x x) Kd).
+    Proof.
+      intros x X. apply (nonsquare_d (KtoF x)).
+      pull_homomorphism KtoF. rewrite X. rewrite <-Hd, HisoF.
+      reflexivity.
+    Qed.
+
+      (* TODO: character respects isomorphism *)
+    Global Instance Kchar_gt_2 :
+      @char_gt K Keq Kzero Kone Kopp Kadd Ksub Kmul (BinNat.N.succ_pos BinNat.N.one).
+    Proof.
+      intros p Hp X; apply (Fchar_gt_2 p Hp).
+      eapply Monoid.is_homomorphism_phi_proper in X.
+      rewrite (homomorphism_zero(zero:=Fzero)(phi:=KtoF)) in X.
+      etransitivity; [|eexact X]; clear X.
+      (* TODO: Ring.of_Z of isomorphism *)
+    Admitted.
+      
+    Local Notation Fpoint := (@E.point F Feq Fone Fadd Fmul Fa Fd).
+    Local Notation Kpoint := (@E.point K Keq Kone Kadd Kmul Ka Kd).
+    Local Notation FzeroP  := (E.zero(nonzero_a:=nonzero_a)(d:=Fd)).
+    Local Notation KzeroP  := (E.zero(nonzero_a:=nonzero_Ka)(d:=Kd)).
+    Local Notation FaddP   := (E.add(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d)).
+    Local Notation KaddP   := (E.add(nonzero_a:=nonzero_Ka)(square_a:=square_Ka)(nonsquare_d:=nonsquare_Kd)).
+    Check KaddP.
+
+    Obligation Tactic := idtac.
+    Program Definition point_phi (P:Fpoint) : Kpoint := exist _ (
+      let (x, y) := coordinates P in (FtoK x, FtoK y)) _.
+    Next Obligation.
+      destruct P as [ [? ?] ?]; cbv.
+      rewrite <-!Ha, <-!Hd; pull_homomorphism FtoK.
+      eapply Monoid.is_homomorphism_phi_proper; assumption.
+    Qed.
+
+    Lemma Proper_point_phi : Proper (eq==>eq) point_phi.
+    Proof.
+      intros P Q H.
+      destruct P as [ [? ?] ?], Q as [ [? ?] ?], H as [Hl Hr]; cbv.
+      rewrite !Hl, !Hr. split; reflexivity.
+    Qed.
+
+    Lemma lift_ismorphism : @Monoid.is_homomorphism Fpoint eq FaddP
+                                                    Kpoint eq KaddP point_phi.
     Proof.
       repeat match goal with
              | |- _ => intro
@@ -162,16 +238,18 @@ Module E.
              | _ => progress destruct_head' @E.point
              | _ => progress destruct_head' prod
              | _ => progress destruct_head' and
-             | |- context[point_phi] => setoid_rewrite point_phi_correct
-             | _ => progress cbv [ref_phi eq E.eq CompleteEdwardsCurve.E.eq E.add E.coordinates proj1_sig] in *
-             (* [_gather_nonzeros] must run before [fst_pair] or [simpl] but after splitting E.eq and unfolding [E.add] *)
-             | _ => _gather_nonzeros
-             | _ => progress simpl in *
-             | |- _ ?x ?x => reflexivity
-             | |- _ ?x ?y => rewrite_strat bottomup hints field_homomorphism
+             | |- context[E.add ?P ?Q] =>
+               unique pose proof (Pre.denominator_nonzero_x _ nonzero_a square_a _ nonsquare_d _ _  (proj2_sig P)  _ _  (proj2_sig Q));
+                 unique pose proof (Pre.denominator_nonzero_y _ nonzero_a square_a _ nonsquare_d _ _  (proj2_sig P)  _ _  (proj2_sig Q))
+             | _ => progress cbv [eq add point_phi coordinates] in *
              | |- _ /\ _ => split
-             | _ => solve [fsatz | repeat (f_equiv; auto) ]
+             | _ => rewrite !(homomorphism_div(phi:=FtoK)) by assumption
+             | _ => rewrite !Ha
+             | _ => rewrite !Hd
+             | _ => push_homomorphism FtoK
+             | |- _ ?x ?x => reflexivity
+             | _ => eapply Monoid.is_homomorphism_phi_proper; assumption
              end.
-      Qed.
+    Qed.
   End Homomorphism.
 End E.
