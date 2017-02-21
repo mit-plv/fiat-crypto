@@ -509,402 +509,16 @@ Module B.
       Proof. cbv [sat_mul_noncps sat_mul]; induction p; prove_eval.  Qed.
       Hint Rewrite eval_sat_mul_noncps : push_eval.
 
-      Definition has_same_wt (cx a:limb) {T} (f:bool->T) :=
-        if dec (fst cx = fst a) then f true else f false.
-      Definition has_same_wt_noncps cx a := has_same_wt cx a id.
-      Hint Opaque has_same_wt_noncps : uncps.
-      Lemma has_same_wt_id cx a {T} f:
-        @has_same_wt cx a T f = f (has_same_wt_noncps cx a).
-      Proof. cbv [has_same_wt has_same_wt_noncps]; prove_id. Qed.
-      Hint Rewrite has_same_wt_id : uncps.
-
-      Lemma find_remove_first'_same_wt cx cx' p: forall acc,
-        fst (find_remove_first' (has_same_wt_noncps cx) acc p) = Some cx' ->
-        fst cx' = fst cx /\
-        fst cx * (snd cx + snd cx') + (eval (snd (find_remove_first' (has_same_wt_noncps cx) acc p))) = fst cx * snd cx + eval acc + eval p.
-      Proof.
-        cbv [has_same_wt has_same_wt_noncps];
-          induction p; simpl find_remove_first' in *;
-            repeat match goal with
-                   | H : _ |- _ => erewrite (proj2 (IHp _ H))
-                   | H : _ |- _ => erewrite (proj1 (IHp _ H))
-                   | |- _ => progress prove_eval
-                   end.
-      Qed.
-      Lemma find_remove_first_same_wt cx cx' p
-        (H : fst (find_remove_first (has_same_wt_noncps cx) p) = Some cx') :
-        fst cx' = fst cx /\
-        fst cx * (snd cx + snd cx') + eval (snd (find_remove_first (has_same_wt_noncps cx) p)) = fst cx * snd cx + eval p.
-      Proof.
-        cbv [find_remove_first]; intros.
-        erewrite (proj1 (find_remove_first'_same_wt _ _ _ _ H)) by eauto.
-        erewrite (proj2 (find_remove_first'_same_wt _ _ _ _ H)) by eauto.
-        prove_eval.
-      Qed.
-
-      Fixpoint compact_no_carry' (acc p:list limb) {T} (f:list limb->T) :=
-        match p with
-        | nil => f acc
-        | (cx::tl)%list =>
-          find_remove_first_cps
-            (has_same_wt cx) acc
-            (fun r =>
-               match (fst r) with
-               | None => compact_no_carry' (cx::acc)%list tl f
-               | Some l => compact_no_carry' ((fst cx, (snd cx + snd l)%RT)::snd r)%list tl f
-               end)
-        end.
-      Definition compact_no_carry'_noncps acc p := compact_no_carry' acc p id.
-      Hint Opaque compact_no_carry'_noncps : uncps.
-      Definition compact_no_carry p {T} f := @compact_no_carry' nil p T f.
-      Definition compact_no_carry_noncps p := compact_no_carry p id.
-      Hint Opaque compact_no_carry_noncps : uncps.
-      Lemma compact_no_carry'_id p: forall acc {T} (f:list limb -> T),
-        @compact_no_carry' acc p T f = f (compact_no_carry'_noncps acc p).
-      Proof.
-        cbv [compact_no_carry'_noncps]; induction p; prove_id;
-          repeat match goal with
-                 | _ => rewrite @find_remove_first_cps_correct in *
-                     by apply has_same_wt_correct
-                 end; prove_id.
-      Qed. Hint Rewrite compact_no_carry'_id : uncps.
-      Lemma eval_compact_no_carry'_noncps p: forall acc,
-        eval (compact_no_carry'_noncps acc p) = eval acc + eval p.
-      Proof.
-        induction p;
-          repeat match goal with
-                 | |- _ => progress (cbv [compact_no_carry'_noncps]; prove_eval)
-                 | |- _ => rewrite IHp
-                 | H : fst (find_remove_first _ _) = _ |- _ =>
-                   apply find_remove_first_same_wt in H
-                 end.
-      Qed. Hint Rewrite eval_compact_no_carry'_noncps : uncps.
-      Lemma length_compact_no_carry' p: forall acc,
-        (length (compact_no_carry'_noncps acc p) <= length p + length acc)%nat.
-      Proof.
-        induction p;
-          repeat match goal with
-                 | _ => progress intros
-                 | _ => progress distr_length
-                 | _ => progress (autorewrite with uncps push_id)
-                 | _ => rewrite IHp
-                 | _ => break_match
-                 | _ => reflexivity
-                 | _ => progress (cbv [compact_no_carry'_noncps]; simpl)
-                 end.
-      Qed.
-      Lemma compact_no_carry_id p {T} f:
-         @compact_no_carry p T f = f (compact_no_carry_noncps p).
-      Proof. cbv [compact_no_carry]; prove_id. Qed.
-      Hint Rewrite compact_no_carry_id : uncps.
-      Lemma eval_compact_no_carry_noncps p:
-         eval (compact_no_carry_noncps p) = eval p.
-      Proof.
-        cbv [compact_no_carry_noncps compact_no_carry].
-        rewrite compact_no_carry'_id; prove_eval.
-      Qed. Hint Rewrite eval_compact_no_carry_noncps : push_eval.
-      Lemma length_compact_no_carry p:
-        (length (compact_no_carry_noncps p) <= length p)%nat.
-      Proof.
-        cbv [compact_no_carry_noncps compact_no_carry].
-        rewrite compact_no_carry'_id, push_id, length_compact_no_carry'.
-        distr_length.
-      Qed. Hint Rewrite length_compact_no_carry : distr_length.
-
-      (* n is fuel, should be length of inp *)
-      Fixpoint compact_cols_loop1 (carries out inp : list limb) (n:nat)
-               {T} (f:list limb * list limb ->T):=
-        match n with
-        | O => f (carries, out)
-        | S n' => 
-          match inp with
-          | nil => f (carries, out)
-          | cons cx tl =>
-            find_remove_first_cps
-              (has_same_wt cx) tl
-              (fun r =>
-                 let found_ls := r in
-                 match (fst found_ls) with
-                 | None => compact_cols_loop1 carries (cx::out) tl n' f
-                 | Some cx' =>
-                   dlet sum_carry := add (snd cx) (snd cx') in
-                   compact_no_carry
-                     ((fst cx * word_max, runtime_snd sum_carry)::carries)
-                              (fun rr =>
-                                 compact_cols_loop1 rr out ((fst cx, runtime_fst sum_carry):: snd found_ls) n' f)
-                 end)
-          end
-        end.
-      Definition compact_cols_loop1_noncps c o i n := compact_cols_loop1 c o i n id.
-      Hint Opaque compact_cols_loop1_noncps : uncps.
-      Lemma compact_cols_loop1_id n:
-        forall p out carries {T} (f:list limb * list limb ->T),
-          compact_cols_loop1 carries out p n f
-          = f (compact_cols_loop1_noncps carries out p n).
-      Proof. cbv [compact_cols_loop1_noncps]; induction n; prove_id. Qed.
-      Hint Rewrite compact_cols_loop1_id : uncps.
-      Lemma eval_compact_cols_loop1_noncps n :
-        forall p (H0:length p = n) out carries,
-          eval (snd (compact_cols_loop1_noncps carries out p n))
-          + eval (fst (compact_cols_loop1_noncps carries out p n))
-          = eval p + eval out + eval carries.
-      Proof.
-        induction n; destruct p;
-          repeat match goal with
-                 | H : fst (find_remove_first _ ?p) = Some _ |- _ =>
-                   unique assert (length p > 0)%nat
-                     by (destruct p; (discriminate || (simpl; omega)))
-                 | _ => rewrite IHn by
-                       (distr_length; break_match; distr_length; discriminate)
-                 | H : fst (find_remove_first _ _) = _ |- _ =>
-                   apply find_remove_first_same_wt in H
-                 | |- context[add ?x ?y] =>
-                   specialize (add_correct x y)
-                 | _ => progress prove_eval
-                 | _ => progress (cbv [compact_cols_loop1_noncps]; simpl)
-                 end.
-      Qed. Hint Rewrite eval_compact_cols_loop1_noncps : push_eval.
-
-      (* n is fuel, should be [length carries + length inp] *)
-      Fixpoint compact_cols_loop2 (carries out inp :list limb) (n:nat)
-               {T} (f:list limb->T) :=
-        match n with
-        | O => f (out++carries++inp)
-        | S n' => 
-          fold_right_no_starter_cps
-            Z.min (List.map fst (inp ++ carries))
-            (fun r =>
-               match r with
-               | None => f (out++carries++inp)
-               | Some min =>
-                 find_remove_first_cps
-                   (has_same_wt (min, 0)) inp
-                   (fun rr =>
-                      let inp_found_ls := rr in
-                      find_remove_first_cps
-                        (has_same_wt (min, 0)) carries
-                        (fun rrr =>
-                           let car_found_ls := rrr in
-                           match fst inp_found_ls, fst car_found_ls with
-                           | None, None => f out (* never happens *)
-                           | Some cx, None =>
-                             compact_cols_loop2 carries (cx :: out) (snd inp_found_ls) n' f
-                           | None, Some cx =>
-                             compact_cols_loop2 (snd car_found_ls) (cx :: out) inp n' f
-                           | Some icx, Some ccx =>
-                             dlet sum_carry := add (snd icx) (snd ccx) in
-                                 compact_no_carry 
-                                   ((min * word_max, runtime_snd sum_carry)::(snd car_found_ls))
-                                   (fun rrrr =>
-                                      compact_cols_loop2
-                                        rrrr
-                                        ((min, runtime_fst sum_carry) :: out)
-                                        (snd inp_found_ls) n' f)
-                           end))
-               end)
-        end.
-      Definition compact_cols_loop2_noncps c o i n := compact_cols_loop2 c o i n id.
-      Hint Opaque compact_cols_loop2_noncps : uncps.
-      Lemma compact_cols_loop2_id n:
-        forall out p carries  {T} (f:list limb->T),
-        compact_cols_loop2 carries out p n f
-        = f (compact_cols_loop2_noncps carries out p n).
-      Proof. cbv [compact_cols_loop2_noncps]; induction n; prove_id. Qed.
-      Hint Rewrite compact_cols_loop2_id : uncps.
-      Lemma eval_compact_cols_loop2_noncps n:
-        forall out p carries,
-        eval (compact_cols_loop2_noncps carries out p n)
-        = eval p + eval carries + eval out.
-      Proof.
-        cbv [compact_cols_loop2_noncps]; induction n;
-          repeat match goal with
-                 | _ => rewrite fold_right_no_starter_cps_correct
-                 | H : fst (find_remove_first _ ?p) = Some _ |- _ =>
-                   unique assert (length p > 0)%nat
-                     by (destruct p; (discriminate || (simpl; omega)))
-                 | _ => rewrite IHn
-                     by (distr_length; break_match; distr_length; discriminate)
-                 | H : fst (find_remove_first _ _) = _ |- _ =>
-                   apply find_remove_first_same_wt in H
-                 | |- context[add ?x ?y] =>
-                   specialize (add_correct x y)
-                 | _ => progress prove_eval
-                 | _ => progress (cbv [compact_cols_loop2_noncps]; simpl) 
-                 end.
-        (* TODO : logic here is kinda ugly-- basic idea is "if you found a minimum weight in (p++carries), an element with that weight must be in either carries or p" *)
-        exfalso.
-        repeat match goal with
-                 | H : fold_right_no_starter Z.min _ = Some _ |- _ =>
-                   apply fold_right_no_starter_min in H
-                 | H : fst (find_remove_first _ _) = None |- _ =>
-                   apply find_remove_first_None in H
-                 | H : List.In _ (List.map _ _) |- _ =>
-                   apply List.in_map_iff in H;
-                     destruct H as [? [? ?]]; subst
-                 | H : List.In _ (_ ++ _) |- _ => apply List.in_app_or in H; destruct H
-                 | H1 : fst (find_remove_first _ ?p) = None,
-                        H2 : List.In ?x ?p
-                   |- _ =>
-                   apply (find_remove_first_None _ _ H1) in H2;
-                     cbv [has_same_wt id] in H2; simpl fst in H2;
-                       break_if; congruence
-                 | H : _ \/ _ |- _ => destruct H
-               end.
-      Qed. Hint Rewrite eval_compact_cols_loop2_noncps : push_eval.
-
-      Definition compact_cols (p:list limb) {T} (f:list limb->T) :=
-        compact_cols_loop1
-          nil nil p (length p)
-          (fun r => compact_cols_loop2
-                      (fst r) nil (snd r) (length (fst r ++ snd r)) f).
-      Definition compact_cols_noncps p := compact_cols p id.
-      Hint Opaque compact_cols_noncps : uncps.
-      Lemma compact_cols_id (p:list limb) {T} (f:list limb->T):
-        compact_cols p f = f (compact_cols_noncps p).
-      Proof. cbv [compact_cols compact_cols_noncps]; prove_id. Qed.
-      Hint Rewrite compact_cols_id : uncps.
-      Lemma eval_compact_cols_noncps (p:list limb):
-        eval (compact_cols_noncps p) = eval p.
-      Proof. cbv [compact_cols_noncps compact_cols]; prove_eval. Qed.
-      Hint Rewrite eval_compact_cols_noncps : push_eval.
-           
     End Saturated.
-
-    (* 
-       it makes sense if we have m = 2^255-19 to have
-       k = 2^255, c = [(1,19)]
-       but then how do we get the digits for k-c?
-       well, we can take the opposite of c, adding modulus, and add it to k
-       is that actually a good idea? k + ((k-c)-c) = 2k - 2c, or 2*modulus
-       we'd have to shift down
-
-       alternative: store k-1
-       then we can just subtract c+1
-
-       to get -modulus, we want -k+c
-       we currently have k-1, c+1
-       
-    *)
-    Record Modulus :=
-      {
-        modulus:Z;
-        k:Z;
-        c:list limb;
-        nonzero:modulus <> 0;
-        k_nonzero: k <> 0;
-        eval_modulus: k - eval c = modulus;
-      }.
-
-    Record SubCoeff {m:Modulus} :=
-      {
-        coeff:list limb;
-        coeff_0 : (eval coeff) mod m.(modulus) = 0;
-      }.
-
-    Section Sub.
-      Context {m:Modulus} {sc: @SubCoeff m}.
-
-      Definition sub (p q : list limb) {T} (f:list limb->T) :=
-        mul q [(1,-1)]
-            (fun r => f (sc.(coeff) ++ p ++ r)).
-      Definition sub_noncps p q := sub p q id.
-      Hint Opaque sub_noncps : uncps.
-      Lemma sub_id p q {T} f : @sub p q T f = f (sub_noncps p q).
-      Proof. cbv [sub_noncps sub]; prove_id. Qed.
-      Hint Rewrite sub_id : uncps.
-      Lemma eval_sub_noncps p q :
-        (eval (sub_noncps p q)) mod m.(modulus)
-        = (eval p - eval q) mod m.(modulus).
-      Proof.
-        cbv [sub_noncps sub]; prove_eval.
-        rewrite Z.add_mod, coeff_0, Z.add_0_l, Z.mod_mod by apply nonzero.
-        f_equal; ring.
-      Qed. Hint Rewrite eval_sub_noncps : push_eval.
-
-     Definition opp (p : list limb) {T} (f:list limb->T) :=
-       sub [] p f.
-     Definition opp_noncps p := opp p id.
-     Hint Opaque opp_noncps : uncps.
-     Lemma opp_id p {T} f : @opp p T f = f (opp_noncps p).
-     Proof. cbv [opp_noncps opp]; prove_id. Qed.
-     Hint Rewrite opp_id : uncps.
-     Lemma eval_opp_noncps p :
-       (eval (opp_noncps p)) mod m.(modulus) = (- eval p) mod m.(modulus).
-     Proof.
-       cbv [opp_noncps opp]; fold (sub_noncps [] p); prove_eval.
-     Qed. Hint Rewrite eval_opp_noncps : push_eval.
-    End Sub.
-    Hint Rewrite @sub_id @opp_id : uncps.
-    Hint Rewrite @eval_sub_noncps @eval_opp_noncps : push_eval.
-
-    Section Freeze.
-      Context {m:Modulus} {sc: @SubCoeff m}
-              {sat_add : list limb -> list limb -> forall {T}, (list limb*bool->T)->T}
-              {cond_add : bool->list limb -> list limb -> forall {T}, (list limb->T)->T}
-      .
-      
-      Definition sat_add_noncps p q := sat_add p q _ id.
-      Hint Opaque sat_add_noncps : uncps.
-      Lemma sat_add_id p q {T} f :
-        @sat_add p q T f = f (sat_add_noncps p q).
-      Admitted. Hint Rewrite sat_add_id : uncps.
-      Lemma eval_sat_add_noncps p q :
-        eval (fst (sat_add_noncps p q)) = eval p + eval q.
-      Admitted. Hint Rewrite eval_sat_add_noncps : push_eval.
-      Definition cond_add_noncps b p q := cond_add b p q _ id.
-      Hint Opaque cond_add_noncps : uncps.
-      Lemma cond_add_id b p q {T} f :
-        @cond_add b p q T f = f (cond_add_noncps b p q).
-      Admitted. Hint Rewrite cond_add_id : uncps.
-      Lemma eval_cond_add_noncps b p q :
-        eval (cond_add_noncps b p q)
-        = if b then eval p + eval q else eval p.
-      Admitted. Hint Rewrite eval_cond_add_noncps : push_eval.
-
-
-      (* based on https://sourceforge.net/p/ed448goldilocks/code/ci/master/tree/src/p448/arch_x86_64/p448.c#l309 *)
-      Definition freeze (x : list limb) {T} (f:list limb->T) :=
-        reduce (m.(k)) (m.(c)) x
-               (fun r =>
-                  @sat_add r ((m.(k), -1)::(m.(c))) _ 
-                           (fun rr =>
-                              @opp m sc (m.(c)) _
-                                   (fun rrr =>
-                                      cond_add (snd rr) (fst rr) ((m.(k),1)::rrr) _ f
-                                   )
-                           )
-               ).
-      Definition freeze_noncps x := freeze x id.
-
-      (* TODO : move to ZUtil *)
-      Lemma Z_add_mod_0 a b c (H:c mod b = 0):
-        (a+c) mod b = a mod b.
-      Proof.
-        intros; rewrite Z.add_mod_r, H, Z.add_0_r; reflexivity.
-      Qed.
-
-      Lemma eval_freeze_noncps x :
-        eval (freeze_noncps x) mod m.(modulus) = eval x mod m.(modulus).
-      Proof.
-        cbv [freeze_noncps freeze].
-        prove_eval;
-          repeat match goal with
-                 | |- (_ + (k _ * _ + _)) mod _ = _ =>
-                   rewrite Z_add_mod_0
-                 | |- (k m * ?x + _) mod ?m = 0 =>
-                   transitivity ((x * m) mod m);
-                     [|solve[auto using Z.mod_mul, nonzero]]
-                 | _ => rewrite Z.add_mod_r; rewrite eval_opp_noncps; 
-                          rewrite <-Z.add_mod_r
-                 | _ => rewrite <-eval_modulus; autorewrite with push_eval;
-                          rewrite ?eval_modulus;
-                          solve [auto using nonzero, k_nonzero]
-                 | _ => rewrite <-eval_modulus; f_equal; ring
-                 end.
-      Qed.
-
-    End Freeze.
   End Associational.
+  Hint Rewrite
+      @Associational.sat_mul_id
+      @Associational.sat_multerm_id
+      @Associational.carry_id
+      @Associational.carryterm_id
+      @Associational.reduce_id
+      @Associational.split_id
+      @Associational.mul_id : uncps.
 
   Module Positional.
     Section Positional.
@@ -997,17 +611,17 @@ Module B.
         fold_right_cps (fun t st => place t (pred n) (fun p=> add_to_nth (fst p) (snd p) st id)) (zeros n) p f.
       Definition from_associational_noncps n p := from_associational n p id.
       Hint Opaque from_associational_noncps : uncps.
-      Lemma from_associational_id {n} p (n_nonzero:n<>O) {T} f:
+      Lemma from_associational_id {n} p {T} f:
         @from_associational n p T f = f (from_associational_noncps n p).
       Proof. cbv [from_associational from_associational_noncps]; prove_id. Qed.
-      Hint Rewrite @from_associational_id using omega : uncps.
+      Hint Rewrite @from_associational_id : uncps.
       Lemma eval_from_associational_noncps {n} p (n_nonzero:n<>O):
         eval (from_associational_noncps n p) = Associational.eval p.
       Proof.
         cbv [from_associational from_associational_noncps]; induction p;
           [|pose proof (place_in_range a (pred n))]; prove_eval.
         cbv [place_noncps]; rewrite weight_place. nsatz.
-      Qed. Hint Rewrite @eval_from_associational_noncps : push_eval.
+      Qed. Hint Rewrite @eval_from_associational_noncps using omega : push_eval.
 
       Section Carries.
         Context {modulo div : Z->Z->Z}.
@@ -1028,7 +642,34 @@ Module B.
       End Carries.
     End Positional.
   End Positional.
+  Hint Rewrite
+      @Associational.sat_mul_id
+      @Associational.sat_multerm_id
+      @Associational.carry_id
+      @Associational.carryterm_id
+      @Associational.reduce_id
+      @Associational.split_id
+      @Associational.mul_id
+      @Positional.carry_id
+      @Positional.from_associational_id
+      @Positional.place_id
+      @Positional.add_to_nth_id
+      @Positional.to_associational_id
+    : uncps.
+  Hint Rewrite
+      @Associational.eval_sat_mul_noncps
+      @Associational.eval_mul_noncps
+      @Positional.eval_to_associational_noncps
+      @Associational.eval_carry_noncps
+      @Associational.eval_carryterm_noncps
+      @Associational.eval_reduce_noncps
+      @Associational.eval_split_noncps
+      @Positional.eval_carry_noncps
+      @Positional.eval_from_associational_noncps
+      @Positional.eval_add_to_nth_noncps
+    using (omega || assumption) : push_eval.
 End B.
+  
 
 Section Karatsuba.
   Context {T : Type} (eval : T -> Z)
@@ -1080,75 +721,129 @@ Import Coq.Lists.List.ListNotations. Local Open Scope list_scope.
 Import B.
 Require Import Crypto.Algebra.
 
-Axiom add_get_carry : Z -> Z -> Z * Z.
-Axiom mul : Z -> Z -> Z * Z.
-Axiom modulo : Z -> Z -> Z.
-Axiom div : Z -> Z -> Z.
-Axiom div_mod :
- forall a b : Z,
- b <> 0 ->
- a = b * div a b + modulo a b.
-
-Lemma lift_tuple2 {R S T n} f (g:R->S) : (forall a b, {prod | g prod = f a b}) ->
-                              { op : tuple T n -> tuple T n -> R & forall a b, g (op a b) = f a b }.
+(* TODO : move *)
+Definition lift_tuple2 {R S T n} f (g:R->S)
+  (X : forall a b, {prod | g prod = f a b}) :
+  { op : tuple T n -> tuple T n -> R & forall a b, g (op a b) = f a b }.
 Proof.
-  intros X.
   exists (fun a b => proj1_sig (X a b)).
-  intros a b. apply (proj2_sig (X a b)).
-Qed.
-
-Local Infix "^" := tuple : type_scope.
-Goal { mul : (Z^4 -> Z^4 -> Z^7)%type &
-             forall a b : Z^4,
-               let eval {n} := Positional.eval (n := n) (fun i => 10^i) in
-               eval (mul a b) = eval a  * eval b }.
-Proof.
-  apply lift_tuple2; intros.
-  cbv [Tuple.tuple Tuple.tuple'] in *.
-  repeat match goal with p : _ * Z |- _ => destruct p end.
-  eexists; cbv zeta beta; intros.
-  match goal with |- Positional.eval ?wt _ = Positional.eval ?wt ?a * Positional.eval ?wt ?b =>
-                  transitivity (Positional.eval wt
-                                  (Positional.to_associational (n := 4) wt a
-                                  (fun r => Positional.to_associational (n := 4) wt b
-                                  (fun r0 => Associational.mul r r0
-                                  (fun r1 => Positional.from_associational wt 7 r1
-                                  (fun r2 => Positional.to_associational wt r2
-                                  (fun r3 => @Positional.carry wt modulo div 0 r3 _
-                                  (fun r4 => @Positional.carry wt modulo div 1 r4 _
-                                  (fun r5 => @Positional.carry wt modulo div 2 r5 _
-                                  (fun r6 => @Positional.carry wt modulo div 3 r6 _
-                                  (fun r7 => @Positional.carry wt modulo div 4 r7 _
-                                  (fun r8 => @Positional.carry wt modulo div 5 r8 _
-                                  (fun r9 => @Positional.carry wt modulo div 6 r9 _
-                                  (fun r10 => @Positional.carry wt modulo div 7 r10 _
-                                  (fun r11 => Positional.from_associational wt 7 r11 id
-                               )))))))))))))))
-  end.
-  {
-  apply f_equal.
-  cbv - [runtime_add runtime_mul Let_In].
-  cbv [runtime_add runtime_mul].
-  repeat progress rewrite ?Z.mul_1_l, ?Z.mul_1_r, ?Z.add_0_l, ?Z.add_0_r.
-  reflexivity.
-  }
-  {
-    repeat progress (try rewrite Positional.to_associational_id;
-                     try rewrite Associational.mul_id;
-                     try rewrite Positional.from_associational_id by congruence;
-                     try rewrite Positional.carry_id;
-                     cbv [id]; fold @id).
-    rewrite Positional.eval_from_associational_id
-      by (try (intro i; apply Z.pow_nonzero; try congruence; destruct i; omega);
-          cbv; congruence).
-    repeat rewrite Positional.eval_carry_id
-      by (auto using div_mod; rewrite <-Z.pow_sub_r; cbv; try split; congruence).
-    rewrite Positional.eval_to_associational_id.
-    rewrite Positional.eval_from_associational_id
-      by (try (intro i; apply Z.pow_nonzero; try congruence; destruct i; omega);
-          cbv; congruence).
-    rewrite Associational.eval_mul_id.
-    rewrite Positional.eval_to_associational_id.
-    rewrite Positional.eval_to_associational_id.
-    reflexivity. }
+  exact (fun a b => proj2_sig (X a b)).
 Defined.
+
+Fixpoint chained_carries wt modulo div n t {T} (f:list (Z*Z)->T) :=
+  match n with
+  | O => @Positional.carry wt modulo div 0 t _ f
+  | S n' => chained_carries wt modulo div n' t (fun r => @Positional.carry wt modulo div n r _ f)
+  end.
+Definition chained_carries_noncps wt m d n t :=
+  chained_carries wt m d n t id.
+Hint Opaque chained_carries_noncps : uncps.
+Lemma chained_carries_id wt m d n : forall t {T} f,
+  @chained_carries wt m d n t T f = f (chained_carries_noncps wt m d n t).
+Proof.
+  cbv [chained_carries_noncps]; induction n; [prove_id|].
+  intros; simpl chained_carries.
+  etransitivity; rewrite IHn; [|reflexivity].
+  rewrite Positional.carry_id.
+  reflexivity.
+Qed. Hint Rewrite chained_carries_id : uncps.
+Lemma eval_chained_carries_noncps :
+  forall wt modulo div,
+    (forall a b : Z, b <> 0 -> a = b * div a b + modulo a b) ->
+    forall (n : nat) (p : list B.limb),
+      (forall i, (i <= n)%nat -> wt (S i) / wt i <> 0) ->
+      Associational.eval (chained_carries_noncps wt modulo div n p)
+      =  Associational.eval p.
+Proof.
+  induction n; intros; cbv [chained_carries_noncps]; simpl chained_carries.
+  { apply Positional.eval_carry_noncps; auto. }
+  { rewrite chained_carries_id.
+    etransitivity;[|apply IHn; solve[auto]].
+    apply Positional.eval_carry_noncps; auto. }
+Qed. Hint Rewrite eval_chained_carries_noncps : push_eval.
+  
+
+Ltac assert_preconditions :=
+  repeat match goal with
+         | |- context [Positional.from_associational ?wt ?n] =>
+           unique assert (wt 0%nat = 1) by (cbv; congruence)
+         | |- context [Positional.from_associational ?wt ?n] =>
+           unique assert (forall i, wt i <> 0) by (intros; apply Z.pow_nonzero; try (cbv; congruence); solve [zero_bounds])
+         | |- context [Positional.from_associational ?wt ?n] =>
+           unique assert (n <> 0%nat) by (cbv; congruence)
+         | |- context [Positional.carry ?wt ?i] =>
+           unique assert (wt (S i) / wt i <> 0) by (cbv; congruence)
+         end.
+
+Ltac op_simplify := 
+  cbv - [runtime_add runtime_mul Let_In];
+  cbv [runtime_add runtime_mul];
+  repeat progress rewrite ?Z.mul_1_l, ?Z.mul_1_r, ?Z.add_0_l, ?Z.add_0_r.
+
+Ltac prove_op sz x :=
+  cbv [Tuple.tuple Tuple.tuple'] in *;
+  repeat match goal with p : _ * Z |- _ => destruct p end;
+  apply (lift_tuple2 (n := sz));
+  eexists; cbv zeta beta; intros;
+  match goal with |- Positional.eval ?wt _ = ?op (Positional.eval ?wt ?a) (Positional.eval ?wt ?b) =>
+                  transitivity (Positional.eval wt (x wt a b))
+  end; 
+  [ apply f_equal; op_simplify; reflexivity
+  | assert_preconditions;
+    progress autorewrite with uncps push_id push_eval;
+    reflexivity ]
+.
+
+Section Ops.
+  Context
+    (add_get_carry : Z -> Z -> Z * Z)
+    (mul : Z -> Z -> Z * Z)
+    (modulo : Z -> Z -> Z)
+    (div : Z -> Z -> Z)
+    (div_mod : forall a b : Z, b <> 0 ->
+                               a = b * div a b + modulo a b).
+  Local Infix "^" := tuple : type_scope.
+
+  Let wt := fun i : nat => 2^(25 * (i / 2) + 26 * ((i + 1) / 2)).
+  Let sz := 10%nat.
+  Let sz2 := 19%nat.
+
+  Definition addT :
+    { add : (Z^sz -> Z^sz -> Z^sz)%type &
+               forall a b : Z^sz,
+                 let eval {n} := Positional.eval (n := n) wt in
+                 eval (add a b) = eval a  + eval b }.
+  Proof.
+    prove_op sz (
+        fun wt a b =>
+        Positional.to_associational (n := sz) wt a
+          (fun r => Positional.to_associational (n := sz) wt b
+          (fun r0 => Positional.from_associational wt sz (r ++ r0) id
+      ))).
+  Defined.
+  
+
+  Definition mulT :
+    { mul : (Z^sz -> Z^sz -> Z^sz2)%type &
+               forall a b : Z^sz,
+                 let eval {n} := Positional.eval (n := n) wt in
+                 eval (mul a b) = eval a  * eval b }.
+  Proof.
+    prove_op sz (
+        fun wt a b =>
+        Positional.to_associational (n := sz) wt a
+          (fun r => Positional.to_associational (n := sz) wt b
+          (fun r0 => Associational.mul r r0
+          (fun r1 => Positional.from_associational wt sz2 r1
+          (fun r2 => Positional.to_associational wt r2
+          (fun r3 => chained_carries wt modulo div 19 r3 
+          (fun r13 => Positional.from_associational wt sz2 r3 id
+      ))))))).
+  Time Defined. (* Finished transaction in 124.656 secs *) 
+
+  (*
+  Eval cbv [projT1 addT lift_tuple2 proj1_sig] in (projT1 addT).
+  Eval cbv [projT1 mulT lift_tuple2 proj1_sig] in (projT1 mulT).
+  *)
+  
+End Ops.
