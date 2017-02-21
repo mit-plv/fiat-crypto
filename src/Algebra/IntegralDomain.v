@@ -19,7 +19,6 @@ Module IntegralDomain.
   Module _LargeCharacteristicReflective.
     Section ReflectiveNsatzSideConditionProver.
       Import BinInt BinNat BinPos.
-      Lemma N_one_le_pos p : (N.one <= N.pos p)%N. Admitted.
       Context {R eq zero one opp add sub mul}
               {ring:@Algebra.ring R eq zero one opp add sub mul}
               {zpzf:@Algebra.is_zero_product_zero_factor R eq zero mul}.
@@ -50,8 +49,9 @@ Module IntegralDomain.
 
       Lemma CtoZ_correct c : of_Z (CtoZ c) = denote c.
       Proof.
+        Set Printing All.
         induction c; simpl CtoZ; simpl denote;
-          repeat (rewrite_hyp ?*; Ring.push_homomorphism constr:(of_Z)); reflexivity.
+          repeat (rewrite_hyp ?* || Ring.push_homomorphism constr:(of_Z)); reflexivity.
       Qed.
 
       (* TODO: move *)

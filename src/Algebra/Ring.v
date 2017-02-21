@@ -135,15 +135,46 @@ Section Homomorphism.
   Qed.
 End Homomorphism.
 
+(* TODO: file a Coq bug for rewrite_strat -- it should accept ltac variables *)
 Ltac push_homomorphism phi :=
-  let H := constr:(_:is_homomorphism(phi:=phi)) in
-  repeat rewrite
-         ?(homomorphism_zero(     phi_homom:=H)),
-         ?(homomorphism_one(is_homomorphism:=H)),
-         ?(homomorphism_add(      phi_homom:=H)),
-         ?(homomorphism_opp(      phi_homom:=H)),
-         ?(homomorphism_sub(      phi_homom:=H)),
-         ?(homomorphism_mul(is_homomorphism:=H)).
+  let H := constr:(_ : @Ring.is_homomorphism _ _ _ _ _ _ _ _ _ _ phi) in
+  pose proof (@homomorphism_zero _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ H)
+    as _push_homomrphism_0;
+  pose proof (@homomorphism_one _ _ _ _ _ _ _ _ _ _ _ H)
+    as _push_homomrphism_1;
+  pose proof (@homomorphism_add _ _ _ _ _ _ _ _ _ _ _ H)
+    as _push_homomrphism_p;
+  pose proof (@homomorphism_opp _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ H)
+    as _push_homomrphism_o;
+  pose proof (@homomorphism_sub _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ H)
+    as _push_homomrphism_s;
+  pose proof (@homomorphism_mul _ _ _ _ _ _ _ _ _ _ _ H)
+    as _push_homomrphism_m;
+  (rewrite_strat bottomup (terms _push_homomrphism_0 _push_homomrphism_1 _push_homomrphism_p _push_homomrphism_o _push_homomrphism_s _push_homomrphism_m));
+  clear _push_homomrphism_0 _push_homomrphism_1 _push_homomrphism_p _push_homomrphism_o _push_homomrphism_s _push_homomrphism_m.
+
+Ltac pull_homomorphism phi :=
+  let H := constr:(_ : @Ring.is_homomorphism _ _ _ _ _ _ _ _ _ _ phi) in
+  pose proof (@homomorphism_zero _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ H)
+    as _pull_homomrphism_0;
+  pose proof (@homomorphism_one _ _ _ _ _ _ _ _ _ _ _ H)
+    as _pull_homomrphism_1;
+  pose proof (@homomorphism_add _ _ _ _ _ _ _ _ _ _ _ H)
+    as _pull_homomrphism_p;
+  pose proof (@homomorphism_opp _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ H)
+    as _pull_homomrphism_o;
+  pose proof (@homomorphism_sub _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ H)
+    as _pull_homomrphism_s;
+  pose proof (@homomorphism_mul _ _ _ _ _ _ _ _ _ _ _ H)
+    as _pull_homomrphism_m;
+  symmetry in _pull_homomrphism_0;
+  symmetry in _pull_homomrphism_1;
+  symmetry in _pull_homomrphism_p;
+  symmetry in _pull_homomrphism_o;
+  symmetry in _pull_homomrphism_s;
+  symmetry in _pull_homomrphism_m;
+  (rewrite_strat bottomup (terms _pull_homomrphism_0 _pull_homomrphism_1 _pull_homomrphism_p _pull_homomrphism_o _pull_homomrphism_s _pull_homomrphism_m));
+  clear _pull_homomrphism_0 _pull_homomrphism_1 _pull_homomrphism_p _pull_homomrphism_o _pull_homomrphism_s _pull_homomrphism_m.
 
 Lemma isomorphism_to_subring_ring
       {T EQ ZERO ONE OPP ADD SUB MUL}

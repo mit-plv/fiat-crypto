@@ -83,6 +83,13 @@ Section Ed25519.
           (Eenc:=Eenc) (Senc:=Senc) (H:=SHA512).
   Proof.
     split; try exact _.
-    timeout 1 match goal with H:?P |- ?P => idtac end.
-  Admitted.
+    (* COQBUG: https://coq.inria.fr/bugs/show_bug.cgi?id=5366 *)
+    (* timeout 1 match goal with H:?P |- ?P => idtac end. *)
+    Crypto.Util.Decidable.vm_decide.
+    Crypto.Util.Decidable.vm_decide.
+    Crypto.Util.Decidable.vm_decide.
+    Crypto.Util.Decidable.vm_decide.
+    Crypto.Util.Decidable.vm_decide.
+    exact l_order_B.
+  Qed.
 End Ed25519.

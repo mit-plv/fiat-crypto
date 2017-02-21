@@ -126,54 +126,11 @@ Module E.
                                                      F Feq Fone Fadd Fmul KtoF}.
     Context {HisoF:forall x, Feq (KtoF (FtoK x)) x}.
     Context {Ka} {Ha:Keq (FtoK Fa) Ka} {Kd} {Hd:Keq (FtoK Fd) Kd}.
-    Print Field.
-
-    (* for Ring *)
-    Ltac push_homomorphism phi :=
-      let H := constr:(_ : @Ring.is_homomorphism _ _ _ _ _ _ _ _ _ _ phi) in
-      pose proof (@homomorphism_zero _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ H)
-        as _push_homomrphism_0;
-      pose proof (@homomorphism_one _ _ _ _ _ _ _ _ _ _ _ H)
-        as _push_homomrphism_1;
-      pose proof (@homomorphism_add _ _ _ _ _ _ _ _ _ _ _ H)
-        as _push_homomrphism_p;
-      pose proof (@homomorphism_opp _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ H)
-        as _push_homomrphism_o;
-      pose proof (@homomorphism_sub _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ H)
-        as _push_homomrphism_s;
-      pose proof (@homomorphism_mul _ _ _ _ _ _ _ _ _ _ _ H)
-        as _push_homomrphism_m;
-      (rewrite_strat bottomup (terms _push_homomrphism_0 _push_homomrphism_1 _push_homomrphism_p _push_homomrphism_o _push_homomrphism_s _push_homomrphism_m));
-      clear _push_homomrphism_0 _push_homomrphism_1 _push_homomrphism_p _push_homomrphism_o _push_homomrphism_s _push_homomrphism_m.
-        
-    (* for Ring *)
-    Ltac pull_homomorphism phi :=
-      let H := constr:(_ : @Ring.is_homomorphism _ _ _ _ _ _ _ _ _ _ phi) in
-      pose proof (@homomorphism_zero _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ H)
-        as _pull_homomrphism_0;
-      pose proof (@homomorphism_one _ _ _ _ _ _ _ _ _ _ _ H)
-        as _pull_homomrphism_1;
-      pose proof (@homomorphism_add _ _ _ _ _ _ _ _ _ _ _ H)
-        as _pull_homomrphism_p;
-      pose proof (@homomorphism_opp _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ H)
-        as _pull_homomrphism_o;
-      pose proof (@homomorphism_sub _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ H)
-        as _pull_homomrphism_s;
-      pose proof (@homomorphism_mul _ _ _ _ _ _ _ _ _ _ _ H)
-        as _pull_homomrphism_m;
-      symmetry in _pull_homomrphism_0;
-      symmetry in _pull_homomrphism_1;
-      symmetry in _pull_homomrphism_p;
-      symmetry in _pull_homomrphism_o;
-      symmetry in _pull_homomrphism_s;
-      symmetry in _pull_homomrphism_m;
-      (rewrite_strat bottomup (terms _pull_homomrphism_0 _pull_homomrphism_1 _pull_homomrphism_p _pull_homomrphism_o _pull_homomrphism_s _pull_homomrphism_m));
-      clear _pull_homomrphism_0 _pull_homomrphism_1 _pull_homomrphism_p _pull_homomrphism_o _pull_homomrphism_s _pull_homomrphism_m.
 
     Lemma nonzero_Ka : ~ Keq Ka Kzero.
     Proof.
       rewrite <-Ha.
-      pull_homomorphism FtoK.
+      Ring.pull_homomorphism FtoK.
       intro X.
       eapply (Monoid.is_homomorphism_phi_proper(phi:=KtoF)) in X.
       rewrite 2HisoF in X.
@@ -183,14 +140,14 @@ Module E.
     Lemma square_Ka : exists sqrt_a, Keq (Kmul sqrt_a sqrt_a) Ka.
     Proof.
       destruct square_a as [sqrt_a]. exists (FtoK sqrt_a).
-      pull_homomorphism FtoK. rewrite <-Ha.
+      Ring.pull_homomorphism FtoK. rewrite <-Ha.
       eapply Monoid.is_homomorphism_phi_proper; assumption.
     Qed.
 
     Lemma nonsquare_Kd : forall x, not (Keq (Kmul x x) Kd).
     Proof.
       intros x X. apply (nonsquare_d (KtoF x)).
-      pull_homomorphism KtoF. rewrite X. rewrite <-Hd, HisoF.
+      Ring.pull_homomorphism KtoF. rewrite X. rewrite <-Hd, HisoF.
       reflexivity.
     Qed.
 
@@ -211,7 +168,6 @@ Module E.
     Local Notation KzeroP  := (E.zero(nonzero_a:=nonzero_Ka)(d:=Kd)).
     Local Notation FaddP   := (E.add(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d)).
     Local Notation KaddP   := (E.add(nonzero_a:=nonzero_Ka)(square_a:=square_Ka)(nonsquare_d:=nonsquare_Kd)).
-    Check KaddP.
 
     Obligation Tactic := idtac.
     Program Definition point_phi (P:Fpoint) : Kpoint := exist _ (
@@ -246,7 +202,7 @@ Module E.
              | _ => rewrite !(homomorphism_div(phi:=FtoK)) by assumption
              | _ => rewrite !Ha
              | _ => rewrite !Hd
-             | _ => push_homomorphism FtoK
+             | _ => Ring.push_homomorphism FtoK
              | |- _ ?x ?x => reflexivity
              | _ => eapply Monoid.is_homomorphism_phi_proper; assumption
              end.

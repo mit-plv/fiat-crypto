@@ -115,10 +115,11 @@ Section Homomorphism_rev.
           {phi'_inv : forall a, phi' (inv a) = INV (phi' a)}
           {phi'_id : phi' id = ID}.
 
-  Local Instance group_from_redundant_representation
-    : @group H eq op id inv.
+  Lemma group_from_redundant_representation
+    : @group H eq op id inv /\ @Monoid.is_homomorphism G EQ OP H eq op phi /\ @Monoid.is_homomorphism H eq op G EQ OP phi'.
   Proof.
     repeat match goal with
+           | [ H : _/\_ |- _ ] => destruct H; try clear H
            | [ H : group |- _ ] => destruct H; try clear H
            | [ H : monoid |- _ ] => destruct H; try clear H
            | [ H : is_associative |- _ ] => destruct H; try clear H
@@ -132,7 +133,7 @@ Section Homomorphism_rev.
            | [ H : eq _ _ |- _ ] => apply phi'_eq in H
            | [ |- eq _ _ ] => apply phi'_eq
            | [ H : EQ _ _ |- _ ] => rewrite H
-           | _ => progress erewrite ?phi'_op, ?phi'_inv, ?phi'_id by reflexivity
+           | _ => progress erewrite ?phi'_op, ?phi'_inv, ?phi'_id, ?phi'_phi_id by reflexivity
            | [ H : _ |- _ ] => progress erewrite ?phi'_op, ?phi'_inv, ?phi'_id in H by reflexivity
            | _ => solve [ eauto ]
            end.
