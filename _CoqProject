@@ -7,6 +7,7 @@ src/BaseSystem.v
 src/BaseSystemProofs.v
 src/EdDSARepChange.v
 src/MxDHRepChange.v
+src/NewBaseSystem.v
 src/Testbit.v
 src/Algebra/ZToRing.v
 src/Assembly/Bounds.v
@@ -436,6 +437,7 @@ src/Util/AdditionChainExponentiation.v
 src/Util/AutoRewrite.v
 src/Util/Bool.v
 src/Util/CaseUtil.v
+src/Util/CPSUtil.v
 src/Util/Curry.v
 src/Util/Decidable.v
 src/Util/Equality.v

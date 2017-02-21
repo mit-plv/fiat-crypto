@@ -766,7 +766,6 @@ Module Z.
       apply Z.mod_mul, Z.pow_nonzero; omega. }
   Qed.
 
-
   Lemma odd_mod : forall a b, (b <> 0)%Z ->
     Z.odd (a mod b) = if Z.odd b then xorb (Z.odd a) (Z.odd (a / b)) else Z.odd a.
   Proof.
