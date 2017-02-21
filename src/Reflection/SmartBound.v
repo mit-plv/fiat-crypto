@@ -78,7 +78,7 @@ Section language.
           end.
 
   Section smart_bound.
-    Definition interpf_smart_bound {var t}
+    Definition interpf_smart_bound_exprf {var t}
                (e : interp_flat_type var t) (bounds : interp_flat_type interp_base_type_bounds t)
     : interp_flat_type (fun t => exprf (var:=var) (Tbase t)) (bound_flat_type bounds)
       := SmartFlatTypeMap2Interp2
@@ -94,6 +94,17 @@ Section language.
            (fun t bs v => Cast _ (bound_base_type t bs) t v)
            e.
 
+    Definition interpf_smart_bound
+               {interp_base_type}
+               (cast_val : forall A A', interp_base_type A -> interp_base_type A')
+               {t}
+               (e : interp_flat_type interp_base_type t)
+               (bounds : interp_flat_type interp_base_type_bounds t)
+    : interp_flat_type interp_base_type (bound_flat_type bounds)
+      := SmartFlatTypeMap2Interp2
+           (f:=fun t v => Tbase _)
+           (fun t bs v => cast_val t (bound_base_type t bs) v)
+           bounds e.
     Definition interpf_smart_unbound
                {interp_base_type}
                (cast_val : forall A A', interp_base_type A -> interp_base_type A')
@@ -105,7 +116,7 @@ Section language.
 
     Definition smart_boundf {var t1} (e1 : exprf (var:=var) t1) (bounds : interp_flat_type interp_base_type_bounds t1)
       : exprf (var:=var) (bound_flat_type bounds)
-      := LetIn e1 (fun e1' => SmartPairf (var:=var) (interpf_smart_bound e1' bounds)).
+      := LetIn e1 (fun e1' => SmartPairf (var:=var) (interpf_smart_bound_exprf e1' bounds)).
     Fixpoint UnSmartArrow {P t}
       : forall (e_bounds : interp_type interp_base_type_bounds t)
                (input_bounds : interp_all_binders_for' t interp_base_type_bounds)
