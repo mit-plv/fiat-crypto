@@ -124,7 +124,7 @@ Qed.
 Lemma rladderstepZ_sigP : rexpr_sigP Expr9_4OpT uncurried_ladderstep rladderstepZ''.
 Proof.
   cbv [rladderstepZ''].
-  etransitivity; [ apply Interp_Linearize | ].
+  etransitivity; [ apply InterpLinearize | ].
   cbv beta iota delta [apply9 apply9_nd interp_type_gen_rel_pointwise Expr9_4OpT SmartArrow ExprArgT rladderstepZ'' uncurried_ladderstep uncurry_unop_fe5211_32 SmartAbs rladderstepZ' exprArg MxDH.ladderstep_gen Interp interp unop_make_args SmartVarf smart_interp_flat_map length_fe5211_32 ladderstep].
   intros; cbv beta zeta.
   unfold invert_Return at 14 15 16 17.

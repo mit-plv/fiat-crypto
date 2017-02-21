@@ -77,7 +77,7 @@ Section language.
     eapply interpf_linearizef.
   Qed.
 
-  Lemma Interp_Linearize {t} (e : Expr t)
+  Lemma InterpLinearize {t} (e : Expr t)
     : interp_type_gen_rel_pointwise (fun _ => @eq _)
                                     (Interp interp_op (Linearize e))
                                     (Interp interp_op e).

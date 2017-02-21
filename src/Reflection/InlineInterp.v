@@ -133,7 +133,7 @@ Section language.
     eapply interp_inline_const_gen; eauto.
   Qed.
 
-  Lemma Interp_InlineConstGen postprocess {t} (e : Expr t)
+  Lemma InterpInlineConstGen postprocess {t} (e : Expr t)
         (wf : Wf e)
         (Hpostprocess : forall t e, interpf interp_op (exprf_of_inline_directive (postprocess _ t e)) = interpf interp_op e)
     : interp_type_gen_rel_pointwise (fun _ => @eq _)
@@ -144,12 +144,12 @@ Section language.
     eapply (interp_inline_const_gen (postprocess _)); simpl in *; intuition (simpl in *; intuition eauto).
   Qed.
 
-  Lemma Interp_InlineConst is_const {t} (e : Expr t)
+  Lemma InterpInlineConst is_const {t} (e : Expr t)
         (wf : Wf e)
     : interp_type_gen_rel_pointwise (fun _ => @eq _)
                                     (Interp interp_op (InlineConst is_const e))
                                     (Interp interp_op e).
   Proof.
-    eapply Interp_InlineConstGen; eauto.
+    eapply InterpInlineConstGen; eauto.
   Qed.
 End language.

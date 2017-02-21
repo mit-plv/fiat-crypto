@@ -105,9 +105,9 @@ Section language.
 
   Local Hint Resolve interpf_exprf_of_push_cast.
 
-  Lemma Interp_InlineCast {t} e (Hwf : Wf e)
+  Lemma InterpInlineCast {t} e (Hwf : Wf e)
     : interp_type_gen_rel_pointwise (fun _ => @eq _)
                                     (Interp interp_op (@InlineCast t e))
                                     (Interp interp_op e).
-  Proof. apply Interp_InlineConstGen; auto. Qed.
+  Proof. apply InterpInlineConstGen; auto. Qed.
 End language.
