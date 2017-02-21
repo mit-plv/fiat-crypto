@@ -119,7 +119,7 @@ Qed.
 Lemma radd_coordinatesZ_sigP : rexpr_sigP Expr9_4OpT uncurried_add_coordinates radd_coordinatesZ''.
 Proof.
   cbv [radd_coordinatesZ''].
-  etransitivity; [ apply Interp_Linearize | ].
+  etransitivity; [ apply InterpLinearize | ].
   cbv beta iota delta [apply9 apply9_nd interp_type_gen_rel_pointwise Expr9_4OpT SmartArrow ExprArgT radd_coordinatesZ'' uncurried_add_coordinates uncurry_unop_fe25519_64 SmartAbs radd_coordinatesZ' exprArg Extended.add_coordinates_gen Interp interp unop_make_args SmartVarf smart_interp_flat_map length_fe25519_64 add_coordinates].
   intros.
   unfold invert_Return at 13 14 15 16.
