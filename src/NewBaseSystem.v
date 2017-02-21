@@ -472,7 +472,7 @@ Module B.
       Proof. cbv [carry carry_noncps]; induction p; prove_eval. Qed.
       Hint Rewrite eval_carry_noncps using auto : push_eval.
     End Carries.
-    
+
     Section Saturated.
       Context {word_max : Z} {word_max_pos : 1 < word_max} 
               {add : Z -> Z -> Z * Z}
@@ -769,6 +769,141 @@ Module B.
       Hint Rewrite eval_compact_cols_noncps : push_eval.
            
     End Saturated.
+
+    (* 
+       it makes sense if we have m = 2^255-19 to have
+       k = 2^255, c = [(1,19)]
+       but then how do we get the digits for k-c?
+       well, we can take the opposite of c, adding modulus, and add it to k
+       is that actually a good idea? k + ((k-c)-c) = 2k - 2c, or 2*modulus
+       we'd have to shift down
+
+       alternative: store k-1
+       then we can just subtract c+1
+
+       to get -modulus, we want -k+c
+       we currently have k-1, c+1
+       
+    *)
+    Record Modulus :=
+      {
+        modulus:Z;
+        k:Z;
+        c:list limb;
+        nonzero:modulus <> 0;
+        k_nonzero: k <> 0;
+        eval_modulus: k - eval c = modulus;
+      }.
+
+    Record SubCoeff {m:Modulus} :=
+      {
+        coeff:list limb;
+        coeff_0 : (eval coeff) mod m.(modulus) = 0;
+      }.
+
+    Section Sub.
+      Context {m:Modulus} {sc: @SubCoeff m}.
+
+      Definition sub (p q : list limb) {T} (f:list limb->T) :=
+        mul q [(1,-1)]
+            (fun r => f (sc.(coeff) ++ p ++ r)).
+      Definition sub_noncps p q := sub p q id.
+      Hint Opaque sub_noncps : uncps.
+      Lemma sub_id p q {T} f : @sub p q T f = f (sub_noncps p q).
+      Proof. cbv [sub_noncps sub]; prove_id. Qed.
+      Hint Rewrite sub_id : uncps.
+      Lemma eval_sub_noncps p q :
+        (eval (sub_noncps p q)) mod m.(modulus)
+        = (eval p - eval q) mod m.(modulus).
+      Proof.
+        cbv [sub_noncps sub]; prove_eval.
+        rewrite Z.add_mod, coeff_0, Z.add_0_l, Z.mod_mod by apply nonzero.
+        f_equal; ring.
+      Qed. Hint Rewrite eval_sub_noncps : push_eval.
+
+     Definition opp (p : list limb) {T} (f:list limb->T) :=
+       sub [] p f.
+     Definition opp_noncps p := opp p id.
+     Hint Opaque opp_noncps : uncps.
+     Lemma opp_id p {T} f : @opp p T f = f (opp_noncps p).
+     Proof. cbv [opp_noncps opp]; prove_id. Qed.
+     Hint Rewrite opp_id : uncps.
+     Lemma eval_opp_noncps p :
+       (eval (opp_noncps p)) mod m.(modulus) = (- eval p) mod m.(modulus).
+     Proof.
+       cbv [opp_noncps opp]; fold (sub_noncps [] p); prove_eval.
+     Qed. Hint Rewrite eval_opp_noncps : push_eval.
+    End Sub.
+    Hint Rewrite @sub_id @opp_id : uncps.
+    Hint Rewrite @eval_sub_noncps @eval_opp_noncps : push_eval.
+
+    Section Freeze.
+      Context {m:Modulus} {sc: @SubCoeff m}
+              {sat_add : list limb -> list limb -> forall {T}, (list limb*bool->T)->T}
+              {cond_add : bool->list limb -> list limb -> forall {T}, (list limb->T)->T}
+      .
+      
+      Definition sat_add_noncps p q := sat_add p q _ id.
+      Hint Opaque sat_add_noncps : uncps.
+      Lemma sat_add_id p q {T} f :
+        @sat_add p q T f = f (sat_add_noncps p q).
+      Admitted. Hint Rewrite sat_add_id : uncps.
+      Lemma eval_sat_add_noncps p q :
+        eval (fst (sat_add_noncps p q)) = eval p + eval q.
+      Admitted. Hint Rewrite eval_sat_add_noncps : push_eval.
+      Definition cond_add_noncps b p q := cond_add b p q _ id.
+      Hint Opaque cond_add_noncps : uncps.
+      Lemma cond_add_id b p q {T} f :
+        @cond_add b p q T f = f (cond_add_noncps b p q).
+      Admitted. Hint Rewrite cond_add_id : uncps.
+      Lemma eval_cond_add_noncps b p q :
+        eval (cond_add_noncps b p q)
+        = if b then eval p + eval q else eval p.
+      Admitted. Hint Rewrite eval_cond_add_noncps : push_eval.
+
+
+      (* based on https://sourceforge.net/p/ed448goldilocks/code/ci/master/tree/src/p448/arch_x86_64/p448.c#l309 *)
+      Definition freeze (x : list limb) {T} (f:list limb->T) :=
+        reduce (m.(k)) (m.(c)) x
+               (fun r =>
+                  @sat_add r ((m.(k), -1)::(m.(c))) _ 
+                           (fun rr =>
+                              @opp m sc (m.(c)) _
+                                   (fun rrr =>
+                                      cond_add (snd rr) (fst rr) ((m.(k),1)::rrr) _ f
+                                   )
+                           )
+               ).
+      Definition freeze_noncps x := freeze x id.
+
+      (* TODO : move to ZUtil *)
+      Lemma Z_add_mod_0 a b c (H:c mod b = 0):
+        (a+c) mod b = a mod b.
+      Proof.
+        intros; rewrite Z.add_mod_r, H, Z.add_0_r; reflexivity.
+      Qed.
+
+      Lemma eval_freeze_noncps x :
+        eval (freeze_noncps x) mod m.(modulus) = eval x mod m.(modulus).
+      Proof.
+        cbv [freeze_noncps freeze].
+        prove_eval;
+          repeat match goal with
+                 | |- (_ + (k _ * _ + _)) mod _ = _ =>
+                   rewrite Z_add_mod_0
+                 | |- (k m * ?x + _) mod ?m = 0 =>
+                   transitivity ((x * m) mod m);
+                     [|solve[auto using Z.mod_mul, nonzero]]
+                 | _ => rewrite Z.add_mod_r; rewrite eval_opp_noncps; 
+                          rewrite <-Z.add_mod_r
+                 | _ => rewrite <-eval_modulus; autorewrite with push_eval;
+                          rewrite ?eval_modulus;
+                          solve [auto using nonzero, k_nonzero]
+                 | _ => rewrite <-eval_modulus; f_equal; ring
+                 end.
+      Qed.
+
+    End Freeze.
   End Associational.
 
   Module Positional.
