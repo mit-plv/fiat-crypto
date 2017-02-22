@@ -12,10 +12,10 @@ Section Ed25519.
 
   Local Open Scope Z_scope.
 
-  Definition q : BinNums.Z := 2^255 - 19.
+  Definition q : BinPos.positive := 2^255 - 19.
   Definition Fq : Type := F q.
 
-  Definition l : BinNums.Z := 2^252 + 27742317777372353535851937790883648493.
+  Definition l : BinPos.positive := 2^252 + 27742317777372353535851937790883648493.
   Definition Fl : Type := F l.
 
   Local Open Scope F_scope.
@@ -51,10 +51,10 @@ Section Ed25519.
     let '(x,y) := E.coordinates P in Fencode (len:=b-1) y ++ bit (sign x).
   Definition Senc : Fl -> Word.word b := Fencode (len:=b).
 
-  Local Instance char_gt_2 : (* TODO: prove this in PrimeFieldTheorems *)
-    @Ring.char_gt (F.F q) (@eq (F.F q)) (F.of_Z q BinNums.Z0)
+  Local Instance char_gt_e : (* TODO: prove this in PrimeFieldTheorems *)
+    @Ring.char_ge (F.F q) (@eq (F.F q)) (F.of_Z q BinNums.Z0)
                   (F.of_Z q (BinNums.Zpos BinNums.xH)) (@F.opp q) 
-                  (@F.add q) (@F.sub q) (@F.mul q) (BinNat.N.succ_pos BinNat.N.one).
+                  (@F.add q) (@F.sub q) (@F.mul q) (BinNat.N.succ_pos BinNat.N.two).
   Proof. intros p ?.
          edestruct (fun p:p = (BinNat.N.succ_pos BinNat.N.zero) \/ p = (BinNat.N.succ_pos BinNat.N.one) => p); subst.
          { admit. (* 
@@ -75,21 +75,18 @@ Section Ed25519.
   Let mul := E.mul(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d).
   Let zero := E.zero(nonzero_a:=nonzero_a)(d:=d).
 
-  Definition ed25519 (l_order_B: E.eq (mul (BinInt.Z.to_nat l) B)%E zero) :
+  Definition ed25519 (l_order_B: E.eq(F:=Fq)(Fone:=F.one) (mul (BinInt.Z.to_nat l) B)%E zero) :
     EdDSA (E:=E) (Eadd:=add) (Ezero:=zero) (EscalarMult:=mul) (B:=B)
           (Eopp:=Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.E.opp(nonzero_a:=nonzero_a)) (* TODO: move defn *)
           (Eeq:=E.eq) (* TODO: move defn *)
           (l:=l) (b:=b) (n:=n) (c:=c)
           (Eenc:=Eenc) (Senc:=Senc) (H:=SHA512).
   Proof.
-    split; try exact _.
-    (* COQBUG: https://coq.inria.fr/bugs/show_bug.cgi?id=5366 *)
-    (* timeout 1 match goal with H:?P |- ?P => idtac end. *)
-    Crypto.Util.Decidable.vm_decide.
-    Crypto.Util.Decidable.vm_decide.
-    Crypto.Util.Decidable.vm_decide.
-    Crypto.Util.Decidable.vm_decide.
-    Crypto.Util.Decidable.vm_decide.
-    exact l_order_B.
+    split; 
+      match goal with
+      | |- ?P => match goal with [H:P|-_] => exact H end (* COQBUG: https://coq.inria.fr/bugs/show_bug.cgi?id=5366 *)
+      | _ => exact _
+      | _ => Crypto.Util.Decidable.vm_decide
+      end.
   Qed.
 End Ed25519.

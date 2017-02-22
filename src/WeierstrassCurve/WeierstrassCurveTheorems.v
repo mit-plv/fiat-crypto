@@ -9,8 +9,8 @@ Module W.
   Section W.
     Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv} {a b:F}
             {field:@Algebra.field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
-            {char_gt_3:@Ring.char_gt F Feq Fzero Fone Fopp Fadd Fsub Fmul (BinNat.N.succ_pos (BinNat.N.two))}
-            {char_gt_11:@Ring.char_gt F Feq Fzero Fone Fopp Fadd Fsub Fmul 11%positive} (* FIXME: we shouldn't need this *)
+            {char_ge_3:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul (BinNat.N.succ_pos (BinNat.N.two))}
+            {char_ge_12:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 12%positive} (* FIXME: we shouldn't need this *)
             {Feq_dec:DecidableRel Feq}.
     Local Infix "=" := Feq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
     Local Notation "0" := Fzero.  Local Notation "1" := Fone.

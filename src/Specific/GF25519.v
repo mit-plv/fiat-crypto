@@ -22,7 +22,7 @@ Local Open Scope Z.
 
 (* BEGIN precomputation. *)
 
-Definition modulus : Z := Eval compute in 2^255 - 19.
+Definition modulus : positive := Eval compute in (2^255 - 19)%positive.
 Definition prime_modulus : prime modulus := Crypto.Spec.Ed25519.prime_q.
 Definition int_width := 64%Z.
 Definition freeze_input_bound := 32%Z.

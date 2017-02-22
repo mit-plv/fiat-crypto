@@ -13,7 +13,7 @@ Require Import Crypto.Spec.ModularWordEncoding.
 Local Open Scope F_scope.
 
 Section SignBit.
-  Context {m : Z} {prime_m : prime m} {two_lt_m : (2 < m)%Z} {sz : nat} {bound_check : (Z.to_nat m < 2 ^ sz)%nat}.
+  Context {m : positive} {prime_m : prime m} {two_lt_m : (2 < m)%Z} {sz : nat} {bound_check : (Z.to_nat m < 2 ^ sz)%nat}.
 
   Lemma sign_bit_parity : forall x, @sign_bit m sz x = Z.odd (F.to_Z x).
   Proof.

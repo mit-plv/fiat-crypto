@@ -17,7 +17,7 @@ Section Edwards.
 
   Context (a:F) (a_nonzero : a<>0) (a_square : exists sqrt_a, sqrt_a^2 = a).
   Context (d:F) (d_nonsquare : forall sqrt_d, sqrt_d^2 <> d).
-  Context {char_gt_2:@Ring.char_gt F eq zero one opp add sub mul 2}.
+  Context {char_ge_3:@Ring.char_ge F eq zero one opp add sub mul 3}.
 
   Local Notation onCurve x y := (a*x^2 + y^2 = 1 + d*x^2*y^2) (only parsing).
   Lemma onCurve_zero : onCurve 0 1. fsatz. Qed.

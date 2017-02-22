@@ -30,12 +30,12 @@ Class CarryChain (limb_widths : list Z) :=
     carry_chain_valid : forall i, In i carry_chain -> (i < length limb_widths)%nat
   }.
 
-  Class SubtractionCoefficient {m : Z} {prm : PseudoMersenneBaseParams m} := {
+  Class SubtractionCoefficient {m : positive} {prm : PseudoMersenneBaseParams m} := {
     coeff : tuple Z (length limb_widths);
     coeff_mod: decode coeff = 0%F
   }.
 
-  Class ExponentiationChain {m : Z} {prm : PseudoMersenneBaseParams m} (exp : Z) := {
+  Class ExponentiationChain {m : positive} {prm : PseudoMersenneBaseParams m} (exp : Z) := {
     chain : list (nat * nat);
     chain_correct : fold_chain 0%N N.add chain (1%N :: nil) = Z.to_N exp
   }.
@@ -85,7 +85,7 @@ Section FieldOperationProofs.
     + apply F.of_Z_to_Z.
     + apply bv.
     + rewrite <-F.mod_to_Z.
-      match goal with |- appcontext [?a mod modulus] =>
+      match goal with |- appcontext [?a mod (Z.pos modulus)] =>
                       pose proof (Z.mod_pos_bound a modulus modulus_pos) end.
       pose proof lt_modulus_2k.
       omega.

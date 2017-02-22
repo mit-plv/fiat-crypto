@@ -10,7 +10,7 @@ Local Open Scope core_scope.
 Section Pre.
   Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
           {field:@field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
-          {char_gt_2:@Ring.char_gt F Feq Fzero Fone Fopp Fadd Fsub Fmul (BinNat.N.succ_pos (BinNat.N.two))}
+          {char_ge_3:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul (BinNat.N.succ_pos (BinNat.N.two))}
           {eq_dec: DecidableRel Feq}.
   Local Infix "=" := Feq. Local Notation "a <> b" := (not (a = b)).
   Local Infix "=" := Feq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.

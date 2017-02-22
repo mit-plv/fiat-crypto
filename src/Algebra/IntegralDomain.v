@@ -62,21 +62,21 @@ Module IntegralDomain.
       Qed.
 
       Section WithChar.
-        Context C (char_gt_C:@Ring.char_gt R eq zero one opp add sub mul C).
+        Context C (char_ge_C:@Ring.char_ge R eq zero one opp add sub mul C) (HC: Pos.lt xH C).
         
         Definition is_factor_nonzero (n:N) : bool :=
-          match n with N0 => false | N.pos p => BinPos.Pos.leb p C end.
+          match n with N0 => false | N.pos p => BinPos.Pos.ltb p C end.
         Lemma is_factor_nonzero_correct (n:N) (refl:Logic.eq (is_factor_nonzero n) true)
           : of_Z (Z.of_N n) <> zero.
         Proof.
-          destruct n; [discriminate|]; rewrite Znat.positive_N_Z; apply char_gt_C, Pos.leb_le, refl.
+          destruct n; [discriminate|]; rewrite Znat.positive_N_Z; apply char_ge_C, Pos.ltb_lt, refl.
         Qed.
 
         Lemma RZN_product_nonzero l (H : forall x : N, List.In x l -> of_Z (Z.of_N x) <> zero)
           : of_Z (Z.of_N (List.fold_right N.mul 1%N l)) <> zero.
         Proof.
           rewrite <-List.Forall_forall in H; induction H; simpl List.fold_right.
-          { eapply char_gt_C, Pos.le_1_l. }
+          { eapply char_ge_C; assumption. }
           { rewrite Znat.N2Z.inj_mul; Ring.push_homomorphism constr:(of_Z).
             eapply Ring.nonzero_product_iff_nonzero_factor; eauto. }
         Qed.
@@ -106,7 +106,7 @@ Module IntegralDomain.
           | Coef_mul c1 c2 => andb (is_nonzero c1) (is_nonzero c2)
           | _ => is_constant_nonzero (CtoZ c)
           end.
-        Lemma is_nonzero_correct c (refl:Logic.eq (is_nonzero c) true) : denote c <> zero.
+        Lemma is_nonzero_correct' c (refl:Logic.eq (is_nonzero c) true) : denote c <> zero.
         Proof.
           induction c;
             repeat match goal with
@@ -123,6 +123,17 @@ Module IntegralDomain.
                    end.
         Qed.
       End WithChar.
+
+      Lemma is_nonzero_correct
+            C
+            (char_ge_C:@Ring.char_ge R eq zero one opp add sub mul C)
+            c (refl:Logic.eq (andb (Pos.ltb xH C) (is_nonzero C c)) true)
+        : denote c <> zero.
+      Proof.
+        rewrite Bool.andb_true_iff in refl; destruct refl.
+        eapply @is_nonzero_correct'; try apply Pos.ltb_lt; eauto.
+      Qed.
+
     End ReflectiveNsatzSideConditionProver.
 
     Ltac reify one opp add mul x :=
@@ -145,9 +156,9 @@ Module IntegralDomain.
   Ltac solve_constant_nonzero :=
     match goal with
     | |- not (?eq ?x _) =>
-      let cg := constr:(_:Ring.char_gt (eq:=eq) _) in
+      let cg := constr:(_:Ring.char_ge (eq:=eq) _) in
       match type of cg with
-        @Ring.char_gt ?R eq ?zero ?one ?opp ?add ?sub ?mul ?C =>
+        @Ring.char_ge ?R eq ?zero ?one ?opp ?add ?sub ?mul ?C =>
         let x' := _LargeCharacteristicReflective.reify one opp add mul x in
         let x' := constr:(@_LargeCharacteristicReflective.denote R one opp add mul x') in
         change (not (eq x' zero));

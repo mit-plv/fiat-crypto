@@ -42,7 +42,7 @@ Module _fsatz_test.
     Lemma division_by_zero_in_hyps_neq_neq (bad:1/0 <> (1+1)/0): 1 <> 0. fsatz. Qed.
     Import BinNums.
 
-    Context {char_gt_15:@Ring.char_gt F eq zero one opp add sub mul 15}.
+    Context {char_ge_16:@Ring.char_ge F eq zero one opp add sub mul 16}.
 
     Local Notation two := (one+one) (only parsing).
     Local Notation three := (one+one+one) (only parsing).

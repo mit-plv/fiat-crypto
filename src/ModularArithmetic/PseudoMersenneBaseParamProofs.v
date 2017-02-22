@@ -33,7 +33,7 @@ Section PseudoMersenneBaseParamProofs.
     pose proof (NumTheoryUtil.lt_1_p _ prime_modulus); omega.
   Qed. Hint Resolve modulus_pos.
 
-  Lemma modulus_nonzero : modulus <> 0.
+  Lemma modulus_nonzero : Z.pos modulus <> 0.
     pose proof (Znumtheory.prime_ge_2 _ prime_modulus); omega.
   Qed.
 
@@ -45,7 +45,6 @@ Section PseudoMersenneBaseParamProofs.
     rewrite Z.mul_add_distr_r, Zplus_mod.
     unfold c.
     rewrite Z.sub_sub_distr, Z.sub_diag.
-    simpl.
     rewrite Z.mul_comm, Z.mod_add_l; auto using modulus_nonzero.
     rewrite <- Zplus_mod; auto.
   Qed.

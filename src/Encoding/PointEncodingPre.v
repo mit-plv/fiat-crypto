@@ -19,15 +19,29 @@ Require Export Crypto.Util.FixCoqMistakes.
 
 Generalizable All Variables.
 Section PointEncodingPre.
-  Context {F eq zero one opp add sub mul inv div} `{field F eq zero one opp add sub mul inv div} {eq_dec:DecidableRel eq}.
-  Local Infix "==" := eq : type_scope.
-  Local Notation "a !== b" := (not (a == b)): type_scope.
-  Local Notation "0" := zero.  Local Notation "1" := one.
-  Local Infix "+" := add. Local Infix "*" := mul.
-  Local Infix "-" := sub. Local Infix "/" := div.
-  Local Notation "x ^ 2" := (x*x).
+    Context {F eq zero one opp add sub mul inv div}
+            {field:@field F eq zero one opp add sub mul inv div}
+            {char_ge_3 : @Ring.char_ge F eq zero one opp add sub mul (BinNat.N.succ_pos BinNat.N.two)}
+            {eq_dec:DecidableRel eq}.
+    Local Infix "==" := eq : type_scope. Local Notation "a !== b" := (not (a == b)) : type_scope.
+    Local Notation "0" := zero.  Local Notation "1" := one.
+    Local Infix "+" := add. Local Infix "*" := mul.
+    Local Infix "-" := sub. Local Infix "/" := div.
+    Local Notation "x ^ 2" := (x*x).
 
-  Add Field EdwardsCurveField : (Field.field_theory_for_stdlib_tactic (T:=F)).
+    Context {a d: F}
+            {nonzero_a : a !== 0}
+            {square_a : exists sqrt_a, sqrt_a^2 == a}
+            {nonsquare_d : forall x, x^2 !== d}.
+    
+    Local Notation onCurve x y := (a*x^2 + y^2 == 1 + d*x^2*y^2).
+    Local Notation point := (@E.point F eq one add mul a d).
+    Local Notation point_eq    := (@E.eq F eq one add mul a d).
+    Local Notation point_zero  := (E.zero(nonzero_a:=nonzero_a)(d:=d)).
+    Local Notation point_add   := (E.add(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d)).
+    Local Notation point_mul   := (E.mul(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d)).
+
+  Add Field _point_encoding_field : (Field.field_theory_for_stdlib_tactic (T:=F)).
 
   Definition F_eqb x y := if eq_dec x y then true else false.
   Lemma F_eqb_iff : forall x y, F_eqb x y = true <-> x == y.
@@ -35,9 +49,6 @@ Section PointEncodingPre.
     unfold F_eqb; intros; destruct (eq_dec x y); split; auto; discriminate.
   Qed.
 
-  Context {a d:F} {prm:@E.twisted_edwards_params F eq zero one opp add sub mul a d}.
-  Local Notation point := (@E.point F eq one add mul a d).
-  Local Notation onCurve := (@E.onCurve F eq one add mul a d).
   Local Notation solve_for_x2 := (@E.solve_for_x2 F one sub mul div a d).
 
   Context {sz : nat} (sz_nonzero : (0 < sz)%nat).
@@ -68,10 +79,10 @@ Section PointEncodingPre.
     onCurve (sqrt (E.solve_for_x2(Fone:=one)(Fsub:=sub)(Fmul:=mul)(Fdiv:=div)(a:=a)(d:=d) y)) y.
   Proof.
     intros.
-    eapply E.solve_correct.
+    eapply @E.solve_correct; eauto.
     eapply square_sqrt.
     symmetry.
-    eapply E.solve_correct. eassumption.
+    eapply @E.solve_correct; eauto.
   Qed.
 
   (* TODO : move? *)
@@ -84,11 +95,11 @@ Section PointEncodingPre.
     onCurve (opp (sqrt (solve_for_x2 y))) y.
   Proof.
     intros.
-    apply E.solve_correct.
+    eapply @E.solve_correct; eauto.
     etransitivity; [ apply square_opp | ].
     eapply square_sqrt.
     symmetry.
-    apply E.solve_correct; eassumption.
+    eapply @E.solve_correct; eauto.
   Qed.
 
   Definition point_enc_coordinates (p : (F * F)) : Word.word (sz+1) := let '(x,y) := p in
@@ -152,7 +163,6 @@ Section PointEncodingPre.
     unfold option_coordinates_eq, option_eq, prod_eq; tauto.
   Qed.
 
-  Definition point_eq (p q : point) : Prop := prod_eq eq eq (proj1_sig p) (proj1_sig q).
   Definition option_point_eq := option_eq (point_eq).
 
   Lemma option_point_eq_iff : forall p q,
@@ -222,19 +232,11 @@ Section PointEncodingPre.
 
   Ltac congruence_option_coord := exfalso; eauto using option_coordinates_eq_NS.
 
-  Lemma onCurve_eq : forall x y,
-    eq (add (mul a (mul x x)) (mul y y))
-        (add one (mul (mul d (mul x x)) (mul y y))) ->
-    @E.onCurve _ eq one add mul a d x y.
-  Proof.
-      tauto.
-  Qed.
-
-  Definition point_from_xy (xy : F * F) : option point :=
+  Program Definition point_from_xy (xy : F * F) : option point :=
     let '(x,y) := xy in
     match Decidable.dec (eq (add (mul a (mul x x)) (mul y y))
-                  (add one (mul (mul d (mul x x)) (mul y y)))) with
-      | left A => Some (exist _ (x,y) (onCurve_eq x y A))
+                  (add one (mul (mul d (mul x x)) (mul y y)))) return option point with
+      | left A => Some (exist _ (x,y) _)
       | right _ => None
     end.
 
@@ -293,12 +295,12 @@ Section PointEncodingPre.
     option_eq point_eq (point_dec w) (Some x) ->
     option_eq (Tuple.fieldwise (n := 2) eq) (point_dec_coordinates w) (Some (E.coordinates x)).
   Proof.
-    unfold point_dec, E.coordinates, point_from_xy, option_rect; intros.
-    break_match; [ | congruence].
-    destruct p. break_match; [ | congruence ].
+    cbv [point_dec E.coordinates point_from_xy option_rect]; intros.
     destruct x as [xy pf]; destruct xy.
-    cbv [option_eq point_eq] in *.
-    simpl in *.
+    break_match; [|congruence].
+    destruct p.
+    break_match; [|congruence].
+    cbv [option_eq point_eq E.coordinates Tuple.fieldwise Tuple.fieldwise'] in *.
     intuition.
   Qed.
 
@@ -357,13 +359,12 @@ Section PointEncodingPre.
     pose proof (square_sqrt (solve_for_x2 y) x) as solve_sqrt_ok.
     forward solve_sqrt_ok. {
       symmetry.
-      apply E.solve_correct.
-      assumption.
+      eapply @E.solve_correct; eassumption.
     }
     match goal with [ H1 : ?P, H2 : ?P -> _ |- _ ] => specialize (H2 H1); clear H1 end.
     unfold sqrt_ok in solve_sqrt_ok.
     break_if; [ |  congruence].
-    assert (solve_for_x2 y == (x ^2)) as solve_correct by (symmetry; apply E.solve_correct; assumption).
+    assert (solve_for_x2 y == (x ^2)) as solve_correct by (symmetry; eapply @E.solve_correct; eassumption).
     destruct (eq_dec x 0) as [eq_x_0 | neq_x_0].
     + rewrite eq_x_0 in *.
       assert (0^2 == 0) as zero_square by apply Ring.mul_0_l.
@@ -387,7 +388,7 @@ Section PointEncodingPre.
         rewrite !solve_correct in *.
         intro.
         apply neq_x_0.
-        rewrite H0, zero_square in sqrt_square.
+        rewrite H, zero_square in sqrt_square.
         rewrite Ring.zero_product_iff_zero_factor in sqrt_square.
         tauto. } Unfocus.
       rewrite wlast_combine.
@@ -396,9 +397,9 @@ Section PointEncodingPre.
         try eapply sign_match with (y := solve_for_x2 y); eauto;
           try solve [symmetry; auto]; rewrite ?square_opp; auto;
             intro; apply neq_x_0; rewrite solve_correct in *;
-      try apply Group.inv_zero_zero in H0;
-      rewrite H0, zero_square in sqrt_square; 
-        rewrite Ring.zero_product_iff_zero_factor in sqrt_square; tauto.
+              rewrite ?Group.inv_id_iff in H;
+              rewrite H, zero_square in sqrt_square; 
+              rewrite Ring.zero_product_iff_zero_factor in sqrt_square; tauto.
 Qed.
 
 Lemma point_encoding_valid : forall p,
@@ -429,11 +430,11 @@ Proof.
          end.
   exfalso.
   apply n.
-  apply option_coordinates_eq_iff in H1; destruct H1.
-  rewrite H1, H2; assumption.
+  apply option_coordinates_eq_iff in H0; destruct H0.
+  rewrite H0, H1; assumption.
 
 
-  rewrite Heqo in H0.
+  rewrite Heqo in H.
   congruence_option_coord.
 Qed.
 

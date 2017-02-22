@@ -31,8 +31,15 @@ Module F.
   Lemma pow_spec {m} a : F.pow a 0%N = 1%F :> F m /\ forall x, F.pow a (1 + x)%N = F.mul a (F.pow a x).
   Proof. change (@F.pow m) with (proj1_sig (@F.pow_with_spec m)); destruct (@F.pow_with_spec m); eauto. Qed.
 
+  Global Instance char_gt {m} :
+    @Ring.char_ge
+      (F m) Logic.eq F.zero F.one F.opp F.add F.sub F.mul
+      m.
+  Proof.
+  Admitted.
+
   Section FandZ.
-    Context {m:Z}.
+    Context {m:positive}.
     Local Open Scope F_scope.
 
     Theorem eq_to_Z_iff (x y : F m) : x = y <-> F.to_Z x = F.to_Z y.
@@ -145,34 +152,33 @@ Module F.
     Local Infix "mod" := modulo : nat_scope.
     Local Open Scope nat_scope.
 
-    Context {m} (m_pos: (0 < m)%Z).
-    Let to_nat_m_nonzero : Z.to_nat m <> 0.
-      rewrite Z2Nat.inj_lt in m_pos; omega.
-    Qed.
+    Context {m:BinPos.positive}.
 
     Lemma to_nat_of_nat (n:nat) : F.to_nat (F.of_nat m n) = (n mod (Z.to_nat m))%nat.
     Proof.
       unfold F.to_nat, F.of_nat.
       rewrite F.to_Z_of_Z.
-      pose proof (mod_Zmod n (Z.to_nat m) to_nat_m_nonzero) as Hmod.
-      rewrite Z2Nat.id in Hmod by omega.
+      assert (Pos.to_nat m <> 0)%nat as HA by (pose proof Pos2Nat.is_pos m; omega).
+      pose proof (mod_Zmod n (Pos.to_nat m) HA) as Hmod.
+      rewrite positive_nat_Z in Hmod.
       rewrite <- Hmod.
-      rewrite <-Nat2Z.id by omega.
-      reflexivity.
+      rewrite <-Nat2Z.id, Z2Nat.inj_pos; omega.
     Qed.
 
     Lemma of_nat_to_nat x : F.of_nat m (F.to_nat x) = x.
       unfold F.to_nat, F.of_nat.
-      rewrite Z2Nat.id; [ eapply F.of_Z_to_Z | eapply F.to_Z_range; trivial].
+      rewrite Z2Nat.id; [ eapply F.of_Z_to_Z | eapply F.to_Z_range; reflexivity].
     Qed.
+
+    Lemma Pos_to_nat_nonzero p : Pos.to_nat p <> 0%nat.
+    Admitted.
 
     Lemma of_nat_mod (n:nat) : F.of_nat m (n mod (Z.to_nat m)) = F.of_nat m n.
     Proof.
       unfold F.of_nat.
-      replace (Z.of_nat (n mod Z.to_nat m)) with(Z.of_nat n mod Z.of_nat (Z.to_nat m))%Z
-        by (symmetry; eapply (mod_Zmod n (Z.to_nat m) to_nat_m_nonzero)).
-      rewrite Z2Nat.id by omega.
-      rewrite <-F.of_Z_mod; reflexivity.
+      rewrite (F.of_Z_mod (Z.of_nat n)), ?mod_Zmod, ?Z2Nat.id; [reflexivity|..].
+      { apply Pos2Z.is_nonneg. }
+      { rewrite Z2Nat.inj_pos. apply Pos_to_nat_nonzero. }
     Qed.
 
     Lemma to_nat_mod (x:F m) (Hm:(0 < m)%Z) : F.to_nat x mod (Z.to_nat m) = F.to_nat x.
@@ -192,7 +198,7 @@ Module F.
   End FandNat.
 
   Section RingTacticGadgets.
-    Context (m:Z).
+    Context (m:positive).
 
     Definition ring_theory : ring_theory 0%F 1%F (@F.add m) (@F.mul m) (@F.sub m) (@F.opp m) eq
       := Algebra.Ring.ring_theory_for_stdlib_tactic.
@@ -252,22 +258,8 @@ Module F.
   Ltac is_constant t := match t with F.of_Z _ ?x => x | _ => NotConstant end.
   Ltac is_pow_constant t := Ncst t.
 
-  Module Type Modulus. Parameter modulus : Z. End Modulus.
-
-  (* Example of how to instantiate the ring tactic *)
-  Module RingModulo (Export M : Modulus).
-    Add Ring _theory : (ring_theory modulus)
-                         (morphism (ring_morph modulus),
-                          constants [is_constant],
-                          div (morph_div_theory modulus),
-                          power_tac (power_theory modulus) [is_pow_constant]).
-
-    Example ring_modulo_example : forall x y z, x*z + z*y = z*(x+y).
-    Proof. intros. ring. Qed.
-  End RingModulo.
-
   Section VariousModulo.
-    Context {m:Z}.
+    Context {m:positive}.
     Local Open Scope F_scope.
 
     Add Ring _theory : (ring_theory m)
@@ -284,7 +276,7 @@ Module F.
   End VariousModulo.
 
   Section Pow.
-    Context {m:Z}.
+    Context {m:positive}.
     Add Ring _theory' : (ring_theory m)
                           (morphism (ring_morph m),
                            constants [is_constant],

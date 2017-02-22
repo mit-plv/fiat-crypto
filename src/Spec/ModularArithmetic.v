@@ -2,6 +2,13 @@ Require Coq.ZArith.Znumtheory Coq.Numbers.BinNums.
 
 Require Crypto.ModularArithmetic.Pre.
 
+Delimit Scope positive_scope with positive.
+Bind Scope positive_scope with BinPos.positive.
+Infix "+" := BinPos.Pos.add : positive_scope.
+Infix "*" := BinPos.Pos.mul : positive_scope.
+Infix "-" := BinPos.Pos.sub : positive_scope.
+Infix "^" := BinPos.Pos.pow : positive_scope.
+
 Delimit Scope N_scope with N.
 Bind Scope N_scope with BinNums.N.
 Infix "+" := BinNat.N.add : N_scope.
@@ -18,17 +25,20 @@ Infix "-" := BinInt.Z.sub : Z_scope.
 Infix "/" := BinInt.Z.div : Z_scope.
 Infix "^" := BinInt.Z.pow : Z_scope.
 Infix "mod" := BinInt.Z.modulo (at level 40, no associativity) : Z_scope.
+
 Local Open Scope Z_scope.
+Global Coercion BinInt.Z.pos : BinPos.positive >-> BinInt.Z.
+Global Coercion BinInt.Z.of_N : BinNums.N >-> BinInt.Z.
+Global Set Printing Coercions.
 
 Module F.
-  Definition F (m : BinInt.Z) := { z : BinInt.Z | z = z mod m }.
-  Bind Scope F_scope with F.
+  Definition F (m : BinPos.positive) := { z : BinInt.Z | z = z mod m }.
   Local Obligation Tactic := cbv beta; auto using Pre.Z_mod_mod.
   Program Definition of_Z  m  (a:BinNums.Z) : F m := a mod m.
   Definition to_Z {m} (a:F m) : BinNums.Z := proj1_sig a.
 
   Section FieldOperations.
-    Context {m : BinInt.Z}.
+    Context {m : BinPos.positive}.
     Definition zero : F m := of_Z m 0.
     Definition one : F m := of_Z m 1.
 
