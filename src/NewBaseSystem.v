@@ -63,66 +63,78 @@ Module B.
 
     Definition multerm (t t' : limb) : limb :=
       (fst t * fst t', (snd t * snd t')%RT).
-    Definition mul_cps (p q:list limb) {T} (f : list limb->T) :=
-      flat_map_cps (fun t => @map_cps _ _ (multerm t) q) p f.
-    Definition mul (p q:list limb) := mul_cps p q id.
-    Hint Opaque mul : uncps.
-    Lemma eval_map_mul (a:limb) (q:list limb) : eval (List.map (multerm a) q) = fst a * snd a * eval q.
+    Lemma eval_map_multerm (a:limb) (q:list limb)
+      : eval (List.map (multerm a) q) = fst a * snd a * eval q.
     Proof.
       induction q; cbv [multerm]; simpl List.map;
         autorewrite with push_basesystem_eval cancel_pair; nsatz.
-    Qed. Hint Rewrite eval_map_mul : push_basesystem_eval.
-    Lemma mul_cps_id p q: forall {T} f,
-      @mul_cps p q T f = f (mul p q).
-    Proof. cbv [mul_cps mul]; prove_id. Qed. Hint Rewrite mul_cps_id : uncps.
-    Lemma eval_mul_noncps p q:
-      eval (mul p q) = eval p * eval q.
-    Proof.
-      cbv [mul mul_cps]; induction p; prove_eval. Qed. Hint Rewrite eval_mul_noncps : push_basesystem_eval.
+    Qed. Hint Rewrite eval_map_multerm : push_basesystem_eval.
 
-    Fixpoint split (s:Z) (xs:list limb)
+    Definition mul_cps (p q:list limb) {T} (f : list limb->T) :=
+      flat_map_cps (fun t => @map_cps _ _ (multerm t) q) p f.
+
+    Definition mul (p q:list limb) := mul_cps p q id.
+    Lemma mul_cps_id p q: forall {T} f, @mul_cps p q T f = f (mul p q).
+    Proof. cbv [mul_cps mul]; prove_id. Qed.
+    Hint Opaque mul : uncps.
+    Hint Rewrite mul_cps_id : uncps.
+
+    Lemma eval_mul p q: eval (mul p q) = eval p * eval q.
+    Proof. cbv [mul mul_cps]; induction p; prove_eval. Qed.
+    Hint Rewrite eval_mul : push_basesystem_eval.
+
+    Fixpoint split_cps (s:Z) (xs:list limb)
              {T} (f :list limb*list limb->T) :=
       match xs with
       | nil => f (nil, nil)
       | cons x xs' =>
-        split s xs'
+        split_cps s xs'
               (fun sxs' =>
         if dec (fst x mod s = 0)
         then f (fst sxs',          cons (fst x / s, snd x) (snd sxs'))
         else f (cons x (fst sxs'), snd sxs'))
       end.
-    Definition split_noncps s xs := split s xs id.
-    Hint Opaque split_noncps : uncps.
-    Lemma split_id s p: forall {T} f,
-        @split s p T f = f (split_noncps s p).
+
+    Definition split s xs := split_cps s xs id.
+    Lemma split_cps_id s p: forall {T} f,
+        @split_cps s p T f = f (split s p).
     Proof.
       induction p;
         repeat match goal with
                | _ => rewrite IHp
-               | _ => progress (cbv [split_noncps]; prove_id)
+               | _ => progress (cbv [split]; prove_id)
                end.
-    Qed. Hint Rewrite split_id : uncps.
-    Lemma eval_split_noncps s p (s_nonzero:s<>0):
-      eval (fst (split_noncps s p)) + s*eval (snd (split_noncps s p))  = eval p.
+    Qed.
+    Hint Opaque split : uncps.
+    Hint Rewrite split_cps_id : uncps.
+
+    Lemma eval_split s p (s_nonzero:s<>0):
+      eval (fst (split s p)) + s*eval (snd (split s p)) = eval p.
     Proof.
-      cbv [split_noncps];  induction p; prove_eval.
-        match goal with H:_ |- _ =>
-                        unique pose proof (Z_div_exact_full_2 _ _ s_nonzero H)
+      cbv [split];  induction p; prove_eval.
+      match goal with
+        H:_ |- _ =>
+        unique pose proof (Z_div_exact_full_2 _ _ s_nonzero H)
         end; nsatz.
-    Qed. Hint Rewrite @eval_split_noncps using auto : push_basesystem_eval.
+    Qed. Hint Rewrite @eval_split using auto : push_basesystem_eval.
 
     Definition reduce_cps (s:Z) (c:list limb) (p:list limb)
                {T} (f : list limb->T) :=
-      split s p (fun ab =>mul_cps c (snd ab) (fun rr =>f (fst ab ++ rr))).
+      split_cps s p
+                (fun ab => mul_cps c (snd ab)
+                                  (fun rr =>f (fst ab ++ rr))).
+
     Definition reduce s c p := reduce_cps s c p id.
+    Lemma reduce_cps_id s c p {T} f:
+      @reduce_cps s c p T f = f (reduce s c p).
+    Proof. cbv [reduce_cps reduce]; prove_id. Qed.
     Hint Opaque reduce : uncps.
+    Hint Rewrite reduce_cps_id : uncps.
+    
     Lemma reduction_rule a b s c (modulus_nonzero:s-c<>0) :
       (a + s * b) mod (s - c) = (a + c * b) mod (s - c).
     Proof. replace (a + s * b) with ((a + c*b) + b*(s-c)) by nsatz.
            rewrite Z.add_mod, Z_mod_mult, Z.add_0_r, Z.mod_mod; trivial. Qed.
-    Lemma reduce_cps_id s c p {T} f:
-      @reduce_cps s c p T f = f (reduce s c p).
-    Proof. cbv [reduce_cps reduce]; prove_id. Qed. Hint Rewrite reduce_cps_id : uncps.
     Lemma eval_reduce s c p (s_nonzero:s<>0) (modulus_nonzero:s-eval c<>0):
       eval (reduce s c p) mod (s - eval c) = eval p mod (s - eval c).
     Proof.
@@ -141,16 +153,16 @@ Module B.
              dlet m := modulo (snd t) fw in
              f ((w*fw, d) :: (w, m) :: @nil limb)
         else f [t].
-      Definition carry_cps(w fw:Z) (p:list limb) {T} (f:list limb->T) :=
-        flat_map_cps (carryterm_cps w fw) p f.
+
       Definition carryterm w fw t := carryterm_cps w fw t id.
-      Hint Opaque carryterm : uncps.
-      Definition carry w fw p := carry_cps w fw p id.
-      Hint Opaque carry : uncps.
       Lemma carryterm_cps_id w fw t {T} f :
         @carryterm_cps w fw t T f
         = f (@carryterm w fw t).
-      Proof. cbv [carryterm_cps carryterm Let_In]; prove_id. Qed. Hint Rewrite carryterm_cps_id : uncps.
+      Proof. cbv [carryterm_cps carryterm Let_In]; prove_id. Qed.
+      Hint Opaque carryterm : uncps.
+      Hint Rewrite carryterm_cps_id : uncps.
+
+
       Lemma eval_carryterm w fw (t:limb) (fw_nonzero:fw<>0):
         eval (carryterm w fw t) = eval [t].
       Proof.
@@ -158,10 +170,17 @@ Module B.
         specialize (div_mod (snd t) fw fw_nonzero).
         nsatz.
       Qed. Hint Rewrite eval_carryterm using auto : push_basesystem_eval.
+
+      Definition carry_cps(w fw:Z) (p:list limb) {T} (f:list limb->T) :=
+        flat_map_cps (carryterm_cps w fw) p f.
+
+      Definition carry w fw p := carry_cps w fw p id.
       Lemma carry_cps_id w fw p {T} f:
         @carry_cps w fw p T f = f (carry w fw p).
       Proof. cbv [carry_cps carry]; prove_id. Qed.
+      Hint Opaque carry : uncps.
       Hint Rewrite carry_cps_id : uncps.
+
       Lemma eval_carry w fw p (fw_nonzero:fw<>0):
         eval (carry w fw p) = eval p.
       Proof. cbv [carry_cps carry]; induction p; prove_eval. Qed.
@@ -180,17 +199,17 @@ Module B.
       Definition sat_multerm_cps (t t' : limb) {T} (f:list limb->T) :=
         dlet tt' := mul (snd t) (snd t') in
               f ((fst t*fst t', runtime_fst tt') :: (fst t*fst t'*word_max, runtime_snd tt') :: nil)%list.
-      Definition sat_mul_cps (p q : list limb) {T} (f:list limb->T) := 
-        flat_map_cps (fun t => @flat_map_cps _ _ (sat_multerm_cps t) q) p f.
-      (* TODO (jgross): kind of an interesting behavior--it infers the type arguments like this but fails to check if I leave them implicit *)
+
       Definition sat_multerm t t' := sat_multerm_cps t t' id.
-      Definition sat_mul p q := sat_mul_cps p q id.
-      Hint Opaque sat_multerm sat_mul : uncps.
       Lemma sat_multerm_cps_id t t' : forall {T} (f:list limb->T),
        sat_multerm_cps t t' f = f (sat_multerm t t').
-      Proof. reflexivity. Qed. Hint Rewrite sat_multerm_cps_id : uncps.
+      Proof. reflexivity. Qed.
+      Hint Opaque sat_multerm : uncps.
+      Hint Rewrite sat_multerm_cps_id : uncps.
+
       Lemma eval_map_sat_multerm_cps t q :
-        eval (flat_map (fun x => sat_multerm_cps t x id) q) = fst t * snd t * eval q.
+        eval (flat_map (fun x => sat_multerm_cps t x id) q)
+        = fst t * snd t * eval q.
       Proof.
         cbv [sat_multerm sat_multerm_cps Let_In runtime_fst runtime_snd];
         induction q; prove_eval;
@@ -198,8 +217,19 @@ Module B.
                               specialize (mul_correct a b) end;
           nsatz.
       Qed. Hint Rewrite eval_map_sat_multerm_cps : push_basesystem_eval.
-      Lemma sat_mul_cps_id p q {T} f : @sat_mul_cps p q T f = f (sat_mul p q).
-      Proof. cbv [sat_mul_cps sat_mul]; prove_id. Qed. Hint Rewrite sat_mul_cps_id : uncps.
+
+      Definition sat_mul_cps (p q : list limb) {T} (f:list limb->T) := 
+        flat_map_cps (fun t =>
+                        @flat_map_cps _ _ (sat_multerm_cps t) q) p f.
+      (* TODO (jgross): kind of an interesting behavior--it infers the type arguments like this but fails to check if I leave them implicit *)
+      
+      Definition sat_mul p q := sat_mul_cps p q id.
+      Lemma sat_mul_cps_id p q {T} f :
+        @sat_mul_cps p q T f = f (sat_mul p q).
+      Proof. cbv [sat_mul_cps sat_mul]; prove_id. Qed.
+      Hint Opaque sat_mul : uncps.
+      Hint Rewrite sat_mul_cps_id : uncps.
+      
       Lemma eval_sat_mul p q : eval (sat_mul p q) = eval p * eval q.
       Proof. cbv [sat_mul_cps sat_mul]; induction p; prove_eval. Qed.
       Hint Rewrite eval_sat_mul : push_basesystem_eval.
@@ -212,7 +242,7 @@ Module B.
       @Associational.carry_cps_id
       @Associational.carryterm_cps_id
       @Associational.reduce_cps_id
-      @Associational.split_id
+      @Associational.split_cps_id
       @Associational.mul_cps_id : uncps.
 
   Module Positional.
@@ -223,22 +253,28 @@ Module B.
               (weight_nonzero : forall i, weight i <> 0).
 
       (** Converting from positional to associational *)
-
       Definition to_associational_cps {n:nat} (xs:tuple Z n)
                  {T} (f:list limb->T) :=
         map_cps weight (seq 0 n)
                 (fun r =>
                    to_list_cps n xs (fun rr => combine_cps r rr f)).
-      Definition to_associational {n} xs := @to_associational_cps n xs _ id.
-      Definition eval {n} x := @to_associational_cps n x _ Associational.eval.
+      
+      Definition to_associational {n} xs :=
+        @to_associational_cps n xs _ id.
       Lemma to_associational_cps_id {n} x {T} f:
         @to_associational_cps n x T f = f (to_associational x).
       Proof. cbv [to_associational_cps to_associational]; prove_id. Qed.
+      Hint Opaque to_associational : uncps.
       Hint Rewrite @to_associational_cps_id : uncps.
+
+      Definition eval {n} x :=
+        @to_associational_cps n x _ Associational.eval.
+
       Lemma eval_to_associational {n} x :
         Associational.eval (@to_associational n x) = eval x.
-      Proof. cbv [to_associational_cps eval to_associational]; prove_eval. Qed.
-      Hint Rewrite @eval_to_associational : push_basesystem_eval.
+      Proof.
+        cbv [to_associational_cps eval to_associational]; prove_eval.
+      Qed. Hint Rewrite @eval_to_associational : push_basesystem_eval.
 
       (** Converting from associational to positional *)
 
@@ -253,8 +289,8 @@ Module B.
 
       Definition add_to_nth_cps {n} i x t {T} (f:tuple Z n->T) :=
         @on_tuple_cps _ _ 0 (update_nth_cps i (runtime_add x)) n n t _ f.
+      
       Definition add_to_nth {n} i x t := @add_to_nth_cps n i x t _ id.
-      Hint Opaque add_to_nth : uncps.
       Lemma add_to_nth_cps_id {n} i x xs {T} f:
         @add_to_nth_cps n i x xs T f = f (add_to_nth i x xs).
       Proof.
@@ -262,7 +298,10 @@ Module B.
           by (intros; autorewrite with uncps; reflexivity); prove_id.
         Unshelve.
         intros; subst. autorewrite with uncps push_id. distr_length.
-      Qed. Hint Rewrite @add_to_nth_cps_id : uncps.
+      Qed.
+      Hint Opaque add_to_nth : uncps.
+      Hint Rewrite @add_to_nth_cps_id : uncps.
+      
       Lemma eval_add_to_nth {n} (i:nat) (x:Z) (H:(i<n)%nat) (xs:tuple Z n):
         eval (@add_to_nth n i x xs) = weight i * x + eval xs.
       Proof.
@@ -288,52 +327,77 @@ Module B.
         if dec (fst t mod weight i = 0)
         then f (i, let c := fst t / weight i in (c * snd t)%RT)
         else match i with S i' => place_cps t i' f | O => f (O, fst t * snd t)%RT end.
-      Lemma place_cps_in_range (t:limb) (n:nat) : (fst (place_cps t n id) < S n)%nat.
+
+      Definition place t i := place_cps t i id.
+      Lemma place_cps_id t i {T} f :
+        @place_cps t i T f = f (place t i).
+      Proof. cbv [place]; induction i; prove_id. Qed.
+      Hint Opaque place : uncps.
+      Hint Rewrite place_cps_id : uncps.
+
+      Lemma place_cps_in_range (t:limb) (n:nat)
+        : (fst (place_cps t n id) < S n)%nat.
       Proof. induction n; simpl; break_match; simpl; omega. Qed.
-      Lemma weight_place_cps t i : weight (fst (place_cps t i id)) * snd (place_cps t i id) = fst t * snd t.
+      Lemma weight_place_cps t i
+        : weight (fst (place_cps t i id)) * snd (place_cps t i id)
+          = fst t * snd t.
       Proof.
         induction i; cbv [id]; simpl place_cps; break_match;
           autorewrite with cancel_pair;
           try find_apply_lem_hyp Z_div_exact_full_2; nsatz || auto.
       Qed.
-      Definition place t i := place_cps t i id.
-      Hint Opaque place : uncps.
-      Lemma place_cps_id t i {T} f :
-        @place_cps t i T f = f (place t i).
-      Proof. cbv [place]; induction i; prove_id. Qed.
-      Hint Rewrite place_cps_id : uncps.
-      Definition from_associational_cps n (p:list limb) {T} (f:tuple Z n->T):=
-        fold_right_cps (fun t st => place_cps t (pred n) (fun p=> add_to_nth_cps (fst p) (snd p) st id)) (zeros n) p f.
+
+      Definition from_associational_cps n (p:list limb)
+                 {T} (f:tuple Z n->T):=
+        fold_right_cps
+          (fun t st =>
+             place_cps t (pred n)
+                       (fun p=> add_to_nth_cps (fst p) (snd p) st id))
+          (zeros n) p f.
+
       Definition from_associational n p := from_associational_cps n p id.
-      Hint Opaque from_associational : uncps.
       Lemma from_associational_cps_id {n} p {T} f:
         @from_associational_cps n p T f = f (from_associational n p).
-      Proof. cbv [from_associational_cps from_associational]; prove_id. Qed.
+      Proof.
+        cbv [from_associational_cps from_associational]; prove_id.
+      Qed.
+      Hint Opaque from_associational : uncps.
       Hint Rewrite @from_associational_cps_id : uncps.
+
       Lemma eval_from_associational {n} p (n_nonzero:n<>O):
         eval (from_associational n p) = Associational.eval p.
       Proof.
         cbv [from_associational_cps from_associational]; induction p;
           [|pose proof (place_cps_in_range a (pred n))]; prove_eval.
         cbv [place]; rewrite weight_place_cps. nsatz.
-      Qed. Hint Rewrite @eval_from_associational using omega : push_basesystem_eval.
+      Qed.
+      Hint Rewrite @eval_from_associational using omega
+        : push_basesystem_eval.
 
       Section Carries.
         Context {modulo div : Z->Z->Z}.
         Context {div_mod : forall a b:Z, b <> 0 ->
                                        a = b * (div a b) + modulo a b}.
-      Definition carry_cps(index:nat) (p:list limb) {T} (f:list limb->T) :=
-        @Associational.carry_cps modulo div (weight index) (weight (S index) / weight index) p T f.
+        Definition carry_cps(index:nat) (p:list limb)
+                   {T} (f:list limb->T) :=
+          @Associational.carry_cps modulo div
+                                   (weight index)
+                                   (weight (S index) / weight index)
+                                   p T f.
+
       Definition carry i p := carry_cps i p id.
-      Hint Opaque carry : uncps.
       Lemma carry_cps_id i p {T} f:
         @carry_cps i p T f = f (carry i p).
-      Proof. cbv [carry_cps carry]; prove_id; rewrite carry_cps_id; reflexivity. Qed.
-      Hint Rewrite carry_cps_id : uncps.
+      Proof.
+        cbv [carry_cps carry]; prove_id; rewrite carry_cps_id; reflexivity.
+      Qed.
+      Hint Opaque carry : uncps. Hint Rewrite carry_cps_id : uncps.
+
       Lemma eval_carry i p: weight (S i) / weight i <> 0 ->
         Associational.eval (carry i p) = Associational.eval p.
       Proof. cbv [carry_cps carry]; intros; eapply @eval_carry; eauto. Qed.
       Hint Rewrite @eval_carry : push_basesystem_eval.
+
       End Carries.
     End Positional.
   End Positional.
@@ -343,7 +407,7 @@ Module B.
       @Associational.carry_cps_id
       @Associational.carryterm_cps_id
       @Associational.reduce_cps_id
-      @Associational.split_id
+      @Associational.split_cps_id
       @Associational.mul_cps_id
       @Positional.carry_cps_id
       @Positional.from_associational_cps_id
@@ -353,12 +417,12 @@ Module B.
     : uncps.
   Hint Rewrite
       @Associational.eval_sat_mul
-      @Associational.eval_mul_noncps
+      @Associational.eval_mul
       @Positional.eval_to_associational
       @Associational.eval_carry
       @Associational.eval_carryterm
       @Associational.eval_reduce
-      @Associational.eval_split_noncps
+      @Associational.eval_split
       @Positional.eval_carry
       @Positional.eval_from_associational
       @Positional.eval_add_to_nth
@@ -453,6 +517,8 @@ Section Ops.
 
 End Ops.
 
+(*
 Eval cbv [projT1 addT lift2_sig proj1_sig] in (projT1 addT).
 Eval cbv [projT1 mulT lift2_sig proj1_sig] in
     (fun m d div_mod => projT1 (mulT m d div_mod)).
+*)
