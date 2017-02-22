@@ -1,6 +1,7 @@
 Require Import Coq.ZArith.ZArith Coq.micromega.Psatz Coq.omega.Omega.
+Require Import Coq.ZArith.BinIntDef.
+Local Open Scope Z_scope.
 
-Require Import Coq.ZArith.BinIntDef. Local Open Scope Z_scope.
 Require Import Crypto.Tactics.Algebra_syntax.Nsatz.
 Require Import Crypto.Util.Tactics Crypto.Util.Decidable Crypto.Util.LetIn.
 Require Import Crypto.Util.ZUtil Crypto.Util.ListUtil Crypto.Util.Sigma.
@@ -23,13 +24,13 @@ Local Ltac prove_id :=
          | _ => solve [auto]
          end.
 
-Create HintDb push_eval discriminated.
+Create HintDb push_basesystem_eval discriminated.
 Local Ltac prove_eval := 
   repeat match goal with
          | _ => progress intros
          | _ => progress simpl
          | _ => progress cbv [Let_In]
-         | _ => progress (autorewrite with push_eval uncps push_id cancel_pair in * )
+         | _ => progress (autorewrite with push_basesystem_eval uncps push_id cancel_pair in * )
          | _ => break_if
          | _ => break_match
          | _ => split 
@@ -58,7 +59,7 @@ Module B.
     Lemma eval_cons p q : eval (p::q) = (fst p) * (snd p) + eval q. Proof. reflexivity. Qed.
     Lemma eval_app p q: eval (p++q) = eval p + eval q.
     Proof. induction p; simpl eval; rewrite ?eval_nil, ?eval_cons; nsatz. Qed.
-    Hint Rewrite eval_nil eval_cons eval_app : push_eval.
+    Hint Rewrite eval_nil eval_cons eval_app : push_basesystem_eval.
 
     Definition multerm (t t' : limb) : limb :=
       (fst t * fst t', (snd t * snd t')%RT).
@@ -69,15 +70,15 @@ Module B.
     Lemma eval_map_mul (a:limb) (q:list limb) : eval (List.map (multerm a) q) = fst a * snd a * eval q.
     Proof.
       induction q; cbv [multerm]; simpl List.map;
-        autorewrite with push_eval cancel_pair; nsatz.
-    Qed. Hint Rewrite eval_map_mul : push_eval.
+        autorewrite with push_basesystem_eval cancel_pair; nsatz.
+    Qed. Hint Rewrite eval_map_mul : push_basesystem_eval.
     Lemma mul_cps_id p q: forall {T} f,
       @mul_cps p q T f = f (mul p q).
     Proof. cbv [mul_cps mul]; prove_id. Qed. Hint Rewrite mul_cps_id : uncps.
     Lemma eval_mul_noncps p q:
       eval (mul p q) = eval p * eval q.
     Proof.
-      cbv [mul mul_cps]; induction p; prove_eval. Qed. Hint Rewrite eval_mul_noncps : push_eval.
+      cbv [mul mul_cps]; induction p; prove_eval. Qed. Hint Rewrite eval_mul_noncps : push_basesystem_eval.
 
     Fixpoint split (s:Z) (xs:list limb)
              {T} (f :list limb*list limb->T) :=
@@ -108,7 +109,7 @@ Module B.
         match goal with H:_ |- _ =>
                         unique pose proof (Z_div_exact_full_2 _ _ s_nonzero H)
         end; nsatz.
-    Qed. Hint Rewrite @eval_split_noncps using auto : push_eval.
+    Qed. Hint Rewrite @eval_split_noncps using auto : push_basesystem_eval.
 
     Definition reduce_cps (s:Z) (c:list limb) (p:list limb)
                {T} (f : list limb->T) :=
@@ -127,7 +128,7 @@ Module B.
     Proof.
       cbv [reduce reduce_cps]; prove_eval;
         rewrite <-reduction_rule by auto; prove_eval.
-    Qed. Hint Rewrite eval_reduce : push_eval.
+    Qed. Hint Rewrite eval_reduce : push_basesystem_eval.
 
     Section Carries.
       Context {modulo div:Z->Z->Z}.
@@ -156,7 +157,7 @@ Module B.
         cbv [carryterm_cps carryterm Let_In]; prove_eval.
         specialize (div_mod (snd t) fw fw_nonzero).
         nsatz.
-      Qed. Hint Rewrite eval_carryterm using auto : push_eval.
+      Qed. Hint Rewrite eval_carryterm using auto : push_basesystem_eval.
       Lemma carry_cps_id w fw p {T} f:
         @carry_cps w fw p T f = f (carry w fw p).
       Proof. cbv [carry_cps carry]; prove_id. Qed.
@@ -164,7 +165,7 @@ Module B.
       Lemma eval_carry w fw p (fw_nonzero:fw<>0):
         eval (carry w fw p) = eval p.
       Proof. cbv [carry_cps carry]; induction p; prove_eval. Qed.
-      Hint Rewrite eval_carry using auto : push_eval.
+      Hint Rewrite eval_carry using auto : push_basesystem_eval.
     End Carries.
 
     Section Saturated.
@@ -196,12 +197,12 @@ Module B.
           try match goal with |- context [mul ?a ?b] =>
                               specialize (mul_correct a b) end;
           nsatz.
-      Qed. Hint Rewrite eval_map_sat_multerm_cps : push_eval.
+      Qed. Hint Rewrite eval_map_sat_multerm_cps : push_basesystem_eval.
       Lemma sat_mul_cps_id p q {T} f : @sat_mul_cps p q T f = f (sat_mul p q).
       Proof. cbv [sat_mul_cps sat_mul]; prove_id. Qed. Hint Rewrite sat_mul_cps_id : uncps.
       Lemma eval_sat_mul p q : eval (sat_mul p q) = eval p * eval q.
       Proof. cbv [sat_mul_cps sat_mul]; induction p; prove_eval. Qed.
-      Hint Rewrite eval_sat_mul : push_eval.
+      Hint Rewrite eval_sat_mul : push_basesystem_eval.
 
     End Saturated.
   End Associational.
@@ -237,7 +238,7 @@ Module B.
       Lemma eval_to_associational {n} x :
         Associational.eval (@to_associational n x) = eval x.
       Proof. cbv [to_associational_cps eval to_associational]; prove_eval. Qed.
-      Hint Rewrite @eval_to_associational : push_eval.
+      Hint Rewrite @eval_to_associational : push_basesystem_eval.
 
       (** Converting from associational to positional *)
 
@@ -248,7 +249,7 @@ Module B.
         cbv [eval Associational.eval to_associational_cps zeros];
           autorewrite with uncps; rewrite Tuple.to_list_from_list.
         generalize dependent (List.seq 0 n); intro xs; induction xs; simpl; nsatz.
-      Qed. Hint Rewrite eval_zeros : push_eval.
+      Qed. Hint Rewrite eval_zeros : push_basesystem_eval.
 
       Definition add_to_nth_cps {n} i x t {T} (f:tuple Z n->T) :=
         @on_tuple_cps _ _ 0 (update_nth_cps i (runtime_add x)) n n t _ f.
@@ -276,12 +277,12 @@ Module B.
         rewrite <-!(ListUtil.splice_nth_equiv_update_nth_update _ _ (weight 0, 0)); cbv [ListUtil.splice_nth id];
           repeat match goal with
                  | _ => progress (apply Zminus_eq; ring_simplify)
-                 | _ => progress autorewrite with push_eval cancel_pair distr_length
+                 | _ => progress autorewrite with push_basesystem_eval cancel_pair distr_length
                  | _ => progress rewrite <-?ListUtil.map_nth_default_always, ?map_fst_combine, ?List.firstn_all2, ?ListUtil.map_nth_default_always, ?nth_default_seq_inbouns, ?plus_O_n
                  end; trivial; lia.
         Unshelve.
         intros; subst. autorewrite with uncps push_id. distr_length.
-      Qed. Hint Rewrite @eval_add_to_nth using omega : push_eval.
+      Qed. Hint Rewrite @eval_add_to_nth using omega : push_basesystem_eval.
 
       Fixpoint place_cps (t:limb) (i:nat) {T} (f:nat * Z->T) :=
         if dec (fst t mod weight i = 0)
@@ -315,7 +316,7 @@ Module B.
         cbv [from_associational_cps from_associational]; induction p;
           [|pose proof (place_cps_in_range a (pred n))]; prove_eval.
         cbv [place]; rewrite weight_place_cps. nsatz.
-      Qed. Hint Rewrite @eval_from_associational using omega : push_eval.
+      Qed. Hint Rewrite @eval_from_associational using omega : push_basesystem_eval.
 
       Section Carries.
         Context {modulo div : Z->Z->Z}.
@@ -332,7 +333,7 @@ Module B.
       Lemma eval_carry i p: weight (S i) / weight i <> 0 ->
         Associational.eval (carry i p) = Associational.eval p.
       Proof. cbv [carry_cps carry]; intros; eapply @eval_carry; eauto. Qed.
-      Hint Rewrite @eval_carry : push_eval.
+      Hint Rewrite @eval_carry : push_basesystem_eval.
       End Carries.
     End Positional.
   End Positional.
@@ -361,7 +362,7 @@ Module B.
       @Positional.eval_carry
       @Positional.eval_from_associational
       @Positional.eval_add_to_nth
-    using (omega || assumption) : push_eval.
+    using (omega || assumption) : push_basesystem_eval.
 End B.
   
 Local Coercion Z.of_nat : nat >-> Z.
@@ -395,7 +396,7 @@ Ltac prove_op sz x :=
   end; 
   [ apply f_equal; op_simplify; reflexivity
   | assert_preconditions;
-    progress autorewrite with uncps push_id push_eval;
+    progress autorewrite with uncps push_id push_basesystem_eval;
     reflexivity ]
 .
 
