@@ -16,6 +16,15 @@ Local Arguments f_equal {_ _} _ {_ _} _.
 
 (** ** Equality for [sigT] *)
 Section sigT.
+  (* Lift foralls out of sigT proofs and leave a sig goal *)
+  Definition lift2_sig {R S T} f (g:R->S)
+             (X : forall a b, {prod | g prod = f a b}) :
+    { op : T -> T -> R & forall a b, g (op a b) = f a b }.
+  Proof.
+    exists (fun a b => proj1_sig (X a b)).
+    exact (fun a b => proj2_sig (X a b)).
+  Defined.
+  
   (** *** Projecting an equality of a pair to equality of the first components *)
   Definition pr1_path {A} {P : A -> Type} {u v : sigT P} (p : u = v)
   : projT1 u = projT1 v

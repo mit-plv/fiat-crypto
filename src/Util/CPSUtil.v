@@ -181,6 +181,23 @@ Proof.
 Qed.
 Hint Rewrite @combine_cps_correct: uncps.
 
+(* differs from fold_right_cps in that the functional argument `g` is also a CPS function *)
+Fixpoint fold_right_cps2 {A B} (g : B -> A -> forall {T}, (A->T)->T) (a0 : A) (l : list B) {T} (f : A -> T) :=
+  match l with
+  | nil => f a0
+  | b :: tl => fold_right_cps2 g a0 tl (fun r => g b r f)
+  end.
+Lemma fold_right_cps2_correct {A B} g a0 l : forall {T} f,
+  (forall b a T h, @g b a T h = h (@g b a A id)) ->
+  @fold_right_cps2 A B g a0 l T f = f (List.fold_right (fun b a => @g b a A id) a0 l).
+Proof.
+  induction l; intros; [reflexivity|].
+  simpl fold_right_cps2. simpl fold_right.
+  rewrite H; erewrite IHl by eassumption.
+  rewrite H; reflexivity.
+Qed.
+Hint Rewrite @fold_right_cps2_correct using (intros; autorewrite with uncps; auto): uncps.
+
 Definition fold_right_no_starter {A} (f:A->A->A) ls : option A :=
   match ls with
   | nil => None

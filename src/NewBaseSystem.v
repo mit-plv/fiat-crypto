@@ -3,7 +3,7 @@ Require Import Coq.ZArith.ZArith Coq.micromega.Psatz Coq.omega.Omega.
 Require Import Coq.ZArith.BinIntDef. Local Open Scope Z_scope.
 Require Import Crypto.Tactics.Algebra_syntax.Nsatz.
 Require Import Crypto.Util.Tactics Crypto.Util.Decidable Crypto.Util.LetIn.
-Require Import Crypto.Util.ZUtil Crypto.Util.ListUtil.
+Require Import Crypto.Util.ZUtil Crypto.Util.ListUtil Crypto.Util.Sigma.
 Require Import Crypto.Util.CPSUtil Crypto.Util.Prod.
 
 Require Import Coq.Lists.List. Import ListNotations.
@@ -413,49 +413,6 @@ End Karatsuba.
 Local Coercion Z.of_nat : nat >-> Z.
 Import Coq.Lists.List.ListNotations. Local Open Scope list_scope.
 Import B.
-Require Import Crypto.Algebra.
-
-(* TODO : move *)
-Definition lift_tuple2 {R S T n} f (g:R->S)
-  (X : forall a b, {prod | g prod = f a b}) :
-  { op : tuple T n -> tuple T n -> R & forall a b, g (op a b) = f a b }.
-Proof.
-  exists (fun a b => proj1_sig (X a b)).
-  exact (fun a b => proj2_sig (X a b)).
-Defined.
-
-Fixpoint chained_carries wt modulo div n t {T} (f:list (Z*Z)->T) :=
-  match n with
-  | O => @Positional.carry wt modulo div 0 t _ f
-  | S n' => chained_carries wt modulo div n' t (fun r => @Positional.carry wt modulo div n r _ f)
-  end.
-Definition chained_carries_noncps wt m d n t :=
-  chained_carries wt m d n t id.
-Hint Opaque chained_carries_noncps : uncps.
-Lemma chained_carries_id wt m d n : forall t {T} f,
-  @chained_carries wt m d n t T f = f (chained_carries_noncps wt m d n t).
-Proof.
-  cbv [chained_carries_noncps]; induction n; [prove_id|].
-  intros; simpl chained_carries.
-  etransitivity; rewrite IHn; [|reflexivity].
-  rewrite Positional.carry_id.
-  reflexivity.
-Qed. Hint Rewrite chained_carries_id : uncps.
-Lemma eval_chained_carries_noncps :
-  forall wt modulo div,
-    (forall a b : Z, b <> 0 -> a = b * div a b + modulo a b) ->
-    forall (n : nat) (p : list B.limb),
-      (forall i, (i <= n)%nat -> wt (S i) / wt i <> 0) ->
-      Associational.eval (chained_carries_noncps wt modulo div n p)
-      =  Associational.eval p.
-Proof.
-  induction n; intros; cbv [chained_carries_noncps]; simpl chained_carries.
-  { apply Positional.eval_carry_noncps; auto. }
-  { rewrite chained_carries_id.
-    etransitivity;[|apply IHn; solve[auto]].
-    apply Positional.eval_carry_noncps; auto. }
-Qed. Hint Rewrite eval_chained_carries_noncps : push_eval.
-  
 
 Ltac assert_preconditions :=
   repeat match goal with
@@ -477,7 +434,7 @@ Ltac op_simplify :=
 Ltac prove_op sz x :=
   cbv [Tuple.tuple Tuple.tuple'] in *;
   repeat match goal with p : _ * Z |- _ => destruct p end;
-  apply (lift_tuple2 (n := sz));
+  apply lift2_sig;
   eexists; cbv zeta beta; intros;
   match goal with |- Positional.eval ?wt _ = ?op (Positional.eval ?wt ?a) (Positional.eval ?wt ?b) =>
                   transitivity (Positional.eval wt (x wt a b))
@@ -490,8 +447,6 @@ Ltac prove_op sz x :=
 
 Section Ops.
   Context
-    (add_get_carry : Z -> Z -> Z * Z)
-    (mul : Z -> Z -> Z * Z)
     (modulo : Z -> Z -> Z)
     (div : Z -> Z -> Z)
     (div_mod : forall a b : Z, b <> 0 ->
@@ -500,7 +455,12 @@ Section Ops.
 
   Let wt := fun i : nat => 2^(25 * (i / 2) + 26 * ((i + 1) / 2)).
   Let sz := 10%nat.
-  Let sz2 := 19%nat.
+  Let sz2 := Eval compute in ((sz * 2) - 1)%nat.
+
+  (* shorthand for many carries in a row *)
+  Definition chained_carries (w : nat -> Z) (p:list B.limb) (idxs : list nat)
+             {T} (f:list B.limb->T) :=
+    fold_right_cps2 (@Positional.carry w modulo div) p idxs f.
 
   Definition addT :
     { add : (Z^sz -> Z^sz -> Z^sz)%type &
@@ -513,7 +473,7 @@ Section Ops.
         Positional.to_associational (n := sz) wt a
           (fun r => Positional.to_associational (n := sz) wt b
           (fun r0 => Positional.from_associational wt sz (r ++ r0) id
-      ))).
+        ))).
   Defined.
   
 
@@ -523,21 +483,21 @@ Section Ops.
                  let eval {n} := Positional.eval (n := n) wt in
                  eval (mul a b) = eval a  * eval b }.
   Proof.
-    prove_op sz (
-        fun wt a b =>
-        Positional.to_associational (n := sz) wt a
-          (fun r => Positional.to_associational (n := sz) wt b
-          (fun r0 => Associational.mul r r0
-          (fun r1 => Positional.from_associational wt sz2 r1
-          (fun r2 => Positional.to_associational wt r2
-          (fun r3 => chained_carries wt modulo div 19 r3 
-          (fun r13 => Positional.from_associational wt sz2 r3 id
-      ))))))).
-  Time Defined. (* Finished transaction in 124.656 secs *) 
+    let x := (eval cbv [chained_carries seq fold_right_cps2 sz2] in
+        (fun w a b =>
+         Positional.to_associational (n := sz) w a
+           (fun r => Positional.to_associational (n := sz) w b
+           (fun r0 => Associational.mul r r0
+           (fun r1 => Positional.from_associational w sz2 r1
+           (fun r2 => Positional.to_associational w r2
+           (fun r3 => chained_carries w r3 (seq 0 sz2)
+           (fun r13 => Positional.from_associational w sz2 r13 id
+             )))))))) in
+    prove_op sz x.
+  Time Defined. (* Finished transaction in 150.562 secs *) 
 
-  (*
-  Eval cbv [projT1 addT lift_tuple2 proj1_sig] in (projT1 addT).
-  Eval cbv [projT1 mulT lift_tuple2 proj1_sig] in (projT1 mulT).
-  *)
-  
 End Ops.
+
+Eval cbv [projT1 addT lift2_sig proj1_sig] in (projT1 addT).
+Eval cbv [projT1 mulT lift2_sig proj1_sig] in
+    (fun m d div_mod =>projT1 (mulT m d div_mod)).
