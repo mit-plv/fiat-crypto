@@ -133,11 +133,15 @@ Section Homomorphism.
     intros.
     rewrite !ring_sub_definition, Monoid.homomorphism, homomorphism_opp. reflexivity.
   Qed.
+
+  Global Instance monoid_homomorphism_mul :
+    Monoid.is_homomorphism (phi:=phi) (OP:=MUL) (op:=mul) (EQ:=EQ) (eq:=eq).
+  Proof. split; destruct phi_homom; assumption || exact _. Qed.
 End Homomorphism.
 
 (* TODO: file a Coq bug for rewrite_strat -- it should accept ltac variables *)
 Ltac push_homomorphism phi :=
-  let H := constr:(_ : @Ring.is_homomorphism _ _ _ _ _ _ _ _ _ _ phi) in
+  let H := constr:(_ : @is_homomorphism _ _ _ _ _ _ _ _ _ _ phi) in
   pose proof (@homomorphism_zero _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ H)
     as _push_homomrphism_0;
   pose proof (@homomorphism_one _ _ _ _ _ _ _ _ _ _ _ H)
@@ -154,7 +158,7 @@ Ltac push_homomorphism phi :=
   clear _push_homomrphism_0 _push_homomrphism_1 _push_homomrphism_p _push_homomrphism_o _push_homomrphism_s _push_homomrphism_m.
 
 Ltac pull_homomorphism phi :=
-  let H := constr:(_ : @Ring.is_homomorphism _ _ _ _ _ _ _ _ _ _ phi) in
+  let H := constr:(_ : @is_homomorphism _ _ _ _ _ _ _ _ _ _ phi) in
   pose proof (@homomorphism_zero _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ H)
     as _pull_homomrphism_0;
   pose proof (@homomorphism_one _ _ _ _ _ _ _ _ _ _ _ H)
@@ -176,31 +180,55 @@ Ltac pull_homomorphism phi :=
   (rewrite_strat bottomup (terms _pull_homomrphism_0 _pull_homomrphism_1 _pull_homomrphism_p _pull_homomrphism_o _pull_homomrphism_s _pull_homomrphism_m));
   clear _pull_homomrphism_0 _pull_homomrphism_1 _pull_homomrphism_p _pull_homomrphism_o _pull_homomrphism_s _pull_homomrphism_m.
 
-Lemma isomorphism_to_subring_ring
-      {T EQ ZERO ONE OPP ADD SUB MUL}
-      {Equivalence_EQ: @Equivalence T EQ} {eq_dec: forall x y, {EQ x y} + {~ EQ x y} }
-      {Proper_OPP:Proper(EQ==>EQ)OPP}
-      {Proper_ADD:Proper(EQ==>EQ==>EQ)ADD}
-      {Proper_SUB:Proper(EQ==>EQ==>EQ)SUB}
-      {Proper_MUL:Proper(EQ==>EQ==>EQ)MUL}
-      {R eq zero one opp add sub mul} {ringR:@ring R eq zero one opp add sub mul}
-      {phi}
-      {eq_phi_EQ: forall x y, eq (phi x) (phi y) -> EQ x y}
-      {phi_opp : forall a, eq (phi (OPP a)) (opp (phi a))}
-      {phi_add : forall a b, eq (phi (ADD a b)) (add (phi a) (phi b))}
-      {phi_sub : forall a b, eq (phi (SUB a b)) (sub (phi a) (phi b))}
-      {phi_mul : forall a b, eq (phi (MUL a b)) (mul (phi a) (phi b))}
-      {phi_zero : eq (phi ZERO) zero}
-      {phi_one : eq (phi ONE) one}
-  : @ring T EQ ZERO ONE OPP ADD SUB MUL.
-Proof.
-  repeat split; eauto with core typeclass_instances; intros;
-    eapply eq_phi_EQ;
-    repeat rewrite ?phi_opp, ?phi_add, ?phi_sub, ?phi_mul, ?phi_inv, ?phi_zero, ?phi_one;
-    auto using (associative (op := add)), (commutative (op := add)), (left_identity (op := add)), (right_identity (op := add)),
-    (associative (op := mul)), (commutative (op := add)), (left_identity (op := mul)), (right_identity (op := mul)),
-    left_inverse, right_inverse, (left_distributive (add := add)), (right_distributive (add := add)), ring_sub_definition.
-Qed.
+
+Section Isomorphism.
+  Context {F EQ ZERO ONE OPP ADD SUB MUL} {ringF:@ring F EQ ZERO ONE OPP ADD SUB MUL}.
+  Context {H} {eq : H -> H -> Prop} {zero one : H} {opp : H -> H} {add sub mul : H -> H -> H} {inv : H -> H} {div : H -> H -> H}.
+  Context {phi:F->H} {phi':H->F}.
+  Local Infix "=" := EQ. Local Infix "=" := EQ : type_scope.
+  Context (phi'_phi_id : forall A, phi' (phi A) = A)
+          (phi'_eq : forall a b, EQ (phi' a) (phi' b) <-> eq a b)
+          {phi'_zero : phi' zero = ZERO}
+          {phi'_one : phi' one = ONE}
+          {phi'_opp : forall a, phi' (opp a) = OPP (phi' a)}
+          (phi'_add : forall a b, phi' (add a b) = ADD (phi' a) (phi' b))
+          (phi'_sub : forall a b, phi' (sub a b) = SUB (phi' a) (phi' b))
+          (phi'_mul : forall a b, phi' (mul a b) = MUL (phi' a) (phi' b)).
+
+  Lemma ring_by_isomorphism
+    : @ring H eq zero one opp add sub mul
+      /\ @is_homomorphism F EQ ONE ADD MUL H eq one add mul phi
+      /\ @is_homomorphism H eq one add mul F EQ ONE ADD MUL phi'.
+  Proof.
+    repeat match goal with
+           | [ H : field |- _ ] => destruct H; try clear H
+           | [ H : commutative_ring |- _ ] => destruct H; try clear H
+           | [ H : ring |- _ ] => destruct H; try clear H
+           | [ H : abelian_group |- _ ] => destruct H; try clear H
+           | [ H : group |- _ ] => destruct H; try clear H
+           | [ H : monoid |- _ ] => destruct H; try clear H
+           | [ H : is_commutative |- _ ] => destruct H; try clear H
+           | [ H : is_left_distributive |- _ ] => destruct H; try clear H
+           | [ H : is_right_distributive |- _ ] => destruct H; try clear H
+           | [ H : is_zero_neq_one |- _ ] => destruct H; try clear H
+           | [ H : is_associative |- _ ] => destruct H; try clear H
+           | [ H : is_left_identity |- _ ] => destruct H; try clear H
+           | [ H : is_right_identity |- _ ] => destruct H; try clear H
+           | [ H : Equivalence _ |- _ ] => destruct H; try clear H
+           | [ H : is_left_inverse |- _ ] => destruct H; try clear H
+           | [ H : is_right_inverse |- _ ] => destruct H; try clear H
+           | _ => intro
+           | _ => split
+           | [ H : eq _ _ |- _ ] => apply phi'_eq in H
+           | [ |- eq _ _ ] => apply phi'_eq
+           | [ H : (~eq _ _)%type |- _ ] => pose proof (fun pf => H (proj1 (@phi'_eq _ _) pf)); clear H
+           | [ H : EQ _ _ |- _ ] => rewrite H
+           | _ => progress erewrite ?phi'_zero, ?phi'_one, ?phi'_opp, ?phi'_add, ?phi'_sub, ?phi'_mul, ?phi'_phi_id by reflexivity
+           | [ H : _ |- _ ] => progress erewrite ?phi'_zero, ?phi'_one, ?phi'_opp, ?phi'_add, ?phi'_sub, ?phi'_mul, ?phi'_phi_id in H by reflexivity
+           | _ => solve [ eauto ]
+           end.
+  Qed.
+End Isomorphism.
 
 Section TacticSupportCommutative.
   Context {T eq zero one opp add sub mul} `{@commutative_ring T eq zero one opp add sub mul}.

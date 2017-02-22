@@ -92,7 +92,6 @@ src/ModularArithmetic/Pre.v
 src/ModularArithmetic/PrimeFieldTheorems.v
 src/ModularArithmetic/PseudoMersenneBaseParamProofs.v
 src/ModularArithmetic/PseudoMersenneBaseParams.v
-src/ModularArithmetic/Tutorial.v
 src/ModularArithmetic/ZBounded.v
 src/ModularArithmetic/ZBoundedZ.v
 src/ModularArithmetic/BarrettReduction/Z.v

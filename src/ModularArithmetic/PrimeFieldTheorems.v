@@ -237,4 +237,58 @@ Module F.
       }
     Qed.
   End SquareRootsPrime5Mod8.
+
+  Module Iso.
+    Section IsomorphicRings.
+      Context {q:positive} {prime_q:prime q} {two_lt_q:2 < Z.pos q}.
+      Context 
+        {H : Type} {eq : H -> H -> Prop} {zero one : H}
+        {opp : H -> H} {add sub mul : H -> H -> H}
+        {phi : F q -> H} {phi' : H -> F q}
+        {phi'_phi : forall A : F q, Logic.eq (phi' (phi A)) A}
+        {phi'_iff : forall a b : H, iff (Logic.eq (phi' a) (phi' b)) (eq a b)}
+        {phi'_zero : Logic.eq (phi' zero) F.zero} {phi'_one : Logic.eq (phi' one) F.one}
+        {phi'_opp : forall a : H, Logic.eq (phi' (opp a)) (F.opp (phi' a))}
+        {phi'_add : forall a b : H, Logic.eq (phi' (add a b)) (F.add (phi' a) (phi' b))}
+        {phi'_sub : forall a b : H, Logic.eq (phi' (sub a b)) (F.sub (phi' a) (phi' b))}
+        {phi'_mul : forall a b : H, Logic.eq (phi' (mul a b)) (F.mul (phi' a) (phi' b))}
+        {P:Type} {pow : H -> P -> H} {NtoP:N->P}
+        {pow_is_scalarmult:ScalarMult.is_scalarmult(G:=H)(eq:=eq)(add:=mul)(zero:=one)(mul:=fun (n:nat) (k:H) => pow k (NtoP (N.of_nat n)))}.
+      Definition inv (x:H) := pow x (NtoP (Z.to_N (q - 2)%Z)).
+      Definition div x y := mul (inv y) x.
+      
+      Lemma ring :
+        @Algebra.ring H eq zero one opp add sub mul
+        /\ @Ring.is_homomorphism (F q) Logic.eq F.one F.add F.mul H eq one add mul phi
+        /\ @Ring.is_homomorphism H eq one add mul (F q) Logic.eq F.one F.add F.mul phi'.
+      Proof. eapply @Ring.ring_by_isomorphism; assumption || exact _. Qed.
+      Local Instance _iso_ring : Algebra.ring := proj1 ring.
+      Local Instance _iso_hom1 : Ring.is_homomorphism := proj1 (proj2 ring).
+      Local Instance _iso_hom2 : Ring.is_homomorphism := proj2 (proj2 ring).
+
+      Let inv_proof : forall a : H, phi' (inv a) = F.inv (phi' a).
+      Proof.
+        intros.
+        cbv [inv]. rewrite (Fq_inv_fermat(q:=q)(two_lt_q:=two_lt_q)).
+        rewrite <-Z_nat_N at 1 2.
+        rewrite (ScalarMult.homomorphism_scalarmult(phi:=phi')(MUL_is_scalarmult:=pow_is_scalarmult)(mul_is_scalarmult:=F.pow_is_scalarmult)).
+        reflexivity.
+        assumption.
+      Qed.
+
+      Let div_proof : forall a b : H, phi' (mul (inv b) a) = phi' a / phi' b.
+      Proof.
+        intros.
+        rewrite phi'_mul, inv_proof, Algebra.field_div_definition, Algebra.commutative.
+        reflexivity.
+      Qed.
+
+      Lemma field_and_iso :
+        @Algebra.field H eq zero one opp add sub mul inv div
+        /\ @Ring.is_homomorphism (F q) Logic.eq F.one F.add F.mul H eq one add mul phi
+        /\ @Ring.is_homomorphism H eq one add mul (F q) Logic.eq F.one F.add F.mul phi'.
+      Proof. eapply @Field.field_and_homomorphism_from_redundant_representation;
+               assumption || exact _ || exact inv_proof || exact div_proof. Qed.
+    End IsomorphicRings.
+  End Iso.
 End F.
