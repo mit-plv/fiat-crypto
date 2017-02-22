@@ -120,7 +120,28 @@ Section language.
       : interp_flat_type_rel_pointwise (fun t => R t t) t x y
         <-> interp_flat_type_rel_pointwise_hetero R t t x y.
     Proof. induction t; simpl; rewrite_hyp ?*; reflexivity. Qed.
+
+    Lemma interp_flat_type_rel_pointwise_impl {R1 R2 : forall t, _ -> _ -> Prop} t x y
+      : interp_flat_type_rel_pointwise (fun t x y => (R1 t x y -> R2 t x y)%type) t x y
+        -> (interp_flat_type_rel_pointwise R1 t x y
+            -> interp_flat_type_rel_pointwise R2 t x y).
+    Proof. induction t; simpl; intuition. Qed.
+
+    Lemma interp_flat_type_rel_pointwise_always {R : forall t, _ -> _ -> Prop}
+      : (forall t x y, R t x y)
+        -> forall t x y, interp_flat_type_rel_pointwise R t x y.
+    Proof. induction t; simpl; intuition. Qed.
   End flat_type.
+  Section flat_type_extra.
+    Context {interp_base_type1 interp_base_type2 : base_type_code -> Type}.
+    Lemma interp_flat_type_rel_pointwise_impl' {R1 R2 : forall t, _ -> _ -> Prop} t x y
+      : @interp_flat_type_rel_pointwise
+          interp_base_type1 interp_base_type2
+          (fun t x y => (R1 t y x -> R2 t x y)%type) t x y
+        -> (interp_flat_type_rel_pointwise R1 t y x
+            -> interp_flat_type_rel_pointwise R2 t x y).
+    Proof. induction t; simpl; intuition. Qed.
+  End flat_type_extra.
 
   Section type.
     Section hetero.
@@ -276,6 +297,16 @@ Section language.
           t x y
         <-> SmartVarfMap f x = y.
     Proof. rewrite lift_interp_flat_type_rel_pointwise_f_eq, SmartVarfMap_id; reflexivity. Qed.
+    Lemma lift_interp_flat_type_rel_pointwise_f_eq2 {T} (f g : forall t, _ -> _ -> T t) t x y
+      : @interp_flat_type_rel_pointwise
+          interp_base_type1 interp_base_type2
+          (fun t x y => f t x y = g t x y)
+          t x y
+        <-> SmartVarfMap2 f x y = SmartVarfMap2 g x y.
+    Proof.
+      induction t; unfold SmartVarfMap2 in *; simpl in *; destruct_head_hnf unit; try tauto.
+      rewrite_hyp !*; intuition congruence.
+    Qed.
   End lifting.
 
   Local Ltac t :=

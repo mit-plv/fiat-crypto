@@ -161,3 +161,6 @@ Section language.
       := fun var => smart_bound (e var) (interp (@interp_op_bounds) (e _)) input_bounds.
   End smart_bound.
 End language.
+
+Global Arguments bound_flat_type _ _ _ !_ _ / .
+Global Arguments bound_type _ _ _ !_ _ _ / .

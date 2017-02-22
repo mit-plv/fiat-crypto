@@ -120,14 +120,37 @@ Section homogenous_type.
   Definition SmartVarfMap {var var'} (f : forall t, var t -> var' t) {t}
     : interp_flat_type var t -> interp_flat_type var' t
     := @smart_interp_flat_map var (interp_flat_type var') f tt (fun A B x y => pair x y) t.
+  Lemma SmartVarfMap_compose {var' var'' var''' t} f g x
+    : @SmartVarfMap var'' var''' g t (@SmartVarfMap var' var'' f t x)
+      = @SmartVarfMap _ _ (fun t v => g t (f t v)) t x.
+  Proof.
+    unfold SmartVarfMap; clear; induction t; simpl; destruct_head_hnf unit; destruct_head_hnf prod;
+      rewrite_hyp ?*; congruence.
+  Qed.
   Lemma SmartVarfMap_id {var' t} x : @SmartVarfMap var' var' (fun _ x => x) t x = x.
   Proof.
-    unfold SmartVarfMap; induction t; simpl; destruct_head_hnf unit; destruct_head_hnf prod;
+    unfold SmartVarfMap; clear; induction t; simpl; destruct_head_hnf unit; destruct_head_hnf prod;
       rewrite_hyp ?*; congruence.
   Qed.
   Definition SmartVarfMap2 {var var' var''} (f : forall t, var t -> var' t -> var'' t) {t}
     : interp_flat_type var t -> interp_flat_type var' t -> interp_flat_type var'' t
     := @smart_interp_flat_map2 var var' (interp_flat_type var'') f tt (fun A B x y => pair x y) t.
+  Lemma SmartVarfMap2_fst_arg {var' var''} {t}
+        (x : interp_flat_type var' t)
+        (y : interp_flat_type var'' t)
+    : SmartVarfMap2 (fun _ a b => a) x y = x.
+  Proof.
+    unfold SmartVarfMap2; clear; induction t; simpl; destruct_head_hnf unit; destruct_head_hnf prod;
+      rewrite_hyp ?*; congruence.
+  Qed.
+  Lemma SmartVarfMap2_snd_arg {var' var''} {t}
+        (x : interp_flat_type var' t)
+        (y : interp_flat_type var'' t)
+    : SmartVarfMap2 (fun _ a b => b) x y = y.
+  Proof.
+    unfold SmartVarfMap2; clear; induction t; simpl; destruct_head_hnf unit; destruct_head_hnf prod;
+      rewrite_hyp ?*; congruence.
+  Qed.
   Definition SmartVarfTypeMap {var} (f : forall t, var t -> Type) {t}
     : interp_flat_type var t -> Type
     := @smart_interp_flat_map var (fun _ => Type) f unit (fun _ _ P Q => P * Q)%type t.
@@ -181,8 +204,8 @@ Global Arguments SmartVarf {_ _ _ _} _.
 Global Arguments SmartPairf {_ _ _ t} _.
 Global Arguments SmartValf {_} T _ t.
 Global Arguments SmartVarVarf {_ _ _ _} _.
-Global Arguments SmartVarfMap {_ _ _} _ {_} _.
-Global Arguments SmartVarfMap2 {_ _ _ _} _ {t} _ _.
+Global Arguments SmartVarfMap {_ _ _} _ {!_} _ / .
+Global Arguments SmartVarfMap2 {_ _ _ _} _ {!t} _ _ / .
 Global Arguments SmartVarfTypeMap {_ _} _ {_} _.
 Global Arguments SmartVarfPropMap {_ _} _ {_} _.
 Global Arguments SmartVarfTypeMap2 {_ _ _} _ {t} _ _.
@@ -192,7 +215,7 @@ Global Arguments SmartFlatTypeUnMap {_} _.
 Global Arguments SmartFlatTypeMapInterp {_ _ _ _} _ {_} _.
 Global Arguments SmartFlatTypeMapUnInterp {_ _ _ _ _} fv {_ _} _.
 Global Arguments SmartVarMap_hetero {_ _ _ _ _} _ _ {_} _.
-Global Arguments SmartVarMap {_ _ _} _ _ {_} _.
+Global Arguments SmartVarMap {_ _ _} _ _ {!_} _ / .
 Global Arguments SmartAbs {_ _ _ _ _} _.
 
 Section hetero_type.
@@ -239,10 +262,27 @@ Section hetero_type.
          | Prod A B => fun xy x'y' => (@SmartFlatTypeMap2Interp2 _ _ _ f fv A (fst xy) (fst x'y'),
                                        @SmartFlatTypeMap2Interp2 _ _ _ f fv B (snd xy) (snd x'y'))
          end.
+
+    Lemma SmartFlatTypeMapUnInterp2_SmartFlatTypeMap2Interp2
+          var' var'' var'''
+          (f : forall t, var' t -> flat_type base_type_code2)
+          (fv : forall t (v : var' t), interp_flat_type var'' (f t v) -> var''' t)
+          (gv : forall t v, var''' t -> interp_flat_type var'' (f t v))
+          {t} v
+          (e : interp_flat_type var''' t)
+      : @SmartFlatTypeMapUnInterp2
+          _ _ _ f fv t v
+          (@SmartFlatTypeMap2Interp2
+             _ _ _ f gv t v e)
+        = SmartVarfMap2 (fun t v e => fv t v (gv t v e)) v e.
+    Proof.
+      induction t; simpl in *; destruct_head' unit;
+        rewrite_hyp ?*; reflexivity.
+    Qed.
   End smart_flat_type_map2.
 End hetero_type.
 
-Global Arguments SmartFlatTypeMap2 {_ _ _} _ {_} _.
+Global Arguments SmartFlatTypeMap2 {_ _ _} _ {!_} _ / .
 Global Arguments SmartFlatTypeMapInterp2 {_ _ _ _ _} fv {_} _.
 Global Arguments SmartFlatTypeMap2Interp2 {_ _ _ _ _ _} fv {t} v _.
 Global Arguments SmartFlatTypeMapUnInterp2 {_ _ _ _ _ _} fv {_ _} _.

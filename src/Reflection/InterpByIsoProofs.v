@@ -45,6 +45,32 @@ Section language.
             (interp_of_var12 : forall t x, interp_of_var1 t (var1_of_interp t x)
                                            = interp_of_var2 t (var2_of_interp t x)).
     Hint Rewrite @flatten_binding_list_SmartVarfMap @List.in_map_iff @List.in_app_iff.
+    Lemma interp_of_var12_SmartVarfMap
+          t1 e1 t x1 x2
+          (H : List.In (existT _ t (x1, x2))
+                       (flatten_binding_list
+                          (SmartVarfMap (t:=t1) var1_of_interp e1)
+                          (SmartVarfMap var2_of_interp e1)))
+      : interp_of_var1 t x1 = interp_of_var2 t x2.
+    Proof.
+      repeat first [ progress repeat autorewrite with core in *
+                   | progress subst
+                   | progress inversion_sigma
+                   | progress inversion_prod
+                   | progress simpl in *
+                   | progress destruct_head' ex
+                   | progress destruct_head' and
+                   | progress destruct_head' or
+                   | progress destruct_head' sigT
+                   | progress destruct_head' prod
+                   | progress rewrite_hyp !*
+                   | solve [ auto ] ].
+      do 2 apply f_equal.
+      eapply interp_flat_type_rel_pointwise_flatten_binding_list with (R':=fun _ => eq); [ eassumption | ].
+      apply lift_interp_flat_type_rel_pointwise_f_eq; reflexivity.
+    Qed.
+    Local Hint Resolve List.in_app_or interp_of_var12_SmartVarfMap.
+
     Lemma wff_interpf_retr G {t} (e1 : @exprf var1 t) (e2 : @exprf var2 t)
           (HG : forall t x1 x2,
               List.In (existT _ t (x1, x2)) G
