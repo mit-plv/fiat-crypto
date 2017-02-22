@@ -4,20 +4,12 @@ Require Import Coq.ZArith.BinIntDef. Local Open Scope Z_scope.
 Require Import Crypto.Tactics.Algebra_syntax.Nsatz.
 Require Import Crypto.Util.Tactics Crypto.Util.Decidable Crypto.Util.LetIn.
 Require Import Crypto.Util.ZUtil Crypto.Util.ListUtil.
-Require Import Crypto.Util.CPSUtil.
+Require Import Crypto.Util.CPSUtil Crypto.Util.Prod.
 
 Require Import Coq.Lists.List. Import ListNotations.
 Require Crypto.Util.Tuple. Local Notation tuple := Tuple.tuple.
 
-(* TODO: move *)
-Lemma fst_pair {A B} (a:A) (b:B) : fst (a,b) = a. reflexivity. Qed.
-Lemma snd_pair {A B} (a:A) (b:B) : snd (a,b) = b. reflexivity. Qed.
-Create HintDb cancel_pair discriminated. Hint Rewrite @fst_pair @snd_pair : cancel_pair.
-
-Lemma push_id {A} (a:A) : id a = a. reflexivity. Qed.
-Create HintDb push_id discriminated. Hint Rewrite @push_id : push_id.
-
-Ltac prove_id :=
+Local Ltac prove_id :=
   repeat match goal with
          | _ => progress intros
          | _ => progress simpl
@@ -32,7 +24,7 @@ Ltac prove_id :=
          end.
 
 Create HintDb push_eval discriminated.
-Ltac prove_eval := 
+Local Ltac prove_eval := 
   repeat match goal with
          | _ => progress intros
          | _ => progress simpl

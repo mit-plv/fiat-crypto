@@ -4,6 +4,9 @@ Require Import Crypto.Util.ListUtil Crypto.Util.Tactics.
 Require Crypto.Util.Tuple. Local Notation tuple := Tuple.tuple.
 Local Open Scope Z_scope.
 
+Lemma push_id {A} (a:A) : id a = a. reflexivity. Qed.
+Create HintDb push_id discriminated. Hint Rewrite @push_id : push_id.
+
 Lemma update_nth_id {T} i (xs:list T) : ListUtil.update_nth i id xs = xs.
 Proof.
   revert xs; induction i; destruct xs; simpl; solve [ trivial | congruence ].
