@@ -1,13 +1,13 @@
-Require Import Crypto.Util.Tactics Crypto.Util.Decidable Crypto.Util.LetIn. 
-Require Import ZArith Nsatz Psatz Coq.omega.Omega.
+Require Import Coq.ZArith.ZArith Coq.micromega.Psatz Coq.omega.Omega.
 
 Require Import Coq.ZArith.BinIntDef. Local Open Scope Z_scope.
+Require Import Crypto.Tactics.Algebra_syntax.Nsatz.
+Require Import Crypto.Util.Tactics Crypto.Util.Decidable Crypto.Util.LetIn.
 Require Import Crypto.Util.ZUtil Crypto.Util.ListUtil.
 Require Import Crypto.Util.CPSUtil.
 
 Require Import Coq.Lists.List. Import ListNotations.
 Require Crypto.Util.Tuple. Local Notation tuple := Tuple.tuple.
-Require Import Recdef.
 
 (* TODO: move *)
 Lemma fst_pair {A B} (a:A) (b:B) : fst (a,b) = a. reflexivity. Qed.
