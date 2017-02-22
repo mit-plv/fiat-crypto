@@ -448,7 +448,7 @@ Section Ops.
            (fun r13 => Positional.from_associational_cps w sz2 r13 id
              )))))))) in
     prove_op sz x.
-  Time Defined. (* Finished transaction in 150.562 secs *) 
+  Time Defined. (* Finished transaction in 139.086 secs *) 
 
 End Ops.
 
