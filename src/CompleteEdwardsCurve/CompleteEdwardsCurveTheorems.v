@@ -21,7 +21,7 @@ Module E.
   Section CompleteEdwardsCurveTheorems.
     Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
             {field:@field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
-            {char_gt_2 : @Ring.char_gt F Feq Fzero Fone Fopp Fadd Fsub Fmul (BinNat.N.succ_pos BinNat.N.one)}
+            {char_ge_3 : @Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul (BinNat.N.succ_pos BinNat.N.two)}
             {Feq_dec:DecidableRel Feq}.
     Local Infix "=" := Feq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
     Local Notation "0" := Fzero.  Local Notation "1" := Fone.
@@ -109,7 +109,7 @@ Module E.
   Section Homomorphism.
     Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
             {field:@field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
-            {Fchar_gt_2 : @Ring.char_gt F Feq Fzero Fone Fopp Fadd Fsub Fmul (BinNat.N.succ_pos BinNat.N.one)}
+            {Fchar_ge_3 : @Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul (BinNat.N.succ_pos BinNat.N.two)}
             {Feq_dec:DecidableRel Feq}.
 
     Context {Fa Fd: F}
@@ -152,10 +152,10 @@ Module E.
     Qed.
 
       (* TODO: character respects isomorphism *)
-    Global Instance Kchar_gt_2 :
-      @char_gt K Keq Kzero Kone Kopp Kadd Ksub Kmul (BinNat.N.succ_pos BinNat.N.one).
+    Global Instance Kchar_ge_2 :
+      @char_ge K Keq Kzero Kone Kopp Kadd Ksub Kmul (BinNat.N.succ_pos BinNat.N.two).
     Proof.
-      intros p Hp X; apply (Fchar_gt_2 p Hp).
+      intros p Hp X; apply (Fchar_ge_3 p Hp).
       eapply Monoid.is_homomorphism_phi_proper in X.
       rewrite (homomorphism_zero(zero:=Fzero)(phi:=KtoF)) in X.
       etransitivity; [|eexact X]; clear X.

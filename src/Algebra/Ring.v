@@ -388,11 +388,11 @@ Section of_Z.
   Qed.
 End of_Z.
 
-Definition char_gt
+Definition char_ge
            {R eq zero one opp add} {sub:R->R->R} {mul:R->R->R}
            C :=
-  @Algebra.char_gt R eq zero (fun p => (@of_Z R zero one opp add) (BinInt.Z.pos p)) C.
-Existing Class char_gt.
+  @Algebra.char_ge R eq zero (fun p => (@of_Z R zero one opp add) (BinInt.Z.pos p)) C.
+Existing Class char_ge.
 
 (*** Tactics for ring equations *)
 Require Export Coq.setoid_ring.Ring_tac.

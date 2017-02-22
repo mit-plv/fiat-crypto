@@ -142,8 +142,8 @@ Section Algebra.
     Global Existing Instance field_div_Proper.
   End AddMul.
 
-  Definition char_gt {T} (eq:T->T->Prop) (zero:T) (inj:BinPos.positive->T) C := forall p, BinPos.Pos.le p C -> not (eq (inj p) zero).
-  Existing Class char_gt.
+  Definition char_ge {T} (eq:T->T->Prop) (zero:T) (inj:BinPos.positive->T) C := forall p, BinPos.Pos.lt p C -> not (eq (inj p) zero).
+  Existing Class char_ge.
 End Algebra.
 
 Section ZeroNeqOne.

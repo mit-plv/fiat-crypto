@@ -19,7 +19,7 @@ Local Open Scope Z.
 
 (* BEGIN precomputation. *)
 
-Definition modulus : Z := 2^130 - 5.
+Definition modulus : positive := (2^130 - 5)%positive.
 Lemma prime_modulus : prime modulus. Admitted.
 Definition int_width := 32%Z.
 

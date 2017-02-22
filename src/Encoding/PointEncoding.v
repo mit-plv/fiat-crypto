@@ -26,7 +26,7 @@ Require Crypto.Encoding.PointEncodingPre.
 *)
 
 Section PointEncoding.
-  Context {b : nat} {m : Z} {Fa Fd : F m} {prime_m : Znumtheory.prime m}
+  Context {b : nat} {m : positive} {Fa Fd : F m} {prime_m : Znumtheory.prime m}
           {two_lt_m : (2 < m)%Z}
           {bound_check : (Z.to_nat m < 2 ^ b)%nat}.
 
@@ -66,7 +66,6 @@ Section PointEncoding.
             {Ksign_correct : forall x, sign x = Ksign (phi x)}
             {Kenc_correct : forall x, Fencode x = Kenc (phi x)}.
 
-    Notation KonCurve := (@E.onCurve _ Keq Kone Kadd Kmul Ka Kd).
     Context {Kpoint}
             {Kcoord_to_point : @E.point K Keq Kone Kadd Kmul Ka Kd  -> Kpoint}
             {Kpoint_to_coord : Kpoint -> (K * K)}.
@@ -74,8 +73,6 @@ Section PointEncoding.
     Context {Kpoint_eq : Kpoint -> Kpoint -> Prop} {Kpoint_add : Kpoint -> Kpoint -> Kpoint}.
     Context {Kpoint_eq_correct : forall p q, Kpoint_eq p q <-> Tuple.fieldwise (n := 2) Keq (Kpoint_to_coord p) (Kpoint_to_coord q)} {Kpoint_eq_Equivalence : Equivalence Kpoint_eq}.
 
-    Context {Fprm:@E.twisted_edwards_params (F m) eq F.zero F.one F.opp F.add F.sub F.mul Fa Fd}.
-    Context {Kprm:@E.twisted_edwards_params K Keq Kzero Kone Kopp Kadd Ksub Kmul Ka Kd}.
     Context {phi_bijective : forall x y, Keq (phi x) (phi y) <-> x = y}.
 
     Lemma phi_onCurve : forall x y,
@@ -93,7 +90,7 @@ Section PointEncoding.
       reflexivity.
     Qed.
 
-    Definition point_phi (P : Fpoint) : Kpoint := Kcoord_to_point (E.ref_phi (fieldK := Kfield) (Ha := phi_a) (Hd := phi_d) P).
+    Definition point_phi (P : Fpoint) : Kpoint := Kcoord_to_point (E.point_phi (fieldK := Kfield) (Ha := phi_a) (Hd := phi_d) P).
 
     Lemma Proper_point_phi : Proper (E.eq ==> Kpoint_eq) point_phi.
     Proof.
@@ -101,7 +98,7 @@ Section PointEncoding.
       apply Kpoint_eq_correct; cbv [point_phi].
       destruct x, y.
       repeat break_let.
-      cbv [E.ref_phi].
+      cbv [E.point_phi].
       rewrite !Kp2c_c2p.
       apply E.Proper_coordinates in H; cbv [E.coordinates proj1_sig] in H.
       inversion H; econstructor; cbv [Tuple.fieldwise' fst snd] in *; subst;
@@ -112,6 +109,8 @@ Section PointEncoding.
     Definition Fdecode (w : word b) : option (F m) :=
       let z := Z.of_N (wordToN w) in
       if Z_lt_dec z m then Some (F.of_Z m z) else None.
+
+    (* The following does not build
 
     Context {Kpoint_add_correct : forall P Q, Kpoint_eq
                                                 (point_phi (Fpoint_add P Q))

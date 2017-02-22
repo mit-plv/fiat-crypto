@@ -9,7 +9,7 @@ Require Import Crypto.Spec.Encoding.
 Local Open Scope nat_scope.
 
 Section ModularWordEncodingPre.
-  Context {m : Z} {sz : nat} {m_pos : (0 < m)%Z} {bound_check : Z.to_nat m < 2 ^ sz}.
+  Context {m : positive} {sz : nat} {m_pos : (0 < m)%Z} {bound_check : Z.to_nat m < 2 ^ sz}.
 
   Let Fm_enc (x : F m) : word sz := NToWord sz (Z.to_N (F.to_Z x)).
 

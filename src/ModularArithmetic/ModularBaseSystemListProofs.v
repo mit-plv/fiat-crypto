@@ -164,7 +164,7 @@ Section ModulusDigitsProofs.
     rewrite encodeZ_spec by eauto using limb_widths_nonnil, limb_widths_good.
     apply Z.mod_small.
     cbv [upper_bound]. fold k.
-    assert (modulus = 2 ^ k - c) by (cbv [c]; ring).
+    assert (Z.pos modulus = 2 ^ k - c) by (cbv [c]; ring).
     omega.
   Qed.
 
@@ -182,7 +182,7 @@ Section ModulusDigitsProofs.
            | |- _ => progress autorewrite with Ztestbit
            | |- _ => unique pose proof c_pos
            | |- _ => unique pose proof modulus_pos
-           | |- _ => unique assert (modulus = 2 ^ k - c) by (cbv [c]; ring)
+           | |- _ => unique assert (Z.pos modulus = 2 ^ k - c) by (cbv [c]; ring)
            | |- _ => break_if
            | |- _ => rewrite decode_modulus_digits
            | |- _ => rewrite Z.testbit_pow2_mod
@@ -196,7 +196,7 @@ Section ModulusDigitsProofs.
                specialize_by (eauto || omega);
                rewrite sum_firstn_succ_default in *; split; zero_bounds; eauto)
            | |- Z.pow2_mod _ _ = Z.ones _ => apply Z.bits_inj'
-           | |- Z.testbit modulus ?i = true => transitivity (Z.testbit (2 ^ k - c) i)
+           | |- Z.testbit (Z.pos modulus) ?i = true => transitivity (Z.testbit (2 ^ k - c) i)
            | |- _ => congruence
            end.
 
@@ -496,7 +496,7 @@ Section ConditionalSubtractModulusProofs.
     specialize_by auto.
     cbv [upper_bound] in *.
     fold k in *.
-    assert (modulus = 2 ^ k - c) by (cbv [c]; ring).
+    assert (Z.pos modulus = 2 ^ k - c) by (cbv [c]; ring).
     destruct (Z_le_dec modulus (BaseSystem.decode base u)).
     + split; try omega.
       apply Z.lt_le_trans with (m := 2 ^ k); try omega.

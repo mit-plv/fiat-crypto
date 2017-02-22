@@ -4,16 +4,16 @@ Require Import Crypto.Util.ListUtil.
 Require Crypto.BaseSystem.
 Local Open Scope Z_scope.
 
-Class PseudoMersenneBaseParams (modulus : Z) := {
+Class PseudoMersenneBaseParams (modulus : positive) := {
   limb_widths : list Z;
   limb_widths_pos : forall w, In w limb_widths -> 0 < w;
   limb_widths_nonnil : limb_widths <> nil;
   limb_widths_good : forall i j, (i + j < length limb_widths)%nat ->
     sum_firstn limb_widths (i + j) <=
     sum_firstn limb_widths i + sum_firstn limb_widths j;
-  prime_modulus : Znumtheory.prime modulus;
+  prime_modulus : Znumtheory.prime (Z.pos modulus);
   k := sum_firstn limb_widths (length limb_widths);
-  c := 2 ^ k - modulus;
+  c := 2 ^ k - (Z.pos modulus);
   c_pos : 0 < c;
   limb_widths_match_modulus : forall i j,
     (i < length limb_widths)%nat ->

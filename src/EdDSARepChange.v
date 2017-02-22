@@ -125,7 +125,6 @@ Section EdDSA.
     Proof.
       eexists.
       pose proof EdDSA_l_odd.
-      assert (l_pos:(0 < l)%Z) by omega.
       cbv [verify'].
 
       etransitivity. Focus 2. {
@@ -140,8 +139,8 @@ Section EdDSA.
             || rewrite SRepERepMul_correct
             || rewrite SdecS_correct
             || rewrite SRepDecModL_correct
-            || rewrite (@F.of_nat_to_nat _ l_pos _)
-            || rewrite (@F.of_nat_mod _ l_pos _)
+            || rewrite (@F.of_nat_to_nat _ _)
+            || rewrite (@F.of_nat_mod _ _)
           ).
         reflexivity.
       } Unfocus.

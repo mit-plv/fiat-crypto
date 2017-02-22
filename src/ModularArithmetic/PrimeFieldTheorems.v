@@ -15,10 +15,11 @@ Require Export Crypto.Util.FixCoqMistakes.
 Require Crypto.Algebra Crypto.Algebra.Field.
 
 Existing Class prime.
+Local Open Scope F_scope.
 
 Module F.
   Section Field.
-    Context (q:Z) {prime_q:prime q}.
+    Context (q:positive) {prime_q:prime q}.
     Lemma inv_spec : F.inv 0%F = (0%F : F q)
                      /\ (prime q -> forall x : F q, x <> 0%F -> (F.inv x * x)%F = 1%F).
     Proof. change (@F.inv q) with (proj1_sig (@F.inv_with_spec q)); destruct (@F.inv_with_spec q); eauto. Qed.
@@ -37,33 +38,10 @@ Module F.
              | _ => split
              end.
     Qed.
-
-    Definition field_theory : field_theory 0%F 1%F F.add F.mul F.sub F.opp F.div F.inv eq
-      := Algebra.Field.field_theory_for_stdlib_tactic.
   End Field.
 
-  (** A field tactic hook that can be imported *)
-  Module Type PrimeModulus.
-    Parameter modulus : Z.
-    Parameter prime_modulus : prime modulus.
-  End PrimeModulus.
-  Module FieldModulo (Export M : PrimeModulus).
-    Module Import RingM := F.RingModulo M.
-    Add Field _field : (F.field_theory modulus)
-                         (morphism (F.ring_morph modulus),
-                          constants [F.is_constant],
-                          div (F.morph_div_theory modulus),
-                          power_tac (F.power_theory modulus) [F.is_pow_constant]).
-  End FieldModulo.
-
   Section NumberThoery.
-    Context {q:Z} {prime_q:prime q} {two_lt_q: 2 < q}.
-    Local Open Scope F_scope.
-    Add Field _field : (field_theory q)
-                         (morphism (F.ring_morph q),
-                          constants [F.is_constant],
-                          div (F.morph_div_theory q),
-                          power_tac (F.power_theory q) [F.is_pow_constant]).
+    Context {q:positive} {prime_q:prime q} {two_lt_q: 2 < q}.
 
     (* TODO: move to PrimeFieldTheorems *)
     Lemma to_Z_1 : @F.to_Z q 1 = 1%Z.
@@ -91,16 +69,15 @@ Module F.
     Global Instance Decidable_square (x:F q) : Decidable (exists y, y*y = x).
     Proof.
       destruct (dec (x = 0)).
-      { left. abstract (exists 0; subst; ring). }
+      { left. abstract (exists 0; subst; apply Ring.mul_0_l). }
       { eapply Decidable_iff_to_impl; [eapply euler_criterion; assumption | exact _]. }
     Defined.
   End NumberThoery.
 
   Section SquareRootsPrime3Mod4.
-    Context {q:Z} {prime_q: prime q} {q_3mod4 : q mod 4 = 3}.
+    Context {q:positive} {prime_q: prime q} {q_3mod4 : q mod 4 = 3}.
 
-    Local Open Scope F_scope.
-    Add Field _field2 : (field_theory q)
+    Add Field _field2 : (Algebra.Field.field_theory_for_stdlib_tactic(T:=F q))
                           (morphism (F.ring_morph q),
                            constants [F.is_constant],
                            div (F.morph_div_theory q),
@@ -114,15 +91,13 @@ Module F.
     Lemma two_lt_q_3mod4 : 2 < q.
     Proof.
       pose proof (prime_ge_2 q _) as two_le_q.
-      apply Zle_lt_or_eq in two_le_q.
-      destruct two_le_q; auto.
-      subst_max.
-      discriminate.
+      destruct (Zle_lt_or_eq _ _ two_le_q) as [H|H]; [exact H|].
+      rewrite <-H in q_3mod4; discriminate.
     Qed.
     Local Hint Resolve two_lt_q_3mod4.
     
-    Lemma sqrt_3mod4_correct : forall x,
-      ((exists y, y*y = x) <-> (sqrt_3mod4 x)*(sqrt_3mod4 x) = x).
+    Lemma sqrt_3mod4_correct (x:F q) :
+      ((exists y, y*y = x) <-> (sqrt_3mod4 x)*(sqrt_3mod4 x) = x)%F.
     Proof.
       cbv [sqrt_3mod4]; intros.
       destruct (F.eq_dec x 0);
@@ -148,10 +123,9 @@ Module F.
   End SquareRootsPrime3Mod4.
 
   Section SquareRootsPrime5Mod8.
-    Context {q:Z} {prime_q: prime q} {q_5mod8 : q mod 8 = 5}.
-
+    Context {q:positive} {prime_q: prime q} {q_5mod8 : q mod 8 = 5}.
     Local Open Scope F_scope.
-    Add Field _field3 : (field_theory q)
+    Add Field _field3 : (Algebra.Field.field_theory_for_stdlib_tactic(T:=F q))
                           (morphism (F.ring_morph q),
                            constants [F.is_constant],
                            div (F.morph_div_theory q),
@@ -164,10 +138,8 @@ Module F.
     Lemma two_lt_q_5mod8 : 2 < q.
     Proof.
       pose proof (prime_ge_2 q _) as two_le_q.
-      apply Zle_lt_or_eq in two_le_q.
-      destruct two_le_q; auto.
-      subst_max.
-      discriminate.
+      destruct (Zle_lt_or_eq _ _ two_le_q) as [H|H]; [exact H|].
+      rewrite <-H in *. discriminate.
     Qed.
     Local Hint Resolve two_lt_q_5mod8.
 

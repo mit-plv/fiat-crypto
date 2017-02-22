@@ -11,7 +11,7 @@ Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.WordUtil.
 Import NPeano.
 
-Local Notation modulusv := (2^252 + 27742317777372353535851937790883648493)%Z.
+Local Notation modulusv := (2^252 + 27742317777372353535851937790883648493)%positive.
 Local Coercion Z.of_nat : nat >-> Z.
 Local Notation eta x := (fst x, snd x).
 Local Notation eta3 x := (eta (fst x), snd x).
