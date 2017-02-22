@@ -44,7 +44,7 @@ Delimit Scope runtime_scope with RT.
 Definition runtime_mul := Z.mul.
 Global Notation "a * b" := (runtime_mul a%RT b%RT) : runtime_scope.
 Definition runtime_add := Z.add.
-Global Infix "a + b" := (runtime_add a%RT b%RT) : runtime_scope. 
+Global Notation "a + b" := (runtime_add a%RT b%RT) : runtime_scope. 
 Definition runtime_fst {A B} := @fst A B.
 Definition runtime_snd {A B} := @snd A B.
 
