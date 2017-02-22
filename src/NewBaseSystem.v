@@ -49,15 +49,15 @@ Ltac prove_eval :=
          end.
 
 Delimit Scope runtime_scope with RT.
-Definition runtime_mul := Z.mul. Global Infix "*" := runtime_mul : runtime_scope.
-Definition runtime_add := Z.add. Global Infix "+" := runtime_add : runtime_scope. 
-Definition runtime_div := Z.div. Global Infix "/" := runtime_div : runtime_scope. 
-Definition runtime_modulo := Z.modulo. Global Infix "mod" := runtime_modulo : runtime_scope.
+Definition runtime_mul := Z.mul.
+Global Notation "a * b" := (runtime_mul a%RT b%RT) : runtime_scope.
+Definition runtime_add := Z.add.
+Global Infix "a + b" := (runtime_add a%RT b%RT) : runtime_scope. 
 Definition runtime_fst {A B} := @fst A B.
 Definition runtime_snd {A B} := @snd A B.
 
 Module B.
-  Let limb := (Z*Z)%type. (* position coefficient and run-time value *)
+  Local Definition limb := (Z*Z)%type. (* position coefficient and run-time value *)
   Module Associational.
     Definition eval (p:list limb) : Z :=
       List.fold_right Z.add 0%Z (List.map (fun t => fst t * snd t) p).
