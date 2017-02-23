@@ -9,6 +9,7 @@ Require Export Crypto.Util.Tactics.RewriteHyp.
 Require Export Crypto.Util.Tactics.SpecializeBy.
 Require Export Crypto.Util.Tactics.SplitInContext.
 Require Export Crypto.Util.Tactics.UniquePose.
+Require Export Crypto.Util.Tactics.VM.
 
 (** Test if a tactic succeeds, but always roll-back the results *)
 Tactic Notation "test" tactic3(tac) :=

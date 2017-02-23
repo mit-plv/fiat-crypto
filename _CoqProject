@@ -62,8 +62,6 @@ src/CompleteEdwardsCurve/Pre.v
 src/Encoding/EncodingTheorems.v
 src/Encoding/ModularWordEncodingPre.v
 src/Encoding/ModularWordEncodingTheorems.v
-src/Encoding/PointEncoding.v
-src/Encoding/PointEncodingPre.v
 src/Experiments/Ed25519.v
 src/Experiments/Ed25519Extraction.v
 src/Experiments/ExtrHaskellNats.v
@@ -485,4 +483,5 @@ src/Util/Tactics/RewriteHyp.v
 src/Util/Tactics/SpecializeBy.v
 src/Util/Tactics/SplitInContext.v
 src/Util/Tactics/UniquePose.v
+src/Util/Tactics/VM.v
 src/WeierstrassCurve/Pre.v
