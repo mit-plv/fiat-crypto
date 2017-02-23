@@ -263,14 +263,14 @@ Ltac fixed_size_op_to_word :=
   syntactic_fixed_size_op_to_word.
 
 
-Section Updates.
+Section log_Updates.
   Local Notation bound n lower value upper := (
        (0 <= lower)%Z
     /\ (lower <= @wordToZ n value)%Z
     /\ (@wordToZ n value <= upper)%Z
     /\ (Z.log2 upper < Z.of_nat (2^n))%Z).
 
-  Definition valid_update n lowerF valueF upperF : Prop :=
+  Definition valid_log_update n lowerF valueF upperF : Prop :=
     forall lower0 value0 upper0
           lower1 value1 upper1,
 
@@ -281,6 +281,108 @@ Section Updates.
     -> bound n (lowerF lower0 upper0 lower1 upper1)
                 (valueF value0 value1)
                 (upperF lower0 upper0 lower1 upper1).
+
+  Lemma word_case_dep_valid_log_update f g wop
+    : (forall n,
+          WordUtil.valid_update
+            n
+            f
+            (wop n)
+            g)
+      -> forall n,
+          valid_log_update
+            n
+            f
+            (word_case_dep
+               (T:=fun _ W => W -> W -> W)
+               n (wop 32) (wop 64) (wop 128)
+               (fun k : nat => wop (2 ^ k)))
+            g.
+  Proof.
+    intros H n; specialize (H (2^n)%nat).
+    unfold valid_log_update; intros; fixed_size_op_to_word; unfold wordToZ_gen; auto.
+  Qed.
+
+  Lemma wadd_valid_log_update: forall n,
+    valid_log_update n
+        (fun l0 u0 l1 u1 => l0 + l1)%Z
+        (@wadd n)
+        (fun l0 u0 l1 u1 => u0 + u1)%Z.
+  Proof. apply word_case_dep_valid_log_update, add_valid_update. Qed.
+
+  Lemma wsub_valid_log_update: forall n,
+    valid_log_update n
+        (fun l0 u0 l1 u1 => l0 - u1)%Z
+        (@wsub n)
+        (fun l0 u0 l1 u1 => u0 - l1)%Z.
+  Proof. apply word_case_dep_valid_log_update, sub_valid_update. Qed.
+
+  Lemma wmul_valid_log_update: forall n,
+    valid_log_update n
+        (fun l0 u0 l1 u1 => l0 * l1)%Z
+        (@wmul n)
+        (fun l0 u0 l1 u1 => u0 * u1)%Z.
+  Proof. apply word_case_dep_valid_log_update, mul_valid_update. Qed.
+
+  Lemma wland_valid_log_update: forall n,
+    valid_log_update n
+        (fun l0 u0 l1 u1 => 0)%Z
+        (@wland n)
+        (fun l0 u0 l1 u1 => Z.min u0 u1)%Z.
+  Proof. apply word_case_dep_valid_log_update, land_valid_update. Qed.
+
+  Lemma wlor_valid_log_update: forall n,
+    valid_log_update n
+        (fun l0 u0 l1 u1 => Z.max l0 l1)%Z
+        (@wlor n)
+        (fun l0 u0 l1 u1 => 2^(Z.max (Z.log2_up (u0+1)) (Z.log2_up (u1+1))) - 1)%Z.
+  Proof. apply word_case_dep_valid_log_update, lor_valid_update. Qed.
+
+  Lemma wshr_valid_log_update: forall n,
+    valid_log_update n
+        (fun l0 u0 l1 u1 => Z.shiftr l0 u1)%Z
+        (@wshr n)
+        (fun l0 u0 l1 u1 => Z.shiftr u0 l1)%Z.
+  Proof. apply word_case_dep_valid_log_update, shr_valid_update. Qed.
+
+  Lemma wshl_valid_log_update: forall n,
+    valid_log_update n
+        (fun l0 u0 l1 u1 => Z.shiftl l0 l1)%Z
+        (@wshl n)
+        (fun l0 u0 l1 u1 => Z.shiftl u0 u1)%Z.
+  Proof. apply word_case_dep_valid_log_update, shl_valid_update. Qed.
+End log_Updates.
+
+Lemma lt_log_helper (v : Z) (n : nat)
+  : (v < 2^2^Z.of_nat n)%Z <-> (Z.log2 v < Z.of_nat (2^n))%Z.
+Proof.
+  rewrite Z.log2_lt_pow2_alt, Z.pow_Zpow by auto with zarith.
+  reflexivity.
+Qed.
+
+Section Updates.
+  Local Notation bound n lower value upper := (
+       (0 <= lower)%Z
+    /\ (lower <= @wordToZ n value)%Z
+    /\ (@wordToZ n value <= upper)%Z
+    /\ (upper < 2^2^Z.of_nat n)%Z).
+
+  Definition valid_update n lowerF valueF upperF : Prop :=
+    forall lower0 value0 upper0
+           lower1 value1 upper1,
+      bound n lower0 value0 upper0
+      -> bound n lower1 value1 upper1
+      -> (0 <= lowerF lower0 upper0 lower1 upper1)%Z
+      -> (upperF lower0 upper0 lower1 upper1 < 2^2^Z.of_nat n)%Z
+      -> bound n (lowerF lower0 upper0 lower1 upper1)
+               (valueF value0 value1)
+               (upperF lower0 upper0 lower1 upper1).
+
+  Local Ltac t lem :=
+    let H := fresh in
+    pose proof lem as H;
+    repeat (let x := fresh in intro x; specialize (H x));
+    rewrite !lt_log_helper; assumption.
 
   Lemma word_case_dep_valid_update f g wop
     : (forall n,
@@ -298,59 +400,56 @@ Section Updates.
                n (wop 32) (wop 64) (wop 128)
                (fun k : nat => wop (2 ^ k)))
             g.
-  Proof.
-    intros H n; specialize (H (2^n)%nat).
-    unfold valid_update; intros; fixed_size_op_to_word; unfold wordToZ_gen; auto.
-  Qed.
+  Proof. t (@word_case_dep_valid_log_update f g wop). Qed.
 
   Lemma wadd_valid_update: forall n,
     valid_update n
         (fun l0 u0 l1 u1 => l0 + l1)%Z
         (@wadd n)
         (fun l0 u0 l1 u1 => u0 + u1)%Z.
-  Proof. apply word_case_dep_valid_update, add_valid_update. Qed.
+  Proof. t (@wadd_valid_log_update). Qed.
 
   Lemma wsub_valid_update: forall n,
     valid_update n
         (fun l0 u0 l1 u1 => l0 - u1)%Z
         (@wsub n)
         (fun l0 u0 l1 u1 => u0 - l1)%Z.
-  Proof. apply word_case_dep_valid_update, sub_valid_update. Qed.
+  Proof. t (@wsub_valid_log_update). Qed.
 
   Lemma wmul_valid_update: forall n,
     valid_update n
         (fun l0 u0 l1 u1 => l0 * l1)%Z
         (@wmul n)
         (fun l0 u0 l1 u1 => u0 * u1)%Z.
-  Proof. apply word_case_dep_valid_update, mul_valid_update. Qed.
+  Proof. t (@wmul_valid_log_update). Qed.
 
   Lemma wland_valid_update: forall n,
     valid_update n
         (fun l0 u0 l1 u1 => 0)%Z
         (@wland n)
         (fun l0 u0 l1 u1 => Z.min u0 u1)%Z.
-  Proof. apply word_case_dep_valid_update, land_valid_update. Qed.
+  Proof. t (@wland_valid_log_update). Qed.
 
   Lemma wlor_valid_update: forall n,
     valid_update n
         (fun l0 u0 l1 u1 => Z.max l0 l1)%Z
         (@wlor n)
         (fun l0 u0 l1 u1 => 2^(Z.max (Z.log2_up (u0+1)) (Z.log2_up (u1+1))) - 1)%Z.
-  Proof. apply word_case_dep_valid_update, lor_valid_update. Qed.
+  Proof. t (@wlor_valid_log_update). Qed.
 
   Lemma wshr_valid_update: forall n,
     valid_update n
         (fun l0 u0 l1 u1 => Z.shiftr l0 u1)%Z
         (@wshr n)
         (fun l0 u0 l1 u1 => Z.shiftr u0 l1)%Z.
-  Proof. apply word_case_dep_valid_update, shr_valid_update. Qed.
+  Proof. t (@wshr_valid_log_update). Qed.
 
   Lemma wshl_valid_update: forall n,
     valid_update n
         (fun l0 u0 l1 u1 => Z.shiftl l0 l1)%Z
         (@wshl n)
         (fun l0 u0 l1 u1 => Z.shiftl u0 u1)%Z.
-  Proof. apply word_case_dep_valid_update, shl_valid_update. Qed.
+  Proof. t (@wshl_valid_log_update). Qed.
 End Updates.
 
 Section pull_ZToWord.
@@ -360,7 +459,8 @@ Section pull_ZToWord.
     apply f_equal.
   Local Ltac t1 lem :=
     let solver := solve [ apply Npow2_Zlog2; autorewrite with push_Zof_N; assumption
-                        | apply N2Z.inj_ge; unfold wordToZ_gen in *; omega ] in
+                        | apply N2Z.inj_ge; unfold wordToZ_gen in *; omega
+                        | apply N2Z.inj_lt; rewrite Npow2_N; autorewrite with push_Zof_N push_Zof_nat; assumption ] in
     first [ rewrite <- lem by solver | rewrite -> lem by solver ].
   Local Ltac t2 :=
     autorewrite with push_Zof_N; unfold wordToZ_gen in *;
@@ -372,7 +472,7 @@ Section pull_ZToWord.
 
   Local Notation pull_ZToWordT_2op wop zop
     := (forall {logsz} (x y : wordT logsz),
-           (Z.log2 (zop (wordToZ x) (wordToZ y)) < Z.of_nat (2^logsz))%Z
+           (zop (wordToZ x) (wordToZ y) < 2^2^Z.of_nat logsz)%Z
            -> wop logsz x y = ZToWord (zop (wordToZ x) (wordToZ y)))
          (only parsing).
   Local Notation pull_ZToWordT_2op' wop zop
@@ -396,5 +496,32 @@ Section pull_ZToWord.
   Lemma wshr_def_ZToWord : pull_ZToWordT_2op (@wshr) (@Z.shiftr).
   Proof. t (@wordToN_NToWord_idempotent). Qed.
 End pull_ZToWord.
+Section pull_ZToWord_log.
+  Local Ltac t lem :=
+    let H := fresh in
+    pose proof lem as H;
+    repeat (let x := fresh in intro x; specialize (H x));
+    rewrite <- !lt_log_helper; assumption.
+
+  Local Notation pull_ZToWordT_log_2op wop zop
+    := (forall {logsz} (x y : wordT logsz),
+           (Z.log2 (zop (wordToZ x) (wordToZ y)) < Z.of_nat (2^logsz))%Z
+           -> wop logsz x y = ZToWord (zop (wordToZ x) (wordToZ y)))
+         (only parsing).
+  Lemma wadd_def_ZToWord_log : pull_ZToWordT_log_2op (@wadd) (@Z.add).
+  Proof. t (@wadd_def_ZToWord). Qed.
+  Lemma wmul_def_ZToWord_log : pull_ZToWordT_log_2op (@wmul) (@Z.mul).
+  Proof. t (@wmul_def_ZToWord). Qed.
+  Lemma wland_def_ZToWord_log : pull_ZToWordT_log_2op (@wland) (@Z.land).
+  Proof. t (@wland_def_ZToWord). Qed.
+  Lemma wlor_def_ZToWord_log : pull_ZToWordT_log_2op (@wlor) (@Z.lor).
+  Proof. t (@wlor_def_ZToWord). Qed.
+  Lemma wshl_def_ZToWord_log : pull_ZToWordT_log_2op (@wshl) (@Z.shiftl).
+  Proof. t (@wshl_def_ZToWord). Qed.
+  Lemma wshr_def_ZToWord_log : pull_ZToWordT_log_2op (@wshr) (@Z.shiftr).
+  Proof. t (@wshr_def_ZToWord). Qed.
+End pull_ZToWord_log.
 Hint Rewrite wadd_def_ZToWord wsub_def_ZToWord wmul_def_ZToWord wland_def_ZToWord wlor_def_ZToWord wshl_def_ZToWord wshr_def_ZToWord : pull_ZToWord.
 Hint Rewrite <- wadd_def_ZToWord wsub_def_ZToWord wmul_def_ZToWord wland_def_ZToWord wlor_def_ZToWord wshl_def_ZToWord wshr_def_ZToWord : push_ZToWord.
+Hint Rewrite wadd_def_ZToWord_log wsub_def_ZToWord wmul_def_ZToWord_log wland_def_ZToWord_log wlor_def_ZToWord_log wshl_def_ZToWord_log wshr_def_ZToWord_log : pull_ZToWord_log.
+Hint Rewrite <- wadd_def_ZToWord_log wsub_def_ZToWord wmul_def_ZToWord_log wland_def_ZToWord_log wlor_def_ZToWord_log wshl_def_ZToWord_log wshr_def_ZToWord_log : push_ZToWord_log.
