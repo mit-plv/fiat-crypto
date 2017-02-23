@@ -58,7 +58,7 @@ Section language.
            end.
       Fixpoint interp {t} (e : @expr interp_flat_type t) : interp_type t
         := match e in expr t return interp_type t with
-           | Return _ x => interpf x
+           | Return _ v => interpf v
            | Abs _ _ f => fun x => @interp _ (f x)
            end.
 
