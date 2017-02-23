@@ -10,6 +10,11 @@ Inductive base_type := TZ.
 
 Local Notation tZ := (Tbase TZ).
 
+Definition interp_base_type (v : base_type) : Type :=
+  match v with
+  | TZ => Z
+  end.
+
 Inductive op : flat_type base_type -> flat_type base_type -> Type :=
 | OpConst (z : Z) : op Unit tZ
 | Add : op (tZ * tZ) tZ
@@ -23,10 +28,16 @@ Inductive op : flat_type base_type -> flat_type base_type -> Type :=
 | Cmovne : op (tZ * tZ * tZ * tZ) tZ
 | Cmovle : op (tZ * tZ * tZ * tZ) tZ.
 
-Definition interp_base_type (v : base_type) : Type :=
-  match v with
-  | TZ => Z
-  end.
+Definition interpToZ {t} : interp_base_type t -> Z
+  := match t with
+     | TZ => fun x => x
+     end.
+Definition ZToInterp {t} : Z -> interp_base_type t
+  := match t return Z -> interp_base_type t with
+     | TZ => fun x => x
+     end.
+Definition cast_const {t1 t2} (v : interp_base_type t1) : interp_base_type t2
+  := ZToInterp (interpToZ v).
 
 Local Notation eta x := (fst x, snd x).
 Local Notation eta3 x := (eta (fst x), snd x).
