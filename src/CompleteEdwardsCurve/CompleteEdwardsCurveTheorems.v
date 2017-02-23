@@ -34,7 +34,7 @@ Module E.
             {square_a : exists sqrt_a, sqrt_a^2 = a}
             {nonsquare_d : forall x, x^2 <> d}.
     
-    Local Notation onCurve x y := (a*x^2 + y^2 = 1 + d*x^2*y^2).
+    Local Notation onCurve x y := (a*x^2 + y^2 = 1 + d*x^2*y^2) (only parsing).
     Local Notation point := (@E.point F Feq Fone Fadd Fmul a d).
     Local Notation eq    := (@E.eq F Feq Fone Fadd Fmul a d).
     Local Notation zero  := (E.zero(nonzero_a:=nonzero_a)(d:=d)).
@@ -94,7 +94,6 @@ Module E.
 
     Section PointCompression.
       Local Notation "x ^ 2" := (x*x).
-      Definition solve_for_x2 (y : F) := ((y^2 - 1) / (d * (y^2) - a)).
 
       Lemma a_d_y2_nonzero y : d * y^2 - a <> 0.
       Proof.
@@ -102,8 +101,117 @@ Module E.
           pose proof nonzero_a; pose proof (nonsquare_d (sqrt_a/y)); fsatz.
       Qed.
 
-      Lemma solve_correct : forall x y, onCurve x y <-> (x^2 = solve_for_x2 y).
-      Proof. pose proof a_d_y2_nonzero; cbv [solve_for_x2]; t. Qed.
+      Lemma solve_correct : forall x y, onCurve x y <-> (x^2 = (y^2-1) / (d*y^2-a)).
+      Proof. pose proof a_d_y2_nonzero; t. Qed.
+
+      (* TODO: move *)
+      Definition exist_option {A} (P : A -> Prop) (x : option A)
+        : match x with Some v => P v | None => True end -> option { a : A | P a }.
+        destruct x; intros; [apply Some | apply None]; eauto. Defined.
+      Lemma exist_option_Some {A} P (x:option A) pf s
+            (H:Logic.eq (exist_option P x pf) (Some s))
+            : Logic.eq x (Some (proj1_sig s)).
+      Proof. destruct x, s; cbv [exist_option proj1_sig] in *; congruence. Qed.
+      Lemma exist_option_None {A} P (x:option A) pf
+            (H:Logic.eq (exist_option P x pf) None)
+            : Logic.eq x None.
+      Proof. destruct x; cbv [exist_option proj1_sig] in *; congruence. Qed.
+
+      Context
+        {sqrt_div:F -> F -> option F}
+        {sqrt_Some: forall u v r, Logic.eq (sqrt_div u v) (Some r) -> r^2 = u/v}
+        {sqrt_None: forall u v, Logic.eq (sqrt_div u v) None -> forall r, r^2 <> u/v}
+        {parity:F -> bool} {Proper_parity: Proper (Feq ==> Logic.eq) parity}
+        {parity_opp: forall x, x <> 0 -> Logic.eq (parity (Fopp x)) (negb (parity x)) }.
+
+      Definition compress (P:point) : (bool*F) :=
+        let (x, y) := coordinates P in pair (parity x) y.
+      Definition set_sign r p : option F :=
+        if dec (Logic.eq (parity r) p)
+        then Some r
+        else
+          let r' := Fopp r in
+          if dec (Logic.eq (parity r') p)
+          then Some r'
+          else None.
+      Lemma set_sign_None r p s (H:Logic.eq (set_sign r p) (Some s))
+            : s^2 = r^2 /\ Logic.eq (parity s) p.
+      Proof.
+        repeat match goal with
+               | _ => progress subst
+               | _ => progress cbv [set_sign] in *
+               | _ => progress break_match_hyps
+               | _ => progress Option.inversion_option
+               | _ => split
+               | _ => solve [ trivial | fsatz ]
+               end.
+      Qed.
+      Lemma set_sign_Some r p (H:Logic.eq (set_sign r p) None)
+            : forall s, s^2 = r^2 -> not (Logic.eq (parity s) p).
+        repeat match goal with
+               | _ => progress intros
+               | _ => progress subst
+               | _ => progress cbv [set_sign] in *
+               | _ => progress break_match_hyps
+               | _ => progress Option.inversion_option
+               end.
+        destruct (dec (r = 0)).
+        assert (s = 0); [|solve[setoid_subst_rel Feq; trivial] ].
+        admit.
+        progress rewrite parity_opp in * by assumption.
+        destruct (parity r), p; cbv [negb] in *; congruence.
+      Admitted.
+
+      Local Ltac t_step :=
+        match goal with
+        | _ => progress subst
+        | _ => progress destruct_head' @E.point
+        | _ => progress destruct_head' and
+        | _ => progress break_match
+        | _ => progress break_match_hyps
+        | _ => progress Option.inversion_option
+        | _ => progress Prod.inversion_prod
+        | H:_ |- _ => unique pose proof (sqrt_Some _ _ _ H); clear H
+        | H:_ |- _ => unique pose proof (sqrt_None _ _ H); clear H
+        | H:_ |- _ => unique pose proof (set_sign_None _ _ _ H); clear H
+        | H:_ |- _ => unique pose proof (set_sign_Some _ _ H); clear H
+        | H:_ |- _ => unique pose proof (exist_option_Some _ _ _ _ H); clear H
+        | H:_ |- _ => unique pose proof (exist_option_None _ _ _ H); clear H
+        | _ => solve [trivial | eapply solve_correct; fsatz]
+        end.
+      Local Ltac t := repeat t_step.
+      
+      Program Definition decompress (b:bool*F) : option point :=
+        exist_option _
+            match b return option (F*F) with
+              (p, y) =>
+              match sqrt_div (y^2 - 1) (d*y^2 - a) return option (F*F) with
+              | None => None
+              | Some r =>
+                match set_sign r p return option (F*F) with
+                | Some x => Some (x, y)
+                | None => None
+                end
+              end
+            end _.
+      Next Obligation. t. Qed.
+
+      Lemma decompress_Some b P (H:Logic.eq (decompress b) (Some P))
+        : Logic.eq (compress P) b.
+      Proof. cbv [compress decompress] in *; t. Qed.
+
+      Lemma decompress_None b (H:Logic.eq (decompress b) None)
+        : forall P, not (Logic.eq (compress P) b).
+      Proof.
+        cbv [compress decompress exist_option coordinates] in *; intros.
+        t.
+        intro.
+        apply (H0 f); [|congruence].
+        admit.
+        intro. Prod.inversion_prod; subst.
+        rewrite solve_correct in y.
+        eapply H. eapply y.
+      Admitted.
     End PointCompression.
   End CompleteEdwardsCurveTheorems.
   Section Homomorphism.
