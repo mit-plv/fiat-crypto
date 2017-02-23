@@ -137,9 +137,8 @@ Module B.
 
       Definition carryterm_cps (w fw:Z) (t:limb) {T} (f:list limb->T) :=
         if dec (fst t = w)
-        then dlet d := div (snd t) fw in
-             dlet m := modulo (snd t) fw in
-             f ((w*fw, d) :: (w, m) :: @nil limb)
+        then dlet t2 := snd t in
+             f ((w*fw, div t2 fw) :: (w, modulo t2 fw) :: @nil limb)
         else f [t].
       Definition carry_cps(w fw:Z) (p:list limb) {T} (f:list limb->T) :=
         flat_map_cps (carryterm_cps w fw) p f.
@@ -383,8 +382,7 @@ Ltac assert_preconditions :=
 
 Ltac op_simplify := 
   cbv - [runtime_add runtime_mul Let_In];
-  cbv [runtime_add runtime_mul];
-  repeat progress rewrite ?Z.mul_1_l, ?Z.mul_1_r, ?Z.add_0_l, ?Z.add_0_r.
+  cbv [runtime_add runtime_mul].
 
 Ltac prove_op sz x :=
   cbv [Tuple.tuple Tuple.tuple'] in *;
@@ -449,10 +447,12 @@ Section Ops.
            (fun r13 => Positional.from_associational_cps w sz2 r13 id
              )))))))) in
     prove_op sz x.
-  Time Defined. (* Finished transaction in 139.086 secs *) 
+  Defined.
 
 End Ops.
 
+(*
 Eval cbv [projT1 addT lift2_sig proj1_sig] in (projT1 addT).
 Eval cbv [projT1 mulT lift2_sig proj1_sig] in
     (fun m d div_mod => projT1 (mulT m d div_mod)).
+*)
