@@ -1261,3 +1261,69 @@ Lemma wlast_combine : forall sz a b, @wlast sz (combine a (WS b WO)) = b.
 Proof.
   intros; unfold wlast; rewrite split2_combine; cbv; reflexivity.
 Qed.
+
+(* TODO : automate *)
+Lemma WordNZ_split1 : forall {n m} w,
+    Z.of_N (Word.wordToN (Word.split1 n m w)) = ZUtil.Z.pow2_mod (Z.of_N (Word.wordToN w)) (Z.of_nat n).
+Proof.
+  intros; unfold ZUtil.Z.pow2_mod.
+  rewrite wordToN_split1.
+  apply Z.bits_inj_iff'; intros k Hpos.
+  rewrite Z.land_spec.
+  repeat (rewrite Z2N.inj_testbit; [|assumption]).
+  rewrite N.land_spec; f_equal.
+  rewrite wordToN_wones.
+
+  destruct (Nge_dec (Z.to_N k) (N.of_nat n)).
+
+  - rewrite Z.ones_spec_high, N.ones_spec_high;
+      [reflexivity|apply N.ge_le; assumption|split; [omega|]].
+    apply Z2N.inj_le; [apply Nat2Z.is_nonneg|assumption|].
+    etransitivity; [|apply N.ge_le; eassumption].
+    apply N.eq_le_incl.
+    induction n; simpl; reflexivity.
+
+  - rewrite Z.ones_spec_low, N.ones_spec_low;
+      [reflexivity|assumption|split; [omega|]].
+    apply Z2N.inj_lt; [assumption|apply Nat2Z.is_nonneg|].
+    eapply N.lt_le_trans; [eassumption|].
+    apply N.eq_le_incl.
+    induction n; simpl; reflexivity.
+Qed.
+
+(* TODO : automate *)
+Lemma WordNZ_split2 : forall {n m} w,
+    Z.of_N (Word.wordToN (Word.split2 n m w)) = Z.shiftr (Z.of_N (Word.wordToN w)) (Z.of_nat n).
+Proof.
+  intros; unfold ZUtil.Z.pow2_mod.
+  rewrite wordToN_split2.
+  apply Z.bits_inj_iff'; intros k Hpos.
+  rewrite Z2N.inj_testbit; [|assumption].
+  rewrite Z.shiftr_spec, N.shiftr_spec; [|apply N2Z.inj_le; rewrite Z2N.id|]; try assumption.
+  rewrite Z2N.inj_testbit; [f_equal|omega].
+  rewrite Z2N.inj_add; [f_equal|assumption|apply Nat2Z.is_nonneg].
+  induction n; simpl; reflexivity.
+Qed.
+
+Lemma WordNZ_range : forall {n} B w,
+  (2 ^ Z.of_nat n <= B)%Z ->
+  (0 <= Z.of_N (@Word.wordToN n w) < B)%Z.
+Proof.
+  intros n B w H.
+  split; [apply N2Z.is_nonneg|].
+  eapply Z.lt_le_trans; [apply N2Z.inj_lt; apply word_size_bound|].
+  rewrite Npow2_N, N2Z.inj_pow, nat_N_Z.
+  assumption.
+Qed.
+
+Lemma WordNZ_range_mono : forall {n} m w,
+  (Z.of_nat n <= m)%Z ->
+  (0 <= Z.of_N (@Word.wordToN n w) < 2 ^ m)%Z.
+Proof.
+  intros n m w H.
+  split; [apply N2Z.is_nonneg|].
+  eapply Z.lt_le_trans; [apply N2Z.inj_lt; apply word_size_bound|].
+  rewrite Npow2_N, N2Z.inj_pow, nat_N_Z.
+  apply Z.pow_le_mono; [|assumption].
+  split; simpl; omega.
+Qed.
