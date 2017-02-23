@@ -138,6 +138,15 @@ Proof.
   rewrite <- (option_leq_to_eq_to_leq p), <- (option_leq_to_eq_to_leq q); simpl; reflexivity.
 Qed.
 
+Definition invert_Some {A} (x : option A) : match x with
+                                            | Some _ => A
+                                            | None => unit
+                                            end
+  := match x with
+     | Some x' => x'
+     | None => tt
+     end.
+
 Lemma invert_eq_Some {A x y} (p : Some x = Some y) : { pf : x = y | @option_eq_to_leq A (Some x) (Some y) pf = p }.
 Proof.
   refine (exist _ _ (option_leq_to_eq_to_leq _)).
