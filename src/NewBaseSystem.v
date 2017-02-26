@@ -283,6 +283,10 @@ Local Ltac prove_eval :=
          | _ => nsatz
          end.
 
+Definition mod_eq m a b := a mod m = b mod m.
+Global Instance mod_eq_equiv m : RelationClasses.Equivalence (mod_eq m).
+Proof. constructor; congruence. Qed.
+
 Delimit Scope runtime_scope with RT.
 Definition runtime_mul := Z.mul.
 Global Notation "a * b" := (runtime_mul a%RT b%RT) : runtime_scope.
@@ -378,11 +382,13 @@ Module B.
     Proof. replace (a + s * b) with ((a + c*b) + b*(s-c)) by nsatz.
            rewrite Z.add_mod, Z_mod_mult, Z.add_0_r, Z.mod_mod; trivial. Qed.
     Lemma eval_reduce s c p (s_nonzero:s<>0) (modulus_nonzero:s-eval c<>0):
-      eval (reduce s c p) mod (s - eval c) = eval p mod (s - eval c).
+      mod_eq (s - eval c) (eval (reduce s c p)) (eval p).
     Proof.
-      cbv [reduce reduce_cps]; prove_eval;
+      cbv [reduce reduce_cps mod_eq]; prove_eval;
         rewrite <-reduction_rule by auto; prove_eval.
-    Qed. Hint Rewrite eval_reduce : push_basesystem_eval.
+    Qed.
+    Hint Rewrite eval_reduce using (omega || assumption) : push_basesystem_eval.
+    (* Why TF does this hint get picked up outside the section (while other eval_ hints do not?) *)
 
     Section Carries.
       Context {modulo div:Z->Z->Z}.
@@ -656,7 +662,36 @@ Ltac assert_preconditions :=
            unique assert (n <> 0%nat) by (cbv; congruence)
          | |- context [Positional.carry_cps?wt ?i] =>
            unique assert (wt (S i) / wt i <> 0) by (cbv; congruence)
+         | |- context [Associational.reduce_cps ?s _] =>
+           unique assert (s <> 0) by (cbv; congruence)
+         | |- context [Associational.reduce_cps ?s ?c] =>
+           unique assert (s - Associational.eval c <> 0) by (cbv; congruence)
          end.
+
+(* matches out the `Prop` argument to `lift2_sig`, applies `lift2_sig` *)
+Ltac lift2_sig :=
+    lazymatch goal with
+      |- @sig _ ?Pop
+      => let P_ := constr:(fun op =>
+                      ltac:(
+                        lazymatch eval cbv beta in (Pop op) with
+                          forall a b, @?P a b =>
+                          exact (fun a b =>
+                            ltac:(
+                              let P := (eval cbv beta in (P a b)) in
+                              let P := (eval pattern (op a b) in P) in
+                              lazymatch P with ?P _ =>
+                                exact P
+                              end
+                              )
+                            )
+                        end
+                      )
+                    ) in
+         lazymatch P_ with
+           fun _ => ?P => apply (lift2_sig P)
+         end
+    end.
 
 Section Ops.
   Context
@@ -668,10 +703,14 @@ Section Ops.
 
   Let wt := fun i : nat => 2^(25 * (i / 2) + 26 * ((i + 1) / 2)).
   Let sz := 10%nat.
+  Let s : Z := 2^255.
+  Let c : list B.limb := [(1, 19)].
+
+  Let m := Eval compute in s - Associational.eval c. (* modulus *)
   Let sz2 := Eval compute in ((sz * 2) - 1)%nat.
 
   Definition addT :
-    { add : (Z^sz -> Z^sz -> Z^sz)%type &
+    { add : (Z^sz -> Z^sz -> Z^sz)%type |
                forall a b : Z^sz,
                  let eval {n} := Positional.eval (n := n) wt in
                  eval (add a b) = eval a  + eval b }.
@@ -680,8 +719,8 @@ Section Ops.
         Positional.to_associational_cps (n := sz) wt a
           (fun r => Positional.to_associational_cps (n := sz) wt b
           (fun r0 => Positional.from_associational_cps wt sz (r ++ r0) id
-        ))) in
-    apply lift2_sig; eexists;
+                    ))) in
+    lift2_sig; eexists;
     transitivity (Positional.eval wt (x wt a b));
       [|assert_preconditions; autorewrite with uncps push_id push_basesystem_eval; reflexivity].
 
@@ -692,12 +731,11 @@ Section Ops.
     reflexivity.
   Defined.
   
-
   Definition mulT :
-    {mul : (Z^sz -> Z^sz -> Z^sz2)%type &
+    {mul : (Z^sz -> Z^sz -> Z^sz)%type |
                forall a b : Z^sz,
                  let eval {n} := Positional.eval (n := n) wt in
-                 eval (mul a b) = eval a  * eval b }.
+                 mod_eq m (eval (mul a b)) (eval a  * eval b)}.
   Proof.
     let x := constr:(fun w a b =>
          Positional.to_associational_cps (n := sz) w a
@@ -705,13 +743,19 @@ Section Ops.
            (fun r0 => Associational.mul_cps r r0
            (fun r1 => Positional.from_associational_cps w sz2 r1
            (fun r2 => Positional.to_associational_cps w r2
-           (fun r3 => Positional.chained_carries(div:=div)(modulo:=modulo) w r3 (seq 0 sz2)
-           (fun r13 => Positional.from_associational_cps w sz2 r13 id
-             ))))))) in
-    apply lift2_sig; eexists;
+           (fun r3 => Associational.reduce_cps s c r3       
+           (fun r4 => Positional.from_associational_cps w sz r4
+           (fun r5 => Positional.to_associational_cps w r5
+           (fun r6 => Positional.chained_carries(div:=div)(modulo:=modulo) w r6 (seq 0 sz)
+           (fun r13 => Positional.from_associational_cps w sz r13 id
+             )))))))))) in
+    lift2_sig; eexists;
     transitivity (Positional.eval wt (x wt a b));
-      [|cbv [Positional.chained_carries fold_right_cps2 seq fold_right sz2]; assert_preconditions; autorewrite with uncps push_id push_basesystem_eval; reflexivity].
+    [|cbv [Positional.chained_carries fold_right_cps2 seq fold_right sz2 sz]; assert_preconditions; autorewrite with uncps push_id push_basesystem_eval; reflexivity].
 
+    cbv [mod_eq].
+    apply f_equal2; [|reflexivity].
+    
     apply f_equal.
 
     basesystem_partial_evaluation_RHS.

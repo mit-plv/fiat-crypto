@@ -16,14 +16,6 @@ Local Arguments f_equal {_ _} _ {_ _} _.
 
 (** ** Equality for [sigT] *)
 Section sigT.
-  (* Lift foralls out of sigT proofs and leave a sig goal *)
-  Definition lift2_sig {R S T} f (g:R->S)
-             (X : forall a b, {prod | g prod = f a b}) :
-    { op : T -> T -> R & forall a b, g (op a b) = f a b }.
-  Proof.
-    exists (fun a b => proj1_sig (X a b)).
-    exact (fun a b => proj2_sig (X a b)).
-  Defined.
   
   (** *** Projecting an equality of a pair to equality of the first components *)
   Definition pr1_path {A} {P : A -> Type} {u v : sigT P} (p : u = v)
@@ -208,6 +200,15 @@ Section ex.
     destruct H, u; reflexivity.
   Defined.
 End ex.
+
+(* Lift foralls out of sig proofs *)
+Definition lift2_sig {A B C} (P:A->B->C->Prop)
+           (op_sig : forall (a:A) (b:B), {c | P a b c}) :
+  { op : A -> B -> C | forall (a:A) (b:B), P a b (op a b) }
+    := exist
+         (fun op => forall a b, P a b (op a b))
+         (fun a b => proj1_sig (op_sig a b))
+         (fun a b => proj2_sig (op_sig a b)).
 
 (** ** Useful Tactics *)
 (** *** [inversion_sigma] *)
