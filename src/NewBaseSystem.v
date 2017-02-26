@@ -428,58 +428,8 @@ Module B.
       Hint Rewrite eval_carry using auto : push_basesystem_eval.
     End Carries.
 
-    Section Saturated.
-      Context {word_max : Z} {word_max_pos : 1 < word_max} 
-              {add : Z -> Z -> Z * Z}
-              {add_correct : forall x y, fst (add x y) + word_max * snd (add x y) = x + y}
-              {mul : Z -> Z -> Z * Z}
-              {mul_correct : forall x y, fst (mul x y) + word_max * snd (mul x y) = x * y}
-              {end_wt:Z} {end_wt_pos : 0 < end_wt}
-      .
-
-      Definition sat_multerm_cps (t t' : limb) {T} (f:list limb->T) :=
-        dlet tt' := mul (snd t) (snd t') in
-              f ((fst t*fst t', runtime_fst tt') :: (fst t*fst t'*word_max, runtime_snd tt') :: nil)%list.
-
-      Definition sat_multerm t t' := sat_multerm_cps t t' id.
-      Lemma sat_multerm_cps_id t t' : forall {T} (f:list limb->T),
-       sat_multerm_cps t t' f = f (sat_multerm t t').
-      Proof. reflexivity. Qed.
-      Hint Opaque sat_multerm : uncps.
-      Hint Rewrite sat_multerm_cps_id : uncps.
-
-      Lemma eval_map_sat_multerm_cps t q :
-        eval (flat_map (fun x => sat_multerm_cps t x id) q)
-        = fst t * snd t * eval q.
-      Proof.
-        cbv [sat_multerm sat_multerm_cps Let_In runtime_fst runtime_snd];
-        induction q; prove_eval;
-          try match goal with |- context [mul ?a ?b] =>
-                              specialize (mul_correct a b) end;
-          nsatz.
-      Qed. Hint Rewrite eval_map_sat_multerm_cps : push_basesystem_eval.
-
-      Definition sat_mul_cps (p q : list limb) {T} (f:list limb->T) := 
-        flat_map_cps (fun t =>
-                        @flat_map_cps _ _ (sat_multerm_cps t) q) p f.
-      (* TODO (jgross): kind of an interesting behavior--it infers the type arguments like this but fails to check if I leave them implicit *)
-      
-      Definition sat_mul p q := sat_mul_cps p q id.
-      Lemma sat_mul_cps_id p q {T} f :
-        @sat_mul_cps p q T f = f (sat_mul p q).
-      Proof. cbv [sat_mul_cps sat_mul]; prove_id. Qed.
-      Hint Opaque sat_mul : uncps.
-      Hint Rewrite sat_mul_cps_id : uncps.
-      
-      Lemma eval_sat_mul p q : eval (sat_mul p q) = eval p * eval q.
-      Proof. cbv [sat_mul_cps sat_mul]; induction p; prove_eval. Qed.
-      Hint Rewrite eval_sat_mul : push_basesystem_eval.
-
-    End Saturated.
   End Associational.
   Hint Rewrite
-      @Associational.sat_mul_cps_id
-      @Associational.sat_multerm_cps_id
       @Associational.carry_cps_id
       @Associational.carryterm_cps_id
       @Associational.reduce_cps_id
@@ -647,8 +597,6 @@ Module B.
     End Positional.
   End Positional.
   Hint Rewrite
-      @Associational.sat_mul_cps_id
-      @Associational.sat_multerm_cps_id
       @Associational.carry_cps_id
       @Associational.carryterm_cps_id
       @Associational.reduce_cps_id
@@ -661,7 +609,6 @@ Module B.
       @Positional.to_associational_cps_id
     : uncps.
   Hint Rewrite
-      @Associational.eval_sat_mul
       @Associational.eval_mul
       @Positional.eval_to_associational
       @Associational.eval_carry
@@ -683,7 +630,7 @@ Ltac basesystem_partial_evaluation_RHS :=
   let t := (eval cbv delta [
   (* this list must contain all definitions referenced by t that reference [Let_In], [runtime_add], or [runtime_mul] *)
 Positional.to_associational_cps Positional.to_associational Positional.eval Positional.zeros Positional.add_to_nth_cps Positional.add_to_nth Positional.place_cps Positional.place Positional.from_associational_cps Positional.from_associational Positional.carry_cps Positional.carry Positional.chained_carries
-Associational.eval Associational.multerm Associational.mul_cps Associational.mul Associational.split_cps Associational.split Associational.reduce_cps Associational.reduce Associational.carryterm_cps Associational.carryterm Associational.carry_cps Associational.carry Associational.sat_multerm_cps Associational.sat_multerm Associational.sat_mul_cps Associational.sat_mul
+Associational.eval Associational.multerm Associational.mul_cps Associational.mul Associational.split_cps Associational.split Associational.reduce_cps Associational.reduce Associational.carryterm_cps Associational.carryterm Associational.carry_cps Associational.carry 
                  ] in t0) in
   let t := (eval pattern @runtime_mul in t) in
   let t := match t with ?t _ => t end in
