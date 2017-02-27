@@ -3,7 +3,6 @@ Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Equality.
 Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Util.LetIn.
-Require Import Crypto.Util.LetInMonad.
 
 Section demo_by_eq.
   Context {base_type_code : Type}
@@ -45,147 +44,45 @@ Section demo_by_eq.
     := cast_or (interp_flat_type _) x (@failf _).
 
   Section parametrized.
-    Context (M : Type -> Type)
-            (ret : forall A, A -> M A)
-            (denote : forall A, M A -> A)
-            (bind : forall A B, M A -> (A -> M B) -> M B).
-    Section with_let_in.
-      Context (let_in : forall T
-                               (A:=interp_flat_type ivar T -> { t' : _ & @exprf base_type_code op var t' })
-                               (B:={ t' : _ & @exprf base_type_code op var t' }),
-                  A -> (A -> M B) -> M B).
-      Fixpoint mpexist_id {t} (e : @exprf base_type_code op ivar t)
-        : M { t' : _ & @exprf base_type_code op var t' }
-        := match e with
-           | TT => ret _ (existT _ _ TT)
-           | Var t v => ret _ (existT _ (Tbase t) v)
-           | Op t1 tR opc args
-             => bind _ _ (@mpexist_id _ args)
-                     (fun argsv
-                      => ret _ (let (argsvT, argsv) := argsv in
-                                existT _ _ (Op opc (cast_exprf argsv))))
-           | Pair tx ex ty ey
-             => bind _ _ (@mpexist_id _ ex)
-                     (fun xv
-                      => bind _ _ (@mpexist_id _ ey)
-                              (fun yv
-                               => ret _ (let (xvT, xv) := xv in
-                                         let (yvT, yv) := yv in
-                                         existT _ _ (Pair xv yv))))
-           | LetIn tx ex tC eC
-             => let_in _ (fun v => denote _ (@mpexist_id _ (eC v)))
-                       (fun Cv
-                        => bind _ _ (@mpexist_id _ ex)
-                                (fun xv
-                                 => ret _ (let (xvT, xv) := xv in
-                                           existT
-                                             _
-                                             (projT1 (Cv failf))
-                                             (LetIn xv
-                                                    (fun v => cast_exprf (projT2 (Cv (cast_ivarf (SmartVarVarf v)))))))))
-           end.
-    (*Let type_of {var' t} (e : @exprf base_type_code op var' t) : flat_type base_type_code :=
-      match e with
-      | TT => t
-      | _ => t
-      end.
-    Fixpoint mpexist_id_nd {t} (e : @exprf base_type_code op ivar t)
-      : M (@exprf base_type_code op var t)
+    Context (let_in : forall T t'
+                             (A:=interp_flat_type ivar T -> @exprf base_type_code op var t')
+                             (B:=@exprf base_type_code op var t'),
+                A -> (A -> B) -> B).
+    Fixpoint pexist_id {t} (e : @exprf base_type_code op ivar t)
+      : { t' : _ & @exprf base_type_code op var t' }
       := match e with
-         | TT => ret _ TT
-         | Var t v => ret _ v
+         | TT => existT _ _ TT
+         | Var t v => existT _ (Tbase t) v
          | Op t1 tR opc args
-           => bind _ _ (@mpexist_id_nd _ args)
-                   (fun argsv
-                    => ret _ (Op opc (cast_exprf argsv)))
+           => let (argsT, argsv) := @pexist_id _ args in
+              existT _ _ (Op opc (cast_exprf argsv))
          | Pair tx ex ty ey
-           => bind _ _ (@mpexist_id_nd _ ex)
-                   (fun xv
-                    => bind _ _ (@mpexist_id_nd _ ey)
-                            (fun yv
-                             => ret _ (Pair xv yv)))
+           => let (xT, xv) := @pexist_id _ ex in
+              let (yT, yv) := @pexist_id _ ey in
+              existT _ _ (Pair xv yv)
          | LetIn tx ex tC eC
-           => let_in _ _ (fun v => denote _ (@mpexist_id_nd _ (eC v)))
-                     (fun Cv
-                      => bind _ (@exprf base_type_code op var tC) (@mpexist_id_nd _ ex)
-                              (fun xv
-                               => ret _ (LetIn xv
-                                               (fun v => cast_exprf (B:=tC) (cast_exprf (B:=type_of (Cv failf)) (Cv (cast_ivarf (SmartVarVarf v))))))))
-         end.*)
-    End with_let_in.
-
-    Section push_let_in_types_only.
-      Context (let_in : forall T t'
-                               (A:=interp_flat_type ivar T -> @exprf base_type_code op var t')
-                               (B:=@exprf base_type_code op var t'),
-                  A -> (A -> M B) -> M B).
-      Definition push_let_in_on_types
-                 T
-                 (A:=interp_flat_type ivar T -> { t' : _ & @exprf base_type_code op var t' })
-                 (B:={ t' : _ & @exprf base_type_code op var t' })
-                 (x : A)
-                 (f : A -> M B)
-        : M B
-        := let (xfailfT, xfailf) := x failf in
-           bind _ _ (let_in T xfailfT
-                            (fun v => cast_exprf (projT2 (x v)))
-                            (fun x' => bind _ _ (f (fun v => existT _ _ (x' v)))
-                                            (fun v => ret _ (cast_exprf (projT2 v)))))
-                (fun pr => ret _ (existT _ _ pr)).
-    End push_let_in_types_only.
+           => dlet Cv := (fun v => @pexist_id _ (eC v)) in
+              let (CfailT, Cfailv) := Cv failf in
+              existT
+                _
+                CfailT
+                (let_in
+                   _ CfailT
+                   (fun v => cast_exprf (projT2 (Cv v)))
+                   (fun Cv'
+                    => let (xT, xv) := @pexist_id _ ex in
+                       LetIn xv
+                             (fun v => cast_exprf (Cv' (cast_ivarf (SmartVarVarf v))))))
+         end.
   End parametrized.
-  Fixpoint exist_id {t} (e : @exprf base_type_code op ivar t)
-    : { t' : _ & @exprf base_type_code op var t' }
-    := match e with
-       | TT => existT _ _ TT
-       | Var t v => existT _ (Tbase t) v
-       | Op t1 tR opc args
-         => let (argsvT, argsv) := @exist_id _ args in
-            existT _ _ (Op opc (cast_exprf argsv))
-       | Pair tx ex ty ey
-         => let (xvT, xv) := @exist_id _ ex in
-            let (yvT, yv) := @exist_id _ ey in
-            existT _ _ (Pair xv yv)
-       | LetIn tx ex tC eC
-         => let (xvT, xv) := @exist_id _ ex in
-            let Cv := (fun v => @exist_id _ (eC v)) in
-            existT
-              _
-              (projT1 (Cv failf))
-              (LetIn xv
-                     (fun v => cast_exprf (projT2 (Cv (cast_ivarf (SmartVarVarf v))))))
-       end.
-  Definition mexist_id {t} (e : @exprf base_type_code op ivar t)
-    : LetInM { t' : _ & @exprf base_type_code op var t' }
-    := Eval cbv [mpexist_id] in
-        @mpexist_id (fun T => LetInM T) (@LetInMonad.ret) (@LetInMonad.denote) (@LetInMonad.bind) (fun T => @LetInMonad.let_in _ _) t e.
-  Definition mpush_let_in_on_types
-    := Eval cbv [push_let_in_on_types] in
-        @push_let_in_on_types (fun T => LetInM T) (@LetInMonad.ret) (@LetInMonad.bind) (fun T t' => @LetInMonad.let_in _ _).
-  Definition pexist_id (let_in : forall T, _ -> (_ -> _) -> _)
+  Definition exist_id
              {t} (e : @exprf base_type_code op ivar t)
     : { t' : _ & @exprf base_type_code op var t' }
-    := Eval cbv [mpexist_id] in
-        @mpexist_id (fun T => T) (fun _ v => v) (fun _ v => v) (fun _ _ x f => f x) let_in t e.
-  Definition ppush_let_in_on_types (let_in : forall T t', _ -> _ -> _)
-    := Eval cbv [push_let_in_on_types] in
-        @push_let_in_on_types (fun T => T) (fun _ v => v) (fun _ _ x f => f x) let_in.
+    := Eval cbv beta iota delta [pexist_id Let_In] in
+        @pexist_id (fun _ _ x f => let y := x in f y) t e.
   Definition dexist_id
              {t} (e : @exprf base_type_code op ivar t)
     : { t' : _ & @exprf base_type_code op var t' }
-    := Eval cbv [mpexist_id] in
-        @mpexist_id (fun T => T) (fun _ v => v) (fun _ v => v) (fun _ _ x f => f x) (fun _ x f => dlet y := x in f y) t e.
-  Definition dpush_let_in_on_types
-    := Eval cbv [push_let_in_on_types] in
-        @push_let_in_on_types (fun T => T) (fun _ v => v) (fun _ _ x f => f x) (fun _ _ x f => dlet y := x in f y).
-  (*Definition pexist_id_nd (let_in : forall A B, A -> (A -> B) -> B)
-             {t} (e : @exprf base_type_code op ivar t)
-    : @exprf base_type_code op var t
-    := Eval cbv [mpexist_id_nd] in
-        @mpexist_id_nd (fun T => T) (let_in) (fun _ v => v) (fun _ v => v) (fun _ _ x f => f x) t e.
-  Definition dexist_id_nd
-             {t} (e : @exprf base_type_code op ivar t)
-    : @exprf base_type_code op var t
-    := Eval cbv [mpexist_id_nd] in
-        @mpexist_id_nd (fun T => T) (fun _ _ x f => dlet y := x in f y) (fun _ v => v) (fun _ v => v) (fun _ _ x f => f x) t e.*)
+    := Eval cbv [pexist_id] in
+        @pexist_id (fun _ _ x f => dlet y := x in f y) t e.
 End demo_by_eq.

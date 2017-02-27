@@ -241,19 +241,13 @@ Section dependent_sigma_eq.
     Definition gen_let_sequence n := gen_let_sequence' n (Op (Const 1) TT).
   End gen.
 
-  Definition mexist_idf {var} {t} (e : @Syntax.exprf base_type op (fun t => @Syntax.exprf base_type op var (Tbase t)) t)
-    := @mexist_id
-         base_type op var base_type_beq
-         internal_base_type_dec_bl
-         (fun _ b => Syntax.Op (make_const _ match b return interp_base_type b with Tnat => 0 end) Syntax.TT)
-         t e.
   Definition dexist_idf {var} {t} (e : @Syntax.exprf base_type op (fun t => @Syntax.exprf base_type op var (Tbase t)) t)
     := @dexist_id
          base_type op var base_type_beq
          internal_base_type_dec_bl
          (fun _ b => Syntax.Op (make_const _ match b return interp_base_type b with Tnat => 0 end) Syntax.TT)
          t e.
-  Definition pexist_idf {var} (let_in : forall T, _ -> (_ -> _) -> _)
+  Definition pexist_idf {var} (let_in : forall T t', _ -> (_ -> _) -> _)
              {t} (e : @Syntax.exprf base_type op (fun t => @Syntax.exprf base_type op var (Tbase t)) t)
     := @pexist_id
          base_type op var base_type_beq
@@ -261,20 +255,7 @@ Section dependent_sigma_eq.
          (fun _ b => Syntax.Op (make_const _ match b return interp_base_type b with Tnat => 0 end) Syntax.TT)
          let_in
          t e.
-  Definition ppush_let_in_on_types {var} (let_in : forall T t', _ -> (_ -> _) -> _)
-    := @ppush_let_in_on_types
-         base_type op var base_type_beq
-         internal_base_type_dec_bl
-         (fun _ b => Syntax.Op (make_const _ match b return interp_base_type b with Tnat => 0 end) Syntax.TT)
-         let_in.
-  (*Definition pexist_idf_nd (let_in : forall A B, A -> (A -> B) -> B)
-             {var} {t} (e : @Syntax.exprf base_type op (fun t => @Syntax.exprf base_type op var (Tbase t)) t)
-    := @pexist_id_nd
-         base_type op var base_type_beq
-         internal_base_type_dec_bl
-         (fun _ b => Syntax.Op (make_const _ match b return interp_base_type b with Tnat => 0 end) Syntax.TT)
-         let_in
-         t e.*)
+
   Definition seq0 {var} := Eval vm_compute in @gen_let_sequence var 0.
   Definition seq1 {var} := Eval vm_compute in @gen_let_sequence var 1.
   Definition seq2 {var} := Eval vm_compute in @gen_let_sequence var 2.
@@ -325,11 +306,8 @@ Section dependent_sigma_eq.
   Definition seq47 {var} := Eval vm_compute in @gen_let_sequence var 47.
   Definition seq48 {var} := Eval vm_compute in @gen_let_sequence var 48.
   Definition seq49 {var} := Eval vm_compute in @gen_let_sequence var 49.
-  (*Definition exist_idf {var t} e := LetInMonad.denote (@mexist_idf var t e).*)
   (*Definition exist_idf {var t} e := @dexist_idf var t e.*)
-  (*Definition exist_idf {var t} e let_in := @pexist_idf var let_in t e.*)
-  Definition exist_idf {var t} e let_in := @pexist_idf var (ppush_let_in_on_types let_in) t e.
-  (*Definition exist_idf {var t} e let_in := @pexist_idf_nd let_in var t e.*)
+  Definition exist_idf {var t} e let_in := @pexist_idf var let_in t e.
 
   Section with_var.
     Context {var : base_type -> Type}.
@@ -385,7 +363,6 @@ Section dependent_sigma_eq.
     Time Definition seq47' := Eval seqr in @exist_idf var (Tbase Tnat) seq47.
     Time Definition seq48' := Eval seqr in @exist_idf var (Tbase Tnat) seq48.
     Time Definition seq49' := Eval seqr in @exist_idf var (Tbase Tnat) seq49.
-    (*Time Definition seq49'' := Eval seqr in @mapf base_type op var var (fun _ x => x) (fun _ x => x) _ seq49.*)
 
     Time Definition seq0'' := Eval seqr in seq0' (fun _ _ x f => f x).
     Time Definition seq1'' := Eval seqr in seq1' (fun _ _ x f => f x).
