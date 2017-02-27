@@ -1101,7 +1101,7 @@ Proof.
   intuition (subst; auto).
 Qed.
 
-Lemma fold_right_invariant : forall {A} P (f: A -> A -> A) l x,
+Lemma fold_right_invariant : forall {A B} P (f: A -> B -> B) l x,
   P x -> (forall y, In y l -> forall z, P z -> P (f y z)) ->
   P (fold_right f x l).
 Proof.
