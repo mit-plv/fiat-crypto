@@ -202,6 +202,16 @@ Section ex.
 End ex.
 
 (* Lift foralls out of sig proofs *)
+Definition lift1_sig {A C} (P:A->C->Prop)
+           (op_sig : forall (a:A), {c | P a c}) :
+  { op : A -> C | forall (a:A), P a (op a) }
+    := exist
+         (fun op => forall a, P a (op a))
+         (fun a => proj1_sig (op_sig a))
+         (fun a => proj2_sig (op_sig a))
+.
+
+(* Lift foralls out of sig proofs *)
 Definition lift2_sig {A B C} (P:A->B->C->Prop)
            (op_sig : forall (a:A) (b:B), {c | P a b c}) :
   { op : A -> B -> C | forall (a:A) (b:B), P a b (op a b) }

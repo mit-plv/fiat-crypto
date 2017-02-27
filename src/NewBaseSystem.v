@@ -692,6 +692,9 @@ Module B.
           { apply f_equal2; ring. }
           { cbv [mod_eq] in *; rewrite Z.add_mod_full, coef_mod, Z.add_0_l, Zmod_mod. reflexivity. }
         Qed.
+
+        Definition opp_cps (p : tuple Z n) {T} (f:tuple Z n->T):=
+          sub_cps (zeros n) p f.
       End Subtraction.
           
     End Positional.
@@ -701,6 +704,7 @@ Module B.
       Positional.mul_cps
       Positional.reduce_cps
       Positional.negate_snd_cps
+      Positional.opp_cps
   .
   Hint Rewrite
       @Associational.carry_cps_id
@@ -739,7 +743,7 @@ Ltac basesystem_partial_evaluation_RHS :=
   let t0 := match goal with |- _ _ ?t => t end in
   let t := (eval cbv delta [
   (* this list must contain all definitions referenced by t that reference [Let_In], [runtime_add], [runtime_opp] or [runtime_mul] *)
-Positional.to_associational_cps Positional.to_associational Positional.eval Positional.zeros Positional.add_to_nth_cps Positional.add_to_nth Positional.place_cps Positional.place Positional.from_associational_cps Positional.from_associational Positional.carry_cps Positional.carry Positional.chained_carries_cps Positional.chained_carries Positional.sub_cps Positional.sub Positional.negate_snd_cps Positional.add_cps
+Positional.to_associational_cps Positional.to_associational Positional.eval Positional.zeros Positional.add_to_nth_cps Positional.add_to_nth Positional.place_cps Positional.place Positional.from_associational_cps Positional.from_associational Positional.carry_cps Positional.carry Positional.chained_carries_cps Positional.chained_carries Positional.sub_cps Positional.sub Positional.negate_snd_cps Positional.add_cps Positional.opp_cps
 Associational.eval Associational.multerm Associational.mul_cps Associational.mul Associational.split_cps Associational.split Associational.reduce_cps Associational.reduce Associational.carryterm_cps Associational.carryterm Associational.carry_cps Associational.carry Associational.negate_snd_cps Associational.negate_snd 
                  ] in t0) in
   let t := (eval pattern @runtime_mul in t) in
@@ -794,6 +798,30 @@ Ltac assert_preconditions :=
            end
          end.
 
+(* matches out the `Prop` argument to `lift1_sig`, applies `lift1_sig` *)
+Ltac lift1_sig :=
+    lazymatch goal with
+      |- @sig _ ?Pop
+      => let P_ := constr:(fun op =>
+                      ltac:(
+                        lazymatch eval cbv beta in (Pop op) with
+                          forall a, @?P a =>
+                          exact (fun a =>
+                            ltac:(
+                              let P := (eval cbv beta in (P a)) in
+                              let P := (eval pattern (op a) in P) in
+                              lazymatch P with ?P _ =>
+                                exact P
+                              end
+                              )
+                            )
+                        end
+                      )
+                    ) in
+         lazymatch P_ with
+           fun _ => ?P => apply (lift1_sig P)
+         end
+    end.
 (* matches out the `Prop` argument to `lift2_sig`, applies `lift2_sig` *)
 Ltac lift2_sig :=
     lazymatch goal with
@@ -885,7 +913,29 @@ Section Ops.
     basesystem_partial_evaluation_RHS.
 
     reflexivity.
-  Qed.
+  Defined.
+
+  Definition opp_sig :
+    {opp : (Z^sz -> Z^sz)%type |
+               forall a : Z^sz,
+                 let eval {n} := Positional.eval (n := n) wt in
+                 mod_eq m (eval (opp a)) (- eval a)}.
+  Proof.
+    let x := constr:(fun w a =>
+         Positional.opp_cps (n:=sz) (coef := coef) w a id) in
+    lift1_sig; eexists;
+      transitivity (Positional.eval wt (x wt a)); autounfold;
+        [|assert_preconditions; autorewrite with uncps push_id push_basesystem_eval; reflexivity].
+
+    cbv [mod_eq].
+    apply f_equal2; [|reflexivity].
+    
+    apply f_equal.
+
+    basesystem_partial_evaluation_RHS.
+
+    reflexivity.
+  Defined.
   
   Definition mul_sig :
     {mul : (Z^sz -> Z^sz -> Z^sz)%type |
@@ -919,7 +969,9 @@ Section Ops.
 End Ops.
 
 (*
-Eval cbv [proj1_sig add_sig lift2_sig] in (proj1_sig add_sig).
+Eval cbv [proj1_sig sub_sig lift2_sig] in (proj1_sig sub_sig).
+Eval cbv [proj1_sig sub_sig lift2_sig] in (proj1_sig sub_sig).
+Eval cbv [proj1_sig opp_sig lift1_sig] in (proj1_sig opp_sig).
 Eval cbv [proj1_sig mul_sig lift2_sig] in
     (fun m d div_mod => proj1_sig (mul_sig m d div_mod)).
 *)
