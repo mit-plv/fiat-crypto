@@ -709,7 +709,7 @@ Section Ops.
   Let m := Eval compute in s - Associational.eval c. (* modulus *)
   Let sz2 := Eval compute in ((sz * 2) - 1)%nat.
 
-  Definition addT :
+  Definition add_sig :
     { add : (Z^sz -> Z^sz -> Z^sz)%type |
                forall a b : Z^sz,
                  let eval {n} := Positional.eval (n := n) wt in
@@ -731,7 +731,7 @@ Section Ops.
     reflexivity.
   Defined.
   
-  Definition mulT :
+  Definition mul_sig :
     {mul : (Z^sz -> Z^sz -> Z^sz)%type |
                forall a b : Z^sz,
                  let eval {n} := Positional.eval (n := n) wt in
@@ -771,7 +771,7 @@ Section Ops.
 End Ops.
 
 (*
-Eval cbv [projT1 addT lift2_sig proj1_sig] in (projT1 addT).
-Eval cbv [projT1 mulT lift2_sig proj1_sig] in
-    (fun m d div_mod => projT1 (mulT m d div_mod)).
+Eval cbv [proj1_sig add_sig lift2_sig] in (proj1_sig add_sig).
+Eval cbv [proj1_sig mul_sig lift2_sig] in
+    (fun m d div_mod => proj1_sig (mul_sig m d div_mod)).
 *)
