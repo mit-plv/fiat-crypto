@@ -874,6 +874,20 @@ Section Ops.
          let zeros : Z^sz := Tuple.from_list_default 0%Z sz nil in
          Positional.sub_cps (coef := zeros) wt s_minus_1 c_minus_1 id).
 
+  Definition zero_sig :
+    { zero : Z^sz | Positional.eval wt zero = 0}.
+  Proof.
+    let t := eval vm_compute in (Positional.zeros sz) in
+        exists t. vm_decide.
+  Defined.
+
+  Definition one_sig :
+    { one : Z^sz | Positional.eval wt one = 1}.
+  Proof.
+    let t := eval vm_compute in (Positional.zeros (sz-1), 1) in
+        exists t. vm_decide.
+  Defined.
+
   Definition add_sig :
     { add : (Z^sz -> Z^sz -> Z^sz)%type |
                forall a b : Z^sz,
