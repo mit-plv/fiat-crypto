@@ -253,14 +253,28 @@ Section dependent_sigma_eq.
          internal_base_type_dec_bl
          (fun _ b => Syntax.Op (make_const _ match b return interp_base_type b with Tnat => 0 end) Syntax.TT)
          t e.
-  Definition pexist_idf (let_in : forall A B, A -> (A -> B) -> B)
-             {var} {t} (e : @Syntax.exprf base_type op (fun t => @Syntax.exprf base_type op var (Tbase t)) t)
+  Definition pexist_idf {var} (let_in : forall T, _ -> (_ -> _) -> _)
+             {t} (e : @Syntax.exprf base_type op (fun t => @Syntax.exprf base_type op var (Tbase t)) t)
     := @pexist_id
          base_type op var base_type_beq
          internal_base_type_dec_bl
          (fun _ b => Syntax.Op (make_const _ match b return interp_base_type b with Tnat => 0 end) Syntax.TT)
          let_in
          t e.
+  Definition ppush_let_in_on_types {var} (let_in : forall T t', _ -> (_ -> _) -> _)
+    := @ppush_let_in_on_types
+         base_type op var base_type_beq
+         internal_base_type_dec_bl
+         (fun _ b => Syntax.Op (make_const _ match b return interp_base_type b with Tnat => 0 end) Syntax.TT)
+         let_in.
+  (*Definition pexist_idf_nd (let_in : forall A B, A -> (A -> B) -> B)
+             {var} {t} (e : @Syntax.exprf base_type op (fun t => @Syntax.exprf base_type op var (Tbase t)) t)
+    := @pexist_id_nd
+         base_type op var base_type_beq
+         internal_base_type_dec_bl
+         (fun _ b => Syntax.Op (make_const _ match b return interp_base_type b with Tnat => 0 end) Syntax.TT)
+         let_in
+         t e.*)
   Definition seq0 {var} := Eval vm_compute in @gen_let_sequence var 0.
   Definition seq1 {var} := Eval vm_compute in @gen_let_sequence var 1.
   Definition seq2 {var} := Eval vm_compute in @gen_let_sequence var 2.
@@ -313,7 +327,9 @@ Section dependent_sigma_eq.
   Definition seq49 {var} := Eval vm_compute in @gen_let_sequence var 49.
   (*Definition exist_idf {var t} e := LetInMonad.denote (@mexist_idf var t e).*)
   (*Definition exist_idf {var t} e := @dexist_idf var t e.*)
-  Definition exist_idf {var t} e let_in := @pexist_idf let_in var t e.
+  (*Definition exist_idf {var t} e let_in := @pexist_idf var let_in t e.*)
+  Definition exist_idf {var t} e let_in := @pexist_idf var (ppush_let_in_on_types let_in) t e.
+  (*Definition exist_idf {var t} e let_in := @pexist_idf_nd let_in var t e.*)
 
   Section with_var.
     Context {var : base_type -> Type}.
@@ -369,5 +385,57 @@ Section dependent_sigma_eq.
     Time Definition seq47' := Eval seqr in @exist_idf var (Tbase Tnat) seq47.
     Time Definition seq48' := Eval seqr in @exist_idf var (Tbase Tnat) seq48.
     Time Definition seq49' := Eval seqr in @exist_idf var (Tbase Tnat) seq49.
+    (*Time Definition seq49'' := Eval seqr in @mapf base_type op var var (fun _ x => x) (fun _ x => x) _ seq49.*)
+
+    Time Definition seq0'' := Eval seqr in seq0' (fun _ _ x f => f x).
+    Time Definition seq1'' := Eval seqr in seq1' (fun _ _ x f => f x).
+    Time Definition seq2'' := Eval seqr in seq2' (fun _ _ x f => f x).
+    Time Definition seq3'' := Eval seqr in seq3' (fun _ _ x f => f x).
+    Time Definition seq4'' := Eval seqr in seq4' (fun _ _ x f => f x).
+    Time Definition seq5'' := Eval seqr in seq5' (fun _ _ x f => f x).
+    Time Definition seq6'' := Eval seqr in seq6' (fun _ _ x f => f x).
+    Time Definition seq7'' := Eval seqr in seq7' (fun _ _ x f => f x).
+    Time Definition seq8'' := Eval seqr in seq8' (fun _ _ x f => f x).
+    Time Definition seq9'' := Eval seqr in seq9' (fun _ _ x f => f x).
+    Time Definition seq10'' := Eval seqr in seq10' (fun _ _ x f => f x).
+    Time Definition seq11'' := Eval seqr in seq11' (fun _ _ x f => f x).
+    Time Definition seq12'' := Eval seqr in seq12' (fun _ _ x f => f x).
+    Time Definition seq13'' := Eval seqr in seq13' (fun _ _ x f => f x).
+    Time Definition seq14'' := Eval seqr in seq14' (fun _ _ x f => f x).
+    Time Definition seq15'' := Eval seqr in seq15' (fun _ _ x f => f x).
+    Time Definition seq16'' := Eval seqr in seq16' (fun _ _ x f => f x).
+    Time Definition seq17'' := Eval seqr in seq17' (fun _ _ x f => f x).
+    Time Definition seq18'' := Eval seqr in seq18' (fun _ _ x f => f x).
+    Time Definition seq19'' := Eval seqr in seq19' (fun _ _ x f => f x).
+    Time Definition seq20'' := Eval seqr in seq20' (fun _ _ x f => f x).
+    Time Definition seq21'' := Eval seqr in seq21' (fun _ _ x f => f x).
+    Time Definition seq22'' := Eval seqr in seq22' (fun _ _ x f => f x).
+    Time Definition seq23'' := Eval seqr in seq23' (fun _ _ x f => f x).
+    Time Definition seq24'' := Eval seqr in seq24' (fun _ _ x f => f x).
+    Time Definition seq25'' := Eval seqr in seq25' (fun _ _ x f => f x).
+    Time Definition seq26'' := Eval seqr in seq26' (fun _ _ x f => f x).
+    Time Definition seq27'' := Eval seqr in seq27' (fun _ _ x f => f x).
+    Time Definition seq28'' := Eval seqr in seq28' (fun _ _ x f => f x).
+    Time Definition seq29'' := Eval seqr in seq29' (fun _ _ x f => f x).
+    Time Definition seq30'' := Eval seqr in seq30' (fun _ _ x f => f x).
+    Time Definition seq31'' := Eval seqr in seq31' (fun _ _ x f => f x).
+    Time Definition seq32'' := Eval seqr in seq32' (fun _ _ x f => f x).
+    Time Definition seq33'' := Eval seqr in seq33' (fun _ _ x f => f x).
+    Time Definition seq34'' := Eval seqr in seq34' (fun _ _ x f => f x).
+    Time Definition seq35'' := Eval seqr in seq35' (fun _ _ x f => f x).
+    Time Definition seq36'' := Eval seqr in seq36' (fun _ _ x f => f x).
+    Time Definition seq37'' := Eval seqr in seq37' (fun _ _ x f => f x).
+    Time Definition seq38'' := Eval seqr in seq38' (fun _ _ x f => f x).
+    Time Definition seq39'' := Eval seqr in seq39' (fun _ _ x f => f x).
+    Time Definition seq40'' := Eval seqr in seq40' (fun _ _ x f => f x).
+    Time Definition seq41'' := Eval seqr in seq41' (fun _ _ x f => f x).
+    Time Definition seq42'' := Eval seqr in seq42' (fun _ _ x f => f x).
+    Time Definition seq43'' := Eval seqr in seq43' (fun _ _ x f => f x).
+    Time Definition seq44'' := Eval seqr in seq44' (fun _ _ x f => f x).
+    Time Definition seq45'' := Eval seqr in seq45' (fun _ _ x f => f x).
+    Time Definition seq46'' := Eval seqr in seq46' (fun _ _ x f => f x).
+    Time Definition seq47'' := Eval seqr in seq47' (fun _ _ x f => f x).
+    Time Definition seq48'' := Eval seqr in seq48' (fun _ _ x f => f x).
+    Time Definition seq49'' := Eval seqr in seq49' (fun _ _ x f => f x).
   End with_var.
 End dependent_sigma_eq.
