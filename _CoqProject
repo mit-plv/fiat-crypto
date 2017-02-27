@@ -106,6 +106,7 @@ src/Reflection/BoundByCastWf.v
 src/Reflection/CommonSubexpressionElimination.v
 src/Reflection/Conversion.v
 src/Reflection/CountLets.v
+src/Reflection/DependentIdentitySigmaByEq.v
 src/Reflection/Equality.v
 src/Reflection/Eta.v
 src/Reflection/EtaInterp.v
