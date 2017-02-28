@@ -643,14 +643,17 @@ Fixpoint eta_tuple'_dep {T n} : forall (P : tuple' T n -> Type),
      end.
 Definition eta_tuple' {T n B} : (tuple' T n -> B) -> (tuple' T n -> B)
   := @eta_tuple'_dep T n (fun _ => B).
+Global Arguments eta_tuple' {T !n B} / _ _.
 Definition eta_tuple_dep {T n} : forall (P : tuple T n -> Type),
     (forall ts : tuple T n, P ts) -> forall ts : tuple T n, P ts
   := match n with
      | 0 => fun P f => f
      | S n' => @eta_tuple'_dep T n'
      end.
+Global Arguments eta_tuple_dep {T !n} P / _ _.
 Definition eta_tuple {T n B} : (tuple T n -> B) -> (tuple T n -> B)
   := @eta_tuple_dep T n (fun _ => B).
+Global Arguments eta_tuple {T !n B} / _ _.
 
 Fixpoint eta_rtuple'_dep {T n} : forall (P : rtuple' T n -> Type),
     (forall ts : rtuple' T n, P ts) -> forall ts : rtuple' T n, P ts
@@ -662,14 +665,17 @@ Fixpoint eta_rtuple'_dep {T n} : forall (P : rtuple' T n -> Type),
      end.
 Definition eta_rtuple' {T n B} : (rtuple' T n -> B) -> (rtuple' T n -> B)
   := @eta_rtuple'_dep T n (fun _ => B).
+Global Arguments eta_rtuple' {T !n B} / _ _.
 Definition eta_rtuple_dep {T n} : forall (P : rtuple T n -> Type),
     (forall ts : rtuple T n, P ts) -> forall ts : rtuple T n, P ts
   := match n with
      | 0 => fun P f => f
      | S n' => @eta_rtuple'_dep T n'
      end.
+Global Arguments eta_rtuple_dep {T !n} P / _ _.
 Definition eta_rtuple {T n B} : (rtuple T n -> B) -> (rtuple T n -> B)
   := @eta_rtuple_dep T n (fun _ => B).
+Global Arguments eta_rtuple {T !n B} / _ _.
 
 Require Import Crypto.Util.ListUtil. (* To initialize [distr_length] database *)
 Hint Rewrite length_to_list' @length_to_list : distr_length.
