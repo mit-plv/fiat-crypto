@@ -141,6 +141,23 @@ Section language.
         -> (interp_flat_type_rel_pointwise R1 t y x
             -> interp_flat_type_rel_pointwise R2 t x y).
     Proof. induction t; simpl; intuition. Qed.
+
+    Global Instance interp_flat_type_rel_pointwise_Reflexive {R : forall t, _ -> _ -> Prop} {H : forall t, Reflexive (R t)}
+      : forall t, Reflexive (@interp_flat_type_rel_pointwise interp_base_type1 interp_base_type1 R t).
+    Proof.
+      induction t; intro; simpl; try apply conj; try reflexivity.
+    Qed.
+
+    Lemma interp_flat_type_rel_pointwise_SmartVarfMap
+          {interp_base_type1' interp_base_type2'}
+          {R : forall t, _ -> _ -> Prop}
+          t f g x y
+      : @interp_flat_type_rel_pointwise interp_base_type1 interp_base_type2 R t (SmartVarfMap f x) (SmartVarfMap g y)
+        <-> @interp_flat_type_rel_pointwise interp_base_type1' interp_base_type2' (fun t x y => R t (f _ x) (g _ y)) t x y.
+    Proof.
+      induction t; simpl; try reflexivity.
+      rewrite_hyp <- !*; reflexivity.
+    Qed.
   End flat_type_extra.
 
   Section type.
