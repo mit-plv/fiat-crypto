@@ -173,27 +173,32 @@ Ltac induction_type_in_using H rect :=
       | True => destruct H
       | _ /\ _ => destruct H as [H1 H2]
       end.
-Ltac inversion_type_step :=
-  match goal with
+Ltac inversion_flat_type_step :=
+  lazymatch goal with
   | [ H : _ = Tbase _ |- _ ]
     => induction_type_in_using H @path_flat_type_rect
-  | [ H : _ = Unit |- _ ]
+  | [ H : Tbase _ = _ |- _ ]
     => induction_type_in_using H @path_flat_type_rect
   | [ H : _ = Prod _ _ |- _ ]
     => induction_type_in_using H @path_flat_type_rect
-  | [ H : _ = Arrow _ _ |- _ ]
-    => induction_type_in_using H @path_type_rect
-  | [ H : _ = Tflat _ |- _ ]
-    => induction_type_in_using H @path_type_rect
-  | [ H : Tbase _ = _ |- _ ]
+  | [ H : Prod _ _ = _ |- _ ]
+    => induction_type_in_using H @path_flat_type_rect
+  | [ H : _ = Unit |- _ ]
     => induction_type_in_using H @path_flat_type_rect
   | [ H : Unit = _ |- _ ]
     => induction_type_in_using H @path_flat_type_rect
-  | [ H : Prod _ _ = _ |- _ ]
-    => induction_type_in_using H @path_flat_type_rect
-  | [ H : Arrow _ _ = _ |- _ ]
+  end.
+Ltac inversion_flat_type := repeat inversion_flat_type_step.
+
+Ltac inversion_type_step :=
+  lazymatch goal with
+  | [ H : _ = Tflat _ |- _ ]
     => induction_type_in_using H @path_type_rect
   | [ H : Tflat _ = _ |- _ ]
+    => induction_type_in_using H @path_type_rect
+  | [ H : _ = Arrow _ _ |- _ ]
+    => induction_type_in_using H @path_type_rect
+  | [ H : Arrow _ _ = _ |- _ ]
     => induction_type_in_using H @path_type_rect
   end.
 Ltac inversion_type := repeat inversion_type_step.
