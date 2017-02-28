@@ -32,17 +32,40 @@ Require Import Crypto.Util.Tactics.
 Require Import Crypto.Util.Notations.
 Require Import Bedrock.Word.
 
+(* TODO: it would be nice if we didn't need to duplicate this *)
+Definition add_coordinates_gen (F:Type) (Fadd Fsub Fmul : F -> F -> F) (twice_d : F) (P1 P2 : F*F*F*F) (F4:Type) (parlet: F -> (F -> F4) -> F4) (pair4:F->F->F->F->F4) : F4 :=
+  let (p, T1) := P1 in
+  let (p0, Z1) := p in
+  let (X1, Y1) := p0 in
+  let (p1, T2) := P2 in
+  let (p2, Z2) := p1 in
+  let (X2, Y2) := p2 in
+  parlet (Fmul (Fsub Y1 X1) (Fsub Y2 X2)) (fun A=>
+  parlet (Fmul (Fadd Y1 X1) (Fadd Y2 X2)) (fun B=>
+  parlet (Fmul (Fmul T1 twice_d) T2) (fun C=>
+  parlet (Fmul Z1 (Fadd Z2 Z2)) (fun D=>
+  parlet (Fsub B A) (fun E=>
+  parlet (Fsub D C) (fun F0=>
+  parlet (Fadd D C) (fun G=>
+  parlet (Fadd B A) (fun H=>
+  parlet (Fmul E F0) (fun X3=>
+  parlet (Fmul G H) (fun Y3=>
+  parlet (Fmul E H) (fun T3=>
+  parlet (Fmul F0 G) (fun Z3=>
+  pair4 X3 Y3 Z3 T3)))))))))))).
+
 Definition radd_coordinatesZ' var twice_d P1 P2
-  := @Extended.add_coordinates_gen
+  := @add_coordinates_gen
        _
        (fun x y => LetIn (Pair x y) (invert_Abs (proj1_sig raddZ_sig var)))
        (fun x y => LetIn (Pair x y) (invert_Abs (proj1_sig rsubZ_sig var)))
        (fun x y => LetIn (Pair x y) (invert_Abs (proj1_sig rmulZ_sig var)))
-       twice_d _
-       (fun x y z w => (x, y, z, w)%expr)
+       twice_d
+       P1 P2
+       _
        (fun v f => LetIn v
                          (fun k => f (SmartVarf k)))
-       P1 P2.
+       (fun x y z w => (x, y, z, w)%expr).
 
 Local Notation eta x := (fst x, snd x).
 
@@ -60,17 +83,20 @@ Definition radd_coordinatesZ'' : Syntax.Expr _ _ _
 
 Definition add_coordinates
   := fun twice_d P10 P11 P12 P13 P20 P21 P22 P23
-     => @Extended.add_coordinates
+     => add_coordinates_gen
           _ add sub mul
-          twice_d (P10, P11, P12, P13) (P20, P21, P22, P23).
+          twice_d (P10, P11, P12, P13) (P20, P21, P22, P23) _ (fun x (f:_->(_*_*_*_)) => let y := x in f y) (fun x y z t => (x,y,z,t)).
 
 Definition uncurried_add_coordinates
   := fun twice_d_P1_P2
      => let twice_d := fst twice_d_P1_P2 in
         let (P1, P2) := eta (snd twice_d_P1_P2) in
-        @Extended.add_coordinates
+        @add_coordinates_gen
           _ add sub mul
-          twice_d P1 P2.
+          twice_d P1 P2
+          _
+          (fun v f => dlet_nd k := v in f k)
+          (fun x y z w => (x, y, z, w)).
 
 Local Notation rexpr_sigPf T uncurried_op rexprZ x :=
   (Interp interp_op (t:=T) rexprZ x = uncurried_op x)
@@ -118,7 +144,7 @@ Proof.
          | [ H : prod _ _ |- _ ] => let H0 := fresh H in let H1 := fresh H in destruct H as [H0 H1]
          end.
   cbv [invert_Abs domain codomain Interp interp SmartVarf smart_interp_flat_map fst snd].
-  cbv [radd_coordinatesZ' add_coordinates Extended.add_coordinates_gen uncurried_add_coordinates SmartVarf smart_interp_flat_map]; simpl @fst; simpl @snd.
+  cbv [radd_coordinatesZ' uncurried_add_coordinates add_coordinates add_coordinates_gen SmartVarf smart_interp_flat_map]; simpl @fst; simpl @snd.
   repeat match goal with
          | [ |- appcontext[@proj1_sig ?A ?B ?v] ]
            => let k := fresh "f" in
@@ -133,11 +159,11 @@ Proof.
          end.
   cbv [Interp Curry.curry2] in *.
   unfold interpf, interpf_step; fold_interpf.
-  cbv beta iota delta [Extended.add_coordinates interp_flat_type interp_base_type GF25519.fe25519].
+  cbv beta iota delta [uncurried_add_coordinates add_coordinates_gen interp_flat_type interp_base_type GF25519.fe25519].
   Time
     abstract (
       repeat match goal with
-             | [ |- (dlet x := ?y in @?z x) = (let x' := ?y' in @?z' x') ]
+             | [ |- (dlet x := ?y in @?z x) = (dlet x' := ?y' in @?z' x') ]
                => refine ((fun pf0 pf1 => @Proper_Let_In_nd_changebody _ _ Logic.eq _ y y' pf0 z z' pf1)
                             (_ : y = y')
                             (_ : forall x, z x = z' x));
