@@ -1,3 +1,4 @@
+Require Import Coq.Classes.Morphisms.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Util.Tactics.DestructHead.
@@ -131,6 +132,24 @@ Section homogenous_type.
   Proof.
     unfold SmartVarfMap; clear; induction t; simpl; destruct_head_hnf unit; destruct_head_hnf prod;
       rewrite_hyp ?*; congruence.
+  Qed.
+  Global Instance smart_interp_flat_map_Proper {f g}
+    : Proper ((forall_relation (fun t => pointwise_relation _ eq))
+                ==> eq
+                ==> (forall_relation (fun A => forall_relation (fun B => pointwise_relation _ (pointwise_relation _ eq))))
+                ==> forall_relation (fun t => eq ==> eq))
+             (@smart_interp_flat_map f g).
+  Proof.
+    unfold forall_relation, pointwise_relation, respectful.
+    intros F G HFG x y ? Q R HQR t a b ?; subst y b.
+    induction t; simpl in *; auto.
+    rewrite_hyp !*; reflexivity.
+  Qed.
+  Global Instance SmartVarfMap_Proper {var' var''}
+    : Proper (forall_relation (fun t => pointwise_relation _ eq) ==> forall_relation (fun t => eq ==> eq))
+             (@SmartVarfMap var' var'').
+  Proof.
+    repeat intro; eapply smart_interp_flat_map_Proper; trivial; repeat intro; reflexivity.
   Qed.
   Definition SmartVarfMap2 {var var' var''} (f : forall t, var t -> var' t -> var'' t) {t}
     : interp_flat_type var t -> interp_flat_type var' t -> interp_flat_type var'' t
