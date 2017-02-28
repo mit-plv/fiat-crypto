@@ -677,5 +677,39 @@ Definition eta_rtuple {T n B} : (rtuple T n -> B) -> (rtuple T n -> B)
   := @eta_rtuple_dep T n (fun _ => B).
 Global Arguments eta_rtuple {T !n B} / _ _.
 
+Lemma strip_eta_tuple'_dep {T n} P (f : forall ts : tuple' T n, P ts) ts
+  : eta_tuple'_dep P f ts = f ts.
+Proof.
+  revert dependent P; induction n; simpl in *; [ reflexivity | intros ].
+  destruct_head prod.
+  rewrite IHn; reflexivity.
+Qed.
+Lemma strip_eta_tuple' {T n B} (f : tuple' T n -> B) ts
+  : eta_tuple' f ts = f ts.
+Proof. exact (strip_eta_tuple'_dep _ _ _). Qed.
+Lemma strip_eta_tuple_dep {T n} P (f : forall ts : tuple T n, P ts) ts
+  : eta_tuple_dep P f ts = f ts.
+Proof. destruct n; [ reflexivity | exact (strip_eta_tuple'_dep _ _ _) ]. Qed.
+Lemma strip_eta_tuple {T n B} (f : tuple T n -> B) ts
+  : eta_tuple f ts = f ts.
+Proof. exact (strip_eta_tuple_dep _ _ _). Qed.
+
+Lemma strip_eta_rtuple'_dep {T n} P (f : forall ts : rtuple' T n, P ts) ts
+  : eta_rtuple'_dep P f ts = f ts.
+Proof.
+  revert dependent P; induction n; simpl in *; [ reflexivity | intros ].
+  destruct_head prod.
+  rewrite IHn; reflexivity.
+Qed.
+Lemma strip_eta_rtuple' {T n B} (f : rtuple' T n -> B) ts
+  : eta_rtuple' f ts = f ts.
+Proof. exact (strip_eta_rtuple'_dep _ _ _). Qed.
+Lemma strip_eta_rtuple_dep {T n} P (f : forall ts : rtuple T n, P ts) ts
+  : eta_rtuple_dep P f ts = f ts.
+Proof. destruct n; [ reflexivity | exact (strip_eta_rtuple'_dep _ _ _) ]. Qed.
+Lemma strip_eta_rtuple {T n B} (f : rtuple T n -> B) ts
+  : eta_rtuple f ts = f ts.
+Proof. exact (strip_eta_rtuple_dep _ _ _). Qed.
+
 Require Import Crypto.Util.ListUtil. (* To initialize [distr_length] database *)
 Hint Rewrite length_to_list' @length_to_list : distr_length.
