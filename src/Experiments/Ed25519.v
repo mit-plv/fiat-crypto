@@ -13,7 +13,6 @@ Require Crypto.Specific.GF25519.
 Require Crypto.Specific.GF25519Bounded.
 Require Crypto.Specific.SC25519.
 Require Crypto.CompleteEdwardsCurve.ExtendedCoordinates.
-Require Crypto.Encoding.PointEncoding.
 Require Crypto.Util.IterAssocOp.
 Import Morphisms.
 Import NPeano.
@@ -59,10 +58,8 @@ Definition Erep := (@ExtendedCoordinates.Extended.point
          GF25519BoundedCommon.fe25519
          GF25519BoundedCommon.eq
          GF25519BoundedCommon.zero
-         GF25519BoundedCommon.one
          GF25519Bounded.add
          GF25519Bounded.mul
-         GF25519BoundedCommon.div
          a
          d
       ).
@@ -72,51 +69,7 @@ Local Existing Instance GF25519.homomorphism_F25519_decode.
 (* MOVE : mostly pre-Specific. TODO : narrow down which properties can
 be proven generically and which need to be computed, then maybe create
 a tactic to do the computed ones *)
-Local Instance twedprm_ERep :
-  @CompleteEdwardsCurve.E.twisted_edwards_params
-   GF25519BoundedCommon.fe25519 GF25519BoundedCommon.eq
-   GF25519BoundedCommon.zero GF25519BoundedCommon.one
-   GF25519Bounded.add GF25519Bounded.mul a d.
-Proof.
-  constructor; try vm_decide.
-  { destruct CompleteEdwardsCurve.E.square_a as [sqrt_a H].
-    exists (GF25519BoundedCommon.encode sqrt_a).
-    transitivity (GF25519BoundedCommon.encode Spec.Ed25519.a); [ rewrite <- H | vm_decide ].
-    rewrite <- Algebra.Ring.homomorphism_mul; reflexivity. }
-  { intros x H.
-    pose proof (CompleteEdwardsCurve.E.nonsquare_d (GF25519BoundedCommon.decode x)) as ns_d.
-    apply ns_d; clear ns_d.
-    transitivity (GF25519BoundedCommon.decode d); [ rewrite <- H | vm_decide ].
-    rewrite <- Algebra.Ring.homomorphism_mul; reflexivity. }
-Qed.
 
-Definition coord_to_extended (xy : GF25519BoundedCommon.fe25519 * GF25519BoundedCommon.fe25519) pf :=
-  ExtendedCoordinates.Extended.from_twisted
-    (field := GF25519Bounded.field25519) (prm :=twedprm_ERep)
-    (exist Pre.onCurve xy pf).
-
-Definition extended_to_coord (P : Erep) : (GF25519BoundedCommon.fe25519 * GF25519BoundedCommon.fe25519) :=
-  CompleteEdwardsCurve.E.coordinates (ExtendedCoordinates.Extended.to_twisted P (field:=GF25519Bounded.field25519)).
-
-Lemma encode_eq_iff :  forall x y : ModularArithmetic.F.F GF25519.modulus,
-                    GF25519BoundedCommon.eq
-                      (GF25519BoundedCommon.encode x)
-                      (GF25519BoundedCommon.encode y) <->  x = y.
-Proof.
-  intros.
-  cbv [GF25519BoundedCommon.eq GF25519BoundedCommon.encode ModularBaseSystem.eq].
-  rewrite !GF25519BoundedCommon.proj1_fe25519_exist_fe25519, !ModularBaseSystemProofs.encode_rep.
-  reflexivity.
-Qed.
-
-Definition EToRep :=
-  PointEncoding.point_phi
-    (Kfield := GF25519Bounded.field25519)
-    (phi_homomorphism := GF25519Bounded.homomorphism_F25519_encode)
-    (Kpoint := Erep)
-    (phi_a := phi_a)
-    (phi_d := phi_d)
-    (Kcoord_to_point := ExtendedCoordinates.Extended.from_twisted (prm := twedprm_ERep) (field := GF25519Bounded.field25519)).
 
 Definition ZNWord sz x := Word.NToWord sz (BinInt.Z.to_N x).
 Definition WordNZ {sz} (w : Word.word sz) := BinInt.Z.of_N (Word.wordToN w).
@@ -127,156 +80,8 @@ Definition S2Rep := SC25519.S2Rep.
 Lemma eq_a_minus1 : GF25519BoundedCommon.eq a (GF25519Bounded.opp GF25519BoundedCommon.one).
 Proof. vm_decide. Qed.
 
-Definition ErepAdd :=
-  (@ExtendedCoordinates.Extended.add _ _ _ _ _ _ _ _ _ _
-                                     a d GF25519Bounded.field25519 twedprm_ERep _
-                                     eq_a_minus1 twice_d (eq_refl _)
-                                     _ (fun _ _ => reflexivity _)).
-
 Local Coercion Z.of_nat : nat >-> Z.
 Definition ERepSel : bool -> Erep -> Erep -> Erep := fun b x y => if b then y else x.
-
-Local Existing Instance ExtendedCoordinates.Extended.extended_group.
-(* TODO : automate this? *)
-Local Instance Ahomom :
-      @Algebra.Monoid.is_homomorphism E
-           CompleteEdwardsCurveTheorems.E.eq
-           CompleteEdwardsCurve.E.add Erep
-           (ExtendedCoordinates.Extended.eq
-              (field := GF25519Bounded.field25519)) ErepAdd EToRep.
-Proof.
-  eapply (Algebra.Group.is_homomorphism_compose
-           (Hphi := CompleteEdwardsCurveTheorems.E.lift_homomorphism
-                (field := PrimeFieldTheorems.F.field_modulo GF25519.modulus)
-                (Ha := phi_a) (Hd := phi_d)
-                (Kprm := twedprm_ERep)
-                (point_phi := CompleteEdwardsCurveTheorems.E.ref_phi
-                                (Ha := phi_a) (Hd := phi_d)
-                                (fieldK := GF25519Bounded.field25519))
-                (fieldK := GF25519Bounded.field25519))
-           (Hphi' :=  ExtendedCoordinates.Extended.homomorphism_from_twisted)).
-  cbv [EToRep PointEncoding.point_phi].
-  reflexivity.
-  Grab Existential Variables.
-  cbv [CompleteEdwardsCurveTheorems.E.eq].
-  intros.
-  match goal with |- @Tuple.fieldwise _ _ ?n ?R _ _ =>
-                  let A := fresh "H" in
-                  assert (Equivalence R) as A by (exact _);
-                    pose proof (@Tuple.Equivalence_fieldwise _ R A n)
-  end.
-  reflexivity.
-Qed.
-
-(* TODO : automate *)
-Lemma ERep_eq_E P Q :
-      ExtendedCoordinates.Extended.eq (field:=GF25519Bounded.field25519)
-      (EToRep P) (EToRep Q)
-      -> CompleteEdwardsCurveTheorems.E.eq P Q.
-Proof.
-  destruct P as [[] HP], Q as [[] HQ].
-  cbv [ExtendedCoordinates.Extended.eq EToRep PointEncoding.point_phi CompleteEdwardsCurveTheorems.E.ref_phi CompleteEdwardsCurveTheorems.E.eq CompleteEdwardsCurve.E.coordinates
-                                       ExtendedCoordinates.Extended.coordinates
-                                       ExtendedCoordinates.Extended.to_twisted
-                                       ExtendedCoordinates.Extended.from_twisted
-                                       GF25519BoundedCommon.eq ModularBaseSystem.eq
-  Tuple.fieldwise Tuple.fieldwise' fst snd proj1_sig].
-  intro H.
-  rewrite !GF25519Bounded.mul_correct, !GF25519Bounded.inv_correct, !GF25519BoundedCommon.proj1_fe25519_encode in *.
-  rewrite !Algebra.Ring.homomorphism_mul in H.
-  pose proof (Algebra.Field.homomorphism_multiplicative_inverse (H:=GF25519.field25519)) as Hinv;
-    rewrite Hinv in H by vm_decide; clear Hinv.
-  let e := constr:((ModularBaseSystem.decode (GF25519BoundedCommon.proj1_fe25519 GF25519BoundedCommon.one))) in
-  set e as xe; assert (Hone:xe = ModularArithmetic.F.one) by vm_decide; subst xe; rewrite Hone in *; clear Hone.
-  rewrite <-!(Algebra.field_div_definition(inv:=ModularArithmetic.F.inv)) in H.
-  rewrite !(Algebra.Field.div_one(one:=ModularArithmetic.F.one)) in H.
-  pose proof ModularBaseSystemProofs.encode_rep as Hencode;
-    unfold ModularBaseSystem.rep in Hencode; rewrite !Hencode in H.
-  assumption.
-Qed.
-
-Section SRepERepMul.
-  Import Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Classes.Equivalence.
-  Import Coq.NArith.NArith Coq.PArith.BinPosDef.
-  Import Coq.Numbers.Natural.Peano.NPeano.
-  Import Crypto.Algebra.
-  Import Crypto.Util.IterAssocOp.
-
-  Let ll := Eval vm_compute in (BinInt.Z.to_nat (BinInt.Z.log2_up l)).
-  Definition SRepERepMul : SRep -> Erep -> Erep := fun x =>
-    IterAssocOp.iter_op
-      (op:=ErepAdd)
-      (id:=ExtendedCoordinates.Extended.zero(field:=GF25519Bounded.field25519)(prm:=twedprm_ERep))
-      (fun i => N.testbit_nat (Z.to_N x) i)
-      (sel:=ERepSel)
-      ll
-  .
-
-  (* TODO : automate *)
-  Lemma SRepERepMul_correct n P :
-    ExtendedCoordinates.Extended.eq (field:=GF25519Bounded.field25519)
-                                    (EToRep (CompleteEdwardsCurve.E.mul (n mod (Z.to_nat l))%nat P))
-                                    (SRepERepMul (S2Rep (ModularArithmetic.F.of_nat l n)) (EToRep P)).
-  Proof.
-    rewrite ScalarMult.scalarmult_ext.
-    unfold SRepERepMul.
-    etransitivity; [|symmetry; eapply iter_op_correct].
-    3: intros; reflexivity.
-    2: intros; reflexivity.
-    { etransitivity.
-      apply (@Group.homomorphism_scalarmult _ _ _ _ _ _ _ _ _ _ _ _ EToRep Ahomom ScalarMult.scalarmult_ref _ ScalarMult.scalarmult_ref _ _ _).
-      unfold S2Rep, SC25519.S2Rep, ModularArithmetic.F.of_nat.
-      apply (_ : Proper (_ ==> _ ==> _) ScalarMult.scalarmult_ref); [ | reflexivity ].
-      rewrite ModularArithmeticTheorems.F.to_Z_of_Z.
-      apply Nat2Z.inj_iff.
-      rewrite N_nat_Z, Z2N.id by (refine (proj1 (Zdiv.Z_mod_lt _ _ _)); vm_decide).
-      rewrite Zdiv.mod_Zmod by (intro Hx; inversion Hx);
-      rewrite Z2Nat.id by vm_decide; reflexivity. }
-    { (* this could be made a lemma with some effort *)
-      unfold S2Rep, SC25519.S2Rep, ModularArithmetic.F.of_nat;
-        rewrite ModularArithmeticTheorems.F.to_Z_of_Z.
-      destruct (Z.mod_pos_bound (Z.of_nat n) l) as [Hl Hu];
-        try (eauto || vm_decide); [].
-      generalize dependent (Z.of_nat n mod l)%Z; intros; [].
-      apply Z2N.inj_lt in Hu; try (eauto || vm_decide); [];
-        apply Z2N.inj_le in Hl; try (eauto || vm_decide); [].
-      clear Hl; generalize dependent (Z.to_N z); intro x; intros.
-      rewrite N.size_nat_equiv.
-      destruct (dec (x = 0%N)); subst; try vm_decide; [];
-        rewrite N.size_log2 by assumption.
-      rewrite N2Nat.inj_succ; assert (N.to_nat (N.log2 x) < ll); try omega.
-      change ll with (N.to_nat (N.of_nat ll)).
-      apply Nomega.Nlt_out; eapply N.le_lt_trans.
-      eapply N.log2_le_mono; eapply N.lt_succ_r.
-      rewrite N.succ_pred; try eassumption.
-      vm_decide.
-      vm_compute. reflexivity. }
-  Qed.
-
-  Definition NERepMul : N -> Erep -> Erep := fun x =>
-    IterAssocOp.iter_op
-      (op:=ErepAdd)
-      (id:=ExtendedCoordinates.Extended.zero(field:=GF25519Bounded.field25519)(prm:=twedprm_ERep))
-      (N.testbit_nat x)
-      (sel:=ERepSel)
-      ll
-  .
-  Lemma NERepMul_correct n P :
-    (N.size_nat (N.of_nat n) <= ll) ->
-    ExtendedCoordinates.Extended.eq (field:=GF25519Bounded.field25519)
-                                    (EToRep (CompleteEdwardsCurve.E.mul n P))
-                                    (NERepMul (N.of_nat n) (EToRep P)).
-  Proof.
-    rewrite ScalarMult.scalarmult_ext.
-    unfold NERepMul.
-    etransitivity; [|symmetry; eapply iter_op_correct].
-    3: intros; reflexivity.
-    2: intros; reflexivity.
-    { rewrite Nat2N.id.
-      apply (@Group.homomorphism_scalarmult _ _ _ _ _ _ _ _ _ _ _ _ EToRep Ahomom ScalarMult.scalarmult_ref _ ScalarMult.scalarmult_ref _ _ _). }
-    { assumption. }
-  Qed.
-End SRepERepMul.
 
 (* TODO : figure out if and where to move this *)
 Lemma nth_default_freeze_input_bound_compat : forall i,
@@ -446,80 +251,6 @@ Proof.
       omega.
 Qed.
 
-(* TODO : automate (after moving feSign) *)
-Lemma feSign_correct : forall x,
-  PointEncoding.sign x = feSign (GF25519BoundedCommon.encode x).
-Proof.
-  cbv [PointEncoding.sign feSign].
-  intros.
-  rewrite GF25519Bounded.freeze_correct.
-  rewrite GF25519BoundedCommon.proj1_fe25519_encode.
-  match goal with |- appcontext [GF25519.freeze ?x] =>
-                  remember (GF25519.freeze x) end.
-  transitivity (Z.testbit (nth_default 0%Z (Tuple.to_list 10 f) 0) 0).
-  Focus 2. {
-  cbv [GF25519.fe25519] in *.
-  repeat match goal with p : (_ * _)%type |- _ => destruct p end.
-  simpl. reflexivity. } Unfocus.
-
-  rewrite !Z.bit0_odd.
-  rewrite <-@Pow2BaseProofs.parity_decode with (limb_widths := PseudoMersenneBaseParams.limb_widths) by (auto using PseudoMersenneBaseParamProofs.limb_widths_nonneg, Tuple.length_to_list; cbv; congruence).
-  pose proof GF25519.freezePreconditions25519.
-  match goal with H : _ = GF25519.freeze ?u |- _ =>
-                  let A := fresh "H" in let B := fresh "H" in
-                  pose proof (ModularBaseSystemProofs.freeze_rep u x) as A;
-                    match type of A with ?P -> _ => assert P as B by apply ModularBaseSystemProofs.encode_rep end;
-                    specialize (A B); clear B
-  end.
-  to_MBSfreeze Heqf.
-  rewrite <-Heqf in *.
-  cbv [ModularBaseSystem.rep ModularBaseSystem.decode ModularBaseSystemList.decode] in *.
-  rewrite <-H0.
-  rewrite ModularArithmeticTheorems.F.to_Z_of_Z.
-  rewrite Z.mod_small; [ reflexivity | ].
-  pose proof (minrep_freeze x).
-  apply ModularBaseSystemListProofs.ge_modulus_spec;
-    try solve [inversion H; auto using Tuple.length_to_list];
-    subst f; intuition auto.
-  Grab Existential Variables.
-  apply Tuple.length_to_list.
-Qed.
-
-(* MOVE : to wherever feSign goes*)
-Local Instance Proper_feSign : Proper (GF25519BoundedCommon.eq ==> eq) feSign.
-Proof.
-  repeat intro; cbv [feSign].
-  rewrite !GF25519Bounded.freeze_correct.
-  repeat match goal with |- appcontext[GF25519.freeze ?x] =>
-                         remember (GF25519.freeze x) end.
-  assert (Tuple.fieldwise (n := 10) eq f f0).
-  { pose proof GF25519.freezePreconditions25519.
-    match goal with H1 : _ = GF25519.freeze ?u,
-                    H2 : _ = GF25519.freeze ?v |- _ =>
-    let A := fresh "H" in
-    let HP := fresh "H" in
-    let HQ := fresh "H" in
-        pose proof (ModularBaseSystemProofs.freeze_canonical
-                      (freeze_pre := GF25519.freezePreconditions25519) u v _ _ eq_refl eq_refl);
-        match type of A with ?P -> ?Q -> _ =>
-                            assert P as HP by apply initial_bounds;
-                                assert Q as HQ by apply initial_bounds end;
-        specialize (A HP HQ); clear HP HQ end.
-    cbv [ModularBaseSystem.eq] in *.
-    to_MBSfreeze Heqf0.
-    to_MBSfreeze Heqf.
-    subst.
-    apply H1.
-    cbv [GF25519BoundedCommon.eq ModularBaseSystem.eq] in *.
-    auto. }
-  { cbv [GF25519.fe25519 ] in *.
-    repeat match goal with p : (_ * _)%type |- _ => destruct p end.
-    cbv [Tuple.fieldwise Tuple.fieldwise' fst snd] in *.
-    intuition congruence. }
-  Grab Existential Variables.
-  rewrite Tuple.length_to_list; reflexivity.
-  rewrite Tuple.length_to_list; reflexivity.
-Qed.
 
 (* MOVE : pre-Specific *)
 Lemma Proper_pack :
@@ -538,153 +269,12 @@ Proof.
     intuition subst; reflexivity.
 Qed.
 
-Lemma ext_eq_correct : forall p q : Erep,
-  ExtendedCoordinates.Extended.eq (field:=GF25519Bounded.field25519) p q <->
-  Tuple.fieldwise (n := 2) GF25519BoundedCommon.eq (extended_to_coord p) (extended_to_coord q).
-Proof.
-  cbv [extended_to_coord]; intros.
-  cbv [ExtendedCoordinates.Extended.eq].
-  match goal with |- _ <-> Tuple.fieldwise _
-                                           (CompleteEdwardsCurve.E.coordinates ?x)
-                                           (CompleteEdwardsCurve.E.coordinates ?y) =>
-                  pose proof (CompleteEdwardsCurveTheorems.E.Proper_coordinates
-                                (field := GF25519Bounded.field25519) (a := a) (d := d) x y)
-  end.
-  tauto.
-Qed.
-
 Definition SRepEnc : SRep -> Word.word b := (fun x => Word.NToWord _ (Z.to_N x)).
-
-(* TODO : automate? *)
-Local Instance Proper_SRepERepMul : Proper (SC25519.SRepEq ==> ExtendedCoordinates.Extended.eq (field:=GF25519Bounded.field25519) ==> ExtendedCoordinates.Extended.eq (field:=GF25519Bounded.field25519)) SRepERepMul.
-  unfold SRepERepMul, SC25519.SRepEq.
-  repeat intro.
-  eapply IterAssocOp.Proper_iter_op.
-  { eapply @ExtendedCoordinates.Extended.Proper_add. }
-  { reflexivity. }
-  { repeat intro; subst; reflexivity. }
-  { unfold ERepSel; repeat intro; break_match; solve [ discriminate | eauto ]. }
-  { reflexivity. }
-  { assumption. }
-Qed.
 
 Lemma SRepEnc_correct : forall x : ModularArithmetic.F.F l, Senc x = SRepEnc (S2Rep x).
   unfold SRepEnc, Senc, Fencode; intros; f_equal.
 Qed.
 
-Section ConstantPoints.
-  Import GF25519BoundedCommon.
-  Let proj1_sig_ERepB' := Eval vm_compute in proj1_sig (EToRep B).
-  Let tmap4 := Eval compute in @Tuple.map 4. Arguments tmap4 {_ _} _ _.
-  Let proj1_sig_ERepB := Eval cbv [tmap4 proj1_sig_ERepB' fe25519_word64ize word64ize andb opt.word64ToZ opt.word64ize opt.Zleb Z.compare CompOpp Pos.compare Pos.compare_cont] in (tmap4 fe25519_word64ize proj1_sig_ERepB').
-  Let proj1_sig_ERepB_correct : proj1_sig_ERepB = proj1_sig (EToRep B).
-  Proof. vm_cast_no_check (eq_refl proj1_sig_ERepB). Qed.
-
-  Definition ERepB : Erep.
-    exists (eta4 proj1_sig_ERepB).
-    cbv [GF25519BoundedCommon.eq ModularBaseSystem.eq Pre.onCurve].
-    vm_decide_no_check.
-  Defined.
-
-  Lemma ERepB_correct : ExtendedCoordinates.Extended.eq (field:=GF25519Bounded.field25519) ERepB (EToRep B).
-    generalize proj1_sig_ERepB_correct as H; destruct (EToRep B) as [B ?] in |- *.
-    cbv [proj1_sig] in |- *. intro. subst B.
-    vm_decide.
-  Qed.
-End ConstantPoints.
-
-Lemma B_order_l : CompleteEdwardsCurveTheorems.E.eq
-              (CompleteEdwardsCurve.E.mul (Z.to_nat l) B)
-              CompleteEdwardsCurve.E.zero.
-Proof.
-  apply ERep_eq_E.
-  rewrite NERepMul_correct; rewrite (Z_nat_N l).
-  2:vm_decide.
-  apply dec_bool.
-  vm_cast_no_check (eq_refl true).
-(* Time Qed. (* Finished transaction in 1646.167 secs (1645.753u,0.339s) (successful) *) *)
-Admitted.
-
-Axiom ERepEnc : Erep -> Word.word b.
-Axiom ERepEnc_correct : (forall P : E, Eenc P = ERepEnc (EToRep P)).
-Axiom Proper_ERepEnc : Proper (ExtendedCoordinates.Extended.eq ==> eq) ERepEnc.
-
-Definition sign := @EdDSARepChange.sign E
-         (@CompleteEdwardsCurveTheorems.E.eq Fq (@eq Fq) (@ModularArithmetic.F.one q)
-            (@ModularArithmetic.F.add q) (@ModularArithmetic.F.mul q) Spec.Ed25519.a Spec.Ed25519.d)
-         (@CompleteEdwardsCurve.E.add Fq (@eq Fq) (ModularArithmetic.F.of_Z q 0) (@ModularArithmetic.F.one q)
-            (@ModularArithmetic.F.opp q) (@ModularArithmetic.F.add q) (@ModularArithmetic.F.sub q)
-            (@ModularArithmetic.F.mul q) (@ModularArithmetic.F.inv q) (@ModularArithmetic.F.div q)
-            (@PrimeFieldTheorems.F.field_modulo q prime_q) (@ModularArithmeticTheorems.F.eq_dec q) Spec.Ed25519.a
-            Spec.Ed25519.d curve_params)
-         (@CompleteEdwardsCurve.E.zero Fq (@eq Fq) (ModularArithmetic.F.of_Z q 0) (@ModularArithmetic.F.one q)
-            (@ModularArithmetic.F.opp q) (@ModularArithmetic.F.add q) (@ModularArithmetic.F.sub q)
-            (@ModularArithmetic.F.mul q) (@ModularArithmetic.F.inv q) (@ModularArithmetic.F.div q)
-            (@PrimeFieldTheorems.F.field_modulo q prime_q) (@ModularArithmeticTheorems.F.eq_dec q) Spec.Ed25519.a
-            Spec.Ed25519.d curve_params)
-         (@CompleteEdwardsCurveTheorems.E.opp Fq (@eq Fq) (ModularArithmetic.F.of_Z q 0)
-            (@ModularArithmetic.F.one q) (@ModularArithmetic.F.opp q) (@ModularArithmetic.F.add q)
-            (@ModularArithmetic.F.sub q) (@ModularArithmetic.F.mul q) (@ModularArithmetic.F.inv q)
-            (@ModularArithmetic.F.div q) Spec.Ed25519.a Spec.Ed25519.d (@PrimeFieldTheorems.F.field_modulo q prime_q)
-            (@ModularArithmeticTheorems.F.eq_dec q))
-         (@CompleteEdwardsCurve.E.mul Fq (@eq Fq) (ModularArithmetic.F.of_Z q 0) (@ModularArithmetic.F.one q)
-            (@ModularArithmetic.F.opp q) (@ModularArithmetic.F.add q) (@ModularArithmetic.F.sub q)
-            (@ModularArithmetic.F.mul q) (@ModularArithmetic.F.inv q) (@ModularArithmetic.F.div q)
-            (@PrimeFieldTheorems.F.field_modulo q prime_q) (@ModularArithmeticTheorems.F.eq_dec q) Spec.Ed25519.a
-            Spec.Ed25519.d curve_params) b SHA512 c n l B Eenc Senc (@ed25519 SHA512 B_order_l ) Erep ERepEnc SRep SC25519.SRepDecModL
-         SRepERepMul SRepEnc SC25519.SRepAdd SC25519.SRepMul ERepB SC25519.SRepDecModLShort.
-
-Let sign_correct : forall pk sk {mlen} (msg:Word.word mlen), sign pk sk _ msg = EdDSA.sign pk sk msg :=
-  @sign_correct
-      (* E := *) E
-      (* Eeq := *) CompleteEdwardsCurveTheorems.E.eq
-      (* Eadd := *) CompleteEdwardsCurve.E.add
-      (* Ezero := *) CompleteEdwardsCurve.E.zero
-      (* Eopp := *) CompleteEdwardsCurveTheorems.E.opp
-      (* EscalarMult := *) CompleteEdwardsCurve.E.mul
-      (* b := *) b
-      (* H := *) SHA512
-      (* c := *) c
-      (* n := *) n
-      (* l := *) l
-      (* B := *) B
-      (* Eenc := *) Eenc
-      (* Senc := *) Senc
-      (* prm := *) (ed25519 B_order_l)
-      (* Erep := *) Erep
-      (* ErepEq := *) ExtendedCoordinates.Extended.eq
-      (* ErepAdd := *) ErepAdd
-      (* ErepId := *) ExtendedCoordinates.Extended.zero
-      (* ErepOpp := *) ExtendedCoordinates.Extended.opp
-      (* Agroup := *) ExtendedCoordinates.Extended.extended_group
-      (* EToRep := *) EToRep
-      (* Ahomom := *) Ahomom
-      (* ERepEnc := *) ERepEnc
-      (* ERepEnc_correct := *) ERepEnc_correct
-      (* Proper_ERepEnc := *) Proper_ERepEnc
-      (* SRep := *) SRep
-      (* SRepEq := *) SC25519.SRepEq (*(Tuple.fieldwise Logic.eq)*)
-      (* H0 := *) SC25519.SRepEquiv (* Tuple.Equivalence_fieldwise*)
-      (* S2Rep := *) S2Rep
-      (* SRepDecModL := *) SC25519.SRepDecModL
-      (* SRepDecModL_correct := *) SC25519.SRepDecModL_Correct
-      (* SRepERepMul := *) SRepERepMul
-      (* SRepERepMul_correct := *) SRepERepMul_correct
-      (* Proper_SRepERepMul := *) Proper_SRepERepMul
-      (* SRepEnc := *) _
-      (* SRepEnc_correct := *) SRepEnc_correct
-      (* Proper_SRepEnc := *) _
-      (* SRepAdd := *) SC25519.SRepAdd
-      (* SRepAdd_correct := *) SC25519.SRepAdd_Correct
-      (* Proper_SRepAdd := *) SC25519.SRepAdd_Proper
-      (* SRepMul := *) SC25519.SRepMul
-      (* SRepMul_correct := *) SC25519.SRepMul_Correct
-      (* Proper_SRepMul := *) SC25519.SRepMul_Proper
-      (* ErepB := *) ERepB
-      (* ErepB_correct := *) ERepB_correct
-      (* SRepDecModLShort := *) SC25519.SRepDecModLShort
-      (* SRepDecModLShort_correct := *) SC25519.SRepDecModLShort_Correct
-.
 Definition Fsqrt_minus1 := Eval vm_compute in ModularBaseSystem.decode (GF25519.sqrt_m1).
 Definition Fsqrt := PrimeFieldTheorems.F.sqrt_5mod8 Fsqrt_minus1.
 
@@ -697,47 +287,19 @@ Proof.
   rewrite <- Znat.Z2Nat.inj_lt by auto with zarith.
   reflexivity.
 Qed.
-Lemma bound_check255 : BinInt.Z.to_nat GF25519.modulus < 2^255.
-Proof.
-  apply bound_check_255_helper; vm_compute; intuition congruence.
-Qed.
-
-Lemma bound_check256 : BinInt.Z.to_nat GF25519.modulus < 2^256.
-Proof.
-  apply bound_check_255_helper; vm_compute; intuition congruence.
-Qed.
-
-Definition Edec := (@PointEncodingPre.point_dec
-               _ eq
-               ModularArithmetic.F.zero
-               ModularArithmetic.F.one
-               ModularArithmetic.F.opp
-               ModularArithmetic.F.add
-               ModularArithmetic.F.sub
-               ModularArithmetic.F.mul
-               ModularArithmetic.F.div
-               _
-               Spec.Ed25519.a
-               Spec.Ed25519.d
-               _
-               Fsqrt
-               (PointEncoding.Fencoding
-                  (two_lt_m := GF25519.modulus_gt_2)
-                  (bound_check := bound_check255))
-               Spec.Ed25519.sign).
 
 (* MOVE : pre-Specific (general SC files?) *)
 Definition Sdec : Word.word b -> option (ModularArithmetic.F.F l) :=
  fun w =>
  let z := (BinIntDef.Z.of_N (Word.wordToN w)) in
- if ZArith_dec.Z_lt_dec z l
+ if ZArith_dec.Z_lt_dec z (Z.pos l)
  then Some (ModularArithmetic.F.of_Z l z) else None.
 
 (* MOVE: same place as Sdec *)
 Lemma eq_enc_S_iff : forall (n_ : Word.word b) (n : ModularArithmetic.F.F l),
  Senc n = n_ <-> Sdec n_ = Some n.
 Proof.
-  assert (0 < Ed25519.l)%Z as l_pos by (cbv; congruence).
+  assert (0 < Z.pos Ed25519.l)%Z as l_pos by (cbv; congruence).
   intros.
   pose proof (ModularArithmeticTheorems.F.to_Z_range n l_pos).
   unfold Senc, Fencode, Sdec; intros;
@@ -767,16 +329,6 @@ Lemma SRepDec_correct : forall w : Word.word b,
    (SRepDec w).
 Proof.
   unfold SRepDec, S2Rep, SC25519.S2Rep; intros; reflexivity.
-Qed.
-
-Lemma extended_to_coord_from_twisted: forall pt,
-  Tuple.fieldwise (n := 2) GF25519BoundedCommon.eq
-     (extended_to_coord (ExtendedCoordinates.Extended.from_twisted pt))
-      (CompleteEdwardsCurve.E.coordinates pt).
-Proof.
-  intros; cbv [extended_to_coord].
-  rewrite ExtendedCoordinates.Extended.to_twisted_from_twisted.
-  reflexivity.
 Qed.
 
 Lemma Fsqrt_minus1_correct :
@@ -971,88 +523,6 @@ Proof.
   eapply f_equal. eapply f_equal. eapply f_equal. rewrite Hxy. reflexivity.
 Qed.
 
-Lemma eq_enc_E_iff : forall (P_ : Word.word b) (P : E),
- Eenc P = P_ <->
- Option.option_eq CompleteEdwardsCurveTheorems.E.eq (Edec P_) (Some P).
-Proof.
-  cbv [Eenc].
-  eapply (@PointEncoding.encode_point_decode_point_iff (b-1)); try (exact iff_equivalence || exact curve_params); [].
-  intros.
-  apply (@PrimeFieldTheorems.F.sqrt_5mod8_correct GF25519.modulus _ eq_refl Fsqrt_minus1 Fsqrt_minus1_correct).
-  eexists.
-  symmetry; eassumption.
-Qed.
-
-Axiom ERepDec : Word.word b -> option Erep.
-Axiom ERepDec_correct : forall w : Word.word b,
- option_eq ExtendedCoordinates.Extended.eq (ERepDec w) (option_map EToRep (Edec w)).
-
-Definition verify := @verify E b SHA512 B Erep ErepAdd
-         (@ExtendedCoordinates.Extended.opp GF25519BoundedCommon.fe25519
-            GF25519BoundedCommon.eq GF25519BoundedCommon.zero
-            GF25519BoundedCommon.one GF25519Bounded.opp GF25519Bounded.add
-            GF25519Bounded.sub GF25519Bounded.mul GF25519Bounded.inv
-            GF25519BoundedCommon.div a d GF25519Bounded.field25519 twedprm_ERep
-            (fun x y : GF25519BoundedCommon.fe25519 =>
-             @ModularArithmeticTheorems.F.eq_dec GF25519.modulus
-               (@ModularBaseSystem.decode GF25519.modulus GF25519.params25519
-                  (GF25519BoundedCommon.proj1_fe25519 x))
-               (@ModularBaseSystem.decode GF25519.modulus GF25519.params25519
-                  (GF25519BoundedCommon.proj1_fe25519 y)))) EToRep ERepEnc ERepDec
-         SRep SC25519.SRepDecModL SRepERepMul SRepDec.
-
-Let verify_correct :
-  forall {mlen : nat} (msg : Word.word mlen) (pk : Word.word b)
-  (sig : Word.word (b + b)), verify _ msg pk sig = true <-> EdDSA.valid msg pk sig :=
-  @verify_correct
-      (* E := *) E
-      (* Eeq := *) CompleteEdwardsCurveTheorems.E.eq
-      (* Eadd := *) CompleteEdwardsCurve.E.add
-      (* Ezero := *) CompleteEdwardsCurve.E.zero
-      (* Eopp := *) CompleteEdwardsCurveTheorems.E.opp
-      (* EscalarMult := *) CompleteEdwardsCurve.E.mul
-      (* b := *) b
-      (* H := *) SHA512
-      (* c := *) c
-      (* n := *) n
-      (* l := *) l
-      (* B := *) B
-      (* Eenc := *) Eenc
-      (* Senc := *) Senc
-      (* prm := *) (ed25519 B_order_l)
-      (* Proper_Eenc := *) (PointEncoding.Proper_encode_point (b:=b-1))
-      (* Edec := *) Edec
-      (* eq_enc_E_iff := *) eq_enc_E_iff
-      (* Sdec := *) Sdec
-      (* eq_enc_S_iff := *) eq_enc_S_iff
-      (* Erep := *) Erep
-      (* ErepEq := *) ExtendedCoordinates.Extended.eq
-      (* ErepAdd := *) ErepAdd
-      (* ErepId := *) ExtendedCoordinates.Extended.zero
-      (* ErepOpp := *) ExtendedCoordinates.Extended.opp
-      (* Agroup := *) ExtendedCoordinates.Extended.extended_group
-      (* EToRep := *) EToRep
-      (* Ahomom := *) Ahomom
-      (* ERepEnc := *) ERepEnc
-      (* ERepEnc_correct := *) ERepEnc_correct
-      (* Proper_ERepEnc := *) Proper_ERepEnc
-      (* ERepDec := *) ERepDec
-      (* ERepDec_correct := *) ERepDec_correct
-      (* SRep := *) SRep (*(Tuple.tuple (Word.word 32) 8)*)
-      (* SRepEq := *) SC25519.SRepEq (* (Tuple.fieldwise Logic.eq)*)
-      (* H0 := *) SC25519.SRepEquiv (* Tuple.Equivalence_fieldwise*)
-      (* S2Rep := *) S2Rep
-      (* SRepDecModL := *) SC25519.SRepDecModL
-      (* SRepDecModL_correct := *) SC25519.SRepDecModL_Correct
-      (* SRepERepMul := *) SRepERepMul
-      (* SRepERepMul_correct := *) SRepERepMul_correct
-      (* Proper_SRepERepMul := *) _
-      (* SRepDec := *) SRepDec
-      (* SRepDec_correct := *) SRepDec_correct
-.
-
-(* TODO : make a new file for the stuff below *)
-
 Lemma Fhomom_inv_zero :
   GF25519BoundedCommon.eq
     (GF25519BoundedCommon.encode
@@ -1106,8 +576,6 @@ Definition x25519_correct' n x :
       (tb2_correct:=fun _ => (reflexivity _))
       255 _.
 
-Let three_correct := (@x25519_correct', @sign_correct, @verify_correct).
-Print Assumptions three_correct.
 (* [B_order_l] is proven above in this file, just replace Admitted with Qed, start the build and wait for a couple of hours *)
 (* [prime_q] and [prime_l] have been proven in Coq exactly as stated here, see <https://github.com/andres-erbsen/safecurves-primes> for the (lengthy) proofs *)
 (* [SHA512] is outside the scope of this project, but its type is satisfied by [(fun n bits => Word.wzero 512)] *)
