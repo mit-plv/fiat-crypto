@@ -268,8 +268,6 @@ Extraction Inline Ed25519.Erep Ed25519.SRep Ed25519.ZNWord Ed25519.WordNZ.
 Extraction Inline GF25519BoundedCommon.fe25519.
 Extraction Inline EdDSARepChange.sign EdDSARepChange.splitSecretPrngCurve.
 Extraction Inline Crypto.Util.IterAssocOp.iter_op Crypto.Util.IterAssocOp.test_and_op.
-Extraction Inline PointEncoding.Kencode_point.
-Extraction Inline ExtendedCoordinates.Extended.point ExtendedCoordinates.Extended.coordinates ExtendedCoordinates.Extended.to_twisted  ExtendedCoordinates.Extended.from_twisted ExtendedCoordinates.Extended.add_coordinates ExtendedCoordinates.Extended.add ExtendedCoordinates.Extended.opp ExtendedCoordinates.Extended.zero. (* ExtendedCoordinates.Extended.zero could be precomputed *)
 Extraction Inline CompleteEdwardsCurve.E.coordinates CompleteEdwardsCurve.E.zero.
 Extraction Inline GF25519BoundedCommon.proj_word GF25519BoundedCommon.Build_bounded_word GF25519BoundedCommon.Build_bounded_word'.
 Extraction Inline GF25519BoundedCommon.app_wire_digits GF25519BoundedCommon.wire_digit_bounds_exp.
@@ -291,5 +289,4 @@ Extract Constant Ed25519.SHA512 =>
 
 Extraction Inline MxDH.ladderstep MxDH.montladder.
 
-Extraction "src/Experiments/Ed25519_noimports.hs" Ed25519.sign (* Ed25519.verify *).
 Extraction "src/Experiments/X25519_noimports.hs" Crypto.Experiments.Ed25519.x25519.
