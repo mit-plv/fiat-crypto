@@ -286,6 +286,8 @@ Local Ltac prove_eval :=
 Definition mod_eq m a b := a mod m = b mod m.
 Global Instance mod_eq_equiv m : RelationClasses.Equivalence (mod_eq m).
 Proof. constructor; congruence. Qed.
+Definition mod_eq_dec m a b : {mod_eq m a b} + {~ mod_eq m a b}
+  := Z.eq_dec _ _.
 
 Delimit Scope runtime_scope with RT.
 Definition runtime_mul := Z.mul.
@@ -294,8 +296,10 @@ Definition runtime_add := Z.add.
 Global Notation "a + b" := (runtime_add a%RT b%RT) : runtime_scope. 
 Definition runtime_opp := Z.opp.
 Global Notation "- a" := (runtime_opp a%RT) : runtime_scope. 
-Definition runtime_fst {A B} := @fst A B.
-Definition runtime_snd {A B} := @snd A B.
+Definition runtime_and := Z.land.
+Global Notation "a &' b" := (runtime_and a%RT b%RT) : runtime_scope. 
+Definition runtime_shr := Z.shiftr.
+Global Notation "a >> b" := (runtime_shr a%RT b%RT) : runtime_scope. 
 
 Module B.
   Local Definition limb := (Z*Z)%type. (* position coefficient and run-time value *)
@@ -734,6 +738,26 @@ Module B.
       @Positional.eval_sub
     using (omega || assumption) : push_basesystem_eval.
 End B.
+
+(* Modulo and div that do shifts if possible, otherwise normal mod/div *)
+Section DivMod.
+  Definition modulo (a b : Z) : Z :=
+    if dec (2 ^ (Z.log2 b) = b)
+    then let x := (Z.ones (Z.log2 b)) in (a &' x)%RT
+    else Z.modulo a b.
+
+  Definition div (a b : Z) : Z :=
+    if dec (2 ^ (Z.log2 b) = b)
+    then let x := Z.log2 b in (a >> x)%RT
+    else Z.div a b.
+
+  Lemma div_mod a b (H:b <> 0) : a = b * div a b + modulo a b.
+  Proof.
+    cbv [div modulo]; intros. break_if; auto using Z.div_mod.
+    rewrite Z.land_ones, Z.shiftr_div_pow2 by apply Z.log2_nonneg.
+    pose proof (Z.div_mod a b H). congruence.
+  Qed.
+End DivMod.
   
 Local Coercion Z.of_nat : nat >-> Z.
 Import Coq.Lists.List.ListNotations. Local Open Scope list_scope.
@@ -742,9 +766,8 @@ Import B.
 Ltac basesystem_partial_evaluation_RHS := 
   let t0 := match goal with |- _ _ ?t => t end in
   let t := (eval cbv delta [
-  (* this list must contain all definitions referenced by t that reference [Let_In], [runtime_add], [runtime_opp] or [runtime_mul] *)
-Positional.to_associational_cps Positional.to_associational Positional.eval Positional.zeros Positional.add_to_nth_cps Positional.add_to_nth Positional.place_cps Positional.place Positional.from_associational_cps Positional.from_associational Positional.carry_cps Positional.carry Positional.chained_carries_cps Positional.chained_carries Positional.sub_cps Positional.sub Positional.negate_snd_cps Positional.add_cps Positional.opp_cps
-Associational.eval Associational.multerm Associational.mul_cps Associational.mul Associational.split_cps Associational.split Associational.reduce_cps Associational.reduce Associational.carryterm_cps Associational.carryterm Associational.carry_cps Associational.carry Associational.negate_snd_cps Associational.negate_snd 
+  (* this list must contain all definitions referenced by t that reference [Let_In], [runtime_add], [runtime_opp], [runtime_mul], [runtime_shr], or [runtime_and] *)
+Positional.to_associational_cps Positional.to_associational Positional.eval Positional.zeros Positional.add_to_nth_cps Positional.add_to_nth Positional.place_cps Positional.place Positional.from_associational_cps Positional.from_associational Positional.carry_cps Positional.carry Positional.chained_carries_cps Positional.chained_carries Positional.sub_cps Positional.sub Positional.negate_snd_cps Positional.add_cps Positional.opp_cps Associational.eval Associational.multerm Associational.mul_cps Associational.mul Associational.split_cps Associational.split Associational.reduce_cps Associational.reduce Associational.carryterm_cps Associational.carryterm Associational.carry_cps Associational.carry Associational.negate_snd_cps Associational.negate_snd div modulo
                  ] in t0) in
   let t := (eval pattern @runtime_mul in t) in
   let t := match t with ?t _ => t end in
@@ -752,12 +775,18 @@ Associational.eval Associational.multerm Associational.mul_cps Associational.mul
   let t := match t with ?t _ => t end in
   let t := (eval pattern @runtime_opp in t) in
   let t := match t with ?t _ => t end in
+  let t := (eval pattern @runtime_shr in t) in
+  let t := match t with ?t _ => t end in
+  let t := (eval pattern @runtime_and in t) in
+  let t := match t with ?t _ => t end in
   let t := (eval pattern @Let_In in t) in
   let t := match t with ?t _ => t end in
   let t1 := fresh "t1" in
   pose t as t1;
   transitivity (t1
                   (@Let_In)
+                  (@runtime_and)
+                  (@runtime_shr)
                   (@runtime_opp)
                   (@runtime_add)
                   (@runtime_mul));
@@ -773,12 +802,14 @@ Ltac assert_preconditions :=
                  solve [zero_bounds])
          | |- context [Positional.from_associational_cps ?wt ?n] =>
            unique assert (n <> 0%nat) by (cbv; congruence)
-         | |- context [Positional.carry_cps?wt ?i] =>
+         | |- context [Positional.carry_cps ?wt ?i] =>
            unique assert (wt (S i) / wt i <> 0) by (cbv; congruence)
          | |- context [Positional.chained_carries_cps ?wt _ ?idxs] =>
            unique assert (forall i, In i idxs -> wt (S i) / wt i <> 0)
              by (clear; simpl;  intuition; subst_let; subst; cbv in *;
                  congruence)
+         | |- context [@Positional.chained_carries_cps _ modulo div] =>
+           unique pose proof div_mod
          | |- context [Associational.reduce_cps ?s _] =>
            unique assert (s <> 0) by (cbv; congruence)
          | |- context [Associational.reduce_cps ?s ?c] =>
@@ -798,61 +829,7 @@ Ltac assert_preconditions :=
            end
          end.
 
-(* matches out the `Prop` argument to `lift1_sig`, applies `lift1_sig` *)
-Ltac lift1_sig :=
-    lazymatch goal with
-      |- @sig _ ?Pop
-      => let P_ := constr:(fun op =>
-                      ltac:(
-                        lazymatch eval cbv beta in (Pop op) with
-                          forall a, @?P a =>
-                          exact (fun a =>
-                            ltac:(
-                              let P := (eval cbv beta in (P a)) in
-                              let P := (eval pattern (op a) in P) in
-                              lazymatch P with ?P _ =>
-                                exact P
-                              end
-                              )
-                            )
-                        end
-                      )
-                    ) in
-         lazymatch P_ with
-           fun _ => ?P => apply (lift1_sig P)
-         end
-    end.
-(* matches out the `Prop` argument to `lift2_sig`, applies `lift2_sig` *)
-Ltac lift2_sig :=
-    lazymatch goal with
-      |- @sig _ ?Pop
-      => let P_ := constr:(fun op =>
-                      ltac:(
-                        lazymatch eval cbv beta in (Pop op) with
-                          forall a b, @?P a b =>
-                          exact (fun a b =>
-                            ltac:(
-                              let P := (eval cbv beta in (P a b)) in
-                              let P := (eval pattern (op a b) in P) in
-                              lazymatch P with ?P _ =>
-                                exact P
-                              end
-                              )
-                            )
-                        end
-                      )
-                    ) in
-         lazymatch P_ with
-           fun _ => ?P => apply (lift2_sig P)
-         end
-    end.
-
 Section Ops.
-  Context
-    (modulo : Z -> Z -> Z)
-    (div : Z -> Z -> Z)
-    (div_mod : forall a b : Z, b <> 0 ->
-                               a = b * div a b + modulo a b).
   Local Infix "^" := tuple : type_scope.
 
   Let wt := fun i : nat => 2^(25 * (i / 2) + 26 * ((i + 1) / 2)).
@@ -875,14 +852,14 @@ Section Ops.
          Positional.sub_cps (coef := zeros) wt s_minus_1 c_minus_1 id).
 
   Definition zero_sig :
-    { zero : Z^sz | Positional.eval wt zero = 0}.
+    { zero : Z^sz | mod_eq m (Positional.eval wt zero) 0}.
   Proof.
     let t := eval vm_compute in (Positional.zeros sz) in
         exists t. vm_decide.
   Defined.
 
   Definition one_sig :
-    { one : Z^sz | Positional.eval wt one = 1}.
+    { one : Z^sz | mod_eq m (Positional.eval wt one) 1}.
   Proof.
     let t := eval vm_compute in (Positional.zeros (sz-1), 1) in
         exists t. vm_decide.
@@ -892,11 +869,11 @@ Section Ops.
     { add : (Z^sz -> Z^sz -> Z^sz)%type |
                forall a b : Z^sz,
                  let eval {n} := Positional.eval (n := n) wt in
-                 eval (add a b) = eval a  + eval b }.
+                 mod_eq m (eval (add a b)) (eval a  + eval b) }.
   Proof.
     let x := constr:(fun wt a b =>
         Positional.add_cps (n := sz) wt a b id) in
-    lift2_sig; eexists;
+    eexists; intros;
     transitivity (Positional.eval wt (x wt a b)); autounfold;
     [|assert_preconditions; autorewrite with uncps push_id push_basesystem_eval; reflexivity].
 
@@ -915,7 +892,7 @@ Section Ops.
   Proof.
     let x := constr:(fun w a b =>
          Positional.sub_cps (n:=sz) (coef := coef) w a b id) in
-    lift2_sig; eexists;
+    eexists; intros;
       transitivity (Positional.eval wt (x wt a b)); autounfold;
         [|assert_preconditions; autorewrite with uncps push_id push_basesystem_eval; reflexivity].
 
@@ -937,7 +914,7 @@ Section Ops.
   Proof.
     let x := constr:(fun w a =>
          Positional.opp_cps (n:=sz) (coef := coef) w a id) in
-    lift1_sig; eexists;
+    eexists; intros;
       transitivity (Positional.eval wt (x wt a)); autounfold;
         [|assert_preconditions; autorewrite with uncps push_id push_basesystem_eval; reflexivity].
 
@@ -961,7 +938,7 @@ Section Ops.
          Positional.mul_cps (n:=sz) (m:=sz2) w a b
            (fun ab => Positional.reduce_cps (n:=sz) (m:=sz2) w s c ab
            (fun r => Positional.chained_carries_cps (n:=sz) (div:=div)(modulo:=modulo) w r (seq 0 sz) id))) in
-    lift2_sig; eexists;
+    eexists; intros;
     transitivity (Positional.eval wt (x wt a b)); autounfold;
       [|assert_preconditions; autorewrite with uncps push_id push_basesystem_eval; reflexivity].
 
@@ -980,6 +957,7 @@ Section Ops.
 
     reflexivity.
   Defined. (* 3s *)
+
 End Ops.
 
 (*
