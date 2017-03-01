@@ -5,6 +5,7 @@ Require Import Crypto.Util.Notations.
 
 Definition Let_In {A P} (x : A) (f : forall a : A, P a) : P x := let y := x in f y.
 Definition Let_In_pf {A P} (x : A) (f : forall a : A, a = x -> P a) : P x := let y := x in f y eq_refl.
+Notation "'dlet_nd' x := y 'in' f" := (Let_In (P:=fun _ => _) y (fun x => f)) (only parsing).
 Notation "'dlet' x := y 'in' f" := (Let_In y (fun x => f)).
 Notation "'pflet' x , pf := y 'in' f" := (Let_In_pf y (fun x pf => f)).
 

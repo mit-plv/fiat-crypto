@@ -72,6 +72,8 @@ Reserved Notation "'llet' x := A 'in' b"
 Reserved Notation "'mlet' x := A 'in' b"
          (at level 200, b at level 200, format "'mlet'  x  :=  A  'in' '//' b").
 (* Note that making [Let] a keyword breaks the vernacular [Let] in Coq 8.4 *)
+Reserved Notation "'dlet_nd' x := y 'in' f"
+         (at level 200, f at level 200, format "'dlet_nd'  x  :=  y  'in' '//' f").
 Reserved Notation "'dlet' x := y 'in' f"
          (at level 200, f at level 200, format "'dlet'  x  :=  y  'in' '//' f").
 Reserved Notation "'pflet' x , pf := y 'in' f"
