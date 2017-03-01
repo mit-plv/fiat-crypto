@@ -226,7 +226,7 @@ Section language.
   Qed.
 
   Lemma flatten_binding_list_same_in_eq
-        {var} T x t a b
+        {var} {T x t a b}
     : List.In (existT _ t (a, b)) (@flatten_binding_list base_type_code var var T x x) -> a = b.
   Proof. intro; eapply flatten_binding_list_In_eq_iff; eauto. Qed.
 End language.
