@@ -198,6 +198,37 @@ Section language.
       = List.map (fun txy => existT _ (projT1 txy) (f _, g _)%core)
                  (flatten_binding_list (SmartFlatTypeUnMap t) (SmartFlatTypeUnMap t)).
   Proof. induction t; flatten_t. Qed.
+
+  Lemma flatten_binding_list_In_eq_iff
+        {var} T x y
+    : (forall t a b, List.In (existT _ t (a, b)) (@flatten_binding_list base_type_code var var T x y) -> a = b)
+      <-> x = y.
+  Proof.
+    induction T;
+      repeat first [ exfalso; assumption
+                   | progress subst
+                   | progress inversion_sigma
+                   | progress inversion_prod
+                   | progress destruct_head' unit
+                   | progress destruct_head' prod
+                   | split
+                   | progress simpl in *
+                   | intro
+                   | progress destruct_head or
+                   | apply (f_equal2 (@pair _ _))
+                   | progress split_iff
+                   | solve [ auto using List.in_or_app ]
+                   | match goal with
+                     | [ H : List.In _ (_ ++ _) |- _ ] => rewrite List.in_app_iff in H
+                     | [ H : forall x y, x = y -> forall t a b, List.In _ _ -> _, H' : List.In _ _ |- _ ]
+                       => specialize (H _ _ eq_refl _ _ _ H')
+                     end ].
+  Qed.
+
+  Lemma flatten_binding_list_same_in_eq
+        {var} T x t a b
+    : List.In (existT _ t (a, b)) (@flatten_binding_list base_type_code var var T x x) -> a = b.
+  Proof. intro; eapply flatten_binding_list_In_eq_iff; eauto. Qed.
 End language.
 
 Hint Resolve wff_SmartVarf wff_SmartVarVarf wff_SmartVarVarf_nil : wf.
