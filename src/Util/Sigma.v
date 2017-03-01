@@ -16,7 +16,7 @@ Local Arguments f_equal {_ _} _ {_ _} _.
 
 (** ** Equality for [sigT] *)
 Section sigT.
-  
+
   (** *** Projecting an equality of a pair to equality of the first components *)
   Definition pr1_path {A} {P : A -> Type} {u v : sigT P} (p : u = v)
   : projT1 u = projT1 v
@@ -96,6 +96,11 @@ Section sigT.
   Proof.
     destruct H, u; reflexivity.
   Defined.
+
+  (** *** η Principle for [sigT] *)
+  Definition sigT_eta {A P} (p : { a : A & P a })
+    : p = existT _ (projT1 p) (projT2 p).
+  Proof. destruct p; reflexivity. Defined.
 End sigT.
 
 (** ** Equality for [sig] *)
@@ -161,6 +166,11 @@ Section sig.
   Proof.
     destruct H, u; reflexivity.
   Defined.
+
+  (** *** η Principle for [sig] *)
+  Definition sig_eta {A P} (p : { a : A | P a })
+    : p = exist _ (proj1_sig p) (proj2_sig p).
+  Proof. destruct p; reflexivity. Defined.
 End sig.
 
 (** ** Equality for [ex] *)
