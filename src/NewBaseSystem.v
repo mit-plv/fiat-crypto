@@ -596,31 +596,45 @@ Module B.
         Context {modulo div : Z->Z->Z}.
         Context {div_mod : forall a b:Z, b <> 0 ->
                                        a = b * (div a b) + modulo a b}.
-        Definition carry_cps(index:nat) (p:list limb)
-                   {T} (f:list limb->T) :=
-          @Associational.carry_cps modulo div
-                                   (weight index)
-                                   (weight (S index) / weight index)
-                                   p T f.
+        Definition carry_cps {n} (index:nat) (p:tuple Z n)
+                   {T} (f:tuple Z n->T) :=
+          to_associational_cps p
+            (fun P =>  @Associational.carry_cps
+                         modulo div
+                         (weight index)
+                         (weight (S index) / weight index)
+                         P T
+             (fun R => from_associational_cps n R f)).
 
-      Definition carry i p := carry_cps i p id.
-      Lemma carry_cps_id i p {T} f:
-        @carry_cps i p T f = f (carry i p).
+      Definition carry {n} i p := @carry_cps n i p _ id.
+      Lemma carry_cps_id {n} i p {T} f:
+        @carry_cps n i p T f = f (carry i p).
       Proof.
         cbv [carry_cps carry]; prove_id; rewrite carry_cps_id; reflexivity.
       Qed.
-      Hint Opaque carry : uncps. Hint Rewrite carry_cps_id : uncps.
+      Hint Opaque carry : uncps. Hint Rewrite @carry_cps_id : uncps.
 
-      Lemma eval_carry i p: weight (S i) / weight i <> 0 ->
-        Associational.eval (carry i p) = Associational.eval p.
-      Proof. cbv [carry_cps carry]; intros; eapply @eval_carry; eauto. Qed.
+      Lemma eval_carry {n} i p: (n <> 0%nat) ->
+                                weight (S i) / weight i <> 0 ->
+        eval (carry (n := n) i p) = eval p.
+      Proof.
+        cbv [carry_cps carry]; intros. prove_eval.
+        rewrite @eval_carry by eauto.
+        apply eval_to_associational.
+      Qed.
       Hint Rewrite @eval_carry : push_basesystem_eval.
 
+      (* N.B. It is important to reverse [idxs] here. Like
+      [fold_right], [fold_right_cps2] is written such that the first
+      terms in the list are actually used last in the computation. For
+      example, running:
+      
+      `Eval cbv - [Z.add] in (fun a b c d => fold_right Z.add d [a;b;c]).`
+
+      will produce [fun a b c d => (a + (b + (c + d)))].*)
       Definition chained_carries_cps {n} (p:tuple Z n) (idxs : list nat)
                  {T} (f:tuple Z n->T) :=
-        to_associational_cps p
-          (fun P => fold_right_cps2 carry_cps P idxs
-            (fun R => from_associational_cps n R f)).
+        fold_right_cps2 carry_cps p (rev idxs) f.
       
       Definition chained_carries {n} p idxs := @chained_carries_cps n p idxs _ id.
       Lemma chained_carries_id {n} p idxs : forall {T} f,
@@ -635,8 +649,21 @@ Module B.
       Proof.
         cbv [chained_carries chained_carries_cps]; intros;
           autorewrite with uncps push_id.
-        apply fold_right_invariant; destruct n; prove_eval; auto.
+        apply fold_right_invariant; [|intro; rewrite <-in_rev];
+          destruct n; prove_eval; auto.
       Qed. Hint Rewrite @eval_chained_carries : push_basesystem_eval.
+
+      (* Reverse of [eval]; ranslate from Z to basesystem by putting
+      everything in first digit and then carrying. This function, like
+      [eval], is not defined using CPS. *)
+      Definition encode {n} (x : Z) : tuple Z n :=
+        chained_carries (from_associational n [(1,x)]) (seq 0 n).
+      Lemma eval_encode {n} x : (n <> 0%nat) ->
+        (forall i, In i (seq 0 n) -> weight (S i) / weight i <> 0) ->
+        eval (@encode n x) = x.
+      Proof. cbv [encode]; intros; prove_eval; auto. Qed.
+      Hint Rewrite @eval_encode : push_basesystem_eval.
+
       End Carries.
 
       Section Wrappers.
@@ -832,24 +859,17 @@ Ltac assert_preconditions :=
 Section Ops.
   Local Infix "^" := tuple : type_scope.
 
+  (* These `Let`s will need to be passed as Ltac arguments (or cleverly inferred *)
   Let wt := fun i : nat => 2^(25 * (i / 2) + 26 * ((i + 1) / 2)).
   Let sz := 10%nat.
   Let s : Z := 2^255.
   Let c : list B.limb := [(1, 19)].
+  Let coef_div_modulus := 2. (* add 2*modulus before subtracting *)
 
+  (* These `Lets` are inferred from those above *)
   Let m := Eval compute in s - Associational.eval c. (* modulus *)
   Let sz2 := Eval compute in ((sz * 2) - 1)%nat.
-
-  (* subtraction coefficient; m = s - c = (s-1)-(c-1) *)
-  Let coef : Z^sz := Eval vm_compute in
-        (let width i := Z.log2 (wt (S i) / wt i) in
-         let s_minus_1 : Z^sz :=
-             (Tuple.from_list_default 0%Z sz
-                (map (fun i => Z.ones (width i)) (seq 0 sz))) in
-         let c_minus_1 : Z^sz :=
-             Positional.from_associational wt sz (c ++ [(1,-1)]) in
-         let zeros : Z^sz := Tuple.from_list_default 0%Z sz nil in
-         Positional.sub_cps (coef := zeros) wt s_minus_1 c_minus_1 id).
+  Let coef := Eval vm_compute in (@Positional.encode wt modulo div sz (coef_div_modulus * (s-Associational.eval c))). (* subtraction coefficient *)
 
   Definition zero_sig :
     { zero : Z^sz | mod_eq m (Positional.eval wt zero) 0}.
