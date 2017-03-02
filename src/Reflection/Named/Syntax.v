@@ -187,7 +187,7 @@ Global Arguments wff {_ _ _ _ _} ctx {t} _.
 Global Arguments wf {_ _ _ _ _} ctx {t} _.
 Global Arguments interp_genf {_ _ _ var _} _ _ _ _ _ _ {ctx t} _ _.
 Global Arguments interpf {_ _ _ _ _ interp_op ctx t} _ _.
-Global Arguments interp {_ _ _ _ _ interp_op ctx t} _ _.
+Global Arguments interp {_ _ _ _ _ interp_op ctx t} _ _ _.
 
 Notation "'slet' x := A 'in' b" := (LetIn _ x A%nexpr b%nexpr) : nexpr_scope.
 Notation "'λn'  x .. y , t" := (Abs x .. (Abs y t%nexpr) .. ) : nexpr_scope.

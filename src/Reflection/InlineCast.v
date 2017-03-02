@@ -76,7 +76,7 @@ Section language.
        | TT
          => None
        end.
-  Definition push_cast {var t} : @exprf var t -> inline_directive (op:=op) (var:=var) t
+  Definition push_cast {var t} : @exprf var t -> @inline_directive _ op var t
     := match t with
        | Tbase _ => fun v => match maybe_push_cast v with
                              | Some e => inline e

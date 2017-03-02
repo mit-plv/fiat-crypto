@@ -134,10 +134,10 @@ Global Arguments interp_type_gen_hetero {_} _ _ _.
 Global Arguments interp_type_gen {_} _ _.
 Global Arguments interp_flat_type {_} _ _.
 Global Arguments interp_type {_} _ _.
-Global Arguments Interp {_ _ _} interp_op {t} _.
-Global Arguments interp {_ _ _} interp_op {t} _.
+Global Arguments Interp {_ _ _} interp_op {t} _ _.
+Global Arguments interp {_ _ _} interp_op {t} _ _.
 Global Arguments interpf {_ _ _} interp_op {t} _.
-Global Arguments interp _ _ _ _ _ !_ / .
+Global Arguments interp _ _ _ _ _ !_ / _.
 
 Module Export Notations.
   Notation "()" := (@Unit _) : ctype_scope.

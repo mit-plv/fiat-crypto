@@ -198,7 +198,7 @@ Global Arguments SmartFlatTypeMap {_ _} _ {_} _.
 Global Arguments SmartFlatTypeUnMap {_} _.
 Global Arguments SmartFlatTypeMapInterp {_ _ _ _} _ {_} _.
 Global Arguments SmartFlatTypeMapUnInterp {_ _ _ _ _} fv {_ _} _.
-Global Arguments SmartVarMap {_ _ _} _ _ {!_} _ / .
+Global Arguments SmartVarMap {_ _ _} _ _ {!_} _ / _.
 
 Section hetero_type.
   Fixpoint flatten_flat_type {base_type_code} (t : flat_type (flat_type base_type_code)) : flat_type base_type_code

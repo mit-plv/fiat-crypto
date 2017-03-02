@@ -170,6 +170,7 @@ Section language.
                      | progress invert_expr
                      | progress inversion_wf
                      | progress break_innermost_match_step
+                     | discriminate
                      | congruence
                      | solve [ auto ] ].
     Qed.
