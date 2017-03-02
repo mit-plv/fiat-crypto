@@ -248,6 +248,7 @@ Require Import Crypto.Tactics.Algebra_syntax.Nsatz.
 Require Import Crypto.Util.Tactics Crypto.Util.Decidable Crypto.Util.LetIn.
 Require Import Crypto.Util.ZUtil Crypto.Util.ListUtil Crypto.Util.Sigma.
 Require Import Crypto.Util.CPSUtil Crypto.Util.Prod Crypto.Util.Tactics.
+Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
 
 Require Import Coq.Lists.List. Import ListNotations.
 Require Crypto.Util.Tuple. Local Notation tuple := Tuple.tuple.
@@ -288,6 +289,9 @@ Global Instance mod_eq_equiv m : RelationClasses.Equivalence (mod_eq m).
 Proof. constructor; congruence. Qed.
 Definition mod_eq_dec m a b : {mod_eq m a b} + {~ mod_eq m a b}
   := Z.eq_dec _ _.
+Lemma mod_eq_Z2F_iff m a b :
+  mod_eq m a b <-> Logic.eq (F.of_Z m a) (F.of_Z m b).
+Proof. rewrite <-F.eq_of_Z_iff. reflexivity. Qed.
 
 Delimit Scope runtime_scope with RT.
 Definition runtime_mul := Z.mul.
@@ -493,6 +497,10 @@ Module B.
       Proof.
         cbv [to_associational_cps eval to_associational]; prove_eval.
       Qed. Hint Rewrite @eval_to_associational : push_basesystem_eval.
+
+      (** (modular) equality that tolerates redundancy **)
+      Definition eq {sz} m (a b : tuple Z sz) : Prop :=
+        mod_eq m (eval a) (eval b).
 
       (** Converting from associational to positional *)
 
@@ -727,7 +735,31 @@ Module B.
         Definition opp_cps (p : tuple Z n) {T} (f:tuple Z n->T):=
           sub_cps (zeros n) p f.
       End Subtraction.
-          
+
+      (* Lemmas about converting to/from F. Will be useful in proving
+      that basesystem is isomorphic to F.commutative_ring_modulo.*)
+      Section F.
+        Context {sz:nat} {sz_nonzero : sz<>0%nat} {m :Z}.
+        Context (weight_divides : forall i : nat, weight (S i) / weight i <> 0).
+        Context {modulo div:Z->Z->Z}
+                {div_mod : forall a b:Z, b <> 0 ->
+                                         a = b * (div a b) + modulo a b}.
+        
+        Definition Fencode (x : F m) : tuple Z sz :=
+          encode (div:=div) (modulo:=modulo) (F.to_Z x).
+
+        Definition Fdecode (x : tuple Z sz) : F m := F.of_Z m (eval x).
+
+        Lemma Fdecode_Fencode_id x : Fdecode (Fencode x) = x.
+        Proof.
+          cbv [Fdecode Fencode]; rewrite @eval_encode by auto.
+          apply F.of_Z_to_Z.
+        Qed.
+
+        Lemma eq_Feq_iff a b :
+          Logic.eq (Fdecode a) (Fdecode b) <-> eq m a b.
+        Proof. cbv [Fdecode]; rewrite <-F.eq_of_Z_iff; reflexivity. Qed.
+      End F.
     End Positional.
   End Positional.
   Hint Unfold
@@ -758,6 +790,7 @@ Module B.
       @Associational.eval_carryterm
       @Associational.eval_reduce
       @Associational.eval_split
+      @Positional.eval_zeros
       @Positional.eval_carry
       @Positional.eval_from_associational
       @Positional.eval_add_to_nth
@@ -856,6 +889,34 @@ Ltac assert_preconditions :=
            end
          end.
 
+(* TODO : move *)
+Lemma F_of_Z_opp {m} x : F.of_Z m (- x) = F.opp (F.of_Z m x).
+Proof.
+  cbv [F.opp]; intros. rewrite F.to_Z_of_Z, <-Z.sub_0_l.
+  etransitivity; rewrite F.of_Z_mod;
+    [rewrite Z.opp_mod_mod|]; reflexivity.
+Qed.
+
+Hint Rewrite <-@F.of_Z_add : pull_FofZ.
+Hint Rewrite <-@F.of_Z_mul : pull_FofZ.
+Hint Rewrite <-@F.of_Z_sub : pull_FofZ.
+Hint Rewrite <-@F_of_Z_opp : pull_FofZ.
+
+Ltac F_mod_eq :=
+  cbv [Positional.Fdecode]; autorewrite with pull_FofZ;
+  apply mod_eq_Z2F_iff.
+
+Ltac solve_op_mod_eq wt x :=
+  transitivity (Positional.eval wt x); autounfold;
+  [|assert_preconditions;
+    autorewrite with uncps push_id push_basesystem_eval;
+    reflexivity];
+  cbv [mod_eq]; apply f_equal2; [|reflexivity];
+  apply f_equal;
+  basesystem_partial_evaluation_RHS; reflexivity.
+
+Ltac solve_op_F wt x := F_mod_eq; solve_op_mod_eq wt x.
+
 Section Ops.
   Local Infix "^" := tuple : type_scope.
 
@@ -870,104 +931,72 @@ Section Ops.
   Let m := Eval compute in s - Associational.eval c. (* modulus *)
   Let sz2 := Eval compute in ((sz * 2) - 1)%nat.
   Let coef := Eval vm_compute in (@Positional.encode wt modulo div sz (coef_div_modulus * (s-Associational.eval c))). (* subtraction coefficient *)
+  Let coef_mod : mod_eq m (Positional.eval (n:=sz) wt coef) 0 := eq_refl.
 
   Definition zero_sig :
-    { zero : Z^sz | mod_eq m (Positional.eval wt zero) 0}.
+    { zero : Z^sz | Positional.Fdecode (m:=m) wt zero = 0%F}.
   Proof.
-    let t := eval vm_compute in (Positional.zeros sz) in
-        exists t. vm_decide.
+    let t := eval vm_compute in
+    (Positional.encode (n:=sz) (modulo:=modulo) (div:=div) wt 0) in
+        exists t; vm_decide.
   Defined.
 
   Definition one_sig :
-    { one : Z^sz | mod_eq m (Positional.eval wt one) 1}.
+    { one : Z^sz | Positional.Fdecode (m:=m) wt one = 1%F}.
   Proof.
-    let t := eval vm_compute in (Positional.zeros (sz-1), 1) in
-        exists t. vm_decide.
+    let t := eval vm_compute in
+    (Positional.encode (n:=sz) (modulo:=modulo) (div:=div) wt 1) in
+        exists t; vm_decide.
   Defined.
 
   Definition add_sig :
     { add : (Z^sz -> Z^sz -> Z^sz)%type |
                forall a b : Z^sz,
-                 let eval {n} := Positional.eval (n := n) wt in
-                 mod_eq m (eval (add a b)) (eval a  + eval b) }.
+                 let eval := Positional.Fdecode (m:=m) wt in
+                 eval (add a b) = (eval a  + eval b)%F }.
   Proof.
-    let x := constr:(fun wt a b =>
+    eexists; cbv beta zeta; intros.
+    let x := constr:(
         Positional.add_cps (n := sz) wt a b id) in
-    eexists; intros;
-    transitivity (Positional.eval wt (x wt a b)); autounfold;
-    [|assert_preconditions; autorewrite with uncps push_id push_basesystem_eval; reflexivity].
-
-    apply f_equal.
-    
-    basesystem_partial_evaluation_RHS.
-
-    reflexivity.
+    solve_op_F wt x.
   Defined.
 
   Definition sub_sig :
     {sub : (Z^sz -> Z^sz -> Z^sz)%type |
                forall a b : Z^sz,
-                 let eval {n} := Positional.eval (n := n) wt in
-                 mod_eq m (eval (sub a b)) (eval a - eval b)}.
+                 let eval := Positional.Fdecode (m:=m) wt in
+                 eval (sub a b) = (eval a - eval b)%F}.
   Proof.
-    let x := constr:(fun w a b =>
-         Positional.sub_cps (n:=sz) (coef := coef) w a b id) in
-    eexists; intros;
-      transitivity (Positional.eval wt (x wt a b)); autounfold;
-        [|assert_preconditions; autorewrite with uncps push_id push_basesystem_eval; reflexivity].
-
-    cbv [mod_eq].
-    apply f_equal2; [|reflexivity].
-    
-    apply f_equal.
-
-    basesystem_partial_evaluation_RHS.
-
-    reflexivity.
+    eexists; cbv beta zeta; intros.
+    let x := constr:(
+         Positional.sub_cps (n:=sz) (coef := coef) wt a b id) in
+    solve_op_F wt x.
   Defined.
 
   Definition opp_sig :
     {opp : (Z^sz -> Z^sz)%type |
                forall a : Z^sz,
-                 let eval {n} := Positional.eval (n := n) wt in
-                 mod_eq m (eval (opp a)) (- eval a)}.
+                 let eval := Positional.Fdecode (m := m) wt in
+                 eval (opp a) = F.opp (eval a)}.
   Proof.
-    let x := constr:(fun w a =>
-         Positional.opp_cps (n:=sz) (coef := coef) w a id) in
-    eexists; intros;
-      transitivity (Positional.eval wt (x wt a)); autounfold;
-        [|assert_preconditions; autorewrite with uncps push_id push_basesystem_eval; reflexivity].
-
-    cbv [mod_eq].
-    apply f_equal2; [|reflexivity].
-    
-    apply f_equal.
-
-    basesystem_partial_evaluation_RHS.
-
-    reflexivity.
+    eexists; cbv beta zeta; intros.
+    let x := constr:(
+         Positional.opp_cps (n:=sz) (coef := coef) wt a id) in
+    solve_op_F wt x.
   Defined.
   
   Definition mul_sig :
     {mul : (Z^sz -> Z^sz -> Z^sz)%type |
                forall a b : Z^sz,
-                 let eval {n} := Positional.eval (n := n) wt in
-                 mod_eq m (eval (mul a b)) (eval a  * eval b)}.
+                 let eval := Positional.Fdecode (m := m) wt in
+                 eval (mul a b) = (eval a  * eval b)%F}.
   Proof.
-    let x := constr:(fun w a b =>
-         Positional.mul_cps (n:=sz) (m:=sz2) w a b
-           (fun ab => Positional.reduce_cps (n:=sz) (m:=sz2) w s c ab
-           (fun r => Positional.chained_carries_cps (n:=sz) (div:=div)(modulo:=modulo) w r (seq 0 sz) id))) in
-    eexists; intros;
-    transitivity (Positional.eval wt (x wt a b)); autounfold;
-      [|assert_preconditions; autorewrite with uncps push_id push_basesystem_eval; reflexivity].
-
-    cbv [mod_eq].
-    apply f_equal2; [|reflexivity].
-    
-    apply f_equal.
-
-    basesystem_partial_evaluation_RHS.
+    eexists; cbv beta zeta; intros.
+    let x := constr:(
+         Positional.mul_cps (n:=sz) (m:=sz2) wt a b
+           (fun ab => Positional.reduce_cps (n:=sz) (m:=sz2) wt s c ab
+           (fun r => Positional.chained_carries_cps (n:=sz) (div:=div)(modulo:=modulo) wt r (seq 0 sz) id))) in
+    solve_op_F wt x.
 
     (* rough breakdown of synthesis time *)
     (* 1.2s for side conditions -- should improve significantly when [chained_carries] gets a correctness lemma *)
@@ -975,15 +1004,13 @@ Section Ops.
 
     (* doing [cbv -[Let_In runtime_add runtime_mul]] took 37s *)
 
-    reflexivity.
   Defined. (* 3s *)
 
 End Ops.
 
 (*
-Eval cbv [proj1_sig sub_sig lift2_sig] in (proj1_sig sub_sig).
-Eval cbv [proj1_sig sub_sig lift2_sig] in (proj1_sig sub_sig).
-Eval cbv [proj1_sig opp_sig lift1_sig] in (proj1_sig opp_sig).
-Eval cbv [proj1_sig mul_sig lift2_sig] in
-    (fun m d div_mod => proj1_sig (mul_sig m d div_mod)).
+Eval cbv [proj1_sig add_sig] in (proj1_sig add_sig).
+Eval cbv [proj1_sig sub_sig] in (proj1_sig sub_sig).
+Eval cbv [proj1_sig opp_sig] in (proj1_sig opp_sig).
+Eval cbv [proj1_sig mul_sig] in (proj1_sig mul_sig).
 *)
