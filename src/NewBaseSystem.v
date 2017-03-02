@@ -284,14 +284,14 @@ Local Ltac prove_eval :=
          | _ => nsatz
          end.
 
-Definition mod_eq m a b := a mod m = b mod m.
+Definition mod_eq (m:positive) a b := a mod m = b mod m.
 Global Instance mod_eq_equiv m : RelationClasses.Equivalence (mod_eq m).
 Proof. constructor; congruence. Qed.
 Definition mod_eq_dec m a b : {mod_eq m a b} + {~ mod_eq m a b}
   := Z.eq_dec _ _.
 Lemma mod_eq_Z2F_iff m a b :
   mod_eq m a b <-> Logic.eq (F.of_Z m a) (F.of_Z m b).
-Proof. rewrite <-F.eq_of_Z_iff. reflexivity. Qed.
+Proof. rewrite <-F.eq_of_Z_iff; reflexivity. Qed.
 
 Delimit Scope runtime_scope with RT.
 
@@ -388,15 +388,17 @@ Module B.
     Hint Opaque reduce : uncps.
     Hint Rewrite reduce_cps_id : uncps.
     
-    Lemma reduction_rule a b s c (modulus_nonzero:s-c<>0) :
-      (a + s * b) mod (s - c) = (a + c * b) mod (s - c).
-    Proof. replace (a + s * b) with ((a + c*b) + b*(s-c)) by nsatz.
-           rewrite Z.add_mod, Z_mod_mult, Z.add_0_r, Z.mod_mod; trivial. Qed.
-    Lemma eval_reduce s c p (s_nonzero:s<>0) (modulus_nonzero:s-eval c<>0):
-      mod_eq (s - eval c) (eval (reduce s c p)) (eval p).
+    Lemma reduction_rule a b s c m (m_eq:Z.pos m = s - c):
+      (a + s * b) mod m = (a + c * b) mod m.
     Proof.
-      cbv [reduce reduce_cps mod_eq]; prove_eval;
-        rewrite <-reduction_rule by auto; prove_eval.
+      rewrite m_eq. assert (Z.pos m <> 0) by (intro; discriminate). clear m_eq.
+      replace (a + s * b) with ((a + c*b) + b*(s-c)) by nsatz.
+      rewrite Z.add_mod, Z_mod_mult, Z.add_0_r, Z.mod_mod; trivial. Admitted.
+    Lemma eval_reduce s c p (s_nonzero:s<>0) m (m_eq : Z.pos m = s - eval c) :
+      mod_eq m (eval (reduce s c p)) (eval p).
+    Proof.
+      cbv [reduce reduce_cps mod_eq]; prove_eval.
+        erewrite <-reduction_rule by eauto; prove_eval.
     Qed.
     Hint Rewrite eval_reduce using (omega || assumption) : push_basesystem_eval.
     (* Why TF does this hint get picked up outside the section (while other eval_ hints do not?) *)
@@ -740,7 +742,7 @@ Module B.
       (* Lemmas about converting to/from F. Will be useful in proving
       that basesystem is isomorphic to F.commutative_ring_modulo.*)
       Section F.
-        Context {sz:nat} {sz_nonzero : sz<>0%nat} {m :Z}.
+        Context {sz:nat} {sz_nonzero : sz<>0%nat} {m :positive}.
         Context (weight_divides : forall i : nat, weight (S i) / weight i <> 0).
         Context {modulo div:Z->Z->Z}
                 {div_mod : forall a b:Z, b <> 0 ->
@@ -906,7 +908,7 @@ Section Ops.
   Let carry_chain := (seq 0 sz) ++ ([0;1])%nat.
 
   (* These `Lets` are inferred from those above *)
-  Let m := Eval compute in s - Associational.eval c. (* modulus *)
+  Let m := Eval compute in Z.to_pos (s - Associational.eval c). (* modulus *)
   Let sz2 := Eval compute in ((sz * 2) - 1)%nat.
   Let coef := Eval vm_compute in (@Positional.encode wt modulo div sz (coef_div_modulus * (s-Associational.eval c))). (* subtraction coefficient *)
   Let coef_mod : mod_eq m (Positional.eval (n:=sz) wt coef) 0 := eq_refl.
