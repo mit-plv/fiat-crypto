@@ -45,13 +45,12 @@ Module IntegralDomain.
         | Coef_add c1 c2 => Z.add (CtoZ c1) (CtoZ c2)
         | Coef_mul c1 c2 => Z.mul (CtoZ c1) (CtoZ c2)
         end.
-      Local Notation of_Z := (@Ring.of_Z R zero one opp add).
+      Let of_Z := (@Ring.of_Z R zero one opp add).
 
       Lemma CtoZ_correct c : of_Z (CtoZ c) = denote c.
       Proof.
-        Set Printing All.
         induction c; simpl CtoZ; simpl denote;
-          repeat (rewrite_hyp ?* || Ring.push_homomorphism constr:(of_Z)); reflexivity.
+          repeat (rewrite_hyp ?* || Ring.push_homomorphism of_Z); reflexivity.
       Qed.
 
       (* TODO: move *)
@@ -77,7 +76,7 @@ Module IntegralDomain.
         Proof.
           rewrite <-List.Forall_forall in H; induction H; simpl List.fold_right.
           { eapply char_ge_C; assumption. }
-          { rewrite Znat.N2Z.inj_mul; Ring.push_homomorphism constr:(of_Z).
+          { rewrite Znat.N2Z.inj_mul; Ring.push_homomorphism of_Z.
             eapply Ring.nonzero_product_iff_nonzero_factor; eauto. }
         Qed.
           
@@ -116,8 +115,8 @@ Module IntegralDomain.
                    | _ => progress (change (denote (Coef_one)) with (of_Z 1) in * )
                    | _ => progress (change (denote (Coef_opp c)) with (opp (denote c)) in * )
                    | _ => progress (change (denote (Coef_mul c1 c2)) with (denote c1 * denote c2) in * )
-                   | |- opp _ <> zero => setoid_rewrite Ring.opp_zero_iff
-                   | |- _ * _ <> zero => eapply Ring.nonzero_product_iff_nonzero_factor
+                   | |- (opp _ <> zero)%type => setoid_rewrite Ring.opp_zero_iff
+                   | |- (mul _ _ <> zero)%type => eapply Ring.nonzero_product_iff_nonzero_factor
                    | _ => solve [eauto using is_constant_nonzero_correct, Pos.le_1_l]
                    | _ => progress rewrite <-CtoZ_correct
                    end.

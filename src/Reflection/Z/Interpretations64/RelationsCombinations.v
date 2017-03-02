@@ -190,7 +190,7 @@ Module Relations.
       t proj012.
     Qed.
   End proj_from_option2.
-  Global Arguments uncurry_interp_type_rel_pointwise_proj_from_option2 {_ _ _ _ _} proj {t f0 f g} _ _ _.
+  Global Arguments uncurry_interp_type_rel_pointwise_proj_from_option2 {_ _ _ _ _} proj {t f0 f g} _ _ _ _ _.
 
   Section proj1_from_option2.
     Context {interp_base_type0 interp_base_type1 : Type} {interp_base_type2 : base_type -> Type}
@@ -234,7 +234,7 @@ Module Relations.
       t proj012.
     Qed.
   End proj1_from_option2.
-  Global Arguments uncurry_interp_type_rel_pointwise_proj1_from_option2 {_ _ _ _ _} R {t f0 f g} _ _ _.
+  Global Arguments uncurry_interp_type_rel_pointwise_proj1_from_option2 {_ _ _ _ _} R {t f0 f g} _ _ _ _ _.
 
   Section combine_related.
     Lemma related_flat_transitivity {interp_base_type1 interp_base_type2 interp_base_type3}

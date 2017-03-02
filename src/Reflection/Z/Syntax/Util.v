@@ -25,7 +25,7 @@ Definition base_type_leb (v1 v2 : base_type) : bool
 
 Definition base_type_min := base_type_min base_type_leb.
 Global Arguments base_type_min !_ !_ / .
-Global Arguments TypeUtil.base_type_min _ _ _ / .
+Global Arguments TypeUtil.base_type_min _ _ _ /  _.
 
 Definition Castb {var} A A' (v : exprf base_type op (var:=var) (Tbase A))
   : exprf base_type op (var:=var) (Tbase A')

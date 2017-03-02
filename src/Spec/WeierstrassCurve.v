@@ -62,7 +62,7 @@ Module W.
        | ∞, _ => coordinates P2
        | _, ∞ => coordinates P1
        end) _.
-    Next Obligation. exact (Pre.add_onCurve _ _ (proj2_sig _) (proj2_sig _)). Qed.
+    Next Obligation. apply (Pre.add_onCurve _ _ (proj2_sig _) (proj2_sig _)). Qed.
 
     Fixpoint mul (n:nat) (P : point) : point :=
       match n with

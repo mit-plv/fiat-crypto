@@ -271,7 +271,7 @@ Ltac _inverse_to_equation_by fld d tac :=
   lazymatch goal with
   | H: eq (mul ?di d) one |- _ => rewrite <-!(left_inv_unique(H:=fld) _ _ H) in *
   | H: eq (mul d ?di) one |- _ => rewrite <-!(right_inv_unique(H:=fld) _ _ H) in *
-  | _ => _introduce_inverse constr:(fld) constr:(d) d_nz
+  | _ => _introduce_inverse fld d d_nz
   end;
   clear d_nz.
 

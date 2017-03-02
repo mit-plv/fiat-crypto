@@ -158,6 +158,7 @@ Example ex1 : Expr base_type op (Arrow Unit TNat) := fun var =>
   LetIn (Op (tR:=TNat) (Plus Nat) (Pair (Var a) (Var b))) (fun c : var Nat =>
   Op (Plus Nat) (Pair (Var c) (Var c)))))).
 
+(*
 Example ex1f : Expr base_type op (Arrow (TNat * TNat) TNat) := fun var =>
   Abs (fun a0b0 : interp_flat_type _ (TNat * TNat) =>
   let a0 := fst a0b0 in let b0 := snd a0b0 in
@@ -179,3 +180,4 @@ Eval compute in ex1fb.
 
 Definition ex1fb' := Boundify ex1f (64, 64)%core.
 Eval compute in ex1fb'.
+*)
