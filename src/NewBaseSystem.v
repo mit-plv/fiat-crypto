@@ -391,9 +391,11 @@ Module B.
     Lemma reduction_rule a b s c m (m_eq:Z.pos m = s - c):
       (a + s * b) mod m = (a + c * b) mod m.
     Proof.
-      rewrite m_eq. assert (Z.pos m <> 0) by (intro; discriminate). clear m_eq.
-      replace (a + s * b) with ((a + c*b) + b*(s-c)) by nsatz.
-      rewrite Z.add_mod, Z_mod_mult, Z.add_0_r, Z.mod_mod; trivial. Admitted.
+      rewrite m_eq. pose proof (Pos2Z.is_pos m).
+      replace (a + s * b) with ((a + c*b) + b*(s-c)) by ring.
+      rewrite Z.add_mod, Z_mod_mult, Z.add_0_r, Z.mod_mod by omega.
+      trivial.
+    Qed.
     Lemma eval_reduce s c p (s_nonzero:s<>0) m (m_eq : Z.pos m = s - eval c) :
       mod_eq m (eval (reduce s c p)) (eval p).
     Proof.
