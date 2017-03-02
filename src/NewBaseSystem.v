@@ -294,6 +294,7 @@ Lemma mod_eq_Z2F_iff m a b :
 Proof. rewrite <-F.eq_of_Z_iff. reflexivity. Qed.
 
 Delimit Scope runtime_scope with RT.
+
 Definition runtime_mul := Z.mul.
 Global Notation "a * b" := (runtime_mul a%RT b%RT) : runtime_scope.
 Definition runtime_add := Z.add.
@@ -857,17 +858,21 @@ Ltac assert_preconditions :=
          | |- context [Positional.from_associational_cps ?wt ?n] =>
            unique assert (wt 0%nat = 1) by (cbv; congruence)
          | |- context [Positional.from_associational_cps ?wt ?n] =>
+           unique assert (n <> 0%nat) by (cbv; congruence)
+         | |- context [Positional.from_associational_cps ?wt ?n] =>
            unique assert (forall i, wt i <> 0)
              by (intros; apply Z.pow_nonzero; try (cbv; congruence);
                  solve [zero_bounds])
-         | |- context [Positional.from_associational_cps ?wt ?n] =>
-           unique assert (n <> 0%nat) by (cbv; congruence)
-         | |- context [Positional.carry_cps ?wt ?i] =>
-           unique assert (wt (S i) / wt i <> 0) by (cbv; congruence)
+         | |- context [Positional.chained_carries_cps ?wt] =>
+           unique assert (forall i, wt i <> 0)
+             by (intros; apply Z.pow_nonzero; try (cbv; congruence);
+                 solve [zero_bounds])
          | |- context [Positional.chained_carries_cps ?wt _ ?idxs] =>
            unique assert (forall i, In i idxs -> wt (S i) / wt i <> 0)
              by (clear; simpl;  intuition; subst_let; subst; cbv in *;
                  congruence)
+         | |- context [Positional.chained_carries_cps ?wt] =>
+           unique assert (wt 0%nat = 1) by (cbv; congruence)
          | |- context [@Positional.chained_carries_cps _ modulo div] =>
            unique pose proof div_mod
          | |- context [Associational.reduce_cps ?s _] =>
@@ -913,7 +918,7 @@ Ltac solve_op_mod_eq wt x :=
     reflexivity];
   cbv [mod_eq]; apply f_equal2; [|reflexivity];
   apply f_equal;
-  basesystem_partial_evaluation_RHS; reflexivity.
+  basesystem_partial_evaluation_RHS.
 
 Ltac solve_op_F wt x := F_mod_eq; solve_op_mod_eq wt x.
 
@@ -926,6 +931,7 @@ Section Ops.
   Let s : Z := 2^255.
   Let c : list B.limb := [(1, 19)].
   Let coef_div_modulus := 2. (* add 2*modulus before subtracting *)
+  Let carry_chain := (seq 0 sz) ++ ([0;1])%nat.
 
   (* These `Lets` are inferred from those above *)
   Let m := Eval compute in s - Associational.eval c. (* modulus *)
@@ -958,7 +964,7 @@ Section Ops.
     eexists; cbv beta zeta; intros.
     let x := constr:(
         Positional.add_cps (n := sz) wt a b id) in
-    solve_op_F wt x.
+    solve_op_F wt x. reflexivity.
   Defined.
 
   Definition sub_sig :
@@ -970,7 +976,7 @@ Section Ops.
     eexists; cbv beta zeta; intros.
     let x := constr:(
          Positional.sub_cps (n:=sz) (coef := coef) wt a b id) in
-    solve_op_F wt x.
+    solve_op_F wt x. reflexivity.
   Defined.
 
   Definition opp_sig :
@@ -982,7 +988,7 @@ Section Ops.
     eexists; cbv beta zeta; intros.
     let x := constr:(
          Positional.opp_cps (n:=sz) (coef := coef) wt a id) in
-    solve_op_F wt x.
+    solve_op_F wt x. reflexivity.
   Defined.
   
   Definition mul_sig :
@@ -994,9 +1000,8 @@ Section Ops.
     eexists; cbv beta zeta; intros.
     let x := constr:(
          Positional.mul_cps (n:=sz) (m:=sz2) wt a b
-           (fun ab => Positional.reduce_cps (n:=sz) (m:=sz2) wt s c ab
-           (fun r => Positional.chained_carries_cps (n:=sz) (div:=div)(modulo:=modulo) wt r (seq 0 sz) id))) in
-    solve_op_F wt x.
+           (fun ab => Positional.reduce_cps (n:=sz) (m:=sz2) wt s c ab id)) in
+    solve_op_F wt x. reflexivity.
 
     (* rough breakdown of synthesis time *)
     (* 1.2s for side conditions -- should improve significantly when [chained_carries] gets a correctness lemma *)
@@ -1006,6 +1011,19 @@ Section Ops.
 
   Defined. (* 3s *)
 
+  (* Performs a full carry loop (as specified by carry_chain) *)
+  Definition carry_sig :
+    {carry : (Z^sz -> Z^sz)%type |
+               forall a : Z^sz,
+                 let eval := Positional.Fdecode (m := m) wt in
+                 eval (carry a) = eval a}.
+  Proof.
+    eexists; cbv beta zeta; intros.
+    let x := constr:(
+               Positional.chained_carries_cps (n:=sz) (div:=div)(modulo:=modulo) wt a carry_chain id) in
+    solve_op_F wt x. reflexivity.
+  Defined.
+
 End Ops.
 
 (*
@@ -1013,4 +1031,5 @@ Eval cbv [proj1_sig add_sig] in (proj1_sig add_sig).
 Eval cbv [proj1_sig sub_sig] in (proj1_sig sub_sig).
 Eval cbv [proj1_sig opp_sig] in (proj1_sig opp_sig).
 Eval cbv [proj1_sig mul_sig] in (proj1_sig mul_sig).
+Eval cbv [proj1_sig carry_sig] in (proj1_sig carry_sig).
 *)
