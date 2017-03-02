@@ -797,7 +797,7 @@ Module B.
       @Positional.eval_add_to_nth
       @Positional.eval_chained_carries
       @Positional.eval_sub
-    using (omega || assumption) : push_basesystem_eval.
+    using (assumption || vm_decide) : push_basesystem_eval.
 End B.
 
 (* Modulo and div that do shifts if possible, otherwise normal mod/div *)
@@ -855,15 +855,7 @@ Positional.to_associational_cps Positional.to_associational Positional.eval Posi
 
 Ltac assert_preconditions :=
   repeat match goal with
-         | |- context [Positional.from_associational_cps ?wt ?n] =>
-           unique assert (wt 0%nat = 1) by (cbv; congruence)
-         | |- context [Positional.from_associational_cps ?wt ?n] =>
-           unique assert (n <> 0%nat) by (cbv; congruence)
-         | |- context [Positional.from_associational_cps ?wt ?n] =>
-           unique assert (forall i, wt i <> 0)
-             by (intros; apply Z.pow_nonzero; try (cbv; congruence);
-                 solve [zero_bounds])
-         | |- context [Positional.chained_carries_cps ?wt] =>
+         | |- context [Positional.Fdecode ?wt] =>
            unique assert (forall i, wt i <> 0)
              by (intros; apply Z.pow_nonzero; try (cbv; congruence);
                  solve [zero_bounds])
@@ -871,27 +863,7 @@ Ltac assert_preconditions :=
            unique assert (forall i, In i idxs -> wt (S i) / wt i <> 0)
              by (clear; simpl;  intuition; subst_let; subst; cbv in *;
                  congruence)
-         | |- context [Positional.chained_carries_cps ?wt] =>
-           unique assert (wt 0%nat = 1) by (cbv; congruence)
-         | |- context [@Positional.chained_carries_cps _ modulo div] =>
-           unique pose proof div_mod
-         | |- context [Associational.reduce_cps ?s _] =>
-           unique assert (s <> 0) by (cbv; congruence)
-         | |- context [Associational.reduce_cps ?s ?c] =>
-           unique assert (s - Associational.eval c <> 0)
-             by (cbv; congruence)
-         | |- context [Positional.sub_cps ?wt] =>
-           unique assert (wt 0%nat = 1) by (cbv; congruence)
-         | |- context [Positional.sub_cps ?wt] =>
-           unique assert (forall i, wt i <> 0)
-             by (intros; apply Z.pow_nonzero; try (cbv; congruence);
-                 solve [zero_bounds])
-         | |- context [@Positional.sub_cps ?wt _ ?c] =>
-           match goal with
-             |- mod_eq ?m _ _ =>
-             unique assert (mod_eq m (Positional.eval wt c) 0)
-               by (subst_let; vm_decide)
-           end
+         | _ => unique pose proof div_mod
          end.
 
 (* TODO : move *)
@@ -961,7 +933,7 @@ Section Ops.
                  let eval := Positional.Fdecode (m:=m) wt in
                  eval (add a b) = (eval a  + eval b)%F }.
   Proof.
-    eexists; cbv beta zeta; intros.
+    eexists; cbv beta zeta; intros; assert_preconditions.
     let x := constr:(
         Positional.add_cps (n := sz) wt a b id) in
     solve_op_F wt x. reflexivity.
@@ -973,7 +945,7 @@ Section Ops.
                  let eval := Positional.Fdecode (m:=m) wt in
                  eval (sub a b) = (eval a - eval b)%F}.
   Proof.
-    eexists; cbv beta zeta; intros.
+    eexists; cbv beta zeta; intros; assert_preconditions.
     let x := constr:(
          Positional.sub_cps (n:=sz) (coef := coef) wt a b id) in
     solve_op_F wt x. reflexivity.
@@ -985,7 +957,7 @@ Section Ops.
                  let eval := Positional.Fdecode (m := m) wt in
                  eval (opp a) = F.opp (eval a)}.
   Proof.
-    eexists; cbv beta zeta; intros.
+    eexists; cbv beta zeta; intros; assert_preconditions.
     let x := constr:(
          Positional.opp_cps (n:=sz) (coef := coef) wt a id) in
     solve_op_F wt x. reflexivity.
@@ -997,7 +969,7 @@ Section Ops.
                  let eval := Positional.Fdecode (m := m) wt in
                  eval (mul a b) = (eval a  * eval b)%F}.
   Proof.
-    eexists; cbv beta zeta; intros.
+    eexists; cbv beta zeta; intros; assert_preconditions.
     let x := constr:(
          Positional.mul_cps (n:=sz) (m:=sz2) wt a b
            (fun ab => Positional.reduce_cps (n:=sz) (m:=sz2) wt s c ab id)) in
@@ -1018,7 +990,7 @@ Section Ops.
                  let eval := Positional.Fdecode (m := m) wt in
                  eval (carry a) = eval a}.
   Proof.
-    eexists; cbv beta zeta; intros.
+    eexists; cbv beta zeta; intros; assert_preconditions.
     let x := constr:(
                Positional.chained_carries_cps (n:=sz) (div:=div)(modulo:=modulo) wt a carry_chain id) in
     solve_op_F wt x. reflexivity.
