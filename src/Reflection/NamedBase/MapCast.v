@@ -1,8 +1,5 @@
 Require Import Coq.Bool.Sumbool.
 Require Import Crypto.Reflection.NamedBase.Syntax.
-(*Require Import Crypto.Util.LetIn.
-Require Import Crypto.Util.Prod.
-Require Import Crypto.Util.Option.*)
 
 Local Open Scope nexpr_scope.
 Section language.
@@ -32,14 +29,19 @@ Section language.
        | LetIn tx n ex tC eC
          => match @mapf_cast ctx _ ex with
             | Some (existT x_bounds ex')
-              => @mapf_cast (extendb (t:=tx) ctx n x_bounds) _ eC
+              => option_map
+                   (fun eC' => let 'existT Cx_bounds C_expr := eC' in
+                               existT _ Cx_bounds (LetIn n ex' C_expr))
+                   (@mapf_cast (extendb (t:=tx) ctx n x_bounds) _ eC)
             | None => None
             end
        | BinOp t1 t2 tR arg1 arg2
          => match @mapf_cast ctx _ arg1, @mapf_cast ctx _ arg2 with
             | Some (existT arg1_bounds arg1'),
               Some (existT arg2_bounds arg2')
-              => Some (existT _ _ (cast_op _ _ _ _ _ arg1' arg2'))
+              => Some (existT _
+                              (interp_op_bounds _ _ _ arg1_bounds arg2_bounds)
+                              (cast_op _ _ _ arg1_bounds arg2_bounds arg1' arg2'))
             | None, _ | _, None => None
             end
        end.

@@ -2,7 +2,7 @@
 Require Import Crypto.Util.PointedProp.
 Require Import Crypto.Util.Notations.
 
-Class Context {base_type_code} (Name : Type) (var : base_type_code -> Type) :=
+Record Context {base_type_code} (Name : Type) (var : base_type_code -> Type) :=
   { ContextT : Type;
     lookupb : ContextT -> Name -> forall {t : base_type_code}, option (var t);
     extendb : ContextT -> Name -> forall {t : base_type_code}, var t -> ContextT;
