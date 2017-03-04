@@ -855,19 +855,6 @@ Positional.to_associational_cps Positional.to_associational Positional.eval Posi
                   (@runtime_mul));
   [replace_with_vm_compute t1; clear t1|reflexivity].
 
-Ltac assert_preconditions :=
-  repeat match goal with
-         | |- context [Positional.Fdecode ?wt] =>
-           unique assert (forall i, wt i <> 0)
-             by (intros; apply Z.pow_nonzero; try (cbv; congruence);
-                 solve [zero_bounds])
-         | |- context [Positional.chained_carries_cps ?wt _ ?idxs] =>
-           unique assert (forall i, In i idxs -> wt (S i) / wt i <> 0)
-             by (clear; simpl;  intuition; subst_let; subst; cbv in *;
-                 congruence)
-         | _ => unique pose proof div_mod
-         end.
-
 (* TODO : move *)
 Lemma F_of_Z_opp {m} x : F.of_Z m (- x) = F.opp (F.of_Z m x).
 Proof.
