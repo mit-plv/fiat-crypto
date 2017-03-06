@@ -82,7 +82,7 @@ Section Karatsuba.
         x = x0 + sx1
         y = y0 + sy1
     Then, with z0 and z2 as before and z1 = ((a + b) * (c + d)) - z0,
-        xy = z0 + z2 + sz1
+        xy mod p = (z0 + z2 + sz1) mod p
     
     Computing xy one operation at a time:
     sum_z = z0 + z2
@@ -94,19 +94,41 @@ Section Karatsuba.
     xy = sum_z - sz1
    
   *)
-  Definition goldilocks_mul s (xs ys : T) : T :=
-    let a_b := split s xs in
-    let c_d := split s ys in
-    let ac := mul (fst a_b) (fst c_d) in
-    (add (add ac (mul (snd a_b) (snd c_d)))
-         (scmul s (sub (mul (add (fst a_b) (snd a_b)) (add (fst c_d) (snd c_d))) ac))).
+  Definition goldilocks_mul_cps s (xs ys : T) {R} (f:T->R) :=
+    split_cps s xs _
+      (fun x0_x1 => split_cps s ys _
+      (fun y0_y1 => mul_cps (fst x0_x1) (fst y0_y1) _
+      (fun z0 => mul_cps (snd x0_x1) (snd y0_y1) _
+      (fun z2 => add_cps z0 z2 _
+      (fun sum_z => add_cps (fst x0_x1) (snd x0_x1) _
+      (fun sum_x => add_cps (fst y0_y1) (snd y0_y1) _
+      (fun sum_y => mul_cps sum_x sum_y _
+      (fun mul_sumxy => sub_cps mul_sumxy z0 _
+      (fun z1 => scmul_cps s z1 _
+      (fun sz1 => add_cps sum_z sz1 _ f)))))))))).
 
-  Local Existing Instances Z.equiv_modulo_Reflexive RelationClasses.eq_Reflexive Z.equiv_modulo_Symmetric Z.equiv_modulo_Transitive Z.mul_mod_Proper Z.add_mod_Proper Z.modulo_equiv_modulo_Proper.
+  Definition goldilocks_mul s xs ys := @goldilocks_mul_cps s xs ys _ id.
+  Lemma goldilocks_mul_id s xs ys {R} f :
+    @goldilocks_mul_cps s xs ys R f = f (goldilocks_mul s xs ys).
+  Proof.
+    cbv [goldilocks_mul goldilocks_mul_cps].
+    repeat progress rewrite ?sub_id, ?mul_id, ?add_id, ?scmul_id, ?split_id.
+    reflexivity.
+  Qed.
+    
+  Local Existing Instances Z.equiv_modulo_Reflexive
+        RelationClasses.eq_Reflexive Z.equiv_modulo_Symmetric
+        Z.equiv_modulo_Transitive Z.mul_mod_Proper Z.add_mod_Proper
+        Z.modulo_equiv_modulo_Proper.
 
   Lemma goldilocks_mul_correct (p : Z) (p_nonzero : p <> 0) s (s_nonzero : s <> 0) (s2_modp : (s^2) mod p = (s+1) mod p) xs ys :
     (eval (goldilocks_mul s xs ys)) mod p = (eval xs * eval ys) mod p.
-  Proof. cbv [goldilocks_mul]; Zmod_to_equiv_modulo.
+  Proof.
+    cbv [goldilocks_mul_cps goldilocks_mul]; Zmod_to_equiv_modulo.
+    repeat progress rewrite ?sub_id, ?mul_id, ?add_id, ?scmul_id, ?split_id.
+    rewrite push_id.
     repeat rewrite ?eval_mul, ?eval_add, ?eval_sub, ?eval_scmul, <-?(eval_split s xs), <-?(eval_split s ys) by assumption; ring_simplify.
     setoid_rewrite s2_modp.
-    apply f_equal2; nsatz. Qed.
+    apply f_equal2; nsatz.
+  Qed.
 End Karatsuba.
