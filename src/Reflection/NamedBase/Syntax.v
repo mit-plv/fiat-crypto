@@ -28,6 +28,30 @@ Module Export Named.
     | LetIn : forall {tx}, Name -> exprf tx -> forall {tC}, exprf tC -> exprf tC.
     Bind Scope nexpr_scope with exprf.
 
+    Section with_context_interp.
+      Context (Context : Context Name interp_base_type)
+              (interp_op : forall src1 src2 dst, interp_base_type src1 -> interp_base_type src2 -> interp_base_type dst).
+
+      Fixpoint interpf
+               (ctx : Context) {t} (e : exprf t)
+        : option (interp_base_type t)
+        := match e in exprf t return option (interp_base_type t) with
+           | Var t' x => lookupb ctx x t'
+           | BinOp _ _ _ arg1 arg2
+             => match @interpf ctx _ arg1, @interpf ctx _ arg1 with
+                | Some a1, Some a2 => Some (@interp_op _ _ _ a1 a2)
+                | None, _ | _, None => None
+                end
+           | LetIn _ n ex _ eC
+             => match @interpf ctx _ ex with
+                | Some xv
+                  => let x := xv in
+                     @interpf (extendb ctx n x) _ eC
+                | None => None
+                end
+           end.
+    End with_context_interp.
+
     Section with_context.
       Context {var : base_type_code -> Type}
               {Context : Context Name var}.
@@ -78,15 +102,6 @@ Module Export Named.
                end.
       End interp_gen.
     End with_context.
-
-    Definition interpf
-               (Context : Context Name interp_base_type)
-               (interp_op : forall src1 src2 dst, interp_base_type src1 -> interp_base_type src2 -> interp_base_type dst)
-      : forall (ctx : Context) {t} (e : exprf t),
-        prop_of_option (wff ctx e) -> interp_base_type t
-      := @interp_genf
-           interp_base_type Context interp_base_type
-           (fun _ x => x) interp_op (fun _ y _ f => let x := y in f x).
   End language.
 End Named.
 
@@ -95,6 +110,6 @@ Global Arguments BinOp {_ _ _ _ _} _ _.
 Global Arguments LetIn {_ _ _} _ _ {_} _.
 Global Arguments wff {_ _ _ _} ctx {t} _.
 Global Arguments interp_genf {_ _ var _} _ _ _ _ {ctx t} _ _.
-Global Arguments interpf {_ _ _ _ interp_op ctx t} _ _.
+Global Arguments interpf {_ _ _ _ interp_op ctx t} _.
 
 Notation "'slet' x := A 'in' b" := (LetIn _ x A%nexpr b%nexpr) : nexpr_scope.
