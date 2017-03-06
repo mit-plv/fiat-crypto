@@ -1,4 +1,3 @@
-Require Import Crypto.Reflection.NamedBase.PositiveContext.
 Require Import Crypto.Reflection.NamedBase.Syntax.
 Require Import Crypto.Reflection.Syntax.
 
@@ -7,9 +6,9 @@ Module Export Named.
     Context {base_type_code : Type}
             {var : base_type_code -> Type}
             (base_type_code_beq : base_type_code -> base_type_code -> bool)
-            (base_type_code_bl_transparent : forall x y, base_type_code_beq x y = true -> x = y).
-
-    Local Notation Context := (@PositiveContext base_type_code var _ base_type_code_bl_transparent).
+            (base_type_code_bl_transparent : forall x y, base_type_code_beq x y = true -> x = y)
+            {Name}
+            {Context : Context Name var}.
 
     Definition interpf_to_phoas
                (ctx : Context)
