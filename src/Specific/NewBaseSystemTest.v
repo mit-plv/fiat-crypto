@@ -322,7 +322,7 @@ Module Ops56.
          (proj2_sig mul_sig)
       ).
 
-(**)
+(*
 Eval cbv [proj1_sig add_sig] in (proj1_sig add_sig).
 Eval cbv [proj1_sig sub_sig] in (proj1_sig sub_sig).
 Eval cbv [proj1_sig opp_sig] in (proj1_sig opp_sig).
