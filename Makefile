@@ -12,7 +12,7 @@ HIDE := $(if $(VERBOSE),,@)
 
 .PHONY: coq clean update-_CoqProject cleanall install \
 	install-coqprime clean-coqprime coqprime \
-	display \
+	specific-display display \
 	specific non-specific \
 	small-specific-gen medium-specific-gen specific-gen \
 	extraction ghc
@@ -47,7 +47,7 @@ update-_CoqProject::
 $(VOFILES): | coqprime
 
 # add files to this list to prevent them from being built by default
-UNMADE_VOFILES := src/SpecificGen/%
+UNMADE_VOFILES := src/SpecificGen/% src/Specific/%Display.vo
 
 COQ_VOFILES := $(filter-out $(UNMADE_VOFILES),$(VOFILES))
 SPECIFIC_VO := $(filter src/Specific/%,$(VOFILES))
@@ -55,8 +55,10 @@ SPECIFIC_GEN_VO := $(filter src/SpecificGen/%,$(VOFILES))
 MEDIUM_SPECIFIC_GEN_VO := $(filter-out src/SpecificGen/GF5211_32%,$(SPECIFIC_GEN_VO))
 SMALL_SPECIFIC_GEN_VO := $(filter-out src/SpecificGen/GF41417_32%,$(MEDIUM_SPECIFIC_GEN_VO))
 NON_SPECIFIC_VO := $(filter-out $(SPECIFIC_VO),$(VO_FILES))
-DISPLAY_VO := $(filter src/Specific/%Display.vo src/SpecificGen/%Display.vo,$(VOFILES))
-DISPLAY_JAVA_VO := $(filter src/Specific/%JavaDisplay.vo src/SpecificGen/%JavaDisplay.vo,$(DISPLAY_VO))
+SPECIFIC_DISPLAY_VO := $(filter src/Specific/%Display.vo,$(VOFILES))
+SPECIFIC_GEN_DISPLAY_VO := $(filter src/SpecificGen/%Display.vo,$(VOFILES))
+DISPLAY_VO := $(SPECIFIC_DISPLAY_VO) $(SPECIFIC_GEN_DISPLAY_VO)
+DISPLAY_JAVA_VO := $(filter %JavaDisplay.vo,$(DISPLAY_VO))
 DISPLAY_NON_JAVA_VO := $(filter-out $(DISPLAY_JAVA_VO),$(DISPLAY_VO))
 
 specific: $(SPECIFIC_VO) coqprime
@@ -64,6 +66,7 @@ specific-gen: $(SPECIFIC_GEN_VO) coqprime
 medium-specific-gen: $(MEDIUM_SPECIFIC_GEN_VO) coqprime
 small-specific-gen: $(SMALL_SPECIFIC_GEN_VO) coqprime
 non-specific: $(NON_SPECIFIC_VO) coqprime
+specific-display: $(SPECIFIC_DISPLAY_VO:.vo=.log) coqprime
 display: $(DISPLAY_VO:.vo=.log) coqprime
 coq: $(COQ_VOFILES) coqprime
 
