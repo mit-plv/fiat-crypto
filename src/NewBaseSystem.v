@@ -874,8 +874,7 @@ Ltac F_mod_eq :=
 
 Ltac solve_op_mod_eq wt x :=
   transitivity (Positional.eval wt x); autounfold;
-  [|assert_preconditions;
-    autorewrite with uncps push_id push_basesystem_eval;
+  [|autorewrite with uncps push_id push_basesystem_eval;
     reflexivity];
   cbv [mod_eq]; apply f_equal2; [|reflexivity];
   apply f_equal;
