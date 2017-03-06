@@ -1,0 +1,33 @@
+raddW = 
+fun var : Syntax.base_type -> Type =>
+λ
+'(x18, x19, x17, x15, x13, x11, x9, x7, x5, x3,
+ (x36, x37, x35, x33, x31, x29, x27, x25, x23, x21))%core,
+Tbase Syntax.TZ x38 = x18 + x36;
+Tbase Syntax.TZ x39 = x19 + x37;
+Tbase Syntax.TZ x40 = x17 + x35;
+Tbase Syntax.TZ x41 = x15 + x33;
+Tbase Syntax.TZ x42 = x13 + x31;
+Tbase Syntax.TZ x43 = x11 + x29;
+Tbase Syntax.TZ x44 = x9 + x27;
+Tbase Syntax.TZ x45 = x7 + x25;
+Tbase Syntax.TZ x46 = x5 + x23;
+Tbase Syntax.TZ x47 = x3 + x21;
+(Return x38, Return x39, Return x40, Return x41, Return x42, Return x43,
+Return x44, Return x45, Return x46, Return x47)
+     : forall var : Syntax.base_type -> Type,
+       expr Syntax.base_type Syntax.op
+         (Tbase Syntax.TZ * Tbase Syntax.TZ * Tbase Syntax.TZ *
+          Tbase Syntax.TZ * Tbase Syntax.TZ * Tbase Syntax.TZ *
+          Tbase Syntax.TZ * Tbase Syntax.TZ * Tbase Syntax.TZ *
+          Tbase Syntax.TZ *
+          (Tbase Syntax.TZ * Tbase Syntax.TZ * Tbase Syntax.TZ *
+           Tbase Syntax.TZ * Tbase Syntax.TZ * Tbase Syntax.TZ *
+           Tbase Syntax.TZ * Tbase Syntax.TZ * Tbase Syntax.TZ *
+           Tbase Syntax.TZ) ->
+          Tbase Syntax.TZ * Tbase Syntax.TZ * Tbase Syntax.TZ *
+          Tbase Syntax.TZ * Tbase Syntax.TZ * Tbase Syntax.TZ *
+          Tbase Syntax.TZ * Tbase Syntax.TZ * Tbase Syntax.TZ *
+          Tbase Syntax.TZ)
+
+Argument scope is [function_scope]

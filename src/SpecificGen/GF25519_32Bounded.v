@@ -282,9 +282,12 @@ Proof.
   eexists.
   unfold GF25519_32.eqb.
   simpl @fe25519_32WToZ in *; cbv beta iota.
-  intros.
+  intros A B; specialize_by assumption; clear A B.
   cbv [Tuple.map Tuple.on_tuple Tuple.to_list Tuple.to_list' List.map Tuple.from_list Tuple.from_list' fe25519_32WToZ] in *.
-  rewrite <- frf, <- frg by assumption.
+  etransitivity. Focus 2. {
+    apply f_equal2.
+    apply frf.
+    apply frg. } Unfocus.
   etransitivity; [ eapply fieldwisebW_correct | ].
   cbv [fe25519_32WToZ].
   reflexivity.
