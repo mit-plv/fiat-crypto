@@ -217,11 +217,21 @@ Section example.
   = cast_back _ _ (interp_op _ _ _  (cast_op _ _ _ o b1 b2) v1 v2).
   Proof.
     cbv [inbounds interp_op_bounds interp_op] in *.
-    cbv [cast_back pick_typeb]; break_match; simpl;
-      rewrite ?to_Z_cast_back in *;
-      rewrite ?Decidable.eqsig_eq, ?Zmod_small; trivial;
-        rewrite ?Bool.andb_true_iff, ?Z.leb_le, ?Z.ltb_lt in *;
-        simpl in *.
+    cbv [cast_back pick_typeb]; rewrite !to_Z_cast_back in *.
+    break_match;
+      repeat first [ reflexivity
+                   | rewrite !to_Z_cast_back in * by fail
+                   | progress simpl in *
+                   | progress destruct_head sig
+                   | progress split_andb
+                   | progress Z.ltb_to_lt
+                   | rewrite !Decidable.eqsig_eq by fail
+                   | progress rewrite ?Zmod_mod by fail
+                   | progress Z.rewrite_mod_small
+                   | rewrite !Zmod_small by solve [ nia | rewrite !Zmod_small; nia ]
+                   | progress rewrite ?Bool.andb_true_iff, ?Z.leb_le, ?Z.ltb_lt in * by fail
+                   | nia
+                   | push_Zmod; reflexivity ].
     all:try nia.
     all:break_match_hyps.
     all:Z.ltb_to_lt.
