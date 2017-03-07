@@ -231,32 +231,9 @@ Section example.
                    | rewrite !Zmod_small by solve [ nia | rewrite !Zmod_small; nia ]
                    | progress rewrite ?Bool.andb_true_iff, ?Z.leb_le, ?Z.ltb_lt in * by fail
                    | nia
-                   | push_Zmod; reflexivity ].
-    all:try nia.
-    all:break_match_hyps.
-    all:Z.ltb_to_lt.
-    all:simpl in *.
-    all:destruct_head sig.
-    all:split_andb.
-    all:Z.ltb_to_lt.
-    split; try nia.
-    (* FIXME impossible? *)
-    (*
-  o : op TZ TZ TW32
-  b1, b2 : bounds TZ
-  x0, x : Z
-  H1 : (0 <= x0 < b1)%Z
-  H2 : (0 <= x < b2)%Z
-  Heqb : (b2 < 2 ^ 32)%Z
-  Heqb0 : (b1 < 2 ^ 32)%Z
-  H0 : (x < 2 ^ 32)%Z
-  H4 : (x0 < 2 ^ 32)%Z
-  H : (0 <= x)%Z
-  H3 : (0 <= x0)%Z
-  ============================
-  (x0 * x < 2 ^ 32)%Z
- *)
-  Admitted.
+                   | push_Zmod; reflexivity
+                   | progress break_match_hyps ].
+  Qed.
 
   Check @mapf_cast_correct base_type_code op positive bounds interp_op_bounds pick_typeb cast_op
         _ (* ctx *)
