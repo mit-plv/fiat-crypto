@@ -19,27 +19,28 @@ Delimit Scope nexpr_scope with nexpr.
 Module Export Named.
   Section language.
     Context (base_type_code : Type)
+            (op : base_type_code -> base_type_code -> base_type_code -> Type)
             (interp_base_type : base_type_code -> Type)
             (Name : Type).
 
     Inductive exprf : base_type_code -> Type :=
     | Var {t} : Name -> exprf t
-    | BinOp {t1 t2 tR} : exprf t1 -> exprf t2 -> exprf tR
+    | BinOp {t1 t2 tR} (_:op t1 t2 tR) : exprf t1 -> exprf t2 -> exprf tR
     | LetIn : forall {tx}, Name -> exprf tx -> forall {tC}, exprf tC -> exprf tC.
     Bind Scope nexpr_scope with exprf.
 
     Section with_context_interp.
       Context (Context : Context Name interp_base_type)
-              (interp_op : forall src1 src2 dst, interp_base_type src1 -> interp_base_type src2 -> interp_base_type dst).
+              (interp_op : forall src1 src2 dst, op src1 src2 dst -> interp_base_type src1 -> interp_base_type src2 -> interp_base_type dst).
 
       Fixpoint interpf
                (ctx : Context) {t} (e : exprf t)
         : option (interp_base_type t)
         := match e in exprf t return option (interp_base_type t) with
            | Var t' x => lookupb ctx x t'
-           | BinOp _ _ _ arg1 arg2
-             => match @interpf ctx _ arg1, @interpf ctx _ arg1 with
-                | Some a1, Some a2 => Some (@interp_op _ _ _ a1 a2)
+           | BinOp _ _ _ o arg1 arg2
+             => match @interpf ctx _ arg1, @interpf ctx _ arg2 with
+                | Some a1, Some a2 => Some (@interp_op _ _ _ o a1 a2)
                 | None, _ | _, None => None
                 end
            | LetIn _ n ex _ eC
@@ -62,7 +63,7 @@ Module Export Named.
                         | Some _ => true
                         | None => false
                         end
-           | BinOp _ _ _ arg1 arg2
+           | BinOp _ _ _ _ arg1 arg2
              => @wff ctx _ arg1 /\ @wff ctx _ arg2
            | LetIn tx n ex _ eC
              => @wff ctx _ ex
@@ -90,7 +91,7 @@ Module Export Named.
                              | Some v => fun _ => interp_var _ v
                              | None => fun bad => match bad : False with end
                              end
-               | BinOp _ _ _ arg1 arg2
+               | BinOp _ _ _ o arg1 arg2
                  => fun good
                     => let good12 := proj1 (@prop_of_option_and _ _) good in
                        @interp_op _ _ _
@@ -105,11 +106,11 @@ Module Export Named.
   End language.
 End Named.
 
-Global Arguments Var {_ _ _} _.
-Global Arguments BinOp {_ _ _ _ _} _ _.
-Global Arguments LetIn {_ _ _} _ _ {_} _.
-Global Arguments wff {_ _ _ _} ctx {t} _.
-Global Arguments interp_genf {_ _ var _} _ _ _ _ {ctx t} _ _.
-Global Arguments interpf {_ _ _ _ interp_op ctx t} _.
+Global Arguments Var {_ _ _ _} _.
+Global Arguments BinOp {_ _ _ _ _ _} _ _ _.
+Global Arguments LetIn {_ _ _ _} _ _ {_} _.
+Global Arguments wff {_ _ _ _ _} ctx {t} _.
+Global Arguments interp_genf {_ _ _ var _} _ _ _ _ {ctx t} _ _.
+Global Arguments interpf {_ _ _ _ _ interp_op ctx t} _.
 
 Notation "'slet' x := A 'in' b" := (LetIn _ x A%nexpr b%nexpr) : nexpr_scope.
