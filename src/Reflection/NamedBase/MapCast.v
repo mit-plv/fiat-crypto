@@ -92,7 +92,23 @@ Section language.
     { specialize (IHe1 oldValues newValues varBounds _ _ Heqo2 Hctx _ Heqo0 _ Heqo4); clear Heqo2 Heqo0 Heqo4.
       specialize (IHe2 oldValues newValues varBounds _ _ Heqo3 Hctx _ Heqo1 _ Heqo5); clear Heqo3 Heqo1 Heqo5.
       destruct_head and; subst; auto. }
-    { admit. }
+    { move IHe2 at bottom.
+      repeat match goal with
+             | [ IH : context[interpf _ ?e], H' : interpf ?ctx ?e = _ |- _ ]
+               => let check_tac _ := (rewrite H' in IH) in
+                  first [ specialize (IH ctx); check_tac ()
+                        | specialize (fun a => IH a ctx); check_tac ()
+                        | specialize (fun a b => IH a b ctx); check_tac () ]
+             | [ IH : context[mapf_cast _ ?e], H' : mapf_cast ?ctx ?e = _ |- _ ]
+               => let check_tac _ := (rewrite H' in IH) in
+                  first [ specialize (IH ctx); check_tac ()
+                        | specialize (fun a => IH a ctx); check_tac ()
+                        | specialize (fun a b => IH a b ctx); check_tac () ]
+             | [ H : forall x y z, Some _ = Some _ -> _ |- _ ]
+               => first [ specialize (H _ _ _ eq_refl)
+                        | specialize (fun x => H x _ _ eq_refl) ]
+             end.
+      admit. }
   Admitted.
 
 End language.
@@ -113,7 +129,7 @@ Section example.
       match t with
         | TW32 => TW32
         | TW64 => if Z.ltb b (2^32) then TW32 else TW64
-        | TZ => 
+        | TZ =>
           if Z.ltb b (2^32) then TW32
           else if Z.ltb b (2^64) then TW64
                else TZ
@@ -150,7 +166,7 @@ Section example.
     | TW32 => exist _ (v mod 2^32)%Z _
     | TW64 => exist _ (v mod 2^64)%Z _
     end; abstract(rewrite !Bool.andb_true_iff, !Z.leb_le, Z.ltb_lt; apply Z_mod_lt; reflexivity). Defined.
-      
+
   Definition cast_back (t : base_type_code) (b : bounds t) (v:interp_base_type (pick_typeb t b))
     : interp_base_type t := of_Z _ (to_Z v).
 
@@ -169,11 +185,15 @@ Section example.
     destruct o; cbv [inbounds interp_op_bounds interp_op] in *;
       generalize dependent (to_Z v1); generalize dependent (to_Z v2);
         clear dependent v1; clear dependent v2;
-          intros z1 H1 z2 H2; cbv [of_Z to_Z id proj1_sig] in *.
-    { cbv [of_Z to_Z id] in *. nia. }
-    admit.
-    admit.
-  Admitted.
+          intros z1 H1 z2 H2; cbv [of_Z to_Z id proj1_sig] in *;
+            cbv [of_Z to_Z id] in *;
+            repeat match goal with
+                   | _ => nia
+                   | [ |- (_ <= _ < _)%Z ] => split
+                   | [ |- (0 <= _ mod _)%Z ] => apply Z.mod_pos_bound; vm_compute; reflexivity
+                   | [ |- (_ mod _ < _)%Z ] => eapply Z.le_lt_trans; [ apply Z.mod_le | ]
+                   end.
+  Qed.
 
   Local Arguments Z.pow : simpl never.
   Lemma to_Z_cast_back t (b:bounds t) (v:interp_base_type (pick_typeb t b))
@@ -181,7 +201,7 @@ Section example.
   Proof.
     destruct t;
       repeat (trivial;
-              rewrite ?Bool.andb_true_iff, ?Z.leb_le, ?Z.ltb_lt in *; 
+              rewrite ?Bool.andb_true_iff, ?Z.leb_le, ?Z.ltb_lt in *;
               cbv [cast_back]; break_match; simpl in *;
               destruct_head' sig;
               rewrite ?Zmod_small by nia).
@@ -196,8 +216,11 @@ Section example.
   Proof.
     cbv [inbounds interp_op_bounds interp_op] in *.
     cbv [cast_back pick_typeb]; break_match; simpl;
-      rewrite ?to_Z_cast_back, ?Decidable.eqsig_eq, ?Zmod_small; trivial;
-        rewrite ?Bool.andb_true_iff, ?Z.leb_le, ?Z.ltb_lt in *.
+      rewrite ?to_Z_cast_back in *;
+      rewrite ?Decidable.eqsig_eq, ?Zmod_small; trivial;
+        rewrite ?Bool.andb_true_iff, ?Z.leb_le, ?Z.ltb_lt in *;
+        simpl in *.
+    all:try nia.
   Admitted.
 
   Check @mapf_cast_correct base_type_code op positive bounds interp_op_bounds pick_typeb cast_op
