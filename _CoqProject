@@ -155,9 +155,13 @@ src/Reflection/Named/Compile.v
 src/Reflection/Named/ContextOn.v
 src/Reflection/Named/DeadCodeElimination.v
 src/Reflection/Named/EstablishLiveness.v
+src/Reflection/Named/FMapContext.v
 src/Reflection/Named/NameUtil.v
+src/Reflection/Named/PositiveContext.v
 src/Reflection/Named/RegisterAssign.v
+src/Reflection/Named/SmartMap.v
 src/Reflection/Named/Syntax.v
+src/Reflection/Named/Wf.v
 src/Reflection/Z/BinaryNotationConstants.v
 src/Reflection/Z/BoundsInterpretations.v
 src/Reflection/Z/CNotations.v
