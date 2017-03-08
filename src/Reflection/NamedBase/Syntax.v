@@ -21,6 +21,20 @@ Record ContextOk {base_type_code Name var} (Context : @Context base_type_code Na
     lookupb_removeb : forall (ctx : Context) n n' t t', n <> n' -> lookupb (removeb ctx n t) n' t'
                                                                    = lookupb ctx n' t';
     lookupb_empty : forall n t, lookupb (@empty _ _ _ Context) n t = None }.
+Lemma lookupb_eq_cast {base_type_code Name var Context}
+      (ContextOk : @ContextOk base_type_code Name var Context)
+  : forall (ctx : Context) n t t' (pf : t = t'),
+    lookupb ctx n t' = option_map (fun v => eq_rect _ var v _ pf) (lookupb ctx n t).
+Proof.
+  intros; subst; edestruct lookupb; reflexivity.
+Defined.
+Lemma lookupb_extendb_eq {base_type_code Name var Context}
+      (ContextOk : @ContextOk base_type_code Name var Context)
+  : forall (ctx : Context) n t t' (pf : t = t') v,
+    lookupb (extendb ctx n (t:=t) v) n t' = Some (eq_rect _ var v _ pf).
+Proof.
+  intros; subst; apply lookupb_extendb_same; assumption.
+Defined.
 
 Delimit Scope nexpr_scope with nexpr.
 Module Export Named.

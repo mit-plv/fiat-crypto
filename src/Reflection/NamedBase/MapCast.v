@@ -1,3 +1,4 @@
+Require Import Coq.Logic.Eqdep_dec.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Tactics Crypto.Util.Option Crypto.Util.Sigma.
@@ -48,6 +49,39 @@ Section language.
             end
        end.
 
+  Local Ltac handle_lookupb_step Name_dec base_type_dec :=
+    let check_neq t t' :=
+        first [ constr_eq t t'; fail 1
+              | lazymatch goal with
+                | [ H : t = t' |- _ ] => fail 1
+                | [ H : t <> t' |- _ ] => fail 1
+                | [ H : t = t' -> False |- _ ] => fail 1
+                | _ => idtac
+                end ] in
+    match goal with
+    | _ => progress subst
+    | [ |- context[lookupb (extendb ?ctx ?n (t:=?t) _) ?n ?t] ]
+      => setoid_rewrite lookupb_extendb_same; [ | assumption.. ]
+    | [ H : ?t = ?t' |- context[lookupb (extendb ?ctx ?n (t:=?t) _) ?n ?t'] ]
+      => setoid_rewrite (fun H' => lookupb_extendb_eq H' ctx n t t' H); [ | assumption.. ]
+    | [ H' : ?n <> ?n' |- context[lookupb (extendb ?ctx ?n (t:=?t) _) ?n' ?t'] ]
+      => setoid_rewrite lookupb_extendb_different; [ | assumption.. ]
+    | [ H' : ?t <> ?t' |- context[lookupb (extendb ?ctx ?n (t:=?t) _) ?n ?t'] ]
+      => setoid_rewrite lookupb_extendb_wrong_type; [ | assumption.. ]
+    | [ |- context[lookupb (extendb ?ctx ?n (t:=?t) _) ?n ?t'] ]
+      => check_neq t t'; destruct (base_type_dec t t')
+    | [ |- context[lookupb (extendb ?ctx ?n (t:=?t) _) ?n' ?t'] ]
+      => check_neq n n'; destruct (Name_dec n n')
+    | [ H : lookupb ?ctx ?n ?t = _, H' : ?t = ?t' |- context[lookupb ?ctx ?n ?t'] ]
+      => rewrite (fun H'' => lookupb_eq_cast H'' ctx n _ _ H')
+    | [ H : lookupb ?ctx ?n ?t = _ |- context[lookupb ?ctx ?n ?t'] ]
+      => check_neq t t'; destruct (base_type_dec t t')
+    | _ => progress inversion_option
+    | [ H : ?x = Some _ |- context[?x] ] => rewrite H
+    | [ H : ?x = None |- context[?x] ] => rewrite H
+    | _ => progress simpl @option_map
+    end.
+
   Local Arguments interpf {_} {_} {_} {_} {_} {_} _ {_} _.
   Lemma mapf_cast_correct
         {interp_base_type : base_type_code -> Type}
@@ -70,7 +104,6 @@ Section language.
              =
              cast_back _ _ (interp_op _ _ _  (cast_op _ _ _ o b1 b2) v1 v2))
         (base_type_dec : forall t1 t2 : base_type_code, t1 = t2 \/ t1 <> t2)
-        (base_type_UIP_refl : forall t (p : t = t :> base_type_code), p = eq_refl)
         (Name_dec : forall t1 t2 : Name, t1 = t2 \/ t1 <> t2)
         {t} (e:exprf base_type_code op Name t)
     : forall
@@ -86,7 +119,7 @@ Section language.
                                        /\ cast_back t b v' = v)
         r (Hr:interpf (interp_op:=interp_op) oldValues e = Some r)
         r' (Hr':interpf (interp_op:=interp_op) newValues e' = Some r')
-        , r = cast_back _ _ r' /\ @inbounds _ b r.
+        , @inbounds _ b r /\ cast_back _ _ r' = r.
   Proof.
     induction e; simpl interpf; simpl mapf_cast; unfold option_map; intros;
       repeat (break_match_hyps; inversion_option; inversion_sigma; simpl in *; subst).
@@ -98,7 +131,7 @@ Section language.
       auto. }
     { specialize (IHe1 oldValues newValues varBounds _ _ Heqo2 Hctx _ Heqo0 _ Heqo4); clear Heqo2 Heqo0 Heqo4.
       specialize (IHe2 oldValues newValues varBounds _ _ Heqo3 Hctx _ Heqo1 _ Heqo5); clear Heqo3 Heqo1 Heqo5.
-      destruct_head and; subst; auto. }
+      destruct_head and; subst; intuition eauto; symmetry; auto. }
     { repeat match goal with
              | [ IH : context[interpf _ ?e], H' : interpf ?ctx ?e = _ |- _ ]
                => let check_tac _ := (rewrite H' in IH) in
@@ -114,55 +147,47 @@ Section language.
                => first [ specialize (H _ _ _ eq_refl)
                         | specialize (fun x => H x _ _ eq_refl) ]
              end.
-      { apply IHe2; clear IHe2; try reflexivity.
-        intros ???.
-        repeat match goal with
-               | _ => progress subst
-               | [ |- context[lookupb (extendb ?ctx ?n (t:=?t) _) ?n ?t] ]
-                 => setoid_rewrite lookupb_extendb_same; [ | assumption.. ]
-               | [ H' : ?n <> ?n' |- context[lookupb (extendb ?ctx ?n (t:=?t) _) ?n' ?t'] ]
-                 => setoid_rewrite lookupb_extendb_different; [ | assumption.. ]
-               | [ H' : ?t <> ?t' |- context[lookupb (extendb ?ctx ?n (t:=?t) _) ?n ?t'] ]
-                 => setoid_rewrite lookupb_extendb_wrong_type; [ | assumption.. ]
-               | [ |- context[lookupb (extendb ?ctx ?n (t:=?t) _) ?n ?t'] ]
-                 => first [ constr_eq t t'; fail 1
-                          | lazymatch goal with
-                            | [ H : t = t' |- _ ] => fail 1
-                            | [ H : t <> t' |- _ ] => fail 1
-                            | [ H : t = t' -> False |- _ ] => fail 1
-                            | _ => idtac
-                            end ];
-                      destruct (base_type_dec t t')
-               | [ |- context[lookupb (extendb ?ctx ?n (t:=?t) _) ?n' ?t'] ]
-                 => first [ constr_eq n n'; fail 1
-                          | lazymatch goal with
-                            | [ H : n = n' |- _ ] => fail 1
-                            | [ H : n <> n' |- _ ] => fail 1
-                            | [ H : n = n' -> False |- _ ] => fail 1
-                            | _ => idtac
-                            end ];
-                      destruct (Name_dec n n')
-               | _ => progress intros
-               | _ => progress inversion_option
-               end.
-        { match goal with
-          | [ |- exists b0, Some _ = Some b0 /\ _ /\ _ ]
-            => eexists; repeat apply conj; [ reflexivity | .. ]
-          end.
-          admit.
-          admit. }
-        { admit. }
-      }
-  Admitted.
-
+      { assert (base_type_UIP_refl : forall t (p : t = t :> base_type_code), p = eq_refl)
+          by (intro; apply K_dec; auto).
+        apply IHe2; clear IHe2; try reflexivity.
+        intros ??? H.
+        let b := fresh "b" in
+        let H' := fresh "H'" in
+        match goal with |- exists b0, ?v = Some b0 /\ _ => destruct v as [b|] eqn:H' end;
+          [ exists b; split; [ reflexivity | ] | exfalso ];
+          revert H H';
+          repeat match goal with
+                 | _ => handle_lookupb_step Name_dec base_type_dec
+                 | _ => progress intros
+                 | _ => progress destruct_head' ex
+                 | _ => progress destruct_head' and
+                 | _ => congruence
+                 | [ H : ?x = Some ?y, H' : ?x = Some ?y' |- _ ]
+                   => assert (y = y') by congruence; (subst y' || subst y)
+                 | [ |- ?A /\ (exists v, Some ?k = Some v /\ @?B v) ]
+                   => cut (A /\ B k); [ clear; solve [ intuition eauto ] | cbv beta ]
+                 | [ |- ?A /\ (exists v, None = Some v /\ @?B v) ]
+                   => exfalso
+                 | [ H : ?x = ?x :> base_type_code |- _ ]
+                   => pose proof (base_type_UIP_refl x H); subst H; simpl
+                 | _ => solve [ auto ]
+                 | _ => progress specialize_by auto
+                 | [ H : forall x, Some _ = Some x -> _ |- _ ] => specialize (H _ eq_refl)
+                 | [ H : forall t n v, lookupb ?ctx n = _ -> _, H' : lookupb ?ctx ?n' = _ |- _ ]
+                   => specialize (H _ _ _ H')
+                 end. } }
+  Qed.
 End language.
 
 Require Import ZArith Lia.
+Local Set Decidable Equality Schemes.
 Section example.
   Inductive base_type_code :=
   | TZ
   | TW32
   | TW64.
+  Lemma base_type_code_dec_or : forall t t' : base_type_code, t = t' \/ t <> t'.
+  Proof. decide equality. Defined.
   Inductive op : base_type_code -> base_type_code -> base_type_code -> Type :=
   | OpMulZ : forall t1 t2, op t1 t2 TZ
   | OpMul32 : forall t1 t2, op t1 t2 TW32
@@ -195,7 +220,7 @@ Section example.
     | TW64 => { z | (Z.leb 0 z && Z.ltb z (2^64)%Z = true)%bool }
     end.
   Check @mapf_cast_correct base_type_code op positive bounds interp_op_bounds pick_typeb cast_op
-        _ (* ctx *)
+        _ (* ctx *) _ (* ctx_ok *)
         interp_base_type.
 
   Definition to_Z {t:base_type_code} : interp_base_type t -> Z :=
@@ -277,11 +302,17 @@ Section example.
                    | progress break_match_hyps ].
   Qed.
 
+  Lemma eq_dec_positive_or : forall p q : positive, p = q \/ p <> q.
+  Proof. decide equality. Defined.
+
   Check @mapf_cast_correct base_type_code op positive bounds interp_op_bounds pick_typeb cast_op
-        _ (* ctx *)
+        _ (* ctx *) _ (* ctx_ok *)
         interp_base_type interp_op cast_back
-        _ (* ctx *)
+        _ (* ctx *) _ (* ctx_ok *)
         inbounds
         interp_op_bounds_correct
         pull_cast_back
-        .
+        base_type_code_dec_or
+        eq_dec_positive_or
+  .
+End example.
