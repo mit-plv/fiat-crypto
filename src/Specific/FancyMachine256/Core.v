@@ -9,6 +9,7 @@ Require Export Crypto.BoundedArithmetic.ArchitectureToZLikeProofs.
 Require Export Crypto.Util.Tuple.
 Require Import Crypto.Util.Option Crypto.Util.Sigma Crypto.Util.Prod.
 Require Export Crypto.Reflection.Named.Syntax.
+Require Export Crypto.Reflection.Named.PositiveContext.
 Require Import Crypto.Reflection.Named.DeadCodeElimination.
 Require Import Crypto.Reflection.CountLets.
 Require Import Crypto.Reflection.Named.ContextOn.
@@ -18,6 +19,7 @@ Require Import Crypto.Reflection.Inline.
 Require Import Crypto.Reflection.CommonSubexpressionElimination.
 Require Export Crypto.Reflection.Reify.
 Require Export Crypto.Util.ZUtil.
+Require Export Crypto.Util.Option.
 Require Export Crypto.Util.Notations.
 Require Import Crypto.Util.ListUtil.
 Require Export Crypto.Util.LetIn.
@@ -206,14 +208,14 @@ Proof.
       try solve [ simpl; congruence | intros; exfalso; lia ].
 Qed.
 
-Global Instance RegisterContext {var : base_type -> Type} : Context Register var
-  := ContextOn pos_of_Register (RegisterAssign.pos_context var).
+Definition RegisterContext {var : base_type -> Type} : Context Register var
+  := ContextOn pos_of_Register (PositiveContext _ _ base_type_beq internal_base_type_dec_bl).
 
 Definition syntax {ops : fancy_machine.instructions (2 * 128)}
   := Named.expr base_type op Register.
 
 Class wf_empty {ops} {var} {t} (e : Named.expr base_type (@op ops) Register t)
-  := mk_wf_empty : @Named.wf base_type op Register var _ empty t e.
+  := mk_wf_empty : @Wf.Named.wf base_type Register var _ RegisterContext empty t e.
 Global Hint Extern 0 (wf_empty _) => vm_compute; intros; constructor : typeclass_instances.
 
 (** Assemble a well-typed easily interpretable expression into a
@@ -223,7 +225,7 @@ Section assemble.
 
   Definition AssembleSyntax' {t} (e : Expr base_type op t) (ls : list Register)
     : option (syntax t)
-    := CompileAndEliminateDeadCode e ls.
+    := CompileAndEliminateDeadCode (Context:=RegisterContext) e ls.
   Definition AssembleSyntax {t} e ls (res := @AssembleSyntax' t e ls)
     := match res return match res with None => _ | _ => _ end with
        | Some v => v
@@ -237,8 +239,8 @@ Section assemble.
 
   Definition DefaultAssembleSyntax {t} e := @AssembleSyntax t e (DefaultRegisters e).
 
-  Definition Interp {t} e {wf : wf_empty e}
-    := @Named.interp base_type interp_base_type op Register _ interp_op empty t e wf.
+  Definition Interp {t} e v
+    := invert_Some (@Named.interp base_type interp_base_type op Register RegisterContext interp_op empty t e v).
 End assemble.
 
 Export Reflection.Named.Syntax.

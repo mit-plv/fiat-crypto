@@ -3,6 +3,7 @@ Require Import Coq.PArith.BinPos Coq.Lists.List.
 Require Import Crypto.Reflection.Named.Syntax.
 Require Import Crypto.Reflection.Named.Compile.
 Require Import Crypto.Reflection.Named.RegisterAssign.
+Require Import Crypto.Reflection.Named.PositiveContext.
 Require Import Crypto.Reflection.Named.EstablishLiveness.
 Require Import Crypto.Reflection.CountLets.
 Require Import Crypto.Reflection.Syntax.
@@ -56,8 +57,8 @@ Section language.
     : option (nexpr t)
     := let e := compile (Name:=positive) (e _) (List.map Pos.of_nat (seq 1 (CountBinders e))) in
        match e with
-       | Some e => Let_In (insert_dead_names None e ls) (* help vm_compute by factoring this out *)
-                          (fun names => register_reassign Pos.eqb empty empty e names)
+       | Some e => Let_In (insert_dead_names (Context:=PositiveContext_nd) None e ls) (* help vm_compute by factoring this out *)
+                          (fun names => register_reassign (InContext:=PositiveContext_nd) (ReverseContext:=Context) Pos.eqb empty empty e names)
        | None => None
        end.
 End language.

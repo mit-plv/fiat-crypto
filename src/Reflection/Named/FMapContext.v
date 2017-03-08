@@ -52,6 +52,17 @@ Module FMapContextFun (E : DecidableType) (W : WSfun E).
                      | rewrite base_type_code_lb in * by reflexivity ].
     Qed.
   End ctx.
+
+  Section ctx_nd.
+    Context {base_type_code var : Type}.
+
+    Definition FMapContext_nd : @Context base_type_code W.key (fun _ => var)
+      := {| ContextT := W.t var;
+            lookupb ctx n t := W.find n ctx;
+            extendb ctx n t v := W.add n v ctx;
+            removeb ctx n t := W.remove n ctx;
+            empty := W.empty _ |}.
+  End ctx_nd.
 End FMapContextFun.
 
 Module FMapContext (W : WS) := FMapContextFun W.E W.

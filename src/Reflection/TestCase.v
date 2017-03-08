@@ -3,6 +3,7 @@ Require Import Coq.PArith.BinPos Coq.Lists.List.
 Require Import Crypto.Reflection.Named.Syntax.
 Require Import Crypto.Reflection.Named.Compile.
 Require Import Crypto.Reflection.Named.RegisterAssign.
+Require Import Crypto.Reflection.Named.PositiveContext.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Wf.
 Require Import Crypto.Reflection.Equality.
@@ -181,7 +182,7 @@ Definition example_expr_compiled
       | None => True
       end.
 
-Compute register_reassign Pos.eqb empty empty example_expr_compiled (Some 1%positive :: Some 2%positive :: None :: List.map (@Some _) (List.map Pos.of_nat (seq 3 20))).
+Compute register_reassign (InContext:=PositiveContext_nd) (ReverseContext:=PositiveContext_nd) Pos.eqb empty empty example_expr_compiled (Some 1%positive :: Some 2%positive :: None :: List.map (@Some _) (List.map Pos.of_nat (seq 3 20))).
 
 Module bounds.
   Record bounded := { lower : nat ; value : nat ; upper : nat }.

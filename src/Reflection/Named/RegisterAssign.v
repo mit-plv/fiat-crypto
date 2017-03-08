@@ -1,6 +1,6 @@
 (** * Reassign registers *)
-Require Import Coq.FSets.FMapPositive Coq.PArith.BinPos.
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.Named.PositiveContext.
 Require Import Crypto.Reflection.Named.Syntax.
 Require Import Crypto.Reflection.Named.NameUtil.
 Require Import Crypto.Util.Decidable.
@@ -82,37 +82,7 @@ Section language.
               end
          end.
   End internal.
-
-  Section context_pos.
-    Global Instance pos_context {decR : DecidableRel (@eq base_type_code)}
-           (var : base_type_code -> Type) : Context positive var
-      := { ContextT := PositiveMap.t { t : _ & var t };
-           lookupb ctx key t := match PositiveMap.find key ctx with
-                                | Some v => match dec (projT1 v = t) with
-                                            | left pf => Some match pf in (_ = t) return var t with
-                                                              | eq_refl => projT2 v
-                                                              end
-                                            | right _ => None
-                                            end
-                                | None => None
-                                end;
-           extendb ctx key t v := PositiveMap.add key (existT _ t v) ctx;
-           removeb ctx key t := if dec (option_map (@projT1 _ _) (PositiveMap.find key ctx) = Some t)
-                                then PositiveMap.remove key ctx
-                                else ctx;
-           empty := PositiveMap.empty _ }.
-    Global Instance pos_context_nd
-           (var : Type)
-      : Context positive (fun _ : base_type_code => var)
-      := { ContextT := PositiveMap.t var;
-           lookupb ctx key t := PositiveMap.find key ctx;
-           extendb ctx key t v := PositiveMap.add key v ctx;
-           removeb ctx key t := PositiveMap.remove key ctx;
-           empty := PositiveMap.empty _ }.
-  End context_pos.
 End language.
 
-Global Arguments pos_context {_ _} var.
-Global Arguments pos_context_nd : clear implicits.
 Global Arguments register_reassign {_ _ _ _ _ _} _ ctxi ctxr {t} e _.
 Global Arguments register_reassignf {_ _ _ _ _ _} _ ctxi ctxr {t} e _.
