@@ -13,7 +13,8 @@ Section language.
           (interp_op_bounds : forall src1 src2 dst, interp_base_type_bounds src1 -> interp_base_type_bounds src2 -> interp_base_type_bounds dst)
           (pick_typeb : forall t, interp_base_type_bounds t -> base_type_code)
           (cast_op : forall t1 t2 tR, op t1 t2 tR -> forall arg1_bs arg2_bs, op (pick_typeb _ arg1_bs) (pick_typeb _ arg2_bs) (pick_typeb _ (interp_op_bounds t1 t2 tR arg1_bs arg2_bs)))
-          {BoundsContext : Context Name interp_base_type_bounds}.
+          {BoundsContext : Context Name interp_base_type_bounds}
+          (BoundsContextOk : ContextOk BoundsContext).
 
   Fixpoint mapf_cast
            (ctx : BoundsContext)
@@ -54,6 +55,7 @@ Section language.
             op src1 src2 dst -> interp_base_type src1 -> interp_base_type src2 -> interp_base_type dst)
         (cast_back: forall t b, interp_base_type (pick_typeb t b) -> interp_base_type t)
         {Context : Context Name interp_base_type}
+        (ContextOk : ContextOk Context)
         (inbounds : forall t, interp_base_type_bounds t -> interp_base_type t -> Prop)
         (interp_op_bounds_correct:
            forall t1 t2 tR o b1 b2
@@ -109,8 +111,27 @@ Section language.
              | [ H : forall x y z, Some _ = Some _ -> _ |- _ ]
                => first [ specialize (H _ _ _ eq_refl)
                         | specialize (fun x => H x _ _ eq_refl) ]
+             | [ H : context[lookupb _ _] |- _ ]
+               => setoid_rewrite lookupb_extendb_Some in H; [ | assumption.. ]
              end.
-      admit. }
+      { apply IHe2; clear IHe2; try reflexivity.
+        intros ???.
+        repeat match goal with
+               | _ => progress intros
+               | _ => progress destruct_head' or
+               | _ => progress destruct_head' and
+               | _ => progress destruct_head' ex
+               | _ => progress subst
+               | [ |- and _ _ ] => split
+               | [ |- (?x = ?x /\ _) \/ (?x <> ?x /\ _) ]
+                 => left
+               | [ |- _ = _ ] => reflexivity
+               | _ => assumption
+               | [ H : ?x <> ?y |- (?x = ?y /\ _) \/ (?x <> ?y /\ _) ]
+                 => right
+               | [ |- ex _ ] => eexists
+               end;
+          admit. }
   Admitted.
 
 End language.

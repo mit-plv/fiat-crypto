@@ -14,9 +14,17 @@ Arguments extendb {_ _ _ _} _ _ [_] _.
 Arguments removeb {_ _ _ _} _ _ _.
 Arguments empty {_ _ _ _}.
 Record ContextOk {base_type_code Name var} (Context : @Context base_type_code Name var) :=
-  { lookupb_extendb_same : forall (ctx : Context) n t v, lookupb (extendb ctx n (t:=t) v) n t = Some v;
-    lookupb_extendb_different : forall (ctx : Context) n n' t t' v, n <> n' -> lookupb (extendb ctx n (t:=t) v) n' t'
-                                                                               = lookupb ctx n' t';
+  { lookupb_extendb_Some
+    : forall (ctx : Context) n n' t t' v v',
+      lookupb (extendb ctx n (t:=t) v) n' t' = Some v'
+      <-> ((n = n' /\ exists pf : t = t',
+               eq_rect _ var v _ pf = v')
+           \/ (n <> n' /\ lookupb ctx n' t' = Some v'));
+    lookupb_extendb_None
+    : forall (ctx : Context) n n' t t' v,
+        lookupb (extendb ctx n (t:=t) v) n' t' = None
+        <-> ((n = n' /\ t <> t')
+             \/ (n <> n' /\ lookupb ctx n' t' = None));
     lookupb_removeb : forall (ctx : Context) n n' t t', n <> n' -> lookupb (removeb ctx n t) n' t'
                                                                    = lookupb ctx n' t';
     lookupb_empty : forall n t, lookupb (@empty _ _ _ Context) n t = None }.
