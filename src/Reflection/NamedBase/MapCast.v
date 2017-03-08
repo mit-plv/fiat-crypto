@@ -69,6 +69,9 @@ Section language.
              interp_op t1 t2 tR o (cast_back t1 b1 v1) (cast_back t2 b2 v2)
              =
              cast_back _ _ (interp_op _ _ _  (cast_op _ _ _ o b1 b2) v1 v2))
+        (base_type_dec : forall t1 t2 : base_type_code, t1 = t2 \/ t1 <> t2)
+        (base_type_UIP_refl : forall t (p : t = t :> base_type_code), p = eq_refl)
+        (Name_dec : forall t1 t2 : Name, t1 = t2 \/ t1 <> t2)
         {t} (e:exprf base_type_code op Name t)
     : forall
         (oldValues:Context)
@@ -116,22 +119,87 @@ Section language.
              end.
       { apply IHe2; clear IHe2; try reflexivity.
         intros ???.
-        repeat match goal with
-               | _ => progress intros
-               | _ => progress destruct_head' or
-               | _ => progress destruct_head' and
-               | _ => progress destruct_head' ex
-               | _ => progress subst
-               | [ |- and _ _ ] => split
-               | [ |- (?x = ?x /\ _) \/ (?x <> ?x /\ _) ]
-                 => left
-               | [ |- _ = _ ] => reflexivity
-               | _ => assumption
-               | [ H : ?x <> ?y |- (?x = ?y /\ _) \/ (?x <> ?y /\ _) ]
-                 => right
-               | [ |- ex _ ] => eexists
-               end;
-          admit. }
+        match goal with
+        | [ |- ((?A /\ exists pf : ?T, @?B pf) \/ (?C /\ ?D))
+               -> exists b : ?BB, ((?A /\ exists pf' : ?T, @?B' b pf')
+                                   \/ (?C /\ @?D' b))
+                                  /\ @?E b
+                                  /\ (exists v : ?VV,
+                                         ((?A /\ exists pf'' : ?T', @?B'' b v pf'')
+                                          \/ (?C /\ @?D'' b v))
+                                         /\ @?E' b v)]
+          => cut (exists (b : BB) (v : VV),
+                     (A -> forall pf : T, B pf -> B' b pf /\ exists pf'' : T', B'' b v pf'')
+                     /\ (C -> D -> D' b /\ D'' b v)
+                     /\ (((A /\ exists pf : T, B pf) \/ (C /\ D)) -> E b /\ E' b v))
+        end.
+        { clear -base_type_UIP_refl.
+          repeat first [ assumption
+                       | progress intros
+                       | progress subst
+                       | progress destruct_head ex
+                       | progress destruct_head and
+                       | progress destruct_head or
+                       | progress simpl in *
+                       | progress specialize_by reflexivity
+                       | progress specialize_by (exists eq_refl; reflexivity)
+                       | progress intuition
+                       | match goal with
+                         | [ H : forall pf : ?x = ?x, _ |- _ ] => specialize (H eq_refl)
+                         | [ H : (?x = ?x -> False) -> _ |- _ ] => clear H
+                         | [ H : ?x = ?x |- _ ] => clear H
+                         | [ H : ?x = ?x :> base_type_code |- _ ] => pose proof (base_type_UIP_refl _ H); subst H
+                         | [ |- exists pf : _ = _, _ ] => exists eq_refl
+                         | [ |- and _ _ ] => split
+                         | [ |- _ \/ ((?x = ?x -> False) /\ _) ] => left
+                         | [ |- _ \/ (?x <> ?x /\ _) ] => left
+                         | [ H : ?x = ?y -> False |- (?x = ?y /\ _) \/ _ ] => right
+                         | [ |- exists b : interp_base_type_bounds _, _ ] => eexists
+                         | [ |- exists b : interp_base_type _, _ ] => eexists
+                         | [ H : ?T -> False, H' : ?T -> ?Q |- _ ] => clear H'
+                         end ];
+            assumption. }
+        { repeat match goal with
+                 | _ => progress subst
+                 | [ |- context[?n0 = ?n1 :> Name] ]
+                   => first [ constr_eq n0 n1; fail 1
+                            | lazymatch goal with
+                              | [ H : n0 <> n1 |- _ ] => fail 1
+                              end
+                            | destruct (Name_dec n0 n1) ]
+                 | [ |- context[?n0 = ?n1 :> base_type_code] ]
+                   => is_var n0; is_var n1;
+                        first [ constr_eq n0 n1; fail 1
+                              | lazymatch goal with
+                                | [ H : n0 <> n1 |- _ ] => fail 1
+                                end
+                              | destruct (base_type_dec n0 n1) ]
+                 | [ |- context[?x = Some _] ]
+                   => lazymatch x with
+                      | Some _ => fail
+                      | None => fail
+                      | _ => destruct x eqn:?
+                      end
+                 end;
+            do 2 eexists;
+            admit;
+            repeat match goal with
+                   | _ => progress intros
+                   | [ |- _ /\ _ ] => split
+                   | _ => progress simpl in *
+                   | [ H : ?x <> ?x |- _ ] => exfalso; apply H; reflexivity
+                   | _ => progress destruct_head' and
+                   | _ => progress destruct_head' or
+                   | _ => progress destruct_head' ex
+                   | [ H : ?x = ?x :> base_type_code |- _ ] => pose proof (base_type_UIP_refl _ H); subst H
+                   | [ H : forall t n v, lookupb ?ctx n = Some _ -> _, H' : lookupb ?ctx ?n' = Some ?v' |- _ ]
+                     => specialize (H _ _ _ H')
+                   | _ => reflexivity
+                   | _ => exists eq_refl
+                   | [ |- ?x = ?x ] => reflexivity
+                   | [ |- ?G ] => first [ has_evar G; fail 1 | progress subst ]
+                   end.
+        }
   Admitted.
 
 End language.
