@@ -161,6 +161,8 @@ src/Reflection/Named/FMapContext.v
 src/Reflection/Named/InterpretToPHOAS.v
 src/Reflection/Named/InterpretToPHOASInterp.v
 src/Reflection/Named/InterpretToPHOASWf.v
+src/Reflection/Named/MapCast.v
+src/Reflection/Named/MapCastInterp.v
 src/Reflection/Named/NameUtil.v
 src/Reflection/Named/NameUtilProperties.v
 src/Reflection/Named/PositiveContext.v
