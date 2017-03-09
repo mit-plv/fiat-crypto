@@ -161,6 +161,15 @@ Section homogenous_type.
        | Prod A B => fun xy => (@SmartFlatTypeMapInterp _ _ f fv A (fst xy),
                                 @SmartFlatTypeMapInterp _ _ f fv B (snd xy))
        end.
+  Fixpoint SmartFlatTypeMapInterp2 {var' var'' var'''} (f : forall t, var' t -> base_type_code)
+           (fv : forall t v, var'' t -> var''' (f t v)) t {struct t}
+    : forall v, interp_flat_type var'' t -> interp_flat_type var''' (SmartFlatTypeMap f (t:=t) v)
+    := match t return forall v, interp_flat_type var'' t -> interp_flat_type var''' (SmartFlatTypeMap f (t:=t) v) with
+       | Syntax.Tbase x => fv _
+       | Unit => fun v _ => v
+       | Prod A B => fun xy x'y' => (@SmartFlatTypeMapInterp2 _ _ _ f fv A (fst xy) (fst x'y'),
+                                     @SmartFlatTypeMapInterp2 _ _ _ f fv B (snd xy) (snd x'y'))
+       end.
   Fixpoint SmartFlatTypeMapUnInterp var' var'' var''' (f : forall t, var' t -> base_type_code)
            (fv : forall t (v : var' t), var'' (f t v) -> var''' t)
            {t} {struct t}
@@ -197,6 +206,7 @@ Global Arguments SmartVarfPropMap2 {_ _ _} _ {t} _ _.
 Global Arguments SmartFlatTypeMap {_ _} _ {_} _.
 Global Arguments SmartFlatTypeUnMap {_} _.
 Global Arguments SmartFlatTypeMapInterp {_ _ _ _} _ {_} _.
+Global Arguments SmartFlatTypeMapInterp2 {_ _ _ _ f} fv {t} _ _.
 Global Arguments SmartFlatTypeMapUnInterp {_ _ _ _ _} fv {_ _} _.
 Global Arguments SmartVarMap {_ _ _} _ _ {!_} _ / _.
 
@@ -214,14 +224,14 @@ Section hetero_type.
     Definition SmartFlatTypeMap2 {var' : base_type_code1 -> Type} (f : forall t, var' t -> flat_type base_type_code2) {t}
       : interp_flat_type var' t -> flat_type base_type_code2
       := @smart_interp_flat_map base_type_code1 var' (fun _ => flat_type base_type_code2) f Unit (fun _ _ => Prod) t.
-    Fixpoint SmartFlatTypeMapInterp2 {var' var''} (f : forall t, var' t -> flat_type base_type_code2)
+    Fixpoint SmartFlatTypeMap2Interp {var' var''} (f : forall t, var' t -> flat_type base_type_code2)
              (fv : forall t v, interp_flat_type var'' (f t v)) t {struct t}
       : forall v, interp_flat_type var'' (SmartFlatTypeMap2 f (t:=t) v)
       := match t return forall v, interp_flat_type var'' (SmartFlatTypeMap2 f (t:=t) v) with
          | Tbase x => fv _
          | Unit => fun v => v
-         | Prod A B => fun xy => (@SmartFlatTypeMapInterp2 _ _ f fv A (fst xy),
-                                  @SmartFlatTypeMapInterp2 _ _ f fv B (snd xy))
+         | Prod A B => fun xy => (@SmartFlatTypeMap2Interp _ _ f fv A (fst xy),
+                                  @SmartFlatTypeMap2Interp _ _ f fv B (snd xy))
          end.
     Fixpoint SmartFlatTypeMapUnInterp2 var' var'' var''' (f : forall t, var' t -> flat_type base_type_code2)
              (fv : forall t (v : var' t), interp_flat_type var'' (f t v) -> var''' t)
@@ -265,6 +275,6 @@ Section hetero_type.
 End hetero_type.
 
 Global Arguments SmartFlatTypeMap2 {_ _ _} _ {!_} _ / .
-Global Arguments SmartFlatTypeMapInterp2 {_ _ _ _ _} fv {_} _.
+Global Arguments SmartFlatTypeMap2Interp {_ _ _ _ _} fv {_} _.
 Global Arguments SmartFlatTypeMap2Interp2 {_ _ _ _ _ _} fv {t} v _.
 Global Arguments SmartFlatTypeMapUnInterp2 {_ _ _ _ _ _} fv {_ _} _.
