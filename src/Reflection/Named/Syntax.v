@@ -122,46 +122,6 @@ Module Export Named.
         : interp_flat_type (domain t) -> option (interp_flat_type (codomain t))
         := fun v => @interpf (extend ctx (Abs_name e) v) _ (invert_Abs e).
     End with_val_context.
-(*
-      Section interp_gen.
-        Context (output_interp_flat_type : flat_type -> Type)
-                (interp_tt : output_interp_flat_type Unit)
-                (interp_var : forall t, var t -> output_interp_flat_type (Tbase t))
-                (interp_op : forall src dst, op src dst -> output_interp_flat_type src -> output_interp_flat_type dst)
-                (interp_let : forall (tx : flat_type) (ex : output_interp_flat_type tx)
-                                     tC (eC : interp_flat_type_gen var tx -> output_interp_flat_type tC),
-                    output_interp_flat_type tC)
-                (interp_pair : forall (tx : flat_type) (ex : output_interp_flat_type tx)
-                                      (ty : flat_type) (ey : output_interp_flat_type ty),
-                    output_interp_flat_type (Prod tx ty)).
-
-        Fixpoint interp_genf (ctx : Context) {t} (e : exprf t)
-          : prop_of_option (wff ctx e) -> output_interp_flat_type t
-          := match e in exprf t return prop_of_option (wff ctx e) -> output_interp_flat_type t with
-             | TT => fun _ => interp_tt
-             | Var t' x => match lookupb ctx x t' as v
-                                 return prop_of_option (match v return bool with
-                                                        | Some _ => true
-                                                        | None => false
-                                                        end)
-                                        -> output_interp_flat_type (Tbase t')
-                           with
-                           | Some v => fun _ => interp_var _ v
-                           | None => fun bad => match bad : False with end
-                           end
-             | Op _ _ op args => fun good => @interp_op _ _ op (@interp_genf ctx _ args good)
-             | LetIn _ n ex _ eC => fun good => let goodxC := proj1 (@prop_of_option_and _ _) good in
-                                                let x := @interp_genf ctx _ ex (proj1 goodxC) in
-                                                interp_let _ x _ (fun x => @interp_genf (extend ctx n x) _ eC (proj2 goodxC x))
-             | Pair _ ex _ ey => fun good => let goodxy := proj1 (@prop_of_option_and _ _) good in
-                                             let x := @interp_genf ctx _ ex (proj1 goodxy) in
-                                             let y := @interp_genf ctx _ ey (proj2 goodxy) in
-                                             interp_pair _ x _ y
-             end.
-      End interp_gen.
-    End with_context.
-
-    End expr_param.*)
   End language.
 End Named.
 
@@ -174,7 +134,6 @@ Global Arguments Abs {_ _ _ _ _} _ _.
 Global Arguments extend {_ _ _ _} ctx {_} _ _.
 Global Arguments remove {_ _ _ _} ctx {_} _.
 Global Arguments lookup {_ _ _ _} ctx {_} _, {_ _ _ _} ctx _ _.
-(*Global Arguments interp_genf {_ _ _ var _} _ _ _ _ _ _ {ctx t} _ _.*)
 Global Arguments interpf {_ _ _ _ _ interp_op ctx t} _.
 Global Arguments interp {_ _ _ _ _ interp_op ctx t} _ _.
 
