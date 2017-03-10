@@ -172,7 +172,7 @@ Section homogenous_type.
        | Syntax.Tbase x => fv _
        | Unit => fun v _ => v
        | Prod A B => fun (xy : interp_flat_type _ A * interp_flat_type _ B)
-                         (x'y' : interp_flat_type _ _ * interp_flat_type _ B)
+                         (x'y' : interp_flat_type _ A * interp_flat_type _ B)
                      => (@SmartFlatTypeMapInterp2 _ _ _ f fv A (fst xy) (fst x'y'),
                          @SmartFlatTypeMapInterp2 _ _ _ f fv B (snd xy) (snd x'y'))
        end.
@@ -186,7 +186,7 @@ Section homogenous_type.
        | Syntax.Tbase x => fv _
        | Unit => fun _ v => v
        | Prod A B => fun (v : interp_flat_type _ A * interp_flat_type _ B)
-                         (xy : interp_flat_type _ _ * interp_flat_type _ _)
+                         (xy : interp_flat_type _ (SmartFlatTypeMap _ (fst v)) * interp_flat_type _ (SmartFlatTypeMap _ (snd v)))
                      => (@SmartFlatTypeMapUnInterp _ _ _ f fv A _ (fst xy),
                          @SmartFlatTypeMapUnInterp _ _ _ f fv B _ (snd xy))
        end.
@@ -252,7 +252,7 @@ Section hetero_type.
          | Tbase x => fv _
          | Unit => fun _ v => v
          | Prod A B => fun (v : interp_flat_type _ A * interp_flat_type _ B)
-                           (xy : interp_flat_type _ _ * interp_flat_type _ _)
+                           (xy : interp_flat_type _ (SmartFlatTypeMap2 _ (fst v)) * interp_flat_type _ (SmartFlatTypeMap2 _ (snd v)))
                        => (@SmartFlatTypeMapUnInterp2 _ _ _ f fv A _ (fst xy),
                            @SmartFlatTypeMapUnInterp2 _ _ _ f fv B _ (snd xy))
          end.
