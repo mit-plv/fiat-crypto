@@ -40,8 +40,9 @@ Section language.
           match t with
           | Tbase t => R t
           | Unit => fun _ => True
-          | Prod _ _ => fun x => and (interp_flat_type_rel_pointwise1_gen_Prop _ (fst x))
-                                     (interp_flat_type_rel_pointwise1_gen_Prop _ (snd x))
+          | Prod A B => fun x : interp_flat_type _ A * interp_flat_type _ B
+                        => and (interp_flat_type_rel_pointwise1_gen_Prop _ (fst x))
+                               (interp_flat_type_rel_pointwise1_gen_Prop _ (snd x))
           end.
       End pointwise1.
       Section pointwise2.
@@ -51,8 +52,11 @@ Section language.
           match t with
           | Tbase t => R t
           | Unit => fun _ _ => True
-          | Prod _ _ => fun x y => and (interp_flat_type_rel_pointwise_gen_Prop _ (fst x) (fst y))
-                                       (interp_flat_type_rel_pointwise_gen_Prop _ (snd x) (snd y))
+          | Prod A B
+            => fun (x : interp_flat_type _ A * interp_flat_type _ B)
+                   (y : interp_flat_type _ A * interp_flat_type _ B)
+               => and (interp_flat_type_rel_pointwise_gen_Prop _ (fst x) (fst y))
+                      (interp_flat_type_rel_pointwise_gen_Prop _ (snd x) (snd y))
           end.
       End pointwise2.
       Section pointwise2_hetero.
@@ -63,8 +67,9 @@ Section language.
              | Tbase t1, Tbase t2 => R t1 t2
              | Unit, Unit => fun _ _ => True
              | Prod x1 y1, Prod x2 y2
-               => fun a b => and (interp_flat_type_rel_pointwise_hetero_gen_Prop x1 x2 (fst a) (fst b))
-                                 (interp_flat_type_rel_pointwise_hetero_gen_Prop y1 y2 (snd a) (snd b))
+               => fun (a b : interp_flat_type _ _ * interp_flat_type _ _)
+                  => and (interp_flat_type_rel_pointwise_hetero_gen_Prop x1 x2 (fst a) (fst b))
+                         (interp_flat_type_rel_pointwise_hetero_gen_Prop y1 y2 (snd a) (snd b))
              | Tbase _, _
              | Unit, _
              | Prod _ _, _
