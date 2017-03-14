@@ -154,6 +154,7 @@ src/Reflection/WfReflectiveGen.v
 src/Reflection/Named/Compile.v
 src/Reflection/Named/ContextDefinitions.v
 src/Reflection/Named/ContextOn.v
+src/Reflection/Named/ContextProperties.v
 src/Reflection/Named/DeadCodeElimination.v
 src/Reflection/Named/EstablishLiveness.v
 src/Reflection/Named/FMapContext.v
