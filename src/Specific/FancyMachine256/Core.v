@@ -216,7 +216,7 @@ Definition syntax {ops : fancy_machine.instructions (2 * 128)}
   := Named.expr base_type op Register.
 
 Class wf_empty {ops} {var} {t} (e : Named.expr base_type (@op ops) Register t)
-  := mk_wf_empty : @Wf.Named.wf base_type Register var _ RegisterContext empty t e.
+  := mk_wf_empty : @Wf.Named.wf base_type Register _ var RegisterContext empty t e.
 Global Hint Extern 0 (wf_empty _) => vm_compute; intros; constructor : typeclass_instances.
 
 (** Assemble a well-typed easily interpretable expression into a

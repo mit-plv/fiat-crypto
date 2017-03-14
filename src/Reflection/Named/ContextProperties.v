@@ -14,6 +14,7 @@ Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.RewriteHyp.
+Require Import Crypto.Util.Tactics.SpecializeBy.
 
 Section with_context.
   Context {base_type_code Name var} (Context : @Context base_type_code Name var)
@@ -66,6 +67,7 @@ Section with_context.
           | rewrite lookupb_extendb_wrong_type by assumption ].
   Local Ltac misc_t_step :=
     first [ progress intros
+          | progress specialize_by_assumption
           | match goal with
             | [ H : ?x = ?x -> _ |- _ ] => specialize (H eq_refl)
             end
@@ -214,6 +216,20 @@ Section with_context.
          rewrite (find_Name_and_val_split (default:=default)) in H
     end.
   Local Ltac find_Name_and_val_default_to_None := repeat find_Name_and_val_default_to_None_step.
+
+  Lemma find_Name_and_val_flatten_binding_list
+        {var' var'' t n T N V1 V2 v1 v2}
+        (H1 : @find_Name_and_val var' t n T N V1 None = Some v1)
+        (H2 : @find_Name_and_val var'' t n T N V2 None = Some v2)
+    : List.In (existT (fun t => (var' t * var'' t)%type) t (v1, v2)) (Wf.flatten_binding_list V1 V2).
+  Proof.
+    induction T;
+      [ | | specialize (IHT1 (fst N) (fst V1) (fst V2));
+            specialize (IHT2 (snd N) (snd V1) (snd V2)) ];
+      repeat first [ find_Name_and_val_default_to_None_step
+                   | rewrite List.in_app_iff
+                   | t_step ].
+  Qed.
 
   Lemma find_Name_SmartFlatTypeMapInterp2_None_iff {var' n f T V N}
     : @find_Name n (SmartFlatTypeMap f (t:=T) V)
