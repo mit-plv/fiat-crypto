@@ -156,3 +156,16 @@ Ltac lazy_decide := abstract lazy_decide_no_check.
 
 (** For dubious compatibility with [eauto using]. *)
 Hint Extern 2 (Decidable _) => progress unfold Decidable : typeclass_instances core.
+
+Definition cast_if_eq {T} `{DecidableRel (@eq T)} {P} (t t' : T) (v : P t) : option (P t')
+  := match dec (t = t'), dec (t' = t') with
+     | left pf, left pf' => Some (eq_rect _ P v _ (eq_trans pf (eq_sym pf')))
+     | _, right pf' => match pf' eq_refl with end
+     | right pf, _ => None
+     end.
+
+Lemma cast_if_eq_refl {T H P} t v : @cast_if_eq T H P t t v = Some v.
+Proof.
+  compute; clear; destruct (H t t) as [ [] |e];
+    [ reflexivity | destruct (e eq_refl) ].
+Qed.

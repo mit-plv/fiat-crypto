@@ -7,6 +7,7 @@ Require Import Crypto.Reflection.Named.Syntax.
 Require Import Crypto.Reflection.Named.ContextDefinitions.
 Require Import Crypto.Util.PointedProp.
 Require Import Crypto.Util.Logic.
+Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Tactics.SplitInContext.
@@ -16,12 +17,11 @@ Require Import Crypto.Util.Tactics.RewriteHyp.
 
 Section with_context.
   Context {base_type_code Name var} (Context : @Context base_type_code Name var)
-          (base_type_code_dec : forall x y : base_type_code, {x = y} + {x <> y})
-          (Name_dec : forall x y : Name, {x = y} + {x <> y})
+          (base_type_code_dec : DecidableRel (@eq base_type_code))
+          (Name_dec : DecidableRel (@eq Name))
           (ContextOk : ContextOk Context).
 
   Local Notation find_Name := (@find_Name base_type_code Name Name_dec).
-  Local Notation cast_if_eq := (@cast_if_eq base_type_code base_type_code_dec).
   Local Notation find_Name_and_val := (@find_Name_and_val base_type_code Name base_type_code_dec Name_dec).
 
   Let base_type_UIP_refl : forall t (p : t = t :> base_type_code), p = eq_refl.
@@ -199,10 +199,9 @@ Section with_context.
         {var' t n T N V default}
     : @find_Name_and_val var' t n T N V default
       = match @find_Name n T N with
-        | Some t' => match base_type_code_dec t t' with
-                     | left _ => @find_Name_and_val var' t n T N V None
-                     | right _ => None
-                     end
+        | Some t' => if dec (t = t')
+                     then @find_Name_and_val var' t n T N V None
+                     else None
         | None => default
         end.
   Proof.

@@ -1,17 +1,18 @@
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Named.Syntax.
 Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Decidable.
 
 Section with_context.
   Context {base_type_code Name var} (Context : @Context base_type_code Name var)
-          (base_type_code_dec : forall x y : base_type_code, {x = y} + {x <> y})
-          (Name_dec : forall x y : Name, {x = y} + {x <> y}).
+          (base_type_code_dec : DecidableRel (@eq base_type_code))
+          (Name_dec : DecidableRel (@eq Name)).
 
   Fixpoint find_Name n
            {T : flat_type base_type_code}
     : interp_flat_type (fun _ => Name) T -> option base_type_code
     := match T with
-       | Tbase t' => fun n' : Name => if Name_dec n n' then Some t' else None
+       | Tbase t' => fun n' : Name => if dec (n = n') then Some t' else None
        | Unit => fun _ => None
        | Prod A B
          => fun ab : interp_flat_type _ A * interp_flat_type _ B
@@ -22,25 +23,14 @@ Section with_context.
                end
        end.
 
-  Definition cast_if_eq {var'} t t' (v : var' t) : option (var' t')
-    := match base_type_code_dec t t', base_type_code_dec t' t' with
-       | left pf, left pf' => Some (eq_rect _ var' v _ (eq_trans pf (eq_sym pf')))
-       | _, right pf' => match pf' eq_refl with end
-       | right pf, _ => None
-       end.
-
-  Lemma cast_if_eq_refl {var'} t v : @cast_if_eq var' t t v = Some v.
-  Proof.
-    compute; clear; break_match; reflexivity.
-  Qed.
-
-  Fixpoint find_Name_and_val {var'} t n
+  Fixpoint find_Name_and_val {var'} t (n : Name)
            {T : flat_type base_type_code}
     : interp_flat_type (fun _ => Name) T -> interp_flat_type var' T -> option (var' t) -> option (var' t)
     := match T with
-       | Tbase t' => fun n' v default => if Name_dec n n'
-                                         then cast_if_eq t' t v
-                                         else default
+       | Tbase t' => fun (n' : Name) v default
+                     => if dec (n = n')
+                        then cast_if_eq t' t v
+                        else default
        | Unit => fun _ _ default => default
        | Prod A B
          => fun (ab : interp_flat_type _ A * interp_flat_type _ B)
