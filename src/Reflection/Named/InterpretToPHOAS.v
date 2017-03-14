@@ -8,8 +8,6 @@ Module Export Named.
     Context {base_type_code : Type}
             {op : flat_type base_type_code -> flat_type base_type_code -> Type}
             {var : base_type_code -> Type}
-            (base_type_code_beq : base_type_code -> base_type_code -> bool)
-            (base_type_code_bl_transparent : forall x y, base_type_code_beq x y = true -> x = y)
             {Name}
             {Context : Context Name var}.
 
