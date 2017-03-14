@@ -158,6 +158,7 @@ src/Reflection/Named/ContextProperties.v
 src/Reflection/Named/DeadCodeElimination.v
 src/Reflection/Named/EstablishLiveness.v
 src/Reflection/Named/FMapContext.v
+src/Reflection/Named/InterpretToPHOAS.v
 src/Reflection/Named/NameUtil.v
 src/Reflection/Named/PositiveContext.v
 src/Reflection/Named/RegisterAssign.v

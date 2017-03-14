@@ -21,9 +21,7 @@ Module Export Named.
          end%option_pointed_prop.
 
     Definition wf (ctx : Context) {t} (e : @expr base_type_code op Name t) : Prop
-      := match e with
-         | Abs src _ n f => forall v, prop_of_option (@wff (extend ctx (t:=src) n v) _ f)
-         end.
+      := forall v, prop_of_option (@wff (extend ctx (Abs_name e) v) _ (invert_Abs e)).
   End language.
 End Named.
 
