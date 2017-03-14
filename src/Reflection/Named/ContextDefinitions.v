@@ -1,17 +1,6 @@
-Require Import Coq.Logic.Eqdep_dec.
-Require Import Crypto.Util.FixCoqMistakes.
 Require Import Crypto.Reflection.Syntax.
-Require Import Crypto.Reflection.Relations.
-Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Reflection.Named.Syntax.
-Require Import Crypto.Util.PointedProp.
-Require Import Crypto.Util.Logic.
-Require Import Crypto.Util.Option.
-Require Import Crypto.Util.Sigma.
-Require Import Crypto.Util.Tactics.SplitInContext.
-Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.BreakMatch.
-Require Import Crypto.Util.Tactics.RewriteHyp.
 
 Section with_context.
   Context {base_type_code Name var} (Context : @Context base_type_code Name var)
