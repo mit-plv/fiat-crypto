@@ -2,7 +2,7 @@ Require Import Coq.Bool.Sumbool.
 Require Import Coq.FSets.FMapInterface.
 Require Import Coq.FSets.FMapFacts.
 Require Import Crypto.Reflection.Named.Syntax.
-Require Import Crypto.Reflection.Named.Wf.
+Require Import Crypto.Reflection.Named.ContextDefinitions.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Equality.
 

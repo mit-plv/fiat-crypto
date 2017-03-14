@@ -10,8 +10,7 @@ Section language.
   Context {base_type_code Name interp_base_type}
           {op : flat_type base_type_code -> flat_type base_type_code -> Type}
           {interp_op : forall src dst, op src dst -> interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst}
-          {Context : @Context base_type_code Name interp_base_type}
-          {ContextOk : ContextOk Context}.
+          {Context : @Context base_type_code Name interp_base_type}.
 
   Lemma wff_interpf_not_None {ctx : Context} {t} {e : @exprf base_type_code op Name t}
         (Hwf : prop_of_option (wff ctx e))

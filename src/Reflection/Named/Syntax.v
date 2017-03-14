@@ -131,6 +131,8 @@ Global Arguments Op {_ _ _ _ _} _ _.
 Global Arguments LetIn {_ _ _} _ _ _ {_} _.
 Global Arguments Pair {_ _ _ _} _ {_} _.
 Global Arguments Abs {_ _ _ _ _} _ _.
+Global Arguments invert_Abs {_ _ _ _} _.
+Global Arguments Abs_name {_ _ _ _} _.
 Global Arguments extend {_ _ _ _} ctx {_} _ _.
 Global Arguments remove {_ _ _ _} ctx {_} _.
 Global Arguments lookup {_ _ _ _} ctx {_} _, {_ _ _ _} ctx _ _.

@@ -13,6 +13,7 @@ Require Export Crypto.Reflection.Named.PositiveContext.
 Require Import Crypto.Reflection.Named.DeadCodeElimination.
 Require Import Crypto.Reflection.CountLets.
 Require Import Crypto.Reflection.Named.ContextOn.
+Require Import Crypto.Reflection.Named.Wf.
 Require Export Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Linearize.
 Require Import Crypto.Reflection.Inline.
