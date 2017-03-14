@@ -3,6 +3,8 @@ Require Import Crypto.Reflection.Named.Wf.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Util.PointedProp.
 
+Local Notation eta_and x := (conj (let (a, b) := x in a) (let (a, b) := x in b)).
+
 Module Export Named.
   Section language.
     Context {base_type_code : Type}
@@ -26,17 +28,17 @@ Module Export Named.
            | Named.TT => fun _ => TT
            | Named.Pair tx ex ty ey
              => fun Hwf : prop_of_option (Named.wff _ _ /\ Named.wff _ _)%option_pointed_prop
-                => let Hwf' := proj1 (prop_of_option_and _ _) Hwf in
-                   Pair (@interpf_to_phoas ctx tx ex (proj1 Hwf')) (@interpf_to_phoas ctx ty ey (proj2 Hwf'))
+                => let (Hwf'1, Hwf'2) := eta_and (proj1 (prop_of_option_and _ _) Hwf) in
+                   Pair (@interpf_to_phoas ctx tx ex Hwf'1) (@interpf_to_phoas ctx ty ey Hwf'2)
            | Named.Op _ _ opc args
              => fun Hwf
                 => Op opc (@interpf_to_phoas ctx _ args Hwf)
            | Named.LetIn _ n ex _ eC
              => fun Hwf : prop_of_option (Named.wff _ _ /\ inject (forall k, prop_of_option (Named.wff _ _)))%option_pointed_prop
-                => let Hwf' := proj1 (prop_of_option_and _ _) Hwf in
-                   LetIn (@interpf_to_phoas ctx _ ex (proj1 Hwf'))
+                => let (Hwf'1, Hwf'2) := eta_and (proj1 (prop_of_option_and _ _) Hwf) in
+                   LetIn (@interpf_to_phoas ctx _ ex Hwf'1)
                          (fun v
-                          => @interpf_to_phoas (extend ctx n v) _ eC (proj2 Hwf' _))
+                          => @interpf_to_phoas (extend ctx n v) _ eC (Hwf'2 _))
            end.
 
       Definition interp_to_phoas
