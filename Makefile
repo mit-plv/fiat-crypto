@@ -48,8 +48,11 @@ $(VOFILES): | coqprime
 
 # add files to this list to prevent them from being built by default
 UNMADE_VOFILES := src/SpecificGen/% src/Specific/%Display.vo
+# add files to this list to prevent them from being built by the "lite" target
+HEAVY_VOFILES := src/WeierstrassCurve/WeierstrassCurveTheorems.vo
 
 COQ_VOFILES := $(filter-out $(UNMADE_VOFILES),$(VOFILES))
+LITE_VOFILES := $(filter-out $(HEAVY_VOFILES),$(COQ_VOFILES))
 SPECIFIC_VO := $(filter src/Specific/%,$(VOFILES))
 SPECIFIC_GEN_VO := $(filter src/SpecificGen/%,$(VOFILES))
 MEDIUM_SPECIFIC_GEN_VO := $(filter-out src/SpecificGen/GF5211_32%,$(SPECIFIC_GEN_VO))
@@ -69,6 +72,7 @@ non-specific: $(NON_SPECIFIC_VO) coqprime
 specific-display: $(SPECIFIC_DISPLAY_VO:.vo=.log) coqprime
 display: $(DISPLAY_VO:.vo=.log) coqprime
 coq: $(COQ_VOFILES) coqprime
+lite: $(LITE_VOFILES) coqprime
 
 ifneq ($(filter 8.4%,$(COQ_VERSION)),) # 8.4
 COQPRIME_FOLDER := coqprime-8.4
