@@ -17,6 +17,12 @@ Ltac split_iff := split_in_context iff (fun a b : Prop => a -> b) (fun a b : Pro
 Ltac split_and' :=
   repeat match goal with
          | [ H : ?a /\ ?b |- _ ] => let H0 := fresh in let H1 := fresh in
-                                                       assert (H0 := fst H); assert (H1 := snd H); clear H
+                                                       assert (H0 := proj1 H); assert (H1 := proj2 H); clear H
+         end.
+Ltac split_prod' :=
+  repeat match goal with
+         | [ H : prod ?a ?b |- _ ] => let H0 := fresh in let H1 := fresh in
+                                                         assert (H0 := fst H); assert (H1 := snd H); clear H
          end.
 Ltac split_and := split_and'; split_in_context and (fun a b : Type => a) (fun a b : Type => b).
+Ltac split_prod := split_and'; split_in_context prod (fun a b : Type => a) (fun a b : Type => b).
