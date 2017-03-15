@@ -782,16 +782,16 @@ Lemma skipn_firstn {A} (ls : list A) n m
 Proof.
   revert n m; induction ls, m, n; simpl; autorewrite with simpl_skipn simpl_firstn; boring_list.
 Qed.
-Lemma firstn_skipn {A} (ls : list A) n m
+Lemma firstn_skipn_add {A} (ls : list A) n m
   : firstn n (skipn m ls) = skipn m (firstn (m + n) ls).
 Proof.
   revert n m; induction ls, m; simpl; autorewrite with simpl_skipn simpl_firstn; boring_list.
 Qed.
-Lemma firstn_skipn' {A} (ls : list A) n m
+Lemma firstn_skipn_add' {A} (ls : list A) n m
   : firstn n (skipn m ls) = skipn m (firstn (n + m) ls).
-Proof. rewrite firstn_skipn; do 2 f_equal; auto with arith. Qed.
-Hint Rewrite <- @firstn_skipn @firstn_skipn' : simpl_firstn.
-Hint Rewrite <- @firstn_skipn @firstn_skipn' : simpl_skipn.
+Proof. rewrite firstn_skipn_add; do 2 f_equal; auto with arith. Qed.
+Hint Rewrite <- @firstn_skipn_add @firstn_skipn_add' : simpl_firstn.
+Hint Rewrite <- @firstn_skipn_add @firstn_skipn_add' : simpl_skipn.
 
 Lemma firstn_app_inleft : forall {A} n (xs ys : list A), (n <= length xs)%nat ->
   firstn n (xs ++ ys) = firstn n xs.

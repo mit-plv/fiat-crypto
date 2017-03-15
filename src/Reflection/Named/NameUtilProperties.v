@@ -35,7 +35,7 @@ Section language.
                      | match goal with
                        | [ H : forall ls, snd (split_mnames _ _ _) = _, H' : context[snd (split_mnames _ _ _)] |- _ ]
                          => rewrite H in H'
-                       | [ H : _ |- _ ] => first [ rewrite <- firstn_skipn in H ]
+                       | [ H : _ |- _ ] => first [ rewrite <- firstn_skipn_add in H ]
                        | [ H : forall ls', fst (split_mnames _ _ _) = _, H' : context[fst (split_mnames _ _ (skipn ?n ?ls))] |- _ ]
                          => rewrite (H (skipn n ls)) in H'
                        | [ H : forall ls', fst (split_mnames _ _ _) = _, H' : context[fst (split_mnames _ ?t (firstn (count_pairs ?t + ?n) ?ls))] |- _ ]
