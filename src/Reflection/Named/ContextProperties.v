@@ -5,11 +5,14 @@ Require Import Crypto.Reflection.Relations.
 Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Reflection.Named.Syntax.
 Require Import Crypto.Reflection.Named.ContextDefinitions.
+Require Import Crypto.Reflection.Named.NameUtil.
+Require Import Crypto.Reflection.Named.NameUtilProperties.
 Require Import Crypto.Util.PointedProp.
 Require Import Crypto.Util.Logic.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Sigma.
+Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.BreakMatch.
@@ -230,6 +233,41 @@ Section with_context.
                    | rewrite List.in_app_iff
                    | t_step ].
   Qed.
+
+  Lemma fst_split_mnames__flatten_binding_list__find_Name
+        (MName : Type) (force : MName -> option Name)
+        {var' t n T N V v} {ls : list MName}
+        (Hs : fst (split_mnames force T ls) = Some N)
+        (HN : List.In (existT _ t (n, v)%core) (Wf.flatten_binding_list (var2:=var') N V))
+    : find_Name n N = Some t.
+  Proof.
+    revert dependent ls; induction T;
+      [ | | specialize (IHT1 (fst N) (fst V));
+            specialize (IHT2 (snd N) (snd V)) ];
+      repeat first [ t_step
+                   | match goal with
+                     | [ H : _ |- _ ] => first [ rewrite snd_split_mnames_skipn in H
+                                               | rewrite List.in_app_iff in H ]
+                     | [ H : context[fst (split_mnames _ _ ?ls)] |- _ ]
+                       => is_var ls; rewrite (@fst_split_mnames_firstn _ _ _ _ _ ls) in H
+                     end ].
+  Abort.
+
+  Lemma fst_split_mnames__find_Name__flatten_binding_list
+        (MName : Type) (force : MName -> option Name)
+        {var' t n T N V v default} {ls : list MName}
+        (Hs : fst (split_mnames force T ls) = Some N)
+        (Hfind : find_Name n N = Some t)
+        (HN : List.In (existT _ t (n, v)%core) (Wf.flatten_binding_list N V))
+    : @find_Name_and_val var' t n T N V default = Some v.
+  Proof.
+    revert default; revert dependent ls; induction T;
+      [ | | specialize (IHT1 (fst N) (fst V));
+            specialize (IHT2 (snd N) (snd V)) ];
+      repeat first [ find_Name_and_val_default_to_None_step
+                   | rewrite List.in_app_iff in *
+                   | t_step ].
+  Abort.
 
   Lemma find_Name_SmartFlatTypeMapInterp2_None_iff {var' n f T V N}
     : @find_Name n (SmartFlatTypeMap f (t:=T) V)
