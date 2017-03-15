@@ -765,6 +765,18 @@ Qed.
 
 Hint Rewrite @skipn_app : push_skipn.
 
+Lemma skipn_skipn {A} n1 n2 (ls : list A)
+  : skipn n2 (skipn n1 ls) = skipn (n1 + n2) ls.
+Proof.
+  revert n2 ls; induction n1, ls;
+    simpl; autorewrite with simpl_skipn;
+      boring.
+Qed.
+
+Hint Rewrite @skipn_skipn : simpl_skipn.
+Hint Rewrite <- @skipn_skipn : push_skipn.
+Hint Rewrite @skipn_skipn : pull_skipn.
+
 Lemma firstn_app_inleft : forall {A} n (xs ys : list A), (n <= length xs)%nat ->
   firstn n (xs ++ ys) = firstn n xs.
 Proof.
