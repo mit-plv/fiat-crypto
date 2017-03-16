@@ -54,6 +54,21 @@ Lemma map_cps_correct {A B} g ls: forall {T} f,
 Proof. induction ls; simpl; intros; rewrite ?IHls; reflexivity. Qed.
 Create HintDb uncps discriminated. Hint Rewrite @map_cps_correct : uncps.
 
+Fixpoint map2_cps {A B C} (g:A->B->C) (la : list A) (lb : list B)
+         {T} (f:list C->T) :=
+  match la with
+  | nil => f nil
+  | a :: la' =>
+    match lb with
+    | nil => f nil
+    | b :: lb' => map2_cps g la' lb' (fun lc => f (g a b :: lc))
+    end
+  end.
+Lemma map2_cps_correct {A B C} g la: forall lb {T} f,
+    @map2_cps A B C g la lb T f = f (map2 g la lb).
+Proof. induction la; destruct lb; simpl; intros; rewrite ?IHla; try reflexivity. Qed.
+Hint Rewrite @map2_cps_correct : uncps.
+
 Fixpoint flat_map_cps {A B} (g:A->forall {T}, (list B->T)->T) (ls : list A) {T} (f:list B->T)  :=
   match ls with
   | nil => f nil
@@ -144,6 +159,37 @@ Proof.
   rewrite (Tuple.from_list_default_eq _ _ _ (H _ (Tuple.length_to_list _))).
   reflexivity.
 Qed.  Hint Rewrite @on_tuple_cps_correct using (intros; autorewrite with uncps; auto): uncps.
+
+Definition on_tuple2_cps {A B C} (d:C)
+           (g:list A->list B->forall {T},(list C->T)->T) {a b c}
+           (xs : Tuple.tuple A a) (ys : Tuple.tuple B b)
+           {T} (f:tuple C c ->T) :=
+  to_list_cps a xs
+    (fun XS => to_list_cps b ys
+    (fun YS => g XS YS (fun ZS => from_list_default_cps d c ZS f))).
+Lemma on_tuple2_cps_correct {A B C} d
+      (g:list A -> list B -> forall {T}, (list C->T)->T) g'
+      {a b c} xs ys {T} f
+      (Hg : forall x y {T} h, @g x y T h = h (g' x y)) : forall H,
+    @on_tuple2_cps A B C d g a b c xs ys T f = f (@Tuple.on_tuple2 A B C (fun x y => g' x y) a b c H xs ys).
+Proof.
+  cbv [on_tuple2_cps Tuple.on_tuple2]; intros.
+  rewrite !to_list_cps_correct, Hg, from_list_default_cps_correct.
+  rewrite (Tuple.from_list_default_eq _ _ _ (H _ _ (Tuple.length_to_list _) (Tuple.length_to_list _))).
+  reflexivity.
+Qed.  Hint Rewrite @on_tuple2_cps_correct using (intros; autorewrite with uncps; auto): uncps.
+
+Definition tuple_map2_cps {n A B C} (d:C) (g:A->B->C)
+           (xs:tuple A n) (ys:tuple B n) {T} (f:tuple C n->T) :=
+  on_tuple2_cps d (map2_cps g) xs ys f.
+Lemma tuple_map2_cps_correct {n A B C} d g xs ys T f :
+  @tuple_map2_cps n A B C d g xs ys T f = f (Tuple.map2 g xs ys).
+Proof.
+  cbv [Tuple.map2 tuple_map2_cps].
+  erewrite on_tuple2_cps_correct by (intros; autorewrite with uncps push_id; auto).
+  reflexivity.
+Qed.
+Hint Rewrite @tuple_map2_cps_correct : uncps.
 
 Fixpoint update_nth_cps {A} n (g:A->A) xs {T} (f:list A->T) :=
   match n with
