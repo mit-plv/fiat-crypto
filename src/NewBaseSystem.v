@@ -299,6 +299,8 @@ Definition runtime_mul := Z.mul.
 Global Notation "a * b" := (runtime_mul a%RT b%RT) : runtime_scope.
 Definition runtime_add := Z.add.
 Global Notation "a + b" := (runtime_add a%RT b%RT) : runtime_scope. 
+Definition runtime_sub := Z.sub. 
+Global Notation "a - b" := (runtime_sub a%RT b%RT) : runtime_scope. 
 Definition runtime_opp := Z.opp.
 Global Notation "- a" := (runtime_opp a%RT) : runtime_scope. 
 Definition runtime_and := Z.land.
@@ -404,7 +406,6 @@ Module B.
     Qed.
     Hint Rewrite eval_reduce using (omega || assumption) : push_basesystem_eval.
     (* Why TF does this hint get picked up outside the section (while other eval_ hints do not?) *)
-
     
     Definition negate_snd_cps (p:list limb) {T} (f:list limb ->T) :=
       map_cps (fun cx => (fst cx, (-snd cx)%RT)) p f.
@@ -700,28 +701,78 @@ Module B.
             (fun P => Associational.reduce_cps s c P
                (fun R => from_associational_cps n R f)).
 
+        Definition split_cps {m n} (s:Z) (p : tuple Z m)
+                   {T} (f:(tuple Z n * tuple Z n)->T) :=
+          to_associational_cps p
+            (fun P => Associational.split_cps s P
+               (fun QR => from_associational_cps n (fst QR)
+                 (fun q => from_associational_cps n (snd QR)
+                 (fun r => f (q, r))))).
+
         Definition negate_snd_cps {n} (p : tuple Z n)
                    {T} (f:tuple Z n->T) :=
           to_associational_cps p
             (fun P => Associational.negate_snd_cps P
               (fun R => from_associational_cps n R f)).
 
+        Definition scmul_cps {n m} (z : Z) (p : tuple Z n)
+                   {T} (f:tuple Z m->T) :=
+          to_associational_cps p
+            (fun P => Associational.mul_cps P [(1,z)]
+              (fun zP => from_associational_cps m zP f)).
+
       End Wrappers.
       Hint Unfold
            Positional.add_cps 
            Positional.mul_cps
            Positional.reduce_cps
+           Positional.split_cps
            Positional.negate_snd_cps
+           Positional.scmul_cps
       .
 
+      (* Subtraction is defined in Positional because we want exactly
+      one term per weight. *)
       Section Subtraction.
+        (* Warning: This version subtraction does not protect from
+        underflow! *)
+        Definition simple_sub_cps {n} (p q : tuple Z n)
+                   {T} (f:tuple Z n->T) :=
+          tuple_map2_cps 0 runtime_sub p q f.
+
+        Definition simple_sub {n} p q := simple_sub_cps (n:=n) p q id.
+        Lemma simple_sub_id {n} p q {T} f :
+          @simple_sub_cps n p q T f = f (simple_sub p q).
+        Proof. cbv [simple_sub_cps simple_sub]; prove_id. Qed.
+        Hint Opaque simple_sub : uncps.
+        Hint Rewrite @simple_sub_id : uncps.
+
+        Lemma eval_combine_map2_sub n : forall (l1 l2 l3 : list Z),
+          length l1 = n -> length l2 = n -> length l3 = n ->
+          Associational.eval (combine l3 (map2 runtime_sub l1 l2))
+          = Associational.eval (combine l3 l1)
+            - Associational.eval (combine l3 l2).
+        Proof.
+          induction n; intros; destruct l1; destruct l2; destruct l3;
+              try discriminate; [reflexivity|simpl].
+          autorewrite with push_basesystem_eval cancel_pair.
+          simpl length in *; rewrite IHn by omega. nsatz.
+        Qed.
+
+        Lemma eval_simple_sub {n} p q :
+          eval (simple_sub (n:=n) p q) = eval p - eval q.
+        Proof.
+          cbv [simple_sub simple_sub_cps eval to_associational_cps].
+          autorewrite with uncps push_id; rewrite <-Tuple.to_list_map2.
+          apply eval_combine_map2_sub with (n:=n); distr_length.
+        Qed.
+        Hint Rewrite @eval_simple_sub : push_basesystem_eval.
+
         Context {m n} {coef : tuple Z n}
                 {coef_mod : mod_eq m (eval coef) 0}.
 
         Definition sub_cps (p q : tuple Z n) {T} (f:tuple Z n->T):=
-          add_cps coef p
-            (fun cp => negate_snd_cps q
-              (fun _q => add_cps cp _q f)).
+          add_cps coef p (fun cp => simple_sub_cps cp q f).
 
         Definition sub p q := sub_cps p q id.
         Lemma sub_id p q {T} f : @sub_cps p q T f = f (sub p q).
@@ -731,11 +782,14 @@ Module B.
 
         Lemma eval_sub p q : mod_eq m (eval (sub p q)) (eval p - eval q).
         Proof.
-          cbv [sub sub_cps]; autounfold; destruct n; prove_eval.
+          cbv [sub sub_cps]; autounfold.
+          destruct (dec (n = 0%nat)); [subst;reflexivity|].
+          prove_eval.
           transitivity (eval coef + (eval p - eval q)).
           { apply f_equal2; ring. }
-          { cbv [mod_eq] in *; rewrite Z.add_mod_full, coef_mod, Z.add_0_l, Zmod_mod. reflexivity. }
+          { cbv [mod_eq]; rewrite Z.add_mod_full, coef_mod, Z.add_0_l, Zmod_mod. reflexivity. }
         Qed.
+        Hint Rewrite eval_sub : uncps.
 
         Definition opp_cps (p : tuple Z n) {T} (f:tuple Z n->T):=
           sub_cps (zeros n) p f.
@@ -771,8 +825,10 @@ Module B.
       Positional.add_cps 
       Positional.mul_cps
       Positional.reduce_cps
+      Positional.split_cps
       Positional.negate_snd_cps
       Positional.opp_cps
+      Positional.scmul_cps
   .
   Hint Rewrite
       @Associational.carry_cps_id
@@ -786,6 +842,7 @@ Module B.
       @Positional.add_to_nth_cps_id
       @Positional.to_associational_cps_id
       @Positional.chained_carries_id
+      @Positional.simple_sub_id
       @Positional.sub_id
     : uncps.
   Hint Rewrite
@@ -800,6 +857,7 @@ Module B.
       @Positional.eval_from_associational
       @Positional.eval_add_to_nth
       @Positional.eval_chained_carries
+      @Positional.eval_simple_sub
       @Positional.eval_sub
     using (assumption || vm_decide) : push_basesystem_eval.
 End B.
@@ -829,12 +887,14 @@ Import B.
 Ltac basesystem_partial_evaluation_RHS := 
   let t0 := match goal with |- _ _ ?t => t end in
   let t := (eval cbv delta [
-  (* this list must contain all definitions referenced by t that reference [Let_In], [runtime_add], [runtime_opp], [runtime_mul], [runtime_shr], or [runtime_and] *)
-Positional.to_associational_cps Positional.to_associational Positional.eval Positional.zeros Positional.add_to_nth_cps Positional.add_to_nth Positional.place_cps Positional.place Positional.from_associational_cps Positional.from_associational Positional.carry_cps Positional.carry Positional.chained_carries_cps Positional.chained_carries Positional.sub_cps Positional.sub Positional.negate_snd_cps Positional.add_cps Positional.opp_cps Associational.eval Associational.multerm Associational.mul_cps Associational.mul Associational.split_cps Associational.split Associational.reduce_cps Associational.reduce Associational.carryterm_cps Associational.carryterm Associational.carry_cps Associational.carry Associational.negate_snd_cps Associational.negate_snd div modulo
+  (* this list must contain all definitions referenced by t that reference [Let_In], [runtime_add], [runtime_opp], [runtime_sub], [runtime_mul], [runtime_shr], or [runtime_and] *)
+Positional.to_associational_cps Positional.to_associational Positional.eval Positional.zeros Positional.add_to_nth_cps Positional.add_to_nth Positional.place_cps Positional.place Positional.from_associational_cps Positional.from_associational Positional.carry_cps Positional.carry Positional.chained_carries_cps Positional.chained_carries Positional.sub_cps Positional.sub Positional.negate_snd_cps Positional.scmul_cps Positional.simple_sub_cps Positional.simple_sub Positional.add_cps Positional.opp_cps Associational.eval Associational.multerm Associational.mul_cps Associational.mul Associational.split_cps Associational.split Associational.reduce_cps Associational.reduce Associational.carryterm_cps Associational.carryterm Associational.carry_cps Associational.carry Associational.negate_snd_cps Associational.negate_snd div modulo
                  ] in t0) in
   let t := (eval pattern @runtime_mul in t) in
   let t := match t with ?t _ => t end in
   let t := (eval pattern @runtime_add in t) in
+  let t := match t with ?t _ => t end in
+  let t := (eval pattern @runtime_sub in t) in
   let t := match t with ?t _ => t end in
   let t := (eval pattern @runtime_opp in t) in
   let t := match t with ?t _ => t end in
@@ -851,6 +911,7 @@ Positional.to_associational_cps Positional.to_associational Positional.eval Posi
                   (@runtime_and)
                   (@runtime_shr)
                   (@runtime_opp)
+                  (@runtime_sub)
                   (@runtime_add)
                   (@runtime_mul));
   [replace_with_vm_compute t1; clear t1|reflexivity].
