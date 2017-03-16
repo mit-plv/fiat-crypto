@@ -4,6 +4,7 @@ Require Import Crypto.NewBaseSystem. Import B.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
 Require Import Crypto.Util.Tactics Crypto.Util.Decidable.
 Require Import Crypto.Util.LetIn Crypto.Util.ZUtil.
+Require Import Karatsuba.
 Require Crypto.Util.Tuple.
 Local Notation tuple := Tuple.tuple.
 Local Open Scope list_scope.
@@ -188,7 +189,7 @@ Module Ops56.
   Let wt := fun i : nat => 2^(56 * i).
   Let sz := 8%nat.
   Let s : Z := 2^448.
-  Let c : list B.limb := [(1, 1); (2^244, 1)].
+  Let c : list B.limb := [(1, 1); (2^224, 1)].
   Let coef_div_modulus := 2.
   Let carry_chain := Eval vm_compute in (seq 0 sz) ++ ([0;1])%nat.
 
@@ -269,6 +270,32 @@ Module Ops56.
          Positional.opp_cps (n:=sz) (coef := coef) wt a id) in
     solve_op_F wt x. reflexivity.
   Defined.
+
+  Local Definition half_sz := Eval vm_compute in (sz / 2)%nat.
+  Local Definition goldilocks_split := Eval vm_compute in 2^224.
+  
+  Local Definition mul_carry (a b : Z^half_sz) {T} (f:_->T) :=
+    Positional.mul_cps (n:=4) (m:=8) wt a b
+      (fun ab => Positional.chained_carries_cps (div:=div) (modulo:=modulo) wt ab (seq 0 8) f).
+  Hint Unfold mul_carry.
+
+  Lemma wt_divides_seq i (H:In i (seq 0 8)) : wt (S i) / wt i <> 0.
+  Proof.
+    cbv [In seq] in H.
+    repeat match goal with H : _ \/ _ |- _ => destruct H end;
+      try (exfalso; assumption); subst; try vm_decide.
+  Qed.
+
+  Check (goldilocks_mul
+           (T := Z^half_sz) (T2 :=Z^sz)
+           (mul_cps := mul_carry)
+           (split_cps := Positional.split_cps wt)
+           (add_cps := Positional.add_cps wt)
+           (sub2_cps := Positional.simple_sub_cps)
+           (add2_cps := Positional.add_cps wt)
+           (scmul2_cps := Positional.scmul_cps wt)
+           goldilocks_split
+        ).
   
   Definition mul_sig :
     {mul : (Z^sz -> Z^sz -> Z^sz)%type |
@@ -277,11 +304,34 @@ Module Ops56.
                  eval (mul a b) = (eval a  * eval b)%F}.
   Proof.
     eexists; cbv beta zeta; intros.
-    pose proof wt_nonzero. pose proof wt_divides.
+    pose proof wt_nonzero. pose proof wt_divides_seq. pose proof div_mod.
     let x := constr:(
-         Positional.mul_cps (n:=sz) (m:=sz2) wt a b
-           (fun ab => Positional.reduce_cps (n:=sz) (m:=sz2) wt s c ab id)) in
-    solve_op_F wt x. reflexivity.
+               goldilocks_mul
+                 (T := Z^half_sz) (T2 :=Z^sz)
+                 (mul_cps := mul_carry)
+                 (split_cps := Positional.split_cps wt)
+                 (add_cps := Positional.add_cps wt)
+                 (sub2_cps := Positional.simple_sub_cps)
+                 (add2_cps := Positional.add_cps wt)
+                 (scmul2_cps := Positional.scmul_cps wt)
+                 goldilocks_split a b
+             ) in
+    F_mod_eq;
+  transitivity (Positional.eval wt x); 
+   [ 
+   | autorewrite with uncps push_id push_basesystem_eval].
+    Focus 2. {
+    cbv [mod_eq].
+    erewrite goldilocks_mul_correct with (eval := Positional.eval wt)
+                                           (eval2 := Positional.eval wt);
+      try solve [intros; repeat progress autounfold;
+                 autorewrite with uncps push_id push_basesystem_eval cancel_pair; try (setoid_rewrite Associational.eval_nil; ring_simplify); reflexivity]; cbv; congruence.
+    } Unfocus.
+    cbv[mod_eq]; apply f_equal2;
+      [  | reflexivity ]; apply f_equal.
+    Set Printing Depth 1000.
+    cbv - [runtime_add runtime_mul runtime_shr runtime_and runtime_sub runtime_opp Let_In].
+    reflexivity.
   Defined.
 
   Definition carry_sig :
