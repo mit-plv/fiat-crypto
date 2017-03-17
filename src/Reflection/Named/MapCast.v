@@ -12,8 +12,10 @@ Section language.
           (interp_op_bounds : forall src dst, op src dst -> interp_flat_type interp_base_type_bounds src -> interp_flat_type interp_base_type_bounds dst)
           (pick_typeb : forall t, interp_base_type_bounds t -> base_type_code).
   Local Notation pick_type v := (SmartFlatTypeMap pick_typeb v).
-  Context (cast_op : forall t tR (opc : op t tR) args_bs,
-              op (pick_type args_bs) (pick_type (interp_op_bounds t tR opc args_bs)))
+  Context (cast_op
+           : forall t tR (opc : op t tR) args_bs
+                    (args : Named.exprf base_type_code op Name (pick_type args_bs)),
+              Named.exprf base_type_code op Name (pick_type (interp_op_bounds t tR opc args_bs)))
           {BoundsContext : Context Name interp_base_type_bounds}.
 
   Fixpoint mapf_cast
@@ -51,7 +53,7 @@ Section language.
                => let 'existT args_bounds argsv := args' in
                   existT _
                          (interp_op_bounds _ _ _ args_bounds)
-                         (Op (cast_op t tR opc args_bounds) argsv))
+                         (cast_op t tR opc args_bounds argsv))
               (@mapf_cast ctx _ args)
        end.
 
