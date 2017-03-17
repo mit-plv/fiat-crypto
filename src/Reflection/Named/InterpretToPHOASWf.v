@@ -9,6 +9,7 @@ Require Import Crypto.Util.PointedProp.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.DestructHead.
 
 Section language.
   Context {base_type_code : Type}
@@ -18,10 +19,12 @@ Section language.
           {Name_dec : DecidableRel (@eq Name)}.
   Section with_var.
     Context {var1 var2 : base_type_code -> Type}
-            {Context1 : Context Name var2}
-            {Context2 : Context Name var1}
+            {Context1 : Context Name var1}
+            {Context2 : Context Name var2}
             {Context1Ok : ContextOk Context1}
-            {Context2Ok : ContextOk Context2}.
+            {Context2Ok : ContextOk Context2}
+            (failb1 : forall t, @Syntax.exprf base_type_code op var1 (Tbase t))
+            (failb2 : forall t, @Syntax.exprf base_type_code op var2 (Tbase t)).
 
     Local Ltac t_step :=
       first [ progress intros
@@ -68,20 +71,16 @@ Section language.
               -> List.In (existT _ t (v1, v2)%core) G)
           (Hctx1_ctx2 : forall n t,
               lookupb ctx1 n t = None <-> lookupb ctx2 n t = None)
-      : wff G (interpf_to_phoas ctx1 e Hwf1) (interpf_to_phoas ctx2 e Hwf2).
+      : wff G (interpf_to_phoas failb1 ctx1 e) (interpf_to_phoas failb2 ctx2 e).
     Proof.
       revert dependent G; revert dependent ctx1; revert dependent ctx2; induction e;
         repeat first [ progress intros
+                     | progress destruct_head' and
                      | progress break_innermost_match_step
                      | progress simpl in *
-                     | solve [ eauto ]
+                     | progress autorewrite with push_prop_of_option in *
+                     | solve [ eauto | tauto ]
                      | match goal with
-                       | [ |- context[@proj1 ?A ?B (prop_of_option_and ?a ?b) ?H] ]
-                         => destruct (@proj1 A B (prop_of_option_and a b) H); clear H
-                       | [ |- context[@proj1 ?A ?B (@conj ?A' ?B' ?x ?y)] ]
-                         => generalize (@proj1 A B (@conj A' B' x y));
-                            generalize (@proj2 A B (@conj A' B' x y));
-                            clear x y
                        | [ |- wff _ _ _ ] => constructor
                        end ].
       match goal with H : _ |- _ => eapply H end; t.
@@ -94,7 +93,7 @@ Section language.
           (Hwf2 : Named.wf ctx2 e)
           (Hctx1 : forall n t, lookupb ctx1 n t = None)
           (Hctx2 : forall n t, lookupb ctx2 n t = None)
-      : wf (interp_to_phoas ctx1 e Hwf1) (interp_to_phoas ctx2 e Hwf2).
+      : wf (interp_to_phoas failb1 ctx1 e) (interp_to_phoas failb2 ctx2 e).
     Proof.
       constructor; intros.
       apply wff_interpf_to_phoas; t.
@@ -102,24 +101,25 @@ Section language.
 
     Lemma wf_interp_to_phoas
           {t} (e : @Named.expr base_type_code op Name t)
-          (Hwf1 : Named.wf empty e)
-          (Hwf2 : Named.wf empty e)
-      : wf (interp_to_phoas (Context:=Context1) empty e Hwf1) (interp_to_phoas (Context:=Context2) empty e Hwf2).
+          (Hwf1 : Named.wf (Context:=Context1) empty e)
+          (Hwf2 : Named.wf (Context:=Context2) empty e)
+      : wf (interp_to_phoas (Context:=Context1) failb1 empty e) (interp_to_phoas (Context:=Context2) failb2 empty e).
     Proof.
-      apply wf_interp_to_phoas_gen; apply lookupb_empty; assumption.
+      apply wf_interp_to_phoas_gen; auto using lookupb_empty.
     Qed.
   End with_var.
 
   Section all.
     Context {Context : forall var, @Context base_type_code Name var}
-            {ContextOk : forall var, ContextOk (Context var)}.
+            {ContextOk : forall var, ContextOk (Context var)}
+            (failb : forall var t, @Syntax.exprf base_type_code op var (Tbase t)).
 
     Lemma Wf_InterpToPHOAS_gen
           {ctx : forall var, Context var}
           {t} (e : @Named.expr base_type_code op Name t)
           (Hctx : forall var n t, lookupb (ctx var) n t = None)
           (Hwf : forall var, Named.wf (ctx var) e)
-      : Wf (InterpToPHOAS_gen ctx e Hwf).
+      : Wf (InterpToPHOAS_gen failb ctx e).
     Proof.
       intros ??; apply wf_interp_to_phoas_gen; auto.
     Qed.
@@ -127,7 +127,7 @@ Section language.
     Lemma Wf_InterpToPHOAS
           {t} (e : @Named.expr base_type_code op Name t)
           (Hwf : Named.Wf Context e)
-      : Wf (InterpToPHOAS e Hwf).
+      : Wf (InterpToPHOAS (Context:=Context) failb e).
     Proof.
       intros ??; apply wf_interp_to_phoas; auto.
     Qed.
