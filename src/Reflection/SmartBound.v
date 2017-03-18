@@ -34,7 +34,7 @@ Section language.
 
   Definition bound_flat_type {t} : interp_flat_type interp_base_type_bounds t
                                    -> flat_type
-    := @SmartFlatTypeMap2 _ _ interp_base_type_bounds (fun t v => Tbase (bound_base_type t v)) t.
+    := @SmartFlatTypeMap _ interp_base_type_bounds (fun t v => bound_base_type t v) t.
   Definition bound_type {t}
              (e_bounds : interp_type interp_base_type_bounds t)
              (input_bounds : interp_flat_type interp_base_type_bounds (domain t))
