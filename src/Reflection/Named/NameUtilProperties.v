@@ -81,6 +81,12 @@ Section language.
     Definition mname_list_unique_skipn n ls
       : mname_list_unique force ls -> mname_list_unique force (skipn n ls)
       := fun H => proj2 (@mname_list_unique_firstn_skipn n ls H).
+    Lemma mname_list_unique_nil
+      : mname_list_unique force nil.
+    Proof.
+      unfold mname_list_unique; simpl; intros ??.
+      rewrite firstn_nil, skipn_nil; simpl; auto.
+    Qed.
   End monad.
 
   Lemma split_onames_firstn_skipn
@@ -114,6 +120,8 @@ Section language.
     intros H k n; specialize (H k n).
     rewrite map_id in H; assumption.
   Qed.
+  Definition oname_list_unique_nil : oname_list_unique (@nil (option Name))
+    := mname_list_unique_nil _ (fun x => x).
 
 
   Lemma split_names_firstn_skipn
@@ -148,4 +156,6 @@ Section language.
     rewrite firstn_map, skipn_map in H.
     eauto using in_map.
   Qed.
+  Definition name_list_unique_nil : name_list_unique nil
+    := mname_list_unique_nil _ (@Some Name).
 End language.
