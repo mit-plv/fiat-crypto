@@ -1152,6 +1152,16 @@ Proof.
   induction n; destruct l; boring.
 Qed.
 
+Lemma In_firstn_skipn_split {T} n (x : T)
+  : forall l, In x l -> In x (firstn n l) \/ In x (skipn n l).
+Proof.
+  induction n; destruct l; boring.
+  match goal with
+  | [ IH : forall l, In ?x l -> _ \/ _, H' : In ?x ?ls |- _ ]
+    => destruct (IH _ H')
+  end; auto.
+Qed.
+
 Lemma firstn_firstn_min : forall {A} m n (l : list A),
     firstn n (firstn m l) = firstn (min n m) l.
 Proof.
