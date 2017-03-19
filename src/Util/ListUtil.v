@@ -1153,9 +1153,9 @@ Proof.
 Qed.
 
 Lemma In_firstn_skipn_split {T} n (x : T)
-  : forall l, In x l -> In x (firstn n l) \/ In x (skipn n l).
+  : forall l, In x l <-> In x (firstn n l) \/ In x (skipn n l).
 Proof.
-  induction n; destruct l; boring.
+  split; revert l; induction n; destruct l; boring.
   match goal with
   | [ IH : forall l, In ?x l -> _ \/ _, H' : In ?x ?ls |- _ ]
     => destruct (IH _ H')
