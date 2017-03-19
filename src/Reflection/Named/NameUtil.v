@@ -45,7 +45,7 @@ Section language.
   Definition oname_list_unique (ls : list (option Name)) : Prop
     := mname_list_unique (option Name) (fun x => x) ls.
   Definition name_list_unique (ls : list Name) : Prop
-    := mname_list_unique Name (@Some _) ls.
+    := oname_list_unique (List.map (@Some Name) ls).
 End language.
 
 Global Arguments split_mnames {_ _ MName} force _ _, {_ _} MName force _ _.

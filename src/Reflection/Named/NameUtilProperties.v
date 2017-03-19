@@ -141,10 +141,16 @@ Section language.
 
   Lemma name_list_unique_firstn n (ls : list Name)
     : name_list_unique ls -> name_list_unique (firstn n ls).
-  Proof. apply mname_list_unique_firstn. Qed.
+  Proof.
+    unfold name_list_unique; intro H; apply oname_list_unique_firstn with (n:=n) in H.
+    rewrite <- firstn_map; assumption.
+  Qed.
   Lemma name_list_unique_skipn n (ls : list Name)
     : name_list_unique ls -> name_list_unique (skipn n ls).
-  Proof. apply mname_list_unique_skipn. Qed.
+  Proof.
+    unfold name_list_unique; intro H; apply oname_list_unique_skipn with (n:=n) in H.
+    rewrite <- skipn_map; assumption.
+  Qed.
   Lemma name_list_unique_specialize (ls : list Name)
     : name_list_unique ls
       -> forall k n,
@@ -153,7 +159,7 @@ Section language.
         -> False.
   Proof.
     intros H k n; specialize (H k n).
-    rewrite firstn_map, skipn_map in H.
+    rewrite !map_id, !firstn_map, !skipn_map in H.
     eauto using in_map.
   Qed.
   Definition name_list_unique_nil : name_list_unique nil
