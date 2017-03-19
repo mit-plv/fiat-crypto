@@ -1193,6 +1193,20 @@ Proof.
     reflexivity.
 Qed.
 
+Lemma firstn_seq k a b
+  : firstn k (seq a b) = seq a (min k b).
+Proof.
+  revert k a; induction b, k; simpl; try reflexivity.
+  intros; rewrite IHb; reflexivity.
+Qed.
+
+Lemma skipn_seq k a b
+  : skipn k (seq a b) = seq (k + a) (b - k).
+Proof.
+  revert k a; induction b, k; simpl; try reflexivity.
+  intros; rewrite IHb; simpl; f_equal; omega.
+Qed.
+
 Lemma update_nth_out_of_bounds : forall {A} n f xs, n >= length xs -> @update_nth A n f xs = xs.
 Proof.
   induction n; destruct xs; simpl; try congruence; try omega; intros.
