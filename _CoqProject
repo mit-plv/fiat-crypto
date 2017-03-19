@@ -130,6 +130,7 @@ src/Reflection/Map.v
 src/Reflection/MapCast.v
 src/Reflection/MapCastByDeBruijn.v
 src/Reflection/MapCastByDeBruijnInterp.v
+src/Reflection/MapCastByDeBruijnWf.v
 src/Reflection/MapCastInterp.v
 src/Reflection/MapCastWf.v
 src/Reflection/MultiSizeTest.v
