@@ -4,8 +4,10 @@ Require Import Crypto.Reflection.Relations.
 Require Import Crypto.Reflection.Named.Syntax.
 Require Import Crypto.Reflection.Named.ContextDefinitions.
 Require Import Crypto.Reflection.Named.MapCastInterp.
+Require Import Crypto.Reflection.Named.MapCastWf.
 Require Import Crypto.Reflection.Named.InterpretToPHOASInterp.
 Require Import Crypto.Reflection.Named.CompileInterp.
+Require Import Crypto.Reflection.Named.CompileWf.
 Require Import Crypto.Reflection.Named.PositiveContext.
 Require Import Crypto.Reflection.Named.PositiveContext.Defaults.
 Require Import Crypto.Reflection.Named.PositiveContext.DefaultsProperties.
@@ -88,10 +90,16 @@ Section language.
                 | repeat first [ rewrite !lookupb_empty by (apply PositiveContextOk; assumption)
                                | intro
                                | congruence ] ];
-      repeat first [ rewrite <- Interp_InterpToPHOAS; [ reflexivity | ] ].
+      unfold Interp, InterpretToPHOAS.Named.InterpToPHOAS, InterpretToPHOAS.Named.InterpToPHOAS_gen;
+      [
+      | rewrite <- interp_interp_to_phoas; [ reflexivity | ] ].
     { erewrite (interp_compile (ContextOk:=PositiveContextOk)), interp_linearize;
         [ reflexivity | apply wf_linearize; auto | .. | eassumption ];
         auto using name_list_unique_DefaultNamesFor. }
-    {
-  Admitted.
+    { intro; eapply wf_map_cast with (oldValues := empty); eauto using PositiveContextOk with typeclass_instances.
+      { eapply (wf_compile (ContextOk:=PositiveContextOk));
+          [ apply wf_linearize; auto | .. | eassumption ].
+        auto using name_list_unique_DefaultNamesFor. }
+      { intros ???; rewrite lookupb_empty by apply PositiveContextOk; congruence. } }
+  Qed.
 End language.
