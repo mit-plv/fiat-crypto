@@ -3,6 +3,7 @@ Require Import Crypto.Reflection.Named.Syntax.
 Require Import Crypto.Reflection.Named.Wf.
 Require Import Crypto.Reflection.Named.ContextDefinitions.
 Require Import Crypto.Reflection.Named.ContextProperties.
+Require Import Crypto.Reflection.Named.ContextProperties.NameUtil.
 Require Import Crypto.Reflection.Named.NameUtil.
 Require Import Crypto.Reflection.Named.NameUtilProperties.
 Require Import Crypto.Reflection.Syntax.
@@ -10,6 +11,7 @@ Require Import Crypto.Reflection.Wf.
 Require Import Crypto.Reflection.Named.Compile.
 Require Import Crypto.Util.PointedProp.
 Require Import Crypto.Util.Option.
+Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Tactics.BreakMatch.
@@ -50,12 +52,8 @@ Section language.
         (Hwf : wff G e e')
         v
         (H : ocompilef e ls = Some v)
-        (HGls : forall t n v,
-            List.In (existT _ t (n, v)%core) G -> ~List.In (Some n) ls)
-        (Hls_unique : forall n k,
-            List.In (Some n) (List.firstn k ls)
-            -> List.In (Some n) (List.skipn k ls)
-            -> False)
+        (Hls : oname_list_unique ls)
+        (HGls : forall t n x, List.In (existT _ t (n, x)%core) G -> List.In (Some n) ls -> False)
     : prop_of_option (nwff ctx v).
   Proof.
     revert dependent ctx; revert dependent ls; induction Hwf;
@@ -69,7 +67,8 @@ Section language.
                    | progress break_match_hyps
                    | progress autorewrite with push_prop_of_option in *
                    | progress specialize_by tauto
-                   | solve [ unfold not in *; eauto using In_skipn ]
+                   | progress specialize_by auto using oname_list_unique_nil
+                   | solve [ unfold not in *; eauto using In_skipn, oname_list_unique_firstn, oname_list_unique_skipn ]
                    | progress destruct_head' or
                    | match goal with
                      | [ IH : forall v ls, ocompilef ?e ls = Some v -> _, H : ocompilef ?e ?ls' = Some ?v' |- _ ]
@@ -121,47 +120,107 @@ Section language.
                        => rewrite firstn_skipn_add in H; apply In_skipn in H
                      | [ H : _ |- prop_of_option (nwff _ ?v) ]
                        => eapply H; clear H
-                     end ].
+                     end ];
       repeat match goal with
              | _ => erewrite lookupb_extend by assumption
              | [ |- context[find_Name_and_val ?tdec ?ndec ?a ?b ?c ?d ?default] ]
                => lazymatch default with None => fail | _ => idtac end;
                     rewrite (find_Name_and_val_split tdec ndec (default:=default))
              | [ H : _ |- _ ] => erewrite H by eassumption
+             | _ => progress unfold dec in *
              | _ => progress break_innermost_match_step
              | _ => progress subst
+             | _ => progress destruct_head' and
              | _ => congruence
+             | [ H : List.In _ (flatten_binding_list _ _) |- _ ]
+               => erewrite <- (flatten_binding_list_find_Name_and_val_unique _ _) in H;
+                    [ | | apply path_prod_uncurried; split; [ eassumption | simpl; reflexivity ] ];
+                    [ | solve [ eauto using oname_list_unique_firstn, oname_list_unique_skipn ] ]
+             | [ H : _ |- _ ]
+               => first [ erewrite find_Name_and_val_wrong_type in H by eassumption
+                        | rewrite find_Name_and_val_different in H by assumption
+                        | rewrite snd_split_onames_skipn in H ]
+             | _ => solve [ eauto using In_skipn, In_firstn
+                          | eapply split_onames_find_Name_Some_unique; [ | apply path_prod; simpl | ]; eauto ]
+             | [ H : find_Name_and_val _ _ ?t ?n ?N ?V None = Some _, H' : List.In (Some ?n) (List.skipn _ ?ls) |- False ]
+               => eapply find_Name_and_val_find_Name_Some, split_onames_find_Name_Some_unique in H;
+                    [ | | apply path_prod_uncurried; split; [ eassumption | simpl; reflexivity ] ];
+                    [ | solve [ eauto using oname_list_unique_firstn, oname_list_unique_skipn ] ]
+             | [ H : List.In (existT _ ?t (?n, _)%core) ?G,
+                     H' : List.In (Some ?n) (List.skipn _ ?ls),
+                          IH : forall t' n' x', List.In (existT _ t' (n', x')%core) ?G -> List.In (Some n') ?ls -> False
+                                                |- False ]
+               => apply (IH _ _ _ H); clear IH H
+             | [ H : List.In (existT _ ?t (?n, _)%core) ?G,
+                     H' : find_Name _ ?n ?N = Some ?t',
+                          IH : forall t' n' x', List.In (existT _ t' (n', x')%core) ?G -> List.In (Some n') ?ls -> False
+                                                |- _ ]
+               => exfalso; apply (IH _ _ _ H); clear IH H
              end.
-  Abort.
-  (*Fixpoint ocompilef {t} (e : exprf t) (ls : list (option Name)) {struct e}
-    : option (nexprf t)
-    := match e in @Syntax.exprf _ _ _ t return option (nexprf t) with
-       | TT => Some Named.TT
-       | Var _ x => Some (Named.Var x)
-       | Op _ _ op args => option_map (Named.Op op) (@ocompilef _ args ls)
-       | LetIn tx ex _ eC
-         => match @ocompilef _ ex nil, split_onames tx ls with
-            | Some x, (Some n, ls')%core
-              => option_map (fun C => Named.LetIn tx n x C) (@ocompilef _ (eC n) ls')
-            | _, _ => None
-            end
-       | Pair _ ex _ ey => match @ocompilef _ ex nil, @ocompilef _ ey nil with
-                           | Some x, Some y => Some (Named.Pair x y)
-                           | _, _ => None
-                           end
-       end.
+  Qed.
 
-  Definition ocompile {t} (e : expr t) (ls : list (option Name))
-    : option (nexpr t)
-    := match e in @Syntax.expr _ _ _ t return option (nexpr t) with
-       | Abs src _ f
-         => match split_onames src ls with
-            | (Some n, ls')%core
-              => option_map (Named.Abs n) (@ocompilef _ (f n) ls')
-            | _ => None
-            end
-       end.
+  Lemma wf_ocompile (ctx : Context) {t} (e : expr t) e' (ls : list (option Name))
+        (Hwf : wf e e')
+        f
+        (Hls : oname_list_unique ls)
+        (H : ocompile e ls = Some f)
+    : nwf ctx f.
+  Proof.
+    revert H; destruct Hwf;
+      repeat first [ progress simpl in *
+                   | progress unfold option_map, Named.interp in *
+                   | congruence
+                   | progress break_innermost_match
+                   | progress inversion_option
+                   | progress subst
+                   | progress intros ].
+    intro; simpl.
+    eapply wff_ocompilef;
+      [ | solve [ eauto ] | eassumption
+        | inversion_prod; subst; rewrite snd_split_onames_skipn; eauto using oname_list_unique_skipn
+        | intros ???; erewrite <- (flatten_binding_list_find_Name_and_val_unique _ _) by eassumption;
+          let H := fresh in
+          intro H; apply find_Name_and_val_find_Name_Some in H;
+          eapply split_onames_find_Name_Some_unique in H; [ | eassumption.. ];
+          intuition ].
+    { intros ???.
+      repeat first [ solve [ auto ]
+                   | rewrite (lookupb_extend Context _ _ _)
+                   | progress subst
+                   | progress break_innermost_match
+                   | erewrite <- (flatten_binding_list_find_Name_and_val_unique _ _) by eassumption
+                   | congruence
+                   | eassumption
+                   | match goal with
+                     | [ |- context[find_Name_and_val ?tdec ?ndec ?a ?b ?c ?d ?default] ]
+                       => lazymatch default with None => fail | _ => idtac end;
+                          rewrite (find_Name_and_val_split tdec ndec (default:=default))
+                     | [ H : _ |- _ ] => first [ erewrite find_Name_and_val_wrong_type in H by eassumption
+                                               | erewrite find_Name_and_val_different in H by eassumption ]
+                     end
+                   | progress intros ]. }
+  Qed.
 
-  Definition compilef {t} (e : exprf t) (ls : list Name) := @ocompilef t e (List.map (@Some _) ls).
-  Definition compile {t} (e : expr t) (ls : list Name) := @ocompile t e (List.map (@Some _) ls).*)
+  Lemma wff_compilef (ctx : Context) {t} (e : exprf t) e' (ls : list Name)
+        G
+        (Hwf : wff G e e')
+        (HG : forall t n x, List.In (existT _ t (n, x)%core) G -> lookupb ctx n t = Some x)
+        v
+        (H : compilef e ls = Some v)
+        (Hls : name_list_unique ls)
+        (HGls : forall t n x, List.In (existT _ t (n, x)%core) G -> List.In n ls -> False)
+    : prop_of_option (nwff ctx v).
+  Proof.
+    eapply wff_ocompilef; try eassumption.
+    setoid_rewrite List.in_map_iff; intros; destruct_head' ex; destruct_head' and; inversion_option; subst.
+    eauto.
+  Qed.
+
+  Lemma wf_compile (ctx : Context) {t} (e : expr t) e' (ls : list Name)
+        (Hwf : wf e e')
+        f
+        (Hls : name_list_unique ls)
+        (H : compile e ls = Some f)
+    : nwf ctx f.
+  Proof. eapply wf_ocompile; eassumption. Qed.
 End language.
