@@ -1,3 +1,4 @@
+Require Import Coq.Lists.List.
 Require Import Crypto.Reflection.Syntax.
 
 Local Open Scope core_scope.
@@ -32,11 +33,24 @@ Section language.
                end,
                ls)
          end.
+    Definition mname_list_unique (ls : list MName) : Prop
+      := forall k n,
+        List.In (Some n) (firstn k (List.map force ls))
+        -> List.In (Some n) (skipn k (List.map force ls))
+        -> False.
   End monad.
   Definition split_onames := @split_mnames (option Name) (fun x => x).
   Definition split_names := @split_mnames Name (@Some _).
+
+  Definition oname_list_unique (ls : list (option Name)) : Prop
+    := mname_list_unique (option Name) (fun x => x) ls.
+  Definition name_list_unique (ls : list Name) : Prop
+    := mname_list_unique Name (@Some _) ls.
 End language.
 
 Global Arguments split_mnames {_ _ MName} force _ _, {_ _} MName force _ _.
 Global Arguments split_onames {_ _} _ _.
 Global Arguments split_names {_ _} _ _.
+Global Arguments mname_list_unique {_ MName} force ls, {_} MName force ls.
+Global Arguments oname_list_unique {_} ls.
+Global Arguments name_list_unique {_} ls.
