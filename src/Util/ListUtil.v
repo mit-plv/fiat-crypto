@@ -1152,14 +1152,22 @@ Proof.
   induction n; destruct l; boring.
 Qed.
 
-Lemma firstn_firstn : forall {A} m n (l : list A), (n <= m)%nat ->
-  firstn n (firstn m l) = firstn n l.
+Lemma firstn_firstn_min : forall {A} m n (l : list A),
+    firstn n (firstn m l) = firstn (min n m) l.
 Proof.
   induction m; destruct n; intros; try omega; auto.
   destruct l; auto.
   simpl.
   f_equal.
   apply IHm; omega.
+Qed.
+
+Lemma firstn_firstn : forall {A} m n (l : list A), (n <= m)%nat ->
+  firstn n (firstn m l) = firstn n l.
+Proof.
+  intros; rewrite firstn_firstn_min.
+  apply Min.min_case_strong; intro; [ reflexivity | ].
+  assert (n = m) by omega; subst; reflexivity.
 Qed.
 
 Hint Rewrite @firstn_firstn using omega : push_firstn.
