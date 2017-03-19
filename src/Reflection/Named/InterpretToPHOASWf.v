@@ -2,6 +2,7 @@ Require Import Crypto.Reflection.Named.Syntax.
 Require Import Crypto.Reflection.Named.Wf.
 Require Import Crypto.Reflection.Named.ContextDefinitions.
 Require Import Crypto.Reflection.Named.ContextProperties.
+Require Import Crypto.Reflection.Named.ContextProperties.SmartMap.
 Require Import Crypto.Reflection.Named.InterpretToPHOAS.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Wf.

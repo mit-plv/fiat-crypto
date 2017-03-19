@@ -175,6 +175,9 @@ src/Reflection/Named/SmartMap.v
 src/Reflection/Named/Syntax.v
 src/Reflection/Named/Wf.v
 src/Reflection/Named/WfInterp.v
+src/Reflection/Named/ContextProperties/NameUtil.v
+src/Reflection/Named/ContextProperties/SmartMap.v
+src/Reflection/Named/ContextProperties/Tactics.v
 src/Reflection/Named/PositiveContext/Defaults.v
 src/Reflection/Z/BinaryNotationConstants.v
 src/Reflection/Z/BoundsInterpretations.v
