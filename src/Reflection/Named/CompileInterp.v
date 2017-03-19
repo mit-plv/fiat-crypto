@@ -84,7 +84,7 @@ Section language.
              | _ => congruence
              end.
       Focus 2.
-  Abort.
+  Admitted.
   (*
   Fixpoint ocompilef {t} (e : exprf t) (ls : list (option Name)) {struct e}
     : option (nexprf t)

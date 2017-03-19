@@ -1,3 +1,4 @@
+Require Import Coq.omega.Omega.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Crypto.Util.FixCoqMistakes.
 Require Import Crypto.Reflection.Syntax.
@@ -11,6 +12,7 @@ Require Import Crypto.Util.PointedProp.
 Require Import Crypto.Util.Logic.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Option.
+Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Tactics.SplitInContext.
@@ -18,6 +20,7 @@ Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Util.Tactics.SpecializeBy.
+Require Import Crypto.Util.Tactics.UniquePose.
 
 Section with_context.
   Context {base_type_code Name var} (Context : @Context base_type_code Name var)
@@ -53,11 +56,12 @@ Section with_context.
     solve [ tauto
           | congruence
           | eauto
-          | exfalso; eauto ].
+          | exfalso; unfold not in *; eauto ].
   Local Ltac inversion_step :=
     first [ progress subst
           | progress inversion_option
           | progress inversion_sigma
+          | progress inversion_prod
           | progress destruct_head' and
           | match goal with
             | [ H : ?t = ?t :> base_type_code |- _ ]
@@ -68,13 +72,29 @@ Section with_context.
     first [ rewrite lookupb_extendb_different by congruence
           | rewrite lookupb_extendb_same
           | rewrite lookupb_extendb_wrong_type by assumption ].
+  Local Ltac specializer_t_step :=
+    match goal with
+    | _ => progress specialize_by_assumption
+    | [ H : ?x = ?x -> _ |- _ ] => specialize (H eq_refl)
+    | [ H : ?T, H' : ?T |- _ ] => clear H'
+    | [ H : forall v, Some _ = Some v -> _ |- _ ]
+      => specialize (H _ eq_refl)
+    | [ H : forall v, Some v = Some _ -> _ |- _ ]
+      => specialize (H _ eq_refl)
+    end.
   Local Ltac misc_t_step :=
     first [ progress intros
-          | progress specialize_by_assumption
-          | match goal with
-            | [ H : ?x = ?x -> _ |- _ ] => specialize (H eq_refl)
-            end
           | progress simpl in * ].
+  Local Ltac misc_oname_t_step :=
+    match goal with
+    | [ H : oname_list_unique (List.skipn _ _) -> _ |- _ ]
+      => specialize (fun pf => H (@oname_list_unique_skipn _ _ _ pf))
+    | [ H : ((_, _) = (_, _))%core -> _ |- _ ]
+      => specialize (fun a b => H (f_equal2 (@pair _ _) a b))
+    | [ H : ?x = (_,_)%core -> _ |- _ ]
+      => rewrite (surjective_pairing x) in H;
+         specialize (fun a b => H (f_equal2 (@pair _ _) a b))
+    end.
   Local Ltac break_t_step :=
     first [ progress break_innermost_match_step
           | progress unfold cast_if_eq in *
@@ -83,7 +103,9 @@ Section with_context.
               => revert H; progress break_innermost_match_step
             | [ |- _ /\ _ ] => split
             | [ |- _ <-> _ ] => split
+            | [ |- ~ _ ] => intro
             end
+          | progress destruct_head' ex
           | progress destruct_head' or ].
   Local Ltac myfold_in_star c :=
     let c' := (eval cbv [interp_flat_type] in c) in
@@ -107,11 +129,17 @@ Section with_context.
                 by (transitivity x; [ symmetry | ]; assumption);
                  clear H'
             | _ => progress autorewrite with ctx_db in *
+            | [ H : context[snd (split_onames _ _)] |- _ ]
+              => rewrite snd_split_onames_skipn in H
+            | [ |- context[snd (split_onames _ _)] ]
+              => rewrite snd_split_onames_skipn
             end ].
   Local Ltac t_step :=
     first [ fin_t_step
           | inversion_step
           | rewrite_lookupb_extendb_step
+          | specializer_t_step
+          | misc_oname_t_step
           | misc_t_step
           | break_t_step
           | refolder_t_step
@@ -212,11 +240,21 @@ Section with_context.
   Proof.
     t; erewrite find_Name_and_val_wrong_type by solve [ eassumption | congruence ]; reflexivity.
   Qed.
+  Lemma find_Name_and_val_find_Name_Some
+        {var' t n T N V v}
+        (H : @find_Name_and_val var' t n T N V None = Some v)
+    : @find_Name n T N = Some t.
+  Proof.
+    rewrite find_Name_and_val_split in H; break_match_hyps; subst; congruence.
+  Qed.
   Local Ltac find_Name_and_val_default_to_None_step :=
     match goal with
     | [ H : context[find_Name_and_val _ _ _ _ ?default] |- _ ]
       => lazymatch default with None => fail | _ => idtac end;
          rewrite (find_Name_and_val_split (default:=default)) in H
+    | [ |- context[find_Name_and_val _ _ _ _ ?default] ]
+      => lazymatch default with None => fail | _ => idtac end;
+         rewrite (find_Name_and_val_split (default:=default))
     end.
   Local Ltac find_Name_and_val_default_to_None := repeat find_Name_and_val_default_to_None_step.
 
@@ -232,6 +270,139 @@ Section with_context.
       repeat first [ find_Name_and_val_default_to_None_step
                    | rewrite List.in_app_iff
                    | t_step ].
+  Qed.
+
+  Lemma split_onames_find_Name
+        {n T N ls ls'}
+        (H : split_onames _ ls = (Some N, ls')%core)
+    : (exists t, @find_Name n T N = Some t)
+      <-> List.In (Some n) (List.firstn (CountLets.count_pairs T) ls).
+  Proof.
+    revert dependent ls; intro ls; revert ls ls'; induction T; intros;
+      [ | | specialize (IHT1 (fst N) ls (snd (split_onames T1 ls)));
+            specialize (IHT2 (snd N) (snd (split_onames T1 ls)) (snd (split_onames (T1 * T2) ls))) ];
+      repeat first [ progress t
+                   | progress split_iff
+                   | progress specialize_by (eexists; eauto)
+                   | solve [ eauto using In_skipn, In_firstn ]
+                   | match goal with
+                     | [ H : List.In ?x (List.firstn ?n ?ls) |- List.In ?x (List.firstn (?n + ?m) ?ls) ]
+                       => apply (In_firstn n); rewrite firstn_firstn by omega
+                     | [ H : _ |- _ ] => first [ rewrite firstn_skipn_add in H
+                                               | rewrite firstn_firstn in H by omega ]
+                     | [ H : List.In ?x' (List.firstn (?n + ?m) ?ls) |- List.In ?x' (List.firstn ?m (List.skipn ?n ?ls)) ]
+                       => apply (In_firstn_skipn_split n) in H
+                     end ].
+  Qed.
+
+  Lemma split_onames_find_Name_Some_unique_iff
+        {n T N ls ls'}
+        (Hls : oname_list_unique ls)
+        (H : split_onames _ ls = (Some N, ls')%core)
+    : (exists t, @find_Name n T N = Some t)
+      <-> List.In (Some n) ls /\ ~List.In (Some n) ls'.
+  Proof.
+    rewrite (split_onames_find_Name (ls':=ls') (ls:=ls)) by assumption.
+    rewrite (surjective_pairing (split_onames _ _)) in H.
+    rewrite fst_split_onames_firstn, snd_split_onames_skipn in H.
+    inversion_prod; subst.
+    split; [ split | intros [? ?] ]; eauto using In_firstn, oname_list_unique_specialize.
+    eapply In_firstn_skipn_split in H; destruct_head' or; eauto; exfalso; eauto.
+  Qed.
+
+  Lemma split_onames_find_Name_Some_unique
+        {t n T N ls ls'}
+        (Hls : oname_list_unique ls)
+        (H : split_onames _ ls = (Some N, ls')%core)
+        (Hfind : @find_Name n T N = Some t)
+    : List.In (Some n) ls /\ ~List.In (Some n) ls'.
+  Proof.
+    eapply split_onames_find_Name_Some_unique_iff; eauto.
+  Qed.
+
+  (*Lemma flatten_binding_list_find_Name_unique_None
+        {var' n T N V ls ls'}
+        (Hls : oname_list_unique ls)
+        (H : split_onames _ ls = (Some N, ls')%core)
+    : @find_Name n T N = None
+      <-> (forall t v, ~List.In (existT (fun t => (Name * var' t)%type) t (n, v)) (Wf.flatten_binding_list N V)).
+  Proof.
+    revert dependent ls; intro ls; revert ls ls'; induction T; intros;
+      [ | | specialize (IHT1 (fst N) (fst V) ls (snd (split_onames T1 ls)));
+            specialize (IHT2 (snd N) (snd V) (snd (split_onames T1 ls)) (snd (split_onames (T1 * T2) ls))) ];
+      repeat first [ find_Name_and_val_default_to_None_step
+                   | progress simpl in *
+                   | setoid_rewrite List.in_app_iff
+                   | t_step
+                   | progress split_iff ].
+    Grab Existential Variables.
+    eassumption.
+  Qed.*)
+
+  (*Lemma flatten_binding_list_find_Name_unique
+        {var' t n T N V ls ls'}
+        (Hls : oname_list_unique ls)
+        (H : split_onames _ ls = (Some N, ls')%core)
+    : @find_Name n T N = Some t
+      <-> (exists v, List.In (existT (fun t => (Name * var' t)%type) t (n, v)) (Wf.flatten_binding_list N V)).
+  Proof.
+    revert t; revert dependent ls; intro ls; revert ls ls'; induction T; intros;
+      [ | | specialize (IHT1 (fst N) (fst V) ls (snd (split_onames T1 ls)));
+            specialize (IHT2 (snd N) (snd V) (snd (split_onames T1 ls)) (snd (split_onames (T1 * T2) ls))) ];
+      repeat first [ find_Name_and_val_default_to_None_step
+                   | progress simpl in *
+                   | setoid_rewrite List.in_app_iff
+                   | t_step
+                   | progress split_iff
+                   | progress destruct_head' ex
+                   | progress destruct_head' or
+                   | progress specialize_by (eexists; eassumption)
+                   | lazymatch goal with
+                     | [ H : forall t : base_type_code, _ |- _ ]
+                       => progress repeat match goal with
+                                          | [ t' : base_type_code |- _ ]
+                                            => unique pose proof (H t')
+                                          end;
+                          clear H
+                     end
+                   | lazymatch goal with
+                     | [ H : find_Name ?n ?x = Some ?t, H' : find_Name ?n ?x' = Some ?t' |- _ ]
+                       => let apply_in_tac H :=
+                              (eapply split_onames_find_Name_Some_unique in H;
+                               [ | | apply path_prod_uncurried; split; [ eassumption | reflexivity ] ];
+                               [ | solve [ eauto using oname_list_unique_firstn, oname_list_unique_skipn ] ]) in
+                          first [ constr_eq x x'; fail 1
+                                | constr_eq t t'; fail 1
+                                | apply_in_tac H; apply_in_tac H' ]
+                     end ].
+  Qed.*)
+
+  Lemma flatten_binding_list_find_Name_and_val_unique
+        {var' t n T N V v ls ls'}
+        (Hls : oname_list_unique ls)
+        (H : split_onames _ ls = (Some N, ls')%core)
+    : @find_Name_and_val var' t n T N V None = Some v
+      <-> List.In (existT (fun t => (Name * var' t)%type) t (n, v)) (Wf.flatten_binding_list N V).
+  Proof.
+    revert dependent ls; intro ls; revert ls ls'; induction T; intros;
+      [ | | specialize (IHT1 (fst N) (fst V) ls (snd (split_onames T1 ls)));
+            specialize (IHT2 (snd N) (snd V) (snd (split_onames T1 ls)) (snd (split_onames (T1 * T2) ls))) ];
+      repeat first [ find_Name_and_val_default_to_None_step
+                   | progress simpl in *
+                   | rewrite List.in_app_iff
+                   | t_step
+                   | progress split_iff
+                   | lazymatch goal with
+                     | [ H : find_Name ?n ?x = Some ?t, H' : find_Name_and_val ?t' ?n ?X ?V None = Some ?v |- _ ]
+                       => apply find_Name_and_val_find_Name_Some in H'
+                     | [ H : find_Name ?n ?x = Some ?t, H' : find_Name ?n ?x' = Some ?t' |- _ ]
+                       => let apply_in_tac H :=
+                              (eapply split_onames_find_Name_Some_unique in H;
+                               [ | | apply path_prod_uncurried; split; [ eassumption | simpl; reflexivity ] ];
+                               [ | solve [ eauto using oname_list_unique_firstn, oname_list_unique_skipn ] ]) in
+                          first [ constr_eq x x'; fail 1
+                                | apply_in_tac H; apply_in_tac H' ]
+                     end ].
   Qed.
 
   Lemma fst_split_mnames__flatten_binding_list__find_Name
