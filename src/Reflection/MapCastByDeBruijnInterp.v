@@ -8,7 +8,9 @@ Require Import Crypto.Reflection.Named.InterpretToPHOASInterp.
 Require Import Crypto.Reflection.Named.CompileInterp.
 Require Import Crypto.Reflection.Named.PositiveContext.
 Require Import Crypto.Reflection.Named.PositiveContext.Defaults.
+Require Import Crypto.Reflection.Named.PositiveContext.DefaultsProperties.
 Require Import Crypto.Reflection.LinearizeInterp.
+Require Import Crypto.Reflection.LinearizeWf.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.MapCastByDeBruijn.
 Require Import Crypto.Util.Decidable.
@@ -29,9 +31,8 @@ Section language.
           (interp_op_bounds : forall src dst, op src dst -> interp_flat_type interp_base_type_bounds src -> interp_flat_type interp_base_type_bounds dst)
           (pick_typeb : forall t, interp_base_type_bounds t -> base_type_code).
   Local Notation pick_type v := (SmartFlatTypeMap pick_typeb v).
-  Context (cast_op : forall var t tR (opc : op t tR) args_bs
-                            (args : exprf base_type_code op (var:=var) (pick_type args_bs)),
-              option (exprf base_type_code op (var:=var) (pick_type (interp_op_bounds t tR opc args_bs))))
+  Context (cast_op : forall t tR (opc : op t tR) args_bs,
+              op (pick_type args_bs) (pick_type (interp_op_bounds t tR opc args_bs)))
           (cast_backb: forall t b, interp_base_type (pick_typeb t b) -> interp_base_type t).
   Let cast_back : forall t b, interp_flat_type interp_base_type (pick_type b) -> interp_flat_type interp_base_type t
     := fun t b => SmartFlatTypeMapUnInterp cast_backb.
@@ -43,26 +44,20 @@ Section language.
                     (v : interp_flat_type interp_base_type t)
                     (H : inbounds t bs v),
               inbounds tR (interp_op_bounds t tR opc bs) (interp_op t tR opc v))
-          (wff_cast_op
-           : forall var1 var2 t tR opc args_bs args1 args2 G v1 v2,
-              cast_op var1 t tR opc args_bs args1 = Some v1
-              -> cast_op var2 t tR opc args_bs args2 = Some v2
-              -> wff G args1 args2
-              -> wff G v1 v2)
           (pull_cast_back
            : forall t tR opc bs
-                    (args : exprf base_type_code op (pick_type bs))
-                    new_e
-                    (Hnew : cast_op _ _ _ opc bs args = Some new_e)
-                    (H : inbounds t bs (cast_back t bs (interpf interp_op args))),
-              interp_op t tR opc (cast_back t bs (interpf interp_op args))
+                    (v : interp_flat_type interp_base_type (pick_type bs))
+                    (H : inbounds t bs (cast_back t bs v)),
+              interp_op t tR opc (cast_back t bs v)
               =
-              cast_back _ _ (interpf interp_op new_e)).
+              cast_back _ _ (interp_op _ _ (cast_op _ _ opc bs) v)).
 
   Local Notation MapCast
     := (@MapCast
           base_type_code op base_type_code_beq base_type_code_bl_transparent
           failb interp_base_type_bounds interp_op_bounds pick_typeb cast_op).
+
+  Local Notation PositiveContextOk := (@PositiveContextOk base_type_code _ base_type_code_beq base_type_code_bl_transparent base_type_code_lb).
 
   Local Instance dec_base_type_code_eq : DecidableRel (@eq base_type_code).
   Proof.
@@ -75,6 +70,7 @@ Section language.
 
   Lemma MapCastCorrect
         {t} (e : Expr base_type_code op t)
+        (Hwf : Wf e)
         (input_bounds : interp_flat_type interp_base_type_bounds (domain t))
     : forall {b} e' (He':MapCast e input_bounds = Some (existT _ b e'))
              v v' (Hv : @inbounds _ input_bounds v /\ cast_back _ _ v' = v),
@@ -91,6 +87,11 @@ Section language.
       try solve [ auto using PositiveContextOk with typeclass_instances
                 | repeat first [ rewrite !lookupb_empty by (apply PositiveContextOk; assumption)
                                | intro
-                               | congruence ] ].
+                               | congruence ] ];
+      repeat first [ rewrite <- Interp_InterpToPHOAS; [ reflexivity | ] ].
+    { erewrite (interp_compile (ContextOk:=PositiveContextOk)), interp_linearize;
+        [ reflexivity | apply wf_linearize; auto | .. | eassumption ];
+        auto using name_list_unique_DefaultNamesFor. }
+    {
   Admitted.
 End language.
