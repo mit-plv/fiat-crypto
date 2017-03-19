@@ -21,6 +21,8 @@ Arguments is_cast [s d] v.
 Definition base_type_leb (v1 v2 : base_type) : bool
   := match v1, v2 with
      | _, TZ => true
+     | TZ, _ => false
+     | TWord logsz1, TWord logsz2 => Compare_dec.leb logsz1 logsz2
      end.
 
 Definition base_type_min := base_type_min base_type_leb.
@@ -70,6 +72,7 @@ Proof.
                | match goal with
                  | [ H : ?leb _ _ = true |- _ ] => apply Compare_dec.leb_complete in H
                  | [ H : ?leb _ _ = false |- _ ] => apply Compare_dec.leb_iff_conv in H
+                 | [ H : TWord _ = TWord _ |- _ ] => inversion H; clear H
                  end
                | rewrite ZToWord_wordToZ_ZToWord by omega *
                | rewrite wordToZ_ZToWord_wordToZ by omega * ].

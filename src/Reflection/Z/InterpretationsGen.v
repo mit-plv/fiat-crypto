@@ -59,7 +59,7 @@ Module InterpretationsGen (Bit : BitSize).
         := @smart_interp_flat_map
              base_type
              interp_base_type' interp_flat_type
-             (fun t => match t with TZ => fun x => x end)
+             (fun t => match t with _ => fun x => x end)
              (Some tt)
              (fun _ _ x y => match x, y with
                              | Some x', Some y' => Some (x', y')
@@ -339,31 +339,31 @@ Module InterpretationsGen (Bit : BitSize).
 
     Definition interp_base_type (t : base_type) : Type
       := match t with
-         | TZ => wordW
+         | _ => wordW
          end.
     Definition interp_op {src dst} (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
       := match f in op src dst return interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst with
-         | OpConst TZ v => fun _ => ZToWordW v
-         | Add TZ => fun xy => fst xy + snd xy
-         | Sub TZ => fun xy => fst xy - snd xy
-         | Mul TZ => fun xy => fst xy * snd xy
-         | Shl TZ => fun xy => fst xy << snd xy
-         | Shr TZ => fun xy => fst xy >> snd xy
-         | Land TZ => fun xy => land (fst xy) (snd xy)
-         | Lor TZ => fun xy => lor (fst xy) (snd xy)
-         | Neg TZ int_width => fun x => neg int_width x
-         | Cmovne TZ => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovne x y z w
-         | Cmovle TZ => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovle x y z w
-         | Cast TZ TZ => fun x => x
+         | OpConst _ v => fun _ => ZToWordW v
+         | Add _ => fun xy => fst xy + snd xy
+         | Sub _ => fun xy => fst xy - snd xy
+         | Mul _ => fun xy => fst xy * snd xy
+         | Shl _ => fun xy => fst xy << snd xy
+         | Shr _ => fun xy => fst xy >> snd xy
+         | Land _ => fun xy => land (fst xy) (snd xy)
+         | Lor _ => fun xy => lor (fst xy) (snd xy)
+         | Neg _ int_width => fun x => neg int_width x
+         | Cmovne _ => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovne x y z w
+         | Cmovle _ => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovle x y z w
+         | Cast _ _ => fun x => x
          end%wordW.
 
     Definition of_Z ty : Z.interp_base_type ty -> interp_base_type ty
       := match ty return Z.interp_base_type ty -> interp_base_type ty with
-         | TZ => ZToWordW
+         | _ => ZToWordW
          end.
     Definition to_Z ty : interp_base_type ty -> Z.interp_base_type ty
       := match ty return interp_base_type ty -> Z.interp_base_type ty with
-         | TZ => wordWToZ
+         | _ => wordWToZ
          end.
 
     Module Export Rewrites.
@@ -492,7 +492,7 @@ Module InterpretationsGen (Bit : BitSize).
       := option bounds.
     Definition interp_op {src dst} (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
       := match f in op src dst return interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst with
-         | OpConst TZ v => fun _ => SmartBuildBounds v v
+         | OpConst _ v => fun _ => SmartBuildBounds v v
          | Add _ => fun xy => fst xy + snd xy
          | Sub _ => fun xy => fst xy - snd xy
          | Mul _ => fun xy => fst xy * snd xy
@@ -508,7 +508,7 @@ Module InterpretationsGen (Bit : BitSize).
 
     Definition of_wordW ty : WordW.interp_base_type ty -> interp_base_type ty
       := match ty return WordW.interp_base_type ty -> interp_base_type ty with
-         | TZ => wordWToBounds
+         | _ => wordWToBounds
          end.
 
     Ltac inversion_bounds :=
@@ -567,17 +567,17 @@ Module InterpretationsGen (Bit : BitSize).
 
     Definition of_wordW ty : WordW.interp_base_type ty -> interp_base_type ty
       := match ty return WordW.interp_base_type ty -> interp_base_type ty with
-         | TZ => wordWToBoundedWord
+         | _ => wordWToBoundedWord
          end.
     Definition to_wordW ty : interp_base_type ty -> WordW.interp_base_type ty
       := match ty return interp_base_type ty -> WordW.interp_base_type ty with
-         | TZ => boundedWordToWordW
+         | _ => boundedWordToWordW
          end.
 
     (** XXX FIXME(jgross) This is going to break horribly if we need to support any types other than [Z] *)
     Definition to_wordW' ty : BoundedWord -> WordW.interp_base_type ty
       := match ty return BoundedWord -> WordW.interp_base_type ty with
-         | TZ => fun x => boundedWordToWordW (Some x)
+         | _ => fun x => boundedWordToWordW (Some x)
          end.
 
     Definition to_Z' ty : BoundedWord -> Z.interp_base_type ty
@@ -596,7 +596,7 @@ Module InterpretationsGen (Bit : BitSize).
 
     Definition to_bounds ty : interp_base_type ty -> ZBounds.interp_base_type ty
       := match ty return interp_base_type ty -> ZBounds.interp_base_type ty with
-         | TZ => to_bounds'
+         | _ => to_bounds'
          end.
 
     Definition SmartBuildBoundedWord (v : Z) : t
@@ -878,18 +878,18 @@ Module InterpretationsGen (Bit : BitSize).
 
     Definition interp_op {src dst} (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
       := match f in op src dst return interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst with
-         | OpConst TZ v => fun _ => SmartBuildBoundedWord v
-         | Add TZ => fun xy => fst xy + snd xy
-         | Sub TZ => fun xy => fst xy - snd xy
-         | Mul TZ => fun xy => fst xy * snd xy
-         | Shl TZ => fun xy => fst xy << snd xy
-         | Shr TZ => fun xy => fst xy >> snd xy
-         | Land TZ => fun xy => land (fst xy) (snd xy)
-         | Lor TZ => fun xy => lor (fst xy) (snd xy)
-         | Neg TZ int_width => fun x => neg int_width x
-         | Cmovne TZ => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovne x y z w
-         | Cmovle TZ => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovle x y z w
-         | Cast TZ TZ => fun x => x
+         | OpConst _ v => fun _ => SmartBuildBoundedWord v
+         | Add _ => fun xy => fst xy + snd xy
+         | Sub _ => fun xy => fst xy - snd xy
+         | Mul _ => fun xy => fst xy * snd xy
+         | Shl _ => fun xy => fst xy << snd xy
+         | Shr _ => fun xy => fst xy >> snd xy
+         | Land _ => fun xy => land (fst xy) (snd xy)
+         | Lor _ => fun xy => lor (fst xy) (snd xy)
+         | Neg _ int_width => fun x => neg int_width x
+         | Cmovne _ => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovne x y z w
+         | Cmovle _ => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovle x y z w
+         | Cast _ _ => fun x => x
          end%bounded_word.
   End BoundedWordW.
 

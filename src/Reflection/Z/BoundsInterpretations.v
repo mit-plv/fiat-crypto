@@ -119,11 +119,13 @@ Module Import Bounds.
   Definition bit_width_of_base_type ty : option Z
     := match ty with
        | TZ => None
+       | TWord logsz => Some (2^Z.of_nat logsz)%Z
        end.
 
   Definition interp_op {src dst} (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
     := match f in op src dst return interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst with
        | OpConst TZ v => fun _ => SmartBuildBounds None v v
+       | OpConst (TWord _ as T) v => fun _ => SmartBuildBounds (bit_width_of_base_type T) ((*FixedWordSizes.wordToZ*) v) ((*FixedWordSizes.wordToZ*) v)
        | Add T => fun xy => add (bit_width_of_base_type T) (fst xy) (snd xy)
        | Sub T => fun xy => sub (bit_width_of_base_type T) (fst xy) (snd xy)
        | Mul T => fun xy => mul (bit_width_of_base_type T) (fst xy) (snd xy)
@@ -154,10 +156,13 @@ Module Import Bounds.
   Definition of_interp t (z : Syntax.interp_base_type t) : interp_base_type t
     := Some (ZToBounds (match t return Syntax.interp_base_type t -> Z with
                         | TZ => fun z => z
+                        | TWord logsz => fun z => z (*FixedWordSizes.wordToZ*)
                         end z)).
 
   Definition bounds_to_base_type' (b : bounds) : base_type
-    := TZ.
+    := if (0 <=? lower b)%Z
+       then TWord (Z.to_nat (Z.log2_up (Z.log2_up (1 + upper b))))
+       else TZ.
   Definition bounds_to_base_type (b : t) : base_type
     := match b with
        | None => TZ
