@@ -1,3 +1,4 @@
+Require Import Coq.Classes.Morphisms Coq.Classes.RelationClasses.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Bool.
@@ -5,6 +6,7 @@ Require Import Crypto.Util.Tactics Crypto.Util.Option Crypto.Util.Sigma.
 Require Import Coq.Bool.Sumbool.
 Require Import Crypto.Reflection.NamedBase.Syntax.
 Require Import Crypto.Util.Bool.
+Require Import Crypto.Util.Tactics.UniquePose.
 
 Local Open Scope nexpr_scope.
 Section language.
@@ -193,18 +195,27 @@ Section example.
   | OpMul : forall t1 t2 tR, op t1 t2 tR
   | OpSub : forall t1 t2 tR, op t1 t2 tR.
   Definition bounds (t:base_type_code) := (Z * Z)%type. (* upper bound only for now *)
-  Definition interp_op_bounds (src1 src2 dst : base_type_code) (opc : op src1 src2 dst) : bounds src1 -> bounds src2 -> bounds dst
+  Definition four_corners (f : Z -> Z -> Z) {a b c} : bounds a -> bounds b -> bounds c
     := fun x y
        => let '(lx, ux) := x in
           let '(ly, uy) := y in
-          match opc with
-          | OpMul _ _ _ => let '(l, u) := (Z.min (lx * ly) (Z.min (lx * uy) (Z.min (ux * ly) (ux * uy))),
-                                           Z.max (lx * ly) (Z.max (lx * uy) (Z.max (ux * ly) (ux * uy)))) in
-                           if ((lx <=? 0) && (0 <=? ux)) || ((ly <=? 0) && (0 <=? uy))
-                           then (Z.min 0 l, Z.max 0 u)
-                           else (l, u)
-          | OpSub _ _ _ => (lx - uy, ux - ly)
-          end%Z%bool.
+          (Z.min (f lx ly) (Z.min (f lx uy) (Z.min (f ux ly) (f ux uy))),
+           Z.max (f lx ly) (Z.max (f lx uy) (Z.max (f ux ly) (f ux uy)))).
+  Definition truncation_bounds {t} : bounds TZ -> bounds t
+    := fun x => let '(l, u) := x in
+                match t with
+                | TZ => (l, u)
+                | TW32 => if (0 <=? l) && (u <? 2^32) then (l, u) else (0, 2^32-1)
+                | TW64 => if (0 <=? l) && (u <? 2^64) then (l, u) else (0, 2^64-1)
+                end%Z%bool.
+  Definition Zinterp_op {src1 src2 dst} (opc : op src1 src2 dst) : Z -> Z -> Z
+    := match opc with
+       | OpMul _ _ _ => Z.mul
+       | OpSub _ _ _ => Z.sub
+       end.
+  Definition interp_op_bounds (src1 src2 dst : base_type_code) (opc : op src1 src2 dst) : bounds src1 -> bounds src2 -> bounds dst
+    := fun x y
+       => truncation_bounds (four_corners (Zinterp_op opc) x y).
   Definition pick_typeb (t : base_type_code) (b:bounds t) : base_type_code :=
       match t with
         | TW32 => TW32
@@ -219,13 +230,22 @@ Section example.
           else TZ
       end.
 
+  Definition precast_op (t1 t2 tR : base_type_code) (o:op t1 t2 tR)
+    : forall t1' t2' tR', op t1' t2' tR'
+    := match o with
+       | OpMul _ _ _ => OpMul
+       | OpSub _ _ _ => OpSub
+       end.
   Definition cast_op (t1 t2 tR : base_type_code) (o:op t1 t2 tR) (arg1_bs : bounds t1) (arg2_bs : bounds t2)
     : op (pick_typeb t1 arg1_bs) (pick_typeb t2 arg2_bs)
          (pick_typeb tR (interp_op_bounds t1 t2 tR o arg1_bs arg2_bs))
-    := match o with
-       | OpMul _ _ _ => OpMul _ _ _
-       | OpSub _ _ _ => OpSub _ _ _
-       end.
+    := precast_op _ _ _ o _ _ _.
+
+  Lemma Zinterp_op_precast_op a b c a' b' c' o
+    : Zinterp_op (@precast_op a b c o a' b' c') = Zinterp_op o.
+  Proof.
+    destruct o; reflexivity.
+  Qed.
 
   Definition interp_base_type t :=
     match t with
@@ -255,43 +275,110 @@ Section example.
 
   Definition interp_op (src1 src2 dst : base_type_code) (o:op src1 src2 dst)
              (x:interp_base_type src1) (y:interp_base_type src2) : interp_base_type dst :=
-    of_Z _ (match o with
-            | OpMul _ _ _ => Z.mul
-            | OpSub _ _ _ => Z.sub
-            end (to_Z x) (to_Z y)).
+    of_Z _ (Zinterp_op o (to_Z x) (to_Z y)).
 
   Definition inbounds t (b:bounds t) (v:interp_base_type t)
-    := let '(l, u) := b in (l <= to_Z v < u)%Z.
+    := let '(l, u) := b in (l <= to_Z v <= u)%Z.
 
+  Definition monotonic_R (R1 R2 : Z -> Z -> Prop) (f : Z -> Z) := Proper (R1 ==> R2) f.
+  Definition monotonic (f : Z -> Z) := monotonic_R Z.le Z.le f \/ monotonic_R Z.le Z.ge f.
+  Definition monotonic2 (f : Z -> Z -> Z) := forall x, monotonic (f x) /\ monotonic (fun y => f y x).
+
+  Local Ltac split_min_max :=
+    repeat match goal with
+           | [ H : (?a <= ?b)%Z |- context[Z.max ?a ?b] ]
+             => rewrite (Z.max_r a b) by omega
+           | [ H : (?b <= ?a)%Z |- context[Z.max ?a ?b] ]
+             => rewrite (Z.max_l a b) by omega
+           | [ H : (?a <= ?b)%Z |- context[Z.min ?a ?b] ]
+             => rewrite (Z.min_l a b) by omega
+           | [ H : (?b <= ?a)%Z |- context[Z.min ?a ?b] ]
+             => rewrite (Z.min_r a b) by omega
+           | [ |- context[Z.max ?a ?b] ]
+             => first [ rewrite (Z.max_l a b) by omega
+                      | rewrite (Z.max_r a b) by omega ]
+           | [ |- context[Z.min ?a ?b] ]
+             => first [ rewrite (Z.min_l a b) by omega
+                      | rewrite (Z.min_r a b) by omega ]
+           | _ => progress repeat apply Z.min_case_strong; intros
+           | _ => progress repeat apply Z.max_case_strong; intros
+           end.
+  Local Arguments Z.pow_pos !_ !_ / .
   Lemma interp_op_bounds_correct t1 t2 tR o b1 b2
         (v1 : interp_base_type t1) (v2 : interp_base_type t2)
         (H1 : @inbounds t1 b1 v1) (H2 : @inbounds t2 b2 v2)
     : inbounds tR (interp_op_bounds t1 t2 tR o b1 b2) (interp_op t1 t2 tR o v1 v2).
   Proof.
-    destruct o; cbv [inbounds interp_op_bounds interp_op] in *;
-      generalize dependent (to_Z v1); generalize dependent (to_Z v2);
-        clear dependent v1; clear dependent v2;
-          intros z1 H1 z2 H2; cbv [of_Z to_Z id proj1_sig] in *;
-            cbv [of_Z to_Z id] in *;
-            repeat match goal with
-                   | _ => nia
-                   | [ H : and _ _ |- _ ] => destruct H
-                   | _ => progress split_andb
-                   | [ H : orb _ _ = true |- _ ] => rewrite Bool.orb_true_iff in H
-                   | _ => progress Z.ltb_to_lt
-                   | [ H : (?a <= ?x)%Z, H' : (?x <= ?y)%Z |- _ ]
-                     => lazymatch goal with
-                        | [ H'' : (a <= y)%Z |- _ ] => fail
-                        | _ => assert ((a <= y)%Z) by omega
-                        end
-                   | _ => break_innermost_match_step
-                   | [ H : or _ _ |- _ ] => destruct H
-                   | [ |- _ /\ _ ] => split
-                   | [ |- (0 <= _ mod _)%Z ] => apply Z.mod_pos_bound; vm_compute; reflexivity
-                   | [ |- (_ mod _ < _)%Z ] => eapply Z.le_lt_trans; [ apply Z.mod_le | ]
-                   | _ => apply Z.min_case_strong; intros
-                   end.
-  Admitted.
+    cbv [interp_op_bounds interp_op].
+    set (f := Zinterp_op o).
+    assert (Hfour_corners
+            : forall {a b c} b1 b2
+                     v1 v2
+                     (H1 : @inbounds TZ b1 v1) (H2 : @inbounds TZ b2 v2),
+               inbounds TZ (@four_corners f a b c b1 b2) (f v1 v2)).
+    { clear; subst f; cbv [inbounds four_corners];
+        intros.
+      destruct b1 as [lb1 ub1], b2 as [lb2 ub2];
+        destruct o; simpl in *; split_min_max;
+          split; try omega; destruct_head' and.
+      all:repeat match goal with
+                 | [ H : (?f ?x ?y <= ?f ?x ?y')%Z |- _ ]
+                   => assert ((y = y') \/ (y <> y' /\ 0 <= x))%Z by (assert (y <= y')%Z by omega; nia);
+                        clear H
+                 | [ H : (?f ?y ?x <= ?f ?y' ?x)%Z |- _ ]
+                   => assert ((y = y') \/ (y <> y' /\ 0 <= x))%Z by (assert (y <= y')%Z by omega; nia);
+                        clear H
+                 | [ H : (?f ?x ?y <= ?f ?x ?y')%Z |- _ ]
+                   => assert ((y = y') \/ (y <> y' /\ x <= 0))%Z by (assert (y' <= y)%Z by omega; nia);
+                        clear H
+                 | [ H : (?f ?y ?x <= ?f ?y' ?x)%Z |- _ ]
+                   => assert ((y = y') \/ (y <> y' /\ x <= 0))%Z by (assert (y' <= y)%Z by omega; nia);
+                        clear H
+                 | [ H : ?T, H' : ?T |- _ ] => clear H'
+                 | [ H : ?A \/ (~?A /\ ?B), H' : ?A \/ (~?A /\ ?C) |- _ ]
+                   => assert (A \/ (~A /\ (B /\ C))) by (clear -H H'; tauto); clear H H'
+                 | _ => progress destruct_head' or; destruct_head' and; subst; try omega
+                 end.
+      all:try nia.
+      all:repeat match goal with
+                 | [ |- context[?x] ]
+                   => lazymatch type of x with
+                      | Z => lazymatch goal with
+                             | [ H : (0 <= x)%Z |- _ ] => fail
+                             | [ H : (x < 0)%Z |- _ ] => fail
+                             | _ => destruct (Z_lt_le_dec x 0); try omega
+                             end
+                      end
+                 end.
+      all:try nia. }
+    clearbody f; clear o.
+    cbv [inbounds] in *.
+    generalize dependent (to_Z v1); clear v1; intro v1;
+      generalize dependent (to_Z v2); clear v2; intro v2; intros.
+    match goal with
+    | [ |- context[@four_corners ?f ?a ?b ?c ?b1 ?b2] ]
+      => specialize (Hfour_corners a b c b1 b2 v1 v2);
+           generalize dependent (@four_corners f a b c b1 b2); intros
+    end.
+    repeat match goal with
+           | [ H : _ |- _ ] => specialize (Hfour_corners H); clear H
+           end.
+    cbv [to_Z] in Hfour_corners.
+    revert Hfour_corners.
+    repeat match goal with x : _ |- _ => clear x end; intro.
+    destruct_head_hnf' prod.
+    cbv [truncation_bounds to_Z of_Z proj1_sig].
+    break_innermost_match; split_andb; try assumption; Z.ltb_to_lt.
+    all:repeat match goal with
+               | [ |- _ /\ _ ] => split
+               | [ |- (0 <= _ mod _)%Z ] => apply Z.mod_pos_bound; vm_compute; reflexivity
+               | [ |- (?x <= ?y - 1)%Z ]
+                 => cut (x < y)%Z; [ omega | ]
+               | [ |- (_ mod _ < _)%Z ] => apply Z.mod_pos_bound; vm_compute; reflexivity
+               | _ => simpl in *; omega
+               | _ => progress Z.rewrite_mod_small
+               end.
+  Qed.
 
   Local Arguments Z.pow : simpl never.
   Lemma to_Z_cast_back t (b:bounds t) (v:interp_base_type (pick_typeb t b))
@@ -312,24 +399,44 @@ Section example.
   : interp_op t1 t2 tR o (cast_back t1 b1 v1) (cast_back t2 b2 v2)
   = cast_back _ _ (interp_op _ _ _  (cast_op _ _ _ o b1 b2) v1 v2).
   Proof.
-    cbv [inbounds interp_op_bounds interp_op] in *.
-    cbv [cast_back pick_typeb]; rewrite !to_Z_cast_back in *.
-    break_match; (* does this succeed in finite time? *)
-      repeat first [ reflexivity
-                   | rewrite !to_Z_cast_back in * by fail
-                   | progress simpl in *
-                   | progress destruct_head sig
-                   | progress split_andb
-                   | progress Z.ltb_to_lt
-                   | rewrite !Decidable.eqsig_eq by fail
-                   | progress rewrite ?Zmod_mod by fail
-                   | progress Z.rewrite_mod_small
-                   | rewrite !Zmod_small by solve [ nia | rewrite !Zmod_small; nia ]
-                   | progress rewrite ?Bool.andb_true_iff, ?Z.leb_le, ?Z.ltb_lt in * by fail
-                   | nia
-                   | push_Zmod; reflexivity
-                   | progress break_match_hyps ].
-  Admitted.
+    pose proof (interp_op_bounds_correct t1 t2 tR o b1 b2) as Hbounds.
+    cbv [inbounds interp_op cast_op] in *.
+    rewrite !Zinterp_op_precast_op.
+    rewrite !to_Z_cast_back in *.
+    match goal with
+    | [ |- context[interp_op_bounds ?a ?b ?c ?o ?b1 ?b2] ]
+      => generalize dependent (interp_op_bounds a b c o b1 b2); intros
+    end.
+    match goal with
+    | [ |- context[Zinterp_op ?a ?b ?c] ]
+      => generalize dependent (Zinterp_op a); intros
+    end.
+    destruct_head_hnf' prod.
+    cbv [cast_back pick_typeb].
+    break_innermost_match.
+    Time all:repeat first [ reflexivity
+                     | progress simpl in *
+                     | progress destruct_head sig
+                     | progress split_andb_in_context
+                     | progress Z.ltb_to_lt_in_context
+                     | rewrite !Decidable.eqsig_eq by fail
+                     | match goal with
+                       | [ H : forall x y, _ -> _ -> _, H0 : _, H1 : _ |- _ ]
+                         => specialize (H _ _ H0 H1)
+                       | [ H : forall x y, _ |- _ ]
+                         => specialize (fun x y pf H0 H1 => H x (exist _ y pf) H0 H1);
+                            cbv [proj1_sig] in H;
+                            specialize (fun x y H0 H1 pf => Hbounds x y pf H0 H1)
+                       | [ H : forall x y, _ |- _ ]
+                         => specialize (fun x y pf H0 H1 => H (exist _ x pf) y H0 H1);
+                            cbv [proj1_sig] in H;
+                            specialize (fun x y H0 H1 pf => Hbounds x y pf H0 H1)
+                       end
+                     | progress break_match_hyps
+                     | progress specialize_by auto
+                     | progress Z.rewrite_mod_small
+                     | progress Z.rewrite_mod_mod_small ].
+  Qed.
 
   Lemma eq_dec_positive_or : forall p q : positive, p = q \/ p <> q.
   Proof. decide equality. Defined.
