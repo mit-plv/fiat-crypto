@@ -4,6 +4,7 @@ Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Tactics Crypto.Util.Option Crypto.Util.Sigma.
 Require Import Coq.Bool.Sumbool.
 Require Import Crypto.Reflection.NamedBase.Syntax.
+Require Import Crypto.Util.Bool.
 
 Local Open Scope nexpr_scope.
 Section language.
@@ -197,9 +198,13 @@ Section example.
        => let '(lx, ux) := x in
           let '(ly, uy) := y in
           match opc with
-          | OpMul _ _ _ => (lx * ly, ux * uy)
+          | OpMul _ _ _ => let '(l, u) := (Z.min (lx * ly) (Z.min (lx * uy) (Z.min (ux * ly) (ux * uy))),
+                                           Z.max (lx * ly) (Z.max (lx * uy) (Z.max (ux * ly) (ux * uy)))) in
+                           if ((lx <=? 0) && (0 <=? ux)) || ((ly <=? 0) && (0 <=? uy))
+                           then (Z.min 0 l, Z.max 0 u)
+                           else (l, u)
           | OpSub _ _ _ => (lx - uy, ux - ly)
-          end%Z.
+          end%Z%bool.
   Definition pick_typeb (t : base_type_code) (b:bounds t) : base_type_code :=
       match t with
         | TW32 => TW32
@@ -256,7 +261,7 @@ Section example.
             end (to_Z x) (to_Z y)).
 
   Definition inbounds t (b:bounds t) (v:interp_base_type t)
-    := let '(l, u) := b in (0 <= l /\ l <= to_Z v < u)%Z.
+    := let '(l, u) := b in (l <= to_Z v < u)%Z.
 
   Lemma interp_op_bounds_correct t1 t2 tR o b1 b2
         (v1 : interp_base_type t1) (v2 : interp_base_type t2)
@@ -270,17 +275,21 @@ Section example.
             cbv [of_Z to_Z id] in *;
             repeat match goal with
                    | _ => nia
-                   | _ => break_innermost_match_step
                    | [ H : and _ _ |- _ ] => destruct H
-                   | [ |- (0 <= _ /\ _ <= _ < _)%Z ] => split
-                   | [ |- (_ <= _ < _)%Z ] => split
-                   | [ |- (0 <= _ mod _)%Z ] => apply Z.mod_pos_bound; vm_compute; reflexivity
-                   | [ |- (_ mod _ < _)%Z ] => eapply Z.le_lt_trans; [ apply Z.mod_le | ]
+                   | _ => progress split_andb
+                   | [ H : orb _ _ = true |- _ ] => rewrite Bool.orb_true_iff in H
+                   | _ => progress Z.ltb_to_lt
                    | [ H : (?a <= ?x)%Z, H' : (?x <= ?y)%Z |- _ ]
                      => lazymatch goal with
                         | [ H'' : (a <= y)%Z |- _ ] => fail
                         | _ => assert ((a <= y)%Z) by omega
                         end
+                   | _ => break_innermost_match_step
+                   | [ H : or _ _ |- _ ] => destruct H
+                   | [ |- _ /\ _ ] => split
+                   | [ |- (0 <= _ mod _)%Z ] => apply Z.mod_pos_bound; vm_compute; reflexivity
+                   | [ |- (_ mod _ < _)%Z ] => eapply Z.le_lt_trans; [ apply Z.mod_le | ]
+                   | _ => apply Z.min_case_strong; intros
                    end.
   Admitted.
 
