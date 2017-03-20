@@ -11,9 +11,9 @@ Section language.
           {op : forall t1 t2 tR : base_type_code, Type}
           {Name : Type}
           {interp_base_type_bounds : base_type_code -> Type}
-          (interp_op_bounds : forall src1 src2 dst, interp_base_type_bounds src1 -> interp_base_type_bounds src2 -> interp_base_type_bounds dst)
+          (interp_op_bounds : forall src1 src2 dst, op src1 src2 dst -> interp_base_type_bounds src1 -> interp_base_type_bounds src2 -> interp_base_type_bounds dst)
           (pick_typeb : forall t, interp_base_type_bounds t -> base_type_code)
-          (cast_op : forall t1 t2 tR, op t1 t2 tR -> forall arg1_bs arg2_bs, op (pick_typeb _ arg1_bs) (pick_typeb _ arg2_bs) (pick_typeb _ (interp_op_bounds t1 t2 tR arg1_bs arg2_bs)))
+          (cast_op : forall t1 t2 tR (opc : op t1 t2 tR), forall arg1_bs arg2_bs, op (pick_typeb _ arg1_bs) (pick_typeb _ arg2_bs) (pick_typeb _ (interp_op_bounds t1 t2 tR opc arg1_bs arg2_bs)))
           {BoundsContext : Context Name interp_base_type_bounds}
           (BoundsContextOk : ContextOk BoundsContext).
 
@@ -43,7 +43,7 @@ Section language.
             | Some (existT arg1_bounds arg1'),
               Some (existT arg2_bounds arg2')
               => Some (existT _
-                              (interp_op_bounds _ _ _ arg1_bounds arg2_bounds)
+                              (interp_op_bounds _ _ _ o arg1_bounds arg2_bounds)
                               (BinOp (cast_op t1 t2 tR o arg1_bounds arg2_bounds) arg1' arg2'))
             | None, _ | _, None => None
             end
@@ -95,7 +95,7 @@ Section language.
            forall t1 t2 tR o b1 b2
              (v1 : interp_base_type t1) (v2 : interp_base_type t2)
              (H1 : inbounds t1 b1 v1) (H2 : inbounds t2 b2 v2),
-             inbounds tR (interp_op_bounds t1 t2 tR b1 b2) (interp_op t1 t2 tR o v1 v2))
+             inbounds tR (interp_op_bounds t1 t2 tR o b1 b2) (interp_op t1 t2 tR o v1 v2))
         (pull_cast_back:
            forall t1 t2 tR o b1 b2
              (v1 : interp_base_type (pick_typeb t1 b1)) (v2 : interp_base_type (pick_typeb t2 b2))
@@ -189,29 +189,38 @@ Section example.
   Lemma base_type_code_dec_or : forall t t' : base_type_code, t = t' \/ t <> t'.
   Proof. decide equality. Defined.
   Inductive op : base_type_code -> base_type_code -> base_type_code -> Type :=
-  | OpMulZ : forall t1 t2, op t1 t2 TZ
-  | OpMul32 : forall t1 t2, op t1 t2 TW32
-  | OpMul64 : forall t1 t2, op t1 t2 TW64.
-  Definition bounds (t:base_type_code) := Z. (* upper bound only for now *)
-  Definition interp_op_bounds (src1 src2 dst : base_type_code) := Z.mul.
+  | OpMul : forall t1 t2 tR, op t1 t2 tR
+  | OpSub : forall t1 t2 tR, op t1 t2 tR.
+  Definition bounds (t:base_type_code) := (Z * Z)%type. (* upper bound only for now *)
+  Definition interp_op_bounds (src1 src2 dst : base_type_code) (opc : op src1 src2 dst) : bounds src1 -> bounds src2 -> bounds dst
+    := fun x y
+       => let '(lx, ux) := x in
+          let '(ly, uy) := y in
+          match opc with
+          | OpMul _ _ _ => (lx * ly, ux * uy)
+          | OpSub _ _ _ => (lx - uy, ux - ly)
+          end%Z.
   Definition pick_typeb (t : base_type_code) (b:bounds t) : base_type_code :=
       match t with
         | TW32 => TW32
-        | TW64 => if Z.ltb b (2^32) then TW32 else TW64
+        | TW64 => let '(l, u) := b in
+                  if Z.ltb u (2^32) then TW32 else TW64
         | TZ =>
-          if Z.ltb b (2^32) then TW32
-          else if Z.ltb b (2^64) then TW64
-               else TZ
+          let '(l, u) := b in
+          if Z.leb 0 l
+          then if Z.ltb u (2^32) then TW32
+               else if Z.ltb u (2^64) then TW64
+                    else TZ
+          else TZ
       end.
 
   Definition cast_op (t1 t2 tR : base_type_code) (o:op t1 t2 tR) (arg1_bs : bounds t1) (arg2_bs : bounds t2)
     : op (pick_typeb t1 arg1_bs) (pick_typeb t2 arg2_bs)
-         (pick_typeb tR (interp_op_bounds t1 t2 tR arg1_bs arg2_bs)) :=
-    match pick_typeb tR (interp_op_bounds t1 t2 tR arg1_bs arg2_bs) with
-    | TZ => OpMulZ _ _
-    | TW32 => OpMul32 _ _
-    | TW64 => OpMul64 _ _
-    end.
+         (pick_typeb tR (interp_op_bounds t1 t2 tR o arg1_bs arg2_bs))
+    := match o with
+       | OpMul _ _ _ => OpMul _ _ _
+       | OpSub _ _ _ => OpSub _ _ _
+       end.
 
   Definition interp_base_type t :=
     match t with
@@ -241,15 +250,18 @@ Section example.
 
   Definition interp_op (src1 src2 dst : base_type_code) (o:op src1 src2 dst)
              (x:interp_base_type src1) (y:interp_base_type src2) : interp_base_type dst :=
-    of_Z _ (Z.mul (to_Z x) (to_Z y)).
+    of_Z _ (match o with
+            | OpMul _ _ _ => Z.mul
+            | OpSub _ _ _ => Z.sub
+            end (to_Z x) (to_Z y)).
 
   Definition inbounds t (b:bounds t) (v:interp_base_type t)
-    := (0 <= to_Z v < b)%Z.
+    := let '(l, u) := b in (0 <= l /\ l <= to_Z v < u)%Z.
 
   Lemma interp_op_bounds_correct t1 t2 tR o b1 b2
         (v1 : interp_base_type t1) (v2 : interp_base_type t2)
         (H1 : @inbounds t1 b1 v1) (H2 : @inbounds t2 b2 v2)
-    : inbounds tR (interp_op_bounds t1 t2 tR b1 b2) (interp_op t1 t2 tR o v1 v2).
+    : inbounds tR (interp_op_bounds t1 t2 tR o b1 b2) (interp_op t1 t2 tR o v1 v2).
   Proof.
     destruct o; cbv [inbounds interp_op_bounds interp_op] in *;
       generalize dependent (to_Z v1); generalize dependent (to_Z v2);
@@ -258,11 +270,19 @@ Section example.
             cbv [of_Z to_Z id] in *;
             repeat match goal with
                    | _ => nia
+                   | _ => break_innermost_match_step
+                   | [ H : and _ _ |- _ ] => destruct H
+                   | [ |- (0 <= _ /\ _ <= _ < _)%Z ] => split
                    | [ |- (_ <= _ < _)%Z ] => split
                    | [ |- (0 <= _ mod _)%Z ] => apply Z.mod_pos_bound; vm_compute; reflexivity
                    | [ |- (_ mod _ < _)%Z ] => eapply Z.le_lt_trans; [ apply Z.mod_le | ]
+                   | [ H : (?a <= ?x)%Z, H' : (?x <= ?y)%Z |- _ ]
+                     => lazymatch goal with
+                        | [ H'' : (a <= y)%Z |- _ ] => fail
+                        | _ => assert ((a <= y)%Z) by omega
+                        end
                    end.
-  Qed.
+  Admitted.
 
   Local Arguments Z.pow : simpl never.
   Lemma to_Z_cast_back t (b:bounds t) (v:interp_base_type (pick_typeb t b))
@@ -285,7 +305,7 @@ Section example.
   Proof.
     cbv [inbounds interp_op_bounds interp_op] in *.
     cbv [cast_back pick_typeb]; rewrite !to_Z_cast_back in *.
-    break_match;
+    break_match; (* does this succeed in finite time? *)
       repeat first [ reflexivity
                    | rewrite !to_Z_cast_back in * by fail
                    | progress simpl in *
@@ -300,7 +320,7 @@ Section example.
                    | nia
                    | push_Zmod; reflexivity
                    | progress break_match_hyps ].
-  Qed.
+  Admitted.
 
   Lemma eq_dec_positive_or : forall p q : positive, p = q \/ p <> q.
   Proof. decide equality. Defined.
