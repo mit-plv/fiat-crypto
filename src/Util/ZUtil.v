@@ -2563,8 +2563,6 @@ Module Z.
     repeat match goal with
            | [ |- context[?x mod ?y] ]
              => rewrite (Z.mod_small x y) by rewrite_mod_small_solver
-           | [ |- context[(?a mod ?n) mod ?m] ]
-             => rewrite (mod_mod_small a n m) by rewrite_mod_small_solver
            end.
   Ltac rewrite_mod_mod_small :=
     repeat match goal with
