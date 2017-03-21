@@ -2532,6 +2532,28 @@ Module Z.
 
   Ltac div_mod_to_quot_rem := repeat div_mod_to_quot_rem_step; intros.
 
+  Lemma mod_mod_small a n m
+        (Hnm : (m mod n = 0)%Z)
+        (Hnm_le : (0 < n <= m)%Z)
+        (H : (a mod m < n)%Z)
+    : ((a mod n) mod m = a mod m)%Z.
+  Proof.
+    assert ((a mod n) < m)%Z
+      by (eapply Z.lt_le_trans; [ apply Z.mod_pos_bound | ]; omega).
+    rewrite (Z.mod_small _ m) by auto with zarith.
+    apply Z.mod_divide in Hnm; [ | omega ].
+    destruct Hnm as [x ?]; subst.
+    repeat match goal with
+           | [ H : context[(_ mod _)%Z] |- _ ]
+             => revert H
+           end.
+    Z.div_mod_to_quot_rem.
+    lazymatch goal with
+    | [ H : a = (?x * ?n * ?q) + _, H' : a = (?n * ?q') + _ |- _ ]
+      => assert (q' = x * q) by nia; subst q'; nia
+    end.
+  Qed.
+
   (** [rewrite_mod_small] is a better version of [rewrite Z.mod_small
       by rewrite_mod_small_solver]; it backtracks across occurences
       that the solver fails to solve the side-conditions on. *)
@@ -2541,6 +2563,8 @@ Module Z.
     repeat match goal with
            | [ |- context[?x mod ?y] ]
              => rewrite (Z.mod_small x y) by rewrite_mod_small_solver
+           | [ |- context[(?a mod ?n) mod ?m] ]
+             => rewrite (mod_mod_small a n m) by rewrite_mod_small_solver
            end.
 
   Local Ltac simplify_div_tac :=
