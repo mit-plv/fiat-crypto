@@ -193,6 +193,7 @@ Section example.
   Proof. decide equality. Defined.
   Inductive op : base_type_code -> base_type_code -> base_type_code -> Type :=
   | OpMul : forall t1 t2 tR, op t1 t2 tR
+  | OpAdd : forall t1 t2 tR, op t1 t2 tR
   | OpSub : forall t1 t2 tR, op t1 t2 tR.
   Definition bounds (t:base_type_code) := (Z * Z)%type. (* upper bound only for now *)
   Definition four_corners (f : Z -> Z -> Z) {a b c} : bounds a -> bounds b -> bounds c
@@ -211,6 +212,7 @@ Section example.
   Definition Zinterp_op {src1 src2 dst} (opc : op src1 src2 dst) : Z -> Z -> Z
     := match opc with
        | OpMul _ _ _ => Z.mul
+       | OpAdd _ _ _ => Z.add
        | OpSub _ _ _ => Z.sub
        end.
   Definition interp_op_bounds (src1 src2 dst : base_type_code) (opc : op src1 src2 dst) : bounds src1 -> bounds src2 -> bounds dst
@@ -234,6 +236,7 @@ Section example.
     : forall t1' t2' tR', op t1' t2' tR'
     := match o with
        | OpMul _ _ _ => OpMul
+       | OpAdd _ _ _ => OpAdd
        | OpSub _ _ _ => OpSub
        end.
   Definition cast_op (t1 t2 tR : base_type_code) (o:op t1 t2 tR) (arg1_bs : bounds t1) (arg2_bs : bounds t2)
