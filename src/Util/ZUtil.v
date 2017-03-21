@@ -2566,6 +2566,13 @@ Module Z.
            | [ |- context[(?a mod ?n) mod ?m] ]
              => rewrite (mod_mod_small a n m) by rewrite_mod_small_solver
            end.
+  Ltac rewrite_mod_mod_small :=
+    repeat match goal with
+           | [ |- context[(?a mod ?n) mod ?m] ]
+             => rewrite (mod_mod_small a n m) by rewrite_mod_small_solver
+           end.
+  Ltac rewrite_mod_small_more :=
+    repeat (rewrite_mod_small || rewrite_mod_mod_small).
 
   Local Ltac simplify_div_tac :=
     intros; autorewrite with zsimplify; rewrite <- ?Z_div_plus_full_l, <- ?Z_div_plus_full by assumption;
