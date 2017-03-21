@@ -1170,29 +1170,50 @@ Module Z.
     refine (proj1 (@reflect_iff_gen _ _ lem b') _);
     cbv beta iota.
 
+  Ltac ltb_to_lt'_hyps_step :=
+    match goal with
+    | [ H : (?x <? ?y) = ?b |- _ ]
+      => ltb_to_lt_with_hyp H (Zlt_cases x y)
+    | [ H : (?x <=? ?y) = ?b |- _ ]
+      => ltb_to_lt_with_hyp H (Zle_cases x y)
+    | [ H : (?x >? ?y) = ?b |- _ ]
+      => ltb_to_lt_with_hyp H (Zgt_cases x y)
+    | [ H : (?x >=? ?y) = ?b |- _ ]
+      => ltb_to_lt_with_hyp H (Zge_cases x y)
+    | [ H : (?x =? ?y) = ?b |- _ ]
+      => ltb_to_lt_with_hyp H (eqb_cases x y)
+    end.
+  Ltac ltb_to_lt'_goal_step :=
+    match goal with
+    | [ |- (?x <? ?y) = ?b ]
+      => ltb_to_lt_in_goal b (Z.ltb_spec0 x y)
+    | [ |- (?x <=? ?y) = ?b ]
+      => ltb_to_lt_in_goal b (Z.leb_spec0 x y)
+    | [ |- (?x >? ?y) = ?b ]
+      => ltb_to_lt_in_goal b (Z.gtb_spec0 x y)
+    | [ |- (?x >=? ?y) = ?b ]
+      => ltb_to_lt_in_goal b (Z.geb_spec0 x y)
+    | [ |- (?x =? ?y) = ?b ]
+      => ltb_to_lt_in_goal b (Z.eqb_spec x y)
+    end.
+  Ltac ltb_to_lt'_step :=
+    first [ ltb_to_lt'_hyps_step
+          | ltb_to_lt'_goal_step ].
+  Ltac ltb_to_lt' := repeat ltb_to_lt'_step.
+
+  Section R_Rb.
+    Local Ltac t := intros ? ? []; split; intro; ltb_to_lt'; omega.
+    Local Notation R_Rb Rb R nR := (forall x y b, Rb x y = b <-> if b then R x y else nR x y).
+    Lemma ltb_lt_iff : R_Rb Z.ltb Z.lt Z.ge. Proof. t. Qed.
+    Lemma leb_le_iff : R_Rb Z.leb Z.le Z.gt. Proof. t. Qed.
+    Lemma gtb_gt_iff : R_Rb Z.gtb Z.gt Z.le. Proof. t. Qed.
+    Lemma geb_ge_iff : R_Rb Z.geb Z.ge Z.lt. Proof. t. Qed.
+    Lemma eqb_eq_iff : R_Rb Z.eqb (@Logic.eq Z) (fun x y => x <> y). Proof. t. Qed.
+  End R_Rb.
+  Hint Rewrite ltb_lt_iff leb_le_iff gtb_gt_iff geb_ge_iff eqb_eq_iff : ltb_to_lt.
   Ltac ltb_to_lt :=
-    repeat match goal with
-           | [ H : (?x <? ?y) = ?b |- _ ]
-             => ltb_to_lt_with_hyp H (Zlt_cases x y)
-           | [ H : (?x <=? ?y) = ?b |- _ ]
-             => ltb_to_lt_with_hyp H (Zle_cases x y)
-           | [ H : (?x >? ?y) = ?b |- _ ]
-             => ltb_to_lt_with_hyp H (Zgt_cases x y)
-           | [ H : (?x >=? ?y) = ?b |- _ ]
-             => ltb_to_lt_with_hyp H (Zge_cases x y)
-           | [ H : (?x =? ?y) = ?b |- _ ]
-             => ltb_to_lt_with_hyp H (eqb_cases x y)
-           | [ |- (?x <? ?y) = ?b ]
-             => ltb_to_lt_in_goal b (Z.ltb_spec0 x y)
-           | [ |- (?x <=? ?y) = ?b ]
-             => ltb_to_lt_in_goal b (Z.leb_spec0 x y)
-           | [ |- (?x >? ?y) = ?b ]
-             => ltb_to_lt_in_goal b (Z.gtb_spec0 x y)
-           | [ |- (?x >=? ?y) = ?b ]
-             => ltb_to_lt_in_goal b (Z.geb_spec0 x y)
-           | [ |- (?x =? ?y) = ?b ]
-             => ltb_to_lt_in_goal b (Z.eqb_spec x y)
-           end.
+    repeat autorewrite with ltb_to_lt in *;
+    cbv beta iota in *.
 
   Ltac compare_to_sgn :=
     repeat match goal with
@@ -3330,4 +3351,3 @@ Ltac Zmod_to_equiv_modulo :=
          | [ |- context T[?x mod ?M = ?y mod ?M] ]
            => let T' := context T[Z.equiv_modulo M x y] in change T'
          end.
-

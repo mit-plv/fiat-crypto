@@ -427,24 +427,34 @@ Proof.
   { exact (fun _ _ x => x). }
 Qed.
 
+(* we [match] and [eexact] rather than [eassumption] so that we can backtrack across hypothesis choice, so that we're hypothesis-order-independent *)
 Local Ltac WordW.Rewrites.wordW_util_arith ::=
       solve [ autorewrite with Zshift_to_pow; omega
             | autorewrite with Zshift_to_pow; nia
             | autorewrite with Zshift_to_pow; auto with zarith
-            | eapply Z.le_lt_trans; [ eapply Z.log2_le_mono | eassumption ];
-              autorewrite with Zshift_to_pow; auto using Z.mul_le_mono_nonneg with zarith;
-              solve [ omega
-                    | nia
-                    | etransitivity; [ eapply Z.div_le_mono | eapply Z.div_le_compat_l ];
-                      auto with zarith ]
+            | match goal with
+              | [ H : _ |- _ ]
+                => eapply Z.le_lt_trans; [ eapply Z.log2_le_mono | eexact H ];
+                   autorewrite with Zshift_to_pow; auto using Z.mul_le_mono_nonneg with zarith;
+                   solve [ omega
+                         | nia
+                         | etransitivity; [ eapply Z.div_le_mono | eapply Z.div_le_compat_l ];
+                           auto with zarith ]
+              end
             | apply Z.land_nonneg; WordW.Rewrites.wordW_util_arith
-            | eapply Z.le_lt_trans; [ eapply Z.log2_le_mono | eassumption ];
-              instantiate; apply Z.min_case_strong; intros;
-              first [ etransitivity; [ apply Z.land_upper_bound_l | ]; omega
-                    | etransitivity; [ apply Z.land_upper_bound_r | ]; omega ]
+            | match goal with
+              | [ H : _ |- _ ]
+                => eapply Z.le_lt_trans; [ eapply Z.log2_le_mono | eexact H ];
+                   instantiate; apply Z.min_case_strong; intros;
+                   first [ etransitivity; [ apply Z.land_upper_bound_l | ]; omega
+                         | etransitivity; [ apply Z.land_upper_bound_r | ]; omega ]
+              end
             | rewrite Z.log2_lor by omega;
               apply Z.max_case_strong; intro;
-              (eapply Z.le_lt_trans; [ eapply Z.log2_le_mono; eassumption | assumption ])
+              match goal with
+              | [ H : _ |- _ ]
+                => eapply Z.le_lt_trans; [ eapply Z.log2_le_mono; eexact H | assumption ]
+              end
             | eapply Z.le_lt_trans; [ eapply Z.log2_le_mono, neg_upperbound | ];
               WordW.Rewrites.wordW_util_arith
             | (progress unfold ModularBaseSystemListZOperations.cmovne, ModularBaseSystemListZOperations.cmovl, ModularBaseSystemListZOperations.neg); break_match;
