@@ -68,4 +68,10 @@ Ltac split_andb :=
            => apply andb_prop in H;
               change (is_true x /\ is_true y) in H;
               destruct H
+         | [ H : context[andb ?x ?y = true] |- _ ]
+           => rewrite (Bool.andb_true_iff x y) in H
+         | [ H : context[is_true (andb ?x ?y)] |- _ ]
+           => change (is_true (andb x y)) with (andb x y = true) in H;
+              rewrite Bool.andb_true_iff in H;
+              change (x = true /\ y = true) with (is_true x /\ is_true y) in H
          end.
