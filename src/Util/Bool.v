@@ -61,17 +61,23 @@ Qed.
 Definition andb_prop : forall a b : bool, a && b = true -> a = true /\ b = true. (* transparent version *)
 Proof. destruct a, b; simpl; split; try reflexivity; assumption. Defined.
 
-Ltac split_andb :=
-  repeat match goal with
-         | [ H : andb _ _ = true |- _ ] => apply andb_prop in H; destruct H
-         | [ H : is_true (andb ?x ?y) |- _ ]
-           => apply andb_prop in H;
-              change (is_true x /\ is_true y) in H;
-              destruct H
-         | [ H : context[andb ?x ?y = true] |- _ ]
-           => rewrite (Bool.andb_true_iff x y) in H
-         | [ H : context[is_true (andb ?x ?y)] |- _ ]
-           => change (is_true (andb x y)) with (andb x y = true) in H;
-              rewrite Bool.andb_true_iff in H;
-              change (x = true /\ y = true) with (is_true x /\ is_true y) in H
-         end.
+Ltac split_andb_step :=
+  match goal with
+  | [ H : andb _ _ = true |- _ ] => apply andb_prop in H; destruct H
+  | [ H : is_true (andb ?x ?y) |- _ ]
+    => apply andb_prop in H;
+       change (is_true x /\ is_true y) in H;
+       destruct H
+  end.
+Ltac split_andb := repeat split_andb_step.
+Ltac split_andb_in_context_step :=
+  match goal with
+  | _ => split_andb_step
+  | [ H : context[andb ?x ?y = true] |- _ ]
+    => rewrite (Bool.andb_true_iff x y) in H
+  | [ H : context[is_true (andb ?x ?y)] |- _ ]
+    => change (is_true (andb x y)) with (andb x y = true) in H;
+       rewrite Bool.andb_true_iff in H;
+       change (x = true /\ y = true) with (is_true x /\ is_true y) in H
+  end.
+Ltac split_andb_in_context := repeat split_andb_in_context_step.
