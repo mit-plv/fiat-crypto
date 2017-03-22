@@ -22,6 +22,9 @@ End ReifyDebugNotations.
 Ltac debug_enter_reify_idtac funname e :=
   let s := (eval compute in (String.append funname ": Attempting to reify:")) in
   cidtac2 s e.
+Ltac debug_leave_reify_success_idtac funname e :=
+  let s := (eval compute in (String.append funname ": Success in reifying:")) in
+  cidtac2 s e.
 Ltac debug_reifyf_case_idtac case :=
   let s := (eval compute in (String.append "reifyf: " case)) in
   cidtac s.
@@ -44,10 +47,12 @@ Ltac debug3 tac :=
   | _ => constr:(Set)
   end.
 Ltac debug_enter_reify2 funname e := debug2 ltac:(fun _ => debug_enter_reify_idtac funname e).
+Ltac debug_leave_reify3_success funname e := debug3 ltac:(fun _ => debug_leave_reify_success_idtac funname e).
 Ltac debug_enter_reify3 funname e := debug2 ltac:(fun _ => debug_enter_reify_idtac funname e).
 Ltac debug_enter_reify_flat_type e := debug_enter_reify3 "reify_flat_type" e.
 Ltac debug_enter_reify_type e := debug_enter_reify3 "reify_type" e.
 Ltac debug_enter_reifyf e := debug_enter_reify2 "reifyf" e.
+Ltac debug_leave_reifyf_success e := debug_leave_reify3_success "reifyf" e.
 Ltac debug_reifyf_case case := debug3 ltac:(fun _ => debug_reifyf_case_idtac case).
 Ltac debug_enter_reify_abs e := debug_enter_reify2 "reify_abs" e.
 
@@ -149,115 +154,118 @@ Ltac reifyf base_type_code interp_base_type op var e :=
   let mkSnd ex := constr:(Snd (base_type_code:=base_type_code) (interp_base_type:=interp_base_type) (op:=op) (var:=var) ex) in
   let reify_tag := constr:(@exprf base_type_code interp_base_type op var) in
   let dummy := debug_enter_reifyf e in
-  lazymatch e with
-  | let x := ?ex in @?eC x =>
-    let dummy := debug_reifyf_case "let in" in
-    let ex := reify_rec ex in
-    let eC := reify_rec eC in
-    mkLetIn ex eC
-  | (dlet x := ?ex in @?eC x) =>
-    let dummy := debug_reifyf_case "dlet in" in
-    let ex := reify_rec ex in
-    let eC := reify_rec eC in
-    mkLetIn ex eC
-  | pair ?a ?b =>
-    let dummy := debug_reifyf_case "pair" in
-    let a := reify_rec a in
-    let b := reify_rec b in
-    mkPair a b
-  | (fun x : ?T => ?C) =>
-    let dummy := debug_reifyf_case "fun" in
-    let t := reify_flat_type T in
-    (* Work around Coq 8.5 and 8.6 bug *)
-    (* <https://coq.inria.fr/bugs/show_bug.cgi?id=4998> *)
-    (* Avoid re-binding the Gallina variable referenced by Ltac [x] *)
-    (* even if its Gallina name matches a Ltac in this tactic. *)
-    let maybe_x := fresh x in
-    let not_x := fresh x in
-    lazymatch constr:(fun (x : T) (not_x : var t) (_ : reify_var_for_in_is base_type_code x t not_x) =>
-                        (_ : reify reify_tag C)) (* [C] here is an open term that references "x" by name *)
-    with fun _ v _ => @?C v => C end
-  | match ?ev with pair a b => @?eC a b end =>
-    let dummy := debug_reifyf_case "matchpair" in
-    let T := type of eC in
-    let t := (let T := match (eval cbv beta in T) with _ -> _ -> ?T => T end in reify_flat_type T) in
-    let v := reify_rec ev in
-    let C := reify_rec eC in
-    let ret := mkMatchPair t v C in
-    ret
-  | @fst ?A ?B ?ev =>
-    let dummy := debug_reifyf_case "fst" in
-    let v := reify_rec ev in
-    mkFst v
-  | @snd ?A ?B ?ev =>
-    let dummy := debug_reifyf_case "snd" in
-    let v := reify_rec ev in
-    mkSnd v
-  | ?x =>
-    let dummy := debug_reifyf_case "generic" in
-    let t := lazymatch type of x with ?t => reify_flat_type t end in
-    let retv := match constr:(Set) with
-                | _ => let retv := reifyf_var x mkVar in constr:(finished_value retv)
-                | _ => let op_head := head x in
-                       reify_op op op_head x
-                | _ => let c := mkConst t x in
-                       constr:(finished_value c)
-                | _ => constr:(reification_unsuccessful)
-                end in
-    lazymatch retv with
-    | finished_value ?v => v
-    | op_info (reify_op _ _ ?nargs ?op_code)
-      => let tR := (let tR := type of x in reify_flat_type tR) in
-         lazymatch nargs with
-         | 1%nat
-           => lazymatch x with
-              | ?f ?x0
-                => let a0T := (let t := type of x0 in reify_flat_type t) in
-                   let a0 := reify_rec x0 in
-                   mkOp a0T tR op_code a0
-              end
-         | 2%nat
-           => lazymatch x with
-              | ?f ?x0 ?x1
-                => let a0T := (let t := type of x0 in reify_flat_type t) in
-                   let a0 := reify_rec x0 in
-                   let a1T := (let t := type of x1 in reify_flat_type t) in
-                   let a1 := reify_rec x1 in
-                   let args := mkPair a0 a1 in
-                   mkOp (@Prod _ a0T a1T) tR op_code args
-              end
-         | 3%nat
-           => lazymatch x with
-              | ?f ?x0 ?x1 ?x2
-                => let a0T := (let t := type of x0 in reify_flat_type t) in
-                   let a0 := reify_rec x0 in
-                   let a1T := (let t := type of x1 in reify_flat_type t) in
-                   let a1 := reify_rec x1 in
-                   let a2T := (let t := type of x2 in reify_flat_type t) in
-                   let a2 := reify_rec x2 in
-                   let args := let a01 := mkPair a0 a1 in mkPair a01 a2 in
-                   mkOp (@Prod _ (@Prod _ a0T a1T) a2T) tR op_code args
-              end
-         | 4%nat
-           => lazymatch x with
-              | ?f ?x0 ?x1 ?x2 ?x3
-                => let a0T := (let t := type of x0 in reify_flat_type t) in
-                   let a0 := reify_rec x0 in
-                   let a1T := (let t := type of x1 in reify_flat_type t) in
-                   let a1 := reify_rec x1 in
-                   let a2T := (let t := type of x2 in reify_flat_type t) in
-                   let a2 := reify_rec x2 in
-                   let a3T := (let t := type of x3 in reify_flat_type t) in
-                   let a3 := reify_rec x3 in
-                   let args := let a01 := mkPair a0 a1 in let a012 := mkPair a01 a2 in mkPair a012 a3 in
-                   mkOp (@Prod _ (@Prod _ (@Prod _ a0T a1T) a2T) a3T) tR op_code args
-              end
-         | _ => cfail2 "Unsupported number of operation arguments in reifyf:"%string nargs
-         end
-    | reification_unsuccessful
-      => cfail2 "Failed to reify:"%string x
-    end
-  end.
+  let ret :=
+      lazymatch e with
+      | let x := ?ex in @?eC x =>
+        let dummy := debug_reifyf_case "let in" in
+        let ex := reify_rec ex in
+        let eC := reify_rec eC in
+        mkLetIn ex eC
+      | (dlet x := ?ex in @?eC x) =>
+        let dummy := debug_reifyf_case "dlet in" in
+        let ex := reify_rec ex in
+        let eC := reify_rec eC in
+        mkLetIn ex eC
+      | pair ?a ?b =>
+        let dummy := debug_reifyf_case "pair" in
+        let a := reify_rec a in
+        let b := reify_rec b in
+        mkPair a b
+      | (fun x : ?T => ?C) =>
+        let dummy := debug_reifyf_case "fun" in
+        let t := reify_flat_type T in
+        (* Work around Coq 8.5 and 8.6 bug *)
+        (* <https://coq.inria.fr/bugs/show_bug.cgi?id=4998> *)
+        (* Avoid re-binding the Gallina variable referenced by Ltac [x] *)
+        (* even if its Gallina name matches a Ltac in this tactic. *)
+        let maybe_x := fresh x in
+        let not_x := fresh x in
+        lazymatch constr:(fun (x : T) (not_x : var t) (_ : reify_var_for_in_is base_type_code x t not_x) =>
+                            (_ : reify reify_tag C)) (* [C] here is an open term that references "x" by name *)
+        with fun _ v _ => @?C v => C end
+      | match ?ev with pair a b => @?eC a b end =>
+        let dummy := debug_reifyf_case "matchpair" in
+        let T := type of eC in
+        let t := (let T := match (eval cbv beta in T) with _ -> _ -> ?T => T end in reify_flat_type T) in
+        let v := reify_rec ev in
+        let C := reify_rec eC in
+        let ret := mkMatchPair t v C in
+        ret
+      | @fst ?A ?B ?ev =>
+        let dummy := debug_reifyf_case "fst" in
+        let v := reify_rec ev in
+        mkFst v
+      | @snd ?A ?B ?ev =>
+        let dummy := debug_reifyf_case "snd" in
+        let v := reify_rec ev in
+        mkSnd v
+      | ?x =>
+        let dummy := debug_reifyf_case "generic" in
+        let t := lazymatch type of x with ?t => reify_flat_type t end in
+        let retv := match constr:(Set) with
+                    | _ => let retv := reifyf_var x mkVar in constr:(finished_value retv)
+                    | _ => let op_head := head x in
+                           reify_op op op_head x
+                    | _ => let c := mkConst t x in
+                           constr:(finished_value c)
+                    | _ => constr:(reification_unsuccessful)
+                    end in
+        lazymatch retv with
+        | finished_value ?v => v
+        | op_info (reify_op _ _ ?nargs ?op_code)
+          => let tR := (let tR := type of x in reify_flat_type tR) in
+             lazymatch nargs with
+             | 1%nat
+               => lazymatch x with
+                  | ?f ?x0
+                    => let a0T := (let t := type of x0 in reify_flat_type t) in
+                       let a0 := reify_rec x0 in
+                       mkOp a0T tR op_code a0
+                  end
+             | 2%nat
+               => lazymatch x with
+                  | ?f ?x0 ?x1
+                    => let a0T := (let t := type of x0 in reify_flat_type t) in
+                       let a0 := reify_rec x0 in
+                       let a1T := (let t := type of x1 in reify_flat_type t) in
+                       let a1 := reify_rec x1 in
+                       let args := mkPair a0 a1 in
+                       mkOp (@Prod _ a0T a1T) tR op_code args
+                  end
+             | 3%nat
+               => lazymatch x with
+                  | ?f ?x0 ?x1 ?x2
+                    => let a0T := (let t := type of x0 in reify_flat_type t) in
+                       let a0 := reify_rec x0 in
+                       let a1T := (let t := type of x1 in reify_flat_type t) in
+                       let a1 := reify_rec x1 in
+                       let a2T := (let t := type of x2 in reify_flat_type t) in
+                       let a2 := reify_rec x2 in
+                       let args := let a01 := mkPair a0 a1 in mkPair a01 a2 in
+                       mkOp (@Prod _ (@Prod _ a0T a1T) a2T) tR op_code args
+                  end
+             | 4%nat
+               => lazymatch x with
+                  | ?f ?x0 ?x1 ?x2 ?x3
+                    => let a0T := (let t := type of x0 in reify_flat_type t) in
+                       let a0 := reify_rec x0 in
+                       let a1T := (let t := type of x1 in reify_flat_type t) in
+                       let a1 := reify_rec x1 in
+                       let a2T := (let t := type of x2 in reify_flat_type t) in
+                       let a2 := reify_rec x2 in
+                       let a3T := (let t := type of x3 in reify_flat_type t) in
+                       let a3 := reify_rec x3 in
+                       let args := let a01 := mkPair a0 a1 in let a012 := mkPair a01 a2 in mkPair a012 a3 in
+                       mkOp (@Prod _ (@Prod _ (@Prod _ a0T a1T) a2T) a3T) tR op_code args
+                  end
+             | _ => cfail2 "Unsupported number of operation arguments in reifyf:"%string nargs
+             end
+        | reification_unsuccessful
+          => cfail2 "Failed to reify:"%string x
+        end
+      end in
+  let dummy := debug_leave_reifyf_success e in
+  ret.
 
 Hint Extern 0 (reify (@exprf ?base_type_code ?interp_base_type ?op ?var) ?e)
 => (debug_enter_reify_rec; let e := reifyf base_type_code interp_base_type op var e in debug_leave_reify_rec e; eexact e) : typeclass_instances.
