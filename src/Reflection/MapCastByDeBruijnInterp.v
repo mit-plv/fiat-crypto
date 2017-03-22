@@ -76,27 +76,37 @@ Section language.
         (input_bounds : interp_flat_type interp_base_type_bounds (domain t))
     : forall {b} e' (He':MapCast e input_bounds = Some (existT _ b e'))
              v v' (Hv : @inbounds _ input_bounds v /\ cast_back _ _ v' = v),
-      @inbounds _ b (Interp interp_op e v)
+      Interp interp_op_bounds e input_bounds = b
+      /\ @inbounds _ b (Interp interp_op e v)
       /\ cast_back _ _ (Interp interp_op e' v') = (Interp interp_op e v).
   Proof.
     unfold MapCastByDeBruijn.MapCast, option_map; intros b e'.
     break_innermost_match; try congruence; intros ? v v'.
     inversion_option; inversion_sigma; subst; simpl in *; intros.
-    match goal with
+    lazymatch goal with
     | [ H : MapCast.map_cast _ _ _ _ _ _ = Some _ |- _ ]
-      => eapply map_cast_correct with (oldValues:=empty) (newValues:=empty) in H; try eassumption
+      => eapply map_cast_correct with (t:=Arrow _ _) (oldValues:=empty) (newValues:=empty) in H;
+           [ destruct H; split; [ | eassumption ] | try eassumption.. ]
     end;
-      try solve [ auto using PositiveContextOk with typeclass_instances
+      try solve [ eassumption
+                | auto using PositiveContextOk with typeclass_instances
                 | repeat first [ rewrite !lookupb_empty by (apply PositiveContextOk; assumption)
                                | intro
                                | congruence ] ];
       unfold Interp, InterpretToPHOAS.Named.InterpToPHOAS, InterpretToPHOAS.Named.InterpToPHOAS_gen;
-      [
+      [ match goal with
+        | [ H : ?y = Some ?b |- ?x = ?b ]
+          => cut (y = Some x); [ congruence | ]
+        end
+      |
       | rewrite <- interp_interp_to_phoas; [ reflexivity | ] ].
     { erewrite (interp_compile (ContextOk:=PositiveContextOk)), interp_linearize;
         [ reflexivity | apply wf_linearize; auto | .. | eassumption ];
         auto using name_list_unique_DefaultNamesFor. }
-    { intro; eapply wf_map_cast with (oldValues := empty); eauto using PositiveContextOk with typeclass_instances.
+    { erewrite (interp_compile (ContextOk:=PositiveContextOk)), interp_linearize;
+        [ reflexivity | apply wf_linearize; auto | .. | eassumption ];
+        auto using name_list_unique_DefaultNamesFor. }
+    { intro; eapply wf_map_cast with (t := Arrow _ _) (oldValues := empty); eauto using PositiveContextOk with typeclass_instances.
       { eapply (wf_compile (ContextOk:=PositiveContextOk));
           [ apply wf_linearize; auto | .. | eassumption ].
         auto using name_list_unique_DefaultNamesFor. }
