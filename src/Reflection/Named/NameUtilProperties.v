@@ -1,4 +1,5 @@
 Require Import Coq.omega.Omega.
+Require Import Coq.Arith.Arith.
 Require Import Coq.Lists.List.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.CountLets.
@@ -189,5 +190,14 @@ Section language.
                  | match goal with
                    | [ |- iff _ _ ] => split
                    end ].
+  Qed.
+
+  Lemma length_fst_split_names_None_iff
+        (t : flat_type base_type_code) (ls : list Name)
+    : fst (split_names t ls) = None <-> List.length ls < count_pairs t.
+  Proof.
+    destruct (length_fst_split_names_Some_iff t ls).
+    destruct (le_lt_dec (count_pairs t) (List.length ls)); specialize_by omega;
+      destruct (fst (split_names t ls)); split; try intuition (congruence || omega).
   Qed.
 End language.
