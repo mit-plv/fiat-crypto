@@ -16,6 +16,7 @@ Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.Tactics.RewriteHyp.
 
 Local Open Scope nexpr_scope.
 Section language.
@@ -193,21 +194,22 @@ Section language.
            end.
 
   Lemma mapf_cast_correct
-  {t} (e:exprf base_type_code op Name t)
+        {t} (e:exprf base_type_code op Name t)
     : forall
-        (oldValues:Context)
-        (newValues:Context)
-        (varBounds:BoundsContext)
-        {b} e' (He':mapf_cast varBounds e = Some (existT _ b e'))
-        (Hctx:forall {t} n v,
-            lookupb (t:=t) oldValues n = Some v
-            -> exists b, lookupb (t:=t) varBounds n = Some b
-                         /\ @inboundsb _ b v
-                         /\ exists v', lookupb (t:=pick_typeb t b) newValues n = Some v'
-                                       /\ cast_backb t b v' = v)
-        r (Hr:interpf (interp_op:=interp_op) (ctx:=oldValues) e = Some r)
-        r' (Hr':interpf (interp_op:=interp_op) (ctx:=newValues) e' = Some r')
-        , @inbounds _ b r /\ cast_back _ _ r' = r.
+      (oldValues:Context)
+      (newValues:Context)
+      (varBounds:BoundsContext)
+      {b} e' (He':mapf_cast varBounds e = Some (existT _ b e'))
+      (Hctx:forall {t} n v,
+          lookupb (t:=t) oldValues n = Some v
+          -> exists b, lookupb (t:=t) varBounds n = Some b
+                       /\ @inboundsb _ b v
+                       /\ exists v', lookupb (t:=pick_typeb t b) newValues n = Some v'
+                                     /\ cast_backb t b v' = v)
+      r (Hr:interpf (interp_op:=interp_op) (ctx:=oldValues) e = Some r)
+      r' (Hr':interpf (interp_op:=interp_op) (ctx:=newValues) e' = Some r')
+    , interpf (interp_op:=interp_op_bounds) (ctx:=varBounds) e = Some b
+      /\ @inbounds _ b r /\ cast_back _ _ r' = r.
   Proof.
     induction e; simpl interpf; simpl mapf_cast; unfold option_map, cast_back in *; intros;
       repeat (break_match_hyps; inversion_option; inversion_sigma; simpl in *; unfold option_map in *; subst; try tauto).
@@ -218,9 +220,10 @@ Section language.
              end.
       auto. }
     { do_specialize_IHe.
-      destruct_head and; subst; intuition eauto; symmetry; eauto. }
+      destruct_head and; subst; intuition eauto; symmetry; rewrite_hyp ?*; eauto. }
     { cbv [LetIn.Let_In] in *.
       do_specialize_IHe.
+      destruct IHe1 as [IHe1_eq IHe1]; rewrite_hyp *.
       { apply IHe2; clear IHe2; try reflexivity.
         intros ??? H.
         let b := fresh "b" in
@@ -249,7 +252,8 @@ Section language.
         v v' (Hv : @inbounds _ input_bounds v /\ cast_back _ _ v' = v)
         r (Hr:interp (interp_op:=interp_op) (ctx:=oldValues) e v = Some r)
         r' (Hr':interp (interp_op:=interp_op) (ctx:=newValues) e' v' = Some r')
-        , @inbounds _ b r /\ cast_back _ _ r' = r.
+        , interp (interp_op:=interp_op_bounds) (ctx:=varBounds) e input_bounds = Some b
+          /\ @inbounds _ b r /\ cast_back _ _ r' = r.
   Proof.
     unfold map_cast, option_map, interp; simpl; intros.
     repeat first [ progress subst
