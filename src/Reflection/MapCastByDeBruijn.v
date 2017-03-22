@@ -33,7 +33,8 @@ Section language.
                             empty
                             e'
                             input_bounds)
-               (compile (Linearize e _) (DefaultNamesFor e))
+               (let e := Linearize e in
+                compile (e _) (DefaultNamesFor e))
        with
        | Some (Some (existT output_bounds e'))
          => Some (existT _ output_bounds (InterpToPHOAS (Context:=Context) failb e'))
