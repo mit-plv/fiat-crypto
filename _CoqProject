@@ -156,6 +156,7 @@ src/Reflection/WfReflective.v
 src/Reflection/WfReflectiveGen.v
 src/Reflection/Named/Compile.v
 src/Reflection/Named/CompileInterp.v
+src/Reflection/Named/CompileProperties.v
 src/Reflection/Named/CompileWf.v
 src/Reflection/Named/ContextDefinitions.v
 src/Reflection/Named/ContextOn.v
