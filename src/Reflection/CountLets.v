@@ -33,6 +33,8 @@ Section language.
         := match e with
            | LetIn tx _ _ eC
              => count_type_let tx + @count_lets_genf _ (eC (SmartValf var mkVar tx))
+           | Op _ _ _ e => @count_lets_genf _ e
+           | Pair _ ex _ ey => @count_lets_genf _ ex + @count_lets_genf _ ey
            | _ => 0
            end.
       Definition count_lets_gen {t} (e : expr t) : nat
