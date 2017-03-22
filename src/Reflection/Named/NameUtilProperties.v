@@ -200,4 +200,24 @@ Section language.
     destruct (le_lt_dec (count_pairs t) (List.length ls)); specialize_by omega;
       destruct (fst (split_names t ls)); split; try intuition (congruence || omega).
   Qed.
+
+  Lemma split_onames_split_names (t : flat_type base_type_code) (ls : list Name)
+    : split_onames t (List.map Some ls)
+      = (fst (split_names t ls), List.map Some (snd (split_names t ls))).
+  Proof.
+    revert ls; induction t;
+      try solve [ destruct ls; reflexivity ].
+    repeat first [ progress simpl in *
+                 | progress intros
+                 | rewrite snd_split_names_skipn
+                 | rewrite snd_split_onames_skipn
+                 | rewrite skipn_map
+                 | match goal with
+                   | [ H : forall ls, split_onames ?t (map Some ls) = _ |- context[split_onames ?t (map Some ?ls')] ]
+                     => specialize (H ls')
+                   end
+                 | break_innermost_match_step
+                 | progress inversion_prod
+                 | congruence ].
+  Qed.
 End language.
