@@ -11,6 +11,7 @@ Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.SplitInContext.
+Require Import Crypto.Util.Tactics.SpecializeBy.
 
 Local Open Scope core_scope.
 Section language.
@@ -164,4 +165,29 @@ Section language.
   Qed.
   Definition name_list_unique_nil : name_list_unique nil
     := mname_list_unique_nil _ (@Some Name).
+
+  Lemma length_fst_split_names_Some_iff
+        (t : flat_type base_type_code) (ls : list Name)
+    : fst (split_names t ls) <> None <-> List.length ls >= count_pairs t.
+  Proof.
+    revert ls; induction t; intros;
+      try solve [ destruct ls; simpl; intuition (omega || congruence) ].
+    repeat first [ progress simpl in *
+                 | progress break_innermost_match_step
+                 | progress specialize_by congruence
+                 | progress specialize_by omega
+                 | rewrite snd_split_names_skipn in *
+                 | progress intros
+                 | congruence
+                 | omega
+                 | match goal with
+                   | [ H : forall ls, fst (split_names ?t ls) <> None <-> _, H' : fst (split_names ?t ?ls') = _ |- _ ]
+                     => specialize (H ls'); rewrite H' in H
+                   | [ H : _ |- _ ] => rewrite skipn_length in H
+                   end
+                 | progress split_iff
+                 | match goal with
+                   | [ |- iff _ _ ] => split
+                   end ].
+  Qed.
 End language.
