@@ -1,4 +1,5 @@
 Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Reflection.Wf.
 Require Import Crypto.Reflection.TypeUtil.
 Require Import Crypto.Reflection.TypeInversion.
@@ -17,6 +18,14 @@ Arguments is_const [s d] v.
 Definition is_cast s d (v : op s d) : bool
   := match v with Cast _ _ => true | _ => false end.
 Arguments is_cast [s d] v.
+
+Definition cast_back_flat_const {var t f V}
+           (v : interp_flat_type interp_base_type (@SmartFlatTypeMap base_type var f t V))
+  : interp_flat_type interp_base_type t
+  := @SmartFlatTypeMapUnInterp
+       _ var interp_base_type interp_base_type
+       f (fun _ _ => cast_const)
+       t V v.
 
 Definition base_type_leb (v1 v2 : base_type) : bool
   := match v1, v2 with
