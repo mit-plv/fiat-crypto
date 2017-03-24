@@ -169,6 +169,10 @@ Proof.
     eapply from_list'_to_list'; assumption. }
 Qed.
 
+Lemma to_list_S {A n} (x : tuple A (S n)) (a:A)
+  : to_list (T:=A) (S (S n)) (x,a) = a :: to_list (S n) x.
+Proof. reflexivity. Qed.
+
 Fixpoint curry'T (R T : Type) (n : nat) : Type
   := match n with
      | 0 => T -> R
@@ -710,6 +714,81 @@ Proof. destruct n; [ reflexivity | exact (strip_eta_rtuple'_dep _ _ _) ]. Qed.
 Lemma strip_eta_rtuple {T n B} (f : rtuple T n -> B) ts
   : eta_rtuple f ts = f ts.
 Proof. exact (strip_eta_rtuple_dep _ _ _). Qed.
+
+Definition append {A n} (a : A) : tuple A n -> tuple A (S n) :=
+  match n as n0 return (tuple A n0 -> tuple A (S n0)) with
+  | O => fun t => a
+  | S n' => fun t => (t,a)
+  end.
+
+Lemma hd_append {A n} (x: tuple A n) (a:A) : hd (append a x) = a.
+Proof. destruct n; reflexivity. Qed.
+
+Lemma tl_append {A n} (x: tuple A n) (a:A) : tl (append a x) = x.
+Proof. destruct n; try destruct x; reflexivity. Qed.
+
+Lemma from_list'_cons {A n} (a0 a1:A) (xs:list A) H :
+  from_list' a0 (S n) (a1::xs) H = append (n:=S n) a0 (from_list' a1 n xs (length_cons_full _ _ _ H)).
+Proof. simpl; rewrite <-!from_list_default'_eq with (d:=a0); eauto. Qed.
+
+Lemma from_list_cons {A n}:
+  forall (xs : list A) a (H:length (a::xs)=S n),
+  from_list (S n) (a :: xs) H = append a (from_list n xs (length_cons_full _ _ _ H)).
+Proof.
+  destruct n; intros; destruct xs; distr_length; [reflexivity|].
+  cbv [from_list]; rewrite !from_list'_cons.
+  rewrite <-!from_list_default'_eq with (d:=a).
+  reflexivity.
+Qed.
+
+Lemma map_append' {A B n} (f:A->B) : forall (x:tuple' A n) (a:A),
+  map f (append (n:=S n) a x) = append (f a) (map (n:=S n) f x).
+Proof.
+  cbv [map append on_tuple]; intros.
+  simpl to_list. simpl List.map. rewrite from_list_cons.
+  cbv [append]; f_equal. rewrite <-!from_list_default_eq with (d:=f a).
+  reflexivity.
+Qed.
+
+Lemma map_append {A B n} (f:A->B) : forall (x:tuple A n) (a:A),
+  map f (append a x) = append (f a) (map f x).
+Proof. destruct n; auto using map_append'. Qed.
+
+(* map operation that carries state*)
+Fixpoint map_with' {S A B n} (f: S->A->S*B) (start:S)
+  : tuple' A n -> S * tuple' B n :=
+  match n as n0 return (tuple' A n0 -> S * tuple' B n0) with
+  | O => fun ys => f start ys
+  | S n' => fun ys =>
+              (fst (map_with' f (fst (f start (hd ys))) (tl ys)),
+               (snd (map_with' f (fst (f start (hd ys))) (tl ys)),
+               snd (f start (hd ys))))
+  end.
+
+Fixpoint map_with {S A B n} (f: S->A->S*B) (start:S)
+  : tuple A n -> S * tuple B n :=
+  match n as n0 return (tuple A n0 -> S * tuple B n0) with
+  | O => fun ys => (start, tt)
+  | S n' => fun ys => map_with' f start ys
+  end.
+
+Lemma map_with_invariant {T A B} (f: T->A->T*B)
+      (P : forall n, T -> T -> tuple A n -> tuple B n -> Prop)
+      (P_holds : forall n starter rem inp out,
+          P n (fst (f starter (hd inp))) rem (tl inp) out
+          -> P (S n) starter rem inp (append (snd (f starter (hd inp))) out))
+      (P_base : forall rem, P 0%nat rem rem tt tt)
+  :
+  forall {n} (start : T) (input : tuple A n),
+    P n start (fst (map_with f start input)) input (snd (map_with f start input)).
+Proof.
+  destruct n. { intros; destruct input; apply P_base. }
+  induction n; intros.
+  { specialize (P_holds 0%nat start (fst (f start input)) input tt).
+    apply P_holds. apply P_base. }
+  { specialize (P_holds (S n) start (fst (map_with f start input)) input).
+    simpl. apply P_holds. apply IHn. }
+Qed.
 
 Require Import Crypto.Util.ListUtil. (* To initialize [distr_length] database *)
 Hint Rewrite length_to_list' @length_to_list : distr_length.

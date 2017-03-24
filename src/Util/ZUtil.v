@@ -596,6 +596,14 @@ Module Z.
   Hint Rewrite mul_div_eq mul_div_eq' using zutil_arith : zdiv_to_mod.
   Hint Rewrite <- mul_div_eq' using zutil_arith : zmod_to_div.
 
+  Lemma mul_div_eq_full : forall a m, m <> 0 -> m * (a / m) = (a - a mod m).
+  Proof.
+    intros. rewrite (Z_div_mod_eq_full a m) at 2 by auto. ring.
+  Qed.
+
+  Hint Rewrite mul_div_eq_full using zutil_arith : zdiv_to_mod.
+  Hint Rewrite <-mul_div_eq_full using zutil_arith : zmod_to_div.
+
   Ltac prime_bound := match goal with
   | [ H : prime ?p |- _ ] => pose proof (prime_ge_2 p H); try omega
   end.

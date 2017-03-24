@@ -765,7 +765,42 @@ Module B.
           Logic.eq (Fdecode a) (Fdecode b) <-> eq m a b.
         Proof. cbv [Fdecode]; rewrite <-F.eq_of_Z_iff; reflexivity. Qed.
       End F.
+
+
     End Positional.
+
+    (* Helper lemmas and definitions for [eval]; this needs to be in a
+    separate section so the weight function can change. *)
+    Section EvalHelpers.
+      Lemma eval_single wt (x:Z) : eval (n:=1) wt x = wt 0%nat * x.
+      Proof. cbv - [Z.mul Z.add]. ring. Qed.
+
+      Lemma eval_step {n} (x:tuple Z n) : forall wt z,
+        eval wt (Tuple.append z x) = wt 0%nat * z + eval (fun i => wt (S i)) x.
+      Proof.
+        destruct n; [reflexivity|].
+        intros; cbv [eval to_associational_cps].
+        autorewrite with uncps. rewrite map_S_seq. reflexivity.
+      Qed.
+
+      Lemma eval_wt_equiv {n} :forall wta wtb (x:tuple Z n),
+          (forall i, wta i = wtb i) -> eval wta x = eval wtb x.
+      Proof.
+        destruct n; [reflexivity|].
+        induction n; intros; [rewrite !eval_single, H; reflexivity|].
+        simpl tuple in *; destruct x.
+        change (t, z) with (Tuple.append (n:=S n) z t).
+        rewrite !eval_step. rewrite (H 0%nat). apply Group.cancel_left.
+        apply IHn; auto.
+      Qed.
+
+      Definition eval_from {n} weight (offset:nat) (x : tuple Z n) : Z :=
+        eval (fun i => weight (i+offset)%nat) x.
+
+      Lemma eval_from_0 {n} wt x : @eval_from n wt 0 x = eval wt x.
+      Proof. cbv [eval_from]. auto using eval_wt_equiv. Qed.
+    End EvalHelpers.
+
   End Positional.
   Hint Unfold
       Positional.add_cps 

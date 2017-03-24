@@ -216,6 +216,8 @@ Local Arguments error / _.
 
 Definition sum_firstn l n := fold_right Z.add 0%Z (firstn n l).
 
+Definition sum xs := sum_firstn xs (length xs).
+
 Fixpoint map2 {A B C} (f : A -> B -> C) (la : list A) (lb : list B) : list C :=
   match la with
   | nil => nil
@@ -884,6 +886,10 @@ Qed.
 
 Hint Rewrite @length_cons : distr_length.
 
+Lemma length_cons_full {T} n (x:list T) (t:T) (H: length (t :: x) = S n)
+  : length x = n.
+Proof. distr_length. Qed.
+
 Lemma cons_length : forall A (xs : list A) a, length (a :: xs) = S (length xs).
 Proof.
   auto.
@@ -899,6 +905,10 @@ Lemma length_snoc : forall {T} xs (x:T),
 Proof.
   boring; simpl_list; boring.
 Qed.
+
+Lemma combine_cons : forall {A B} a b (xs:list A) (ys:list B),
+  combine (a :: xs) (b :: ys) = (a,b) :: combine xs ys.
+Proof. reflexivity. Qed.
 
 Lemma firstn_combine : forall {A B} n (xs:list A) (ys:list B),
   firstn n (combine xs ys) = combine (firstn n xs) (firstn n ys).
@@ -1120,6 +1130,10 @@ Proof.
 Qed.
 
 Hint Rewrite @map_nth_default_always : push_nth_default.
+
+Lemma map_S_seq {A} (f:nat->A) len : forall start,
+  List.map (fun i => f (S i)) (seq start len) = List.map f (seq (S start) len).
+Proof. induction len; intros; simpl; rewrite ?IHlen; reflexivity. Qed.
 
 Lemma fold_right_and_True_forall_In_iff : forall {T} (l : list T) (P : T -> Prop),
   (forall x, In x l -> P x) <-> fold_right and True (map P l).
@@ -1406,6 +1420,12 @@ Proof.
   do 2 f_equal; omega.
 Qed.
 Hint Rewrite @sum_firstn_app_sum : simpl_sum_firstn.
+
+Lemma sum_cons xs x : sum (x :: xs) = (x + sum xs)%Z.
+Proof. reflexivity. Qed.
+
+Lemma sum_nil : sum nil = 0%Z.
+Proof. reflexivity. Qed.
 
 Lemma nth_error_skipn : forall {A} n (l : list A) m,
 nth_error (skipn n l) m = nth_error l (n + m).
