@@ -21,5 +21,8 @@ appearing in our code.
 | [openssl#1593](https://rt.openssl.org/Ticket/Display.html?id=1593&user=guest&pass=guest) | P384 modular reduction | carry handling | [exploitable](https://eprint.iacr.org/2011/633.pdf) |
 | [go#fa09811d](https://github.com/golang/crypto/commit/84e98f45760e87786b7f24603b8166a6fa09811d) | poly1305 reduction | AMD64 asm, missing subtraction of 3 | found quickly |
 | [jose-adobe](https://blogs.adobe.com/security/2017/03/critical-vulnerability-uncovered-in-json-encryption.html) | ECDH-ES | 5 libraries | not onCurve | 
+| [tweetnacl-m\[15\]](http://seb.dbzteam.org/blog/2014/04/28/tweetnacl_arithmetic_bug.html) | GF(2^255-19) freeze | bit-twiddly C | bounds? typo? | 
+| [tweetnacl-U32](https://web.archive.org/web/20160305001036/http://blog.skylable.com/2014/05/tweetnacl-carrybit-bug/) | irrelevant | bit-twiddly C | `sizeof(long)!=32` | 
+
 
 Not covered in the above list: memory mismanagement (buffer overrun, use-after-free, uninitialized read, null dereference), timing attacks (branch, cache, instruction). While these issues are very important, there are good programming disciplines for avoiding them without verifying intricate details of the computation.
