@@ -55,7 +55,16 @@ Module _fsatz_test.
     Lemma fractional_equation_no_solution x (A:x<>1) (B:x<>opp two) (C:x*x+x <> two) (X:nine/(x*x + x - two) = opp three/(x+two) + seven*inv(x-1)) : False.
     Proof. fsatz. Qed.
 
-    Local Notation "x ^ 2" := (x*x). Local Notation "x ^ 3" := (x^2*x).
+    Local Notation "x ^ 2" := (x*x).
+    Lemma recursive_nonzero_solving
+          (a sqrt_a d x y : F)
+          (Hpoly : a * x^2 + y^2 = one + d * x^2 * y^2)
+          (Hsqrt : sqrt_a^2 = a)
+          (Hfrac : (sqrt_a / y)^2 <> d)
+      : x^2 = (y^2 - one) / (d * y^2 - a).
+    Proof. fsatz. Qed.
+
+    Local Notation "x ^ 3" := (x^2*x).
     Lemma weierstrass_associativity_main a b x1 y1 x2 y2 x4 y4
           (A: y1^2=x1^3+a*x1+b)
           (B: y2^2=x2^3+a*x2+b)
@@ -77,6 +86,6 @@ Module _fsatz_test.
           x9 (Hx9: x9 = λ9^2-x1-x6)
           y9 (Hy9: y9 = λ9*(x1-x9)-y1)
       : x7 = x9 /\ y7 = y9.
-    Proof. split; fsatz. Qed.
+    Proof. fsatz_prepare_hyps; split; fsatz. Qed.
   End _test.
 End _fsatz_test.

@@ -60,6 +60,8 @@ Module M.
             end.
     Next Obligation. Proof. t. Qed.
 
+    Program Definition zero : point := ∞.
+
     Program Definition opp (P:point) : point :=
       match P return F*F+∞ with
       | (x, y) => (x, -y)
@@ -73,10 +75,18 @@ Module M.
     Local Notation "27" := (3*9).
     Context {char_ge_28:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 28}.
 
-    Let WeierstrassA := ((3-a^2)/(3*b^2)).
-    Let WeierstrassB := ((2*a^3-9*a)/(27*b^3)).
+    Local Notation WeierstrassA := ((3-a^2)/(3*b^2)).
+    Local Notation WeierstrassB := ((2*a^3-9*a)/(27*b^3)).
     Local Notation Wpoint := (@W.point F Feq Fadd Fmul WeierstrassA WeierstrassB).
     Local Notation Wadd := (@W.add F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv field Feq_dec char_ge_3 WeierstrassA WeierstrassB).
+
+    Program Definition to_Weierstrass (P:point) : Wpoint :=
+      match coordinates P return F*F+∞ with
+      | (x, y) => ((x + a/3)/b, y/b)
+      | _ => ∞
+      end.
+    Next Obligation.
+    Proof. clear char_ge_3; destruct P; t. Qed.
 
     Program Definition of_Weierstrass (P:Wpoint) : point :=
       match W.coordinates P return F*F+∞ with
@@ -84,12 +94,36 @@ Module M.
       | _ => ∞
       end.
     Next Obligation.
-    Proof. clear char_ge_3; subst WeierstrassA; subst WeierstrassB; destruct P; t. Qed.
+    Proof. clear char_ge_3; destruct P; t. Qed.
 
-    Lemma of_Weierstrass_add P1 P2 :
-      eq (of_Weierstrass (W.add P1 P2))
-         (add (of_Weierstrass P1) (of_Weierstrass P2)).
-    Proof. cbv [WeierstrassA WeierstrassB eq of_Weierstrass W.add add coordinates W.coordinates proj1_sig] in *; clear char_ge_3; t. Qed.
+    (* TODO: move *)
+    Program Definition Wopp (P:Wpoint) : Wpoint :=
+      match P return F*F+∞ with
+      | (x, y) => (x, -y)
+      | ∞ => ∞
+      end.
+    Next Obligation. destruct P; t. Qed.
+
+    Axiom Wgroup : @Algebra.group Wpoint (@W.eq F Feq Fadd Fmul WeierstrassA WeierstrassB)
+         Wadd (@W.zero F Feq Fadd Fmul WeierstrassA WeierstrassB) Wopp.
+    Program Definition _MW : _ /\ _ /\ _ :=
+      @Group.group_from_redundant_representation
+        Wpoint W.eq Wadd W.zero Wopp
+        Wgroup
+        point eq add zero opp
+        of_Weierstrass
+        to_Weierstrass
+        _ _ _ _ _
+        .
+    Next Obligation. cbv [W.eq eq to_Weierstrass of_Weierstrass W.add add coordinates W.coordinates proj1_sig] in *; t. Qed.
+    Next Obligation. cbv [W.eq eq to_Weierstrass of_Weierstrass W.add add coordinates W.coordinates proj1_sig] in *. clear char_ge_3. t. 2:intuition idtac. 2:intuition idtac. 2:intuition idtac.
+                     { repeat split; destruct_head' and; t. } Qed.
+    Next Obligation.
+      (* addition case, same issue as in Weierstrass associativity *) 
+      cbv [W.eq eq to_Weierstrass of_Weierstrass W.add add coordinates W.coordinates proj1_sig] in *.
+      clear char_ge_3. t. Qed.
+    Next Obligation. cbv [W.eq eq to_Weierstrass of_Weierstrass W.add add Wopp opp coordinates W.coordinates proj1_sig] in *. clear char_ge_3. t. Qed.
+    Next Obligation. cbv [W.eq eq to_Weierstrass of_Weierstrass W.add add Wopp opp coordinates W.coordinates proj1_sig] in *. clear char_ge_3. t. Qed.
     
     Section AddX.
       Lemma homogeneous_x_differential_addition_releations P1 P2 :
