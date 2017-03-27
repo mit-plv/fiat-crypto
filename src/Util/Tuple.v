@@ -754,40 +754,54 @@ Lemma map_append {A B n} (f:A->B) : forall (x:tuple A n) (a:A),
   map f (append a x) = append (f a) (map f x).
 Proof. destruct n; auto using map_append'. Qed.
 
-(* map operation that carries state*)
-Fixpoint map_with' {S A B n} (f: S->A->S*B) (start:S)
-  : tuple' A n -> S * tuple' B n :=
-  match n as n0 return (tuple' A n0 -> S * tuple' B n0) with
-  | O => fun ys => f start ys
+(* map operation that carries state *)
+(* first argument to f is index in tuple *)
+Fixpoint mapi_with' {T A B n} i (f: nat->T->A->T*B) (start:T)
+  : tuple' A n -> T * tuple' B n :=
+  match n as n0 return (tuple' A n0 -> T * tuple' B n0) with
+  | O => fun ys => f i start ys
   | S n' => fun ys =>
-              (fst (map_with' f (fst (f start (hd ys))) (tl ys)),
-               (snd (map_with' f (fst (f start (hd ys))) (tl ys)),
-               snd (f start (hd ys))))
+              (fst (mapi_with' (S i) f (fst (f i start (hd ys))) (tl ys)),
+               (snd (mapi_with' (S i) f (fst (f i start (hd ys))) (tl ys)),
+               snd (f i start (hd ys))))
   end.
 
-Fixpoint map_with {S A B n} (f: S->A->S*B) (start:S)
-  : tuple A n -> S * tuple B n :=
-  match n as n0 return (tuple A n0 -> S * tuple B n0) with
+Fixpoint mapi_with {T A B n} (f: nat->T->A->T*B) (start:T)
+  : tuple A n -> T * tuple B n :=
+  match n as n0 return (tuple A n0 -> T * tuple B n0) with
   | O => fun ys => (start, tt)
-  | S n' => fun ys => map_with' f start ys
+  | S n' => fun ys => mapi_with' 0 f start ys
   end.
 
-Lemma map_with_invariant {T A B} (f: T->A->T*B)
-      (P : forall n, T -> T -> tuple A n -> tuple B n -> Prop)
-      (P_holds : forall n starter rem inp out,
-          P n (fst (f starter (hd inp))) rem (tl inp) out
-          -> P (S n) starter rem inp (append (snd (f starter (hd inp))) out))
-      (P_base : forall rem, P 0%nat rem rem tt tt)
+Lemma mapi_with'_invariant {T A B} (f: nat->T->A->T*B)
+      (P : forall n, nat -> T -> T -> tuple A n -> tuple B n -> Prop)
+      (P_holds : forall n i starter rem inp out,
+          P n (S i) (fst (f i starter (hd inp))) rem (tl inp) out
+          -> P (S n) i starter rem inp (append (snd (f i starter (hd inp))) out))
+      (P_base : forall i rem, P 0%nat i rem rem tt tt)
+  :
+  forall {n} i (start : T) (input : tuple A (S n)),
+    P (S n) i start (fst (mapi_with' i f start input)) input (snd (mapi_with' i f start input)).
+Proof.
+  induction n; intros.
+  { specialize (P_holds 0%nat i start (fst (f i start input)) input tt).
+    apply P_holds. apply P_base. }
+  { specialize (P_holds (S n) i start (fst (mapi_with' i f start input)) input).
+    apply P_holds. apply IHn. }
+Qed.
+
+Lemma mapi_with_invariant {T A B} (f: nat->T->A->T*B)
+      (P : forall n, nat -> T -> T -> tuple A n -> tuple B n -> Prop)
+      (P_holds : forall n i starter rem inp out,
+          P n (S i) (fst (f i starter (hd inp))) rem (tl inp) out
+          -> P (S n) i starter rem inp (append (snd (f i starter (hd inp))) out))
+      (P_base : forall i rem, P 0%nat i rem rem tt tt)
   :
   forall {n} (start : T) (input : tuple A n),
-    P n start (fst (map_with f start input)) input (snd (map_with f start input)).
+    P n 0%nat start (fst (mapi_with f start input)) input (snd (mapi_with f start input)).
 Proof.
-  destruct n. { intros; destruct input; apply P_base. }
-  induction n; intros.
-  { specialize (P_holds 0%nat start (fst (f start input)) input tt).
-    apply P_holds. apply P_base. }
-  { specialize (P_holds (S n) start (fst (map_with f start input)) input).
-    simpl. apply P_holds. apply IHn. }
+  destruct n; [intros; destruct input; apply P_base|];
+    apply mapi_with'_invariant; auto.
 Qed.
 
 Require Import Crypto.Util.ListUtil. (* To initialize [distr_length] database *)
