@@ -95,14 +95,9 @@ Module E.
     Section PointCompression.
       Local Notation "x ^ 2" := (x*x).
 
-      Lemma a_d_y2_nonzero y : d * y^2 - a <> 0.
-      Proof.
-        destruct square_a as [sqrt_a], (dec (y=0));
-          pose proof nonzero_a; pose proof (nonsquare_d (sqrt_a/y)); fsatz.
-      Qed.
-
-      Lemma solve_correct : forall x y, onCurve x y <-> (x^2 = (y^2-1) / (d*y^2-a)).
-      Proof. pose proof a_d_y2_nonzero; t. Qed.
+      Lemma solve_correct x y : onCurve x y <-> (x^2 = (y^2-1) / (d*y^2-a)).
+      Proof. destruct square_a as [sqrt_a]; pose proof (nonsquare_d (sqrt_a/y));
+               split; intros; fsatz. Qed.
 
       (* TODO: move *)
       Definition exist_option {A} (P : A -> Prop) (x : option A)

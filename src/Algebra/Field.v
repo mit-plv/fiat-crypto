@@ -231,17 +231,6 @@ Ltac goal_to_field_equality fld :=
          end
   end.
 
-Ltac _introduce_inverse fld d d_nz :=
-  let eq := match type of fld with Algebra.field(eq:=?eq) => eq end in
-  let mul := match type of fld with Algebra.field(mul:=?mul) => mul end in
-  let one := match type of fld with Algebra.field(one:=?one) => one end in
-  let inv := match type of fld with Algebra.field(inv:=?inv) => inv end in
-  match goal with [H: eq (mul d _) one |- _ ] => fail 1 | _ => idtac end;
-  let d_i := fresh "i" in
-  unique pose proof (right_multiplicative_inverse(H:=fld) _ d_nz);
-  set (inv d) as d_i in *;
-  clearbody d_i.
-
 Ltac inequalities_to_inverse_equations fld :=
   let eq := match type of fld with Algebra.field(eq:=?eq) => eq end in
   let zero := match type of fld with Algebra.field(zero:=?zero) => zero end in
@@ -250,51 +239,79 @@ Ltac inequalities_to_inverse_equations fld :=
   repeat match goal with
          | [H: not (eq _ _) |- _ ] =>
            lazymatch type of H with
-           | not (eq ?d zero) => _introduce_inverse fld d H
-           | not (eq zero ?d) => _introduce_inverse fld d (symmetry(R:=fun a b => not (eq a b)) H)
-           | not (eq ?x ?y) => _introduce_inverse fld (sub x y) (Ring.neq_sub_neq_zero _ _ H)
+           | not (eq ?d zero) =>
+             unique pose proof (right_multiplicative_inverse(H:=fld) _ H)
+           | not (eq zero ?d) =>
+             unique pose proof (right_multiplicative_inverse(H:=fld) _ (symmetry(R:=fun a b => not (eq a b)) H))
+           | not (eq ?x ?y) => 
+             unique pose proof (right_multiplicative_inverse(H:=fld) _ (Ring.neq_sub_neq_zero _ _ H))
            end
          end.
 
-Ltac _nonzero_tac fld :=
-  solve [trivial | IntegralDomain.solve_constant_nonzero | goal_to_field_equality fld; nsatz; IntegralDomain.solve_constant_nonzero].
+Ltac unique_pose_implication pf :=
+  let B := match type of pf with ?A -> ?B => B end in
+  match goal with
+             | [H:B|-_] => fail 1
+             | _ => unique pose proof pf
+  end.
 
-Ltac _inverse_to_equation_by fld d tac :=
+Ltac inverses_to_conditional_equations fld :=
   let eq := match type of fld with Algebra.field(eq:=?eq) => eq end in
-  let zero := match type of fld with Algebra.field(zero:=?zero) => zero end in
-  let one := match type of fld with Algebra.field(one:=?one) => one end in
-  let mul := match type of fld with Algebra.field(mul:=?mul) => mul end in
-  let div := match type of fld with Algebra.field(div:=?div) => div end in
-  let inv := match type of fld with Algebra.field(inv:=?inv) => inv end in
-  let d_nz := fresh "nz" in
-  assert (not (eq d zero)) as d_nz by tac;
-  lazymatch goal with
-  | H: eq (mul ?di d) one |- _ => rewrite <-!(left_inv_unique(H:=fld) _ _ H) in *
-  | H: eq (mul d ?di) one |- _ => rewrite <-!(right_inv_unique(H:=fld) _ _ H) in *
-  | _ => _introduce_inverse fld d d_nz
-  end;
-  clear d_nz.
-
-Ltac inverses_to_equations_by fld tac :=
-  let eq := match type of fld with Algebra.field(eq:=?eq) => eq end in
-  let zero := match type of fld with Algebra.field(zero:=?zero) => zero end in
   let inv := match type of fld with Algebra.field(inv:=?inv) => inv end in
   repeat match goal with
-         | |- context[inv ?d] => _inverse_to_equation_by fld d tac
-         | H: context[inv ?d] |- _ => _inverse_to_equation_by fld d tac
+         | |- context[inv ?d] =>
+           unique_pose_implication constr:(right_multiplicative_inverse(H:=fld) d)
+         | H: context[inv ?d] |- _ => 
+           unique_pose_implication constr:(right_multiplicative_inverse(H:=fld) d)
+         end.
+
+Ltac clear_hypotheses_with_nonzero_requirements fld :=
+  let eq := match type of fld with Algebra.field(eq:=?eq) => eq end in
+  let zero := match type of fld with Algebra.field(zero:=?zero) => zero end in
+  repeat match goal with
+           [H: not (eq _ zero) -> _ |- _ ] => clear H
+         end.
+
+Ltac forward_nonzero fld solver_tac :=
+  let eq := match type of fld with Algebra.field(eq:=?eq) => eq end in
+  let zero := match type of fld with Algebra.field(zero:=?zero) => zero end in
+  repeat match goal with
+         | [H: not (eq ?x zero) -> _ |- _ ]
+           => let H' := fresh in
+              assert (H' : not (eq x zero)) by (clear_hypotheses_with_nonzero_requirements; solver_tac); specialize (H H')
+         | [H: not (eq ?x zero) -> _ |- _ ]
+           => let H' := fresh in
+              assert (H' : not (eq x zero)) by (clear H; solver_tac); specialize (H H')
          end.
 
 Ltac divisions_to_inverses fld :=
   rewrite ?(field_div_definition(field:=fld)) in *.
 
-Ltac fsatz :=
-  let fld := guess_field in
+Ltac fsatz_solve_on fld :=
   goal_to_field_equality fld;
-  inequalities_to_inverse_equations fld;
-  divisions_to_inverses fld;
-  inverses_to_equations_by fld ltac:(solve_debugfail ltac:(_nonzero_tac fld));
+  forward_nonzero fld ltac:(fsatz_solve_on fld);
   nsatz;
   solve_debugfail ltac:(IntegralDomain.solve_constant_nonzero).
+
+Ltac fsatz_solve :=
+  let fld := guess_field in
+  fsatz_solve_on fld.
+
+Ltac fsatz_prepare_hyps_on fld :=
+  divisions_to_inverses fld;
+  inequalities_to_inverse_equations fld;
+  inverses_to_conditional_equations fld;
+  forward_nonzero fld ltac:(fsatz_solve_on fld).
+
+Ltac fsatz_prepare_hyps :=
+  let fld := guess_field in
+  fsatz_prepare_hyps_on fld.
+
+Ltac fsatz :=
+  let fld := guess_field in
+  fsatz_prepare_hyps_on fld;
+  fsatz_solve_on fld.
+
 
 Section FieldSquareRoot.
   Context {T eq zero one opp add mul sub inv div} `{@field T eq zero one opp add sub mul inv div} {eq_dec:DecidableRel eq}.
