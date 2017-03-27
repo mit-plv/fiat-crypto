@@ -38,11 +38,6 @@ Proof.
   rewrite <-Z.mul_mod, <-Z.add_mod by auto; reflexivity.
 Qed.
 
-(* TODO 
-Lemma to_nat_neg : forall x, x < 0 -> Z.to_nat x = 0%nat.
-Proof. destruct x; try reflexivity; intros. pose proof (Pos2Z.is_pos p). omega. Qed.
- *)
-
 Fixpoint map_cps {A B} (g : A->B) ls
          {T} (f:list B->T):=
   match ls with
@@ -242,3 +237,35 @@ Proof.
   cbv [fold_right_no_starter_cps fold_right_no_starter]; break_match; reflexivity.
 Qed.        
 Hint Rewrite @fold_right_no_starter_cps_correct : uncps.
+
+Import Tuple.
+
+Fixpoint mapi_with'_cps {T A B n} i
+         (f: nat->T->A->forall {R}, (T*B->R)->R) (start:T)
+  : Tuple.tuple' A n -> forall {R}, (T * tuple' B n -> R) -> R :=
+  match n as n0 return (tuple' A n0 -> forall {R}, (T * tuple' B n0->R)->R) with
+  | O => fun ys {T} ret => f i start ys ret
+  | S n' => fun ys {T} ret =>
+              f i start (hd ys) (fun sb =>
+              mapi_with'_cps (S i) f (fst sb) (tl ys)
+                (fun r => ret (fst r, (snd r, snd sb))))
+  end.
+
+Fixpoint mapi_with_cps {S A B n}
+         (f: nat->S->A->forall {T}, (S*B->T)->T) (start:S)
+  : tuple A n -> forall {T}, (S * tuple B n->T)->T :=
+  match n as n0 return (tuple A n0 -> forall {T}, (S * tuple B n0->T)->T) with
+  | O => fun ys {T} ret => ret (start, tt)
+  | S n' => fun ys {T} ret => mapi_with'_cps 0%nat f start ys ret
+  end.
+
+Lemma mapi_with'_cps_correct {S A B n} : forall i f start xs T ret,
+  (forall i s a R (ret:_->R), f i s a R ret = ret (f i s a _ id)) ->
+  @mapi_with'_cps S A B n i f start xs T ret = ret (mapi_with' i (fun i s a => f i s a _ id) start xs).
+Proof. induction n; intros; simpl; rewrite H, ?IHn by assumption; reflexivity. Qed.
+Lemma mapi_with_cps_correct {S A B n} f start xs T ret
+  (H:forall i s a R (ret:_->R), f i s a R ret = ret (f i s a _ id))
+  : @mapi_with_cps S A B n f start xs T ret = ret (mapi_with (fun i s a => f i s a _ id) start xs).
+Proof. destruct n; simpl; rewrite ?mapi_with'_cps_correct by assumption; reflexivity. Qed.
+Hint Rewrite @mapi_with_cps_correct @mapi_with'_cps_correct
+     using (intros; autorewrite with uncps; auto): uncps.
