@@ -99,3 +99,5 @@ Section language.
                 | intros ???; rewrite lookupb_empty by apply PositiveContextOk; congruence ].
   Qed.
 End language.
+
+Hint Resolve Wf_MapCast : wf.
