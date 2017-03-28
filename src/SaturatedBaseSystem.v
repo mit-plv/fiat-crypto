@@ -155,12 +155,43 @@ Section Saturated.
     rewrite eval_from_0, B.Positional.eval_from_0 in Hinv; apply Hinv.
   Qed.
 
+  Definition cons_to_nth_cps {n} i (x:Z) (t:(list Z)^n)
+             {T} (f:(list Z)^n->T) :=
+    @on_tuple_cps _ _ nil (update_nth_cps i (cons x)) n n t _ f.
+
+  Definition nils n : (list Z)^n :=
+    from_list n (repeat nil n) (repeat_length _ _).
+
+  Definition from_associational_cps n (p:list B.limb)
+             {T} (f:(list Z)^n -> T) :=
+    fold_right_cps
+      (fun t st =>
+         B.Positional.place_cps weight t (pred n)
+                   (fun p=> cons_to_nth_cps (fst p) (snd p) st id))
+      (nils n) p f.
+  
+  Definition mul_cps {n m} (p q : Z^n) {T} (f : (list Z)^m->T) :=
+    B.Positional.to_associational_cps weight p
+      (fun P => B.Positional.to_associational_cps weight q
+      (fun Q => B.Associational.mul_cps P Q
+       (fun PQ => from_associational_cps m PQ f))). 
+
 End Saturated.
 
 (*
+(* Just some pretty-printing *)
+Local Notation "fst~ a" := (let (x,_) := a in x) (at level 40, only printing). 
+Local Notation "snd~ a" := (let (_,y) := a in y) (at level 40, only printing). 
+
+(* Simple example : base 10, multiply two bignums and compact them *)
 Definition base10 i := Eval compute in 10^(Z.of_nat i).
-Import ListNotations.
 Eval cbv -[runtime_add runtime_mul Let_In] in
-    (fun adc a0 a1 b0 b1 =>
-       compact (n:=2) (add_get_carry:=adc) (weight:=base10) ([a1;b1],[a0;b0])).
+    (fun adc a0 a1 a2 b0 b1 b2 =>
+       mul_cps (weight := base10) (n:=3) (a2,a1,a0) (b2,b1,b0) (fun ab => compact (n:=5) (add_get_carry:=adc) (weight:=base10) ab)).
+
+(* More complex example : base 56, 8 limbs *)
+Definition base2pow56 i := Eval compute in 2^(56*Z.of_nat i).
+Eval cbv -[runtime_add runtime_mul Let_In] in
+    (fun adc a0 a1 a2 a3 a4 a5 a6 a7 b0 b1 b2 b3 b4 b5 b6 b7 =>
+       mul_cps (weight := base10) (n:=8) (a7,a6,a5,a4,a3,a2,a1,a0) (b7,b6,b5,b4,b3,b2,b1,b0) (fun ab => compact (n:=15) (add_get_carry:=adc) (weight:=base10) ab)).
 *)
