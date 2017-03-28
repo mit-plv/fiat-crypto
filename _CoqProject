@@ -9,6 +9,7 @@ src/EdDSARepChange.v
 src/Karatsuba.v
 src/MxDHRepChange.v
 src/NewBaseSystem.v
+src/SaturatedBaseSystem.v
 src/Testbit.v
 src/Algebra/Field.v
 src/Algebra/Field_test.v
@@ -201,7 +202,6 @@ src/Reflection/Z/Interpretations64/Relations.v
 src/Reflection/Z/Interpretations64/RelationsCombinations.v
 src/Reflection/Z/Syntax/Equality.v
 src/Reflection/Z/Syntax/Util.v
-src/SaturatedBaseSystem.v
 src/Spec/CompleteEdwardsCurve.v
 src/Spec/Ed25519.v
 src/Spec/EdDSA.v
