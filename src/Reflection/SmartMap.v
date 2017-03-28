@@ -53,6 +53,22 @@ Section homogenous_type.
                              (@smart_interp_flat_map2 f1 f2 g h tt pair A (fst v1) (fst v2))
                              (@smart_interp_flat_map2 f1 f2 g h tt pair B (snd v1) (snd v2))
        end.
+  Fixpoint smart_interp_flat_map3 {f1 f2 f3 g}
+           (h : forall x, f1 x -> f2 x -> f3 x -> g (Tbase x))
+           (tt : g Unit)
+           (pair : forall A B, g A -> g B -> g (Prod A B))
+           {t}
+    : interp_flat_type f1 t -> interp_flat_type f2 t -> interp_flat_type f3 t -> g t
+    := match t return interp_flat_type f1 t -> interp_flat_type f2 t -> interp_flat_type f3 t -> g t with
+       | Syntax.Tbase _ => h _
+       | Unit => fun _ _ _ => tt
+       | Prod A B => fun (v1 : interp_flat_type _ A * interp_flat_type _ B)
+                         (v2 : interp_flat_type _ A * interp_flat_type _ B)
+                         (v3 : interp_flat_type _ A * interp_flat_type _ B)
+                     => pair _ _
+                             (@smart_interp_flat_map3 f1 f2 f3 g h tt pair A (fst v1) (fst v2) (fst v3))
+                             (@smart_interp_flat_map3 f1 f2 f3 g h tt pair B (snd v1) (snd v2) (snd v3))
+       end.
   Definition smart_interp_map_hetero {f g g'}
              (h : forall x, f x -> g (Tbase x))
              (tt : g Unit)
@@ -137,6 +153,9 @@ Section homogenous_type.
     unfold SmartVarfMap2; clear; induction t; simpl; destruct_head_hnf unit; destruct_head_hnf prod;
       rewrite_hyp ?*; congruence.
   Qed.
+  Definition SmartVarfMap3 {var var' var'' var'''} (f : forall t, var t -> var' t -> var'' t -> var''' t) {t}
+    : interp_flat_type var t -> interp_flat_type var' t -> interp_flat_type var'' t -> interp_flat_type var''' t
+    := @smart_interp_flat_map3 var var' var'' (interp_flat_type var''') f tt (fun A B x y => pair x y) t.
   Definition SmartVarfTypeMap {var} (f : forall t, var t -> Type) {t}
     : interp_flat_type var t -> Type
     := @smart_interp_flat_map var (fun _ => Type) f unit (fun _ _ P Q => P * Q)%type t.
