@@ -226,6 +226,7 @@ Global Arguments SmartValf {_} T _ t.
 Global Arguments SmartVarVarf {_ _ _ _} _.
 Global Arguments SmartVarfMap {_ _ _} _ {!_} _ / .
 Global Arguments SmartVarfMap2 {_ _ _ _} _ {!t} _ _ / .
+Global Arguments SmartVarfMap3 {_ _ _ _ _} _ {!t} _ _ _ / .
 Global Arguments SmartVarfTypeMap {_ _} _ {_} _.
 Global Arguments SmartVarfPropMap {_ _} _ {_} _.
 Global Arguments SmartVarfTypeMap2 {_ _ _} _ {t} _ _.
