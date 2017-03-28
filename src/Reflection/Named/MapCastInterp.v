@@ -27,8 +27,10 @@ Section language.
           (interp_op_bounds : forall src dst, op src dst -> interp_flat_type interp_base_type_bounds src -> interp_flat_type interp_base_type_bounds dst)
           (pick_typeb : forall t, interp_base_type_bounds t -> base_type_code).
   Local Notation pick_type t v := (SmartFlatTypeMap pick_typeb (t:=t) v).
-  Context (cast_op : forall t tR (opc : op t tR) args_bs,
-              op (pick_type _ args_bs) (pick_type _ (interp_op_bounds t tR opc args_bs)))
+  Context (cast_op
+           : forall t tR (opc : op t tR) args_bs
+                    (args : Named.exprf base_type_code op Name (pick_type _ args_bs)),
+              option (Named.exprf base_type_code op Name (pick_type _ (interp_op_bounds t tR opc args_bs))))
           {BoundsContext : Context Name interp_base_type_bounds}
           (BoundsContextOk : ContextOk BoundsContext)
           {interp_base_type : base_type_code -> Type}
@@ -47,13 +49,23 @@ Section language.
                     (v : interp_flat_type interp_base_type t)
                     (H : inbounds t bs v),
                inbounds tR (interp_op_bounds t tR opc bs) (interp_op t tR opc v))
-          (pull_cast_back:
-             forall t tR opc bs
-                    (v : interp_flat_type interp_base_type (pick_type t bs))
-                    (H : inbounds t bs (cast_back t bs v)),
-               interp_op t tR opc (cast_back t bs v)
-               =
-               cast_back _ _ (interp_op _ _ (cast_op _ _ opc bs) v))
+          (pull_cast_back
+           : forall t tR opc bs (ctx : Context)
+                    (args : Named.exprf base_type_code op Name (pick_type t bs)) argsv
+                    (Hargs : interpf (interp_op:=interp_op) (ctx:=ctx) args = Some argsv)
+                    (H : inbounds t bs (cast_back t bs argsv))
+                    new_ope
+                    (Hnewe : cast_op _ _ opc bs args = Some new_ope)
+                    new_opv
+                    (Hnew : interpf (interp_op:=interp_op) (ctx:=ctx) new_ope
+                            = Some new_opv),
+              interp_op t tR opc (cast_back t bs argsv)
+              =
+              cast_back _ _ new_opv)
+          (cast_op_None : forall t tR opc bs args (ctx : Context) new_ope,
+              cast_op t tR opc bs args = Some new_ope
+              -> interpf (interp_op:=interp_op) (ctx:=ctx) args = None
+              -> interpf (interp_op:=interp_op) (ctx:=ctx) new_ope = None)
           (base_type_dec : DecidableRel (@eq base_type_code))
           (Name_dec : DecidableRel (@eq Name)).
 
@@ -186,10 +198,21 @@ Section language.
                       | specialize (fun a b => IH a b ctx); check_tac () ]
            | [ H : forall x y z, Some _ = Some _ -> _ |- _ ]
              => first [ specialize (H _ _ _ eq_refl)
-                      | specialize (fun x => H x _ _ eq_refl) ]
+                      | specialize (fun x => H x _ _ eq_refl)
+                      | specialize (fun x y => H x y _ eq_refl) ]
            | [ H : forall x y, Some _ = Some _ -> _ |- _ ]
              => first [ specialize (H _ _ eq_refl)
                       | specialize (fun x => H x _ eq_refl) ]
+           | [ H : context[interpf ?e], H' : interpf (interp_op:=?interp_op) (ctx:=?ctx) (cast_op ?t ?tR ?opc ?bs ?e) = _ |- _ ]
+             => let H2 := fresh in
+                destruct (interpf (interp_op:=interp_op) (ctx:=ctx) e) eqn:H2;
+                [ specialize (fun a => H ctx a _ H2)
+                | apply (@cast_op_None t tR opc bs e ctx) in H2; congruence ]
+           | [ H : context[interpf ?e], H'0 : cast_op ?t ?tR ?opc ?bs ?e = Some ?e', H' : interpf (interp_op:=?interp_op) (ctx:=?ctx) ?e' = _ |- _ ]
+             => let H2 := fresh in
+                destruct (interpf (interp_op:=interp_op) (ctx:=ctx) e) eqn:H2;
+                [ specialize (fun a => H ctx a _ H2)
+                | apply (@cast_op_None t tR opc bs e ctx e' H'0) in H2; congruence ]
            | _ => progress specialize_by_assumption
            end.
 
