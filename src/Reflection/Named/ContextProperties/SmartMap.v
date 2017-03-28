@@ -161,4 +161,40 @@ Section with_context.
       repeat first [ find_Name_and_val_default_to_None_step
                    | t_step ].
   Qed.
+
+  Lemma find_Name_and_val_SmartFlatTypeMapUnInterp2_Some_Some
+        {var' var'' var''' f g}
+        {T}
+        {N : interp_flat_type (fun _ : base_type_code => Name) T}
+        {B : interp_flat_type var' T}
+        {V : interp_flat_type var'' (SmartFlatTypeMap (t:=T) f B)}
+        {n : Name}
+        {t : base_type_code}
+        {v : var''' t}
+        {b}
+        {h} {i : forall v, var'' (f _ (h v))}
+        (Hn : find_Name n N = Some t)
+        (Hf : find_Name_and_val t n N (SmartFlatTypeMapUnInterp2 g V) None = Some v)
+        (Hb : find_Name_and_val t n N B None = Some b)
+        (Hig : forall B V,
+               existT _ (h (g _ B V)) (i (g _ B V))
+               = existT _ B V
+                        :> { b : _ & var'' (f _ b)})
+        (N' := SmartFlatTypeMapInterp2 (var'':=fun _ => Name) (f:=f) (fun _ _ n => n) _ N)
+    : b = h v /\ find_Name_and_val (f t (h v)) n N' V None = Some (i v).
+  Proof.
+    induction T;
+      [ | | specialize (IHT1 (fst N) (fst B) (fst V));
+            specialize (IHT2 (snd N) (snd B) (snd V)) ];
+      repeat first [ find_Name_and_val_default_to_None_step
+                   | lazymatch goal with
+                     | [ H : context[find_Name ?n (@SmartFlatTypeMapInterp2 _ ?var' _ _ ?f _ ?T ?V ?N)] |- _ ]
+                       => setoid_rewrite find_Name_SmartFlatTypeMapInterp2 in H
+                     end
+                   | t_step
+                   | match goal with
+                     | [ Hhg : forall B V, existT _ (?h (?g ?t B V)) _ = existT _ B _ |- context[?h (?g ?t ?B' ?V')] ]
+                       => specialize (Hhg B' V'); generalize dependent (g t B' V')
+                     end ].
+  Qed.
 End with_context.
