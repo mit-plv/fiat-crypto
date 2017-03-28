@@ -87,4 +87,10 @@ Section language.
   Lemma InterpExprEta' {t e}
     : forall x, Interp (@interp_op) (ExprEta' (t:=t) e) x = Interp (@interp_op) e x.
   Proof. apply interp_expr_eta'. Qed.
+  Lemma InterpExprEta_arrow {s d e}
+    : forall x, Interp (t:=Arrow s d) (@interp_op) (ExprEta (t:=Arrow s d) e) x = Interp (@interp_op) e x.
+  Proof. exact (@InterpExprEta (Arrow s d) e). Qed.
+  Lemma InterpExprEta'_arrow {s d e}
+    : forall x, Interp (t:=Arrow s d) (@interp_op) (ExprEta' (t:=Arrow s d) e) x = Interp (@interp_op) e x.
+  Proof. exact (@InterpExprEta' (Arrow s d) e). Qed.
 End language.
