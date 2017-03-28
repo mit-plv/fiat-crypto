@@ -4,6 +4,8 @@ Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Relations.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Notations.
+Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.Tactics.DestructHead.
 Export Reflection.Syntax.Notations.
 
 Local Notation eta x := (fst x, snd x).
@@ -208,4 +210,18 @@ Module Import Bounds.
     := interp_flat_type_rel_pointwise (@is_bounded_by').
   Definition is_bounded_by_bool {T} : interp_flat_type Syntax.interp_base_type T -> interp_flat_type interp_base_type T -> bool
     := interp_flat_type_relb_pointwise (@is_bounded_byb).
+
+  Global Instance dec_eq_bounds : DecidableRel (@eq bounds) | 10.
+  Proof.
+    intros [lx ux] [ly uy].
+    destruct (dec (lx = ly)), (dec (ux = uy));
+      [ left; apply f_equal2; assumption
+      | abstract (right; intro H; inversion_bounds; tauto).. ].
+  Defined.
+
+  Local Arguments interp_base_type !_ / .
+  Global Instance dec_eq_interp_flat_type {T} : DecidableRel (@eq (interp_flat_type interp_base_type T)) | 10.
+  Proof.
+    induction T; destruct_head base_type; simpl; exact _.
+  Defined.
 End Bounds.
