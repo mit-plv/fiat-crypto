@@ -6,6 +6,7 @@ Require Import Crypto.Reflection.Named.Compile.
 Require Import Crypto.Reflection.Named.PositiveContext.
 Require Import Crypto.Reflection.Named.PositiveContext.Defaults.
 Require Import Crypto.Reflection.Linearize.
+Require Import Crypto.Reflection.Eta.
 Require Import Crypto.Reflection.Syntax.
 
 Section language.
@@ -21,23 +22,41 @@ Section language.
   Context (cast_op : forall t tR (opc : op t tR) args_bs,
               op (pick_type args_bs) (pick_type (interp_op_bounds t tR opc args_bs))).
 
-  Definition MapCast {t} (e : Expr base_type_code op t)
-             (input_bounds : interp_flat_type interp_base_type_bounds (domain t))
-    : option { output_bounds : interp_flat_type interp_base_type_bounds (codomain t)
-                               & Expr base_type_code op (Arrow (pick_type input_bounds) (pick_type output_bounds)) }
-    := let Context var := PositiveContext _ _ _ base_type_code_bl_transparent in
-       match option_map
-               (fun e' => map_cast
-                            interp_op_bounds pick_typeb cast_op
-                            (BoundsContext:=Context _)
-                            empty
-                            e'
-                            input_bounds)
-               (let e := Linearize e in
-                compile (e _) (DefaultNamesFor e))
-       with
-       | Some (Some (existT output_bounds e'))
-         => Some (existT _ output_bounds (InterpToPHOAS (Context:=Context) failb e'))
-       | Some None | None => None
-       end.
+  Local Notation PContext var := (PositiveContext _ var _ base_type_code_bl_transparent).
+
+  Section MapCast.
+    Context {t} (e : Expr base_type_code op t)
+            (input_bounds : interp_flat_type interp_base_type_bounds (domain t)).
+
+    Definition MapCastPreProcess
+      := ExprEta (Linearize e).
+    Definition MapCastCompile (e' : Expr base_type_code op (domain t -> codomain t))
+      := compile (e' _) (DefaultNamesFor e').
+    Definition MapCastDoCast (e' : option (Named.expr base_type_code op BinNums.positive (domain t -> codomain t)))
+      := option_map
+           (fun e'' => map_cast
+                         (t:=Arrow (domain t) (codomain t))
+                         interp_op_bounds pick_typeb cast_op
+                         (BoundsContext:=PContext _)
+                         empty
+                         e''
+                         input_bounds)
+           e'.
+    Definition MapCastDoInterp
+               (e' : option
+                       (option
+                          { output_bounds : interp_flat_type interp_base_type_bounds (codomain t) &
+                                           Named.expr _ _ _ (Arrow (pick_type input_bounds) (pick_type output_bounds)) }))
+      : option { output_bounds : interp_flat_type interp_base_type_bounds (codomain t)
+                                 & Expr base_type_code op (Arrow (pick_type input_bounds) (pick_type output_bounds)) }
+      := match e' with
+         | Some (Some (existT output_bounds e''))
+           => Some (existT _ output_bounds (Eta.ExprEta (InterpToPHOAS (Context:=fun var => PContext var) failb e'')))
+         | Some None | None => None
+         end.
+    Definition MapCast
+      : option { output_bounds : interp_flat_type interp_base_type_bounds (codomain t)
+                                 & Expr base_type_code op (Arrow (pick_type input_bounds) (pick_type output_bounds)) }
+      := MapCastDoInterp (MapCastDoCast (MapCastCompile MapCastPreProcess)).
+  End MapCast.
 End language.

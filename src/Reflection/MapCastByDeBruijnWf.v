@@ -10,6 +10,7 @@ Require Import Crypto.Reflection.Named.PositiveContext.
 Require Import Crypto.Reflection.Named.PositiveContext.Defaults.
 Require Import Crypto.Reflection.Named.PositiveContext.DefaultsProperties.
 Require Import Crypto.Reflection.LinearizeWf.
+Require Import Crypto.Reflection.EtaWf.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.MapCastByDeBruijn.
 Require Import Crypto.Util.Decidable.
@@ -67,6 +68,7 @@ Section language.
       abstract (intro; erewrite base_type_code_lb in pf by eassumption; congruence). }
   Defined.
 
+  Local Arguments Compile.compile : simpl never.
   Lemma Wf_MapCast
         {t} (e : Expr base_type_code op t)
         (Hwf : Wf e)
@@ -74,10 +76,12 @@ Section language.
     : forall {b} e' (He':MapCast e input_bounds = Some (existT _ b e')),
       Wf e'.
   Proof.
-    unfold MapCastByDeBruijn.MapCast, option_map; intros b e'.
+    unfold MapCastByDeBruijn.MapCast, MapCastCompile, MapCastDoCast, MapCastDoInterp, MapCastPreProcess, option_map; intros b e'.
     break_innermost_match; try congruence; intros ? v v'.
     inversion_option; inversion_sigma; subst; simpl in *; intros.
     unfold InterpretToPHOAS.Named.InterpToPHOAS, InterpretToPHOAS.Named.InterpToPHOAS_gen.
+    destruct t as [src dst].
+    apply (proj2 (wf_expr_eta (t:=Arrow _ _))).
     eapply (@wf_interp_to_phoas
               base_type_code op FMapPositive.PositiveMap.key _ _ _ _
               (PositiveContext base_type_code _ base_type_code_beq base_type_code_bl_transparent)
@@ -86,7 +90,11 @@ Section language.
               (failb _) (failb _) _ e1);
       (eapply wf_map_cast with (fValues:=empty); eauto using PositiveContextOk with typeclass_instances);
       try (eapply (wf_compile (ContextOk:=PositiveContextOk));
-           [ apply wf_linearize; eauto | .. | eassumption ]);
+           [ eapply (proj2 (wf_expr_eta (t:=Arrow _ _)));
+             [ eapply wf_linearize | .. ];
+             eauto
+           | ..
+           | eassumption ]);
       try solve [ auto using name_list_unique_DefaultNamesFor
                 | intros ???; rewrite lookupb_empty by apply PositiveContextOk; congruence ].
   Qed.
