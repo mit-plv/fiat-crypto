@@ -98,6 +98,15 @@ Section language.
       try solve [ auto using name_list_unique_DefaultNamesFor
                 | intros ???; rewrite lookupb_empty by apply PositiveContextOk; congruence ].
   Qed.
+
+  Lemma Wf_MapCast_arrow
+        {s d} (e : Expr base_type_code op (Arrow s d))
+        (Hwf : Wf e)
+        (input_bounds : interp_flat_type interp_base_type_bounds s)
+    : forall {b} (e' : Expr _ _ (Arrow (pick_type input_bounds) (pick_type b)))
+             (He':MapCast e input_bounds = Some (existT _ b e')),
+      Wf e'.
+  Proof. exact (@Wf_MapCast (Arrow s d) e Hwf input_bounds). Qed.
 End language.
 
-Hint Resolve Wf_MapCast : wf.
+Hint Resolve Wf_MapCast Wf_MapCast_arrow : wf.
