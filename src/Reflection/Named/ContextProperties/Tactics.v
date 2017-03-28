@@ -20,6 +20,10 @@ Ltac fin_t_late_step :=
         | exfalso; unfold not in *; eauto ].
 Ltac inversion_step :=
   first [ progress subst
+        | match goal with
+          | [ H := _ |- _ ] => subst H
+          | [ H : ?x = ?y |- _ ] => subst x || subst y
+          end
         | progress inversion_option
         | progress inversion_sigma
         | progress inversion_prod
