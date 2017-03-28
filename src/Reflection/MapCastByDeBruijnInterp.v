@@ -106,7 +106,7 @@ Section language.
     { erewrite (interp_compile (ContextOk:=PositiveContextOk)), interp_linearize;
         [ reflexivity | apply wf_linearize; auto | .. | eassumption ];
         auto using name_list_unique_DefaultNamesFor. }
-    { intro; eapply wf_map_cast with (t := Arrow _ _) (oldValues := empty); eauto using PositiveContextOk with typeclass_instances.
+    { intro; eapply wf_map_cast with (t := Arrow _ _) (fValues := empty); eauto using PositiveContextOk with typeclass_instances.
       { eapply (wf_compile (ContextOk:=PositiveContextOk));
           [ apply wf_linearize; auto | .. | eassumption ].
         auto using name_list_unique_DefaultNamesFor. }

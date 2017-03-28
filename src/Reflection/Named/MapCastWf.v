@@ -13,6 +13,7 @@ Require Import Crypto.Util.PointedProp.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Option.
+Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Tactics.BreakMatch.
@@ -35,10 +36,9 @@ Section language.
           {interp_base_type : base_type_code -> Type}
           (interp_op : forall src dst,
               op src dst -> interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst)
-          (cast_backb: forall t b, interp_base_type (pick_typeb t b) -> interp_base_type t).
-  Let cast_back : forall t b, interp_flat_type interp_base_type (@pick_type t b) -> interp_flat_type interp_base_type t
-    := fun t b => SmartFlatTypeMapUnInterp cast_backb.
-  Context {Context : Context Name interp_base_type}
+          {FullContext : Context Name (fun t => { b : interp_base_type_bounds t & interp_base_type (pick_typeb t b) }%type)}
+          (FullContextOk : ContextOk FullContext)
+          {Context : Context Name interp_base_type}
           (ContextOk : ContextOk Context)
           (base_type_dec : DecidableRel (@eq base_type_code))
           (Name_dec : DecidableRel (@eq Name)).
@@ -66,6 +66,7 @@ Section language.
     | _ => progress unfold option_map in *
     end.
 
+  Local Ltac handle_lookupb_step_extra := fail.
   Local Ltac handle_lookupb_step :=
     let do_eq_dec dec t t' :=
         first [ constr_eq t t'; fail 1
@@ -101,6 +102,7 @@ Section language.
       => rewrite find_Name_SmartFlatTypeMapInterp2 with (base_type_code_dec:=base_type_dec) in H
     | [ H : find_Name_and_val _ _ _ _ _ _ _ = None |- _ ]
       => apply find_Name_and_val_None_iff in H
+    | _ => progress handle_lookupb_step_extra
     (* destructers *)
     | [ |- context[find_Name_and_val ?tdec ?ndec ?t ?n ?N ?V ?default] ]
       => destruct (find_Name_and_val tdec ndec t n N V default) eqn:?
@@ -131,10 +133,16 @@ Section language.
     match goal with
     | [ H : ?T, H' : ?T |- _ ] => clear H
     | [ H : forall x, Some _ = Some x -> _ |- _ ] => specialize (H _ eq_refl)
+    | [ H : ?x = Some _, IH : forall a b c, ?x = Some _ -> _ |- _ ]
+      => specialize (IH _ _ _ H)
     | [ H : ?x = Some _, IH : forall a b, ?x = Some _ -> _ |- _ ]
       => specialize (IH _ _ H)
     | [ H : ?x = Some _, IH : forall a, ?x = Some _ -> _ |- _ ]
       => specialize (IH _ H)
+    | [ H : forall t n x y z, lookupb ?ctx n = _ -> _, H' : lookupb ?ctx ?n' = _ |- _ ]
+      => specialize (H _ _ _ _ _ H')
+    | [ H : forall t n x y, lookupb ?ctx n = _ -> _, H' : lookupb ?ctx ?n' = _ |- _ ]
+      => specialize (H _ _ _ _ H')
     | [ H : forall t n v, lookupb ?ctx n = _ -> _, H' : lookupb ?ctx ?n' = _ |- _ ]
       => specialize (H _ _ _ H')
     | _ => progress specialize_by auto
@@ -145,34 +153,50 @@ Section language.
           | progress destruct_head'_ex
           | progress destruct_head'_and
           | progress inversion_option
+          | progress inversion_prod
           | progress inversion_sigma
           | progress autorewrite with push_prop_of_option in *
           | progress break_match_hyps ].
 
-  Local Ltac do_specialize_IHe :=
-    repeat match goal with
-           | [ IH : context[mapf_cast _ ?e], H' : mapf_cast ?ctx ?e = _ |- _ ]
-             => let check_tac _ := (rewrite H' in IH) in
-                first [ specialize (IH ctx); check_tac ()
-                      | specialize (fun a => IH a ctx); check_tac ()
-                      | specialize (fun a b => IH a b ctx); check_tac () ]
-           | [ H : forall x y z w, Some _ = Some _ -> _ |- _ ]
-             => first [ specialize (H _ _ _ _ eq_refl)
-                      | specialize (fun x y => H x y _ _ eq_refl) ]
-           | [ H : forall x y z, Some _ = Some _ -> _ |- _ ]
-             => first [ specialize (H _ _ _ eq_refl)
-                      | specialize (fun x => H x _ _ eq_refl) ]
-           | [ H : forall x y, Some _ = Some _ -> _ |- _ ]
-             => first [ specialize (H _ _ eq_refl)
-                      | specialize (fun x => H x _ eq_refl) ]
-           | _ => progress specialize_by_assumption
-           | [ H : forall a b, prop_of_option (Named.wff a ?e) -> _, H' : prop_of_option (Named.wff _ ?e) |- _ ]
-             => specialize (fun b => H _ b H')
-           | [ H : forall a b, prop_of_option (Named.wff a ?e) -> _, H' : forall v, prop_of_option (Named.wff _ ?e) |- _ ]
-             => specialize (fun b v => H _ b (H' v))
-           | [ H : forall b v, _ -> prop_of_option (Named.wff b ?e) |- prop_of_option (Named.wff ?ctx ?e) ]
-             => specialize (H ctx)
-           end.
+  Local Ltac do_specialize_IHe_step :=
+    match goal with
+    | [ IH : context[mapf_cast _ ?e], H' : mapf_cast ?ctx ?e = _ |- _ ]
+      => let check_tac _ := (rewrite H' in IH) in
+         first [ specialize (IH ctx); check_tac ()
+               | specialize (fun a => IH a ctx); check_tac ()
+               | specialize (fun a b => IH a b ctx); check_tac () ]
+    | [ H : forall x y z w, Some _ = Some _ -> _ |- _ ]
+      => first [ specialize (H _ _ _ _ eq_refl)
+               | specialize (fun x y => H x y _ _ eq_refl) ]
+    | [ H : forall x y z, Some _ = Some _ -> _ |- _ ]
+      => first [ specialize (H _ _ _ eq_refl)
+               | specialize (fun x => H x _ _ eq_refl) ]
+    | [ H : forall x y, Some _ = Some _ -> _ |- _ ]
+      => first [ specialize (H _ _ eq_refl)
+               | specialize (fun x => H x _ eq_refl) ]
+    | _ => progress specialize_by_assumption
+    | [ H : forall a b, prop_of_option (Named.wff a ?e) -> _, H' : prop_of_option (Named.wff _ ?e) |- _ ]
+      => specialize (fun b => H _ b H')
+    | [ H : forall b v, _ -> prop_of_option (Named.wff b ?e) |- prop_of_option (Named.wff ?ctx ?e) ]
+      => specialize (H ctx)
+    | [ H : forall b v, _ -> _ -> prop_of_option (Named.wff b ?e) |- prop_of_option (Named.wff ?ctx ?e) ]
+      => specialize (H ctx)
+    | [ H : forall a b, _ -> _ -> _ -> prop_of_option (Named.wff b ?e) |- prop_of_option (Named.wff ?ctx ?e) ]
+      => specialize (fun a => H a ctx)
+    | [ H : forall a b, prop_of_option (Named.wff a ?e) -> _, H' : forall v, prop_of_option (Named.wff _ ?e) |- _ ]
+      => specialize (fun b v => H _ b (H' v))
+    end.
+  Ltac do_specialize_IHe := repeat do_specialize_IHe_step.
+
+  Definition make_fContext_value {t} {b : interp_flat_type interp_base_type_bounds t}
+             (v : interp_flat_type interp_base_type (pick_type t b))
+    : interp_flat_type
+        (fun t => { b : interp_base_type_bounds t & interp_base_type (pick_typeb t b)})
+        t
+    := SmartFlatTypeMapUnInterp2
+         (fun t b (v : interp_flat_type _ (Tbase _))
+          => existT (fun b => interp_base_type (pick_typeb t b)) b v)
+         v.
 
   Local Ltac t_step :=
     first [ progress intros
@@ -186,23 +210,49 @@ Section language.
           | progress do_specialize_IHe
           | match goal with
             | [ IH : forall v, _ -> ?T, v' : interp_flat_type _ _ |- ?T ]
-              => apply (IH (cast_back _ _ v')); clear IH
+              => apply (IH (make_fContext_value v')); clear IH
             end ].
   Local Ltac t := repeat t_step.
 
+  Lemma find_Name_and_val_make_fContext_value_Some {T}
+        {N : interp_flat_type (fun _ : base_type_code => Name) T}
+        {B : interp_flat_type interp_base_type_bounds T}
+        {V : interp_flat_type interp_base_type (pick_type T B)}
+        {n : Name}
+        {t : base_type_code}
+        {v : { b : interp_base_type_bounds t & interp_base_type (pick_typeb t b)}}
+        {b}
+        (Hn : find_Name Name_dec n N = Some t)
+        (Hf : find_Name_and_val base_type_dec Name_dec t n N (make_fContext_value V) None = Some v)
+        (Hb : find_Name_and_val base_type_dec Name_dec t n N B None = Some b)
+        (N' := SmartFlatTypeMapInterp2 (var'':=fun _ => Name) (f:=pick_typeb) (fun _ _ n => n) _ N)
+    : b = projT1 v /\ find_Name_and_val base_type_dec Name_dec (pick_typeb t (projT1 v)) n N' V None = Some (projT2 v).
+  Proof.
+    eapply (find_Name_and_val_SmartFlatTypeMapUnInterp2_Some_Some base_type_dec Name_dec (h:=@projT1 _ _) (i:=@projT2 _ _) (f:=pick_typeb) (g:=fun _ => existT _));
+      auto.
+  Qed.
+
+  Local Ltac handle_lookupb_step_extra ::=
+        lazymatch goal with
+        | [ H : find_Name _ ?n ?N = Some ?t,
+                H' : find_Name_and_val _ _ ?t ?n ?N (@make_fContext_value ?T ?B ?v) None = Some ?v',
+                     H'' : find_Name_and_val _ _ ?t ?n ?N ?B None = Some _
+            |- _ ]
+          => pose proof (find_Name_and_val_make_fContext_value_Some H H' H''); clear H'
+        end.
 
   Lemma wff_mapf_cast
         {t} (e:exprf base_type_code op Name t)
     : forall
-        (oldValues:Context)
+        (fValues:FullContext)
         (newValues:Context)
         (varBounds:BoundsContext)
         {b} e' (He':mapf_cast varBounds e = Some (existT _ b e'))
-        (Hwf : prop_of_option (Named.wff oldValues e))
+        (Hwf : prop_of_option (Named.wff fValues e))
         (Hctx:forall {t} n v,
-            lookupb (t:=t) oldValues n = Some v
-            -> exists b, lookupb (t:=t) varBounds n = Some b
-                         /\ exists v', lookupb (t:=pick_typeb t b) newValues n = Some v'),
+            lookupb (t:=t) fValues n = Some v
+            -> lookupb (t:=t) varBounds n = Some (projT1 v)
+               /\ lookupb (t:=pick_typeb t (projT1 v)) newValues n = Some (projT2 v)),
       prop_of_option (Named.wff newValues e').
   Proof. induction e; t. Qed.
 
@@ -210,15 +260,15 @@ Section language.
         {t} (e:expr base_type_code op Name t)
         (input_bounds : interp_flat_type interp_base_type_bounds (domain t))
     : forall
-        (oldValues:Context)
+        (fValues:FullContext)
         (newValues:Context)
         (varBounds:BoundsContext)
         {b} e' (He':map_cast varBounds e input_bounds = Some (existT _ b e'))
-        (Hwf : Named.wf oldValues e)
+        (Hwf : Named.wf fValues e)
         (Hctx:forall {t} n v,
-            lookupb (t:=t) oldValues n = Some v
-            -> exists b, lookupb (t:=t) varBounds n = Some b
-                         /\ exists v', lookupb (t:=pick_typeb t b) newValues n = Some v'),
+            lookupb (t:=t) fValues n = Some v
+            -> lookupb (t:=t) varBounds n = Some (projT1 v)
+               /\ lookupb (t:=pick_typeb t (projT1 v)) newValues n = Some (projT2 v)),
       Named.wf newValues e'.
   Proof.
     unfold Named.wf, map_cast, option_map, interp; simpl; intros.
@@ -228,7 +278,7 @@ Section language.
                  | progress break_match_hyps
                  | progress destruct_head' sigT
                  | progress simpl in * ].
-    match goal with v : _ |- _ => specialize (Hwf (cast_back _ _ v)) end.
+    match goal with v : _ |- _ => specialize (Hwf (make_fContext_value v)) end.
     eapply wff_mapf_cast; eauto; [].
     t.
   Qed.

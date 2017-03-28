@@ -67,7 +67,7 @@ Section language.
       abstract (intro; erewrite base_type_code_lb in pf by eassumption; congruence). }
   Defined.
 
-  Lemma MapCastCorrect
+  Lemma Wf_MapCast
         {t} (e : Expr base_type_code op t)
         (Hwf : Wf e)
         (input_bounds : interp_flat_type interp_base_type_bounds (domain t))
@@ -84,11 +84,10 @@ Section language.
               (PositiveContext base_type_code _ base_type_code_beq base_type_code_bl_transparent)
               PositiveContextOk PositiveContextOk
               (failb _) (failb _) _ e1);
-      (eapply wf_map_cast with (oldValues:=empty); eauto using PositiveContextOk with typeclass_instances);
+      (eapply wf_map_cast with (fValues:=empty); eauto using PositiveContextOk with typeclass_instances);
       try (eapply (wf_compile (ContextOk:=PositiveContextOk));
            [ apply wf_linearize; eauto | .. | eassumption ]);
       try solve [ auto using name_list_unique_DefaultNamesFor
                 | intros ???; rewrite lookupb_empty by apply PositiveContextOk; congruence ].
-    (* XXX why do we need cast_backb for arbitrary var ? *)
-  Abort.
+  Qed.
 End language.
