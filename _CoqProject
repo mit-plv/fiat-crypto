@@ -112,6 +112,7 @@ src/Reflection/EtaInterp.v
 src/Reflection/EtaWf.v
 src/Reflection/ExprInversion.v
 src/Reflection/FilterLive.v
+src/Reflection/FoldTypes.v
 src/Reflection/Inline.v
 src/Reflection/InlineCast.v
 src/Reflection/InlineCastInterp.v
