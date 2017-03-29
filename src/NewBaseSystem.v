@@ -509,13 +509,18 @@ Module B.
 
       (** Converting from associational to positional *)
 
-      Program Definition zeros n : tuple Z n := Tuple.from_list n (List.map (fun _ => 0) (List.seq 0 n)) _.
-      Next Obligation. autorewrite with distr_length; reflexivity. Qed.
+      Definition zeros n : tuple Z n := Tuple.repeat 0 n.
       Lemma eval_zeros n : eval (zeros n) = 0.
       Proof.
-        cbv [eval Associational.eval to_associational_cps zeros];
-          autorewrite with uncps; rewrite Tuple.to_list_from_list.
-        generalize dependent (List.seq 0 n); intro xs; induction xs; simpl; nsatz.
+        cbv [eval Associational.eval to_associational_cps zeros].
+        pose proof (seq_length n 0). generalize dependent (seq 0 n). 
+        intro xs; revert n; induction xs; intros;
+          [autorewrite with uncps; reflexivity|].
+        intros; destruct n; [distr_length|].
+        specialize (IHxs n). autorewrite with uncps in *.
+        rewrite !@Tuple.to_list_repeat in *.
+        simpl List.repeat. rewrite map_cons, combine_cons, map_cons.
+        simpl fold_right.  rewrite IHxs by distr_length. ring.
       Qed. Hint Rewrite eval_zeros : push_basesystem_eval.
 
       Definition add_to_nth_cps {n} i x t {T} (f:tuple Z n->T) :=
