@@ -189,6 +189,7 @@ src/Reflection/Named/PositiveContext/DefaultsProperties.v
 src/Reflection/Z/BinaryNotationConstants.v
 src/Reflection/Z/BoundsInterpretations.v
 src/Reflection/Z/CNotations.v
+src/Reflection/Z/FoldTypes.v
 src/Reflection/Z/HexNotationConstants.v
 src/Reflection/Z/Interpretations128.v
 src/Reflection/Z/Interpretations64.v

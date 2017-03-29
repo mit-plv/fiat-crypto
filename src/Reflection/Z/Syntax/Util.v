@@ -35,8 +35,11 @@ Definition base_type_leb (v1 v2 : base_type) : bool
      end.
 
 Definition base_type_min := base_type_min base_type_leb.
+Definition base_type_max := base_type_max base_type_leb.
 Global Arguments base_type_min !_ !_ / .
+Global Arguments base_type_max !_ !_ / .
 Global Arguments TypeUtil.base_type_min _ _ _ /  _.
+Global Arguments TypeUtil.base_type_max _ _ _ /  _.
 
 Definition Castb {var} A A' (v : exprf base_type op (var:=var) (Tbase A))
   : exprf base_type op (var:=var) (Tbase A')
