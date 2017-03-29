@@ -827,5 +827,20 @@ Proof.
     apply mapi_with'_invariant; auto.
 Qed.
 
+Fixpoint repeat {A} (a:A) n : tuple A n :=
+  match n with
+  | O => tt
+  | S n' => append a (repeat a n')
+  end.
+
+Lemma map_repeat {A B} (f:A->B) (a: A) n :
+  map f (repeat a n) = repeat (f a) n.
+Proof.
+  induction n; simpl repeat; [reflexivity|rewrite map_append; congruence].
+Qed.
+
+Lemma to_list_repeat {A} (a:A) n : to_list _ (repeat a n) = List.repeat a n.
+Proof. induction n; [reflexivity|destruct n; simpl in *; congruence]. Qed.
+
 Require Import Crypto.Util.ListUtil. (* To initialize [distr_length] database *)
 Hint Rewrite length_to_list' @length_to_list : distr_length.
