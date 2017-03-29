@@ -7,6 +7,8 @@ src/BaseSystem.v
 src/BaseSystemProofs.v
 src/EdDSARepChange.v
 src/Karatsuba.v
+src/MontgomeryCurveTheorems.v
+src/MontgomeryX.v
 src/MxDHRepChange.v
 src/NewBaseSystem.v
 src/SaturatedBaseSystem.v
@@ -64,6 +66,7 @@ src/BoundedArithmetic/Double/Repeated/Proofs/SelectConditional.v
 src/BoundedArithmetic/Double/Repeated/Proofs/ShiftLeftRight.v
 src/BoundedArithmetic/Double/Repeated/Proofs/ShiftRightDoubleWordImmediate.v
 src/CompleteEdwardsCurve/CompleteEdwardsCurveTheorems.v
+src/CompleteEdwardsCurve/EdwardsMontgomery.v
 src/CompleteEdwardsCurve/ExtendedCoordinates.v
 src/CompleteEdwardsCurve/Pre.v
 src/Encoding/EncodingTheorems.v
@@ -519,4 +522,5 @@ src/Util/Tactics/SplitInContext.v
 src/Util/Tactics/UniquePose.v
 src/Util/Tactics/VM.v
 src/WeierstrassCurve/Pre.v
+src/WeierstrassCurve/Projective.v
 src/WeierstrassCurve/WeierstrassCurveTheorems.v
