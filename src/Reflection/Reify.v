@@ -359,16 +359,19 @@ Ltac Reify_rhs_gen Reify prove_interp_compile_correct interp_op try_tac :=
                       end;
                       cbv iota beta delta [InputSyntax.Interp interp_type interp_type_gen interp_type_gen_hetero interp_flat_type interp interpf]; reflexivity)) ] ] ].
 
-Ltac prove_compile_correct :=
+Ltac prove_compile_correct_using tac :=
   fun _ => intros;
            lazymatch goal with
            | [ |- @Syntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op _ (@Compile _ _ _ ?make_const (InputSyntax.Arrow ?src (Tflat ?dst)) ?e) ?x = _ ]
              => apply (fun pf => @InputSyntax.Compile_correct base_type_code interp_base_type op make_const interp_op pf src dst e x);
-                let T := fresh in intro T; destruct T; reflexivity
+                solve [ tac () ]
            | [ |- @Syntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op _ (@Compile _ _ _ ?make_const (Tflat ?T) ?e) ?x = _ ]
              => apply (fun pf => @InputSyntax.Compile_flat_correct_flat base_type_code interp_base_type op make_const interp_op pf T e x);
-                let T := fresh in intro T; destruct T; reflexivity
+                solve [ tac () ]
            end.
+Ltac prove_compile_correct :=
+  prove_compile_correct_using
+    ltac:(fun _ => let T := fresh in intro T; destruct T; reflexivity).
 
 Ltac Reify_rhs base_type_code interp_base_type op make_const interp_op :=
   Reify_rhs_gen

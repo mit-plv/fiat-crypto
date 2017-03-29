@@ -50,7 +50,7 @@ Ltac prove_ExprEta_InlineConst_Linearize_Compile_correct :=
             reflect_Wf base_type_eq_semidec_is_dec op_beq_bl
           | etransitivity;
             [ apply (@InterpLinearize base_type_code interp_base_type op interp_op t)
-            | prove_compile_correct () ] ]
+            | prove_compile_correct_using ltac:(fun _ => apply make_const_correct) () ] ]
      end.
 Ltac Reify_rhs :=
   Reflection.Reify.Reify_rhs_gen Reify prove_ExprEta_InlineConst_Linearize_Compile_correct interp_op ltac:(fun tac => tac ()).

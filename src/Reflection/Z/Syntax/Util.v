@@ -90,6 +90,12 @@ Proof.
                | rewrite wordToZ_ZToWord_wordToZ by omega * ].
 Qed.
 
+Lemma make_const_correct : forall T v, interp_op Unit (Tbase T) (make_const T v) tt = v.
+Proof.
+  destruct T; cbv -[FixedWordSizes.ZToWord FixedWordSizes.wordToZ FixedWordSizes.wordT];
+    intro; rewrite ?ZToWord_wordToZ; reflexivity.
+Qed.
+
 Lemma is_cast_correct s d opc
   : forall e,
     @is_cast (Tbase s) (Tbase d) opc = true
