@@ -5,9 +5,11 @@ Require Import Crypto.Reflection.Named.InterpretToPHOAS.
 Require Import Crypto.Reflection.Named.Compile.
 Require Import Crypto.Reflection.Named.PositiveContext.
 Require Import Crypto.Reflection.Named.PositiveContext.Defaults.
-Require Import Crypto.Reflection.Linearize.
-Require Import Crypto.Reflection.Eta.
 Require Import Crypto.Reflection.Syntax.
+
+(** N.B. This procedure only works when there are no nested lets,
+    i.e., nothing like [let x := let y := z in w] in the PHOAS syntax
+    tree.  This is a limitation of [compile]. *)
 
 Section language.
   Context {base_type_code : Type}
@@ -28,14 +30,11 @@ Section language.
     Context {t} (e : Expr base_type_code op t)
             (input_bounds : interp_flat_type interp_base_type_bounds (domain t)).
 
-    Definition MapCastPreProcess
-      := ExprEta (Linearize e).
-    Definition MapCastCompile (e' : Expr base_type_code op (domain t -> codomain t))
-      := compile (e' _) (DefaultNamesFor e').
-    Definition MapCastDoCast (e' : option (Named.expr base_type_code op BinNums.positive (domain t -> codomain t)))
+    Definition MapCastCompile
+      := compile (e _) (DefaultNamesFor e).
+    Definition MapCastDoCast (e' : option (Named.expr base_type_code op BinNums.positive t))
       := option_map
            (fun e'' => map_cast
-                         (t:=Arrow (domain t) (codomain t))
                          interp_op_bounds pick_typeb cast_op
                          (BoundsContext:=PContext _)
                          empty
@@ -51,12 +50,12 @@ Section language.
                                  & Expr base_type_code op (Arrow (pick_type input_bounds) (pick_type output_bounds)) }
       := match e' with
          | Some (Some (existT output_bounds e''))
-           => Some (existT _ output_bounds (Eta.ExprEta (InterpToPHOAS (Context:=fun var => PContext var) failb e'')))
+           => Some (existT _ output_bounds (InterpToPHOAS (Context:=fun var => PContext var) failb e''))
          | Some None | None => None
          end.
     Definition MapCast
       : option { output_bounds : interp_flat_type interp_base_type_bounds (codomain t)
                                  & Expr base_type_code op (Arrow (pick_type input_bounds) (pick_type output_bounds)) }
-      := MapCastDoInterp (MapCastDoCast (MapCastCompile MapCastPreProcess)).
+      := MapCastDoInterp (MapCastDoCast MapCastCompile).
   End MapCast.
 End language.

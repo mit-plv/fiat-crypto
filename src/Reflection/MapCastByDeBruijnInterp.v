@@ -11,10 +11,6 @@ Require Import Crypto.Reflection.Named.CompileWf.
 Require Import Crypto.Reflection.Named.PositiveContext.
 Require Import Crypto.Reflection.Named.PositiveContext.Defaults.
 Require Import Crypto.Reflection.Named.PositiveContext.DefaultsProperties.
-Require Import Crypto.Reflection.EtaInterp.
-Require Import Crypto.Reflection.EtaWf.
-Require Import Crypto.Reflection.LinearizeInterp.
-Require Import Crypto.Reflection.LinearizeWf.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.MapCastByDeBruijn.
 Require Import Crypto.Util.Decidable.
@@ -83,7 +79,7 @@ Section language.
       /\ @inbounds _ b (Interp interp_op e v)
       /\ cast_back _ _ (Interp interp_op e' v') = (Interp interp_op e v).
   Proof.
-    unfold MapCastByDeBruijn.MapCast, MapCastCompile, MapCastDoCast, MapCastDoInterp, MapCastPreProcess, option_map; intros b e'.
+    unfold MapCastByDeBruijn.MapCast, MapCastCompile, MapCastDoCast, MapCastDoInterp, option_map; intros b e'.
     break_innermost_match; try congruence; intros ? v v'.
     inversion_option; inversion_sigma; subst; simpl in *; intros.
     lazymatch goal with
@@ -103,22 +99,17 @@ Section language.
         end
       |
       | change (interp interp_op (?e ?var) ?v') with (Interp interp_op e v');
-        rewrite InterpExprEta;
         unfold Interp, InterpretToPHOAS.Named.InterpToPHOAS, InterpretToPHOAS.Named.InterpToPHOAS_gen;
         rewrite <- interp_interp_to_phoas; [ reflexivity | ] ].
-    { erewrite (interp_compile (ContextOk:=PositiveContextOk)) with (e':=Eta.ExprEta (Linearize.Linearize e) _);
-        cbv [Eta.ExprEta Linearize.Linearize];
-        [ rewrite interp_expr_eta, interp_linearize | .. ];
-        [ reflexivity | eapply wf_expr_eta, wf_linearize; auto | .. | eassumption ];
+    { erewrite (interp_compile (ContextOk:=PositiveContextOk)) with (e':=e _);
+        [ reflexivity | auto | .. | eassumption ];
         auto using name_list_unique_DefaultNamesFor. }
-    { erewrite (interp_compile (ContextOk:=PositiveContextOk)) with (e':=Eta.ExprEta (Linearize.Linearize e) _);
-        cbv [Eta.ExprEta Linearize.Linearize];
-        [ rewrite interp_expr_eta, interp_linearize | .. ];
-        [ reflexivity | eapply wf_expr_eta, wf_linearize; auto | .. | eassumption ];
+    { erewrite (interp_compile (ContextOk:=PositiveContextOk)) with (e':=e _);
+        [ reflexivity | auto | .. | eassumption ];
         auto using name_list_unique_DefaultNamesFor. }
     { intro; eapply wf_map_cast with (t := Arrow _ _) (fValues := empty); eauto using PositiveContextOk with typeclass_instances.
-      { eapply (wf_compile (ContextOk:=PositiveContextOk)) with (e':=Eta.ExprEta (Linearize.Linearize e) _);
-          [ eapply wf_expr_eta, wf_linearize; auto | .. | eassumption ];
+      { eapply (wf_compile (ContextOk:=PositiveContextOk)) with (e':= e _);
+          [ auto | .. | eassumption ];
           auto using name_list_unique_DefaultNamesFor. }
       { intros ???; rewrite lookupb_empty by apply PositiveContextOk; congruence. } }
   Qed.
