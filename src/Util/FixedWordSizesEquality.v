@@ -262,6 +262,13 @@ Ltac fixed_size_op_to_word :=
   repeat autounfold with fixed_size_constants in *;
   syntactic_fixed_size_op_to_word.
 
+Lemma wordToZ_gen_range {sz} w : (0 <= @wordToZ_gen sz w < 2^Z.of_nat sz)%Z.
+Proof. apply WordNZ_range; reflexivity. Qed.
+
+Lemma wordToZ_range {logsz} w : (0 <= @wordToZ logsz w < 2^Z.of_nat (2^logsz))%Z.
+Proof.
+  generalize (@wordToZ_gen_range (2^logsz)); wordToZ_word_case_dep_t.
+Qed.
 
 Section log_Updates.
   Local Notation bound n lower value upper := (
