@@ -217,6 +217,17 @@ Definition on_tuple {A B} (f:list A -> list B)
 Definition map {n A B} (f:A -> B) (xs:tuple A n) : tuple B n
   := on_tuple (List.map f) (fun _ => eq_trans (map_length _ _)) xs.
 
+Fixpoint map' {n A B} (f:A -> B) : tuple' A n -> tuple' B n
+  := match n with
+     | 0 => f
+     | S n' => fun x : tuple' _ _ * _ => (@map' n' A B f (fst x), f (snd x))
+     end.
+Definition map_fix {n A B} (f:A -> B) : tuple A n -> tuple B n
+  := match n with
+     | 0 => fun x => x
+     | S n' => map' f
+     end.
+
 Definition on_tuple2 {A B C} (f : list A -> list B -> list C) {a b c : nat}
            (Hlength : forall la lb, length la = a -> length lb = b -> length (f la lb) = c)
            (ta:tuple A a) (tb:tuple B b) : tuple C c
@@ -225,6 +236,18 @@ Definition on_tuple2 {A B C} (f : list A -> list B -> list C) {a b c : nat}
 
 Definition map2 {n A B C} (f:A -> B -> C) (xs:tuple A n) (ys:tuple B n) : tuple C n
   := on_tuple2 (map2 f) (fun la lb pfa pfb => eq_trans (@map2_length _ _ _ _ la lb) (eq_trans (f_equal2 _ pfa pfb) (Min.min_idempotent _))) xs ys.
+
+Fixpoint pointwise2' {n A B} (R:A -> B -> Prop) : tuple' A n -> tuple' B n -> Prop
+  := match n with
+     | 0 => R
+     | S n' => fun (x y : tuple' _ _ * _)
+               => @pointwise2' n' A B R (fst x) (fst y) /\ R (snd x) (snd y)
+     end.
+Definition pointwise2 {n A B} (R:A -> B -> Prop) : tuple A n -> tuple B n -> Prop
+  := match n with
+     | 0 => fun _ _ => True
+     | S n' => pointwise2' R
+     end.
 
 Lemma to_list'_ext {n A} (xs ys:tuple' A n) : to_list' n xs = to_list' n ys -> xs = ys.
 Proof.
