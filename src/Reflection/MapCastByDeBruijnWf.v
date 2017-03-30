@@ -69,9 +69,8 @@ Section language.
   Local Arguments Compile.compile : simpl never.
   Lemma Wf_MapCast
         {t} (e : Expr base_type_code op t)
-        (Hwf : Wf e)
         (input_bounds : interp_flat_type interp_base_type_bounds (domain t))
-    : forall {b} e' (He':MapCast e input_bounds = Some (existT _ b e')),
+    : forall {b} e' (He':MapCast e input_bounds = Some (existT _ b e')) (Hwf : Wf e),
       Wf e'.
   Proof.
     unfold MapCastByDeBruijn.MapCast, MapCastCompile, MapCastDoCast, MapCastDoInterp, option_map; intros b e'.
@@ -96,12 +95,12 @@ Section language.
 
   Lemma Wf_MapCast_arrow
         {s d} (e : Expr base_type_code op (Arrow s d))
-        (Hwf : Wf e)
         (input_bounds : interp_flat_type interp_base_type_bounds s)
     : forall {b} (e' : Expr _ _ (Arrow (pick_type input_bounds) (pick_type b)))
-             (He':MapCast e input_bounds = Some (existT _ b e')),
+             (He':MapCast e input_bounds = Some (existT _ b e'))
+             (Hwf : Wf e),
       Wf e'.
-  Proof. exact (@Wf_MapCast (Arrow s d) e Hwf input_bounds). Qed.
+  Proof. exact (@Wf_MapCast (Arrow s d) e input_bounds). Qed.
 End language.
 
 Hint Resolve Wf_MapCast Wf_MapCast_arrow : wf.
