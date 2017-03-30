@@ -5,10 +5,10 @@ Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParamProofs.
 Require Import Crypto.ModularArithmetic.ModularBaseSystem.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemProofs.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemOpt.
+Require Import Crypto.Util.Tuple.
 Require Import Coq.Lists.List Crypto.Util.ListUtil.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.Util.ZUtil.
-Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Decidable.
