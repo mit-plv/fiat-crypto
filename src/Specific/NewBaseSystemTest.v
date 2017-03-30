@@ -17,20 +17,20 @@ Base: 25.5
 Section Ops25p5.
   Local Infix "^" := tuple : type_scope.
 
-  (* These `Let`s will need to be passed as Ltac arguments (or cleverly
-  inferred) when things are eventually automated *)
-  Let wt := fun i : nat => 2^(25 * (i / 2) + 26 * ((i + 1) / 2)).
-  Let sz := 10%nat.
-  Let s : Z := 2^255.
-  Let c : list B.limb := [(1, 19)].
-  Let coef_div_modulus := 2. (* add 2*modulus before subtracting *)
-  Let carry_chain := Eval vm_compute in (seq 0 sz) ++ ([0;1])%nat.
+  (* These definitions will need to be passed as Ltac arguments (or
+  cleverly inferred) when things are eventually automated *)
+  Definition wt := fun i : nat => 2^(25 * (i / 2) + 26 * ((i + 1) / 2)).
+  Definition sz := 10%nat.
+  Definition s : Z := 2^255.
+  Definition c : list B.limb := [(1, 19)].
+  Definition coef_div_modulus := 2. (* add 2*modulus before subtracting *)
+  Definition carry_chain := Eval vm_compute in (seq 0 sz) ++ ([0;1])%nat.
 
-  (* These `Let`s are inferred from those above *)
-  Let m := Eval vm_compute in Z.to_pos (s - Associational.eval c). (* modulus *)
-  Let sz2 := Eval vm_compute in ((sz * 2) - 1)%nat.
-  Let coef := Eval vm_compute in (@Positional.encode wt modulo div sz (coef_div_modulus * (s-Associational.eval c))). (* subtraction coefficient *)
-  Let coef_mod : mod_eq m (Positional.eval (n:=sz) wt coef) 0 := eq_refl.
+  (* These definitions are inferred from those above *)
+  Definition m := Eval vm_compute in Z.to_pos (s - Associational.eval c). (* modulus *)
+  Definition sz2 := Eval vm_compute in ((sz * 2) - 1)%nat.
+  Definition coef := Eval vm_compute in (@Positional.encode wt modulo div sz (coef_div_modulus * (s-Associational.eval c))). (* subtraction coefficient *)
+  Definition coef_mod : mod_eq m (Positional.eval (n:=sz) wt coef) 0 := eq_refl.
 
   Lemma sz_nonzero : sz <> 0%nat. Proof. vm_decide. Qed.
   Lemma wt_nonzero i : wt i <> 0.
