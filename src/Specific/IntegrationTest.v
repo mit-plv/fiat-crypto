@@ -28,6 +28,10 @@ Section BoundedField25p5.
   Let length_lw := Eval compute in List.length limb_widths.
 
   Local Notation b_of exp := {| lower := 0 ; upper := 2^exp + 2^(exp-3) |}%Z (only parsing). (* max is [(0, 2^(exp+2) + 2^exp + 2^(exp-1) + 2^(exp-3) + 2^(exp-4) + 2^(exp-5) + 2^(exp-6) + 2^(exp-10) + 2^(exp-12) + 2^(exp-13) + 2^(exp-14) + 2^(exp-15) + 2^(exp-17) + 2^(exp-23) + 2^(exp-24))%Z] *)
+  (* The definition [bounds_exp] is a tuple-version of the
+     limb-widths, which are the [exp] argument in [b_of] above, i.e.,
+     the approximate base-2 exponent of the bounds on the limb in that
+     position. *)
   Let bounds_exp : Tuple.tuple Z length_lw
     := Eval compute in
         Tuple.from_list length_lw limb_widths eq_refl.
