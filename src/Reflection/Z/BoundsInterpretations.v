@@ -5,16 +5,13 @@ Require Import Crypto.Reflection.Relations.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.Bounds.
 Require Import Crypto.Util.Tactics.DestructHead.
 Export Reflection.Syntax.Notations.
 
 Local Notation eta x := (fst x, snd x).
 Local Notation eta3 x := (eta (fst x), snd x).
 Local Notation eta4 x := (eta3 (fst x), snd x).
-
-Delimit Scope bounds_scope with bounds.
-Record bounds := { lower : Z ; upper : Z }.
-Bind Scope bounds_scope with bounds.
 
 Module Import Bounds.
   Definition t := option bounds. (* TODO?: Separate out the bounds computation from the overflow computation? e.g., have [safety := in_bounds | overflow] and [t := bounds * safety]? *)
@@ -105,9 +102,7 @@ Module Import Bounds.
   End with_bitwidth.
 
   Module Export Notations.
-    Delimit Scope bounds_scope with bounds.
-    Notation "b[ l ~> u ]" := {| lower := l ; upper := u |}
-                              (format "b[ l  ~>  u ]") : bounds_scope.
+    Export Util.Bounds.Notations.
     Infix "+" := (add _) : bounds_scope.
     Infix "-" := (sub _) : bounds_scope.
     Infix "*" := (mul _) : bounds_scope.
@@ -141,18 +136,6 @@ Module Import Bounds.
        | Cast _ T => fun x => SmartRebuildBounds (bit_width_of_base_type T) x
        end%bounds.
 
-  Ltac inversion_bounds :=
-    let lower := (eval cbv [lower] in (fun x => lower x)) in
-    let upper := (eval cbv [upper] in (fun y => upper y)) in
-    repeat match goal with
-           | [ H : _ = _ :> bounds |- _ ]
-             => pose proof (f_equal lower H); pose proof (f_equal upper H); clear H;
-                cbv beta iota in *
-           | [ H : _ = _ :> t |- _ ]
-             => unfold t in H; inversion_option
-           end.
-
-  Definition ZToBounds (z : Z) : bounds := {| lower := z ; upper := z |}.
   Definition of_Z (z : Z) : t := Some (ZToBounds z).
 
   Definition of_interp t (z : Syntax.interp_base_type t) : interp_base_type t
@@ -196,11 +179,7 @@ Module Import Bounds.
     := fun val bound
        => match bound with
           | Some bounds'
-            => ((0 <=? lower bounds') && (lower bounds' <=? interpToZ val) && (interpToZ val <=? upper bounds'))
-                 && (match bit_width_of_base_type T with
-                     | Some sz => upper bounds' <? 2^sz
-                     | None => true
-                     end)
+            => Util.Bounds.is_bounded_byb (bit_width_of_base_type T) bounds' val
           | None => true
           end%bool%Z.
   Definition is_bounded_by' {T} : Syntax.interp_base_type T -> interp_base_type T -> Prop
@@ -210,14 +189,6 @@ Module Import Bounds.
     := interp_flat_type_rel_pointwise (@is_bounded_by').
   Definition is_bounded_by_bool {T} : interp_flat_type Syntax.interp_base_type T -> interp_flat_type interp_base_type T -> bool
     := interp_flat_type_relb_pointwise (@is_bounded_byb).
-
-  Global Instance dec_eq_bounds : DecidableRel (@eq bounds) | 10.
-  Proof.
-    intros [lx ux] [ly uy].
-    destruct (dec (lx = ly)), (dec (ux = uy));
-      [ left; apply f_equal2; assumption
-      | abstract (right; intro H; inversion_bounds; tauto).. ].
-  Defined.
 
   Local Arguments interp_base_type !_ / .
   Global Instance dec_eq_interp_flat_type {T} : DecidableRel (@eq (interp_flat_type interp_base_type T)) | 10.
