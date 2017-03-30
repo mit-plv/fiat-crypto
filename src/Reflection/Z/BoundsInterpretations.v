@@ -5,13 +5,16 @@ Require Import Crypto.Reflection.Relations.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Decidable.
-Require Import Crypto.Util.Bounds.
+Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.Tactics.DestructHead.
 Export Reflection.Syntax.Notations.
 
 Local Notation eta x := (fst x, snd x).
 Local Notation eta3 x := (eta (fst x), snd x).
 Local Notation eta4 x := (eta3 (fst x), snd x).
+
+Notation bounds := zrange.
+Delimit Scope bounds_scope with bounds.
 
 Module Import Bounds.
   Definition t := option bounds. (* TODO?: Separate out the bounds computation from the overflow computation? e.g., have [safety := in_bounds | overflow] and [t := bounds * safety]? *)
@@ -32,7 +35,7 @@ Module Import Bounds.
       := match x with
          | Some x
            => match f x with
-              | Build_bounds l u
+              | {| lower := l ; upper := u |}
                 => SmartBuildBounds l u
               end
          | _ => None
@@ -41,7 +44,7 @@ Module Import Bounds.
       := match x, y with
          | Some x, Some y
            => match f x y with
-              | Build_bounds l u
+              | {| lower := l ; upper := u |}
                 => SmartBuildBounds l u
               end
          | _, _ => None
@@ -50,7 +53,7 @@ Module Import Bounds.
       := match x, y, z, w with
          | Some x, Some y, Some z, Some w
            => match f x y z w with
-              | Build_bounds l u
+              | {| lower := l ; upper := u |}
                 => SmartBuildBounds l u
               end
          | _, _, _, _ => None
@@ -102,7 +105,7 @@ Module Import Bounds.
   End with_bitwidth.
 
   Module Export Notations.
-    Export Util.Bounds.Notations.
+    Export Util.ZRange.Notations.
     Infix "+" := (add _) : bounds_scope.
     Infix "-" := (sub _) : bounds_scope.
     Infix "*" := (mul _) : bounds_scope.
@@ -136,10 +139,10 @@ Module Import Bounds.
        | Cast _ T => fun x => SmartRebuildBounds (bit_width_of_base_type T) x
        end%bounds.
 
-  Definition of_Z (z : Z) : t := Some (ZToBounds z).
+  Definition of_Z (z : Z) : t := Some (ZToZRange z).
 
   Definition of_interp t (z : Syntax.interp_base_type t) : interp_base_type t
-    := Some (ZToBounds (match t return Syntax.interp_base_type t -> Z with
+    := Some (ZToZRange (match t return Syntax.interp_base_type t -> Z with
                         | TZ => fun z => z
                         | TWord logsz => fun z => z (*FixedWordSizes.wordToZ*)
                         end z)).
@@ -175,20 +178,16 @@ Module Import Bounds.
   Definition bounds_are_good : forall {t}, interp_flat_type interp_base_type t -> Prop
     := (@interp_flat_type_rel_pointwise1 _ _ bound_is_good).
 
-  Definition is_bounded_byb {T} : Syntax.interp_base_type T -> interp_base_type T -> bool
+  Definition is_bounded_by' {T} : Syntax.interp_base_type T -> interp_base_type T -> Prop
     := fun val bound
        => match bound with
           | Some bounds'
-            => Util.Bounds.is_bounded_byb (bit_width_of_base_type T) bounds' val
-          | None => true
-          end%bool%Z.
-  Definition is_bounded_by' {T} : Syntax.interp_base_type T -> interp_base_type T -> Prop
-    := fun val bound => is_bounded_byb val bound = true.
+            => is_bounded_by' (bit_width_of_base_type T) bounds' val
+          | None => True
+          end.
 
   Definition is_bounded_by {T} : interp_flat_type Syntax.interp_base_type T -> interp_flat_type interp_base_type T -> Prop
     := interp_flat_type_rel_pointwise (@is_bounded_by').
-  Definition is_bounded_by_bool {T} : interp_flat_type Syntax.interp_base_type T -> interp_flat_type interp_base_type T -> bool
-    := interp_flat_type_relb_pointwise (@is_bounded_byb).
 
   Local Arguments interp_base_type !_ / .
   Global Instance dec_eq_interp_flat_type {T} : DecidableRel (@eq (interp_flat_type interp_base_type T)) | 10.

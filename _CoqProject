@@ -468,7 +468,6 @@ src/Test/Curve25519SpecTestVectors.v
 src/Util/AdditionChainExponentiation.v
 src/Util/AutoRewrite.v
 src/Util/Bool.v
-src/Util/Bounds.v
 src/Util/CPSUtil.v
 src/Util/CaseUtil.v
 src/Util/Curry.v
@@ -505,6 +504,7 @@ src/Util/Tower.v
 src/Util/Tuple.v
 src/Util/Unit.v
 src/Util/WordUtil.v
+src/Util/ZRange.v
 src/Util/ZUtil.v
 src/Util/Tactics/BreakMatch.v
 src/Util/Tactics/DestructHead.v
