@@ -214,15 +214,18 @@ Definition on_tuple {A B} (f:list A -> list B)
   from_list m (f (to_list n xs))
             (H (to_list n xs) (length_to_list xs)).
 
-Definition map {n A B} (f:A -> B) (xs:tuple A n) : tuple B n
-  := on_tuple (List.map f) (fun _ => eq_trans (map_length _ _)) xs.
+Section map.
+  (* Put the types and function in the context, so that the fixpoint doesn't depend on them *)
+  Context {A B} (f:A -> B).
 
-Fixpoint map' {n A B} (f:A -> B) : tuple' A n -> tuple' B n
-  := match n with
-     | 0 => f
-     | S n' => fun x : tuple' _ _ * _ => (@map' n' A B f (fst x), f (snd x))
-     end.
-Definition map_fix {n A B} (f:A -> B) : tuple A n -> tuple B n
+  Fixpoint map' {n} : tuple' A n -> tuple' B n
+    := match n with
+       | 0 => f
+       | S n' => fun x : tuple' _ _ * _ => (@map' n' (fst x), f (snd x))
+       end.
+End map.
+
+Definition map {n A B} (f:A -> B) : tuple A n -> tuple B n
   := match n with
      | 0 => fun x => x
      | S n' => map' f
@@ -287,9 +290,9 @@ Ltac tuples_from_lists :=
 Lemma map_to_list {A B n ts} (f : A -> B)
   : List.map f (@to_list A n ts) = @to_list B n (map f ts).
 Proof.
-  tuples_from_lists; unfold map, on_tuple.
-  repeat (rewrite to_list_from_list || rewrite from_list_to_list).
-  reflexivity.
+  destruct n; simpl; [ reflexivity | ].
+  induction n; simpl in *; [ reflexivity | ].
+  destruct ts; simpl; congruence.
 Qed.
 
 Lemma to_list_map2 {A B C n xs ys} (f : A -> B -> C)
@@ -767,9 +770,6 @@ Qed.
 Lemma map_append' {A B n} (f:A->B) : forall (x:tuple' A n) (a:A),
   map f (append (n:=S n) a x) = append (f a) (map (n:=S n) f x).
 Proof.
-  cbv [map append on_tuple]; intros.
-  simpl to_list. simpl List.map. rewrite from_list_cons.
-  cbv [append]; f_equal. rewrite <-!from_list_default_eq with (d:=f a).
   reflexivity.
 Qed.
 

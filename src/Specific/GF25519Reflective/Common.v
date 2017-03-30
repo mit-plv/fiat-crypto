@@ -371,7 +371,7 @@ Section gen.
                          | progress rewrite ?Tuple.map_S, ?Tuple.map2_S, ?Tuple.strip_eta_tuple'_dep
                          | progress break_match_hyps
                          | rewrite Bool.andb_true_iff; apply conj
-                         | unfold Tuple.map, Tuple.map2; simpl; rewrite Bool.andb_true_iff; apply conj ]
+                         | unfold Tuple.map, Tuple.map', Tuple.map2; simpl; rewrite Bool.andb_true_iff; apply conj ]
           ). }
   Defined.
 
@@ -561,8 +561,9 @@ Ltac t_correct_and_bounded ropZ_sig Hbounds H0 H1 args :=
   repeat match goal with x := _ |- _ => subst x end;
   cbv [id
          binop_args_to_bounded unop_args_to_bounded unopWireToFE_args_to_bounded op9_args_to_bounded
-         Tuple.map Tuple.on_tuple Tuple.to_list Tuple.to_list' List.map Tuple.from_list Tuple.from_list
+         Tuple.map Tuple.map' Tuple.on_tuple Tuple.to_list Tuple.to_list' List.map Tuple.from_list Tuple.from_list
          Relations.proj_eq_rel SmartVarfMap interp_flat_type smart_interp_flat_map domain fst snd BoundedWordW.to_wordW' BoundedWordW.boundedWordToWordW BoundedWord.value Relations.related_wordW_boundsi' Relations.related'_wordW_bounds Bounds.upper Bounds.lower codomain WordW.to_Z nm_op_args_to_bounded nm_op_args_to_bounded' n_op_args_to_bounded n_op_args_to_bounded' unop_args_to_bounded' Relations.interp_flat_type_rel_pointwise Relations.interp_flat_type_rel_pointwise_gen_Prop] in Hbounds_left, Hbounds_right;
+  simpl @fst in Hbounds_left, Hbounds_right; simpl @snd in Hbounds_left, Hbounds_right;
   simpl @interp_flat_type in *;
   (let v := (eval unfold WordW.interp_base_type in (WordW.interp_base_type TZ)) in
    change (WordW.interp_base_type TZ) with v in *);
@@ -585,7 +586,7 @@ Ltac t_correct_and_bounded ropZ_sig Hbounds H0 H1 args :=
   (split; [ exact Hbounds_left | ]);
   cbv [interp_flat_type] in *;
   cbv [fst snd
-           Tuple.map Tuple.on_tuple Tuple.to_list Tuple.to_list' List.map Tuple.from_list Tuple.from_list Tuple.from_list'
+           Tuple.map Tuple.map' Tuple.on_tuple Tuple.to_list Tuple.to_list' List.map Tuple.from_list Tuple.from_list Tuple.from_list'
            make_bound
            Datatypes.length wire_widths wire_digit_bounds PseudoMersenneBaseParams.limb_widths bounds
            binop_bounds_good unop_bounds_good unopFEToWire_bounds_good unopWireToFE_bounds_good unopFEToZ_bounds_good op9_4_bounds_good
@@ -596,7 +597,7 @@ Ltac t_correct_and_bounded ropZ_sig Hbounds H0 H1 args :=
   destruct_head' and;
   Z.ltb_to_lt;
   change WordW.wordWToZ with word64ToZ in *;
-  cbv [Tuple.map HList.hlist Tuple.on_tuple Tuple.from_list Tuple.from_list' Tuple.to_list Tuple.to_list' List.map HList.hlist' fst snd fe25519WToZ HList.hlistP HList.hlistP'];
+  cbv [Tuple.map Tuple.map' HList.hlist Tuple.on_tuple Tuple.from_list Tuple.from_list' Tuple.to_list Tuple.to_list' List.map HList.hlist' fst snd fe25519WToZ HList.hlistP HList.hlistP'];
   cbv [WordW.bit_width BitSize64.bit_width Z.of_nat Pos.of_succ_nat Pos.succ] in *;
   repeat split; unfold_is_bounded;
   Z.ltb_to_lt;

@@ -91,11 +91,10 @@ Qed.
 Lemma map_is_mapt {n A F B} (f : A -> B) {ts : tuple A n} (ls : hlist F ts)
   : Tuple.map f ts = mapt (fun x _ => f x) ls.
 Proof.
-  destruct n as [|n]; [ reflexivity | ].
+  destruct n as [|n]; simpl; [ destruct ts; reflexivity | ].
   induction n as [|n IHn]; [ reflexivity | ].
-  { unfold mapt in *; simpl @mapt' in *.
-    rewrite <- IHn; clear IHn.
-    rewrite <- (@Tuple.map_S n _ _ f); destruct ts; reflexivity. }
+  { simpl in *; rewrite <- IHn; clear IHn.
+    reflexivity. }
 Qed.
 
 Lemma map_is_mapt' {n A F B} (f : A -> B) {ts : tuple A (S n)} (ls : hlist' F ts)
@@ -147,7 +146,7 @@ Global Instance mapt_Proper {n A F B}
   : Proper
       ((forall_relation (fun x => pointwise_relation _ Logic.eq))
          ==> forall_relation (fun ts => Logic.eq ==> Logic.eq))
-      (@HList.mapt n A F B).
+      (@mapt n A F B).
 Proof.
   unfold forall_relation, pointwise_relation, respectful.
   repeat intro; subst; destruct n as [|n]; [ reflexivity | ].

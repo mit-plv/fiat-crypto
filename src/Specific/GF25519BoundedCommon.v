@@ -288,7 +288,7 @@ Definition word31_to_unbounded_word (x : word 31) : unbounded_word 31.
 Proof. apply (word_to_unbounded_word x); reflexivity. Defined.
 
 Local Opaque word64.
-Declare Reduction app_tuple_map := cbv [app_wire_digitsW app_fe25519W app_fe25519 HList.mapt HList.mapt' Tuple.map on_tuple List.map List.app length_fe25519 List.length wire_widths Tuple.from_list Tuple.from_list' Tuple.to_list Tuple.to_list' fst snd].
+Declare Reduction app_tuple_map := cbv [app_wire_digitsW app_fe25519W app_fe25519 HList.mapt HList.mapt' Tuple.map Tuple.map' fst snd on_tuple List.map List.app length_fe25519 List.length wire_widths Tuple.from_list Tuple.from_list' Tuple.to_list Tuple.to_list' fst snd].
 Definition fe25519WToZ (x : fe25519W) : Specific.GF25519.fe25519
   := Eval app_tuple_map in
       app_fe25519W x (Tuple.map (fun v : word64 => v : Z)).
@@ -322,14 +322,14 @@ Ltac unfold_is_bounded_in' H :=
   end.
 Ltac preunfold_is_bounded_in H :=
   unfold is_bounded, wire_digits_is_bounded, is_bounded_gen, fe25519WToZ, wire_digitsWToZ in H;
-  cbv [to_list length bounds wire_digit_bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 Tuple.map List.map fold_right List.rev List.app length_fe25519 List.length wire_widths HList.hlistP HList.hlistP' Tuple.on_tuple] in H.
+  cbv [to_list length bounds wire_digit_bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 Tuple.map Tuple.map' List.map fold_right List.rev List.app length_fe25519 List.length wire_widths HList.hlistP HList.hlistP' Tuple.on_tuple] in H.
 Ltac unfold_is_bounded_in H :=
   preunfold_is_bounded_in H;
   unfold_is_bounded_in' H.
 
 Ltac preunfold_is_bounded :=
   unfold is_bounded, wire_digits_is_bounded, is_bounded_gen, fe25519WToZ, wire_digitsWToZ;
-  cbv [to_list length bounds wire_digit_bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 Tuple.map List.map fold_right List.rev List.app length_fe25519 List.length wire_widths HList.hlistP HList.hlistP' Tuple.on_tuple].
+  cbv [to_list length bounds wire_digit_bounds from_list from_list' map2 on_tuple2 to_list' ListUtil.map2 Tuple.map Tuple.map' List.map fold_right List.rev List.app length_fe25519 List.length wire_widths HList.hlistP HList.hlistP' Tuple.on_tuple].
 
 Ltac unfold_is_bounded :=
   preunfold_is_bounded;
@@ -349,7 +349,7 @@ Local Ltac prove_lt_bit_width :=
 Lemma fe25519ZToW_WToZ (x : fe25519W) : fe25519ZToW (fe25519WToZ x) = x.
 Proof.
   hnf in x; destruct_head' prod; cbv [fe25519WToZ fe25519ZToW].
-  rewrite !ZToWord64_word64ToZ; reflexivity.
+  simpl; rewrite !ZToWord64_word64ToZ; reflexivity.
 Qed.
 
 Lemma fe25519WToZ_ZToW x : is_bounded x = true -> fe25519WToZ (fe25519ZToW x) = x.
@@ -358,7 +358,7 @@ Proof.
   intro H.
   unfold_is_bounded_in H; destruct_head' and.
   Z.ltb_to_lt.
-  rewrite !word64ToZ_ZToWord64 by prove_lt_bit_width.
+  simpl; rewrite !word64ToZ_ZToWord64 by prove_lt_bit_width.
   reflexivity.
 Qed.
 
@@ -366,13 +366,13 @@ Lemma fe25519W_word64ize_id x : fe25519W_word64ize x = x.
 Proof.
   hnf in x; destruct_head' prod.
   cbv [fe25519W_word64ize];
-    repeat apply f_equal2; apply word64ize_id.
+    simpl; repeat apply f_equal2; apply word64ize_id.
 Qed.
 Lemma wire_digitsW_word64ize_id x : wire_digitsW_word64ize x = x.
 Proof.
   hnf in x; destruct_head' prod.
   cbv [wire_digitsW_word64ize];
-    repeat apply f_equal2; apply word64ize_id.
+    simpl; repeat apply f_equal2; apply word64ize_id.
 Qed.
 
 Definition uncurry_unop_fe25519W {T} (op : fe25519W -> T)
@@ -511,6 +511,7 @@ Lemma proj1_fe25519_exist_fe25519 x pf : proj1_fe25519 (exist_fe25519 x pf) = x.
 Proof.
   hnf in x; destruct_head' prod.
   cbv [proj1_fe25519 exist_fe25519 proj1_fe25519W fe25519WToZ proj_word Build_bounded_word Build_bounded_word'].
+  simpl.
   unfold_is_bounded_in pf.
   destruct_head' and.
   Z.ltb_to_lt.
@@ -543,6 +544,7 @@ Lemma proj1_wire_digits_exist_wire_digits x pf : proj1_wire_digits (exist_wire_d
 Proof.
   hnf in x; destruct_head' prod.
   cbv [proj1_wire_digits exist_wire_digits proj1_wire_digitsW wire_digitsWToZ proj_word Build_bounded_word Build_bounded_word' app_wire_digits HList.mapt HList.mapt' length wire_widths fst snd].
+  simpl.
   unfold_is_bounded_in pf.
   destruct_head' and.
   Z.ltb_to_lt.
@@ -694,6 +696,7 @@ Proof.
   generalize (encode_bounded x); generalize (ModularBaseSystem.encode x).
   intros y pf; intros; hnf in y; destruct_head_hnf' prod.
   cbv [proj1_fe25519 exist_fe25519 proj1_fe25519W Build_bounded_word Build_bounded_word' fe25519WToZ proj_word].
+  simpl.
   unfold_is_bounded_in pf.
   destruct_head' and.
   Z.ltb_to_lt.
@@ -706,6 +709,7 @@ Lemma decode_exist_fe25519 x pf
 Proof.
   hnf in x; destruct_head' prod.
   cbv [decode proj1_fe25519 exist_fe25519 proj1_fe25519W Build_bounded_word Build_bounded_word' fe25519WToZ proj_word].
+  simpl.
   unfold_is_bounded_in pf.
   destruct_head' and.
   Z.ltb_to_lt.

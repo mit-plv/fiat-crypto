@@ -24,8 +24,16 @@ Import ListNotations.
 Require Import Coq.ZArith.ZArith Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.ZArith.Znumtheory.
 Local Open Scope Z.
 
+Local Ltac simpl_tuple_map1 :=
+  repeat match goal with
+         | [ |- context[@Tuple.map 1 ?A ?B ?f] ]
+           => replace (@Tuple.map 1 A B f) with f by (clear; abstract reflexivity)
+         | [ H : context[@Tuple.map 1 ?A ?B ?f] |- _ ]
+           => replace (@Tuple.map 1 A B f) with f in H by (clear; abstract reflexivity)
+         end.
 
 Local Ltac cbv_tuple_map :=
+  simpl_tuple_map1;
   cbv [Tuple.map Tuple.on_tuple Tuple.to_list Tuple.to_list' List.map Tuple.from_list Tuple.from_list' HList.hlistP HList.hlistP'].
 
 Local Ltac post_bounded_t :=
@@ -150,10 +158,11 @@ Proof.
   change word64ToZ with Interpretations64.WordW.wordWToZ in *.
   rewrite Hgm.
 
-  cbv [modulusW Tuple.map].
+  cbv [modulusW Tuple.map Tuple.map'].
   cbv [on_tuple List.map to_list to_list' from_list from_list'
                 HList.hlistP HList.hlistP'
-                Tuple.map2 on_tuple2 ListUtil.map2 fe25519WToZ length_fe25519].
+                Tuple.map2 on_tuple2 ListUtil.map2 fe25519WToZ length_fe25519 Tuple.map Tuple.map'].
+  simpl @fst in *; simpl @snd in *.
   cbv [postfreeze GF25519.postfreeze].
   cbv [Let_In].
 
@@ -225,7 +234,8 @@ Proof.
   { reflexivity. }
   { reflexivity. }
   { intros; pose proof (fun k0 k1 X Y => proj1 (mulW_correct_and_bounded (k0, k1) (conj X Y))) as H'.
-    cbv [Curry.curry2 Tuple.map Tuple.on_tuple Tuple.to_list Tuple.to_list' List.map Tuple.from_list Tuple.from_list'] in H'.
+    cbv [Curry.curry2 Tuple.map Tuple.map' Tuple.on_tuple Tuple.to_list Tuple.to_list' List.map Tuple.from_list Tuple.from_list'] in H'.
+    simpl @fst in *; simpl @snd in *.
     rewrite <- H' by assumption.
     apply mulW_correct_and_bounded; split; assumption. }
   { intros; rewrite (fun X Y => proj1 (mulW_correct_and_bounded (_, _) (conj X Y))) by assumption; reflexivity. }
@@ -344,32 +354,44 @@ Proof.
              end;
              change sqrt_m1 with (fe25519WToZ sqrt_m1W);
              pose proof (fun X Y => proj1 (mulW_correct_and_bounded (sqrt_m1W, a) (conj X Y))) as correctness;
-             let cbv_in_all _ := (cbv [fe25519WToZ Tuple.map Tuple.on_tuple Tuple.to_list Tuple.to_list' List.map Tuple.from_list Tuple.from_list' fe25519WToZ Curry.curry2 HList.hlistP HList.hlistP'] in *; idtac) in
-             cbv_in_all ();
-               let solver _ := (repeat match goal with
-                                       | _ => progress subst
-                                       | _ => progress unfold fst, snd
-                                       | _ => progress cbv_in_all ()
-                                       | [ |- ?x /\ ?x ] => cut x; [ intro; split; assumption | ]
-                                       | [ |- is_bounded ?op = true ]
-                                         => let H := fresh in
-                                            lazymatch op with
-                                            | context[mulW (_, _)] => pose proof mulW_correct_and_bounded as H
-                                            | context[mulW_noinline (_, _)] => pose proof mulW_correct_and_bounded as H
-                                            | context[powW _ _] => pose proof powW_correct_and_bounded as H
-                                            | context[sqrt_m1W] => vm_compute; reflexivity
-                                            | _ => assumption
-                                            end;
-                                            cbv_in_all ();
-                                            apply H
-                                       end) in
-               rewrite <- correctness by solver (); clear correctness;
-                 let lem := fresh in
-                 pose proof eqbW_correct as lem; cbv_in_all (); rewrite <- lem by solver (); clear lem;
-                   pose proof (pull_bool_if fe25519WToZ) as lem; cbv_in_all (); rewrite lem by solver (); clear lem;
-                     subst_evars; reflexivity
+             let cbv_in_all _ := (cbv [fe25519WToZ Tuple.map Tuple.map' Tuple.on_tuple Tuple.to_list Tuple.to_list' List.map Tuple.from_list Tuple.from_list' fe25519WToZ Curry.curry2 HList.hlistP HList.hlistP' fst snd] in *; idtac) in
+               let solver _ := (repeat match goal with H := ?e |- _ => is_evar e; clearbody H end;
+                                abstract
+                                  (repeat match goal with
+                                          | _ => progress subst
+                                          | _ => progress unfold fst, snd
+                                          | _ => progress cbv_in_all ()
+                                          | [ |- ?x /\ ?x ] => cut x; [ intro; split; assumption | ]
+                                          | [ |- is_bounded ?op = true ]
+                                            => let H := fresh in
+                                               lazymatch op with
+                                               | context[mulW (_, _)] => pose proof mulW_correct_and_bounded as H
+                                               | context[mulW_noinline (_, _)] => pose proof mulW_correct_and_bounded as H
+                                               | context[powW _ _] => pose proof powW_correct_and_bounded as H
+                                               | context[sqrt_m1W] => vm_compute; reflexivity
+                                               | _ => assumption
+                                               end;
+                                               cbv_in_all ();
+                                               apply H
+                                          end)) in
+               specialize_by solver ();
+                 (* munging for fast [Defined] >.< *)
+                 let T := type of correctness in
+                 let T' := (eval unfold Tuple.map at 2 in T) in
+                 let T' := (eval cbv [Curry.curry2 Tuple.map' fst snd] in T') in
+                 let correctness' := fresh "correctness'" in
+                 assert (correctness' : T') by (clear -correctness; abstract (rewrite correctness; reflexivity));
+                   rewrite <- correctness' by fail;
+                   clear correctness';
+                   cbv [Tuple.map Tuple.map'];
+                   let lem := fresh in
+                   pose proof eqbW_correct as lem;
+                     rewrite <- lem by solver (); clear lem;
+                       pose proof (pull_bool_if fe25519WToZ) as lem; rewrite lem by solver (); clear lem;
+                         subst_evars; reflexivity
       end.
     } Unfocus.
+
     assert (Hfold : forall x, fe25519WToZ x = fe25519WToZ x) by reflexivity.
     unfold fe25519WToZ at 2 in Hfold.
     etransitivity.
@@ -395,8 +417,8 @@ Proof.
                => apply powW_correct_and_bounded; assumption
              | [ |- is_bounded (snd (?WToZ (_, powW _ _))) = true ]
                => generalize powW_correct_and_bounded;
-                    cbv [snd Tuple.map Tuple.on_tuple Tuple.to_list Tuple.to_list' List.map Tuple.from_list Tuple.from_list' HList.hlistP HList.hlistP'];
-                    let H := fresh in intro H; apply H; assumption
+                    simpl_tuple_map1;
+                    abstract (let H := fresh in intro H; apply H; assumption)
              | [ |- is_bounded (?WToZ (mulW (_, _))) = true ]
                => apply mulW_correct_and_bounded; split; [ vm_compute; reflexivity | ]
              end.
