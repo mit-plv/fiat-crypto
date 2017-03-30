@@ -24,9 +24,17 @@ End Pre.
 Section BoundedField25p5.
   Local Coercion Z.of_nat : nat >-> Z.
 
-  (* TODO(jgross) : what goes here? *)
-  Let bounds: tuple zrange 10 := repeat (Build_zrange 0 (2^32)) 10.
-  
+  Let limb_widths := Eval vm_compute in (List.map (fun i => Z.log2 (wt (S i) / wt i)) (seq 0 10)).
+  Let length_lw := Eval compute in List.length limb_widths.
+
+  Local Notation b_of exp := {| lower := 0 ; upper := 2^exp + 2^(exp-3) |}%Z (only parsing). (* max is [(0, 2^(exp+2) + 2^exp + 2^(exp-1) + 2^(exp-3) + 2^(exp-4) + 2^(exp-5) + 2^(exp-6) + 2^(exp-10) + 2^(exp-12) + 2^(exp-13) + 2^(exp-14) + 2^(exp-15) + 2^(exp-17) + 2^(exp-23) + 2^(exp-24))%Z] *)
+  Let bounds_exp : Tuple.tuple Z length_lw
+    := Eval compute in
+        Tuple.from_list length_lw limb_widths eq_refl.
+  Let bounds : Tuple.tuple zrange length_lw
+    := Eval compute in
+        Tuple.map (fun e => b_of e) bounds_exp.
+
   Let feZ : Type := tuple Z 10.
   Let feW : Type := tuple word32 10.
   Let feBW : Type := BoundedWord 10 32 bounds.
@@ -38,11 +46,13 @@ Section BoundedField25p5.
     { mul : feBW -> feBW -> feBW
     | forall a b, phi (mul a b) = (phi a * phi b)%F }.
   Proof.
-    eexists; intros. cbv [phi].
-    destruct mul_sig as [mulZ phi_mulZ].
-    rewrite <-phi_mulZ.
+    eexists ?[mul]; intros. cbv [phi].
+    rewrite <- (proj2_sig mul_sig).
+    set (mulZ := proj1_sig mul_sig).
+    cbv beta iota delta [proj1_sig mul_sig runtime_add runtime_and runtime_mul runtime_opp runtime_shr] in mulZ.
     apply f_equal.
     (* jgross start here! *)
+
   Admitted.
 
 End BoundedField25p5.
