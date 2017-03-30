@@ -82,3 +82,5 @@ Reserved Notation "'λ'  x .. y , t" (at level 200, x binder, y binder, right as
 Reserved Notation "'λn'  x .. y , t" (at level 200, right associativity).
 Reserved Notation "x ::> ( max_bitwidth = v )"
          (at level 70, no associativity, format "x  ::>  ( max_bitwidth  =  v )").
+Reserved Notation "r[ l ~> u ]" (format "r[ l  ~>  u ]").
+Reserved Notation "b[ l ~> u ]" (format "b[ l  ~>  u ]").
