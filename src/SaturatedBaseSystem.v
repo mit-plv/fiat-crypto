@@ -185,7 +185,7 @@ Module Columns.
       map sum (@cons_to_nth n i x t) = B.Positional.add_to_nth i x (map sum t).
     Proof.
       cbv [B.Positional.add_to_nth B.Positional.add_to_nth_cps cons_to_nth cons_to_nth_cps on_tuple_cps].
-      induction n; [simpl; rewrite update_nth_cps_correct; reflexivity|].
+      induction n; [simpl; rewrite !update_nth_cps_correct; reflexivity|].
       specialize (IHn (tl t)). autorewrite with uncps push_id in *.
       apply to_list_ext. rewrite <-!map_to_list.
       erewrite !from_list_default_eq, !to_list_from_list.
