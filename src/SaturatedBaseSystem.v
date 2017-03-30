@@ -17,7 +17,7 @@ saturated limbs. Compatible with mixed-radix bases.
  ***)
 
 Module Sorted.
-  Section Saturated.
+  Section Sorted.
     Context {weight : nat->Z}
             {weight_0 : weight 0%nat = 1}
             {weight_nonzero : forall i, weight i <> 0}
@@ -173,9 +173,37 @@ Module Sorted.
     Qed.
     Hint Opaque cons_to_nth : uncps.
     Hint Rewrite @cons_to_nth_id : uncps.
+    
+    Lemma map_sum_update_nth l : forall i x,
+      List.map sum (update_nth i (cons x) l) =
+      update_nth i (Z.add x) (List.map sum l).
+    Proof.
+      induction l; intros; destruct i; simpl; rewrite ?IHl; reflexivity.
+    Qed.
 
-    Definition nils n : (list Z)^n :=
-      Tuple.repeat nil n.
+    Lemma cons_to_nth_add_to_nth n i x t :
+      map sum (@cons_to_nth n i x t) = B.Positional.add_to_nth i x (map sum t).
+    Proof.
+      cbv [B.Positional.add_to_nth B.Positional.add_to_nth_cps cons_to_nth cons_to_nth_cps on_tuple_cps].
+      induction n; [simpl; rewrite update_nth_cps_correct; reflexivity|].
+      specialize (IHn (tl t)). autorewrite with uncps push_id in *.
+      apply to_list_ext. rewrite <-!map_to_list.
+      erewrite !from_list_default_eq, !to_list_from_list.
+      rewrite map_sum_update_nth. reflexivity.
+      Unshelve.
+      distr_length.
+      distr_length.
+    Qed.
+    
+    Lemma eval_cons_to_nth n i x t : (i < n)%nat ->
+      eval (@cons_to_nth n i x t) = weight i * x + eval t.
+    Proof.
+      cbv [eval]; intros. rewrite cons_to_nth_add_to_nth.
+      auto using B.Positional.eval_add_to_nth.
+    Qed.
+    Hint Rewrite eval_cons_to_nth using omega : push_basesystem_eval.
+
+    Definition nils n : (list Z)^n := Tuple.repeat nil n.
 
     Lemma map_sum_nils n : map sum (nils n) = B.Positional.zeros n.
     Proof.
@@ -185,7 +213,7 @@ Module Sorted.
     Qed.
 
     Lemma eval_nils n : eval (nils n) = 0.
-    Proof. cbv [eval]. rewrite map_sum_nils, B.Positional.eval_zeros. reflexivity. Qed.
+    Proof. cbv [eval]. rewrite map_sum_nils, B.Positional.eval_zeros. reflexivity. Qed. Hint Rewrite eval_nils : push_basesystem_eval.
 
     Definition from_associational_cps n (p:list B.limb)
                {T} (f:(list Z)^n -> T) :=
@@ -194,6 +222,28 @@ Module Sorted.
            B.Positional.place_cps weight t (pred n)
              (fun p=> cons_to_nth_cps (fst p) (snd p) st id))
         (nils n) p f.
+
+    Definition from_associational n p := from_associational_cps n p id.
+    Lemma from_associational_id n p T f :
+      @from_associational_cps n p T f = f (from_associational n p).
+    Proof.
+      cbv [from_associational_cps from_associational].
+      autorewrite with uncps push_id; reflexivity.
+    Qed.
+    Hint Opaque from_associational : uncps.
+    Hint Rewrite from_associational_id : uncps.
+
+    Lemma eval_from_associational n p (n_nonzero:n<>0%nat):
+      eval (from_associational n p) = B.Associational.eval p.
+    Proof.
+      cbv [from_associational_cps from_associational]; induction p;
+        autorewrite with uncps push_id push_basesystem_eval; [reflexivity|].
+        pose proof (B.Positional.weight_place_cps weight weight_0 weight_nonzero a (pred n)).
+        pose proof (B.Positional.place_cps_in_range weight a (pred n)).
+        rewrite Nat.succ_pred in * by assumption. simpl.
+        autorewrite with uncps push_id push_basesystem_eval in *.
+        rewrite eval_cons_to_nth by omega. nsatz.
+    Qed.
     
     Definition mul_cps {n m} (p q : Z^n) {T} (f : (list Z)^m->T) :=
       B.Positional.to_associational_cps weight p
@@ -206,7 +256,7 @@ Module Sorted.
         (fun P => B.Positional.to_associational_cps weight q
         (fun Q => from_associational_cps n (P++Q) f)).
 
-  End Saturated.
+  End Sorted.
 End Sorted.
 
 (*
