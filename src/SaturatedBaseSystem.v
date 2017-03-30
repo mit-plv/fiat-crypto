@@ -16,8 +16,8 @@ saturated limbs. Compatible with mixed-radix bases.
 
  ***)
 
-Module Sorted.
-  Section Sorted.
+Module Columns.
+  Section Columns.
     Context {weight : nat->Z}
             {weight_0 : weight 0%nat = 1}
             {weight_nonzero : forall i, weight i <> 0}
@@ -256,8 +256,8 @@ Module Sorted.
         (fun P => B.Positional.to_associational_cps weight q
         (fun Q => from_associational_cps n (P++Q) f)).
 
-  End Sorted.
-End Sorted.
+  End Columns.
+End Columns.
 
 (*
 (* Just some pretty-printing *)
@@ -268,17 +268,17 @@ Local Notation "snd~ a" := (let (_,y) := a in y) (at level 40, only printing).
 Definition base10 i := Eval compute in 10^(Z.of_nat i).
 Eval cbv -[runtime_add runtime_mul Let_In] in
     (fun adc a0 a1 a2 b0 b1 b2 =>
-       Sorted.mul_cps (weight := base10) (n:=3) (a2,a1,a0) (b2,b1,b0) (fun ab => Sorted.compact (n:=5) (add_get_carry:=adc) (weight:=base10) ab)).
+       Columns.mul_cps (weight := base10) (n:=3) (a2,a1,a0) (b2,b1,b0) (fun ab => Columns.compact (n:=5) (add_get_carry:=adc) (weight:=base10) ab)).
 
 (* More complex example : base 2^56, 8 limbs *)
 Definition base2pow56 i := Eval compute in 2^(56*Z.of_nat i).
 Time Eval cbv -[runtime_add runtime_mul Let_In] in
     (fun adc a0 a1 a2 a3 a4 a5 a6 a7 b0 b1 b2 b3 b4 b5 b6 b7 =>
-       Sorted.mul_cps (weight := base2pow56) (n:=8) (a7,a6,a5,a4,a3,a2,a1,a0) (b7,b6,b5,b4,b3,b2,b1,b0) (fun ab => Sorted.compact (n:=15) (add_get_carry:=adc) (weight:=base2pow56) ab)). (* Finished transaction in 151.392 secs *) 
+       Columns.mul_cps (weight := base2pow56) (n:=8) (a7,a6,a5,a4,a3,a2,a1,a0) (b7,b6,b5,b4,b3,b2,b1,b0) (fun ab => Columns.compact (n:=15) (add_get_carry:=adc) (weight:=base2pow56) ab)). (* Finished transaction in 151.392 secs *) 
 
 (* Mixed-radix example : base 2^25.5, 10 limbs *)
 Definition base2pow25p5 i := Eval compute in 2^(25*Z.of_nat i + ((Z.of_nat i + 1) / 2)).
 Time Eval cbv -[runtime_add runtime_mul Let_In] in
     (fun adc a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 =>
-       Sorted.mul_cps (weight := base2pow25p5) (n:=10) (a9,a8,a7,a6,a5,a4,a3,a2,a1,a0) (b9,b8,b7,b6,b5,b4,b3,b2,b1,b0) (fun ab => Sorted.compact (n:=19) (add_get_carry:=adc) (weight:=base2pow25p5) ab)). (* Finished transaction in 97.341 secs *)
+       Columns.mul_cps (weight := base2pow25p5) (n:=10) (a9,a8,a7,a6,a5,a4,a3,a2,a1,a0) (b9,b8,b7,b6,b5,b4,b3,b2,b1,b0) (fun ab => Columns.compact (n:=19) (add_get_carry:=adc) (weight:=base2pow25p5) ab)). (* Finished transaction in 97.341 secs *)
 *)
