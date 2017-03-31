@@ -5,6 +5,7 @@ Require Export Crypto.Util.Tactics.Head.
 Require Export Crypto.Util.Tactics.DestructHyps.
 Require Export Crypto.Util.Tactics.DestructHead.
 Require Export Crypto.Util.Tactics.DoWithHyp.
+Require Export Crypto.Util.Tactics.ETransitivity.
 Require Export Crypto.Util.Tactics.RewriteHyp.
 Require Export Crypto.Util.Tactics.SpecializeBy.
 Require Export Crypto.Util.Tactics.SplitInContext.
