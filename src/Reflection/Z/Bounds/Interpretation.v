@@ -178,15 +178,15 @@ Module Import Bounds.
   Definition bounds_are_good : forall {t}, interp_flat_type interp_base_type t -> Prop
     := (@interp_flat_type_rel_pointwise1 _ _ bound_is_good).
 
-  Definition is_bounded_by' {T} : Syntax.interp_base_type T -> interp_base_type T -> Prop
-    := fun val bound
-       => match bound with
+  Definition is_bounded_by' {T} : interp_base_type T -> Syntax.interp_base_type T -> Prop
+    := fun bounds val
+       => match bounds with
           | Some bounds'
             => is_bounded_by' (bit_width_of_base_type T) bounds' val
           | None => True
           end.
 
-  Definition is_bounded_by {T} : interp_flat_type Syntax.interp_base_type T -> interp_flat_type interp_base_type T -> Prop
+  Definition is_bounded_by {T} : interp_flat_type interp_base_type T -> interp_flat_type Syntax.interp_base_type T -> Prop
     := interp_flat_type_rel_pointwise (@is_bounded_by').
 
   Local Arguments interp_base_type !_ / .
