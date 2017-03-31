@@ -129,3 +129,52 @@ Proof.
   generalize dependent (op_beq_hetero_type_eqs f g H).
   intros; eliminate_hprop_eq; simpl in *; assumption.
 Qed.
+
+Section encode_decode.
+  Definition base_type_code (t1 t2 : base_type) : Prop
+    := match t1, t2 with
+       | TZ, TZ => True
+       | TWord s1, TWord s2 => s1 = s2
+       | TZ, _
+       | TWord _, _
+         => False
+       end.
+
+    Definition base_type_encode (x y : base_type) : x = y -> base_type_code x y.
+    Proof. intro p; destruct p, x; repeat constructor. Defined.
+
+    Definition base_type_decode (x y : base_type) : base_type_code x y -> x = y.
+    Proof.
+      destruct x, y; simpl in *; intro H;
+        try first [ apply f_equal; assumption
+                  | exfalso; assumption
+                  | reflexivity
+                  | apply f_equal2; destruct H; assumption ].
+    Defined.
+    Definition path_base_type_rect {x y : base_type} (Q : x = y -> Type)
+               (f : forall p, Q (base_type_decode x y p))
+      : forall p, Q p.
+    Proof. intro p; specialize (f (base_type_encode x y p)); destruct x, p; exact f. Defined.
+End encode_decode.
+
+Ltac induction_type_in_using H rect :=
+  induction H as [H] using (rect _ _ _);
+  cbv [base_type_code] in H;
+  let H1 := fresh H in
+  let H2 := fresh H in
+  try lazymatch type of H with
+      | False => exfalso; exact H
+      | True => destruct H
+      end.
+Ltac inversion_base_type_step :=
+  lazymatch goal with
+  | [ H : _ = TWord _ |- _ ]
+    => induction_type_in_using H @path_base_type_rect
+  | [ H : TWord _ = _ |- _ ]
+    => induction_type_in_using H @path_base_type_rect
+  | [ H : _ = TZ |- _ ]
+    => induction_type_in_using H @path_base_type_rect
+  | [ H : TZ = _ |- _ ]
+    => induction_type_in_using H @path_base_type_rect
+  end.
+Ltac inversion_base_type := repeat inversion_base_type_step.
