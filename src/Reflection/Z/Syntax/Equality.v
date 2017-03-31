@@ -158,7 +158,7 @@ Section encode_decode.
 End encode_decode.
 
 Ltac induction_type_in_using H rect :=
-  induction H as [H] using (rect _ _ _);
+  induction H as [H] using (rect _ _);
   cbv [base_type_code] in H;
   let H1 := fresh H in
   let H2 := fresh H in
