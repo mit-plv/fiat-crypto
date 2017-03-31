@@ -37,6 +37,9 @@ Section with_bitwidth.
     := Tuple.pointwise2 is_bounded_by'.
 End with_bitwidth.
 
+Definition is_tighter_than_bool (x y : zrange) : bool
+  := ((lower y <=? lower x) && (upper x <=? upper y))%bool%Z.
+
 Global Instance dec_eq_zrange : DecidableRel (@eq zrange) | 10.
 Proof.
   intros [lx ux] [ly uy].
@@ -49,4 +52,5 @@ Module Export Notations.
   Delimit Scope zrange_scope with zrange.
   Notation "r[ l ~> u ]" := {| lower := l ; upper := u |}
                               (format "r[ l  ~>  u ]") : zrange_scope.
+  Infix "<=?" := is_tighter_than_bool : zrange_scope.
 End Notations.
