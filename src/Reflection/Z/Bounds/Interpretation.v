@@ -178,6 +178,14 @@ Module Import Bounds.
   Definition bounds_are_good : forall {t}, interp_flat_type interp_base_type t -> Prop
     := (@interp_flat_type_rel_pointwise1 _ _ bound_is_good).
 
+  Definition is_tighter_thanb' {T} : interp_base_type T -> interp_base_type T -> bool
+    := fun bounds1 bounds2
+       => match bounds1, bounds2 with
+          | Some bounds1, Some bounds2 => is_tighter_than_bool bounds1 bounds2
+          | _, None => true
+          | None, Some _ => false
+          end.
+
   Definition is_bounded_by' {T} : interp_base_type T -> Syntax.interp_base_type T -> Prop
     := fun bounds val
        => match bounds with
@@ -185,6 +193,9 @@ Module Import Bounds.
             => is_bounded_by' (bit_width_of_base_type T) bounds' val
           | None => True
           end.
+
+  Definition is_tighter_thanb {T} : interp_flat_type interp_base_type T -> interp_flat_type interp_base_type T -> bool
+    := interp_flat_type_relb_pointwise (@is_tighter_thanb').
 
   Definition is_bounded_by {T} : interp_flat_type interp_base_type T -> interp_flat_type Syntax.interp_base_type T -> Prop
     := interp_flat_type_rel_pointwise (@is_bounded_by').
