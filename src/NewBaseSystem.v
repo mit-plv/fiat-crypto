@@ -120,7 +120,7 @@ Fixpoint add_lists_cps (p q : list Z) {T} (f:list Z->T) :=
 Now let's try some partial evaluation. The expression we'll evaluate is:
 
 ```
-Definition x := 
+Definition x :=
     (fun a0 a1 a2 b0 b1 b2 =>
       let r := add_lists [a0;a1;a2] [b0;b1;b2] in
       let rr := add_lists r r in
@@ -130,7 +130,7 @@ Definition x :=
 Or, using `add_lists_cps`:
 
 ```
-Definition y := 
+Definition y :=
     (fun a0 a1 a2 b0 b1 b2 =>
       add_lists_cps [a0;a1;a2] [b0;b1;b2]
                      (fun r => add_lists_cps r r
@@ -153,7 +153,7 @@ the `dlet` we put into the functions should help us avoid. Let's try
 
 ```
 fun a0 a1 a2 b0 b1 b2 : Z =>
-       (fix add_lists (p q : list Z) {struct p} : 
+       (fix add_lists (p q : list Z) {struct p} :
         list Z :=
           match p with
           | [] => []
@@ -165,7 +165,7 @@ fun a0 a1 a2 b0 b1 b2 : Z =>
                   sum :: add_lists p' q'
               end
           end)
-         ((fix add_lists (p q : list Z) {struct p} : 
+         ((fix add_lists (p q : list Z) {struct p} :
            list Z :=
              match p with
              | [] => []
@@ -187,7 +187,7 @@ fun a0 a1 a2 b0 b1 b2 : Z =>
              :: (dlet sum0 := a1 + b1 in
                  sum0 :: (dlet sum1 := a2 + b2 in
                           [sum1]))))
-         ((fix add_lists (p q : list Z) {struct p} : 
+         ((fix add_lists (p q : list Z) {struct p} :
            list Z :=
              match p with
              | [] => []
@@ -268,7 +268,7 @@ Local Ltac prove_id :=
          end.
 
 Create HintDb push_basesystem_eval discriminated.
-Local Ltac prove_eval := 
+Local Ltac prove_eval :=
   repeat match goal with
          | _ => progress intros
          | _ => progress simpl
@@ -276,7 +276,7 @@ Local Ltac prove_eval :=
          | _ => progress (autorewrite with push_basesystem_eval uncps push_id cancel_pair in * )
          | _ => break_if
          | _ => break_match
-         | _ => split 
+         | _ => split
          | H : _ /\ _ |- _ => destruct H
          | H : Some _ = Some _ |- _ => progress (inversion H; subst)
          | _ => discriminate
@@ -298,20 +298,20 @@ Delimit Scope runtime_scope with RT.
 Definition runtime_mul := Z.mul.
 Global Notation "a * b" := (runtime_mul a%RT b%RT) : runtime_scope.
 Definition runtime_add := Z.add.
-Global Notation "a + b" := (runtime_add a%RT b%RT) : runtime_scope. 
+Global Notation "a + b" := (runtime_add a%RT b%RT) : runtime_scope.
 Definition runtime_opp := Z.opp.
-Global Notation "- a" := (runtime_opp a%RT) : runtime_scope. 
+Global Notation "- a" := (runtime_opp a%RT) : runtime_scope.
 Definition runtime_and := Z.land.
-Global Notation "a &' b" := (runtime_and a%RT b%RT) : runtime_scope. 
+Global Notation "a &' b" := (runtime_and a%RT b%RT) : runtime_scope.
 Definition runtime_shr := Z.shiftr.
-Global Notation "a >> b" := (runtime_shr a%RT b%RT) : runtime_scope. 
+Global Notation "a >> b" := (runtime_shr a%RT b%RT) : runtime_scope.
 
 Module B.
   Definition limb := (Z*Z)%type. (* position coefficient and run-time value *)
   Module Associational.
     Definition eval (p:list limb) : Z :=
       List.fold_right Z.add 0%Z (List.map (fun t => fst t * snd t) p).
-    
+
     Lemma eval_nil : eval nil = 0. Proof. reflexivity. Qed.
     Lemma eval_cons p q : eval (p::q) = (fst p) * (snd p) + eval q. Proof. reflexivity. Qed.
     Lemma eval_app p q: eval (p++q) = eval p + eval q.
@@ -387,7 +387,7 @@ Module B.
     Proof. cbv [reduce_cps reduce]; prove_id. Qed.
     Hint Opaque reduce : uncps.
     Hint Rewrite reduce_cps_id : uncps.
-    
+
     Lemma reduction_rule a b s c m (m_eq:Z.pos m = s - c):
       (a + s * b) mod m = (a + c * b) mod m.
     Proof.
@@ -405,7 +405,7 @@ Module B.
     Hint Rewrite eval_reduce using (omega || assumption) : push_basesystem_eval.
     (* Why TF does this hint get picked up outside the section (while other eval_ hints do not?) *)
 
-    
+
     Definition negate_snd_cps (p:list limb) {T} (f:list limb ->T) :=
       map_cps (fun cx => (fst cx, (-snd cx)%RT)) p f.
 
@@ -485,7 +485,7 @@ Module B.
         map_cps weight (seq 0 n)
                 (fun r =>
                    to_list_cps n xs (fun rr => combine_cps r rr f)).
-      
+
       Definition to_associational {n} xs :=
         @to_associational_cps n xs _ id.
       Lemma to_associational_cps_id {n} x {T} f:
@@ -513,7 +513,7 @@ Module B.
       Lemma eval_zeros n : eval (zeros n) = 0.
       Proof.
         cbv [eval Associational.eval to_associational_cps zeros].
-        pose proof (seq_length n 0). generalize dependent (seq 0 n). 
+        pose proof (seq_length n 0). generalize dependent (seq 0 n).
         intro xs; revert n; induction xs; intros;
           [autorewrite with uncps; reflexivity|].
         intros; destruct n; [distr_length|].
@@ -525,7 +525,7 @@ Module B.
 
       Definition add_to_nth_cps {n} i x t {T} (f:tuple Z n->T) :=
         @on_tuple_cps _ _ 0 (update_nth_cps i (runtime_add x)) n n t _ f.
-      
+
       Definition add_to_nth {n} i x t := @add_to_nth_cps n i x t _ id.
       Lemma add_to_nth_cps_id {n} i x xs {T} f:
         @add_to_nth_cps n i x xs T f = f (add_to_nth i x xs).
@@ -537,7 +537,7 @@ Module B.
       Qed.
       Hint Opaque add_to_nth : uncps.
       Hint Rewrite @add_to_nth_cps_id : uncps.
-      
+
       Lemma eval_add_to_nth {n} (i:nat) (x:Z) (H:(i<n)%nat) (xs:tuple Z n):
         eval (@add_to_nth n i x xs) = weight i * x + eval xs.
       Proof.
@@ -646,14 +646,14 @@ Module B.
       [fold_right], [fold_right_cps2] is written such that the first
       terms in the list are actually used last in the computation. For
       example, running:
-      
+
       `Eval cbv - [Z.add] in (fun a b c d => fold_right Z.add d [a;b;c]).`
 
       will produce [fun a b c d => (a + (b + (c + d)))].*)
       Definition chained_carries_cps {n} (p:tuple Z n) (idxs : list nat)
                  {T} (f:tuple Z n->T) :=
         fold_right_cps2 carry_cps p (rev idxs) f.
-      
+
       Definition chained_carries {n} p idxs := @chained_carries_cps n p idxs _ id.
       Lemma chained_carries_id {n} p idxs : forall {T} f,
           @chained_carries_cps n p idxs T f = f (chained_carries p idxs).
@@ -719,7 +719,7 @@ Module B.
 
       End Wrappers.
       Hint Unfold
-           Positional.add_cps 
+           Positional.add_cps
            Positional.mul_cps
            Positional.reduce_cps
            Positional.carry_reduce_cps
@@ -761,7 +761,7 @@ Module B.
         Context {modulo div:Z->Z->Z}
                 {div_mod : forall a b:Z, b <> 0 ->
                                          a = b * (div a b) + modulo a b}.
-        
+
         Definition Fencode (x : F m) : tuple Z sz :=
           encode (div:=div) (modulo:=modulo) (F.to_Z x).
 
@@ -815,7 +815,7 @@ Module B.
 
   End Positional.
   Hint Unfold
-      Positional.add_cps 
+      Positional.add_cps
       Positional.mul_cps
       Positional.reduce_cps
       Positional.carry_reduce_cps
@@ -873,8 +873,8 @@ Section DivMod.
 End DivMod.
 
 Import B.
-  
-Ltac basesystem_partial_evaluation_RHS := 
+
+Ltac basesystem_partial_evaluation_RHS :=
   let t0 := match goal with |- _ _ ?t => t end in
   let t := (eval cbv delta [
   (* this list must contain all definitions referenced by t that reference [Let_In], [runtime_add], [runtime_opp], [runtime_mul], [runtime_shr], or [runtime_and] *)
