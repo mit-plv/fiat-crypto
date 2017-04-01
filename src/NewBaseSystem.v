@@ -903,6 +903,34 @@ Positional.to_associational_cps Positional.to_associational Positional.eval Posi
                   (@runtime_mul));
   [replace_with_vm_compute t1; clear t1|reflexivity].
 
+(** This block of tactic code works around bug #5434
+    (https://coq.inria.fr/bugs/show_bug.cgi?id=5434), that
+    [vm_compute] breaks an invariant in pretyping/constr_matching.ml.
+    So we refresh all of the names in match statements in the goal by
+    crawling it. *)
+Ltac replace_match_with_destructuring_match T :=
+  match T with
+  | ?F ?X
+    => let F' := replace_match_with_destructuring_match F in
+       let X' := replace_match_with_destructuring_match X in
+       constr:(F' X')
+  (* we must use [@?f a b] here and not [?f], or else we get an anomaly *)
+  | match ?d with pair a b => @?f a b end
+    => let d' := replace_match_with_destructuring_match d in
+       let T' := fresh in
+       constr:(let '(a, b) := d' in
+               match f a b with
+               | T' => ltac:(let v := (eval cbv beta delta [T'] in T') in
+                             let v := replace_match_with_destructuring_match v in
+                             exact v)
+               end)
+  | ?x => x
+  end.
+Ltac do_replace_match_with_destructuring_match_in_goal :=
+  let G := get_goal in
+  let G' := replace_match_with_destructuring_match G in
+  change G'.
+
 (* TODO : move *)
 Lemma F_of_Z_opp {m} x : F.of_Z m (- x) = F.opp (F.of_Z m x).
 Proof.
@@ -926,6 +954,7 @@ Ltac solve_op_mod_eq wt x :=
     reflexivity];
   cbv [mod_eq]; apply f_equal2; [|reflexivity];
   apply f_equal;
-  basesystem_partial_evaluation_RHS.
+  basesystem_partial_evaluation_RHS;
+  do_replace_match_with_destructuring_match_in_goal.
 
 Ltac solve_op_F wt x := F_mod_eq; solve_op_mod_eq wt x.
