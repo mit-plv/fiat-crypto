@@ -208,6 +208,21 @@ Fixpoint curry {R T n} : curryT R T n -> (tuple T n -> R)
      | S n' => @curry' R T n'
      end.
 
+Fixpoint eta' {n A B} : (tuple' A n -> B) -> tuple' A n -> B
+  := match n with
+     | 0 => fun f => f
+     | S n' => fun (f : tuple' A n' * A -> B)
+                   (xy : tuple' A n' * A)
+               => let '(x, y) := xy in
+                  eta' (fun x => f (x, y)) x
+     end.
+
+Definition eta {n A B} : (tuple A n -> B) -> tuple A n -> B
+  := match n with
+     | 0 => fun f => f
+     | S n' => @eta' n' A B
+     end.
+
 Definition on_tuple {A B} (f:list A -> list B)
            {n m:nat} (H:forall xs, length xs = n -> length (f xs) = m)
            (xs:tuple A n) : tuple B m :=
