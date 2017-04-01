@@ -614,27 +614,27 @@ Module B.
         Context {modulo div : Z->Z->Z}.
         Context {div_mod : forall a b:Z, b <> 0 ->
                                        a = b * (div a b) + modulo a b}.
-        Definition carry_cps {n} (index:nat) (p:tuple Z n)
-                   {T} (f:tuple Z n->T) :=
+        Definition carry_cps {n m} (index:nat) (p:tuple Z n)
+                   {T} (f:tuple Z m->T) :=
           to_associational_cps p
             (fun P =>  @Associational.carry_cps
                          modulo div
                          (weight index)
                          (weight (S index) / weight index)
                          P T
-             (fun R => from_associational_cps n R f)).
+             (fun R => from_associational_cps m R f)).
 
-      Definition carry {n} i p := @carry_cps n i p _ id.
-      Lemma carry_cps_id {n} i p {T} f:
-        @carry_cps n i p T f = f (carry i p).
+      Definition carry {n m} i p := @carry_cps n m i p _ id.
+      Lemma carry_cps_id {n m} i p {T} f:
+        @carry_cps n m i p T f = f (carry i p).
       Proof.
         cbv [carry_cps carry]; prove_id; rewrite carry_cps_id; reflexivity.
       Qed.
       Hint Opaque carry : uncps. Hint Rewrite @carry_cps_id : uncps.
 
-      Lemma eval_carry {n} i p: (n <> 0%nat) ->
+      Lemma eval_carry {n m} i p: (n <> 0%nat) -> (m <> 0%nat) ->
                                 weight (S i) / weight i <> 0 ->
-        eval (carry (n := n) i p) = eval p.
+        eval (carry (n:=n) (m:=m) i p) = eval p.
       Proof.
         cbv [carry_cps carry]; intros. prove_eval.
         rewrite @eval_carry by eauto.
@@ -705,6 +705,12 @@ Module B.
             (fun P => Associational.reduce_cps s c P
                (fun R => from_associational_cps n R f)).
 
+        Definition carry_reduce_cps {n div modulo}
+                   (s:Z) (c:list limb) (p : tuple Z n)
+                   {T} (f: tuple Z n ->T) :=
+          carry_cps (div:=div) (modulo:=modulo) (n:=n) (m:=S n) (pred n) p
+            (fun r => reduce_cps (m:=S n) (n:=n) s c r f).
+
         Definition negate_snd_cps {n} (p : tuple Z n)
                    {T} (f:tuple Z n->T) :=
           to_associational_cps p
@@ -716,6 +722,7 @@ Module B.
            Positional.add_cps 
            Positional.mul_cps
            Positional.reduce_cps
+           Positional.carry_reduce_cps
            Positional.negate_snd_cps
       .
 
@@ -811,6 +818,7 @@ Module B.
       Positional.add_cps 
       Positional.mul_cps
       Positional.reduce_cps
+      Positional.carry_reduce_cps
       Positional.negate_snd_cps
       Positional.opp_cps
   .
@@ -913,7 +921,7 @@ Ltac F_mod_eq :=
   apply mod_eq_Z2F_iff.
 
 Ltac solve_op_mod_eq wt x :=
-  transitivity (Positional.eval wt x); autounfold;
+  transitivity (Positional.eval wt x); repeat autounfold;
   [|autorewrite with uncps push_id push_basesystem_eval;
     reflexivity];
   cbv [mod_eq]; apply f_equal2; [|reflexivity];

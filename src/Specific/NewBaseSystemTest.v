@@ -24,7 +24,8 @@ Section Ops25p5.
   Definition s : Z := 2^255.
   Definition c : list B.limb := [(1, 19)].
   Definition coef_div_modulus := 2. (* add 2*modulus before subtracting *)
-  Definition carry_chain := Eval vm_compute in (seq 0 sz) ++ ([0;1])%nat.
+  Definition carry_chain1 := Eval vm_compute in (seq 0 (pred sz)).
+  Definition carry_chain2 := ([0;1])%nat.
 
   (* These definitions are inferred from those above *)
   Definition m := Eval vm_compute in Z.to_pos (s - Associational.eval c). (* modulus *)
@@ -35,9 +36,15 @@ Section Ops25p5.
   Lemma sz_nonzero : sz <> 0%nat. Proof. vm_decide. Qed.
   Lemma wt_nonzero i : wt i <> 0.
   Proof. apply Z.pow_nonzero; zero_bounds. Qed.
-  Lemma wt_divides i (H:In i carry_chain) : wt (S i) / wt i <> 0.
+  Lemma wt_divides_chain1 i (H:In i carry_chain1) : wt (S i) / wt i <> 0.
   Proof.
-    cbv [In carry_chain] in H.
+    cbv [In carry_chain1] in H.
+    repeat match goal with H : _ \/ _ |- _ => destruct H end;
+      try (exfalso; assumption); subst; try vm_decide.
+  Qed.
+  Lemma wt_divides_chain2 i (H:In i carry_chain2) : wt (S i) / wt i <> 0.
+  Proof.
+    cbv [In carry_chain2] in H.
     repeat match goal with H : _ \/ _ |- _ => destruct H end;
       try (exfalso; assumption); subst; try vm_decide.
   Qed.
@@ -76,7 +83,7 @@ Section Ops25p5.
                  eval (add a b) = (eval a  + eval b)%F }.
   Proof.
     eexists; cbv beta zeta; intros.
-    pose proof wt_nonzero. pose proof wt_divides.
+    pose proof wt_nonzero.
     let x := constr:(
         Positional.add_cps (n := sz) wt a b id) in
     solve_op_F wt x. reflexivity.
@@ -89,7 +96,7 @@ Section Ops25p5.
                  eval (sub a b) = (eval a - eval b)%F}.
   Proof.
     eexists; cbv beta zeta; intros.
-    pose proof wt_nonzero. pose proof wt_divides.
+    pose proof wt_nonzero.
     let x := constr:(
          Positional.sub_cps (n:=sz) (coef := coef) wt a b id) in
     solve_op_F wt x. reflexivity.
@@ -102,7 +109,7 @@ Section Ops25p5.
                  eval (opp a) = F.opp (eval a)}.
   Proof.
     eexists; cbv beta zeta; intros.
-    pose proof wt_nonzero. pose proof wt_divides.
+    pose proof wt_nonzero.
     let x := constr:(
          Positional.opp_cps (n:=sz) (coef := coef) wt a id) in
     solve_op_F wt x. reflexivity.
@@ -115,7 +122,7 @@ Section Ops25p5.
                  eval (mul a b) = (eval a  * eval b)%F}.
   Proof.
     eexists; cbv beta zeta; intros.
-    pose proof wt_nonzero. pose proof wt_divides.
+    pose proof wt_nonzero.
     let x := constr:(
          Positional.mul_cps (n:=sz) (m:=sz2) wt a b
            (fun ab => Positional.reduce_cps (n:=sz) (m:=sz2) wt s c ab id)) in
@@ -137,9 +144,13 @@ Section Ops25p5.
                  eval (carry a) = eval a}.
   Proof.
     eexists; cbv beta zeta; intros.
-    pose proof wt_nonzero. pose proof wt_divides. pose proof div_mod.
+    pose proof wt_nonzero. pose proof wt_divides_chain1.
+    pose proof div_mod. pose proof wt_divides_chain2.
     let x := constr:(
-               Positional.chained_carries_cps (n:=sz) (div:=div)(modulo:=modulo) wt a carry_chain id) in
+               Positional.chained_carries_cps (n:=sz) (div:=div)(modulo:=modulo) wt a carry_chain1
+                  (fun r => Positional.carry_reduce_cps (n:=sz) (div:=div) (modulo:=modulo) wt s c r
+                  (fun rrr => Positional.chained_carries_cps (n:=sz) (div:=div) (modulo:=modulo) wt rrr carry_chain2 id
+             ))) in
     solve_op_F wt x. reflexivity.
   Defined.
   
