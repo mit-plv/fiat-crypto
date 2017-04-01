@@ -28,7 +28,7 @@ Local Arguments Z.pow : simpl never.
 Local Arguments Z.sub !_ !_.
 Local Arguments Z.add !_ !_.
 Local Arguments Z.mul !_ !_.
-Lemma relax_output_bounds
+Lemma relax_output_bounds'
       t (tight_output_bounds relaxed_output_bounds : interp_flat_type Bounds.interp_base_type t)
       (Hv : SmartFlatTypeMap (fun _ => Bounds.bounds_to_base_type) relaxed_output_bounds
             = SmartFlatTypeMap (fun _ => Bounds.bounds_to_base_type) tight_output_bounds)
@@ -101,4 +101,28 @@ Proof.
                        => first [ generalize dependent x | generalize dependent y ];
                           let k := fresh in intro k; intros; subst k
                      end ]. }
+Qed.
+
+Lemma relax_output_bounds
+      t (tight_output_bounds relaxed_output_bounds : interp_flat_type Bounds.interp_base_type t)
+      (Hv : SmartFlatTypeMap (fun _ => Bounds.bounds_to_base_type) relaxed_output_bounds
+            = SmartFlatTypeMap (fun _ => Bounds.bounds_to_base_type) tight_output_bounds)
+      v k
+      (v' := eq_rect _ (interp_flat_type _) v _ Hv)
+      (Htighter : @Bounds.is_bounded_by t tight_output_bounds k
+                  /\ @cast_back_flat_const
+                       (@Bounds.interp_base_type) t (fun _ => Bounds.bounds_to_base_type) tight_output_bounds
+                       v'
+                     = k)
+      (Hrelax : Bounds.is_tighter_thanb tight_output_bounds relaxed_output_bounds = true)
+  : @Bounds.is_bounded_by t relaxed_output_bounds k
+    /\ @cast_back_flat_const
+         (@Bounds.interp_base_type) t (fun _ => Bounds.bounds_to_base_type) relaxed_output_bounds
+         v
+       = k.
+Proof.
+  pose proof (fun pf => @relax_output_bounds' t tight_output_bounds relaxed_output_bounds Hv v k (conj pf (proj2 Htighter)) Hrelax) as H.
+  destruct H as [H1 H2]; [ | rewrite <- H2; tauto ].
+  subst v'.
+  destruct Htighter; subst k; assumption.
 Qed.
