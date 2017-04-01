@@ -2192,6 +2192,15 @@ Module Z.
             | rewrite Z.log2_up_eqn0 by omega; simpl; omega ].
   Qed.
 
+  Lemma log2_up_le_pow2_full : forall a b : Z, (0 <= b)%Z -> (a <= 2 ^ b)%Z <-> (Z.log2_up a <= b)%Z.
+  Proof.
+    intros a b H.
+    destruct (Z_lt_le_dec 0 a); [ apply Z.log2_up_le_pow2; assumption | ].
+    split; transitivity 0%Z; try omega; auto with zarith.
+    rewrite Z.log2_up_eqn0 by omega.
+    reflexivity.
+  Qed.
+
   Lemma ones_lt_pow2 x y : 0 <= x <= y -> Z.ones x < 2^y.
   Proof.
     rewrite Z.ones_equiv, Z.lt_pred_le.
