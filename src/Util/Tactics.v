@@ -9,6 +9,7 @@ Require Export Crypto.Util.Tactics.ETransitivity.
 Require Export Crypto.Util.Tactics.RewriteHyp.
 Require Export Crypto.Util.Tactics.SpecializeBy.
 Require Export Crypto.Util.Tactics.SplitInContext.
+Require Export Crypto.Util.Tactics.SubstLet.
 Require Export Crypto.Util.Tactics.UniquePose.
 Require Export Crypto.Util.Tactics.VM.
 
@@ -49,8 +50,6 @@ Ltac subst_evars :=
   repeat match goal with
          | [ e := ?E |- _ ] => is_evar E; subst e
          end.
-
-Ltac subst_let := repeat match goal with | x := _ |- _ => subst x end.
 
 Ltac free_in x y :=
   idtac;
