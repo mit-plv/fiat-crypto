@@ -255,18 +255,6 @@ Definition on_tuple2 {A B C} (f : list A -> list B -> list C) {a b c : nat}
 Definition map2 {n A B C} (f:A -> B -> C) (xs:tuple A n) (ys:tuple B n) : tuple C n
   := on_tuple2 (map2 f) (fun la lb pfa pfb => eq_trans (@map2_length _ _ _ _ la lb) (eq_trans (f_equal2 _ pfa pfb) (Min.min_idempotent _))) xs ys.
 
-Fixpoint pointwise2' {n A B} (R:A -> B -> Prop) : tuple' A n -> tuple' B n -> Prop
-  := match n with
-     | 0 => R
-     | S n' => fun (x y : tuple' _ _ * _)
-               => @pointwise2' n' A B R (fst x) (fst y) /\ R (snd x) (snd y)
-     end.
-Definition pointwise2 {n A B} (R:A -> B -> Prop) : tuple A n -> tuple B n -> Prop
-  := match n with
-     | 0 => fun _ _ => True
-     | S n' => pointwise2' R
-     end.
-
 Lemma to_list'_ext {n A} (xs ys:tuple' A n) : to_list' n xs = to_list' n ys -> xs = ys.
 Proof.
   induction n; simpl in *; [cbv; congruence|]; destruct_head' prod.
@@ -472,17 +460,17 @@ Proof.
                | intro ].
 Qed.
 
-Fixpoint fieldwise' {A B} (n:nat) (R:A->B->Prop) (a:tuple' A n) (b:tuple' B n) {struct n} : Prop.
-  destruct n; simpl @tuple' in *.
-  { exact (R a b). }
-  { exact (R (snd a) (snd b) /\ fieldwise' _ _ n R (fst a) (fst b)). }
-Defined.
-
-Definition fieldwise {A B} (n:nat) (R:A->B->Prop) (a:tuple A n) (b:tuple B n) : Prop.
-  destruct n; simpl @tuple in *.
-  { exact True. }
-  { exact (fieldwise' _ R a b). }
-Defined.
+Fixpoint fieldwise' {A B} (n:nat) (R:A -> B -> Prop) : tuple' A n -> tuple' B n -> Prop
+  := match n with
+     | 0 => R
+     | S n' => fun (x y : tuple' _ _ * _)
+               => @fieldwise' A B n' R (fst x) (fst y) /\ R (snd x) (snd y)
+     end.
+Definition fieldwise {A B} (n:nat) (R:A -> B -> Prop) : tuple A n -> tuple B n -> Prop
+  := match n with
+     | 0 => fun _ _ => True
+     | S n' => fieldwise' n' R
+     end.
 
 Local Ltac Equivalence_fieldwise'_t :=
   let n := match goal with |- ?R (fieldwise' ?n _) => n end in
@@ -566,7 +554,7 @@ End fieldwise_map.
 Fixpoint fieldwiseb' {A B} (n:nat) (R:A->B->bool) (a:tuple' A n) (b:tuple' B n) {struct n} : bool.
   destruct n; simpl @tuple' in *.
   { exact (R a b). }
-  { exact (R (snd a) (snd b) && fieldwiseb' _ _ n R (fst a) (fst b))%bool. }
+  { exact (fieldwiseb' _ _ n R (fst a) (fst b) && R (snd a) (snd b))%bool. }
 Defined.
 
 Definition fieldwiseb {A B} (n:nat) (R:A->B->bool) (a:tuple A n) (b:tuple B n) : bool.
