@@ -34,7 +34,7 @@ Section language.
     Definition simplify_op_expr {src dst} (opc : op src dst)
       : exprf (var:=var) src -> exprf (var:=var) dst
       := match opc in op src dst return exprf src -> exprf dst with
-         | Add _ as opc
+         | Add TZ TZ TZ as opc
            => fun args
               => match interp_as_expr_or_const args with
                  | Some (inl l, inl r)
@@ -46,7 +46,7 @@ Section language.
                       else Op opc args
                  | _ => Op opc args
                  end
-         | Sub _ as opc
+         | Sub TZ TZ TZ as opc
            => fun args
               => match interp_as_expr_or_const args with
                  | Some (inl l, inl r)
@@ -57,7 +57,7 @@ Section language.
                       else Op opc args
                  | _ => Op opc args
                  end
-         | Mul _ as opc
+         | Mul TZ TZ TZ as opc
            => fun args
               => match interp_as_expr_or_const args with
                  | Some (inl l, inl r)
@@ -71,8 +71,8 @@ Section language.
                            else Op opc args
                  | _ => Op opc args
                  end
-         | Shl _ as opc
-         | Shr _ as opc
+         | Shl TZ TZ TZ as opc
+         | Shr TZ TZ TZ as opc
            => fun args
               => match interp_as_expr_or_const args with
                  | Some (inl l, inl r)
@@ -83,7 +83,7 @@ Section language.
                       else Op opc args
                  | _ => Op opc args
                  end
-         | Land _ as opc
+         | Land TZ TZ TZ as opc
            => fun args
               => match interp_as_expr_or_const args with
                  | Some (inl l, inl r)
@@ -95,7 +95,7 @@ Section language.
                       else Op opc args
                  | _ => Op opc args
                  end
-         | Lor _ as opc
+         | Lor TZ TZ TZ as opc
            => fun args
               => match interp_as_expr_or_const args with
                  | Some (inl l, inl r)
@@ -107,11 +107,17 @@ Section language.
                       else Op opc args
                  | _ => Op opc args
                  end
-         | Cast _ _ as opc
+         | Add _ _ _ as opc
+         | Sub _ _ _ as opc
+         | Mul _ _ _ as opc
+         | Shl _ _ _ as opc
+         | Shr _ _ _ as opc
+         | Land _ _ _ as opc
+         | Lor _ _ _ as opc
          | OpConst _ _ as opc
-         | Neg _ _ as opc
-         | Cmovne _ as opc
-         | Cmovle _ as opc
+         | Neg _ _ _ as opc
+         | Cmovne _ _ _ _ _ as opc
+         | Cmovle _ _ _ _ _ as opc
            => Op opc
          end.
   End with_var.

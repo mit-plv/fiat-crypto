@@ -44,13 +44,14 @@ Local Ltac break_t_step :=
 Lemma interp_as_expr_or_const_correct_base {t} e z
   : @interp_as_expr_or_const interp_base_type (Tbase t) e = Some z
     -> interpf interp_op e = match z with
-                             | inl z => z
+                             | inl z => cast_const (t1:=TZ) z
                              | inr e => interpf interp_op e
                              end.
 Proof.
   destruct z.
   { repeat first [ fin_t
                  | progress simpl in *
+                 | progress intros
                  | break_t_step
                  | progress invert_expr
                  | progress invert_op ]. }
@@ -65,11 +66,11 @@ Qed.
 Lemma interp_as_expr_or_const_correct_prod_base {A B} e (v : _ * _)
   : @interp_as_expr_or_const interp_base_type (Prod (Tbase A) (Tbase B)) e = Some v
     -> interpf interp_op e = (match fst v with
-                              | inl z => z
+                              | inl z => cast_const (t1:=TZ) z
                               | inr e => interpf interp_op e
                               end,
                               match snd v with
-                              | inl z => z
+                              | inl z => cast_const (t1:=TZ) z
                               | inr e => interpf interp_op e
                               end).
 Proof.
@@ -92,6 +93,7 @@ Proof.
   break_innermost_match;
     repeat first [ fin_t
                  | progress simpl in *
+                 | progress unfold interp_op, lift_op
                  | progress subst
                  | erewrite !interp_as_expr_or_const_correct_prod_base by eassumption; cbv beta iota
                  | erewrite !interp_as_expr_or_const_correct_base by eassumption; cbv beta iota
