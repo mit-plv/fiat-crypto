@@ -31,3 +31,19 @@ Definition Build_ProcessedReflectivePackage_from_option_sigma
         => let 'existT b e' := be in
            {| InputType := t ; input_expr := e ; input_bounds := input_bounds ; output_bounds := b ; output_expr := e' |})
        result.
+
+Definition ProcessedReflectivePackage_to_sigT (x : ProcessedReflectivePackage)
+  : { InputType : _
+  & { input_expr : Expr base_type op InputType
+  & { input_bounds : interp_flat_type Bounds.interp_base_type (domain InputType)
+  & { output_bounds : interp_flat_type Bounds.interp_base_type (codomain InputType)
+                      & Expr base_type op (Arrow (pick_type input_bounds) (pick_type output_bounds)) } } } }
+  := let (a, b, c, d, e) := x in
+     existT _ a (existT _ b (existT _ c (existT _ d e))).
+
+Ltac inversion_ProcessedReflectivePackage :=
+  repeat match goal with
+         | [ H : _ = _ :> ProcessedReflectivePackage |- _ ]
+           => apply (f_equal ProcessedReflectivePackage_to_sigT) in H;
+              cbv [ProcessedReflectivePackage_to_sigT] in H
+         end.
