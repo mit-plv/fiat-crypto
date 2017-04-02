@@ -907,7 +907,25 @@ Positional.to_associational_cps Positional.to_associational Positional.eval Posi
     (https://coq.inria.fr/bugs/show_bug.cgi?id=5434), that
     [vm_compute] breaks an invariant in pretyping/constr_matching.ml.
     So we refresh all of the names in match statements in the goal by
-    crawling it. *)
+    crawling it.
+
+    In particular, [replace_with_vm_compute] creates a [vm_compute]d
+    term which has anonymous binders where pretyping expects there to
+    be named binders.  This shows up when you try to match on the
+    function (the branch statement of the match) with an Ltac pattern
+    like [(fun x : ?T => ?C)] rather than [(fun x : ?T => @?C x)]; we
+    use the former in reification to save the cost of many extra
+    invocations of [cbv beta].  Luckily, patterns like [(fun x : ?T =>
+    @?C x)] don't trigger this anomaly, so we can walk the term,
+    fixing all match statements whose branches are functions whose
+    binder names were eaten by [vm_compute] (note that in a match,
+    every branch where the corresponding constructor takes arguments
+    is represented internally as a function (lambda term)).  We fix
+    the match statements by pulling out the branch with the [@?]
+    pattern that doesn't trigger the anomaly, and then recreating the
+    match with a destructuring [let] that hasn't been through
+    [vm_compute], and therefore has name information that
+    constr_matching is happy with. *)
 Ltac replace_match_with_destructuring_match T :=
   match T with
   | ?F ?X
