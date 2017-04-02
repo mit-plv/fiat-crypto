@@ -7,19 +7,8 @@ Require Import Crypto.NewBaseSystem.
 Require Import Crypto.Util.FixedWordSizes.
 Require Import Crypto.Specific.NewBaseSystemTest.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
-Require Import Crypto.Util.Tuple Crypto.Util.Notations Crypto.Util.ZRange.
+Require Import Crypto.Util.Tuple Crypto.Util.Notations Crypto.Util.ZRange Crypto.Util.BoundedWord.
 Import ListNotations.
-
-Section Pre.
-  Definition BoundedWord n (bitwidth : nat)
-             (bounds : tuple zrange n) : Type :=
-    { x : tuple (wordT bitwidth) n
-    | is_bounded_by (Some (Z.of_nat bitwidth)) bounds
-                    (map wordToZ x)}.
-
-  Definition BoundedWordToZ n w b (BW :BoundedWord n w b)
-    : tuple Z n :=  map wordToZ (proj1_sig BW).
-End Pre.
 
 Section BoundedField25p5.
   Local Coercion Z.of_nat : nat >-> Z.

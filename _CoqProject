@@ -482,6 +482,7 @@ src/Test/Curve25519SpecTestVectors.v
 src/Util/AdditionChainExponentiation.v
 src/Util/AutoRewrite.v
 src/Util/Bool.v
+src/Util/BoundedWord.v
 src/Util/CPSUtil.v
 src/Util/CaseUtil.v
 src/Util/Curry.v
