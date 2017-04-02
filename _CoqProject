@@ -215,6 +215,7 @@ src/Reflection/Z/Bounds/MapCastByDeBruijnInterp.v
 src/Reflection/Z/Bounds/MapCastByDeBruijnWf.v
 src/Reflection/Z/Bounds/Pipeline.v
 src/Reflection/Z/Bounds/Relax.v
+src/Reflection/Z/Bounds/Pipeline/Composition.v
 src/Reflection/Z/Bounds/Pipeline/Definition.v
 src/Reflection/Z/Bounds/Pipeline/Glue.v
 src/Reflection/Z/Bounds/Pipeline/OutputType.v
