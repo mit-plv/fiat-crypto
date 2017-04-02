@@ -95,7 +95,7 @@ Require Import Crypto.Util.Decidable.
 
 Local Notation pick_typeb := Bounds.bounds_to_base_type (only parsing).
 Local Notation pick_type v := (SmartFlatTypeMap (fun _ => pick_typeb) v).
-Definition PostWfPipelineCorrct
+Definition PostWfPipelineCorrect
            {t}
            (e : Expr base_type op t)
            (input_bounds : interp_flat_type Bounds.interp_base_type (domain t))

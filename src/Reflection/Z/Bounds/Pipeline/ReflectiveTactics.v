@@ -8,6 +8,7 @@
     modifying this file.  This file will need to be modified if you
     perform heavy changes in the shape of the generic or ℤ-specific
     reflective machinery itself, or if you find bugs or slowness. *)
+(** ** Preamble *)
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Wf.
@@ -48,6 +49,19 @@ Module Export Exports.
   Export Crypto.Reflection.Z.Bounds.Pipeline.Definition.Exports.
 End Exports.
 
+(** ** Pre-reification *)
+(** The [assert_reflective] tactic is the first one that gets run, and
+    it takes a goal of the form
+<<
+@Bounds.is_bounded_by (codomain T) bounds _
+  /\ cast_back_flat_const fW = fZ (cast_back_flat_const v)
+>>
+    where [fW] must be a context variable.  It creates a second goal
+    of the form [{ rexpr | forall x, Interp _ rexpr x = fZ x }], which
+    is what reification works on.  This goal is placed first, and in
+    the second (original) subgoal, [fZ] is replaced with the
+    interpretation of the evar which will be filled with the reflected
+    constant. *)
 Ltac assert_reflective :=
   lazymatch goal with
   | [ |- @Bounds.is_bounded_by (codomain ?T) ?bounds _
@@ -63,6 +77,19 @@ Ltac assert_reflective :=
          subst rexpr fZ ]
   end.
 
+(** ** Reification *)
+(** The [rexpr_cbv] tactic unfolds various constants in a goal of the
+    form
+<<
+{ rexpr | forall x, Interp _ rexpr x = f x }
+>>
+    to get the goal into a form that [eexists; Reify_rhs] can handle.
+    This tactic is somewhat more general than it currently needs to
+    be; it can handle cases where [f] is already unfolded, cases
+    where [f] is a definition or a context variable, and cases where
+    [f] is some sort of uncurrying functional applied to a context
+    variable, definition, or unfolded term.  In the old pipeline, it
+    needed to handle all of these cases. *)
 Ltac rexpr_cbv :=
   lazymatch goal with
   | [ |- { rexpr | forall x, Interp _ (t:=?T) rexpr x = ?uncurry ?oper x } ]
@@ -75,18 +102,56 @@ Ltac rexpr_cbv :=
        try cbv delta [T]; try cbv delta [oper]
   end;
   cbv beta iota delta [interp_flat_type interp_base_type].
+(** The [reify_sig] tactic handles a goal of the form
+<<
+{ rexpr | forall x, Interp _ rexpr x = f x }
+>>
+    by reifying [f]. *)
 Ltac reify_sig :=
   rexpr_cbv; eexists; Reify_rhs; reflexivity.
+(** The [do_reify] tactic runs [reify_sig] on the first goal, and
+    then, in the second goal left by [assert_reflective], reduces
+    projections of the reified pair (which was an evar, and is now
+    instantiated). *)
+Ltac do_reify := [ > reify_sig | cbv beta iota in * ].
+
+(** ** Post-reification, pre-Wf transformations *)
+(** The [do_pre_wf_pipeline] tactic runs the part of the pipeline,
+    defined in Pipeline.Definition, which does not rely on
+    well-foundedness.  It operates on a goal of the form
+<<
+Bounds.is_bounded_by bounds (Interp _ fZ v')
+  /\ cast_back_flat_const fW = Interp _ fZ v'
+>>
+    where [fZ] is expected to be a context variable, and does not
+    change the shape of the goal (it updates the definition of [fZ]). *)
+Ltac do_pre_wf_pipeline :=
+  lazymatch goal with
+  | [ |- Bounds.is_bounded_by ?bounds (Interp _ ?fZ ?v')
+         /\ cast_back_flat_const ?fW = Interp _ ?fZ ?v' ]
+    => rewrite <- !(InterpPreWfPipeline fZ);
+       let fZ' := fresh fZ in
+       rename fZ into fZ';
+       set (fZ := PreWfPipeline fZ');
+       vm_compute in fZ; clear fZ'
+  end.
+
+(** ** Well-foundedness *)
+(** The [assert_wf] tactic adds an opaque hypothesis of type [Wf fZ]
+    to the context, pulling [fZ] from a goal of the form
+<<
+Bounds.is_bounded_by _ _ /\ cast_back_flat_const fW = Interp _ fZ _
+>>
+ *)
 Ltac prove_rexpr_wfT
   := reflect_Wf Equality.base_type_eq_semidec_is_dec Equality.op_beq_bl.
-
 Ltac assert_wf :=
   lazymatch goal with
-  | [ |- @Bounds.is_bounded_by (codomain ?T) ?bounds _
-         /\ cast_back_flat_const ?fW = Interp _ ?fZ (@cast_back_flat_const _ _ _ ?input_bounds ?v) ]
+  | [ |- Bounds.is_bounded_by _ _ /\ cast_back_flat_const ?fW = Interp _ ?fZ _ ]
     => assert (Wf fZ) by (clear; prove_rexpr_wfT)
   end.
 
+(** ** Post-Wf pipeline *)
 Notation rexpr_post_wf_pipeline_option rexprZ rexpr_bounds
   := (PostWfPipeline rexprZ rexpr_bounds)
        (only parsing).
@@ -103,7 +168,7 @@ Notation rexpr_post_wf_pipeline_postprocess2 v
 Notation rexpr_correct_and_bounded rexprZ rexprW input_bounds output_bounds rexprZ_Wf
   := (fun v v' Hv
       => proj2
-           (@PostWfPipelineCorrct
+           (@PostWfPipelineCorrect
               _ rexprZ input_bounds rexprZ_Wf
               output_bounds rexprW
               _
@@ -192,17 +257,6 @@ Ltac handle_bounds_from_hyps :=
          | [ |- _ /\ _ ] => split
          | [ |- Bounds.is_bounded_by (_, _) _ ] => split
          end.
-Ltac do_pre_wf_pipeline :=
-  lazymatch goal with
-  | [ |- @Bounds.is_bounded_by (codomain ?T) ?bounds (Interp _ ?fZ ?v')
-         /\ cast_back_flat_const ?fW = Interp _ ?fZ ?v' ]
-    => rewrite <- !(InterpPreWfPipeline fZ);
-       let fZ' := fresh fZ in
-       rename fZ into fZ';
-       set (fZ := PreWfPipeline fZ');
-       vm_compute in fZ; clear fZ'
-  end.
-Ltac do_reify := [ > reify_sig | cbv beta iota in * ].
 Ltac do_post_wf_pipeline :=
   let Hcorrectness := fresh "Hcorrectness" in
   do_pose_correctness Hcorrectness;
@@ -211,6 +265,10 @@ Ltac do_post_wf_pipeline :=
   [ exact Hcorrectness
   | handle_bounds_from_hyps ].
 
+(** ** The Entire Pipeline *)
+(** The [do_reflective_pipeline] tactic solves a goal of the form that
+    is described at the top of this file, and is the public interface
+    of this file. *)
 Ltac do_reflective_pipeline :=
   assert_reflective;
   do_reify;
