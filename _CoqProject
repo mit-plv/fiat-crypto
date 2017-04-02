@@ -143,6 +143,8 @@ src/Reflection/MultiSizeTest2.v
 src/Reflection/Reify.v
 src/Reflection/Relations.v
 src/Reflection/Rewriter.v
+src/Reflection/RewriterInterp.v
+src/Reflection/RewriterWf.v
 src/Reflection/SmartBound.v
 src/Reflection/SmartBoundInterp.v
 src/Reflection/SmartBoundWf.v
