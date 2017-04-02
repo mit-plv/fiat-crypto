@@ -10,6 +10,8 @@ Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
 Require Import Crypto.Util.Tuple Crypto.Util.Sigma Crypto.Util.Notations Crypto.Util.ZRange Crypto.Util.BoundedWord.
 Import ListNotations.
 
+Require Import Crypto.Reflection.Z.Bounds.Pipeline.Glue.
+
 Section BoundedField25p5.
   Local Coercion Z.of_nat : nat >-> Z.
 
@@ -35,16 +37,24 @@ Section BoundedField25p5.
     fun x => B.Positional.Fdecode wt (BoundedWordToZ _ _ _ x).
 
   (* TODO : change this to field once field isomorphism happens *)
-  Definition mul :
-    { mul : feBW -> feBW -> feBW
-    | forall a b, phi (mul a b) = (phi a * phi b)%F }.
+  Definition add :
+    { add : feBW -> feBW -> feBW
+    | forall a b, phi (add a b) = F.add (phi a) (phi b) }.
   Proof.
-    eexists ?[mul]; intros. cbv [phi].
-    rewrite <- (proj2_sig mul_sig).
-    set (mulZ := proj1_sig mul_sig).
-    cbv beta iota delta [proj1_sig mul_sig runtime_add runtime_and runtime_mul runtime_opp runtime_shr] in mulZ.
+    lazymatch goal with
+    | [ |- { f | forall a b, ?phi (f a b) = @?rhs a b } ]
+      => apply lift2_sig with (P:=fun a b f => phi f = rhs a b)
+    end.
+    intros. eexists ?[add]. cbv [phi].
+    rewrite <- (proj2_sig add_sig).
+    symmetry; rewrite <- (proj2_sig carry_sig); symmetry.
+    set (carry_addZ := fun a b => proj1_sig carry_sig (proj1_sig add_sig a b)).
+    change (proj1_sig carry_sig (proj1_sig add_sig ?a ?b)) with (carry_addZ a b).
+    cbv beta iota delta [proj1_sig add_sig carry_sig runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz] in carry_addZ.
+    cbn beta iota delta [fst snd] in carry_addZ.
     apply f_equal.
     (* jgross start here! *)
+    (*refine_to_reflective_glue.*)
 
   Admitted.
 

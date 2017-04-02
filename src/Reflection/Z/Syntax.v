@@ -2,6 +2,7 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemListZOperations.
+Require Import Crypto.Util.FixedWordSizes.
 Export Syntax.Notations.
 
 Local Set Boolean Equality Schemes.

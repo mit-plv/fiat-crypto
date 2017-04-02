@@ -58,23 +58,22 @@ Proof.
   cbv [Bounds.is_bounded_by cast_back_flat_const Bounds.is_tighter_thanb] in *.
   apply interp_flat_type_rel_pointwise_iff_relb in Hrelax.
   induction t; unfold SmartFlatTypeMap in *; simpl @smart_interp_flat_map in *; inversion_flat_type.
-  { cbv [Bounds.is_tighter_thanb' ZRange.is_tighter_than_bool is_true SmartFlatTypeMap Bounds.bounds_to_base_type' Bounds.bounds_to_base_type ZRange.is_bounded_by' ZRange.is_bounded_by Bounds.is_bounded_by' Bounds.bit_width_of_base_type] in *; simpl in *.
-    progress destruct_head_hnf option;
-      repeat first [ progress inversion_flat_type
-                   | progress inversion_base_type
-                   | progress destruct_head bounds
-                   | progress split_andb
-                   | progress Z.ltb_to_lt
-                   | progress break_match_hyps
-                   | progress destruct_head'_and
-                   | progress simpl in *
-                   | rewrite helper in *
-                   | omega
-                   | tauto
-                   | congruence
-                   | progress destruct_head @eq; (reflexivity || omega)
-                   | progress break_innermost_match_step
-                   | apply conj ]. }
+  { cbv [Bounds.is_tighter_thanb' ZRange.is_tighter_than_bool is_true SmartFlatTypeMap Bounds.bounds_to_base_type ZRange.is_bounded_by' ZRange.is_bounded_by Bounds.is_bounded_by' Bounds.bit_width_of_base_type] in *; simpl in *.
+    repeat first [ progress inversion_flat_type
+                 | progress inversion_base_type
+                 | progress destruct_head bounds
+                 | progress split_andb
+                 | progress Z.ltb_to_lt
+                 | progress break_match_hyps
+                 | progress destruct_head'_and
+                 | progress simpl in *
+                 | rewrite helper in *
+                 | omega
+                 | tauto
+                 | congruence
+                 | progress destruct_head @eq; (reflexivity || omega)
+                 | progress break_innermost_match_step
+                 | apply conj ]. }
   { compute in *; tauto. }
   { simpl in *.
     specialize (fun Hv => IHt1 (fst tight_output_bounds) (fst relaxed_output_bounds) Hv (fst v)).
