@@ -29,33 +29,33 @@ Qed.
 
 Definition op_beq_hetero {t1 tR t1' tR'} (f : op t1 tR) (g : op t1' tR') : bool
   := match f, g return bool with
-     | OpConst TZ v, OpConst TZ v' => Z.eqb v v'
-     | OpConst _ _, _ => false
-     | Add T1, Add T2
-     | Sub T1, Sub T2
-     | Mul T1, Mul T2
-     | Shl T1, Shl T2
-     | Shr T1, Shr T2
-     | Land T1, Land T2
-     | Lor T1, Lor T2
-     | Cmovne T1, Cmovne T2
-     | Cmovle T1, Cmovle T2
-       => base_type_beq T1 T2
-     | Neg T1 n, Neg T2 m
-       => base_type_beq T1 T2 && Z.eqb n m
-     | Cast T1 T2, Cast T1' T2'
-       => base_type_beq T1 T1' && base_type_beq T2 T2'
-     | Add _, _ => false
-     | Sub _, _ => false
-     | Mul _, _ => false
-     | Shl _, _ => false
-     | Shr _, _ => false
-     | Land _, _ => false
-     | Lor _, _ => false
-     | Neg _ _, _ => false
-     | Cmovne _, _ => false
-     | Cmovle _, _ => false
-     | Cast _ _, _ => false
+     | OpConst T1 v, OpConst T2 v'
+       => base_type_beq T1 T2 && Z.eqb v v'
+     | Add T1 T2 Tout, Add T1' T2' Tout'
+     | Sub T1 T2 Tout, Sub T1' T2' Tout'
+     | Mul T1 T2 Tout, Mul T1' T2' Tout'
+     | Shl T1 T2 Tout, Shl T1' T2' Tout'
+     | Shr T1 T2 Tout, Shr T1' T2' Tout'
+     | Land T1 T2 Tout, Land T1' T2' Tout'
+     | Lor T1 T2 Tout, Lor T1' T2' Tout'
+       => base_type_beq T1 T1' && base_type_beq T2 T2' && base_type_beq Tout Tout'
+     | Cmovne T1 T2 T3 T4 Tout, Cmovne T1' T2' T3' T4' Tout'
+     | Cmovle T1 T2 T3 T4 Tout, Cmovle T1' T2' T3' T4' Tout'
+       => base_type_beq T1 T1' && base_type_beq T2 T2' &&  base_type_beq T3 T3' &&  base_type_beq T4 T4' &&  base_type_beq Tout Tout'
+     | Neg Tin Tout n, Neg Tin' Tout' m
+       => base_type_beq Tin Tin' && base_type_beq Tout Tout' && Z.eqb n m
+     | OpConst _ _, _
+     | Add _ _ _, _
+     | Sub _ _ _, _
+     | Mul _ _ _, _
+     | Shl _ _ _, _
+     | Shr _ _ _, _
+     | Land _ _ _, _
+     | Lor _ _ _, _
+     | Neg _ _ _, _
+     | Cmovne _ _ _ _ _, _
+     | Cmovle _ _ _ _ _, _
+       => false
      end%bool.
 
 Definition op_beq t1 tR (f g : op t1 tR) : bool
@@ -68,10 +68,10 @@ Proof.
            | _ => progress unfold op_beq_hetero in *
            | _ => simpl; intro; exfalso; assumption
            | _ => solve [ repeat constructor ]
-           | _ => progress destruct_head base_type
            | [ |- context[reified_Prop_of_bool ?b] ]
              => let H := fresh in destruct (Sumbool.sumbool_of_bool b) as [H|H]; rewrite H
            | [ H : nat_beq _ _ = true |- _ ] => apply internal_nat_dec_bl in H; subst
+           | [ H : base_type_beq _ _ = true |- _ ] => apply internal_base_type_dec_bl in H; subst
            | [ H : wordT_beq_hetero _ _ = true |- _ ] => apply wordT_beq_bl in H; subst
            | [ H : wordT_beq_hetero _ _ = true |- _ ] => apply wordT_beq_hetero_bl in H; destruct H; subst
            | [ H : andb ?x ?y = true |- _ ]
@@ -80,6 +80,7 @@ Proof.
            | [ H : and _ _ |- _ ] => destruct H
            | [ H : false = true |- _ ] => exfalso; clear -H; abstract congruence
            | [ H : true = false |- _ ] => exfalso; clear -H; abstract congruence
+           | _ => progress break_match_hyps
            end.
 Defined.
 

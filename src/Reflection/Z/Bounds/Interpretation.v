@@ -124,19 +124,17 @@ Module Import Bounds.
 
   Definition interp_op {src dst} (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
     := match f in op src dst return interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst with
-       | OpConst TZ v => fun _ => BuildTruncated_bounds None v v
-       | OpConst (TWord _ as T) v => fun _ => BuildTruncated_bounds (bit_width_of_base_type T) ((*FixedWordSizes.wordToZ*) v) ((*FixedWordSizes.wordToZ*) v)
-       | Add T => fun xy => add (bit_width_of_base_type T) (fst xy) (snd xy)
-       | Sub T => fun xy => sub (bit_width_of_base_type T) (fst xy) (snd xy)
-       | Mul T => fun xy => mul (bit_width_of_base_type T) (fst xy) (snd xy)
-       | Shl T => fun xy => shl (bit_width_of_base_type T) (fst xy) (snd xy)
-       | Shr T => fun xy => shr (bit_width_of_base_type T) (fst xy) (snd xy)
-       | Land T => fun xy => land (bit_width_of_base_type T) (fst xy) (snd xy)
-       | Lor T => fun xy => lor (bit_width_of_base_type T) (fst xy) (snd xy)
-       | Neg T int_width => fun x => neg (bit_width_of_base_type T) int_width x
-       | Cmovne T => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovne (bit_width_of_base_type T) x y z w
-       | Cmovle T => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovle (bit_width_of_base_type T) x y z w
-       | Cast _ T => fun x => truncation_bounds (bit_width_of_base_type T) x
+       | OpConst T v => fun _ => BuildTruncated_bounds (bit_width_of_base_type T) v v
+       | Add _ _ T => fun xy => add (bit_width_of_base_type T) (fst xy) (snd xy)
+       | Sub _ _ T => fun xy => sub (bit_width_of_base_type T) (fst xy) (snd xy)
+       | Mul _ _ T => fun xy => mul (bit_width_of_base_type T) (fst xy) (snd xy)
+       | Shl _ _ T => fun xy => shl (bit_width_of_base_type T) (fst xy) (snd xy)
+       | Shr _ _ T => fun xy => shr (bit_width_of_base_type T) (fst xy) (snd xy)
+       | Land _ _ T => fun xy => land (bit_width_of_base_type T) (fst xy) (snd xy)
+       | Lor _ _ T => fun xy => lor (bit_width_of_base_type T) (fst xy) (snd xy)
+       | Neg _ T int_width => fun x => neg (bit_width_of_base_type T) int_width x
+       | Cmovne _ _ _ _ T => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovne (bit_width_of_base_type T) x y z w
+       | Cmovle _ _ _ _ T => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovle (bit_width_of_base_type T) x y z w
        end%bounds.
 
   Definition of_Z (z : Z) : t := ZToZRange z.

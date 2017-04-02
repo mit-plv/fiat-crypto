@@ -10,6 +10,8 @@ Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
 Require Import Crypto.Util.Tuple Crypto.Util.Sigma Crypto.Util.Notations Crypto.Util.ZRange Crypto.Util.BoundedWord.
 Import ListNotations.
 
+Require Import Crypto.Reflection.Z.Bounds.Pipeline.
+
 Section BoundedField25p5.
   Local Coercion Z.of_nat : nat >-> Z.
 
@@ -52,8 +54,9 @@ Section BoundedField25p5.
     cbn beta iota delta [fst snd] in carry_addZ.
     apply f_equal.
     (* jgross start here! *)
-    (*refine_to_reflective_glue.*)
-
-  Admitted.
+    Set Ltac Profiling.
+    Time refine_reflectively.
+    Show Ltac Profile.
+  Time Defined.
 
 End BoundedField25p5.
