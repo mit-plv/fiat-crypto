@@ -13,7 +13,9 @@ Section language.
       match goal with
       | [ p : _ |- _ ] => specialize (H _ p)
       end;
-      assumption.
+      cbv beta iota in *;
+      try specialize (H eq_refl); simpl in *;
+      try assumption.
 
     Definition preinvert_Tbase (Q : forall t, P (Tbase t) -> Type)
       : (forall t (p : P t), match t return P t -> Type with Tbase _ => Q _ | _ => fun _ => True end p)
@@ -33,6 +35,15 @@ Section language.
     Definition preinvert_Prod2 (Q : forall A B, P (Prod (Tbase A) (Tbase B)) -> Type)
       : (forall t (p : P t), match t return P t -> Type with Prod (Tbase _) (Tbase _) => Q _ _ | _ => fun _ => True end p)
         -> forall A B p, Q A B p.
+    Proof. t. Defined.
+
+    Definition preinvert_Prod2_same (Q : forall A, P (Prod (Tbase A) (Tbase A)) -> Type)
+      : (forall t (p : P t), match t return P t -> Type with
+                             | Prod (Tbase A) (Tbase B)
+                               => fun p => forall pf : A = B, Q B (eq_rect _ (fun a => P (Prod (Tbase a) (Tbase B))) p _ pf)
+                             | _ => fun _ => True
+                             end p)
+        -> forall A p, Q A p.
     Proof. t. Defined.
 
     Definition preinvert_Prod3 (Q : forall A B C, P (Tbase A * Tbase B * Tbase C)%ctype -> Type)
@@ -108,6 +119,10 @@ Ltac preinvert_one_type e :=
        move e at top;
        revert dependent T;
        refine (preinvert_Tbase P _ _)
+  | ?P (Prod (Tbase ?A) (Tbase ?A))
+    => is_var A;
+       move e at top; revert dependent A;
+       refine (preinvert_Prod2_same P _ _)
   | ?P (Prod (Tbase ?A) (Tbase ?B))
     => is_var A; is_var B;
        move e at top; revert dependent A; intros A e;
