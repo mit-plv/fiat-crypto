@@ -43,7 +43,7 @@ Section language.
     Qed.
   End with_var.
 
-  Lemma Wf_InterpRewriteOp
+  Lemma Wf_RewriteOp
         {rewrite_op_expr}
         (Hrewrite_wff : forall var1 var2 G src dst opc args1 args2,
             wff G args1 args2
@@ -58,4 +58,4 @@ Section language.
   Qed.
 End language.
 
-Hint Resolve Wf_InterpRewriteOp : wf.
+Hint Resolve Wf_RewriteOp : wf.
