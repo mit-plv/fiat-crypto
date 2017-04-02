@@ -8,10 +8,13 @@
     modifying this file.  This file will need to be modified if you
     perform heavy changes in the shape of the generic or ℤ-specific
     reflective machinery itself, or if you find bugs or slowness. *)
+Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Wf.
 Require Import Crypto.Reflection.WfReflective.
 Require Import Crypto.Reflection.RenameBinders.
+Require Import Crypto.Reflection.Eta.
+Require Import Crypto.Reflection.EtaInterp.
 Require Import Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Reflection.Z.Syntax.Util.
 Require Import Crypto.Reflection.Z.Bounds.Interpretation.
@@ -22,7 +25,9 @@ Require Import Crypto.Reflection.Z.Bounds.Pipeline.OutputType.
 Require Import Crypto.Reflection.Z.Bounds.Pipeline.Definition.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.SubstLet.
+Require Import Crypto.Util.FixedWordSizes.
 Require Import Crypto.Util.Option.
+Require Import Bedrock.Word.
 
 (** The final tactic in this file, [do_reflective_pipeline], takes a
     goal of the form
@@ -40,6 +45,7 @@ Require Import Crypto.Util.Option.
 Module Export Exports.
   Export Crypto.Reflection.Reify. (* export for the instances for recursing under binders *)
   Export Crypto.Reflection.Z.Reify. (* export for the tactic redefinitions *)
+  Export Crypto.Reflection.Z.Bounds.Pipeline.Definition.Exports.
 End Exports.
 
 Ltac assert_reflective :=
@@ -144,6 +150,12 @@ Ltac pretighten_bounds_from_correctness Hcorrectness :=
   end.
 Ltac tighten_bounds_from_correctness Hcorrectness :=
   pretighten_bounds_from_correctness Hcorrectness; posttighten_bounds.
+
+Declare Reduction interp_red := cbv [Interp InterpEta interp_op interp interp_eta interpf interpf_step interp_flat_type_eta interp_flat_type_eta_gen SmartMap.SmartFlatTypeMap codomain domain interp_flat_type interp_base_type SmartMap.smart_interp_flat_map lift_op Zinterp_op SmartMap.SmartFlatTypeMapUnInterp SmartMap.SmartFlatTypeMapInterp2 fst snd cast_const ZToInterp interpToZ].
+(* hopefully separating this out into a separate tactic will make it
+   show up in the Ltac profile *)
+Ltac clear_then_abstract_reflexivity x :=
+  clear; abstract exact_no_check (eq_refl x).
 Ltac specialize_Hcorrectness Hcorrectness :=
   lazymatch goal with
   | [ |- @Bounds.is_bounded_by (codomain ?T) ?bounds (Interp _ ?fZ ?v')
@@ -151,11 +163,27 @@ Ltac specialize_Hcorrectness Hcorrectness :=
     => let v := lazymatch v' with cast_back_flat_const ?v => v end in
        specialize (Hcorrectness v' v);
        lazymatch type of Hcorrectness with
-       | ?T -> Bounds.is_bounded_by _ _ /\ cast_back_flat_const ?fW' = _
-         => let fWev := (eval cbv delta [fW] in fW) in
-            unify fWev fW'; cut T
+       | ?T -> Bounds.is_bounded_by _ _
+               /\ cast_back_flat_const (@Interp ?base_type ?interp_base_type ?op ?interp_op ?fWT ?fW' ?args) = _
+         => cut T;
+            [ (let H := fresh in intro H; specialize (Hcorrectness H); clear H);
+              rewrite <- (@eq_InterpEta base_type interp_base_type op interp_op fWT fW' args) in Hcorrectness
+            | ]
        end;
-       [ let H := fresh in intro H; specialize (Hcorrectness H) | ]
+       [ lazymatch type of Hcorrectness with
+           Bounds.is_bounded_by _ _ /\ cast_back_flat_const ?fW' = _
+           => let fWev := (eval cbv delta [fW] in fW) in
+              let fW'_orig := fW' in
+              let fW' := (eval interp_red in fW') in
+              let fW' := (eval extra_interp_red in fW') in
+              let fW' := lazymatch do_constant_simplification with
+                         | true => (eval constant_simplification in fW')
+                         | _ => fW'
+                         end in
+              unify fWev fW';
+              replace fW with fW'_orig by clear_then_abstract_reflexivity fW
+         end
+       | ]
   end.
 Ltac handle_bounds_from_hyps :=
   repeat match goal with
