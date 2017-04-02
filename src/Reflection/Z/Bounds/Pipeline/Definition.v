@@ -123,3 +123,52 @@ Proof.
   (** Now handle word-size selection itself *)
   eapply MapCastCorrect; eauto with wf.
 Qed.
+
+
+(** ** Constant Simplification and Unfolding *)
+(** The reflective pipeline may introduce constants that you want to
+    unfold before instantiating the refined term; you can control that
+    here.  A number of reflection-specific constants are always
+    unfolded (in ReflectiveTactics.v).  Currently, we also reduce
+    expressions of the form [wordToZ (ZToWord Z_literal)], as
+    specified here. *)
+Require Import Coq.ZArith.ZArith.
+Require Import Crypto.Util.FixedWordSizes.
+Require Import Bedrock.Word.
+
+Module Export Exports. (* export unfolding strategy *)
+  (* iota is probably (hopefully?) the cheapest reduction.
+     Unfortunately, we can't say no-op here.  This is meant to be
+     extended. *)
+  Declare Reduction extra_interp_red := cbv iota.
+
+  (** Overload this to change reduction behavior of constants of the
+      form [wordToZ (ZToWord Z_literal)].  You might want to set this
+      to false if your term is very large, to speed things up. *)
+  Ltac do_constant_simplification := constr:(true).
+
+  Global Arguments ZToWord !_ !_ / .
+  Global Arguments wordToZ !_ !_ / .
+  Global Arguments word_case_dep _ !_ _ _ _ _ / .
+  Global Arguments ZToWord32 !_ / .
+  Global Arguments ZToWord64 !_ / .
+  Global Arguments ZToWord128 !_ / .
+  Global Arguments ZToWord_gen !_ !_ / .
+  Global Arguments word32ToZ !_ / .
+  Global Arguments word64ToZ !_ / .
+  Global Arguments word128ToZ !_ / .
+  Global Arguments wordToZ_gen !_ !_ / .
+  Global Arguments Z.to_N !_ / .
+  Global Arguments Z.of_N !_ / .
+  Global Arguments Word.NToWord !_ !_ / .
+  Global Arguments Word.wordToN !_ !_ / .
+  Global Arguments Word.posToWord !_ !_ / .
+  Global Arguments N.succ_double !_ / .
+  Global Arguments Word.wzero' !_ / .
+  Global Arguments N.double !_ .
+  Global Arguments Nat.pow !_ !_ / .
+  Global Arguments Nat.mul !_ !_ / .
+  Global Arguments Nat.add !_ !_ / .
+
+  Declare Reduction constant_simplification := cbn [FixedWordSizes.wordToZ FixedWordSizes.ZToWord word_case_dep ZToWord32 ZToWord64 ZToWord128 ZToWord_gen word32ToZ word64ToZ word128ToZ wordToZ_gen Word.NToWord Word.wordToN Word.posToWord Word.wzero' Z.to_N Z.of_N N.succ_double N.double Nat.pow Nat.mul Nat.add].
+End Exports.
