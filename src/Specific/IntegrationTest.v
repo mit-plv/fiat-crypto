@@ -10,8 +10,6 @@ Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
 Require Import Crypto.Util.Tuple Crypto.Util.Sigma Crypto.Util.Notations Crypto.Util.ZRange Crypto.Util.BoundedWord.
 Import ListNotations.
 
-Require Import Crypto.Reflection.Z.Bounds.Pipeline.Glue.
-
 Section BoundedField25p5.
   Local Coercion Z.of_nat : nat >-> Z.
 

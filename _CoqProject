@@ -216,8 +216,6 @@ src/Reflection/Z/Syntax.v
 src/Reflection/Z/Bounds/Interpretation.v
 src/Reflection/Z/Bounds/MapCastByDeBruijn.v
 src/Reflection/Z/Bounds/Relax.v
-src/Reflection/Z/Bounds/Pipeline/Glue.v
-src/Reflection/Z/Bounds/Pipeline/PreDefinitions.v
 src/Reflection/Z/Interpretations128/Relations.v
 src/Reflection/Z/Interpretations128/RelationsCombinations.v
 src/Reflection/Z/Interpretations64/Relations.v
