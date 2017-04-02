@@ -217,7 +217,7 @@ src/Reflection/Z/Bounds/Pipeline.v
 src/Reflection/Z/Bounds/Relax.v
 src/Reflection/Z/Bounds/Pipeline/Definition.v
 src/Reflection/Z/Bounds/Pipeline/Glue.v
-src/Reflection/Z/Bounds/Pipeline/PreDefinitions.v
+src/Reflection/Z/Bounds/Pipeline/OutputType.v
 src/Reflection/Z/Bounds/Pipeline/ReflectiveTactics.v
 src/Reflection/Z/Syntax/Equality.v
 src/Reflection/Z/Syntax/Util.v

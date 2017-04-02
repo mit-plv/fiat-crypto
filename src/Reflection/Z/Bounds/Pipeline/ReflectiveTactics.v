@@ -9,7 +9,7 @@ Require Import Crypto.Reflection.Z.Bounds.Interpretation.
 Require Import Crypto.Reflection.Z.Bounds.Relax.
 Require Import Crypto.Reflection.Reify.
 Require Import Crypto.Reflection.Z.Reify.
-Require Import Crypto.Reflection.Z.Bounds.Pipeline.PreDefinitions.
+Require Import Crypto.Reflection.Z.Bounds.Pipeline.OutputType.
 Require Import Crypto.Reflection.Z.Bounds.Pipeline.Definition.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.SubstLet.

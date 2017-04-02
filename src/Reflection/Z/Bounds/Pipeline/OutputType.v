@@ -1,5 +1,4 @@
-(** * Definitions which are used in the pipeline, but shouldn't be changed *)
-(** *** Definition of the output type of the post-Wf pipeline *)
+(** * Definition of the output type of the post-Wf pipeline *)
 (** Do not change these definitions unless you're hacking on the
     entire reflective pipeline tactic automation. *)
 Require Import Crypto.Reflection.Syntax.
