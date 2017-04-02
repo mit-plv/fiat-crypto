@@ -88,6 +88,7 @@ Section language.
               => match interp_as_expr_or_const args with
                  | Some (inl l, inl r)
                    => Op (OpConst (interp_op _ _ opc (l, r))) TT
+                 | Some (inl v, inr e)
                  | Some (inr e, inl v)
                    => if (v =? 0)%Z
                       then Op (OpConst 0%Z) TT
@@ -99,6 +100,7 @@ Section language.
               => match interp_as_expr_or_const args with
                  | Some (inl l, inl r)
                    => Op (OpConst (interp_op _ _ opc (l, r))) TT
+                 | Some (inl v, inr e)
                  | Some (inr e, inl v)
                    => if (v =? 0)%Z
                       then e
