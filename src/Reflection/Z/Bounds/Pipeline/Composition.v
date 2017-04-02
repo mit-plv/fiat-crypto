@@ -8,6 +8,7 @@ Require Import Crypto.Reflection.Wf.
 Require Import Crypto.Reflection.WfReflectiveGen.
 Require Import Crypto.Reflection.WfReflective.
 Require Import Crypto.Reflection.Eta.
+Require Import Crypto.Reflection.EtaWf.
 Require Import Crypto.Reflection.EtaInterp.
 Require Import Crypto.Reflection.Z.Bounds.Pipeline.OutputType.
 Require Import Crypto.Reflection.Z.Bounds.Pipeline.Definition.
@@ -40,13 +41,13 @@ Definition PipelineCorrect
            (** ** pre-wf pipeline *)
            (He : e = PreWfPipeline (proj1_sig rexpr_sig))
            (** ** proving wf *)
-           (He_unnatize_for_wf : forall var, unnatize_expr 0 (e (fun t => (nat * var t)%type)) = e _)
+           (He_unnatize_for_wf : forall var, unnatize_expr 0 (ExprEta' e (fun t => (nat * var t)%type)) = ExprEta' e _)
            (Hwf : forall var1 var2,
-               let P := (@reflect_wfT base_type base_type_eq_semidec_transparent op op_beq var1 var2 nil _ _ (e _) (e _)) in
+               let P := (@reflect_wfT base_type base_type_eq_semidec_transparent op op_beq var1 var2 nil _ _ (ExprEta' e _) (ExprEta' e _)) in
                trueify P = P)
            (** ** post-wf-pipeline *)
            (Hpost : e_pkg = PostWfPipeline e input_bounds)
-           (Hpost_correct : e_pkg = Some {| input_expr := e ; input_bounds := input_bounds ; output_bounds := b ; output_expr := e' |})
+           (Hpost_correct : Some {| input_expr := e ; input_bounds := input_bounds ; output_bounds := b ; output_expr := e' |} = e_pkg)
            (** ** renaming *)
            (Hrenaming : e_final = e')
            (** ** bounds relaxation *)
@@ -64,10 +65,12 @@ Definition PipelineCorrect
 Proof.
   destruct rexpr_sig as [? Hrexpr].
   assert (Hwf' : Wf e)
-    by (eapply reflect_Wf;
+    by (apply (proj1 (@Wf_ExprEta'_iff _ _ _ e));
+        eapply reflect_Wf;
         [ .. | intros; split; [ eapply He_unnatize_for_wf | rewrite <- Hwf; apply trueify_true ] ];
         auto using base_type_eq_semidec_is_dec, op_beq_bl).
   clear Hwf He_unnatize_for_wf.
+  symmetry in Hpost_correct.
   subst; cbv [proj1_sig] in *.
   rewrite <- Hrexpr.
   eapply PostWfPipelineCorrect in Hpost_correct; [ | solve [ eauto ].. ].
