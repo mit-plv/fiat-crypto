@@ -14,7 +14,6 @@ HIDE := $(if $(VERBOSE),,@)
 	install-coqprime clean-coqprime coqprime \
 	specific-display display \
 	specific non-specific \
-	small-specific-gen medium-specific-gen specific-gen \
 	extraction ghc
 
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g'
@@ -54,20 +53,13 @@ HEAVY_VOFILES := src/WeierstrassCurve/WeierstrassCurveTheorems.vo
 COQ_VOFILES := $(filter-out $(UNMADE_VOFILES),$(VOFILES))
 LITE_VOFILES := $(filter-out $(HEAVY_VOFILES),$(COQ_VOFILES))
 SPECIFIC_VO := $(filter src/Specific/%,$(VOFILES))
-SPECIFIC_GEN_VO := $(filter src/SpecificGen/%,$(VOFILES))
-MEDIUM_SPECIFIC_GEN_VO := $(filter-out src/SpecificGen/GF5211_32%,$(SPECIFIC_GEN_VO))
-SMALL_SPECIFIC_GEN_VO := $(filter-out src/SpecificGen/GF41417_32%,$(MEDIUM_SPECIFIC_GEN_VO))
 NON_SPECIFIC_VO := $(filter-out $(SPECIFIC_VO),$(VO_FILES))
 SPECIFIC_DISPLAY_VO := $(filter src/Specific/%Display.vo,$(VOFILES))
-SPECIFIC_GEN_DISPLAY_VO := $(filter src/SpecificGen/%Display.vo,$(VOFILES))
-DISPLAY_VO := $(SPECIFIC_DISPLAY_VO) $(SPECIFIC_GEN_DISPLAY_VO)
+DISPLAY_VO := $(SPECIFIC_DISPLAY_VO)
 DISPLAY_JAVA_VO := $(filter %JavaDisplay.vo,$(DISPLAY_VO))
 DISPLAY_NON_JAVA_VO := $(filter-out $(DISPLAY_JAVA_VO),$(DISPLAY_VO))
 
 specific: $(SPECIFIC_VO) coqprime
-specific-gen: $(SPECIFIC_GEN_VO) coqprime
-medium-specific-gen: $(MEDIUM_SPECIFIC_GEN_VO) coqprime
-small-specific-gen: $(SMALL_SPECIFIC_GEN_VO) coqprime
 non-specific: $(NON_SPECIFIC_VO) coqprime
 specific-display: $(SPECIFIC_DISPLAY_VO:.vo=.log) coqprime
 display: $(DISPLAY_VO:.vo=.log) coqprime
