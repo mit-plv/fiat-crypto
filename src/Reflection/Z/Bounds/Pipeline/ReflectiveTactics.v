@@ -1,4 +1,13 @@
 (** * Reflective Pipeline: Tactics that execute the pipeline *)
+(** N.B. This file should not need to be changed in normal
+    modifications of the reflective transformations; to modify the
+    transformations performed in the reflective pipeline; see
+    Pipeline/Definition.v.  If the input format of the pre-reflective
+    goal changes, prefer adding complexity to Pipeline/Glue.v to
+    transform the goal and hypotheses into a uniform syntax to
+    modifying this file.  This file will need to be modified if you
+    perform heavy changes in the shape of the generic or ℤ-specific
+    reflective machinery itself, or if you find bugs or slowness. *)
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Wf.
 Require Import Crypto.Reflection.WfReflective.
@@ -15,10 +24,38 @@ Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.SubstLet.
 Require Import Crypto.Util.Option.
 
+(** The final tactic in this file, [do_reflective_pipeline], takes a
+    goal of the form
+<<
+@Bounds.is_bounded_by (codomain T) bounds (fZ (cast_back_flat_const v))
+  /\ cast_back_flat_const fW = fZ (cast_back_flat_const v)
+>>
+
+    where [fW] must be a context definition which is a single evar,
+    and all other terms must be evar-free.  It fully solves the goal,
+    instantiating [fW] with an appropriately-unfolded
+    (reflection-definition-free) version of [fZ (cast_back_flat_const
+    v)] which has been transformed by the reflective pipeline. *)
+
 Module Export Exports.
   Export Crypto.Reflection.Reify. (* export for the instances for recursing under binders *)
   Export Crypto.Reflection.Z.Reify. (* export for the tactic redefinitions *)
 End Exports.
+
+Ltac assert_reflective :=
+  lazymatch goal with
+  | [ |- @Bounds.is_bounded_by (codomain ?T) ?bounds _
+         /\ cast_back_flat_const ?fW = ?fZ (cast_back_flat_const ?v) ]
+    => let rexpr := fresh "rexpr" in
+       simple refine (let rexpr : { rexpr | forall x, Interp interp_op (t:=T) rexpr x = fZ x } := _ in _);
+       [ cbv [interp_flat_type interp_base_type Tuple.tuple Tuple.tuple'] in *;
+         subst fW
+       | rewrite <- (proj2_sig rexpr);
+         let rexpr' := fresh rexpr in
+         set (rexpr' := proj1_sig rexpr);
+         unfold proj1_sig in rexpr';
+         subst rexpr fZ ]
+  end.
 
 Ltac rexpr_cbv :=
   lazymatch goal with
@@ -34,20 +71,6 @@ Ltac rexpr_cbv :=
   cbv beta iota delta [interp_flat_type interp_base_type].
 Ltac reify_sig :=
   rexpr_cbv; eexists; Reify_rhs; reflexivity.
-Ltac assert_reflective :=
-  lazymatch goal with
-  | [ |- @Bounds.is_bounded_by (codomain ?T) ?bounds _
-         /\ cast_back_flat_const ?fW = ?fZ (cast_back_flat_const ?v) ]
-    => let rexpr := fresh "rexpr" in
-       simple refine (let rexpr : { rexpr | forall x, Interp interp_op (t:=T) rexpr x = fZ x } := _ in _);
-       [ cbv [interp_flat_type interp_base_type Tuple.tuple Tuple.tuple'] in *;
-         subst fW
-       | rewrite <- (proj2_sig rexpr);
-         let rexpr' := fresh rexpr in
-         set (rexpr' := proj1_sig rexpr);
-         unfold proj1_sig in rexpr';
-         subst rexpr fZ ]
-  end.
 Ltac prove_rexpr_wfT
   := reflect_Wf Equality.base_type_eq_semidec_is_dec Equality.op_beq_bl.
 
