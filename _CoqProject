@@ -142,6 +142,7 @@ src/Reflection/MultiSizeTest.v
 src/Reflection/MultiSizeTest2.v
 src/Reflection/Reify.v
 src/Reflection/Relations.v
+src/Reflection/RenameBinders.v
 src/Reflection/Rewriter.v
 src/Reflection/RewriterInterp.v
 src/Reflection/RewriterWf.v
