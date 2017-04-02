@@ -46,3 +46,5 @@ Section language.
     apply interp_rewrite_op; assumption.
   Qed.
 End language.
+
+Hint Rewrite @InterpRewriteOp using assumption : reflective_interp.

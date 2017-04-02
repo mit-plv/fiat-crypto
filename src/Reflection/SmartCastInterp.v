@@ -33,3 +33,5 @@ Section language.
     { reflexivity. }
   Qed.
 End language.
+
+Hint Rewrite @interpf_SmartCast_base using solve [ eassumption | eauto ] : reflective_interp.

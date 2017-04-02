@@ -130,3 +130,5 @@ Section language.
     eapply InterpInlineConstGen; eauto.
   Qed.
 End language.
+
+Hint Rewrite @InterpInlineConst @interp_inline_const @interpf_inline_constf using solve [ eassumption | eauto with wf ] : reflective_interp.

@@ -94,3 +94,5 @@ Section language.
     : forall x, Interp (t:=Arrow s d) (@interp_op) (ExprEta' (t:=Arrow s d) e) x = Interp (@interp_op) e x.
   Proof. exact (@InterpExprEta' (Arrow s d) e). Qed.
 End language.
+
+Hint Rewrite @eq_interp_flat_type_eta @eq_interp_flat_type_eta' @interpf_exprf_eta @interpf_exprf_eta' @interp_expr_eta @interp_expr_eta' @InterpExprEta @InterpExprEta' @InterpExprEta_arrow @InterpExprEta'_arrow : reflective_interp.

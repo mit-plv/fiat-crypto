@@ -111,3 +111,5 @@ Section language.
       = Interp interp_op e x.
   Proof. apply InterpInlineConstGen; auto. Qed.
 End language.
+
+Hint Rewrite @interpf_exprf_of_push_cast @InterpInlineCast using solve [ eassumption | eauto with wf ] : reflective_interp.

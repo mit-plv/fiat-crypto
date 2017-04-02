@@ -60,3 +60,6 @@ Section language.
     subst; eapply interpf_SmartVarVarf; eassumption.
   Qed.
 End language.
+
+Hint Rewrite @interpf_LetIn @interpf_SmartVarf : reflective_interp.
+Hint Rewrite @interpf_SmartVarVarf using assumption : reflective_interp.

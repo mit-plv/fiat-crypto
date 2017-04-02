@@ -81,3 +81,6 @@ Section language.
     eapply interp_linearize.
   Qed.
 End language.
+
+Hint Rewrite @interpf_under_letsf : reflective_interp.
+Hint Rewrite @InterpLinearize @interp_linearize @interpf_linearizef using solve [ eassumption | eauto with wf ] : reflective_interp.

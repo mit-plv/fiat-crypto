@@ -98,3 +98,5 @@ Proof.
                  | progress Z.ltb_to_lt
                  | progress rewrite ?Z.land_0_l, ?Z.land_0_r, ?Z.lor_0_l, ?Z.lor_0_r ].
 Qed.
+
+Hint Rewrite @InterpSimplifyArith : reflective_interp.
