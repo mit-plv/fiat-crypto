@@ -38,7 +38,7 @@ Section language.
            | Op t1 tR opc args => Op opc (@exprf_eta_gen _ args)
            | LetIn tx ex tC eC
              => LetIn (@exprf_eta_gen _ ex)
-                      (interp_flat_type_eta_gen eC)
+                      (interp_flat_type_eta_gen (fun x => @exprf_eta_gen _ (eC x)))
            | Pair tx ex ty ey => Pair (@exprf_eta_gen _ ex) (@exprf_eta_gen _ ey)
            end.
     End gen_flat_type.
