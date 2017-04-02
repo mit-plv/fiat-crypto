@@ -22,7 +22,7 @@ Section language.
          | TT => TT
          | Pair tx ex ty ey
            => Pair (@rewrite_opf tx ex) (@rewrite_opf ty ey)
-         | Op t1 tR opc args => rewrite_op_expr _ _ opc args
+         | Op t1 tR opc args => rewrite_op_expr _ _ opc (@rewrite_opf t1 args)
          end.
 
     Definition rewrite_op {t} (e : @expr var t) : @expr var t
