@@ -63,3 +63,13 @@ Section language.
   Definition ExprEta' {t} (e : Expr t) : Expr (Arrow (domain t) (codomain t))
     := fun var => expr_eta' (e var).
 End language.
+(* put these outside the section so the argument order lines up with
+   [interp] and [Interp] *)
+Definition interp_eta {base_type_code interp_base_type op} interp_op
+           {t} (e : @expr base_type_code op interp_base_type t)
+  : interp_type interp_base_type t
+  := interp_flat_type_eta (interp interp_op e).
+Definition InterpEta {base_type_code interp_base_type op} interp_op
+           {t} (e : @Expr base_type_code op t)
+  : interp_type interp_base_type t
+  := interp_eta interp_op (e _).

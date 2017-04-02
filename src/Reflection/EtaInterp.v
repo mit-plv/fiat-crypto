@@ -93,6 +93,13 @@ Section language.
   Lemma InterpExprEta'_arrow {s d e}
     : forall x, Interp (t:=Arrow s d) (@interp_op) (ExprEta' (t:=Arrow s d) e) x = Interp (@interp_op) e x.
   Proof. exact (@InterpExprEta' (Arrow s d) e). Qed.
+
+  Lemma eq_interp_eta {t e}
+    : forall x, interp_eta interp_op (t:=t) e x = interp interp_op e x.
+  Proof. apply eq_interp_flat_type_eta. Qed.
+  Lemma eq_InterpEta {t e}
+    : forall x, InterpEta interp_op (t:=t) e x = Interp interp_op e x.
+  Proof. apply eq_interp_eta. Qed.
 End language.
 
-Hint Rewrite @eq_interp_flat_type_eta @eq_interp_flat_type_eta' @interpf_exprf_eta @interpf_exprf_eta' @interp_expr_eta @interp_expr_eta' @InterpExprEta @InterpExprEta' @InterpExprEta_arrow @InterpExprEta'_arrow : reflective_interp.
+Hint Rewrite @eq_interp_flat_type_eta @eq_interp_flat_type_eta' @interpf_exprf_eta @interpf_exprf_eta' @interp_expr_eta @interp_expr_eta' @InterpExprEta @InterpExprEta' @InterpExprEta_arrow @InterpExprEta'_arrow @eq_interp_eta @eq_InterpEta : reflective_interp.
