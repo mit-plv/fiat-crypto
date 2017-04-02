@@ -10,14 +10,9 @@ To build (if your COQPATH variable is empty):
 
     make
 
-To build (Coq 8.5):
+To build (Coq 8.5, Coq 8.6):
 
 	export COQPATH="$(pwd)/coqprime${COQPATH:+:}$COQPATH"
-	make
-
-To build with Coq 8.4
-
-	export COQPATH="$(pwd)/coqprime-8.4${COQPATH:+:}$COQPATH"
 	make
 
 ## Build Targets

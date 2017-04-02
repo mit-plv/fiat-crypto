@@ -24,11 +24,6 @@ SUPER_FAST_TARGETS += update-_CoqProject Makefile.coq
 COQ_VERSION_PREFIX = The Coq Proof Assistant, version
 COQ_VERSION := $(firstword $(subst $(COQ_VERSION_PREFIX),,$(shell "$(COQBIN)coqc" --version 2>/dev/null)))
 
-ifneq ($(filter 8.4%,$(COQ_VERSION)),) # 8.4
-# Give us TIMED=1 in Coq 8.4
-COQC?=$(TIMER) "$(COQBIN)coqc"
-endif
-
 ifneq ($(filter-out $(SUPER_FAST_TARGETS),$(MAKECMDGOALS)),)
 -include Makefile.coq
 else
@@ -66,9 +61,6 @@ display: $(DISPLAY_VO:.vo=.log) coqprime
 coq: $(COQ_VOFILES) coqprime
 lite: $(LITE_VOFILES) coqprime
 
-ifneq ($(filter 8.4%,$(COQ_VERSION)),) # 8.4
-COQPRIME_FOLDER := coqprime-8.4
-else
 COQPRIME_FOLDER := coqprime
 ifneq ($(filter 8.5%,$(COQ_VERSION)),) # 8.5
 else
@@ -76,7 +68,6 @@ ifneq ($(PROFILE),)
 OTHERFLAGS ?= -profile-ltac -w "-deprecated-appcontext -notation-overridden"
 else
 OTHERFLAGS ?= -w "-deprecated-appcontext -notation-overridden"
-endif
 endif
 endif
 
