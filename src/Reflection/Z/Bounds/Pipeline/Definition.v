@@ -1,7 +1,7 @@
 (** * Reflective Pipeline: Main Pipeline Definition *)
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Z.Syntax.
-Require Import Crypto.Reflection.Z.Bounds.Pipeline.PreDefinitions.
+Require Import Crypto.Reflection.Z.Bounds.Pipeline.OutputType.
 (** This file contains the definitions of the assembling of the
     various transformations that are used in the pipeline.  There are
     two stages to the reflective pipeline, with different
