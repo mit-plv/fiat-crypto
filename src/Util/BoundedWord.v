@@ -5,8 +5,8 @@ Require Import Crypto.Util.FixedWordSizes.
 
 Definition BoundedWord n (bitwidth : nat)
            (bounds : tuple zrange n) : Type :=
-  { x : tuple (wordT bitwidth) n
-  | is_bounded_by (Some (Z.of_nat bitwidth)) bounds
+  { x : tuple (wordT (Nat.log2 bitwidth)) n
+  | is_bounded_by None bounds
                   (map wordToZ x)}.
 
 Definition BoundedWordToZ n w b (BW :BoundedWord n w b)

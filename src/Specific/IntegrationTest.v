@@ -7,7 +7,7 @@ Require Import Crypto.NewBaseSystem.
 Require Import Crypto.Util.FixedWordSizes.
 Require Import Crypto.Specific.NewBaseSystemTest.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
-Require Import Crypto.Util.Tuple Crypto.Util.Notations Crypto.Util.ZRange Crypto.Util.BoundedWord.
+Require Import Crypto.Util.Tuple Crypto.Util.Sigma Crypto.Util.Notations Crypto.Util.ZRange Crypto.Util.BoundedWord.
 Import ListNotations.
 
 Section BoundedField25p5.
