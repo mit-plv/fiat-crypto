@@ -6,6 +6,8 @@ Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Reflection.Z.Bounds.Interpretation.
+Require Import Crypto.Util.Sigma.
+Require Import Crypto.Util.Prod.
 Local Notation pick_typeb := Bounds.bounds_to_base_type (only parsing).
 Local Notation pick_type v := (SmartFlatTypeMap (fun _ => pick_typeb) v).
 
@@ -34,16 +36,17 @@ Definition Build_ProcessedReflectivePackage_from_option_sigma
 
 Definition ProcessedReflectivePackage_to_sigT (x : ProcessedReflectivePackage)
   : { InputType : _
-  & { input_expr : Expr base_type op InputType
-  & { input_bounds : interp_flat_type Bounds.interp_base_type (domain InputType)
-  & { output_bounds : interp_flat_type Bounds.interp_base_type (codomain InputType)
-                      & Expr base_type op (Arrow (pick_type input_bounds) (pick_type output_bounds)) } } } }
+                  & Expr base_type op InputType
+                    * { bounds : interp_flat_type Bounds.interp_base_type (domain InputType)
+                                 * interp_flat_type Bounds.interp_base_type (codomain InputType)
+                                 & Expr base_type op (Arrow (pick_type (fst bounds)) (pick_type (snd bounds))) } }%type
   := let (a, b, c, d, e) := x in
-     existT _ a (existT _ b (existT _ c (existT _ d e))).
+     existT _ a (b, (existT _ (c, d) e)).
 
 Ltac inversion_ProcessedReflectivePackage :=
   repeat match goal with
          | [ H : _ = _ :> ProcessedReflectivePackage |- _ ]
            => apply (f_equal ProcessedReflectivePackage_to_sigT) in H;
               cbv [ProcessedReflectivePackage_to_sigT] in H
-         end.
+         end;
+  inversion_sigma; inversion_prod.
