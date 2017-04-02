@@ -25,7 +25,9 @@ BoundedWordToZ (?f a b ... z) = F A B ... Z
 <<
 BoundedWordToZ (f' (a, b, ..., z)) = F' (A, B, ..., Z)
 >>
- *)
+
+    Note that the number of arguments on the left and on the right DO
+    NOT need to be the same.  *)
 Ltac do_curry :=
   lazymatch goal with
   | [ |- ?BWtoZ ?f_bw = ?f_Z ]
@@ -36,52 +38,92 @@ Ltac do_curry :=
        set (f_bw_name := f_bw);
        change_with_curried f_bw_name
   end.
+
 (** The [split_BoundedWordToZ] tactic takes a goal of the form
 <<
-BoundedWordToZ (f args) = F ARGS
+BoundedWordToZ f = F
 >>
     and splits it into a conjunction, one part about the computational
-    behavior, and another part about the boundedness.  *)
-Ltac count_tuple_length T :=
-  lazymatch T with
-  | (?A * ?B)%type => let a := count_tuple_length A in
-                      let b := count_tuple_length B in
-                      (eval compute in (a + b)%nat)
-  | _ => constr:(1%nat)
-  end.
+    behavior, and another part about the boundedness.
+
+    This tactic relies on the specific definition of [BoundedWordToZ],
+    and requires [f] to be a context variable which is set to a single
+    evar. *)
 Ltac make_evar_for_first_projection :=
   lazymatch goal with
-  | [ |- @map ?N1 ?A ?B wordToZ (@proj1_sig _ ?P ?f) = ?fZ ?argsZ ]
-    => let T := type of argsZ in
-       let N := count_tuple_length T in
-       let map' := (eval compute in (@map N)) in
-       let proj1_sig' := (eval compute in @proj1_sig) in
-       let f1 := fresh f in
+  | [ |- @map ?N1 ?A ?B wordToZ (@proj1_sig _ ?P ?f) = _ ]
+    => let f1 := fresh f in
        let f2 := fresh f in
        let pf := fresh in
        revert f; refine (_ : let f := exist P _ _ in _);
        intro f;
        pose (proj1_sig f) as f1;
        pose (proj2_sig f : P f1) as f2;
-       change f with (exist _ f1 f2);
+       change f with (exist P f1 f2);
        subst f; cbn [proj1_sig proj2_sig] in f1, f2 |- *; revert f2;
+       (** Now we rely on the behavior of Coq's unifier to transform
+           the goal for us; we a goal like [let f' : A := ?f_evar in
+           B], and we want a goal like [A /\ B].  So we refine with a
+           hole named [pf] which is proof of [A /\ B], and then assert
+           that the second projection of the proof (which has type
+           [B]) actually has type [let f' : A := proj1 pf in B].  If
+           done naïvely, this would give a circlular type, which Coq
+           disallows.  However, Coq is happy to zeta-reduce away the
+           circlularity; happily, this is done after Coq unifies [let
+           f' : A := proj1 pf in B] with [let f' : A := ?f_evar in B],
+           hence filling [?f_evar] with the first projection of the
+           proof.  Since Coq instantiates the two existing evars
+           ([?f_evar] and the current goal, which is represented by an
+           evar under the hood) with projections of the new evar
+           (which becomes the new goal)---and let us hope that Coq
+           devs never decide both to turn on judgmental η (currently
+           controlled by primitive projections) for [and], and to
+           prefer η-expansion of evars before dropping context
+           variables (we might also be in trouble if someone adds a
+           [Canonical Structure] for [and])---we get the desired
+           behavior--for now. *)
        lazymatch goal with
-       | [ |- let f' := _ in @?P f' ]
-         => refine (let pf := _ in (proj2 pf : let f' := proj1 pf in P f'))
+       | [ |- let f' := _ in ?B ]
+         => refine (let pf := _ in (proj2 pf : let f' := proj1 pf in B))
+       end
+  end.
+Ltac check_split_BoundedWordToZ_precondition :=
+  lazymatch goal with
+  | [ |- BoundedWordToZ _ _ _ ?f = _ ]
+    => first [ is_var f | fail 1 "The argument to BoundedWordToZ must be a bare context-definition set to an evar, not"
+                               f "which is not a variable" ];
+       match goal with
+       | [ f' := ?f_evar |- _ ]
+         => constr_eq f f';
+            first [ is_evar f_evar | fail 2 "The argument to BoundedWordToZ must be a context-definition set to an evar, not"
+                                          f' "which is defined as" f_evar ]
+       | [ f' : _ |- _ ]
+         => constr_eq f f';
+            fail 1 "The argument to BoundedWordToZ must be a context-definition set to an evar, not"
+                 f' "which has no body"
+       | _ => fail 1 "The argument to BoundedWordToZ must be a context-definition, not" f "which does not appear in the context"
        end
   end.
 Ltac split_BoundedWordToZ :=
-  match goal with
-  | [ |- BoundedWordToZ _ _ _ ?x = _ ]
-    => revert x
+  check_split_BoundedWordToZ_precondition;
+  (** first revert the context definition which is an evar named [f]
+      in the docs above, so that it becomes evar 1 (for
+      [instantiate]), and so that [make_evar_for_first_projection]
+      works *)
+  lazymatch goal with
+  | [ |- BoundedWordToZ _ _ _ ?f = _ ]
+    => revert f
   end;
   repeat match goal with
          | [ |- context[BoundedWordToZ _ _ _ ?x] ]
            => is_var x;
               first [ clearbody x; fail 1
-                    | instantiate (1:=ltac:(destruct x)); destruct x ]
+                    | (** we want to keep the same context variable in
+                          the evar that we reverted above, and in the
+                          current goal; hence the instantiate trick *)
+                    instantiate (1:=ltac:(destruct x)); destruct x ]
          end;
-  cbv beta iota; intro;
+  cbv beta iota; intro; (* put [f] back in the context so that [cbn] doesn't remove this let-in *)
   unfold BoundedWordToZ; cbn [proj1_sig];
   make_evar_for_first_projection.
 (** The [zrange_to_reflective] tactic takes a goal of the form
@@ -116,7 +158,9 @@ Ltac zrange_to_reflective_hyps_step :=
     => let rT := constr:(Syntax.tuple (Tbase TZ) count) in
        let is_bounded_by' := constr:(@Bounds.is_bounded_by rT) in
        let map' := constr:(@cast_back_flat_const (@Bounds.interp_base_type) rT (fun _ => Bounds.bounds_to_base_type) bounds) in
-       (* we use [cut] and [abstract] rather than [change] to catch inefficiencies in conversion early, rather than allowing [Defined] to take forever *)
+       (* we use [assert] and [abstract] rather than [change] to catch
+          inefficiencies in conversion early, rather than allowing
+          [Defined] to take forever *)
        let H' := fresh H in
        rename H into H';
        assert (H : is_bounded_by' bounds (map' arg)) by (clear -H'; abstract exact H');
@@ -137,16 +181,24 @@ Ltac zrange_to_reflective_goal :=
        let map_output := constr:(map_t (codomain rT) bounds) in
        let map_input := constr:(map_t (domain rT) input_bounds) in
        let args := unmap_wordToZ_tuple Zargs in
-       (* we use [cut] and [abstract] rather than [change] to catch inefficiencies in conversion early, rather than allowing [Defined] to take forever *)
+       (* we use [cut] and [abstract] rather than [change] to catch
+          inefficiencies in conversion early, rather than allowing
+          [Defined] to take forever *)
        cut (is_bounded_by' bounds (map_output reified_f_evar) /\ map_output reified_f_evar = f (map_input args));
-       [ generalize reified_f_evar; clear; clearbody f; let x := fresh in intros ? x; abstract exact x
+       [ generalize reified_f_evar; clear; clearbody f; clear; let x := fresh in intros ? x; abstract exact x
        | ];
        cbv beta
   end;
   adjust_goal_for_reflective.
 Ltac zrange_to_reflective := zrange_to_reflective_hyps; zrange_to_reflective_goal.
 
-(** The tactic [refine_to_reflective_glue] is the public-facing one. *)
+(** The tactic [refine_to_reflective_glue] is the public-facing one;
+    it takes a goal of the form
+<<
+BoundedWordToZ ?f = F (BoundedWordToZ A) (BoundedWordToZ B) ... (BoundedWordToZ Z)
+>>
+    where [?f] is an evar, and turns it into a goal the that
+    reflective automation pipeline can handle. *)
 Ltac refine_to_reflective_glue :=
   do_curry;
   split_BoundedWordToZ;
