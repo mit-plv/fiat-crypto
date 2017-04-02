@@ -34,7 +34,7 @@ Section with_bitwidth.
              end.
 
   Definition is_bounded_by {n} : Tuple.tuple zrange n -> Tuple.tuple Z n -> Prop
-    := Tuple.pointwise2 is_bounded_by'.
+    := Tuple.fieldwise is_bounded_by'.
 End with_bitwidth.
 
 Definition is_tighter_than_bool (x y : zrange) : bool
