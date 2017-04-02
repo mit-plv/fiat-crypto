@@ -44,6 +44,9 @@ Proof. case p; reflexivity. Defined.
 Definition transport_idmap_ap A (P : A -> Type) x y (p : x = y) (u : P x)
   : eq_rect _ P u _ p = eq_rect _ (fun T => T) u _ (f_equal P p).
 Proof. case p; reflexivity. Defined.
+Definition ap_transport {A} {P Q : A -> Type} {x y : A} (p : x = y) (f : forall x, P x -> Q x) (z : P x)
+  : f _ (@eq_rect A x P z y p) = @eq_rect A x Q (f _ z) y p.
+Proof. case p; reflexivity. Defined.
 
 (** To classify the equalities of a type [A] at a point [a : A], we
     must give a "code" that stands in for the type [a = x] for each
