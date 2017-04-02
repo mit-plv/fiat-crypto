@@ -13,8 +13,7 @@ HIDE := $(if $(VERBOSE),,@)
 .PHONY: coq clean update-_CoqProject cleanall install \
 	install-coqprime clean-coqprime coqprime \
 	specific-display display \
-	specific non-specific \
-	extraction ghc
+	specific non-specific
 
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g'
 
@@ -94,33 +93,6 @@ $(DISPLAY_NON_JAVA_VO:.vo=.log) : %Display.log : %.vo %Display.v src/Reflection/
 $(DISPLAY_JAVA_VO:.vo=.log) : %JavaDisplay.log : %.vo %JavaDisplay.v src/Reflection/Z/JavaNotations.vo
 	$(SHOW)"COQC $*JavaDisplay > $@"
 	$(HIDE)$(COQC) $(COQDEBUG) $(COQFLAGS) $*JavaDisplay.v > $@.tmp && mv -f $@.tmp $@
-
-src/Experiments/Ed25519_noimports.hs: src/Experiments/Ed25519Extraction.vo src/Experiments/Ed25519Extraction.v
-
-src/Experiments/Ed25519.hs: src/Experiments/Ed25519_noimports.hs src/Experiments/Ed25519_imports.hs
-	( cd src/Experiments && \
-		( < Ed25519_noimports.hs \
-		sed "/import qualified Prelude/r Ed25519_imports.hs" | \
-	  sed 's/ Ed25519_noimports / Ed25519 /g' \
-		&& echo -e '{-# INLINE mul1 #-} \n{-# INLINE add2 #-} \n{-# INLINE sub3 #-}' ) \
-		> Ed25519.hs )
-
-src/Experiments/X25519.hs: src/Experiments/X25519_noimports.hs src/Experiments/Ed25519_imports.hs
-	( cd src/Experiments && \
-		( < X25519_noimports.hs \
-		sed "/import qualified Prelude/r Ed25519_imports.hs" | \
-	  sed 's/ X25519_noimports / X25519 /g' \
-		&& echo -e '{-# INLINE mul #-} \n{-# INLINE sub0 #-} \n{-# INLINE add #-}' ) \
-		> X25519.hs )
-
-src/Experiments/Ed25519.o: src/Experiments/Ed25519.hs
-	( cd src/Experiments && ghc -XStrict -O3 Ed25519.hs )
-
-src/Experiments/X25519.o: src/Experiments/X25519.hs
-	( cd src/Experiments && ghc -XStrict -O3 X25519.hs )
-
-extraction: src/Experiments/Ed25519.hs src/Experiments/X25519.hs
-ghc: src/Experiments/Ed25519.o src/Experiments/X25519.o
 
 clean::
 	rm -f Makefile.coq
