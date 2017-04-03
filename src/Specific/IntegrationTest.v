@@ -55,29 +55,28 @@ Section BoundedField25p5.
     end.
 
   (** TODO MOVE ME *)
-  (** The [save_state_and_back_to_sig] tactic, invoked as [all:
-      save_state_and_back_to_sig] or in a pipeline, as [stuff;
-      save_state_and_back_to_sig], operates on two goals
-      simultaneously, the first of the form [?y = f (k args)], and the
-      second of the form [{ a | _ = ?y }] (generally it will be
-      specifically of the form [{ a | f a = ?y }]), and solves the
-      first by [reflexivity], and, working under the assumption that
-      [k] is a context variable in the first goal which is not set in
-      the second goal, stuffs the head of the [k args] (which should
-      be a lambda) into a new context variable.
-
-      This tactic could presumably be generalized to first revert all
-      of the context definitions used in [f (k args)], then unify that
-      with [?y] in a way that preserves the let-ins, and then
-      introduce any let-ins at the head of [?y] into the context.  *)
-  Ltac save_state_and_back_to_sig :=
-    [> reflexivity
-    | lazymatch goal with
-      | [ |- { a | _ = ?f ?k_args } ]
-        => let k := head k_args in
-           let rexprZ := fresh "rexprZ" in
-           set (rexprZ := k)
-      end ].
+  (** This tactic moves to the context any [dlet x := y in ...] on the
+      rhs of a goal of the form [{ a | lhs = rhs }]. *)
+  Ltac sig_dlet_in_rhs_to_context :=
+    repeat lazymatch goal with
+           | [ |- { a | _ = @Let_In ?A ?B ?x ?P } ]
+             => let v := fresh "x" in
+                pose x as v;
+                replace (@Let_In A B x P) with (P v) by (clear; abstract (subst v; cbv [Let_In]; reflexivity));
+                cbv beta
+           end.
+  (** This tactic creates a [dlet x := f in rhs] in the rhs of a goal
+      of the form [lhs = rhs]. *)
+  Ltac context_to_dlet_in_rhs f :=
+    lazymatch goal with
+    | [ |- ?LHS = ?RHS ]
+      => let RHS' := lazymatch (eval pattern f in RHS) with
+                     | ?RHS _ => RHS
+                     end in
+         let x := fresh "x" in
+         transitivity (dlet x := f in RHS' x);
+         [ | clear; abstract (cbv [Let_In]; reflexivity) ]
+    end.
   (* TODO : change this to field once field isomorphism happens *)
   Definition mul :
     { mul : feBW -> feBW -> feBW
@@ -93,13 +92,10 @@ Section BoundedField25p5.
     symmetry; rewrite <- (proj2_sig carry_sig); symmetry.
     set (carry_mulZ := fun a b => proj1_sig carry_sig (proj1_sig mul_sig a b)).
     change (proj1_sig carry_sig (proj1_sig mul_sig ?a ?b)) with (carry_mulZ a b).
-    let carry_mulZ' := (eval cbv beta iota delta [carry_mulZ proj1_sig mul_sig carry_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz] in carry_mulZ) in
-    let carry_mulZ'' := fresh carry_mulZ in
-    rename carry_mulZ into carry_mulZ'';
-      pose carry_mulZ' as carry_mulZ;
-      replace carry_mulZ'' with carry_mulZ by abstract (cbv beta iota delta [carry_mulZ'' proj1_sig mul_sig carry_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz]; reflexivity);
-      clear carry_mulZ''.
-    all:save_state_and_back_to_sig.
+    context_to_dlet_in_rhs carry_mulZ.
+    cbv beta iota delta [carry_mulZ proj1_sig mul_sig carry_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz].
+    reflexivity.
+    sig_dlet_in_rhs_to_context.
     apply (fun f => proj2_sig_map (fun THIS_NAME_MUST_NOT_BE_UNDERSCORE_TO_WORK_AROUND_CONSTR_MATCHING_ANAOMLIES___BUT_NOTE_THAT_IF_THIS_NAME_IS_LOWERCASE_A___THEN_REIFICATION_STACK_OVERFLOWS___AND_I_HAVE_NO_IDEA_WHATS_GOING_ON p => f_equal f p)).
     (* jgross start here! *)
     (*Set Ltac Profiling.*)
