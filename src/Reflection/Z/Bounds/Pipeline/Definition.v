@@ -62,6 +62,7 @@ Require Import Crypto.Reflection.LinearizeWf.
 Require Import Crypto.Reflection.Z.Bounds.MapCastByDeBruijn.
 Require Import Crypto.Reflection.Z.Bounds.MapCastByDeBruijnInterp.
 Require Import Crypto.Reflection.Z.Bounds.MapCastByDeBruijnWf.
+Require Import Crypto.Util.Sigma.
 
 (** *** Definition of the Post-Wf Pipeline *)
 (** Do not change the name or the type of this definition *)
@@ -112,7 +113,7 @@ Definition PostWfPipelineCorrect
     /\ cast_back_flat_const (Interp interp_op e' v') = Interp interp_op e v.
 Proof.
   (** These first two lines probably shouldn't change much *)
-  unfold PostWfPipeline, Build_ProcessedReflectivePackage_from_option_sigma, option_map in *.
+  unfold PostWfPipeline, Build_ProcessedReflectivePackage_from_option_sigma, option_map, projT2_map in *.
   repeat (break_match_hyps || inversion_option || inversion_ProcessedReflectivePackage
           || inversion_sigma || eliminate_hprop_eq || inversion_prod
           || simpl in * || subst).
