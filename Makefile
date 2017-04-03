@@ -40,7 +40,10 @@ $(VOFILES): | coqprime
 
 # add files to this list to prevent them from being built by default
 UNMADE_VOFILES := src/SpecificGen/% src/Specific/%Display.vo
-# add files to this list to prevent them from being built by the "lite" target
+# add files to this list to prevent them from being built as final
+# targets by the "lite" target
+# N.B. if a file not in this list depends on one in this list,
+# that file will be built by the "lite" target
 HEAVY_VOFILES := src/WeierstrassCurve/WeierstrassCurveTheorems.vo
 
 COQ_VOFILES := $(filter-out $(UNMADE_VOFILES),$(VOFILES))
