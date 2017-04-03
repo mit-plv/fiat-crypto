@@ -15,10 +15,10 @@ Ltac unify_transformed_rhs_abstract_tac transform_rhs unify exact_no_check :=
   lazymatch goal with
   | [ |- ?LHS = ?RHS ]
     => tryif has_evar LHS
-    then let RHS' := transform_rhs RHS in
-         unify LHS RHS'; clear;
-         abstract exact_no_check (eq_refl RHS')
-    else abstract exact_no_check (eq_refl RHS)
+    then (let RHS' := transform_rhs RHS in
+          unify LHS RHS'; clear;
+          abstract exact_no_check (eq_refl RHS'))
+    else (abstract exact_no_check (eq_refl RHS))
   end.
 
 Ltac idterm x := x.
