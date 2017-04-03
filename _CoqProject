@@ -328,6 +328,7 @@ src/Util/Tactics/RewriteHyp.v
 src/Util/Tactics/SpecializeBy.v
 src/Util/Tactics/SplitInContext.v
 src/Util/Tactics/SubstLet.v
+src/Util/Tactics/UnifyAbstractReflexivity.v
 src/Util/Tactics/UniquePose.v
 src/Util/Tactics/VM.v
 src/WeierstrassCurve/Pre.v
