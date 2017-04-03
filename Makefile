@@ -100,3 +100,7 @@ printenv::
 
 .dir-locals.el::
 	sed 's:@COQPRIME@:$(COQPRIME_FOLDER):g' .dir-locals.el.in > $@
+
+-include etc/coq-scripts/Makefile.vo_closure
+printdeps::
+	$(HIDE)$(foreach vo,$(filter %.vo,$(MAKECMDGOALS)),echo '$(vo): $(call vo_closure,$(vo))'; )
