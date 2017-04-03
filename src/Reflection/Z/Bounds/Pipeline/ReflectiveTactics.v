@@ -23,9 +23,9 @@ Require Import Crypto.Reflection.Z.Bounds.Relax.
 Require Import Crypto.Reflection.Reify.
 Require Import Crypto.Reflection.Z.Reify.
 Require Import Crypto.Reflection.Z.Bounds.Pipeline.Definition.
-Require Import Crypto.Reflection.Z.Bounds.Pipeline.Composition.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.SubstLet.
+Require Import Crypto.Util.Tactics.UnifyAbstractReflexivity.
 Require Import Crypto.Util.FixedWordSizes.
 Require Import Crypto.Util.Option.
 Require Import Bedrock.Word.
@@ -96,62 +96,19 @@ Declare Reduction interp_red
     not contain evars.  Most tactics use [abstract] to reduce the load
     on [Defined] and to catch looping behavior early. *)
 
-(** The tactic [abstract_vm_compute_rhs] unifies [LHS] with the result
-    of [vm_compute]ing [RHS], and costs two [vm_compute]s. *)
-Ltac abstract_vm_compute_rhs :=
-  intros; clear;
-  lazymatch goal with
-  | [ |- ?LHS = ?RHS ]
-    => let RHS' := (eval vm_compute in RHS) in
-       unify LHS RHS'; clear;
-       abstract vm_cast_no_check (eq_refl RHS')
-  end.
-(** The tactic [abstract_vm_compute_rhs_no_evar] costs only one
-    [vm_compute] and proves only evar-free goals.  Best when the cost
-    of retypechecking [RHS] is small, or at least smaller than the
-    cost of retypechecking [LHS]. *)
-Ltac abstract_vm_compute_rhs_no_evar :=
-  intros; clear;
-  match goal with
-  | [ |- ?LHS = ?RHS ]
-    => abstract vm_cast_no_check (eq_refl RHS)
-  end.
-(** The tactic [abstract_rhs] unifies [LHS] with [RHS]. *)
-Ltac abstract_rhs :=
-  intros; clear;
-  lazymatch goal with
-  | [ |- ?LHS = ?RHS ]
-    => unify LHS RHS; clear;
-       abstract exact_no_check (eq_refl RHS)
-  end.
-(** The tactic [renamify_rhs] calls [renamify] on [RHS] and unifies
+(** The tactic [unify_abstract_renamify_rhs_reflexivity] calls [renamify] on [RHS] and unifies
     that with [LHS]; and then costs one [vm_compute] to prove the
     equality. *)
-Ltac renamify_rhs :=
-  intros; clear;
-  lazymatch goal with
-  | [ |- ?LHS = ?RHS ]
-    => let RHS' := renamify RHS in
-       unify LHS RHS';
-       clear; abstract vm_cast_no_check (eq_refl RHS')
-  end.
-(** The tactic [abstract_cbv_rhs] unfies [LHS] with the result of
-    running [cbv] in [RHS], and costs a [cbv] and a [vm_compute].  Use
-    this if you don't want to lose binder names or otherwise can't use
-    [vm_compute]. *)
-Ltac abstract_cbv_rhs :=
-  intros; clear;
-  lazymatch goal with
-  | [ |- ?LHS = ?RHS ]
-    => let RHS' := (eval cbv in RHS) in
-       unify LHS RHS';
-       clear; abstract vm_cast_no_check (eq_refl RHS')
-  end.
-(** The tactic [abstract_cbv_interp_rhs] runs the interpretation
+Ltac unify_abstract_renamify_rhs_reflexivity :=
+  unify_transformed_rhs_abstract_tac
+    ltac:(renamify)
+           unify_tac
+           vm_cast_no_check.
+(** The tactic [unify_abstract_cbv_interp_rhs_reflexivity] runs the interpretation
     reduction strategies in [RHS] and unifies the result with [LHS],
     and does not use the vm (and hence does not fully reduce things,
     which is important for efficiency). *)
-Ltac abstract_cbv_interp_rhs :=
+Ltac unify_abstract_cbv_interp_rhs_reflexivity :=
   intros; clear;
   lazymatch goal with
   | [ |- ?LHS = ?RHS ]
@@ -164,7 +121,93 @@ Ltac abstract_cbv_interp_rhs :=
        unify LHS RHS'; abstract exact_no_check (eq_refl RHS')
   end.
 
-(** ** Assembling the Pipeline *)
+
+(** ** Assemble the parts of Pipeline.Definition, in Gallina *)
+(** In this section, we assemble [PreWfPipeline] and [PostWfPipeline],
+    and add extra equality hypotheses to minimize the work we have to
+    do in Ltac. *)
+(** *** Gallina assembly imports *)
+Require Import Crypto.Reflection.Syntax.
+Require Import Crypto.Reflection.SmartMap.
+Require Import Crypto.Reflection.Wf.
+Require Import Crypto.Reflection.WfReflectiveGen.
+Require Import Crypto.Reflection.WfReflective.
+Require Import Crypto.Reflection.Eta.
+Require Import Crypto.Reflection.EtaWf.
+Require Import Crypto.Reflection.EtaInterp.
+Require Import Crypto.Reflection.Z.Bounds.Pipeline.OutputType.
+Require Import Crypto.Reflection.Z.Bounds.Pipeline.Definition.
+Require Import Crypto.Reflection.Z.Syntax.
+Require Import Crypto.Reflection.Z.Syntax.Equality.
+Require Import Crypto.Reflection.Z.Syntax.Util.
+Require Import Crypto.Reflection.Z.Bounds.Interpretation.
+Require Import Crypto.Reflection.Z.Bounds.Relax.
+Require Import Crypto.Util.PartiallyReifiedProp.
+Require Import Crypto.Util.Equality.
+
+(** *** Gallina assembly *)
+Local Notation pick_typeb := Bounds.bounds_to_base_type (only parsing).
+Local Notation pick_type v := (SmartFlatTypeMap (fun _ => pick_typeb) v).
+Definition PipelineCorrect
+           {t}
+           {input_bounds : interp_flat_type Bounds.interp_base_type (domain t)}
+           {given_output_bounds : interp_flat_type Bounds.interp_base_type (codomain t)}
+           {v' : interp_flat_type Syntax.interp_base_type (pick_type input_bounds)}
+           {b e' e_final e_final_newtype}
+           {fZ}
+           {final_e_evar : interp_flat_type Syntax.interp_base_type (pick_type given_output_bounds)}
+           {e}
+           {e_pkg}
+           (** ** reification *)
+           (rexpr_sig : { rexpr : Expr base_type op t | forall x, Interp Syntax.interp_op rexpr x = fZ x })
+           (** ** pre-wf pipeline *)
+           (He : e = PreWfPipeline (proj1_sig rexpr_sig))
+           (** ** proving wf *)
+           (He_unnatize_for_wf : forall var, unnatize_expr 0 (ExprEta' e (fun t => (nat * var t)%type)) = ExprEta' e _)
+           (Hwf : forall var1 var2,
+               let P := (@reflect_wfT base_type base_type_eq_semidec_transparent op op_beq var1 var2 nil _ _ (ExprEta' e _) (ExprEta' e _)) in
+               trueify P = P)
+           (** ** post-wf-pipeline *)
+           (Hpost : e_pkg = PostWfPipeline e input_bounds)
+           (Hpost_correct : Some {| input_expr := e ; input_bounds := input_bounds ; output_bounds := b ; output_expr := e' |} = e_pkg)
+           (** ** renaming *)
+           (Hrenaming : e_final = e')
+           (** ** bounds relaxation *)
+           (Hbounds_sane : pick_type given_output_bounds = pick_type b)
+           (Hbounds_relax : Bounds.is_tighter_thanb b given_output_bounds = true)
+           (Hbounds_sane_refl
+            : e_final_newtype
+              = eq_rect _ (fun t => Expr base_type op (Arrow (pick_type input_bounds) t)) e' _ (eq_sym Hbounds_sane))
+           (** ** instantiation of original evar *)
+           (Hevar : final_e_evar = Interp (t:=Arrow _ _) Syntax.interp_op e_final_newtype v')
+           (** ** side condition *)
+           (Hv : Bounds.is_bounded_by input_bounds (cast_back_flat_const v'))
+  : Bounds.is_bounded_by given_output_bounds (fZ (cast_back_flat_const v'))
+    /\ cast_back_flat_const final_e_evar = fZ (cast_back_flat_const v').
+Proof.
+  destruct rexpr_sig as [? Hrexpr].
+  assert (Hwf' : Wf e)
+    by (apply (proj1 (@Wf_ExprEta'_iff _ _ _ e));
+        eapply reflect_Wf;
+        [ .. | intros; split; [ eapply He_unnatize_for_wf | rewrite <- Hwf; apply trueify_true ] ];
+        auto using base_type_eq_semidec_is_dec, op_beq_bl).
+  clear Hwf He_unnatize_for_wf.
+  symmetry in Hpost_correct.
+  subst; cbv [proj1_sig] in *.
+  rewrite <- Hrexpr.
+  eapply PostWfPipelineCorrect in Hpost_correct; [ | solve [ eauto ].. ].
+  rewrite !@InterpPreWfPipeline in Hpost_correct.
+  unshelve eapply relax_output_bounds; try eassumption; [].
+  match goal with
+  | [ |- context[Interp _ (@eq_rect ?A ?x ?P ?k ?y ?pf) ?v] ]
+    => rewrite (@ap_transport A P _ x y pf (fun t e => Interp interp_op e v) k)
+  end.
+  rewrite <- transport_pp, concat_Vp; simpl.
+  apply Hpost_correct.
+Qed.
+
+
+(** ** Assembling the Pipeline, in Ltac *)
 (** The tactic [refine_with_pipeline_correct] uses the
     [PipelineCorrect] lemma to create side-conditions.  It assumes the
     goal is in exactly the form given in the conclusion of the
@@ -178,18 +221,17 @@ Ltac refine_with_pipeline_correct :=
   end;
   [ eexists
   | cbv [proj1_sig].. ].
+
 (** The tactic [solve_side_conditions] uses the above
     reduction-and-proving-equality tactics to prove the
-    side-conditions of [PipelineCorrect].  Which tactic to use was
-    chosen in the following way:
+    side-conditions of [PipelineCorrect].  The order must match with
+    [PipelineCorrect].  Which tactic to use was chosen in the
+    following way:
 
-    - The default is [abstract_vm_compute_rhs]
-
-    - If the goal has no evar, instead use
-      [abstract_vm_compute_rhs_no_evar] (it's faster)
+    - The default is [unify_abstract_vm_compute_rhs_reflexivity]
 
     - If the [RHS] is already in [vm_compute]d form, use
-      [abstract_rhs] (saves a needless [vm_compute] which would be a
+      [unify_abstract_rhs_reflexivity] (saves a needless [vm_compute] which would be a
       costly no-op)
 
     - If the proof needs to be transparent and there are no evars and
@@ -199,7 +241,7 @@ Ltac refine_with_pipeline_correct :=
     - If the user should see an unreduced term and you're proving [_ =
       true], use [abstract vm_cast_no_check (eq_refl true)]
 
-    - If you want to preserve binder names, use [abstract_cbv_rhs]
+    - If you want to preserve binder names, use [unify_abstract_cbv_rhs_reflexivity]
 
     The other choices are tactics that are specialized to the specific
     side-condition for which they are used (reification, boundedness
@@ -209,17 +251,17 @@ Ltac solve_side_conditions :=
    (** ** reification *)
    do_reify |
    (** ** pre-wf pipeline *)
-   abstract_vm_compute_rhs |
+   unify_abstract_vm_compute_rhs_reflexivity |
    (** ** reflective wf side-condition 1 *)
-   abstract_vm_compute_rhs_no_evar |
+   unify_abstract_vm_compute_rhs_reflexivity |
    (** ** reflective wf side-condition 2 *)
-   abstract_vm_compute_rhs_no_evar |
+   unify_abstract_vm_compute_rhs_reflexivity |
    (** ** post-wf pipeline *)
-   abstract_vm_compute_rhs |
+   unify_abstract_vm_compute_rhs_reflexivity |
    (** ** post-wf pipeline gives [Some _] *)
-   abstract_rhs |
+   unify_abstract_rhs_reflexivity |
    (** ** renaming binders *)
-   renamify_rhs |
+   unify_abstract_renamify_rhs_reflexivity |
    (** ** types computed from given output bounds are the same as types computed from computed output bounds *)
    (** N.B. the proof must be exactly [eq_refl] because it's used in a
             later goal and needs to reduce *)
@@ -229,9 +271,9 @@ Ltac solve_side_conditions :=
        get an error message that displays the bounds *)
    subst_let; clear; abstract vm_cast_no_check (eq_refl true) |
    (** ** removal of a cast across the equality proof above *)
-   abstract_cbv_rhs |
+   unify_abstract_compute_rhs_reflexivity |
    (** ** unfolding of [interp] constants *)
-   abstract_cbv_interp_rhs |
+   unify_abstract_cbv_interp_rhs_reflexivity |
    (** ** boundedness of inputs *)
    abstract handle_bounds_from_hyps ].
 
