@@ -1,6 +1,6 @@
 Require Import Crypto.Algebra Crypto.Algebra.Field.
 Require Import Crypto.Util.GlobalSettings Crypto.Util.Notations.
-Require Import (*Crypto.Util.Tactics*) Crypto.Util.Sum Crypto.Util.Prod.
+Require Import Crypto.Util.Sum Crypto.Util.Prod Crypto.Util.LetIn.
 Require Import Crypto.Spec.MontgomeryCurve Crypto.MontgomeryCurveTheorems.
 
 Module M.
@@ -34,20 +34,20 @@ Module M.
     Context {a24:F} {a24_correct:(1+1+1+1)*a24 = a-(1+1)}.
     Definition xzladderstep (x1:F) (Q Q':F*F) : ((F*F)*(F*F)) :=
       match Q, Q' with
-        pair x z, pair x' z' => 
-        let A := x+z in
-        let B := x-z in
-        let AA := A^2 in
-        let BB := B^2 in
-        let x2 := AA*BB in
-        let E := AA-BB in
-        let z2 := E*(AA + a24*E) in
-        let C := x'+z' in
-        let D := x'-z' in
-        let CB := C*B in
-        let DA := D*A in
-        let x3 := (DA+CB)^2 in
-        let z3 := x1*(DA-CB)^2 in
+        pair x z, pair x' z' =>
+        dlet A := x+z in
+        dlet B := x-z in
+        dlet AA := A^2 in
+        dlet BB := B^2 in
+        dlet x2 := AA*BB in
+        dlet E := AA-BB in
+        dlet z2 := E*(AA + a24*E) in
+        dlet C := x'+z' in
+        dlet D := x'-z' in
+        dlet CB := C*B in
+        dlet DA := D*A in
+        dlet x3 := (DA+CB)^2 in
+        dlet z3 := x1*(DA-CB)^2 in
         (pair (pair x2 z2) (pair x3 z3))
       end.
 
@@ -65,11 +65,11 @@ Module M.
         | _ => progress Prod.inversion_prod
         | _ => progress Tactics.BreakMatch.break_match_hyps
         | _ => progress Tactics.BreakMatch.break_match
-        | _ => progress cbv [fst snd M.coordinates M.add M.zero M.eq M.opp proj1_sig xzladderstep to_xz] in *
+        | _ => progress cbv [fst snd M.coordinates M.add M.zero M.eq M.opp proj1_sig xzladderstep to_xz Let_In] in *
         | |- _ /\ _ => split
         end.
 
-    Lemma xzladderstep_correct 
+    Lemma xzladderstep_correct
           (Q Q':point) x z x' z' x1 x2 z2 x3 z3
           (Hl:Logic.eq (pair(pair x2 z2)(pair x3 z3)) (xzladderstep x1 (pair x z) (pair x' z')))
           (H:match M.coordinates Q with∞=>z=0/\x<>0|(xQ,y)=>xQ=x/z/\z<>0  (* TODO *) /\ y <> 0 (* TODO: prove this from non-squareness of a^2 - 4 *) end)
