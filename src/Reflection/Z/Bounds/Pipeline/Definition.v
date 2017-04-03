@@ -79,7 +79,7 @@ Definition PostWfPipeline
              (fun b e'
               => let e' := InlineConst e' in
                  let e' := ExprEta e' in
-                 e'
+                 e'))
           e).
 
 (** *** Correctness proof of the Pre-Wf Pipeline *)
