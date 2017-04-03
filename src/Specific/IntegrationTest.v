@@ -37,32 +37,47 @@ Section BoundedField25p5.
   Let phi : feBW -> F m :=
     fun x => B.Positional.Fdecode wt (BoundedWordToZ _ _ _ x).
 
+  (** TODO MOVE ME *)
+  (** The [eexists_sig_etransitivity] tactic takes a goal of the form
+      [{ a | f a = b }], and splits it into two goals, [?b' = b] and
+      [{ a | f a = ?b' }], where [?b'] is a fresh evar. *)
+  Definition sig_eq_trans_exist1 {A B} (f : A -> B)
+             (b b' : B)
+             (pf : b' = b)
+             (y : { a : A | f a = b' })
+    : { a : A | f a = b }
+    := let 'exist a p := y in exist _ a (eq_trans p pf).
   Ltac eexists_sig_etransitivity :=
     lazymatch goal with
     | [ |- { a : ?A | @?f a = ?b } ]
-      => let k := fresh in
-         let k' := fresh in
-         simple refine (let k : { a | a = b } := _ in
-                        let k' : { a : A | f a = let (p1, _) := k in p1 } := _ in
-                        exist _ (proj1_sig k') (eq_trans (proj2_sig k') (proj2_sig k)));
-         [ eexists | subst k ];
-         cbv beta iota
+      => let lem := open_constr:(@sig_eq_trans_exist1 A _ f b _) in
+         simple refine (lem _ _)
     end.
 
   (** TODO MOVE ME *)
+  (** The [save_state_and_back_to_sig] tactic, invoked as [all:
+      save_state_and_back_to_sig] or in a pipeline, as [stuff;
+      save_state_and_back_to_sig], operates on two goals
+      simultaneously, the first of the form [?y = f (k args)], and the
+      second of the form [{ a | _ = ?y }] (generally it will be
+      specifically of the form [{ a | f a = ?y }]), and solves the
+      first by [reflexivity], and, working under the assumption that
+      [k] is a context variable in the first goal which is not set in
+      the second goal, stuffs the head of the [k args] (which should
+      be a lambda) into a new context variable.
+
+      This tactic could presumably be generalized to first revert all
+      of the context definitions used in [f (k args)], then unify that
+      with [?y] in a way that preserves the let-ins, and then
+      introduce any let-ins at the head of [?y] into the context.  *)
   Ltac save_state_and_back_to_sig :=
     [> reflexivity
     | lazymatch goal with
-      | [ |- { c | _ = ?f ?x } ]
-        => let rexpr := head x in
+      | [ |- { a | _ = ?f ?k_args } ]
+        => let k := head k_args in
            let rexprZ := fresh "rexprZ" in
-           set (rexprZ := rexpr)
+           set (rexprZ := k)
       end ].
-  (** TODO: Move me *)
-  Definition sig_f_equal {T A B} (f : A -> B) {x y : T -> A}
-             (p : { t : T | x t = y t })
-    : { t : T | f (x t) = f (y t) }
-    := exist _ (proj1_sig p) (f_equal f (proj2_sig p)).
   (* TODO : change this to field once field isomorphism happens *)
   Definition add :
     { add : feBW -> feBW -> feBW
@@ -85,7 +100,7 @@ Section BoundedField25p5.
       replace carry_addZ'' with carry_addZ by abstract (cbv beta iota delta [carry_addZ'' proj1_sig add_sig carry_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz]; reflexivity);
       clear carry_addZ''.
     all:save_state_and_back_to_sig.
-    apply sig_f_equal.
+    apply (fun f => proj2_sig_map (fun _ p => f_equal f p)).
     (* jgross start here! *)
     (*Set Ltac Profiling.*)
     Time refine_reflectively. (* Finished transaction in 19.348 secs (19.284u,0.036s) (successful) *)
