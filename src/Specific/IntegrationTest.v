@@ -79,9 +79,9 @@ Section BoundedField25p5.
            set (rexprZ := k)
       end ].
   (* TODO : change this to field once field isomorphism happens *)
-  Definition add :
-    { add : feBW -> feBW -> feBW
-    | forall a b, phi (add a b) = F.add (phi a) (phi b) }.
+  Definition mul :
+    { mul : feBW -> feBW -> feBW
+    | forall a b, phi (mul a b) = F.mul (phi a) (phi b) }.
   Proof.
     lazymatch goal with
     | [ |- { f | forall a b, ?phi (f a b) = @?rhs a b } ]
@@ -89,16 +89,16 @@ Section BoundedField25p5.
     end.
     intros.
     eexists_sig_etransitivity. all:cbv [phi].
-    rewrite <- (proj2_sig add_sig).
+    rewrite <- (proj2_sig mul_sig).
     symmetry; rewrite <- (proj2_sig carry_sig); symmetry.
-    set (carry_addZ := fun a b => proj1_sig carry_sig (proj1_sig add_sig a b)).
-    change (proj1_sig carry_sig (proj1_sig add_sig ?a ?b)) with (carry_addZ a b).
-    let carry_addZ' := (eval cbv beta iota delta [carry_addZ proj1_sig add_sig carry_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz] in carry_addZ) in
-    let carry_addZ'' := fresh carry_addZ in
-    rename carry_addZ into carry_addZ'';
-      pose carry_addZ' as carry_addZ;
-      replace carry_addZ'' with carry_addZ by abstract (cbv beta iota delta [carry_addZ'' proj1_sig add_sig carry_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz]; reflexivity);
-      clear carry_addZ''.
+    set (carry_mulZ := fun a b => proj1_sig carry_sig (proj1_sig mul_sig a b)).
+    change (proj1_sig carry_sig (proj1_sig mul_sig ?a ?b)) with (carry_mulZ a b).
+    let carry_mulZ' := (eval cbv beta iota delta [carry_mulZ proj1_sig mul_sig carry_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz] in carry_mulZ) in
+    let carry_mulZ'' := fresh carry_mulZ in
+    rename carry_mulZ into carry_mulZ'';
+      pose carry_mulZ' as carry_mulZ;
+      replace carry_mulZ'' with carry_mulZ by abstract (cbv beta iota delta [carry_mulZ'' proj1_sig mul_sig carry_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz]; reflexivity);
+      clear carry_mulZ''.
     all:save_state_and_back_to_sig.
     apply (fun f => proj2_sig_map (fun THIS_NAME_MUST_NOT_BE_UNDERSCORE_TO_WORK_AROUND_CONSTR_MATCHING_ANAOMLIES___BUT_NOTE_THAT_IF_THIS_NAME_IS_LOWERCASE_A___THEN_REIFICATION_STACK_OVERFLOWS___AND_I_HAVE_NO_IDEA_WHATS_GOING_ON p => f_equal f p)).
     (* jgross start here! *)
