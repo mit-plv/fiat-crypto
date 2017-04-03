@@ -322,6 +322,7 @@ src/Util/Tactics/DestructHead.v
 src/Util/Tactics/DestructHyps.v
 src/Util/Tactics/DoWithHyp.v
 src/Util/Tactics/ETransitivity.v
+src/Util/Tactics/EvarExists.v
 src/Util/Tactics/Head.v
 src/Util/Tactics/RewriteHyp.v
 src/Util/Tactics/SpecializeBy.v
