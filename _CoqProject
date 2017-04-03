@@ -274,7 +274,6 @@ src/Util/PointedProp.v
 src/Util/Prod.v
 src/Util/Relations.v
 src/Util/Sigma.v
-src/Util/SigmaAssoc.v
 src/Util/Sum.v
 src/Util/Sumbool.v
 src/Util/Tactics.v
@@ -284,6 +283,8 @@ src/Util/Unit.v
 src/Util/WordUtil.v
 src/Util/ZRange.v
 src/Util/ZUtil.v
+src/Util/Sigma/Associativity.v
+src/Util/Sigma/Lift.v
 src/Util/Tactics/BreakMatch.v
 src/Util/Tactics/DestructHead.v
 src/Util/Tactics/DestructHyps.v

@@ -12,7 +12,7 @@ Require Import Crypto.Util.Curry.
 Require Import Crypto.Util.FixedWordSizes.
 Require Import Crypto.Util.BoundedWord.
 Require Import Crypto.Util.Tuple.
-Require Import Crypto.Util.SigmaAssoc.
+Require Import Crypto.Util.Sigma.Associativity.
 Require Import Crypto.Util.Tactics.EvarExists.
 
 Module Export Exports.
