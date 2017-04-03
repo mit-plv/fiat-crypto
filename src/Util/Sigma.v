@@ -231,7 +231,7 @@ Definition lift2_sig {A B C} (P:A->B->C->Prop)
          (fun a b => proj2_sig (op_sig a b)).
 
 Definition projT2_map {A P Q} (f : forall a, P a -> Q a) (x : @sigT A P) : @sigT A Q
-  := let 'existT a p := x in existT P a (f a p).
+  := let 'existT a p := x in existT Q a (f a p).
 
 (** ** Useful Tactics *)
 (** *** [inversion_sigma] *)
