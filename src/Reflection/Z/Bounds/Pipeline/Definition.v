@@ -75,9 +75,11 @@ Definition PostWfPipeline
         let e := InlineConst e in
         let e := MapCast e input_bounds in
         option_map
-          (fun v
-           => let 'existT b e := v in
-              existT _ b (ExprEta (InlineConst e)))
+          (projT2_map
+             (fun b e'
+              => let e' := InlineConst e' in
+                 let e' := ExprEta e' in
+                 e'
           e).
 
 (** *** Correctness proof of the Pre-Wf Pipeline *)
