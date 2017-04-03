@@ -100,7 +100,7 @@ Section BoundedField25p5.
       replace carry_addZ'' with carry_addZ by abstract (cbv beta iota delta [carry_addZ'' proj1_sig add_sig carry_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz]; reflexivity);
       clear carry_addZ''.
     all:save_state_and_back_to_sig.
-    apply (fun f => proj2_sig_map (fun _ p => f_equal f p)).
+    apply (fun f => proj2_sig_map (fun THIS_NAME_MUST_NOT_BE_UNDERSCORE_TO_WORK_AROUND_CONSTR_MATCHING_ANAOMLIES___BUT_NOTE_THAT_IF_THIS_NAME_IS_LOWERCASE_A___THEN_REIFICATION_STACK_OVERFLOWS___AND_I_HAVE_NO_IDEA_WHATS_GOING_ON p => f_equal f p)).
     (* jgross start here! *)
     (*Set Ltac Profiling.*)
     Time refine_reflectively. (* Finished transaction in 19.348 secs (19.284u,0.036s) (successful) *)
