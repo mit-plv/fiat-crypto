@@ -1,7 +1,12 @@
+Require Coq.setoid_ring.Ncring.
+Require Coq.setoid_ring.Cring.
 Require Import Coq.Classes.Morphisms.
-Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.OnSubterms.
+Require Import Crypto.Util.Tactics.Revert.
 Require Import Crypto.Algebra Crypto.Algebra.Group Crypto.Algebra.Monoid.
 Require Coq.ZArith.ZArith Coq.PArith.PArith.
+
 
 Section Ring.
   Context {T eq zero one opp add sub mul} `{@ring T eq zero one opp add sub mul}.
@@ -84,10 +89,6 @@ Section Ring.
 
   Lemma nonzero_product_iff_nonzero_factor {Hzpzf:@is_zero_product_zero_factor T eq zero mul} :
     forall x y : T, not (eq (mul x y) zero) <-> (not (eq x zero) /\ not (eq y zero)).
-  Proof. intros; rewrite zero_product_iff_zero_factor; tauto. Qed.
-
-  Lemma nonzero_hypothesis_to_goal {Hzpzf:@is_zero_product_zero_factor T eq zero mul} :
-    forall x y : T, (not (eq x zero) -> eq y zero) <-> (eq (mul x y) zero).
   Proof. intros; rewrite zero_product_iff_zero_factor; tauto. Qed.
 
   Global Instance Ncring_Ring_ops : @Ncring.Ring_ops T zero one add mul sub opp eq.

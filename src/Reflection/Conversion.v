@@ -1,7 +1,8 @@
 (** * Convert between interpretations of types *)
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Map.
-Require Import Crypto.Util.Notations Crypto.Util.Tactics.
+Require Import Crypto.Util.Notations.
+Require Import Crypto.Util.Tactics.RewriteHyp.
 
 Local Open Scope expr_scope.
 

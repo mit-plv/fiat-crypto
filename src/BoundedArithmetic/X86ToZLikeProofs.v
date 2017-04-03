@@ -14,7 +14,8 @@ Require Import Crypto.BoundedArithmetic.StripCF.
 Require Import Crypto.BoundedArithmetic.X86ToZLike.
 Require Import Crypto.ModularArithmetic.ZBounded.
 Require Import Crypto.Util.Tuple.
-Require Import Crypto.Util.ZUtil Crypto.Util.Tactics.
+Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.LetIn.
 Import NPeano.
 

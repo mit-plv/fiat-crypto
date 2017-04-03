@@ -1,6 +1,6 @@
 Require Crypto.Algebra Crypto.Algebra.Field.
 Require Crypto.Util.GlobalSettings.
-Require Crypto.Util.Tactics Crypto.Util.Sum Crypto.Util.Prod.
+Require Crypto.Util.Tactics.DestructHead Crypto.Util.Sum Crypto.Util.Prod.
 
 Module M.
   Section MontgomeryCurve.
@@ -54,7 +54,7 @@ Module M.
             | _, ∞ => coordinates P1
             end.
     Next Obligation.
-    Proof. 
+    Proof.
       repeat match goal with
              | _ => solve [ trivial ]
              | _ => progress Tactics.DestructHead.destruct_head' @point

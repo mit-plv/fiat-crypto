@@ -2,6 +2,7 @@ Require Import Coq.ZArith.ZArith.
 Require Import Crypto.ModularArithmetic.ModularBaseSystemListZOperations.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.Tactics.BreakMatch.
 
 Local Open Scope Z_scope.
 

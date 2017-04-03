@@ -5,7 +5,9 @@ Require Import Crypto.Reflection.Relations.
 Require Import Crypto.Reflection.LinearizeWf.
 Require Import Crypto.Reflection.InterpProofs.
 Require Import Crypto.Reflection.Linearize.
-Require Import Crypto.Util.Tactics Crypto.Util.Sigma Crypto.Util.Prod.
+Require Import Crypto.Util.Sigma Crypto.Util.Prod.
+Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.SpecializeBy.
 
 
 Local Open Scope ctype_scope.

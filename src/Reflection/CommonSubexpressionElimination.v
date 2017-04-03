@@ -2,7 +2,7 @@
 Require Import Coq.Lists.List.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.SmartMap.
-Require Import Crypto.Util.Tactics Crypto.Util.Bool.
+Require Import (*Crypto.Util.Tactics*) Crypto.Util.Bool.
 
 Local Open Scope list_scope.
 

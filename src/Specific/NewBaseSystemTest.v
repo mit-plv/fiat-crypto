@@ -2,7 +2,7 @@ Require Import Coq.ZArith.ZArith Coq.ZArith.BinIntDef.
 Require Import Coq.Lists.List. Import ListNotations.
 Require Import Crypto.NewBaseSystem. Import B.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
-Require Import Crypto.Util.Tactics Crypto.Util.Decidable.
+Require Import (*Crypto.Util.Tactics*) Crypto.Util.Decidable.
 Require Import Crypto.Util.LetIn Crypto.Util.ZUtil.
 Require Crypto.Util.Tuple.
 Local Notation tuple := Tuple.tuple.

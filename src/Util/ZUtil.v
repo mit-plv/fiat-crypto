@@ -3,12 +3,15 @@ Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 Require Import Coq.Structures.Equalities.
 Require Import Coq.omega.Omega Coq.micromega.Psatz Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
 Require Import Crypto.Util.NatUtil.
-Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Tactics.SpecializeBy.
+Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.Contains.
+Require Import Crypto.Util.Tactics.Not.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Notations.
 Require Import Coq.Lists.List.
 Require Export Crypto.Util.FixCoqMistakes.
-Require Export Crypto.Tactics.VerdiTactics.
+(*Require Export Crypto.Tactics.VerdiTactics.*)
 Import Nat.
 Local Open Scope Z.
 
@@ -291,7 +294,7 @@ Module Z.
   Lemma ones_spec : forall n m, 0 <= n -> 0 <= m -> Z.testbit (Z.ones n) m = if Z_lt_dec m n then true else false.
   Proof.
     intros.
-    break_if.
+    break_match.
     + apply Z.ones_spec_low. omega.
     + apply Z.ones_spec_high. omega.
   Qed.
@@ -305,7 +308,7 @@ Module Z.
                                             else if Z_lt_dec m n then true else false.
   Proof.
     intros.
-    repeat (break_if || autorewrite with Ztestbit); try reflexivity; try omega.
+    repeat (break_match || autorewrite with Ztestbit); try reflexivity; try omega.
     unfold Z.ones.
     rewrite <- Z.shiftr_opp_r, Z.shiftr_eq_0 by (simpl; omega); simpl.
     destruct m; simpl in *; try reflexivity.
@@ -319,7 +322,7 @@ Module Z.
   cbv [Z.pow2_mod]; intros; destruct (Z_le_dec 0 i);
       repeat match goal with
           | |- _ => rewrite Z.testbit_neg_r by omega
-          | |- _ => break_if
+          | |- _ => break_innermost_match_step
           | |- _ => omega
           | |- _ => reflexivity
           | |- _ => progress autorewrite with Ztestbit
@@ -364,7 +367,7 @@ Module Z.
   Proof.
     intros; cbv [Z.pow2_mod].
     apply Z.bits_inj'; intros.
-    repeat progress (try break_if; autorewrite with Ztestbit zsimplify; try reflexivity).
+    repeat progress (try break_match; autorewrite with Ztestbit zsimplify; try reflexivity).
     try match goal with H : ?a < ?b |- appcontext[Z.testbit _ (?a - ?b)] =>
       rewrite !Z.testbit_neg_r with (n := a - b) by omega end.
     autorewrite with Ztestbit; reflexivity.
@@ -375,7 +378,7 @@ Module Z.
   Proof.
     intros; cbv [Z.pow2_mod].
     apply Z.bits_inj'; intros.
-    apply Z.min_case_strong; intros; repeat progress (try break_if; autorewrite with Ztestbit zsimplify; try reflexivity).
+    apply Z.min_case_strong; intros; repeat progress (try break_match; autorewrite with Ztestbit zsimplify; try reflexivity).
   Qed.
 
   Lemma pow2_mod_pos_bound a b : 0 < b -> 0 <= Z.pow2_mod a b < 2^b.
@@ -1020,7 +1023,7 @@ Module Z.
     intros.
     assert (a = Z.pow2_mod a x). {
      apply Z.bits_inj'; intros.
-     rewrite Z.testbit_pow2_mod by omega; break_if; auto.
+     rewrite Z.testbit_pow2_mod by omega; break_match; auto.
     }
     rewrite H1.
     rewrite Z.pow2_mod_spec; try apply Z.mod_pos_bound; zero_bounds.
@@ -1134,7 +1137,7 @@ Module Z.
            | |- _ => rewrite Z.shiftl_mul_pow2 by omega
            | |- _ => rewrite add_compare_mono_r
            | |- _ => rewrite <-Z.mul_sub_distr_r
-           | |- _ => break_if
+           | |- _ => break_innermost_match_step
            | H : Z.pow2_mod _ _ = _ |- _ => rewrite pow2_mod_id_iff in H by omega
            | H : ?a <> ?b |- _ = (?a ?= ?b) =>
              case_eq (a ?= b); rewrite ?Z.compare_eq_iff, ?Z.compare_gt_iff, ?Z.compare_lt_iff
@@ -2145,7 +2148,7 @@ Module Z.
   Lemma lt_mul_2_pow_2_shiftr : forall a n, 0 <= a < 2 * 2 ^ n ->
                                             a >> n = if Z_lt_dec a (2 ^ n) then 0 else 1.
   Proof.
-    intros; break_if; [ apply lt_pow_2_shiftr; omega | ].
+    intros; break_match; [ apply lt_pow_2_shiftr; omega | ].
     destruct (Z_le_dec 0 n).
     + replace (2 * 2 ^ n) with (2 ^ (n + 1)) in *
         by (rewrite Z.pow_add_r; try omega; ring).

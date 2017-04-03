@@ -49,7 +49,8 @@
 
 Require Import Coq.Arith.Arith Coq.Logic.Eqdep_dec.
 Require Import Crypto.Reflection.Syntax.
-Require Import Crypto.Util.Notations Crypto.Util.Tactics Crypto.Util.Option Crypto.Util.Sigma Crypto.Util.Prod Crypto.Util.Decidable Crypto.Util.ListUtil.
+Require Import Crypto.Util.Notations Crypto.Util.Option Crypto.Util.Sigma Crypto.Util.Prod Crypto.Util.Decidable Crypto.Util.ListUtil.
+Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Reflection.Wf.
 Require Export Crypto.Util.PartiallyReifiedProp. (* export for the [bool >-> reified_Prop] coercion *)
 Require Export Crypto.Util.FixCoqMistakes.

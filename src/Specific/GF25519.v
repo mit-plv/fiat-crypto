@@ -9,7 +9,9 @@ Require Import Crypto.Util.Tuple.
 Require Import Coq.Lists.List Crypto.Util.ListUtil.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.Util.ZUtil.
-Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Tactics.SetEvars.
+Require Import Crypto.Util.Tactics.SubstEvars.
+Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Tower.
 Require Import Crypto.Util.Notations.

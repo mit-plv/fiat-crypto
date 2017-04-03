@@ -5,8 +5,7 @@ Require Import Crypto.ModularArithmetic.Pow2Base Crypto.ModularArithmetic.Pow2Ba
 Require Import Coq.ZArith.ZArith Coq.ZArith.Zdiv.
 Require Import Coq.omega.Omega Coq.Numbers.Natural.Peano.NPeano.
 Require Import Coq.micromega.Psatz.
-Require Import Crypto.Tactics.VerdiTactics.
-Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Tactics.UniquePose.
 Require Coq.Arith.Arith.
 Import Nat.
 Local Open Scope Z.

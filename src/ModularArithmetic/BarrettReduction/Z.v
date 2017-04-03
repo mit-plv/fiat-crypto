@@ -1,7 +1,8 @@
 (*** Barrett Reduction *)
 (** This file implements Barrett Reduction on [Z].  We follow Wikipedia. *)
 Require Import Coq.ZArith.ZArith Coq.micromega.Psatz.
-Require Import Crypto.Util.ZUtil Crypto.Util.Tactics.
+Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.Tactics.BreakMatch.
 
 Local Open Scope Z_scope.
 

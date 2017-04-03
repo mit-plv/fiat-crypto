@@ -1,6 +1,8 @@
 Require Import Crypto.Spec.MxDH.
 Require Import Crypto.Algebra Crypto.Algebra.Monoid Crypto.Algebra.Group Crypto.Algebra.Ring Crypto.Algebra.Field.
 Require Import Crypto.Util.Tuple.
+Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.Tactics.BreakMatch.
 
 Section MxDHRepChange.
   Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv} {field:@Algebra.field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv} {Feq_dec:Decidable.DecidableRel Feq} {Fcswap:bool->F*F->F*F->(F*F)*(F*F)} {Fa24:F} {tb1:nat->bool}.
@@ -36,7 +38,7 @@ Section MxDHRepChange.
         reflexivity
       ).
 
-  Import Crypto.Util.Tactics.
+  (*Import Crypto.Util.Tactics.*)
   Import List.
   Import Coq.Classes.Morphisms.
 

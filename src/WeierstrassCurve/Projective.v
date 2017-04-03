@@ -1,5 +1,9 @@
 Require Import Crypto.Spec.WeierstrassCurve.
-Require Import Crypto.Util.Decidable Crypto.Util.Tactics Crypto.Algebra.Field.
+Require Import Crypto.Util.Decidable Crypto.Algebra.Field.
+Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.Tactics.SpecializeBy.
+Require Import Crypto.Util.Tactics.SetoidSubst.
 Require Import Crypto.Util.Notations Crypto.Util.FixCoqMistakes.
 Require Import Crypto.Util.Sum Crypto.Util.Prod Crypto.Util.Sigma.
 

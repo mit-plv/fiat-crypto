@@ -3,9 +3,9 @@ Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems Crypto.ModularArithmetic.ModularArithmeticTheorems.
 Require Import Bedrock.Word.
-Require Import Crypto.Tactics.VerdiTactics Crypto.Util.Tactics.
 Require Import Crypto.Spec.Encoding.
 Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.FixCoqMistakes.
 Require Import Crypto.Spec.ModularWordEncoding.
 

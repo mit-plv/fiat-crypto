@@ -24,6 +24,7 @@ Require Export Crypto.Util.Option.
 Require Export Crypto.Util.Notations.
 Require Import Crypto.Util.ListUtil.
 Require Export Crypto.Util.LetIn.
+Require Import Crypto.Util.Tactics.BreakMatch.
 Export ListNotations.
 
 Open Scope Z_scope.

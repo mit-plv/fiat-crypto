@@ -9,7 +9,8 @@ Require Import Crypto.ModularArithmetic.ExtendedBaseVector.
 Require Import Crypto.ModularArithmetic.ZBounded.
 Require Import Crypto.BaseSystem.
 Require Import Crypto.Util.ZUtil.
-Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Tactics.Test.
+Require Import Crypto.Util.Tactics.Not.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Notations.
 

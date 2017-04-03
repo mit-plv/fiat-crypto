@@ -6,7 +6,7 @@ Require Import Crypto.ModularArithmetic.ZBoundedZ.
 Require Import Crypto.Spec.ModularArithmetic.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.LetIn.
-Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.WordUtil.
 Import NPeano.

@@ -9,7 +9,7 @@
     base ([b]), exponent ([k]), and the [offset] than those given in
     the HAC. *)
 Require Import Coq.ZArith.ZArith Coq.micromega.Psatz.
-Require Import Crypto.Util.ZUtil Crypto.Util.Tactics Crypto.Algebra.
+Require Import Crypto.Util.ZUtil Crypto.Util.Tactics.BreakMatch Crypto.Algebra.
 
 Local Open Scope Z_scope.
 

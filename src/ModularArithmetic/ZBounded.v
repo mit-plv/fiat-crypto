@@ -3,7 +3,7 @@
     operations for Montgomery Reduction and Barrett Reduction. *)
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.ZUtil.
-Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Notations.
 
 Local Open Scope Z_scope.

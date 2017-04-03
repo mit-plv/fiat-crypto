@@ -11,7 +11,8 @@ Require Import Crypto.ModularArithmetic.ExtendedBaseVector.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
 Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParams.
 Require Import Crypto.ModularArithmetic.PseudoMersenneBaseParamProofs.
-Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Tactics.UniquePose.
+Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Notations.

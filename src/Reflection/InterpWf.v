@@ -5,7 +5,9 @@ Require Import Crypto.Reflection.Relations.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Prod.
-Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.Tactics.SpecializeBy.
+Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Util.Notations.
 Local Open Scope ctype_scope.
 Local Open Scope expr_scope.

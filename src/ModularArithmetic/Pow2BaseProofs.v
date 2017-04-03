@@ -4,7 +4,10 @@ Require Import Coq.Lists.List.
 Require Import Coq.funind.Recdef.
 Require Import Crypto.Util.ListUtil Crypto.Util.ZUtil Crypto.Util.NatUtil.
 Require Import Crypto.Tactics.VerdiTactics.
-Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Tactics.SpecializeBy.
+Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.UniquePose.
+Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.ModularArithmetic.Pow2Base Crypto.BaseSystemProofs.
 Require Import Crypto.Util.Notations.
 Require Export Crypto.Util.Bool.

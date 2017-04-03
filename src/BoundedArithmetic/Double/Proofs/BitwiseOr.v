@@ -3,7 +3,7 @@ Require Import Crypto.BoundedArithmetic.Interface.
 Require Import Crypto.BoundedArithmetic.Double.Core.
 Require Import Crypto.BoundedArithmetic.Double.Proofs.Decode.
 Require Import Crypto.Util.ZUtil.
-Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Tactics.BreakMatch.
 
 Local Open Scope Z_scope.
 

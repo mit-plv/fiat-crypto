@@ -6,7 +6,11 @@ Require Import Coq.Logic.Eqdep_dec.
 Require Import Crypto.Tactics.VerdiTactics.
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.Relations.Relation_Definitions.
-Require Import Crypto.Util.Tuple Crypto.Util.Notations Crypto.Util.Tactics.
+Require Import Crypto.Util.Tuple Crypto.Util.Notations.
+Require Import Crypto.Util.Tactics.UniquePose.
+Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.SetoidSubst.
 Require Export Crypto.Util.FixCoqMistakes.
 
 Module E.
@@ -33,7 +37,7 @@ Module E.
             {nonzero_a : a <> 0}
             {square_a : exists sqrt_a, sqrt_a^2 = a}
             {nonsquare_d : forall x, x^2 <> d}.
-    
+
     Local Notation onCurve x y := (a*x^2 + y^2 = 1 + d*x^2*y^2) (only parsing).
     Local Notation point := (@E.point F Feq Fone Fadd Fmul a d).
     Local Notation eq    := (@E.eq F Feq Fone Fadd Fmul a d).
@@ -50,7 +54,7 @@ Module E.
       | _ => intro
       | |- Equivalence _ => split
       | |- abelian_group => split | |- group => split | |- monoid => split
-      | |- is_associative => split | |- is_commutative => split 
+      | |- is_associative => split | |- is_commutative => split
       | |- is_left_inverse => split | |- is_right_inverse => split
       | |- is_left_identity => split | |- is_right_identity => split
       | _ => progress destruct_head' @E.point
@@ -175,7 +179,7 @@ Module E.
         | _ => solve [trivial | eapply solve_correct; fsatz]
         end.
       Local Ltac t := repeat t_step.
-      
+
       Program Definition decompress (b:bool*F) : option point :=
         exist_option _
             match b return option (F*F) with
@@ -219,7 +223,7 @@ Module E.
             {nonzero_a : not (Feq Fa Fzero)}
             {square_a : exists sqrt_a, Feq (Fmul sqrt_a sqrt_a) Fa}
             {nonsquare_d : forall x, not (Feq (Fmul x x) Fd)}.
-    
+
     Context {K Keq Kzero Kone Kopp Kadd Ksub Kmul Kinv Kdiv}
             {fieldK: @Algebra.field K Keq Kzero Kone Kopp Kadd Ksub Kmul Kinv Kdiv}
             {Keq_dec:DecidableRel Keq}.
@@ -264,7 +268,7 @@ Module E.
       etransitivity; [|eexact X]; clear X.
       (* TODO: Ring.of_Z of isomorphism *)
     Admitted.
-      
+
     Local Notation Fpoint := (@E.point F Feq Fone Fadd Fmul Fa Fd).
     Local Notation Kpoint := (@E.point K Keq Kone Kadd Kmul Ka Kd).
     Local Notation FzeroP  := (E.zero(nonzero_a:=nonzero_a)(d:=Fd)).

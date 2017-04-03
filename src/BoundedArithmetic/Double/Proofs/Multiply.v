@@ -6,7 +6,7 @@ Require Import Crypto.BoundedArithmetic.Double.Proofs.Decode.
 Require Import Crypto.BoundedArithmetic.Double.Proofs.SpreadLeftImmediate.
 Require Import Crypto.BoundedArithmetic.Double.Proofs.RippleCarryAddSub.
 Require Import Crypto.Util.ZUtil.
-Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Tactics.SimplifyProjections.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Prod.

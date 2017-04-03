@@ -1,6 +1,6 @@
 Require Import Crypto.Algebra Crypto.Algebra.Field.
 Require Import Crypto.Util.GlobalSettings Crypto.Util.Notations.
-Require Import Crypto.Util.Tactics Crypto.Util.Sum Crypto.Util.Prod.
+Require Import (*Crypto.Util.Tactics*) Crypto.Util.Sum Crypto.Util.Prod.
 Require Import Crypto.Spec.MontgomeryCurve Crypto.MontgomeryCurveTheorems.
 
 Module M.

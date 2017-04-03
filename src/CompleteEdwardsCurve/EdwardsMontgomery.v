@@ -2,7 +2,7 @@ Require Import Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
 Require Import Crypto.Spec.MontgomeryCurve Crypto.MontgomeryCurveTheorems.
 
 Require Import Crypto.Util.Notations Crypto.Util.Decidable.
-Require Import Crypto.Util.Tactics Crypto.Util.Sum Crypto.Util.Prod.
+Require Import (*Crypto.Util.Tactics*) Crypto.Util.Sum Crypto.Util.Prod.
 Require Import Crypto.Algebra Crypto.Algebra.Field.
 
 Module E.

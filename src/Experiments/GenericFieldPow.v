@@ -1,11 +1,11 @@
 Require Import Coq.setoid_ring.Cring.
 Require Import Coq.omega.Omega.
 Require Export Crypto.Util.FixCoqMistakes.
+Require Import Crypto.Util.Tactics.UniquePose.
 (** TODO: Move some imports up here from below, if it doesn't break things *)
 Require Coq.setoid_ring.Field_theory Coq.setoid_ring.Field_tac.
 Require Coq.setoid_ring.Ring_theory Coq.setoid_ring.NArithRing.
 Require Coq.nsatz.Nsatz.
-Require Crypto.Util.Tactics.
 Generalizable All Variables.
 
 
@@ -130,7 +130,6 @@ Module F.
       try (exact I);
       try (idtac; []; clear H;intro H).
 
-    Import Util.Tactics.
     Inductive field_simplify_done {x y:F} : (x==y) -> Type :=
       Field_simplify_done : forall (H:x==y), field_simplify_done H.
     Ltac field_nsatz :=

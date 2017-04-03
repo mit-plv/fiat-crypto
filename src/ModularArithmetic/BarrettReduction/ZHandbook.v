@@ -9,7 +9,7 @@
     have to carry around extra precision), but requires more stringint
     conditions on the base ([b]), exponent ([k]), and the [offset]. *)
 Require Import Coq.ZArith.ZArith Coq.micromega.Psatz.
-Require Import Crypto.Util.ZUtil Crypto.Util.Tactics Crypto.Algebra.
+Require Import Crypto.Util.ZUtil Crypto.Util.Tactics.BreakMatch Crypto.Algebra.
 
 Local Open Scope Z_scope.
 

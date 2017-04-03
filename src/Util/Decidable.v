@@ -4,7 +4,6 @@ Require Import Coq.Logic.Eqdep_dec.
 Require Import Crypto.Util.FixCoqMistakes.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.HProp.
-Require Import Crypto.Util.Equality.
 Require Import Coq.ZArith.BinInt Coq.ZArith.ZArith_dec.
 Require Import Coq.NArith.BinNat.
 

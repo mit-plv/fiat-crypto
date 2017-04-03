@@ -1,7 +1,6 @@
 Require Import Coq.ZArith.Zpower Coq.ZArith.ZArith.
 Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Coq.Lists.List.
-Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.Algebra.
 Require Import Crypto.BaseSystem.
 Require Import Crypto.BaseSystemProofs.
@@ -17,7 +16,9 @@ Require Import Crypto.ModularArithmetic.ModularBaseSystem.
 Require Import Crypto.Util.ListUtil Crypto.Util.CaseUtil Crypto.Util.ZUtil Crypto.Util.NatUtil.
 Require Import Crypto.Util.AdditionChainExponentiation.
 Require Import Crypto.Util.Tuple.
-Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Tactics.UniquePose.
+Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Notations.
 Require Export Crypto.Util.FixCoqMistakes.
 Local Open Scope Z_scope.
@@ -415,7 +416,7 @@ Section CarryProofs.
     distr_length.
     assert (0 < length limb_widths)%nat by (pose proof limb_widths_nonnil;
       destruct limb_widths; distr_length; congruence).
-    repeat break_if; repeat rewrite ?pred_mod, ?Nat.succ_pred,?Nat.mod_same in * by omega;
+    break_match; repeat rewrite ?pred_mod, ?Nat.succ_pred,?Nat.mod_same in * by omega;
       try omega.
     rewrite !nth_default_base by (auto || destruct (length limb_widths); auto).
     rewrite sum_firstn_0.
@@ -449,7 +450,7 @@ Section CarryProofs.
 
     specialize_by eauto.
     cbv [ModularBaseSystemList.carry].
-    break_if; subst; eauto.
+    break_match; subst; eauto.
     apply F.eq_of_Z_iff.
     rewrite to_list_from_list.
     apply carry_decode_eq_reduce. auto.
@@ -584,7 +585,7 @@ Section CanonicalizationProofs.
   Proof.
     intros.
     cbv [carry].
-    break_if.
+    break_innermost_match_step.
     + subst i.
       pose proof lt_1_length_limb_widths.
       autorewrite with push_nth_default natsimplify.
@@ -624,16 +625,15 @@ Section CanonicalizationProofs.
   Proof.
     induction i; intros; cbv [carry_sequence].
     + cbv [pred make_chain fold_right].
-      repeat break_if; subst; omega || reflexivity || auto using Z.add_0_r.
+      break_match; subst; omega || reflexivity || auto using Z.add_0_r.
       apply nth_default_out_of_bounds. omega.
     + replace (make_chain (S i)) with (i :: make_chain i) by reflexivity.
       rewrite fold_right_cons.
       pose proof lt_1_length_limb_widths.
       autorewrite with push_nth_default natsimplify;
         rewrite ?Nat.pred_succ; fold (carry_sequence (make_chain i) us);
-        rewrite length_carry_sequence; auto.
-      repeat break_if; try omega; rewrite ?IHi by (omega || auto);
-        rewrite ?Z.add_0_r; try reflexivity.
+          rewrite length_carry_sequence; auto.
+      repeat (break_innermost_match_step; try omega).
   Qed.
 
   Lemma nth_default_carry : forall i us,
@@ -665,7 +665,8 @@ Section CanonicalizationProofs.
            | |- _ => progress (intros; subst)
            | |- _ => unique pose proof lt_1_length_limb_widths
            | |- _ => unique pose proof c_reduce2
-           | |- _ => break_if; try omega
+           | |- _ => break_innermost_match_step; try omega
+           | |- _ => break_innermost_match_hyps_step; try omega
            | |- _ => progress simpl pred in *
            | |- _ => progress rewrite ?Z.add_0_r, ?Z.sub_0_r in *
            | |- _ => rewrite nth_default_out_of_bounds by omega
@@ -690,7 +691,7 @@ Section CanonicalizationProofs.
                unique assert (0 <= a < 2 * 2 ^ n) by omega
            | H : 0 <= ?a < 2 * 2 ^ ?n |- appcontext [?a >> ?n] =>
              pose proof c_pos;
-             apply Z.lt_mul_2_pow_2_shiftr in H; break_if; rewrite H; omega
+             apply Z.lt_mul_2_pow_2_shiftr in H; (break_innermost_match_step || break_innermost_match_hyps_step); rewrite H; omega
            | H : 0 <= ?a < 2 ^ ?n |- appcontext [?a >> ?n] =>
              pose proof c_pos;
              apply Z.lt_pow_2_shiftr in H; rewrite H; omega
@@ -743,7 +744,7 @@ Section CanonicalizationProofs.
     specialize (Hfbound Hbound).
     specialize (Hloop (f us) Hflength Hfbound (length limb_widths) n).
     specialize_by omega.
-    repeat (break_if; try omega).
+    repeat (omega || break_innermost_match_step || break_innermost_match_hyps_step).
   Qed.
 
   Lemma bound_after_loop : forall us (Hlength : length us = length limb_widths)
@@ -767,7 +768,7 @@ Section CanonicalizationProofs.
     specialize (Hfbound Hbound).
     specialize (Hloop (f us) Hflength Hfbound (length limb_widths) n).
     specialize_by omega.
-    repeat (break_if; try omega).
+    repeat (omega || break_innermost_match_step || break_innermost_match_hyps_step).
   Qed.
 
   Lemma bound_after_first_loop_pre : forall us,
@@ -798,7 +799,7 @@ Section CanonicalizationProofs.
     rewrite !nth_default_out_of_bounds by (rewrite ?length_carry_full; omega).
     autorewrite with zsimplify.
     rewrite Z.pow_0_r.
-    break_if; omega.
+    break_innermost_match_step; omega.
   Qed.
 
   Lemma bound_during_second_loop : forall us,
@@ -1089,7 +1090,7 @@ Section SquareRootProofs.
                 (if dec (?c = _) then _ else _) =>
              assert (a ~= c) by
                  (cbv [rep]; rewrite <-chain_correct, <-pow_rep, <-mul_rep;
-                  eassumption); repeat break_if
+                  eassumption); break_innermost_match
            | |- _ => apply mul_rep; try reflexivity;
                        rewrite <-chain_correct, <-pow_rep; eassumption
            | |- _ => rewrite <-chain_correct, <-pow_rep; eassumption
@@ -1139,6 +1140,6 @@ Section ConversionProofs.
     rewrite F.to_Z_of_Z.
     rewrite <-Conversion.convert_correct; auto using length_to_list.
   Qed.
-    
+
 
 End ConversionProofs.

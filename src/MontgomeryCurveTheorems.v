@@ -1,6 +1,7 @@
 Require Import Crypto.Algebra Crypto.Algebra.Field.
 Require Import Crypto.Util.GlobalSettings.
-Require Import Crypto.Util.Tactics Crypto.Util.Sum Crypto.Util.Prod.
+Require Import Crypto.Util.Sum Crypto.Util.Prod.
+Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Spec.MontgomeryCurve Crypto.Spec.WeierstrassCurve.
 Require Import Crypto.WeierstrassCurve.WeierstrassCurveTheorems.
 

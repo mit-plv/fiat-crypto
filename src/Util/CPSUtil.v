@@ -1,6 +1,8 @@
 Require Import Coq.Lists.List. Import ListNotations.
 Require Import Coq.ZArith.ZArith Coq.omega.Omega.
-Require Import Crypto.Util.ListUtil Crypto.Util.Tactics.
+Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.ListUtil.
 Require Crypto.Util.Tuple. Local Notation tuple := Tuple.tuple.
 Local Open Scope Z_scope.
 
@@ -30,7 +32,7 @@ Proof.
   break_innermost_match; solve [ trivial | omega ].
 Qed.
 
-Lemma mod_add_mul_full a b c k m : m <> 0 -> c mod m = k mod m -> 
+Lemma mod_add_mul_full a b c k m : m <> 0 -> c mod m = k mod m ->
                                    (a + b * c) mod m = (a + b * k) mod m.
 Proof.
   intros; rewrite Z.add_mod, Z.mul_mod by auto.
@@ -142,7 +144,7 @@ Qed.  Hint Rewrite @on_tuple_cps_correct using (intros; autorewrite with uncps; 
 
 Fixpoint update_nth_cps {A} n (g:A->A) xs {T} (f:list A->T) :=
   match n with
-  | O => 
+  | O =>
     match xs with
     | [] => f []
     | x' :: xs' => f (g x' :: xs')
@@ -235,7 +237,7 @@ Lemma fold_right_no_starter_cps_correct {A} g ls {T} f :
   @fold_right_no_starter_cps A g ls T f = f (fold_right_no_starter g ls).
 Proof.
   cbv [fold_right_no_starter_cps fold_right_no_starter]; break_match; reflexivity.
-Qed.        
+Qed.
 Hint Rewrite @fold_right_no_starter_cps_correct : uncps.
 
 Import Tuple.

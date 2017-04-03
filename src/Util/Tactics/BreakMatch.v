@@ -117,4 +117,10 @@ Ltac break_innermost_match_step :=
                                   | appcontext[match _ with _ => _ end] => fail
                                   | _ => idtac
                                   end).
+Ltac break_innermost_match_hyps_step :=
+  break_match_hyps_step ltac:(fun v => lazymatch v with
+                                       | appcontext[match _ with _ => _ end] => fail
+                                       | _ => idtac
+                                       end).
 Ltac break_innermost_match := repeat break_innermost_match_step.
+Ltac break_innermost_match_hyps := repeat break_innermost_match_hyps_step.

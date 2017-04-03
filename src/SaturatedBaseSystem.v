@@ -6,7 +6,8 @@ Local Open Scope Z_scope.
 Require Import Crypto.Tactics.Algebra_syntax.Nsatz.
 Require Import Crypto.NewBaseSystem.
 Require Import Crypto.Util.LetIn Crypto.Util.CPSUtil.
-Require Import Crypto.Util.Tuple Crypto.Util.ListUtil Crypto.Util.Tactics.
+Require Import Crypto.Util.Tuple Crypto.Util.ListUtil.
+Require Import Crypto.Util.Tactics.BreakMatch.
 Local Notation "A ^ n" := (tuple A n) : type_scope.
 
 (***
@@ -83,8 +84,8 @@ Module Columns.
     Proof. cbv [compact_step_cps compact_step]; autorewrite with uncps; reflexivity. Qed.
     Hint Opaque compact_step : uncps.
     Hint Rewrite compact_step_id : uncps.
-    
-    Definition compact_cps {n} (xs : (list Z)^n) {T} (f:Z * Z^n->T) := 
+
+    Definition compact_cps {n} (xs : (list Z)^n) {T} (f:Z * Z^n->T) :=
       mapi_with_cps compact_step_cps 0 xs f.
 
     Definition compact {n} xs := @compact_cps n xs _ id.
@@ -120,7 +121,7 @@ Module Columns.
       repeat match goal with
              | _ => rewrite B.Positional.eval_step
              | _ => rewrite eval_from_S
-             | _ => rewrite sum_cons 
+             | _ => rewrite sum_cons
              | _ => rewrite weight_multiples
              | _ => rewrite Nat.add_succ_l in *
              | _ => rewrite Nat.add_succ_r in *
@@ -173,7 +174,7 @@ Module Columns.
     Qed.
     Hint Opaque cons_to_nth : uncps.
     Hint Rewrite @cons_to_nth_id : uncps.
-    
+
     Lemma map_sum_update_nth l : forall i x,
       List.map sum (update_nth i (cons x) l) =
       update_nth i (Z.add x) (List.map sum l).
@@ -194,7 +195,7 @@ Module Columns.
       distr_length.
       distr_length.
     Qed.
-    
+
     Lemma eval_cons_to_nth n i x t : (i < n)%nat ->
       eval (@cons_to_nth n i x t) = weight i * x + eval t.
     Proof.
@@ -244,13 +245,13 @@ Module Columns.
         autorewrite with uncps push_id push_basesystem_eval in *.
         rewrite eval_cons_to_nth by omega. nsatz.
     Qed.
-    
+
     Definition mul_cps {n m} (p q : Z^n) {T} (f : (list Z)^m->T) :=
       B.Positional.to_associational_cps weight p
         (fun P => B.Positional.to_associational_cps weight q
         (fun Q => B.Associational.mul_cps P Q
         (fun PQ => from_associational_cps m PQ f))).
-    
+
     Definition add_cps {n} (p q : Z^n) {T} (f : (list Z)^n->T) :=
       B.Positional.to_associational_cps weight p
         (fun P => B.Positional.to_associational_cps weight q
@@ -261,8 +262,8 @@ End Columns.
 
 (*
 (* Just some pretty-printing *)
-Local Notation "fst~ a" := (let (x,_) := a in x) (at level 40, only printing). 
-Local Notation "snd~ a" := (let (_,y) := a in y) (at level 40, only printing). 
+Local Notation "fst~ a" := (let (x,_) := a in x) (at level 40, only printing).
+Local Notation "snd~ a" := (let (_,y) := a in y) (at level 40, only printing).
 
 (* Simple example : base 10, multiply two bignums and compact them *)
 Definition base10 i := Eval compute in 10^(Z.of_nat i).
@@ -274,7 +275,7 @@ Eval cbv -[runtime_add runtime_mul Let_In] in
 Definition base2pow56 i := Eval compute in 2^(56*Z.of_nat i).
 Time Eval cbv -[runtime_add runtime_mul Let_In] in
     (fun adc a0 a1 a2 a3 a4 a5 a6 a7 b0 b1 b2 b3 b4 b5 b6 b7 =>
-       Columns.mul_cps (weight := base2pow56) (n:=8) (a7,a6,a5,a4,a3,a2,a1,a0) (b7,b6,b5,b4,b3,b2,b1,b0) (fun ab => Columns.compact (n:=15) (add_get_carry:=adc) (weight:=base2pow56) ab)). (* Finished transaction in 151.392 secs *) 
+       Columns.mul_cps (weight := base2pow56) (n:=8) (a7,a6,a5,a4,a3,a2,a1,a0) (b7,b6,b5,b4,b3,b2,b1,b0) (fun ab => Columns.compact (n:=15) (add_get_carry:=adc) (weight:=base2pow56) ab)). (* Finished transaction in 151.392 secs *)
 
 (* Mixed-radix example : base 2^25.5, 10 limbs *)
 Definition base2pow25p5 i := Eval compute in 2^(25*Z.of_nat i + ((Z.of_nat i + 1) / 2)).

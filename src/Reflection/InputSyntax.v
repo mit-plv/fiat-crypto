@@ -5,7 +5,7 @@ Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Reflection.ExprInversion.
 Require Import Crypto.Reflection.InterpProofs.
 Require Import Crypto.Util.Tuple.
-Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Util.Notations.
 
 (** We parameterize the language over a type of basic type codes (for

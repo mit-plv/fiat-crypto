@@ -4,7 +4,7 @@ Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Util.PointedProp.
 Require Import Crypto.Util.Tuple.
-Require Import Crypto.Util.Tactics.
+(*Require Import Crypto.Util.Tactics.*)
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.LetIn.
 

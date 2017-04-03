@@ -1,6 +1,7 @@
 Require Import Coq.Classes.Morphisms. Require Coq.Setoids.Setoid.
 Require Import Crypto.Algebra Crypto.Algebra.Field.
-Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Decidable.
 Import BinNums.

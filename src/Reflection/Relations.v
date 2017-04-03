@@ -2,7 +2,9 @@ Require Import Coq.Lists.List Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Reflection.Wf.
-Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Tactics.RewriteHyp.
+Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Sigma.
 

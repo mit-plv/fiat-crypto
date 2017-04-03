@@ -8,7 +8,8 @@ Require Import Crypto.BoundedArithmetic.Double.Proofs.Multiply.
 Require Import Crypto.BoundedArithmetic.ArchitectureToZLike.
 Require Import Crypto.ModularArithmetic.ZBounded.
 Require Import Crypto.Util.Tuple.
-Require Import Crypto.Util.ZUtil Crypto.Util.Tactics.
+Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.LetIn.
 
 Local Open Scope nat_scope.

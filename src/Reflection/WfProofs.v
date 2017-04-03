@@ -3,7 +3,10 @@ Require Import Crypto.Reflection.Wf.
 Require Import Crypto.Reflection.WfInversion.
 Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Reflection.ExprInversion.
-Require Import Crypto.Util.Tactics Crypto.Util.Sigma Crypto.Util.Prod.
+Require Import Crypto.Util.Sigma Crypto.Util.Prod.
+Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.Tactics.RewriteHyp.
+Require Import Crypto.Util.Tactics.SplitInContext.
 
 Local Open Scope ctype_scope.
 Section language.

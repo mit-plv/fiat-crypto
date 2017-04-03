@@ -1,5 +1,5 @@
 Require Import Coq.Classes.Morphisms.
-Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Algebra.
 
 Section Monoid.

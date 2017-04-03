@@ -4,7 +4,9 @@ Require Import Crypto.Spec.CompleteEdwardsCurve Crypto.CompleteEdwardsCurve.Comp
 
 Require Import Crypto.Algebra Crypto.Algebra.
 Require Import Crypto.Util.Notations Crypto.Util.GlobalSettings.
-Require Export Crypto.Util.FixCoqMistakes Crypto.Util.Tactics.
+Require Export Crypto.Util.FixCoqMistakes.
+Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.Tactics.UniquePose.
 
 Module Extended.
   Section ExtendedCoordinates.
@@ -61,7 +63,7 @@ Module Extended.
     Global Instance Proper_from_twisted : Proper (E.eq==>eq) from_twisted.
     Proof. cbv [from_twisted]; t. Qed.
 
-    Program Definition to_twisted (P:point) : Epoint := 
+    Program Definition to_twisted (P:point) : Epoint :=
       let XYZT := coordinates P in let T := snd XYZT in
       let XYZ  := fst XYZT in      let Z := snd XYZ in
       let XY   := fst XYZ in       let Y := snd XY in

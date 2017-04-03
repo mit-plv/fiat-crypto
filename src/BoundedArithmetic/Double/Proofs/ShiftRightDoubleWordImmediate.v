@@ -4,7 +4,7 @@ Require Import Crypto.BoundedArithmetic.Double.Core.
 Require Import Crypto.BoundedArithmetic.Double.Proofs.Decode.
 Require Import Crypto.BoundedArithmetic.Double.Proofs.ShiftLeftRightTactic.
 Require Import Crypto.Util.ZUtil.
-Require Import Crypto.Util.Tactics.
+(*Require Import Crypto.Util.Tactics.*)
 
 Local Open Scope Z_scope.
 

@@ -1,4 +1,6 @@
-Require Import Crypto.Util.Relations Crypto.Util.Tactics Crypto.Util.Notations.
+Require Import Crypto.Util.Relations Crypto.Util.Notations.
+Require Import Crypto.Util.Tactics.UniquePose.
+Require Import Crypto.Util.Tactics.DebugPrint.
 Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 Require Import Crypto.Algebra Crypto.Algebra.Ring Crypto.Algebra.IntegralDomain.
 Require Coq.setoid_ring.Field_theory.
@@ -243,7 +245,7 @@ Ltac inequalities_to_inverse_equations fld :=
              unique pose proof (right_multiplicative_inverse(H:=fld) _ H)
            | not (eq zero ?d) =>
              unique pose proof (right_multiplicative_inverse(H:=fld) _ (symmetry(R:=fun a b => not (eq a b)) H))
-           | not (eq ?x ?y) => 
+           | not (eq ?x ?y) =>
              unique pose proof (right_multiplicative_inverse(H:=fld) _ (Ring.neq_sub_neq_zero _ _ H))
            end
          end.
@@ -261,7 +263,7 @@ Ltac inverses_to_conditional_equations fld :=
   repeat match goal with
          | |- context[inv ?d] =>
            unique_pose_implication constr:(right_multiplicative_inverse(H:=fld) d)
-         | H: context[inv ?d] |- _ => 
+         | H: context[inv ?d] |- _ =>
            unique_pose_implication constr:(right_multiplicative_inverse(H:=fld) d)
          end.
 

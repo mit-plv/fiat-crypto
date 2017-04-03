@@ -10,7 +10,9 @@ Require Import Coq.Bool.Bool.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.ZUtil.
-Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Util.Sigma.
 
 Require Import Bedrock.Word.

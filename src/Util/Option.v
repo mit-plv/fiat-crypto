@@ -1,7 +1,7 @@
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.Relations.Relation_Definitions.
-Require Import Crypto.Tactics.VerdiTactics.
-Require Import Crypto.Util.Logic.
+Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.DestructHead.
 
 Section Relations.
   Definition option_eq {A} eq (x y : option A) :=
@@ -51,7 +51,7 @@ Lemma option_rect_false_returns_true_iff
       (f:T->bool) {Proper_f:Proper(R==>eq)f} (o:option T) :
   option_rect (fun _ => bool) f false o = true <-> exists s:T, option_eq R o (Some s) /\ f s = true.
 Proof.
-  unfold option_rect; break_match; logic; [ | | congruence .. ].
+  unfold option_rect; break_match; repeat intuition (destruct_head ex; eauto); [ | | congruence.. ].
   { repeat esplit; simpl; easy. }
   { match goal with [H : f _ = true |- f _ = true ] =>
                     solve [rewrite <- H; eauto] end. }
@@ -60,7 +60,7 @@ Qed.
 Lemma option_rect_false_returns_true_iff_eq
       {T} (f:T->bool) (o:option T) :
   option_rect (fun _ => bool) f false o = true <-> exists s:T, Logic.eq o (Some s) /\ f s = true.
-Proof. unfold option_rect; break_match; logic; congruence. Qed.
+Proof. unfold option_rect; break_match; repeat intuition (destruct_head ex; eauto); congruence. Qed.
 
 Lemma option_rect_option_map : forall {A B C} (f:A->B) some none v,
     option_rect (fun _ => C) (fun x => some (f x)) none v = option_rect (fun _ => C) some none (option_map f v).
@@ -129,7 +129,7 @@ Lemma option_eq_to_leq_to_eq {A x y} v : @option_leq_to_eq A x y (@option_eq_to_
 Proof.
   compute in *.
   repeat first [ progress subst
-               | progress break_match
+               | progress break_innermost_match_step
                | reflexivity ].
 Qed.
 

@@ -1,7 +1,8 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.BoundedArithmetic.Interface.
 Require Import Crypto.Util.ZUtil.
-Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Tactics.UniquePose.
+Require Import Crypto.Util.Tactics.BreakMatch.
 
 Local Open Scope Z_scope.
 

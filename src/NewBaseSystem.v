@@ -244,11 +244,15 @@ Require Import Coq.ZArith.ZArith Coq.micromega.Psatz Coq.omega.Omega.
 Require Import Coq.ZArith.BinIntDef.
 Local Open Scope Z_scope.
 
+Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.Tactics.Algebra_syntax.Nsatz.
-Require Import Crypto.Util.Tactics Crypto.Util.Decidable Crypto.Util.LetIn.
+Require Import Crypto.Util.Decidable Crypto.Util.LetIn.
 Require Import Crypto.Util.ZUtil Crypto.Util.ListUtil Crypto.Util.Sigma.
-Require Import Crypto.Util.CPSUtil Crypto.Util.Prod Crypto.Util.Tactics.
+Require Import Crypto.Util.CPSUtil Crypto.Util.Prod.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
+Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.UniquePose.
+Require Import Crypto.Util.Tactics.VM.
 
 Require Import Coq.Lists.List. Import ListNotations.
 Require Crypto.Util.Tuple. Local Notation tuple := Tuple.tuple.
@@ -259,8 +263,7 @@ Local Ltac prove_id :=
          | _ => progress simpl
          | _ => progress cbv [Let_In]
          | _ => progress (autorewrite with uncps push_id in * )
-         | _ => break_if
-         | _ => break_match
+         | _ => break_innermost_match_step
          | _ => contradiction
          | _ => reflexivity
          | _ => nsatz
@@ -274,8 +277,7 @@ Local Ltac prove_eval :=
          | _ => progress simpl
          | _ => progress cbv [Let_In]
          | _ => progress (autorewrite with push_basesystem_eval uncps push_id cancel_pair in * )
-         | _ => break_if
-         | _ => break_match
+         | _ => break_innermost_match_step
          | _ => split
          | H : _ /\ _ |- _ => destruct H
          | H : Some _ = Some _ |- _ => progress (inversion H; subst)
@@ -866,7 +868,7 @@ Section DivMod.
 
   Lemma div_mod a b (H:b <> 0) : a = b * div a b + modulo a b.
   Proof.
-    cbv [div modulo]; intros. break_if; auto using Z.div_mod.
+    cbv [div modulo]; intros. break_match; auto using Z.div_mod.
     rewrite Z.land_ones, Z.shiftr_div_pow2 by apply Z.log2_nonneg.
     pose proof (Z.div_mod a b H). congruence.
   Qed.

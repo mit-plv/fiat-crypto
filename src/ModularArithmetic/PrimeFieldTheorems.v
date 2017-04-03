@@ -9,7 +9,7 @@ Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
 Require Import Coq.ZArith.BinInt Coq.NArith.BinNat Coq.ZArith.ZArith Coq.ZArith.Znumtheory Coq.NArith.NArith. (* import Zdiv before Znumtheory *)
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Crypto.Util.NumTheoryUtil Crypto.Util.ZUtil.
-Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Decidable.
 Require Export Crypto.Util.FixCoqMistakes.
 Require Crypto.Algebra Crypto.Algebra.Field.

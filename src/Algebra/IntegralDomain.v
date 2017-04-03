@@ -1,6 +1,9 @@
-Require Import Crypto.Util.Tactics Crypto.Util.Relations.
+Require Coq.setoid_ring.Integral_domain.
+Require Crypto.Tactics.Algebra_syntax.Nsatz.
 Require Import Crypto.Util.Factorize.
 Require Import Crypto.Algebra Crypto.Algebra.Ring.
+Require Import Crypto.Util.Tactics.RewriteHyp.
+Require Import Crypto.Util.Tactics.BreakMatch.
 
 Module IntegralDomain.
   Section IntegralDomain.
@@ -25,7 +28,7 @@ Module IntegralDomain.
       Local Infix "=" := eq. Local Notation "a <> b" := (not (a = b)).
       Local Infix "=" := eq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
       Local Infix "+" := add.  Local Infix "-" := sub. Local Infix "*" := mul.
-      
+
       Inductive coef :=
       | Coef_one
       | Coef_opp (_:coef)
@@ -62,7 +65,7 @@ Module IntegralDomain.
 
       Section WithChar.
         Context C (char_ge_C:@Ring.char_ge R eq zero one opp add sub mul C) (HC: Pos.lt xH C).
-        
+
         Definition is_factor_nonzero (n:N) : bool :=
           match n with N0 => false | N.pos p => BinPos.Pos.ltb p C end.
         Lemma is_factor_nonzero_correct (n:N) (refl:Logic.eq (is_factor_nonzero n) true)
@@ -79,7 +82,7 @@ Module IntegralDomain.
           { rewrite Znat.N2Z.inj_mul; Ring.push_homomorphism of_Z.
             eapply Ring.nonzero_product_iff_nonzero_factor; eauto. }
         Qed.
-          
+
         Definition is_constant_nonzero (z:Z) : bool :=
           match factorize_or_fail (Z.abs_N z) with
           | Some factors => List.forallb is_factor_nonzero factors

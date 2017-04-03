@@ -4,7 +4,8 @@ Require Import Crypto.Reflection.ExprInversion.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Equality.
-Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Notations.
 
 Section language.

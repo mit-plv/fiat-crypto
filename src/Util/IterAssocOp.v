@@ -3,6 +3,7 @@ Require Import Coq.NArith.NArith Coq.PArith.BinPosDef.
 Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Crypto.Algebra Crypto.Algebra.Monoid Crypto.Algebra.ScalarMult.
 Require Import Crypto.Util.NUtil.
+Require Import Crypto.Util.Tactics.BreakMatch.
 
 Local Open Scope equiv_scope.
 
@@ -121,7 +122,7 @@ Section IterAssocOp.
 End IterAssocOp.
 
 Require Import Coq.Classes.Morphisms.
-Require Import Crypto.Util.Tactics.
+(*Require Import Crypto.Util.Tactics.*)
 Require Import Crypto.Util.Relations.
 
 Global Instance Proper_funexp {T R} {Equivalence_R:Equivalence R}

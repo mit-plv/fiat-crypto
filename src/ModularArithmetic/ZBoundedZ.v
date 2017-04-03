@@ -2,7 +2,7 @@
 Require Import Coq.ZArith.ZArith Coq.micromega.Psatz.
 Require Import Crypto.ModularArithmetic.ZBounded.
 Require Import Crypto.Util.ZUtil.
-Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Notations.
 

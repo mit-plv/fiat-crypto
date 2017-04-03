@@ -4,7 +4,9 @@
     Wikipedia. *)
 Require Import Coq.ZArith.ZArith Coq.micromega.Psatz Coq.Structures.Equalities.
 Require Import Crypto.ModularArithmetic.Montgomery.Z.
-Require Import Crypto.Util.ZUtil Crypto.Util.Tactics.
+Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.SimplifyRepeatedIfs.
 Require Import Crypto.Util.Notations.
 
 Declare Module Nop : Nop.

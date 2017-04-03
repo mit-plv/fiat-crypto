@@ -4,7 +4,8 @@ Require Import Crypto.BoundedArithmetic.InterfaceProofs.
 Require Import Crypto.BoundedArithmetic.Double.Core.
 Require Import Crypto.BoundedArithmetic.Double.Proofs.Decode.
 Require Import Crypto.Util.ZUtil.
-Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.LetIn.
 Import Bug5107WorkAround.

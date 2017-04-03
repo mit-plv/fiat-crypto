@@ -4,7 +4,10 @@ Require Import Coq.Lists.List.
 Require Import Coq.funind.Recdef.
 Require Import Crypto.Util.ListUtil Crypto.Util.ZUtil Crypto.Util.NatUtil.
 Require Import Crypto.Tactics.VerdiTactics.
-Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Tactics.UniquePose.
+Require Import Crypto.Util.Tactics.SpecializeBy.
+Require Import Crypto.Util.Tactics.SubstLet.
+Require Import Crypto.Util.Tactics.Forward.
 Require Import Crypto.ModularArithmetic.Pow2Base.
 Require Import Crypto.ModularArithmetic.Pow2BaseProofs Crypto.BaseSystemProofs.
 Require Import Crypto.Util.Notations.
@@ -298,7 +301,7 @@ Section Conversion.
     rewrite nth_default_zeros.
     split; zero_bounds.
   Qed.
-    
+
   (* This is part of convert'_invariant, but proving it separately strips preconditions *)
   Lemma length_convert' : forall inp i out,
     length (convert' inp i out) = length out.
