@@ -44,7 +44,7 @@ UNMADE_VOFILES := src/SpecificGen/% src/Specific/%Display.vo
 # targets by the "lite" target
 # N.B. if a file not in this list depends on one in this list,
 # that file will be built by the "lite" target
-HEAVY_VOFILES := src/WeierstrassCurve/WeierstrassCurveTheorems.vo
+HEAVY_VOFILES := src/WeierstrassCurve/WeierstrassCurveTheorems.vo src/Specific/IntegrationTestLadderstep.vo
 
 COQ_VOFILES := $(filter-out $(UNMADE_VOFILES),$(VOFILES))
 LITE_VOFILES := $(filter-out $(HEAVY_VOFILES),$(COQ_VOFILES))
