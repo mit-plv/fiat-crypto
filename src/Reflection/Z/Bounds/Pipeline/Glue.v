@@ -208,7 +208,8 @@ Ltac split_BoundedWordToZ :=
 
 (** The [zrange_to_reflective] tactic takes a goal of the form
 <<
-is_bounded_by _ bounds (map wordToZ (?fW args)) /\ map wordToZ (?fW args) = fZ argsZ
+(is_bounded_by _ bounds (map wordToZ (?fW args)) /\ ...)
+  /\ (map wordToZ (?fW args), ...) = fZ argsZ
 >>
     and uses [cut] and a small lemma to turn it into a goal that the
     reflective machinery can handle.  The goal left by this tactic
