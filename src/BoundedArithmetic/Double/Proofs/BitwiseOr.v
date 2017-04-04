@@ -16,7 +16,7 @@ Section bitwise_or.
 
   Global Instance is_bitwise_or_double
     : is_bitwise_or or_double.
-  Proof.
+  Proof using Type*.
     constructor; intros x y.
     destruct n as [|p|].
     { rewrite !(tuple_decoder_n_O (W:=W) 2); easy. }

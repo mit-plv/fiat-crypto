@@ -25,7 +25,7 @@ Section with_context.
         (H1 : @find_Name_and_val var' t n T N V1 None = Some v1)
         (H2 : @find_Name_and_val var'' t n T N V2 None = Some v2)
     : List.In (existT (fun t => (var' t * var'' t)%type) t (v1, v2)) (Wf.flatten_binding_list V1 V2).
-  Proof.
+  Proof using Type.
     induction T;
       [ | | specialize (IHT1 (fst N) (fst V1) (fst V2));
             specialize (IHT2 (snd N) (snd V1) (snd V2)) ];
@@ -38,7 +38,7 @@ Section with_context.
     : @find_Name n (SmartFlatTypeMap f (t:=T) V)
                  (SmartFlatTypeMapInterp2 (var':=var') (fun _ _ (n' : Name) => n') V N) = None
       <-> find_Name n N = None.
-  Proof.
+  Proof using Type.
     split;
       (induction T;
        [ | | specialize (IHT1 (fst V) (fst N));
@@ -50,19 +50,19 @@ Section with_context.
     : @find_Name n (SmartFlatTypeMap f (t:=T) V)
                  (SmartFlatTypeMapInterp2 (var':=var') (fun _ _ (n' : Name) => n') V N) = None
       -> find_Name n N = None.
-  Proof. apply find_Name_SmartFlatTypeMapInterp2_None_iff. Qed.
+  Proof using Type. apply find_Name_SmartFlatTypeMapInterp2_None_iff. Qed.
   Hint Rewrite @find_Name_SmartFlatTypeMapInterp2_None using eassumption : ctx_db.
   Lemma find_Name_SmartFlatTypeMapInterp2_None' {var' n f T V N}
     : find_Name n N = None
       -> @find_Name n (SmartFlatTypeMap f (t:=T) V)
                     (SmartFlatTypeMapInterp2 (var':=var') (fun _ _ (n' : Name) => n') V N) = None.
-  Proof. apply find_Name_SmartFlatTypeMapInterp2_None_iff. Qed.
+  Proof using Type. apply find_Name_SmartFlatTypeMapInterp2_None_iff. Qed.
   Lemma find_Name_SmartFlatTypeMapInterp2_None_Some_wrong {var' n f T V N v}
     : @find_Name n (SmartFlatTypeMap f (t:=T) V)
                  (SmartFlatTypeMapInterp2 (var':=var') (fun _ _ (n' : Name) => n') V N) = None
       -> find_Name n N = Some v
       -> False.
-  Proof.
+  Proof using Type.
     intro; erewrite find_Name_SmartFlatTypeMapInterp2_None by eassumption; congruence.
   Qed.
   Local Hint Resolve @find_Name_SmartFlatTypeMapInterp2_None_Some_wrong.
@@ -77,7 +77,7 @@ Section with_context.
                      end
         | None => None
         end.
-  Proof.
+  Proof using Type.
     induction T;
       [ | | specialize (IHT1 (fst V) (fst N));
             specialize (IHT2 (snd V) (snd N)) ].
@@ -110,7 +110,7 @@ Section with_context.
       -> @find_Name_and_val
            var''' t n T N (SmartFlatTypeMapUnInterp (f:=f) g X) None = Some v'
       -> g t b v = v'.
-  Proof.
+  Proof using Type.
     induction T;
       [ | | specialize (IHT1 (fst V) (fst N) (fst X));
             specialize (IHT2 (snd V) (snd N) (snd X)) ];
@@ -134,7 +134,7 @@ Section with_context.
       -> @find_Name_and_val
            var''' t n T N (SmartFlatTypeMapUnInterp (f:=f) g X) None = Some v'
       -> g t b v = v'.
-  Proof.
+  Proof using Type.
     induction T;
       [ | | specialize (IHT1 (fst V) (fst N) (fst X));
             specialize (IHT2 (snd V) (snd N) (snd X)) ];
@@ -154,7 +154,7 @@ Section with_context.
         (H1 : @find_Name_and_val var'' t n T N y None = Some v1)
         (HR : interp_flat_type_rel_pointwise R x y)
     : R _ v0 v1.
-  Proof.
+  Proof using Type.
     induction T;
       [ | | specialize (IHT1 (fst N) (fst x) (fst y));
             specialize (IHT2 (snd N) (snd x) (snd y)) ];
@@ -182,7 +182,7 @@ Section with_context.
                         :> { b : _ & var'' (f _ b)})
         (N' := SmartFlatTypeMapInterp2 (var'':=fun _ => Name) (f:=f) (fun _ _ n => n) _ N)
     : b = h v /\ find_Name_and_val (f t (h v)) n N' V None = Some (i v).
-  Proof.
+  Proof using Type.
     induction T;
       [ | | specialize (IHT1 (fst N) (fst B) (fst V));
             specialize (IHT2 (snd N) (snd B) (snd V)) ];

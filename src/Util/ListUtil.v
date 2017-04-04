@@ -56,7 +56,7 @@ Module Export List.
     (** Results about [nth_error] *)
 
     Lemma nth_error_In l n (x : A) : nth_error l n = Some x -> In x l.
-    Proof.
+    Proof using Type.
       revert n. induction l as [|a l IH]; intros [|n]; simpl; try easy.
       - injection 1; auto.
       - eauto.
@@ -68,7 +68,7 @@ Module Export List.
     Variable f : A -> B.
 
     Lemma map_cons (x:A)(l:list A) : map f (x::l) = (f x) :: (map f l).
-    Proof.
+    Proof using Type.
       reflexivity.
     Qed.
   End Map.
@@ -90,7 +90,7 @@ Module Export List.
 
     Theorem length_zero_iff_nil (l : list A):
       length l = 0 <-> l=[].
-    Proof.
+    Proof using Type.
       split; [now destruct l | now intros ->].
     Qed.
   End Facts.
@@ -106,13 +106,13 @@ Module Export List.
 
     Theorem repeat_length x n:
       length (repeat x n) = n.
-    Proof.
+    Proof using Type.
       induction n as [| k Hrec]; simpl; rewrite ?Hrec; reflexivity.
     Qed.
 
     Theorem repeat_spec n x y:
       In y (repeat x n) -> y=x.
-    Proof.
+    Proof using Type.
       induction n as [|k Hrec]; simpl; destruct 1; auto.
     Qed.
 
@@ -125,16 +125,16 @@ Module Export List.
     Local Notation firstn := (@firstn A).
 
     Lemma firstn_nil n: firstn n [] = [].
-    Proof. induction n; now simpl. Qed.
+    Proof using Type. induction n; now simpl. Qed.
 
     Lemma firstn_cons n a l: firstn (S n) (a::l) = a :: (firstn n l).
-    Proof. now simpl. Qed.
+    Proof using Type. now simpl. Qed.
 
     Lemma firstn_all l: firstn (length l) l = l.
     Proof. induction l as [| ? ? H]; simpl; [reflexivity | now rewrite H]. Qed.
 
     Lemma firstn_all2 n: forall (l:list A), (length l) <= n -> firstn n l = l.
-    Proof. induction n as [|k iHk].
+    Proof using Type. induction n as [|k iHk].
            - intro. inversion 1 as [H1|?].
              rewrite (length_zero_iff_nil l) in H1. subst. now simpl.
            - destruct l as [|x xs]; simpl.
@@ -143,10 +143,10 @@ Module Export List.
     Qed.
 
     Lemma firstn_O l: firstn 0 l = [].
-    Proof. now simpl. Qed.
+    Proof using Type. now simpl. Qed.
 
     Lemma firstn_le_length n: forall l:list A, length (firstn n l) <= n.
-    Proof.
+    Proof using Type.
       induction n as [|k iHk]; simpl; [auto | destruct l as [|x xs]; simpl].
       - auto with arith.
       - apply le_n_S, iHk.
@@ -154,7 +154,7 @@ Module Export List.
 
     Lemma firstn_length_le: forall l:list A, forall n:nat,
           n <= length l -> length (firstn n l) = n.
-    Proof. induction l as [|x xs Hrec].
+    Proof using Type. induction l as [|x xs Hrec].
            - simpl. intros n H. apply le_n_0_eq in H. rewrite <- H. now simpl.
            - destruct n.
              * now simpl.
@@ -164,7 +164,7 @@ Module Export List.
     Lemma firstn_app n:
       forall l1 l2,
         firstn n (l1 ++ l2) = (firstn n l1) ++ (firstn (n - length l1) l2).
-    Proof. induction n as [|k iHk]; intros l1 l2.
+    Proof using Type. induction n as [|k iHk]; intros l1 l2.
            - now simpl.
            - destruct l1 as [|x xs].
              * unfold List.firstn at 2, length. now rewrite 2!app_nil_l, <- minus_n_O.
@@ -174,7 +174,7 @@ Module Export List.
     Lemma firstn_app_2 n:
       forall l1 l2,
         firstn ((length l1) + n) (l1 ++ l2) = l1 ++ firstn n l2.
-    Proof. induction n as [| k iHk];intros l1 l2.
+    Proof using Type. induction n as [| k iHk];intros l1 l2.
            - unfold List.firstn at 2. rewrite <- plus_n_O, app_nil_r.
              rewrite firstn_app. rewrite <- minus_diag_reverse.
              unfold List.firstn at 2. rewrite app_nil_r. apply firstn_all.

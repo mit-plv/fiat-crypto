@@ -126,7 +126,7 @@ Module N.
         (0 <= z2 < 2 ^ (Z.of_nat sz2))%Z ->
         Word.combine (ZNWord sz1 z1) (ZNWord sz2 z2) =
         ZNWord (sz1 + sz2) (Z.lor z1 (Z.shiftl z2 (Z.of_nat sz1))).
-    Proof.
+    Proof using Type.
       cbv [ZNWord]; intros.
       rewrite !Word.NToWord_nat.
       match goal with |- ?a = _ => rewrite <- (Word.natToWord_wordToNat a) end.

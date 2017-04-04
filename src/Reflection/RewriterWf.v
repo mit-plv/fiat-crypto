@@ -31,14 +31,14 @@ Section language.
     Lemma wff_rewrite_opf {t} G (e1 : @exprf var1 t) (e2 : @exprf var2 t)
           (Hwf : wff G e1 e2)
       : wff G (rewrite_opf rewrite_op_expr1 e1) (rewrite_opf rewrite_op_expr2 e2).
-    Proof.
+    Proof using Type*.
       induction Hwf; simpl; try constructor; auto.
     Qed.
 
     Lemma wf_rewrite_opf {t} (e1 : @expr var1 t) (e2 : @expr var2 t)
           (Hwf : wf e1 e2)
       : wf (rewrite_op rewrite_op_expr1 e1) (rewrite_op rewrite_op_expr2 e2).
-    Proof.
+    Proof using Type*.
       destruct Hwf; simpl; constructor; intros; apply wff_rewrite_opf; auto.
     Qed.
   End with_var.
@@ -53,7 +53,7 @@ Section language.
         {t} (e : Expr t)
         (Hwf : Wf e)
     : Wf (RewriteOp rewrite_op_expr e).
-  Proof.
+  Proof using Type.
     intros var1 var2; apply wf_rewrite_opf; auto.
   Qed.
 End language.

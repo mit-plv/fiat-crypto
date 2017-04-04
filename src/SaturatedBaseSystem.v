@@ -36,11 +36,11 @@ Module Columns.
       B.Positional.eval (fun i => weight (i+offset)) (Tuple.map sum x).
 
     Lemma eval_from_0 {n} x : @eval_from n 0 x = eval x.
-    Proof. cbv [eval_from eval]. auto using B.Positional.eval_wt_equiv. Qed.
+    Proof using Type. cbv [eval_from eval]. auto using B.Positional.eval_wt_equiv. Qed.
 
     Lemma eval_from_S {n}: forall i (inp : (list Z)^(S n)),
         eval_from i inp = eval_from (S i) (tl inp) + weight i * sum (hd inp).
-    Proof.
+    Proof using Type.
       intros; cbv [eval_from].
       replace inp with (append (hd inp) (tl inp))
         by (simpl in *; destruct n; destruct inp; reflexivity).
@@ -66,7 +66,7 @@ Module Columns.
     Definition compact_digit n digit := compact_digit_cps n digit id.
     Lemma compact_digit_id n digit: forall {T} f,
         @compact_digit_cps n digit T f = f (compact_digit n digit).
-    Proof.
+    Proof using Type.
       induction digit; intros; cbv [compact_digit]; [reflexivity|];
         simpl compact_digit_cps; break_match; [reflexivity|].
       rewrite !IHdigit; reflexivity.
@@ -81,7 +81,7 @@ Module Columns.
     Definition compact_step i c d := compact_step_cps i c d id.
     Lemma compact_step_id i c d T f :
       @compact_step_cps i c d T f = f (compact_step i c d).
-    Proof. cbv [compact_step_cps compact_step]; autorewrite with uncps; reflexivity. Qed.
+    Proof using Type. cbv [compact_step_cps compact_step]; autorewrite with uncps; reflexivity. Qed.
     Hint Opaque compact_step : uncps.
     Hint Rewrite compact_step_id : uncps.
 
@@ -90,11 +90,11 @@ Module Columns.
 
     Definition compact {n} xs := @compact_cps n xs _ id.
     Lemma compact_id {n} xs {T} f : @compact_cps n xs T f = f (compact xs).
-    Proof. cbv [compact_cps compact]; autorewrite with uncps; reflexivity. Qed.
+    Proof using Type. cbv [compact_cps compact]; autorewrite with uncps; reflexivity. Qed.
 
     Lemma compact_digit_correct i (xs : list Z) :
       snd (compact_digit i xs)  = sum xs - (weight (S i) / weight i) * (fst (compact_digit i xs)).
-    Proof.
+    Proof using add_get_carry_correct weight_0.
       induction xs; cbv [compact_digit]; simpl compact_digit_cps;
         cbv [Let_In];
         repeat match goal with
@@ -116,7 +116,7 @@ Module Columns.
     Lemma compact_invariant_holds n i starter rem inp out :
       compact_invariant n (S i) (fst (compact_step_cps i starter (hd inp) id)) rem (tl inp) out ->
       compact_invariant (S n) i starter rem inp (append (snd (compact_step_cps i starter (hd inp) id)) out).
-    Proof.
+    Proof using Type*.
       cbv [compact_invariant B.Positional.eval_from]; intros.
       repeat match goal with
              | _ => rewrite B.Positional.eval_step
@@ -138,11 +138,11 @@ Module Columns.
     Qed.
 
     Lemma compact_invariant_base i rem : compact_invariant 0 i rem rem tt tt.
-    Proof. cbv [compact_invariant]. simpl. repeat (f_equal; try omega). Qed.
+    Proof using Type. cbv [compact_invariant]. simpl. repeat (f_equal; try omega). Qed.
 
     Lemma compact_invariant_end {n} start (input : (list Z)^n):
       compact_invariant n 0%nat start (fst (mapi_with_cps compact_step_cps start input id)) input (snd (mapi_with_cps compact_step_cps start input id)).
-    Proof.
+    Proof using Type*.
       autorewrite with uncps push_id.
       apply (mapi_with_invariant _ compact_invariant
                                  compact_invariant_holds compact_invariant_base).
@@ -150,7 +150,7 @@ Module Columns.
 
     Lemma eval_compact {n} (xs : tuple (list Z) n) :
       B.Positional.eval weight (snd (compact xs)) + (weight n * fst (compact xs)) = eval xs.
-    Proof.
+    Proof using Type*.
       pose proof (compact_invariant_end 0 xs) as Hinv.
       cbv [compact_invariant] in Hinv.
       simpl in Hinv. autorewrite with zsimplify natsimplify in Hinv.
@@ -164,7 +164,7 @@ Module Columns.
     Definition cons_to_nth {n} i x t := @cons_to_nth_cps n i x t _ id.
     Lemma cons_to_nth_id {n} i x t T f :
       @cons_to_nth_cps n i x t T f = f (cons_to_nth i x t).
-    Proof.
+    Proof using Type.
       cbv [cons_to_nth_cps cons_to_nth].
       assert (forall xs : list (list Z), length xs = n ->
                  length (update_nth_cps i (cons x) xs id) = n) as Hlen.
@@ -178,13 +178,13 @@ Module Columns.
     Lemma map_sum_update_nth l : forall i x,
       List.map sum (update_nth i (cons x) l) =
       update_nth i (Z.add x) (List.map sum l).
-    Proof.
+    Proof using Type.
       induction l; intros; destruct i; simpl; rewrite ?IHl; reflexivity.
     Qed.
 
     Lemma cons_to_nth_add_to_nth n i x t :
       map sum (@cons_to_nth n i x t) = B.Positional.add_to_nth i x (map sum t).
-    Proof.
+    Proof using weight.
       cbv [B.Positional.add_to_nth B.Positional.add_to_nth_cps cons_to_nth cons_to_nth_cps on_tuple_cps].
       induction n; [simpl; rewrite !update_nth_cps_correct; reflexivity|].
       specialize (IHn (tl t)). autorewrite with uncps push_id in *.
@@ -198,7 +198,7 @@ Module Columns.
 
     Lemma eval_cons_to_nth n i x t : (i < n)%nat ->
       eval (@cons_to_nth n i x t) = weight i * x + eval t.
-    Proof.
+    Proof using Type.
       cbv [eval]; intros. rewrite cons_to_nth_add_to_nth.
       auto using B.Positional.eval_add_to_nth.
     Qed.
@@ -207,14 +207,14 @@ Module Columns.
     Definition nils n : (list Z)^n := Tuple.repeat nil n.
 
     Lemma map_sum_nils n : map sum (nils n) = B.Positional.zeros n.
-    Proof.
+    Proof using Type.
       cbv [nils B.Positional.zeros]; induction n; [reflexivity|].
       change (repeat nil (S n)) with (@nil Z :: repeat nil n).
       rewrite map_repeat, sum_nil. reflexivity.
     Qed.
 
     Lemma eval_nils n : eval (nils n) = 0.
-    Proof. cbv [eval]. rewrite map_sum_nils, B.Positional.eval_zeros. reflexivity. Qed. Hint Rewrite eval_nils : push_basesystem_eval.
+    Proof using Type. cbv [eval]. rewrite map_sum_nils, B.Positional.eval_zeros. reflexivity. Qed. Hint Rewrite eval_nils : push_basesystem_eval.
 
     Definition from_associational_cps n (p:list B.limb)
                {T} (f:(list Z)^n -> T) :=
@@ -227,7 +227,7 @@ Module Columns.
     Definition from_associational n p := from_associational_cps n p id.
     Lemma from_associational_id n p T f :
       @from_associational_cps n p T f = f (from_associational n p).
-    Proof.
+    Proof using Type.
       cbv [from_associational_cps from_associational].
       autorewrite with uncps push_id; reflexivity.
     Qed.
@@ -236,7 +236,7 @@ Module Columns.
 
     Lemma eval_from_associational n p (n_nonzero:n<>0%nat):
       eval (from_associational n p) = B.Associational.eval p.
-    Proof.
+    Proof using weight_0 weight_nonzero.
       cbv [from_associational_cps from_associational]; induction p;
         autorewrite with uncps push_id push_basesystem_eval; [reflexivity|].
         pose proof (B.Positional.weight_place_cps weight weight_0 weight_nonzero a (pred n)).

@@ -64,7 +64,7 @@ Section multiply.
     : (is_mul_low_low (Z.of_nat 2^Z.of_nat exp * n_over_two) (multiply_low_low_repeated_double (exp:=exp))
        * is_mul_high_low (Z.of_nat 2^Z.of_nat exp * n_over_two) (multiply_high_low_repeated_double (exp:=exp))
        * is_mul_high_high (Z.of_nat 2^Z.of_nat exp * n_over_two) (multiply_high_high_repeated_double (exp:=exp)))%type.
-  Proof.
+  Proof using Type*.
     destruct exp as [|exp']; [ clear is_multi_multiply_repeated_double | specialize (is_multi_multiply_repeated_double exp') ].
     { destruct decode; generalize ismulhwll, ismulhwhl, ismulhwhh.
       simpl.

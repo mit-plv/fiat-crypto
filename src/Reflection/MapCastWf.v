@@ -102,7 +102,7 @@ Section language.
       : wff G1
             (@mapf_interp_cast ovar1 t1 e1 t1 ebounds)
             (@mapf_interp_cast ovar2 t1 e2 t1 ebounds).
-    Proof.
+    Proof using wff_transfer_op.
       revert dependent Gbounds; revert ebounds;
       induction Hwf;
         repeat match goal with
@@ -130,7 +130,7 @@ Section language.
           (Hwf : wf e1 e2)
       : wf (@map_interp_cast ovar1 t1 e1 t1 ebounds args2)
            (@map_interp_cast ovar2 t1 e2 t1 ebounds args2).
-    Proof.
+    Proof using wff_transfer_op.
       destruct Hwf;
         repeat match goal with
                | _ => solve [ constructor; eauto
@@ -163,7 +163,7 @@ Section language.
           args
           (Hwf : Wf e)
       : Wf (@MapInterpCast t e args).
-    Proof.
+    Proof using wff_transfer_op.
       intros ??; apply wf_map_interp_cast; auto.
     Qed.
   End gen.

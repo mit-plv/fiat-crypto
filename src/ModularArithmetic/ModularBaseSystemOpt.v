@@ -596,7 +596,7 @@ Section Multiplication.
   Definition mul_bi'_opt_correct
              (i : nat) (vsr : list Z) (bs : list Z)
     : mul_bi'_opt i vsr bs = mul_bi' bs i vsr.
-  Proof.
+  Proof using Type.
     revert i; induction vsr as [|vsr vsrs IHvsr]; intros.
     { reflexivity. }
     { simpl mul_bi'.
@@ -621,7 +621,7 @@ Section Multiplication.
 
   Lemma map_zeros : forall a n l,
     List.map (Z.mul a) (zeros n ++ l) = zeros n ++ List.map (Z.mul a) l.
-  Proof.
+  Proof using prm.
     induction n; simpl; [ reflexivity | intros; apply f_equal2; [ omega | congruence ] ].
   Qed.
 
@@ -660,7 +660,7 @@ Section Multiplication.
   Definition mul'_opt_correct
            (usr vs : list Z) (bs : list Z)
     : mul'_opt usr vs bs = mul' bs usr vs.
-  Proof.
+  Proof using prm.
     revert vs; induction usr as [|usr usrs IHusr]; intros.
     { reflexivity. }
     { simpl.
@@ -769,7 +769,7 @@ Section PowInv.
 
   Lemma fold_chain_opt_correct : forall {T} (id : T) op chain acc,
     fold_chain_opt id op chain acc = fold_chain id op chain acc.
-  Proof.
+  Proof using Type.
     reflexivity.
   Qed.
 
@@ -940,7 +940,7 @@ Section Canonicalization.
 
   Lemma ge_modulus'_cps : forall {A} (f : Z -> A) (us : list Z) i b,
     f (ge_modulus' id us b i) = ge_modulus' f us b i.
-  Proof.
+  Proof using Type.
     induction i; intros; simpl; cbv [Let_In cmovl cmovne]; break_if; try reflexivity;
       apply IHi.
   Qed.
@@ -1029,7 +1029,7 @@ Section SquareRoots.
   Lemma if_equiv : forall {A} (eqA : A -> A -> Prop) (x0 x1 : bool) y0 y1 z0 z1,
     x0 = x1 -> eqA y0 y1 -> eqA z0 z1 ->
     eqA (if x0 then y0 else z0) (if x1 then y1 else z1).
-  Proof.
+  Proof using Type.
     intros; repeat break_if; congruence.
   Qed.
 

@@ -41,7 +41,7 @@ Section ExtendedBaseVector.
   Definition ext_limb_widths := limb_widths ++ limb_widths.
   Definition ext_base := base_from_limb_widths ext_limb_widths.
   Lemma ext_base_alt : ext_base = base ++ (map (Z.mul (2^k)) base).
-  Proof.
+  Proof using Type*.
     unfold ext_base, ext_limb_widths.
     rewrite base_from_limb_widths_app by auto.
     rewrite two_p_equiv.
@@ -49,13 +49,13 @@ Section ExtendedBaseVector.
   Qed.
 
   Lemma ext_base_positive : forall b, In b ext_base -> b > 0.
-  Proof.
+  Proof using Type*.
     apply base_positive; unfold ext_limb_widths.
     intros ? H. apply in_app_or in H; destruct H; auto.
   Qed.
 
   Lemma b0_1 : forall x, nth_default x base 0 = 1 -> nth_default x ext_base 0 = 1.
-  Proof.
+  Proof using Type*.
     intros. rewrite ext_base_alt, nth_default_app.
     destruct base; assumption.
   Qed.
@@ -63,7 +63,7 @@ Section ExtendedBaseVector.
   Lemma map_nth_default_base_high : forall n, (n < (length base))%nat ->
     nth_default 0 (map (Z.mul (2 ^ k)) base) n =
     (2 ^ k) * (nth_default 0 base n).
-  Proof.
+  Proof using Type.
     intros.
     erewrite map_nth_default; auto.
   Qed.
@@ -71,14 +71,14 @@ Section ExtendedBaseVector.
   Lemma ext_limb_widths_nonneg
         (limb_widths_nonneg : forall w : Z, In w limb_widths -> 0 <= w)
     : forall w : Z, In w ext_limb_widths -> 0 <= w.
-  Proof.
+  Proof using Type*.
     unfold ext_limb_widths; setoid_rewrite in_app_iff.
     intros ? [?|?]; auto.
   Qed.
 
   Lemma ext_limb_widths_upper_bound
     : upper_bound ext_limb_widths = upper_bound limb_widths * upper_bound limb_widths.
-  Proof.
+  Proof using Type*.
     unfold ext_limb_widths.
     autorewrite with push_upper_bound; reflexivity.
   Qed.
@@ -105,7 +105,7 @@ Section ExtendedBaseVector.
         (2 ^ k * (nth_default 0 base i * nth_default 0 base j'))
           / (2 ^ k * nth_default 0 base (i + j')) *
         (2 ^ k * nth_default 0 base (i + j')).
-    Proof.
+    Proof using base_good two_k_nonzero.
       clear limb_widths_match_modulus.
       intros.
       remember (nth_default 0 base) as b.
@@ -124,7 +124,7 @@ Section ExtendedBaseVector.
                   let b := nth_default 0 ext_base in
                   let r := (b i * b j) / b (i+j)%nat in
                   b i * b j = r * b (i+j)%nat.
-    Proof.
+    Proof using Type*.
       intros.
       subst b. subst r.
       rewrite ext_base_alt in *.
@@ -160,7 +160,7 @@ Section ExtendedBaseVector.
 
   Lemma extended_base_length:
       length ext_base = (length base + length base)%nat.
-  Proof.
+  Proof using Type.
     clear limb_widths_nonnegative.
     unfold ext_base, ext_limb_widths; autorewrite with distr_length; reflexivity.
   Qed.
@@ -168,7 +168,7 @@ Section ExtendedBaseVector.
   Lemma firstn_us_base_ext_base : forall (us : BaseSystem.digits),
       (length us <= length base)%nat
       -> firstn (length us) base = firstn (length us) ext_base.
-  Proof.
+  Proof using Type*.
     rewrite ext_base_alt; intros.
     rewrite firstn_app_inleft; auto; omega.
   Qed.
@@ -176,7 +176,7 @@ Section ExtendedBaseVector.
   Lemma decode_short : forall (us : BaseSystem.digits),
     (length us <= length base)%nat ->
     BaseSystem.decode base us = BaseSystem.decode ext_base us.
-  Proof. auto using decode_short_initial, firstn_us_base_ext_base. Qed.
+  Proof using Type*. auto using decode_short_initial, firstn_us_base_ext_base. Qed.
 
   Section BaseVector.
     Context {bv : BaseSystem.BaseVector base}

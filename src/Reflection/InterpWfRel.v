@@ -39,7 +39,7 @@ Section language.
         (HIn : List.In (existT (fun t : base_type_code => (interp_base_type1 t * interp_base_type2 t)%type) t (x, x')%core)
                        (flatten_binding_list (t:=T) e1 e2))
     : R t x x'.
-  Proof.
+  Proof using Type.
     induction T; simpl in *; try tauto; [ | rewrite List.in_app_iff in HIn ];
       repeat first [ progress destruct_head or
                    | progress destruct_head False
@@ -61,7 +61,7 @@ Section language.
                  -> R t x x')
              (Rwf : wff G e1 e2)
     : interp_flat_type_rel_pointwise R (interpf1 e1) (interpf2 e2).
-    Proof.
+    Proof using Type*.
       induction Rwf; simpl; auto.
       repeat match goal with
              | [ H : context[List.In _ (_ ++ _)] |- _ ]
@@ -79,7 +79,7 @@ Section language.
              {t} {e1 : expr1 t} {e2 : expr2 t}
              (Rwf : wf e1 e2)
     : interp_type_rel_pointwise R (interp1 e1) (interp2 e2).
-    Proof.
+    Proof using Type*.
       destruct Rwf; simpl; repeat intro; eauto.
     Qed.
 
@@ -87,7 +87,7 @@ Section language.
              {t} {e : Expr t}
              (Rwf : Wf e)
     : interp_type_rel_pointwise R (Interp1 e) (Interp2 e).
-    Proof.
+    Proof using Type*.
       unfold Interp, Wf in *; apply interp_wf; simpl; intuition.
     Qed.
   End wf.

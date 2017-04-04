@@ -48,7 +48,7 @@ Section InstructionGallery.
         {isdecode : is_decode Wdecoder}
     : is_spread_left_immediate sprl
       <-> (forall r count, 0 <= count < n -> decode (fst (sprl r count)) + decode (snd (sprl r count)) << n = (decode r << count) mod (2^n*2^n))%Z.
-  Proof.
+  Proof using Type.
     split; intro H; [ | apply Build_is_spread_left_immediate' ];
       intros r count Hc;
       [ | specialize (H r count Hc); revert H ];
@@ -70,7 +70,7 @@ Section InstructionGallery.
         {isdecode : is_decode Wdecoder}
     : is_mul_double muldw
       <-> (forall x y, decode (fst (muldw x y)) + decode (snd (muldw x y)) << n = (decode x * decode y) mod (2^n*2^n)).
-  Proof.
+  Proof using Type.
     split; intro H; [ | apply Build_is_mul_double' ];
       intros x y;
       [ | specialize (H x y); revert H ];
@@ -136,19 +136,19 @@ Section adc_subc.
           {issubc : is_sub_with_carry subc}.
   Global Instance bit_fst_add_with_carry_false
     : forall x y, bit (fst (adc x y false)) <~=~> (decode x + decode y) >> n.
-  Proof.
+  Proof using isadc.
     intros; erewrite bit_fst_add_with_carry by assumption.
     autorewrite with zsimplify_const; reflexivity.
   Qed.
   Global Instance bit_fst_add_with_carry_true
     : forall x y, bit (fst (adc x y true)) <~=~> (decode x + decode y + 1) >> n.
-  Proof.
+  Proof using isadc.
     intros; erewrite bit_fst_add_with_carry by assumption.
     autorewrite with zsimplify_const; reflexivity.
   Qed.
   Global Instance fst_add_with_carry_leb
     : forall x y c, fst (adc x y c) <~= (2^n <=? (decode x + decode y + bit c)).
-  Proof.
+  Proof using isadc isdecode.
     intros x y c; hnf.
     assert (0 <= n)%Z by eauto using decode_exponent_nonnegative.
     pose proof (decode_range x); pose proof (decode_range y).
@@ -165,25 +165,25 @@ Section adc_subc.
   Qed.
   Global Instance fst_add_with_carry_false_leb
     : forall x y, fst (adc x y false) <~= (2^n <=? (decode x + decode y)).
-  Proof.
+  Proof using isadc isdecode.
     intros; erewrite fst_add_with_carry_leb by assumption.
     autorewrite with zsimplify_const; reflexivity.
   Qed.
   Global Instance fst_add_with_carry_true_leb
     : forall x y, fst (adc x y true) <~=~> (2^n <=? (decode x + decode y + 1)).
-  Proof.
+  Proof using isadc isdecode.
     intros; erewrite fst_add_with_carry_leb by assumption.
     autorewrite with zsimplify_const; reflexivity.
   Qed.
   Global Instance fst_sub_with_carry_false
     : forall x y, fst (subc x y false) <~=~> ((decode x - decode y) <? 0).
-  Proof.
+  Proof using issubc.
     intros; erewrite fst_sub_with_carry by assumption.
     autorewrite with zsimplify_const; reflexivity.
   Qed.
   Global Instance fst_sub_with_carry_true
     : forall x y, fst (subc x y true) <~=~> ((decode x - decode y - 1) <? 0).
-  Proof.
+  Proof using issubc.
     intros; erewrite fst_sub_with_carry by assumption.
     autorewrite with zsimplify_const; reflexivity.
   Qed.

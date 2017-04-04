@@ -24,13 +24,13 @@ Section language.
 
     Lemma interpf_rewrite_opf {t} (e : exprf t)
       : interpf interp_op (rewrite_opf rewrite_op_expr e) = interpf interp_op e.
-    Proof.
+    Proof using Type*.
       induction e; simpl; unfold LetIn.Let_In; rewrite_hyp ?*; reflexivity.
     Qed.
 
     Lemma interp_rewrite_op {t} (e : expr t)
       : forall x, interp interp_op (rewrite_op rewrite_op_expr e) x = interp interp_op e x.
-    Proof.
+    Proof using Type*.
       destruct e; intro x; apply interpf_rewrite_opf.
     Qed.
   End specialized.
@@ -42,7 +42,7 @@ Section language.
             = interp_op _ _ opc (interpf interp_op args))
         {t} (e : Expr t)
     : forall x, Interp interp_op (RewriteOp rewrite_op_expr e) x = Interp interp_op e x.
-  Proof.
+  Proof using Type.
     apply interp_rewrite_op; assumption.
   Qed.
 End language.

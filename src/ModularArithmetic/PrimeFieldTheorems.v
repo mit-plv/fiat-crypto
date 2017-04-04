@@ -22,13 +22,13 @@ Module F.
     Context (q:positive) {prime_q:prime q}.
     Lemma inv_spec : F.inv 0%F = (0%F : F q)
                      /\ (prime q -> forall x : F q, x <> 0%F -> (F.inv x * x)%F = 1%F).
-    Proof. change (@F.inv q) with (proj1_sig (@F.inv_with_spec q)); destruct (@F.inv_with_spec q); eauto. Qed.
+    Proof using Type. change (@F.inv q) with (proj1_sig (@F.inv_with_spec q)); destruct (@F.inv_with_spec q); eauto. Qed.
 
-    Lemma inv_0 : F.inv 0%F = F.of_Z q 0. Proof. destruct inv_spec; auto. Qed.
-    Lemma inv_nonzero (x:F q) : (x <> 0 -> F.inv x * x%F = 1)%F. Proof. destruct inv_spec; auto. Qed.
+    Lemma inv_0 : F.inv 0%F = F.of_Z q 0. Proof using Type. destruct inv_spec; auto. Qed.
+    Lemma inv_nonzero (x:F q) : (x <> 0 -> F.inv x * x%F = 1)%F. Proof using Type*. destruct inv_spec; auto. Qed.
 
     Global Instance field_modulo : @Algebra.field (F q) Logic.eq 0%F 1%F F.opp F.add F.sub F.mul F.inv F.div.
-    Proof.
+    Proof using Type*.
       repeat match goal with
              | _ => solve [ solve_proper
                           | apply F.commutative_ring_modulo
@@ -45,10 +45,10 @@ Module F.
 
     (* TODO: move to PrimeFieldTheorems *)
     Lemma to_Z_1 : @F.to_Z q 1 = 1%Z.
-    Proof. simpl. rewrite Zmod_small; omega. Qed.
+    Proof using two_lt_q. simpl. rewrite Zmod_small; omega. Qed.
 
     Lemma Fq_inv_fermat (x:F q) : F.inv x = x ^ Z.to_N (q - 2)%Z.
-    Proof.
+    Proof using Type*.
       destruct (dec (x = 0%F)) as [?|Hnz].
       { subst x; rewrite inv_0, F.pow_0_l; trivial.
         change (0%N) with (Z.to_N 0%Z); rewrite Z2N.inj_iff; omega. }
@@ -59,7 +59,7 @@ Module F.
 
     Lemma euler_criterion (a : F q) (a_nonzero : a <> 0) :
       (a ^ (Z.to_N (q / 2)) = 1) <-> (exists b, b*b = a).
-    Proof.
+    Proof using Type*.
       pose proof F.to_Z_nonzero_range a; pose proof (odd_as_div q).
       specialize_by (destruct (Z.prime_odd_or_2 _ prime_q); try omega; trivial).
       rewrite F.eq_to_Z_iff, !F.to_Z_pow, !to_Z_1, !Z2N.id by omega.
@@ -86,10 +86,10 @@ Module F.
     Definition sqrt_3mod4 (a : F q) : F q := a ^ Z.to_N (q / 4 + 1).
 
     Global Instance Proper_sqrt_3mod4 : Proper (eq ==> eq ) sqrt_3mod4.
-    Proof. repeat intro; subst; reflexivity. Qed.
+    Proof using Type. repeat intro; subst; reflexivity. Qed.
 
     Lemma two_lt_q_3mod4 : 2 < q.
-    Proof.
+    Proof using Type*.
       pose proof (prime_ge_2 q _) as two_le_q.
       destruct (Zle_lt_or_eq _ _ two_le_q) as [H|H]; [exact H|].
       rewrite <-H in q_3mod4; discriminate.
@@ -98,7 +98,7 @@ Module F.
     
     Lemma sqrt_3mod4_correct (x:F q) :
       ((exists y, y*y = x) <-> (sqrt_3mod4 x)*(sqrt_3mod4 x) = x)%F.
-    Proof.
+    Proof using Type*.
       cbv [sqrt_3mod4]; intros.
       destruct (F.eq_dec x 0);
       repeat match goal with
@@ -136,7 +136,7 @@ Module F.
     Context (sqrt_minus1 : F q) (sqrt_minus1_valid : sqrt_minus1 * sqrt_minus1 = F.opp 1).
 
     Lemma two_lt_q_5mod8 : 2 < q.
-    Proof.
+    Proof using prime_q q_5mod8.
       pose proof (prime_ge_2 q _) as two_le_q.
       destruct (Zle_lt_or_eq _ _ two_le_q) as [H|H]; [exact H|].
       rewrite <-H in *. discriminate.
@@ -150,11 +150,11 @@ Module F.
       else sqrt_minus1 * b.
 
     Global Instance Proper_sqrt_5mod8 : Proper (eq ==> eq ) sqrt_5mod8.
-    Proof. repeat intro; subst; reflexivity. Qed.
+    Proof using Type. repeat intro; subst; reflexivity. Qed.
 
     Lemma eq_b4_a2 (x : F q) (Hex:exists y, y*y = x) :
       ((x ^ Z.to_N (q / 8 + 1)) ^ 2) ^ 2 = x ^ 2.
-    Proof.
+    Proof using prime_q q_5mod8.
       pose proof two_lt_q_5mod8.
       assert (0 <= q/8)%Z by (apply Z.div_le_lower_bound; rewrite ?Z.mul_0_r; omega).
       assert (Z.to_N (q / 8 + 1) <> 0%N) by
@@ -185,7 +185,7 @@ Module F.
     Qed.
 
     Lemma mul_square_sqrt_minus1 : forall x, sqrt_minus1 * x * (sqrt_minus1 * x) = F.opp (x * x).
-    Proof.
+    Proof using prime_q sqrt_minus1_valid.
       intros.
       transitivity (F.opp 1 * (x * x)); [ | field].
       rewrite <-sqrt_minus1_valid.
@@ -194,7 +194,7 @@ Module F.
 
     Lemma eq_b4_a2_iff (x : F q) : x <> 0 ->
       ((exists y, y*y = x) <-> ((x ^ Z.to_N (q / 8 + 1)) ^ 2) ^ 2 = x ^ 2).
-    Proof.
+    Proof using Type*.
       split; try apply eq_b4_a2.
       intro Hyy.
       rewrite !@F.pow_2_r in *.
@@ -207,7 +207,7 @@ Module F.
 
     Lemma sqrt_5mod8_correct : forall x,
       ((exists y, y*y = x) <-> (sqrt_5mod8 x)*(sqrt_5mod8 x) = x).
-    Proof.
+    Proof using Type*.
       cbv [sqrt_5mod8]; intros.
       destruct (F.eq_dec x 0).
       {
@@ -261,7 +261,7 @@ Module F.
         @Algebra.ring H eq zero one opp add sub mul
         /\ @Ring.is_homomorphism (F q) Logic.eq F.one F.add F.mul H eq one add mul phi
         /\ @Ring.is_homomorphism H eq one add mul (F q) Logic.eq F.one F.add F.mul phi'.
-      Proof. eapply @Ring.ring_by_isomorphism; assumption || exact _. Qed.
+      Proof using phi'_add phi'_iff phi'_mul phi'_one phi'_opp phi'_phi phi'_sub phi'_zero. eapply @Ring.ring_by_isomorphism; assumption || exact _. Qed.
       Local Instance _iso_ring : Algebra.ring := proj1 ring.
       Local Instance _iso_hom1 : Ring.is_homomorphism := proj1 (proj2 ring).
       Local Instance _iso_hom2 : Ring.is_homomorphism := proj2 (proj2 ring).
@@ -287,7 +287,7 @@ Module F.
         @Algebra.field H eq zero one opp add sub mul inv div
         /\ @Ring.is_homomorphism (F q) Logic.eq F.one F.add F.mul H eq one add mul phi
         /\ @Ring.is_homomorphism H eq one add mul (F q) Logic.eq F.one F.add F.mul phi'.
-      Proof. eapply @Field.field_and_homomorphism_from_redundant_representation;
+      Proof using Type*. eapply @Field.field_and_homomorphism_from_redundant_representation;
                assumption || exact _ || exact inv_proof || exact div_proof. Qed.
     End IsomorphicRings.
   End Iso.

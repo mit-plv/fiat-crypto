@@ -148,7 +148,7 @@ Section ZeroNeqOne.
   Context {T eq zero one} `{@is_zero_neq_one T eq zero one} `{Equivalence T eq}.
 
   Lemma one_neq_zero : not (eq one zero).
-  Proof.
+  Proof using Type*.
     intro HH; symmetry in HH. auto using zero_neq_one.
   Qed.
 End ZeroNeqOne.

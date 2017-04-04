@@ -54,7 +54,7 @@ Section barrett.
                          if r <? 0 then r + b^(k+offset) else r.
 
     Lemma r_mod_3m_eq_orig : r_mod_3m = r_mod_3m_orig.
-    Proof.
+    Proof using base_pos k_big_enough m_pos m_small offset_nonneg r1 r2.
       assert (0 <= r1 < b^(k+offset)) by (subst r1; auto with zarith).
       assert (0 <= r2 < b^(k+offset)) by (subst r2; auto with zarith).
       subst r_mod_3m r_mod_3m_orig; cbv zeta.
@@ -71,7 +71,7 @@ Section barrett.
     Let Q := x / m.
     Let R := x mod m.
     Lemma q3_nice : { b : bool * bool | q3 = Q + (if fst b then -1 else 0) + (if snd b then -1 else 0) }.
-    Proof.
+    Proof using base_pos k_big_enough m_large m_pos m_small offset_nonneg x_nonneg x_small μ_good.
       assert (0 < b^(k+offset)) by zero_bounds.
       assert (0 < b^(k-offset)) by zero_bounds.
       assert (x / b^(k-offset) <= b^(2*k) / b^(k-offset)) by auto with zarith lia.
@@ -85,7 +85,7 @@ Section barrett.
     Qed.
 
     Fact q3_in_range : Q - 2 <= q3 <= Q.
-    Proof.
+    Proof using base_pos k_big_enough m_large m_pos m_small offset_nonneg q2 x_nonneg x_small μ_good.
       rewrite (proj2_sig q3_nice).
       break_match; lia.
     Qed.
@@ -98,7 +98,7 @@ Section barrett.
             Fact 14.43 guarantees that [q₃] is never larger than the
             true quotient [Q], and is at most 2 smaller. *)
     Lemma x_minus_q3_m_in_range : 0 <= x - q3 * m < 3 * m.
-    Proof.
+    Proof using base_pos k_big_enough m_large m_pos m_small offset_nonneg q2 x_nonneg x_small μ_good.
       pose proof q3_in_range.
       assert (0 <= R < m) by (subst R; auto with zarith).
       assert (0 <= (Q - q3) * m + R < 3 * m) by nia.
@@ -106,7 +106,7 @@ Section barrett.
     Qed.
 
     Lemma r_mod_3m_eq_alt : r_mod_3m = x - q3 * m.
-    Proof.
+    Proof using base_pos k_big_enough m_large m_pos m_small offset_nonneg q2 x_nonneg x_small μ_good.
       pose proof x_minus_q3_m_in_range.
       subst r_mod_3m r_mod_3m_orig r1 r2.
       autorewrite with pull_Zmod zsimplify; reflexivity.
@@ -115,7 +115,7 @@ Section barrett.
     (** This version uses reduction modulo [b^(k+offset)]. *)
     Theorem barrett_reduction_equivalent
       : r_mod_3m mod m = x mod m.
-    Proof.
+    Proof using base_pos k_big_enough m_large m_pos m_small offset_nonneg r1 r2 x_nonneg x_small μ_good.
       rewrite r_mod_3m_eq_alt.
       autorewrite with zsimplify push_Zmod; reflexivity.
     Qed.
@@ -124,10 +124,10 @@ Section barrett.
         conditional addition of [b^(k+offset)]. *)
     Theorem barrett_reduction_orig_equivalent
       : r_mod_3m_orig mod m = x mod m.
-    Proof. rewrite <- r_mod_3m_eq_orig; apply barrett_reduction_equivalent. Qed.
+    Proof using base_pos k_big_enough m_large m_pos m_small offset_nonneg r_mod_3m x_nonneg x_small μ_good. rewrite <- r_mod_3m_eq_orig; apply barrett_reduction_equivalent. Qed.
 
     Lemma r_small : 0 <= r_mod_3m < 3 * m.
-    Proof.
+    Proof using Q R base_pos k_big_enough m_large m_pos m_small offset_nonneg q3 x_nonneg x_small μ_good.
       pose proof x_minus_q3_m_in_range.
       subst Q R r_mod_3m r_mod_3m_orig r1 r2.
       autorewrite with pull_Zmod zsimplify; lia.
@@ -139,7 +139,7 @@ Section barrett.
       : x mod m = let r := if r <? m then r else r-m in
                   let r := if r <? m then r else r-m in
                   r.
-    Proof.
+    Proof using base_pos k_big_enough m_large m_pos m_small offset_nonneg r1 r2 x_nonneg x_small μ_good.
       pose proof r_small. cbv zeta.
       destruct (r <? m) eqn:Hr, (r-m <? m) eqn:?; subst r; rewrite !r_mod_3m_eq_alt, ?Hr in *; Z.ltb_to_lt; try lia.
       { symmetry; eapply (Zmod_unique x m q3); lia. }
@@ -153,6 +153,6 @@ Section barrett.
       : x mod m = let r := if r <? m then r else r-m in
                   let r := if r <? m then r else r-m in
                   r.
-    Proof. subst r; rewrite <- r_mod_3m_eq_orig; apply barrett_reduction_small. Qed.
+    Proof using base_pos k_big_enough m_large m_pos m_small offset_nonneg r_mod_3m x_nonneg x_small μ_good. subst r; rewrite <- r_mod_3m_eq_orig; apply barrett_reduction_small. Qed.
   End barrett_modular_reduction.
 End barrett.

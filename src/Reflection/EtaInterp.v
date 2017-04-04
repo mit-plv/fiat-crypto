@@ -33,7 +33,7 @@ Section language.
             (eq_eta : forall A B x, @eta A B x = x).
     Lemma eq_interp_flat_type_eta_gen {var t T f} x
       : @interp_flat_type_eta_gen base_type_code var eta t T f x = f x.
-    Proof. induction t; t. Qed.
+    Proof using eq_eta. induction t; t. Qed.
 
     (* Local *) Hint Rewrite @eq_interp_flat_type_eta_gen.
 
@@ -43,17 +43,17 @@ Section language.
       Lemma interp_expr_eta_gen {t e}
         : forall x,
           interp (@interp_op) (expr_eta_gen eta exprf_eta (t:=t) e) x = interp (@interp_op) e x.
-      Proof. t. Qed.
+      Proof using Type*. t. Qed.
     End gen_type.
     (* Local *) Hint Rewrite @interp_expr_eta_gen.
 
     Lemma interpf_exprf_eta_gen {t e}
       : interpf (@interp_op) (exprf_eta_gen eta (t:=t) e) = interpf (@interp_op) e.
-    Proof. induction e; t. Qed.
+    Proof using eq_eta. induction e; t. Qed.
 
     Lemma InterpExprEtaGen {t e}
       : forall x, Interp (@interp_op) (ExprEtaGen eta (t:=t) e) x = Interp (@interp_op) e x.
-    Proof. apply interp_expr_eta_gen; intros; apply interpf_exprf_eta_gen. Qed.
+    Proof using eq_eta. apply interp_expr_eta_gen; intros; apply interpf_exprf_eta_gen. Qed.
   End gen_flat_type.
   (* Local *) Hint Rewrite @eq_interp_flat_type_eta_gen.
   (* Local *) Hint Rewrite @interp_expr_eta_gen.
@@ -61,45 +61,45 @@ Section language.
 
   Lemma eq_interp_flat_type_eta {var t T f} x
     : @interp_flat_type_eta base_type_code var t T f x = f x.
-  Proof. t. Qed.
+  Proof using Type. t. Qed.
   (* Local *) Hint Rewrite @eq_interp_flat_type_eta.
   Lemma eq_interp_flat_type_eta' {var t T f} x
     : @interp_flat_type_eta' base_type_code var t T f x = f x.
-  Proof. t. Qed.
+  Proof using Type. t. Qed.
   (* Local *) Hint Rewrite @eq_interp_flat_type_eta'.
   Lemma interpf_exprf_eta {t e}
     : interpf (@interp_op) (exprf_eta (t:=t) e) = interpf (@interp_op) e.
-  Proof. t. Qed.
+  Proof using Type. t. Qed.
   (* Local *) Hint Rewrite @interpf_exprf_eta.
   Lemma interpf_exprf_eta' {t e}
     : interpf (@interp_op) (exprf_eta' (t:=t) e) = interpf (@interp_op) e.
-  Proof. t. Qed.
+  Proof using Type. t. Qed.
   (* Local *) Hint Rewrite @interpf_exprf_eta'.
   Lemma interp_expr_eta {t e}
     : forall x, interp (@interp_op) (expr_eta (t:=t) e) x = interp (@interp_op) e x.
-  Proof. t. Qed.
+  Proof using Type. t. Qed.
   Lemma interp_expr_eta' {t e}
     : forall x, interp (@interp_op) (expr_eta' (t:=t) e) x = interp (@interp_op) e x.
-  Proof. t. Qed.
+  Proof using Type. t. Qed.
   Lemma InterpExprEta {t e}
     : forall x, Interp (@interp_op) (ExprEta (t:=t) e) x = Interp (@interp_op) e x.
-  Proof. apply interp_expr_eta. Qed.
+  Proof using Type. apply interp_expr_eta. Qed.
   Lemma InterpExprEta' {t e}
     : forall x, Interp (@interp_op) (ExprEta' (t:=t) e) x = Interp (@interp_op) e x.
-  Proof. apply interp_expr_eta'. Qed.
+  Proof using Type. apply interp_expr_eta'. Qed.
   Lemma InterpExprEta_arrow {s d e}
     : forall x, Interp (t:=Arrow s d) (@interp_op) (ExprEta (t:=Arrow s d) e) x = Interp (@interp_op) e x.
-  Proof. exact (@InterpExprEta (Arrow s d) e). Qed.
+  Proof using Type. exact (@InterpExprEta (Arrow s d) e). Qed.
   Lemma InterpExprEta'_arrow {s d e}
     : forall x, Interp (t:=Arrow s d) (@interp_op) (ExprEta' (t:=Arrow s d) e) x = Interp (@interp_op) e x.
-  Proof. exact (@InterpExprEta' (Arrow s d) e). Qed.
+  Proof using Type. exact (@InterpExprEta' (Arrow s d) e). Qed.
 
   Lemma eq_interp_eta {t e}
     : forall x, interp_eta interp_op (t:=t) e x = interp interp_op e x.
-  Proof. apply eq_interp_flat_type_eta. Qed.
+  Proof using Type. apply eq_interp_flat_type_eta. Qed.
   Lemma eq_InterpEta {t e}
     : forall x, InterpEta interp_op (t:=t) e x = Interp interp_op e x.
-  Proof. apply eq_interp_eta. Qed.
+  Proof using Type. apply eq_interp_eta. Qed.
 End language.
 
 Hint Rewrite @eq_interp_flat_type_eta @eq_interp_flat_type_eta' @interpf_exprf_eta @interpf_exprf_eta' @interp_expr_eta @interp_expr_eta' @InterpExprEta @InterpExprEta' @InterpExprEta_arrow @InterpExprEta'_arrow @eq_interp_eta @eq_InterpEta : reflective_interp.

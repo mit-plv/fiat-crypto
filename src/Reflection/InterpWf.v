@@ -30,7 +30,7 @@ Section language.
         (HIn : List.In (existT (fun t : base_type_code => (interp_base_type t * interp_base_type t)%type) t (x, x')%core)
                        (flatten_binding_list (t:=T) e e))
     : x = x'.
-  Proof.
+  Proof using Type.
     induction T; simpl in *; [ | | rewrite List.in_app_iff in HIn ];
       repeat first [ progress destruct_head or
                    | progress destruct_head False
@@ -53,7 +53,7 @@ Section language.
                  -> x = x')
              (Rwf : wff G e1 e2)
     : interpf e1 = interpf e2.
-    Proof.
+    Proof using Type.
       induction Rwf; simpl; auto;
         specialize_by auto; try congruence.
       rewrite_hyp !*; auto.
@@ -73,7 +73,7 @@ Section language.
              {t} {e1 e2 : expr t}
              (Rwf : wf e1 e2)
     : forall x, interp e1 x = interp e2 x.
-    Proof.
+    Proof using Type.
       destruct Rwf; simpl; eauto.
     Qed.
   End wf.

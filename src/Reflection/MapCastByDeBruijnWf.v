@@ -72,7 +72,7 @@ Section language.
         (input_bounds : interp_flat_type interp_base_type_bounds (domain t))
     : forall {b} e' (He':MapCast e input_bounds = Some (existT _ b e')) (Hwf : Wf e),
       Wf e'.
-  Proof.
+  Proof using base_type_code_lb.
     unfold MapCastByDeBruijn.MapCast, MapCastCompile, MapCastDoCast, MapCastDoInterp, option_map; intros b e'.
     break_innermost_match; try congruence; intros ? v v'.
     inversion_option; inversion_sigma; subst; simpl in *; intros.
@@ -100,7 +100,7 @@ Section language.
              (He':MapCast e input_bounds = Some (existT _ b e'))
              (Hwf : Wf e),
       Wf e'.
-  Proof. exact (@Wf_MapCast (Arrow s d) e input_bounds). Qed.
+  Proof using base_type_code_lb. exact (@Wf_MapCast (Arrow s d) e input_bounds). Qed.
 End language.
 
 Hint Resolve Wf_MapCast Wf_MapCast_arrow : wf.

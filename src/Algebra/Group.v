@@ -9,16 +9,16 @@ Section BasicProperties.
   Local Open Scope eq_scope.
 
   Lemma cancel_left : forall z x y, z*x = z*y <-> x = y.
-  Proof. eauto using Monoid.cancel_left, left_inverse. Qed.
+  Proof using Type*. eauto using Monoid.cancel_left, left_inverse. Qed.
   Lemma cancel_right : forall z x y, x*z = y*z <-> x = y.
-  Proof. eauto using Monoid.cancel_right, right_inverse. Qed.
+  Proof using Type*. eauto using Monoid.cancel_right, right_inverse. Qed.
   Lemma inv_inv x : inv(inv(x)) = x.
-  Proof. eauto using Monoid.inv_inv, left_inverse. Qed.
+  Proof using Type*. eauto using Monoid.inv_inv, left_inverse. Qed.
   Lemma inv_op_ext x y : (inv y*inv x)*(x*y) =id.
-  Proof. eauto using Monoid.inv_op, left_inverse. Qed.
+  Proof using Type*. eauto using Monoid.inv_op, left_inverse. Qed.
 
   Lemma inv_unique x ix : ix * x = id -> ix = inv x.
-  Proof.
+  Proof using Type*.
     intro Hix.
     cut (ix*x*inv x = inv x).
     - rewrite <-associative, right_inverse, right_identity; trivial.
@@ -26,14 +26,14 @@ Section BasicProperties.
   Qed.
 
   Lemma inv_bijective x y : inv x = inv y <-> x = y.
-  Proof.
+  Proof using Type*.
     split; intro Hi; rewrite ?Hi; try reflexivity.
     assert (Hii:inv (inv x) = inv (inv y)) by (rewrite Hi; reflexivity).
     rewrite 2inv_inv in Hii; exact Hii.
   Qed.
 
   Lemma inv_op x y : inv (x*y) = inv y*inv x.
-  Proof.
+  Proof using Type*.
     symmetry. etransitivity.
     2:eapply inv_unique.
     2:eapply inv_op_ext.
@@ -41,19 +41,19 @@ Section BasicProperties.
   Qed.
 
   Lemma inv_id : inv id = id.
-  Proof. symmetry. eapply inv_unique, left_identity. Qed.
+  Proof using Type*. symmetry. eapply inv_unique, left_identity. Qed.
 
   Lemma inv_id_iff x : inv x = id <-> x = id.
-  Proof.
+  Proof using Type*.
     split; intro Hi; rewrite ?Hi, ?inv_id; try reflexivity.
     rewrite <-inv_id, inv_bijective in Hi; exact Hi.
   Qed.
 
   Lemma inv_nonzero_nonzero x : x <> id <-> inv x <> id.
-  Proof. setoid_rewrite inv_id_iff; reflexivity. Qed.
+  Proof using Type*. setoid_rewrite inv_id_iff; reflexivity. Qed.
 
   Lemma eq_r_opp_r_inv a b c : a = op c (inv b) <-> op a b = c.
-  Proof.
+  Proof using Type*.
     split; intro Hx; rewrite Hx || rewrite <-Hx;
       rewrite <-!associative, ?left_inverse, ?right_inverse, right_identity;
       reflexivity.
@@ -62,9 +62,9 @@ Section BasicProperties.
   Section ZeroNeqOne.
     Context {one} `{is_zero_neq_one T eq id one}.
     Lemma opp_one_neq_zero : inv one <> id.
-    Proof. setoid_rewrite inv_id_iff. exact one_neq_zero. Qed.
+    Proof using Type*. setoid_rewrite inv_id_iff. exact one_neq_zero. Qed.
     Lemma zero_neq_opp_one : id <> inv one.
-    Proof. intro Hx. symmetry in Hx. eauto using opp_one_neq_zero. Qed.
+    Proof using Type*. intro Hx. symmetry in Hx. eauto using opp_one_neq_zero. Qed.
   End ZeroNeqOne.
 End BasicProperties.
 
@@ -75,14 +75,14 @@ Section Homomorphism.
   Local Infix "=" := eq. Local Infix "=" := eq : type_scope.
 
   Lemma homomorphism_id : phi ID = id.
-  Proof.
+  Proof using Type*.
     assert (Hii: op (phi ID) (phi ID) = op (phi ID) id) by
         (rewrite <- Monoid.homomorphism, left_identity, right_identity; reflexivity).
     rewrite cancel_left in Hii; exact Hii.
   Qed.
 
   Lemma homomorphism_inv x : phi (INV x) = inv (phi x).
-  Proof.
+  Proof using Type*.
     apply inv_unique.
     rewrite <- Monoid.homomorphism, left_inverse, homomorphism_id; reflexivity.
   Qed.
@@ -91,11 +91,11 @@ Section Homomorphism.
     Context {MUL} {MUL_is_scalarmult:@ScalarMult.is_scalarmult G EQ OP ID MUL }.
     Context {mul} {mul_is_scalarmult:@ScalarMult.is_scalarmult H eq op id mul }.
     Lemma homomorphism_scalarmult n P : phi (MUL n P) = mul n (phi P).
-    Proof. eapply ScalarMult.homomorphism_scalarmult, homomorphism_id. Qed.
+    Proof using Type*. eapply ScalarMult.homomorphism_scalarmult, homomorphism_id. Qed.
 
     Import ScalarMult.
     Lemma opp_mul : forall n P, inv (mul n P) = mul n (inv P).
-    Proof.
+    Proof using groupH mul_is_scalarmult.
       induction n; intros.
       { rewrite !scalarmult_0_l, inv_id; reflexivity. }
       { rewrite <-NPeano.Nat.add_1_l, Plus.plus_comm at 1.
@@ -117,7 +117,7 @@ Section Homomorphism_rev.
 
   Lemma group_from_redundant_representation
     : @group H eq op id inv /\ @Monoid.is_homomorphism G EQ OP H eq op phi /\ @Monoid.is_homomorphism H eq op G EQ OP phi'.
-  Proof.
+  Proof using Type*.
     repeat match goal with
            | [ H : _/\_ |- _ ] => destruct H; try clear H
            | [ H : group |- _ ] => destruct H; try clear H
@@ -141,7 +141,7 @@ Section Homomorphism_rev.
 
   Definition homomorphism_from_redundant_representation
     : @Monoid.is_homomorphism G EQ OP H eq op phi.
-  Proof.
+  Proof using groupG phi'_eq phi'_op phi'_phi_id.
     split; repeat intro; apply phi'_eq; rewrite ?phi'_op, ?phi'_phi_id; easy.
   Qed.
 End Homomorphism_rev.
@@ -204,7 +204,7 @@ Section HomomorphismComposition.
         {phi'':G->K}
         (Hphi'' : forall x, eqK (phi' (phi x)) (phi'' x))
     : @Monoid.is_homomorphism G EQ OP K eqK opK phi''.
-  Proof.
+  Proof using Hphi Hphi' groupK.
     split; repeat intro; rewrite <- !Hphi''.
     { rewrite !Monoid.homomorphism; reflexivity. }
     { apply Hphi', Hphi; assumption. }

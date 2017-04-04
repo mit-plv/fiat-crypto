@@ -21,7 +21,7 @@ Section ModularWordEncodingPre.
   .
 
   Lemma Fm_encoding_valid : forall x, Fm_dec (Fm_enc x) = Some x.
-  Proof.
+  Proof using bound_check m_pos.
     unfold Fm_dec, Fm_enc; intros.
     pose proof (F.to_Z_range x m_pos).
     rewrite wordToN_NToWord_idempotent by (apply bound_check_nat_N;
@@ -32,7 +32,7 @@ Section ModularWordEncodingPre.
   Qed.
 
   Lemma Fm_encoding_canonical : forall w x, Fm_dec w = Some x -> Fm_enc x = w.
-  Proof.
+  Proof using bound_check.
     unfold Fm_dec, Fm_enc; intros ? ? dec_Some.
     break_if; [ | congruence ].
     inversion dec_Some.

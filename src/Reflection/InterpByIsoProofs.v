@@ -23,13 +23,13 @@ Section language.
 
   Lemma interpf_retr_id {t} (e : @exprf interp_base_type t)
     : interpf_retr (fun _ x => x) (fun _ x => x) e = interpf interp_op e.
-  Proof.
+  Proof using Type.
     induction e; simpl; cbv [LetIn.Let_In]; rewrite_hyp ?*; rewrite ?SmartVarfMap_id; reflexivity.
   Qed.
   Lemma interp_retr_id {t} (e : @expr interp_base_type t)
     : forall x,
       interp_retr (fun _ x => x) (fun _ x => x) e x = interp interp_op e x.
-  Proof.
+  Proof using Type.
     destruct e; simpl; intros; rewrite interpf_retr_id, SmartVarfMap_id; reflexivity.
   Qed.
 
@@ -49,7 +49,7 @@ Section language.
                           (SmartVarfMap (t:=t1) var1_of_interp e1)
                           (SmartVarfMap var2_of_interp e1)))
       : interp_of_var1 t x1 = interp_of_var2 t x2.
-    Proof.
+    Proof using interp_of_var12.
       repeat first [ progress repeat autorewrite with core in *
                    | progress subst
                    | progress inversion_sigma
@@ -75,7 +75,7 @@ Section language.
           (Hwf : wff G e1 e2)
       : interpf_retr var1_of_interp interp_of_var1 e1
         = interpf_retr var2_of_interp interp_of_var2 e2.
-    Proof.
+    Proof using interp_of_var12.
       induction Hwf; simpl; rewrite_hyp ?*; try reflexivity; auto.
       { match goal with H : _ |- _ => apply H end.
         intros ???; rewrite List.in_app_iff.
@@ -86,7 +86,7 @@ Section language.
       : forall x,
         interp_retr var1_of_interp interp_of_var1 e1 x
         = interp_retr var2_of_interp interp_of_var2 e2 x.
-    Proof.
+    Proof using interp_of_var12.
       destruct Hwf; simpl; repeat intro; subst; eapply wff_interpf_retr; eauto.
     Qed.
   End with_var2.
@@ -102,7 +102,7 @@ Section language.
               -> interp_of_var t x1 = x2)
           (Hwf : wff G e1 e2)
       : interpf_retr var_of_interp interp_of_var e1 = interpf interp_op e2.
-    Proof.
+    Proof using var_is_retract.
       erewrite wff_interpf_retr, interpf_retr_id; eauto.
     Qed.
     Lemma wf_interp_retr_correct {t} (e1 : @expr var t) (e2 : @expr interp_base_type t)
@@ -110,7 +110,7 @@ Section language.
           x
       : interp_retr var_of_interp interp_of_var e1 x
         = interp interp_op e2 x.
-    Proof.
+    Proof using var_is_retract.
       erewrite wf_interp_retr, interp_retr_id; eauto.
     Qed.
   End with_var.

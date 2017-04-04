@@ -44,7 +44,7 @@ Section language.
               (fun _ x => x) (fun _ x => x)
               t e
         = e.
-    Proof.
+    Proof using functional_extensionality.
       induction e;
         repeat match goal with
                | _ => reflexivity
@@ -82,7 +82,7 @@ Section language.
                        f_var12 f_var21
                        t e)
         = interpf interp_op e.
-    Proof.
+    Proof using f_var12_id f_var21_id.
       induction e;
         repeat match goal with
                | _ => progress unfold LetIn.Let_In

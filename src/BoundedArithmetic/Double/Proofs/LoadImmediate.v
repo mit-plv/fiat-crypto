@@ -18,7 +18,7 @@ Section load_immediate.
 
   Global Instance is_load_immediate_double
     : is_load_immediate (ldi_double n).
-  Proof.
+  Proof using Type*.
     intros x H; hnf in H.
     pose proof (decode_exponent_nonnegative decode (ldi x)).
     assert (0 <= x mod 2^n < 2^n) by auto with zarith.

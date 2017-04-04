@@ -102,7 +102,7 @@ Section language.
                  wff (flatten_binding_list x1 x2 ++ G) (eC1 x1) (eC2 x2))
              {struct e1}
       : @wff var1 var2 G tC (under_letsf e1 eC1) (under_letsf e2 eC2).
-    Proof.
+    Proof using Type.
       revert H.
       set (e1v := e1) in *.
       destruct e1 as [ | | ? ? ? args | tx ex tC0 eC0 | ? ex ? ey ];
@@ -153,7 +153,7 @@ Section language.
     Lemma wff_linearizef G {t} e1 e2
       : @wff var1 var2 G t e1 e2
         -> @wff var1 var2 G t (linearizef e1) (linearizef e2).
-    Proof.
+    Proof using Type.
       induction 1; t_fin ltac:(apply wff_under_letsf).
     Qed.
 
@@ -162,13 +162,13 @@ Section language.
     Lemma wf_linearize {t} e1 e2
       : @wf var1 var2 t e1 e2
         -> @wf var1 var2 t (linearize e1) (linearize e2).
-    Proof.
+    Proof using Type.
       destruct 1; constructor; auto.
     Qed.
   End with_var.
 
   Lemma Wf_Linearize {t} (e : Expr t) : Wf e -> Wf (Linearize e).
-  Proof.
+  Proof using Type.
     intros wf var1 var2; apply wf_linearize, wf.
   Qed.
 End language.

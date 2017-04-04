@@ -28,30 +28,32 @@ Section ScalarMultProperties.
     end.
 
   Global Instance Proper_scalarmult_ref : Proper (Logic.eq==>eq==>eq) scalarmult_ref.
-  Proof.
+  Proof using monoidG.
     repeat intro; subst.
     match goal with [n:nat |- _ ] => induction n; simpl @scalarmult_ref; [reflexivity|] end.
     repeat match goal with [H:_ |- _ ] => rewrite H end; reflexivity.
   Qed.
 
   Lemma scalarmult_ext : forall n P, mul n P = scalarmult_ref n P.
+  Proof using Type*.
+
     induction n; simpl @scalarmult_ref; intros; rewrite <-?IHn; (apply scalarmult_0_l || apply scalarmult_S_l).
   Qed.
 
   Lemma scalarmult_1_l : forall P, 1*P = P.
-  Proof. intros. rewrite scalarmult_S_l, scalarmult_0_l, right_identity; reflexivity. Qed.
+  Proof using Type*. intros. rewrite scalarmult_S_l, scalarmult_0_l, right_identity; reflexivity. Qed.
 
   Lemma scalarmult_add_l : forall (n m:nat) (P:G), ((n + m)%nat * P = n * P + m * P).
-  Proof.
+  Proof using Type*.
     induction n; intros;
       rewrite ?scalarmult_0_l, ?scalarmult_S_l, ?plus_Sn_m, ?plus_O_n, ?scalarmult_S_l, ?left_identity, <-?associative, <-?IHn; reflexivity.
   Qed.
 
   Lemma scalarmult_zero_r : forall m, m * zero = zero.
-  Proof. induction m; rewrite ?scalarmult_S_l, ?scalarmult_0_l, ?left_identity, ?IHm; try reflexivity. Qed.
+  Proof using Type*. induction m; rewrite ?scalarmult_S_l, ?scalarmult_0_l, ?left_identity, ?IHm; try reflexivity. Qed.
 
   Lemma scalarmult_assoc : forall (n m : nat) P, n * (m * P) = (m * n)%nat * P.
-  Proof.
+  Proof using Type*.
     induction n; intros.
     { rewrite <-mult_n_O, !scalarmult_0_l. reflexivity. }
     { rewrite scalarmult_S_l, <-mult_n_Sm, <-Plus.plus_comm, scalarmult_add_l.
@@ -59,10 +61,10 @@ Section ScalarMultProperties.
   Qed.
 
   Lemma scalarmult_times_order : forall l B, l*B = zero -> forall n, (l * n) * B = zero.
-  Proof. intros ? ? Hl ?. rewrite <-scalarmult_assoc, Hl, scalarmult_zero_r. reflexivity. Qed.
+  Proof using Type*. intros ? ? Hl ?. rewrite <-scalarmult_assoc, Hl, scalarmult_zero_r. reflexivity. Qed.
 
   Lemma scalarmult_mod_order : forall l B, l <> 0%nat -> l*B = zero -> forall n, n mod l * B = n * B.
-  Proof.
+  Proof using Type*.
     intros ? ? Hnz Hmod ?.
     rewrite (NPeano.Nat.div_mod n l Hnz) at 2.
     rewrite scalarmult_add_l, scalarmult_times_order, left_identity by auto. reflexivity.
@@ -79,7 +81,7 @@ Section ScalarMultHomomorphism.
   Context (phi_ZERO:phi ZERO = zero).
 
   Lemma homomorphism_scalarmult : forall n P, phi (MUL n P) = mul n (phi P).
-  Proof.
+  Proof using Type*.
     setoid_rewrite scalarmult_ext.
     induction n; intros; simpl; rewrite ?Monoid.homomorphism, ?IHn; easy.
   Qed.

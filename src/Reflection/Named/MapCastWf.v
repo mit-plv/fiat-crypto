@@ -227,7 +227,7 @@ Section language.
         (Hb : find_Name_and_val base_type_dec Name_dec t n N B None = Some b)
         (N' := SmartFlatTypeMapInterp2 (var'':=fun _ => Name) (f:=pick_typeb) (fun _ _ n => n) _ N)
     : b = projT1 v /\ find_Name_and_val base_type_dec Name_dec (pick_typeb t (projT1 v)) n N' V None = Some (projT2 v).
-  Proof.
+  Proof using Type.
     eapply (find_Name_and_val_SmartFlatTypeMapUnInterp2_Some_Some base_type_dec Name_dec (h:=@projT1 _ _) (i:=@projT2 _ _) (f:=pick_typeb) (g:=fun _ => existT _));
       auto.
   Qed.
@@ -254,7 +254,7 @@ Section language.
             -> lookupb (t:=t) varBounds n = Some (projT1 v)
                /\ lookupb (t:=pick_typeb t (projT1 v)) newValues n = Some (projT2 v)),
       prop_of_option (Named.wff newValues e').
-  Proof. induction e; t. Qed.
+  Proof using BoundsContextOk ContextOk FullContextOk Name_dec base_type_dec. induction e; t. Qed.
 
   Lemma wf_map_cast
         {t} (e:expr base_type_code op Name t)
@@ -270,7 +270,7 @@ Section language.
             -> lookupb (t:=t) varBounds n = Some (projT1 v)
                /\ lookupb (t:=pick_typeb t (projT1 v)) newValues n = Some (projT2 v)),
       Named.wf newValues e'.
-  Proof.
+  Proof using BoundsContextOk ContextOk FullContextOk Name_dec base_type_dec.
     unfold Named.wf, map_cast, option_map, interp; simpl; intros.
     repeat first [ progress subst
                  | progress inversion_option

@@ -24,7 +24,7 @@ Section shrd.
   Local Ltac zutil_arith ::= solve [ auto with nocore omega ].
 
   Global Instance is_shift_right_doubleword_immediate_double : is_shift_right_doubleword_immediate (shrd_double n).
-  Proof.
+  Proof using isdecode isshrd.
     intros high low count Hcount; hnf in Hcount.
     unfold shrd_double, shift_right_doubleword_immediate_double; simpl.
     generalize (decode_range low).

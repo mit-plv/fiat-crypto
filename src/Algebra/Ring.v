@@ -15,7 +15,7 @@ Section Ring.
   Local Infix "+" := add. Local Infix "-" := sub. Local Infix "*" := mul.
 
   Lemma mul_0_l : forall x, 0 * x = 0.
-  Proof.
+  Proof using Type*.
     intros.
     assert (0*x = 0*x) as Hx by reflexivity.
     rewrite <-(right_identity 0), right_distributive in Hx at 1.
@@ -24,7 +24,7 @@ Section Ring.
   Qed.
 
   Lemma mul_0_r : forall x, x * 0 = 0.
-  Proof.
+  Proof using Type*.
     intros.
     assert (x*0 = x*0) as Hx by reflexivity.
     rewrite <-(left_identity 0), left_distributive in Hx at 1.
@@ -33,10 +33,10 @@ Section Ring.
   Qed.
 
   Lemma sub_0_l x : 0 - x = opp x.
-  Proof. rewrite ring_sub_definition. rewrite left_identity. reflexivity. Qed.
+  Proof using Type*. rewrite ring_sub_definition. rewrite left_identity. reflexivity. Qed.
 
   Lemma mul_opp_r x y : x * opp y = opp (x * y).
-  Proof.
+  Proof using Type*.
     assert (Ho:x*(opp y) + x*y = 0)
       by (rewrite <-left_distributive, left_inverse, mul_0_r; reflexivity).
     rewrite <-(left_identity (opp (x*y))), <-Ho; clear Ho.
@@ -44,7 +44,7 @@ Section Ring.
   Qed.
 
   Lemma mul_opp_l x y : opp x * y = opp (x * y).
-  Proof.
+  Proof using Type*.
     assert (Ho:opp x*y + x*y = 0)
       by (rewrite <-right_distributive, left_inverse, mul_0_l; reflexivity).
     rewrite <-(left_identity (opp (x*y))), <-Ho; clear Ho.
@@ -54,19 +54,19 @@ Section Ring.
   Definition opp_zero_iff : forall x, opp x = 0 <-> x = 0 := Group.inv_id_iff.
 
   Global Instance is_left_distributive_sub : is_left_distributive (eq:=eq)(add:=sub)(mul:=mul).
-  Proof.
+  Proof using Type*.
     split; intros. rewrite !ring_sub_definition, left_distributive.
     eapply Group.cancel_left, mul_opp_r.
   Qed.
 
   Global Instance is_right_distributive_sub : is_right_distributive (eq:=eq)(add:=sub)(mul:=mul).
-  Proof.
+  Proof using Type*.
     split; intros. rewrite !ring_sub_definition, right_distributive.
     eapply Group.cancel_left, mul_opp_l.
   Qed.
 
   Lemma sub_zero_iff x y : x - y = 0 <-> x = y.
-  Proof.
+  Proof using Type*.
     split; intro E.
     { rewrite <-(right_identity y), <- E, ring_sub_definition.
       rewrite commutative, <-associative, commutative.
@@ -75,25 +75,25 @@ Section Ring.
   Qed.
 
   Lemma neq_sub_neq_zero x y (Hxy:x<>y) : x-y <> 0.
-  Proof.
+  Proof using Type*.
     intro Hsub. apply Hxy. rewrite <-(left_identity y), <-Hsub, ring_sub_definition.
     rewrite <-associative, left_inverse, right_identity. reflexivity.
   Qed.
 
   Lemma zero_product_iff_zero_factor {Hzpzf:@is_zero_product_zero_factor T eq zero mul} :
     forall x y : T, eq (mul x y) zero <-> eq x zero \/ eq y zero.
-  Proof.
+  Proof using Type*.
     split; eauto using zero_product_zero_factor; [].
     intros [Hz|Hz]; rewrite Hz; eauto using mul_0_l, mul_0_r.
   Qed.
 
   Lemma nonzero_product_iff_nonzero_factor {Hzpzf:@is_zero_product_zero_factor T eq zero mul} :
     forall x y : T, not (eq (mul x y) zero) <-> (not (eq x zero) /\ not (eq y zero)).
-  Proof. intros; rewrite zero_product_iff_zero_factor; tauto. Qed.
+  Proof using Type*. intros; rewrite zero_product_iff_zero_factor; tauto. Qed.
 
   Global Instance Ncring_Ring_ops : @Ncring.Ring_ops T zero one add mul sub opp eq.
   Global Instance Ncring_Ring : @Ncring.Ring T zero one add mul sub opp eq Ncring_Ring_ops.
-  Proof.
+  Proof using Type*.
     split; exact _ || cbv; intros; eauto using left_identity, right_identity, commutative, associative, right_inverse, left_distributive, right_distributive, ring_sub_definition with core typeclass_instances.
     - (* TODO: why does [eauto using @left_identity with typeclass_instances] not work? *)
       eapply @left_identity; eauto with typeclass_instances.
@@ -121,23 +121,23 @@ Section Homomorphism.
   Context `{phi_homom:is_homomorphism}.
 
   Lemma homomorphism_zero : phi ZERO = zero.
-  Proof. apply Group.homomorphism_id. Qed.
+  Proof using Type*. apply Group.homomorphism_id. Qed.
 
   Lemma homomorphism_add : forall x y,  phi (ADD x y) = add (phi x) (phi y).
-  Proof. apply Monoid.homomorphism. Qed.
+  Proof using phi_homom. apply Monoid.homomorphism. Qed.
 
   Definition homomorphism_opp : forall x,  phi (OPP x) = opp (phi x) :=
     (Group.homomorphism_inv (INV:=OPP) (inv:=opp)).
 
   Lemma homomorphism_sub : forall x y, phi (SUB x y) = sub (phi x) (phi y).
-  Proof.
+  Proof using Type*.
     intros.
     rewrite !ring_sub_definition, Monoid.homomorphism, homomorphism_opp. reflexivity.
   Qed.
 
   Global Instance monoid_homomorphism_mul :
     Monoid.is_homomorphism (phi:=phi) (OP:=MUL) (op:=mul) (EQ:=EQ) (eq:=eq).
-  Proof. split; destruct phi_homom; assumption || exact _. Qed.
+  Proof using phi_homom. split; destruct phi_homom; assumption || exact _. Qed.
 End Homomorphism.
 
 (* TODO: file a Coq bug for rewrite_strat -- it should accept ltac variables *)
@@ -200,7 +200,7 @@ Section Isomorphism.
     : @ring H eq zero one opp add sub mul
       /\ @is_homomorphism F EQ ONE ADD MUL H eq one add mul phi
       /\ @is_homomorphism H eq one add mul F EQ ONE ADD MUL phi'.
-  Proof.
+  Proof using phi'_add phi'_eq phi'_mul phi'_one phi'_opp phi'_phi_id phi'_sub phi'_zero ringF.
     repeat match goal with
            | [ H : field |- _ ] => destruct H; try clear H
            | [ H : commutative_ring |- _ ] => destruct H; try clear H
@@ -236,10 +236,10 @@ Section TacticSupportCommutative.
 
   Global Instance Cring_Cring_commutative_ring :
     @Cring.Cring T zero one add mul sub opp eq Ncring_Ring_ops Ncring_Ring.
-  Proof. unfold Cring.Cring; intros; cbv. eapply commutative. Qed.
+  Proof using Type. unfold Cring.Cring; intros; cbv. eapply commutative. Qed.
 
   Lemma ring_theory_for_stdlib_tactic : Ring_theory.ring_theory zero one add mul sub opp eq.
-  Proof.
+  Proof using Type*.
     constructor; intros. (* TODO(automation): make [auto] do this? *)
     - apply left_identity.
     - apply commutative.
@@ -289,15 +289,15 @@ Section of_Z.
     end.
 
   Lemma of_Z_0 : of_Z 0 = Rzero.
-  Proof. reflexivity. Qed.
+  Proof using Type*. reflexivity. Qed.
 
   Lemma of_nat_add x :
     of_nat (Nat.add x 1) = Radd (of_nat x) Rone.
-  Proof. destruct x; rewrite ?Nat.add_1_r; reflexivity. Qed.
+  Proof using Type*. destruct x; rewrite ?Nat.add_1_r; reflexivity. Qed.
 
   Lemma of_nat_sub x (H: (0 < x)%nat):
     of_nat (Nat.sub x 1) = Rsub (of_nat x) Rone.
-  Proof.
+  Proof using Type*.
     induction x; [omega|simpl].
     rewrite <-of_nat_add.
     rewrite Nat.sub_0_r, Nat.add_1_r.
@@ -309,7 +309,7 @@ Section of_Z.
 
   Lemma of_Z_add_1_r :
     forall x, of_Z (Z.add x 1) = Radd (of_Z x) Rone.
-  Proof.
+  Proof using Type*.
     destruct x; [reflexivity| | ]; simpl of_Z.
     { rewrite Pos2Nat.inj_add, of_nat_add.
       reflexivity. }
@@ -330,7 +330,7 @@ Section of_Z.
 
   Lemma of_Z_sub_1_r :
     forall x, of_Z (Z.sub x 1) = Rsub (of_Z x) Rone.
-  Proof.
+  Proof using Type*.
     induction x.
     { simpl; rewrite ring_sub_definition, !left_identity;
         reflexivity. }
@@ -354,14 +354,14 @@ Section of_Z.
 
   Lemma of_Z_opp : forall a,
       of_Z (Z.opp a) = Ropp (of_Z a).
-  Proof.
+  Proof using Type*.
     destruct a; simpl; rewrite ?Group.inv_id, ?Group.inv_inv;
       reflexivity.
   Qed.
 
   Lemma of_Z_add : forall a b,
       of_Z (Z.add a b) = Radd (of_Z a) (of_Z b).
-  Proof.
+  Proof using Type*.
     intros.
     let x := match goal with |- ?x => x end in
     let f := match (eval pattern b in x) with ?f _ => f end in
@@ -381,7 +381,7 @@ Section of_Z.
 
   Lemma of_Z_mul : forall a b,
       of_Z (Z.mul a b) = Rmul (of_Z a) (of_Z b).
-  Proof.
+  Proof using Type*.
     intros.
     let x := match goal with |- ?x => x end in
     let f := match (eval pattern b in x) with ?f _ => f end in
@@ -408,7 +408,7 @@ Section of_Z.
       Z Logic.eq Z.one Z.add Z.mul
       R Req  Rone  Radd  Rmul
       of_Z.
-  Proof.
+  Proof using Type*.
     repeat constructor; intros.
     { apply of_Z_add. }
     { repeat intro; subst; reflexivity. }

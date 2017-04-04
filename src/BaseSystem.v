@@ -48,7 +48,7 @@ Section BaseSystem.
   Definition encode z max := encode' z max (length base).
 
   Lemma decode'_truncate : forall bs us, decode' bs us = decode' bs (firstn (length bs) us).
-  Proof.
+  Proof using Type.
     unfold decode'; intros; f_equal; apply combine_truncate_l.
   Qed.
 
@@ -105,6 +105,8 @@ Section PolynomialBaseCoefs.
   Definition poly_base := map bi (seq 0 baseLength).
 
   Lemma poly_b0_1 : forall x, nth_default x poly_base 0 = 1.
+  Proof using baseLengthNonzero.
+
     unfold poly_base, bi, nth_default.
     case_eq baseLength; intros. {
       assert ((0 < baseLength)%nat) by
@@ -115,7 +117,7 @@ Section PolynomialBaseCoefs.
   Qed.
 
   Lemma poly_base_positive : forall b, In b poly_base -> b > 0.
-  Proof.
+  Proof using Type.
     unfold poly_base.
     intros until 0; intro H.
     rewrite in_map_iff in *.
@@ -126,7 +128,7 @@ Section PolynomialBaseCoefs.
 
   Lemma poly_base_defn : forall i, (i < length poly_base)%nat ->
       nth_default 0 poly_base i = bi i.
-  Proof.
+  Proof using Type.
     unfold poly_base, nth_default; nth_tac.
   Qed.
 
@@ -135,7 +137,7 @@ Section PolynomialBaseCoefs.
     let b := nth_default 0 poly_base in
     let r := (b (S i) / b i) in
     b (S i) = r * b i.
-  Proof.
+  Proof using Type.
     intros; subst b; subst r.
     repeat rewrite poly_base_defn in * by omega.
     unfold bi.
@@ -153,7 +155,7 @@ Section PolynomialBaseCoefs.
     let b := nth_default 0 poly_base in
     let r := (b i * b j) / b (i+j)%nat in
     b i * b j = r * b (i+j)%nat.
-  Proof.
+  Proof using Type.
     unfold poly_base, nth_default; nth_tac.
 
     clear.

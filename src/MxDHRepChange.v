@@ -18,7 +18,7 @@ Section MxDHRepChange.
 
   (* TODO: move to algebra *)
   Lemma homomorphism_multiplicative_inverse_complete' x : Keq (FtoK (Finv x)) (Kinv (FtoK x)).
-  Proof.
+  Proof using Feq_dec Keq_dec field homom homomorphism_inv_zero impl_field.
     eapply (homomorphism_multiplicative_inverse_complete).
     intro J; rewrite J. rewrite homomorphism_inv_zero, homomorphism_id.
     reflexivity.
@@ -44,7 +44,7 @@ Section MxDHRepChange.
 
   Global Instance Proper_ladderstep :
     Proper (Keq ==> (fieldwise (n:=2) Keq) ==> fieldwise (n:=2) Keq ==> fieldwise (n:=2) (fieldwise (n:=2) Keq)) (@MxDH.ladderstep K Kadd Ksub Kmul Ka24).
-  Proof.
+  Proof using Keq_dec impl_field.
     cbv [MxDH.ladderstep tuple tuple' fieldwise fieldwise' fst snd];
       repeat intro; destruct_head' prod; destruct_head' and; repeat split;
         repeat match goal with [H:Keq ?x ?y |- _ ] => rewrite !H; clear H x end; reflexivity.
@@ -54,7 +54,7 @@ Section MxDHRepChange.
     fieldwise (n:=2) (fieldwise (n:=2) Keq)
     ((Tuple.map (n:=2) (Tuple.map (n:=2) FtoK)) (@MxDH.ladderstep F Fadd Fsub Fmul Fa24 u P Q))
     (@MxDH.ladderstep K Kadd Ksub Kmul Ka24 Ku (Tuple.map (n:=2) FtoK P) (Tuple.map (n:=2) FtoK Q)).
-  Proof.
+  Proof using Feq_dec Keq_dec field homom homomorphism_a24 impl_field.
     destruct P as [? ?], Q as [? ?]; cbv; repeat split; rewrite <-?Ku_correct; t.
   Qed.
 
@@ -72,7 +72,7 @@ Section MxDHRepChange.
     fieldwise (n:=2) (fieldwise (n:=2) Keq) (fst a) (fst b) /\ snd a = snd b.
 
   Local Instance Equivalence_loopiter_eq : Equivalence loopiter_eq.
-  Proof.
+  Proof using Keq_dec impl_field loopiter_phi.
     unfold loopiter_eq; split; repeat intro;
       intuition (reflexivity||symmetry;eauto||etransitivity;symmetry;eauto).
   Qed.
@@ -80,7 +80,7 @@ Section MxDHRepChange.
   Lemma MxLoopIterRepChange b Fu s i Ku (HKu:Keq (FtoK Fu) Ku) : loopiter_eq
     (loopiter_phi (loopiter F Fzero Fone Fadd Fsub Fmul Finv Fa24 Fcswap b tb1 Fu s i))
     (loopiter K Kzero Kone Kadd Ksub Kmul Kinv Ka24 Kcswap b tb2 Ku (loopiter_phi s) i).
-  Proof.
+  Proof using Fcswap_correct Feq_dec Kcswap_correct Keq_dec field homom homomorphism_a24 impl_field tb2_correct.
     destruct_head' prod; break_match.
     simpl.
     rewrite !Fcswap_correct, !Kcswap_correct, tb2_correct in *.
@@ -91,14 +91,14 @@ Section MxDHRepChange.
 
   Global Instance Proper_fold_left {A RA B RB} :
     Proper ((RA==>RB==>RA) ==> SetoidList.eqlistA RB ==> RA ==> RA) (@fold_left A B).
-  Proof.
+  Proof using Type.
     intros ? ? ? ? ? Hl; induction Hl; repeat intro; [assumption|].
     simpl; cbv [Proper respectful] in *; eauto.
   Qed.
 
   Lemma proj_fold_left {A B L} R {Equivalence_R:@Equivalence B R} (proj:A->B) step step' {Proper_step':(R ==> eq ==> R)%signature step' step'} (xs:list L) init init' (H0:R (proj init) init') (Hproj:forall x i, R (proj (step x i)) (step' (proj x) i)) :
          R (proj (fold_left step xs init)) (fold_left step' xs init').
-  Proof.
+  Proof using Type.
     generalize dependent init; generalize dependent init'.
     induction xs; [solve [eauto]|].
     repeat intro; simpl; rewrite IHxs by eauto.
@@ -109,7 +109,7 @@ Section MxDHRepChange.
 
   Global Instance Proper_downto {T R} {Equivalence_R:@Equivalence T R} :
     Proper (R ==> Logic.eq ==> (R==>Logic.eq==>R) ==> R) MxDH.downto.
-  Proof.
+  Proof using Type.
     intros s0 s0' Hs0 n' n Hn'; subst n'; generalize dependent s0; generalize dependent s0'.
     induction n; repeat intro; [assumption|].
     unfold MxDH.downto; simpl.
@@ -119,7 +119,7 @@ Section MxDHRepChange.
 
   Global Instance Proper_loopiter a b c :
    Proper (loopiter_eq ==> eq ==> loopiter_eq) (loopiter K Kzero Kone Kadd Ksub Kmul Kinv Ka24 Kcswap a b c).
-  Proof.
+  Proof using Kcswap_correct Keq_dec impl_field.
     unfold loopiter; intros [? ?] [? ?] [[[] []] ?]; repeat intro ; cbv [fst snd] in * |-; subst.
     repeat VerdiTactics.break_match; subst; repeat (VerdiTactics.find_injection; intros; subst).
     split; [|reflexivity].
@@ -137,7 +137,7 @@ Section MxDHRepChange.
     Keq
       (FtoK (@MxDH.montladder F Fzero Fone Fadd Fsub Fmul Finv Fa24 Fcswap b tb1 x))
       (@MxDH.montladder K Kzero Kone Kadd Ksub Kmul Kinv Ka24 Kcswap b tb2 (FtoK x)).
-  Proof.
+  Proof using Fcswap_correct Feq_dec Kcswap_correct Keq_dec field homom homomorphism_a24 homomorphism_inv_zero impl_field tb2_correct.
     cbv [MxDH.montladder].
     repeat break_match.
     assert (Hrel:loopiter_eq (loopiter_phi (p, p0, b0)) (p1, p3, b1)).

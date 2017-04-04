@@ -147,13 +147,13 @@ Section language.
 
       Lemma SmartConst_correct t v
         : Syntax.interpf interp_op (SmartConst make_const t v) = v.
-      Proof.
+      Proof using Type*.
         induction t; try destruct v; simpl in *; congruence.
       Qed.
 
       Lemma compilef_correct {t} (e : @exprf interp_flat_type t)
       : Syntax.interpf interp_op (compilef make_const e) = interpf interp_op e.
-      Proof.
+      Proof using Type*.
         induction e;
           repeat match goal with
                  | _ => reflexivity
@@ -170,7 +170,7 @@ Section language.
 
       Lemma compile_flat_correct {T} (e : expr (Tflat T))
       : forall x, Syntax.interp interp_op (compile make_const e) x = interp interp_op e.
-      Proof.
+      Proof using Type*.
         intros []; simpl.
         let G := match goal with |- ?G => G end in
         let G := match (eval pattern T, e in G) with ?G _ _ => G end in
@@ -187,11 +187,11 @@ Section language.
 
       Lemma Compile_flat_correct_flat {T} (e : Expr (Tflat T))
         : forall x, Syntax.Interp interp_op (Compile make_const e) x = Interp interp_op e.
-      Proof. apply compile_flat_correct. Qed.
+      Proof using Type*. apply compile_flat_correct. Qed.
 
       Lemma Compile_correct {src dst} (e : @Expr (Arrow src (Tflat dst)))
       : forall x, Syntax.Interp interp_op (Compile make_const e) x = Interp interp_op e x.
-      Proof.
+      Proof using Type*.
         unfold Interp, Compile, Syntax.Interp; simpl.
         pose (e interp_flat_type) as E.
         repeat match goal with |- context[e ?f] => change (e f) with E end.

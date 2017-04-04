@@ -27,7 +27,7 @@ Section language.
   Lemma wff_SmartCast_base {var1 var2 A A'} G e1 e2
         (Hwf : wff (var1:=var1) (var2:=var2) G (t:=Tbase A) e1 e2)
     : wff G (t:=Tbase A') (SmartCast_base e1) (SmartCast_base e2).
-  Proof.
+  Proof using wff_Cast.
     unfold SmartCast_base; destruct (Sumbool.sumbool_of_bool (base_type_beq A A')) as [H|H].
     { destruct (base_type_bl_transparent A A' H); assumption. }
     { auto. }
@@ -44,7 +44,7 @@ Section language.
       | None, None => True
       | Some _, None | None, Some _ => False
       end.
-  Proof.
+  Proof using wff_Cast.
     break_innermost_match; revert dependent B; induction A, B;
       repeat match goal with
              | _ => progress simpl in *
@@ -67,7 +67,7 @@ Section language.
     : SmartCast A B = Some f1 -> SmartCast A B = Some f2
       -> forall e1 e2,
           wff (var1:=var1) (var2:=var2) (flatten_binding_list e1 e2) (f1 e1) (f2 e2).
-  Proof.
+  Proof using wff_Cast.
     intros H1 H2; generalize (@wff_SmartCast_match var1 var2 A B).
     rewrite H1, H2; trivial.
   Qed.
@@ -76,7 +76,7 @@ Section language.
     : SmartCast A B = Some f1 -> SmartCast A B = Some f2
       -> forall e1 e2,
           wff (var1:=var1) (var2:=var2) (flatten_binding_list e1 e2 ++ G) (f1 e1) (f2 e2).
-  Proof.
+  Proof using wff_Cast.
     intros; eapply wff_in_impl_Proper; [ eapply wff_SmartCast; eassumption | auto ].
   Qed.
 End language.

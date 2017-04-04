@@ -30,7 +30,7 @@ Section language.
           (Hwf : prop_of_option (Named.wff ctx e))
       : Named.interpf (interp_op:=interp_op) (ctx:=ctx) e
         = Some (Syntax.interpf interp_op (interpf_to_phoas failb ctx e)).
-    Proof.
+    Proof using Type.
       revert dependent ctx; induction e;
         repeat first [ progress intros
                      | progress subst
@@ -58,7 +58,7 @@ Section language.
           v
       : Named.interp (interp_op:=interp_op) (ctx:=ctx) e v
         = Some (Syntax.interp interp_op (interp_to_phoas failb ctx e) v).
-    Proof.
+    Proof using Type.
       unfold interp, interp_to_phoas, Named.interp; apply interpf_interpf_to_phoas; auto.
     Qed.
   End with_context.
@@ -75,7 +75,7 @@ Section language.
           v
       : Named.interp (interp_op:=interp_op) (ctx:=ctx _) e v
         = Some (Interp interp_op (InterpToPHOAS_gen failb ctx e) v).
-    Proof. apply interp_interp_to_phoas; auto. Qed.
+    Proof using Type. apply interp_interp_to_phoas; auto. Qed.
 
     Lemma Interp_InterpToPHOAS
           {t} (e : @Named.expr base_type_code op Name t)
@@ -83,6 +83,6 @@ Section language.
           v
       : Named.interp (Context:=Context _) (interp_op:=interp_op) (ctx:=empty) e v
         = Some (Interp interp_op (InterpToPHOAS (Context:=Context) failb e) v).
-    Proof. apply interp_interp_to_phoas; auto. Qed.
+    Proof using Type. apply interp_interp_to_phoas; auto. Qed.
   End all.
 End language.

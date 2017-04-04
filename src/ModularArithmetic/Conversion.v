@@ -103,7 +103,7 @@ Section Conversion.
     let bitsA := Z.pow2_mod ((inp # digitA) >> indexA) dist in
     0 < dist ->
     bounded limb_widthsB (update_nth digitB (update_by_concat_bits indexB bitsA) out).
-  Proof.
+  Proof using limb_widthsB_nonneg.
     repeat match goal with
            | |- _ => progress intros
            | |- _ => progress autorewrite with Ztestbit
@@ -134,7 +134,7 @@ Section Conversion.
     0 < dist ->
     Z.of_nat i < bitsIn limb_widthsA ->
     Z.of_nat i + dist <= bitsIn limb_widthsA.
-  Proof.
+  Proof using limb_widthsA_nonneg.
     pose proof (rem_bits_in_digit_le_rem_bits limb_widthsA).
     pose proof (rem_bits_in_digit_le_rem_bits limb_widthsA).
     repeat match goal with
@@ -167,7 +167,7 @@ Section Conversion.
     Z.of_nat i < bitsIn limb_widthsA ->
     convert'_invariant inp (i + Z.to_nat dist)%nat
                        (update_nth digitB (update_by_concat_bits indexB bitsA) out).
-  Proof.
+  Proof using Type*.
     Time
     repeat match goal with
            | |- _ => progress intros; cbv [convert'_invariant] in *
@@ -229,7 +229,7 @@ Section Conversion.
     bounded limb_widthsA inp ->
     convert'_invariant inp i out ->
     convert'_invariant inp (Z.to_nat (bitsIn limb_widthsA)) (convert' inp i out).
-  Proof.
+  Proof using Type.
     intros until 2; functional induction (convert' inp i out);
       repeat match goal with
            | |- _ => progress intros
@@ -253,7 +253,7 @@ Section Conversion.
   Lemma convert_correct : forall us, length us = length limb_widthsA ->
                                      bounded limb_widthsA us ->
                                      decodeA us = decodeB (convert us).
-  Proof.
+  Proof using Type.
     repeat match goal with
            | |- _ => progress intros
            | |- _ => progress cbv [convert convert'_invariant] in *
@@ -283,7 +283,7 @@ Section Conversion.
   Lemma convert'_bounded : forall inp i out,
     bounded limb_widthsB out ->
     bounded limb_widthsB (convert' inp i out).
-  Proof.
+  Proof using Type.
     intros; functional induction (convert' inp i out); auto.
     apply IHl.
     apply convert'_bounded_step; auto.
@@ -295,7 +295,7 @@ Section Conversion.
   Qed.
 
   Lemma convert_bounded : forall us, bounded limb_widthsB (convert us).
-  Proof.
+  Proof using Type.
     intros; apply convert'_bounded.
     apply bounded_iff; intros.
     rewrite nth_default_zeros.
@@ -305,12 +305,12 @@ Section Conversion.
   (* This is part of convert'_invariant, but proving it separately strips preconditions *)
   Lemma length_convert' : forall inp i out,
     length (convert' inp i out) = length out.
-  Proof.
+  Proof using Type.
     intros; functional induction (convert' inp i out); distr_length.
   Qed.
 
   Lemma length_convert : forall us, length (convert us) = length limb_widthsB.
-  Proof.
+  Proof using Type.
     cbv [convert]; intros.
     rewrite length_convert', length_zeros.
     reflexivity.

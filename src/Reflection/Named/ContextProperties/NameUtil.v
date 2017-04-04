@@ -46,7 +46,7 @@ Section with_context.
         (H : split_onames _ ls = (Some N, ls')%core)
     : (exists t, @find_Name n T N = Some t)
       <-> List.In (Some n) (List.firstn (CountLets.count_pairs T) ls).
-  Proof.
+  Proof using Type.
     revert dependent ls; intro ls; revert ls ls'; induction T; intros;
       [ | | specialize (IHT1 (fst N) ls (snd (split_onames T1 ls)));
             specialize (IHT2 (snd N) (snd (split_onames T1 ls)) (snd (split_onames (T1 * T2) ls))) ];
@@ -71,7 +71,7 @@ Section with_context.
         (H : split_onames _ ls = (Some N, ls')%core)
     : (exists t, @find_Name n T N = Some t)
       <-> List.In (Some n) ls /\ ~List.In (Some n) ls'.
-  Proof.
+  Proof using Type.
     rewrite (split_onames_find_Name (ls':=ls') (ls:=ls)) by assumption.
     rewrite (surjective_pairing (split_onames _ _)) in H.
     rewrite fst_split_onames_firstn, snd_split_onames_skipn in H.
@@ -86,7 +86,7 @@ Section with_context.
         (H : split_onames _ ls = (Some N, ls')%core)
         (Hfind : @find_Name n T N = Some t)
     : List.In (Some n) ls /\ ~List.In (Some n) ls'.
-  Proof.
+  Proof using Type.
     eapply split_onames_find_Name_Some_unique_iff; eauto.
   Qed.
 
@@ -96,7 +96,7 @@ Section with_context.
         (H : split_onames _ ls = (Some N, ls')%core)
     : @find_Name_and_val var' t n T N V None = Some v
       <-> List.In (existT (fun t => (Name * var' t)%type) t (n, v)) (Wf.flatten_binding_list N V).
-  Proof.
+  Proof using Type.
     revert dependent ls; intro ls; revert ls ls'; induction T; intros;
       [ | | specialize (IHT1 (fst N) (fst V) ls (snd (split_onames T1 ls)));
             specialize (IHT2 (snd N) (snd V) (snd (split_onames T1 ls)) (snd (split_onames (T1 * T2) ls))) ];

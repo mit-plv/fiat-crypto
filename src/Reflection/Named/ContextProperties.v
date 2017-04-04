@@ -31,7 +31,7 @@ Section with_context.
         T N t n v
     : lookupb (extend ctx N (t:=T) v) n t
       = find_Name_and_val t n N v (lookupb ctx n t).
-  Proof. revert ctx; induction T; t. Qed.
+  Proof using ContextOk. revert ctx; induction T; t. Qed.
 
   Lemma find_Name_and_val_Some_None
         {var' var''}
@@ -42,7 +42,7 @@ Section with_context.
         (H0 : @find_Name_and_val var' t n T N x default = Some v)
         (H1 : @find_Name_and_val var'' t n T N y default' = None)
     : default = Some v /\ default' = None.
-  Proof.
+  Proof using Type.
     revert dependent default; revert dependent default'; induction T; t.
   Qed.
 
@@ -54,7 +54,7 @@ Section with_context.
         (H : @find_Name n T N <> None)
     : @find_Name_and_val var' t n T N x default
       = @find_Name_and_val var' t n T N x None.
-  Proof. revert default; induction T; t. Qed.
+  Proof using Type. revert default; induction T; t. Qed.
   Hint Rewrite @find_Name_and_val_default_to_None using congruence : ctx_db.
 
   Lemma find_Name_and_val_different
@@ -64,7 +64,7 @@ Section with_context.
         {default}
         (H : @find_Name n T N = None)
     : @find_Name_and_val var' t n T N x default = default.
-  Proof. revert default; induction T; t. Qed.
+  Proof using Type. revert default; induction T; t. Qed.
   Hint Rewrite @find_Name_and_val_different using assumption : ctx_db.
 
   Lemma find_Name_and_val_wrong_type_iff
@@ -75,7 +75,7 @@ Section with_context.
         (H : @find_Name n T N = Some t')
     : t <> t'
       <-> @find_Name_and_val var' t n T N x default = None.
-  Proof. split; revert default; induction T; t. Qed.
+  Proof using Type. split; revert default; induction T; t. Qed.
   Lemma find_Name_and_val_wrong_type
         {var'}
         {t t' n T N}
@@ -84,14 +84,14 @@ Section with_context.
         (H : @find_Name n T N = Some t')
         (Ht : t <> t')
     : @find_Name_and_val var' t n T N x default = None.
-  Proof. eapply find_Name_and_val_wrong_type_iff; eassumption. Qed.
+  Proof using Type. eapply find_Name_and_val_wrong_type_iff; eassumption. Qed.
   Hint Rewrite @find_Name_and_val_wrong_type using congruence : ctx_db.
 
   Lemma find_Name_find_Name_and_val_wrong {var' n t' T V N}
     : find_Name n N = Some t'
       -> @find_Name_and_val var' t' n T N V None = None
       -> False.
-  Proof. induction T; t. Qed.
+  Proof using Type. induction T; t. Qed.
 
   Lemma find_Name_and_val_None_iff
         {var'}
@@ -101,7 +101,7 @@ Section with_context.
     : (@find_Name n T N <> Some t
        /\ (@find_Name n T N <> None \/ default = None))
       <-> @find_Name_and_val var' t n T N x default = None.
-  Proof.
+  Proof using Type.
     destruct (@find_Name n T N) eqn:?; unfold not; t;
       try solve [ eapply find_Name_and_val_wrong_type; [ eassumption | congruence ]
                 | eapply find_Name_find_Name_and_val_wrong; eassumption
@@ -117,14 +117,14 @@ Section with_context.
                      else None
         | None => default
         end.
-  Proof.
+  Proof using Type.
     t; erewrite find_Name_and_val_wrong_type by solve [ eassumption | congruence ]; reflexivity.
   Qed.
   Lemma find_Name_and_val_find_Name_Some
         {var' t n T N V v}
         (H : @find_Name_and_val var' t n T N V None = Some v)
     : @find_Name n T N = Some t.
-  Proof.
+  Proof using Type.
     rewrite find_Name_and_val_split in H; break_match_hyps; subst; congruence.
   Qed.
 End with_context.

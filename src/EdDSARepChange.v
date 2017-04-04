@@ -21,7 +21,7 @@ Section EdDSA.
 
   Local Notation valid := (@valid E Eeq Eadd EscalarMult b H l B Eenc Senc).
   Lemma sign_valid : forall A_ sk {n} (M:word n), A_ = public sk -> valid M A_ (sign A_ sk M).
-  Proof.
+  Proof using Type.
     cbv [sign public Spec.EdDSA.valid]; intros; subst;
       repeat match goal with
              | |- exists _, _ => eexists
@@ -51,7 +51,7 @@ Section EdDSA.
 
   Context {Proper_Eenc : Proper (Eeq==>Logic.eq) Eenc}.
   Global Instance Proper_eq_Eenc ref : Proper (Eeq ==> iff) (fun P => Eenc P = ref).
-  Proof. intros ? ? Hx; rewrite Hx; reflexivity. Qed.
+  Proof using Proper_Eenc. intros ? ? Hx; rewrite Hx; reflexivity. Qed.
 
   Context {Edec:word b-> option E}   {eq_enc_E_iff: forall P_ P, Eenc P = P_ <-> option_eq Eeq (Edec P_) (Some P)}.
   Context {Sdec:word b-> option (F l)} {eq_enc_S_iff: forall n_ n, Senc n = n_ <-> Sdec n_ = Some n}.
@@ -99,7 +99,7 @@ Section EdDSA.
     Eval cbv [proj1_sig verify'_sig] in proj1_sig verify'_sig mlen message pk sig.
   Lemma verify'_correct : forall {mlen} (message:word mlen) pk sig,
     verify' message pk sig = true <-> valid message pk sig.
-  Proof. exact (proj2_sig verify'_sig). Qed.
+  Proof using Type*. exact (proj2_sig verify'_sig). Qed.
 
   Section ChangeRep.
     Context {Erep ErepEq ErepAdd ErepId ErepOpp} {Agroup:@group Erep ErepEq ErepAdd ErepId ErepOpp}.
@@ -208,7 +208,7 @@ Section EdDSA.
       Eval cbv beta iota delta [proj1_sig verify_using_representation] in
       proj1_sig (verify_using_representation msg pk sig).
     Lemma verify_correct {mlen} (msg:word mlen) pk sig : verify msg pk sig = true <-> valid msg pk sig.
-    Proof.
+    Proof using Type*.
       etransitivity; [|eapply (verify'_correct msg pk sig)].
       eapply iff_R_R_same_r, (proj2_sig (verify_using_representation _ _ _)).
     Qed.
@@ -242,7 +242,7 @@ Section EdDSA.
     Lemma splitSecretPrngCurve_correct sk :
       let (s, r) := splitSecretPrngCurve sk in
       SRepEq s (S2Rep (F.of_nat l (curveKey sk))) /\ r = prngKey (H:=H) sk.
-    Proof.
+    Proof using H0 SRepDecModLShort_correct.
       cbv [splitSecretPrngCurve EdDSA.curveKey EdDSA.prngKey Let_In]; split;
         repeat (
             reflexivity
@@ -270,13 +270,15 @@ Section EdDSA.
       ERepEnc R ++ SRepEnc S.
 
     Lemma to_nat_l_nonzero : Z.to_nat l <> 0.
+    Proof using n_le_bpb.
+
       intro Hx; change 0 with (Z.to_nat 0) in Hx.
       destruct prm; rewrite Z2Nat.inj_iff in Hx; omega.
     Qed.
 
     Lemma sign_correct (pk sk : word b) {mlen} (msg:word mlen)
                : sign pk sk msg = EdDSA.sign pk sk msg.
-    Proof.
+    Proof using Agroup Ahomom ERepEnc_correct ErepB_correct H0 Proper_ERepEnc Proper_SRepAdd Proper_SRepERepMul Proper_SRepEnc Proper_SRepMul SRepAdd_correct SRepDecModLShort_correct SRepDecModL_correct SRepERepMul_correct SRepEnc_correct SRepMul_correct.
       cbv [sign EdDSA.sign Let_In].
 
       let H := fresh "H" in

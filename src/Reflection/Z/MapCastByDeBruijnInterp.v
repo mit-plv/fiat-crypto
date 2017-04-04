@@ -44,7 +44,7 @@ Section language.
       Interp interp_op_bounds e input_bounds = b
       /\ @inbounds _ b (Interp interp_op e v)
       /\ cast_back _ _ (Interp interp_op e' v') = (Interp interp_op e v).
-  Proof.
+  Proof using Type*.
     apply MapCastCorrect; auto using internal_base_type_dec_lb.
   Qed.
 End language.

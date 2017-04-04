@@ -73,7 +73,7 @@ Section tuple2.
 
     Lemma decode_mul_double_mod x y
       : (tuple_decoder (mul_double half_n x y) = (decode x * decode y) mod (2^(2 * half_n) * 2^(2*half_n)))%Z.
-    Proof.
+    Proof using Type*.
       assert (0 <= 2 * half_n) by eauto using decode_exponent_nonnegative.
       assert (0 <= half_n) by omega.
       unfold mul_double, Let_In.
@@ -94,13 +94,13 @@ Section tuple2.
 
     Lemma decode_mul_double_function x y
       : tuple_decoder (mul_double half_n x y) = (decode x * decode y)%Z.
-    Proof.
+    Proof using Type*.
       rewrite decode_mul_double_mod; generalize_decode_var.
       simpl in *; Z.rewrite_mod_small; reflexivity.
     Qed.
 
     Global Instance mul_double_is_multiply_double : is_mul_double mul_double_multiply.
-    Proof.
+    Proof using Type*.
       apply decode_mul_double_iff; apply decode_mul_double_function.
     Qed.
   End full_from_half.
@@ -123,10 +123,10 @@ Section tuple2.
       try reflexivity.
 
     Global Instance mul_double_is_multiply_low_low : is_mul_low_low n mul_double_multiply_low_low.
-    Proof. t. Qed.
+    Proof using Type*. t. Qed.
     Global Instance mul_double_is_multiply_high_low : is_mul_high_low n mul_double_multiply_high_low.
-    Proof. t. Qed.
+    Proof using Type*. t. Qed.
     Global Instance mul_double_is_multiply_high_high : is_mul_high_high n mul_double_multiply_high_high.
-    Proof. t. Qed.
+    Proof using Type*. t. Qed.
   End half_from_full.
 End tuple2.

@@ -65,10 +65,16 @@ Section Ed25519.
          { Crypto.Util.Decidable.vm_decide. }
          { Crypto.Util.Decidable.vm_decide. }
   Admitted.
-  Lemma nonzero_a : a <> 0%F. Crypto.Util.Decidable.vm_decide. Qed.
+  Lemma nonzero_a : a <> 0%F.
+  Proof using Type.
+ Crypto.Util.Decidable.vm_decide. Qed.
   Lemma square_a : exists sqrt_a : Fq, (sqrt_a * sqrt_a)%F = a.
+  Proof using Type.
+
     pose (@PrimeFieldTheorems.F.Decidable_square q _ ltac:(Crypto.Util.Decidable.vm_decide) a); Crypto.Util.Decidable.vm_decide. Qed.
   Lemma nonsquare_d : forall x : Fq, (x * x)%F <> d.
+  Proof using Type.
+
     pose (@PrimeFieldTheorems.F.Decidable_square q _ ltac:(Crypto.Util.Decidable.vm_decide) d); Crypto.Util.Decidable.vm_decide. Qed.
 
   Let add := E.add(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d).
@@ -81,7 +87,7 @@ Section Ed25519.
           (Eeq:=E.eq) (* TODO: move defn *)
           (l:=l) (b:=b) (n:=n) (c:=c)
           (Eenc:=Eenc) (Senc:=Senc) (H:=SHA512).
-  Proof.
+  Proof using Type.
     split; 
       match goal with
       | |- ?P => match goal with [H:P|-_] => exact H end (* COQBUG: https://coq.inria.fr/bugs/show_bug.cgi?id=5366 *)

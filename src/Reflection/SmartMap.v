@@ -95,7 +95,7 @@ Section homogenous_type.
     := @smart_interp_flat_map exprfb exprf (fun t x => x) TT (fun A B x y => Pair x y) t.
   Lemma SmartPairf_Pair {A B} (e1 : interp_flat_type _ A) (e2 : interp_flat_type _ B)
     : SmartPairf (t:=Prod A B) (e1, e2)%core = Pair (SmartPairf e1) (SmartPairf e2).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
   Definition SmartVarf {t} : interp_flat_type var t -> exprf t
     := @smart_interp_flat_map var exprf (fun t => Var) TT (fun A B x y => Pair x y) t.
   Definition SmartVarf_Pair {A B v}
@@ -107,12 +107,12 @@ Section homogenous_type.
   Lemma SmartVarfMap_compose {var' var'' var''' t} f g x
     : @SmartVarfMap var'' var''' g t (@SmartVarfMap var' var'' f t x)
       = @SmartVarfMap _ _ (fun t v => g t (f t v)) t x.
-  Proof.
+  Proof using Type.
     unfold SmartVarfMap; clear; induction t; simpl; destruct_head_hnf unit; destruct_head_hnf prod;
       rewrite_hyp ?*; congruence.
   Qed.
   Lemma SmartVarfMap_id {var' t} x : @SmartVarfMap var' var' (fun _ x => x) t x = x.
-  Proof.
+  Proof using Type.
     unfold SmartVarfMap; clear; induction t; simpl; destruct_head_hnf unit; destruct_head_hnf prod;
       rewrite_hyp ?*; congruence.
   Qed.
@@ -122,7 +122,7 @@ Section homogenous_type.
                 ==> (forall_relation (fun A => forall_relation (fun B => pointwise_relation _ (pointwise_relation _ eq))))
                 ==> forall_relation (fun t => eq ==> eq))
              (@smart_interp_flat_map f g).
-  Proof.
+  Proof using Type.
     unfold forall_relation, pointwise_relation, respectful.
     intros F G HFG x y ? Q R HQR t a b ?; subst y b.
     induction t; simpl in *; auto.
@@ -131,7 +131,7 @@ Section homogenous_type.
   Global Instance SmartVarfMap_Proper {var' var''}
     : Proper (forall_relation (fun t => pointwise_relation _ eq) ==> forall_relation (fun t => eq ==> eq))
              (@SmartVarfMap var' var'').
-  Proof.
+  Proof using Type.
     repeat intro; eapply smart_interp_flat_map_Proper; trivial; repeat intro; reflexivity.
   Qed.
   Definition SmartVarfMap2 {var var' var''} (f : forall t, var t -> var' t -> var'' t) {t}
@@ -141,7 +141,7 @@ Section homogenous_type.
         (x : interp_flat_type var' t)
         (y : interp_flat_type var'' t)
     : SmartVarfMap2 (fun _ a b => a) x y = x.
-  Proof.
+  Proof using Type.
     unfold SmartVarfMap2; clear; induction t; simpl; destruct_head_hnf unit; destruct_head_hnf prod;
       rewrite_hyp ?*; congruence.
   Qed.
@@ -149,7 +149,7 @@ Section homogenous_type.
         (x : interp_flat_type var' t)
         (y : interp_flat_type var'' t)
     : SmartVarfMap2 (fun _ a b => b) x y = y.
-  Proof.
+  Proof using Type.
     unfold SmartVarfMap2; clear; induction t; simpl; destruct_head_hnf unit; destruct_head_hnf prod;
       rewrite_hyp ?*; congruence.
   Qed.
@@ -215,7 +215,7 @@ Section homogenous_type.
        | Arrow src dst => fun F x => SmartVarfMap f (F (SmartVarfMap f' x))
        end.
   Lemma SmartVarMap_id {var' t} x v : @SmartVarMap var' var' (fun _ x => x) (fun _ x => x) t x v = x v.
-  Proof. destruct t; simpl; rewrite !SmartVarfMap_id; reflexivity. Qed.
+  Proof using Type. destruct t; simpl; rewrite !SmartVarfMap_id; reflexivity. Qed.
   Definition SmartVarVarf {t} : interp_flat_type var t -> interp_flat_type exprfb t
     := SmartVarfMap (fun t => Var).
 End homogenous_type.
@@ -300,7 +300,7 @@ Section hetero_type.
           (@SmartFlatTypeMap2Interp2
              _ _ _ f gv t v e)
         = SmartVarfMap2 (fun t v e => fv t v (gv t v e)) v e.
-    Proof.
+    Proof using Type.
       induction t; simpl in *; destruct_head' unit;
         rewrite_hyp ?*; reflexivity.
     Qed.

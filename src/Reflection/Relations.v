@@ -88,7 +88,7 @@ Section language.
     Global Arguments interp_flat_type_rel_pointwise1 _ !_ _ / .
     Lemma interp_flat_type_rel_pointwise1_iff_relb {R} t x
       : interp_flat_type_relb_pointwise1 R t x <-> interp_flat_type_rel_pointwise1 R t x.
-    Proof. clear; induction t; rel_relb_t. Qed.
+    Proof using Type. clear; induction t; rel_relb_t. Qed.
     Definition interp_flat_type_rel_pointwise1_gen_Prop_iff_bool
       : forall {R} t x,
         interp_flat_type_rel_pointwise1_gen_Prop bool _ _ R t x
@@ -102,7 +102,7 @@ Section language.
     Global Arguments interp_flat_type_rel_pointwise _ !_ _ _ / .
     Lemma interp_flat_type_rel_pointwise_iff_relb {R} t x y
       : interp_flat_type_relb_pointwise R t x y <-> interp_flat_type_rel_pointwise R t x y.
-    Proof. clear; induction t; rel_relb_t. Qed.
+    Proof using Type. clear; induction t; rel_relb_t. Qed.
     Definition interp_flat_type_rel_pointwise_gen_Prop_iff_bool
       : forall {R} t x y,
         interp_flat_type_rel_pointwise_gen_Prop bool _ _ R t x y
@@ -116,7 +116,7 @@ Section language.
     Global Arguments interp_flat_type_rel_pointwise_hetero _ !_ !_ _ _ / .
     Lemma interp_flat_type_rel_pointwise_hetero_iff_relb {R} t1 t2 x y
       : interp_flat_type_relb_pointwise_hetero R t1 t2 x y <-> interp_flat_type_rel_pointwise_hetero R t1 t2 x y.
-    Proof. clear; revert dependent t2; induction t1, t2; rel_relb_t. Qed.
+    Proof using Type. clear; revert dependent t2; induction t1, t2; rel_relb_t. Qed.
     Definition interp_flat_type_rel_pointwise_hetero_gen_Prop_iff_bool
       : forall {R} t1 t2 x y,
         interp_flat_type_rel_pointwise_hetero_gen_Prop bool _ _ _ R t1 t2 x y
@@ -126,18 +126,18 @@ Section language.
     Lemma interp_flat_type_rel_pointwise_hetero_iff {R t} x y
       : interp_flat_type_rel_pointwise (fun t => R t t) t x y
         <-> interp_flat_type_rel_pointwise_hetero R t t x y.
-    Proof. induction t; simpl; rewrite_hyp ?*; reflexivity. Qed.
+    Proof using Type. induction t; simpl; rewrite_hyp ?*; reflexivity. Qed.
 
     Lemma interp_flat_type_rel_pointwise_impl {R1 R2 : forall t, _ -> _ -> Prop} t x y
       : interp_flat_type_rel_pointwise (fun t x y => (R1 t x y -> R2 t x y)%type) t x y
         -> (interp_flat_type_rel_pointwise R1 t x y
             -> interp_flat_type_rel_pointwise R2 t x y).
-    Proof. induction t; simpl; intuition. Qed.
+    Proof using Type. induction t; simpl; intuition. Qed.
 
     Lemma interp_flat_type_rel_pointwise_always {R : forall t, _ -> _ -> Prop}
       : (forall t x y, R t x y)
         -> forall t x y, interp_flat_type_rel_pointwise R t x y.
-    Proof. induction t; simpl; intuition. Qed.
+    Proof using Type. induction t; simpl; intuition. Qed.
   End flat_type.
   Section flat_type_extra.
     Context {interp_base_type1 interp_base_type2 : base_type_code -> Type}.
@@ -147,11 +147,11 @@ Section language.
           (fun t x y => (R1 t y x -> R2 t x y)%type) t x y
         -> (interp_flat_type_rel_pointwise R1 t y x
             -> interp_flat_type_rel_pointwise R2 t x y).
-    Proof. induction t; simpl; intuition. Qed.
+    Proof using Type. induction t; simpl; intuition. Qed.
 
     Global Instance interp_flat_type_rel_pointwise_Reflexive {R : forall t, _ -> _ -> Prop} {H : forall t, Reflexive (R t)}
       : forall t, Reflexive (@interp_flat_type_rel_pointwise interp_base_type1 interp_base_type1 R t).
-    Proof.
+    Proof using Type.
       induction t; intro; simpl; try apply conj; try reflexivity.
     Qed.
 
@@ -161,7 +161,7 @@ Section language.
           t f g x y
       : @interp_flat_type_rel_pointwise interp_base_type1 interp_base_type2 R t (SmartVarfMap f x) (SmartVarfMap g y)
         <-> @interp_flat_type_rel_pointwise interp_base_type1' interp_base_type2' (fun t x y => R t (f _ x) (g _ y)) t x y.
-    Proof.
+    Proof using Type.
       induction t; simpl; try reflexivity.
       rewrite_hyp <- !*; reflexivity.
     Qed.
@@ -246,16 +246,16 @@ Section language.
                 (RProd' : forall A B x y, R (Prod A B) x y -> R A (fst x) (fst y) /\ R B (snd x) (snd y)).
         Lemma lift_interp_flat_type_rel_pointwise1 t (x : interp_flat_type1 t) (y : interp_flat_type2 t)
           : interp_flat_type_rel_pointwise R t x y -> R t x y.
-        Proof. clear RProd'; induction t; simpl; destruct_head_hnf' unit; intuition. Qed.
+        Proof using RProd RUnit. clear RProd'; induction t; simpl; destruct_head_hnf' unit; intuition. Qed.
         Lemma lift_interp_flat_type_rel_pointwise2 t (x : interp_flat_type1 t) (y : interp_flat_type2 t)
           : R t x y -> interp_flat_type_rel_pointwise R t x y.
-        Proof. clear RProd; induction t; simpl; destruct_head_hnf' unit; split_and; intuition. Qed.
+        Proof using RProd'. clear RProd; induction t; simpl; destruct_head_hnf' unit; split_and; intuition. Qed.
       End RProd.
       Section RProd_iff.
         Context (RProd : forall A B x y, R A (fst x) (fst y) /\ R B (snd x) (snd y) <-> R (Prod A B) x y).
         Lemma lift_interp_flat_type_rel_pointwise t (x : interp_flat_type1 t) (y : interp_flat_type2 t)
           : interp_flat_type_rel_pointwise R t x y <-> R t x y.
-        Proof.
+        Proof using RProd RUnit.
           split_iff; split; auto using lift_interp_flat_type_rel_pointwise1, lift_interp_flat_type_rel_pointwise2.
         Qed.
       End RProd_iff.
@@ -266,7 +266,7 @@ Section language.
           (fun t x y => f t x = g t y)
           t x y
         <-> SmartVarfMap f x = SmartVarfMap g y.
-    Proof.
+    Proof using Type.
       induction t; unfold SmartVarfMap in *; simpl in *; destruct_head_hnf unit; try tauto.
       rewrite_hyp !*; intuition congruence.
     Qed.
@@ -276,21 +276,21 @@ Section language.
           (fun t x y => x = f t y)
           t x y
         <-> x = SmartVarfMap f y.
-    Proof. rewrite lift_interp_flat_type_rel_pointwise_f_eq, SmartVarfMap_id; reflexivity. Qed.
+    Proof using Type. rewrite lift_interp_flat_type_rel_pointwise_f_eq, SmartVarfMap_id; reflexivity. Qed.
     Lemma lift_interp_flat_type_rel_pointwise_f_eq_id2 (f : forall t, _ -> _) t x y
       : @interp_flat_type_rel_pointwise
           interp_base_type1 interp_base_type2
           (fun t x y => f t x = y)
           t x y
         <-> SmartVarfMap f x = y.
-    Proof. rewrite lift_interp_flat_type_rel_pointwise_f_eq, SmartVarfMap_id; reflexivity. Qed.
+    Proof using Type. rewrite lift_interp_flat_type_rel_pointwise_f_eq, SmartVarfMap_id; reflexivity. Qed.
     Lemma lift_interp_flat_type_rel_pointwise_f_eq2 {T} (f g : forall t, _ -> _ -> T t) t x y
       : @interp_flat_type_rel_pointwise
           interp_base_type1 interp_base_type2
           (fun t x y => f t x y = g t x y)
           t x y
         <-> SmartVarfMap2 f x y = SmartVarfMap2 g x y.
-    Proof.
+    Proof using Type.
       induction t; unfold SmartVarfMap2 in *; simpl in *; destruct_head_hnf unit; try tauto.
       rewrite_hyp !*; intuition congruence.
     Qed.
@@ -300,7 +300,7 @@ Section language.
           (fun t x y => f t x = g t y)
           t x y
         <-> (forall a b, SmartVarfMap f a = SmartVarfMap g b -> SmartVarfMap f (x a) = SmartVarfMap g (y b)).
-    Proof.
+    Proof using Type.
       destruct t; simpl; unfold interp_type_rel_pointwise, respectful_hetero.
       setoid_rewrite lift_interp_flat_type_rel_pointwise_f_eq; reflexivity.
     Qed.
@@ -310,14 +310,14 @@ Section language.
           (fun t x y => x = f t y)
           t x y
         <-> (forall a, x (SmartVarfMap f a) = SmartVarfMap f (y a)).
-    Proof. rewrite lift_interp_type_rel_pointwise_f_eq; setoid_rewrite SmartVarfMap_id; firstorder (subst; eauto). Qed.
+    Proof using Type. rewrite lift_interp_type_rel_pointwise_f_eq; setoid_rewrite SmartVarfMap_id; firstorder (subst; eauto). Qed.
     Lemma lift_interp_type_rel_pointwise_f_eq_id2 (f : forall t, _ -> _) t x y
       : interp_type_rel_pointwise
           interp_base_type1 interp_base_type2
           (fun t x y => f t x = y)
           t x y
         <-> (forall a, SmartVarfMap f (x a) = y (SmartVarfMap f a)).
-    Proof. rewrite lift_interp_type_rel_pointwise_f_eq; setoid_rewrite SmartVarfMap_id; firstorder (subst; eauto). Qed.
+    Proof using Type. rewrite lift_interp_type_rel_pointwise_f_eq; setoid_rewrite SmartVarfMap_id; firstorder (subst; eauto). Qed.
   End lifting.
 
   Local Ltac t :=
@@ -341,14 +341,14 @@ Section language.
         (H : List.In (existT _ t (v1, v2)%core) (flatten_binding_list e1 e2))
         (HR : @interp_flat_type_rel_pointwise interp_base_type1 interp_base_type2 R' T e1 e2)
     : R' t v1 v2.
-  Proof. induction T; t. Qed.
+  Proof using Type. induction T; t. Qed.
 
   Lemma interp_flat_type_rel_pointwise_hetero_flatten_binding_list2
         {interp_base_type1 interp_base_type2 t1 t2 T1 T2} R' e1 e2 v1 v2
         (H : List.In (existT _ (t1, t2)%core (v1, v2)%core) (flatten_binding_list2 e1 e2))
         (HR : @interp_flat_type_rel_pointwise_hetero interp_base_type1 interp_base_type2 R' T1 T2 e1 e2)
     : R' t1 t2 v1 v2.
-  Proof.
+  Proof using Type.
     revert dependent T2; induction T1, T2; t.
   Qed.
 End language.

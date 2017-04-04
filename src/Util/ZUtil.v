@@ -3210,7 +3210,7 @@ for name in names:
     Proof. split; reflexivity. Qed.
 
     Lemma div_to_inv_modulo a x x' : x > 0 -> x * x' mod N = 1 mod N -> (a / x) == ((a - a mod x) * x').
-    Proof.
+    Proof using Type.
       intros H xinv.
       replace (a / x) with ((a / x) * 1) by lia.
       change (x * x' == 1) in xinv.

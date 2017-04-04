@@ -26,7 +26,7 @@ Section decode.
 
     Lemma decode_bounded {isdecode : is_decode decode} w
       : 0 <= n -> bounded limb_widths (List.map decode (rev (to_list k w))).
-    Proof.
+    Proof using Type.
       intro.
       eapply bounded_uniform; try solve [ eauto using repeat_spec ].
       { distr_length. }
@@ -38,7 +38,7 @@ Section decode.
     (** TODO: Clean up this proof *)
     Global Instance tuple_is_decode {isdecode : is_decode decode}
       : is_decode (tuple_decoder (k := k)).
-    Proof.
+    Proof using Type.
       unfold tuple_decoder; hnf; simpl.
       intro w.
       destruct (zerop k); [ subst | ].
@@ -59,7 +59,7 @@ Section decode.
   Local Arguments repeat : simpl never.
   Local Arguments Z.mul !_ !_.
   Lemma tuple_decoder_S {k} w : 0 <= n -> (tuple_decoder (k := S (S k)) w = tuple_decoder (k := S k) (fst w) + (decode (snd w) << (S k * n)))%Z.
-  Proof.
+  Proof using Type.
     intro Hn.
     destruct w as [? w]; simpl.
     replace (decode w) with (decode w * 1 + 0)%Z by omega.
@@ -70,16 +70,16 @@ Section decode.
     reflexivity.
   Qed.
   Global Instance tuple_decoder_O w : tuple_decoder (k := 1) w =~> decode w.
-  Proof.
+  Proof using Type.
     unfold tuple_decoder, BaseSystem.decode, BaseSystem.decode', accumulate, base_from_limb_widths, repeat.
     simpl; hnf.
     omega.
   Qed.
   Global Instance tuple_decoder_m1 w : tuple_decoder (k := 0) w =~> 0.
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma tuple_decoder_n_neg k w {H : is_decode decode} : n <= 0 -> tuple_decoder (k := k) w =~> 0.
-  Proof.
+  Proof using Type.
     pose proof (tuple_is_decode w) as H'; hnf in H'.
     intro; assert (k * n <= 0) by nia.
     assert (2^(k * n) <= 2^0) by (apply Z.pow_le_mono_r; omega).
@@ -91,7 +91,7 @@ Section decode.
          (P_ext : forall n (a b : decoder n W), (forall x, a x = b x) -> P _ a -> P _ b)
     : (P _ (tuple_decoder (k := 1)) -> P _ decode)
       * (P _ decode -> P _ (tuple_decoder (k := 1))).
-  Proof.
+  Proof using Type.
     unfold tuple_decoder, BaseSystem.decode, BaseSystem.decode', accumulate, base_from_limb_widths, repeat.
     simpl; hnf.
     rewrite Z.mul_1_l.
@@ -99,12 +99,12 @@ Section decode.
   Qed.
 
   Global Instance tuple_decoder_2' w : (0 <= n)%bounded_rewrite -> tuple_decoder (k := 2) w <~= (decode (fst w) + decode (snd w) << (1%nat * n))%Z.
-  Proof.
+  Proof using Type.
     intros; rewrite !tuple_decoder_S, !tuple_decoder_O by assumption.
     reflexivity.
   Qed.
   Global Instance tuple_decoder_2 w : (0 <= n)%bounded_rewrite -> tuple_decoder (k := 2) w <~= (decode (fst w) + decode (snd w) << n)%Z.
-  Proof.
+  Proof using Type.
     intros; rewrite !tuple_decoder_S, !tuple_decoder_O by assumption.
     autorewrite with zsimplify_const; reflexivity.
   Qed.

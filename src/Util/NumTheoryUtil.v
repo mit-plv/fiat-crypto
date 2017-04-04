@@ -47,12 +47,12 @@ Hypothesis prime_p : prime p.
 Hypothesis neq_p_2 : p <> 2. (* Euler's Criterion is also provable with p = 2, but we do not need it and are lazy.*)
 Hypothesis x_id : x * 2 + 1 = p.
 
-Lemma lt_1_p : 1 < p. Proof. prime_bound. Qed.
-Lemma x_pos: 0 < x. Proof. prime_bound. Qed.
-Lemma x_nonneg: 0 <= x. Proof. prime_bound. Qed.
+Lemma lt_1_p : 1 < p. Proof using prime_p. prime_bound. Qed.
+Lemma x_pos: 0 < x. Proof using prime_p x_id. prime_bound. Qed.
+Lemma x_nonneg: 0 <= x. Proof using prime_p x_id. prime_bound. Qed.
 
 Lemma x_id_inv : x = (p - 1) / 2.
-Proof.
+Proof using x_id.
   intros; apply Zeq_plus_swap in x_id.
   replace (p - 1) with (2 * ((p - 1) / 2)) in x_id by
     (symmetry; apply Z_div_exact_2; [omega | rewrite <- x_id; apply Z_mod_mult]).
@@ -60,19 +60,19 @@ Proof.
 Qed.
 
 Lemma mod_p_order : FGroup.g_order (ZPGroup p lt_1_p) = p - 1.
-Proof.
+Proof using Type.
   intros; rewrite <- phi_is_order.
   apply Euler.prime_phi_n_minus_1; auto.
 Qed.
 
 Lemma p_odd : Z.odd p = true.
-Proof.
+Proof using neq_p_2 prime_p.
   pose proof (Z.prime_odd_or_2 p prime_p).
   destruct H; auto.
 Qed.
 
 Lemma prime_pred_even : Z.even (p - 1) = true.
-Proof.
+Proof using neq_p_2 prime_p.
   intros.
   rewrite <- Z.odd_succ.
   replace (Z.succ (p - 1)) with p by ring.
@@ -81,7 +81,7 @@ Qed.
 
 Lemma fermat_little: forall a (a_nonzero : a mod p <> 0),
   a ^ (p - 1) mod p = 1.
-Proof.
+Proof using prime_p.
   intros.
   assert (rel_prime a p). {
     apply rel_prime_mod_rev; try prime_bound.
@@ -96,7 +96,7 @@ Proof.
 Qed.
 
 Lemma fermat_inv : forall a, a mod p <> 0 -> ((a^(p-2) mod p) * a) mod p = 1.
-Proof.
+Proof using prime_p.
   intros.
   pose proof (prime_ge_2 _ prime_p).
   rewrite Zmult_mod_idemp_l.
@@ -108,7 +108,7 @@ Qed.
 
 Lemma squared_fermat_little: forall a (a_nonzero : a mod p <> 0),
   (a * a) ^ x mod p = 1.
-Proof.
+Proof using prime_p x_id.
   intros.
   rewrite <- Z.pow_2_r.
   rewrite <- Z.pow_mul_r by (apply x_nonneg || omega).
@@ -119,7 +119,7 @@ Qed.
 
 Lemma euler_criterion_square_reverse : forall a (a_nonzero : a mod p <> 0),
   (exists b, b * b mod p = a) -> (a ^ x mod p = 1).
-Proof.
+Proof using Type*.
   intros ? ? a_square.
   destruct a_square as [b a_square].
   assert (b mod p <> 0) as b_nonzero. {
@@ -139,7 +139,7 @@ Lemma exists_primitive_root_power :
   (exists y, List.In y (FGroup.s (ZPGroup p lt_1_p))
   /\ EGroup.e_order Z.eq_dec y (ZPGroup p lt_1_p) = FGroup.g_order (ZPGroup p lt_1_p)
   /\ (forall a (a_range : 1 <= a <= p - 1), exists j, 0 <= j <= p - 1 /\ y ^ j mod p = a)).
-Proof.
+Proof using Type.
   intros.
   destruct (Zp_cyclic p lt_1_p prime_p) as [y [y_in_ZPGroup y_order]].
   exists y; repeat split; auto.
@@ -169,7 +169,7 @@ Ltac ereplace x := match type of x with ?t =>
 
 Lemma euler_criterion_square : forall a (a_range : 1 <= a <= p - 1)
   (pow_a_x : a ^ x mod p = 1), exists b, b * b mod p = a.
-Proof.
+Proof using Type*.
   intros.
   destruct (exists_primitive_root_power) as [y [in_ZPGroup_y [y_order gpow_y]]]; auto.
   destruct (gpow_y a a_range) as [j [j_range pow_y_j]]; clear gpow_y.
@@ -206,7 +206,7 @@ Qed.
 
 Lemma euler_criterion : forall a (a_range : 1 <= a <= p - 1),
   (a ^ x mod p = 1) <-> exists b, b * b mod p = a.
-Proof.
+Proof using Type*.
   intros; split. {
     exact (euler_criterion_square _ a_range).
   } {
@@ -218,7 +218,7 @@ Qed.
 
 Lemma euler_criterion_nonsquare : forall a (a_range : 1 <= a <= p - 1),
   (a ^ x mod p <> 1) <-> ~ (exists b, b * b mod p = a).
-Proof.
+Proof using Type*.
   split; intros A B; apply (euler_criterion a a_range) in B; congruence.
 Qed.
 

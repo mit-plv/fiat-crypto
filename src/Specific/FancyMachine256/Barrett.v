@@ -91,12 +91,12 @@ Section reflected.
   Let assembled_result (v : Tuple.tuple fancy_machine.W 2) : fancy_machine.W := Core.Interp compiled_syntax (m, μ, fst v, snd v).
 
   Theorem sanity : result = expression ops m μ.
-  Proof.
+  Proof using Type.
     reflexivity.
   Qed.
 
   Theorem assembled_sanity : assembled_result = expression ops m μ.
-  Proof.
+  Proof using Type.
     reflexivity.
   Qed.
 
@@ -113,12 +113,12 @@ Section reflected.
             (v : Tuple.tuple fancy_machine.W 2)
             (H6 : 0 <= decode v < b^(2 * k)).
     Theorem correctness : fancy_machine.decode (result v) = decode v mod m.
-    Proof.
+    Proof using H0 H1 H2 H3 H4 H5 H6 props.
       rewrite sanity; destruct v.
       apply expression_eq; assumption.
     Qed.
     Theorem assembled_correctness : fancy_machine.decode (assembled_result v) = decode v mod m.
-    Proof.
+    Proof using H0 H1 H2 H3 H4 H5 H6 props.
       rewrite assembled_sanity; destruct v.
       apply expression_eq; assumption.
     Qed.

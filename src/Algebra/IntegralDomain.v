@@ -11,12 +11,12 @@ Module IntegralDomain.
 
     Lemma nonzero_product_iff_nonzero_factors :
       forall x y : T, ~ eq (mul x y) zero <-> ~ eq x zero /\ ~ eq y zero.
-    Proof. setoid_rewrite Ring.zero_product_iff_zero_factor; intuition. Qed.
+    Proof using Type*. setoid_rewrite Ring.zero_product_iff_zero_factor; intuition. Qed.
 
     Global Instance Integral_domain :
       @Integral_domain.Integral_domain T zero one add mul sub opp eq Ring.Ncring_Ring_ops
                                        Ring.Ncring_Ring Ring.Cring_Cring_commutative_ring.
-    Proof. split; cbv; eauto using zero_product_zero_factor, one_neq_zero. Qed.
+    Proof using Type. split; cbv; eauto using zero_product_zero_factor, one_neq_zero. Qed.
   End IntegralDomain.
 
   Module _LargeCharacteristicReflective.
@@ -51,14 +51,14 @@ Module IntegralDomain.
       Let of_Z := (@Ring.of_Z R zero one opp add).
 
       Lemma CtoZ_correct c : of_Z (CtoZ c) = denote c.
-      Proof.
+      Proof using ring.
         induction c; simpl CtoZ; simpl denote;
           repeat (rewrite_hyp ?* || Ring.push_homomorphism of_Z); reflexivity.
       Qed.
 
       (* TODO: move *)
       Lemma nonzero_of_Z_abs z : of_Z (Z.abs z) <> zero <-> of_Z z <> zero.
-      Proof.
+      Proof using ring.
         destruct z; simpl Z.abs; [reflexivity..|].
         simpl of_Z. setoid_rewrite opp_zero_iff. reflexivity.
       Qed.
@@ -70,13 +70,13 @@ Module IntegralDomain.
           match n with N0 => false | N.pos p => BinPos.Pos.ltb p C end.
         Lemma is_factor_nonzero_correct (n:N) (refl:Logic.eq (is_factor_nonzero n) true)
           : of_Z (Z.of_N n) <> zero.
-        Proof.
+        Proof using char_ge_C.
           destruct n; [discriminate|]; rewrite Znat.positive_N_Z; apply char_ge_C, Pos.ltb_lt, refl.
         Qed.
 
         Lemma RZN_product_nonzero l (H : forall x : N, List.In x l -> of_Z (Z.of_N x) <> zero)
           : of_Z (Z.of_N (List.fold_right N.mul 1%N l)) <> zero.
-        Proof.
+        Proof using HC char_ge_C ring zpzf.
           rewrite <-List.Forall_forall in H; induction H; simpl List.fold_right.
           { eapply char_ge_C; assumption. }
           { rewrite Znat.N2Z.inj_mul; Ring.push_homomorphism of_Z.
@@ -90,7 +90,7 @@ Module IntegralDomain.
           end.
         Lemma is_constant_nonzero_correct z (refl:Logic.eq (is_constant_nonzero z) true)
           : of_Z z <> zero.
-        Proof.
+        Proof using HC char_ge_C ring zpzf.
             rewrite <-nonzero_of_Z_abs, <-Znat.N2Z.inj_abs_N.
             repeat match goal with
                    | _ => progress cbv [is_constant_nonzero] in *
@@ -109,7 +109,7 @@ Module IntegralDomain.
           | _ => is_constant_nonzero (CtoZ c)
           end.
         Lemma is_nonzero_correct' c (refl:Logic.eq (is_nonzero c) true) : denote c <> zero.
-        Proof.
+        Proof using HC char_ge_C ring zpzf.
           induction c;
             repeat match goal with
                    | H:_|-_ => progress rewrite Bool.andb_true_iff in H; destruct H
@@ -131,7 +131,7 @@ Module IntegralDomain.
             (char_ge_C:@Ring.char_ge R eq zero one opp add sub mul C)
             c (refl:Logic.eq (andb (Pos.ltb xH C) (is_nonzero C c)) true)
         : denote c <> zero.
-      Proof.
+      Proof using ring zpzf.
         rewrite Bool.andb_true_iff in refl; destruct refl.
         eapply @is_nonzero_correct'; try apply Pos.ltb_lt; eauto.
       Qed.

@@ -437,14 +437,14 @@ Module B.
       Lemma carryterm_cps_id w fw t {T} f :
         @carryterm_cps w fw t T f
         = f (@carryterm w fw t).
-      Proof. cbv [carryterm_cps carryterm Let_In]; prove_id. Qed.
+      Proof using Type. cbv [carryterm_cps carryterm Let_In]; prove_id. Qed.
       Hint Opaque carryterm : uncps.
       Hint Rewrite carryterm_cps_id : uncps.
 
 
       Lemma eval_carryterm w fw (t:limb) (fw_nonzero:fw<>0):
         eval (carryterm w fw t) = eval [t].
-      Proof.
+      Proof using Type*.
         cbv [carryterm_cps carryterm Let_In]; prove_eval.
         specialize (div_mod (snd t) fw fw_nonzero).
         nsatz.
@@ -456,13 +456,13 @@ Module B.
       Definition carry w fw p := carry_cps w fw p id.
       Lemma carry_cps_id w fw p {T} f:
         @carry_cps w fw p T f = f (carry w fw p).
-      Proof. cbv [carry_cps carry]; prove_id. Qed.
+      Proof using Type. cbv [carry_cps carry]; prove_id. Qed.
       Hint Opaque carry : uncps.
       Hint Rewrite carry_cps_id : uncps.
 
       Lemma eval_carry w fw p (fw_nonzero:fw<>0):
         eval (carry w fw p) = eval p.
-      Proof. cbv [carry_cps carry]; induction p; prove_eval. Qed.
+      Proof using Type*. cbv [carry_cps carry]; induction p; prove_eval. Qed.
       Hint Rewrite eval_carry using auto : push_basesystem_eval.
     End Carries.
 
@@ -492,7 +492,7 @@ Module B.
         @to_associational_cps n xs _ id.
       Lemma to_associational_cps_id {n} x {T} f:
         @to_associational_cps n x T f = f (to_associational x).
-      Proof. cbv [to_associational_cps to_associational]; prove_id. Qed.
+      Proof using Type. cbv [to_associational_cps to_associational]; prove_id. Qed.
       Hint Opaque to_associational : uncps.
       Hint Rewrite @to_associational_cps_id : uncps.
 
@@ -501,7 +501,7 @@ Module B.
 
       Lemma eval_to_associational {n} x :
         Associational.eval (@to_associational n x) = eval x.
-      Proof.
+      Proof using Type.
         cbv [to_associational_cps eval to_associational]; prove_eval.
       Qed. Hint Rewrite @eval_to_associational : push_basesystem_eval.
 
@@ -513,7 +513,7 @@ Module B.
 
       Definition zeros n : tuple Z n := Tuple.repeat 0 n.
       Lemma eval_zeros n : eval (zeros n) = 0.
-      Proof.
+      Proof using Type.
         cbv [eval Associational.eval to_associational_cps zeros].
         pose proof (seq_length n 0). generalize dependent (seq 0 n).
         intro xs; revert n; induction xs; intros;
@@ -531,7 +531,7 @@ Module B.
       Definition add_to_nth {n} i x t := @add_to_nth_cps n i x t _ id.
       Lemma add_to_nth_cps_id {n} i x xs {T} f:
         @add_to_nth_cps n i x xs T f = f (add_to_nth i x xs).
-      Proof.
+      Proof using weight.
         cbv [add_to_nth_cps add_to_nth]; erewrite !on_tuple_cps_correct
           by (intros; autorewrite with uncps; reflexivity); prove_id.
         Unshelve.
@@ -542,7 +542,7 @@ Module B.
 
       Lemma eval_add_to_nth {n} (i:nat) (x:Z) (H:(i<n)%nat) (xs:tuple Z n):
         eval (@add_to_nth n i x xs) = weight i * x + eval xs.
-      Proof.
+      Proof using Type.
         cbv [eval to_associational_cps add_to_nth add_to_nth_cps runtime_add].
         erewrite on_tuple_cps_correct by (intros; autorewrite with uncps; reflexivity).
         prove_eval.
@@ -569,17 +569,17 @@ Module B.
       Definition place t i := place_cps t i id.
       Lemma place_cps_id t i {T} f :
         @place_cps t i T f = f (place t i).
-      Proof. cbv [place]; induction i; prove_id. Qed.
+      Proof using Type. cbv [place]; induction i; prove_id. Qed.
       Hint Opaque place : uncps.
       Hint Rewrite place_cps_id : uncps.
 
       Lemma place_cps_in_range (t:limb) (n:nat)
         : (fst (place_cps t n id) < S n)%nat.
-      Proof. induction n; simpl; break_match; simpl; omega. Qed.
+      Proof using Type. induction n; simpl; break_match; simpl; omega. Qed.
       Lemma weight_place_cps t i
         : weight (fst (place_cps t i id)) * snd (place_cps t i id)
           = fst t * snd t.
-      Proof.
+      Proof using Type*.
         induction i; cbv [id]; simpl place_cps; break_match;
           autorewrite with cancel_pair;
           try find_apply_lem_hyp Z_div_exact_full_2; nsatz || auto.
@@ -596,7 +596,7 @@ Module B.
       Definition from_associational n p := from_associational_cps n p id.
       Lemma from_associational_cps_id {n} p {T} f:
         @from_associational_cps n p T f = f (from_associational n p).
-      Proof.
+      Proof using Type.
         cbv [from_associational_cps from_associational]; prove_id.
       Qed.
       Hint Opaque from_associational : uncps.
@@ -604,7 +604,7 @@ Module B.
 
       Lemma eval_from_associational {n} p (n_nonzero:n<>O):
         eval (from_associational n p) = Associational.eval p.
-      Proof.
+      Proof using Type*.
         cbv [from_associational_cps from_associational]; induction p;
           [|pose proof (place_cps_in_range a (pred n))]; prove_eval.
         cbv [place]; rewrite weight_place_cps. nsatz.
@@ -659,14 +659,14 @@ Module B.
       Definition chained_carries {n} p idxs := @chained_carries_cps n p idxs _ id.
       Lemma chained_carries_id {n} p idxs : forall {T} f,
           @chained_carries_cps n p idxs T f = f (chained_carries p idxs).
-      Proof. cbv [chained_carries_cps chained_carries]; prove_id. Qed.
+      Proof using Type. cbv [chained_carries_cps chained_carries]; prove_id. Qed.
       Hint Opaque chained_carries : uncps.
       Hint Rewrite @chained_carries_id : uncps.
 
       Lemma eval_chained_carries {n} (p:tuple Z n) idxs :
         (forall i, In i idxs -> weight (S i) / weight i <> 0) ->
         eval (chained_carries p idxs) = eval p.
-      Proof.
+      Proof using Type*.
         cbv [chained_carries chained_carries_cps]; intros;
           autorewrite with uncps push_id.
         apply fold_right_invariant; [|intro; rewrite <-in_rev];
@@ -681,7 +681,7 @@ Module B.
       Lemma eval_encode {n} x : (n <> 0%nat) ->
         (forall i, In i (seq 0 n) -> weight (S i) / weight i <> 0) ->
         eval (@encode n x) = x.
-      Proof. cbv [encode]; intros; prove_eval; auto. Qed.
+      Proof using Type*. cbv [encode]; intros; prove_eval; auto. Qed.
       Hint Rewrite @eval_encode : push_basesystem_eval.
 
       End Carries.
@@ -739,12 +739,12 @@ Module B.
 
         Definition sub p q := sub_cps p q id.
         Lemma sub_id p q {T} f : @sub_cps p q T f = f (sub p q).
-        Proof. cbv [sub_cps sub]; autounfold; prove_id. Qed.
+        Proof using Type. cbv [sub_cps sub]; autounfold; prove_id. Qed.
         Hint Opaque sub : uncps.
         Hint Rewrite sub_id : uncps.
 
         Lemma eval_sub p q : mod_eq m (eval (sub p q)) (eval p - eval q).
-        Proof.
+        Proof using Type*.
           cbv [sub sub_cps]; autounfold; destruct n; prove_eval.
           transitivity (eval coef + (eval p - eval q)).
           { apply f_equal2; ring. }
@@ -770,14 +770,14 @@ Module B.
         Definition Fdecode (x : tuple Z sz) : F m := F.of_Z m (eval x).
 
         Lemma Fdecode_Fencode_id x : Fdecode (Fencode x) = x.
-        Proof.
+        Proof using div_mod sz_nonzero weight_0 weight_divides weight_nonzero.
           cbv [Fdecode Fencode]; rewrite @eval_encode by auto.
           apply F.of_Z_to_Z.
         Qed.
 
         Lemma eq_Feq_iff a b :
           Logic.eq (Fdecode a) (Fdecode b) <-> eq m a b.
-        Proof. cbv [Fdecode]; rewrite <-F.eq_of_Z_iff; reflexivity. Qed.
+        Proof using Type. cbv [Fdecode]; rewrite <-F.eq_of_Z_iff; reflexivity. Qed.
       End F.
 
 

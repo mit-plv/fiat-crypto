@@ -37,7 +37,7 @@ Module FMapContextFun (E : DecidableType) (W : WSfun E).
             := W.remove n ctx;
             empty := W.empty _ |}.
     Lemma FMapContextOk : @ContextOk base_type_code W.key var FMapContext.
-    Proof.
+    Proof using E_eq_l base_type_code_lb.
       split;
         repeat first [ reflexivity
                      | progress simpl in *

@@ -27,7 +27,7 @@ Section ext_mul.
       (length us <= length base)%nat ->
       (length vs <= length base)%nat ->
       (BaseSystem.decode base us) * (BaseSystem.decode base vs) = BaseSystem.decode (ext_base limb_widths) (BaseSystem.mul (ext_base limb_widths) us vs).
-  Proof.
+  Proof using Type*.
     intros; apply mul_rep_two_base; auto;
       distr_length.
   Qed.

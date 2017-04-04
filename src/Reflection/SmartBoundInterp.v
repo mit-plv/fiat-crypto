@@ -72,13 +72,13 @@ Section language.
         {t} e bounds
     : interpf interp_op (SmartPairf (interpf_smart_bound_exprf (t:=t) e bounds))
       = interpf_smart_bound e bounds.
-  Proof. clear -interpf_cast; induction t; t. Qed.
+  Proof using interpf_cast. clear -interpf_cast; induction t; t. Qed.
 
   Lemma interpf_SmartPairf_interpf_smart_unbound_exprf
         {t} bounds e
     : interpf interp_op (SmartPairf (interpf_smart_unbound_exprf (t:=t) bounds e))
       = interpf_smart_unbound bounds (SmartVarfMap (fun _ e => interpf interp_op e) e).
-  Proof. clear -interpf_cast; induction t; t. Qed.
+  Proof using interpf_cast. clear -interpf_cast; induction t; t. Qed.
 
   Lemma interp_smart_bound_and_rel {t}
         (e : expr t) (ebounds : expr t)
@@ -91,7 +91,7 @@ Section language.
       -> is_bounded_by (interp interp_op e (interpf_smart_unbound input_bounds x)) output_bounds
          /\ interpf_smart_unbound _ (interp interp_op e' x)
             = interp interp_op e (interpf_smart_unbound input_bounds x).
-  Proof.
+  Proof using interpf_cast is_bounded_by_interp_op strip_cast_val.
     intros; subst e' output_bounds.
     match goal with |- ?A /\ ?B => cut (A /\ (A -> B)); [ tauto | ] end.
     split.
@@ -121,7 +121,7 @@ Section language.
       -> is_bounded_by (Interp interp_op e (interpf_smart_unbound input_bounds x)) output_bounds
          /\ interpf_smart_unbound _ (Interp interp_op e' x)
             = Interp interp_op e (interpf_smart_unbound input_bounds x).
-  Proof.
+  Proof using interpf_cast is_bounded_by_interp_op strip_cast_val.
     apply interp_smart_bound_and_rel; auto.
   Qed.
 
@@ -138,7 +138,7 @@ Section language.
       is_bounded_by (interpf_smart_unbound input_bounds x) input_bounds
       -> interpf_smart_unbound _ (Interp interp_op e' x)
          = Interp interp_op e (interpf_smart_unbound input_bounds x).
-  Proof.
+  Proof using interpf_cast is_bounded_by_interp_op strip_cast_val.
     intros; eapply InterpSmartBoundAndRel; auto.
   Qed.
 End language.

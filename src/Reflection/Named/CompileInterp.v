@@ -54,7 +54,7 @@ Section language.
         (HGls : forall t n x, List.In (existT _ t (n, x)%core) G -> List.In (Some n) ls -> False)
     : Named.interpf (interp_op:=interp_op) (ctx:=ctx) v
       = Some (interpf interp_op e').
-  Proof.
+  Proof using ContextOk Name_dec base_type_dec.
     revert dependent ctx; revert dependent ls; induction Hwf;
       repeat first [ progress intros
                    | progress subst
@@ -135,7 +135,7 @@ Section language.
         (H : ocompile e ls = Some f)
     : forall v, Named.interp (interp_op:=interp_op) (ctx:=ctx) f v
                 = Some (interp interp_op e' v).
-  Proof.
+  Proof using ContextOk Name_dec base_type_dec.
     revert H; destruct Hwf;
       repeat first [ progress simpl in *
                    | progress unfold option_map, Named.interp in *
@@ -179,7 +179,7 @@ Section language.
         (HGls : forall t n x, List.In (existT _ t (n, x)%core) G -> List.In n ls -> False)
     : Named.interpf (interp_op:=interp_op) (ctx:=ctx) v
       = Some (interpf interp_op e').
-  Proof.
+  Proof using ContextOk Name_dec base_type_dec.
     eapply interpf_ocompilef; try eassumption.
     setoid_rewrite List.in_map_iff; intros; destruct_head' ex; destruct_head' and; inversion_option; subst.
     eauto.
@@ -192,5 +192,5 @@ Section language.
         (H : compile e ls = Some f)
     : forall v, Named.interp (interp_op:=interp_op) (ctx:=ctx) f v
                 = Some (interp interp_op e' v).
-  Proof. eapply interp_ocompile; eassumption. Qed.
+  Proof using ContextOk Name_dec base_type_dec. eapply interp_ocompile; eassumption. Qed.
 End language.

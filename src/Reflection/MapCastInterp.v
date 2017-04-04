@@ -64,7 +64,7 @@ Section language.
         R t x
     : is_true (@bounds_are_recursively_goodb R t x)
       <-> @bounds_are_recursively_good (fun t x => is_true (R t x)) t x.
-  Proof.
+  Proof using Type.
     unfold is_true.
     clear; induction x; simpl in *; rewrite ?Bool.andb_true_iff;
       try setoid_rewrite interp_flat_type_rel_pointwise1_gen_Prop_iff_bool;
@@ -81,7 +81,7 @@ Section language.
     := (@interp_flat_type_rel_pointwise1 _ _ bound_is_good).
   Lemma bounds_are_good_when_recursively_good {t} e
     : @bounds_are_recursively_good bound_is_good t e -> bounds_are_good (interpf interp_op2 e).
-  Proof.
+  Proof using Type.
     induction e; simpl; unfold LetIn.Let_In; intuition auto.
   Qed.
   Local Hint Resolve bounds_are_good_when_recursively_good.
@@ -227,7 +227,7 @@ Section language.
       = interpf interp_op1 e1
       /\ R (interpf interp_op1 (@mapf_interp_cast interp_base_type1 t1 e1 t1 ebounds))
            (interpf interp_op2 ebounds).
-  Proof. induction Hwf; repeat t_step. Qed.
+  Proof using R_transfer_op interpf_transfer_op. induction Hwf; repeat t_step. Qed.
 
   Local Hint Resolve interpf_mapf_interp_cast_and_rel.
 
@@ -239,7 +239,7 @@ Section language.
         (Hwf : wff G e1 ebounds)
     : interpf interp_op1 (@mapf_interp_cast interp_base_type1 t1 e1 t1 ebounds)
       = interpf interp_op1 e1.
-  Proof. eapply interpf_mapf_interp_cast_and_rel; eassumption. Qed.
+  Proof using R_transfer_op interpf_transfer_op. eapply interpf_mapf_interp_cast_and_rel; eassumption. Qed.
 
   Lemma interp_map_interp_cast_and_rel
         {t1} e1 ebounds
@@ -252,7 +252,7 @@ Section language.
          = interp interp_op1 e1 x
          /\ R (interp interp_op1 (@map_interp_cast interp_base_type1 t1 e1 t1 ebounds args2) x)
               (interp interp_op2 ebounds args2).
-  Proof. destruct Hwf; intros; eapply interpf_mapf_interp_cast_and_rel; eauto. Qed.
+  Proof using R_transfer_op interpf_transfer_op. destruct Hwf; intros; eapply interpf_mapf_interp_cast_and_rel; eauto. Qed.
 
   Lemma interp_map_interp_cast
         {t1} e1 ebounds
@@ -263,7 +263,7 @@ Section language.
       R x args2
       -> interp interp_op1 (@map_interp_cast interp_base_type1 t1 e1 t1 ebounds args2) x
          = interp interp_op1 e1 x.
-  Proof. intros; eapply interp_map_interp_cast_and_rel; eassumption. Qed.
+  Proof using R_transfer_op interpf_transfer_op. intros; eapply interp_map_interp_cast_and_rel; eassumption. Qed.
 
   Lemma InterpMapInterpCastAndRel
         {t} e
@@ -276,7 +276,7 @@ Section language.
          = Interp interp_op1 e x
          /\ R (Interp interp_op1 (@MapInterpCast t e args) x)
               (Interp interp_op2 e args).
-  Proof. apply interp_map_interp_cast_and_rel; auto. Qed.
+  Proof using R_transfer_op interpf_transfer_op. apply interp_map_interp_cast_and_rel; auto. Qed.
 
   Lemma InterpMapInterpCast
         {t} e
@@ -287,5 +287,5 @@ Section language.
       R x args
       -> Interp interp_op1 (@MapInterpCast t e args) x
          = Interp interp_op1 e x.
-  Proof. apply interp_map_interp_cast; auto. Qed.
+  Proof using R_transfer_op interpf_transfer_op. apply interp_map_interp_cast; auto. Qed.
 End language.

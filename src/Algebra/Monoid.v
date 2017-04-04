@@ -11,7 +11,7 @@ Section Monoid.
 
   Lemma cancel_right z iz (Hinv:op z iz = id) :
     forall x y, x * z = y * z <-> x = y.
-  Proof.
+  Proof using Type*.
     split; intros.
     { assert (op (op x z) iz = op (op y z) iz) as Hcut by (rewrite_hyp ->!*; reflexivity).
       rewrite <-associative in Hcut.
@@ -21,7 +21,7 @@ Section Monoid.
 
   Lemma cancel_left z iz (Hinv:op iz z = id) :
     forall x y, z * x = z * y <-> x = y.
-  Proof.
+  Proof using Type*.
     split; intros.
     { assert (op iz (op z x) = op iz (op z y)) as Hcut by (rewrite_hyp ->!*; reflexivity).
       rewrite !associative, !Hinv, !left_identity in Hcut; exact Hcut. }
@@ -29,14 +29,14 @@ Section Monoid.
   Qed.
 
   Lemma inv_inv x ix iix : ix*x = id -> iix*ix = id -> iix = x.
-  Proof.
+  Proof using Type*.
     intros Hi Hii.
     assert (H:op iix id = op iix (op ix x)) by (rewrite Hi; reflexivity).
     rewrite associative, Hii, left_identity, right_identity in H; exact H.
   Qed.
 
   Lemma inv_op x y ix iy : ix*x = id -> iy*y = id -> (iy*ix)*(x*y) =id.
-  Proof.
+  Proof using Type*.
     intros Hx Hy.
     cut (iy * (ix*x) * y = id); try intro H.
     { rewrite <-!associative; rewrite <-!associative in H; exact H. }

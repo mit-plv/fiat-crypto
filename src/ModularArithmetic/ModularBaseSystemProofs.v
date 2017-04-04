@@ -61,25 +61,25 @@ Section FieldOperationProofs.
   Local Hint Unfold rep decode ModularBaseSystemList.decode.
 
   Lemma rep_decode : forall us x, us ~= x -> decode us = x.
-  Proof.
+  Proof using Type.
     autounfold; intuition.
   Qed.
 
   Lemma decode_rep : forall us, rep us (decode us).
-  Proof.
+  Proof using Type.
     cbv [rep]; auto.
   Qed.
 
   Lemma encode_eq : forall x : F modulus,
     ModularBaseSystemList.encode x = BaseSystem.encode base (F.to_Z x) (2 ^ k).
-  Proof.
+  Proof using Type.
     cbv [ModularBaseSystemList.encode BaseSystem.encode encodeZ]; intros.
     rewrite base_from_limb_widths_length.
     apply encode'_spec; auto using Nat.eq_le_incl.
   Qed.
 
   Lemma encode_rep : forall x : F modulus, encode x ~= x.
-  Proof.
+  Proof using Type.
     autounfold; cbv [encode]; intros.
     rewrite to_list_from_list; autounfold.
     rewrite encode_eq, encode_rep.
@@ -94,7 +94,7 @@ Section FieldOperationProofs.
   Qed.
 
   Lemma bounded_encode : forall x, bounded limb_widths (to_list (encode x)).
-  Proof.
+  Proof using Type.
     intros.
     cbv [encode]; rewrite to_list_from_list.
     cbv [ModularBaseSystemList.encode].
@@ -118,7 +118,7 @@ Section FieldOperationProofs.
 
   Lemma add_rep : forall u v x y, u ~= x -> v ~= y ->
     add u v ~= (x+y)%F.
-  Proof.
+  Proof using Type.
     autounfold; cbv [add]; intros.
     rewrite to_list_from_list; autounfold.
     rewrite add_rep, F.of_Z_add.
@@ -126,18 +126,18 @@ Section FieldOperationProofs.
   Qed.
 
   Lemma eq_rep_iff : forall u v, (eq u v <-> u ~= decode v).
-  Proof.
+  Proof using Type.
     reflexivity.
   Qed.
 
   Lemma eq_dec : forall x y, Decidable.Decidable (eq x y).
-  Proof.
+  Proof using Type.
     intros.
     destruct (F.eq_dec (decode x) (decode y)); [ left | right ]; congruence.
   Qed.
 
   Lemma modular_base_system_add_monoid : @monoid digits eq add zero.
-  Proof.
+  Proof using Type.
     repeat match goal with
            | |- _ => progress intro
            | |- _ => cbv [zero]; rewrite encode_rep
@@ -171,7 +171,7 @@ Section FieldOperationProofs.
   Qed.
 
   Lemma mul_rep : forall u v x y, u ~= x -> v ~= y -> mul u v ~= (x*y)%F.
-  Proof.
+  Proof using Type.
     autounfold in *; unfold ModularBaseSystem.mul in *.
     intuition idtac; subst.
     rewrite to_list_from_list.
@@ -185,7 +185,7 @@ Section FieldOperationProofs.
   Qed.
 
   Lemma modular_base_system_mul_monoid : @monoid digits eq mul one.
-  Proof.
+  Proof using Type.
     repeat match goal with
            | |- _ => progress intro
            | |- _ => cbv [one]; rewrite encode_rep
@@ -207,7 +207,7 @@ Section FieldOperationProofs.
 
   Lemma Fdecode_decode_mod : forall us x,
     decode us = x -> BaseSystem.decode base (to_list us) mod modulus = F.to_Z x.
-  Proof.
+  Proof using Type.
     autounfold; intros.
     rewrite <-H.
     apply F.to_Z_of_Z.
@@ -227,7 +227,7 @@ Section FieldOperationProofs.
   Qed.
 
   Lemma opp_rep : forall mm pf u x, u ~= x -> opp mm pf u ~= F.opp x.
-  Proof.
+  Proof using Type.
     cbv [opp rep]; intros.
     rewrite sub_rep by (apply encode_rep || eassumption).
     apply F.eq_to_Z_iff.
@@ -244,7 +244,7 @@ Section FieldOperationProofs.
 
   Lemma scalarmult_rep : forall u x n, u ~= x ->
     (@ScalarMult.scalarmult_ref digits mul one n u) ~= (x ^ (N.of_nat n))%F.
-  Proof.
+  Proof using Type.
     induction n; intros.
     + cbv [N.to_nat ScalarMult.scalarmult_ref]. rewrite F.pow_0_r.
       apply encode_rep.
@@ -256,7 +256,7 @@ Section FieldOperationProofs.
 
   Lemma pow_rep : forall chain u x, u ~= x ->
     pow u chain ~= F.pow x (fold_chain 0%N N.add chain (1%N :: nil)).
-  Proof.
+  Proof using Type.
     cbv [pow rep]; intros.
     erewrite (@fold_chain_exp _ _ _ _ modular_base_system_mul_monoid)
       by (apply @ScalarMult.scalarmult_ref_is_scalarmult; apply modular_base_system_mul_monoid).
@@ -267,7 +267,7 @@ Section FieldOperationProofs.
 
   Lemma inv_rep : forall chain pf u x, u ~= x ->
     inv chain pf u ~= F.inv x.
-  Proof.
+  Proof using modulus_gt_2.
     cbv [inv]; intros.
     rewrite (@F.Fq_inv_fermat _ prime_modulus modulus_gt_2).
     etransitivity; [ apply pow_rep; eassumption | ].
@@ -280,13 +280,13 @@ Section FieldOperationProofs.
   Import Morphisms.
 
   Global Instance encode_Proper : Proper (Logic.eq ==> eq) encode.
-  Proof.
+  Proof using Type.
     repeat intro; cbv [eq].
     rewrite !encode_rep. assumption.
   Qed.
 
   Global Instance add_Proper : Proper (eq ==> eq ==> eq) add.
-  Proof.
+  Proof using Type.
     repeat intro.
     cbv beta delta [eq] in *.
     erewrite !add_rep; cbv [rep] in *; try reflexivity; assumption.
@@ -294,7 +294,7 @@ Section FieldOperationProofs.
 
   Global Instance sub_Proper mm mm_correct
     : Proper (eq ==> eq ==> eq) (sub mm mm_correct).
-  Proof.
+  Proof using Type.
     repeat intro.
     cbv beta delta [eq] in *.
     erewrite !sub_rep; cbv [rep] in *; try reflexivity; assumption.
@@ -302,20 +302,20 @@ Section FieldOperationProofs.
 
   Global Instance opp_Proper mm mm_correct
     : Proper (eq ==> eq) (opp mm mm_correct).
-  Proof.
+  Proof using Type.
      cbv [opp]; repeat intro.
      apply sub_Proper; assumption || reflexivity.
   Qed.
 
   Global Instance mul_Proper : Proper (eq ==> eq ==> eq) mul.
-  Proof.
+  Proof using Type.
     repeat intro.
     cbv beta delta [eq] in *.
     erewrite !mul_rep; cbv [rep] in *; try reflexivity; assumption.
   Qed.
 
   Global Instance pow_Proper : Proper (eq ==> Logic.eq ==> eq) pow.
-  Proof.
+  Proof using Type.
     repeat intro.
     cbv beta delta [eq] in *.
     erewrite !pow_rep; cbv [rep] in *; subst; try reflexivity.
@@ -323,13 +323,13 @@ Section FieldOperationProofs.
   Qed.
 
   Global Instance inv_Proper chain chain_correct : Proper (eq ==> eq) (inv chain chain_correct).
-  Proof.
+  Proof using Type.
      cbv [inv]; repeat intro.
     apply pow_Proper; assumption || reflexivity.
   Qed.
 
   Global Instance div_Proper : Proper (eq ==> eq ==> eq) div.
-  Proof.
+  Proof using Type.
     cbv [div]; repeat intro; congruence.
   Qed.
 
@@ -339,7 +339,7 @@ Section FieldOperationProofs.
           {ec : ExponentiationChain (modulus - 2)}.
 
   Lemma _zero_neq_one : not (eq zero one).
-  Proof.
+  Proof using Type.
     cbv [eq zero one]; erewrite !encode_rep.
     pose proof (@F.field_modulo modulus prime_modulus).
     apply zero_neq_one.
@@ -347,7 +347,7 @@ Section FieldOperationProofs.
 
   Lemma modular_base_system_field :
     @field digits eq zero one (opp coeff coeff_mod) add (sub coeff coeff_mod) mul (inv chain chain_correct) div.
-  Proof.
+  Proof using modulus_gt_2.
     eapply (Field.isomorphism_to_subfield_field (phi := decode) (fieldR := @F.field_modulo modulus prime_modulus)).
     Grab Existential Variables.
     + intros; eapply encode_rep.
@@ -375,7 +375,7 @@ Section CarryProofs.
   Local Hint Resolve log_cap_nonneg.
 
   Lemma base_length_lt_pred : (pred (length base) < length base)%nat.
-  Proof.
+  Proof using Type.
     pose proof limb_widths_nonnil; rewrite base_from_limb_widths_length.
     destruct limb_widths; congruence || distr_length.
   Qed.
@@ -386,7 +386,7 @@ Section CarryProofs.
 
   Lemma carry_done_bounds : forall us, (length us = length base) ->
     (carry_done us <-> forall i, 0 <= nth_default 0 us i < 2 ^ log_cap i).
-  Proof.
+  Proof using Type.
     intros ? ?; unfold carry_done; split; [ intros Hcarry_done i | intros Hbounds i i_lt ].
     + destruct (lt_dec i (length base)) as [i_lt | i_nlt].
       - specialize (Hcarry_done i i_lt).
@@ -410,7 +410,7 @@ Section CarryProofs.
     (length us = length limb_widths) ->
     BaseSystem.decode base (carry_and_reduce (pred (length limb_widths)) us) mod modulus
     = BaseSystem.decode base us mod modulus.
-  Proof.
+  Proof using Type.
     cbv [carry_and_reduce]; intros.
     rewrite carry_gen_decode_eq; auto.
     distr_length.
@@ -443,7 +443,7 @@ Section CarryProofs.
     (i < length limb_widths)%nat ->
     forall pf1 pf2,
     from_list _ us pf1 ~= x -> from_list _ (carry i us) pf2 ~= x.
-  Proof.
+  Proof using Type.
     cbv [carry rep decode]; intros.
     rewrite to_list_from_list.
     pose proof carry_decode_eq_reduce. pose proof (@carry_simple_decode_eq limb_widths).
@@ -462,7 +462,7 @@ Section CarryProofs.
 
   Lemma decode_mod_Fdecode : forall u, length u = length limb_widths ->
     BaseSystem.decode base u mod modulus= F.to_Z (decode (from_list_default 0 _ u)).
-  Proof.
+  Proof using Type.
     intros.
     rewrite <-(to_list_from_list _ u) with (pf := H).
     erewrite Fdecode_decode_mod by reflexivity.
@@ -474,7 +474,7 @@ Section CarryProofs.
   Lemma carry_sequence_rep : forall is us x,
     (forall i, In i is -> (i < length limb_widths)%nat) ->
     us ~= x -> forall pf, from_list _ (carry_sequence is (to_list _ us)) pf ~= x.
-  Proof.
+  Proof using Type.
     induction is; intros.
     + cbv [carry_sequence fold_right]. rewrite from_list_to_list. assumption.
     + simpl. apply carry_rep with (pf1 := length_carry_sequence (length_to_list us));
@@ -486,7 +486,7 @@ Section CarryProofs.
   Lemma carry_mul_rep : forall us vs x y,
     rep us x -> rep vs y ->
     rep (carry_mul carry_chain us vs) (x * y)%F.
-  Proof.
+  Proof using Type.
     cbv [carry_mul]; intros; apply carry_sequence_rep;
       auto using carry_chain_valid,  mul_rep.
   Qed.
@@ -495,7 +495,7 @@ Section CarryProofs.
     eq
       (carry_sub carry_chain coeff coeff_mod a b)
       (sub coeff coeff_mod a b).
-  Proof.
+  Proof using Type.
     cbv [carry_sub carry_]; intros.
     eapply carry_sequence_rep; auto using carry_chain_valid.
     reflexivity.
@@ -503,7 +503,7 @@ Section CarryProofs.
 
   Lemma carry_add_rep : forall a b,
     eq (carry_add carry_chain a b) (add a b).
-  Proof.
+  Proof using Type.
     cbv [carry_add carry_]; intros.
     eapply carry_sequence_rep; auto using carry_chain_valid.
     reflexivity.
@@ -513,7 +513,7 @@ Section CarryProofs.
     eq
       (carry_opp carry_chain coeff coeff_mod a)
       (opp coeff coeff_mod a).
-  Proof.
+  Proof using Type.
     cbv [carry_opp opp]; intros.
     apply carry_sub_rep.
   Qed.
@@ -556,7 +556,7 @@ Section CanonicalizationProofs.
           then c * (us [i mod length limb_widths]) >> (limb_widths [i mod length limb_widths])
           else 0
       else 0.
-  Proof.
+  Proof using Type.
     cbv [carry_and_reduce]; intros.
     autorewrite with push_nth_default.
     reflexivity.
@@ -582,7 +582,7 @@ Section CanonicalizationProofs.
                then (us [i]) >> (limb_widths [i])
                else 0
       else 0.
-  Proof.
+  Proof using Type*.
     intros.
     cbv [carry].
     break_innermost_match_step.
@@ -622,7 +622,7 @@ Section CanonicalizationProofs.
                       else 0)
                   else Z.pow2_mod (us {{ pred i }} [n]) (limb_widths [n])
       else 0.
-  Proof.
+  Proof using Type*.
     induction i; intros; cbv [carry_sequence].
     + cbv [pred make_chain fold_right].
       break_match; subst; omega || reflexivity || auto using Z.add_0_r.
@@ -641,14 +641,14 @@ Section CanonicalizationProofs.
     (i < length us)%nat ->
     nth_default 0 (carry i us) i
     = Z.pow2_mod (us [i]) (limb_widths [i]).
-  Proof.
+  Proof using Type*.
     intros; pose proof lt_1_length_limb_widths; autorewrite with push_nth_default natsimplify; break_match; omega.
   Qed.
   Hint Rewrite @nth_default_carry using (omega || distr_length; omega) : push_nth_default.
 
   Lemma pow_limb_widths_gt_1 : forall i, (i < length limb_widths)%nat ->
                                          1 < 2 ^ limb_widths [i].
-  Proof.
+  Proof using Type.
     intros.
     apply Z.pow_gt_1; try omega.
     apply nth_default_preserves_properties_length_dep; intros; try omega.
@@ -656,7 +656,7 @@ Section CanonicalizationProofs.
   Qed.
 
   Lemma carry_sequence_nil_l : forall us, carry_sequence nil us = us.
-  Proof.
+  Proof using Type.
     reflexivity.
   Qed.
 
@@ -719,7 +719,7 @@ Section CanonicalizationProofs.
           if eq_nat_dec n 0
           then 2 * 2 ^ limb_widths [n]
           else 2 ^ limb_widths [n].
-  Proof.
+  Proof using Type*.
     induction i; bound_during_loop.
   Qed.
 
@@ -738,7 +738,7 @@ Section CanonicalizationProofs.
      length (f us) = length limb_widths ->
      (forall n, (n < length limb_widths)%nat -> 0 <= us [n] < bound us n)
                 -> forall n, (n < length limb_widths)%nat -> 0 <= (carry_full (f us)) [n] < bound'' (f us) n.
-  Proof.
+  Proof using Type*.
     pose proof lt_1_length_limb_widths.
     cbv [carry_full full_carry_chain]; intros ? ? ? ? ? ? ? ? Hloop Hfbound Hflength Hbound n.
     specialize (Hfbound Hbound).
@@ -762,7 +762,7 @@ Section CanonicalizationProofs.
      -> length (f us) = length limb_widths
      -> (forall n, (n < length limb_widths)%nat -> 0 <= us [n] < bound us n)
                 -> forall n, 0 <= (carry_full (f us)) [n] < bound'' (f us) n.
-  Proof.
+  Proof using Type*.
     pose proof lt_1_length_limb_widths.
     cbv [carry_full full_carry_chain]; intros ? ? ? ? ? ? ? ? Hloop Hfbound Hflength Hbound n.
     specialize (Hfbound Hbound).
@@ -779,7 +779,7 @@ Section CanonicalizationProofs.
       if eq_nat_dec n 0
       then 2 * 2 ^ limb_widths [n]
       else 2 ^ limb_widths [n].
-  Proof.
+  Proof using Type*.
     intros ? ?.
     apply (bound_after_loop_length_preconditions us H id bound_during_first_loop); auto.
   Qed.
@@ -792,7 +792,7 @@ Section CanonicalizationProofs.
       if eq_nat_dec n 0
       then 2 * 2 ^ limb_widths [n]
       else 2 ^ limb_widths [n].
-  Proof.
+  Proof using Type*.
     intros.
     destruct (lt_dec n (length limb_widths));
       auto using bound_after_first_loop_pre.
@@ -819,7 +819,7 @@ Section CanonicalizationProofs.
           if eq_nat_dec n 0
           then 2 ^ limb_widths [n] + c
           else 2 ^ limb_widths [n].
-  Proof.
+  Proof using Type*.
     induction i; bound_during_loop.
   Qed.
 
@@ -831,7 +831,7 @@ Section CanonicalizationProofs.
       if eq_nat_dec n 0
       then 2 ^ limb_widths [n] + c
       else 2 ^ limb_widths [n].
-  Proof.
+  Proof using Type*.
     intros ? ?; apply (bound_after_loop us H carry_full bound_during_second_loop);
       auto using length_carry_full, bound_after_first_loop.
   Qed.
@@ -858,7 +858,7 @@ Section CanonicalizationProofs.
                  else us[n] + 1
       else
           2 ^ limb_widths [n].
-  Proof.
+  Proof using Type*.
     induction i; bound_during_loop.
   Qed.
 
@@ -867,7 +867,7 @@ Section CanonicalizationProofs.
     (forall n, (n < length limb_widths)%nat -> 0 <= us [n] < 2 ^ B - if eq_nat_dec n 0 then 0 else ((2 ^ B) >> (limb_widths [pred n]))) ->
     forall n,
     0 <= (carry_full (carry_full (carry_full us))) [n] < 2 ^ limb_widths [n].
-  Proof.
+  Proof using Type*.
     intros ? ?.
     apply (bound_after_loop us H (fun x => carry_full (carry_full x)) bound_during_third_loop);
       auto using length_carry_full, bound_after_second_loop.
@@ -886,7 +886,7 @@ Section CanonicalizationProofs.
   Lemma decode_bitwise_eq_iff : forall u v, minimal_rep u -> minimal_rep v ->
     (fieldwise Logic.eq u v <->
      decode_bitwise limb_widths (to_list _ u) = decode_bitwise limb_widths (to_list _ v)).
-  Proof.
+  Proof using Type.
     intros.
     rewrite !decode_bitwise_spec by (tauto || auto using length_to_list).
     rewrite fieldwise_to_list_iff.
@@ -899,14 +899,14 @@ Section CanonicalizationProofs.
   Qed.
 
   Lemma c_upper_bound : c - 1 < 2 ^ limb_widths[0].
-  Proof.
+  Proof using Type*.
     pose proof c_reduce2. pose proof c_pos.
     omega.
   Qed.
   Hint Resolve c_upper_bound.
 
   Lemma minimal_rep_encode : forall x, minimal_rep (encode x).
-  Proof.
+  Proof using Type*.
     split; intros; auto using bounded_encode.
     apply ge_modulus_spec; auto using bounded_encode, length_to_list.
     apply encode_range.
@@ -914,7 +914,7 @@ Section CanonicalizationProofs.
 
   Lemma encode_minimal_rep : forall u x, rep u x -> minimal_rep u ->
                                          fieldwise Logic.eq u (encode x).
-  Proof.
+  Proof using Type*.
     intros.
     apply decode_bitwise_eq_iff; auto using minimal_rep_encode.
     rewrite !decode_bitwise_spec by (intuition auto; distr_length; try apply minimal_rep_encode).
@@ -928,7 +928,7 @@ Section CanonicalizationProofs.
   Lemma bounded_canonical : forall u v x y, rep u x -> rep v y ->
                                             minimal_rep u -> minimal_rep v ->
                                             (x = y <-> fieldwise Logic.eq u v).
-  Proof.
+  Proof using Type*.
     intros.
     eapply encode_minimal_rep in H1; eauto.
     eapply encode_minimal_rep in H2; eauto.
@@ -944,14 +944,14 @@ Section CanonicalizationProofs.
   Qed.
 
   Lemma int_width_compat : forall x, In x limb_widths -> x < int_width.
-  Proof.
+  Proof using Type*.
     intros. apply B_compat in H.
     eapply Z.lt_le_trans; eauto using B_le_int_width.
   Qed.
 
   Lemma minimal_rep_freeze : forall u, initial_bounds u ->
       minimal_rep (freeze int_width u).
-  Proof.
+  Proof using Type*.
     repeat match goal with
            | |- _ => progress (cbv [freeze ModularBaseSystemList.freeze])
            | |- _ => progress intros
@@ -968,7 +968,7 @@ Section CanonicalizationProofs.
   Lemma freeze_decode : forall u,
       BaseSystem.decode base (to_list _ (freeze int_width u)) mod modulus =
       BaseSystem.decode base (to_list _ u) mod modulus.
-  Proof.
+  Proof using Type*.
     repeat match goal with
            | |- _ => progress cbv [freeze ModularBaseSystemList.freeze]
            | |- _ => progress intros
@@ -996,7 +996,7 @@ Section CanonicalizationProofs.
   Qed.
 
   Lemma freeze_rep : forall u x, rep u x -> rep (freeze int_width u) x.
-  Proof.
+  Proof using Type*.
     cbv [rep]; intros.
     apply F.eq_to_Z_iff.
     erewrite <-!Fdecode_decode_mod by eauto.
@@ -1007,7 +1007,7 @@ Section CanonicalizationProofs.
                                            initial_bounds u ->
                                            initial_bounds v ->
     (x = y <-> fieldwise Logic.eq (freeze int_width u) (freeze int_width v)).
-  Proof.
+  Proof using Type*.
     intros; apply bounded_canonical; auto using freeze_rep, minimal_rep_freeze.
   Qed.
 
@@ -1032,7 +1032,7 @@ Section SquareRootProofs.
   Lemma eqb_true_iff : forall u v x y,
     bounded_by u freeze_input_bounds -> bounded_by v freeze_input_bounds ->
     u ~= x -> v ~= y -> (x = y <-> eqb int_width u v = true).
-  Proof.
+  Proof using Type*.
     cbv [eqb freeze_input_bounds]. intros.
     rewrite fieldwiseb_fieldwise by (apply Z.eqb_eq).
     eauto using freeze_canonical.
@@ -1041,7 +1041,7 @@ Section SquareRootProofs.
   Lemma eqb_false_iff : forall u v x y,
     bounded_by u freeze_input_bounds -> bounded_by v freeze_input_bounds ->
     u ~= x -> v ~= y -> (x <> y <-> eqb int_width u v = false).
-  Proof.
+  Proof using Type*.
     intros.
     case_eq (eqb int_width u v).
     + rewrite <-eqb_true_iff by eassumption; split; intros;
@@ -1058,7 +1058,7 @@ Section SquareRootProofs.
 
   Lemma sqrt_3mod4_correct : forall u x, u ~= x ->
     (sqrt_3mod4 chain chain_correct u) ~= F.sqrt_3mod4 x.
-  Proof.
+  Proof using Type.
     repeat match goal with
            | |- _ => progress (cbv [sqrt_3mod4 F.sqrt_3mod4]; intros)
            | |- _ => rewrite @F.pow_2_r in *
@@ -1079,7 +1079,7 @@ Section SquareRootProofs.
     ModularBaseSystem.eq powx (pow u chain) ->
     ModularBaseSystem.eq powx_squared (mul powx powx) ->
     (sqrt_5mod8 int_width powx powx_squared chain chain_correct sqrt_m1 u) ~= F.sqrt_5mod8 (decode sqrt_m1) x.
-  Proof.
+  Proof using freeze_pre.
     cbv [sqrt_5mod8 F.sqrt_5mod8].
     intros.
     repeat match goal with
@@ -1120,7 +1120,7 @@ Section ConversionProofs.
                   (BaseSystem.decode
                      target_base
                      (to_list _ (pack target_widths_nonneg bits_eq w)))).
-  Proof.
+  Proof using Type.
     intros; cbv [pack ModularBaseSystemList.pack rep].
     rewrite Tuple.to_list_from_list.
     apply F.eq_to_Z_iff.
@@ -1132,7 +1132,7 @@ Section ConversionProofs.
     bounded target_widths (to_list _ w) ->
     rep (unpack target_widths_nonneg bits_eq w)
         (F.of_Z modulus (BaseSystem.decode target_base (to_list _ w))).
-  Proof.
+  Proof using Type.
     intros; cbv [unpack ModularBaseSystemList.unpack rep].
     apply F.eq_to_Z_iff.
     rewrite <-from_list_default_eq with (d := 0).

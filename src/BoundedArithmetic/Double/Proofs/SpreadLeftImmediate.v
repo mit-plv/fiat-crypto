@@ -61,7 +61,7 @@ Section tuple2.
           r count
           (H : 0 < count < n)
       : (decode (shl r count) + decode (shr r (n - count)) << n = decode r << count mod (2^n*2^n))%Z.
-    Proof.
+    Proof using isdecode isshl isshr.
       assert (0 <= count < n) by lia.
       assert (0 <= n - count < n) by lia.
       assert (0 < 2^(n-count)) by auto with zarith.
@@ -80,7 +80,7 @@ Section tuple2.
 
     Global Instance is_spread_left_from_shift
       : is_spread_left_immediate (sprl_from_shift n).
-    Proof.
+    Proof using Type*.
       apply is_spread_left_immediate_alt.
       intros r count; intros.
       pose proof (decode_range r).
@@ -124,7 +124,7 @@ Section tuple2.
           r
       : (decode (shl r half_n) + decode (shr r half_n) * (2^half_n * 2^half_n)
          = (decode r * 2^half_n) mod (2^half_n*2^half_n*2^half_n*2^half_n))%Z.
-    Proof.
+    Proof using Type*.
       destruct (0 <? half_n) eqn:Hn; Z.ltb_to_lt.
       { pose proof (spread_left_from_shift_correct (2*half_n) r half_n) as H.
         specialize_by lia.

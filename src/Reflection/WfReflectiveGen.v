@@ -119,21 +119,21 @@ Section language.
             end
        end.
   Lemma base_type_eq_semidec_transparent_refl t : base_type_eq_semidec_transparent t t = Some eq_refl.
-  Proof.
+  Proof using base_type_eq_semidec_is_dec.
     clear -base_type_eq_semidec_is_dec.
     pose proof (base_type_eq_semidec_is_dec t t).
     destruct (base_type_eq_semidec_transparent t t); intros; try intuition congruence.
     inversion_base_type_code; reflexivity.
   Qed.
   Lemma flat_type_eq_semidec_transparent_refl t : flat_type_eq_semidec_transparent t t = Some eq_refl.
-  Proof.
+  Proof using base_type_eq_semidec_is_dec.
     clear -base_type_eq_semidec_is_dec.
     induction t as [t | | A B IHt]; simpl; try reflexivity.
     { rewrite base_type_eq_semidec_transparent_refl; reflexivity. }
     { rewrite_hyp !*; reflexivity. }
   Qed.
   Lemma type_eq_semidec_transparent_refl t : type_eq_semidec_transparent t t = Some eq_refl.
-  Proof.
+  Proof using base_type_eq_semidec_is_dec.
     clear -base_type_eq_semidec_is_dec.
     destruct t; simpl; rewrite !flat_type_eq_semidec_transparent_refl; reflexivity.
   Qed.
@@ -189,13 +189,13 @@ Section language.
 
   Lemma duplicate_type_app ls ls'
     : (duplicate_type (ls ++ ls') = duplicate_type ls ++ duplicate_type ls')%list.
-  Proof. apply List.map_app. Qed.
+  Proof using Type. apply List.map_app. Qed.
   Lemma duplicate_type_length ls
     : List.length (duplicate_type ls) = List.length ls.
-  Proof. apply List.map_length. Qed.
+  Proof using Type. apply List.map_length. Qed.
   Lemma duplicate_type_in t v ls
     : List.In (existT _ (t, t) v) (duplicate_type ls) -> List.In (existT _ t v) ls.
-  Proof.
+  Proof using base_type_eq_semidec_is_dec.
     unfold duplicate_type; rewrite List.in_map_iff.
     intros [ [? ?] [? ?] ].
     inversion_sigma; inversion_prod; inversion_base_type_code; subst; simpl.
@@ -203,7 +203,7 @@ Section language.
   Qed.
   Lemma duplicate_type_not_in G t t0 v (H : base_type_eq_semidec_transparent t t0 = None)
     : ~List.In (existT _ (t, t0) v) (duplicate_type G).
-  Proof.
+  Proof using base_type_eq_semidec_is_dec.
     apply base_type_eq_semidec_is_dec in H.
     clear -H; intro H'.
     induction G as [|? ? IHG]; simpl in *; destruct H';
@@ -237,14 +237,14 @@ Section language.
   Arguments natize_interp_flat_type {var t} _ _.
   Lemma length_natize_interp_flat_type1 {t} (base : nat) (v1 : interp_flat_type var1 t) (v2 : interp_flat_type var2 t)
     : fst (natize_interp_flat_type base v1) = length (flatten_binding_list v1 v2) + base.
-  Proof.
+  Proof using Type.
     revert base; induction t; simpl; [ reflexivity | reflexivity | ].
     intros; rewrite List.app_length, <- plus_assoc.
     rewrite_hyp <- ?*; reflexivity.
   Qed.
   Lemma length_natize_interp_flat_type2 {t} (base : nat) (v1 : interp_flat_type var1 t) (v2 : interp_flat_type var2 t)
     : fst (natize_interp_flat_type base v2) = length (flatten_binding_list v1 v2) + base.
-  Proof.
+  Proof using Type.
     revert base; induction t; simpl; [ reflexivity | reflexivity | ].
     intros; rewrite List.app_length, <- plus_assoc.
     rewrite_hyp <- ?*; reflexivity.

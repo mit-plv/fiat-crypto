@@ -103,7 +103,7 @@ Section language.
       -> is_bounded_by (Interp interp_op e (interpf_smart_unbound input_bounds x)) output_bounds
          /\ interpf_smart_unbound _ (Interp interp_op e' x)
             = Interp interp_op e (interpf_smart_unbound input_bounds x).
-  Proof.
+  Proof using cast_val_squash interpf_Cast_id interpf_bound_op interpf_cast is_bounded_by_bound_op is_bounded_by_interp_op is_cast_correct strip_cast_val wff_Cast.
     intros; subst e' output_bounds.
     unfold Boundify.
     erewrite InterpExprEta, InterpInlineCast, InterpLinearize by eauto with wf.
