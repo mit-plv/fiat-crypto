@@ -17,6 +17,7 @@ Require Export Crypto.Util.Tactics.Forward.
 Require Export Crypto.Util.Tactics.GetGoal.
 Require Export Crypto.Util.Tactics.OnSubterms.
 Require Export Crypto.Util.Tactics.Not.
+Require Export Crypto.Util.Tactics.PrintContext.
 Require Export Crypto.Util.Tactics.Revert.
 Require Export Crypto.Util.Tactics.RewriteHyp.
 Require Export Crypto.Util.Tactics.SetEvars.
