@@ -26,13 +26,13 @@ Module W.
     Next Obligation. destruct P as [[[??]|[]]?]; cbv; trivial; fsatz. Qed.
 
     Global Instance commutative_group : abelian_group(eq:=W.eq)(op:=W.add)(id:=W.zero)(inv:=inv).
-    Proof.
+    Proof using Type.
       repeat match goal with
              | _ => solve [ contradiction | trivial | exact _ ]
              | _ => intro
              | |- Equivalence _ => split
              | |- abelian_group => split | |- group => split | |- monoid => split
-             | |- is_associative => split | |- is_commutative => split 
+             | |- is_associative => split | |- is_commutative => split
              | |- is_left_inverse => split | |- is_right_inverse => split
              | |- is_left_identity => split | |- is_right_identity => split
              | _ => progress destruct_head' @W.point
