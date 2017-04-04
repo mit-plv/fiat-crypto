@@ -11,7 +11,6 @@ Local Open Scope type_scope.
 
 Class Decidable (P : Prop) := dec : {P} + {~P}.
 Arguments dec _%type_scope {_}.
-
 Notation DecidableRel R := (forall x y, Decidable (R x y)).
 
 Global Instance hprop_eq_dec {A} `{DecidableRel (@eq A)} : IsHPropRel (@eq A) | 10.
@@ -85,7 +84,6 @@ Lemma dec_not {A} `{Decidable A} : Decidable (~A).
 Proof. solve_decidable_transparent. Defined.
 (** Disallow infinite loops of dec_not *)
 Hint Extern 0 (Decidable (~?A)) => apply (@dec_not A) : typeclass_instances.
-
 Global Instance dec_eq_unit : DecidableRel (@eq unit) | 10. exact _. Defined.
 Global Instance dec_eq_bool : DecidableRel (@eq bool) | 10. exact _. Defined.
 Global Instance dec_eq_Empty_set : DecidableRel (@eq Empty_set) | 10. exact _. Defined.
@@ -109,8 +107,6 @@ Global Instance dec_lt_Z : DecidableRel BinInt.Z.lt := ZArith_dec.Z_lt_dec.
 Global Instance dec_le_Z : DecidableRel BinInt.Z.le := ZArith_dec.Z_le_dec.
 Global Instance dec_gt_Z : DecidableRel BinInt.Z.gt := ZArith_dec.Z_gt_dec.
 Global Instance dec_ge_Z : DecidableRel BinInt.Z.ge := ZArith_dec.Z_ge_dec.
-
-Global Instance dec_eq_positive : DecidableRel (@eq BinNums.positive) | 10 := BinPos.Pos.eq_dec.
 
 Global Instance dec_match_pair {A B} {P : A -> B -> Prop} {x : A * B}
        {HD : Decidable (P (fst x) (snd x))}
@@ -138,6 +134,16 @@ Proof. solve_decidable_transparent. Defined.
 
 Lemma Decidable_iff_to_flip_impl A B (H : A <-> B) : Decidable B -> Decidable A.
 Proof. solve_decidable_transparent. Defined.
+
+Global Instance dec_eq_positive : DecidableRel (@eq BinNums.positive) | 10 := BinPos.Pos.eq_dec.
+Global Instance dec_lt_positive : DecidableRel BinPos.Pos.lt.
+Proof. eauto using Decidable_iff_to_impl, Pos.ltb_lt with typeclass_instances. Defined.
+Global Instance dec_le_positive : DecidableRel BinPos.Pos.le.
+Proof. eauto using Decidable_iff_to_impl, Pos.leb_le with typeclass_instances. Defined.
+Global Instance dec_gt_positive : DecidableRel BinPos.Pos.gt.
+Proof. eauto using Decidable_iff_to_flip_impl, Pos.gt_lt_iff with typeclass_instances. Defined.
+Global Instance dec_ge_positive : DecidableRel BinPos.Pos.ge.
+Proof. eauto using Decidable_iff_to_flip_impl, Pos.ge_le_iff with typeclass_instances. Defined.
 
 Lemma dec_of_semidec {P : Prop} (H : option P) (H_complete : H = None -> ~P) : Decidable P.
 Proof. destruct H; [ left; assumption | right; apply H_complete, eq_refl ]. Defined.
