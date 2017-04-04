@@ -62,7 +62,7 @@ Require Import Crypto.Reflection.LinearizeWf.
 Require Import Crypto.Reflection.Z.Bounds.MapCastByDeBruijn.
 Require Import Crypto.Reflection.Z.Bounds.MapCastByDeBruijnInterp.
 Require Import Crypto.Reflection.Z.Bounds.MapCastByDeBruijnWf.
-Require Import Crypto.Util.Sigma.
+Require Import Crypto.Util.Sigma.MapProjections.
 
 (** *** Definition of the Post-Wf Pipeline *)
 (** Do not change the name or the type of this definition *)

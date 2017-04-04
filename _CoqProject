@@ -285,6 +285,7 @@ src/Util/ZRange.v
 src/Util/ZUtil.v
 src/Util/Sigma/Associativity.v
 src/Util/Sigma/Lift.v
+src/Util/Sigma/MapProjections.v
 src/Util/Tactics/BreakMatch.v
 src/Util/Tactics/ClearDuplicates.v
 src/Util/Tactics/Contains.v
