@@ -25,9 +25,8 @@ Module W.
          end.
     Next Obligation. destruct P as [[[??]|[]]?]; cbv; trivial; fsatz. Qed.
 
-    Local Set Suggest Proof Using. (** Get travis to tell us what we should actually put here *)
     Global Instance commutative_group : abelian_group(eq:=W.eq)(op:=W.add)(id:=W.zero)(inv:=inv).
-    Proof using All.
+    Proof using Feq_dec discriminant_nonzero field.
       repeat match goal with
              | _ => solve [ contradiction | trivial | exact _ ]
              | _ => intro
