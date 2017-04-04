@@ -39,7 +39,7 @@ Section language.
             Cast
             is_cast is_const genericize_op
             failf t1 e1 args2).
-  Proof.
+  Proof using wff_Cast.
     unfold Boundify; auto 7 with wf.
   Qed.
 End language.

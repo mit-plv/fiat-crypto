@@ -154,7 +154,7 @@ Section RangeUpdate.
 
   Section BoundedSub.
     Lemma NToWord_Npow2: wzero n = NToWord n (Npow2 n).
-    Proof.
+    Proof using Type.
       induction n as [|n0].
 
       + repeat rewrite shatter_word_0; reflexivity.
@@ -167,7 +167,7 @@ Section RangeUpdate.
     Lemma bWSub_lem: forall (x0 x1: word n) (low0 high1: N),
       (low0 <= wordToN x0)%N -> (wordToN x1 <= high1)%N ->
       (low0 - high1 <= & (x0 ^- x1))%N.
-    Proof.
+    Proof using Type.
       intros.
 
       destruct (Nge_dec (wordToN x1) 1)%N as [e|e].
@@ -244,14 +244,14 @@ Section RangeUpdate.
     Definition getBits (x: N) := N.succ (N.log2 x).
 
     Lemma land_intro_ones: forall x, x = N.land x (N.ones (getBits x)).
-    Proof.
+    Proof using Type.
       intros.
       rewrite N.land_ones_low; [reflexivity|].
       unfold getBits; nomega.
     Qed.
 
     Lemma land_lt_Npow2: forall x k, (N.land x (N.ones k) < 2 ^ k)%N.
-    Proof.
+    Proof using Type.
       intros.
       rewrite N.land_ones.
       apply N.mod_lt.
@@ -262,7 +262,7 @@ Section RangeUpdate.
     Qed.
 
     Lemma land_prop_bound_l: forall a b, (N.land a b < Npow2 (N.to_nat (getBits a)))%N.
-    Proof.
+    Proof using Type.
       intros; rewrite Npow2_N.
       rewrite (land_intro_ones a).
       rewrite <- N.land_comm.
@@ -280,7 +280,7 @@ Section RangeUpdate.
     Qed.
 
     Lemma land_prop_bound_r: forall a b, (N.land a b < Npow2 (N.to_nat (getBits b)))%N.
-    Proof.
+    Proof using Type.
       intros; rewrite N.land_comm; apply land_prop_bound_l.
     Qed.
   End LandOnes.
@@ -295,7 +295,7 @@ Section RangeUpdate.
            else Some (range N (low0 + low1) (high0 + high1))
          end)%N
       (@wplus n).
-  Proof.
+  Proof using Type.
     unfold validBinaryWordOp; intros.
 
     destruct (overflows n (high0 + high1))%N; repeat split; try assumption.
@@ -324,7 +324,7 @@ Section RangeUpdate.
            else None
          end)
       (@wminus n).
-  Proof.
+  Proof using Type.
     unfold validBinaryWordOp; intros.
 
     Ltac kill_preds :=
@@ -371,7 +371,7 @@ Section RangeUpdate.
            Some (range N (low0 * low1) (high0 * high1))%N
           end)
       (@wmult n).
-  Proof.
+  Proof using Type.
     unfold validBinaryWordOp; intros.
     destruct (overflows n (high0 * high1))%N; repeat split.
 
@@ -399,7 +399,7 @@ Section RangeUpdate.
              else (N.shiftr high0 low1)))%N
           end)
       (fun x k => extend (Nat.eq_le_incl _ _ eq_refl) (shiftr x (wordToNat k))).
-  Proof.
+  Proof using Type.
     unfold validBinaryWordOp; intros.
     repeat split; unfold extend; try rewrite wordToN_convS, wordToN_zext.
 
@@ -478,7 +478,7 @@ Section RangeUpdate.
            Some (range N 0%N (if (Nge_dec upper (Npow2 n)) then (N.pred (Npow2 n)) else upper))
           end)
       (@wand n).
-  Proof.
+  Proof using Type.
     unfold validBinaryWordOp; intros.
     repeat split; [apply N_ge_0 | |].
     destruct (lt_dec (N.to_nat (getBits high0)) (N.to_nat (getBits high1))),
@@ -638,7 +638,7 @@ Section BoundedWord.
   Defined.
 
   Lemma just_None_spec: forall x, just x = None -> (x >= Npow2 n)%N.
-  Proof.
+  Proof using Type.
     intros x H; unfold just in *.
     destruct (Nge_dec (N.pred (Npow2 n)) x) as [p|p]; [inversion H |].
     rewrite <- (N.pred_succ x) in p.
@@ -649,21 +649,21 @@ Section BoundedWord.
   Qed.
 
   Lemma just_value_spec: forall x b, just x = Some b -> bw_value b = NToWord n x.
-  Proof.
+  Proof using Type.
     intros x b H; destruct b; unfold just in *;
     destruct (Nge_dec (N.pred (Npow2 n)) x);
     simpl in *; inversion H; subst; reflexivity.
   Qed.
 
   Lemma just_low_spec: forall x b, just x = Some b -> bw_low b = x.
-  Proof.
+  Proof using Type.
     intros x b H; destruct b; unfold just in *;
     destruct (Nge_dec (N.pred (Npow2 n)) x);
     simpl in *; inversion H; subst; reflexivity.
   Qed.
 
   Lemma just_high_spec: forall x b, just x = Some b -> bw_high b = x.
-  Proof.
+  Proof using Type.
     intros x b H; destruct b; unfold just in *;
     destruct (Nge_dec (N.pred (Npow2 n)) x);
     simpl in *; inversion H; subst; reflexivity.

@@ -52,7 +52,7 @@ Module CompileHL.
     Lemma compile_correct {_: Evaluable T} {t} e1 e2 G (wf:HL.wf G e1 e2) :
       List.Forall (fun v => let 'existT _ (x, a) := v in LL.interp_arg a = x) G ->
         LL.interp (compile e2) = HL.interp e1 :> interp_type t.
-    Proof.
+    Proof using Type.
       induction wf;
         repeat match goal with
         | [HIn:In ?x ?l, HForall:Forall _ ?l |- _ ] =>
@@ -171,7 +171,7 @@ Module CompileLL.
         end.
 
       Lemma type_eqb_spec: forall t0 t1, type_eqb t0 t1 = true <-> t0 = t1.
-      Proof.
+      Proof using Type.
         intros; split.
 
         - revert t1; induction t0 as [|t0a IHt0a t0b IHt0b].

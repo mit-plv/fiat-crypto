@@ -53,7 +53,7 @@ Module Extended.
     Ltac t := repeat t_step; Field.fsatz.
 
     Global Instance Equivalence_eq : Equivalence eq.
-    Proof. split; repeat intro; t. Qed.
+    Proof using Feq_dec field nonzero_a. split; repeat intro; t. Qed.
     Global Instance DecidableRel_eq : Decidable.DecidableRel eq.
     Proof. intros P Q; destruct P as [ [ [ [ ] ? ] ? ] ?], Q as [ [ [ [ ] ? ] ? ] ? ]; exact _. Defined.
 
@@ -61,7 +61,7 @@ Module Extended.
       let xy := E.coordinates P in (fst xy, snd xy, 1, fst xy * snd xy).
     Next Obligation. t. Qed.
     Global Instance Proper_from_twisted : Proper (E.eq==>eq) from_twisted.
-    Proof. cbv [from_twisted]; t. Qed.
+    Proof using Type. cbv [from_twisted]; t. Qed.
 
     Program Definition to_twisted (P:point) : Epoint :=
       let XYZT := coordinates P in let T := snd XYZT in
@@ -71,12 +71,12 @@ Module Extended.
       let iZ := Finv Z in ((X*iZ), (Y*iZ)).
     Next Obligation. t. Qed.
     Global Instance Proper_to_twisted : Proper (eq==>E.eq) to_twisted.
-    Proof. cbv [to_twisted]; t. Qed.
+    Proof using Type. cbv [to_twisted]; t. Qed.
 
     Lemma to_twisted_from_twisted P : E.eq (to_twisted (from_twisted P)) P.
-    Proof. cbv [to_twisted from_twisted]; t. Qed.
+    Proof using Type. cbv [to_twisted from_twisted]; t. Qed.
     Lemma from_twisted_to_twisted P : eq (from_twisted (to_twisted P)) P.
-    Proof. cbv [to_twisted from_twisted]; t. Qed.
+    Proof using Type. cbv [to_twisted from_twisted]; t. Qed.
 
     Program Definition zero : point := (0, 1, 1, 0).
     Next Obligation. t. Qed.

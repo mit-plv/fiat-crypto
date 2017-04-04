@@ -139,7 +139,7 @@ Module Projective.
       W.eq
         (to_affine (add P Q H))
         (WeierstrassCurve.W.add (to_affine P) (to_affine Q)).
-    Proof.
+    Proof using Type.
       destruct P as [p ?]; destruct p as [p Z1]; destruct p as [X1 Y1].
       destruct Q as [q ?]; destruct q as [q Z2]; destruct q as [X2 Y2].
       cbv [add opp to_affine] in *; t.

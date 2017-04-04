@@ -73,7 +73,7 @@ Section language.
           (Hctx1_ctx2 : forall n t,
               lookupb ctx1 n t = None <-> lookupb ctx2 n t = None)
       : wff G (interpf_to_phoas failb1 ctx1 e) (interpf_to_phoas failb2 ctx2 e).
-    Proof.
+    Proof using Context1Ok Context2Ok Name_dec base_type_code_dec.
       revert dependent G; revert dependent ctx1; revert dependent ctx2; induction e;
         repeat first [ progress intros
                      | progress destruct_head' and
@@ -95,7 +95,7 @@ Section language.
           (Hctx1 : forall n t, lookupb ctx1 n t = None)
           (Hctx2 : forall n t, lookupb ctx2 n t = None)
       : wf (interp_to_phoas failb1 ctx1 e) (interp_to_phoas failb2 ctx2 e).
-    Proof.
+    Proof using Context1Ok Context2Ok Name_dec base_type_code_dec.
       constructor; intros.
       apply wff_interpf_to_phoas; t.
     Qed.
@@ -105,7 +105,7 @@ Section language.
           (Hwf1 : Named.wf (Context:=Context1) empty e)
           (Hwf2 : Named.wf (Context:=Context2) empty e)
       : wf (interp_to_phoas (Context:=Context1) failb1 empty e) (interp_to_phoas (Context:=Context2) failb2 empty e).
-    Proof.
+    Proof using Context1Ok Context2Ok Name_dec base_type_code_dec.
       apply wf_interp_to_phoas_gen; auto using lookupb_empty.
     Qed.
   End with_var.
@@ -121,7 +121,7 @@ Section language.
           (Hctx : forall var n t, lookupb (ctx var) n t = None)
           (Hwf : forall var, Named.wf (ctx var) e)
       : Wf (InterpToPHOAS_gen failb ctx e).
-    Proof.
+    Proof using ContextOk Name_dec base_type_code_dec.
       intros ??; apply wf_interp_to_phoas_gen; auto.
     Qed.
 
@@ -129,7 +129,7 @@ Section language.
           {t} (e : @Named.expr base_type_code op Name t)
           (Hwf : Named.Wf Context e)
       : Wf (InterpToPHOAS (Context:=Context) failb e).
-    Proof.
+    Proof using ContextOk Name_dec base_type_code_dec.
       intros ??; apply wf_interp_to_phoas; auto.
     Qed.
   End all.

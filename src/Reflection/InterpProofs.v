@@ -22,11 +22,11 @@ Section language.
     : Syntax.interpf interp_op (LetIn (tx:=tx) ex (tC:=tC) eC)
       = dlet x := Syntax.interpf interp_op ex in
         Syntax.interpf interp_op (eC x).
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
 
   Lemma interpf_SmartVarf t v
     : Syntax.interpf interp_op (SmartVarf (t:=t) v) = v.
-  Proof.
+  Proof using Type.
     unfold SmartVarf; induction t;
       repeat match goal with
              | _ => reflexivity
@@ -42,7 +42,7 @@ Section language.
                          t (x, x'))
                  (flatten_binding_list (t := t') (SmartVarVarf v) v))
     : interpf interp_op x = x'.
-  Proof.
+  Proof using Type.
     clear -Hin.
     induction t'; simpl in *; try tauto.
     { intuition (inversion_sigma; inversion_prod; subst; eauto). }
@@ -57,7 +57,7 @@ Section language.
                          t (x, x'))
                  (flatten_binding_list (t := t') (SmartVarVarf v') v))
     : interpf interp_op x = x'.
-  Proof.
+  Proof using Type.
     subst; eapply interpf_SmartVarVarf; eassumption.
   Qed.
 End language.

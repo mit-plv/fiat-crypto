@@ -38,7 +38,7 @@ Section AddChainExp.
       (H:forall i, nth_default id acc i = (nth_default 0 ref i) * x)
       (Hl:Logic.eq (length acc) (length ref)),
       fold_chain id op is acc = (fold_chain 0 N.add is ref) * x.
-  Proof.
+  Proof using Type*.
     induction is; intros; simpl @fold_chain.
     { repeat break_match; specialize (H 0%nat); rewrite ?nth_default_cons, ?nth_default_cons_S in H;
       solve [ simpl length in *; discriminate | apply H | rewrite scalarmult_0_l; reflexivity ]. }
@@ -51,7 +51,7 @@ Section AddChainExp.
   Qed.
 
   Lemma fold_chain_exp x is: fold_chain id op is [x] = (fold_chain 0 N.add is [1]) * x.
-  Proof.
+  Proof using Type*.
     eapply fold_chain_exp'; intros; trivial.
     destruct i; try destruct i; rewrite ?nth_default_cons_S, ?nth_default_cons, ?nth_default_nil;
       rewrite ?scalarmult_1_l, ?scalarmult_0_l; reflexivity.

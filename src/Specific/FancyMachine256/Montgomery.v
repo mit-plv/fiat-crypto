@@ -85,12 +85,12 @@ Section reflected.
   Let assembled_result (v : Tuple.tuple fancy_machine.W 2) : fancy_machine.W := Core.Interp compiled_syntax (modulus, m', fst v, snd v).
 
   Theorem sanity : result = expression ops modulus m'.
-  Proof.
+  Proof using Type.
     reflexivity.
   Qed.
 
   Theorem assembled_sanity : assembled_result = expression ops modulus m'.
-  Proof.
+  Proof using Type.
     reflexivity.
   Qed.
 
@@ -108,7 +108,7 @@ Section reflected.
             (H5 : 0 <= decode v <= 2^256 * modulus).
     Theorem correctness
       : fancy_machine.decode (result v) = (decode v * R') mod modulus.
-    Proof.
+    Proof using H0 H1 H2 H3 H4 H5 props.
       replace m' with (fancy_machine.decode (fancy_machine.ldi m'))
         in H4
         by (apply decode_load_immediate; trivial; exact _).
@@ -116,7 +116,7 @@ Section reflected.
     Qed.
     Theorem assembled_correctness
       : fancy_machine.decode (assembled_result v) = (decode v * R') mod modulus.
-    Proof.
+    Proof using H0 H1 H2 H3 H4 H5 props.
       replace m' with (fancy_machine.decode (fancy_machine.ldi m'))
         in H4
         by (apply decode_load_immediate; trivial; exact _).

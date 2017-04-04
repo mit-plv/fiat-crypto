@@ -32,7 +32,7 @@ Section barrett.
 
     Theorem naive_barrett_reduction_correct
       : a mod n = a - ⌊am⌋ * n.
-    Proof.
+    Proof using n_reasonable.
       apply Zmod_eq_full; assumption.
     Qed.
   End general_idea.
@@ -58,7 +58,7 @@ Section barrett.
             (a_nonneg : 0 <= a).
 
     Lemma k_nonnegative : 0 <= k.
-    Proof.
+    Proof using Type*.
       destruct (Z_lt_le_dec k 0); try assumption.
       rewrite !Z.pow_neg_r in * by lia; lia.
     Qed.
@@ -70,7 +70,7 @@ Section barrett.
         truncated division), [q] is an integer and [r ≡ a mod n]. *)
     Theorem barrett_reduction_equivalent
       : r mod n = a mod n.
-    Proof.
+    Proof using m_good.
       subst r q m.
       rewrite <- !Z.add_opp_r, !Zopp_mult_distr_l, !Z_mod_plus_full by assumption.
       reflexivity.
@@ -78,7 +78,7 @@ Section barrett.
 
     Lemma qn_small
       : q * n <= a.
-    Proof.
+    Proof using a_nonneg k_good m_good n_pos n_reasonable.
       pose proof k_nonnegative; subst q r m.
       assert (0 <= 2^(k-1)) by zero_bounds.
       Z.simplify_fractions_le.
@@ -88,7 +88,7 @@ Section barrett.
     (** N.B. It turns out that it is sufficient to assume [a < 4ᵏ]. *)
     Context (a_small : a < 4^k).
     Lemma q_nice : { b : bool | q = a / n + if b then -1 else 0 }.
-    Proof.
+    Proof using a_nonneg a_small k_good m_good n_pos n_reasonable.
       assert (0 <= (4 ^ k * a / n) mod 4 ^ k < 4 ^ k) by auto with zarith lia.
       assert (0 <= a * (4 ^ k mod n) / n < 4 ^ k) by (auto with zero_bounds zarith lia).
       subst q r m.
@@ -99,7 +99,7 @@ Section barrett.
     Qed.
 
     Lemma r_small : r < 2 * n.
-    Proof.
+    Proof using a_nonneg a_small k_good m_good n_pos n_reasonable q.
       Hint Rewrite (Z.mul_div_eq' a n) using lia : zstrip_div.
       assert (a mod n < n) by auto with zarith lia.
       subst r; rewrite (proj2_sig q_nice); generalize (proj1_sig q_nice); intro; subst q m.
@@ -112,7 +112,7 @@ Section barrett.
       : a mod n = if r <? n
                   then r
                   else r - n.
-    Proof.
+    Proof using a_nonneg a_small k_good m_good n_pos n_reasonable q.
       pose proof r_small. pose proof qn_small.
       destruct (r <? n) eqn:rlt; Z.ltb_to_lt.
       { symmetry; apply (Zmod_unique a n q); subst r; lia. }

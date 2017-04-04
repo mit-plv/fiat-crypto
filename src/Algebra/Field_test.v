@@ -13,33 +13,37 @@ Module _fsatz_test.
     Local Infix "-" := sub. Local Infix "/" := div.
 
     Lemma inv_hyp a b c d (H:a*inv b=inv d*c) (bnz:b<>0) (dnz:d<>0) : a*d = b*c.
-    Proof. fsatz. Qed.
+    Proof using Type*. fsatz. Qed.
 
     Lemma inv_goal a b c d (H:a=b+c) (anz:a<>0) : inv a*d + 1 = (d+b+c)*inv(b+c).
-    Proof. fsatz. Qed.
+    Proof using Type*. fsatz. Qed.
 
     Lemma div_hyp a b c d (H:a/b=c/d) (bnz:b<>0) (dnz:d<>0) : a*d = b*c.
-    Proof. fsatz. Qed.
+    Proof using Type*. fsatz. Qed.
 
     Lemma div_goal a b c d (H:a=b+c) (anz:a<>0) : d/a + 1 = (d+b+c)/(b+c).
-    Proof. fsatz. Qed.
+    Proof using Type*. fsatz. Qed.
 
     Lemma zero_neq_one : 0 <> 1.
-    Proof. fsatz. Qed.
+    Proof using Type*. fsatz. Qed.
 
     Lemma only_two_square_roots x y : x * x = y * y -> x <> opp y -> x = y.
-    Proof. intros; fsatz. Qed.
+    Proof using Type*. intros; fsatz. Qed.
 
     Lemma transitivity_contradiction a b c (ab:a=b) (bc:b=c) (X:a<>c) : False.
-    Proof. fsatz. Qed.
+    Proof using Type*. fsatz. Qed.
 
     Lemma algebraic_contradiction a b c (A:a+b=c) (B:a-b=c) (X:a*a - b*b <> c*c) : False.
-    Proof. fsatz. Qed.
+    Proof using Type*. fsatz. Qed.
 
     Lemma division_by_zero_in_hyps (bad:1/0 + 1 = (1+1)/0): 1 = 1.
-    Proof. fsatz. Qed.
-    Lemma division_by_zero_in_hyps_eq_neq (bad:1/0 + 1 = (1+1)/0): 1 <> 0. fsatz. Qed.
-    Lemma division_by_zero_in_hyps_neq_neq (bad:1/0 <> (1+1)/0): 1 <> 0. fsatz. Qed.
+    Proof using Type*. fsatz. Qed.
+    Lemma division_by_zero_in_hyps_eq_neq (bad:1/0 + 1 = (1+1)/0): 1 <> 0.
+    Proof using Type*.
+ fsatz. Qed.
+    Lemma division_by_zero_in_hyps_neq_neq (bad:1/0 <> (1+1)/0): 1 <> 0.
+    Proof using Type*.
+ fsatz. Qed.
     Import BinNums.
 
     Context {char_ge_16:@Ring.char_ge F eq zero one opp add sub mul 16}.
@@ -50,10 +54,10 @@ Module _fsatz_test.
     Local Notation nine := (three+three+three) (only parsing).
 
     Lemma fractional_equation_solution x (A:x<>1) (B:x<>opp two) (C:x*x+x <> two) (X:nine/(x*x + x - two) = three/(x+two) + seven*inv(x-1)) : x = opp one / (three+two).
-    Proof. fsatz. Qed.
+    Proof using Type*. fsatz. Qed.
 
     Lemma fractional_equation_no_solution x (A:x<>1) (B:x<>opp two) (C:x*x+x <> two) (X:nine/(x*x + x - two) = opp three/(x+two) + seven*inv(x-1)) : False.
-    Proof. fsatz. Qed.
+    Proof using Type*. fsatz. Qed.
 
     Local Notation "x ^ 2" := (x*x).
     Lemma recursive_nonzero_solving
@@ -62,7 +66,7 @@ Module _fsatz_test.
           (Hsqrt : sqrt_a^2 = a)
           (Hfrac : (sqrt_a / y)^2 <> d)
       : x^2 = (y^2 - one) / (d * y^2 - a).
-    Proof. fsatz. Qed.
+    Proof using eq_dec fld. fsatz. Qed.
 
     Local Notation "x ^ 3" := (x^2*x).
     Lemma weierstrass_associativity_main a b x1 y1 x2 y2 x4 y4
@@ -86,6 +90,6 @@ Module _fsatz_test.
           x9 (Hx9: x9 = λ9^2-x1-x6)
           y9 (Hy9: y9 = λ9*(x1-x9)-y1)
       : x7 = x9 /\ y7 = y9.
-    Proof. fsatz_prepare_hyps; split; fsatz. Qed.
+    Proof using Type*. fsatz_prepare_hyps; split; fsatz. Qed.
   End _test.
 End _fsatz_test.

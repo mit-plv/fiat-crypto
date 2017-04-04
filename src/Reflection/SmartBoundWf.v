@@ -44,7 +44,7 @@ Section language.
     : wff G
           (@bound_op ovar1 src1 dst1 src2 dst2 opc1 opc2 e1 args2)
           (@bound_op ovar2 src1 dst1 src2 dst2 opc1 opc2 e2 args2).
-  Proof.
+  Proof using wff_Cast.
     unfold SmartBound.bound_op;
       repeat first [ progress break_innermost_match
                    | assumption
@@ -73,7 +73,7 @@ Section language.
              (t:=t)
              (interpf_smart_unbound_exprf input_bounds
                                           (SmartVarfMap (fun t => Var) x2))).
-  Proof.
+  Proof using wff_Cast.
     clear -wff_Cast.
     unfold SmartPairf, SmartVarfMap, interpf_smart_unbound_exprf; induction t;
       repeat match goal with
@@ -98,7 +98,7 @@ Section language.
           (SmartPairf
              (var:=var2)
              (interpf_smart_bound_exprf x2 output_bounds)).
-  Proof.
+  Proof using wff_Cast.
     clear -wff_Cast.
     unfold SmartPairf, SmartVarfMap, interpf_smart_bound_exprf; induction t;
       repeat match goal with
@@ -119,7 +119,7 @@ Section language.
         (Hwf : wf e1 e2)
     : wf (@smart_bound var1 t1 e1 e_bounds input_bounds)
          (@smart_bound var2 t1 e2 e_bounds input_bounds).
-  Proof.
+  Proof using wff_Cast.
     clear -wff_Cast Hwf.
     destruct Hwf; unfold SmartBound.smart_bound.
     repeat constructor; auto with wf; intros;
@@ -130,7 +130,7 @@ Section language.
   Lemma Wf_SmartBound {t1} e input_bounds
         (Hwf : Wf e)
     : Wf (@SmartBound t1 e input_bounds).
-  Proof.
+  Proof using wff_Cast.
     intros var1 var2; specialize (Hwf var1 var2).
     unfold SmartBound.SmartBound.
     apply wf_smart_bound; assumption.

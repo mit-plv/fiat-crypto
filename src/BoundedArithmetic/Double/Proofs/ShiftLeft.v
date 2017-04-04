@@ -26,7 +26,7 @@ Section shl.
           {isor : is_bitwise_or or}.
 
   Global Instance is_shift_left_immediate_double : is_shift_left_immediate (shl_double n).
-  Proof.
+  Proof using Type*.
     intros r count H; hnf in H.
     assert (0 < 2^count) by auto with zarith.
     assert (0 < 2^(n+count)) by auto with zarith.

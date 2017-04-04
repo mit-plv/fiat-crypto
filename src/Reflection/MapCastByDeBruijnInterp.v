@@ -78,7 +78,7 @@ Section language.
       Interp interp_op_bounds e input_bounds = b
       /\ @inbounds _ b (Interp interp_op e v)
       /\ cast_back _ _ (Interp interp_op e' v') = (Interp interp_op e v).
-  Proof.
+  Proof using base_type_code_lb interp_op_bounds_correct pull_cast_back.
     unfold MapCastByDeBruijn.MapCast, MapCastCompile, MapCastDoCast, MapCastDoInterp, option_map; intros b e'.
     break_innermost_match; try congruence; intros ? v v'.
     inversion_option; inversion_sigma; subst; simpl in *; intros.

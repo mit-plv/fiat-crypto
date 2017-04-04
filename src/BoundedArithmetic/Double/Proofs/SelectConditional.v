@@ -12,7 +12,7 @@ Section select_conditional.
 
   Global Instance is_select_conditional_double
     : is_select_conditional selc_double.
-  Proof.
+  Proof using Type*.
     intros b x y.
     destruct n.
     { rewrite !(tuple_decoder_n_O (W:=W) 2); now destruct b. }

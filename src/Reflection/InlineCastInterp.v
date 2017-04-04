@@ -46,11 +46,11 @@ Section language.
 
   Lemma cast_val_id A (v : exprf _ _ (Tbase A))
     : cast_val A A (interpf interp_op v) = interpf interp_op v.
-  Proof. rewrite <- !interpf_cast, !interpf_Cast_id; reflexivity. Qed.
+  Proof using interpf_Cast_id interpf_cast. rewrite <- !interpf_cast, !interpf_Cast_id; reflexivity. Qed.
 
   Lemma interpf_squash_cast a b c e1
     : interpf interp_op (@squash_cast _ a b c e1) = interpf interp_op (Cast _ b c (Cast _ a b e1)).
-  Proof.
+  Proof using cast_val_squash interpf_Cast_id interpf_cast.
     unfold squash_cast;
       repeat first [ progress break_innermost_match
                    | intro
@@ -67,7 +67,7 @@ Section language.
   Lemma interpf_maybe_push_cast t e e'
     : @maybe_push_cast _ t e = Some e'
       -> interpf interp_op e' = interpf interp_op e.
-  Proof.
+  Proof using cast_val_squash interpf_Cast_id interpf_cast is_cast_correct.
     revert e'; induction e;
       repeat first [ reflexivity
                    | discriminate
@@ -97,7 +97,7 @@ Section language.
   Lemma interpf_exprf_of_push_cast t e
     : interpf interp_op (exprf_of_inline_directive (@push_cast _ t e))
       = interpf interp_op e.
-  Proof.
+  Proof using cast_val_squash interpf_Cast_id interpf_cast is_cast_correct.
     unfold push_cast; break_innermost_match; simpl; try reflexivity.
     match goal with H : _ |- _ => apply interpf_maybe_push_cast in H end.
     assumption.
@@ -109,7 +109,7 @@ Section language.
     : forall x,
       Interp interp_op (@InlineCast t e) x
       = Interp interp_op e x.
-  Proof. apply InterpInlineConstGen; auto. Qed.
+  Proof using cast_val_squash interpf_Cast_id interpf_cast is_cast_correct. apply InterpInlineConstGen; auto. Qed.
 End language.
 
 Hint Rewrite @interpf_exprf_of_push_cast @InterpInlineCast using solve [ eassumption | eauto with wf ] : reflective_interp.

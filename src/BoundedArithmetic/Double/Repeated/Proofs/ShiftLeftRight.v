@@ -32,7 +32,7 @@ Section shift_left_right.
   Fixpoint is_shift_left_right_immediate_repeated_double {exp : nat}
     : (is_shift_left_immediate (shift_left_immediate_repeated_double (exp:=exp))
        * is_shift_right_immediate (shift_right_immediate_repeated_double (exp:=exp)))%type.
-  Proof. is_cls_fixpoint_t2 decode n exp is_shl is_shr (@is_shift_left_right_immediate_repeated_double). Qed.
+  Proof using Type*. is_cls_fixpoint_t2 decode n exp is_shl is_shr (@is_shift_left_right_immediate_repeated_double). Qed.
   Global Instance is_shift_left_immediate_repeated_double {exp : nat}
     : is_shift_left_immediate (shift_left_immediate_repeated_double (exp:=exp))
     := fst (@is_shift_left_right_immediate_repeated_double exp).

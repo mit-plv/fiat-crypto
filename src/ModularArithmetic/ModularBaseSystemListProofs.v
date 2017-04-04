@@ -26,7 +26,7 @@ Section LengthProofs.
   Local Notation base := (base_from_limb_widths limb_widths).
 
   Lemma length_encode {x} : length (encode x) = length limb_widths.
-  Proof.
+  Proof using Type.
     cbv [encode encodeZ]; intros.
     rewrite encode'_spec;
       auto using encode'_length, limb_widths_nonneg, Nat.eq_le_incl, base_from_limb_widths_length.
@@ -35,7 +35,7 @@ Section LengthProofs.
   Lemma length_reduce : forall us,
       (length limb_widths <= length us <= length (ext_base limb_widths))%nat ->
       (length (reduce us) = length limb_widths)%nat.
-  Proof.
+  Proof using Type.
     rewrite extended_base_length.
     unfold reduce; intros.
     rewrite add_length_exact.
@@ -48,7 +48,7 @@ Section LengthProofs.
       length u = length limb_widths
       -> length v = length limb_widths
       -> length (mul u v) = length limb_widths.
-  Proof.
+  Proof using Type.
     cbv [mul]; intros.
     apply length_reduce.
     destruct u; try congruence.
@@ -75,7 +75,7 @@ Section LengthProofs.
       length u = length limb_widths
       -> length v = length limb_widths
       -> length (sub mm u v) = length limb_widths.
-  Proof.
+  Proof using Type*.
     cbv [sub]; intros.
     rewrite sub_length, add_length_exact.
     repeat rewrite Max.max_r; omega.
@@ -83,19 +83,19 @@ Section LengthProofs.
   End Sub.
 
   Lemma length_carry_and_reduce {us}: forall i, length (carry_and_reduce i us) = length us.
-  Proof. intros; unfold carry_and_reduce; autorewrite with distr_length; reflexivity. Qed.
+  Proof using Type. intros; unfold carry_and_reduce; autorewrite with distr_length; reflexivity. Qed.
   Hint Rewrite @length_carry_and_reduce : distr_length.
 
   Lemma length_carry {u i} :
     length u = length limb_widths
     -> length (carry i u) = length limb_widths.
-  Proof. intros; unfold carry; break_if; autorewrite with distr_length; omega. Qed.
+  Proof using Type. intros; unfold carry; break_if; autorewrite with distr_length; omega. Qed.
   Hint Rewrite @length_carry : distr_length.
 
   Lemma length_carry_sequence {u i} :
     length u = length limb_widths
     -> length (carry_sequence i u) = length limb_widths.
-  Proof.
+  Proof using Type.
    induction i; intros; unfold carry_sequence;
      simpl; autorewrite with distr_length; auto. Qed.
   Hint Rewrite @length_carry_sequence : distr_length.
@@ -103,11 +103,11 @@ Section LengthProofs.
   Lemma length_carry_full {u} :
     length u = length limb_widths
     -> length (carry_full u) = length limb_widths.
-  Proof. intros; unfold carry_full; autorewrite with distr_length; congruence. Qed.
+  Proof using Type. intros; unfold carry_full; autorewrite with distr_length; congruence. Qed.
   Hint Rewrite @length_carry_full : distr_length.
 
   Lemma length_modulus_digits : length modulus_digits = length limb_widths.
-  Proof.
+  Proof using Type.
     intros; unfold modulus_digits, encodeZ.
     rewrite encode'_spec, encode'_length;
       auto using encode'_length, limb_widths_nonneg, Nat.eq_le_incl, base_from_limb_widths_length.
@@ -117,7 +117,7 @@ Section LengthProofs.
   Lemma length_conditional_subtract_modulus {int_width u cond} :
     length u = length limb_widths
     -> length (conditional_subtract_modulus int_width u cond) = length limb_widths.
-  Proof.
+  Proof using Type.
     intros; unfold conditional_subtract_modulus.
     rewrite map2_length, map_length, length_modulus_digits.
     apply Min.min_case; omega.
@@ -127,7 +127,7 @@ Section LengthProofs.
   Lemma length_freeze {int_width u} :
     length u = length limb_widths
     -> length (freeze int_width u) = length limb_widths.
-  Proof.
+  Proof using Type.
     intros; unfold freeze; repeat autorewrite with distr_length; congruence.
   Qed.
 
@@ -135,7 +135,7 @@ Section LengthProofs.
                              {target_widths_nonneg : forall x, In x target_widths -> 0 <= x}
                              {pf us},
       length (pack target_widths_nonneg pf us) = length target_widths.
-  Proof.
+  Proof using Type.
     cbv [pack]; intros.
     apply length_convert.
   Qed.
@@ -144,7 +144,7 @@ Section LengthProofs.
                              {target_widths_nonneg : forall x, In x target_widths -> 0 <= x}
                              {pf us},
       length (unpack target_widths_nonneg pf us) = length limb_widths.
-  Proof.
+  Proof using Type.
     cbv [pack]; intros.
     apply length_convert.
   Qed.
@@ -159,7 +159,7 @@ Section ModulusDigitsProofs.
   Local Hint Resolve limb_widths_nonneg.
 
   Lemma decode_modulus_digits : decode' base modulus_digits = modulus.
-  Proof.
+  Proof using Type.
     cbv [modulus_digits].
     pose proof c_pos. pose proof modulus_pos.
     rewrite encodeZ_spec by eauto using limb_widths_nonnil, limb_widths_good.
@@ -170,14 +170,14 @@ Section ModulusDigitsProofs.
   Qed.
 
   Lemma bounded_modulus_digits : bounded limb_widths modulus_digits.
-  Proof.
+  Proof using Type.
     apply bounded_encodeZ; auto using limb_widths_nonneg.
     pose proof modulus_pos; omega.
   Qed.
 
   Lemma modulus_digits_ones : forall i, (0 < i < length limb_widths)%nat ->
     nth_default 0 modulus_digits i = Z.ones (nth_default 0 limb_widths i).
-  Proof.
+  Proof using Type*.
     repeat match goal with
            | |- _ => progress (cbv [BaseSystem.decode]; intros)
            | |- _ => progress autorewrite with Ztestbit
@@ -212,7 +212,7 @@ Section ModulusDigitsProofs.
   Lemma bounded_le_modulus_digits : forall us i, length us = length limb_widths ->
     bounded limb_widths us -> (0 < i < length limb_widths)%nat ->
     nth_default 0 us i <= nth_default 0 modulus_digits i.
-  Proof.
+  Proof using Type*.
     intros until 0; rewrite bounded_iff; intros.
     rewrite modulus_digits_ones by omega.
     specialize (H0 i).
@@ -247,7 +247,7 @@ Section ModulusComparisonProofs.
     length vs = length limb_widths -> bounded limb_widths vs ->
     (Z.compare (decode' base (firstn i us)) (decode' base (firstn i vs))
      = compare' us vs i).
-  Proof.
+  Proof using Type.
     induction i;
       repeat match goal with
              | |- _ => progress intros
@@ -275,7 +275,7 @@ Section ModulusComparisonProofs.
     length vs = length limb_widths -> bounded limb_widths vs ->
     (Z.compare (decode' base us) (decode' base vs)
      = compare' us vs (length limb_widths)).
-  Proof.
+  Proof using Type.
     intros.
     rewrite <-decode_firstn_compare' by (auto || omega).
     rewrite !firstn_all by auto.
@@ -284,14 +284,14 @@ Section ModulusComparisonProofs.
 
   Lemma ge_modulus'_0 : forall {A} f us i,
     ge_modulus' (A := A) f us 0 i = f 0.
-  Proof.
+  Proof using Type.
     induction i; intros; simpl; cbv [cmovne cmovl]; break_if; auto.
   Qed.
 
   Lemma ge_modulus'_01 : forall {A} f us i b,
     (b = 0 \/ b = 1) ->
     (ge_modulus' (A := A) f us b i = f 0 \/ ge_modulus' (A := A) f us b i = f 1).
-  Proof.
+  Proof using Type.
     induction i; intros;
       try intuition (subst; cbv [ge_modulus' LetIn.Let_In cmovl cmovne]; break_if; tauto).
     simpl; cbv [LetIn.Let_In cmovl cmovne].
@@ -300,7 +300,7 @@ Section ModulusComparisonProofs.
 
   Lemma ge_modulus_01 : forall us,
     (ge_modulus us = 0 \/ ge_modulus us = 1).
-  Proof.
+  Proof using Type.
     cbv [ge_modulus]; intros; apply ge_modulus'_01; tauto.
   Qed.
 
@@ -309,7 +309,7 @@ Section ModulusComparisonProofs.
     forall i, (i < length us)%nat -> ge_modulus' id us 1 i = 1 ->
               forall j, (j <= i)%nat ->
                         nth_default 0 modulus_digits j <= nth_default 0 us j.
-  Proof.
+  Proof using Type.
     induction i;
       repeat match goal with
              | |- _ => progress intros; simpl in *
@@ -328,7 +328,7 @@ Section ModulusComparisonProofs.
   Lemma ge_modulus'_compare' : forall us, length us = length limb_widths -> bounded limb_widths us ->
     forall i, (i < length limb_widths)%nat ->
     (ge_modulus' id us 1 i = 0 <-> compare' us modulus_digits (S i) = Lt).
-  Proof.
+  Proof using Type*.
     induction i;
       repeat match goal with
              | |- _ => progress (intros; cbv [LetIn.Let_In id cmovne cmovl])
@@ -360,7 +360,7 @@ Section ModulusComparisonProofs.
    Lemma ge_modulus_spec : forall u, length u = length limb_widths ->
      bounded limb_widths u ->
     (ge_modulus u = 0 <-> 0 <= BaseSystem.decode base u < modulus).
-  Proof.
+  Proof using Type*.
     cbv [ge_modulus]; intros.
     assert (0 < length limb_widths)%nat
       by (pose proof limb_widths_nonnil; destruct limb_widths;
@@ -391,14 +391,14 @@ Section ConditionalSubtractModulusProofs.
 
   Lemma map2_sub_eq : forall us vs, length us = length vs ->
     map2 (fun x y => x - y) us vs = BaseSystem.sub us vs.
-  Proof.
+  Proof using lt_1_length_limb_widths.
     induction us; destruct vs; boring; try omega.
   Qed.
 
   (* TODO : ListUtil *)
   Lemma map_id_strong : forall {A} f (xs : list A),
     (forall x, In x xs -> f x = x) -> map f xs = xs.
-  Proof.
+  Proof using Type.
     induction xs; intros; auto.
     simpl; f_equal; auto using in_eq, in_cons.
   Qed.
@@ -406,7 +406,7 @@ Section ConditionalSubtractModulusProofs.
   Lemma bounded_digit_fits : forall us,
     length us = length limb_widths -> bounded limb_widths us ->
     forall x, In x us -> 0 <= x < 2 ^ B.
-  Proof.
+  Proof using B_compat c_upper_bound lt_1_length_limb_widths.
     intros.
     let i := fresh "i" in
     match goal with H : In ?x ?us, Hb : bounded _ _ |- _ =>
@@ -421,7 +421,7 @@ Section ConditionalSubtractModulusProofs.
   Lemma map_land_max_ones : forall us,
     length us = length limb_widths ->
     bounded limb_widths us -> map (Z.land (Z.ones B)) us = us.
-  Proof.
+  Proof using Type*.
     repeat match goal with
            | |- _ => progress intros
            | |- _ => apply map_id_strong
@@ -433,7 +433,7 @@ Section ConditionalSubtractModulusProofs.
   Qed.
 
   Lemma map_land_zero : forall us, map (Z.land 0) us = zeros (length us).
-  Proof.
+  Proof using Type.
     induction us; boring.
   Qed.
 
@@ -443,7 +443,7 @@ Section ConditionalSubtractModulusProofs.
     length u = length limb_widths ->
     BaseSystem.decode base (conditional_subtract_modulus B u cond) =
     BaseSystem.decode base u - cond * modulus.
-  Proof.
+  Proof using Type*.
     repeat match goal with
            | |- _ => progress (cbv [conditional_subtract_modulus neg]; intros)
            | |- _ => destruct cond_01; subst
@@ -463,7 +463,7 @@ Section ConditionalSubtractModulusProofs.
       length u = length limb_widths ->
       bounded limb_widths u ->
       bounded limb_widths (conditional_subtract_modulus B u (ge_modulus u)).
-  Proof.
+  Proof using Type*.
     repeat match goal with
            | |- _ => progress (cbv [conditional_subtract_modulus neg]; intros)
            | |- _ => unique pose proof bounded_modulus_digits
@@ -491,7 +491,7 @@ Section ConditionalSubtractModulusProofs.
   Lemma bounded_mul2_modulus : forall u, length u = length limb_widths ->
     bounded limb_widths u -> ge_modulus u = 1 ->
     modulus <= BaseSystem.decode base u < 2 * modulus.
-  Proof.
+  Proof using c_upper_bound lt_1_length_limb_widths.
     intros.
     pose proof (@decode_upper_bound _ limb_widths_nonneg u).
     specialize_by auto.
@@ -525,7 +525,7 @@ Section ConditionalSubtractModulusProofs.
     length u = length limb_widths ->
     bounded limb_widths u ->
     ge_modulus (conditional_subtract_modulus B u (ge_modulus u)) = 0.
-  Proof.
+  Proof using Type*.
     intros.
     rewrite ge_modulus_spec by auto using length_conditional_subtract_modulus, conditional_subtract_modulus_preserves_bounded.
     pose proof (ge_modulus_01 u) as Hgm01.

@@ -38,7 +38,7 @@ Section language.
   Lemma wff_squash_cast var1 var2 a b c e1 e2 G
         (Hwf : wff G e1 e2)
     : wff G (@squash_cast var1 a b c e1) (@squash_cast var2 a b c e2).
-  Proof.
+  Proof using wff_Cast.
     unfold squash_cast; break_innermost_match; auto with wf.
   Qed.
 
@@ -51,7 +51,7 @@ Section language.
       | None, None => True
       | Some _, None | None, Some _ => False
       end.
-  Proof.
+  Proof using wff_Cast.
     induction Hwf;
       repeat match goal with
              | [ |- wff _ (squash_cast _ _ _ _) (squash_cast _ _ _ _) ]
@@ -81,7 +81,7 @@ Section language.
     : @maybe_push_cast var1 t e1 = Some e1'
       -> @maybe_push_cast var2 t e2 = Some e2'
       -> wff G e1' e2'.
-  Proof.
+  Proof using wff_Cast.
     intros H0 H1; eapply wff_maybe_push_cast_match in Hwf.
     rewrite H0, H1 in Hwf; assumption.
   Qed.
@@ -103,7 +103,7 @@ Section language.
   Lemma wff_push_cast var1 var2 t e1 e2 G
         (Hwf : wff G e1 e2)
     : wff_inline_directive G (@push_cast var1 t e1) (@push_cast var2 t e2).
-  Proof.
+  Proof using wff_Cast.
     pose proof (wff_maybe_push_cast_match Hwf).
     unfold push_cast; destruct t;
       break_innermost_match;
@@ -119,13 +119,13 @@ Section language.
     : wff G
           (exprf_of_inline_directive (@push_cast var1 t e1))
           (exprf_of_inline_directive (@push_cast var2 t e2)).
-  Proof. apply wff_push_cast; assumption. Qed.
+  Proof using wff_Cast. apply wff_push_cast; assumption. Qed.
 
   Local Hint Resolve wff_push_cast.
 
   Lemma Wf_InlineCast {t} e (Hwf : Wf e)
     : Wf (@InlineCast t e).
-  Proof. apply Wf_InlineConstGen; auto. Qed.
+  Proof using wff_Cast. apply Wf_InlineConstGen; auto. Qed.
 End language.
 
 Hint Resolve Wf_InlineCast : wf.

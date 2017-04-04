@@ -156,7 +156,7 @@ Section language.
           -> @wff base_type_code op var1 var2 G t2 (eq_rect _ exprf (unnatize_exprf (List.length G) e1) _ p) (unnatize_exprf (List.length G) e2)
       | None => True
       end.
-  Proof.
+  Proof using base_type_eq_semidec_is_dec op_beq_bl.
     cbv zeta.
     destruct e1 as [ | | ? ? ? args | tx ex tC eC | ? ex ? ey ],
                    e2 as [ | | ? ? ? args' | tx' ex' tC' eC' | ? ex' ? ey' ]; simpl;
@@ -192,7 +192,7 @@ Section language.
           -> @wf base_type_code op var1 var2 t2 (eq_rect _ expr (unnatize_expr 0 e1) _ p) (unnatize_expr 0 e2)
       | None => True
       end.
-  Proof.
+  Proof using base_type_eq_semidec_is_dec op_beq_bl.
     destruct e1 as [ tx tR f ],
                    e2 as [ tx' tR' f' ]; simpl; try solve [ exact I ].
     pose proof (fun x x'
@@ -223,7 +223,7 @@ Section Wf.
     : (forall var1 var2,
           to_prop (@reflect_wfT base_type_code base_type_eq_semidec_transparent op op_beq var1 var2 nil t t (e _) (e _)))
       -> Wf (fun var => unnatize_expr 0 (e (fun t => (nat * var t)%type))).
-  Proof.
+  Proof using base_type_eq_semidec_is_dec op_beq_bl.
     intros H var1 var2; specialize (H var1 var2).
     pose proof (@reflect_wf base_type_code base_type_eq_semidec_transparent base_type_eq_semidec_is_dec op op_beq op_beq_bl var1 var2 t t (e _) (e _)) as H'.
     rewrite type_eq_semidec_transparent_refl in H' by assumption; simpl in *.
@@ -237,7 +237,7 @@ Section Wf.
           unnatize_expr 0 (e (fun t => (nat * var1 t)%type)) = e _
           /\ to_prop (@reflect_wfT base_type_code base_type_eq_semidec_transparent op op_beq var1 var2 nil t t (e _) (e _)))
       -> Wf e.
-  Proof.
+  Proof using base_type_eq_semidec_is_dec op_beq_bl.
     intros H var1 var2.
     rewrite <- (proj1 (H var1 var2)), <- (proj1 (H var2 var2)).
     apply reflect_Wf_unnatize, H.

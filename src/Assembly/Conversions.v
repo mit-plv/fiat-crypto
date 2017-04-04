@@ -206,7 +206,7 @@ Module LLConversions.
       Lemma convertArg_interp' : forall {t V} f (x: @arg A V t),
           (interp_arg' (fun z => toT (fromT (f z))) (@convertArg A B EA EB _ t x))
             = @convertVar A B EA EB t (interp_arg' f x).
-      Proof.
+      Proof using Type.
         intros.
         induction x as [| |t0 t1 i0 i1]; simpl; [reflexivity|reflexivity|].
         induction EA, EB; simpl; f_equal; assumption.
@@ -214,7 +214,7 @@ Module LLConversions.
 
       Lemma convertArg_var: forall {A B EA EB t} V (x: @interp_type A t),
           @convertArg A B EA EB V t (uninterp_arg x) = uninterp_arg (var := V) (@convertVar A B EA EB t x).
-      Proof.
+      Proof using Type.
         induction t as [|t0 IHt_0 t1 IHt_1]; simpl; intros; [reflexivity|].
         induction x as [a b]; simpl; f_equal;
             induction t0 as [|t0a IHt0_0 t0b IHt0_1],
@@ -241,7 +241,7 @@ Module LLConversions.
       Admitted.
 
       Lemma roundTrip_0 : @toT Correctness.B BE (@fromT Z ZE 0%Z) <> None.
-      Proof.
+      Proof using Type.
         intros; unfold toT, fromT, BE, ZE, BoundedEvaluable, ZEvaluable, bwFromRWV;
           simpl; try break_match; simpl; try abstract (intro Z; inversion Z);
           pose proof (Npow2_gt0 n); simpl in *; nomega.
@@ -447,7 +447,7 @@ Module LLConversions.
           check (f := rangeOf) (@convertExpr Z R _ _ _ _ E) = true
         -> typeMap (fun x => NToWord n (Z.to_N x)) (zinterp E)
             = wordInterp (ZToWord _ E).
-      Proof.
+      Proof using Type.
         intros.
         apply RangeInterp_bounded_spec.
         apply check_spec.

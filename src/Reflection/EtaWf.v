@@ -53,13 +53,13 @@ Section language.
           : wf (expr_eta_gen eta exprf_eta1 (t:=t) e1)
                (expr_eta_gen eta exprf_eta2 (t:=t) e2)
             <-> wf e1 e2.
-        Proof. unfold expr_eta_gen; t; inversion_wf_step; t. Qed.
+        Proof using Type*. unfold expr_eta_gen; t; inversion_wf_step; t. Qed.
       End gen_type.
 
       Lemma wff_exprf_eta_gen {t e1 e2} G
         : wff G (exprf_eta_gen eta (t:=t) e1) (exprf_eta_gen eta (t:=t) e2)
           <-> @wff base_type_code op var1 var2 G t e1 e2.
-      Proof.
+      Proof using eq_eta.
         revert G; induction e1; first [ progress invert_expr | destruct e2 ];
           t; inversion_wf_step; t.
       Qed.
@@ -71,22 +71,22 @@ Section language.
     Lemma wff_exprf_eta {G t e1 e2}
       : wff G (exprf_eta (t:=t) e1) (exprf_eta (t:=t) e2)
         <-> @wff base_type_code op var1 var2 G t e1 e2.
-    Proof. setoid_rewrite wff_exprf_eta_gen; reflexivity. Qed.
+    Proof using Type. setoid_rewrite wff_exprf_eta_gen; reflexivity. Qed.
     Lemma wff_exprf_eta' {G t e1 e2}
       : wff G (exprf_eta' (t:=t) e1) (exprf_eta' (t:=t) e2)
         <-> @wff base_type_code op var1 var2 G t e1 e2.
-    Proof. setoid_rewrite wff_exprf_eta_gen; intuition. Qed.
+    Proof using Type. setoid_rewrite wff_exprf_eta_gen; intuition. Qed.
     Lemma wf_expr_eta {t e1 e2}
       : wf (expr_eta (t:=t) e1) (expr_eta (t:=t) e2)
         <-> @wf base_type_code op var1 var2 t e1 e2.
-    Proof.
+    Proof using Type.
       unfold expr_eta, exprf_eta.
       setoid_rewrite wf_expr_eta_gen; intuition (solve [ eapply wff_exprf_eta_gen; [ | eassumption ]; intuition ] || eauto).
     Qed.
     Lemma wf_expr_eta' {t e1 e2}
       : wf (expr_eta' (t:=t) e1) (expr_eta' (t:=t) e2)
         <-> @wf base_type_code op var1 var2 t e1 e2.
-    Proof.
+    Proof using Type.
       unfold expr_eta', exprf_eta'.
       setoid_rewrite wf_expr_eta_gen; intuition (solve [ eapply wff_exprf_eta_gen; [ | eassumption ]; intuition ] || eauto).
     Qed.
@@ -97,7 +97,7 @@ Section language.
         (eq_eta : forall A B x, @eta A B x = x)
         {t e}
     : Wf (ExprEtaGen (@eta) e) <-> @Wf base_type_code op t e.
-  Proof.
+  Proof using Type.
     split; intros H var1 var2; specialize (H var1 var2);
       revert H; eapply wf_expr_eta_gen; try eassumption; intros;
         symmetry; apply wff_exprf_eta_gen;
@@ -106,13 +106,13 @@ Section language.
   Lemma Wf_ExprEta_iff
         {t e}
     : Wf (ExprEta e) <-> @Wf base_type_code op t e.
-  Proof.
+  Proof using Type.
     unfold Wf; setoid_rewrite wf_expr_eta; reflexivity.
   Qed.
   Lemma Wf_ExprEta'_iff
         {t e}
     : Wf (ExprEta' e) <-> @Wf base_type_code op t e.
-  Proof.
+  Proof using Type.
     unfold Wf; setoid_rewrite wf_expr_eta'; reflexivity.
   Qed.
   Definition Wf_ExprEta {t e} : Wf e -> Wf (ExprEta e) := proj2 (@Wf_ExprEta_iff t e).

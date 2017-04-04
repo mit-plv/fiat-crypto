@@ -44,7 +44,7 @@ Module LL.
       end.
 
     Lemma interp_arg_spec: forall {t} (x: arg t), interp_arg x = interp_arg' id x.
-    Proof.
+    Proof using Type.
       intros; induction x; unfold id in *; simpl; repeat f_equal;
         first [reflexivity| assumption].
     Qed.
@@ -82,7 +82,7 @@ Module LL.
       end.
 
     Lemma interp_spec: forall {t} (e: expr t), interp e = interp' id e.
-    Proof.
+    Proof using Type.
       intros; induction e; unfold id in *; simpl; repeat f_equal;
         try rewrite H; simpl; repeat f_equal;
         rewrite interp_arg_spec; repeat f_equal.
@@ -133,7 +133,7 @@ Module LL.
         match_arg_Prod a = (a1, a2) <-> a = Pair a1 a2
       | _ => fun _ => True
       end a.
-    Proof.
+    Proof using Type.
       unfold match_arg_Prod; destruct a;
         repeat match goal with
         | _ => split
@@ -147,7 +147,7 @@ Module LL.
 
     Lemma match_arg_Prod_correct {var t1 t2} (a:arg T var (Prod t1 t2)) (a1:arg T var t1) (a2:arg T var t2) :
       match_arg_Prod a = (a1, a2) <-> a = Pair a1 a2.
-    Proof.
+    Proof using Type.
       pose proof (match_arg_Prod_correct_helper a) as H; simpl in H; rewrite H; reflexivity.
     Qed.
   End match_arg.

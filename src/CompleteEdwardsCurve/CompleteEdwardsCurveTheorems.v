@@ -70,7 +70,7 @@ Module E.
     Ltac t := repeat t_step; fsatz.
 
     Global Instance associative_add : is_associative(eq:=E.eq)(op:=add).
-    Proof.
+    Proof using Type.
       (* [nsatz_compute] for a denominator runs out of 6GB of stack space *)
       (* COQBUG: https://coq.inria.fr/bugs/show_bug.cgi?id=5359 *)
       Add Field _field : (Algebra.Field.field_theory_for_stdlib_tactic (T:=F)).
@@ -83,24 +83,24 @@ Module E.
     Qed.
 
     Global Instance edwards_curve_abelian_group : abelian_group (eq:=eq)(op:=add)(id:=zero)(inv:=opp).
-    Proof. t. Qed.
+    Proof using Type. t. Qed.
 
-    Global Instance Proper_coordinates : Proper (eq==>fieldwise (n:=2) Feq) coordinates. Proof. repeat t_step. Qed.
+    Global Instance Proper_coordinates : Proper (eq==>fieldwise (n:=2) Feq) coordinates. Proof using Type. repeat t_step. Qed.
 
     Global Instance Proper_mul : Proper (Logic.eq==>eq==>eq) mul.
-    Proof.
+    Proof using Type.
       intros n n'; repeat intro; subst n'.
       induction n; (reflexivity || eapply (_:Proper (eq==>eq==>eq) add); eauto).
     Qed.
 
     Global Instance mul_is_scalarmult : @is_scalarmult point eq add zero mul.
-    Proof. split; intros; (reflexivity || exact _). Qed.
+    Proof using Type. split; intros; (reflexivity || exact _). Qed.
 
     Section PointCompression.
       Local Notation "x ^ 2" := (x*x).
 
       Lemma solve_correct x y : onCurve x y <-> (x^2 = (y^2-1) / (d*y^2-a)).
-      Proof. destruct square_a as [sqrt_a]; pose proof (nonsquare_d (sqrt_a/y));
+      Proof using Feq_dec field nonsquare_d nonzero_a square_a. destruct square_a as [sqrt_a]; pose proof (nonsquare_d (sqrt_a/y));
                split; intros; fsatz. Qed.
 
       (* TODO: move *)
@@ -110,11 +110,11 @@ Module E.
       Lemma exist_option_Some {A} P (x:option A) pf s
             (H:Logic.eq (exist_option P x pf) (Some s))
             : Logic.eq x (Some (proj1_sig s)).
-      Proof. destruct x, s; cbv [exist_option proj1_sig] in *; congruence. Qed.
+      Proof using Type. destruct x, s; cbv [exist_option proj1_sig] in *; congruence. Qed.
       Lemma exist_option_None {A} P (x:option A) pf
             (H:Logic.eq (exist_option P x pf) None)
             : Logic.eq x None.
-      Proof. destruct x; cbv [exist_option proj1_sig] in *; congruence. Qed.
+      Proof using Type. destruct x; cbv [exist_option proj1_sig] in *; congruence. Qed.
 
       Context
         {sqrt_div:F -> F -> option F}
@@ -135,7 +135,7 @@ Module E.
           else None.
       Lemma set_sign_None r p s (H:Logic.eq (set_sign r p) (Some s))
             : s^2 = r^2 /\ Logic.eq (parity s) p.
-      Proof.
+      Proof using Feq_dec field nonzero_a.
         repeat match goal with
                | _ => progress subst
                | _ => progress cbv [set_sign] in *
@@ -197,7 +197,7 @@ Module E.
 
       Lemma decompress_Some b P (H:Logic.eq (decompress b) (Some P))
         : Logic.eq (compress P) b.
-      Proof. cbv [compress decompress] in *; t. Qed.
+      Proof using Type. cbv [compress decompress] in *; t. Qed.
 
       Lemma decompress_None b (H:Logic.eq (decompress b) None)
         : forall P, not (Logic.eq (compress P) b).
@@ -235,7 +235,7 @@ Module E.
     Context {Ka} {Ha:Keq (FtoK Fa) Ka} {Kd} {Hd:Keq (FtoK Fd) Kd}.
 
     Lemma nonzero_Ka : ~ Keq Ka Kzero.
-    Proof.
+    Proof using Feq_dec HFtoK HKtoF Ha HisoF Keq_dec field fieldK nonzero_a.
       rewrite <-Ha.
       Ring.pull_homomorphism FtoK.
       intro X.
@@ -245,14 +245,14 @@ Module E.
     Qed.
 
     Lemma square_Ka : exists sqrt_a, Keq (Kmul sqrt_a sqrt_a) Ka.
-    Proof.
+    Proof using Feq_dec HFtoK Ha Keq_dec field fieldK square_a.
       destruct square_a as [sqrt_a]. exists (FtoK sqrt_a).
       Ring.pull_homomorphism FtoK. rewrite <-Ha.
       eapply Monoid.is_homomorphism_phi_proper; assumption.
     Qed.
 
     Lemma nonsquare_Kd : forall x, not (Keq (Kmul x x) Kd).
-    Proof.
+    Proof using Feq_dec HKtoF Hd HisoF Keq_dec field fieldK nonsquare_d.
       intros x X. apply (nonsquare_d (KtoF x)).
       Ring.pull_homomorphism KtoF. rewrite X. rewrite <-Hd, HisoF.
       reflexivity.
@@ -286,7 +286,7 @@ Module E.
     Qed.
 
     Lemma Proper_point_phi : Proper (eq==>eq) point_phi.
-    Proof.
+    Proof using Type.
       intros P Q H.
       destruct P as [ [? ?] ?], Q as [ [? ?] ?], H as [Hl Hr]; cbv.
       rewrite !Hl, !Hr. split; reflexivity.
@@ -294,7 +294,7 @@ Module E.
 
     Lemma lift_ismorphism : @Monoid.is_homomorphism Fpoint eq FaddP
                                                     Kpoint eq KaddP point_phi.
-    Proof.
+    Proof using Type.
       repeat match goal with
              | |- _ => intro
              | |- Monoid.is_homomorphism => split

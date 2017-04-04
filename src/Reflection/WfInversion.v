@@ -103,12 +103,12 @@ Section language.
     Defined.
 
     Definition wff_endecode {G t e1 e2} v : @wff_decode G t e1 e2 (@wff_encode G t e1 e2 v) = v.
-    Proof.
+    Proof using Type.
       destruct v; reflexivity.
     Qed.
 
     Definition wff_deencode {G t e1 e2} v : @wff_encode G t e1 e2 (@wff_decode G t e1 e2 v) = v.
-    Proof.
+    Proof using Type.
       destruct e1; simpl in *;
         move e2 at top;
         lazymatch type of e2 with
@@ -154,12 +154,12 @@ Section language.
     Defined.
 
     Definition wf_endecode {t e1 e2} v : @wf_decode t e1 e2 (@wf_encode t e1 e2 v) = v.
-    Proof.
+    Proof using Type.
       destruct v; reflexivity.
     Qed.
 
     Definition wf_deencode {t e1 e2} v : @wf_encode t e1 e2 (@wf_decode t e1 e2 v) = v.
-    Proof.
+    Proof using Type.
       destruct e1 as [src dst f1].
       revert dependent f1.
       refine match e2 with

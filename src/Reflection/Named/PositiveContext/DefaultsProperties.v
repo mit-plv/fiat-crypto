@@ -16,7 +16,7 @@ Section language.
 
   Lemma name_list_unique_map_pos_of_succ_nat_seq a b
     : name_list_unique (map BinPos.Pos.of_succ_nat (seq a b)).
-  Proof.
+  Proof using Type.
     unfold name_list_unique, oname_list_unique, mname_list_unique.
     intros k n.
     rewrite !map_map, firstn_map, skipn_map, firstn_seq, skipn_seq.
@@ -28,11 +28,11 @@ Section language.
 
   Lemma name_list_unique_default_names_forf {var dummy t e}
     : name_list_unique (@default_names_forf base_type_code op var dummy t e).
-  Proof. apply name_list_unique_map_pos_of_succ_nat_seq. Qed.
+  Proof using Type. apply name_list_unique_map_pos_of_succ_nat_seq. Qed.
   Lemma name_list_unique_default_names_for {var dummy t e}
     : name_list_unique (@default_names_for base_type_code op var dummy t e).
-  Proof. apply name_list_unique_map_pos_of_succ_nat_seq. Qed.
+  Proof using Type. apply name_list_unique_map_pos_of_succ_nat_seq. Qed.
   Lemma name_list_unique_DefaultNamesFor {t e}
     : name_list_unique (@DefaultNamesFor base_type_code op t e).
-  Proof. apply name_list_unique_map_pos_of_succ_nat_seq. Qed.
+  Proof using Type. apply name_list_unique_map_pos_of_succ_nat_seq. Qed.
 End language.

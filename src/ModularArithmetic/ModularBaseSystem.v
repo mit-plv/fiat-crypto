@@ -102,7 +102,7 @@ Section ModularBaseSystem.
 
   Import Morphisms.
   Global Instance eq_Equivalence : Equivalence eq.
-  Proof.
+  Proof using Type.
     split; cbv [eq]; repeat intro; congruence.
   Qed.
 

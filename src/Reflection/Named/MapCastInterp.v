@@ -210,7 +210,7 @@ Section language.
       r' (Hr':interpf (interp_op:=interp_op) (ctx:=newValues) e' = Some r')
     , interpf (interp_op:=interp_op_bounds) (ctx:=varBounds) e = Some b
       /\ @inbounds _ b r /\ cast_back _ _ r' = r.
-  Proof.
+  Proof using Type*.
     induction e; simpl interpf; simpl mapf_cast; unfold option_map, cast_back in *; intros;
       repeat (break_match_hyps; inversion_option; inversion_sigma; simpl in *; unfold option_map in *; subst; try tauto).
     { destruct (Hctx _ _ _ Hr) as [b' [Hb'[Hb'v[v'[Hv' Hv'v]]]]]; clear Hctx Hr; subst.
@@ -254,7 +254,7 @@ Section language.
         r' (Hr':interp (interp_op:=interp_op) (ctx:=newValues) e' v' = Some r')
         , interp (interp_op:=interp_op_bounds) (ctx:=varBounds) e input_bounds = Some b
           /\ @inbounds _ b r /\ cast_back _ _ r' = r.
-  Proof.
+  Proof using Type*.
     unfold map_cast, option_map, interp; simpl; intros.
     repeat first [ progress subst
                  | progress inversion_option

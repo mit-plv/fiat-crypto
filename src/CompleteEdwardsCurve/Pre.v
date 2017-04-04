@@ -20,13 +20,15 @@ Section Edwards.
   Context {char_ge_3:@Ring.char_ge F eq zero one opp add sub mul 3}.
 
   Local Notation onCurve x y := (a*x^2 + y^2 = 1 + d*x^2*y^2) (only parsing).
-  Lemma onCurve_zero : onCurve 0 1. fsatz. Qed.
+  Lemma onCurve_zero : onCurve 0 1.
+  Proof using a_nonzero eq_dec field.
+ fsatz. Qed.
 
   Section Addition.
     Context (x1 y1:F) (P1onCurve: onCurve x1 y1).
     Context (x2 y2:F) (P2onCurve: onCurve x2 y2).
     Lemma denominator_nonzero : (d*x1*x2*y1*y2)^2 <> 1.
-    Proof.
+    Proof using Type*.
       destruct a_square as [sqrt_a], (dec(sqrt_a*x2+y2 = 0)), (dec(sqrt_a*x2-y2 = 0));
         try match goal with [H: ?f (sqrt_a * x2) y2 <> 0 |- _ ]
             => pose proof (d_nonsquare ((f (sqrt_a * x1) (d * x1 * x2 * y1 * y2 * y1))
@@ -35,10 +37,10 @@ Section Edwards.
     Qed.
 
     Lemma denominator_nonzero_x : 1 + d*x1*x2*y1*y2 <> 0.
-    Proof. pose proof denominator_nonzero. Field.fsatz. Qed.
+    Proof using Type*. pose proof denominator_nonzero. Field.fsatz. Qed.
     Lemma denominator_nonzero_y : 1 - d*x1*x2*y1*y2 <> 0.
-    Proof. pose proof denominator_nonzero. Field.fsatz. Qed.
+    Proof using Type*. pose proof denominator_nonzero. Field.fsatz. Qed.
     Lemma onCurve_add : onCurve ((x1*y2  +  y1*x2)/(1 + d*x1*x2*y1*y2)) ((y1*y2 - a*x1*x2)/(1 - d*x1*x2*y1*y2)).
-    Proof. pose proof denominator_nonzero. Field.fsatz. Qed.
+    Proof using Type*. pose proof denominator_nonzero. Field.fsatz. Qed.
   End Addition.
 End Edwards.

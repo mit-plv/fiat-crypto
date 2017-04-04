@@ -147,7 +147,7 @@ Section language.
   Lemma interpf_invert_Abs interp_op {T e} x
     : Syntax.interpf interp_op (@invert_Abs interp_base_type T e x)
       = Syntax.interp interp_op e x.
-  Proof. destruct e; reflexivity. Qed.
+  Proof using Type. destruct e; reflexivity. Qed.
 End language.
 
 Global Arguments invert_Var {_ _ _ _} _.

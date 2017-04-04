@@ -12,12 +12,12 @@ Section Field.
   Local Infix "+" := add. Local Infix "*" := mul.
 
   Lemma right_multiplicative_inverse : forall x : T, ~ eq x zero -> eq (mul x (inv x)) one.
-  Proof.
+  Proof using Type*.
     intros. rewrite commutative. auto using left_multiplicative_inverse.
   Qed.
 
   Lemma left_inv_unique x ix : ix * x = one -> ix = inv x.
-  Proof.
+  Proof using Type*.
     intro Hix.
     assert (ix*x*inv x = inv x).
     - rewrite Hix, left_identity; reflexivity.
@@ -28,17 +28,17 @@ Section Field.
   Definition inv_unique := left_inv_unique.
 
   Lemma right_inv_unique x ix : x * ix = one -> ix = inv x.
-  Proof. rewrite commutative. apply left_inv_unique. Qed.
+  Proof using Type*. rewrite commutative. apply left_inv_unique. Qed.
 
   Lemma div_one x : div x one = x.
-  Proof.
+  Proof using Type*.
     rewrite field_div_definition.
     rewrite <-(inv_unique 1 1); apply monoid_is_right_identity.
   Qed.
 
   Lemma mul_cancel_l_iff : forall x y, y <> 0 ->
                                        (x * y = y <-> x = one).
-  Proof.
+  Proof using Type*.
     intros.
     split; intros.
     + rewrite <-(right_multiplicative_inverse y) by assumption.
@@ -50,7 +50,7 @@ Section Field.
   Qed.
 
   Lemma field_theory_for_stdlib_tactic : Field_theory.field_theory 0 1 add mul sub opp div inv eq.
-  Proof.
+  Proof using Type*.
     constructor.
     { apply Ring.ring_theory_for_stdlib_tactic. }
     { intro H01. symmetry in H01. auto using (zero_neq_one(eq:=eq)). }
@@ -61,7 +61,7 @@ Section Field.
   Context {eq_dec:DecidableRel eq}.
 
   Global Instance is_mul_nonzero_nonzero : @is_zero_product_zero_factor T eq 0 mul.
-  Proof.
+  Proof using Type*.
     split. intros x y Hxy.
     eapply not_not; try typeclasses eauto; []; intuition idtac; eapply (zero_neq_one(eq:=eq)).
     transitivity ((inv y * (inv x * x)) * y).
@@ -71,7 +71,7 @@ Section Field.
   Qed.
 
   Global Instance integral_domain : @integral_domain T eq zero one opp add sub mul.
-  Proof.
+  Proof using Type*.
     split; auto using field_commutative_ring, field_is_zero_neq_one, is_mul_nonzero_nonzero.
   Qed.
 End Field.
@@ -126,7 +126,7 @@ Section Homomorphism.
   Lemma homomorphism_multiplicative_inverse
     : forall x, not (EQ x ZERO)
                 -> phi (INV x) = inv (phi x).
-  Proof.
+  Proof using Type*.
     intros.
     eapply inv_unique.
     rewrite <-Ring.homomorphism_mul.
@@ -137,14 +137,14 @@ Section Homomorphism.
         { EQ_dec : DecidableRel EQ }
     : forall x, (EQ x ZERO -> phi (INV x) = inv (phi x))
                 -> phi (INV x) = inv (phi x).
-  Proof.
+  Proof using Type*.
     intros x ?; destruct (dec (EQ x ZERO)); auto using homomorphism_multiplicative_inverse.
   Qed.
 
   Lemma homomorphism_div
     : forall x y, not (EQ y ZERO)
                   -> phi (DIV x y) = div (phi x) (phi y).
-  Proof.
+  Proof using Type*.
     intros. rewrite !field_div_definition.
     rewrite Ring.homomorphism_mul, homomorphism_multiplicative_inverse;
       (eauto || reflexivity).
@@ -154,7 +154,7 @@ Section Homomorphism.
         { EQ_dec : DecidableRel EQ }
     : forall x y, (EQ y ZERO -> phi (INV y) = inv (phi y))
                   -> phi (DIV x y) = div (phi x) (phi y).
-  Proof.
+  Proof using Type*.
     intros. rewrite !field_div_definition.
     rewrite Ring.homomorphism_mul, homomorphism_multiplicative_inverse_complete;
       (eauto || reflexivity).
@@ -181,7 +181,7 @@ Section Homomorphism_rev.
     : @field H eq zero one opp add sub mul inv div
       /\ @Ring.is_homomorphism F EQ ONE ADD MUL H eq one add mul phi
       /\ @Ring.is_homomorphism H eq one add mul F EQ ONE ADD MUL phi'.
-  Proof.
+  Proof using Type*.
     repeat match goal with
            | [ H : field |- _ ] => destruct H; try clear H
            | [ H : commutative_ring |- _ ] => destruct H; try clear H
@@ -320,7 +320,7 @@ Section FieldSquareRoot.
   Local Infix "=" := eq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
   Local Infix "+" := add. Local Infix "*" := mul.
   Lemma only_two_square_roots_choice x y z : x * x = z -> y * y = z -> x = y \/ x = opp y.
-  Proof.
+  Proof using Type*.
     intros.
     setoid_rewrite <-sub_zero_iff.
     eapply zero_product_zero_factor.

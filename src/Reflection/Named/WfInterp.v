@@ -15,7 +15,7 @@ Section language.
   Lemma wff_interpf_not_None {ctx : Context} {t} {e : @exprf base_type_code op Name t}
         (Hwf : prop_of_option (wff ctx e))
     : @interpf base_type_code interp_base_type op Name Context interp_op ctx t e <> None.
-  Proof.
+  Proof using Type.
     revert dependent ctx; induction e;
       repeat first [ progress intros
                    | progress simpl in *
@@ -34,7 +34,7 @@ Section language.
         (Hwf : wf ctx e)
         v
     : @interp base_type_code interp_base_type op Name Context interp_op ctx t e v <> None.
-  Proof.
+  Proof using Type.
     destruct e; unfold interp, wf in *; apply wff_interpf_not_None; auto.
   Qed.
 End language.

@@ -77,6 +77,6 @@ Module M.
           (H1:match M.coordinates (add Q (opp Q')) with∞=>False|(x,y)=>x=x1/\x<>0 end):
       match M.coordinates (add Q Q) with∞=>z2=0/\x2<>0|(xQQ,_)=>xQQ=x2/z2/\z2<>0 end /\
       match M.coordinates (add Q Q') with∞=>z3=0/\x3<>0|(xQQ',_)=>xQQ'=x3/z3/\z3<>0 end.
-    Proof. t; abstract fsatz. Qed.
+    Proof using a24_correct char_ge_5. t; abstract fsatz. Qed.
   End MontgomeryCurve.
 End M.

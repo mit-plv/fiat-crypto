@@ -39,7 +39,7 @@ Section barrett.
 
     Theorem naive_barrett_reduction_correct
       : a mod n = a - ⌊am⌋ * n.
-    Proof.
+    Proof using n_reasonable.
       apply Zmod_eq_full; assumption.
     Qed.
   End general_idea.
@@ -84,7 +84,7 @@ Section barrett.
         truncated division), [q] is an integer and [r ≡ a mod n]. *)
     Theorem barrett_reduction_equivalent
       : r mod n = a mod n.
-    Proof.
+    Proof using m_good offset.
       subst r q m.
       rewrite <- !Z.add_opp_r, !Zopp_mult_distr_l, !Z_mod_plus_full by assumption.
       reflexivity.
@@ -92,7 +92,7 @@ Section barrett.
 
     Lemma qn_small
       : q * n <= a.
-    Proof.
+    Proof using a_nonneg a_small base_good k_big_enough m_good n_pos n_reasonable offset_nonneg.
       subst q r m.
       assert (0 < b^(k-offset)). zero_bounds.
       assert (0 < b^(k+offset)) by zero_bounds.
@@ -102,7 +102,7 @@ Section barrett.
     Qed.
 
     Lemma q_nice : { b : bool * bool | q = a / n + (if fst b then -1 else 0) + (if snd b then -1 else 0) }.
-    Proof.
+    Proof using a_nonneg a_small base_good k_big_enough m_good n_large n_pos n_reasonable offset_nonneg.
       assert (0 < b^(k+offset)) by zero_bounds.
       assert (0 < b^(k-offset)) by zero_bounds.
       assert (a / b^(k-offset) <= b^(2*k) / b^(k-offset)) by auto with zarith lia.
@@ -116,7 +116,7 @@ Section barrett.
     Qed.
 
     Lemma r_small : r < 3 * n.
-    Proof.
+    Proof using a_nonneg a_small base_good k_big_enough m_good n_large n_pos n_reasonable offset_nonneg q.
       Hint Rewrite (Z.mul_div_eq' a n) using lia : zstrip_div.
       assert (a mod n < n) by auto with zarith lia.
       subst r; rewrite (proj2_sig q_nice); generalize (proj1_sig q_nice); intro; subst q m.
@@ -129,7 +129,7 @@ Section barrett.
       : a mod n = let r := if r <? n then r else r-n in
                   let r := if r <? n then r else r-n in
                   r.
-    Proof.
+    Proof using a_nonneg a_small base_good k_big_enough m_good n_large n_pos n_reasonable offset_nonneg q.
       pose proof r_small. pose proof qn_small. cbv zeta.
       destruct (r <? n) eqn:Hr, (r-n <? n) eqn:?; try rewrite Hr; Z.ltb_to_lt; try lia.
       { symmetry; apply (Zmod_unique a n q); subst r; lia. }

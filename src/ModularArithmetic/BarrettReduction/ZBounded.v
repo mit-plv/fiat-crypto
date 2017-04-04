@@ -53,7 +53,7 @@ Section barrett.
     : medium_valid x
       -> decode_small (barrett_reduce_function x) = (decode_large x) mod m
          /\ small_valid (barrett_reduce_function x).
-  Proof.
+  Proof using base_pos k_big_enough m_large m_pos m_small offset_nonneg μ'_eq μ'_good μ_good.
     exact (proj2_sig (barrett_reduce x)).
   Qed.
 End barrett.

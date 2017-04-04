@@ -55,7 +55,7 @@ Section Pre.
 
   Lemma add_onCurve P1 P2 (_:onCurve P1) (_:onCurve P2) :
     onCurve (add P1 P2).
-  Proof.
+  Proof using a b char_ge_3 eq_dec field.
     destruct_head' sum; destruct_head' prod;
       cbv [onCurve add] in *; break_match; trivial; [|]; fsatz.
   Qed.

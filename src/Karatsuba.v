@@ -27,7 +27,7 @@ Section Karatsuba.
 
   Lemma eval_karatsuba_mul s x y (s_nonzero:s <> 0) :
     eval (karatsuba_mul s x y) = eval x * eval y.
-  Proof. cbv [karatsuba_mul]; repeat rewrite ?eval_sub, ?eval_mul, ?eval_add, ?eval_scmul.
+  Proof using Type*. cbv [karatsuba_mul]; repeat rewrite ?eval_sub, ?eval_mul, ?eval_add, ?eval_scmul.
          rewrite <-(eval_split s x), <-(eval_split s y) by assumption; ring. Qed.
 
 
@@ -42,7 +42,7 @@ Section Karatsuba.
 
   Lemma goldilocks_mul_correct (p : Z) (p_nonzero : p <> 0) s (s_nonzero : s <> 0) (s2_modp : (s^2) mod p = (s+1) mod p) xs ys :
     (eval (goldilocks_mul s xs ys)) mod p = (eval xs * eval ys) mod p.
-  Proof. cbv [goldilocks_mul]; Zmod_to_equiv_modulo.
+  Proof using Type*. cbv [goldilocks_mul]; Zmod_to_equiv_modulo.
     repeat rewrite ?eval_mul, ?eval_add, ?eval_sub, ?eval_scmul, <-?(eval_split s xs), <-?(eval_split s ys) by assumption; ring_simplify.
     setoid_rewrite s2_modp.
     apply f_equal2; nsatz. Qed.

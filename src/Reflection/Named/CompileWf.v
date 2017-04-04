@@ -55,7 +55,7 @@ Section language.
         (Hls : oname_list_unique ls)
         (HGls : forall t n x, List.In (existT _ t (n, x)%core) G -> List.In (Some n) ls -> False)
     : prop_of_option (nwff ctx v).
-  Proof.
+  Proof using ContextOk Name_dec base_type_dec.
     revert dependent ctx; revert dependent ls; induction Hwf;
       repeat first [ progress intros
                    | progress subst
@@ -165,7 +165,7 @@ Section language.
         (Hls : oname_list_unique ls)
         (H : ocompile e ls = Some f)
     : nwf ctx f.
-  Proof.
+  Proof using ContextOk Name_dec base_type_dec.
     revert H; destruct Hwf;
       repeat first [ progress simpl in *
                    | progress unfold option_map, Named.interp in *
@@ -210,7 +210,7 @@ Section language.
         (Hls : name_list_unique ls)
         (HGls : forall t n x, List.In (existT _ t (n, x)%core) G -> List.In n ls -> False)
     : prop_of_option (nwff ctx v).
-  Proof.
+  Proof using ContextOk Name_dec base_type_dec.
     eapply wff_ocompilef; try eassumption.
     setoid_rewrite List.in_map_iff; intros; destruct_head' ex; destruct_head' and; inversion_option; subst.
     eauto.
@@ -222,5 +222,5 @@ Section language.
         (Hls : name_list_unique ls)
         (H : compile e ls = Some f)
     : nwf ctx f.
-  Proof. eapply wf_ocompile; eassumption. Qed.
+  Proof using ContextOk Name_dec base_type_dec. eapply wf_ocompile; eassumption. Qed.
 End language.

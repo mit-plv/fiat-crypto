@@ -16,7 +16,7 @@ Section IterAssocOp.
 
   Lemma nat_iter_op_plus m n a :
     op (nat_iter_op m a) (nat_iter_op n a) === nat_iter_op (m + n) a.
-  Proof. symmetry; eapply ScalarMult.scalarmult_add_l. Qed.
+  Proof using Type*. symmetry; eapply ScalarMult.scalarmult_add_l. Qed.
 
   Definition N_iter_op n a :=
     match n with
@@ -25,17 +25,17 @@ Section IterAssocOp.
     end.
 
   Lemma Pos_iter_op_succ : forall p a, Pos.iter_op op (Pos.succ p) a === op a (Pos.iter_op op p a).
-  Proof.
+  Proof using Type*.
    induction p; intros; simpl; rewrite ?associative, ?IHp; reflexivity.
   Qed.
 
   Lemma N_iter_op_succ : forall n a, N_iter_op (N.succ n) a  === op a (N_iter_op n a).
-  Proof.
+  Proof using Type*.
     destruct n; simpl; intros; rewrite ?Pos_iter_op_succ, ?right_identity; reflexivity.
   Qed.
 
   Lemma N_iter_op_is_nat_iter_op : forall n a, N_iter_op n a === nat_iter_op (N.to_nat n) a.
-  Proof.
+  Proof using Type*.
     induction n using N.peano_ind; intros; rewrite ?N2Nat.inj_succ, ?N_iter_op_succ, ?IHn; reflexivity.
   Qed.
 
@@ -68,7 +68,7 @@ Section IterAssocOp.
   Lemma test_and_op_inv_step : forall a s,
     test_and_op_inv a s ->
     test_and_op_inv a (test_and_op a s).
-  Proof.
+  Proof using Type*.
     destruct s as [i acc].
     unfold test_and_op_inv, test_and_op; simpl; intro Hpre.
     destruct i; [ apply Hpre | ].
@@ -83,13 +83,13 @@ Section IterAssocOp.
   Lemma test_and_op_inv_holds : forall a i s,
     test_and_op_inv a s ->
     test_and_op_inv a (funexp (test_and_op a) s i).
-  Proof.
+  Proof using Type*.
     induction i; intros; auto; simpl; apply test_and_op_inv_step; auto.
   Qed.
 
   Lemma funexp_test_and_op_index : forall a x acc y,
     fst (funexp (test_and_op a) (x, acc) y) = x - y.
-  Proof.
+  Proof using Type.
     induction y; simpl; rewrite <- ?Minus.minus_n_O; try reflexivity.
     match goal with |- context[funexp ?a ?b ?c] => destruct (funexp a b c) as [i acc'] end.
     simpl in IHy.
@@ -102,7 +102,7 @@ Section IterAssocOp.
     test_and_op_inv a
       (funexp (test_and_op a) (bound, id) bound) ->
     iter_op bound a === nat_iter_op (N.to_nat x) a.
-  Proof.
+  Proof using moinoid.
     unfold test_and_op_inv, iter_op; simpl; intros ? ? ? Hinv.
     rewrite Hinv, funexp_test_and_op_index, Minus.minus_diag.
     reflexivity.
@@ -110,7 +110,7 @@ Section IterAssocOp.
 
   Lemma iter_op_correct : forall a bound, N.size_nat x <= bound ->
     iter_op bound a === nat_iter_op (N.to_nat x) a.
-  Proof.
+  Proof using Type*.
     intros.
     apply iter_op_termination; auto.
     apply test_and_op_inv_holds.

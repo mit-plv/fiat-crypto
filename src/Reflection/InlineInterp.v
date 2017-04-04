@@ -73,14 +73,14 @@ Section language.
                       (x, x')) G
             -> interpf interp_op x = x')
     : interpf interp_op (inline_const_genf postprocess e1) = interpf interp_op e2.
-  Proof.
+  Proof using Type.
     clear -wf H Hpostprocess.
     induction wf; t_fin.
   Qed.
 
   Lemma interpf_postprocess_for_const is_const t e
     : interpf interp_op (exprf_of_inline_directive (postprocess_for_const is_const t e)) = interpf interp_op e.
-  Proof.
+  Proof using Type.
     unfold postprocess_for_const; t_fin.
   Qed.
 
@@ -94,7 +94,7 @@ Section language.
                       (x, x')) G
             -> interpf interp_op x = x')
     : interpf interp_op (inline_constf is_const e1) = interpf interp_op e2.
-  Proof. eapply interpf_inline_const_genf; eauto. Qed.
+  Proof using Type. eapply interpf_inline_const_genf; eauto. Qed.
 
   Local Hint Resolve interpf_inline_constf.
 
@@ -102,7 +102,7 @@ Section language.
         (wf : @wf _ _ t e1 e2)
         (Hpostprocess : forall t e, interpf interp_op (exprf_of_inline_directive (postprocess t e)) = interpf interp_op e)
     : forall x, interp interp_op (inline_const_gen postprocess e1) x = interp interp_op e2 x.
-  Proof.
+  Proof using Type.
     destruct wf.
     simpl in *; intro; eapply (interpf_inline_const_genf postprocess); eauto.
   Qed.
@@ -112,7 +112,7 @@ Section language.
   Lemma interp_inline_const is_const {t} e1 e2
         (wf : @wf _ _ t e1 e2)
     : forall x, interp interp_op (inline_const is_const e1) x = interp interp_op e2 x.
-  Proof.
+  Proof using Type.
     eapply interp_inline_const_gen; eauto.
   Qed.
 
@@ -120,7 +120,7 @@ Section language.
         (wf : Wf e)
         (Hpostprocess : forall t e, interpf interp_op (exprf_of_inline_directive (postprocess _ t e)) = interpf interp_op e)
     : forall x, Interp interp_op (InlineConstGen postprocess e) x = Interp interp_op e x.
-  Proof.
+  Proof using Type.
     unfold Interp, InlineConst.
     eapply (interp_inline_const_gen (postprocess _)); simpl; intuition.
   Qed.
@@ -128,7 +128,7 @@ Section language.
   Lemma InterpInlineConst is_const {t} (e : Expr t)
         (wf : Wf e)
     : forall x, Interp interp_op (InlineConst is_const e) x = Interp interp_op e x.
-  Proof.
+  Proof using Type.
     eapply InterpInlineConstGen; eauto.
   Qed.
 End language.

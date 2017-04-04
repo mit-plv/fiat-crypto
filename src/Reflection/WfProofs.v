@@ -27,7 +27,7 @@ Section language.
     Lemma wff_app' {g G0 G1 t e1 e2}
           (wf : @wff var1 var2 (G0 ++ G1) t e1 e2)
       : wff (G0 ++ g ++ G1) e1 e2.
-    Proof.
+    Proof using Type.
       rewrite !List.app_assoc.
       revert wf; remember (G0 ++ G1)%list as G eqn:?; intro wf.
       revert dependent G0. revert dependent G1.
@@ -40,14 +40,14 @@ Section language.
     Lemma wff_app_pre {g G t e1 e2}
           (wf : @wff var1 var2 G t e1 e2)
       : wff (g ++ G) e1 e2.
-    Proof.
+    Proof using Type.
       apply (@wff_app' _ nil); assumption.
     Qed.
 
     Lemma wff_app_post {g G t e1 e2}
           (wf : @wff var1 var2 G t e1 e2)
       : wff (G ++ g) e1 e2.
-    Proof.
+    Proof using Type.
       pose proof (@wff_app' g G nil t e1 e2) as H.
       rewrite !List.app_nil_r in *; auto.
     Qed.
@@ -56,7 +56,7 @@ Section language.
       : @wff var1 var2 G0 t e1 e2
         -> (forall x, List.In x G0 -> List.In x G1)
         -> @wff var1 var2 G1 t e1 e2.
-    Proof.
+    Proof using Type.
       intro wf; revert G1; induction wf;
         repeat match goal with
                | _ => setoid_rewrite List.in_app_iff
@@ -74,7 +74,7 @@ Section language.
 
     Lemma wff_SmartVarf {t} x1 x2
       : @wff var1 var2 (flatten_binding_list x1 x2) t (SmartVarf x1) (SmartVarf x2).
-    Proof.
+    Proof using Type.
       unfold SmartVarf.
       induction t; simpl; constructor; eauto.
     Qed.
@@ -85,7 +85,7 @@ Section language.
           (Hin : List.In (existT (fun t : base_type_code => (exprf (Tbase t) * exprf (Tbase t))%type) t (x1, x2))
                           (flatten_binding_list (SmartVarVarf v1) (SmartVarVarf v2)))
       : @wff var1 var2 (flatten_binding_list (t:=t') v1 v2 ++ G) (Tbase t) x1 x2.
-    Proof.
+    Proof using Type.
       revert dependent G; induction t'; intros; simpl in *; try tauto.
       { intuition (inversion_sigma; inversion_prod; subst; simpl; eauto).
         constructor; eauto. }
@@ -99,7 +99,7 @@ Section language.
           (Hin : List.In (existT (fun t : base_type_code => (exprf (Tbase t) * exprf (Tbase t))%type) t (x1, x2))
                           (flatten_binding_list (SmartVarVarf v1) (SmartVarVarf v2)))
       : @wff var1 var2 (flatten_binding_list (t:=t') v1 v2) (Tbase t) x1 x2.
-    Proof.
+    Proof using Type.
       apply wff_SmartVarVarf with (G:=nil) in Hin.
       rewrite List.app_nil_r in Hin; assumption.
     Qed.
@@ -108,7 +108,7 @@ Section language.
           (Hwf : @wff var1 var2 G t (SmartVarf v1) (SmartVarf v2))
           (Hin : List.In e (flatten_binding_list v1 v2))
       : List.In e G.
-    Proof.
+    Proof using Type.
       induction t;
         repeat match goal with
                | _ => assumption
@@ -136,7 +136,7 @@ Section language.
       {var1 var2 t1} x1 x2
   : duplicate_types (@flatten_binding_list base_type_code var1 var2 t1 x1 x2)
     = @flatten_binding_list2 base_type_code var1 var2 t1 t1 x1 x2.
-  Proof.
+  Proof using Type.
     induction t1; simpl; try reflexivity.
     rewrite_hyp <- !*.
     unfold duplicate_types; rewrite List.map_app; reflexivity.
@@ -157,7 +157,7 @@ Section language.
     : flatten_binding_list2 (var1:=var1') (var2:=var2') (base_type_code:=base_type_code) (SmartVarfMap f x1) (SmartVarfMap g x2)
       = List.map (fun txy => existT _ (projT1 txy) (f _ (fst (projT2 txy)), g _ (snd (projT2 txy)))%core)
                  (flatten_binding_list2 x1 x2).
-  Proof.
+  Proof using Type.
     revert dependent t2; induction t1, t2; flatten_t.
   Qed.
 
@@ -166,7 +166,7 @@ Section language.
     : flatten_binding_list2 (var1:=var1') (var2:=var2') (base_type_code:=base_type_code) (SmartVarfMap f x1) x2
       = List.map (fun txy => existT _ (projT1 txy) (f _ (fst (projT2 txy)), snd (projT2 txy))%core)
                  (flatten_binding_list2 x1 x2).
-  Proof.
+  Proof using Type.
     revert dependent t2; induction t1, t2; flatten_t.
   Qed.
 
@@ -175,7 +175,7 @@ Section language.
     : flatten_binding_list2 (var1:=var1') (var2:=var2') (base_type_code:=base_type_code) x1 (SmartVarfMap g x2)
       = List.map (fun txy => existT _ (projT1 txy) (fst (projT2 txy), g _ (snd (projT2 txy)))%core)
                  (flatten_binding_list2 x1 x2).
-  Proof.
+  Proof using Type.
     revert dependent t2; induction t1, t2; flatten_t.
   Qed.
 
@@ -184,14 +184,14 @@ Section language.
     : flatten_binding_list (var1:=var1') (var2:=var2') (base_type_code:=base_type_code) (SmartVarfMap f x1) (SmartVarfMap g x2)
       = List.map (fun txy => existT _ (projT1 txy) (f _ (fst (projT2 txy)), g _ (snd (projT2 txy)))%core)
                  (flatten_binding_list x1 x2).
-  Proof. induction t; flatten_t. Qed.
+  Proof using Type. induction t; flatten_t. Qed.
 
   Lemma flatten_binding_list2_SmartValf
         {T1 T2} f g t1 t2
     : flatten_binding_list2 (base_type_code:=base_type_code) (SmartValf T1 f t1) (SmartValf T2 g t2)
       = List.map (fun txy => existT _ (projT1 txy) (f _, g _)%core)
                  (flatten_binding_list2 (SmartFlatTypeUnMap t1) (SmartFlatTypeUnMap t2)).
-  Proof.
+  Proof using Type.
     revert dependent t2; induction t1, t2; flatten_t.
   Qed.
 
@@ -200,13 +200,13 @@ Section language.
     : flatten_binding_list (base_type_code:=base_type_code) (SmartValf T1 f t) (SmartValf T2 g t)
       = List.map (fun txy => existT _ (projT1 txy) (f _, g _)%core)
                  (flatten_binding_list (SmartFlatTypeUnMap t) (SmartFlatTypeUnMap t)).
-  Proof. induction t; flatten_t. Qed.
+  Proof using Type. induction t; flatten_t. Qed.
 
   Lemma flatten_binding_list_In_eq_iff
         {var} T x y
     : (forall t a b, List.In (existT _ t (a, b)) (@flatten_binding_list base_type_code var var T x y) -> a = b)
       <-> x = y.
-  Proof.
+  Proof using Type.
     induction T;
       repeat first [ exfalso; assumption
                    | progress subst
@@ -231,7 +231,7 @@ Section language.
   Lemma flatten_binding_list_same_in_eq
         {var} {T x t a b}
     : List.In (existT _ t (a, b)) (@flatten_binding_list base_type_code var var T x x) -> a = b.
-  Proof. intro; eapply flatten_binding_list_In_eq_iff; eauto. Qed.
+  Proof using Type. intro; eapply flatten_binding_list_In_eq_iff; eauto. Qed.
 End language.
 
 Hint Resolve wff_SmartVarf wff_SmartVarVarf wff_SmartVarVarf_nil : wf.

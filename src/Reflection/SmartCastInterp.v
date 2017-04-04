@@ -24,7 +24,7 @@ Section language.
 
   Lemma interpf_SmartCast_base {A A'} (x : exprf (Tbase A))
     : interpf interp_op (SmartCast_base x) = interpf interp_op (Cast _ A A' x).
-  Proof.
+  Proof using interpf_Cast_id.
     clear dependent cast_val.
     unfold SmartCast_base.
     destruct (Sumbool.sumbool_of_bool (base_type_beq A A')) as [H|H].

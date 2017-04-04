@@ -90,7 +90,7 @@ Section montgomery.
                        (decode_small (proj1_sig (reduce_via_partial v)))
                        (decode_large v * R')
         /\ Z.min 0 (small_bound - modulus) <= (decode_small (proj1_sig (reduce_via_partial v))) < modulus.
-    Proof.
+    Proof using H Hmod Hmod' Hv.
       rewrite (proj1 (proj2_sig (reduce_via_partial v) H)).
       eauto 6 using reduce_via_partial_correct, reduce_via_partial_in_range, decode_small_valid.
     Qed.
@@ -100,7 +100,7 @@ Section montgomery.
                        (decode_small (proj1_sig (reduce_via_partial v)))
                        (decode_large v * R')
         /\ 0 <= (decode_small (proj1_sig (reduce_via_partial v))) < modulus.
-    Proof.
+    Proof using H Hmod Hmod' Hv.
       pose proof (proj2 (proj2_sig (reduce_via_partial v) H)) as H'.
       apply decode_small_valid in H'.
       destruct reduce_via_partial_correct'; split; eauto; omega.
@@ -108,7 +108,7 @@ Section montgomery.
 
     Theorem reduce_via_partial_correct
       : decode_small (proj1_sig (reduce_via_partial v)) = (decode_large v * R') mod modulus.
-    Proof.
+    Proof using H Hmod Hmod' Hv.
       rewrite <- (proj1 reduce_via_partial_correct'').
       rewrite Z.mod_small by apply reduce_via_partial_correct''.
       reflexivity.

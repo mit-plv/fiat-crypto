@@ -27,19 +27,19 @@ Section montgomery.
           (R'_good : R * R' ≡ 1).
 
   Lemma R'_good' : R' * R ≡ 1.
-  Proof. rewrite <- R'_good; apply f_equal2; lia. Qed.
+  Proof using R'_good. rewrite <- R'_good; apply f_equal2; lia. Qed.
 
   Local Notation to_montgomery_naive := (to_montgomery_naive R) (only parsing).
   Local Notation from_montgomery_naive := (from_montgomery_naive R') (only parsing).
 
   Lemma to_from_montgomery_naive x : to_montgomery_naive (from_montgomery_naive x) ≡ x.
-  Proof.
+  Proof using R'_good.
     unfold Z.to_montgomery_naive, Z.from_montgomery_naive.
     rewrite <- Z.mul_assoc, R'_good'.
     autorewrite with zsimplify; reflexivity.
   Qed.
   Lemma from_to_montgomery_naive x : from_montgomery_naive (to_montgomery_naive x) ≡ x.
-  Proof.
+  Proof using R'_good.
     unfold Z.to_montgomery_naive, Z.from_montgomery_naive.
     rewrite <- Z.mul_assoc, R'_good.
     autorewrite with zsimplify; reflexivity.
@@ -52,18 +52,18 @@ Section montgomery.
     Local Infix "*" := (mul_naive R') : montgomery_scope.
 
     Lemma add_correct_naive x y : from_montgomery_naive (x + y) = from_montgomery_naive x + from_montgomery_naive y.
-    Proof. unfold Z.from_montgomery_naive, add; lia. Qed.
+    Proof using Type. unfold Z.from_montgomery_naive, add; lia. Qed.
     Lemma add_correct_naive_to x y : to_montgomery_naive (x + y) = (to_montgomery_naive x + to_montgomery_naive y)%montgomery.
-    Proof. unfold Z.to_montgomery_naive, add; autorewrite with push_Zmul; reflexivity. Qed.
+    Proof using Type. unfold Z.to_montgomery_naive, add; autorewrite with push_Zmul; reflexivity. Qed.
     Lemma sub_correct_naive x y : from_montgomery_naive (x - y) = from_montgomery_naive x - from_montgomery_naive y.
-    Proof. unfold Z.from_montgomery_naive, sub; lia. Qed.
+    Proof using Type. unfold Z.from_montgomery_naive, sub; lia. Qed.
     Lemma sub_correct_naive_to x y : to_montgomery_naive (x - y) = (to_montgomery_naive x - to_montgomery_naive y)%montgomery.
-    Proof. unfold Z.to_montgomery_naive, sub; autorewrite with push_Zmul; reflexivity. Qed.
+    Proof using Type. unfold Z.to_montgomery_naive, sub; autorewrite with push_Zmul; reflexivity. Qed.
 
     Theorem mul_correct_naive x y : from_montgomery_naive (x * y) = from_montgomery_naive x * from_montgomery_naive y.
-    Proof. unfold Z.from_montgomery_naive, mul_naive; lia. Qed.
+    Proof using Type. unfold Z.from_montgomery_naive, mul_naive; lia. Qed.
     Theorem mul_correct_naive_to x y : to_montgomery_naive (x * y) ≡ (to_montgomery_naive x * to_montgomery_naive y)%montgomery.
-    Proof.
+    Proof using R'_good.
       unfold Z.to_montgomery_naive, mul_naive.
       rewrite <- !Z.mul_assoc, R'_good.
       autorewrite with zsimplify; apply (f_equal2 Z.modulo); lia.
@@ -77,10 +77,10 @@ Section montgomery.
             (N'_good : N * N' ≡ᵣ -1).
 
     Lemma N'_good' : N' * N ≡ᵣ -1.
-    Proof. rewrite <- N'_good; apply f_equal2; lia. Qed.
+    Proof using N'_good. rewrite <- N'_good; apply f_equal2; lia. Qed.
 
     Lemma N'_good'_alt x : (((x mod R) * (N' mod R)) mod R) * (N mod R) ≡ᵣ x * -1.
-    Proof.
+    Proof using N'_good.
       rewrite <- N'_good', Z.mul_assoc.
       unfold Z.equiv_modulo; push_Zmod.
       reflexivity.
@@ -96,7 +96,7 @@ Section montgomery.
         unfold Z.equiv_modulo; push_Zmod; autorewrite with zsimplify; reflexivity.
 
       Lemma prereduce_correct : prereduce T ≡ T * R'.
-      Proof.
+      Proof using N'_good N'_in_range N_reasonable R'_good.
         transitivity ((T + m * N) * R').
         { unfold Z.prereduce.
           autorewrite with zstrip_div; push_Zmod.
@@ -107,19 +107,19 @@ Section montgomery.
       Qed.
 
       Lemma reduce_correct : reduce N R N' T ≡ T * R'.
-      Proof.
+      Proof using N'_good N'_in_range N_reasonable R'_good.
         unfold reduce.
         break_match; rewrite prereduce_correct; t_fin_correct.
       Qed.
 
       Lemma partial_reduce_correct : partial_reduce N R N' T ≡ T * R'.
-      Proof.
+      Proof using N'_good N'_in_range N_reasonable R'_good.
         unfold partial_reduce.
         break_match; rewrite prereduce_correct; t_fin_correct.
       Qed.
 
       Lemma reduce_via_partial_correct : reduce_via_partial N R N' T ≡ T * R'.
-      Proof.
+      Proof using N'_good N'_in_range N_reasonable R'_good.
         unfold reduce_via_partial.
         break_match; rewrite partial_reduce_correct; t_fin_correct.
       Qed.
@@ -131,7 +131,7 @@ Section montgomery.
         : 0 <= N
           -> 0 <= T <= R * B
           -> 0 <= prereduce T < B + N.
-        Proof. unfold Z.prereduce; auto with zarith nia. Qed.
+        Proof using N_reasonable m_small. unfold Z.prereduce; auto with zarith nia. Qed.
       End generic.
 
       Section N_very_small.
@@ -140,7 +140,7 @@ Section montgomery.
         Lemma prereduce_in_range_very_small
           : 0 <= T <= (2 * N - 1) * (2 * N - 1)
             -> 0 <= prereduce T < 2 * N.
-        Proof. pose proof (prereduce_in_range_gen N); nia. Qed.
+        Proof using N_reasonable N_very_small m_small. pose proof (prereduce_in_range_gen N); nia. Qed.
       End N_very_small.
 
       Section N_small.
@@ -149,12 +149,12 @@ Section montgomery.
         Lemma prereduce_in_range_small
           : 0 <= T <= (2 * N - 1) * (N - 1)
             -> 0 <= prereduce T < 2 * N.
-        Proof. pose proof (prereduce_in_range_gen N); nia. Qed.
+        Proof using N_reasonable N_small m_small. pose proof (prereduce_in_range_gen N); nia. Qed.
 
         Lemma prereduce_in_range_small_fully_reduced
           : 0 <= T <= 2 * N
             -> 0 <= prereduce T <= N.
-        Proof. pose proof (prereduce_in_range_gen 1); nia. Qed.
+        Proof using N_reasonable N_small m_small. pose proof (prereduce_in_range_gen 1); nia. Qed.
       End N_small.
 
       Section N_small_enough.
@@ -163,12 +163,12 @@ Section montgomery.
         Lemma prereduce_in_range_small_enough
           : 0 <= T <= R * R
             -> 0 <= prereduce T < R + N.
-        Proof. pose proof (prereduce_in_range_gen R); nia. Qed.
+        Proof using N_reasonable N_small_enough m_small. pose proof (prereduce_in_range_gen R); nia. Qed.
 
         Lemma reduce_in_range_R
           : 0 <= T <= R * R
             -> 0 <= reduce N R N' T < R.
-        Proof.
+        Proof using N_reasonable N_small_enough m_small.
           intro H; pose proof (prereduce_in_range_small_enough H).
           unfold reduce, Z.prereduce in *; break_match; Z.ltb_to_lt; nia.
         Qed.
@@ -176,7 +176,7 @@ Section montgomery.
         Lemma partial_reduce_in_range_R
           : 0 <= T <= R * R
             -> 0 <= partial_reduce N R N' T < R.
-        Proof.
+        Proof using N_reasonable N_small_enough m_small.
           intro H; pose proof (prereduce_in_range_small_enough H).
           unfold partial_reduce, Z.prereduce in *; break_match; Z.ltb_to_lt; nia.
         Qed.
@@ -184,7 +184,7 @@ Section montgomery.
         Lemma reduce_via_partial_in_range_R
           : 0 <= T <= R * R
             -> 0 <= reduce_via_partial N R N' T < R.
-        Proof.
+        Proof using N_reasonable N_small_enough m_small.
           intro H; pose proof (prereduce_in_range_small_enough H).
           unfold reduce_via_partial, partial_reduce, Z.prereduce in *; break_match; Z.ltb_to_lt; nia.
         Qed.
@@ -194,12 +194,12 @@ Section montgomery.
         Lemma prereduce_in_range
           : 0 <= T <= R * N
             -> 0 <= prereduce T < 2 * N.
-        Proof. pose proof (prereduce_in_range_gen N); nia. Qed.
+        Proof using N_reasonable m_small. pose proof (prereduce_in_range_gen N); nia. Qed.
 
         Lemma reduce_in_range
         : 0 <= T <= R * N
           -> 0 <= reduce N R N' T < N.
-        Proof.
+        Proof using N_reasonable m_small.
           intro H; pose proof (prereduce_in_range H).
           unfold reduce, Z.prereduce in *; break_match; Z.ltb_to_lt; nia.
         Qed.
@@ -207,7 +207,7 @@ Section montgomery.
         Lemma partial_reduce_in_range
         : 0 <= T <= R * N
           -> Z.min 0 (R - N) <= partial_reduce N R N' T < 2 * N.
-        Proof.
+        Proof using N_reasonable m_small.
           intro H; pose proof (prereduce_in_range H).
           unfold partial_reduce, Z.prereduce in *; break_match; Z.ltb_to_lt;
             apply Z.min_case_strong; nia.
@@ -216,7 +216,7 @@ Section montgomery.
         Lemma reduce_via_partial_in_range
         : 0 <= T <= R * N
           -> Z.min 0 (R - N) <= reduce_via_partial N R N' T < N.
-        Proof.
+        Proof using N_reasonable m_small.
           intro H; pose proof (partial_reduce_in_range H).
           unfold reduce_via_partial in *; break_match; Z.ltb_to_lt; lia.
         Qed.
@@ -226,7 +226,7 @@ Section montgomery.
         Context (N_in_range : 0 <= N < R)
                 (T_representable : 0 <= T < R * R).
         Lemma partial_reduce_alt_eq : partial_reduce_alt N R N' T = partial_reduce N R N' T.
-        Proof.
+        Proof using N_in_range N_reasonable T_representable m_small.
           assert (0 <= T + m * N < 2 * (R * R)) by nia.
           assert (0 <= T + m * N < R * (R + N)) by nia.
           assert (0 <= (T + m * N) / R < R + N) by auto with zarith.
@@ -252,7 +252,7 @@ Section montgomery.
       Local Notation to_montgomery := (to_montgomery N R N').
       Local Notation from_montgomery := (from_montgomery N R N').
       Lemma to_from_montgomery a : to_montgomery (from_montgomery a) ≡ a.
-      Proof.
+      Proof using N'_good N'_in_range N_reasonable R'_good.
         unfold Z.to_montgomery, Z.from_montgomery.
         transitivity ((a * 1) * 1); [ | apply f_equal2; lia ].
         rewrite <- !R'_good, !reduce_correct.
@@ -260,7 +260,7 @@ Section montgomery.
         apply f_equal2; lia.
       Qed.
       Lemma from_to_montgomery a : from_montgomery (to_montgomery a) ≡ a.
-      Proof.
+      Proof using N'_good N'_in_range N_reasonable R'_good.
         unfold Z.to_montgomery, Z.from_montgomery.
         rewrite !reduce_correct.
         transitivity (a * ((R * (R * R' mod N) * R') mod N)).
@@ -273,12 +273,12 @@ Section montgomery.
       Qed.
 
       Theorem mul_correct x y : from_montgomery (x * y) ≡ from_montgomery x * from_montgomery y.
-      Proof.
+      Proof using N'_good N'_in_range N_reasonable R'_good.
         unfold Z.from_montgomery, mul.
         rewrite !reduce_correct; apply f_equal2; lia.
       Qed.
       Theorem mul_correct_to x y : to_montgomery (x * y) ≡ (to_montgomery x * to_montgomery y)%montgomery.
-      Proof.
+      Proof using N'_good N'_in_range N_reasonable R'_good.
         unfold Z.to_montgomery, mul.
         rewrite !reduce_correct.
         transitivity (x * y * R * 1 * 1 * 1);

@@ -34,16 +34,16 @@ Section language.
            end.
       Lemma flat_interp_untuple'_tuple' {T n v}
         : @flat_interp_untuple' T n (flat_interp_tuple' v) = v.
-      Proof. induction n; [ reflexivity | simpl; rewrite IHn; destruct v; reflexivity ]. Qed.
+      Proof using Type. induction n; [ reflexivity | simpl; rewrite IHn; destruct v; reflexivity ]. Qed.
       Lemma flat_interp_untuple_tuple {T n v}
         : flat_interp_untuple (@flat_interp_tuple T n v) = v.
-      Proof. destruct n; [ reflexivity | apply flat_interp_untuple'_tuple' ]. Qed.
+      Proof using Type. destruct n; [ reflexivity | apply flat_interp_untuple'_tuple' ]. Qed.
       Lemma flat_interp_tuple'_untuple' {T n v}
         : @flat_interp_tuple' T n (flat_interp_untuple' v) = v.
-      Proof. induction n; [ reflexivity | simpl; rewrite IHn; destruct v; reflexivity ]. Qed.
+      Proof using Type. induction n; [ reflexivity | simpl; rewrite IHn; destruct v; reflexivity ]. Qed.
       Lemma flat_interp_tuple_untuple {T n v}
         : @flat_interp_tuple T n (flat_interp_untuple v) = v.
-      Proof. destruct n; [ reflexivity | apply flat_interp_tuple'_untuple' ]. Qed.
+      Proof using Type. destruct n; [ reflexivity | apply flat_interp_tuple'_untuple' ]. Qed.
 
       Definition tuple_map {A B n} (f : interp_flat_type A -> interp_flat_type B) (v : interp_flat_type (tuple A n))
         : interp_flat_type (tuple B n)

@@ -53,14 +53,14 @@ Section language.
 
   Lemma interpf_under_letsf {t tC} (ex : exprf t) (eC : _ -> exprf tC)
     : interpf interp_op (under_letsf ex eC) = let x := interpf interp_op ex in interpf interp_op (eC x).
-  Proof.
+  Proof using Type.
     clear.
     induction ex; t_fin.
   Qed.
 
   Lemma interpf_linearizef {t} e
     : interpf interp_op (linearizef (t:=t) e) = interpf interp_op e.
-  Proof.
+  Proof using Type.
     clear.
     induction e;
       repeat first [ progress rewrite ?interpf_under_letsf, ?interpf_SmartVarf
@@ -72,13 +72,13 @@ Section language.
 
   Lemma interp_linearize {t} e
     : forall x, interp interp_op (linearize (t:=t) e) x = interp interp_op e x.
-  Proof.
+  Proof using Type.
     induction e; simpl; eauto.
   Qed.
 
   Lemma InterpLinearize {t} (e : Expr t)
     : forall x, Interp interp_op (Linearize e) x = Interp interp_op e x.
-  Proof.
+  Proof using Type.
     unfold Interp, Linearize.
     eapply interp_linearize.
   Qed.

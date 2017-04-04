@@ -86,7 +86,7 @@ Section language.
                  wff G e1 e2
                  -> wff_inline_directive G (postprocess1 t e1) (postprocess2 t e2))
       : @wff var1 var2 G t (inline_const_genf postprocess1 e1) (inline_const_genf postprocess2 e2).
-    Proof.
+    Proof using Type.
       revert dependent G; induction wf; simpl in *; auto; intros; [].
       repeat match goal with
              | [ H : context[List.In _ (_ ++ _)] |- _ ]
@@ -156,7 +156,7 @@ Section language.
           (e2 : @exprf var2 t)
           (Hwf : wff G e1 e2)
       : wff_inline_directive G (postprocess_for_const is_const t e1) (postprocess_for_const is_const t e2).
-    Proof.
+    Proof using Type.
       destruct e1; unfold postprocess_for_const;
         repeat first [ progress subst
                      | intro
@@ -182,7 +182,7 @@ Section language.
                             -> wff G x x')
              (wf : wff G' e1 e2)
       : @wff var1 var2 G t (inline_constf is_const e1) (inline_constf is_const e2).
-    Proof. eapply wff_inline_const_genf; eauto. Qed.
+    Proof using Type. eapply wff_inline_const_genf; eauto. Qed.
 
     Lemma wf_inline_const_gen postprocess1 postprocess2 {t} e1 e2
           (Hwf : wf e1 e2)
@@ -190,7 +190,7 @@ Section language.
               wff G e1 e2
               -> wff_inline_directive G (postprocess1 t e1) (postprocess2 t e2))
       : @wf var1 var2 t (inline_const_gen postprocess1 e1) (inline_const_gen postprocess2 e2).
-    Proof.
+    Proof using Type.
       destruct Hwf; constructor; intros.
       eapply wff_inline_const_genf; eauto using wff_SmartVarVarf_nil.
     Qed.
@@ -198,7 +198,7 @@ Section language.
     Lemma wf_inline_const is_const {t} e1 e2
           (Hwf : wf e1 e2)
       : @wf var1 var2 t (inline_const is_const e1) (inline_const is_const e2).
-    Proof. eapply wf_inline_const_gen; eauto. Qed.
+    Proof using Type. eapply wf_inline_const_gen; eauto. Qed.
   End with_var.
 
   Lemma Wf_InlineConstGen postprocess {t} (e : Expr t)
@@ -207,7 +207,7 @@ Section language.
             wff G e1 e2
             -> wff_inline_directive G (postprocess var1 t e1) (postprocess var2 t e2))
     : Wf (InlineConstGen postprocess e).
-  Proof.
+  Proof using Type.
     intros var1 var2.
     apply (@wf_inline_const_gen var1 var2 (postprocess _) (postprocess _) t (e _) (e _)); simpl; auto.
   Qed.
@@ -215,7 +215,7 @@ Section language.
   Lemma Wf_InlineConst is_const {t} (e : Expr t)
         (Hwf : Wf e)
     : Wf (InlineConst is_const e).
-  Proof.
+  Proof using Type.
     intros var1 var2.
     apply (@wf_inline_const var1 var2 is_const t (e _) (e _)); simpl.
     apply Hwf.

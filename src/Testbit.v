@@ -36,7 +36,7 @@ Section Testbit.
   Lemma testbit_spec' : forall a b us, (0 <= b < width) ->
     bounded limb_widths us -> (length us = length limb_widths)%nat ->
     Z.testbit (nth_default 0 us a) b = Z.testbit (decode base us) (Z.of_nat a * width + b).
-  Proof.
+  Proof using limb_width_pos limb_widths_uniform.
       repeat match goal with
              | |- _ => progress intros
              | |- _ => progress autorewrite with push_nth_default Ztestbit zsimplify in *
@@ -67,7 +67,7 @@ Section Testbit.
   Lemma testbit_spec : forall n us, (length us = length limb_widths)%nat ->
     bounded limb_widths us ->
     testbit us n = Z.testbit (BaseSystem.decode base us) (Z.of_nat n).
-  Proof.
+  Proof using limb_width_pos limb_widths_uniform.
     cbv [testbit]; intros.
     pose proof limb_width_pos as limb_width_pos_nat.
     rewrite Z2Nat.inj_lt in limb_width_pos_nat by omega.

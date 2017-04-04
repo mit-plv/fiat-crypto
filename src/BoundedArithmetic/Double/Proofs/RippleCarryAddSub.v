@@ -71,7 +71,7 @@ Section carry_sub_is_good.
 
   Lemma carry_sub_is_good_carry
     : ((z1 - if z0 <? 0 then 1 else 0) <? 0) = ((z0 + z1 << k) <? 0).
-  Proof.
+  Proof using Hk Hz0.
     clear n Hn Hz1.
     assert (0 < 2 ^ k) by auto with zarith.
     autorewrite with Zshift_to_pow.
@@ -88,7 +88,7 @@ Section carry_sub_is_good.
   Lemma carry_sub_is_good_value
     : (z0 mod 2 ^ k + ((z1 - if z0 <? 0 then 1 else 0) mod 2 ^ n) << k)%Z
       = (z0 + z1 << k) mod (2 ^ k * 2 ^ n).
-  Proof.
+  Proof using Type*.
     assert (0 < 2 ^ n) by auto with zarith.
     assert (0 < 2 ^ k) by auto with zarith.
     assert (0 < 2^n * 2^k) by nia.
@@ -119,14 +119,14 @@ Section ripple_carry_adc.
         let '(carry, zs) := eta (ripple_carry_adc (k := S k) adc xs ys carry) in
         let '(carry, z) := eta (adc x y carry) in
         (carry, (zs, z)).
-  Proof. apply ripple_carry_tuple_SS. Qed.
+  Proof using Type. apply ripple_carry_tuple_SS. Qed.
 
   Local Opaque Z.of_nat.
   Global Instance ripple_carry_is_add_with_carry {k}
          {isdecode : is_decode decode}
          {is_adc : is_add_with_carry adc}
     : is_add_with_carry (ripple_carry_adc (k := k) adc).
-  Proof.
+  Proof using Type.
     destruct k as [|k].
     { constructor; simpl; intros; autorewrite with zsimplify; reflexivity. }
     { induction k as [|k IHk].
@@ -163,14 +163,14 @@ Section ripple_carry_subc.
         let '(carry, zs) := eta (ripple_carry_subc (k := S k) subc xs ys carry) in
         let '(carry, z) := eta (subc x y carry) in
         (carry, (zs, z)).
-  Proof. apply ripple_carry_tuple_SS. Qed.
+  Proof using Type. apply ripple_carry_tuple_SS. Qed.
 
   Local Opaque Z.of_nat.
   Global Instance ripple_carry_is_sub_with_carry {k}
          {isdecode : is_decode decode}
          {is_subc : is_sub_with_carry subc}
     : is_sub_with_carry (ripple_carry_subc (k := k) subc).
-  Proof.
+  Proof using Type.
     destruct k as [|k].
     { constructor; repeat (intros [] || intro); autorewrite with simpl_tuple_decoder zsimplify; reflexivity. }
     { induction k as [|k IHk].
