@@ -119,7 +119,7 @@ Section barrett.
     Proof using a_nonneg a_small base_good k_big_enough m_good n_large n_pos n_reasonable offset_nonneg q.
       Hint Rewrite (Z.mul_div_eq' a n) using lia : zstrip_div.
       assert (a mod n < n) by auto with zarith lia.
-      subst r; rewrite (proj2_sig q_nice); generalize (proj1_sig q_nice); intro; subst q m.
+      unfold r; rewrite (proj2_sig q_nice); generalize (proj1_sig q_nice); intro; subst q m.
       autorewrite with push_Zmul zsimplify zstrip_div.
       break_match; auto with lia.
     Qed.
