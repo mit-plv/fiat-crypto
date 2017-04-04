@@ -26,7 +26,7 @@ Module W.
     Next Obligation. destruct P as [[[??]|[]]?]; cbv; trivial; fsatz. Qed.
 
     Global Instance commutative_group : abelian_group(eq:=W.eq)(op:=W.add)(id:=W.zero)(inv:=inv).
-    Proof using Feq_dec discriminant_nonzero field.
+    Proof using Feq_dec discriminant_nonzero field char_ge_12.
       repeat match goal with
              | _ => solve [ contradiction | trivial | exact _ ]
              | _ => intro
