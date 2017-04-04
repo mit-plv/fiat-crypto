@@ -7,8 +7,10 @@ src/BaseSystem.v
 src/BaseSystemProofs.v
 src/EdDSARepChange.v
 src/Karatsuba.v
+src/MontgomeryCurve.v
 src/MontgomeryCurveTheorems.v
 src/MontgomeryX.v
+src/MontgomeryXProofs.v
 src/MxDHRepChange.v
 src/NewBaseSystem.v
 src/SaturatedBaseSystem.v
@@ -323,6 +325,7 @@ src/Util/Tactics/TransparentAssert.v
 src/Util/Tactics/UnifyAbstractReflexivity.v
 src/Util/Tactics/UniquePose.v
 src/Util/Tactics/VM.v
+src/WeierstrassCurve/Definitions.v
 src/WeierstrassCurve/Pre.v
 src/WeierstrassCurve/Projective.v
 src/WeierstrassCurve/WeierstrassCurveTheorems.v

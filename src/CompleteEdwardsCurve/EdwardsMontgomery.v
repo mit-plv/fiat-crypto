@@ -1,15 +1,17 @@
 Require Import Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
 Require Import Crypto.Spec.MontgomeryCurve Crypto.MontgomeryCurveTheorems.
+Require Import Crypto.MontgomeryCurve.
 
 Require Import Crypto.Util.Notations Crypto.Util.Decidable.
 Require Import (*Crypto.Util.Tactics*) Crypto.Util.Sum Crypto.Util.Prod.
 Require Import Crypto.Algebra Crypto.Algebra.Field.
+Import BinNums.
 
 Module E.
   Section EdwardsMontgomery.
     Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
             {field:@Algebra.field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
-            {char_ge_3 : @Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul (BinNat.N.succ_pos BinNat.N.two)}
+            {char_ge_28 : @Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 28}
             {Feq_dec:DecidableRel Feq}.
     Local Infix "=" := Feq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
     Local Notation "0" := Fzero.  Local Notation "1" := Fone.
@@ -17,13 +19,18 @@ Module E.
     Local Infix "-" := Fsub. Local Infix "/" := Fdiv.
     Local Notation "x ^ 2" := (x*x).
 
+    Let char_ge_12 : @Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 12.
+    Proof. eapply char_ge_weaken; eauto. vm_decide. Qed.
+    Let char_ge_3 : @Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 3.
+    Proof. eapply char_ge_weaken; eauto. vm_decide. Qed.
+
     Context {a d: F}
             {nonzero_a : a <> 0}
             {square_a : exists sqrt_a, sqrt_a^2 = a}
             {nonsquare_d : forall x, x^2 <> d}.
     Local Notation Epoint := (@E.point F Feq Fone Fadd Fmul a d).
     Local Notation Ezero  := (E.zero(nonzero_a:=nonzero_a)(d:=d)).
-    Local Notation Eadd   := (E.add(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d)).
+    Local Notation Eadd   := (E.add(char_ge_3:=char_ge_3)(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d)).
     Local Notation Eopp   := (E.opp(nonzero_a:=nonzero_a)(d:=d)).
 
     Let a_neq_d : a <> d.
@@ -86,28 +93,22 @@ Module E.
       assert (f1 <> Fopp 1) by admit (* ad, d are nonsero *); fsatz.
     Admitted.
 
-    Import BinNums.
-    (* TODO: characteristic weakening lemmas *)
-    Context {char_ge_12 : @Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 12}.
-    Context {char_ge_28 : @Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 28}.
-
-    Program Definition _EM : _ /\ _ /\ _ :=
+    Program Definition _EM (discr_nonzero:id _) : _ /\ _ /\ _ :=
       @Group.group_from_redundant_representation
         Mpoint M.eq Madd M.zero M.opp
-        (M.group(discr_nonzero:=_))
+        (M.group discr_nonzero)
         Epoint E.eq Eadd Ezero Eopp
         of_Montgomery
         to_Montgomery
         _ _ _ _ _
     .
-    Next Obligation. Proof. Admitted. (* discriminant nonzero *)
     Next Obligation. Proof. Admitted. (* M->E->M *)
-    Next Obligation. Proof. Admitted. (* M->E->M *)
+    Next Obligation. Proof. Admitted. (* equivalences match *)
     Next Obligation. Proof. Admitted. (* add *)
     Next Obligation. Proof. Admitted. (* opp *)
     Next Obligation. Proof. cbv [of_Montgomery to_Montgomery]; t; fsatz. Qed.
 
-    Global Instance homomorphism_of_Montgomery : Monoid.is_homomorphism(phi:=of_Montgomery) := proj1 (proj2 _EM).
-    Global Instance homomorphism_to_Montgomery : Monoid.is_homomorphism(phi:=to_Montgomery) := proj2 (proj2 _EM).
+    Global Instance homomorphism_of_Montgomery discr_nonzero : Monoid.is_homomorphism(phi:=of_Montgomery) := proj1 (proj2 (_EM discr_nonzero)).
+    Global Instance homomorphism_to_Montgomery discr_nonzero : Monoid.is_homomorphism(phi:=to_Montgomery) := proj2 (proj2 (_EM discr_nonzero)).
   End EdwardsMontgomery.
 End E.

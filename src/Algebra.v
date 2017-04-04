@@ -140,8 +140,15 @@ Section Algebra.
     Global Existing Instance field_div_Proper.
   End AddMul.
 
-  Definition char_ge {T} (eq:T->T->Prop) (zero:T) (inj:BinPos.positive->T) C := forall p, BinPos.Pos.lt p C -> not (eq (inj p) zero).
+  Definition char_ge (zero:T) (inj:BinPos.positive->T) C := forall p, BinPos.Pos.lt p C -> not (eq (inj p) zero).
   Existing Class char_ge.
+  Lemma char_ge_weaken id of_pos C
+        (HC:@char_ge id of_pos C) c (Hc:BinPos.Pos.le c C)
+    : @char_ge id of_pos c.
+  Proof. intros ??; eauto using BinPos.Pos.lt_le_trans. Qed.
+  (* TODO: make a typeclass instance that applies this lemma
+  automatically using [vm_decide] for the inequality if both
+  characteristics are literal constants. *)
 End Algebra.
 
 Section ZeroNeqOne.
