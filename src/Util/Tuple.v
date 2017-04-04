@@ -845,5 +845,21 @@ Qed.
 Lemma to_list_repeat {A} (a:A) n : to_list _ (repeat a n) = List.repeat a n.
 Proof. induction n; [reflexivity|destruct n; simpl in *; congruence]. Qed.
 
+Global Instance map'_Proper {n A B} : Proper (pointwise_relation _ eq ==> eq ==> eq) (fun f => @map' A B f n) | 10.
+Proof.
+  induction n.
+  { compute; intros; subst; auto. }
+  { cbv [pointwise_relation Proper respectful] in *.
+    intros f g Hfg x y ?; subst y.
+    simpl; erewrite IHn by first [ eassumption | eauto ].
+    congruence. }
+Qed.
+
+Global Instance map_Proper {n A B} : Proper (pointwise_relation _ eq ==> eq ==> eq) (@map n A B) | 10.
+Proof.
+  destruct n; [ | apply map'_Proper ].
+  { repeat (intros [] || intro); auto. }
+Qed.
+
 Require Import Crypto.Util.ListUtil. (* To initialize [distr_length] database *)
 Hint Rewrite length_to_list' @length_to_list : distr_length.
