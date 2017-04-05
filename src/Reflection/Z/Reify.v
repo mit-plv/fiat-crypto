@@ -22,6 +22,7 @@ Ltac base_reify_op op op_head extra ::=
      | @Z.shiftr => constr:(reify_op op op_head 2 (Shr TZ TZ TZ))
      | @Z.land => constr:(reify_op op op_head 2 (Land TZ TZ TZ))
      | @Z.lor => constr:(reify_op op op_head 2 (Lor TZ TZ TZ))
+     | @Z.opp => constr:(reify_op op op_head 1 (Opp TZ TZ))
      | @ModularBaseSystemListZOperations.cmovne => constr:(reify_op op op_head 4 (Cmovne TZ TZ TZ TZ TZ))
      | @ModularBaseSystemListZOperations.cmovl => constr:(reify_op op op_head 4 (Cmovle TZ TZ TZ TZ TZ))
      | @ModularBaseSystemListZOperations.neg

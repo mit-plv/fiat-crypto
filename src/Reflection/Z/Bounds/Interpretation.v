@@ -28,6 +28,11 @@ Module Import Bounds.
             let (ly, uy) := y in
             {| lower := Z.min (f lx ly) (Z.min (f lx uy) (Z.min (f ux ly) (f ux uy)));
                upper := Z.max (f lx ly) (Z.max (f lx uy) (Z.max (f ux ly) (f ux uy))) |}.
+    Definition two_corners (f : Z -> Z) : t -> t
+      := fun x
+         => let (lx, ux) := x in
+            {| lower := Z.min (f lx) (f ux);
+               upper := Z.max (f lx) (f ux) |}.
     Definition truncation_bounds (b : t)
       := match bit_width with
          | Some bit_width => if ((0 <=? lower b) && (upper b <? 2^bit_width))%bool
@@ -37,8 +42,8 @@ Module Import Bounds.
          end.
     Definition BuildTruncated_bounds (l u : Z) : t
       := truncation_bounds {| lower := l ; upper := u |}.
-    Definition t_map1 (f : bounds -> bounds) (x : t)
-      := truncation_bounds (f x).
+    Definition t_map1 (f : Z -> Z) (x : t)
+      := truncation_bounds (two_corners f x).
     Definition t_map2 (f : Z -> Z -> Z) : t -> t -> t
       := fun x y => truncation_bounds (four_corners f x y).
     Definition t_map4 (f : bounds -> bounds -> bounds -> bounds -> bounds) (x y z w : t)
@@ -77,6 +82,7 @@ Module Import Bounds.
                let (ly, uy) := y in
                {| lower := Z.max lx ly;
                   upper := 2^(Z.max (Z.log2_up (ux+1)) (Z.log2_up (uy+1))) - 1 |}).
+    Definition opp : t -> t := t_map1 Z.opp.
     Definition neg' (int_width : Z) : t -> t
       := fun v
          => let (lb, ub) := v in
@@ -112,6 +118,7 @@ Module Import Bounds.
     Infix "<<" := (shl _) : bounds_scope.
     Infix ">>" := (shr _) : bounds_scope.
     Infix "&'" := (land _) : bounds_scope.
+    Notation "- x" := (opp _ x) : bounds_scope.
   End Notations.
 
   Definition interp_base_type (ty : base_type) : Set := t.
@@ -132,6 +139,7 @@ Module Import Bounds.
        | Shr _ _ T => fun xy => shr (bit_width_of_base_type T) (fst xy) (snd xy)
        | Land _ _ T => fun xy => land (bit_width_of_base_type T) (fst xy) (snd xy)
        | Lor _ _ T => fun xy => lor (bit_width_of_base_type T) (fst xy) (snd xy)
+       | Opp _ T => fun x => opp (bit_width_of_base_type T) x
        | Neg _ T int_width => fun x => neg (bit_width_of_base_type T) int_width x
        | Cmovne _ _ _ _ T => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovne (bit_width_of_base_type T) x y z w
        | Cmovle _ _ _ _ T => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovle (bit_width_of_base_type T) x y z w

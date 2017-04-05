@@ -195,6 +195,7 @@ src/Reflection/Named/PositiveContext/Defaults.v
 src/Reflection/Named/PositiveContext/DefaultsProperties.v
 src/Reflection/Z/ArithmeticSimplifier.v
 src/Reflection/Z/ArithmeticSimplifierInterp.v
+src/Reflection/Z/ArithmeticSimplifierUtil.v
 src/Reflection/Z/ArithmeticSimplifierWf.v
 src/Reflection/Z/BinaryNotationConstants.v
 src/Reflection/Z/CNotations.v
