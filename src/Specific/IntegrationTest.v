@@ -9,6 +9,7 @@ Require Import Crypto.Specific.NewBaseSystemTest.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
 Require Import Crypto.Util.Tuple Crypto.Util.Sigma Crypto.Util.Sigma.MapProjections Crypto.Util.Sigma.Lift Crypto.Util.Notations Crypto.Util.ZRange Crypto.Util.BoundedWord.
 Require Import Crypto.Util.Tactics.Head.
+Require Import Crypto.Util.Tactics.MoveLetIn.
 Import ListNotations.
 
 Require Import Crypto.Reflection.Z.Bounds.Pipeline.
@@ -54,29 +55,6 @@ Section BoundedField25p5.
          simple refine (lem _ _)
     end.
 
-  (** TODO MOVE ME *)
-  (** This tactic moves to the context any [dlet x := y in ...] on the
-      rhs of a goal of the form [{ a | lhs = rhs }]. *)
-  Ltac sig_dlet_in_rhs_to_context :=
-    repeat lazymatch goal with
-           | [ |- { a | _ = @Let_In ?A ?B ?x ?P } ]
-             => let v := fresh "x" in
-                pose x as v;
-                replace (@Let_In A B x P) with (P v) by (clear; abstract (subst v; cbv [Let_In]; reflexivity));
-                cbv beta
-           end.
-  (** This tactic creates a [dlet x := f in rhs] in the rhs of a goal
-      of the form [lhs = rhs]. *)
-  Ltac context_to_dlet_in_rhs f :=
-    lazymatch goal with
-    | [ |- ?LHS = ?RHS ]
-      => let RHS' := lazymatch (eval pattern f in RHS) with
-                     | ?RHS _ => RHS
-                     end in
-         let x := fresh "x" in
-         transitivity (dlet x := f in RHS' x);
-         [ | clear; abstract (cbv [Let_In]; reflexivity) ]
-    end.
   (* TODO : change this to field once field isomorphism happens *)
   Definition mul :
     { mul : feBW -> feBW -> feBW
