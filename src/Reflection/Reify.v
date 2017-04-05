@@ -455,7 +455,10 @@ Ltac reify_context_variables base_type_code interp_base_type op :=
      (moving the burden of reifying [interp_base_type T] to
      [reify_base_type], rather than keeping it here) *)
   cbv beta iota delta [interp_base_type] in *;
-  repeat match goal with
+  (** [match reverse] so that we respect the chain of dependencies in
+      context variables; otherwise we're going to be trying the last
+      context variable many times, and bottlenecking there. *)
+  repeat match reverse goal with
          | [ F := _ : Syntax.interp_type _ _  |- _ ]
            => unique_reify_context_variable base_type_code interp_base_type op F
          end.
