@@ -25,12 +25,36 @@ Hint Extern 0 (cfail2 ?msg1 ?msg2) => idtac "Error:" msg1 msg2; exact I : typecl
 Class cfail3 {T1 T2 T3} (msg1 : T1) (msg2 : T2) (msg3 : T3) := Build_cfail3 : True.
 Hint Extern 0 (cfail3 ?msg1 ?msg2 ?msg3) => idtac "Error:" msg1 msg2 msg3; exact I : typeclass_instances.
 
-Ltac cidtac msg := constr:(_ : cidtac msg).
-Ltac cidtac2 msg1 msg2 := constr:(_ : cidtac2 msg1 msg2).
-Ltac cidtac3 msg1 msg2 msg3 := constr:(_ : cidtac2 msg1 msg2 msg3).
-Ltac cfail msg := let dummy := constr:(_ : cfail msg) in constr:(I : I).
-Ltac cfail2 msg1 msg2 := let dummy := constr:(_ : cfail2 msg1 msg2) in constr:(I : I).
-Ltac cfail3 msg1 msg2 msg3 := let dummy := constr:(_ : cfail2 msg1 msg2 msg3) in constr:(I : I).
+Ltac cidtac msg :=
+  let dummy := match goal with
+               | _ => idtac msg
+               end in
+  constr:(I).
+Ltac cidtac2 msg1 msg2 :=
+  let dummy := match goal with
+               | _ => idtac msg1 msg2
+               end in
+  constr:(I).
+Ltac cidtac3 msg1 msg2 msg3 :=
+  let dummy := match goal with
+               | _ => idtac msg1 msg2 msg3
+               end in
+  constr:(I).
+Ltac cfail msg :=
+  let dummy := match goal with
+               | _ => idtac "Error:" msg
+               end in
+  constr:(I : I).
+Ltac cfail2 msg1 msg2 :=
+  let dummy := match goal with
+               | _ => idtac "Error:" msg1 msg2
+               end in
+  constr:(I : I).
+Ltac cfail3 msg1 msg2 msg3 :=
+  let dummy := match goal with
+               | _ => idtac "Error:" msg1 msg2 msg3
+               end in
+  constr:(I : I).
 
 Ltac idtac_goal := lazymatch goal with |- ?G => idtac "Goal:" G end.
 Ltac idtac_context :=
