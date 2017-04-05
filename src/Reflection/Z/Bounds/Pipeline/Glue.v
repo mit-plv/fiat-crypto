@@ -45,6 +45,29 @@ Ltac unfold_paired_tuple_map :=
          | [ |- context[Tuple.map (n:=S ?N) _ (pair _ _)] ]
            => progress change (@Tuple.map (S N)) with (fun A B f => @Tuple.map' A B f N); cbv beta iota delta [Tuple.map']
          end.
+(** The tactic [change_to_reified_type f] reifies the type of a
+    context variable [f] and changes [f] to the interpretation of that
+    type. *)
+Ltac change_to_reified_type f :=
+  let T := type of f in
+  let cT := (eval compute in T) in
+  let rT := reify_type cT in
+  change (interp_type Syntax.interp_base_type rT) in (type of f).
+
+(** The tactic [sig_dlet_in_rhs_to_context_curried] moves to the
+    context any [dlet x := y in ...] on the rhs of a goal of the form
+    [{ a | lhs = rhs }], curries each such moved definition, and then
+    reifies the type of each such context variable. *)
+Ltac sig_dlet_in_rhs_to_context_curried :=
+  lazymatch goal with
+  | [ |- { a | _ = @Let_In ?A ?B ?x _ } ]
+    => let f := fresh in
+       sig_dlet_in_rhs_to_context_step f;
+       change_with_curried f;
+       change_to_reified_type f;
+       sig_dlet_in_rhs_to_context_curried
+  | _ => idtac
+  end.
 (** The tactic [preunfold_and_dlet_to_context] will unfold
     [BoundedWordToZ] and [Tuple.map]s applied to [pair]s, and then
     look for a [dlet x := y in ...] in the RHS of a goal of shape [{a
@@ -52,7 +75,7 @@ Ltac unfold_paired_tuple_map :=
 Ltac preunfold_and_dlet_to_context :=
   unfold_paired_tuple_map;
   cbv [BoundedWordToZ]; cbn [fst snd proj1_sig];
-  sig_dlet_in_rhs_to_context.
+  sig_dlet_in_rhs_to_context_curried.
 (** The tactic [pattern_proj1_sig_in_lhs_of_sig] takes a goal of the form
 <<
 { a : A | P }
@@ -107,6 +130,7 @@ Ltac reassoc_sig_and_eexists :=
   preunfold_and_dlet_to_context;
   pattern_sig_sig_assoc;
   evar_exists.
+
 
 (** ** [do_curry_rhs] *)
 (** The [do_curry_rhs] tactic takes a goal of the form
@@ -222,7 +246,14 @@ Ltac check_RHS_Z_shape_rec subterm :=
 Ltac check_RHS_Z_shape RHS :=
   lazymatch RHS with
   | ?f ?args
-    => check_RHS_Z_shape_rec args
+    => let G := get_goal in
+       first [ is_var f
+             | fail 1 "In the goal" G
+                    "The second conjunct of the goal is expected to be a equality whose"
+                    "right-hand side is the application of a single context-variable to a tuple"
+                    "but the right-hand side is" RHS
+                    "which is an application of something which is not a context variable:" f ];
+       check_RHS_Z_shape_rec args
   | _ => let G := get_goal in
          let shape := uconstr:(map wordToZ ?fW) in
          fail "In the goal" G
@@ -369,7 +400,7 @@ Ltac zrange_to_reflective_goal Hbounded :=
   lazymatch goal with
   | [ |- ?is_bounded_by_T /\ ?LHS = ?f ?Zargs ]
     => let T := type of f in
-       let f_domain := lazymatch T with ?A -> ?B => A end in
+       let f_domain := lazymatch eval hnf in T with ?A -> ?B => A end in
        let T := (eval compute in T) in
        let rT := reify_type T in
        let is_bounded_by' := constr:(@Bounds.is_bounded_by (codomain rT)) in
