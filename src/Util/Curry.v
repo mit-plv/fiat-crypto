@@ -8,7 +8,7 @@ Ltac change_with_curried f :=
     => let f' := fresh f in
        rename f into f';
        pose (fun (ab : A * B) => f' (fst ab) (snd ab)) as f;
-       change f' with (fun (a : A) (b : B) => f (a, b));
+       change f' with (fun (a : A) (b : B) => f (a, b)) in *;
        subst f';
        cbv beta;
        change_with_curried f
