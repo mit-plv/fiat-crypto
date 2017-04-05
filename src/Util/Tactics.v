@@ -15,6 +15,7 @@ Require Export Crypto.Util.Tactics.ETransitivity.
 Require Export Crypto.Util.Tactics.EvarExists.
 Require Export Crypto.Util.Tactics.Forward.
 Require Export Crypto.Util.Tactics.GetGoal.
+Require Export Crypto.Util.Tactics.MoveLetIn.
 Require Export Crypto.Util.Tactics.OnSubterms.
 Require Export Crypto.Util.Tactics.Not.
 Require Export Crypto.Util.Tactics.PrintContext.
