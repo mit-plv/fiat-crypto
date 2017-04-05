@@ -7,6 +7,7 @@ Require Import Crypto.Reflection.RewriterWf.
 Require Import Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Reflection.Z.OpInversion.
 Require Import Crypto.Reflection.Z.ArithmeticSimplifier.
+Require Import Crypto.Reflection.Z.Syntax.Equality.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Sum.
@@ -14,6 +15,7 @@ Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.SpecializeBy.
+Require Import Crypto.Util.HProp.
 
 Local Notation exprf := (@exprf base_type op).
 Local Notation expr := (@expr base_type op).
@@ -40,7 +42,7 @@ Local Ltac break_t_step :=
         | progress destruct_head'_prod
         | progress destruct_head'_sig
         | progress specialize_by reflexivity
-        (*| progress eliminate_hprop_eq*)
+        | progress eliminate_hprop_eq
         | progress break_innermost_match_step
         | progress break_match_hyps
         | progress inversion_wf_constr ].
@@ -82,19 +84,25 @@ Lemma wff_interp_as_expr_or_const_base {var1 var2 t} {G e1 e2 v1 v2}
   : @interp_as_expr_or_const var1 (Tbase t) e1 = Some v1
     -> @interp_as_expr_or_const var2 (Tbase t) e2 = Some v2
     -> match v1, v2 with
-       | inl z1, inl z2 => z1 = z2
-       | inr e1, inr e2 => wff G e1 e2
-       | inl _, inr _ | inr _ , inl _ => False
+       | const_of z1, const_of z2 => z1 = z2
+       | gen_expr e1, gen_expr e2
+       | neg_expr e1, neg_expr e2
+         => wff G e1 e2
+       | const_of _, _
+       | gen_expr _, _
+       | neg_expr _, _
+         => False
        end.
 Proof.
-  invert_one_expr e1; intros; try invert_one_expr e2; intros;
-    repeat first [ fin_t
-                 | progress simpl in *
-                 | progress intros
-                 | break_t_step
-                 | match goal with
-                   | [ H : wff _ _ ?e |- _ ] => is_var e; invert_one_expr e
-                   end ].
+  invert_one_expr e1; intros; break_innermost_match; intros;
+    try invert_one_expr e2; intros;
+      repeat first [ fin_t
+                   | progress simpl in *
+                   | progress intros
+                   | break_t_step
+                   | match goal with
+                     | [ H : wff _ _ ?e |- _ ] => is_var e; invert_one_expr e
+                     end ].
 Qed.
 
 Lemma wff_interp_as_expr_or_const_prod_base {var1 var2 A B} {G e1 e2} {v1 v2 : _ * _}
@@ -102,14 +110,24 @@ Lemma wff_interp_as_expr_or_const_prod_base {var1 var2 A B} {G e1 e2} {v1 v2 : _
   : @interp_as_expr_or_const var1 (Prod (Tbase A) (Tbase B)) e1 = Some v1
     -> @interp_as_expr_or_const var2 (Prod (Tbase A) (Tbase B)) e2 = Some v2
     -> match fst v1, fst v2 with
-       | inl z1, inl z2 => z1 = z2
-       | inr e1, inr e2 => wff G e1 e2
-       | inl _, inr _ | inr _ , inl _ => False
+       | const_of z1, const_of z2 => z1 = z2
+       | gen_expr e1, gen_expr e2
+       | neg_expr e1, neg_expr e2
+         => wff G e1 e2
+       | const_of _, _
+       | gen_expr _, _
+       | neg_expr _, _
+         => False
        end
        /\ match snd v1, snd v2 with
-          | inl z1, inl z2 => z1 = z2
-          | inr e1, inr e2 => wff G e1 e2
-          | inl _, inr _ | inr _ , inl _ => False
+          | const_of z1, const_of z2 => z1 = z2
+          | gen_expr e1, gen_expr e2
+          | neg_expr e1, neg_expr e2
+            => wff G e1 e2
+          | const_of _, _
+          | gen_expr _, _
+          | neg_expr _, _
+            => False
           end.
 Proof.
   invert_one_expr e1; intros; break_innermost_match; intros; try exact I;

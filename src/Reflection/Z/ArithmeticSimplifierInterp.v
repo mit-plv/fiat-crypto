@@ -7,6 +7,7 @@ Require Import Crypto.Reflection.RewriterInterp.
 Require Import Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Reflection.Z.OpInversion.
 Require Import Crypto.Reflection.Z.ArithmeticSimplifier.
+Require Import Crypto.Reflection.Z.ArithmeticSimplifierUtil.
 Require Import Crypto.Reflection.Z.Syntax.Equality.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Option.
@@ -33,6 +34,7 @@ Local Ltac break_t_step :=
         | progress inversion_sum
         | progress inversion_expr
         | progress inversion_prod
+        | progress inversion_inverted_expr
         | progress inversion_flat_type
         | progress destruct_head'_and
         | progress destruct_head'_prod
@@ -44,8 +46,9 @@ Local Ltac break_t_step :=
 Lemma interp_as_expr_or_const_correct_base {t} e z
   : @interp_as_expr_or_const interp_base_type (Tbase t) e = Some z
     -> interpf interp_op e = match z with
-                             | inl z => cast_const (t1:=TZ) z
-                             | inr e => interpf interp_op e
+                             | const_of z => cast_const (t1:=TZ) z
+                             | gen_expr e => interpf interp_op e
+                             | neg_expr e => interpf interp_op (Op (Opp _ _) e)
                              end.
 Proof.
   destruct z.
@@ -61,17 +64,25 @@ Proof.
                    | progress intros
                    | break_t_step
                    | progress invert_op ]. }
+  { do 2 (invert_expr; break_innermost_match; intros);
+      repeat first [ fin_t
+                   | progress simpl in *
+                   | progress intros
+                   | break_t_step
+                   | progress invert_op ]. }
 Qed.
 
 Lemma interp_as_expr_or_const_correct_prod_base {A B} e (v : _ * _)
   : @interp_as_expr_or_const interp_base_type (Prod (Tbase A) (Tbase B)) e = Some v
     -> interpf interp_op e = (match fst v with
-                              | inl z => cast_const (t1:=TZ) z
-                              | inr e => interpf interp_op e
+                              | const_of z => cast_const (t1:=TZ) z
+                              | gen_expr e => interpf interp_op e
+                              | neg_expr e => interpf interp_op (Op (Opp _ _) e)
                               end,
                               match snd v with
-                              | inl z => cast_const (t1:=TZ) z
-                              | inr e => interpf interp_op e
+                              | const_of z => cast_const (t1:=TZ) z
+                              | gen_expr e => interpf interp_op e
+                              | neg_expr e => interpf interp_op (Op (Opp _ _) e)
                               end).
 Proof.
   invert_expr;
@@ -85,6 +96,7 @@ Qed.
 Local Arguments Z.mul !_ !_.
 Local Arguments Z.add !_ !_.
 Local Arguments Z.sub !_ !_.
+Local Arguments Z.opp !_.
 
 Lemma InterpSimplifyArith {t} (e : Expr t)
   : forall x, Interp interp_op (SimplifyArith e) x = Interp interp_op e x.
@@ -93,10 +105,14 @@ Proof.
   break_innermost_match;
     repeat first [ fin_t
                  | progress simpl in *
-                 | progress unfold interp_op, lift_op
                  | progress subst
                  | erewrite !interp_as_expr_or_const_correct_prod_base by eassumption; cbv beta iota
                  | erewrite !interp_as_expr_or_const_correct_base by eassumption; cbv beta iota
+                 | match goal with
+                   | [ |- context[interpf _ ?e] ]
+                     => erewrite !(@interp_as_expr_or_const_correct_base _ e) by eassumption; cbv beta iota
+                   end
+                 | progress unfold interp_op, lift_op
                  | progress Z.ltb_to_lt
                  | progress rewrite ?Z.land_0_l, ?Z.land_0_r, ?Z.lor_0_l, ?Z.lor_0_r ].
 Qed.

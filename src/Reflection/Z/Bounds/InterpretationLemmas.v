@@ -306,6 +306,10 @@ Proof.
                  | progress Zarith_land_lor_t_step
                  | solve [ split_min_max; try omega; try Zarith_land_lor_t_step ] ];
       admit. }
+  { repeat first [ progress destruct_head Bounds.t
+                 | progress simpl in *
+                 | progress split_min_max
+                 | omega ]. }
   { t_special_case_op. }
   { t_special_case_op. }
   { t_special_case_op. }
