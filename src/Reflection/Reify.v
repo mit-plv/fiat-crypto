@@ -6,7 +6,8 @@ Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Relations.
 Require Import Crypto.Reflection.InputSyntax.
 Require Import Crypto.Util.Tuple.
-Require Import Crypto.Util.Tactics.DebugPrint.
+(*Require Import Crypto.Util.Tactics.DebugPrint.*)
+Require Import Crypto.Util.Tactics.PrintContext.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Notations.
@@ -30,23 +31,29 @@ Ltac debug_leave_reify_success_idtac funname e :=
 Ltac debug_reifyf_case_idtac case :=
   let s := (eval compute in (String.append "reifyf: " case)) in
   cidtac s.
+Ltac check_debug_level_then_Set _ :=
+  let lvl := reify_debug_level in
+  lazymatch type of lvl with
+  | nat => constr:(Set)
+  | ?T => cfail2 "reify_debug_level should have type nat but instead has type" T
+  end.
 Ltac debug1 tac :=
   let lvl := reify_debug_level in
   match lvl with
   | S _ => tac ()
-  | _ => constr:(Set)
+  | _ => check_debug_level_then_Set ()
   end.
 Ltac debug2 tac :=
   let lvl := reify_debug_level in
   match lvl with
   | S (S _) => tac ()
-  | _ => constr:(Set)
+  | _ => check_debug_level_then_Set ()
   end.
 Ltac debug3 tac :=
   let lvl := reify_debug_level in
   match lvl with
   | S (S (S _)) => tac ()
-  | _ => constr:(Set)
+  | _ => check_debug_level_then_Set ()
   end.
 Ltac debug_enter_reify2 funname e := debug2 ltac:(fun _ => debug_enter_reify_idtac funname e).
 Ltac debug_leave_reify3_success funname e := debug3 ltac:(fun _ => debug_leave_reify_success_idtac funname e).
@@ -192,9 +199,16 @@ Ltac reifyf base_type_code interp_base_type op var e :=
         (* even if its Gallina name matches a Ltac in this tactic. *)
         let maybe_x := fresh x in
         let not_x := fresh x in
-        lazymatch constr:(fun (x : T) (not_x : var t) (_ : reify_var_for_in_is base_type_code x t not_x) =>
-                            (_ : reify reify_tag C)) (* [C] here is an open term that references "x" by name *)
-        with fun _ v _ => @?C v => C end
+        let C' := match constr:(Set) with
+                  | _ => constr:(fun (x : T) (not_x : var t) (_ : reify_var_for_in_is base_type_code x t not_x) =>
+                                   (_ : reify reify_tag C)) (* [C] here is an open term that references "x" by name *)
+                  | _ => cfail2 "reifyf: Failed to reify by typeclasses:"%string e
+                  end in
+        match constr:(Set) with
+        | _ => lazymatch C'
+               with fun _ v _ => @?C v => C end
+        | _ => cfail2 "reifyf: Failed to eliminate function dependencies of:"%string C'
+        end
       | match ?ev with pair a b => @?eC a b end =>
         let dummy := debug_reifyf_case "matchpair" in
         let T := type of eC in
@@ -297,7 +311,18 @@ Ltac reifyf base_type_code interp_base_type op var e :=
   ret.
 
 Hint Extern 0 (reify (@exprf ?base_type_code ?interp_base_type ?op ?var) ?e)
-=> (debug_enter_reify_rec; let e := reifyf base_type_code interp_base_type op var e in debug_leave_reify_rec e; eexact e) : typeclass_instances.
+=> solve [ debug_enter_reify_rec;
+             let e := reifyf base_type_code interp_base_type op var e in
+             debug_leave_reify_rec e;
+               solve [ eexact e
+                     | ((*idtac "Error: In context:"; print_context ();*)
+                       idtac "In goal:"; idtac_goal;
+                         idtac "Error: Successful reification but unsuccessful eexact:" e;
+                         fail 10000 "Anomaly in reify hint") ]
+         | ((*idtac "Error: In context:"; print_context ();*)
+           idtac "In goal:"; idtac_goal;
+             idtac "Error: In hint for reify: Failed to reify:" e; fail) ]
+   : typeclass_instances.
 
 (** For reification including [Abs] *)
 Class reify_abs {varT} (var : varT) {eT} (e : eT) {T : Type} := Build_reify_abs : T.
@@ -412,53 +437,49 @@ Ltac Reify_rhs base_type_code interp_base_type op make_const interp_op :=
 
 (** Reification of context variables of the form [F := _ :
     Syntax.interp_type _ _] *)
-Ltac unique_reify_context_variable base_type_code interp_base_type op F :=
+Ltac unique_reify_context_variable base_type_code interp_base_type op F Fbody rT :=
   let reify_pretag := constr:(@exprf base_type_code interp_base_type op) in
   lazymatch goal with
   | [ H : forall var x not_x, reify _ (F x) |- _ ]
     => fail
   | _
     => let H' := fresh in
-       let T := type of F in
-       let rT := reify_type T in
        let src := lazymatch rT with Syntax.Arrow ?src ?dst => src end in
-       transparent eassert (H' : (id (forall var x (not_x : var src) (rv : reify_var_for_in_is base_type_code x src not_x),
-                                         reify (reify_pretag var) (F x))))
-         by (subst F; cbv beta delta [id]; exact _);
-       (** now we jump through a bunch of hoops to remove the [rv]
-           argument, and factor the body out into a separate context
-           variable, so that when we unfold once, we still make use of
-           context variables. *)
-       unfold id, reify_var_for_in_is in H';
-       let H'' := fresh in
-       pose (fun rv var x not_x => H' var x not_x rv) as H'';
-       subst H'; rename H'' into H';
-       unfold reify in (value of H');
-       let HT := lazymatch type of H' with
-                 | forall x, ?T => T
-                 end in
-       let C := lazymatch (eval cbv delta [H'] in H') with
-                | fun _ => ?v => v
-                end in
-       lazymatch C with
-       | fun var _ xv => @?C var xv
-         => let f := fresh F in
-            pose C as f;
-            clear H';
-            pose ((fun var _ xv => f var xv) : HT) as H';
-            cbv beta in H'
+       lazymatch Fbody with
+       | fun x : ?X => ?Fbody'
+         => let maybe_x := fresh x in
+            let not_x := fresh maybe_x in
+            let rF := lazymatch constr:(fun var' (x : X) (not_x : var' src) (_ : reify_var_for_in_is base_type_code x src not_x)
+                                        => (_ : reify (reify_pretag var') Fbody'))
+                      with
+                      | fun (var' : ?VAR) (x : ?X) (v : ?V) _ => ?C
+                        => constr:(fun (var' : VAR) (v : V) => C)
+                      end in
+            let F' := fresh F in
+            pose rF as F';
+            pose ((fun var (x : X) => F' var) : forall var (x : X) (not_x : var src), reify (reify_pretag var) (F x)) as H';
+            cbv beta in (value of H')
        end
   end.
-Ltac reify_context_variables base_type_code interp_base_type op :=
+Ltac prereify_context_variables interp_base_type :=
   (** N.B. this assumes that [interp_base_type] is a transparent
      definition; minor reorganization may be needed if this is changed
      (moving the burden of reifying [interp_base_type T] to
      [reify_base_type], rather than keeping it here) *)
-  cbv beta iota delta [interp_base_type] in *;
+  cbv beta iota delta [interp_base_type] in *.
+Ltac reify_context_variable base_type_code interp_base_type op :=
   (** [match reverse] so that we respect the chain of dependencies in
       context variables; otherwise we're going to be trying the last
       context variable many times, and bottlenecking there. *)
-  repeat match reverse goal with
-         | [ F := _ : Syntax.interp_type _ _  |- _ ]
-           => unique_reify_context_variable base_type_code interp_base_type op F
-         end.
+  match reverse goal with
+  | [ F := ?Fbody : Syntax.interp_type _ ?rT  |- _ ]
+    => unique_reify_context_variable base_type_code interp_base_type op F Fbody rT
+  end.
+Ltac lazy_reify_context_variable base_type_code interp_base_type op :=
+  lazymatch reverse goal with
+  | [ F := ?Fbody : Syntax.interp_type _ ?rT  |- _ ]
+    => unique_reify_context_variable base_type_code interp_base_type op F Fbody rT
+  end.
+Ltac reify_context_variables base_type_code interp_base_type op :=
+  prereify_context_variables interp_base_type;
+  repeat reify_context_variable base_type_code interp_base_type op.

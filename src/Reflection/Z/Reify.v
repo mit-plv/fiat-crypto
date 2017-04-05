@@ -48,5 +48,11 @@ Ltac prove_ExprEta_Compile_correct :=
 Ltac Reify_rhs :=
   Reflection.Reify.Reify_rhs_gen Reify prove_ExprEta_Compile_correct interp_op ltac:(fun tac => tac ()).
 
+Ltac prereify_context_variables :=
+  Reflection.Reify.prereify_context_variables interp_base_type.
+Ltac reify_context_variable :=
+  Reflection.Reify.reify_context_variable base_type interp_base_type op.
+Ltac lazy_reify_context_variable :=
+  Reflection.Reify.lazy_reify_context_variable base_type interp_base_type op.
 Ltac reify_context_variables :=
   Reflection.Reify.reify_context_variables base_type interp_base_type op.
