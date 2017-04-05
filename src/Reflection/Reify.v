@@ -450,6 +450,11 @@ Ltac unique_reify_context_variable base_type_code interp_base_type op F :=
        end
   end.
 Ltac reify_context_variables base_type_code interp_base_type op :=
+  (** N.B. this assumes that [interp_base_type] is a transparent
+     definition; minor reorganization may be needed if this is changed
+     (moving the burden of reifying [interp_base_type T] to
+     [reify_base_type], rather than keeping it here) *)
+  cbv beta iota delta [interp_base_type] in *;
   repeat match goal with
          | [ F := _ : Syntax.interp_type _ _  |- _ ]
            => unique_reify_context_variable base_type_code interp_base_type op F

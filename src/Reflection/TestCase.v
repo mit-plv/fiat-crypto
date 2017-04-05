@@ -52,7 +52,6 @@ Ltac Reify' e := Reify.Reify' base_type interp_base_type op e.
 Ltac Reify e := Reify.Reify base_type interp_base_type op make_const e.
 Ltac Reify_rhs := Reify.Reify_rhs base_type interp_base_type op make_const interp_op.
 Ltac reify_context_variables :=
-  cbv beta iota delta [interp_base_type] in *;
   Reify.reify_context_variables base_type interp_base_type op.
 
 (*Ltac reify_debug_level ::= constr:(2).*)
