@@ -6,8 +6,8 @@ Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Relations.
 Require Import Crypto.Reflection.InputSyntax.
 Require Import Crypto.Util.Tuple.
-(*Require Import Crypto.Util.Tactics.DebugPrint.*)
-Require Import Crypto.Util.Tactics.PrintContext.
+Require Import Crypto.Util.Tactics.DebugPrint.
+(*Require Import Crypto.Util.Tactics.PrintContext.*)
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Notations.
