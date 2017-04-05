@@ -13,14 +13,17 @@ Require Import Crypto.Util.FixedWordSizes.
 Require Import Crypto.Util.BoundedWord.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Sigma.Associativity.
+Require Import Crypto.Util.Sigma.MapProjections.
 Require Import Crypto.Util.Tactics.EvarExists.
 Require Import Crypto.Util.Tactics.GetGoal.
 Require Import Crypto.Util.Tactics.PrintContext.
+Require Import Crypto.Util.Tactics.MoveLetIn.
 
 Module Export Exports.
   Export Crypto.Reflection.Z.Reify. (* export for the tactic redefinitions *)
 End Exports.
 
+(** ** [reassoc_sig_and_eexists] *)
 (** The [reassoc_sig_and_eexists] tactic operates on a goal convertible with
 <<
 { f : { a | is_bounded_by bounds a }
@@ -33,11 +36,79 @@ is_bounded_by bounds (map wordToZ ?f)
 >>
     where [?f] is a context variable set to a new evar.  This tactic
     relies on the exact definition of [BoundedWordToZ]. *)
+
+
+(** The tactic [unfold_paired_tuple_map] unfolds any [Tuple.map]s
+    applied to [pair]s. *)
+Ltac unfold_paired_tuple_map :=
+  repeat match goal with
+         | [ |- context[Tuple.map (n:=S ?N) _ (pair _ _)] ]
+           => progress change (@Tuple.map (S N)) with (fun A B f => @Tuple.map' A B f N); cbv beta iota delta [Tuple.map']
+         end.
+(** The tactic [preunfold_and_dlet_to_context] will unfold
+    [BoundedWordToZ] and [Tuple.map]s applied to [pair]s, and then
+    look for a [dlet x := y in ...] in the RHS of a goal of shape [{a
+    | LHS = RHS }] and replace it with a context variable. *)
+Ltac preunfold_and_dlet_to_context :=
+  unfold_paired_tuple_map;
+  cbv [BoundedWordToZ]; cbn [fst snd proj1_sig];
+  sig_dlet_in_rhs_to_context.
+(** The tactic [pattern_proj1_sig_in_lhs_of_sig] takes a goal of the form
+<<
+{ a : A | P }
+>>
+    where [A] is a sigma type, and leaves a goal of the form
+<<
+{ a : A | dlet p := P' in p (proj1_sig a)
+>>
+    where all occurrences of [proj1_sig a] have been abstracted out of
+    [P] to make [P']. *)
+Ltac pattern_proj1_sig_in_sig :=
+  eapply proj2_sig_map;
+  [ let a := fresh in
+    let H := fresh in
+    intros a H; pattern (proj1_sig a);
+    lazymatch goal with
+    | [ |- ?P ?p1a ]
+      => cut (dlet p := P in p p1a);
+         [ clear; abstract (cbv [Let_In]; exact (fun x => x)) | ]
+    end;
+    exact H
+  | cbv beta ].
+(** The tactic [pattern_sig_sig_assoc] takes a goal of the form
+<<
+{ a : { a' : A | P } | Q }
+>>
+    where [Q] mentions [proj1_sig a] but not [proj2_sig a], and leaves
+    a goal of the form
+<<
+{ a : A | P /\ Q }
+>>
+ *)
+Ltac pattern_sig_sig_assoc :=
+  pattern_proj1_sig_in_sig;
+  let f := fresh in
+  goal_dlet_to_context_step f;
+  apply sig_sig_assoc;
+  subst f; cbv beta.
+(** The tactic [reassoc_sig_and_eexists] will unfold [BoundedWordToZ]
+    and move any [dlet x := ... in ...] to context variables, and then
+    take a goal of the form
+<<
+{ a : { a' : A | P a' } | Q (proj1_sig a) }
+>>
+    where [Q] mentions [proj1_sig a] but not [proj2_sig a], and leave
+    a goal of the form
+<<
+P ?a /\ Q ?a
+>>
+ *)
 Ltac reassoc_sig_and_eexists :=
-  cbv [BoundedWordToZ];
-  sig_sig_assoc;
+  preunfold_and_dlet_to_context;
+  pattern_sig_sig_assoc;
   evar_exists.
 
+(** ** [do_curry_rhs] *)
 (** The [do_curry_rhs] tactic takes a goal of the form
 <<
 _ /\ _ = F A B ... Z
@@ -54,6 +125,7 @@ Ltac do_curry_rhs :=
        change_with_curried f_Z
   end.
 
+(** ** [split_BoundedWordToZ] *)
 (** The [split_BoundedWordToZ] tactic takes a goal of the form
 <<
 _ /\ (map wordToZ (proj1_sig f1), ... map wordToZ (proj1_sig fn)) = F ARGS
@@ -206,6 +278,7 @@ Ltac split_BoundedWordToZ :=
   cbv beta iota; intro; (* put [f] back in the context so that [cbn] doesn't remove this let-in *)
   cbn [proj1_sig].
 
+(** ** [zrange_to_reflective] *)
 (** The [zrange_to_reflective] tactic takes a goal of the form
 <<
 (is_bounded_by _ bounds (map wordToZ (?fW args)) /\ ...)
@@ -319,6 +392,7 @@ Ltac zrange_to_reflective_goal Hbounded :=
   adjust_goal_for_reflective.
 Ltac zrange_to_reflective Hbounded := zrange_to_reflective_hyps; zrange_to_reflective_goal Hbounded.
 
+(** ** [refine_to_reflective_glue] *)
 (** The tactic [refine_to_reflective_glue] is the public-facing one;
     it takes a goal of the form
 <<
