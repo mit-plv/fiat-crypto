@@ -57,6 +57,7 @@ forall x, Interp _ ?e x = F
     by reifying [F]. *)
 Ltac do_reify :=
   cbv beta iota delta [Syntax.interp_flat_type Syntax.interp_base_type];
+  reify_context_variables;
   Reify_rhs; reflexivity.
 (** ** Input Boundedness Side-Conditions *)
 (** The tactic [handle_bounds_from_hyps] handles goals of the form
