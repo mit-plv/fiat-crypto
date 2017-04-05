@@ -51,6 +51,9 @@ Definition make_const (t : base_type) : interp_base_type t -> op Unit (Tbase t)
 Ltac Reify' e := Reify.Reify' base_type interp_base_type op e.
 Ltac Reify e := Reify.Reify base_type interp_base_type op make_const e.
 Ltac Reify_rhs := Reify.Reify_rhs base_type interp_base_type op make_const interp_op.
+Ltac reify_context_variables :=
+  cbv beta iota delta [interp_base_type] in *;
+  Reify.reify_context_variables base_type interp_base_type op.
 
 (*Ltac reify_debug_level ::= constr:(2).*)
 
@@ -103,6 +106,16 @@ Abort.
 Definition example_expr : Syntax.Expr base_type op (Syntax.Arrow (tnat * tnat) tnat).
 Proof.
   let x := Reify (fun zw => let '(z, w) := zw in let unused := 1 + 1 in let x := 1 in let y := 1 in (let a := 1 in let '(c, d) := (2, 3) in a + x + (x + x) + (x + x) - (x + x) - a + c + d) + y + z + w)%nat in
+  exact x.
+Defined.
+
+Definition example_expr_ctx : Syntax.Expr base_type op (Syntax.Arrow (tnat * tnat) tnat).
+Proof.
+  pose (((fun ab => let '(a, b) := ab in a + b)%nat)
+        : Syntax.interp_type interp_base_type (Syntax.Arrow (tnat * tnat) tnat))
+    as F.
+  reify_context_variables.
+  let x := Reify (fun zw => let '(z, w) := zw in F (z, w))%nat in
   exact x.
 Defined.
 
