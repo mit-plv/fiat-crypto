@@ -13,6 +13,7 @@ Require Import Crypto.Reflection.CommonSubexpressionElimination.
 Require Crypto.Reflection.Linearize Crypto.Reflection.Inline.
 Require Import Crypto.Reflection.WfReflective.
 Require Import Crypto.Reflection.Conversion.
+Require Import Crypto.Reflection.DependentIdentitySigmaByEq.
 Require Import Crypto.Util.NatUtil.
 
 Import ReifyDebugNotations.
@@ -247,3 +248,193 @@ Module bounds.
                                          (exist _ {| lower := 0 ; value := x ; upper := 10 |} xpf,
                                           exist _ {| lower := 100 ; value := y ; upper := 1000 |} ypf))).
 End bounds.
+
+Section dependent_sigma_eq.
+  Section gen.
+    Import Reflection.Syntax.
+    Context {var : base_type -> Type}.
+    Fixpoint gen_let_sequence' (n : nat) (rv : @exprf base_type op var (Tbase Tnat))
+      : @exprf base_type op var (Tbase Tnat)
+      := match n with
+         | 0 => rv
+         | S n' => LetIn (Op Add (Pair rv rv))
+                         (fun v => gen_let_sequence' n' (@Var base_type op var Tnat v))
+         end.
+    Definition gen_let_sequence n := gen_let_sequence' n (Op (Const 1) TT).
+  End gen.
+
+  Definition dexist_idf {var} {t} (e : @Syntax.exprf base_type op (fun t => @Syntax.exprf base_type op var (Tbase t)) t)
+    := @dexist_id
+         base_type op var base_type_beq
+         internal_base_type_dec_bl
+         (fun _ b => Syntax.Op (make_const _ match b return interp_base_type b with Tnat => 0 end) Syntax.TT)
+         t e.
+  Definition pexist_idf {var} (let_in : forall T t', _ -> (_ -> _) -> _)
+             {t} (e : @Syntax.exprf base_type op (fun t => @Syntax.exprf base_type op var (Tbase t)) t)
+    := @pexist_id
+         base_type op var base_type_beq
+         internal_base_type_dec_bl
+         (fun _ b => Syntax.Op (make_const _ match b return interp_base_type b with Tnat => 0 end) Syntax.TT)
+         let_in
+         t e.
+
+  Definition seq0 {var} := Eval vm_compute in @gen_let_sequence var 0.
+  Definition seq1 {var} := Eval vm_compute in @gen_let_sequence var 1.
+  Definition seq2 {var} := Eval vm_compute in @gen_let_sequence var 2.
+  Definition seq3 {var} := Eval vm_compute in @gen_let_sequence var 2.
+  Definition seq4 {var} := Eval vm_compute in @gen_let_sequence var 4.
+  Definition seq5 {var} := Eval vm_compute in @gen_let_sequence var 5.
+  Definition seq6 {var} := Eval vm_compute in @gen_let_sequence var 6.
+  Definition seq7 {var} := Eval vm_compute in @gen_let_sequence var 7.
+  Definition seq8 {var} := Eval vm_compute in @gen_let_sequence var 8.
+  Definition seq9 {var} := Eval vm_compute in @gen_let_sequence var 9.
+  Definition seq10 {var} := Eval vm_compute in @gen_let_sequence var 10.
+  Definition seq11 {var} := Eval vm_compute in @gen_let_sequence var 11.
+  Definition seq12 {var} := Eval vm_compute in @gen_let_sequence var 12.
+  Definition seq13 {var} := Eval vm_compute in @gen_let_sequence var 13.
+  Definition seq14 {var} := Eval vm_compute in @gen_let_sequence var 14.
+  Definition seq15 {var} := Eval vm_compute in @gen_let_sequence var 15.
+  Definition seq16 {var} := Eval vm_compute in @gen_let_sequence var 16.
+  Definition seq17 {var} := Eval vm_compute in @gen_let_sequence var 17.
+  Definition seq18 {var} := Eval vm_compute in @gen_let_sequence var 18.
+  Definition seq19 {var} := Eval vm_compute in @gen_let_sequence var 19.
+  Definition seq20 {var} := Eval vm_compute in @gen_let_sequence var 20.
+  Definition seq21 {var} := Eval vm_compute in @gen_let_sequence var 21.
+  Definition seq22 {var} := Eval vm_compute in @gen_let_sequence var 22.
+  Definition seq23 {var} := Eval vm_compute in @gen_let_sequence var 23.
+  Definition seq24 {var} := Eval vm_compute in @gen_let_sequence var 24.
+  Definition seq25 {var} := Eval vm_compute in @gen_let_sequence var 25.
+  Definition seq26 {var} := Eval vm_compute in @gen_let_sequence var 26.
+  Definition seq27 {var} := Eval vm_compute in @gen_let_sequence var 27.
+  Definition seq28 {var} := Eval vm_compute in @gen_let_sequence var 28.
+  Definition seq29 {var} := Eval vm_compute in @gen_let_sequence var 29.
+  Definition seq30 {var} := Eval vm_compute in @gen_let_sequence var 30.
+  Definition seq31 {var} := Eval vm_compute in @gen_let_sequence var 31.
+  Definition seq32 {var} := Eval vm_compute in @gen_let_sequence var 32.
+  Definition seq33 {var} := Eval vm_compute in @gen_let_sequence var 33.
+  Definition seq34 {var} := Eval vm_compute in @gen_let_sequence var 34.
+  Definition seq35 {var} := Eval vm_compute in @gen_let_sequence var 35.
+  Definition seq36 {var} := Eval vm_compute in @gen_let_sequence var 36.
+  Definition seq37 {var} := Eval vm_compute in @gen_let_sequence var 37.
+  Definition seq38 {var} := Eval vm_compute in @gen_let_sequence var 38.
+  Definition seq39 {var} := Eval vm_compute in @gen_let_sequence var 39.
+  Definition seq40 {var} := Eval vm_compute in @gen_let_sequence var 40.
+  Definition seq41 {var} := Eval vm_compute in @gen_let_sequence var 41.
+  Definition seq42 {var} := Eval vm_compute in @gen_let_sequence var 42.
+  Definition seq43 {var} := Eval vm_compute in @gen_let_sequence var 43.
+  Definition seq44 {var} := Eval vm_compute in @gen_let_sequence var 44.
+  Definition seq45 {var} := Eval vm_compute in @gen_let_sequence var 45.
+  Definition seq46 {var} := Eval vm_compute in @gen_let_sequence var 46.
+  Definition seq47 {var} := Eval vm_compute in @gen_let_sequence var 47.
+  Definition seq48 {var} := Eval vm_compute in @gen_let_sequence var 48.
+  Definition seq49 {var} := Eval vm_compute in @gen_let_sequence var 49.
+  (*Definition exist_idf {var t} e := @dexist_idf var t e.*)
+  Definition exist_idf {var t} e let_in := @pexist_idf var let_in t e.
+
+  Section with_var.
+    Context {var : base_type -> Type}.
+    Opaque Let_In.
+    Declare Reduction seqr := vm_compute.
+    Time Definition seq0' := Eval seqr in @exist_idf var (Tbase Tnat) seq0.
+    Time Definition seq1' := Eval seqr in @exist_idf var (Tbase Tnat) seq1.
+    Time Definition seq2' := Eval seqr in @exist_idf var (Tbase Tnat) seq2.
+    Time Definition seq3' := Eval seqr in @exist_idf var (Tbase Tnat) seq3.
+    Time Definition seq4' := Eval seqr in @exist_idf var (Tbase Tnat) seq4.
+    Time Definition seq5' := Eval seqr in @exist_idf var (Tbase Tnat) seq5.
+    Time Definition seq6' := Eval seqr in @exist_idf var (Tbase Tnat) seq6.
+    Time Definition seq7' := Eval seqr in @exist_idf var (Tbase Tnat) seq7.
+    Time Definition seq8' := Eval seqr in @exist_idf var (Tbase Tnat) seq8.
+    Time Definition seq9' := Eval seqr in @exist_idf var (Tbase Tnat) seq9.
+    Time Definition seq10' := Eval seqr in @exist_idf var (Tbase Tnat) seq10.
+    Time Definition seq11' := Eval seqr in @exist_idf var (Tbase Tnat) seq11.
+    Time Definition seq12' := Eval seqr in @exist_idf var (Tbase Tnat) seq12.
+    Time Definition seq13' := Eval seqr in @exist_idf var (Tbase Tnat) seq13.
+    Time Definition seq14' := Eval seqr in @exist_idf var (Tbase Tnat) seq14.
+    Time Definition seq15' := Eval seqr in @exist_idf var (Tbase Tnat) seq15.
+    Time Definition seq16' := Eval seqr in @exist_idf var (Tbase Tnat) seq16.
+    Time Definition seq17' := Eval seqr in @exist_idf var (Tbase Tnat) seq17.
+    Time Definition seq18' := Eval seqr in @exist_idf var (Tbase Tnat) seq18.
+    Time Definition seq19' := Eval seqr in @exist_idf var (Tbase Tnat) seq19.
+    Time Definition seq20' := Eval seqr in @exist_idf var (Tbase Tnat) seq20.
+    Time Definition seq21' := Eval seqr in @exist_idf var (Tbase Tnat) seq21.
+    Time Definition seq22' := Eval seqr in @exist_idf var (Tbase Tnat) seq22.
+    Time Definition seq23' := Eval seqr in @exist_idf var (Tbase Tnat) seq23.
+    Time Definition seq24' := Eval seqr in @exist_idf var (Tbase Tnat) seq24.
+    Time Definition seq25' := Eval seqr in @exist_idf var (Tbase Tnat) seq25.
+    Time Definition seq26' := Eval seqr in @exist_idf var (Tbase Tnat) seq26.
+    Time Definition seq27' := Eval seqr in @exist_idf var (Tbase Tnat) seq27.
+    Time Definition seq28' := Eval seqr in @exist_idf var (Tbase Tnat) seq28.
+    Time Definition seq29' := Eval seqr in @exist_idf var (Tbase Tnat) seq29.
+    Time Definition seq30' := Eval seqr in @exist_idf var (Tbase Tnat) seq30.
+    Time Definition seq31' := Eval seqr in @exist_idf var (Tbase Tnat) seq31.
+    Time Definition seq32' := Eval seqr in @exist_idf var (Tbase Tnat) seq32.
+    Time Definition seq33' := Eval seqr in @exist_idf var (Tbase Tnat) seq33.
+    Time Definition seq34' := Eval seqr in @exist_idf var (Tbase Tnat) seq34.
+    Time Definition seq35' := Eval seqr in @exist_idf var (Tbase Tnat) seq35.
+    Time Definition seq36' := Eval seqr in @exist_idf var (Tbase Tnat) seq36.
+    Time Definition seq37' := Eval seqr in @exist_idf var (Tbase Tnat) seq37.
+    Time Definition seq38' := Eval seqr in @exist_idf var (Tbase Tnat) seq38.
+    Time Definition seq39' := Eval seqr in @exist_idf var (Tbase Tnat) seq39.
+    Time Definition seq40' := Eval seqr in @exist_idf var (Tbase Tnat) seq40.
+    Time Definition seq41' := Eval seqr in @exist_idf var (Tbase Tnat) seq41.
+    Time Definition seq42' := Eval seqr in @exist_idf var (Tbase Tnat) seq42.
+    Time Definition seq43' := Eval seqr in @exist_idf var (Tbase Tnat) seq43.
+    Time Definition seq44' := Eval seqr in @exist_idf var (Tbase Tnat) seq44.
+    Time Definition seq45' := Eval seqr in @exist_idf var (Tbase Tnat) seq45.
+    Time Definition seq46' := Eval seqr in @exist_idf var (Tbase Tnat) seq46.
+    Time Definition seq47' := Eval seqr in @exist_idf var (Tbase Tnat) seq47.
+    Time Definition seq48' := Eval seqr in @exist_idf var (Tbase Tnat) seq48.
+    Time Definition seq49' := Eval seqr in @exist_idf var (Tbase Tnat) seq49.
+
+    Time Definition seq0'' := Eval seqr in seq0' (fun _ _ x f => f x).
+    Time Definition seq1'' := Eval seqr in seq1' (fun _ _ x f => f x).
+    Time Definition seq2'' := Eval seqr in seq2' (fun _ _ x f => f x).
+    Time Definition seq3'' := Eval seqr in seq3' (fun _ _ x f => f x).
+    Time Definition seq4'' := Eval seqr in seq4' (fun _ _ x f => f x).
+    Time Definition seq5'' := Eval seqr in seq5' (fun _ _ x f => f x).
+    Time Definition seq6'' := Eval seqr in seq6' (fun _ _ x f => f x).
+    Time Definition seq7'' := Eval seqr in seq7' (fun _ _ x f => f x).
+    Time Definition seq8'' := Eval seqr in seq8' (fun _ _ x f => f x).
+    Time Definition seq9'' := Eval seqr in seq9' (fun _ _ x f => f x).
+    Time Definition seq10'' := Eval seqr in seq10' (fun _ _ x f => f x).
+    Time Definition seq11'' := Eval seqr in seq11' (fun _ _ x f => f x).
+    Time Definition seq12'' := Eval seqr in seq12' (fun _ _ x f => f x).
+    Time Definition seq13'' := Eval seqr in seq13' (fun _ _ x f => f x).
+    Time Definition seq14'' := Eval seqr in seq14' (fun _ _ x f => f x).
+    Time Definition seq15'' := Eval seqr in seq15' (fun _ _ x f => f x).
+    Time Definition seq16'' := Eval seqr in seq16' (fun _ _ x f => f x).
+    Time Definition seq17'' := Eval seqr in seq17' (fun _ _ x f => f x).
+    Time Definition seq18'' := Eval seqr in seq18' (fun _ _ x f => f x).
+    Time Definition seq19'' := Eval seqr in seq19' (fun _ _ x f => f x).
+    Time Definition seq20'' := Eval seqr in seq20' (fun _ _ x f => f x).
+    Time Definition seq21'' := Eval seqr in seq21' (fun _ _ x f => f x).
+    Time Definition seq22'' := Eval seqr in seq22' (fun _ _ x f => f x).
+    Time Definition seq23'' := Eval seqr in seq23' (fun _ _ x f => f x).
+    Time Definition seq24'' := Eval seqr in seq24' (fun _ _ x f => f x).
+    Time Definition seq25'' := Eval seqr in seq25' (fun _ _ x f => f x).
+    Time Definition seq26'' := Eval seqr in seq26' (fun _ _ x f => f x).
+    Time Definition seq27'' := Eval seqr in seq27' (fun _ _ x f => f x).
+    Time Definition seq28'' := Eval seqr in seq28' (fun _ _ x f => f x).
+    Time Definition seq29'' := Eval seqr in seq29' (fun _ _ x f => f x).
+    Time Definition seq30'' := Eval seqr in seq30' (fun _ _ x f => f x).
+    Time Definition seq31'' := Eval seqr in seq31' (fun _ _ x f => f x).
+    Time Definition seq32'' := Eval seqr in seq32' (fun _ _ x f => f x).
+    Time Definition seq33'' := Eval seqr in seq33' (fun _ _ x f => f x).
+    Time Definition seq34'' := Eval seqr in seq34' (fun _ _ x f => f x).
+    Time Definition seq35'' := Eval seqr in seq35' (fun _ _ x f => f x).
+    Time Definition seq36'' := Eval seqr in seq36' (fun _ _ x f => f x).
+    Time Definition seq37'' := Eval seqr in seq37' (fun _ _ x f => f x).
+    Time Definition seq38'' := Eval seqr in seq38' (fun _ _ x f => f x).
+    Time Definition seq39'' := Eval seqr in seq39' (fun _ _ x f => f x).
+    Time Definition seq40'' := Eval seqr in seq40' (fun _ _ x f => f x).
+    Time Definition seq41'' := Eval seqr in seq41' (fun _ _ x f => f x).
+    Time Definition seq42'' := Eval seqr in seq42' (fun _ _ x f => f x).
+    Time Definition seq43'' := Eval seqr in seq43' (fun _ _ x f => f x).
+    Time Definition seq44'' := Eval seqr in seq44' (fun _ _ x f => f x).
+    Time Definition seq45'' := Eval seqr in seq45' (fun _ _ x f => f x).
+    Time Definition seq46'' := Eval seqr in seq46' (fun _ _ x f => f x).
+    Time Definition seq47'' := Eval seqr in seq47' (fun _ _ x f => f x).
+    Time Definition seq48'' := Eval seqr in seq48' (fun _ _ x f => f x).
+    Time Definition seq49'' := Eval seqr in seq49' (fun _ _ x f => f x).
+  End with_var.
+End dependent_sigma_eq.
