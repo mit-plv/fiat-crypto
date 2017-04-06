@@ -388,8 +388,8 @@ Ltac find_reified_f_evar LHS :=
   | map wordToZ ?x => find_reified_f_evar x
   | _ => LHS
   end.
-Ltac zrange_to_reflective_hyps_step :=
-  match goal with
+Ltac zrange_to_reflective_hyps_step_gen then_tac :=
+  lazymatch goal with
   | [ H : @ZRange.is_bounded_by ?option_bit_width ?count ?bounds (Tuple.map wordToZ ?arg) |- _ ]
     => let rT := constr:(Syntax.tuple (Tbase TZ) count) in
        let is_bounded_by' := constr:(@Bounds.is_bounded_by rT) in
@@ -400,7 +400,8 @@ Ltac zrange_to_reflective_hyps_step :=
        let H' := fresh H in
        rename H into H';
        assert (H : is_bounded_by' bounds (map' arg)) by (clear -H'; abstract exact H');
-       clear H'; move H at top
+       clear H'; move H at top;
+       then_tac ()
   | [ H := context Hv[@Tuple.map ?a ?b ?c (@wordToZ ?d) ?x], Hbounded : Bounds.is_bounded_by ?bounds (cast_back_flat_const ?x) |- _ ]
     => let T := type of (@Tuple.map a b c (@wordToZ d) x) in
        let T := (eval compute in T) in
@@ -408,9 +409,12 @@ Ltac zrange_to_reflective_hyps_step :=
        let map_t := constr:(fun t bs => @cast_back_flat_const (@Bounds.interp_base_type) t (fun _ => Bounds.bounds_to_base_type) bs) in
        let map' := constr:(map_t rT bounds) in
        let Hv' := context Hv[map' x] in
-       progress change Hv' in (value of H); cbv beta in H
+       progress change Hv' in (value of H); cbv beta in H;
+       then_tac ()
+  | _ => idtac
   end.
-Ltac zrange_to_reflective_hyps := repeat zrange_to_reflective_hyps_step.
+Ltac zrange_to_reflective_hyps_step := zrange_to_reflective_hyps_step_gen ltac:(fun _ => idtac).
+Ltac zrange_to_reflective_hyps := zrange_to_reflective_hyps_step_gen ltac:(fun _ => zrange_to_reflective_hyps).
 Ltac zrange_to_reflective_goal Hbounded :=
   lazymatch goal with
   | [ |- ?is_bounded_by_T /\ ?LHS = ?f ?Zargs ]
