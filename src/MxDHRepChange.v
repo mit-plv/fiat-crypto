@@ -1,6 +1,6 @@
 Require Import Crypto.Spec.MxDH.
 Require Import Crypto.Algebra Crypto.Algebra.Monoid Crypto.Algebra.Group Crypto.Algebra.Ring Crypto.Algebra.Field.
-Require Import Crypto.Util.Tuple.
+Require Import Crypto.Util.Tuple Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.BreakMatch.
 
@@ -121,7 +121,7 @@ Section MxDHRepChange.
    Proper (loopiter_eq ==> eq ==> loopiter_eq) (loopiter K Kzero Kone Kadd Ksub Kmul Kinv Ka24 Kcswap a b c).
   Proof using Kcswap_correct Keq_dec impl_field.
     unfold loopiter; intros [? ?] [? ?] [[[] []] ?]; repeat intro ; cbv [fst snd] in * |-; subst.
-    repeat VerdiTactics.break_match; subst; repeat (VerdiTactics.find_injection; intros; subst).
+    repeat (break_match; break_match_hyps).
     split; [|reflexivity].
     etransitivity; [|etransitivity]; [ | eapply Proper_ladderstep | ];
       [eapply eq_subrelation; [ exact _ | symmetry; eassumption ]
@@ -129,8 +129,7 @@ Section MxDHRepChange.
       | eapply eq_subrelation; [exact _ | eassumption ] ];
       rewrite !Kcswap_correct in *;
       match goal with [H: (if ?b then _ else _) = _ |- _] => destruct b end;
-      repeat (VerdiTactics.find_injection; intros; subst);
-    split; simpl; eauto.
+      destruct_head prod; inversion_prod; subst; eauto.
   Qed.
 
   Lemma MxDHRepChange b (x:F) :
@@ -152,7 +151,7 @@ Section MxDHRepChange.
     { destruct_head' prod; destruct Hrel as [[[] []] ?]; simpl in *; subst.
       rewrite !Fcswap_correct, !Kcswap_correct in *.
       match goal with [H: (if ?b then _ else _) = _ |- _] => destruct b end;
-        repeat (VerdiTactics.find_injection; intros; subst);
+        destruct_head prod; inversion_prod; subst;
         repeat match goal with [H: Keq (FtoK ?x) (?kx)|- _ ] => rewrite <- H end;
         t.
     }

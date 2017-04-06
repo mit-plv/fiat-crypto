@@ -1,11 +1,12 @@
 Require Import Coq.Lists.List.
-Require Import Coq.omega.Omega.
+Require Import Coq.omega.Omega Lia.
 Require Import Coq.Arith.Peano_dec.
 Require Import Coq.Classes.Morphisms.
-Require Import Crypto.Tactics.VerdiTactics.
 Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Crypto.Util.NatUtil.
 Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.Tactics.BreakMatch.
+Require Export Crypto.Util.Tactics.DestructHead.
 
 Create HintDb distr_length discriminated.
 Create HintDb simpl_set_nth discriminated.
@@ -552,8 +553,7 @@ Lemma splice_nth_equiv_update_nth : forall {T} n f d (xs:list T),
   then update_nth n f xs
   else xs ++ (f d)::nil.
 Proof.
-  induction n, xs; boring_list.
-  do 2 break_if; auto; omega.
+  induction n, xs; boring_list; break_match; auto; omega.
 Qed.
 
 Lemma splice_nth_equiv_update_nth_update : forall {T} n f d (xs:list T),
@@ -561,8 +561,7 @@ Lemma splice_nth_equiv_update_nth_update : forall {T} n f d (xs:list T),
   splice_nth n (f (nth_default d xs n)) xs = update_nth n f xs.
 Proof.
   intros.
-  rewrite splice_nth_equiv_update_nth.
-  break_if; auto; omega.
+  rewrite splice_nth_equiv_update_nth; break_match; auto; omega.
 Qed.
 
 Lemma splice_nth_equiv_update_nth_snoc : forall {T} n f d (xs:list T),
@@ -570,8 +569,7 @@ Lemma splice_nth_equiv_update_nth_snoc : forall {T} n f d (xs:list T),
   splice_nth n (f (nth_default d xs n)) xs = xs ++ (f d)::nil.
 Proof.
   intros.
-  rewrite splice_nth_equiv_update_nth.
-  break_if; auto; omega.
+  rewrite splice_nth_equiv_update_nth; break_match; auto; omega.
 Qed.
 
 Definition IMPOSSIBLE {T} : list T. exact nil. Qed.
@@ -688,7 +686,7 @@ Qed.
 Lemma In_nth_error_value : forall {T} xs (x:T),
   In x xs -> exists n, nth_error xs n = Some x.
 Proof.
-  induction xs; nth_tac; break_or_hyp.
+  induction xs; nth_tac; destruct_head or; subst.
   - exists 0; reflexivity.
   - edestruct IHxs; eauto. exists (S x0). eauto.
 Qed.
@@ -1115,11 +1113,11 @@ Hint Resolve @nth_default_in_bounds : simpl_nth_default.
 
 Lemma cons_eq_head : forall {T} (x y:T) xs ys, x::xs = y::ys -> x=y.
 Proof.
-  intros; solve_by_inversion.
+  intros; congruence.
 Qed.
 Lemma cons_eq_tail : forall {T} (x y:T) xs ys, x::xs = y::ys -> xs=ys.
 Proof.
-  intros; solve_by_inversion.
+  intros; congruence.
 Qed.
 
 Lemma map_nth_default_always {A B} (f : A -> B) (n : nat) (x : A) (l : list A)
@@ -1238,8 +1236,8 @@ Lemma update_nth_nth_default_full : forall {A} (d:A) n f l i,
   else d.
 Proof.
   induction n; (destruct l; simpl in *; [ intros; destruct i; simpl; try reflexivity; omega | ]);
-    intros; repeat break_if; subst; try destruct i;
-      repeat first [ progress break_if
+    intros; repeat break_match; subst; try destruct i;
+      repeat first [ progress break_match
                    | progress subst
                    | progress boring
                    | progress autorewrite with simpl_nth_default
@@ -1251,7 +1249,7 @@ Hint Rewrite @update_nth_nth_default_full : push_nth_default.
 Lemma update_nth_nth_default : forall {A} (d:A) n f l i, (0 <= i < length l)%nat ->
   nth_default d (update_nth n f l) i =
   if (eq_nat_dec i n) then f (nth_default d l i) else nth_default d l i.
-Proof. intros; rewrite update_nth_nth_default_full; repeat break_if; boring. Qed.
+Proof. intros; rewrite update_nth_nth_default_full; repeat break_match; boring. Qed.
 
 Hint Rewrite @update_nth_nth_default using (omega || distr_length; omega) : push_nth_default.
 
@@ -1527,23 +1525,23 @@ Proof.
   induction ls1, ls2.
   + cbv [map2 length min].
     intros.
-    break_if; try omega.
+    break_match; try omega.
     apply nth_default_nil.
   + cbv [map2 length min].
     intros.
-    break_if; try omega.
+    break_match; try omega.
     apply nth_default_nil.
   + cbv [map2 length min].
     intros.
-    break_if; try omega.
+    break_match; try omega.
     apply nth_default_nil.
   + simpl.
     destruct i.
     - intros. rewrite !nth_default_cons.
-      break_if; auto; omega.
+      break_match; auto; omega.
     - intros. rewrite !nth_default_cons_S.
       rewrite IHls1 with (d1 := d1) (d2 := d2).
-      repeat break_if; auto; omega.
+      repeat break_match; auto; omega.
 Qed.
 
 Lemma map2_cons : forall A B C (f : A -> B -> C) ls1 ls2 a b,
@@ -1655,15 +1653,15 @@ Lemma nth_default_firstn : forall {A} (d : A) l i n,
                                  then if lt_dec i n then nth_default d l i else d
                                  else nth_default d l i.
 Proof.
-  induction n; intros; break_if; autorewrite with push_nth_default; auto; try omega.
+  induction n; intros; break_match; autorewrite with push_nth_default; auto; try omega.
   + rewrite (firstn_succ d) by omega.
-    autorewrite with push_nth_default; repeat (break_if; distr_length);
+    autorewrite with push_nth_default; repeat (break_match_hyps; break_match; distr_length);
       rewrite Min.min_l in * by omega; try omega.
     - apply IHn; omega.
     - replace i with n in * by omega.
       rewrite Nat.sub_diag.
       autorewrite with push_nth_default; auto.
-    - rewrite nth_default_out_of_bounds; distr_length; auto.
+  + rewrite nth_default_out_of_bounds; break_match_hyps; distr_length; auto; lia.
   + rewrite firstn_all2 by omega.
     auto.
 Qed.

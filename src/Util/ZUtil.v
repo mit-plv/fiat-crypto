@@ -11,7 +11,6 @@ Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Notations.
 Require Import Coq.Lists.List.
 Require Export Crypto.Util.FixCoqMistakes.
-(*Require Export Crypto.Tactics.VerdiTactics.*)
 Import Nat.
 Local Open Scope Z.
 

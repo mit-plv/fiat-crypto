@@ -3,7 +3,6 @@ Require Export Crypto.Spec.CompleteEdwardsCurve.
 Require Import Crypto.Algebra Crypto.Algebra Crypto.Util.Decidable.
 Require Import Crypto.CompleteEdwardsCurve.Pre.
 Require Import Coq.Logic.Eqdep_dec.
-Require Import Crypto.Tactics.VerdiTactics.
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Crypto.Util.Tuple Crypto.Util.Notations.

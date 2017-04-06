@@ -26,17 +26,17 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *)
 
-Ltac subst_max :=
+Ltac subst_max := idtac "VerdiTactics is deprecated in fiat-crypto";
   repeat match goal with
            | [ H : ?X = _ |- _ ]  => subst X
            | [H : _ = ?X |- _] => subst X
          end.
 
-Ltac inv H := inversion H; subst_max.
-Ltac invc H := inv H; clear H.
-Ltac invcs H := invc H; simpl in *.
+Ltac inv H := idtac "VerdiTactics is deprecated in fiat-crypto"; inversion H; subst_max.
+Ltac invc H := idtac "VerdiTactics is deprecated in fiat-crypto"; inv H; clear H.
+Ltac invcs H := idtac "VerdiTactics is deprecated in fiat-crypto"; invc H; simpl in *.
 
-Ltac break_if :=
+Ltac break_if := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ |- context [ if ?X then _ else _ ] ] =>
       match type of X with
@@ -50,7 +50,7 @@ Ltac break_if :=
       end
   end.
 
-Ltac break_match_hyp :=
+Ltac break_match_hyp := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ H : context [ match ?X with _ => _ end ] |- _] =>
       match type of X with
@@ -59,7 +59,7 @@ Ltac break_match_hyp :=
       end
   end.
 
-Ltac break_match_goal :=
+Ltac break_match_goal := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ |- context [ match ?X with _ => _ end ] ] =>
       match type of X with
@@ -68,66 +68,66 @@ Ltac break_match_goal :=
       end
   end.
 
-Ltac break_match := break_match_goal || break_match_hyp.
+Ltac break_match := idtac "VerdiTactics is deprecated in fiat-crypto"; break_match_goal || break_match_hyp.
 
 
-Ltac break_exists :=
+Ltac break_exists := idtac "VerdiTactics is deprecated in fiat-crypto";
   repeat match goal with
            | [H : exists _, _ |- _ ] => destruct H
          end.
 
-Ltac break_exists_exists :=
+Ltac break_exists_exists := idtac "VerdiTactics is deprecated in fiat-crypto";
   repeat match goal with
            | H:exists _, _ |- _ =>
              let x := fresh "x" in
              destruct H as [x]; exists x
          end.
 
-Ltac break_and :=
+Ltac break_and := idtac "VerdiTactics is deprecated in fiat-crypto";
   repeat match goal with
            | [H : _ /\ _ |- _ ] => destruct H
          end.
 
-Ltac solve_by_inversion' tac :=
+Ltac solve_by_inversion' tac := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [H : _ |- _] => solve [inv H; tac]
   end.
 
-Ltac solve_by_inversion := solve_by_inversion' auto.
+Ltac solve_by_inversion := idtac "VerdiTactics is deprecated in fiat-crypto"; solve_by_inversion' auto.
 
-Ltac apply_fun f H:=
+Ltac apply_fun f H:= idtac "VerdiTactics is deprecated in fiat-crypto";
   match type of H with
     | ?X = ?Y => assert (f X = f Y)
   end.
 
-Ltac conclude H tac :=
+Ltac conclude H tac := idtac "VerdiTactics is deprecated in fiat-crypto";
   (let H' := fresh in
    match type of H with
      | ?P -> _ => assert P as H' by (tac)
    end; specialize (H H'); clear H').
 
-Ltac concludes :=
+Ltac concludes := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ H : ?P -> _ |- _ ] => conclude H auto
   end.
 
-Ltac forward H :=
+Ltac forward H := idtac "VerdiTactics is deprecated in fiat-crypto";
   let H' := fresh in
    match type of H with
      | ?P -> _ => assert P as H'
    end.
 
-Ltac forwards :=
+Ltac forwards := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ H : ?P -> _ |- _ ] => forward H
   end.
 
-Ltac find_contradiction :=
+Ltac find_contradiction := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ H : ?X = _, H' : ?X = _ |- _ ] => rewrite H in H'; solve_by_inversion
   end.
 
-Ltac find_rewrite :=
+Ltac find_rewrite := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ H : ?X _ _ _ _ = _, H' : ?X _ _ _ _ = _ |- _ ] => rewrite H in H'
     | [ H : ?X = _, H' : ?X = _ |- _ ] => rewrite H in H'
@@ -135,31 +135,31 @@ Ltac find_rewrite :=
     | [ H : ?X = _ |- context [ ?X ] ] => rewrite H
   end.
 
-Ltac find_rewrite_lem lem :=
+Ltac find_rewrite_lem lem := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ H : _ |- _ ] =>
       rewrite lem in H; [idtac]
   end.
 
-Ltac find_rewrite_lem_by lem t :=
+Ltac find_rewrite_lem_by lem t := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ H : _ |- _ ] =>
       rewrite lem in H by t
   end.
 
-Ltac find_erewrite_lem lem :=
+Ltac find_erewrite_lem lem := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ H : _ |- _] => erewrite lem in H by eauto
   end.
 
-Ltac find_reverse_rewrite :=
+Ltac find_reverse_rewrite := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ H : _ = ?X _ _ _ _, H' : ?X _ _ _ _ = _ |- _ ] => rewrite <- H in H'
     | [ H : _ = ?X, H' : context [ ?X ] |- _ ] => rewrite <- H in H'
     | [ H : _ = ?X |- context [ ?X ] ] => rewrite <- H
   end.
 
-Ltac find_inversion :=
+Ltac find_inversion := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ H : ?X _ _ _ _ _ _ = ?X _ _ _ _ _ _ |- _ ] => invc H
     | [ H : ?X _ _ _ _ _ = ?X _ _ _ _ _ |- _ ] => invc H
@@ -169,7 +169,7 @@ Ltac find_inversion :=
     | [ H : ?X _ = ?X _ |- _ ] => invc H
   end.
 
-Ltac prove_eq :=
+Ltac prove_eq := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ H : ?X ?x1 ?x2 ?x3 = ?X ?y1 ?y2 ?y3 |- _ ] =>
       assert (x1 = y1) by congruence;
@@ -185,75 +185,75 @@ Ltac prove_eq :=
         clear H
   end.
 
-Ltac tuple_inversion :=
+Ltac tuple_inversion := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ H : (_, _, _, _) = (_, _, _, _) |- _ ] => invc H
     | [ H : (_, _, _) = (_, _, _) |- _ ] => invc H
     | [ H : (_, _) = (_, _) |- _ ] => invc H
   end.
 
-Ltac f_apply H f :=
+Ltac f_apply H f := idtac "VerdiTactics is deprecated in fiat-crypto";
   match type of H with
     | ?X = ?Y =>
       assert (f X = f Y) by (rewrite H; auto)
   end.
 
-Ltac break_let :=
+Ltac break_let := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ H : context [ (let (_,_) := ?X in _) ] |- _ ] => destruct X eqn:?
     | [ |- context [ (let (_,_) := ?X in _) ] ] => destruct X eqn:?
   end.
 
-Ltac break_or_hyp :=
+Ltac break_or_hyp := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ H : _ \/ _ |- _ ] => invc H
   end.
 
-Ltac copy_apply lem H :=
+Ltac copy_apply lem H := idtac "VerdiTactics is deprecated in fiat-crypto";
   let x := fresh in
   pose proof H as x;
     apply lem in x.
 
-Ltac copy_eapply lem H :=
+Ltac copy_eapply lem H := idtac "VerdiTactics is deprecated in fiat-crypto";
   let x := fresh in
   pose proof H as x;
     eapply lem in x.
 
-Ltac conclude_using tac :=
+Ltac conclude_using tac := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ H : ?P -> _ |- _ ] => conclude H tac
   end.
 
-Ltac find_higher_order_rewrite :=
+Ltac find_higher_order_rewrite := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ H : _ = _ |- _ ] => rewrite H in *
     | [ H : forall _, _ = _ |- _ ] => rewrite H in *
     | [ H : forall _ _, _ = _ |- _ ] => rewrite H in *
   end.
 
-Ltac find_reverse_higher_order_rewrite :=
+Ltac find_reverse_higher_order_rewrite := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ H : _ = _ |- _ ] => rewrite <- H in *
     | [ H : forall _, _ = _ |- _ ] => rewrite <- H in *
     | [ H : forall _ _, _ = _ |- _ ] => rewrite <- H in *
   end.
 
-Ltac clean :=
+Ltac clean := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ H : ?X = ?X |- _ ] => clear H
   end.
 
-Ltac find_apply_hyp_goal :=
+Ltac find_apply_hyp_goal := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ H : _ |- _ ] => solve [apply H]
   end.
 
-Ltac find_copy_apply_lem_hyp lem :=
+Ltac find_copy_apply_lem_hyp lem := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ H : _ |- _ ] => copy_apply lem H
   end.
 
-Ltac find_apply_hyp_hyp :=
+Ltac find_apply_hyp_hyp := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ H : forall _, _ -> _,
         H' : _ |- _ ] =>
@@ -262,7 +262,7 @@ Ltac find_apply_hyp_hyp :=
       apply H in H'; auto; [idtac]
   end.
 
-Ltac find_copy_apply_hyp_hyp :=
+Ltac find_copy_apply_hyp_hyp := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ H : forall _, _ -> _,
         H' : _ |- _ ] =>
@@ -271,17 +271,17 @@ Ltac find_copy_apply_hyp_hyp :=
       copy_apply H H'; auto; [idtac]
   end.
 
-Ltac find_apply_lem_hyp lem :=
+Ltac find_apply_lem_hyp lem := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ H : _ |- _ ] => apply lem in H
   end.
 
-Ltac find_eapply_lem_hyp lem :=
+Ltac find_eapply_lem_hyp lem := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ H : _ |- _ ] => eapply lem in H
   end.
 
-Ltac insterU H :=
+Ltac insterU H := idtac "VerdiTactics is deprecated in fiat-crypto";
   match type of H with
     | forall _ : ?T, _ =>
       let x := fresh "x" in
@@ -290,18 +290,18 @@ Ltac insterU H :=
         clear x; specialize (H x')
   end.
 
-Ltac find_insterU :=
+Ltac find_insterU := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ H : forall _, _ |- _ ] => insterU H
   end.
 
-Ltac eapply_prop P :=
+Ltac eapply_prop P := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | H : P _ |- _ =>
       eapply H
   end.
 
-Ltac isVar t :=
+Ltac isVar t := idtac "VerdiTactics is deprecated in fiat-crypto";
     match goal with
       | v : _ |- _ =>
         match t with
@@ -309,15 +309,15 @@ Ltac isVar t :=
         end
     end.
 
-Ltac remGen t :=
+Ltac remGen t := idtac "VerdiTactics is deprecated in fiat-crypto";
   let x := fresh in
   let H := fresh in
   remember t as x eqn:H;
     generalize dependent H.
 
-Ltac remGenIfNotVar t := first [isVar t| remGen t].
+Ltac remGenIfNotVar t := idtac "VerdiTactics is deprecated in fiat-crypto"; first [isVar t| remGen t].
 
-Ltac rememberNonVars H :=
+Ltac rememberNonVars H := idtac "VerdiTactics is deprecated in fiat-crypto";
   match type of H with
     | _ ?a ?b ?c ?d ?e =>
       remGenIfNotVar a;
@@ -341,7 +341,7 @@ Ltac rememberNonVars H :=
       remGenIfNotVar a
   end.
 
-Ltac generalizeEverythingElse H :=
+Ltac generalizeEverythingElse H := idtac "VerdiTactics is deprecated in fiat-crypto";
   repeat match goal with
            | [ x : ?T |- _ ] =>
              first [
@@ -354,48 +354,48 @@ Ltac generalizeEverythingElse H :=
                  revert x]
          end.
 
-Ltac prep_induction H :=
+Ltac prep_induction H := idtac "VerdiTactics is deprecated in fiat-crypto";
   rememberNonVars H;
   generalizeEverythingElse H.
 
-Ltac econcludes :=
+Ltac econcludes := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ H : ?P -> _ |- _ ] => conclude H eauto
   end.
 
-Ltac find_copy_eapply_lem_hyp lem :=
+Ltac find_copy_eapply_lem_hyp lem := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ H : _ |- _ ] => copy_eapply lem H
   end.
 
-Ltac apply_prop_hyp P Q :=
+Ltac apply_prop_hyp P Q := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
   | [ H : context [ P ], H' : context [ Q ] |- _ ] =>
     apply H in H'
   end.
 
 
-Ltac eapply_prop_hyp P Q :=
+Ltac eapply_prop_hyp P Q := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
   | [ H : context [ P ], H' : context [ Q ] |- _ ] =>
     eapply H in H'
   end.
 
-Ltac copy_eapply_prop_hyp P Q :=
+Ltac copy_eapply_prop_hyp P Q := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ H : context [ P ], H' : context [ Q ] |- _ ] =>
       copy_eapply H H'
   end.
 
-Ltac find_false :=
+Ltac find_false := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | H : _ -> False |- _ => exfalso; apply H
   end.
 
-Ltac injc H :=
+Ltac injc H := idtac "VerdiTactics is deprecated in fiat-crypto";
   injection H; clear H; intro; subst_max.
 
-Ltac find_injection :=
+Ltac find_injection := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
     | [ H : ?X _ _ _ _ _ _ = ?X _ _ _ _ _ _ |- _ ] => injc H
     | [ H : ?X _ _ _ _ _ = ?X _ _ _ _ _ |- _ ] => injc H
@@ -405,10 +405,10 @@ Ltac find_injection :=
     | [ H : ?X _ = ?X _ |- _ ] => injc H
   end.
 
-Ltac aggresive_rewrite_goal :=
+Ltac aggresive_rewrite_goal := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with H : _ |- _ => rewrite H end.
 
-Ltac break_exists_name x :=
+Ltac break_exists_name x := idtac "VerdiTactics is deprecated in fiat-crypto";
   match goal with
   | [ H : exists _, _ |- _ ] => destruct H as [x H]
   end.

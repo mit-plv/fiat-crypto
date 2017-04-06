@@ -1,7 +1,6 @@
 Require Import Coq.ZArith.BinInt Coq.NArith.BinNat Coq.Numbers.BinNums Coq.ZArith.Zdiv Coq.ZArith.Znumtheory.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Coq.Logic.EqdepFacts.
-Require Import Crypto.Tactics.VerdiTactics.
 Require Import Coq.omega.Omega.
 Require Import Crypto.Util.NumTheoryUtil.
 Require Import Crypto.Tactics.VerdiTactics.

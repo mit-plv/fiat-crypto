@@ -244,7 +244,6 @@ Require Import Coq.ZArith.ZArith Coq.micromega.Psatz Coq.omega.Omega.
 Require Import Coq.ZArith.BinIntDef.
 Local Open Scope Z_scope.
 
-Require Import Crypto.Tactics.VerdiTactics.
 Require Import Crypto.Tactics.Algebra_syntax.Nsatz.
 Require Import Crypto.Util.Decidable Crypto.Util.LetIn.
 Require Import Crypto.Util.ZUtil Crypto.Util.ListUtil Crypto.Util.Sigma.
@@ -582,7 +581,8 @@ Module B.
       Proof using Type*.
         induction i; cbv [id]; simpl place_cps; break_match;
           autorewrite with cancel_pair;
-          try find_apply_lem_hyp Z_div_exact_full_2; nsatz || auto.
+          try match goal with [H:_|-_] => apply Z_div_exact_full_2 in H end;
+          nsatz || auto.
       Qed.
 
       Definition from_associational_cps n (p:list limb)

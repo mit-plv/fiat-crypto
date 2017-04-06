@@ -2,8 +2,8 @@ Require Import Coq.ZArith.Zpower Coq.ZArith.Znumtheory Coq.ZArith.ZArith Coq.ZAr
 Require Import Coq.omega.Omega Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
 Require Import Crypto.Util.NatUtil Crypto.Util.ZUtil.
 Require Import Coqprime.Zp.
-Require Import Crypto.Tactics.VerdiTactics.
 Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.Tactics.
 Local Open Scope Z.
 
 (* TODO: move somewhere else for lemmas about Coqprime? *)
@@ -284,7 +284,7 @@ Proof.
   intros.
   destruct (Z.prime_odd_or_2 p prime_p); intuition.
   rewrite <- Zdiv2_div.
-  pose proof (Zdiv2_odd_eqn p); break_if; congruence || omega.
+  pose proof (Zdiv2_odd_eqn p); break_match; break_match_hyps; congruence || omega.
 Qed.
 
 Lemma minus1_square_1mod4 : forall (p : Z) (prime_p : prime p),
