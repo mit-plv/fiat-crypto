@@ -3,7 +3,7 @@ Require Import Coq.Lists.List. Import ListNotations.
 Require Import Crypto.NewBaseSystem. Import B.
 Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
 Require Import (*Crypto.Util.Tactics*) Crypto.Util.Decidable.
-Require Import Crypto.Util.LetIn Crypto.Util.ZUtil.
+Require Import Crypto.Util.LetIn Crypto.Util.ZUtil Crypto.Util.Tactics.
 Require Crypto.Util.Tuple.
 Local Notation tuple := Tuple.tuple.
 Local Open Scope list_scope.
@@ -19,7 +19,6 @@ Section Ops25p5.
 
   (* These definitions will need to be passed as Ltac arguments (or
   cleverly inferred) when things are eventually automated *)
-  Definition wt := fun i : nat => 2^(25 * (i / 2) + 26 * ((i + 1) / 2)).
   Definition sz := 10%nat.
   Definition s : Z := 2^255.
   Definition c : list B.limb := [(1, 19)].
@@ -29,13 +28,19 @@ Section Ops25p5.
 
   (* These definitions are inferred from those above *)
   Definition m := Eval vm_compute in Z.to_pos (s - Associational.eval c). (* modulus *)
+  Definition wt := fun i : nat =>
+                     let si := Z.log2 s * i in
+                     2 ^ ((si/sz) + (if dec ((si/sz)*sz=si) then 0 else 1)).
   Definition sz2 := Eval vm_compute in ((sz * 2) - 1)%nat.
   Definition coef := Eval vm_compute in (@Positional.encode wt modulo div sz (coef_div_modulus * (s-Associational.eval c))). (* subtraction coefficient *)
   Definition coef_mod : mod_eq m (Positional.eval (n:=sz) wt coef) 0 := eq_refl.
 
   Lemma sz_nonzero : sz <> 0%nat. Proof. vm_decide. Qed.
   Lemma wt_nonzero i : wt i <> 0.
-  Proof. apply Z.pow_nonzero; zero_bounds. Qed.
+  Proof.
+    apply Z.pow_nonzero; zero_bounds; try break_match; vm_decide.
+  Qed.
+  
   Lemma wt_divides_chain1 i (H:In i carry_chain1) : wt (S i) / wt i <> 0.
   Proof.
     cbv [In carry_chain1] in H.
@@ -52,12 +57,20 @@ Section Ops25p5.
   Proof.
     cbv [wt].
     match goal with |- _ ^ ?x / _ ^ ?y <> _ => assert (0 <= y <= x) end.
-    { rewrite Nat2Z.inj_succ. split; [zero_bounds|].
-    apply Z.add_le_mono;
-      (apply Z.mul_le_mono_nonneg_l; [zero_bounds|]);
-      apply Z.div_le_mono; omega. }
-    rewrite <-Z.pow_sub_r by omega.
-    apply Z.pow_nonzero; omega.
+    { rewrite Nat2Z.inj_succ.
+      split; try break_match; ring_simplify;
+      repeat match goal with
+             | _ => apply Z.div_le_mono; try vm_decide; [ ]
+             | _ => apply Z.mul_le_mono_nonneg_l; try vm_decide; [ ]
+             | _ => apply Z.add_le_mono; try vm_decide; [ ]
+             | |- ?x <= ?y + 1 => assert (x <= y); [|omega]
+             | |- ?x + 1 <= ?y => rewrite <- Z.div_add by vm_decide
+             | _ => progress zero_bounds
+             | _ => progress ring_simplify
+             | _ => vm_decide
+             end. }
+    break_match; rewrite <-Z.pow_sub_r by omega;
+      apply Z.pow_nonzero; omega.
   Qed.
 
   Definition zero_sig :
