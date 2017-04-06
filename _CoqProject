@@ -236,6 +236,7 @@ src/Spec/WeierstrassCurve.v
 src/Specific/GF1305.v
 src/Specific/GF25519.v
 src/Specific/IntegrationTest.v
+src/Specific/IntegrationTestOpp.v
 src/Specific/NewBaseSystemTest.v
 src/Specific/SC25519.v
 src/Specific/FancyMachine256/Barrett.v
