@@ -32,9 +32,11 @@ Section BoundedField25p5.
     := Eval compute in
         Tuple.map (fun e => b_of e) bounds_exp.
 
+  Let lgbitwidth := Eval compute in (Z.to_nat (Z.log2_up (List.fold_right Z.max 0 limb_widths))).
+  Let bitwidth := Eval compute in (2^lgbitwidth)%nat.
   Let feZ : Type := tuple Z sz.
-  Let feW : Type := tuple word32 sz.
-  Let feBW : Type := BoundedWord sz 32 bounds.
+  Let feW : Type := tuple (wordT lgbitwidth) sz.
+  Let feBW : Type := BoundedWord sz bitwidth bounds.
   Let phi : feBW -> F m :=
     fun x => B.Positional.Fdecode wt (BoundedWordToZ _ _ _ x).
 
