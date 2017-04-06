@@ -191,6 +191,6 @@ Module W.
       Time s. (* Finished transaction in 0.068 secs (0.066u,0.s) (successful) *)
       (* Total: 414.396 seconds, roughly 7 minutes*)
 
-    Time Qed.
+    Time Qed. (* Finished transaction in 390.998 secs (390.783u,0.276s) (successful) *)
   End W.
 End W.
