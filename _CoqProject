@@ -28,8 +28,6 @@ src/BoundedArithmetic/Eta.v
 src/BoundedArithmetic/Interface.v
 src/BoundedArithmetic/InterfaceProofs.v
 src/BoundedArithmetic/StripCF.v
-src/BoundedArithmetic/X86ToZLike.v
-src/BoundedArithmetic/X86ToZLikeProofs.v
 src/BoundedArithmetic/Double/Core.v
 src/BoundedArithmetic/Double/Proofs/BitwiseOr.v
 src/BoundedArithmetic/Double/Proofs/Decode.v
@@ -42,15 +40,6 @@ src/BoundedArithmetic/Double/Proofs/ShiftLeftRightTactic.v
 src/BoundedArithmetic/Double/Proofs/ShiftRight.v
 src/BoundedArithmetic/Double/Proofs/ShiftRightDoubleWordImmediate.v
 src/BoundedArithmetic/Double/Proofs/SpreadLeftImmediate.v
-src/BoundedArithmetic/Double/Repeated/Core.v
-src/BoundedArithmetic/Double/Repeated/Proofs/BitwiseOr.v
-src/BoundedArithmetic/Double/Repeated/Proofs/Decode.v
-src/BoundedArithmetic/Double/Repeated/Proofs/LoadImmediate.v
-src/BoundedArithmetic/Double/Repeated/Proofs/Multiply.v
-src/BoundedArithmetic/Double/Repeated/Proofs/RippleCarryAddSub.v
-src/BoundedArithmetic/Double/Repeated/Proofs/SelectConditional.v
-src/BoundedArithmetic/Double/Repeated/Proofs/ShiftLeftRight.v
-src/BoundedArithmetic/Double/Repeated/Proofs/ShiftRightDoubleWordImmediate.v
 src/CompleteEdwardsCurve/CompleteEdwardsCurveTheorems.v
 src/CompleteEdwardsCurve/EdwardsMontgomery.v
 src/CompleteEdwardsCurve/ExtendedCoordinates.v
