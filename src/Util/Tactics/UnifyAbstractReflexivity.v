@@ -1,4 +1,5 @@
 (** * Various variants on [reflexivity] and [abstract reflexivity] for evars *)
+Require Import Crypto.Util.Tactics.ClearAll.
 (** This file defines a number of different ways to solve goals of the
     form [LHS = RHS] where [LHS] may contain evars and [RHS] must not
     contain evars.  Most tactics use [abstract] to reduce the load on
@@ -11,7 +12,7 @@
     new_rhs].  If there is no evar in the [LHS], don't run
     transformation nor unification. *)
 Ltac unify_transformed_rhs_abstract_tac transform_rhs unify exact_no_check :=
-  intros; clear;
+  intros; clear_all;
   lazymatch goal with
   | [ |- ?LHS = ?RHS ]
     => tryif has_evar LHS
