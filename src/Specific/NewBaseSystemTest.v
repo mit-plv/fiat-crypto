@@ -10,16 +10,16 @@ Local Open Scope list_scope.
 Local Open Scope Z_scope.
 Local Coercion Z.of_nat : nat >-> Z.
 
-(*** 
+(***
 Modulus : 2^255-19
-Base: 25.5
+Base: 51
 ***)
-Section Ops25p5.
+Section Ops51.
   Local Infix "^" := tuple : type_scope.
 
   (* These definitions will need to be passed as Ltac arguments (or
   cleverly inferred) when things are eventually automated *)
-  Definition sz := 10%nat.
+  Definition sz := 5%nat.
   Definition s : Z := 2^255.
   Definition c : list B.limb := [(1, 19)].
   Definition coef_div_modulus := 2. (* add 2*modulus before subtracting *)
@@ -40,7 +40,7 @@ Section Ops25p5.
   Proof.
     apply Z.pow_nonzero; zero_bounds; try break_match; vm_decide.
   Qed.
-  
+
   Lemma wt_divides_chain1 i (H:In i carry_chain1) : wt (S i) / wt i <> 0.
   Proof.
     cbv [In carry_chain1] in H.
@@ -127,7 +127,7 @@ Section Ops25p5.
          Positional.opp_cps (n:=sz) (coef := coef) wt a id) in
     solve_op_F wt x. reflexivity.
   Defined.
-  
+
   Definition mul_sig :
     {mul : (Z^sz -> Z^sz -> Z^sz)%type |
                forall a b : Z^sz,
@@ -166,8 +166,8 @@ Section Ops25p5.
              ))) in
     solve_op_F wt x. reflexivity.
   Defined.
-  
-  Definition ring_25p5 :=
+
+  Definition ring_51 :=
     (Ring.ring_by_isomorphism
          (F := F m)
          (H := Z^sz)
@@ -200,4 +200,4 @@ Eval cbv [proj1_sig mul_sig] in (proj1_sig mul_sig).
 Eval cbv [proj1_sig carry_sig] in (proj1_sig carry_sig).
 *)
 
-End Ops25p5.
+End Ops51.
