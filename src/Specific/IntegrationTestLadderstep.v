@@ -52,11 +52,11 @@ Section BoundedField25p5.
     : { xzladderstep : tuple Z sz -> tuple Z sz -> tuple Z sz * tuple Z sz -> tuple Z sz * tuple Z sz -> tuple Z sz * tuple Z sz * (tuple Z sz * tuple Z sz)
       | forall a24 x1 Q Q', let eval := B.Positional.Fdecode wt in Tuple.map (n:=2) (Tuple.map (n:=2) eval) (xzladderstep a24 x1 Q Q') = FMxzladderstep (eval a24) (eval x1) (Tuple.map (n:=2) eval Q) (Tuple.map (n:=2) eval Q') }.
   Proof.
-    exists (@M.xzladderstep _ (proj1_sig add_sig) (proj1_sig sub_sig) (proj1_sig mul_sig)).
+    exists (@M.xzladderstep _ (proj1_sig add_sig) (proj1_sig sub_sig) (fun x y => proj1_sig carry_sig (proj1_sig mul_sig x y))).
     intros.
     cbv [FMxzladderstep M.xzladderstep].
     destruct Q, Q'; cbv [map map' fst snd Let_In eval].
-    repeat rewrite <- ?(proj2_sig add_sig), <- ?(proj2_sig mul_sig), <- ?(proj2_sig sub_sig).
+    repeat rewrite ?(proj2_sig add_sig), ?(proj2_sig mul_sig), ?(proj2_sig sub_sig), ?(proj2_sig carry_sig).
     reflexivity.
   Defined.
 
@@ -121,6 +121,10 @@ Section BoundedField25p5.
     set (k := @M.xzladderstep _ _ _ _); context_to_dlet_in_rhs k; subst k.
     cbv [M.xzladderstep].
     lazymatch goal with
+    | [ |- context[@proj1_sig ?a ?b carry_sig] ]
+      => context_to_dlet_in_rhs (@proj1_sig a b carry_sig)
+    end.
+    lazymatch goal with
     | [ |- context[@proj1_sig ?a ?b mul_sig] ]
       => context_to_dlet_in_rhs (@proj1_sig a b mul_sig)
     end.
@@ -132,7 +136,7 @@ Section BoundedField25p5.
     | [ |- context[@proj1_sig ?a ?b sub_sig] ]
       => context_to_dlet_in_rhs (@proj1_sig a b sub_sig)
     end.
-    cbv beta iota delta [proj1_sig mul_sig add_sig sub_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz].
+    cbv beta iota delta [proj1_sig mul_sig add_sig sub_sig carry_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz].
     reflexivity.
     eexists_sig_etransitivity_for_rewrite_fun.
     { intro; cbv beta.
