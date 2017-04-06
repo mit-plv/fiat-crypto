@@ -140,9 +140,6 @@ Module Import Bounds.
        | Land _ _ T => fun xy => land (bit_width_of_base_type T) (fst xy) (snd xy)
        | Lor _ _ T => fun xy => lor (bit_width_of_base_type T) (fst xy) (snd xy)
        | Opp _ T => fun x => opp (bit_width_of_base_type T) x
-       | Neg _ T int_width => fun x => neg (bit_width_of_base_type T) int_width x
-       | Cmovne _ _ _ _ T => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovne (bit_width_of_base_type T) x y z w
-       | Cmovle _ _ _ _ T => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovle (bit_width_of_base_type T) x y z w
        end%bounds.
 
   Definition of_Z (z : Z) : t := ZToZRange z.

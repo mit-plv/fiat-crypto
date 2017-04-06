@@ -175,9 +175,6 @@ Section language.
          | Lor _ _ _ as opc
          | OpConst _ _ as opc
          | Opp _ _ as opc
-         | Neg _ _ _ as opc
-         | Cmovne _ _ _ _ _ as opc
-         | Cmovle _ _ _ _ _ as opc
            => Op opc
          end.
   End with_var.

@@ -4,7 +4,6 @@ Require Import Bedrock.Word.
 Require Import Crypto.Reflection.SmartMap.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.TypeUtil.
-Require Import Crypto.ModularArithmetic.ModularBaseSystemListZOperations.
 Require Import Crypto.Util.FixedWordSizes.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.NatUtil. (* for nat_beq for equality schemes *)
@@ -27,9 +26,7 @@ Inductive op : flat_type base_type -> flat_type base_type -> Type :=
 | Land T1 T2 Tout : op (Tbase T1 * Tbase T2) (Tbase Tout)
 | Lor T1 T2 Tout : op (Tbase T1 * Tbase T2) (Tbase Tout)
 | Opp T Tout : op (Tbase T) (Tbase Tout)
-| Neg T Tout (int_width : Z) : op (Tbase T) (Tbase Tout)
-| Cmovne T1 T2 T3 T4 Tout : op (Tbase T1 * Tbase T2 * Tbase T3 * Tbase T4) (Tbase Tout)
-| Cmovle T1 T2 T3 T4 Tout : op (Tbase T1 * Tbase T2 * Tbase T3 * Tbase T4) (Tbase Tout).
+.
 
 Definition interp_base_type (v : base_type) : Type :=
   match v with
@@ -81,9 +78,6 @@ Definition Zinterp_op src dst (f : op src dst)
      | Land _ _ _ => fun xy => Z.land (fst xy) (snd xy)
      | Lor _ _ _ => fun xy => Z.lor (fst xy) (snd xy)
      | Opp _ _ => fun x => Z.opp x
-     | Neg _ _ int_width => fun x => ModularBaseSystemListZOperations.neg int_width x
-     | Cmovne _ _ _ _ _ => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovne x y z w
-     | Cmovle _ _ _ _ _ => fun xyzw => let '(x, y, z, w) := eta4 xyzw in cmovl x y z w
      end%Z.
 
 Definition interp_op src dst (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst

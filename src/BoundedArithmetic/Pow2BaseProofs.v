@@ -8,11 +8,11 @@ Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Tactics.RewriteHyp.
-Require Import Crypto.ModularArithmetic.Pow2Base Crypto.BaseSystemProofs.
+Require Import Crypto.BoundedArithmetic.Pow2Base.
+Require Import Crypto.BoundedArithmetic.BaseSystemProofs.
 Require Import Crypto.Util.Notations.
 Require Export Crypto.Util.Bool.
 Require Export Crypto.Util.FixCoqMistakes.
-Require Crypto.BaseSystem.
 Local Open Scope Z_scope.
 
 Create HintDb simpl_add_to_nth discriminated.

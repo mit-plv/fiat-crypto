@@ -1,5 +1,4 @@
 Require Import Coq.ZArith.ZArith.
-Require Import Crypto.ModularArithmetic.ModularBaseSystemListZOperations.
 Require Import Crypto.Reflection.InputSyntax.
 Require Import Crypto.Reflection.Z.Syntax.
 Require Import Crypto.Reflection.Z.Syntax.Equality.
@@ -23,14 +22,6 @@ Ltac base_reify_op op op_head extra ::=
      | @Z.land => constr:(reify_op op op_head 2 (Land TZ TZ TZ))
      | @Z.lor => constr:(reify_op op op_head 2 (Lor TZ TZ TZ))
      | @Z.opp => constr:(reify_op op op_head 1 (Opp TZ TZ))
-     | @ModularBaseSystemListZOperations.cmovne => constr:(reify_op op op_head 4 (Cmovne TZ TZ TZ TZ TZ))
-     | @ModularBaseSystemListZOperations.cmovl => constr:(reify_op op op_head 4 (Cmovle TZ TZ TZ TZ TZ))
-     | @ModularBaseSystemListZOperations.neg
-       => lazymatch extra with
-          | @ModularBaseSystemListZOperations.neg ?int_width _
-            => constr:(reify_op op op_head 1 (Neg TZ TZ int_width))
-          | _ => fail 100 "Anomaly: In Reflection.Z.base_reify_op: head is neg but body is wrong:" extra
-          end
      end.
 Ltac base_reify_type T ::=
      lazymatch T with

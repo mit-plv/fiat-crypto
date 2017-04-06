@@ -59,9 +59,6 @@ Definition genericize_op {var' src dst} (opc : op src dst) {f}
      | Land _ _ _ => fun _ _ => Land _ _ _
      | Lor _ _ _ => fun _ _ => Lor _ _ _
      | Opp _ _ => fun _ _ => Opp _ _
-     | Neg _ _ int_width => fun _ _ => Neg _ _ int_width
-     | Cmovne _ _ _ _ _ => fun _ _ => Cmovne _ _ _ _ _
-     | Cmovle _ _ _ _ _ => fun _ _ => Cmovle _ _ _ _ _
      end.
 
 Lemma cast_const_id {t} v

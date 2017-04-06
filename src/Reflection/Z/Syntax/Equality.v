@@ -41,11 +41,6 @@ Definition op_beq_hetero {t1 tR t1' tR'} (f : op t1 tR) (g : op t1' tR') : bool
        => base_type_beq T1 T1' && base_type_beq T2 T2' && base_type_beq Tout Tout'
      | Opp Tin Tout, Opp Tin' Tout'
        => base_type_beq Tin Tin' && base_type_beq Tout Tout'
-     | Cmovne T1 T2 T3 T4 Tout, Cmovne T1' T2' T3' T4' Tout'
-     | Cmovle T1 T2 T3 T4 Tout, Cmovle T1' T2' T3' T4' Tout'
-       => base_type_beq T1 T1' && base_type_beq T2 T2' &&  base_type_beq T3 T3' &&  base_type_beq T4 T4' &&  base_type_beq Tout Tout'
-     | Neg Tin Tout n, Neg Tin' Tout' m
-       => base_type_beq Tin Tin' && base_type_beq Tout Tout' && Z.eqb n m
      | OpConst _ _, _
      | Add _ _ _, _
      | Sub _ _ _, _
@@ -55,9 +50,6 @@ Definition op_beq_hetero {t1 tR t1' tR'} (f : op t1 tR) (g : op t1' tR') : bool
      | Land _ _ _, _
      | Lor _ _ _, _
      | Opp _ _, _
-     | Neg _ _ _, _
-     | Cmovne _ _ _ _ _, _
-     | Cmovle _ _ _ _ _, _
        => false
      end%bool.
 

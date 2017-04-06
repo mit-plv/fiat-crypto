@@ -2,8 +2,8 @@ Require Import Coq.ZArith.ZArith Coq.Lists.List Coq.micromega.Psatz.
 Require Import Crypto.BoundedArithmetic.Interface.
 Require Import Crypto.BoundedArithmetic.InterfaceProofs.
 Require Import Crypto.BaseSystem.
-Require Import Crypto.ModularArithmetic.Pow2Base.
-Require Import Crypto.ModularArithmetic.Pow2BaseProofs.
+Require Import Crypto.BoundedArithmetic.Pow2Base.
+Require Import Crypto.BoundedArithmetic.Pow2BaseProofs.
 Require Import Crypto.BoundedArithmetic.Double.Core.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.ZUtil.

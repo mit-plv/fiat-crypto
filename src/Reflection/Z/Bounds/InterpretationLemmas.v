@@ -241,20 +241,6 @@ Proof.
                | word_arith_t ].
 Qed.
 
-Local Ltac t_special_case_op_step :=
-  first [ fin_t
-        | progress intros
-        | progress subst
-        | progress simpl in *
-        | progress split_andb
-        | progress Zarith_t_step
-        | specializer_t_step
-        | rewriter_t
-        | progress break_t_step
-        | progress split_min_max
-        | progress cbv [Bounds.neg' Bounds.cmovne' Bounds.cmovle' ModularBaseSystemListZOperations.neg ModularBaseSystemListZOperations.cmovne ModularBaseSystemListZOperations.cmovl] ].
-Local Ltac t_special_case_op := repeat t_special_case_op_step.
-
 Local Arguments Z.pow : simpl never.
 Local Arguments Z.add !_ !_.
 Local Existing Instances Z.add_le_Proper Z.log2_up_le_Proper Z.pow_Zpos_le_Proper Z.sub_le_eq_Proper.
@@ -310,9 +296,6 @@ Proof.
                  | progress simpl in *
                  | progress split_min_max
                  | omega ]. }
-  { t_special_case_op. }
-  { t_special_case_op. }
-  { t_special_case_op. }
 Admitted.
 
 Local Arguments lift_op : simpl never.
