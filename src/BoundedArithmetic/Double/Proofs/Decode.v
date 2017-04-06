@@ -1,14 +1,14 @@
 Require Import Coq.ZArith.ZArith Coq.Lists.List Coq.micromega.Psatz.
 Require Import Crypto.BoundedArithmetic.Interface.
 Require Import Crypto.BoundedArithmetic.InterfaceProofs.
-Require Import Crypto.BaseSystem.
-Require Import Crypto.BoundedArithmetic.Pow2Base.
-Require Import Crypto.BoundedArithmetic.Pow2BaseProofs.
 Require Import Crypto.BoundedArithmetic.Double.Core.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Notations.
+
+Require Crypto.BoundedArithmetic.Pow2Base.
+Require Crypto.BoundedArithmetic.Pow2BaseProofs.
 
 Local Open Scope nat_scope.
 Local Open Scope type_scope.
@@ -25,10 +25,10 @@ Section decode.
     Local Notation limb_widths := (repeat n k).
 
     Lemma decode_bounded {isdecode : is_decode decode} w
-      : 0 <= n -> bounded limb_widths (List.map decode (rev (to_list k w))).
+      : 0 <= n -> Pow2Base.bounded limb_widths (List.map decode (rev (to_list k w))).
     Proof using Type.
       intro.
-      eapply bounded_uniform; try solve [ eauto using repeat_spec ].
+      eapply Pow2BaseProofs.bounded_uniform; try solve [ eauto using repeat_spec ].
       { distr_length. }
       { intros z H'.
         apply in_map_iff in H'.
@@ -42,20 +42,20 @@ Section decode.
       unfold tuple_decoder; hnf; simpl.
       intro w.
       destruct (zerop k); [ subst | ].
-      { unfold BaseSystem.decode, BaseSystem.decode'; simpl; omega. }
+      { cbv; intuition congruence. }
       assert (0 <= n)
         by (destruct k as [ | [|] ]; [ omega | | destruct w ];
             eauto using decode_exponent_nonnegative).
-      replace (2^(k * n)) with (upper_bound limb_widths)
-        by (erewrite upper_bound_uniform by eauto using repeat_spec; distr_length).
-      apply decode_upper_bound; auto using decode_bounded.
+      replace (2^(k * n)) with (Pow2Base.upper_bound limb_widths)
+        by (erewrite Pow2BaseProofs.upper_bound_uniform by eauto using repeat_spec; distr_length).
+      apply Pow2BaseProofs.decode_upper_bound; auto using decode_bounded.
       { intros ? H'.
         apply repeat_spec in H'; omega. }
       { distr_length. }
     Qed.
   End with_k.
 
-  Local Arguments base_from_limb_widths : simpl never.
+  Local Arguments Pow2Base.base_from_limb_widths : simpl never.
   Local Arguments repeat : simpl never.
   Local Arguments Z.mul !_ !_.
   Lemma tuple_decoder_S {k} w : 0 <= n -> (tuple_decoder (k := S (S k)) w = tuple_decoder (k := S k) (fst w) + (decode (snd w) << (S k * n)))%Z.
@@ -64,16 +64,15 @@ Section decode.
     destruct w as [? w]; simpl.
     replace (decode w) with (decode w * 1 + 0)%Z by omega.
     rewrite map_app, map_cons, map_nil.
-    erewrite decode_shift_uniform_app by (eauto using repeat_spec; distr_length).
+    erewrite Pow2BaseProofs.decode_shift_uniform_app by (eauto using repeat_spec; distr_length).
     distr_length.
     autorewrite with push_skipn natsimplify push_firstn.
     reflexivity.
   Qed.
   Global Instance tuple_decoder_O w : tuple_decoder (k := 1) w =~> decode w.
   Proof using Type.
-    unfold tuple_decoder, BaseSystem.decode, BaseSystem.decode', accumulate, base_from_limb_widths, repeat.
-    simpl; hnf.
-    omega.
+    cbv [tuple_decoder BoundedArithmetic.BaseSystem.decode BoundedArithmetic.BaseSystem.decode' BoundedArithmetic.BaseSystem.accumulate Pow2Base.base_from_limb_widths repeat].
+    simpl; hnf; lia.
   Qed.
   Global Instance tuple_decoder_m1 w : tuple_decoder (k := 0) w =~> 0.
   Proof using Type. reflexivity. Qed.
@@ -92,7 +91,7 @@ Section decode.
     : (P _ (tuple_decoder (k := 1)) -> P _ decode)
       * (P _ decode -> P _ (tuple_decoder (k := 1))).
   Proof using Type.
-    unfold tuple_decoder, BaseSystem.decode, BaseSystem.decode', accumulate, base_from_limb_widths, repeat.
+    unfold tuple_decoder, BaseSystem.decode, BaseSystem.decode', BaseSystem.accumulate, Pow2Base.base_from_limb_widths, repeat.
     simpl; hnf.
     rewrite Z.mul_1_l.
     split; apply P_ext; simpl; intro; autorewrite with zsimplify_const; reflexivity.

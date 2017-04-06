@@ -2,12 +2,14 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.BoundedArithmetic.Interface.
 Require Import Crypto.BoundedArithmetic.InterfaceProofs.
-Require Import Crypto.BoundedArithmetic.Pow2Base.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.LetIn.
 Import Bug5107WorkAround.
+
+Require Crypto.BoundedArithmetic.BaseSystem.
+Require Crypto.BoundedArithmetic.Pow2Base.
 
 Local Open Scope nat_scope.
 Local Open Scope Z_scope.
@@ -18,7 +20,7 @@ Local Notation eta x := (fst x, snd x).
 
 (** The list is low to high; the tuple is low to high *)
 Definition tuple_decoder {n W} {decode : decoder n W} {k : nat} : decoder (k * n) (tuple W k)
-  := {| decode w := BaseSystem.decode (base_from_limb_widths (repeat n k))
+  := {| decode w := BaseSystem.decode (Pow2Base.base_from_limb_widths (repeat n k))
                                       (List.map decode (List.rev (Tuple.to_list _ w))) |}.
 Global Arguments tuple_decoder : simpl never.
 Hint Extern 3 (decoder _ (tuple ?W ?k)) => let kv := (eval simpl in (Z.of_nat k)) in apply (fun n decode => (@tuple_decoder n W decode k : decoder (kv * n) (tuple W k))) : typeclass_instances.
