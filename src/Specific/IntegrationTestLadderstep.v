@@ -153,6 +153,7 @@ Section BoundedField25p5.
     apply adjust_tuple2_tuple2_sig.
     (* jgross start here! *)
     Set Ltac Profiling.
+    (*
     Time Glue.refine_to_reflective_glue.
     Time ReflectiveTactics.refine_with_pipeline_correct.
     { Time ReflectiveTactics.do_reify. }
@@ -167,7 +168,9 @@ Section BoundedField25p5.
     { Time UnifyAbstractReflexivity.unify_abstract_compute_rhs_reflexivity. }
     { Time ReflectiveTactics.unify_abstract_cbv_interp_rhs_reflexivity. }
     { Time abstract ReflectiveTactics.handle_bounds_from_hyps. }
+     *)
+    Time refine_reflectively.
     Show Ltac Profile.
-  Time Defined. (* Finished transaction in 10.167 secs (10.123u,0.023s) (successful) *)
+  Time Defined.
 
 Time End BoundedField25p5.
