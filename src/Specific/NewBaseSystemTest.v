@@ -22,7 +22,7 @@ Section Ops51.
   Definition sz := 5%nat.
   Definition s : Z := 2^255.
   Definition c : list B.limb := [(1, 19)].
-  Definition coef_div_modulus := 2. (* add 2*modulus before subtracting *)
+  Definition coef_div_modulus : nat := 2. (* add 2*modulus before subtracting *)
   Definition carry_chain1 := Eval vm_compute in (seq 0 (pred sz)).
   Definition carry_chain2 := ([0;1])%nat.
 
@@ -32,7 +32,16 @@ Section Ops51.
                      let si := Z.log2 s * i in
                      2 ^ ((si/sz) + (if dec ((si/sz)*sz=si) then 0 else 1)).
   Definition sz2 := Eval vm_compute in ((sz * 2) - 1)%nat.
-  Definition coef := Eval vm_compute in (@Positional.encode wt modulo div sz (coef_div_modulus * (s-Associational.eval c))). (* subtraction coefficient *)
+  Definition coef := (* subtraction coefficient *)
+    Eval vm_compute in
+      ( let p := Positional.encode
+                   (modulo:=modulo) (div:=div) (n:=sz)
+                   wt (s-Associational.eval c) in
+        (fix addp (acc: Z^sz) (ctr : nat) : Z^sz :=
+         match ctr with
+         | O => acc
+         | S n => addp (Positional.add_cps wt acc p id) n
+        end) (Positional.zeros sz) coef_div_modulus).
   Definition coef_mod : mod_eq m (Positional.eval (n:=sz) wt coef) 0 := eq_refl.
 
   Lemma sz_nonzero : sz <> 0%nat. Proof. vm_decide. Qed.
@@ -201,3 +210,4 @@ Eval cbv [proj1_sig carry_sig] in (proj1_sig carry_sig).
 *)
 
 End Ops51.
+
