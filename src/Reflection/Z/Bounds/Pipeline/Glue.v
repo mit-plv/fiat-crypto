@@ -402,15 +402,6 @@ Ltac zrange_to_reflective_hyps_step_gen then_tac :=
        assert (H : is_bounded_by' bounds (map' arg)) by (clear -H'; abstract exact H');
        clear H'; move H at top;
        then_tac ()
-  | [ H := context Hv[@Tuple.map ?a ?b ?c (@wordToZ ?d) ?x], Hbounded : Bounds.is_bounded_by ?bounds (cast_back_flat_const ?x) |- _ ]
-    => let T := type of (@Tuple.map a b c (@wordToZ d) x) in
-       let T := (eval compute in T) in
-       let rT := reify_flat_type T in
-       let map_t := constr:(fun t bs => @cast_back_flat_const (@Bounds.interp_base_type) t (fun _ => Bounds.bounds_to_base_type) bs) in
-       let map' := constr:(map_t rT bounds) in
-       let Hv' := context Hv[map' x] in
-       progress change Hv' in (value of H); cbv beta in H;
-       then_tac ()
   | _ => idtac
   end.
 Ltac zrange_to_reflective_hyps_step := zrange_to_reflective_hyps_step_gen ltac:(fun _ => idtac).
