@@ -55,9 +55,6 @@ src/CompleteEdwardsCurve/CompleteEdwardsCurveTheorems.v
 src/CompleteEdwardsCurve/EdwardsMontgomery.v
 src/CompleteEdwardsCurve/ExtendedCoordinates.v
 src/CompleteEdwardsCurve/Pre.v
-src/Encoding/EncodingTheorems.v
-src/Encoding/ModularWordEncodingPre.v
-src/Encoding/ModularWordEncodingTheorems.v
 src/Experiments/ExtrHaskellNats.v
 src/Experiments/GenericFieldPow.v
 src/ModularArithmetic/Conversion.v
@@ -211,9 +208,7 @@ src/Reflection/Z/Syntax/Util.v
 src/Spec/CompleteEdwardsCurve.v
 src/Spec/Ed25519.v
 src/Spec/EdDSA.v
-src/Spec/Encoding.v
 src/Spec/ModularArithmetic.v
-src/Spec/ModularWordEncoding.v
 src/Spec/MontgomeryCurve.v
 src/Spec/MxDH.v
 src/Spec/WeierstrassCurve.v
