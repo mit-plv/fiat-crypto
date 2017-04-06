@@ -175,8 +175,8 @@ Definition PipelineCorrect
            (** ** renaming *)
            (Hrenaming : e_final = e')
            (** ** bounds relaxation *)
-           (Hbounds_sane : pick_type given_output_bounds = pick_type b)
            (Hbounds_relax : Bounds.is_tighter_thanb b given_output_bounds = true)
+           (Hbounds_sane : pick_type given_output_bounds = pick_type b)
            (Hbounds_sane_refl
             : e_final_newtype
               = eq_rect _ (fun t => Expr base_type op (Arrow (pick_type input_bounds) t)) e' _ (eq_sym Hbounds_sane))
@@ -264,14 +264,14 @@ Ltac solve_side_conditions :=
    unify_abstract_rhs_reflexivity |
    (** ** renaming binders *)
    unify_abstract_renamify_rhs_reflexivity |
-   (** ** types computed from given output bounds are the same as types computed from computed output bounds *)
-   (** N.B. the proof must be exactly [eq_refl] because it's used in a
-            later goal and needs to reduce *)
-   subst_let; clear; vm_compute; reflexivity |
    (** ** computed output bounds are not looser than the given output bounds *)
    (** we do subst and we don't [vm_compute] first because we want to
        get an error message that displays the bounds *)
    subst_let; clear; abstract vm_cast_no_check (eq_refl true) |
+   (** ** types computed from given output bounds are the same as types computed from computed output bounds *)
+   (** N.B. the proof must be exactly [eq_refl] because it's used in a
+            later goal and needs to reduce *)
+   subst_let; clear; vm_compute; reflexivity |
    (** ** removal of a cast across the equality proof above *)
    unify_abstract_compute_rhs_reflexivity |
    (** ** unfolding of [interp] constants *)
