@@ -17,7 +17,7 @@ Require Import Crypto.Reflection.Z.Bounds.Pipeline.
 Section BoundedField25p5.
   Local Coercion Z.of_nat : nat >-> Z.
 
-  Let limb_widths := Eval vm_compute in (List.map (fun i => Z.log2 (wt (S i) / wt i)) (seq 0 10)).
+  Let limb_widths := Eval vm_compute in (List.map (fun i => Z.log2 (wt (S i) / wt i)) (seq 0 sz)).
   Let length_lw := Eval compute in List.length limb_widths.
 
   Local Notation b_of exp := {| lower := 0 ; upper := 2^exp + 2^(exp-3) |}%Z (only parsing). (* max is [(0, 2^(exp+2) + 2^exp + 2^(exp-1) + 2^(exp-3) + 2^(exp-4) + 2^(exp-5) + 2^(exp-6) + 2^(exp-10) + 2^(exp-12) + 2^(exp-13) + 2^(exp-14) + 2^(exp-15) + 2^(exp-17) + 2^(exp-23) + 2^(exp-24))%Z] *)
@@ -32,9 +32,9 @@ Section BoundedField25p5.
     := Eval compute in
         Tuple.map (fun e => b_of e) bounds_exp.
 
-  Let feZ : Type := tuple Z 10.
-  Let feW : Type := tuple word32 10.
-  Let feBW : Type := BoundedWord 10 32 bounds.
+  Let feZ : Type := tuple Z sz.
+  Let feW : Type := tuple word32 sz.
+  Let feBW : Type := BoundedWord sz 32 bounds.
   Let phi : feBW -> F m :=
     fun x => B.Positional.Fdecode wt (BoundedWordToZ _ _ _ x).
 
