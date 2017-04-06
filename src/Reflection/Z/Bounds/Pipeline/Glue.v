@@ -295,6 +295,13 @@ Ltac split_BoundedWordToZ :=
                           the evar that we reverted above, and in the
                           current goal; hence the instantiate trick *)
                     instantiate (1:=ltac:(destruct x)); destruct x ]
+         | [ H := context[map wordToZ (proj1_sig ?x)] |- _ ]
+           => is_var x;
+              first [ clearbody x; fail 1
+                    | (** we want to keep the same context variable in
+                          the evar that we reverted above, and in the
+                          current goal; hence the instantiate trick *)
+                    instantiate (1:=ltac:(destruct x)); destruct x ]
          | [ |- context[fst ?x] ]
            => is_var x;
               first [ clearbody x; fail 1
@@ -306,8 +313,8 @@ Ltac split_BoundedWordToZ :=
                     instantiate (1:=ltac:(destruct x)); destruct x ];
               cbv beta iota
          end;
-  cbv beta iota; intro; (* put [f] back in the context so that [cbn] doesn't remove this let-in *)
-  cbn [proj1_sig].
+  cbv beta iota in *; intro; (* put [f] back in the context so that [cbn] doesn't remove this let-in *)
+  cbn [proj1_sig] in *.
 
 (** ** [zrange_to_reflective] *)
 (** The [zrange_to_reflective] tactic takes a goal of the form
@@ -394,6 +401,14 @@ Ltac zrange_to_reflective_hyps_step :=
        rename H into H';
        assert (H : is_bounded_by' bounds (map' arg)) by (clear -H'; abstract exact H');
        clear H'; move H at top
+  | [ H := context Hv[@Tuple.map ?a ?b ?c (@wordToZ ?d) ?x], Hbounded : Bounds.is_bounded_by ?bounds (cast_back_flat_const ?x) |- _ ]
+    => let T := type of (@Tuple.map a b c (@wordToZ d) x) in
+       let T := (eval compute in T) in
+       let rT := reify_flat_type T in
+       let map_t := constr:(fun t bs => @cast_back_flat_const (@Bounds.interp_base_type) t (fun _ => Bounds.bounds_to_base_type) bs) in
+       let map' := constr:(map_t rT bounds) in
+       let Hv' := context Hv[map' x] in
+       progress change Hv' in (value of H); cbv beta in H
   end.
 Ltac zrange_to_reflective_hyps := repeat zrange_to_reflective_hyps_step.
 Ltac zrange_to_reflective_goal Hbounded :=
