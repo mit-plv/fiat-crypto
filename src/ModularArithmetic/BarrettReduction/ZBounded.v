@@ -3,12 +3,8 @@
     [BarretReduction/ZHandbook.v]. *)
 Require Import Coq.ZArith.ZArith Coq.Lists.List Coq.Classes.Morphisms Coq.micromega.Psatz.
 Require Import Crypto.ModularArithmetic.BarrettReduction.ZHandbook.
-Require Import Crypto.ModularArithmetic.Pow2Base.
-Require Import Crypto.ModularArithmetic.ExtendedBaseVector.
 Require Import Crypto.ModularArithmetic.ZBounded.
-Require Import Crypto.BaseSystem.
 Require Import Crypto.Util.ZUtil.
-(*Require Import Crypto.Util.Tactics.*)
 Require Import Crypto.Util.Notations.
 
 Local Open Scope small_zlike_scope.
