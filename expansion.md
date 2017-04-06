@@ -19,12 +19,6 @@ implementing unsigned-to-signed conversion for bignums.
 binary exponentiation (window of 1 bit), but 4 would be much faster. See
 go.crypto ed25519 for reference, or maybe go.crypto p256.
 
-**Weierstrass** or **Montgomery** curves, spec and associativity-commutativity
-proofs. This will most likely include writing a nsatz tactic wrapper that takes
-into account nonzero-ness hypotheses (specified in a [Coq Enhancement proposal by
-Jason and Andres](https://github.com/coq/ceps/blob/master/text/007-nsatz-inequalities.md))
-and possibly debugging nsatz itself.
-
 **homomorphism** from ed25519 to x25519 -- the signing scheme and key agreement
 system use the same curve but in different coordinates. The ed25519
 fixed-basepoint scalar multiplication with precomputed tables is faster than
@@ -54,20 +48,6 @@ for some existing curve for to test it; the real target would be p256.
 **freeze** (field element canonicalization) the way Mike Hamburg does it -- it
 may or may not be better than our current one, but it very well might be less
 code+proof.
-
-**striping** for poly1305 -- evaluating a polynomial by splitting it into, for
-example, 4 polynomials such that coefficient i is in polynomial i mod 4 and
-evaluating the 4 polynomials in parallel, then combining results.
-
-**saturated-limb** arithmetic synthesis -- we currently have some support for
-synthesizing "multi-word" fixed-size integers using saturated techniques, but
-such code is separate from our main BaseSystem, is not as complete, and has had
-synthesis performance issues. We should investigate whether the saturated-limb
-and unsaturated-limb synthesis systems can be unified (e g try to define
-add-get-carry in terms of integer addition and the NewBaseSystem split
-operation). If not, improve the multi-word code so that it can synthesize
-arithmetic modulo p256 and order of curve25519 using existing Montgomery and
-Barrett reduction formulas respectively.
 
 **refined Montgomery multiplication** for p256 and maybe RSA. Model after the
 work of Shay Gueron and Vlad Krasnov -- the code is in OpenSSL ("rsaz" and
