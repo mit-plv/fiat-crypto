@@ -4,10 +4,7 @@
 Require Import Coq.ZArith.ZArith Coq.Lists.List Coq.Classes.Morphisms Coq.micromega.Psatz.
 Require Import Crypto.ModularArithmetic.Montgomery.Z.
 Require Import Crypto.ModularArithmetic.Montgomery.ZProofs.
-Require Import Crypto.ModularArithmetic.Pow2Base.
-Require Import Crypto.ModularArithmetic.ExtendedBaseVector.
 Require Import Crypto.ModularArithmetic.ZBounded.
-Require Import Crypto.BaseSystem.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tactics.Test.
 Require Import Crypto.Util.Tactics.Not.
