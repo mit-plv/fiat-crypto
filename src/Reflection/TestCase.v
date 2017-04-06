@@ -6,6 +6,7 @@ Require Import Crypto.Reflection.Named.RegisterAssign.
 Require Import Crypto.Reflection.Named.PositiveContext.
 Require Import Crypto.Reflection.Syntax.
 Require Import Crypto.Reflection.Wf.
+Require Import Crypto.Reflection.WfReflective.
 Require Import Crypto.Reflection.Equality.
 Require Export Crypto.Reflection.Reify.
 Require Import Crypto.Reflection.InputSyntax.
@@ -104,7 +105,7 @@ Abort.
 
 Definition example_expr : Syntax.Expr base_type op (Syntax.Arrow (tnat * tnat) tnat).
 Proof.
-  let x := Reify (fun zw => let '(z, w) := zw in let unused := 1 + 1 in let x := 1 in let y := 1 in (let a := 1 in let '(c, d) := (2, 3) in a + x + (x + x) + (x + x) - (x + x) - a + c + d) + y + z + w)%nat in
+  let x := Reify (fun zw => let '(z, w) := zw in let unused := 1 + 1 in let x := 1 in let y := 1 in (let a := 1 in let cd := let cdef := (2, 3, 4, 5) in let '(c, d, e, f) := cdef in (c, d) in let '(c, d) := cd in a + x + (x + x) + (x + x) - (x + x) - a + c + d) + y + z + w)%nat in
   exact x.
 Defined.
 
@@ -167,6 +168,11 @@ Proof.
                  | [ |- ?x = ?y \/ _ ] => right
                  end). (* 0.036 s *)
 Qed.
+
+Definition example_expr_eta := Eval vm_compute in Eta.ExprEta example_expr.
+
+Lemma example_expr_wf_eta : Wf example_expr_eta.
+Proof. Time reflect_Wf. (* 0.008 s *) Qed.
 
 Lemma example_expr_wf : Wf example_expr.
 Proof. Time reflect_Wf. (* 0.008 s *) Qed.
