@@ -1,5 +1,5 @@
 Require Import Coq.Classes.Morphisms Crypto.Util.Relations (*Crypto.Util.Tactics*).
-Require Import Crypto.Algebra Crypto.Algebra.Monoid Crypto.Algebra.ScalarMult.
+Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.Monoid Crypto.Algebra.ScalarMult.
 
 Section BasicProperties.
   Context {T eq op id inv} `{@group T eq op id inv}.

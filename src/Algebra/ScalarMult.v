@@ -1,5 +1,5 @@
 Require Import Coq.Classes.Morphisms.
-Require Import Crypto.Algebra Crypto.Algebra.Monoid.
+Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.Monoid.
 
 Module Import ModuloCoq8485.
   Import NPeano Nat.

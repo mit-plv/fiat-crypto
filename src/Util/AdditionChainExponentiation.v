@@ -1,9 +1,9 @@
 Require Import Coq.Lists.List Coq.Lists.SetoidList. Import ListNotations.
 Require Import Coq.Numbers.BinNums Coq.NArith.BinNat.
 Require Import Crypto.Util.ListUtil.
-Require Import Crypto.Algebra Crypto.Algebra.Monoid Crypto.Algebra.ScalarMult.
-Require Import Crypto.Tactics.VerdiTactics.
+Require Import Crypto.Algebra.Monoid Crypto.Algebra.ScalarMult.
 Require Import Crypto.Util.Option.
+Require Import Crypto.Util.Tactics.BreakMatch.
 
 Section AddChainExp.
   Function fold_chain {T} (id:T) (op:T->T->T) (is:list (nat*nat)) (acc:list T) {struct is} : T :=
@@ -28,7 +28,7 @@ Section AddChainExp.
   (0, 6)] (* 31 = 30 + 1 *)
   [1] = 31. reflexivity. Qed.
 
-  Context {G eq op id} {monoid:@Algebra.monoid G eq op id}.
+  Context {G eq op id} {monoid:@Algebra.Hierarchy.monoid G eq op id}.
   Context {scalarmult} {is_scalarmult:@ScalarMult.is_scalarmult G eq op id scalarmult}.
   Local Infix "=" := eq : type_scope.
   Local Open Scope N_scope.

@@ -1,6 +1,6 @@
 Require Import Crypto.Specific.FancyMachine256.Core.
-Require Import Crypto.ModularArithmetic.Montgomery.ZBounded.
-Require Import Crypto.ModularArithmetic.Montgomery.ZProofs.
+Require Import Crypto.LegacyArithmetic.MontgomeryReduction.
+Require Import Crypto.Arithmetic.MontgomeryReduction.Proofs.
 
 Section expression.
   Context (ops : fancy_machine.instructions (2 * 128)) (props : fancy_machine.arithmetic ops) (modulus : Z) (m' : Z) (Hm : modulus <> 0) (H : 0 <= modulus < 2^256) (Hm' : 0 <= m' < 2^256).
@@ -48,7 +48,7 @@ Section expression.
              v
              Hv
     : fancy_machine.decode (expression v) = _
-    := @ZBounded.reduce_via_partial_correct (2^256) modulus _ (props' _ _ eq_refl eq_refl) (ldi' m') I Hm R' HR0 HR1 (fst v, snd v) I Hv.
+    := @Crypto.LegacyArithmetic.MontgomeryReduction.reduce_via_partial_correct (2^256) modulus _ (props' _ _ eq_refl eq_refl) (ldi' m') I Hm R' HR0 HR1 (fst v, snd v) I Hv.
 End expression.
 
 Section reflected.

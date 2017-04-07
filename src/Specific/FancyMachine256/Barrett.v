@@ -1,6 +1,6 @@
 Require Import Crypto.Specific.FancyMachine256.Core.
-Require Import Crypto.ModularArithmetic.BarrettReduction.ZBounded.
-Require Import Crypto.ModularArithmetic.BarrettReduction.ZHandbook.
+Require Import LegacyArithmetic.BarretReduction.
+Require Import Crypto.Arithmetic.BarrettReduction.HAC.
 
 (** Useful for arithmetic in the field of integers modulo the order of the curve25519 base point *)
 Section expression.

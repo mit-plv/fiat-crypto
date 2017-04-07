@@ -1,7 +1,7 @@
 Require Import Coq.Setoids.Setoid Coq.Classes.Morphisms Coq.Classes.Equivalence.
 Require Import Coq.NArith.NArith Coq.PArith.BinPosDef.
 Require Import Coq.Numbers.Natural.Peano.NPeano.
-Require Import Crypto.Algebra Crypto.Algebra.Monoid Crypto.Algebra.ScalarMult.
+Require Import Crypto.Algebra.Monoid Crypto.Algebra.ScalarMult.
 Require Import Crypto.Util.NUtil.
 Require Import Crypto.Util.Tactics.BreakMatch.
 
@@ -9,7 +9,7 @@ Local Open Scope equiv_scope.
 
 Generalizable All Variables.
 Section IterAssocOp.
-  Context {T eq op id} {moinoid : @monoid T eq op id} (testbit : nat -> bool).
+  Context {T eq op id} {moinoid : @Algebra.Hierarchy.monoid T eq op id} (testbit : nat -> bool).
   Local Infix "===" := eq. Local Infix "===" := eq : type_scope.
 
   Local Notation nat_iter_op := (ScalarMult.scalarmult_ref (add:=op) (zero:=id)).
@@ -26,12 +26,12 @@ Section IterAssocOp.
 
   Lemma Pos_iter_op_succ : forall p a, Pos.iter_op op (Pos.succ p) a === op a (Pos.iter_op op p a).
   Proof using Type*.
-   induction p; intros; simpl; rewrite ?associative, ?IHp; reflexivity.
+   induction p; intros; simpl; rewrite ?Algebra.Hierarchy.associative, ?IHp; reflexivity.
   Qed.
 
   Lemma N_iter_op_succ : forall n a, N_iter_op (N.succ n) a  === op a (N_iter_op n a).
   Proof using Type*.
-    destruct n; simpl; intros; rewrite ?Pos_iter_op_succ, ?right_identity; reflexivity.
+    destruct n; simpl; intros; rewrite ?Pos_iter_op_succ, ?Algebra.Hierarchy.right_identity; reflexivity.
   Qed.
 
   Lemma N_iter_op_is_nat_iter_op : forall n a, N_iter_op n a === nat_iter_op (N.to_nat n) a.

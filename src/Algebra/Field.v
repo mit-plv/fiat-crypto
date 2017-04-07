@@ -2,7 +2,7 @@ Require Import Crypto.Util.Relations Crypto.Util.Notations.
 Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Tactics.DebugPrint.
 Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms.
-Require Import Crypto.Algebra Crypto.Algebra.Ring Crypto.Algebra.IntegralDomain.
+Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.Ring Crypto.Algebra.IntegralDomain.
 Require Coq.setoid_ring.Field_theory.
 
 Section Field.
@@ -215,14 +215,14 @@ End Homomorphism_rev.
 
 Ltac guess_field :=
   match goal with
-  | |- ?eq _ _ =>  constr:(_:Algebra.field (eq:=eq))
-  | |- not (?eq _ _) =>  constr:(_:Algebra.field (eq:=eq))
-  | [H: ?eq _ _ |- _ ] =>  constr:(_:Algebra.field (eq:=eq))
-  | [H: not (?eq _ _) |- _] =>  constr:(_:Algebra.field (eq:=eq))
+  | |- ?eq _ _ =>  constr:(_:Hierarchy.field (eq:=eq))
+  | |- not (?eq _ _) =>  constr:(_:Hierarchy.field (eq:=eq))
+  | [H: ?eq _ _ |- _ ] =>  constr:(_:Hierarchy.field (eq:=eq))
+  | [H: not (?eq _ _) |- _] =>  constr:(_:Hierarchy.field (eq:=eq))
   end.
 
 Ltac goal_to_field_equality fld :=
-  let eq := match type of fld with Algebra.field(eq:=?eq) => eq end in
+  let eq := match type of fld with Hierarchy.field(eq:=?eq) => eq end in
   match goal with
   | [ |- eq _ _] => idtac
   | [ |- not (eq ?x ?y) ] => apply not_exfalso; intro; goal_to_field_equality fld
@@ -234,10 +234,10 @@ Ltac goal_to_field_equality fld :=
   end.
 
 Ltac inequalities_to_inverse_equations fld :=
-  let eq := match type of fld with Algebra.field(eq:=?eq) => eq end in
-  let zero := match type of fld with Algebra.field(zero:=?zero) => zero end in
-  let div := match type of fld with Algebra.field(div:=?div) => div end in
-  let sub := match type of fld with Algebra.field(sub:=?sub) => sub end in
+  let eq := match type of fld with Hierarchy.field(eq:=?eq) => eq end in
+  let zero := match type of fld with Hierarchy.field(zero:=?zero) => zero end in
+  let div := match type of fld with Hierarchy.field(div:=?div) => div end in
+  let sub := match type of fld with Hierarchy.field(sub:=?sub) => sub end in
   repeat match goal with
          | [H: not (eq _ _) |- _ ] =>
            lazymatch type of H with
@@ -258,8 +258,8 @@ Ltac unique_pose_implication pf :=
   end.
 
 Ltac inverses_to_conditional_equations fld :=
-  let eq := match type of fld with Algebra.field(eq:=?eq) => eq end in
-  let inv := match type of fld with Algebra.field(inv:=?inv) => inv end in
+  let eq := match type of fld with Hierarchy.field(eq:=?eq) => eq end in
+  let inv := match type of fld with Hierarchy.field(inv:=?inv) => inv end in
   repeat match goal with
          | |- context[inv ?d] =>
            unique_pose_implication constr:(right_multiplicative_inverse(H:=fld) d)
@@ -268,15 +268,15 @@ Ltac inverses_to_conditional_equations fld :=
          end.
 
 Ltac clear_hypotheses_with_nonzero_requirements fld :=
-  let eq := match type of fld with Algebra.field(eq:=?eq) => eq end in
-  let zero := match type of fld with Algebra.field(zero:=?zero) => zero end in
+  let eq := match type of fld with Hierarchy.field(eq:=?eq) => eq end in
+  let zero := match type of fld with Hierarchy.field(zero:=?zero) => zero end in
   repeat match goal with
            [H: not (eq _ zero) -> _ |- _ ] => clear H
          end.
 
 Ltac forward_nonzero fld solver_tac :=
-  let eq := match type of fld with Algebra.field(eq:=?eq) => eq end in
-  let zero := match type of fld with Algebra.field(zero:=?zero) => zero end in
+  let eq := match type of fld with Hierarchy.field(eq:=?eq) => eq end in
+  let zero := match type of fld with Hierarchy.field(zero:=?zero) => zero end in
   repeat match goal with
          | [H: not (eq ?x zero) -> _ |- _ ]
            => let H' := fresh in

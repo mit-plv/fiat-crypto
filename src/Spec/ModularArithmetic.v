@@ -1,6 +1,6 @@
 Require Coq.ZArith.Znumtheory Coq.Numbers.BinNums.
 
-Require Crypto.ModularArithmetic.Pre.
+Require Crypto.Arithmetic.ModularArithmeticPre.
 
 Delimit Scope positive_scope with positive.
 Bind Scope positive_scope with BinPos.positive.
@@ -33,7 +33,7 @@ Global Set Printing Coercions.
 
 Module F.
   Definition F (m : BinPos.positive) := { z : BinInt.Z | z = z mod m }.
-  Local Obligation Tactic := cbv beta; auto using Pre.Z_mod_mod.
+  Local Obligation Tactic := cbv beta; auto using ModularArithmeticPre.Z_mod_mod.
   Program Definition of_Z  m  (a:BinNums.Z) : F m := a mod m.
   Definition to_Z {m} (a:F m) : BinNums.Z := proj1_sig a.
 
@@ -51,14 +51,14 @@ Module F.
                                | inv zero = zero
                                  /\ ( Znumtheory.prime m ->
                                       forall a, a <> zero -> mul (inv a) a = one )
-                               } := Pre.inv_impl.
+                               } := ModularArithmeticPre.inv_impl.
     Definition inv : F m -> F m := Eval hnf in proj1_sig inv_with_spec.
     Definition div (a b:F m) : F m := mul a (inv b).
 
     Definition pow_with_spec : { pow : F m -> BinNums.N -> F m
                                | forall a, pow a 0%N = one
                                            /\ forall x, pow a (1 + x)%N = mul a (pow a x)
-                               } := Pre.pow_impl.
+                               } := ModularArithmeticPre.pow_impl.
     Definition pow : F m -> BinNums.N -> F m := Eval hnf in proj1_sig pow_with_spec.
   End FieldOperations.
 

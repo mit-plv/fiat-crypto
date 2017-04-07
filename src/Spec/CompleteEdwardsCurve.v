@@ -1,4 +1,4 @@
-Require Crypto.CompleteEdwardsCurve.Pre.
+Require Crypto.Curves.Edwards.Pre.
 Require Crypto.Util.Decidable.
 
 Module E.
@@ -10,7 +10,7 @@ Module E.
     *)
 
     Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
-            {field:@Algebra.field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
+            {field:@Algebra.Hierarchy.field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
             {char_ge_3 : @Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul (BinNat.N.succ_pos BinNat.N.two)}
             {Feq_dec:Decidable.DecidableRel Feq}.
     Local Infix "=" := Feq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.

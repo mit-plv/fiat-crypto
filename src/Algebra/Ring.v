@@ -4,7 +4,7 @@ Require Import Coq.Classes.Morphisms.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.OnSubterms.
 Require Import Crypto.Util.Tactics.Revert.
-Require Import Crypto.Algebra Crypto.Algebra.Group Crypto.Algebra.Monoid.
+Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.Group Crypto.Algebra.Monoid.
 Require Coq.ZArith.ZArith Coq.PArith.PArith.
 
 
@@ -420,7 +420,7 @@ End of_Z.
 Definition char_ge
            {R eq zero one opp add} {sub:R->R->R} {mul:R->R->R}
            C :=
-  @Algebra.char_ge R eq zero (fun p => (@of_Z R zero one opp add) (BinInt.Z.pos p)) C.
+  @Hierarchy.char_ge R eq zero (fun p => (@of_Z R zero one opp add) (BinInt.Z.pos p)) C.
 Existing Class char_ge.
 
 (*** Tactics for ring equations *)

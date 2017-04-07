@@ -3,22 +3,22 @@ Require Import Coq.Classes.RelationClasses Coq.Classes.Morphisms.
 Require Import Coq.PArith.BinPos Coq.micromega.Psatz.
 Require Export Coq.ZArith.ZArith Coq.Lists.List.
 Require Import Crypto.Util.Decidable.
-Require Export Crypto.BoundedArithmetic.Interface.
-Require Export Crypto.BoundedArithmetic.ArchitectureToZLike.
-Require Export Crypto.BoundedArithmetic.ArchitectureToZLikeProofs.
+Require Export Crypto.LegacyArithmetic.Interface.
+Require Export Crypto.LegacyArithmetic.ArchitectureToZLike.
+Require Export Crypto.LegacyArithmetic.ArchitectureToZLikeProofs.
 Require Export Crypto.Util.Tuple.
 Require Import Crypto.Util.Option Crypto.Util.Sigma Crypto.Util.Prod.
-Require Export Crypto.Reflection.Named.Syntax.
-Require Export Crypto.Reflection.Named.PositiveContext.
-Require Import Crypto.Reflection.Named.DeadCodeElimination.
-Require Import Crypto.Reflection.CountLets.
-Require Import Crypto.Reflection.Named.ContextOn.
-Require Import Crypto.Reflection.Named.Wf.
-Require Export Crypto.Reflection.Syntax.
-Require Import Crypto.Reflection.Linearize.
-Require Import Crypto.Reflection.Inline.
-Require Import Crypto.Reflection.CommonSubexpressionElimination.
-Require Export Crypto.Reflection.Reify.
+Require Export Crypto.Compilers.Named.Syntax.
+Require Export Crypto.Compilers.Named.PositiveContext.
+Require Import Crypto.Compilers.Named.DeadCodeElimination.
+Require Import Crypto.Compilers.CountLets.
+Require Import Crypto.Compilers.Named.ContextOn.
+Require Import Crypto.Compilers.Named.Wf.
+Require Export Crypto.Compilers.Syntax.
+Require Import Crypto.Compilers.Linearize.
+Require Import Crypto.Compilers.Inline.
+Require Import Crypto.Compilers.CommonSubexpressionElimination.
+Require Export Crypto.Compilers.Reify.
 Require Export Crypto.Util.ZUtil.
 Require Export Crypto.Util.Option.
 Require Export Crypto.Util.Notations.
@@ -245,7 +245,7 @@ Section assemble.
     := invert_Some (@Named.interp base_type interp_base_type op Register RegisterContext interp_op empty t e v).
 End assemble.
 
-Export Reflection.Named.Syntax.
+Export Compilers.Named.Syntax.
 Open Scope nexpr_scope.
 Open Scope ctype_scope.
 Open Scope type_scope.

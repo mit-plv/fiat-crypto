@@ -1,7 +1,7 @@
 Require Coq.setoid_ring.Integral_domain.
-Require Crypto.Tactics.Algebra_syntax.Nsatz.
+Require Crypto.Algebra.Nsatz.
 Require Import Crypto.Util.Factorize.
-Require Import Crypto.Algebra Crypto.Algebra.Ring.
+Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.Ring.
 Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Util.Tactics.BreakMatch.
 
@@ -23,8 +23,8 @@ Module IntegralDomain.
     Section ReflectiveNsatzSideConditionProver.
       Import BinInt BinNat BinPos.
       Context {R eq zero one opp add sub mul}
-              {ring:@Algebra.ring R eq zero one opp add sub mul}
-              {zpzf:@Algebra.is_zero_product_zero_factor R eq zero mul}.
+              {ring:@Hierarchy.ring R eq zero one opp add sub mul}
+              {zpzf:@Hierarchy.is_zero_product_zero_factor R eq zero mul}.
       Local Infix "=" := eq. Local Notation "a <> b" := (not (a = b)).
       Local Infix "=" := eq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
       Local Infix "+" := add.  Local Infix "-" := sub. Local Infix "*" := mul.
@@ -198,4 +198,4 @@ Ltac dropRingSyntax :=
         Ncring.opp_notation
         Ncring.eq_notation
     ] in *.
-Ltac nsatz := Algebra_syntax.Nsatz.nsatz; dropRingSyntax.
+Ltac nsatz := Algebra.Nsatz.nsatz; dropRingSyntax.
