@@ -7,8 +7,7 @@ Ltac sig_dlet_in_rhs_to_context_step v :=
   lazymatch goal with
   | [ |- { a | _ = @Let_In ?A ?B ?x _ } ]
     => pose x as v;
-       replace (@Let_In A B x) with (fun P : forall a : A, B a => P v)
-         by (clear; abstract (subst v; cbv [Let_In]; reflexivity));
+       change (@Let_In A B x) with (fun P : forall a : A, B a => P v);
        cbv beta
   end.
 Ltac sig_dlet_in_rhs_to_context :=
@@ -20,8 +19,7 @@ Ltac sig_dlet_in_lhs_to_context_step v :=
   lazymatch goal with
   | [ |- { a | @Let_In ?A ?B ?x _ = _ } ]
     => pose x as v;
-       replace (@Let_In A B x) with (fun P : forall a : A, B a => P v)
-         by (clear; abstract (subst v; cbv [Let_In]; reflexivity));
+       change (@Let_In A B x) with (fun P : forall a : A, B a => P v);
        cbv beta
   end.
 Ltac sig_dlet_in_lhs_to_context :=
@@ -32,8 +30,7 @@ Ltac goal_dlet_to_context_step v :=
   match goal with
   | [ |- context[@Let_In ?A ?B ?x] ]
     => pose x as v;
-       replace (@Let_In A B x) with (fun P : forall a : A, B a => P v)
-         by (clear; abstract (subst v; cbv [Let_In]; reflexivity));
+       change (@Let_In A B x) with (fun P : forall a : A, B a => P v);
        cbv beta
   end.
 Ltac goal_dlet_to_context :=
