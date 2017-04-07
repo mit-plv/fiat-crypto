@@ -131,13 +131,15 @@ src/Compilers/Z/OpInversion.v
 src/Compilers/Z/Reify.v
 src/Compilers/Z/Syntax.v
 src/Compilers/Z/Bounds/Interpretation.v
-src/Compilers/Z/Bounds/InterpretationLemmas.v
 src/Compilers/Z/Bounds/MapCastByDeBruijn.v
 src/Compilers/Z/Bounds/MapCastByDeBruijnInterp.v
 src/Compilers/Z/Bounds/MapCastByDeBruijnWf.v
 src/Compilers/Z/Bounds/Pipeline.v
 src/Compilers/Z/Bounds/Relax.v
 src/Compilers/Z/Bounds/RoundUpLemmas.v
+src/Compilers/Z/Bounds/InterpretationLemmas/IsBoundedBy.v
+src/Compilers/Z/Bounds/InterpretationLemmas/PullCast.v
+src/Compilers/Z/Bounds/InterpretationLemmas/Tactics.v
 src/Compilers/Z/Bounds/Pipeline/Definition.v
 src/Compilers/Z/Bounds/Pipeline/Glue.v
 src/Compilers/Z/Bounds/Pipeline/OutputType.v

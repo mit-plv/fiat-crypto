@@ -6,7 +6,8 @@ Require Import Crypto.Compilers.Z.MapCastByDeBruijnWf.
 Require Import Crypto.Compilers.Z.Syntax.
 Require Import Crypto.Compilers.Z.Syntax.Util.
 Require Import Crypto.Compilers.Z.Bounds.Interpretation.
-Require Import Crypto.Compilers.Z.Bounds.InterpretationLemmas.
+Require Import Crypto.Compilers.Z.Bounds.InterpretationLemmas.IsBoundedBy.
+Require Import Crypto.Compilers.Z.Bounds.InterpretationLemmas.PullCast.
 Require Import Crypto.Compilers.Z.Bounds.MapCastByDeBruijn.
 
 Definition Wf_MapCast
