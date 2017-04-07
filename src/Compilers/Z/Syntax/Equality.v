@@ -174,3 +174,15 @@ Ltac inversion_base_type_step :=
     => induction_type_in_using H @path_base_type_rect
   end.
 Ltac inversion_base_type := repeat inversion_base_type_step.
+Ltac inversion_base_type_constr_step :=
+  lazymatch goal with
+  | [ H : TWord _ = TWord _ |- _ ]
+    => induction_type_in_using H @path_base_type_rect
+  | [ H : TWord _ = TZ |- _ ]
+    => induction_type_in_using H @path_base_type_rect
+  | [ H : TZ = TWord _ |- _ ]
+    => induction_type_in_using H @path_base_type_rect
+  | [ H : TZ = TZ |- _ ]
+    => induction_type_in_using H @path_base_type_rect
+  end.
+Ltac inversion_base_type_constr := repeat inversion_base_type_constr_step.
