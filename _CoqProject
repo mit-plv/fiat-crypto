@@ -23,13 +23,10 @@ src/BoundedArithmetic/ArchitectureToZLike.v
 src/BoundedArithmetic/ArchitectureToZLikeProofs.v
 src/BoundedArithmetic/BaseSystem.v
 src/BoundedArithmetic/BaseSystemProofs.v
-src/BoundedArithmetic/CaseUtil.v
-src/BoundedArithmetic/Eta.v
 src/BoundedArithmetic/Interface.v
 src/BoundedArithmetic/InterfaceProofs.v
 src/BoundedArithmetic/Pow2Base.v
 src/BoundedArithmetic/Pow2BaseProofs.v
-src/BoundedArithmetic/StripCF.v
 src/BoundedArithmetic/Double/Core.v
 src/BoundedArithmetic/Double/Proofs/BitwiseOr.v
 src/BoundedArithmetic/Double/Proofs/Decode.v
@@ -46,8 +43,6 @@ src/CompleteEdwardsCurve/CompleteEdwardsCurveTheorems.v
 src/CompleteEdwardsCurve/EdwardsMontgomery.v
 src/CompleteEdwardsCurve/ExtendedCoordinates.v
 src/CompleteEdwardsCurve/Pre.v
-src/Experiments/ExtrHaskellNats.v
-src/Experiments/GenericFieldPow.v
 src/ModularArithmetic/ModularArithmeticTheorems.v
 src/ModularArithmetic/Pre.v
 src/ModularArithmetic/PrimeFieldTheorems.v
@@ -190,7 +185,6 @@ src/Spec/MxDH.v
 src/Spec/WeierstrassCurve.v
 src/Specific/IntegrationTest.v
 src/Specific/NewBaseSystemTest.v
-src/Specific/SC25519.v
 src/Specific/FancyMachine256/Barrett.v
 src/Specific/FancyMachine256/Core.v
 src/Specific/FancyMachine256/Montgomery.v
