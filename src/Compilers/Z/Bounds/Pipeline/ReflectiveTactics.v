@@ -82,7 +82,7 @@ Ltac handle_bounds_from_hyps :=
     vm_computed_reified_expression arguments]. *)
 Declare Reduction interp_red
   := cbv [fst snd
-              Interp InterpEta interp_op interp interp_eta interpf interpf_step
+              Interp (*InterpEta interp_op*) interp interp_eta interpf interpf_step
               interp_flat_type_eta interp_flat_type_eta_gen interp_flat_type
               interp_base_type interp_op
               SmartMap.SmartFlatTypeMap SmartMap.SmartFlatTypeMapUnInterp SmartMap.SmartFlatTypeMapInterp2
