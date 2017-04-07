@@ -14,7 +14,7 @@ HIDE := $(if $(VERBOSE),,@)
 	install-coqprime clean-coqprime coqprime \
 	specific non-specific
 
-SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g'
+SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g' | uniq
 
 FAST_TARGETS += archclean clean cleanall clean-coqprime printenv clean-old update-_CoqProject Makefile.coq
 SUPER_FAST_TARGETS += update-_CoqProject Makefile.coq
