@@ -13,7 +13,8 @@ Global Arguments Pos.to_nat !_ / .
 Global Arguments InterpEta {_ _ _ _ _}.
 
 Ltac display_helper f :=
-  lazymatch type of f with
+  let t := type of f in
+  lazymatch (eval hnf in t) with
   | forall _ : ?A, ?B
     => let x := fresh "x" in
        lazymatch (eval hnf in A) with
@@ -25,15 +26,22 @@ Ltac display_helper f :=
          => let f' := open_constr:(fun (a : A) (b : B) => f (a, b)%core) in
             display_helper f'
        end
-  | _ => first [ refine (proj1_sig f)
-               | refine f ]
+  | sig _ => refine (proj1_sig f)
+  | prod _ _
+    => let a := fresh "a" in
+       let b := fresh "b" in
+       refine (let (a, b) := f in
+               pair _ _);
+       [ display_helper a | display_helper b ]
   end.
 Tactic Notation "display" open_constr(f) :=
   let do_red F := (eval cbv [f
-                               proj1_sig
+                               proj1_sig fst snd
+                               Tuple.map Tuple.map'
                                Lift.lift2_sig Lift.lift4_sig
                                MapProjections.proj2_sig_map Associativity.sig_sig_assoc
-                               sig_eq_trans_exist1
+                               sig_eq_trans_exist1 sig_eq_trans_rewrite_fun_exist1
+                               adjust_tuple2_tuple2_sig
                                Tuple.tuple Tuple.tuple'
                                FixedWordSizes.wordT FixedWordSizes.word_case FixedWordSizes.ZToWord FixedWordSizes.word_case_dep
                                PeanoNat.Nat.log2 PeanoNat.Nat.log2_iter PeanoNat.Nat.pred
