@@ -15,6 +15,88 @@ Local Notation "A ^ n" := (tuple A n) : type_scope.
 Arithmetic on bignums that handles carry bits; this is useful for
 saturated limbs. Compatible with mixed-radix bases.
 
+Uses "columns" representation: a bignum has type [tuple (list Z) n].
+Associated with a weight function w, the bignum B represents:
+
+    \sum_{i=0}^{n}{w[i] * sum{B[i]}}
+
+Example: ([a21, a20],[],[a0]) with weight function (fun i => 10^i)
+represents
+
+    a0 + 10*0 + 100 * (a20 + a21)
+
+If you picture this representation with the weights on the bottom and
+the terms in each list stacked above the corresponding weight,
+
+                a20
+    a0          a21
+    ---------------
+     1    10    100
+
+it's easy to see how the lists can be called "columns".
+
+This is a particularly useful representation for adding partial
+products after multiplication, particularly when we want to do this
+using a carrying add. We want to add together the terms from each
+column, accumulating the carries together along the way. Then we want
+to add the carry accumulator to the next column, and repeat, producing
+a [tuple Z n] as output. This operation is called "compact".
+
+As an example, let's compact the product of 571 and 645 in base 10.
+At first, the partial products look like this:
+
+      
+                   1*6         
+            1*4    7*4     7*6
+     1*5    7*5    5*5     5*4      5*6
+    ------------------------------------
+       1     10    100    1000    10000
+                   
+                     6         
+              4     28      42
+       5     35     25      20       30
+    ------------------------------------
+       1     10    100    1000    10000
+
+Now, we process the first column:
+
+     {carry_acc = 0; output =()}
+     STEP [5]
+     {carry_acc = 0; output=(5,)}
+
+Since we have only one term, there's no addition to do, and no carry
+bit. We add a 0 to the next column and continue.
+
+     STEP [0,4,35] (0 + 4 = 4)
+     {carry_acc = 0; output=(5,)}
+     STEP [4,35] (4 + 35 = 39)
+     {carry_acc = 3; output=(9,5)}
+     
+This time, we have a carry. We add it to the third column and process
+that:
+
+     STEP [9,6,28,25] (9 + 6  = 15)
+     {carry_acc = 1; output=(9,5)}
+     STEP [5,28,25] (5 + 28 = 33)
+     {carry_acc = 4; output=(9,5)}
+     STEP [3,25] (3 + 25 = 28)
+     {carry_acc = 2; output=(8,9,5)}
+
+You're probably getting the idea, but here are the fourth and fifth
+columns:
+
+     STEP [2,42,20] (2 + 42 = 44)
+     {carry_acc = 4; output=(8,9,5)}
+     STEP [4,20] (4 + 20 = 24)
+     {carry_acc = 6; output=(4,8,9,5)}
+     
+     STEP [6,30] (6 + 30 = 36)
+     {carry_acc = 3; output=(6,4,8,9,5)}
+
+The final result is the output plus the final carry, so we produce
+(6,4,8,9,5) and 3, representing the number 364895. A quick calculator
+check confirms our result.
+
  ***)
 
 Module Columns.
