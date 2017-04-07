@@ -61,16 +61,16 @@ Eta.InterpEta
    uint128_t x76 = (uint128_t) x75 + x28;
    uint64_t x77 = (uint64_t) x68 & 0x7ffffffffffff;
    uint64_t x78 = (uint64_t) (x76 >> 0x33);
-   uint64_t x79 = (uint64_t) 0x13 * x78;
+   uint64_t x79 = 0x13 * x78;
    uint64_t x80 = x77 + x79;
-   uint8_t x81 = (uint8_t) (x80 >> 0x33);
+   uint64_t x81 = (uint64_t) (x80 >> 0x33);
    uint64_t x82 = (uint64_t) x70 & 0x7ffffffffffff;
-   uint64_t x83 = (uint64_t) x81 + x82;
+   uint64_t x83 = x81 + x82;
    uint64_t x84 = (uint64_t) x76 & 0x7ffffffffffff;
    uint64_t x85 = (uint64_t) x74 & 0x7ffffffffffff;
-   bool x86 = (bool) (x83 >> 0x33);
+   uint64_t x86 = (uint64_t) (x83 >> 0x33);
    uint64_t x87 = (uint64_t) x72 & 0x7ffffffffffff;
-   uint64_t x88 = (uint64_t) x86 + x87;
+   uint64_t x88 = x86 + x87;
    uint64_t x89 = x83 & 0x7ffffffffffff;
    uint64_t x90 = x80 & 0x7ffffffffffff;
    (Return x84, Return x85, Return x88, Return x89, Return x90)) 
