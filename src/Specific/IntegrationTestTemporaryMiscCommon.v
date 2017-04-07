@@ -9,10 +9,8 @@ Definition adjust_tuple2_tuple2_sig {A P Q}
                       exist _ _ (proj2 (proj2 (proj2_sig a))))) })
   : { a : tuple (tuple (@sig A P) 2) 2 | Q a }.
 Proof.
-  eexists (let 'exist (exist ((a, b), (c, d)) p) q := v in
-           ((exist _ a (proj1 (proj1 p)), exist _ b (proj2 (proj1 p))),
-            (exist _ c (proj1 (proj2 p)), exist _ d (proj2 (proj2 p))))).
-  destruct v as [[[[? ?] [? ?]] ?] ?]; assumption.
+  eexists.
+  exact (proj2_sig v).
 Defined.
 
 (** TODO MOVE ME *)
