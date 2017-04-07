@@ -181,7 +181,7 @@ Definition PipelineCorrect
             : e_final_newtype
               = eq_rect _ (fun t => Expr base_type op (Arrow (pick_type input_bounds) t)) e' _ (eq_sym Hbounds_sane))
            (** ** instantiation of original evar *)
-           (Hevar : final_e_evar = Interp (t:=Arrow _ _) Syntax.interp_op e_final_newtype v')
+           (Hevar : final_e_evar = InterpEta (t:=Arrow _ _) Syntax.interp_op e_final_newtype v')
            (** ** side condition *)
            (Hv : Bounds.is_bounded_by input_bounds (cast_back_flat_const v'))
   : Bounds.is_bounded_by given_output_bounds (fZ (cast_back_flat_const v'))
@@ -196,7 +196,7 @@ Proof.
   clear Hwf He_unnatize_for_wf.
   symmetry in Hpost_correct.
   subst; cbv [proj1_sig] in *.
-  rewrite <- Hrexpr.
+  rewrite eq_InterpEta, <- Hrexpr.
   eapply PostWfPipelineCorrect in Hpost_correct; [ | solve [ eauto ].. ].
   rewrite !@InterpPreWfPipeline in Hpost_correct.
   unshelve eapply relax_output_bounds; try eassumption; [].

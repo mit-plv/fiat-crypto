@@ -12,6 +12,7 @@ HIDE := $(if $(VERBOSE),,@)
 
 .PHONY: coq clean update-_CoqProject cleanall install \
 	install-coqprime clean-coqprime coqprime \
+	specific-display display \
 	specific non-specific
 
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g' | uniq
@@ -50,11 +51,17 @@ COQ_VOFILES := $(filter-out $(UNMADE_VOFILES),$(VOFILES))
 LITE_VOFILES := $(filter-out $(HEAVY_VOFILES),$(COQ_VOFILES))
 SPECIFIC_VO := $(filter src/Specific/%,$(VOFILES))
 NON_SPECIFIC_VO := $(filter-out $(SPECIFIC_VO),$(VO_FILES))
+SPECIFIC_DISPLAY_VO := $(filter src/Specific/%Display.vo,$(VOFILES))
+DISPLAY_VO := $(SPECIFIC_DISPLAY_VO)
+DISPLAY_JAVA_VO := $(filter %JavaDisplay.vo,$(DISPLAY_VO))
+DISPLAY_NON_JAVA_VO := $(filter-out $(DISPLAY_JAVA_VO),$(DISPLAY_VO))
 
 specific: $(SPECIFIC_VO) coqprime
 non-specific: $(NON_SPECIFIC_VO) coqprime
 coq: $(COQ_VOFILES) coqprime
 lite: $(LITE_VOFILES) coqprime
+specific-display: $(SPECIFIC_DISPLAY_VO:.vo=.log) coqprime
+display: $(DISPLAY_VO:.vo=.log) coqprime
 
 COQPRIME_FOLDER := coqprime
 ifneq ($(filter 8.5%,$(COQ_VERSION)),) # 8.5
@@ -82,13 +89,13 @@ Makefile.coq: Makefile _CoqProject
 	$(SHOW)'COQ_MAKEFILE -f _CoqProject > $@'
 	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject | sed s'/^clean:$$/clean::/g' | sed s'/^Makefile: /Makefile-old: /g' | sed s'/^printenv:$$/printenv::/g' > $@
 
-#$(DISPLAY_NON_JAVA_VO:.vo=.log) : %Display.log : %.vo %Display.v src/Reflection/Z/CNotations.vo
-#	$(SHOW)"COQC $*Display > $@"
-#	$(HIDE)$(COQC) $(COQDEBUG) $(COQFLAGS) $*Display.v > $@.tmp && mv -f $@.tmp $@
-#
-#$(DISPLAY_JAVA_VO:.vo=.log) : %JavaDisplay.log : %.vo %JavaDisplay.v src/Reflection/Z/JavaNotations.vo
-#	$(SHOW)"COQC $*JavaDisplay > $@"
-#	$(HIDE)$(COQC) $(COQDEBUG) $(COQFLAGS) $*JavaDisplay.v > $@.tmp && mv -f $@.tmp $@
+$(DISPLAY_NON_JAVA_VO:.vo=.log) : %Display.log : %.vo %Display.v src/Compilers/Z/CNotations.vo
+	$(SHOW)"COQC $*Display > $@"
+	$(HIDE)$(COQC) $(COQDEBUG) $(COQFLAGS) $*Display.v > $@.tmp && mv -f $@.tmp $@
+
+$(DISPLAY_JAVA_VO:.vo=.log) : %JavaDisplay.log : %.vo %JavaDisplay.v src/Compilers/Z/JavaNotations.vo
+	$(SHOW)"COQC $*JavaDisplay > $@"
+	$(HIDE)$(COQC) $(COQDEBUG) $(COQFLAGS) $*JavaDisplay.v > $@.tmp && mv -f $@.tmp $@
 
 clean::
 	rm -f Makefile.coq

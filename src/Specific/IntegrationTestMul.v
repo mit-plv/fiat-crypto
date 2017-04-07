@@ -11,6 +11,8 @@ Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.MoveLetIn.
 Import ListNotations.
 
+Require Import Crypto.Specific.IntegrationTestTemporaryMiscCommon.
+
 Require Import Crypto.Compilers.Z.Bounds.Pipeline.
 
 Section BoundedField25p5.
@@ -38,23 +40,6 @@ Section BoundedField25p5.
   Let feBW : Type := BoundedWord sz bitwidth bounds.
   Let phi : feBW -> F m :=
     fun x => B.Positional.Fdecode wt (BoundedWordToZ _ _ _ x).
-
-  (** TODO MOVE ME *)
-  (** The [eexists_sig_etransitivity] tactic takes a goal of the form
-      [{ a | f a = b }], and splits it into two goals, [?b' = b] and
-      [{ a | f a = ?b' }], where [?b'] is a fresh evar. *)
-  Definition sig_eq_trans_exist1 {A B} (f : A -> B)
-             (b b' : B)
-             (pf : b' = b)
-             (y : { a : A | f a = b' })
-    : { a : A | f a = b }
-    := let 'exist a p := y in exist _ a (eq_trans p pf).
-  Ltac eexists_sig_etransitivity :=
-    lazymatch goal with
-    | [ |- { a : ?A | @?f a = ?b } ]
-      => let lem := open_constr:(@sig_eq_trans_exist1 A _ f b _) in
-         simple refine (lem _ _)
-    end.
 
   (* TODO : change this to field once field isomorphism happens *)
   Definition mul :

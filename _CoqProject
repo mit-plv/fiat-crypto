@@ -191,9 +191,14 @@ src/Spec/MxDH.v
 src/Spec/WeierstrassCurve.v
 src/Spec/Test/X25519.v
 src/Specific/ArithmeticSynthesisTest.v
+src/Specific/IntegrationTestDisplayCommon.v
 src/Specific/IntegrationTestLadderstep.v
+src/Specific/IntegrationTestLadderstepDisplay.v
 src/Specific/IntegrationTestMul.v
+src/Specific/IntegrationTestMulDisplay.v
 src/Specific/IntegrationTestSub.v
+src/Specific/IntegrationTestSubDisplay.v
+src/Specific/IntegrationTestTemporaryMiscCommon.v
 src/Specific/FancyMachine256/Barrett.v
 src/Specific/FancyMachine256/Core.v
 src/Specific/FancyMachine256/Montgomery.v
