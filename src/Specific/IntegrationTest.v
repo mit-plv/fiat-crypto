@@ -2,17 +2,16 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
 Local Open Scope Z_scope.
 
-Require Import Crypto.Algebra.
-Require Import Crypto.NewBaseSystem.
+Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Util.FixedWordSizes.
-Require Import Crypto.Specific.NewBaseSystemTest.
-Require Import Crypto.ModularArithmetic.PrimeFieldTheorems.
+Require Import Crypto.Specific.ArithmeticSynthesisTest.
+Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Util.Tuple Crypto.Util.Sigma Crypto.Util.Sigma.MapProjections Crypto.Util.Sigma.Lift Crypto.Util.Notations Crypto.Util.ZRange Crypto.Util.BoundedWord.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.MoveLetIn.
 Import ListNotations.
 
-Require Import Crypto.Reflection.Z.Bounds.Pipeline.
+Require Import Crypto.Compilers.Z.Bounds.Pipeline.
 
 Section BoundedField25p5.
   Local Coercion Z.of_nat : nat >-> Z.

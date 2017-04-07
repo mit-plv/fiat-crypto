@@ -2,7 +2,8 @@ Require Import Crypto.Spec.ModularArithmetic.
 Require Import Crypto.Spec.CompleteEdwardsCurve.
 Require Import Crypto.Spec.EdDSA.
 
-Require ModularArithmetic.PrimeFieldTheorems. (* to know that Z mod p is a field *)
+Require Crypto.Arithmetic.PrimeFieldTheorems. (* to know that Z mod p is a field *)
+Require Crypto.Curves.Edwards.AffineProofs.
 
 (* these 2 proofs can be generated using https://github.com/andres-erbsen/safecurves-primes *)
 Axiom prime_q : Znumtheory.prime (2^255-19). Global Existing Instance prime_q.
@@ -83,7 +84,7 @@ Section Ed25519.
 
   Definition ed25519 (l_order_B: E.eq(F:=Fq)(Fone:=F.one) (mul (BinInt.Z.to_nat l) B)%E zero) :
     EdDSA (E:=E) (Eadd:=add) (Ezero:=zero) (EscalarMult:=mul) (B:=B)
-          (Eopp:=Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.E.opp(nonzero_a:=nonzero_a)) (* TODO: move defn *)
+          (Eopp:=Crypto.Curves.Edwards.AffineProofs.E.opp(nonzero_a:=nonzero_a)) (* TODO: move defn *)
           (Eeq:=E.eq) (* TODO: move defn *)
           (l:=l) (b:=b) (n:=n) (c:=c)
           (Eenc:=Eenc) (Senc:=Senc) (H:=SHA512).

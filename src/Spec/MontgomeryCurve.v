@@ -1,4 +1,4 @@
-Require Crypto.Algebra Crypto.Algebra.Field.
+Require Crypto.Algebra.Field.
 Require Crypto.Util.GlobalSettings.
 Require Crypto.Util.Tactics.DestructHead Crypto.Util.Sum Crypto.Util.Prod.
 
@@ -6,7 +6,7 @@ Module M.
   Section MontgomeryCurve.
     Import BinNat.
     Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
-            {field:@Algebra.field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
+            {field:@Algebra.Hierarchy.field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
             {Feq_dec:Decidable.DecidableRel Feq}
             {char_ge_3:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul (BinNat.N.succ_pos (BinNat.N.two))}.
     Local Infix "=" := Feq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.

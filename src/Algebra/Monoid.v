@@ -1,6 +1,6 @@
 Require Import Coq.Classes.Morphisms.
 Require Import Crypto.Util.Tactics.RewriteHyp.
-Require Import Crypto.Algebra.
+Require Import Crypto.Algebra.Hierarchy.
 
 Section Monoid.
   Context {T eq op id} {monoid:@monoid T eq op id}.

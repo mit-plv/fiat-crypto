@@ -1,7 +1,7 @@
 Require Bedrock.Word Crypto.Util.WordUtil.
 Require Coq.ZArith.Znumtheory Coq.ZArith.BinInt.
 Require Coq.Numbers.Natural.Peano.NPeano.
-Require Crypto.CompleteEdwardsCurve.CompleteEdwardsCurveTheorems.
+Require Crypto.Algebra.ScalarMult.
 
 Require Import Omega. (* TODO: remove this import when we drop 8.4 *)
 
@@ -41,7 +41,7 @@ Section EdDSA.
         {Senc : F l -> Word.word b} (* normative encoding of scalars *)
     :=
       {
-        EdDSA_group:@Algebra.group E Eeq Eadd Ezero Eopp;
+        EdDSA_group:@Algebra.Hierarchy.group E Eeq Eadd Ezero Eopp;
         EdDSA_scalarmult:@Algebra.ScalarMult.is_scalarmult E Eeq Eadd Ezero EscalarMult;
 
         EdDSA_c_valid : c = 2 \/ c = 3;
