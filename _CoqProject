@@ -195,6 +195,7 @@ src/Specific/ArithmeticSynthesisTest130.v
 src/Specific/IntegrationTestDisplayCommon.v
 src/Specific/IntegrationTestLadderstep.v
 src/Specific/IntegrationTestLadderstep130.v
+src/Specific/IntegrationTestLadderstep130Display.v
 src/Specific/IntegrationTestLadderstepDisplay.v
 src/Specific/IntegrationTestMul.v
 src/Specific/IntegrationTestMulDisplay.v
