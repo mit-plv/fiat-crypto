@@ -76,6 +76,7 @@ src/Encoding/ModularWordEncodingPre.v
 src/Encoding/ModularWordEncodingTheorems.v
 src/Experiments/ExtrHaskellNats.v
 src/Experiments/GenericFieldPow.v
+src/Experiments/poly1305.v
 src/ModularArithmetic/Conversion.v
 src/ModularArithmetic/ExtPow2BaseMulProofs.v
 src/ModularArithmetic/ExtendedBaseVector.v
