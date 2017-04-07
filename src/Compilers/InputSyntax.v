@@ -5,6 +5,7 @@ Require Import Crypto.Compilers.SmartMap.
 Require Import Crypto.Compilers.ExprInversion.
 Require Import Crypto.Compilers.InterpProofs.
 Require Import Crypto.Util.Tuple.
+Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Util.Notations.
 
@@ -60,7 +61,7 @@ Section language.
            | Const _ x => x
            | Var _ x => x
            | Op _ _ op args => @interp_op _ _ op (@interpf _ args)
-           | LetIn _ ex _ eC => let x := @interpf _ ex in @interpf _ (eC x)
+           | LetIn _ ex _ eC => dlet x := @interpf _ ex in @interpf _ (eC x)
            | Pair _ ex _ ey => (@interpf _ ex, @interpf _ ey)
            | MatchPair _ _ ex _ eC => match @interpf _ ex with pair x y => @interpf _ (eC x y) end
            end.

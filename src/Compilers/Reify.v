@@ -9,6 +9,7 @@ Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Tactics.DebugPrint.
 (*Require Import Crypto.Util.Tactics.PrintContext.*)
 Require Import Crypto.Util.Tactics.Head.
+Require Import Crypto.Util.Tactics.SubstLet.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Tactics.TransparentAssert.
@@ -329,23 +330,34 @@ Ltac reify_abs base_type_code interp_base_type op var e :=
   let reifyf_term e := reifyf base_type_code interp_base_type op var e in
   let mkReturn ef := constr:(Return (base_type_code:=base_type_code) (interp_base_type:=interp_base_type) (op:=op) (var:=var) ef) in
   let mkAbs src ef := constr:(Abs (base_type_code:=base_type_code) (interp_base_type:=interp_base_type) (op:=op) (var:=var) (src:=src) ef) in
-  let reify_tag := constr:(@exprf base_type_code interp_base_type op var) in
+  let reify_pretag := constr:(@exprf base_type_code interp_base_type op) in
+  let reify_tag := constr:(reify_pretag var) in
   let dummy := debug_enter_reify_abs e in
-  lazymatch e with
-  | (fun x : ?T => ?C) =>
+  lazymatch goal with
+  | [ re := ?rev : forall var' (x : ?T) (not_x : var' _), reify (reify_pretag var') (e x) |- _ ] =>
+    (* fast path *)
     let t := reify_flat_type T in
-    (* Work around Coq 8.5 and 8.6 bug *)
-    (* <https://coq.inria.fr/bugs/show_bug.cgi?id=4998> *)
-    (* Avoid re-binding the Gallina variable referenced by Ltac [x] *)
-    (* even if its Gallina name matches a Ltac in this tactic. *)
-    let maybe_x := fresh x in
-    let not_x := fresh x in
-    lazymatch constr:(fun (x : T) (not_x : var t) (_ : reify_var_for_in_is base_type_code x t not_x) =>
-                        (_ : reify_abs reify_tag C)) (* [C] here is an open term that references "x" by name *)
-    with fun _ v _ => @?C v => mkAbs t C end
-  | ?x =>
-    let xv := reifyf_term x in
-    mkReturn xv
+    let F := lazymatch (eval cbv beta in (rev var)) with
+             | fun _ => ?C => C
+             end in
+    mkAbs t F
+  | _ =>
+    lazymatch e with
+    | (fun x : ?T => ?C) =>
+      let t := reify_flat_type T in
+      (* Work around Coq 8.5 and 8.6 bug *)
+      (* <https://coq.inria.fr/bugs/show_bug.cgi?id=4998> *)
+      (* Avoid re-binding the Gallina variable referenced by Ltac [x] *)
+      (* even if its Gallina name matches a Ltac in this tactic. *)
+      let maybe_x := fresh x in
+      let not_x := fresh x in
+      lazymatch constr:(fun (x : T) (not_x : var t) (_ : reify_var_for_in_is base_type_code x t not_x) =>
+                          (_ : reify_abs reify_tag C)) (* [C] here is an open term that references "x" by name *)
+      with fun _ v _ => @?C v => mkAbs t C end
+    | ?x =>
+      let xv := reifyf_term x in
+      mkReturn xv
+    end
   end.
 
 Hint Extern 0 (reify_abs (@exprf ?base_type_code ?interp_base_type ?op ?var) ?e)
@@ -410,7 +422,8 @@ Ltac Reify_rhs_gen Reify prove_interp_compile_correct interp_op try_tac :=
                            change interp_base_type with interp_base_type';
                            change interp_op with interp_op'
                       end;
-                      cbv iota beta delta [InputSyntax.Interp interp_type interp_type_gen interp_type_gen_hetero interp_flat_type interp interpf]; reflexivity)) ] ] ].
+                      subst_let;
+                      cbv iota beta delta [InputSyntax.Interp interp_type interp_type_gen interp_type_gen_hetero interp_flat_type interp interpf InputSyntax.Fst InputSyntax.Snd]; reflexivity)) ] ] ].
 
 Ltac prove_compile_correct_using tac :=
   fun _ => intros;
