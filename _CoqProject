@@ -74,8 +74,6 @@ src/Compilers/SmartCastWf.v
 src/Compilers/SmartMap.v
 src/Compilers/Syntax.v
 src/Compilers/TestCase.v
-src/Compilers/TestCase.v
-src/Compilers/TestCase.v
 src/Compilers/Tuple.v
 src/Compilers/TypeInversion.v
 src/Compilers/TypeUtil.v
@@ -160,14 +158,10 @@ src/Curves/Weierstrass/Projective.v
 src/LegacyArithmetic/ArchitectureToZLike.v
 src/LegacyArithmetic/ArchitectureToZLikeProofs.v
 src/LegacyArithmetic/BarretReduction.v
-src/LegacyArithmetic/BarretReduction.v
-src/LegacyArithmetic/BarretReduction.v
 src/LegacyArithmetic/BaseSystem.v
 src/LegacyArithmetic/BaseSystemProofs.v
 src/LegacyArithmetic/Interface.v
 src/LegacyArithmetic/InterfaceProofs.v
-src/LegacyArithmetic/MontgomeryReduction.v
-src/LegacyArithmetic/MontgomeryReduction.v
 src/LegacyArithmetic/MontgomeryReduction.v
 src/LegacyArithmetic/Pow2Base.v
 src/LegacyArithmetic/Pow2BaseProofs.v
