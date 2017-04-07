@@ -123,11 +123,14 @@ Module Import Bounds.
 
   Definition interp_base_type (ty : base_type) : Set := t.
 
-  Definition bit_width_of_base_type ty : option Z
+  Definition log_bit_width_of_base_type ty : option nat
     := match ty with
        | TZ => None
-       | TWord logsz => Some (2^Z.of_nat logsz)%Z
+       | TWord logsz => Some logsz
        end.
+
+  Definition bit_width_of_base_type ty : option Z
+    := option_map (fun logsz => 2^Z.of_nat logsz)%Z (log_bit_width_of_base_type ty).
 
   Definition interp_op {src dst} (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
     := match f in op src dst return interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst with
@@ -147,10 +150,56 @@ Module Import Bounds.
   Definition of_interp t (z : Syntax.interp_base_type t) : interp_base_type t
     := ZToZRange (interpToZ z).
 
-  Definition bounds_to_base_type (b : t) : base_type
+  Definition smallest_logsz
+             (round_up : nat -> option nat)
+             (b : t)
+    : option nat
     := if (0 <=? lower b)%Z
-       then TWord (Z.to_nat (Z.log2_up (Z.log2_up (1 + upper b))))
-       else TZ.
+       then Some (Z.to_nat (Z.log2_up (Z.log2_up (1 + upper b))))
+       else None.
+  Definition actual_logsz
+             (round_up : nat -> option nat)
+             (b : t)
+    : option nat
+    := if (0 <=? lower b)%Z
+       then let smallest_lgsz := (Z.to_nat (Z.log2_up (Z.log2_up (1 + upper b)))) in
+            let lgsz := round_up smallest_lgsz in
+            match lgsz with
+            | Some lgsz
+              => if Nat.leb smallest_lgsz lgsz
+                 then Some lgsz
+                 else None
+            | None => None
+            end
+       else None.
+  Definition bounds_to_base_type
+             {round_up : nat -> option nat}
+             (T : base_type)
+             (b : interp_base_type T)
+    : base_type
+    := match T with
+       | TZ => match actual_logsz round_up b with
+               | Some lgsz => TWord lgsz
+               | None => TZ
+               end
+       | TWord _
+         => match smallest_logsz round_up b with
+            | Some lgsz => TWord lgsz
+            | None => TZ
+            end
+       end.
+
+  Definition option_min (a : nat) (b : option nat)
+    := match b with
+       | Some b => Nat.min a b
+       | None => a
+       end.
+
+  Definition round_up_to_in_list (allowable_lgsz : list nat)
+             (lgsz : nat)
+    : option nat
+    := let good_lgsz := List.filter (Nat.leb lgsz) allowable_lgsz in
+       List.fold_right (fun a b => Some (option_min a b)) None good_lgsz.
 
   Definition ComputeBounds {t} (e : Expr base_type op t)
              (input_bounds : interp_flat_type interp_base_type (domain t))

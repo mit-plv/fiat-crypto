@@ -15,6 +15,12 @@ Module Export Exports.
   Export ReflectiveTactics.Exports.
 End Exports.
 
-Ltac refine_reflectively :=
-  refine_to_reflective_glue;
+Ltac refine_reflectively_gen allowable_bit_widths :=
+  refine_to_reflective_glue allowable_bit_widths;
   do_reflective_pipeline.
+
+Ltac refine_reflectively64 := refine_reflectively_gen (64::128::nil)%nat%list.
+Ltac refine_reflectively32 := refine_reflectively_gen (32::64::nil)%nat%list.
+
+(** The default *)
+Ltac refine_reflectively := refine_reflectively64.

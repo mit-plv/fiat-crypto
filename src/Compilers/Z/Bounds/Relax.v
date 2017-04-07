@@ -1,4 +1,5 @@
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.Arith.Arith.
 Require Import Coq.Classes.Morphisms.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.TypeInversion.
@@ -8,10 +9,12 @@ Require Import Crypto.Compilers.Z.Syntax.
 Require Import Crypto.Compilers.Z.Syntax.Equality.
 Require Import Crypto.Compilers.Z.Syntax.Util.
 Require Import Crypto.Compilers.Z.Bounds.Interpretation.
+Require Import Crypto.Compilers.Z.Bounds.RoundUpLemmas.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.SplitInContext.
+Require Import Crypto.Util.Option.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Bool.
 
@@ -29,28 +32,29 @@ Local Arguments Z.sub !_ !_.
 Local Arguments Z.add !_ !_.
 Local Arguments Z.mul !_ !_.
 Lemma relax_output_bounds'
+      round_up
       t (tight_output_bounds relaxed_output_bounds : interp_flat_type Bounds.interp_base_type t)
-      (Hv : SmartFlatTypeMap (fun _ => Bounds.bounds_to_base_type) relaxed_output_bounds
-            = SmartFlatTypeMap (fun _ => Bounds.bounds_to_base_type) tight_output_bounds)
+      (Hv : SmartFlatTypeMap (@Bounds.bounds_to_base_type round_up) relaxed_output_bounds
+            = SmartFlatTypeMap (@Bounds.bounds_to_base_type round_up) tight_output_bounds)
       v k
       (v' := eq_rect _ (interp_flat_type _) v _ Hv)
       (Htighter : @Bounds.is_bounded_by
                     t tight_output_bounds
                     (@cast_back_flat_const
-                       (@Bounds.interp_base_type) t (fun _ => Bounds.bounds_to_base_type) tight_output_bounds
+                       (@Bounds.interp_base_type) t (@Bounds.bounds_to_base_type round_up) tight_output_bounds
                        v')
                   /\ @cast_back_flat_const
-                       (@Bounds.interp_base_type) t (fun _ => Bounds.bounds_to_base_type) tight_output_bounds
+                       (@Bounds.interp_base_type) t (@Bounds.bounds_to_base_type round_up) tight_output_bounds
                        v'
                      = k)
       (Hrelax : Bounds.is_tighter_thanb tight_output_bounds relaxed_output_bounds = true)
   : @Bounds.is_bounded_by
       t relaxed_output_bounds
       (@cast_back_flat_const
-         (@Bounds.interp_base_type) t (fun _ => Bounds.bounds_to_base_type) relaxed_output_bounds
+         (@Bounds.interp_base_type) t (@Bounds.bounds_to_base_type round_up) relaxed_output_bounds
          v)
     /\ @cast_back_flat_const
-         (@Bounds.interp_base_type) t (fun _ => Bounds.bounds_to_base_type) relaxed_output_bounds
+         (@Bounds.interp_base_type) t (@Bounds.bounds_to_base_type round_up) relaxed_output_bounds
          v
        = k.
 Proof.
@@ -58,22 +62,24 @@ Proof.
   cbv [Bounds.is_bounded_by cast_back_flat_const Bounds.is_tighter_thanb] in *.
   apply interp_flat_type_rel_pointwise_iff_relb in Hrelax.
   induction t; unfold SmartFlatTypeMap in *; simpl @smart_interp_flat_map in *; inversion_flat_type.
-  { cbv [Bounds.is_tighter_thanb' ZRange.is_tighter_than_bool is_true SmartFlatTypeMap Bounds.bounds_to_base_type ZRange.is_bounded_by' ZRange.is_bounded_by Bounds.is_bounded_by' Bounds.bit_width_of_base_type] in *; simpl in *.
-    repeat first [ progress inversion_flat_type
-                 | progress inversion_base_type
-                 | progress destruct_head bounds
-                 | progress split_andb
-                 | progress Z.ltb_to_lt
-                 | progress break_match_hyps
-                 | progress destruct_head'_and
-                 | progress simpl in *
-                 | rewrite helper in *
-                 | omega
-                 | tauto
-                 | congruence
-                 | progress destruct_head @eq; (reflexivity || omega)
-                 | progress break_innermost_match_step
-                 | apply conj ]. }
+  { cbv [Bounds.is_tighter_thanb' Bounds.bounds_to_base_type ZRange.is_tighter_than_bool is_true SmartFlatTypeMap ZRange.is_bounded_by' Bounds.smallest_logsz ZRange.is_bounded_by Bounds.is_bounded_by' Bounds.bit_width_of_base_type] in *; simpl in *;
+      repeat first [ progress inversion_flat_type
+                   | progress inversion_base_type_constr
+                   | progress subst
+                   | progress destruct_head bounds
+                   | progress destruct_head base_type
+                   | progress split_andb
+                   | progress Z.ltb_to_lt
+                   | progress break_match_hyps
+                   | progress destruct_head'_and
+                   | progress simpl in *
+                   | rewrite helper in *
+                   | omega
+                   | tauto
+                   | congruence
+                   | progress destruct_head @eq; (reflexivity || omega)
+                   | progress break_innermost_match_step
+                   | apply conj ]. }
   { compute in *; tauto. }
   { simpl in *.
     specialize (fun Hv => IHt1 (fst tight_output_bounds) (fst relaxed_output_bounds) Hv (fst v)).
@@ -103,24 +109,25 @@ Proof.
 Qed.
 
 Lemma relax_output_bounds
+      round_up
       t (tight_output_bounds relaxed_output_bounds : interp_flat_type Bounds.interp_base_type t)
-      (Hv : SmartFlatTypeMap (fun _ => Bounds.bounds_to_base_type) relaxed_output_bounds
-            = SmartFlatTypeMap (fun _ => Bounds.bounds_to_base_type) tight_output_bounds)
+      (Hv : SmartFlatTypeMap (@Bounds.bounds_to_base_type round_up) relaxed_output_bounds
+            = SmartFlatTypeMap (@Bounds.bounds_to_base_type round_up) tight_output_bounds)
       v k
       (v' := eq_rect _ (interp_flat_type _) v _ Hv)
       (Htighter : @Bounds.is_bounded_by t tight_output_bounds k
                   /\ @cast_back_flat_const
-                       (@Bounds.interp_base_type) t (fun _ => Bounds.bounds_to_base_type) tight_output_bounds
+                       (@Bounds.interp_base_type) t (@Bounds.bounds_to_base_type round_up) tight_output_bounds
                        v'
                      = k)
       (Hrelax : Bounds.is_tighter_thanb tight_output_bounds relaxed_output_bounds = true)
   : @Bounds.is_bounded_by t relaxed_output_bounds k
     /\ @cast_back_flat_const
-         (@Bounds.interp_base_type) t (fun _ => Bounds.bounds_to_base_type) relaxed_output_bounds
+         (@Bounds.interp_base_type) t (@Bounds.bounds_to_base_type round_up) relaxed_output_bounds
          v
        = k.
 Proof.
-  pose proof (fun pf => @relax_output_bounds' t tight_output_bounds relaxed_output_bounds Hv v k (conj pf (proj2 Htighter)) Hrelax) as H.
+  pose proof (fun pf => @relax_output_bounds' round_up t tight_output_bounds relaxed_output_bounds Hv v k (conj pf (proj2 Htighter)) Hrelax) as H.
   destruct H as [H1 H2]; [ | rewrite <- H2; tauto ].
   subst v'.
   destruct Htighter; subst k; assumption.

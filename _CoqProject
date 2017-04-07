@@ -137,6 +137,7 @@ src/Compilers/Z/Bounds/MapCastByDeBruijnInterp.v
 src/Compilers/Z/Bounds/MapCastByDeBruijnWf.v
 src/Compilers/Z/Bounds/Pipeline.v
 src/Compilers/Z/Bounds/Relax.v
+src/Compilers/Z/Bounds/RoundUpLemmas.v
 src/Compilers/Z/Bounds/Pipeline/Definition.v
 src/Compilers/Z/Bounds/Pipeline/Glue.v
 src/Compilers/Z/Bounds/Pipeline/OutputType.v

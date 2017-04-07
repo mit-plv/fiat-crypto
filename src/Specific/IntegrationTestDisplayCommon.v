@@ -44,6 +44,9 @@ Tactic Notation "display" open_constr(f) :=
                                adjust_tuple2_tuple2_sig
                                Tuple.tuple Tuple.tuple'
                                FixedWordSizes.wordT FixedWordSizes.word_case FixedWordSizes.ZToWord FixedWordSizes.word_case_dep
+                               Bounds.actual_logsz Bounds.round_up_to_in_list Bounds.option_min
+                               List.map List.filter List.fold_right List.fold_left
+                               Nat.leb Nat.min
                                PeanoNat.Nat.log2 PeanoNat.Nat.log2_iter PeanoNat.Nat.pred
                                Bounds.bounds_to_base_type
                                interp_flat_type

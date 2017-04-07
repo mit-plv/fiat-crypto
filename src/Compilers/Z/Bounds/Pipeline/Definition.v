@@ -67,14 +67,15 @@ Require Import Crypto.Util.Sigma.MapProjections.
 (** *** Definition of the Post-Wf Pipeline *)
 (** Do not change the name or the type of this definition *)
 Definition PostWfPipeline
+           round_up
            {t} (e : Expr base_type op t)
            (input_bounds : interp_flat_type Bounds.interp_base_type (domain t))
-  : option ProcessedReflectivePackage
+  : option (@ProcessedReflectivePackage round_up)
   := Build_ProcessedReflectivePackage_from_option_sigma
        e input_bounds
        (let e := Linearize e in
         let e := InlineConst e in
-        let e := MapCast e input_bounds in
+        let e := MapCast _ e input_bounds in
         option_map
           (projT2_map
              (fun b e'
@@ -96,37 +97,41 @@ Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.HProp.
 Require Import Crypto.Util.Decidable.
 
-Local Notation pick_typeb := Bounds.bounds_to_base_type (only parsing).
-Local Notation pick_type v := (SmartFlatTypeMap (fun _ => pick_typeb) v).
-Definition PostWfPipelineCorrect
-           {t}
-           (e : Expr base_type op t)
-           (input_bounds : interp_flat_type Bounds.interp_base_type (domain t))
-           (Hwf : Wf e)
-           {b e'} (He : PostWfPipeline e input_bounds
-                        = Some {| input_expr := e ; input_bounds := input_bounds ; output_bounds := b ; output_expr := e' |})
-           (v : interp_flat_type Syntax.interp_base_type (domain t))
-           (v' : interp_flat_type Syntax.interp_base_type (pick_type input_bounds))
-           (Hv : Bounds.is_bounded_by input_bounds v /\ cast_back_flat_const v' = v)
-  : Interp (@Bounds.interp_op) e input_bounds = b
-    /\ Bounds.is_bounded_by b (Interp interp_op e v)
-    /\ cast_back_flat_const (Interp interp_op e' v') = Interp interp_op e v.
-Proof.
-  (** These first two lines probably shouldn't change much *)
-  unfold PostWfPipeline, Build_ProcessedReflectivePackage_from_option_sigma, option_map, projT2_map in *.
-  repeat (break_match_hyps || inversion_option || inversion_ProcessedReflectivePackage
-          || inversion_sigma || eliminate_hprop_eq || inversion_prod
-          || simpl in * || subst).
-  (** Now handle all the transformations that come after the word-size selection *)
-  rewrite InterpExprEta_arrow, InterpInlineConst
-    by eauto with wf.
-  (** Now handle all the transformations that come before the word-size selection *)
-  rewrite <- !InterpLinearize with (e:=e), <- !(@InterpInlineConst _ _ _ (Linearize e))
-    by eauto with wf.
-  (** Now handle word-size selection itself *)
-  eapply MapCastCorrect; eauto with wf.
-Qed.
+Section with_round_up_list.
+  Context {allowable_lgsz : list nat}.
 
+  Local Notation pick_typeb := (@Bounds.bounds_to_base_type (Bounds.round_up_to_in_list allowable_lgsz)) (only parsing).
+  Local Notation pick_type v := (SmartFlatTypeMap pick_typeb v).
+
+  Definition PostWfPipelineCorrect
+             {t}
+             (e : Expr base_type op t)
+             (input_bounds : interp_flat_type Bounds.interp_base_type (domain t))
+             (Hwf : Wf e)
+             {b e'} (He : PostWfPipeline _ e input_bounds
+                          = Some {| input_expr := e ; input_bounds := input_bounds ; output_bounds := b ; output_expr := e' |})
+             (v : interp_flat_type Syntax.interp_base_type (domain t))
+             (v' : interp_flat_type Syntax.interp_base_type (pick_type input_bounds))
+             (Hv : Bounds.is_bounded_by input_bounds v /\ cast_back_flat_const v' = v)
+    : Interp (@Bounds.interp_op) e input_bounds = b
+      /\ Bounds.is_bounded_by b (Interp interp_op e v)
+      /\ cast_back_flat_const (Interp interp_op e' v') = Interp interp_op e v.
+  Proof.
+    (** These first two lines probably shouldn't change much *)
+    unfold PostWfPipeline, Build_ProcessedReflectivePackage_from_option_sigma, option_map, projT2_map in *.
+    repeat (break_match_hyps || inversion_option || inversion_ProcessedReflectivePackage
+            || inversion_sigma || eliminate_hprop_eq || inversion_prod
+            || simpl in * || subst).
+    (** Now handle all the transformations that come after the word-size selection *)
+    rewrite InterpExprEta_arrow, InterpInlineConst
+      by eauto with wf.
+    (** Now handle all the transformations that come before the word-size selection *)
+    rewrite <- !InterpLinearize with (e:=e), <- !(@InterpInlineConst _ _ _ (Linearize e))
+      by eauto with wf.
+    (** Now handle word-size selection itself *)
+    eapply MapCastCorrect; eauto with wf.
+  Qed.
+End with_round_up_list.
 
 (** ** Constant Simplification and Unfolding *)
 (** The reflective pipeline may introduce constants that you want to

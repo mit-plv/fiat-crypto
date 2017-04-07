@@ -388,12 +388,12 @@ Ltac find_reified_f_evar LHS :=
   | map wordToZ ?x => find_reified_f_evar x
   | _ => LHS
   end.
-Ltac zrange_to_reflective_hyps_step_gen then_tac :=
+Ltac zrange_to_reflective_hyps_step_gen then_tac round_up :=
   lazymatch goal with
   | [ H : @ZRange.is_bounded_by ?option_bit_width ?count ?bounds (Tuple.map wordToZ ?arg) |- _ ]
     => let rT := constr:(Syntax.tuple (Tbase TZ) count) in
        let is_bounded_by' := constr:(@Bounds.is_bounded_by rT) in
-       let map' := constr:(@cast_back_flat_const (@Bounds.interp_base_type) rT (fun _ => Bounds.bounds_to_base_type) bounds) in
+       let map' := constr:(@cast_back_flat_const (@Bounds.interp_base_type) rT (@Bounds.bounds_to_base_type round_up) bounds) in
        (* we use [assert] and [abstract] rather than [change] to catch
           inefficiencies in conversion early, rather than allowing
           [Defined] to take forever *)
@@ -405,19 +405,19 @@ Ltac zrange_to_reflective_hyps_step_gen then_tac :=
   | _ => idtac
   end.
 Ltac zrange_to_reflective_hyps_step := zrange_to_reflective_hyps_step_gen ltac:(fun _ => idtac).
-Ltac zrange_to_reflective_hyps := zrange_to_reflective_hyps_step_gen ltac:(fun _ => zrange_to_reflective_hyps).
-Ltac zrange_to_reflective_goal Hbounded :=
+Ltac zrange_to_reflective_hyps round_up := zrange_to_reflective_hyps_step_gen ltac:(fun _ => zrange_to_reflective_hyps round_up) round_up.
+Ltac zrange_to_reflective_goal round_up Hbounded :=
   lazymatch goal with
   | [ |- ?is_bounded_by_T /\ ?LHS = ?f ?Zargs ]
     => let T := type of f in
-       let f_domain := lazymatch eval hnf in T with ?A -> ?B => A end in
+       let f_domain := lazymatch (eval hnf in T) with ?A -> ?B => A end in
        let T := (eval compute in T) in
        let rT := reify_type T in
        let is_bounded_by' := constr:(@Bounds.is_bounded_by (codomain rT)) in
        let output_bounds := bounds_from_is_bounded_by is_bounded_by_T in
        pose_proof_bounded_from_Zargs_hyps Zargs Hbounded;
        let input_bounds := lazymatch type of Hbounded with Bounds.is_bounded_by ?bounds _ => bounds end in
-       let map_t := constr:(fun t bs => @cast_back_flat_const (@Bounds.interp_base_type) t (fun _ => Bounds.bounds_to_base_type) bs) in
+       let map_t := constr:(fun t bs => @cast_back_flat_const (@Bounds.interp_base_type) t (@Bounds.bounds_to_base_type round_up) bs) in
        let map_output := constr:(map_t (codomain rT) output_bounds) in
        let map_input := constr:(map_t (domain rT) input_bounds) in
        let args := unmap_wordToZ_tuple Zargs in
@@ -431,7 +431,15 @@ Ltac zrange_to_reflective_goal Hbounded :=
        cbv beta
   end;
   adjust_goal_for_reflective.
-Ltac zrange_to_reflective Hbounded := zrange_to_reflective_hyps; zrange_to_reflective_goal Hbounded.
+Ltac zrange_to_reflective round_up Hbounded :=
+  zrange_to_reflective_hyps round_up; zrange_to_reflective_goal round_up Hbounded.
+
+
+(** ** [round_up_from_allowable_bit_widths] *)
+(** Construct a valid [round_up] function from allowable bit-widths *)
+Ltac round_up_from_allowable_bit_widths allowable_bit_widths :=
+  let allowable_lgsz := (eval compute in (List.map Nat.log2 allowable_bit_widths)) in
+  constr:(Bounds.round_up_to_in_list allowable_lgsz).
 
 (** ** [refine_to_reflective_glue] *)
 (** The tactic [refine_to_reflective_glue] is the public-facing one;
@@ -441,11 +449,12 @@ BoundedWordToZ ?f = F (BoundedWordToZ A) (BoundedWordToZ B) ... (BoundedWordToZ 
 >>
     where [?f] is an evar, and turns it into a goal the that
     reflective automation pipeline can handle. *)
-Ltac refine_to_reflective_glue' Hbounded :=
+Ltac refine_to_reflective_glue' allowable_bit_widths Hbounded :=
+  let round_up := round_up_from_allowable_bit_widths allowable_bit_widths in
   reassoc_sig_and_eexists;
   do_curry_rhs;
   split_BoundedWordToZ;
-  zrange_to_reflective Hbounded.
-Ltac refine_to_reflective_glue :=
+  zrange_to_reflective round_up Hbounded.
+Ltac refine_to_reflective_glue allowable_bit_widths :=
   let Hbounded := fresh "Hbounded" in
-  refine_to_reflective_glue' Hbounded.
+  refine_to_reflective_glue' allowable_bit_widths Hbounded.
