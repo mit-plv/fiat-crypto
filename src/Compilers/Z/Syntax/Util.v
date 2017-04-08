@@ -95,6 +95,18 @@ Proof.
                | rewrite ZToWord_wordToZ_ZToWord_small by omega ].
 Qed.
 
+Lemma cast_const_split_mod {a b} v
+  : @cast_const a b v = ZToInterp (match a, b with
+                                   | TZ, _ => interpToZ v
+                                   | _, TWord lgsz => (interpToZ v) mod (2^Z.of_nat (2^lgsz))
+                                   | _, TZ => interpToZ v
+                                   end).
+Proof.
+  destruct_head base_type; simpl; try reflexivity.
+  rewrite <- wordToZ_ZToWord_mod, ZToWord_wordToZ by apply wordToZ_range.
+  reflexivity.
+Qed.
+
 Lemma cast_const_idempotent {a b c} v
   : base_type_min b (base_type_min a c) = base_type_min a c
     -> @cast_const b c (@cast_const a b v) = @cast_const a c v.
