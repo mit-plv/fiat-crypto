@@ -120,6 +120,16 @@ Proof.
   assumption.
 Qed.
 
+Lemma wordToZ_gen_ZToWord_gen_mod : forall {sz} w, (0 <= w)%Z -> wordToZ_gen (@ZToWord_gen sz w) = (w mod (2^Z.of_nat sz))%Z.
+Proof.
+  unfold ZToWord_gen, wordToZ_gen.
+  intros.
+  rewrite wordToN_NToWord_mod.
+  rewrite N2Z.inj_mod by (destruct sz; simpl; congruence).
+  rewrite Z2N.id, N2Z.inj_pow, nat_N_Z by assumption.
+  reflexivity.
+Qed.
+
 Lemma ZToWord_gen_wordToZ_gen_ZToWord_gen : forall {sz1 sz2} v,
     (sz2 <= sz1)%nat -> @ZToWord_gen sz2 (wordToZ_gen (@ZToWord_gen sz1 v)) = ZToWord_gen v.
 Proof.
@@ -159,6 +169,13 @@ Lemma wordToZ_ZToWord : forall {sz} v, (0 <= v < 2^(Z.of_nat (2^sz)))%Z -> @word
 Proof.
   unfold wordToZ, ZToWord, word_case_dep.
   intros; break_match; apply wordToZ_gen_ZToWord_gen;
+    assumption.
+Qed.
+
+Lemma wordToZ_ZToWord_mod : forall {sz} v, (0 <= v)%Z -> wordToZ (@ZToWord sz v) = (v mod (2^Z.of_nat (2^sz)))%Z.
+Proof.
+  unfold wordToZ, ZToWord, word_case_dep.
+  intros; break_match; apply wordToZ_gen_ZToWord_gen_mod;
     assumption.
 Qed.
 

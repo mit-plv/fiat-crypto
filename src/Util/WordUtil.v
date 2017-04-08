@@ -464,6 +464,22 @@ Section WordToN.
     reflexivity.
   Qed.
 
+  Lemma wordToN_NToWord_mod : forall sz w, wordToN (NToWord sz w) = N.modulo w (2^N.of_nat sz).
+  Proof.
+    intros.
+    apply N.bits_inj; intro k.
+    repeat match goal with
+           | _ => reflexivity
+           | _ => progress rewrite ?wordToN_testbit, ?wbit_NToWord, ?N2Nat.id
+           | _ => rewrite N.mod_pow2_bits_low by lia
+           | _ => rewrite N.mod_pow2_bits_high by lia
+           | _ => progress break_match
+           | [ H : (_ <? _) = true |- _ ] => apply Nat.ltb_lt in H
+           | [ H : (_ <? _) = false |- _ ] => apply Nat.ltb_ge in H
+           | _ => omega
+           end.
+  Qed.
+
   Lemma wordToN_split1: forall {n m} x,
     wordToN (@split1 n m x) = N.land (wordToN x) (wordToN (wones n)).
   Proof.
