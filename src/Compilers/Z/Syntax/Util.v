@@ -107,6 +107,34 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma interpToZ_cast_const_mod {a b} v
+  : interpToZ (@cast_const a b v)
+    = match b with
+      | TZ => interpToZ v
+      | TWord lgsz => if (0 <=? interpToZ v)%Z
+                      then (interpToZ v) mod (2^Z.of_nat (2^lgsz))
+                      else 0
+      end%Z.
+Proof.
+  repeat first [ progress destruct_head base_type
+               | reflexivity
+               | rewrite wordToZ_ZToWord_mod_full ].
+Qed.
+
+Lemma cast_const_ZToInterp_mod {a b} v
+  : @cast_const a b (ZToInterp v)
+    = ZToInterp match a with
+                | TZ => v
+                | TWord lgsz => if (0 <=? v)%Z
+                                then v mod 2^Z.of_nat (2^lgsz)
+                                else 0
+                end%Z.
+Proof.
+  repeat first [ progress destruct_head base_type
+               | reflexivity
+               | rewrite wordToZ_ZToWord_mod_full ].
+Qed.
+
 Lemma cast_const_idempotent {a b c} v
   : base_type_min b (base_type_min a c) = base_type_min a c
     -> @cast_const b c (@cast_const a b v) = @cast_const a c v.
