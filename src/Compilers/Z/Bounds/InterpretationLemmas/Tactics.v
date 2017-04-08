@@ -123,10 +123,10 @@ Ltac saturate_with_shift_facts :=
            => unique assert (x << x' <= y << y') by (apply Z.shiftl_le_mono; omega)
          | [ H : ?x <= ?y, H' : ?x' <= ?y' |- context[?y << ?y'] ]
            => unique assert (x << x' <= y << y') by (apply Z.shiftl_le_mono; omega)
-         | [ H : ?x <= ?y, H' : ?x' <= ?y' |- context[?x >> ?x'] ]
-           => unique assert (x >> x' <= y >> y') by (apply Z.shiftr_le_mono; omega)
-         | [ H : ?x <= ?y, H' : ?x' <= ?y' |- context[?y >> ?y'] ]
-           => unique assert (x >> x' <= y >> y') by (apply Z.shiftr_le_mono; omega)
+          | [ H : ?x <= ?y, H' : ?x' <= ?y' |- context[?x >> ?y'] ]
+            => unique assert (x >> y' <= y >> x') by (Z.shiftr_le_mono; omega)
+         | [ H : ?x <= ?y, H' : ?x' <= ?y' |- context[?y >> ?x'] ]
+           => unique assert (x >> y' <= y >> x') by (apply Z.shiftr_le_mono; omega)
          end.
 Ltac saturate_with_all_shift_facts :=
   repeat match goal with
@@ -134,8 +134,17 @@ Ltac saturate_with_all_shift_facts :=
          | [ H : ?x <= ?y, H' : ?x' <= ?y' |- context[Z.shiftl _ _] ]
            => unique assert (x << x' <= y << y') by (apply Z.shiftl_le_mono; omega)
          | [ H : ?x <= ?y, H' : ?x' <= ?y' |- context[Z.shiftr _ _] ]
-           => unique assert (x >> x' <= y >> y') by (apply Z.shiftr_le_mono; omega)
+           => unique assert (x >> y' <= y >> x') by (apply Z.shiftr_le_mono; omega)
          end.
+Ltac preprocess_shift_min_max :=
+  repeat first [ rewrite (Z.min_r (_ >> _) (_ >> _)) by (apply Z.shiftr_le_mono; omega)
+               | rewrite (Z.min_l (_ >> _) (_ >> _)) by (apply Z.shiftr_le_mono; omega)
+               | rewrite (Z.max_r (_ >> _) (_ >> _)) by (apply Z.shiftr_le_mono; omega)
+               | rewrite (Z.max_l (_ >> _) (_ >> _)) by (apply Z.shiftr_le_mono; omega)
+               | rewrite (Z.min_r (_ << _) (_ << _)) by (apply Z.shiftl_le_mono; omega)
+               | rewrite (Z.min_l (_ << _) (_ << _)) by (apply Z.shiftl_le_mono; omega)
+               | rewrite (Z.max_r (_ << _) (_ << _)) by (apply Z.shiftl_le_mono; omega)
+               | rewrite (Z.max_l (_ << _) (_ << _)) by (apply Z.shiftl_le_mono; omega) ].
 Ltac saturate_land_lor_facts :=
   repeat match goal with
          | [ |- context[Z.land ?x ?y] ]
@@ -179,7 +188,9 @@ Ltac replace_all_neg_with_pos :=
          end.
 Ltac handle_shift_neg :=
   repeat first [ rewrite !Z.shiftr_opp_r
-               | rewrite !Z.shiftl_opp_r ].
+               | rewrite !Z.shiftl_opp_r
+               | rewrite !Z.shiftr_opp_l
+               | rewrite !Z.shiftl_opp_l ].
 
 Ltac handle_four_corners_step_fast :=
   first [ progress destruct_head Bounds.t
