@@ -1,3 +1,4 @@
+Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.SmartMap.
 Require Import Crypto.Compilers.Wf.
@@ -7,6 +8,7 @@ Require Import Crypto.Compilers.Z.Syntax.
 Require Import Crypto.Util.FixedWordSizesEquality.
 Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.HProp.
+Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Notations.
@@ -66,6 +68,31 @@ Lemma cast_const_id {t} v
 Proof.
   destruct t; simpl; trivial.
   rewrite ZToWord_wordToZ; reflexivity.
+Qed.
+
+Lemma cast_const_idempotent_small {a b c} v
+  : match b with
+    | TZ => True
+    | TWord bsz => 0 <= interpToZ (@cast_const a c v) < 2^Z.of_nat (2^bsz)
+    end%Z
+    -> @cast_const b c (@cast_const a b v) = @cast_const a c v.
+Proof.
+  repeat first [ reflexivity
+               | congruence
+               | progress destruct_head' base_type
+               | progress simpl
+               | progress break_match
+               | progress subst
+               | intro
+               | match goal with
+                 | [ H : ?leb _ _ = true |- _ ] => apply Compare_dec.leb_complete in H
+                 | [ H : ?leb _ _ = false |- _ ] => apply Compare_dec.leb_iff_conv in H
+                 | [ H : TWord _ = TWord _ |- _ ] => inversion H; clear H
+                 end
+               | rewrite ZToWord_wordToZ_ZToWord by omega *
+               | rewrite wordToZ_ZToWord_wordToZ by omega *
+               | rewrite wordToZ_ZToWord by assumption
+               | rewrite ZToWord_wordToZ_ZToWord_small by omega ].
 Qed.
 
 Lemma cast_const_idempotent {a b c} v
