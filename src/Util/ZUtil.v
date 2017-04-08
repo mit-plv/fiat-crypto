@@ -1548,6 +1548,32 @@ Module Z.
   Hint Rewrite Z.div_opp_l_complete using zutil_arith : pull_Zopp.
   Hint Rewrite Z.div_opp_l_complete' using zutil_arith : push_Zopp.
 
+  Lemma shiftl_opp_l a n
+    : Z.shiftl (-a) n = - Z.shiftl a n - (if Z_zerop (a mod 2 ^ (- n)) then 0 else 1).
+  Proof.
+    destruct (Z_dec 0 n) as [ [?|?] | ? ];
+      subst;
+      rewrite ?Z.pow_neg_r by omega;
+      autorewrite with zsimplify_const;
+      [ | | simpl; omega ].
+    { rewrite !Z.shiftl_mul_pow2 by omega.
+      nia. }
+    { rewrite !Z.shiftl_div_pow2 by omega.
+      rewrite Z.div_opp_l_complete by auto with zarith.
+      reflexivity. }
+  Qed.
+  Hint Rewrite shiftl_opp_l : push_Zshift.
+  Hint Rewrite <- shiftl_opp_l : pull_Zshift.
+
+  Lemma shiftr_opp_l a n
+    : Z.shiftr (-a) n = - Z.shiftr a n - (if Z_zerop (a mod 2 ^ n) then 0 else 1).
+  Proof.
+    unfold Z.shiftr; rewrite shiftl_opp_l at 1; rewrite Z.opp_involutive.
+    reflexivity.
+  Qed.
+  Hint Rewrite shiftr_opp_l : push_Zshift.
+  Hint Rewrite <- shiftr_opp_l : pull_Zshift.
+
   Lemma div_opp a : a <> 0 -> -a / a = -1.
   Proof.
     intros; autorewrite with pull_Zopp zsimplify; lia.
