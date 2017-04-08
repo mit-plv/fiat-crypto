@@ -180,6 +180,16 @@ Proof.
   congruence.
 Qed.
 
+Lemma interpToZ_range {a} (v : interp_base_type a)
+  : match a with
+    | TZ => True
+    | TWord lgsz => 0 <= interpToZ v < 2^Z.of_nat (2^lgsz)
+    end%Z.
+Proof.
+  destruct a; trivial; simpl.
+  apply wordToZ_range.
+Qed.
+
 Lemma make_const_correct : forall T v, interp_op Unit (Tbase T) (make_const T v) tt = v.
 Proof.
   destruct T; cbv -[FixedWordSizes.ZToWord FixedWordSizes.wordToZ FixedWordSizes.wordT];
