@@ -59,6 +59,7 @@ Section with_round_up.
     all:change (@interpToZ) with (fun t1 => cast_const (t1:=t1) (t2:=TZ)) in *.
     all:cbv beta in *.
     { specialize (H0 (cast_const v)).
+      specialize_by_assumption.
       (*{ simpl in *.
       specialize (H0 tt I).
       simpl in *.
