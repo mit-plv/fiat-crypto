@@ -129,6 +129,18 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma ZToWord_gen_wordToZ_gen_ZToWord_gen_small : forall {sz1 sz2} v,
+    (wordToZ_gen (@ZToWord_gen sz2 v) < 2^(Z.of_nat sz1))%Z
+    -> @ZToWord_gen sz2 (wordToZ_gen (@ZToWord_gen sz1 v)) = ZToWord_gen v.
+Proof.
+  unfold ZToWord_gen, wordToZ_gen.
+  intros sz1 sz2 v H.
+  change 2%Z with (Z.of_nat 2) in H.
+  rewrite <- !nat_N_Z, <- N2Z.inj_pow, <- N2Z.inj_lt in H.
+  rewrite N2Z.id, NToWord_wordToN_NToWord_small by assumption.
+  reflexivity.
+Qed.
+
 Lemma wordToZ_gen_ZToWord_gen_wordToZ_gen sz1 sz2 w
   : (sz1 <= sz2)%nat -> wordToZ_gen (@ZToWord_gen sz2 (@wordToZ_gen sz1 w)) = wordToZ_gen w.
 Proof.
@@ -169,6 +181,14 @@ Proof.
   unfold wordToZ, ZToWord, word_case_dep.
   intros sz1 sz2; break_match; intros; apply ZToWord_gen_wordToZ_gen_ZToWord_gen;
     handle_le.
+Qed.
+
+Lemma ZToWord_wordToZ_ZToWord_small : forall {sz1 sz2} v,
+    (wordToZ (@ZToWord sz2 v) < 2^Z.of_nat (2^sz1))%Z -> @ZToWord sz2 (wordToZ (@ZToWord sz1 v)) = ZToWord v.
+Proof.
+  unfold wordToZ, ZToWord, word_case_dep.
+  intros sz1 sz2; break_match; intros; apply ZToWord_gen_wordToZ_gen_ZToWord_gen_small;
+    handle_le; try omega.
 Qed.
 
 Lemma wordToZ_ZToWord_wordToZ : forall sz1 sz2 w, (sz1 <= sz2)%nat -> wordToZ (@ZToWord sz2 (@wordToZ sz1 w)) = wordToZ w.

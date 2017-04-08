@@ -414,6 +414,31 @@ Section WordToN.
             reflexivity. } }
   Qed.
 
+  Lemma NToWord_wordToN_NToWord_small : forall sz1 sz2 w,
+      (wordToN (NToWord sz2 w) < 2^N.of_nat sz1)%N
+      -> NToWord sz2 (wordToN (NToWord sz1 w)) = NToWord sz2 w.
+  Proof.
+    intros sz1 sz2 w H.
+    apply wbit_inj_iff_lt; intros k Hlt.
+    rewrite !wbit_NToWord, wordToN_testbit, wbit_NToWord, Nat2N.id.
+    destruct (N.eq_dec (wordToN (NToWord sz2 w)) 0) as [H'|H'];
+      [ apply N.bits_inj_iff in H'; specialize (H' (N.of_nat k));
+        rewrite wordToN_testbit, wbit_NToWord, N2Nat.id, Nat2N.id in H'; simpl in *
+      | assert (H'' : sz1 <= k -> N.testbit (wordToN (NToWord sz2 w)) (N.of_nat k) = false);
+        [ intro;
+          apply N.log2_lt_pow2 in H; [ | lia.. ]
+        | rewrite wordToN_testbit, wbit_NToWord, N2Nat.id, Nat2N.id in H'' ] ];
+    break_match; try reflexivity;
+      repeat match goal with
+             | [ H : (_ <? _) = true |- _ ] => apply Nat.ltb_lt in H
+             | [ H : (_ <? _) = false |- _ ] => apply Nat.ltb_ge in H
+             | _ => omega
+             | _ => congruence
+             | _ => rewrite N.bits_above_log2 by lia
+             | _ => solve [ symmetry; auto ]
+             end.
+  Qed.
+
   Lemma NToWord_wordToN_NToWord : forall sz1 sz2 w,
       sz2 <= sz1 -> NToWord sz2 (wordToN (NToWord sz1 w)) = NToWord sz2 w.
   Proof.
