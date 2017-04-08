@@ -135,6 +135,19 @@ Proof.
                | rewrite wordToZ_ZToWord_mod_full ].
 Qed.
 
+Lemma interpToZ_ZToInterp_mod {a} v
+  : @interpToZ a (ZToInterp v)
+    = match a with
+      | TZ => v
+      | TWord lgsz => if (0 <=? v)%Z
+                      then v mod 2^Z.of_nat (2^lgsz)
+                      else 0
+      end%Z.
+Proof.
+  etransitivity; [ apply (@interpToZ_cast_const_mod TZ) | ].
+  reflexivity.
+Qed.
+
 Lemma cast_const_idempotent {a b c} v
   : base_type_min b (base_type_min a c) = base_type_min a c
     -> @cast_const b c (@cast_const a b v) = @cast_const a c v.
