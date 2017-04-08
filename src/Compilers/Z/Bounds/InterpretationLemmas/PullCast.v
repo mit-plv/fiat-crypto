@@ -51,89 +51,15 @@ Section with_round_up.
     unfold interp_op in *.
     rewrite Zinterp_op_genericize_op.
     generalize dependent (Zinterp_op t tR opc).
-    generalize dependent (Bounds.interp_op opc bs); clear opc; simpl; intros.
-    revert dependent t; induction tR as [tR| |]; intros;
-      [
-      | repeat first [ match goal with
-                       | [ |- ?x = ?y ]
-                         => transitivity tt; destruct x, y; reflexivity
-                       end
-                     | reflexivity
-                     | progress simpl @Bounds.is_bounded_by in *
-                     | rewrite !lift_op_prod_dst
-                     | rewrite !cast_back_flat_const_prod
-                     | progress split_and
-                     | match goal with
-                       | [ H : _ |- _ ] => first [ setoid_rewrite lift_op_prod_dst in H
-                                                 | setoid_rewrite cast_back_flat_const_prod in H ]
-                       end
-                     | setoid_rewrite lift_op_prod_dst
-                     | match goal with
-                       | [ H : _ |- _ ] => erewrite H by eassumption
-                       end ].. ].
-    revert dependent tR; induction t as [t| |]; intros;
-      [
-      | repeat first [ match goal with
-                       | [ |- ?x = ?y ]
-                         => transitivity tt; destruct x, y; reflexivity
-                       end
-                     | reflexivity
-                     | progress simpl @Bounds.is_bounded_by in *
-                     | rewrite !lift_op_prod_dst
-                     | rewrite !cast_back_flat_const_prod
-                     | progress split_and
-                     | match goal with
-                       | [ H : _ |- _ ] => first [ setoid_rewrite lift_op_prod_dst in H
-                                                 | setoid_rewrite cast_back_flat_const_prod in H ]
-                       end
-                     | setoid_rewrite lift_op_prod_dst
-                     | match goal with
-                       | [ H : _ |- _ ] => erewrite H by eassumption
-                       end ].. ].
-    { simpl in *; unfold unzify_op, cast_back_flat_const, SmartFlatTypeMap, Bounds.interp_base_type, cast_const, Bounds.is_bounded_by', lift_op, SmartFlatTypeMapUnInterp, SmartFlatTypeMapInterp2, cast_const in *; simpl in *.
-      unfold Bounds.is_bounded_by', cast_const, ZToInterp, interpToZ, Bounds.bounds_to_base_type, ZRange.is_bounded_by' in *; simpl in *.
-      destruct_head base_type; break_innermost_match; Z.ltb_to_lt; destruct_head Bounds.t;
-        repeat match goal with
-               | _ => progress destruct_head'_and
-               | _ => reflexivity
-               | [ H : forall v, _ /\ True -> _ |- _ ] => specialize (fun v pf => H v (conj pf I))
-               | [ H : forall v, _ -> _ /\ True |- _ ] => pose proof (fun v pf => proj1 (H v pf)); clear H
-               | [ H : True |- _ ] => clear H
-               | [ H : ?T, H' : ?T |- _ ] => clear H
-               | [ H : forall v, _ -> _ <= ?f v <= _ |- ?f ?v' = _ ]
-                 => specialize (H v')
-               | [ H : forall v, _ -> _ <= ?f (?g v) <= _ |- ?f (?g ?v') = _ ]
-                 => specialize (H v')
-               | [ H : forall v, _ -> _ <= ?f (?g (?h v)) <= _ /\ _ /\ _ |- context[?h ?v'] ]
-                 => specialize (H v')
-               | [ H : forall v, _ -> _ <= ?f (?g (?h (?i v))) <= _ /\ _ /\ _ |- context[?h (?i ?v')] ]
-                 => specialize (H v')
-               | _ => progress specialize_by omega
-               | _ => rewrite wordToZ_ZToWord
-                   by repeat match goal with
-                             | [ |- and _ _ ] => split
-                             | [ |- ?x < ?y ] => cut (1 + x <= y); [ omega | ]
-                             | _ => omega
-                             | _ => progress autorewrite with push_Zof_nat zsimplify_const
-                             | _ => rewrite Z2Nat.id by auto with zarith
-                             | _ => rewrite <- !Z.log2_up_le_full
-                             end
-               | _ => rewrite wordToZ_ZToWord in *
-                   by repeat match goal with
-                             | [ |- and _ _ ] => split
-                             | [ |- ?x < ?y ] => cut (1 + x <= y); [ omega | ]
-                             | _ => omega
-                             | _ => progress autorewrite with push_Zof_nat zsimplify_const
-                             | _ => rewrite Z2Nat.id by auto with zarith
-                             | _ => rewrite <- !Z.log2_up_le_full
-                             end
-               | _ => rewrite wordToZ_ZToWord_wordToZ
-                   by (rewrite Nat2Z.inj_le, Z2Nat.id, <- !Z.log2_up_le_pow2_full by auto with zarith; omega)
-               | _ => rewrite wordToZ_ZToWord_wordToZ in *
-                   by (rewrite Nat2Z.inj_le, Z2Nat.id, <- !Z.log2_up_le_pow2_full by auto with zarith; omega)
-               end.
-      all:admit. }
-    { simpl in *.
+    generalize dependent (Bounds.interp_op opc bs); simpl; intros.
+    repeat (destruct_one_head flat_type; try solve [ inversion opc ]).
+    all:simpl in *; destruct_head unit; destruct_head True; simpl in *.
+    all:unfold unzify_op, cast_back_flat_const, lift_op in *; simpl in *.
+    all:unfold Bounds.is_bounded_by', ZRange.is_bounded_by' in *.
+    all:change (@interpToZ) with (fun t1 => cast_const (t1:=t1) (t2:=TZ)) in *.
+    all:cbv beta in *.
+    { specialize (H0 (cast_const v)).
+      (*{ simpl in *.
       specialize (H0 tt I).
       simpl in *.
       hnf in H0.
@@ -160,6 +86,6 @@ Section with_round_up.
       all:try reflexivity.
       unfold interpToZ, cast_const.
       simpl.
-
+*)
   Admitted.
 End with_round_up.
