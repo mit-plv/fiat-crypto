@@ -130,6 +130,32 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma wordToZ_gen_ZToWord_gen_0 : forall {sz}, wordToZ_gen (@ZToWord_gen sz 0) = 0%Z.
+Proof.
+  intros; rewrite wordToZ_gen_ZToWord_gen_mod by reflexivity.
+  rewrite Z.mod_0_l by auto with zarith.
+  reflexivity.
+Qed.
+
+Lemma wordToZ_gen_ZToWord_gen_neg : forall {sz} w, (w <= 0)%Z -> wordToZ_gen (@ZToWord_gen sz w) = 0%Z.
+Proof.
+  unfold ZToWord_gen, wordToZ_gen.
+  intros sz w H.
+  destruct w.
+  { apply wordToZ_gen_ZToWord_gen_0. }
+  { compute in H; congruence. }
+  { apply wordToZ_gen_ZToWord_gen_0. }
+Qed.
+
+Lemma wordToZ_gen_ZToWord_gen_mod_full : forall {sz} w, wordToZ_gen (@ZToWord_gen sz w) = if (0 <=? w)%Z
+                                                                                          then (w mod (2^Z.of_nat sz))%Z
+                                                                                          else 0%Z.
+Proof.
+  intros; break_match; Z.ltb_to_lt.
+  { apply wordToZ_gen_ZToWord_gen_mod; assumption. }
+  { apply wordToZ_gen_ZToWord_gen_neg; omega. }
+Qed.
+
 Lemma ZToWord_gen_wordToZ_gen_ZToWord_gen : forall {sz1 sz2} v,
     (sz2 <= sz1)%nat -> @ZToWord_gen sz2 (wordToZ_gen (@ZToWord_gen sz1 v)) = ZToWord_gen v.
 Proof.
@@ -213,6 +239,27 @@ Proof.
   unfold wordToZ, ZToWord, word_case_dep.
   intros sz1 sz2; break_match; intros; apply wordToZ_gen_ZToWord_gen_wordToZ_gen;
     handle_le.
+Qed.
+
+Lemma wordToZ_ZToWord_0 : forall {sz}, wordToZ (@ZToWord sz 0) = 0%Z.
+Proof.
+  unfold wordToZ, ZToWord, word_case_dep.
+  intros sz; break_match; intros; apply wordToZ_gen_ZToWord_gen_0.
+Qed.
+
+Lemma wordToZ_ZToWord_neg : forall {sz} w, (w <= 0)%Z -> wordToZ (@ZToWord sz w) = 0%Z.
+Proof.
+  unfold wordToZ, ZToWord, word_case_dep.
+  intros sz w; break_match; apply wordToZ_gen_ZToWord_gen_neg.
+Qed.
+
+Lemma wordToZ_ZToWord_mod_full : forall {sz} w, wordToZ (@ZToWord sz w) = if (0 <=? w)%Z
+                                                                          then (w mod (2^Z.of_nat (2^sz)))%Z
+                                                                          else 0%Z.
+Proof.
+  unfold wordToZ, ZToWord, word_case_dep.
+  intros sz w; set (k := if (_ <=? _)%Z then _ else _);
+    break_match; apply wordToZ_gen_ZToWord_gen_mod_full.
 Qed.
 
 Local Ltac wordToZ_word_case_dep_t :=
