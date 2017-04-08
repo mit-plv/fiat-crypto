@@ -162,6 +162,24 @@ Proof.
                | rewrite wordToZ_ZToWord_wordToZ by omega * ].
 Qed.
 
+Lemma ZToInterp_eq_inj {a} x y
+  : @ZToInterp a x = @ZToInterp a y
+    <-> match a with
+        | TZ => x
+        | TWord lgsz => Z.max 0 x mod 2^Z.of_nat (2^lgsz)
+        end%Z
+        = match a with
+          | TZ => y
+          | TWord lgsz => Z.max 0 y mod 2^Z.of_nat (2^lgsz)
+          end%Z.
+Proof.
+  rewrite <- !interpToZ_ZToInterp_mod.
+  destruct a; try reflexivity; simpl.
+  split; intro H; try congruence.
+  rewrite <- (ZToWord_wordToZ (FixedWordSizes.ZToWord x)), <- (ZToWord_wordToZ (FixedWordSizes.ZToWord y)).
+  congruence.
+Qed.
+
 Lemma make_const_correct : forall T v, interp_op Unit (Tbase T) (make_const T v) tt = v.
 Proof.
   destruct T; cbv -[FixedWordSizes.ZToWord FixedWordSizes.wordToZ FixedWordSizes.wordT];
