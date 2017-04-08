@@ -147,13 +147,11 @@ Proof.
   { apply wordToZ_gen_ZToWord_gen_0. }
 Qed.
 
-Lemma wordToZ_gen_ZToWord_gen_mod_full : forall {sz} w, wordToZ_gen (@ZToWord_gen sz w) = if (0 <=? w)%Z
-                                                                                          then (w mod (2^Z.of_nat sz))%Z
-                                                                                          else 0%Z.
+Lemma wordToZ_gen_ZToWord_gen_mod_full : forall {sz} w, wordToZ_gen (@ZToWord_gen sz w) = (Z.max 0 w mod (2^Z.of_nat sz))%Z.
 Proof.
-  intros; break_match; Z.ltb_to_lt.
-  { apply wordToZ_gen_ZToWord_gen_mod; assumption. }
+  intros; apply Z.max_case_strong; intro.
   { apply wordToZ_gen_ZToWord_gen_neg; omega. }
+  { apply wordToZ_gen_ZToWord_gen_mod; assumption. }
 Qed.
 
 Lemma ZToWord_gen_wordToZ_gen_ZToWord_gen : forall {sz1 sz2} v,
@@ -253,13 +251,10 @@ Proof.
   intros sz w; break_match; apply wordToZ_gen_ZToWord_gen_neg.
 Qed.
 
-Lemma wordToZ_ZToWord_mod_full : forall {sz} w, wordToZ (@ZToWord sz w) = if (0 <=? w)%Z
-                                                                          then (w mod (2^Z.of_nat (2^sz)))%Z
-                                                                          else 0%Z.
+Lemma wordToZ_ZToWord_mod_full : forall {sz} w, wordToZ (@ZToWord sz w) = ((Z.max 0 w) mod (2^Z.of_nat (2^sz)))%Z.
 Proof.
   unfold wordToZ, ZToWord, word_case_dep.
-  intros sz w; set (k := if (_ <=? _)%Z then _ else _);
-    break_match; apply wordToZ_gen_ZToWord_gen_mod_full.
+  intros sz w; break_match; apply wordToZ_gen_ZToWord_gen_mod_full.
 Qed.
 
 Local Ltac wordToZ_word_case_dep_t :=
