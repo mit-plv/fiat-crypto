@@ -13,6 +13,7 @@ Require Import Crypto.Util.FixedWordSizesEquality.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.UniquePose.
+Require Import Crypto.Util.Tactics.SpecializeBy.
 
 Local Open Scope Z_scope.
 
@@ -132,7 +133,7 @@ Proof.
     [ eapply Z.bits_above_log2_neg | eapply Z.bits_above_log2]; lia.
 Qed.
 
-Lemma stabilization_time_weaker (x:Z) : stabilizes_after x (1 + Z.log2_up (Z.abs x)).
+Lemma stabilization_time_weaker (x:Z) : stabilizes_after x (Z.log2_up (Z.abs x)).
 Proof.
   eapply stabilizes_after_Proper; try apply stabilization_time.
   repeat match goal with
@@ -150,14 +151,9 @@ Proof.
          | _ => omega
          | _ => simpl; omega
          | _ => rewrite Z.log2_up_eqn by assumption
+         | _ => progress change (Z.log2_up 1) with 0
          end.
 Qed.
-
-Lemma bounded_stabilizes (x l:Z) (H:-2^l < x+1 /\ x < 2^l) : stabilizes_after x l.
-Proof.
-  destruct (stabilization_time x) as [b G]; exists b; intros n Hn; apply (G n); clear G.
-  destruct H; rewrite Z.max_lub_lt_iff; split.
-Admitted. (* the theorem statement may be wrong about how Z.log2 rounds *)
 
 Lemma land_stabilizes (a b la lb:Z) (Ha:stabilizes_after a la) (Hb:stabilizes_after b lb) : stabilizes_after (Z.land a b) (Z.max la lb).
 Proof.
@@ -173,7 +169,21 @@ Proof.
   rewrite Z.lor_spec, Hba, Hbb; trivial; lia.
 Qed.
 
-Lemma stabilizes_bounded (x l:Z) (H:stabilizes_after x l) : Z.abs x <= 2^l.
+Local Arguments Z.pow !_ !_.
+Local Arguments Z.log2_up !_.
+Local Arguments Z.add !_ !_.
+Lemma stabilizes_bounded (x l:Z) (H:stabilizes_after x l) (Hl : 0 <= l) : Z.abs x <= 2^(1 + l) - 1.
+Proof.
+  rewrite Z.add_comm.
+  destruct H as [b H].
+  destruct (Z_zerop x); subst; simpl.
+  { cut (0 < 2^(l + 1)); auto with zarith. }
+  assert (Hlt : forall n, l < n <-> l + 1 <= n) by (intro; omega).
+  apply Zabs_ind; intro.
+  { pose proof (Z.testbit_false_bound x (l + 1)) as Hf.
+    setoid_rewrite <- Z.le_ngt in Hf.
+    setoid_rewrite <- Hlt in Hf.
+    destruct b; specialize_by (omega || assumption); [ | omega ].
 Admitted. (* this theorem statement is just a guess, I don't know what the actual bound is *)
 
 Local Existing Instances Z.log2_up_le_Proper Z.add_le_Proper.
@@ -181,7 +191,7 @@ Lemma land_upper_lor_land_bounds a b
   : Z.abs (Z.land a b) <= Bounds.upper_lor_and_bounds (Z.abs a) (Z.abs b).
 Proof.
   unfold Bounds.upper_lor_and_bounds.
-  apply stabilizes_bounded.
+  apply stabilizes_bounded; auto with zarith.
   rewrite <- !Z.max_mono by exact _.
   apply land_stabilizes; apply stabilization_time_weaker.
 Qed.
@@ -190,7 +200,7 @@ Lemma lor_upper_lor_land_bounds a b
   : Z.abs (Z.lor a b) <= Bounds.upper_lor_and_bounds (Z.abs a) (Z.abs b).
 Proof.
   unfold Bounds.upper_lor_and_bounds.
-  apply stabilizes_bounded.
+  apply stabilizes_bounded; auto with zarith.
   rewrite <- !Z.max_mono by exact _.
   apply lor_stabilizes; apply stabilization_time_weaker.
 Qed.
