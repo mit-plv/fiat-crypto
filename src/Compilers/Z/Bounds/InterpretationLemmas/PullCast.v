@@ -59,6 +59,72 @@ Section with_round_up.
                    end ].
 
   Local Arguments cast_const : simpl never.
+  Lemma interpToZ_cast_const_small T0 (bs : Bounds.interp_base_type T0)
+        (v : interp_base_type (@Bounds.bounds_to_base_type round_up T0 bs))
+        (H : match Bounds.bit_width_of_base_type T0 with
+             | Some sz => 0 <= ZRange.lower bs /\ ZRange.upper bs < 2 ^ sz
+             | None => True
+             end)
+        (Hv : ZRange.lower bs <= interpToZ (cast_const (t2:=T0) v) <= ZRange.upper bs)
+    : interpToZ (cast_const (t2:=T0) v) = interpToZ v.
+  Proof.
+    destruct_head base_type; simpl in *; try reflexivity.
+    unfold Bounds.smallest_logsz, Bounds.interp_base_type, cast_const in *.
+    break_innermost_match_hyps; Z.ltb_to_lt; simpl in *;
+      [ pose proof (wordToZ_range v) | omega ].
+    rewrite wordToZ_ZToWord_mod_full.
+    rewrite wordToZ_ZToWord_mod_full in Hv.
+    revert Hv; apply Z.max_case_strong; Z.rewrite_mod_small; intros; try omega; [].
+    rewrite Z.mod_small; [ reflexivity | split; auto with zarith ].
+    autorewrite with push_Zof_nat zsimplify_const in *.
+    rewrite Z2Nat.id in * by auto with zarith.
+    destruct_head' and.
+    eapply Z.lt_le_trans; [ eassumption | ].
+    repeat first [ progress Z.peel_le
+                 | rewrite <- Z.log2_up_pow2 by auto with zarith; progress Z.peel_le
+                 | omega ].
+  Qed.
+
+  Local Existing Instances Z.pow_Zpos_le_Proper Z.pow_Zpos_le_Proper_flip Z.lt_le_flip_Proper_flip_impl.
+  Lemma ZToInterp_cast_const_small T (bs : Bounds.interp_base_type T)
+        v
+        (H : match Bounds.bit_width_of_base_type T with
+             | Some sz => 0 <= ZRange.lower bs /\ ZRange.upper bs < 2 ^ sz
+             | None => True
+             end)
+        (Hb : ZRange.lower bs <= interpToZ (@ZToInterp T v) <= ZRange.upper bs)
+    : @cast_const (@Bounds.bounds_to_base_type round_up T bs) T (ZToInterp v) = ZToInterp v.
+  Proof.
+    apply ZToInterp_eq_inj.
+    rewrite ?interpToZ_ZToInterp_mod.
+    rewrite interpToZ_ZToInterp_mod in Hb.
+    destruct T; simpl in *.
+    { unfold Bounds.actual_logsz.
+      break_innermost_match; Z.ltb_to_lt; try reflexivity; [].
+      t_small.
+      apply Z.max_case_strong; intros; Z.rewrite_mod_small; omega. }
+    { unfold Bounds.smallest_logsz.
+      break_innermost_match_step; Z.ltb_to_lt; try omega; [].
+      revert Hb; apply (Z.max_case_strong 0 v); intros; Z.rewrite_mod_small; try reflexivity.
+      rewrite Z.max_r by auto with zarith.
+      autorewrite with push_Zof_nat zsimplify_const in *.
+      rewrite Z2Nat.id by auto with zarith.
+      rewrite Z.mod_mod_small; try apply conj; auto with zarith;
+        repeat first [ rewrite <- Z.log2_up_le_pow2_full in * by auto with zarith
+                     | rewrite <- Z.log2_up_le_full
+                     | omega
+                     | apply conj
+                     | progress Z.peel_le
+                     | rewrite <- Z.log2_up_pow2 by auto with zarith; progress Z.peel_le
+                     | match goal with
+                       | [ |- 2^?x mod 2^?y = 0 ]
+                         => destruct (Z.pow2_lt_or_divides x y);
+                            [ solve [ auto with zarith ]
+                            | exfalso; assert (2^y <= 2^x)
+                            | assumption ]
+                       end ]. }
+  Qed.
+
   Lemma pull_cast_genericize_op
         t tR (opc : op t tR)
         (bs : interp_flat_type Bounds.interp_base_type t)
@@ -101,143 +167,16 @@ Section with_round_up.
                => progress change (@cast_const x TZ) with (@interpToZ x) in *
              | [ H : context[@cast_const ?x TZ] |- _ ]
                => progress change (@cast_const x TZ) with (@interpToZ x) in *
+             end;
+      repeat match goal with
+             | _ => reflexivity
+             | _ => progress rewrite ?interpToZ_cast_const_small, ?ZToInterp_cast_const_small by auto
+             | [ H : context[ZToInterp (?f (interpToZ (cast_const ?v)))] |- _ ]
+               => rewrite (@interpToZ_cast_const_small _ _ v) in H by auto
+             | [ H : context[(interpToZ (cast_const ?v), _)] |- _ ]
+               => rewrite (@interpToZ_cast_const_small _ _ v) in H by auto
+             | [ H : context[(_, interpToZ (cast_const ?v))] |- _ ]
+               => rewrite (@interpToZ_cast_const_small _ _ v) in H by auto
              end.
-    all:repeat match goal with
-               | [ H : _ |- _ ] => progress rewrite ?cast_const_ZToInterp_mod, ?interpToZ_cast_const_mod, ?interpToZ_ZToInterp_mod in H
-               | _ => progress rewrite ?cast_const_ZToInterp_mod, ?interpToZ_cast_const_mod, ?interpToZ_ZToInterp_mod
-               | [ |- ZToInterp _ = ZToInterp _ ]
-                 => apply ZToInterp_eq_inj
-               | [ |- context[interpToZ ?x] ]
-                 => is_var x; pose proof (interpToZ_range x); generalize dependent (interpToZ x);
-                      clear x; intro x; intros
-               end.
-    { repeat first [ reflexivity
-                   | progress subst
-                   | progress Z.ltb_to_lt
-                   | progress inversion_base_type_constr
-                   | progress destruct_head'_and
-                   | omega
-                   | break_innermost_match_step
-                   | progress cbv [Bounds.bit_width_of_base_type option_map Bounds.log_bit_width_of_base_type] in *
-                   | rewrite Z2Nat.id in * by auto with zarith
-                   | rewrite <- Z.log2_up_le_pow2_full in * by auto with zarith
-                   | progress autorewrite with push_Zof_nat zsimplify_const
-                   | progress intros
-                   | match goal with
-                     | [ H : Bounds.bounds_to_base_type _ ?x = _, H' : ZRange.lower ?x <= ?v |- context[?v] ]
-                       => cbv [Bounds.actual_logsz Bounds.bounds_to_base_type] in H; revert H
-                     | [ H : (_ <=? _)%nat = true |- _ ] => apply Nat.leb_le in H
-                     | [ H : (_ <= _)%nat |- _ ] => apply inj_le in H
-                     | [ H : ?x <= 0, H' : 0 <= ?x |- _ ] => assert (x = 0) by omega; clear H H'
-                     | [ |- context[Z.max 0 ?x] ]
-                       => repeat match goal with
-                                 | [ H : context[Z.max 0 x] |- _ ] => revert H
-                                 end;
-                          apply Z.max_case_strong; Z.rewrite_mod_small; intros
-                     end ].
-      all:repeat first [ reflexivity
-                   | progress subst
-                   | progress Z.ltb_to_lt
-                   | progress inversion_base_type_constr
-                   | progress destruct_head'_and
-                   | omega
-                   | break_innermost_match_step
-                   | progress cbv [Bounds.bit_width_of_base_type option_map Bounds.log_bit_width_of_base_type] in *
-                   | rewrite Z2Nat.id in * by auto with zarith
-                   | rewrite <- Z.log2_up_le_pow2_full in * by auto with zarith
-                   | progress autorewrite with push_Zof_nat zsimplify_const
-                   | progress intros
-                   | match goal with
-                     | [ H : Bounds.bounds_to_base_type _ ?x = _, H' : ZRange.lower ?x <= ?v |- context[?v] ]
-                       => cbv [Bounds.actual_logsz Bounds.bounds_to_base_type] in H; revert H
-                     | [ H : (_ <=? _)%nat = true |- _ ] => apply Nat.leb_le in H
-                     | [ H : (_ <= _)%nat |- _ ] => apply inj_le in H
-                     | [ H : ?x <= 0, H' : 0 <= ?x |- _ ] => assert (x = 0) by omega; clear H H'
-                     | [ |- context[Z.max 0 ?x] ]
-                       => repeat match goal with
-                                 | [ H : context[Z.max 0 x] |- _ ] => revert H
-                                 end;
-                          apply Z.max_case_strong; Z.rewrite_mod_small; intros
-                     end
-                   | progress cbv [Bounds.bounds_to_base_type Bounds.smallest_logsz] in *
-                   | progress break_innermost_match_hyps_step
-                   | progress autorewrite with push_Zof_nat zsimplify_const in * ].
-      all:repeat first [ reflexivity
-                       | progress subst
-                       | progress Z.ltb_to_lt
-                       | progress inversion_base_type_constr
-                       | progress destruct_head'_and
-                       | omega
-                       | break_innermost_match_step
-                       | progress cbv [Bounds.bit_width_of_base_type option_map Bounds.log_bit_width_of_base_type] in *
-                       | rewrite Z2Nat.id in * by auto with zarith
-                       | rewrite <- Z.log2_up_le_pow2_full in * by auto with zarith
-                       | rewrite <- Z.log2_up_le_full in *
-                       | rewrite Z.log2_up_pow2 in * by auto with zarith
-                       | progress autorewrite with push_Zof_nat zsimplify_const
-                       | progress intros
-                       | match goal with
-                         | [ H : Bounds.bounds_to_base_type _ ?x = _, H' : ZRange.lower ?x <= ?v |- context[?v] ]
-                           => cbv [Bounds.actual_logsz Bounds.bounds_to_base_type] in H; revert H
-                         | [ H : (_ <=? _)%nat = true |- _ ] => apply Nat.leb_le in H
-                         | [ H : (_ <= _)%nat |- _ ] => apply inj_le in H
-                         | [ H : ?x <= 0, H' : 0 <= ?x |- _ ] => assert (x = 0) by omega; clear H H'
-                         | [ |- ?x < ?y ] => cut (1 + x <= y); [ omega | ]
-                         | [ H : ?x < ?y |- _ ] => assert (1 + x <= y) by omega; clear H
-                         | [ |- context[Z.max 0 ?x] ]
-                           => repeat match goal with
-                                     | [ H : context[Z.max 0 x] |- _ ] => revert H
-                                     end;
-                              apply Z.max_case_strong; Z.rewrite_mod_small; intros
-                         end
-                       | progress cbv [Bounds.bounds_to_base_type Bounds.smallest_logsz Bounds.actual_logsz] in *
-                       | progress break_innermost_match_hyps_step
-                       | progress autorewrite with push_Zof_nat zsimplify_const in *
-                       | match goal with
-                         | [ H : ?x <= 2^2^Z.log2_up (Z.log2_up ?y), H' : ?y <= 2^2^?z |- context[_ mod 2^2^?z] ]
-                           => rewrite H' in H
-                         end
-                       | progress Z.rewrite_mod_small ].
-      all:repeat first [ reflexivity
-                       | progress subst
-                       | progress Z.ltb_to_lt
-                       | progress inversion_base_type_constr
-                       | progress inversion_option
-                       | progress destruct_head'_and
-                       | omega
-                       | break_innermost_match_step
-                       | progress cbv [Bounds.bit_width_of_base_type option_map Bounds.log_bit_width_of_base_type] in *
-                       | rewrite Z2Nat.id in * by auto with zarith
-                       | rewrite <- Z.log2_up_le_pow2_full in * by auto with zarith
-                       | rewrite <- Z.log2_up_le_full in *
-                       | rewrite Z.log2_up_pow2 in * by auto with zarith
-                       | progress autorewrite with push_Zof_nat zsimplify_const
-                       | progress intros
-                       | match goal with
-                         | [ H : Bounds.bounds_to_base_type _ ?x = _, H' : ZRange.lower ?x <= ?v |- context[?v] ]
-                           => cbv [Bounds.actual_logsz Bounds.bounds_to_base_type] in H; revert H
-                         | [ H : (_ <=? _)%nat = true |- _ ] => apply Nat.leb_le in H
-                         | [ H : (_ <= _)%nat |- _ ] => apply inj_le in H
-                         | [ H : ?x <= 0, H' : 0 <= ?x |- _ ] => assert (x = 0) by omega; clear H H'
-                         | [ |- ?x < ?y ] => cut (1 + x <= y); [ omega | ]
-                         | [ H : ?x < ?y |- _ ] => assert (1 + x <= y) by omega; clear H
-                         | [ |- context[Z.max 0 ?x] ]
-                           => repeat match goal with
-                                     | [ H : context[Z.max 0 x] |- _ ] => revert H
-                                     end;
-                              apply Z.max_case_strong; Z.rewrite_mod_small; intros
-                         end
-                       | progress cbv [Bounds.bounds_to_base_type Bounds.smallest_logsz Bounds.actual_logsz] in *
-                       | progress break_innermost_match_hyps_step
-                       | progress autorewrite with push_Zof_nat zsimplify_const in *
-                       | match goal with
-                         | [ H : ?x <= 2^2^Z.log2_up (Z.log2_up ?y), H' : ?y <= 2^2^?z |- context[_ mod 2^2^?z] ]
-                           => rewrite H' in H
-                         end
-                       | progress Z.rewrite_mod_small
-                       | progress match goal with
-                                  | [ H : context[?x mod _] |- _ ]
-                                    => revert H; progress Z.rewrite_mod_small; intro
-                                  end ].
-  Admitted.
+  Qed.
 End with_round_up.
