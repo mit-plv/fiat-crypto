@@ -96,31 +96,70 @@ Proof.
     | intros ???; apply Hmonotone; auto; destruct b2; reflexivity ].
 Qed.
 
+Lemma monotonify2 (f : Z -> Z -> Z) (upper : Z -> Z -> Z)
+      (Hbounded : forall a b, Z.abs (f a b) <= upper a b)
+      (Hupper_monotone : Proper (Z.le ==> Z.le ==> Z.le) upper)
+      {xb yb x y}
+      (Hboundedx : ZRange.is_bounded_by' None xb x)
+      (Hboundedy : ZRange.is_bounded_by' None yb y)
+  : ZRange.is_bounded_by'
+      None
+      {| ZRange.lower := -upper (Bounds.max_abs_bound xb) (Bounds.max_abs_bound yb);
+         ZRange.upper := upper (Bounds.max_abs_bound xb) (Bounds.max_abs_bound yb) |}
+      (f x y).
+Proof.
+  split; [ | exact I ]; simpl.
+  apply Z.abs_le.
+  destruct Hboundedx as [Hx _], Hboundedy as [Hy _].
+  etransitivity; [ apply Hbounded | ].
+  apply Hupper_monotone;
+    unfold Bounds.max_abs_bound;
+    repeat (apply Z.max_case_strong || apply Zabs_ind); omega.
+Qed.
+
+Lemma land_upper_lor_land_bounds a b
+  : Z.abs (Z.land a b) <= Bounds.upper_lor_and_bounds a b.
+Proof.
+Admitted.
+
+Lemma lor_upper_lor_land_bounds a b
+  : Z.abs (Z.lor a b) <= Bounds.upper_lor_and_bounds a b.
+Proof.
+Admitted.
+
+
+Hint Resolve Z.log2_nonneg Z.log2_up_nonneg Z.div_small Z.mod_small Z.pow_neg_r Z.pow_0_l Z.pow_pos_nonneg Z.lt_le_incl Z.pow_nonzero Z.div_le_upper_bound Z_div_exact_full_2 Z.div_same Z.div_lt_upper_bound Z.div_le_lower_bound Zplus_minus Zplus_gt_compat_l Zplus_gt_compat_r Zmult_gt_compat_l Zmult_gt_compat_r Z.pow_lt_mono_r Z.pow_lt_mono_l Z.pow_lt_mono Z.mul_lt_mono_nonneg Z.div_lt_upper_bound Z.div_pos Zmult_lt_compat_r Z.pow_le_mono_r Z.pow_le_mono_l Z.div_lt Z.div_le_compat_l Z.div_le_mono Z.max_le_compat Z.min_le_compat Z.log2_up_le_mono : zarith.
+Lemma upper_lor_and_bounds_Proper
+  : Proper (Z.le ==> Z.le ==> Z.le) Bounds.upper_lor_and_bounds.
+Proof.
+  intros ??? ???.
+  unfold Bounds.upper_lor_and_bounds.
+  auto with zarith.
+Qed.
+
+Local Arguments Z.pow !_ !_.
+Local Arguments Z.log2_up !_.
+Local Arguments Z.add !_ !_.
 Lemma land_bounds_extreme xb yb x y
       (Hx : ZRange.is_bounded_by' None xb x)
       (Hy : ZRange.is_bounded_by' None yb y)
   : ZRange.is_bounded_by' None (Bounds.extreme_lor_land_bounds xb yb) (Z.land x y).
 Proof.
-Admitted.
+  apply monotonify2; auto;
+    unfold Bounds.extreme_lor_land_bounds;
+    [ apply land_upper_lor_land_bounds
+    | apply upper_lor_and_bounds_Proper ].
+Qed.
 Lemma lor_bounds_extreme xb yb x y
       (Hx : ZRange.is_bounded_by' None xb x)
       (Hy : ZRange.is_bounded_by' None yb y)
   : ZRange.is_bounded_by' None (Bounds.extreme_lor_land_bounds xb yb) (Z.lor x y).
 Proof.
-Admitted.
-(*
-Lemma monotonify2 (f : Z -> Z -> Z) (lower : Z -> Z -> Z) (upper : Z -> Z -> Z)
-      (bl1 bl2 bu1 bu2 : bool)
-      (Rl1 := if bl1 then Z.le else Z.ge) (Rl2 := if bl2 then Z.le else Z.ge)
-      (Ru1 := if bu1 then Z.le else Z.ge) (Ru2 := if bu2 then Z.le else Z.ge)
-      (Hbounded : forall a b, lower a b <= f a b <= upper a b)
-      (Hlower_monotone : Proper (Rl1 ==> Rl2 ==> Z.le) lower)
-      (Hupper_monotone : Proper (Ru1 ==> Ru2 ==> Z.le) upper)
-      {bx by x y}
-      (Hboundedx : ZRange.is_bounded_by' None bx x)
-      (Hboundedy : ZRange.is_bounded_by' None by y)
-  : ZRange.is_bounded_by' None (Bounds.four_corners
-    ZRange.lower (Bounds.four_corners Z.add t t0) <= z + z0 <= ZRange.upper (Bounds.four_corners Z.add t t0)*)
+  apply monotonify2; auto;
+    unfold Bounds.extreme_lor_land_bounds;
+    [ apply lor_upper_lor_land_bounds
+    | apply upper_lor_and_bounds_Proper ].
+Qed.
 Local Arguments N.ldiff : simpl never.
 Lemma land_abs_bounds a b
   : a < 0 \/ b < 0

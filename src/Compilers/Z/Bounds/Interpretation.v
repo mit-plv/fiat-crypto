@@ -53,15 +53,14 @@ Module Import Bounds.
     Definition mul : t -> t -> t := t_map2 Z.mul.
     Definition shl : t -> t -> t := t_map2 Z.shiftl.
     Definition shr : t -> t -> t := t_map2 Z.shiftr.
+    Definition max_abs_bound (x : t) : Z
+      := Z.max (Z.abs (lower x)) (Z.abs (upper x)).
+    Definition upper_lor_and_bounds (x y : Z) : Z
+      := 2^(1 + Z.log2_up (Z.max x y)).
     Definition extreme_lor_land_bounds (x y : t) : t
-      := let (lx, ux) := x in
-         let (ly, uy) := y in
-         let lx := Z.abs lx in
-         let ly := Z.abs ly in
-         let ux := Z.abs ux in
-         let uy := Z.abs uy in
-         let max := Z.max (Z.max lx ly) (Z.max ux uy) in
-         {| lower := -2^(1 + Z.log2_up max) ; upper := 2^(1 + Z.log2_up max) |}.
+      := let mx := max_abs_bound x in
+         let my := max_abs_bound y in
+         {| lower := -upper_lor_and_bounds mx my ; upper := upper_lor_and_bounds mx my |}.
     Definition extermization_bounds (f : t -> t -> t) (x y : t) : t
       := truncation_bounds
            (let (lx, ux) := x in
