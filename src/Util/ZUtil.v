@@ -269,7 +269,7 @@ Module Z.
     Lemma sub_le_ge_Proper : Proper (Z.le ==> Z.ge ==> Z.le) Z.sub.
     Proof. repeat (omega || intro). Qed.
     Lemma sub_le_flip_le_Proper : Proper (Z.le ==> Basics.flip Z.le ==> Z.le) Z.sub.
-    Proof. repeat (omega || intro). Qed.
+    Proof. unfold Basics.flip; repeat (omega || intro). Qed.
     Lemma sub_le_eq_Proper : Proper (Z.le ==> Logic.eq ==> Z.le) Z.sub.
     Proof. repeat (omega || intro). Qed.
     Lemma log2_up_le_Proper : Proper (Z.le ==> Z.le) Z.log2_up.
