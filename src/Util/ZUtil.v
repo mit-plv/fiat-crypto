@@ -325,6 +325,24 @@ Module Z.
     | [ |- _ * ?x <= _ * ?x ]
       => first [ apply Z.mul_le_mono_nonneg_r; [ zutil_arith | ]
                | apply Z.mul_le_mono_nonpos_r; [ zutil_arith | ] ]
+    | [ |- -_ <= -_ ]
+      => apply Z.opp_le_mono
+    | [ |- _ / ?x <= _ / ?x ]
+      => apply Z.div_le_mono; [ zutil_arith | ]
+    | [ |- ?x / _ <= ?x / _ ]
+      => apply Z.div_le_compat_l; [ zutil_arith | split; [ zutil_arith | ] ]
+    | [ |- Z.quot _ ?x <= Z.quot _ ?x ]
+      => apply Z.quot_le_mono; [ zutil_arith | ]
+    | [ |- Z.quot ?x _ <= Z.quot ?x _ ]
+      => apply Z.quot_le_compat_l; [ zutil_arith | split; [ zutil_arith | ] ]
+    | [ |- Z.max ?x _ <= Z.max ?x _ ]
+      => apply Z.max_le_compat_l
+    | [ |- Z.max _ ?x <= Z.max _ ?x ]
+      => apply Z.max_le_compat_r
+    | [ |- Z.min ?x _ <= Z.min ?x _ ]
+      => apply Z.min_le_compat_l
+    | [ |- Z.min _ ?x <= Z.min _ ?x ]
+      => apply Z.min_le_compat_r
     end.
   Ltac peel_le := repeat peel_le_step.
 
