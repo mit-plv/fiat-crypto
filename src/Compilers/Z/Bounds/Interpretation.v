@@ -56,7 +56,7 @@ Module Import Bounds.
     Definition max_abs_bound (x : t) : Z
       := Z.max (Z.abs (lower x)) (Z.abs (upper x)).
     Definition upper_lor_and_bounds (x y : Z) : Z
-      := 2^(1 + Z.log2_up (Z.max x y)) - 1.
+      := 2^(1 + Z.log2_up (Z.max x y)).
     Definition extreme_lor_land_bounds (x y : t) : t
       := let mx := max_abs_bound x in
          let my := max_abs_bound y in

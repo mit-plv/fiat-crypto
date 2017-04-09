@@ -8,6 +8,7 @@ Require Import Crypto.Compilers.Z.Bounds.Interpretation.
 Require Import Crypto.Compilers.Z.Bounds.InterpretationLemmas.Tactics.
 Require Import Crypto.Compilers.SmartMap.
 Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.ZUtil.Stabilization.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.FixedWordSizesEquality.
 Require Import Crypto.Util.Tactics.DestructHead.
@@ -117,74 +118,6 @@ Proof.
     unfold Bounds.max_abs_bound;
     repeat (apply Z.max_case_strong || apply Zabs_ind); omega.
 Qed.
-
-Local Notation stabilizes_after x l := (exists b, forall n, l < n -> Z.testbit x n = b).
-
-Lemma stabilizes_after_Proper x
-  : Proper (Z.le ==> Basics.impl) (fun l => stabilizes_after x l).
-Proof.
-  intros ?? H [b H']; exists b.
-  intros n H''; apply (H' n); omega.
-Qed.
-
-Lemma stabilization_time (x:Z) : stabilizes_after x (Z.max (Z.log2 (Z.pred (- x))) (Z.log2 x)).
-Proof.
-  destruct (Z_lt_le_dec x 0); eexists; intros;
-    [ eapply Z.bits_above_log2_neg | eapply Z.bits_above_log2]; lia.
-Qed.
-
-Lemma stabilization_time_weaker (x:Z) : stabilizes_after x (Z.log2_up (Z.abs x)).
-Proof.
-  eapply stabilizes_after_Proper; try apply stabilization_time.
-  repeat match goal with
-         | [ |- context[Z.abs _ ] ] => apply Zabs_ind; intro
-         | [ |- context[Z.log2 ?x] ]
-           => rewrite (Z.log2_nonpos x) by omega
-         | [ |- context[Z.log2_up ?x] ]
-           => rewrite (Z.log2_up_nonpos x) by omega
-         | _ => rewrite Z.max_r by auto with zarith
-         | _ => rewrite Z.max_l by auto with zarith
-         | _ => etransitivity; [ apply Z.le_log2_log2_up | omega ]
-         | _ => progress Z.replace_all_neg_with_pos
-         | [ H : 0 <= ?x |- _ ]
-           => assert (x = 0 \/ x = 1 \/ 1 < x) by omega; clear H; destruct_head' or; subst
-         | _ => omega
-         | _ => simpl; omega
-         | _ => rewrite Z.log2_up_eqn by assumption
-         | _ => progress change (Z.log2_up 1) with 0
-         end.
-Qed.
-
-Lemma land_stabilizes (a b la lb:Z) (Ha:stabilizes_after a la) (Hb:stabilizes_after b lb) : stabilizes_after (Z.land a b) (Z.max la lb).
-Proof.
-  destruct Ha as [ba Hba]. destruct Hb as [bb Hbb].
-  exists (andb ba bb); intros n Hn.
-  rewrite Z.land_spec, Hba, Hbb; trivial; lia.
-Qed.
-
-Lemma lor_stabilizes (a b la lb:Z) (Ha:stabilizes_after a la) (Hb:stabilizes_after b lb) : stabilizes_after (Z.lor a b) (Z.max la lb).
-Proof.
-  destruct Ha as [ba Hba]. destruct Hb as [bb Hbb].
-  exists (orb ba bb); intros n Hn.
-  rewrite Z.lor_spec, Hba, Hbb; trivial; lia.
-Qed.
-
-Local Arguments Z.pow !_ !_.
-Local Arguments Z.log2_up !_.
-Local Arguments Z.add !_ !_.
-Lemma stabilizes_bounded (x l:Z) (H:stabilizes_after x l) (Hl : 0 <= l) : Z.abs x <= 2^(1 + l) - 1.
-Proof.
-  rewrite Z.add_comm.
-  destruct H as [b H].
-  destruct (Z_zerop x); subst; simpl.
-  { cut (0 < 2^(l + 1)); auto with zarith. }
-  assert (Hlt : forall n, l < n <-> l + 1 <= n) by (intro; omega).
-  apply Zabs_ind; intro.
-  { pose proof (Z.testbit_false_bound x (l + 1)) as Hf.
-    setoid_rewrite <- Z.le_ngt in Hf.
-    setoid_rewrite <- Hlt in Hf.
-    destruct b; specialize_by (omega || assumption); [ | omega ].
-Admitted. (* this theorem statement is just a guess, I don't know what the actual bound is *)
 
 Local Existing Instances Z.log2_up_le_Proper Z.add_le_Proper.
 Lemma land_upper_lor_land_bounds a b

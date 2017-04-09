@@ -290,3 +290,4 @@ src/Util/Tactics/TransparentAssert.v
 src/Util/Tactics/UnifyAbstractReflexivity.v
 src/Util/Tactics/UniquePose.v
 src/Util/Tactics/VM.v
+src/Util/ZUtil/Stabilization.v
