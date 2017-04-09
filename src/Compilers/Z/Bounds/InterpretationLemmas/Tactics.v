@@ -59,25 +59,38 @@ Ltac revert_min_max :=
          | [ H : context[Z.min _ _] |- _ ] => revert H
          | [ H : context[Z.max _ _] |- _ ] => revert H
          end.
-Ltac split_min_max :=
-  repeat match goal with
-         | [ H : (?a <= ?b)%Z |- context[Z.max ?a ?b] ]
-           => rewrite (Z.max_r a b) by omega
-         | [ H : (?b <= ?a)%Z |- context[Z.max ?a ?b] ]
-           => rewrite (Z.max_l a b) by omega
-         | [ H : (?a <= ?b)%Z |- context[Z.min ?a ?b] ]
-           => rewrite (Z.min_l a b) by omega
-         | [ H : (?b <= ?a)%Z |- context[Z.min ?a ?b] ]
-           => rewrite (Z.min_r a b) by omega
-         | [ |- context[Z.max ?a ?b] ]
-           => first [ rewrite (Z.max_l a b) by omega
-                    | rewrite (Z.max_r a b) by omega ]
-         | [ |- context[Z.min ?a ?b] ]
-           => first [ rewrite (Z.min_l a b) by omega
-                    | rewrite (Z.min_r a b) by omega ]
-         | _ => revert_min_max; progress repeat apply Z.min_case_strong; intros
-         | _ => revert_min_max; progress repeat apply Z.max_case_strong; intros
-         end.
+Ltac rewrite_min_max_step_fast :=
+  match goal with
+  | [ H : (?a <= ?b)%Z |- context[Z.max ?a ?b] ]
+    => rewrite (Z.max_r a b) by assumption
+  | [ H : (?b <= ?a)%Z |- context[Z.max ?a ?b] ]
+    => rewrite (Z.max_l a b) by assumption
+  | [ H : (?a <= ?b)%Z |- context[Z.min ?a ?b] ]
+    => rewrite (Z.min_l a b) by assumption
+  | [ H : (?b <= ?a)%Z |- context[Z.min ?a ?b] ]
+    => rewrite (Z.min_r a b) by assumption
+  end.
+Ltac rewrite_min_max_step :=
+  match goal with
+  | _ => rewrite_min_max_step_fast
+  | [ |- context[Z.max ?a ?b] ]
+    => first [ rewrite (Z.max_l a b) by omega
+             | rewrite (Z.max_r a b) by omega ]
+  | [ |- context[Z.min ?a ?b] ]
+    => first [ rewrite (Z.min_l a b) by omega
+             | rewrite (Z.min_r a b) by omega ]
+  end.
+Ltac only_split_min_max_step :=
+  match goal with
+  | _ => revert_min_max; progress repeat apply Z.min_case_strong; intros
+  | _ => revert_min_max; progress repeat apply Z.max_case_strong; intros
+  end.
+Ltac split_min_max_step :=
+  match goal with
+  | _ => rewrite_min_max_step
+  | _ => only_split_min_max_step
+  end.
+Ltac split_min_max := repeat split_min_max_step.
 
 Ltac case_Zvar_nonneg_on x :=
   is_var x;
@@ -169,22 +182,6 @@ Ltac saturate_land_lor_facts :=
            => unique assert (0 <= Z.lor x y) by (apply Z.lor_nonneg; omega)
          | [ |- context[Z.lor ?x ?y] ]
            => case_Zvar_nonneg_on x; case_Zvar_nonneg_on y
-         end.
-Ltac clean_neg :=
-  repeat match goal with
-         | [ H : (-?x) < 0 |- _ ] => assert (0 <= x) by omega; assert (x <> 0) by omega; clear H
-         | [ H : -?x <= -?y |- _ ] => apply Z.opp_le_mono in H
-         | [ |- -?x <= -?y ] => apply Z.opp_le_mono
-         | _ => progress rewrite <- Z.opp_le_mono in *
-         end.
-Ltac replace_with_neg x :=
-  assert (x = -(-x)) by omega; generalize dependent (-x);
-  let x' := fresh in
-  rename x into x'; intro x; intros; subst x';
-  clean_neg.
-Ltac replace_all_neg_with_pos :=
-  repeat match goal with
-         | [ H : ?x < 0 |- _ ] => replace_with_neg x
          end.
 Ltac handle_shift_neg :=
   repeat first [ rewrite !Z.shiftr_opp_r
