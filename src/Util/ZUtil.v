@@ -268,6 +268,8 @@ Module Z.
     Proof. repeat (omega || intro). Qed.
     Lemma sub_le_ge_Proper : Proper (Z.le ==> Z.ge ==> Z.le) Z.sub.
     Proof. repeat (omega || intro). Qed.
+    Lemma sub_le_flip_le_Proper : Proper (Z.le ==> Basics.flip Z.le ==> Z.le) Z.sub.
+    Proof. repeat (omega || intro). Qed.
     Lemma sub_le_eq_Proper : Proper (Z.le ==> Logic.eq ==> Z.le) Z.sub.
     Proof. repeat (omega || intro). Qed.
     Lemma log2_up_le_Proper : Proper (Z.le ==> Z.le) Z.log2_up.
@@ -281,6 +283,8 @@ Module Z.
     Lemma add_le_Proper_flip : Proper (Basics.flip Z.le ==> Basics.flip Z.le ==> Basics.flip Z.le) Z.add.
     Proof. unfold Basics.flip; repeat (omega || intro). Qed.
     Lemma sub_le_ge_Proper_flip : Proper (Basics.flip Z.le ==> Basics.flip Z.ge ==> Basics.flip Z.le) Z.sub.
+    Proof. unfold Basics.flip; repeat (omega || intro). Qed.
+    Lemma sub_flip_le_le_Proper_flip : Proper (Basics.flip Z.le ==> Z.le ==> Basics.flip Z.le) Z.sub.
     Proof. unfold Basics.flip; repeat (omega || intro). Qed.
     Lemma sub_le_eq_Proper_flip : Proper (Basics.flip Z.le ==> Logic.eq ==> Basics.flip Z.le) Z.sub.
     Proof. unfold Basics.flip; repeat (omega || intro). Qed.
