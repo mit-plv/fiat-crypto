@@ -279,6 +279,9 @@ Module Z.
     Proof. intros ???; apply Z.log2_le_mono; assumption. Qed.
     Lemma pow_Zpos_le_Proper x : Proper (Z.le ==> Z.le) (Z.pow (Z.pos x)).
     Proof. intros ???; apply Z.pow_le_mono_r; try reflexivity; try assumption. Qed.
+    Lemma lt_le_flip_Proper_flip_impl
+      : Proper (Z.le ==> Basics.flip Z.le ==> Basics.flip Basics.impl) Z.lt.
+    Proof. unfold Basics.flip; repeat (omega || intro). Qed.
     Lemma le_Proper_ge_le_flip_impl : Proper (Z.le ==> Z.ge ==> Basics.flip Basics.impl) Z.le.
     Proof. intros ???????; omega. Qed.
     Lemma add_le_Proper_flip : Proper (Basics.flip Z.le ==> Basics.flip Z.le ==> Basics.flip Z.le) Z.add.
