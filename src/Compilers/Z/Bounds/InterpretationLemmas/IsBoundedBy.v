@@ -97,7 +97,7 @@ Proof.
 Qed.
 
 Lemma monotonify2 (f : Z -> Z -> Z) (upper : Z -> Z -> Z)
-      (Hbounded : forall a b, Z.abs (f a b) <= upper a b)
+      (Hbounded : forall a b, Z.abs (f a b) <= upper (Z.abs a) (Z.abs b))
       (Hupper_monotone : Proper (Z.le ==> Z.le ==> Z.le) upper)
       {xb yb x y}
       (Hboundedx : ZRange.is_bounded_by' None xb x)
@@ -117,18 +117,84 @@ Proof.
     repeat (apply Z.max_case_strong || apply Zabs_ind); omega.
 Qed.
 
-Lemma land_upper_lor_land_bounds a b
-  : Z.abs (Z.land a b) <= Bounds.upper_lor_and_bounds a b.
+Local Notation stabilizes_after x l := (exists b, forall n, l < n -> Z.testbit x n = b).
+
+Lemma stabilizes_after_Proper x
+  : Proper (Z.le ==> Basics.impl) (fun l => stabilizes_after x l).
 Proof.
-Admitted.
+  intros ?? H [b H']; exists b.
+  intros n H''; apply (H' n); omega.
+Qed.
+
+Lemma stabilization_time (x:Z) : stabilizes_after x (Z.max (Z.log2 (Z.pred (- x))) (Z.log2 x)).
+Proof.
+  destruct (Z_lt_le_dec x 0); eexists; intros;
+    [ eapply Z.bits_above_log2_neg | eapply Z.bits_above_log2]; lia.
+Qed.
+
+Lemma stabilization_time_weaker (x:Z) : stabilizes_after x (1 + Z.log2_up (Z.abs x)).
+Proof.
+  eapply stabilizes_after_Proper; try apply stabilization_time.
+  repeat match goal with
+         | [ |- context[Z.abs _ ] ] => apply Zabs_ind; intro
+         | [ |- context[Z.log2 ?x] ]
+           => rewrite (Z.log2_nonpos x) by omega
+         | [ |- context[Z.log2_up ?x] ]
+           => rewrite (Z.log2_up_nonpos x) by omega
+         | _ => rewrite Z.max_r by auto with zarith
+         | _ => rewrite Z.max_l by auto with zarith
+         | _ => etransitivity; [ apply Z.le_log2_log2_up | omega ]
+         | _ => progress Z.replace_all_neg_with_pos
+         | [ H : 0 <= ?x |- _ ]
+           => assert (x = 0 \/ x = 1 \/ 1 < x) by omega; clear H; destruct_head' or; subst
+         | _ => omega
+         | _ => simpl; omega
+         | _ => rewrite Z.log2_up_eqn by assumption
+         end.
+Qed.
+
+Lemma bounded_stabilizes (x l:Z) (H:-2^l < x+1 /\ x < 2^l) : stabilizes_after x l.
+Proof.
+  destruct (stabilization_time x) as [b G]; exists b; intros n Hn; apply (G n); clear G.
+  destruct H; rewrite Z.max_lub_lt_iff; split.
+Admitted. (* the theorem statement may be wrong about how Z.log2 rounds *)
+
+Lemma land_stabilizes (a b la lb:Z) (Ha:stabilizes_after a la) (Hb:stabilizes_after b lb) : stabilizes_after (Z.land a b) (Z.max la lb).
+Proof.
+  destruct Ha as [ba Hba]. destruct Hb as [bb Hbb].
+  exists (andb ba bb); intros n Hn.
+  rewrite Z.land_spec, Hba, Hbb; trivial; lia.
+Qed.
+
+Lemma lor_stabilizes (a b la lb:Z) (Ha:stabilizes_after a la) (Hb:stabilizes_after b lb) : stabilizes_after (Z.lor a b) (Z.max la lb).
+Proof.
+  destruct Ha as [ba Hba]. destruct Hb as [bb Hbb].
+  exists (orb ba bb); intros n Hn.
+  rewrite Z.lor_spec, Hba, Hbb; trivial; lia.
+Qed.
+
+Lemma stabilizes_bounded (x l:Z) (H:stabilizes_after x l) : Z.abs x <= 2^l.
+Admitted. (* this theorem statement is just a guess, I don't know what the actual bound is *)
+
+Local Existing Instances Z.log2_up_le_Proper Z.add_le_Proper.
+Lemma land_upper_lor_land_bounds a b
+  : Z.abs (Z.land a b) <= Bounds.upper_lor_and_bounds (Z.abs a) (Z.abs b).
+Proof.
+  unfold Bounds.upper_lor_and_bounds.
+  apply stabilizes_bounded.
+  rewrite <- !Z.max_mono by exact _.
+  apply land_stabilizes; apply stabilization_time_weaker.
+Qed.
 
 Lemma lor_upper_lor_land_bounds a b
-  : Z.abs (Z.lor a b) <= Bounds.upper_lor_and_bounds a b.
+  : Z.abs (Z.lor a b) <= Bounds.upper_lor_and_bounds (Z.abs a) (Z.abs b).
 Proof.
-Admitted.
+  unfold Bounds.upper_lor_and_bounds.
+  apply stabilizes_bounded.
+  rewrite <- !Z.max_mono by exact _.
+  apply lor_stabilizes; apply stabilization_time_weaker.
+Qed.
 
-
-Hint Resolve Z.log2_nonneg Z.log2_up_nonneg Z.div_small Z.mod_small Z.pow_neg_r Z.pow_0_l Z.pow_pos_nonneg Z.lt_le_incl Z.pow_nonzero Z.div_le_upper_bound Z_div_exact_full_2 Z.div_same Z.div_lt_upper_bound Z.div_le_lower_bound Zplus_minus Zplus_gt_compat_l Zplus_gt_compat_r Zmult_gt_compat_l Zmult_gt_compat_r Z.pow_lt_mono_r Z.pow_lt_mono_l Z.pow_lt_mono Z.mul_lt_mono_nonneg Z.div_lt_upper_bound Z.div_pos Zmult_lt_compat_r Z.pow_le_mono_r Z.pow_le_mono_l Z.div_lt Z.div_le_compat_l Z.div_le_mono Z.max_le_compat Z.min_le_compat Z.log2_up_le_mono : zarith.
 Lemma upper_lor_and_bounds_Proper
   : Proper (Z.le ==> Z.le ==> Z.le) Bounds.upper_lor_and_bounds.
 Proof.
@@ -160,54 +226,8 @@ Proof.
     [ apply lor_upper_lor_land_bounds
     | apply upper_lor_and_bounds_Proper ].
 Qed.
-Local Arguments N.ldiff : simpl never.
-Lemma land_abs_bounds a b
-  : a < 0 \/ b < 0
-    -> -(2^(Z.log2_up (Z.max (Z.abs a) (Z.abs b))))
-       <= Z.land a b
-       <= Z.max a b.
-Proof.
-  destruct a, b; simpl Z.abs; split;
-    try solve [ unfold Z.max; simpl; lia
-              | unfold Z.max; simpl; apply Z.opp_nonpos_nonneg; auto with zarith
-              | match goal with
-                | [ |- - _ <= _ ]
-                  => transitivity 0;
-                     solve [ unfold Z.max; simpl; lia
-                           | unfold Z.max; simpl; apply Z.opp_nonpos_nonneg; auto with zarith ]
-                | [ |- Z.land (Z.pos _) (Z.pos _) <= Z.max _ _ ]
-                  => apply Z.max_case_strong; intro;
-                     first [ apply Z.land_upper_bound_l
-                           | apply Z.land_upper_bound_r ];
-                     lia
-                end ].
-  all:simpl.
-  all:admit.
-Admitted.
-Local Existing Instances Z.add_le_Proper Z.log2_up_le_Proper Z.pow_Zpos_le_Proper Z.sub_le_eq_Proper.
-Lemma lor_abs_bounds a b
-  : a < 0 \/ b < 0
-    -> Z.min a b
-       <= Z.lor a b
-       <= 2^(Z.log2_up (Z.max (Z.abs a) (Z.abs b) + 1)) - 1.
-Proof.
-  destruct a, b; simpl Z.abs; split;
-    try solve [ unfold Z.max, Z.min; simpl; lia
-              | unfold Z.max, Z.min; simpl; apply Z.opp_nonpos_nonneg; auto with zarith
-              | match goal with
-                | [ |- Z.min (Z.pos _) (Z.pos _) <= Z.lor _ _ ]
-                  => apply Z.lor_bounds_gen_lower; lia
-                end
-              | apply Z.lor_bounds_upper ];
-    repeat first [ rewrite Z.max_r by lia
-                 | rewrite Z.max_l by lia
-                 | rewrite Z.lor_0_l
-                 | rewrite Z.lor_0_r
-                 | omega
-                 | lia
-                 | rewrite <- Z.log2_up_le_full; lia ].
-Admitted.
 
+Local Arguments N.ldiff : simpl never.
 Local Arguments Z.pow : simpl never.
 Local Arguments Z.add !_ !_.
 Local Existing Instances Z.add_le_Proper Z.sub_le_flip_le_Proper Z.log2_up_le_Proper Z.pow_Zpos_le_Proper Z.sub_le_eq_Proper.
