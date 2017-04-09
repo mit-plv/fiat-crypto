@@ -114,3 +114,6 @@ printenv::
 -include etc/coq-scripts/Makefile.vo_closure
 printdeps::
 	$(HIDE)$(foreach vo,$(filter %.vo,$(MAKECMDGOALS)),echo '$(vo): $(call vo_closure,$(vo))'; )
+
+printreversedeps::
+	$(HIDE)$(foreach vo,$(filter %.vo,$(MAKECMDGOALS)),echo '$(vo): $(call vo_reverse_closure,$(vo))'; )
