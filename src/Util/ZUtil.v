@@ -2693,6 +2693,8 @@ Module Z.
     repeat match goal with
            | [ H : (-?x) < 0 |- _ ] => assert (0 < x) by omega; clear H
            | [ H : 0 > (-?x) |- _ ] => assert (0 < x) by omega; clear H
+           | [ H : (-?x) <= 0 |- _ ] => assert (0 <= x) by omega; clear H
+           | [ H : 0 >= (-?x) |- _ ] => assert (0 <= x) by omega; clear H
            | [ H : -?x <= -?y |- _ ] => apply Z.opp_le_mono in H
            | [ |- -?x <= -?y ] => apply Z.opp_le_mono
            | _ => progress rewrite <- Z.opp_le_mono in *
@@ -2713,6 +2715,8 @@ Module Z.
     repeat match goal with
            | [ H : ?x < 0 |- _ ] => replace_with_neg x
            | [ H : 0 > ?x |- _ ] => replace_with_neg x
+           | [ H : ?x <= 0 |- _ ] => replace_with_neg x
+           | [ H : 0 >= ?x |- _ ] => replace_with_neg x
            end.
 
   Lemma shiftl_le_Proper2 y
