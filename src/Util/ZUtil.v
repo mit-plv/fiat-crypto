@@ -22,8 +22,9 @@ Hint Extern 1 => lia : lia.
 Hint Extern 1 => lra : lra.
 Hint Extern 1 => nia : nia.
 Hint Extern 1 => omega : omega.
-Hint Resolve Z.log2_nonneg Z.log2_up_nonneg Z.div_small Z.mod_small Z.pow_neg_r Z.pow_0_l Z.pow_pos_nonneg Z.lt_le_incl Z.pow_nonzero Z.div_le_upper_bound Z_div_exact_full_2 Z.div_same Z.div_lt_upper_bound Z.div_le_lower_bound Zplus_minus Zplus_gt_compat_l Zplus_gt_compat_r Zmult_gt_compat_l Zmult_gt_compat_r Z.pow_lt_mono_r Z.pow_lt_mono_l Z.pow_lt_mono Z.mul_lt_mono_nonneg Z.div_lt_upper_bound Z.div_pos Zmult_lt_compat_r Z.pow_le_mono_r Z.pow_le_mono_l Z.div_lt : zarith.
+Hint Resolve Z.log2_nonneg Z.log2_up_nonneg Z.div_small Z.mod_small Z.pow_neg_r Z.pow_0_l Z.pow_pos_nonneg Z.lt_le_incl Z.pow_nonzero Z.div_le_upper_bound Z_div_exact_full_2 Z.div_same Z.div_lt_upper_bound Z.div_le_lower_bound Zplus_minus Zplus_gt_compat_l Zplus_gt_compat_r Zmult_gt_compat_l Zmult_gt_compat_r Z.pow_lt_mono_r Z.pow_lt_mono_l Z.pow_lt_mono Z.mul_lt_mono_nonneg Z.div_lt_upper_bound Z.div_pos Zmult_lt_compat_r Z.pow_le_mono_r Z.pow_le_mono_l Z.div_lt Z.div_le_compat_l Z.div_le_mono : zarith.
 Hint Resolve (fun a b H => proj1 (Z.mod_pos_bound a b H)) (fun a b H => proj2 (Z.mod_pos_bound a b H)) (fun a b pf => proj1 (Z.pow_gt_1 a b pf)) : zarith.
+Hint Resolve (fun n m => proj1 (Z.opp_le_mono n m)) : zarith.
 Hint Resolve (fun n m => proj1 (Z.pred_le_mono n m)) : zarith.
 Hint Resolve (fun a b => proj2 (Z.lor_nonneg a b)) : zarith.
 
@@ -2638,6 +2639,153 @@ Module Z.
     intros; autorewrite with zsimplify; rewrite <- ?Z_div_plus_full_l, <- ?Z_div_plus_full by assumption;
     try (apply f_equal2; [ | reflexivity ]);
     try zutil_arith.
+
+  Ltac clean_neg :=
+    repeat match goal with
+           | [ H : (-?x) < 0 |- _ ] => assert (0 < x) by omega; clear H
+           | [ H : 0 > (-?x) |- _ ] => assert (0 < x) by omega; clear H
+           | [ H : -?x <= -?y |- _ ] => apply Z.opp_le_mono in H
+           | [ |- -?x <= -?y ] => apply Z.opp_le_mono
+           | _ => progress rewrite <- Z.opp_le_mono in *
+           | [ H : 0 <= ?x, H' : 0 <= ?y, H'' : -?x <= ?y |- _ ] => clear H''
+           | [ H : 0 < ?x, H' : 0 <= ?y, H'' : -?x <= ?y |- _ ] => clear H''
+           | [ H : 0 <= ?x, H' : 0 < ?y, H'' : -?x <= ?y |- _ ] => clear H''
+           | [ H : 0 < ?x, H' : 0 < ?y, H'' : -?x <= ?y |- _ ] => clear H''
+           | [ H : 0 < ?x, H' : 0 <= ?y, H'' : -?x < ?y |- _ ] => clear H''
+           | [ H : 0 <= ?x, H' : 0 < ?y, H'' : -?x < ?y |- _ ] => clear H''
+           | [ H : 0 < ?x, H' : 0 < ?y, H'' : -?x < ?y |- _ ] => clear H''
+           end.
+  Ltac replace_with_neg x :=
+    assert (x = -(-x)) by omega; generalize dependent (-x);
+    let x' := fresh in
+    rename x into x'; intro x; intros; subst x';
+    clean_neg.
+  Ltac replace_all_neg_with_pos :=
+    repeat match goal with
+           | [ H : ?x < 0 |- _ ] => replace_with_neg x
+           | [ H : 0 > ?x |- _ ] => replace_with_neg x
+           end.
+
+  Lemma shiftl_le_Proper2 y
+    : Proper (Z.le ==> Z.le) (fun x => Z.shiftl x y).
+  Proof.
+    unfold Basics.flip in *.
+    pose proof (Zle_cases 0 y) as Hx.
+    intros x x' H.
+    pose proof (Zle_cases 0 x) as Hy.
+    pose proof (Zle_cases 0 x') as Hy'.
+    destruct (0 <=? y), (0 <=? x), (0 <=? x');
+      autorewrite with Zshift_to_pow;
+      replace_all_neg_with_pos;
+      autorewrite with pull_Zopp;
+      rewrite ?Z.div_opp_l_complete;
+      repeat destruct (Z_zerop _);
+      autorewrite with zsimplify_const pull_Zopp;
+      auto with zarith;
+      repeat match goal with
+             | [ |- context[-?x - ?y] ]
+               => replace (-x - y) with (-(x + y)) by omega
+             | _ => rewrite <- Z.opp_le_mono
+             | _ => rewrite <- Z.add_le_mono_r
+             | _ => solve [ auto with zarith ]
+             | [ |- ?x <= ?y + 1 ]
+               => cut (x <= y); [ omega | solve [ auto with zarith ] ]
+             | [ |- -_ <= _ ]
+               => solve [ transitivity (-0); auto with zarith ]
+             end.
+    { repeat match goal with H : context[_ mod _] |- _ => revert H end;
+        Z.div_mod_to_quot_rem; nia. }
+  Qed.
+
+  Lemma shiftl_le_Proper1 x
+        (R := fun b : bool => if b then Z.le else Basics.flip Z.le)
+    : Proper (R (0 <=? x) ==> Z.le) (Z.shiftl x).
+  Proof.
+    unfold Basics.flip in *.
+    pose proof (Zle_cases 0 x) as Hx.
+    intros y y' H.
+    pose proof (Zle_cases 0 y) as Hy.
+    pose proof (Zle_cases 0 y') as Hy'.
+    destruct (0 <=? x), (0 <=? y), (0 <=? y'); subst R; cbv beta iota in *;
+      autorewrite with Zshift_to_pow;
+      replace_all_neg_with_pos;
+      autorewrite with pull_Zopp;
+      rewrite ?Z.div_opp_l_complete;
+      repeat destruct (Z_zerop _);
+      autorewrite with zsimplify_const pull_Zopp;
+      auto with zarith;
+      repeat match goal with
+             | [ |- context[-?x - ?y] ]
+               => replace (-x - y) with (-(x + y)) by omega
+             | _ => rewrite <- Z.opp_le_mono
+             | _ => rewrite <- Z.add_le_mono_r
+             | _ => solve [ auto with zarith ]
+             | [ |- ?x <= ?y + 1 ]
+               => cut (x <= y); [ omega | solve [ auto with zarith ] ]
+             | [ |- context[2^?x] ]
+               => lazymatch goal with
+                  | [ H : 1 < 2^x |- _ ] => fail
+                  | [ H : 0 < 2^x |- _ ] => fail
+                  | [ H : 0 <= 2^x |- _ ] => fail
+                  | _ => first [ assert (1 < 2^x) by auto with zarith
+                               | assert (0 < 2^x) by auto with zarith
+                               | assert (0 <= 2^x) by auto with zarith ]
+                  end
+             | [ H : ?x <= ?y |- _ ]
+               => is_var x; is_var y;
+                    lazymatch goal with
+                    | [ H : 2^x <= 2^y |- _ ] => fail
+                    | [ H : 2^x < 2^y |- _ ] => fail
+                    | _ => assert (2^x <= 2^y) by auto with zarith
+                    end
+             | [ H : ?x <= ?y, H' : ?f ?x = ?k, H'' : ?f ?y <> ?k |- _ ]
+               => let Hn := fresh in
+                  assert (Hn : x <> y) by congruence;
+                    assert (x < y) by omega; clear H Hn
+             | [ H : ?x <= ?y, H' : ?f ?x <> ?k, H'' : ?f ?y = ?k |- _ ]
+               => let Hn := fresh in
+                  assert (Hn : x <> y) by congruence;
+                    assert (x < y) by omega; clear H Hn
+             | _ => solve [ repeat match goal with H : context[_ mod _] |- _ => revert H end;
+                            Z.div_mod_to_quot_rem; subst;
+                            lazymatch goal with
+                            | [ |- _ <= (?a * ?q + ?r) * ?q' ]
+                              => transitivity (q * (a * q') + r * q');
+                                 [ assert (0 < a * q') by nia; nia
+                                 | nia ]
+                            end ]
+             end.
+    { replace y' with (y + (y' - y)) by omega.
+      rewrite Z.pow_add_r, <- Zdiv_Zdiv by auto with zarith.
+      assert (y < y') by (assert (y <> y') by congruence; omega).
+      assert (1 < 2^(y'-y)) by auto with zarith.
+      assert (0 < x / 2^y)
+        by (repeat match goal with H : context[_ mod _] |- _ => revert H end;
+            Z.div_mod_to_quot_rem; nia).
+      assert (2^y <= x)
+        by (repeat match goal with H : context[_ / _] |- _ => revert H end;
+            Z.div_mod_to_quot_rem; nia).
+      match goal with
+      | [ |- ?x + 1 <= ?y ] => cut (x < y); [ omega | ]
+      end.
+      auto with zarith. }
+  Qed.
+
+  Lemma shiftr_le_Proper2 y
+    : Proper (Z.le ==> Z.le) (fun x => Z.shiftr x y).
+  Proof. apply shiftl_le_Proper2. Qed.
+
+  Lemma shiftr_le_Proper1 x
+        (R := fun b : bool => if b then Z.le else Basics.flip Z.le)
+    : Proper (R (x <? 0) ==> Z.le) (Z.shiftr x).
+  Proof.
+    subst R; intros y y' H'; unfold Z.shiftr; apply shiftl_le_Proper1.
+    unfold Basics.flip in *.
+    pose proof (Zle_cases 0 x).
+    pose proof (Zlt_cases x 0).
+    destruct (0 <=? x), (x <? 0); try omega.
+  Qed.
+
 
   (* Naming Convention: [X] for thing being divided by, [p] for plus,
      [m] for minus, [d] for div, and [_] to separate parentheses and
