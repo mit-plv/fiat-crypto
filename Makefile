@@ -20,16 +20,23 @@ SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g' | u
 FAST_TARGETS += archclean clean cleanall clean-coqprime printenv clean-old update-_CoqProject Makefile.coq
 SUPER_FAST_TARGETS += update-_CoqProject Makefile.coq
 
+SLOW :=
+ifneq ($(filter-out $(SUPER_FAST_TARGETS),$(MAKECMDGOALS)),)
+SLOW := 1
+else
+ifeq ($(MAKECMDGOALS),)
+SLOW := 1
+endif
+endif
+
+ifneq ($(SLOW),)
 COQ_VERSION_PREFIX = The Coq Proof Assistant, version
 COQ_VERSION := $(firstword $(subst $(COQ_VERSION_PREFIX),,$(shell "$(COQBIN)coqc" --version 2>/dev/null)))
 
-ifneq ($(filter-out $(SUPER_FAST_TARGETS),$(MAKECMDGOALS)),)
--include Makefile.coq
-else
-ifeq ($(MAKECMDGOALS),)
 -include Makefile.coq
 endif
-endif
+
+-include etc/coq-scripts/Makefile.vo_closure
 
 .DEFAULT_GOAL := coq
 
@@ -43,18 +50,20 @@ $(VOFILES): | coqprime
 UNMADE_VOFILES := src/SpecificGen/% src/Specific/%Display.vo
 # add files to this list to prevent them from being built as final
 # targets by the "lite" target
-# N.B. if a file not in this list depends on one in this list,
-# that file will be built by the "lite" target
-HEAVY_VOFILES := src/WeierstrassCurve/WeierstrassCurveTheorems.vo # src/Specific/IntegrationTestLadderstep.vo
+HEAVY_VOFILES := src/Curves/Weierstrass/AffineProofs.vo
 
 COQ_VOFILES := $(filter-out $(UNMADE_VOFILES),$(VOFILES))
-LITE_VOFILES := $(filter-out $(HEAVY_VOFILES),$(COQ_VOFILES))
 SPECIFIC_VO := $(filter src/Specific/%,$(VOFILES))
 NON_SPECIFIC_VO := $(filter-out $(SPECIFIC_VO),$(VO_FILES))
 SPECIFIC_DISPLAY_VO := $(filter src/Specific/%Display.vo,$(VOFILES))
 DISPLAY_VO := $(SPECIFIC_DISPLAY_VO)
 DISPLAY_JAVA_VO := $(filter %JavaDisplay.vo,$(DISPLAY_VO))
 DISPLAY_NON_JAVA_VO := $(filter-out $(DISPLAY_JAVA_VO),$(DISPLAY_VO))
+# computing the reverse_vo_closure is slow, so we only do it if we're
+# asked to make the lite target
+ifneq ($(filter lite,$(MAKECMDGOALS)),)
+LITE_VOFILES := $(filter-out $(call reverse_vo_closure,$(VO_FILES),$(HEAVY_VOFILES)),$(COQ_VOFILES))
+endif
 
 specific: $(SPECIFIC_VO) coqprime
 non-specific: $(NON_SPECIFIC_VO) coqprime
@@ -111,7 +120,6 @@ printenv::
 .dir-locals.el::
 	sed 's:@COQPRIME@:$(COQPRIME_FOLDER):g' .dir-locals.el.in > $@
 
--include etc/coq-scripts/Makefile.vo_closure
 printdeps::
 	$(HIDE)$(foreach vo,$(filter %.vo,$(MAKECMDGOALS)),echo '$(vo): $(call vo_closure,$(vo))'; )
 
