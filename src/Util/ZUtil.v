@@ -297,6 +297,37 @@ Module Z.
     Proof. intros ???; apply Z.pow_le_mono_r; try reflexivity; try assumption. Qed.
   End proper.
 
+  Ltac peel_le_step :=
+    match goal with
+    | [ |- ?x + _ <= ?x + _ ]
+      => apply Z.add_le_mono_l
+    | [ |- _ + ?x <= _ + ?x ]
+      => apply Z.add_le_mono_r
+    | [ |- ?x - _ <= ?x - _ ]
+      => apply Z.sub_le_mono_l
+    | [ |- _ - ?x <= _ - ?x ]
+      => apply Z.sub_le_mono_r
+    | [ |- ?x^_ <= ?x^_ ]
+      => apply Z.pow_le_mono_r; [ zutil_arith | ]
+    | [ |- _^?x <= _^?x ]
+      => apply Z.pow_le_mono_l; split; [ zutil_arith | ]
+    | [ |- Z.log2_up _ <= Z.log2_up _ ]
+      => apply Z.log2_up_le_mono
+    | [ |- Z.log2 _ <= Z.log2 _ ]
+      => apply Z.log2_le_mono
+    | [ |- Z.succ _ <= Z.succ _ ]
+      => apply Zsucc_le_compat
+    | [ |- Z.pred _ <= Z.pred _ ]
+      => apply Z.pred_le_mono
+    | [ |- ?x * _ <= ?x * _ ]
+      => first [ apply Z.mul_le_mono_nonneg_l; [ zutil_arith | ]
+               | apply Z.mul_le_mono_nonpos_l; [ zutil_arith | ] ]
+    | [ |- _ * ?x <= _ * ?x ]
+      => first [ apply Z.mul_le_mono_nonneg_r; [ zutil_arith | ]
+               | apply Z.mul_le_mono_nonpos_r; [ zutil_arith | ] ]
+    end.
+  Ltac peel_le := repeat peel_le_step.
+
   Definition pow2_mod n i := (n &' (Z.ones i)).
 
   Lemma pow2_mod_spec : forall a b, (0 <= b) -> Z.pow2_mod a b = a mod (2 ^ b).
