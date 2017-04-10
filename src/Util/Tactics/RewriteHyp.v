@@ -42,3 +42,43 @@ Tactic Notation "erewrite_hyp" "<-" "?*" "in" "*" := repeat do_with_hyp' ltac:(f
 Tactic Notation "erewrite_hyp" "!*" "in" "*" := progress erewrite_hyp ?* in *.
 Tactic Notation "erewrite_hyp" "->" "!*" "in" "*" := progress erewrite_hyp -> ?* in *.
 Tactic Notation "erewrite_hyp" "<-" "!*" "in" "*" := progress erewrite_hyp <- ?* in *.
+
+Tactic Notation "rewrite_hyp" "*" "by" tactic3(tac) := do_with_hyp' ltac:(fun H => rewrite H).
+Tactic Notation "rewrite_hyp" "->" "*" "by" tactic3(tac) := do_with_hyp' ltac:(fun H => rewrite -> H).
+Tactic Notation "rewrite_hyp" "<-" "*" "by" tactic3(tac) := do_with_hyp' ltac:(fun H => rewrite <- H).
+Tactic Notation "rewrite_hyp" "?*" "by" tactic3(tac) := repeat do_with_hyp' ltac:(fun H => rewrite !H).
+Tactic Notation "rewrite_hyp" "->" "?*" "by" tactic3(tac) := repeat do_with_hyp' ltac:(fun H => rewrite -> !H).
+Tactic Notation "rewrite_hyp" "<-" "?*" "by" tactic3(tac) := repeat do_with_hyp' ltac:(fun H => rewrite <- !H).
+Tactic Notation "rewrite_hyp" "!*" "by" tactic3(tac) := progress rewrite_hyp ?*.
+Tactic Notation "rewrite_hyp" "->" "!*" "by" tactic3(tac) := progress rewrite_hyp -> ?*.
+Tactic Notation "rewrite_hyp" "<-" "!*" "by" tactic3(tac) := progress rewrite_hyp <- ?*.
+
+Tactic Notation "rewrite_hyp" "*" "in" "*" "by" tactic3(tac) := do_with_hyp' ltac:(fun H => rewrite H in * by tac).
+Tactic Notation "rewrite_hyp" "->" "*" "in" "*" "by" tactic3(tac) := do_with_hyp' ltac:(fun H => rewrite -> H in * by tac).
+Tactic Notation "rewrite_hyp" "<-" "*" "in" "*" "by" tactic3(tac) := do_with_hyp' ltac:(fun H => rewrite <- H in * by tac).
+Tactic Notation "rewrite_hyp" "?*" "in" "*" "by" tactic3(tac) := repeat do_with_hyp' ltac:(fun H => rewrite !H in * by tac).
+Tactic Notation "rewrite_hyp" "->" "?*" "in" "*" "by" tactic3(tac) := repeat do_with_hyp' ltac:(fun H => rewrite -> !H in * by tac).
+Tactic Notation "rewrite_hyp" "<-" "?*" "in" "*" "by" tactic3(tac) := repeat do_with_hyp' ltac:(fun H => rewrite <- !H in * by tac).
+Tactic Notation "rewrite_hyp" "!*" "in" "*" "by" tactic3(tac) := progress rewrite_hyp ?* in * by tac.
+Tactic Notation "rewrite_hyp" "->" "!*" "in" "*" "by" tactic3(tac) := progress rewrite_hyp -> ?* in * by tac.
+Tactic Notation "rewrite_hyp" "<-" "!*" "in" "*" "by" tactic3(tac) := progress rewrite_hyp <- ?* in * by tac.
+
+Tactic Notation "erewrite_hyp" "*" "by" tactic3(tac) := do_with_hyp' ltac:(fun H => erewrite H by tac).
+Tactic Notation "erewrite_hyp" "->" "*" "by" tactic3(tac) := do_with_hyp' ltac:(fun H => erewrite -> H by tac).
+Tactic Notation "erewrite_hyp" "<-" "*" "by" tactic3(tac) := do_with_hyp' ltac:(fun H => erewrite <- H by tac).
+Tactic Notation "erewrite_hyp" "?*" "by" tactic3(tac) := repeat do_with_hyp' ltac:(fun H => erewrite !H by tac).
+Tactic Notation "erewrite_hyp" "->" "?*" "by" tactic3(tac) := repeat do_with_hyp' ltac:(fun H => erewrite -> !H by tac).
+Tactic Notation "erewrite_hyp" "<-" "?*" "by" tactic3(tac) := repeat do_with_hyp' ltac:(fun H => erewrite <- !H by tac).
+Tactic Notation "erewrite_hyp" "!*" "by" tactic3(tac) := progress erewrite_hyp ?* by tac.
+Tactic Notation "erewrite_hyp" "->" "!*" "by" tactic3(tac) := progress erewrite_hyp -> ?* by tac.
+Tactic Notation "erewrite_hyp" "<-" "!*" "by" tactic3(tac) := progress erewrite_hyp <- ?* by tac.
+
+Tactic Notation "erewrite_hyp" "*" "in" "*" "by" tactic3(tac) := do_with_hyp' ltac:(fun H => erewrite H in * by tac).
+Tactic Notation "erewrite_hyp" "->" "*" "in" "*" "by" tactic3(tac) := do_with_hyp' ltac:(fun H => erewrite -> H in * by tac).
+Tactic Notation "erewrite_hyp" "<-" "*" "in" "*" "by" tactic3(tac) := do_with_hyp' ltac:(fun H => erewrite <- H in * by tac).
+Tactic Notation "erewrite_hyp" "?*" "in" "*" "by" tactic3(tac) := repeat do_with_hyp' ltac:(fun H => erewrite !H in * by tac).
+Tactic Notation "erewrite_hyp" "->" "?*" "in" "*" "by" tactic3(tac) := repeat do_with_hyp' ltac:(fun H => erewrite -> !H in * by tac).
+Tactic Notation "erewrite_hyp" "<-" "?*" "in" "*" "by" tactic3(tac) := repeat do_with_hyp' ltac:(fun H => erewrite <- !H in * by tac).
+Tactic Notation "erewrite_hyp" "!*" "in" "*" "by" tactic3(tac) := progress erewrite_hyp ?* in * by tac.
+Tactic Notation "erewrite_hyp" "->" "!*" "in" "*" "by" tactic3(tac) := progress erewrite_hyp -> ?* in * by tac.
+Tactic Notation "erewrite_hyp" "<-" "!*" "in" "*" "by" tactic3(tac) := progress erewrite_hyp <- ?* in * by tac.
