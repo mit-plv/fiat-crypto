@@ -232,6 +232,60 @@ Section language.
         {var} {T x t a b}
     : List.In (existT _ t (a, b)) (@flatten_binding_list base_type_code var var T x x) -> a = b.
   Proof using Type. intro; eapply flatten_binding_list_In_eq_iff; eauto. Qed.
+
+  Lemma flatten_binding_list_SmartVarfMap2_pair_In_eq2_iff
+        {var1 var1' var2} T x x' y y'
+    : (forall t a b, List.In (existT _ t (a, b))
+                             (@flatten_binding_list
+                                base_type_code _ _ T
+                                (SmartVarfMap2 (fun t (a : var1 t) (b : var2 t) => (a, b)) x y)
+                                (SmartVarfMap2 (fun t (a : var1' t) (b : var2 t) => (a, b)) x' y'))
+                              -> snd a = snd b)
+      <-> y = y'.
+  Proof using Type.
+    induction T;
+      repeat first [ exfalso; assumption
+                   | progress subst
+                   | progress inversion_sigma
+                   | progress inversion_prod
+                   | progress destruct_head' unit
+                   | progress destruct_head' prod
+                   | split
+                   | progress simpl in *
+                   | intro
+                   | progress destruct_head or
+                   | apply (f_equal2 (@pair _ _))
+                   | progress split_iff
+                   | solve [ auto using List.in_or_app ]
+                   | match goal with
+                     | [ H : List.In _ (_ ++ _) |- _ ] => rewrite List.in_app_iff in H
+                     | [ H : context[List.In _ (_ ++ _)] |- _ ] => setoid_rewrite List.in_app_iff in H
+                     | [ H : forall x y, x = y -> forall t a b, List.In _ _ -> _, H' : List.In _ _ |- _ ]
+                       => specialize (H _ _ eq_refl _ _ _ H')
+                     | [ H : forall x x' y y', y = y' -> forall t a b, List.In _ _ -> _, H' : List.In _ _ |- _ ]
+                       => specialize (H _ _ _ _ eq_refl _ _ _ H')
+                     | [ H : forall t a b, _ \/ _ -> _ |- _ ]
+                       => pose proof (fun t a b pf => H t a b (or_introl pf));
+                          pose proof (fun t a b pf => H t a b (or_intror pf));
+                          clear H
+                     | [ H : forall t a b, _ |- _ ]
+                       => solve [ eapply (H _ (_, _) (_, _)); eauto ]
+                     | [ H : forall x x' y y', _ -> y = y' |- ?Y = ?Y' ]
+                       => specialize (fun x x' => H x x' Y Y')
+                     | [ H : forall x x', (forall t a b, List.In _ _ -> _ = _) -> _, H' : forall t' a' b', List.In _ _ -> _ = _ |- _ ]
+                       => specialize (H _ _ H')
+                     end ].
+  Qed.
+
+  Lemma flatten_binding_list_SmartVarfMap2_pair_same_in_eq2
+        {var1 var1' var2} {T x x' y t a b}
+    : List.In (existT _ t (a, b))
+              (@flatten_binding_list
+                 base_type_code _ _ T
+                 (SmartVarfMap2 (fun t (a : var1 t) (b : var2 t) => (a, b)) x y)
+                 (SmartVarfMap2 (fun t (a : var1' t) (b : var2 t) => (a, b)) x' y))
+      -> snd a = snd b.
+  Proof using Type. intro; eapply flatten_binding_list_SmartVarfMap2_pair_In_eq2_iff; eauto. Qed.
 End language.
 
 Hint Resolve wff_SmartVarf wff_SmartVarVarf wff_SmartVarVarf_nil : wf.
