@@ -47,7 +47,7 @@ Section ctx.
 
   Definition add (k : key) (x : { t : _ & var t }) (xs : list (key * { t : _ & var t }))
     : list (key * { t : _ & var t })
-    := (k, x) :: remove k xs.
+    := (k, x) :: xs.
 
   Lemma find_remove_neq k k' xs (H : k <> k')
     : find k (remove k' xs) = find k xs.
@@ -86,6 +86,10 @@ Section ctx.
           removeb ctx n t
           := remove n ctx;
           empty := nil |}.
+
+  Lemma length_extendb (ctx : AListContext) k t v
+    : length (@extendb _ _ _ AListContext ctx k t v) = S (length ctx).
+  Proof. reflexivity. Qed.
 
   Lemma AListContextOk : @ContextOk base_type_code key var AListContext.
   Proof using base_type_code_lb key_bl key_lb.
