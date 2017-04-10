@@ -1,8 +1,12 @@
 (** * Common Subexpression Elimination for PHOAS Syntax *)
 Require Import Coq.Lists.List.
+Require Import Coq.FSets.FMapInterface.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.SmartMap.
-Require Import (*Crypto.Util.Tactics*) Crypto.Util.Bool.
+Require Import Crypto.Compilers.Named.Context.
+Require Import Crypto.Compilers.Named.AListContext.
+Require Import Crypto.Compilers.Named.ContextDefinitions.
+Require Import Crypto.Util.Bool.
 
 Local Open Scope list_scope.
 
@@ -11,6 +15,8 @@ Inductive symbolic_expr {base_type_code op_code} : Type :=
 | SVar   (v : base_type_code) (n : nat)
 | SOp    (op : op_code) (args : symbolic_expr)
 | SPair  (x y : symbolic_expr)
+| SFst (x : symbolic_expr)
+| SSnd (x : symbolic_expr)
 | SInvalid.
 Scheme Equality for symbolic_expr.
 
@@ -21,6 +27,8 @@ Ltac inversion_symbolic_expr_step :=
   | [ H : SVar _ _ = SVar _ _ |- _ ] => inversion H; clear H
   | [ H : SOp _ _ = SOp _ _ |- _ ] => inversion H; clear H
   | [ H : SPair _ _ = SPair _ _ |- _ ] => inversion H; clear H
+  | [ H : SFst _ = SFst _ |- _ ] => inversion H; clear H
+  | [ H : SSnd _ = SSnd _ |- _ ] => inversion H; clear H
   end.
 Ltac inversion_symbolic_expr := repeat inversion_symbolic_expr_step.
 
@@ -53,41 +61,35 @@ Section symbolic.
   Local Notation expr := (@expr base_type_code op).
   Local Notation Expr := (@Expr base_type_code op).
 
+  Definition SymbolicExprContext {var : base_type_code -> Type}
+    : @Context base_type_code symbolic_expr var
+    := @AListContext symbolic_expr symbolic_expr_beq base_type_code var base_type_code_beq base_type_code_bl.
+
+  Local Instance SymbolicExprContextOk {var} : ContextOk _
+    := @AListContextOk
+         symbolic_expr symbolic_expr_beq symbolic_expr_bl symbolic_expr_lb
+         base_type_code var base_type_code_beq base_type_code_bl base_type_code_lb.
+
+  Fixpoint push_pair_symbolic_expr {t : flat_type} (s : symbolic_expr)
+    : interp_flat_type_gen (fun _ => symbolic_expr) t
+    := match t with
+       | Unit => tt
+       | Tbase T => s
+       | Prod A B
+         => (@push_pair_symbolic_expr A (SFst s), @push_pair_symbolic_expr B (SSnd s))
+       end.
 
   Section with_var.
     Context {var : base_type_code -> Type}.
 
     Local Notation svar t := (var t * symbolic_expr)%type.
     Local Notation fsvar := (fun t => svar t).
-    Local Notation mapping := (forall t : base_type_code, list (svar t))%type.
+    Local Notation mapping := (@SymbolicExprContext var).
 
     Context (prefix : list (sigT (fun t : flat_type => @exprf fsvar t))).
 
-    Definition empty_mapping : mapping := fun _ => nil.
-    Definition type_lookup t (xs : mapping) : list (svar t) := xs t.
-    Definition mapping_update_type t (xs : mapping) (upd : list (svar t) -> list (svar t))
-      : mapping
-      := fun t' => (if base_type_code_beq t t' as b return base_type_code_beq t t' = b -> _
-                    then fun H => match base_type_code_bl _ _ H in (_ = t') return list (svar t') with
-                                  | eq_refl => upd (type_lookup t xs)
-                                  end
-                    else fun _ => type_lookup t' xs)
-                     eq_refl.
-
-    Fixpoint lookup' {t} (sv : symbolic_expr) (xs : list (svar t)) {struct xs} : option (var t) :=
-      match xs with
-      | nil => None
-      | (x, sv') :: xs' =>
-        if symbolic_expr_beq sv' sv
-        then Some x
-        else lookup' sv xs'
-      end.
-    Definition lookup t (sv : symbolic_expr) (xs : mapping) : option (var t) :=
-      lookup' sv (type_lookup t xs).
-    Definition symbolicify_var {t : base_type_code} (v : var t) (xs : mapping) : symbolic_expr :=
-      SVar t (length (type_lookup t xs)).
-    Definition add_mapping {t} (v : var t) (sv : symbolic_expr) (xs : mapping) : mapping :=
-      mapping_update_type t xs (fun ls => (v, sv) :: ls).
+    Definition symbolize_var (xs : mapping) (t : base_type_code) : symbolic_expr :=
+      SVar t (length xs).
 
     Fixpoint symbolize_exprf
              {t} (v : @exprf fsvar t) {struct v}
@@ -105,59 +107,45 @@ Section symbolic.
                              end
          end.
 
-    Fixpoint smart_lookup_gen f (proj : forall t, svar t -> f t)
-             (t : flat_type) (sv : symbolic_expr) (xs : mapping) {struct t}
-      : option (interp_flat_type_gen f t)
-      := match t return option (interp_flat_type_gen f t) with
-         | Tbase t => option_map (fun v => proj t (v, sv)) (lookup t sv xs)
-         | Unit => Some tt
-         | Prod A B => match @smart_lookup_gen f proj A sv xs, @smart_lookup_gen f proj B sv xs with
-                       | Some a, Some b => Some (a, b)
-                       | _, _ => None
-                       end
-         end.
-    Definition smart_lookup (t : flat_type) (sv : symbolic_expr) (xs : mapping) : option (interp_flat_type_gen fsvar t)
-      := @smart_lookup_gen fsvar (fun _ x => x) t sv xs.
-    Definition smart_lookupo (t : flat_type) (sv : option symbolic_expr) (xs : mapping) : option (interp_flat_type_gen fsvar t)
-      := match sv with
-         | Some sv => smart_lookup t sv xs
-         | None => None
-         end.
-    Definition symbolicify_smart_var {t : flat_type} (xs : mapping) (replacement : option symbolic_expr)
-      : interp_flat_type_gen var t -> interp_flat_type_gen fsvar t
-      := smart_interp_flat_map
-           (g:=interp_flat_type_gen fsvar)
-           (fun t v => (v,
-                        match replacement with
-                        | Some sv => sv
-                        | None => symbolicify_var v xs
-                        end))
-           tt
-           (fun A B => @pair _ _).
-    Fixpoint smart_add_mapping {t : flat_type} (xs : mapping) : interp_flat_type_gen fsvar t -> mapping
-      := match t return interp_flat_type_gen fsvar t -> mapping with
-         | Tbase t => fun v => add_mapping (fst v) (snd v) xs
-         | Unit => fun _ => xs
+    Fixpoint symbolize_smart_var_nat (t : flat_type) (len : nat)
+      : interp_flat_type_gen (fun _ => symbolic_expr) t * nat
+      := match t with
+         | Unit => (tt, len)
+         | Tbase T => (SVar T len, S len)
          | Prod A B
-           => fun v => let xs := @smart_add_mapping B xs (snd v) in
-                       let xs := @smart_add_mapping A xs (fst v) in
-                       xs
+           => let '(sa, len) := @symbolize_smart_var_nat A len in
+              let '(sb, len) := @symbolize_smart_var_nat B len in
+              ((sa, sb), len)
          end.
+
+    Definition symbolize_smart_var (t : flat_type) (xs : mapping)
+      : interp_flat_type_gen (fun _ => symbolic_expr) t
+      := fst (symbolize_smart_var_nat t (length xs)).
+
+    Definition symbolicify_smart_var {t : flat_type}
+               (vs : interp_flat_type_gen var t)
+               (ss : interp_flat_type_gen (fun _ => symbolic_expr) t)
+      : interp_flat_type_gen fsvar t
+      := SmartVarfMap2 (fun t v s => (v, s)) vs ss.
 
     Definition csef_step
                (csef : forall {t} (v : @exprf fsvar t) (xs : mapping), @exprf var t)
                {t} (v : @exprf fsvar t) (xs : mapping)
       : @exprf var t
       := match v in @Syntax.exprf _ _ _ t return exprf t with
-         | LetIn tx ex _ eC => let sx := symbolize_exprf ex in
-                             let ex' := @csef _ ex xs in
-                             let sv := smart_lookupo tx sx xs in
-                             match sv with
-                             | Some v => @csef _ (eC v) xs
-                             | None
-                               => LetIn ex' (fun x => let x' := symbolicify_smart_var xs sx x in
-                                                    @csef _ (eC x') (smart_add_mapping xs x'))
-                             end
+         | LetIn tx ex _ eC
+           => let sx := option_map push_pair_symbolic_expr (symbolize_exprf ex) in
+              let ex' := @csef _ ex xs in
+              let '(sx, sv) := match sx with
+                               | Some sx => (sx, lookup xs sx)
+                               | None => (symbolize_smart_var tx xs, None)
+                               end in
+              match sv with
+              | Some v => @csef _ (eC (symbolicify_smart_var v sx)) xs
+              | None
+                => LetIn ex' (fun x => let sx' := symbolicify_smart_var x sx in
+                                       @csef _ (eC sx') (extend xs sx x))
+              end
          | TT => TT
          | Var _ x => Var (fst x)
          | Op _ _ op args => Op op (@csef _ args xs)
@@ -176,14 +164,16 @@ Section symbolic.
 
     Definition cse {t} (v : @expr fsvar t) (xs : mapping) : @expr var t
       := match v in @Syntax.expr _ _ _ t return expr t with
-         | Abs _ _ f => Abs (fun x => let x' := symbolicify_smart_var xs None x in
-                                      csef (prepend_prefix (f x') prefix) (smart_add_mapping xs x'))
+         | Abs src dst f
+           => let sx := symbolize_smart_var src xs in
+              Abs (fun x => let x' := symbolicify_smart_var x sx in
+                            csef (prepend_prefix (f x') prefix) (extend xs sx x))
          end.
   End with_var.
 
   Definition CSE {t} (e : Expr t) (prefix : forall var, list (sigT (fun t : flat_type => @exprf var t)))
     : Expr t
-    := fun var => cse (prefix _) (e _) empty_mapping.
+    := fun var => cse (prefix _) (e _) empty.
 End symbolic.
 
 Global Arguments csef {_} op_code base_type_code_beq op_code_beq base_type_code_bl {_} symbolize_op {var t} _ _.
