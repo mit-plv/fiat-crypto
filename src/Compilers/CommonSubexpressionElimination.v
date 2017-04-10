@@ -2,6 +2,7 @@
 Require Import Coq.Lists.List.
 Require Import Coq.FSets.FMapInterface.
 Require Import Crypto.Compilers.Syntax.
+Require Import Crypto.Compilers.Equality.
 Require Import Crypto.Compilers.SmartMap.
 Require Import Crypto.Compilers.Named.Context.
 Require Import Crypto.Compilers.Named.AListContext.
@@ -12,11 +13,9 @@ Local Open Scope list_scope.
 
 Inductive symbolic_expr {base_type_code op_code} : Type :=
 | STT
-| SVar   (v : base_type_code) (n : nat)
+| SVar   (v : flat_type base_type_code) (n : nat)
 | SOp    (op : op_code) (args : symbolic_expr)
 | SPair  (x y : symbolic_expr)
-| SFst (x : symbolic_expr)
-| SSnd (x : symbolic_expr)
 | SInvalid.
 Scheme Equality for symbolic_expr.
 
@@ -27,8 +26,6 @@ Ltac inversion_symbolic_expr_step :=
   | [ H : SVar _ _ = SVar _ _ |- _ ] => inversion H; clear H
   | [ H : SOp _ _ = SOp _ _ |- _ ] => inversion H; clear H
   | [ H : SPair _ _ = SPair _ _ |- _ ] => inversion H; clear H
-  | [ H : SFst _ = SFst _ |- _ ] => inversion H; clear H
-  | [ H : SSnd _ = SSnd _ |- _ ] => inversion H; clear H
   end.
 Ltac inversion_symbolic_expr := repeat inversion_symbolic_expr_step.
 
@@ -61,34 +58,34 @@ Section symbolic.
   Local Notation expr := (@expr base_type_code op).
   Local Notation Expr := (@Expr base_type_code op).
 
-  Definition SymbolicExprContext {var : base_type_code -> Type}
-    : @Context base_type_code symbolic_expr var
-    := @AListContext symbolic_expr symbolic_expr_beq base_type_code var base_type_code_beq base_type_code_bl.
+  Definition SymbolicExprContext {var : flat_type -> Type}
+    : Context symbolic_expr var
+    := @AListContext symbolic_expr symbolic_expr_beq _ var (@flat_type_beq _ base_type_code_beq) (@flat_type_dec_bl _ _ base_type_code_bl).
 
-  Local Instance SymbolicExprContextOk {var} : ContextOk _
+  Local Instance SymbolicExprContextOk {var} : ContextOk (@SymbolicExprContext var)
     := @AListContextOk
          symbolic_expr symbolic_expr_beq symbolic_expr_bl symbolic_expr_lb
-         base_type_code var base_type_code_beq base_type_code_bl base_type_code_lb.
+         _ _ _ _ (@flat_type_dec_lb _ _ base_type_code_lb).
 
-  Fixpoint push_pair_symbolic_expr {t : flat_type} (s : symbolic_expr)
+  (*Fixpoint push_pair_symbolic_expr {t : flat_type} (s : symbolic_expr)
     : interp_flat_type_gen (fun _ => symbolic_expr) t
     := match t with
        | Unit => tt
        | Tbase T => s
        | Prod A B
          => (@push_pair_symbolic_expr A (SFst s), @push_pair_symbolic_expr B (SSnd s))
-       end.
+       end.*)
 
   Section with_var.
     Context {var : base_type_code -> Type}.
 
     Local Notation svar t := (var t * symbolic_expr)%type.
     Local Notation fsvar := (fun t => svar t).
-    Local Notation mapping := (@SymbolicExprContext var).
+    Local Notation mapping := (@SymbolicExprContext (interp_flat_type_gen var)).
 
     Context (prefix : list (sigT (fun t : flat_type => @exprf fsvar t))).
 
-    Definition symbolize_var (xs : mapping) (t : base_type_code) : symbolic_expr :=
+    Definition symbolize_var (xs : mapping) (t : flat_type) : symbolic_expr :=
       SVar t (length xs).
 
     Fixpoint symbolize_exprf
@@ -107,7 +104,7 @@ Section symbolic.
                              end
          end.
 
-    Fixpoint symbolize_smart_var_nat (t : flat_type) (len : nat)
+    (*Fixpoint symbolize_smart_var_nat (t : flat_type) (len : nat)
       : interp_flat_type_gen (fun _ => symbolic_expr) t * nat
       := match t with
          | Unit => (tt, len)
@@ -116,17 +113,17 @@ Section symbolic.
            => let '(sa, len) := @symbolize_smart_var_nat A len in
               let '(sb, len) := @symbolize_smart_var_nat B len in
               ((sa, sb), len)
-         end.
+         end.*)
 
-    Definition symbolize_smart_var (t : flat_type) (xs : mapping)
+    (*Definition symbolize_smart_var (t : flat_type) (xs : mapping)
       : interp_flat_type_gen (fun _ => symbolic_expr) t
-      := fst (symbolize_smart_var_nat t (length xs)).
+      := fst (symbolize_smart_var_nat t (length xs)).*)
 
     Definition symbolicify_smart_var {t : flat_type}
                (vs : interp_flat_type_gen var t)
-               (ss : interp_flat_type_gen (fun _ => symbolic_expr) t)
+               (ss : symbolic_expr)
       : interp_flat_type_gen fsvar t
-      := SmartVarfMap2 (fun t v s => (v, s)) vs ss.
+      := SmartVarfMap (fun t v => (v, ss)) vs.
 
     Definition csef_step
                (csef : forall {t} (v : @exprf fsvar t) (xs : mapping), @exprf var t)
@@ -134,17 +131,17 @@ Section symbolic.
       : @exprf var t
       := match v in @Syntax.exprf _ _ _ t return exprf t with
          | LetIn tx ex _ eC
-           => let sx := option_map push_pair_symbolic_expr (symbolize_exprf ex) in
+           => let sx := symbolize_exprf ex in
               let ex' := @csef _ ex xs in
               let '(sx, sv) := match sx with
-                               | Some sx => (sx, lookup xs sx)
-                               | None => (symbolize_smart_var tx xs, None)
+                               | Some sx => (sx, lookupb xs sx)
+                               | None => (symbolize_var xs tx, None)
                                end in
               match sv with
               | Some v => @csef _ (eC (symbolicify_smart_var v sx)) xs
               | None
                 => LetIn ex' (fun x => let sx' := symbolicify_smart_var x sx in
-                                       @csef _ (eC sx') (extend xs sx x))
+                                       @csef _ (eC sx') (extendb xs sx x))
               end
          | TT => TT
          | Var _ x => Var (fst x)
@@ -165,9 +162,9 @@ Section symbolic.
     Definition cse {t} (v : @expr fsvar t) (xs : mapping) : @expr var t
       := match v in @Syntax.expr _ _ _ t return expr t with
          | Abs src dst f
-           => let sx := symbolize_smart_var src xs in
+           => let sx := symbolize_var xs src in
               Abs (fun x => let x' := symbolicify_smart_var x sx in
-                            csef (prepend_prefix (f x') prefix) (extend xs sx x))
+                            csef (prepend_prefix (f x') prefix) (extendb xs sx x))
          end.
   End with_var.
 
