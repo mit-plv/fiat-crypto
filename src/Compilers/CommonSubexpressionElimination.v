@@ -16,6 +16,8 @@ Inductive symbolic_expr {base_type_code op_code} : Type :=
 | SVar   (v : flat_type base_type_code) (n : nat)
 | SOp    (op : op_code) (args : symbolic_expr)
 | SPair  (x y : symbolic_expr)
+| SFst (x : symbolic_expr)
+| SSnd (x : symbolic_expr)
 | SInvalid.
 Scheme Equality for symbolic_expr.
 
@@ -26,6 +28,8 @@ Ltac inversion_symbolic_expr_step :=
   | [ H : SVar _ _ = SVar _ _ |- _ ] => inversion H; clear H
   | [ H : SOp _ _ = SOp _ _ |- _ ] => inversion H; clear H
   | [ H : SPair _ _ = SPair _ _ |- _ ] => inversion H; clear H
+  | [ H : SFst _ = SFst _ |- _ ] => inversion H; clear H
+  | [ H : SSnd _ = SSnd _ |- _ ] => inversion H; clear H
   end.
 Ltac inversion_symbolic_expr := repeat inversion_symbolic_expr_step.
 
@@ -67,14 +71,14 @@ Section symbolic.
          symbolic_expr symbolic_expr_beq symbolic_expr_bl symbolic_expr_lb
          _ _ _ _ (@flat_type_dec_lb _ _ base_type_code_lb).
 
-  (*Fixpoint push_pair_symbolic_expr {t : flat_type} (s : symbolic_expr)
+  Fixpoint push_pair_symbolic_expr {t : flat_type} (s : symbolic_expr)
     : interp_flat_type_gen (fun _ => symbolic_expr) t
     := match t with
        | Unit => tt
        | Tbase T => s
        | Prod A B
          => (@push_pair_symbolic_expr A (SFst s), @push_pair_symbolic_expr B (SSnd s))
-       end.*)
+       end.
 
   Section with_var.
     Context {var : base_type_code -> Type}.
@@ -104,26 +108,11 @@ Section symbolic.
                              end
          end.
 
-    (*Fixpoint symbolize_smart_var_nat (t : flat_type) (len : nat)
-      : interp_flat_type_gen (fun _ => symbolic_expr) t * nat
-      := match t with
-         | Unit => (tt, len)
-         | Tbase T => (SVar T len, S len)
-         | Prod A B
-           => let '(sa, len) := @symbolize_smart_var_nat A len in
-              let '(sb, len) := @symbolize_smart_var_nat B len in
-              ((sa, sb), len)
-         end.*)
-
-    (*Definition symbolize_smart_var (t : flat_type) (xs : mapping)
-      : interp_flat_type_gen (fun _ => symbolic_expr) t
-      := fst (symbolize_smart_var_nat t (length xs)).*)
-
     Definition symbolicify_smart_var {t : flat_type}
                (vs : interp_flat_type_gen var t)
                (ss : symbolic_expr)
       : interp_flat_type_gen fsvar t
-      := SmartVarfMap (fun t v => (v, ss)) vs.
+      := SmartVarfMap2 (fun t v s => (v, s)) vs (push_pair_symbolic_expr ss).
 
     Definition csef_step
                (csef : forall {t} (v : @exprf fsvar t) (xs : mapping), @exprf var t)
