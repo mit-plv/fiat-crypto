@@ -1,7 +1,7 @@
 Require Import Coq.Bool.Sumbool.
 Require Import Coq.FSets.FMapInterface.
 Require Import Coq.FSets.FMapFacts.
-Require Import Crypto.Compilers.Named.Syntax.
+Require Import Crypto.Compilers.Named.Context.
 Require Import Crypto.Compilers.Named.ContextDefinitions.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Equality.

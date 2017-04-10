@@ -2,6 +2,7 @@
 Require Import Coq.Lists.List.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.SmartMap.
+Require Import Crypto.Compilers.Named.Context.
 Require Import Crypto.Compilers.Named.Syntax.
 Require Import Crypto.Compilers.CountLets.
 Require Import Crypto.Util.ListUtil.

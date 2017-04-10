@@ -1,7 +1,7 @@
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.Relations.
 Require Import Crypto.Compilers.SmartMap.
-Require Import Crypto.Compilers.Named.Syntax.
+Require Import Crypto.Compilers.Named.Context.
 Require Import Crypto.Compilers.Named.ContextDefinitions.
 Require Import Crypto.Compilers.Named.ContextProperties.
 Require Import Crypto.Compilers.Named.ContextProperties.Tactics.

@@ -1,3 +1,4 @@
+Require Import Crypto.Compilers.Named.Context.
 Require Import Crypto.Compilers.Named.Syntax.
 Require Import Crypto.Compilers.Named.Wf.
 Require Import Crypto.Compilers.Named.ContextDefinitions.

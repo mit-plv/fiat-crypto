@@ -1,5 +1,5 @@
 (** * Transfer [Context] across an injection *)
-Require Import Crypto.Compilers.Named.Syntax.
+Require Import Crypto.Compilers.Named.Context.
 
 Section language.
   Context {base_type_code Name1 Name2 : Type}

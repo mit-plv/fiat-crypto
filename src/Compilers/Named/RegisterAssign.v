@@ -1,5 +1,6 @@
 (** * Reassign registers *)
 Require Import Crypto.Compilers.Syntax.
+Require Import Crypto.Compilers.Named.Context.
 Require Import Crypto.Compilers.Named.PositiveContext.
 Require Import Crypto.Compilers.Named.Syntax.
 Require Import Crypto.Compilers.Named.NameUtil.

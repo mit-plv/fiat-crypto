@@ -2,7 +2,7 @@ Require Import Coq.omega.Omega.
 Require Import Crypto.Util.FixCoqMistakes.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.Wf.
-Require Import Crypto.Compilers.Named.Syntax.
+Require Import Crypto.Compilers.Named.Context.
 Require Import Crypto.Compilers.Named.ContextDefinitions.
 Require Import Crypto.Compilers.Named.NameUtil.
 Require Import Crypto.Compilers.Named.NameUtilProperties.

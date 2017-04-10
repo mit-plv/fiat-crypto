@@ -1,5 +1,5 @@
 Require Import Crypto.Compilers.Syntax.
-Require Import Crypto.Compilers.Named.Syntax.
+Require Import Crypto.Compilers.Named.Context.
 Require Import Crypto.Compilers.Named.ContextDefinitions.
 Require Import Crypto.Compilers.Named.ContextProperties.Tactics.
 Require Import Crypto.Util.Decidable.

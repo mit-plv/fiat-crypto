@@ -1,4 +1,5 @@
 (** * PHOAS → Named Representation of Gallina *)
+Require Import Crypto.Compilers.Named.Context.
 Require Import Crypto.Compilers.Named.Syntax.
 Require Import Crypto.Compilers.Named.NameUtil.
 Require Import Crypto.Compilers.Named.NameUtilProperties.

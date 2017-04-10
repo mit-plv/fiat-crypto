@@ -1,25 +1,9 @@
 (** * Named Representation of Gallina *)
-Require Import Coq.Classes.RelationClasses.
 Require Import Crypto.Compilers.Syntax.
-Require Import Crypto.Compilers.SmartMap.
+Require Import Crypto.Compilers.Named.Context.
 Require Import Crypto.Util.PointedProp.
-Require Import Crypto.Util.Tuple.
-(*Require Import Crypto.Util.Tactics.*)
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.LetIn.
-
-Record Context {base_type_code} (Name : Type) (var : base_type_code -> Type) :=
-  { ContextT : Type;
-    lookupb : ContextT -> Name -> forall {t : base_type_code}, option (var t);
-    extendb : ContextT -> Name -> forall {t : base_type_code}, var t -> ContextT;
-    removeb : ContextT -> Name -> base_type_code -> ContextT;
-    empty : ContextT }.
-Coercion ContextT : Context >-> Sortclass.
-Arguments ContextT {_ _ _ _}, {_ _ _} _.
-Arguments lookupb {_ _ _ _} _ _ {_}, {_ _ _ _} _ _ _.
-Arguments extendb {_ _ _ _} _ _ [_] _.
-Arguments removeb {_ _ _ _} _ _ _.
-Arguments empty {_ _ _ _}.
 
 Local Open Scope ctype_scope.
 Local Open Scope expr_scope.
@@ -51,46 +35,6 @@ Module Export Named.
       := match e with Abs _ _ n f => n end.
     Definition invert_Abs {t} (e : expr t) : exprf (codomain t)
       := match e with Abs _ _ n f => f end.
-
-    Section with_context.
-      Context {var : base_type_code -> Type}
-              {Context : Context Name var}.
-
-      Fixpoint extend (ctx : Context) {t : flat_type}
-               (n : interp_flat_type_gen (fun _ => Name) t) (v : interp_flat_type_gen var t)
-        : Context
-        := match t return interp_flat_type_gen (fun _ => Name) t -> interp_flat_type_gen var t -> Context with
-           | Tbase t => fun n v => extendb ctx n v
-           | Unit => fun _ _ => ctx
-           | Prod A B => fun n v
-                         => let ctx := @extend ctx A (fst n) (fst v) in
-                            let ctx := @extend ctx B (snd n) (snd v) in
-                            ctx
-           end n v.
-
-      Fixpoint remove (ctx : Context) {t : flat_type}
-               (n : interp_flat_type_gen (fun _ => Name) t)
-        : Context
-        := match t return interp_flat_type_gen (fun _ => Name) t -> Context with
-           | Tbase t => fun n => removeb ctx n t
-           | Unit => fun _ => ctx
-           | Prod A B => fun n
-                         => let ctx := @remove ctx A (fst n) in
-                            let ctx := @remove ctx B (snd n) in
-                            ctx
-           end n.
-
-      Definition lookup (ctx : Context) {t}
-        : interp_flat_type_gen (fun _ => Name) t -> option (interp_flat_type_gen var t)
-        := smart_interp_flat_map
-             (g := fun t => option (interp_flat_type_gen var t))
-             (fun t v => lookupb ctx v)
-             (Some tt)
-             (fun A B x y => match x, y with
-                             | Some x', Some y' => Some (x', y')%core
-                             | _, _ => None
-                             end).
-    End with_context.
 
     Section with_val_context.
       Context (Context : Context Name interp_base_type)
@@ -133,9 +77,6 @@ Global Arguments Pair {_ _ _ _} _ {_} _.
 Global Arguments Abs {_ _ _ _ _} _ _.
 Global Arguments invert_Abs {_ _ _ _} _.
 Global Arguments Abs_name {_ _ _ _} _.
-Global Arguments extend {_ _ _ _} ctx {_} _ _.
-Global Arguments remove {_ _ _ _} ctx {_} _.
-Global Arguments lookup {_ _ _ _} ctx {_} _, {_ _ _ _} ctx _ _.
 Global Arguments interpf {_ _ _ _ _ interp_op ctx t} _.
 Global Arguments interp {_ _ _ _ _ interp_op ctx t} _ _.
 

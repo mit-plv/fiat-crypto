@@ -1,4 +1,5 @@
 Require Import Crypto.Compilers.SmartMap.
+Require Import Crypto.Compilers.Named.Context.
 Require Import Crypto.Compilers.Named.Syntax.
 Require Import Crypto.Compilers.Named.MapCast.
 Require Import Crypto.Compilers.Named.InterpretToPHOAS.

@@ -1,4 +1,6 @@
+Require Import Coq.Lists.List.
 Require Import Crypto.Compilers.Syntax.
+Require Import Crypto.Compilers.Named.Context.
 Require Import Crypto.Compilers.Named.Syntax.
 
 Section language.

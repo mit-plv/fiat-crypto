@@ -8,6 +8,7 @@ Require Export Crypto.LegacyArithmetic.ArchitectureToZLike.
 Require Export Crypto.LegacyArithmetic.ArchitectureToZLikeProofs.
 Require Export Crypto.Util.Tuple.
 Require Import Crypto.Util.Option Crypto.Util.Sigma Crypto.Util.Prod.
+Require Import Crypto.Compilers.Named.Context.
 Require Export Crypto.Compilers.Named.Syntax.
 Require Export Crypto.Compilers.Named.PositiveContext.
 Require Import Crypto.Compilers.Named.DeadCodeElimination.
