@@ -82,6 +82,7 @@ src/Compilers/WfInversion.v
 src/Compilers/WfProofs.v
 src/Compilers/WfReflective.v
 src/Compilers/WfReflectiveGen.v
+src/Compilers/Named/AListContext.v
 src/Compilers/Named/Compile.v
 src/Compilers/Named/CompileInterp.v
 src/Compilers/Named/CompileProperties.v
@@ -106,6 +107,7 @@ src/Compilers/Named/PositiveContext.v
 src/Compilers/Named/RegisterAssign.v
 src/Compilers/Named/SmartMap.v
 src/Compilers/Named/Syntax.v
+src/Compilers/Named/WeakListContext.v
 src/Compilers/Named/Wf.v
 src/Compilers/Named/WfInterp.v
 src/Compilers/Named/ContextProperties/NameUtil.v

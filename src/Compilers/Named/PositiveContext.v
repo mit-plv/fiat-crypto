@@ -1,5 +1,4 @@
 Require Import Coq.FSets.FMapPositive.
-Require Import Crypto.Compilers.Named.Syntax.
 Require Import Crypto.Compilers.Named.FMapContext.
 
 Module PositiveContext := FMapContext PositiveMap.
