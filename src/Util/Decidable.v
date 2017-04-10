@@ -152,6 +152,15 @@ Lemma dec_rel_of_semidec_rel {A} {R : A -> A -> Prop} (H : forall x y, option (R
       (H_complete : forall x y, H x y = None -> ~R x y) : DecidableRel R.
 Proof. eauto using dec_of_semidec. Defined.
 
+Lemma dec_of_bool_dec {P : Prop} (b : bool) (Hbl : b = true -> P) (Hlb : P -> b = true)
+  : Decidable P.
+Proof. destruct b; [ left; apply Hbl; reflexivity | right; intro p; apply Bool.diff_false_true, Hlb, p ]. Defined.
+
+Lemma dec_rel_of_bool_dec_rel {A} {R : A -> A -> Prop} (b : A -> A -> bool)
+      (Hbl : forall x y, b x y = true -> R x y) (Hlb : forall x y, R x y -> b x y = true)
+  : DecidableRel R.
+Proof. eauto using dec_of_bool_dec. Defined.
+
 Lemma dec_bool : forall {P} {Pdec:Decidable P}, (if dec P then true else false) = true -> P.
 Proof. intros. destruct dec; solve [ auto | discriminate ]. Qed.
 
