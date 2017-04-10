@@ -8,6 +8,7 @@ Require Import Crypto.Compilers.Named.Context.
 Require Import Crypto.Compilers.Named.AListContext.
 Require Import Crypto.Compilers.Named.ContextDefinitions.
 Require Import Crypto.Util.Bool.
+Require Import Crypto.Util.Decidable.
 
 Local Open Scope list_scope.
 
@@ -22,6 +23,13 @@ Inductive symbolic_expr {base_type_code op_code} : Type :=
 Scheme Equality for symbolic_expr.
 
 Arguments symbolic_expr : clear implicits.
+
+Global Instance symbolic_expr_dec {base_type_code op_code}
+       `{DecidableRel (@eq base_type_code), DecidableRel (@eq op_code)}
+  : DecidableRel (@eq (symbolic_expr base_type_code op_code)).
+Proof.
+  unfold Decidable in *; intros; repeat decide equality.
+Defined.
 
 Ltac inversion_symbolic_expr_step :=
   match goal with

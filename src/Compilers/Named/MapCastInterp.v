@@ -95,11 +95,11 @@ Section language.
     | _ => handle_options_step
     (* preprocess *)
     | [ H : context[lookupb (extend _ _ _) _] |- _ ]
-      => first [ rewrite (fun C => lookupb_extend C base_type_dec Name_dec) in H by assumption
-               | setoid_rewrite (fun C => lookupb_extend C base_type_dec Name_dec) in H; [ | assumption.. ] ]
+      => first [ rewrite (lookupb_extend base_type_dec Name_dec) in H by assumption
+               | setoid_rewrite (lookupb_extend base_type_dec Name_dec) in H; [ | assumption.. ] ]
     | [ |- context[lookupb (extend _ _ _) _] ]
       => first [ rewrite (fun C => lookupb_extend C base_type_dec Name_dec) by assumption
-               | setoid_rewrite (fun C => lookupb_extend C base_type_dec Name_dec); [ | assumption.. ] ]
+               | setoid_rewrite (lookupb_extend base_type_dec Name_dec); [ | assumption.. ] ]
     | _ => progress subst
     (* handle multiple hypotheses *)
     | [ H : find_Name _ ?n ?N = Some ?t', H'' : context[find_Name_and_val _ _ ?t ?n ?N ?x ?default] |- _ ]

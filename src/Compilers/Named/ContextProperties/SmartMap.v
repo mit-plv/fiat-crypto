@@ -16,9 +16,9 @@ Section with_context.
   Local Notation find_Name := (@find_Name base_type_code Name Name_dec).
   Local Notation find_Name_and_val := (@find_Name_and_val base_type_code Name base_type_code_dec Name_dec).
 
-  Hint Rewrite (@find_Name_and_val_default_to_None _ _ base_type_code_dec Name_dec) using congruence : ctx_db.
-  Hint Rewrite (@find_Name_and_val_different _ _ base_type_code_dec Name_dec) using assumption : ctx_db.
-  Hint Rewrite (@find_Name_and_val_wrong_type _ _ base_type_code_dec Name_dec) using congruence : ctx_db.
+  Hint Rewrite (@find_Name_and_val_default_to_None _ base_type_code_dec _ Name_dec) using congruence : ctx_db.
+  Hint Rewrite (@find_Name_and_val_different _ base_type_code_dec _ Name_dec) using assumption : ctx_db.
+  Hint Rewrite (@find_Name_and_val_wrong_type _ base_type_code_dec _ Name_dec) using congruence : ctx_db.
 
   Lemma find_Name_and_val_flatten_binding_list
         {var' var'' t n T N V1 V2 v1 v2}

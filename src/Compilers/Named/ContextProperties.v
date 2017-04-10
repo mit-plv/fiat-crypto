@@ -6,9 +6,11 @@ Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Tactics.BreakMatch.
 
 Section with_context.
-  Context {base_type_code Name var} (Context : @Context base_type_code Name var)
+  Context {base_type_code}
           (base_type_code_dec : DecidableRel (@eq base_type_code))
+          {Name}
           (Name_dec : DecidableRel (@eq Name))
+          {var} (Context : @Context base_type_code Name var)
           (ContextOk : ContextOk Context).
 
   Local Notation find_Name := (@find_Name base_type_code Name Name_dec).

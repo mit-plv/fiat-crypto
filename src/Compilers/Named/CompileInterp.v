@@ -155,7 +155,7 @@ Section language.
          intuition ].
     { intros ???.
       repeat first [ solve [ auto ]
-                   | rewrite (lookupb_extend Context _ _ _)
+                   | rewrite (lookupb_extend _ _ _)
                    | progress subst
                    | progress break_innermost_match
                    | erewrite <- (flatten_binding_list_find_Name_and_val_unique _ _) by eassumption

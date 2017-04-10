@@ -25,9 +25,9 @@ Section with_context.
   Local Notation find_Name := (@find_Name base_type_code Name Name_dec).
   Local Notation find_Name_and_val := (@find_Name_and_val base_type_code Name base_type_code_dec Name_dec).
 
-  Hint Rewrite (@find_Name_and_val_default_to_None _ _ base_type_code_dec Name_dec) using congruence : ctx_db.
-  Hint Rewrite (@find_Name_and_val_different _ _ base_type_code_dec Name_dec) using assumption : ctx_db.
-  Hint Rewrite (@find_Name_and_val_wrong_type _ _ base_type_code_dec Name_dec) using congruence : ctx_db.
+  Hint Rewrite (@find_Name_and_val_default_to_None _ base_type_code_dec _ Name_dec) using congruence : ctx_db.
+  Hint Rewrite (@find_Name_and_val_different _ base_type_code_dec _ Name_dec) using assumption : ctx_db.
+  Hint Rewrite (@find_Name_and_val_wrong_type _ base_type_code_dec _ Name_dec) using congruence : ctx_db.
   Hint Rewrite (@snd_split_onames_skipn base_type_code Name) : ctx_db.
 
   Local Ltac misc_oname_t_step :=
