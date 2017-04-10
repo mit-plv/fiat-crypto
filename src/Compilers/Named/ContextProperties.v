@@ -27,6 +27,23 @@ Section with_context.
     intros; subst; apply lookupb_extendb_same; assumption.
   Defined.
 
+  Lemma lookupb_extendb_full (ctx : Context) n n' t t' v
+    : lookupb (extendb ctx n (t:=t) v) n' t'
+      = match dec (n = n'), dec (t = t') with
+        | left _, left pf
+          => Some (eq_rect _ var v _ pf)
+        | left _, _
+          => None
+        | right _, _
+          => lookupb ctx n' t'
+        end.
+  Proof using ContextOk.
+    break_innermost_match; subst; simpl.
+    { apply lookupb_extendb_same; assumption. }
+    { apply lookupb_extendb_wrong_type; assumption. }
+    { apply lookupb_extendb_different; assumption. }
+  Qed.
+
   Lemma lookupb_extend (ctx : Context)
         T N t n v
     : lookupb (extend ctx N (t:=T) v) n t
