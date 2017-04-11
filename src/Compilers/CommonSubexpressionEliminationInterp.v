@@ -6,6 +6,8 @@ Require Import Crypto.Compilers.Named.ContextDefinitions.
 Require Import Crypto.Compilers.Named.ContextProperties.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.Equality.
+Require Import Crypto.Compilers.WfInversion.
+Require Import Crypto.Compilers.ExprInversion.
 Require Import Crypto.Compilers.Wf.
 Require Import Crypto.Compilers.WfProofs.
 Require Import Crypto.Compilers.SmartMap.
@@ -81,28 +83,100 @@ Section symbolic.
                    | solve [ eauto ] ].
   Qed.
 
+  (*Lemma interpf_symbolize_exprf_injective
+        s
+    : forall G0 G1 t e0 e1 e0' e1'
+             (HG0 : forall t x y, In (existT _ t (x, y)) G0 -> fst x = y)
+             (HG1 : forall t x y, In (existT _ t (x, y)) G1 -> fst x = y)
+             (Hwf0 : wff G0 (t:=t) e0 e0')
+             (Hwf1 : wff G1 (t:=t) e1 e1')
+             (Hs0 : symbolize_exprf e0 = Some s)
+             (Hs1 : symbolize_exprf e1 = Some s),
+      interpf interp_op e0' = interpf interp_op e1'.
+  Proof.
+    induction s; intros;
+      destruct Hwf0;
+      try (invert_one_expr e1; break_innermost_match; try exact I; intros);
+      try (invert_one_expr e1'; break_innermost_match; try exact I; intros);
+      try solve [ repeat first [ reflexivity
+                               | progress subst
+                               | progress destruct_head'_sig
+                               | progress destruct_head'_and
+                               | progress destruct_head'_prod
+                               | progress inversion_option
+                               | congruence
+                               | progress simpl in *
+                               | progress unfold option_map in *
+                               | progress inversion_wf_constr
+                               | break_innermost_match_hyps_step
+                               | match goal with
+                                 | [ HG : forall t x y, In _ ?G -> fst x = y, H : In _ ?G |- _ ]
+                                   => pose proof (HG _ _ _ H); progress subst
+                                 end ] ].
+    Focus 3.
+    { simpl in *.
+    Focus 3.
+    try reflexivity;
+        simpl in *.
+      inversion_expr.
+        .
+      inversion_wf.
+    move s at top; reverse.
+                ->
+
+*)
+
+
+
+Check @symbolize_exprf.
+
   Local Arguments lookupb : simpl never.
   Local Arguments extendb : simpl never.
   Lemma interpf_csef G t e1 e2
         (HG : forall t x y, In (existT _ t (x, y)) G -> fst x = y)
         (m : @SymbolicExprContext (interp_flat_type_gen _))
+        (HGm : forall t e s v,
+            @symbolize_exprf interp_base_type t e = Some s
+            -> lookupb m s = Some v
+            -> forall k,
+                List.In k (flatten_binding_list (@symbolicify_smart_var interp_base_type t v s) v)
+                -> List.In k G)
+        (Hm : forall t e1 e2 s v,
+            symbolize_exprf e1 = Some s
+            -> lookupb m s = Some v
+            -> wff G (t:=t) e1 e2
+            -> v = interpf interp_op e2)
         (Hwf : wff G e1 e2)
     : interpf interp_op (@csef interp_base_type t e1 m) = interpf interp_op e2.
   Proof.
       revert dependent m;
         induction Hwf; simpl; cbv [LetIn.Let_In symbolize_var]; intros; eauto;
           rewrite_hyp ?* by eauto; try reflexivity; eauto.
-      { break_match.
-        { break_match_hyps; try congruence; inversion_prod; inversion_option; subst.
-          erewrite_hyp *; [ reflexivity | ].
-          setoid_rewrite in_app_iff; intros; destruct_head or; eauto; [].
-          specialize_by eauto.
-          admit. }
-        { simpl; unfold LetIn.Let_In.
-          rewrite_hyp !* by eauto.
-          erewrite_hyp *; [ reflexivity | ].
-          setoid_rewrite in_app_iff; intros; destruct_head or; eauto; [].
-          eauto using interpf_flatten_binding_list. } }
+      { break_match; break_match_hyps; try congruence; inversion_prod; inversion_option; subst;
+          simpl; unfold LetIn.Let_In;
+            [ match goal with
+              | [ Hm : forall t e1 e2 s v, symbolize_exprf _ = _ -> _, H' : symbolize_exprf _ = _ |- _ ]
+                => erewrite (Hm _ _ _ _ _ H') by eassumption
+              end
+            | rewrite_hyp !* by eauto
+            | rewrite_hyp !* by eauto ];
+            match goal with
+            | [ H : context[interpf interp_op (csef _ _)] |- _ ] => erewrite H; [ reflexivity | | eauto | eauto ]
+            end;
+            intros *;
+            try solve [ repeat first [ rewrite !(fun var => @lookupb_extendb_full flat_type _ symbolic_expr _ var _ SymbolicExprContextOk)
+                         | setoid_rewrite in_app_iff
+                         | progress break_innermost_match
+                         | progress subst
+                         | progress simpl in *
+                         | progress inversion_prod
+                         | progress inversion_option
+                         | progress destruct_head or
+                         | solve [ eauto using interpf_flatten_binding_list ]
+                         | progress intros ] ].
+        admit.
+        admit.
+        admit. }
   Admitted.
 
   Lemma interpf_prepend_prefix t e prefix
@@ -118,7 +192,7 @@ Section symbolic.
     destruct Hwf; simpl; intros.
     etransitivity; [ | eapply interpf_prepend_prefix ].
     eapply interpf_csef; eauto;
-      [
+      [ ..
       | eapply wff_prepend_prefix; [ .. | solve [ eauto ] ] ].
     { intros; eapply interpf_flatten_binding_list; eassumption. }
     { admit. }
