@@ -51,6 +51,7 @@ Section symbolic.
   Local Notation CSE := (@CSE base_type_code op_code base_type_code_beq op_code_beq base_type_code_bl op symbolize_op).
   Local Notation SymbolicExprContext := (@SymbolicExprContext base_type_code op_code base_type_code_beq op_code_beq base_type_code_bl).
   Local Notation SymbolicExprContextOk := (@SymbolicExprContextOk base_type_code op_code base_type_code_beq op_code_beq base_type_code_bl base_type_code_lb op_code_bl op_code_lb).
+  Local Notation prepend_prefix := (@prepend_prefix base_type_code op_code op).
 
   Local Instance base_type_code_dec : DecidableRel (@eq base_type_code)
     := dec_rel_of_bool_dec_rel base_type_code_beq base_type_code_bl base_type_code_lb.
@@ -122,7 +123,32 @@ Section symbolic.
                        | solve [ intuition (eauto || congruence) ] ]. }
     Qed.
 
+    Lemma wff_prepend_prefix prefix1 prefix2 G t e1 e2
+          (Hlen : length prefix1 = length prefix2)
+          (Hprefix : forall n t1 t2 e1 e2,
+              nth_error prefix1 n = Some (existT _ t1 e1)
+              -> nth_error prefix2 n = Some (existT _ t2 e2)
+              -> exists pf : t1 = t2, wff nil (eq_rect _ exprf e1 _ pf) e2)
+          (Hwf : wff G e1 e2)
+      : wff G (@prepend_prefix var1 t e1 prefix1) (@prepend_prefix var2 t e2 prefix2).
+    Proof.
+      revert dependent G; revert dependent prefix2; induction prefix1, prefix2; simpl; intros; try congruence.
+      { pose proof (Hprefix 0) as H0; specialize (fun n => Hprefix (S n)).
+        destruct_head sigT; simpl in *.
+        specialize (H0 _ _ _ _ eq_refl eq_refl); destruct_head ex; subst; simpl in *.
+        constructor.
+        { eapply wff_in_impl_Proper; [ eassumption | simpl; tauto ]. }
+        { intros.
+          apply IHprefix1; try congruence; auto.
+          eapply wff_in_impl_Proper; [ eassumption | simpl; intros; rewrite in_app_iff; auto ]. } }
+    Qed.
+
     Lemma wf_cse prefix1 prefix2 t e1 e2 (Hwf : wf e1 e2)
+          (Hlen : length prefix1 = length prefix2)
+          (Hprefix : forall n t1 t2 e1 e2,
+              nth_error prefix1 n = Some (existT _ t1 e1)
+              -> nth_error prefix2 n = Some (existT _ t2 e2)
+              -> exists pf : t1 = t2, wff nil (eq_rect _ exprf e1 _ pf) e2)
       : wf (@cse var1 prefix1 t e1 empty) (@cse var2 prefix2 t e2 empty).
     Proof.
       destruct Hwf; simpl; constructor; intros.
@@ -138,20 +164,21 @@ Section symbolic.
         break_innermost_match; subst; simpl; try setoid_rewrite lookupb_empty; eauto using SymbolicExprContextOk; try congruence. }
       { intros *; intro H'; exact (flatten_binding_list_SmartVarfMap2_pair_same_in_eq2 H'). }
       { intros *; intro H'; destruct (flatten_binding_list_SmartVarfMap2_pair_In_split H'); eauto. }
-      { admit. }
-    Admitted.
+      { apply wff_prepend_prefix; auto. }
+    Qed.
   End with_var.
 
   Lemma Wf_CSE t (e : Expr t)
         (prefix : forall var, list (sigT (fun t : flat_type => @exprf var t)))
-        (*Hprefix : forall var1 var2 t e1 e2,
-            List.In (existT _ t e1) (prefix var1)
-            -> List.In (existT _ t e2) (prefix var2)
-            -> wff nil e1 e2*)
+        (Hlen : forall var1 var2, length (prefix var1) = length (prefix var2))
+        (Hprefix : forall var1 var2 n t1 t2 e1 e2,
+            nth_error (prefix var1) n = Some (existT _ t1 e1)
+            -> nth_error (prefix var2) n = Some (existT _ t2 e2)
+            -> exists pf : t1 = t2, wff nil (eq_rect _ exprf e1 _ pf) e2)
         (Hwf : Wf e)
     : Wf (@CSE t e prefix).
   Proof.
-    intros var1 var2; apply wf_cse; auto.
+    intros var1 var2; apply wf_cse; eauto.
   Qed.
 End symbolic.
 
