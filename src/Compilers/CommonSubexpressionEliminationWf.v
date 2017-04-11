@@ -51,7 +51,7 @@ Section symbolic.
   Local Notation CSE := (@CSE base_type_code op_code base_type_code_beq op_code_beq base_type_code_bl op symbolize_op).
   Local Notation SymbolicExprContext := (@SymbolicExprContext base_type_code op_code base_type_code_beq op_code_beq base_type_code_bl).
   Local Notation SymbolicExprContextOk := (@SymbolicExprContextOk base_type_code op_code base_type_code_beq op_code_beq base_type_code_bl base_type_code_lb op_code_bl op_code_lb).
-  Local Notation prepend_prefix := (@prepend_prefix base_type_code op_code op).
+  Local Notation prepend_prefix := (@prepend_prefix base_type_code op).
 
   Local Instance base_type_code_dec : DecidableRel (@eq base_type_code)
     := dec_rel_of_bool_dec_rel base_type_code_beq base_type_code_bl base_type_code_lb.
@@ -123,14 +123,14 @@ Section symbolic.
                        | solve [ intuition (eauto || congruence) ] ]. }
     Qed.
 
-    Lemma wff_prepend_prefix prefix1 prefix2 G t e1 e2
+    Lemma wff_prepend_prefix {var1' var2'} prefix1 prefix2 G t e1 e2
           (Hlen : length prefix1 = length prefix2)
           (Hprefix : forall n t1 t2 e1 e2,
               nth_error prefix1 n = Some (existT _ t1 e1)
               -> nth_error prefix2 n = Some (existT _ t2 e2)
               -> exists pf : t1 = t2, wff nil (eq_rect _ exprf e1 _ pf) e2)
           (Hwf : wff G e1 e2)
-      : wff G (@prepend_prefix var1 t e1 prefix1) (@prepend_prefix var2 t e2 prefix2).
+      : wff G (@prepend_prefix var1' t e1 prefix1) (@prepend_prefix var2' t e2 prefix2).
     Proof.
       revert dependent G; revert dependent prefix2; induction prefix1, prefix2; simpl; intros; try congruence.
       { pose proof (Hprefix 0) as H0; specialize (fun n => Hprefix (S n)).

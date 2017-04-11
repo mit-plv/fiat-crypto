@@ -88,6 +88,17 @@ Section symbolic.
          => (@push_pair_symbolic_expr A (SFst s), @push_pair_symbolic_expr B (SSnd s))
        end.
 
+  Section with_var0.
+    Context {var : base_type_code -> Type}.
+
+    Fixpoint prepend_prefix {t} (e : @exprf var t) (ls : list (sigT (fun t : flat_type => @exprf var t)))
+      : @exprf var t
+      := match ls with
+         | nil => e
+         | x :: xs => LetIn (projT2 x) (fun _ => @prepend_prefix _ e xs)
+         end.
+  End with_var0.
+
   Section with_var.
     Context {var : base_type_code -> Type}.
 
@@ -148,13 +159,6 @@ Section symbolic.
 
     Fixpoint csef {t} (v : @exprf fsvar t) (xs : mapping)
       := @csef_step (@csef) t v xs.
-
-    Fixpoint prepend_prefix {t} (e : @exprf fsvar t) (ls : list (sigT (fun t : flat_type => @exprf fsvar t)))
-      : @exprf fsvar t
-      := match ls with
-         | nil => e
-         | x :: xs => LetIn (projT2 x) (fun _ => @prepend_prefix _ e xs)
-         end.
 
     Definition cse {t} (v : @expr fsvar t) (xs : mapping) : @expr var t
       := match v in @Syntax.expr _ _ _ t return expr t with
