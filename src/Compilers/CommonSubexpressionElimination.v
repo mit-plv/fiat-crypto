@@ -146,7 +146,7 @@ Section symbolic.
                                | None => (symbolize_var xs tx, None)
                                end in
               match sv with
-              | Some v => @csef _ (eC (symbolicify_smart_var v sx)) xs
+              | Some v => @csef _ (eC (symbolicify_smart_var v sx)) (extendb xs sx v)
               | None
                 => LetIn ex' (fun x => let sx' := symbolicify_smart_var x sx in
                                        @csef _ (eC sx') (extendb xs sx x))
