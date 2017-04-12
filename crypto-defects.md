@@ -23,6 +23,7 @@ appearing in our code.
 | [jose-adobe](https://blogs.adobe.com/security/2017/03/critical-vulnerability-uncovered-in-json-encryption.html) | ECDH-ES | 5 libraries | not onCurve | 
 | [tweetnacl-m\[15\]](http://seb.dbzteam.org/blog/2014/04/28/tweetnacl_arithmetic_bug.html) | GF(2^255-19) freeze | bit-twiddly C | bounds? typo? | 
 | [tweetnacl-U32](https://web.archive.org/web/20160305001036/http://blog.skylable.com/2014/05/tweetnacl-carrybit-bug/) | irrelevant | bit-twiddly C | `sizeof(long)!=32` | 
+| [CVE-2017-3732](https://www.openssl.org/news/secadv/20170126.txt) | x^2 mod m | Montgomery form, AMD64 assembly | [carry](https://boringssl.googlesource.com/boringssl/+/d103616db14ca9587f074efaf9f09a48b8ca80cb%5E%21/), exploitable |
 
 
 Not covered in the above list: memory mismanagement (buffer overrun, use-after-free, uninitialized read, null dereference), timing attacks (branch, cache, instruction). While these issues are very important, there are good programming disciplines for avoiding them without verifying intricate details of the computation.
