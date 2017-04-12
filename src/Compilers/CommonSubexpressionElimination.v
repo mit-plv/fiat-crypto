@@ -17,8 +17,8 @@ Inductive symbolic_expr {base_type_code op_code} : Type :=
 | SVar   (v : flat_type base_type_code) (n : nat)
 | SOp    (op : op_code) (args : symbolic_expr)
 | SPair  (x y : symbolic_expr)
-| SFst (x : symbolic_expr)
-| SSnd (x : symbolic_expr)
+| SFst (A B : flat_type base_type_code) (x : symbolic_expr)
+| SSnd (A B : flat_type base_type_code) (x : symbolic_expr)
 | SInvalid.
 Scheme Equality for symbolic_expr.
 
@@ -36,8 +36,8 @@ Ltac inversion_symbolic_expr_step :=
   | [ H : SVar _ _ = SVar _ _ |- _ ] => inversion H; clear H
   | [ H : SOp _ _ = SOp _ _ |- _ ] => inversion H; clear H
   | [ H : SPair _ _ = SPair _ _ |- _ ] => inversion H; clear H
-  | [ H : SFst _ = SFst _ |- _ ] => inversion H; clear H
-  | [ H : SSnd _ = SSnd _ |- _ ] => inversion H; clear H
+  | [ H : SFst _ _ _ = SFst _ _ _ |- _ ] => inversion H; clear H
+  | [ H : SSnd _ _ _ = SSnd _ _ _ |- _ ] => inversion H; clear H
   end.
 Ltac inversion_symbolic_expr := repeat inversion_symbolic_expr_step.
 
@@ -85,7 +85,7 @@ Section symbolic.
        | Unit => tt
        | Tbase T => s
        | Prod A B
-         => (@push_pair_symbolic_expr A (SFst s), @push_pair_symbolic_expr B (SSnd s))
+         => (@push_pair_symbolic_expr A (SFst A B s), @push_pair_symbolic_expr B (SSnd A B s))
        end.
 
   Section with_var0.
