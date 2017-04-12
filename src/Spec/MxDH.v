@@ -1,5 +1,6 @@
 Require Crypto.Algebra.Hierarchy.
 Require Import Crypto.Util.Notations.
+(*Require Crypto.Curves.Montgomery.XZ.*)
 
 Module MxDH. (* from RFC7748 *)
   Section MontgomeryLadderKeyExchange.
@@ -66,6 +67,13 @@ Module MxDH. (* from RFC7748 *)
             (fun X3 Y3 Z3 T3 => ((X3, Y3), (Z3, T3)))
             (fun x f => let y := x in f y)
             X1 P1 P2.
+
+    (*Import Curves.Montgomery.XZ.
+    Goal forall X1 P1 P2, Logic.eq (ladderstep X1 P1 P2) (@M.xzladderstep F Fadd Fsub Fmul a24 X1 P1 P2).
+    Proof.
+      intros ? [? ?] [? ?].
+      reflexivity.
+    Qed.*)
 
     Context {cswap:bool->F*F->F*F->(F*F)*(F*F)}.
 
