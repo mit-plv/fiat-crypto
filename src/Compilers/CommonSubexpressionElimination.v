@@ -14,11 +14,11 @@ Local Open Scope list_scope.
 
 Inductive symbolic_expr {base_type_code op_code} : Type :=
 | STT
-| SVar   (v : flat_type base_type_code) (n : nat)
-| SOp    (op : op_code) (args : symbolic_expr)
-| SPair  (x y : symbolic_expr)
-| SFst (A B : flat_type base_type_code) (x : symbolic_expr)
-| SSnd (A B : flat_type base_type_code) (x : symbolic_expr)
+| SVar  (v : flat_type base_type_code) (n : nat)
+| SOp   (argT : flat_type base_type_code) (op : op_code) (args : symbolic_expr)
+| SPair (x y : symbolic_expr)
+| SFst  (A B : flat_type base_type_code) (x : symbolic_expr)
+| SSnd  (A B : flat_type base_type_code) (x : symbolic_expr)
 | SInvalid.
 Scheme Equality for symbolic_expr.
 
@@ -34,7 +34,7 @@ Defined.
 Ltac inversion_symbolic_expr_step :=
   match goal with
   | [ H : SVar _ _ = SVar _ _ |- _ ] => inversion H; clear H
-  | [ H : SOp _ _ = SOp _ _ |- _ ] => inversion H; clear H
+  | [ H : SOp _ _ _ = SOp _ _ _ |- _ ] => inversion H; clear H
   | [ H : SPair _ _ = SPair _ _ |- _ ] => inversion H; clear H
   | [ H : SFst _ _ _ = SFst _ _ _ |- _ ] => inversion H; clear H
   | [ H : SSnd _ _ _ = SSnd _ _ _ |- _ ] => inversion H; clear H
@@ -117,9 +117,9 @@ Section symbolic.
       := match v with
          | TT => Some STT
          | Var _ x => Some (snd x)
-         | Op _ _ op args => option_map
-                               (fun sargs => SOp (symbolize_op _ _ op) sargs)
-                               (@symbolize_exprf _ args)
+         | Op argsT _ op args => option_map
+                                   (fun sargs => SOp argsT (symbolize_op _ _ op) sargs)
+                                   (@symbolize_exprf _ args)
          | LetIn _ ex _ eC => None
          | Pair _ ex _ ey => match @symbolize_exprf _ ex, @symbolize_exprf _ ey with
                              | Some sx, Some sy => Some (SPair sx sy)
