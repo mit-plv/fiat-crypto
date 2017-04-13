@@ -108,6 +108,7 @@ src/Compilers/Named/NameUtil.v
 src/Compilers/Named/NameUtilProperties.v
 src/Compilers/Named/PositiveContext.v
 src/Compilers/Named/RegisterAssign.v
+src/Compilers/Named/RegisterAssignInterp.v
 src/Compilers/Named/SmartMap.v
 src/Compilers/Named/Syntax.v
 src/Compilers/Named/WeakListContext.v
