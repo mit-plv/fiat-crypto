@@ -31,3 +31,14 @@ Definition lift4_sig {A B C D E} (P:A->B->C->D->E->Prop)
        (fun op => forall a b c d, P a b c d (op a b c d))
        (fun a b c d => proj1_sig (op_sig a b c d))
        (fun a b c d => proj2_sig (op_sig a b c d)).
+
+Definition lift4_sig_sig {A B C D E} {E' : A -> B -> C -> D -> E -> Prop}
+           (P:forall (a:A) (b:B) (c:C) (d:D) (e:E), E' a b c d e -> Prop)
+           (op_sig : forall (a:A) (b:B) (c:C) (d:D), {e : {e : E | E' a b c d e } | P a b c d (proj1_sig e) (proj2_sig e) })
+           (opTP := fun op : A -> B -> C -> D -> E => forall a b c d, E' a b c d (op a b c d))
+      : { op : sig opTP
+    | forall (a:A) (b:B) (c:C) (d:D), P a b c d (proj1_sig op a b c d) (proj2_sig op a b c d) }
+  := exist
+       (fun op : sig opTP => forall a b c d, P a b c d (proj1_sig op a b c d) (proj2_sig op a b c d))
+       (exist opTP (fun a b c d => proj1_sig (proj1_sig (op_sig a b c d))) (fun a b c d => proj2_sig (proj1_sig (op_sig a b c d))))
+       (fun a b c d => proj2_sig (op_sig a b c d)).
