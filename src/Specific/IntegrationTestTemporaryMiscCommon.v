@@ -1,4 +1,5 @@
 (*** XXX TODO MOVE ALL THINGS IN THIS FILE TO BETTER PLACES *)
+Require Import Coq.Classes.Morphisms.
 Require Import Crypto.Util.Tuple.
 
 Definition adjust_tuple2_tuple2_sig {A P Q}
@@ -14,15 +15,30 @@ Proof.
 Defined.
 
 (** TODO MOVE ME *)
+(** The [eexists_sig_etransitivity_R R] tactic takes a goal of the form
+    [{ a | R (f a) b }], and splits it into two goals, [R ?b' b] and
+    [{ a | R (f a) ?b' }], where [?b'] is a fresh evar. *)
+Definition sig_R_trans_exist1 {B} (R : B -> B -> Prop) {HT : Transitive R} {A} (f : A -> B)
+           (b b' : B)
+           (pf : R b' b)
+           (y : { a : A | R (f a) b' })
+  : { a : A | R (f a) b }
+  := let 'exist a p := y in exist _ a (transitivity (R:=R) p pf).
+Ltac eexists_sig_etransitivity_R R :=
+  lazymatch goal with
+  | [ |- @sig ?A ?P ]
+    => let RT := type of R in
+       let B := lazymatch (eval hnf in RT) with ?B -> _ => B end in
+       let lem := constr:(@sig_R_trans_exist1 B R _ A _ _ : forall b' pf y, @sig A P) in
+       let lem := open_constr:(lem _) in
+       simple refine (lem _ _)
+  end.
+Tactic Notation "eexists_sig_etransitivity_R" open_constr(R) := eexists_sig_etransitivity_R R.
 (** The [eexists_sig_etransitivity] tactic takes a goal of the form
       [{ a | f a = b }], and splits it into two goals, [?b' = b] and
       [{ a | f a = ?b' }], where [?b'] is a fresh evar. *)
-Definition sig_eq_trans_exist1 {A B} (f : A -> B)
-           (b b' : B)
-           (pf : b' = b)
-           (y : { a : A | f a = b' })
-  : { a : A | f a = b }
-  := let 'exist a p := y in exist _ a (eq_trans p pf).
+Definition sig_eq_trans_exist1 {A B}
+  := @sig_R_trans_exist1 B (@eq B) _ A.
 Ltac eexists_sig_etransitivity :=
   lazymatch goal with
   | [ |- { a : ?A | @?f a = ?b } ]

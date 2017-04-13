@@ -40,7 +40,7 @@ Tactic Notation "display" open_constr(f) :=
                                Tuple.map Tuple.map'
                                Lift.lift2_sig Lift.lift4_sig
                                MapProjections.proj2_sig_map Associativity.sig_sig_assoc
-                               sig_eq_trans_exist1 sig_eq_trans_rewrite_fun_exist1
+                               sig_eq_trans_exist1 sig_R_trans_exist1 sig_eq_trans_rewrite_fun_exist1
                                adjust_tuple2_tuple2_sig
                                Tuple.tuple Tuple.tuple'
                                FixedWordSizes.wordT FixedWordSizes.word_case FixedWordSizes.ZToWord FixedWordSizes.word_case_dep
