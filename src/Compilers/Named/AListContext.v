@@ -66,11 +66,35 @@ Section ctx.
              end.
   Qed.
 
+  Lemma find_remove_same k xs
+    : find k (remove k xs) = None.
+  Proof.
+    induction xs as [|x xs IHxs]; [ reflexivity | simpl ].
+    break_innermost_match;
+      repeat match goal with
+             | [ H : key_beq _ _ = true |- _ ] => apply key_bl in H
+             | [ H : context[key_beq ?x ?x] |- _ ] => rewrite (key_lb x x) in H by reflexivity
+             | [ |- context[key_beq ?x ?x] ] => rewrite (key_lb x x) by reflexivity
+             | [ H : ?x = false |- context[?x] ] => rewrite H
+             | _ => congruence
+             | _ => assumption
+             | _ => progress subst
+             | _ => progress simpl
+             end.
+  Qed.
+
   Lemma find_remove_nbeq k k' xs (H : key_beq k k' = false)
     : find k (remove k' xs) = find k xs.
   Proof.
     rewrite find_remove_neq; [ reflexivity | intro; subst ].
     rewrite key_lb in H by reflexivity; congruence.
+  Qed.
+
+  Lemma find_remove_beq k k' xs (H : key_beq k k' = true)
+    : find k (remove k' xs) = None.
+  Proof.
+    apply key_bl in H; subst.
+    rewrite find_remove_same; reflexivity.
   Qed.
 
   Definition AListContext : @Context base_type_code key var
@@ -98,7 +122,9 @@ Section ctx.
                    | progress simpl in *
                    | progress intros
                    | rewrite find_remove_nbeq by eassumption
+                   | rewrite find_remove_beq by eassumption
                    | rewrite find_remove_neq by congruence
+                   | rewrite find_remove_same by congruence
                    | match goal with
                      | [ |- context[key_beq ?x ?y] ]
                        => destruct (key_beq x y) eqn:?

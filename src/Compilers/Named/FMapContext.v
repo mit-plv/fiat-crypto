@@ -43,7 +43,7 @@ Module FMapContextFun (E : DecidableType) (W : WSfun E).
                      | progress simpl in *
                      | progress intros
                      | rewrite add_eq_o by reflexivity
-                     | progress rewrite ?add_neq_o, ?remove_neq_o in * by intuition
+                     | progress rewrite ?add_neq_o, ?remove_neq_o, ?remove_eq_o in * by intuition
                      | progress rewrite empty_o in *
                      | progress unfold var_cast
                      | progress break_innermost_match_step

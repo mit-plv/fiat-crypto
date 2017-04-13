@@ -48,12 +48,14 @@ Section with_context.
       : forall (ctx : Context) n t v, lookupb (extendb ctx n (t:=t) v) n t = Some v;
       lookupb_extendb_different
       : forall (ctx : Context) n n' t t' v, n <> n' -> lookupb (extendb ctx n (t:=t) v) n' t'
-                                                                                 = lookupb ctx n' t';
+                                                       = lookupb ctx n' t';
       lookupb_extendb_wrong_type
       : forall (ctx : Context) n t t' v, t <> t' -> lookupb (extendb ctx n (t:=t) v) n t' = None;
-      lookupb_removeb
+      lookupb_removeb_different
       : forall (ctx : Context) n n' t t', n <> n' -> lookupb (removeb ctx n t) n' t'
-                                                                     = lookupb ctx n' t';
+                                                     = lookupb ctx n' t';
+      lookupb_removeb_same
+      : forall (ctx : Context) n t t', lookupb (removeb ctx n t) n t' = None;
       lookupb_empty
       : forall n t, lookupb (@empty _ _ _ Context) n t = None }.
 End with_context.
