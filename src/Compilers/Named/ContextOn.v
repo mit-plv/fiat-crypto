@@ -1,5 +1,6 @@
 (** * Transfer [Context] across an injection *)
 Require Import Crypto.Compilers.Named.Context.
+Require Import Crypto.Compilers.Named.ContextDefinitions.
 
 Section language.
   Context {base_type_code Name1 Name2 : Type}
@@ -13,4 +14,11 @@ Section language.
           extendb ctx n t v := extendb ctx (f n) v;
           removeb ctx n t := removeb ctx (f n) t;
           empty := empty |}.
+
+  Lemma ContextOnOk {Ctx} (COk : ContextOk Ctx) : ContextOk (ContextOn Ctx).
+  Proof.
+    split; intros; try apply COk; auto.
+  Qed.
 End language.
+
+Arguments ContextOnOk {_ _ _ f} f_inj {_ _} COk.
