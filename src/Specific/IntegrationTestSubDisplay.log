@@ -1,55 +1,39 @@
-fun x x0 : word64 * word64 * word64 * word64 * word64 =>
-Eta.InterpEta
-  (fun var : Syntax.base_type -> Type =>
-   λ '(x10, x11, x9, x7, x5, (x18, x19, x17, x15, x13))%core,
-   uint64_t x20 = 0xffffffffffffe + x10;
-   uint64_t x21 = x20 - x18;
-   uint64_t x22 = 0xffffffffffffe + x11;
-   uint64_t x23 = x22 - x19;
-   uint64_t x24 = 0xffffffffffffe + x9;
-   uint64_t x25 = x24 - x17;
-   uint64_t x26 = 0xffffffffffffe + x7;
-   uint64_t x27 = x26 - x15;
-   uint64_t x28 = 0xfffffffffffda + x5;
-   uint64_t x29 = x28 - x13;
-   uint64_t x30 = (uint64_t) (x29 >> 0x33);
-   uint64_t x31 = x30 + x27;
-   uint64_t x32 = (uint64_t) (x31 >> 0x33);
-   uint64_t x33 = x32 + x25;
-   uint64_t x34 = (uint64_t) (x33 >> 0x33);
-   uint64_t x35 = x34 + x23;
-   uint64_t x36 = (uint64_t) (x35 >> 0x33);
-   uint64_t x37 = x36 + x21;
-   uint64_t x38 = x29 & 0x7ffffffffffff;
-   uint64_t x39 = (uint64_t) (x37 >> 0x33);
-   uint64_t x40 = 0x13 * x39;
-   uint64_t x41 = x38 + x40;
-   uint64_t x42 = (uint64_t) (x41 >> 0x33);
-   uint64_t x43 = x31 & 0x7ffffffffffff;
-   uint64_t x44 = x42 + x43;
-   uint64_t x45 = x37 & 0x7ffffffffffff;
-   uint64_t x46 = x35 & 0x7ffffffffffff;
-   uint64_t x47 = (uint64_t) (x44 >> 0x33);
-   uint64_t x48 = x33 & 0x7ffffffffffff;
-   uint64_t x49 = x47 + x48;
-   uint64_t x50 = x44 & 0x7ffffffffffff;
-   uint64_t x51 = x41 & 0x7ffffffffffff;
-   (Return x45, Return x46, Return x49, Return x50, Return x51)) 
-  (x, x0)%core
-     : word64 * word64 * word64 * word64 * word64 ->
-       word64 * word64 * word64 * word64 * word64 ->
-       interp_flat_type
-         (fun v : Syntax.base_type =>
-          match v with
-          | Syntax.TZ => Z
-          | Syntax.TWord 0 => word (2 ^ 0)
-          | Syntax.TWord 1 => word (2 ^ 1)
-          | Syntax.TWord 2 => word (2 ^ 2)
-          | Syntax.TWord 3 => word (2 ^ 3)
-          | Syntax.TWord 4 => word (2 ^ 4)
-          | Syntax.TWord 5 => word32
-          | Syntax.TWord 6 => word64
-          | Syntax.TWord 7 => word128
-          | Syntax.TWord (S (S (S (S (S (S (S (S n6)))))))) =>
-              word (2 ^ S (S (S (S (S (S (S (S n6))))))))
-          end) (uint64_t * uint64_t * uint64_t * uint64_t * uint64_t)
+λ x x0 : word64 * word64 * word64 * word64 * word64,
+Interp-η
+(λ var : Syntax.base_type → Type,
+ λ '(x10, x11, x9, x7, x5, (x18, x19, x17, x15, x13))%core,
+ uint64_t x20 = 0xffffffffffffe + x10;
+ uint64_t x21 = x20 - x18;
+ uint64_t x22 = 0xffffffffffffe + x11;
+ uint64_t x23 = x22 - x19;
+ uint64_t x24 = 0xffffffffffffe + x9;
+ uint64_t x25 = x24 - x17;
+ uint64_t x26 = 0xffffffffffffe + x7;
+ uint64_t x27 = x26 - x15;
+ uint64_t x28 = 0xfffffffffffda + x5;
+ uint64_t x29 = x28 - x13;
+ uint64_t x30 = (uint64_t) (x29 >> 0x33);
+ uint64_t x31 = x30 + x27;
+ uint64_t x32 = (uint64_t) (x31 >> 0x33);
+ uint64_t x33 = x32 + x25;
+ uint64_t x34 = (uint64_t) (x33 >> 0x33);
+ uint64_t x35 = x34 + x23;
+ uint64_t x36 = (uint64_t) (x35 >> 0x33);
+ uint64_t x37 = x36 + x21;
+ uint64_t x38 = x29 & 0x7ffffffffffff;
+ uint64_t x39 = (uint64_t) (x37 >> 0x33);
+ uint64_t x40 = 0x13 * x39;
+ uint64_t x41 = x38 + x40;
+ uint64_t x42 = (uint64_t) (x41 >> 0x33);
+ uint64_t x43 = x31 & 0x7ffffffffffff;
+ uint64_t x44 = x42 + x43;
+ uint64_t x45 = x37 & 0x7ffffffffffff;
+ uint64_t x46 = x35 & 0x7ffffffffffff;
+ uint64_t x47 = (uint64_t) (x44 >> 0x33);
+ uint64_t x48 = x33 & 0x7ffffffffffff;
+ uint64_t x49 = x47 + x48;
+ uint64_t x50 = x44 & 0x7ffffffffffff;
+ uint64_t x51 = x41 & 0x7ffffffffffff;
+ (Return x45, Return x46, Return x49, Return x50, Return x51))
+(x, x0)%core
+     : word64 * word64 * word64 * word64 * word64 → word64 * word64 * word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t * uint64_t * uint64_t)
