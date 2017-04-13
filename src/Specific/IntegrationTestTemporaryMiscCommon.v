@@ -45,6 +45,23 @@ Ltac eexists_sig_etransitivity :=
     => let lem := open_constr:(@sig_eq_trans_exist1 A _ f b _) in
        simple refine (lem _ _)
   end.
+Definition sig_R_trans_rewrite_fun_exist1 {B} (R : B -> B -> Prop) {HT : Transitive R}
+{A} (f : A -> B) (b : B) (f' : A -> B)
+           (pf : forall a, R (f a) (f' a))
+           (y : { a : A | R (f' a) b })
+  : { a : A | R (f a) b }
+  := let 'exist a p := y in exist _ a (transitivity (R:=R) (pf a) p).
+Ltac eexists_sig_etransitivity_for_rewrite_fun_R R :=
+  lazymatch goal with
+  | [ |- @sig ?A ?P ]
+    => let RT := type of R in
+       let B := lazymatch (eval hnf in RT) with ?B -> _ => B end in
+       let lem := constr:(@sig_R_trans_rewrite_fun_exist1 B R _ A _ _ : forall f' pf y, @sig A P) in
+       let lem := open_constr:(lem _) in
+       simple refine (lem _ _); cbv beta
+  end.
+Tactic Notation "eexists_sig_etransitivity_for_rewrite_fun_R" open_constr(R)
+  := eexists_sig_etransitivity_for_rewrite_fun_R R.
 Definition sig_eq_trans_rewrite_fun_exist1 {A B} (f f' : A -> B)
            (b : B)
            (pf : forall a, f' a = f a)
