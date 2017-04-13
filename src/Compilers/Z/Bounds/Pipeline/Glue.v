@@ -14,6 +14,7 @@ Require Import Crypto.Util.BoundedWord.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Sigma.Associativity.
 Require Import Crypto.Util.Sigma.MapProjections.
+Require Import Crypto.Util.Logic.ImplAnd.
 Require Import Crypto.Util.Tactics.EvarExists.
 Require Import Crypto.Util.Tactics.GetGoal.
 Require Import Crypto.Util.Tactics.PrintContext.
@@ -54,18 +55,18 @@ Ltac change_to_reified_type f :=
   let rT := reify_type cT in
   change (interp_type Syntax.interp_base_type rT) in (type of f).
 
-(** The tactic [sig_dlet_in_rhs_to_context_curried] moves to the
-    context any [dlet x := y in ...] on the rhs of a goal of the form
-    [{ a | lhs = rhs }], curries each such moved definition, and then
-    reifies the type of each such context variable. *)
-Ltac sig_dlet_in_rhs_to_context_curried :=
+(** The tactic [goal_dlet_to_context_curried] moves to the
+    context any [dlet x := y in ...] in the goal, curries each such
+    moved definition, and then reifies the type of each such context
+    variable. *)
+Ltac goal_dlet_to_context_curried :=
   lazymatch goal with
-  | [ |- { a | _ = @Let_In ?A ?B ?x _ } ]
+  | [ |- context[@Let_In ?A ?B ?x _] ]
     => let f := fresh in
-       sig_dlet_in_rhs_to_context_step f;
+       goal_dlet_to_context_step f;
        change_with_curried f;
        change_to_reified_type f;
-       sig_dlet_in_rhs_to_context_curried
+       goal_dlet_to_context_curried
   | _ => idtac
   end.
 (** The tactic [preunfold_and_dlet_to_context] will unfold
@@ -75,7 +76,7 @@ Ltac sig_dlet_in_rhs_to_context_curried :=
 Ltac preunfold_and_dlet_to_context :=
   unfold_paired_tuple_map;
   cbv [BoundedWordToZ]; cbn [fst snd proj1_sig];
-  sig_dlet_in_rhs_to_context_curried.
+  goal_dlet_to_context_curried.
 (** The tactic [pattern_proj1_sig_in_lhs_of_sig] takes a goal of the form
 <<
 { a : A | P }
@@ -131,6 +132,18 @@ Ltac reassoc_sig_and_eexists :=
   pattern_sig_sig_assoc;
   evar_exists.
 
+(** ** [intros_under_and] *)
+(** The [intros_under_and] tactic takes a goal of the form
+<<
+(A -> B -> ... -> Y -> Z) /\ (A -> B -> ... -> Y -> Z')
+>>
+    and turns it into a goal of the form
+<<
+Z /\ Z'
+>>
+    where [A], [B], ..., [Y] have been introduced into the context. *)
+Ltac intros_under_and :=
+  repeat (apply (proj1 impl_and_iff); intro).
 
 (** ** [do_curry_rhs] *)
 (** The [do_curry_rhs] tactic takes a goal of the form
@@ -308,10 +321,12 @@ Ltac split_BoundedWordToZ :=
                     | (** we want to keep the same context variable in
                           the evar that we reverted above, and in the
                           current goal; hence the instantiate trick *)
-                    change (fst x) with (let (a, b) := x in a);
-                    change (snd x) with (let (a, b) := x in b);
+                    change (fst x) with (let (a, b) := x in a) in *;
+                    change (snd x) with (let (a, b) := x in b) in *;
                     instantiate (1:=ltac:(destruct x)); destruct x ];
               cbv beta iota
+         | [ H : _ /\ _ |- _ ]
+           => destruct H
          end;
   cbv beta iota in *; intro; (* put [f] back in the context so that [cbn] doesn't remove this let-in *)
   cbn [proj1_sig] in *.
@@ -452,6 +467,7 @@ BoundedWordToZ ?f = F (BoundedWordToZ A) (BoundedWordToZ B) ... (BoundedWordToZ 
 Ltac refine_to_reflective_glue' allowable_bit_widths Hbounded :=
   let round_up := round_up_from_allowable_bit_widths allowable_bit_widths in
   reassoc_sig_and_eexists;
+  intros_under_and;
   do_curry_rhs;
   split_BoundedWordToZ;
   zrange_to_reflective round_up Hbounded.
