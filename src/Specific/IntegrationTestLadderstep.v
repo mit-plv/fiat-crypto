@@ -13,6 +13,7 @@ Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.MoveLetIn.
 Require Import Crypto.Util.Tactics.SetEvars.
 Require Import Crypto.Util.Tactics.SubstEvars.
+Require Import Crypto.Util.Tactics.ETransitivity.
 Require Import Crypto.Curves.Montgomery.XZ.
 Import ListNotations.
 
@@ -42,6 +43,8 @@ Section BoundedField25p5.
   Let bitwidth := Eval compute in (2^lgbitwidth)%nat.
   Let feZ : Type := tuple Z sz.
   Let feW : Type := tuple (wordT lgbitwidth) sz.
+  Let feW_bounded : feW -> Prop
+    := fun w => is_bounded_by None bounds (map wordToZ w).
   Let feBW : Type := BoundedWord sz bitwidth bounds.
   Let phi : feBW -> F m :=
     fun x => B.Positional.Fdecode wt (BoundedWordToZ _ _ _ x).
@@ -63,43 +66,76 @@ Section BoundedField25p5.
   Defined.
 
   (* TODO : change this to field once field isomorphism happens *)
+  Local Notation xzladderstepP a24 x1 Q Q'
+    := (fun xz : feW * feW * (feW * feW)
+        => feW_bounded a24
+           -> feW_bounded x1
+           -> feW_bounded (fst Q) /\ feW_bounded (snd Q)
+           -> feW_bounded (fst Q') /\ feW_bounded (snd Q')
+           -> (feW_bounded (fst (fst xz)) /\ feW_bounded (snd (fst xz)))
+              /\ (feW_bounded (fst (snd xz)) /\ feW_bounded (snd (snd xz))))
+         (only parsing).
   Definition xzladderstep :
-    { xzladderstep : feBW -> feBW -> feBW * feBW -> feBW * feBW -> feBW * feBW * (feBW * feBW)
-    | forall a24 x1 Q Q', Tuple.map (n:=2) (Tuple.map (n:=2) phi) (xzladderstep a24 x1 Q Q') = FMxzladderstep (phi a24) (phi x1) (Tuple.map (n:=2) phi Q) (Tuple.map (n:=2) phi Q') }.
+    { xzladderstep : { xzladderstep : feW -> feW -> feW * feW -> feW * feW -> feW * feW * (feW * feW)
+                     | forall a24 x1 Q Q', xzladderstepP a24 x1 Q Q' (xzladderstep a24 x1 Q Q') }
+    | forall a24v x1v Qv Q'v,
+        let v := proj1_sig xzladderstep a24v x1v Qv Q'v in
+        let pf : xzladderstepP a24v x1v Qv Q'v v := proj2_sig xzladderstep a24v x1v Qv Q'v in
+        forall a24p x1p Qp Q'p,
+          let a24 := exist _ a24v a24p in
+          let x1 := exist _ x1v x1p in
+          let Q := (exist _ (fst Qv) (proj1 Qp), exist _ (snd Qv) (proj2 Qp)) in
+          let Q' := (exist _ (fst Q'v) (proj1 Q'p), exist _ (snd Q'v) (proj2 Q'p)) in
+          let pf := pf a24p x1p Qp Q'p in
+          let xzladderstep := ((exist _ (fst (fst v)) (proj1 (proj1 pf)),
+                                exist _ (snd (fst v)) (proj2 (proj1 pf))),
+                               (exist _ (fst (snd v)) (proj1 (proj2 pf)),
+                                exist _ (snd (snd v)) (proj2 (proj2 pf)))) in
+          Tuple.map (n:=2) (Tuple.map (n:=2) phi) xzladderstep = FMxzladderstep (phi a24) (phi x1) (Tuple.map (n:=2) phi Q) (Tuple.map (n:=2) phi Q') }.
   Proof.
     lazymatch goal with
-    | [ |- { f | forall a b c d, ?phi (f a b c d) = @?rhs a b c d } ]
-      => apply lift4_sig with (P:=fun a b c d f => phi f = rhs a b c d)
+    | [ |- { op | forall (a:?A) (b:?B) (c:?C) (d:?D),
+               let v := proj1_sig op a b c d in
+               let pf := proj2_sig op a b c d in
+               @?P a b c d v pf } ]
+      => refine (@lift4_sig_sig A B C D _ _ P _)
     end.
-    intros.
-    eexists_sig_etransitivity. all:cbv [phi].
-    rewrite <- !(Tuple.map_map (B.Positional.Fdecode wt) (BoundedWordToZ sz bitwidth bounds)).
-    rewrite <- (proj2_sig Mxzladderstep_sig).
-    apply f_equal.
-    cbv [proj1_sig]; cbv [Mxzladderstep_sig].
-    context_to_dlet_in_rhs (@M.xzladderstep _ _ _ _).
-    set (k := @M.xzladderstep _ _ _ _); context_to_dlet_in_rhs k; subst k.
-    cbv [M.xzladderstep].
-    lazymatch goal with
-    | [ |- context[@proj1_sig ?a ?b carry_sig] ]
-      => context_to_dlet_in_rhs (@proj1_sig a b carry_sig)
-    end.
-    lazymatch goal with
-    | [ |- context[@proj1_sig ?a ?b mul_sig] ]
-      => context_to_dlet_in_rhs (@proj1_sig a b mul_sig)
-    end.
-    lazymatch goal with
-    | [ |- context[@proj1_sig ?a ?b add_sig] ]
-      => context_to_dlet_in_rhs (@proj1_sig a b add_sig)
-    end.
-    lazymatch goal with
-    | [ |- context[@proj1_sig ?a ?b sub_sig] ]
-      => context_to_dlet_in_rhs (@proj1_sig a b sub_sig)
-    end.
-    cbv beta iota delta [proj1_sig mul_sig add_sig sub_sig carry_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz].
-    reflexivity.
-    eexists_sig_etransitivity_for_rewrite_fun.
-    { intro; cbv beta.
+    intros; cbv beta iota zeta.
+    eexists_sig_etransitivity_R (pointwise_relation _ (pointwise_relation _ (pointwise_relation _ (pointwise_relation _ eq))));
+      cbv [pointwise_relation].
+    intros. all:cbv [phi].
+    { set_evars.
+      rewrite <- !(Tuple.map_map (B.Positional.Fdecode wt) (BoundedWordToZ sz bitwidth bounds)).
+      rewrite <- (proj2_sig Mxzladderstep_sig).
+      etransitivity_rev.
+      { apply f_equal.
+        cbv [proj1_sig]; cbv [Mxzladderstep_sig].
+        context_to_dlet_in_rhs (@M.xzladderstep _ _ _ _).
+        set (k := @M.xzladderstep _ _ _ _); context_to_dlet_in_rhs k; subst k.
+        cbv [M.xzladderstep].
+        lazymatch goal with
+        | [ |- context[@proj1_sig ?a ?b carry_sig] ]
+          => context_to_dlet_in_rhs (@proj1_sig a b carry_sig)
+        end.
+        lazymatch goal with
+        | [ |- context[@proj1_sig ?a ?b mul_sig] ]
+          => context_to_dlet_in_rhs (@proj1_sig a b mul_sig)
+        end.
+        lazymatch goal with
+        | [ |- context[@proj1_sig ?a ?b add_sig] ]
+          => context_to_dlet_in_rhs (@proj1_sig a b add_sig)
+        end.
+        lazymatch goal with
+        | [ |- context[@proj1_sig ?a ?b sub_sig] ]
+          => context_to_dlet_in_rhs (@proj1_sig a b sub_sig)
+        end.
+        cbv beta iota delta [proj1_sig mul_sig add_sig sub_sig carry_sig runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz]; cbn [fst snd].
+        reflexivity. }
+      subst_evars.
+      reflexivity. }
+    eexists_sig_etransitivity_for_rewrite_fun_R (pointwise_relation _ (pointwise_relation _ (pointwise_relation _ (pointwise_relation _ eq))));
+      cbv [pointwise_relation].
+    { intros.
       subst feBW.
       set_evars.
       do 2 lazymatch goal with
@@ -109,12 +145,15 @@ Section BoundedField25p5.
       subst_evars.
       reflexivity. }
     cbv beta.
-    apply (fun f => proj2_sig_map (fun THIS_NAME_MUST_NOT_BE_UNDERSCORE_TO_WORK_AROUND_CONSTR_MATCHING_ANAOMLIES___BUT_NOTE_THAT_IF_THIS_NAME_IS_LOWERCASE_A___THEN_REIFICATION_STACK_OVERFLOWS___AND_I_HAVE_NO_IDEA_WHATS_GOING_ON p => f_equal f p)).
-    apply adjust_tuple2_tuple2_sig.
+    refine (proj2_sig_map _ _).
+    { intros ? p x y z w; apply f_equal; revert x y z w.
+      lazymatch type of p with ?e ?v => pattern v end.
+      eexact p. }
+    subst feW feW_bounded; cbv beta.
     (* jgross start here! *)
     Set Ltac Profiling.
     (*
-    Time Glue.refine_to_reflective_glue.
+    Time Glue.refine_to_reflective_glue (64::128::nil)%nat%list.
     Time ReflectiveTactics.refine_with_pipeline_correct.
     { Time ReflectiveTactics.do_reify. }
     { Time UnifyAbstractReflexivity.unify_abstract_vm_compute_rhs_reflexivity. }
