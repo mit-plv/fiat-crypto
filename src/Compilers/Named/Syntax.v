@@ -65,6 +65,10 @@ Module Export Named.
       Definition interp (ctx : Context) {t} (e : expr t)
         : interp_flat_type (domain t) -> option (interp_flat_type (codomain t))
         := fun v => @interpf (extend ctx (Abs_name e) v) _ (invert_Abs e).
+
+      Definition Interp {t} (e : expr t)
+        : interp_flat_type (domain t) -> option (interp_flat_type (codomain t))
+        := interp empty e.
     End with_val_context.
   End language.
 End Named.
@@ -79,6 +83,7 @@ Global Arguments invert_Abs {_ _ _ _} _.
 Global Arguments Abs_name {_ _ _ _} _.
 Global Arguments interpf {_ _ _ _ _ interp_op ctx t} _.
 Global Arguments interp {_ _ _ _ _ interp_op ctx t} _ _.
+Global Arguments Interp {_ _ _ _ _ interp_op t} _ _.
 
 Notation "'slet' x := A 'in' b" := (LetIn _ x A%nexpr b%nexpr) : nexpr_scope.
 Notation "'λn'  x .. y , t" := (Abs x .. (Abs y t%nexpr) .. ) : nexpr_scope.
