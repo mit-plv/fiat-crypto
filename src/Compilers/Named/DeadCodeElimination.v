@@ -27,31 +27,8 @@ Section language.
   Local Notation exprf := (@exprf base_type_code op (fun _ => Name)).
   Local Notation expr := (@expr base_type_code op (fun _ => Name)).
   Local Notation Expr := (@Expr base_type_code op).
-  (*Local Notation lexprf := (@Syntax.exprf base_type_code op (fun _ => list (option Name))).
-  Local Notation lexpr := (@Syntax.expr base_type_code op (fun _ => list (option Name))).*)
   Local Notation nexprf := (@Named.exprf base_type_code op Name).
   Local Notation nexpr := (@Named.expr base_type_code op Name).
-
-  (*Definition get_live_namesf (names : list (option Name)) {t} (e : lexprf t) : list (option Name)
-    := filter_live_namesf
-         base_type_code op
-         (option Name) None
-         (fun x y => match x, y with
-                     | Some x, _ => Some x
-                     | _, Some y => Some y
-                     | None, None => None
-                     end)
-         nil names e.
-  Definition get_live_names (names : list (option Name)) {t} (e : lexpr t) : list (option Name)
-    := filter_live_names
-         base_type_code op
-         (option Name) None
-         (fun x y => match x, y with
-                     | Some x, _ => Some x
-                     | _, Some y => Some y
-                     | None, None => None
-                     end)
-         nil names e.*)
 
   Definition CompileAndEliminateDeadCode
              {t} (e : Expr t) (ls : list Name)
