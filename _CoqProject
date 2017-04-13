@@ -256,6 +256,7 @@ src/Util/Unit.v
 src/Util/WordUtil.v
 src/Util/ZRange.v
 src/Util/ZUtil.v
+src/Util/Logic/ImplAnd.v
 src/Util/Sigma/Associativity.v
 src/Util/Sigma/Lift.v
 src/Util/Sigma/MapProjections.v
