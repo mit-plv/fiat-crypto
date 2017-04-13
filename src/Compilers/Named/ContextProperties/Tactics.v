@@ -37,7 +37,8 @@ Ltac inversion_step :=
 Ltac rewrite_lookupb_extendb_step :=
   first [ rewrite lookupb_extendb_different by congruence
         | rewrite lookupb_extendb_same
-        | rewrite lookupb_extendb_wrong_type by assumption ].
+        | rewrite lookupb_extendb_wrong_type by assumption
+        | rewrite lookupb_removeb by congruence ].
 Ltac specializer_t_step :=
   match goal with
   | _ => progress specialize_by_assumption

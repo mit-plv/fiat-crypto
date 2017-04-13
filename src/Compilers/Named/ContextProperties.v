@@ -52,6 +52,12 @@ Section with_context.
       = find_Name_and_val t n N v (lookupb ctx n t).
   Proof using ContextOk. revert ctx; induction T; t. Qed.
 
+  Lemma lookupb_remove_not_in (ctx : Context)
+        T N t n
+        (H : @find_Name n T N = None)
+    : lookupb (remove ctx N) n t = lookupb ctx n t.
+  Proof using ContextOk. revert ctx; induction T; t. Qed.
+
   Lemma find_Name_and_val_Some_None
         {var' var''}
         {t n T N}
