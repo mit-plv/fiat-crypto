@@ -78,7 +78,7 @@ Reserved Notation "'dlet' x := y 'in' f"
          (at level 200, f at level 200, format "'dlet'  x  :=  y  'in' '//' f").
 Reserved Notation "'pflet' x , pf := y 'in' f"
          (at level 200, f at level 200, format "'pflet'  x ,  pf  :=  y  'in' '//' f").
-Reserved Notation "'λ'  x .. y , t" (at level 200, x binder, y binder, right associativity).
+Reserved Notation "'λ' x .. y , t" (at level 200, x binder, y binder, right associativity, format "'λ'  x .. y , '//' t").
 Reserved Notation "'λn'  x .. y , t" (at level 200, right associativity).
 Reserved Notation "x ::> ( max_bitwidth = v )"
          (at level 70, no associativity, format "x  ::>  ( max_bitwidth  =  v )").
