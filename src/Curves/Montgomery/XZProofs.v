@@ -57,6 +57,21 @@ Module M.
         | |- _ /\ _ => split
         end.
 
+    Lemma add_0_denominators A B C D
+      :  snd (fst (xzladderstep 0 (pair A 0) (pair C 0))) = 0
+      /\ snd (snd (xzladderstep 0 (pair B 0) (pair D 0))) = 0.
+    Proof. t; fsatz. Qed.
+
+    Lemma add_0_numerator_l A B C D
+      :  snd (fst (xzladderstep 0 (pair 0 C) (pair A 0))) = 0
+      /\ snd (snd (xzladderstep 0 (pair 0 D) (pair B 0))) = 0.
+    Proof. t; fsatz. Qed.
+
+    Lemma add_0_numerator_r A B C D
+      :  snd (fst (xzladderstep 0 (pair C 0) (pair 0 A))) = 0
+      /\ snd (snd (xzladderstep 0 (pair D 0) (pair 0 B))) = 0.
+    Proof. t; fsatz. Qed.
+
     Lemma to_xz_add (x1:F) (Q Q':Mpoint)
           (difference_correct:match M.coordinates (Madd Q (Mopp Q')) with
                               | ∞ => False                  (* Q <> Q' *)
