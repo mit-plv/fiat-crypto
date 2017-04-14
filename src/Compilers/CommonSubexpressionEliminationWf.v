@@ -29,8 +29,9 @@ Section symbolic.
           (interp_base_type : base_type_code -> Type)
           (op : flat_type base_type_code -> flat_type base_type_code -> Type)
           (symbolize_op : forall s d, op s d -> op_code).
-
   Local Notation symbolic_expr := (symbolic_expr base_type_code op_code).
+  Context (normalize_symbolic_op_arguments : op_code -> symbolic_expr -> symbolic_expr).
+
   Local Notation symbolic_expr_beq := (@symbolic_expr_beq base_type_code op_code base_type_code_beq op_code_beq).
   Local Notation symbolic_expr_lb := (@internal_symbolic_expr_dec_lb base_type_code op_code base_type_code_beq op_code_beq base_type_code_lb op_code_lb).
   Local Notation symbolic_expr_bl := (@internal_symbolic_expr_dec_bl base_type_code op_code base_type_code_beq op_code_beq base_type_code_bl op_code_bl).
@@ -46,9 +47,10 @@ Section symbolic.
 
   Local Notation symbolicify_smart_var := (@symbolicify_smart_var base_type_code op_code).
   Local Notation symbolize_exprf := (@symbolize_exprf base_type_code op_code op symbolize_op).
-  Local Notation csef := (@csef base_type_code op_code base_type_code_beq op_code_beq base_type_code_bl op symbolize_op).
-  Local Notation cse := (@cse base_type_code op_code base_type_code_beq op_code_beq base_type_code_bl op symbolize_op).
-  Local Notation CSE := (@CSE base_type_code op_code base_type_code_beq op_code_beq base_type_code_bl op symbolize_op).
+  Local Notation norm_symbolize_exprf := (@norm_symbolize_exprf base_type_code op_code op symbolize_op normalize_symbolic_op_arguments).
+  Local Notation csef := (@csef base_type_code op_code base_type_code_beq op_code_beq base_type_code_bl op symbolize_op normalize_symbolic_op_arguments).
+  Local Notation cse := (@cse base_type_code op_code base_type_code_beq op_code_beq base_type_code_bl op symbolize_op normalize_symbolic_op_arguments).
+  Local Notation CSE := (@CSE base_type_code op_code base_type_code_beq op_code_beq base_type_code_bl op symbolize_op normalize_symbolic_op_arguments).
   Local Notation SymbolicExprContext := (@SymbolicExprContext base_type_code op_code base_type_code_beq op_code_beq base_type_code_bl).
   Local Notation SymbolicExprContextOk := (@SymbolicExprContextOk base_type_code op_code base_type_code_beq op_code_beq base_type_code_bl base_type_code_lb op_code_bl op_code_lb).
   Local Notation prepend_prefix := (@prepend_prefix base_type_code op).
@@ -67,6 +69,14 @@ Section symbolic.
       : @symbolize_exprf var1 t e1 = @symbolize_exprf var2 t e2.
     Proof.
       induction Hwf; simpl; erewrite_hyp ?* by eassumption; reflexivity.
+    Qed.
+
+    Lemma wff_norm_symbolize_exprf G t e1 e2
+          (HG : forall t x y, List.In (existT _ t (x, y)) G -> snd x = snd y)
+          (Hwf : wff G e1 e2)
+      : @norm_symbolize_exprf var1 t e1 = @norm_symbolize_exprf var2 t e2.
+    Proof.
+      unfold norm_symbolize_exprf; erewrite wff_symbolize_exprf by eassumption; reflexivity.
     Qed.
 
     Local Arguments lookupb : simpl never.
@@ -92,7 +102,7 @@ Section symbolic.
     Proof.
       revert dependent m1; revert m2; revert dependent G'.
       induction Hwf; simpl; intros; try constructor; auto.
-      { erewrite wff_symbolize_exprf by eassumption.
+      { erewrite wff_norm_symbolize_exprf by eassumption.
         break_innermost_match;
           try match goal with
               | [ H : lookupb ?m1 ?x = Some ?k, H' : lookupb ?m2 ?x = None |- _ ]

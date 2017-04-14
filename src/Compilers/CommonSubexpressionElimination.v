@@ -14,7 +14,7 @@ Local Open Scope list_scope.
 
 Inductive symbolic_expr {base_type_code op_code} : Type :=
 | STT
-| SVar  (v : flat_type base_type_code) (n : nat)
+| SVar  (n : nat)
 | SOp   (argT : flat_type base_type_code) (op : op_code) (args : symbolic_expr)
 | SPair (x y : symbolic_expr)
 | SFst  (A B : flat_type base_type_code) (x : symbolic_expr)
@@ -33,7 +33,7 @@ Defined.
 
 Ltac inversion_symbolic_expr_step :=
   match goal with
-  | [ H : SVar _ _ = SVar _ _ |- _ ] => inversion H; clear H
+  | [ H : SVar _ = SVar _ |- _ ] => inversion H; clear H
   | [ H : SOp _ _ _ = SOp _ _ _ |- _ ] => inversion H; clear H
   | [ H : SPair _ _ = SPair _ _ |- _ ] => inversion H; clear H
   | [ H : SFst _ _ _ = SFst _ _ _ |- _ ] => inversion H; clear H
@@ -54,9 +54,11 @@ Section symbolic.
           (op_code_lb : forall x y, x = y -> op_code_beq x y = true)
           (interp_base_type : base_type_code -> Type)
           (op : flat_type base_type_code -> flat_type base_type_code -> Type)
-          (symbolize_op : forall s d, op s d -> op_code).
-
+          (symbolize_op : forall s d, op s d -> op_code)
+          (op_code_leb : forall (arg1T arg2T : flat_type base_type_code), op_code -> op_code -> bool).
   Local Notation symbolic_expr := (symbolic_expr base_type_code op_code).
+  Context (normalize_symbolic_op_arguments : op_code -> symbolic_expr -> symbolic_expr).
+
   Local Notation symbolic_expr_beq := (@symbolic_expr_beq base_type_code op_code base_type_code_beq op_code_beq).
   Local Notation symbolic_expr_lb := (@internal_symbolic_expr_dec_lb base_type_code op_code base_type_code_beq op_code_beq base_type_code_lb op_code_lb).
   Local Notation symbolic_expr_bl := (@internal_symbolic_expr_dec_bl base_type_code op_code base_type_code_beq op_code_beq base_type_code_bl op_code_bl).
@@ -99,6 +101,61 @@ Section symbolic.
          end.
   End with_var0.
 
+  Local Notation op_code_eqb argT1 argT2 op1 op2
+    := (flat_type_beq _ base_type_code_beq argT1 argT2 && op_code_beq op1 op2).
+  Local Notation ltb_of_leb leb eqb
+    := (leb && negb eqb).
+  Local Notation op_code_ltb argT1 argT2 op1 op2
+    := (ltb_of_leb (op_code_leb argT1 argT2 op1 op2)
+                   (op_code_eqb argT1 argT2 op1 op2)).
+  Local Notation leb_pair leb1 eqb1 leb2
+    := (ltb_of_leb leb1 eqb1 || (eqb1 && leb2)).
+
+  Fixpoint symbolic_expr_leb (x y : symbolic_expr) : bool
+    := match x, y with
+       | STT, _ => true
+       | _, STT => false
+       | SVar n1, SVar n2 => Nat.leb n1 n2
+       | SVar _, _ => true
+       | _, SVar _ => false
+       | SOp argT1 op1 args1, SOp argT2 op2 args2
+         => leb_pair (op_code_leb argT1 argT2 op1 op2)
+                     (op_code_eqb argT1 argT2 op1 op2)
+                     (symbolic_expr_leb args1 args2)
+       | SOp _ _ _, _ => true
+       | _, SOp _ _ _ => false
+       | SPair x1 y1, SPair x2 y2
+         => leb_pair (symbolic_expr_leb x1 x2)
+                     (symbolic_expr_beq x1 x2)
+                     (symbolic_expr_leb y1 y2)
+       | SPair _ _, _ => true
+       | _, SPair _ _ => false
+       | SFst _ _ x, SFst _ _ y
+         => symbolic_expr_leb x y
+       | SFst _ _ _, _ => true
+       | _, SFst _ _ _ => false
+       | SSnd _ _ x, SSnd _ _ y
+         => symbolic_expr_leb x y
+       | SSnd _ _ _, _ => true
+       | _, SSnd _ _ _ => false
+       | SInvalid, _ => true
+       end.
+  Definition symbolic_expr_ltb x y
+    := ltb_of_leb (symbolic_expr_leb x y) (symbolic_expr_beq x y).
+
+  Fixpoint symbolic_expr_normalize (x : symbolic_expr) : symbolic_expr
+    := match x with
+       | STT => STT
+       | SVar n => SVar n
+       | SOp argT op args
+         => SOp argT op (normalize_symbolic_op_arguments op args)
+       | SPair x y
+         => SPair (symbolic_expr_normalize x) (symbolic_expr_normalize y)
+       | SFst A B x => SFst A B (symbolic_expr_normalize x)
+       | SSnd A B x => SFst A B (symbolic_expr_normalize x)
+       | SInvalid => SInvalid
+       end.
+
   Section with_var.
     Context {var : base_type_code -> Type}.
 
@@ -109,7 +166,7 @@ Section symbolic.
     Context (prefix : list (sigT (fun t : flat_type => @exprf fsvar t))).
 
     Definition symbolize_var (xs : mapping) (t : flat_type) : symbolic_expr :=
-      SVar t (length xs).
+      SVar (length xs).
 
     Fixpoint symbolize_exprf
              {t} (v : @exprf fsvar t) {struct v}
@@ -127,6 +184,9 @@ Section symbolic.
                              end
          end.
 
+    Definition norm_symbolize_exprf {t} v : option symbolic_expr
+      := option_map symbolic_expr_normalize (@symbolize_exprf t v).
+
     Definition symbolicify_smart_var {t : flat_type}
                (vs : interp_flat_type_gen var t)
                (ss : symbolic_expr)
@@ -139,7 +199,7 @@ Section symbolic.
       : @exprf var t
       := match v in @Syntax.exprf _ _ _ t return exprf t with
          | LetIn tx ex _ eC
-           => let sx := symbolize_exprf ex in
+           => let sx := norm_symbolize_exprf ex in
               let ex' := @csef _ ex xs in
               let '(sx, sv) := match sx with
                                | Some sx => (sx, lookupb xs sx)
@@ -174,6 +234,6 @@ Section symbolic.
     := fun var => cse (prefix _) (e _) empty.
 End symbolic.
 
-Global Arguments csef {_} op_code base_type_code_beq op_code_beq base_type_code_bl {_} symbolize_op {var t} _ _.
-Global Arguments cse {_} op_code base_type_code_beq op_code_beq base_type_code_bl {_} symbolize_op {var} prefix {t} _ _.
-Global Arguments CSE {_} op_code base_type_code_beq op_code_beq base_type_code_bl {_} symbolize_op {t} e prefix var.
+Global Arguments csef {_} op_code base_type_code_beq op_code_beq base_type_code_bl {_} symbolize_op normalize_symbolic_op_arguments {var t} _ _.
+Global Arguments cse {_} op_code base_type_code_beq op_code_beq base_type_code_bl {_} symbolize_op normalize_symbolic_op_arguments {var} prefix {t} _ _.
+Global Arguments CSE {_} op_code base_type_code_beq op_code_beq base_type_code_bl {_} symbolize_op normalize_symbolic_op_arguments {t} e prefix var.

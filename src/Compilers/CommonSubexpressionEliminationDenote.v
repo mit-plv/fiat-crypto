@@ -57,13 +57,11 @@ Section symbolic.
       : option (interp_flat_type interp_base_type t)
       := match se, t with
          | STT, Unit => Some tt
-         | SVar t n, t'
-           => if flat_type_beq t t'
-              then match List.nth_error m (length m - n) with
-                   | Some e => @var_cast _ t' (projT2 (snd e))
-                   | None => None
-                   end
-              else None
+         | SVar n, t
+           => match List.nth_error m (length m - n) with
+              | Some e => @var_cast _ t (projT2 (snd e))
+              | None => None
+              end
          | SOp argsT op args, _
            => match denote_op argsT t op, @denote_symbolic_expr argsT args with
               | Some opc, Some eargs => Some (interp_op _ _ opc eargs)
