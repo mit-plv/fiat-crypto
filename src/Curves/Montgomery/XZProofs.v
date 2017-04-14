@@ -1,8 +1,10 @@
 Require Import Crypto.Algebra.Field.
 Require Import Crypto.Util.Sum Crypto.Util.Prod Crypto.Util.LetIn.
 Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.Tactics.SetoidSubst.
 Require Import Crypto.Spec.MontgomeryCurve Crypto.Curves.Montgomery.Affine.
 Require Import Crypto.Curves.Montgomery.XZ BinPos.
+Require Import Coq.Classes.Morphisms.
 
 Module M.
   Section MontgomeryCurve.
@@ -22,10 +24,20 @@ Module M.
 
     Context {a b: F} {b_nonzero:b <> 0}.
     Context {a24:F} {a24_correct:(1+1+1+1)*a24 = a-(1+1)}.
-    Local Notation add := (M.add(a:=a)(b_nonzero:=b_nonzero)(char_ge_3:=char_ge_3)).
-    Local Notation opp := (M.opp(a:=a)(b_nonzero:=b_nonzero)).
-    Local Notation point := (@M.point F Feq Fadd Fmul a b).
+    Local Notation Madd := (M.add(a:=a)(b_nonzero:=b_nonzero)(char_ge_3:=char_ge_3)).
+    Local Notation Mopp := (M.opp(a:=a)(b_nonzero:=b_nonzero)).
+    Local Notation Mpoint := (@M.point F Feq Fadd Fmul a b).
     Local Notation xzladderstep := (M.xzladderstep(a24:=a24)(Fadd:=Fadd)(Fsub:=Fsub)(Fmul:=Fmul)).
+    Local Notation to_xz := (M.to_xz(Fzero:=Fzero)(Fone:=Fone)(Feq:=Feq)(Fadd:=Fadd)(Fmul:=Fmul)(a:=a)(b:=b)).
+
+    Definition eq (P Q:F*F) := fst P * snd Q = fst Q * snd P.
+
+    Context {nonsquare_a24:forall r, r*r <> a*a - (1+1+1+1)}.
+    Let y_nonzero (Q:Mpoint) : match M.coordinates Q with ∞ => True | (x,y) => x <> 0 -> y <> 0 end.
+    Proof.
+      destruct Q as [Q pfQ]; destruct Q as [[x y]|[]]; cbv -[not]; intros; trivial.
+      specialize (nonsquare_a24 (x+x+a)); fsatz.
+    Qed.
 
     Ltac t :=
       repeat
@@ -41,18 +53,17 @@ Module M.
         | _ => progress Prod.inversion_prod
         | _ => progress Tactics.BreakMatch.break_match_hyps
         | _ => progress Tactics.BreakMatch.break_match
-        | _ => progress cbv [fst snd M.coordinates M.add M.zero M.eq M.opp proj1_sig M.xzladderstep M.to_xz Let_In] in *
+        | _ => progress cbv [eq fst snd M.coordinates M.add M.zero M.eq M.opp proj1_sig xzladderstep M.to_xz Let_In Proper respectful] in *
         | |- _ /\ _ => split
         end.
 
-    Lemma xzladderstep_correct
-          (Q Q':point) x z x' z' x1 x2 z2 x3 z3
-          (Hl:Logic.eq (pair(pair x2 z2)(pair x3 z3)) (xzladderstep x1 (pair x z) (pair x' z')))
-          (H:match M.coordinates Q with∞=>z=0/\x<>0|(xQ,y)=>xQ=x/z/\z<>0  (* TODO *) /\ y <> 0 (* TODO: prove this from non-squareness of a^2 - 4 *) end)
-          (H':match M.coordinates Q' with∞=>z'=0/\x'<>0|(xQ',_)=>xQ'=x'/z'/\z'<>0 end)
-          (H1:match M.coordinates (add Q (opp Q')) with∞=>False|(x,y)=>x=x1/\x<>0 end):
-      match M.coordinates (add Q Q) with∞=>z2=0/\x2<>0|(xQQ,_)=>xQQ=x2/z2/\z2<>0 end /\
-      match M.coordinates (add Q Q') with∞=>z3=0/\x3<>0|(xQQ',_)=>xQQ'=x3/z3/\z3<>0 end.
-    Proof using a24_correct char_ge_5. t; abstract fsatz. Qed.
+    Lemma to_xz_add (x1:F) (Q Q':Mpoint)
+          (difference_correct:match M.coordinates (Madd Q (Mopp Q')) with
+                              | ∞ => False                  (* Q <> Q' *)
+                              | (x,y) => x = x1 /\ x1 <> 0  (* Q-Q' <> (0, 0) *)
+                              end)
+      :  eq (to_xz (Madd Q Q )) (fst (xzladderstep x1 (to_xz Q) (to_xz Q )))
+      /\ eq (to_xz (Madd Q Q')) (snd (xzladderstep x1 (to_xz Q) (to_xz Q'))).
+    Proof. specialize (y_nonzero Q); t; fsatz. Qed.
   End MontgomeryCurve.
 End M.
