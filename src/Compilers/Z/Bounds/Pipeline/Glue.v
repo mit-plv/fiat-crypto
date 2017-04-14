@@ -73,7 +73,7 @@ Ltac goal_dlet_to_context_curried :=
     [BoundedWordToZ] and [Tuple.map]s applied to [pair]s, and then
     look for a [dlet x := y in ...] in the RHS of a goal of shape [{a
     | LHS = RHS }] and replace it with a context variable. *)
-Ltac preunfold_and_dlet_to_context :=
+Ltac preunfold_and_dlet_to_context _ :=
   unfold_paired_tuple_map;
   cbv [BoundedWordToZ]; cbn [fst snd proj1_sig];
   goal_dlet_to_context_curried.
@@ -115,9 +115,7 @@ Ltac pattern_sig_sig_assoc :=
   goal_dlet_to_context_step f;
   apply sig_sig_assoc;
   subst f; cbv beta.
-(** The tactic [reassoc_sig_and_eexists] will unfold [BoundedWordToZ]
-    and move any [dlet x := ... in ...] to context variables, and then
-    take a goal of the form
+(** The tactic [reassoc_sig_and_eexists] will take a goal either of the form
 <<
 { a : { a' : A | P a' } | Q (proj1_sig a) }
 >>
@@ -126,11 +124,22 @@ Ltac pattern_sig_sig_assoc :=
 <<
 P ?a /\ Q ?a
 >>
+
+    The tactic [maybe_reassoc_sig_and_eexists] also supports goals that
+    don't need to be reassociated.
  *)
 Ltac reassoc_sig_and_eexists :=
-  preunfold_and_dlet_to_context;
   pattern_sig_sig_assoc;
   evar_exists.
+Ltac maybe_reassoc_sig_and_eexists _ :=
+  lazymatch goal with
+  | [ |- { a : ?T | _ } ]
+    => lazymatch (eval hnf in T) with
+       | { a' | _ }
+         => reassoc_sig_and_eexists
+       | _ => evar_exists
+       end
+  end.
 
 (** ** [intros_under_and] *)
 (** The [intros_under_and] tactic takes a goal of the form
@@ -142,8 +151,8 @@ Ltac reassoc_sig_and_eexists :=
 Z /\ Z'
 >>
     where [A], [B], ..., [Y] have been introduced into the context. *)
-Ltac intros_under_and :=
-  repeat (apply (proj1 impl_and_iff); intro).
+Ltac intros_under_and _ :=
+  repeat (apply (proj1 impl_and_iff); intro); intros.
 
 (** ** [do_curry_rhs] *)
 (** The [do_curry_rhs] tactic takes a goal of the form
@@ -155,7 +164,7 @@ _ /\ _ = F A B ... Z
 _ /\ _ = F' (A, B, ..., Z)
 >>
  *)
-Ltac do_curry_rhs :=
+Ltac do_curry_rhs _ :=
   lazymatch goal with
   | [ |- _ /\ _ = ?f_Z ]
     => let f_Z := head f_Z in
@@ -181,7 +190,7 @@ Ltac check_fW_type descr top_fW fW :=
   | fst ?fW => check_fW_type descr top_fW fW
   | snd ?fW => check_fW_type descr top_fW fW
   | _ => let G := get_goal in
-         let shape := uconstr:(map wordToZ ?fW) in
+         let shape := uconstr:(Tuple.map wordToZ ?fW) in
          let efW := uconstr:(?fW) in
          first [ is_var fW
                | fail 1 "In the goal" G
@@ -215,45 +224,72 @@ Ltac check_fW_type descr top_fW fW :=
   end.
 Tactic Notation "check_fW_type" string(descr) constr(fW)
   := check_fW_type descr fW fW.
+Ltac check_is_map_wordToZ lvl descr top_subterm subterm :=
+  lazymatch subterm with
+  | wordToZ => idtac
+  | Tuple.map ?f => check_is_map_wordToZ lvl descr top_subterm f
+  | _ => let map_shape := uconstr:(Tuple.map) in
+         let wordToZ_shape := uconstr:(wordToZ) in
+         fail lvl descr
+              "which are a repeated application of" map_shape "to" wordToZ_shape
+              "but in the subterm" top_subterm "the function" subterm
+              "was found, which is not of this form"
+  end.
+Tactic Notation "check_is_map_wordToZ" int_or_var(lvl) string(descr) constr(term)
+  := check_is_map_wordToZ lvl descr term term.
+
 Ltac check_is_bounded_by_shape subterm_type :=
   lazymatch subterm_type with
-  | ZRange.is_bounded_by None ?bounds (map wordToZ ?fW)
+  | ZRange.is_bounded_by None ?bounds (Tuple.map wordToZ ?fW)
     => check_fW_type "The ℤ argument to is_bounded_by must have the shape" fW
   | ?A /\ ?B
     => check_is_bounded_by_shape A;
        check_is_bounded_by_shape B
   | _ => let G := get_goal in
-         let shape := uconstr:(ZRange.is_bounded_by None ?bounds (map wordToZ ?fW)) in
+         let shape := uconstr:(ZRange.is_bounded_by None ?bounds (Tuple.map wordToZ ?fW)) in
          fail "In the goal" G
               "The first conjunct of the goal is expected to be a conjunction of things of the shape" shape
               "but a subterm not matching this shape was found:" subterm_type
   end.
 Ltac check_LHS_Z_shape subterm :=
   lazymatch subterm with
-  | map wordToZ ?fW
-    => check_fW_type "The left-hand side of the second conjunct of the goal must be a tuple of terms with shape" fW
+  | Tuple.map ?f ?fW
+    => check_is_map_wordToZ 0 "The left-hand side of the second conjunct of the goal must be a tuple of terms" f;
+       check_fW_type "The left-hand side of the second conjunct of the goal must be a tuple of terms with shape" fW
   | (?A, ?B)
     => check_LHS_Z_shape A;
        check_LHS_Z_shape B
   | _ => let G := get_goal in
-         let shape := uconstr:(map wordToZ ?fW) in
+         let shape := uconstr:(Tuple.map wordToZ ?fW) in
+         let ef := uconstr:(?f) in
+         let shape' := uconstr:(Tuple.map ?f ?fW) in
+         let map_shape := uconstr:(Tuple.map) in
+         let wordToZ_shape := uconstr:(wordToZ) in
          fail "In the goal" G
               "The second conjunct of the goal is expected to be a equality whose"
               "left-hand side is a tuple of terms of the shape" shape
+              "or" shape' "where" ef "is a repeated application of" map_shape "to" wordToZ_shape
               "but a subterm not matching this shape was found:" subterm
   end.
 Ltac check_RHS_Z_shape_rec subterm :=
   lazymatch subterm with
-  | map wordToZ ?fW
-    => idtac
+  | Tuple.map ?f ?fW
+    => check_is_map_wordToZ
+         0
+         "The second conjunct of the goal is expected to be a equality whose right-hand side is the application of a function to a tuple of terms" f
   | (?A, ?B)
     => check_RHS_Z_shape_rec A;
        check_RHS_Z_shape_rec B
   | _ => let G := get_goal in
-         let shape := uconstr:(map wordToZ ?fW) in
+         let shape := uconstr:(Tuple.map wordToZ ?fW) in
+         let ef := uconstr:(?f) in
+         let shape' := uconstr:(Tuple.map ?f ?fW) in
+         let map_shape := uconstr:(Tuple.map) in
+         let wordToZ_shape := uconstr:(wordToZ) in
          fail "In the goal" G
               "The second conjunct of the goal is expected to be a equality whose"
               "right-hand side is the application of a function to a tuple of terms of the shape" shape
+              "or" shape' "where" ef "is a repeated application of" map_shape "to" wordToZ_shape
               "but a subterm not matching this shape was found:" subterm
   end.
 Ltac check_RHS_Z_shape RHS :=
@@ -268,10 +304,15 @@ Ltac check_RHS_Z_shape RHS :=
                     "which is an application of something which is not a context variable:" f ];
        check_RHS_Z_shape_rec args
   | _ => let G := get_goal in
-         let shape := uconstr:(map wordToZ ?fW) in
+         let shape := uconstr:(Tuple.map wordToZ ?fW) in
+         let ef := uconstr:(?f) in
+         let shape' := uconstr:(Tuple.map ?f ?fW) in
+         let map_shape := uconstr:(Tuple.map) in
+         let wordToZ_shape := uconstr:(wordToZ) in
          fail "In the goal" G
               "The second conjunct of the goal is expected to be a equality whose"
               "right-hand side is the application of a function to a tuple of terms of the shape" shape
+              "or" shape' "where" ef "is a repeated application of" map_shape "to" wordToZ_shape
               "but the right-hand side is not a function application:" RHS
   end.
 Ltac check_precondition _ :=
@@ -284,7 +325,7 @@ Ltac check_precondition _ :=
     => let shape := uconstr:(?is_bounded /\ ?LHS = ?RHS) in
        fail "The goal has the wrong shape for reflective gluing; expected" shape "but found" G
   end.
-Ltac split_BoundedWordToZ :=
+Ltac split_BoundedWordToZ _ :=
   (** first revert the context definition which is an evar named [f]
       in the docs above, so that it becomes evar 1 (for
       [instantiate]), and so that [make_evar_for_first_projection]
@@ -300,31 +341,36 @@ Ltac split_BoundedWordToZ :=
             revert f
        end
   end;
+  let destruct_sig x :=
+      is_var x;
+      first [ clearbody x; fail 1
+            | (** we want to keep the same context variable in the
+                  evar that we reverted above, and in the current
+                  goal; hence the instantiate trick *)
+            instantiate (1:=ltac:(destruct x)); destruct x ] in
+  let destruct_pair x :=
+      is_var x;
+      first [ clearbody x; fail 1
+            | (** we want to keep the same context variable in the
+                  evar that we reverted above, and in the current
+                  goal; hence the instantiate trick *)
+            change (fst x) with (let (a, b) := x in a) in *;
+            change (snd x) with (let (a, b) := x in b) in *;
+            instantiate (1:=ltac:(destruct x)); destruct x ];
+      (cbv beta iota) in
+  let destruct_sig_or_pair v :=
+      progress repeat match v with
+                      | context[proj1_sig ?x] => destruct_sig x
+                      | context[fst ?x] => destruct_pair x
+                      | context[snd ?x] => destruct_pair x
+                      end in
   repeat match goal with
-         | [ |- context[map wordToZ (proj1_sig ?x)] ]
-           => is_var x;
-              first [ clearbody x; fail 1
-                    | (** we want to keep the same context variable in
-                          the evar that we reverted above, and in the
-                          current goal; hence the instantiate trick *)
-                    instantiate (1:=ltac:(destruct x)); destruct x ]
-         | [ H := context[map wordToZ (proj1_sig ?x)] |- _ ]
-           => is_var x;
-              first [ clearbody x; fail 1
-                    | (** we want to keep the same context variable in
-                          the evar that we reverted above, and in the
-                          current goal; hence the instantiate trick *)
-                    instantiate (1:=ltac:(destruct x)); destruct x ]
-         | [ |- context[fst ?x] ]
-           => is_var x;
-              first [ clearbody x; fail 1
-                    | (** we want to keep the same context variable in
-                          the evar that we reverted above, and in the
-                          current goal; hence the instantiate trick *)
-                    change (fst x) with (let (a, b) := x in a) in *;
-                    change (snd x) with (let (a, b) := x in b) in *;
-                    instantiate (1:=ltac:(destruct x)); destruct x ];
-              cbv beta iota
+         | [ |- context[Tuple.map ?f ?v] ]
+           => check_is_map_wordToZ 0 "DEBUG" f; destruct_sig_or_pair v
+         | [ H := context[Tuple.map ?f ?v] |- _ ]
+           => check_is_map_wordToZ 0 "DEBUG" f; destruct_sig_or_pair v
+         | [ H : context[Tuple.map ?f ?v] |- _ ]
+           => check_is_map_wordToZ 0 "DEBUG" f; destruct_sig_or_pair v
          | [ H : _ /\ _ |- _ ]
            => destruct H
          end;
@@ -350,7 +396,11 @@ Ltac unmap_wordToZ_tuple term :=
   | (?x, ?y) => let x' := unmap_wordToZ_tuple x in
                 let y' := unmap_wordToZ_tuple y in
                 constr:((x', y'))
-  | map wordToZ ?x => x
+  | Tuple.map ?f ?x
+    => let dummy := match goal with
+                    | _ => check_is_map_wordToZ 1 "In unmap_wordToZ_tuple, expected terms" f
+                    end in
+       x
   end.
 Ltac bounds_from_is_bounded_by T :=
   lazymatch T with
@@ -385,22 +435,34 @@ Ltac pose_proof_bounded_from_Zargs_hyps Zargs H :=
                  "Cannot match type" pfT
                  "with shape" shape
        end
-  | Tuple.map wordToZ ?arg
-    => lazymatch goal with
-       | [ H' : Bounds.is_bounded_by ?bounds (cast_back_flat_const arg) |- _ ]
-         => rename H' into H
-       | _ => let shape := uconstr:(Bounds.is_bounded_by _ (cast_back_flat_const arg)) in
-              idtac "In the context:"; print_context ();
-              fail 1 "Could not find bounds in the context for" arg
-                   "when looking for a hypothesis of shape" shape
-       end
+  | Tuple.map ?f ?arg
+    => first [ check_is_map_wordToZ 0 "DEBUG" f
+             | let G := get_goal in
+               idtac "In the context:"; print_context ();
+               idtac "In the goal:" G;
+               idtac "When looking for bounds for" Zargs;
+               check_is_map_wordToZ 1 "Expected a map of a function" f ];
+       pose_proof_bounded_from_Zargs_hyps arg H
+  | ?arg =>
+    lazymatch goal with
+    | [ H' : Bounds.is_bounded_by ?bounds (cast_back_flat_const arg) |- _ ]
+      => rename H' into H
+    | _ => let shape := uconstr:(Bounds.is_bounded_by _ (cast_back_flat_const arg)) in
+           idtac "In the context:"; print_context ();
+           fail 1 "Could not find bounds in the context for" arg
+                "when looking for a hypothesis of shape" shape
+    end
   end.
 Ltac find_reified_f_evar LHS :=
   lazymatch LHS with
   | fst ?x => find_reified_f_evar x
   | snd ?x => find_reified_f_evar x
   | (?x, _) => find_reified_f_evar x
-  | map wordToZ ?x => find_reified_f_evar x
+  | map ?f ?x
+    => let dummy := match goal with
+                    | _ => check_is_map_wordToZ 1 "In find_reified_f_evar, expected terms" f
+                    end in
+       find_reified_f_evar x
   | _ => LHS
   end.
 Ltac zrange_to_reflective_hyps_step_gen then_tac round_up :=
@@ -437,10 +499,14 @@ Ltac zrange_to_reflective_goal round_up Hbounded :=
        let map_input := constr:(map_t (domain rT) input_bounds) in
        let args := unmap_wordToZ_tuple Zargs in
        let reified_f_evar := find_reified_f_evar LHS in
+       let mapped_output := constr:(map_output reified_f_evar) in
+       let conjunct1 := constr:(is_bounded_by' output_bounds mapped_output) in
+       let conjunct2_rhs := constr:(f (map_input args)) in
+       let conjunct2 := constr:(mapped_output = conjunct2_rhs) in
        (* we use [cut] and [abstract] rather than [change] to catch
           inefficiencies in conversion early, rather than allowing
           [Defined] to take forever *)
-       cut (is_bounded_by' output_bounds (map_output reified_f_evar) /\ map_output reified_f_evar = f (map_input args));
+       cut (conjunct1 /\ conjunct2);
        [ generalize reified_f_evar; clear; clearbody f; clear; let x := fresh in intros ? x; abstract exact x
        | ];
        cbv beta
@@ -466,10 +532,11 @@ BoundedWordToZ ?f = F (BoundedWordToZ A) (BoundedWordToZ B) ... (BoundedWordToZ 
     reflective automation pipeline can handle. *)
 Ltac refine_to_reflective_glue' allowable_bit_widths Hbounded :=
   let round_up := round_up_from_allowable_bit_widths allowable_bit_widths in
-  reassoc_sig_and_eexists;
-  intros_under_and;
-  do_curry_rhs;
-  split_BoundedWordToZ;
+  preunfold_and_dlet_to_context ();
+  maybe_reassoc_sig_and_eexists ();
+  intros_under_and ();
+  do_curry_rhs ();
+  split_BoundedWordToZ ();
   zrange_to_reflective round_up Hbounded.
 Ltac refine_to_reflective_glue allowable_bit_widths :=
   let Hbounded := fresh "Hbounded" in

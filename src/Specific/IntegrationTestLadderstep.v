@@ -46,8 +46,8 @@ Section BoundedField25p5.
   Let feW_bounded : feW -> Prop
     := fun w => is_bounded_by None bounds (map wordToZ w).
   Let feBW : Type := BoundedWord sz bitwidth bounds.
-  Let phi : feBW -> F m :=
-    fun x => B.Positional.Fdecode wt (BoundedWordToZ _ _ _ x).
+  Let phi : feW -> F m :=
+    fun x => B.Positional.Fdecode wt (Tuple.map wordToZ x).
 
   (** TODO(jadep,andreser): Move to NewBaseSystemTest? *)
   Definition FMxzladderstep := @M.xzladderstep (F m) F.add F.sub F.mul.
@@ -66,89 +66,49 @@ Section BoundedField25p5.
   Defined.
 
   (* TODO : change this to field once field isomorphism happens *)
-  Local Notation xzladderstepP a24 x1 Q Q'
-    := (fun xz : feW * feW * (feW * feW)
-        => feW_bounded a24
-           -> feW_bounded x1
-           -> feW_bounded (fst Q) /\ feW_bounded (snd Q)
-           -> feW_bounded (fst Q') /\ feW_bounded (snd Q')
-           -> (feW_bounded (fst (fst xz)) /\ feW_bounded (snd (fst xz)))
-              /\ (feW_bounded (fst (snd xz)) /\ feW_bounded (snd (snd xz))))
-         (only parsing).
   Definition xzladderstep :
-    { xzladderstep : { xzladderstep : feW -> feW -> feW * feW -> feW * feW -> feW * feW * (feW * feW)
-                     | forall a24 x1 Q Q', xzladderstepP a24 x1 Q Q' (xzladderstep a24 x1 Q Q') }
-    | forall a24v x1v Qv Q'v,
-        let v := proj1_sig xzladderstep a24v x1v Qv Q'v in
-        let pf : xzladderstepP a24v x1v Qv Q'v v := proj2_sig xzladderstep a24v x1v Qv Q'v in
-        forall a24p x1p Qp Q'p,
-          let a24 := exist _ a24v a24p in
-          let x1 := exist _ x1v x1p in
-          let Q := (exist _ (fst Qv) (proj1 Qp), exist _ (snd Qv) (proj2 Qp)) in
-          let Q' := (exist _ (fst Q'v) (proj1 Q'p), exist _ (snd Q'v) (proj2 Q'p)) in
-          let pf := pf a24p x1p Qp Q'p in
-          let xzladderstep := ((exist _ (fst (fst v)) (proj1 (proj1 pf)),
-                                exist _ (snd (fst v)) (proj2 (proj1 pf))),
-                               (exist _ (fst (snd v)) (proj1 (proj2 pf)),
-                                exist _ (snd (snd v)) (proj2 (proj2 pf)))) in
-          Tuple.map (n:=2) (Tuple.map (n:=2) phi) xzladderstep = FMxzladderstep (phi a24) (phi x1) (Tuple.map (n:=2) phi Q) (Tuple.map (n:=2) phi Q') }.
+    { xzladderstep : feW -> feW -> feW * feW -> feW * feW -> feW * feW * (feW * feW)
+    | forall a24 x1 Q Q',
+        let xz := xzladderstep a24 x1 Q Q' in
+        feW_bounded a24
+        -> feW_bounded x1
+        -> feW_bounded (fst Q) /\ feW_bounded (snd Q)
+        -> feW_bounded (fst Q') /\ feW_bounded (snd Q')
+        -> ((feW_bounded (fst (fst xz)) /\ feW_bounded (snd (fst xz)))
+            /\ (feW_bounded (fst (snd xz)) /\ feW_bounded (snd (snd xz))))
+           /\ Tuple.map (n:=2) (Tuple.map (n:=2) phi) xz = FMxzladderstep (phi a24) (phi x1) (Tuple.map (n:=2) phi Q) (Tuple.map (n:=2) phi Q') }.
   Proof.
     lazymatch goal with
     | [ |- { op | forall (a:?A) (b:?B) (c:?C) (d:?D),
-               let v := proj1_sig op a b c d in
-               let pf := proj2_sig op a b c d in
-               @?P a b c d v pf } ]
-      => refine (@lift4_sig_sig A B C D _ _ P _)
+               let v := op a b c d in
+               @?P a b c d v } ]
+      => refine (@lift4_sig A B C D _ P _)
     end.
-    intros; cbv beta iota zeta.
-    eexists_sig_etransitivity_R (pointwise_relation _ (pointwise_relation _ (pointwise_relation _ (pointwise_relation _ eq))));
-      cbv [pointwise_relation].
-    intros. all:cbv [phi].
-    { set_evars.
-      rewrite <- !(Tuple.map_map (B.Positional.Fdecode wt) (BoundedWordToZ sz bitwidth bounds)).
-      rewrite <- (proj2_sig Mxzladderstep_sig).
-      etransitivity_rev.
-      { apply f_equal.
-        cbv [proj1_sig]; cbv [Mxzladderstep_sig].
-        context_to_dlet_in_rhs (@M.xzladderstep _ _ _ _).
-        set (k := @M.xzladderstep _ _ _ _); context_to_dlet_in_rhs k; subst k.
-        cbv [M.xzladderstep].
-        lazymatch goal with
-        | [ |- context[@proj1_sig ?a ?b carry_sig] ]
-          => context_to_dlet_in_rhs (@proj1_sig a b carry_sig)
-        end.
-        lazymatch goal with
-        | [ |- context[@proj1_sig ?a ?b mul_sig] ]
-          => context_to_dlet_in_rhs (@proj1_sig a b mul_sig)
-        end.
-        lazymatch goal with
-        | [ |- context[@proj1_sig ?a ?b add_sig] ]
-          => context_to_dlet_in_rhs (@proj1_sig a b add_sig)
-        end.
-        lazymatch goal with
-        | [ |- context[@proj1_sig ?a ?b sub_sig] ]
-          => context_to_dlet_in_rhs (@proj1_sig a b sub_sig)
-        end.
-        cbv beta iota delta [proj1_sig mul_sig add_sig sub_sig carry_sig runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz]; cbn [fst snd].
-        reflexivity. }
-      subst_evars.
-      reflexivity. }
-    eexists_sig_etransitivity_for_rewrite_fun_R (pointwise_relation _ (pointwise_relation _ (pointwise_relation _ (pointwise_relation _ eq))));
-      cbv [pointwise_relation].
-    { intros.
-      subst feBW.
-      set_evars.
-      do 2 lazymatch goal with
-           | [ |- context[Tuple.map (n:=?n) (fun x => ?f (?g x))] ]
-             => rewrite <- (Tuple.map_map (n:=n) f g : pointwise_relation _ eq _ _)
+    intros a b c d; cbv beta iota zeta.
+    lazymatch goal with
+    | [ |- { e | ?A -> ?B -> ?C -> ?D -> @?E e } ]
+      => refine (proj2_sig_map (P:=fun e => A -> B -> C -> D -> (_:Prop)) _ _)
+    end.
+    { intros ? FINAL.
+      repeat let H := fresh in intro H; specialize (FINAL H).
+      cbv [phi].
+      split; [ refine (proj1 FINAL); shelve | ].
+      do 4 match goal with
+           | [ |- context[Tuple.map (n:=?N) (fun x : ?T => ?f (?g x))] ]
+             => rewrite <- (Tuple.map_map (n:=N) f g
+                            : pointwise_relation _ eq _ (Tuple.map (n:=N) (fun x : T => f (g x))))
            end.
-      subst_evars.
-      reflexivity. }
-    cbv beta.
-    refine (proj2_sig_map _ _).
-    { intros ? p x y z w; apply f_equal; revert x y z w.
-      lazymatch type of p with ?e ?v => pattern v end.
-      eexact p. }
+      rewrite <- (proj2_sig Mxzladderstep_sig).
+      apply f_equal.
+      cbv [proj1_sig]; cbv [Mxzladderstep_sig].
+      context_to_dlet_in_rhs (@M.xzladderstep _ _ _ _).
+      cbv [M.xzladderstep].
+      do 4 lazymatch goal with
+           | [ |- context[@proj1_sig ?a ?b ?f_sig _] ]
+             => context_to_dlet_in_rhs (@proj1_sig a b f_sig)
+           end.
+      cbv beta iota delta [proj1_sig mul_sig add_sig sub_sig carry_sig runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz]; cbn [fst snd].
+      refine (proj2 FINAL). }
     subst feW feW_bounded; cbv beta.
     (* jgross start here! *)
     Set Ltac Profiling.
