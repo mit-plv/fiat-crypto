@@ -12,6 +12,7 @@ Require Import Crypto.Compilers.Wf.
 Require Import Crypto.Compilers.WfProofs.
 Require Import Crypto.Compilers.SmartMap.
 Require Import Crypto.Compilers.CommonSubexpressionElimination.
+Require Import Crypto.Compilers.CommonSubexpressionEliminationDenote.
 Require Import Crypto.Compilers.CommonSubexpressionEliminationWf.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Tactics.RewriteHyp.
@@ -36,7 +37,8 @@ Section symbolic.
           (interp_base_type : base_type_code -> Type)
           (op : flat_type base_type_code -> flat_type base_type_code -> Type)
           (interp_op : forall s d (opc : op s d), interp_flat_type interp_base_type s -> interp_flat_type interp_base_type d)
-          (symbolize_op : forall s d, op s d -> op_code).
+          (symbolize_op : forall s d, op s d -> op_code)
+          (denote_op : forall s d, op_code -> option (op s d)).
 
   Local Notation symbolic_expr := (symbolic_expr base_type_code op_code).
   Local Notation symbolic_expr_beq := (@symbolic_expr_beq base_type_code op_code base_type_code_beq op_code_beq).
@@ -60,6 +62,8 @@ Section symbolic.
   Local Notation SymbolicExprContext := (@SymbolicExprContext base_type_code op_code base_type_code_beq op_code_beq base_type_code_bl).
   Local Notation SymbolicExprContextOk := (@SymbolicExprContextOk base_type_code op_code base_type_code_beq op_code_beq base_type_code_bl base_type_code_lb op_code_bl op_code_lb).
   Local Notation prepend_prefix := (@prepend_prefix base_type_code op).
+
+  Local Notation denote_symbolic_expr := (@denote_symbolic_expr base_type_code op_code base_type_code_beq op_code_beq base_type_code_bl op denote_op interp_base_type interp_op).
 
   Local Instance base_type_code_dec : DecidableRel (@eq base_type_code)
     := dec_rel_of_bool_dec_rel base_type_code_beq base_type_code_bl base_type_code_lb.
@@ -135,24 +139,22 @@ Check @symbolize_exprf.
   Lemma interpf_csef G t e1 e2
         (HG : forall t x y, In (existT _ t (x, y)) G -> fst x = y)
         (m : @SymbolicExprContext (interp_flat_type_gen _))
-        (HGm : forall t e s v,
-            @symbolize_exprf interp_base_type t e = Some s
-            -> lookupb m s = Some v
+        (HGm : forall t s v,
+            lookupb m s = Some v
             -> forall k,
                 List.In k (flatten_binding_list (@symbolicify_smart_var interp_base_type t v s) v)
                 -> List.In k G)
-        (Hm : forall t e1 e2 s v,
-            symbolize_exprf e1 = Some s
-            -> lookupb m s = Some v
-            -> wff G (t:=t) e1 e2
-            -> v = interpf interp_op e2)
+        (Hm : forall t sv v,
+            lookupb m sv = Some v
+            -> denote_symbolic_expr m t sv = Some v)
         (Hwf : wff G e1 e2)
     : interpf interp_op (@csef interp_base_type t e1 m) = interpf interp_op e2.
   Proof.
+    cbv beta in *.
       revert dependent m;
         induction Hwf; simpl; cbv [LetIn.Let_In symbolize_var]; intros; eauto;
           rewrite_hyp ?* by eauto; try reflexivity; eauto.
-      { break_match; break_match_hyps; try congruence; inversion_prod; inversion_option; subst;
+      (*{ break_match; break_match_hyps; try congruence; inversion_prod; inversion_option; subst;
           simpl; unfold LetIn.Let_In;
             [ match goal with
               | [ Hm : forall t e1 e2 s v, symbolize_exprf _ = _ -> _, H' : symbolize_exprf _ = _ |- _ ]
@@ -176,7 +178,7 @@ Check @symbolize_exprf.
                          | progress intros ] ].
         admit.
         admit.
-        admit. }
+        admit. }*)
   Admitted.
 
   Lemma interpf_prepend_prefix t e prefix

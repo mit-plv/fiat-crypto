@@ -46,52 +46,41 @@ Section symbolic.
   Local Notation prepend_prefix := (@prepend_prefix base_type_code op).
 
   Section with_var.
-    Context {var : base_type_code -> Type}
-            (m : @SymbolicExprContext (interp_flat_type var)).
+    Context {interp_base_type : base_type_code -> Type}
+            {interp_op : forall s d, op s d -> interp_flat_type interp_base_type s -> interp_flat_type interp_base_type d}
+            (m : @SymbolicExprContext (interp_flat_type interp_base_type)).
 
-    Local Notation var_cast := (@var_cast _ (interp_flat_type var) flat_type_beq flat_type_dec_bl).
+    Local Notation var_cast := (@var_cast _ (interp_flat_type interp_base_type) flat_type_beq flat_type_dec_bl).
     Fixpoint denote_symbolic_expr
              (t : flat_type)
              (se : symbolic_expr)
-      : option (@exprf var t)
+      : option (interp_flat_type interp_base_type t)
       := match se, t with
-         | STT, Unit => Some TT
+         | STT, Unit => Some tt
          | SVar t n, t'
            => if flat_type_beq t t'
               then match List.nth_error m (length m - n) with
-                   | Some e => option_map SmartVarf (@var_cast _ t' (projT2 (snd e)))
+                   | Some e => @var_cast _ t' (projT2 (snd e))
                    | None => None
                    end
               else None
          | SOp argsT op args, _
            => match denote_op argsT t op, @denote_symbolic_expr argsT args with
-              | Some opc, Some eargs => Some (Op opc eargs)
+              | Some opc, Some eargs => Some (interp_op _ _ opc eargs)
               | Some _, None | None, Some _ | None, None => None
               end
          | SPair x y, Prod A B
            => match @denote_symbolic_expr A x, @denote_symbolic_expr B y with
-              | Some ex, Some ey => Some (Pair ex ey)
+              | Some ex, Some ey => Some (ex, ey)
               | Some _, None | None, Some _ | None, None => None
               end
          | SFst A B x, A'
            => if flat_type_beq A A'
-              then match @denote_symbolic_expr (Prod A' B) x with
-                   | Some e => match option_map (@fst _ _) (invert_Pair e) with
-                               | Some e => Some e
-                               | None => Some (LetIn e (fun x => SmartVarf (fst x)))
-                               end
-                   | None => None
-                   end
+              then option_map (@fst _ _) (@denote_symbolic_expr (Prod A' B) x)
               else None
          | SSnd A B x, B'
            => if flat_type_beq B B'
-              then match @denote_symbolic_expr (Prod A B') x with
-                   | Some e => match option_map (@snd _ _) (invert_Pair e) with
-                               | Some e => Some e
-                               | None => Some (LetIn e (fun x => SmartVarf (snd x)))
-                               end
-                   | None => None
-                   end
+              then option_map (@snd _ _) (@denote_symbolic_expr (Prod A B') x)
               else None
          | SInvalid, _
          | STT, _
