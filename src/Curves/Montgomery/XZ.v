@@ -2,6 +2,7 @@ Require Import Crypto.Algebra.Field.
 Require Import Crypto.Util.GlobalSettings Crypto.Util.Notations.
 Require Import Crypto.Util.Sum Crypto.Util.Prod Crypto.Util.LetIn.
 Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.ForLoop.
 Require Import Crypto.Spec.MontgomeryCurve Crypto.Curves.Montgomery.Affine.
 
 Module M.
@@ -11,13 +12,15 @@ Module M.
             {field:@Algebra.Hierarchy.field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
             {Feq_dec:Decidable.DecidableRel Feq}
             {char_ge_5:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 5}.
+    Delimit Scope F_scope with F.
+    Local Open Scope F_scope.
     Local Infix "=" := Feq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
-    Local Infix "+" := Fadd. Local Infix "*" := Fmul.
-    Local Infix "-" := Fsub. Local Infix "/" := Fdiv.
-    Local Notation "x ^ 2" := (x*x).
-    Local Notation "0" := Fzero.  Local Notation "1" := Fone.
+    Local Infix "+" := Fadd : F_scope. Local Infix "*" := Fmul : F_scope.
+    Local Infix "-" := Fsub : F_scope. Local Infix "/" := Fdiv : F_scope.
+    Local Notation "x ^ 2" := (x*x) : F_scope.
+    Local Notation "0" := Fzero : F_scope.  Local Notation "1" := Fone : F_scope.
     Local Notation "'∞'" := (inr tt) : core_scope.
-    Local Notation "( x , y )" := (inl (pair x y)).
+    Local Notation "( x , y , .. , z )" := (inl (pair .. (pair x y) .. z)) : F_scope.
 
     Context {a b: F} {b_nonzero:b <> 0}.
     Local Notation add := (M.add(b_nonzero:=b_nonzero)).
@@ -26,8 +29,8 @@ Module M.
 
     Program Definition to_xz (P:point) : F*F :=
       match M.coordinates P with
-      | (x, y) => pair x 1
-      | ∞ => pair 1 0
+      | (x, y) => (x, 1)%core
+      | ∞ => (1, 0)%core
       end.
 
     Let char_ge_3:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul (BinNat.N.succ_pos (BinNat.N.two)).
@@ -51,7 +54,29 @@ Module M.
         dlet DA := D*A in
         dlet x3 := (DA+CB)^2 in
         dlet z3 := x1*(DA-CB)^2 in
-        (pair (pair x2 z2) (pair x3 z3))
+        ((x2, z2), (x3, z3))%core
       end.
+
+      Context {cswap:bool->F*F->F*F->(F*F)*(F*F)}.
+
+      Local Notation xor := Coq.Init.Datatypes.xorb.
+
+      (* Ideally, we would verify that this corresponds to x coordinate
+         multiplication *)
+      Local Open Scope core_scope.
+      Definition montladder (bound : positive) (testbit:nat->bool) (u:F) :=
+        let '(P1, P2, swap) :=
+            for (int i = BinInt.Z.pos bound; i >= 0%Z; i--)
+                updating ('(P1, P2, swap) = ((1%F, 0%F), (u, 1%F), false)) {{
+              dlet s_i := testbit (BinInt.Z.to_nat i) in
+              dlet swap := xor swap s_i in
+              let '(P1, P2) := cswap swap P1 P2 in
+              dlet swap := s_i in
+              let '(P1, P2) := xzladderstep u P1 P2 in
+              (P1, P2, swap)
+        }} in
+        let '((x, z), _) := cswap swap P1 P2 in
+        x * Finv z.
+
   End MontgomeryCurve.
 End M.
