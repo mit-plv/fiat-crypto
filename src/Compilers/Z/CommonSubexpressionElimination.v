@@ -61,6 +61,29 @@ Definition symbolize_op s d (opc : op s d) : symbolic_op
      | Opp T Tout => SOpp
      end.
 
+Definition denote_symbolic_op s d (opc : symbolic_op) : option (op s d)
+  := match opc, s, d with
+     | SOpConst z, Unit, Tbase T => Some (OpConst z)
+     | SAdd, Prod (Tbase _) (Tbase _), Tbase _ => Some (Add _ _ _)
+     | SSub, Prod (Tbase _) (Tbase _), Tbase _ => Some (Sub _ _ _)
+     | SMul, Prod (Tbase _) (Tbase _), Tbase _ => Some (Mul _ _ _)
+     | SShl, Prod (Tbase _) (Tbase _), Tbase _ => Some (Shl _ _ _)
+     | SShr, Prod (Tbase _) (Tbase _), Tbase _ => Some (Shr _ _ _)
+     | SLand, Prod (Tbase _) (Tbase _), Tbase _ => Some (Land _ _ _)
+     | SLor, Prod (Tbase _) (Tbase _), Tbase _ => Some (Lor _ _ _)
+     | SOpp, Tbase _, Tbase _ => Some (Opp _ _)
+     | SAdd, _, _
+     | SSub, _, _
+     | SMul, _, _
+     | SShl, _, _
+     | SShr, _, _
+     | SLand, _, _
+     | SLor, _, _
+     | SOpp, _, _
+     | SOpConst _, _, _
+       => None
+     end.
+
 Lemma symbolic_op_leb_total
   : forall a1 a2, symbolic_op_leb a1 a2 = true \/ symbolic_op_leb a2 a1 = true.
 Proof.
@@ -138,9 +161,13 @@ Definition cse {var} (prefix : list _) {t} (v : expr _ _ t) xs
           normalize_symbolic_expr_mod_c
           var prefix t v xs.
 
-Definition CSE {t} (e : Expr _ _ t) (prefix : forall var, list { t : flat_type base_type & exprf _ _ t })
+Definition CSE_gen {t} (e : Expr _ _ t) (prefix : forall var, list { t : flat_type base_type & exprf _ _ t })
   : Expr _ _ t
   := @CSE base_type symbolic_op base_type_beq symbolic_op_beq
           internal_base_type_dec_bl op symbolize_op
           normalize_symbolic_expr_mod_c
           t e prefix.
+
+Definition CSE {t} (e : Expr _ _ t)
+  : Expr _ _ t
+  := @CSE_gen t e (fun _ => nil).

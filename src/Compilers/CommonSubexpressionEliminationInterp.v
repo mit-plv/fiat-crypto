@@ -215,3 +215,5 @@ Check @symbolize_exprf.
     apply interp_cse; auto.
   Qed.
 End symbolic.
+
+Hint Rewrite @InterpCSE using solve_wf_side_condition : reflective_interp.
