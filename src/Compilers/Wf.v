@@ -4,6 +4,8 @@ Require Import Crypto.Util.Notations.
 
 Create HintDb wf discriminated.
 
+Ltac solve_wf_side_condition := solve [ eassumption | eauto 30 with wf ].
+
 Section language.
   Context {base_type_code : Type}
           {op : flat_type base_type_code -> flat_type base_type_code -> Type}.
