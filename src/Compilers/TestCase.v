@@ -99,7 +99,7 @@ Import Linearize Inline.
 
 Goal True.
   let x := Reify (fun xy => let '(x, y) := xy in (let a := 1 in let '(c, d) := (2, 3) in a + x - a + c + d) + y)%nat in
-  pose (InlineConst is_const (Linearize x)) as e.
+  pose (InlineConst is_const (ANormal x)) as e.
   vm_compute in e.
 Abort.
 
@@ -190,7 +190,7 @@ Section cse.
   Definition CSE {t} e := @CSE base_type op_code base_type_beq op_code_beq internal_base_type_dec_bl op symbolicify_op (fun _ x => x) t e (fun _ => nil).
 End cse.
 
-Definition example_expr_simplified := Eval vm_compute in InlineConst is_const (Linearize example_expr).
+Definition example_expr_simplified := Eval vm_compute in InlineConst is_const (ANormal example_expr).
 Compute CSE example_expr_simplified.
 
 Definition example_expr_compiled

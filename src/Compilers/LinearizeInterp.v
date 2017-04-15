@@ -55,31 +55,56 @@ Section language.
     induction ex; t_fin.
   Qed.
 
-  Lemma interpf_linearizef {t} e
-    : interpf interp_op (linearizef (t:=t) e) = interpf interp_op e.
-  Proof using Type.
-    clear.
-    induction e;
-      repeat first [ progress rewrite ?interpf_under_letsf, ?interpf_SmartVarf
-                   | progress simpl
-                   | t_fin ].
-  Qed.
+  Section gen.
+    Context (let_bind_op_args : bool).
 
-  Local Hint Resolve interpf_linearizef.
+    Lemma interpf_linearizef_gen {t} e
+      : interpf interp_op (linearizef_gen let_bind_op_args (t:=t) e) = interpf interp_op e.
+    Proof using Type.
+      clear.
+      induction e;
+        repeat first [ progress rewrite ?interpf_under_letsf, ?interpf_SmartVarf
+                     | progress simpl
+                     | t_fin ].
+    Qed.
 
-  Lemma interp_linearize {t} e
-    : forall x, interp interp_op (linearize (t:=t) e) x = interp interp_op e x.
-  Proof using Type.
-    induction e; simpl; eauto.
-  Qed.
+    Local Hint Resolve interpf_linearizef_gen.
 
-  Lemma InterpLinearize {t} (e : Expr t)
-    : forall x, Interp interp_op (Linearize e) x = Interp interp_op e x.
-  Proof using Type.
-    unfold Interp, Linearize.
-    eapply interp_linearize.
-  Qed.
+    Lemma interp_linearize_gen {t} e
+      : forall x, interp interp_op (linearize_gen let_bind_op_args (t:=t) e) x = interp interp_op e x.
+    Proof using Type.
+      induction e; simpl; eauto.
+    Qed.
+
+    Lemma InterpLinearize_gen {t} (e : Expr t)
+      : forall x, Interp interp_op (Linearize_gen let_bind_op_args e) x = Interp interp_op e x.
+    Proof using Type.
+      unfold Interp, Linearize_gen.
+      eapply interp_linearize_gen.
+    Qed.
+  End gen.
+
+  Definition interpf_linearizef {t} e
+    : interpf interp_op (linearizef (t:=t) e) = interpf interp_op e
+    := interpf_linearizef_gen _ e.
+  Definition interpf_a_normalf {t} e
+    : interpf interp_op (a_normalf (t:=t) e) = interpf interp_op e
+    := interpf_linearizef_gen _ e.
+
+  Definition interp_linearize {t} e
+    : forall x, interp interp_op (linearize (t:=t) e) x = interp interp_op e x
+    := interp_linearize_gen _ e.
+  Definition interp_a_normal {t} e
+    : forall x, interp interp_op (a_normal (t:=t) e) x = interp interp_op e x
+    := interp_linearize_gen _ e.
+
+  Definition InterpLinearize {t} (e : Expr t)
+    : forall x, Interp interp_op (Linearize e) x = Interp interp_op e x
+    := InterpLinearize_gen _ e.
+  Definition InterpANormal {t} (e : Expr t)
+    : forall x, Interp interp_op (ANormal e) x = Interp interp_op e x
+    := InterpLinearize_gen _ e.
 End language.
 
 Hint Rewrite @interpf_under_letsf : reflective_interp.
-Hint Rewrite @InterpLinearize @interp_linearize @interpf_linearizef using solve [ eassumption | eauto with wf ] : reflective_interp.
+Hint Rewrite @InterpLinearize_gen @interp_linearize_gen @interpf_linearizef_gen @InterpLinearize @interp_linearize @interpf_linearizef @InterpANormal @interp_a_normal @interpf_a_normalf using solve [ eassumption | eauto with wf ] : reflective_interp.

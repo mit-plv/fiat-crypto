@@ -5,10 +5,6 @@ Require Import Crypto.Compilers.Z.Syntax.Equality.
 Require Import Crypto.Compilers.Z.Syntax.Util.
 Require Import Crypto.Compilers.WfReflective.
 Require Import Crypto.Compilers.Reify.
-Require Import Crypto.Compilers.Inline.
-Require Import Crypto.Compilers.InlineInterp.
-Require Import Crypto.Compilers.Linearize.
-Require Import Crypto.Compilers.LinearizeInterp.
 Require Import Crypto.Compilers.Eta.
 Require Import Crypto.Compilers.EtaInterp.
 

@@ -3,7 +3,8 @@ Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.Wf.
 Require Import Crypto.Compilers.WfProofs.
 Require Import Crypto.Compilers.Linearize.
-Require Import (*Crypto.Util.Tactics*) Crypto.Util.Sigma.
+Require Import Crypto.Util.Sigma.
+Require Import Crypto.Util.Tactics.BreakMatch.
 
 Local Open Scope ctype_scope.
 Section language.
@@ -41,6 +42,7 @@ Section language.
       | _ => progress tac
       | [ |- wff _ _ _ ] => constructor
       | [ |- wf _ _ _ ] => constructor
+      | _ => break_innermost_match_step
       end.
     Local Ltac t_fin tac := repeat t_fin_step tac.
 
@@ -150,27 +152,58 @@ Section language.
     Local Hint Resolve wff_in_impl_Proper.
     Local Hint Resolve wff_SmartVarf.
 
-    Lemma wff_linearizef G {t} e1 e2
-      : @wff var1 var2 G t e1 e2
-        -> @wff var1 var2 G t (linearizef e1) (linearizef e2).
-    Proof using Type.
-      induction 1; t_fin ltac:(apply wff_under_letsf).
-    Qed.
+    Section gen.
+      Context (let_bind_op_args : bool).
 
-    Local Hint Resolve wff_linearizef.
+      Lemma wff_linearizef_gen G {t} e1 e2
+        : @wff var1 var2 G t e1 e2
+          -> @wff var1 var2 G t (linearizef_gen let_bind_op_args e1) (linearizef_gen let_bind_op_args e2).
+      Proof using Type.
+        induction 1; t_fin ltac:(apply wff_under_letsf).
+      Qed.
 
-    Lemma wf_linearize {t} e1 e2
-      : @wf var1 var2 t e1 e2
-        -> @wf var1 var2 t (linearize e1) (linearize e2).
-    Proof using Type.
-      destruct 1; constructor; auto.
-    Qed.
+      Local Hint Resolve wff_linearizef_gen.
+
+      Lemma wf_linearize_gen {t} e1 e2
+        : @wf var1 var2 t e1 e2
+          -> @wf var1 var2 t (linearize_gen let_bind_op_args e1) (linearize_gen let_bind_op_args e2).
+      Proof using Type.
+        destruct 1; constructor; auto.
+      Qed.
+    End gen.
   End with_var.
 
-  Lemma Wf_Linearize {t} (e : Expr t) : Wf e -> Wf (Linearize e).
-  Proof using Type.
-    intros wf var1 var2; apply wf_linearize, wf.
-  Qed.
+  Section gen.
+    Context (let_bind_op_args : bool).
+
+    Lemma Wf_Linearize_gen {t} (e : Expr t) : Wf e -> Wf (Linearize_gen let_bind_op_args e).
+    Proof using Type.
+      intros wf var1 var2; apply wf_linearize_gen, wf.
+    Qed.
+  End gen.
+
+  Definition wff_linearizef {var1 var2} G {t} e1 e2
+    : @wff var1 var2 G t e1 e2
+      -> @wff var1 var2 G t (linearizef e1) (linearizef e2)
+    := wff_linearizef_gen _ G e1 e2.
+  Definition wff_a_normalf {var1 var2} G {t} e1 e2
+    : @wff var1 var2 G t e1 e2
+      -> @wff var1 var2 G t (a_normalf e1) (a_normalf e2)
+    := wff_linearizef_gen _ G e1 e2.
+
+  Definition wf_linearize {var1 var2 t} e1 e2
+    : @wf var1 var2 t e1 e2
+      -> @wf var1 var2 t (linearize e1) (linearize e2)
+    := wf_linearize_gen _ e1 e2.
+  Definition wf_a_normal {var1 var2 t} e1 e2
+    : @wf var1 var2 t e1 e2
+      -> @wf var1 var2 t (a_normal e1) (a_normal e2)
+    := wf_linearize_gen _ e1 e2.
+
+  Definition Wf_Linearize {t} (e : Expr t) : Wf e -> Wf (Linearize e)
+    := Wf_Linearize_gen _ e.
+  Definition Wf_ANormal {t} (e : Expr t) : Wf e -> Wf (ANormal e)
+    := Wf_Linearize_gen _ e.
 End language.
 
-Hint Resolve Wf_Linearize : wf.
+Hint Resolve Wf_Linearize_gen Wf_Linearize Wf_ANormal : wf.

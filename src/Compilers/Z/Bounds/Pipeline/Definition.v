@@ -73,7 +73,7 @@ Definition PostWfPipeline
   : option (@ProcessedReflectivePackage round_up)
   := Build_ProcessedReflectivePackage_from_option_sigma
        e input_bounds
-       (let e := Linearize e in
+       (let e := ANormal e in
         let e := InlineConst e in
         let e := MapCast _ e input_bounds in
         option_map
@@ -126,7 +126,7 @@ Section with_round_up_list.
     rewrite InterpExprEta_arrow, InterpInlineConst
       by eauto with wf.
     (** Now handle all the transformations that come before the word-size selection *)
-    rewrite <- !InterpLinearize with (e:=e), <- !(@InterpInlineConst _ _ _ (Linearize e))
+    rewrite <- !InterpANormal with (e:=e), <- !(@InterpInlineConst _ _ _ (ANormal e))
       by eauto with wf.
     (** Now handle word-size selection itself *)
     eapply MapCastCorrect; eauto with wf.
