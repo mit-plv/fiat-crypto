@@ -52,10 +52,10 @@ Section symbolic.
           (base_type_code_lb : forall x y, x = y -> base_type_code_beq x y = true)
           (op_code_bl : forall x y, op_code_beq x y = true -> x = y)
           (op_code_lb : forall x y, x = y -> op_code_beq x y = true)
-          (interp_base_type : base_type_code -> Type)
           (op : flat_type base_type_code -> flat_type base_type_code -> Type)
           (symbolize_op : forall s d, op s d -> op_code)
-          (op_code_leb : forall (arg1T arg2T : flat_type base_type_code), op_code -> op_code -> bool).
+          (op_code_leb : op_code -> op_code -> bool)
+          (base_type_leb : base_type_code -> base_type_code -> bool).
   Local Notation symbolic_expr := (symbolic_expr base_type_code op_code).
   Context (normalize_symbolic_op_arguments : op_code -> symbolic_expr -> symbolic_expr).
 
@@ -65,9 +65,6 @@ Section symbolic.
 
   Local Notation flat_type := (flat_type base_type_code).
   Local Notation type := (type base_type_code).
-  Local Notation interp_type := (interp_type interp_base_type).
-  Local Notation interp_flat_type_gen := interp_flat_type.
-  Local Notation interp_flat_type := (interp_flat_type interp_base_type).
   Local Notation exprf := (@exprf base_type_code op).
   Local Notation expr := (@expr base_type_code op).
   Local Notation Expr := (@Expr base_type_code op).
@@ -82,7 +79,7 @@ Section symbolic.
          _ _ _ _ (@flat_type_dec_lb _ _ base_type_code_lb).
 
   Fixpoint push_pair_symbolic_expr {t : flat_type} (s : symbolic_expr)
-    : interp_flat_type_gen (fun _ => symbolic_expr) t
+    : interp_flat_type (fun _ => symbolic_expr) t
     := match t with
        | Unit => tt
        | Tbase T => s
@@ -105,11 +102,24 @@ Section symbolic.
     := (flat_type_beq _ base_type_code_beq argT1 argT2 && op_code_beq op1 op2).
   Local Notation ltb_of_leb leb eqb
     := (leb && negb eqb).
-  Local Notation op_code_ltb argT1 argT2 op1 op2
-    := (ltb_of_leb (op_code_leb argT1 argT2 op1 op2)
-                   (op_code_eqb argT1 argT2 op1 op2)).
   Local Notation leb_pair leb1 eqb1 leb2
     := (ltb_of_leb leb1 eqb1 || (eqb1 && leb2)).
+  Local Notation op_code_ltb op1 op2
+    := (ltb_of_leb (op_code_leb op1 op2)
+                   (op_code_beq op1 op2)).
+
+  Fixpoint flat_type_leb (x y : flat_type) : bool
+    := match x, y with
+       | Unit, _ => true
+       | _, Unit => false
+       | Tbase x, Tbase y => base_type_leb x y
+       | Tbase _, _ => true
+       | _, Tbase _ => false
+       | Prod A1 B1, Prod A2 B2
+         => leb_pair (flat_type_leb A1 A2)
+                     (flat_type_beq _ base_type_code_beq A1 A2)
+                     (flat_type_leb B1 B2)
+       end.
 
   Fixpoint symbolic_expr_leb (x y : symbolic_expr) : bool
     := match x, y with
@@ -119,8 +129,10 @@ Section symbolic.
        | SVar _, _ => true
        | _, SVar _ => false
        | SOp argT1 op1 args1, SOp argT2 op2 args2
-         => leb_pair (op_code_leb argT1 argT2 op1 op2)
-                     (op_code_eqb argT1 argT2 op1 op2)
+         => leb_pair (leb_pair (op_code_leb op1 op2)
+                               (op_code_beq op1 op2)
+                               (flat_type_leb argT1 argT2))
+                     (op_code_beq op1 op2 && flat_type_beq _ base_type_code_beq argT1 argT2)
                      (symbolic_expr_leb args1 args2)
        | SOp _ _ _, _ => true
        | _, SOp _ _ _ => false
@@ -161,7 +173,7 @@ Section symbolic.
 
     Local Notation svar t := (var t * symbolic_expr)%type.
     Local Notation fsvar := (fun t => svar t).
-    Local Notation mapping := (@SymbolicExprContext (interp_flat_type_gen var)).
+    Local Notation mapping := (@SymbolicExprContext (interp_flat_type var)).
 
     Context (prefix : list (sigT (fun t : flat_type => @exprf fsvar t))).
 
@@ -188,9 +200,9 @@ Section symbolic.
       := option_map symbolic_expr_normalize (@symbolize_exprf t v).
 
     Definition symbolicify_smart_var {t : flat_type}
-               (vs : interp_flat_type_gen var t)
+               (vs : interp_flat_type var t)
                (ss : symbolic_expr)
-      : interp_flat_type_gen fsvar t
+      : interp_flat_type fsvar t
       := SmartVarfMap2 (fun t v s => (v, s)) vs (push_pair_symbolic_expr ss).
 
     Definition csef_step
