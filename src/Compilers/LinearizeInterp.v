@@ -50,14 +50,14 @@ Section language.
            | _ => rewrite interpf_SmartVarf
            end.
 
-  Lemma interpf_under_letsf' let_bind_op_args {t tC} (ex : exprf t) (eC : _ -> exprf tC)
+  Lemma interpf_under_letsf' let_bind_op_args bind_pairs {t tC} (ex : exprf t) (eC : _ -> exprf tC)
         (eC_resp : forall x y,
             x = interpf interp_op y
             -> interpf interp_op (eC (inr y)) = interpf interp_op (eC (inl x)))
-    : interpf interp_op (under_letsf' let_bind_op_args ex eC)
+    : interpf interp_op (under_letsf' let_bind_op_args bind_pairs ex eC)
       = let x := interpf interp_op ex in interpf interp_op (eC (inl x)).
   Proof using Type.
-    clear -eC_resp.
+    clear -eC_resp; revert bind_pairs.
     induction ex; t_fin.
   Qed.
 

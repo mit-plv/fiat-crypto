@@ -64,6 +64,7 @@ Section language.
       Context (let_bind_op_args : bool).
 
       Fixpoint wff_under_letsf' G {t} e1 e2 {tC} eC1 eC2
+               let_bind_pairs
                (wf : @wff var1 var2 G t e1 e2)
                (H : forall (x1 : interp_flat_type var1 t) (x2 : interp_flat_type var2 t),
                    wff (flatten_binding_list x1 x2 ++ G) (eC1 (inl x1)) (eC2 (inl x2)))
@@ -71,7 +72,7 @@ Section language.
                    wff (G' ++ G) x y
                    -> wff (G' ++ G) (eC1 (inr x)) (eC2 (inr y)))
                {struct e1}
-        : @wff var1 var2 G tC (under_letsf' let_bind_op_args e1 eC1) (under_letsf' let_bind_op_args e2 eC2).
+        : @wff var1 var2 G tC (under_letsf' let_bind_op_args let_bind_pairs e1 eC1) (under_letsf' let_bind_op_args let_bind_pairs e2 eC2).
       Proof using Type.
         revert H.
         set (e1v := e1) in *.

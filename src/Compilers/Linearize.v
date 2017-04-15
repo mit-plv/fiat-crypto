@@ -20,14 +20,14 @@ Section language.
     Local Notation expr := (@expr base_type_code op var).
 
     Section under_lets.
-      Fixpoint under_letsf' {t} (e : exprf t)
+      Fixpoint under_letsf' (bind_pairs : bool) {t} (e : exprf t)
         : forall {tC} (C : interp_flat_type var t + exprf t -> exprf tC), exprf tC
         := match e in Syntax.exprf _ _ t return forall {tC} (C : interp_flat_type var t + exprf t -> exprf tC), exprf tC with
            | LetIn _ ex _ eC
-             => fun _ C => @under_letsf' _ ex _ (fun v =>
+             => fun _ C => @under_letsf' true _ ex _ (fun v =>
                            match v with
-                           | inl v => @under_letsf' _ (eC v) _ C
-                           | inr v => LetIn v (fun v => @under_letsf' _ (eC v) _ C)
+                           | inl v => @under_letsf' false _ (eC v) _ C
+                           | inr v => LetIn v (fun v => @under_letsf' false _ (eC v) _ C)
                            end)
            | TT => fun _ C => C (inl tt)
            | Var _ x => fun _ C => C (inl x)
@@ -35,19 +35,22 @@ Section language.
              => if let_bind_op_args
                 then fun _ C => LetIn e (fun v => C (inl v))
                 else fun _ C => C (inr e)
-           | Pair A x B y => fun _ C => @under_letsf' A x _ (fun x =>
-                                        @under_letsf' B y _ (fun y =>
-                                        match x, y with
-                                        | inl x, inl y => C (inl (x, y))
-                                        | inl x, inr y => C (inr (Pair (SmartVarf x) y))
-                                        | inr x, inl y => C (inr (Pair x (SmartVarf y)))
-                                        | inr x, inr y => C (inr (Pair x y))
+           | Pair A x B y => fun _ C => @under_letsf' bind_pairs A x _ (fun x =>
+                                        @under_letsf' bind_pairs B y _ (fun y =>
+                                        match x, y, bind_pairs with
+                                        | inl x, inl y, _ => C (inl (x, y))
+                                        | inl x, inr y, false => C (inr (Pair (SmartVarf x) y))
+                                        | inr x, inl y, false => C (inr (Pair x (SmartVarf y)))
+                                        | inr x, inr y, false => C (inr (Pair x y))
+                                        | inl x, inr y, true => LetIn y (fun y => C (inl (x, y)))
+                                        | inr x, inl y, true => LetIn x (fun x => C (inl (x, y)))
+                                        | inr x, inr y, true => LetIn x (fun x => LetIn y (fun y => C (inl (x, y))))
                                         end))
            end.
       Definition under_letsf {t} (e : exprf t)
                  {tC} (C : exprf t -> exprf tC)
         : exprf tC
-        := under_letsf' e (fun v => match v with inl v => C (SmartVarf v) | inr v => C v end).
+        := under_letsf' false e (fun v => match v with inl v => C (SmartVarf v) | inr v => C v end).
     End under_lets.
 
     Fixpoint linearizef_gen {t} (e : exprf t) : exprf t
@@ -74,7 +77,7 @@ Section language.
     := fun var => linearize_gen (e _).
 End language.
 
-Global Arguments under_letsf' _ {_ _ _ _} _ {tC} _.
+Global Arguments under_letsf' _ {_ _ _} bind_pairs {_} _ {tC} _.
 Global Arguments under_letsf _ {_ _ _ _} _ {tC} _.
 Global Arguments linearizef_gen _ {_ _ _ _} _.
 Global Arguments linearize_gen _ {_ _ _ _} _.
