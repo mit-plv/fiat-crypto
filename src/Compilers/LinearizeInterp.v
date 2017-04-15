@@ -1,6 +1,5 @@
 (** * Linearize: Place all and only operations in let binders *)
 Require Import Crypto.Compilers.Syntax.
-Require Import Crypto.Compilers.Wf.
 Require Import Crypto.Compilers.Relations.
 Require Import Crypto.Compilers.LinearizeWf.
 Require Import Crypto.Compilers.InterpProofs.
@@ -24,8 +23,6 @@ Section language.
   Local Notation exprf := (@exprf base_type_code op).
   Local Notation expr := (@expr base_type_code op).
   Local Notation Expr := (@Expr base_type_code op).
-  Local Notation wff := (@wff base_type_code op).
-  Local Notation wf := (@wf base_type_code op).
 
   Local Hint Extern 1 => eapply interpf_SmartVarVarf.
 
