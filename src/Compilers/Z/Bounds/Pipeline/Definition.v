@@ -26,6 +26,8 @@ Require Import Crypto.Compilers.Z.Bounds.Pipeline.OutputType.
 (** *** Pre-Wf Pipeline Imports *)
 Require Import Crypto.Compilers.Eta.
 Require Import Crypto.Compilers.EtaInterp.
+Require Import Crypto.Compilers.Linearize.
+Require Import Crypto.Compilers.LinearizeInterp.
 Require Import Crypto.Compilers.Z.ArithmeticSimplifier.
 Require Import Crypto.Compilers.Z.ArithmeticSimplifierInterp.
 
