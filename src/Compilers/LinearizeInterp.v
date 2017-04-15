@@ -1,7 +1,6 @@
 (** * Linearize: Place all and only operations in let binders *)
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.Relations.
-Require Import Crypto.Compilers.LinearizeWf.
 Require Import Crypto.Compilers.InterpProofs.
 Require Import Crypto.Compilers.Linearize.
 Require Import Crypto.Util.Sigma Crypto.Util.Prod.
@@ -34,7 +33,7 @@ Section language.
            | _ => progress intros
            | _ => progress inversion_sigma
            | _ => progress inversion_prod
-           | _ => solve [ intuition eauto ]
+           | _ => solve [ intuition eauto | eauto | symmetry; eauto ]
            | _ => apply (f_equal (interp_op _ _ _))
            | _ => apply (f_equal2 (@pair _ _))
            | _ => progress specialize_by assumption
@@ -46,13 +45,29 @@ Section language.
            | [ H : ?x = _, H' : context[?x] |- _ ] => rewrite H in H'
            | [ H : _ |- _ ] => apply H
            | [ H : _ |- _ ] => rewrite H
+           | [ H : _ |- _ ] => erewrite H by reflexivity
+           | _ => rewrite interpf_SmartVarf
            end.
 
-  Lemma interpf_under_letsf {t tC} (ex : exprf t) (eC : _ -> exprf tC)
-    : interpf interp_op (under_letsf ex eC) = let x := interpf interp_op ex in interpf interp_op (eC x).
+  Lemma interpf_under_letsf' let_bind_op_args {t tC} (ex : exprf t) (eC : _ -> exprf tC)
+        (eC_resp : forall x y,
+            x = interpf interp_op y
+            -> interpf interp_op (eC (inr y)) = interpf interp_op (eC (inl x)))
+    : interpf interp_op (under_letsf' let_bind_op_args ex eC)
+      = let x := interpf interp_op ex in interpf interp_op (eC (inl x)).
   Proof using Type.
-    clear.
+    clear -eC_resp.
     induction ex; t_fin.
+  Qed.
+
+  Lemma interpf_under_letsf let_bind_op_args {t tC} (ex : exprf t) (eC : _ -> exprf tC)
+        (eC_resp : forall x y,
+            interpf interp_op x = interpf interp_op y
+            -> interpf interp_op (eC x) = interpf interp_op (eC y))
+    : interpf interp_op (under_letsf let_bind_op_args ex eC)
+      = let x := interpf interp_op ex in interpf interp_op (eC (SmartMap.SmartVarf x)).
+  Proof using Type.
+    unfold under_letsf; rewrite interpf_under_letsf'; t_fin.
   Qed.
 
   Section gen.

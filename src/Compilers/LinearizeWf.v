@@ -1,10 +1,13 @@
 (** * Linearize: Place all and only operations in let binders *)
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.Wf.
+Require Import Crypto.Compilers.ExprInversion.
+Require Import Crypto.Compilers.WfInversion.
 Require Import Crypto.Compilers.WfProofs.
 Require Import Crypto.Compilers.Linearize.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.DestructHead.
 
 Local Open Scope ctype_scope.
 Section language.
@@ -29,6 +32,8 @@ Section language.
       | _ => progress simpl in *
       | _ => progress subst
       | _ => progress inversion_sigma
+      | _ => progress destruct_head'_sig
+      | _ => progress destruct_head'_and
       | _ => setoid_rewrite List.in_app_iff
       | [ H : context[List.In _ (_ ++ _)] |- _ ] => setoid_rewrite List.in_app_iff in H
       | _ => progress intros
@@ -38,113 +43,77 @@ Section language.
       | _ => rewrite !List.app_assoc
       | [ H : _ \/ _ |- _ ] => destruct H
       | [ H : _ |- _ ] => apply H
-      | _ => eapply wff_in_impl_Proper; [ solve [ eauto ] | ]
+      | [ H : forall G : list _, _ |- _ ] => apply (H nil)
+      | _ => eapply wff_in_impl_Proper; [ solve [ eauto using wff_SmartVarf ] | solve [ repeat t_fin_step tac ] ]
       | _ => progress tac
       | [ |- wff _ _ _ ] => constructor
       | [ |- wf _ _ _ ] => constructor
       | _ => break_innermost_match_step
+      | _ => progress inversion_expr
+      | _ => congruence
+      | _ => progress destruct_head' sum
+      | _ => progress unfold invert_Op in *
+      | _ => break_innermost_match_hyps_step
       end.
     Local Ltac t_fin tac := repeat t_fin_step tac.
 
     Local Hint Constructors Wf.wff.
     Local Hint Resolve List.in_app_or List.in_or_app.
 
-    Local Ltac small_inversion_helper wf G0 e2 :=
-      let t0 := match type of wf with wff (t:=?t0) _ _ _ => t0 end in
-      let e1 := match goal with
-                | |- context[wff G0 (under_letsf ?e1 _) (under_letsf e2 _)] => e1
-                end in
-      pattern G0, t0, e1, e2;
-      lazymatch goal with
-      | [ |- ?retP _ _ _ _ ]
-        => first [ refine (match wf in @Wf.wff _ _ _ _ G t v1 v2
-                                return match v1 return Prop with
-                                       | TT => retP G t v1 v2
-                                       | _ => forall P : Prop, P -> P
-                                       end with
-                          | WfTT _ => _
-                          | _ => fun _ p => p
-                          end)
-                | refine (match wf in @Wf.wff _ _ _ _ G t v1 v2
-                                return match v1 return Prop with
-                                       | Var _ _ => retP G t v1 v2
-                                       | _ => forall P : Prop, P -> P
-                                       end with
-                          | WfVar _ _ _ _ _ => _
-                          | _ => fun _ p => p
-                          end)
-                | refine (match wf in @Wf.wff _ _ _ _ G t v1 v2
-                                return match v1 return Prop with
-                                       | Op _ _ _ _ => retP G t v1 v2
-                                       | _ => forall P : Prop, P -> P
-                                       end with
-                          | WfOp _ _ _ _ _ _ _ => _
-                          | _ => fun _ p => p
-                          end)
-                | refine (match wf in @Wf.wff _ _ _ _ G t v1 v2
-                                return match v1 return Prop with
-                                       | LetIn _ _ _ _ => retP G t v1 v2
-                                       | _ => forall P : Prop, P -> P
-                                       end with
-                          | WfLetIn _ _ _ _ _ _ _ _ _ => _
-                          | _ => fun _ p => p
-                          end)
-                | refine (match wf in @Wf.wff _ _ _ _ G t v1 v2
-                                return match v1 return Prop with
-                                       | Pair _ _ _ _ => retP G t v1 v2
-                                       | _ => forall P : Prop, P -> P
-                                       end with
-                          | WfPair _ _ _ _ _ _ _ _ _ => _
-                          | _ => fun _ p => p
-                          end) ]
-      end.
-    Fixpoint wff_under_letsf G {t} e1 e2 {tC} eC1 eC2
+    Section gen1.
+      Context (let_bind_op_args : bool).
+
+      Fixpoint wff_under_letsf' G {t} e1 e2 {tC} eC1 eC2
+               (wf : @wff var1 var2 G t e1 e2)
+               (H : forall (x1 : interp_flat_type var1 t) (x2 : interp_flat_type var2 t),
+                   wff (flatten_binding_list x1 x2 ++ G) (eC1 (inl x1)) (eC2 (inl x2)))
+               (H' : forall G' (x y : exprf t),
+                   wff (G' ++ G) x y
+                   -> wff (G' ++ G) (eC1 (inr x)) (eC2 (inr y)))
+               {struct e1}
+        : @wff var1 var2 G tC (under_letsf' let_bind_op_args e1 eC1) (under_letsf' let_bind_op_args e2 eC2).
+      Proof using Type.
+        revert H.
+        set (e1v := e1) in *.
+        destruct e1 as [ | | ? ? ? args | tx ex tC0 eC0 | ? ex ? ey ];
+          [ clear wff_under_letsf'
+          | clear wff_under_letsf'
+          | clear wff_under_letsf'
+          | generalize (fun G => match e1v return match e1v with LetIn _ _ _ _ => _ | _ => _ end with
+                                 | LetIn _ ex _ eC => wff_under_letsf' G _ ex
+                                 | _ => I
+                                 end);
+            generalize (fun G => match e1v return match e1v with LetIn tx0 _ tC1 e0 => _ | _ => _ end with
+                                 | LetIn _ ex tC' eC => fun x => wff_under_letsf' G tC' (eC x)
+                                 | _ => I
+                                 end);
+            clear wff_under_letsf'
+          | generalize (fun G => match e1v return match e1v with Pair _ _ _ _ => _ | _ => _ end with
+                                 | Pair _ ex _ ey => wff_under_letsf' G _ ex
+                                 | _ => I
+                                 end);
+            generalize (fun G => match e1v return match e1v with Pair _ _ _ _ => _ | _ => _ end with
+                                 | Pair _ ex _ ey => wff_under_letsf' G _ ey
+                                 | _ => I
+                                 end);
+            clear wff_under_letsf' ];
+          subst e1v;
+          cbv beta iota;
+          (invert_one_expr e2 || destruct e2); intros; try break_innermost_match_step; try exact I; intros;
+            inversion_wf;
+            t_fin idtac.
+      Qed.
+
+      Lemma  wff_under_letsf G {t} e1 e2 {tC} eC1 eC2
              (wf : @wff var1 var2 G t e1 e2)
-             (H : forall (x1 : interp_flat_type var1 t) (x2 : interp_flat_type var2 t),
-                 wff (flatten_binding_list x1 x2 ++ G) (eC1 x1) (eC2 x2))
-             {struct e1}
-      : @wff var1 var2 G tC (under_letsf e1 eC1) (under_letsf e2 eC2).
-    Proof using Type.
-      revert H.
-      set (e1v := e1) in *.
-      destruct e1 as [ | | ? ? ? args | tx ex tC0 eC0 | ? ex ? ey ];
-        [ clear wff_under_letsf
-        | clear wff_under_letsf
-        | clear wff_under_letsf
-        | generalize (fun G => match e1v return match e1v with LetIn _ _ _ _ => _ | _ => _ end with
-                            | LetIn _ ex _ eC => wff_under_letsf G _ ex
-                            | _ => I
-                            end);
-          generalize (fun G => match e1v return match e1v with
-                                                | LetIn tx0 _ tC1 e0 => (* 8.4's type inferencer is broken, so we copy/paste the term from 8.5.  This entire clause could just be [_], if Coq 8.4 worked *)
-                                                  forall (x : @interp_flat_type base_type_code var1 tx0) (e3 : exprf tC1)
-                                                         (tC2 : flat_type) (eC3 : @interp_flat_type base_type_code var1 tC1 -> exprf tC2)
-                                                         (eC4 : @interp_flat_type base_type_code var2 tC1 -> exprf tC2),
-                                                    wff G (e0 x) e3 ->
-                                                    (forall (x1 : @interp_flat_type base_type_code var1 tC1)
-                                                            (x2 : @interp_flat_type base_type_code var2 tC1),
-                                                        wff (@flatten_binding_list base_type_code var1 var2 tC1 x1 x2 ++ G) (eC3 x1) (eC4 x2)) ->
-                                                    wff G (@under_letsf base_type_code op var1 tC1 (e0 x) tC2 eC3)
-                                                        (@under_letsf base_type_code op var2 tC1 e3 tC2 eC4)
-                                                | _ => _ end with
-                               | LetIn _ ex tC' eC => fun x => wff_under_letsf G tC' (eC x)
-                               | _ => I
-                               end);
-          clear wff_under_letsf
-        | generalize (fun G => match e1v return match e1v with Pair _ _ _ _ => _ | _ => _ end with
-                            | Pair _ ex _ ey => wff_under_letsf G _ ex
-                            | _ => I
-                            end);
-          generalize (fun G => match e1v return match e1v with Pair _ _ _ _ => _ | _ => _ end with
-                            | Pair _ ex _ ey => wff_under_letsf G _ ey
-                            | _ => I
-                            end);
-          clear wff_under_letsf ];
-        revert eC1 eC2;
-        (* alas, Coq's refiner isn't smart enough to figure out these small inversions for us *)
-        small_inversion_helper wf G e2;
-        t_fin idtac.
-    Qed.
+             (H' : forall G' (x y : exprf t),
+                 wff (G' ++ G) x y
+                 -> wff (G' ++ G) (eC1 x) (eC2 y))
+        : @wff var1 var2 G tC (under_letsf let_bind_op_args e1 eC1) (under_letsf let_bind_op_args e2 eC2).
+      Proof using Type.
+        apply wff_under_letsf'; t_fin idtac.
+      Qed.
+    End gen1.
 
     Local Hint Resolve wff_under_letsf.
     Local Hint Constructors or.
@@ -152,7 +121,7 @@ Section language.
     Local Hint Resolve wff_in_impl_Proper.
     Local Hint Resolve wff_SmartVarf.
 
-    Section gen.
+    Section gen2.
       Context (let_bind_op_args : bool).
 
       Lemma wff_linearizef_gen G {t} e1 e2
@@ -170,7 +139,7 @@ Section language.
       Proof using Type.
         destruct 1; constructor; auto.
       Qed.
-    End gen.
+    End gen2.
   End with_var.
 
   Section gen.
