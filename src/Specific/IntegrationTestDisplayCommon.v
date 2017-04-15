@@ -51,7 +51,7 @@ Tactic Notation "display" open_constr(f) :=
   let do_red F := (eval cbv [f
                                proj1_sig fst snd
                                Tuple.map Tuple.map'
-                               Lift.lift1_sig Lift.lift2_sig Lift.lift4_sig Lift.lift4_sig_sig
+                               Lift.lift1_sig Lift.lift2_sig Lift.lift3_sig Lift.lift4_sig Lift.lift4_sig_sig
                                MapProjections.proj2_sig_map Associativity.sig_sig_assoc
                                sig_eq_trans_exist1 sig_R_trans_exist1 sig_eq_trans_rewrite_fun_exist1
                                sig_R_trans_rewrite_fun_exist1
