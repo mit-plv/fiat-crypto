@@ -28,6 +28,7 @@ src/Compilers/BoundByCastWf.v
 src/Compilers/CommonSubexpressionElimination.v
 src/Compilers/CommonSubexpressionEliminationDenote.v
 src/Compilers/CommonSubexpressionEliminationInterp.v
+src/Compilers/CommonSubexpressionEliminationProperties.v
 src/Compilers/CommonSubexpressionEliminationWf.v
 src/Compilers/Conversion.v
 src/Compilers/CountLets.v
