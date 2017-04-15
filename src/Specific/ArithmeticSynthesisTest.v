@@ -25,6 +25,7 @@ Section Ops51.
   Definition coef_div_modulus : nat := 2. (* add 2*modulus before subtracting *)
   Definition carry_chain1 := Eval vm_compute in (seq 0 (pred sz)).
   Definition carry_chain2 := ([0;1])%nat.
+  Definition a24 := 121665%Z.
 
   (* These definitions are inferred from those above *)
   Definition m := Eval vm_compute in Z.to_pos (s - Associational.eval c). (* modulus *)
@@ -82,20 +83,30 @@ Section Ops51.
       apply Z.pow_nonzero; omega.
   Qed.
 
+  Local Ltac solve_constant_sig :=
+    lazymatch goal with
+    | [ |- { c : Z^?sz | Positional.Fdecode (m:=?M) ?wt c = ?v } ]
+      => let t := (eval vm_compute in
+                      (Positional.encode (n:=sz) (modulo:=modulo) (div:=div) wt (F.to_Z (m:=M) v))) in
+         (exists t; vm_decide)
+    end.
+
   Definition zero_sig :
     { zero : Z^sz | Positional.Fdecode (m:=m) wt zero = 0%F}.
   Proof.
-    let t := eval vm_compute in
-    (Positional.encode (n:=sz) (modulo:=modulo) (div:=div) wt 0) in
-        exists t; vm_decide.
+    solve_constant_sig.
   Defined.
 
   Definition one_sig :
     { one : Z^sz | Positional.Fdecode (m:=m) wt one = 1%F}.
   Proof.
-    let t := eval vm_compute in
-    (Positional.encode (n:=sz) (modulo:=modulo) (div:=div) wt 1) in
-        exists t; vm_decide.
+    solve_constant_sig.
+  Defined.
+
+  Definition a24_sig :
+    { a24t : Z^sz | Positional.Fdecode (m:=m) wt a24t = F.of_Z m a24 }.
+  Proof.
+    solve_constant_sig.
   Defined.
 
   Definition add_sig :
@@ -210,4 +221,3 @@ Eval cbv [proj1_sig carry_sig] in (proj1_sig carry_sig).
 *)
 
 End Ops51.
-
