@@ -57,7 +57,8 @@ Section symbolic.
           (op_code_leb : op_code -> op_code -> bool)
           (base_type_leb : base_type_code -> base_type_code -> bool).
   Local Notation symbolic_expr := (symbolic_expr base_type_code op_code).
-  Context (normalize_symbolic_op_arguments : op_code -> symbolic_expr -> symbolic_expr).
+  Context (normalize_symbolic_op_arguments : op_code -> symbolic_expr -> symbolic_expr)
+          (inline_symbolic_expr_in_lookup : bool).
 
   Local Notation symbolic_expr_beq := (@symbolic_expr_beq base_type_code op_code base_type_code_beq op_code_beq).
   Local Notation symbolic_expr_lb := (@internal_symbolic_expr_dec_lb base_type_code op_code base_type_code_beq op_code_beq base_type_code_lb op_code_lb).
@@ -223,11 +224,12 @@ Section symbolic.
                                | Some sx => (sx, lookupb xs sx)
                                | None => (symbolize_var xs tx, None)
                                end in
+              let reduced_sx := if inline_symbolic_expr_in_lookup then sx else symbolize_var xs tx in
               match sv with
-              | Some v => @csef _ (eC (symbolicify_smart_var v sx)) xs
+              | Some v => @csef _ (eC (symbolicify_smart_var v reduced_sx)) (extendb xs reduced_sx v)
               | None
-                => LetIn ex' (fun x => let sx' := symbolicify_smart_var x sx in
-                                       @csef _ (eC sx') (extendb xs sx x))
+                => LetIn ex' (fun x => let sx' := symbolicify_smart_var x reduced_sx in
+                                       @csef _ (eC sx') (extendb (extendb xs sx x) reduced_sx x))
               end
          | TT => TT
          | Var _ x => Var (fst x)
@@ -252,6 +254,6 @@ Section symbolic.
     := fun var => cse (prefix _) (e _) empty.
 End symbolic.
 
-Global Arguments csef {_} op_code base_type_code_beq op_code_beq base_type_code_bl {_} symbolize_op normalize_symbolic_op_arguments {var t} _ _.
-Global Arguments cse {_} op_code base_type_code_beq op_code_beq base_type_code_bl {_} symbolize_op normalize_symbolic_op_arguments {var} prefix {t} _ _.
-Global Arguments CSE {_} op_code base_type_code_beq op_code_beq base_type_code_bl {_} symbolize_op normalize_symbolic_op_arguments {t} e prefix var.
+Global Arguments csef {_} op_code base_type_code_beq op_code_beq base_type_code_bl {_} symbolize_op normalize_symbolic_op_arguments inline_symbolic_expr_in_lookup {var t} _ _.
+Global Arguments cse {_} op_code base_type_code_beq op_code_beq base_type_code_bl {_} symbolize_op normalize_symbolic_op_arguments inline_symbolic_expr_in_lookup {var} prefix {t} _ _.
+Global Arguments CSE {_} op_code base_type_code_beq op_code_beq base_type_code_bl {_} symbolize_op normalize_symbolic_op_arguments inline_symbolic_expr_in_lookup {t} e prefix var.

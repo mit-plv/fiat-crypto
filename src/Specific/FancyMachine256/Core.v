@@ -108,7 +108,7 @@ Section reflection.
        | OPaddm => SOPaddm
        end.
 
-  Definition CSE {t} e := @CSE base_type op_code base_type_beq op_code_beq internal_base_type_dec_bl op symbolicify_op (fun _ x => x) t e (fun _ => nil).
+  Definition CSE {t} e := @CSE base_type op_code base_type_beq op_code_beq internal_base_type_dec_bl op symbolicify_op (fun _ x => x) true t e (fun _ => nil).
 
   Inductive inline_option := opt_inline | opt_default | opt_noinline.
 

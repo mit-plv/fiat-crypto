@@ -187,7 +187,7 @@ Section cse.
        | Mul => SMul
        | Sub => SSub
        end.
-  Definition CSE {t} e := @CSE base_type op_code base_type_beq op_code_beq internal_base_type_dec_bl op symbolicify_op (fun _ x => x) t e (fun _ => nil).
+  Definition CSE {t} e := @CSE base_type op_code base_type_beq op_code_beq internal_base_type_dec_bl op symbolicify_op (fun _ x => x) true t e (fun _ => nil).
 End cse.
 
 Definition example_expr_simplified := Eval vm_compute in InlineConst is_const (ANormal example_expr).

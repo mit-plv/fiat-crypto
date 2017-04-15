@@ -151,25 +151,25 @@ Definition normalize_symbolic_expr_mod_c (opc : symbolic_op) (args : symbolic_ex
        => args
      end.
 
-Definition csef {var t} (v : exprf _ _ t) xs
+Definition csef inline_symbolic_expr_in_lookup {var t} (v : exprf _ _ t) xs
   := @csef base_type symbolic_op base_type_beq symbolic_op_beq
            internal_base_type_dec_bl op symbolize_op
            normalize_symbolic_expr_mod_c
-           var t v xs.
+           var inline_symbolic_expr_in_lookup t v xs.
 
-Definition cse {var} (prefix : list _) {t} (v : expr _ _ t) xs
+Definition cse inline_symbolic_expr_in_lookup {var} (prefix : list _) {t} (v : expr _ _ t) xs
   := @cse base_type symbolic_op base_type_beq symbolic_op_beq
           internal_base_type_dec_bl op symbolize_op
           normalize_symbolic_expr_mod_c
-          var prefix t v xs.
+          inline_symbolic_expr_in_lookup var prefix t v xs.
 
-Definition CSE_gen {t} (e : Expr _ _ t) (prefix : forall var, list { t : flat_type base_type & exprf _ _ t })
+Definition CSE_gen inline_symbolic_expr_in_lookup {t} (e : Expr _ _ t) (prefix : forall var, list { t : flat_type base_type & exprf _ _ t })
   : Expr _ _ t
   := @CSE base_type symbolic_op base_type_beq symbolic_op_beq
           internal_base_type_dec_bl op symbolize_op
           normalize_symbolic_expr_mod_c
-          t e prefix.
+          inline_symbolic_expr_in_lookup t e prefix.
 
-Definition CSE {t} (e : Expr _ _ t)
+Definition CSE inline_symbolic_expr_in_lookup {t} (e : Expr _ _ t)
   : Expr _ _ t
-  := @CSE_gen t e (fun _ => nil).
+  := @CSE_gen inline_symbolic_expr_in_lookup t e (fun _ => nil).
