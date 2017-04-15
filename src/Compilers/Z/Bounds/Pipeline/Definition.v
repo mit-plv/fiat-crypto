@@ -61,6 +61,7 @@ Require Import Crypto.Compilers.Z.InlineWf.
 Require Import Crypto.Compilers.Linearize.
 Require Import Crypto.Compilers.LinearizeInterp.
 Require Import Crypto.Compilers.LinearizeWf.
+Require Import Crypto.Compilers.Z.ArithmeticSimplifierWf.
 Require Import Crypto.Compilers.Z.Bounds.MapCastByDeBruijn.
 Require Import Crypto.Compilers.Z.Bounds.MapCastByDeBruijnInterp.
 Require Import Crypto.Compilers.Z.Bounds.MapCastByDeBruijnWf.
@@ -115,8 +116,7 @@ Section with_round_up_list.
              (v : interp_flat_type Syntax.interp_base_type (domain t))
              (v' : interp_flat_type Syntax.interp_base_type (pick_type input_bounds))
              (Hv : Bounds.is_bounded_by input_bounds v /\ cast_back_flat_const v' = v)
-    : Interp (@Bounds.interp_op) e input_bounds = b
-      /\ Bounds.is_bounded_by b (Interp interp_op e v)
+    : Bounds.is_bounded_by b (Interp interp_op e v)
       /\ cast_back_flat_const (Interp interp_op e' v') = Interp interp_op e v.
   Proof.
     (** These first two lines probably shouldn't change much *)
@@ -125,13 +125,12 @@ Section with_round_up_list.
             || inversion_sigma || eliminate_hprop_eq || inversion_prod
             || simpl in * || subst).
     (** Now handle all the transformations that come after the word-size selection *)
-    rewrite InterpExprEta_arrow, InterpInlineConst
-      by eauto with wf.
+    autorewrite with reflective_interp.
+    (** Now handle word-size selection *)
+    eapply MapCastCorrect_eq; [ | eassumption | eassumption | .. ];
+      [ auto with wf | reflexivity | ].
     (** Now handle all the transformations that come before the word-size selection *)
-    rewrite <- !InterpANormal with (e:=e), <- !(@InterpInlineConst _ _ _ (ANormal e))
-      by eauto with wf.
-    (** Now handle word-size selection itself *)
-    eapply MapCastCorrect; eauto with wf.
+    repeat autorewrite with reflective_interp; reflexivity.
   Qed.
 End with_round_up_list.
 
