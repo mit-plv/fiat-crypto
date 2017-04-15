@@ -66,27 +66,27 @@ Section BoundedField25p5.
 
   (* TODO : change this to field once field isomorphism happens *)
   Definition xzladderstep :
-    { xzladderstep : feW -> feW -> feW * feW -> feW * feW -> feW * feW * (feW * feW)
-    | forall a24 x1 Q Q',
-        let xz := xzladderstep a24 x1 Q Q' in
-        feW_bounded a24
-        -> feW_bounded x1
+    { xzladderstep : feW -> feW * feW -> feW * feW -> feW * feW * (feW * feW)
+    | forall x1 Q Q',
+        let xz := xzladderstep x1 Q Q' in
+        let eval := B.Positional.Fdecode wt in
+        feW_bounded x1
         -> feW_bounded (fst Q) /\ feW_bounded (snd Q)
         -> feW_bounded (fst Q') /\ feW_bounded (snd Q')
         -> ((feW_bounded (fst (fst xz)) /\ feW_bounded (snd (fst xz)))
             /\ (feW_bounded (fst (snd xz)) /\ feW_bounded (snd (snd xz))))
-           /\ Tuple.map (n:=2) (Tuple.map (n:=2) phi) xz = FMxzladderstep (phi a24) (phi x1) (Tuple.map (n:=2) phi Q) (Tuple.map (n:=2) phi Q') }.
+           /\ Tuple.map (n:=2) (Tuple.map (n:=2) phi) xz = FMxzladderstep (eval (proj1_sig a24_sig)) (phi x1) (Tuple.map (n:=2) phi Q) (Tuple.map (n:=2) phi Q') }.
   Proof.
     lazymatch goal with
-    | [ |- { op | forall (a:?A) (b:?B) (c:?C) (d:?D),
-               let v := op a b c d in
-               @?P a b c d v } ]
-      => refine (@lift4_sig A B C D _ P _)
+    | [ |- { op | forall (a:?A) (b:?B) (c:?C),
+               let v := op a b c in
+               @?P a b c v } ]
+      => refine (@lift3_sig A B C _ P _)
     end.
-    intros a b c d; cbv beta iota zeta.
+    intros a b c; cbv beta iota zeta.
     lazymatch goal with
-    | [ |- { e | ?A -> ?B -> ?C -> ?D -> @?E e } ]
-      => refine (proj2_sig_map (P:=fun e => A -> B -> C -> D -> (_:Prop)) _ _)
+    | [ |- { e | ?A -> ?B -> ?C -> @?E e } ]
+      => refine (proj2_sig_map (P:=fun e => A -> B -> C -> (_:Prop)) _ _)
     end.
     { intros ? FINAL.
       repeat let H := fresh in intro H; specialize (FINAL H).
@@ -100,8 +100,8 @@ Section BoundedField25p5.
       rewrite <- (proj2_sig Mxzladderstep_sig).
       apply f_equal.
       cbv [proj1_sig]; cbv [Mxzladderstep_sig].
-      context_to_dlet_in_rhs (@M.xzladderstep _ _ _ _).
-      cbv [M.xzladderstep].
+      context_to_dlet_in_rhs (@M.xzladderstep _ _ _ _ _).
+      cbv [M.xzladderstep a24_sig].
       do 4 lazymatch goal with
            | [ |- context[@proj1_sig ?a ?b ?f_sig _] ]
              => context_to_dlet_in_rhs (@proj1_sig a b f_sig)
@@ -110,8 +110,8 @@ Section BoundedField25p5.
       refine (proj2 FINAL). }
     subst feW feW_bounded; cbv beta.
     (* jgross start here! *)
-    (*
     Set Ltac Profiling.
+    (*
     Time Glue.refine_to_reflective_glue (128::256::nil)%nat%list.
     Time ReflectiveTactics.refine_with_pipeline_correct.
     { Time ReflectiveTactics.do_reify. }
