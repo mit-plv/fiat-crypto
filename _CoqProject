@@ -126,6 +126,7 @@ src/Compilers/Z/ArithmeticSimplifierUtil.v
 src/Compilers/Z/ArithmeticSimplifierWf.v
 src/Compilers/Z/BinaryNotationConstants.v
 src/Compilers/Z/CNotations.v
+src/Compilers/Z/CommonSubexpressionElimination.v
 src/Compilers/Z/FoldTypes.v
 src/Compilers/Z/HexNotationConstants.v
 src/Compilers/Z/Inline.v
