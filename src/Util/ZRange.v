@@ -17,6 +17,12 @@ Ltac inversion_zrange :=
          | [ H : _ = _ :> zrange |- _ ]
            => pose proof (f_equal lower H); pose proof (f_equal upper H); clear H;
               cbv beta iota in *
+         | [ H : Build_zrange _ _ = _ |- _ ]
+           => pose proof (f_equal lower H); pose proof (f_equal upper H); clear H;
+              cbv beta iota in *
+         | [ H : _ = Build_zrange _ _ |- _ ]
+           => pose proof (f_equal lower H); pose proof (f_equal upper H); clear H;
+              cbv beta iota in *
          end.
 
 (** All of the boundedness properties take an optional bitwidth, and
