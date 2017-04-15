@@ -6,16 +6,16 @@ Require Import Crypto.Compilers.Z.Syntax.
 Require Import Crypto.Compilers.CommonSubexpressionEliminationInterp.
 Require Import Crypto.Compilers.Z.CommonSubexpressionElimination.
 
-Lemma InterpCSE_gen t (e : Expr _ _ t) prefix
+Lemma InterpCSE_gen inline_symbolic_expr_in_lookup t (e : Expr _ _ t) prefix
       (Hwf : Wf e)
-  : forall x, Interp interp_op (@CSE_gen t e prefix) x = Interp interp_op e x.
+  : forall x, Interp interp_op (@CSE_gen inline_symbolic_expr_in_lookup t e prefix) x = Interp interp_op e x.
 Proof.
   apply InterpCSE;
     auto using internal_base_type_dec_bl, internal_base_type_dec_lb, internal_symbolic_op_dec_bl, internal_symbolic_op_dec_lb, denote_symbolic_op.
 Qed.
 
-Lemma InterpCSE t (e : Expr _ _ t) (Hwf : Wf e)
-  : forall x, Interp interp_op (@CSE t e) x = Interp interp_op e x.
+Lemma InterpCSE inline_symbolic_expr_in_lookup t (e : Expr _ _ t) (Hwf : Wf e)
+  : forall x, Interp interp_op (@CSE inline_symbolic_expr_in_lookup t e) x = Interp interp_op e x.
 Proof.
   apply InterpCSE_gen; auto.
 Qed.
