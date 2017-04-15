@@ -270,3 +270,10 @@ Lemma cast_back_flat_const_prod {var A B f} {V : _ * _}
     = (@cast_back_flat_const var A f (fst V) (fst v),
        @cast_back_flat_const var B f (snd V) (snd v)).
 Proof. reflexivity. Qed.
+
+Lemma base_type_leb_total
+  : forall x y : base_type, base_type_leb x y = true \/ base_type_leb y x = true.
+Proof.
+  induction x, y; simpl; auto.
+  rewrite !Nat.leb_le; omega.
+Qed.
