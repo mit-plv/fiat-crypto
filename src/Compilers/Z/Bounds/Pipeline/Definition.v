@@ -76,7 +76,9 @@ Definition PostWfPipeline
   : option (@ProcessedReflectivePackage round_up)
   := Build_ProcessedReflectivePackage_from_option_sigma
        e input_bounds
-       (let e := ANormal e in
+       (let e := InlineConst e in
+        let e := SimplifyArith e in
+        let e := ANormal e in
         let e := InlineConst e in
         let e := MapCast _ e input_bounds in
         option_map
