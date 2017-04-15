@@ -34,7 +34,7 @@ Require Import Crypto.Compilers.Z.ArithmeticSimplifierInterp.
 (** *** Definition of the Pre-Wf Pipeline *)
 (** Do not change the name or the type of this definition *)
 Definition PreWfPipeline {t} (e : Expr base_type op t) : Expr base_type op _
-  := ExprEta (SimplifyArith e).
+  := ExprEta (SimplifyArith (Linearize e)).
 
 (** *** Correctness proof of the Pre-Wf Pipeline *)
 (** Do not change the statement of this lemma.  You shouldn't need to
