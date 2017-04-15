@@ -166,3 +166,5 @@ Proof.
                      end
                    | break_t_step ].
 Qed.
+
+Hint Resolve Wf_SimplifyArith : wf.
