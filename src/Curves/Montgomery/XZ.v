@@ -64,11 +64,11 @@ Module M.
       (* Ideally, we would verify that this corresponds to x coordinate
          multiplication *)
       Local Open Scope core_scope.
-      Definition montladder (bound : positive) (testbit:nat->bool) (u:F) :=
+      Definition montladder (bound : positive) (testbit:Z->bool) (u:F) :=
         let '(P1, P2, swap) :=
-            for (int i = BinInt.Z.pos bound; i >= 0%Z; i--)
+            for (int i = BinInt.Z.pos bound; i >= 0; i--)
                 updating ('(P1, P2, swap) = ((1%F, 0%F), (u, 1%F), false)) {{
-              dlet s_i := testbit (BinInt.Z.to_nat i) in
+              dlet s_i := testbit i in
               dlet swap := xor swap s_i in
               let '(P1, P2) := cswap swap P1 P2 in
               dlet swap := s_i in
