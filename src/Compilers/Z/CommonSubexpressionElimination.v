@@ -97,7 +97,7 @@ Module SymbolicExprOrder <: TotalLeBool.
   Theorem leb_total : forall a1 a2, leb a1 a2 = true \/ leb a2 a1 = true.
   Proof.
     intros; apply symbolic_expr_leb_total;
-      auto using internal_base_type_dec_bl, internal_symbolic_op_dec_bl, base_type_leb_total, symbolic_op_leb_total.
+      auto using internal_base_type_dec_bl, internal_base_type_dec_lb, internal_symbolic_op_dec_bl, internal_symbolic_op_dec_lb, base_type_leb_total, symbolic_op_leb_total.
   Qed.
 End SymbolicExprOrder.
 

@@ -63,6 +63,8 @@ Section symbolic.
   Local Notation symbolic_expr_lb := (@internal_symbolic_expr_dec_lb base_type_code op_code base_type_code_beq op_code_beq base_type_code_lb op_code_lb).
   Local Notation symbolic_expr_bl := (@internal_symbolic_expr_dec_bl base_type_code op_code base_type_code_beq op_code_beq base_type_code_bl op_code_bl).
 
+  Local Notation flat_type_beq := (@flat_type_beq base_type_code base_type_code_beq).
+
   Local Notation flat_type := (flat_type base_type_code).
   Local Notation type := (type base_type_code).
   Local Notation exprf := (@exprf base_type_code op).
@@ -71,7 +73,7 @@ Section symbolic.
 
   Definition SymbolicExprContext {var : flat_type -> Type}
     : Context symbolic_expr var
-    := @AListContext symbolic_expr symbolic_expr_beq _ var (@flat_type_beq _ base_type_code_beq) (@flat_type_dec_bl _ _ base_type_code_bl).
+    := @AListContext symbolic_expr symbolic_expr_beq _ var flat_type_beq (@flat_type_dec_bl _ _ base_type_code_bl).
 
   Local Instance SymbolicExprContextOk {var} : ContextOk (@SymbolicExprContext var)
     := @AListContextOk
@@ -117,7 +119,7 @@ Section symbolic.
        | _, Tbase _ => false
        | Prod A1 B1, Prod A2 B2
          => leb_pair (flat_type_leb A1 A2)
-                     (flat_type_beq _ base_type_code_beq A1 A2)
+                     (flat_type_beq A1 A2)
                      (flat_type_leb B1 B2)
        end.
 
@@ -132,7 +134,7 @@ Section symbolic.
          => leb_pair (leb_pair (op_code_leb op1 op2)
                                (op_code_beq op1 op2)
                                (flat_type_leb argT1 argT2))
-                     (op_code_beq op1 op2 && flat_type_beq _ base_type_code_beq argT1 argT2)
+                     (op_code_beq op1 op2 && flat_type_beq argT1 argT2)
                      (symbolic_expr_leb args1 args2)
        | SOp _ _ _, _ => true
        | _, SOp _ _ _ => false
@@ -142,12 +144,16 @@ Section symbolic.
                      (symbolic_expr_leb y1 y2)
        | SPair _ _, _ => true
        | _, SPair _ _ => false
-       | SFst _ _ x, SFst _ _ y
-         => symbolic_expr_leb x y
+       | SFst A B x, SFst A' B' y
+         => leb_pair (flat_type_leb (Prod A B) (Prod A' B'))
+                     (flat_type_beq (Prod A B) (Prod A' B'))
+                     (symbolic_expr_leb x y)
        | SFst _ _ _, _ => true
        | _, SFst _ _ _ => false
-       | SSnd _ _ x, SSnd _ _ y
-         => symbolic_expr_leb x y
+       | SSnd A B x, SSnd A' B' y
+         => leb_pair (flat_type_leb (Prod A B) (Prod A' B'))
+                     (flat_type_beq (Prod A B) (Prod A' B'))
+                     (symbolic_expr_leb x y)
        | SSnd _ _ _, _ => true
        | _, SSnd _ _ _ => false
        | SInvalid, _ => true
