@@ -351,9 +351,17 @@ Ltac reify_abs base_type_code interp_base_type op var e :=
       (* even if its Gallina name matches a Ltac in this tactic. *)
       let maybe_x := fresh x in
       let not_x := fresh x in
-      lazymatch constr:(fun (x : T) (not_x : var t) (_ : reify_var_for_in_is base_type_code x t not_x) =>
-                          (_ : reify_abs reify_tag C)) (* [C] here is an open term that references "x" by name *)
-      with fun _ v _ => @?C v => mkAbs t C end
+      let C' := match constr:(Set) with
+                | _ => constr:(fun (x : T) (not_x : var t) (_ : reify_var_for_in_is base_type_code x t not_x) =>
+                                 (_ : reify reify_tag C)) (* [C] here is an open term that references "x" by name *)
+                | _ => cfail2 "reifyf: Failed to reify by typeclasses:"%string e
+                end in
+      let C := match constr:(Set) with
+               | _ => lazymatch C'
+                      with fun _ v _ => @?C v => C end
+               | _ => cfail2 "reifyf: Failed to eliminate function dependencies of:"%string C'
+               end in
+      mkAbs t C
     | ?x =>
       let xv := reifyf_term x in
       mkReturn xv
