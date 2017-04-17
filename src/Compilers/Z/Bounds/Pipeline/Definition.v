@@ -130,7 +130,7 @@ Section with_round_up_list.
     autorewrite with reflective_interp.
     (** Now handle word-size selection *)
     eapply MapCastCorrect_eq; [ | eassumption | eassumption | .. ];
-      [ auto with wf | reflexivity | ].
+      [ solve [ auto 60 with wf ] | reflexivity | ].
     (** Now handle all the transformations that come before the word-size selection *)
     repeat autorewrite with reflective_interp; reflexivity.
   Qed.
