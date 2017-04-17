@@ -113,6 +113,8 @@ Fixpoint symbolic_op_args_to_list (t : flat_type base_type)
           else (t, args)::nil
      | SPair x y, Prod A B
        => symbolic_op_args_to_list A opc x ++ symbolic_op_args_to_list B opc y
+     | SPair x y, Unit
+       => symbolic_op_args_to_list Unit opc x ++ symbolic_op_args_to_list Unit opc y
      | STT, _
      | SVar _, _
      | SPair _ _, _
