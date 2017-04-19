@@ -143,11 +143,13 @@ Qed.
 
 Lemma length_to_list' T n t : length (@to_list' T n t) = S n.
 Proof. induction n; simpl in *; trivial; destruct t; simpl; congruence. Qed.
+Hint Rewrite length_to_list' : distr_length.
 
 Lemma length_to_list : forall {T} {n} (xs:tuple T n), length (to_list n xs) = n.
 Proof.
   destruct n; [ reflexivity | apply length_to_list' ].
 Qed.
+Hint Rewrite @length_to_list : distr_length.
 
 Lemma from_list'_to_list' : forall T n (xs:tuple' T n),
     forall x xs' pf, to_list' n xs = cons x xs' ->
@@ -756,6 +758,13 @@ Proof. destruct n; reflexivity. Qed.
 Lemma tl_append {A n} (x: tuple A n) (a:A) : tl (append a x) = x.
 Proof. destruct n; try destruct x; reflexivity. Qed.
 
+Lemma subst_append {A n} (x : tuple A (S n)) : x = append (hd x) (tl x).
+Proof. destruct n; try destruct x; reflexivity. Qed.
+
+Lemma to_list_append {A n} (x : tuple A n) (a : A) :
+  to_list (S n) (append a x) = a :: to_list n x.
+Proof. destruct n; try destruct x; reflexivity. Qed.
+
 Lemma from_list'_cons {A n} (a0 a1:A) (xs:list A) H :
   from_list' a0 (S n) (a1::xs) H = append (n:=S n) a0 (from_list' a1 n xs (length_cons_full _ _ _ H)).
 Proof. simpl; rewrite <-!from_list_default'_eq with (d:=a0); eauto. Qed.
@@ -772,9 +781,7 @@ Qed.
 
 Lemma map_append' {A B n} (f:A->B) : forall (x:tuple' A n) (a:A),
   map f (append (n:=S n) a x) = append (f a) (map (n:=S n) f x).
-Proof.
-  reflexivity.
-Qed.
+Proof. reflexivity. Qed.
 
 Lemma map_append {A B n} (f:A->B) : forall (x:tuple A n) (a:A),
   map f (append a x) = append (f a) (map f x).
@@ -852,6 +859,36 @@ Qed.
 Lemma to_list_repeat {A} (a:A) n : to_list _ (repeat a n) = List.repeat a n.
 Proof. induction n; [reflexivity|destruct n; simpl in *; congruence]. Qed.
 
+Fixpoint lastn {A m} n : n <= m -> tuple A m -> tuple A n :=
+  match n as n0 return (n0 <= m -> tuple A m -> tuple A n0) with
+  | O => fun _ _ => tt
+  | S n' =>
+    match m as m0 return (S n' <= m0 -> tuple A m0 -> tuple A (S n')) with
+    | O => fun (H : S n' <= 0) _ =>
+             False_rect _ (NPeano.Nat.nle_succ_0 _ H)
+    | S m' => fun (H  : S n' <= S m') xs =>
+                append (hd xs) (lastn n' (le_S_n _ _ H) (tl xs))
+    end
+  end.
+
+Lemma to_list_lastn {A} n: forall {m} H xs,
+  to_list n (@lastn A m n H xs) = firstn n (to_list m xs).
+Proof.
+  induction n; intros; destruct m; try rewrite (subst_append xs);
+    repeat match goal with
+           | _ => rewrite to_list_append
+           | _ => rewrite hd_append
+           | _ => rewrite tl_append
+           | _ => progress simpl lastn
+           | _ => progress simpl firstn
+           | _ => reflexivity
+           | _ => solve [distr_length]
+           end.
+  rewrite IHn. reflexivity.
+Qed.
+
+Definition nth {A} 
+
 Global Instance map'_Proper {n A B} : Proper (pointwise_relation _ eq ==> eq ==> eq) (fun f => @map' A B f n) | 10.
 Proof.
   induction n.
@@ -867,6 +904,3 @@ Proof.
   destruct n; [ | apply map'_Proper ].
   { repeat (intros [] || intro); auto. }
 Qed.
-
-Require Import Crypto.Util.ListUtil. (* To initialize [distr_length] database *)
-Hint Rewrite length_to_list' @length_to_list : distr_length.
