@@ -1,6 +1,7 @@
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.Lists.List.
+Require Import Coq.omega.Omega.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.DestructHead.
@@ -794,6 +795,81 @@ Fixpoint nth_default {A m} (d:A) n : tuple A m -> A :=
   | S m', S n' => fun x => nth_default d n' (tl x)
   end.
 
+Fixpoint left_tl {T n} : tuple T (S n) -> tuple T n :=
+  match n with
+  | O => fun _ => tt
+  | S n' => fun xs => append (hd xs) (left_tl (tl xs))
+  end.
+
+Fixpoint left_hd {T n} : tuple T (S n) -> T :=
+  match n with
+  | O => fun x => x
+  | S n' => fun xs => left_hd (tl xs)
+  end.
+
+Fixpoint left_append {T n} (x : T) : tuple T n -> tuple T (S n) :=
+  match n with
+  | O => fun _ => x
+  | S n' => fun xs => append (hd xs) (left_append x (tl xs))
+  end.
+
+Lemma left_append_left_hd {T n} (xs : tuple T n) x :
+  left_hd (left_append x xs) = x.
+Proof. induction n; [reflexivity | apply IHn]. Qed.
+
+Lemma left_append_left_tl {T n} (xs : tuple T n) x :
+  left_tl (left_append x xs) = xs.
+Proof.
+  induction n; [destruct xs; reflexivity|].
+  simpl. rewrite IHn.
+  symmetry; apply subst_append.
+Qed.
+
+Lemma left_append_append {T n} (xs : tuple T n) r l :
+  left_append l (append r xs) = append r (left_append l xs).
+Proof. destruct n; reflexivity. Qed.
+
+Lemma left_tl_append {T n} (xs : tuple T (S n)) x:
+  left_tl (append x xs) = append x (left_tl xs).
+Proof. reflexivity. Qed.
+
+Lemma left_hd_append {T n} (xs : tuple T (S n)) x:
+  left_hd (append x xs) = left_hd xs.
+Proof. reflexivity. Qed.
+
+Lemma tl_left_append {T n} (xs : tuple T (S n)) x :
+  tl (left_append x xs) = left_append x (tl xs).
+Proof. destruct n; reflexivity. Qed.
+
+Lemma hd_left_append {T n} (xs : tuple T (S n)) x :
+  hd (left_append x xs) = hd xs.
+Proof. destruct n; reflexivity. Qed.
+
+Lemma map'_left_append {A B n} f xs x0 :
+    @map' A B f (S n) (left_append (n:=S n) x0 xs)
+    = left_append (n:=S n) (f x0) (map' f xs).
+Proof.
+    induction n; try reflexivity.
+    transitivity (map' f (tl (left_append x0 xs)), f (hd (left_append x0 xs))); [reflexivity|].
+    rewrite tl_left_append, IHn. reflexivity.
+Qed.
+
+Lemma map_left_append {A B n} f xs x0 :
+  @map (S n) A B f (left_append x0 xs)
+  = left_append (f x0) (map f xs).
+Proof.
+  destruct n; [ destruct xs; reflexivity| apply map'_left_append].
+Qed.
+
+Lemma subst_left_append {T n} (xs : tuple T (S n)) :
+  xs = left_append (left_hd xs) (left_tl xs).
+Proof.
+  induction n; [reflexivity|].
+  simpl tuple in *; destruct xs as [xs x0].
+  simpl; rewrite hd_append, tl_append.
+  rewrite <-IHn; reflexivity.
+Qed.
+
 (* map operation that carries state *)
 (* first argument to f is index in tuple *)
 Fixpoint mapi_with' {T A B n} i (f: nat->T->A->T*B) (start:T)
@@ -813,36 +889,54 @@ Fixpoint mapi_with {T A B n} (f: nat->T->A->T*B) (start:T)
   | S n' => fun ys => mapi_with' 0 f start ys
   end.
 
-Lemma mapi_with'_invariant {T A B} (f: nat->T->A->T*B)
-      (P : forall n, nat -> T -> T -> tuple A n -> tuple B n -> Prop)
-      (P_holds : forall n i starter rem inp out,
-          P n (S i) (fst (f i starter (hd inp))) rem (tl inp) out
-          -> P (S n) i starter rem inp (append (snd (f i starter (hd inp))) out))
-      (P_base : forall i rem, P 0%nat i rem rem tt tt)
-  :
-  forall {n} i (start : T) (input : tuple A (S n)),
-    P (S n) i start (fst (mapi_with' i f start input)) input (snd (mapi_with' i f start input)).
+Lemma mapi_with'_step {T A B n} i f start inp :
+  @mapi_with' T A B (S n) i f start inp =
+  (fst (mapi_with' (S i) f (fst (f i start (hd inp))) (tl inp)),
+   (snd (mapi_with'(S i) f (fst (f i start (hd inp))) (tl inp)), snd (f i start (hd inp)))).
+Proof. reflexivity. Qed.
+
+Lemma mapi_with'_left_step {T A B n} f a0:
+  forall i start (xs : tuple' A n),
+    @mapi_with' T A B (S n) i f start (left_append (n:=S n) a0 xs)
+    = (fst (f (i + S n)%nat (fst (mapi_with' i f start xs)) a0),
+       left_append (n:=S n)
+                   (snd (f (i + S n)%nat
+                           (fst (mapi_with' i f start xs)) a0))
+                   (snd (mapi_with' i f start xs))).
 Proof.
-  induction n; intros.
-  { specialize (P_holds 0%nat i start (fst (f i start input)) input tt).
-    apply P_holds. apply P_base. }
-  { specialize (P_holds (S n) i start (fst (mapi_with' i f start input)) input).
-    apply P_holds. apply IHn. }
+  induction n; intros; [subst; simpl; repeat f_equal; omega|].
+  rewrite mapi_with'_step; autorewrite with cancel_pair.
+  rewrite tl_left_append, hd_left_append.
+  erewrite IHn by reflexivity; subst; autorewrite with cancel_pair.
+  match goal with |- context [(?xs ,?x0)] =>
+                  change (xs, x0) with (append x0 xs) end.
+  rewrite <-left_append_append.
+  repeat (f_equal; try omega).
 Qed.
 
-Lemma mapi_with_invariant {T A B} (f: nat->T->A->T*B)
-      (P : forall n, nat -> T -> T -> tuple A n -> tuple B n -> Prop)
-      (P_holds : forall n i starter rem inp out,
-          P n (S i) (fst (f i starter (hd inp))) rem (tl inp) out
-          -> P (S n) i starter rem inp (append (snd (f i starter (hd inp))) out))
-      (P_base : forall i rem, P 0%nat i rem rem tt tt)
-  :
-  forall {n} (start : T) (input : tuple A n),
-    P n 0%nat start (fst (mapi_with f start input)) input (snd (mapi_with f start input)).
+Lemma mapi_with'_linvariant {T A B n} start f
+      (P : forall n, T -> tuple A n -> tuple B n -> Prop)
+      (P_holds : forall n st x0 xs ys,
+          (st = fst (mapi_with f start xs)) ->
+          (ys = snd (mapi_with f start xs)) ->
+          P n st xs ys ->
+          P (S n) (fst (f n st x0))
+            (left_append x0 xs)
+            (left_append (snd (f n st x0)) ys))
+      (P_base : P 0%nat start tt tt) (inp : tuple A n):
+  P n (fst (mapi_with f start inp)) inp (snd (mapi_with f start inp)).
 Proof.
-  destruct n; [intros; destruct input; apply P_base|];
-    apply mapi_with'_invariant; auto.
+  induction n; [destruct inp; apply P_base |].
+  rewrite (subst_left_append inp).
+  cbv [mapi_with]. specialize (P_holds n).
+  destruct n.
+  { apply (P_holds _ inp tt tt (eq_refl _) (eq_refl _)).
+    apply P_base. }
+  { rewrite mapi_with'_left_step.
+    autorewrite with cancel_pair natsimplify.
+    apply P_holds; try apply IHn; reflexivity. }
 Qed.
+
 
 Fixpoint repeat {A} (a:A) n : tuple A n :=
   match n with
@@ -859,35 +953,6 @@ Qed.
 Lemma to_list_repeat {A} (a:A) n : to_list _ (repeat a n) = List.repeat a n.
 Proof. induction n; [reflexivity|destruct n; simpl in *; congruence]. Qed.
 
-Fixpoint lastn {A m} n : n <= m -> tuple A m -> tuple A n :=
-  match n as n0 return (n0 <= m -> tuple A m -> tuple A n0) with
-  | O => fun _ _ => tt
-  | S n' =>
-    match m as m0 return (S n' <= m0 -> tuple A m0 -> tuple A (S n')) with
-    | O => fun (H : S n' <= 0) _ =>
-             False_rect _ (NPeano.Nat.nle_succ_0 _ H)
-    | S m' => fun (H  : S n' <= S m') xs =>
-                append (hd xs) (lastn n' (le_S_n _ _ H) (tl xs))
-    end
-  end.
-
-Lemma to_list_lastn {A} n: forall {m} H xs,
-  to_list n (@lastn A m n H xs) = firstn n (to_list m xs).
-Proof.
-  induction n; intros; destruct m; try rewrite (subst_append xs);
-    repeat match goal with
-           | _ => rewrite to_list_append
-           | _ => rewrite hd_append
-           | _ => rewrite tl_append
-           | _ => progress simpl lastn
-           | _ => progress simpl firstn
-           | _ => reflexivity
-           | _ => solve [distr_length]
-           end.
-  rewrite IHn. reflexivity.
-Qed.
-
-Definition nth {A} 
 
 Global Instance map'_Proper {n A B} : Proper (pointwise_relation _ eq ==> eq ==> eq) (fun f => @map' A B f n) | 10.
 Proof.
