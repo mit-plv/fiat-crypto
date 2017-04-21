@@ -127,6 +127,12 @@ Module Columns.
     Proof. reflexivity. Qed.
     Hint Rewrite eval_unit : push_basesystem_eval.
 
+    Lemma eval_single (x:list Z) : eval (n:=1) x = sum x.
+    Proof.
+      cbv [eval]. simpl map. cbv - [Z.mul Z.add sum].
+      rewrite weight_0; ring.
+    Qed. Hint Rewrite eval_single : push_basesystem_eval.
+
     Definition eval_from {n} (offset:nat) (x : (list Z)^n) : Z :=
       B.Positional.eval (fun i => weight (i+offset)) (Tuple.map sum x).
 
@@ -226,64 +232,102 @@ Module Columns.
       rewrite Z.div_add' by auto; nsatz.
     Qed.
 
-    Definition compact_invariant n i (starter rem:Z) (inp : tuple (list Z) n) (out : tuple Z n) :=
-      B.Positional.eval_from weight i out + weight (i + n) * rem  = eval_from i inp + weight i*starter.
+    (* TODO : move to Core? *)
+    Lemma Pos_eval_unit : B.Positional.eval (n:=0) weight tt = 0.
+    Proof. reflexivity. Qed.
+    Hint Rewrite Pos_eval_unit B.Positional.eval_single
+         @B.Positional.eval_step : push_basesystem_eval.
+    (* TODO : move to Core? *)
+    Lemma Pos_eval_left_append {n} : forall wt x xs,
+      B.Positional.eval wt (left_append (n:=n) x xs)
+      = wt n * x + B.Positional.eval wt xs.
+    Proof.
+      induction n; intros; try destruct xs;
+        unfold left_append; fold @left_append;
+        autorewrite with push_basesystem_eval; [ring|].
+      rewrite IHn.
+      rewrite (subst_append xs), hd_append, tl_append.
+      rewrite B.Positional.eval_step.
+      ring.
+    Qed.
+    Hint Rewrite @Pos_eval_left_append : push_basesystem_eval.
 
-    Lemma compact_invariant_holds n i starter rem inp out :
-      compact_invariant n (S i) (fst (compact_step_cps i starter (hd inp) id)) rem (tl inp) out ->
-      compact_invariant (S n) i starter rem inp (append (snd (compact_step_cps i starter (hd inp) id)) out).
-    Proof using Type*.
-    cbv [compact_invariant B.Positional.eval_from]; intros.
-      repeat match goal with
-             | _ => rewrite B.Positional.eval_step
-             | _ => rewrite eval_from_S
-             | _ => rewrite sum_cons
-             | _ => rewrite weight_multiples
-             | _ => rewrite Nat.add_succ_l in *
-             | _ => rewrite Nat.add_succ_r in *
-             | _ => (rewrite fst_fst_compact_step in * )
-             | _ => progress ring_simplify
-             | _ => rewrite ZUtil.Z.mul_div_eq_full by apply weight_nonzero
-             | _ => cbv [compact_step_cps] in *;
-                      autorewrite with uncps push_id in *;
-                      rewrite !compact_digit_mod, !compact_digit_div in *
-             | _ => progress (autorewrite with natsimplify in * )
-             end;
-      rewrite B.Positional.eval_wt_equiv with (wtb := fun i0 => weight (i0 + S i)) by (intros; f_equal; try omega).
-    {
-      rewrite Z.mod_eq by auto using Z.positive_is_nonzero.
-      rewrite sum_cons in H.
-      ring_simplify.
-      match type of H with
-        context [?y * (?a / (?y / ?x))] =>
-        replace (y * (a / (y / x))) with (x * (y / x) * (a / (y / x))) in H
-          by (rewrite Z.mul_div_eq_full by auto using Z.positive_is_nonzero;
-              rewrite weight_multiples; ring)
-      end.
-      nsatz.
-    }
+    Lemma small_mod_eq a b n: a mod n = b mod n -> 0 <= a < n -> a = b mod n.
+    Proof. intros; rewrite <-(Z.mod_small a n); auto. Qed.
+
+    (* helper for some of the modular logic in compact *)
+    Lemma compact_mod_step a b c d: 0 < a -> 0 < b ->
+      a * ((c / a + d) mod b) + c mod a = (a * d + c) mod (a * b).
+    Proof.
+      intros Ha Hb. assert (a <= a * b) by (apply Z.le_mul_diag_r; omega).
+      pose proof (Z.mod_pos_bound c a Ha).
+      pose proof (Z.mod_pos_bound (c/a+d) b Hb).
+      apply small_mod_eq.
+      { rewrite <-(Z.mod_small (c mod a) (a * b)) by omega.
+        rewrite <-Z.mul_mod_distr_l with (c:=a) by omega.
+        rewrite Z.mul_add_distr_l, Z.mul_div_eq, <-Z.add_mod_full by omega.
+        f_equal; ring. }
+      { split; [zero_bounds|].
+        apply Z.lt_le_trans with (m:=a*(b-1)+a); [|ring_simplify; omega].
+        apply Z.add_le_lt_mono; try apply Z.mul_le_mono_nonneg_l; omega. }
     Qed.
 
-
-    Lemma compact_invariant_base i rem : compact_invariant 0 i rem rem tt tt.
-    Proof using Type. cbv [compact_invariant]. simpl. repeat (f_equal; try omega). Qed.
-
-    Lemma compact_invariant_end {n} start (input : (list Z)^n):
-      compact_invariant n 0%nat start (fst (mapi_with_cps compact_step_cps start input id)) input (snd (mapi_with_cps compact_step_cps start input id)).
-    Proof using Type*.
-      autorewrite with uncps push_id.
-      apply (mapi_with_invariant _ compact_invariant
-                                 compact_invariant_holds compact_invariant_base).
+    Lemma compact_div_step a b c d : 0 < a -> 0 < b ->
+      (c / a + d) / b = (a * d + c) / (a * b).
+    Proof.
+      intros Ha Hb.
+      rewrite <-Z.div_div by omega.
+      rewrite Z.div_add_l' by omega.
+      f_equal; ring.
     Qed.
 
-    Lemma eval_compact {n} (xs : tuple (list Z) n) :
-      B.Positional.eval weight (snd (compact xs)) = eval xs - (weight n * fst (compact xs)).
-    Proof using Type*.
-      pose proof (compact_invariant_end 0 xs) as Hinv.
-      cbv [compact_invariant] in Hinv.
-      simpl in Hinv. autorewrite with zsimplify natsimplify in Hinv.
-      rewrite eval_from_0, B.Positional.eval_from_0 in Hinv. nsatz.
+    Lemma compact_div_mod {n} inp :
+      (B.Positional.eval weight (snd (compact inp))
+       = (eval inp) mod (weight n))
+        /\ (fst (compact inp) = eval (n:=n) inp / weight n).
+    Proof.
+      cbv [compact compact_cps compact_step compact_step_cps];
+        autorewrite with uncps push_id.
+      change (fun i s a => compact_digit_cps i (s :: a) id)
+        with (fun i s a => compact_digit i (s :: a)).
+
+      apply mapi_with'_linvariant; [|tauto].
+      
+      clear n inp. intros until 0. intros Hst Hys [Hmod Hdiv].
+      pose proof (weight_positive n). pose proof (weight_divides n).
+      autorewrite with push_basesystem_eval.
+      destruct n; cbv [mapi_with] in *; simpl tuple in *;
+        [destruct xs, ys; subst; simpl| cbv [eval] in *];
+        repeat match goal with
+               | _ => rewrite mapi_with'_left_step
+               | _ => rewrite compact_digit_div, sum_cons
+               | _ => rewrite compact_digit_mod, sum_cons
+               | _ => rewrite map_left_append
+               | _ => rewrite eval_left_append
+               | _ => rewrite weight_0, ?Z.div_1_r, ?Z.mod_1_r
+               | _ => rewrite Hdiv 
+               | _ => rewrite Hmod 
+               | _ => progress subst
+               | _ => progress autorewrite with natsimplify cancel_pair push_basesystem_eval
+               | _ => solve [split; ring_simplify; f_equal; ring]
+               end.
+        remember (weight (S (S n)) / weight (S n)) as bound.
+        replace (weight (S (S n))) with (weight (S n) * bound)
+          by (subst bound; rewrite Z.mul_div_eq by omega;
+              rewrite weight_multiples; ring).
+        split; [apply compact_mod_step | apply compact_div_step]; omega.
     Qed.
+
+    Lemma compact_mod {n} inp :
+      (B.Positional.eval weight (snd (compact inp))
+       = (eval (n:=n) inp) mod (weight n)).
+    Proof. apply (proj1 (compact_div_mod inp)). Qed.
+    Hint Rewrite @compact_mod : push_basesystem_eval.
+
+    Lemma compact_div {n} inp :
+      fst (compact inp) = eval (n:=n) inp / weight n.
+    Proof. apply (proj2 (compact_div_mod inp)). Qed.
+    Hint Rewrite @compact_div : push_basesystem_eval.
 
     Definition cons_to_nth_cps {n} i (x:Z) (t:(list Z)^n)
                {T} (f:(list Z)^n->T) :=
@@ -404,7 +448,8 @@ Hint Rewrite
      @Columns.from_associational_id
   : uncps.
 Hint Rewrite
-     @Columns.eval_compact
+     @Columns.compact_mod
+     @Columns.compact_div
      @Columns.eval_cons_to_nth
      @Columns.eval_from_associational
      @Columns.eval_nils
@@ -526,9 +571,13 @@ Section Freeze.
     = B.Positional.eval weight p + (if (dec (cond = 0)) then 0 else B.Positional.eval weight q) - weight n * (fst (conditional_add mask cond p q)).
   Proof.
     cbv [conditional_add_cps conditional_add];
-      repeat progress autounfold; rewrite ?Hmask, ?map_land_zero; 
+      repeat progress autounfold in *; rewrite ?Hmask, ?map_land_zero; 
         autorewrite with uncps push_id push_basesystem_eval;
-        break_match; ring.
+        break_match;
+        match goal with
+          |- context [weight ?n * (?x / weight ?n)] =>
+          pose proof (Z.div_mod x (weight n) (weight_nonzero n))
+        end; omega.
   Qed.
   Hint Rewrite @eval_conditional_add using (omega || assumption)
     : push_basesystem_eval.
