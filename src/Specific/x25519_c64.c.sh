@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 cat << 'EOF'
 // The non-synthesized parts are from Adam Langley's curve25519-donna-c64
@@ -49,19 +50,19 @@ fsquare_times(fe25519 output, const fe25519 in, uint64_t count) {
   do {
 EOF
 
-< src/Specific/IntegrationTestMulDisplay.log \
+< src/Specific/IntegrationTestSquareDisplay.log \
   grep -- "λ '(" | \
   grep -owP -- 'x\d+' | \
   paste -d ' =;' \
-    <(for i in $(seq 1 10); do echo uint64_t; done) \
+    <(for i in $(seq 1 5); do echo uint64_t; done) \
     /dev/stdin \
-    <(echo {r,r}{4,3,2,1,0} | tr ' ' '\n') \
+    <(echo r{4,3,2,1,0} | tr ' ' '\n') \
     /dev/null
 
-< src/Specific/IntegrationTestMulDisplay.log \
+< src/Specific/IntegrationTestSquareDisplay.log \
 grep -oP 'uint\d+_t\W+\w+ = .*;$'
 
-< src/Specific/IntegrationTestMulDisplay.log \
+< src/Specific/IntegrationTestSquareDisplay.log \
   grep -- Return | \
   grep -owP -- 'x\d+' | \
   paste -d '=;' \
@@ -93,9 +94,9 @@ EOF
   grep -- "λ '(" | \
   grep -owP -- 'x\d+' | \
   paste -d ' =;' \
-    <(for i in $(seq 1 30); do echo uint64_t; done) \
+    <(for i in $(seq 1 25); do echo uint64_t; done) \
     /dev/stdin \
-    <(echo 0 0 0 0 121665 {qmqp,x,z,xprime,zprime}\[{4,3,2,1,0}\] | tr ' ' '\n') \
+    <(echo {qmqp,x,z,xprime,zprime}\[{4,3,2,1,0}\] | tr ' ' '\n') \
     /dev/null
 
 < src/Specific/IntegrationTestLadderstepDisplay.log \
