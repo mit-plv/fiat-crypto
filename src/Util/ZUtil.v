@@ -55,12 +55,13 @@ Hint Resolve (fun a b H => proj1 (Z.log2_lt_pow2 a b H)) (fun a b H => proj1 (Z.
 Hint Resolve (fun a b H => proj2 (Z.log2_lt_pow2 a b H)) (fun a b H => proj2 (Z.log2_le_pow2 a b H)) : hyp_log2.
 Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r Z_mod_same_full Z.sub_simpl_r Z.sub_simpl_l Z.add_opp_diag_r Z.add_opp_diag_l Zmod_0_l Z.add_simpl_r Z.add_simpl_l Z.opp_0 Zmod_0_r Zmod_mod Z.mul_succ_l Z.mul_succ_r Z.shiftr_0_r Z.shiftr_0_l Z.mod_1_r Zmod_0_l Zmod_0_r Z.shiftl_0_r Z.shiftl_0_l Z.shiftr_0_r Z.shiftr_0_l Z.sub_diag : zsimplify_fast.
 
-Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r Z_mod_same_full Z.sub_simpl_r Z.sub_simpl_l Z.add_opp_diag_r Z.add_opp_diag_l Zmod_0_l Z.add_simpl_r Z.add_simpl_l Z.opp_0 Zmod_0_r Zmod_mod Z.mul_succ_l Z.mul_succ_r Z.shiftr_0_r Z.shiftr_0_l Z.mod_1_r Zmod_0_l Zmod_0_r Z.shiftl_0_r Z.shiftl_0_l Z.shiftr_0_r Z.shiftr_0_l Zplus_minus Z.add_diag : zsimplify.
+Hint Rewrite Z.div_1_r Z.mul_1_r Z.mul_1_l Z.sub_diag Z.mul_0_r Z.mul_0_l Z.add_0_l Z.add_0_r Z.opp_involutive Z.sub_0_r Z_mod_same_full Z.sub_simpl_r Z.sub_simpl_l Z.add_opp_diag_r Z.add_opp_diag_l Zmod_0_l Z.add_simpl_r Z.add_simpl_l Z.opp_0 Zmod_0_r Zmod_mod Z.mul_succ_l Z.mul_succ_r Z.shiftr_0_r Z.shiftr_0_l Z.mod_1_r Zmod_0_l Zmod_0_r Z.shiftl_0_r Z.shiftl_0_l Z.shiftr_0_r Z.shiftr_0_l Zplus_minus Z.add_diag Z.abs_0 Z.sgn_0 Nat2Z.inj_0 : zsimplify.
 Hint Rewrite Z.div_mul Z.div_1_l Z.div_same Z.mod_same Z.div_small Z.mod_small Z.div_add Z.div_add_l Z.mod_add Z.div_0_l Z.mod_mod Z.mod_small Z_mod_zero_opp_full Z.mod_1_l using zutil_arith : zsimplify.
 Hint Rewrite <- Z.opp_eq_mul_m1 Z.one_succ Z.two_succ : zsimplify.
 Hint Rewrite <- Z.div_mod using zutil_arith : zsimplify.
 Hint Rewrite (fun x y => proj2 (Z.eqb_neq x y)) using assumption : zsimplify.
-Hint Rewrite Z.mul_0_l Z.mul_0_r Z.mul_1_l Z.mul_1_r Z.add_0_l Z.add_0_r Z.sub_0_l Z.sub_0_r Zdiv_0_l Zdiv_0_r Zdiv_1_r Zmod_0_l Zmod_0_r Zmod_1_r Z.opp_0 : zsimplify_const.
+Hint Rewrite Z.mul_0_l Z.mul_0_r Z.mul_1_l Z.mul_1_r Z.add_0_l Z.add_0_r Z.sub_0_l Z.sub_0_r Zdiv_0_l Zdiv_0_r Zdiv_1_r Zmod_0_l Zmod_0_r Zmod_1_r Z.opp_0 Z.abs_0 Z.sgn_0 Nat2Z.inj_0 : zsimplify_const.
+
 Hint Rewrite <- Z.one_succ Z.two_succ : zsimplify_const.
 
 (** "push" means transform [-f x] to [f (-x)]; "pull" means go the other way *)
@@ -2903,6 +2904,47 @@ Module Z.
     destruct (Z_zerop a); subst; [ lia | ].
     rewrite Z.div_small; lia.
   Qed.
+
+  Lemma quot_small_abs a b : 0 <= Z.abs a < Z.abs b -> Z.quot a b = 0.
+  Proof.
+    intros; rewrite Z.quot_small_iff by lia; lia.
+  Qed.
+
+  Lemma quot_add_sub_sgn_small a b : b <> 0 -> Z.sgn a = Z.sgn b -> Z.quot (a + b - Z.sgn b) b = Z.quot (a - Z.sgn b) b + 1.
+  Proof.
+    destruct (Z_zerop a), (Z_zerop b), (Z_lt_le_dec a 0), (Z_lt_le_dec b 0), (Z_lt_le_dec 1 (Z.abs a));
+      subst;
+      try lia;
+      rewrite !Z.quot_div_full;
+      try rewrite (Z.sgn_neg a) by omega;
+      try rewrite (Z.sgn_neg b) by omega;
+      repeat first [ reflexivity
+                   | rewrite Z.sgn_neg by lia
+                   | rewrite Z.sgn_pos by lia
+                   | rewrite Z.abs_eq by lia
+                   | rewrite Z.abs_neq by lia
+                   | rewrite !Z.mul_opp_l
+                   | rewrite Z.abs_opp in *
+                   | rewrite Z.abs_eq in * by omega
+                   | match goal with
+                     | [ |- context[-1 * ?x] ]
+                       => replace (-1 * x) with (-x) by omega
+                     | [ |- context[?x * -1] ]
+                       => replace (x * -1) with (-x) by omega
+                     | [ |- context[-?x - ?y] ]
+                       => replace (-x - y) with (-(x + y)) by omega
+                     | [ |- context[-?x + - ?y] ]
+                       => replace (-x + - y) with (-(x + y)) by omega
+                     | [ |- context[(?a + ?b + ?c) / ?b] ]
+                       => replace (a + b + c) with (((a + c) + b * 1)) by lia; rewrite Z.div_add' by omega
+                     | [ |- context[(?a + ?b - ?c) / ?b] ]
+                       => replace (a + b - c) with (((a - c) + b * 1)) by lia; rewrite Z.div_add' by omega
+                     end
+                   | progress intros
+                   | progress Z.replace_all_neg_with_pos
+                   | progress autorewrite with zsimplify ].
+  Qed.
+
 
   (* Naming Convention: [X] for thing being divided by, [p] for plus,
      [m] for minus, [d] for div, and [_] to separate parentheses and
