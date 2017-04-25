@@ -54,6 +54,7 @@ Module M.
       | _ => progress subst
       | _ => progress specialize_by_assumption
       | [ H : ?x = ?x |- _ ] => clear H
+      | [ H : ?x <> ?x |- _ ] => specialize (H (reflexivity _))
       | [ H0 : ?T, H1 : ~?T -> _ |- _ ] => clear H1
       | _ => progress destruct_head'_prod
       | _ => progress destruct_head'_and
@@ -90,6 +91,61 @@ Module M.
       /\ snd (snd (xzladderstep 0 (pair B 0) (pair D 0))) = 0.
     Proof. t; fsatz. Qed.
 
+    (** This tactic is to work around deficiencies in the Coq 8.6
+        (released) version of [nsatz]; it has some heuristics for
+        clearing hypotheses and running [exfalso], and then tries to
+        solve the goal with [tac].  If [tac] fails on a goal, this
+        tactic does nothing. *)
+    Local Ltac exfalso_smart_clear_solve_by tac :=
+      try lazymatch goal with
+          | [ fld : Hierarchy.field (T:=?F) (eq:=?Feq), Feq_dec : DecidableRel ?Feq |- _ ]
+            => lazymatch goal with
+               | [ H : ?x * 1 = ?y * ?z, H' : ?x <> 0, H'' : ?z = 0 |- _ ]
+                 => clear -H H' H'' fld Feq_dec; exfalso; tac
+               | [ H : ?x * 0 = 1 * ?y, H' : ?y <> 0 |- _ ]
+                 => clear -H H' fld Feq_dec; exfalso; tac
+               | _
+                 => match goal with
+                    | [ H : ?b * ?lhs = ?rhs, H' : ?b * ?lhs' = ?rhs', Heq : ?x = ?y, Hb : ?b <> 0 |- _ ]
+                      => exfalso;
+                         repeat match goal with H : Ring.char_ge _ |- _ => revert H end;
+                         let rhs := match (eval pattern x in rhs) with ?f _ => f end in
+                         let rhs' := match (eval pattern y in rhs') with ?f _ => f end in
+                         unify rhs rhs';
+                         match goal with
+                         | [ H'' : ?x = ?Fopp ?x, H''' : ?x <> ?Fopp (?Fopp ?y) |- _ ]
+                           => let lhs := match (eval pattern x in lhs) with ?f _ => f end in
+                              let lhs' := match (eval pattern y in lhs') with ?f _ => f end in
+                              unify lhs lhs';
+                              clear -H H' Heq H'' H''' Hb fld Feq_dec; intros
+                         | [ H'' : ?x <> ?Fopp ?y, H''' : ?x <> ?Fopp (?Fopp ?y) |- _ ]
+                           => let lhs := match (eval pattern x in lhs) with ?f _ => f end in
+                              let lhs' := match (eval pattern y in lhs') with ?f _ => f end in
+                              unify lhs lhs';
+                              clear -H H' Heq H'' H''' Hb fld Feq_dec; intros
+                         end;
+                         tac
+                    | [ H : ?x * (?y * ?z) = 0 |- _ ]
+                      => exfalso;
+                         repeat match goal with
+                                | [ H : ?x * 1 = ?y * ?z |- _ ]
+                                  => is_var x; is_var y; is_var z;
+                                     revert H
+                                end;
+                         generalize fld;
+                         let lhs := match type of H with ?lhs = _ => lhs end in
+                         repeat match goal with
+                                | [ x : F |- _ ] => lazymatch type of H with
+                                                    | context[x] => fail
+                                                    | _ => clear dependent x
+                                                    end
+                                end;
+                         intros _; intros;
+                         tac
+                    end
+               end
+          end.
+
     Lemma to_xz_add (x1:F) (xz x'z':F*F)
           (Hxz:projective xz) (Hz'z':projective x'z')
           (Q Q':Mpoint)
@@ -109,71 +165,7 @@ Module M.
       Set Ltac Profiling.
       Time t.
       Show Ltac Profile.
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
+      Time all:exfalso_smart_clear_solve_by ltac:(abstract fsatz).
       { Time abstract fsatz. }
       { Time abstract fsatz. }
       { Time abstract fsatz. }
