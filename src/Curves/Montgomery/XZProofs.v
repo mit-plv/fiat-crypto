@@ -34,7 +34,7 @@ Module M.
     Local Notation to_xz := (M.to_xz(Fzero:=Fzero)(Fone:=Fone)(Feq:=Feq)(Fadd:=Fadd)(Fmul:=Fmul)(a:=a)(b:=b)).
 
     Definition projective (P:F*F) :=
-      (fst P = 0 -> snd P <> 0) /\ (snd P = 0 -> fst P <> 0).
+      if dec (snd P = 0) then fst P <> 0 else True.
     Definition eq (P Q:F*F) := fst P * snd Q = fst Q * snd P.
 
     Context {nonsquare_a24:forall r, r*r <> a*a - (1+1+1+1)}.
@@ -44,23 +44,34 @@ Module M.
       specialize (nonsquare_a24 (x+x+a)); fsatz.
     Qed.
 
-    Ltac t_step :=
+    Local Ltac do_unfold :=
+      cbv [eq projective fst snd M.coordinates M.add M.zero M.eq M.opp proj1_sig xzladderstep M.to_xz Let_In Proper respectful] in *.
+
+    Ltac t_step _ :=
       match goal with
       | _ => solve [ contradiction | trivial ]
       | _ => progress intros
       | _ => progress subst
-      | _ => progress destruct_head' @M.point
-      | _ => progress destruct_head' @prod
-      | _ => progress destruct_head' @sum
-      | _ => progress destruct_head' @and
+      | _ => progress specialize_by_assumption
+      | [ H : ?x = ?x |- _ ] => clear H
+      | [ H0 : ?T, H1 : ~?T -> _ |- _ ] => clear H1
+      | _ => progress destruct_head'_prod
+      | _ => progress destruct_head'_and
       | _ => progress Sum.inversion_sum
       | _ => progress Prod.inversion_prod
+      | _ => progress cbv [fst snd proj1_sig projective eq] in * |-
+      | _ => progress cbn [to_xz M.coordinates proj1_sig] in * |-
+      | _ => progress destruct_head' @M.point
+      | _ => progress destruct_head'_sum
+      | [ H : context[dec ?T], H' : ~?T -> _ |- _ ]
+        => let H'' := fresh in
+           destruct (dec T) as [H''|H'']; [ clear H' | specialize (H' H'') ]
       | _ => progress break_match_hyps
       | _ => progress break_match
-      | _ => progress cbv [eq projective fst snd M.coordinates M.add M.zero M.eq M.opp proj1_sig xzladderstep M.to_xz Let_In Proper respectful] in *
       | |- _ /\ _ => split
+      | _ => progress do_unfold
       end.
-    Ltac t := repeat t_step.
+    Ltac t := repeat t_step ().
 
     Lemma projective_fst_xzladderstep x1 Q (HQ:projective Q)
       :  projective (fst (xzladderstep x1 Q Q)).
@@ -93,169 +104,88 @@ Module M.
     Proof.
       pose proof (nonsquare_a24 (fst xz/snd xz  - fst xz/snd xz)) as Hsq1.
       pose proof (y_nonzero Q) as Hsq2.
-      destruct xz as [x z];
-      destruct x'z' as [x' z'];
-      destruct Q as [Q pfQ]; destruct Q as [[xQ yQ]|[]];
-      destruct Q' as [Q' pfQ']; destruct Q' as [[xQ' yQ']|[]];
-      t.
-      
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      {
-        rename f into xQ.
-        rename f0 into yQ.
-        intro HH.
-        assert (((x' - z') * (x + z) + (x' + z') * (x - z)) = 0 /\ ((x' - z') * (x + z) - (x' + z') * (x - z)) = 0) by (
-        repeat match goal with
-               | H : _ |- _ => apply Hierarchy.zero_product_zero_factor in H; destruct H as [H|H]
-               end; split; try contradiction; try assumption); destruct_head and; clear HH H10.
-        clear Hsq2.
-        assert ((x' - z') * (x + z) = 0) by fsatz; assert ((x' + z') * (x - z) = 0) by fsatz.
-        assert (xQ*xQ = 1).
-        destruct (dec(z' = 0)), (dec(z = 0)); specialize_by assumption.
-        abstract fsatz.
-        abstract fsatz.
-        abstract fsatz.
-        abstract fsatz.
-        abstract fsatz.
-      }
-      {
-        rename f into xQ.
-        rename f0 into yQ.
-        intro HH.
-        assert (((x' - z') * (x + z) + (x' + z') * (x - z)) = 0 /\ ((x' - z') * (x + z) - (x' + z') * (x - z)) = 0) by (
-        repeat match goal with
-               | H : _ |- _ => apply Hierarchy.zero_product_zero_factor in H; destruct H as [H|H]
-               end; split; try contradiction; try assumption); destruct_head and; clear HH H10.
-        clear Hsq2.
-        assert ((x' - z') * (x + z) = 0) by fsatz; assert ((x' + z') * (x - z) = 0) by fsatz.
-        assert (xQ*xQ = 1).
-        destruct (dec(z' = 0)), (dec(z = 0)); specialize_by assumption.
-        abstract fsatz.
-        abstract fsatz.
-        abstract fsatz.
-        abstract fsatz.
-        abstract fsatz.
-      }
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      { destruct (dec(f=0)); [|destruct Hsq2; fsatz].
-        assert (x = 0) by fsatz. 
-        assert (xQ' - f <> 0) by fsatz.
-        specialize_by assumption. 
-        destruct (dec(x'=0)). specialize_by assumption. abstract fsatz.
-        destruct (dec(z'=0)). specialize_by assumption. abstract fsatz.
-        abstract fsatz. }
-      { destruct (dec(f=0)); [|destruct Hsq2; fsatz].
-        assert (x = 0) by fsatz. 
-        assert (xQ' - f <> 0) by fsatz.
-        specialize_by assumption. 
-        destruct (dec(x'=0)). specialize_by assumption. abstract fsatz.
-        destruct (dec(z'=0)). specialize_by assumption. abstract fsatz.
-        abstract fsatz. }
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      { rename f into xQ. rename f0 into yQ.
-        intro HH.
-        apply H5.
-        assert ((x' - z') * (x + z) - (x' + z') * (x - z) =0 /\ ((x' - z') * (x + z) + (x' + z') * (x - z))=0) by (
-        repeat match goal with
-               | H : _ |- _ => apply Hierarchy.zero_product_zero_factor in H; destruct H as [H|H]
-               end; split; try contradiction; try assumption); destruct_head and; clear HH H8.
-        clear Hsq2 Hsq1. (* TODO: removing this clear gives stack overflow *)
-        assert (x'*x = z'*z) by fsatz.
-        destruct (dec(z' = 0)), (dec(z = 0)); specialize_by assumption.
-        abstract fsatz.
-        abstract fsatz.
-        abstract fsatz.
-        abstract fsatz.
-      }
-      { rename f into xQ. rename f0 into yQ.
-        intro HH.
-        apply H5.
-        assert ((x' - z') * (x + z) - (x' + z') * (x - z) =0 /\ ((x' - z') * (x + z) + (x' + z') * (x - z))=0) by (
-        repeat match goal with
-               | H : _ |- _ => apply Hierarchy.zero_product_zero_factor in H; destruct H as [H|H]
-               end; split; try contradiction; try assumption); destruct_head and; clear HH H8.
-        clear Hsq2 Hsq1. (* TODO: removing this clear gives stack overflow *)
-        assert (x'*x = z'*z) by fsatz.
-        destruct (dec(z' = 0)), (dec(z = 0)); specialize_by assumption.
-        abstract fsatz.
-        abstract fsatz.
-        abstract fsatz.
-        abstract fsatz.
-      }
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      { 
-        destruct (dec(z' = 0)), (dec(z = 0)); specialize_by assumption.
-        abstract fsatz.
-        abstract fsatz.
-        abstract fsatz.
-        abstract fsatz. }
-      { 
-        destruct (dec(z' = 0)), (dec(z = 0)); specialize_by assumption.
-        abstract fsatz.
-        abstract fsatz.
-        abstract fsatz.
-        abstract fsatz. }
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      { 
-        destruct (dec(z' = 0)), (dec(z = 0)); specialize_by assumption.
-        abstract fsatz.
-        abstract fsatz.
-        abstract fsatz.
-        abstract fsatz. }
-      {
-        destruct (dec(z' = 0)), (dec(z = 0)); specialize_by assumption.
-        abstract fsatz.
-        abstract fsatz.
-        abstract fsatz.
-        abstract fsatz. }
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      clear Hsq1 Hsq2; abstract fsatz.
-      { 
-        destruct (dec(z' = 0)), (dec(z = 0)); specialize_by assumption.
-        abstract fsatz.
-        abstract fsatz.
-        abstract fsatz.
-        abstract fsatz. }
-      { 
-        destruct (dec(z' = 0)), (dec(z = 0)); specialize_by assumption.
-        abstract fsatz.
-        abstract fsatz.
-        abstract fsatz.
-        abstract fsatz. }
-    Qed.
+      let fld := guess_field in
+      fsatz_prepare_hyps_on fld.
+      Set Ltac Profiling.
+      Time t.
+      Show Ltac Profile.
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+      { Time abstract fsatz. }
+    Time Qed.
 
     Context {group:@Hierarchy.abelian_group Mpoint M.eq Madd M.zero Mopp}.
     Lemma difference_preserved Q Q' :
