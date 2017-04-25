@@ -58,3 +58,8 @@ Ltac destruct_one_head'_or := match goal with H : or _ _ |- _ => destruct H end.
 Ltac destruct_one_head_or := destruct_one_head'_or; simpl in *.
 Ltac destruct_head'_or := repeat destruct_one_head'_or.
 Ltac destruct_head_or := repeat destruct_one_head_or.
+
+Ltac destruct_one_head'_sum := match goal with H : sum _ _ |- _ => destruct H end.
+Ltac destruct_one_head_sum := destruct_one_head'_sum; simpl in *.
+Ltac destruct_head'_sum := repeat destruct_one_head'_sum.
+Ltac destruct_head_sum := repeat destruct_one_head_sum.

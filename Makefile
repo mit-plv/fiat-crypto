@@ -113,15 +113,11 @@ clean::
 	rm -f Makefile.coq
 
 cleanall:: clean clean-coqprime
-	rm -f .dir-locals.el
 
 install: coq install-coqprime
 
 printenv::
 	@echo "COQPATH =        $$COQPATH"
-
-.dir-locals.el::
-	sed 's:@COQPRIME@:$(COQPRIME_FOLDER):g' .dir-locals.el.in > $@
 
 printdeps::
 	$(HIDE)$(foreach vo,$(filter %.vo,$(MAKECMDGOALS)),echo '$(vo): $(call vo_closure,$(vo))'; )
