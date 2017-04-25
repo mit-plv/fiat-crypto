@@ -158,8 +158,8 @@ Module M.
       /\ eq (to_xz (Madd Q Q')) (snd (xzladderstep x1 xz x'z'))
       /\ projective (snd (xzladderstep x1 xz x'z')).
     Proof.
-      pose proof (nonsquare_a24 (fst xz/snd xz  - fst xz/snd xz)) as Hsq1.
-      pose proof (y_nonzero Q) as Hsq2.
+      clear nonsquare_a24.
+      clear y_nonzero.
       let fld := guess_field in
       fsatz_prepare_hyps_on fld.
       Set Ltac Profiling.
