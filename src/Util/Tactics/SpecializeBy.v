@@ -29,5 +29,10 @@ Tactic Notation "specialize_by" tactic3(tac) := specialize_by tac.
 (** A marginally faster version of [specialize_by assumption] *)
 Ltac specialize_by_assumption :=
   repeat match goal with
-         | [ H : ?T, H' : (?T -> ?U)%type |- _ ] => specialize (H' H)
+         | [ H : ?T, H' : (?T -> ?U)%type |- _ ]
+           => lazymatch goal with
+              | [ _ : context[H'] |- _ ] => fail
+              | [ |- context[H'] ] => fail
+              | _ => specialize (H' H)
+              end
          end.
