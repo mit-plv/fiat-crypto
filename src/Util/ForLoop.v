@@ -1,6 +1,12 @@
 (** * Definition and Notations for [for (int i = i₀; i < i∞; i += Δi)] *)
 Require Import Coq.ZArith.BinInt.
 Require Import Crypto.Util.Notations.
+(** Note: These definitions are fairly tricky.  See
+    https://github.com/mit-plv/fiat-crypto/issues/164 and
+    https://github.com/mit-plv/fiat-crypto/pull/163 for more
+    discussion.
+
+    TODO: Fix the definitions to make them more obviously right. *)
 
 Section with_body.
   Context {stateT : Type}
