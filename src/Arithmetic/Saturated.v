@@ -151,12 +151,16 @@ Module Columns.
     Qed.
 
     (* Sums a list of integers using carry bits.
-     Output : next index, carry, sum
+     Output : carry, sum
      *)
     Fixpoint compact_digit_cps n (digit : list Z) {T} (f:Z * Z->T) :=
       match digit with
       | nil => f (0, 0)
       | x :: nil => f (div x (weight (S n) / weight n), modulo x (weight (S n) / weight n))
+      | x :: y :: nil =>
+          dlet sum_carry := add_get_carry (weight (S n) / weight n) x y in
+          dlet carry := snd sum_carry in
+          f (carry, fst sum_carry)
       | x :: tl =>
         compact_digit_cps n tl
           (fun rec =>
@@ -170,8 +174,8 @@ Module Columns.
         @compact_digit_cps n digit T f = f (compact_digit n digit).
     Proof using Type.
       induction digit; intros; cbv [compact_digit]; [reflexivity|];
-        simpl compact_digit_cps; break_match; [reflexivity|].
-      rewrite !IHdigit; reflexivity.
+        simpl compact_digit_cps; break_match; rewrite ?IHdigit;
+          reflexivity.
     Qed.
     Hint Opaque compact_digit : uncps.
     Hint Rewrite compact_digit_id : uncps.
@@ -474,8 +478,17 @@ Section Freeze.
             {div modulo : Z -> Z -> Z}
             {div_correct : forall a b, div a b = a / b}
             {modulo_correct : forall a b, modulo a b = a mod b}
-  .
+            {select_cps : forall n, Z -> Z^n -> forall {T}, (Z^n->T) -> T}
+            {select : forall n, Z -> Z^n -> Z^n}
+            {select_id : forall n cond x T f, @select_cps n cond x T f = f (select n cond x)}
+            {eval_select : forall n cond x,
+                B.Positional.eval weight (select n cond x) = if dec (cond = 0) then 0 else B.Positional.eval weight x}
+    .
 
+    Hint Rewrite select_id : uncps.
+    Hint Rewrite eval_select : push_basesystem_eval.
+
+  (*
   (* adds p and q if cond is 0, else adds 0 to p*)
   Definition conditional_mask_cps {n} (mask:Z) (cond:Z) (p:Z^n)
              {T} (f:_->T) :=
@@ -494,17 +507,19 @@ Section Freeze.
   Hint Opaque conditional_mask : uncps.
   Hint Rewrite @conditional_mask_id : uncps.
 
-  Definition conditional_add_cps {n} mask cond (p q : Z^n) {T} (f:_->T) :=
-    conditional_mask_cps mask cond q
+   *)
+
+  Definition conditional_add_cps {n} cond (p q : Z^n) {T} (f:_->T) :=
+    select_cps n cond q _
     (fun qq => Columns.add_cps (div:=div) (modulo:=modulo) (add_get_carry:=add_get_carry) weight p qq f).
-  Definition conditional_add {n} mask cond p q :=
-    @conditional_add_cps n mask cond p q _ id.
-  Lemma conditional_add_id {n} mask cond p q T f:
-    @conditional_add_cps n mask cond p q T f
-    = f (conditional_add mask cond p q).
+  Definition conditional_add {n} cond p q :=
+    @conditional_add_cps n cond p q _ id.
+  Lemma conditional_add_id {n} cond p q T f:
+    @conditional_add_cps n cond p q T f
+    = f (conditional_add cond p q).
   Proof.
-    cbv [conditional_add_cps conditional_add]; autounfold;
-      autorewrite with uncps push_id; reflexivity.
+    cbv [conditional_add_cps conditional_add]; autounfold.
+    autorewrite with uncps push_id; reflexivity.
   Qed.
   Hint Opaque conditional_add : uncps.
   Hint Rewrite @conditional_add_id : uncps.
@@ -525,17 +540,17 @@ Section Freeze.
     (3) discard the carry after this last addition; it should be 1 if
     the carry in step 3 was -1, so they cancel out.
    *)
-  Definition freeze_cps {n} (mask:Z) (m:Z^n) (p:Z^n) {T} (f : Z^n->T) :=
+  Definition freeze_cps {n} (m:Z^n) (p:Z^n) {T} (f : Z^n->T) :=
     Columns.sub_cps (div:=div) (modulo:=modulo)
                     (add_get_carry:=add_get_carry) weight p m
-      (fun carry_p => conditional_add_cps mask (fst carry_p) (snd carry_p) m
+      (fun carry_p => conditional_add_cps (fst carry_p) (snd carry_p) m
       (fun carry_r => f (snd carry_r)))
   .
 
-  Definition freeze {n} mask m p :=
-    @freeze_cps n mask m p _ id.
-  Lemma freeze_id {n} mask m p T f:
-    @freeze_cps n mask m p T f = f (freeze mask m p).
+  Definition freeze {n} m p :=
+    @freeze_cps n m p _ id.
+  Lemma freeze_id {n} m p T f:
+    @freeze_cps n m p T f = f (freeze m p).
   Proof.
     cbv [freeze_cps freeze]; repeat progress autounfold;
       autorewrite with uncps push_id; reflexivity.
@@ -543,41 +558,17 @@ Section Freeze.
   Hint Opaque freeze : uncps.
   Hint Rewrite @freeze_id : uncps.
 
-  Lemma map_land_zero {n} (p:Z^n):
-    Tuple.map (Z.land 0) p = B.Positional.zeros n.
-  Proof.
-    induction n; [ destruct p; reflexivity | ].
-    replace p with (append (hd p) (tl p)) by
-        (simpl in p; destruct n; destruct p; reflexivity).
-    rewrite map_append, IHn, Z.land_0_l; reflexivity.
-  Qed.
-
-  Lemma eval_conditional_mask {n} mask cond p (n_nonzero:n<>0%nat)
-    (Hmask : Tuple.map (Z.land mask) p = p):
-    B.Positional.eval weight (@conditional_mask n mask cond p)
-    = if (dec (cond = 0)) then 0 else B.Positional.eval weight p.
-  Proof.
-    cbv [conditional_mask_cps conditional_mask Let_In];
-      repeat progress autounfold; break_match;
-        rewrite ?Hmask, ?map_land_zero;
-        autorewrite with uncps push_id push_basesystem_eval; ring.
-  Qed.
-  Hint Rewrite @eval_conditional_mask using (omega || assumption)
-    : push_basesystem_eval.
-
-  Lemma eval_conditional_add {n} mask cond p q (n_nonzero:n<>0%nat)
-    (Hmask : Tuple.map (Z.land mask) q = q):
-    B.Positional.eval weight (snd (@conditional_add n mask cond p q))
-    = B.Positional.eval weight p + (if (dec (cond = 0)) then 0 else B.Positional.eval weight q) - weight n * (fst (conditional_add mask cond p q)).
+  Lemma eval_conditional_add {n} cond p q (n_nonzero:n<>0%nat):
+    B.Positional.eval weight (snd (@conditional_add n cond p q))
+    = B.Positional.eval weight p + (if (dec (cond = 0)) then 0 else B.Positional.eval weight q) - weight n * (fst (conditional_add cond p q)).
   Proof.
     cbv [conditional_add_cps conditional_add];
-      repeat progress autounfold in *; rewrite ?Hmask, ?map_land_zero; 
-        autorewrite with uncps push_id push_basesystem_eval;
-        break_match;
-        match goal with
-          |- context [weight ?n * (?x / weight ?n)] =>
-          pose proof (Z.div_mod x (weight n) (weight_nonzero n))
-        end; omega.
+      repeat progress autounfold in *.
+    autorewrite with uncps push_id push_basesystem_eval.
+    match goal with
+      |- context [weight ?n * (?x / weight ?n)] =>
+      pose proof (Z.div_mod x (weight n) (weight_nonzero n))
+    end; omega.
   Qed.
   Hint Rewrite @eval_conditional_add using (omega || assumption)
     : push_basesystem_eval.
@@ -609,16 +600,15 @@ Section Freeze.
       f_equal. ring. }
   Qed.
   
-  Lemma eval_freeze {n} mask c m p
+  Lemma eval_freeze {n} c m p
         (n_nonzero:n<>0%nat)
-        (Hmask : Tuple.map (Z.land mask) m = m)
         (Hc : 0 < B.Associational.eval c < weight n)
         modulus (Hm : B.Positional.eval weight m = Z.pos modulus)
         (Hp : 0 <= B.Positional.eval weight p < 2*(Z.pos modulus))
         (Hsc : Z.pos modulus = weight n - B.Associational.eval c)
     :
       mod_eq modulus
-             (B.Positional.eval weight (@freeze n mask m p))
+             (B.Positional.eval weight (@freeze n m p))
              (B.Positional.eval weight p).
   Proof.
     cbv [freeze_cps freeze conditional_add_cps].
