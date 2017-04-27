@@ -224,15 +224,6 @@ Section Ops51.
     Qed.
   End PreFreeze.
 
-  Context {select_cps : forall n, Z -> Z^n -> forall {T}, (Z^n->T) -> T}
-          {select : forall n, Z -> Z^n -> Z^n}
-          {select_id : forall n cond x T f, @select_cps n cond x T f = f (select n cond x)}
-          {eval_select : forall n cond x,
-              B.Positional.eval wt (select n cond x) = if dec (cond = 0) then 0 else B.Positional.eval wt x}
-  .
-
-  Hint Rewrite select_id : uncps.
-  Hint Rewrite eval_select : push_basesystem_eval.
   Hint Opaque freeze : uncps.
   Hint Rewrite freeze_id : uncps.
   
@@ -250,16 +241,18 @@ Section Ops51.
     pose proof add_get_carry_mod.
     pose proof add_get_carry_div.
     pose proof div_correct. pose proof modulo_correct.
-    pose proof select_id. pose proof eval_select.
-    let x := constr:(freeze (n:=5) (add_get_carry:=add_get_carry) (div:=div) (modulo:=modulo) (select_cps:=select_cps) wt m_enc a) in
+    let x := constr:(freeze (n:=5) (add_get_carry:=add_get_carry) (div:=div) (modulo:=modulo) (select_cps:=(@B.Positional.select_cps (zselect bitwidth))) wt m_enc a) in
     F_mod_eq;
       transitivity (Positional.eval wt x); repeat autounfold;
         [ | autorewrite with uncps push_id push_basesystem_eval;
             rewrite eval_freeze with (c:=c);
-            try eassumption; try omega; try reflexivity; vm_decide].
+            try eassumption; try omega; try reflexivity;
+            try solve [auto using B.Positional.select_id,
+                       B.Positional.eval_select, zselect_correct];
+            vm_decide].
    cbv[mod_eq]; apply f_equal2;
      [  | reflexivity ]; apply f_equal.
-   cbv - [runtime_opp runtime_add runtime_mul runtime_shr runtime_and Let_In add_get_carry].
+   cbv - [runtime_opp runtime_add runtime_mul runtime_shr runtime_and Let_In add_get_carry zselect].
    reflexivity.
   Defined.
   
