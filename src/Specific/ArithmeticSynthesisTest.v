@@ -222,20 +222,19 @@ Section Ops51.
         apply Z.div_positive_gt_0; auto using wt_pos.
         apply wt_multiples.
     Qed.
-
-    Context {select_cps : forall n, Z -> Z^n -> forall {T}, (Z^n->T) -> T}
-            {select : forall n, Z -> Z^n -> Z^n}
-            {select_id : forall n cond x T f, @select_cps n cond x T f = f (select n cond x)}
-            {eval_select : forall n cond x,
-                B.Positional.eval wt (select n cond x) = if dec (cond = 0) then 0 else B.Positional.eval wt x}
-    .
-
-    Hint Rewrite select_id : uncps.
-    Hint Rewrite eval_select : push_basesystem_eval.
-
-    Hint Opaque freeze : uncps.
-    Hint Rewrite freeze_id : uncps.
   End PreFreeze.
+
+  Context {select_cps : forall n, Z -> Z^n -> forall {T}, (Z^n->T) -> T}
+          {select : forall n, Z -> Z^n -> Z^n}
+          {select_id : forall n cond x T f, @select_cps n cond x T f = f (select n cond x)}
+          {eval_select : forall n cond x,
+              B.Positional.eval wt (select n cond x) = if dec (cond = 0) then 0 else B.Positional.eval wt x}
+  .
+
+  Hint Rewrite select_id : uncps.
+  Hint Rewrite eval_select : push_basesystem_eval.
+  Hint Opaque freeze : uncps.
+  Hint Rewrite freeze_id : uncps.
   
   Definition freeze_sig :
     {freeze : (Z^sz -> Z^sz)%type |
