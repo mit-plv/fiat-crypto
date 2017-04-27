@@ -192,7 +192,7 @@ Module Columns.
     Hint Rewrite compact_step_id : uncps.
 
     Definition compact_cps {n} (xs : (list Z)^n) {T} (f:Z * Z^n->T) :=
-      mapi_with_cps compact_step_cps 0 xs f.
+      Tuple.mapi_with_cps compact_step_cps 0 xs f.
 
     Definition compact {n} xs := @compact_cps n xs _ id.
     Lemma compact_id {n} xs {T} f : @compact_cps n xs T f = f (compact xs).
@@ -235,26 +235,6 @@ Module Columns.
       end.
       rewrite Z.div_add' by auto; nsatz.
     Qed.
-
-    (* TODO : move to Core? *)
-    Lemma Pos_eval_unit : B.Positional.eval (n:=0) weight tt = 0.
-    Proof. reflexivity. Qed.
-    Hint Rewrite Pos_eval_unit B.Positional.eval_single
-         @B.Positional.eval_step : push_basesystem_eval.
-    (* TODO : move to Core? *)
-    Lemma Pos_eval_left_append {n} : forall wt x xs,
-      B.Positional.eval wt (left_append (n:=n) x xs)
-      = wt n * x + B.Positional.eval wt xs.
-    Proof.
-      induction n; intros; try destruct xs;
-        unfold left_append; fold @left_append;
-        autorewrite with push_basesystem_eval; [ring|].
-      rewrite IHn.
-      rewrite (subst_append xs), hd_append, tl_append.
-      rewrite B.Positional.eval_step.
-      ring.
-    Qed.
-    Hint Rewrite @Pos_eval_left_append : push_basesystem_eval.
 
     Lemma small_mod_eq a b n: a mod n = b mod n -> 0 <= a < n -> a = b mod n.
     Proof. intros; rewrite <-(Z.mod_small a n); auto. Qed.
@@ -307,7 +287,7 @@ Module Columns.
                | _ => rewrite compact_digit_div, sum_cons
                | _ => rewrite compact_digit_mod, sum_cons
                | _ => rewrite map_left_append
-               | _ => rewrite eval_left_append
+               | _ => rewrite B.Positional.eval_left_append
                | _ => rewrite weight_0, ?Z.div_1_r, ?Z.mod_1_r
                | _ => rewrite Hdiv 
                | _ => rewrite Hmod 

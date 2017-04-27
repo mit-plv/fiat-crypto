@@ -498,6 +498,13 @@ Module B.
       Definition eval {n} x :=
         @to_associational_cps n x _ Associational.eval.
 
+      Lemma eval_single (x:Z) : eval (n:=1) x = weight 0%nat * x.
+      Proof. cbv - [Z.mul Z.add]. ring. Qed.
+
+      Lemma eval_unit : eval (n:=0) tt = 0.
+      Proof. reflexivity. Qed.
+      Hint Rewrite eval_unit eval_single : push_basesystem_eval.
+
       Lemma eval_to_associational {n} x :
         Associational.eval (@to_associational n x) = eval x.
       Proof using Type.
@@ -782,13 +789,11 @@ Module B.
 
 
     End Positional.
+    Hint Rewrite eval_unit eval_single : push_basesystem_eval.
 
-    (* Helper lemmas and definitions for [eval]; this needs to be in a
+    (* Helper lemmas and definitions for [eval] that to be in a
     separate section so the weight function can change. *)
     Section EvalHelpers.
-      Lemma eval_single wt (x:Z) : eval (n:=1) wt x = wt 0%nat * x.
-      Proof. cbv - [Z.mul Z.add]. ring. Qed.
-
       Lemma eval_step {n} (x:tuple Z n) : forall wt z,
         eval wt (Tuple.append z x) = wt 0%nat * z + eval (fun i => wt (S i)) x.
       Proof.
@@ -796,6 +801,18 @@ Module B.
         intros; cbv [eval to_associational_cps].
         autorewrite with uncps. rewrite map_S_seq. reflexivity.
       Qed.
+
+      Lemma eval_left_append {n} : forall wt x xs,
+          eval wt (Tuple.left_append (n:=n) x xs)
+          = wt n * x + eval wt xs.
+      Proof.
+        induction n; intros; try destruct xs;
+          unfold Tuple.left_append; fold @Tuple.left_append;
+            autorewrite with push_basesystem_eval; [ring|].
+        rewrite (Tuple.subst_append xs), Tuple.hd_append, Tuple.tl_append.
+        rewrite !eval_step, IHn. ring.
+      Qed.
+      Hint Rewrite @eval_left_append : push_basesystem_eval.
 
       Lemma eval_wt_equiv {n} :forall wta wtb (x:tuple Z n),
           (forall i, wta i = wtb i) -> eval wta x = eval wtb x.
@@ -814,6 +831,39 @@ Module B.
       Lemma eval_from_0 {n} wt x : @eval_from n wt 0 x = eval wt x.
       Proof. cbv [eval_from]. auto using eval_wt_equiv. Qed.
     End EvalHelpers.
+
+    Section Select.
+      Context {weight : nat -> Z}
+              {select_single : Z -> Z -> Z}
+              {select_single_correct : forall cond x,
+                  select_single cond x = if dec (cond = 0) then 0 else x}
+      .
+      
+      Definition select_cps {n} cond (p : tuple Z n) {T} (f:_->T) :=
+        Tuple.map_cps (select_single cond) p f.
+
+      Definition select {n} cond p := @select_cps n cond p _ id.
+      Lemma select_id {n} cond p T f :
+        @select_cps n cond p T f = f (select cond p).
+      Proof.
+        cbv [select_cps select]. autorewrite with uncps push_id.
+        reflexivity.
+      Qed.
+      Hint Opaque select : uncps.
+      Hint Rewrite @select_id : uncps.
+
+      Lemma eval_select {n} cond p :
+        eval weight (@select n cond p) = if dec (cond = 0) then 0 else eval weight p.
+      Proof.
+        cbv [select select_cps]; autorewrite with uncps push_id.
+        induction n; [destruct p|].
+        { break_match; reflexivity. }
+        { rewrite (Tuple.subst_left_append p).
+          rewrite Tuple.map_left_append, !eval_left_append.
+          rewrite select_single_correct, IHn.
+          break_match;  ring. }
+      Qed. Hint Rewrite @eval_select : push_basesystem_eval.
+    End Select.
 
   End Positional.
   Hint Unfold
@@ -837,20 +887,24 @@ Module B.
       @Positional.to_associational_cps_id
       @Positional.chained_carries_id
       @Positional.sub_id
+      @Positional.select_id
     : uncps.
   Hint Rewrite
-      @Associational.eval_mul
-      @Positional.eval_to_associational
-      @Associational.eval_carry
-      @Associational.eval_carryterm
-      @Associational.eval_reduce
-      @Associational.eval_split
-      @Positional.eval_zeros
-      @Positional.eval_carry
-      @Positional.eval_from_associational
-      @Positional.eval_add_to_nth
-      @Positional.eval_chained_carries
-      @Positional.eval_sub
+       @Associational.eval_mul
+       @Positional.eval_single
+       @Positional.eval_unit
+       @Positional.eval_to_associational
+       @Associational.eval_carry
+       @Associational.eval_carryterm
+       @Associational.eval_reduce
+       @Associational.eval_split
+       @Positional.eval_zeros
+       @Positional.eval_carry
+       @Positional.eval_from_associational
+       @Positional.eval_add_to_nth
+       @Positional.eval_chained_carries
+       @Positional.eval_sub
+       @Positional.eval_select
     using (assumption || vm_decide) : push_basesystem_eval.
 End B.
 
@@ -887,6 +941,33 @@ Section DivMod.
     pose proof (Z.div_mod a b H). congruence.
   Qed.
 End DivMod.
+
+Section ZSelect.
+
+  Definition mask width cond :=
+    if dec (cond = 0) then 0 else Z.ones width.
+
+  Definition zselect bitwidth (cond x : Z) : Z :=
+    if (dec (x <= 0))
+    then (if dec (cond = 0) then 0 else x)
+    else (let width := Z.max (Z.log2 x + 1) bitwidth in
+          dlet t := mask width cond in x &' t).
+
+  Lemma zselect_correct bw cond x :
+    zselect bw cond x = if dec (cond = 0) then 0 else x.
+  Proof.
+    cbv [zselect mask Let_In]; break_match;
+      rewrite ?Z.land_0_r; try reflexivity; [ ].
+    pose proof (Z.log2_nonneg x).
+    pose proof (Z.log2_spec x) as Hlog2.
+    rewrite <-Z.add_1_r in Hlog2.
+    apply Z.max_case_strong; intros; rewrite Z.land_ones by omega;
+      apply Z.mod_small; split; try omega.
+    apply Z.lt_le_trans with (m:=2 ^ (Z.log2 x + 1));
+      [|apply Z.pow_le_mono_r]; omega.
+  Qed.
+
+End ZSelect.
 
 Import B.
 
