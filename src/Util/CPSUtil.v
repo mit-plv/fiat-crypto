@@ -242,32 +242,50 @@ Hint Rewrite @fold_right_no_starter_cps_correct : uncps.
 
 Import Tuple.
 
-Fixpoint mapi_with'_cps {T A B n} i
-         (f: nat->T->A->forall {R}, (T*B->R)->R) (start:T)
+Module Tuple.
+  Fixpoint map_cps {A B n} (g : A->B) :
+  tuple A n -> forall {T}, (tuple B n->T) -> T:=
+  match n with
+  | O => fun _ _ f => f tt
+  | S n' => fun t T f => map_cps g (tl t) (fun r => f (append (g (hd t)) r))
+  end.
+  Lemma map_cps_correct {A B n} g t: forall {T} f,
+      @map_cps A B n g t T f = f (map g t).
+  Proof.
+    induction n; simpl map_cps; intros; try destruct t;
+    [|rewrite IHn, <-map_append,<-subst_append]; reflexivity.
+  Qed. Hint Rewrite @map_cps_correct : uncps.
+
+  Fixpoint mapi_with'_cps {T A B n} i
+          (f: nat->T->A->forall {R}, (T*B->R)->R) (start:T)
   : Tuple.tuple' A n -> forall {R}, (T * tuple' B n -> R) -> R :=
   match n as n0 return (tuple' A n0 -> forall {R}, (T * tuple' B n0->R)->R) with
   | O => fun ys {T} ret => f i start ys ret
   | S n' => fun ys {T} ret =>
               f i start (hd ys) (fun sb =>
               mapi_with'_cps (S i) f (fst sb) (tl ys)
-                (fun r => ret (fst r, (snd r, snd sb))))
+                  (fun r => ret (fst r, (snd r, snd sb))))
   end.
 
-Fixpoint mapi_with_cps {S A B n}
-         (f: nat->S->A->forall {T}, (S*B->T)->T) (start:S)
+  Fixpoint mapi_with_cps {S A B n}
+          (f: nat->S->A->forall {T}, (S*B->T)->T) (start:S)
   : tuple A n -> forall {T}, (S * tuple B n->T)->T :=
   match n as n0 return (tuple A n0 -> forall {T}, (S * tuple B n0->T)->T) with
   | O => fun ys {T} ret => ret (start, tt)
   | S n' => fun ys {T} ret => mapi_with'_cps 0%nat f start ys ret
   end.
 
-Lemma mapi_with'_cps_correct {S A B n} : forall i f start xs T ret,
+  Lemma mapi_with'_cps_correct {S A B n} : forall i f start xs T ret,
   (forall i s a R (ret:_->R), f i s a R ret = ret (f i s a _ id)) ->
   @mapi_with'_cps S A B n i f start xs T ret = ret (mapi_with' i (fun i s a => f i s a _ id) start xs).
-Proof. induction n; intros; simpl; rewrite H, ?IHn by assumption; reflexivity. Qed.
-Lemma mapi_with_cps_correct {S A B n} f start xs T ret
+  Proof. induction n; intros; simpl; rewrite H, ?IHn by assumption; reflexivity. Qed.
+  Lemma mapi_with_cps_correct {S A B n} f start xs T ret
   (H:forall i s a R (ret:_->R), f i s a R ret = ret (f i s a _ id))
   : @mapi_with_cps S A B n f start xs T ret = ret (mapi_with (fun i s a => f i s a _ id) start xs).
-Proof. destruct n; simpl; rewrite ?mapi_with'_cps_correct by assumption; reflexivity. Qed.
-Hint Rewrite @mapi_with_cps_correct @mapi_with'_cps_correct
+  Proof. destruct n; simpl; rewrite ?mapi_with'_cps_correct by assumption; reflexivity. Qed.
+  Hint Rewrite @mapi_with_cps_correct @mapi_with'_cps_correct
+       using (intros; autorewrite with uncps; auto): uncps.
+End Tuple.
+Hint Rewrite @Tuple.map_cps_correct : uncps.
+Hint Rewrite @Tuple.mapi_with_cps_correct @Tuple.mapi_with'_cps_correct
      using (intros; autorewrite with uncps; auto): uncps.
