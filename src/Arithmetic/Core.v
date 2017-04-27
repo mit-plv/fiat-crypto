@@ -866,6 +866,20 @@ Section DivMod.
     then let x := Z.log2 b in (a >> x)%RT
     else Z.div a b.
 
+  Lemma div_correct a b : div a b = Z.div a b.
+  Proof.
+    cbv [div]; intros. break_match; try reflexivity.
+    rewrite Z.shiftr_div_pow2 by apply Z.log2_nonneg.
+    congruence.
+  Qed.
+
+  Lemma modulo_correct a b : modulo a b = Z.modulo a b.
+  Proof.
+    cbv [modulo]; intros. break_match; try reflexivity.
+    rewrite Z.land_ones by apply Z.log2_nonneg.
+    congruence.
+  Qed.
+
   Lemma div_mod a b (H:b <> 0) : a = b * div a b + modulo a b.
   Proof.
     cbv [div modulo]; intros. break_match; auto using Z.div_mod.
