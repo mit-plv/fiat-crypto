@@ -1,4 +1,4 @@
-Require Crypto.Curves.Weierstrass.Pre.
+Require Crypto.Algebra.Field.
 
 Module W.
   Section WeierstrassCurves.
@@ -29,7 +29,7 @@ Module W.
                               | (x, y) => y^2 = x^3 + a*x + b
                               | ∞ => True
                               end }.
-    Definition coordinates (P:point) : (F*F + ∞) := proj1_sig P.
+    Definition coordinates (P:point) : F*F + ∞ := let (xyi,_) := P in xyi.
 
     Definition eq (P1 P2:point) :=
       match coordinates P1, coordinates P2 with
@@ -43,26 +43,28 @@ Module W.
     Local Notation "0" := Fzero.  Local Notation "1" := Fone.
     Local Notation "2" := (1+1). Local Notation "3" := (1+2). 
 
-    Program Definition add (P1 P2:point) : point  := exist _
-      (match coordinates P1, coordinates P2 return _ with
-       | (x1, y1), (x2, y2) =>
-         if x1 =? x2
-         then
-           if y2 =? -y1
-           then ∞
-           else let k := (3*x1^2+a)/(2*y1) in
-                let x3 := k^2-x1-x1 in
-                let y3 := k*(x1-x3)-y1 in
-                (x3, y3)
-         else let k := (y2-y1)/(x2-x1) in
-              let x3 := k^2-x1-x2 in
-              let y3 := k*(x1-x3)-y1 in
-              (x3, y3)
-       | ∞, ∞ => ∞
-       | ∞, _ => coordinates P2
-       | _, ∞ => coordinates P1
-       end) _.
-    Next Obligation. apply (Pre.add_onCurve _ _ (proj2_sig _) (proj2_sig _)). Qed.
+    Program Definition add (P1 P2:point) : point :=
+      match coordinates P1, coordinates P2 return F*F+∞ with
+      | (x1, y1), (x2, y2) =>
+        if x1 =? x2
+        then
+          if y2 =? -y1
+          then ∞
+          else let k := (3*x1^2+a)/(2*y1) in
+               let x3 := k^2-x1-x2 in
+               let y3 := k*(x1-x3)-y1 in
+               (x3, y3)
+        else let k := (y2-y1)/(x2-x1) in
+             let x3 := k^2-x1-x2 in
+             let y3 := k*(x1-x3)-y1 in
+             (x3, y3)
+      | ∞, ∞ => ∞
+      | ∞, _ => coordinates P2
+      | _, ∞ => coordinates P1
+      end.
+    Next Obligation.
+      cbv [coordinates]; BreakMatch.break_match; trivial; Field.fsatz.
+    Qed.
 
     Fixpoint mul (n:nat) (P : point) : point :=
       match n with

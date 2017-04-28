@@ -11,8 +11,10 @@ Module W.
     Program Definition opp (P:@W.point F Feq Fadd Fmul a b) : @W.point F Feq Fadd Fmul a b
       := match W.coordinates P return F*F+_ with
          | inl (x1, y1) => inl (x1, Fopp y1)
-         | _ => P
+         | inr tt => inr tt
          end.
-    Next Obligation. destruct P as [[[??]|[]]?]; cbv; trivial; fsatz. Qed.
+    Next Obligation.
+      cbv [W.coordinates]; break_match; trivial; fsatz.
+    Qed.
   End W.
 End W.

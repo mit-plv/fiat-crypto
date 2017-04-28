@@ -108,7 +108,7 @@ Ltac nsatz_domain_sugar_power domain sugar power :=
     intros _ (* discard [nsatz_compute] output *); intros;
     apply (fun Haa refl cond => @Integral_domain.Rintegral_domain_pow _ _ _ _ _ _ _ _ _ _ _ domain (interp a) _ (BinNat.N.to_nat power) Haa (@Nsatz.check_correct _ _ _ _ _ _ _ _ _ _ FCring fv reified_givens (PEmul a (PEpow reified_goal power)) crt refl cond));
     [ nsatz_nonzero; cbv iota beta delta [Nsatz.PEevalR PEeval InitialRing.gen_phiZ InitialRing.gen_phiPOS]
-    | solve [vm_compute; exact (eq_refl true)] (* exact_no_check (eq_refl true) *)
+    | solve [vm_cast_no_check (eq_refl true)] (* if this fails, the prover returned a bad certificate *)
     | solve [repeat (split; [assumption|]); exact I] ]
   end.
 

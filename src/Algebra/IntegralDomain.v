@@ -165,7 +165,7 @@ Module IntegralDomain.
         let x' := constr:(@_LargeCharacteristicReflective.denote R one opp add mul x') in
         change (not (eq x' zero));
         apply (_LargeCharacteristicReflective.is_nonzero_correct(eq:=eq)(zero:=zero) C cg);
-        abstract (vm_cast_no_check (eq_refl true))
+        (vm_cast_no_check (eq_refl true))
       end
     end.
 End IntegralDomain.

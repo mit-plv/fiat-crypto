@@ -28,7 +28,7 @@ Module M.
                                       | (x, y) => b*y^2 = x^3 + a*x^2 + x
                                       | ∞ => True
                                       end }.
-    Definition coordinates (P:point) : (F*F + ∞) := proj1_sig P.
+    Definition coordinates (P:point) : (F*F + ∞) := let (xyi, _) := P in xyi.
 
     Program Definition zero : point := ∞.
 
@@ -46,29 +46,20 @@ Module M.
               then if Decidable.dec (y1 = - y2)
                    then ∞
                    else let k := (3*x1^2 + 2*a*x1 + 1)/(2*b*y1) in
-                        (b*k^2 - a - x1 - x1, (2*x1 + x1 + a)*k - b*k^3 - y1)
+                        let x := b*k^2 - a - x1 - x2 in
+                        let y := (2*x1 + x2 + a)*k - b*k^3 - y1 in
+                        (x, y)
               else let k := (y2 - y1)/(x2-x1) in
-                   (b*k^2 - a - x1 - x2, (2*x1 + x2 + a)*k - b*k^3 - y1)
+                   let x := b*k^2 - a - x1 - x2 in
+                   let y := (2*x1 + x2 + a)*k - b*k^3 - y1 in
+                   (x, y)
             | ∞, ∞ => ∞
             | ∞, _ => coordinates P2
             | _, ∞ => coordinates P1
             end.
     Next Obligation.
     Proof.
-      repeat match goal with
-             | _ => solve [ trivial ]
-             | _ => progress Tactics.DestructHead.destruct_head' @point
-             | _ => progress Tactics.DestructHead.destruct_head' @prod
-             | _ => progress Tactics.DestructHead.destruct_head' @sum
-             | _ => progress Sum.inversion_sum
-             | _ => progress Prod.inversion_prod
-             | _ => progress Tactics.BreakMatch.break_match_hyps
-             | _ => progress Tactics.BreakMatch.break_match
-             | _ => progress subst
-             | _ => progress cbv [coordinates proj1_sig] in *
-             | |- _ /\ _ => split
-             | |- _ => Field.fsatz
-             end.
+      cbv [coordinates]; BreakMatch.break_match; trivial; Field.fsatz.
     Qed.
   End MontgomeryCurve.
 End M.

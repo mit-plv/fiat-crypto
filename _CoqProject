@@ -151,7 +151,6 @@ src/Curves/Montgomery/XZ.v
 src/Curves/Montgomery/XZProofs.v
 src/Curves/Weierstrass/Affine.v
 src/Curves/Weierstrass/AffineProofs.v
-src/Curves/Weierstrass/Pre.v
 src/Curves/Weierstrass/Projective.v
 src/LegacyArithmetic/ArchitectureToZLike.v
 src/LegacyArithmetic/ArchitectureToZLikeProofs.v
