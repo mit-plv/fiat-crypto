@@ -37,13 +37,6 @@ Module M.
       if dec (snd P = 0) then fst P <> 0 else True.
     Definition eq (P Q:F*F) := fst P * snd Q = fst Q * snd P.
 
-    Context {nonsquare_a24:forall r, r*r <> a*a - (1+1+1+1)}.
-    Let y_nonzero (Q:Mpoint) : match M.coordinates Q with ∞ => True | (x,y) => x <> 0 -> y <> 0 end.
-    Proof.
-      destruct Q as [Q pfQ]; destruct Q as [[x y]|[]]; cbv -[not]; intros; trivial.
-      specialize (nonsquare_a24 (x+x+a)); fsatz.
-    Qed.
-
     Local Ltac do_unfold :=
       cbv [eq projective fst snd M.coordinates M.add M.zero M.eq M.opp proj1_sig xzladderstep M.to_xz Let_In Proper respectful] in *.
 
@@ -73,13 +66,6 @@ Module M.
       | _ => progress do_unfold
       end.
     Ltac t := repeat t_step ().
-
-    Lemma projective_fst_xzladderstep x1 Q (HQ:projective Q)
-      :  projective (fst (xzladderstep x1 Q Q)).
-    Proof.
-      specialize (nonsquare_a24 (fst Q/snd Q  - fst Q/snd Q)).
-      destruct (dec (snd Q = 0)); t; specialize_by assumption; fsatz.
-    Qed.
 
     (* happens if u=0 in montladder, all denominators remain 0 *)
     Lemma add_0_numerator_r A B C D
@@ -158,26 +144,18 @@ Module M.
       /\ eq (to_xz (Madd Q Q')) (snd (xzladderstep x1 xz x'z'))
       /\ projective (snd (xzladderstep x1 xz x'z')).
     Proof.
-      clear nonsquare_a24.
-      clear y_nonzero.
-      let fld := guess_field in
-      fsatz_prepare_hyps_on fld.
-      Set Ltac Profiling.
+      fsatz_prepare_hyps.
       Time t.
-      Show Ltac Profile.
-      Time all:exfalso_smart_clear_solve_by ltac:(abstract fsatz).
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
-      { Time abstract fsatz. }
+      Time par: abstract (exfalso_smart_clear_solve_by fsatz || fsatz).
     Time Qed.
+
+    Context {nonsquare_a24:forall r, r*r <> a*a - (1+1+1+1)}.
+    Lemma projective_fst_xzladderstep x1 Q (HQ:projective Q)
+      :  projective (fst (xzladderstep x1 Q Q)).
+    Proof.
+      specialize (nonsquare_a24 (fst Q/snd Q  - fst Q/snd Q)).
+      destruct (dec (snd Q = 0)); t; specialize_by assumption; fsatz.
+    Qed.
 
     Context {group:@Hierarchy.abelian_group Mpoint M.eq Madd M.zero Mopp}.
     Lemma difference_preserved Q Q' :
