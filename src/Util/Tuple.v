@@ -780,6 +780,13 @@ Lemma map_append {A B n} (f:A->B) : forall (x:tuple A n) (a:A),
   map f (append a x) = append (f a) (map f x).
 Proof. destruct n; auto using map_append'. Qed.
 
+Fixpoint nth_default {A m} (d:A) n (x: tuple A m) : A :=
+  match m,n with
+  | O, _ => d
+  | S m', O => hd x
+  | S m', S n' => nth_default d n' (tl x)
+  end.
+
 (* map operation that carries state *)
 (* first argument to f is index in tuple *)
 Fixpoint mapi_with' {T A B n} i (f: nat->T->A->T*B) (start:T)
