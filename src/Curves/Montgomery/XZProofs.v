@@ -6,6 +6,7 @@ Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Spec.MontgomeryCurve Crypto.Curves.Montgomery.Affine.
+Require Import Crypto.Curves.Montgomery.AffineInstances.
 Require Import Crypto.Curves.Montgomery.XZ BinPos.
 Require Import Coq.Classes.Morphisms.
 
@@ -14,16 +15,16 @@ Module M.
     Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
             {field:@Algebra.Hierarchy.field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
             {Feq_dec:Decidable.DecidableRel Feq}
-            {char_ge_5:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 5}.
+            {char_ge_3:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 3}
+            {char_ge_5:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 5}
+            {char_ge_12:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 12}
+            {char_ge_28:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 28}.
     Local Infix "=" := Feq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
     Local Infix "+" := Fadd. Local Infix "*" := Fmul.
     Local Infix "-" := Fsub. Local Infix "/" := Fdiv.
     Local Notation "0" := Fzero.  Local Notation "1" := Fone.
     Local Notation "'∞'" := (inr tt) : core_scope.
     Local Notation "( x , y )" := (inl (pair x y)).
-
-    Let char_ge_3:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul (BinNat.N.succ_pos (BinNat.N.two)).
-    Proof. eapply Algebra.Hierarchy.char_ge_weaken; eauto; vm_decide. Qed.
 
     Context {a b: F} {b_nonzero:b <> 0}.
     Context {a24:F} {a24_correct:(1+1+1+1)*a24 = a-(1+1)}.
@@ -149,20 +150,24 @@ Module M.
       Time par: abstract (exfalso_smart_clear_solve_by fsatz || fsatz).
     Time Qed.
 
-    Context {nonsquare_a24:forall r, r*r <> a*a - (1+1+1+1)}.
+    Context {a2m4_nonsquare:forall r, r*r <> a*a - (1+1+1+1)}.
+
     Lemma projective_fst_xzladderstep x1 Q (HQ:projective Q)
       :  projective (fst (xzladderstep x1 Q Q)).
     Proof.
-      specialize (nonsquare_a24 (fst Q/snd Q  - fst Q/snd Q)).
+      specialize (a2m4_nonsquare (fst Q/snd Q  - fst Q/snd Q)).
       destruct (dec (snd Q = 0)); t; specialize_by assumption; fsatz.
     Qed.
 
-    Context {group:@Hierarchy.abelian_group Mpoint M.eq Madd M.zero Mopp}.
+    Let a2m4_nz : a*a - (1+1+1+1) <> 0.
+    Proof. specialize (a2m4_nonsquare 0). fsatz. Qed.
+
     Lemma difference_preserved Q Q' :
           M.eq
             (Madd (Madd Q Q) (Mopp (Madd Q Q')))
             (Madd Q (Mopp Q')).
     Proof.
+      pose proof (let (_, h, _, _) := AffineInstances.M.MontgomeryWeierstrassIsomorphism b_nonzero (a:=a) a2m4_nz in h) as commutative_group.
       rewrite Group.inv_op.
       rewrite <-Hierarchy.associative.
       rewrite Group.cancel_left.
@@ -198,17 +203,17 @@ Module M.
     Proof.
       destruct (to_xz_add x1 xz x'z' Hxz Hx'z' Q Q' HQ HQ' difference_correct) as [? [? ?]].
       split; [|split; [|split;[|split]]]; eauto.
-      pose proof projective_fst_xzladderstep x1 xz Hxz.
-      destruct_head prod.
-      cbv [projective fst xzladderstep] in *; eauto.
+      {
+        pose proof projective_fst_xzladderstep x1 xz Hxz.
+        destruct_head prod.
+        cbv [projective fst xzladderstep] in *; eauto. }
       {
         pose proof difference_preserved Q Q' as HQQ;
         destruct (Madd (Madd Q Q) (Mopp (Madd Q Q'))) as [[[xQ yQ]|[]]pfQ];
         destruct (Madd Q (Mopp Q')) as [[[xD yD]|[]]pfD];
-        cbv [M.coordinates proj1_sig M.eq];
-        cbv [M.coordinates proj1_sig M.eq] in HQQ;
-        cbv [M.coordinates proj1_sig M.eq] in difference_correct;
-          destruct_head' and; try split; try contradiction; try etransitivity; eauto.
+        cbv [M.coordinates proj1_sig M.eq] in *;
+        destruct_head' and; try split;
+          try contradiction; try etransitivity; eauto.
       }
     Qed.
 

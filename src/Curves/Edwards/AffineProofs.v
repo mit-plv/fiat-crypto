@@ -51,7 +51,7 @@ Module E.
       | _ => solve [trivial | exact _ ]
       | _ => intro
       | |- Equivalence _ => split
-      | |- abelian_group => split | |- group => split | |- monoid => split
+      | |- commutative_group => split | |- group => split | |- monoid => split
       | |- is_associative => split | |- is_commutative => split
       | |- is_left_inverse => split | |- is_right_inverse => split
       | |- is_left_identity => split | |- is_right_identity => split
@@ -80,7 +80,7 @@ Module E.
       { intro. eapply H0. field_simplify_eq; repeat split; trivial. IntegralDomain.nsatz. }
     Qed.
 
-    Global Instance edwards_curve_abelian_group : abelian_group (eq:=eq)(op:=add)(id:=zero)(inv:=opp).
+    Global Instance edwards_curve_commutative_group : commutative_group (eq:=eq)(op:=add)(id:=zero)(inv:=opp).
     Proof using Type. t. Qed.
 
     Global Instance Proper_coordinates : Proper (eq==>fieldwise (n:=2) Feq) coordinates. Proof using Type. repeat t_step. Qed.

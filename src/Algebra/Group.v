@@ -104,24 +104,35 @@ Section Homomorphism.
   End ScalarMultHomomorphism.
 End Homomorphism.
 
-Section Homomorphism_rev.
-  Context {G EQ OP ID INV} {groupG:@group G EQ OP ID INV}.
+Section GroupByIsomorphism.
+  Context {G} {EQ:G->G->Prop} {OP:G->G->G} {ID:G} {INV:G->G}.
   Context {H} {eq : H -> H -> Prop} {op : H -> H -> H} {id : H} {inv : H -> H}.
   Context {phi:G->H} {phi':H->G}.
   Local Infix "=" := EQ. Local Infix "=" := EQ : type_scope.
-  Context (phi'_phi_id : forall A, phi' (phi A) = A)
-          (phi'_eq : forall a b, EQ (phi' a) (phi' b) <-> eq a b)
-          (phi'_op : forall a b, phi' (op a b) = OP (phi' a) (phi' b))
-          {phi'_inv : forall a, phi' (inv a) = INV (phi' a)}
-          {phi'_id : phi' id = ID}.
 
-  Lemma group_from_redundant_representation
-    : @group H eq op id inv /\ @Monoid.is_homomorphism G EQ OP H eq op phi /\ @Monoid.is_homomorphism H eq op G EQ OP phi'.
+  Class isomorphic_groups :=
+    {
+      isomorphic_groups_group_G :> @group G EQ OP ID INV;
+      isomorphic_groups_group_H :> @group H eq op id inv;
+      isomorphic_groups_hom_GH :> @Monoid.is_homomorphism G EQ OP H eq op phi;
+      isomorphic_groups_hom_HG :> @Monoid.is_homomorphism H eq op G EQ OP phi';
+    }.
+
+  Lemma group_by_isomorphism
+        (groupG:@group G EQ OP ID INV)
+        (phi'_phi_id : forall A, phi' (phi A) = A)
+        (phi'_eq : forall a b, EQ (phi' a) (phi' b) <-> eq a b)
+        (phi'_op : forall a b, phi' (op a b) = OP (phi' a) (phi' b))
+        (phi'_inv : forall a, phi' (inv a) = INV (phi' a))
+        (phi'_id : phi' id = ID)
+    : isomorphic_groups.
   Proof using Type*.
     repeat match goal with
            | [ H : _/\_ |- _ ] => destruct H; try clear H
+           | [ H : commutative_group |- _ ] => destruct H; try clear H
            | [ H : group |- _ ] => destruct H; try clear H
            | [ H : monoid |- _ ] => destruct H; try clear H
+           | [ H : is_commutative |- _ ] => destruct H; try clear H
            | [ H : is_associative |- _ ] => destruct H; try clear H
            | [ H : is_left_identity |- _ ] => destruct H; try clear H
            | [ H : is_right_identity |- _ ] => destruct H; try clear H
@@ -138,79 +149,51 @@ Section Homomorphism_rev.
            | _ => solve [ eauto ]
            end.
   Qed.
+End GroupByIsomorphism.
 
-  Definition homomorphism_from_redundant_representation
-    : @Monoid.is_homomorphism G EQ OP H eq op phi.
-  Proof using groupG phi'_eq phi'_op phi'_phi_id.
-    split; repeat intro; apply phi'_eq; rewrite ?phi'_op, ?phi'_phi_id; easy.
+Section CommutativeGroupByIsomorphism.
+  Context {G} {EQ:G->G->Prop} {OP:G->G->G} {ID:G} {INV:G->G}.
+  Context {H} {eq : H -> H -> Prop} {op : H -> H -> H} {id : H} {inv : H -> H}.
+  Context {phi:G->H} {phi':H->G}.
+  Local Infix "=" := EQ. Local Infix "=" := EQ : type_scope.
+
+  Class isomorphic_commutative_groups :=
+    {
+      isomorphic_commutative_groups_group_G :> @commutative_group G EQ OP ID INV;
+      isomorphic_commutative_groups_group_H :> @commutative_group H eq op id inv;
+      isomorphic_commutative_groups_hom_GH :> @Monoid.is_homomorphism G EQ OP H eq op phi;
+      isomorphic_commutative_groups_hom_HG :> @Monoid.is_homomorphism H eq op G EQ OP phi';
+    }.
+
+  Lemma commutative_group_by_isomorphism
+        (groupG:@commutative_group G EQ OP ID INV)
+        (phi'_phi_id : forall A, phi' (phi A) = A)
+        (phi'_eq : forall a b, EQ (phi' a) (phi' b) <-> eq a b)
+        (phi'_op : forall a b, phi' (op a b) = OP (phi' a) (phi' b))
+        (phi'_inv : forall a, phi' (inv a) = INV (phi' a))
+        (phi'_id : phi' id = ID)
+    : isomorphic_commutative_groups.
+  Proof using Type*.
+    repeat match goal with
+           | [ H : _/\_ |- _ ] => destruct H; try clear H
+           | [ H : commutative_group |- _ ] => destruct H; try clear H
+           | [ H : group |- _ ] => destruct H; try clear H
+           | [ H : monoid |- _ ] => destruct H; try clear H
+           | [ H : is_commutative |- _ ] => destruct H; try clear H
+           | [ H : is_associative |- _ ] => destruct H; try clear H
+           | [ H : is_left_identity |- _ ] => destruct H; try clear H
+           | [ H : is_right_identity |- _ ] => destruct H; try clear H
+           | [ H : Equivalence _ |- _ ] => destruct H; try clear H
+           | [ H : is_left_inverse |- _ ] => destruct H; try clear H
+           | [ H : is_right_inverse |- _ ] => destruct H; try clear H
+           | _ => intro
+           | _ => split
+           | [ H : eq _ _ |- _ ] => apply phi'_eq in H
+           | [ |- eq _ _ ] => apply phi'_eq
+           | [ H : EQ _ _ |- _ ] => rewrite H
+           | _ => progress erewrite ?phi'_op, ?phi'_inv, ?phi'_id, ?phi'_phi_id by reflexivity
+           | [ H : _ |- _ ] => progress erewrite ?phi'_op, ?phi'_inv, ?phi'_id in H by reflexivity
+           | _ => solve [ eauto ]
+           end.
   Qed.
-End Homomorphism_rev.
-
-Section GroupByHomomorphism.
-  Lemma surjective_homomorphism_from_group
-        {G EQ OP ID INV} {groupG:@group G EQ OP ID INV}
-        {H eq op id inv}
-        {Equivalence_eq: @Equivalence H eq} {eq_dec: forall x y, {eq x y} + {~ eq x y} }
-        {Proper_op:Proper(eq==>eq==>eq)op}
-        {Proper_inv:Proper(eq==>eq)inv}
-        {phi iph} {Proper_phi:Proper(EQ==>eq)phi} {Proper_iph:Proper(eq==>EQ)iph}
-        {surj:forall h, eq (phi (iph h)) h}
-        {phi_op : forall a b, eq (phi (OP a b)) (op (phi a) (phi b))}
-        {phi_inv : forall a, eq (phi (INV a)) (inv (phi a))}
-        {phi_id : eq (phi ID) id}
-  : @group H eq op id inv.
-  Proof.
-    repeat split; eauto with core typeclass_instances; intros;
-      repeat match goal with
-               |- context[?x] =>
-               match goal with
-               | |- context[iph x] => fail 1
-               | _ => unify x id; fail 1
-               | _ => is_var x; rewrite <- (surj x)
-               end
-             end;
-      repeat rewrite <-?phi_op, <-?phi_inv, <-?phi_id;
-      f_equiv; auto using associative, left_identity, right_identity, left_inverse, right_inverse.
-  Qed.
-
-  Lemma isomorphism_to_subgroup_group
-        {G EQ OP ID INV}
-        {Equivalence_EQ: @Equivalence G EQ} {eq_dec: forall x y, {EQ x y} + {~ EQ x y} }
-        {Proper_OP:Proper(EQ==>EQ==>EQ)OP}
-        {Proper_INV:Proper(EQ==>EQ)INV}
-        {H eq op id inv} {groupG:@group H eq op id inv}
-        {phi}
-        {eq_phi_EQ: forall x y, eq (phi x) (phi y) -> EQ x y}
-        {phi_op : forall a b, eq (phi (OP a b)) (op (phi a) (phi b))}
-        {phi_inv : forall a, eq (phi (INV a)) (inv (phi a))}
-        {phi_id : eq (phi ID) id}
-    : @group G EQ OP ID INV.
-  Proof.
-    repeat split; eauto with core typeclass_instances; intros;
-      eapply eq_phi_EQ;
-      repeat rewrite ?phi_op, ?phi_inv, ?phi_id;
-      auto using associative, left_identity, right_identity, left_inverse, right_inverse.
-  Qed.
-End GroupByHomomorphism.
-
-Section HomomorphismComposition.
-  Context {G EQ OP ID INV} {groupG:@group G EQ OP ID INV}.
-  Context {H eq op id inv} {groupH:@group H eq op id inv}.
-  Context {K eqK opK idK invK} {groupK:@group K eqK opK idK invK}.
-  Context {phi:G->H} {phi':H->K}
-          {Hphi:@Monoid.is_homomorphism G EQ OP H eq op phi}
-          {Hphi':@Monoid.is_homomorphism H eq op K eqK opK phi'}.
-  Lemma is_homomorphism_compose
-        {phi'':G->K}
-        (Hphi'' : forall x, eqK (phi' (phi x)) (phi'' x))
-    : @Monoid.is_homomorphism G EQ OP K eqK opK phi''.
-  Proof using Hphi Hphi' groupK.
-    split; repeat intro; rewrite <- !Hphi''.
-    { rewrite !Monoid.homomorphism; reflexivity. }
-    { apply Hphi', Hphi; assumption. }
-  Qed.
-
-  Global Instance is_homomorphism_compose_refl
-    : @Monoid.is_homomorphism G EQ OP K eqK opK (fun x => phi' (phi x))
-    := is_homomorphism_compose (fun x => reflexivity _).
-End HomomorphismComposition.
+End CommutativeGroupByIsomorphism.

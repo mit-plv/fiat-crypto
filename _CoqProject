@@ -142,10 +142,10 @@ src/Compilers/Z/Bounds/Pipeline/ReflectiveTactics.v
 src/Compilers/Z/Syntax/Equality.v
 src/Compilers/Z/Syntax/Util.v
 src/Curves/Edwards/AffineProofs.v
-src/Curves/Edwards/Montgomery.v
 src/Curves/Edwards/Pre.v
 src/Curves/Edwards/XYZT.v
 src/Curves/Montgomery/Affine.v
+src/Curves/Montgomery/AffineInstances.v
 src/Curves/Montgomery/AffineProofs.v
 src/Curves/Montgomery/XZ.v
 src/Curves/Montgomery/XZProofs.v

@@ -57,14 +57,14 @@ Section Algebra.
 
     Class is_commutative := { commutative : forall x y, op x y = op y x }.
 
-    Record abelian_group :=
+    Record commutative_group :=
       {
-        abelian_group_group : group;
-        abelian_group_is_commutative : is_commutative
+        commutative_group_group : group;
+        commutative_group_is_commutative : is_commutative
       }.
-    Existing Class abelian_group.
-    Global Existing Instance abelian_group_group.
-    Global Existing Instance abelian_group_is_commutative.
+    Existing Class commutative_group.
+    Global Existing Instance commutative_group_group.
+    Global Existing Instance commutative_group_is_commutative.
   End SingleOperation.
 
   Section AddMul.
@@ -79,7 +79,7 @@ Section Algebra.
 
     Class ring :=
       {
-        ring_abelian_group_add : abelian_group (op:=add) (id:=zero) (inv:=opp);
+        ring_commutative_group_add : commutative_group (op:=add) (id:=zero) (inv:=opp);
         ring_monoid_mul : monoid (op:=mul) (id:=one);
         ring_is_left_distributive : is_left_distributive;
         ring_is_right_distributive : is_right_distributive;
@@ -89,7 +89,7 @@ Section Algebra.
         ring_mul_Proper : Proper (respectful eq (respectful eq eq)) mul;
         ring_sub_Proper : Proper(respectful eq (respectful eq eq)) sub
       }.
-    Global Existing Instance ring_abelian_group_add.
+    Global Existing Instance ring_commutative_group_add.
     Global Existing Instance ring_monoid_mul.
     Global Existing Instance ring_is_left_distributive.
     Global Existing Instance ring_is_right_distributive.
