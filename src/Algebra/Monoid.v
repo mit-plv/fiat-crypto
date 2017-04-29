@@ -58,3 +58,25 @@ Section Homomorphism.
     }.
   Global Existing Instance is_homomorphism_phi_proper.
 End Homomorphism.
+
+Section HomomorphismComposition.
+  Context {G EQ OP ID} {monoidG:@monoid G EQ OP ID}.
+  Context {H eq op id} {monoidH:@monoid H eq op id}.
+  Context {K eqK opK idK} {monoidK:@monoid K eqK opK idK}.
+  Context {phi:G->H} {phi':H->K}
+          {Hphi:@is_homomorphism G EQ OP H eq op phi}
+          {Hphi':@is_homomorphism H eq op K eqK opK phi'}.
+  Lemma is_homomorphism_compose
+        {phi'':G->K}
+        (Hphi'' : forall x, eqK (phi' (phi x)) (phi'' x))
+    : @is_homomorphism G EQ OP K eqK opK phi''.
+  Proof using Hphi Hphi' monoidK.
+    split; repeat intro; rewrite <- !Hphi''.
+    { rewrite !homomorphism; reflexivity. }
+    { apply Hphi', Hphi; assumption. }
+  Qed.
+
+  Global Instance is_homomorphism_compose_refl
+    : @is_homomorphism G EQ OP K eqK opK (fun x => phi' (phi x))
+    := is_homomorphism_compose (fun x => reflexivity _).
+End HomomorphismComposition.

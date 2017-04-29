@@ -107,34 +107,23 @@ Module Extended.
         end.
       Next Obligation. pose proof (E.denominator_nonzero _ nonzero_a square_a _ nonsquare_d _ _ (proj2_sig (to_twisted P1))  _ _  (proj2_sig (to_twisted P2))); t. Qed.
 
-      Program Definition _group_proof nonzero_a' square_a' nonsquare_d' : Algebra.Hierarchy.group /\ _ /\ _ :=
-                 @Group.group_from_redundant_representation
-                   _ _ _ _ _
-                   ((E.edwards_curve_abelian_group(a:=a)(d:=d)(nonzero_a:=nonzero_a')(square_a:=square_a')
-                                                  (nonsquare_d:=nonsquare_d')).(Algebra.Hierarchy.abelian_group_group))
-                   _
-                   eq
-                   m1add
-                   zero
-                   opp
-                   from_twisted
-                   to_twisted
-                   to_twisted_from_twisted
-                   _ _ _ _.
-      Next Obligation. cbv [to_twisted]. t. Qed.
-      Next Obligation.
-        match goal with
-        | |- context[E.add ?P ?Q] =>
-          unique pose proof (E.denominator_nonzero _ nonzero_a square_a _ nonsquare_d _ _  (proj2_sig P)  _ _  (proj2_sig Q))
-        end. cbv [to_twisted m1add]. t. Qed.
-      Next Obligation. cbv [to_twisted opp]. t. Qed.
-      Next Obligation. cbv [to_twisted zero]. t. Qed.
-      Global Instance group x y z
-        : Algebra.Hierarchy.group := proj1 (_group_proof x y z).
-      Global Instance homomorphism_from_twisted x y z :
-        Monoid.is_homomorphism := proj1 (proj2 (_group_proof x y z)).
-      Global Instance homomorphism_to_twisted x y z :
-        Monoid.is_homomorphism := proj2 (proj2 (_group_proof x y z)).
+      Global Instance isomorphic_commutative_group_m1 :
+        @Group.isomorphic_commutative_groups
+          Epoint E.eq
+            (E.add(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d))
+            (E.zero(nonzero_a:=nonzero_a))
+            (E.opp(nonzero_a:=nonzero_a))
+          point eq m1add zero opp
+          from_twisted to_twisted.
+      Proof.
+        eapply Group.commutative_group_by_isomorphism; try exact _.
+        par: abstract
+               (cbv [to_twisted from_twisted zero opp m1add]; intros;
+                repeat match goal with
+                       | |- context[E.add ?P ?Q] =>
+                         unique pose proof (E.denominator_nonzero _ nonzero_a square_a _ nonsquare_d _ _  (proj2_sig P)  _ _  (proj2_sig Q)) end;
+                t).
+      Qed.
     End TwistMinusOne.
   End ExtendedCoordinates.
 End Extended.

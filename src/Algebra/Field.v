@@ -186,7 +186,7 @@ Section Homomorphism_rev.
            | [ H : field |- _ ] => destruct H; try clear H
            | [ H : commutative_ring |- _ ] => destruct H; try clear H
            | [ H : ring |- _ ] => destruct H; try clear H
-           | [ H : abelian_group |- _ ] => destruct H; try clear H
+           | [ H : commutative_group |- _ ] => destruct H; try clear H
            | [ H : group |- _ ] => destruct H; try clear H
            | [ H : monoid |- _ ] => destruct H; try clear H
            | [ H : is_commutative |- _ ] => destruct H; try clear H

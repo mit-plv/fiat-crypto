@@ -38,17 +38,15 @@ Module M.
     Section MontgomeryWeierstrass.
       Local Notation "2" := (1+1).
       Local Notation "3" := (1+2).
-      Local Notation "4" := (1+3).
-      Local Notation "16" := (4*4).
+      Local Notation "4" := (1+1+1+1).
       Local Notation "9" := (3*3).
-      Local Notation "27" := (3*9).
+      Local Notation "27" := (4*4 + 4+4 +1+1+1).
+
       Context {char_ge_28:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 28}.
 
-
-      Local Notation WeierstrassA := ((3-a^2)/(3*b^2)).
-      Local Notation WeierstrassB := ((2*a^3-9*a)/(27*b^3)).
-      Local Notation Wpoint := (@W.point F Feq Fadd Fmul WeierstrassA WeierstrassB).
-      Local Notation Wadd := (@W.add F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv field Feq_dec char_ge_3 WeierstrassA WeierstrassB).
+      Context {aw bw} {Haw:aw=(3-a^2)/(3*b^2)} {Hbw:bw=(2*a^3-9*a)/(27*b^3)}.
+      Local Notation Wpoint := (@W.point F Feq Fadd Fmul aw bw).
+      Local Notation Wadd := (@W.add F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv field Feq_dec char_ge_3 aw bw).
       Program Definition to_Weierstrass (P:@point) : Wpoint :=
         match M.coordinates P return F*F+∞ with
         | (x, y) => ((x + a/3)/b, y/b)

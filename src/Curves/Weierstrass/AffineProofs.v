@@ -9,10 +9,7 @@ Module W.
   Section W.
     Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv} {a b:F}
             {field:@Algebra.Hierarchy.field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
-            {Feq_dec:DecidableRel Feq}
-            {char_ge_12:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 12%positive}. (* FIXME: shouldn't need we need 4, not 12? *)
-    Let char_ge_3 : @Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 3.
-    Proof. eapply Algebra.Hierarchy.char_ge_weaken; eauto; vm_decide. Qed.
+            {Feq_dec:DecidableRel Feq}.
     Local Infix "=" := Feq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
     Local Notation "0" := Fzero.  Local Notation "1" := Fone.
     Local Infix "+" := Fadd. Local Infix "-" := Fsub. Local Infix "*" := Fmul.
@@ -24,7 +21,7 @@ Module W.
              | |- Equivalence _ => split; [intros ? | intros ??? | intros ????? ]
              | |- monoid => split
              | |- group => split
-             | |- abelian_group => split
+             | |- commutative_group => split
              | |- is_associative => split; intros ???
              | |- is_commutative => split; intros ??
              | |- is_left_inverse => split; intros ?
@@ -33,8 +30,12 @@ Module W.
              | |- is_right_identity => split; intros ?
              end.
 
-    Global Instance commutative_group {discriminant_nonzero:id(4*a*a*a + 27*b*b <> 0)} : abelian_group(eq:=W.eq(a:=a)(b:=b))(op:=W.add(char_ge_3:=char_ge_3))(id:=W.zero)(inv:=W.opp).
-    Proof using Type.
+    Global Instance commutative_group
+           char_ge_3
+           {char_ge_12:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 12%positive} (* FIXME: shouldn't need we need 4, not 12? *)
+           {discriminant_nonzero:id(4*a*a*a + 27*b*b <> 0)}
+      : commutative_group(eq:=W.eq(a:=a)(b:=b))(op:=W.add(char_ge_3:=char_ge_3))(id:=W.zero)(inv:=W.opp).
+    Proof using Type. 
       Time
         cbv [W.opp W.eq W.zero W.add W.coordinates proj1_sig];
           repeat match goal with
