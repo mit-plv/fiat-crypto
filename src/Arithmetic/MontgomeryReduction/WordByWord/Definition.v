@@ -46,10 +46,11 @@ Section positional.
   Section body.
     Context (T : tuple Z k)
             (i : nat).
-    Let k0 := p' mod (weight i).
+    Let N := weight (S i) / weight i.
+    Let k0 := p' mod N.
 
-    Let T1 := T{{i}} mod (weight i).
-    Let Y := (T1 * k0) mod (weight i).
+    Let T1 := T{{i}} mod N.
+    Let Y := (T1 * k0) mod N.
     Let T2 := mul p (encode Y).
     Let T3 := add T T2.
     Definition redc_body := T3.
@@ -60,4 +61,7 @@ Section positional.
        | O => T
        | S count' => redc_from (redc_body T (k - count)) count'
        end.
+
+  Definition redc (T : tuple Z k) : tuple Z k
+    := redc_from T k.
 End positional.
