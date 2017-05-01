@@ -5,6 +5,7 @@
     https://eprint.iacr.org/2013/816.pdf. *)
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Arithmetic.Core.
+Require Import Crypto.Arithmetic.Saturated.
 Require Import Crypto.Arithmetic.MontgomeryReduction.Definition.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Notations.
@@ -32,36 +33,60 @@ Require Import Crypto.Util.Notations.
 Return X
 >> *)
 Local Open Scope Z_scope.
-Section positional.
-  Local Notation "ts {{ i }}" := (@nth_default Z _ 0%Z i ts).
-  Context (k : nat)
-          (weight : nat -> Z)
-          (p : tuple Z k) (* the prime *)
-          (p' : Z) (* [-p⁻¹] *)
-          (modulo div : Z -> Z -> Z).
-  Local Notation encode := (@B.Positional.encode weight modulo div k).
-  Local Notation mul a b := (@B.Positional.mul_cps weight k k a b _ id).
-  Local Notation add a b := (@B.Positional.add_cps weight k a b _ id).
-
+Section columns.
+  (** TODO(jadep): implement these *)
+  Context (Columns_add_cps : forall (weight : nat -> Z)
+                                    (n : nat)
+                                    (a b : tuple (list Z) n)
+                                    T
+                                    (f : tuple (list Z) n -> T),
+              T)
+          (Columns_mul_cps : forall (weight : nat -> Z)
+                                    (n m : nat)
+                                    (a b : tuple (list Z) n)
+                                    T
+                                    (f : tuple (list Z) m -> T),
+              T).
+  Context (modulo div : Z -> Z -> Z)
+          (add_get_carry : Z -> Z -> Z -> Z * Z)
+          (k' : nat)
+          (s : Z).
+  Let k := S k'.
+  Context (p : tuple (list Z) k)
+          (p' : Z) (* [-p⁻¹] *).
+  Local Notation weight := (fun i : nat => 2^(Z.of_nat i * s))%Z.
   Section body.
-    Context (T : tuple Z k)
-            (i : nat).
-    Let N := weight (S i) / weight i.
+    Context (T : tuple Z k).
+    Local Notation Pos2Col t
+      := (@Columns.from_associational
+            weight k
+            (@B.Positional.to_associational
+               weight k t)).
+    Local Notation encode z
+      := (Pos2Col (@B.Positional.encode weight modulo div k z)).
+    Local Notation compact := (@Columns.compact weight add_get_carry div modulo k).
+    Local Notation mul a b := (@Columns_mul_cps weight k k a b _ id).
+    Local Notation add a b := (@Columns_add_cps weight k a b _ id).
+
+    Let N := 2^s.
     Let k0 := p' mod N.
 
-    Let T1 := T{{i}} mod N.
+    Let T1 := (hd T) mod N.
     Let Y := (T1 * k0) mod N.
     Let T2 := mul p (encode Y).
-    Let T3 := add T T2.
-    Definition redc_body := T3.
+    Let T3 := add (Pos2Col T) T2.
+    Definition carry_to_highest_and_drop_lowest (ts : tuple Z k) (c : Z) : tuple Z k
+      := Tuple.left_append c (tl ts).
+    Definition redc_body : tuple Z k
+      := let '(c, ts) := compact T3 in carry_to_highest_and_drop_lowest ts c.
   End body.
 
-  Fixpoint redc_from (T : tuple Z k) (count : nat) : tuple Z k
+  Fixpoint redc_for (T : tuple Z k) (count : nat) : tuple Z k
     := match count with
        | O => T
-       | S count' => redc_from (redc_body T (k - count)) count'
+       | S count' => redc_for (redc_body T) count'
        end.
 
   Definition redc (T : tuple Z k) : tuple Z k
-    := redc_from T k.
-End positional.
+    := redc_for T k.
+End columns.
