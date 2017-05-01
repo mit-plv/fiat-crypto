@@ -42,20 +42,22 @@ Section columns.
                                     (f : tuple (list Z) n -> T),
               T)
           (Columns_mul_cps : forall (weight : nat -> Z)
-                                    (n m : nat)
-                                    (a b : tuple (list Z) n)
+                                    (na nb m : nat)
+                                    (a : tuple (list Z) na)
+                                    (a : tuple (list Z) nb)
                                     T
                                     (f : tuple (list Z) m -> T),
               T).
   Context (modulo div : Z -> Z -> Z)
           (add_get_carry : Z -> Z -> Z -> Z * Z)
-          (k' : nat)
+          (p_len : nat)
           (s : Z).
-  Let k := S k'.
-  Context (p : tuple (list Z) k)
-          (p' : Z) (* [-p⁻¹] *).
+  Context (p : tuple (list Z) p_len)
+          (k0 : Z) (* [(-p⁻¹) mod 2ˢ] *).
   Local Notation weight := (fun i : nat => 2^(Z.of_nat i * s))%Z.
   Section body.
+    Context (k' : nat).
+    Let k := (S (k' + p_len)).
     Context (T : tuple Z k).
     Local Notation Pos2Col t
       := (@Columns.from_associational
@@ -65,28 +67,23 @@ Section columns.
     Local Notation encode z
       := (Pos2Col (@B.Positional.encode weight modulo div k z)).
     Local Notation compact := (@Columns.compact weight add_get_carry div modulo k).
-    Local Notation mul a b := (@Columns_mul_cps weight k k a b _ id).
+    Local Notation mul a b := (@Columns_mul_cps weight _ _ k a b _ id).
     Local Notation add a b := (@Columns_add_cps weight k a b _ id).
 
-    Let N := 2^s.
-    Let k0 := p' mod N.
-
-    Let T1 := (hd T) mod N.
-    Let Y := (T1 * k0) mod N.
-    Let T2 := mul p (encode Y).
+    Let T1 := (hd T) (*mod (2^s)*).
+    Let Y := (T1 * k0) mod (2^s).
+    Let T2 := mul ((Y::nil)%list : tuple _ 1) p.
     Let T3 := add (Pos2Col T) T2.
-    Definition carry_to_highest_and_drop_lowest (ts : tuple Z k) (c : Z) : tuple Z k
-      := Tuple.left_append c (tl ts).
-    Definition redc_body : tuple Z k
-      := let '(c, ts) := compact T3 in carry_to_highest_and_drop_lowest ts c.
+    Definition (*carry_to_highest_and_*)drop_lowest (ts : tuple Z k) (c : Z) : tuple Z (pred k)
+      := (*Tuple.left_append c*) (tl ts).
+    Definition redc_body : tuple Z (pred k)
+      := let '(c, ts) := compact T3 in
+         (*carry_to_highest_and_*)drop_lowest ts c.
   End body.
 
-  Fixpoint redc_for (T : tuple Z k) (count : nat) : tuple Z k
+  Fixpoint redc (count : nat) : tuple Z (count + p_len) -> tuple Z p_len
     := match count with
-       | O => T
-       | S count' => redc_for (redc_body T) count'
+       | O => fun T => T
+       | S count' => fun T => redc count' (redc_body _ T)
        end.
-
-  Definition redc (T : tuple Z k) : tuple Z k
-    := redc_for T k.
 End columns.
