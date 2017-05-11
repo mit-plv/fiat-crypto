@@ -242,24 +242,6 @@ Hint Rewrite Z.testbit_neg_r using zutil_arith : Ztestbit.
 Hint Rewrite Bool.andb_true_r Bool.andb_false_r Bool.orb_true_r Bool.orb_false_r
              Bool.andb_true_l Bool.andb_false_l Bool.orb_true_l Bool.orb_false_l : Ztestbit.
 
-Ltac comes_before ls x y :=
-  match ls with
-  | context[cons x ?xs]
-    => match xs with
-       | context[y] => idtac
-       end
-  end.
-Ltac canonicalize_comm_step mul ls comm comm3 :=
-  match goal with
-  | [ |- context[mul ?x ?y] ]
-    => comes_before ls y x;
-       rewrite (comm x y)
-  | [ |- context[mul ?x (mul ?y ?z)] ]
-    => comes_before ls y x;
-       rewrite (comm3 x y z)
-  end.
-Ltac canonicalize_comm mul ls comm comm3 := repeat canonicalize_comm_step mul ls comm comm3.
-
 Module Z.
   Section proper.
     (** We prove a bunch of [Proper] lemmas, but do not make them
@@ -471,8 +453,6 @@ Module Z.
 
   Lemma mul_comm3 x y z : x * (y * z) = y * (x * z).
   Proof. lia. Qed.
-
-  Ltac Zcanonicalize_comm ls := canonicalize_comm Z.mul ls Z.mul_comm mul_comm3.
 
   Lemma positive_is_nonzero : forall x, x > 0 -> x <> 0.
   Proof. intros; omega. Qed.
