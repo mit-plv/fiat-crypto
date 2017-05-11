@@ -3,8 +3,8 @@ Ltac revert_last_nondep :=
   match goal with
   | [ H : _ |- _ ]
     => lazymatch goal with
-       | [ H' : appcontext[H] |- _ ] => fail
-       | [ |- appcontext[H] ] => fail
+       | [ H' : context[H] |- _ ] => fail
+       | [ |- context[H] ] => fail
        | _ => idtac
        end;
        revert H

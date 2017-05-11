@@ -953,7 +953,7 @@ Lemma wordToNat_wfirstn : forall a b w H, wordToNat (@wfirstn a b w H) = (wordTo
 Proof.
   unfold wfirstn.
   intros; rewrite wordToNat_split1.
-  match goal with |- appcontext[match ?x with _ => _ end] => generalize x end.
+  match goal with |- context[match ?x with _ => _ end] => generalize x end.
   intro H'; destruct H'.
   reflexivity.
 Qed.

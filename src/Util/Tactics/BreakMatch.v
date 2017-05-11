@@ -70,31 +70,31 @@ Ltac destruct_rewrite_sumbool e :=
       end.
 Ltac break_match_step only_when :=
   match goal with
-  | [ |- appcontext[match ?e with _ => _ end] ]
+  | [ |- context[match ?e with _ => _ end] ]
     => only_when e; is_var e; destruct e
-  | [ |- appcontext[match ?e with _ => _ end] ]
+  | [ |- context[match ?e with _ => _ end] ]
     => only_when e;
        match type of e with
        | sumbool _ _ => destruct_rewrite_sumbool e
        end
-  | [ |- appcontext[if ?e then _ else _] ]
+  | [ |- context[if ?e then _ else _] ]
     => only_when e; destruct e eqn:?
-  | [ |- appcontext[match ?e with _ => _ end] ]
+  | [ |- context[match ?e with _ => _ end] ]
     => only_when e; destruct e eqn:?
   | _ => let v := fresh in set_match_refl v only_when; destruct_by_existing_equation v
   end.
 Ltac break_match_hyps_step only_when :=
   match goal with
-  | [ H : appcontext[match ?e with _ => _ end] |- _ ]
+  | [ H : context[match ?e with _ => _ end] |- _ ]
     => only_when e; is_var e; destruct e
-  | [ H : appcontext[match ?e with _ => _ end] |- _ ]
+  | [ H : context[match ?e with _ => _ end] |- _ ]
     => only_when e;
        match type of e with
        | sumbool _ _ => destruct_rewrite_sumbool e
        end
-  | [ H : appcontext[if ?e then _ else _] |- _ ]
+  | [ H : context[if ?e then _ else _] |- _ ]
     => only_when e; destruct e eqn:?
-  | [ H : appcontext[match ?e with _ => _ end] |- _ ]
+  | [ H : context[match ?e with _ => _ end] |- _ ]
     => only_when e; destruct e eqn:?
   | _ => let v := fresh in set_match_refl_hyp v only_when; destruct_by_existing_equation v
   end.
@@ -114,12 +114,12 @@ Ltac break_match_when_head T := repeat break_match_when_head_step T.
 Ltac break_match_hyps_when_head T := repeat break_match_hyps_when_head_step T.
 Ltac break_innermost_match_step :=
   break_match_step ltac:(fun v => lazymatch v with
-                                  | appcontext[match _ with _ => _ end] => fail
+                                  | context[match _ with _ => _ end] => fail
                                   | _ => idtac
                                   end).
 Ltac break_innermost_match_hyps_step :=
   break_match_hyps_step ltac:(fun v => lazymatch v with
-                                       | appcontext[match _ with _ => _ end] => fail
+                                       | context[match _ with _ => _ end] => fail
                                        | _ => idtac
                                        end).
 Ltac break_innermost_match := repeat break_innermost_match_step.

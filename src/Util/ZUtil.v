@@ -251,10 +251,10 @@ Ltac comes_before ls x y :=
   end.
 Ltac canonicalize_comm_step mul ls comm comm3 :=
   match goal with
-  | [ |- appcontext[mul ?x ?y] ]
+  | [ |- context[mul ?x ?y] ]
     => comes_before ls y x;
        rewrite (comm x y)
-  | [ |- appcontext[mul ?x (mul ?y ?z)] ]
+  | [ |- context[mul ?x (mul ?y ?z)] ]
     => comes_before ls y x;
        rewrite (comm3 x y z)
   end.
@@ -437,7 +437,7 @@ Module Z.
     intros; cbv [Z.pow2_mod].
     apply Z.bits_inj'; intros.
     repeat progress (try break_match; autorewrite with Ztestbit zsimplify; try reflexivity).
-    try match goal with H : ?a < ?b |- appcontext[Z.testbit _ (?a - ?b)] =>
+    try match goal with H : ?a < ?b |- context[Z.testbit _ (?a - ?b)] =>
       rewrite !Z.testbit_neg_r with (n := a - b) by omega end.
     autorewrite with Ztestbit; reflexivity.
   Qed.
@@ -2235,7 +2235,7 @@ Module Z.
            | |- _ => progress intros
            | |- _ => progress rewrite ?Z.eqb_eq, ?Z.eqb_neq in *
            | |- _ => progress autorewrite with Ztestbit
-           | |- appcontext[Z.eqb ?a ?b] => case_eq (Z.eqb a b)
+           | |- context[Z.eqb ?a ?b] => case_eq (Z.eqb a b)
            | |- _ => reflexivity || omega
            end.
   Qed.

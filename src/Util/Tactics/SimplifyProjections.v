@@ -8,7 +8,7 @@ Ltac pre_simplify_projection proj proj' uproj' :=
 Ltac do_simplify_projection_2Targ_4carg_step proj proj' uproj' construct :=
   change proj' with uproj' at 1;
   lazymatch goal with
-  | [ |- appcontext[uproj' _ _ (construct _ _ _ _)] ]
+  | [ |- context[uproj' _ _ (construct _ _ _ _)] ]
     => cbv beta iota delta [uproj']
   | _ => change uproj' with proj
   end.

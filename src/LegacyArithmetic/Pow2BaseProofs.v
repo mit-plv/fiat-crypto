@@ -280,8 +280,8 @@ Section Pow2BaseProofs.
            | |- _ => rewrite nth_default_base
            | |- _ => rewrite IHi
            | |- _ => rewrite <-Z.lor_shiftl by (rewrite ?Z.pow2_mod_spec; try apply Z.mod_pos_bound; zero_bounds)
-           | |- appcontext[min ?x ?y] => (rewrite Nat.min_l by omega || rewrite Nat.min_r by omega)
-           | |- appcontext[2 ^ ?a * _] => rewrite (Z.mul_comm (2 ^ a)); rewrite <-Z.shiftl_mul_pow2
+           | |- context[min ?x ?y] => (rewrite Nat.min_l by omega || rewrite Nat.min_r by omega)
+           | |- context[2 ^ ?a * _] => rewrite (Z.mul_comm (2 ^ a)); rewrite <-Z.shiftl_mul_pow2
            | |- _ => solve [auto]
            | |- _ => lia
            end.
@@ -291,7 +291,7 @@ Section Pow2BaseProofs.
            | |- _ => progress autorewrite with Ztestbit
            | |- _ => rewrite Z.testbit_pow2_mod by (omega || trivial)
            | |- _ => break_if; try omega
-           | H : ?a < ?b |- appcontext[Z.testbit _ (?a - ?b)] =>
+           | H : ?a < ?b |- context[Z.testbit _ (?a - ?b)] =>
              rewrite (Z.testbit_neg_r _ (a-b)) by omega
            | |- _ => reflexivity
            | |- _ => solve [f_equal; ring]

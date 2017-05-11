@@ -76,9 +76,9 @@ COQPRIME_FOLDER := coqprime
 ifneq ($(filter 8.5%,$(COQ_VERSION)),) # 8.5
 else
 ifneq ($(PROFILE),)
-OTHERFLAGS ?= -profile-ltac -w "-deprecated-appcontext -notation-overridden"
+OTHERFLAGS ?= -profile-ltac -w "-notation-overridden"
 else
-OTHERFLAGS ?= -w "-deprecated-appcontext -notation-overridden"
+OTHERFLAGS ?= -w "-notation-overridden"
 endif
 endif
 

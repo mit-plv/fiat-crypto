@@ -252,7 +252,7 @@ Ltac boring :=
   simpl; intuition auto with zarith datatypes;
   repeat match goal with
            | [ H : _ |- _ ] => rewrite H; clear H
-           | [ |- appcontext[match ?pf with end] ] => solve [ case pf ]
+           | [ |- context[match ?pf with end] ] => solve [ case pf ]
            | _ => progress autounfold in *
            | _ => progress autorewrite with core
            | _ => progress simpl in *
@@ -633,7 +633,7 @@ Qed.
 (* grumble, grumble, [rewrite] is bad at inferring the identity function, and constant functions *)
 Ltac rewrite_rev_combine_update_nth :=
   let lem := match goal with
-             | [ |- appcontext[update_nth ?n (fun xy => (@?f xy, @?g xy)) (combine ?xs ?ys)] ]
+             | [ |- context[update_nth ?n (fun xy => (@?f xy, @?g xy)) (combine ?xs ?ys)] ]
                => let f := match (eval cbv [fst] in (fun y x => f (x, y))) with
                            | fun _ => ?f => f
                            end in
@@ -1564,10 +1564,10 @@ Qed.
 Local Hint Resolve map2_nil_r map2_nil_l.
 
 Ltac simpl_list_lengths := repeat match goal with
-                                  | H : appcontext[length (@nil ?A)] |- _ => rewrite (@nil_length0 A) in H
-                                  | H : appcontext[length (_ :: _)] |- _ => rewrite length_cons in H
-                                  | |- appcontext[length (@nil ?A)] => rewrite (@nil_length0 A)
-                                  | |- appcontext[length (_ :: _)] => rewrite length_cons
+                                  | H : context[length (@nil ?A)] |- _ => rewrite (@nil_length0 A) in H
+                                  | H : context[length (_ :: _)] |- _ => rewrite length_cons in H
+                                  | |- context[length (@nil ?A)] => rewrite (@nil_length0 A)
+                                  | |- context[length (_ :: _)] => rewrite length_cons
                                   end.
 
 Section OpaqueMap2.

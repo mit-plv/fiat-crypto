@@ -28,7 +28,7 @@ Section language.
     | _ => progress split_iff
     | _ => rewrite eq_interp_flat_type_eta_gen by assumption
     | [ H : _ |- _ ] => rewrite eq_interp_flat_type_eta_gen in H by assumption
-    | [ H : appcontext[interp_flat_type_eta_gen] |- _ ]
+    | [ H : context[interp_flat_type_eta_gen] |- _ ]
       => setoid_rewrite eq_interp_flat_type_eta_gen in H; [ | assumption.. ]
     | _ => progress break_match
     | [ H : wff _ _ _ |- _ ] => solve [ inversion H ]

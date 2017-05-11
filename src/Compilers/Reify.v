@@ -424,7 +424,7 @@ Ltac Reify_rhs_gen Reify prove_interp_compile_correct interp_op try_tac :=
                   clear;
                   abstract (
                       lazymatch goal with
-                      | [ |- appcontext[@InputSyntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op ?t ?e] ]
+                      | [ |- context[@InputSyntax.Interp ?base_type_code ?interp_base_type ?op ?interp_op ?t ?e] ]
                         => let interp_base_type' := (eval hnf in interp_base_type) in
                            let interp_op' := (eval hnf in interp_op) in
                            change interp_base_type with interp_base_type';
