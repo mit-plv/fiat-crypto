@@ -43,6 +43,10 @@ Reserved Infix "≡_r" (at level 70, no associativity).
 Reserved Infix "≢_r" (at level 70, no associativity).
 Reserved Infix "≡ᵣ" (at level 70, no associativity).
 Reserved Infix "≢ᵣ" (at level 70, no associativity).
+Reserved Infix "≡_p" (at level 70, no associativity).
+Reserved Infix "≢_p" (at level 70, no associativity).
+Reserved Infix "≡ₚ" (at level 70, no associativity).
+Reserved Infix "≢ₚ" (at level 70, no associativity).
 Reserved Infix "≡₃₂" (at level 70, no associativity).
 Reserved Infix "≢₃₂" (at level 70, no associativity).
 Reserved Infix "≡₆₄" (at level 70, no associativity).
