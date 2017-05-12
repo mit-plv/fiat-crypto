@@ -1307,9 +1307,9 @@ Qed.
 
 (* TODO : automate *)
 Lemma WordNZ_split1 : forall {n m} w,
-    Z.of_N (Word.wordToN (Word.split1 n m w)) = ZUtil.Z.pow2_mod (Z.of_N (Word.wordToN w)) (Z.of_nat n).
+    Z.of_N (Word.wordToN (Word.split1 n m w)) = Z.pow2_mod (Z.of_N (Word.wordToN w)) (Z.of_nat n).
 Proof.
-  intros; unfold ZUtil.Z.pow2_mod.
+  intros; unfold Z.pow2_mod.
   rewrite wordToN_split1.
   apply Z.bits_inj_iff'; intros k Hpos.
   rewrite Z.land_spec.
@@ -1338,7 +1338,7 @@ Qed.
 Lemma WordNZ_split2 : forall {n m} w,
     Z.of_N (Word.wordToN (Word.split2 n m w)) = Z.shiftr (Z.of_N (Word.wordToN w)) (Z.of_nat n).
 Proof.
-  intros; unfold ZUtil.Z.pow2_mod.
+  intros; unfold Z.pow2_mod.
   rewrite wordToN_split2.
   apply Z.bits_inj_iff'; intros k Hpos.
   rewrite Z2N.inj_testbit; [|assumption].

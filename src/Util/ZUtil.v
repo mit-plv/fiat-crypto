@@ -11,12 +11,10 @@ Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Notations.
 Require Import Coq.Lists.List.
 Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.ZUtil.Notations.
+Require Export Crypto.Util.ZUtil.Definitions.
 Import Nat.
 Local Open Scope Z.
-
-Infix ">>" := Z.shiftr : Z_scope.
-Infix "<<" := Z.shiftl : Z_scope.
-Infix "&'" := Z.land : Z_scope.
 
 Hint Extern 1 => lia : lia.
 Hint Extern 1 => lra : lra.
@@ -332,8 +330,6 @@ Module Z.
     end.
   Ltac peel_le := repeat peel_le_step.
 
-  Definition pow2_mod n i := (n &' (Z.ones i)).
-
   Lemma pow2_mod_spec : forall a b, (0 <= b) -> Z.pow2_mod a b = a mod (2 ^ b).
   Proof.
     intros.
@@ -387,7 +383,7 @@ Module Z.
                                      else if Z_lt_dec i n then Z.testbit a i else false.
   Proof.
     intros; destruct (Z_lt_dec n 0); [ | apply testbit_pow2_mod; omega ].
-    unfold pow2_mod.
+    unfold Z.pow2_mod.
     autorewrite with Ztestbit_full;
       repeat break_match;
       autorewrite with Ztestbit;
