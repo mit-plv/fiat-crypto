@@ -20,9 +20,18 @@ Section language.
       : option (interp_flat_type inverted_expr t)
       := match x in Syntax.exprf _ _ t return option (interp_flat_type _ t) with
          | Op t1 (Tbase _) opc args
-           => Some (match opc in op src dst return exprf dst -> exprf src -> inverted_expr match dst with Tbase t => t | _ => TZ end with
+           => Some (match opc in op src dst
+                          return exprf dst
+                                 -> exprf src
+                                 -> match dst with
+                                    | Tbase t => inverted_expr t
+                                    | Prod _ _ => True
+                                    | _ => inverted_expr TZ
+                                    end
+                    with
                     | OpConst _ z => fun _ _ => const_of _ z
                     | Opp TZ TZ => fun _ args => neg_expr _ args
+                    | AddWithGetCarry _ _ _ _ _ _ => fun _ _ => I
                     | _ => fun e _ => gen_expr _ e
                     end (Op opc args) args)
          | TT => Some tt
@@ -175,6 +184,9 @@ Section language.
          | Lor _ _ _ as opc
          | OpConst _ _ as opc
          | Opp _ _ as opc
+         | Zselect _ _ _ _ as opc
+         | AddWithCarry _ _ _ _ as opc
+         | AddWithGetCarry _ _ _ _ _ _ as opc
            => Op opc
          end.
   End with_var.

@@ -7,6 +7,7 @@ Require Import Crypto.Compilers.WfReflective.
 Require Import Crypto.Compilers.Reify.
 Require Import Crypto.Compilers.Eta.
 Require Import Crypto.Compilers.EtaInterp.
+Require Import Crypto.Util.ZUtil.Definitions.
 
 Ltac base_reify_op op op_head extra ::=
      lazymatch op_head with
@@ -18,13 +19,25 @@ Ltac base_reify_op op op_head extra ::=
      | @Z.land => constr:(reify_op op op_head 2 (Land TZ TZ TZ))
      | @Z.lor => constr:(reify_op op op_head 2 (Lor TZ TZ TZ))
      | @Z.opp => constr:(reify_op op op_head 1 (Opp TZ TZ))
+     | @Z.opp => constr:(reify_op op op_head 1 (Opp TZ TZ))
+     | @Z.zselect => constr:(reify_op op op_head 3 (Zselect TZ TZ TZ TZ))
+     | @Z.add_with_carry => constr:(reify_op op op_head 3 (AddWithCarry TZ TZ TZ TZ))
+     | @Z.add_with_get_carry
+       => lazymatch extra with
+          | @Z.add_with_get_carry ?bit_width _ _ _
+            => constr:(reify_op op op_head 3 (AddWithGetCarry bit_width TZ TZ TZ TZ TZ))
+          | _ => fail 100 "Anomaly: In Reflection.Z.base_reify_op: head is Z.add_with_get_carry but body is wrong:" extra
+          end
      end.
 Ltac base_reify_type T ::=
      lazymatch T with
      | Z => TZ
      end.
-Ltac Reify' e := Compilers.Reify.Reify' base_type interp_base_type op e.
+Ltac Reify' e :=
+  let e := (eval cbv beta delta [Z.add_get_carry] in e) in
+  Compilers.Reify.Reify' base_type interp_base_type op e.
 Ltac Reify e :=
+  let e := (eval cbv beta delta [Z.add_get_carry] in e) in
   let v := Compilers.Reify.Reify base_type interp_base_type op make_const e in
   constr:(ExprEta v).
 Ltac prove_ExprEta_Compile_correct :=

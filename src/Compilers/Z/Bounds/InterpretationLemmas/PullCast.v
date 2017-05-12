@@ -160,7 +160,7 @@ Section with_round_up.
                    | progress destruct_head'_and ];
       [
       | rewrite cast_const_idempotent_small by t_small; reflexivity
-      | ];
+      | .. ];
       repeat match goal with
              | _ => progress change (@cast_const TZ) with @ZToInterp in *
              | [ |- context[@cast_const ?x TZ] ]

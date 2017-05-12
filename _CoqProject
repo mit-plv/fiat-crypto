@@ -199,6 +199,8 @@ src/Spec/Test/X25519.v
 src/Specific/ArithmeticSynthesisTest.v
 src/Specific/ArithmeticSynthesisTest130.v
 src/Specific/IntegrationTestDisplayCommon.v
+src/Specific/IntegrationTestFreeze.v
+src/Specific/IntegrationTestFreezeDisplay.v
 src/Specific/IntegrationTestLadderstep.v
 src/Specific/IntegrationTestLadderstep130.v
 src/Specific/IntegrationTestLadderstep130Display.v
