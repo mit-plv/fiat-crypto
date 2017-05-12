@@ -796,26 +796,6 @@ Module Z.
   Hint Rewrite Z.shiftr_succ using zutil_arith : push_Zshift.
   Hint Rewrite <- Z.shiftr_succ using zutil_arith : pull_Zshift.
 
-  Definition shiftl_by n a := Z.shiftl a n.
-
-  Lemma shiftl_by_mul_pow2 : forall n a, 0 <= n -> Z.mul (2 ^ n) a = Z.shiftl_by n a.
-  Proof.
-    intros.
-    unfold Z.shiftl_by.
-    rewrite Z.shiftl_mul_pow2 by assumption.
-    apply Z.mul_comm.
-  Qed.
-
-  Lemma map_shiftl : forall n l, 0 <= n -> map (Z.mul (2 ^ n)) l = map (Z.shiftl_by n) l.
-  Proof.
-    intros; induction l; auto using Z.shiftl_by_mul_pow2.
-    simpl.
-    rewrite IHl.
-    f_equal.
-    apply Z.shiftl_by_mul_pow2.
-    assumption.
-  Qed.
-
   Lemma pow2_lt_or_divides : forall a b, 0 <= b ->
     2 ^ a < 2 ^ b \/ (2 ^ a) mod 2 ^ b = 0.
   Proof.
