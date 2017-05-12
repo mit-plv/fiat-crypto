@@ -20,11 +20,15 @@ Inductive symbolic_op :=
 | SLand
 | SLor
 | SOpp
+| SZselect
+| SAddWithCarry
+| SAddWithGetCarry (bitwidth : Z)
 .
 
 Definition symbolic_op_leb (x y : symbolic_op) : bool
   := match x, y with
      | SOpConst z1, SOpConst z2 => Z.leb z1 z2
+     | SAddWithGetCarry bw1, SAddWithGetCarry bw2 => Z.leb bw1 bw2
      | SOpConst _, _ => true
      | _, SOpConst _ => false
      | SAdd, _ => true
@@ -42,6 +46,13 @@ Definition symbolic_op_leb (x y : symbolic_op) : bool
      | SLor, _ => true
      | _, SLor => false
      | SOpp, _ => true
+     | _, SOpp => false
+     | SZselect, _ => true
+     | _, SZselect => false
+     | SAddWithCarry, _ => true
+     | _, SAddWithCarry => false
+     (*| SAddWithGetCarry _, _ => true
+     | _, SAddWithGetCarry _ => false*)
      end.
 
 Local Notation symbolic_expr := (@symbolic_expr base_type symbolic_op).
@@ -59,6 +70,9 @@ Definition symbolize_op s d (opc : op s d) : symbolic_op
      | Land T1 T2 Tout => SLand
      | Lor T1 T2 Tout => SLor
      | Opp T Tout => SOpp
+     | Zselect T1 T2 T3 Tout => SZselect
+     | AddWithCarry T1 T2 T3 Tout => SAddWithCarry
+     | AddWithGetCarry bitwidth T1 T2 T3 Tout1 Tout2 => SAddWithGetCarry bitwidth
      end.
 
 Definition denote_symbolic_op s d (opc : symbolic_op) : option (op s d)
@@ -72,6 +86,10 @@ Definition denote_symbolic_op s d (opc : symbolic_op) : option (op s d)
      | SLand, Prod (Tbase _) (Tbase _), Tbase _ => Some (Land _ _ _)
      | SLor, Prod (Tbase _) (Tbase _), Tbase _ => Some (Lor _ _ _)
      | SOpp, Tbase _, Tbase _ => Some (Opp _ _)
+     | SZselect, Prod (Prod (Tbase _) (Tbase _)) (Tbase _), Tbase _ => Some (Zselect _ _ _ _)
+     | SAddWithCarry, Prod (Prod (Tbase _) (Tbase _)) (Tbase _), Tbase _ => Some (AddWithCarry _ _ _ _)
+     | SAddWithGetCarry bitwidth, Prod (Prod (Tbase _) (Tbase _)) (Tbase _), Prod (Tbase _) (Tbase _)
+       => Some (AddWithGetCarry bitwidth _ _ _ _ _)
      | SAdd, _, _
      | SSub, _, _
      | SMul, _, _
@@ -81,14 +99,17 @@ Definition denote_symbolic_op s d (opc : symbolic_op) : option (op s d)
      | SLor, _, _
      | SOpp, _, _
      | SOpConst _, _, _
+     | SZselect, _, _
+     | SAddWithCarry, _, _
+     | SAddWithGetCarry _, _, _
        => None
      end.
 
 Lemma symbolic_op_leb_total
   : forall a1 a2, symbolic_op_leb a1 a2 = true \/ symbolic_op_leb a2 a1 = true.
 Proof.
-  induction a1, a2; simpl; auto.
-  rewrite !Z.leb_le; omega.
+  induction a1, a2; simpl; auto;
+    rewrite !Z.leb_le; omega.
 Qed.
 
 Module SymbolicExprOrder <: TotalLeBool.
@@ -148,6 +169,9 @@ Definition normalize_symbolic_expr_mod_c (opc : symbolic_op) (args : symbolic_ex
      | SShl
      | SShr
      | SOpp
+     | SZselect
+     | SAddWithCarry
+     | SAddWithGetCarry _
        => args
      end.
 

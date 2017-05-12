@@ -35,6 +35,65 @@ Proof.
                | word_arith_t ].
 Qed.
 
+Lemma is_bounded_by_compose T1 T2 f_v bs v f_bs fv
+      (H : Bounds.is_bounded_by (T:=Tbase T1) bs v)
+      (Hf : forall bs v, Bounds.is_bounded_by (T:=Tbase T1) bs v -> Bounds.is_bounded_by (T:=Tbase T2) (f_bs bs) (f_v v))
+      (Hfv : f_v v = fv)
+  : Bounds.is_bounded_by (T:=Tbase T2) (f_bs bs) fv.
+Proof.
+  subst; eauto.
+Qed.
+
+Lemma monotone_two_corners_genb
+      (f : Z -> Z)
+      (R := fun b : bool => if b then Z.le else Basics.flip Z.le)
+      (Hmonotone : exists b, Proper (R b ==> Z.le) f)
+      x_bs x
+      (Hboundedx : ZRange.is_bounded_by' None x_bs x)
+  : ZRange.is_bounded_by' None (Bounds.two_corners f x_bs) (f x).
+Proof.
+  unfold ZRange.is_bounded_by' in *; split; trivial.
+  destruct x_bs as [lx ux]; simpl in *.
+  destruct Hboundedx as [Hboundedx _].
+  destruct_head'_ex.
+  repeat match goal with
+         | [ H : Proper (R ?b ==> Z.le) f |- _ ]
+           => unique assert (R b (if b then lx else x) (if b then x else lx)
+                             /\ R b (if b then x else ux) (if b then ux else x))
+             by (unfold R, Basics.flip; destruct b; omega)
+         end.
+  destruct_head' and.
+  repeat match goal with
+         | [ H : Proper (R ?b ==> Z.le) _, H' : R ?b _ _ |- _ ]
+           => unique pose proof (H _ _ H')
+         end.
+  destruct_head bool; split_min_max; omega.
+Qed.
+
+Lemma monotone_two_corners_gen
+      (f : Z -> Z)
+      (Hmonotone : Proper (Z.le ==> Z.le) f \/ Proper (Basics.flip Z.le ==> Z.le) f)
+      x_bs x
+      (Hboundedx : ZRange.is_bounded_by' None x_bs x)
+  : ZRange.is_bounded_by' None (Bounds.two_corners f x_bs) (f x).
+Proof.
+  eapply monotone_two_corners_genb; auto.
+  destruct Hmonotone; [ exists true | exists false ]; assumption.
+Qed.
+Lemma monotone_two_corners
+      (b : bool)
+      (f : Z -> Z)
+      (R := if b then Z.le else Basics.flip Z.le)
+      (Hmonotone : Proper (R ==> Z.le) f)
+      x_bs x
+      (Hboundedx : ZRange.is_bounded_by' None x_bs x)
+  : ZRange.is_bounded_by' None (Bounds.two_corners f x_bs) (f x).
+Proof.
+  apply monotone_two_corners_genb; auto; subst R;
+    exists b.
+  intros ???; apply Hmonotone; auto.
+Qed.
+
 Lemma monotone_four_corners_genb
       (f : Z -> Z -> Z)
       (R := fun b : bool => if b then Z.le else Basics.flip Z.le)
@@ -45,11 +104,19 @@ Lemma monotone_four_corners_genb
       (Hboundedy : ZRange.is_bounded_by' None y_bs y)
   : ZRange.is_bounded_by' None (Bounds.four_corners f x_bs y_bs) (f x y).
 Proof.
-  unfold ZRange.is_bounded_by' in *; split; trivial.
-  destruct x_bs as [lx ux], y_bs as [ly uy]; simpl in *.
-  destruct Hboundedx as [Hboundedx _], Hboundedy as [Hboundedy _].
-  pose proof (Hmonotone1 lx); pose proof (Hmonotone1 x); pose proof (Hmonotone1 ux).
-  pose proof (Hmonotone2 ly); pose proof (Hmonotone2 y); pose proof (Hmonotone2 uy).
+  destruct x_bs as [lx ux], y_bs as [ly uy].
+  unfold Bounds.four_corners.
+  pose proof (monotone_two_corners_genb (f lx) (Hmonotone1 _) _ _ Hboundedy) as Hmono_fl.
+  pose proof (monotone_two_corners_genb (f ux) (Hmonotone1 _) _ _ Hboundedy) as Hmono_fu.
+  repeat match goal with
+         | [ |- context[Bounds.two_corners ?x ?y] ]
+           => let l := fresh "lf" in
+              let u := fresh "uf" in
+              generalize dependent (Bounds.two_corners x y); intros [l u]; intros
+         end.
+  unfold ZRange.is_bounded_by' in *; simpl in *; split; trivial.
+  destruct_head'_and; destruct_head' True.
+  pose proof (Hmonotone2 y).
   destruct_head'_ex.
   repeat match goal with
          | [ H : Proper (R ?b ==> Z.le) (f _) |- _ ]
@@ -65,7 +132,7 @@ Proof.
   repeat match goal with
          | [ H : Proper (R ?b ==> Z.le) _, H' : R ?b _ _ |- _ ]
            => unique pose proof (H _ _ H')
-         end.
+         end; cbv beta in *.
   destruct_head bool; split_min_max; omega.
 Qed.
 
@@ -96,6 +163,88 @@ Proof.
     [ exists b2 | exists b1 ];
     [ eapply (Hmonotone x' x'); destruct b1; reflexivity
     | intros ???; apply Hmonotone; auto; destruct b2; reflexivity ].
+Qed.
+
+Lemma monotone_eight_corners_genb
+      (f : Z -> Z -> Z -> Z)
+      (R := fun b : bool => if b then Z.le else Basics.flip Z.le)
+      (Hmonotone1 : forall x y, exists b, Proper (R b ==> Z.le) (f x y))
+      (Hmonotone2 : forall x z, exists b, Proper (R b ==> Z.le) (fun y => f x y z))
+      (Hmonotone3 : forall y z, exists b, Proper (R b ==> Z.le) (fun x => f x y z))
+      x_bs y_bs z_bs x y z
+      (Hboundedx : ZRange.is_bounded_by' None x_bs x)
+      (Hboundedy : ZRange.is_bounded_by' None y_bs y)
+      (Hboundedz : ZRange.is_bounded_by' None z_bs z)
+  : ZRange.is_bounded_by' None (Bounds.eight_corners f x_bs y_bs z_bs) (f x y z).
+Proof.
+  destruct x_bs as [lx ux], y_bs as [ly uy], z_bs as [lz uz].
+  unfold Bounds.eight_corners.
+  pose proof (monotone_four_corners_genb (f lx) (Hmonotone1 _) (Hmonotone2 _) _ _ _ _ Hboundedy Hboundedz) as Hmono_fl.
+  pose proof (monotone_four_corners_genb (f ux) (Hmonotone1 _) (Hmonotone2 _) _ _ _ _ Hboundedy Hboundedz) as Hmono_fu.
+  repeat match goal with
+         | [ |- context[Bounds.four_corners ?x ?y ?z] ]
+           => let l := fresh "lf" in
+              let u := fresh "uf" in
+              generalize dependent (Bounds.four_corners x y z); intros [l u]; intros
+         end.
+  unfold ZRange.is_bounded_by' in *; simpl in *; split; trivial.
+  destruct_head'_and; destruct_head' True.
+  pose proof (Hmonotone3 y z).
+  destruct_head'_ex.
+  repeat match goal with
+         | [ H : Proper (R ?b ==> Z.le) (f _ _) |- _ ]
+           => unique assert (R b (if b then lz else z) (if b then z else lz)
+                             /\ R b (if b then z else uz) (if b then uz else z))
+             by (unfold R, Basics.flip; destruct b; omega)
+         | [ H : Proper (R ?b ==> Z.le) (fun y' => f _ y' _) |- _ ]
+           => unique assert (R b (if b then ly else y) (if b then y else ly)
+                             /\ R b (if b then y else uy) (if b then uy else y))
+             by (unfold R, Basics.flip; destruct b; omega)
+         | [ H : Proper (R ?b ==> Z.le) (fun x' => f x' _ _) |- _ ]
+           => unique assert (R b (if b then lx else x) (if b then x else lx)
+                             /\ R b (if b then x else ux) (if b then ux else x))
+             by (unfold R, Basics.flip; destruct b; omega)
+         end.
+  destruct_head' and.
+  repeat match goal with
+         | [ H : Proper (R ?b ==> Z.le) _, H' : R ?b _ _ |- _ ]
+           => unique pose proof (H _ _ H')
+         end.
+  destruct_head bool; split_min_max; omega.
+Qed.
+
+Lemma monotone_eight_corners_gen
+      (f : Z -> Z -> Z -> Z)
+      (Hmonotone1 : forall x y, Proper (Z.le ==> Z.le) (f x y) \/ Proper (Basics.flip Z.le ==> Z.le) (f x y))
+      (Hmonotone2 : forall x z, Proper (Z.le ==> Z.le) (fun y => f x y z) \/ Proper (Basics.flip Z.le ==> Z.le) (fun y => f x y z))
+      (Hmonotone3 : forall y z, Proper (Z.le ==> Z.le) (fun x => f x y z) \/ Proper (Basics.flip Z.le ==> Z.le) (fun x => f x y z))
+      x_bs y_bs z_bs x y z
+      (Hboundedx : ZRange.is_bounded_by' None x_bs x)
+      (Hboundedy : ZRange.is_bounded_by' None y_bs y)
+      (Hboundedz : ZRange.is_bounded_by' None z_bs z)
+  : ZRange.is_bounded_by' None (Bounds.eight_corners f x_bs y_bs z_bs) (f x y z).
+Proof.
+  eapply monotone_eight_corners_genb; auto.
+  { intros x' y'; destruct (Hmonotone1 x' y'); [ exists true | exists false ]; assumption. }
+  { intros x' y'; destruct (Hmonotone2 x' y'); [ exists true | exists false ]; assumption. }
+  { intros x' y'; destruct (Hmonotone3 x' y'); [ exists true | exists false ]; assumption. }
+Qed.
+Lemma monotone_eight_corners
+      (b1 b2 b3 : bool)
+      (f : Z -> Z -> Z -> Z)
+      (R1 := if b1 then Z.le else Basics.flip Z.le)
+      (R2 := if b2 then Z.le else Basics.flip Z.le)
+      (R3 := if b3 then Z.le else Basics.flip Z.le)
+      (Hmonotone : Proper (R1 ==> R2 ==> R3 ==> Z.le) f)
+      x_bs y_bs z_bs x y z
+      (Hboundedx : ZRange.is_bounded_by' None x_bs x)
+      (Hboundedy : ZRange.is_bounded_by' None y_bs y)
+      (Hboundedz : ZRange.is_bounded_by' None z_bs z)
+  : ZRange.is_bounded_by' None (Bounds.eight_corners f x_bs y_bs z_bs) (f x y z).
+Proof.
+  apply monotone_eight_corners_genb; auto; intro x'; subst R1 R2 R3;
+    [ exists b3 | exists b2 | exists b1 ];
+    intros ???; apply Hmonotone; break_innermost_match; try reflexivity; trivial.
 Qed.
 
 Lemma monotonify2 (f : Z -> Z -> Z) (upper : Z -> Z -> Z)
@@ -173,7 +322,7 @@ Qed.
 Local Arguments N.ldiff : simpl never.
 Local Arguments Z.pow : simpl never.
 Local Arguments Z.add !_ !_.
-Local Existing Instances Z.add_le_Proper Z.sub_le_flip_le_Proper Z.log2_up_le_Proper Z.pow_Zpos_le_Proper Z.sub_le_eq_Proper.
+Local Existing Instances Z.add_le_Proper Z.sub_le_flip_le_Proper Z.log2_up_le_Proper Z.pow_Zpos_le_Proper Z.sub_le_eq_Proper Z.add_with_carry_le_Proper.
 Local Hint Extern 1 => progress cbv beta iota : typeclass_instances.
 Lemma is_bounded_by_interp_op t tR (opc : op t tR)
       (bs : interp_flat_type Bounds.interp_base_type _)
@@ -181,7 +330,14 @@ Lemma is_bounded_by_interp_op t tR (opc : op t tR)
       (H : Bounds.is_bounded_by bs v)
   : Bounds.is_bounded_by (Bounds.interp_op opc bs) (Syntax.interp_op _ _ opc v).
 Proof.
-  destruct opc; apply is_bounded_by_truncation_bounds;
+  destruct opc;
+    [ apply is_bounded_by_truncation_bounds..
+    | split;
+      cbv [Bounds.interp_op Zinterp_op Z.add_with_get_carry SmartFlatTypeMapUnInterp Bounds.add_with_get_carry Z.get_carry cast_const]; cbn [fst snd];
+      [ eapply is_bounded_by_compose with (T1:=TZ) (f_v := fun v => ZToInterp (v mod _)) (v:=ZToInterp _);
+        [ | intros; apply is_bounded_by_truncation_bounds | simpl; reflexivity ]
+      | eapply is_bounded_by_compose with (T1:=TZ) (f_v := fun v => ZToInterp (v / _))   (v:=ZToInterp _);
+        [ | intros; apply is_bounded_by_truncation_bounds | simpl; reflexivity ] ] ];
     repeat first [ progress simpl in *
                  | progress cbv [interp_op lift_op cast_const Bounds.interp_base_type Bounds.is_bounded_by' ZRange.is_bounded_by'] in *
                  | progress destruct_head'_prod
@@ -225,4 +381,11 @@ Proof.
                  | progress simpl in *
                  | progress split_min_max
                  | omega ]. }
+  { destruct_head Bounds.t; cbv [Bounds.zselect' Z.zselect].
+    break_innermost_match; split_min_max; omega. }
+  { apply (@monotone_eight_corners true true true _ _ _); split; auto. }
+  { apply (@monotone_eight_corners true true true _ _ _); split; auto. }
+  { apply Z.mod_bound_min_max; auto. }
+  { apply (@monotone_eight_corners true true true _ _ _); split; auto. }
+  { auto with zarith. }
 Qed.

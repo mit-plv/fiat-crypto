@@ -5,6 +5,7 @@ Require Import Crypto.Compilers.Relations.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.ZRange.
+Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.Tactics.DestructHead.
 Export Compilers.Syntax.Notations.
 
@@ -22,17 +23,25 @@ Module Import Bounds.
   Local Coercion Z.of_nat : nat >-> Z.
   Section with_bitwidth.
     Context (bit_width : option Z).
-    Definition four_corners (f : Z -> Z -> Z) : t -> t -> t
-      := fun x y
-         => let (lx, ux) := x in
-            let (ly, uy) := y in
-            {| lower := Z.min (f lx ly) (Z.min (f lx uy) (Z.min (f ux ly) (f ux uy)));
-               upper := Z.max (f lx ly) (Z.max (f lx uy) (Z.max (f ux ly) (f ux uy))) |}.
     Definition two_corners (f : Z -> Z) : t -> t
       := fun x
          => let (lx, ux) := x in
             {| lower := Z.min (f lx) (f ux);
                upper := Z.max (f lx) (f ux) |}.
+    Definition four_corners (f : Z -> Z -> Z) : t -> t -> t
+      := fun x y
+         => let (lx, ux) := x in
+            let (lfl, ufl) := two_corners (f lx) y in
+            let (lfu, ufu) := two_corners (f ux) y in
+            {| lower := Z.min lfl lfu;
+               upper := Z.max ufl ufu |}.
+    Definition eight_corners (f : Z -> Z -> Z -> Z) : t -> t -> t -> t
+      := fun x y z
+         => let (lx, ux) := x in
+            let (lfl, ufl) := four_corners (f lx) y z in
+            let (lfu, ufu) := four_corners (f ux) y z in
+            {| lower := Z.min lfl lfu;
+               upper := Z.max ufl ufu |}.
     Definition truncation_bounds (b : t)
       := match bit_width with
          | Some bit_width => if ((0 <=? lower b) && (upper b <? 2^bit_width))%bool
@@ -46,6 +55,10 @@ Module Import Bounds.
       := truncation_bounds (two_corners f x).
     Definition t_map2 (f : Z -> Z -> Z) : t -> t -> t
       := fun x y => truncation_bounds (four_corners f x y).
+    Definition t_map3' (f : Z -> Z -> Z -> Z) : t -> t -> t -> t
+      := fun x y z => eight_corners f x y z.
+    Definition t_map3 (f : Z -> Z -> Z -> Z) : t -> t -> t -> t
+      := fun x y z => truncation_bounds (eight_corners f x y z).
     Definition t_map4 (f : bounds -> bounds -> bounds -> bounds -> bounds) (x y z w : t)
       := truncation_bounds (f x y z w).
     Definition add : t -> t -> t := t_map2 Z.add.
@@ -82,6 +95,27 @@ Module Import Bounds.
                {| lower := Z.max lx ly;
                   upper := 2^(Z.max (Z.log2_up (ux+1)) (Z.log2_up (uy+1))) - 1 |}).
     Definition opp : t -> t := t_map1 Z.opp.
+    Definition zselect' (r1 r2 : t) : t
+      := let (lr1, ur1) := r1 in
+         let (lr2, ur2) := r2 in
+         {| lower := Z.min lr1 lr2 ; upper := Z.max ur1 ur2 |}.
+    Definition zselect (c r1 r2 : t) : t
+      := truncation_bounds (zselect' r1 r2).
+    Definition add_with_carry' : t -> t -> t -> t
+      := t_map3' Z.add_with_carry.
+    Definition add_with_carry : t -> t -> t -> t
+      := t_map3 Z.add_with_carry.
+    Definition modulo_pow2_constant : Z -> t -> t
+      := fun e x
+         => let d := 2^e in
+            let (l, u) := (lower x, upper x) in
+            truncation_bounds {| lower := if l / d =? u / d then Z.min (l mod d) (u mod d) else Z.min 0 (d + 1);
+                                 upper := if l / d =? u / d then Z.max (l mod d) (u mod d) else Z.max 0 (d - 1) |}.
+    Definition div_pow2_constant : Z -> t -> t
+      := fun e x
+         => let d := 2^e in
+            let (l, u) := (lower x, upper x) in
+            truncation_bounds {| lower := l / d ; upper := u / d |}.
     Definition neg' (int_width : Z) : t -> t
       := fun v
          => let (lb, ub) := v in
@@ -108,6 +142,14 @@ Module Import Bounds.
     Definition cmovle (x y r1 r2 : t) : t
       := truncation_bounds (cmovle' r1 r2).
   End with_bitwidth.
+  Section with_bitwidth2.
+    Context (bit_width1 bit_width2 : option Z).
+    Definition add_with_get_carry (carry_boundary_bit_width : Z) : t -> t -> t -> t * t
+      := fun c x y
+         => let xpy := add_with_carry' c x y in
+            (modulo_pow2_constant bit_width1 carry_boundary_bit_width xpy,
+             div_pow2_constant bit_width2 carry_boundary_bit_width xpy).
+  End with_bitwidth2.
 
   Module Export Notations.
     Export Util.ZRange.Notations.
@@ -142,6 +184,11 @@ Module Import Bounds.
        | Land _ _ T => fun xy => land (bit_width_of_base_type T) (fst xy) (snd xy)
        | Lor _ _ T => fun xy => lor (bit_width_of_base_type T) (fst xy) (snd xy)
        | Opp _ T => fun x => opp (bit_width_of_base_type T) x
+       | Zselect _ _ _ T => fun cxy => let '(c, x, y) := eta3 cxy in zselect (bit_width_of_base_type T) c x y
+       | AddWithCarry _ _ _ T => fun cxy => let '(c, x, y) := eta3 cxy in add_with_carry (bit_width_of_base_type T) c x y
+       | AddWithGetCarry carry_boundary_bit_width _ _ _ T1 T2
+         => fun cxy => let '(c, x, y) := eta3 cxy in
+                       add_with_get_carry (bit_width_of_base_type T1) (bit_width_of_base_type T2) carry_boundary_bit_width c x y
        end%bounds.
 
   Definition of_Z (z : Z) : t := ZToZRange z.
