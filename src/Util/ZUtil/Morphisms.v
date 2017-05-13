@@ -2,6 +2,8 @@
 Require Import Coq.omega.Omega.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Classes.Morphisms.
+Require Import Coq.Classes.RelationPairs.
+Require Import Crypto.Util.ZUtil.Definitions.
 Local Open Scope Z_scope.
 
 Module Z.
@@ -42,4 +44,6 @@ Module Z.
   Proof. intros ???; apply Z.log2_le_mono; assumption. Qed.
   Lemma pow_Zpos_le_Proper_flip x : Proper (Basics.flip Z.le ==> Basics.flip Z.le) (Z.pow (Z.pos x)).
   Proof. intros ???; apply Z.pow_le_mono_r; try reflexivity; try assumption. Qed.
+  Lemma add_with_carry_le_Proper : Proper (Z.le ==> Z.le ==> Z.le ==> Z.le) Z.add_with_carry.
+  Proof. unfold Z.add_with_carry; repeat (omega || intro). Qed.
 End Z.
