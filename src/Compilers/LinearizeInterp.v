@@ -1,6 +1,5 @@
 (** * Linearize: Place all and only operations in let binders *)
 Require Import Crypto.Compilers.Syntax.
-Require Import Crypto.Compilers.Wf.
 Require Import Crypto.Compilers.Relations.
 Require Import Crypto.Compilers.InterpProofs.
 Require Import Crypto.Compilers.Linearize.
@@ -123,4 +122,4 @@ Section language.
 End language.
 
 Hint Rewrite @interpf_under_letsf : reflective_interp.
-Hint Rewrite @InterpLinearize_gen @interp_linearize_gen @interpf_linearizef_gen @InterpLinearize @interp_linearize @interpf_linearizef @InterpANormal @interp_a_normal @interpf_a_normalf using solve_wf_side_condition : reflective_interp.
+Hint Rewrite @InterpLinearize_gen @interp_linearize_gen @interpf_linearizef_gen @InterpLinearize @interp_linearize @interpf_linearizef @InterpANormal @interp_a_normal @interpf_a_normalf : reflective_interp.
