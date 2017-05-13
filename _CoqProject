@@ -294,5 +294,6 @@ src/Util/Tactics/UnifyAbstractReflexivity.v
 src/Util/Tactics/UniquePose.v
 src/Util/Tactics/VM.v
 src/Util/ZUtil/Definitions.v
+src/Util/ZUtil/Morphisms.v
 src/Util/ZUtil/Notations.v
 src/Util/ZUtil/Stabilization.v
