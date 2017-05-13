@@ -26,8 +26,8 @@ Module Z.
             clear H'; revert H'' ];
     let q := fresh "q" in
     let r := fresh "r" in
-    set (q := x / y);
-    set (r := x mod y);
+    set (q := x / y) in *;
+    set (r := x mod y) in *;
     clearbody q r.
 
   Ltac div_mod_to_quot_rem_step :=

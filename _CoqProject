@@ -296,8 +296,11 @@ src/Util/Tactics/VM.v
 src/Util/ZUtil/Definitions.v
 src/Util/ZUtil/Div.v
 src/Util/ZUtil/Hints.v
+src/Util/ZUtil/Land.v
+src/Util/ZUtil/Modulo.v
 src/Util/ZUtil/Morphisms.v
 src/Util/ZUtil/Notations.v
+src/Util/ZUtil/Pow2Mod.v
 src/Util/ZUtil/Stabilization.v
 src/Util/ZUtil/Tactics.v
 src/Util/ZUtil/Testbit.v

@@ -14,8 +14,11 @@ Require Export Crypto.Util.FixCoqMistakes.
 Require Export Crypto.Util.ZUtil.Definitions.
 Require Export Crypto.Util.ZUtil.Div.
 Require Export Crypto.Util.ZUtil.Hints.
+Require Export Crypto.Util.ZUtil.Land.
+Require Export Crypto.Util.ZUtil.Modulo.
 Require Export Crypto.Util.ZUtil.Morphisms.
 Require Export Crypto.Util.ZUtil.Notations.
+Require Export Crypto.Util.ZUtil.Pow2Mod.
 Require Export Crypto.Util.ZUtil.Tactics.
 Require Export Crypto.Util.ZUtil.Testbit.
 Require Export Crypto.Util.ZUtil.ZSimplify.
@@ -23,58 +26,6 @@ Import Nat.
 Local Open Scope Z.
 
 Module Z.
-  Lemma pow2_mod_spec : forall a b, (0 <= b) -> Z.pow2_mod a b = a mod (2 ^ b).
-  Proof.
-    intros.
-    unfold Z.pow2_mod.
-    rewrite Z.land_ones; auto.
-  Qed.
-  Hint Rewrite <- Z.pow2_mod_spec using zutil_arith : convert_to_Ztestbit.
-
-  Lemma pow2_mod_0_r : forall a, Z.pow2_mod a 0 = 0.
-  Proof.
-    intros; rewrite Z.pow2_mod_spec, Z.mod_1_r; reflexivity.
-  Qed.
-
-  Lemma pow2_mod_0_l : forall n, 0 <= n -> Z.pow2_mod 0 n = 0.
-  Proof.
-    intros; rewrite Z.pow2_mod_spec, Z.mod_0_l; try reflexivity; try apply Z.pow_nonzero; omega.
-  Qed.
-
-  Lemma pow2_mod_split : forall a n m, 0 <= n -> 0 <= m ->
-                                       Z.pow2_mod a (n + m) = Z.lor (Z.pow2_mod a n) ((Z.pow2_mod (a >> n) m) << n).
-  Proof.
-    intros; cbv [Z.pow2_mod].
-    apply Z.bits_inj'; intros.
-    repeat progress (try break_match; autorewrite with Ztestbit zsimplify; try reflexivity).
-    try match goal with H : ?a < ?b |- context[Z.testbit _ (?a - ?b)] =>
-      rewrite !Z.testbit_neg_r with (n := a - b) by omega end.
-    autorewrite with Ztestbit; reflexivity.
-  Qed.
-
-  Lemma pow2_mod_pow2_mod : forall a n m, 0 <= n -> 0 <= m ->
-                                          Z.pow2_mod (Z.pow2_mod a n) m = Z.pow2_mod a (Z.min n m).
-  Proof.
-    intros; cbv [Z.pow2_mod].
-    apply Z.bits_inj'; intros.
-    apply Z.min_case_strong; intros; repeat progress (try break_match; autorewrite with Ztestbit zsimplify; try reflexivity).
-  Qed.
-
-  Lemma pow2_mod_pos_bound a b : 0 < b -> 0 <= Z.pow2_mod a b < 2^b.
-  Proof.
-    intros; rewrite Z.pow2_mod_spec by omega.
-    auto with zarith.
-  Qed.
-  Hint Resolve pow2_mod_pos_bound : zarith.
-
-  Lemma land_same_r : forall a b, (a &' b) &' b = a &' b.
-  Proof.
-  intros; apply Z.bits_inj'; intros.
-  rewrite !Z.land_spec.
-  case_eq (Z.testbit b n); intros;
-      rewrite ?Bool.andb_true_r, ?Bool.andb_false_r; reflexivity.
-  Qed.
-
   Lemma div_lt_upper_bound' a b q : 0 < b -> a < q * b -> a / b < q.
   Proof. intros; apply Z.div_lt_upper_bound; nia. Qed.
   Hint Resolve div_lt_upper_bound' : zarith.
@@ -84,7 +35,6 @@ Module Z.
 
   Lemma positive_is_nonzero : forall x, x > 0 -> x <> 0.
   Proof. intros; omega. Qed.
-
   Hint Resolve positive_is_nonzero : zarith.
 
   Lemma div_positive_gt_0 : forall a b, a > 0 -> b > 0 -> a mod b = 0 ->
@@ -94,40 +44,6 @@ Module Z.
     apply Z.div_str_pos.
     split; intuition auto with omega.
     apply Z.divide_pos_le; try (apply Zmod_divide); omega.
-  Qed.
-
-  Lemma elim_mod : forall a b m, a = b -> a mod m = b mod m.
-  Proof. intros; subst; auto. Qed.
-
-  Hint Resolve elim_mod : zarith.
-
-  Lemma mod_add_full : forall a b c, (a + b * c) mod c = a mod c.
-  Proof. intros; destruct (Z_zerop c); try subst; autorewrite with zsimplify; reflexivity. Qed.
-  Hint Rewrite mod_add_full : zsimplify.
-
-  Lemma mod_add_l_full : forall a b c, (a * b + c) mod b = c mod b.
-  Proof. intros; rewrite (Z.add_comm _ c); autorewrite with zsimplify; reflexivity. Qed.
-  Hint Rewrite mod_add_l_full : zsimplify.
-
-  Lemma mod_add'_full : forall a b c, (a + b * c) mod b = a mod b.
-  Proof. intros; rewrite (Z.mul_comm _ c); autorewrite with zsimplify; reflexivity. Qed.
-  Lemma mod_add_l'_full : forall a b c, (a * b + c) mod a = c mod a.
-  Proof. intros; rewrite (Z.mul_comm _ b); autorewrite with zsimplify; reflexivity. Qed.
-  Hint Rewrite mod_add'_full mod_add_l'_full : zsimplify.
-
-  Lemma mod_add_l : forall a b c, b <> 0 -> (a * b + c) mod b = c mod b.
-  Proof. intros; rewrite (Z.add_comm _ c); autorewrite with zsimplify; reflexivity. Qed.
-
-  Lemma mod_add' : forall a b c, b <> 0 -> (a + b * c) mod b = a mod b.
-  Proof. intros; rewrite (Z.mul_comm _ c); autorewrite with zsimplify; reflexivity. Qed.
-  Lemma mod_add_l' : forall a b c, a <> 0 -> (a * b + c) mod a = c mod a.
-  Proof. intros; rewrite (Z.mul_comm _ b); autorewrite with zsimplify; reflexivity. Qed.
-
-  Lemma add_pow_mod_l : forall a b c, a <> 0 -> 0 < b ->
-                                      ((a ^ b) + c) mod a = c mod a.
-  Proof.
-    intros; replace b with (b - 1 + 1) by ring;
-      rewrite Z.pow_add_r, Z.pow_1_r by omega; auto using Z.mod_add_l.
   Qed.
 
   Lemma pos_pow_nat_pos : forall x n,
@@ -159,52 +75,6 @@ Module Z.
   Qed.
   Hint Rewrite pow_Zpow : push_Zof_nat.
   Hint Rewrite <- pow_Zpow : pull_Zof_nat.
-
-  Lemma mod_exp_0 : forall a x m, x > 0 -> m > 1 -> a mod m = 0 ->
-    a ^ x mod m = 0.
-  Proof.
-    intros.
-    replace x with (Z.of_nat (Z.to_nat x)) in * by (apply Z2Nat.id; omega).
-    induction (Z.to_nat x). {
-      simpl in *; omega.
-    } {
-      rewrite Nat2Z.inj_succ in *.
-      rewrite Z.pow_succ_r by omega.
-      rewrite Z.mul_mod by omega.
-      case_eq n; intros. {
-        subst. simpl.
-        rewrite Zmod_1_l by omega.
-        rewrite H1.
-        apply Zmod_0_l.
-      } {
-        subst.
-        rewrite IHn by (rewrite Nat2Z.inj_succ in *; omega).
-        rewrite H1.
-        auto.
-      }
-    }
-  Qed.
-
-  Lemma mod_pow : forall (a m b : Z), (0 <= b) -> (m <> 0) ->
-      a ^ b mod m = (a mod m) ^ b mod m.
-  Proof.
-    intros; rewrite <- (Z2Nat.id b) by auto.
-    induction (Z.to_nat b); auto.
-    rewrite Nat2Z.inj_succ.
-    do 2 rewrite Z.pow_succ_r by apply Nat2Z.is_nonneg.
-    rewrite Z.mul_mod by auto.
-    rewrite (Z.mul_mod (a mod m) ((a mod m) ^ Z.of_nat n) m) by auto.
-    rewrite <- IHn by auto.
-    rewrite Z.mod_mod by auto.
-    reflexivity.
-  Qed.
-
-  Lemma mod_to_nat x m (Hm:(0 < m)%Z) (Hx:(0 <= x)%Z) : (Z.to_nat x mod Z.to_nat m = Z.to_nat (x mod m))%nat.
-    pose proof Zdiv.mod_Zmod (Z.to_nat x) (Z.to_nat m) as H;
-      rewrite !Z2Nat.id in H by omega.
-    rewrite <-H by (change 0%nat with (Z.to_nat 0); rewrite Z2Nat.inj_iff; omega).
-    rewrite !Nat2Z.id; reflexivity.
-  Qed.
 
   Lemma divide_mul_div: forall a b c (a_nonzero : a <> 0) (c_nonzero : c <> 0),
     (a | b * (a / c)) -> (c | a) -> (c | b).
