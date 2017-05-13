@@ -255,7 +255,7 @@ Open Scope core_scope.
 Notation Return x := (Var x).
 Notation Const z := (Op (@OPconst _ _ z) TT).
 Notation ldi z := (Op OPldi (Const z%Z)).
-Notation "'slet' x := A 'in' b" := (LetIn _ x (Op OPldi (Var A%nexpr)) b%nexpr) : nexpr_scope.
+Notation "'nlet' x := A 'in' b" := (LetIn _ x (Op OPldi (Var A%nexpr)) b%nexpr) : nexpr_scope.
 Notation "'c.Rshi' ( x , A , B , C ) , b" :=
   (LetIn _ x (Op OPshrd (Pair (Pair (Var A) (Var B)) (Const C%Z))) b)
     (at level 200, b at level 200, format "'c.Rshi' ( x ,  A ,  B ,  C ) , '//' b").

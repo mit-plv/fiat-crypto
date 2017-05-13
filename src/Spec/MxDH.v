@@ -31,23 +31,23 @@ Module MxDH. (* from RFC7748 *)
       Context (F4 : Type)
               (pair4 : F -> F -> F -> F -> F4)
               (let_in : F -> (F -> F4) -> F4).
-      Local Notation "'slet' x := y 'in' z" := (let_in y (fun x => z)).
+      Local Notation "'llet' x := y 'in' z" := (let_in y (fun x => z)).
       Definition ladderstep_gen (X1:F) (P1 P2:F * F) : F4 :=
         let '(X2, Z2) := P1 in
         let '(X3, Z3) := P2 in
-        slet A := X2+Z2 in
-        slet AA := A^2 in
-        slet B := X2-Z2 in
-        slet BB := B^2 in
-        slet E := AA-BB in
-        slet C := X3+Z3 in
-        slet D := X3-Z3 in
-        slet DA := D*A in
-        slet CB := C*B in
-        slet X5 := (DA+CB)^2 in
-        slet Z5 := X1*(DA-CB)^2 in
-        slet X4 := AA*BB in
-        slet Z4 := E*(AA + a24*E) in
+        llet A := X2+Z2 in
+        llet AA := A^2 in
+        llet B := X2-Z2 in
+        llet BB := B^2 in
+        llet E := AA-BB in
+        llet C := X3+Z3 in
+        llet D := X3-Z3 in
+        llet DA := D*A in
+        llet CB := C*B in
+        llet X5 := (DA+CB)^2 in
+        llet Z5 := X1*(DA-CB)^2 in
+        llet X4 := AA*BB in
+        llet Z4 := E*(AA + a24*E) in
         pair4 X4 Z4 X5 Z5.
     End generic.
 

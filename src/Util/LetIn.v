@@ -5,12 +5,12 @@ Require Import Crypto.Util.Notations.
 
 Definition Let_In {A P} (x : A) (f : forall a : A, P a) : P x := let y := x in f y.
 Definition Let_In_pf {A P} (x : A) (f : forall a : A, a = x -> P a) : P x := let y := x in f y eq_refl.
-Notation "'dlet_nd' x := y 'in' f" := (Let_In (P:=fun _ => _) y (fun x => f)) (only parsing).
-Notation "'dlet' x := y 'in' f" := (Let_In y (fun x => f)).
+Notation "'dlet_nd' x .. y := v 'in' f" := (Let_In (P:=fun _ => _) v (fun x => .. (fun y => f) .. )) (only parsing).
+Notation "'dlet' x .. y := v 'in' f" := (Let_In v (fun x => .. (fun y => f) .. )).
 Notation "'pflet' x , pf := y 'in' f" := (Let_In_pf y (fun x pf => f)).
 
 Module Bug5107WorkAround.
-  Notation "'dlet' x := y 'in' f" := (Let_In (P:=fun _ => _) y (fun x => f)).
+  Notation "'dlet' x .. y := v 'in' f" := (Let_In (P:=fun _ => _) v (fun x => .. (fun y => f) .. )).
 End Bug5107WorkAround.
 
 Global Instance Proper_Let_In_nd_changebody {A P R} {Reflexive_R:@Reflexive P R}

@@ -129,9 +129,9 @@ Print compiled_syntax.
 (* compiled_syntax =
 fun ops : fancy_machine.instructions (2 * 128) =>
 λn (RegMod, RegMuLow, x, xHigh),
-slet RegMod := RegMod in
-slet RegMuLow := RegMuLow in
-slet RegZero := ldi 0 in
+nlet RegMod := RegMod in
+nlet RegMuLow := RegMuLow in
+nlet RegZero := ldi 0 in
 c.Rshi(tmp, xHigh, x, 250),
 c.Mul128(q, c.LowerHalf(tmp), c.LowerHalf(RegMuLow)),
 c.Mul128(qHigh, c.UpperHalf(tmp), c.UpperHalf(RegMuLow)),

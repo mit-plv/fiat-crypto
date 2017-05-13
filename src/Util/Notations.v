@@ -69,17 +69,19 @@ Reserved Notation "u {{ i }}" (at level 30).
 Reserved Notation "a # b" (at level 55, no associativity). (* match with theories/QArith/QArith_base.v *)
 Reserved Notation "'plet' x := y 'in' z"
          (at level 200, z at level 200, format "'plet'  x  :=  y  'in' '//' z").
-Reserved Notation "'slet' x := A 'in' b"
-         (at level 200, b at level 200, format "'slet'  x  :=  A  'in' '//' b").
+Reserved Notation "'nlet' x := A 'in' b"
+         (at level 200, b at level 200, format "'nlet'  x  :=  A  'in' '//' b").
+Reserved Notation "'slet' x .. y := A 'in' b"
+         (at level 200, x binder, y binder, b at level 200, format "'slet'  x .. y  :=  A  'in' '//' b").
 Reserved Notation "'llet' x := A 'in' b"
          (at level 200, b at level 200, format "'llet'  x  :=  A  'in' '//' b").
 Reserved Notation "'mlet' x := A 'in' b"
          (at level 200, b at level 200, format "'mlet'  x  :=  A  'in' '//' b").
 (* Note that making [Let] a keyword breaks the vernacular [Let] in Coq 8.4 *)
-Reserved Notation "'dlet_nd' x := y 'in' f"
-         (at level 200, f at level 200, format "'dlet_nd'  x  :=  y  'in' '//' f").
-Reserved Notation "'dlet' x := y 'in' f"
-         (at level 200, f at level 200, format "'dlet'  x  :=  y  'in' '//' f").
+Reserved Notation "'dlet_nd' x .. y := v 'in' f"
+         (at level 200, x binder, y binder, f at level 200, format "'dlet_nd'  x .. y  :=  v  'in' '//' f").
+Reserved Notation "'dlet' x .. y := v 'in' f"
+         (at level 200, x binder, y binder, f at level 200, format "'dlet'  x .. y  :=  v  'in' '//' f").
 Reserved Notation "'pflet' x , pf := y 'in' f"
          (at level 200, f at level 200, format "'pflet'  x ,  pf  :=  y  'in' '//' f").
 Reserved Notation "'λ' x .. y , t" (at level 200, x binder, y binder, right associativity, format "'λ'  x .. y , '//' t").

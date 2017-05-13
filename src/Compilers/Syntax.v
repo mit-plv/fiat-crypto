@@ -143,7 +143,7 @@ Module Export Notations.
   Notation "()" := (@Unit _) : ctype_scope.
   Notation "A * B" := (@Prod _ A B) : ctype_scope.
   Notation "A -> B" := (@Arrow _ A B) : ctype_scope.
-  Notation "'slet' x := A 'in' b" := (LetIn A (fun x => b)) : expr_scope.
+  Notation "'slet' x .. y := A 'in' b" := (LetIn A%expr (fun x => .. (fun y => b%expr) .. )) : expr_scope.
   Notation "'λ'  x .. y , t" := (Abs (fun x => .. (Abs (fun y => t%expr)) ..)) : expr_scope.
   Notation "( x , y , .. , z )" := (Pair .. (Pair x%expr y%expr) .. z%expr) : expr_scope.
   Notation "( )" := TT : expr_scope.

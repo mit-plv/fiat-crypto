@@ -85,7 +85,7 @@ Global Arguments interpf {_ _ _ _ _ interp_op ctx t} _.
 Global Arguments interp {_ _ _ _ _ interp_op ctx t} _ _.
 Global Arguments Interp {_ _ _ _ _ interp_op t} _ _.
 
-Notation "'slet' x := A 'in' b" := (LetIn _ x A%nexpr b%nexpr) : nexpr_scope.
+Notation "'nlet' x := A 'in' b" := (LetIn _ x A%nexpr b%nexpr) : nexpr_scope.
 Notation "'λn'  x .. y , t" := (Abs x .. (Abs y t%nexpr) .. ) : nexpr_scope.
 Notation "( x , y , .. , z )" := (Pair .. (Pair x%nexpr y%nexpr) .. z%nexpr) : nexpr_scope.
 Notation "()" := TT : nexpr_scope.
