@@ -61,9 +61,9 @@ Require Import Crypto.Compilers.Z.InlineWf.
 Require Import Crypto.Compilers.Linearize.
 Require Import Crypto.Compilers.LinearizeInterp.
 Require Import Crypto.Compilers.LinearizeWf.
-Require Import Crypto.Compilers.Z.CommonSubexpressionElimination.
+(*Require Import Crypto.Compilers.Z.CommonSubexpressionElimination.
 Require Import Crypto.Compilers.Z.CommonSubexpressionEliminationInterp.
-Require Import Crypto.Compilers.Z.CommonSubexpressionEliminationWf.
+Require Import Crypto.Compilers.Z.CommonSubexpressionEliminationWf.*)
 Require Import Crypto.Compilers.Z.ArithmeticSimplifierWf.
 Require Import Crypto.Compilers.Z.Bounds.MapCastByDeBruijn.
 Require Import Crypto.Compilers.Z.Bounds.MapCastByDeBruijnInterp.
@@ -83,7 +83,7 @@ Definition PostWfPipeline
         let e := SimplifyArith e in
         let e := ANormal e in
         let e := InlineConst e in
-        let e := CSE false e in
+        (*let e := CSE false e in*)
         let e := MapCast _ e input_bounds in
         option_map
           (projT2_map
