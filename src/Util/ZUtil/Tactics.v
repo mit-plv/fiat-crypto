@@ -6,6 +6,7 @@ Require Export Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Export Crypto.Util.ZUtil.Tactics.PeelLe.
 Require Export Crypto.Util.ZUtil.Tactics.PrimeBound.
 Require Export Crypto.Util.ZUtil.Tactics.ReplaceNegWithPos.
+Require Export Crypto.Util.ZUtil.Tactics.RewriteModSmall.
 Require Export Crypto.Util.ZUtil.Tactics.SimplifyFractionsLe.
 Require Export Crypto.Util.ZUtil.Tactics.ZeroBounds.
 Require Export Crypto.Util.ZUtil.Tactics.Ztestbit.

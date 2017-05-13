@@ -83,4 +83,65 @@ Module Z.
     rewrite <-H by (change 0%nat with (Z.to_nat 0); rewrite Z2Nat.inj_iff; omega).
     rewrite !Nat2Z.id; reflexivity.
   Qed.
+
+  Lemma mul_div_eq_full : forall a m, m <> 0 -> m * (a / m) = (a - a mod m).
+  Proof.
+    intros. rewrite (Z_div_mod_eq_full a m) at 2 by auto. ring.
+  Qed.
+
+  Hint Rewrite mul_div_eq_full using zutil_arith : zdiv_to_mod.
+  Hint Rewrite <-mul_div_eq_full using zutil_arith : zmod_to_div.
+
+  Lemma f_equal_mul_mod x y x' y' m : x mod m = x' mod m -> y mod m = y' mod m -> (x * y) mod m = (x' * y') mod m.
+  Proof.
+    intros H0 H1; rewrite Zmult_mod, H0, H1, <- Zmult_mod; reflexivity.
+  Qed.
+  Hint Resolve f_equal_mul_mod : zarith.
+
+  Lemma f_equal_add_mod x y x' y' m : x mod m = x' mod m -> y mod m = y' mod m -> (x + y) mod m = (x' + y') mod m.
+  Proof.
+    intros H0 H1; rewrite Zplus_mod, H0, H1, <- Zplus_mod; reflexivity.
+  Qed.
+  Hint Resolve f_equal_add_mod : zarith.
+
+  Lemma f_equal_opp_mod x x' m : x mod m = x' mod m -> (-x) mod m = (-x') mod m.
+  Proof.
+    intro H.
+    destruct (Z_zerop (x mod m)) as [H'|H'], (Z_zerop (x' mod m)) as [H''|H''];
+      try congruence.
+    { rewrite !Z_mod_zero_opp_full by assumption; reflexivity. }
+    { rewrite Z_mod_nz_opp_full, H, <- Z_mod_nz_opp_full by assumption; reflexivity. }
+  Qed.
+  Hint Resolve f_equal_opp_mod : zarith.
+
+  Lemma f_equal_sub_mod x y x' y' m : x mod m = x' mod m -> y mod m = y' mod m -> (x - y) mod m = (x' - y') mod m.
+  Proof.
+    rewrite <- !Z.add_opp_r; auto with zarith.
+  Qed.
+  Hint Resolve f_equal_sub_mod : zarith.
+
+  Lemma mul_div_eq : forall a m, m > 0 -> m * (a / m) = (a - a mod m).
+  Proof.
+    intros.
+    rewrite (Z_div_mod_eq a m) at 2 by auto.
+    ring.
+  Qed.
+
+  Lemma mul_div_eq' : (forall a m, m > 0 -> (a / m) * m = (a - a mod m))%Z.
+  Proof.
+    intros.
+    rewrite (Z_div_mod_eq a m) at 2 by auto.
+    ring.
+  Qed.
+
+  Hint Rewrite mul_div_eq mul_div_eq' using zutil_arith : zdiv_to_mod.
+  Hint Rewrite <- mul_div_eq' using zutil_arith : zmod_to_div.
+
+  Lemma mod_div_eq0 : forall a b, 0 < b -> (a mod b) / b = 0.
+  Proof.
+    intros.
+    apply Z.div_small.
+    auto using Z.mod_pos_bound.
+  Qed.
+  Hint Rewrite mod_div_eq0 using zutil_arith : zsimplify.
 End Z.
