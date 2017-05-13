@@ -293,6 +293,7 @@ src/Util/Tactics/TransparentAssert.v
 src/Util/Tactics/UnifyAbstractReflexivity.v
 src/Util/Tactics/UniquePose.v
 src/Util/Tactics/VM.v
+src/Util/ZUtil/AddGetCarry.v
 src/Util/ZUtil/Definitions.v
 src/Util/ZUtil/Div.v
 src/Util/ZUtil/EquivModulo.v
