@@ -11,11 +11,14 @@ Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Notations.
 Require Import Coq.Lists.List.
 Require Export Crypto.Util.FixCoqMistakes.
-Require Export Crypto.Util.ZUtil.Notations.
 Require Export Crypto.Util.ZUtil.Definitions.
-Require Export Crypto.Util.ZUtil.Morphisms.
+Require Export Crypto.Util.ZUtil.Div.
 Require Export Crypto.Util.ZUtil.Hints.
-Require Export Crypto.Util.ZUtil.Tactics.PeelLe.
+Require Export Crypto.Util.ZUtil.Morphisms.
+Require Export Crypto.Util.ZUtil.Notations.
+Require Export Crypto.Util.ZUtil.Tactics.
+Require Export Crypto.Util.ZUtil.Testbit.
+Require Export Crypto.Util.ZUtil.ZSimplify.
 Import Nat.
 Local Open Scope Z.
 
@@ -27,67 +30,6 @@ Module Z.
     rewrite Z.land_ones; auto.
   Qed.
   Hint Rewrite <- Z.pow2_mod_spec using zutil_arith : convert_to_Ztestbit.
-
-  Lemma ones_spec : forall n m, 0 <= n -> 0 <= m -> Z.testbit (Z.ones n) m = if Z_lt_dec m n then true else false.
-  Proof.
-    intros.
-    break_match.
-    + apply Z.ones_spec_low. omega.
-    + apply Z.ones_spec_high. omega.
-  Qed.
-  Hint Rewrite ones_spec using zutil_arith : Ztestbit.
-
-  Lemma ones_spec_full : forall n m, Z.testbit (Z.ones n) m
-                                     = if Z_lt_dec m 0
-                                       then false
-                                       else if Z_lt_dec n 0
-                                            then true
-                                            else if Z_lt_dec m n then true else false.
-  Proof.
-    intros.
-    repeat (break_match || autorewrite with Ztestbit); try reflexivity; try omega.
-    unfold Z.ones.
-    rewrite <- Z.shiftr_opp_r, Z.shiftr_eq_0 by (simpl; omega); simpl.
-    destruct m; simpl in *; try reflexivity.
-    exfalso; auto using Zlt_neg_0.
-  Qed.
-  Hint Rewrite ones_spec_full : Ztestbit_full.
-
-  Lemma testbit_pow2_mod : forall a n i, 0 <= n ->
-  Z.testbit (Z.pow2_mod a n) i = if Z_lt_dec i n then Z.testbit a i else false.
-  Proof.
-  cbv [Z.pow2_mod]; intros; destruct (Z_le_dec 0 i);
-      repeat match goal with
-          | |- _ => rewrite Z.testbit_neg_r by omega
-          | |- _ => break_innermost_match_step
-          | |- _ => omega
-          | |- _ => reflexivity
-          | |- _ => progress autorewrite with Ztestbit
-          end.
-  Qed.
-  Hint Rewrite testbit_pow2_mod using zutil_arith : Ztestbit.
-
-  Lemma testbit_pow2_mod_full : forall a n i,
-      Z.testbit (Z.pow2_mod a n) i = if Z_lt_dec n 0
-                                     then if Z_lt_dec i 0 then false else Z.testbit a i
-                                     else if Z_lt_dec i n then Z.testbit a i else false.
-  Proof.
-    intros; destruct (Z_lt_dec n 0); [ | apply testbit_pow2_mod; omega ].
-    unfold Z.pow2_mod.
-    autorewrite with Ztestbit_full;
-      repeat break_match;
-      autorewrite with Ztestbit;
-      reflexivity.
-  Qed.
-  Hint Rewrite testbit_pow2_mod_full : Ztestbit_full.
-
-  Lemma bits_above_pow2 a n : 0 <= a < 2^n -> Z.testbit a n = false.
-  Proof.
-    intros.
-    destruct (Z_zerop a); subst; autorewrite with Ztestbit; trivial.
-    apply Z.bits_above_log2; auto with zarith concl_log2.
-  Qed.
-  Hint Rewrite bits_above_pow2 using zutil_arith : Ztestbit.
 
   Lemma pow2_mod_0_r : forall a, Z.pow2_mod a 0 = 0.
   Proof.
@@ -196,10 +138,6 @@ Module Z.
     apply Zmult_gt_0_compat; auto; reflexivity.
   Qed.
 
-  Lemma div_mul' : forall a b : Z, b <> 0 -> (b * a) / b = a.
-  Proof. intros. rewrite Z.mul_comm. apply Z.div_mul; auto. Qed.
-  Hint Rewrite div_mul' using zutil_arith : zsimplify.
-
   (** TODO: Should we get rid of this duplicate? *)
   Notation gt0_neq0 := positive_is_nonzero (only parsing).
 
@@ -268,22 +206,12 @@ Module Z.
     rewrite !Nat2Z.id; reflexivity.
   Qed.
 
-  Ltac divide_exists_mul := let k := fresh "k" in
-  match goal with
-  | [ H : (?a | ?b) |- _ ] => apply Z.mod_divide in H; try apply Zmod_divides in H;
-                              match type of H with
-                              | ex _ => destruct H as [k H]
-                              | _ => destruct H
-                              end
-  | [ |- (?a | ?b) ] => apply Z.mod_divide; try apply Zmod_divides
-  end; (omega || auto).
-
   Lemma divide_mul_div: forall a b c (a_nonzero : a <> 0) (c_nonzero : c <> 0),
     (a | b * (a / c)) -> (c | a) -> (c | b).
   Proof.
-    intros ? ? ? ? ? divide_a divide_c_a; do 2 divide_exists_mul.
+    intros ? ? ? ? ? divide_a divide_c_a; do 2 Z.divide_exists_mul.
     rewrite divide_c_a in divide_a.
-    rewrite div_mul' in divide_a by auto.
+    rewrite Z.div_mul' in divide_a by auto.
     replace (b * k) with (k * b) in divide_a by ring.
     replace (c * k * k0) with (k * (k0 * c)) in divide_a by ring.
     rewrite Z.mul_cancel_l in divide_a by (intuition auto with nia; rewrite H in divide_c_a; ring_simplify in divide_a; intuition).
@@ -294,7 +222,7 @@ Module Z.
   Proof.
     intro; split. {
       intro divide2_n.
-      divide_exists_mul; [ | pose proof (Z.mod_pos_bound n 2); omega].
+      Z.divide_exists_mul; [ | pose proof (Z.mod_pos_bound n 2); omega].
       rewrite divide2_n.
       apply Z.even_mul.
     } {
@@ -346,32 +274,6 @@ Module Z.
 
   Hint Rewrite mul_div_eq_full using zutil_arith : zdiv_to_mod.
   Hint Rewrite <-mul_div_eq_full using zutil_arith : zmod_to_div.
-
-  Ltac prime_bound := match goal with
-  | [ H : prime ?p |- _ ] => pose proof (prime_ge_2 p H); try omega
-  end.
-
-  Lemma testbit_low : forall n x i, (0 <= i < n) ->
-    Z.testbit x i = Z.testbit (Z.land x (Z.ones n)) i.
-  Proof.
-    intros.
-    rewrite Z.land_ones by omega.
-    symmetry.
-    apply Z.mod_pow2_bits_low.
-    omega.
-  Qed.
-
-
-  Lemma testbit_add_shiftl_low : forall i, (0 <= i) -> forall a b n, (i < n) ->
-    Z.testbit (a + Z.shiftl b n) i = Z.testbit a i.
-  Proof.
-    intros.
-    erewrite Z.testbit_low; eauto.
-    rewrite Z.land_ones, Z.shiftl_mul_pow2 by omega.
-    rewrite Z.mod_add by (pose proof (Z.pow_pos_nonneg 2 n); omega).
-    auto using Z.mod_pow2_bits_low.
-  Qed.
-  Hint Rewrite testbit_add_shiftl_low using zutil_arith : Ztestbit.
 
   Lemma mod_div_eq0 : forall a b, 0 < b -> (a mod b) / b = 0.
   Proof.
@@ -621,7 +523,7 @@ Module Z.
     apply Z.bits_inj'; intros t ?.
     rewrite Z.lor_spec, Z.shiftl_spec by assumption.
     destruct (Z_lt_dec t n).
-    + rewrite testbit_add_shiftl_low by omega.
+    + rewrite Z.testbit_add_shiftl_low by omega.
       rewrite Z.testbit_neg_r with (n := t - n) by omega.
       apply Bool.orb_false_r.
     + rewrite testbit_add_shiftl_high by omega.
@@ -683,35 +585,13 @@ Module Z.
     rewrite Z.mod_opp_l_nz; autorewrite with zsimplify; omega.
   Qed.
 
-  (* prove that combinations of known positive/nonnegative numbers are positive/nonnegative *)
-  Ltac zero_bounds' :=
-    repeat match goal with
-    | [ |- 0 <= _ + _] => apply Z.add_nonneg_nonneg
-    | [ |- 0 <= _ - _] => apply Z.le_0_sub
-    | [ |- 0 <= _ * _] => apply Z.mul_nonneg_nonneg
-    | [ |- 0 <= _ / _] => apply Z.div_pos
-    | [ |- 0 <= _ ^ _ ] => apply Z.pow_nonneg
-    | [ |- 0 <= Z.shiftr _ _] => apply Z.shiftr_nonneg
-    | [ |- 0 <= _ mod _] => apply Z.mod_pos_bound
-    | [ |- 0 < _ + _] => try solve [apply Z.add_pos_nonneg; zero_bounds'];
-                         try solve [apply Z.add_nonneg_pos; zero_bounds']
-    | [ |- 0 < _ - _] => apply Z.lt_0_sub
-    | [ |- 0 < _ * _] => apply Z.lt_0_mul; left; split
-    | [ |- 0 < _ / _] => apply Z.div_str_pos
-    | [ |- 0 < _ ^ _ ] => apply Z.pow_pos_nonneg
-    end; try omega; try prime_bound; auto.
-
-  Ltac zero_bounds := try omega; try prime_bound; zero_bounds'.
-
-  Hint Extern 1 => progress zero_bounds : zero_bounds.
-
   Lemma ones_nonneg : forall i, (0 <= i) -> 0 <= Z.ones i.
   Proof.
     apply natlike_ind.
     + unfold Z.ones. simpl; omega.
     + intros.
       rewrite Z.ones_succ by assumption.
-      zero_bounds.
+      Z.zero_bounds.
   Qed.
   Hint Resolve ones_nonneg : zarith.
 
@@ -730,7 +610,7 @@ Module Z.
   Proof.
     intros.
     rewrite Z.pow2_mod_spec by assumption.
-    assert (0 < 2 ^ n) by zero_bounds.
+    assert (0 < 2 ^ n) by Z.zero_bounds.
     rewrite Z.mod_small_iff by omega.
     split; intros; intuition omega.
   Qed.
@@ -745,7 +625,7 @@ Module Z.
      rewrite Z.testbit_pow2_mod by omega; break_match; auto.
     }
     rewrite H1.
-    rewrite Z.pow2_mod_spec; try apply Z.mod_pos_bound; zero_bounds.
+    rewrite Z.pow2_mod_spec; try apply Z.mod_pos_bound; Z.zero_bounds.
   Qed.
 
   Lemma lor_range : forall x y n, 0 <= x < 2 ^ n -> 0 <= y < 2 ^ n ->
@@ -779,7 +659,7 @@ Module Z.
       apply Z.pow_le_mono_r; omega. }
     { rewrite Z.shiftl_mul_pow2 by omega.
       rewrite Z.pow_add_r by omega.
-      split; zero_bounds.
+      split; Z.zero_bounds.
       rewrite Z.mul_comm.
       apply Z.mul_lt_mono_pos_l; omega. }
   Qed.
@@ -869,117 +749,11 @@ Module Z.
            end.
   Qed.
 
-  Lemma eqb_cases x y : if x =? y then x = y else x <> y.
-  Proof.
-    pose proof (Z.eqb_spec x y) as H.
-    inversion H; trivial.
-  Qed.
-
   Lemma ones_le x y : x <= y -> Z.ones x <= Z.ones y.
   Proof.
     rewrite !Z.ones_equiv; auto with zarith.
   Qed.
   Hint Resolve ones_le : zarith.
-
-  Lemma geb_spec0 : forall x y : Z, Bool.reflect (x >= y) (x >=? y).
-  Proof.
-    intros x y; pose proof (Zge_cases x y) as H; destruct (Z.geb x y); constructor; omega.
-  Qed.
-  Lemma gtb_spec0 : forall x y : Z, Bool.reflect (x > y) (x >? y).
-  Proof.
-    intros x y; pose proof (Zgt_cases x y) as H; destruct (Z.gtb x y); constructor; omega.
-  Qed.
-
-  Ltac ltb_to_lt_with_hyp H lem :=
-    let H' := fresh in
-    rename H into H';
-    pose proof lem as H;
-    rewrite H' in H;
-    clear H'.
-
-  Ltac ltb_to_lt_in_goal b' lem :=
-    refine (proj1 (@reflect_iff_gen _ _ lem b') _);
-    cbv beta iota.
-
-  Ltac ltb_to_lt_hyps_step :=
-    match goal with
-    | [ H : (?x <? ?y) = ?b |- _ ]
-      => ltb_to_lt_with_hyp H (Zlt_cases x y)
-    | [ H : (?x <=? ?y) = ?b |- _ ]
-      => ltb_to_lt_with_hyp H (Zle_cases x y)
-    | [ H : (?x >? ?y) = ?b |- _ ]
-      => ltb_to_lt_with_hyp H (Zgt_cases x y)
-    | [ H : (?x >=? ?y) = ?b |- _ ]
-      => ltb_to_lt_with_hyp H (Zge_cases x y)
-    | [ H : (?x =? ?y) = ?b |- _ ]
-      => ltb_to_lt_with_hyp H (eqb_cases x y)
-    end.
-  Ltac ltb_to_lt_goal_step :=
-    match goal with
-    | [ |- (?x <? ?y) = ?b ]
-      => ltb_to_lt_in_goal b (Z.ltb_spec0 x y)
-    | [ |- (?x <=? ?y) = ?b ]
-      => ltb_to_lt_in_goal b (Z.leb_spec0 x y)
-    | [ |- (?x >? ?y) = ?b ]
-      => ltb_to_lt_in_goal b (Z.gtb_spec0 x y)
-    | [ |- (?x >=? ?y) = ?b ]
-      => ltb_to_lt_in_goal b (Z.geb_spec0 x y)
-    | [ |- (?x =? ?y) = ?b ]
-      => ltb_to_lt_in_goal b (Z.eqb_spec x y)
-    end.
-  Ltac ltb_to_lt_step :=
-    first [ ltb_to_lt_hyps_step
-          | ltb_to_lt_goal_step ].
-  Ltac ltb_to_lt := repeat ltb_to_lt_step.
-
-  Section R_Rb.
-    Local Ltac t := intros ? ? []; split; intro; ltb_to_lt; omega.
-    Local Notation R_Rb Rb R nR := (forall x y b, Rb x y = b <-> if b then R x y else nR x y).
-    Lemma ltb_lt_iff : R_Rb Z.ltb Z.lt Z.ge. Proof. t. Qed.
-    Lemma leb_le_iff : R_Rb Z.leb Z.le Z.gt. Proof. t. Qed.
-    Lemma gtb_gt_iff : R_Rb Z.gtb Z.gt Z.le. Proof. t. Qed.
-    Lemma geb_ge_iff : R_Rb Z.geb Z.ge Z.lt. Proof. t. Qed.
-    Lemma eqb_eq_iff : R_Rb Z.eqb (@Logic.eq Z) (fun x y => x <> y). Proof. t. Qed.
-  End R_Rb.
-  Hint Rewrite ltb_lt_iff leb_le_iff gtb_gt_iff geb_ge_iff eqb_eq_iff : ltb_to_lt.
-  Ltac ltb_to_lt_in_context :=
-    repeat autorewrite with ltb_to_lt in *;
-    cbv beta iota in *.
-
-  Ltac compare_to_sgn :=
-    repeat match goal with
-           | [ H : _ |- _ ] => progress rewrite <- ?Z.sgn_neg_iff, <- ?Z.sgn_pos_iff, <- ?Z.sgn_null_iff in H
-           | _ => progress rewrite <- ?Z.sgn_neg_iff, <- ?Z.sgn_pos_iff, <- ?Z.sgn_null_iff
-           end.
-
-  Local Ltac replace_to_const c :=
-    repeat match goal with
-           | [ H : ?x = ?x |- _ ] => clear H
-           | [ H : ?x = c, H' : context[?x] |- _ ] => rewrite H in H'
-           | [ H : c = ?x, H' : context[?x] |- _ ] => rewrite <- H in H'
-           | [ H : ?x = c |- context[?x] ] => rewrite H
-           | [ H : c = ?x |- context[?x] ] => rewrite <- H
-           end.
-
-  Lemma lt_div_0 n m : n / m < 0 <-> ((n < 0 < m \/ m < 0 < n) /\ 0 < -(n / m)).
-  Proof.
-    Z.compare_to_sgn; rewrite Z.sgn_opp; simpl.
-    pose proof (Zdiv_sgn n m) as H.
-    pose proof (Z.sgn_spec (n / m)) as H'.
-    repeat first [ progress intuition auto
-                 | progress simpl in *
-                 | congruence
-                 | lia
-                 | progress replace_to_const (-1)
-                 | progress replace_to_const 0
-                 | progress replace_to_const 1
-                 | match goal with
-                   | [ x : Z |- _ ] => destruct x
-                   end ].
-  Qed.
-
-  Lemma two_times_x_minus_x x : 2 * x - x = x.
-  Proof. lia. Qed.
 
   Lemma mul_div_le x y z
         (Hx : 0 <= x) (Hy : 0 <= y) (Hz : 0 < z)
@@ -1045,169 +819,6 @@ Module Z.
   Qed.
 
   Hint Resolve Zmult_le_compat_r Zmult_le_compat_l Z_div_le Z.div_mul_le_le_offset Z.add_le_mono Z.sub_le_mono : zarith.
-
-  Lemma sub_same_minus (x y : Z) : x - (x - y) = y.
-  Proof. lia. Qed.
-  Hint Rewrite sub_same_minus : zsimplify.
-  Lemma sub_same_plus (x y : Z) : x - (x + y) = -y.
-  Proof. lia. Qed.
-  Hint Rewrite sub_same_plus : zsimplify.
-  Lemma sub_same_minus_plus (x y z : Z) : x - (x - y + z) = y - z.
-  Proof. lia. Qed.
-  Hint Rewrite sub_same_minus_plus : zsimplify.
-  Lemma sub_same_plus_plus (x y z : Z) : x - (x + y + z) = -y - z.
-  Proof. lia. Qed.
-  Hint Rewrite sub_same_plus_plus : zsimplify.
-  Lemma sub_same_minus_minus (x y z : Z) : x - (x - y - z) = y + z.
-  Proof. lia. Qed.
-  Hint Rewrite sub_same_minus_minus : zsimplify.
-  Lemma sub_same_plus_minus (x y z : Z) : x - (x + y - z) = z - y.
-  Proof. lia. Qed.
-  Hint Rewrite sub_same_plus_minus : zsimplify.
-  Lemma sub_same_minus_then_plus (x y w : Z) : x - (x - y) + w = y + w.
-  Proof. lia. Qed.
-  Hint Rewrite sub_same_minus_then_plus : zsimplify.
-  Lemma sub_same_plus_then_plus (x y w : Z) : x - (x + y) + w = w - y.
-  Proof. lia. Qed.
-  Hint Rewrite sub_same_plus_then_plus : zsimplify.
-  Lemma sub_same_minus_plus_then_plus (x y z w : Z) : x - (x - y + z) + w = y - z + w.
-  Proof. lia. Qed.
-  Hint Rewrite sub_same_minus_plus_then_plus : zsimplify.
-  Lemma sub_same_plus_plus_then_plus (x y z w : Z) : x - (x + y + z) + w = w - y - z.
-  Proof. lia. Qed.
-  Hint Rewrite sub_same_plus_plus_then_plus : zsimplify.
-  Lemma sub_same_minus_minus_then_plus (x y z w : Z) : x - (x - y - z) + w = y + z + w.
-  Proof. lia. Qed.
-  Hint Rewrite sub_same_minus_minus : zsimplify.
-  Lemma sub_same_plus_minus_then_plus (x y z w : Z) : x - (x + y - z) + w = z - y + w.
-  Proof. lia. Qed.
-  Hint Rewrite sub_same_plus_minus_then_plus : zsimplify.
-
-  (** * [Z.simplify_fractions_le] *)
-  (** The culmination of this series of tactics,
-      [Z.simplify_fractions_le], will use the fact that [a * (b / c) <=
-      (a * b) / c], and do some reasoning modulo associativity and
-      commutativity in [Z] to perform such a reduction.  It may leave
-      over goals if it cannot prove that some denominators are non-zero.
-      If the rewrite [a * (b / c)] → [(a * b) / c] is safe to do on the
-      LHS of the goal, this tactic should not turn a solvable goal into
-      an unsolvable one.
-
-      After running, the tactic does some basic rewriting to simplify
-      fractions, e.g., that [a * b / b = a]. *)
-  Ltac split_sums_step :=
-    match goal with
-    | [ |- _ + _ <= _ ]
-      => etransitivity; [ eapply Z.add_le_mono | ]
-    | [ |- _ - _ <= _ ]
-      => etransitivity; [ eapply Z.sub_le_mono | ]
-    end.
-  Ltac split_sums :=
-    try (split_sums_step; [ split_sums.. | ]).
-  Ltac pre_reorder_fractions_step :=
-    match goal with
-    | [ |- context[?x / ?y * ?z] ]
-      => lazymatch z with
-         | context[_ / _] => fail
-         | _ => idtac
-         end;
-         rewrite (Z.mul_comm (x / y) z)
-    | _ => let LHS := match goal with |- ?LHS <= ?RHS => LHS end in
-           match LHS with
-           | context G[?x * (?y / ?z)]
-             => let G' := context G[(x * y) / z] in
-                transitivity G'
-           end
-    end.
-  Ltac pre_reorder_fractions :=
-    try first [ split_sums_step; [ pre_reorder_fractions.. | ]
-              | pre_reorder_fractions_step; [ .. | pre_reorder_fractions ] ].
-  Ltac split_comparison :=
-    match goal with
-    | [ |- ?x <= ?x ] => reflexivity
-    | [ H : _ >= _ |- _ ]
-      => apply Z.ge_le_iff in H
-    | [ |- ?x * ?y <= ?z * ?w ]
-      => lazymatch goal with
-         | [ H : 0 <= x |- _ ] => idtac
-         | [ H : x < 0 |- _ ] => fail
-         | _ => destruct (Z_lt_le_dec x 0)
-         end;
-         [ ..
-         | lazymatch goal with
-           | [ H : 0 <= y |- _ ] => idtac
-           | [ H : y < 0 |- _ ] => fail
-           | _ => destruct (Z_lt_le_dec y 0)
-           end;
-           [ ..
-           | apply Zmult_le_compat; [ | | assumption | assumption ] ] ]
-    | [ |- ?x / ?y <= ?z / ?y ]
-      => lazymatch goal with
-         | [ H : 0 < y |- _ ] => idtac
-         | [ H : y <= 0 |- _ ] => fail
-         | _ => destruct (Z_lt_le_dec 0 y)
-         end;
-         [ apply Z_div_le; [ apply Z.gt_lt_iff; assumption | ]
-         | .. ]
-    | [ |- ?x / ?y <= ?x / ?z ]
-      => lazymatch goal with
-         | [ H : 0 <= x |- _ ] => idtac
-         | [ H : x < 0 |- _ ] => fail
-         | _ => destruct (Z_lt_le_dec x 0)
-         end;
-         [ ..
-         | lazymatch goal with
-           | [ H : 0 < z |- _ ] => idtac
-           | [ H : z <= 0 |- _ ] => fail
-           | _ => destruct (Z_lt_le_dec 0 z)
-           end;
-           [ apply Z.div_le_compat_l; [ assumption | split; [ assumption | ] ]
-           | .. ] ]
-    | [ |- _ + _ <= _ + _ ]
-      => apply Z.add_le_mono
-    | [ |- _ - _ <= _ - _ ]
-      => apply Z.sub_le_mono
-    | [ |- ?x * (?y / ?z) <= (?x * ?y) / ?z ]
-      => apply Z.div_mul_le
-    end.
-  Ltac split_comparison_fin_step :=
-    match goal with
-    | _ => assumption
-    | _ => lia
-    | _ => progress subst
-    | [ H : ?n * ?m < 0 |- _ ]
-      => apply (proj1 (Z.lt_mul_0 n m)) in H; destruct H as [ [??]|[??] ]
-    | [ H : ?n / ?m < 0 |- _ ]
-      => apply (proj1 (lt_div_0 n m)) in H; destruct H as [ [ [??]|[??] ] ? ]
-    | [ H : (?x^?y) <= ?n < _, H' : ?n < 0 |- _ ]
-      => assert (0 <= x^y) by zero_bounds; lia
-    | [ H : (?x^?y) < 0 |- _ ]
-      => assert (0 <= x^y) by zero_bounds; lia
-    | [ H : (?x^?y) <= 0 |- _ ]
-      => let H' := fresh in
-         assert (H' : 0 <= x^y) by zero_bounds;
-         assert (x^y = 0) by lia;
-         clear H H'
-    | [ H : _^_ = 0 |- _ ]
-      => apply Z.pow_eq_0_iff in H; destruct H as [ ?|[??] ]
-    | [ H : 0 <= ?x, H' : ?x - 1 < 0 |- _ ]
-      => assert (x = 0) by lia; clear H H'
-    | [ |- ?x <= ?y ] => is_evar x; reflexivity
-    | [ |- ?x <= ?y ] => is_evar y; reflexivity
-    end.
-  Ltac split_comparison_fin := repeat split_comparison_fin_step.
-  Ltac simplify_fractions_step :=
-    match goal with
-    | _ => rewrite Z.div_mul by (try apply Z.pow_nonzero; zero_bounds)
-    | [ |- context[?x * ?y / ?x] ]
-      => rewrite (Z.mul_comm x y)
-    | [ |- ?x <= ?x ] => reflexivity
-    end.
-  Ltac simplify_fractions := repeat simplify_fractions_step.
-  Ltac simplify_fractions_le :=
-    pre_reorder_fractions;
-    [ repeat split_comparison; split_comparison_fin; zero_bounds..
-    | simplify_fractions ].
 
   Lemma log2_nonneg' n a : n <= 0 -> n <= Z.log2 a.
   Proof.
@@ -1464,10 +1075,6 @@ Module Z.
   Proof. reflexivity. Qed.
   Hint Rewrite <- two_p_two_eq_four : push_Zpow.
 
-  Lemma two_sub_sub_inner_sub x y z : 2 * x - y - (x - z) = x - y + z.
-  Proof. clear; lia. Qed.
-  Hint Rewrite two_sub_sub_inner_sub : zsimplify.
-
   Lemma f_equal_mul_mod x y x' y' m : x mod m = x' mod m -> y mod m = y' mod m -> (x * y) mod m = (x' * y') mod m.
   Proof.
     intros H0 H1; rewrite Zmult_mod, H0, H1, <- Zmult_mod; reflexivity.
@@ -1576,10 +1183,6 @@ Module Z.
   Proof. destruct b; reflexivity. Qed.
   Hint Rewrite mod_l_distr_if : push_Zmod.
   Hint Rewrite <- mod_l_distr_if : pull_Zmod.
-
-  Lemma minus_minus_one : - -1 = 1.
-  Proof. reflexivity. Qed.
-  Hint Rewrite minus_minus_one : zsimplify.
 
   Lemma div_add_exact x y d : d <> 0 -> x mod d = 0 -> (x + y) / d = x / d + y / d.
   Proof.
@@ -1745,7 +1348,7 @@ Module Z.
   Lemma div_between_if n a b : 0 <= n -> b <> 0 -> n * b <= a < (2 + n) * b -> (a / b = if (1 + n) * b <=? a then 1 + n else n)%Z.
   Proof.
     intros.
-    break_match; ltb_to_lt;
+    break_match; Z.ltb_to_lt;
       apply div_between; lia.
   Qed.
 
@@ -1781,19 +1384,19 @@ Module Z.
 
 
   Lemma leb_add_same x y : (x <=? y + x) = (0 <=? y).
-  Proof. destruct (x <=? y + x) eqn:?, (0 <=? y) eqn:?; ltb_to_lt; try reflexivity; omega. Qed.
+  Proof. destruct (x <=? y + x) eqn:?, (0 <=? y) eqn:?; Z.ltb_to_lt; try reflexivity; omega. Qed.
   Hint Rewrite leb_add_same : zsimplify.
 
   Lemma ltb_add_same x y : (x <? y + x) = (0 <? y).
-  Proof. destruct (x <? y + x) eqn:?, (0 <? y) eqn:?; ltb_to_lt; try reflexivity; omega. Qed.
+  Proof. destruct (x <? y + x) eqn:?, (0 <? y) eqn:?; Z.ltb_to_lt; try reflexivity; omega. Qed.
   Hint Rewrite ltb_add_same : zsimplify.
 
   Lemma geb_add_same x y : (x >=? y + x) = (0 >=? y).
-  Proof. destruct (x >=? y + x) eqn:?, (0 >=? y) eqn:?; ltb_to_lt; try reflexivity; omega. Qed.
+  Proof. destruct (x >=? y + x) eqn:?, (0 >=? y) eqn:?; Z.ltb_to_lt; try reflexivity; omega. Qed.
   Hint Rewrite geb_add_same : zsimplify.
 
   Lemma gtb_add_same x y : (x >? y + x) = (0 >? y).
-  Proof. destruct (x >? y + x) eqn:?, (0 >? y) eqn:?; ltb_to_lt; try reflexivity; omega. Qed.
+  Proof. destruct (x >? y + x) eqn:?, (0 >? y) eqn:?; Z.ltb_to_lt; try reflexivity; omega. Qed.
   Hint Rewrite gtb_add_same : zsimplify.
 
   Lemma shiftl_add x y z : 0 <= z -> (x + y) << z = (x << z) + (y << z).
@@ -1827,7 +1430,7 @@ Module Z.
     assert (0 <= y mod 2 ^ (n - m) <= 2 ^ (n - m) - 1) by omega.
     assert (0 <= (y mod 2 ^ (n - m)) * 2^m <= (2^(n-m) - 1)*2^m) by auto with zarith.
     assert (0 <= x / 2^(n-m) < 2^n / 2^(n-m)).
-    { split; zero_bounds.
+    { split; Z.zero_bounds.
       apply Z.div_lt_upper_bound; autorewrite with pull_Zpow zsimplify; nia. }
     autorewrite with Zshift_to_pow.
     split; Z.zero_bounds.
@@ -2179,125 +1782,6 @@ Module Z.
     { subst; cbv -[Z.le]; split; omega. }
   Qed.
 
-  Lemma simplify_twice_sub_sub x y : 2 * x - (x - y) = x + y.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_twice_sub_sub : zsimplify.
-
-  Lemma simplify_twice_sub_add x y : 2 * x - (x + y) = x - y.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_twice_sub_add : zsimplify.
-
-  Lemma simplify_2XmX X : 2 * X - X = X.
-  Proof. omega. Qed.
-  Hint Rewrite simplify_2XmX : zsimplify.
-
-  Lemma simplify_add_pos x y : Z.pos x + Z.pos y = Z.pos (x + y).
-  Proof. reflexivity. Qed.
-  Hint Rewrite simplify_add_pos : zsimplify_Z_to_pos.
-  Lemma simplify_add_pos10 x0 x1 x2 x3 x4 x5 x6 x7 x8 x9
-    : Z.pos x0 + (Z.pos x1 + (Z.pos x2 + (Z.pos x3 + (Z.pos x4 + (Z.pos x5 + (Z.pos x6 + (Z.pos x7 + (Z.pos x8 + Z.pos x9))))))))
-      = Z.pos (x0 + (x1 + (x2 + (x3 + (x4 + (x5 + (x6 + (x7 + (x8 + x9))))))))).
-  Proof. reflexivity. Qed.
-  Hint Rewrite simplify_add_pos10 : zsimplify_Z_to_pos.
-  Lemma simplify_mul_pos x y : Z.pos x * Z.pos y = Z.pos (x * y).
-  Proof. reflexivity. Qed.
-  Hint Rewrite simplify_mul_pos : zsimplify_Z_to_pos.
-  Lemma simplify_mul_pos10 x0 x1 x2 x3 x4 x5 x6 x7 x8 x9
-    : Z.pos x0 * (Z.pos x1 * (Z.pos x2 * (Z.pos x3 * (Z.pos x4 * (Z.pos x5 * (Z.pos x6 * (Z.pos x7 * (Z.pos x8 * Z.pos x9))))))))
-      = Z.pos (x0 * (x1 * (x2 * (x3 * (x4 * (x5 * (x6 * (x7 * (x8 * x9))))))))).
-  Proof. reflexivity. Qed.
-  Hint Rewrite simplify_mul_pos10 : zsimplify_Z_to_pos.
-  Lemma simplify_sub_pos x y : Z.pos x - Z.pos y = Z.pos_sub x y.
-  Proof. reflexivity. Qed.
-  Hint Rewrite simplify_sub_pos : zsimplify_Z_to_pos.
-
-  Lemma move_R_pX x y z : x + y = z -> x = z - y.
-  Proof. omega. Qed.
-  Lemma move_R_mX x y z : x - y = z -> x = z + y.
-  Proof. omega. Qed.
-  Lemma move_R_Xp x y z : y + x = z -> x = z - y.
-  Proof. omega. Qed.
-  Lemma move_R_Xm x y z : y - x = z -> x = y - z.
-  Proof. omega. Qed.
-  Lemma move_L_pX x y z : z = x + y -> z - y = x.
-  Proof. omega. Qed.
-  Lemma move_L_mX x y z : z = x - y -> z + y = x.
-  Proof. omega. Qed.
-  Lemma move_L_Xp x y z : z = y + x -> z - y = x.
-  Proof. omega. Qed.
-  Lemma move_L_Xm x y z : z = y - x -> y - z = x.
-  Proof. omega. Qed.
-
-  (** [linear_substitute x] attempts to maipulate equations using only
-      addition and subtraction to put [x] on the left, and then
-      eliminates [x].  Currently, it only handles equations where [x]
-      appears once; it does not yet handle equations like [x - x + x =
-      5]. *)
-  Ltac linear_solve_for_in_step for_var H :=
-    let LHS := match type of H with ?LHS = ?RHS => LHS end in
-    let RHS := match type of H with ?LHS = ?RHS => RHS end in
-    first [ match RHS with
-            | ?a + ?b
-              => first [ contains for_var b; apply move_L_pX in H
-                       | contains for_var a; apply move_L_Xp in H ]
-            | ?a - ?b
-              => first [ contains for_var b; apply move_L_mX in H
-                       | contains for_var a; apply move_L_Xm in H ]
-            | for_var
-              => progress symmetry in H
-            end
-          | match LHS with
-            | ?a + ?b
-              => first [ not contains for_var b; apply move_R_pX in H
-                       | not contains for_var a; apply move_R_Xp in H ]
-            | ?a - ?b
-              => first [ not contains for_var b; apply move_R_mX in H
-                       | not contains for_var a; apply move_R_Xm in H ]
-            end ].
-  Ltac linear_solve_for_in for_var H := repeat linear_solve_for_in_step for_var H.
-  Ltac linear_solve_for for_var :=
-    match goal with
-    | [ H : for_var = _ |- _ ] => idtac
-    | [ H : context[for_var] |- _ ]
-      => linear_solve_for_in for_var H;
-         lazymatch type of H with
-         | for_var = _ => idtac
-         | ?T => fail 0 "Could not fully solve for" for_var "in" T "(hypothesis" H ")"
-         end
-    end.
-  Ltac linear_substitute for_var := linear_solve_for for_var; subst for_var.
-  Ltac linear_substitute_all :=
-    repeat match goal with
-           | [ v : Z |- _ ] => linear_substitute v
-           end.
-
-  (** [div_mod_to_quot_rem] replaces [x / y] and [x mod y] with new
-      variables [q] and [r] while simultaneously adding facts that
-      uniquely specify [q] and [r] to the context (roughly, that [y *
-      q + r = x] and that [0 <= r < y]. *)
-  Ltac div_mod_to_quot_rem_inequality_solver :=
-    zutil_arith_more_inequalities.
-  Ltac generalize_div_eucl x y :=
-    let H := fresh in
-    let H' := fresh in
-    assert (H' : y <> 0) by div_mod_to_quot_rem_inequality_solver;
-    generalize (Z.div_mod x y H'); clear H';
-    assert (H' : 0 < y) by div_mod_to_quot_rem_inequality_solver;
-    generalize (Z.mod_pos_bound x y H'); clear H';
-    let q := fresh "q" in
-    let r := fresh "r" in
-    set (q := x / y);
-    set (r := x mod y);
-    clearbody q r.
-
-  Ltac div_mod_to_quot_rem_step :=
-    match goal with
-    | [ |- context[?x / ?y] ] => generalize_div_eucl x y
-    | [ |- context[?x mod ?y] ] => generalize_div_eucl x y
-    end.
-
-  Ltac div_mod_to_quot_rem := repeat div_mod_to_quot_rem_step; intros.
-
   Lemma mod_mod_small a n m
         (Hnm : (m mod n = 0)%Z)
         (Hnm_le : (0 < n <= m)%Z)
@@ -2338,41 +1822,6 @@ Module Z.
   Ltac rewrite_mod_small_more :=
     repeat (rewrite_mod_small || rewrite_mod_mod_small).
 
-  Local Ltac simplify_div_tac :=
-    intros; autorewrite with zsimplify; rewrite <- ?Z_div_plus_full_l, <- ?Z_div_plus_full by assumption;
-    try (apply f_equal2; [ | reflexivity ]);
-    try zutil_arith.
-
-  Ltac clean_neg :=
-    repeat match goal with
-           | [ H : (-?x) < 0 |- _ ] => assert (0 < x) by omega; clear H
-           | [ H : 0 > (-?x) |- _ ] => assert (0 < x) by omega; clear H
-           | [ H : (-?x) <= 0 |- _ ] => assert (0 <= x) by omega; clear H
-           | [ H : 0 >= (-?x) |- _ ] => assert (0 <= x) by omega; clear H
-           | [ H : -?x <= -?y |- _ ] => apply Z.opp_le_mono in H
-           | [ |- -?x <= -?y ] => apply Z.opp_le_mono
-           | _ => progress rewrite <- Z.opp_le_mono in *
-           | [ H : 0 <= ?x, H' : 0 <= ?y, H'' : -?x <= ?y |- _ ] => clear H''
-           | [ H : 0 < ?x, H' : 0 <= ?y, H'' : -?x <= ?y |- _ ] => clear H''
-           | [ H : 0 <= ?x, H' : 0 < ?y, H'' : -?x <= ?y |- _ ] => clear H''
-           | [ H : 0 < ?x, H' : 0 < ?y, H'' : -?x <= ?y |- _ ] => clear H''
-           | [ H : 0 < ?x, H' : 0 <= ?y, H'' : -?x < ?y |- _ ] => clear H''
-           | [ H : 0 <= ?x, H' : 0 < ?y, H'' : -?x < ?y |- _ ] => clear H''
-           | [ H : 0 < ?x, H' : 0 < ?y, H'' : -?x < ?y |- _ ] => clear H''
-           end.
-  Ltac replace_with_neg x :=
-    assert (x = -(-x)) by omega; generalize dependent (-x);
-    let x' := fresh in
-    rename x into x'; intro x; intros; subst x';
-    clean_neg.
-  Ltac replace_all_neg_with_pos :=
-    repeat match goal with
-           | [ H : ?x < 0 |- _ ] => replace_with_neg x
-           | [ H : 0 > ?x |- _ ] => replace_with_neg x
-           | [ H : ?x <= 0 |- _ ] => replace_with_neg x
-           | [ H : 0 >= ?x |- _ ] => replace_with_neg x
-           end.
-
   Lemma shiftl_le_Proper2 y
     : Proper (Z.le ==> Z.le) (fun x => Z.shiftl x y).
   Proof.
@@ -2383,7 +1832,7 @@ Module Z.
     pose proof (Zle_cases 0 x') as Hy'.
     destruct (0 <=? y), (0 <=? x), (0 <=? x');
       autorewrite with Zshift_to_pow;
-      replace_all_neg_with_pos;
+      Z.replace_all_neg_with_pos;
       autorewrite with pull_Zopp;
       rewrite ?Z.div_opp_l_complete;
       repeat destruct (Z_zerop _);
@@ -2415,7 +1864,7 @@ Module Z.
     pose proof (Zle_cases 0 y') as Hy'.
     destruct (0 <=? x), (0 <=? y), (0 <=? y'); subst R; cbv beta iota in *;
       autorewrite with Zshift_to_pow;
-      replace_all_neg_with_pos;
+      Z.replace_all_neg_with_pos;
       autorewrite with pull_Zopp;
       rewrite ?Z.div_opp_l_complete;
       repeat destruct (Z_zerop _);
@@ -2594,589 +2043,6 @@ Module Z.
                    | progress Z.replace_all_neg_with_pos
                    | progress autorewrite with zsimplify ].
   Qed.
-
-
-  (* Naming Convention: [X] for thing being divided by, [p] for plus,
-     [m] for minus, [d] for div, and [_] to separate parentheses and
-     multiplication. *)
-  (* Mathematica code to generate these hints:
-<<
-ClearAll[minus, plus, div, mul, combine, parens, ExprToString,
-  ExprToExpr, ExprToName, SymbolsIn, Chars, RestFrom, a, b, c, d, e,
-  f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, X];
-Chars = StringSplit["abcdefghijklmnopqrstuvwxyz", ""];
-RestFrom[i_, len_] :=
- Join[{mul[Chars[[i]], "X"]}, Take[Drop[Chars, i], len]]
-Exprs = Flatten[
-   Map[{#1, #1 /. mul[a_, "X", b___] :> mul["X", a, b]} &, Flatten[{
-      Table[
-       Table[div[
-         combine @@
-          Join[Take[Chars, start - 1], RestFrom[start, len]],
-         "X"], {len, 0, 10 - start}], {start, 1, 2}],
-      Table[
-       Table[div[
-         combine["a",
-          parens @@
-           Join[Take[Drop[Chars, 1], start - 1],
-            RestFrom[1 + start, len]]], "X"], {len, 0,
-         10 - start}], {start, 1, 2}],
-      div[combine["a", parens["b", parens["c", mul["d", "X"]], "e"]],
-       "X"],
-      div[combine["a", "b", parens["c", mul["d", "X"]], "e"], "X"],
-      div[combine["a", "b", mul["c", "X", "d"], "e", "f"], "X"],
-      div[combine["a", mul["b", "X", "c"], "d", "e"], "X"],
-      div[
-       combine["a",
-        parens["b", parens["c", mul["d", "X", "e"]], "f"]], "X"],
-      div[combine["a", parens["b", mul["c", "X", "d"]], "e"], "X"]}]]];
-ExprToString[div[x_, y_], withparen_: False] :=
- With[{v := ExprToString[x, True] <> " / " <> ExprToString[y, True]},
-  If[withparen, "(" <> v <> ")", v]]
-ExprToString[combine[x_], withparen_: False] :=
- ExprToString[x, withparen]
-ExprToString[combine[x_, minus, y__], withparen_: False] :=
- With[{v :=
-    ExprToString[x, False] <> " - " <>
-     ExprToString[combine[y], False]},
-  If[withparen, "(" <> v <> ")", v]]
-ExprToString[combine[minus, y__], withparen_: False] :=
- With[{v := "-" <> ExprToString[combine[y], False]},
-  If[withparen, "(" <> v <> ")", v]]
-ExprToString[combine[x_, y__], withparen_: False] :=
- With[{v :=
-    ExprToString[x, False] <> " + " <>
-     ExprToString[combine[y], False]},
-  If[withparen, "(" <> v <> ")", v]]
-ExprToString[mul[x_], withparen_: False] := ExprToString[x]
-ExprToString[mul[x_, y__], withparen_: False] :=
- With[{v :=
-    ExprToString[x, False] <> " * " <> ExprToString[mul[y], False]},
-  If[withparen, "(" <> v <> ")", v]]
-ExprToString[parens[x__], withparen_: False] :=
- "(" <> ExprToString[combine[x]] <> ")"
-ExprToString[x_String, withparen_: False] := x
-ExprToExpr[div[x__]] := Divide @@ Map[ExprToExpr, {x}]
-ExprToExpr[mul[x__]] := Times @@ Map[ExprToExpr, {x}]
-ExprToExpr[combine[]] := 0
-ExprToExpr[combine[minus, y_, z___]] := -ExprToExpr[y] +
-  ExprToExpr[combine[z]]
-ExprToExpr[combine[x_, y___]] := ExprToExpr[x] + ExprToExpr[combine[y]]
-ExprToExpr[parens[x__]] := ExprToExpr[combine[x]]
-ExprToExpr[x_String] := Symbol[x]
-ExprToName["X", ispos_: True] := If[ispos, "X", "mX"]
-ExprToName[x_String, ispos_: True] := If[ispos, "p", "m"]
-ExprToName[div[x_, y_], ispos_: True] :=
- If[ispos, "p", "m"] <> ExprToName[x] <> "d" <> ExprToName[y]
-ExprToName[mul[x_], ispos_: True] :=
- If[ispos, "", "m_"] <> ExprToName[x] <> "_"
-ExprToName[mul[x_, y__], ispos_: True] :=
- If[ispos, "", "m_"] <> ExprToName[x] <> ExprToName[mul[y]]
-ExprToName[combine[], ispos_: True] := ""
-ExprToName[combine[x_], ispos_: True] := ExprToName[x, ispos]
-ExprToName[combine[x_, minus, mul[y__], z___], ispos_: True] :=
- ExprToName[x, ispos] <> "m_" <> ExprToName[mul[y], True] <>
-  ExprToName[combine[z], True]
-ExprToName[combine[x_, mul[y__], z___], ispos_: True] :=
- ExprToName[x, ispos] <> "p_" <> ExprToName[mul[y], True] <>
-  ExprToName[combine[z], True]
-ExprToName[combine[x_, y__], ispos_: True] :=
- ExprToName[x, ispos] <> ExprToName[combine[y], True]
-ExprToName[combine[x_, minus, y__], ispos_: True] :=
- ExprToName[x, ispos] <> ExprToName[combine[y], True]
-ExprToName[combine[x_, y__], ispos_: True] :=
- ExprToName[x, ispos] <> ExprToName[combine[y], True]
-ExprToName[parens[x__], ispos_: True] :=
- "_o_" <> ExprToName[combine[x], ispos] <> "_c_"
-SymbolsIn[x_String] := {x <> " "}
-SymbolsIn[f_[y___]] := Join @@ Map[SymbolsIn, {y}]
-StringJoin @@
- Map[{"  Lemma simplify_div_" <> ExprToName[#1] <> " " <>
-     StringJoin @@ Sort[DeleteDuplicates[SymbolsIn[#1]]] <>
-     ": X <> 0 -> " <> ExprToString[#1] <> " = " <>
-     StringReplace[(FullSimplify[ExprToExpr[#1]] // InputForm //
-        ToString), "/" -> " / "] <> "." <>
-     "\n  Proof. simplify_div_tac. Qed.\n  Hint Rewrite \
-simplify_div_" <> ExprToName[#1] <>
-     " using zutil_arith : zsimplify.\n"} &, Exprs]
->> *)
-  Lemma simplify_div_ppX_dX a X : X <> 0 -> (a * X) / X = a.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppX_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pXp_dX a X : X <> 0 -> (X * a) / X = a.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pXp_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppX_pdX a b X : X <> 0 -> (a * X + b) / X = a + b / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppX_pdX using zutil_arith : zsimplify.
-  Lemma simplify_div_pXp_pdX a b X : X <> 0 -> (X * a + b) / X = a + b / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pXp_pdX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppX_ppdX a b c X : X <> 0 -> (a * X + b + c) / X = a + (b + c) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppX_ppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_pXp_ppdX a b c X : X <> 0 -> (X * a + b + c) / X = a + (b + c) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pXp_ppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppX_pppdX a b c d X : X <> 0 -> (a * X + b + c + d) / X = a + (b + c + d) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppX_pppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_pXp_pppdX a b c d X : X <> 0 -> (X * a + b + c + d) / X = a + (b + c + d) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pXp_pppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppX_ppppdX a b c d e X : X <> 0 -> (a * X + b + c + d + e) / X = a + (b + c + d + e) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppX_ppppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_pXp_ppppdX a b c d e X : X <> 0 -> (X * a + b + c + d + e) / X = a + (b + c + d + e) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pXp_ppppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppX_pppppdX a b c d e f X : X <> 0 -> (a * X + b + c + d + e + f) / X = a + (b + c + d + e + f) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppX_pppppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_pXp_pppppdX a b c d e f X : X <> 0 -> (X * a + b + c + d + e + f) / X = a + (b + c + d + e + f) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pXp_pppppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppX_ppppppdX a b c d e f g X : X <> 0 -> (a * X + b + c + d + e + f + g) / X = a + (b + c + d + e + f + g) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppX_ppppppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_pXp_ppppppdX a b c d e f g X : X <> 0 -> (X * a + b + c + d + e + f + g) / X = a + (b + c + d + e + f + g) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pXp_ppppppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppX_pppppppdX a b c d e f g h X : X <> 0 -> (a * X + b + c + d + e + f + g + h) / X = a + (b + c + d + e + f + g + h) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppX_pppppppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_pXp_pppppppdX a b c d e f g h X : X <> 0 -> (X * a + b + c + d + e + f + g + h) / X = a + (b + c + d + e + f + g + h) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pXp_pppppppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppX_ppppppppdX a b c d e f g h i X : X <> 0 -> (a * X + b + c + d + e + f + g + h + i) / X = a + (b + c + d + e + f + g + h + i) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppX_ppppppppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_pXp_ppppppppdX a b c d e f g h i X : X <> 0 -> (X * a + b + c + d + e + f + g + h + i) / X = a + (b + c + d + e + f + g + h + i) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pXp_ppppppppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppX_pppppppppdX a b c d e f g h i j X : X <> 0 -> (a * X + b + c + d + e + f + g + h + i + j) / X = a + (b + c + d + e + f + g + h + i + j) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppX_pppppppppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_pXp_pppppppppdX a b c d e f g h i j X : X <> 0 -> (X * a + b + c + d + e + f + g + h + i + j) / X = a + (b + c + d + e + f + g + h + i + j) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pXp_pppppppppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppp_pX_dX a b X : X <> 0 -> (a + b * X) / X = b + a / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppp_pX_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppp_Xp_dX a b X : X <> 0 -> (a + X * b) / X = b + a / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppp_Xp_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppp_pX_pdX a b c X : X <> 0 -> (a + b * X + c) / X = b + (a + c) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppp_pX_pdX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppp_Xp_pdX a b c X : X <> 0 -> (a + X * b + c) / X = b + (a + c) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppp_Xp_pdX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppp_pX_ppdX a b c d X : X <> 0 -> (a + b * X + c + d) / X = b + (a + c + d) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppp_pX_ppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppp_Xp_ppdX a b c d X : X <> 0 -> (a + X * b + c + d) / X = b + (a + c + d) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppp_Xp_ppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppp_pX_pppdX a b c d e X : X <> 0 -> (a + b * X + c + d + e) / X = b + (a + c + d + e) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppp_pX_pppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppp_Xp_pppdX a b c d e X : X <> 0 -> (a + X * b + c + d + e) / X = b + (a + c + d + e) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppp_Xp_pppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppp_pX_ppppdX a b c d e f X : X <> 0 -> (a + b * X + c + d + e + f) / X = b + (a + c + d + e + f) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppp_pX_ppppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppp_Xp_ppppdX a b c d e f X : X <> 0 -> (a + X * b + c + d + e + f) / X = b + (a + c + d + e + f) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppp_Xp_ppppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppp_pX_pppppdX a b c d e f g X : X <> 0 -> (a + b * X + c + d + e + f + g) / X = b + (a + c + d + e + f + g) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppp_pX_pppppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppp_Xp_pppppdX a b c d e f g X : X <> 0 -> (a + X * b + c + d + e + f + g) / X = b + (a + c + d + e + f + g) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppp_Xp_pppppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppp_pX_ppppppdX a b c d e f g h X : X <> 0 -> (a + b * X + c + d + e + f + g + h) / X = b + (a + c + d + e + f + g + h) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppp_pX_ppppppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppp_Xp_ppppppdX a b c d e f g h X : X <> 0 -> (a + X * b + c + d + e + f + g + h) / X = b + (a + c + d + e + f + g + h) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppp_Xp_ppppppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppp_pX_pppppppdX a b c d e f g h i X : X <> 0 -> (a + b * X + c + d + e + f + g + h + i) / X = b + (a + c + d + e + f + g + h + i) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppp_pX_pppppppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppp_Xp_pppppppdX a b c d e f g h i X : X <> 0 -> (a + X * b + c + d + e + f + g + h + i) / X = b + (a + c + d + e + f + g + h + i) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppp_Xp_pppppppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppp_pX_ppppppppdX a b c d e f g h i j X : X <> 0 -> (a + b * X + c + d + e + f + g + h + i + j) / X = b + (a + c + d + e + f + g + h + i + j) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppp_pX_ppppppppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppp_Xp_ppppppppdX a b c d e f g h i j X : X <> 0 -> (a + X * b + c + d + e + f + g + h + i + j) / X = b + (a + c + d + e + f + g + h + i + j) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppp_Xp_ppppppppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pX__c_dX a b X : X <> 0 -> (a + (b * X)) / X = b + a / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pX__c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_Xp__c_dX a b X : X <> 0 -> (a + (X * b)) / X = b + a / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_Xp__c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pX_p_c_dX a b c X : X <> 0 -> (a + (b * X + c)) / X = b + (a + c) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pX_p_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_Xp_p_c_dX a b c X : X <> 0 -> (a + (X * b + c)) / X = b + (a + c) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_Xp_p_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pX_pp_c_dX a b c d X : X <> 0 -> (a + (b * X + c + d)) / X = b + (a + c + d) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pX_pp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_Xp_pp_c_dX a b c d X : X <> 0 -> (a + (X * b + c + d)) / X = b + (a + c + d) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_Xp_pp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pX_ppp_c_dX a b c d e X : X <> 0 -> (a + (b * X + c + d + e)) / X = b + (a + c + d + e) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pX_ppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_Xp_ppp_c_dX a b c d e X : X <> 0 -> (a + (X * b + c + d + e)) / X = b + (a + c + d + e) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_Xp_ppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pX_pppp_c_dX a b c d e f X : X <> 0 -> (a + (b * X + c + d + e + f)) / X = b + (a + c + d + e + f) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pX_pppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_Xp_pppp_c_dX a b c d e f X : X <> 0 -> (a + (X * b + c + d + e + f)) / X = b + (a + c + d + e + f) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_Xp_pppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pX_ppppp_c_dX a b c d e f g X : X <> 0 -> (a + (b * X + c + d + e + f + g)) / X = b + (a + c + d + e + f + g) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pX_ppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_Xp_ppppp_c_dX a b c d e f g X : X <> 0 -> (a + (X * b + c + d + e + f + g)) / X = b + (a + c + d + e + f + g) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_Xp_ppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pX_pppppp_c_dX a b c d e f g h X : X <> 0 -> (a + (b * X + c + d + e + f + g + h)) / X = b + (a + c + d + e + f + g + h) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pX_pppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_Xp_pppppp_c_dX a b c d e f g h X : X <> 0 -> (a + (X * b + c + d + e + f + g + h)) / X = b + (a + c + d + e + f + g + h) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_Xp_pppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pX_ppppppp_c_dX a b c d e f g h i X : X <> 0 -> (a + (b * X + c + d + e + f + g + h + i)) / X = b + (a + c + d + e + f + g + h + i) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pX_ppppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_Xp_ppppppp_c_dX a b c d e f g h i X : X <> 0 -> (a + (X * b + c + d + e + f + g + h + i)) / X = b + (a + c + d + e + f + g + h + i) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_Xp_ppppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pX_pppppppp_c_dX a b c d e f g h i j X : X <> 0 -> (a + (b * X + c + d + e + f + g + h + i + j)) / X = b + (a + c + d + e + f + g + h + i + j) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pX_pppppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_Xp_pppppppp_c_dX a b c d e f g h i j X : X <> 0 -> (a + (X * b + c + d + e + f + g + h + i + j)) / X = b + (a + c + d + e + f + g + h + i + j) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_Xp_pppppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pX_ppppppppp_c_dX a b c d e f g h i j k X : X <> 0 -> (a + (b * X + c + d + e + f + g + h + i + j + k)) / X = b + (a + c + d + e + f + g + h + i + j + k) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pX_ppppppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_Xp_ppppppppp_c_dX a b c d e f g h i j k X : X <> 0 -> (a + (X * b + c + d + e + f + g + h + i + j + k)) / X = b + (a + c + d + e + f + g + h + i + j + k) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_Xp_ppppppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_pX__c_dX a b c X : X <> 0 -> (a + (b + c * X)) / X = c + (a + b) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pp_pX__c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_Xp__c_dX a b c X : X <> 0 -> (a + (b + X * c)) / X = c + (a + b) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pp_Xp__c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_pX_p_c_dX a b c d X : X <> 0 -> (a + (b + c * X + d)) / X = c + (a + b + d) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pp_pX_p_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_Xp_p_c_dX a b c d X : X <> 0 -> (a + (b + X * c + d)) / X = c + (a + b + d) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pp_Xp_p_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_pX_pp_c_dX a b c d e X : X <> 0 -> (a + (b + c * X + d + e)) / X = c + (a + b + d + e) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pp_pX_pp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_Xp_pp_c_dX a b c d e X : X <> 0 -> (a + (b + X * c + d + e)) / X = c + (a + b + d + e) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pp_Xp_pp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_pX_ppp_c_dX a b c d e f X : X <> 0 -> (a + (b + c * X + d + e + f)) / X = c + (a + b + d + e + f) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pp_pX_ppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_Xp_ppp_c_dX a b c d e f X : X <> 0 -> (a + (b + X * c + d + e + f)) / X = c + (a + b + d + e + f) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pp_Xp_ppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_pX_pppp_c_dX a b c d e f g X : X <> 0 -> (a + (b + c * X + d + e + f + g)) / X = c + (a + b + d + e + f + g) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pp_pX_pppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_Xp_pppp_c_dX a b c d e f g X : X <> 0 -> (a + (b + X * c + d + e + f + g)) / X = c + (a + b + d + e + f + g) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pp_Xp_pppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_pX_ppppp_c_dX a b c d e f g h X : X <> 0 -> (a + (b + c * X + d + e + f + g + h)) / X = c + (a + b + d + e + f + g + h) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pp_pX_ppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_Xp_ppppp_c_dX a b c d e f g h X : X <> 0 -> (a + (b + X * c + d + e + f + g + h)) / X = c + (a + b + d + e + f + g + h) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pp_Xp_ppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_pX_pppppp_c_dX a b c d e f g h i X : X <> 0 -> (a + (b + c * X + d + e + f + g + h + i)) / X = c + (a + b + d + e + f + g + h + i) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pp_pX_pppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_Xp_pppppp_c_dX a b c d e f g h i X : X <> 0 -> (a + (b + X * c + d + e + f + g + h + i)) / X = c + (a + b + d + e + f + g + h + i) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pp_Xp_pppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_pX_ppppppp_c_dX a b c d e f g h i j X : X <> 0 -> (a + (b + c * X + d + e + f + g + h + i + j)) / X = c + (a + b + d + e + f + g + h + i + j) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pp_pX_ppppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_Xp_ppppppp_c_dX a b c d e f g h i j X : X <> 0 -> (a + (b + X * c + d + e + f + g + h + i + j)) / X = c + (a + b + d + e + f + g + h + i + j) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pp_Xp_ppppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_pX_pppppppp_c_dX a b c d e f g h i j k X : X <> 0 -> (a + (b + c * X + d + e + f + g + h + i + j + k)) / X = c + (a + b + d + e + f + g + h + i + j + k) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pp_pX_pppppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_Xp_pppppppp_c_dX a b c d e f g h i j k X : X <> 0 -> (a + (b + X * c + d + e + f + g + h + i + j + k)) / X = c + (a + b + d + e + f + g + h + i + j + k) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pp_Xp_pppppppp_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_p_o_pp_pX__c_p_c_dX a b c d e X : X <> 0 -> (a + (b + (c + d * X) + e)) / X = d + (a + b + c + e) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_p_o_pp_pX__c_p_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_p_o_pp_Xp__c_p_c_dX a b c d e X : X <> 0 -> (a + (b + (c + X * d) + e)) / X = d + (a + b + c + e) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_p_o_pp_Xp__c_p_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppp_o_pp_pX__c_pdX a b c d e X : X <> 0 -> (a + b + (c + d * X) + e) / X = d + (a + b + c + e) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppp_o_pp_pX__c_pdX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppp_o_pp_Xp__c_pdX a b c d e X : X <> 0 -> (a + b + (c + X * d) + e) / X = d + (a + b + c + e) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppp_o_pp_Xp__c_pdX using zutil_arith : zsimplify.
-  Lemma simplify_div_pppp_pXp_ppdX a b c d e f X : X <> 0 -> (a + b + c * X * d + e + f) / X = (a + b + e + f + c*d*X) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pppp_pXp_ppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_pppp_Xpp_ppdX a b c d e f X : X <> 0 -> (a + b + X * c * d + e + f) / X = (a + b + e + f + c*d*X) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pppp_Xpp_ppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppp_pXp_ppdX a b c d e X : X <> 0 -> (a + b * X * c + d + e) / X = (a + d + e + b*c*X) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppp_pXp_ppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_ppp_Xpp_ppdX a b c d e X : X <> 0 -> (a + X * b * c + d + e) / X = (a + d + e + b*c*X) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_ppp_Xpp_ppdX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_p_o_pp_pXp__c_p_c_dX a b c d e f X : X <> 0 -> (a + (b + (c + d * X * e) + f)) / X = (a + b + c + f + d*e*X) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_p_o_pp_pXp__c_p_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_p_o_pp_Xpp__c_p_c_dX a b c d e f X : X <> 0 -> (a + (b + (c + X * d * e) + f)) / X = (a + b + c + f + d*e*X) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_p_o_pp_Xpp__c_p_c_dX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_pXp__c_pdX a b c d e X : X <> 0 -> (a + (b + c * X * d) + e) / X = (a + b + e + c*d*X) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pp_pXp__c_pdX using zutil_arith : zsimplify.
-  Lemma simplify_div_pp_o_pp_Xpp__c_pdX a b c d e X : X <> 0 -> (a + (b + X * c * d) + e) / X = (a + b + e + c*d*X) / X.
-  Proof. simplify_div_tac. Qed.
-  Hint Rewrite simplify_div_pp_o_pp_Xpp__c_pdX using zutil_arith : zsimplify.
-
-
-  (* Naming convention: [X] for thing being aggregated, [p] for plus,
-     [m] for minus, [_] for parentheses *)
-  (* Python code to generate these hints:
-<<
-#!/usr/bin/env python
-
-def sgn(v):
-    if v < 0:
-        return -1
-    elif v == 0:
-        return 0
-    elif v > 0:
-        return 1
-
-def to_eqn(name):
-    vars_left = list('abcdefghijklmnopqrstuvwxyz')
-    ret = ''
-    close = ''
-    while name:
-        if name[0] == 'X':
-            ret += ' X'
-            name = name[1:]
-        elif not name[0].isdigit():
-            ret += ' ' + vars_left[0]
-            vars_left = vars_left[1:]
-        if name:
-            if name[0] == 'm': ret += ' -'
-            elif name[0] == 'p': ret += ' +'
-            elif name[0].isdigit(): ret += ' %s *' % name[0]
-            name = name[1:]
-        if name and name[0] == '_':
-            ret += ' ('
-            close += ')'
-            name = name[1:]
-    if ret[-1] != 'X':
-        ret += ' ' + vars_left[0]
-    return (ret + close).strip().replace('( ', '(')
-
-def simplify(eqn):
-    counts = {}
-    sign_stack = [1, 1]
-    for i in eqn:
-        if i == ' ': continue
-        elif i == '(': sign_stack.append(sign_stack[-1])
-        elif i == ')': sign_stack.pop()
-        elif i == '+': sign_stack.append(sgn(sign_stack[-1]))
-        elif i == '-': sign_stack.append(-sgn(sign_stack[-1]))
-        elif i == '*': continue
-        elif i.isdigit(): sign_stack[-1] *= int(i)
-        else:
-            counts[i] = counts.get(i,0) + sign_stack.pop()
-    ret = ''
-    for k in sorted(counts.keys()):
-        if counts[k] == 1: ret += ' + %s' % k
-        elif counts[k] == -1: ret += ' - %s' % k
-        elif counts[k] < 0: ret += ' - %d * %s' % (abs(counts[k]), k)
-        elif counts[k] > 0: ret += ' + %d * %s' % (abs(counts[k]), k)
-    if ret == '': ret = '0'
-    return ret.strip(' +')
-
-
-def to_def(name):
-    eqn = to_eqn(name)
-    return r'''  Lemma simplify_%s %s X : %s = %s.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_%s : zsimplify.''' % (name, ' '.join(sorted(set(eqn) - set('*+-() 0123456789X'))), eqn, simplify(eqn), name)
-
-names = []
-names += ['%sX%s%sX' % (a, b, c) for a in 'mp' for b in 'mp' for c in 'mp']
-names += ['%sX%s_X%s' % (a, b, c) for a in 'mp' for b in 'mp' for c in 'mp']
-names += ['X%s%s_X%s' % (a, b, c) for a in 'mp' for b in 'mp' for c in 'mp']
-names += ['%sX%s_%sX' % (a, b, c) for a in 'mp' for b in 'mp' for c in 'mp']
-names += ['X%s%s_%sX' % (a, b, c) for a in 'mp' for b in 'mp' for c in 'mp']
-names += ['m2XpX', 'm2XpXpX']
-
-print(r'''  (* Python code to generate these hints:
-<<''')
-print(open(__file__).read())
-print(r'''
->> *)''')
-for name in names:
-    print(to_def(name))
-
-
->> *)
-  Lemma simplify_mXmmX a b X : a - X - b - X = - 2 * X + a - b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_mXmmX : zsimplify.
-  Lemma simplify_mXmpX a b X : a - X - b + X = a - b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_mXmpX : zsimplify.
-  Lemma simplify_mXpmX a b X : a - X + b - X = - 2 * X + a + b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_mXpmX : zsimplify.
-  Lemma simplify_mXppX a b X : a - X + b + X = a + b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_mXppX : zsimplify.
-  Lemma simplify_pXmmX a b X : a + X - b - X = a - b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_pXmmX : zsimplify.
-  Lemma simplify_pXmpX a b X : a + X - b + X = 2 * X + a - b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_pXmpX : zsimplify.
-  Lemma simplify_pXpmX a b X : a + X + b - X = a + b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_pXpmX : zsimplify.
-  Lemma simplify_pXppX a b X : a + X + b + X = 2 * X + a + b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_pXppX : zsimplify.
-  Lemma simplify_mXm_Xm a b X : a - X - (X - b) = - 2 * X + a + b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_mXm_Xm : zsimplify.
-  Lemma simplify_mXm_Xp a b X : a - X - (X + b) = - 2 * X + a - b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_mXm_Xp : zsimplify.
-  Lemma simplify_mXp_Xm a b X : a - X + (X - b) = a - b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_mXp_Xm : zsimplify.
-  Lemma simplify_mXp_Xp a b X : a - X + (X + b) = a + b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_mXp_Xp : zsimplify.
-  Lemma simplify_pXm_Xm a b X : a + X - (X - b) = a + b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_pXm_Xm : zsimplify.
-  Lemma simplify_pXm_Xp a b X : a + X - (X + b) = a - b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_pXm_Xp : zsimplify.
-  Lemma simplify_pXp_Xm a b X : a + X + (X - b) = 2 * X + a - b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_pXp_Xm : zsimplify.
-  Lemma simplify_pXp_Xp a b X : a + X + (X + b) = 2 * X + a + b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_pXp_Xp : zsimplify.
-  Lemma simplify_Xmm_Xm a b X : X - a - (X - b) = - a + b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_Xmm_Xm : zsimplify.
-  Lemma simplify_Xmm_Xp a b X : X - a - (X + b) = - a - b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_Xmm_Xp : zsimplify.
-  Lemma simplify_Xmp_Xm a b X : X - a + (X - b) = 2 * X - a - b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_Xmp_Xm : zsimplify.
-  Lemma simplify_Xmp_Xp a b X : X - a + (X + b) = 2 * X - a + b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_Xmp_Xp : zsimplify.
-  Lemma simplify_Xpm_Xm a b X : X + a - (X - b) = a + b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_Xpm_Xm : zsimplify.
-  Lemma simplify_Xpm_Xp a b X : X + a - (X + b) = a - b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_Xpm_Xp : zsimplify.
-  Lemma simplify_Xpp_Xm a b X : X + a + (X - b) = 2 * X + a - b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_Xpp_Xm : zsimplify.
-  Lemma simplify_Xpp_Xp a b X : X + a + (X + b) = 2 * X + a + b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_Xpp_Xp : zsimplify.
-  Lemma simplify_mXm_mX a b X : a - X - (b - X) = a - b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_mXm_mX : zsimplify.
-  Lemma simplify_mXm_pX a b X : a - X - (b + X) = - 2 * X + a - b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_mXm_pX : zsimplify.
-  Lemma simplify_mXp_mX a b X : a - X + (b - X) = - 2 * X + a + b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_mXp_mX : zsimplify.
-  Lemma simplify_mXp_pX a b X : a - X + (b + X) = a + b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_mXp_pX : zsimplify.
-  Lemma simplify_pXm_mX a b X : a + X - (b - X) = 2 * X + a - b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_pXm_mX : zsimplify.
-  Lemma simplify_pXm_pX a b X : a + X - (b + X) = a - b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_pXm_pX : zsimplify.
-  Lemma simplify_pXp_mX a b X : a + X + (b - X) = a + b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_pXp_mX : zsimplify.
-  Lemma simplify_pXp_pX a b X : a + X + (b + X) = 2 * X + a + b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_pXp_pX : zsimplify.
-  Lemma simplify_Xmm_mX a b X : X - a - (b - X) = 2 * X - a - b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_Xmm_mX : zsimplify.
-  Lemma simplify_Xmm_pX a b X : X - a - (b + X) = - a - b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_Xmm_pX : zsimplify.
-  Lemma simplify_Xmp_mX a b X : X - a + (b - X) = - a + b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_Xmp_mX : zsimplify.
-  Lemma simplify_Xmp_pX a b X : X - a + (b + X) = 2 * X - a + b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_Xmp_pX : zsimplify.
-  Lemma simplify_Xpm_mX a b X : X + a - (b - X) = 2 * X + a - b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_Xpm_mX : zsimplify.
-  Lemma simplify_Xpm_pX a b X : X + a - (b + X) = a - b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_Xpm_pX : zsimplify.
-  Lemma simplify_Xpp_mX a b X : X + a + (b - X) = a + b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_Xpp_mX : zsimplify.
-  Lemma simplify_Xpp_pX a b X : X + a + (b + X) = 2 * X + a + b.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_Xpp_pX : zsimplify.
-  Lemma simplify_m2XpX a X : a - 2 * X + X = - X + a.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_m2XpX : zsimplify.
-  Lemma simplify_m2XpXpX a X : a - 2 * X + X + X = a.
-  Proof. lia. Qed.
-  Hint Rewrite simplify_m2XpXpX : zsimplify.
 
   Section equiv_modulo.
     Context (N : Z).
@@ -3371,25 +2237,6 @@ Ltac pull_Zmod :=
            => rewrite (Zmod_mod x z)
          | _ => progress autorewrite with pull_Zmod
          end.
-
-Ltac Ztestbit_full_step :=
-  match goal with
-  | _ => progress autorewrite with Ztestbit_full
-  | [ |- context[Z.testbit ?x ?y] ]
-    => rewrite (Z.testbit_neg_r x y) by zutil_arith
-  | [ |- context[Z.testbit ?x ?y] ]
-    => rewrite (Z.bits_above_pow2 x y) by zutil_arith
-  | [ |- context[Z.testbit ?x ?y] ]
-    => rewrite (Z.bits_above_log2 x y) by zutil_arith
-  end.
-Ltac Ztestbit_full := repeat Ztestbit_full_step.
-
-Ltac Ztestbit_step :=
-  match goal with
-  | _ => progress autorewrite with Ztestbit
-  | _ => progress Ztestbit_full_step
-  end.
-Ltac Ztestbit := repeat Ztestbit_step.
 
 (** Change [_ mod _ = _ mod _] to [Z.equiv_modulo _ _ _] *)
 Ltac Zmod_to_equiv_modulo :=
