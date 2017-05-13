@@ -15,5 +15,5 @@ Module Z.
   Definition add_with_get_carry (bitwidth : Z) (c : Z) (x y : Z) : Z * Z
     := get_carry bitwidth (add_with_carry c x y).
   Definition add_get_carry (bitwidth : Z) (x y : Z) : Z * Z
-    := get_carry bitwidth (x + y).
+    := add_with_get_carry bitwidth 0 x y.
 End Z.
