@@ -6,6 +6,7 @@ Require Import Crypto.Compilers.ExprInversion.
 Require Import Crypto.Util.Sigma Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.RewriteHyp.
+Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SplitInContext.
 
 Local Open Scope ctype_scope.
@@ -310,6 +311,41 @@ Section language.
                  (SmartVarfMap2 (fun t (a : var1' t) (b : var2 t) => (a, b)) x' y))
       -> snd a = snd b.
   Proof using Type. intro; eapply flatten_binding_list_SmartVarfMap2_pair_In_eq2_iff; eauto. Qed.
+
+  Lemma flatten_binding_list_SmartVarfMap2_pair_in_generalize2
+        {var1 var1' var2 var2' var3 var3'} {T x x' y y' t a b}
+    : List.In (existT _ t (a, b))
+              (@flatten_binding_list
+                 base_type_code _ _ T
+                 (SmartVarfMap2 (fun t (a : var1 t) (b : var2 t) => (a, b)) x y)
+                 (SmartVarfMap2 (fun t (a : var1' t) (b : var2' t) => (a, b)) x' y'))
+      -> (forall z z',
+             exists a' b',
+               List.In (existT _ t ((fst a, a'), (fst b, b')))
+                       (@flatten_binding_list
+                          base_type_code _ _ T
+                          (SmartVarfMap2 (fun t (a : var1 t) (b : var3 t) => (a, b)) x z)
+                          (SmartVarfMap2 (fun t (a : var1' t) (b : var3' t) => (a, b)) x' z'))).
+  Proof.
+    induction T;
+      repeat first [ progress intros
+                   | progress subst
+                   | progress inversion_sigma
+                   | progress inversion_prod
+                   | progress simpl in *
+                   | progress destruct_head'_or
+                   | progress destruct_head'_prod
+                   | progress destruct_head'_ex
+                   | tauto
+                   | solve [ eauto ]
+                   | progress specialize_by_assumption
+                   | setoid_rewrite List.in_app_iff
+                   | match goal with
+                     | [ H : context[List.In _ (_ ++ _)] |- _ ] => setoid_rewrite List.in_app_iff in H
+                     | [ H : forall x : interp_flat_type ?var ?T, _, x' : interp_flat_type ?var ?T |- _ ]
+                       => specialize (H x')
+                     end ].
+  Qed.
 End language.
 
 Hint Resolve wff_SmartVarf wff_SmartVarVarf wff_SmartVarVarf_nil : wf.
