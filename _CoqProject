@@ -294,6 +294,13 @@ src/Util/Tactics/UnifyAbstractReflexivity.v
 src/Util/Tactics/UniquePose.v
 src/Util/Tactics/VM.v
 src/Util/ZUtil/Definitions.v
+src/Util/ZUtil/Hints.v
 src/Util/ZUtil/Morphisms.v
 src/Util/ZUtil/Notations.v
 src/Util/ZUtil/Stabilization.v
+src/Util/ZUtil/Hints/Core.v
+src/Util/ZUtil/Hints/PullPush.v
+src/Util/ZUtil/Hints/ZArith.v
+src/Util/ZUtil/Hints/Ztestbit.v
+src/Util/ZUtil/Tactics/PeelLe.v
+src/Util/ZUtil/ZSimplify/Core.v
