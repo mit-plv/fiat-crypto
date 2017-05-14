@@ -106,7 +106,7 @@ $(DISPLAY_JAVA_VO:.vo=.log) : %JavaDisplay.log : %.vo %JavaDisplay.v src/Compile
 	$(SHOW)"COQC $*JavaDisplay > $@"
 	$(HIDE)$(COQC) $(COQDEBUG) $(COQFLAGS) $*JavaDisplay.v > $@.tmp && mv -f $@.tmp $@
 
-src/Specific/x25519_c64.c: src/Specific/x25519_c64.c.sh src/Specific/IntegrationTestMulDisplay.log
+src/Specific/x25519_c64.c: src/Specific/x25519_c64.c.sh src/Specific/IntegrationTestLadderstepDisplay.log src/Specific/IntegrationTestMulDisplay.log src/Specific/IntegrationTestSquareDisplay.log
 	bash src/Specific/x25519_c64.c.sh > src/Specific/x25519_c64.c
 
 clean::

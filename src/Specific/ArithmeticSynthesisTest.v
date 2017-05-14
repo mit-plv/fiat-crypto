@@ -160,7 +160,7 @@ Section Ops51.
          Positional.mul_cps (n:=sz) (m:=sz2) wt a b
                             (fun ab => Positional.reduce_cps (n:=sz) (m:=sz2) wt s c ab id)) in
     solve_op_F wt x.
-    transitivity (
+    instantiate (1 := fun a b =>
       (* Micro-optimized form from curve25519-donna-c64 by Adam Langley (Google) and Daniel Bernstein. See <https://github.com/agl/curve25519-donna/blob/master/LICENSE.md>. *)
       let '(r4, r3, r2, r1, r0) := a in
       let '(s4, s3, s2, s1, s0) := b in
@@ -181,18 +181,38 @@ Section Ops51.
       dlet t3 := t3 + r4' * s4 in
       (t4, t3, t2, t1, t0)
     ).
-    Focus 2. {
-      break_match; cbv [Let_In runtime_mul runtime_add]; repeat apply (f_equal2 pair); ring.
-    } Unfocus.
-    reflexivity.
+    break_match; cbv [Let_In runtime_mul runtime_add]; repeat apply (f_equal2 pair); ring.
+  Defined.
 
-    (* rough breakdown of synthesis time *)
-    (* 1.2s for side conditions -- should improve significantly when [chained_carries] gets a correctness lemma *)
-    (* basesystem_partial_evaluation_RHS (primarily vm_compute): 1.8s, which gets re-computed during defined *)
-
-    (* doing [cbv -[Let_In runtime_add runtime_mul]] took 37s *)
-
-  Defined. (* 3s *)
+  Definition square_sig :
+    {mul : (Z^sz -> Z^sz -> Z^sz)%type |
+               forall a : Z^sz,
+                 let eval := Positional.Fdecode (m := m) wt in
+                 eval (mul a a) = (eval a  * eval a)%F}.
+  Proof.
+    eexists; cbv beta zeta; intros.
+    pose proof wt_nonzero.
+    let x := constr:(
+         Positional.mul_cps (n:=sz) (m:=sz2) wt a a
+                            (fun ab => Positional.reduce_cps (n:=sz) (m:=sz2) wt s c ab id)) in
+    solve_op_F wt x.
+    instantiate (1 := fun a _ =>
+      (* Micro-optimized form from curve25519-donna-c64 by Adam Langley (Google) and Daniel Bernstein. See <https://github.com/agl/curve25519-donna/blob/master/LICENSE.md>. *)
+      let '(r4, r3, r2, r1, r0) := a in
+      dlet d0 := r0 * 2 in
+      dlet d1 := r1 * 2 in
+      dlet d2 := r2 * 2 * 19 in
+      dlet d419 := r4 * 19 in
+      dlet d4 := d419 * 2 in
+      dlet t0 := r0 * r0 + d4 * r1 + d2 * r3      in
+      dlet t1 := d0 * r1 + d4 * r2 + r3 * r3 * 19 in
+      dlet t2 := d0 * r2 + r1 * r1 + d4 * r3      in
+      dlet t3 := d0 * r3 + d1 * r2 + r4 * d419    in
+      dlet t4 := d0 * r4 + d1 * r3 + r2 * r2      in
+      (t4, t3, t2, t1, t0)
+    ).
+    break_match; cbv [Let_In runtime_mul runtime_add]; repeat apply (f_equal2 pair); ring.
+  Defined.
 
   (* Performs a full carry loop (as specified by carry_chain) *)
   Definition carry_sig :
