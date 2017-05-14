@@ -98,4 +98,15 @@ Module Z.
     auto using f_equal2 with lia.
   Qed.
   Hint Rewrite div_mul_skip_pow' using zutil_arith : zsimplify.
+
+  Lemma div_le_mono_nonneg a b c : 0 <= c -> a <= b -> a / c <= b / c.
+  Proof.
+    destruct (Z_zerop c).
+    { subst; simpl; autorewrite with zsimplify; reflexivity. }
+    { intros; apply Z.div_le_mono; omega. }
+  Qed.
+  Hint Resolve div_le_mono_nonneg : zarith.
+
+  Lemma div_le_mono_pow_pos a b c e : a <= b -> a / Z.pos c ^ e <= b / Z.pos c ^ e.
+  Proof. auto with zarith. Qed.
 End Z.
