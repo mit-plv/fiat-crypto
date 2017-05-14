@@ -457,42 +457,9 @@ Section Freeze.
             {modulo_correct : forall a b, modulo a b = a mod b}
     .
 
-    Definition select_cps {n} (mask cond:Z) (p:Z^n) {T} (f:Z^n->T) :=
-      dlet t := Z.zselect cond 0 mask in Tuple.map_cps (runtime_and t) p f.
-
-    Definition select {n} mask cond p := @select_cps n mask cond p _ id.
-    Lemma select_id {n} mask cond p T f :
-      @select_cps n mask cond p T f = f (select mask cond p).
-    Proof.
-      cbv [select select_cps Let_In]; autorewrite with uncps push_id;
-        reflexivity.
-    Qed.
-    Hint Opaque select : uncps.
-    Hint Rewrite @select_id : uncps.
-
-    Lemma map_and_0 {n} (p:Z^n) :
-      Tuple.map (Z.land 0) p = B.Positional.zeros n.
-    Proof.
-      induction n; [destruct p; reflexivity | ].
-      rewrite (subst_append p), map_append, Z.land_0_l, IHn.
-      reflexivity.
-    Qed.
-
-    Lemma eval_select {n} mask cond x (H:Tuple.map (Z.land mask) x = x) :
-      B.Positional.eval weight (@select n mask cond x) =
-      if dec (cond = 0) then 0 else  B.Positional.eval weight x.
-    Proof.
-      cbv [select select_cps Let_In].
-      autorewrite with uncps push_id.
-      rewrite Z.zselect_correct; break_match.
-      { rewrite map_and_0. apply B.Positional.eval_zeros. }
-      {  change runtime_and with Z.land. rewrite H; reflexivity. }
-    Qed.
-    Hint Rewrite @eval_select using assumption : push_basesystem_eval.
-
     Definition conditional_add_cps {n} mask cond (p q : Z^n)
                {T} (f:_->T) :=
-      select_cps mask cond q
+      B.Positional.select_cps mask cond q
                  (fun qq => Columns.add_cps (div:=div) (modulo:=modulo) (add_get_carry:=Z.add_get_carry_full) weight p qq f).
     Definition conditional_add {n} mask cond p q :=
       @conditional_add_cps n mask cond p q _ id.
