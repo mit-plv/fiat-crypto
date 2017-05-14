@@ -76,9 +76,9 @@ Reserved Notation "a # b" (at level 55, no associativity). (* match with theorie
 Reserved Notation "'plet' x := y 'in' z"
          (at level 200, z at level 200, format "'plet'  x  :=  y  'in' '//' z").
 Reserved Notation "'nlet' x := A 'in' b"
-         (at level 200, b at level 200, format "'nlet'  x  :=  A  'in' '//' b").
+         (at level 200, b at level 200, x at level 99, format "'nlet'  x  :=  A  'in' '//' b").
 Reserved Notation "'nlet' x : tx := A 'in' b"
-         (at level 200, b at level 200, format "'nlet'  x  :  tx  :=  A  'in' '//' b").
+         (at level 200, b at level 200, x at level 99, format "'nlet'  x  :  tx  :=  A  'in' '//' b").
 Reserved Notation "'slet' x .. y := A 'in' b"
          (at level 200, x binder, y binder, b at level 200, format "'slet'  x .. y  :=  A  'in' '//' b").
 Reserved Notation "'llet' x := A 'in' b"
