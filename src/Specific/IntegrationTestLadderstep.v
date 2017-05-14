@@ -52,16 +52,42 @@ Section BoundedField25p5.
   (** TODO(jadep,andreser): Move to NewBaseSystemTest? *)
   Definition FMxzladderstep := @M.xzladderstep (F m) F.add F.sub F.mul.
 
+  Section with_notations.
+    Local Infix "+" := (proj1_sig add_sig).
+    Local Notation "a * b" := (proj1_sig carry_sig (proj1_sig mul_sig a b)).
+    Local Notation "x ^ 2" := (proj1_sig carry_sig (proj1_sig square_sig x)).
+    Local Infix "-" := (proj1_sig sub_sig).
+    Definition Mxzladderstep a24 x1 Q Q'
+      := match Q, Q' with
+         | (x, z), (x', z')
+           => dlet A := x+z in
+              dlet B := x-z in
+              dlet AA := A^2 in
+              dlet BB := B^2 in
+              dlet x2 := AA*BB in
+              dlet E := AA-BB in
+              dlet z2 := E*(AA + a24*E) in
+              dlet C := x'+z' in
+              dlet D := x'-z' in
+              dlet CB := C*B in
+              dlet DA := D*A in
+              dlet x3 := (DA+CB)^2 in
+              dlet z3 := x1*(DA-CB)^2 in
+              ((x2, z2), (x3, z3))%core
+         end.
+  End with_notations.
+
+
   (** TODO(jadep,andreser): Move to NewBaseSystemTest? *)
   Definition Mxzladderstep_sig
     : { xzladderstep : tuple Z sz -> tuple Z sz -> tuple Z sz * tuple Z sz -> tuple Z sz * tuple Z sz -> tuple Z sz * tuple Z sz * (tuple Z sz * tuple Z sz)
       | forall a24 x1 Q Q', let eval := B.Positional.Fdecode wt in Tuple.map (n:=2) (Tuple.map (n:=2) eval) (xzladderstep a24 x1 Q Q') = FMxzladderstep (eval a24) (eval x1) (Tuple.map (n:=2) eval Q) (Tuple.map (n:=2) eval Q') }.
   Proof.
-    exists (@M.xzladderstep _ (proj1_sig add_sig) (proj1_sig sub_sig) (fun x y => proj1_sig carry_sig (proj1_sig mul_sig x y))).
+    exists Mxzladderstep.
     intros.
-    cbv [FMxzladderstep M.xzladderstep].
+    cbv [Mxzladderstep FMxzladderstep M.xzladderstep].
     destruct Q, Q'; cbv [map map' fst snd Let_In eval].
-    repeat rewrite ?(proj2_sig add_sig), ?(proj2_sig mul_sig), ?(proj2_sig sub_sig), ?(proj2_sig carry_sig).
+    repeat rewrite ?(proj2_sig add_sig), ?(proj2_sig mul_sig), ?(proj2_sig square_sig), ?(proj2_sig sub_sig), ?(proj2_sig carry_sig).
     reflexivity.
   Defined.
 
@@ -101,13 +127,13 @@ Section BoundedField25p5.
       rewrite <- (proj2_sig Mxzladderstep_sig).
       apply f_equal.
       cbv [proj1_sig]; cbv [Mxzladderstep_sig].
-      context_to_dlet_in_rhs (@M.xzladderstep _ _ _ _ _).
-      cbv [M.xzladderstep a24_sig].
-      do 4 lazymatch goal with
+      context_to_dlet_in_rhs (@Mxzladderstep _).
+      cbv [Mxzladderstep M.xzladderstep a24_sig].
+      do 5 lazymatch goal with
            | [ |- context[@proj1_sig ?a ?b ?f_sig _] ]
              => context_to_dlet_in_rhs (@proj1_sig a b f_sig)
            end.
-      cbv beta iota delta [proj1_sig mul_sig add_sig sub_sig carry_sig runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz]; cbn [fst snd].
+      cbv beta iota delta [proj1_sig mul_sig add_sig sub_sig carry_sig square_sig runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz]; cbn [fst snd].
       refine (proj2 FINAL). }
     subst feW feW_bounded; cbv beta.
     (* jgross start here! *)
