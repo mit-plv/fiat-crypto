@@ -30,15 +30,21 @@ Section language.
   Local Notation nexprf := (@Named.exprf base_type_code op Name).
   Local Notation nexpr := (@Named.expr base_type_code op Name).
 
+  Definition EliminateDeadCode
+             {t} (e : @Named.expr base_type_code op _ t) (ls : list Name)
+    : option (nexpr t)
+    := Let_In (insert_dead_names (Context:=PositiveContext_nd) None e ls) (* help vm_compute by factoring this out *)
+              (fun names => register_reassign (InContext:=PositiveContext_nd) (ReverseContext:=Context) Pos.eqb empty empty e names).
+
   Definition CompileAndEliminateDeadCode
              {t} (e : Expr t) (ls : list Name)
     : option (nexpr t)
     := let e := compile (Name:=positive) (e _) (List.map Pos.of_nat (seq 1 (CountBinders e))) in
        match e with
-       | Some e => Let_In (insert_dead_names (Context:=PositiveContext_nd) None e ls) (* help vm_compute by factoring this out *)
-                          (fun names => register_reassign (InContext:=PositiveContext_nd) (ReverseContext:=Context) Pos.eqb empty empty e names)
+       | Some e => EliminateDeadCode e ls
        | None => None
        end.
 End language.
 
+Global Arguments EliminateDeadCode {_ _ _ _ t} e ls.
 Global Arguments CompileAndEliminateDeadCode {_ _ _ _ t} e ls.
