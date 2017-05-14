@@ -1,6 +1,8 @@
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
+Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Hints.ZArith.
+Require Import Crypto.Util.Prod Crypto.Util.Tactics.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
 Require Import Crypto.Util.LetIn.
@@ -49,4 +51,23 @@ Module Z.
       apply add_get_carry_to_add_with_get_carry_cps_gen.
     Qed.
   End with_bitwidth.
+  
+  Local Hint Unfold Z.add_get_carry_full Z.add_get_carry
+        Z.add_with_get_carry Z.get_carry Z.add_with_carry.
+  Lemma add_get_carry_full_mod s x y :
+    fst (Z.add_get_carry_full s x y)  = (x + y) mod s.
+  Proof.
+    repeat progress autounfold.
+    break_match; autorewrite with cancel_pair zsimplify;
+      reflexivity.
+  Qed.
+
+  Lemma add_get_carry_full_div s x y :
+    snd (Z.add_get_carry_full s x y)  = (x + y) / s.
+  Proof.
+    repeat progress autounfold.
+    break_match; autorewrite with cancel_pair zsimplify;
+      reflexivity.
+  Qed.
+  
 End Z.
