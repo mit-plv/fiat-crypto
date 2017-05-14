@@ -9,6 +9,9 @@ Require Import Crypto.Util.LetIn Crypto.Util.CPSUtil.
 Require Import Crypto.Util.Tuple Crypto.Util.ListUtil.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Decidable Crypto.Util.ZUtil.
+Require Import Crypto.Util.ZUtil.Definitions.
+Require Import Crypto.Util.ZUtil.AddGetCarry.
+Require Import Crypto.Util.ZUtil.Zselect.
 Local Notation "A ^ n" := (tuple A n) : type_scope.
 
 (***
@@ -449,62 +452,80 @@ Section Freeze.
             {weight_positive : forall i, weight i > 0}
             {weight_multiples : forall i, weight (S i) mod weight i = 0}
             {weight_divides : forall i : nat, weight (S i) / weight i > 0}
-            (* add_get_carry takes in a number at which to split output *)
-            {add_get_carry: Z ->Z -> Z -> (Z * Z)}
-            {add_get_carry_mod : forall s x y,
-                fst (add_get_carry s x y)  = (x + y) mod s}
-            {add_get_carry_div : forall s x y,
-                snd (add_get_carry s x y)  = (x + y) / s}
             {div modulo : Z -> Z -> Z}
             {div_correct : forall a b, div a b = a / b}
             {modulo_correct : forall a b, modulo a b = a mod b}
-            {select_cps : forall n, Z -> Z^n -> forall {T}, (Z^n->T) -> T}
-            {select : forall n, Z -> Z^n -> Z^n}
-            {select_id : forall n cond x T f, @select_cps n cond x T f = f (select n cond x)}
-            {eval_select : forall n cond x,
-                B.Positional.eval weight (select n cond x) = if dec (cond = 0) then 0 else B.Positional.eval weight x}
     .
 
-    Hint Rewrite select_id : uncps.
-    Hint Rewrite eval_select : push_basesystem_eval.
+    Definition select_cps {n} (mask cond:Z) (p:Z^n) {T} (f:Z^n->T) :=
+      dlet t := Z.zselect cond 0 mask in Tuple.map_cps (runtime_and t) p f.
 
-  (*
-  (* adds p and q if cond is 0, else adds 0 to p*)
-  Definition conditional_mask_cps {n} (mask:Z) (cond:Z) (p:Z^n)
-             {T} (f:_->T) :=
-    dlet and_term := if (dec (cond = 0)) then 0 else mask in
-    f (Tuple.map (Z.land and_term) p).
+    Definition select {n} mask cond p := @select_cps n mask cond p _ id.
+    Lemma select_id {n} mask cond p T f :
+      @select_cps n mask cond p T f = f (select mask cond p).
+    Proof.
+      cbv [select select_cps Let_In]; autorewrite with uncps push_id;
+        reflexivity.
+    Qed.
+    Hint Opaque select : uncps.
+    Hint Rewrite @select_id : uncps.
 
-  Definition conditional_mask {n} mask cond p :=
-    @conditional_mask_cps n mask cond p _ id.
-  Lemma conditional_mask_id {n} mask cond p T f:
-    @conditional_mask_cps n mask cond p T f
-    = f (conditional_mask mask cond p).
+    Lemma map_and_0 {n} (p:Z^n) :
+      Tuple.map (Z.land 0) p = B.Positional.zeros n.
+    Proof.
+      induction n; [destruct p; reflexivity | ].
+      rewrite (subst_append p), map_append, Z.land_0_l, IHn.
+      reflexivity.
+    Qed.
+
+    Lemma eval_select {n} mask cond x (H:Tuple.map (Z.land mask) x = x) :
+      B.Positional.eval weight (@select n mask cond x) =
+      if dec (cond = 0) then 0 else  B.Positional.eval weight x.
+    Proof.
+      cbv [select select_cps Let_In].
+      autorewrite with uncps push_id.
+      rewrite Z.zselect_correct; break_match.
+      { rewrite map_and_0. apply B.Positional.eval_zeros. }
+      {  change runtime_and with Z.land. rewrite H; reflexivity. }
+    Qed.
+    Hint Rewrite @eval_select using assumption : push_basesystem_eval.
+
+    Definition conditional_add_cps {n} mask cond (p q : Z^n)
+               {T} (f:_->T) :=
+      select_cps mask cond q
+                 (fun qq => Columns.add_cps (div:=div) (modulo:=modulo) (add_get_carry:=Z.add_get_carry_full) weight p qq f).
+    Definition conditional_add {n} mask cond p q :=
+      @conditional_add_cps n mask cond p q _ id.
+    Lemma conditional_add_id {n} mask cond p q T f:
+      @conditional_add_cps n mask cond p q T f
+      = f (conditional_add mask cond p q).
+    Proof.
+      cbv [conditional_add_cps conditional_add]; autounfold.
+      autorewrite with uncps push_id; reflexivity.
+    Qed.
+    Hint Opaque conditional_add : uncps.
+    Hint Rewrite @conditional_add_id : uncps.
+
+    Lemma eval_conditional_add {n} mask cond p q (n_nonzero:n<>0%nat)
+      (H:Tuple.map (Z.land mask) q = q) :
+    B.Positional.eval weight (snd (@conditional_add n mask cond p q))
+    = B.Positional.eval weight p + (if (dec (cond = 0)) then 0 else B.Positional.eval weight q) - weight n * (fst (conditional_add mask cond p q)).
   Proof.
-    cbv [conditional_mask_cps conditional_mask Let_In]; break_match;
-      autounfold; autorewrite with uncps push_id; reflexivity.
+    cbv [conditional_add_cps conditional_add];
+      repeat progress autounfold in *.
+    pose proof Z.add_get_carry_full_mod.
+    pose proof Z.add_get_carry_full_div.
+    autorewrite with uncps push_id push_basesystem_eval.
+    break_match;
+      match goal with
+        |- context [weight ?n * (?x / weight ?n)] =>
+        pose proof (Z.div_mod x (weight n) (weight_nonzero n))
+      end; omega.
   Qed.
-  Hint Opaque conditional_mask : uncps.
-  Hint Rewrite @conditional_mask_id : uncps.
-
-   *)
-
-  Definition conditional_add_cps {n} cond (p q : Z^n) {T} (f:_->T) :=
-    select_cps n cond q _
-    (fun qq => Columns.add_cps (div:=div) (modulo:=modulo) (add_get_carry:=add_get_carry) weight p qq f).
-  Definition conditional_add {n} cond p q :=
-    @conditional_add_cps n cond p q _ id.
-  Lemma conditional_add_id {n} cond p q T f:
-    @conditional_add_cps n cond p q T f
-    = f (conditional_add cond p q).
-  Proof.
-    cbv [conditional_add_cps conditional_add]; autounfold.
-    autorewrite with uncps push_id; reflexivity.
-  Qed.
-  Hint Opaque conditional_add : uncps.
-  Hint Rewrite @conditional_add_id : uncps.
-  
-  
+  Hint Rewrite @eval_conditional_add using (omega || assumption)
+    : push_basesystem_eval.
+    
+    
   (*
     The input to [freeze] should be less than 2*m (this can probably
     be accomplished by a single carry_reduce step, for most moduli).
@@ -520,38 +541,23 @@ Section Freeze.
     (3) discard the carry after this last addition; it should be 1 if
     the carry in step 3 was -1, so they cancel out.
    *)
-  Definition freeze_cps {n} (m:Z^n) (p:Z^n) {T} (f : Z^n->T) :=
+  Definition freeze_cps {n} mask (m:Z^n) (p:Z^n) {T} (f : Z^n->T) :=
     Columns.sub_cps (div:=div) (modulo:=modulo)
-                    (add_get_carry:=add_get_carry) weight p m
-      (fun carry_p => conditional_add_cps (fst carry_p) (snd carry_p) m
+                    (add_get_carry:=Z.add_get_carry_full) weight p m
+      (fun carry_p => conditional_add_cps mask (fst carry_p) (snd carry_p) m
       (fun carry_r => f (snd carry_r)))
   .
 
-  Definition freeze {n} m p :=
-    @freeze_cps n m p _ id.
-  Lemma freeze_id {n} m p T f:
-    @freeze_cps n m p T f = f (freeze m p).
+  Definition freeze {n} mask m p :=
+    @freeze_cps n mask m p _ id.
+  Lemma freeze_id {n} mask m p T f:
+    @freeze_cps n mask m p T f = f (freeze mask m p).
   Proof.
     cbv [freeze_cps freeze]; repeat progress autounfold;
       autorewrite with uncps push_id; reflexivity.
   Qed.
   Hint Opaque freeze : uncps.
   Hint Rewrite @freeze_id : uncps.
-
-  Lemma eval_conditional_add {n} cond p q (n_nonzero:n<>0%nat):
-    B.Positional.eval weight (snd (@conditional_add n cond p q))
-    = B.Positional.eval weight p + (if (dec (cond = 0)) then 0 else B.Positional.eval weight q) - weight n * (fst (conditional_add cond p q)).
-  Proof.
-    cbv [conditional_add_cps conditional_add];
-      repeat progress autounfold in *.
-    autorewrite with uncps push_id push_basesystem_eval.
-    match goal with
-      |- context [weight ?n * (?x / weight ?n)] =>
-      pose proof (Z.div_mod x (weight n) (weight_nonzero n))
-    end; omega.
-  Qed.
-  Hint Rewrite @eval_conditional_add using (omega || assumption)
-    : push_basesystem_eval.
 
   Lemma freezeZ m s c y y0 z z0 c0 a :
     m = s - c ->
@@ -580,19 +586,22 @@ Section Freeze.
       f_equal. ring. }
   Qed.
   
-  Lemma eval_freeze {n} c m p
+  Lemma eval_freeze {n} c mask m p
         (n_nonzero:n<>0%nat)
         (Hc : 0 < B.Associational.eval c < weight n)
+        (Hmask : Tuple.map (Z.land mask) m = m)
         modulus (Hm : B.Positional.eval weight m = Z.pos modulus)
         (Hp : 0 <= B.Positional.eval weight p < 2*(Z.pos modulus))
         (Hsc : Z.pos modulus = weight n - B.Associational.eval c)
     :
       mod_eq modulus
-             (B.Positional.eval weight (@freeze n m p))
+             (B.Positional.eval weight (@freeze n mask m p))
              (B.Positional.eval weight p).
   Proof.
     cbv [freeze_cps freeze conditional_add_cps].
     repeat progress autounfold.
+    pose proof Z.add_get_carry_full_mod.
+    pose proof Z.add_get_carry_full_div.
     autorewrite with uncps push_id push_basesystem_eval.
 
     pose proof (weight_nonzero n).

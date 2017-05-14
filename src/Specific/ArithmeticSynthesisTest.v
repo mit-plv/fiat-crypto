@@ -190,23 +190,6 @@ Section Ops51.
   Require Import Crypto.Arithmetic.Saturated.
 
   Section PreFreeze.
-    Definition add_get_carry (s x y : Z) : Z * Z :=
-        dlet z := (x + y)%RT in (Core.modulo z s, Core.div z s).
-
-    Lemma add_get_carry_mod s x y :
-        fst (add_get_carry s x y) = (x + y) mod s.
-    Proof.
-        cbv [add_get_carry]; autorewrite with cancel_pair.
-        apply modulo_correct.
-    Qed.
-
-    Lemma add_get_carry_div s x y :
-        snd (add_get_carry s x y) = (x + y) / s.
-    Proof.
-        cbv [add_get_carry]; autorewrite with cancel_pair.
-        apply div_correct.
-    Qed.
-
     Lemma wt_pos i : wt i > 0.
     Proof.
         apply Z.lt_gt.
@@ -238,10 +221,9 @@ Section Ops51.
     pose proof wt_nonzero. pose proof wt_pos.
     pose proof div_mod. pose proof wt_divides_full_pos.
     pose proof wt_multiples.
-    pose proof add_get_carry_mod.
-    pose proof add_get_carry_div.
     pose proof div_correct. pose proof modulo_correct.
-    let x := constr:(freeze (n:=5) (add_get_carry:=add_get_carry) (div:=div) (modulo:=modulo) (select_cps:=(@B.Positional.select_cps (zselect bitwidth))) wt m_enc a) in
+    About freeze.
+    let x := constr:(freeze (n:=sz) (div:=div) (modulo:=modulo) wt (Z.ones bitwidth) m_enc a) in
     F_mod_eq;
       transitivity (Positional.eval wt x); repeat autounfold;
         [ | autorewrite with uncps push_id push_basesystem_eval;
@@ -252,7 +234,7 @@ Section Ops51.
             vm_decide].
    cbv[mod_eq]; apply f_equal2;
      [  | reflexivity ]; apply f_equal.
-   cbv - [runtime_opp runtime_add runtime_mul runtime_shr runtime_and Let_In add_get_carry zselect].
+   cbv - [runtime_opp runtime_add runtime_mul runtime_shr runtime_and Let_In Z.add_get_carry Z.zselect].
    reflexivity.
   Defined.
   
