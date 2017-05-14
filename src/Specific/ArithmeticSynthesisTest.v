@@ -185,10 +185,10 @@ Section Ops51.
   Defined.
 
   Definition square_sig :
-    {mul : (Z^sz -> Z^sz -> Z^sz)%type |
+    {square : (Z^sz -> Z^sz)%type |
                forall a : Z^sz,
                  let eval := Positional.Fdecode (m := m) wt in
-                 eval (mul a a) = (eval a  * eval a)%F}.
+                 eval (square a) = (eval a  * eval a)%F}.
   Proof.
     eexists; cbv beta zeta; intros.
     pose proof wt_nonzero.
@@ -196,7 +196,7 @@ Section Ops51.
          Positional.mul_cps (n:=sz) (m:=sz2) wt a a
                             (fun ab => Positional.reduce_cps (n:=sz) (m:=sz2) wt s c ab id)) in
     solve_op_F wt x.
-    instantiate (1 := fun a _ =>
+    instantiate (1 := fun a =>
       (* Micro-optimized form from curve25519-donna-c64 by Adam Langley (Google) and Daniel Bernstein. See <https://github.com/agl/curve25519-donna/blob/master/LICENSE.md>. *)
       let '(r4, r3, r2, r1, r0) := a in
       dlet d0 := r0 * 2 in
