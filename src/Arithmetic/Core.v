@@ -430,7 +430,9 @@ Module B.
       Definition carryterm_cps (w fw:Z) (t:limb) {T} (f:list limb->T) :=
         if dec (fst t = w)
         then dlet t2 := snd t in
-             f ((w*fw, div t2 fw) :: (w, modulo t2 fw) :: @nil limb)
+             dlet d2 := div t2 fw in
+             dlet m2 := modulo t2 fw in
+             f ((w*fw, d2) :: (w, m2) :: @nil limb)
         else f [t].
 
       Definition carryterm w fw t := carryterm_cps w fw t id.
