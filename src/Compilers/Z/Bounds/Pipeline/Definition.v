@@ -81,6 +81,8 @@ Definition PostWfPipeline
        e input_bounds
        (let e := InlineConst e in
         let e := SimplifyArith e in
+        let e := InlineConst e in
+        let e := SimplifyArith e in
         let e := ANormal e in
         let e := InlineConst e in
         (*let e := CSE false e in*)
