@@ -54,8 +54,8 @@ Section BoundedField25p5.
     eexists_sig_etransitivity. all:cbv [phi].
     rewrite <- (proj2_sig square_sig).
     symmetry; rewrite <- (proj2_sig carry_sig); symmetry.
-    set (carry_squareZ := fun a => proj1_sig carry_sig (proj1_sig square_sig a a)).
-    change (proj1_sig carry_sig (proj1_sig square_sig ?a ?a)) with (carry_squareZ a).
+    set (carry_squareZ := fun a => proj1_sig carry_sig (proj1_sig square_sig a)).
+    change (proj1_sig carry_sig (proj1_sig square_sig ?a)) with (carry_squareZ a).
     context_to_dlet_in_rhs carry_squareZ.
     cbv beta iota delta [carry_squareZ proj1_sig square_sig carry_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz].
     reflexivity.
