@@ -158,8 +158,33 @@ Section Ops51.
     pose proof wt_nonzero.
     let x := constr:(
          Positional.mul_cps (n:=sz) (m:=sz2) wt a b
-           (fun ab => Positional.reduce_cps (n:=sz) (m:=sz2) wt s c ab id)) in
-    solve_op_F wt x. reflexivity.
+                            (fun ab => Positional.reduce_cps (n:=sz) (m:=sz2) wt s c ab id)) in
+    solve_op_F wt x.
+    transitivity (
+      (* Micro-optimized form from curve25519-donna-c64 by Adam Langley (Google) and Daniel Bernstein. See <https://github.com/agl/curve25519-donna/blob/master/LICENSE.md>. *)
+      let '(r4, r3, r2, r1, r0) := a in
+      let '(s4, s3, s2, s1, s0) := b in
+      let t0  :=  r0 * s0 in
+      let t1  :=  r0 * s1 + r1 * s0 in
+      let t2  :=  r0 * s2 + r2 * s0 + r1 * s1 in
+      let t3  :=  r0 * s3 + r3 * s0 + r1 * s2 + r2 * s1 in
+      let t4  :=  r0 * s4 + r4 * s0 + r3 * s1 + r1 * s3 + r2 * s2 in
+
+      let r4' := r4*19 in
+      let r1' := r1*19 in
+      let r2' := r2*19 in
+      let r3' := r3*19 in
+
+      let t0 := t0 + r4' * s1 + r1' * s4 + r2' * s3 + r3' * s2 in
+      let t1 := t1 + r4' * s2 + r2' * s4 + r3' * s3 in
+      let t2 := t2 + r4' * s3 + r3' * s4 in
+      let t3 := t3 + r4' * s4 in
+      (t4, t3, t2, t1, t0)
+    ).
+    Focus 2. {
+      break_match; cbv [runtime_mul runtime_add]; repeat apply (f_equal2 pair); ring.
+    } Unfocus.
+    reflexivity.
 
     (* rough breakdown of synthesis time *)
     (* 1.2s for side conditions -- should improve significantly when [chained_carries] gets a correctness lemma *)
