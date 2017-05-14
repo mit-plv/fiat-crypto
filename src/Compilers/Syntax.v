@@ -149,5 +149,5 @@ Module Export Notations.
   Notation "( )" := TT : expr_scope.
   Notation "()" := TT : expr_scope.
   Bind Scope ctype_scope with flat_type.
-  Bind Scope ctype_scope with type.
+  Bind Scope ctype_scope with ctype.
 End Notations.
