@@ -17,6 +17,8 @@ Class cidtac2 {T1 T2} (msg1 : T1) (msg2 : T2) := Build_cidtac2 : True.
 Hint Extern 0 (cidtac2 ?msg1 ?msg2) => idtac msg1 msg2; exact I : typeclass_instances.
 Class cidtac3 {T1 T2 T3} (msg1 : T1) (msg2 : T2) (msg3 : T3) := Build_cidtac3 : True.
 Hint Extern 0 (cidtac3 ?msg1 ?msg2 ?msg3) => idtac msg1 msg2 msg3; exact I : typeclass_instances.
+Class cidtac4 {T1 T2 T3 T4} (msg1 : T1) (msg2 : T2) (msg3 : T3) (msg4 : T4) := Build_cidtac4 : True.
+Hint Extern 0 (cidtac4 ?msg1 ?msg2 ?msg3 ?msg4) => idtac msg1 msg2 msg3 msg4; exact I : typeclass_instances.
 
 Class cfail {T} (msg : T) := Build_cfail : True.
 Hint Extern 0 (cfail ?msg) => idtac "Error:" msg; exact I : typeclass_instances.
@@ -25,36 +27,26 @@ Hint Extern 0 (cfail2 ?msg1 ?msg2) => idtac "Error:" msg1 msg2; exact I : typecl
 Class cfail3 {T1 T2 T3} (msg1 : T1) (msg2 : T2) (msg3 : T3) := Build_cfail3 : True.
 Hint Extern 0 (cfail3 ?msg1 ?msg2 ?msg3) => idtac "Error:" msg1 msg2 msg3; exact I : typeclass_instances.
 
+Ltac constr_run_tac tac :=
+  let dummy := match goal with
+               | _ => tac ()
+               end in
+  constr:(I).
+
 Ltac cidtac msg :=
-  let dummy := match goal with
-               | _ => idtac msg
-               end in
-  constr:(I).
+  constr_run_tac ltac:(fun _ => idtac msg).
 Ltac cidtac2 msg1 msg2 :=
-  let dummy := match goal with
-               | _ => idtac msg1 msg2
-               end in
-  constr:(I).
+  constr_run_tac ltac:(fun _ => idtac msg1 msg2).
 Ltac cidtac3 msg1 msg2 msg3 :=
-  let dummy := match goal with
-               | _ => idtac msg1 msg2 msg3
-               end in
-  constr:(I).
+  constr_run_tac ltac:(fun _ => idtac msg1 msg2 msg3).
+Ltac cidtac4 msg1 msg2 msg3 msg4 :=
+  constr_run_tac ltac:(fun _ => idtac msg1 msg2 msg3 msg4).
 Ltac cfail msg :=
-  let dummy := match goal with
-               | _ => idtac "Error:" msg
-               end in
-  constr:(I : I).
+  constr_run_tac ltac:(fun _ => idtac "Error:" msg).
 Ltac cfail2 msg1 msg2 :=
-  let dummy := match goal with
-               | _ => idtac "Error:" msg1 msg2
-               end in
-  constr:(I : I).
+  constr_run_tac ltac:(fun _ => idtac "Error:" msg1 msg2).
 Ltac cfail3 msg1 msg2 msg3 :=
-  let dummy := match goal with
-               | _ => idtac "Error:" msg1 msg2 msg3
-               end in
-  constr:(I : I).
+  constr_run_tac ltac:(fun _ => idtac "Error:" msg1 msg2 msg3).
 
 Ltac idtac_goal := lazymatch goal with |- ?G => idtac "Goal:" G end.
 Ltac idtac_context :=

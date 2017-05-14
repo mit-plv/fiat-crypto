@@ -26,9 +26,9 @@ End ReifyDebugNotations.
 Ltac debug_enter_reify_idtac funname e :=
   let s := (eval compute in (String.append funname ": Attempting to reify:")) in
   cidtac2 s e.
-Ltac debug_leave_reify_success_idtac funname e :=
+Ltac debug_leave_reify_success_idtac funname e ret :=
   let s := (eval compute in (String.append funname ": Success in reifying:")) in
-  cidtac2 s e.
+  cidtac4 s e " as " ret.
 Ltac debug_leave_reify_failure_idtac funname e :=
   let s := (eval compute in (String.append funname ": Failure in reifying:")) in
   cfail2 s e.
@@ -60,12 +60,12 @@ Ltac debug3 tac :=
   | _ => check_debug_level_then_Set ()
   end.
 Ltac debug_enter_reify2 funname e := debug2 ltac:(fun _ => debug_enter_reify_idtac funname e).
-Ltac debug_leave_reify3_success funname e := debug3 ltac:(fun _ => debug_leave_reify_success_idtac funname e).
+Ltac debug_leave_reify3_success funname e ret := debug3 ltac:(fun _ => debug_leave_reify_success_idtac funname e ret).
 Ltac debug_enter_reify3 funname e := debug2 ltac:(fun _ => debug_enter_reify_idtac funname e).
 Ltac debug_enter_reify_flat_type e := debug_enter_reify3 "reify_flat_type" e.
 Ltac debug_enter_reify_type e := debug_enter_reify3 "reify_type" e.
 Ltac debug_enter_reifyf e := debug_enter_reify2 "reifyf" e.
-Ltac debug_leave_reifyf_success e := debug_leave_reify3_success "reifyf" e.
+Ltac debug_leave_reifyf_success e ret := debug_leave_reify3_success "reifyf" e ret.
 Ltac debug_leave_reifyf_failure e := debug_leave_reify_failure_idtac "reifyf" e.
 Ltac debug_reifyf_case case := debug3 ltac:(fun _ => debug_reifyf_case_idtac case).
 Ltac debug_enter_reify_abs e := debug_enter_reify2 "reify_abs" e.
@@ -314,7 +314,7 @@ Ltac reifyf base_type_code interp_base_type op var e :=
             => cfail2 "Failed to reify:"%string x
           end
         end in
-    let dummy := debug_leave_reifyf_success e in
+    let dummy := debug_leave_reifyf_success e ret in
     ret
   | _ => debug_leave_reifyf_failure e
   end.
