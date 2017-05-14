@@ -16,6 +16,12 @@ Reserved Infix "<=?" (at level 70, no associativity).
 Reserved Infix "!=?" (at level 70, no associativity).
 Reserved Infix "?=" (at level 70, no associativity).
 Reserved Infix "?<" (at level 70, no associativity).
+Reserved Infix "=n?" (at level 70, no associativity).
+Reserved Infix "=Z?" (at level 70, no associativity).
+Reserved Infix "=ₙ?" (at level 70, no associativity).
+Reserved Infix "=ℤ?" (at level 70, no associativity).
+Reserved Infix "=ᶻ?" (at level 70, no associativity).
+Reserved Infix "=ⁿ?" (at level 70, no associativity).
 Reserved Infix ".+" (at level 50).
 Reserved Infix ".*" (at level 50).
 Reserved Notation "x ^ 2" (at level 30, format "x ^ 2").
