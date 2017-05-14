@@ -4,6 +4,7 @@ Require Export Crypto.Compilers.Z.HexNotationConstants.
 Require Export Crypto.Util.Notations.
 
 Reserved Notation "T x = A ; b" (at level 200, b at level 200, format "T  x  =  A ; '//' b").
+Reserved Notation "T0 x , T1 y = A ; b" (at level 200, b at level 200, format "T0  x ,  T1  y  =  A ; '//' b").
 Reserved Notation "x & y" (at level 40).
 (* N.B. M32 is 0xFFFFFFFFL, and is how to cast a 64-bit thing to a 32-bit thing in Java *)
 Reserved Notation "'M32' & x" (at level 200, x at level 9).
@@ -11,6 +12,7 @@ Reserved Notation "'M32' & x" (at level 200, x at level 9).
 Global Open Scope expr_scope.
 
 Notation "T x = A ; b" := (LetIn (tx:=T) A (fun x => b)) : expr_scope.
+Notation "T0 x , T1 y = A ; b" := (LetIn (tx:=Prod T0 T1) A (fun '((x, y)%core) => b)) : expr_scope.
 (* ??? Did I get M32 wrong? *)
 (*Notation "'(int)' x" := (Op (Cast _ (TWord 0)) x).
 Notation "'(int)' x" := (Op (Cast _ (TWord 1)) x).

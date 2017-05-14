@@ -4,11 +4,13 @@ Require Export Crypto.Compilers.Z.HexNotationConstants.
 Require Export Crypto.Util.Notations.
 
 Reserved Notation "T x = A ; b" (at level 200, b at level 200, format "T  x  =  A ; '//' b").
+Reserved Notation "T0 x , T1 y = A ; b" (at level 200, b at level 200, format "T0  x ,  T1  y  =  A ; '//' b").
 Reserved Notation "x & y" (at level 40).
 
 Global Open Scope expr_scope.
 
 Notation "T x = A ; b" := (LetIn (tx:=T) A (fun x => b)) : expr_scope.
+Notation "T0 x , T1 y = A ; b" := (LetIn (tx:=Prod T0 T1) A (fun '((x, y)%core) => b)) : expr_scope.
 (* python:
 <<
 #!/usr/bin/env python
