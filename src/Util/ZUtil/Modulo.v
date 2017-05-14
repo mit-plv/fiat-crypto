@@ -2,6 +2,10 @@ Require Import Coq.ZArith.ZArith Coq.micromega.Lia Coq.ZArith.Znumtheory.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.ZSimplify.Core.
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
+Require Import Crypto.Util.ZUtil.Tactics.ReplaceNegWithPos.
+Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.DestructHead.
 Local Open Scope Z_scope.
 
 Module Z.
@@ -144,4 +148,31 @@ Module Z.
     auto using Z.mod_pos_bound.
   Qed.
   Hint Rewrite mod_div_eq0 using zutil_arith : zsimplify.
+
+  Lemma mod_bound_min_max l x u d (H : l <= x <= u)
+    : (if l / d =? u / d then Z.min (l mod d) (u mod d) else Z.min 0 (d + 1))
+      <= x mod d
+      <= if l / d =? u / d then Z.max (l mod d) (u mod d) else Z.max 0 (d - 1).
+  Proof.
+    destruct (Z_dec d 0) as [ [?|?] | ? ];
+      try solve [ subst; autorewrite with zsimplify; simpl; split; reflexivity
+                | repeat first [ progress Z.div_mod_to_quot_rem
+                               | progress subst
+                               | progress break_innermost_match
+                               | progress Z.ltb_to_lt
+                               | progress destruct_head'_or
+                               | progress destruct_head'_and
+                               | progress apply Z.min_case_strong
+                               | progress apply Z.max_case_strong
+                               | progress intros
+                               | omega
+                               | match goal with
+                                 | [ H : ?x <= ?y, H' : ?y <= ?x |- _ ] => assert (x = y) by omega; clear H H'
+                                 | _ => progress subst
+                                 | [ H : ?d * ?q0 + ?r0 = ?d * ?q1 + ?r1 |- _ ]
+                                   => assert (q0 = q1) by nia; subst q0
+                                 | [ H : ?d * ?q0 + ?r0 <= ?d * ?q1 + ?r1 |- _ ]
+                                   => assert (q0 = q1) by nia; subst q0
+                                 end ] ].
+  Qed.
 End Z.
