@@ -27,8 +27,8 @@ EOF
 grep -oP 'uint\d+_t\W+\w+ = .*;$'
 
 < src/Specific/IntegrationTestMulDisplay.log \
-  grep -- Return | \
-  grep -owP -- 'x\d+' | \
+  grep -- return | sed 's:return::g' | sed 's:Return::g' | \
+  tr -d '(' | tr -d ')' | tr ',' '\n' | grep -o '\S.*\S' | \
   paste -d '=;' \
     <(echo output\[{4,3,2,1,0}\] | tr ' ' '\n') \
     /dev/stdin \
@@ -63,8 +63,8 @@ EOF
 grep -oP 'uint\d+_t\W+\w+ = .*;$'
 
 < src/Specific/IntegrationTestSquareDisplay.log \
-  grep -- Return | \
-  grep -owP -- 'x\d+' | \
+  grep -- return | sed 's:return::g' | sed 's:Return::g' | \
+  tr -d '(' | tr -d ')' | tr ',' '\n' | grep -o '\S.*\S' | \
   paste -d '=;' \
     <(echo r{4,3,2,1,0} | tr ' ' '\n') \
     /dev/stdin \
@@ -103,8 +103,8 @@ EOF
 grep -oP 'uint\d+_t\W+\w+ = .*;$'
 
 < src/Specific/IntegrationTestLadderstepDisplay.log \
-  grep -- Return | \
-  grep -owP -- 'x\d+' | \
+  grep -- return | sed 's:return::g' | sed 's:Return::g' | \
+  tr -d '(' | tr -d ')' | tr ',' '\n' | grep -o '\S.*\S' | \
   paste -d '=;' \
     <(echo {x2,z2,x3,z3}\[{4,3,2,1,0}\] | tr ' ' '\n') \
     /dev/stdin \
