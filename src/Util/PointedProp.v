@@ -96,8 +96,12 @@ Ltac inversion_pointed_Prop := repeat inversion_pointed_Prop_step.
 
 Create HintDb push_prop_of_option discriminated.
 Create HintDb push_to_prop discriminated.
+Create HintDb push_eq_trivial discriminated.
+Create HintDb push_eq_Some_trivial discriminated.
 Hint Extern 1 => progress autorewrite with push_prop_of_option in * : push_prop_of_option.
 Hint Extern 1 => progress autorewrite with push_to_prop in * : push_to_prop.
+Hint Extern 1 => progress autorewrite with push_eq_trivial in * : push_eq_trivial.
+Hint Extern 1 => progress autorewrite with push_eq_Some_trivial in * : push_eq_Some_trivial.
 
 Lemma to_prop_and P Q : to_prop (P /\ Q)%pointed_prop
                         <-> (to_prop P /\ to_prop Q).
@@ -133,3 +137,38 @@ Lemma prop_of_option_not P : prop_of_option (~P)%option_pointed_prop
                                <-> (~prop_of_option P).
 Proof. destruct P as [ [|] | ]; simpl; tauto. Qed.
 Hint Rewrite prop_of_option_not : push_prop_of_option.
+
+Lemma eq_trivial_and P Q : (P /\ Q)%pointed_prop = trivial
+                           <-> (P = trivial /\ Q = trivial).
+Proof. destruct P, Q; simpl; intuition congruence. Qed.
+Hint Rewrite eq_trivial_and : push_eq_trivial.
+
+Lemma eq_trivial_or P Q : (P \/ Q)%pointed_prop = trivial
+                          <-> (P = trivial \/ Q = trivial).
+Proof. destruct P, Q; simpl; intuition congruence. Qed.
+Hint Rewrite eq_trivial_or : push_eq_trivial.
+
+Lemma eq_trivial_impl P Q : (impl_pointed_Prop P Q)%pointed_prop = trivial
+                         <-> Q = trivial.
+Proof. destruct P, Q; simpl; intuition congruence. Qed.
+Hint Rewrite eq_trivial_impl : push_eq_trivial.
+
+Lemma eq_Some_trivial_and P Q : (P /\ Q)%option_pointed_prop = Some trivial
+                               <-> (P = Some trivial /\ Q = Some trivial).
+Proof. destruct P as [ []|], Q as [ []|]; simpl; intuition congruence. Qed.
+Hint Rewrite eq_Some_trivial_and : push_eq_Some_trivial.
+
+Lemma eq_Some_trivial_or P Q : (P \/ Q)%option_pointed_prop = Some trivial
+                               <-> (P = Some trivial \/ Q = Some trivial).
+Proof. destruct P as [ []|], Q as [ []|]; simpl; intuition congruence. Qed.
+Hint Rewrite eq_Some_trivial_or : push_eq_Some_trivial.
+
+Lemma eq_Some_trivial_impl P Q : (impl_option_pointed_Prop P Q)%option_pointed_prop = Some trivial
+                               <-> (P = None \/ Q = Some trivial).
+Proof. destruct P as [ [|P] |], Q as [ [|Q] |]; simpl; intuition congruence. Qed.
+Hint Rewrite eq_Some_trivial_impl : push_eq_Some_trivial.
+
+Lemma eq_Some_trivial_not P : (~P)%option_pointed_prop = Some trivial
+                               <-> P = None.
+Proof. destruct P as [ [|] | ]; simpl; intuition congruence. Qed.
+Hint Rewrite eq_Some_trivial_not : push_eq_Some_trivial.
