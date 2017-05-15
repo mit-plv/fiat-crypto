@@ -5,6 +5,7 @@ Require Export Crypto.Util.Notations.
 
 Reserved Notation "T x = A ; b" (at level 200, b at level 200, format "T  x  =  A ; '//' b").
 Reserved Notation "T0 x , T1 y = A ; b" (at level 200, b at level 200, format "T0  x ,  T1  y  =  A ; '//' b").
+Reserved Notation "v == 0 ? a : b" (at level 40, a at level 10, b at level 10).
 Reserved Notation "x & y" (at level 40).
 (* N.B. M32 is 0xFFFFFFFFL, and is how to cast a 64-bit thing to a 32-bit thing in Java *)
 Reserved Notation "'M32' & x" (at level 200, x at level 9).
