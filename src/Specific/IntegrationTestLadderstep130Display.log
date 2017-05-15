@@ -363,7 +363,7 @@ let (a, b) := Interp-η
  uint128_t x391 = x390 >> 0x55;
  uint128_t x392 = x390 & 0x1fffffffffffffffffffffL;
  uint128_t x393 = x391 + x385;
- (Return x140, Return x139, Return x136, (Return x201, Return x200, Return x197), (Return x315, Return x314, Return x311, (Return x393, Return x392, Return x389))))
+ return (Return x140, Return x139, Return x136, (Return x201, Return x200, Return x197), (Return x315, Return x314, Return x311, (Return x393, Return x392, Return x389))))
 (x, (x0, x1), (x2, x3))%core in
 (let (a0, b0) := a in
 (a0, b0), let (a0, b0) := b in

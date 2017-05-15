@@ -34,6 +34,6 @@ Interp-η
  uint64_t x49 = x48 >> 0x33;
  uint64_t x50 = x48 & 0x7ffffffffffff;
  uint64_t x51 = x49 + x37;
- (Return x43, Return x40, Return x51, Return x50, Return x47))
+ return (x43, x40, x51, x50, x47))
 (x, x0)%core
      : word64 * word64 * word64 * word64 * word64 → word64 * word64 * word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t * uint64_t * uint64_t)
