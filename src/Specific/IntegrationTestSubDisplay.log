@@ -13,27 +13,27 @@ Interp-η
  uint64_t x28 = 0xfffffffffffda + x5;
  uint64_t x29 = x28 - x13;
  uint64_t x30 = x29 >> 0x33;
- uint64_t x31 = x30 + x27;
- uint64_t x32 = x31 >> 0x33;
- uint64_t x33 = x32 + x25;
- uint64_t x34 = x33 >> 0x33;
- uint64_t x35 = x34 + x23;
+ uint64_t x31 = x29 & 0x7ffffffffffff;
+ uint64_t x32 = x30 + x27;
+ uint64_t x33 = x32 >> 0x33;
+ uint64_t x34 = x32 & 0x7ffffffffffff;
+ uint64_t x35 = x33 + x25;
  uint64_t x36 = x35 >> 0x33;
- uint64_t x37 = x36 + x21;
- uint64_t x38 = x29 & 0x7ffffffffffff;
- uint64_t x39 = x37 >> 0x33;
- uint64_t x40 = 0x13 * x39;
- uint64_t x41 = x38 + x40;
+ uint64_t x37 = x35 & 0x7ffffffffffff;
+ uint64_t x38 = x36 + x23;
+ uint64_t x39 = x38 >> 0x33;
+ uint64_t x40 = x38 & 0x7ffffffffffff;
+ uint64_t x41 = x39 + x21;
  uint64_t x42 = x41 >> 0x33;
- uint64_t x43 = x31 & 0x7ffffffffffff;
- uint64_t x44 = x42 + x43;
- uint64_t x45 = x37 & 0x7ffffffffffff;
- uint64_t x46 = x35 & 0x7ffffffffffff;
- uint64_t x47 = x44 >> 0x33;
- uint64_t x48 = x33 & 0x7ffffffffffff;
- uint64_t x49 = x47 + x48;
- uint64_t x50 = x44 & 0x7ffffffffffff;
- uint64_t x51 = x41 & 0x7ffffffffffff;
- (Return x45, Return x46, Return x49, Return x50, Return x51))
+ uint64_t x43 = x41 & 0x7ffffffffffff;
+ uint64_t x44 = 0x13 * x42;
+ uint64_t x45 = x31 + x44;
+ uint64_t x46 = x45 >> 0x33;
+ uint64_t x47 = x45 & 0x7ffffffffffff;
+ uint64_t x48 = x46 + x34;
+ uint64_t x49 = x48 >> 0x33;
+ uint64_t x50 = x48 & 0x7ffffffffffff;
+ uint64_t x51 = x49 + x37;
+ (Return x43, Return x40, Return x51, Return x50, Return x47))
 (x, x0)%core
      : word64 * word64 * word64 * word64 * word64 → word64 * word64 * word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t * uint64_t * uint64_t)
