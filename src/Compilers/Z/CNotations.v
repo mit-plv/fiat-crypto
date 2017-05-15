@@ -22,10 +22,30 @@ Notation "T0 x , T1 y = A ; b" := (LetIn (tx:=Prod T0 T1) A (fun '((x, y)%core) 
 Notation "T0 x , T1 y = A ; 'return' b" := (LetIn (tx:=Prod T0 T1) A (fun '((x, y)%core) => Var b)) : expr_scope.
 (*Notation "T0 x , T1 y = A ; 'return' ( b0 , b1 , .. , b2 )" := (LetIn (tx:=Prod T0 T1) A (fun '((x, y)%core) => (Pair .. (Pair b0%expr b1%expr) .. b2%expr))) : expr_scope.*) (* Error: Unsupported construction in recursive notations., https://coq.inria.fr/bugs/show_bug.cgi?id=5523 *)
 (*Notation "T0 x , T1 y = A ; 'return' ( b0 , b1 , .. , b2 )" := (LetIn (tx:=Prod T0 T1) A (fun '((x, y)%core) => (Pair .. (Pair (Var b0) (Var b1)) .. (Var b2)))) : expr_scope.*) (* Error: Unsupported construction in recursive notations., https://coq.inria.fr/bugs/show_bug.cgi?id=5523 *)
+
+(* for now, handle with
+<<
+sed s':^\([^,]*\) \([^, ]*\)\(\s*\),\(.*\)\(addcarryx.*\))\([; ]*\)$:\1 \2\3;\4_\5, \&\2)\6:'
+>>
+
+   Once we get https://coq.inria.fr/bugs/show_bug.cgi?id=5526, we can print actual C notations:
+<<
+Reserved Notation "T0 out ; T1 c_out = '_addcarryx_u32' ( c_in , a , b , & out ) ; REST"
+ (at level 200, REST at level 200, only printing format "T0  out ; '//' T1  c_out  =  '_addcarryx_u64' ( c_in ,  a ,  b ,  & out ) ; '//' REST").
+Reserved Notation "T0 out ; T1 c_out = '_addcarryx_u64' ( c_in , a , b , & out ) ; REST"
+ (at level 200, REST at level 200, only printing format "T0  out ; '//' T1  c_out  =  '_addcarryx_u64' ( c_in ,  a ,  b ,  & out ) ; '//' REST").
+>> *)
+Reserved Notation "'addcarryx_u32' ( c , a , b )" (format "'addcarryx_u32' ( c ,  a ,  b )").
+Reserved Notation "'addcarryx_u64' ( c , a , b )" (format "'addcarryx_u64' ( c ,  a ,  b )").
+Reserved Notation "'addcarryx_u51' ( c , a , b )" (format "'addcarryx_u51' ( c ,  a ,  b )"). (* temporary for testing *)
+
 (* python:
 <<
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import math
+def log2_up(x):
+    return int(math.ceil(math.log(x, 2)))
 types = ('bool', 'uint8_t', 'uint8_t', 'uint8_t', 'uint16_t', 'uint32_t', 'uint64_t', 'uint128_t', 'uint256_t')
 for lgwordsz in range(0, len(types)):
     print('Notation "\'%s\'" := (Tbase (TWord %d)).' % (types[lgwordsz], lgwordsz))
@@ -152,6 +172,18 @@ for lgwordsz in range(0, len(types)):
                 rhs = ('y' if not v2 else '(Var y)')
                 print('Notation "\'(%s)\' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord %d)) (Pair (Pair %s %s) %s)) (at level 40, x at level 10, y at level 10).' % (types[lgwordsz], lgwordsz, tes, lhs, rhs))
                 print('Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord %d) (TWord %d) (TWord %d)) (Pair (Pair %s %s) %s)).' % (lgwordsz, lgwordsz, lgwordsz, tes, lhs, rhs))
+for wordsz in (32, 64, 51):
+    lgwordsz = log2_up(wordsz)
+    for v0 in (False, True):
+        for v1 in (False, True):
+            for v2 in (False, True):
+                c = ('c' if not v0 else '(Var c)')
+                a = ('a' if not v1 else '(Var a)')
+                b = ('b' if not v2 else '(Var b)')
+                print(('Notation "\'addcarryx_u%d\' ( c , a , b )" := (Op (AddWithGetCarry %d (TWord 0) (TWord %d) (TWord %d) (TWord %d) (TWord 0)) (Pair (Pair %s %s) %s)).') % (wordsz, wordsz, lgwordsz, lgwordsz, lgwordsz, c, a, b))
+                print(('Notation "\'addcarryx_u%d\' ( c , a , b )" := (Op (AddWithGetCarry %d (TWord 0) (TWord 0) (TWord %d) (TWord %d) (TWord 0)) (Pair (Pair %s %s) %s)).') % (wordsz, wordsz, lgwordsz, lgwordsz, c, a, b))
+                print(('(' + '*Notation "T0 out ; T1 c_out = \'_addcarryx_u%d\' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry %d (TWord 0) (TWord %d) (TWord %d) (TWord %d) (TWord 0)) (Pair (Pair %s %s) %s)) (fun \'((out, c_out)%%core) => REST)).*' + ')') % (wordsz, wordsz, lgwordsz, lgwordsz, lgwordsz, c, a, b))
+                print(('(' + '*Notation "T0 out ; T1 c_out = \'_addcarryx_u%d\' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry %d (TWord 0) (TWord 0) (TWord %d) (TWord %d) (TWord 0)) (Pair (Pair %s %s) %s)) (fun \'((out, c_out)%%core) => REST)).*' + ')') % (wordsz, wordsz, lgwordsz, lgwordsz, c, a, b))
 print('Notation Return x := (Var x).')
 print('Notation C_like := (Expr base_type op _).')
 >> *)
@@ -1494,5 +1526,101 @@ Notation "'(uint256_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _
 Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 8) (TWord 8) (TWord 8)) (Pair (Pair (Var v) (Var x)) y)).
 Notation "'(uint256_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 8)) (Pair (Pair (Var v) (Var x)) (Var y))) (at level 40, x at level 10, y at level 10).
 Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 8) (TWord 8) (TWord 8)) (Pair (Pair (Var v) (Var x)) (Var y))).
+Notation "'addcarryx_u32' ( c , a , b )" := (Op (AddWithGetCarry 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) b)).
+Notation "'addcarryx_u32' ( c , a , b )" := (Op (AddWithGetCarry 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) b)).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u32' ( c , a , b )" := (Op (AddWithGetCarry 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))).
+Notation "'addcarryx_u32' ( c , a , b )" := (Op (AddWithGetCarry 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u32' ( c , a , b )" := (Op (AddWithGetCarry 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)).
+Notation "'addcarryx_u32' ( c , a , b )" := (Op (AddWithGetCarry 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u32' ( c , a , b )" := (Op (AddWithGetCarry 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))).
+Notation "'addcarryx_u32' ( c , a , b )" := (Op (AddWithGetCarry 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u32' ( c , a , b )" := (Op (AddWithGetCarry 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)).
+Notation "'addcarryx_u32' ( c , a , b )" := (Op (AddWithGetCarry 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u32' ( c , a , b )" := (Op (AddWithGetCarry 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))).
+Notation "'addcarryx_u32' ( c , a , b )" := (Op (AddWithGetCarry 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u32' ( c , a , b )" := (Op (AddWithGetCarry 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)).
+Notation "'addcarryx_u32' ( c , a , b )" := (Op (AddWithGetCarry 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u32' ( c , a , b )" := (Op (AddWithGetCarry 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))).
+Notation "'addcarryx_u32' ( c , a , b )" := (Op (AddWithGetCarry 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u64' ( c , a , b )" := (Op (AddWithGetCarry 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c a) b)).
+Notation "'addcarryx_u64' ( c , a , b )" := (Op (AddWithGetCarry 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c a) b)).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u64' ( c , a , b )" := (Op (AddWithGetCarry 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c a) (Var b))).
+Notation "'addcarryx_u64' ( c , a , b )" := (Op (AddWithGetCarry 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u64' ( c , a , b )" := (Op (AddWithGetCarry 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c (Var a)) b)).
+Notation "'addcarryx_u64' ( c , a , b )" := (Op (AddWithGetCarry 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c (Var a)) b)).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u64' ( c , a , b )" := (Op (AddWithGetCarry 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c (Var a)) (Var b))).
+Notation "'addcarryx_u64' ( c , a , b )" := (Op (AddWithGetCarry 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c (Var a)) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u64' ( c , a , b )" := (Op (AddWithGetCarry 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) a) b)).
+Notation "'addcarryx_u64' ( c , a , b )" := (Op (AddWithGetCarry 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) a) b)).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u64' ( c , a , b )" := (Op (AddWithGetCarry 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) a) (Var b))).
+Notation "'addcarryx_u64' ( c , a , b )" := (Op (AddWithGetCarry 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u64' ( c , a , b )" := (Op (AddWithGetCarry 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)).
+Notation "'addcarryx_u64' ( c , a , b )" := (Op (AddWithGetCarry 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u64' ( c , a , b )" := (Op (AddWithGetCarry 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))).
+Notation "'addcarryx_u64' ( c , a , b )" := (Op (AddWithGetCarry 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u51' ( c , a , b )" := (Op (AddWithGetCarry 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c a) b)).
+Notation "'addcarryx_u51' ( c , a , b )" := (Op (AddWithGetCarry 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c a) b)).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u51' ( c , a , b )" := (Op (AddWithGetCarry 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c a) (Var b))).
+Notation "'addcarryx_u51' ( c , a , b )" := (Op (AddWithGetCarry 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u51' ( c , a , b )" := (Op (AddWithGetCarry 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c (Var a)) b)).
+Notation "'addcarryx_u51' ( c , a , b )" := (Op (AddWithGetCarry 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c (Var a)) b)).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u51' ( c , a , b )" := (Op (AddWithGetCarry 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c (Var a)) (Var b))).
+Notation "'addcarryx_u51' ( c , a , b )" := (Op (AddWithGetCarry 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c (Var a)) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u51' ( c , a , b )" := (Op (AddWithGetCarry 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) a) b)).
+Notation "'addcarryx_u51' ( c , a , b )" := (Op (AddWithGetCarry 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) a) b)).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u51' ( c , a , b )" := (Op (AddWithGetCarry 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) a) (Var b))).
+Notation "'addcarryx_u51' ( c , a , b )" := (Op (AddWithGetCarry 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u51' ( c , a , b )" := (Op (AddWithGetCarry 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)).
+Notation "'addcarryx_u51' ( c , a , b )" := (Op (AddWithGetCarry 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u51' ( c , a , b )" := (Op (AddWithGetCarry 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))).
+Notation "'addcarryx_u51' ( c , a , b )" := (Op (AddWithGetCarry 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
 Notation Return x := (Var x).
 Notation C_like := (Expr base_type op _).
