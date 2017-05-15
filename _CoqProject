@@ -102,6 +102,7 @@ src/Compilers/Named/SmartMap.v
 src/Compilers/Named/Syntax.v
 src/Compilers/Named/WeakListContext.v
 src/Compilers/Named/Wf.v
+src/Compilers/Named/WfFromUnit.v
 src/Compilers/Named/WfInterp.v
 src/Compilers/Named/ContextProperties/NameUtil.v
 src/Compilers/Named/ContextProperties/SmartMap.v
