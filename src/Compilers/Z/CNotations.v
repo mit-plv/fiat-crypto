@@ -9,6 +9,7 @@ Reserved Notation "T x = A ; 'return' ( b0 , b1 , .. , b2 )" (at level 200, form
 Reserved Notation "T0 x , T1 y = A ; b" (at level 200, b at level 200, format "T0  x ,  T1  y  =  A ; '//' b").
 Reserved Notation "T0 x , T1 y = A ; 'return' b" (at level 200, b at level 200, format "T0  x ,  T1  y  =  A ; '//' 'return'  b").
 Reserved Notation "T0 x , T1 y = A ; 'return' ( b0 , b1 , .. , b2 )" (at level 200, format "T0  x ,  T1  y  =  A ; '//' 'return'  ( b0 ,  b1 ,  .. ,  b2 )").
+Reserved Notation "v == 0 ? a : b" (at level 40, a at level 10, b at level 10).
 Reserved Notation "x & y" (at level 40).
 
 Global Open Scope expr_scope.
