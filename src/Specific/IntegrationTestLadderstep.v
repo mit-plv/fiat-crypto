@@ -50,7 +50,7 @@ Section BoundedField25p5.
     fun x => B.Positional.Fdecode wt (Tuple.map wordToZ x).
 
   (** TODO(jadep,andreser): Move to NewBaseSystemTest? *)
-  Definition FMxzladderstep := @M.xzladderstep (F m) F.add F.sub F.mul.
+  Definition FMxzladderstep := @M.donnaladderstep (F m) F.add F.sub F.mul.
 
   Section with_notations.
     Local Infix "+" := (proj1_sig add_sig).
@@ -59,21 +59,29 @@ Section BoundedField25p5.
     Local Infix "-" := (proj1_sig sub_sig).
     Definition Mxzladderstep a24 x1 Q Q'
       := match Q, Q' with
-         | (x, z), (x', z')
-           => dlet A := x+z in
-              dlet B := x-z in
-              dlet AA := A^2 in
-              dlet BB := B^2 in
-              dlet x2 := AA*BB in
-              dlet E := AA-BB in
-              dlet z2 := E*(AA + a24*E) in
-              dlet C := x'+z' in
-              dlet D := x'-z' in
-              dlet CB := C*B in
-              dlet DA := D*A in
-              dlet x3 := (DA+CB)^2 in
-              dlet z3 := x1*(DA-CB)^2 in
-              ((x2, z2), (x3, z3))%core
+         | (x, z), (x', z') =>
+           dlet origx := x in
+           dlet x := x + z in
+           dlet z := origx - z in
+           dlet origx' := x' in
+           dlet x' := x' + z' in
+           dlet z' := origx' - z' in
+           dlet xx' := x' * z in
+           dlet zz' := x * z' in
+           dlet origx' := xx' in
+           dlet xx' := xx' + zz' in
+           dlet zz' := origx' - zz' in
+           dlet x3 := xx'^2 in
+           dlet zzz' := zz'^2 in
+           dlet z3 := zzz' * x1 in
+           dlet xx := x^2 in
+           dlet zz := z^2 in
+           dlet x2 := xx * zz in
+           dlet zz := xx - zz in
+           dlet zzz := zz * a24 in
+           dlet zzz := zzz + xx in
+           dlet z2 := zz * zzz in
+           ((x2, z2), (x3, z3))%core
          end.
   End with_notations.
 
@@ -85,7 +93,7 @@ Section BoundedField25p5.
   Proof.
     exists Mxzladderstep.
     intros.
-    cbv [Mxzladderstep FMxzladderstep M.xzladderstep].
+    cbv [Mxzladderstep FMxzladderstep M.donnaladderstep].
     destruct Q, Q'; cbv [map map' fst snd Let_In eval].
     repeat rewrite ?(proj2_sig add_sig), ?(proj2_sig mul_sig), ?(proj2_sig square_sig), ?(proj2_sig sub_sig), ?(proj2_sig carry_sig).
     reflexivity.

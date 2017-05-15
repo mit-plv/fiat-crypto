@@ -57,26 +57,54 @@ Module M.
         ((x2, z2), (x3, z3))%core
       end.
 
-      Context {cswap:bool->F*F->F*F->(F*F)*(F*F)}.
+    (* optimized version from curve25519-donna by Adam Langley *)
+    Definition donnaladderstep (x1:F) (Q Q':F*F) : (F*F)*(F*F) :=
+      match Q, Q' with
+        pair x z, pair x' z'=>
+        dlet origx := x in
+        dlet x := x + z in
+        dlet z := origx - z in
+        dlet origx' := x' in
+        dlet x' := x' + z' in
+        dlet z' := origx' - z' in
+        dlet xx' := x' * z in
+        dlet zz' := x * z' in
+        dlet origx' := xx' in
+        dlet xx' := xx' + zz' in
+        dlet zz' := origx' - zz' in
+        dlet x3 := xx'^2 in
+        dlet zzz' := zz'^2 in
+        dlet z3 := zzz' * x1 in
+        dlet xx := x^2 in
+        dlet zz := z^2 in
+        dlet x2 := xx * zz in
+        dlet zz := xx - zz in
+        dlet zzz := zz * a24 in
+        dlet zzz := zzz + xx in
+        dlet z2 := zz * zzz in
+        ((x2, z2), (x3, z3))%core
+      end.
 
-      Local Notation xor := Coq.Init.Datatypes.xorb.
+    Context {cswap:bool->F*F->F*F->(F*F)*(F*F)}.
 
-      (* Ideally, we would verify that this corresponds to x coordinate
-         multiplication *)
-      Local Open Scope core_scope.
-      Definition montladder (bound : positive) (testbit:Z->bool) (u:F) :=
-        let '(P1, P2, swap) :=
-            for (int i = BinInt.Z.pos bound; i >= 0; i--)
-                updating ('(P1, P2, swap) = ((1%F, 0%F), (u, 1%F), false)) {{
-              dlet s_i := testbit i in
-              dlet swap := xor swap s_i in
-              let '(P1, P2) := cswap swap P1 P2 in
-              dlet swap := s_i in
-              let '(P1, P2) := xzladderstep u P1 P2 in
-              (P1, P2, swap)
-        }} in
-        let '((x, z), _) := cswap swap P1 P2 in
-        x * Finv z.
+    Local Notation xor := Coq.Init.Datatypes.xorb.
+
+    (* Ideally, we would verify that this corresponds to x coordinate
+       multiplication *)
+    Local Open Scope core_scope.
+    Definition montladder (bound : positive) (testbit:Z->bool) (u:F) :=
+      let '(P1, P2, swap) :=
+          for (int i = BinInt.Z.pos bound; i >= 0; i--)
+              updating ('(P1, P2, swap) = ((1%F, 0%F), (u, 1%F), false)) {{
+            dlet s_i := testbit i in
+            dlet swap := xor swap s_i in
+            let '(P1, P2) := cswap swap P1 P2 in
+            dlet swap := s_i in
+            let '(P1, P2) := xzladderstep u P1 P2 in
+            (P1, P2, swap)
+      }} in
+      let '((x, z), _) := cswap swap P1 P2 in
+      x * Finv z.
 
   End MontgomeryCurve.
 End M.

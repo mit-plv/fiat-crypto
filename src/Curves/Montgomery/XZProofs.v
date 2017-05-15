@@ -1,6 +1,7 @@
 Require Import Crypto.Algebra.Field.
 Require Import Crypto.Util.Sum Crypto.Util.Prod Crypto.Util.LetIn.
 Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Tactics.SetoidSubst.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.DestructHead.
@@ -32,7 +33,13 @@ Module M.
     Local Notation Mopp := (M.opp(a:=a)(b_nonzero:=b_nonzero)).
     Local Notation Mpoint := (@M.point F Feq Fadd Fmul a b).
     Local Notation xzladderstep := (M.xzladderstep(a24:=a24)(Fadd:=Fadd)(Fsub:=Fsub)(Fmul:=Fmul)).
+    Local Notation donnaladderstep := (M.donnaladderstep(a24:=a24)(Fadd:=Fadd)(Fsub:=Fsub)(Fmul:=Fmul)).
     Local Notation to_xz := (M.to_xz(Fzero:=Fzero)(Fone:=Fone)(Feq:=Feq)(Fadd:=Fadd)(Fmul:=Fmul)(a:=a)(b:=b)).
+
+    Lemma donnaladderstep_ok x1 Q Q' :
+      let eq := fieldwise (n:=2) (fieldwise (n:=2) Feq) in
+      eq (xzladderstep x1 Q Q') (donnaladderstep x1 Q Q').
+    Proof. cbv; break_match; repeat split; fsatz. Qed.
 
     Definition projective (P:F*F) :=
       if dec (snd P = 0) then fst P <> 0 else True.
