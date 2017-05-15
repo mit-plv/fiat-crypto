@@ -144,6 +144,7 @@ src/Compilers/Z/Bounds/Pipeline/Glue.v
 src/Compilers/Z/Bounds/Pipeline/OutputType.v
 src/Compilers/Z/Bounds/Pipeline/ReflectiveTactics.v
 src/Compilers/Z/Named/DeadCodeElimination.v
+src/Compilers/Z/Named/DeadCodeEliminationInterp.v
 src/Compilers/Z/Syntax/Equality.v
 src/Compilers/Z/Syntax/Util.v
 src/Curves/Edwards/AffineProofs.v

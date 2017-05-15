@@ -35,7 +35,7 @@ Section language.
 
   Lemma interp_EliminateDeadCode
         t e new_names
-        (ctxi_interp : PositiveContext _ _ base_type_code_beq base_type_code_bl)
+        (ctxi_interp : PContext _)
         (ctxr_interp : InterpContext)
         eout v1 v2 x
     : @EliminateDeadCode t e new_names = Some eout
