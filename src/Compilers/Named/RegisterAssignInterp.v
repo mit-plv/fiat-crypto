@@ -120,6 +120,21 @@ Section language.
       end.
   Qed.
 
+  Lemma find_Name_and_val_same_oval {var' t T n_in n_out NI NO V}
+        (H2 : find_Name_and_val base_type_code_dec InName_dec t n_in NI NO None = Some n_out)
+        (H3 : find_Name_and_val base_type_code_dec OutName_dec t n_out NO NI None = Some n_in)
+    : find_Name_and_val base_type_code_dec InName_dec t (T:=T) (var':=var') n_in NI V None
+      = find_Name_and_val base_type_code_dec OutName_dec t (T:=T) n_out NO V None.
+  Proof using Type.
+    t_find T;
+      match goal with
+      | [ H : _ = None |- _ ]
+        => first [ eapply find_Name_and_val_OutToIn in H; [ | eassumption ]
+                 | eapply find_Name_and_val_InToOut in H; [ | eassumption ] ];
+             destruct H
+      end.
+  Qed.
+
   Local Ltac t :=
     repeat first [ reflexivity
                  | assumption
