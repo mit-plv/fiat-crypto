@@ -8,7 +8,7 @@ Section language.
           {Context : Context Name (fun _ : base_type => positive)}.
 
   Definition EliminateDeadCode {t} e ls
-    := @EliminateDeadCode base_type op Name Context t e ls.
+    := @EliminateDeadCode base_type op Name _ internal_base_type_dec_bl Context t e ls.
   Definition CompileAndEliminateDeadCode {t} e ls
-    := @CompileAndEliminateDeadCode base_type op Name Context t e ls.
+    := @CompileAndEliminateDeadCode base_type op Name _ internal_base_type_dec_bl Context t e ls.
 End language.

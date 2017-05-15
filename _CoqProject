@@ -82,6 +82,7 @@ src/Compilers/Named/ContextOn.v
 src/Compilers/Named/ContextProperties.v
 src/Compilers/Named/CountLets.v
 src/Compilers/Named/DeadCodeElimination.v
+src/Compilers/Named/DeadCodeEliminationInterp.v
 src/Compilers/Named/EstablishLiveness.v
 src/Compilers/Named/FMapContext.v
 src/Compilers/Named/GetNames.v

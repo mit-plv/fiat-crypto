@@ -228,7 +228,7 @@ Section assemble.
 
   Definition AssembleSyntax' {t} (e : Expr base_type op t) (ls : list Register)
     : option (syntax t)
-    := CompileAndEliminateDeadCode (Context:=RegisterContext) e ls.
+    := CompileAndEliminateDeadCode (base_type_code_bl:=internal_base_type_dec_bl) (Context:=RegisterContext) e ls.
   Definition AssembleSyntax {t} e ls (res := @AssembleSyntax' t e ls)
     := match res return match res with None => _ | _ => _ end with
        | Some v => v
