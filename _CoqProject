@@ -84,6 +84,7 @@ src/Compilers/Named/CountLets.v
 src/Compilers/Named/DeadCodeElimination.v
 src/Compilers/Named/DeadCodeEliminationInterp.v
 src/Compilers/Named/EstablishLiveness.v
+src/Compilers/Named/ExprInversion.v
 src/Compilers/Named/FMapContext.v
 src/Compilers/Named/GetNames.v
 src/Compilers/Named/IdContext.v
