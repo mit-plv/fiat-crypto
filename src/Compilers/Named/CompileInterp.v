@@ -196,7 +196,7 @@ Section language.
                 = Some (interp interp_op e' v).
   Proof using ContextOk Name_dec base_type_dec. eapply interp_ocompile; eassumption. Qed.
 
-  Lemma Interp_compile (ctx : Context) {t} (e : Expr t) (ls : list Name)
+  Lemma Interp_compile {t} (e : Expr t) (ls : list Name)
         (Hwf : Wf e)
         f
         (Hls : name_list_unique ls)
