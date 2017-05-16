@@ -82,7 +82,7 @@ Section language.
           {t} (e : @Named.expr base_type_code op Name t)
           (Hwf : Named.Wf Context e)
           v
-      : Named.interp (Context:=Context _) (interp_op:=interp_op) (ctx:=empty) e v
+      : Named.Interp (Context:=Context _) (interp_op:=interp_op) e v
         = Some (Interp interp_op (InterpToPHOAS (Context:=Context) failb e) v).
     Proof using Type. apply interp_interp_to_phoas; auto. Qed.
   End all.
