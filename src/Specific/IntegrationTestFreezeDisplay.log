@@ -3,36 +3,21 @@ Interp-η
 (λ var : Syntax.base_type → Type,
  λ '(x7, x8, x6, x4, x2)%core,
  uint64_t x10, ℤ x11 = Op (Syntax.AddWithGetCarry 51 (Syntax.TWord 0) (Syntax.TWord 6) Syntax.TZ (Syntax.TWord 6) Syntax.TZ) (0x0, Return x2, Const (-2251799813685229));
- uint64_t x13, bool x14 = addcarryx_u51(0x0, 0x0, x10);
- ℤ x15 = x11 + x14;
- uint64_t x17, ℤ x18 = Op (Syntax.AddWithGetCarry 51 (Syntax.TWord 0) (Syntax.TWord 6) Syntax.TZ (Syntax.TWord 6) Syntax.TZ) (0x0, Return x4, Const (-2251799813685247));
- uint64_t x20, ℤ x21 = Op (Syntax.AddWithGetCarry 51 (Syntax.TWord 0) Syntax.TZ (Syntax.TWord 6) (Syntax.TWord 6) Syntax.TZ) (0x0, Return x15, Return x17);
- ℤ x22 = x18 + x21;
- uint64_t x24, ℤ x25 = Op (Syntax.AddWithGetCarry 51 (Syntax.TWord 0) (Syntax.TWord 6) Syntax.TZ (Syntax.TWord 6) Syntax.TZ) (0x0, Return x6, Const (-2251799813685247));
- uint64_t x27, ℤ x28 = Op (Syntax.AddWithGetCarry 51 (Syntax.TWord 0) Syntax.TZ (Syntax.TWord 6) (Syntax.TWord 6) Syntax.TZ) (0x0, Return x22, Return x24);
- ℤ x29 = x25 + x28;
- uint64_t x31, ℤ x32 = Op (Syntax.AddWithGetCarry 51 (Syntax.TWord 0) (Syntax.TWord 6) Syntax.TZ (Syntax.TWord 6) Syntax.TZ) (0x0, Return x8, Const (-2251799813685247));
- uint64_t x34, ℤ x35 = Op (Syntax.AddWithGetCarry 51 (Syntax.TWord 0) Syntax.TZ (Syntax.TWord 6) (Syntax.TWord 6) Syntax.TZ) (0x0, Return x29, Return x31);
- ℤ x36 = x32 + x35;
- uint64_t x38, ℤ x39 = Op (Syntax.AddWithGetCarry 51 (Syntax.TWord 0) (Syntax.TWord 6) Syntax.TZ (Syntax.TWord 6) Syntax.TZ) (0x0, Return x7, Const (-2251799813685247));
- uint64_t x41, ℤ x42 = Op (Syntax.AddWithGetCarry 51 (Syntax.TWord 0) Syntax.TZ (Syntax.TWord 6) (Syntax.TWord 6) Syntax.TZ) (0x0, Return x36, Return x38);
- ℤ x43 = x39 + x42;
- uint64_t x44 = (uint64_t) (x43 == 0 ? 0x0 : 0xffffffffffffffffL);
- uint64_t x46, bool x47 = addcarryx_u51(0x0, x13, x44 & 0x7ffffffffffed);
- uint64_t x49, bool x50 = addcarryx_u51(0x0, 0x0, x46);
- bool x51 = x47 + x50;
- uint64_t x53, bool x54 = addcarryx_u51(0x0, x20, x44 & 0x7ffffffffffff);
- uint64_t x56, bool x57 = addcarryx_u51(0x0, x51, x53);
- uint64_t x58 = (uint64_t) x54 + x57;
- uint64_t x60, bool x61 = addcarryx_u51(0x0, x27, x44 & 0x7ffffffffffff);
- uint64_t x63, bool x64 = addcarryx_u51(0x0, x58, x60);
- uint64_t x65 = (uint64_t) x61 + x64;
- uint64_t x67, bool x68 = addcarryx_u51(0x0, x34, x44 & 0x7ffffffffffff);
- uint64_t x70, bool x71 = addcarryx_u51(0x0, x65, x67);
- uint64_t x72 = (uint64_t) x68 + x71;
- uint64_t x74, bool x75 = addcarryx_u51(0x0, x41, x44 & 0x7ffffffffffff);
- uint64_t x77, bool x78 = addcarryx_u51(0x0, x72, x74);
- uint64_t _ = (uint64_t) x75 + x78;
- return (x77, x70, x63, x56, x49))
+ uint64_t x13, ℤ x14 = Op (Syntax.AddWithGetCarry 51 Syntax.TZ (Syntax.TWord 6) Syntax.TZ (Syntax.TWord 6) Syntax.TZ) (Return x11, Return x4, Const (-2251799813685247));
+ uint64_t x16, ℤ x17 = Op (Syntax.AddWithGetCarry 51 Syntax.TZ (Syntax.TWord 6) Syntax.TZ (Syntax.TWord 6) Syntax.TZ) (Return x14, Return x6, Const (-2251799813685247));
+ uint64_t x19, ℤ x20 = Op (Syntax.AddWithGetCarry 51 Syntax.TZ (Syntax.TWord 6) Syntax.TZ (Syntax.TWord 6) Syntax.TZ) (Return x17, Return x8, Const (-2251799813685247));
+ uint64_t x22, ℤ x23 = Op (Syntax.AddWithGetCarry 51 Syntax.TZ (Syntax.TWord 6) Syntax.TZ (Syntax.TWord 6) Syntax.TZ) (Return x20, Return x7, Const (-2251799813685247));
+ uint64_t x24 = (uint64_t) (x23 == 0 ? 0x0 : 0xffffffffffffffffL);
+ uint64_t x25 = x24 & 0x7ffffffffffed;
+ uint64_t x27, bool x28 = addcarryx_u51(0x0, x10, x25);
+ uint64_t x29 = x24 & 0x7ffffffffffff;
+ uint64_t x31, bool x32 = addcarryx_u51(x28, x13, x29);
+ uint64_t x33 = x24 & 0x7ffffffffffff;
+ uint64_t x35, bool x36 = addcarryx_u51(x32, x16, x33);
+ uint64_t x37 = x24 & 0x7ffffffffffff;
+ uint64_t x39, bool x40 = addcarryx_u51(x36, x19, x37);
+ uint64_t x41 = x24 & 0x7ffffffffffff;
+ uint64_t x43, bool _ = addcarryx_u51(x40, x22, x41);
+ (Return x43, Return x39, Return x35, Return x31, Return x27))
 x
      : word64 * word64 * word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t * uint64_t * uint64_t)
