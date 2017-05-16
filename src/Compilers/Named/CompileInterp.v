@@ -36,6 +36,7 @@ Section language.
   Local Notation type := (type base_type_code).
   Local Notation exprf := (@exprf base_type_code op (fun _ => Name)).
   Local Notation expr := (@expr base_type_code op (fun _ => Name)).
+  Local Notation Expr := (@Expr base_type_code op).
   Local Notation wff := (@wff base_type_code op (fun _ => Name) interp_base_type).
   Local Notation wf := (@wf base_type_code op (fun _ => Name) interp_base_type).
   Local Notation nexprf := (@Named.exprf base_type_code op Name).
@@ -194,4 +195,13 @@ Section language.
     : forall v, Named.interp (interp_op:=interp_op) (ctx:=ctx) f v
                 = Some (interp interp_op e' v).
   Proof using ContextOk Name_dec base_type_dec. eapply interp_ocompile; eassumption. Qed.
+
+  Lemma Interp_compile (ctx : Context) {t} (e : Expr t) (ls : list Name)
+        (Hwf : Wf e)
+        f
+        (Hls : name_list_unique ls)
+        (H : compile (e _) ls = Some f)
+    : forall v, Named.Interp (Context:=Context) (interp_op:=interp_op) f v
+                = Some (Interp interp_op e v).
+  Proof using ContextOk Name_dec base_type_dec. eapply interp_compile; eauto. Qed.
 End language.
