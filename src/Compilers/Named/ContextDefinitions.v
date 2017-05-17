@@ -58,4 +58,7 @@ Section with_context.
       : forall (ctx : Context) n t t', lookupb t' (removeb t ctx n) n = None;
       lookupb_empty
       : forall n t, lookupb t (@empty _ _ _ Context) n = None }.
+
+  Definition context_equiv (a b : Context)
+    := forall n t, lookupb t a n = lookupb t b n.
 End with_context.

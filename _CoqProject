@@ -106,6 +106,7 @@ src/Compilers/Named/Wf.v
 src/Compilers/Named/WfFromUnit.v
 src/Compilers/Named/WfInterp.v
 src/Compilers/Named/ContextProperties/NameUtil.v
+src/Compilers/Named/ContextProperties/Proper.v
 src/Compilers/Named/ContextProperties/SmartMap.v
 src/Compilers/Named/ContextProperties/Tactics.v
 src/Compilers/Named/PositiveContext/Defaults.v
