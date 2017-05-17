@@ -108,6 +108,8 @@ Global Instance dec_le_Z : DecidableRel BinInt.Z.le := ZArith_dec.Z_le_dec.
 Global Instance dec_gt_Z : DecidableRel BinInt.Z.gt := ZArith_dec.Z_gt_dec.
 Global Instance dec_ge_Z : DecidableRel BinInt.Z.ge := ZArith_dec.Z_ge_dec.
 
+Global Instance dec_eq_positive : DecidableRel (@eq positive) | 10 := Pos.eq_dec.
+
 Global Instance dec_match_pair {A B} {P : A -> B -> Prop} {x : A * B}
        {HD : Decidable (P (fst x) (snd x))}
   : Decidable (let '(a, b) := x in P a b) | 1.
