@@ -19,9 +19,9 @@ Ltac refine_reflectively_gen allowable_bit_widths opts :=
   refine_to_reflective_glue allowable_bit_widths;
   do_reflective_pipeline opts.
 
-Ltac refine_reflectively128_with opts := refine_reflectively_gen (128::256::nil)%nat%list opts.
-Ltac refine_reflectively64_with opts := refine_reflectively_gen (64::128::nil)%nat%list opts.
-Ltac refine_reflectively32_with opts := refine_reflectively_gen (32::64::nil)%nat%list opts.
+Ltac refine_reflectively128_with opts := refine_reflectively_gen (1::128::256::nil)%nat%list opts.
+Ltac refine_reflectively64_with opts := refine_reflectively_gen (1::64::128::nil)%nat%list opts.
+Ltac refine_reflectively32_with opts := refine_reflectively_gen (1::32::64::nil)%nat%list opts.
 Ltac refine_reflectively128 := refine_reflectively128_with default_PipelineOptions.
 Ltac refine_reflectively64 := refine_reflectively64_with default_PipelineOptions.
 Ltac refine_reflectively32 := refine_reflectively32_with default_PipelineOptions.

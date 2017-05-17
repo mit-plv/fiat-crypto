@@ -33,7 +33,7 @@ Interp-η
  uint64_t x48 = x47 >> 0x33;
  uint64_t x49 = x47 & 0x7ffffffffffff;
  uint64_t x50 = x48 + x37;
- uint64_t x51 = x50 >> 0x33;
+ bool x51 = (bool) (x50 >> 0x33);
  uint64_t x52 = x50 & 0x7ffffffffffff;
  return (Return x46, Return x43, x51 + x40, Return x52, Return x49))
 (x, x0)%core

@@ -30,7 +30,7 @@ Interp-η
  uint64_t x34 = x33 >> 0x33;
  uint64_t x35 = x33 & 0x7ffffffffffff;
  uint64_t x36 = x34 + x23;
- uint64_t x37 = x36 >> 0x33;
+ bool x37 = (bool) (x36 >> 0x33);
  uint64_t x38 = x36 & 0x7ffffffffffff;
  return (Return x32, Return x29, x37 + x26, Return x38, Return x35))
 x
