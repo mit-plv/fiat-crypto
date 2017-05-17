@@ -71,9 +71,15 @@ Require Import Crypto.Compilers.Z.Bounds.MapCastByDeBruijnWf.
 Require Import Crypto.Util.Sigma.MapProjections.
 
 (** *** Definition of the Post-Wf Pipeline *)
+(** We define the record that holds various options to customize the
+    pipeline. *)
+Record PipelineOptions := { anf : bool }.
+Definition default_PipelineOptions :=
+  {| anf := false |}.
 (** Do not change the name or the type of this definition *)
 Definition PostWfPipeline
            round_up
+           (opts : PipelineOptions)
            {t} (e : Expr base_type op t)
            (input_bounds : interp_flat_type Bounds.interp_base_type (domain t))
   : option (@ProcessedReflectivePackage round_up)
@@ -83,7 +89,7 @@ Definition PostWfPipeline
         let e := SimplifyArith e in
         let e := InlineConst e in
         let e := SimplifyArith e in
-        (*let e := ANormal e in*)
+        let e := if opts.(anormal) then ANormal e else e in
         let e := InlineConst e in
         (*let e := CSE false e in*)
         let e := MapCast _ e input_bounds in
@@ -115,11 +121,12 @@ Section with_round_up_list.
   Local Notation pick_type v := (SmartFlatTypeMap pick_typeb v).
 
   Definition PostWfPipelineCorrect
+             opts
              {t}
              (e : Expr base_type op t)
              (input_bounds : interp_flat_type Bounds.interp_base_type (domain t))
              (Hwf : Wf e)
-             {b e'} (He : PostWfPipeline _ e input_bounds
+             {b e'} (He : PostWfPipeline _ opts e input_bounds
                           = Some {| input_expr := e ; input_bounds := input_bounds ; output_bounds := b ; output_expr := e' |})
              (v : interp_flat_type Syntax.interp_base_type (domain t))
              (v' : interp_flat_type Syntax.interp_base_type (pick_type input_bounds))
@@ -133,12 +140,12 @@ Section with_round_up_list.
             || inversion_sigma || eliminate_hprop_eq || inversion_prod
             || simpl in * || subst).
     (** Now handle all the transformations that come after the word-size selection *)
-    autorewrite with reflective_interp.
+    all:autorewrite with reflective_interp.
     (** Now handle word-size selection *)
-    eapply MapCastCorrect_eq; [ | eassumption | eassumption | .. ];
-      [ solve [ auto 60 with wf ] | reflexivity | ].
+    all:(eapply MapCastCorrect_eq; [ | eassumption | eassumption | .. ];
+         [ solve [ auto 60 with wf ] | reflexivity | ]).
     (** Now handle all the transformations that come before the word-size selection *)
-    repeat autorewrite with reflective_interp; reflexivity.
+    all:repeat autorewrite with reflective_interp; reflexivity.
   Qed.
 End with_round_up_list.
 

@@ -155,6 +155,7 @@ Section with_round_up_list.
   Local Notation pick_type v := (SmartFlatTypeMap pick_typeb v).
 
   Definition PipelineCorrect
+             opts
              {t}
              {input_bounds : interp_flat_type Bounds.interp_base_type (domain t)}
              {given_output_bounds : interp_flat_type Bounds.interp_base_type (codomain t)}
@@ -174,7 +175,7 @@ Section with_round_up_list.
                  let P := (@reflect_wfT base_type base_type_eq_semidec_transparent op op_beq var1 var2 nil _ _ (ExprEta' e _) (ExprEta' e _)) in
                  trueify P = P)
              (** ** post-wf-pipeline *)
-             (Hpost : e_pkg = PostWfPipeline _ e input_bounds)
+             (Hpost : e_pkg = PostWfPipeline _ opts e input_bounds)
              (Hpost_correct : Some {| input_expr := e ; input_bounds := input_bounds ; output_bounds := b ; output_expr := e' |} = e_pkg)
              (** ** renaming *)
              (Hrenaming : e_final = e')
@@ -218,10 +219,11 @@ End with_round_up_list.
     [PipelineCorrect] lemma to create side-conditions.  It assumes the
     goal is in exactly the form given in the conclusion of the
     [PipelineCorrect] lemma. *)
-Ltac refine_with_pipeline_correct :=
+
+Ltac refine_with_pipeline_correct opts :=
   lazymatch goal with
   | [ |- _ /\ ?castback ?fW = ?fZ ?arg ]
-    => let lem := open_constr:(@PipelineCorrect _ _ _ _ _ _ _ _ _ _ _ _ _) in
+    => let lem := open_constr:(@PipelineCorrect _ opts _ _ _ _ _ _ _ _ _ _ _ _) in
        simple refine (lem _ _ _ _ _ _ _ _ _ _ _ _);
        subst fW fZ
   end;
@@ -288,5 +290,6 @@ Ltac solve_side_conditions :=
 (** The [do_reflective_pipeline] tactic solves a goal of the form that
     is described at the top of this file, and is the public interface
     of this file. *)
-Ltac do_reflective_pipeline :=
-  refine_with_pipeline_correct; solve_side_conditions.
+Ltac do_reflective_pipeline opts :=
+  refine_with_pipeline_correct opts; solve_side_conditions.
+Notation default_PipelineOptions := default_PipelineOptions.
