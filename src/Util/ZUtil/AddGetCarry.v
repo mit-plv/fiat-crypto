@@ -20,12 +20,12 @@ Module Z.
     Local Arguments Z.pow : simpl never.
 
     Lemma add_get_carry_to_add_with_get_carry_cps_gen {T} c a b (P : Z -> Z -> Z -> Z -> Z -> T)
-      : (let '(a', c1) := ADD c a in
-         let '(s, c2) := ADD a' b in
+      : (let '(a', c1) := ADD a b in
+         let '(s, c2) := ADD c a' in
          dlet c := c1 + c2 in
          P a' c1 c2 s c)
-        = let '(a', c1) := eta (ADD c a) in
-          let '(s, c2) := eta (ADD a' b) in
+        = let '(a', c1) := eta (ADD a b) in
+          let '(s, c2) := eta (ADD c a') in
           let '(s, c) := ADC c a b in
           P a' c1 c2 s c.
     Proof.
@@ -35,14 +35,14 @@ Module Z.
         autorewrite with zsimplify.
         reflexivity. }
       { f_equal.
-        { push_Zmod; reflexivity. }
+        { push_Zmod; pull_Zmod; apply f_equal2; omega. }
         { Z.div_mod_to_quot_rem; nia. } }
-      { subst; autorewrite with zsimplify; reflexivity. }
+      { subst; autorewrite with zsimplify; f_equal; omega. }
     Qed.
 
     Lemma add_get_carry_to_add_with_get_carry_cps {T} c a b (P : Z -> Z -> T)
-      : (let '(a', c1) := ADD c a in
-         let '(s, c2) := ADD a' b in
+      : (let '(a', c1) := ADD a b in
+         let '(s, c2) := ADD c a' in
          dlet c := c1 + c2 in
          P s c)
         = let '(s, c) := ADC c a b in
@@ -51,7 +51,7 @@ Module Z.
       apply add_get_carry_to_add_with_get_carry_cps_gen.
     Qed.
   End with_bitwidth.
-  
+
   Local Hint Unfold Z.add_get_carry_full Z.add_get_carry
         Z.add_with_get_carry Z.get_carry Z.add_with_carry.
   Lemma add_get_carry_full_mod s x y :
@@ -69,5 +69,5 @@ Module Z.
     break_match; autorewrite with cancel_pair zsimplify;
       reflexivity.
   Qed.
-  
+
 End Z.
