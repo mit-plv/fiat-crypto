@@ -27,7 +27,7 @@ Ltac refine_reflectively64 := refine_reflectively64_with default_PipelineOptions
 Ltac refine_reflectively32 := refine_reflectively32_with default_PipelineOptions.
 
 (** Convenience notations for options *)
-Notation anf := {| Pipeline.Definition.anf := true |}.
+Definition anf := {| Pipeline.Definition.anf := true |}.
 
 (** The default *)
 Ltac refine_reflectively_with opts := refine_reflectively64_with opts.
