@@ -243,7 +243,7 @@ Section assemble.
   Definition DefaultAssembleSyntax {t} e := @AssembleSyntax t e (DefaultRegisters e).
 
   Definition Interp {t} e v
-    := invert_Some (@Named.interp base_type interp_base_type op Register RegisterContext interp_op empty t e v).
+    := invert_Some (@Named.Interp base_type interp_base_type op Register RegisterContext interp_op t e v).
 End assemble.
 
 Export Compilers.Named.Syntax.

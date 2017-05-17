@@ -41,30 +41,30 @@ Module Export Named.
               (interp_op : forall src dst, op src dst -> interp_flat_type src -> interp_flat_type dst).
 
       Fixpoint interpf
-               (ctx : Context) {t} (e : exprf t)
+               {t} (ctx : Context) (e : exprf t)
         : option (interp_flat_type t)
         := match e in exprf t return option (interp_flat_type t) with
            | Var t' x => lookupb t' ctx x
            | TT => Some tt
            | Pair _ ex _ ey
-             => match @interpf ctx _ ex, @interpf ctx _ ey with
+             => match @interpf _ ctx ex, @interpf _ ctx ey with
                 | Some xv, Some yv => Some (xv, yv)%core
                 | None, _ | _, None => None
                 end
            | Op _ _ opc args
-             => option_map (@interp_op _ _ opc) (@interpf ctx _ args)
+             => option_map (@interp_op _ _ opc) (@interpf _ ctx args)
            | LetIn _ n ex _ eC
-             => match @interpf ctx _ ex with
+             => match @interpf _ ctx ex with
                 | Some xv
                   => dlet x := xv in
-                     @interpf (extend ctx n x) _ eC
+                     @interpf _ (extend ctx n x) eC
                 | None => None
                 end
            end.
 
-      Definition interp (ctx : Context) {t} (e : expr t)
+      Definition interp {t} (ctx : Context) (e : expr t)
         : interp_flat_type (domain t) -> option (interp_flat_type (codomain t))
-        := fun v => @interpf (extend ctx (Abs_name e) v) _ (invert_Abs e).
+        := fun v => @interpf _ (extend ctx (Abs_name e) v) (invert_Abs e).
 
       Definition Interp {t} (e : expr t)
         : interp_flat_type (domain t) -> option (interp_flat_type (codomain t))
@@ -81,8 +81,8 @@ Global Arguments Pair {_ _ _ _} _ {_} _.
 Global Arguments Abs {_ _ _ _ _} _ _.
 Global Arguments invert_Abs {_ _ _ _} _.
 Global Arguments Abs_name {_ _ _ _} _.
-Global Arguments interpf {_ _ _ _ _ interp_op ctx t} _.
-Global Arguments interp {_ _ _ _ _ interp_op ctx t} _ _.
+Global Arguments interpf {_ _ _ _ _ interp_op t ctx} _.
+Global Arguments interp {_ _ _ _ _ interp_op t ctx} _ _.
 Global Arguments Interp {_ _ _ _ _ interp_op t} _ _.
 
 Notation "'nlet' x := A 'in' b" := (LetIn _ x A%nexpr b%nexpr) : nexpr_scope.
