@@ -27,7 +27,7 @@ Module Export Named.
         : @Syntax.exprf base_type_code op var t
         := match e in Named.exprf _ _ _ t return @Syntax.exprf base_type_code op var t with
            | Named.Var t' x
-             => match lookupb ctx x t' with
+             => match lookupb t' ctx x with
                 | Some v => Var v
                 | None => failf _
                 end

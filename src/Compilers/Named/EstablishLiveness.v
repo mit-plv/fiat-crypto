@@ -50,7 +50,7 @@ Section language.
       : list liveness
       := match e with
          | TT => prefix
-         | Var t' name => match lookup ctx (Tbase t') name with
+         | Var t' name => match lookup (Tbase t') ctx name with
                           | Some ls => ls
                           | _ => nil
                           end

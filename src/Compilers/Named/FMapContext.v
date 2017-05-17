@@ -25,15 +25,15 @@ Module FMapContextFun (E : DecidableType) (W : WSfun E).
          end.
     Definition FMapContext : @Context base_type_code W.key var
       := {| ContextT := W.t { t : _ & var t };
-            lookupb ctx n t
+            lookupb t ctx n
             := match W.find n ctx with
                | Some (existT t' v)
                  => var_cast v
                | None => None
                end;
-            extendb ctx n t v
+            extendb t ctx n v
             := W.add n (existT _ t v) ctx;
-            removeb ctx n t
+            removeb t ctx n
             := W.remove n ctx;
             empty := W.empty _ |}.
     Lemma FMapContextOk : @ContextOk base_type_code W.key var FMapContext.
@@ -58,9 +58,9 @@ Module FMapContextFun (E : DecidableType) (W : WSfun E).
 
     Definition FMapContext_nd : @Context base_type_code W.key (fun _ => var)
       := {| ContextT := W.t var;
-            lookupb ctx n t := W.find n ctx;
-            extendb ctx n t v := W.add n v ctx;
-            removeb ctx n t := W.remove n ctx;
+            lookupb t ctx n := W.find n ctx;
+            extendb t ctx n v := W.add n v ctx;
+            removeb t ctx n := W.remove n ctx;
             empty := W.empty _ |}.
   End ctx_nd.
 End FMapContextFun.

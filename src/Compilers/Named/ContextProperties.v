@@ -18,26 +18,26 @@ Section with_context.
 
   Lemma lookupb_eq_cast
     : forall (ctx : Context) n t t' (pf : t = t'),
-      lookupb ctx n t' = option_map (fun v => eq_rect _ var v _ pf) (lookupb ctx n t).
+      lookupb t' ctx n = option_map (fun v => eq_rect _ var v _ pf) (lookupb t ctx n).
   Proof.
     intros; subst; edestruct lookupb; reflexivity.
   Defined.
   Lemma lookupb_extendb_eq
     : forall (ctx : Context) n t t' (pf : t = t') v,
-      lookupb (extendb ctx n (t:=t) v) n t' = Some (eq_rect _ var v _ pf).
+      lookupb t' (extendb ctx n (t:=t) v) n = Some (eq_rect _ var v _ pf).
   Proof.
     intros; subst; apply lookupb_extendb_same; assumption.
   Defined.
 
   Lemma lookupb_extendb_full (ctx : Context) n n' t t' v
-    : lookupb (extendb ctx n (t:=t) v) n' t'
+    : lookupb t' (extendb ctx n (t:=t) v) n'
       = match dec (n = n'), dec (t = t') with
         | left _, left pf
           => Some (eq_rect _ var v _ pf)
         | left _, _
           => None
         | right _, _
-          => lookupb ctx n' t'
+          => lookupb t' ctx n'
         end.
   Proof using ContextOk.
     break_innermost_match; subst; simpl.
@@ -48,29 +48,29 @@ Section with_context.
 
   Lemma lookupb_extend (ctx : Context)
         T N t n v
-    : lookupb (extend ctx N (t:=T) v) n t
-      = find_Name_and_val t n N v (lookupb ctx n t).
+    : lookupb t (extend ctx N (t:=T) v) n
+      = find_Name_and_val t n N v (lookupb t ctx n).
   Proof using ContextOk. revert ctx; induction T; t. Qed.
 
   Lemma lookupb_remove (ctx : Context)
         T N t n
-    : lookupb (remove ctx N) n t
+    : lookupb t (remove ctx N) n
       = match @find_Name n T N with
         | Some _ => None
-        | None => lookupb ctx n t
+        | None => lookupb t ctx n
         end.
   Proof using ContextOk. revert ctx; induction T; t. Qed.
 
   Lemma lookupb_remove_not_in (ctx : Context)
         T N t n
         (H : @find_Name n T N = None)
-    : lookupb (remove ctx N) n t = lookupb ctx n t.
+    : lookupb t (remove ctx N) n = lookupb t ctx n.
   Proof using ContextOk. rewrite lookupb_remove, H; reflexivity. Qed.
 
   Lemma lookupb_remove_in (ctx : Context)
         T N t n
         (H : @find_Name n T N <> None)
-    : lookupb (remove ctx N) n t = None.
+    : lookupb t (remove ctx N) n = None.
   Proof using ContextOk. rewrite lookupb_remove; break_match; congruence. Qed.
 
   Lemma find_Name_and_val_Some_None

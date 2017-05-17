@@ -99,20 +99,20 @@ Section ctx.
 
   Definition AListContext : @Context base_type_code key var
     := {| ContextT := list (key * { t : _ & var t });
-          lookupb ctx n t
+          lookupb t ctx n
           := match find n ctx with
              | Some (existT t' v)
                => var_cast v
              | None => None
              end;
-          extendb ctx n t v
+          extendb t ctx n v
           := add n (existT _ t v) ctx;
-          removeb ctx n t
+          removeb t ctx n
           := remove n ctx;
           empty := nil |}.
 
   Lemma length_extendb (ctx : AListContext) k t v
-    : length (@extendb _ _ _ AListContext ctx k t v) = S (length ctx).
+    : length (@extendb _ _ _ AListContext t ctx k v) = S (length ctx).
   Proof. reflexivity. Qed.
 
   Lemma AListContextOk : @ContextOk base_type_code key var AListContext.

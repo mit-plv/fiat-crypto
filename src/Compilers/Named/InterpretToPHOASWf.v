@@ -54,9 +54,9 @@ Section language.
               | [ H : context[find_Name_and_val ?tdec ?ndec ?a ?b ?c ?d ?default] |- _ ]
                 => lazymatch default with None => fail | _ => idtac end;
                    rewrite (find_Name_and_val_split tdec ndec (default:=default)) in H
-              | [ H : forall n t, lookupb _ n t = None <-> lookupb _ n t = None |- context[lookupb _ _ = None] ]
+              | [ H : forall n t, lookupb _ n = None <-> lookupb _ n = None |- context[lookupb _ _ = None] ]
                 => rewrite H
-              | [ H : forall n t, lookupb _ n t = None |- context[lookupb _ _ = None] ]
+              | [ H : forall n t, lookupb _ n = None |- context[lookupb _ _ = None] ]
                 => rewrite H
               end ].
     Local Ltac t := repeat t_step.
@@ -68,11 +68,11 @@ Section language.
           (Hwf2 : prop_of_option (Named.wff ctx2 e))
           G
           (HG : forall n t v1 v2,
-              lookupb ctx1 n t = Some v1
-              -> lookupb ctx2 n t = Some v2
+              lookupb t ctx1 n = Some v1
+              -> lookupb t ctx2 n = Some v2
               -> List.In (existT _ t (v1, v2)%core) G)
           (Hctx1_ctx2 : forall n t,
-              lookupb ctx1 n t = None <-> lookupb ctx2 n t = None)
+              lookupb t ctx1 n = None <-> lookupb t ctx2 n = None)
       : wff G (interpf_to_phoas failb1 ctx1 e) (interpf_to_phoas failb2 ctx2 e).
     Proof using Context1Ok Context2Ok Name_dec base_type_code_dec.
       revert dependent G; revert dependent ctx1; revert dependent ctx2; induction e;
@@ -93,8 +93,8 @@ Section language.
           {t} (e : @Named.expr base_type_code op Name t)
           (Hwf1 : Named.wf ctx1 e)
           (Hwf2 : Named.wf ctx2 e)
-          (Hctx1 : forall n t, lookupb ctx1 n t = None)
-          (Hctx2 : forall n t, lookupb ctx2 n t = None)
+          (Hctx1 : forall n t, lookupb t ctx1 n = None)
+          (Hctx2 : forall n t, lookupb t ctx2 n = None)
       : wf (interp_to_phoas failb1 ctx1 e) (interp_to_phoas failb2 ctx2 e).
     Proof using Context1Ok Context2Ok Name_dec base_type_code_dec.
       constructor; intros.
@@ -119,7 +119,7 @@ Section language.
     Lemma Wf_InterpToPHOAS_gen
           {ctx : forall var, Context var}
           {t} (e : @Named.expr base_type_code op Name t)
-          (Hctx : forall var n t, lookupb (ctx var) n t = None)
+          (Hctx : forall var n t, lookupb t (ctx var) n = None)
           (Hwf : forall var, Named.wf (ctx var) e)
       : Wf (InterpToPHOAS_gen failb ctx e).
     Proof using ContextOk Name_dec base_type_code_dec.

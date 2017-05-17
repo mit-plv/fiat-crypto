@@ -83,10 +83,10 @@ Section symbolic.
           (m1 : @SymbolicExprContext (interp_flat_type var1))
           (m2 : @SymbolicExprContext (interp_flat_type var2))
           (Hlen : length m1 = length m2)
-          (Hm1m2None : forall t v, lookupb m1 v t = None <-> lookupb m2 v t = None)
+          (Hm1m2None : forall t v, lookupb t m1 v = None <-> lookupb t m2 v = None)
           (Hm1m2Some : forall t v sv1 sv2,
-              lookupb m1 v t = Some sv1
-              -> lookupb m2 v t = Some sv2
+              lookupb t m1 v = Some sv1
+              -> lookupb t m2 v = Some sv2
               -> forall k,
                   List.In k (flatten_binding_list
                                (t:=t)

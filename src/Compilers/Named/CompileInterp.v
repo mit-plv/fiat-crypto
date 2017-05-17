@@ -49,7 +49,7 @@ Section language.
   Lemma interpf_ocompilef (ctx : Context) {t} (e : exprf t) e' (ls : list (option Name))
         G
         (Hwf : wff G e e')
-        (HG : forall t n x, List.In (existT _ t (n, x)%core) G -> lookupb ctx n t = Some x)
+        (HG : forall t n x, List.In (existT _ t (n, x)%core) G -> lookupb t ctx n = Some x)
         v
         (H : ocompilef e ls = Some v)
         (Hls : oname_list_unique ls)
@@ -174,7 +174,7 @@ Section language.
   Lemma interpf_compilef (ctx : Context) {t} (e : exprf t) e' (ls : list Name)
         G
         (Hwf : wff G e e')
-        (HG : forall t n x, List.In (existT _ t (n, x)%core) G -> lookupb ctx n t = Some x)
+        (HG : forall t n x, List.In (existT _ t (n, x)%core) G -> lookupb t ctx n = Some x)
         v
         (H : compilef e ls = Some v)
         (Hls : name_list_unique ls)

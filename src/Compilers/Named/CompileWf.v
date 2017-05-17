@@ -48,7 +48,7 @@ Section language.
 
   Lemma wff_ocompilef (ctx : Context) G
         (HG : forall t n v,
-            List.In (existT _ t (n, v)%core) G -> lookupb ctx n t = Some v)
+            List.In (existT _ t (n, v)%core) G -> lookupb t ctx n = Some v)
         {t} (e : exprf t) e' (ls : list (option Name))
         (Hwf : wff G e e')
         v
@@ -205,7 +205,7 @@ Section language.
   Lemma wff_compilef (ctx : Context) {t} (e : exprf t) e' (ls : list Name)
         G
         (Hwf : wff G e e')
-        (HG : forall t n x, List.In (existT _ t (n, x)%core) G -> lookupb ctx n t = Some x)
+        (HG : forall t n x, List.In (existT _ t (n, x)%core) G -> lookupb t ctx n = Some x)
         v
         (H : compilef e ls = Some v)
         (Hls : name_list_unique ls)

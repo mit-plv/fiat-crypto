@@ -50,7 +50,7 @@ Section language.
     Lemma wff_from_unit
           (vctx : vContext)
           (uctx : uContext)
-          (Hctx : forall t n, lookupb vctx n t = None <-> lookupb uctx n t = None)
+          (Hctx : forall t n, lookupb t vctx n = None <-> lookupb t uctx n = None)
           {t} (e : @exprf base_type_code op Name t)
       : wff_unit uctx e = Some trivial -> prop_of_option (wff vctx e).
     Proof using Name_dec base_type_code_dec uContextOk vContextOk.
@@ -60,7 +60,7 @@ Section language.
     Lemma wf_from_unit
           (vctx : vContext)
           (uctx : uContext)
-          (Hctx : forall t n, lookupb vctx n t = None <-> lookupb uctx n t = None)
+          (Hctx : forall t n, lookupb t vctx n = None <-> lookupb t uctx n = None)
           {t} (e : @expr base_type_code op Name t)
       : wf_unit uctx e = Some trivial -> wf vctx e.
     Proof using Name_dec base_type_code_dec uContextOk vContextOk.

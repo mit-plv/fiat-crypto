@@ -45,17 +45,17 @@ Section with_context.
 
   Class ContextOk :=
     { lookupb_extendb_same
-      : forall (ctx : Context) n t v, lookupb (extendb ctx n (t:=t) v) n t = Some v;
+      : forall (ctx : Context) n t v, lookupb t (extendb ctx n (t:=t) v) n = Some v;
       lookupb_extendb_different
-      : forall (ctx : Context) n n' t t' v, n <> n' -> lookupb (extendb ctx n (t:=t) v) n' t'
-                                                       = lookupb ctx n' t';
+      : forall (ctx : Context) n n' t t' v, n <> n' -> lookupb t' (extendb ctx n (t:=t) v) n'
+                                                       = lookupb t' ctx n';
       lookupb_extendb_wrong_type
-      : forall (ctx : Context) n t t' v, t <> t' -> lookupb (extendb ctx n (t:=t) v) n t' = None;
+      : forall (ctx : Context) n t t' v, t <> t' -> lookupb t' (extendb ctx n (t:=t) v) n = None;
       lookupb_removeb_different
-      : forall (ctx : Context) n n' t t', n <> n' -> lookupb (removeb ctx n t) n' t'
-                                                     = lookupb ctx n' t';
+      : forall (ctx : Context) n n' t t', n <> n' -> lookupb t' (removeb t ctx n) n'
+                                                     = lookupb t' ctx n';
       lookupb_removeb_same
-      : forall (ctx : Context) n t t', lookupb (removeb ctx n t) n t' = None;
+      : forall (ctx : Context) n t t', lookupb t' (removeb t ctx n) n = None;
       lookupb_empty
-      : forall n t, lookupb (@empty _ _ _ Context) n t = None }.
+      : forall n t, lookupb t (@empty _ _ _ Context) n = None }.
 End with_context.

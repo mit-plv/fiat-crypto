@@ -18,7 +18,7 @@ Module Export Named.
         Fixpoint wff_gen (ctx : Context) {t} (e : @exprf base_type_code op Name t) : option pointed_Prop
           := match e with
              | TT => Some trivial
-             | Var t n => match lookupb ctx n t return bool with
+             | Var t n => match lookupb t ctx n return bool with
                           | Some _ => true
                           | None => false
                           end

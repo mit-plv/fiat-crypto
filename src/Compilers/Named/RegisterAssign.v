@@ -34,9 +34,9 @@ Section language.
       : option (exprf OutName t)
       := match e in Named.exprf _ _ _ t return option (exprf _ t) with
          | TT => Some TT
-         | Var t' name => match lookupb ctxi name t' with
+         | Var t' name => match lookupb t' ctxi name with
                           | Some new_name
-                            => match lookupb ctxr new_name t' with
+                            => match lookupb t' ctxr new_name with
                                | Some name'
                                  => if InName_beq name name'
                                     then Some (Var new_name)

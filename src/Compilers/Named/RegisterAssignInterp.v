@@ -80,9 +80,9 @@ Section language.
   Proof using Type. t_find T. Qed.
 
   Lemma lookupb_extend_helper {ctxi : InContext} {ctxr : ReverseContext} {t T NI NO n_in n_out}
-        (H0 : lookupb (extend (t:=T) ctxi NI NO) n_in t = Some n_out)
-        (H1 : lookupb (extend (t:=T) ctxr NO NI) n_out t = Some n_in)
-    : ((lookupb ctxi n_in t = Some n_out /\ lookupb ctxr n_out t = Some n_in)
+        (H0 : lookupb t (extend (t:=T) ctxi NI NO) n_in = Some n_out)
+        (H1 : lookupb t (extend (t:=T) ctxr NO NI) n_out = Some n_in)
+    : ((lookupb t ctxi n_in = Some n_out /\ lookupb t ctxr n_out = Some n_in)
        /\ (find_Name _ n_in NI = None /\ find_Name _ n_out NO = None))
       \/ (find_Name_and_val _ _ t n_in NI NO None = Some n_out
           /\ find_Name_and_val _ _ t n_out NO NI None = Some n_in).
@@ -186,10 +186,10 @@ Section language.
         eout
         v1 v2
     : (forall t (n_in : InName) (n_out : OutName) v1 v2,
-          lookupb ctxi n_in t = Some n_out
-          -> lookupb ctxr n_out t = Some n_in
-          -> lookupb ctxi_interp n_in t = Some v1
-          -> lookupb ctxr_interp n_out t = Some v2
+          lookupb t ctxi n_in = Some n_out
+          -> lookupb t ctxr n_out = Some n_in
+          -> lookupb t ctxi_interp n_in = Some v1
+          -> lookupb t ctxr_interp n_out = Some v2
           -> v1 = v2)
       -> @register_reassignf ctxi ctxr t e new_names = Some eout
       -> interpf (interp_op:=interp_op) (ctx:=ctxr_interp) eout = Some v1
@@ -207,10 +207,10 @@ Section language.
         eout
         v1 v2 x
     : (forall t (n_in : InName) (n_out : OutName) v1 v2,
-          lookupb ctxi n_in t = Some n_out
-          -> lookupb ctxr n_out t = Some n_in
-          -> lookupb ctxi_interp n_in t = Some v1
-          -> lookupb ctxr_interp n_out t = Some v2
+          lookupb t ctxi n_in = Some n_out
+          -> lookupb t ctxr n_out = Some n_in
+          -> lookupb t ctxi_interp n_in = Some v1
+          -> lookupb t ctxr_interp n_out = Some v2
           -> v1 = v2)
       -> @register_reassign ctxi ctxr t e new_names = Some eout
       -> interp (interp_op:=interp_op) (ctx:=ctxr_interp) eout x = Some v1

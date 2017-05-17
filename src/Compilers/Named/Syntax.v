@@ -44,7 +44,7 @@ Module Export Named.
                (ctx : Context) {t} (e : exprf t)
         : option (interp_flat_type t)
         := match e in exprf t return option (interp_flat_type t) with
-           | Var t' x => lookupb ctx x t'
+           | Var t' x => lookupb t' ctx x
            | TT => Some tt
            | Pair _ ex _ ey
              => match @interpf ctx _ ex, @interpf ctx _ ey with
