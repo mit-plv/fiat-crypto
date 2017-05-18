@@ -13,7 +13,7 @@ HIDE := $(if $(VERBOSE),,@)
 .PHONY: coq clean update-_CoqProject cleanall install \
 	install-coqprime clean-coqprime coqprime \
 	specific-display display \
-	specific non-specific
+	specific non-specific lite only-heavy
 
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g' | uniq
 
@@ -50,7 +50,7 @@ $(VOFILES): | coqprime
 UNMADE_VOFILES := src/SpecificGen/% src/Specific/%Display.vo
 # add files to this list to prevent them from being built as final
 # targets by the "lite" target
-HEAVY_VOFILES := src/Curves/Weierstrass/AffineProofs.vo
+LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo
 
 COQ_VOFILES := $(filter-out $(UNMADE_VOFILES),$(VOFILES))
 SPECIFIC_VO := $(filter src/Specific/%,$(VOFILES))
@@ -62,13 +62,17 @@ DISPLAY_NON_JAVA_VO := $(filter-out $(DISPLAY_JAVA_VO),$(DISPLAY_VO))
 # computing the reverse_vo_closure is slow, so we only do it if we're
 # asked to make the lite target
 ifneq ($(filter lite,$(MAKECMDGOALS)),)
-LITE_VOFILES := $(filter-out $(call reverse_vo_closure,$(VO_FILES),$(HEAVY_VOFILES)),$(COQ_VOFILES))
+LITE_VOFILES := $(filter-out $(call reverse_vo_closure,$(VO_FILES),$(LITE_UNMADE_VOFILES)),$(COQ_VOFILES))
+endif
+ifneq ($(filter only-heavy,$(MAKECMDGOALS)),)
+HEAVY_VOFILES := $(call vo_closure,$(LITE_UNMADE_VOFILES))
 endif
 
 specific: $(SPECIFIC_VO) coqprime
 non-specific: $(NON_SPECIFIC_VO) coqprime
 coq: $(COQ_VOFILES) coqprime
 lite: $(LITE_VOFILES) coqprime
+only-heavy: $(HEAVY_VOFILES) coqprime
 specific-display: $(SPECIFIC_DISPLAY_VO:.vo=.log) coqprime
 display: $(DISPLAY_VO:.vo=.log) coqprime
 
