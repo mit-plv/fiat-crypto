@@ -145,8 +145,8 @@ Local Arguments Z.add !_ !_.
 Local Arguments Z.sub !_ !_.
 Local Arguments Z.opp !_.
 
-Lemma InterpSimplifyArith {t} (e : Expr t)
-  : forall x, Interp interp_op (SimplifyArith e) x = Interp interp_op e x.
+Lemma InterpSimplifyArith {convert_adc_to_sbb} {t} (e : Expr t)
+  : forall x, Interp interp_op (SimplifyArith convert_adc_to_sbb e) x = Interp interp_op e x.
 Proof.
   apply InterpRewriteOp; intros; unfold simplify_op_expr.
   break_innermost_match;

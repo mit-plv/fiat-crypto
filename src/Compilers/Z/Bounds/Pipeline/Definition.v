@@ -34,7 +34,7 @@ Require Import Crypto.Compilers.Z.ArithmeticSimplifierInterp.
 (** *** Definition of the Pre-Wf Pipeline *)
 (** Do not change the name or the type of this definition *)
 Definition PreWfPipeline {t} (e : Expr base_type op t) : Expr base_type op _
-  := ExprEta (SimplifyArith (Linearize e)).
+  := ExprEta (SimplifyArith false (Linearize e)).
 
 (** *** Correctness proof of the Pre-Wf Pipeline *)
 (** Do not change the statement of this lemma.  You shouldn't need to
@@ -89,13 +89,13 @@ Definition PostWfPipeline
   := Build_ProcessedReflectivePackage_from_option_sigma
        e input_bounds
        (let e := InlineConst e in
-        let e := InlineConst (SimplifyArith e) in
-        let e := InlineConst (SimplifyArith e) in
-        let e := InlineConst (SimplifyArith e) in
-        let e := if opts.(anf) then ANormal e else e in
-        let e := InlineConst e in
+        let e := InlineConst (SimplifyArith false e) in
+        let e := InlineConst (SimplifyArith false e) in
+        let e := InlineConst (SimplifyArith false e) in
+        let e := if opts.(anf) then InlineConst (ANormal e) else e in
         let e := RewriteAdc e in
-        let e := InlineConst (SimplifyArith e) in
+        let e := InlineConstAndOpp (Linearize (SimplifyArith true e)) in
+        let e := InlineConstAndOpp (Linearize (SimplifyArith true e)) in
         (*let e := CSE false e in*)
         let e := MapCast _ e input_bounds in
         option_map

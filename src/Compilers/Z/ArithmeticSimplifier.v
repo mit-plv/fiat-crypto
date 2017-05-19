@@ -5,6 +5,7 @@ Require Import Crypto.Compilers.Rewriter.
 Require Import Crypto.Compilers.Z.Syntax.
 
 Section language.
+  Context (convert_adc_to_sbb : bool).
   Local Notation exprf := (@exprf base_type op).
   Local Notation Expr := (@Expr base_type op).
 
@@ -178,108 +179,116 @@ Section language.
                  end
          | AddWithCarry TZ TZ TZ TZ as opc
            => fun args
-              => match interp_as_expr_or_const args with
-                 | Some (const_of c, const_of x, const_of y)
-                   => Op (OpConst (interp_op _ _ opc (c, x, y))) TT
-                 | Some (c, gen_expr x, y)
-                   => let y' := match y with
-                                | const_of y => if (y <? 0)%Z
-                                                then Some (Op (OpConst (-y)) TT)
-                                                else None
-                                | neg_expr y => Some y
-                                | gen_expr _ => None
-                                end in
-                      match y' with
-                      | Some y => Op (SubWithBorrow TZ TZ TZ TZ)
-                                     (match c with
-                                      | const_of c => Op (OpConst (-c)) TT
-                                      | neg_expr c => c
-                                      | gen_expr c => Op (Opp TZ TZ) c
-                                      end,
-                                      x, y)%expr
-                      | None => Op opc args
+              => if convert_adc_to_sbb
+                 then match interp_as_expr_or_const args with
+                      | Some (const_of c, const_of x, const_of y)
+                        => Op (OpConst (interp_op _ _ opc (c, x, y))) TT
+                      | Some (c, gen_expr x, y)
+                        => let y' := match y with
+                                     | const_of y => if (y <? 0)%Z
+                                                     then Some (Op (OpConst (-y)) TT)
+                                                     else None
+                                     | neg_expr y => Some y
+                                     | gen_expr _ => None
+                                     end in
+                           match y' with
+                           | Some y => Op (SubWithBorrow TZ TZ TZ TZ)
+                                          (match c with
+                                           | const_of c => Op (OpConst (-c)) TT
+                                           | neg_expr c => c
+                                           | gen_expr c => Op (Opp TZ TZ) c
+                                           end,
+                                           x, y)%expr
+                           | None => Op opc args
+                           end
+                      | _ => Op opc args
                       end
-                 | _ => Op opc args
-                 end
+                 else Op opc args
          | AddWithGetCarry bw TZ TZ TZ TZ TZ as opc
            => fun args
-              => match interp_as_expr_or_const args with
-                 | Some (const_of c, const_of x, const_of y)
-                   => let '(v, c) := interp_op _ _ opc (c, x, y) in
-                      (Op (OpConst v) TT, Op (OpConst c) TT)%expr
-                 | Some (c, gen_expr x, y)
-                   => let y' := match y with
-                                | const_of y => if (y <? 0)%Z
-                                                then Some (Op (OpConst (-y)) TT)
-                                                else None
-                                | neg_expr y => Some y
-                                | gen_expr _ => None
-                                end in
-                      match y' with
-                      | Some y => LetIn (Op (SubWithGetBorrow bw TZ TZ TZ TZ TZ)
-                                            (match c with
-                                             | const_of c => Op (OpConst (-c)) TT
-                                             | neg_expr c => c
-                                             | gen_expr c => Op (Opp TZ TZ) c
-                                             end,
-                                             x, y)%expr)
-                                        (fun '(v, c) => (Var v, Op (Opp TZ TZ) (Var c))%expr)
-                      | None => Op opc args
+              => if convert_adc_to_sbb
+                 then match interp_as_expr_or_const args with
+                      | Some (const_of c, const_of x, const_of y)
+                        => let '(v, c) := interp_op _ _ opc (c, x, y) in
+                           (Op (OpConst v) TT, Op (OpConst c) TT)%expr
+                      | Some (c, gen_expr x, y)
+                        => let y' := match y with
+                                     | const_of y => if (y <? 0)%Z
+                                                     then Some (Op (OpConst (-y)) TT)
+                                                     else None
+                                     | neg_expr y => Some y
+                                     | gen_expr _ => None
+                                     end in
+                           match y' with
+                           | Some y => LetIn (Op (SubWithGetBorrow bw TZ TZ TZ TZ TZ)
+                                                 (match c with
+                                                  | const_of c => Op (OpConst (-c)) TT
+                                                  | neg_expr c => c
+                                                  | gen_expr c => Op (Opp TZ TZ) c
+                                                  end,
+                                                  x, y)%expr)
+                                             (fun '(v, c) => (Var v, Op (Opp TZ TZ) (Var c))%expr)
+                           | None => Op opc args
+                           end
+                      | _ => Op opc args
                       end
-                 | _ => Op opc args
-                 end
+                 else Op opc args
          | SubWithBorrow TZ TZ TZ TZ as opc
            => fun args
-              => match interp_as_expr_or_const args with
-                 | Some (const_of c, const_of x, const_of y)
-                   => Op (OpConst (interp_op _ _ opc (c, x, y))) TT
-                 | Some (c, gen_expr x, y)
-                   => let y' := match y with
-                                | const_of y => if (y <? 0)%Z
-                                                then Some (Op (OpConst (-y)) TT)
-                                                else None
-                                | neg_expr y => Some y
-                                | gen_expr _ => None
-                                end in
-                      match y' with
-                      | Some y => Op (AddWithCarry TZ TZ TZ TZ)
-                                     (match c with
-                                      | const_of c => Op (OpConst (-c)) TT
-                                      | neg_expr c => c
-                                      | gen_expr c => Op (Opp TZ TZ) c
-                                      end,
-                                      x, y)%expr
-                      | None => Op opc args
+              => if convert_adc_to_sbb
+                 then match interp_as_expr_or_const args with
+                      | Some (const_of c, const_of x, const_of y)
+                        => Op (OpConst (interp_op _ _ opc (c, x, y))) TT
+                      | Some (c, gen_expr x, y)
+                        => let y' := match y with
+                                     | const_of y => if (y <? 0)%Z
+                                                     then Some (Op (OpConst (-y)) TT)
+                                                     else None
+                                     | neg_expr y => Some y
+                                     | gen_expr _ => None
+                                     end in
+                           match y' with
+                           | Some y => Op (AddWithCarry TZ TZ TZ TZ)
+                                          (match c with
+                                           | const_of c => Op (OpConst (-c)) TT
+                                           | neg_expr c => c
+                                           | gen_expr c => Op (Opp TZ TZ) c
+                                           end,
+                                           x, y)%expr
+                           | None => Op opc args
+                           end
+                      | _ => Op opc args
                       end
-                 | _ => Op opc args
-                 end
+                 else Op opc args
          | SubWithGetBorrow bw TZ TZ TZ TZ TZ as opc
            => fun args
-              => match interp_as_expr_or_const args with
-                 | Some (const_of c, const_of x, const_of y)
-                   => let '(v, c) := interp_op _ _ opc (c, x, y) in
-                      (Op (OpConst v) TT, Op (OpConst c) TT)%expr
-                 | Some (c, gen_expr x, y)
-                   => let y' := match y with
-                                | const_of y => if (y <? 0)%Z
-                                                then Some (Op (OpConst (-y)) TT)
-                                                else None
-                                | neg_expr y => Some y
-                                | gen_expr _ => None
-                                end in
-                      match y' with
-                      | Some y => LetIn (Op (AddWithGetCarry bw TZ TZ TZ TZ TZ)
-                                            (match c with
-                                             | const_of c => Op (OpConst (-c)) TT
-                                             | neg_expr c => c
-                                             | gen_expr c => Op (Opp TZ TZ) c
-                                             end,
-                                             x, y)%expr)
-                                        (fun '(v, c) => (Var v, Op (Opp TZ TZ) (Var c))%expr)
-                      | None => Op opc args
+              => if convert_adc_to_sbb
+                 then match interp_as_expr_or_const args with
+                      | Some (const_of c, const_of x, const_of y)
+                        => let '(v, c) := interp_op _ _ opc (c, x, y) in
+                           (Op (OpConst v) TT, Op (OpConst c) TT)%expr
+                      | Some (c, gen_expr x, y)
+                        => let y' := match y with
+                                     | const_of y => if (y <? 0)%Z
+                                                     then Some (Op (OpConst (-y)) TT)
+                                                     else None
+                                     | neg_expr y => Some y
+                                     | gen_expr _ => None
+                                     end in
+                           match y' with
+                           | Some y => LetIn (Op (AddWithGetCarry bw TZ TZ TZ TZ TZ)
+                                                 (match c with
+                                                  | const_of c => Op (OpConst (-c)) TT
+                                                  | neg_expr c => c
+                                                  | gen_expr c => Op (Opp TZ TZ) c
+                                                  end,
+                                                  x, y)%expr)
+                                             (fun '(v, c) => (Var v, Op (Opp TZ TZ) (Var c))%expr)
+                           | None => Op opc args
+                           end
+                      | _ => Op opc args
                       end
-                 | _ => Op opc args
-                 end
+                 else Op opc args
          | Add _ _ _ as opc
          | Sub _ _ _ as opc
          | Mul _ _ _ as opc
