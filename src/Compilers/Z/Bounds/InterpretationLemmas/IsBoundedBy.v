@@ -268,7 +268,7 @@ Proof.
     repeat (apply Z.max_case_strong || apply Zabs_ind); omega.
 Qed.
 
-Local Existing Instances Z.log2_up_le_Proper Z.add_le_Proper.
+Local Existing Instances Z.log2_up_le_Proper Z.add_le_Proper Z.sub_with_borrow_le_Proper.
 Lemma land_upper_lor_land_bounds a b
   : Z.abs (Z.land a b) <= Bounds.upper_lor_and_bounds (Z.abs a) (Z.abs b).
 Proof.
@@ -324,6 +324,10 @@ Local Arguments Z.pow : simpl never.
 Local Arguments Z.add !_ !_.
 Local Existing Instances Z.add_le_Proper Z.sub_le_flip_le_Proper Z.log2_up_le_Proper Z.pow_Zpos_le_Proper Z.sub_le_eq_Proper Z.add_with_carry_le_Proper.
 Local Hint Extern 1 => progress cbv beta iota : typeclass_instances.
+Local Ltac ibbio_do_cbv :=
+  cbv [Bounds.interp_op Zinterp_op Z.add_with_get_carry SmartFlatTypeMapUnInterp Bounds.add_with_get_carry Bounds.sub_with_get_borrow Bounds.get_carry Bounds.get_borrow Z.get_carry cast_const]; cbn [fst snd].
+Local Ltac ibbio_prefin_by_apply :=
+  [ > | intros; apply is_bounded_by_truncation_bounds | simpl; reflexivity ].
 Lemma is_bounded_by_interp_op t tR (opc : op t tR)
       (bs : interp_flat_type Bounds.interp_base_type _)
       (v : interp_flat_type interp_base_type _)
@@ -332,12 +336,17 @@ Lemma is_bounded_by_interp_op t tR (opc : op t tR)
 Proof.
   destruct opc;
     [ apply is_bounded_by_truncation_bounds..
-    | split;
-      cbv [Bounds.interp_op Zinterp_op Z.add_with_get_carry SmartFlatTypeMapUnInterp Bounds.add_with_get_carry Z.get_carry cast_const]; cbn [fst snd];
+    | split; ibbio_do_cbv;
       [ eapply is_bounded_by_compose with (T1:=TZ) (f_v := fun v => ZToInterp (v mod _)) (v:=ZToInterp _);
-        [ | intros; apply is_bounded_by_truncation_bounds | simpl; reflexivity ]
+        ibbio_prefin_by_apply
       | eapply is_bounded_by_compose with (T1:=TZ) (f_v := fun v => ZToInterp (v / _))   (v:=ZToInterp _);
-        [ | intros; apply is_bounded_by_truncation_bounds | simpl; reflexivity ] ] ];
+        ibbio_prefin_by_apply ]
+    | apply is_bounded_by_truncation_bounds
+    | split; ibbio_do_cbv;
+      [ eapply is_bounded_by_compose with (T1:=TZ) (f_v := fun v => ZToInterp (v mod _)) (v:=ZToInterp _);
+        ibbio_prefin_by_apply
+      | eapply is_bounded_by_compose with (T1:=TZ) (f_v := fun v => ZToInterp (-(v / _)))   (v:=ZToInterp _);
+        ibbio_prefin_by_apply ] ];
     repeat first [ progress simpl in *
                  | progress cbv [interp_op lift_op cast_const Bounds.interp_base_type Bounds.is_bounded_by' ZRange.is_bounded_by'] in *
                  | progress destruct_head'_prod
@@ -387,5 +396,10 @@ Proof.
   { apply (@monotone_eight_corners true true true _ _ _); split; auto. }
   { apply Z.mod_bound_min_max; auto. }
   { apply (@monotone_eight_corners true true true _ _ _); split; auto. }
+  { auto with zarith. }
+  { apply (@monotone_eight_corners false true false _ _ _); split; auto. }
+  { apply (@monotone_eight_corners false true false _ _ _); split; auto. }
+  { apply Z.mod_bound_min_max; auto. }
+  { apply (@monotone_eight_corners false true false _ _ _); split; auto. }
   { auto with zarith. }
 Qed.

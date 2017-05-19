@@ -105,6 +105,10 @@ Module Import Bounds.
       := t_map3' Z.add_with_carry.
     Definition add_with_carry : t -> t -> t -> t
       := t_map3 Z.add_with_carry.
+    Definition sub_with_borrow' : t -> t -> t -> t
+      := t_map3' Z.sub_with_borrow.
+    Definition sub_with_borrow : t -> t -> t -> t
+      := t_map3 Z.sub_with_borrow.
     Definition modulo_pow2_constant : Z -> t -> t
       := fun e x
          => let d := 2^e in
@@ -116,6 +120,11 @@ Module Import Bounds.
          => let d := 2^e in
             let (l, u) := (lower x, upper x) in
             truncation_bounds {| lower := l / d ; upper := u / d |}.
+    Definition opp_div_pow2_constant : Z -> t -> t
+      := fun e x
+         => let d := 2^e in
+            let (l, u) := (lower x, upper x) in
+            truncation_bounds {| lower := -(u / d) ; upper := -(l / d) |}.
     Definition neg' (int_width : Z) : t -> t
       := fun v
          => let (lb, ub) := v in
@@ -143,12 +152,22 @@ Module Import Bounds.
       := truncation_bounds (cmovle' r1 r2).
   End with_bitwidth.
   Section with_bitwidth2.
-    Context (bit_width1 bit_width2 : option Z).
-    Definition add_with_get_carry (carry_boundary_bit_width : Z) : t -> t -> t -> t * t
+    Context (bit_width1 bit_width2 : option Z)
+            (carry_boundary_bit_width : Z).
+    Definition get_carry : t -> t * t
+      := fun v =>
+           (modulo_pow2_constant bit_width1 carry_boundary_bit_width v,
+            div_pow2_constant bit_width2 carry_boundary_bit_width v).
+    Definition get_borrow : t -> t * t
+      := fun v =>
+           (modulo_pow2_constant bit_width1 carry_boundary_bit_width v,
+            opp_div_pow2_constant bit_width2 carry_boundary_bit_width v).
+    Definition add_with_get_carry  : t -> t -> t -> t * t
       := fun c x y
-         => let xpy := add_with_carry' c x y in
-            (modulo_pow2_constant bit_width1 carry_boundary_bit_width xpy,
-             div_pow2_constant bit_width2 carry_boundary_bit_width xpy).
+         => get_carry (add_with_carry' c x y).
+    Definition sub_with_get_borrow : t -> t -> t -> t * t
+      := fun c x y
+         => get_borrow (sub_with_borrow' c x y).
   End with_bitwidth2.
 
   Module Export Notations.
@@ -189,6 +208,10 @@ Module Import Bounds.
        | AddWithGetCarry carry_boundary_bit_width _ _ _ T1 T2
          => fun cxy => let '(c, x, y) := eta3 cxy in
                        add_with_get_carry (bit_width_of_base_type T1) (bit_width_of_base_type T2) carry_boundary_bit_width c x y
+       | SubWithBorrow _ _ _ T => fun cxy => let '(c, x, y) := eta3 cxy in sub_with_borrow (bit_width_of_base_type T) c x y
+       | SubWithGetBorrow carry_boundary_bit_width _ _ _ T1 T2
+         => fun cxy => let '(c, x, y) := eta3 cxy in
+                       sub_with_get_borrow (bit_width_of_base_type T1) (bit_width_of_base_type T2) carry_boundary_bit_width c x y
        end%bounds.
 
   Definition of_Z (z : Z) : t := ZToZRange z.

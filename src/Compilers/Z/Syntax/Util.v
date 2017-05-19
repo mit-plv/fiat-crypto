@@ -71,6 +71,8 @@ Definition genericize_op {var' src dst} (opc : op src dst) {f}
      | Zselect _ _ _ _ => fun _ _ => Zselect _ _ _ _
      | AddWithCarry _ _ _ _ => fun _ _ => AddWithCarry _ _ _ _
      | AddWithGetCarry bitwidth _ _ _ _ _ => fun _ _ => AddWithGetCarry bitwidth _ _ _ _ _
+     | SubWithBorrow _ _ _ _ => fun _ _ => SubWithBorrow _ _ _ _
+     | SubWithGetBorrow bitwidth _ _ _ _ _ => fun _ _ => SubWithGetBorrow bitwidth _ _ _ _ _
      end.
 
 Lemma cast_const_id {t} v
