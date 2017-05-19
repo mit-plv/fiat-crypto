@@ -18,6 +18,13 @@ Definition make_const t : interp_base_type t -> op Unit (Tbase t)
 Definition is_const s d (v : op s d) : bool
   := match v with OpConst _ _ => true | _ => false end.
 Arguments is_const [s d] v.
+Definition is_opp s d (v : op s d) : bool
+  := match v with Opp _ _ => true | _ => false end.
+Arguments is_opp [s d] v.
+Definition is_const_or_opp s d (v : op s d) : bool
+  := (is_const v || is_opp v)%bool.
+Arguments is_const_or_opp [s d] v.
+
 
 Definition cast_back_flat_const {var t f V}
            (v : interp_flat_type interp_base_type (@SmartFlatTypeMap base_type var f t V))
