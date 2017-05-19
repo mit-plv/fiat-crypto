@@ -220,9 +220,9 @@ Local Ltac pose_wff_prod3 :=
     => pose proof (wff_interp_as_expr_or_const_prod3_base Hwf H1 H2); clear H1 H2
   end.
 
-Lemma Wf_SimplifyArith {t} (e : Expr t)
+Lemma Wf_SimplifyArith {convert_adc_to_sbb} {t} (e : Expr t)
       (Hwf : Wf e)
-  : Wf (SimplifyArith e).
+  : Wf (SimplifyArith convert_adc_to_sbb e).
 Proof.
   apply Wf_RewriteOp; [ | assumption ].
   intros ???????? Hwf'; unfold simplify_op_expr;
