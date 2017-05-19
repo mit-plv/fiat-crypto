@@ -46,4 +46,6 @@ Module Z.
   Proof. intros ???; apply Z.pow_le_mono_r; try reflexivity; try assumption. Qed.
   Lemma add_with_carry_le_Proper : Proper (Z.le ==> Z.le ==> Z.le ==> Z.le) Z.add_with_carry.
   Proof. unfold Z.add_with_carry; repeat (omega || intro). Qed.
+  Lemma sub_with_borrow_le_Proper : Proper (Basics.flip Z.le ==> Z.le ==> Basics.flip Z.le ==> Z.le) Z.sub_with_borrow.
+  Proof. unfold Z.sub_with_borrow, Z.add_with_carry, Basics.flip; repeat (omega || intro). Qed.
 End Z.

@@ -18,6 +18,16 @@ Module Z.
   Definition add_get_carry (bitwidth : Z) (x y : Z) : Z * Z
     := add_with_get_carry bitwidth 0 x y.
 
+  Definition get_borrow (bitwidth : Z) (v : Z) : Z * Z
+    := let '(v, c) := get_carry bitwidth v in
+       (v, -c).
+  Definition sub_with_borrow (c : Z) (x y : Z) : Z
+    := add_with_carry (-c) x (-y).
+  Definition sub_with_get_borrow (bitwidth : Z) (c : Z) (x y : Z) : Z * Z
+    := get_borrow bitwidth (sub_with_borrow c x y).
+  Definition sub_get_borrow (bitwidth : Z) (x y : Z) : Z * Z
+    := sub_with_get_borrow bitwidth 0 x y.
+
   (* splits at [bound], not [2^bitwidth]; wrapper to make add_getcarry
   work if input is not known to be a power of 2 *)
   Definition add_get_carry_full (bound : Z) (x y : Z) : Z * Z

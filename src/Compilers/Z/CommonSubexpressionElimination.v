@@ -23,12 +23,15 @@ Inductive symbolic_op :=
 | SZselect
 | SAddWithCarry
 | SAddWithGetCarry (bitwidth : Z)
+| SSubWithBorrow
+| SSubWithGetBorrow (bitwidth : Z)
 .
 
 Definition symbolic_op_leb (x y : symbolic_op) : bool
   := match x, y with
      | SOpConst z1, SOpConst z2 => Z.leb z1 z2
      | SAddWithGetCarry bw1, SAddWithGetCarry bw2 => Z.leb bw1 bw2
+     | SSubWithGetBorrow bw1, SSubWithGetBorrow bw2 => Z.leb bw1 bw2
      | SOpConst _, _ => true
      | _, SOpConst _ => false
      | SAdd, _ => true
@@ -51,8 +54,12 @@ Definition symbolic_op_leb (x y : symbolic_op) : bool
      | _, SZselect => false
      | SAddWithCarry, _ => true
      | _, SAddWithCarry => false
-     (*| SAddWithGetCarry _, _ => true
-     | _, SAddWithGetCarry _ => false*)
+     | SAddWithGetCarry _, _ => true
+     | _, SAddWithGetCarry _ => false
+     | SSubWithBorrow, _ => true
+     | _, SSubWithBorrow => false
+     (*| SSubWithGetBorrow _, _ => true
+     | _, SSubWithGetBorrow _ => false*)
      end.
 
 Local Notation symbolic_expr := (@symbolic_expr base_type symbolic_op).
@@ -73,6 +80,8 @@ Definition symbolize_op s d (opc : op s d) : symbolic_op
      | Zselect T1 T2 T3 Tout => SZselect
      | AddWithCarry T1 T2 T3 Tout => SAddWithCarry
      | AddWithGetCarry bitwidth T1 T2 T3 Tout1 Tout2 => SAddWithGetCarry bitwidth
+     | SubWithBorrow T1 T2 T3 Tout => SSubWithBorrow
+     | SubWithGetBorrow bitwidth T1 T2 T3 Tout1 Tout2 => SSubWithGetBorrow bitwidth
      end.
 
 Definition denote_symbolic_op s d (opc : symbolic_op) : option (op s d)
@@ -90,6 +99,9 @@ Definition denote_symbolic_op s d (opc : symbolic_op) : option (op s d)
      | SAddWithCarry, Prod (Prod (Tbase _) (Tbase _)) (Tbase _), Tbase _ => Some (AddWithCarry _ _ _ _)
      | SAddWithGetCarry bitwidth, Prod (Prod (Tbase _) (Tbase _)) (Tbase _), Prod (Tbase _) (Tbase _)
        => Some (AddWithGetCarry bitwidth _ _ _ _ _)
+     | SSubWithBorrow, Prod (Prod (Tbase _) (Tbase _)) (Tbase _), Tbase _ => Some (SubWithBorrow _ _ _ _)
+     | SSubWithGetBorrow bitwidth, Prod (Prod (Tbase _) (Tbase _)) (Tbase _), Prod (Tbase _) (Tbase _)
+       => Some (SubWithGetBorrow bitwidth _ _ _ _ _)
      | SAdd, _, _
      | SSub, _, _
      | SMul, _, _
@@ -102,6 +114,8 @@ Definition denote_symbolic_op s d (opc : symbolic_op) : option (op s d)
      | SZselect, _, _
      | SAddWithCarry, _, _
      | SAddWithGetCarry _, _, _
+     | SSubWithBorrow, _, _
+     | SSubWithGetBorrow _, _, _
        => None
      end.
 
@@ -172,6 +186,8 @@ Definition normalize_symbolic_expr_mod_c (opc : symbolic_op) (args : symbolic_ex
      | SZselect
      | SAddWithCarry
      | SAddWithGetCarry _
+     | SSubWithBorrow
+     | SSubWithGetBorrow _
        => args
      end.
 

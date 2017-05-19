@@ -47,6 +47,10 @@ Definition op_beq_hetero {t1 tR t1' tR'} (f : op t1 tR) (g : op t1' tR') : bool
        => base_type_beq T1 T1' && base_type_beq T2 T2' && base_type_beq T3 T3' && base_type_beq Tout Tout'
      | AddWithGetCarry bitwidth T1 T2 T3 Tout1 Tout2, AddWithGetCarry bitwidth' T1' T2' T3' Tout1' Tout2'
        => Z.eqb bitwidth bitwidth' && base_type_beq T1 T1' && base_type_beq T2 T2' && base_type_beq T3 T3' && base_type_beq Tout1 Tout1' && base_type_beq Tout2 Tout2'
+     | SubWithBorrow T1 T2 T3 Tout, SubWithBorrow T1' T2' T3' Tout'
+       => base_type_beq T1 T1' && base_type_beq T2 T2' && base_type_beq T3 T3' && base_type_beq Tout Tout'
+     | SubWithGetBorrow bitwidth T1 T2 T3 Tout1 Tout2, SubWithGetBorrow bitwidth' T1' T2' T3' Tout1' Tout2'
+       => Z.eqb bitwidth bitwidth' && base_type_beq T1 T1' && base_type_beq T2 T2' && base_type_beq T3 T3' && base_type_beq Tout1 Tout1' && base_type_beq Tout2 Tout2'
      | OpConst _ _, _
      | Add _ _ _, _
      | Sub _ _ _, _
@@ -59,6 +63,8 @@ Definition op_beq_hetero {t1 tR t1' tR'} (f : op t1 tR) (g : op t1' tR') : bool
      | Zselect _ _ _ _, _
      | AddWithCarry _ _ _ _, _
      | AddWithGetCarry _ _ _ _ _ _, _
+     | SubWithBorrow _ _ _ _, _
+     | SubWithGetBorrow _ _ _ _ _ _, _
        => false
      end%bool.
 

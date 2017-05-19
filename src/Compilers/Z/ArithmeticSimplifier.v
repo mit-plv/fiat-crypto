@@ -32,6 +32,7 @@ Section language.
                     | OpConst _ z => fun _ _ => const_of _ z
                     | Opp TZ TZ => fun _ args => neg_expr _ args
                     | AddWithGetCarry _ _ _ _ _ _ => fun _ _ => I
+                    | SubWithGetBorrow _ _ _ _ _ _ => fun _ _ => I
                     | _ => fun e _ => gen_expr _ e
                     end (Op opc args) args)
          | TT => Some tt
@@ -187,6 +188,8 @@ Section language.
          | Zselect _ _ _ _ as opc
          | AddWithCarry _ _ _ _ as opc
          | AddWithGetCarry _ _ _ _ _ _ as opc
+         | SubWithBorrow _ _ _ _ as opc
+         | SubWithGetBorrow _ _ _ _ _ _ as opc
            => Op opc
          end.
   End with_var.
