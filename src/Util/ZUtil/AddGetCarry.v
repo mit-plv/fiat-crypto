@@ -70,4 +70,8 @@ Module Z.
       reflexivity.
   Qed.
 
+  Lemma sub_with_borrow_to_add_get_carry c x y
+    : Z.sub_with_borrow c x y = Z.add_with_carry (-c) x (-y).
+  Proof. reflexivity. Qed.
+
 End Z.
