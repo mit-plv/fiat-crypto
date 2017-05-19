@@ -28,7 +28,14 @@ Local Ltac fin_t :=
         | reflexivity
         | congruence
         | assumption
-        | exfalso; assumption ].
+        | exfalso; assumption
+        | match goal with
+          | [ |- _ /\ False ] => exfalso
+          | [ |- False /\ _ ] => exfalso
+          | [ |- _ /\ _ /\ False ] => exfalso
+          | [ |- _ /\ False /\ _ ] => exfalso
+          | [ |- False /\ _ /\ _ ] => exfalso
+          end ].
 Local Ltac break_t_step :=
   first [ progress subst
         | progress inversion_option
@@ -43,6 +50,7 @@ Local Ltac break_t_step :=
         | progress destruct_head'_sig
         | progress specialize_by reflexivity
         | progress eliminate_hprop_eq
+        | progress break_innermost_match_hyps_step
         | progress break_innermost_match_step
         | progress break_match_hyps
         | progress inversion_wf_constr ].
@@ -79,6 +87,18 @@ Proof.
   erewrite <- interp_as_expr_or_const_None_iff by eassumption; congruence.
 Qed.
 
+Local Ltac pret_step :=
+  first [ fin_t
+        | progress subst
+        | progress inversion_option
+        | progress inversion_prod
+        | progress simpl in *
+        | progress inversion_wf
+        | match goal with
+          | [ H : match interp_as_expr_or_const ?e with _ => _ end = Some _ |- _ ]
+            => is_var e; destruct (interp_as_expr_or_const e) eqn:?
+          end ].
+
 Lemma wff_interp_as_expr_or_const_base {var1 var2 t} {G e1 e2 v1 v2}
       (Hwf : @wff var1 var2 G (Tbase t) e1 e2)
   : @interp_as_expr_or_const var1 (Tbase t) e1 = Some v1
@@ -104,6 +124,12 @@ Proof.
                      | [ H : wff _ _ ?e |- _ ] => is_var e; invert_one_expr e
                      end ].
 Qed.
+
+Local Ltac pose_wff_base :=
+  match goal with
+  | [ H1 : _ = Some _, H2 : _ = Some _, Hwf : wff _ _ _ |- _ ]
+    => pose proof (wff_interp_as_expr_or_const_base Hwf H1 H2); clear H1 H2
+  end.
 
 Lemma wff_interp_as_expr_or_const_prod_base {var1 var2 A B} {G e1 e2} {v1 v2 : _ * _}
       (Hwf : wff G e1 e2)
@@ -132,15 +158,67 @@ Lemma wff_interp_as_expr_or_const_prod_base {var1 var2 A B} {G e1 e2} {v1 v2 : _
 Proof.
   invert_one_expr e1; intros; break_innermost_match; intros; try exact I;
     try invert_one_expr e2; intros; break_innermost_match; intros; try exact I;
-      repeat first [ fin_t
-                   | progress simpl in *
+      repeat first [ pret_step
+                   | pose_wff_base
                    | break_t_step
-                   | match goal with
-                     | [ H1 : _ = Some _, H2 : _ = Some _, Hwf : wff _ _ _ |- _ ]
-                       => pose proof (wff_interp_as_expr_or_const_base Hwf H1 H2); clear H1 H2
-                     | [ |- and _ _ ] => split
-                     end ].
+                   | apply conj ].
 Qed.
+
+Local Ltac pose_wff_prod :=
+  match goal with
+  | [ H1 : _ = Some _, H2 : _ = Some _, Hwf : wff _ _ _ |- _ ]
+    => pose proof (wff_interp_as_expr_or_const_prod_base Hwf H1 H2); clear H1 H2
+  end.
+
+Lemma wff_interp_as_expr_or_const_prod3_base {var1 var2 A B C} {G e1 e2} {v1 v2 : _ * _ * _}
+      (Hwf : wff G e1 e2)
+  : @interp_as_expr_or_const var1 (Prod (Prod (Tbase A) (Tbase B)) (Tbase C)) e1 = Some v1
+    -> @interp_as_expr_or_const var2 (Prod (Prod (Tbase A) (Tbase B)) (Tbase C)) e2 = Some v2
+    -> match fst (fst v1), fst (fst v2) with
+       | const_of z1, const_of z2 => z1 = z2
+       | gen_expr e1, gen_expr e2
+       | neg_expr e1, neg_expr e2
+         => wff G e1 e2
+       | const_of _, _
+       | gen_expr _, _
+       | neg_expr _, _
+         => False
+       end
+       /\ match snd (fst v1), snd (fst v2) with
+          | const_of z1, const_of z2 => z1 = z2
+          | gen_expr e1, gen_expr e2
+          | neg_expr e1, neg_expr e2
+            => wff G e1 e2
+          | const_of _, _
+          | gen_expr _, _
+          | neg_expr _, _
+            => False
+          end
+       /\ match snd v1, snd v2 with
+          | const_of z1, const_of z2 => z1 = z2
+          | gen_expr e1, gen_expr e2
+          | neg_expr e1, neg_expr e2
+            => wff G e1 e2
+          | const_of _, _
+          | gen_expr _, _
+          | neg_expr _, _
+            => False
+          end.
+Proof.
+  invert_one_expr e1; intros; break_innermost_match; intros; try exact I;
+    try invert_one_expr e2; intros; break_innermost_match; intros; try exact I;
+      repeat first [ pret_step
+                   | pose_wff_base
+                   | pose_wff_prod
+                   | break_t_step
+                   | apply conj ].
+Qed.
+
+Local Ltac pose_wff_prod3 :=
+  match goal with
+  | [ H1 : _ = Some _, H2 : _ = Some _, Hwf : wff _ _ _ |- _ ]
+    => pose proof (wff_interp_as_expr_or_const_prod3_base Hwf H1 H2); clear H1 H2
+  end.
 
 Lemma Wf_SimplifyArith {t} (e : Expr t)
       (Hwf : Wf e)
@@ -148,23 +226,28 @@ Lemma Wf_SimplifyArith {t} (e : Expr t)
 Proof.
   apply Wf_RewriteOp; [ | assumption ].
   intros ???????? Hwf'; unfold simplify_op_expr;
-    break_innermost_match; repeat constructor; auto;
-      repeat first [ fin_t
-                   | progress simpl in *
-                   | progress subst
-                   | progress Z.ltb_to_lt
-                   | match goal with
-                     | [ H1 : _ = Some _, H2 : _ = Some _, Hwf : wff _ _ _ |- _ ]
-                       => pose proof (wff_interp_as_expr_or_const_base Hwf H1 H2); clear H1 H2
-                     | [ H1 : _ = Some _, H2 : _ = Some _, Hwf : wff _ _ _ |- _ ]
-                       => pose proof (wff_interp_as_expr_or_const_prod_base Hwf H1 H2); clear H1 H2
-                     | [ H1 : _ = Some _, H2 : _ = None, Hwf : wff _ _ _ |- _ ]
-                       => pose proof (interp_as_expr_or_const_Some_None Hwf H1 H2); clear H1 H2
-                     | [ H1 : _ = None, H2 : _ = Some _, Hwf : wff _ _ _ |- _ ]
-                       => pose proof (interp_as_expr_or_const_None_Some Hwf H1 H2); clear H1 H2
-                     | [ |- wff _ _ _ ] => constructor
-                     end
-                   | break_t_step ].
+    repeat match goal with
+           | [ H : ?T |- ?T ] => exact H
+           | [ H : False |- _ ] => exfalso; assumption
+           | [ H : false = true |- _ ] => exfalso; clear -H; discriminate
+           | [ H : true = false |- _ ] => exfalso; clear -H; discriminate
+           | _ => pose_wff_base
+           | _ => pose_wff_prod
+           | _ => pose_wff_prod3
+           | _ => progress destruct_head'_and
+           | _ => progress subst
+           | [ H1 : _ = Some _, H2 : _ = None, Hwf : wff _ _ _ |- _ ]
+             => pose proof (interp_as_expr_or_const_Some_None Hwf H1 H2); clear H1 H2
+           | [ H1 : _ = None, H2 : _ = Some _, Hwf : wff _ _ _ |- _ ]
+             => pose proof (interp_as_expr_or_const_None_Some Hwf H1 H2); clear H1 H2
+           | [ |- wff _ (Op _ _) (LetIn _ _) ] => exfalso
+           | [ |- wff _ (LetIn _ _) (Op _ _) ] => exfalso
+           | [ |- wff _ (Pair _ _) (LetIn _ _) ] => exfalso
+           | [ |- wff _ (LetIn _ _) (Pair _ _) ] => exfalso
+           | [ |- wff _ _ _ ] => constructor; intros
+           | [ |- List.In _ _ ] => progress (simpl; auto)
+           | _ => break_innermost_match_step; simpl in *
+           end.
 Qed.
 
 Hint Resolve Wf_SimplifyArith : wf.

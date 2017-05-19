@@ -89,12 +89,13 @@ Definition PostWfPipeline
   := Build_ProcessedReflectivePackage_from_option_sigma
        e input_bounds
        (let e := InlineConst e in
-        let e := SimplifyArith e in
-        let e := InlineConst e in
-        let e := SimplifyArith e in
+        let e := InlineConst (SimplifyArith e) in
+        let e := InlineConst (SimplifyArith e) in
+        let e := InlineConst (SimplifyArith e) in
         let e := if opts.(anf) then ANormal e else e in
         let e := InlineConst e in
         let e := RewriteAdc e in
+        let e := InlineConst (SimplifyArith e) in
         (*let e := CSE false e in*)
         let e := MapCast _ e input_bounds in
         option_map
