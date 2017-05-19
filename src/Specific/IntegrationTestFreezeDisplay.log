@@ -3,36 +3,21 @@ Interp-η
 (λ var : Syntax.base_type → Type,
  λ '(x7, x8, x6, x4, x2)%core,
  uint64_t x10, bool x11 = subborrow_u51(0x0, x2, 0x7ffffffffffed);
- ℤ x12 = Op (Syntax.Opp (Syntax.TWord 0) Syntax.TZ) (Return x11);
- uint64_t x14, bool x15 = addcarryx_u51(0x0, 0x0, x10);
- ℤ x16 = x12 + x15;
- uint64_t x18, bool x19 = subborrow_u51(0x0, x4, 0x7ffffffffffff);
- ℤ x20 = Op (Syntax.Opp (Syntax.TWord 0) Syntax.TZ) (Return x19);
- uint64_t x22, ℤ x23 = Op (Syntax.AddWithGetCarry 51 (Syntax.TWord 0) Syntax.TZ (Syntax.TWord 6) (Syntax.TWord 6) Syntax.TZ) (0x0, Return x16, Return x18);
- ℤ x24 = x20 + x23;
- uint64_t x26, bool x27 = subborrow_u51(0x0, x6, 0x7ffffffffffff);
- ℤ x28 = Op (Syntax.Opp (Syntax.TWord 0) Syntax.TZ) (Return x27);
- uint64_t x30, ℤ x31 = Op (Syntax.AddWithGetCarry 51 (Syntax.TWord 0) Syntax.TZ (Syntax.TWord 6) (Syntax.TWord 6) Syntax.TZ) (0x0, Return x24, Return x26);
- ℤ x32 = x28 + x31;
- uint64_t x34, bool x35 = subborrow_u51(0x0, x8, 0x7ffffffffffff);
- ℤ x36 = Op (Syntax.Opp (Syntax.TWord 0) Syntax.TZ) (Return x35);
- uint64_t x38, ℤ x39 = Op (Syntax.AddWithGetCarry 51 (Syntax.TWord 0) Syntax.TZ (Syntax.TWord 6) (Syntax.TWord 6) Syntax.TZ) (0x0, Return x32, Return x34);
- ℤ x40 = x36 + x39;
- uint64_t x42, bool x43 = subborrow_u51(0x0, x7, 0x7ffffffffffff);
- ℤ x44 = Op (Syntax.Opp (Syntax.TWord 0) Syntax.TZ) (Return x43);
- uint64_t x46, ℤ x47 = Op (Syntax.AddWithGetCarry 51 (Syntax.TWord 0) Syntax.TZ (Syntax.TWord 6) (Syntax.TWord 6) Syntax.TZ) (0x0, Return x40, Return x42);
- ℤ x48 = x44 + x47;
- uint64_t x49 = (uint64_t) (x48 == 0 ? 0x0 : 0xffffffffffffffffL);
- uint64_t x50 = x49 & 0x7ffffffffffed;
- uint64_t x52, bool x53 = addcarryx_u51(0x0, x14, x50);
- uint64_t x54 = x49 & 0x7ffffffffffff;
- uint64_t x56, bool x57 = addcarryx_u51(x53, x22, x54);
- uint64_t x58 = x49 & 0x7ffffffffffff;
- uint64_t x60, bool x61 = addcarryx_u51(x57, x30, x58);
- uint64_t x62 = x49 & 0x7ffffffffffff;
- uint64_t x64, bool x65 = addcarryx_u51(x61, x38, x62);
- uint64_t x66 = x49 & 0x7ffffffffffff;
- uint64_t x68, bool _ = addcarryx_u51(x65, x46, x66);
- (Return x68, Return x64, Return x60, Return x56, Return x52))
+ uint64_t x13, bool x14 = subborrow_u51(Op (Syntax.Opp Syntax.TZ (Syntax.TWord 0)) (Op (Syntax.Opp (Syntax.TWord 0) Syntax.TZ) (Return x11)), x4, 0x7ffffffffffff);
+ uint64_t x16, bool x17 = subborrow_u51(x14, x6, 0x7ffffffffffff);
+ uint64_t x19, bool x20 = subborrow_u51(x17, x8, 0x7ffffffffffff);
+ uint64_t x22, bool x23 = subborrow_u51(x20, x7, 0x7ffffffffffff);
+ uint64_t x24 = (uint64_t) (Op (Syntax.Opp (Syntax.TWord 0) Syntax.TZ) (Return x23) == 0 ? 0x0 : 0xffffffffffffffffL);
+ uint64_t x25 = x24 & 0x7ffffffffffed;
+ uint64_t x27, bool x28 = addcarryx_u51(0x0, x10, x25);
+ uint64_t x29 = x24 & 0x7ffffffffffff;
+ uint64_t x31, bool x32 = addcarryx_u51(x28, x13, x29);
+ uint64_t x33 = x24 & 0x7ffffffffffff;
+ uint64_t x35, bool x36 = addcarryx_u51(x32, x16, x33);
+ uint64_t x37 = x24 & 0x7ffffffffffff;
+ uint64_t x39, bool x40 = addcarryx_u51(x36, x19, x37);
+ uint64_t x41 = x24 & 0x7ffffffffffff;
+ uint64_t x43, bool _ = addcarryx_u51(x40, x22, x41);
+ (Return x43, Return x39, Return x35, Return x31, Return x27))
 x
      : word64 * word64 * word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t * uint64_t * uint64_t)
