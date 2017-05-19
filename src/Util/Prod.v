@@ -139,3 +139,23 @@ Ltac eta_expand :=
            => rewrite (surjective_pairing e)
          | _ => rewrite <- !surjective_pairing
          end.
+
+(** *** [subst_prod] *)
+(** The tactic [subst_prod] is like [subst], but it works on equations
+    of the form [_ = (x, y)] and [(x, y) = _] for [x] and [y]
+    identifiers. *)
+Ltac do_subst_prod A B x y :=
+  is_var x; is_var y;
+  let H := fresh in
+  let xy := fresh x in
+  remember (@pair A B x y) as xy eqn:H;
+  assert (fst xy = x) by (subst xy; reflexivity);
+  assert (snd xy = y) by (subst xy; reflexivity);
+  subst x y;
+  clear H; try subst xy.
+Ltac subst_prod_step :=
+  match goal with
+  | [ H : _ = @pair ?A ?B ?x ?y |- _ ] => do_subst_prod A B x y
+  | [ H : @pair ?A ?B ?x ?y = _ |- _ ] => do_subst_prod A B x y
+  end.
+Ltac subst_prod := repeat subst_prod_step.
