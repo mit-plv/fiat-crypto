@@ -27,6 +27,7 @@ appearing in our code.
 | [openssl#c2633b8f](https://git.openssl.org/gitweb/?p=openssl.git;a=commitdiff;h=b62b2454fadfccaf5e055a1810d72174c2633b8f;ds=sidebyside) | a + b mod p256 |  Montgomery form, AMD64 assembly | [non-canonical](https://mta.openssl.org/pipermail/openssl-dev/2016-August/008179.html) |
 | [openssl#59dfcabf](https://git.openssl.org/gitweb/?p=openssl.git;a=commitdiff;h=e3057a57caf4274ea1fb074518e4714059dfcabf;ds=sidebyside) | Weier. affine <-> Jacobian |  Montgomery form, AMD64 and C | ∞ confusion |
 | [openssl#a970db05](https://git.openssl.org/gitweb/?p=openssl.git;a=commitdiff;h=bbe9769ba66ab2512678a87b0d9b266ba970db05;ds=sidebyside) | Poly1305 |  Lazy reduction in x86 asm | lost bit 59 |
+| [openssl#6825d74b](https://git.openssl.org/gitweb/?p=openssl.git;a=commitdiff;h=1ea8ae5090f557fea2e5b4d5758b10566825d74b;ds=sidebyside) | Poly1305 | AVX2 addition and reduction | bounds? |
 
 
 Not covered in the above list: memory mismanagement (buffer overrun, use-after-free, uninitialized read, null dereference), timing attacks (branch, cache, instruction). While these issues are very important, there are good programming disciplines for avoiding them without verifying intricate details of the computation.
