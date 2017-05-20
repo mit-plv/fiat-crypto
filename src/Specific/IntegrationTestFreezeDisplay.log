@@ -3,7 +3,7 @@ Interp-η
 (λ var : Syntax.base_type → Type,
  λ '(x7, x8, x6, x4, x2)%core,
  uint64_t x10, bool x11 = subborrow_u51(0x0, x2, 0x7ffffffffffed);
- uint64_t x13, bool x14 = subborrow_u51(Op (Syntax.Opp Syntax.TZ (Syntax.TWord 0)) (Op (Syntax.Opp (Syntax.TWord 0) Syntax.TZ) (Return x11)), x4, 0x7ffffffffffff);
+ uint64_t x13, bool x14 = subborrow_u51(x11, x4, 0x7ffffffffffff);
  uint64_t x16, bool x17 = subborrow_u51(x14, x6, 0x7ffffffffffff);
  uint64_t x19, bool x20 = subborrow_u51(x17, x8, 0x7ffffffffffff);
  uint64_t x22, bool x23 = subborrow_u51(x20, x7, 0x7ffffffffffff);
