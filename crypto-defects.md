@@ -24,6 +24,7 @@ appearing in our code.
 | [tweetnacl-m\[15\]](http://seb.dbzteam.org/blog/2014/04/28/tweetnacl_arithmetic_bug.html) | GF(2^255-19) freeze | bit-twiddly C | bounds? typo? | 
 | [tweetnacl-U32](https://web.archive.org/web/20160305001036/http://blog.skylable.com/2014/05/tweetnacl-carrybit-bug/) | irrelevant | bit-twiddly C | `sizeof(long)!=32` | 
 | [CVE-2017-3732](https://www.openssl.org/news/secadv/20170126.txt) | x^2 mod m | Montgomery form, AMD64 assembly | [carry](https://boringssl.googlesource.com/boringssl/+/d103616db14ca9587f074efaf9f09a48b8ca80cb%5E%21/), exploitable |
+| [openssl#c2633b8f](https://git.openssl.org/gitweb/?p=openssl.git;a=commitdiff;h=b62b2454fadfccaf5e055a1810d72174c2633b8f;ds=sidebyside) | a + b mod p256 |  Montgomery form, AMD64 assembly | [non-canonical](https://mta.openssl.org/pipermail/openssl-dev/2016-August/008179.html) |
 
 
 Not covered in the above list: memory mismanagement (buffer overrun, use-after-free, uninitialized read, null dereference), timing attacks (branch, cache, instruction). While these issues are very important, there are good programming disciplines for avoiding them without verifying intricate details of the computation.
