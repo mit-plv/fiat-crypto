@@ -95,6 +95,7 @@ Definition PostWfPipeline
         let e := if opts.(anf) then InlineConst (ANormal e) else e in
         let e := RewriteAdc e in
         let e := InlineConstAndOpp (Linearize (SimplifyArith true e)) in
+        let e := if opts.(anf) then InlineConstAndOpp (ANormal e) else e in
         let e := InlineConstAndOpp (Linearize (SimplifyArith true e)) in
         (*let e := CSE false e in*)
         let e := MapCast _ e input_bounds in
