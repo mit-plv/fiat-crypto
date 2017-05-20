@@ -151,7 +151,7 @@ Proof.
   apply InterpRewriteOp; intros; unfold simplify_op_expr.
   break_innermost_match;
     repeat first [ fin_t
-                 | progress cbv [LetIn.Let_In]
+                 | progress cbv [LetIn.Let_In Z.zselect]
                  | progress simpl in *
                  | progress subst
                  | progress subst_prod
@@ -162,7 +162,8 @@ Proof.
                  | progress Z.ltb_to_lt
                  | progress rewrite ?Z.land_0_l, ?Z.land_0_r, ?Z.lor_0_l, ?Z.lor_0_r
                  | rewrite !Z.sub_with_borrow_to_add_get_carry
-                 | progress autorewrite with zsimplify_fast ].
+                 | progress autorewrite with zsimplify_fast
+                 | break_innermost_match_step ].
 Qed.
 
 Hint Rewrite @InterpSimplifyArith : reflective_interp.

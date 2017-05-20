@@ -48,6 +48,19 @@ Section language.
               end
          end.
 
+    Fixpoint uninterp_expr_or_const {t} : interp_flat_type inverted_expr t -> exprf (var:=var) t
+      := match t with
+         | Tbase T => fun e => match e with
+                               | const_of v => Op (OpConst v) TT
+                               | gen_expr e => e
+                               | neg_expr e => Op (Opp _ _) e
+                               end
+         | Unit => fun _ => TT
+         | Prod A B => fun (ab : interp_flat_type _ A * interp_flat_type _ B)
+                       => Pair (@uninterp_expr_or_const A (fst ab))
+                               (@uninterp_expr_or_const B (snd ab))
+         end.
+
     Definition simplify_op_expr {src dst} (opc : op src dst)
       : exprf (var:=var) src -> exprf (var:=var) dst
       := match opc in op src dst return exprf src -> exprf dst with
@@ -176,6 +189,27 @@ Section language.
                    => e
                  | _
                    => Op opc args
+                 end
+         | Zselect TZ TZ TZ TZ as opc
+           => fun args
+              => match interp_as_expr_or_const args with
+                 | Some (const_of c, x, y)
+                   => match (c =? 0)%Z, x, y with
+                      | true, const_of c, _
+                      | false, _, const_of c
+                        => Op (OpConst c) TT
+                      | true, gen_expr e, _
+                      | false, _, gen_expr e
+                        => e
+                      | true, neg_expr e, _
+                      | false, _, neg_expr e
+                        => Op (Opp TZ TZ) e
+                      end
+                 | Some (neg_expr e, x, y)
+                   => let x := uninterp_expr_or_const (t:=Tbase _) x in
+                      let y := uninterp_expr_or_const (t:=Tbase _) y in
+                      Op (Zselect TZ TZ TZ TZ) (e, x, y)%expr
+                 | _ => Op opc args
                  end
          | AddWithCarry TZ TZ TZ TZ as opc
            => fun args
