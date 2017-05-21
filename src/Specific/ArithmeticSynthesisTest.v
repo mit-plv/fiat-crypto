@@ -204,11 +204,11 @@ Section Ops51.
       dlet d2 := r2 * 2 * 19 in
       dlet d419 := r4 * 19 in
       dlet d4 := d419 * 2 in
-      dlet t0 := r0 * r0 + d4 * r1 + d2 * r3      in
-      dlet t1 := d0 * r1 + d4 * r2 + r3 * r3 * 19 in
-      dlet t2 := d0 * r2 + r1 * r1 + d4 * r3      in
-      dlet t3 := d0 * r3 + d1 * r2 + r4 * d419    in
-      dlet t4 := d0 * r4 + d1 * r3 + r2 * r2      in
+      dlet t0 := r0 * r0 + d4 * r1 + d2 * r3        in
+      dlet t1 := d0 * r1 + d4 * r2 + r3 * (r3 * 19) in
+      dlet t2 := d0 * r2 + r1 * r1 + d4 * r3        in
+      dlet t3 := d0 * r3 + d1 * r2 + r4 * d419      in
+      dlet t4 := d0 * r4 + d1 * r3 + r2 * r2        in
       (t4, t3, t2, t1, t0)
     ).
     break_match; cbv [Let_In runtime_mul runtime_add]; repeat apply (f_equal2 pair); ring.
