@@ -2,16 +2,50 @@
 set -euo pipefail
 
 cat << 'EOF'
-// The non-synthesized parts are from Adam Langley's curve25519-donna-c64
-// (Copytight 2008 Google, released into public domain)
-#include <stdint.h>
+// The synthesized parts are from fiat-crypto, copyright MIT 2017.
+// The synthesis framework is released under the MIT license.
+// The non-synthesized parts are from curve25519-donna by Adam Langley (Google):
+/* Copyright 2008, Google Inc.
+ * All rights reserved.
+ *
+ * Code released into the public domain.
+ *
+ * curve25519-donna: Curve25519 elliptic curve, public key function
+ *
+ * http://code.google.com/p/curve25519-donna/
+ *
+ * Adam Langley <agl@imperialviolet.org>
+ * Parts optimised by floodyberry
+ * Derived from public domain C code by Daniel J. Bernstein <djb@cr.yp.to>
+ *
+ * More information about curve25519 can be found here
+ *   http://cr.yp.to/ecdh.html
+ *
+ * djb's sample implementation of curve25519 is written in a special assembly
+ * language called qhasm and uses the floating point registers.
+ *
+ * This is, almost, a clean room reimplementation from the curve25519 paper. It
+ * uses many of the tricks described therein. Only the crecip function is taken
+ * from the sample implementation.
+ */
+
 #include <string.h>
-#include "crypto_scalarmult.h"
-typedef uint64_t fe25519[5];
+#include <stdint.h>
+#include <stdbool.h>
+
+typedef uint8_t u8;
+typedef uint64_t limb;
+typedef limb felem[5];
+// This is a special gcc mode for 128-bit integers. It's implemented on 64-bit
+// platforms only as far as I know.
 typedef unsigned uint128_t __attribute__((mode(TI)));
 
-static void
-fmul(fe25519 output, const fe25519 in2, const fe25519 in) {
+#undef force_inline
+#define force_inline __attribute__((always_inline))
+
+/* Multiply two numbers: output = in2 * in */
+static void force_inline
+fmul(felem output, const felem in2, const felem in) {
 EOF
 
 < src/Specific/IntegrationTestMulDisplay.log \
@@ -24,7 +58,7 @@ EOF
     /dev/null
 
 < src/Specific/IntegrationTestMulDisplay.log \
-grep -oP 'uint\d+_t\W+\w+ = .*;$'
+  grep -oP '(bool|uint\d+_t)\W+\w+ = .*;$'
 
 < src/Specific/IntegrationTestMulDisplay.log \
   grep -- return | sed 's:return::g' | sed 's:Return::g' | \
@@ -37,9 +71,11 @@ grep -oP 'uint\d+_t\W+\w+ = .*;$'
 cat << 'EOF'
 }
 
-static void
-fsquare_times(fe25519 output, const fe25519 in, uint64_t count) {
-  uint64_t r0,r1,r2,r3,r4;
+static void force_inline
+fsquare_times(felem output, const felem in, limb count) {
+  uint128_t t[5];
+  limb r0,r1,r2,r3,r4,c;
+  limb d0,d1,d2,d4,d419;
 
   r0 = in[0];
   r1 = in[1];
@@ -60,7 +96,7 @@ EOF
     /dev/null
 
 < src/Specific/IntegrationTestSquareDisplay.log \
-grep -oP 'uint\d+_t\W+\w+ = .*;$'
+  grep -oP '(bool|uint\d+_t)\W+\w+ = .*;$'
 
 < src/Specific/IntegrationTestSquareDisplay.log \
   grep -- return | sed 's:return::g' | sed 's:Return::g' | \
@@ -80,42 +116,9 @@ cat << 'EOF'
   output[4] = r4;
 }
 
-/* Input: Q, Q', Q-Q'
- * Output: 2Q, Q+Q' */
-static void
-fmonty(uint64_t *x2, uint64_t *z2, /* output 2Q */
-       uint64_t *x3, uint64_t *z3, /* output Q + Q' */
-       uint64_t *x, uint64_t *z,   /* input Q */
-       uint64_t *xprime, uint64_t *zprime, /* input Q' */
-       const uint64_t *qmqp /* input Q - Q' */) {
-EOF
-
-< src/Specific/IntegrationTestLadderstepDisplay.log \
-  grep -- "λ '(" | \
-  grep -owP -- 'x\d+' | \
-  paste -d ' =;' \
-    <(for i in $(seq 1 25); do echo uint64_t; done) \
-    /dev/stdin \
-    <(echo {qmqp,x,z,xprime,zprime}\[{4,3,2,1,0}\] | tr ' ' '\n') \
-    /dev/null
-
-< src/Specific/IntegrationTestLadderstepDisplay.log \
-grep -oP 'uint\d+_t\W+\w+ = .*;$'
-
-< src/Specific/IntegrationTestLadderstepDisplay.log \
-  grep -- return | sed 's:return::g' | sed 's:Return::g' | \
-  tr -d '(' | tr -d ')' | tr ',' '\n' | grep -o '\S.*\S' | \
-  paste -d '=;' \
-    <(echo {x2,z2,x3,z3}\[{4,3,2,1,0}\] | tr ' ' '\n') \
-    /dev/stdin \
-    /dev/null
-
-cat <<'EOF'
-}
-
 /* Take a little-endian, 32-byte number and expand it into polynomial form */
 static void
-fexpand(uint64_t *output, const uint8_t *in) {
+fexpand(limb *output, const u8 *in) {
   output[0] = *((const uint64_t *)(in)) & 0x7ffffffffffff;
   output[1] = (*((const uint64_t *)(in+6)) >> 3) & 0x7ffffffffffff;
   output[2] = (*((const uint64_t *)(in+12)) >> 6) & 0x7ffffffffffff;
@@ -124,9 +127,10 @@ fexpand(uint64_t *output, const uint8_t *in) {
 }
 
 /* Take a fully reduced polynomial form number and contract it into a
- * little-endian, 32-byte array */
+ * little-endian, 32-byte array
+ */
 static void
-fcontract(uint8_t *output, const fe25519 input) {
+fcontract(u8 *output, const felem input) {
   uint128_t t[5];
 
   t[0] = input[0];
@@ -180,20 +184,54 @@ fcontract(uint8_t *output, const fe25519 input) {
   *((uint64_t *)(output+24)) = (t[3] >> 39) | (t[4] << 12);
 }
 
+/* Input: Q, Q', Q-Q'
+ * Output: 2Q, Q+Q'
+ */
+static void
+fmonty(limb *x2, limb *z2, /* output 2Q */
+       limb *x3, limb *z3, /* output Q + Q' */
+       limb *x, limb *z,   /* input Q */
+       limb *xprime, limb *zprime, /* input Q' */
+       const limb *qmqp /* input Q - Q' */) {
+EOF
+
+< src/Specific/IntegrationTestLadderstepDisplay.log \
+  grep -- "λ '(" | \
+  grep -owP -- 'x\d+' | \
+  paste -d ' =;' \
+    <(for i in $(seq 1 25); do echo uint64_t; done) \
+    /dev/stdin \
+    <(echo {qmqp,x,z,xprime,zprime}\[{4,3,2,1,0}\] | tr ' ' '\n') \
+    /dev/null
+
+< src/Specific/IntegrationTestLadderstepDisplay.log \
+  grep -oP '(bool|uint\d+_t)\W+\w+ = .*;$'
+
+< src/Specific/IntegrationTestLadderstepDisplay.log \
+  grep -- return | sed 's:return::g' | sed 's:Return::g' | \
+  tr -d '(' | tr -d ')' | tr ',' '\n' | grep -o '\S.*\S' | \
+  paste -d '=;' \
+    <(echo {x2,z2,x3,z3}\[{4,3,2,1,0}\] | tr ' ' '\n') \
+    /dev/stdin \
+    /dev/null
+
+cat <<'EOF'
+}
+
 // -----------------------------------------------------------------------------
-// Maybe swap the contents of two uint64_t arrays (@a and @b), each @len elements
+// Maybe swap the contents of two limb arrays (@a and @b), each @len elements
 // long. Perform the swap iff @swap is non-zero.
 //
 // This function performs the swap without leaking any side-channel
 // information.
 // -----------------------------------------------------------------------------
 static void
-swap_conditional(uint64_t a[5], uint64_t b[5], uint64_t iswap) {
+swap_conditional(limb a[5], limb b[5], limb iswap) {
   unsigned i;
-  const uint64_t swap = -iswap;
+  const limb swap = -iswap;
 
   for (i = 0; i < 5; ++i) {
-    const uint64_t x = swap & (a[i] ^ b[i]);
+    const limb x = swap & (a[i] ^ b[i]);
     a[i] ^= x;
     b[i] ^= x;
   }
@@ -206,20 +244,20 @@ swap_conditional(uint64_t a[5], uint64_t b[5], uint64_t iswap) {
  *   q: a point of the curve (short form)
  */
 static void
-cmult(uint64_t *resultx, uint64_t *resultz, const uint8_t *n, const uint64_t *q) {
-  uint64_t a[5] = {0}, b[5] = {1}, c[5] = {1}, d[5] = {0};
-  uint64_t *nqpqx = a, *nqpqz = b, *nqx = c, *nqz = d, *t;
-  uint64_t e[5] = {0}, f[5] = {1}, g[5] = {0}, h[5] = {1};
-  uint64_t *nqpqx2 = e, *nqpqz2 = f, *nqx2 = g, *nqz2 = h;
+cmult(limb *resultx, limb *resultz, const u8 *n, const limb *q) {
+  limb a[5] = {0}, b[5] = {1}, c[5] = {1}, d[5] = {0};
+  limb *nqpqx = a, *nqpqz = b, *nqx = c, *nqz = d, *t;
+  limb e[5] = {0}, f[5] = {1}, g[5] = {0}, h[5] = {1};
+  limb *nqpqx2 = e, *nqpqz2 = f, *nqx2 = g, *nqz2 = h;
 
   unsigned i, j;
 
-  memcpy(nqpqx, q, sizeof(uint64_t) * 5);
+  memcpy(nqpqx, q, sizeof(limb) * 5);
 
   for (i = 0; i < 32; ++i) {
-    uint8_t byte = n[31 - i];
+    u8 byte = n[31 - i];
     for (j = 0; j < 8; ++j) {
-      const uint64_t bit = byte >> 7;
+      const limb bit = byte >> 7;
 
       swap_conditional(nqx, nqpqx, bit);
       swap_conditional(nqz, nqpqz, bit);
@@ -248,8 +286,8 @@ cmult(uint64_t *resultx, uint64_t *resultz, const uint8_t *n, const uint64_t *q)
     }
   }
 
-  memcpy(resultx, nqx, sizeof(uint64_t) * 5);
-  memcpy(resultz, nqz, sizeof(uint64_t) * 5);
+  memcpy(resultx, nqx, sizeof(limb) * 5);
+  memcpy(resultz, nqz, sizeof(limb) * 5);
 }
 
 
@@ -257,8 +295,8 @@ cmult(uint64_t *resultx, uint64_t *resultz, const uint8_t *n, const uint64_t *q)
 // Shamelessly copied from djb's code, tightened a little
 // -----------------------------------------------------------------------------
 static void
-crecip(fe25519 out, const fe25519 z) {
-  fe25519 a,t0,b,c;
+crecip(felem out, const felem z) {
+  felem a,t0,b,c;
 
   /* 2 */ fsquare_times(a, z, 1); // a = 2
   /* 8 */ fsquare_times(t0, a, 2);
@@ -285,8 +323,8 @@ crecip(fe25519 out, const fe25519 z) {
 }
 
 int
-crypto_scalarmult(uint8_t *mypublic, const uint8_t *secret, const uint8_t *basepoint) {
-  uint64_t bp[5], x[5], z[5], zmone[5];
+crypto_scalarmult(u8 *mypublic, const u8 *secret, const u8 *basepoint) {
+  limb bp[5], x[5], z[5], zmone[5];
   uint8_t e[32];
   int i;
 
