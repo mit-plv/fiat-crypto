@@ -2,13 +2,13 @@
 Require Import Coq.omega.Omega.
 Require Import Crypto.Util.Notations.
 
-(** TODO: MOVE ME *)
-Local Notation "'return' x" := (fun {T} (continuation:_->T) => continuation x) (at level 70).
-Local Notation "x <- v ; C" := (v _ (fun x => C)) (at level 70, right associativity, format "'[v' x  <-  v ; '/' C ']'").
-Local Notation "~> R" := (forall {T} (_:R->T), T) (at level 70).
-Local Notation "A ~> R" := (forall (_:A) {T} (_:R->T), T) (at level 99).
-
 Section with_state.
+  (** TODO: MOVE ME *)
+  Local Notation "'return' x" := (fun {T} (continuation:_->T) => continuation x) (at level 70).
+  Local Notation "x <- v ; C" := (v _ (fun x => C)) (at level 70, right associativity, format "'[v' x  <-  v ; '/' C ']'").
+  Local Notation "~> R" := (forall {T} (_:R->T), T) (at level 70).
+  Local Notation "A ~> R" := (forall (_:A) {T} (_:R->T), T) (at level 99).
+
   Context {state : Type}.
 
   Definition loop_cps_step
@@ -91,3 +91,13 @@ Section with_state.
     edestruct Hbody as [Hbody'|Hbody']; eauto.
   Qed.
 End with_state.
+
+(* N.B., Coq doesn't yet print this *)
+Notation "'loop' _{ fuel } ( state1 .. staten = initial ) 'via' ( continue , break ) {{ body }} ; rest"
+  := (@loop_cps _ fuel initial
+                (fun state1 => .. (fun staten => (fun _ continue break => body)) .. )
+                _ (fun state1 => .. (fun staten => rest) .. ))
+       (at level 200, state1 binder, staten binder, rest at level 10, only parsing,
+        format "'[v  ' 'loop' _{ fuel }  ( state1 .. staten  =  initial )  'via'  ( continue ,  break )  {{ '//' body ']' '//' }} ; '//' rest").
+
+Check loop _{ 10 } (x = 0) via (continue, break) {{ continue (x + 1) }} ; x.
