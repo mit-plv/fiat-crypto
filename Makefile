@@ -79,10 +79,12 @@ display: $(DISPLAY_VO:.vo=.log) coqprime
 COQPRIME_FOLDER := coqprime
 ifneq ($(filter 8.5%,$(COQ_VERSION)),) # 8.5
 else
+ifeq ($(OTHERFLAGS),)
 ifneq ($(PROFILE),)
-OTHERFLAGS ?= -profile-ltac -w "-notation-overridden"
+OTHERFLAGS := -profile-ltac -w "-notation-overridden"
 else
-OTHERFLAGS ?= -w "-notation-overridden"
+OTHERFLAGS := -w "-notation-overridden"
+endif
 endif
 endif
 
