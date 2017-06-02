@@ -115,7 +115,8 @@ Lemma wff_interp_as_expr_or_const_base {var1 var2 t} {G e1 e2 v1 v2}
        end.
 Proof.
   invert_one_expr e1; intros; break_innermost_match; intros;
-    try invert_one_expr e2; intros;
+    try (let e2 := match goal with Hwf : wff ?G ?e1 ?e2 |- _ => e2 end in
+         invert_one_expr e2); intros;
       repeat first [ fin_t
                    | progress simpl in *
                    | progress intros
@@ -157,7 +158,9 @@ Lemma wff_interp_as_expr_or_const_prod_base {var1 var2 A B} {G e1 e2} {v1 v2 : _
           end.
 Proof.
   invert_one_expr e1; intros; break_innermost_match; intros; try exact I;
-    try invert_one_expr e2; intros; break_innermost_match; intros; try exact I;
+    try (let e2 := match goal with Hwf : wff ?G ?e1 ?e2 |- _ => e2 end in
+         invert_one_expr e2);
+    intros; break_innermost_match; intros; try exact I;
       repeat first [ pret_step
                    | pose_wff_base
                    | break_t_step
@@ -206,7 +209,9 @@ Lemma wff_interp_as_expr_or_const_prod3_base {var1 var2 A B C} {G e1 e2} {v1 v2 
           end.
 Proof.
   invert_one_expr e1; intros; break_innermost_match; intros; try exact I;
-    try invert_one_expr e2; intros; break_innermost_match; intros; try exact I;
+    try (let e2 := match goal with Hwf : wff ?G ?e1 ?e2 |- _ => e2 end in
+         invert_one_expr e2);
+    intros; break_innermost_match; intros; try exact I;
       repeat first [ pret_step
                    | pose_wff_base
                    | pose_wff_prod

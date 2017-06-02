@@ -60,7 +60,7 @@ Section EdDSA.
   Definition verify'_sig : { verify | forall mlen (message:word mlen) (pk:word b) (sig:word (b+b)),
       verify mlen message pk sig = true <-> valid message pk sig }.
   Proof.
-    eexists; intros; set_evars.
+    eexists; intros mlen message pk sig; set_evars.
     unfold Spec.EdDSA.valid.
     setoid_rewrite solve_for_R.
     setoid_rewrite combine_eq_iff.

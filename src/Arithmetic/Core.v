@@ -358,7 +358,7 @@ Module B.
     Lemma split_cps_id s p: forall {T} f,
         @split_cps s p T f = f (split s p).
     Proof.
-      induction p;
+      induction p as [|?? IHp];
         repeat match goal with
                | _ => rewrite IHp
                | _ => progress (cbv [split]; prove_id)
@@ -525,9 +525,9 @@ Module B.
       Proof using Type.
         cbv [eval Associational.eval to_associational_cps zeros].
         pose proof (seq_length n 0). generalize dependent (seq 0 n).
-        intro xs; revert n; induction xs; intros;
+        intro xs; revert n; induction xs as [|?? IHxs]; intros n H;
           [autorewrite with uncps; reflexivity|].
-        intros; destruct n; [distr_length|].
+        destruct n as [|n]; [distr_length|].
         specialize (IHxs n). autorewrite with uncps in *.
         rewrite !@Tuple.to_list_repeat in *.
         simpl List.repeat. rewrite map_cons, combine_cons, map_cons.
@@ -835,7 +835,7 @@ Module B.
           eval wt (Tuple.left_append (n:=n) x xs)
           = wt n * x + eval wt xs.
       Proof.
-        induction n; intros; try destruct xs;
+        induction n as [|n IHn]; intros wt x xs; try destruct xs;
           unfold Tuple.left_append; fold @Tuple.left_append;
             autorewrite with push_basesystem_eval; [ring|].
         rewrite (Tuple.subst_append xs), Tuple.hd_append, Tuple.tl_append.
@@ -846,8 +846,8 @@ Module B.
       Lemma eval_wt_equiv {n} :forall wta wtb (x:tuple Z n),
           (forall i, wta i = wtb i) -> eval wta x = eval wtb x.
       Proof.
-        destruct n; [reflexivity|].
-        induction n; intros; [rewrite !eval_single, H; reflexivity|].
+        destruct n as [|n]; [reflexivity|].
+        induction n as [|n IHn]; intros wta wtb x H; [rewrite !eval_single, H; reflexivity|].
         simpl tuple in *; destruct x.
         change (t, z) with (Tuple.append (n:=S n) z t).
         rewrite !eval_step. rewrite (H 0%nat). apply Group.cancel_left.
@@ -879,7 +879,7 @@ Module B.
 
       Lemma map_and_0 {n} (p:tuple Z n) : Tuple.map (Z.land 0) p = zeros n.
       Proof.
-        induction n; [destruct p; reflexivity | ].
+        induction n as [|n IHn]; [destruct p; reflexivity | ].
         rewrite (Tuple.subst_append p), Tuple.map_append, Z.land_0_l, IHn.
         reflexivity.
       Qed.

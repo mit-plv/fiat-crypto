@@ -50,7 +50,7 @@ Section BoundedField25p5.
     | [ |- { f | forall a b, ?phi (f a b) = @?rhs a b } ]
       => apply lift2_sig with (P:=fun a b f => phi f = rhs a b)
     end.
-    intros.
+    intros a b.
     eexists_sig_etransitivity. all:cbv [phi].
     rewrite <- (proj2_sig sub_sig).
     symmetry; rewrite <- (proj2_sig carry_sig); symmetry.

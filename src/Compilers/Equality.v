@@ -51,7 +51,7 @@ Section language.
   Lemma flat_type_dec_bl X : forall Y, flat_type_beq X Y = true -> X = Y.
   Proof. clear base_type_code_lb; induction X, Y; t. Defined.
   Lemma flat_type_dec_lb X : forall Y, X = Y -> flat_type_beq X Y = true.
-  Proof. clear base_type_code_bl; intros; subst Y; induction X; t. Defined.
+  Proof. clear base_type_code_bl; intros Y **; subst Y; induction X; t. Defined.
   Definition flat_type_eq_dec (X Y : flat_type) : {X = Y} + {X <> Y}
     := match Sumbool.sumbool_of_bool (flat_type_beq X Y) with
        | left pf => left (flat_type_dec_bl _ _ pf)
@@ -65,7 +65,7 @@ Section language.
   Lemma type_dec_bl X : forall Y, type_beq X Y = true -> X = Y.
   Proof. clear base_type_code_lb; pose proof flat_type_dec_bl; induction X, Y; t. Defined.
   Lemma type_dec_lb X : forall Y, X = Y -> type_beq X Y = true.
-  Proof. clear base_type_code_bl; pose proof flat_type_dec_lb; intros; subst Y; induction X; t. Defined.
+  Proof. clear base_type_code_bl; pose proof flat_type_dec_lb; intros Y **; subst Y; induction X; t. Defined.
   Definition type_eq_dec (X Y : type) : {X = Y} + {X <> Y}
     := match Sumbool.sumbool_of_bool (type_beq X Y) with
        | left pf => left (type_dec_bl _ _ pf)

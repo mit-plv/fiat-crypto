@@ -137,7 +137,7 @@ end.
 
 Lemma to_list_from_list : forall {T} (n:nat) (xs:list T) pf, to_list n (from_list n xs pf) = xs.
 Proof.
-  destruct xs; simpl; intros; subst; auto.
+  destruct xs as [|t xs]; simpl; intros; subst; auto.
   generalize dependent t. simpl in *.
   induction xs; simpl in *; intros; congruence.
 Qed.
@@ -156,7 +156,7 @@ Lemma from_list'_to_list' : forall T n (xs:tuple' T n),
     forall x xs' pf, to_list' n xs = cons x xs' ->
       from_list' x n xs' pf = xs.
 Proof.
-  induction n; intros.
+  induction n; intros xs x xs' pf H.
   { simpl in *. injection H; clear H; intros; subst. congruence. }
   { destruct xs eqn:Hxs;
     destruct xs' eqn:Hxs';
@@ -166,7 +166,7 @@ Qed.
 
 Lemma from_list_to_list : forall {T n} (xs:tuple T n) pf, from_list n (to_list n xs) pf = xs.
 Proof.
-  destruct n; auto; intros; simpl in *.
+  destruct n as [|n]; auto; intros xs pf; simpl in *.
   { destruct xs; auto. }
   { destruct (to_list' n xs) eqn:H; try discriminate.
     eapply from_list'_to_list'; assumption. }
@@ -356,7 +356,9 @@ Lemma map_S' {n A B} (f:A -> B) (xs:tuple A (S n)) (x:A)
   : map (n:=S (S n)) f (xs, x) = (map (n:=S n) f xs, f x).
 Proof.
   tuple_maps_to_list_maps.
+  let lxs := match goal with lxs : list _ |- _ => lxs end in
   destruct lxs as [|x' lxs']; [simpl in *; discriminate|].
+  let x0 := match goal with H : _ = _ |- _ => H end in
   change ( f x :: List.map f (to_list (S n) (from_list (S n) (x' :: lxs') x0)) = f x :: to_list (S n) (map f (from_list (S n) (x' :: lxs') x0)) ).
   tuple_maps_to_list_maps.
   reflexivity.
@@ -369,7 +371,9 @@ Lemma map2_S' {n A B C} (f:A -> B -> C) (xs:tuple A (S n)) (ys:tuple B (S n)) (x
   : map2 (n:=S (S n)) f (xs, x) (ys, y) = (map2 (n:=S n) f xs ys, f x y).
 Proof.
   tuple_maps_to_list_maps.
+  let lxs := match goal with lxs : list A |- _ => lxs end in
   destruct lxs as [|x' lxs']; [simpl in *; discriminate|].
+  let lys := match goal with lxs : list B |- _ => lxs end in
   destruct lys as [|y' lys']; [simpl in *; discriminate|].
   change ( f x y ::  ListUtil.map2 f (to_list (S n) (from_list (S n) (x' :: lxs') x1))
     (to_list (S n) (from_list (S n) (y' :: lys') x0)) = f x y :: to_list (S n) (map2 f (from_list (S n) (x' :: lxs') x1) (from_list (S n) (y' :: lys') x0)) ).
@@ -497,13 +501,13 @@ Section Equivalence.
   Global Instance Equivalence_fieldwise' {R_equiv:Equivalence R} {n:nat} : Equivalence (fieldwise' n R).
   Proof using Type. constructor; exact _. Qed.
 
-  Global Instance Reflexive_fieldwise {R_Reflexive:Reflexive R} {n:nat} : Reflexive (fieldwise n R) | 5.
+  Global Instance Reflexive_fieldwise {R_Reflexive:Reflexive R} : forall {n:nat}, Reflexive (fieldwise n R) | 5.
   Proof using Type. destruct n; (repeat constructor || exact _). Qed.
-  Global Instance Symmetric_fieldwise {R_Symmetric:Symmetric R} {n:nat} : Symmetric (fieldwise n R) | 5.
+  Global Instance Symmetric_fieldwise {R_Symmetric:Symmetric R} : forall {n:nat}, Symmetric (fieldwise n R) | 5.
   Proof using Type. destruct n; (repeat constructor || exact _). Qed.
-  Global Instance Transitive_fieldwise {R_Transitive:Transitive R} {n:nat} : Transitive (fieldwise n R) | 5.
+  Global Instance Transitive_fieldwise {R_Transitive:Transitive R} : forall {n:nat}, Transitive (fieldwise n R) | 5.
   Proof using Type. destruct n; (repeat constructor || exact _). Qed.
-  Global Instance Equivalence_fieldwise {R_equiv:Equivalence R} {n:nat} : Equivalence (fieldwise n R).
+  Global Instance Equivalence_fieldwise {R_equiv:Equivalence R} : forall {n:nat}, Equivalence (fieldwise n R).
   Proof using Type. constructor; exact _. Qed.
 End Equivalence.
 
@@ -511,7 +515,7 @@ Arguments fieldwise' {A B n} _ _ _.
 Arguments fieldwise {A B n} _ _ _.
 
 Local Hint Extern 0 => solve [ solve_decidable_transparent ] : typeclass_instances.
-Global Instance dec_fieldwise' {A RA} {HA : DecidableRel RA} {n} : DecidableRel (@fieldwise' A A n RA) | 10.
+Global Instance dec_fieldwise' {A RA} {HA : DecidableRel RA} : forall {n}, DecidableRel (@fieldwise' A A n RA) | 10.
 Proof.
   induction n; simpl @fieldwise'.
   { exact _. }
@@ -519,7 +523,7 @@ Proof.
     exact _. }
 Defined.
 
-Global Instance dec_fieldwise {A RA} {HA : DecidableRel RA} {n} : DecidableRel (@fieldwise A A n RA) | 10.
+Global Instance dec_fieldwise {A RA} {HA : DecidableRel RA} : forall {n}, DecidableRel (@fieldwise A A n RA) | 10.
 Proof.
   destruct n; unfold fieldwise; exact _.
 Defined.
@@ -574,7 +578,7 @@ Lemma fieldwiseb'_fieldwise' :forall {A B} n R Rb
   (forall a b, Rb a b = true <-> R a b) ->
   (fieldwiseb' Rb a b = true <-> fieldwise' R a b).
 Proof.
-  intros.
+  intros A B n R Rb a b H.
   revert n a b;
   induction n; intros; simpl @tuple' in *;
     simpl fieldwiseb'; simpl fieldwise'; auto.
@@ -588,7 +592,7 @@ Lemma fieldwiseb_fieldwise :forall {A B} n R Rb
   (forall a b, Rb a b = true <-> R a b) ->
   (fieldwiseb Rb a b = true <-> fieldwise R a b).
 Proof.
-  intros; destruct n; simpl @tuple in *;
+  intros A B n R Rb a b H; destruct n; simpl @tuple in *;
     simpl @fieldwiseb; simpl @fieldwise; try tauto.
   auto using fieldwiseb'_fieldwise'.
 Qed.
@@ -617,7 +621,7 @@ end.
 Lemma from_list_default'_eq : forall {T} (d : T) xs n y pf,
   from_list_default' d y n xs = from_list' y n xs pf.
 Proof.
-  induction xs; destruct n; intros; simpl in *;
+  induction xs as [|?? IHxs]; destruct n; intros; simpl in *;
     solve [ congruence (* 8.5 *)
           | erewrite IHxs; reflexivity ]. (* 8.4 *)
 Qed.
@@ -652,7 +656,7 @@ Require Import Coq.Lists.SetoidList.
 Lemma fieldwise_to_list_iff : forall {T n} R (s t : tuple T n),
     (fieldwise R s t <-> Forall2 R (to_list _ s) (to_list _ t)).
 Proof.
-  induction n; split; intros.
+  induction n as [|n IHn]; intros R s t; split; intros.
   + constructor.
   + cbv [fieldwise]. auto.
   + destruct n; cbv [tuple to_list fieldwise] in *.
@@ -774,7 +778,7 @@ Lemma from_list_cons {A n}:
   forall (xs : list A) a (H:length (a::xs)=S n),
   from_list (S n) (a :: xs) H = append a (from_list n xs (length_cons_full _ _ _ H)).
 Proof.
-  destruct n; intros; destruct xs; distr_length; [reflexivity|].
+  destruct n; intros xs a H; destruct xs; distr_length; [reflexivity|].
   cbv [from_list]; rewrite !from_list'_cons.
   rewrite <-!from_list_default'_eq with (d:=a).
   reflexivity.
@@ -904,7 +908,7 @@ Lemma mapi_with'_left_step {T A B n} f a0:
                            (fst (mapi_with' i f start xs)) a0))
                    (snd (mapi_with' i f start xs))).
 Proof.
-  induction n; intros; [subst; simpl; repeat f_equal; omega|].
+  induction n as [|? IHn]; intros; [subst; simpl; repeat f_equal; omega|].
   rewrite mapi_with'_step; autorewrite with cancel_pair.
   rewrite tl_left_append, hd_left_append.
   erewrite IHn by reflexivity; subst; autorewrite with cancel_pair.
@@ -951,12 +955,12 @@ Proof.
 Qed.
 
 Lemma to_list_repeat {A} (a:A) n : to_list _ (repeat a n) = List.repeat a n.
-Proof. induction n; [reflexivity|destruct n; simpl in *; congruence]. Qed.
+Proof. induction n as [|n]; [reflexivity|destruct n; simpl in *; congruence]. Qed.
 
 
-Global Instance map'_Proper {n A B} : Proper (pointwise_relation _ eq ==> eq ==> eq) (fun f => @map' A B f n) | 10.
+Global Instance map'_Proper : forall {n A B}, Proper (pointwise_relation _ eq ==> eq ==> eq) (fun f => @map' A B f n) | 10.
 Proof.
-  induction n.
+  induction n as [|n IHn]; intros.
   { compute; intros; subst; auto. }
   { cbv [pointwise_relation Proper respectful] in *.
     intros f g Hfg x y ?; subst y.
@@ -964,8 +968,8 @@ Proof.
     congruence. }
 Qed.
 
-Global Instance map_Proper {n A B} : Proper (pointwise_relation _ eq ==> eq ==> eq) (@map n A B) | 10.
+Global Instance map_Proper : forall {n A B}, Proper (pointwise_relation _ eq ==> eq ==> eq) (@map n A B) | 10.
 Proof.
-  destruct n; [ | apply map'_Proper ].
+  destruct n; intros; [ | apply map'_Proper ].
   { repeat (intros [] || intro); auto. }
 Qed.

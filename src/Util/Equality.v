@@ -83,8 +83,9 @@ Section gen.
     reflexivity.
   Defined.
 
-  Global Instance isiso_encode {y} : IsIso (encode y).
+  Global Instance isiso_encode : forall {y}, IsIso (encode y).
   Proof.
+    intro y.
     exists (@decode y).
     { intro H.
       unfold decode.

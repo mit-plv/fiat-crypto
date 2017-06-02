@@ -99,7 +99,7 @@ Section symbolic.
       : wff G' (@csef var1 t e1 m1) (@csef var2 t e2 m2).
     Proof.
       revert dependent m1; revert m2; revert dependent G'.
-      induction Hwf; simpl; intros; try constructor; auto.
+      induction Hwf; simpl; intros G' HGG' m2 m1 Hlen Hm1m2None Hm1m2Some; try constructor; auto.
       { erewrite wff_norm_symbolize_exprf by eassumption.
         break_innermost_match;
           try match goal with
@@ -170,7 +170,7 @@ Section symbolic.
           (Hwf : wff G e1 e2)
       : wff G (@prepend_prefix var1' t e1 prefix1) (@prepend_prefix var2' t e2 prefix2).
     Proof.
-      revert dependent G; revert dependent prefix2; induction prefix1, prefix2; simpl; intros; try congruence.
+      revert dependent G; revert dependent prefix2; induction prefix1, prefix2; simpl; intros Hlen Hprefix G Hwf; try congruence.
       { pose proof (Hprefix 0) as H0; specialize (fun n => Hprefix (S n)).
         destruct_head sigT; simpl in *.
         specialize (H0 _ _ _ _ eq_refl eq_refl); destruct_head ex; subst; simpl in *.

@@ -145,9 +145,10 @@ Hint Rewrite
 
 Hint Rewrite @tuple_decoder_S @tuple_decoder_O @tuple_decoder_m1 using solve [ auto with zarith ] : simpl_tuple_decoder.
 
-Global Instance tuple_decoder_mod {n W} {decode : decoder n W} {k} {isdecode : is_decode decode} (w : tuple W (S (S k)))
-  : tuple_decoder (k := S k) (fst w) <~= tuple_decoder w mod 2^(S k * n).
+Global Instance tuple_decoder_mod : forall {n W} {decode : decoder n W} {k} {isdecode : is_decode decode} (w : tuple W (S (S k))),
+    tuple_decoder (k := S k) (fst w) <~= tuple_decoder w mod 2^(S k * n).
 Proof.
+  intros n W decode k isdecode w.
   pose proof (snd w).
   assert (0 <= n) by eauto using decode_exponent_nonnegative.
   assert (0 <= (S k) * n) by nia.
@@ -156,9 +157,10 @@ Proof.
   reflexivity.
 Qed.
 
-Global Instance tuple_decoder_div {n W} {decode : decoder n W} {k} {isdecode : is_decode decode} (w : tuple W (S (S k)))
-  : decode (snd w) <~= tuple_decoder w / 2^(S k * n).
+Global Instance tuple_decoder_div : forall {n W} {decode : decoder n W} {k} {isdecode : is_decode decode} (w : tuple W (S (S k))),
+    decode (snd w) <~= tuple_decoder w / 2^(S k * n).
 Proof.
+  intros n W decode k isdecode w.
   pose proof (snd w).
   assert (0 <= n) by eauto using decode_exponent_nonnegative.
   assert (0 <= (S k) * n) by nia.
@@ -169,16 +171,18 @@ Proof.
   reflexivity.
 Qed.
 
-Global Instance tuple2_decoder_mod {n W} {decode : decoder n W} {isdecode : is_decode decode} (w : tuple W 2)
-  : decode (fst w) <~= tuple_decoder w mod 2^n.
+Global Instance tuple2_decoder_mod : forall {n W} {decode : decoder n W} {isdecode : is_decode decode} (w : tuple W 2),
+    decode (fst w) <~= tuple_decoder w mod 2^n.
 Proof.
+  intros n W decode isdecode w.
   generalize (@tuple_decoder_mod n W decode 0 isdecode w).
   autorewrite with simpl_tuple_decoder; trivial.
 Qed.
 
-Global Instance tuple2_decoder_div {n W} {decode : decoder n W} {isdecode : is_decode decode} (w : tuple W 2)
-  : decode (snd w) <~= tuple_decoder w / 2^n.
+Global Instance tuple2_decoder_div : forall {n W} {decode : decoder n W} {isdecode : is_decode decode} (w : tuple W 2),
+    decode (snd w) <~= tuple_decoder w / 2^n.
 Proof.
+  intros n W decode isdecode w.
   generalize (@tuple_decoder_div n W decode 0 isdecode w).
   autorewrite with simpl_tuple_decoder; trivial.
 Qed.

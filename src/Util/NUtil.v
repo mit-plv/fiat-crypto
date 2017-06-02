@@ -26,7 +26,7 @@ Module N.
 
   Lemma size_nat_equiv : forall n, N.size_nat n = N.to_nat (N.size n).
   Proof.
-    destruct n; auto; simpl; induction p; simpl; auto; rewrite IHp, Pnat.Pos2Nat.inj_succ; reflexivity.
+    destruct n as [|p]; auto; simpl; induction p as [p IHp|p IHp|]; simpl; auto; rewrite IHp, Pnat.Pos2Nat.inj_succ; reflexivity.
   Qed.
 
   Lemma size_nat_le a b : (a <= b)%N -> (N.size_nat a <= N.size_nat b)%nat.
@@ -39,7 +39,7 @@ Module N.
   Lemma shiftr_size : forall n bound, N.size_nat n <= bound ->
     N.shiftr_nat n bound = 0%N.
   Proof.
-    intros.
+    intros n bound H.
     rewrite <- (Nat2N.id bound).
     rewrite Nshiftr_nat_equiv.
     destruct (N.eq_dec n 0); subst; [apply N.shiftr_0_l|].
@@ -86,7 +86,7 @@ Module N.
     then S (2 * N.to_nat (N.shiftr_nat n (S i)))
     else (2 * N.to_nat (N.shiftr_nat n (S i))).
   Proof.
-    intros.
+    intros n i.
     rewrite Nshiftr_nat_S.
     case_eq (N.testbit_nat n i); intro testbit_i;
       pose proof (Nshiftr_nat_spec n i 0) as shiftr_n_odd;

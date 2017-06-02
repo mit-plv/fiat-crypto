@@ -53,7 +53,7 @@ Module Z.
   Lemma pos_pow_nat_pos : forall x n,
     Z.pos x ^ Z.of_nat n > 0.
   Proof.
-    do 2 (intros; induction n; subst; simpl in *; auto with zarith).
+    do 2 (try intros x n; induction n as [|n]; subst; simpl in *; auto with zarith).
     rewrite <- Pos.add_1_r, Zpower_pos_is_exp.
     apply Zmult_gt_0_compat; auto; reflexivity.
   Qed.
@@ -64,7 +64,7 @@ Module Z.
   Lemma pow_Z2N_Zpow : forall a n, 0 <= a ->
     ((Z.to_nat a) ^ n = Z.to_nat (a ^ Z.of_nat n)%Z)%nat.
   Proof.
-    intros; induction n; try reflexivity.
+    intros a n H; induction n as [|n IHn]; try reflexivity.
     rewrite Nat2Z.inj_succ.
     rewrite pow_succ_r by apply le_0_n.
     rewrite Z.pow_succ_r by apply Zle_0_nat.
@@ -94,14 +94,14 @@ Module Z.
 
   Lemma divide2_even_iff : forall n, (2 | n) <-> Z.even n = true.
   Proof.
-    intro; split. {
+    intros n; split. {
       intro divide2_n.
       Z.divide_exists_mul; [ | pose proof (Z.mod_pos_bound n 2); omega].
       rewrite divide2_n.
       apply Z.even_mul.
     } {
       intro n_even.
-      pose proof (Zmod_even n).
+      pose proof (Zmod_even n) as H.
       rewrite n_even in H.
       apply Zmod_divide; omega || auto.
     }
@@ -109,7 +109,7 @@ Module Z.
 
   Lemma prime_odd_or_2 : forall p (prime_p : prime p), p = 2 \/ Z.odd p = true.
   Proof.
-    intros.
+    intros p prime_p.
     apply Decidable.imp_not_l; try apply Z.eq_decidable.
     intros p_neq2.
     pose proof (Zmod_odd p) as mod_odd.
@@ -127,7 +127,7 @@ Module Z.
   Lemma shiftr_add_shiftl_high : forall n m a b, 0 <= n <= m -> 0 <= a < 2 ^ n ->
     Z.shiftr (a + (Z.shiftl b n)) m = Z.shiftr b (m - n).
   Proof.
-    intros.
+    intros n m a b H H0.
     rewrite !Z.shiftr_div_pow2, Z.shiftl_mul_pow2 by omega.
     replace (2 ^ m) with (2 ^ n * 2 ^ (m - n)) by
       (rewrite <-Z.pow_add_r by omega; f_equal; ring).
@@ -141,7 +141,7 @@ Module Z.
   Lemma shiftr_add_shiftl_low : forall n m a b, 0 <= m <= n -> 0 <= a < 2 ^ n ->
     Z.shiftr (a + (Z.shiftl b n)) m = Z.shiftr a m + Z.shiftr b (m - n).
   Proof.
-    intros.
+    intros n m a b H H0.
     rewrite !Z.shiftr_div_pow2, Z.shiftl_mul_pow2, Z.shiftr_mul_pow2 by omega.
     replace (2 ^ n) with (2 ^ (n - m) * 2 ^ m) by
       (rewrite <-Z.pow_add_r by omega; f_equal; ring).
@@ -155,8 +155,8 @@ Module Z.
     0 <= a < 2 ^ n ->
     Z.testbit (a + Z.shiftl b n) i = Z.testbit b (i - n).
   Proof.
-    intros ? ?.
-    apply natlike_ind with (x := i); intros; try assumption;
+    intros i ?.
+    apply natlike_ind with (x := i); [ intros a b n | intros x H0 H1 a b n | ]; intros; try assumption;
       (destruct (Z_eq_dec 0 n); [ subst; rewrite Z.pow_0_r in *;
        replace a with 0 by omega; f_equal; ring | ]); try omega.
     rewrite <-Z.add_1_r at 1. rewrite <-Z.shiftr_spec by assumption.
@@ -195,7 +195,7 @@ Module Z.
   Lemma land_add_land : forall n m a b, (m <= n)%nat ->
     Z.land ((Z.land a (Z.ones (Z.of_nat n))) + (Z.shiftl b (Z.of_nat n))) (Z.ones (Z.of_nat m)) = Z.land a (Z.ones (Z.of_nat m)).
   Proof.
-    intros.
+    intros n m a b H.
     rewrite !Z.land_ones by apply Nat2Z.is_nonneg.
     rewrite Z.shiftl_mul_pow2 by apply Nat2Z.is_nonneg.
     replace (b * 2 ^ Z.of_nat n) with
@@ -232,7 +232,7 @@ Module Z.
   Lemma pow2_lt_or_divides : forall a b, 0 <= b ->
     2 ^ a < 2 ^ b \/ (2 ^ a) mod 2 ^ b = 0.
   Proof.
-    intros.
+    intros a b H.
     destruct (Z_lt_dec a b); [left|right].
     { apply Z.pow_lt_mono_r; auto; omega. }
     { replace a with (a - b + b) by ring.
@@ -243,7 +243,7 @@ Module Z.
   Lemma odd_mod : forall a b, (b <> 0)%Z ->
     Z.odd (a mod b) = if Z.odd b then xorb (Z.odd a) (Z.odd (a / b)) else Z.odd a.
   Proof.
-    intros.
+    intros a b H.
     rewrite Zmod_eq_full by assumption.
     rewrite <-Z.add_opp_r, Z.odd_add, Z.odd_opp, Z.odd_mul.
     case_eq (Z.odd b); intros; rewrite ?Bool.andb_true_r, ?Bool.andb_false_r; auto using Bool.xorb_false_r.
@@ -251,7 +251,7 @@ Module Z.
 
   Lemma mod_same_pow : forall a b c, 0 <= c <= b -> a ^ b mod a ^ c = 0.
   Proof.
-    intros.
+    intros a b c H.
     replace b with (b - c + c) by ring.
     rewrite Z.pow_add_r by omega.
     apply Z_mod_mult.
@@ -287,14 +287,14 @@ Module Z.
 
   Lemma shiftr_le : forall a b i : Z, 0 <= i -> a <= b -> a >> i <= b >> i.
   Proof.
-    intros until 1. revert a b. apply natlike_ind with (x := i); intros; auto.
+    intros a b i ?; revert a b. apply natlike_ind with (x := i); intros; auto.
     rewrite !shiftr_succ, shiftr_1_r_le; eauto. reflexivity.
   Qed.
   Hint Resolve shiftr_le : zarith.
 
   Lemma ones_pred : forall i, 0 < i -> Z.ones (Z.pred i) = Z.shiftr (Z.ones i) 1.
   Proof.
-    induction i; [ | | pose proof (Pos2Z.neg_is_neg p) ]; try omega.
+    induction i as [|p|p]; [ | | pose proof (Pos2Z.neg_is_neg p) ]; try omega.
     intros.
     unfold Z.ones.
     rewrite !Z.shiftl_1_l, Z.shiftr_div_pow2, <-!Z.sub_1_r, Z.pow_1_r, <-!Z.add_opp_r by omega.
@@ -310,12 +310,12 @@ Module Z.
   Lemma shiftr_ones' : forall a n, 0 <= a < 2 ^ n -> forall i, (0 <= i) ->
     Z.shiftr a i <= Z.ones (n - i) \/ n <= i.
   Proof.
-    intros until 1.
+    intros a n H.
     apply natlike_ind.
     + unfold Z.ones.
       rewrite Z.shiftr_0_r, Z.shiftl_1_l, Z.sub_0_r.
       omega.
-    + intros.
+    + intros x H0 H1.
       destruct (Z_lt_le_dec x n); try omega.
       intuition auto with zarith lia.
       left.
@@ -360,7 +360,7 @@ Module Z.
   Lemma lor_shiftl : forall a b n, 0 <= n -> 0 <= a < 2 ^ n ->
     Z.lor a (Z.shiftl b n) = a + (Z.shiftl b n).
   Proof.
-    intros.
+    intros a b n H H0.
     apply Z.bits_inj'; intros t ?.
     rewrite Z.lor_spec, Z.shiftl_spec by assumption.
     destruct (Z_lt_dec t n).
@@ -449,7 +449,7 @@ Module Z.
   Lemma pow2_mod_id_iff : forall a n, 0 <= n ->
                                       (Z.pow2_mod a n = a <-> 0 <= a < 2 ^ n).
   Proof.
-    intros.
+    intros a n H.
     rewrite Z.pow2_mod_spec by assumption.
     assert (0 < 2 ^ n) by Z.zero_bounds.
     rewrite Z.mod_small_iff by omega.
@@ -460,8 +460,8 @@ Module Z.
     (forall n, ~ (n < x) -> Z.testbit a n = false) ->
     a < 2 ^ x.
   Proof.
-    intros.
-    assert (a = Z.pow2_mod a x). {
+    intros a x H H0.
+    assert (H1 : a = Z.pow2_mod a x). {
      apply Z.bits_inj'; intros.
      rewrite Z.testbit_pow2_mod by omega; break_match; auto.
     }
@@ -472,7 +472,7 @@ Module Z.
   Lemma lor_range : forall x y n, 0 <= x < 2 ^ n -> 0 <= y < 2 ^ n ->
                                   0 <= Z.lor x y < 2 ^ n.
   Proof.
-    intros; assert (0 <= n) by auto with zarith omega.
+    intros x y n H H0; assert (0 <= n) by auto with zarith omega.
     repeat match goal with
            | |- _ => progress intros
            | |- _ => rewrite Z.lor_spec
@@ -493,7 +493,7 @@ Module Z.
       (0 <= y < 2 ^ n)%Z ->
       (0 <= Z.lor y (Z.shiftl x n) < 2 ^ (n + m))%Z.
   Proof.
-    intros.
+    intros x y n m H H0 H1 H2.
     apply Z.lor_range.
     { split; try omega.
       apply Z.lt_le_trans with (m := (2 ^ n)%Z); try omega.
@@ -512,8 +512,8 @@ Module Z.
 
   Lemma Pos_land_upper_bound_l : forall a b, (Pos.land a b <= N.pos a)%N.
   Proof.
-    induction a; destruct b; intros; try solve [cbv; congruence];
-      simpl; specialize (IHa b); case_eq (Pos.land a b); intro; simpl;
+    induction a as [a IHa|a IHa|]; destruct b as [b|b|]; try solve [cbv; congruence];
+      simpl; specialize (IHa b); case_eq (Pos.land a b); intro p; simpl;
       try (apply N_le_1_l || apply N.le_0_l); intro land_eq;
       rewrite land_eq in *; unfold N.le, N.compare in *;
       rewrite ?Pos.compare_xI_xI, ?Pos.compare_xO_xI, ?Pos.compare_xO_xO;
@@ -524,7 +524,7 @@ Module Z.
   Lemma land_upper_bound_l : forall a b, (0 <= a) -> (0 <= b) ->
     Z.land a b <= a.
   Proof.
-    intros.
+    intros a b H H0.
     destruct a, b; try solve [exfalso; auto]; try solve [cbv; congruence].
     cbv [Z.land].
     rewrite <-N2Z.inj_pos, <-N2Z.inj_le.
@@ -542,7 +542,7 @@ Module Z.
   Lemma le_fold_right_max : forall low l x, (forall y, In y l -> low <= y) ->
     In x l -> x <= fold_right Z.max low l.
   Proof.
-    induction l; intros ? lower_bound In_list; [cbv [In] in *; intuition | ].
+    induction l as [|a l IHl]; intros ? lower_bound In_list; [cbv [In] in *; intuition | ].
     simpl.
     destruct (in_inv In_list); subst.
     + apply Z.le_max_l.
@@ -553,13 +553,13 @@ Module Z.
 
   Lemma le_fold_right_max_initial : forall low l, low <= fold_right Z.max low l.
   Proof.
-    induction l; intros; try reflexivity.
+    induction l as [|a l IHl]; intros; try reflexivity.
     etransitivity; [ apply IHl | apply Z.le_max_r ].
   Qed.
 
   Lemma add_compare_mono_r: forall n m p, (n + p ?= m + p) = (n ?= m).
   Proof.
-    intros.
+    intros n m p.
     rewrite <-!(Z.add_comm p).
     apply Z.add_compare_mono_l.
   Qed.
@@ -997,7 +997,7 @@ Module Z.
 
   Lemma lt_mul_2_mod_sub : forall a b, b <> 0 -> b <= a < 2 * b -> a mod b = a - b.
   Proof.
-    intros.
+    intros a b H H0.
     replace (a mod b) with ((1 * b + (a - b)) mod b) by (f_equal; ring).
     rewrite Z.mod_add_l by auto.
     apply Z.mod_small.
@@ -1093,7 +1093,7 @@ Module Z.
 
   Lemma lt_pow_2_shiftr : forall a n, 0 <= a < 2 ^ n -> a >> n = 0.
   Proof.
-    intros.
+    intros a n H.
     destruct (Z_le_dec 0 n).
     + rewrite Z.shiftr_div_pow2 by assumption.
       auto using Z.div_small.
@@ -1118,7 +1118,7 @@ Module Z.
   Lemma lt_mul_2_pow_2_shiftr : forall a n, 0 <= a < 2 * 2 ^ n ->
                                             a >> n = if Z_lt_dec a (2 ^ n) then 0 else 1.
   Proof.
-    intros; break_match; [ apply lt_pow_2_shiftr; omega | ].
+    intros a n H; break_match; [ apply lt_pow_2_shiftr; omega | ].
     destruct (Z_le_dec 0 n).
     + replace (2 * 2 ^ n) with (2 ^ (n + 1)) in *
         by (rewrite Z.pow_add_r; try omega; ring).
@@ -1217,7 +1217,7 @@ Module Z.
   Section ZInequalities.
     Lemma land_le : forall x y, (0 <= x)%Z -> (Z.land x y <= x)%Z.
     Proof.
-      intros; apply Z.ldiff_le; [assumption|].
+      intros x y H; apply Z.ldiff_le; [assumption|].
       rewrite Z.ldiff_land, Z.land_comm, Z.land_assoc.
       rewrite <- Z.land_0_l with (a := y); f_equal.
       rewrite Z.land_comm, Z.land_lnot_diag.
@@ -1226,7 +1226,7 @@ Module Z.
 
     Lemma lor_lower : forall x y, (0 <= x)%Z -> (0 <= y)%Z -> (x <= Z.lor x y)%Z.
     Proof.
-      intros; apply Z.ldiff_le; [apply Z.lor_nonneg; auto|].
+      intros x y H H0; apply Z.ldiff_le; [apply Z.lor_nonneg; auto|].
       rewrite Z.ldiff_land.
       apply Z.bits_inj_iff'; intros k Hpos; apply Z.le_ge in Hpos.
       rewrite Z.testbit_0_l, Z.land_spec, Z.lnot_spec, Z.lor_spec;
@@ -1240,7 +1240,7 @@ Module Z.
         -> (y <= z)%Z
         -> (Z.lor x y <= (2 ^ Z.log2_up (z+1)) - 1)%Z.
     Proof.
-      intros; apply Z.ldiff_le.
+      intros x y z H H0 H1; apply Z.ldiff_le.
 
       - apply Z.le_add_le_sub_r.
         replace 1%Z with (2 ^ 0)%Z by (cbv; reflexivity).
@@ -1538,7 +1538,7 @@ Module N2Z.
 
   Lemma inj_shiftl: forall x y, Z.of_N (N.shiftl x y) = Z.shiftl (Z.of_N x) (Z.of_N y).
   Proof.
-    intros.
+    intros x y.
     apply Z.bits_inj_iff'; intros k Hpos.
     rewrite Z2N.inj_testbit; [|assumption].
     rewrite Z.shiftl_spec; [|assumption].

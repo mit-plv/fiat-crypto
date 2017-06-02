@@ -27,12 +27,12 @@ Theorem Nneq_out : forall n m,
   n <> m
   -> nat_of_N n <> nat_of_N m.
   intuition.
-  apply nat_of_N_eq in H0; tauto.
+  match goal with H0 : _ |- _ => apply nat_of_N_eq in H0; tauto end.
 Qed.
 
 Theorem Nlt_out : forall n m, n < m
   -> (nat_of_N n < nat_of_N m)%nat.
-  unfold Nlt; intros.
+  unfold Nlt; intros ?? H.
   rewrite nat_of_Ncompare in H.
   apply nat_compare_Lt_lt; assumption.
 Qed.
@@ -46,7 +46,7 @@ Qed.
 
 Theorem Nge_out : forall n m, n >= m
   -> (nat_of_N n >= nat_of_N m)%nat.
-  unfold Nge; intros.
+  unfold Nge; intros ?? H.
   rewrite nat_of_Ncompare in H.
   apply nat_compare_ge; assumption.
 Qed.

@@ -105,8 +105,8 @@ Ltac nat_beq_to_eq :=
 
 Lemma div_minus : forall a b, b <> 0 -> (a + b) / b = a / b + 1.
 Proof.
-  intros.
-  assert (b = 1 * b) by omega.
+  intros a b H.
+  assert (H0 : b = 1 * b) by omega.
   rewrite H0 at 1.
   rewrite <- Nat.div_add by auto.
   reflexivity.
@@ -114,7 +114,7 @@ Qed.
 
 Lemma pred_mod : forall m, (0 < m)%nat -> ((pred m) mod m)%nat = pred m.
 Proof.
-  intros; apply Nat.mod_small.
+  intros m H; apply Nat.mod_small.
   destruct m; try omega; rewrite Nat.pred_succ; auto.
 Qed.
 
@@ -141,7 +141,7 @@ Qed.
 Lemma divide2_1mod4_nat : forall c x, c = x / 4 -> x mod 4 = 1 -> exists y, 2 * y = (x / 2).
 Proof.
   assert (4 <> 0) as ne40 by omega.
-  induction c; intros; pose proof (div_mod x 4 ne40); rewrite <- H in H1. {
+  induction c; intros x H H0; pose proof (div_mod x 4 ne40) as H1; rewrite <- H in H1. {
     rewrite H0 in H1.
     simpl in H1.
     rewrite H1.
@@ -155,8 +155,8 @@ Proof.
     apply Nat.add_cancel_r in H.
     replace x with ((x - 4) + (1 * 4)) in H0 by omega.
     rewrite Nat.mod_add in H0 by auto.
-    pose proof (IHc _ H H0).
-    destruct H2.
+    pose proof (IHc _ H H0) as H2.
+    destruct H2 as [x0 H2].
     exists (x0 + 1).
     rewrite <- (Nat.sub_add 4 x) in H1 at 1 by auto.
     replace (4 * c + 4 + x mod 4) with (4 * c + x mod 4 + 4) in H1 by omega.
@@ -265,7 +265,7 @@ Hint Rewrite eq_nat_dec_refl : natsimplify.
 (** Helper to get around the lack of function extensionality *)
 Definition eq_nat_dec_right_val n m (pf0 : n <> m) : { pf | eq_nat_dec n m = right pf }.
 Proof.
-  revert dependent n; induction m; destruct n as [|n]; simpl;
+  revert dependent n; induction m as [|m IHm]; destruct n as [|n]; simpl;
     intro pf0;
     [ (exists pf0; exfalso; abstract congruence)
     | eexists; reflexivity

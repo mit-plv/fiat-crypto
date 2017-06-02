@@ -100,7 +100,7 @@ Section MxDHRepChange.
          R (proj (fold_left step xs init)) (fold_left step' xs init').
   Proof using Type.
     generalize dependent init; generalize dependent init'.
-    induction xs; [solve [eauto]|].
+    induction xs as [|?? IHxs]; [solve [eauto]|].
     repeat intro; simpl; rewrite IHxs by eauto.
     apply (_ : Proper ((R ==> eq ==> R) ==> SetoidList.eqlistA eq ==> R ==> R) (@fold_left _ _));
       try reflexivity;

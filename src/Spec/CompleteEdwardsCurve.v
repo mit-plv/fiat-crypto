@@ -39,7 +39,7 @@ Module E.
         (x1, y1), (x2, y2) =>
         (((x1*y2  +  y1*x2)/(1 + d*x1*x2*y1*y2)) , ((y1*y2 - a*x1*x2)/(1 - d*x1*x2*y1*y2)))
       end.
-    Next Obligation. destruct P1 as [[??]?], P2 as [[??]?]; eapply Pre.onCurve_add; eauto. Qed.
+    Next Obligation. do 2 match goal with P : point |- _ => destruct P as [[??]?] end; eapply Pre.onCurve_add; eauto. Qed.
 
     Fixpoint mul (n:nat) (P : point) : point :=
       match n with

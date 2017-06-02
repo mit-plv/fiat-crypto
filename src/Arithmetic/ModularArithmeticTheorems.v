@@ -104,8 +104,7 @@ Module F.
 
     Lemma of_Z_pow x n : F.of_Z _ x ^ n = F.of_Z _ (x ^ (Z.of_N n) mod m) :> F m.
     Proof using Type.
-      intros.
-      induction n using N.peano_ind;
+      induction n as [|n IHn] using N.peano_ind;
         destruct (pow_spec (F.of_Z m x)) as [pow_0 pow_succ] . {
         rewrite pow_0.
         unwrap_F; trivial.
@@ -122,9 +121,9 @@ Module F.
     Lemma to_Z_pow : forall (x : F m) n,
         F.to_Z (x ^ n)%F = (F.to_Z x ^ Z.of_N n mod m)%Z.
     Proof using Type.
-      intros.
+      intros x n.
       symmetry.
-      induction n using N.peano_ind;
+      induction n as [|n IHn] using N.peano_ind;
         destruct (pow_spec x) as [pow_0 pow_succ] . {
         rewrite pow_0, Z.pow_0_r; auto.
       } {
@@ -209,12 +208,12 @@ Module F.
 
     Lemma pow_pow_N (x : F m) : forall (n : N), (x ^ id n)%F = pow_N 1%F F.mul x n.
     Proof using Type.
-      destruct (pow_spec x) as [HO HS]; intros.
-      destruct n; auto; unfold id.
+      destruct (pow_spec x) as [HO HS]; intros n.
+      destruct n as [|p]; auto; unfold id.
       rewrite ModularArithmeticPre.N_pos_1plus at 1.
       rewrite HS.
       simpl.
-      induction p using Pos.peano_ind.
+      induction p as [|p IHp] using Pos.peano_ind.
       - simpl. rewrite HO. apply Algebra.Hierarchy.right_identity.
       - rewrite (@pow_pos_succ (F m) (@F.mul m) eq _ _ associative x).
         rewrite <-IHp, Pos.pred_N_succ, ModularArithmeticPre.N_pos_1plus, HS.
@@ -229,7 +228,7 @@ Module F.
       let '(q, r) := (Z.quotrem (F.to_Z a) (F.to_Z b)) in (F.of_Z _ q , F.of_Z _ r).
     Lemma div_theory : div_theory eq (@F.add m) (@F.mul m) (@id _) quotrem.
     Proof using Type.
-      constructor; intros; unfold quotrem, id.
+      constructor; intros a b; unfold quotrem, id.
 
       replace (Z.quotrem (F.to_Z a) (F.to_Z b)) with (Z.quot (F.to_Z a) (F.to_Z b), Z.rem (F.to_Z a) (F.to_Z b)) by
           try (unfold Z.quot, Z.rem; rewrite <- surjective_pairing; trivial).
@@ -245,13 +244,13 @@ Module F.
      * to inject the result afterward. *)
     Lemma ring_morph: ring_morph 0%F 1%F F.add F.mul F.sub F.opp   eq
                                  0%Z 1%Z Z.add Z.mul Z.sub Z.opp Z.eqb  (F.of_Z m).
-    Proof using Type. split; intros; unwrap_F; solve [ auto | rewrite (proj1 (Z.eqb_eq x y)); trivial]. Qed.
+    Proof using Type. split; try intro x; try intro y; unwrap_F; solve [ auto | rewrite (proj1 (Z.eqb_eq x y)); trivial]. Qed.
 
     (* Redefine our division theory under the ring morphism *)
     Lemma morph_div_theory:
       Ring_theory.div_theory eq Zplus Zmult (F.of_Z m) Z.quotrem.
     Proof using Type.
-      split; intros.
+      split; intros a b.
       replace (Z.quotrem a b) with (Z.quot a b, Z.rem a b);
         try (unfold Z.quot, Z.rem; rewrite <- surjective_pairing; trivial).
       unwrap_F; rewrite <- (Z.quot_rem' a b); trivial.
@@ -292,7 +291,7 @@ Module F.
     Global Instance pow_is_scalarmult
       : is_scalarmult (G:=F m) (eq:=eq) (add:=F.mul) (zero:=1%F) (mul := fun n x => x ^ (N.of_nat n)).
     Proof using Type.
-      split; intros; rewrite ?Nat2N.inj_succ, <-?N.add_1_l;
+      split; [ intro P | intros n P | ]; rewrite ?Nat2N.inj_succ, <-?N.add_1_l;
         match goal with
         | [x:F m |- _ ] => solve [destruct (@pow_spec m P); auto]
         | |- Proper _ _ => solve_proper
@@ -317,7 +316,7 @@ Module F.
               match goal with
               | |- context [ (_^?n)%F ] =>
                 rewrite <-(N2Nat.id n); generalize (N.to_nat n); clear n;
-                let m := fresh n in intro m
+                intro n
               | |- context [ (_^N.of_nat ?n)%F ] =>
                 let rw := constr:(scalarmult_ext(zero:=F.of_Z m 1) n) in
                 setoid_rewrite rw (* rewriting moduloa reduction *)

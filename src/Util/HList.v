@@ -142,13 +142,14 @@ Proof.
   destruct n; [ simpl; tauto | apply fold_right_and_True_hlist' ].
 Qed.
 
-Global Instance mapt_Proper {n A F B}
-  : Proper
+Global Instance mapt_Proper
+  : forall {n A F B},
+    Proper
       ((forall_relation (fun x => pointwise_relation _ Logic.eq))
          ==> forall_relation (fun ts => Logic.eq ==> Logic.eq))
       (@mapt n A F B).
 Proof.
-  unfold forall_relation, pointwise_relation, respectful.
+  intro n; unfold forall_relation, pointwise_relation, respectful.
   repeat intro; subst; destruct n as [|n]; [ reflexivity | ].
   induction n; simpl in *; congruence.
 Qed.

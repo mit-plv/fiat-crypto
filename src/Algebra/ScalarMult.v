@@ -36,8 +36,7 @@ Section ScalarMultProperties.
 
   Lemma scalarmult_ext : forall n P, mul n P = scalarmult_ref n P.
   Proof using Type*.
-
-    induction n; simpl @scalarmult_ref; intros; rewrite <-?IHn; (apply scalarmult_0_l || apply scalarmult_S_l).
+    induction n as [|n IHn]; simpl @scalarmult_ref; intros; rewrite <-?IHn; (apply scalarmult_0_l || apply scalarmult_S_l).
   Qed.
 
   Lemma scalarmult_1_l : forall P, 1*P = P.
@@ -45,16 +44,16 @@ Section ScalarMultProperties.
 
   Lemma scalarmult_add_l : forall (n m:nat) (P:G), ((n + m)%nat * P = n * P + m * P).
   Proof using Type*.
-    induction n; intros;
+    induction n as [|n IHn]; intros;
       rewrite ?scalarmult_0_l, ?scalarmult_S_l, ?plus_Sn_m, ?plus_O_n, ?scalarmult_S_l, ?left_identity, <-?associative, <-?IHn; reflexivity.
   Qed.
 
   Lemma scalarmult_zero_r : forall m, m * zero = zero.
-  Proof using Type*. induction m; rewrite ?scalarmult_S_l, ?scalarmult_0_l, ?left_identity, ?IHm; try reflexivity. Qed.
+  Proof using Type*. induction m as [|? IHm]; rewrite ?scalarmult_S_l, ?scalarmult_0_l, ?left_identity, ?IHm; try reflexivity. Qed.
 
   Lemma scalarmult_assoc : forall (n m : nat) P, n * (m * P) = (m * n)%nat * P.
   Proof using Type*.
-    induction n; intros.
+    induction n as [|n IHn]; intros.
     { rewrite <-mult_n_O, !scalarmult_0_l. reflexivity. }
     { rewrite scalarmult_S_l, <-mult_n_Sm, <-Plus.plus_comm, scalarmult_add_l.
       rewrite IHn. reflexivity. }
@@ -65,7 +64,7 @@ Section ScalarMultProperties.
 
   Lemma scalarmult_mod_order : forall l B, l <> 0%nat -> l*B = zero -> forall n, n mod l * B = n * B.
   Proof using Type*.
-    intros ? ? Hnz Hmod ?.
+    intros l B Hnz Hmod n.
     rewrite (NPeano.Nat.div_mod n l Hnz) at 2.
     rewrite scalarmult_add_l, scalarmult_times_order, left_identity by auto. reflexivity.
   Qed.
@@ -83,7 +82,7 @@ Section ScalarMultHomomorphism.
   Lemma homomorphism_scalarmult : forall n P, phi (MUL n P) = mul n (phi P).
   Proof using Type*.
     setoid_rewrite scalarmult_ext.
-    induction n; intros; simpl; rewrite ?Monoid.homomorphism, ?IHn; easy.
+    induction n as [|n IHn]; intros; simpl; rewrite ?Monoid.homomorphism, ?IHn; easy.
   Qed.
 End ScalarMultHomomorphism.
 

@@ -122,12 +122,13 @@ Section ripple_carry_adc.
   Proof using Type. apply ripple_carry_tuple_SS. Qed.
 
   Local Opaque Z.of_nat.
-  Global Instance ripple_carry_is_add_with_carry {k}
-         {isdecode : is_decode decode}
-         {is_adc : is_add_with_carry adc}
-    : is_add_with_carry (ripple_carry_adc (k := k) adc).
+  Global Instance ripple_carry_is_add_with_carry
+    : forall {k}
+             {isdecode : is_decode decode}
+             {is_adc : is_add_with_carry adc},
+      is_add_with_carry (ripple_carry_adc (k := k) adc).
   Proof using Type.
-    destruct k as [|k].
+    destruct k as [|k]; intros isdecode is_adc.
     { constructor; simpl; intros; autorewrite with zsimplify; reflexivity. }
     { induction k as [|k IHk].
       { cbv [ripple_carry_adc ripple_carry_tuple to_list].
@@ -166,12 +167,13 @@ Section ripple_carry_subc.
   Proof using Type. apply ripple_carry_tuple_SS. Qed.
 
   Local Opaque Z.of_nat.
-  Global Instance ripple_carry_is_sub_with_carry {k}
-         {isdecode : is_decode decode}
-         {is_subc : is_sub_with_carry subc}
-    : is_sub_with_carry (ripple_carry_subc (k := k) subc).
+  Global Instance ripple_carry_is_sub_with_carry
+    : forall {k}
+             {isdecode : is_decode decode}
+             {is_subc : is_sub_with_carry subc},
+      is_sub_with_carry (ripple_carry_subc (k := k) subc).
   Proof using Type.
-    destruct k as [|k].
+    destruct k as [|k]; intros isdecode is_subc.
     { constructor; repeat (intros [] || intro); autorewrite with simpl_tuple_decoder zsimplify; reflexivity. }
     { induction k as [|k IHk].
       { cbv [ripple_carry_subc ripple_carry_tuple to_list].

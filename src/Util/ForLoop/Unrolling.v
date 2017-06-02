@@ -31,7 +31,7 @@ Section with_body.
     : repeat_function body (S count) st
       = body 1 (repeat_function (fun count => body (S count)) count st).
   Proof using Type.
-    revert st; induction count; [ reflexivity | ].
+    revert st; induction count as [|? IHcount]; [ reflexivity | ].
     intros; simpl in *; rewrite <- IHcount; reflexivity.
   Qed.
 
