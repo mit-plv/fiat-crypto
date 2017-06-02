@@ -149,118 +149,7 @@ Section Ops51.
     solve_op_F wt x. reflexivity.
   Defined.
 
-  Check goldilocks_mul_cps.
   Definition half_sz : nat := Eval compute in (sz / 2).
-
-  (* TODO: move *)
-  Definition Positional_split_cps {n m1 m2} (s:Z) (p : tuple Z n)
-             {T} (f:(tuple Z m1 * tuple Z m2) -> T) :=
-        Positional.to_associational_cps wt p
-            (fun P => Associational.split_cps s P
-            (fun split_P =>
-               f (Positional.from_associational wt m1 (fst split_P),
-                  (Positional.from_associational wt m2 (snd split_P))))).
-  Definition Positional_scmul_cps {n} (x : Z) (p: tuple Z n)
-             {T} (f:tuple Z n->T) :=
-    Positional.to_associational_cps wt p
-        (fun P => Associational.mul_cps P [(1, x)]
-        (fun R => Positional.from_associational_cps wt n R f)).
-  Definition Positional_sub_cps {n} (p q: tuple Z n)
-             {T} (f:tuple Z n->T) :=
-    Positional.to_associational_cps wt p
-        (fun P => Positional.to_associational_cps wt q
-        (fun Q => Associational.negate_snd_cps Q
-        (fun negQ => Positional.from_associational_cps wt n (P ++ negQ) f))).
-  Definition goldilocks448_cps :=
-    (goldilocks_mul_cps
-           (T := tuple Z half_sz) (T2 := tuple Z sz)
-           (mul_cps := Positional.mul_cps (n:=half_sz) wt)
-           (add_cps := Positional.add_cps (n:=half_sz) wt)
-           (add2_cps := Positional.add_cps (n:=sz) wt)
-           (split_cps := Positional_split_cps (n:=sz) (m1:=half_sz) (m2 := half_sz))
-           (scmul2_cps := Positional_scmul_cps (n:=sz))
-           (sub2_cps := Positional_sub_cps (n:=sz))
-    ).
-  Hint Unfold goldilocks448_cps.
-  Check goldilocks_mul_id.
-  Definition goldilocks448_id
-             mul_id add_id add2_id split_id scmul2_id sub2_id
-    :=
-    (goldilocks_mul_id
-       (T := tuple Z half_sz) (T2 := tuple Z sz)
-       (mul_cps := Positional.mul_cps (n:=half_sz) wt)
-       (add_cps := Positional.add_cps (n:=half_sz) wt)
-       (add2_cps := Positional.add_cps (n:=sz) wt)
-       (split_cps := Positional_split_cps (n:=sz) (m1:=half_sz) (m2 := half_sz))
-       (scmul2_cps := Positional_scmul_cps (n:=sz))
-       (sub2_cps := Positional_sub_cps (n:=sz))
-       (mul := fun a b => Positional.mul_cps (n:= half_sz) wt a b id)
-       (add := fun a b => Positional.add_cps (n:=half_sz) wt a b id)
-       (add2 := fun a b => Positional.add_cps (n:=sz) wt a b id)
-       (split := fun s a => Positional_split_cps (n:=sz) (m1:=half_sz) (m2 := half_sz) s a id)
-       (scmul2 := fun x a => Positional_scmul_cps (n:=sz) x a id)
-       (sub2 := fun a b => Positional_sub_cps (n:=sz) a b id)
-       (mul_id := mul_id)
-       (add_id := add_id)
-       (add2_id := add2_id)
-       (split_id := split_id)
-       (scmul2_id := scmul2_id)
-       (sub2_id := sub2_id)
-    ).
-  Definition goldilocks448_correct'
-             mul_id add_id add2_id split_id scmul2_id sub2_id
-             eval_mul eval_add eval_add2 eval_split eval_scmul2 eval_sub2
-    :=
-    (goldilocks_mul_correct
-       (T := tuple Z half_sz) (T2 := tuple Z sz)
-       (Positional.eval (n:=half_sz) wt)
-       (Positional.eval (n:=sz) wt)
-       (mul_cps := Positional.mul_cps (n:=half_sz) wt)
-       (add_cps := Positional.add_cps (n:=half_sz) wt)
-       (add2_cps := Positional.add_cps (n:=sz) wt)
-       (split_cps := Positional_split_cps (n:=sz) (m1:=half_sz) (m2 := half_sz))
-       (scmul2_cps := Positional_scmul_cps (n:=sz))
-       (sub2_cps := Positional_sub_cps (n:=sz))
-       (mul := fun a b => Positional.mul_cps (n:= half_sz) wt a b id)
-       (add := fun a b => Positional.add_cps (n:=half_sz) wt a b id)
-       (add2 := fun a b => Positional.add_cps (n:=sz) wt a b id)
-       (split := fun s a => Positional_split_cps (n:=sz) (m1:=half_sz) (m2 := half_sz) s a id)
-       (scmul2 := fun x a => Positional_scmul_cps (n:=sz) x a id)
-       (sub2 := fun a b => Positional_sub_cps (n:=sz) a b id)
-       (mul_id := mul_id)
-       (add_id := add_id)
-       (add2_id := add2_id)
-       (split_id := split_id)
-       (scmul2_id := scmul2_id)
-       (sub2_id := sub2_id)
-       (eval_mul := eval_mul)
-       (eval_add := eval_add)
-       (eval_add2 := eval_add2)
-       (eval_split := eval_split)
-       (eval_scmul2 := eval_scmul2)
-       (eval_sub2 := eval_sub2)
-    ).
-  Check goldilocks448_correct'.
-  Hint Unfold Positional_split_cps Positional_scmul_cps Positional_sub_cps.
-  Lemma goldilocks448_correct : 
-       forall p : positive,
-       forall s : Z,
-       s <> 0 ->
-       s ^ 2 mod p = (s + 1) mod p ->
-       forall xs ys : Z ^ sz,
-         mod_eq (Z.to_pos p)
-                (Positional.eval wt (goldilocks448_cps s xs ys _ id))
-                (Positional.eval wt xs * Positional.eval wt ys).
-  Proof.
-    pose proof wt_nonzero.
-    intros; autounfold. cbv [mod_eq].
-    rewrite goldilocks448_id by (intros; autounfold; autorewrite with uncps push_id; reflexivity). autorewrite with push_id.
-    apply goldilocks448_correct'; try assumption; intros; autounfold;
-      autorewrite with uncps push_id cancel_pair push_basesystem_eval;
-      try reflexivity.
-    { setoid_rewrite Associational.eval_nil. ring. }
-    { rewrite Pos2Z.id; congruence. }
-  Qed.
 
   Definition mul_sig :
     {mul : (Z^sz -> Z^sz -> Z^sz)%type |
@@ -270,16 +159,19 @@ Section Ops51.
   Proof.
     eexists; cbv beta zeta; intros.
     pose proof wt_nonzero.
+    Print goldilocks_mul_cps.
     let x := constr:(
-               goldilocks448_cps (2^224) a b _ id) in
+               goldilocks_mul_cps (n:=half_sz) (n2:=sz) wt (2^224) a b id) in
     F_mod_eq;
       transitivity (Positional.eval wt x); repeat autounfold;
 
    [ 
    | autorewrite with uncps push_id push_basesystem_eval;
-     apply goldilocks448_correct; cbv; congruence ].
+     apply goldilocks_mul_correct; try assumption; cbv; congruence ].
    cbv[mod_eq]; apply f_equal2;
      [  | reflexivity ]; apply f_equal.
+   cbv [goldilocks_mul_cps].
+   repeat autounfold.
    basesystem_partial_evaluation_RHS.
    do_replace_match_with_destructuring_match_in_goal.
    reflexivity.
