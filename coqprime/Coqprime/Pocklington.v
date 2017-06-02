@@ -12,14 +12,14 @@ Require Import Tactic.
 Require Import ZCAux.
 Require Import Zp.
 Require Import FGroup.
-Require Import EGroup. 
+Require Import EGroup.
 Require Import Euler.
 
 Open Scope Z_scope.
 
-Theorem Pocklington: 
-forall N F1 R1, 1 < F1 -> 0 < R1 -> N - 1 = F1 * R1 -> 
-   (forall p, prime p -> (p | F1) -> exists a,  1 < a /\ a^(N - 1) mod N = 1 /\ Zgcd (a ^ ((N - 1)/ p) - 1) N = 1) -> 
+Theorem Pocklington:
+forall N F1 R1, 1 < F1 -> 0 < R1 -> N - 1 = F1 * R1 ->
+   (forall p, prime p -> (p | F1) -> exists a,  1 < a /\ a^(N - 1) mod N = 1 /\ Zgcd (a ^ ((N - 1)/ p) - 1) N = 1) ->
   forall n, prime n -> (n | N) -> n mod F1 = 1.
 intros N F1 R1 HF1 HR1 Neq Rec n Hn H.
 assert (HN: 1 < N).
@@ -73,9 +73,9 @@ apply Zdivide_trans with (1:= HiF1); rewrite Neq; apply Zdivide_factor_r.
 apply Zorder_div; auto.
 Qed.
 
-Theorem PocklingtonCorollary1: 
+Theorem PocklingtonCorollary1:
 forall N F1 R1, 1 < F1 -> 0 < R1 -> N - 1 = F1 * R1 -> N < F1 * F1 ->
-   (forall p, prime p -> (p | F1) -> exists a,  1 < a /\ a^(N - 1) mod N = 1 /\ Zgcd (a ^ ((N - 1)/ p) - 1) N = 1) -> 
+   (forall p, prime p -> (p | F1) -> exists a,  1 < a /\ a^(N - 1) mod N = 1 /\ Zgcd (a ^ ((N - 1)/ p) - 1) N = 1) ->
    prime N.
 intros N F1 R1 H H1 H2 H3 H4; case (prime_dec N); intros H5; auto.
 assert (HN: 1 < N).
@@ -93,9 +93,9 @@ apply Pocklington with (R1 := R1) (4 := H4); auto.
 apply Zlt_square_mult_inv; auto with zarith.
 Qed.
 
-Theorem PocklingtonCorollary2: 
-forall N F1 R1, 1 < F1 -> 0 < R1 -> N - 1 = F1 * R1 -> 
-   (forall p,  prime p -> (p | F1) -> exists a,  1 < a /\ a^(N - 1) mod N = 1 /\ Zgcd (a ^ ((N - 1)/ p) - 1) N = 1) -> 
+Theorem PocklingtonCorollary2:
+forall N F1 R1, 1 < F1 -> 0 < R1 -> N - 1 = F1 * R1 ->
+   (forall p,  prime p -> (p | F1) -> exists a,  1 < a /\ a^(N - 1) mod N = 1 /\ Zgcd (a ^ ((N - 1)/ p) - 1) N = 1) ->
   forall n, 0 <= n -> (n | N) -> n mod F1 = 1.
 intros N F1 R1 H1 H2 H3 H4 n H5; pattern n; apply prime_induction; auto.
 assert (HN: 1 < N).
@@ -114,9 +114,9 @@ Qed.
 
 Definition isSquare x := exists y, x = y * y.
 
-Theorem PocklingtonExtra: 
+Theorem PocklingtonExtra:
 forall N F1 R1, 1 < F1 -> 0 < R1 -> N - 1 = F1 * R1 -> Zeven F1 -> Zodd R1 ->
-   (forall p, prime p -> (p | F1) -> exists a,  1 < a /\ a^(N - 1) mod N = 1 /\ Zgcd (a ^ ((N - 1)/ p) - 1) N = 1) -> 
+   (forall p, prime p -> (p | F1) -> exists a,  1 < a /\ a^(N - 1) mod N = 1 /\ Zgcd (a ^ ((N - 1)/ p) - 1) N = 1) ->
    forall m, 1 <= m ->  (forall l, 1 <= l < m -> ~((l * F1 + 1) | N)) ->
     let s := (R1 / (2 * F1)) in
     let r := (R1 mod (2 * F1)) in
@@ -186,7 +186,7 @@ case (Zeven_odd_dec (c + d)); auto; intros O1.
 contradict ER1; apply Zeven_not_Zodd; rewrite L6; rewrite <- Zplus_assoc; apply Zeven_plus_Zeven; auto.
 apply Zeven_mult_Zeven_r; auto.
 assert (L6_2: Zeven (c * d)).
-case (Zeven_odd_dec c); intros HH1. 
+case (Zeven_odd_dec c); intros HH1.
 apply Zeven_mult_Zeven_l; auto.
 case (Zeven_odd_dec d); intros HH2.
 apply Zeven_mult_Zeven_r; auto.
@@ -237,9 +237,9 @@ rewrite <- L10.
 replace (8 * s) with (4 * (2 * s)); auto with zarith; try rewrite L11; ring.
 Qed.
 
-Theorem PocklingtonExtraCorollary: 
+Theorem PocklingtonExtraCorollary:
 forall N F1 R1, 1 < F1 -> 0 < R1 -> N - 1 = F1 * R1 -> Zeven F1 -> Zodd R1 ->
-   (forall p, prime p -> (p | F1) -> exists a,  1 < a /\ a^(N - 1) mod N = 1 /\ Zgcd (a ^ ((N - 1)/ p) - 1) N = 1) -> 
+   (forall p, prime p -> (p | F1) -> exists a,  1 < a /\ a^(N - 1) mod N = 1 /\ Zgcd (a ^ ((N - 1)/ p) - 1) N = 1) ->
     let s := (R1 / (2 * F1)) in
     let r := (R1 mod (2 * F1)) in
       N < 2 * F1 * F1 * F1 ->  (s = 0 \/ ~ isSquare (r * r - 8 * s)) -> prime N.

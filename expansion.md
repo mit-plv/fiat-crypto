@@ -70,7 +70,7 @@ involve register allocation and instruction scheduling.
 
 **loops** for our PHOAS language. Possibly hardcoded to [fold_left] of [seq], or
 something else that is sufficient to encode C "for" loops. Importantly, we
-should have a way to reify existing code 
+should have a way to reify existing code
 
 **modules** for our PHOAS language so we don't have to inline everything.
 Basically we want to allow one Coq-level object to represent a collection of

@@ -7,22 +7,22 @@
 (*************************************************************)
 
 (**********************************************************************
-    FGroup.v                        
-                                                                     
-    Defintion and properties of finite groups                         
-                                                                     
-    Definition: FGroup              
+    FGroup.v
+
+    Defintion and properties of finite groups
+
+    Definition: FGroup
   **********************************************************************)
 Require Import List.
 Require Import UList.
 Require Import Tactic.
 Require Import ZArith.
 
-Open Scope Z_scope. 
+Open Scope Z_scope.
 
 Set Implicit Arguments.
 
-(************************************** 
+(**************************************
   A finite group is defined for an operation op
   it has a support  (s)
   op operates inside the group (internal)
@@ -32,7 +32,7 @@ Set Implicit Arguments.
   the inverse operates inside the group (i_internal)
   it gives an inverse (i_is_inverse_l is_is_inverse_r)
  **************************************)
- 
+
 Record FGroup (A: Set) (op: A -> A -> A): Set := mkGroup
   {s : (list A);
    unique_s: ulist s;
@@ -48,10 +48,10 @@ Record FGroup (A: Set) (op: A -> A -> A): Set := mkGroup
    i_is_inverse_r:  forall a, (In a s) -> op a (i a) = e
 }.
 
-(************************************** 
+(**************************************
    The order of a group is the lengh of the support
  **************************************)
- 
+
 Definition g_order  (A: Set) (op: A -> A -> A) (g: FGroup op)  := Z_of_nat (length g.(s)).
 
 Unset Implicit Arguments.
@@ -65,7 +65,7 @@ Section FGroup.
 Variable A: Set.
 Variable op: A -> A -> A.
 
-(************************************** 
+(**************************************
    Some properties of a finite group
  **************************************)
 
@@ -91,7 +91,7 @@ apply sym_equal; apply assoc with g; sauto.
 replace (op a (g.(i) a)) with g.(e); sauto.
 Qed.
 
-Theorem e_unique: forall (g : FGroup op), forall e1, In e1 g.(s) ->  (forall a, In a g.(s) -> op e1 a = a) -> e1 = g.(e). 
+Theorem e_unique: forall (g : FGroup op), forall e1, In e1 g.(s) ->  (forall a, In a g.(s) -> op e1 a = a) -> e1 = g.(e).
 intros g e1 He1 H2.
 apply trans_equal with (op e1 g.(e)); sauto.
 Qed.
@@ -110,7 +110,7 @@ intro g; apply g_cancel_l with (g:= g) (a := g.(e)); sauto.
 apply trans_equal with g.(e); sauto.
 Qed.
 
-(************************************** 
+(**************************************
    A group has at least one element
  **************************************)
 

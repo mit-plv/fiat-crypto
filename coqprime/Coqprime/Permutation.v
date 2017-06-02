@@ -7,20 +7,20 @@
 (*************************************************************)
 
 (**********************************************************************
-    Permutation.v                        
-                                                                     
-    Defintion and properties of permutations                         
+    Permutation.v
+
+    Defintion and properties of permutations
    **********************************************************************)
 Require Export List.
 Require Export ListAux.
- 
+
 Section permutation.
 Variable A : Set.
 
-(************************************** 
+(**************************************
    Definition of permutations as sequences of adjacent transpositions
  **************************************)
- 
+
 Inductive permutation : list A -> list A -> Prop :=
   | permutation_nil : permutation nil nil
   | permutation_skip :
@@ -33,10 +33,10 @@ Inductive permutation : list A -> list A -> Prop :=
       permutation l1 l2 -> permutation l2 l3 -> permutation l1 l3.
 Hint Constructors permutation.
 
-(************************************** 
+(**************************************
    Reflexivity
  **************************************)
- 
+
 Theorem permutation_refl : forall l : list A, permutation l l.
 simple induction l.
 apply permutation_nil.
@@ -45,10 +45,10 @@ apply permutation_skip with (1 := H).
 Qed.
 Hint Resolve permutation_refl.
 
-(************************************** 
+(**************************************
    Symmetry
    **************************************)
- 
+
 Theorem permutation_sym :
  forall l m : list A, permutation l m -> permutation m l.
 intros l1 l2 H'; elim H'.
@@ -61,10 +61,10 @@ intros l1' l2' l3' H1 H2 H3 H4.
 apply permutation_trans with (1 := H4) (2 := H2).
 Qed.
 
-(************************************** 
+(**************************************
    Compatibility with list length
    **************************************)
- 
+
 Theorem permutation_length :
  forall l m : list A, permutation l m -> length l = length m.
 intros l m H'; elim H'; simpl in |- *; auto.
@@ -72,20 +72,20 @@ intros l1 l2 l3 H'0 H'1 H'2 H'3.
 rewrite <- H'3; auto.
 Qed.
 
-(************************************** 
+(**************************************
    A permutation of the nil list is the nil list
    **************************************)
- 
+
 Theorem permutation_nil_inv : forall l : list A, permutation l nil -> l = nil.
 intros l H; generalize (permutation_length _ _ H); case l; simpl in |- *;
  auto.
 intros; discriminate.
 Qed.
- 
-(************************************** 
+
+(**************************************
    A permutation of the singleton list is the singleton list
    **************************************)
- 
+
 Let permutation_one_inv_aux :
   forall l1 l2 : list A,
   permutation l1 l2 -> forall a : A, l1 = a :: nil -> l2 = a :: nil.
@@ -101,19 +101,19 @@ Theorem permutation_one_inv :
 intros a l H; apply permutation_one_inv_aux with (l1 := a :: nil); auto.
 Qed.
 
-(************************************** 
+(**************************************
    Compatibility with the belonging
    **************************************)
- 
+
 Theorem permutation_in :
  forall (a : A) (l m : list A), permutation l m -> In a l -> In a m.
 intros a l m H; elim H; simpl in |- *; auto; intuition.
 Qed.
 
-(************************************** 
+(**************************************
    Compatibility with the append function
    **************************************)
- 
+
 Theorem permutation_app_comp :
  forall l1 l2 l3 l4,
  permutation l1 l2 -> permutation l3 l4 -> permutation (l1 ++ l3) (l2 ++ l4).
@@ -128,10 +128,10 @@ apply permutation_trans with (l2 ++ l4); auto.
 Qed.
 Hint Resolve permutation_app_comp.
 
-(************************************** 
+(**************************************
    Swap two sublists
    **************************************)
- 
+
 Theorem permutation_app_swap :
  forall l1 l2, permutation (l1 ++ l2) (l2 ++ l1).
 intros l1; elim l1; auto.
@@ -152,10 +152,10 @@ apply (app_ass l2 (a :: nil) l).
 apply (app_ass l2 (a :: nil) l).
 Qed.
 
-(************************************** 
+(**************************************
    A transposition is a permutation
    **************************************)
- 
+
 Theorem permutation_transposition :
  forall a b l1 l2 l3,
  permutation (l1 ++ a :: l2 ++ b :: l3) (l1 ++ b :: l2 ++ a :: l3).
@@ -173,10 +173,10 @@ apply permutation_app_comp; auto.
 apply permutation_app_swap; auto.
 Qed.
 
-(************************************** 
+(**************************************
    An element of a list can be put on top of the list to get a permutation
    **************************************)
- 
+
 Theorem in_permutation_ex :
  forall a l, In a l -> exists l1 : list A, permutation (a :: l1) l.
 intros a l; elim l; simpl in |- *; auto.
@@ -186,8 +186,8 @@ exists l0; rewrite H0; auto.
 case H; auto; intros l1 Hl1; exists (a0 :: l1).
 apply permutation_trans with (a0 :: a :: l1); auto.
 Qed.
- 
-(************************************** 
+
+(**************************************
    A permutation of a cons can be inverted
    **************************************)
 
@@ -232,7 +232,7 @@ intros l6 (l7, (Hl3, Hl4)).
 exists l6; exists l7; split; auto.
 apply permutation_trans with (1 := Hl2); auto.
 Qed.
- 
+
 Theorem permutation_cons_ex :
  forall (a : A) (l1 l2 : list A),
  permutation (a :: l1) l2 ->
@@ -242,10 +242,10 @@ intros a l1 l2 H.
 apply (permutation_cons_ex_aux a (a :: l1) l2 H nil l1); simpl in |- *; auto.
 Qed.
 
-(************************************** 
+(**************************************
    A permutation can be simply inverted if the two list starts with a cons
    **************************************)
- 
+
 Theorem permutation_inv :
  forall (a : A) (l1 l2 : list A),
  permutation (a :: l1) (a :: l2) -> permutation l1 l2.
@@ -260,11 +260,11 @@ apply permutation_skip; apply permutation_app_swap.
 apply (permutation_app_swap (a0 :: l4) l5).
 Qed.
 
-(************************************** 
-   Take a list and return tle list of all pairs of an element of the 
+(**************************************
+   Take a list and return tle list of all pairs of an element of the
    list and the remaining list
    **************************************)
- 
+
 Fixpoint split_one (l : list A) : list (A * list A) :=
   match l with
   | nil => nil (A:=A * list A)
@@ -273,10 +273,10 @@ Fixpoint split_one (l : list A) : list (A * list A) :=
       :: map (fun p : A * list A => (fst p, a :: snd p)) (split_one l1)
   end.
 
-(************************************** 
+(**************************************
    The pairs of the list are a permutation
    **************************************)
- 
+
 Theorem split_one_permutation :
  forall (a : A) (l1 l2 : list A),
  In (a, l1) (split_one l2) -> permutation (a :: l1) l2.
@@ -294,10 +294,10 @@ apply H2; auto.
 case a1; simpl in |- *; auto.
 Qed.
 
-(************************************** 
+(**************************************
    All elements of the list are there
    **************************************)
- 
+
 Theorem split_one_in_ex :
  forall (a : A) (l1 : list A),
  In a l1 -> exists l2 : list A, In (a, l2) (split_one l1).
@@ -312,10 +312,10 @@ apply
  auto.
 Qed.
 
-(************************************** 
+(**************************************
    An auxillary function to generate all permutations
    **************************************)
- 
+
 Fixpoint all_permutations_aux (l : list A) (n : nat) {struct n} :
  list (list A) :=
   match n with
@@ -326,13 +326,13 @@ Fixpoint all_permutations_aux (l : list A) (n : nat) {struct n} :
          map (cons (fst p)) (all_permutations_aux (snd p) n1)) (
         split_one l)
   end.
-(************************************** 
+(**************************************
    Generate all the permutations
    **************************************)
- 
+
 Definition all_permutations (l : list A) := all_permutations_aux l (length l).
- 
-(************************************** 
+
+(**************************************
    All the elements of the list are permutations
    **************************************)
 
@@ -361,14 +361,14 @@ apply permutation_length; auto.
 apply permutation_sym; apply split_one_permutation; auto.
 apply split_one_permutation; auto.
 Qed.
- 
+
 Theorem all_permutations_permutation :
  forall l1 l2 : list A, In l1 (all_permutations l2) -> permutation l1 l2.
 intros l1 l2 H; apply all_permutations_aux_permutation with (n := length l2);
  auto.
 Qed.
- 
-(************************************** 
+
+(**************************************
    A permutation is in the list
    **************************************)
 
@@ -399,17 +399,17 @@ apply permutation_inv with (a := a1).
 apply permutation_trans with (1 := H2).
 apply permutation_sym; apply split_one_permutation; auto.
 Qed.
- 
+
 Theorem permutation_all_permutations :
  forall l1 l2 : list A, permutation l1 l2 -> In l1 (all_permutations l2).
 intros l1 l2 H; unfold all_permutations in |- *;
  apply permutation_all_permutations_aux; auto.
 Qed.
 
-(************************************** 
+(**************************************
    Permutation is decidable
    **************************************)
- 
+
 Definition permutation_dec :
   (forall a b : A, {a = b} + {a <> b}) ->
   forall l1 l2 : list A, {permutation l1 l2} + {~ permutation l1 l2}.
@@ -418,10 +418,10 @@ case (In_dec (list_eq_dec H) l1 (all_permutations l2)).
 intros i; left; apply all_permutations_permutation; auto.
 intros i; right; contradict i; apply permutation_all_permutations; auto.
 Defined.
- 
+
 End permutation.
 
-(************************************** 
+(**************************************
    Hints
    **************************************)
 
@@ -430,7 +430,7 @@ Hint Resolve permutation_refl.
 Hint Resolve permutation_app_comp.
 Hint Resolve permutation_app_swap.
 
-(************************************** 
+(**************************************
    Implicits
    **************************************)
 
@@ -439,10 +439,10 @@ Implicit Arguments split_one [A].
 Implicit Arguments all_permutations [A].
 Implicit Arguments permutation_dec [A].
 
-(************************************** 
+(**************************************
    Permutation is compatible with map
    **************************************)
- 
+
 Theorem permutation_map :
  forall (A B : Set) (f : A -> B) l1 l2,
  permutation l1 l2 -> permutation (map f l1) (map f l2).
@@ -450,8 +450,8 @@ intros A B f l1 l2 H; elim H; simpl in |- *; auto.
 intros l0 l3 l4 H0 H1 H2 H3; apply permutation_trans with (2 := H3); auto.
 Qed.
 Hint Resolve permutation_map.
- 
-(************************************** 
+
+(**************************************
   Permutation  of a map can be inverted
   *************************************)
 
@@ -482,7 +482,7 @@ case H2 with (1 := HH2); auto.
 intros l5 (HH3, HH4); exists l5; split; auto.
 apply permutation_trans with (1 := HH3); auto.
 Qed.
- 
+
 Theorem permutation_map_ex :
  forall (A B : Set) (f : A -> B) l1 l2,
  permutation (map f l1) l2 ->
@@ -491,10 +491,10 @@ intros A0 B f l1 l2 H; apply permutation_map_ex_aux with (l1 := map f l1);
  auto.
 Qed.
 
-(************************************** 
+(**************************************
    Permutation is compatible with flat_map
  **************************************)
- 
+
 Theorem permutation_flat_map :
  forall (A B : Set) (f : A -> list B) l1 l2,
  permutation l1 l2 -> permutation (flat_map f l1) (flat_map f l2).

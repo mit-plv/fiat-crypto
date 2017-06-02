@@ -49,14 +49,14 @@ a [tuple Z n] as output. This operation is called "compact".
 As an example, let's compact the product of 571 and 645 in base 10.
 At first, the partial products look like this:
 
-      
-                   1*6         
+
+                   1*6
             1*4    7*4     7*6
      1*5    7*5    5*5     5*4      5*6
     ------------------------------------
        1     10    100    1000    10000
-                   
-                     6         
+
+                     6
               4     28      42
        5     35     25      20       30
     ------------------------------------
@@ -75,7 +75,7 @@ bit. We add a 0 to the next column and continue.
      {carry_acc = 0; output=(5,)}
      STEP [4,35] (4 + 35 = 39)
      {carry_acc = 3; output=(9,5)}
-     
+
 This time, we have a carry. We add it to the third column and process
 that:
 
@@ -93,7 +93,7 @@ columns:
      {carry_acc = 4; output=(8,9,5)}
      STEP [4,20] (4 + 20 = 24)
      {carry_acc = 6; output=(4,8,9,5)}
-     
+
      STEP [6,30] (6 + 30 = 36)
      {carry_acc = 3; output=(6,4,8,9,5)}
 
@@ -213,7 +213,7 @@ Module Columns.
                | _ => progress (autorewrite with uncps push_id cancel_pair in * )
                | _ => progress break_match; try discriminate
                | _ => reflexivity
-               | _ => f_equal; ring 
+               | _ => f_equal; ring
                end.
     Qed. Hint Rewrite compact_digit_mod : div_mod.
 
@@ -229,9 +229,9 @@ Module Columns.
                | _ => progress (autorewrite with uncps push_id cancel_pair in * )
                | _ => progress break_match; try discriminate
                | _ => reflexivity
-               | _ => f_equal; ring 
+               | _ => f_equal; ring
                end.
-      assert (weight (S i) / weight i <> 0) by auto using Z.positive_is_nonzero. 
+      assert (weight (S i) / weight i <> 0) by auto using Z.positive_is_nonzero.
       match goal with |- _ = (?a + ?X) / ?D =>
                       transitivity  ((a + X mod D + D * (X / D)) / D);
                         [| rewrite (Z.div_mod'' X D) at 3; f_equal; auto; ring]
@@ -279,7 +279,7 @@ Module Columns.
         with (fun i s a => compact_digit i (s :: a)).
 
       apply mapi_with'_linvariant; [|tauto].
-      
+
       clear n inp. intros until 0. intros Hst Hys [Hmod Hdiv].
       pose proof (weight_positive n). pose proof (weight_divides n).
       autorewrite with push_basesystem_eval.
@@ -292,8 +292,8 @@ Module Columns.
                | _ => rewrite map_left_append
                | _ => rewrite B.Positional.eval_left_append
                | _ => rewrite weight_0, ?Z.div_1_r, ?Z.mod_1_r
-               | _ => rewrite Hdiv 
-               | _ => rewrite Hmod 
+               | _ => rewrite Hdiv
+               | _ => rewrite Hmod
                | _ => progress subst
                | _ => progress autorewrite with natsimplify cancel_pair push_basesystem_eval
                | _ => solve [split; ring_simplify; f_equal; ring]
@@ -424,7 +424,7 @@ Module Columns.
         (fun nq => B.Positional.to_associational_cps weight nq
         (fun Q => from_associational_cps weight n (P++Q)
         (fun R => compact_cps (div:=div) (modulo:=modulo) (add_get_carry:=add_get_carry) weight R f)))).
-   
+
     End Wrappers.
 End Columns.
 Hint Unfold
@@ -491,8 +491,8 @@ Section Freeze.
   Qed.
   Hint Rewrite @eval_conditional_add using (omega || assumption)
     : push_basesystem_eval.
-    
-    
+
+
   (*
     The input to [freeze] should be less than 2*m (this can probably
     be accomplished by a single carry_reduce step, for most moduli).
@@ -552,7 +552,7 @@ Section Freeze.
       by (pose proof (Z.div_small (y - (s-c)) s); omega).
       f_equal. ring. }
   Qed.
-  
+
   Lemma eval_freeze {n} c mask m p
         (n_nonzero:n<>0%nat)
         (Hc : 0 < B.Associational.eval c < weight n)
@@ -589,7 +589,7 @@ Section Freeze.
   Qed.
 End Freeze.
 
-  
+
 (*
 (* Just some pretty-printing *)
 Local Notation "fst~ a" := (let (x,_) := a in x) (at level 40, only printing).

@@ -7,12 +7,12 @@
 (*************************************************************)
 
 (**********************************************************************
-    Lagrange.v                        
-                                                                     
-    Proof of Lagrange theorem: 
-      the oder of a subgroup divides the order of a group                         
-                                                                     
-    Definition: lagrange              
+    Lagrange.v
+
+    Proof of Lagrange theorem:
+      the oder of a subgroup divides the order of a group
+
+    Definition: lagrange
   **********************************************************************)
 Require Import List.
 Require Import UList.
@@ -37,7 +37,7 @@ Variable H:(FGroup op).
 
 Hypothesis G_in_H: (incl G.(s)  H.(s)).
 
-(************************************** 
+(**************************************
    A group and a subgroup have the same neutral element
  **************************************)
 
@@ -53,11 +53,11 @@ apply trans_equal with (op G.(e) H.(e)); sauto.
 eq_tac; sauto.
 Qed.
 
-(************************************** 
+(**************************************
    The proof works like this.
    If G = {e, g1, g2, g3, .., gn} and {e, h1, h2, h3, ..., hm}
    we construct the list mkGH
-    {e, g1, g2, g3, ...., gn 
+    {e, g1, g2, g3, ...., gn
      hi*e, hi * g1, hi * g2, ..., hi * gn   if hi does not appear before
      ....
      hk*e, hk * g1, hk * g2, ..., hk * gn   if hk does not appear before
@@ -67,16 +67,16 @@ Qed.
  **************************************)
 
 Fixpoint mkList (base l: (list A)) { struct l}  : (list A) :=
-  match l with 
+  match l with
    nil => nil
  | cons a l1 => let r1 := mkList base l1 in
-                         if (In_dec A_dec a r1) then r1 else 
+                         if (In_dec A_dec a r1) then r1 else
                           (map (op a) base) ++ r1
   end.
 
 Definition mkGH := mkList G.(s) H.(s).
 
-Theorem mkGH_length:  divide (length G.(s)) (length mkGH). 
+Theorem mkGH_length:  divide (length G.(s)) (length mkGH).
 unfold mkGH; elim H.(s); simpl.
 exists 0%nat; auto with arith.
 intros a l1 (c, H1); case (In_dec A_dec a (mkList  G.(s) l1)); intros H2.
@@ -161,11 +161,11 @@ assert (In a H.(s)); sauto; apply (H2 a); auto with datatypes.
 unfold mkGH; apply H1; auto with datatypes.
 Qed.
 
-(************************************** 
+(**************************************
   Lagrange theorem
  **************************************)
- 
-Theorem lagrange: (g_order G | (g_order H)). 
+
+Theorem lagrange: (g_order G | (g_order H)).
 unfold g_order.
 rewrite Permutation.permutation_length with  (l := H.(s)) (m:= mkGH).
 case mkGH_length; intros x H1; exists (Z_of_nat x).

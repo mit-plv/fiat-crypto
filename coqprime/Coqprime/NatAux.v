@@ -7,9 +7,9 @@
 (*************************************************************)
 
 (**********************************************************************
-     Aux.v                                                                                           
-                                                                                                          
-     Auxillary functions & Theorems                                              
+     Aux.v
+
+     Auxillary functions & Theorems
  **********************************************************************)
 Require Export Arith.
 
@@ -24,7 +24,7 @@ Qed.
 
 
 (**************************************
-  Definitions and properties of the power for nat 
+  Definitions and properties of the power for nat
 **************************************)
 
 Fixpoint pow (n m: nat)  {struct m} : nat := match m with O => 1%nat | (S m1) => (n * pow n m1)%nat  end.
@@ -56,7 +56,7 @@ apply pow_pos; auto with arith.
 Qed.
 
 (************************************
-  Definition of the divisibility for nat 
+  Definition of the divisibility for nat
 **************************************)
 
 Definition divide a b := exists c, b = a * c.

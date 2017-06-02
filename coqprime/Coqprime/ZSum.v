@@ -19,14 +19,14 @@ Require Import ZProgression.
 
 Open Scope Z_scope.
 (* Iterated Sum *)
- 
+
 Definition Zsum :=
    fun n m f =>
    if Zle_bool n m
      then iter 0 f Zplus (progression Zsucc n (Zabs_nat ((1 + m) - n)))
      else iter 0 f Zplus (progression Zpred n (Zabs_nat ((1 + n) - m))).
 Hint Unfold Zsum .
- 
+
 Lemma Zsum_nn: forall n f,  Zsum n n f = f n.
 intros n f; unfold Zsum; rewrite Zle_bool_refl.
 replace ((1 + n) - n) with 1; auto with zarith.
@@ -39,7 +39,7 @@ intros a1 l1 Hl1.
 apply permutation_trans with (cons a1 (rev l1)); auto.
 change (permutation (rev l1 ++ (a1 :: nil)) (app (cons a1 nil) (rev l1))); auto.
 Qed.
- 
+
 Lemma Zsum_swap: forall (n m : Z) (f : Z ->  Z),  Zsum n m f = Zsum m n f.
 intros n m f; unfold Zsum.
 generalize (Zle_cases n m) (Zle_cases m n); case (Zle_bool n m);
@@ -85,7 +85,7 @@ repeat rewrite <- plus_n_Sm; simpl; auto.
 intros p H3; contradict H3; auto with zarith.
 apply permutation_rev.
 Qed.
- 
+
 Lemma Zsum_split_up:
  forall (n m p : Z) (f : Z ->  Z),
  ( n <= m < p ) ->  Zsum n p f = Zsum n m f + Zsum (m + 1) p f.
@@ -128,20 +128,20 @@ apply inj_eq_rev; auto with zarith.
 rewrite inj_S; (repeat rewrite inj_Zabs_nat); auto with zarith.
 (repeat rewrite Zabs_eq); auto with zarith.
 Qed.
- 
+
 Lemma Zsum_S_left:
  forall (n m : Z) (f : Z ->  Z), n < m ->  Zsum n m f = f n + Zsum (n + 1) m f.
 intros n m f H; rewrite (Zsum_split_up n n m f); auto with zarith.
 rewrite Zsum_nn; auto with zarith.
 Qed.
- 
+
 Lemma Zsum_S_right:
  forall (n m : Z) (f : Z ->  Z),
  n <= m ->  Zsum n (m + 1) f = Zsum n m f  + f (m + 1).
 intros n m f H; rewrite (Zsum_split_up n m (m + 1) f); auto with zarith.
 rewrite Zsum_nn; auto with zarith.
 Qed.
-  
+
 Lemma Zsum_split_down:
  forall (n m p : Z) (f : Z ->  Z),
  ( p < m <= n ) ->  Zsum n p f = Zsum n m f  + Zsum (m - 1) p f.
@@ -191,13 +191,13 @@ Lemma Zsum_add:
 intros n m f g; unfold Zsum; case (Zle_bool n m); apply iter_comp;
  auto with zarith.
 Qed.
- 
+
 Lemma Zsum_times:
  forall n m x f,  x * Zsum n m f = Zsum n m (fun i=> x * f i).
 intros n m x f.
 unfold Zsum. case (Zle_bool n m); intros; apply iter_comp_const with (k := (fun y : Z => x * y)); auto with zarith.
 Qed.
- 
+
 Lemma inv_Zsum:
  forall (P : Z ->  Prop) (n m : Z) (f : Z ->  Z),
  n <= m ->
@@ -241,7 +241,7 @@ replace (Zpred (n + 1)) with (Zpred n + 1); auto with zarith.
 unfold Zpred; auto with zarith.
 exists (Zabs_nat ((1 + n) - m)); auto.
 Qed.
- 
+
 Theorem Zsum_c:
  forall (c p q : Z), p <= q ->  Zsum p q (fun x => c) = ((1 + q) - p) * c.
 intros c p q Hq; unfold Zsum.
@@ -256,7 +256,7 @@ intros n H p0; replace (Z_of_nat (S n)) with (Z_of_nat n + 1); auto with zarith.
 simpl; rewrite H; ring.
 rewrite inj_S; auto with zarith.
 Qed.
- 
+
 Theorem Zsum_Zsum_f:
  forall (i j k l : Z) (f : Z -> Z ->  Z),
  i <= j ->
@@ -266,7 +266,7 @@ Theorem Zsum_Zsum_f:
 intros; apply Zsum_ext; intros; auto with zarith.
 rewrite Zsum_S_right; auto with zarith.
 Qed.
- 
+
 Theorem Zsum_com:
  forall (i j k l : Z) (f : Z -> Z ->  Z),
   Zsum i j (fun x => Zsum k l (fun y => f x y)) =
@@ -274,7 +274,7 @@ Theorem Zsum_com:
 intros; unfold Zsum; case (Zle_bool i j); case (Zle_bool k l); apply iter_com;
  auto with zarith.
 Qed.
- 
+
 Theorem Zsum_le:
  forall (n m : Z) (f g : Z ->  Z),
  n <= m ->
@@ -301,7 +301,7 @@ forall (f g: Z -> Z)  l, (forall a, In a l -> f a <= g a) ->
   iter 0 f Zplus l <= iter 0 g Zplus l.
 intros f g l; elim l; simpl; auto with zarith.
 Qed.
- 
+
 Theorem Zsum_lt:
  forall n m f g,
  (forall x, n <= x -> x <= m ->  f x <= g x) ->
@@ -327,7 +327,7 @@ apply in_Zprogression.
 rewrite inj_Zabs_nat; auto with zarith.
 rewrite Zabs_eq; auto with zarith.
 Qed.
- 
+
 Theorem Zsum_minus:
  forall n m f g,  Zsum n m f - Zsum n m g = Zsum n m (fun x => f x - g x).
 intros n m f g; apply trans_equal with (Zsum n m f + (-1) * Zsum n m g); auto with zarith.

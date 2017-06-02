@@ -117,7 +117,7 @@ Module N.
       replace (Z.of_nat 2) with 2%Z by reflexivity.
       omega.
     Qed.
- 
+
     Let ZNWord sz x := Word.NToWord sz (BinInt.Z.to_N x).
     Lemma combine_ZNWord : forall sz1 sz2 z1 z2,
         (0 <= Z.of_nat sz1)%Z ->

@@ -7,11 +7,11 @@
 (*************************************************************)
 
 (**********************************************************************
-    Igroup                    
-                                                                     
+    Igroup
+
     Build the group of the inversible elements for the operation
-                                                              
-    Definition: ZpGroup              
+
+    Definition: ZpGroup
   **********************************************************************)
 Require Import ZArith.
 Require Import Tactic.
@@ -37,12 +37,12 @@ Hypothesis op_assoc: forall a b c, In a support -> In b support -> In c support 
 Hypothesis e_is_zero_l:  forall a, In a support ->  op e a = a.
 Hypothesis e_is_zero_r:  forall a, In a support ->  op a e = a.
 
-(************************************** 
+(**************************************
   is_inv_aux tests if there is an inverse of a for op in l
  **************************************)
 
 Fixpoint is_inv_aux (l: list A) (a: A) {struct l}: bool :=
-  match l with nil => false | cons b l1 => 
+  match l with nil => false | cons b l1 =>
    if (A_dec (op a b) e) then if (A_dec (op b a) e) then true else is_inv_aux l1 a else is_inv_aux l1 a
   end.
 
@@ -52,19 +52,19 @@ intros a l1 Rec H; case (A_dec (op a b) e); case (A_dec (op b a) e); auto.
 intros H1 H2; case (H a); auto; intros H3; case H3; auto.
 Qed.
 
-(************************************** 
+(**************************************
   is_inv tests if there is an inverse in support
  **************************************)
 Definition is_inv := is_inv_aux support.
 
-(************************************** 
+(**************************************
   isupport_aux returns the sublist of inversible element of support
  **************************************)
 
 Fixpoint isupport_aux (l: list A) : list  A :=
   match l with nil => nil | cons a  l1 => if is_inv a then a::isupport_aux l1 else isupport_aux l1 end.
 
-(************************************** 
+(**************************************
   Some properties of isupport_aux
  **************************************)
 
@@ -82,7 +82,7 @@ case (is_inv b); auto with datatypes.
 Qed.
 
 
-Theorem isupport_aux_not_in: 
+Theorem isupport_aux_not_in:
   forall b l, (forall a, (In a support) -> op b a <> e \/  op a b <> e) -> ~ In b (isupport_aux l).
 intros b l; elim l; simpl; simpl; auto.
 intros a l1 H; case_eq (is_inv a); intros H1; simpl; auto.
@@ -107,13 +107,13 @@ apply H1; apply ulist_app_inv_r with (a:: nil); auto.
 apply H1; apply ulist_app_inv_r with (a:: nil); auto.
 Qed.
 
-(************************************** 
+(**************************************
   isupport is the sublist of inversible element of support
  **************************************)
 
 Definition isupport := isupport_aux support.
 
-(************************************** 
+(**************************************
   Some properties of isupport
  **************************************)
 
@@ -140,17 +140,17 @@ apply isupport_ulist.
 apply isupport_incl.
 Qed.
 
-Theorem isupport_length_strict:  
-  forall b, (In b support) -> (forall a, (In a support) -> op b a <> e \/  op a b <> e) -> 
+Theorem isupport_length_strict:
+  forall b, (In b support) -> (forall a, (In a support) -> op b a <> e \/  op a b <> e) ->
            (length isupport < length support)%nat.
 intros b H H1; apply ulist_incl_length_strict.
 apply isupport_ulist.
 apply isupport_incl.
 intros H2; case (isupport_aux_not_in b support); auto.
 Qed.
- 
+
 Fixpoint inv_aux (l: list A) (a: A) {struct l}: A :=
-  match l with nil => e | cons b l1 => 
+  match l with nil => e | cons b l1 =>
    if  A_dec (op a b) e then  if (A_dec (op b a) e) then b else inv_aux l1 a else inv_aux l1 a
   end.
 
@@ -180,25 +180,25 @@ intros l a; elim l; simpl; auto.
 intros b l1; case (A_dec (op a b) e); case (A_dec (op b a) e); intros _ _ [H1 | H1]; auto.
 Qed.
 
-(************************************** 
+(**************************************
   The inverse function
  **************************************)
 
 Definition inv := inv_aux support.
 
-(************************************** 
+(**************************************
   Some properties of inv
  **************************************)
 
 Theorem inv_prop_r: forall a, In a isupport -> op a (inv a) = e.
 intros a H; unfold inv; apply inv_aux_prop_r with (l := support).
-change (is_inv a = true). 
+change (is_inv a = true).
 apply isupport_is_inv_true; auto.
 Qed.
 
 Theorem inv_prop_l: forall a, In a isupport -> op (inv a) a = e.
 intros a H; unfold inv; apply inv_aux_prop_l with (l := support).
-change (is_inv a = true). 
+change (is_inv a = true).
 apply isupport_is_inv_true; auto.
 Qed.
 
@@ -220,8 +220,8 @@ case (inv_aux_in support a); unfold inv; auto.
 intros H1; rewrite H1; apply e_in_support; auto with zarith.
 Qed.
 
-(************************************** 
-   We are now ready to build our group 
+(**************************************
+   We are now ready to build our group
  **************************************)
 
 Definition IGroup : (FGroup op).

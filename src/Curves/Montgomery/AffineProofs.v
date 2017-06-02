@@ -13,7 +13,7 @@ Module M.
     Context {F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
             {field:@Algebra.Hierarchy.field F Feq Fzero Fone Fopp Fadd Fsub Fmul Finv Fdiv}
             {Feq_dec:Decidable.DecidableRel Feq}.
-      
+
     Local Infix "=" := Feq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
     Local Infix "+" := Fadd. Local Infix "*" := Fmul.
     Local Infix "-" := Fsub. Local Infix "/" := Fdiv.
@@ -74,7 +74,7 @@ Module M.
         (M.add(char_ge_3:=_3)(b_nonzero:=_4))
         M.zero
         (M.opp(b_nonzero:=_7))
-        
+
         (M.of_Weierstrass(Haw:=Haw)(Hbw:=Hbw)(b_nonzero:=_5))
         (M.to_Weierstrass(Haw:=Haw)(Hbw:=Hbw)(b_nonzero:=_6)).
     Proof.

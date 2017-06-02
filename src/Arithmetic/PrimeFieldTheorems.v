@@ -95,7 +95,7 @@ Module F.
       rewrite <-H in q_3mod4; discriminate.
     Qed.
     Local Hint Resolve two_lt_q_3mod4.
-    
+
     Lemma sqrt_3mod4_correct (x:F q) :
       ((exists y, y*y = x) <-> (sqrt_3mod4 x)*(sqrt_3mod4 x) = x)%F.
     Proof using Type*.
@@ -130,7 +130,7 @@ Module F.
                            constants [F.is_constant],
                            div (F.morph_div_theory q),
                            power_tac (F.power_theory q) [F.is_pow_constant]).
-    
+
     (* Any nonsquare element raised to (q-1)/4 (real implementations use 2 ^ ((q-1)/4) )
        would work for sqrt_minus1 *)
     Context (sqrt_minus1 : F q) (sqrt_minus1_valid : sqrt_minus1 * sqrt_minus1 = F.opp 1).
@@ -241,7 +241,7 @@ Module F.
   Module Iso.
     Section IsomorphicRings.
       Context {q:positive} {prime_q:prime q} {two_lt_q:2 < Z.pos q}.
-      Context 
+      Context
         {H : Type} {eq : H -> H -> Prop} {zero one : H}
         {opp : H -> H} {add sub mul : H -> H -> H}
         {phi : F q -> H} {phi' : H -> F q}
@@ -256,7 +256,7 @@ Module F.
         {pow_is_scalarmult:ScalarMult.is_scalarmult(G:=H)(eq:=eq)(add:=mul)(zero:=one)(mul:=fun (n:nat) (k:H) => pow k (NtoP (N.of_nat n)))}.
       Definition inv (x:H) := pow x (NtoP (Z.to_N (q - 2)%Z)).
       Definition div x y := mul (inv y) x.
-      
+
       Lemma ring :
         @Algebra.Hierarchy.ring H eq zero one opp add sub mul
         /\ @Ring.is_homomorphism (F q) Logic.eq F.one F.add F.mul H eq one add mul phi

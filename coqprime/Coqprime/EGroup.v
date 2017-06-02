@@ -7,8 +7,8 @@
 (*************************************************************)
 
 (**********************************************************************
-    EGroup.v                                
-                                                                     
+    EGroup.v
+
     Given an element a, create the group {e, a, a^2, ..., a^n}
  **********************************************************************)
 Require Import ZArith.
@@ -38,10 +38,10 @@ Variable G: FGroup op.
 Hypothesis a_in_G: In a G.(s).
 
 
-(************************************** 
+(**************************************
   The power function for the group
  **************************************)
- 
+
 Set Implicit Arguments.
 Definition gpow n := match n with  Zpos p => iter_pos _ (op a) G.(e) p | _ => G.(e) end.
 Unset Implicit Arguments.
@@ -54,10 +54,10 @@ Theorem gpow_1 : gpow 1 = a.
 simpl; sauto.
 Qed.
 
-(************************************** 
+(**************************************
   Some properties of the power function
  **************************************)
- 
+
 Theorem gpow_in: forall n, In (gpow n) G.(s).
 intros n; case n; simpl; auto.
 intros p; apply iter_pos_invariant with (Inv := fun x => In x G.(s)); auto.
@@ -91,7 +91,7 @@ rewrite iter_pos_plus; rewrite (fun x y => gpow_op (iter_pos A x y p2)); auto.
 exact (gpow_in (Zpos p2)).
 Qed.
 
-Theorem gpow_1_more: 
+Theorem gpow_1_more:
   forall n, 0 < n -> gpow n = G.(e) -> forall m, 0 <= m -> exists p, 0 <= p < n /\ gpow m = gpow p.
 intros n H1 H2 m Hm;  generalize Hm; pattern m; apply Z_lt_induction; auto with zarith; clear m Hm.
 intros m Rec Hm.
@@ -110,7 +110,7 @@ apply g_cancel_l with (g:= G) (a := gpow n); sauto.
 rewrite <- gpow_add; try rewrite <- H3; sauto.
 Qed.
 
-(************************************** 
+(**************************************
   We build the support by iterating the power function
  **************************************)
 
@@ -118,21 +118,21 @@ Set Implicit Arguments.
 
 Fixpoint support_aux (b: A) (n: nat) {struct n}: list A :=
 b::let c := op a b in
-    match n with 
-       O => nil | 
-      (S n1) =>if A_dec c G.(e) then nil else  support_aux c n1 
+    match n with
+       O => nil |
+      (S n1) =>if A_dec c G.(e) then nil else  support_aux c n1
     end.
 
 Definition support := support_aux G.(e) (Zabs_nat (g_order G)).
 
 Unset Implicit Arguments.
 
-(************************************** 
+(**************************************
   Some properties of the support that helps to prove that we have a group
  **************************************)
 
-Theorem support_aux_gpow: 
-  forall n m b, 0 <=  m -> In b (support_aux (gpow m) n) -> 
+Theorem support_aux_gpow:
+  forall n m b, 0 <=  m -> In b (support_aux (gpow m) n) ->
         exists p, (0 <= p < length (support_aux (gpow m) n))%nat  /\ b = gpow (m + Z_of_nat p).
 intros n; elim n; simpl.
 intros n1 b Hm [H1 | H1]; exists 0%nat; simpl; rewrite Zplus_0_r; auto; case H1.
@@ -143,13 +143,13 @@ case H2.
 case (Rec (1 + m) b); auto with zarith.
 rewrite gpow_add; auto with zarith.
 rewrite gpow_1; auto.
-intros p (Hp1, Hp2); exists (S p); split; auto with zarith. 
+intros p (Hp1, Hp2); exists (S p); split; auto with zarith.
 rewrite <- gpow_1.
 rewrite <- gpow_add; auto with zarith.
 rewrite inj_S; rewrite Hp2; eq_tac; auto with zarith.
 Qed.
 
-Theorem gpow_support_aux_not_e: 
+Theorem gpow_support_aux_not_e:
   forall n m p, 0 <= m -> m < p < m + Z_of_nat (length (support_aux (gpow m) n)) -> gpow p <> G.(e).
 intros n; elim n; simpl.
 intros m p Hm (H1, H2); contradict H2; auto with zarith.
@@ -186,8 +186,8 @@ intros n; elim n; simpl; auto.
 intros n1 Rec a1; case (A_dec (op a a1) G.(e)); simpl; auto with arith.
 Qed.
 
-Theorem support_aux_length_le_is_e: 
-   forall n m, 0 <= m ->  (length (support_aux (gpow m) n) <= n)%nat -> 
+Theorem support_aux_length_le_is_e:
+   forall n m, 0 <= m ->  (length (support_aux (gpow m) n) <= n)%nat ->
       gpow (m + Z_of_nat (length (support_aux (gpow m) n))) = G.(e) .
 intros n; elim n; simpl; auto.
 intros m _ H1; contradict H1; auto with arith.
@@ -201,8 +201,8 @@ rewrite <- gpow_add; auto with zarith.
 rewrite  Zplus_assoc; rewrite (Zplus_comm 1); intros H2; apply Rec; auto with zarith.
 Qed.
 
-Theorem support_aux_in: 
-  forall n m p, 0 <= m ->  (p < length (support_aux (gpow m) n))% nat ->  
+Theorem support_aux_in:
+  forall n m p, 0 <= m ->  (p < length (support_aux (gpow m) n))% nat ->
             (In (gpow (m + Z_of_nat p)) (support_aux (gpow m) n)).
 intros n; elim n; simpl; auto; clear n.
 intros m p Hm H1; replace p with 0%nat.
@@ -224,7 +224,7 @@ rewrite <- gpow_1; rewrite <- gpow_add; auto with zarith.
 rewrite  Zplus_assoc; rewrite (Zplus_comm 1); intros H2; right; apply Rec; auto with zarith.
 Qed.
 
-Theorem support_aux_ulist: 
+Theorem support_aux_ulist:
   forall n m, 0 <= m -> (forall p, 0 <= p < m -> gpow (1 + p) <> G.(e)) -> ulist (support_aux (gpow m) n).
 intros n; elim n; auto; clear n.
 intros m _ _; auto.
@@ -338,13 +338,13 @@ apply inj_le_rev; rewrite inj_Zabs_nat; auto with zarith.
 rewrite Zabs_eq; auto with zarith.
 Qed.
 
-(************************************** 
+(**************************************
   We are now ready to build the group
  **************************************)
 
 Definition Gsupport: (FGroup op).
 generalize support_incl_G; unfold incl; intros Ho.
-apply mkGroup with support G.(e) G.(i); sauto. 
+apply mkGroup with support G.(e) G.(i); sauto.
 apply support_ulist.
 apply support_internal.
 intros a1 b1 c1 H1 H2 H3; apply G.(assoc); sauto.
@@ -352,7 +352,7 @@ apply support_in_e.
 apply support_i_internal.
 Defined.
 
-(************************************** 
+(**************************************
   Definition of the order of an element
  **************************************)
 Set Implicit Arguments.
@@ -361,7 +361,7 @@ Definition e_order := Z_of_nat (length support).
 
 Unset Implicit Arguments.
 
-(************************************** 
+(**************************************
  Some properties of the order of an element
  **************************************)
 
@@ -474,7 +474,7 @@ apply Zpower_ge_0; auto with zarith.
 Qed.
 
 Theorem gpow_mult: forall (A : Set) (op : A -> A -> A) (a b: A) (G : FGroup op)
-       (comm: forall a b,  In a (s G) -> In b (s G) -> op a b = op b a), 
+       (comm: forall a b,  In a (s G) -> In b (s G) -> op a b = op b a),
        In a (s G) -> In b (s G) -> forall n, 0 <= n -> gpow (op a b) G n = op (gpow a G n) (gpow b G n).
 intros A op a  b G comm Ha Hb n; case n; simpl; auto.
 intros _; rewrite G.(e_is_zero_r); auto.
@@ -504,8 +504,8 @@ case H4; intros q3 H5; exists q3; rewrite H2; rewrite H5; auto with zarith.
 Qed.
 
 Theorem order_mult: forall (A : Set) (op : A -> A -> A) (A_dec: forall a b: A, {a = b} + {~ a = b}) (G : FGroup op)
-       (comm: forall a b,  In a (s G) -> In b (s G) -> op a b = op b a) (a b: A), 
-       In a (s G) -> In b (s G) -> rel_prime (e_order A_dec a G) (e_order A_dec b G) -> 
+       (comm: forall a b,  In a (s G) -> In b (s G) -> op a b = op b a) (a b: A),
+       In a (s G) -> In b (s G) -> rel_prime (e_order A_dec a G) (e_order A_dec b G) ->
         e_order A_dec (op a b) G = e_order A_dec a G * e_order A_dec b G.
 intros A op A_dec G comm a b Ha Hb Hab.
 assert (Hoat: 0 < e_order A_dec a G); try apply e_order_pos.
@@ -576,10 +576,10 @@ case (e_order_divide_gpow A Adec op a G H1 m F1 H2); intros q Hq.
 assert (F2: 1 <= q).
   case (Zle_or_lt 0 q); intros HH.
     case (Zle_lt_or_eq _ _ HH); auto with zarith.
-    intros HH1; generalize Hm; rewrite Hq; rewrite <- HH1; 
+    intros HH1; generalize Hm; rewrite Hq; rewrite <- HH1;
       auto with zarith.
   assert (F2: 0 <= (- q) * e_order Adec a G); auto with zarith.
-    apply Zmult_le_0_compat; auto with zarith. 
+    apply Zmult_le_0_compat; auto with zarith.
     apply Zlt_le_weak; apply e_order_pos.
   generalize F2; rewrite Zopp_mult_distr_l_reverse;
       rewrite <- Hq; auto with zarith.

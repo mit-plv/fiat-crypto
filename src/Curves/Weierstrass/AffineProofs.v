@@ -35,7 +35,7 @@ Module W.
            {char_ge_12:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 12%positive} (* FIXME: shouldn't need we need 4, not 12? *)
            {discriminant_nonzero:id(4*a*a*a + 27*b*b <> 0)}
       : commutative_group(eq:=W.eq(a:=a)(b:=b))(op:=W.add(char_ge_3:=char_ge_3))(id:=W.zero)(inv:=W.opp).
-    Proof using Type. 
+    Proof using Type.
       Time
         cbv [W.opp W.eq W.zero W.add W.coordinates proj1_sig];
           repeat match goal with

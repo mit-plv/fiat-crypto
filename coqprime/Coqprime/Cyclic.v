@@ -7,9 +7,9 @@
 (*************************************************************)
 
 (***********************************************************************
-      Cyclic.v                                                                                       
-                                                                                                         
-      Proof that an abelien ring is cyclic                                 
+      Cyclic.v
+
+      Proof that an abelien ring is cyclic
  ************************************************************************)
 Require Import ZCAux.
 Require Import List.
@@ -50,13 +50,13 @@ Hypothesis op_internal: forall a, In a support -> In (op a) support.
 Hypothesis plus_op_zero: forall a, In a support -> plus a (op a) = zero.
 Hypothesis mult_integral: forall a b, In a support -> In b support -> mult a b = zero -> a = zero \/ b = zero.
 
-Definition IA := (IGroup A mult support e A_dec support_ulist e_in_support mult_internal 
+Definition IA := (IGroup A mult support e A_dec support_ulist e_in_support mult_internal
                              mult_assoc
                              e_is_zero_l e_is_zero_r).
 
 Hint Resolve (fun x => isupport_incl _ mult support e A_dec x).
 
-Theorem gpow_evaln: forall n, 0 < n -> 
+Theorem gpow_evaln: forall n, 0 < n ->
   exists p, (length p <=  Zabs_nat n)%nat /\  (forall i, In i p -> In i support) /\
   forall x, In x IA.(s) -> eval A plus mult zero (zero::p) x = gpow x IA n.
 intros n Hn; generalize Hn; pattern n; apply natlike_ind; auto with zarith.
@@ -92,7 +92,7 @@ intros l n; elim l; simpl; auto.
 intros H; left; intros a H1; case H1.
 intros a l1 Rec H.
 case (A_dec (gpow a IA n) e); intros H2.
-case Rec; try intros H3. 
+case Rec; try intros H3.
 apply incl_tran with (2 := H); auto with datatypes.
 left; intros a1 H4; case H4; auto.
 intros H5; rewrite <- H5; auto.
@@ -146,7 +146,7 @@ case (check_list_gpow IA.(s) i); try intros H; auto with datatypes.
 case (gpow_evaln i); auto; intros p (Hp1, (Hp2, Hp3)).
 absurd ((op e) = zero).
 intros H1; case e_not_zero.
-rewrite <- (plus_op_zero e); try rewrite H1; auto. 
+rewrite <- (plus_op_zero e); try rewrite H1; auto.
 rewrite plus_comm; auto.
 apply (root_max_is_zero _ (fun x => In x support) plus mult op zero) with (l := IA.(s)) (p := op e :: p); auto with datatypes.
 simpl; intros x [Hx | Hx]; try rewrite <- Hx; auto.
@@ -161,7 +161,7 @@ apply inj_lt_inv.
 rewrite inj_Zabs_nat; auto with zarith.
 rewrite Zabs_eq; auto with zarith.
 Qed.
- 
+
 Theorem divide_g_order_e_order: forall n, 0 <= n -> (n | g_order IA) -> exists a, In a IA.(s) /\ e_order A_dec  a IA = n.
 intros n Hn H.
 assert (Hg: 0 < g_order IA).

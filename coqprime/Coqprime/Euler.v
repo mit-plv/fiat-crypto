@@ -20,7 +20,7 @@ Open Scope Z_scope.
 
 Definition phi n := Zsum 1 (n - 1) (fun x => if rel_prime_dec x n then 1 else 0).
 
-Theorem phi_def_with_0:  
+Theorem phi_def_with_0:
   forall n, 1< n -> phi n = Zsum 0 (n - 1) (fun x => if rel_prime_dec x n then 1 else 0).
 intros n H; rewrite Zsum_S_left; auto with zarith.
 case (rel_prime_dec 0 n); intros H2.
@@ -47,7 +47,7 @@ Qed.
 
 Theorem phi_le_n_minus_1: forall n, 1 < n -> phi n <= n - 1.
 intros n H; replace (n-1) with ((1 +  (n - 1) - 1) * 1); auto with zarith.
-rewrite <- Zsum_c; auto with zarith. 
+rewrite <- Zsum_c; auto with zarith.
 unfold phi; apply Zsum_le; auto with zarith.
 intros x H1; case (rel_prime_dec x n); auto with zarith.
 Qed.
@@ -59,7 +59,7 @@ assert (2 <= n); auto with zarith.
 apply prime_ge_2; auto.
 rewrite <- Zsum_c; auto with zarith; unfold phi; apply Zsum_ext; auto.
 intros x  (H2, H3); case H; clear H; intros H H1.
-generalize (H1 x); case (rel_prime_dec x n); auto with zarith. 
+generalize (H1 x); case (rel_prime_dec x n); auto with zarith.
 intros H6 H7; contradict H6; apply H7; split; auto with zarith.
 Qed.
 

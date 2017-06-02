@@ -254,7 +254,7 @@ Section Ops51.
 
   Hint Opaque freeze : uncps.
   Hint Rewrite freeze_id : uncps.
-  
+
   Definition freeze_sig :
     {freeze : (Z^sz -> Z^sz)%type |
      forall a : Z^sz,
@@ -281,7 +281,7 @@ Section Ops51.
    cbv - [runtime_opp runtime_add runtime_mul runtime_shr runtime_and Let_In Z.add_get_carry Z.zselect].
    reflexivity.
   Defined.
-  
+
   Definition ring_51 :=
     (Ring.ring_by_isomorphism
          (F := F m)

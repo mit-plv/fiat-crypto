@@ -7,9 +7,9 @@
 (*************************************************************)
 
 (***********************************************************************
-      Root.v                                                                                       
-                                                                                                         
-      Proof that a polynomial has at most n roots                                 
+      Root.v
+
+      Proof that a polynomial has at most n roots
 ************************************************************************)
 Require Import ZArith.
 Require Import List.
@@ -30,11 +30,11 @@ Variable zero one: A.
 
 Let pol := list A.
 
-Definition toA z := 
-match z with 
-  Z0  => zero 
-| Zpos p => iter_pos _ (plus one) zero p 
-| Zneg p => op (iter_pos _ (plus one) zero p) 
+Definition toA z :=
+match z with
+  Z0  => zero
+| Zpos p => iter_pos _ (plus one) zero p
+| Zneg p => op (iter_pos _ (plus one) zero p)
 end.
 
 Fixpoint eval (p: pol) (x: A) {struct p} : A :=
@@ -47,8 +47,8 @@ Fixpoint div (p: pol) (x: A) {struct p} : pol * A :=
 match p with
   nil => (nil, zero)
 | a::nil => (nil, a)
-| a::p1 => 
-                     (snd (div p1 x)::fst (div p1 x), 
+| a::p1 =>
+                     (snd (div p1 x)::fst (div p1 x),
                      (plus a (mult  x (snd (div p1 x)))))
 end.
 
@@ -82,7 +82,7 @@ simpl; intuition.
 intros a2 p2 Rec Hi; split.
 case Rec; auto with datatypes.
 intros H H1 i.
-replace (In i (fst (div (a1 :: a2 :: p2) a))) with 
+replace (In i (fst (div (a1 :: a2 :: p2) a))) with
  (snd (div (a2::p2) a) = i \/  In i (fst (div (a2::p2) a))); auto.
 intros [Hi1 | Hi1]; auto.
 rewrite <- Hi1; auto.
@@ -93,13 +93,13 @@ case Rec; auto with datatypes.
 Qed.
 
 
-Theorem div_correct: 
+Theorem div_correct:
   forall p x y, P x -> P y -> (forall i, In i p -> P i) -> eval p y = plus (mult (eval (fst (div p x)) y) (plus y (op x))) (snd (div p x)).
 intros p x y; elim p; simpl.
 intros; rewrite mult_zero; try rewrite plus_zero; auto.
 intros a l; case l; simpl; auto.
 intros _ px py pa; rewrite (fun x => mult_comm x zero); repeat rewrite mult_zero; try apply plus_comm; auto.
-intros a1 l1. 
+intros a1 l1.
 generalize (div_P (a1::l1) x); simpl.
 match goal with |-  context[fst ?A]   => case A end; simpl.
 intros q r Hd Rec px py pi.
@@ -117,7 +117,7 @@ repeat rewrite mult_plus_distr; auto.
 repeat (rewrite (fun x y => (mult_comm (plus x y))) || rewrite mult_plus_distr); auto.
 rewrite (fun x => (plus_comm  x (mult y r))); auto.
 repeat rewrite  plus_assoc; try apply f_equal2 with (f := plus); auto.
-2: repeat rewrite mult_assoc; try rewrite (fun y => mult_comm y (op x)); 
+2: repeat rewrite mult_assoc; try rewrite (fun y => mult_comm y (op x));
     repeat rewrite mult_assoc; auto.
 rewrite (fun z => (plus_comm  z (mult (op x) r))); auto.
 repeat rewrite  plus_assoc; try apply f_equal2 with (f := plus); auto.
@@ -127,7 +127,7 @@ rewrite (plus_comm (op x)); try rewrite plus_op_zero; auto.
 rewrite (fun x => mult_comm x zero); try rewrite mult_zero; try rewrite plus_zero; auto.
 Qed.
 
-Theorem div_correct_factor: 
+Theorem div_correct_factor:
   forall p a, (forall i, In i p -> P i) -> P a ->
        eval p a = zero -> forall x,  P x -> eval p x =  (mult (eval (fst (div p a)) x) (plus x (op a))).
 intros p a Hp Ha H x px.
@@ -143,14 +143,14 @@ Theorem length_decrease: forall p x, p <> nil -> (length (fst (div p x)) < lengt
 intros p x; elim p; simpl; auto.
 intros H1; case H1; auto.
 intros a l; case l; simpl; auto.
-intros a1 l1. 
+intros a1 l1.
 match goal with |-  context[fst ?A]   => case A end; simpl; auto with zarith.
 intros p1 _ H H1.
 apply lt_n_S; apply H; intros; discriminate.
 Qed.
 
-Theorem root_max: 
-forall p l, ulist l -> (forall i, In i p -> P i) -> (forall i, In i l -> P i) -> 
+Theorem root_max:
+forall p l, ulist l -> (forall i, In i p -> P i) -> (forall i, In i l -> P i) ->
   (forall x, In x l -> eval p x = zero) -> (length p <= length l)%nat -> forall x, P x -> eval p x = zero.
 intros p l; generalize p; elim l; clear l p; simpl; auto.
 intros p; case p; simpl; auto.
@@ -178,8 +178,8 @@ apply lt_n_Sm_le;apply lt_le_trans with (length (a1 :: p2)); auto with zarith.
 apply length_decrease; auto with datatypes.
 Qed.
 
-Theorem root_max_is_zero: 
-forall p l, ulist l -> (forall i, In i p -> P i) -> (forall i, In i l -> P i) -> 
+Theorem root_max_is_zero:
+forall p l, ulist l -> (forall i, In i p -> P i) -> (forall i, In i l -> P i) ->
   (forall x, In x l -> eval p x = zero) -> (length p <= length l)%nat -> forall x, (In x p) -> x = zero.
 intros p l; generalize p; elim l; clear l p; simpl; auto.
 intros p; case p; simpl; auto.

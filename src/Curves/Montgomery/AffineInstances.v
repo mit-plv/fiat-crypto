@@ -19,7 +19,7 @@ Module M.
     Local Notation "0" := Fzero.
     Local Notation "1" := Fone.
     Local Notation "4" := (1+1+1+1).
-      
+
     Global Instance MontgomeryWeierstrassIsomorphism
            {a b: F}
            (b_nonzero : b <> 0)
@@ -40,7 +40,7 @@ Module M.
         (M.add(char_ge_3:=char_ge_3)(b_nonzero:=b_nonzero))
         M.zero
         (M.opp(b_nonzero:=b_nonzero))
-        
+
         (M.of_Weierstrass(Haw:=reflexivity _)(Hbw:=reflexivity _)(b_nonzero:=b_nonzero))
         (M.to_Weierstrass(Haw:=reflexivity _)(Hbw:=reflexivity _)(b_nonzero:=b_nonzero)).
     Proof.

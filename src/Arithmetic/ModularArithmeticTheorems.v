@@ -17,10 +17,10 @@ Module F.
     lazy iota beta delta [F.add F.sub F.mul F.opp F.to_Z F.of_Z proj1_sig] in *;
     try apply eqsig_eq;
     pull_Zmod.
-  
+
   (* FIXME: remove the pose proof once [monoid] no longer contains decidable equality *)
   Global Instance eq_dec {m} : DecidableRel (@eq (F m)). pose proof dec_eq_Z. exact _. Defined.
-  
+
   Global Instance commutative_ring_modulo m
     : @Algebra.Hierarchy.commutative_ring (F m) Logic.eq 0%F 1%F F.opp F.add F.sub F.mul.
   Proof.
@@ -48,14 +48,14 @@ Module F.
     Lemma eq_of_Z_iff : forall x y : Z, x mod m = y mod m <-> F.of_Z m x = F.of_Z m y.
     Proof using Type. split; unwrap_F; congruence. Qed.
 
-    
+
     Lemma to_Z_of_Z : forall z, F.to_Z (F.of_Z m z) = z mod m.
     Proof using Type. unwrap_F; trivial. Qed.
 
     Lemma of_Z_to_Z x : F.of_Z m (F.to_Z x) = x :> F m.
     Proof using Type. unwrap_F; congruence. Qed.
 
-    
+
     Lemma of_Z_mod : forall x, F.of_Z m x = F.of_Z m (x mod m).
     Proof using Type. unwrap_F; trivial. Qed.
 
@@ -95,7 +95,7 @@ Module F.
     Lemma to_Z_mul : forall x y : F m,
         F.to_Z (x * y) = ((F.to_Z x * F.to_Z y) mod m)%Z.
     Proof using Type. unwrap_F; trivial. Qed.
-    
+
     Lemma of_Z_sub x y : F.of_Z _ (x - y) = F.of_Z _ x - F.of_Z _ y :> F m.
     Proof using Type. unwrap_F. trivial. Qed.
 

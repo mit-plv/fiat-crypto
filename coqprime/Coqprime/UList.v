@@ -7,33 +7,33 @@
 (*************************************************************)
 
 (***********************************************************************
-      UList.v                                                                                       
-                                                                                                         
-      Definition of list with distinct elements                                 
-                                                                                                         
-      Definition: ulist                                                                         
+      UList.v
+
+      Definition of list with distinct elements
+
+      Definition: ulist
 ************************************************************************)
 Require Import List.
 Require Import Arith.
 Require Import Permutation.
 Require Import ListSet.
- 
+
 Section UniqueList.
 Variable A : Set.
 Variable eqA_dec : forall (a b : A),  ({ a = b }) + ({ a <> b }).
 (* A list is unique if there is not twice the same element in the list *)
- 
+
 Inductive ulist : list A ->  Prop :=
   ulist_nil: ulist nil
  | ulist_cons: forall a l, ~ In a l -> ulist l ->  ulist (a :: l) .
 Hint Constructors ulist .
 (* Inversion theorem *)
- 
+
 Theorem ulist_inv: forall a l, ulist (a :: l) ->  ulist l.
 intros a l H; inversion H; auto.
 Qed.
 (* The append of two unique list is unique if the list are distinct *)
- 
+
 Theorem ulist_app:
  forall l1 l2,
  ulist l1 ->
@@ -48,7 +48,7 @@ apply ulist_inv with ( 1 := H0 ); auto.
 intros a0 H3 H4; apply (H2 a0); auto.
 Qed.
 (* Iinversion theorem the appended list *)
- 
+
 Theorem ulist_app_inv:
  forall l1 l2 (a : A), ulist (l1 ++ l2) -> In a l1 -> In a l2 ->  False.
 intros l1; elim l1; simpl; auto.
@@ -59,7 +59,7 @@ apply (H l2 a0); auto.
 apply ulist_inv with ( 1 := H0 ); auto.
 Qed.
 (* Iinversion theorem the appended list *)
- 
+
 Theorem ulist_app_inv_l: forall (l1 l2 : list A), ulist (l1 ++ l2) ->  ulist l1.
 intros l1; elim l1; simpl; auto.
 intros a l H l2 H0.
@@ -68,13 +68,13 @@ intros H5; case iH2; auto with datatypes.
 apply H with l2; auto.
 Qed.
 (* Iinversion theorem the appended list *)
- 
+
 Theorem ulist_app_inv_r: forall (l1 l2 : list A), ulist (l1 ++ l2) ->  ulist l2.
 intros l1; elim l1; simpl; auto.
 intros a l H l2 H0; inversion H0; auto.
 Qed.
 (* Uniqueness is decidable *)
- 
+
 Definition ulist_dec: forall l,  ({ ulist l }) + ({ ~ ulist l }).
 intros l; elim l; auto.
 intros a l1 [H|H]; auto.
@@ -83,7 +83,7 @@ right; red; intros H1; inversion H1; auto.
 right; intros H1; case H; apply ulist_inv with ( 1 := H1 ).
 Defined.
 (* Uniqueness is compatible with permutation *)
- 
+
 Theorem ulist_perm:
  forall (l1 l2 : list A), permutation l1 l2 -> ulist l1 ->  ulist l2.
 intros l1 l2 H; elim H; clear H l1 l2; simpl; auto.
@@ -103,7 +103,7 @@ intros H; case iH1; simpl; auto.
 inversion_clear H0 as [|ia il iH1 iH2]; auto.
 inversion iH2; auto.
 Qed.
- 
+
 Theorem ulist_def:
  forall l a,
  In a l -> ulist l ->  ~ (exists l1 , permutation l (a :: (a :: l1)) ).
@@ -112,7 +112,7 @@ absurd (ulist (a :: (a :: l1))); auto.
 intros H2; inversion_clear H2; simpl; auto with datatypes.
 apply ulist_perm with ( 1 := H1 ); auto.
 Qed.
- 
+
 Theorem ulist_incl_permutation:
  forall (l1 l2 : list A),
  ulist l1 -> incl l1 l2 ->  (exists l3 , permutation l2 (l1 ++ l3) ).
@@ -134,7 +134,7 @@ intros l4 H4; exists l4.
 apply permutation_trans with (a :: l3); auto.
 apply permutation_sym; auto.
 Qed.
- 
+
 Theorem ulist_eq_permutation:
  forall (l1 l2 : list A),
  ulist l1 -> incl l1 l2 -> length l1 = length l2 ->  permutation l1 l2.
@@ -150,7 +150,7 @@ replace l1 with (app l1 l3); auto.
 apply permutation_sym; auto.
 rewrite H5; rewrite app_nil_end; auto.
 Qed.
- 
+
 
 Theorem ulist_incl_length:
  forall (l1 l2 : list A), ulist l1 -> incl l1 l2 ->  le (length l1) (length l2).
@@ -166,8 +166,8 @@ intros l1 l2 H1 H2 H3 H4.
 apply ulist_eq_permutation; auto.
 apply le_antisym; apply ulist_incl_length; auto.
 Qed.
- 
- 
+
+
 Theorem ulist_incl_length_strict:
  forall (l1 l2 : list A),
  ulist l1 -> incl l1 l2 -> ~ incl l2 l1 ->  lt (length l1) (length l2).
@@ -180,14 +180,14 @@ intros H2; case Hi0; auto.
 intros a HH; apply permutation_in with ( 1 := H2 ); auto.
 intros a l Hl0; (rewrite plus_comm; simpl; rewrite plus_comm; auto with arith).
 Qed.
- 
+
 Theorem in_inv_dec:
  forall (a b : A) l, In a (cons b l) ->  a = b \/ ~ a = b /\ In a l.
 intros a b l H; case (eqA_dec a b); auto; intros H1.
 right; split; auto; inversion H; auto.
 case H1; auto.
 Qed.
- 
+
 Theorem in_ex_app_first:
  forall (a : A) (l : list A),
  In a l ->
@@ -203,7 +203,7 @@ case H; auto; intros l1 [l2 [Hl2 Hl3]]; exists (a1 :: l1); exists l2; simpl;
 subst; auto.
 intros H4; case H4; auto.
 Qed.
- 
+
 Theorem ulist_inv_ulist:
  forall (l : list A),
  ~ ulist l ->
@@ -239,7 +239,7 @@ replace (l1 ++ (a1 :: (l2 ++ (a1 :: l3))))
      with ((l1 ++ (a1 :: l2)) ++ (a1 :: l3)); auto with datatypes.
 (repeat (rewrite <- ass_app; simpl)); auto.
 Qed.
- 
+
 Theorem incl_length_repetition:
  forall (l1 l2 : list A),
  incl l1 l2 ->
@@ -253,11 +253,11 @@ intros l1 l2 H H0; apply ulist_inv_ulist.
 intros H1; absurd (le (length l1) (length l2)); auto with arith.
 apply ulist_incl_length; auto.
 Qed.
- 
+
 End UniqueList.
 Implicit Arguments ulist [A].
 Hint Constructors ulist .
- 
+
 Theorem ulist_map:
  forall (A B : Set) (f : A ->  B) l,
  (forall x y, (In x l) -> (In y l) ->  f x = f y ->  x = y) -> ulist l ->  ulist (map f l).
@@ -270,7 +270,7 @@ case in_map_inv with ( 1 := H1 ); auto with datatypes.
 intros b1 [Hb1 Hb2].
 replace a1 with b1; auto with datatypes.
 Qed.
- 
+
 Theorem ulist_list_prod:
  forall (A : Set) (l1 l2 : list A),
  ulist l1 -> ulist l2 ->  ulist (list_prod l1 l2).

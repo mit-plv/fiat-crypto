@@ -34,7 +34,7 @@ Definition nprim sc :=
  | Pock_certif n _ _ _ => n
  | SPock_certif n _ _ => n
  | Ell_certif n _ _ _ _ _ _ => n
- 
+
  end.
 
 Open Scope positive_scope.
@@ -51,11 +51,11 @@ Definition mkProd' (l:dec_prime) :=
   fold_right (fun (k:positive*positive) r => times (fst k) r) 1%positive l.
 
 Definition mkProd_pred (l:dec_prime) :=
-  fold_right (fun (k:positive*positive) r => 
+  fold_right (fun (k:positive*positive) r =>
     if ((snd k) ?= 1)%P then r else times (pow (fst k) (Ppred (snd k))) r)
   1%positive l.
 
-Definition mkProd (l:dec_prime) := 
+Definition mkProd (l:dec_prime) :=
   fold_right (fun (k:positive*positive) r => times (pow (fst k) (snd k)) r) 1%positive l.
 
 (* [pow_mod a m n] return [a^m mod n] *)
@@ -84,7 +84,7 @@ Definition Npow_mod a m n :=
 
 (* [fold_pow_mod a [q1,_;...;qn,_]] b = a ^(q1*...*qn) mod b *)
 (* invariant a mod N = a *)
-Definition fold_pow_mod a l n := 
+Definition fold_pow_mod a l n :=
   fold_left
     (fun a' (qp:positive*positive) =>  Npow_mod a' (fst qp) n)
     l a.
@@ -99,15 +99,15 @@ Definition times_mod x y n :=
 Definition Npred_mod p n :=
   match p with
   | N0 => Npos (Ppred n)
-  | Npos p => 
+  | Npos p =>
       if (p ?= 1) then N0
       else Npos (Ppred p)
-   end.     
- 
+   end.
+
 Fixpoint all_pow_mod (prod a : N) (l:dec_prime) (n:positive) {struct l}: N*N :=
   match l with
   | nil => (prod,a)
-  | (q,_) :: l => 
+  | (q,_) :: l =>
     let m := Npred_mod (fold_pow_mod a l n) n in
     all_pow_mod (times_mod prod m n) (Npow_mod a q n) l n
   end.
@@ -117,19 +117,19 @@ Fixpoint pow_mod_pred (a:N) (l:dec_prime) (n:positive) {struct l} : N :=
   | nil => a
   | (q,p)::l =>
     if (p ?= 1) then pow_mod_pred a l n
-    else 
+    else
       let a' := iter_pos _ (fun x => Npow_mod x q n) a (Ppred p) in
       pow_mod_pred a' l n
   end.
 
 Definition is_odd p :=
-  match p with 
+  match p with
   | xO _ => false
   | _     => true
   end.
 
-Definition is_even p := 
-   match p with 
+Definition is_even p :=
+   match p with
   | xO _ => true
   | _       => false
   end.
@@ -137,19 +137,19 @@ Definition is_even p :=
 Definition check_s_r s r sqrt :=
  match s with
  | N0 => true
- | Npos p => 
+ | Npos p =>
     match (Zminus (square r) (xO (xO (xO p)))) with
     | Zpos x =>
        let sqrt2 := square sqrt in
        let sqrt12 := square (Psucc sqrt)  in
-       if sqrt2 ?< x then x ?< sqrt12 
+       if sqrt2 ?< x then x ?< sqrt12
        else false
     | Zneg _ => true
     | Z0 => false
     end
   end.
 
-Definition test_pock N a dec sqrt := 
+Definition test_pock N a dec sqrt :=
   if (2 ?< N) then
     let Nm1 := Ppred N in
     let F1 := mkProd dec in
@@ -165,8 +165,8 @@ Definition test_pock N a dec sqrt :=
               match all_pow_mod 1%N A dec N with
               | (Npos p, Npos aNm1) =>
                 if (aNm1 ?= 1) then
-                  if gcd p N ?= 1 then 
-                    if check_s_r s r sqrt then 
+                  if gcd p N ?= 1 then
+                    if check_s_r s r sqrt then
 		      (N ?< (times ((times ((xO F1)+r+1) F1) + r) F1) + 1)
                     else false
                   else false
@@ -176,10 +176,10 @@ Definition test_pock N a dec sqrt :=
             | _ => false
             end
 	  else false
-        else false 
+        else false
       else false
     | _=> false
-    end      
+    end
   else false.
 
 Fixpoint is_in (p : positive) (lc : Certif) {struct lc} : bool :=
@@ -191,10 +191,10 @@ Fixpoint is_in (p : positive) (lc : Certif) {struct lc} : bool :=
 Fixpoint all_in (lc : Certif) (lp : dec_prime) {struct lp} : bool :=
   match lp with
   | nil => true
-  | (p,_) :: lp => 
-    if all_in lc lp 
+  | (p,_) :: lp =>
+    if all_in lc lp
     then is_in p lc
-    else false 
+    else false
   end.
 
 Definition gt2 n :=
@@ -212,7 +212,7 @@ Fixpoint test_Certif (lc : Certif) : bool :=
      if gt2 p then
        match Mp p with
        | Zpos n' =>
-          if (n ?= n') then 
+          if (n ?= n') then
             match SS p with
             | Z0 => true
             | _ => false
@@ -220,10 +220,10 @@ Fixpoint test_Certif (lc : Certif) : bool :=
           else false
       | _ => false
       end
-    else false 
+    else false
     else false
   | (Pock_certif n a dec sqrt) :: lc =>
-    if test_pock n a dec sqrt then 
+    if test_pock n a dec sqrt then
      if all_in lc dec then test_Certif lc else false
     else false
 (* Shoudl be done later to do it with Z *)
@@ -231,9 +231,9 @@ Fixpoint test_Certif (lc : Certif) : bool :=
   | (Ell_certif _ _ _ _ _ _ _):: lc => false
   end.
 
-Lemma pos_eq_1_spec : 
+Lemma pos_eq_1_spec :
   forall p,
-    if (p ?= 1)%P then p = xH 
+    if (p ?= 1)%P then p = xH
     else (1 < p).
 Proof.
  unfold Zlt;destruct p;simpl; auto; red;reflexivity.
@@ -248,7 +248,7 @@ Lemma mod_unique : forall b q1 r1 q2 r2,
 Proof with auto with zarith.
  intros b q1 r1 q2 r2 H1 H2 H3.
  assert (r2 = (b * q1 + r1) -b*q2).  rewrite H3;ring.
- assert (b*(q2 - q1) = r1 - r2 ).  rewrite H;ring. 
+ assert (b*(q2 - q1) = r1 - r2 ).  rewrite H;ring.
  assert (-b < r1 - r2 < b). omega.
  destruct (Ztrichotomy q1 q2) as [H5 | [H5 | H5]].
   assert (q2 - q1 >= 1).  omega.
@@ -277,10 +277,10 @@ Qed.
 
 Hint Resolve Zpower_gt_0 Zlt_0_pos Zge_0_pos Zlt_le_weak Zge_0_pos_add: zmisc.
 
-Hint Rewrite  Zpos_mult Zpower_mult Zpower_1_r Zmod_mod Zpower_exp 
+Hint Rewrite  Zpos_mult Zpower_mult Zpower_1_r Zmod_mod Zpower_exp
             times_Zmult square_Zmult Psucc_Zplus: zmisc.
 
-Ltac mauto := 
+Ltac mauto :=
   trivial;autorewrite with zmisc;trivial;auto with zmisc zarith.
 
 Lemma mod_lt : forall a (b:positive), a mod b < b.
@@ -318,9 +318,9 @@ Proof.
  assert (b>0). mauto.
  unfold Zmod; assert (H1 := Z_div_mod a b H).
  destruct (Zdiv_eucl a b) as (q2, r2).
- assert (H2 := div_eucl_spec a b). 
+ assert (H2 := div_eucl_spec a b).
  assert (Z_of_N (fst (a / b)%P) = q2 /\ Z_of_N (snd (a/b)%P) = r2).
- destruct H1;destruct H2. 
+ destruct H1;destruct H2.
  apply mod_unique with b;mauto.
  split;mauto.
  unfold Zle;destruct (snd (a / b)%P);intro;discriminate.
@@ -351,7 +351,7 @@ Proof.
  destruct (pow_mod a m n); mauto.
  rewrite (Zmult_mod (a^m)(a^m)); auto with zmisc.
  rewrite <- IHm. destruct (pow_mod a m n);simpl; mauto.
-Qed. 
+Qed.
 Hint Rewrite pow_mod_spec Zpower_0 : zmisc.
 
 Lemma Npow_mod_spec : forall a p n, Z_of_N (Npow_mod a p n) = a^p mod n.
@@ -360,7 +360,7 @@ Proof.
 Qed.
 Hint Rewrite Npow_mod_spec : zmisc.
 
-Lemma iter_Npow_mod_spec : forall n q p a, 
+Lemma iter_Npow_mod_spec : forall n q p a,
   Z_of_N (iter_pos N (fun x : N => Npow_mod x q n) a p) = a^q^p mod n.
 Proof.
  induction p; mauto; intros; simpl Pos.iter; mauto; repeat rewrite IHp.
@@ -370,28 +370,28 @@ Proof.
 Qed.
 Hint Rewrite iter_Npow_mod_spec : zmisc.
 
-Lemma fold_pow_mod_spec : forall (n:positive) l (a:N), 
+Lemma fold_pow_mod_spec : forall (n:positive) l (a:N),
   Z_of_N a = a mod n ->
-  Z_of_N (fold_pow_mod a l n) = a^(mkProd' l) mod n. 
+  Z_of_N (fold_pow_mod a l n) = a^(mkProd' l) mod n.
 Proof.
- unfold fold_pow_mod;induction l; simpl fold_left; simpl mkProd'; 
+ unfold fold_pow_mod;induction l; simpl fold_left; simpl mkProd';
   intros; mauto.
  rewrite IHl; mauto.
 Qed.
-Hint Rewrite fold_pow_mod_spec : zmisc.				
+Hint Rewrite fold_pow_mod_spec : zmisc.
 
 Lemma pow_mod_pred_spec : forall (n:positive) l (a:N),
   Z_of_N a = a mod n ->
-  Z_of_N (pow_mod_pred a l n) = a^(mkProd_pred l) mod n. 
+  Z_of_N (pow_mod_pred a l n) = a^(mkProd_pred l) mod n.
 Proof.
  unfold pow_mod_pred;induction l;simpl mkProd;intros; mauto.
  destruct a as (q,p).
  simpl mkProd_pred.
  destruct (p ?= 1)%P; rewrite IHl; mauto; simpl.
 Qed.
-Hint Rewrite pow_mod_pred_spec : zmisc.				
+Hint Rewrite pow_mod_pred_spec : zmisc.
 
-Lemma mkProd_pred_mkProd : forall l, 
+Lemma mkProd_pred_mkProd : forall l,
    (mkProd_pred l)*(mkProd' l) = mkProd l.
 Proof.
  induction l;simpl;intros; mauto.
@@ -418,7 +418,7 @@ Proof.
   assert ( 0 <= a mod b < b).
    apply Z_mod_lt; mauto.
   destruct (mod_unique b (a/b) (a mod b) 0 a H0 H); mauto.
-  rewrite <- Z_div_mod_eq; mauto. 
+  rewrite <- Z_div_mod_eq; mauto.
 Qed.
 
 Lemma Npred_mod_spec : forall p n, Z_of_N p < Zpos n ->
@@ -455,7 +455,7 @@ Qed.
 Lemma fold_aux : forall a N (n:positive) l prod,
   fold_left
      (fun (r : Z) (k : positive * positive) =>
-      r * (a ^(N / fst k) - 1) mod n) l (prod mod n) mod n = 
+      r * (a ^(N / fst k) - 1) mod n) l (prod mod n) mod n =
   fold_left
      (fun (r : Z) (k : positive * positive) =>
       r * (a^(N / fst k) - 1)) l prod mod n.
@@ -465,12 +465,12 @@ Qed.
 
 Lemma fst_all_pow_mod :
  forall (n a:positive) l  (R:positive) (prod A :N),
-  1 < n -> 
+  1 < n ->
   Z_of_N prod = prod mod n ->
   Z_of_N A = a^R mod n ->
-  Z_of_N (fst (all_pow_mod prod A l n)) = 
+  Z_of_N (fst (all_pow_mod prod A l n)) =
     (fold_left
-      (fun r (k:positive*positive) => 
+      (fun r (k:positive*positive) =>
         (r * (a ^ (R* mkProd' l / (fst k)) - 1))) l prod) mod n.
 Proof.
  induction l;simpl;intros; mauto.
@@ -483,23 +483,23 @@ Proof.
  rewrite Z_div_mult;auto with zmisc zarith.
  rewrite <- fold_aux.
  rewrite <- (fold_aux a (R * q * mkProd' l) n l (prod * (a ^ (R * mkProd' l) - 1)))...
- assert ( ((prod * (A ^ mkProd' l - 1)) mod n) = 
+ assert ( ((prod * (A ^ mkProd' l - 1)) mod n) =
               ((prod * ((a ^ R) ^ mkProd' l - 1)) mod n)).
   repeat rewrite (Zmult_mod prod);auto with zmisc.
   rewrite Zminus_mod;auto with zmisc.
   rewrite (Zminus_mod ((a ^ R) ^ mkProd' l));auto with zmisc.
   rewrite (Zpower_mod (a^R));auto with zmisc.  rewrite H1; mauto.
- rewrite H3; mauto. 
+ rewrite H3; mauto.
  rewrite H1; mauto.
 Qed.
 
 Lemma is_odd_Zodd : forall p, is_odd p = true -> Zodd p.
-Proof. 
+Proof.
  destruct p;intros;simpl;trivial;discriminate.
 Qed.
 
 Lemma is_even_Zeven : forall p, is_even p = true -> Zeven p.
-Proof. 
+Proof.
  destruct p;intros;simpl;trivial;discriminate.
 Qed.
 
@@ -513,12 +513,12 @@ Qed.
 Lemma le_square : forall x y, 0 <= x  -> x <= y -> x*x <= y*y.
 Proof.
  intros; apply Zle_trans with (x*y).
- apply Zmult_le_compat_l;trivial. 
+ apply Zmult_le_compat_l;trivial.
  apply Zmult_le_compat_r;trivial. omega.
 Qed.
 
-Lemma borned_square : forall x y, 0 <= x -> 0 <= y -> 
-                             x*x < y*y < (x+1)*(x+1) -> False. 
+Lemma borned_square : forall x y, 0 <= x -> 0 <= y ->
+                             x*x < y*y < (x+1)*(x+1) -> False.
 Proof.
  intros;destruct (Z_lt_ge_dec x y) as [z|z].
  assert (x + 1 <= y). omega.
@@ -539,25 +539,25 @@ Qed.
 Ltac spec_dec :=
  repeat match goal with
  | [H:(?x ?= ?y)%P = _ |- _] =>
-      generalize (is_eq_spec x y); 
+      generalize (is_eq_spec x y);
       rewrite H;clear H; autorewrite with zmisc;
       intro
   | [H:(?x ?< ?y)%P = _ |- _] =>
-      generalize (is_lt_spec x y); 
+      generalize (is_lt_spec x y);
       rewrite H; clear H; autorewrite with zmisc;
       intro
   end.
 
 Ltac elimif :=
  match goal with
- | [H: (if ?b then _ else _) = _ |- _] => 
+ | [H: (if ?b then _ else _) = _ |- _] =>
       let H1 := fresh "H" in
       (CaseEq b;intros H1; rewrite H1 in H;
       try discriminate H); elimif
  | _ => spec_dec
  end.
 
-Lemma check_s_r_correct : forall s r sqrt, check_s_r s r sqrt = true -> 
+Lemma check_s_r_correct : forall s r sqrt, check_s_r s r sqrt = true ->
           Z_of_N s = 0 \/ ~ isSquare (r * r - 8 * s).
 Proof.
  unfold check_s_r;intros.
@@ -566,7 +566,7 @@ Proof.
    rewrite H1 in H;try discriminate H.
  elimif.
  assert (Zpos (xO (xO (xO s))) = 8 * s).  repeat rewrite Zpos_xO_add;ring.
- generalizeclear H1; rewrite H2;mauto;intros. 
+ generalizeclear H1; rewrite H2;mauto;intros.
  apply (not_square sqrt).
  simpl Z.of_N; rewrite H1;auto.
  intros (y,Heq).
@@ -579,10 +579,10 @@ Proof.
  destruct y;discriminate Heq2.
 Qed.
 
-Lemma in_mkProd_prime_div_in : 
-  forall p:positive,  prime p -> 
-  forall (l:dec_prime),   
-    (forall k, In k l -> prime (fst k)) -> 
+Lemma in_mkProd_prime_div_in :
+  forall p:positive,  prime p ->
+  forall (l:dec_prime),
+    (forall k, In k l -> prime (fst k)) ->
     Zdivide p (mkProd l) -> exists n,In (p, n) l.
 Proof.
  induction l;simpl mkProd; simpl In; mauto.
@@ -591,7 +591,7 @@ Proof.
  apply Zdivide_le; auto with zarith.
  intros.
  case prime_mult with (2 := H1); auto with zarith; intros H2.
- exists (snd a);left. 
+ exists (snd a);left.
  destruct a;simpl in *.
  assert (Zpos p = Zpos p0).
    rewrite (prime_div_Zpower_prime p1 p p0); mauto.
@@ -616,7 +616,7 @@ Proof.
  rewrite Zmult_comm;apply Zis_gcd_for_euclid2;simpl in *.
  apply Zis_gcd_sym;auto.
 Qed.
- 
+
 Lemma test_pock_correct : forall N a dec sqrt,
    (forall k, In k dec -> prime (Zpos (fst k))) ->
    test_pock N a dec sqrt = true ->
@@ -632,10 +632,10 @@ Proof.
  generalize (div_eucl_spec R1 (xO (mkProd dec)));
  destruct ((R1 / xO (mkProd dec))%P) as (s,r'); mauto;intros (H7,H8).
  destruct r' as [|r];try discriminate H0.
- generalize (fst_all_pow_mod N a dec (R1*mkProd_pred dec) 1 
+ generalize (fst_all_pow_mod N a dec (R1*mkProd_pred dec) 1
          (pow_mod_pred (pow_mod a R1 N) dec N)).
  generalize (snd_all_pow_mod N dec 1 (pow_mod_pred (pow_mod a R1 N) dec N)).
- destruct (all_pow_mod 1 (pow_mod_pred (pow_mod a R1 N) dec N) dec N) as 
+ destruct (all_pow_mod 1 (pow_mod_pred (pow_mod a R1 N) dec N) dec N) as
   (prod,aNm1); mauto; simpl Z_of_N.
  destruct prod as [|prod];try discriminate H0.
  destruct aNm1 as [|aNm1];try discriminate H0;elimif.
@@ -654,7 +654,7 @@ Proof.
  end; mauto.
  rewrite Zmod_small; mauto.
  assert (1 < mkProd dec).
-  assert (H14 := Zlt_0_pos (mkProd dec)). 
+  assert (H14 := Zlt_0_pos (mkProd dec)).
   assert (1 <= mkProd dec); mauto.
   destruct (Zle_lt_or_eq _ _ H15); mauto.
   inversion H16. rewrite <- H18 in H5;discriminate H5.
@@ -671,7 +671,7 @@ Proof.
   auto with zmisc zarith.
  rewrite H2; mauto.
  apply is_even_Zeven; auto.
- apply is_odd_Zodd; auto. 
+ apply is_odd_Zodd; auto.
  intros p; case p; clear p.
  intros HH; contradict HH.
  apply not_prime_0.
@@ -691,7 +691,7 @@ Proof.
  revert H2; mauto; intro H2.
  rewrite <- H2.
  match goal with |- context [fold_left ?f _ _] =>
-   apply (ListAux.fold_left_invol_in _ _ f (fun k => Zdivide (a ^ ((N - 1) / p) - 1) k)) 
+   apply (ListAux.fold_left_invol_in _ _ f (fun k => Zdivide (a ^ ((N - 1) / p) - 1) k))
      with (b := (p, q)); auto with zarith
  end.
  rewrite <- Heqr.
@@ -702,7 +702,7 @@ Proof.
  apply check_s_r_correct with sqrt; mauto.
 Qed.
 
-Lemma is_in_In : 
+Lemma is_in_In :
   forall p lc, is_in p lc = true -> exists c, In c lc /\ p = nprim c.
 Proof.
  induction lc;simpl;try (intros;discriminate).
@@ -711,7 +711,7 @@ Proof.
  destruct (IHlc H) as [c [H1 H2]];exists c;auto.
 Qed.
 
-Lemma all_in_In : 
+Lemma all_in_In :
  forall lc lp, all_in lc lp = true ->
  forall pq, In pq lp -> exists c, In c lc /\ fst pq = nprim c.
 Proof.
@@ -721,8 +721,8 @@ Proof.
  rewrite <- H0;simpl;apply is_in_In;trivial.
 Qed.
 
-Lemma test_Certif_In_Prime : 
-  forall lc, test_Certif lc = true -> 
+Lemma test_Certif_In_Prime :
+  forall lc, test_Certif lc = true ->
    forall c, In c lc -> prime (nprim c).
 Proof with mauto.
  induction lc;simpl;intros. elim H0.
@@ -732,10 +732,10 @@ Proof with mauto.
  CaseEq (Mp p);[intros Heq|intros N' Heq|intros N' Heq];rewrite Heq in H;
   try discriminate H. elimif.
  CaseEq (SS p);[intros Heq'|intros N'' Heq'|intros N'' Heq'];rewrite Heq' in H;
-  try discriminate H. 
+  try discriminate H.
  rewrite H2;rewrite <- Heq.
 apply LucasLehmer;trivial.
-(destruct p; try discriminate H1). 
+(destruct p; try discriminate H1).
 simpl in H1; generalize (is_lt_spec 2 p); rewrite H1; auto.
 elimif.
 apply (test_pock_correct N a d p); mauto.
@@ -748,9 +748,8 @@ discriminate.
 discriminate.
 Qed.
 
-Lemma Pocklington_refl : 
+Lemma Pocklington_refl :
   forall c lc, test_Certif (c::lc) = true -> prime (nprim c).
 Proof.
  intros c lc Heq;apply test_Certif_In_Prime with (c::lc);trivial;simpl;auto.
 Qed.
-

@@ -54,11 +54,11 @@ Section Ed25519.
 
   Local Instance char_gt_e : (* TODO: prove this in PrimeFieldTheorems *)
     @Ring.char_ge (F.F q) (@eq (F.F q)) (F.of_Z q BinNums.Z0)
-                  (F.of_Z q (BinNums.Zpos BinNums.xH)) (@F.opp q) 
+                  (F.of_Z q (BinNums.Zpos BinNums.xH)) (@F.opp q)
                   (@F.add q) (@F.sub q) (@F.mul q) (BinNat.N.succ_pos BinNat.N.two).
   Proof. intros p ?.
          edestruct (fun p:p = (BinNat.N.succ_pos BinNat.N.zero) \/ p = (BinNat.N.succ_pos BinNat.N.one) => p); subst.
-         { admit. (* 
+         { admit. (*
            p : BinNums.positive
            H : BinPos.Pos.le p (BinNat.N.succ_pos BinNat.N.one)
            ============================
@@ -89,7 +89,7 @@ Section Ed25519.
           (l:=l) (b:=b) (n:=n) (c:=c)
           (Eenc:=Eenc) (Senc:=Senc) (H:=SHA512).
   Proof using Type.
-    split; 
+    split;
       match goal with
       | |- ?P => match goal with [H:P|-_] => exact H end (* COQBUG: https://coq.inria.fr/bugs/show_bug.cgi?id=5366 *)
       | _ => exact _

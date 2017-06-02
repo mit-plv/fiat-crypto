@@ -7,12 +7,12 @@
 (*************************************************************)
 
 (**********************************************************************
-    Zp.v                        
-                                                                     
+    Zp.v
+
     Build the group of the inversible element on {1, 2, .., n-1}
     for the multiplication modulo n
-                                                                 
-    Definition: ZpGroup              
+
+    Definition: ZpGroup
  **********************************************************************)
 Require Import ZArith Znumtheory Zpow_facts.
 Require Import Tactic.
@@ -34,14 +34,14 @@ Variable n: Z.
 Hypothesis n_pos: 1 < n.
 
 
-(************************************** 
+(**************************************
   mkZp m creates {m, m - 1, ..., 0}
  **************************************)
 
 Fixpoint mkZp_aux (m: nat): list Z:=
-  Z_of_nat m :: match m with O => nil | (S m1) => mkZp_aux m1 end. 
+  Z_of_nat m :: match m with O => nil | (S m1) => mkZp_aux m1 end.
 
-(************************************** 
+(**************************************
   Some properties of mkZp_aux
  **************************************)
 
@@ -75,13 +75,13 @@ rewrite inj_S; intros H1.
 case in_mkZp_aux with (1 := H1); auto with zarith.
 Qed.
 
-(************************************** 
+(**************************************
   mkZp creates {n - 1, ..., 1, 0}
  **************************************)
 
 Definition mkZp := mkZp_aux (Zabs_nat (n - 1)).
 
-(************************************** 
+(**************************************
   Some properties of mkZp
  **************************************)
 
@@ -109,13 +109,13 @@ Theorem mkZp_ulist: ulist mkZp.
 unfold mkZp; apply mkZp_aux_ulist; auto.
 Qed.
 
-(************************************** 
+(**************************************
   Multiplication of two pairs
  **************************************)
 
 Definition pmult (p q: Z) := (p * q) mod n.
 
-(************************************** 
+(**************************************
   Properties of multiplication
  **************************************)
 
@@ -155,7 +155,7 @@ Qed.
 
 Definition Lrel := isupport_aux _ pmult  mkZp 1 Z_eq_dec (progression Zsucc 0 (Zabs_nat n)).
 
-Theorem rel_prime_is_inv: 
+Theorem rel_prime_is_inv:
   forall a, is_inv Z pmult mkZp 1 Z_eq_dec a = if (rel_prime_dec a n) then true else false.
 assert (Hu: 0 < n); try apply Zlt_trans with 1; auto with zarith.
 intros a; case (rel_prime_dec a n); intros H.
@@ -184,8 +184,8 @@ unfold pmult in H2; rewrite (Zmult_comm c); try rewrite H2.
 ring.
 Qed.
 
-(************************************** 
-   We are now ready to build our group 
+(**************************************
+   We are now ready to build our group
  **************************************)
 
 Definition ZPGroup : (FGroup pmult).
@@ -232,7 +232,7 @@ intros a H; unfold ZPGroup; simpl.
 apply isupport_is_in.
 unfold Lrel in H; apply  isupport_aux_is_inv_true with (1 := H).
 apply mkZp_in; auto.
-assert (In a (progression Zsucc 0 (Zabs_nat  n))). 
+assert (In a (progression Zsucc 0 (Zabs_nat  n))).
 apply  (isupport_aux_incl _ pmult mkZp 1 Z_eq_dec); auto.
 split.
 apply Zprogression_le_init with (1 := H0).
@@ -246,7 +246,7 @@ simpl in H; apply  isupport_is_inv_true with (1 := H).
 apply in_Zprogression.
 rewrite Zplus_0_l; rewrite inj_Zabs_nat; auto with zarith.
 rewrite Zabs_eq; auto with zarith.
-assert (In a mkZp). 
+assert (In a mkZp).
 apply  (isupport_aux_incl _ pmult mkZp 1 Z_eq_dec); auto.
 apply in_mkZp; auto.
 Qed.
@@ -330,8 +330,8 @@ apply Z_mod_lt; auto with zarith.
 Qed.
 
 
-Theorem Zpower_mod_is_gpow: 
-  forall p q n (Hn: 1 < n), rel_prime p n -> 0 <= q -> p ^ q mod n = gpow (p mod n) (ZPGroup n Hn) q. 
+Theorem Zpower_mod_is_gpow:
+  forall p q n (Hn: 1 < n), rel_prime p n -> 0 <= q -> p ^ q mod n = gpow (p mod n) (ZPGroup n Hn) q.
 intros p q n H Hp H1; generalize H1; pattern q; apply natlike_ind; simpl; auto.
 intros _; apply Zmod_small; auto with zarith.
 intros n1 Hn1 Rec _; simpl.
@@ -343,7 +343,7 @@ rewrite Zmult_mod; auto.
 Qed.
 
 
-Theorem Zorder_div_power: forall p q n, 1 < n -> rel_prime p n -> p ^ q  mod n = 1 -> (Zorder p n | q). 
+Theorem Zorder_div_power: forall p q n, 1 < n -> rel_prime p n -> p ^ q  mod n = 1 -> (Zorder p n | q).
 intros p q n H H1 H2.
 assert (Hq: 0 <= q).
 generalize H2; case q; simpl; auto with zarith.
@@ -355,7 +355,7 @@ apply in_mod_ZPGroup; auto.
 rewrite <- Zpower_mod_is_gpow; auto with zarith.
 Qed.
 
-Theorem Zorder_div:  forall p n,  prime n -> ~(n | p) -> (Zorder p n | n - 1). 
+Theorem Zorder_div:  forall p n,  prime n -> ~(n | p) -> (Zorder p n | n - 1).
 intros p n H; unfold Zorder.
 case (Z_le_dec n 1); intros H1 H2.
 contradict H1; generalize (prime_ge_2 n H); auto with zarith.

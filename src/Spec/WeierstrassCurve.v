@@ -41,7 +41,7 @@ Module W.
     Program Definition zero : point := ∞.
 
     Local Notation "0" := Fzero.  Local Notation "1" := Fone.
-    Local Notation "2" := (1+1). Local Notation "3" := (1+2). 
+    Local Notation "2" := (1+1). Local Notation "3" := (1+2).
 
     Program Definition add (P1 P2:point) : point :=
       match coordinates P1, coordinates P2 return F*F+∞ with

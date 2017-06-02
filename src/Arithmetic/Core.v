@@ -837,7 +837,7 @@ Module B.
 
     Section Select.
       Context {weight : nat -> Z}.
-      
+
       Definition select_cps {n} (mask cond:Z) (p:tuple Z n)
                  {T} (f:tuple Z n->T) :=
         dlet t := Z.zselect cond 0 mask in Tuple.map_cps (runtime_and t) p f.
