@@ -244,6 +244,7 @@ src/Util/LetIn.v
 src/Util/LetInMonad.v
 src/Util/ListUtil.v
 src/Util/Logic.v
+src/Util/Loop.v
 src/Util/NUtil.v
 src/Util/NatUtil.v
 src/Util/Notations.v
