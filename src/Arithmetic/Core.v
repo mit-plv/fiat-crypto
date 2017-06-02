@@ -729,6 +729,29 @@ Module B.
             (fun P => Associational.negate_snd_cps P
               (fun R => from_associational_cps n R f)).
 
+        Definition split_cps {n m1 m2} (s:Z) (p : tuple Z n)
+                    {T} (f:(tuple Z m1 * tuple Z m2) -> T) :=
+          to_associational_cps p
+            (fun P => Associational.split_cps s P
+            (fun split_P =>
+              f (from_associational m1 (fst split_P),
+                (from_associational m2 (snd split_P))))).
+
+        Definition scmul_cps {n} (x : Z) (p: tuple Z n)
+                    {T} (f:tuple Z n->T) :=
+          to_associational_cps p
+            (fun P => Associational.mul_cps P [(1, x)]
+            (fun R => from_associational_cps n R f)).
+        
+        (* This version of sub does not add balance; bounds must be
+        carefully handled. *)
+        Definition unbalanced_sub_cps {n} (p q: tuple Z n)
+                    {T} (f:tuple Z n->T) :=
+          to_associational_cps p
+            (fun P => to_associational_cps q
+            (fun Q => Associational.negate_snd_cps Q
+            (fun negQ => from_associational_cps n (P ++ negQ) f))).
+
       End Wrappers.
       Hint Unfold
            Positional.add_cps
@@ -736,6 +759,9 @@ Module B.
            Positional.reduce_cps
            Positional.carry_reduce_cps
            Positional.negate_snd_cps
+           Positional.split_cps
+           Positional.scmul_cps
+           Positional.unbalanced_sub_cps
       .
 
       Section Subtraction.
@@ -879,6 +905,9 @@ Module B.
       Positional.reduce_cps
       Positional.carry_reduce_cps
       Positional.negate_snd_cps
+      Positional.split_cps
+      Positional.scmul_cps
+      Positional.unbalanced_sub_cps
       Positional.opp_cps
   .
   Hint Rewrite
@@ -955,7 +984,7 @@ Ltac basesystem_partial_evaluation_RHS :=
   let t0 := match goal with |- _ _ ?t => t end in
   let t := (eval cbv delta [
   (* this list must contain all definitions referenced by t that reference [Let_In], [runtime_add], [runtime_opp], [runtime_mul], [runtime_shr], or [runtime_and] *)
-Positional.to_associational_cps Positional.to_associational Positional.eval Positional.zeros Positional.add_to_nth_cps Positional.add_to_nth Positional.place_cps Positional.place Positional.from_associational_cps Positional.from_associational Positional.carry_cps Positional.carry Positional.chained_carries_cps Positional.chained_carries Positional.sub_cps Positional.sub Positional.negate_snd_cps Positional.add_cps Positional.opp_cps Associational.eval Associational.multerm Associational.mul_cps Associational.mul Associational.split_cps Associational.split Associational.reduce_cps Associational.reduce Associational.carryterm_cps Associational.carryterm Associational.carry_cps Associational.carry Associational.negate_snd_cps Associational.negate_snd div modulo
+Positional.to_associational_cps Positional.to_associational Positional.eval Positional.zeros Positional.add_to_nth_cps Positional.add_to_nth Positional.place_cps Positional.place Positional.from_associational_cps Positional.from_associational Positional.carry_cps Positional.carry Positional.chained_carries_cps Positional.chained_carries Positional.sub_cps Positional.sub Positional.split_cps Positional.scmul_cps Positional.unbalanced_sub_cps Positional.negate_snd_cps Positional.add_cps Positional.opp_cps Associational.eval Associational.multerm Associational.mul_cps Associational.mul Associational.split_cps Associational.split Associational.reduce_cps Associational.reduce Associational.carryterm_cps Associational.carryterm Associational.carry_cps Associational.carry Associational.negate_snd_cps Associational.negate_snd div modulo
                  ] in t0) in
   let t := (eval pattern @runtime_mul in t) in
   let t := match t with ?t _ => t end in
