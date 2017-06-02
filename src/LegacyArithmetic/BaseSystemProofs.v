@@ -122,7 +122,8 @@ Section BaseSystemProofs.
              end.
     rewrite (combine_truncate_r vs bs); apply (f_equal2 Z.add); trivial; [].
     unfold combine; break_match.
-    { apply (f_equal (@length _)) in Heql; simpl length in Heql; rewrite skipn_length in Heql; omega. }
+    { let Heql := match goal with H : _ = nil |- _ => H end in
+      apply (f_equal (@length _)) in Heql; simpl length in Heql; rewrite skipn_length in Heql; omega. }
     { cbv -[Z.add Z.mul]; ring_simplify; f_equal.
       assert (HH: nth_error (z0 :: l) 0 = Some z) by
           (

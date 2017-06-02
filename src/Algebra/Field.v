@@ -19,7 +19,7 @@ Section Field.
   Lemma left_inv_unique x ix : ix * x = one -> ix = inv x.
   Proof using Type*.
     intro Hix.
-    assert (ix*x*inv x = inv x).
+    assert (H0 : ix*x*inv x = inv x).
     - rewrite Hix, left_identity; reflexivity.
     - rewrite <-associative, right_multiplicative_inverse, right_identity in H0; trivial.
       intro eq_x_0. rewrite eq_x_0, Ring.mul_0_r in Hix.
@@ -39,8 +39,8 @@ Section Field.
   Lemma mul_cancel_l_iff : forall x y, y <> 0 ->
                                        (x * y = y <-> x = one).
   Proof using Type*.
-    intros.
-    split; intros.
+    intros x y H0.
+    split; intros H1.
     + rewrite <-(right_multiplicative_inverse y) by assumption.
       rewrite <-H1 at 1; rewrite <-associative.
       rewrite right_multiplicative_inverse by assumption.

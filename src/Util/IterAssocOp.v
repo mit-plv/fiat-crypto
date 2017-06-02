@@ -26,7 +26,7 @@ Section IterAssocOp.
 
   Lemma Pos_iter_op_succ : forall p a, Pos.iter_op op (Pos.succ p) a === op a (Pos.iter_op op p a).
   Proof using Type*.
-   induction p; intros; simpl; rewrite ?Algebra.Hierarchy.associative, ?IHp; reflexivity.
+   induction p as [p IHp|p IHp|]; intros; simpl; rewrite ?Algebra.Hierarchy.associative, ?IHp; reflexivity.
   Qed.
 
   Lemma N_iter_op_succ : forall n a, N_iter_op (N.succ n) a  === op a (N_iter_op n a).
@@ -36,7 +36,7 @@ Section IterAssocOp.
 
   Lemma N_iter_op_is_nat_iter_op : forall n a, N_iter_op n a === nat_iter_op (N.to_nat n) a.
   Proof using Type*.
-    induction n using N.peano_ind; intros; rewrite ?N2Nat.inj_succ, ?N_iter_op_succ, ?IHn; reflexivity.
+    induction n as [|n IHn] using N.peano_ind; intros; rewrite ?N2Nat.inj_succ, ?N_iter_op_succ, ?IHn; reflexivity.
   Qed.
 
   Context {sel:bool->T->T->T} {sel_correct:forall b x y, sel b x y = if b then y else x}.
@@ -90,7 +90,7 @@ Section IterAssocOp.
   Lemma funexp_test_and_op_index : forall a x acc y,
     fst (funexp (test_and_op a) (x, acc) y) = x - y.
   Proof using Type.
-    induction y; simpl; rewrite <- ?Minus.minus_n_O; try reflexivity.
+    induction y as [|? IHy]; simpl; rewrite <- ?Minus.minus_n_O; try reflexivity.
     match goal with |- context[funexp ?a ?b ?c] => destruct (funexp a b c) as [i acc'] end.
     simpl in IHy.
     unfold test_and_op.
@@ -129,7 +129,7 @@ Global Instance Proper_funexp {T R} {Equivalence_R:Equivalence R}
   : Proper ((R==>R) ==> R ==> Logic.eq ==> R) (@funexp T).
 Proof.
   repeat intro; subst.
-  match goal with [n0 : nat |- _ ] => rename n0 into n; induction n end; [solve [trivial]|].
+  match goal with [n0 : nat |- _ ] => rename n0 into n; induction n as [|n IHn] end; [solve [trivial]|].
   match goal with
       [H: (_ ==> _)%signature _ _ |- _ ] =>
       etransitivity; solve [eapply (H _ _ IHn)|reflexivity]
@@ -169,7 +169,8 @@ Global Instance Proper_iter_op {T R} {Equivalence_R:@Equivalence T R} :
 Proof.
   repeat match goal with
            | _ => solve [ reflexivity | congruence | eauto 99 ]
-           | _ => progress eapply (Proper_funexp (R:=(fun nt NT => Logic.eq (fst nt) (fst NT) /\ R (snd nt) (snd NT))))
+           | [ R : _ |- _ ]
+             => progress eapply (Proper_funexp (R:=(fun nt NT => Logic.eq (fst nt) (fst NT) /\ R (snd nt) (snd NT))))
            | _ => progress eapply Proper_test_and_op
            | _ => progress split
            | _ => progress (cbv [fst snd pointwise_relation respectful] in * )

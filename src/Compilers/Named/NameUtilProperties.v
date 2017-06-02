@@ -171,7 +171,7 @@ Section language.
         (t : flat_type base_type_code) (ls : list Name)
     : fst (split_names t ls) <> None <-> List.length ls >= count_pairs t.
   Proof using Type.
-    revert ls; induction t; intros;
+    revert ls; induction t; intros ls;
       try solve [ destruct ls; simpl; intuition (omega || congruence) ].
     repeat first [ progress simpl in *
                  | progress break_innermost_match_step

@@ -47,7 +47,7 @@ Section with_context.
     : (exists t, @find_Name n T N = Some t)
       <-> List.In (Some n) (List.firstn (CountLets.count_pairs T) ls).
   Proof using Type.
-    revert dependent ls; intro ls; revert ls ls'; induction T; intros;
+    revert dependent ls; intro ls; revert ls ls'; induction T; intros ls ls' H;
       [ | | specialize (IHT1 (fst N) ls (snd (split_onames T1 ls)));
             specialize (IHT2 (snd N) (snd (split_onames T1 ls)) (snd (split_onames (T1 * T2) ls))) ];
       repeat first [ misc_oname_t_step
@@ -77,7 +77,11 @@ Section with_context.
     rewrite fst_split_onames_firstn, snd_split_onames_skipn in H.
     inversion_prod; subst.
     split; [ split | intros [? ?] ]; eauto using In_firstn, oname_list_unique_specialize.
-    eapply In_firstn_skipn_split in H; destruct_head' or; eauto; exfalso; eauto.
+    match goal with
+    | [ H : List.In (Some _) ?ls |- _ ]
+      => is_var ls;
+           eapply In_firstn_skipn_split in H; destruct_head' or; eauto; exfalso; eauto
+    end.
   Qed.
 
   Lemma split_onames_find_Name_Some_unique
@@ -97,7 +101,7 @@ Section with_context.
     : @find_Name_and_val var' t n T N V None = Some v
       <-> List.In (existT (fun t => (Name * var' t)%type) t (n, v)) (Wf.flatten_binding_list N V).
   Proof using Type.
-    revert dependent ls; intro ls; revert ls ls'; induction T; intros;
+    revert dependent ls; intro ls; revert ls ls'; induction T; intros ls ls' Hls H;
       [ | | specialize (IHT1 (fst N) (fst V) ls (snd (split_onames T1 ls)));
             specialize (IHT2 (snd N) (snd V) (snd (split_onames T1 ls)) (snd (split_onames (T1 * T2) ls))) ];
       repeat first [ find_Name_and_val_default_to_None_step

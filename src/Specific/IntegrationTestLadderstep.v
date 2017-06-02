@@ -92,7 +92,7 @@ Section BoundedField25p5.
       | forall a24 x1 Q Q', let eval := B.Positional.Fdecode wt in Tuple.map (n:=2) (Tuple.map (n:=2) eval) (xzladderstep a24 x1 Q Q') = FMxzladderstep (eval a24) (eval x1) (Tuple.map (n:=2) eval Q) (Tuple.map (n:=2) eval Q') }.
   Proof.
     exists Mxzladderstep.
-    intros.
+    intros a24 x1 Q Q' eval.
     cbv [Mxzladderstep FMxzladderstep M.donnaladderstep].
     destruct Q, Q'; cbv [map map' fst snd Let_In eval].
     repeat rewrite ?(proj2_sig add_sig), ?(proj2_sig mul_sig), ?(proj2_sig square_sig), ?(proj2_sig sub_sig), ?(proj2_sig carry_sig).

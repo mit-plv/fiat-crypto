@@ -41,15 +41,15 @@ Section with_context.
                  | rewrite lookupb_removeb_different by assumption
                  | solve [ auto ] ].
 
-  Global Instance extendb_Proper {t} : Proper (context_equiv ==> eq ==> eq ==> context_equiv) (@extendb t) | 10.
+  Global Instance extendb_Proper : forall {t}, Proper (context_equiv ==> eq ==> eq ==> context_equiv) (@extendb t) | 10.
   Proof.
-    intros ??? n n0 ???? n' t'; subst n0; subst; proper_t n n' t t'.
+    intros t ??? n n0 ???? n' t'; subst n0; subst; proper_t n n' t t'.
   Qed.
-  Global Instance removeb_Proper {t} : Proper (context_equiv ==> eq ==> context_equiv) (@removeb t) | 10.
+  Global Instance removeb_Proper : forall {t}, Proper (context_equiv ==> eq ==> context_equiv) (@removeb t) | 10.
   Proof.
-    intros ??? n n0 ? n' t'; subst n0; subst; proper_t n n' t t'.
+    intros t ??? n n0 ? n' t'; subst n0; subst; proper_t n n' t t'.
   Qed.
-  Global Instance lookupb_Proper {t} : Proper (context_equiv ==> eq ==> eq) (@lookupb t) | 10.
+  Global Instance lookupb_Proper : forall {t}, Proper (context_equiv ==> eq ==> eq) (@lookupb t) | 10.
   Proof. repeat intro; subst; auto. Qed.
 
   Local Ltac proper_t2 t :=
@@ -68,13 +68,14 @@ Section with_context.
       first [ eapply IHt2; [ eapply IHt1 | .. ]; auto
             | idtac ] ].
 
-  Global Instance extend_Proper {t} : Proper (context_equiv ==> eq ==> eq ==> context_equiv) (@extend t) | 10.
-  Proof. proper_t2 t. Qed.
-  Global Instance remove_Proper {t} : Proper (context_equiv ==> eq ==> context_equiv) (@remove t) | 10.
-  Proof. proper_t2 t. Qed.
-  Global Instance lookup_Proper {t} : Proper (context_equiv ==> eq ==> eq) (@lookup t) | 10.
+  Global Instance extend_Proper : forall {t}, Proper (context_equiv ==> eq ==> eq ==> context_equiv) (@extend t) | 10.
+  Proof. intro t; proper_t2 t. Qed.
+  Global Instance remove_Proper : forall {t}, Proper (context_equiv ==> eq ==> context_equiv) (@remove t) | 10.
+  Proof. intro t; proper_t2 t. Qed.
+
+  Global Instance lookup_Proper : forall {t}, Proper (context_equiv ==> eq ==> eq) (@lookup t) | 10.
   Proof.
-    proper_t2 t.
+    intro t; proper_t2 t.
     repeat match goal with
            | [ |- context G[lookup (?A * ?B) ?ctx (?na, ?nb)] ]
              => let G' := context G[match lookup A ctx na, lookup B ctx nb with
@@ -88,7 +89,7 @@ Section with_context.
              | _ => progress subst
              | _ => progress inversion_option
              | _ => reflexivity
-             | [ H : lookup _ _ _ = ?x, H' : lookup _ _ _ = ?y |- _ ]
+             | [ IHt2 : Proper _ (lookup t2), H : lookup _ _ _ = ?x, H' : lookup _ _ _ = ?y |- _ ]
                => assert (x = y)
                  by (rewrite <- H, <- H'; first [ eapply IHt1 | eapply IHt2 ]; (assumption || reflexivity));
                     clear H H'

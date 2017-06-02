@@ -44,7 +44,7 @@ Module E.
     Local Notation mul   := (E.mul(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d)).
 
     Program Definition opp (P:point) : point := (Fopp (fst P), (snd P)).
-    Next Obligation. destruct P as [ [??]?]; cbv; fsatz. Qed.
+    Next Obligation. match goal with P : point |- _ => destruct P as [ [??]?] end; cbv; fsatz. Qed.
 
     Ltac t_step :=
       match goal with
@@ -203,7 +203,10 @@ Module E.
         cbv [compress decompress exist_option coordinates] in *; intros.
         t.
         intro.
-        apply (H0 f); [|congruence].
+        match goal with
+        | [ H0 : _ |- False ]
+          => apply (H0 f); [|congruence]
+        end.
         admit.
         intro. Prod.inversion_prod; subst.
         rewrite solve_correct in y.

@@ -145,7 +145,7 @@ Module Columns.
     Lemma eval_from_S {n}: forall i (inp : (list Z)^(S n)),
         eval_from i inp = eval_from (S i) (tl inp) + weight i * sum (hd inp).
     Proof using Type.
-      intros; cbv [eval_from].
+      intros i inp; cbv [eval_from].
       replace inp with (append (hd inp) (tl inp))
         by (simpl in *; destruct n; destruct inp; reflexivity).
       rewrite map_append, B.Positional.eval_step, hd_append, tl_append.
@@ -280,7 +280,7 @@ Module Columns.
 
       apply mapi_with'_linvariant; [|tauto].
 
-      clear n inp. intros until 0. intros Hst Hys [Hmod Hdiv].
+      clear n inp. intros n st x0 xs ys Hst Hys [Hmod Hdiv].
       pose proof (weight_positive n). pose proof (weight_divides n).
       autorewrite with push_basesystem_eval.
       destruct n; cbv [mapi_with] in *; simpl tuple in *;
@@ -338,7 +338,7 @@ Module Columns.
       List.map sum (update_nth i (cons x) l) =
       update_nth i (Z.add x) (List.map sum l).
     Proof using Type.
-      induction l; intros; destruct i; simpl; rewrite ?IHl; reflexivity.
+      induction l as [|a l IHl]; intros i x; destruct i; simpl; rewrite ?IHl; reflexivity.
     Qed.
 
     Lemma cons_to_nth_add_to_nth n i x t :
@@ -367,7 +367,7 @@ Module Columns.
 
     Lemma map_sum_nils n : map sum (nils n) = B.Positional.zeros n.
     Proof using Type.
-      cbv [nils B.Positional.zeros]; induction n; [reflexivity|].
+      cbv [nils B.Positional.zeros]; induction n as [|n]; [reflexivity|].
       change (repeat nil (S n)) with (@nil Z :: repeat nil n).
       rewrite map_repeat, sum_nil. reflexivity.
     Qed.

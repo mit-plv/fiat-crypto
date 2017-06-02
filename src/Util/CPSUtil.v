@@ -48,7 +48,7 @@ Fixpoint map_cps {A B} (g : A->B) ls
   end.
 Lemma map_cps_correct {A B} g ls: forall {T} f,
     @map_cps A B g ls T f = f (map g ls).
-Proof. induction ls; simpl; intros; rewrite ?IHls; reflexivity. Qed.
+Proof. induction ls as [|?? IHls]; simpl; intros; rewrite ?IHls; reflexivity. Qed.
 Create HintDb uncps discriminated. Hint Rewrite @map_cps_correct : uncps.
 
 Fixpoint flat_map_cps {A B} (g:A->forall {T}, (list B->T)->T) (ls : list A) {T} (f:list B->T)  :=
@@ -61,7 +61,7 @@ Lemma flat_map_cps_correct {A B} (g:A->forall {T}, (list B->T)->T) ls :
     (forall x T h, @g x T h = h (g x id)) ->
     @flat_map_cps A B g ls T f = f (List.flat_map (fun x => g x id) ls).
 Proof.
-  induction ls; intros; [reflexivity|].
+  induction ls as [|?? IHls]; intros T f H; [reflexivity|].
   simpl flat_map_cps. simpl flat_map.
   rewrite H; erewrite IHls by eassumption.
   reflexivity.
@@ -81,7 +81,7 @@ Fixpoint from_list_default'_cps {A} (d y:A) n xs:
 Lemma from_list_default'_cps_correct {A} n : forall d y l {T} f,
     @from_list_default'_cps A d y n l T f = f (Tuple.from_list_default' d y n l).
 Proof.
-  induction n; intros; simpl; [reflexivity|].
+  induction n as [|? IHn]; intros; simpl; [reflexivity|].
   break_match; subst; apply IHn.
 Qed.
 Definition from_list_default_cps {A} (d:A) n (xs:list A) :
@@ -136,7 +136,7 @@ Lemma on_tuple_cps_correct {A B} d (g:list A -> forall {T}, (list B->T)->T)
       (Hg : forall x {T} h, @g x T h = h (g x id)) : forall H,
     @on_tuple_cps A B d g n m xs T f = f (@Tuple.on_tuple A B (fun x => g x id) n m H xs).
 Proof.
-  cbv [on_tuple_cps Tuple.on_tuple]; intros.
+  cbv [on_tuple_cps Tuple.on_tuple]; intros H.
   rewrite to_list_cps_correct, Hg, from_list_default_cps_correct.
   rewrite (Tuple.from_list_default_eq _ _ _ (H _ (Tuple.length_to_list _))).
   reflexivity.
@@ -188,7 +188,7 @@ Lemma fold_right_cps2_correct {A B} g a0 l : forall {T} f,
   (forall b a T h, @g b a T h = h (@g b a A id)) ->
   @fold_right_cps2 A B g a0 l T f = f (List.fold_right (fun b a => @g b a A id) a0 l).
 Proof.
-  induction l; intros; [reflexivity|].
+  induction l as [|?? IHl]; intros T f H; [reflexivity|].
   simpl fold_right_cps2. simpl fold_right.
   rewrite H; erewrite IHl by eassumption.
   rewrite H; reflexivity.
@@ -225,7 +225,7 @@ Fixpoint fold_right_cps {A B} (g:B->A->A) (a0:A) (l:list B) {T} (f:A->T) :=
   end.
 Lemma fold_right_cps_correct {A B} g a0 l: forall {T} f,
     @fold_right_cps A B g a0 l T f = f (List.fold_right g a0 l).
-Proof. induction l; intros; simpl; rewrite ?IHl; auto. Qed.
+Proof. induction l as [|? l IHl]; intros; simpl; rewrite ?IHl; auto. Qed.
 Hint Rewrite @fold_right_cps_correct : uncps.
 
 Definition fold_right_no_starter_cps {A} g ls {T} (f:option A->T) :=
@@ -278,7 +278,7 @@ Module Tuple.
   Lemma mapi_with'_cps_correct {S A B n} : forall i f start xs T ret,
   (forall i s a R (ret:_->R), f i s a R ret = ret (f i s a _ id)) ->
   @mapi_with'_cps S A B n i f start xs T ret = ret (mapi_with' i (fun i s a => f i s a _ id) start xs).
-  Proof. induction n; intros; simpl; rewrite H, ?IHn by assumption; reflexivity. Qed.
+  Proof. induction n as [|n IHn]; intros i f start xs T ret H; simpl; rewrite H, ?IHn by assumption; reflexivity. Qed.
   Lemma mapi_with_cps_correct {S A B n} f start xs T ret
   (H:forall i s a R (ret:_->R), f i s a R ret = ret (f i s a _ id))
   : @mapi_with_cps S A B n f start xs T ret = ret (mapi_with (fun i s a => f i s a _ id) start xs).

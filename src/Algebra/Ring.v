@@ -4,6 +4,7 @@ Require Import Coq.Classes.Morphisms.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.OnSubterms.
 Require Import Crypto.Util.Tactics.Revert.
+Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.Group Crypto.Algebra.Monoid.
 Require Coq.ZArith.ZArith Coq.PArith.PArith.
 
@@ -16,7 +17,7 @@ Section Ring.
 
   Lemma mul_0_l : forall x, 0 * x = 0.
   Proof using Type*.
-    intros.
+    intros x.
     assert (0*x = 0*x) as Hx by reflexivity.
     rewrite <-(right_identity 0), right_distributive in Hx at 1.
     assert (0*x + 0*x - 0*x = 0*x - 0*x) as Hxx by (rewrite Hx; reflexivity).
@@ -25,7 +26,7 @@ Section Ring.
 
   Lemma mul_0_r : forall x, x * 0 = 0.
   Proof using Type*.
-    intros.
+    intros x.
     assert (x*0 = x*0) as Hx by reflexivity.
     rewrite <-(left_identity 0), left_distributive in Hx at 1.
     assert (opp (x*0) + (x*0 + x*0)  = opp (x*0) + x*0) as Hxx by (rewrite Hx; reflexivity).
@@ -331,7 +332,7 @@ Section of_Z.
   Lemma of_Z_sub_1_r :
     forall x, of_Z (Z.sub x 1) = Rsub (of_Z x) Rone.
   Proof using Type*.
-    induction x.
+    induction x as [|p|].
     { simpl; rewrite ring_sub_definition, !left_identity;
         reflexivity. }
     { case_eq (1 ?= p)%positive; intros;
@@ -362,19 +363,27 @@ Section of_Z.
   Lemma of_Z_add : forall a b,
       of_Z (Z.add a b) = Radd (of_Z a) (of_Z b).
   Proof using Type*.
-    intros.
+    intros a b.
     let x := match goal with |- ?x => x end in
     let f := match (eval pattern b in x) with ?f _ => f end in
     apply (Z.peano_ind f); intros.
     { rewrite !right_identity. reflexivity. }
-    { replace (a + Z.succ x) with ((a + x) + 1) by ring.
+    { match goal with
+      | [ |- context[?a + Z.succ ?x'] ]
+        => rename x' into x
+      end.
+      replace (a + Z.succ x) with ((a + x) + 1) by ring.
       replace (Z.succ x) with (x+1) by ring.
-      rewrite !of_Z_add_1_r, H.
+      rewrite !of_Z_add_1_r; rewrite_hyp *.
       rewrite associative; reflexivity. }
-    { replace (a + Z.pred x) with ((a+x)-1)
+    { match goal with
+      | [ |- context[?a + Z.pred ?x'] ]
+        => rename x' into x
+      end.
+      replace (a + Z.pred x) with ((a+x)-1)
         by (rewrite <-Z.sub_1_r; ring).
       replace (Z.pred x) with (x-1) by apply Z.sub_1_r.
-      rewrite !of_Z_sub_1_r, H.
+      rewrite !of_Z_sub_1_r; rewrite_hyp *.
       rewrite !ring_sub_definition.
       rewrite associative; reflexivity. }
   Qed.
@@ -382,7 +391,7 @@ Section of_Z.
   Lemma of_Z_mul : forall a b,
       of_Z (Z.mul a b) = Rmul (of_Z a) (of_Z b).
   Proof using Type*.
-    intros.
+    intros a b.
     let x := match goal with |- ?x => x end in
     let f := match (eval pattern b in x) with ?f _ => f end in
     apply (Z.peano_ind f); intros until 0; try intro IHb.

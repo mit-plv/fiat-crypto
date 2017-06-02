@@ -10,10 +10,12 @@ Definition sumwise {A B} (RA:relation A) (RB : relation B) : relation (A + B)
                 | _, _ => False
                 end.
 
-Global Instance Equivalence_sumwise {A B} {RA:relation A} {RB:relation B}
-       {RA_equiv:Equivalence RA} {RB_equiv:Equivalence RB}
-  : Equivalence (sumwise RA RB).
+Global Instance Equivalence_sumwise
+  : forall {A B} {RA:relation A} {RB:relation B}
+           {RA_equiv:Equivalence RA} {RB_equiv:Equivalence RB},
+    Equivalence (sumwise RA RB).
 Proof.
+  intros A B RA RB RA_equiv RB_equiv.
   split; repeat intros [?|?]; simpl; trivial; destruct RA_equiv, RB_equiv; try tauto; eauto.
 Qed.
 

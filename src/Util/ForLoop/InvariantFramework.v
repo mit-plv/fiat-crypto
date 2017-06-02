@@ -16,7 +16,7 @@ Lemma repeat_function_ind {stateT} (P : nat -> stateT -> Prop)
   : P 0 (repeat_function body count st).
 Proof.
   revert dependent st; revert dependent body; revert dependent P.
-  induction count; intros; [ exact Pbefore | ].
+  induction count as [|? IHcount]; intros P body Pbody st Pbefore; [ exact Pbefore | ].
   { rewrite repeat_function_unroll1_end; apply Pbody; [ omega | ].
     apply (IHcount (fun c => P (S c))); auto with omega. }
 Qed.

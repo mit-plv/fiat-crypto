@@ -288,7 +288,7 @@ Module Import Bounds.
     := interp_flat_type_rel_pointwise (@is_bounded_by').
 
   Local Arguments interp_base_type !_ / .
-  Global Instance dec_eq_interp_flat_type {T} : DecidableRel (@eq (interp_flat_type interp_base_type T)) | 10.
+  Global Instance dec_eq_interp_flat_type : forall {T}, DecidableRel (@eq (interp_flat_type interp_base_type T)) | 10.
   Proof.
     induction T; destruct_head base_type; simpl; exact _.
   Defined.

@@ -123,8 +123,11 @@ Module Projective.
       end.
     Next Obligation.
     Proof.
-      destruct P as [p ?]; destruct p as [p Z1]; destruct p as [X1 Y1].
-      destruct Q as [q ?]; destruct q as [q Z2]; destruct q as [X2 Y2].
+      match goal with
+      | [ |- match (let (_, _) := proj1_sig ?P in let (_, _) := _ in let (_, _) := proj1_sig ?Q in _) with _ => _ end ]
+        => destruct P as [p ?]; destruct p as [p Z1]; destruct p as [X1 Y1];
+             destruct Q as [q ?]; destruct q as [q Z2]; destruct q as [X2 Y2]
+      end.
       t.
       all: try abstract fsatz.
       (* FIXME: the final fsatz starts requiring 56 <> 0 if

@@ -38,7 +38,8 @@ Global Instance Equivalence_and {A B RA RB}
        {Equivalence_RB:@Equivalence B RB}
        : Equivalence (fun ab AB => RA (fst ab) (fst AB) /\ RB (snd ab) (snd AB)).
 Proof.
-  destruct Equivalence_RA as [], Equivalence_RB as []; cbv in *|-.
+  do 2 match goal with H : Equivalence _ |- _ => destruct H end;
+    cbv in *|-.
   repeat match goal with
            | _ => intro
            | _ => split

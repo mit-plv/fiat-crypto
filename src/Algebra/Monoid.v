@@ -12,7 +12,7 @@ Section Monoid.
   Lemma cancel_right z iz (Hinv:op z iz = id) :
     forall x y, x * z = y * z <-> x = y.
   Proof using Type*.
-    split; intros.
+    intros x y; split; intro.
     { assert (op (op x z) iz = op (op y z) iz) as Hcut by (rewrite_hyp ->!*; reflexivity).
       rewrite <-associative in Hcut.
       rewrite <-!associative, !Hinv, !right_identity in Hcut; exact Hcut. }
@@ -22,7 +22,7 @@ Section Monoid.
   Lemma cancel_left z iz (Hinv:op iz z = id) :
     forall x y, z * x = z * y <-> x = y.
   Proof using Type*.
-    split; intros.
+    intros x y; split; intros.
     { assert (op iz (op z x) = op iz (op z y)) as Hcut by (rewrite_hyp ->!*; reflexivity).
       rewrite !associative, !Hinv, !left_identity in Hcut; exact Hcut. }
     { rewrite_hyp ->!*; reflexivity. }

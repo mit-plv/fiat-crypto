@@ -64,6 +64,7 @@ Section language.
                         then fun pf => left (base_type_code_bl_transparent _ _ pf)
                         else fun pf => right _) eq_refl).
     { clear -pf base_type_code_lb.
+      let pf := pf in
       abstract (intro; erewrite base_type_code_lb in pf by eassumption; congruence). }
   Defined.
 

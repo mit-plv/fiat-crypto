@@ -99,8 +99,9 @@ Global Instance decode_proj n W (dec : W -> Z)
   : @decode n W {| decode := dec |} =~> dec.
 Proof. reflexivity. Qed.
 
-Global Instance decode_if_bool n W (decode : decoder n W) (b : bool) x y
-  : decode (if b then x else y)
+Global Instance decode_if_bool n W (decode : decoder n W)
+  : forall (b : bool) x y,
+    decode (if b then x else y)
     =~> if b then decode x else decode y.
 Proof. destruct b; reflexivity. Qed.
 

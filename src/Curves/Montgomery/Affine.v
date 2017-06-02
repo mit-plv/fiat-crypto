@@ -2,6 +2,7 @@ Require Import Crypto.Algebra.Field.
 Require Import Crypto.Util.GlobalSettings.
 Require Import Crypto.Util.Sum Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Spec.MontgomeryCurve Crypto.Spec.WeierstrassCurve.
 
 Module M.
@@ -30,7 +31,7 @@ Module M.
       | (x, y) => (x, -y)
       | ∞ => ∞
       end.
-    Next Obligation. Proof. destruct P; cbv; break_match; trivial; fsatz. Qed.
+    Next Obligation. Proof. destruct_head @M.point; cbv; break_match; trivial; fsatz. Qed.
 
     Local Notation add := (M.add(b_nonzero:=b_nonzero)).
     Local Notation point := (@M.point F Feq Fadd Fmul a b).
@@ -52,14 +53,14 @@ Module M.
         | (x, y) => ((x + a/3)/b, y/b)
         | _ => ∞
         end.
-      Next Obligation. Proof. destruct P; cbv; break_match; trivial; fsatz. Qed.
+      Next Obligation. Proof. destruct_head' @point; cbv; break_match; trivial; fsatz. Qed.
 
       Program Definition of_Weierstrass (P:Wpoint) : point :=
         match W.coordinates P return F*F+∞ with
         | (x,y) => (b*x-a/3, b*y)
         | _ => ∞
         end.
-      Next Obligation. Proof. destruct P; cbv; break_match; trivial; fsatz. Qed.
+      Next Obligation. Proof. destruct_head' @Wpoint; cbv; break_match; trivial; fsatz. Qed.
     End MontgomeryWeierstrass.
   End MontgomeryCurve.
 End M.

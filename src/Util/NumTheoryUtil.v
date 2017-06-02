@@ -11,7 +11,7 @@ Lemma in_ZPGroup_range (n : Z) (n_pos : 1 < n) (p : Z) :
   List.In p (FGroup.s (ZPGroup n n_pos)) -> 1 <= p < n.
 Proof.
 unfold ZPGroup; simpl; intros Hin.
-pose proof (IGroup.isupport_incl Z (pmult n) (mkZp n) 1 Z.eq_dec).
+pose proof (IGroup.isupport_incl Z (pmult n) (mkZp n) 1 Z.eq_dec) as H.
 unfold List.incl in *.
 specialize (H p Hin).
 apply in_mkZp in H; auto.
@@ -29,7 +29,7 @@ Lemma generator_subgroup_is_group p (lt_1_p : 1 < p): forall y,
   -> forall a, List.In a (FGroup.s (ZPGroup p lt_1_p)) ->
   List.In a (EGroup.support Z.eq_dec y (ZPGroup p lt_1_p)).
 Proof.
-  intros.
+  intros y H a H0.
   destruct H as [in_ZPGroup_y y_order].
   pose proof (EGroup.support_incl_G Z Z.eq_dec (pmult p) y (ZPGroup p lt_1_p) in_ZPGroup_y).
   eapply Permutation.permutation_in; [|eauto].
@@ -67,7 +67,7 @@ Qed.
 
 Lemma p_odd : Z.odd p = true.
 Proof using neq_p_2 prime_p.
-  pose proof (Z.prime_odd_or_2 p prime_p).
+  pose proof (Z.prime_odd_or_2 p prime_p) as H.
   destruct H; auto.
 Qed.
 
@@ -82,7 +82,7 @@ Qed.
 Lemma fermat_little: forall a (a_nonzero : a mod p <> 0),
   a ^ (p - 1) mod p = 1.
 Proof using prime_p.
-  intros.
+  intros a a_nonzero.
   assert (rel_prime a p). {
     apply rel_prime_mod_rev; try prime_bound.
     assert (0 < p) as p_pos by prime_bound.
@@ -97,7 +97,7 @@ Qed.
 
 Lemma fermat_inv : forall a, a mod p <> 0 -> ((a^(p-2) mod p) * a) mod p = 1.
 Proof using prime_p.
-  intros.
+  intros a H.
   pose proof (prime_ge_2 _ prime_p).
   rewrite Zmult_mod_idemp_l.
   replace (a ^ (p - 2) * a) with (a^(p-1)).
@@ -120,7 +120,7 @@ Qed.
 Lemma euler_criterion_square_reverse : forall a (a_nonzero : a mod p <> 0),
   (exists b, b * b mod p = a) -> (a ^ x mod p = 1).
 Proof using Type*.
-  intros ? ? a_square.
+  intros a a_nonzero a_square.
   destruct a_square as [b a_square].
   assert (b mod p <> 0) as b_nonzero. {
     intuition.
@@ -170,7 +170,7 @@ Ltac ereplace x := match type of x with ?t =>
 Lemma euler_criterion_square : forall a (a_range : 1 <= a <= p - 1)
   (pow_a_x : a ^ x mod p = 1), exists b, b * b mod p = a.
 Proof using Type*.
-  intros.
+  intros a a_range pow_a_x.
   destruct (exists_primitive_root_power) as [y [in_ZPGroup_y [y_order gpow_y]]]; auto.
   destruct (gpow_y a a_range) as [j [j_range pow_y_j]]; clear gpow_y.
   rewrite Z.mod_pow in pow_a_x by prime_bound.
@@ -207,7 +207,7 @@ Qed.
 Lemma euler_criterion : forall a (a_range : 1 <= a <= p - 1),
   (a ^ x mod p = 1) <-> exists b, b * b mod p = a.
 Proof using Type*.
-  intros; split. {
+  intros a a_range; split. {
     exact (euler_criterion_square _ a_range).
   } {
     apply euler_criterion_square_reverse; auto.
@@ -219,21 +219,21 @@ Qed.
 Lemma euler_criterion_nonsquare : forall a (a_range : 1 <= a <= p - 1),
   (a ^ x mod p <> 1) <-> ~ (exists b, b * b mod p = a).
 Proof using Type*.
-  split; intros A B; apply (euler_criterion a a_range) in B; congruence.
+  intros a a_range; split; intros A B; apply (euler_criterion a a_range) in B; congruence.
 Qed.
 
 End EulerCriterion.
 
 Lemma divide2_1mod4 : forall x (x_1mod4 : x mod 4 = 1) (x_nonneg : 0 <= x), (2 | x / 2).
 Proof.
-  intros.
+  intros x x_1mod4 x_nonneg0.
   assert (Z.to_nat x mod 4 = 1)%nat as x_1mod4_nat. {
     replace 1 with (Z.of_nat 1) in * by auto.
     replace (x mod 4) with (Z.of_nat (Z.to_nat x mod 4)) in *
       by (rewrite mod_Zmod by omega; rewrite Z2Nat.id; auto).
     apply Nat2Z.inj in x_1mod4; auto.
   }
-  remember (Z.to_nat x / 4)%nat as c.
+  remember (Z.to_nat x / 4)%nat as c eqn:Heqc.
   destruct (divide2_1mod4_nat c (Z.to_nat x) Heqc x_1mod4_nat) as [k k_id].
   replace 2%nat with (Z.to_nat 2) in * by auto.
   apply inj_eq in k_id.
@@ -247,7 +247,7 @@ Qed.
 
 Lemma minus1_even_pow : forall x y, (2 | y) -> (1 < x) -> (0 <= y) -> ((x - 1) ^ y mod x = 1).
 Proof.
-  intros ? ? divide_2_y lt_1_x y_nonneg.
+  intros x y divide_2_y lt_1_x y_nonneg.
   apply Zdivide_Zdiv_eq in divide_2_y; try omega.
   rewrite divide_2_y.
   rewrite Z.pow_mul_r by omega.
@@ -261,7 +261,7 @@ Proof.
     do 2 rewrite Zmod_1_l by auto; auto.
   }
   rewrite <- (Z2Nat.id (y / 2)) by omega.
-  induction (Z.to_nat (y / 2)); try apply Zmod_1_l; auto.
+  induction (Z.to_nat (y / 2)) as [|n IHn]; try apply Zmod_1_l; auto.
   rewrite Nat2Z.inj_succ.
   rewrite Z.pow_succ_r by apply Zle_0_nat.
   rewrite Zmult_mod.
@@ -281,7 +281,7 @@ Qed.
 Lemma div2_p_1mod4 : forall (p : Z) (prime_p : prime p) (neq_p_2: p <> 2),
   (p / 2) * 2 + 1 = p.
 Proof.
-  intros.
+  intros p prime_p neq_p_2.
   destruct (Z.prime_odd_or_2 p prime_p); intuition.
   rewrite <- Zdiv2_div.
   pose proof (Zdiv2_odd_eqn p); break_match; break_match_hyps; congruence || omega.
@@ -290,7 +290,7 @@ Qed.
 Lemma minus1_square_1mod4 : forall (p : Z) (prime_p : prime p),
   (p mod 4 = 1)%Z -> exists b : Z, (b * b mod p = p - 1)%Z.
 Proof.
-  intros.
+  intros p prime_p H.
   assert (p <> 2) as neq_p_2 by (apply prime_1mod4_neq2; auto).
   apply (euler_criterion (p / 2) p prime_p).
   + auto.

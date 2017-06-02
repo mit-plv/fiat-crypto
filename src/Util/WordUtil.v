@@ -66,9 +66,9 @@ Module Word.
   Theorem weqb_hetero_homo_true_iff : forall sz x y,
       @weqb_hetero sz sz x y = true <-> x = y.
   Proof.
-    etransitivity; [ apply weqb_hetero_true_iff | ].
+    intros sz x y; etransitivity; [ apply weqb_hetero_true_iff | ].
     split; [ intros [pf H] | intro ]; try (subst y; exists eq_refl; reflexivity).
-    revert y H; induction x as [|b n x IHx]; intros.
+    revert y H; induction x as [|b n x IHx]; intros y H.
     { subst y;
         refine match pf in (_ = z)
                      return match z return 0 = z -> Prop with
@@ -184,7 +184,7 @@ Section Pow2.
 
   Lemma Zpow_pow2 : forall n, pow2 n = Z.to_nat (2 ^ (Z.of_nat n)).
   Proof.
-    induction n; intros; auto.
+    induction n as [|n IHn]; intros; auto.
     simpl pow2.
     rewrite Nat2Z.inj_succ.
     rewrite Z.pow_succ_r by apply Zle_0_nat.
@@ -196,7 +196,7 @@ Section Pow2.
 
   Lemma Npow2_gt0 : forall x, (0 < Npow2 x)%N.
   Proof.
-    intros; induction x.
+    intros x; induction x as [|x IHx].
 
     - simpl; apply N.lt_1_r; intuition.
 
@@ -218,7 +218,7 @@ Section Pow2.
 
   Lemma Npow2_N: forall n, Npow2 n = (2 ^ N.of_nat n)%N.
   Proof.
-    induction n.
+    induction n as [|n IHn].
 
     - simpl; intuition.
 
@@ -232,7 +232,7 @@ Section Pow2.
       (Z.log2 (Z.of_N x) < Z.of_nat n)%Z
    -> (x < Npow2 n)%N.
   Proof.
-    intros.
+    intros x n H.
     apply N2Z.inj_lt.
     rewrite Npow2_N, N2Z.inj_pow, nat_N_Z.
     destruct (N.eq_dec x 0%N) as [e|e].
@@ -247,7 +247,7 @@ Section Pow2.
 
   Lemma Npow2_ordered: forall n m, (n <= m)%nat -> (Npow2 n <= Npow2 m)%N.
   Proof.
-    induction n; intros m H; try rewrite Npow2_succ.
+    induction n as [|n IHn]; intros m H; try rewrite Npow2_succ.
 
     - simpl; apply Npow2_ge1.
 
@@ -299,7 +299,7 @@ Section WordToN.
   Lemma wbit_large {n} (x: word n) (k: nat)
     : n <= k -> wbit x k = false.
   Proof.
-    revert k; induction x, k; intro H; simpl; try reflexivity; try omega.
+    revert k; induction x as [|b n x IHx], k; intro H; simpl; try reflexivity; try omega.
     apply IHx; omega.
   Qed.
 
@@ -354,17 +354,17 @@ Section WordToN.
             end = N.double x) as kill_match by (
       induction x; simpl; intuition).
 
-    induction n; intros.
+    induction n as [|n IHn]; intros x k.
 
     - shatter x; simpl; intuition.
 
     - revert IHn; rewrite <- (N2Nat.id k).
-      generalize (N.to_nat k) as k'; intros; clear k.
+      generalize (N.to_nat k) as k'; intros k' IHn; clear k.
       rewrite Nat2N.id in *.
 
-      induction k'.
+      induction k' as [|k' IHk'].
 
-      + clear IHn; induction x; simpl; intuition.
+      + clear IHn; induction x as [|b ? x IHx]; simpl; intuition.
         destruct (wordToN x), b; simpl; intuition.
 
       + clear IHk'.
@@ -386,10 +386,11 @@ Section WordToN.
         destruct (whd x);
           try rewrite N.testbit_odd_succ;
           try rewrite N.testbit_even_succ;
+          let k' := k' in
           try abstract (
             unfold N.le; simpl;
             induction (N.of_nat k'); intuition;
-            try inversion H);
+            match goal with H : _ |- _ => solve [ inversion H ] end);
           rewrite IHn;
           rewrite Nat2N.id;
           reflexivity.
@@ -400,7 +401,7 @@ Section WordToN.
                               then N.testbit v (N.of_nat k)
                               else false.
   Proof.
-    revert k v; induction sz, k; intros; try reflexivity.
+    revert k v; induction sz as [|sz IHsz], k; intros v **; try reflexivity.
     { destruct v as [|p]; simpl; try reflexivity.
       destruct p; simpl; reflexivity. }
     { pose proof (fun v k => IHsz k (Npos v)) as IHszp.
@@ -483,7 +484,7 @@ Section WordToN.
   Lemma wordToN_split1: forall {n m} x,
     wordToN (@split1 n m x) = N.land (wordToN x) (wordToN (wones n)).
   Proof.
-    intros.
+    intros n m x.
 
     pose proof (Word.combine_split _ _ x) as C; revert C.
     generalize (split1 n m x) as a, (split2 n m x) as b.
@@ -494,7 +495,7 @@ Section WordToN.
     repeat rewrite wordToN_testbit.
     revert x a b.
 
-    induction n, m; intros;
+    induction n as [|n IHn], m; intros;
       shatter a; shatter b;
       induction (N.to_nat x) as [|n0];
       try rewrite <- (Nat2N.id n0);
@@ -506,7 +507,7 @@ Section WordToN.
   Lemma wordToN_split2: forall {n m} x,
     wordToN (@split2 n m x) = N.shiftr (wordToN x) (N.of_nat n).
   Proof.
-    intros.
+    intros n m x.
 
     pose proof (Word.combine_split _ _ x) as C; revert C.
     generalize (split1 n m x) as a, (split2 n m x) as b.
@@ -519,7 +520,7 @@ Section WordToN.
       try apply N_ge_0.
 
     revert x a b.
-    induction n, m; intros;
+    induction n as [|n IHn], m; intros;
       shatter a;
       try apply N_ge_0.
 
@@ -545,7 +546,7 @@ Section WordToN.
 
   Lemma wordToN_wones: forall x, wordToN (wones x) = N.ones (N.of_nat x).
   Proof.
-    induction x.
+    induction x as [|x IHx].
 
     - simpl; intuition.
 
@@ -576,7 +577,7 @@ Section WordToN.
     wordToN (@Word.combine n a m b)
       = N.lxor (N.shiftl (wordToN b) (N.of_nat n)) (wordToN a).
   Proof.
-    intros; symmetry.
+    intros n m a b; symmetry.
 
     replaceAt1 a with (Word.split1 _ _ (Word.combine a b))
       by (apply Word.split1_combine).
@@ -608,7 +609,7 @@ Section WordToN.
   Lemma NToWord_equal: forall n (x y: word n),
       wordToN x = wordToN y -> x = y.
   Proof.
-    intros.
+    intros n x y H.
     rewrite <- (NToWord_wordToN _ x).
     rewrite <- (NToWord_wordToN _ y).
     rewrite H; reflexivity.
@@ -617,7 +618,7 @@ Section WordToN.
   Lemma Npow2_ignore: forall {n} (x: word n),
     x = NToWord _ (wordToN x + Npow2 n).
   Proof.
-    intros.
+    intros n x.
     rewrite <- (NToWord_wordToN n x) at 1.
     repeat rewrite NToWord_nat.
     rewrite N2Nat.inj_add.
@@ -632,7 +633,7 @@ End WordToN.
 Section WordBounds.
   Lemma word_size_bound : forall {n} (w: word n), (wordToN w < Npow2 n)%N.
   Proof.
-    intros; pose proof (wordToNat_bound w) as B;
+    intros n w; pose proof (wordToNat_bound w) as B;
       rewrite of_nat_lt in B;
       rewrite <- Npow2_nat in B;
       rewrite N2Nat.id in B;
@@ -714,13 +715,13 @@ Section WordBounds.
   Lemma wordize_and: forall {n} (x y: word n),
     wordToN (wand x y) = N.land (wordToN x) (wordToN y).
   Proof.
-    intros.
+    intros n x y.
     apply N.bits_inj_iff; unfold N.eqf; intro k.
     rewrite N.land_spec.
     repeat rewrite wordToN_testbit.
     revert x y.
     generalize (N.to_nat k) as k'.
-    induction n; intros; shatter x; shatter y; simpl; [reflexivity|].
+    induction n as [|n IHn]; intros; shatter x; shatter y; simpl; [reflexivity|].
     induction k'; [reflexivity|].
     fold wand.
     rewrite IHn.
@@ -730,13 +731,13 @@ Section WordBounds.
   Lemma wordize_or: forall {n} (x y: word n),
     wordToN (wor x y) = N.lor (wordToN x) (wordToN y).
   Proof.
-    intros.
+    intros n x y.
     apply N.bits_inj_iff; unfold N.eqf; intro k.
     rewrite N.lor_spec.
     repeat rewrite wordToN_testbit.
     revert x y.
     generalize (N.to_nat k) as k'; clear k.
-    induction n; intros; shatter x; shatter y; simpl; [reflexivity|].
+    induction n as [|n IHn]; intros; shatter x; shatter y; simpl; [reflexivity|].
     induction k'; [reflexivity|].
     rewrite IHn.
     reflexivity.
@@ -756,7 +757,7 @@ Qed.
 
 Lemma weqb_false_iff : forall sz (x y : word sz), weqb x y = false <-> x <> y.
 Proof.
-  split; intros.
+  intros sz x y; split; intros.
   + intro eq_xy; apply weqb_true_iff in eq_xy; congruence.
   + case_eq (weqb x y); intros weqb_xy; auto.
     apply weqb_true_iff in weqb_xy.
@@ -786,7 +787,7 @@ Fixpoint correct_wordsize_eq (x y : nat) : wordsize_eq x y -> x = y
 
 Lemma correct_wordsize_eq_refl n pf : correct_wordsize_eq n n pf = eq_refl.
 Proof.
-  induction n; [ reflexivity | simpl ].
+  induction n as [|n IHn]; [ reflexivity | simpl ].
   rewrite IHn; reflexivity.
 Qed.
 
@@ -827,13 +828,13 @@ Definition clearbit {b} n {H:n < b} (w:word b) : word b :=
 
 Lemma wordToNat_wzero {n} : wordToNat (wzero n) = 0.
 Proof.
-  unfold wzero; induction n; simpl; try rewrite_hyp!*; omega.
+  unfold wzero; induction n as [|n IHn]; simpl; try rewrite_hyp!*; omega.
 Qed.
 
 Lemma wordToNat_combine : forall {a} (wa:word a) {b} (wb:word b),
   wordToNat (wa ++ wb) = wordToNat wa + 2^a * wordToNat wb.
 Proof.
-  induction wa; intros; simpl; rewrite ?IHwa; break_match; nia.
+  induction wa as [|??? IHwa]; intros; simpl; rewrite ?IHwa; break_match; nia.
 Qed.
 
 Lemma wordToNat_zext_ge {n m pf} (w:word m) : wordToNat (@zext_ge n m pf w) = wordToNat w.
@@ -853,7 +854,7 @@ Proof.
            | _ => I
            end.
     reflexivity. }
-  { intros; rewrite IHx; clear IHx; revert x.
+  { intros x' y y'; rewrite IHx; clear IHx; revert x.
     refine match x' in word Sn return match Sn return word Sn -> _ with
                                       | 0 => fun _ => True
                                       | S _ => fun x' => forall x, WS (f b' (whd x')) (bitwp f (x ++ y) (wtl x' ++ y')) = WS (f b' (whd (x' ++ y'))) (bitwp f (x ++ y) (wtl (x' ++ y')))
@@ -897,7 +898,7 @@ Proof.
       rewrite pow2_id in *.
   { assert (b - c = 0) by omega.
     assert (2^b <= 2^c) by auto using pow_le_mono_r with arith.
-    generalize dependent (b - c); intros; destruct x0; try omega; [].
+    generalize dependent (b - c); intros n x0 H0 H2; destruct x0; try omega; [].
     simpl; rewrite mul_0_r, add_0_r.
     rewrite mod_small by omega.
     omega. }
@@ -929,7 +930,7 @@ Proof.
       rewrite pow2_id in *.
   { assert (b - c = 0) by omega.
     assert (2^b <= 2^c) by auto using pow_le_mono_r with arith.
-    generalize dependent (b - c); intros; destruct x0; try omega.
+    generalize dependent (b - c); intros n x0 H0 H2; destruct x0; try omega.
     simpl; rewrite mul_0_r, add_0_r.
     rewrite mod_small by omega.
     omega. }
@@ -939,9 +940,9 @@ Qed.
 
 Lemma wordToNat_split1 : forall a b w, wordToNat (split1 a b w) = (wordToNat w) mod (2^a).
 Proof.
-  intro a; induction a.
+  intro a; induction a as [|a IHa].
   { reflexivity. }
-  { simpl; intros; rewrite IHa; clear IHa.
+  { simpl; intros b w; rewrite IHa; clear IHa.
     rewrite (shatter_word w); simpl.
     change (2^a + (2^a + 0)) with (2 * 2^a).
     rewrite (mul_comm 2 (2^a)).
@@ -983,7 +984,7 @@ Section Bounds.
 
   Lemma wordToN_wplus : bounds_2statement (@wplus _) Z.add.
   Proof.
-    intros.
+    intros sz x y H H0.
     rewrite <- wordize_plus; [rewrite N2Z.inj_add; reflexivity|].
     destruct (N.eq_dec (wordToN x + wordToN y) 0%N) as [e|e];
         [rewrite e; apply Npow2_gt0|].
@@ -1014,7 +1015,7 @@ Section Bounds.
 
   Lemma wordToN_wmult : bounds_2statement (@wmult _) Z.mul.
   Proof.
-    intros.
+    intros sz x y H H0.
     rewrite <- wordize_mult; [rewrite N2Z.inj_mul; reflexivity|].
     destruct (N.eq_dec (wordToN x * wordToN y) 0%N) as [e|e];
         [rewrite e; apply Npow2_gt0|].
@@ -1277,7 +1278,7 @@ Arguments wlast {_} _.
 Lemma combine_winit_wlast : forall {sz} a b (c:word (sz+1)),
     @combine sz a 1 b = c <-> a = winit c /\ b = (WS (wlast c) WO).
 Proof.
-  intros; split; unfold winit, wlast; intro H.
+  intros sz a b c; split; unfold winit, wlast; intro H.
 
   - rewrite <- H.
     rewrite split1_combine, split2_combine.
@@ -1289,7 +1290,7 @@ Proof.
   - destruct H as [H0 H1]; rewrite H0.
     replace b with (split2 sz 1 c); [apply combine_split|].
     rewrite H1.
-    generalize (split2 sz 1 c) as b'; intro.
+    generalize (split2 sz 1 c) as b'; intro b'.
     shatter b'.
     generalize (wtl b') as b''; intro;
       shatter b''; reflexivity.
@@ -1309,7 +1310,7 @@ Qed.
 Lemma WordNZ_split1 : forall {n m} w,
     Z.of_N (Word.wordToN (Word.split1 n m w)) = Z.pow2_mod (Z.of_N (Word.wordToN w)) (Z.of_nat n).
 Proof.
-  intros; unfold Z.pow2_mod.
+  intros n m w; unfold Z.pow2_mod.
   rewrite wordToN_split1.
   apply Z.bits_inj_iff'; intros k Hpos.
   rewrite Z.land_spec.
@@ -1324,28 +1325,28 @@ Proof.
     apply Z2N.inj_le; [apply Nat2Z.is_nonneg|assumption|].
     etransitivity; [|apply N.ge_le; eassumption].
     apply N.eq_le_incl.
-    induction n; simpl; reflexivity.
+    induction n as [|n IHn]; simpl; reflexivity.
 
   - rewrite Z.ones_spec_low, N.ones_spec_low;
       [reflexivity|assumption|split; [omega|]].
     apply Z2N.inj_lt; [assumption|apply Nat2Z.is_nonneg|].
     eapply N.lt_le_trans; [eassumption|].
     apply N.eq_le_incl.
-    induction n; simpl; reflexivity.
+    induction n as [|n IHn]; simpl; reflexivity.
 Qed.
 
 (* TODO : automate *)
 Lemma WordNZ_split2 : forall {n m} w,
     Z.of_N (Word.wordToN (Word.split2 n m w)) = Z.shiftr (Z.of_N (Word.wordToN w)) (Z.of_nat n).
 Proof.
-  intros; unfold Z.pow2_mod.
+  intros n m w; unfold Z.pow2_mod.
   rewrite wordToN_split2.
   apply Z.bits_inj_iff'; intros k Hpos.
   rewrite Z2N.inj_testbit; [|assumption].
   rewrite Z.shiftr_spec, N.shiftr_spec; [|apply N2Z.inj_le; rewrite Z2N.id|]; try assumption.
   rewrite Z2N.inj_testbit; [f_equal|omega].
   rewrite Z2N.inj_add; [f_equal|assumption|apply Nat2Z.is_nonneg].
-  induction n; simpl; reflexivity.
+  induction n as [|n IHn]; simpl; reflexivity.
 Qed.
 
 Lemma WordNZ_range : forall {n} B w,

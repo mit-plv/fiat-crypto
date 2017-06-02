@@ -212,17 +212,17 @@ Module bounds.
   Definition add_bounded_pf (x y : bounded_pf) : bounded_pf.
   Proof.
     exists (map_bounded_f2 plus false (proj1_sig x) (proj1_sig y)).
-    simpl; abstract (destruct x, y; simpl; omega).
+    simpl; let x := x in let y := y in abstract (destruct x, y; simpl; omega).
   Defined.
   Definition mul_bounded_pf (x y : bounded_pf) : bounded_pf.
   Proof.
     exists (map_bounded_f2 mult false (proj1_sig x) (proj1_sig y)).
-    simpl; abstract (destruct x, y; simpl; nia).
+    simpl; let x := x in let y := y in abstract (destruct x, y; simpl; nia).
   Defined.
   Definition sub_bounded_pf (x y : bounded_pf) : bounded_pf.
   Proof.
     exists (map_bounded_f2 minus true (proj1_sig x) (proj1_sig y)).
-    simpl; abstract (destruct x, y; simpl; omega).
+    simpl; let x := x in let y := y in abstract (destruct x, y; simpl; omega).
   Defined.
   Definition interp_base_type_bounds (v : base_type) : Type :=
     match v with

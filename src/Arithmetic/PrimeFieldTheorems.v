@@ -66,9 +66,9 @@ Module F.
       rewrite F.square_iff, <-(euler_criterion (q/2)) by (trivial || omega); reflexivity.
     Qed.
 
-    Global Instance Decidable_square (x:F q) : Decidable (exists y, y*y = x).
+    Global Instance Decidable_square : forall (x:F q), Decidable (exists y, y*y = x).
     Proof.
-      destruct (dec (x = 0)).
+      intro x; destruct (dec (x = 0)).
       { left. abstract (exists 0; subst; apply Ring.mul_0_l). }
       { eapply Decidable_iff_to_impl; [eapply euler_criterion; assumption | exact _]. }
     Defined.
@@ -186,7 +186,7 @@ Module F.
 
     Lemma mul_square_sqrt_minus1 : forall x, sqrt_minus1 * x * (sqrt_minus1 * x) = F.opp (x * x).
     Proof using prime_q sqrt_minus1_valid.
-      intros.
+      intros x.
       transitivity (F.opp 1 * (x * x)); [ | field].
       rewrite <-sqrt_minus1_valid.
       field.
@@ -208,7 +208,7 @@ Module F.
     Lemma sqrt_5mod8_correct : forall x,
       ((exists y, y*y = x) <-> (sqrt_5mod8 x)*(sqrt_5mod8 x) = x).
     Proof using Type*.
-      cbv [sqrt_5mod8]; intros.
+      cbv [sqrt_5mod8]; intros x.
       destruct (F.eq_dec x 0).
       {
         repeat match goal with

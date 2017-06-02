@@ -115,7 +115,7 @@ Section Ops51.
                  let eval := Positional.Fdecode (m:=m) wt in
                  eval (add a b) = (eval a  + eval b)%F }.
   Proof.
-    eexists; cbv beta zeta; intros.
+    eexists; cbv beta zeta; intros a b.
     pose proof wt_nonzero.
     let x := constr:(
         Positional.add_cps (n := sz) wt a b id) in
@@ -128,7 +128,7 @@ Section Ops51.
                  let eval := Positional.Fdecode (m:=m) wt in
                  eval (sub a b) = (eval a - eval b)%F}.
   Proof.
-    eexists; cbv beta zeta; intros.
+    eexists; cbv beta zeta; intros a b.
     pose proof wt_nonzero.
     let x := constr:(
          Positional.sub_cps (n:=sz) (coef := coef) wt a b id) in
@@ -141,7 +141,7 @@ Section Ops51.
                  let eval := Positional.Fdecode (m := m) wt in
                  eval (opp a) = F.opp (eval a)}.
   Proof.
-    eexists; cbv beta zeta; intros.
+    eexists; cbv beta zeta; intros a.
     pose proof wt_nonzero.
     let x := constr:(
          Positional.opp_cps (n:=sz) (coef := coef) wt a id) in
@@ -154,7 +154,7 @@ Section Ops51.
                  let eval := Positional.Fdecode (m := m) wt in
                  eval (mul a b) = (eval a  * eval b)%F}.
   Proof.
-    eexists; cbv beta zeta; intros.
+    eexists; cbv beta zeta; intros a b.
     pose proof wt_nonzero.
     let x := constr:(
          Positional.mul_cps (n:=sz) (m:=sz2) wt a b
@@ -190,7 +190,7 @@ Section Ops51.
                  let eval := Positional.Fdecode (m := m) wt in
                  eval (square a) = (eval a  * eval a)%F}.
   Proof.
-    eexists; cbv beta zeta; intros.
+    eexists; cbv beta zeta; intros a.
     pose proof wt_nonzero.
     let x := constr:(
          Positional.mul_cps (n:=sz) (m:=sz2) wt a a
@@ -221,7 +221,7 @@ Section Ops51.
                  let eval := Positional.Fdecode (m := m) wt in
                  eval (carry a) = eval a}.
   Proof.
-    eexists; cbv beta zeta; intros.
+    eexists; cbv beta zeta; intros a.
     pose proof wt_nonzero. pose proof wt_divides_chain1.
     pose proof div_mod. pose proof wt_divides_chain2.
     let x := constr:(
@@ -262,7 +262,7 @@ Section Ops51.
                  let eval := Positional.Fdecode (m := m) wt in
                  eval (freeze a) = eval a}.
   Proof.
-    eexists; cbv beta zeta; intros.
+    eexists; cbv beta zeta; intros a ?.
     pose proof wt_nonzero. pose proof wt_pos.
     pose proof div_mod. pose proof wt_divides_full_pos.
     pose proof wt_multiples.

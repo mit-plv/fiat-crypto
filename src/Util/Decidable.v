@@ -16,8 +16,8 @@ Notation DecidableRel R := (forall x y, Decidable (R x y)).
 Global Instance hprop_eq_dec {A} `{DecidableRel (@eq A)} : IsHPropRel (@eq A) | 10.
 Proof. repeat intro; apply UIP_dec; trivial with nocore. Qed.
 
-Global Instance eq_dec_hprop {A} {x y : A} `{hp : IsHProp A} : Decidable (@eq A x y) | 5.
-Proof. left; apply hp. Qed.
+Global Instance eq_dec_hprop {A} {x y : A} {hp : IsHProp A} : Decidable (@eq A x y) | 5.
+Proof. left; auto. Qed.
 
 Ltac no_equalities_about x0 y0 :=
   lazymatch goal with
@@ -111,15 +111,16 @@ Global Instance dec_ge_Z : DecidableRel BinInt.Z.ge := ZArith_dec.Z_ge_dec.
 Global Instance dec_match_pair {A B} {P : A -> B -> Prop} {x : A * B}
        {HD : Decidable (P (fst x) (snd x))}
   : Decidable (let '(a, b) := x in P a b) | 1.
-Proof. destruct x; assumption. Defined.
+Proof. edestruct (_ : _ * _); assumption. Defined.
 
 Lemma not_not P {d:Decidable P} : not (not P) <-> P.
 Proof. destruct (dec P); intuition. Qed.
 
-Global Instance dec_ex_forall_not T (P:T->Prop) {d:Decidable (exists b, P b)} : Decidable (forall b, ~ P b).
+Global Instance dec_ex_forall_not : forall T (P:T->Prop) {d:Decidable (exists b, P b)}, Decidable (forall b, ~ P b).
 Proof.
+  intros T P d.
   destruct (dec (~ exists b, P b)) as [Hd|Hd]; [left|right];
-    [abstract eauto | abstract (rewrite not_not in Hd by eauto; destruct Hd; eauto) ].
+    [abstract eauto | let Hd := Hd in abstract (rewrite not_not in Hd by eauto; destruct Hd; eauto) ].
 Defined.
 
 Lemma eqsig_eq {T} {U} {Udec:DecidableRel (@eq U)} (f g:T->U) (x x':T) pf pf' :

@@ -105,7 +105,12 @@ Module Extended.
           let Z3 := F*G in
           (X3, Y3, Z3, T3)
         end.
-      Next Obligation. pose proof (E.denominator_nonzero _ nonzero_a square_a _ nonsquare_d _ _ (proj2_sig (to_twisted P1))  _ _  (proj2_sig (to_twisted P2))); t. Qed.
+      Next Obligation.
+        match goal with
+        | [ |- match (let (_, _) := coordinates ?P1 in let (_, _) := _ in let (_, _) := _ in let (_, _) := coordinates ?P2 in _) with _ => _ end ]
+          => pose proof (E.denominator_nonzero _ nonzero_a square_a _ nonsquare_d _ _ (proj2_sig (to_twisted P1))  _ _  (proj2_sig (to_twisted P2)))
+        end; t.
+      Qed.
 
       Global Instance isomorphic_commutative_group_m1 :
         @Group.isomorphic_commutative_groups
