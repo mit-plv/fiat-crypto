@@ -95,9 +95,9 @@ End with_state.
 (* N.B., Coq doesn't yet print this *)
 Notation "'loop' _{ fuel } ( state1 .. staten = initial ) 'via' ( continue , break ) {{ body }} ; rest"
   := (@loop_cps _ fuel initial
-                (fun state1 => .. (fun staten => (fun _ continue break => body)) .. )
+                (fun state1 => .. (fun staten => id (fun T continue break => body)) .. )
                 _ (fun state1 => .. (fun staten => rest) .. ))
-       (at level 200, state1 binder, staten binder, rest at level 10, only parsing,
+       (at level 200, state1 binder, staten binder, rest at level 10,
         format "'[v  ' 'loop' _{ fuel }  ( state1 .. staten  =  initial )  'via'  ( continue ,  break )  {{ '//' body ']' '//' }} ; '//' rest").
 
 Check loop _{ 10 } (x = 0) via (continue, break) {{ continue (x + 1) }} ; x.
