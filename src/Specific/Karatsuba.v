@@ -150,6 +150,43 @@ Section Ops51.
   Defined.
 
   Definition half_sz : nat := Eval compute in (sz / 2).
+  Lemma half_sz_nonzero : half_sz <> 0%nat. Proof. cbv; congruence. Qed.
+
+  Definition goldilocks_mul_sig :
+    {mul : (Z^sz -> Z^sz -> Z^sz)%type |
+     forall a b : Z^sz,
+       mul a b = goldilocks_mul_cps (n:=half_sz) (n2:=sz) wt (2 ^ 224) a b id}.
+  Proof.
+    eexists; cbv beta zeta; intros.
+    cbv [goldilocks_mul_cps].
+    repeat autounfold.
+    basesystem_partial_evaluation_RHS.
+    do_replace_match_with_destructuring_match_in_goal.
+    reflexivity.
+  Defined.
+  
+  Definition goldilocks_mul_for_bounds_checker_sig :
+    {mul : (Z^sz -> Z^sz -> Z^sz)%type |
+     forall a b : Z^sz,
+       mul a b = goldilocks_mul_cps_for_bounds_checker (n:=half_sz) (n2:=sz) wt (2 ^ 224) a b id}.
+  Proof.
+    eexists; cbv beta zeta; intros.
+    cbv [goldilocks_mul_cps_for_bounds_checker].
+    repeat autounfold.
+    basesystem_partial_evaluation_RHS.
+    do_replace_match_with_destructuring_match_in_goal.
+    reflexivity.
+  Defined.
+
+  Lemma goldilocks_mul_sig_equiv a b :
+    proj1_sig goldilocks_mul_sig a b =
+    proj1_sig goldilocks_mul_for_bounds_checker_sig a b.
+  Proof.
+   rewrite (proj2_sig goldilocks_mul_sig).
+   rewrite (proj2_sig goldilocks_mul_for_bounds_checker_sig).
+   apply goldilocks_mul_equiv;
+               auto using half_sz_nonzero, sz_nonzero, wt_nonzero.
+  Qed.
 
   Definition mul_sig :
     {mul : (Z^sz -> Z^sz -> Z^sz)%type |
@@ -159,22 +196,21 @@ Section Ops51.
   Proof.
     eexists; cbv beta zeta; intros.
     pose proof wt_nonzero.
-    Print goldilocks_mul_cps.
     let x := constr:(
-               goldilocks_mul_cps (n:=half_sz) (n2:=sz) wt (2^224) a b id) in
+               goldilocks_mul (n:=half_sz) (n2:=sz) wt (eq_refl _)  wt_nonzero half_sz_nonzero sz_nonzero (2^224) a b ) in
     F_mod_eq;
       transitivity (Positional.eval wt x); repeat autounfold;
 
    [ 
    | autorewrite with uncps push_id push_basesystem_eval;
      apply goldilocks_mul_correct; try assumption; cbv; congruence ].
-   cbv[mod_eq]; apply f_equal2;
+   cbv [mod_eq]; apply f_equal2;
      [  | reflexivity ]; apply f_equal.
-   cbv [goldilocks_mul_cps].
-   repeat autounfold.
-   basesystem_partial_evaluation_RHS.
-   do_replace_match_with_destructuring_match_in_goal.
-   reflexivity.
+   cbv [goldilocks_mul].
+   transitivity (id_with_alt_bounds_and_proof (pf := goldilocks_mul_sig_equiv a b) ((proj1_sig goldilocks_mul_sig) a b) ((proj1_sig goldilocks_mul_for_bounds_checker_sig) a b)).
+   { cbv [proj1_sig goldilocks_mul_for_bounds_checker_sig goldilocks_mul_sig]. reflexivity. }
+   { cbv [id_with_alt_bounds_and_proof id_with_alt_bounds].
+     rewrite (proj2_sig goldilocks_mul_sig). reflexivity. } 
  Defined.
 
   Definition square_sig :
