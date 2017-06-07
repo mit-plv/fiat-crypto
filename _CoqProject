@@ -220,6 +220,7 @@ src/Specific/IntegrationTestTemporaryMiscCommon.v
 src/Specific/FancyMachine256/Barrett.v
 src/Specific/FancyMachine256/Core.v
 src/Specific/FancyMachine256/Montgomery.v
+src/Specific/Karatsuba.v
 src/Util/AdditionChainExponentiation.v
 src/Util/AutoRewrite.v
 src/Util/Bool.v
