@@ -35,17 +35,17 @@ Return X
 Local Open Scope Z_scope.
 Section columns.
   (** TODO(jadep): implement these *)
-  Context {t : Type} {length : t -> nat}
-          {divmod : t -> t * Z} (* returns lowest limb and all-but-lowest-limb *)
-          {scmul : Z -> t -> t} (* uses double-output multiply *)
-          {add : t -> t -> t * Z} (* produces carry *)
-          {join : t * Z -> t}
-          {zero : nat -> t}
-          (A B : t)
+  Context {T : Type} {length : T -> nat}
+          {divmod : T -> T * Z} (* returns lowest limb and all-but-lowest-limb *)
+          {scmul : Z -> T -> T} (* uses double-output multiply *)
+          {add : T -> T -> T * Z} (* produces carry *)
+          {join : T * Z -> T}
+          {zero : nat -> T}
+          (A B : T)
           (bound : Z)
-          (N : t)
+          (N : T)
           (k : Z) (* [(-1 mod N) mod bound] *).
-  Definition redc_body : t * t -> t * t
+  Definition redc_body : T * T -> T * T
     := fun '(A, S')
        => let '(A, a) := divmod A in
           let '(S', _) := add S' (scmul a B) in
@@ -53,12 +53,12 @@ Section columns.
           let '(S', _) := divmod (join (add S' (scmul q N))) in
           (A, S').
 
-  Fixpoint redc_loop (count : nat) : t * t -> t * t
+  Fixpoint redc_loop (count : nat) : T * T -> T * T
     := match count with
        | O => fun A_S => A_S
        | S count' => fun A_S => redc_loop count' (redc_body A_S)
        end.
 
-  Definition redc : t
+  Definition redc : T
     := snd (redc_loop (length A) (A, zero (1 + length B))).
 End columns.
