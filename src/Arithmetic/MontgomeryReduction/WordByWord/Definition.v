@@ -35,55 +35,25 @@ Return X
 Local Open Scope Z_scope.
 Section columns.
   (** TODO(jadep): implement these *)
-  Context (Columns_add_cps : forall (weight : nat -> Z)
-                                    (n : nat)
-                                    (a b : tuple (list Z) n)
-                                    T
-                                    (f : tuple (list Z) n -> T),
-              T)
-          (Columns_mul_cps : forall (weight : nat -> Z)
-                                    (na nb m : nat)
-                                    (a : tuple (list Z) na)
-                                    (a : tuple (list Z) nb)
-                                    T
-                                    (f : tuple (list Z) m -> T),
-              T).
-  Context (modulo div : Z -> Z -> Z)
-          (add_get_carry : Z -> Z -> Z -> Z * Z)
-          (p_len : nat)
-          (s : Z).
-  Context (p : tuple (list Z) p_len)
+  Context {t : Type} {length : t -> nat}
+          {divmod : t -> t * Z} (* returns lowest limb and all-but-lowest-limb *)
+          {scmul : Z -> t -> t} (* uses double-output multiply *)
+          {add : t -> t -> t * Z} (* produces carry *)
+          {join : t * Z -> t}
+          (p : t)
+          (s : Z)
           (k0 : Z) (* [(-p⁻¹) mod 2ˢ] *).
-  Local Notation weight := (fun i : nat => 2^(Z.of_nat i * s))%Z.
-  Section body.
-    Context (k' : nat).
-    Let k := (S (k' + p_len)).
-    Context (T : tuple Z k).
-    Local Notation Pos2Col t
-      := (@Columns.from_associational
-            weight k
-            (@B.Positional.to_associational
-               weight k t)).
-    Local Notation encode z
-      := (Pos2Col (@B.Positional.encode weight modulo div k z)).
-    Local Notation compact := (@Columns.compact weight add_get_carry div modulo k).
-    Local Notation mul a b := (@Columns_mul_cps weight _ _ k a b _ id).
-    Local Notation add a b := (@Columns_add_cps weight k a b _ id).
+  Definition redc_body (T : t) : t
+    := let '(_, T1) := divmod T in
+       let Y := (T1 * k0) mod (2^s) in
+       let T2 := scmul Y p in
+       let T3 := join (add T T2) in
+       let '(T, _) := divmod T3 in
+       T.
 
-    Let T1 := (hd T) (*mod (2^s)*).
-    Let Y := (T1 * k0) mod (2^s).
-    Let T2 := mul ((Y::nil)%list : tuple _ 1) p.
-    Let T3 := add (Pos2Col T) T2.
-    Definition (*carry_to_highest_and_*)drop_lowest (ts : tuple Z k) (c : Z) : tuple Z (pred k)
-      := (*Tuple.left_append c*) (tl ts).
-    Definition redc_body : tuple Z (pred k)
-      := let '(c, ts) := compact T3 in
-         (*carry_to_highest_and_*)drop_lowest ts c.
-  End body.
-
-  Fixpoint redc (count : nat) : tuple Z (count + p_len) -> tuple Z p_len
+  Fixpoint redc (count : nat) : t -> t
     := match count with
        | O => fun T => T
-       | S count' => fun T => redc count' (redc_body _ T)
+       | S count' => fun T => redc count' (redc_body T)
        end.
 End columns.
