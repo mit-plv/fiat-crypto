@@ -599,6 +599,8 @@ Section API.
 
   Definition length : T -> nat := @length Z.
 
+  Definition zero (n:nat) : T := to_list _ (B.Positional.zeros n).
+  
   Definition divmod (p : T) : T * Z :=
     (List.tl p, List.hd 0 p).
 
@@ -619,6 +621,18 @@ Section API.
   Section Proofs.
     Definition eval (p : T) : Z :=
       B.Positional.eval weight (Tuple.from_list (Datatypes.length p) p (eq_refl _)).
+
+    Lemma eval_zero n : eval (zero n) = 0.
+    Proof.
+      cbv [eval zero]. rewrite <-from_list_default_eq with (d:=0).
+      erewrite length_to_list, from_list_default_eq, from_list_to_list.
+      autorewrite with push_basesystem_eval.
+      reflexivity.
+      Unshelve. distr_length.
+    Qed.
+
+    Lemma length_zero n : length (zero n) = n.
+    Proof. cbv [eval zero]. apply length_to_list. Qed.
 
     Lemma eval_add_nz p q :
       max (Datatypes.length p) (Datatypes.length q) <> 0%nat ->
