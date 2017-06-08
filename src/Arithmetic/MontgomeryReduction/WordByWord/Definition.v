@@ -40,20 +40,25 @@ Section columns.
           {scmul : Z -> t -> t} (* uses double-output multiply *)
           {add : t -> t -> t * Z} (* produces carry *)
           {join : t * Z -> t}
-          (p : t)
-          (s : Z)
-          (k0 : Z) (* [(-p⁻¹) mod 2ˢ] *).
-  Definition redc_body (T : t) : t
-    := let '(_, T1) := divmod T in
-       let Y := (T1 * k0) mod (2^s) in
-       let T2 := scmul Y p in
-       let T3 := join (add T T2) in
-       let '(T, _) := divmod T3 in
-       T.
+          {zero : nat -> t}
+          (A B : t)
+          (bound : Z)
+          (N : t)
+          (k : Z) (* [(-1 mod N) mod bound] *).
+  Definition redc_body : t * t -> t * t
+    := fun '(A, S')
+       => let '(A, a) := divmod A in
+          let '(S', _) := add S' (scmul a B) in
+          let '(_, q) := divmod (scmul k S') in
+          let '(S', _) := divmod (join (add S' (scmul q N))) in
+          (A, S').
 
-  Fixpoint redc (count : nat) : t -> t
+  Fixpoint redc_loop (count : nat) : t * t -> t * t
     := match count with
-       | O => fun T => T
-       | S count' => fun T => redc count' (redc_body T)
+       | O => fun A_S => A_S
+       | S count' => fun A_S => redc_loop count' (redc_body A_S)
        end.
+
+  Definition redc : t
+    := snd (redc_loop (length A) (A, zero (1 + length B))).
 End columns.
