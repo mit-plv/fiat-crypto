@@ -267,7 +267,7 @@ Section Ops51.
     pose proof div_mod. pose proof wt_divides_full_pos.
     pose proof wt_multiples.
     pose proof div_correct. pose proof modulo_correct.
-    let x := constr:(freeze (n:=sz) (div:=div) (modulo:=modulo) wt (Z.ones bitwidth) m_enc a) in
+    let x := constr:(freeze (n:=sz) wt (Z.ones bitwidth) m_enc a) in
     F_mod_eq;
       transitivity (Positional.eval wt x); repeat autounfold;
         [ | autorewrite with uncps push_id push_basesystem_eval;
