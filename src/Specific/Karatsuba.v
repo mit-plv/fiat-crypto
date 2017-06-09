@@ -164,7 +164,7 @@ Section Ops51.
     do_replace_match_with_destructuring_match_in_goal.
     reflexivity.
   Defined.
-  
+
   Definition goldilocks_mul_for_bounds_checker_sig :
     {mul : (Z^sz -> Z^sz -> Z^sz)%type |
      forall a b : Z^sz,
@@ -201,7 +201,7 @@ Section Ops51.
     F_mod_eq;
       transitivity (Positional.eval wt x); repeat autounfold;
 
-   [ 
+   [
    | autorewrite with uncps push_id push_basesystem_eval;
      apply goldilocks_mul_correct; try assumption; cbv; congruence ].
    cbv [mod_eq]; apply f_equal2;
@@ -210,7 +210,7 @@ Section Ops51.
    transitivity (id_with_alt_bounds_and_proof (pf := goldilocks_mul_sig_equiv a b) ((proj1_sig goldilocks_mul_sig) a b) ((proj1_sig goldilocks_mul_for_bounds_checker_sig) a b)).
    { cbv [proj1_sig goldilocks_mul_for_bounds_checker_sig goldilocks_mul_sig]. reflexivity. }
    { cbv [id_with_alt_bounds_and_proof id_with_alt_bounds].
-     rewrite (proj2_sig goldilocks_mul_sig). reflexivity. } 
+     rewrite (proj2_sig goldilocks_mul_sig). reflexivity. }
  Defined.
 
   Definition square_sig :
@@ -279,7 +279,7 @@ Section Ops51.
     pose proof div_mod. pose proof wt_divides_full_pos.
     pose proof wt_multiples.
     pose proof div_correct. pose proof modulo_correct.
-    let x := constr:(freeze (n:=sz) (div:=div) (modulo:=modulo) wt (Z.ones bitwidth) m_enc a) in
+    let x := constr:(freeze (n:=sz) wt (Z.ones bitwidth) m_enc a) in
     F_mod_eq;
       transitivity (Positional.eval wt x); repeat autounfold;
         [ | autorewrite with uncps push_id push_basesystem_eval;
