@@ -37,6 +37,8 @@ Section montgomery.
   Local Infix "≡" := (Z.equiv_modulo bound).
 
   Local Notation redc_body := (@redc_body T divmod scmul add join B N k).
+  Local Notation redc_loop := (@redc_loop T divmod scmul add join B N k).
+  Local Notation redc := (@redc T length divmod scmul add join zero A B N k).
 
   Local Ltac start :=
     unfold redc_body;
@@ -79,5 +81,27 @@ Section montgomery.
                        end ].
   Qed.
 
-  (*Lemma redc_body_value A_S *)
+  Fixpoint redc_loop_rev (count : nat) : T * T -> T * T
+    := match count with
+       | O => fun A_S => A_S
+       | S count' => fun A_S => redc_body (redc_loop_rev count' A_S)
+       end.
+
+  Lemma redc_loop_comm_body count
+    : forall A_S, redc_loop count (redc_body A_S) = redc_body (redc_loop count A_S).
+  Proof.
+    induction count as [|count IHcount]; try reflexivity.
+    simpl; intro; rewrite IHcount; reflexivity.
+  Qed.
+
+  Lemma redc_loop__redc_loop_rev count
+    : forall A_S, redc_loop count A_S = redc_loop_rev count A_S.
+  Proof.
+    induction count as [|count IHcount]; try reflexivity.
+    simpl; intro; rewrite <- IHcount, redc_loop_comm_body; reflexivity.
+  Qed.
+
+(*  Print WordByWord.Definition.redc.
+  Lemma redc_correct i
+    : *)
 End montgomery.
