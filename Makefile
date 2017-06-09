@@ -50,7 +50,7 @@ $(VOFILES): | coqprime
 UNMADE_VOFILES := src/SpecificGen/% src/Specific/%Display.vo
 # add files to this list to prevent them from being built as final
 # targets by the "lite" target
-LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo
+LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo src/Specific/Karatsuba.vo
 
 COQ_VOFILES := $(filter-out $(UNMADE_VOFILES),$(VOFILES))
 SPECIFIC_VO := $(filter src/Specific/%,$(VOFILES))
