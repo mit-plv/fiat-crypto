@@ -236,4 +236,5 @@ Section WordByWordMontgomery.
         autorewrite with zsimplify.
       reflexivity.
     Qed.
-End Iteration.
+  End Iteration.
+End WordByWordMontgomery.
