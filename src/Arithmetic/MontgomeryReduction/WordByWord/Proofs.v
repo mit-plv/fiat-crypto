@@ -36,7 +36,6 @@ Section WordByWordMontgomery.
     {small_scmul : forall a v, 0 <= a < r -> small v -> small (scmul a v)}
     {numlimbs_scmul : forall a v, 0 <= a < r -> numlimbs (scmul a v) = S (numlimbs v)}
     {R : positive}
-    {R_big : R > 3} (* needed for [(N + B - 1) / R <= 1] *)
     {R_numlimbs : nat}.
   Local Notation bn := (r * R) (only parsing).
   Context
@@ -95,8 +94,7 @@ Section WordByWordMontgomery.
     Context (A S : T)
             (small_A : small A)
             (small_S : small S)
-            (S_nonneg : 0 <= eval S)
-            (S_div_R_small : eval S / R <= 1).
+            (S_nonneg : 0 <= eval S).
     (* Given A, B < R, we want to compute A * B / R mod N. R = bound 0 * ... * bound (n-1) *)
 
     Local Coercion eval : T >-> Z.
@@ -242,19 +240,6 @@ Section WordByWordMontgomery.
       unfold S4; autorewrite with push_eval.
       rewrite (Z.mod_small _ bn) by nia.
       apply S3_mod_N.
-    Qed.
-
-    Lemma small_from_bound
-      : forall x, x < eval N + eval B -> x / R <= 1.
-    Proof.
-      clear -R_big N_lt_R B_bounds.
-      intros x Hbound.
-      cut ((N + B - 1) / R <= 1);
-        [ Z.div_mod_to_quot_rem; subst; nia | ].
-      transitivity (((R-1) + (R-1) - 1) / R);
-        [ Z.peel_le; omega | ].
-      autorewrite with zsimplify.
-      reflexivity.
     Qed.
   End Iteration.
 
