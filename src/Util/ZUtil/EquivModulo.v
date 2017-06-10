@@ -29,6 +29,12 @@ Module Z.
     Local Instance opp_mod_Proper : Proper (equiv_modulo ==> equiv_modulo) Z.opp.
     Proof. unfold equiv_modulo, Proper, respectful; auto with zarith. Qed.
 
+    Local Instance pow_mod_Proper : Proper (equiv_modulo ==> eq ==> equiv_modulo) Z.pow.
+    Proof.
+      intros ?? H ???; subst; hnf in H |- *.
+      rewrite Z.power_mod_full, H, <- Z.power_mod_full; reflexivity.
+    Qed.
+
     Local Instance modulo_equiv_modulo_Proper
       : Proper (equiv_modulo ==> (fun x y => x = N /\ N = y) ==> Logic.eq) Z.modulo.
     Proof.
@@ -59,11 +65,12 @@ Module Z.
     Existing Instance add_mod_Proper.
     Existing Instance sub_mod_Proper.
     Existing Instance opp_mod_Proper.
+    Existing Instance pow_mod_Proper.
     Existing Instance modulo_equiv_modulo_Proper.
     Existing Instance eq_to_ProperProxy.
   End EquivModuloInstances.
   Module RemoveEquivModuloInstances (dummy : Nop).
-    Global Remove Hints equiv_modulo_Reflexive equiv_modulo_Symmetric equiv_modulo_Transitive mul_mod_Proper add_mod_Proper sub_mod_Proper opp_mod_Proper modulo_equiv_modulo_Proper eq_to_ProperProxy : typeclass_instances.
+    Global Remove Hints equiv_modulo_Reflexive equiv_modulo_Symmetric equiv_modulo_Transitive mul_mod_Proper add_mod_Proper sub_mod_Proper opp_mod_Proper pow_mod_Proper modulo_equiv_modulo_Proper eq_to_ProperProxy : typeclass_instances.
   End RemoveEquivModuloInstances.
 End Z.
 

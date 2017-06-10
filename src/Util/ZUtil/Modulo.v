@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia Coq.ZArith.Znumtheory.
+Require Import Coq.ZArith.ZArith Coq.micromega.Lia Coq.ZArith.Znumtheory Coq.ZArith.Zpow_facts.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.ZSimplify.Core.
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
@@ -148,6 +148,33 @@ Module Z.
     auto using Z.mod_pos_bound.
   Qed.
   Hint Rewrite mod_div_eq0 using zutil_arith : zsimplify.
+
+  Lemma power_mod_full p q n : (p^q) mod n = ((p mod n)^q) mod n.
+  Proof.
+    destruct (Z_dec' n 0) as [ [H|H] | H]; subst;
+      [
+      | apply Zpower_mod; assumption
+      | rewrite !Zmod_0_r; reflexivity ].
+    { revert H.
+      rewrite <- (Z.opp_involutive (p^q)),
+      <- (Z.opp_involutive ((p mod n)^q)),
+      <- (Z.opp_involutive p),
+      <- (Z.opp_involutive n).
+      generalize (-n); clear n; intros n H.
+      rewrite !Zmod_opp_opp.
+      rewrite !Z.opp_involutive.
+      apply f_equal.
+      destruct (Z.Even_or_Odd q).
+      { rewrite !Z.pow_opp_even by (assumption || omega).
+        destruct (Z.eq_dec (p^q mod n) 0) as [H'|H'], (Z.eq_dec ((-p mod n)^q mod n) 0) as [H''|H''];
+          repeat first [ rewrite Z_mod_zero_opp_full by assumption
+                       | rewrite Z_mod_nz_opp_full by assumption
+                       | reflexivity
+                       | rewrite <- Zpower_mod, Z.pow_opp_even in H'' by (assumption || omega); omega
+                       | rewrite <- Zpower_mod, Z.pow_opp_even in H'' |- * by (assumption || omega); omega ]. }
+      { rewrite Z.pow_opp_odd, !Z.opp_involutive, <- Zpower_mod, Z.pow_opp_odd, ?Z.opp_involutive by (assumption || omega).
+        reflexivity. } }
+  Qed.
 
   Lemma mod_bound_min_max l x u d (H : l <= x <= u)
     : (if l / d =? u / d then Z.min (l mod d) (u mod d) else Z.min 0 (d + 1))
