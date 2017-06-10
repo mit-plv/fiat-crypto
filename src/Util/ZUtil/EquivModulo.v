@@ -32,7 +32,7 @@ Module Z.
     Local Instance pow_mod_Proper : Proper (equiv_modulo ==> eq ==> equiv_modulo) Z.pow.
     Proof.
       intros ?? H ???; subst; hnf in H |- *.
-      rewrite Z.mod_pow_full, H, <- Z.power_mod_full; reflexivity.
+      rewrite Z.mod_pow_full, H, <- Z.mod_pow_full; reflexivity.
     Qed.
 
     Local Instance modulo_equiv_modulo_Proper
