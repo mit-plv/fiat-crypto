@@ -9,6 +9,7 @@ Require Import Crypto.Algebra.Ring.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Tactics.SetEvars.
 Require Import Crypto.Util.Tactics.SubstEvars.
+Require Import Crypto.Util.Tactics.DestructHead.
 Local Open Scope Z_scope.
 
 Section WordByWordMontgomery.
@@ -20,22 +21,28 @@ Section WordByWordMontgomery.
     {divmod : T -> T * Z} (* returns lowest limb and all-but-lowest-limb *)
     {r : positive}
     {r_big : r > 1}
+    {small : T -> Prop}
     {eval_zero : forall n, eval (zero n) = 0}
-    {eval_div : forall v, eval (fst (divmod v)) = eval v / r}
-    {eval_mod : forall v, snd (divmod v) = eval v mod r}
+    {small_zero : forall n, small (zero n)}
+    {eval_div : forall v, small v -> eval (fst (divmod v)) = eval v / r}
+    {eval_mod : forall v, small v -> snd (divmod v) = eval v mod r}
+    {small_div : forall v, small v -> small (fst (divmod v))}
     {scmul : Z -> T -> T} (* uses double-output multiply *)
     {eval_scmul: forall a v, eval (scmul a v) = a * eval v}
+    {small_scmul : forall a v, small v -> small (scmul a v)}
     {R : positive}
     {R_big : R > 3} (* needed for [(N + B - 1) / R <= 1] *).
   Local Notation bn := (r * R) (only parsing).
   Context
     {add : T -> T -> T} (* joins carry *)
     {eval_add : forall a b, eval (add a b) = eval a + eval b}
-    {eval_nonneg : forall v, 0 <= eval v}
+    {small_add : forall a b, small a -> small b -> small (add a b)}
     (N : T) (Npos : positive) (Npos_correct: eval N = Z.pos Npos)
-    (N_small : eval N < R)
+    (N_lt_R : eval N < R)
+    (small_N : small N)
     (B : T)
-    (B_small : eval B < R)
+    (B_bounds : 0 <= eval B < R)
+    (small_B : small B)
     ri (ri_correct : r*ri mod (eval N) = 1 mod (eval N)).
   Context (k : Z) (k_correct : k * eval N mod r = -1).
 
@@ -46,42 +53,48 @@ Section WordByWordMontgomery.
        eval_mod
        eval_add
        eval_scmul
+       using (repeat autounfold with word_by_word_montgomery; auto)
     : push_eval.
 
   (* Recurse for a as many iterations as A has limbs, varying A := A, S := 0, r, bounds *)
   Section Iteration.
     Context (A S : T)
-            (S_small : eval S / R <= 1).
+            (small_A : small A)
+            (small_S : small S)
+            (S_nonneg : 0 <= eval S)
+            (S_div_R_small : eval S / R <= 1).
     (* Given A, B < R, we want to compute A * B / R mod N. R = bound 0 * ... * bound (n-1) *)
 
     Local Coercion eval : T >-> Z.
 
     Local Notation a := (@WordByWord.Definition.a T divmod A).
+    Local Notation A' := (@WordByWord.Definition.A' T divmod A).
     Local Notation S3 := (@WordByWord.Definition.S3 T divmod r scmul add N B k A S).
     Local Notation S1 := (@WordByWord.Definition.S1 T divmod scmul add B A S).
     Local Notation cS2 := (@WordByWord.Definition.cS2 T divmod r scmul add N B k A S).
 
+    Lemma S3_nonneg : 0 <= eval S3.
+    Proof.
+      repeat autounfold with word_by_word_montgomery;
+      autorewrite with push_eval; [].
+      rewrite ?Npos_correct; Z.zero_bounds; lia.
+    Qed.
+
     Lemma S3_bound
-      : 0 <= eval S < eval N + eval B
-        -> 0 <= eval S3 < eval N + eval B.
+      : eval S < eval N + eval B
+        -> eval S3 < eval N + eval B.
     Proof.
       assert (Hmod : forall a b, 0 < b -> a mod b <= b - 1)
         by (intros x y; pose proof (Z_mod_lt x y); omega).
       intro HS.
       unfold S3, WordByWord.Definition.cS2, WordByWord.Definition.S1.
-      autorewrite with push_eval.
-      split;
-        [ solve
-            [ autounfold with word_by_word_montgomery;
-              unfold Let_In; autorewrite with push_eval;
-              Z.zero_bounds ]
-        | ].
+      autorewrite with push_eval; [].
       eapply Z.le_lt_trans.
       { transitivity ((N+B-1 + (r-1)*B + (r-1)*N) / r);
           [ | set_evars; ring_simplify_subterms; subst_evars; reflexivity ].
         Z.peel_le; repeat apply Z.add_le_mono; repeat apply Z.mul_le_mono_nonneg; try lia;
           autounfold with word_by_word_montgomery;
-          unfold Let_In; autorewrite with push_eval;
+          autorewrite with push_eval;
             try Z.zero_bounds;
             auto with lia. }
       rewrite (Z.mul_comm _ r), <- Z.add_sub_assoc, <- Z.add_opp_r, !Z.div_add_l' by lia.
@@ -148,10 +161,22 @@ Section WordByWordMontgomery.
       reflexivity.
     Qed.
 
-    Lemma small_from_bound
-      : forall x, 0 <= x < eval N + eval B -> x / R <= 1.
+    Lemma small_A'
+      : small A'.
     Proof.
-      clear -R_big N_small B_small.
+      repeat autounfold with word_by_word_montgomery; auto.
+    Qed.
+
+    Lemma small_S3
+      : small S3.
+    Proof.
+      repeat autounfold with word_by_word_montgomery; auto.
+    Qed.
+
+    Lemma small_from_bound
+      : forall x, x < eval N + eval B -> x / R <= 1.
+    Proof.
+      clear -R_big N_lt_R B_bounds.
       intros x Hbound.
       cut ((N + B - 1) / R <= 1);
         [ Z.div_mod_to_quot_rem; subst; nia | ].
@@ -188,22 +213,30 @@ Section WordByWordMontgomery.
 
   Section body.
     Context (A_S : T * T).
-    Let A':=fst A_S.
+    Let A:=fst A_S.
     Let S:=snd A_S.
-    Let A_a:=divmod A'.
+    Let A_a:=divmod A.
     Let a:=snd A_a.
-    Context (S_small : eval S / R <= 1).
+    Context (small_A : small A)
+            (small_S : small S)
+            (S_nonneg : 0 <= eval S)
+            (S_div_R_small : eval S / R <= 1).
 
-    Lemma redc_body_mod_N
+    Lemma small_fst_redc_body : small (fst (redc_body A_S)).
+    Proof. destruct A_S; apply small_A'; assumption. Qed.
+    Lemma small_snd_redc_body : small (snd (redc_body A_S)).
+    Proof. destruct A_S; apply small_S3; assumption. Qed.
+    Lemma snd_redc_body_nonneg : 0 <= eval (snd (redc_body A_S)).
+    Proof. destruct A_S; apply S3_nonneg; assumption. Qed.
+
+    Lemma snd_redc_body_mod_N
       : (eval (snd (redc_body A_S))) mod (eval N) = (eval S + a*eval B)*ri mod (eval N).
-    Proof.
-      destruct A_S; apply S3_mod_N; assumption.
-    Qed.
+    Proof. destruct A_S; apply S3_mod_N; assumption. Qed.
 
     Lemma fst_redc_body
       : (eval (fst (redc_body A_S))) = eval (fst A_S) / r.
     Proof.
-      destruct A_S; simpl; unfold WordByWord.Definition.A', WordByWord.Definition.A_a, Let_In, a, A_a, A'; simpl.
+      destruct A_S; simpl; unfold WordByWord.Definition.A', WordByWord.Definition.A_a, Let_In, a, A_a, A; simpl.
       autorewrite with push_eval.
       reflexivity.
     Qed.
@@ -213,45 +246,56 @@ Section WordByWordMontgomery.
     Proof.
       rewrite fst_redc_body.
       etransitivity; [ eapply Z.div_to_inv_modulo; try eassumption; lia | ].
-      unfold a, A_a, A'.
+      unfold a, A_a, A.
       autorewrite with push_eval.
       reflexivity.
     Qed.
 
     Lemma redc_body_bound
-      : 0 <= eval S < eval N + eval B
-        -> 0 <= eval (snd (redc_body A_S)) < eval N + eval B.
+      : eval S < eval N + eval B
+        -> eval (snd (redc_body A_S)) < eval N + eval B.
     Proof.
-      destruct A_S; apply S3_bound.
+      destruct A_S; apply S3_bound; assumption.
     Qed.
   End body.
 
   Local Arguments Z.pow !_ !_.
   Local Arguments Z.of_nat !_.
-  Lemma redc_loop_bound A_S count
-    : 0 <= eval (snd A_S) < eval N + eval B
-      -> 0 <= eval (snd (redc_loop count A_S)) < eval N + eval B.
+  Local Ltac induction_loop count IHcount
+    := induction count as [|count IHcount]; intros; cbn [redc_loop] in *; [ | rewrite redc_loop_comm_body in * ].
+  Lemma redc_loop_good A_S count
+        (Hsmall : small (fst A_S) /\ small (snd A_S))
+        (Hbound : 0 <= eval (snd A_S) < eval N + eval B)
+    : (small (fst (redc_loop count A_S)) /\ small (snd (redc_loop count A_S)))
+      /\ 0 <= eval (snd (redc_loop count A_S)) < eval N + eval B.
   Proof.
-    rewrite redc_loop__redc_loop_rev.
-    induction count as [|count IHcount].
-    { simpl; trivial. }
-    { simpl; intro;
-        repeat first [ apply redc_body_bound
-                     | apply IHcount
-                     | assumption
-                     | apply small_from_bound ]. }
+    induction_loop count IHcount; auto; [].
+    change (id (0 <= eval B < R)) in B_bounds (* don't let [destruct_head'_and] loop *).
+    destruct_head'_and.
+    repeat first [ apply conj
+                 | apply small_fst_redc_body
+                 | apply small_snd_redc_body
+                 | apply small_from_bound
+                 | apply redc_body_bound
+                 | apply snd_redc_body_nonneg
+                 | solve [ auto ] ].
   Qed.
 
+  Lemma redc_loop_bound A_S count
+        (Hsmall : small (fst A_S) /\ small (snd A_S))
+        (Hbound : 0 <= eval (snd A_S) < eval N + eval B)
+    : 0 <= eval (snd (redc_loop count A_S)) < eval N + eval B.
+  Proof. apply redc_loop_good; assumption. Qed.
+
   Lemma fst_redc_loop A_S count
+        (Hsmall : small (fst A_S) /\ small (snd A_S))
         (Hbound : 0 <= eval (snd A_S) < eval N + eval B)
     : eval (fst (redc_loop count A_S)) = eval (fst A_S) / r^(Z.of_nat count).
   Proof.
-    rewrite redc_loop__redc_loop_rev.
-    induction count as [|count IHcount].
+    induction_loop count IHcount.
     { simpl; autorewrite with zsimplify; reflexivity. }
-    { simpl @redc_loop_rev.
-      rewrite fst_redc_body, IHcount
-        by (apply small_from_bound; rewrite <-redc_loop__redc_loop_rev; apply redc_loop_bound; auto).
+    { rewrite fst_redc_body, IHcount
+        by (try apply small_from_bound; apply redc_loop_good; auto).
       rewrite Zdiv_Zdiv by Z.zero_bounds.
       rewrite <- (Z.pow_1_r r) at 2.
       rewrite <- Z.pow_add_r by lia.
@@ -260,6 +304,7 @@ Section WordByWordMontgomery.
   Qed.
 
   Lemma fst_redc_loop_mod_N A_S count
+        (Hsmall : small (fst A_S) /\ small (snd A_S))
         (Hbound : 0 <= eval (snd A_S) < eval N + eval B)
     : eval (fst (redc_loop count A_S)) mod (eval N) = eval (fst A_S) * ri^(Z.of_nat count) mod (eval N).
   Proof.
@@ -271,18 +316,18 @@ Section WordByWordMontgomery.
       erewrite <- Z.pow_mul_l, <- Z.pow_1_l.
   Admitted.
 
-  Lemma redc_loop_mod_N A_S count
-        (S_bound : 0 <= eval (snd A_S) < eval N + eval B)
+  Lemma snd_redc_loop_mod_N A_S count
+        (Hsmall : small (fst A_S) /\ small (snd A_S))
+        (Hbound : 0 <= eval (snd A_S) < eval N + eval B)
     : (eval (snd (redc_loop count A_S))) mod (eval N) = ((eval (snd A_S) + (eval (fst A_S) mod ri^(Z.of_nat count))*eval B)*ri^(Z.of_nat count)) mod (eval N).
   Proof.
-    rewrite redc_loop__redc_loop_rev.
-    induction count as [|count IHcount].
+    induction_loop count IHcount.
     { simpl; autorewrite with zsimplify; reflexivity. }
-    { simpl; rewrite redc_body_mod_N
-        by (apply small_from_bound; rewrite <- redc_loop__redc_loop_rev; apply redc_loop_bound; auto).
+    { simpl; rewrite snd_redc_body_mod_N
+        by (try apply small_from_bound; apply redc_loop_good; auto).
       push_Zmod; rewrite IHcount; pull_Zmod.
       autorewrite with push_eval.
-      rewrite <- redc_loop__redc_loop_rev, fst_redc_loop by omega.
+      rewrite fst_redc_loop by (try apply redc_loop_good; auto; omega).
       match goal with
       | [ |- ?x mod ?N = ?y mod ?N ]
         => change (Z.equiv_modulo N x y)
@@ -304,20 +349,27 @@ Section WordByWordMontgomery.
       Infix "≡" := (Z.equiv_modulo _) (at level 70).
   Admitted.
 
-  Lemma redc_mod_N A
+  Lemma redc_good A
+        (small_A : small A)
+    : small (redc A)
+      /\ 0 <= eval (redc A) < eval N + eval B.
+  Proof.
+    unfold redc.
+    split; apply redc_loop_good; simpl; autorewrite with push_eval;
+      rewrite ?Npos_correct; auto; lia.
+  Qed.
+
+  Lemma small_redc A (small_A : small A) : small (redc A).
+  Proof. apply redc_good; assumption. Qed.
+  Lemma redc_bound A (small_A : small A) : 0 <= eval (redc A) < eval N + eval B.
+  Proof. apply redc_good; assumption. Qed.
+
+  Lemma redc_mod_N A (small_A : small A)
     : (eval (redc A)) mod (eval N) = (eval A * eval B * ri^(Z.of_nat (numlimbs A))) mod (eval N).
   Proof.
     unfold redc.
-    rewrite redc_loop_mod_N; cbn [fst snd];
+    rewrite snd_redc_loop_mod_N; cbn [fst snd];
       autorewrite with push_eval zsimplify;
-      [ | rewrite Npos_correct; pose proof (eval_nonneg B); lia ].
+      [ | rewrite ?Npos_correct; auto; lia.. ].
   Admitted.
-
-  Lemma redc_bound A
-    : 0 <= eval (redc A) < eval N + eval B.
-  Proof.
-    unfold redc.
-    apply redc_loop_bound; simpl; autorewrite with push_eval.
-    rewrite Npos_correct; pose proof (eval_nonneg B); lia.
-  Qed.
 End WordByWordMontgomery.
