@@ -149,6 +149,79 @@ Module Z.
   Qed.
   Hint Rewrite mod_div_eq0 using zutil_arith : zsimplify.
 
+  Local Lemma mod_pull_div_helper a b c X
+        (HX : forall a b c d e f g,
+            X a b c d e f g = if a =? 0 then c else 0)
+    : 0 <> b
+      -> 0 <> c
+      -> (a / b) mod c
+         = (a mod (c * b)) / b
+           + if c <? 0 then - X ((a / b) mod c) (a mod (c * b)) ((a mod (c * b)) / b) a b c (a / b) else 0.
+  Proof.
+    intros; break_match; Z.ltb_to_lt; rewrite ?Z.sub_0_r, ?Z.add_0_r;
+      assert (0 <> c * b) by nia; Z.div_mod_to_quot_rem; subst;
+        destruct_head'_or; destruct_head'_and;
+          try assert (b < 0) by omega;
+          try assert (c < 0) by omega;
+          Z.replace_all_neg_with_pos;
+          try match goal with
+              | [ H : ?c * ?b * ?q1 + ?r1 = ?b * (?c * ?q2 + _) + _ |- _ ]
+                => assert (q1 = q2) by nia; progress subst
+              end;
+          rewrite ?HX; clear HX X;
+          try nia;
+          repeat match goal with
+                 | [ |- - ?x = ?y ] => is_var y; assert (y <= 0) by nia; Z.replace_all_neg_with_pos
+                 | [ |- - ?x = ?y + -_ ] => is_var y; assert (y <= 0) by nia; Z.replace_all_neg_with_pos
+                 | [ H : -?x + (-?y + ?z) = -?w + ?v |- _ ]
+                   => assert (x + (y + -z) = w + -v) by omega; clear H
+                 | [ H : ?c * ?b * ?q1 + (?b * ?q2 + ?r) = ?b * (?c * ?q1' + ?q2') + ?r' |- _ ]
+                   => assert (c * q1 + q2 = c * q1' + q2') by nia;
+                        assert (r = r') by nia;
+                        clear H
+                 | [ H : -?x < -?y + ?z |- _ ] => assert (y + -z < x) by omega; clear H
+                 | [ H : -?x + ?y <= 0 |- _ ] => assert (0 <= x + -y) by omega; clear H
+                 | _ => progress Z.clean_neg
+                 | _ => progress subst
+                 end.
+    all:match goal with
+        | [ H : ?c * ?q + ?r = ?c * ?q' + ?r' |- _ ]
+          => first [ constr_eq q q'; assert (r = r') by nia; clear H
+                   | assert (q = q') by nia; assert (r = r') by nia; clear H
+                   | lazymatch goal with
+                     | [ H' : r' < c |- _ ]
+                       => destruct (Z_dec' r c) as [[?|?]|?]
+                     | [ H' : r < c |- _ ]
+                       => destruct (Z_dec' r' c) as [[?|?]|?]
+                     end;
+                     subst;
+                     [ assert (q = q') by nia; assert (r = r') by nia; clear H
+                     | nia
+                     | first [ assert (1 + q = q') by nia | assert (q = 1 + q') by nia ];
+                       first [ assert (r' = 0) by nia | assert (r = 0) by nia ] ] ]
+        end.
+    all:try omega.
+    all:break_match; Z.ltb_to_lt; omega.
+  Qed.
+
+  Lemma mod_pull_div_full a b c
+    : (a / b) mod c
+      = if ((c <? 0) && ((a / b) mod c =? 0))%bool
+        then 0
+        else (a mod (c * b)) / b.
+  Proof.
+    destruct (Z_zerop b), (Z_zerop c); subst;
+      autorewrite with zsimplify; try reflexivity.
+    { break_match; Z.ltb_to_lt; omega. }
+    { erewrite mod_pull_div_helper at 1 by (omega || reflexivity); cbv beta.
+      destruct (c <? 0) eqn:?; simpl; [ | omega ].
+      break_innermost_match; omega. }
+  Qed.
+
+  Lemma mod_pull_div a b c
+    : 0 <= c -> (a / b) mod c = a mod (c * b) / b.
+  Proof. rewrite mod_pull_div_full; destruct (c <? 0) eqn:?; Z.ltb_to_lt; simpl; omega. Qed.
+
   Lemma mod_pow_full p q n : (p^q) mod n = ((p mod n)^q) mod n.
   Proof.
     destruct (Z_dec' n 0) as [ [H|H] | H]; subst;
