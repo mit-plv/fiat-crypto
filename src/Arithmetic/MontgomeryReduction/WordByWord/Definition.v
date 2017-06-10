@@ -1,14 +1,11 @@
 (*** Word-By-Word Montgomery Multiplication *)
 (** This file implements Montgomery Form, Montgomery Reduction, and
-    Montgomery Multiplication on [tuple ℤ].  We follow "Fast Prime
+    Montgomery Multiplication on an abstract [T].  We follow "Fast Prime
     Field Elliptic Curve Cryptography with 256 Bit Primes",
     https://eprint.iacr.org/2013/816.pdf. *)
 Require Import Coq.ZArith.ZArith.
-Require Import Crypto.Arithmetic.Core.
-Require Import Crypto.Arithmetic.Saturated.
-Require Import Crypto.Arithmetic.MontgomeryReduction.Definition.
-Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Notations.
+Require Import Crypto.Util.LetIn.
 
 (** Quoting from page 7 of "Fast Prime
     Field Elliptic Curve Cryptography with 256 Bit Primes",
@@ -33,32 +30,50 @@ Require Import Crypto.Util.Notations.
 Return X
 >> *)
 Local Open Scope Z_scope.
-Section columns.
-  (** TODO(jadep): implement these *)
-  Context {T : Type} {length : T -> nat}
-          {divmod : T -> T * Z} (* returns lowest limb and all-but-lowest-limb *)
-          {scmul : Z -> T -> T} (* uses double-output multiply *)
-          {add : T -> T -> T * Z} (* produces carry *)
-          {join : T * Z -> T}
-          {zero : nat -> T}
-          (A B : T)
-          (bound : Z)
-          (N : T)
-          (k : Z) (* [(-1 mod N) mod bound] *).
-  Definition redc_body : T * T -> T * T
-    := fun '(A, S')
-       => let '(A, a) := divmod A in
-          let '(S', _) := add S' (scmul a B) in
-          let '(_, q) := divmod (scmul k S') in
-          let '(S', _) := divmod (join (add S' (scmul q N))) in
-          (A, S').
 
-  Fixpoint redc_loop (count : nat) : T * T -> T * T
-    := match count with
-       | O => fun A_S => A_S
-       | S count' => fun A_S => redc_loop count' (redc_body A_S)
-       end.
+Section WordByWordMontgomery.
+  Local Coercion Z.pos : positive >-> Z.
+  Context
+    {T : Type}
+    {eval : T -> Z}
+    {numlimbs : T -> nat}
+    {zero : nat -> T}
+    {divmod : T -> T * Z} (* returns lowest limb and all-but-lowest-limb *)
+    {r : positive}
+    {scmul : Z -> T -> T} (* uses double-output multiply *)
+    {R : positive}
+    {add : T -> T -> T} (* joins carry *)
+    (N : T).
 
-  Definition redc : T
-    := snd (redc_loop (length A) (A, zero (1 + length B))).
-End columns.
+  (* Recurse for a as many iterations as A has limbs, varying A := A, S := 0, r, bounds *)
+  Section Iteration.
+    Context (B : T) (k : Z).
+    Context (A S : T).
+    (* Given A, B < R, we want to compute A * B / R mod N. R = bound 0 * ... * bound (n-1) *)
+    Local Definition A_a := dlet p := divmod A in p. Local Definition A' := fst A_a. Local Definition a := snd A_a.
+    Local Definition S1 := add S (scmul a B).
+    Local Definition s := snd (divmod S1).
+    Local Definition q := s * k mod r.
+    Local Definition cS2 := add S1 (scmul q N).
+    Local Definition S3 := fst (divmod cS2).
+  End Iteration.
+
+  Section loop.
+    Context (A B : T) (k : Z) (S' : T).
+
+    Definition redc_body : T * T -> T * T
+      := fun '(A, S') => (A' A, S3 B k A S').
+
+    Fixpoint redc_loop (count : nat) : T * T -> T * T
+      := match count with
+         | O => fun A_S => A_S
+         | S count' => fun A_S => redc_loop count' (redc_body A_S)
+         end.
+
+    Definition redc : T
+      := snd (redc_loop (numlimbs A) (A, zero (1 + numlimbs B))).
+  End loop.
+End WordByWordMontgomery.
+
+Create HintDb word_by_word_montgomery.
+Hint Unfold A_a A' a S1 s q cS2 S3 : word_by_word_montgomery.
