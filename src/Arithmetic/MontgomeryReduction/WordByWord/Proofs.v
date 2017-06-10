@@ -29,7 +29,7 @@ Section WordByWordMontgomery.
     {small_div : forall v, small v -> small (fst (divmod v))}
     {scmul : Z -> T -> T} (* uses double-output multiply *)
     {eval_scmul: forall a v, eval (scmul a v) = a * eval v}
-    {small_scmul : forall a v, small v -> small (scmul a v)}
+    {small_scmul : forall a v, 0 <= a < r -> small v -> small (scmul a v)}
     {R : positive}
     {R_big : R > 3} (* needed for [(N + B - 1) / R <= 1] *).
   Local Notation bn := (r * R) (only parsing).
@@ -47,13 +47,22 @@ Section WordByWordMontgomery.
   Context (k : Z) (k_correct : k * eval N mod r = -1).
 
   Create HintDb push_eval discriminated.
+  Local Ltac t_small :=
+    repeat first [ assumption
+                 | apply small_add
+                 | apply small_div
+                 | apply small_scmul
+                 | apply Z_mod_lt
+                 | solve [ auto ]
+                 | lia
+                 | progress autorewrite with push_eval ].
   Hint Rewrite
        eval_zero
        eval_div
        eval_mod
        eval_add
        eval_scmul
-       using (repeat autounfold with word_by_word_montgomery; auto)
+       using (repeat autounfold with word_by_word_montgomery; t_small)
     : push_eval.
 
   (* Recurse for a as many iterations as A has limbs, varying A := A, S := 0, r, bounds *)
@@ -76,7 +85,7 @@ Section WordByWordMontgomery.
     Lemma S3_nonneg : 0 <= eval S3.
     Proof.
       repeat autounfold with word_by_word_montgomery;
-      autorewrite with push_eval; [].
+        autorewrite with push_eval; [].
       rewrite ?Npos_correct; Z.zero_bounds; lia.
     Qed.
 
@@ -170,7 +179,7 @@ Section WordByWordMontgomery.
     Lemma small_S3
       : small S3.
     Proof.
-      repeat autounfold with word_by_word_montgomery; auto.
+      repeat autounfold with word_by_word_montgomery; t_small.
     Qed.
 
     Lemma small_from_bound
