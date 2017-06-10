@@ -127,10 +127,9 @@ Section WordByWordMontgomery.
     Proof.
       cbv [S1 a A'].
       repeat autorewrite with push_eval.
-      rewrite (Z.mod_small _ bn). (* by (apply aB_range). *)
+      rewrite (Z.mod_small _ bn) by (apply S_aB_range).
       reflexivity.
-      Unset Printing Coercions.
-    Admitted.
+    Qed.
 
     Lemma cS2_mod_N : (eval (fst cS2) + bn * snd cS2) mod N = (S + a*B) mod N.
     Proof.
@@ -166,7 +165,10 @@ Section WordByWordMontgomery.
         apply path_sig_hprop; [ intro; exact HProp.allpath_hprop | ]; simpl.
         rewrite (proj1 Hr), (proj2 Hr); reflexivity. }
       Grab Existential Variables.
-
+      { unfold S1.
+        autorewrite with push_eval.
+        rewrite (Z.mod_small _ bn) by apply S_aB_range.
+        admit. }
     Admitted.
 
     Lemma cS3_mod_N ri (ri_correct : r*ri mod N = 1 mod N)
