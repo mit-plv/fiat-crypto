@@ -312,4 +312,12 @@ Section WordByWordMontgomery.
       autorewrite with push_eval zsimplify;
       [ | rewrite Npos_correct; pose proof (eval_nonneg B); lia ].
   Admitted.
+
+  Lemma redc_bound A
+    : 0 <= eval (redc A) < eval N + eval B.
+  Proof.
+    unfold redc.
+    apply redc_loop_bound; simpl; autorewrite with push_eval.
+    rewrite Npos_correct; pose proof (eval_nonneg B); lia.
+  Qed.
 End WordByWordMontgomery.
