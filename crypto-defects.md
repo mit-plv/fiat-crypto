@@ -31,6 +31,7 @@ appearing in our code.
 | [openssl#74acf42c](https://git.openssl.org/gitweb/?p=openssl.git;a=commitdiff;h=4b8736a22e758c371bc2f8b3534dc0c274acf42c;ds=sidebyside) | Poly1305 | multiple implementations | incorrect carrying |
 | [ed25519.py](https://ed25519.cr.yp.to/python/ed25519.py) | Ed25519 | accepts signatures other impls reject | missing h mod l |
 | [CryptoNote](https://getmonero.org/2017/05/17/disclosure-of-a-major-bug-in-cryptonote-based-currencies.html) | Anti-double-spending tag |  additive curve25519 curve point | need order(P) = l |
+|[bitcoin#eed71d85](https://github.com/bitcoin-core/secp256k1/commit/5de4c5dffd22aa4510a5c97d0ad4a9c2eed71d85) | ECDSA-secp256k1 x*B | mixed addition Jacobian+Affine | missing case |
 
 
 
