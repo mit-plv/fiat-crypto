@@ -1,14 +1,45 @@
 (** * Definition and Notations for [do { body }] *)
 Require Import Coq.omega.Omega.
 Require Import Crypto.Util.Notations.
+Require Import Crypto.Util.LetIn.
+
+(* TODO: move *)
+Module CPSNotations.
+  (** [x <- f ; C] encodes a call to function [f] with [C] as the
+  continuation. In [C], [x] refers to the output of [f]. *)
+
+  (* TODO: [cpscall] is a marker to get Coq to print code using this notation only when it was actually used *)
+  Definition cpscall {T} (x:T) := x.
+  Notation "x <- v ; C" := (cpscall (v _ (fun x => C))) (at level 70, right associativity, format "'[v' x  <-  v ; '/' C ']'").
+
+  (** A value of type [~>R] accepts a continuation that takes an
+     argument of type [R].  It is meant to be used in [Definition] and
+     such; for example:
+<<
+     Definition add_cps (a b:nat) : ~> nat.
+>>
+     The return type of the continuation is not yet specified; every
+     [~> R] is universally quantified over the possible return types
+     of the continuations that it can be applied to.
+*)
+  Notation "~> R" := (forall {T} (_:R->T), T) (at level 70).
+
+  (** The type [A ~> R] contains functions that takes an argument of
+  type [A] and pass a value of type [R] to the continuation. Functions
+  that take multiple arguments can be encoded as [A -> B ~> C] or [A
+  ~> B ~>C] -- the first form requires both arguments to be specified
+  before its output can be CPS-bound, the latter must be bound once it
+  is partially applied to one argument. *)
+  Notation "A ~> R" := (A -> ~>R) (at level 99).
+  
+  (* TODO: [cpsreturn] is a marker to get Coq to print loop notations before a [return] *)
+  Definition cpsreturn {T} (x:T) := x.
+  (** [return x] passes [x] to the continuation implicit in the previous notations. *)
+  Notation "'return' x" := (cpsreturn (fun {T} (continuation:_->T) => continuation x)) (at level 70, format "'return'  x").
+End CPSNotations.
 
 Section with_state.
-  (** TODO: MOVE ME *)
-  Local Notation "'return' x" := (fun {T} (continuation:_->T) => continuation x) (at level 70).
-  Local Notation "x <- v ; C" := (v _ (fun x => C)) (at level 70, right associativity, format "'[v' x  <-  v ; '/' C ']'").
-  Local Notation "~> R" := (forall {T} (_:R->T), T) (at level 70).
-  Local Notation "A ~> R" := (forall (_:A) {T} (_:R->T), T) (at level 99).
-
+  Import CPSNotations.
   Context {state : Type}.
 
   Definition loop_cps_step
@@ -67,7 +98,7 @@ Section with_state.
       -> P (loop_cps n v0 body T rest).
   Proof.
     revert v0 rest.
-    induction n as [|n IHn]; intros v0 rest Hinv Hbody HP; simpl; auto.
+    induction n as [|n IHn]; intros v0 rest Hinv Hbody HP; simpl; cbv [cpsreturn]; auto.
   Qed.
 
   Local Hint Extern 2 => omega.
@@ -93,11 +124,81 @@ Section with_state.
 End with_state.
 
 (* N.B., Coq doesn't yet print this *)
-Notation "'loop' _{ fuel } ( state1 .. staten = initial ) 'via' ( continue , break ) {{ body }} ; rest"
+Notation "'loop' _{ fuel } ( state1 .. staten = initial ) 'labels' ( continue , break ) {{ body }} ; rest"
   := (@loop_cps _ fuel initial
                 (fun state1 => .. (fun staten => id (fun T continue break => body)) .. )
                 _ (fun state1 => .. (fun staten => rest) .. ))
        (at level 200, state1 binder, staten binder, rest at level 10,
-        format "'[v  ' 'loop' _{ fuel }  ( state1 .. staten  =  initial )  'via'  ( continue ,  break )  {{ '//' body ']' '//' }} ; '//' rest").
+        format "'[v  ' 'loop' _{ fuel }  ( state1 .. staten  =  initial )  'labels'  ( continue ,  break )  {{ '//' body ']' '//' }} ; '//' rest").
 
-Check loop _{ 10 } (x = 0) via (continue, break) {{ continue (x + 1) }} ; x.
+Section LoopTest.
+  Import CPSNotations.
+  Check loop _{ 10 } (x = 0) labels (continue, break) {{ continue (x + 1) }} ; x.
+                                                                                      
+  Check
+    loop _{ 1234 } ('(i, a) = (0, 0)) labels (continue, break)
+    {{
+        if i <? 10
+        then 
+          continue (i + 1, a+1)
+        else
+          break (0, a)
+    }};
+    a.
+
+  Context (f:nat~>nat).
+  (* TODO: the loop notation should print here. *)
+  Check loop _{ 10 } (x = 0) labels (continue, break) {{ x <- f x; continue (x) }} ; x.
+
+  (* TODO: "return x" should print without parenteses around it. *)
+  Check loop _{ 10 } (x = 0) labels (continue, break) {{ continue (x + 1) }} ; return x.
+
+  Check loop _{ 10 } (x = 0) labels (continue, break) {{ continue (x + 1) }} ; 
+    (* TODO: the following parentheses should not be necessary for parsing. *)
+    (x <- f x;
+    return x).
+
+  (* TODO: printing of both "return x" and the loop notation is broken here. *)
+  Check loop _{ 10 } (x = 0) labels (continue, break) {{ x <- f x; continue (x) }} ; return x.
+
+  (*
+  (* TODO LATER: something like these notations would be nice, desugaring to a [state := nat * T] *)
+  for ( i = s; i < f; i++) updating (P = zero) labels (continue, break)
+  {{
+      continue (P+P)
+  }};
+  P.
+
+  for ( i = s; i < f; i++) updating (P = zero) labels (continue)
+  {{
+      continue (P+P)
+  }};
+  P.
+  *)
+End LoopTest.
+
+Require Import Crypto.Util.Tuple Crypto.Util.CPSUtil.
+Section ScalarMult.
+  Import CPSNotations.
+
+  Context {G} (zero:G) (op_tbl : nat -> Z -> G ~> G). (* a monoid with a precomputed table *)
+  Context (k w : nat) (nth_limb : nat ~> Z). (* k w-bit limbs *)
+
+  (*
+   table of xi*(32^i)*B
+        for 
+        0 <= xi <= 8 (with sign flips, -8 <= xi <= 8)
+        0 <= i <= 31
+   *)
+
+  Definition ScalarMultBase :=
+    loop _{k} ('(i, P_s) = (0, zero)) labels (continue, break)
+    {{  if negb (i <? k) then break (i, P_s) else
+        let i' := i + 1 in
+        x <- nth_limb i;
+        P_s <- op_tbl i x P_s;
+        continue (i', P_s)
+    }};
+  return P_s.
+  Print ScalarMultBase. (* TODO: the loop notation should print here *)
+End ScalarMult.
