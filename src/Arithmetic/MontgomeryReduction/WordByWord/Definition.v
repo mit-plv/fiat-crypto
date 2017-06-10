@@ -43,6 +43,7 @@ Section WordByWordMontgomery.
     {scmul : Z -> T -> T} (* uses double-output multiply *)
     {R : positive}
     {add : T -> T -> T} (* joins carry *)
+    {drop_high : T -> T} (* drops the highest limb *)
     (N : T).
 
   (* Recurse for a as many iterations as A has limbs, varying A := A, S := 0, r, bounds *)
@@ -54,15 +55,16 @@ Section WordByWordMontgomery.
     Local Definition S1 := add S (scmul a B).
     Local Definition s := snd (divmod S1).
     Local Definition q := s * k mod r.
-    Local Definition cS2 := add S1 (scmul q N).
-    Local Definition S3 := fst (divmod cS2).
+    Local Definition S2 := add S1 (scmul q N).
+    Local Definition S3 := fst (divmod S2).
+    Local Definition S4 := drop_high S3.
   End Iteration.
 
   Section loop.
     Context (A B : T) (k : Z) (S' : T).
 
     Definition redc_body : T * T -> T * T
-      := fun '(A, S') => (A' A, S3 B k A S').
+      := fun '(A, S') => (A' A, S4 B k A S').
 
     Fixpoint redc_loop (count : nat) : T * T -> T * T
       := match count with
@@ -76,4 +78,4 @@ Section WordByWordMontgomery.
 End WordByWordMontgomery.
 
 Create HintDb word_by_word_montgomery.
-Hint Unfold S3 cS2 q s S1 a A' A_a Let_In : word_by_word_montgomery.
+Hint Unfold S4 S3 S2 q s S1 a A' A_a Let_In : word_by_word_montgomery.
