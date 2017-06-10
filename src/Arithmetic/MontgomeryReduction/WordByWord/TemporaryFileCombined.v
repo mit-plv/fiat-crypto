@@ -3,7 +3,10 @@ Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Arithmetic.ModularArithmeticTheorems Crypto.Spec.ModularArithmetic.
+Require Import Crypto.Algebra.Ring.
 Require Import Crypto.Util.Sigma.
+Require Import Crypto.Util.Tactics.SetEvars.
+Require Import Crypto.Util.Tactics.SubstEvars.
 Local Open Scope Z_scope.
 
 Section WordByWordMontgomery.
@@ -52,49 +55,33 @@ Section WordByWordMontgomery.
 
     Local Coercion eval : T >-> Z.
 
-(*    Lemma fst_S_aB_bound : eval S + a * eval B < bn.
-    Proof.
-*)
-
     Lemma S3_bound
       : 0 <= eval S < eval N + eval B
         -> 0 <= eval S3 < eval N + eval B.
     Proof.
-      Unset Printing Coercions.
+      assert (Hmod : forall a b, 0 < b -> a mod b <= b - 1)
+        by (intros x y; pose proof (Z_mod_lt x y); omega).
       intro HS.
-      unfold S3.
-      Local Notation "x 'div' 'r'" := (fst (divmod x)) (at level 10).
-      unfold cS2.
-      Local Infix "+" := add (only printing).
-      Local Infix "*" := scmul (only printing).
-      rename N into M.
-      unfold S1.
-      (*cbn [fst snd].
+      unfold S3, cS2, S1.
       autorewrite with push_eval.
-      cbn [fst snd].
-      autorewrite with push_eval.
-      rewrite Z.div_mul' by lia.
-      rewrite <- Z.div_div, Z.mul_div_eq by lia.
-      rewrite Z.add_sub_assoc.
-      SearchAbout (_ / ?r + _ / ?r)%Z.
-      SearchAbout (_ / ?b * ?b)%Z.
-      rewrite (Z.mul_comm (_ / r)).
-      rewrite (Z.mul_comm r R).
-      SearchAbout (_ *
-      SearchAbout (_ / (_ * _)).
-      push_Zmod; pull_Zmod.
-      rewrite eval_join; cbn [fst snd].
+      split;
+        [ solve
+            [ repeat match goal with H := _ |- _ => progress unfold H end;
+              unfold Let_In; autorewrite with push_eval;
+              Z.zero_bounds ]
+        | ].
+      eapply Z.le_lt_trans.
+      { transitivity ((N+B-1 + (r-1)*B + (r-1)*N) / r);
+          [ | set_evars; ring_simplify_subterms; subst_evars; reflexivity ].
+        Z.peel_le; repeat apply Z.add_le_mono; repeat apply Z.mul_le_mono_nonneg; try lia;
+          repeat match goal with H := _ |- _ => progress unfold H end;
+          unfold Let_In; autorewrite with push_eval;
+            try Z.zero_bounds;
+            auto with lia. }
+      rewrite (Z.mul_comm _ r), <- Z.add_sub_assoc, <- Z.add_opp_r, !Z.div_add_l' by lia.
       autorewrite with zsimplify.
-      unfold cS2.
-      rename N into M.
-      Local Infix "*" := scmul.
-      Local Infix
-      repeat match goal with H := _ |- _ => progress unfold H end.
-      unfold Let_In.
-
-      autorewrite with push_eval.
-       *)
-    Abort.
+      omega.
+    Qed.
 
     Lemma S1_eq : eval S1 = S + a*B.
     Proof.
