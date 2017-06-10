@@ -22,6 +22,7 @@ src/Arithmetic/BarrettReduction/HAC.v
 src/Arithmetic/BarrettReduction/Wikipedia.v
 src/Arithmetic/MontgomeryReduction/Definition.v
 src/Arithmetic/MontgomeryReduction/Proofs.v
+src/Arithmetic/MontgomeryReduction/WordByWord/Combined.v
 src/Arithmetic/MontgomeryReduction/WordByWord/Definition.v
 src/Compilers/CommonSubexpressionElimination.v
 src/Compilers/CommonSubexpressionEliminationDenote.v
@@ -217,10 +218,10 @@ src/Specific/IntegrationTestSquareDisplay.v
 src/Specific/IntegrationTestSub.v
 src/Specific/IntegrationTestSubDisplay.v
 src/Specific/IntegrationTestTemporaryMiscCommon.v
+src/Specific/Karatsuba.v
 src/Specific/FancyMachine256/Barrett.v
 src/Specific/FancyMachine256/Core.v
 src/Specific/FancyMachine256/Montgomery.v
-src/Specific/Karatsuba.v
 src/Util/AdditionChainExponentiation.v
 src/Util/AutoRewrite.v
 src/Util/Bool.v
