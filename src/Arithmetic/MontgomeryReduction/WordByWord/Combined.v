@@ -58,6 +58,50 @@ Section WordByWordMontgomery.
 
     Local Coercion eval : T >-> Z.
 
+(*    Lemma fst_S_aB_bound : eval S + a * eval B < bn.
+    Proof.
+*)
+
+    Lemma S3_bound
+      : 0 <= eval S < eval N + eval B
+        -> 0 <= eval (join (S3, c)) < eval N + eval B.
+    Proof.
+      Unset Printing Coercions.
+      intro HS.
+      unfold S3, c.
+      Local Notation "x 'div' 'r'" := (join ((fst (divmod (fst x)), snd x))) (at level 10).
+      unfold cS2.
+      Local Infix "+" := add (only printing).
+      Local Infix "*" := scmul (only printing).
+      rename N into M.
+      unfold S1.
+      (*cbn [fst snd].
+      autorewrite with push_eval.
+      cbn [fst snd].
+      autorewrite with push_eval.
+      rewrite Z.div_mul' by lia.
+      rewrite <- Z.div_div, Z.mul_div_eq by lia.
+      rewrite Z.add_sub_assoc.
+      SearchAbout (_ / ?r + _ / ?r)%Z.
+      SearchAbout (_ / ?b * ?b)%Z.
+      rewrite (Z.mul_comm (_ / r)).
+      rewrite (Z.mul_comm r R).
+      SearchAbout (_ *
+      SearchAbout (_ / (_ * _)).
+      push_Zmod; pull_Zmod.
+      rewrite eval_join; cbn [fst snd].
+      autorewrite with zsimplify.
+      unfold cS2.
+      rename N into M.
+      Local Infix "*" := scmul.
+      Local Infix
+      repeat match goal with H := _ |- _ => progress unfold H end.
+      unfold Let_In.
+
+      autorewrite with push_eval.
+       *)
+    Abort.
+
     Lemma S_aB_over_R_bound : (eval S + a * eval B) / R <= 1 + ((r - 1)^2 / r + 1 + 1).
     Proof.
       assert (Hmod0 : forall v r, 0 < r -> v mod r < r) by (intros; apply Z_mod_lt; lia).
