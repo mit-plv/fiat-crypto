@@ -149,7 +149,7 @@ Module Z.
   Qed.
   Hint Rewrite mod_div_eq0 using zutil_arith : zsimplify.
 
-  Lemma power_mod_full p q n : (p^q) mod n = ((p mod n)^q) mod n.
+  Lemma mod_pow_full p q n : (p^q) mod n = ((p mod n)^q) mod n.
   Proof.
     destruct (Z_dec' n 0) as [ [H|H] | H]; subst;
       [
