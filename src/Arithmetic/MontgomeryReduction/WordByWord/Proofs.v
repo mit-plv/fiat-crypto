@@ -402,9 +402,12 @@ Section WordByWordMontgomery.
     rewrite fst_redc_loop by assumption.
     destruct count.
     { simpl; autorewrite with zsimplify; reflexivity. }
-    { etransitivity; [ eapply Z.div_to_inv_modulo; try eassumption | ].
-      Focus 2.
-      erewrite <- Z.pow_mul_l, <- Z.pow_1_l.
+    { etransitivity;
+        [ eapply Z.div_to_inv_modulo;
+          try solve [ eassumption
+                    | apply Z.lt_gt, Z.pow_pos_nonneg; lia ]
+        | ].
+      { erewrite <- Z.pow_mul_l, <- Z.pow_1_l.
   Admitted.
 
   Lemma snd_redc_loop_mod_N A_S count
