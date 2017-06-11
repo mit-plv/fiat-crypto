@@ -278,6 +278,7 @@ src/Util/Tactics/BreakMatch.v
 src/Util/Tactics/ChangeInAll.v
 src/Util/Tactics/ClearAll.v
 src/Util/Tactics/ClearDuplicates.v
+src/Util/Tactics/ClearbodyAll.v
 src/Util/Tactics/Contains.v
 src/Util/Tactics/ConvoyDestruct.v
 src/Util/Tactics/DebugPrint.v
