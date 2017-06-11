@@ -150,6 +150,10 @@ Module Import Bounds.
          {| lower := Z.min lr1 lr2 ; upper := Z.max ur1 ur2 |}.
     Definition cmovle (x y r1 r2 : t) : t
       := truncation_bounds (cmovle' r1 r2).
+
+    (** TODO(jgross): swap to other bounds here *)
+    Definition id_with_alt (x y : t) : t
+      := truncation_bounds x.
   End with_bitwidth.
   Section with_bitwidth2.
     Context (bit_width1 bit_width2 : option Z)
@@ -203,6 +207,7 @@ Module Import Bounds.
        | Land _ _ T => fun xy => land (bit_width_of_base_type T) (fst xy) (snd xy)
        | Lor _ _ T => fun xy => lor (bit_width_of_base_type T) (fst xy) (snd xy)
        | Opp _ T => fun x => opp (bit_width_of_base_type T) x
+       | IdWithAlt _ _ T => fun xy => id_with_alt (bit_width_of_base_type T) (fst xy) (snd xy)
        | Zselect _ _ _ T => fun cxy => let '(c, x, y) := eta3 cxy in zselect (bit_width_of_base_type T) c x y
        | AddWithCarry _ _ _ T => fun cxy => let '(c, x, y) := eta3 cxy in add_with_carry (bit_width_of_base_type T) c x y
        | AddWithGetCarry carry_boundary_bit_width _ _ _ T1 T2

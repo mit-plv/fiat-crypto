@@ -390,6 +390,7 @@ Proof.
                  | progress simpl in *
                  | progress split_min_max
                  | omega ]. }
+  { split; assumption. }
   { destruct_head Bounds.t; cbv [Bounds.zselect' Z.zselect].
     break_innermost_match; split_min_max; omega. }
   { apply (@monotone_eight_corners true true true _ _ _); split; auto. }

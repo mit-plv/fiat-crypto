@@ -41,6 +41,8 @@ Definition op_beq_hetero {t1 tR t1' tR'} (f : op t1 tR) (g : op t1' tR') : bool
        => base_type_beq T1 T1' && base_type_beq T2 T2' && base_type_beq Tout Tout'
      | Opp Tin Tout, Opp Tin' Tout'
        => base_type_beq Tin Tin' && base_type_beq Tout Tout'
+     | IdWithAlt T1 T2 Tout, IdWithAlt T1' T2' Tout'
+       => base_type_beq T1 T1' && base_type_beq T2 T2' && base_type_beq Tout Tout'
      | Zselect T1 T2 T3 Tout, Zselect T1' T2' T3' Tout'
        => base_type_beq T1 T1' && base_type_beq T2 T2' && base_type_beq T3 T3' && base_type_beq Tout Tout'
      | AddWithCarry T1 T2 T3 Tout, AddWithCarry T1' T2' T3' Tout'
@@ -65,6 +67,7 @@ Definition op_beq_hetero {t1 tR t1' tR'} (f : op t1 tR) (g : op t1' tR') : bool
      | AddWithGetCarry _ _ _ _ _ _, _
      | SubWithBorrow _ _ _ _, _
      | SubWithGetBorrow _ _ _ _ _ _, _
+     | IdWithAlt _ _ _, _
        => false
      end%bool.
 

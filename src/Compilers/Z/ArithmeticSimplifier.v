@@ -332,6 +332,7 @@ Section language.
          | Lor _ _ _ as opc
          | OpConst _ _ as opc
          | Opp _ _ as opc
+         | IdWithAlt _ _ _ as opc
          | Zselect _ _ _ _ as opc
          | AddWithCarry _ _ _ _ as opc
          | AddWithGetCarry _ _ _ _ _ _ as opc

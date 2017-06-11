@@ -8,6 +8,7 @@ Require Import Crypto.Compilers.Reify.
 Require Import Crypto.Compilers.Eta.
 Require Import Crypto.Compilers.EtaInterp.
 Require Import Crypto.Util.ZUtil.Definitions.
+Require Import Crypto.Util.IdfunWithAlt.
 
 Ltac base_reify_op op op_head extra ::=
      lazymatch op_head with
@@ -23,6 +24,16 @@ Ltac base_reify_op op op_head extra ::=
      | @Z.zselect => constr:(reify_op op op_head 3 (Zselect TZ TZ TZ TZ))
      | @Z.add_with_carry => constr:(reify_op op op_head 3 (AddWithCarry TZ TZ TZ TZ))
      | @Z.sub_with_borrow => constr:(reify_op op op_head 3 (SubWithBorrow TZ TZ TZ TZ))
+     | @id_with_alt
+       => lazymatch extra with
+          | @id_with_alt Z _ _
+            => constr:(reify_op op op_head 2 (IdWithAlt TZ TZ TZ))
+          | @id_with_alt ?T _ _
+            => let c := uconstr:(@id_with_alt) in
+               let uZ := uconstr:(Z) in
+               fail 100 "Error: In Reflection.Z.base_reify_op: can only reify" c "applied to" uZ "not" T
+          | _ => fail 100 "Anomaly: In Reflection.Z.base_reify_op: head is id_with_alt but body is wrong:" extra
+          end
      | @Z.add_with_get_carry
        => lazymatch extra with
           | @Z.add_with_get_carry ?bit_width _ _ _

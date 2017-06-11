@@ -20,6 +20,7 @@ Inductive symbolic_op :=
 | SLand
 | SLor
 | SOpp
+| SIdWithAlt
 | SZselect
 | SAddWithCarry
 | SAddWithGetCarry (bitwidth : Z)
@@ -50,6 +51,8 @@ Definition symbolic_op_leb (x y : symbolic_op) : bool
      | _, SLor => false
      | SOpp, _ => true
      | _, SOpp => false
+     | SIdWithAlt, _ => true
+     | _, SIdWithAlt => false
      | SZselect, _ => true
      | _, SZselect => false
      | SAddWithCarry, _ => true
@@ -77,6 +80,7 @@ Definition symbolize_op s d (opc : op s d) : symbolic_op
      | Land T1 T2 Tout => SLand
      | Lor T1 T2 Tout => SLor
      | Opp T Tout => SOpp
+     | IdWithAlt T1 T2 Tout => SIdWithAlt
      | Zselect T1 T2 T3 Tout => SZselect
      | AddWithCarry T1 T2 T3 Tout => SAddWithCarry
      | AddWithGetCarry bitwidth T1 T2 T3 Tout1 Tout2 => SAddWithGetCarry bitwidth
@@ -95,6 +99,7 @@ Definition denote_symbolic_op s d (opc : symbolic_op) : option (op s d)
      | SLand, Prod (Tbase _) (Tbase _), Tbase _ => Some (Land _ _ _)
      | SLor, Prod (Tbase _) (Tbase _), Tbase _ => Some (Lor _ _ _)
      | SOpp, Tbase _, Tbase _ => Some (Opp _ _)
+     | SIdWithAlt, Prod (Tbase _) (Tbase _), Tbase _ => Some (IdWithAlt _ _ _)
      | SZselect, Prod (Prod (Tbase _) (Tbase _)) (Tbase _), Tbase _ => Some (Zselect _ _ _ _)
      | SAddWithCarry, Prod (Prod (Tbase _) (Tbase _)) (Tbase _), Tbase _ => Some (AddWithCarry _ _ _ _)
      | SAddWithGetCarry bitwidth, Prod (Prod (Tbase _) (Tbase _)) (Tbase _), Prod (Tbase _) (Tbase _)
@@ -111,6 +116,7 @@ Definition denote_symbolic_op s d (opc : symbolic_op) : option (op s d)
      | SLor, _, _
      | SOpp, _, _
      | SOpConst _, _, _
+     | SIdWithAlt, _, _
      | SZselect, _, _
      | SAddWithCarry, _, _
      | SAddWithGetCarry _, _, _
@@ -183,6 +189,7 @@ Definition normalize_symbolic_expr_mod_c (opc : symbolic_op) (args : symbolic_ex
      | SShl
      | SShr
      | SOpp
+     | SIdWithAlt
      | SZselect
      | SAddWithCarry
      | SAddWithGetCarry _
