@@ -9,8 +9,9 @@ Module CPSNotations.
   continuation. In [C], [x] refers to the output of [f]. *)
 
   (* TODO: [cpscall] is a marker to get Coq to print code using this notation only when it was actually used *)
-  Definition cpscall {T} (x:T) := x.
-  Notation "x <- v ; C" := (cpscall (v _ (fun x => C))) (at level 70, right associativity, format "'[v' x  <-  v ; '/' C ']'").
+  Definition cpscall {R} (f:forall{T}(continuation:R->T),T) {T} (continuation:R->T)
+    := @f T continuation.
+  Notation "x <- v ; C" := (cpscall v (fun x => C)) (at level 70, right associativity, format "'[v' x  <-  v ; '/' C ']'").
 
   (** A value of type [~>R] accepts a continuation that takes an
      argument of type [R].  It is meant to be used in [Definition] and
@@ -128,7 +129,7 @@ Notation "'loop' _{ fuel } ( state1 .. staten = initial ) 'labels' ( continue , 
   := (@loop_cps _ fuel initial
                 (fun state1 => .. (fun staten => id (fun T continue break => body)) .. )
                 _ (fun state1 => .. (fun staten => rest) .. ))
-       (at level 200, state1 binder, staten binder, rest at level 10,
+       (at level 200, state1 binder, staten binder,
         format "'[v  ' 'loop' _{ fuel }  ( state1 .. staten  =  initial )  'labels'  ( continue ,  break )  {{ '//' body ']' '//' }} ; '//' rest").
 
 Section LoopTest.
@@ -147,19 +148,19 @@ Section LoopTest.
     a.
 
   Context (f:nat~>nat).
+
+  Check x <- f 0 ; return x + x.
+  Check x <- f 0 ; y <- f x; z <- f y; return (x,y,z).
+
+ Check loop _{ 10 } (x = 0) labels (continue, break) {{ continue (x + 1) }} ;
+   return x.
+
+ Check loop _{ 10 } (x = 0) labels (continue, break) {{ continue (x + 1) }} ; 
+   x <- f x;
+   return x.
+  
   (* TODO: the loop notation should print here. *)
   Check loop _{ 10 } (x = 0) labels (continue, break) {{ x <- f x; continue (x) }} ; x.
-
-  (* TODO: "return x" should print without parenteses around it. *)
-  Check loop _{ 10 } (x = 0) labels (continue, break) {{ continue (x + 1) }} ; return x.
-
-  Check loop _{ 10 } (x = 0) labels (continue, break) {{ continue (x + 1) }} ; 
-    (* TODO: the following parentheses should not be necessary for parsing. *)
-    (x <- f x;
-    return x).
-
-  (* TODO: printing of both "return x" and the loop notation is broken here. *)
-  Check loop _{ 10 } (x = 0) labels (continue, break) {{ x <- f x; continue (x) }} ; return x.
 
   (*
   (* TODO LATER: something like these notations would be nice, desugaring to a [state := nat * T] *)
