@@ -4,12 +4,12 @@ Require Export Crypto.Util.Tactics.BreakMatch.
 Require Export Crypto.Util.Tactics.ChangeInAll.
 Require Export Crypto.Util.Tactics.ClearAll.
 Require Export Crypto.Util.Tactics.ClearDuplicates.
+Require Export Crypto.Util.Tactics.ClearbodyAll.
 Require Export Crypto.Util.Tactics.Contains.
 Require Export Crypto.Util.Tactics.ConvoyDestruct.
-Require Export Crypto.Util.Tactics.Head.
 Require Export Crypto.Util.Tactics.DebugPrint.
-Require Export Crypto.Util.Tactics.DestructHyps.
 Require Export Crypto.Util.Tactics.DestructHead.
+Require Export Crypto.Util.Tactics.DestructHyps.
 Require Export Crypto.Util.Tactics.DestructTrivial.
 Require Export Crypto.Util.Tactics.DoWithHyp.
 Require Export Crypto.Util.Tactics.ESpecialize.
@@ -17,9 +17,10 @@ Require Export Crypto.Util.Tactics.ETransitivity.
 Require Export Crypto.Util.Tactics.EvarExists.
 Require Export Crypto.Util.Tactics.Forward.
 Require Export Crypto.Util.Tactics.GetGoal.
+Require Export Crypto.Util.Tactics.Head.
 Require Export Crypto.Util.Tactics.MoveLetIn.
-Require Export Crypto.Util.Tactics.OnSubterms.
 Require Export Crypto.Util.Tactics.Not.
+Require Export Crypto.Util.Tactics.OnSubterms.
 Require Export Crypto.Util.Tactics.PrintContext.
 Require Export Crypto.Util.Tactics.Revert.
 Require Export Crypto.Util.Tactics.RewriteHyp.
