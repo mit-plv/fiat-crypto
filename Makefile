@@ -92,13 +92,13 @@ COQPATH?=${CURDIR}/$(COQPRIME_FOLDER)
 export COQPATH
 
 coqprime:
-	$(MAKE) -C $(COQPRIME_FOLDER)
+	$(MAKE) --no-print-directory -C $(COQPRIME_FOLDER)
 
 clean-coqprime:
-	$(MAKE) -C $(COQPRIME_FOLDER) clean
+	$(MAKE) --no-print-directory -C $(COQPRIME_FOLDER) clean
 
 install-coqprime:
-	$(MAKE) -C $(COQPRIME_FOLDER) install
+	$(MAKE) --no-print-directory -C $(COQPRIME_FOLDER) install
 
 Makefile.coq: Makefile _CoqProject
 	$(SHOW)'COQ_MAKEFILE -f _CoqProject > $@'
