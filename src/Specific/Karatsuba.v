@@ -6,6 +6,7 @@ Require Import (*Crypto.Util.Tactics*) Crypto.Util.Decidable.
 Require Import Crypto.Util.LetIn Crypto.Util.ZUtil Crypto.Util.Tactics.
 Require Import Crypto.Arithmetic.Karatsuba.
 Require Crypto.Util.Tuple.
+Require Import Crypto.Util.IdfunWithAlt.
 Local Notation tuple := Tuple.tuple.
 Local Open Scope list_scope.
 Local Open Scope Z_scope.
@@ -207,9 +208,22 @@ Section Ops51.
    cbv [mod_eq]; apply f_equal2;
      [  | reflexivity ]; apply f_equal.
    cbv [goldilocks_mul].
-   transitivity (id_with_alt_bounds_and_proof (pf := goldilocks_mul_sig_equiv a b) ((proj1_sig goldilocks_mul_sig) a b) ((proj1_sig goldilocks_mul_for_bounds_checker_sig) a b)).
-   { cbv [proj1_sig goldilocks_mul_for_bounds_checker_sig goldilocks_mul_sig]. reflexivity. }
-   { cbv [id_with_alt_bounds_and_proof id_with_alt_bounds].
+   transitivity
+     (Tuple.eta_tuple
+      (fun a
+       => Tuple.eta_tuple
+            (fun b
+             => id_tuple_with_alt_proof
+                  (pf := goldilocks_mul_sig_equiv a b)
+                  ((proj1_sig goldilocks_mul_sig) a b)
+                  ((proj1_sig goldilocks_mul_for_bounds_checker_sig) a b))
+            b)
+      a).
+   { cbv [proj1_sig goldilocks_mul_for_bounds_checker_sig goldilocks_mul_sig Tuple.eta_tuple Tuple.eta_tuple_dep sz Tuple.eta_tuple'_dep id_tuple_with_alt_proof id_tuple'_with_alt_proof];
+       cbn [fst snd].
+     cbv [id_with_alt_proof].
+     reflexivity. }
+   { rewrite !Tuple.strip_eta_tuple, !unfold_id_tuple_with_alt_proof.
      rewrite (proj2_sig goldilocks_mul_sig). reflexivity. }
  Defined.
 

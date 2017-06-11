@@ -3,6 +3,7 @@ Require Import Crypto.Algebra.Nsatz.
 Require Import Crypto.Util.ZUtil Crypto.Util.LetIn Crypto.Util.CPSUtil Crypto.Util.Tactics.
 Require Import Crypto.Arithmetic.Core. Import B. Import Positional.
 Require Import Crypto.Util.Tuple.
+Require Import Crypto.Util.IdfunWithAlt.
 Local Open Scope Z_scope.
 
 Section Karatsuba.
@@ -15,10 +16,10 @@ Context (weight : nat -> Z)
   Let T := tuple Z n.
   Let T2 := tuple Z n2.
 
-  (* 
-     If x = x0 + sx1 and y = y0 + sy1, then xy = s^2 * z2 + s * z1 + s * z0, 
+  (*
+     If x = x0 + sx1 and y = y0 + sy1, then xy = s^2 * z2 + s * z1 + s * z0,
      with:
-     
+
      z2 = x1y1
      z0 = x0y0
      z1 = (x1+x0)(y1+y0) - (z2 + z0)
@@ -77,19 +78,16 @@ Context (weight : nat -> Z)
     actually run and a version to bounds-check, along with a proof
     that they are exactly equal. This works around cases where the
     bounds proof requires high-level reasoning. *)
-  Definition id_with_alt_bounds {A} (value : A) (value_for_alt_bounds : A) : A
-  := value.
-  Definition id_with_alt_bounds_and_proof {A} (value : A) (value_for_alt_bounds : A)
-      {pf : value = value_for_alt_bounds}
-  := id_with_alt_bounds value value_for_alt_bounds.
-  
+  Local Notation id_with_alt_bounds := id_tuple_with_alt.
+  Local Notation id_with_alt_bounds_and_proof := id_tuple_with_alt_proof.
+
   (*
     If:
         s^2 mod p = (s + 1) mod p
         x = x0 + sx1
         y = y0 + sy1
     Then, with z0 and z2 as before (x0y0 and x1y1 respectively), let z1 = ((x0 + x1) * (y0 + y1)) - z0.
-    
+
     Computing xy one operation at a time:
     sum_z = z0 + z2
     sum_x = x0 + x1
@@ -104,13 +102,13 @@ Context (weight : nat -> Z)
     bounds of the values would indicate that it could underflow--we
     know it won't because
 
-    mul_sumxy -z0 = ((x0+x1) * (y0+y1)) - x0y0 
-                  = (x0y0 + x1y0 + x0y1 + x1y1) - x0y0 
+    mul_sumxy -z0 = ((x0+x1) * (y0+y1)) - x0y0
+                  = (x0y0 + x1y0 + x0y1 + x1y1) - x0y0
                   = x1y0 + x0y1 + x1y1
 
     Therefore, we use id_with_alt_bounds to indicate that the
     bounds-checker should check the non-subtracting form.
-   
+
    *)
 
   Definition goldilocks_mul_cps_for_bounds_checker
@@ -126,7 +124,7 @@ Context (weight : nat -> Z)
       (fun z1' => add_cps weight z1' z2
       (fun z1 => scmul_cps weight s z1
       (fun sz1 => add_cps weight sum_z sz1 f)))))))))).
-  
+
   Definition goldilocks_mul_cps s (xs ys : T2) {R} (f:T2->R) :=
     split_cps (m1:=n) (m2:=n) weight s xs
       (fun x0_x1 => split_cps weight s ys
@@ -190,11 +188,11 @@ Context (weight : nat -> Z)
   Admitted.
 
   Local Infix "**" := Associational.mul (at level 40).
-  
+
   Local Definition multerm terms :=
     Associational.multerm (fst terms) (snd terms).
-  
-  Lemma mul_power_equiv (p q : list limb) : 
+
+  Lemma mul_power_equiv (p q : list limb) :
     Permutation.permutation
       (p ** q)
       (List.map multerm (list_prod p q)).
@@ -254,7 +252,7 @@ Context (weight : nat -> Z)
   Lemma subtraction_id N p q :
     from N ((p ++ Associational.negate_snd p) ++ q) = from N q.
   Admitted.
-  
+
   Lemma goldilocks_mul_equiv' x0 x1 y0 y1 :
     let X0 := to (from n x0) in
     let X1 := to (from n x1) in
@@ -281,10 +279,10 @@ Context (weight : nat -> Z)
     | |- _ = from ?n (?a ++ ?b ++ ?c ++ ?d ++ Associational.negate_snd ?a) =>
       transitivity (from n ((a ++ Associational.negate_snd a) ++ b ++ c ++ d));
         [|remember a as A; remember b as B; remember c as C; remember d as D; remember (Associational.negate_snd A) as negA]
-        
+
     end.
     Focus 2.
-    { rewrite app_assoc_reverse. 
+    { rewrite app_assoc_reverse.
       apply permutation_from_associational.
       replace (A ++ B ++ C ++ D ++ negA) with (A ++ (B ++ C ++ D) ++ negA).
       auto using app_assoc, app_assoc_reverse.
@@ -298,7 +296,7 @@ Context (weight : nat -> Z)
            end.
     reflexivity.
   Qed.
-    
+
   Lemma goldilocks_mul_equiv s xs ys {R} f:
     @goldilocks_mul_cps s xs ys R f =
     @goldilocks_mul_cps_for_bounds_checker s xs ys R f.
@@ -323,19 +321,19 @@ Context (weight : nat -> Z)
   Qed.
 
   Definition goldilocks_mul s xs ys :=
-    id_with_alt_bounds_and_proof (pf := goldilocks_mul_equiv _ _ _ _)
+    id_with_alt_bounds_and_proof
+      (pf := goldilocks_mul_equiv _ _ _ _)
       (@goldilocks_mul_cps s xs ys _ id)
       (@goldilocks_mul_cps_for_bounds_checker s xs ys _ id).
   Lemma goldilocks_mul_id s xs ys {R} f :
     @goldilocks_mul_cps s xs ys R f = f (goldilocks_mul s xs ys).
   Proof.
-    cbv [id_with_alt_bounds_and_proof
-           id_with_alt_bounds goldilocks_mul goldilocks_mul_cps].
+    cbv [goldilocks_mul goldilocks_mul_cps]; rewrite !unfold_id_tuple_with_alt_proof.
     repeat autounfold.
     autorewrite with cancel_pair push_id uncps.
     reflexivity.
   Qed.
-    
+
   Local Existing Instances Z.equiv_modulo_Reflexive
         RelationClasses.eq_Reflexive Z.equiv_modulo_Symmetric
         Z.equiv_modulo_Transitive Z.mul_mod_Proper Z.add_mod_Proper
@@ -344,8 +342,7 @@ Context (weight : nat -> Z)
   Lemma goldilocks_mul_correct (p : Z) (p_nonzero : p <> 0) s (s_nonzero : s <> 0) (s2_modp : (s^2) mod p = (s+1) mod p) xs ys :
     (eval weight (goldilocks_mul s xs ys)) mod p = (eval weight xs * eval weight ys) mod p.
   Proof.
-    cbv [id_with_alt_bounds_and_proof
-           id_with_alt_bounds goldilocks_mul goldilocks_mul_cps].
+    cbv [goldilocks_mul goldilocks_mul_cps]; rewrite !unfold_id_tuple_with_alt_proof.
     Zmod_to_equiv_modulo.
     repeat autounfold; autorewrite with push_id cancel_pair uncps push_basesystem_eval.
     repeat match goal with
