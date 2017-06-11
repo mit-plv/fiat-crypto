@@ -42,3 +42,34 @@ Fixpoint id_tuple_with_alt_proof {A n}
      | O => id_with_alt_proof
      | S n' => id_tuple'_with_alt_proof
      end.
+
+Lemma unfold_id_with_alt {A} value value'
+  : @id_with_alt A value value' = value.
+Proof. reflexivity. Qed.
+Lemma unfold_id_with_alt_proof {A} value value' pf
+  : @id_with_alt_proof A value value' pf = value.
+Proof. reflexivity. Qed.
+Local Ltac t_ind n :=
+  let IHn := fresh "IHn" in
+  induction n as [|n IHn]; cbn [id_tuple'_with_alt id_tuple'_with_alt_proof];
+  first [ rewrite unfold_id_with_alt | rewrite unfold_id_with_alt_proof ];
+  [ reflexivity
+  | rewrite IHn, <- surjective_pairing; reflexivity ].
+Lemma unfold_id_tuple'_with_alt {A n} value value'
+  : @id_tuple'_with_alt A n value value' = value.
+Proof. t_ind n. Qed.
+Lemma unfold_id_tuple'_with_alt_proof {A n} value value' pf
+  : @id_tuple'_with_alt_proof A n value value' pf = value.
+Proof. t_ind n. Qed.
+Lemma unfold_id_tuple_with_alt {A n} value value'
+  : @id_tuple_with_alt A n value value' = value.
+Proof.
+  destruct n; cbn [id_tuple_with_alt];
+    [ apply unfold_id_with_alt | apply unfold_id_tuple'_with_alt ].
+Qed.
+Lemma unfold_id_tuple_with_alt_proof {A n} value value' pf
+  : @id_tuple_with_alt_proof A n value value' pf = value.
+Proof.
+  destruct n; cbn [id_tuple_with_alt_proof];
+    [ apply unfold_id_with_alt_proof | apply unfold_id_tuple'_with_alt_proof ].
+Qed.
