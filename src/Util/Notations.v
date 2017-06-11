@@ -63,6 +63,13 @@ Reserved Infix "≡₂₅₆" (at level 70, no associativity).
 Reserved Infix "≢₂₅₆" (at level 70, no associativity).
 Reserved Infix "≡₅₁₂" (at level 70, no associativity).
 Reserved Infix "≢₅₁₂" (at level 70, no associativity).
+(* Put these at level 71 so they don't conflict with the infix notations at level 70 *)
+Reserved Notation "<" (at level 71).
+Reserved Notation ">" (at level 71).
+Reserved Notation "<=" (at level 71).
+Reserved Notation ">=" (at level 71).
+Reserved Notation "≤" (at level 71).
+Reserved Notation "≥" (at level 71).
 Reserved Notation "a !== b" (at level 70, no associativity).
 Reserved Notation "a ≢ b" (at level 70, no associativity).
 Reserved Notation "$$ v" (at level 40).
@@ -108,3 +115,6 @@ Reserved Notation "x ++" (at level 60, format "x ++").
 Reserved Notation "x --" (at level 60, format "x --").
 Reserved Notation "++ x" (at level 60, format "++ x").
 Reserved Notation "-- x" (at level 60, format "-- x").
+Reserved Notation "~> R" (at level 70).
+Reserved Notation "A ~> R" (at level 99).
+Reserved Notation "'return' x" (at level 70, format "'return'  x").
