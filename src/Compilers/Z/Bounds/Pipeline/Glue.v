@@ -19,6 +19,8 @@ Require Import Crypto.Util.Tactics.EvarExists.
 Require Import Crypto.Util.Tactics.GetGoal.
 Require Import Crypto.Util.Tactics.PrintContext.
 Require Import Crypto.Util.Tactics.MoveLetIn.
+Require Import Crypto.Util.Tactics.ClearAll.
+Require Import Crypto.Util.Tactics.ClearbodyAll.
 
 Module Export Exports.
   Export Crypto.Compilers.Z.Reify. (* export for the tactic redefinitions *)
@@ -95,7 +97,8 @@ Ltac pattern_proj1_sig_in_sig :=
     lazymatch goal with
     | [ |- ?P ?p1a ]
       => cut (dlet p := P in p p1a);
-         [ clear; abstract (cbv [Let_In]; exact (fun x => x)) | ]
+         [ repeat (clear_all; clearbody_all);
+           abstract (cbv [Let_In]; exact (fun x => x)) | ]
     end;
     exact H
   | cbv beta ].
