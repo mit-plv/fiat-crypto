@@ -90,6 +90,7 @@ src/Compilers/Named/ExprInversion.v
 src/Compilers/Named/FMapContext.v
 src/Compilers/Named/GetNames.v
 src/Compilers/Named/IdContext.v
+src/Compilers/Named/InterpSideConditions.v
 src/Compilers/Named/InterpretToPHOAS.v
 src/Compilers/Named/InterpretToPHOASInterp.v
 src/Compilers/Named/InterpretToPHOASWf.v
