@@ -45,6 +45,7 @@ src/Compilers/InputSyntax.v
 src/Compilers/InterpByIso.v
 src/Compilers/InterpByIsoProofs.v
 src/Compilers/InterpProofs.v
+src/Compilers/InterpSideConditions.v
 src/Compilers/InterpWf.v
 src/Compilers/InterpWfRel.v
 src/Compilers/Linearize.v
