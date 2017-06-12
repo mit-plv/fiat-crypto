@@ -151,19 +151,24 @@ Proof.
   apply InterpRewriteOp; intros; unfold simplify_op_expr.
   break_innermost_match;
     repeat first [ fin_t
-                 | progress cbv [LetIn.Let_In Z.zselect]
+                 | progress cbv [LetIn.Let_In Z.zselect IdfunWithAlt.id_with_alt]
                  | progress simpl in *
                  | progress subst
                  | progress subst_prod
                  | rewrite_interp_as_expr_or_const_correct_base ()
                  | rewrite_interp_as_expr_or_const_correct_prod_base ()
                  | rewrite_interp_as_expr_or_const_correct_prod3_base ()
+                 | rewrite FixedWordSizesEquality.ZToWord_wordToZ
+                 | rewrite FixedWordSizesEquality.ZToWord_wordToZ_ZToWord by reflexivity
+                 | rewrite FixedWordSizesEquality.wordToZ_ZToWord_0
                  | progress unfold interp_op, lift_op
                  | progress Z.ltb_to_lt
                  | progress rewrite ?Z.land_0_l, ?Z.land_0_r, ?Z.lor_0_l, ?Z.lor_0_r
                  | rewrite !Z.sub_with_borrow_to_add_get_carry
                  | progress autorewrite with zsimplify_fast
-                 | break_innermost_match_step ].
+                 | break_innermost_match_step
+                 | inversion_base_type_constr_step
+                 | progress cbv [cast_const ZToInterp interpToZ] ].
 Qed.
 
 Hint Rewrite @InterpSimplifyArith : reflective_interp.

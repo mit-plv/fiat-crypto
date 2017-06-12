@@ -3,6 +3,7 @@ Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.Rewriter.
 Require Import Crypto.Compilers.Z.Syntax.
+Require Import Crypto.Compilers.Z.Syntax.Equality.
 
 Section language.
   Context (convert_adc_to_sbb : bool).
@@ -82,6 +83,25 @@ Section language.
                  | Some (gen_expr ep, neg_expr en)
                  | Some (neg_expr en, gen_expr ep)
                    => Op (Sub _ _ _) (Pair ep en)
+                 | _ => Op opc args
+                 end
+         | Add T1 T2 Tout as opc
+           => fun args
+              => match interp_as_expr_or_const args with
+                 | Some (const_of v, gen_expr e)
+                   => if (v =? 0)%Z
+                      then match base_type_eq_semidec_transparent T2 Tout with
+                           | Some pf => eq_rect _ (fun t => exprf (Tbase t)) e _ pf
+                           | None => Op opc args
+                           end
+                      else Op opc args
+                 | Some (gen_expr e, const_of v)
+                   => if (v =? 0)%Z
+                      then match base_type_eq_semidec_transparent T1 Tout with
+                           | Some pf => eq_rect _ (fun t => exprf (Tbase t)) e _ pf
+                           | None => Op opc args
+                           end
+                      else Op opc args
                  | _ => Op opc args
                  end
          | Sub TZ TZ TZ as opc
@@ -188,6 +208,23 @@ Section language.
                  | Some (neg_expr e)
                    => e
                  | _
+                   => Op opc args
+                 end
+         | IdWithAlt (TWord _ as T1) _ (TWord _ as Tout) as opc
+           => fun args
+              => match base_type_eq_semidec_transparent T1 Tout with
+                 | Some pf
+                   => match interp_as_expr_or_const args with
+                      | Some (const_of c, _)
+                        => Op (OpConst c) TT
+                      | Some (neg_expr e, _)
+                        => Op (Opp _ _) e
+                      | Some (gen_expr e, _)
+                        => eq_rect _ (fun t => exprf (Tbase t)) e _ pf
+                      | None
+                        => Op opc args
+                      end
+                 | None
                    => Op opc args
                  end
          | Zselect TZ TZ TZ TZ as opc
@@ -323,7 +360,6 @@ Section language.
                       | _ => Op opc args
                       end
                  else Op opc args
-         | Add _ _ _ as opc
          | Sub _ _ _ as opc
          | Mul _ _ _ as opc
          | Shl _ _ _ as opc

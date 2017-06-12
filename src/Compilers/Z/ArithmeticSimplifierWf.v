@@ -241,6 +241,7 @@ Proof.
            | _ => pose_wff_prod3
            | _ => progress destruct_head'_and
            | _ => progress subst
+           | _ => inversion_base_type_constr_step
            | [ H1 : _ = Some _, H2 : _ = None, Hwf : wff _ _ _ |- _ ]
              => pose proof (interp_as_expr_or_const_Some_None Hwf H1 H2); clear H1 H2
            | [ H1 : _ = None, H2 : _ = Some _, Hwf : wff _ _ _ |- _ ]
@@ -251,6 +252,8 @@ Proof.
            | [ |- wff _ (LetIn _ _) (Pair _ _) ] => exfalso
            | [ |- wff _ _ _ ] => constructor; intros
            | [ |- List.In _ _ ] => progress (simpl; auto)
+           | _ => rewrite FixedWordSizesEquality.ZToWord_wordToZ
+           | _ => rewrite FixedWordSizesEquality.ZToWord_wordToZ_ZToWord by reflexivity
            | _ => break_innermost_match_step; simpl in *
            end.
 Qed.
