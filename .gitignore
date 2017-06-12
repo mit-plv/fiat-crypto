@@ -9,6 +9,7 @@
 Makefile.bak
 Makefile.coq
 Makefile.coq.bak
+Makefile-old.conf
 csdp.cache
 lia.cache
 nlia.cache
