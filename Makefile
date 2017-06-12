@@ -63,7 +63,8 @@ DISPLAY_NON_JAVA_VO := $(filter-out $(DISPLAY_JAVA_VO),$(DISPLAY_VO))
 # computing the vo_reverse_closure is slow, so we only do it if we're
 # asked to make the lite target
 ifneq ($(filter lite,$(MAKECMDGOALS)),)
-LITE_VOFILES := $(filter-out $(call vo_reverse_closure,$(VO_FILES),$(LITE_UNMADE_VOFILES)),$(COQ_VOFILES))
+LITE_ALL_UNMADE_VOFILES := $(foreach vo,$(LITE_UNMADE_VOFILES),$(call vo_reverse_closure,$(VOFILES),$(vo)))
+LITE_VOFILES := $(filter-out $(LITE_ALL_UNMADE_VOFILES),$(COQ_VOFILES))
 endif
 ifneq ($(filter only-heavy,$(MAKECMDGOALS)),)
 HEAVY_VOFILES := $(call vo_closure,$(LITE_UNMADE_VOFILES))
