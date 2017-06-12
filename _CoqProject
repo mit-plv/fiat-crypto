@@ -127,6 +127,7 @@ src/Compilers/Z/HexNotationConstants.v
 src/Compilers/Z/Inline.v
 src/Compilers/Z/InlineInterp.v
 src/Compilers/Z/InlineWf.v
+src/Compilers/Z/InterpSideConditions.v
 src/Compilers/Z/JavaNotations.v
 src/Compilers/Z/MapCastByDeBruijn.v
 src/Compilers/Z/MapCastByDeBruijnInterp.v
