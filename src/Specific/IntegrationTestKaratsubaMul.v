@@ -87,7 +87,7 @@ Section BoundedField25p5.
     { Time unify_abstract_vm_compute_rhs_reflexivity. }
     { Time unify_abstract_vm_compute_rhs_reflexivity. }
     { Time unify_abstract_rhs_reflexivity. }
-    { Time unify_abstract_renamify_rhs_reflexivity. }
+    { Show. Time unify_abstract_renamify_rhs_reflexivity. }
     { Time shelve; subst_let; clear; abstract vm_cast_no_check (eq_refl true). }
     { Time shelve; subst_let; clear; vm_compute; reflexivity. }
     { Time shelve; unify_abstract_compute_rhs_reflexivity. }
