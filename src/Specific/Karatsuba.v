@@ -198,7 +198,7 @@ Section Ops51.
     eexists; cbv beta zeta; intros.
     pose proof wt_nonzero.
     let x := constr:(
-               goldilocks_mul (n:=half_sz) (n2:=sz) wt (eq_refl _)  wt_nonzero half_sz_nonzero sz_nonzero (2^224) a b ) in
+               goldilocks_mul (n:=half_sz) (n2:=sz) wt (2^224) a b ) in
     F_mod_eq;
       transitivity (Positional.eval wt x); repeat autounfold;
 
@@ -213,17 +213,16 @@ Section Ops51.
       (fun a
        => Tuple.eta_tuple
             (fun b
-             => id_tuple_with_alt_proof
-                  (pf := goldilocks_mul_sig_equiv a b)
+             => id_tuple_with_alt
                   ((proj1_sig goldilocks_mul_sig) a b)
                   ((proj1_sig goldilocks_mul_for_bounds_checker_sig) a b))
             b)
       a).
-   { cbv [proj1_sig goldilocks_mul_for_bounds_checker_sig goldilocks_mul_sig Tuple.eta_tuple Tuple.eta_tuple_dep sz Tuple.eta_tuple'_dep id_tuple_with_alt_proof id_tuple'_with_alt_proof];
+   { cbv [proj1_sig goldilocks_mul_for_bounds_checker_sig goldilocks_mul_sig Tuple.eta_tuple Tuple.eta_tuple_dep sz Tuple.eta_tuple'_dep id_tuple_with_alt id_tuple'_with_alt];
        cbn [fst snd].
-     cbv [id_with_alt_proof].
+     cbv [id_with_alt].
      reflexivity. }
-   { rewrite !Tuple.strip_eta_tuple, !unfold_id_tuple_with_alt_proof.
+   { rewrite !Tuple.strip_eta_tuple, !unfold_id_tuple_with_alt.
      rewrite (proj2_sig goldilocks_mul_sig). reflexivity. }
  Defined.
 

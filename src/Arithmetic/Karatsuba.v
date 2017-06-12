@@ -79,7 +79,6 @@ Context (weight : nat -> Z)
     that they are exactly equal. This works around cases where the
     bounds proof requires high-level reasoning. *)
   Local Notation id_with_alt_bounds := id_tuple_with_alt.
-  Local Notation id_with_alt_bounds_and_proof := id_tuple_with_alt_proof.
 
   (*
     If:
@@ -321,14 +320,13 @@ Context (weight : nat -> Z)
   Qed.
 
   Definition goldilocks_mul s xs ys :=
-    id_with_alt_bounds_and_proof
-      (pf := goldilocks_mul_equiv _ _ _ _)
+    id_with_alt_bounds
       (@goldilocks_mul_cps s xs ys _ id)
       (@goldilocks_mul_cps_for_bounds_checker s xs ys _ id).
   Lemma goldilocks_mul_id s xs ys {R} f :
     @goldilocks_mul_cps s xs ys R f = f (goldilocks_mul s xs ys).
   Proof.
-    cbv [goldilocks_mul goldilocks_mul_cps]; rewrite !unfold_id_tuple_with_alt_proof.
+    cbv [goldilocks_mul goldilocks_mul_cps]; rewrite !unfold_id_tuple_with_alt.
     repeat autounfold.
     autorewrite with cancel_pair push_id uncps.
     reflexivity.
@@ -342,7 +340,7 @@ Context (weight : nat -> Z)
   Lemma goldilocks_mul_correct (p : Z) (p_nonzero : p <> 0) s (s_nonzero : s <> 0) (s2_modp : (s^2) mod p = (s+1) mod p) xs ys :
     (eval weight (goldilocks_mul s xs ys)) mod p = (eval weight xs * eval weight ys) mod p.
   Proof.
-    cbv [goldilocks_mul goldilocks_mul_cps]; rewrite !unfold_id_tuple_with_alt_proof.
+    cbv [goldilocks_mul goldilocks_mul_cps]; rewrite !unfold_id_tuple_with_alt.
     Zmod_to_equiv_modulo.
     repeat autounfold; autorewrite with push_id cancel_pair uncps push_basesystem_eval.
     repeat match goal with
