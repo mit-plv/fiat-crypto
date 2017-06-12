@@ -50,7 +50,6 @@ Section WordByWordMontgomery.
     (N : T) (Npos : positive) (Npos_correct: eval N = Z.pos Npos)
     (N_lt_R : eval N < R)
     (small_N : small N)
-    (eval_small_bounded_numlimbs : forall v, small v -> eval v < r ^ Z.of_nat (numlimbs v))
     (B : T)
     (B_bounds : 0 <= eval B < R)
     (small_B : small B)
@@ -501,14 +500,13 @@ Section WordByWordMontgomery.
     : numlimbs (redc A) = S (numlimbs B).
   Proof. rewrite numlimbs_redc_gen; subst; auto; destruct (numlimbs A); reflexivity. Qed.
 
-  Lemma redc_mod_N A (small_A : small A) (A_nonneg : 0 <= eval A)
+  Lemma redc_mod_N A (small_A : small A) (A_bound : 0 <= eval A < r ^ Z.of_nat (numlimbs A))
     : (eval (redc A)) mod (eval N) = (eval A * eval B * ri^(Z.of_nat (numlimbs A))) mod (eval N).
   Proof.
     unfold redc.
     rewrite snd_redc_loop_mod_N; cbn [fst snd];
       autorewrite with push_eval zsimplify;
       [ | rewrite ?Npos_correct; auto; lia.. ].
-    pose proof (eval_small_bounded_numlimbs A small_A).
     Z.rewrite_mod_small.
     reflexivity.
   Qed.
