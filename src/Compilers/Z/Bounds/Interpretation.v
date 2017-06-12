@@ -21,6 +21,8 @@ Module Import Bounds.
   Definition t := bounds.
   Bind Scope bounds_scope with t.
   Local Coercion Z.of_nat : nat >-> Z.
+  Definition interp_base_type (ty : base_type) : Set := t.
+
   Section with_bitwidth.
     Context (bit_width : option Z).
     Definition two_corners (f : Z -> Z) : t -> t
@@ -151,9 +153,12 @@ Module Import Bounds.
     Definition cmovle (x y r1 r2 : t) : t
       := truncation_bounds (cmovle' r1 r2).
 
-    (** TODO(jgross): swap to other bounds here *)
-    Definition id_with_alt (x y : t) : t
-      := truncation_bounds x.
+    Definition id_with_alt {T1 T2 Tout} (x : interp_base_type T1) (y : interp_base_type T2)
+      : interp_base_type Tout
+      := truncation_bounds match T1, T2, Tout with
+                           | TZ, TZ, TZ => (*y*)x
+                           | _, _, _ => x
+                           end.
   End with_bitwidth.
   Section with_bitwidth2.
     Context (bit_width1 bit_width2 : option Z)
@@ -184,8 +189,6 @@ Module Import Bounds.
     Infix "&'" := (land _) : bounds_scope.
     Notation "- x" := (opp _ x) : bounds_scope.
   End Notations.
-
-  Definition interp_base_type (ty : base_type) : Set := t.
 
   Definition log_bit_width_of_base_type ty : option nat
     := match ty with

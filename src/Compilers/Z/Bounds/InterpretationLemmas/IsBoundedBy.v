@@ -332,6 +332,7 @@ Lemma is_bounded_by_interp_op t tR (opc : op t tR)
       (bs : interp_flat_type Bounds.interp_base_type _)
       (v : interp_flat_type interp_base_type _)
       (H : Bounds.is_bounded_by bs v)
+      (*H_side : interped_op_side_conditions opc v = true*)
   : Bounds.is_bounded_by (Bounds.interp_op opc bs) (Syntax.interp_op _ _ opc v).
 Proof.
   destruct opc;
@@ -390,7 +391,8 @@ Proof.
                  | progress simpl in *
                  | progress split_min_max
                  | omega ]. }
-  { split; assumption. }
+  { break_innermost_match; simpl in *; Z.ltb_to_lt; subst;
+      split; assumption. }
   { destruct_head Bounds.t; cbv [Bounds.zselect' Z.zselect].
     break_innermost_match; split_min_max; omega. }
   { apply (@monotone_eight_corners true true true _ _ _); split; auto. }

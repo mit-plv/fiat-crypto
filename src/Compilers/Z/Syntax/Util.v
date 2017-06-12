@@ -26,6 +26,15 @@ Definition is_const_or_opp s d (v : op s d) : bool
 Arguments is_const_or_opp [s d] v.
 
 
+Definition interped_op_side_conditions {s d} (opc : op s d)
+  : interp_flat_type interp_base_type s -> bool
+  := match opc in op s d return interp_flat_type _ s -> _ with
+     | IdWithAlt TZ TZ TZ
+       => fun v1v2 : Z * Z
+          => Z.eqb (fst v1v2) (snd v1v2)
+     | _ => fun _ => true
+     end.
+
 Definition cast_back_flat_const {var t f V}
            (v : interp_flat_type interp_base_type (@SmartFlatTypeMap base_type var f t V))
   : interp_flat_type interp_base_type t
