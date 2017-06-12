@@ -76,6 +76,7 @@ src/Compilers/WfReflectiveGen.v
 src/Compilers/Named/AListContext.v
 src/Compilers/Named/Compile.v
 src/Compilers/Named/CompileInterp.v
+src/Compilers/Named/CompileInterpSideConditions.v
 src/Compilers/Named/CompileProperties.v
 src/Compilers/Named/CompileWf.v
 src/Compilers/Named/Context.v
