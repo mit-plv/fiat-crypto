@@ -63,8 +63,41 @@ Section BoundedField25p5.
     apply (fun f => proj2_sig_map (fun THIS_NAME_MUST_NOT_BE_UNDERSCORE_TO_WORK_AROUND_CONSTR_MATCHING_ANAOMLIES___BUT_NOTE_THAT_IF_THIS_NAME_IS_LOWERCASE_A___THEN_REIFICATION_STACK_OVERFLOWS___AND_I_HAVE_NO_IDEA_WHATS_GOING_ON p => f_equal f p)).
     (* jgross start here! *)
     (*Set Ltac Profiling.*)
-    Time admit; refine_reflectively.
+    (*Open Scope zrange_scope.
+    assert (Interpretation.Bounds.is_tighter_thanb
+              (T:=Syntax.tuple (Syntax.Tbase Syntax.TZ) 8)
+              (r[0 ~> 72057594037927935]%zrange, r[0 ~> 72057594037927935]%zrange, r[0 ~> 72057594037927935]%zrange,
+               r[0 ~> 102363547501837588311535505879802992345435751778060049012811372691468]%zrange, r[0 ~> 72057594037927935]%zrange,
+               r[0 ~> 19714502134749424271321677013450763]%zrange, r[0 ~> 72057594037927935]%zrange, r[0 ~> 72057594037927935]%zrange)
+              (r[0 ~> 81064793292668928]%zrange, r[0 ~> 81064793292668928]%zrange, r[0 ~> 81064793292668928]%zrange,
+               r[0 ~> 81064793292668928]%zrange, r[0 ~> 81064793292668928]%zrange, r[0 ~> 81064793292668928]%zrange,
+               r[0 ~> 81064793292668928]%zrange, r[0 ~> 81064793292668928]%zrange) = true).
+    cbv [Interpretation.Bounds.is_tighter_thanb Relations.interp_flat_type_relb_pointwise Relations.interp_flat_type_rel_pointwise_gen_Prop Syntax.tuple Syntax.tuple' fst snd].*)
+    Ltac ReflectiveTactics.solve_side_conditions ::= idtac.
+    Time refine_reflectively.
+    Import ReflectiveTactics.
+    { Time do_reify. }
+    Import Compilers.Syntax.
+    Require Import CNotations.
+    Require Import Crypto.Util.Tactics.SubstLet.
+    Require Import Crypto.Util.Tactics.UnifyAbstractReflexivity.
+    { Time unify_abstract_vm_compute_rhs_reflexivity. }
+    { Time unify_abstract_vm_compute_rhs_reflexivity. }
+    { Time unify_abstract_vm_compute_rhs_reflexivity. }
+    { Time unify_abstract_vm_compute_rhs_reflexivity. }
+    { Time unify_abstract_vm_compute_rhs_reflexivity. }
+    { Time unify_abstract_rhs_reflexivity. }
+    { Time unify_abstract_renamify_rhs_reflexivity. }
+    { Time shelve; subst_let; clear; abstract vm_cast_no_check (eq_refl true). }
+    { Time shelve; subst_let; clear; vm_compute; reflexivity. }
+    { Time shelve; unify_abstract_compute_rhs_reflexivity. }
+    { Time shelve; unify_abstract_cbv_interp_rhs_reflexivity. }
+    { Time abstract handle_bounds_from_hyps. }
+    { Time handle_boundedness_side_condition. }
+    Unshelve.
+    all:shelve_unifiable.
+    cbv [Interpretation.Bounds.is_tighter_thanb Relations.interp_flat_type_relb_pointwise Relations.interp_flat_type_rel_pointwise_gen_Prop Syntax.tuple Syntax.tuple' fst snd codomain bounds Interpretation.Bounds.is_tighter_thanb'].
     (*Show Ltac Profile.*)
-  Time Admitted. (* Finished transaction in 10.167 secs (10.123u,0.023s) (successful) *)
+  Time Admitted.
 
 End BoundedField25p5.
