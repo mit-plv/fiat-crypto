@@ -34,9 +34,7 @@ Section WordByWordMontgomery.
     {eval_scmul: forall a v, eval (scmul a v) = a * eval v}
     {numlimbs_scmul : forall a v, 0 <= a < r -> numlimbs (scmul a v) = S (numlimbs v)}
     {R : positive}
-    {R_numlimbs : nat}.
-  Local Notation bn := (r * R) (only parsing).
-  Context
+    {R_numlimbs : nat}
     {R_correct : R = r^Z.of_nat R_numlimbs :> Z}
     {add : T -> T -> T} (* joins carry *)
     {eval_add : forall a b, eval (add a b) = eval a + eval b}
@@ -171,7 +169,6 @@ Section WordByWordMontgomery.
 
     Lemma S2_mod_N : (eval S2) mod N = (S + a*B) mod N.
     Proof.
-      assert (bn_large : bn >= r) by (unfold bn; nia).
       cbv [S2 WordByWord.Definition.q WordByWord.Definition.s]; autorewrite with push_eval zsimplify. rewrite S1_eq. reflexivity.
     Qed.
 
@@ -206,7 +203,6 @@ Section WordByWordMontgomery.
     Lemma S3_mod_N
       : S3 mod N = (S + a*B)*ri mod N.
     Proof.
-      assert (r_div_bn : (r | bn)) by apply Z.divide_factor_l.
       cbv [S3]; autorewrite with push_eval cancel_pair.
       pose proof fun a => Z.div_to_inv_modulo N a r ri eq_refl ri_correct as HH;
                             cbv [Z.equiv_modulo] in HH; rewrite HH; clear HH.
@@ -214,8 +210,6 @@ Section WordByWordMontgomery.
                       rewrite (fun a => Z.mul_mod_l a ri N); reflexivity].
       rewrite <-S2_mod_N; repeat (f_equal; []); autorewrite with push_eval.
       autorewrite with push_Zmod;
-        replace (bn mod r) with 0
-        by (symmetry; apply Z.mod_divide; try assumption; try lia);
         rewrite S2_mod_r;
         autorewrite with zsimplify.
       reflexivity.
