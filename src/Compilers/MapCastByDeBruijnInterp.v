@@ -8,15 +8,18 @@ Require Import Crypto.Compilers.Named.MapCastInterp.
 Require Import Crypto.Compilers.Named.MapCastWf.
 Require Import Crypto.Compilers.Named.InterpretToPHOASInterp.
 Require Import Crypto.Compilers.Named.CompileInterp.
+Require Import Crypto.Compilers.Named.CompileInterpSideConditions.
 Require Import Crypto.Compilers.Named.CompileWf.
 Require Import Crypto.Compilers.Named.PositiveContext.
 Require Import Crypto.Compilers.Named.PositiveContext.Defaults.
 Require Import Crypto.Compilers.Named.PositiveContext.DefaultsProperties.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.MapCastByDeBruijn.
+Require Import Crypto.Compilers.InterpSideConditions.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Sigma.
+Require Import Crypto.Util.PointedProp.
 Require Import Crypto.Util.Tactics.BreakMatch.
 
 Section language.
@@ -30,6 +33,7 @@ Section language.
           (interp_op : forall src dst, op src dst -> interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst)
           {interp_base_type_bounds : base_type_code -> Type}
           (interp_op_bounds : forall src dst, op src dst -> interp_flat_type interp_base_type_bounds src -> interp_flat_type interp_base_type_bounds dst)
+          (interped_op_side_conditions : forall s d, op s d -> interp_flat_type interp_base_type s -> pointed_Prop)
           (pick_typeb : forall t, interp_base_type_bounds t -> base_type_code).
   Local Notation pick_type v := (SmartFlatTypeMap pick_typeb v).
   Context (cast_op : forall t tR (opc : op t tR) args_bs,
@@ -43,12 +47,14 @@ Section language.
   Context (interp_op_bounds_correct
            : forall t tR opc bs
                     (v : interp_flat_type interp_base_type t)
-                    (H : inbounds t bs v),
+                    (H : inbounds t bs v)
+                    (Hside : to_prop (interped_op_side_conditions _ _ opc v)),
               inbounds tR (interp_op_bounds t tR opc bs) (interp_op t tR opc v))
           (pull_cast_back
            : forall t tR opc bs
                     (v : interp_flat_type interp_base_type (pick_type bs))
-                    (H : inbounds t bs (cast_back t bs v)),
+                    (H : inbounds t bs (cast_back t bs v))
+                    (Hside : to_prop (interped_op_side_conditions _ _ opc (cast_back t bs v))),
               interp_op t tR opc (cast_back t bs v)
               =
               cast_back _ _ (interp_op _ _ (cast_op _ _ opc bs) v)).
@@ -76,7 +82,8 @@ Section language.
         (Hwf : Wf e)
         (input_bounds : interp_flat_type interp_base_type_bounds (domain t))
     : forall {b} e' (He':MapCast e input_bounds = Some (existT _ b e'))
-             v v' (Hv : @inbounds _ input_bounds v /\ cast_back _ _ v' = v),
+             v v' (Hv : @inbounds _ input_bounds v /\ cast_back _ _ v' = v)
+             (Hside : to_prop (InterpSideConditions interp_op interped_op_side_conditions e v)),
       Interp interp_op_bounds e input_bounds = b
       /\ @inbounds _ b (Interp interp_op e v)
       /\ cast_back _ _ (Interp interp_op e' v') = (Interp interp_op e v).
@@ -102,7 +109,8 @@ Section language.
       |
       | change (interp interp_op (?e ?var) ?v') with (Interp interp_op e v');
         unfold Interp, InterpretToPHOAS.Named.InterpToPHOAS, InterpretToPHOAS.Named.InterpToPHOAS_gen;
-        rewrite <- interp_interp_to_phoas; [ reflexivity | ] ].
+        rewrite <- interp_interp_to_phoas; [ reflexivity | ]
+      | ].
     { erewrite (interp_compile (ContextOk:=PositiveContextOk)) with (e':=e _);
         [ reflexivity | auto | .. | eassumption ];
         auto using name_list_unique_DefaultNamesFor. }
@@ -114,5 +122,8 @@ Section language.
           [ auto | .. | eassumption ];
           auto using name_list_unique_DefaultNamesFor. }
       { intros ???; rewrite lookupb_empty by apply PositiveContextOk; congruence. } }
+    { erewrite (interp_side_conditions_compile (ContextOk:=PositiveContextOk)) with (e':=e _);
+        [ assumption | auto | .. | eassumption ];
+        auto using name_list_unique_DefaultNamesFor. }
   Qed.
 End language.

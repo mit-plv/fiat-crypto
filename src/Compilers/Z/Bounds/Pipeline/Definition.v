@@ -79,26 +79,37 @@ Require Import Crypto.Util.Sigma.MapProjections.
 Record PipelineOptions := { anf : bool }.
 Definition default_PipelineOptions :=
   {| anf := false |}.
-(** Do not change the name or the type of this definition *)
-Definition PostWfPipeline
-           round_up
+(** Do not change the name or the type of these two definitions *)
+(** The definition [PostWfPreBoundsPipeline] is for the part of the
+    pipeline that comes before [MapCast]; it must preserve the type of
+    the expression. *)
+Definition PostWfPreBoundsPipeline
            (opts : PipelineOptions)
            {t} (e : Expr base_type op t)
+  : Expr base_type op t
+  := let e := InlineConst e in
+     let e := InlineConst (SimplifyArith false e) in
+     let e := InlineConst (SimplifyArith false e) in
+     let e := InlineConst (SimplifyArith false e) in
+     let e := if opts.(anf) then InlineConst (ANormal e) else e in
+     let e := RewriteAdc e in
+     let e := InlineConstAndOpp (Linearize (SimplifyArith true e)) in
+     let e := if opts.(anf) then InlineConstAndOpp (ANormal e) else e in
+     let e := InlineConstAndOpp (Linearize (SimplifyArith true e)) in
+     (*let e := CSE false e in*)
+     e.
+(** The definition [PostWfBoundsPipeline] is for the part of the
+    pipeline that begins with [MapCast]. *)
+Definition PostWfBoundsPipeline
+           round_up
+           (opts : PipelineOptions)
+           {t} (e0 : Expr base_type op t)
+           (e : Expr base_type op t)
            (input_bounds : interp_flat_type Bounds.interp_base_type (domain t))
   : option (@ProcessedReflectivePackage round_up)
   := Build_ProcessedReflectivePackage_from_option_sigma
-       e input_bounds
-       (let e := InlineConst e in
-        let e := InlineConst (SimplifyArith false e) in
-        let e := InlineConst (SimplifyArith false e) in
-        let e := InlineConst (SimplifyArith false e) in
-        let e := if opts.(anf) then InlineConst (ANormal e) else e in
-        let e := RewriteAdc e in
-        let e := InlineConstAndOpp (Linearize (SimplifyArith true e)) in
-        let e := if opts.(anf) then InlineConstAndOpp (ANormal e) else e in
-        let e := InlineConstAndOpp (Linearize (SimplifyArith true e)) in
-        (*let e := CSE false e in*)
-        let e := MapCast _ e input_bounds in
+       e0 input_bounds
+       (let e := MapCast _ e input_bounds in
         option_map
           (projT2_map
              (fun b e'
@@ -107,24 +118,27 @@ Definition PostWfPipeline
                  e'))
           e).
 
-(** *** Correctness proof of the Pre-Wf Pipeline *)
+(** *** Correctness proof of the Post-Wf Pipeline *)
 (** Do not change the statement of this lemma. *)
 Require Import Crypto.Compilers.Wf.
 Require Import Crypto.Compilers.Equality.
 Require Import Crypto.Compilers.SmartMap.
 Require Import Crypto.Compilers.Z.Syntax.Util.
+Require Import Crypto.Compilers.Z.InterpSideConditions.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.HProp.
 Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.PointedProp.
 
 Section with_round_up_list.
   Context {allowable_lgsz : list nat}.
 
   Local Notation pick_typeb := (@Bounds.bounds_to_base_type (Bounds.round_up_to_in_list allowable_lgsz)) (only parsing).
   Local Notation pick_type v := (SmartFlatTypeMap pick_typeb v).
+  Local Opaque to_prop InterpSideConditions.
 
   Definition PostWfPipelineCorrect
              opts
@@ -132,23 +146,25 @@ Section with_round_up_list.
              (e : Expr base_type op t)
              (input_bounds : interp_flat_type Bounds.interp_base_type (domain t))
              (Hwf : Wf e)
-             {b e'} (He : PostWfPipeline _ opts e input_bounds
-                          = Some {| input_expr := e ; input_bounds := input_bounds ; output_bounds := b ; output_expr := e' |})
+             (e' := PostWfPreBoundsPipeline opts e)
+             {b e''} (He' : PostWfBoundsPipeline _ opts e e' input_bounds
+                            = Some {| input_expr := e ; input_bounds := input_bounds ; output_bounds := b ; output_expr := e'' |})
              (v : interp_flat_type Syntax.interp_base_type (domain t))
              (v' : interp_flat_type Syntax.interp_base_type (pick_type input_bounds))
              (Hv : Bounds.is_bounded_by input_bounds v /\ cast_back_flat_const v' = v)
+             (Hside : to_prop (InterpSideConditions e' v))
     : Bounds.is_bounded_by b (Interp interp_op e v)
-      /\ cast_back_flat_const (Interp interp_op e' v') = Interp interp_op e v.
+      /\ cast_back_flat_const (Interp interp_op e'' v') = Interp interp_op e v.
   Proof.
     (** These first two lines probably shouldn't change much *)
-    unfold PostWfPipeline, Build_ProcessedReflectivePackage_from_option_sigma, option_map, projT2_map in *.
+    unfold PostWfBoundsPipeline, PostWfPreBoundsPipeline, Build_ProcessedReflectivePackage_from_option_sigma, option_map, projT2_map in *; subst e'.
     repeat (break_match_hyps || inversion_option || inversion_ProcessedReflectivePackage
             || inversion_sigma || eliminate_hprop_eq || inversion_prod
             || simpl in * || subst).
     (** Now handle all the transformations that come after the word-size selection *)
     all:autorewrite with reflective_interp.
     (** Now handle word-size selection *)
-    all:(eapply MapCastCorrect_eq; [ | eassumption | eassumption | .. ];
+    all:(eapply MapCastCorrect_eq; [ | eassumption | eassumption | assumption | .. ];
          [ solve [ auto 60 with wf ] | reflexivity | ]).
     (** Now handle all the transformations that come before the word-size selection *)
     all:repeat autorewrite with reflective_interp; reflexivity.

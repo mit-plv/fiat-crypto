@@ -5,10 +5,12 @@ Require Import Crypto.Compilers.Relations.
 Require Import Crypto.Compilers.Z.MapCastByDeBruijnInterp.
 Require Import Crypto.Compilers.Z.Syntax.
 Require Import Crypto.Compilers.Z.Syntax.Util.
+Require Import Crypto.Compilers.Z.InterpSideConditions.
 Require Import Crypto.Compilers.Z.Bounds.Interpretation.
 Require Import Crypto.Compilers.Z.Bounds.InterpretationLemmas.IsBoundedBy.
 Require Import Crypto.Compilers.Z.Bounds.InterpretationLemmas.PullCast.
 Require Import Crypto.Compilers.Z.Bounds.MapCastByDeBruijn.
+Require Import Crypto.Util.PointedProp.
 
 Lemma MapCastCorrect
       {round_up}
@@ -16,7 +18,8 @@ Lemma MapCastCorrect
       (Hwf : Wf e)
       (input_bounds : interp_flat_type Bounds.interp_base_type (domain t))
   : forall {b} e' (He':MapCast round_up e input_bounds = Some (existT _ b e'))
-           v v' (Hv : Bounds.is_bounded_by input_bounds v /\ cast_back_flat_const v' = v),
+           v v' (Hv : Bounds.is_bounded_by input_bounds v /\ cast_back_flat_const v' = v)
+           (Hside : to_prop (InterpSideConditions e v)),
     Interp (@Bounds.interp_op) e input_bounds = b
     /\ Bounds.is_bounded_by b (Interp interp_op e v)
     /\ cast_back_flat_const (Interp interp_op e' v') = (Interp interp_op e v).
@@ -34,6 +37,7 @@ Lemma MapCastCorrect_eq
       (input_bounds : interp_flat_type Bounds.interp_base_type (domain t))
   : forall {b} e' (He':MapCast round_up e input_bounds = Some (existT _ b e'))
            v v' (Hv : Bounds.is_bounded_by input_bounds v /\ cast_back_flat_const v' = v)
+           (Hside : to_prop (InterpSideConditions e v))
            (Hevb : evb = Interp (@Bounds.interp_op) e input_bounds)
            (Hev : ev = Interp interp_op e v),
     evb = b

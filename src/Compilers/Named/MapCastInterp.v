@@ -8,12 +8,15 @@ Require Import Crypto.Compilers.Named.Syntax.
 Require Import Crypto.Compilers.Named.ContextDefinitions.
 Require Import Crypto.Compilers.Named.ContextProperties.
 Require Import Crypto.Compilers.Named.ContextProperties.SmartMap.
+Require Import Crypto.Compilers.Named.InterpSideConditions.
+Require Import Crypto.Compilers.Named.InterpSideConditionsInterp.
 Require Import Crypto.Compilers.Named.MapCast.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.PointedProp.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.DestructHead.
@@ -35,6 +38,7 @@ Section language.
           {interp_base_type : base_type_code -> Type}
           (interp_op : forall src dst,
               op src dst -> interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst)
+          (interped_op_side_conditions : forall s d, op s d -> interp_flat_type interp_base_type s -> pointed_Prop)
           (cast_backb: forall t b, interp_base_type (pick_typeb t b) -> interp_base_type t).
   Let cast_back : forall t b, interp_flat_type interp_base_type (@pick_type t b) -> interp_flat_type interp_base_type t
     := fun t b => SmartFlatTypeMapUnInterp cast_backb.
@@ -46,12 +50,14 @@ Section language.
   Context (interp_op_bounds_correct:
              forall t tR opc bs
                     (v : interp_flat_type interp_base_type t)
-                    (H : inbounds t bs v),
+                    (H : inbounds t bs v)
+                    (Hside : to_prop (interped_op_side_conditions _ _ opc v)),
                inbounds tR (interp_op_bounds t tR opc bs) (interp_op t tR opc v))
           (pull_cast_back:
              forall t tR opc bs
                     (v : interp_flat_type interp_base_type (pick_type t bs))
-                    (H : inbounds t bs (cast_back t bs v)),
+                    (H : inbounds t bs (cast_back t bs v))
+                    (Hside : to_prop (interped_op_side_conditions _ _ opc (cast_back t bs v))),
                interp_op t tR opc (cast_back t bs v)
                =
                cast_back _ _ (interp_op _ _ (cast_op _ _ opc bs) v))
@@ -139,6 +145,14 @@ Section language.
     | [ |- ?A /\ (exists v, None = Some v /\ @?B v) ]
       => exfalso
     end.
+  Local Ltac handle_bounds_side_conditions_step :=
+    match goal with
+    | [ H : interpf ?e = Some ?v, H' : interpf_side_conditions_gen _ _ _ ?e = Some (_, ?v')%core |- _ ]
+      => first [ constr_eq v v'; fail 1
+               | assert (Some v = Some v')
+                 by (erewrite <- H, snd_interpf_side_conditions_gen_eq, H'; reflexivity);
+                 inversion_option; (subst v || subst v') ]
+    end.
   Local Ltac fin_inbounds_cast_back_t_step :=
     match goal with
     | [ |- inboundsb _ _ _ /\ _ ]
@@ -170,7 +184,9 @@ Section language.
           | handle_exists_in_goal
           | solve [ auto ]
           | specializer_t_step
-          | fin_inbounds_cast_back_t_step ].
+          | fin_inbounds_cast_back_t_step
+          | handle_options_step
+          | handle_bounds_side_conditions_step ].
   Local Ltac t := repeat t_step.
 
   Local Ltac do_specialize_IHe :=
@@ -209,11 +225,13 @@ Section language.
                                      /\ cast_backb t b v' = v)
       r (Hr:interpf (interp_op:=interp_op) (ctx:=oldValues) e = Some r)
       r' (Hr':interpf (interp_op:=interp_op) (ctx:=newValues) e' = Some r')
+      (Hside : prop_of_option (interpf_side_conditions interp_op interped_op_side_conditions oldValues e))
     , interpf (interp_op:=interp_op_bounds) (ctx:=varBounds) e = Some b
       /\ @inbounds _ b r /\ cast_back _ _ r' = r.
   Proof using Type*.
     induction e; simpl interpf; simpl mapf_cast; unfold option_map, cast_back in *; intros;
-      repeat (break_match_hyps; inversion_option; inversion_sigma; simpl in *; unfold option_map in *; subst; try tauto).
+      unfold interpf_side_conditions in *; simpl in Hside;
+      repeat (repeat handle_options_step; break_match_hyps; inversion_option; inversion_sigma; autorewrite with push_to_prop in *; simpl in *; unfold option_map in *; subst; try tauto).
     { destruct (Hctx _ _ _ Hr) as [b' [Hb'[Hb'v[v'[Hv' Hv'v]]]]]; clear Hctx Hr; subst.
       repeat match goal with
                [H: ?e = Some ?x, G:?e = Some ?x' |- _] =>
@@ -221,17 +239,20 @@ Section language.
              end.
       auto. }
     { do_specialize_IHe.
-      destruct_head and; subst; intuition eauto; symmetry; rewrite_hyp ?*; eauto. }
+      repeat (handle_options_step || destruct_head_and || specialize_by_assumption).
+      subst; intuition eauto; try (symmetry; rewrite_hyp ?*; eauto);
+        repeat handle_bounds_side_conditions_step; auto. }
     { cbv [LetIn.Let_In] in *.
       do_specialize_IHe.
-      destruct IHe1 as [IHe1_eq IHe1]; rewrite_hyp *.
-      { apply IHe2; clear IHe2; try reflexivity.
-        intros ??? H.
+      destruct_head'_and.
+      destruct IHe1 as [IHe1_eq IHe1]; rewrite_hyp *; try assumption.
+      { apply IHe2; clear IHe2; try reflexivity; [ | t ].
+        intros ??? Hlookup.
         let b := fresh "b" in
         let H' := fresh "H'" in
         match goal with |- exists b0, ?v = Some b0 /\ _ => destruct v as [b|] eqn:H' end;
           [ exists b; split; [ reflexivity | ] | exfalso ];
-          revert H H'; t. } }
+          revert Hlookup H'; t. } }
     { do_specialize_IHe.
       t. }
   Qed.
@@ -253,6 +274,7 @@ Section language.
         v v' (Hv : @inbounds _ input_bounds v /\ cast_back _ _ v' = v)
         r (Hr:interp (interp_op:=interp_op) (ctx:=oldValues) e v = Some r)
         r' (Hr':interp (interp_op:=interp_op) (ctx:=newValues) e' v' = Some r')
+        (Hside : prop_of_option (interp_side_conditions interp_op interped_op_side_conditions oldValues e v))
         , interp (interp_op:=interp_op_bounds) (ctx:=varBounds) e input_bounds = Some b
           /\ @inbounds _ b r /\ cast_back _ _ r' = r.
   Proof using Type*.

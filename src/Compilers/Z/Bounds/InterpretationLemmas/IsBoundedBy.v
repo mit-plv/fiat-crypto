@@ -9,6 +9,7 @@ Require Import Crypto.Compilers.Z.Bounds.InterpretationLemmas.Tactics.
 Require Import Crypto.Compilers.SmartMap.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.ZUtil.Stabilization.
+Require Import Crypto.Util.PointedProp.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.FixedWordSizesEquality.
 Require Import Crypto.Util.Tactics.DestructHead.
@@ -332,7 +333,7 @@ Lemma is_bounded_by_interp_op t tR (opc : op t tR)
       (bs : interp_flat_type Bounds.interp_base_type _)
       (v : interp_flat_type interp_base_type _)
       (H : Bounds.is_bounded_by bs v)
-      (*H_side : interped_op_side_conditions opc v = true*)
+      (H_side : to_prop (interped_op_side_conditions opc v))
   : Bounds.is_bounded_by (Bounds.interp_op opc bs) (Syntax.interp_op _ _ opc v).
 Proof.
   destruct opc;

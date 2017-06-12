@@ -11,6 +11,7 @@ Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.FixedWordSizesEquality.
 Require Import Crypto.Util.Option.
+Require Import Crypto.Util.PointedProp.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.SpecializeBy.
@@ -31,7 +32,8 @@ Section with_round_up.
            : forall t tR (opc : op t tR)
                     (bs : interp_flat_type Bounds.interp_base_type _)
                     (v : interp_flat_type interp_base_type _)
-                    (H : Bounds.is_bounded_by bs v),
+                    (H : Bounds.is_bounded_by bs v)
+                    (Hside : to_prop (interped_op_side_conditions opc v)),
               Bounds.is_bounded_by (Bounds.interp_op opc bs) (Syntax.interp_op _ _ opc v)).
   Context {round_up : nat -> option nat}.
 
@@ -132,6 +134,7 @@ Section with_round_up.
         (H : Bounds.is_bounded_by bs
                                   (SmartFlatTypeMapUnInterp
                                      (fun (t1 : base_type) (b0 : Bounds.interp_base_type t1) => cast_const) v))
+        (Hside : to_prop (interped_op_side_conditions opc (cast_back_flat_const v)))
     : interp_op t tR opc (cast_back_flat_const v)
       = cast_back_flat_const (interp_op (pick_type bs) (pick_type (Bounds.interp_op opc bs)) (genericize_op opc) v).
   Proof.
@@ -151,7 +154,9 @@ Section with_round_up.
                    | match goal with
                      | [ H : forall v, _ <= ?f v <= _ /\ _ -> _ |- context[?f ?v'] ]
                        => specialize (H v')
+                     | _ => progress specialize_by_assumption
                      | _ => progress specialize_by auto
+                     | [ H : forall v : unit, _ |- _ ] => specialize (H tt)
                      | [ H : forall v : _ * _, _ /\ _ -> _ |- _ ]
                        => specialize (fun v1 v2 p1 p2 => H (v1, v2) (conj p1 p2));
                           cbn [fst snd] in H;

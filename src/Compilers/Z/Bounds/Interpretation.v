@@ -156,7 +156,7 @@ Module Import Bounds.
     Definition id_with_alt {T1 T2 Tout} (x : interp_base_type T1) (y : interp_base_type T2)
       : interp_base_type Tout
       := truncation_bounds match T1, T2, Tout with
-                           | TZ, TZ, TZ => (*y*)x
+                           | TZ, TZ, TZ => y
                            | _, _, _ => x
                            end.
   End with_bitwidth.
