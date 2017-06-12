@@ -56,7 +56,6 @@ Defined.
 
 Module Export Notations.
   Delimit Scope zrange_scope with zrange.
-  Notation "r[ l ~> u ]" := {| lower := l ; upper := u |}
-                              (format "r[ l  ~>  u ]") : zrange_scope.
+  Notation "r[ l ~> u ]" := {| lower := l ; upper := u |} : zrange_scope.
   Infix "<=?" := is_tighter_than_bool : zrange_scope.
 End Notations.
