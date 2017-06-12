@@ -12,6 +12,7 @@ Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Notations.
+Require Import Crypto.Util.PointedProp.
 
 Definition make_const t : interp_base_type t -> op Unit (Tbase t)
   := fun v => OpConst (cast_const (t2:=TZ) v).
@@ -27,12 +28,12 @@ Arguments is_const_or_opp [s d] v.
 
 
 Definition interped_op_side_conditions {s d} (opc : op s d)
-  : interp_flat_type interp_base_type s -> bool
+  : interp_flat_type interp_base_type s -> pointed_Prop
   := match opc in op s d return interp_flat_type _ s -> _ with
      | IdWithAlt TZ TZ TZ
        => fun v1v2 : Z * Z
-          => Z.eqb (fst v1v2) (snd v1v2)
-     | _ => fun _ => true
+          => inject (fst v1v2 = snd v1v2)
+     | _ => fun _ => trivial
      end.
 
 Definition cast_back_flat_const {var t f V}
