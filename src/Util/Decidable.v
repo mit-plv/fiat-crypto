@@ -93,6 +93,7 @@ Global Instance dec_eq_list {A} `{DecidableRel (@eq A)} : DecidableRel (@eq (lis
 Global Instance dec_eq_sum {A B} `{DecidableRel (@eq A), DecidableRel (@eq B)} : DecidableRel (@eq (A + B)) | 10. exact _. Defined.
 Global Instance dec_eq_sigT_hprop {A P} `{DecidableRel (@eq A), forall a : A, IsHProp (P a)} : DecidableRel (@eq (@sigT A P)) | 10. exact _. Defined.
 Global Instance dec_eq_sig_hprop {A} {P : A -> Prop} `{DecidableRel (@eq A), forall a : A, IsHProp (P a)} : DecidableRel (@eq (@sig A P)) | 10. exact _. Defined.
+Global Instance dec_eq_comparison : DecidableRel (@eq comparison) | 10. exact _. Defined.
 
 Global Instance dec_eq_nat : DecidableRel (@eq nat) | 10. exact _. Defined.
 Global Instance dec_le_nat : DecidableRel le := Compare_dec.le_dec.
