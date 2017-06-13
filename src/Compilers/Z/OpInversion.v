@@ -1,5 +1,6 @@
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.TypeInversion.
+Require Import Crypto.Compilers.Z.TypeInversion.
 Require Import Crypto.Compilers.Z.Syntax.
 
 Ltac invert_one_op e :=

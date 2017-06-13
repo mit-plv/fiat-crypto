@@ -143,6 +143,7 @@ src/Compilers/Z/RewriteAddToAdc.v
 src/Compilers/Z/RewriteAddToAdcInterp.v
 src/Compilers/Z/RewriteAddToAdcWf.v
 src/Compilers/Z/Syntax.v
+src/Compilers/Z/TypeInversion.v
 src/Compilers/Z/Bounds/Interpretation.v
 src/Compilers/Z/Bounds/MapCastByDeBruijn.v
 src/Compilers/Z/Bounds/MapCastByDeBruijnInterp.v
