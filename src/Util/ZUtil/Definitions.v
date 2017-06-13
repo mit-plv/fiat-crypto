@@ -35,4 +35,6 @@ Module Z.
        then add_get_carry (Z.log2 bound) x y
        else ((x + y) mod bound, (x + y) / bound).
 
+  Definition mul_split (s x y : Z) : Z * Z
+    := ((x * y) mod s, (x * y) / s).
 End Z.
