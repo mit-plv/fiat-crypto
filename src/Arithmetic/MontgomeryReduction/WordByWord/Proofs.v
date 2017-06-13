@@ -10,32 +10,25 @@ Require Import Crypto.Util.ZUtil.
 Local Open Scope Z_scope.
 Local Coercion Z.pos : positive >-> Z.
 Section WordByWordMontgomery.
-  (** XXX TODO: Figure out how to fill in these context variables *)
-  Context {mul_split : Z -> Z -> Z -> Z * Z} (* first argument is where to split output; [mul_split s x y] gives ((x * y) mod s, (x * y) / s) *)
-          {mul_split_mod : forall s x y,
-              fst (mul_split s x y)  = (x * y) mod s}
-          {mul_split_div : forall s x y,
-              snd (mul_split s x y)  = (x * y) / s}.
-
   (** XXX TODO: pick better names for things like [R_numlimbs] *)
   Context (r : positive)
           (R_numlimbs : nat).
   Local Notation small := (@small (Z.pos r)).
   Local Notation eval := (@eval (Z.pos r)).
   Local Notation add := (@add (Z.pos r)).
-  Local Notation scmul := (@scmul (Z.pos r) mul_split).
+  Local Notation scmul := (@scmul (Z.pos r)).
   Local Notation eval_zero := (@eval_zero (Z.pos r)).
-  Local Notation eval_div := (@eval_div (Z.pos r) (Zorder.Zgt_pos_0 _) mul_split mul_split_mod mul_split_div).
-  Local Notation eval_mod := (@eval_mod (Z.pos r) (Zorder.Zgt_pos_0 _) mul_split mul_split_mod mul_split_div).
-  Local Notation small_div := (@small_div (Z.pos r) (Zorder.Zgt_pos_0 _) mul_split mul_split_mod mul_split_div).
-  Local Notation numlimbs_div := (@numlimbs_div (Z.pos r) (Zorder.Zgt_pos_0 _) mul_split mul_split_mod mul_split_div).
-  Local Notation eval_scmul := (@eval_scmul (Z.pos r) (Zorder.Zgt_pos_0 _) mul_split mul_split_mod mul_split_div).
-  Local Notation numlimbs_scmul := (@numlimbs_scmul (Z.pos r) (Zorder.Zgt_pos_0 _) mul_split mul_split_mod mul_split_div).
+  Local Notation eval_div := (@eval_div (Z.pos r) (Zorder.Zgt_pos_0 _)).
+  Local Notation eval_mod := (@eval_mod (Z.pos r) (Zorder.Zgt_pos_0 _)).
+  Local Notation small_div := (@small_div (Z.pos r) (Zorder.Zgt_pos_0 _)).
+  Local Notation numlimbs_div := (@numlimbs_div (Z.pos r) (Zorder.Zgt_pos_0 _)).
+  Local Notation eval_scmul := (@eval_scmul (Z.pos r) (Zorder.Zgt_pos_0 _)).
+  Local Notation numlimbs_scmul := (@numlimbs_scmul (Z.pos r) (Zorder.Zgt_pos_0 _)).
   Local Notation eval_add := (@eval_add (Z.pos r) (Zorder.Zgt_pos_0 _)).
   Local Notation small_add := (@small_add (Z.pos r) (Zorder.Zgt_pos_0 _)).
-  Local Notation numlimbs_add := (@numlimbs_add (Z.pos r) (Zorder.Zgt_pos_0 _) mul_split mul_split_mod mul_split_div).
+  Local Notation numlimbs_add := (@numlimbs_add (Z.pos r) (Zorder.Zgt_pos_0 _)).
   Local Notation drop_high := (@drop_high (S R_numlimbs)).
-  Local Notation numlimbs_drop_high := (@numlimbs_drop_high (Z.pos r) (Zorder.Zgt_pos_0 _) mul_split mul_split_mod mul_split_div (S R_numlimbs)).
+  Local Notation numlimbs_drop_high := (@numlimbs_drop_high (Z.pos r) (Zorder.Zgt_pos_0 _) (S R_numlimbs)).
   Context (N A B : T)
           (k : Z)
           ri
@@ -77,7 +70,7 @@ Section WordByWordMontgomery.
     rewrite Znat.Nat2Z.inj_succ, Z.pow_succ_r by lia; reflexivity.
   Qed.
 
-  Local Notation redc := (@redc mul_split r R_numlimbs N A B k).
+  Local Notation redc := (@redc r R_numlimbs N A B k).
 
   Definition redc_bound : 0 <= eval redc < eval N + eval B
     := @redc_bound T eval numlimbs zero divmod r r_big small eval_zero eval_div eval_mod small_div scmul eval_scmul R R_numlimbs R_correct add eval_add small_add drop_high eval_drop_high N Npos Npos_correct N_lt_R B B_bound ri k A small_A.

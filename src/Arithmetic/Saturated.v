@@ -12,6 +12,7 @@ Require Import Crypto.Util.Decidable Crypto.Util.ZUtil.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.AddGetCarry.
 Require Import Crypto.Util.ZUtil.Zselect.
+Require Import Crypto.Util.ZUtil.MulSplit.
 Local Notation "A ^ n" := (tuple A n) : type_scope.
 
 (***
@@ -113,7 +114,7 @@ Module Associational.
             .
 
     Definition multerm_cps s (t t' : B.limb) {T} (f:list B.limb ->T) :=
-      dlet xy := mul_split s (snd t) (snd t') in 
+      dlet xy := mul_split s (snd t) (snd t') in
       f ((fst t * fst t', fst xy) :: (fst t * fst t' * s, snd xy) :: nil).
 
     Definition multerm s t t' := multerm_cps s t t' id.
@@ -132,7 +133,7 @@ Module Associational.
     Hint Opaque mul : uncps.
     Hint Rewrite mul_id : uncps.
 
-    Lemma eval_map_multerm s a q (s_nonzero:s<>0): 
+    Lemma eval_map_multerm s a q (s_nonzero:s<>0):
       B.Associational.eval (flat_map (multerm s a) q) = fst a * snd a * B.Associational.eval q.
     Proof.
       cbv [multerm multerm_cps Let_In]; induction q;
@@ -409,7 +410,7 @@ Module Columns.
         { rewrite hd_to_list in H1. assumption. } }
       { simpl. apply Z.gt_lt, weight_divides. }
     Qed.
-      
+
     Definition cons_to_nth_cps {n} i (x:Z) (t:(list Z)^n)
                {T} (f:(list Z)^n->T) :=
       @on_tuple_cps _ _ nil (update_nth_cps i (cons x)) n n t _ f.
@@ -498,7 +499,7 @@ Module Columns.
         autorewrite with uncps push_id push_basesystem_eval in *.
         rewrite eval_cons_to_nth by omega. nsatz.
     Qed.
-    
+
   End Columns.
 
   Section Wrappers.
@@ -518,11 +519,11 @@ Module Columns.
         (fun Q => from_associational_cps weight n (P++Q)
         (fun R => compact_cps (div:=div) (modulo:=modulo) (add_get_carry:=Z.add_get_carry_full) weight R f)))).
 
-    Definition mul_cps {n1 n2 n3 mul_split} s (p : Z^n1) (q : Z^n2)
+    Definition mul_cps {n1 n2 n3} s (p : Z^n1) (q : Z^n2)
                {T} (f : (Z*Z^n3)->T) :=
       B.Positional.to_associational_cps weight p
         (fun P => B.Positional.to_associational_cps weight q
-        (fun Q => Associational.mul_cps (mul_split := mul_split) s P Q
+        (fun Q => Associational.mul_cps (mul_split := Z.mul_split) s P Q
         (fun PQ => from_associational_cps weight n3 PQ
         (fun R => compact_cps (div:=div) (modulo:=modulo) (add_get_carry:=Z.add_get_carry_full) weight R f)))).
 
@@ -710,11 +711,6 @@ End UniformWeight.
 
 Section API.
   Context (bound : Z) {bound_pos : bound > 0}.
-  Context {mul_split : Z -> Z -> Z -> Z * Z}
-          {mul_split_mod : forall s x y,
-              fst (mul_split s x y)  = (x * y) mod s}
-          {mul_split_div : forall s x y,
-              snd (mul_split s x y)  = (x * y) / s}.
   Definition T : Type := list Z.
 
   Definition numlimbs : T -> nat := @length Z.
@@ -723,16 +719,16 @@ Section API.
   to simply separate the lowest limb from the rest and be equivalent
   to normal div/mod with [bound]. *)
   Definition small (p : T) : Prop := List.hd 0 p < bound.
-  
+
   Definition zero (n:nat) : T := to_list _ (B.Positional.zeros n).
-  
+
   Definition divmod (p : T) : T * Z := (List.tl p, List.hd 0 p).
 
   Definition drop_high (n : nat) (p : T) : T := firstn n p.
 
   Definition scmul (c : Z) (p : T) : T :=
     let P := Tuple.from_list (length p) p (eq_refl _) in
-    Columns.mul_cps (mul_split := mul_split) (n1:=1) (n3:=length p) (uweight bound) bound c P
+    Columns.mul_cps (n1:=1) (n3:=length p) (uweight bound) bound c P
     (fun carry_result =>
       to_list _ (left_append (fst carry_result) (snd carry_result))).
 
@@ -745,7 +741,7 @@ Section API.
         to_list (S n) (left_append (fst carry_result) (snd carry_result))).
 
   Section Proofs.
-    
+
     Definition eval (p : T) : Z :=
       B.Positional.eval (uweight bound) (Tuple.from_list (length p) p (eq_refl _)).
 
@@ -782,7 +778,7 @@ Section API.
              | _ => progress (cbv [add eval Let_In]; repeat autounfold)
              | _ => progress autorewrite with uncps push_id cancel_pair push_basesystem_eval
              | _ => rewrite B.Positional.eval_left_append
-             
+
              | _ => progress
                       (rewrite <-!from_list_default_eq with (d:=0);
                        erewrite !length_to_list, !from_list_default_eq,
@@ -820,7 +816,7 @@ Section API.
         autorewrite with zsimplify.
         rewrite Z.pow_1_r. reflexivity. }
     Qed.
-      
+
     Lemma numlimbs_add a b: numlimbs (add a b) = S (max (numlimbs a) (numlimbs b)).
     Proof.
     Admitted.
@@ -828,7 +824,7 @@ Section API.
     Lemma eval_scmul a v: eval (scmul a v) = a * eval v.
     Proof.
     Admitted.
-      
+
     Lemma numlimbs_scmul a v: 0 <= a < bound ->
                               numlimbs (scmul a v) = S (numlimbs v).
     Admitted.
@@ -841,7 +837,7 @@ Section API.
       rewrite from_list_cons, tl_append, <-!(from_list_default_eq a ls).
       reflexivity.
     Qed.
-    
+
     Lemma eval_div p : small p -> eval (fst (divmod p)) = eval p / bound.
     Proof.
       repeat match goal with
@@ -850,7 +846,7 @@ Section API.
              end.
       erewrite from_list_tl.
     Admitted.
-    
+
     Lemma eval_mod p : small p -> snd (divmod p) = eval p mod bound.
     Proof.
     Admitted.
@@ -860,15 +856,15 @@ Section API.
 
     Lemma numlimbs_div v : numlimbs (fst (divmod v)) = pred (numlimbs v).
     Admitted.
-    
+
     Lemma eval_drop_high n v :
       small v -> eval (drop_high n v) = eval v mod (uweight bound n).
     Admitted.
-    
+
     Lemma numlimbs_drop_high n v :
       numlimbs (drop_high n v) = min (numlimbs v) n.
     Admitted.
-      
+
   End Proofs.
 End API.
 
