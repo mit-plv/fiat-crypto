@@ -12,7 +12,7 @@ Module CPSNotations.
   (** [x <- f ; C] encodes a call to function [f] with [C] as the
   continuation. In [C], [x] refers to the output of [f]. *)
 
-  (* TODO: [cpscall] is a marker to get Coq to print code using this notation only when it was actually used *)
+  (* [cpscall] is a marker to get Coq to print code using this notation only when it was actually used *)
   Definition cpscall {R} (f:forall{T}(continuation:R->T),T) {T} (continuation:R->T)
     := @f T continuation.
   Notation "x' <- v ; C" := (cpscall v (fun x' => C)).
@@ -37,7 +37,7 @@ Module CPSNotations.
   is partially applied to one argument. *)
   Notation "A ~> R" := (A -> ~>R).
 
-  (* TODO: [cpsreturn] is a marker to get Coq to print loop notations before a [return] *)
+  (* [cpsreturn] is a marker to get Coq to print loop notations before a [return] *)
   Definition cpsreturn {T} (x:T) := x.
   (** [return x] passes [x] to the continuation implicit in the previous notations. *)
   Notation "'return' x" := (cpsreturn (fun {T} (continuation:_->T) => continuation x)).
@@ -263,6 +263,8 @@ Notation "<=" := Z.leb (at level 71) : for_test_scope.
 Notation ">=" := Z.geb (at level 71) : for_test_scope.
 Notation "≤" := Z.leb (at level 71) : for_test_scope.
 Notation "≥" := Z.geb (at level 71) : for_test_scope.
+Global Close Scope for_test_scope. (* TODO: make these notations not print all over the place *)
+
 Definition force_idZ (f : Z -> Z) (pf : f = id) {T} (v : T) := v.
 (** [lhs] and [cmp_expr] go at level 9 so that they bind more tightly
     than application (so that [i (<)] sticks [i] in [lhs] and [(<)] in
@@ -345,8 +347,7 @@ Section LoopTest.
   Check loop _{ 10 } (x = 0) labels (continue, break) {{ x <- f x ; continue (x) }} ; x.
 
 
-  Axiom s F : Z.
-  Axiom zero : nat.
+  Context (s F : Z) (zero : nat).
   Check for ( i = s; i (<) F; i++) updating (P = zero) labels (continue, break)
   {{
       continue (P+P)
@@ -355,33 +356,69 @@ Section LoopTest.
 
   Check for ( i = s; i (<) F; i++) updating (P = zero) labels (continue)
   {{
+      P <- f P;
       continue (P+P)
   }};
   P.
 End LoopTest.
 
-Require Import Crypto.Util.Tuple Crypto.Util.CPSUtil.
+Module CPSBoilerplate.
+  Import CPSNotations.
+  Definition valid {R} (f:~>R) :=
+    forall {T} (continuation:R->T),
+      (x <- f; continuation x) = (continuation (f _ id)).
+  Existing Class valid.
+End CPSBoilerplate.
+
+Require Import Coq.Classes.Morphisms.
+Require Import Crypto.Algebra.ScalarMult.
 Section ScalarMult.
   Import CPSNotations.
 
-  Context {G} (zero:G) (op_tbl : nat -> Z -> G ~> G). (* a monoid with a precomputed table *)
-  Context (k w : nat) (nth_limb : nat ~> Z). (* k w-bit limbs *)
-
-  (*
-   table of xi*(32^i)*B
-        for
-        0 <= xi <= 8 (with sign flips, -8 <= xi <= 8)
-        0 <= i <= 31
-   *)
+  Context {G} (zero:G) (k w : Z) (op_tbl : Z -> Z -> G ~> G) (nth_limb : Z ~> Z). (* k w-bit limbs *)
 
   Definition ScalarMultBase :=
-    loop _{k} ('(i, P_s) = (0, zero)) labels (continue, break)
-    {{  if negb (i <? k) then break (i, P_s) else
-        let i' := i + 1 in
-        x <- nth_limb i;
-        P_s <- op_tbl i x P_s;
-        continue (i', P_s)
+    for ( i = 0; i (<) k; i++) updating (P = zero) labels (continue, break)
+    {{
+      x <- nth_limb i;
+      P <- op_tbl i x P;
+      continue P
     }};
-  return P_s.
-  Print ScalarMultBase.
+    P.
+
+  Context {Geq op} {Hmonoid:@Algebra.Hierarchy.monoid G Geq op zero}.
+  Context {nth_limb_valid : forall a, CPSBoilerplate.valid (nth_limb a)}.
+  Context {op_tbl_valid : forall a b c, CPSBoilerplate.valid (op_tbl a b c)}.
+  Context {Proper_op_tbl : Proper (eq ==> eq ==> Geq ==> Geq) (fun a b c => op_tbl a b c _ id)}.
+  Context (B:G).
+
+  Definition n : Z :=
+    for ( i = 0; i (<) k; i++) updating (n = 0%Z) labels (continue)
+    {{
+            x <- nth_limb i;
+            continue (n * (2^w) + x)%Z
+    }};
+    n.
+
+  Goal Geq ScalarMultBase (scalarmult_ref (add:=op) (zero:=zero) (Z.to_nat n) B).
+    cbv [ScalarMultBase].
+    eapply for_cps_ind with (invariant := fun i P => Geq P (scalarmult_ref (add:=op) (zero:=zero) (Z.to_nat (n mod 2^(i*w))) B )%Z).
+    - intros; omega.
+    - intros; rewrite Z.ltb_lt in H; autorewrite with zsimplify; omega.
+    - autorewrite with zsimplify. symmetry; eapply (scalarmult_0_l(add:=op)).
+    - cbv [force_idZ id]; intros. clear H.
+      setoid_rewrite nth_limb_valid; setoid_rewrite op_tbl_valid.
+      setoid_rewrite <-H0; [reflexivity|]; clear H0.
+
+      etransitivity.
+      eapply Proper_op_tbl; [reflexivity|reflexivity|eapply H1].
+      clear H1.
+      rewrite Z.mul_add_distr_r.
+
+      Set Printing All.
+      admit.
+    - cbv [force_idZ id]; intros; subst.
+      rewrite H0; clear H0.
+      rewrite Z.ltb_ge in H.
+      
 End ScalarMult.
