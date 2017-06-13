@@ -35,6 +35,10 @@ Module Z.
        then add_get_carry (Z.log2 bound) x y
        else ((x + y) mod bound, (x + y) / bound).
 
+  Definition mul_split_at_bitwidth (bitwidth : Z) (x y : Z) : Z * Z
+    := ((x * y) mod 2^bitwidth, (x * y) / 2^bitwidth).
   Definition mul_split (s x y : Z) : Z * Z
-    := ((x * y) mod s, (x * y) / s).
+    := if s =? 2^Z.log2 s
+       then mul_split_at_bitwidth (Z.log2 s) x y
+       else ((x * y) mod s, (x * y) / s).
 End Z.
