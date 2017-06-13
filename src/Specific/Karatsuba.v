@@ -220,7 +220,6 @@ Section Ops51.
       a).
    { cbv [proj1_sig goldilocks_mul_for_bounds_checker_sig goldilocks_mul_sig Tuple.eta_tuple Tuple.eta_tuple_dep sz Tuple.eta_tuple'_dep id_tuple_with_alt id_tuple'_with_alt];
        cbn [fst snd].
-     cbv [id_with_alt].
      reflexivity. }
    { rewrite !Tuple.strip_eta_tuple, !unfold_id_tuple_with_alt.
      rewrite (proj2_sig goldilocks_mul_sig). reflexivity. }
