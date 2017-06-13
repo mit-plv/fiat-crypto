@@ -24,6 +24,8 @@ src/Arithmetic/MontgomeryReduction/Definition.v
 src/Arithmetic/MontgomeryReduction/Proofs.v
 src/Arithmetic/MontgomeryReduction/WordByWord/Definition.v
 src/Arithmetic/MontgomeryReduction/WordByWord/Proofs.v
+src/Arithmetic/MontgomeryReduction/WordByWord/Abstract/Definition.v
+src/Arithmetic/MontgomeryReduction/WordByWord/Abstract/Proofs.v
 src/Compilers/CommonSubexpressionElimination.v
 src/Compilers/CommonSubexpressionEliminationDenote.v
 src/Compilers/CommonSubexpressionEliminationInterp.v
