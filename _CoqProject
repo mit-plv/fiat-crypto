@@ -331,6 +331,7 @@ src/Util/ZUtil/Modulo.v
 src/Util/ZUtil/Morphisms.v
 src/Util/ZUtil/MulSplit.v
 src/Util/ZUtil/Notations.v
+src/Util/ZUtil/Peano.v
 src/Util/ZUtil/Pow2Mod.v
 src/Util/ZUtil/Quot.v
 src/Util/ZUtil/Sgn.v
