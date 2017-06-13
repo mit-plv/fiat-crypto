@@ -78,7 +78,6 @@ Section BoundedField25p5.
     Import ReflectiveTactics.
     { Time do_reify. }
     Import Compilers.Syntax.
-    Require Import CNotations.
     Require Import Crypto.Util.Tactics.SubstLet.
     Require Import Crypto.Util.Tactics.UnifyAbstractReflexivity.
     { Time unify_abstract_vm_compute_rhs_reflexivity. }
@@ -87,6 +86,7 @@ Section BoundedField25p5.
     { Time unify_abstract_vm_compute_rhs_reflexivity. }
     { Time unify_abstract_vm_compute_rhs_reflexivity. }
     { Time unify_abstract_rhs_reflexivity. }
+    Require Import CNotations.
     { Show. Time unify_abstract_renamify_rhs_reflexivity. }
     { Time shelve; subst_let; clear; abstract vm_cast_no_check (eq_refl true). }
     { Time shelve; subst_let; clear; vm_compute; reflexivity. }
