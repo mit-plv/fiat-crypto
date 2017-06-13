@@ -1,34 +1,13 @@
 (*** Word-By-Word Montgomery Multiplication *)
 (** This file implements Montgomery Form, Montgomery Reduction, and
-    Montgomery Multiplication on an abstract [T].  We follow "Fast Prime
-    Field Elliptic Curve Cryptography with 256 Bit Primes",
-    https://eprint.iacr.org/2013/816.pdf. *)
+    Montgomery Multiplication on an abstract [T].  See
+    https://github.com/mit-plv/fiat-crypto/issues/157 for a discussion
+    of the algorithm; note that it may be that none of the algorithms
+    there exactly match what we're doing here. *)
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.LetIn.
 
-(** Quoting from page 7 of "Fast Prime
-    Field Elliptic Curve Cryptography with 256 Bit Primes",
-    https://eprint.iacr.org/2013/816.pdf: *)
-(** * Algorithm 1: Word-by-Word Montgomery Multiplication (WW-MM) *)
-(** Input: [p < 2ˡ] (odd modulus),
-           [0 ≤ a, b < p], [l = s×k]
-    Output: [a×b×2⁻ˡ mod p]
-    Pre-computed: [k0 = -p⁻¹ mod 2ˢ]
-    Flow
-<<
-1. T = a×b
- For i = 1 to k do
-   2. T1 = T mod 2ˢ
-   3. Y = T1 × k0 mod 2ˢ
-   4. T2 = Y × p
-   5. T3 = (T + T2)
-   6. T = T3 / 2ˢ
- End For
-7. If T ≥ p then X = T – p;
-      else X = T
-Return X
->> *)
 Local Open Scope Z_scope.
 
 Section WordByWordMontgomery.
