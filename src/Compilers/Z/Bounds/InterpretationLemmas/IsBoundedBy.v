@@ -326,9 +326,17 @@ Local Arguments Z.add !_ !_.
 Local Existing Instances Z.add_le_Proper Z.sub_le_flip_le_Proper Z.log2_up_le_Proper Z.pow_Zpos_le_Proper Z.sub_le_eq_Proper Z.add_with_carry_le_Proper.
 Local Hint Extern 1 => progress cbv beta iota : typeclass_instances.
 Local Ltac ibbio_do_cbv :=
-  cbv [Bounds.interp_op Zinterp_op Z.add_with_get_carry SmartFlatTypeMapUnInterp Bounds.add_with_get_carry Bounds.sub_with_get_borrow Bounds.get_carry Bounds.get_borrow Z.get_carry cast_const]; cbn [fst snd].
+  cbv [Bounds.interp_op Zinterp_op Z.add_with_get_carry SmartFlatTypeMapUnInterp Bounds.add_with_get_carry Bounds.sub_with_get_borrow Bounds.get_carry Bounds.get_borrow Z.get_carry cast_const Bounds.mul_split]; cbn [fst snd].
 Local Ltac ibbio_prefin_by_apply :=
   [ > | intros; apply is_bounded_by_truncation_bounds | simpl; reflexivity ].
+Local Ltac handle_mul :=
+  apply monotone_four_corners_genb; try (split; auto);
+  unfold Basics.flip;
+  let x := fresh "x" in
+  intro x;
+  exists (0 <=? x);
+  break_match; Z.ltb_to_lt;
+  intros ???; nia.
 Lemma is_bounded_by_interp_op t tR (opc : op t tR)
       (bs : interp_flat_type Bounds.interp_base_type _)
       (v : interp_flat_type interp_base_type _)
@@ -338,6 +346,12 @@ Lemma is_bounded_by_interp_op t tR (opc : op t tR)
 Proof.
   destruct opc;
     [ apply is_bounded_by_truncation_bounds..
+    | split; ibbio_do_cbv;
+      [ eapply is_bounded_by_compose with (T1:=TZ) (f_v := fun v => ZToInterp (v mod _)) (v:=ZToInterp _);
+        ibbio_prefin_by_apply
+      | eapply is_bounded_by_compose with (T1:=TZ) (f_v := fun v => ZToInterp (v / _))   (v:=ZToInterp _);
+        ibbio_prefin_by_apply ]
+    | apply is_bounded_by_truncation_bounds
     | split; ibbio_do_cbv;
       [ eapply is_bounded_by_compose with (T1:=TZ) (f_v := fun v => ZToInterp (v mod _)) (v:=ZToInterp _);
         ibbio_prefin_by_apply
@@ -361,13 +375,7 @@ Proof.
                    end ].
   { apply (@monotone_four_corners true true _ _); split; auto. }
   { apply (@monotone_four_corners true false _ _); split; auto. }
-  { apply monotone_four_corners_genb; try (split; auto);
-      unfold Basics.flip;
-      let x := fresh "x" in
-      intro x;
-        exists (0 <=? x);
-        break_match; Z.ltb_to_lt;
-          intros ???; nia. }
+  { handle_mul. }
   { apply monotone_four_corners_genb; try (split; auto);
       [ eexists; apply Z.shiftl_le_Proper1
       | exists true; apply Z.shiftl_le_Proper2 ]. }
@@ -396,6 +404,10 @@ Proof.
       split; assumption. }
   { destruct_head Bounds.t; cbv [Bounds.zselect' Z.zselect].
     break_innermost_match; split_min_max; omega. }
+  { handle_mul. }
+  { apply Z.mod_bound_min_max; auto. }
+  { handle_mul. }
+  { auto with zarith. }
   { apply (@monotone_eight_corners true true true _ _ _); split; auto. }
   { apply (@monotone_eight_corners true true true _ _ _); split; auto. }
   { apply Z.mod_bound_min_max; auto. }

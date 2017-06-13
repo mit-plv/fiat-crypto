@@ -34,6 +34,12 @@ Ltac base_reify_op op op_head extra ::=
                fail 100 "Error: In Reflection.Z.base_reify_op: can only reify" c "applied to" uZ "not" T
           | _ => fail 100 "Anomaly: In Reflection.Z.base_reify_op: head is id_with_alt but body is wrong:" extra
           end
+     | @Z.mul_split_at_bitwidth
+       => lazymatch extra with
+          | @Z.mul_split_at_bitwidth ?bit_width _ _
+            => constr:(reify_op op op_head 3 (MulSplit bit_width TZ TZ TZ TZ))
+          | _ => fail 100 "Anomaly: In Reflection.Z.base_reify_op: head is Z.mul_split_with_bitwidth but body is wrong:" extra
+          end
      | @Z.add_with_get_carry
        => lazymatch extra with
           | @Z.add_with_get_carry ?bit_width _ _ _

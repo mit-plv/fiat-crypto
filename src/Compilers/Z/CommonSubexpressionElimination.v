@@ -22,6 +22,7 @@ Inductive symbolic_op :=
 | SOpp
 | SIdWithAlt
 | SZselect
+| SMulSplit (bitwidth : Z)
 | SAddWithCarry
 | SAddWithGetCarry (bitwidth : Z)
 | SSubWithBorrow
@@ -55,6 +56,8 @@ Definition symbolic_op_leb (x y : symbolic_op) : bool
      | _, SIdWithAlt => false
      | SZselect, _ => true
      | _, SZselect => false
+     | SMulSplit _, _ => true
+     | _, SMulSplit _ => false
      | SAddWithCarry, _ => true
      | _, SAddWithCarry => false
      | SAddWithGetCarry _, _ => true
@@ -82,6 +85,7 @@ Definition symbolize_op s d (opc : op s d) : symbolic_op
      | Opp T Tout => SOpp
      | IdWithAlt T1 T2 Tout => SIdWithAlt
      | Zselect T1 T2 T3 Tout => SZselect
+     | MulSplit bitwidth T1 T2 Tout1 Tout2 => SMulSplit bitwidth
      | AddWithCarry T1 T2 T3 Tout => SAddWithCarry
      | AddWithGetCarry bitwidth T1 T2 T3 Tout1 Tout2 => SAddWithGetCarry bitwidth
      | SubWithBorrow T1 T2 T3 Tout => SSubWithBorrow
@@ -101,6 +105,8 @@ Definition denote_symbolic_op s d (opc : symbolic_op) : option (op s d)
      | SOpp, Tbase _, Tbase _ => Some (Opp _ _)
      | SIdWithAlt, Prod (Tbase _) (Tbase _), Tbase _ => Some (IdWithAlt _ _ _)
      | SZselect, Prod (Prod (Tbase _) (Tbase _)) (Tbase _), Tbase _ => Some (Zselect _ _ _ _)
+     | SMulSplit bitwidth, Prod (Tbase _) (Tbase _), Prod (Tbase _) (Tbase _)
+       => Some (MulSplit bitwidth _ _ _ _)
      | SAddWithCarry, Prod (Prod (Tbase _) (Tbase _)) (Tbase _), Tbase _ => Some (AddWithCarry _ _ _ _)
      | SAddWithGetCarry bitwidth, Prod (Prod (Tbase _) (Tbase _)) (Tbase _), Prod (Tbase _) (Tbase _)
        => Some (AddWithGetCarry bitwidth _ _ _ _ _)
@@ -118,6 +124,7 @@ Definition denote_symbolic_op s d (opc : symbolic_op) : option (op s d)
      | SOpConst _, _, _
      | SIdWithAlt, _, _
      | SZselect, _, _
+     | SMulSplit _, _, _
      | SAddWithCarry, _, _
      | SAddWithGetCarry _, _, _
      | SSubWithBorrow, _, _
@@ -191,6 +198,7 @@ Definition normalize_symbolic_expr_mod_c (opc : symbolic_op) (args : symbolic_ex
      | SOpp
      | SIdWithAlt
      | SZselect
+     | SMulSplit _
      | SAddWithCarry
      | SAddWithGetCarry _
      | SSubWithBorrow

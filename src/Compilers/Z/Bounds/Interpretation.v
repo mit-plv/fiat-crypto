@@ -55,6 +55,8 @@ Module Import Bounds.
       := truncation_bounds {| lower := l ; upper := u |}.
     Definition t_map1 (f : Z -> Z) (x : t)
       := truncation_bounds (two_corners f x).
+    Definition t_map2' (f : Z -> Z -> Z) : t -> t -> t
+      := fun x y => four_corners f x y.
     Definition t_map2 (f : Z -> Z -> Z) : t -> t -> t
       := fun x y => truncation_bounds (four_corners f x y).
     Definition t_map3' (f : Z -> Z -> Z -> Z) : t -> t -> t -> t
@@ -66,6 +68,7 @@ Module Import Bounds.
     Definition add : t -> t -> t := t_map2 Z.add.
     Definition sub : t -> t -> t := t_map2 Z.sub.
     Definition mul : t -> t -> t := t_map2 Z.mul.
+    Definition mul' : t -> t -> t := t_map2' Z.mul.
     Definition shl : t -> t -> t := t_map2 Z.shiftl.
     Definition shr : t -> t -> t := t_map2 Z.shiftr.
     Definition max_abs_bound (x : t) : Z
@@ -177,6 +180,8 @@ Module Import Bounds.
     Definition sub_with_get_borrow : t -> t -> t -> t * t
       := fun c x y
          => get_borrow (sub_with_borrow' c x y).
+    Definition mul_split : t -> t -> t * t
+      := fun x y => get_carry (mul' x y).
   End with_bitwidth2.
 
   Module Export Notations.
@@ -212,6 +217,8 @@ Module Import Bounds.
        | Opp _ T => fun x => opp (bit_width_of_base_type T) x
        | IdWithAlt _ _ T => fun xy => id_with_alt (bit_width_of_base_type T) (fst xy) (snd xy)
        | Zselect _ _ _ T => fun cxy => let '(c, x, y) := eta3 cxy in zselect (bit_width_of_base_type T) c x y
+       | MulSplit carry_boundary_bit_width _ _ T1 T2
+         => fun xy => mul_split (bit_width_of_base_type T1) (bit_width_of_base_type T2) carry_boundary_bit_width (fst xy) (snd xy)
        | AddWithCarry _ _ _ T => fun cxy => let '(c, x, y) := eta3 cxy in add_with_carry (bit_width_of_base_type T) c x y
        | AddWithGetCarry carry_boundary_bit_width _ _ _ T1 T2
          => fun cxy => let '(c, x, y) := eta3 cxy in

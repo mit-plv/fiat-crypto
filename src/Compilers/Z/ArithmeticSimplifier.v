@@ -33,6 +33,7 @@ Section language.
                     with
                     | OpConst _ z => fun _ _ => const_of _ z
                     | Opp TZ TZ => fun _ args => neg_expr _ args
+                    | MulSplit _ _ _ _ _ => fun _ _ => I
                     | AddWithGetCarry _ _ _ _ _ _ => fun _ _ => I
                     | SubWithGetBorrow _ _ _ _ _ _ => fun _ _ => I
                     | _ => fun e _ => gen_expr _ e
@@ -370,6 +371,7 @@ Section language.
          | Opp _ _ as opc
          | IdWithAlt _ _ _ as opc
          | Zselect _ _ _ _ as opc
+         | MulSplit _ _ _ _ _ as opc
          | AddWithCarry _ _ _ _ as opc
          | AddWithGetCarry _ _ _ _ _ _ as opc
          | SubWithBorrow _ _ _ _ as opc
