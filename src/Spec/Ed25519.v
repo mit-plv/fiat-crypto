@@ -79,21 +79,23 @@ Section Ed25519.
     pose (@PrimeFieldTheorems.F.Decidable_square q _ ltac:(Crypto.Util.Decidable.vm_decide) d); Crypto.Util.Decidable.vm_decide. Qed.
 
   Let add := E.add(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d).
-  Let mul := E.mul(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d).
   Let zero := E.zero(nonzero_a:=nonzero_a)(d:=d).
+  (* TODO: move scalarmult_ref to Spec? *)
+  Let mul := ScalarMult.scalarmult_ref(zero:=zero)(add:=add)(opp:=AffineProofs.E.opp(nonzero_a:=nonzero_a)).
 
-  Definition ed25519 (l_order_B: E.eq(F:=Fq)(Fone:=F.one) (mul (BinInt.Z.to_nat l) B)%E zero) :
-    EdDSA (E:=E) (Eadd:=add) (Ezero:=zero) (EscalarMult:=mul) (B:=B)
+  Definition ed25519 (l_order_B: (mul l B = zero)%E) :
+    EdDSA (E:=E) (Eadd:=add) (Ezero:=zero) (ZEmul:=mul) (B:=B)
           (Eopp:=Crypto.Curves.Edwards.AffineProofs.E.opp(nonzero_a:=nonzero_a)) (* TODO: move defn *)
           (Eeq:=E.eq) (* TODO: move defn *)
           (l:=l) (b:=b) (n:=n) (c:=c)
           (Eenc:=Eenc) (Senc:=Senc) (H:=SHA512).
   Proof using Type.
-    split;
-      match goal with
-      | |- ?P => match goal with [H:P|-_] => exact H end (* COQBUG: https://coq.inria.fr/bugs/show_bug.cgi?id=5366 *)
-      | _ => exact _
-      | _ => Crypto.Util.Decidable.vm_decide
-      end.
+    split; try exact _.
+    Crypto.Util.Decidable.vm_decide.
+    Crypto.Util.Decidable.vm_decide.
+    Crypto.Util.Decidable.vm_decide.
+    Crypto.Util.Decidable.vm_decide.
+    Crypto.Util.Decidable.vm_decide.
+    exact l_order_B.
   Qed.
 End Ed25519.
