@@ -153,8 +153,69 @@ Section Ops51.
   Definition half_sz : nat := Eval compute in (sz / 2).
   Lemma half_sz_nonzero : half_sz <> 0%nat. Proof. cbv; congruence. Qed.
 
+Ltac basesystem_partial_evaluation_RHS :=
+  let t0 := (match goal with
+             | |- _ _ ?t => t
+             end) in
+  let t :=
+   eval
+    cbv
+     delta [Positional.to_associational_cps Positional.to_associational
+           Positional.eval Positional.zeros Positional.add_to_nth_cps
+           Positional.add_to_nth Positional.place_cps Positional.place
+           Positional.from_associational_cps Positional.from_associational
+           Positional.carry_cps Positional.carry
+           Positional.chained_carries_cps Positional.chained_carries
+           Positional.sub_cps Positional.sub Positional.split_cps
+           Positional.scmul_cps Positional.unbalanced_sub_cps
+           Positional.negate_snd_cps Positional.add_cps Positional.opp_cps
+           Associational.eval Associational.multerm Associational.mul_cps
+           Associational.mul Associational.split_cps Associational.split
+           Associational.reduce_cps Associational.reduce
+           Associational.carryterm_cps Associational.carryterm
+           Associational.carry_cps Associational.carry
+           Associational.negate_snd_cps Associational.negate_snd div modulo
+           id_tuple_with_alt id_tuple'_with_alt
+           ]
+   in t0
+  in
+  let t := eval pattern @runtime_mul in t in
+  let t := (match t with
+            | ?t _ => t
+            end) in
+  let t := eval pattern @runtime_add in t in
+  let t := (match t with
+            | ?t _ => t
+            end) in
+  let t := eval pattern @runtime_opp in t in
+  let t := (match t with
+            | ?t _ => t
+            end) in
+  let t := eval pattern @runtime_shr in t in
+  let t := (match t with
+            | ?t _ => t
+            end) in
+  let t := eval pattern @runtime_and in t in
+  let t := (match t with
+            | ?t _ => t
+            end) in
+  let t := eval pattern @Let_In in t in
+  let t := (match t with
+            | ?t _ => t
+            end) in
+  let t := eval pattern @id_with_alt in t in
+  let t := (match t with
+            | ?t _ => t
+            end) in
+  let t1 := fresh "t1" in
+  pose (t1 := t);
+   transitivity
+    (t1 (@id_with_alt) (@Let_In) (@runtime_and) (@runtime_shr) (@runtime_opp) (@runtime_add)
+       (@runtime_mul));
+   [ replace_with_vm_compute t1; clear t1 | reflexivity ].
+    Print id_tuple_with_alt.
   Definition goldilocks_mul_sig :
-    {mul : (Z^sz -> Z^sz -> Z^sz)%type |
+    {mul : (Z^sz -> Z^sz -> Z^(sz+half_sz))%type |
      forall a b : Z^sz,
        mul a b = goldilocks_mul_cps (n:=half_sz) (n2:=sz) wt (2 ^ 224) a b id}.
   Proof.
@@ -166,39 +227,16 @@ Section Ops51.
     reflexivity.
   Defined.
 
-  Definition goldilocks_mul_for_bounds_checker_sig :
-    {mul : (Z^sz -> Z^sz -> Z^sz)%type |
-     forall a b : Z^sz,
-       mul a b = goldilocks_mul_cps_for_bounds_checker (n:=half_sz) (n2:=sz) wt (2 ^ 224) a b id}.
-  Proof.
-    eexists; cbv beta zeta; intros.
-    cbv [goldilocks_mul_cps_for_bounds_checker].
-    repeat autounfold.
-    basesystem_partial_evaluation_RHS.
-    do_replace_match_with_destructuring_match_in_goal.
-    reflexivity.
-  Defined.
-
-  Lemma goldilocks_mul_sig_equiv a b :
-    proj1_sig goldilocks_mul_sig a b =
-    proj1_sig goldilocks_mul_for_bounds_checker_sig a b.
-  Proof.
-   rewrite (proj2_sig goldilocks_mul_sig).
-   rewrite (proj2_sig goldilocks_mul_for_bounds_checker_sig).
-   apply goldilocks_mul_equiv;
-               auto using half_sz_nonzero, sz_nonzero, wt_nonzero.
-  Qed.
-
   Definition mul_sig :
-    {mul : (Z^sz -> Z^sz -> Z^sz)%type |
+    {mul : (Z^sz -> Z^sz -> Z^(sz+half_sz))%type |
                forall a b : Z^sz,
                  let eval := Positional.Fdecode (m := m) wt in
-                 eval (mul a b) = (eval a  * eval b)%F}.
+                 Positional.Fdecode (m := m) wt (mul a b) = (eval a  * eval b)%F}.
   Proof.
     eexists; cbv beta zeta; intros.
     pose proof wt_nonzero.
     let x := constr:(
-               goldilocks_mul (n:=half_sz) (n2:=sz) wt (2^224) a b ) in
+               goldilocks_mul_cps (n:=half_sz) (n2:=sz) wt (2^224) a b  id) in
     F_mod_eq;
       transitivity (Positional.eval wt x); repeat autounfold;
 
@@ -207,29 +245,16 @@ Section Ops51.
      apply goldilocks_mul_correct; try assumption; cbv; congruence ].
    cbv [mod_eq]; apply f_equal2;
      [  | reflexivity ]; apply f_equal.
-   cbv [goldilocks_mul].
-   transitivity
-     (Tuple.eta_tuple
-      (fun a
-       => Tuple.eta_tuple
-            (fun b
-             => id_tuple_with_alt
-                  ((proj1_sig goldilocks_mul_sig) a b)
-                  ((proj1_sig goldilocks_mul_for_bounds_checker_sig) a b))
-            b)
-      a).
-   { cbv [proj1_sig goldilocks_mul_for_bounds_checker_sig goldilocks_mul_sig Tuple.eta_tuple Tuple.eta_tuple_dep sz Tuple.eta_tuple'_dep id_tuple_with_alt id_tuple'_with_alt];
-       cbn [fst snd].
-     reflexivity. }
-   { rewrite !Tuple.strip_eta_tuple, !unfold_id_tuple_with_alt.
-     rewrite (proj2_sig goldilocks_mul_sig). reflexivity. }
+   etransitivity;[|apply (proj2_sig (goldilocks_mul_sig))].
+   cbv [proj1_sig goldilocks_mul_sig].
+   reflexivity.
  Defined.
 
   Definition square_sig :
-    {square : (Z^sz -> Z^sz)%type |
+    {square : (Z^sz -> Z^(sz+half_sz))%type |
                forall a : Z^sz,
                  let eval := Positional.Fdecode (m := m) wt in
-                 eval (square a) = (eval a  * eval a)%F}.
+                 Positional.Fdecode (m := m) wt (square a) = (eval a  * eval a)%F}.
   Proof.
     eexists; cbv beta zeta; intros.
     rewrite <-(proj2_sig mul_sig).
@@ -306,6 +331,7 @@ Section Ops51.
    reflexivity.
   Defined.
 
+  (* TODO: implement reduce, reduce after mul and square
   Definition ring_56 :=
     (Ring.ring_by_isomorphism
          (F := F m)
@@ -329,7 +355,7 @@ Section Ops51.
          (proj2_sig add_sig)
          (proj2_sig sub_sig)
          (proj2_sig mul_sig)
-      ).
+      ). *)
 
 (*
 Eval cbv [proj1_sig add_sig] in (proj1_sig add_sig).
