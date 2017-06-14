@@ -375,50 +375,54 @@ Require Import Crypto.Algebra.ScalarMult.
 Section ScalarMult.
   Import CPSNotations.
 
-  Context {G} (zero:G) (k w : Z) (op_tbl : Z -> Z -> G ~> G) (nth_limb : Z ~> Z). (* k w-bit limbs *)
+  Context {G} (zero:G) (k w : Z) (add_tbl : G -> Z -> Z ~> G) (nth_limb : Z ~> Z). (* k w-bit limbs *)
 
   Definition ScalarMultBase :=
     for ( i = 0; i (<) k; i++) updating (P = zero) labels (continue, break)
     {{
       x <- nth_limb i;
-      P <- op_tbl i x P;
+      P <- add_tbl P i x;
       continue P
     }};
     P.
 
-  Context {Geq op} {Hmonoid:@Algebra.Hierarchy.monoid G Geq op zero}.
+  Context {Geq add opp} {Hmonoid:@Algebra.Hierarchy.group G Geq add zero opp}.
+  Local Notation smul := (@scalarmult_ref G add zero opp).
   Context {nth_limb_valid : forall a, CPSBoilerplate.valid (nth_limb a)}.
-  Context {op_tbl_valid : forall a b c, CPSBoilerplate.valid (op_tbl a b c)}.
-  Context {Proper_op_tbl : Proper (eq ==> eq ==> Geq ==> Geq) (fun a b c => op_tbl a b c _ id)}.
+  Context {add_tbl_valid : forall a b c, CPSBoilerplate.valid (add_tbl a b c)}.
+  Context {Proper_add_tbl : Proper (Geq ==> eq ==> eq ==> Geq) (fun a b c => add_tbl a b c _ id)}.
   Context (B:G).
+  Context {limb_good}
+          {nth_limb_good: forall i, (0 <= i < k)%Z -> limb_good i (nth_limb i _ id)}
+          {add_tbl_correct : forall P i limb,
+              limb_good i limb -> Geq (add_tbl P i limb G id) (add P (smul (2 ^ i * limb) B))}.
 
-  Definition n : Z :=
-    for ( i = 0; i (<) k; i++) updating (n = 0%Z) labels (continue)
+  Definition n_upto t : Z :=
+    for ( i = 0; i (<) t; i++) updating (n = 0%Z) labels (continue)
     {{
             x <- nth_limb i;
-            continue (n * (2^w) + x)%Z
+            continue (n + (2^i)*x)%Z
     }};
     n.
 
-  Goal Geq ScalarMultBase (scalarmult_ref (add:=op) (zero:=zero) (Z.to_nat n) B).
+
+  Lemma ScalarMultBase_correct : Geq ScalarMultBase (smul (n_upto k) B).
     cbv [ScalarMultBase].
-    eapply for_cps_ind with (invariant := fun i P => Geq P (scalarmult_ref (add:=op) (zero:=zero) (Z.to_nat (n mod 2^(i*w))) B )%Z).
+    eapply for_cps_ind with (invariant := fun i P => Geq P (smul (n_upto i) B )%Z).
     - intros; omega.
     - intros; rewrite Z.ltb_lt in H; autorewrite with zsimplify; omega.
-    - autorewrite with zsimplify. symmetry; eapply (scalarmult_0_l(add:=op)).
+    - autorewrite with zsimplify. symmetry; eapply (scalarmult_0_l(add:=add)).
     - cbv [force_idZ id]; intros. clear H.
-      setoid_rewrite nth_limb_valid; setoid_rewrite op_tbl_valid.
+      setoid_rewrite nth_limb_valid; setoid_rewrite add_tbl_valid.
       setoid_rewrite <-H0; [reflexivity|]; clear H0.
 
       etransitivity.
-      eapply Proper_op_tbl; [reflexivity|reflexivity|eapply H1].
+      eapply Proper_add_tbl; [eapply H1|reflexivity|reflexivity].
       clear H1.
-      rewrite Z.mul_add_distr_r.
-
-      Set Printing All.
+      replace (n_upto (i+1))%Z with (n_upto i + (2^i)*(nth_limb i _ id))%Z by admit.
+      rewrite scalarmult_add_l.
+      rewrite add_tbl_correct; [reflexivity|].
+      apply nth_limb_good.
       admit.
-    - cbv [force_idZ id]; intros; subst.
-      rewrite H0; clear H0.
-      rewrite Z.ltb_ge in H.
-      
+  Admitted.
 End ScalarMult.
