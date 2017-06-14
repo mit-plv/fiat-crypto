@@ -37,7 +37,11 @@ COQ_VERSION := $(firstword $(subst $(COQ_VERSION_PREFIX),,$(shell "$(COQBIN)coqc
 -include Makefile.coq
 endif
 
+ifeq ($(filter lite only-heavy printdeps printreversedeps,$(MAKECMDGOALS)),)
 -include etc/coq-scripts/Makefile.vo_closure
+else
+include etc/coq-scripts/Makefile.vo_closure
+endif
 
 .DEFAULT_GOAL := coq
 
