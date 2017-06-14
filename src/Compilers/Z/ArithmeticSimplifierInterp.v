@@ -1,6 +1,7 @@
 Require Import Coq.micromega.Psatz.
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Compilers.Syntax.
+Require Import Crypto.Compilers.SmartMap.
 Require Import Crypto.Compilers.TypeInversion.
 Require Import Crypto.Compilers.ExprInversion.
 Require Import Crypto.Compilers.RewriterInterp.
@@ -44,131 +45,89 @@ Local Ltac break_t_step :=
         | progress break_innermost_match_step
         | progress break_match_hyps ].
 
+Definition interpf_as_expr_or_const {t}
+  : interp_flat_type (@inverted_expr interp_base_type) t -> interp_flat_type interp_base_type t
+  := SmartVarfMap
+       (fun t z => match z with
+                   | const_of z => cast_const (t1:=TZ) z
+                   | gen_expr e => interpf interp_op e
+                   | neg_expr e => interpf interp_op (Op (Opp _ _) e)
+                   end).
 
-Lemma interp_as_expr_or_const_correct_base {t} e z
-  : @interp_as_expr_or_const interp_base_type (Tbase t) e = Some z
-    -> interpf interp_op e = match z with
-                             | const_of z => cast_const (t1:=TZ) z
-                             | gen_expr e => interpf interp_op e
-                             | neg_expr e => interpf interp_op (Op (Opp _ _) e)
-                             end.
+Lemma interp_as_expr_or_const_correct {t} e z
+  : @interp_as_expr_or_const interp_base_type t e = Some z
+    -> interpf interp_op e = interpf_as_expr_or_const z.
 Proof.
-  destruct z.
-  { repeat first [ fin_t
+  induction e;
+    repeat first [ progress subst
+                 | progress inversion_option
                  | progress simpl in *
-                 | progress intros
-                 | break_t_step
-                 | progress invert_expr
-                 | progress invert_op ]. }
-  { do 2 (invert_expr; break_innermost_match; intros);
-      repeat first [ fin_t
-                   | progress simpl in *
-                   | progress intros
-                   | break_t_step
-                   | progress invert_op ]. }
-  { do 2 (invert_expr; break_innermost_match; intros);
-      repeat first [ fin_t
-                   | progress simpl in *
-                   | progress intros
-                   | break_t_step
-                   | progress invert_op ]. }
+                 | progress cbn [interpf_as_expr_or_const SmartVarfMap smart_interp_flat_map]
+                 | reflexivity
+                 | break_innermost_match_hyps_step
+                 | intro
+                 | match goal with
+                   | [ H : forall z, Some _ = Some z -> _ |- _ ] => specialize (H _ eq_refl)
+                   | [ H : interpf _ ?e = interpf_as_expr_or_const _ |- _ ]
+                     => rewrite H
+                   | [ |- context[match ?e with _ => _ end] ]
+                     => is_var e; invert_one_op e
+                   end
+                 | break_innermost_match_step ].
 Qed.
 
-Local Ltac rewrite_interp_as_expr_or_const_correct_base _ :=
+Local Ltac rewrite_interp_as_expr_or_const_correct _ :=
   match goal with
   | [ |- context[interpf _ ?e] ]
-    => erewrite !(@interp_as_expr_or_const_correct_base _ e) by eassumption; cbv beta iota
-  end.
-
-Lemma interp_as_expr_or_const_correct_prod_base {A B} e (v : _ * _)
-  : @interp_as_expr_or_const interp_base_type (Prod (Tbase A) (Tbase B)) e = Some v
-    -> interpf interp_op e = (match fst v with
-                              | const_of z => cast_const (t1:=TZ) z
-                              | gen_expr e => interpf interp_op e
-                              | neg_expr e => interpf interp_op (Op (Opp _ _) e)
-                              end,
-                              match snd v with
-                              | const_of z => cast_const (t1:=TZ) z
-                              | gen_expr e => interpf interp_op e
-                              | neg_expr e => interpf interp_op (Op (Opp _ _) e)
-                              end).
-Proof.
-  invert_expr;
-    repeat first [ fin_t
-                 | progress simpl in *
-                 | progress intros
-                 | break_t_step
-                 | rewrite_interp_as_expr_or_const_correct_base () ].
-Qed.
-
-Local Ltac rewrite_interp_as_expr_or_const_correct_prod_base _ :=
-  match goal with
-  | [ |- context[interpf _ ?e] ]
-    => erewrite !(@interp_as_expr_or_const_correct_prod_base _ _ e) by eassumption; cbv beta iota
-  end.
-
-Lemma interp_as_expr_or_const_correct_prod3_base {A B C} e (v : _ * _ * _)
-  : @interp_as_expr_or_const interp_base_type (Prod (Prod (Tbase A) (Tbase B)) (Tbase C)) e = Some v
-    -> interpf interp_op e = (match fst (fst v) with
-                              | const_of z => cast_const (t1:=TZ) z
-                              | gen_expr e => interpf interp_op e
-                              | neg_expr e => interpf interp_op (Op (Opp _ _) e)
-                              end,
-                              match snd (fst v) with
-                              | const_of z => cast_const (t1:=TZ) z
-                              | gen_expr e => interpf interp_op e
-                              | neg_expr e => interpf interp_op (Op (Opp _ _) e)
-                              end,
-                              match snd v with
-                              | const_of z => cast_const (t1:=TZ) z
-                              | gen_expr e => interpf interp_op e
-                              | neg_expr e => interpf interp_op (Op (Opp _ _) e)
-                              end).
-Proof.
-  invert_expr;
-    repeat first [ fin_t
-                 | progress simpl in *
-                 | progress intros
-                 | break_t_step
-                 | rewrite_interp_as_expr_or_const_correct_base ()
-                 | rewrite_interp_as_expr_or_const_correct_prod_base () ].
-Qed.
-
-Local Ltac rewrite_interp_as_expr_or_const_correct_prod3_base _ :=
-  match goal with
-  | [ |- context[interpf _ ?e] ]
-    => erewrite !(@interp_as_expr_or_const_correct_prod3_base _ _ _ e) by eassumption; cbv beta iota
+    => erewrite !(@interp_as_expr_or_const_correct _ e) by eassumption; cbv beta iota;
+       cbn [interpf_as_expr_or_const SmartVarfMap smart_interp_flat_map]
   end.
 
 Local Arguments Z.mul !_ !_.
 Local Arguments Z.add !_ !_.
 Local Arguments Z.sub !_ !_.
 Local Arguments Z.opp !_.
+Local Arguments interp_op _ _ !_ _ / .
+Local Arguments lift_op / .
 
 Lemma InterpSimplifyArith {convert_adc_to_sbb} {t} (e : Expr t)
   : forall x, Interp interp_op (SimplifyArith convert_adc_to_sbb e) x = Interp interp_op e x.
 Proof.
   apply InterpRewriteOp; intros; unfold simplify_op_expr.
-  break_innermost_match;
-    repeat first [ fin_t
-                 | progress cbv [LetIn.Let_In Z.zselect IdfunWithAlt.id_with_alt]
-                 | progress simpl in *
+  Time break_innermost_match;
+    repeat first [ reflexivity
                  | progress subst
-                 | progress subst_prod
-                 | rewrite_interp_as_expr_or_const_correct_base ()
-                 | rewrite_interp_as_expr_or_const_correct_prod_base ()
-                 | rewrite_interp_as_expr_or_const_correct_prod3_base ()
-                 | rewrite FixedWordSizesEquality.ZToWord_wordToZ
-                 | rewrite FixedWordSizesEquality.ZToWord_wordToZ_ZToWord by reflexivity
-                 | rewrite FixedWordSizesEquality.wordToZ_ZToWord_0
-                 | progress unfold interp_op, lift_op
-                 | progress Z.ltb_to_lt
-                 | progress rewrite ?Z.land_0_l, ?Z.land_0_r, ?Z.lor_0_l, ?Z.lor_0_r
-                 | rewrite !Z.sub_with_borrow_to_add_get_carry
-                 | progress autorewrite with zsimplify_fast
-                 | break_innermost_match_step
+                 | progress simpl in *
+                 | progress inversion_prod
+                 | progress invert_expr_subst
                  | inversion_base_type_constr_step
-                 | progress cbv [cast_const ZToInterp interpToZ] ].
+                 | match goal with
+                   | [ |- context[match ?e with _ => _ end] ]
+                     => is_var e; invert_one_op e;
+                        repeat match goal with
+                               | [ |- match ?T with _ => _ end _ ]
+                                 => break_innermost_match_step; try exact I
+                               end
+                   end
+                 | break_innermost_match_step
+                 | rewrite_interp_as_expr_or_const_correct ()
+                 | intro ].
+  all:repeat first [ reflexivity
+                   | omega
+                   | discriminate
+                   | progress cbv [LetIn.Let_In Z.zselect IdfunWithAlt.id_with_alt]
+                   | progress subst
+                   | progress simpl in *
+                   | progress Z.ltb_to_lt
+                   | break_innermost_match_step
+                   | rewrite FixedWordSizesEquality.ZToWord_wordToZ
+                   | rewrite FixedWordSizesEquality.ZToWord_wordToZ_ZToWord by reflexivity
+                   | rewrite FixedWordSizesEquality.wordToZ_ZToWord_0
+                   | progress rewrite ?Z.land_0_l, ?Z.land_0_r, ?Z.lor_0_l, ?Z.lor_0_r
+                   | rewrite !Z.sub_with_borrow_to_add_get_carry
+                   | progress autorewrite with zsimplify_fast
+                   | progress cbv [cast_const ZToInterp interpToZ]
+                   | nia ].
 Qed.
 
 Hint Rewrite @InterpSimplifyArith : reflective_interp.
