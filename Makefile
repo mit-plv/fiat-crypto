@@ -14,7 +14,7 @@ INSTALLDEFAULTROOT := Crypto
 .PHONY: coq clean update-_CoqProject cleanall install \
 	install-coqprime clean-coqprime coqprime \
 	specific-display display \
-	specific non-specific lite only-heavy
+	specific non-specific lite only-heavy printlite
 
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g' | uniq
 
@@ -37,7 +37,7 @@ COQ_VERSION := $(firstword $(subst $(COQ_VERSION_PREFIX),,$(shell "$(COQBIN)coqc
 -include Makefile.coq
 endif
 
-ifeq ($(filter lite only-heavy printdeps printreversedeps,$(MAKECMDGOALS)),)
+ifeq ($(filter lite only-heavy printdeps printreversedeps printlite,$(MAKECMDGOALS)),)
 -include etc/coq-scripts/Makefile.vo_closure
 else
 include etc/coq-scripts/Makefile.vo_closure
@@ -81,6 +81,14 @@ lite: $(LITE_VOFILES) coqprime
 only-heavy: $(HEAVY_VOFILES) coqprime
 specific-display: $(SPECIFIC_DISPLAY_VO:.vo=.log) coqprime
 display: $(DISPLAY_VO:.vo=.log) coqprime
+
+printlite::
+	@echo 'Files Made:'
+	@for i in $(sort $(LITE_VOFILES)); do echo $$i; done
+	@echo
+	@echo
+	@echo 'Files Not Made:'
+	@for i in $(sort $(LITE_ALL_UNMADE_VOFILES)); do echo $$i; done
 
 COQPRIME_FOLDER := coqprime
 ifneq ($(filter 8.5%,$(COQ_VERSION)),) # 8.5
