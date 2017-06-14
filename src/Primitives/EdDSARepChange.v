@@ -31,10 +31,10 @@ Section EdDSA.
     rewrite F.to_Z_of_Z, scalarmult_mod_order, scalarmult_add_l, cancel_left, scalarmult_mod_order, Z.mul_comm, scalarmult_assoc;
       try solve [ reflexivity
                 | setoid_rewrite (*unify 0*) (Z2Nat.inj_iff _ 0); pose proof EdDSA_l_odd; omega
-                                                                                                   | pose proof EdDSA_l_odd; omega
+                | pose proof EdDSA_l_odd; omega
                 | apply EdDSA_l_order_B
-                | rewrite scalarmult_assoc, mult_comm, <-scalarmult_assoc,
-                             EdDSA_l_order_B, scalarmult_zero_r; reflexivity ].
+                | rewrite scalarmult_assoc, Z.mul_comm, <-scalarmult_assoc,
+                  EdDSA_l_order_B, scalarmult_zero_r; reflexivity].
   Qed.
 
   Lemma solve_for_R_sig : forall s B R n A, { solution | s * B == R + n * A <-> R == solution }.
