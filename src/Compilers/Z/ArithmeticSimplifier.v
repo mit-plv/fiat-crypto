@@ -1,6 +1,7 @@
 (** * SimplifyArith: Remove things like (_ * 1), (_ + 0), etc *)
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Compilers.Syntax.
+Require Import Crypto.Compilers.ExprInversion.
 Require Import Crypto.Compilers.Rewriter.
 Require Import Crypto.Compilers.Z.Syntax.
 Require Import Crypto.Compilers.Z.Syntax.Equality.
@@ -226,6 +227,36 @@ Section language.
                         => Op opc args
                       end
                  | None
+                   => Op opc args
+                 end
+         | IdWithAlt TZ TZ TZ as opc
+           => fun args
+              => match interp_as_expr_or_const args with
+                 | Some (gen_expr e1, gen_expr e2)
+                   => match invert_Op e1, invert_Op e2 with
+                      | Some (existT _ (Add TZ TZ TZ as opc1, args1)),
+                        Some (existT _ (Add TZ TZ TZ as opc2, args2))
+                      | Some (existT _ (Sub TZ TZ TZ as opc1, args1)),
+                        Some (existT _ (Sub TZ TZ TZ as opc2, args2))
+                      | Some (existT _ (Mul TZ TZ TZ as opc1, args1)),
+                        Some (existT _ (Mul TZ TZ TZ as opc2, args2))
+                        => match interp_as_expr_or_const args1, interp_as_expr_or_const args2 with
+                           | Some (gen_expr e1, const_of c1),
+                             Some (gen_expr e2, const_of c2)
+                             => if Z.eqb c1 c2
+                                then Op opc1 (Op opc (e1, e2), Op (OpConst c1) TT)%expr
+                                else Op opc args
+                           | _, _
+                             => Op opc args
+                           end
+                      | _, _
+                        => Op opc args
+                      end
+                 | Some (neg_expr e1, neg_expr e2)
+                   => Op (Opp _ _) (Op opc (e1, e2)%expr)
+                 | Some (const_of c1, const_of c2)
+                   => Op (OpConst c1) TT
+                 | _
                    => Op opc args
                  end
          | Zselect TZ TZ TZ TZ as opc
