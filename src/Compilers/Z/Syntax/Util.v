@@ -311,8 +311,8 @@ Proof. destruct T; reflexivity. Qed.
 Ltac rewrite_eta_match_base_type_impl_step :=
   match goal with
   | [ H : context[match ?T as T' in base_type return (@?P1 T' -> ?P2) with TZ => _ | _ => _ end] |- _ ]
-    => rewrite (@eta_match_base_type_arr P1 P2) in H
+    => rewrite (@eta_match_base_type_impl P1 P2) in H
   | [ |- context[match ?T as T' in base_type return (@?P1 T' -> ?P2) with TZ => _ | _ => _ end] ]
-    => rewrite (@eta_match_base_type_arr P1 P2)
+    => rewrite (@eta_match_base_type_impl P1 P2)
   end.
 Ltac rewrite_eta_match_base_type_impl := repeat rewrite_eta_match_base_type_impl_step.
