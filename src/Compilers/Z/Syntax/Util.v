@@ -310,9 +310,9 @@ Lemma eta_match_base_type_impl P1 P2 PZ T
 Proof. destruct T; reflexivity. Qed.
 Ltac rewrite_eta_match_base_type_impl_step :=
   match goal with
-  | [ H : context[match ?T as T' in base_type return (@?P1 T' -> ?P2) with TZ => _ | _ => _ end] |- _ ]
-    => rewrite (@eta_match_base_type_impl P1 P2) in H
-  | [ |- context[match ?T as T' in base_type return (@?P1 T' -> ?P2) with TZ => _ | _ => _ end] ]
-    => rewrite (@eta_match_base_type_impl P1 P2)
+  | [ H : context[match ?T as T' in base_type return (@?P1 T' -> ?P2) with TZ => fun _ => ?PZ | TWord _ => fun _ => ?PZ end] |- _ ]
+    => rewrite (@eta_match_base_type_impl P1 P2 PZ T) in H
+  | [ |- context[match ?T as T' in base_type return (@?P1 T' -> ?P2) with TZ => fun _ => ?PZ | TWord _ => fun _ => ?PZ end] ]
+    => rewrite (@eta_match_base_type_impl P1 P2 PZ T)
   end.
 Ltac rewrite_eta_match_base_type_impl := repeat rewrite_eta_match_base_type_impl_step.
