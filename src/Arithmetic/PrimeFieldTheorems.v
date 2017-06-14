@@ -251,9 +251,8 @@ Module F.
         {phi'_opp : forall a : H, Logic.eq (phi' (opp a)) (F.opp (phi' a))}
         {phi'_add : forall a b : H, Logic.eq (phi' (add a b)) (F.add (phi' a) (phi' b))}
         {phi'_sub : forall a b : H, Logic.eq (phi' (sub a b)) (F.sub (phi' a) (phi' b))}
-        {phi'_mul : forall a b : H, Logic.eq (phi' (mul a b)) (F.mul (phi' a) (phi' b))}
-        {P:Type} {pow : H -> P -> H} {NtoP:N->P}
-        {pow_is_scalarmult:ScalarMult.is_scalarmult(G:=H)(eq:=eq)(add:=mul)(zero:=one)(mul:=fun (n:nat) (k:H) => pow k (NtoP (N.of_nat n)))}.
+        {phi'_mul : forall a b : H, Logic.eq (phi' (mul a b)) (F.mul (phi' a) (phi' b))}.
+      (* TODO: revive this once we figure out how to spec the pow impl
       Definition inv (x:H) := pow x (NtoP (Z.to_N (q - 2)%Z)).
       Definition div x y := mul (inv y) x.
 
@@ -289,6 +288,7 @@ Module F.
         /\ @Ring.is_homomorphism H eq one add mul (F q) Logic.eq F.one F.add F.mul phi'.
       Proof using Type*. eapply @Field.field_and_homomorphism_from_redundant_representation;
                assumption || exact _ || exact inv_proof || exact div_proof. Qed.
+      *)
     End IsomorphicRings.
   End Iso.
 End F.

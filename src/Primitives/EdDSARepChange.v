@@ -17,9 +17,9 @@ Import Notations.
 
 Section EdDSA.
   Context `{prm:EdDSA}.
-  Local Infix "==" := Eeq. Local Infix "+" := Eadd. Local Infix "*" := EscalarMult.
+  Local Infix "==" := Eeq. Local Infix "+" := Eadd. Local Infix "*" := ZEmul.
 
-  Local Notation valid := (@valid E Eeq Eadd EscalarMult b H l B Eenc Senc).
+  Local Notation valid := (@valid E Eeq Eadd ZEmul b H l B Eenc Senc).
   Lemma sign_valid : forall A_ sk {n} (M:word n), A_ = public sk -> valid M A_ (sign A_ sk M).
   Proof using Type.
     cbv [sign public Spec.EdDSA.valid]; intros; subst;
@@ -28,7 +28,7 @@ Section EdDSA.
              | |- _ /\ _ => eapply conj
              | |- _ => reflexivity
              end.
-    rewrite F.to_nat_of_nat, scalarmult_mod_order, scalarmult_add_l, cancel_left, scalarmult_mod_order, NPeano.Nat.mul_comm, scalarmult_assoc;
+    rewrite F.to_Z_of_Z, scalarmult_mod_order, scalarmult_add_l, cancel_left, scalarmult_mod_order, Z.mul_comm, scalarmult_assoc;
       try solve [ reflexivity
                 | setoid_rewrite (*unify 0*) (Z2Nat.inj_iff _ 0); pose proof EdDSA_l_odd; omega
                                                                                                    | pose proof EdDSA_l_odd; omega
@@ -43,7 +43,7 @@ Section EdDSA.
     set_evars.
     setoid_rewrite <-(symmetry_iff(R:=Eeq)) at 1.
     setoid_rewrite <-eq_r_opp_r_inv.
-    setoid_rewrite opp_mul.
+    setoid_rewrite <-scalarmult_opp_r.
     subst_evars.
     reflexivity.
   Defined.
@@ -66,11 +66,11 @@ Section EdDSA.
     setoid_rewrite combine_eq_iff.
     setoid_rewrite and_comm at 4. setoid_rewrite and_assoc. repeat setoid_rewrite exists_and_indep_l.
     setoid_rewrite (and_rewrite_l Eenc (split1 b b sig)
-                            (fun x y => x == _ * B + wordToNat (H _ (y ++ Eenc _ ++ message)) mod _ * Eopp _)); setoid_rewrite eq_enc_S_iff.
+                            (fun x y => x == _ * B + Z.of_nat (wordToNat (H _ (y ++ Eenc _ ++ message))) mod _ * Eopp _)); setoid_rewrite eq_enc_S_iff.
     setoid_rewrite (@exists_and_equiv_r _ _ _ _ _ _).
     setoid_rewrite <- (fun A => and_rewriteleft_l (fun x => x) (Eenc A) (fun pk EencA => exists a,
         Sdec (split2 b b sig) = Some a /\
-        Eenc (_ * B + wordToNat (H (b + (b + mlen)) (split1 b b sig ++ EencA ++ message)) mod _ * Eopp A)
+        Eenc (_ * B + Z.of_nat (wordToNat (H (b + (b + mlen)) (split1 b b sig ++ EencA ++ message))) mod _ * Eopp A)
         = split1 b b sig)). setoid_rewrite (eq_enc_E_iff pk).
     setoid_rewrite <-weqb_true_iff.
     setoid_rewrite <-option_rect_false_returns_true_iff_eq.
@@ -78,22 +78,7 @@ Section EdDSA.
      (intros ? ? Hxy; unfold option_rect; break_match; rewrite <-?Hxy; reflexivity).
 
     subst_evars.
-    (* TODO: generalize this higher order reflexivity *)
-    match goal with
-      |- ?f ?mlen ?msg ?pk ?sig = true <-> ?term = true
-      => let term := eval pattern sig in term in
-         let term := eval pattern pk in term in
-         let term := eval pattern msg in term in
-         let term := match term with
-                       (fun msg => (fun pk => (fun sig => @?body msg pk sig) sig) pk) msg =>
-                       body
-                     end in
-         let term := eval pattern mlen in term in
-         let term := match term with
-                       (fun mlen => @?body mlen) mlen => body
-                     end in
-         unify f term; reflexivity
-    end.
+    eapply reflexivity.
   Defined.
   Definition verify' {mlen} (message:word mlen) (pk:word b) (sig:word (b+b)) : bool :=
     Eval cbv [proj1_sig verify'_sig] in proj1_sig verify'_sig mlen message pk sig.
@@ -114,10 +99,10 @@ Section EdDSA.
 
     Context {SRep SRepEq} `{@Equivalence SRep SRepEq} {S2Rep:F l->SRep}.
 
-    Context {SRepDecModL} {SRepDecModL_correct: forall (w:word (b+b)), SRepEq (S2Rep (F.of_nat _ (wordToNat w))) (SRepDecModL w)}.
+    Context {SRepDecModL} {SRepDecModL_correct: forall (w:word (b+b)), SRepEq (S2Rep (F.of_Z _ (Z.of_nat (wordToNat w)))) (SRepDecModL w)}.
 
     Context {SRepERepMul:SRep->Erep->Erep}
-            {SRepERepMul_correct:forall n P, ErepEq (EToRep ((n mod Z.to_nat l)*P)) (SRepERepMul (S2Rep (F.of_nat _ n)) (EToRep P))}
+            {SRepERepMul_correct:forall n P, ErepEq (EToRep ((n mod l)*P)) (SRepERepMul (S2Rep (F.of_Z _ n)) (EToRep P))}
             {Proper_SRepERepMul: Proper (SRepEq==>ErepEq==>ErepEq) SRepERepMul}.
 
     Context {SRepDec: word b -> option SRep}
@@ -134,7 +119,7 @@ Section EdDSA.
       etransitivity. Focus 2. {
         eapply Proper_option_rect_nd_changebody; [intro|reflexivity].
         eapply Proper_option_rect_nd_changebody; [intro|reflexivity].
-        rewrite <-F.to_nat_mod by omega.
+        rewrite <-F.mod_to_Z by omega.
         repeat (
             rewrite ERepEnc_correct
             || rewrite homomorphism
@@ -143,8 +128,8 @@ Section EdDSA.
             || rewrite SRepERepMul_correct
             || rewrite SdecS_correct
             || rewrite SRepDecModL_correct
-            || rewrite (@F.of_nat_to_nat _ _)
-            || rewrite (@F.of_nat_mod _ _)
+            || rewrite (@F.of_Z_to_Z _ _)
+            || rewrite (@F.mod_to_Z _ _)
           ).
         reflexivity.
       } Unfocus.
@@ -233,32 +218,11 @@ Section EdDSA.
 
     Let n_le_bpb : (n <= b+b)%nat. destruct prm. omega. Qed.
 
-    Definition splitSecretPrngCurve (sk:word b) : SRep * word b :=
-      dlet hsk := H _ sk in
-      dlet curveKey := SRepDecModLShort (clearlow c (@wfirstn n _ hsk n_le_bpb) ++ wones 1) in
-      dlet prngKey := split2 b b hsk in
-      (curveKey, prngKey).
-
-    Lemma splitSecretPrngCurve_correct sk :
+    (* TODO: change impl to basesystem *)
+    Context (splitSecretPrngCurve : forall (sk:word b), SRep * word b).
+    Context (splitSecretPrngCurve_correct : forall sk,
       let (s, r) := splitSecretPrngCurve sk in
-      SRepEq s (S2Rep (F.of_nat l (curveKey sk))) /\ r = prngKey (H:=H) sk.
-    Proof using H0 SRepDecModLShort_correct.
-      cbv [splitSecretPrngCurve EdDSA.curveKey EdDSA.prngKey Let_In]; split;
-        repeat (
-            reflexivity
-            || rewrite <-SRepDecModLShort_correct
-            || rewrite wordToNat_split1
-            || rewrite wordToNat_wfirstn
-            || rewrite wordToNat_combine
-            || rewrite wordToNat_clearlow
-            || rewrite (eq_refl:wordToNat (wones 1) = 1)
-            || rewrite mult_1_r
-            || rewrite setbit_high by
-              ( pose proof (Nat.pow_nonzero 2 n); specialize_by discriminate;
-                set (x := wordToNat (H b sk));
-                assert (x mod 2 ^ n < 2^n)%nat by (apply Nat.mod_bound_pos; omega); omega)
-          ).
-    Qed.
+      SRepEq s (S2Rep (F.of_Z l (curveKey sk))) /\ r = prngKey (H:=H) sk).
 
     Definition sign (pk sk : word b) {mlen} (msg:word mlen) :=
       dlet sp := splitSecretPrngCurve sk in
@@ -267,18 +231,13 @@ Section EdDSA.
       dlet r := SRepDecModL (H _ (p ++ msg)) in
       dlet R := SRepERepMul r ErepB in
       dlet S := SRepAdd r (SRepMul (SRepDecModL (H _ (ERepEnc R ++ pk ++ msg))) s) in
-      ERepEnc R ++ SRepEnc S.
+      ERepEnc R ++ SRepEnc S. 
 
-    Lemma to_nat_l_nonzero : Z.to_nat l <> 0.
-    Proof using n_le_bpb.
-
-      intro Hx; change 0 with (Z.to_nat 0) in Hx.
-      destruct prm; rewrite Z2Nat.inj_iff in Hx; omega.
-    Qed.
+    Lemma Z_l_nonzero : Z.pos l <> 0%Z. discriminate. Qed.
 
     Lemma sign_correct (pk sk : word b) {mlen} (msg:word mlen)
                : sign pk sk msg = EdDSA.sign pk sk msg.
-    Proof using Agroup Ahomom ERepEnc_correct ErepB_correct H0 Proper_ERepEnc Proper_SRepAdd Proper_SRepERepMul Proper_SRepEnc Proper_SRepMul SRepAdd_correct SRepDecModLShort_correct SRepDecModL_correct SRepERepMul_correct SRepEnc_correct SRepMul_correct.
+    Proof using Agroup Ahomom ERepEnc_correct ErepB_correct H0 Proper_ERepEnc Proper_SRepAdd Proper_SRepERepMul Proper_SRepEnc Proper_SRepMul SRepAdd_correct SRepDecModLShort_correct SRepDecModL_correct SRepERepMul_correct SRepEnc_correct SRepMul_correct splitSecretPrngCurve_correct.
       cbv [sign EdDSA.sign Let_In].
 
       let H := fresh "H" in
@@ -292,8 +251,8 @@ Section EdDSA.
           || rewrite SRepEnc_correct
           || rewrite SRepDecModL_correct
           || rewrite SRepERepMul_correct
-          || rewrite (F.of_nat_add (m:=l))
-          || rewrite (F.of_nat_mul (m:=l))
+          || rewrite (F.of_Z_add (m:=l))
+          || rewrite (F.of_Z_mul (m:=l))
           || rewrite SRepAdd_correct
           || rewrite SRepMul_correct
           || rewrite ErepB_correct
@@ -301,7 +260,7 @@ Section EdDSA.
           || rewrite <-curveKey_correct
           || eapply (f_equal2 (fun a b => a ++ b))
           || f_equiv
-          || rewrite <-(@scalarmult_mod_order _ _ _ _ _ _ _ _ B to_nat_l_nonzero EdDSA_l_order_B)
+          || rewrite <-(scalarmult_mod_order l B Z_l_nonzero EdDSA_l_order_B), SRepERepMul_correct
         ).
     Qed.
   End ChangeRep.

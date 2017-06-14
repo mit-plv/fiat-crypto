@@ -1,33 +1,19 @@
 Require Bedrock.Word Crypto.Util.WordUtil.
+Require Crypto.Algebra.Hierarchy Algebra.ScalarMult.
 Require Coq.ZArith.Znumtheory Coq.ZArith.BinInt.
 Require Coq.Numbers.Natural.Peano.NPeano.
-Require Crypto.Algebra.ScalarMult.
-
-Require Import Omega. (* TODO: remove this import when we drop 8.4 *)
 
 Require Import Crypto.Spec.ModularArithmetic.
 
-(** In Coq 8.4, we have [NPeano.pow] and [NPeano.modulo].  In Coq 8.5,
-    they are [Nat.pow] and [Nat.modulo].  To allow this file to work
-    with both versions, we create a module where we (locally) import
-    both [NPeano] and [Nat], and define the notations with unqualified
-    names.  By importing the module, we get access to the notations
-    without importing [NPeano] and [Nat] in the top-level of this
-    file. *)
+Local Infix "-" := BinInt.Z.sub.
+Local Infix "^" := BinInt.Z.pow.
+Local Infix "mod" := BinInt.Z.modulo.
+Local Infix "++" := Word.combine.
+Local Notation setbit := BinInt.Z.setbit.
 
-Module Import Notations.
-  Import NPeano Nat.
-
-  Infix "^" := pow.
-  Infix "mod" := modulo (at level 40, no associativity).
-  Infix "++" := Word.combine.
-  Notation setbit := setbit.
-End Notations.
-
-Generalizable All Variables.
 Section EdDSA.
   Class EdDSA (* <https://eprint.iacr.org/2015/677.pdf> *)
-        {E Eeq Eadd Ezero Eopp} {EscalarMult} (* the underllying elliptic curve operations *)
+        {E Eeq Eadd Ezero Eopp} {ZEmul} (* the underllying elliptic curve operations *)
 
         {b : nat} (* public keys are k bits, signatures are 2*k bits *)
         {H : forall {n}, Word.word n -> Word.word (b + b)} (* main hash function *)
@@ -42,7 +28,7 @@ Section EdDSA.
     :=
       {
         EdDSA_group:@Algebra.Hierarchy.group E Eeq Eadd Ezero Eopp;
-        EdDSA_scalarmult:@Algebra.ScalarMult.is_scalarmult E Eeq Eadd Ezero EscalarMult;
+        EdDSA_scalarmult:@Algebra.ScalarMult.is_scalarmult E Eeq Eadd Ezero Eopp ZEmul;
 
         EdDSA_c_valid : c = 2 \/ c = 3;
 
@@ -53,7 +39,7 @@ Section EdDSA.
 
         EdDSA_l_prime : Znumtheory.prime l;
         EdDSA_l_odd : BinInt.Z.lt 2 l;
-        EdDSA_l_order_B : Eeq (EscalarMult (BinInt.Z.to_nat l) B) Ezero
+        EdDSA_l_order_B : Eeq (ZEmul l B) Ezero
       }.
   Global Existing Instance EdDSA_group.
   Global Existing Instance EdDSA_scalarmult.
@@ -61,7 +47,7 @@ Section EdDSA.
   Context `{prm:EdDSA}.
 
   Local Coercion Word.wordToNat : Word.word >-> nat.
-  Local Coercion BinInt.Z.to_nat : BinInt.Z >-> nat.
+  Local Coercion BinInt.Z.of_nat : nat >-> BinInt.Z.
   Local Notation secretkey := (Word.word b) (only parsing).
   Local Notation publickey := (Word.word b) (only parsing).
   Local Notation signature := (Word.word (b + b)) (only parsing).
@@ -69,27 +55,27 @@ Section EdDSA.
   Local Arguments H {n} _.
   Local Notation wfirstn n w := (@WordUtil.wfirstn n _ w _) (only parsing).
 
-  Local Obligation Tactic := destruct prm; simpl; intros; omega.
+  Local Obligation Tactic := destruct prm; simpl; intros; Omega.omega.
 
-  Program Definition curveKey (sk:secretkey) : nat :=
+  Program Definition curveKey (sk:secretkey) : BinInt.Z :=
     let x := wfirstn n (H sk) in (* hash the key, use first "half" for secret scalar *)
     let x := x - (x mod (2^c)) in (* it is implicitly 0 mod (2^c) *)
              setbit x n. (* and the high bit is always set *)
 
   Local Infix "+" := Eadd.
-  Local Infix "*" := EscalarMult.
+  Local Infix "*" := ZEmul.
 
   Definition prngKey (sk:secretkey) : Word.word b := Word.split2 b b (H sk).
   Definition public (sk:secretkey) : publickey := Eenc (curveKey sk*B).
 
   Program Definition sign (A_:publickey) sk {n} (M : Word.word n) :=
-    let r : nat := H (prngKey sk ++ M) in (* secret nonce *)
-    let R : E := r * B in (* commitment to nonce *)
-    let s : nat := curveKey sk in (* secret scalar *)
-    let S : F l := F.nat_mod l (r + H (Eenc R ++ A_ ++ M) * s) in
+    let r := H (prngKey sk ++ M) in (* secret nonce *)
+    let R := r * B in (* commitment to nonce *)
+    let s := curveKey sk in (* secret scalar *)
+    let S := F.of_Z l (r + H (Eenc R ++ A_ ++ M) * s) in
         Eenc R ++ Senc S.
 
   Definition valid {n} (message : Word.word n) pubkey signature :=
     exists A S R, Eenc A = pubkey /\ Eenc R ++ Senc S = signature /\
-                  Eeq (F.to_nat S * B) (R + (H (Eenc R ++ Eenc A ++ message) mod l) * A).
+                  Eeq (F.to_Z S * B) (R + (H (Eenc R ++ Eenc A ++ message) mod l) * A).
 End EdDSA.

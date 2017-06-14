@@ -251,7 +251,6 @@ src/Util/HProp.v
 src/Util/IdfunWithAlt.v
 src/Util/IffT.v
 src/Util/Isomorphism.v
-src/Util/IterAssocOp.v
 src/Util/LetIn.v
 src/Util/LetInMonad.v
 src/Util/ListUtil.v

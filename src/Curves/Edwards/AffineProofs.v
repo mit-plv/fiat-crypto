@@ -1,6 +1,6 @@
 Require Export Crypto.Spec.CompleteEdwardsCurve.
 
-Require Import Crypto.Algebra.Hierarchy Crypto.Util.Decidable.
+Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.ScalarMult Crypto.Util.Decidable.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.Relations.Relation_Definitions.
@@ -12,7 +12,7 @@ Require Import Crypto.Util.Tactics.SetoidSubst.
 Require Export Crypto.Util.FixCoqMistakes.
 
 Module E.
-  Import Group ScalarMult Ring Field CompleteEdwardsCurve.E.
+  Import Group Ring Field CompleteEdwardsCurve.E.
 
   Notation onCurve_zero := Pre.onCurve_zero.
   Notation denominator_nonzero := Pre.denominator_nonzero.
@@ -90,9 +90,6 @@ Module E.
       intros n n'; repeat intro; subst n'.
       induction n; (reflexivity || eapply (_:Proper (eq==>eq==>eq) add); eauto).
     Qed.
-
-    Global Instance mul_is_scalarmult : @is_scalarmult point eq add zero mul.
-    Proof using Type. split; intros; (reflexivity || exact _). Qed.
 
     Section PointCompression.
       Local Notation "x ^ 2" := (x*x).

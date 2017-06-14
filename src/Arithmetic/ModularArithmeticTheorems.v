@@ -6,7 +6,7 @@ Require Import Coq.ZArith.BinInt Coq.ZArith.Zdiv Coq.ZArith.Znumtheory Coq.NArit
 Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
 Require Export Coq.setoid_ring.Ring_theory Coq.setoid_ring.Ring_tac.
 
-Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.Ring Crypto.Algebra.Field.
+Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.ScalarMult Crypto.Algebra.Ring Crypto.Algebra.Field.
 Require Import Crypto.Util.Decidable Crypto.Util.ZUtil.
 Require Export Crypto.Util.FixCoqMistakes.
 
@@ -184,7 +184,6 @@ Module F.
 
     Lemma to_nat_mod (x:F m) (Hm:(0 < m)%Z) : F.to_nat x mod (Z.to_nat m) = F.to_nat x.
     Proof using Type.
-
       unfold F.to_nat.
       rewrite <-F.mod_to_Z at 2.
       apply Z.mod_to_nat; [assumption|].
@@ -287,17 +286,6 @@ Module F.
                            power_tac (power_theory m) [is_pow_constant]).
     Local Open Scope F_scope.
 
-    Import Algebra.ScalarMult.
-    Global Instance pow_is_scalarmult
-      : is_scalarmult (G:=F m) (eq:=eq) (add:=F.mul) (zero:=1%F) (mul := fun n x => x ^ (N.of_nat n)).
-    Proof using Type.
-      split; [ intro P | intros n P | ]; rewrite ?Nat2N.inj_succ, <-?N.add_1_l;
-        match goal with
-        | [x:F m |- _ ] => solve [destruct (@pow_spec m P); auto]
-        | |- Proper _ _ => solve_proper
-        end.
-    Qed.
-
     (* TODO: move this somewhere? *)
     Create HintDb nat2N discriminated.
     Hint Rewrite Nat2N.inj_iff
@@ -311,36 +299,60 @@ Module F.
          Nat2N.inj_div2 Nat2N.inj_max Nat2N.inj_min Nat2N.id
       : nat2N.
 
-    Ltac pow_to_scalarmult_ref :=
-      repeat (autorewrite with nat2N;
-              match goal with
-              | |- context [ (_^?n)%F ] =>
-                rewrite <-(N2Nat.id n); generalize (N.to_nat n); clear n;
-                intro n
-              | |- context [ (_^N.of_nat ?n)%F ] =>
-                let rw := constr:(scalarmult_ext(zero:=F.of_Z m 1) n) in
-                setoid_rewrite rw (* rewriting moduloa reduction *)
-              end).
-
     Lemma pow_0_r (x:F m) : x^0 = 1.
-    Proof using Type. pow_to_scalarmult_ref. apply scalarmult_0_l. Qed.
+    Proof using Type. destruct (F.pow_spec x); auto. Qed.
+
+    Lemma pow_succ_r (x:F m) n : x^(N.succ n) = x * x^n.
+    Proof using Type.
+      rewrite <-N.add_1_l; 
+        destruct (F.pow_spec x); auto.
+    Qed.
 
     Lemma pow_add_r (x:F m) (a b:N) : x^(a+b) = x^a * x^b.
-    Proof using Type. pow_to_scalarmult_ref; apply scalarmult_add_l. Qed.
+    Proof using Type.
+      destruct (F.pow_spec x) as [A B].
+      induction a as [|a IHa] using N.peano_ind;
+        rewrite ?N.add_succ_l, ?pow_0_r, ?pow_succ_r, ?N.add_0_l, ?IHa; try ring.
+    Qed.
 
     Lemma pow_0_l (n:N) : n <> 0%N -> 0^n = 0 :> F m.
-    Proof using Type. pow_to_scalarmult_ref; destruct n; simpl; intros; [congruence|ring]. Qed.
+    Proof using Type.
+      induction n as [|a IHa] using N.peano_ind; [contradiction|].
+      rewrite <-N.add_1_l, pow_add_r; intros; ring.
+    Qed.
+
+    Lemma pow_1_l (n:N) : 1^n = 1 :> F m.
+    Proof using Type.
+      induction n as [|n IHn] using N.peano_ind;
+        rewrite ?pow_0_r, ?pow_succ_r, ?pow_add_r, ?pow_1_l, ?IHn; ring.
+    Qed.
+
+    Lemma pow_mul_l (x y:F m) (n:N) : (x*y)^n = x^n * y^n.
+    Proof using Type.
+      induction n as [|n IHn] using N.peano_ind;
+        repeat (rewrite ?pow_0_r, ?pow_succ_r, ?pow_1_l, <-?N.add_1_l, ?N.mul_add_distr_r, ?pow_add_r, ?N.mul_1_l, ?IHn); try ring.
+    Qed.
 
     Lemma pow_pow_l (x:F m) (a b:N) : (x^a)^b = x^(a*b).
-    Proof using Type. pow_to_scalarmult_ref. apply scalarmult_assoc. Qed.
+    Proof using Type.
+      induction a as [|a IHa] using N.peano_ind;
+        repeat (rewrite ?pow_0_r, ?pow_succ_r, ?pow_1_l, <-?N.add_1_l, ?N.mul_add_distr_r, ?pow_add_r, ?N.mul_1_l, ?pow_mul_l, ?IHa);
+        try ring.
+    Qed.
 
     Lemma pow_1_r (x:F m) : x^1 = x.
-    Proof using Type. pow_to_scalarmult_ref; simpl; ring. Qed.
+    Proof using Type.
+      change 1%N with (N.succ 0); repeat rewrite ?pow_succ_r, ?pow_0_r; ring.
+    Qed.
 
     Lemma pow_2_r (x:F m) : x^2 = x*x.
-    Proof using Type. pow_to_scalarmult_ref; simpl; ring. Qed.
+    Proof using Type.
+      change 1%N with (N.succ (N.succ 0)); repeat rewrite ?pow_succ_r, ?pow_0_r; ring.
+    Qed.
 
     Lemma pow_3_r (x:F m) : x^3 = x*x*x.
-    Proof using Type. pow_to_scalarmult_ref; simpl; ring. Qed.
+    Proof using Type.
+      change 1%N with (N.succ (N.succ (N.succ 0))); repeat rewrite ?pow_succ_r, ?pow_0_r; ring.
+    Qed.
   End Pow.
 End F.

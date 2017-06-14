@@ -1,5 +1,5 @@
 Require Import Coq.Classes.Morphisms Crypto.Util.Relations (*Crypto.Util.Tactics*).
-Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.Monoid Crypto.Algebra.ScalarMult.
+Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.Monoid.
 
 Section BasicProperties.
   Context {T eq op id inv} `{@group T eq op id inv}.
@@ -86,22 +86,6 @@ Section Homomorphism.
     apply inv_unique.
     rewrite <- Monoid.homomorphism, left_inverse, homomorphism_id; reflexivity.
   Qed.
-
-  Section ScalarMultHomomorphism.
-    Context {MUL} {MUL_is_scalarmult:@ScalarMult.is_scalarmult G EQ OP ID MUL }.
-    Context {mul} {mul_is_scalarmult:@ScalarMult.is_scalarmult H eq op id mul }.
-    Lemma homomorphism_scalarmult n P : phi (MUL n P) = mul n (phi P).
-    Proof using Type*. eapply ScalarMult.homomorphism_scalarmult, homomorphism_id. Qed.
-
-    Import ScalarMult.
-    Lemma opp_mul : forall n P, inv (mul n P) = mul n (inv P).
-    Proof using groupH mul_is_scalarmult.
-      induction n; intros.
-      { rewrite !scalarmult_0_l, inv_id; reflexivity. }
-      { rewrite <-NPeano.Nat.add_1_l, Plus.plus_comm at 1.
-        rewrite scalarmult_add_l, scalarmult_1_l, inv_op, scalarmult_S_l, cancel_left; eauto. }
-    Qed.
-  End ScalarMultHomomorphism.
 End Homomorphism.
 
 Section GroupByIsomorphism.

@@ -6,6 +6,12 @@ Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Tactics.BreakMatch.
 
 Section AddChainExp.
+  (* TODO: rewrite this.
+     - use CPS and Loop
+     - use an inner loop for repeated squaring
+     - connect to something that abstracts over F.pow, Z.pow, N.pow NOT scalarmult
+  *)
+
   Function fold_chain {T} (id:T) (op:T->T->T) (is:list (nat*nat)) (acc:list T) {struct is} : T :=
     match is with
     | nil =>
@@ -27,33 +33,4 @@ Section AddChainExp.
   (0, 2); (* 30 = 24 + 6 *)
   (0, 6)] (* 31 = 30 + 1 *)
   [1] = 31. reflexivity. Qed.
-
-  Context {G eq op id} {monoid:@Algebra.Hierarchy.monoid G eq op id}.
-  Context {scalarmult} {is_scalarmult:@ScalarMult.is_scalarmult G eq op id scalarmult}.
-  Local Infix "=" := eq : type_scope.
-  Local Open Scope N_scope.
-  Local Notation "n * P" := (scalarmult (N.to_nat n) P) (only parsing).
-
-  Lemma fold_chain_exp' : forall (x:G) is acc ref
-      (H:forall i, nth_default id acc i = (nth_default 0 ref i) * x)
-      (Hl:Logic.eq (length acc) (length ref)),
-      fold_chain id op is acc = (fold_chain 0 N.add is ref) * x.
-  Proof using Type*.
-    intro x; induction is; intros acc ref H Hl; simpl @fold_chain.
-    { repeat break_match; specialize (H 0%nat); rewrite ?nth_default_cons, ?nth_default_cons_S in H;
-      solve [ simpl length in *; discriminate | apply H | rewrite scalarmult_0_l; reflexivity ]. }
-    { repeat break_match. eapply IHis; intros; [|auto with distr_length]; [].
-      match goal with
-          [H:context [nth_default _ ?l _] |- context[nth_default _ (?h::?l) ?i] ]
-          => destruct i; rewrite ?nth_default_cons, ?nth_default_cons_S;
-             solve [ apply H | rewrite !H, <-scalarmult_add_l, Nnat.N2Nat.inj_add; reflexivity ]
-        end. }
-  Qed.
-
-  Lemma fold_chain_exp x is: fold_chain id op is [x] = (fold_chain 0 N.add is [1]) * x.
-  Proof using Type*.
-    eapply fold_chain_exp'; trivial; intros i.
-    destruct i as [|i]; try destruct i; rewrite ?nth_default_cons_S, ?nth_default_cons, ?nth_default_nil;
-      rewrite ?scalarmult_1_l, ?scalarmult_0_l; reflexivity.
-  Qed.
 End AddChainExp.
