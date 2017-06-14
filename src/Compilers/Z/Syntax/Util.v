@@ -301,3 +301,10 @@ Proof.
   induction x, y; simpl; auto.
   rewrite !Nat.leb_le; omega.
 Qed.
+
+Lemma eta_match_base_type_impl P1 P2 PZ T
+  : match T as T return P1 T -> P2 with
+    | TZ => fun _ => PZ
+    | TWord _ => fun _ => PZ
+    end = fun _ => PZ.
+Proof. destruct T; reflexivity. Qed.
