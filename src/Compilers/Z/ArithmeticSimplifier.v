@@ -259,6 +259,23 @@ Section language.
                  | _
                    => Op opc args
                  end
+         | IdWithAlt _ _ (TWord _ as Tout) as opc
+           => fun args
+              => match interp_as_expr_or_const args with
+                 | Some (gen_expr e1, _)
+                   => match invert_Op e1 with
+                      | Some (existT _ (Add (TWord _) (TWord _) TZ as opc1, args1))
+                        => Op (Add _ _ Tout) args1
+                      | Some (existT _ (Sub (TWord _) (TWord _) TZ as opc1, args1))
+                        => Op (Sub _ _ Tout) args1
+                      | Some (existT _ (Mul (TWord _) (TWord _) TZ as opc1, args1))
+                        => Op (Mul _ _ Tout) args1
+                      | _
+                        => Op opc args
+                      end
+                 | _
+                   => Op opc args
+                 end
          | Zselect TZ TZ TZ TZ as opc
            => fun args
               => match interp_as_expr_or_const args with
