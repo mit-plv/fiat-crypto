@@ -340,6 +340,7 @@ src/Util/ZUtil/Sgn.v
 src/Util/ZUtil/Stabilization.v
 src/Util/ZUtil/Tactics.v
 src/Util/ZUtil/Testbit.v
+src/Util/ZUtil/Z2Nat.v
 src/Util/ZUtil/ZSimplify.v
 src/Util/ZUtil/Zselect.v
 src/Util/ZUtil/Hints/Core.v
