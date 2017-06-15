@@ -45,14 +45,18 @@ Section WordByWordMontgomery.
     Definition redc_body : T * T -> T * T
       := fun '(A, S') => (A' A, S4 B k A S').
 
-    Fixpoint redc_loop (count : nat) : T * T -> T * T
-      := match count with
-         | O => fun A_S => A_S
-         | S count' => fun A_S => redc_loop count' (redc_body A_S)
-         end.
 
-    Definition redc : T
-      := snd (redc_loop (numlimbs A) (A, zero (1 + numlimbs B))).
+    Section loop.
+      Context {cpsT} (rest : T * T -> cpsT).
+      Fixpoint redc_loop_cps (count : nat) : T * T -> cpsT
+        := match count with
+           | O => rest
+           | S count' => fun A_S => redc_loop_cps count' (redc_body A_S)
+           end.
+    End loop.
+
+    Definition redc_cps {cpsT} (rest : T -> cpsT) : cpsT
+      := redc_loop_cps (fun '(_, v) => rest v) (numlimbs A) (A, zero (1 + numlimbs B)).
   End loop.
 End WordByWordMontgomery.
 

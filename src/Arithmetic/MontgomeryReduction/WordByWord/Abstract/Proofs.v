@@ -227,14 +227,29 @@ Section WordByWordMontgomery.
   End Iteration.
 
   Local Notation redc_body := (@redc_body T divmod r scmul add drop_high N B k).
-  Local Notation redc_loop := (@redc_loop T divmod r scmul add drop_high N B k).
-  Local Notation redc A := (@redc T numlimbs zero divmod r scmul add drop_high N A B k).
+  Local Notation redc_loop_cps := (@redc_loop_cps T divmod r scmul add drop_high N B k).
+  Local Notation redc_cps A := (@redc_cps T numlimbs zero divmod r scmul add drop_high N A B k).
+  Local Notation redc_loop := (@redc_loop_cps _ id).
+  Local Notation redc A := (@redc_cps A _ id).
+
+  Lemma redc_loop_cps_id {cpsT} (rest : _ -> cpsT) count
+    : forall A_S, redc_loop_cps rest count A_S = rest (redc_loop count A_S).
+  Proof.
+    induction count as [|count IHcount]; try reflexivity.
+    simpl; intro; rewrite IHcount; reflexivity.
+  Qed.
+
+  Lemma redc_loop_cps_comm_body {cpsT} (rest : _ -> cpsT) count
+    : forall A_S, redc_loop_cps rest count (redc_body A_S) = redc_loop_cps (fun v => rest (redc_body v)) count A_S.
+  Proof.
+    induction count as [|count IHcount]; try reflexivity.
+    simpl; intro; rewrite IHcount; reflexivity.
+  Qed.
 
   Lemma redc_loop_comm_body count
     : forall A_S, redc_loop count (redc_body A_S) = redc_body (redc_loop count A_S).
   Proof.
-    induction count as [|count IHcount]; try reflexivity.
-    simpl; intro; rewrite IHcount; reflexivity.
+    intro; rewrite redc_loop_cps_comm_body, redc_loop_cps_id; reflexivity.
   Qed.
 
   Section body.
@@ -288,7 +303,7 @@ Section WordByWordMontgomery.
   Local Arguments Z.pow !_ !_.
   Local Arguments Z.of_nat !_.
   Local Ltac induction_loop count IHcount
-    := induction count as [|count IHcount]; intros; cbn [redc_loop] in *; [ | rewrite redc_loop_comm_body in * ].
+    := induction count as [|count IHcount]; intros; cbn [redc_loop_cps] in *; [ | rewrite redc_loop_comm_body in * ].
   Lemma redc_loop_good A_S count
         (Hsmall : small (fst A_S))
         (Hbound : 0 <= eval (snd A_S) < eval N + eval B)
@@ -454,6 +469,7 @@ Section WordByWordMontgomery.
     : 0 <= eval (redc A) < eval N + eval B.
   Proof.
     unfold redc.
+    rewrite redc_loop_cps_id.
     apply redc_loop_good; simpl; autorewrite with push_eval;
       rewrite ?Npos_correct; auto; lia.
   Qed.
@@ -465,8 +481,8 @@ Section WordByWordMontgomery.
         | _ => S R_numlimbs
         end.
   Proof.
-    unfold redc; rewrite numlimbs_redc_loop by (cbn [fst snd]; t_small);
-      cbn [snd]; rewrite ?numlimbs_zero.
+    unfold redc; rewrite redc_loop_cps_id; setoid_rewrite numlimbs_redc_loop; [ | solve [ cbn [fst snd]; t_small ].. ].
+    cbn [snd]; rewrite ?numlimbs_zero.
     reflexivity.
   Qed.
   Lemma numlimbs_redc A (small_A : small A) (Hnumlimbs : R_numlimbs = numlimbs B)
@@ -477,10 +493,34 @@ Section WordByWordMontgomery.
     : (eval (redc A)) mod (eval N) = (eval A * eval B * ri^(Z.of_nat (numlimbs A))) mod (eval N).
   Proof.
     unfold redc.
-    rewrite snd_redc_loop_mod_N; cbn [fst snd];
+    rewrite redc_loop_cps_id.
+    setoid_rewrite snd_redc_loop_mod_N; cbn [fst snd];
       autorewrite with push_eval zsimplify;
       [ | rewrite ?Npos_correct; auto; lia.. ].
     Z.rewrite_mod_small.
     reflexivity.
+  Qed.
+
+  Lemma redc_cps_ind
+        A
+        (small_A : small A)
+        (Hnumlimbs : R_numlimbs = numlimbs B)
+        (A_bound : 0 <= eval A < r ^ Z.of_nat (numlimbs A))
+        {cpsT} (rest : _ -> cpsT)
+        (P : cpsT -> Prop)
+        (H : forall redcv,
+            (eval redcv) mod (eval N) = (eval A * eval B * ri^(Z.of_nat (numlimbs A))) mod (eval N)
+            -> numlimbs redcv = S (numlimbs B)
+            -> 0 <= eval redcv < eval N + eval B
+            -> P (rest redcv))
+    : P (redc_cps A rest).
+  Proof.
+    pose proof (redc_mod_N A) as H0.
+    pose proof (redc_bound A) as H1.
+    pose proof (numlimbs_redc A) as H2.
+    unfold redc_cps in *.
+    rewrite @redc_loop_cps_id in H0, H1, H2 |- *.
+    rewrite (surjective_pairing (redc_loop_cps _ _ _)) in H0, H1, H2 |- *.
+    auto.
   Qed.
 End WordByWordMontgomery.
