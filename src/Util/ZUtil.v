@@ -26,6 +26,7 @@ Require Export Crypto.Util.ZUtil.Sgn.
 Require Export Crypto.Util.ZUtil.Tactics.
 Require Export Crypto.Util.ZUtil.Testbit.
 Require Export Crypto.Util.ZUtil.ZSimplify.
+Require Export Crypto.Util.ZUtil.Z2Nat.
 Import Nat.
 Local Open Scope Z.
 
