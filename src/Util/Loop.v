@@ -4,11 +4,14 @@ Require Import Coq.Classes.Morphisms.
 Require Import Coq.micromega.Lia.
 Require Import Coq.omega.Omega.
 Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.ZUtil.Z2Nat.
 Require Import Crypto.Util.Notations Crypto.Util.CPSNotations.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.SplitInContext.
+Require Import Crypto.Util.Tactics.UniquePose.
 
 Section with_state.
   Import CPSNotations.
@@ -162,9 +165,8 @@ Notation "'loop' _{ fuel } ( state1 .. staten = initial ) 'labels' ( continue ) 
 
 Section with_for_state.
   Import CPSNotations.
-  Context {state : Type}.
-
   Section with_loop_params.
+    Context {state : Type}.
     Context (test : Z -> Z -> bool) (i_final : Z) (upd_i : Z -> Z)
             (body : state -> Z -> forall {T} (continue : state -> T) (break : state -> T), T).
 
@@ -187,7 +189,8 @@ Section with_for_state.
     Section lemmas.
       Local Open Scope Z_scope.
       Context (upd_linear : forall x, upd_i x = upd_i 0 + x)
-              (upd_signed : forall i0, test i0 i_final = true -> 0 < (i_final - i0) / (upd_i 0)).
+              (upd_nonzero : upd_i 0 <> 0)
+              (upd_signed : forall i0, test i0 i_final = true -> 0 <= (i_final - i0) / (upd_i 0)).
 
       (** TODO: Strengthen this to take into account the value of
                   the loop counter at the end of the loop; based on
@@ -211,10 +214,12 @@ Section with_for_state.
         intros Hinv IH Hrest.
         eapply @loop_cps_wf_ind with (T:=T)
                                        (invariant := fun '(i, s) => invariant i s)
-                                       (measure := fun '(i, s) => S (Z.to_nat ((i_final - i) / upd_i 0)));
+                                       (measure := fun '(i, s) => Z.to_nat (1 + (i_final - i) / upd_i 0));
           [ assumption
           |
-          | omega ].
+          | solve [ destruct (Z_le_gt_dec 0 ((i_final - i0) / upd_i 0));
+                    [ rewrite Z2Nat.inj_add by omega; simpl; omega
+                    | rewrite Z2Nat.inj_nonpos by omega; omega ] ] ].
         intros [i st] continue Hinv' IH'.
         destruct (test i i_final) eqn:Hi; [ | solve [ eauto ] ].
         pose proof (upd_signed _ Hi) as upd_signed'.
@@ -230,11 +235,7 @@ Section with_for_state.
         with ((i_final - i) / upd_i 0 - 1)
           in IH'
           by (Z.div_mod_to_quot_rem; nia).
-        rewrite <- upd_linear, Z2Nat.inj_sub in IH' by omega.
-        assert ((Z.to_nat 0 < Z.to_nat ((i_final - i) / upd_i 0))%nat)
-          by (apply Z2Nat.inj_lt; omega).
-        change (Z.to_nat 0) with 0%nat in *.
-        change (Z.to_nat 1) with 1%nat in *.
+        rewrite <- upd_linear, Zplus_minus, Z2Nat.inj_add in IH' by omega.
         auto with omega.
       Qed.
 
@@ -254,7 +255,7 @@ Section with_for_state.
         apply body_Proper; [ reflexivity | reflexivity | intro st | reflexivity ].
         assert (Hto0 : forall x, x <= 0 -> Z.to_nat x = 0%nat)
           by (intros []; intros; simpl; lia).
-        apply eq_loop_cps_large_n with (measure := fun '(i, st) => Z.to_nat ((i_final - i) / upd_i 0));
+        apply eq_loop_cps_large_n with (measure := fun '(i, st) => Z.to_nat (1 + (i_final - i) / upd_i 0));
           repeat first [ progress intros
                        | reflexivity
                        | progress destruct_head'_prod
@@ -263,6 +264,7 @@ Section with_for_state.
                        | apply body_Proper
                        | omega
                        | rewrite Zdiv.Zdiv_0_r in *
+                       | rewrite ?(Z.add_opp_r _ 1), Zplus_minus, <- ?(Z.add_opp_r _ 1) in *
                        | match goal with
                          | [ H : forall v, _ -> ?continue _ = ?continue' _ |- ?continue _ = ?continue' _ ] => apply H
                          | [ |- context[upd_i ?x] ]
@@ -272,7 +274,7 @@ Section with_for_state.
                               end
                          | [ H : ?x = 0 |- context[?x] ] => rewrite H
                          | [ H : ?x = 0, H' : context[?x] |- _ ] => rewrite H in H'
-                         | [ H : forall i, ?f i ?y = true -> 0 < _ / 0, H' : ?f _ ?y = true |- _ ]
+                         | [ H : forall i, ?f i ?y = true -> ?R (_ / 0), H' : ?f _ ?y = true |- _ ]
                            => specialize (H _ H')
                          | [ |- context[?i_final - (upd_i 0 + ?i0)] ]
                            => replace (i_final - (upd_i 0 + i0)) with ((i_final - i0) + (-1) * upd_i 0) by omega;
@@ -284,13 +286,15 @@ Section with_for_state.
                          | _ => destruct (Z_zerop (upd_i 0))
                          end
                        | match goal with
-                         | [ |- (Z.to_nat _ < S (Z.to_nat ?x))%nat ]
+                         | [ |- context[S (Z.to_nat ?x)] ]
                            => destruct (Z_lt_le_dec 0 x);
-                              [ rewrite <- Z2Nat.inj_succ by omega; apply Z2Nat.inj_lt
-                              | rewrite !Hto0 by omega ]
+                              [ rewrite <- (Z2Nat.inj_succ x) by omega
+                              | rewrite !(Hto0 x) by omega ]
                          | [ |- (Z.to_nat _ < Z.to_nat _)%nat ]
                            => apply Z2Nat.inj_lt
-                         | [ H : forall i, ?f i ?y = true -> 0 < _ / _, H' : ?f _ ?y = true |- _ ]
+                         | [ |- (Z.to_nat ?x < ?n)%nat ]
+                           => apply (Z2Nat.inj_lt x (Z.of_nat n)); simpl
+                         | [ H : forall i, ?f i ?y = true -> 0 <= _ / _, H' : ?f _ ?y = true |- _ ]
                            => specialize (H _ H')
                          end ].
       Qed.
