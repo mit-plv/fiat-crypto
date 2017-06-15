@@ -166,7 +166,8 @@ src/Compilers/Z/Syntax/Equality.v
 src/Compilers/Z/Syntax/Util.v
 src/Curves/Edwards/AffineProofs.v
 src/Curves/Edwards/Pre.v
-src/Curves/Edwards/XYZT.v
+src/Curves/Edwards/XYZT/Basic.v
+src/Curves/Edwards/XYZT/Precomputed.v
 src/Curves/Montgomery/Affine.v
 src/Curves/Montgomery/AffineInstances.v
 src/Curves/Montgomery/AffineProofs.v
