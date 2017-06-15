@@ -461,6 +461,7 @@ Section ScalarMult.
     cbv [ScalarMultBase].
     eapply for_cps_ind with (invariant := fun i P => Geq P (smul (n_upto i) B )%Z).
     - intros; omega.
+    - omega.
     - intros; rewrite Z.ltb_lt in H; autorewrite with zsimplify; omega.
     - autorewrite with zsimplify. symmetry; eapply (scalarmult_0_l(add:=add)).
     - cbv [force_idZ id]; intros. clear H.
