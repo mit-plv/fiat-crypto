@@ -1,11 +1,14 @@
 (** * Definition and Notations for [do { body }] *)
 Require Import Coq.ZArith.BinInt.
+Require Import Coq.Classes.Morphisms.
 Require Import Coq.micromega.Lia.
 Require Import Coq.omega.Omega.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Notations Crypto.Util.CPSNotations.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Tactics.SpecializeBy.
+Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.Tactics.BreakMatch.
 
 Section with_state.
   Import CPSNotations.
@@ -233,6 +236,63 @@ Section with_for_state.
         change (Z.to_nat 0) with 0%nat in *.
         change (Z.to_nat 1) with 1%nat in *.
         auto with omega.
+      Qed.
+
+      Theorem for_cps_unroll1
+              T i0 v0 rest
+              (body_Proper : Proper (eq ==> eq ==> forall_relation (fun T => (pointwise_relation _ eq) ==> eq ==> eq)) body)
+        : for_cps i0 v0 T rest
+          = if test i0 i_final
+            then @body v0 i0 T
+                       (fun v => for_cps (upd_i i0) v T rest)
+                       rest
+            else rest v0.
+      Proof.
+        unfold for_cps at 1.
+        rewrite loop_cps_def.
+        destruct (test i0 i_final) eqn:Hi; [ | reflexivity ].
+        apply body_Proper; [ reflexivity | reflexivity | intro st | reflexivity ].
+        assert (Hto0 : forall x, x <= 0 -> Z.to_nat x = 0%nat)
+          by (intros []; intros; simpl; lia).
+        apply eq_loop_cps_large_n with (measure := fun '(i, st) => Z.to_nat ((i_final - i) / upd_i 0));
+          repeat first [ progress intros
+                       | reflexivity
+                       | progress destruct_head'_prod
+                       | progress unfold pointwise_relation
+                       | break_innermost_match_step
+                       | apply body_Proper
+                       | omega
+                       | rewrite Zdiv.Zdiv_0_r in *
+                       | match goal with
+                         | [ H : forall v, _ -> ?continue _ = ?continue' _ |- ?continue _ = ?continue' _ ] => apply H
+                         | [ |- context[upd_i ?x] ]
+                           => lazymatch x with
+                              | 0 => fail
+                              | _ => rewrite (upd_linear x)
+                              end
+                         | [ H : ?x = 0 |- context[?x] ] => rewrite H
+                         | [ H : ?x = 0, H' : context[?x] |- _ ] => rewrite H in H'
+                         | [ H : forall i, ?f i ?y = true -> 0 < _ / 0, H' : ?f _ ?y = true |- _ ]
+                           => specialize (H _ H')
+                         | [ |- context[?i_final - (upd_i 0 + ?i0)] ]
+                           => replace (i_final - (upd_i 0 + i0)) with ((i_final - i0) + (-1) * upd_i 0) by omega;
+                              rewrite Zdiv.Z_div_plus_full by assumption
+                         end
+                       | lazymatch goal with
+                         | [ H : upd_i 0 = 0 |- _ ] => fail
+                         | [ H : upd_i 0 <> 0 |- _ ] => fail
+                         | _ => destruct (Z_zerop (upd_i 0))
+                         end
+                       | match goal with
+                         | [ |- (Z.to_nat _ < S (Z.to_nat ?x))%nat ]
+                           => destruct (Z_lt_le_dec 0 x);
+                              [ rewrite <- Z2Nat.inj_succ by omega; apply Z2Nat.inj_lt
+                              | rewrite !Hto0 by omega ]
+                         | [ |- (Z.to_nat _ < Z.to_nat _)%nat ]
+                           => apply Z2Nat.inj_lt
+                         | [ H : forall i, ?f i ?y = true -> 0 < _ / _, H' : ?f _ ?y = true |- _ ]
+                           => specialize (H _ H')
+                         end ].
       Qed.
     End lemmas.
   End with_loop_params.
