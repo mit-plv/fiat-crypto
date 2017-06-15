@@ -108,6 +108,29 @@ Section with_state.
     induction n as [|n IHn]; intros v0 Hinv Hbody Hmeasure; simpl; try omega.
     eauto.
   Qed.
+
+  Theorem eq_loop_cps_large_n
+          (measure : state -> nat)
+          n n' v0 body T rest
+    : measure v0 < n
+      -> measure v0 < n'
+      -> (forall v continue continue',
+             (forall v', measure v' < measure v -> continue v' = continue' v')
+             -> measure v <= measure v0
+             -> body v T continue rest = body v T continue' rest)
+      -> loop_cps n v0 body T rest = loop_cps n' v0 body T rest.
+  Proof.
+    revert n n'.
+    match goal with
+    | [ |- forall n n', ?P ] => cut (forall n n', n <= n' -> P)
+    end.
+    { intros H n n' ???.
+      destruct (le_lt_dec n n'); [ | symmetry ]; auto. }
+    { intros n n' Hle Hn _.
+      revert n' Hle v0 Hn.
+      induction n as [|n IHn], n' as [|n']; simpl;
+        auto with omega. }
+  Qed.
 End with_state.
 
 (** N.B. If the body is polymorphic (that is, if the type argument
