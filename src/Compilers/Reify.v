@@ -24,17 +24,19 @@ Module Import ReifyDebugNotations.
 End ReifyDebugNotations.
 
 Tactic Notation "debug_enter_reify_idtac" string(funname) uconstr(e)
-  := constr_run_tac ltac:(fun _ => idtac funname "Attempting to reify:" e).
+  := idtac funname "Attempting to reify:" e.
 Tactic Notation "debug_leave_reify_success_idtac" string(funname) uconstr(e) uconstr(ret)
-  := constr_run_tac ltac:(fun _ => idtac funname "Success in reifying:" e "as" ret).
+  := idtac funname "Success in reifying:" e "as" ret.
 Tactic Notation "debug_leave_reify_failure_idtac" string(funname) uconstr(e)
-  := constr_run_tac ltac:(fun _ => idtac funname "Failure in reifying:" e).
+  := idtac funname "Failure in reifying:" e.
 Ltac check_debug_level_then_Set _ :=
   let lvl := reify_debug_level in
   lazymatch type of lvl with
   | nat => constr:(Set)
   | ?T => constr_run_tac ltac:(fun _ => idtac "Error: reify_debug_level should have type nat but instead has type" T)
   end.
+Ltac debug0 tac :=
+  constr_run_tac tac.
 Ltac debug1 tac :=
   let lvl := reify_debug_level in
   lazymatch lvl with
@@ -57,7 +59,7 @@ Ltac debug_enter_reify_flat_type e := debug2 ltac:(fun _ => debug_enter_reify_id
 Ltac debug_enter_reify_type e := debug2 ltac:(fun _ => debug_enter_reify_idtac "reify_type:" e).
 Ltac debug_enter_reifyf e := debug2 ltac:(fun _ => debug_enter_reify_idtac "reifyf:" e).
 Ltac debug_leave_reifyf_success e ret := debug3 ltac:(fun _ => debug_leave_reify_success_idtac "reifyf:" e ret).
-Ltac debug_leave_reifyf_failure e := debug_leave_reify_failure_idtac "reifyf:" e.
+Ltac debug_leave_reifyf_failure e := debug0 ltac:(fun _ => debug_leave_reify_failure_idtac "reifyf:" e).
 Tactic Notation "debug_reifyf_case" string(case)
   := debug3 ltac:(fun _ => idtac "reifyf:" case).
 Ltac debug_enter_reify_abs e := debug2 ltac:(fun _ => debug_enter_reify_idtac "reify_abs:" e).
