@@ -10,6 +10,7 @@ Reserved Notation "T0 x , T1 y = A ; b" (at level 200, b at level 200, format "T
 Reserved Notation "T0 x , T1 y = A ; 'return' b" (at level 200, b at level 200, format "T0  x ,  T1  y  =  A ; '//' 'return'  b").
 Reserved Notation "T0 x , T1 y = A ; 'return' ( b0 , b1 , .. , b2 )" (at level 200, format "T0  x ,  T1  y  =  A ; '//' 'return'  ( b0 ,  b1 ,  .. ,  b2 )").
 Reserved Notation "v == 0 ? a : b" (at level 40, a at level 10, b at level 10).
+Reserved Notation "v == 0 ?ℤ a : b" (at level 40, a at level 10, b at level 10).
 Reserved Notation "x & y" (at level 40).
 
 Global Open Scope expr_scope.
@@ -64,6 +65,7 @@ for opn, op, lvl in (('*', 'Mul', 40), ('+', 'Add', 50), ('-', 'Sub', 50)):
             lhs = ('x' if not v1 else '(Var x)')
             rhs = ('y' if not v2 else '(Var y)')
             print('Notation "x %s y" := (Op (%s _ _ _) (Pair %s %s)).' % (opn, op, lhs, rhs))
+            print('Notation "x %sℤ y" := (Op (%s _ _ TZ) (Pair %s %s)) (at level %d).' % (opn, op, lhs, rhs, lvl))
     for lgwordsz in range(0, len(types)):
         for v1 in (False, True):
             for v2 in (False, True):
@@ -106,6 +108,7 @@ for opn, op, lvl in (('&', 'Land', 40),):
             lhs = ('x' if not v1 else '(Var x)')
             rhs = ('y' if not v2 else '(Var y)')
             print('Notation "x %s y" := (Op (%s _ _ _) (Pair %s %s)).' % (opn, op, lhs, rhs))
+            print('Notation "x %sℤ y" := (Op (%s _ _ _) (Pair %s %s)) (at level %d).' % (opn, op, lhs, rhs, lvl))
     for lgwordsz in range(0, len(types)):
         for v1 in (False, True):
             for v2 in (False, True):
@@ -136,6 +139,7 @@ for opn, op, lvl in (('<<', 'Shl', 30),):
             lhs = ('x' if not v1 else '(Var x)')
             rhs = ('y' if not v2 else '(Var y)')
             print('Notation "x %s y" := (Op (%s _ _ _) (Pair %s %s)).' % (opn, op, lhs, rhs))
+            print('Notation "x %sℤ y" := (Op (%s _ _ TZ) (Pair %s %s)) (at level %d).' % (opn, op, lhs, rhs, lvl))
     for lgwordsz in range(0, len(types)):
         for v1 in (False, True):
             for v2 in (False, True):
@@ -151,6 +155,7 @@ for opn, op, lvl in (('>>', 'Shr', 30),):
             lhs = ('x' if not v1 else '(Var x)')
             rhs = ('y' if not v2 else '(Var y)')
             print('Notation "x %s y" := (Op (%s _ _ _) (Pair %s %s)).' % (opn, op, lhs, rhs))
+            print('Notation "x %sℤ y" := (Op (%s _ _ TZ) (Pair %s %s)) (at level %d).' % (opn, op, lhs, rhs, lvl))
     for lgwordsz in range(0, len(types)):
         for v1 in (False, True):
             for v2 in (False, True):
@@ -167,6 +172,7 @@ for v0 in (False, True):
             lhs = ('x' if not v1 else '(Var x)')
             rhs = ('y' if not v2 else '(Var y)')
             print('Notation "v == 0 ? x : y" := (Op (Zselect _ _ _ _) (Pair (Pair %s %s) %s)).' % (tes, lhs, rhs))
+            print('Notation "v == 0 ?ℤ x : y" := (Op (Zselect _ _ _ TZ) (Pair (Pair %s %s) %s)).' % (tes, lhs, rhs))
 for lgwordsz in range(0, len(types)):
     for v0 in (False, True):
         for v1 in (False, True):
@@ -204,9 +210,13 @@ Notation "'uint256_t'" := (Tbase (TWord 8)).
 Notation ℤ := (Tbase TZ).
 
 Notation "x * y" := (Op (Mul _ _ _) (Pair x y)).
+Notation "x *ℤ y" := (Op (Mul _ _ TZ) (Pair x y)) (at level 40).
 Notation "x * y" := (Op (Mul _ _ _) (Pair x (Var y))).
+Notation "x *ℤ y" := (Op (Mul _ _ TZ) (Pair x (Var y))) (at level 40).
 Notation "x * y" := (Op (Mul _ _ _) (Pair (Var x) y)).
+Notation "x *ℤ y" := (Op (Mul _ _ TZ) (Pair (Var x) y)) (at level 40).
 Notation "x * y" := (Op (Mul _ _ _) (Pair (Var x) (Var y))).
+Notation "x *ℤ y" := (Op (Mul _ _ TZ) (Pair (Var x) (Var y))) (at level 40).
 Notation "'(bool)' x * y" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 40, x at level 9).
 Notation "x * '(bool)' y" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 40, y at level 9).
 Notation "'(bool)' x * '(bool)' y" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 40, x at level 9, y at level 9).
@@ -496,9 +506,13 @@ Notation "x * y" := (Op (Mul (TWord 8) (TWord 8) (TWord 8)) (Pair x (Var y))).
 Notation "x * y" := (Op (Mul (TWord 8) (TWord 8) (TWord 8)) (Pair (Var x) y)).
 Notation "x * y" := (Op (Mul (TWord 8) (TWord 8) (TWord 8)) (Pair (Var x) (Var y))).
 Notation "x + y" := (Op (Add _ _ _) (Pair x y)).
+Notation "x +ℤ y" := (Op (Add _ _ TZ) (Pair x y)) (at level 50).
 Notation "x + y" := (Op (Add _ _ _) (Pair x (Var y))).
+Notation "x +ℤ y" := (Op (Add _ _ TZ) (Pair x (Var y))) (at level 50).
 Notation "x + y" := (Op (Add _ _ _) (Pair (Var x) y)).
+Notation "x +ℤ y" := (Op (Add _ _ TZ) (Pair (Var x) y)) (at level 50).
 Notation "x + y" := (Op (Add _ _ _) (Pair (Var x) (Var y))).
+Notation "x +ℤ y" := (Op (Add _ _ TZ) (Pair (Var x) (Var y))) (at level 50).
 Notation "'(bool)' x + y" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 50, x at level 9).
 Notation "x + '(bool)' y" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 50, y at level 9).
 Notation "'(bool)' x + '(bool)' y" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 50, x at level 9, y at level 9).
@@ -788,9 +802,13 @@ Notation "x + y" := (Op (Add (TWord 8) (TWord 8) (TWord 8)) (Pair x (Var y))).
 Notation "x + y" := (Op (Add (TWord 8) (TWord 8) (TWord 8)) (Pair (Var x) y)).
 Notation "x + y" := (Op (Add (TWord 8) (TWord 8) (TWord 8)) (Pair (Var x) (Var y))).
 Notation "x - y" := (Op (Sub _ _ _) (Pair x y)).
+Notation "x -ℤ y" := (Op (Sub _ _ TZ) (Pair x y)) (at level 50).
 Notation "x - y" := (Op (Sub _ _ _) (Pair x (Var y))).
+Notation "x -ℤ y" := (Op (Sub _ _ TZ) (Pair x (Var y))) (at level 50).
 Notation "x - y" := (Op (Sub _ _ _) (Pair (Var x) y)).
+Notation "x -ℤ y" := (Op (Sub _ _ TZ) (Pair (Var x) y)) (at level 50).
 Notation "x - y" := (Op (Sub _ _ _) (Pair (Var x) (Var y))).
+Notation "x -ℤ y" := (Op (Sub _ _ TZ) (Pair (Var x) (Var y))) (at level 50).
 Notation "'(bool)' x - y" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 50, x at level 9).
 Notation "x - '(bool)' y" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 50, y at level 9).
 Notation "'(bool)' x - '(bool)' y" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 50, x at level 9, y at level 9).
@@ -1080,9 +1098,13 @@ Notation "x - y" := (Op (Sub (TWord 8) (TWord 8) (TWord 8)) (Pair x (Var y))).
 Notation "x - y" := (Op (Sub (TWord 8) (TWord 8) (TWord 8)) (Pair (Var x) y)).
 Notation "x - y" := (Op (Sub (TWord 8) (TWord 8) (TWord 8)) (Pair (Var x) (Var y))).
 Notation "x & y" := (Op (Land _ _ _) (Pair x y)).
+Notation "x &ℤ y" := (Op (Land _ _ _) (Pair x y)) (at level 40).
 Notation "x & y" := (Op (Land _ _ _) (Pair x (Var y))).
+Notation "x &ℤ y" := (Op (Land _ _ _) (Pair x (Var y))) (at level 40).
 Notation "x & y" := (Op (Land _ _ _) (Pair (Var x) y)).
+Notation "x &ℤ y" := (Op (Land _ _ _) (Pair (Var x) y)) (at level 40).
 Notation "x & y" := (Op (Land _ _ _) (Pair (Var x) (Var y))).
+Notation "x &ℤ y" := (Op (Land _ _ _) (Pair (Var x) (Var y))) (at level 40).
 Notation "'(bool)' x & '(bool)' y" := (Op (Land (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 40, x at level 9, y at level 9).
 Notation "'(bool)' x & '(bool)' y" := (Op (Land (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 40, x at level 9, y at level 9).
 Notation "'(bool)' x & '(bool)' y" := (Op (Land (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 40, x at level 9, y at level 9).
@@ -1228,9 +1250,13 @@ Notation "x & y" := (Op (Land (TWord 8) (TWord 8) (TWord 8)) (Pair x (Var y))).
 Notation "x & y" := (Op (Land (TWord 8) (TWord 8) (TWord 8)) (Pair (Var x) y)).
 Notation "x & y" := (Op (Land (TWord 8) (TWord 8) (TWord 8)) (Pair (Var x) (Var y))).
 Notation "x << y" := (Op (Shl _ _ _) (Pair x y)).
+Notation "x <<ℤ y" := (Op (Shl _ _ TZ) (Pair x y)) (at level 30).
 Notation "x << y" := (Op (Shl _ _ _) (Pair x (Var y))).
+Notation "x <<ℤ y" := (Op (Shl _ _ TZ) (Pair x (Var y))) (at level 30).
 Notation "x << y" := (Op (Shl _ _ _) (Pair (Var x) y)).
+Notation "x <<ℤ y" := (Op (Shl _ _ TZ) (Pair (Var x) y)) (at level 30).
 Notation "x << y" := (Op (Shl _ _ _) (Pair (Var x) (Var y))).
+Notation "x <<ℤ y" := (Op (Shl _ _ TZ) (Pair (Var x) (Var y))) (at level 30).
 Notation "'(bool)' x << y" := (Op (Shl (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 30).
 Notation "x << y" := (Op (Shl (TWord 0) (TWord _) (TWord 0)) (Pair x y)).
 Notation "'(bool)' x << y" := (Op (Shl (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 30).
@@ -1304,9 +1330,13 @@ Notation "x << y" := (Op (Shl (TWord 8) (TWord _) (TWord 8)) (Pair (Var x) y)).
 Notation "'(uint256_t)' x << y" := (Op (Shl (TWord _) (TWord _) (TWord 8)) (Pair (Var x) (Var y))) (at level 30).
 Notation "x << y" := (Op (Shl (TWord 8) (TWord _) (TWord 8)) (Pair (Var x) (Var y))).
 Notation "x >> y" := (Op (Shr _ _ _) (Pair x y)).
+Notation "x >>ℤ y" := (Op (Shr _ _ TZ) (Pair x y)) (at level 30).
 Notation "x >> y" := (Op (Shr _ _ _) (Pair x (Var y))).
+Notation "x >>ℤ y" := (Op (Shr _ _ TZ) (Pair x (Var y))) (at level 30).
 Notation "x >> y" := (Op (Shr _ _ _) (Pair (Var x) y)).
+Notation "x >>ℤ y" := (Op (Shr _ _ TZ) (Pair (Var x) y)) (at level 30).
 Notation "x >> y" := (Op (Shr _ _ _) (Pair (Var x) (Var y))).
+Notation "x >>ℤ y" := (Op (Shr _ _ TZ) (Pair (Var x) (Var y))) (at level 30).
 Notation "'(bool)' ( x >> y )" := (Op (Shr (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 30).
 Notation "x >> y" := (Op (Shr (TWord 0) (TWord _) (TWord 0)) (Pair x y)).
 Notation "'(bool)' ( x >> y )" := (Op (Shr (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 30).
@@ -1380,13 +1410,21 @@ Notation "x >> y" := (Op (Shr (TWord 8) (TWord _) (TWord 8)) (Pair (Var x) y)).
 Notation "'(uint256_t)' ( x >> y )" := (Op (Shr (TWord _) (TWord _) (TWord 8)) (Pair (Var x) (Var y))) (at level 30).
 Notation "x >> y" := (Op (Shr (TWord 8) (TWord _) (TWord 8)) (Pair (Var x) (Var y))).
 Notation "v == 0 ? x : y" := (Op (Zselect _ _ _ _) (Pair (Pair v x) y)).
+Notation "v == 0 ?ℤ x : y" := (Op (Zselect _ _ _ TZ) (Pair (Pair v x) y)).
 Notation "v == 0 ? x : y" := (Op (Zselect _ _ _ _) (Pair (Pair v x) (Var y))).
+Notation "v == 0 ?ℤ x : y" := (Op (Zselect _ _ _ TZ) (Pair (Pair v x) (Var y))).
 Notation "v == 0 ? x : y" := (Op (Zselect _ _ _ _) (Pair (Pair v (Var x)) y)).
+Notation "v == 0 ?ℤ x : y" := (Op (Zselect _ _ _ TZ) (Pair (Pair v (Var x)) y)).
 Notation "v == 0 ? x : y" := (Op (Zselect _ _ _ _) (Pair (Pair v (Var x)) (Var y))).
+Notation "v == 0 ?ℤ x : y" := (Op (Zselect _ _ _ TZ) (Pair (Pair v (Var x)) (Var y))).
 Notation "v == 0 ? x : y" := (Op (Zselect _ _ _ _) (Pair (Pair (Var v) x) y)).
+Notation "v == 0 ?ℤ x : y" := (Op (Zselect _ _ _ TZ) (Pair (Pair (Var v) x) y)).
 Notation "v == 0 ? x : y" := (Op (Zselect _ _ _ _) (Pair (Pair (Var v) x) (Var y))).
+Notation "v == 0 ?ℤ x : y" := (Op (Zselect _ _ _ TZ) (Pair (Pair (Var v) x) (Var y))).
 Notation "v == 0 ? x : y" := (Op (Zselect _ _ _ _) (Pair (Pair (Var v) (Var x)) y)).
+Notation "v == 0 ?ℤ x : y" := (Op (Zselect _ _ _ TZ) (Pair (Pair (Var v) (Var x)) y)).
 Notation "v == 0 ? x : y" := (Op (Zselect _ _ _ _) (Pair (Pair (Var v) (Var x)) (Var y))).
+Notation "v == 0 ?ℤ x : y" := (Op (Zselect _ _ _ TZ) (Pair (Pair (Var v) (Var x)) (Var y))).
 Notation "'(bool)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 0)) (Pair (Pair v x) y)) (at level 40, x at level 10, y at level 10).
 Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 0) (TWord 0) (TWord 0)) (Pair (Pair v x) y)).
 Notation "'(bool)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 0)) (Pair (Pair v x) (Var y))) (at level 40, x at level 10, y at level 10).
