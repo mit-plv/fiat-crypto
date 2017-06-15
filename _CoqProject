@@ -235,6 +235,7 @@ src/Util/AdditionChainExponentiation.v
 src/Util/AutoRewrite.v
 src/Util/Bool.v
 src/Util/BoundedWord.v
+src/Util/CPSNotations.v
 src/Util/CPSUtil.v
 src/Util/ChangeInAll.v
 src/Util/Curry.v
