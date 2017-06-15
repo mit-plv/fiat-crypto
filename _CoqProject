@@ -1,5 +1,6 @@
 -R src Crypto
 -R Bedrock Bedrock
+-arg "-compat 8.6"
 Bedrock/Nomega.v
 Bedrock/Word.v
 src/Algebra/Field.v
