@@ -150,6 +150,16 @@ Context (weight : nat -> Z)
       (fun sum_z => Positional.from_associational_cps weight _ (sum_z++sz1) f
       ))))))))))).
 
+  Definition goldilocks_mul s xs ys := goldilocks_mul_cps s xs ys id.
+  Lemma goldilocks_mul_id s xs ys R f :
+    @goldilocks_mul_cps s xs ys R f = f (goldilocks_mul s xs ys).
+  Proof.
+    cbv [goldilocks_mul goldilocks_mul_cps id_with_alt_bounds Let_In].
+    repeat autounfold. autorewrite with uncps push_id.
+    reflexivity.
+  Qed.
+  Hint Opaque goldilocks_mul : uncps.
+  Hint Rewrite goldilocks_mul_id : uncps.
 
   Local Existing Instances Z.equiv_modulo_Reflexive
         RelationClasses.eq_Reflexive Z.equiv_modulo_Symmetric
@@ -157,9 +167,9 @@ Context (weight : nat -> Z)
         Z.modulo_equiv_modulo_Proper.
 
   Lemma goldilocks_mul_correct (p : Z) (p_nonzero : p <> 0) s (s_nonzero : s <> 0) (s2_modp : (s^2) mod p = (s+1) mod p) xs ys :
-    (eval weight (goldilocks_mul_cps s xs ys id)) mod p = (eval weight xs * eval weight ys) mod p.
+    (eval weight (goldilocks_mul s xs ys)) mod p = (eval weight xs * eval weight ys) mod p.
   Proof.
-    cbv [goldilocks_mul_cps Let_In].
+    cbv [goldilocks_mul_cps goldilocks_mul Let_In].
     Zmod_to_equiv_modulo.
     progress autounfold.
     progress autorewrite with push_id cancel_pair uncps push_basesystem_eval.
@@ -189,3 +199,5 @@ Context (weight : nat -> Z)
     assumption. assumption. omega.
   Qed.
 End Karatsuba.
+Hint Opaque goldilocks_mul : uncps.
+Hint Rewrite goldilocks_mul_id : uncps.
