@@ -52,7 +52,7 @@ endif
 
 update-_CoqProject::
 	$(SHOW)'ECHO > _CoqProject'
-	$(HIDE)(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-R Bedrock Bedrock'; echo '-arg "-compat 8.6"'; (git ls-files 'src/*.v' 'Bedrock/*.v' | $(SORT_COQPROJECT))) > _CoqProject
+	$(HIDE)(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-R Bedrock Bedrock'; (git ls-files 'src/*.v' 'Bedrock/*.v' | $(SORT_COQPROJECT))) > _CoqProject
 
 $(VOFILES): | coqprime
 
