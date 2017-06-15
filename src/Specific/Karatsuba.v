@@ -215,9 +215,9 @@ Ltac basesystem_partial_evaluation_RHS :=
    [ replace_with_vm_compute t1; clear t1 | reflexivity ].
     Print id_tuple_with_alt.
   Definition goldilocks_mul_sig :
-    {mul : (Z^sz -> Z^sz -> Z^(sz2))%type |
+    {mul : (Z^sz -> Z^sz -> Z^sz)%type |
      forall a b : Z^sz,
-       mul a b = goldilocks_mul_cps (n:=half_sz) (n2:=sz) wt (2 ^ 224) a b (fun ab => Positional.reduce_cps (n:=sz2) wt s c ab id)}.
+       mul a b = goldilocks_mul_cps (n:=half_sz) (n2:=sz) wt (2 ^ 224) a b (fun ab => Positional.reduce_cps (n:=sz) wt s c ab id)}.
   Proof.
     eexists; cbv beta zeta; intros.
     cbv [goldilocks_mul_cps].
@@ -228,7 +228,7 @@ Ltac basesystem_partial_evaluation_RHS :=
   Defined.
 
   Definition mul_sig :
-    {mul : (Z^sz -> Z^sz -> Z^sz2)%type |
+    {mul : (Z^sz -> Z^sz -> Z^sz)%type |
                forall a b : Z^sz,
                  let eval := Positional.Fdecode (m := m) wt in
                  Positional.Fdecode (m := m) wt (mul a b) = (eval a  * eval b)%F}.
@@ -236,7 +236,7 @@ Ltac basesystem_partial_evaluation_RHS :=
     eexists; cbv beta zeta; intros.
     pose proof wt_nonzero.
     let x := constr:(
-               goldilocks_mul_cps (n:=half_sz) (n2:=sz) wt (2^224) a b (fun ab => Positional.reduce_cps (n:=sz2) wt s c ab id)) in
+               goldilocks_mul_cps (n:=half_sz) (n2:=sz) wt (2^224) a b (fun ab => Positional.reduce_cps (n:=sz) wt s c ab id)) in
     F_mod_eq;
       transitivity (Positional.eval wt x); repeat autounfold;
 
