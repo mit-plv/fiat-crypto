@@ -742,7 +742,7 @@ Module B.
           to_associational_cps p
             (fun P => Associational.mul_cps P [(1, x)]
             (fun R => from_associational_cps n R f)).
-        
+
         (* This version of sub does not add balance; bounds must be
         carefully handled. *)
         Definition unbalanced_sub_cps {n} (p q: tuple Z n)
@@ -1048,6 +1048,16 @@ Ltac replace_match_with_destructuring_match T :=
                              let v := replace_match_with_destructuring_match v in
                              exact v)
                end)
+  | (fun a : ?A => @?f a)
+    => let T' := fresh in
+       let T' := fresh T' in
+       let T' := fresh T' in
+       constr:(fun a : A
+               => match f a with
+                  | T' => ltac:(let v := (eval cbv beta delta [T'] in T') in
+                                let v := replace_match_with_destructuring_match v in
+                                exact v)
+                  end)
   | ?x => x
   end.
 Ltac do_replace_match_with_destructuring_match_in_goal :=
