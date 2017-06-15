@@ -32,6 +32,11 @@ Ltac constr_run_tac tac :=
                | _ => tac ()
                end in
   constr:(I).
+Ltac constr_run_tac_fail tac :=
+  let dummy := match goal with
+               | _ => tac ()
+               end in
+  constr:(I : I).
 
 Ltac cidtac msg :=
   constr_run_tac ltac:(fun _ => idtac msg).
@@ -42,11 +47,11 @@ Ltac cidtac3 msg1 msg2 msg3 :=
 Ltac cidtac4 msg1 msg2 msg3 msg4 :=
   constr_run_tac ltac:(fun _ => idtac msg1 msg2 msg3 msg4).
 Ltac cfail msg :=
-  constr_run_tac ltac:(fun _ => idtac "Error:" msg).
+  constr_run_tac_fail ltac:(fun _ => idtac "Error:" msg).
 Ltac cfail2 msg1 msg2 :=
-  constr_run_tac ltac:(fun _ => idtac "Error:" msg1 msg2).
+  constr_run_tac_fail ltac:(fun _ => idtac "Error:" msg1 msg2).
 Ltac cfail3 msg1 msg2 msg3 :=
-  constr_run_tac ltac:(fun _ => idtac "Error:" msg1 msg2 msg3).
+  constr_run_tac_fail ltac:(fun _ => idtac "Error:" msg1 msg2 msg3).
 
 Ltac idtac_goal := lazymatch goal with |- ?G => idtac "Goal:" G end.
 Ltac idtac_context :=
