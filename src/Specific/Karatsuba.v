@@ -251,7 +251,7 @@ Ltac basesystem_partial_evaluation_RHS :=
  Defined.
 
   Definition square_sig :
-    {square : (Z^sz -> Z^sz2)%type |
+    {square : (Z^sz -> Z^sz)%type |
                forall a : Z^sz,
                  let eval := Positional.Fdecode (m := m) wt in
                  Positional.Fdecode (m := m) wt (square a) = (eval a  * eval a)%F}.
