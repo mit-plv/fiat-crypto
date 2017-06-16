@@ -231,6 +231,7 @@ src/Specific/IntegrationTestSub.v
 src/Specific/IntegrationTestSubDisplay.v
 src/Specific/IntegrationTestTemporaryMiscCommon.v
 src/Specific/Karatsuba.v
+src/Specific/MontgomreyP256.v
 src/Specific/FancyMachine256/Barrett.v
 src/Specific/FancyMachine256/Core.v
 src/Specific/FancyMachine256/Montgomery.v
