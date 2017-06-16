@@ -51,6 +51,19 @@ Lemma map_cps_correct {A B} g ls: forall {T} f,
 Proof. induction ls as [|?? IHls]; simpl; intros; rewrite ?IHls; reflexivity. Qed.
 Create HintDb uncps discriminated. Hint Rewrite @map_cps_correct : uncps.
 
+Fixpoint firstn_cps {A} (n:nat) (l:list A) {T} (f:list A->T) :=
+  match n with
+  | O => f nil
+  | S n' => match l with
+            | nil => f nil
+            | a :: l' => f (a :: firstn n' l')
+            end
+  end.
+Lemma firstn_cps_correct {A} n l T f :
+  @firstn_cps A n l T f = f (firstn n l).
+Proof. induction n; destruct l; reflexivity. Qed.
+Hint Rewrite @firstn_cps_correct : uncps.
+
 Fixpoint flat_map_cps {A B} (g:A->forall {T}, (list B->T)->T) (ls : list A) {T} (f:list B->T)  :=
   match ls with
   | nil => f nil
@@ -285,7 +298,26 @@ Module Tuple.
   Proof. destruct n; simpl; rewrite ?mapi_with'_cps_correct by assumption; reflexivity. Qed.
   Hint Rewrite @mapi_with_cps_correct @mapi_with'_cps_correct
        using (intros; autorewrite with uncps; auto): uncps.
+
+  Fixpoint left_append_cps {A n} (x:A) :
+    tuple A n -> forall {R}, (tuple A (S n) -> R) -> R :=
+  match
+    n as n0 return (tuple A n0 -> forall R, (tuple A (S n0) -> R) -> R)
+  with
+  | 0%nat => fun _ _ f => f x
+  | S n' =>
+      fun xs _ f =>
+      left_append_cps x (tl xs) (fun r => f (append (hd xs) r))
+  end.
+  Lemma left_append_cps_correct A n x xs R f :
+    @left_append_cps A n x xs R f = f (left_append x xs).
+  Proof.
+    induction n; [reflexivity|].
+    simpl left_append. simpl left_append_cps.
+    rewrite IHn. reflexivity.
+  Qed.
+  
 End Tuple.
-Hint Rewrite @Tuple.map_cps_correct : uncps.
+Hint Rewrite @Tuple.map_cps_correct @Tuple.left_append_cps_correct : uncps.
 Hint Rewrite @Tuple.mapi_with_cps_correct @Tuple.mapi_with'_cps_correct
      using (intros; autorewrite with uncps; auto): uncps.

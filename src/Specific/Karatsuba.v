@@ -26,8 +26,9 @@ Section Ops51.
   Definition s : Z := 2^448.
   Definition c : list B.limb := [(1, 1); (2^224, 1)].
   Definition coef_div_modulus : nat := 2. (* add 2*modulus before subtracting *)
-  Definition carry_chain1 := Eval vm_compute in (seq 0 (pred sz)).
-  Definition carry_chain2 := ([0;1])%nat.
+  Definition carry_chain1 := [3;7]%nat.
+  Definition carry_chain2 := [0;4;1;5;2;6;3;7]%nat.
+  Definition carry_chain3 := [4;0]%nat.
   Definition a24 := 121665%Z.
 
   (* These definitions are inferred from those above *)
@@ -62,6 +63,12 @@ Section Ops51.
   Lemma wt_divides_chain2 i (H:In i carry_chain2) : wt (S i) / wt i <> 0.
   Proof.
     cbv [In carry_chain2] in H.
+    repeat match goal with H : _ \/ _ |- _ => destruct H end;
+      try (exfalso; assumption); subst; try vm_decide.
+  Qed.
+  Lemma wt_divides_chain3 i (H:In i carry_chain3) : wt (S i) / wt i <> 0.
+  Proof.
+    cbv [In carry_chain3] in H.
     repeat match goal with H : _ \/ _ |- _ => destruct H end;
       try (exfalso; assumption); subst; try vm_decide.
   Qed.
@@ -273,11 +280,14 @@ Ltac basesystem_partial_evaluation_RHS :=
     eexists; cbv beta zeta; intros.
     pose proof wt_nonzero. pose proof wt_divides_chain1.
     pose proof div_mod. pose proof wt_divides_chain2.
+    pose proof wt_divides_chain3.
     let x := constr:(
                Positional.chained_carries_cps (n:=sz) (div:=div)(modulo:=modulo) wt a carry_chain1
                   (fun r => Positional.carry_reduce_cps (n:=sz) (div:=div) (modulo:=modulo) wt s c r
-                  (fun rrr => Positional.chained_carries_cps (n:=sz) (div:=div) (modulo:=modulo) wt rrr carry_chain2 id
-             ))) in
+                  (fun r => Positional.chained_carries_cps (n:=sz) (div:=div) (modulo:=modulo) wt r carry_chain2
+                  (fun r => Positional.carry_reduce_cps (n:=sz) (div:=div) (modulo:=modulo) wt s c r
+                  (fun r => Positional.chained_carries_cps (n:=sz) (div:=div) (modulo:=modulo) wt r carry_chain3 id
+             ))))) in
     solve_op_F wt x. reflexivity.
   Defined.
 
