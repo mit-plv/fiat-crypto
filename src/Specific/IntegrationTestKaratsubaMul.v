@@ -87,17 +87,16 @@ Section BoundedField25p5.
     Unshelve.
     all:shelve_unifiable.
     cbv [Interpretation.Bounds.is_tighter_thanb Relations.interp_flat_type_relb_pointwise Relations.interp_flat_type_rel_pointwise_gen_Prop Syntax.tuple Syntax.tuple' fst snd codomain bounds Interpretation.Bounds.is_tighter_thanb'].
-    Show.
-    (*
-    assert (((r[0 ~> 72057594037927935] <=? r[0 ~> 81064793292668928])%zrange &&
-   (r[0 ~> 72057594037927935] <=? r[0 ~> 81064793292668928])%zrange &&
-   (r[0 ~> 72057594037927935] <=? r[0 ~> 81064793292668928])%zrange &&
-   (r[0 ~> 1166432303488958480] <=? r[0 ~> 81064793292668928])%zrange &&
-   (r[0 ~> 72057594037927935] <=? r[0 ~> 81064793292668928])%zrange &&
-   (r[0 ~> 72057594037927936] <=? r[0 ~> 81064793292668928])%zrange &&
-   (r[0 ~> 72057594037927935] <=? r[0 ~> 81064793292668928])%zrange &&
-   (r[0 ~> 72057594037927935] <=? r[0 ~> 81064793292668928])%zrange)%bool = true). *)
-    (*Show Ltac Profile.*)
+  (*((r[0 ~> 72057594037927935] <=? r[0 ~> 81064793292668928])%zrange &&
+     (r[0 ~> 72057594037927935] <=? r[0 ~> 81064793292668928])%zrange &&
+     (r[0 ~> 72057594037927936] <=? r[0 ~> 81064793292668928])%zrange &&
+     (r[0 ~> 72057594037927935] <=? r[0 ~> 81064793292668928])%zrange &&
+     (r[0 ~> 72057594037927935] <=? r[0 ~> 81064793292668928])%zrange &&
+     (r[0 ~> 72057594037927935] <=? r[0 ~> 81064793292668928])%zrange &&
+     (r[0 ~> 72057594037927936] <=? r[0 ~> 81064793292668928])%zrange &&
+     (r[0 ~> 72057594037927935] <=? r[0 ~> 81064793292668928])%zrange)%bool =
+    true *)
+    Decidable.vm_decide.
   Time Admitted.
 
 End BoundedField25p5.
