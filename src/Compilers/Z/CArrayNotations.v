@@ -4,12 +4,12 @@ Require Export Crypto.Compilers.Z.HexNotationConstants.
 Require Export Crypto.Util.Notations.
 
 Reserved Notation "x [0]" (at level 10, format "x [0]").
-Reserved Notation "T x [1] = { A } ; b" (at level 200, b at level 200, format "T  x [1]  =  { A } ; '//' b").
-Reserved Notation "T x [1] = { A } ; 'return' b" (at level 200, b at level 200, format "T  x [1]  =  { A } ; '//' 'return'  b").
-Reserved Notation "T x [1] = { A } ; 'return' ( b0 , b1 , .. , b2 )" (at level 200, format "T  x [1]  =  { A } ; '//' 'return'  ( b0 ,  b1 ,  .. ,  b2 )").
-Reserved Notation "T0 x [1] , T1 y [1] = { A } ; b" (at level 200, b at level 200, format "T0  x [1] ,  T1  y [1]  =  { A } ; '//' b").
-Reserved Notation "T0 x [1] , T1 y [1] = { A } ; 'return' b" (at level 200, b at level 200, format "T0  x [1] ,  T1  y [1]  =  { A } ; '//' 'return'  b").
-Reserved Notation "T0 x [1] , T1 y [1] = { A } ; 'return' ( b0 , b1 , .. , b2 )" (at level 200, format "T0  x [1] ,  T1  y [1]  =  { A } ; '//' 'return'  ( b0 ,  b1 ,  .. ,  b2 )").
+Reserved Notation "T x [1] = {( A )} ; b" (at level 200, b at level 200, format "T  x [1]  =  {( A )} ; '//' b").
+Reserved Notation "T x [1] = {( A )} ; 'return' b [0]" (at level 200, b at level 200, format "T  x [1]  =  {( A )} ; '//' 'return'  b [0]").
+Reserved Notation "T x [1] = {( A )} ; 'return' ( b0 , b1 , .. , b2 )" (at level 200, format "T  x [1]  =  {( A )} ; '//' 'return'  ( b0 ,  b1 ,  .. ,  b2 )").
+Reserved Notation "T0 x , T1 y = A ; b" (at level 200, b at level 200, format "T0  x ,  T1  y  =  A ; '//' b").
+Reserved Notation "T0 x , T1 y = A ; 'return' b" (at level 200, b at level 200, format "T0  x ,  T1  y  =  A ; '//' 'return'  b").
+Reserved Notation "T0 x , T1 y = A ; 'return' ( b0 , b1 , .. , b2 )" (at level 200, format "T0  x ,  T1  y  =  A ; '//' 'return'  ( b0 ,  b1 ,  .. ,  b2 )").
 Reserved Notation "v == 0 ? a : b" (at level 40, a at level 10, b at level 10).
 Reserved Notation "v == 0 ?ℤ a : b" (at level 40, a at level 10, b at level 10).
 Reserved Notation "x & y" (at level 40).
@@ -17,11 +17,11 @@ Reserved Notation "x & y" (at level 40).
 Global Open Scope expr_scope.
 
 Notation "x [0]" := (Var x) : expr_scope.
-Notation "T x [1] = { A } ; b" := (LetIn (tx:=T) A (fun x => b)) : expr_scope.
-Notation "T x [1] = { A } ; 'return' b" := (LetIn (tx:=T) A (fun x => b)) : expr_scope.
-Notation "T x [1] = { A } ; 'return' ( b0 , b1 , .. , b2 )" := (LetIn (tx:=T) A (fun x => Pair .. (Pair b0%expr b1%expr) .. b2%expr)) : expr_scope.
-Notation "T0 x [1] , T1 y [1] = { A } ; b" := (LetIn (tx:=Prod T0 T1) A (fun '((x, y)%core) => b)) : expr_scope.
-Notation "T0 x [1] , T1 y [1] = { A } ; 'return' b" := (LetIn (tx:=Prod T0 T1) A (fun '((x, y)%core) => Var b)) : expr_scope.
+Notation "T x [1] = {( A )} ; b" := (LetIn (tx:=T) A (fun x => b)) : expr_scope.
+Notation "T x [1] = {( A )} ; 'return' b [0]" := (LetIn (tx:=T) A (fun x => Var b)) : expr_scope.
+Notation "T x [1] = {( A )} ; 'return' ( b0 , b1 , .. , b2 )" := (LetIn (tx:=T) A (fun x => Pair .. (Pair b0%expr b1%expr) .. b2%expr)) : expr_scope.
+Notation "T0 x , T1 y = A ; b" := (LetIn (tx:=Prod T0 T1) A (fun '((x, y)%core) => b)) : expr_scope.
+Notation "T0 x , T1 y = A ; 'return' b" := (LetIn (tx:=Prod T0 T1) A (fun '((x, y)%core) => Var b)) : expr_scope.
 (*Notation "T0 x , T1 y = A ; 'return' ( b0 , b1 , .. , b2 )" := (LetIn (tx:=Prod T0 T1) A (fun '((x, y)%core) => (Pair .. (Pair b0%expr b1%expr) .. b2%expr))) : expr_scope.*) (* Error: Unsupported construction in recursive notations., https://coq.inria.fr/bugs/show_bug.cgi?id=5523 *)
 (*Notation "T0 x , T1 y = A ; 'return' ( b0 , b1 , .. , b2 )" := (LetIn (tx:=Prod T0 T1) A (fun '((x, y)%core) => (Pair .. (Pair (Var b0) (Var b1)) .. (Var b2)))) : expr_scope.*) (* Error: Unsupported construction in recursive notations., https://coq.inria.fr/bugs/show_bug.cgi?id=5523 *)
 
