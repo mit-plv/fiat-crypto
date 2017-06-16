@@ -720,18 +720,16 @@ Section API.
 
   Definition zero {n:nat} : T n := B.Positional.zeros n.
 
-  Axiom JADE_HOW_DO_I_IMPLEMENT_THIS : forall {T}, T.
-
-  Definition join0_cps {n:nat} (p : T n) {R} (f:T (S n) -> R) : R
-    := JADE_HOW_DO_I_IMPLEMENT_THIS.
+  Definition join0_cps {n:nat} (p : T n) {R} (f:T (S n) -> R)
+    := Tuple.left_append_cps 0 p f.
   Definition join0 {n} p : T (S n) := @join0_cps n p _ id.
 
   Definition divmod_cps {n} (p : T (S n)) {R} (f:T n * Z->R) : R
-    := JADE_HOW_DO_I_IMPLEMENT_THIS (*f (List.tl p, List.hd 0 p)*).
+    := Tuple.tl_cps p (fun d => Tuple.hd_cps p (fun m =>  f (d, m))).
   Definition divmod {n} p : T n * Z := @divmod_cps n p _ id.
 
-  Definition drop_high_cps {n : nat} (p : T (S n)) {R} (f:T n->R) : R
-    := JADE_HOW_DO_I_IMPLEMENT_THIS (*firstn_cps n p f*).
+  Definition drop_high_cps {n : nat} (p : T (S n)) {R} (f:T n->R)
+    := Tuple.left_tl_cps p f.
   Definition drop_high {n} p : T n := @drop_high_cps n p _ id.
 
   Definition scmul_cps {n} (c : Z) (p : T n) {R} (f:T (S n)->R) :=
@@ -755,15 +753,15 @@ Section API.
 
     Lemma join0_id n p R f :
       @join0_cps n p R f = f (join0 p).
-    Proof. cbv [join0_cps join0]. exact JADE_HOW_DO_I_IMPLEMENT_THIS; prove_id. Qed.
+    Proof. cbv [join0_cps join0]. prove_id. Qed.
 
     Lemma divmod_id n p R f :
       @divmod_cps n p R f = f (divmod p).
-    Proof. cbv [divmod_cps divmod]. exact JADE_HOW_DO_I_IMPLEMENT_THIS; prove_id. Qed.
+    Proof. cbv [divmod_cps divmod]; prove_id. Qed.
 
     Lemma drop_high_id n p R f :
       @drop_high_cps n p R f = f (drop_high p).
-    Proof. cbv [drop_high_cps drop_high]. exact JADE_HOW_DO_I_IMPLEMENT_THIS; prove_id. Qed.
+    Proof. cbv [drop_high_cps drop_high]; prove_id. Qed.
 
     Lemma scmul_id n c p R f :
       @scmul_cps n c p R f = f (scmul c p).
