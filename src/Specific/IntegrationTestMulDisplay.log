@@ -2,39 +2,39 @@
 Interp-η
 (λ var : Syntax.base_type → Type,
  λ '(x10, x11, x9, x7, x5, (x18, x19, x17, x15, x13))%core,
- uint128_t x20[1] = {((uint128_t) (x5[0]) * x13[0])};
- uint128_t x21[1] = {((uint128_t) (x5[0]) * x15[0] + (uint128_t) (x7[0]) * x13[0])};
- uint128_t x22[1] = {((uint128_t) (x5[0]) * x17[0] + (uint128_t) (x9[0]) * x13[0] + (uint128_t) (x7[0]) * x15[0])};
- uint128_t x23[1] = {((uint128_t) (x5[0]) * x19[0] + (uint128_t) (x11[0]) * x13[0] + (uint128_t) (x7[0]) * x17[0] + (uint128_t) (x9[0]) * x15[0])};
- uint128_t x24[1] = {((uint128_t) (x5[0]) * x18[0] + (uint128_t) (x10[0]) * x13[0] + (uint128_t) (x11[0]) * x15[0] + (uint128_t) (x7[0]) * x19[0] + (uint128_t) (x9[0]) * x17[0])};
- uint64_t x25[1] = {(x10[0] * 0x13)};
- uint64_t x26[1] = {(x7[0] * 0x13)};
- uint64_t x27[1] = {(x9[0] * 0x13)};
- uint64_t x28[1] = {(x11[0] * 0x13)};
- uint128_t x29[1] = {(x20[0] + (uint128_t) (x25[0]) * x15[0] + (uint128_t) (x26[0]) * x18[0] + (uint128_t) (x27[0]) * x19[0] + (uint128_t) (x28[0]) * x17[0])};
- uint128_t x30[1] = {(x21[0] + (uint128_t) (x25[0]) * x17[0] + (uint128_t) (x27[0]) * x18[0] + (uint128_t) (x28[0]) * x19[0])};
- uint128_t x31[1] = {(x22[0] + (uint128_t) (x25[0]) * x19[0] + (uint128_t) (x28[0]) * x18[0])};
- uint128_t x32[1] = {(x23[0] + (uint128_t) (x25[0]) * x18[0])};
- uint64_t x33[1] = {((uint64_t) (x29[0] >> 0x33))};
- uint64_t x34[1] = {((uint64_t) (x29[0]) & 0x7ffffffffffff)};
- uint128_t x35[1] = {(x33[0] + x30[0])};
- uint64_t x36[1] = {((uint64_t) (x35[0] >> 0x33))};
- uint64_t x37[1] = {((uint64_t) (x35[0]) & 0x7ffffffffffff)};
- uint128_t x38[1] = {(x36[0] + x31[0])};
- uint64_t x39[1] = {((uint64_t) (x38[0] >> 0x33))};
- uint64_t x40[1] = {((uint64_t) (x38[0]) & 0x7ffffffffffff)};
- uint128_t x41[1] = {(x39[0] + x32[0])};
- uint64_t x42[1] = {((uint64_t) (x41[0] >> 0x33))};
- uint64_t x43[1] = {((uint64_t) (x41[0]) & 0x7ffffffffffff)};
- uint128_t x44[1] = {(x42[0] + x24[0])};
- uint64_t x45[1] = {((uint64_t) (x44[0] >> 0x33))};
- uint64_t x46[1] = {((uint64_t) (x44[0]) & 0x7ffffffffffff)};
- uint64_t x47[1] = {(x34[0] + 0x13 * x45[0])};
- uint64_t x48[1] = {(x47[0] >> 0x33)};
- uint64_t x49[1] = {(x47[0] & 0x7ffffffffffff)};
- uint64_t x50[1] = {(x48[0] + x37[0])};
- uint64_t x51[1] = {(x50[0] >> 0x33)};
- uint64_t x52[1] = {(x50[0] & 0x7ffffffffffff)};
- return (x46[0], x43[0], x51[0] + x40[0], x52[0], x49[0]))
+ uint128_t x20 = (uint128_t) x5 * x13;
+ uint128_t x21 = (uint128_t) x5 * x15 + (uint128_t) x7 * x13;
+ uint128_t x22 = (uint128_t) x5 * x17 + (uint128_t) x9 * x13 + (uint128_t) x7 * x15;
+ uint128_t x23 = (uint128_t) x5 * x19 + (uint128_t) x11 * x13 + (uint128_t) x7 * x17 + (uint128_t) x9 * x15;
+ uint128_t x24 = (uint128_t) x5 * x18 + (uint128_t) x10 * x13 + (uint128_t) x11 * x15 + (uint128_t) x7 * x19 + (uint128_t) x9 * x17;
+ uint64_t x25 = x10 * 0x13;
+ uint64_t x26 = x7 * 0x13;
+ uint64_t x27 = x9 * 0x13;
+ uint64_t x28 = x11 * 0x13;
+ uint128_t x29 = x20 + (uint128_t) x25 * x15 + (uint128_t) x26 * x18 + (uint128_t) x27 * x19 + (uint128_t) x28 * x17;
+ uint128_t x30 = x21 + (uint128_t) x25 * x17 + (uint128_t) x27 * x18 + (uint128_t) x28 * x19;
+ uint128_t x31 = x22 + (uint128_t) x25 * x19 + (uint128_t) x28 * x18;
+ uint128_t x32 = x23 + (uint128_t) x25 * x18;
+ uint64_t x33 = (uint64_t) (x29 >> 0x33);
+ uint64_t x34 = (uint64_t) x29 & 0x7ffffffffffff;
+ uint128_t x35 = x33 + x30;
+ uint64_t x36 = (uint64_t) (x35 >> 0x33);
+ uint64_t x37 = (uint64_t) x35 & 0x7ffffffffffff;
+ uint128_t x38 = x36 + x31;
+ uint64_t x39 = (uint64_t) (x38 >> 0x33);
+ uint64_t x40 = (uint64_t) x38 & 0x7ffffffffffff;
+ uint128_t x41 = x39 + x32;
+ uint64_t x42 = (uint64_t) (x41 >> 0x33);
+ uint64_t x43 = (uint64_t) x41 & 0x7ffffffffffff;
+ uint128_t x44 = x42 + x24;
+ uint64_t x45 = (uint64_t) (x44 >> 0x33);
+ uint64_t x46 = (uint64_t) x44 & 0x7ffffffffffff;
+ uint64_t x47 = x34 + 0x13 * x45;
+ uint64_t x48 = x47 >> 0x33;
+ uint64_t x49 = x47 & 0x7ffffffffffff;
+ uint64_t x50 = x48 + x37;
+ uint64_t x51 = x50 >> 0x33;
+ uint64_t x52 = x50 & 0x7ffffffffffff;
+ return (Return x46, Return x43, x51 + x40, Return x52, Return x49))
 (x, x0)%core
      : word64 * word64 * word64 * word64 * word64 → word64 * word64 * word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t * uint64_t * uint64_t)

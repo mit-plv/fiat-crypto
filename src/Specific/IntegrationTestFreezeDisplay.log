@@ -2,22 +2,22 @@
 Interp-η
 (λ var : Syntax.base_type → Type,
  λ '(x7, x8, x6, x4, x2)%core,
- uint64_t x10, bool x11 = subborrow_u51(0x0, x2[0], 0x7ffffffffffed);
- uint64_t x13, bool x14 = subborrow_u51(x11[0], x4[0], 0x7ffffffffffff);
- uint64_t x16, bool x17 = subborrow_u51(x14[0], x6[0], 0x7ffffffffffff);
- uint64_t x19, bool x20 = subborrow_u51(x17[0], x8[0], 0x7ffffffffffff);
- uint64_t x22, bool x23 = subborrow_u51(x20[0], x7[0], 0x7ffffffffffff);
- uint64_t x24[1] = {((uint64_t) (x23[0] == 0 ? 0x0 : 0xffffffffffffffffL))};
- uint64_t x25[1] = {(x24[0] & 0x7ffffffffffed)};
- uint64_t x27, bool x28 = addcarryx_u51(0x0, x10[0], x25[0]);
- uint64_t x29[1] = {(x24[0] & 0x7ffffffffffff)};
- uint64_t x31, bool x32 = addcarryx_u51(x28[0], x13[0], x29[0]);
- uint64_t x33[1] = {(x24[0] & 0x7ffffffffffff)};
- uint64_t x35, bool x36 = addcarryx_u51(x32[0], x16[0], x33[0]);
- uint64_t x37[1] = {(x24[0] & 0x7ffffffffffff)};
- uint64_t x39, bool x40 = addcarryx_u51(x36[0], x19[0], x37[0]);
- uint64_t x41[1] = {(x24[0] & 0x7ffffffffffff)};
- uint64_t x43, bool _ = addcarryx_u51(x40[0], x22[0], x41[0]);
- (x43[0], x39[0], x35[0], x31[0], x27[0]))
+ uint64_t x10, bool x11 = subborrow_u51(0x0, x2, 0x7ffffffffffed);
+ uint64_t x13, bool x14 = subborrow_u51(x11, x4, 0x7ffffffffffff);
+ uint64_t x16, bool x17 = subborrow_u51(x14, x6, 0x7ffffffffffff);
+ uint64_t x19, bool x20 = subborrow_u51(x17, x8, 0x7ffffffffffff);
+ uint64_t x22, bool x23 = subborrow_u51(x20, x7, 0x7ffffffffffff);
+ uint64_t x24 = (uint64_t) (x23 == 0 ? 0x0 : 0xffffffffffffffffL);
+ uint64_t x25 = x24 & 0x7ffffffffffed;
+ uint64_t x27, bool x28 = addcarryx_u51(0x0, x10, x25);
+ uint64_t x29 = x24 & 0x7ffffffffffff;
+ uint64_t x31, bool x32 = addcarryx_u51(x28, x13, x29);
+ uint64_t x33 = x24 & 0x7ffffffffffff;
+ uint64_t x35, bool x36 = addcarryx_u51(x32, x16, x33);
+ uint64_t x37 = x24 & 0x7ffffffffffff;
+ uint64_t x39, bool x40 = addcarryx_u51(x36, x19, x37);
+ uint64_t x41 = x24 & 0x7ffffffffffff;
+ uint64_t x43, bool _ = addcarryx_u51(x40, x22, x41);
+ (Return x43, Return x39, Return x35, Return x31, Return x27))
 x
      : word64 * word64 * word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t * uint64_t * uint64_t)
