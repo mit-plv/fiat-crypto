@@ -124,6 +124,7 @@ src/Compilers/Z/ArithmeticSimplifierInterp.v
 src/Compilers/Z/ArithmeticSimplifierUtil.v
 src/Compilers/Z/ArithmeticSimplifierWf.v
 src/Compilers/Z/BinaryNotationConstants.v
+src/Compilers/Z/CArrayNotations.v
 src/Compilers/Z/CNotations.v
 src/Compilers/Z/CommonSubexpressionElimination.v
 src/Compilers/Z/CommonSubexpressionEliminationInterp.v
