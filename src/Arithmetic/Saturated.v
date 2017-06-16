@@ -899,7 +899,7 @@ Section API.
 
   End Proofs.
 End API.
-
+Hint Rewrite divmod_id drop_high_id scmul_id add_id : uncps.
 
 (*
 (* Just some pretty-printing *)
