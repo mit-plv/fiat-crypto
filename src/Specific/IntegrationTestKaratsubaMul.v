@@ -63,40 +63,8 @@ Section BoundedField25p5.
     apply (fun f => proj2_sig_map (fun THIS_NAME_MUST_NOT_BE_UNDERSCORE_TO_WORK_AROUND_CONSTR_MATCHING_ANAOMLIES___BUT_NOTE_THAT_IF_THIS_NAME_IS_LOWERCASE_A___THEN_REIFICATION_STACK_OVERFLOWS___AND_I_HAVE_NO_IDEA_WHATS_GOING_ON p => f_equal f p)).
     (* jgross start here! *)
     (*Set Ltac Profiling.*)
-    Ltac ReflectiveTactics.solve_side_conditions ::= idtac.
     Time refine_reflectively.
-    Import ReflectiveTactics.
-    { Time do_reify. }
-    Import Compilers.Syntax.
-    Require Import Crypto.Util.Tactics.SubstLet.
-    Require Import Crypto.Util.Tactics.UnifyAbstractReflexivity.
-    { Time unify_abstract_vm_compute_rhs_reflexivity. }
-    { Time unify_abstract_vm_compute_rhs_reflexivity. }
-    { Time unify_abstract_vm_compute_rhs_reflexivity. }
-    { Time unify_abstract_vm_compute_rhs_reflexivity. }
-    { Time unify_abstract_vm_compute_rhs_reflexivity. }
-    { Time unify_abstract_rhs_reflexivity. }
-    Require Import CNotations.
-    { Show. Time unify_abstract_renamify_rhs_reflexivity. }
-    { Time shelve; subst_let; clear; abstract vm_cast_no_check (eq_refl true). }
-    { Time shelve; subst_let; clear; vm_compute; reflexivity. }
-    { Time shelve; unify_abstract_compute_rhs_reflexivity. }
-    { Time shelve; unify_abstract_cbv_interp_rhs_reflexivity. }
-    { Time abstract handle_bounds_from_hyps. }
-    { Time handle_boundedness_side_condition. }
-    Unshelve.
-    all:shelve_unifiable.
-    cbv [Interpretation.Bounds.is_tighter_thanb Relations.interp_flat_type_relb_pointwise Relations.interp_flat_type_rel_pointwise_gen_Prop Syntax.tuple Syntax.tuple' fst snd codomain bounds Interpretation.Bounds.is_tighter_thanb'].
-  (*((r[0 ~> 72057594037927935] <=? r[0 ~> 81064793292668928])%zrange &&
-     (r[0 ~> 72057594037927935] <=? r[0 ~> 81064793292668928])%zrange &&
-     (r[0 ~> 72057594037927936] <=? r[0 ~> 81064793292668928])%zrange &&
-     (r[0 ~> 72057594037927935] <=? r[0 ~> 81064793292668928])%zrange &&
-     (r[0 ~> 72057594037927935] <=? r[0 ~> 81064793292668928])%zrange &&
-     (r[0 ~> 72057594037927935] <=? r[0 ~> 81064793292668928])%zrange &&
-     (r[0 ~> 72057594037927936] <=? r[0 ~> 81064793292668928])%zrange &&
-     (r[0 ~> 72057594037927935] <=? r[0 ~> 81064793292668928])%zrange)%bool =
-    true *)
-    Decidable.vm_decide.
-  Time Admitted.
+    (*Show Ltac Profile.*)
+  Time Defined.
 
 End BoundedField25p5.
