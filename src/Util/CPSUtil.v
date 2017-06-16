@@ -316,8 +316,68 @@ Module Tuple.
     simpl left_append. simpl left_append_cps.
     rewrite IHn. reflexivity.
   Qed.
+
+  Definition tl_cps {A n} : 
+    tuple A (S n) -> forall {R}, (tuple A n -> R) -> R :=
+  match
+    n as n0 return (tuple A (S n0) -> forall R, (tuple A n0 -> R) -> R)
+  with
+  | 0%nat => fun _ _ f => f tt
+  | S n' => fun xs _ f => f (fst xs)
+  end.
+  Lemma tl_cps_correct A n xs R f :
+    @tl_cps A n xs R f = f (tl xs).
+  Proof. destruct n; reflexivity. Qed.
+
+  Definition hd_cps {A n} : 
+    tuple A (S n) -> forall {R}, (A -> R) -> R :=
+  match
+    n as n0 return (tuple A (S n0) -> forall R, (A -> R) -> R)
+  with
+  | 0%nat => fun x _ f => f x
+  | S n' => fun xs _ f => f (snd xs)
+  end.
+  Lemma hd_cps_correct A n xs R f :
+    @hd_cps A n xs R f = f (hd xs).
+  Proof. destruct n; reflexivity. Qed.
   
+  Fixpoint left_tl_cps {A n} : 
+    tuple A (S n) -> forall {R}, (tuple A n -> R) -> R :=
+  match
+    n as n0 return (tuple A (S n0) -> forall R, (tuple A n0 -> R) -> R)
+  with
+  | 0%nat => fun _ _ f => f tt
+  | S n' =>
+      fun xs _ f =>
+        tl_cps xs (fun xtl => hd_cps xs (fun xhd => 
+          left_tl_cps xtl (fun r => f (append xhd r))))
+  end.
+  Lemma left_tl_cps_correct A n xs R f :
+    @left_tl_cps A n xs R f = f (left_tl xs).
+  Proof.
+    induction n; [reflexivity|].
+    simpl left_tl. simpl left_tl_cps.
+    rewrite IHn. reflexivity.
+  Qed.
+
+  Fixpoint left_hd_cps {A n} : 
+    tuple A (S n) -> forall {R}, (A -> R) -> R :=
+  match
+    n as n0 return (tuple A (S n0) -> forall R, (A -> R) -> R)
+  with
+  | 0%nat => fun x _ f => f x
+  | S n' =>
+      fun xs _ f => tl_cps xs (fun xtl => left_hd_cps xtl f)
+  end.
+  Lemma left_hd_cps_correct A n xs R f :
+    @left_hd_cps A n xs R f = f (left_hd xs).
+  Proof.
+    induction n; [reflexivity|].
+    simpl left_hd. simpl left_hd_cps.
+    rewrite IHn. reflexivity.
+  Qed.
+
 End Tuple.
-Hint Rewrite @Tuple.map_cps_correct @Tuple.left_append_cps_correct : uncps.
+Hint Rewrite @Tuple.map_cps_correct @Tuple.left_append_cps_correct @Tuple.left_tl_cps_correct @Tuple.left_hd_cps_correct @Tuple.tl_cps_correct @Tuple.hd_cps_correct : uncps.
 Hint Rewrite @Tuple.mapi_with_cps_correct @Tuple.mapi_with'_cps_correct
      using (intros; autorewrite with uncps; auto): uncps.
