@@ -51,14 +51,19 @@ EOF
 < src/Specific/IntegrationTestMulDisplay.log \
   grep -- "λ '(" | \
   grep -owP -- 'x\d+' | \
-  paste -d ' =;' \
+  paste -d ' [1]={};' \
     <(for i in $(seq 1 10); do echo uint64_t; done) \
     /dev/stdin \
+    /dev/null \
+    /dev/null \
+    /dev/null \
+    /dev/null \
     <(echo {in2,in}\[{4,3,2,1,0}\] | tr ' ' '\n') \
+    /dev/null \
     /dev/null
 
 < src/Specific/IntegrationTestMulDisplay.log \
-  grep -oP '(bool|uint\d+_t)\W+\w+ = .*;$'
+  grep -oP '(bool|uint\d+_t)\W+\w+\[?\d?\]? = .*;$'
 
 < src/Specific/IntegrationTestMulDisplay.log \
   grep -- return | sed 's:return::g' | sed 's:Return::g' | \
@@ -89,14 +94,19 @@ EOF
 < src/Specific/IntegrationTestSquareDisplay.log \
   grep -- "λ '(" | \
   grep -owP -- 'x\d+' | \
-  paste -d ' =;' \
+  paste -d ' [1]={};' \
     <(for i in $(seq 1 5); do echo uint64_t; done) \
     /dev/stdin \
+    /dev/null \
+    /dev/null \
+    /dev/null \
+    /dev/null \
     <(echo r{4,3,2,1,0} | tr ' ' '\n') \
+    /dev/null \
     /dev/null
 
 < src/Specific/IntegrationTestSquareDisplay.log \
-  grep -oP '(bool|uint\d+_t)\W+\w+ = .*;$'
+  grep -oP '(bool|uint\d+_t)\W+\w+\[?\d?\]? = .*;$'
 
 < src/Specific/IntegrationTestSquareDisplay.log \
   grep -- return | sed 's:return::g' | sed 's:Return::g' | \
@@ -198,14 +208,19 @@ EOF
 < src/Specific/IntegrationTestLadderstepDisplay.log \
   grep -- "λ '(" | \
   grep -owP -- 'x\d+' | \
-  paste -d ' =;' \
+  paste -d ' [1]={};' \
     <(for i in $(seq 1 25); do echo uint64_t; done) \
     /dev/stdin \
-    <(echo {qmqp,x,z,xprime,zprime}\[{4,3,2,1,0}\] | tr ' ' '\n') \
+    /dev/null \
+    /dev/null \
+    /dev/null \
+    /dev/null \
+    <(echo {x2,z2,x3,z3}\[{4,3,2,1,0}\] | tr ' ' '\n') \
+    /dev/null \
     /dev/null
 
 < src/Specific/IntegrationTestLadderstepDisplay.log \
-  grep -oP '(bool|uint\d+_t)\W+\w+ = .*;$'
+  grep -oP '(bool|uint\d+_t)\W+\w+\[?\d?\]? = .*;$'
 
 < src/Specific/IntegrationTestLadderstepDisplay.log \
   grep -- return | sed 's:return::g' | sed 's:Return::g' | \
