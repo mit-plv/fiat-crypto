@@ -70,7 +70,8 @@ Section WordByWordMontgomery.
     rewrite Znat.Nat2Z.inj_succ, Z.pow_succ_r by lia; reflexivity.
   Qed.
 
-  Local Notation redc := (@redc r R_numlimbs N A B k).
+  Local Notation redc_cps := (@redc_cps r R_numlimbs N A B k).
+  Local Notation redc := (@redc_cps _ id).
 
   Definition redc_bound : 0 <= eval redc < eval N + eval B
     := @redc_bound T eval numlimbs zero divmod r r_big small eval_zero eval_div eval_mod small_div scmul eval_scmul R R_numlimbs R_correct add eval_add small_add drop_high eval_drop_high N Npos Npos_correct N_lt_R B B_bound ri k A small_A.
@@ -86,4 +87,14 @@ Section WordByWordMontgomery.
   Definition redc_mod_N
     : (eval redc) mod (eval N) = (eval A * eval B * ri^(Z.of_nat (numlimbs A))) mod (eval N)
     := @redc_mod_N T eval numlimbs zero divmod r r_big small eval_zero eval_div eval_mod small_div scmul eval_scmul R R_numlimbs R_correct add eval_add small_add drop_high eval_drop_high N Npos Npos_correct N_lt_R B B_bound ri ri_correct k k_correct A small_A A_bound.
+  Definition redc_cps_ind
+    : forall {cpsT} (rest : _ -> cpsT)
+             (P : cpsT -> Prop)
+             (H : forall redcv,
+                 (eval redcv) mod (eval N) = (eval A * eval B * ri^(Z.of_nat (numlimbs A))) mod (eval N)
+                 -> numlimbs redcv = S (numlimbs B)
+                 -> 0 <= eval redcv < eval N + eval B
+                 -> P (rest redcv)),
+      P (redc_cps rest)
+    := @redc_cps_ind T eval numlimbs zero divmod r r_big small eval_zero numlimbs_zero eval_div eval_mod small_div numlimbs_div scmul eval_scmul numlimbs_scmul R R_numlimbs R_correct add eval_add small_add numlimbs_add drop_high eval_drop_high numlimbs_drop_high N Npos Npos_correct N_lt_R B B_bound ri ri_correct k k_correct A small_A Hnumlimbs_eq A_bound.
 End WordByWordMontgomery.
