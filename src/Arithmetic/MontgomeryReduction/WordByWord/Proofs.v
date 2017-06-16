@@ -2,8 +2,8 @@
 Require Import Coq.ZArith.BinInt.
 Require Import Coq.micromega.Lia.
 Require Import Crypto.Arithmetic.Saturated.
-Require Import Crypto.Arithmetic.MontgomeryReduction.WordByWord.Abstract.Definition.
-Require Import Crypto.Arithmetic.MontgomeryReduction.WordByWord.Abstract.Proofs.
+Require Import Crypto.Arithmetic.MontgomeryReduction.WordByWord.Abstract.Dependent.Definition.
+Require Import Crypto.Arithmetic.MontgomeryReduction.WordByWord.Abstract.Dependent.Proofs.
 Require Import Crypto.Arithmetic.MontgomeryReduction.WordByWord.Definition.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tactics.BreakMatch.
@@ -19,25 +19,24 @@ Section WordByWordMontgomery.
   Local Notation add := (@add (Z.pos r)).
   Local Notation scmul := (@scmul (Z.pos r)).
   Local Notation eval_zero := (@eval_zero (Z.pos r)).
+  Local Notation eval_join0 := (@eval_zero (Z.pos r) (Zorder.Zgt_pos_0 _)).
   Local Notation eval_div := (@eval_div (Z.pos r) (Zorder.Zgt_pos_0 _)).
   Local Notation eval_mod := (@eval_mod (Z.pos r) (Zorder.Zgt_pos_0 _)).
   Local Notation small_div := (@small_div (Z.pos r) (Zorder.Zgt_pos_0 _)).
-  Local Notation numlimbs_div := (@numlimbs_div (Z.pos r) (Zorder.Zgt_pos_0 _)).
   Local Notation eval_scmul := (@eval_scmul (Z.pos r) (Zorder.Zgt_pos_0 _)).
-  Local Notation numlimbs_scmul := (@numlimbs_scmul (Z.pos r) (Zorder.Zgt_pos_0 _)).
   Local Notation eval_add := (@eval_add (Z.pos r) (Zorder.Zgt_pos_0 _)).
   Local Notation small_add := (@small_add (Z.pos r) (Zorder.Zgt_pos_0 _)).
-  Local Notation numlimbs_add := (@numlimbs_add (Z.pos r) (Zorder.Zgt_pos_0 _)).
   Local Notation drop_high := (@drop_high (S R_numlimbs)).
-  Local Notation numlimbs_drop_high := (@numlimbs_drop_high (Z.pos r) (Zorder.Zgt_pos_0 _) (S R_numlimbs)).
-  Context (N A B : T)
-          (k : Z)
-          ri
+  Context (A_numlimbs : nat)
+          (N' : T R_numlimbs)
+          (A : T A_numlimbs)
+          (B : T R_numlimbs)
+          (k : Z).
+  Local Notation N := (join0 N').
+  Context ri
           (r_big : r > 1)
           (small_A : small A)
-          (Hnumlimbs_le : (R_numlimbs <= numlimbs B)%nat)
-          (Hnumlimbs_eq : R_numlimbs = numlimbs B)
-          (A_bound : 0 <= eval A < Z.pos r ^ Z.of_nat (numlimbs A))
+          (A_bound : 0 <= eval A < Z.pos r ^ Z.of_nat A_numlimbs)
           (ri_correct : r*ri mod (eval N) = 1 mod (eval N))
           (N_bound : 0 < eval N < r^Z.of_nat R_numlimbs)
           (B_bound' : 0 <= eval B < r^Z.of_nat R_numlimbs)
@@ -71,33 +70,24 @@ Section WordByWordMontgomery.
     rewrite Znat.Nat2Z.inj_succ, Z.pow_succ_r by lia; reflexivity.
   Qed.
 
-  Local Notation redc_body_no_cps := (@redc_body_no_cps r R_numlimbs N).
-  Local Notation redc_body_cps := (@redc_body_cps r R_numlimbs N).
-  Local Notation redc_body := (@redc_body r R_numlimbs N).
-  Local Notation redc_loop_no_cps := (@redc_loop_no_cps r R_numlimbs N B k).
-  Local Notation redc_loop_cps := (@redc_loop_cps r R_numlimbs N B k).
-  Local Notation redc_loop := (@redc_loop r R_numlimbs N B k).
-  Local Notation redc_no_cps := (@redc_no_cps r R_numlimbs N A B k).
-  Local Notation redc_cps := (@redc_cps r R_numlimbs N A B k).
-  Local Notation redc := (@redc r R_numlimbs N A B k).
+  Local Notation redc_body_no_cps := (@redc_body_no_cps r R_numlimbs N').
+  Local Notation redc_body_cps := (@redc_body_cps r R_numlimbs N').
+  Local Notation redc_body := (@redc_body r R_numlimbs N').
+  Local Notation redc_loop_no_cps := (@redc_loop_no_cps r R_numlimbs N' B k).
+  Local Notation redc_loop_cps := (@redc_loop_cps r R_numlimbs N' B k).
+  Local Notation redc_loop := (@redc_loop r R_numlimbs N' B k).
+  Local Notation redc_no_cps := (@redc_no_cps r R_numlimbs N' A_numlimbs A B k).
+  Local Notation redc_cps := (@redc_cps r R_numlimbs N' A_numlimbs A B k).
+  Local Notation redc := (@redc r R_numlimbs N' A_numlimbs A B k).
 
   Definition redc_no_cps_bound : 0 <= eval redc_no_cps < eval N + eval B
-    := @redc_bound T eval numlimbs zero divmod r r_big small eval_zero eval_div eval_mod small_div scmul eval_scmul R R_numlimbs R_correct add eval_add small_add drop_high eval_drop_high N Npos Npos_correct N_lt_R B B_bound ri k A small_A.
-  Definition numlimbs_redc_no_cps_gen
-    : numlimbs redc_no_cps
-      = match numlimbs A with
-        | O => S (numlimbs B)
-        | _ => S R_numlimbs
-        end
-    := @numlimbs_redc_gen T eval numlimbs zero divmod r r_big small eval_zero numlimbs_zero eval_div eval_mod small_div numlimbs_div scmul eval_scmul numlimbs_scmul R R_numlimbs R_correct add eval_add small_add numlimbs_add drop_high eval_drop_high numlimbs_drop_high N Npos Npos_correct N_lt_R B B_bound ri k A small_A Hnumlimbs_le.
-  Definition numlimbs_redc_no_cps : numlimbs redc_no_cps = S (numlimbs B)
-    := @numlimbs_redc T eval numlimbs zero divmod r r_big small eval_zero numlimbs_zero eval_div eval_mod small_div numlimbs_div scmul eval_scmul numlimbs_scmul R R_numlimbs R_correct add eval_add small_add numlimbs_add drop_high eval_drop_high numlimbs_drop_high N Npos Npos_correct N_lt_R B B_bound ri k A small_A Hnumlimbs_eq.
+    := @redc_bound T (@eval) (@zero) (@divmod) r r_big R R_numlimbs R_correct (@small) eval_zero eval_div eval_mod small_div (@scmul) eval_scmul (@add) eval_add small_add drop_high eval_drop_high N Npos Npos_correct N_lt_R B B_bound ri k A_numlimbs A small_A.
   Definition redc_no_cps_mod_N
-    : (eval redc_no_cps) mod (eval N) = (eval A * eval B * ri^(Z.of_nat (numlimbs A))) mod (eval N)
-    := @redc_mod_N T eval numlimbs zero divmod r r_big small eval_zero eval_div eval_mod small_div scmul eval_scmul R R_numlimbs R_correct add eval_add small_add drop_high eval_drop_high N Npos Npos_correct N_lt_R B B_bound ri ri_correct k k_correct A small_A A_bound.
+    : (eval redc_no_cps) mod (eval N) = (eval A * eval B * ri^(Z.of_nat A_numlimbs)) mod (eval N)
+    := @redc_mod_N T (@eval) (@zero) (@divmod) r r_big R R_numlimbs R_correct (@small) eval_zero eval_div eval_mod small_div (@scmul) eval_scmul (@add) eval_add small_add drop_high eval_drop_high N Npos Npos_correct N_lt_R B B_bound ri ri_correct k k_correct A_numlimbs A small_A A_bound.
 
-  Lemma redc_body_cps_id (A' S' : T) {cpsT} f
-    : @redc_body_cps A' B k S' cpsT f = f (redc_body A' B k S').
+  Lemma redc_body_cps_id pred_A_numlimbs (A' : T (S pred_A_numlimbs)) (S' : T (S R_numlimbs)) {cpsT} f
+    : @redc_body_cps pred_A_numlimbs A' B k S' cpsT f = f (redc_body A' B k S').
   Proof.
     unfold redc_body, redc_body_cps, LetIn.Let_In.
     repeat first [ reflexivity
@@ -105,7 +95,7 @@ Section WordByWordMontgomery.
                  | progress autorewrite with uncps ].
   Qed.
 
-  Lemma redc_loop_cps_id (count : nat) (A_S : T * T) {cpsT} f
+  Lemma redc_loop_cps_id (count : nat) (A_S : T count * T (S R_numlimbs)) {cpsT} f
     : @redc_loop_cps cpsT count f A_S = f (redc_loop count A_S).
   Proof.
     unfold redc_loop.
@@ -121,10 +111,10 @@ Section WordByWordMontgomery.
     etransitivity; rewrite redc_loop_cps_id; [ | reflexivity ]; break_innermost_match; reflexivity.
   Qed.
 
-  Lemma redc_body_id_no_cps A' S'
-    : redc_body A' B k S' = redc_body_no_cps B k (A', S').
+  Lemma redc_body_id_no_cps pred_A_numlimbs A' S'
+    : @redc_body pred_A_numlimbs A' B k S' = redc_body_no_cps B k (A', S').
   Proof.
-    unfold redc_body, redc_body_cps, redc_body_no_cps, Abstract.Definition.redc_body, LetIn.Let_In, id.
+    unfold redc_body, redc_body_cps, redc_body_no_cps, Abstract.Dependent.Definition.redc_body, LetIn.Let_In, id.
     repeat autounfold with word_by_word_montgomery.
     repeat first [ reflexivity
                  | progress cbn [fst snd id]
@@ -144,24 +134,15 @@ Section WordByWordMontgomery.
   Qed.
   Lemma redc_cps_id_no_cps : redc = redc_no_cps.
   Proof.
-    unfold redc, redc_no_cps, redc_cps, Abstract.Definition.redc.
+    unfold redc, redc_no_cps, redc_cps, Abstract.Dependent.Definition.redc.
     rewrite redc_loop_cps_id, (surjective_pairing (redc_loop _ _)).
     rewrite redc_loop_cps_id_no_cps; reflexivity.
   Qed.
 
   Lemma redc_bound : 0 <= eval redc < eval N + eval B.
   Proof. rewrite redc_cps_id_no_cps; apply redc_no_cps_bound. Qed.
-  Lemma numlimbs_redc_gen
-    : numlimbs redc
-      = match numlimbs A with
-        | O => S (numlimbs B)
-        | _ => S R_numlimbs
-        end.
-  Proof. rewrite redc_cps_id_no_cps; apply numlimbs_redc_no_cps_gen. Qed.
-  Lemma numlimbs_redc : numlimbs redc = S (numlimbs B).
-  Proof. rewrite redc_cps_id_no_cps; apply numlimbs_redc_no_cps. Qed.
   Lemma redc_mod_N
-    : (eval redc) mod (eval N) = (eval A * eval B * ri^(Z.of_nat (numlimbs A))) mod (eval N).
+    : (eval redc) mod (eval N) = (eval A * eval B * ri^(Z.of_nat A_numlimbs)) mod (eval N).
   Proof. rewrite redc_cps_id_no_cps; apply redc_no_cps_mod_N. Qed.
 End WordByWordMontgomery.
 

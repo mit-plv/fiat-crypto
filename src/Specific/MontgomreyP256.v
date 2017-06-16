@@ -9,27 +9,21 @@ Definition r := Eval compute in (2^64)%positive.
 Definition sz := 4%nat.
 Definition p256 :=
   Eval vm_compute in
-    Tuple.to_list _ ((Positional.encode (modulo:=modulo) (div:=div) (n:=sz) wt (2^256-2^224+2^192+2^96-1))).
+    ((Positional.encode (modulo:=modulo) (div:=div) (n:=sz) wt (2^256-2^224+2^192+2^96-1))).
 
-Definition mulmod_256 : { f:Tuple.tuple Z 4 -> Tuple.tuple Z 4 -> Tuple.tuple Z 4
+Definition mulmod_256 : { f:Tuple.tuple Z 4 -> Tuple.tuple Z 4 -> Tuple.tuple Z 5
                            | forall (A B : Tuple.tuple Z 4),
                                f A B =
-                               (CPSUtil.to_list_cps 4 A) (fun a =>
-                               (CPSUtil.to_list_cps 4 B) (fun b =>
-                               (redc_cps (r:=r)(R_numlimbs:=1) p256 a b 1) (fun r =>
-                               (Tuple.from_list_default 0%Z 4 r)
-                           ))) }.
+                               (redc (r:=r)(R_numlimbs:=4) p256 A B 1)
+                            }.
 Proof.
-  eapply (lift2_sig (fun A B c => c = (CPSUtil.to_list_cps 4 A) (fun a =>
-                               (CPSUtil.to_list_cps 4 B) (fun b =>
-                               (redc_cps (r:=r)(R_numlimbs:=1) p256 a b 1) (fun r =>
-                               (Tuple.from_list_default 0%Z 4 r)
-                           ))))); eexists.
+  eapply (lift2_sig (fun A B c => c = (redc (r:=r)(R_numlimbs:=4) p256 A B 1)
+                           )); eexists.
   cbv [
       r wt sz p256
        CPSUtil.to_list_cps CPSUtil.to_list'_cps CPSUtil.to_list_cps' CPSUtil.flat_map_cps CPSUtil.fold_right_cps
        CPSUtil.map_cps CPSUtil.Tuple.left_append_cps CPSUtil.firstn_cps CPSUtil.combine_cps CPSUtil.on_tuple_cps CPSUtil.update_nth_cps CPSUtil.from_list_default_cps CPSUtil.from_list_default'_cps
-       fst snd length Saturated.numlimbs List.seq List.hd List.app
+       fst snd length List.seq List.hd List.app
        redc redc_cps redc_loop_cps redc_body_cps
        Positional.to_associational_cps
        Saturated.divmod_cps

@@ -711,83 +711,87 @@ End UniformWeight.
 
 Section API.
   Context (bound : Z) {bound_pos : bound > 0}.
-  Definition T : Type := list Z.
-
-  Definition numlimbs : T -> nat := @length Z.
+  Definition T : nat -> Type := tuple Z.
 
   (* lowest limb is less than its bound; this is required for [divmod]
   to simply separate the lowest limb from the rest and be equivalent
   to normal div/mod with [bound]. *)
-  Definition small (p : T) : Prop := List.hd 0 p < bound.
+  Definition small {n} (p : T n) : Prop := List.hd 0 (to_list _ p) < bound.
 
-  Definition zero (n:nat) : T := to_list _ (B.Positional.zeros n).
+  Definition zero {n:nat} : T n := B.Positional.zeros n.
 
-  Definition divmod_cps (p : T) {R} (f:T * Z->R)
-    := f (List.tl p, List.hd 0 p).
-  Definition divmod p : T * Z := divmod_cps p id.
+  Axiom JADE_HOW_DO_I_IMPLEMENT_THIS : forall {T}, T.
 
-  Definition drop_high_cps (n : nat) (p : T) {R} (f:T->R)
-    := firstn_cps n p f.
-  Definition drop_high n p : T := drop_high_cps n p id.
+  Definition join0_cps {n:nat} (p : T n) {R} (f:T (S n) -> R) : R
+    := JADE_HOW_DO_I_IMPLEMENT_THIS.
+  Definition join0 {n} p : T (S n) := @join0_cps n p _ id.
 
-  Definition scmul_cps (c : Z) (p : T) {R} (f:T->R) :=
-    let P := Tuple.from_list (length p) p (eq_refl _) in
-    Columns.mul_cps (n1:=1) (n3:=length p) (uweight bound) bound c P
+  Definition divmod_cps {n} (p : T (S n)) {R} (f:T n * Z->R) : R
+    := JADE_HOW_DO_I_IMPLEMENT_THIS (*f (List.tl p, List.hd 0 p)*).
+  Definition divmod {n} p : T n * Z := @divmod_cps n p _ id.
+
+  Definition drop_high_cps {n : nat} (p : T (S n)) {R} (f:T n->R) : R
+    := JADE_HOW_DO_I_IMPLEMENT_THIS (*firstn_cps n p f*).
+  Definition drop_high {n} p : T n := @drop_high_cps n p _ id.
+
+  Definition scmul_cps {n} (c : Z) (p : T n) {R} (f:T (S n)->R) :=
+    Columns.mul_cps (n1:=1) (n3:=n) (uweight bound) bound c p
       (fun carry_result => Tuple.left_append_cps (fst carry_result) (snd carry_result)
-      (fun result => to_list_cps _ result f)).
-  Definition scmul c p : T := scmul_cps c p id.
+      f).
+  Definition scmul {n} c p : T (S n) := @scmul_cps n c p _ id.
 
-  Definition add_cps (p q : T) {R} (f:T->R) :=
-    let P := Tuple.from_list (length p) p (eq_refl _) in
-    let Q := Tuple.from_list (length q) q (eq_refl _) in
-    dlet n := max (length p) (length q) in
-    Columns.add_cps (uweight bound) P Q
+  Definition add_cps {n} (p q : T n) {R} (f:T (S n)->R) :=
+    Columns.add_cps (uweight bound) p q
       (fun carry_result => Tuple.left_append_cps (fst carry_result) (snd carry_result)
-      (fun result => to_list_cps (S n) result f)).
-  Definition add p q : T := add_cps p q id.
+      f).
+  Definition add {n} p q : T (S n) := @add_cps n p q _ id.
 
-  Hint Opaque divmod drop_high scmul add : uncps.
+  Hint Opaque join0 divmod drop_high scmul add : uncps.
 
   Section CPSProofs.
 
     Local Ltac prove_id :=
       repeat autounfold; autorewrite with uncps; reflexivity.
 
-    Lemma divmod_id p R f :
-      @divmod_cps p R f = f (divmod p).
-    Proof. cbv [divmod_cps divmod]. prove_id. Qed.
+    Lemma join0_id n p R f :
+      @join0_cps n p R f = f (join0 p).
+    Proof. cbv [join0_cps join0]. exact JADE_HOW_DO_I_IMPLEMENT_THIS; prove_id. Qed.
+
+    Lemma divmod_id n p R f :
+      @divmod_cps n p R f = f (divmod p).
+    Proof. cbv [divmod_cps divmod]. exact JADE_HOW_DO_I_IMPLEMENT_THIS; prove_id. Qed.
 
     Lemma drop_high_id n p R f :
-      @drop_high_cps n p R f = f (drop_high n p).
-    Proof. cbv [drop_high_cps drop_high]. prove_id. Qed.
+      @drop_high_cps n p R f = f (drop_high p).
+    Proof. cbv [drop_high_cps drop_high]. exact JADE_HOW_DO_I_IMPLEMENT_THIS; prove_id. Qed.
 
-    Lemma scmul_id c p R f :
-      @scmul_cps c p R f = f (scmul c p).
+    Lemma scmul_id n c p R f :
+      @scmul_cps n c p R f = f (scmul c p).
     Proof. cbv [scmul_cps scmul]. prove_id. Qed.
 
-    Lemma add_id p q R f :
-      @add_cps p q R f = f (add p q).
+    Lemma add_id n p q R f :
+      @add_cps n p q R f = f (add p q).
     Proof. cbv [add_cps add Let_In]. prove_id. Qed.
 
   End CPSProofs.
-  Hint Rewrite divmod_id drop_high_id scmul_id add_id : uncps.
+  Hint Rewrite join0_id divmod_id drop_high_id scmul_id add_id : uncps.
 
   Section Proofs.
 
-    Definition eval (p : T) : Z :=
-      B.Positional.eval (uweight bound) (Tuple.from_list (length p) p (eq_refl _)).
+    Definition eval {n} (p : T n) : Z :=
+      B.Positional.eval (uweight bound) p.
 
-    Lemma eval_zero n : eval (zero n) = 0.
+    Lemma eval_zero n : eval (@zero n) = 0.
     Proof.
-      cbv [eval zero]. rewrite <-from_list_default_eq with (d:=0).
-      erewrite length_to_list, from_list_default_eq, from_list_to_list.
+      cbv [eval zero].
       autorewrite with push_basesystem_eval.
       reflexivity.
-      Unshelve. distr_length.
     Qed.
 
-    Lemma numlimbs_zero n : numlimbs (zero n) = n.
-    Proof. cbv [eval zero]. apply length_to_list. Qed.
+    Lemma eval_join0 n p
+      : eval (@join0 n p) = eval p.
+    Proof.
+    Admitted.
 
     Local Ltac pose_uweight bound :=
       match goal with H : bound > 0 |- _ =>
@@ -798,9 +802,9 @@ Section API.
                       pose proof (@uweight_divides bound H)
       end.
 
-    Lemma eval_add_nz p q :
-      max (length p) (length q) <> 0%nat ->
-      eval (add p q) = eval p + eval q.
+    Lemma eval_add_nz n p q :
+      n <> 0%nat ->
+      eval (@add n p q) = eval p + eval q.
     Proof.
       intros. pose_uweight bound.
       pose proof Z.add_get_carry_full_div.
@@ -818,21 +822,20 @@ Section API.
              | _ => rewrite Z.mul_div_eq by auto;
                       omega
              end.
-      Unshelve. distr_length.
     Qed.
 
-    Lemma eval_add_z p q :
-      max (length p) (length q) = 0%nat ->
-      eval (add p q) = eval p + eval q.
-    Proof. destruct p, q; distr_length; reflexivity. Qed.
+    Lemma eval_add_z n p q :
+      n = 0%nat ->
+      eval (@add n p q) = eval p + eval q.
+    Proof. intro; subst n; reflexivity. Qed.
 
-    Lemma eval_add p q :  eval (add p q) = eval p + eval q.
+    Lemma eval_add n p q :  eval (@add n p q) = eval p + eval q.
     Proof.
-      destruct (Nat.eq_dec (max (length p) (length q)) 0%nat); auto using eval_add_z, eval_add_nz.
+      destruct (Nat.eq_dec n 0%nat); auto using eval_add_z, eval_add_nz.
     Qed.
     Hint Rewrite eval_add : push_basesystem_eval.
 
-    Lemma small_add a b : small (add a b).
+    Lemma small_add n a b : small (@add n a b).
     Proof.
       intros. pose_uweight bound.
       pose proof Z.add_get_carry_full_div.
@@ -840,7 +843,7 @@ Section API.
       pose proof div_correct. pose proof modulo_correct.
       cbv [small add_cps add Let_In]. repeat autounfold.
       autorewrite with uncps push_id.
-      destruct (max (length a) (length b)); [simpl; omega |].
+      destruct n; [simpl; omega |].
       rewrite Columns.hd_to_list, hd_left_append.
       eapply Z.lt_le_trans.
       { apply Columns.small_compact; auto. }
@@ -849,16 +852,8 @@ Section API.
         rewrite Z.pow_1_r. reflexivity. }
     Qed.
 
-    Lemma numlimbs_add a b: numlimbs (add a b) = S (max (numlimbs a) (numlimbs b)).
+    Lemma eval_scmul n a v: eval (@scmul n a v) = a * eval v.
     Proof.
-    Admitted.
-
-    Lemma eval_scmul a v: eval (scmul a v) = a * eval v.
-    Proof.
-    Admitted.
-
-    Lemma numlimbs_scmul a v: 0 <= a < bound ->
-                              numlimbs (scmul a v) = S (numlimbs v).
     Admitted.
 
     (* TODO : move to tuple *)
@@ -870,36 +865,28 @@ Section API.
       reflexivity.
     Qed.
 
-    Lemma eval_div p : small p -> eval (fst (divmod p)) = eval p / bound.
+    Lemma eval_div n p : small p -> eval (fst (@divmod n p)) = eval p / bound.
     Proof.
       repeat match goal with
              | _ => progress (intros; cbv [divmod_cps divmod eval]; repeat autounfold)
              | _ => progress autorewrite with uncps push_id cancel_pair push_basesystem_eval
              end.
-      erewrite from_list_tl.
     Admitted.
 
-    Lemma eval_mod p : small p -> snd (divmod p) = eval p mod bound.
+    Lemma eval_mod n p : small p -> snd (@divmod n p) = eval p mod bound.
     Proof.
     Admitted.
 
-    Lemma small_div v : small v -> small (fst (divmod v)).
-    Admitted.
-
-    Lemma numlimbs_div v : numlimbs (fst (divmod v)) = pred (numlimbs v).
+    Lemma small_div n v : small v -> small (fst (@divmod n v)).
     Admitted.
 
     Lemma eval_drop_high n v :
-      small v -> eval (drop_high n v) = eval v mod (uweight bound n).
-    Admitted.
-
-    Lemma numlimbs_drop_high n v :
-      numlimbs (drop_high n v) = min (numlimbs v) n.
+      small v -> eval (@drop_high n v) = eval v mod (uweight bound n).
     Admitted.
 
   End Proofs.
 End API.
-Hint Rewrite divmod_id drop_high_id scmul_id add_id : uncps.
+Hint Rewrite join0_id divmod_id drop_high_id scmul_id add_id : uncps.
 
 (*
 (* Just some pretty-printing *)
