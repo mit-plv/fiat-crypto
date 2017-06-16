@@ -7,7 +7,7 @@ Require Import Crypto.Compilers.Eta.
 Require Export Coq.ZArith.ZArith.
 Require Export Crypto.Util.LetIn.
 Require Export Crypto.Util.FixedWordSizes.
-Require Export Crypto.Compilers.Z.CNotations.
+Require Export Crypto.Compilers.Z.CArrayNotations.
 Require Export Coq.Unicode.Utf8. (* for better line breaks at function display; must come last *)
 
 Global Arguments Pos.to_nat !_ / .
