@@ -38,8 +38,9 @@ Ltac refine_reflectively32_with_bool := refine_reflectively32_with_bool_with def
 
 (** Convenience notations for options *)
 Definition anf := {| Pipeline.Definition.anf := true |}.
+Definition default := default_PipelineOptions.
 
 (** The default *)
 Ltac refine_reflectively_with_bool_with opts := refine_reflectively64_with_bool_with opts.
 Ltac refine_reflectively_with opts := refine_reflectively64_with opts.
-Ltac refine_reflectively := refine_reflectively_with default_PipelineOptions.
+Ltac refine_reflectively := refine_reflectively_with default.
