@@ -203,12 +203,12 @@ Ltac reifyf base_type_code interp_base_type op var e :=
           let C' := match constr:(Set) with
                     | _ => constr:(fun (x : T) (not_x : var t) (_ : reify_var_for_in_is base_type_code x t not_x) =>
                                      (_ : reify reify_tag C)) (* [C] here is an open term that references "x" by name *)
-                    | _ => cfail2 "reifyf: Failed to reify by typeclasses:"%string e
+                    | _ => constr_run_tac_fail ltac:(fun _ => idtac "Error: reifyf: Failed to reify by typeclasses:" e)
                     end in
           match constr:(Set) with
           | _ => lazymatch C'
                  with fun _ v _ => @?C v => C end
-          | _ => cfail2 "reifyf: Failed to eliminate function dependencies of:"%string C'
+          | _ => constr_run_tac_fail ltac:(fun _ => idtac "Error: reifyf: Failed to eliminate function dependencies of:" C')
           end
         | match ?ev with pair a b => @?eC a b end =>
           let dummy := debug_reifyf_case "matchpair" in
@@ -302,10 +302,10 @@ Ltac reifyf base_type_code interp_base_type op var e :=
                          let args := let a01 := mkPair a0 a1 in let a012 := mkPair a01 a2 in mkPair a012 a3 in
                          mkOp (@Prod _ (@Prod _ (@Prod _ a0T a1T) a2T) a3T) tR op_code args
                     end
-               | _ => cfail2 "Unsupported number of operation arguments in reifyf:"%string nargs
+               | _ => constr_run_tac_fail ltac:(fun _ => idtac "Error: Unsupported number of operation arguments in reifyf:" nargs)
                end
           | reification_unsuccessful
-            => cfail2 "Failed to reify:"%string x
+            => constr_run_tac_fail ltac:(fun _ => idtac "Error: Failed to reify:" x)
           end
         end in
     let dummy := debug_leave_reifyf_success e ret in
@@ -348,12 +348,12 @@ Ltac reify_abs base_type_code interp_base_type op var e :=
       let C' := match constr:(Set) with
                 | _ => constr:(fun (x : T) (not_x : var t) (_ : reify_var_for_in_is base_type_code x t not_x) =>
                                  (_ : reify_abs reify_tag C)) (* [C] here is an open term that references "x" by name *)
-                | _ => cfail2 "reify_abs: Failed to reify by typeclasses:"%string e
+                | _ => constr_run_tac_fail ltac:(fun _ => idtac "Error: reify_absB: Failed to reify by typeclasses:" e)
                 end in
       let C := match constr:(Set) with
                | _ => lazymatch C'
                       with fun _ v _ => @?C v => C end
-               | _ => cfail2 "reify_abs: Failed to eliminate function dependencies of:"%string C'
+               | _ => constr_run_tac_fail ltac:(fun _ => idtac "Error: reify_abs: Failed to eliminate function dependencies of:" C')
                end in
       mkAbs t C
     | ?x =>
