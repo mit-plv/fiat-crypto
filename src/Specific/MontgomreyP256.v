@@ -20,6 +20,8 @@ Definition mulmod_256 : { f:Tuple.tuple Z 4 -> Tuple.tuple Z 4 -> Tuple.tuple Z 
 Proof.
   eapply (lift2_sig (fun A B c => c = (redc (r:=r)(R_numlimbs:=4) p256 A B 1)
                            )); eexists.
+  cbv -[Definitions.Z.add_get_carry_full Definitions.Z.mul_split runtime_add runtime_mul Let_In].
+  (*
   cbv [
       r wt sz p256
         CPSUtil.Tuple.tl_cps CPSUtil.Tuple.hd_cps
@@ -78,8 +80,11 @@ Nat.max
 Positional.to_associational_cps
 Z.of_nat *)
     ].
+  Unset Printing Notations.
 
   (* cbv -[runtime_add runtime_mul LetIn.Let_In Definitions.Z.add_get_carry_full Definitions.Z.mul_split]. *)
 
   (* basesystem_partial_evaluation_RHS. *)
-Abort.
+   *)
+  reflexivity.
+Defined.

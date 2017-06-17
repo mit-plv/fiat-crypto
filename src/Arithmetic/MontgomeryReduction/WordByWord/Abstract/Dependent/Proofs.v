@@ -8,6 +8,7 @@ Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Arithmetic.ModularArithmeticTheorems Crypto.Spec.ModularArithmetic.
 Require Import Crypto.Arithmetic.MontgomeryReduction.WordByWord.Abstract.Dependent.Definition.
 Require Import Crypto.Algebra.Ring.
+Require Import Crypto.Util.ZUtil.MulSplit.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Tactics.SetEvars.
 Require Import Crypto.Util.Tactics.SubstEvars.
@@ -100,7 +101,7 @@ Section WordByWordMontgomery.
       { transitivity ((N+B-1 + (r-1)*B + (r-1)*N) / r);
           [ | set_evars; ring_simplify_subterms; subst_evars; reflexivity ].
         Z.peel_le; repeat apply Z.add_le_mono; repeat apply Z.mul_le_mono_nonneg; try lia;
-          repeat autounfold with word_by_word_montgomery;
+          repeat autounfold with word_by_word_montgomery; rewrite ?Z.mul_split_mod;
           autorewrite with push_eval;
             try Z.zero_bounds;
             auto with lia. }
@@ -121,7 +122,7 @@ Section WordByWordMontgomery.
 
     Lemma S3_nonneg : 0 <= eval S3.
     Proof.
-      repeat autounfold with word_by_word_montgomery;
+      repeat autounfold with word_by_word_montgomery; rewrite ?Z.mul_split_mod;
         autorewrite with push_eval; [].
       rewrite ?Npos_correct; Z.zero_bounds; lia.
     Qed.
@@ -163,6 +164,7 @@ Section WordByWordMontgomery.
       autorewrite with pull_Zmod.
       replace 0 with (0 mod r) by apply Zmod_0_l.
       eapply F.eq_of_Z_iff.
+      rewrite Z.mul_split_mod.
       repeat rewrite ?F.of_Z_add, ?F.of_Z_mul, <-?F.of_Z_mod.
       rewrite <-Algebra.Hierarchy.associative.
       replace ((F.of_Z r k * F.of_Z r (eval N))%F) with (F.opp (m:=r) F.one).

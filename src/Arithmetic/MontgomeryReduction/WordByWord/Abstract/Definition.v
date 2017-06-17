@@ -7,6 +7,7 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.LetIn.
+Require Import Crypto.Util.ZUtil.Definitions.
 
 Local Open Scope Z_scope.
 
@@ -33,7 +34,7 @@ Section WordByWordMontgomery.
     Local Definition A_a := dlet p := divmod A in p. Local Definition A' := fst A_a. Local Definition a := snd A_a.
     Local Definition S1 := add S (scmul a B).
     Local Definition s := snd (divmod S1).
-    Local Definition q := s * k mod r.
+    Local Definition q := fst (Z.mul_split r s k).
     Local Definition S2 := add S1 (scmul q N).
     Local Definition S3 := fst (divmod S2).
     Local Definition S4 := drop_high S3.

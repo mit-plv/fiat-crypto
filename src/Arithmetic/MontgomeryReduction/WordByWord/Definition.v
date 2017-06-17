@@ -9,6 +9,7 @@ Require Import Crypto.Arithmetic.Saturated.
 Require Import Crypto.Arithmetic.MontgomeryReduction.WordByWord.Abstract.Dependent.Definition.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.LetIn.
+Require Import Crypto.Util.ZUtil.Definitions.
 
 Local Open Scope Z_scope.
 
@@ -42,7 +43,7 @@ Section WordByWordMontgomery.
     := divmod_cps A (fun '(A, a) =>
        @scmul_cps r _ a B _ (fun aB => @add_cps r _ S' aB _ (fun S1 =>
        divmod_cps S1 (fun '(_, s) =>
-       dlet q := s * k mod r in
+       dlet q := fst (Z.mul_split r s k) in
        @scmul_cps r _ q N _ (fun qN => @add_cps r _ S1 qN _ (fun S2 =>
        divmod_cps S2 (fun '(S3, _) =>
        @drop_high_cps (S R_numlimbs) S3 _ (fun S4 => rest (A, S4))))))))).
