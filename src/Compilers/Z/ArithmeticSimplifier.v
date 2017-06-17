@@ -299,31 +299,47 @@ Section language.
                  end
          | AddWithCarry TZ TZ TZ TZ as opc
            => fun args
-              => if convert_adc_to_sbb
-                 then match interp_as_expr_or_const args with
-                      | Some (const_of c, const_of x, const_of y)
-                        => Op (OpConst (interp_op _ _ opc (c, x, y))) TT
-                      | Some (c, gen_expr x, y)
-                        => let y' := match y with
-                                     | const_of y => if (y <? 0)%Z
-                                                     then Some (Op (OpConst (-y)) TT)
-                                                     else None
-                                     | neg_expr y => Some y
-                                     | gen_expr _ => None
-                                     end in
-                           match y' with
-                           | Some y => Op (SubWithBorrow TZ TZ TZ TZ)
-                                          (match c with
-                                           | const_of c => Op (OpConst (-c)) TT
-                                           | neg_expr c => c
-                                           | gen_expr c => Op (Opp TZ TZ) c
-                                           end,
-                                           x, y)%expr
-                           | None => Op opc args
+              => let first_pass
+                     := match interp_as_expr_or_const args with
+                        | Some (const_of c, const_of x, const_of y)
+                          => Some (Op (OpConst (interp_op _ _ opc (c, x, y))) TT)
+                        | Some (gen_expr e, const_of c1, const_of c2)
+                        | Some (const_of c1, gen_expr e, const_of c2)
+                        | Some (const_of c1, const_of c2, gen_expr e)
+                          => if (c1 + c2 =? 0)%Z
+                             then Some e
+                             else None
+                        | _ => None
+                        end in
+                 match first_pass with
+                 | Some e => e
+                 | None
+                   => if convert_adc_to_sbb
+                      then match interp_as_expr_or_const args with
+                           | Some (const_of c, const_of x, const_of y)
+                             => Op (OpConst (interp_op _ _ opc (c, x, y))) TT
+                           | Some (c, gen_expr x, y)
+                             => let y' := match y with
+                                          | const_of y => if (y <? 0)%Z
+                                                          then Some (Op (OpConst (-y)) TT)
+                                                          else None
+                                          | neg_expr y => Some y
+                                          | gen_expr _ => None
+                                          end in
+                                match y' with
+                                | Some y => Op (SubWithBorrow TZ TZ TZ TZ)
+                                               (match c with
+                                                | const_of c => Op (OpConst (-c)) TT
+                                                | neg_expr c => c
+                                                | gen_expr c => Op (Opp TZ TZ) c
+                                                end,
+                                                x, y)%expr
+                                | None => Op opc args
+                                end
+                           | _ => Op opc args
                            end
-                      | _ => Op opc args
-                      end
-                 else Op opc args
+                      else Op opc args
+                 end
          | AddWithGetCarry bw TZ TZ TZ TZ TZ as opc
            => fun args
               => if convert_adc_to_sbb
@@ -353,6 +369,42 @@ Section language.
                       | _ => Op opc args
                       end
                  else Op opc args
+         | AddWithGetCarry bw (TWord bw1 as T1) (TWord bw2 as T2) (TWord bw3 as T3) (TWord bwout as Tout) Tout2 as opc
+           => fun args
+              => match interp_as_expr_or_const args with
+                 | Some (const_of c, const_of x, const_of y)
+                   => if ((c =? 0) && (x =? 0) && (y =? 0))%Z%bool
+                      then Pair (Op (OpConst 0) TT) (Op (OpConst 0) TT)
+                      else Op opc args
+                 | Some (gen_expr e, const_of c1, const_of c2)
+                   => match base_type_eq_semidec_transparent T1 Tout with
+                      | Some pf
+                        => if ((c1 =? 0) && (c2 =? 0) && (2^Z.of_nat bw1 <=? bw))%Z%bool
+                           then Pair (eq_rect _ (fun t => exprf (Tbase t)) e _ pf) (Op (OpConst 0) TT)
+                           else Op opc args
+                      | None
+                        => Op opc args
+                      end
+                 | Some (const_of c1, gen_expr e, const_of c2)
+                   => match base_type_eq_semidec_transparent T2 Tout with
+                      | Some pf
+                        => if ((c1 =? 0) && (c2 =? 0) && (2^Z.of_nat bw2 <=? bw))%Z%bool
+                           then Pair (eq_rect _ (fun t => exprf (Tbase t)) e _ pf) (Op (OpConst 0) TT)
+                           else Op opc args
+                      | None
+                        => Op opc args
+                      end
+                 | Some (const_of c1, const_of c2, gen_expr e)
+                   => match base_type_eq_semidec_transparent T3 Tout with
+                      | Some pf
+                        => if ((c1 =? 0) && (c2 =? 0) && (2^Z.of_nat bw3 <=? bw))%Z%bool
+                           then Pair (eq_rect _ (fun t => exprf (Tbase t)) e _ pf) (Op (OpConst 0) TT)
+                           else Op opc args
+                      | None
+                        => Op opc args
+                      end
+                 | _ => Op opc args
+                 end
          | SubWithBorrow TZ TZ TZ TZ as opc
            => fun args
               => if convert_adc_to_sbb

@@ -45,6 +45,16 @@ Local Ltac break_t_step :=
         | progress break_innermost_match_step
         | progress break_match_hyps ].
 
+Local Ltac solve_word_small _ :=
+  lazymatch goal with
+  | [ H : (2^Z.of_nat ?b <= ?bw)%Z |- (0 <= FixedWordSizes.wordToZ ?x < 2^?bw)%Z ]
+    => cut (0 <= FixedWordSizes.wordToZ x < 2^(Z.of_nat (2^b)%nat))%Z;
+       [ rewrite Z.pow_Zpow; cbn [Z.of_nat Pos.of_succ_nat Pos.succ];
+         assert ((2^2^Z.of_nat b <= 2^bw)%Z) by auto with zarith;
+         auto with zarith
+       | apply FixedWordSizesEquality.wordToZ_range ]
+  end.
+
 Definition interpf_as_expr_or_const {t}
   : interp_flat_type (@inverted_expr interp_base_type) t -> interp_flat_type interp_base_type t
   := SmartVarfMap
@@ -118,6 +128,7 @@ Proof.
                    | progress cbv [LetIn.Let_In Z.zselect IdfunWithAlt.id_with_alt]
                    | progress subst
                    | progress simpl in *
+                   | progress Bool.split_andb
                    | progress Z.ltb_to_lt
                    | break_innermost_match_step
                    | rewrite FixedWordSizesEquality.ZToWord_wordToZ
@@ -127,7 +138,14 @@ Proof.
                    | rewrite !Z.sub_with_borrow_to_add_get_carry
                    | progress autorewrite with zsimplify_fast
                    | progress cbv [cast_const ZToInterp interpToZ]
-                   | nia ].
+                   | nia
+                   | progress cbv [Z.add_with_carry]
+                   | match goal with
+                     | [ |- context[(?x mod ?m)%Z] ]
+                       => rewrite (Z.mod_small x m) by solve_word_small ()
+                     | [ |- context[(?x / ?m)%Z] ]
+                       => rewrite (Z.div_small x m) by solve_word_small ()
+                     end ].
 Qed.
 
 Hint Rewrite @InterpSimplifyArith : reflective_interp.
