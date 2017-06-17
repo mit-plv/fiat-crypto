@@ -16,7 +16,8 @@ Section WordByWordMontgomery.
           (R_numlimbs : nat).
   Local Notation small := (@small (Z.pos r)).
   Local Notation eval := (@eval (Z.pos r)).
-  Local Notation add := (@add (Z.pos r)).
+  Local Notation add' := (fun n => @add (Z.pos r) (S n) n (S n)).
+  Local Notation add := (fun n => @add (Z.pos r) n n n).
   Local Notation scmul := (@scmul (Z.pos r)).
   Local Notation eval_zero := (@eval_zero (Z.pos r)).
   Local Notation eval_join0 := (@eval_zero (Z.pos r) (Zorder.Zgt_pos_0 _)).
@@ -24,15 +25,15 @@ Section WordByWordMontgomery.
   Local Notation eval_mod := (@eval_mod (Z.pos r) (Zorder.Zgt_pos_0 _)).
   Local Notation small_div := (@small_div (Z.pos r) (Zorder.Zgt_pos_0 _)).
   Local Notation eval_scmul := (@eval_scmul (Z.pos r) (Zorder.Zgt_pos_0 _)).
-  Local Notation eval_add := (@eval_add (Z.pos r) (Zorder.Zgt_pos_0 _)).
-  Local Notation small_add := (@small_add (Z.pos r) (Zorder.Zgt_pos_0 _)).
+  Local Notation eval_add := (@eval_add_same (Z.pos r) (Zorder.Zgt_pos_0 _)).
+  Local Notation eval_add' := (@eval_add_S1 (Z.pos r) (Zorder.Zgt_pos_0 _)).
+  Local Notation small_add := (fun n => @small_add (Z.pos r) (Zorder.Zgt_pos_0 _) _ _ _).
   Local Notation drop_high := (@drop_high (S R_numlimbs)).
   Context (A_numlimbs : nat)
-          (N' : T R_numlimbs)
+          (N : T R_numlimbs)
           (A : T A_numlimbs)
           (B : T R_numlimbs)
           (k : Z).
-  Local Notation N := (join0 N').
   Context ri
           (r_big : r > 1)
           (small_A : small A)
@@ -70,21 +71,21 @@ Section WordByWordMontgomery.
     rewrite Znat.Nat2Z.inj_succ, Z.pow_succ_r by lia; reflexivity.
   Qed.
 
-  Local Notation redc_body_no_cps := (@redc_body_no_cps r R_numlimbs N').
-  Local Notation redc_body_cps := (@redc_body_cps r R_numlimbs N').
-  Local Notation redc_body := (@redc_body r R_numlimbs N').
-  Local Notation redc_loop_no_cps := (@redc_loop_no_cps r R_numlimbs N' B k).
-  Local Notation redc_loop_cps := (@redc_loop_cps r R_numlimbs N' B k).
-  Local Notation redc_loop := (@redc_loop r R_numlimbs N' B k).
-  Local Notation redc_no_cps := (@redc_no_cps r R_numlimbs N' A_numlimbs A B k).
-  Local Notation redc_cps := (@redc_cps r R_numlimbs N' A_numlimbs A B k).
-  Local Notation redc := (@redc r R_numlimbs N' A_numlimbs A B k).
+  Local Notation redc_body_no_cps := (@redc_body_no_cps r R_numlimbs N).
+  Local Notation redc_body_cps := (@redc_body_cps r R_numlimbs N).
+  Local Notation redc_body := (@redc_body r R_numlimbs N).
+  Local Notation redc_loop_no_cps := (@redc_loop_no_cps r R_numlimbs N B k).
+  Local Notation redc_loop_cps := (@redc_loop_cps r R_numlimbs N B k).
+  Local Notation redc_loop := (@redc_loop r R_numlimbs N B k).
+  Local Notation redc_no_cps := (@redc_no_cps r R_numlimbs N A_numlimbs A B k).
+  Local Notation redc_cps := (@redc_cps r R_numlimbs N A_numlimbs A B k).
+  Local Notation redc := (@redc r R_numlimbs N A_numlimbs A B k).
 
   Definition redc_no_cps_bound : 0 <= eval redc_no_cps < eval N + eval B
-    := @redc_bound T (@eval) (@zero) (@divmod) r r_big R R_numlimbs R_correct (@small) eval_zero eval_div eval_mod small_div (@scmul) eval_scmul (@add) eval_add small_add drop_high eval_drop_high N Npos Npos_correct N_lt_R B B_bound ri k A_numlimbs A small_A.
+    := @redc_bound T (@eval) (@zero) (@divmod) r r_big R R_numlimbs R_correct (@small) eval_zero eval_div eval_mod small_div (@scmul) eval_scmul (@add) eval_add small_add (@add') eval_add' small_add drop_high eval_drop_high N Npos Npos_correct N_lt_R B B_bound ri k A_numlimbs A small_A.
   Definition redc_no_cps_mod_N
     : (eval redc_no_cps) mod (eval N) = (eval A * eval B * ri^(Z.of_nat A_numlimbs)) mod (eval N)
-    := @redc_mod_N T (@eval) (@zero) (@divmod) r r_big R R_numlimbs R_correct (@small) eval_zero eval_div eval_mod small_div (@scmul) eval_scmul (@add) eval_add small_add drop_high eval_drop_high N Npos Npos_correct N_lt_R B B_bound ri ri_correct k k_correct A_numlimbs A small_A A_bound.
+    := @redc_mod_N T (@eval) (@zero) (@divmod) r r_big R R_numlimbs R_correct (@small) eval_zero eval_div eval_mod small_div (@scmul) eval_scmul (@add) eval_add small_add (@add') eval_add' small_add drop_high eval_drop_high N Npos Npos_correct N_lt_R B B_bound ri ri_correct k k_correct A_numlimbs A small_A A_bound.
 
   Lemma redc_body_cps_id pred_A_numlimbs (A' : T (S pred_A_numlimbs)) (S' : T (S R_numlimbs)) {cpsT} f
     : @redc_body_cps pred_A_numlimbs A' B k S' cpsT f = f (redc_body A' B k S').

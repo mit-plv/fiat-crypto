@@ -23,8 +23,9 @@ Section WordByWordMontgomery.
     {R_numlimbs : nat}
     {scmul : forall {n}, Z -> T n -> T (S n)} (* uses double-output multiply *)
     {add : forall {n}, T n -> T n -> T (S n)} (* joins carry *)
+    {add' : forall {n}, T (S n) -> T n -> T (S (S n))} (* joins carry *)
     {drop_high : T (S (S R_numlimbs)) -> T (S R_numlimbs)} (* drops the highest limb *)
-    (N : T (S R_numlimbs)).
+    (N : T R_numlimbs).
 
   (* Recurse for a as many iterations as A has limbs, varying A := A, S := 0, r, bounds *)
   Section Iteration.
@@ -37,7 +38,7 @@ Section WordByWordMontgomery.
     Local Definition S1 := add _ S (scmul _ a B).
     Local Definition s := snd (divmod _ S1).
     Local Definition q := fst (Z.mul_split r s k).
-    Local Definition S2 := add _ S1 (scmul _ q N).
+    Local Definition S2 := add' _ S1 (scmul _ q N).
     Local Definition S3 := fst (divmod _ S2).
     Local Definition S4 := drop_high S3.
   End Iteration.

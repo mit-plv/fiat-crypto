@@ -36,9 +36,12 @@ Section WordByWordMontgomery.
     {add : forall {n}, T n -> T n -> T (S n)} (* joins carry *)
     {eval_add : forall n a b, eval (@add n a b) = eval a + eval b}
     {small_add : forall n a b, small (@add n a b)}
+    {add' : forall {n}, T (S n) -> T n -> T (S (S n))} (* joins carry *)
+    {eval_add' : forall n a b, eval (@add' n a b) = eval a + eval b}
+    {small_add' : forall n a b, small (@add' n a b)}
     {drop_high : T (S (S R_numlimbs)) -> T (S R_numlimbs)} (* drops the highest limb *)
     {eval_drop_high : forall v, small v -> eval (drop_high v) = eval v mod (r * r^Z.of_nat R_numlimbs)}
-    (N : T (S R_numlimbs)) (Npos : positive) (Npos_correct: eval N = Z.pos Npos)
+    (N : T R_numlimbs) (Npos : positive) (Npos_correct: eval N = Z.pos Npos)
     (N_lt_R : eval N < R)
     (B : T R_numlimbs)
     (B_bounds : 0 <= eval B < R)
@@ -49,6 +52,7 @@ Section WordByWordMontgomery.
   Local Ltac t_small :=
     repeat first [ assumption
                  | apply small_add
+                 | apply small_add'
                  | apply small_div
                  | apply Z_mod_lt
                  | solve [ auto ]
@@ -59,6 +63,7 @@ Section WordByWordMontgomery.
        eval_div
        eval_mod
        eval_add
+       eval_add'
        eval_scmul
        eval_drop_high
        using (repeat autounfold with word_by_word_montgomery; t_small)
@@ -84,9 +89,9 @@ Section WordByWordMontgomery.
     Local Notation S1 := (@WordByWord.Abstract.Dependent.Definition.S1 T (@divmod) R_numlimbs scmul add pred_A_numlimbs B A S).
     Local Notation s := (@WordByWord.Abstract.Dependent.Definition.s T (@divmod) R_numlimbs scmul add pred_A_numlimbs B A S).
     Local Notation q := (@WordByWord.Abstract.Dependent.Definition.q T (@divmod) r R_numlimbs scmul add pred_A_numlimbs B k A S).
-    Local Notation S2 := (@WordByWord.Abstract.Dependent.Definition.S2 T (@divmod) r R_numlimbs scmul add N pred_A_numlimbs B k A S).
-    Local Notation S3 := (@WordByWord.Abstract.Dependent.Definition.S3 T (@divmod) r R_numlimbs scmul add N pred_A_numlimbs B k A S).
-    Local Notation S4 := (@WordByWord.Abstract.Dependent.Definition.S4 T (@divmod) r R_numlimbs scmul add drop_high N pred_A_numlimbs B k A S).
+    Local Notation S2 := (@WordByWord.Abstract.Dependent.Definition.S2 T (@divmod) r R_numlimbs scmul add add' N pred_A_numlimbs B k A S).
+    Local Notation S3 := (@WordByWord.Abstract.Dependent.Definition.S3 T (@divmod) r R_numlimbs scmul add add' N pred_A_numlimbs B k A S).
+    Local Notation S4 := (@WordByWord.Abstract.Dependent.Definition.S4 T (@divmod) r R_numlimbs scmul add add' drop_high N pred_A_numlimbs B k A S).
 
     Lemma S3_bound
       : eval S < eval N + eval B
@@ -209,9 +214,9 @@ Section WordByWordMontgomery.
     Qed.
   End Iteration.
 
-  Local Notation redc_body := (@redc_body T (@divmod) r R_numlimbs scmul add drop_high N B k).
-  Local Notation redc_loop := (@redc_loop T (@divmod) r R_numlimbs scmul add drop_high N B k).
-  Local Notation redc A := (@redc T zero (@divmod) r R_numlimbs scmul add drop_high N _ A B k).
+  Local Notation redc_body := (@redc_body T (@divmod) r R_numlimbs scmul add add' drop_high N B k).
+  Local Notation redc_loop := (@redc_loop T (@divmod) r R_numlimbs scmul add add' drop_high N B k).
+  Local Notation redc A := (@redc T zero (@divmod) r R_numlimbs scmul add add' drop_high N _ A B k).
 
   (*Lemma redc_loop_comm_body count
     : forall A_S, redc_loop count (redc_body A_S) = redc_body (redc_loop count A_S).
