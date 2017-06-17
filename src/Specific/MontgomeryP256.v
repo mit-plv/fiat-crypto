@@ -8,9 +8,10 @@ Require Import Crypto.Util.LetIn.
 Definition wt (i:nat) : Z := Z.shiftl 1 (64*Z.of_nat i).
 Definition r := Eval compute in (2^64)%positive.
 Definition sz := 4%nat.
+Definition m : positive := 2^256-2^224+2^192+2^96-1.
 Definition p256 :=
   Eval vm_compute in
-    ((Positional.encode (modulo:=modulo) (div:=div) (n:=sz) wt (2^256-2^224+2^192+2^96-1))).
+    ((Positional.encode (modulo:=modulo) (div:=div) (n:=sz) wt m)).
 
 Definition mulmod_256 : { f:Tuple.tuple Z 4 -> Tuple.tuple Z 4 -> Tuple.tuple Z 5
                            | forall (A B : Tuple.tuple Z 4),
