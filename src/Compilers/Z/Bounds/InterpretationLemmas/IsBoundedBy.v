@@ -9,6 +9,7 @@ Require Import Crypto.Compilers.Z.Bounds.InterpretationLemmas.Tactics.
 Require Import Crypto.Compilers.SmartMap.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.ZUtil.Stabilization.
+Require Import Crypto.Util.ZUtil.MulSplit.
 Require Import Crypto.Util.PointedProp.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.FixedWordSizesEquality.
@@ -348,8 +349,10 @@ Proof.
     [ apply is_bounded_by_truncation_bounds..
     | split; ibbio_do_cbv;
       [ eapply is_bounded_by_compose with (T1:=TZ) (f_v := fun v => ZToInterp (v mod _)) (v:=ZToInterp _);
+        [ .. | cbn -[Z.mul_split_at_bitwidth]; rewrite Z.mul_split_at_bitwidth_mod ];
         ibbio_prefin_by_apply
       | eapply is_bounded_by_compose with (T1:=TZ) (f_v := fun v => ZToInterp (v / _))   (v:=ZToInterp _);
+        [ .. | cbn -[Z.mul_split_at_bitwidth]; rewrite Z.mul_split_at_bitwidth_div ];
         ibbio_prefin_by_apply ]
     | apply is_bounded_by_truncation_bounds
     | split; ibbio_do_cbv;

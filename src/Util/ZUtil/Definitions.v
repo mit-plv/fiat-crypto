@@ -1,6 +1,7 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.ZUtil.Notations.
+Require Import Crypto.Util.LetIn.
 Local Open Scope Z_scope.
 
 Module Z.
@@ -36,7 +37,15 @@ Module Z.
        else ((x + y) mod bound, (x + y) / bound).
 
   Definition mul_split_at_bitwidth (bitwidth : Z) (x y : Z) : Z * Z
-    := ((x * y) mod 2^bitwidth, (x * y) / 2^bitwidth).
+    := dlet xy := x * y in
+        (match bitwidth with
+         | Z.pos _ | Z0 => xy &' Z.ones bitwidth
+         | Z.neg _ => xy mod 2^bitwidth
+         end,
+         match bitwidth with
+         | Z.pos _ | Z0 => xy >> bitwidth
+         | Z.neg _ => xy / 2^bitwidth
+         end).
   Definition mul_split (s x y : Z) : Z * Z
     := if s =? 2^Z.log2 s
        then mul_split_at_bitwidth (Z.log2 s) x y
