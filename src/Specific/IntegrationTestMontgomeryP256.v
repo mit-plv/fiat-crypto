@@ -63,9 +63,7 @@ Section BoundedField25p5.
     (*apply (fun f => proj2_sig_map (fun THIS_NAME_MUST_NOT_BE_UNDERSCORE_TO_WORK_AROUND_CONSTR_MATCHING_ANAOMLIES___BUT_NOTE_THAT_IF_THIS_NAME_IS_LOWERCASE_A___THEN_REIFICATION_STACK_OVERFLOWS___AND_I_HAVE_NO_IDEA_WHATS_GOING_ON p => f_equal f p)).*)
     (* jgross start here! *)
     (*Set Ltac Profiling.*)
-    Ltac reify_debug_level ::= constr:(3%nat).
-    Typeclasses eauto := debug.
-    Time admit; refine_reflectively. (* Finished transaction in 19.348 secs (19.284u,0.036s) (successful) *)
+    Time refine_reflectively. (* Finished transaction in 212.693 secs (212.576u,0.184s) (successful) *)
     (*Show Ltac Profile.*)
     (* total time:     19.632s
 
@@ -109,6 +107,6 @@ Section BoundedField25p5.
  │ └─ReflectiveTactics.abstract_cbv_rhs    2.0%   2.7%       1    0.532s
  └─Glue.refine_to_reflective_glue ------   0.0%   2.2%       1    0.436s
 *)
-  Time Admitted. (* Finished transaction in 10.167 secs (10.123u,0.023s) (successful) *)
+  Time Defined. (* Finished transaction in 21.291 secs (21.231u,0.032s) (successful) *)
 
-End BoundedField25p5.
+Time End BoundedField25p5. (* Finished transaction in 14.666 secs (14.556u,0.111s) (successful) *)

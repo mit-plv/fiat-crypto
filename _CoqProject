@@ -226,6 +226,7 @@ src/Specific/IntegrationTestLadderstep130.v
 src/Specific/IntegrationTestLadderstep130Display.v
 src/Specific/IntegrationTestLadderstepDisplay.v
 src/Specific/IntegrationTestMontgomeryP256.v
+src/Specific/IntegrationTestMontgomeryP256Display.v
 src/Specific/IntegrationTestMul.v
 src/Specific/IntegrationTestMulDisplay.v
 src/Specific/IntegrationTestSquare.v
