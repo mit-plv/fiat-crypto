@@ -32,26 +32,26 @@ Ltac base_reify_op op op_head extra ::=
           | @id_with_alt ?T _ _
             => let c := uconstr:(@id_with_alt) in
                let uZ := uconstr:(Z) in
-               constr_run_tac_fail ltac:(fun _ => idtac "Error: In Reflection.Z.base_reify_op: can only reify" c "applied to" uZ "not" T)
-          | _ => constr_run_tac_fail ltac:(fun _ => idtac "Anomaly: In Reflection.Z.base_reify_op: head is id_with_alt but body is wrong:" extra)
+               constr_run_tac_fail ltac:(fun _ => idtac "Error: In Reflection.Z.base_reify_op: can only reify" c "applied to" uZ "not" T; fail 100)
+          | _ => constr_run_tac_fail ltac:(fun _ => idtac "Anomaly: In Reflection.Z.base_reify_op: head is id_with_alt but body is wrong:" extra; fail 100)
           end
      | @Z.mul_split_at_bitwidth
        => lazymatch extra with
           | @Z.mul_split_at_bitwidth ?bit_width _ _
             => constr:(reify_op op op_head 3 (MulSplit bit_width TZ TZ TZ TZ))
-          | _ => constr_run_tac_fail ltac:(fun _ => idtac "Anomaly: In Reflection.Z.base_reify_op: head is Z.mul_split_with_bitwidth but body is wrong:" extra)
+          | _ => constr_run_tac_fail ltac:(fun _ => idtac "Anomaly: In Reflection.Z.base_reify_op: head is Z.mul_split_with_bitwidth but body is wrong:" extra; fail 100)
           end
      | @Z.add_with_get_carry
        => lazymatch extra with
           | @Z.add_with_get_carry ?bit_width _ _ _
             => constr:(reify_op op op_head 3 (AddWithGetCarry bit_width TZ TZ TZ TZ TZ))
-          | _ => constr_run_tac_fail ltac:(fun _ => idtac "Anomaly: In Reflection.Z.base_reify_op: head is Z.add_with_get_carry but body is wrong:" extra)
+          | _ => constr_run_tac_fail ltac:(fun _ => idtac "Anomaly: In Reflection.Z.base_reify_op: head is Z.add_with_get_carry but body is wrong:" extra; fail 100)
           end
      | @Z.sub_with_get_borrow
        => lazymatch extra with
           | @Z.sub_with_get_borrow ?bit_width _ _ _
             => constr:(reify_op op op_head 3 (SubWithGetBorrow bit_width TZ TZ TZ TZ TZ))
-          | _ => constr_run_tac_fail ltac:(fun _ => idtac "Anomaly: In Reflection.Z.base_reify_op: head is Z.sub_with_get_borrow but body is wrong:" extra)
+          | _ => constr_run_tac_fail ltac:(fun _ => idtac "Anomaly: In Reflection.Z.base_reify_op: head is Z.sub_with_get_borrow but body is wrong:" extra; fail 100)
           end
      end.
 Ltac base_reify_type T ::=
