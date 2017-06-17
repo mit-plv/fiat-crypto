@@ -8,11 +8,11 @@ matrix:
     - dist: trusty
       env: COQ_VERSION="trunk"    COQ_PACKAGE="coq"                            COQPRIME="coqprime"     PPA="ppa:jgross-h/coq-trunk-daily"        TARGETS="coq"
     - dist: trusty
-      env: COQ_VERSION="v8.6"     COQ_PACKAGE="coq"                            COQPRIME="coqprime"     PPA="ppa:jgross-h/coq-8.6-daily"          TARGETS="coq"
+      env: COQ_VERSION="v8.6"     COQ_PACKAGE="coq"                            COQPRIME="coqprime"     PPA="ppa:jgross-h/coq-8.6-daily"          TARGETS="no-curves-proofs"
     - dist: trusty
       env: COQ_VERSION="v8.5"     COQ_PACKAGE="coq"                            COQPRIME="coqprime"     PPA="ppa:jgross-h/coq-8.5-daily"          TARGETS="lite"
     - dist: trusty
-      env: COQ_VERSION="8.6"      COQ_PACKAGE="coq-8.6"                        COQPRIME="coqprime"     PPA="ppa:jgross-h/many-coq-versions"       TARGETS="coq"
+      env: COQ_VERSION="8.6"      COQ_PACKAGE="coq-8.6"                        COQPRIME="coqprime"     PPA="ppa:jgross-h/many-coq-versions"       TARGETS="no-curves-proofs"
     - dist: trusty
       env: TARGETS="printlite lite" COQ_VERSION="8.6"      COQ_PACKAGE="coq-8.6"                        COQPRIME="coqprime"     PPA="ppa:jgross-h/many-coq-versions"
 #    - dist: trusty
@@ -25,7 +25,7 @@ matrix:
 #      env: COQ_VERSION="8.4"     COQ_PACKAGE="coq"                            COQPRIME="coqprime-8.4" PPA=""
   allow_failures:
     - env: COQ_VERSION="v8.5"     COQ_PACKAGE="coq"                            COQPRIME="coqprime"     PPA="ppa:jgross-h/coq-8.5-daily"          TARGETS="lite"
-    - env: COQ_VERSION="v8.6"     COQ_PACKAGE="coq"                            COQPRIME="coqprime"     PPA="ppa:jgross-h/coq-8.6-daily"          TARGETS="coq"
+    - env: COQ_VERSION="v8.6"     COQ_PACKAGE="coq"                            COQPRIME="coqprime"     PPA="ppa:jgross-h/coq-8.6-daily"          TARGETS="no-curves-proofs"
     - env: COQ_VERSION="trunk"    COQ_PACKAGE="coq"                            COQPRIME="coqprime"     PPA="ppa:jgross-h/coq-trunk-daily"        TARGETS="coq"
 
 before_install:

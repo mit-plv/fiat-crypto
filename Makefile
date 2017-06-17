@@ -14,7 +14,8 @@ INSTALLDEFAULTROOT := Crypto
 .PHONY: coq clean update-_CoqProject cleanall install \
 	install-coqprime clean-coqprime coqprime \
 	specific-display display \
-	specific non-specific lite only-heavy printlite
+	specific non-specific lite only-heavy printlite \
+	curves-proofs no-curves-proofs
 
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g' | uniq
 
@@ -37,7 +38,7 @@ COQ_VERSION := $(firstword $(subst $(COQ_VERSION_PREFIX),,$(shell "$(COQBIN)coqc
 -include Makefile.coq
 endif
 
-ifeq ($(filter lite only-heavy printdeps printreversedeps printlite,$(MAKECMDGOALS)),)
+ifeq ($(filter curves-proofs no-curves-proofs lite only-heavy printdeps printreversedeps printlite,$(MAKECMDGOALS)),)
 -include etc/coq-scripts/Makefile.vo_closure
 else
 include etc/coq-scripts/Makefile.vo_closure
@@ -56,6 +57,8 @@ UNMADE_VOFILES := src/SpecificGen/% src/Specific/%Display.vo
 # add files to this list to prevent them from being built as final
 # targets by the "lite" target
 LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo src/Specific/Karatsuba.vo
+CURVES_PROOFS_PRE_VOFILES := $(filter src/Curves/%Proofs.vo,$(VOFILES))
+NO_CURVES_PROOFS_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo
 
 COQ_VOFILES := $(filter-out $(UNMADE_VOFILES),$(VOFILES))
 SPECIFIC_VO := $(filter src/Specific/%,$(VOFILES))
@@ -73,12 +76,21 @@ endif
 ifneq ($(filter only-heavy,$(MAKECMDGOALS)),)
 HEAVY_VOFILES := $(call vo_closure,$(LITE_UNMADE_VOFILES))
 endif
+ifneq ($(filter no-curves-proofs,$(MAKECMDGOALS)),)
+NO_CURVES_PROOFS_ALL_UNMADE_VOFILES := $(foreach vo,$(NO_CURVES_PROOFS_UNMADE_VOFILES),$(call vo_reverse_closure,$(VOFILES),$(vo)))
+NO_CURVES_PROOFS_VOFILES := $(filter-out $(NO_CURVES_PROOFS_ALL_UNMADE_VOFILES),$(COQ_VOFILES))
+endif
+ifneq ($(filter curves-proofs,$(MAKECMDGOALS)),)
+CURVES_PROOFS_VOFILES := $(call vo_closure,$(CURVES_PROOFS_PRE_VOFILES))
+endif
 
 specific: $(SPECIFIC_VO) coqprime
 non-specific: $(NON_SPECIFIC_VO) coqprime
 coq: $(COQ_VOFILES) coqprime
 lite: $(LITE_VOFILES) coqprime
 only-heavy: $(HEAVY_VOFILES) coqprime
+curves-proofs: $(CURVES_PROOFS_VOFILES) coqprime
+no-curves-proofs: $(NO_CURVES_PROOFS_VOFILES) coqprime
 specific-display: $(SPECIFIC_DISPLAY_VO:.vo=.log) coqprime
 display: $(DISPLAY_VO:.vo=.log) coqprime
 
