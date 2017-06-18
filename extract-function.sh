@@ -1,4 +1,7 @@
 #!/bin/sh
+set -e || true
+set -u || true
+set -o pipefail || true
 
 case "$#" in
   0)
@@ -46,7 +49,7 @@ while IFS= read -r line; do
         sed 's:return::g' | sed 's:Return::g' | tr -d '(' | tr -d ')' | tr , '\n' | sed 's/^\s\+//g' | \
         ( while IFS= read -r ret; do
             echo "out[$i] = $ret;"
-            ((i++))
+            i=$((i+1))
           done;
           seq 2 "$lines" | while IFS= read -r _; do
             echo -n "}"
@@ -59,7 +62,7 @@ while IFS= read -r line; do
     *)
       case "$show" in
         true)
-          ((lines++))
+          lines=$((lines+1))
           echo "{ $line" | \
             sed s':^\([^,]*\) \([^, ]*\)\(\s*\),\(.*\)\(addcarryx.*\))\([; ]*\)$:\1 \2\3;\4_\5, \&\2)\6:' | \
             sed s':^\([^,]*\) \([^, ]*\)\(\s*\),\(.*\)\(subborrow.*\))\([; ]*\)$:\1 \2\3;\4_\5, \&\2)\6:'

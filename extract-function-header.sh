@@ -1,4 +1,7 @@
 #!/bin/sh
+set -e || true
+set -u || true
+set -o pipefail || true
 
 case "$#" in
   0)
