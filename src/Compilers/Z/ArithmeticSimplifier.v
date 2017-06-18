@@ -159,22 +159,23 @@ Section language.
            => fun args
               => let sz1 := (2^Z.of_nat (2^bw1))%Z in
                  let sz2 := (2^Z.of_nat (2^bw2))%Z in
+                 let szout := (2^Z.of_nat (2^bwout))%Z in
                  match interp_as_expr_or_const args with
                  | Some (const_of l, const_of r)
-                   => Op (OpConst ((Z.max 0 l mod sz1) * (Z.max 0 r mod sz2))%Z) TT
+                   => Op (OpConst (((Z.max 0 l mod sz1) * (Z.max 0 r mod sz2)) mod szout)%Z) TT
                  | Some (const_of v, gen_expr e)
-                   => if (Z.max 0 v mod sz1 =? 0)%Z
+                   => if ((Z.max 0 v mod sz1) mod szout =? 0)%Z
                       then Op (OpConst 0%Z) TT
-                      else if (Z.max 0 v mod sz1 =? 1)%Z
+                      else if ((Z.max 0 v mod sz1) mod szout =? 1)%Z
                            then match base_type_eq_semidec_transparent T2 Tout with
                                 | Some pf => eq_rect _ (fun t => exprf (Tbase t)) e _ pf
                                 | None => Op opc args
                                 end
                            else Op opc args
                  | Some (gen_expr e, const_of v)
-                   => if (Z.max 0 v mod sz2 =? 0)%Z
+                   => if ((Z.max 0 v mod sz2) mod szout =? 0)%Z
                       then Op (OpConst 0%Z) TT
-                      else if (Z.max 0 v mod sz2 =? 1)%Z
+                      else if ((Z.max 0 v mod sz2) mod szout =? 1)%Z
                            then match base_type_eq_semidec_transparent T1 Tout with
                                 | Some pf => eq_rect _ (fun t => exprf (Tbase t)) e _ pf
                                 | None => Op opc args
