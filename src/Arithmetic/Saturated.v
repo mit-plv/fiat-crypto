@@ -805,6 +805,13 @@ Section API.
       reflexivity.
     Qed.
 
+    Lemma small_zero n : small (@zero n).
+    Proof.
+      cbv [zero small B.Positional.zeros]. destruct n; [simpl;tauto|].
+      rewrite to_list_repeat.
+      intros x H; apply repeat_spec in H; subst x; omega.
+   Qed.
+
     Lemma eval_join0 n p
       : eval (@join0 n p) = eval p.
     Proof.
