@@ -166,7 +166,7 @@ Module Associational.
 End Associational.
 Hint Opaque Associational.mul Associational.multerm : uncps.
 Hint Rewrite @Associational.mul_id @Associational.multerm_id : uncps.
-Hint Rewrite @Associational.eval_mul @Associational.eval_map_multerm : push_basesystem_eval.
+Hint Rewrite @Associational.eval_mul @Associational.eval_map_multerm using (omega || assumption) : push_basesystem_eval.
 
 Module Columns.
   Section Columns.
@@ -826,14 +826,18 @@ Section API.
                       pose proof (@uweight_divides bound H)
       end.
 
+    Local Ltac pose_all :=
+      pose_uweight bound;
+      pose proof Z.add_get_carry_full_div;
+      pose proof Z.add_get_carry_full_mod;
+      pose proof Z.mul_split_div; pose proof Z.mul_split_mod;
+      pose proof div_correct; pose proof modulo_correct.
+    
     Lemma eval_add_nz n m pred_nm p q :
       pred_nm <> 0%nat ->
       eval (@add n m pred_nm p q) = eval p + eval q.
     Proof.
-      intros. pose_uweight bound.
-      pose proof Z.add_get_carry_full_div.
-      pose proof Z.add_get_carry_full_mod.
-      pose proof div_correct. pose proof modulo_correct.
+      intros. pose_all.
       repeat match goal with
              | _ => progress (cbv [add_cps add eval Let_In]; repeat autounfold)
              | _ => progress autorewrite with uncps push_id cancel_pair push_basesystem_eval
@@ -879,10 +883,7 @@ Section API.
     Local Definition compact_digit := Columns.compact_digit (add_get_carry:=Z.add_get_carry_full) (div:=div) (modulo:=modulo) (uweight bound).
     Lemma small_compact {n} (p:(list Z)^n) : small (snd (compact p)).
     Proof.
-      pose_uweight bound.
-      pose proof Z.add_get_carry_full_div.
-      pose proof Z.add_get_carry_full_mod.
-      pose proof div_correct. pose proof modulo_correct.
+      pose_all.
       match goal with
         |- ?G => assert (G /\ fst (compact p) = fst (compact p)); [|tauto]
       end. (* assert a dummy second statement so that fst (compact x) is in context *)
@@ -922,10 +923,7 @@ Section API.
       (uweight bound n + uweight bound m <= uweight bound pred_nm) ->
       small a -> small b -> small (@add n m pred_nm a b).
     Proof.
-      intros. pose_uweight bound.
-      pose proof Z.add_get_carry_full_div.
-      pose proof Z.add_get_carry_full_mod.
-      pose proof div_correct. pose proof modulo_correct.
+      intros. pose_all.
       cbv [small add_cps add Let_In]. repeat autounfold.
       autorewrite with uncps push_id.
       rewrite to_list_left_append.
@@ -965,9 +963,17 @@ Section API.
       apply small_left_tl.
     Qed. 
 
-    Lemma eval_scmul n a v: eval (@scmul n a v) = a * eval v.
+    Lemma eval_scmul n a v : small v -> 0 <= a < bound ->
+      eval (@scmul n a v) = a * eval v.
     Proof.
-    Admitted.
+      intro Hsmall. pose_all. apply eval_small in Hsmall.
+      intros. cbv [scmul scmul_cps eval] in *. repeat autounfold.
+      autorewrite with uncps push_id push_basesystem_eval.
+      rewrite uweight_0, Z.mul_1_l. apply Z.mod_small.
+      split; [solve[Z.zero_bounds]|]. cbv [uweight] in *.
+      rewrite !Nat2Z.inj_succ, Z.pow_succ_r by auto using Nat2Z.is_nonneg.
+      apply Z.mul_lt_mono_nonneg; omega.
+    Qed.
 
     (* TODO : move to tuple *)
     Lemma from_list_tl {A n} (ls : list A) H H':
