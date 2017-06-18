@@ -1,1 +1,1 @@
-174312  ashryn-noht-notb-ac-broadwell-2.50ghz  694c4878
+174300	ashryn-noht-notb-ac-broadwell	2.50ghz	7.1.1	4dc08623

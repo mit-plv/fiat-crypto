@@ -153,7 +153,7 @@ DISPLAY_X25519_C64_VO := $(filter src/Specific/X25519/C64/%,$(DISPLAY_NON_JAVA_V
 src/Specific/X25519/C64/measure: src/Specific/X25519/C64/compiler.sh measure.c $(DISPLAY_X25519_C64_VO:Display.vo=.c) $(DISPLAY_X25519_C64_VO:Display.vo=.h) src/Specific/X25519/C64/scalarmult.c
 	src/Specific/X25519/C64/compiler.sh -o src/Specific/X25519/C64/measure -I src/Specific/X25519/C64/ measure.c $(DISPLAY_X25519_C64_VO:Display.vo=.c) src/Specific/X25519/C64/scalarmult.c -D TIMINGS=2047 -D UUT=crypto_scalarmult_bench
 
-src/Specific/X25519/C64/measurements.txt: src/Specific/X25519/C64/measure capture.sh etc/machine.sh
+src/Specific/X25519/C64/measurements.txt: src/Specific/X25519/C64/measure capture.sh etc/machine.sh etc/freq.sh
 	./capture.sh src/Specific/X25519/C64
 
 bench: src/Specific/X25519/C64/measurements.txt
