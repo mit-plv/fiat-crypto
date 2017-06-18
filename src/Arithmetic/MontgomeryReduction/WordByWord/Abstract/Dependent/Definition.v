@@ -25,6 +25,7 @@ Section WordByWordMontgomery.
     {add : forall {n}, T n -> T n -> T (S n)} (* joins carry *)
     {add' : forall {n}, T (S n) -> T n -> T (S (S n))} (* joins carry *)
     {drop_high : T (S (S R_numlimbs)) -> T (S R_numlimbs)} (* drops the highest limb *)
+    {conditional_subtract : T (S R_numlimbs) -> T R_numlimbs} (* computes [arg - N] if [R <= arg], and drops high bit *)
     (N : T R_numlimbs).
 
   (* Recurse for a as many iterations as A has limbs, varying A := A, S := 0, r, bounds *)
@@ -60,8 +61,11 @@ Section WordByWordMontgomery.
          | S count' => fun A_S => redc_loop count' (redc_body A_S)
          end.
 
-    Definition redc : T (S R_numlimbs)
+    Definition pre_redc : T (S R_numlimbs)
       := snd (redc_loop A_numlimbs (A, zero (1 + R_numlimbs))).
+
+    Definition redc : T R_numlimbs
+      := conditional_subtract pre_redc.
   End loop.
 End WordByWordMontgomery.
 

@@ -13,7 +13,7 @@ Definition p256 :=
   Eval vm_compute in
     ((Positional.encode (modulo:=modulo) (div:=div) (n:=sz) wt (Z.pos m))).
 
-Definition mulmod_256 : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z (S sz)
+Definition mulmod_256 : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
                            | forall (A B : Tuple.tuple Z sz),
                                f A B =
                                (redc (r:=r)(R_numlimbs:=sz) p256 A B 1)

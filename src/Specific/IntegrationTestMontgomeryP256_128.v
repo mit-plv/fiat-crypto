@@ -36,7 +36,7 @@ Section BoundedField25p5.
   Definition mulmod_256 : { f:feBW -> feBW -> feBW
                           | forall A B,
                               BoundedWordToZ _ _ _ (f A B) =
-                              Saturated.drop_high (redc (r:=r)(R_numlimbs:=sz) p256 (BoundedWordToZ _ _ _ A) (BoundedWordToZ _ _ _ B) 1)
+                              redc (r:=r)(R_numlimbs:=sz) p256 (BoundedWordToZ _ _ _ A) (BoundedWordToZ _ _ _ B) 1
                           }.
   Proof.
     (*Definition mulmod :
@@ -53,10 +53,8 @@ Section BoundedField25p5.
     (*symmetry; rewrite <- (proj2_sig carry_sig); symmetry.
     set (carry_mulZ := fun a b => proj1_sig carry_sig (proj1_sig mul_sig a b)).
     change (proj1_sig carry_sig (proj1_sig mul_sig ?a ?b)) with (carry_mulZ a b).*)
-    set (drop_high_mulmodZ := fun a b => dlet v := proj1_sig mulmod_256 a b in Saturated.drop_high v).
-    change (Saturated.drop_high (proj1_sig mulmod_256 ?a ?b)) with (drop_high_mulmodZ a b).
-    context_to_dlet_in_rhs drop_high_mulmodZ; cbv [drop_high_mulmodZ].
-    cbv [Saturated.drop_high Saturated.T fst snd Saturated.drop_high_cps CPSUtil.Tuple.left_tl_cps id append CPSUtil.Tuple.hd_cps CPSUtil.Tuple.tl_cps].
+    set (mulmodZ := proj1_sig mulmod_256).
+    context_to_dlet_in_rhs mulmodZ; cbv [mulmodZ].
     cbv beta iota delta [mulmod_256 proj1_sig Saturated.T lift2_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz].
     reflexivity.
     sig_dlet_in_rhs_to_context.

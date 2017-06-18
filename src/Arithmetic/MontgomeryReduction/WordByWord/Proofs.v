@@ -20,15 +20,16 @@ Section WordByWordMontgomery.
   Local Notation add := (fun n => @add (Z.pos r) n n n).
   Local Notation scmul := (@scmul (Z.pos r)).
   Local Notation eval_zero := (@eval_zero (Z.pos r)).
+  Local Notation small_zero := (@small_zero r (Zorder.Zgt_pos_0 _)).
   Local Notation eval_join0 := (@eval_zero (Z.pos r) (Zorder.Zgt_pos_0 _)).
   Local Notation eval_div := (@eval_div (Z.pos r) (Zorder.Zgt_pos_0 _)).
   Local Notation eval_mod := (@eval_mod (Z.pos r) (Zorder.Zgt_pos_0 _)).
   Local Notation small_div := (@small_div (Z.pos r) (Zorder.Zgt_pos_0 _)).
-  Local Notation eval_scmul := (fun n a v _ _ => @eval_scmul (Z.pos r) (Zorder.Zgt_pos_0 _) n a v).
+  Local Notation eval_scmul := (fun n a v smallv abound vbound => @eval_scmul (Z.pos r) (Zorder.Zgt_pos_0 _) n a v smallv abound).
   Local Notation eval_add := (@eval_add_same (Z.pos r) (Zorder.Zgt_pos_0 _)).
   Local Notation eval_add' := (@eval_add_S1 (Z.pos r) (Zorder.Zgt_pos_0 _)).
-  Local Notation small_add := (fun n => @small_add (Z.pos r) (Zorder.Zgt_pos_0 _) _ _ _).
   Local Notation drop_high := (@drop_high (S R_numlimbs)).
+  Local Notation small_drop_high := (@small_drop_high (Z.pos r) (Zorder.Zgt_pos_0 _) (S R_numlimbs)).
   Context (A_numlimbs : nat)
           (N : T R_numlimbs)
           (A : T A_numlimbs)
@@ -40,7 +41,9 @@ Section WordByWordMontgomery.
           (A_bound : 0 <= eval A < Z.pos r ^ Z.of_nat A_numlimbs)
           (ri_correct : r*ri mod (eval N) = 1 mod (eval N))
           (N_bound : 0 < eval N < r^Z.of_nat R_numlimbs)
+          (small_N : small N)
           (B_bound' : 0 <= eval B < r^Z.of_nat R_numlimbs)
+          (small_B : small B)
           (k_correct : k * eval N mod r = -1).
   Let R : positive := match (Z.pos r ^ Z.of_nat R_numlimbs)%Z with
                       | Z.pos R => R
@@ -64,6 +67,41 @@ Section WordByWordMontgomery.
   Proof. rewrite R_correct; apply B_bound'. Qed.
 
 
+  (*****************************************************************************************)
+  (** TODO(jadep) FIXME: Fill these in, replacing [Axiom] with [Local Notation] *)
+  Local Lemma small_add : forall n a b, small a -> small b -> small (@add n a b).
+  Proof.
+    intros; apply Saturated.small_add; auto; try lia.
+    cbv [uweight].
+    rewrite ?Znat.Nat2Z.inj_succ, ?Z.pow_succ_r by lia.
+    try nia.
+  Admitted.
+  Local Lemma small_add' : forall n a b, small a -> small b -> small (@add' n a b).
+  Proof.
+    intros; apply Saturated.small_add; auto; try lia.
+    cbv [uweight].
+    rewrite !Znat.Nat2Z.inj_succ, !Z.pow_succ_r by lia.
+    try nia.
+  Admitted.
+  Local Notation conditional_subtract_cps := (@drop_high_cps R_numlimbs).
+  (*Axiom conditional_subtract_cps : T (S R_numlimbs) -> forall {cpsT}, (T R_numlimbs -> cpsT) -> cpsT *)(* computes [arg - N] if [R <= arg], and drops high bit *)
+  Local Notation conditional_subtract := conditional_subtract.
+  Axiom conditional_subtract_cps_id : forall v cpsT f, @conditional_subtract_cps v cpsT f = f (@conditional_subtract _ v).
+  Axiom small_scmul : forall (n : nat) (a : Z) (v : T n),
+      small v -> 0 <= a < Z.pos r -> 0 <= eval v < R -> small (scmul a v).
+  Axiom eval_conditional_subtract
+    : forall v : T (S R_numlimbs),
+      small v ->
+      0 <= eval v < eval N + Z.pos R ->
+      eval (conditional_subtract v) = eval v + (if Z.pos R <=? eval v then - eval N else 0).
+  Axiom small_conditional_subtract
+    : forall v : T (S R_numlimbs),
+      small v ->
+      0 <= eval v < eval N + Z.pos R ->
+      small (conditional_subtract v).
+  (*****************************************************************************************)
+
+
   Local Lemma eval_drop_high : forall v, small v -> eval (drop_high v) = eval v mod (r * r^Z.of_nat R_numlimbs).
   Proof.
     intros; erewrite eval_drop_high by (eassumption || lia).
@@ -77,15 +115,21 @@ Section WordByWordMontgomery.
   Local Notation redc_loop_no_cps := (@redc_loop_no_cps r R_numlimbs N B k).
   Local Notation redc_loop_cps := (@redc_loop_cps r R_numlimbs N B k).
   Local Notation redc_loop := (@redc_loop r R_numlimbs N B k).
+  Local Notation pre_redc_no_cps := (@pre_redc_no_cps r R_numlimbs N A_numlimbs A B k).
+  Local Notation pre_redc_cps := (@pre_redc_cps r R_numlimbs N A_numlimbs A B k).
+  Local Notation pre_redc := (@pre_redc r R_numlimbs N A_numlimbs A B k).
   Local Notation redc_no_cps := (@redc_no_cps r R_numlimbs N A_numlimbs A B k).
   Local Notation redc_cps := (@redc_cps r R_numlimbs N A_numlimbs A B k).
   Local Notation redc := (@redc r R_numlimbs N A_numlimbs A B k).
 
-  Definition redc_no_cps_bound : 0 <= eval redc_no_cps < eval N + eval B
-    := @redc_bound T (@eval) (@zero) (@divmod) r r_big R R_numlimbs R_correct (@small) eval_zero eval_div eval_mod small_div (@scmul) eval_scmul (@add) eval_add small_add (@add') eval_add' small_add drop_high eval_drop_high N Npos Npos_correct N_lt_R B B_bound ri k A_numlimbs A small_A.
+  Definition redc_no_cps_bound : 0 <= eval redc_no_cps < R
+    := @redc_bound T (@eval) (@zero) (@divmod) r r_big R R_numlimbs R_correct (@small) eval_zero small_zero eval_div eval_mod small_div (@scmul) eval_scmul small_scmul (@add) eval_add small_add (@add') eval_add' small_add' drop_high eval_drop_high small_drop_high N Npos Npos_correct small_N N_lt_R conditional_subtract eval_conditional_subtract B B_bound small_B ri k A_numlimbs A small_A A_bound.
   Definition redc_no_cps_mod_N
     : (eval redc_no_cps) mod (eval N) = (eval A * eval B * ri^(Z.of_nat A_numlimbs)) mod (eval N)
-    := @redc_mod_N T (@eval) (@zero) (@divmod) r r_big R R_numlimbs R_correct (@small) eval_zero eval_div eval_mod small_div (@scmul) eval_scmul (@add) eval_add small_add (@add') eval_add' small_add drop_high eval_drop_high N Npos Npos_correct N_lt_R B B_bound ri ri_correct k k_correct A_numlimbs A small_A A_bound.
+    := @redc_mod_N T (@eval) (@zero) (@divmod) r r_big R R_numlimbs R_correct (@small) eval_zero small_zero eval_div eval_mod small_div (@scmul) eval_scmul small_scmul (@add) eval_add small_add (@add') eval_add' small_add' drop_high eval_drop_high small_drop_high N Npos Npos_correct small_N N_lt_R conditional_subtract eval_conditional_subtract B B_bound small_B ri ri_correct k k_correct A_numlimbs A small_A A_bound.
+  Definition small_redc_no_cps
+    : small redc_no_cps
+    := @small_redc T (@eval) (@zero) (@divmod) r r_big R R_numlimbs R_correct (@small) eval_zero small_zero eval_div eval_mod small_div (@scmul) eval_scmul small_scmul (@add) eval_add small_add (@add') eval_add' small_add' drop_high eval_drop_high small_drop_high N Npos Npos_correct small_N N_lt_R conditional_subtract small_conditional_subtract B B_bound small_B ri k A_numlimbs A small_A A_bound.
 
   Lemma redc_body_cps_id pred_A_numlimbs (A' : T (S pred_A_numlimbs)) (S' : T (S R_numlimbs)) {cpsT} f
     : @redc_body_cps pred_A_numlimbs A' B k S' cpsT f = f (redc_body A' B k S').
@@ -106,10 +150,18 @@ Section WordByWordMontgomery.
     { intros [A' S']; simpl; intros.
       etransitivity; rewrite @redc_body_cps_id; [ rewrite IHcount | ]; reflexivity. }
   Qed.
+  Lemma pre_redc_cps_id {cpsT} f : @pre_redc_cps cpsT f = f pre_redc.
+  Proof.
+    unfold pre_redc, pre_redc_cps.
+    etransitivity; rewrite redc_loop_cps_id; [ | reflexivity ]; break_innermost_match;
+      reflexivity.
+  Qed.
   Lemma redc_cps_id {cpsT} f : @redc_cps cpsT f = f redc.
   Proof.
     unfold redc, redc_cps.
-    etransitivity; rewrite redc_loop_cps_id; [ | reflexivity ]; break_innermost_match; reflexivity.
+    etransitivity; rewrite pre_redc_cps_id; [ | reflexivity ];
+      rewrite ?conditional_subtract_cps_id;
+      reflexivity.
   Qed.
 
   Lemma redc_body_id_no_cps pred_A_numlimbs A' S'
@@ -133,18 +185,27 @@ Section WordByWordMontgomery.
     rewrite redc_body_cps_id, redc_loop_cps_id, IHcount, redc_body_id_no_cps.
     reflexivity.
   Qed.
-  Lemma redc_cps_id_no_cps : redc = redc_no_cps.
+  Lemma pre_redc_cps_id_no_cps : pre_redc = pre_redc_no_cps.
   Proof.
-    unfold redc, redc_no_cps, redc_cps, Abstract.Dependent.Definition.redc.
+    unfold pre_redc, pre_redc_cps, pre_redc_no_cps, Abstract.Dependent.Definition.pre_redc.
     rewrite redc_loop_cps_id, (surjective_pairing (redc_loop _ _)).
     rewrite redc_loop_cps_id_no_cps; reflexivity.
   Qed.
+  Lemma redc_cps_id_no_cps : redc = redc_no_cps.
+  Proof.
+    unfold redc, redc_no_cps, redc_cps, Abstract.Dependent.Definition.redc.
+    rewrite pre_redc_cps_id, pre_redc_cps_id_no_cps.
+    rewrite conditional_subtract_cps_id; reflexivity.
+  Qed.
 
-  Lemma redc_bound : 0 <= eval redc < eval N + eval B.
+  Lemma redc_bound : 0 <= eval redc < R.
   Proof. rewrite redc_cps_id_no_cps; apply redc_no_cps_bound. Qed.
   Lemma redc_mod_N
     : (eval redc) mod (eval N) = (eval A * eval B * ri^(Z.of_nat A_numlimbs)) mod (eval N).
   Proof. rewrite redc_cps_id_no_cps; apply redc_no_cps_mod_N. Qed.
+  Lemma small_redc
+    : small redc.
+  Proof. rewrite redc_cps_id_no_cps; apply small_redc_no_cps. Qed.
 End WordByWordMontgomery.
 
-Hint Rewrite redc_body_cps_id redc_loop_cps_id redc_cps_id : uncps.
+Hint Rewrite redc_body_cps_id redc_loop_cps_id pre_redc_cps_id redc_cps_id : uncps.
