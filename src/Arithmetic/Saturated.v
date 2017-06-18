@@ -738,11 +738,11 @@ Section API.
       f).
   Definition scmul {n} c p : T (S n) := @scmul_cps n c p _ id.
 
-  Definition add_cps {n m nm} (p : T n) (q : T m) {R} (f:T (S nm)->R) :=
+  Definition add_cps {n m pred_nm} (p : T n) (q : T m) {R} (f:T (S pred_nm)->R) :=
     Columns.add_cps (uweight bound) p q
       (fun carry_result => Tuple.left_append_cps (fst carry_result) (snd carry_result)
       f).
-  Definition add {n m nm} p q : T (S nm) := @add_cps n m nm p q _ id.
+  Definition add {n m pred_nm} p q : T (S pred_nm) := @add_cps n m pred_nm p q _ id.
 
   Hint Opaque join0 divmod drop_high scmul add : uncps.
 
@@ -767,8 +767,8 @@ Section API.
       @scmul_cps n c p R f = f (scmul c p).
     Proof. cbv [scmul_cps scmul]. prove_id. Qed.
 
-    Lemma add_id n m nm p q R f :
-      @add_cps n m nm p q R f = f (add p q).
+    Lemma add_id n m pred_nm p q R f :
+      @add_cps n m pred_nm p q R f = f (add p q).
     Proof. cbv [add_cps add Let_In]. prove_id. Qed.
 
   End CPSProofs.
@@ -800,9 +800,9 @@ Section API.
                       pose proof (@uweight_divides bound H)
       end.
 
-    Lemma eval_add_nz n m nm p q :
-      nm <> 0%nat ->
-      eval (@add n m nm p q) = eval p + eval q.
+    Lemma eval_add_nz n m pred_nm p q :
+      pred_nm <> 0%nat ->
+      eval (@add n m pred_nm p q) = eval p + eval q.
     Proof.
       intros. pose_uweight bound.
       pose proof Z.add_get_carry_full_div.
@@ -822,17 +822,17 @@ Section API.
              end.
     Qed.
 
-    Lemma eval_add_z n m nm p q :
-      nm = 0%nat ->
+    Lemma eval_add_z n m pred_nm p q :
+      pred_nm = 0%nat ->
       n = 0%nat ->
       m = 0%nat ->
-      eval (@add n m nm p q) = eval p + eval q.
+      eval (@add n m pred_nm p q) = eval p + eval q.
     Proof. intros; subst; reflexivity. Qed.
 
-    Lemma eval_add n m nm p q (Hnm : nm = 0%nat -> n = 0%nat /\ m = 0%nat)
-      :  eval (@add n m nm p q) = eval p + eval q.
+    Lemma eval_add n m pred_nm p q (Hpred_nm : pred_nm = 0%nat -> n = 0%nat /\ m = 0%nat)
+      :  eval (@add n m pred_nm p q) = eval p + eval q.
     Proof.
-      destruct (Nat.eq_dec nm 0%nat); intuition auto using eval_add_z, eval_add_nz.
+      destruct (Nat.eq_dec pred_nm 0%nat); intuition auto using eval_add_z, eval_add_nz.
     Qed.
     Lemma eval_add_same n p q
       :  eval (@add n n n p q) = eval p + eval q.
@@ -845,7 +845,7 @@ Section API.
     Proof. apply eval_add; omega. Qed.
     Hint Rewrite eval_add_same eval_add_S1 eval_add_S2 : push_basesystem_eval.
 
-    Lemma small_add n m nm a b : small (@add n m nm a b).
+    Lemma small_add n m pred_nm a b : small (@add n m pred_nm a b).
     Proof.
       intros. pose_uweight bound.
       pose proof Z.add_get_carry_full_div.
@@ -853,7 +853,7 @@ Section API.
       pose proof div_correct. pose proof modulo_correct.
       cbv [small add_cps add Let_In]. repeat autounfold.
       autorewrite with uncps push_id.
-      destruct n, m, nm; try (simpl; omega);
+      destruct n, m, pred_nm; try (simpl; omega);
         rewrite Columns.hd_to_list, hd_left_append;
         (eapply Z.lt_le_trans;
          [ apply Columns.small_compact; auto
