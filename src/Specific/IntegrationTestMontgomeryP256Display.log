@@ -29,7 +29,7 @@ Interp-η
  uint64_t x48 = (uint64_t) x47 & 0xffffffffffffffffL;
  uint64_t x49 = (uint64_t) (x47 >> 0x40);
  uint64_t x51, bool x52 = addcarryx_u64(0x0, x43, x45);
- uint64_t x54, bool x55 = Op (Syntax.AddWithGetCarry 64 (Syntax.TWord 0) (Syntax.TWord 6) (Syntax.TWord 0) (Syntax.TWord 6) (Syntax.TWord 0)) (Return x52, Return x46, 0x0);
+ uint64_t x54, bool x55 = addcarryx_u64(x52, x46, 0x0);
  uint64_t x57, bool x58 = addcarryx_u64(x55, 0x0, x48);
  uint64_t x60, bool _ = addcarryx_u64(0x0, x58, x49);
  uint64_t _, bool x64 = addcarryx_u64(0x0, x17, x42);
@@ -69,7 +69,7 @@ Interp-η
  uint64_t x124 = (uint64_t) x123 & 0xffffffffffffffffL;
  uint64_t x125 = (uint64_t) (x123 >> 0x40);
  uint64_t x127, bool x128 = addcarryx_u64(0x0, x119, x121);
- uint64_t x130, bool x131 = Op (Syntax.AddWithGetCarry 64 (Syntax.TWord 0) (Syntax.TWord 6) (Syntax.TWord 0) (Syntax.TWord 6) (Syntax.TWord 0)) (Return x128, Return x122, 0x0);
+ uint64_t x130, bool x131 = addcarryx_u64(x128, x122, 0x0);
  uint64_t x133, bool x134 = addcarryx_u64(x131, 0x0, x124);
  uint64_t x136, bool _ = addcarryx_u64(0x0, x134, x125);
  uint64_t _, bool x140 = addcarryx_u64(0x0, x102, x118);
@@ -110,7 +110,7 @@ Interp-η
  uint64_t x201 = (uint64_t) x200 & 0xffffffffffffffffL;
  uint64_t x202 = (uint64_t) (x200 >> 0x40);
  uint64_t x204, bool x205 = addcarryx_u64(0x0, x196, x198);
- uint64_t x207, bool x208 = Op (Syntax.AddWithGetCarry 64 (Syntax.TWord 0) (Syntax.TWord 6) (Syntax.TWord 0) (Syntax.TWord 6) (Syntax.TWord 0)) (Return x205, Return x199, 0x0);
+ uint64_t x207, bool x208 = addcarryx_u64(x205, x199, 0x0);
  uint64_t x210, bool x211 = addcarryx_u64(x208, 0x0, x201);
  uint64_t x213, bool _ = addcarryx_u64(0x0, x211, x202);
  uint64_t _, bool x217 = addcarryx_u64(0x0, x179, x195);
@@ -151,7 +151,7 @@ Interp-η
  uint64_t x278 = (uint64_t) x277 & 0xffffffffffffffffL;
  uint64_t x279 = (uint64_t) (x277 >> 0x40);
  uint64_t x281, bool x282 = addcarryx_u64(0x0, x273, x275);
- uint64_t x284, bool x285 = Op (Syntax.AddWithGetCarry 64 (Syntax.TWord 0) (Syntax.TWord 6) (Syntax.TWord 0) (Syntax.TWord 6) (Syntax.TWord 0)) (Return x282, Return x276, 0x0);
+ uint64_t x284, bool x285 = addcarryx_u64(x282, x276, 0x0);
  uint64_t x287, bool x288 = addcarryx_u64(x285, 0x0, x278);
  uint64_t x290, bool _ = addcarryx_u64(0x0, x288, x279);
  uint64_t _, bool x294 = addcarryx_u64(0x0, x256, x272);
