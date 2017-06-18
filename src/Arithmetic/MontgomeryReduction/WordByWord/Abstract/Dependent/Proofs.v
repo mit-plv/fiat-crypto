@@ -32,7 +32,7 @@ Section WordByWordMontgomery.
     {eval_mod : forall n v, small v -> snd (@divmod n v) = eval v mod r}
     {small_div : forall n v, small v -> small (fst (@divmod n v))}
     {scmul : forall {n}, Z -> T n -> T (S n)} (* uses double-output multiply *)
-    {eval_scmul: forall n a v, eval (@scmul n a v) = a * eval v}
+    {eval_scmul: forall n a v, 0 <= a < r -> 0 <= eval v < R -> eval (@scmul n a v) = a * eval v}
     {add : forall {n}, T n -> T n -> T (S n)} (* joins carry *)
     {eval_add : forall n a b, eval (@add n a b) = eval a + eval b}
     {small_add : forall n a b, small (@add n a b)}
@@ -55,7 +55,8 @@ Section WordByWordMontgomery.
                  | apply small_add'
                  | apply small_div
                  | apply Z_mod_lt
-                 | solve [ auto ]
+                 | rewrite Z.mul_split_mod
+                 | solve [ auto with zarith ]
                  | lia
                  | progress autorewrite with push_eval ].
   Hint Rewrite

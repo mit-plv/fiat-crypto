@@ -24,6 +24,9 @@ Section WordByWordMontgomery.
     {divmod : T -> T * Z} (* returns lowest limb and all-but-lowest-limb *)
     {r : positive}
     {r_big : r > 1}
+    {R : positive}
+    {R_numlimbs : nat}
+    {R_correct : R = r^Z.of_nat R_numlimbs :> Z}
     {small : T -> Prop}
     {eval_zero : forall n, eval (zero n) = 0}
     {numlimbs_zero : forall n, numlimbs (zero n) = n}
@@ -32,11 +35,8 @@ Section WordByWordMontgomery.
     {small_div : forall v, small v -> small (fst (divmod v))}
     {numlimbs_div : forall v, numlimbs (fst (divmod v)) = pred (numlimbs v)}
     {scmul : Z -> T -> T} (* uses double-output multiply *)
-    {eval_scmul: forall a v, eval (scmul a v) = a * eval v}
+    {eval_scmul: forall a v, 0 <= a < r -> 0 <= eval v < R -> eval (scmul a v) = a * eval v}
     {numlimbs_scmul : forall a v, 0 <= a < r -> numlimbs (scmul a v) = S (numlimbs v)}
-    {R : positive}
-    {R_numlimbs : nat}
-    {R_correct : R = r^Z.of_nat R_numlimbs :> Z}
     {add : T -> T -> T} (* joins carry *)
     {eval_add : forall a b, eval (add a b) = eval a + eval b}
     {small_add : forall a b, small (add a b)}
@@ -58,7 +58,8 @@ Section WordByWordMontgomery.
                  | apply small_add
                  | apply small_div
                  | apply Z_mod_lt
-                 | solve [ auto ]
+                 | rewrite Z.mul_split_mod
+                 | solve [ auto with zarith ]
                  | lia
                  | progress autorewrite with push_eval
                  | progress autorewrite with push_numlimbs ].

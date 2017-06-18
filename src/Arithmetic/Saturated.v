@@ -738,11 +738,11 @@ Section API.
          Tuple.left_append_cps (fst carry_result) (snd carry_result)
       (* The carry that comes out of Columns.mul_cps will be 0, since
       (S n) limbs is enough to hold the result of the
-      multiplication. To make this extra limb disappear, we convert to
-      and from associational, simply indicating that we only need to
-      have (S n) limbs when converting back. *)
-      (fun R => B.Positional.to_associational_cps (uweight bound) R
-      (fun r => B.Positional.from_associational_cps (uweight bound) (S n) r f))).
+      multiplication. To make this extra limb disappear, we could
+      convert to and from associational, simply indicating that we
+      only need to have (S n) limbs when converting back, but we
+      don't, instead dropping it later. *)
+                               (fun v => drop_high_cps v f)).
   Definition scmul {n} c p : T (S n) := @scmul_cps n c p _ id.
 
   Definition add_cps {n m pred_nm} (p : T n) (q : T m) {R} (f:T (S pred_nm)->R) :=
@@ -769,6 +769,7 @@ Section API.
     Lemma drop_high_id n p R f :
       @drop_high_cps n p R f = f (drop_high p).
     Proof. cbv [drop_high_cps drop_high]; prove_id. Qed.
+    Hint Rewrite drop_high_id : uncps.
 
     Lemma scmul_id n c p R f :
       @scmul_cps n c p R f = f (scmul c p).
@@ -869,6 +870,10 @@ Section API.
            rewrite Z.pow_1_r; reflexivity ]).
     Qed.
 
+    Lemma eval_drop_high n v :
+      small v -> eval (@drop_high n v) = eval v mod (uweight bound n).
+    Admitted.
+
     Lemma eval_scmul n a v: eval (@scmul n a v) = a * eval v.
     Proof.
     Admitted.
@@ -895,10 +900,6 @@ Section API.
     Admitted.
 
     Lemma small_div n v : small v -> small (fst (@divmod n v)).
-    Admitted.
-
-    Lemma eval_drop_high n v :
-      small v -> eval (@drop_high n v) = eval v mod (uweight bound n).
     Admitted.
 
   End Proofs.
