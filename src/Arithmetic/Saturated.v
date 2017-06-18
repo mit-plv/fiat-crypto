@@ -934,10 +934,22 @@ Section API.
       destruct pred_nm; autorewrite with push_basesystem_eval;
        rewrite Z.div_small; omega.
     Qed.
-    
+
+    Lemma small_left_tl n (v:T (S n)) : small v -> small (left_tl v).
+    Proof. cbv [small]. auto using In_to_list_left_tl. Qed.
+
     Lemma eval_drop_high n v :
       small v -> eval (@drop_high n v) = eval v mod (uweight bound n).
-    Admitted.
+    Proof.
+      cbv [drop_high drop_high_cps eval].
+      rewrite Tuple.left_tl_cps_correct, push_id. (* TODO : for some reason autorewrite with uncps doesn't work here *)
+      intro H. apply small_left_tl in H.
+      rewrite (subst_left_append v) at 2.
+      autorewrite with push_basesystem_eval.
+      apply eval_small in H.
+      rewrite Z.mod_add_l' by (pose_uweight bound; auto).
+      rewrite Z.mod_small; auto.
+    Qed.
 
     Lemma eval_scmul n a v: eval (@scmul n a v) = a * eval v.
     Proof.
