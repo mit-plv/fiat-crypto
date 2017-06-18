@@ -1,7 +1,5 @@
 #!/bin/sh
-set -e || true
-set -u || true
-set -o pipefail || true
+set -eu
 
 machine=$(etc/machine.sh)
 measurement=$($1/measure | (LC_ALL=C sort -n || true) | head -1024 | tail -1)
