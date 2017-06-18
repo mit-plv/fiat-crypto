@@ -155,6 +155,33 @@ Section language.
                    => Op (Mul _ _ _) (Pair e1 e2)
                  | _ => Op opc args
                  end
+         | Mul (TWord bw1 as T1) (TWord bw2 as T2) (TWord bwout as Tout) as opc
+           => fun args
+              => let sz1 := (2^Z.of_nat (2^bw1))%Z in
+                 let sz2 := (2^Z.of_nat (2^bw2))%Z in
+                 match interp_as_expr_or_const args with
+                 | Some (const_of l, const_of r)
+                   => Op (OpConst ((Z.max 0 l mod sz1) * (Z.max 0 r mod sz2))%Z) TT
+                 | Some (const_of v, gen_expr e)
+                   => if (Z.max 0 v mod sz1 =? 0)%Z
+                      then Op (OpConst 0%Z) TT
+                      else if (Z.max 0 v mod sz1 =? 1)%Z
+                           then match base_type_eq_semidec_transparent T2 Tout with
+                                | Some pf => eq_rect _ (fun t => exprf (Tbase t)) e _ pf
+                                | None => Op opc args
+                                end
+                           else Op opc args
+                 | Some (gen_expr e, const_of v)
+                   => if (Z.max 0 v mod sz2 =? 0)%Z
+                      then Op (OpConst 0%Z) TT
+                      else if (Z.max 0 v mod sz2 =? 1)%Z
+                           then match base_type_eq_semidec_transparent T1 Tout with
+                                | Some pf => eq_rect _ (fun t => exprf (Tbase t)) e _ pf
+                                | None => Op opc args
+                                end
+                           else Op opc args
+                 | _ => Op opc args
+                 end
          | Shl TZ TZ TZ as opc
          | Shr TZ TZ TZ as opc
            => fun args
@@ -371,39 +398,49 @@ Section language.
                  else Op opc args
          | AddWithGetCarry bw (TWord bw1 as T1) (TWord bw2 as T2) (TWord bw3 as T3) (TWord bwout as Tout) Tout2 as opc
            => fun args
-              => match interp_as_expr_or_const args with
-                 | Some (const_of c, const_of x, const_of y)
-                   => if ((c =? 0) && (x =? 0) && (y =? 0))%Z%bool
-                      then Pair (Op (OpConst 0) TT) (Op (OpConst 0) TT)
-                      else Op opc args
-                 | Some (gen_expr e, const_of c1, const_of c2)
-                   => match base_type_eq_semidec_transparent T1 Tout with
-                      | Some pf
-                        => if ((c1 =? 0) && (c2 =? 0) && (2^Z.of_nat bw1 <=? bw))%Z%bool
-                           then Pair (eq_rect _ (fun t => exprf (Tbase t)) e _ pf) (Op (OpConst 0) TT)
+              => let pass0
+                     := if ((bw1 =? 0) && (bw2 =? 0) && (bw3 =? 0) && (0 <? bwout) && (1 <? bw)%Z)%nat%bool
+                        then Some (Pair (LetIn args (fun '(a, b, c) => Op (Add _ _ _) (Pair (Op (Add _ _ Tout) (Pair (Var a) (Var b))) (Var c))))
+                                        (Op (OpConst 0) TT))
+                        else None
+                 in
+                 match pass0 with
+                 | Some e => e
+                 | None
+                   => match interp_as_expr_or_const args with
+                      | Some (const_of c, const_of x, const_of y)
+                        => if ((c =? 0) && (x =? 0) && (y =? 0))%Z%bool
+                           then Pair (Op (OpConst 0) TT) (Op (OpConst 0) TT)
                            else Op opc args
-                      | None
-                        => Op opc args
+                      | Some (gen_expr e, const_of c1, const_of c2)
+                        => match base_type_eq_semidec_transparent T1 Tout with
+                           | Some pf
+                             => if ((c1 =? 0) && (c2 =? 0) && (2^Z.of_nat bw1 <=? bw))%Z%bool
+                                then Pair (eq_rect _ (fun t => exprf (Tbase t)) e _ pf) (Op (OpConst 0) TT)
+                                else Op opc args
+                           | None
+                             => Op opc args
+                           end
+                      | Some (const_of c1, gen_expr e, const_of c2)
+                        => match base_type_eq_semidec_transparent T2 Tout with
+                           | Some pf
+                             => if ((c1 =? 0) && (c2 =? 0) && (2^Z.of_nat bw2 <=? bw))%Z%bool
+                                then Pair (eq_rect _ (fun t => exprf (Tbase t)) e _ pf) (Op (OpConst 0) TT)
+                                else Op opc args
+                           | None
+                             => Op opc args
+                           end
+                      | Some (const_of c1, const_of c2, gen_expr e)
+                        => match base_type_eq_semidec_transparent T3 Tout with
+                           | Some pf
+                             => if ((c1 =? 0) && (c2 =? 0) && (2^Z.of_nat bw3 <=? bw))%Z%bool
+                                then Pair (eq_rect _ (fun t => exprf (Tbase t)) e _ pf) (Op (OpConst 0) TT)
+                                else Op opc args
+                           | None
+                             => Op opc args
+                           end
+                      | _ => Op opc args
                       end
-                 | Some (const_of c1, gen_expr e, const_of c2)
-                   => match base_type_eq_semidec_transparent T2 Tout with
-                      | Some pf
-                        => if ((c1 =? 0) && (c2 =? 0) && (2^Z.of_nat bw2 <=? bw))%Z%bool
-                           then Pair (eq_rect _ (fun t => exprf (Tbase t)) e _ pf) (Op (OpConst 0) TT)
-                           else Op opc args
-                      | None
-                        => Op opc args
-                      end
-                 | Some (const_of c1, const_of c2, gen_expr e)
-                   => match base_type_eq_semidec_transparent T3 Tout with
-                      | Some pf
-                        => if ((c1 =? 0) && (c2 =? 0) && (2^Z.of_nat bw3 <=? bw))%Z%bool
-                           then Pair (eq_rect _ (fun t => exprf (Tbase t)) e _ pf) (Op (OpConst 0) TT)
-                           else Op opc args
-                      | None
-                        => Op opc args
-                      end
-                 | _ => Op opc args
                  end
          | SubWithBorrow TZ TZ TZ TZ as opc
            => fun args

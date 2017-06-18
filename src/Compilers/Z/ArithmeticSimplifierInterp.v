@@ -138,6 +138,8 @@ Proof.
                    | rewrite !Z.sub_with_borrow_to_add_get_carry
                    | progress autorewrite with zsimplify_fast
                    | progress cbv [cast_const ZToInterp interpToZ]
+                   | progress change (Z.pow_pos 2 1) with 2%Z in *
+                   | progress change (Z.pow_pos 2 2) with 4%Z in *
                    | nia
                    | progress cbv [Z.add_with_carry]
                    | match goal with
@@ -145,7 +147,35 @@ Proof.
                        => rewrite (Z.mod_small x m) by solve_word_small ()
                      | [ |- context[(?x / ?m)%Z] ]
                        => rewrite (Z.div_small x m) by solve_word_small ()
-                     end ].
+                     | [ H : ?x = 0%Z |- context[?x] ] => rewrite H
+                     | [ H : ?x = 1%Z |- context[?x] ] => rewrite H
+                     | [ H : (_ =? _)%nat = true |- _ ] => apply beq_nat_true in H
+                     | [ H : (_ <? _)%nat = true |- _ ] => apply NPeano.Nat.ltb_lt in H
+                     | [ |- context[FixedWordSizes.wordToZ_gen ?x] ]
+                       => lazymatch goal with
+                          | [ H : (0 <= FixedWordSizes.wordToZ_gen x)%Z |- _ ] => fail
+                          | [ H : (0 <= FixedWordSizes.wordToZ_gen x < _)%Z |- _ ] => fail
+                          | _ => pose proof (FixedWordSizesEquality.wordToZ_gen_range x)
+                          end
+                     | [ |- context[Z.max ?x ?y] ]
+                       => first [ rewrite (Z.max_r x y) by omega
+                                | rewrite (Z.max_l x y) by omega ]
+                     | [ H : 0 < ?e |- context[(_ mod (2^Z.of_nat (2^?e)))%Z] ]
+                       => lazymatch goal with
+                          | [ H : (_ <= 2^Z.of_nat (2^e))%Z |- _ ] => fail
+                          | _ => assert (2^Z.of_nat (2^1) <= 2^Z.of_nat (2^e))%Z
+                              by (rewrite !Z.pow_Zpow; simpl Z.of_nat; auto with zarith)
+                          end
+                     | [ H : (1 < ?e)%Z |- context[(_ mod (2^?e))%Z] ]
+                       => lazymatch goal with
+                          | [ H : (_ <= 2^e)%Z |- _ ] => fail
+                          | _ => assert (2^2 <= 2^e)%Z
+                              by auto with zarith
+                          end
+                     end
+                   | rewrite !FixedWordSizesEquality.wordToZ_ZToWord_mod_full
+                   | progress Z.rewrite_mod_small
+                   | rewrite Z.div_small by omega ].
 Qed.
 
 Hint Rewrite @InterpSimplifyArith : reflective_interp.
