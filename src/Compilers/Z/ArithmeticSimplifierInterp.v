@@ -18,6 +18,7 @@ Require Import Crypto.Util.Sum.
 Require Import Crypto.Util.HProp.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.Tactics.UniquePose.
 
 Local Notation exprf := (@exprf base_type op interp_base_type).
 Local Notation expr := (@expr base_type op interp_base_type).
@@ -131,26 +132,25 @@ Proof.
                    | progress Bool.split_andb
                    | progress Z.ltb_to_lt
                    | break_innermost_match_step
-                   | rewrite FixedWordSizesEquality.ZToWord_wordToZ
+                   | apply (f_equal2 pair)
+                   | progress cbv [cast_const ZToInterp interpToZ]
+                   | match goal with
+                     | [ |- interpf ?interp_op ?e = ?x ]
+                       => rewrite <- (FixedWordSizesEquality.ZToWord_wordToZ (interpf interp_op e)), <- FixedWordSizesEquality.eq_ZToWord
+                     end
+                   | rewrite <- FixedWordSizesEquality.eq_ZToWord ].
+  all:repeat first [ rewrite FixedWordSizesEquality.ZToWord_wordToZ
                    | rewrite FixedWordSizesEquality.ZToWord_wordToZ_ZToWord by reflexivity
                    | rewrite FixedWordSizesEquality.wordToZ_ZToWord_0
-                   | progress rewrite ?Z.land_0_l, ?Z.land_0_r, ?Z.lor_0_l, ?Z.lor_0_r
+                   | rewrite !FixedWordSizesEquality.wordToZ_ZToWord_mod_full ].
+  all:try nia.
+  all:repeat first [ reflexivity
+                   | omega
+                   | progress rewrite ?Z.land_0_l, ?Z.land_0_r, ?Z.lor_0_l, ?Z.lor_0_r, ?Z.opp_involutive
                    | rewrite !Z.sub_with_borrow_to_add_get_carry
-                   | progress autorewrite with zsimplify_fast
-                   | progress cbv [cast_const ZToInterp interpToZ]
-                   | progress change (Z.pow_pos 2 1) with 2%Z in *
-                   | progress change (Z.pow_pos 2 2) with 4%Z in *
-                   | nia
                    | progress cbv [Z.add_with_carry]
+                   | rewrite Z.mod_mod by Z.zero_bounds
                    | match goal with
-                     | [ |- context[(?x mod ?m)%Z] ]
-                       => rewrite (Z.mod_small x m) by solve_word_small ()
-                     | [ |- context[(?x / ?m)%Z] ]
-                       => rewrite (Z.div_small x m) by solve_word_small ()
-                     | [ H : ?x = 0%Z |- context[?x] ] => rewrite H
-                     | [ H : ?x = 1%Z |- context[?x] ] => rewrite H
-                     | [ H : (_ =? _)%nat = true |- _ ] => apply beq_nat_true in H
-                     | [ H : (_ <? _)%nat = true |- _ ] => apply NPeano.Nat.ltb_lt in H
                      | [ |- context[FixedWordSizes.wordToZ_gen ?x] ]
                        => lazymatch goal with
                           | [ H : (0 <= FixedWordSizes.wordToZ_gen x)%Z |- _ ] => fail
@@ -163,49 +163,40 @@ Proof.
                           | [ H : (0 <= FixedWordSizes.wordToZ e < _)%Z |- _ ] => fail
                           | _ => pose proof (FixedWordSizesEquality.wordToZ_range e)
                           end
-                     | [ |- context[Z.max ?x ?y] ]
-                       => first [ rewrite (Z.max_r x y) by omega
-                                | rewrite (Z.max_l x y) by omega ]
-                     | [ H : 0 < ?e |- context[(_ mod (2^Z.of_nat (2^?e)))%Z] ]
+                     | [ |- context[(?x mod ?y)%Z] ]
                        => lazymatch goal with
-                          | [ H : (_ <= 2^Z.of_nat (2^e))%Z |- _ ] => fail
-                          | _ => assert (2^Z.of_nat (2^1) <= 2^Z.of_nat (2^e))%Z
-                              by (rewrite !Z.pow_Zpow; simpl Z.of_nat; auto with zarith)
+                          | [ H : (0 <= x mod y)%Z |- _ ] => fail
+                          | [ H : (0 <= x mod y < _)%Z |- _ ] => fail
+                          | _ => assert (0 <= x mod y < y)%Z by (apply Z.mod_pos_bound; Z.zero_bounds)
                           end
-                     | [ H : (1 < ?e)%Z |- context[(_ mod (2^?e))%Z] ]
-                       => lazymatch goal with
-                          | [ H : (_ <= 2^e)%Z |- _ ] => fail
-                          | _ => assert (2^2 <= 2^e)%Z
-                              by auto with zarith
-                          end
-                     | [ |- context[Z.max 0 (?x mod ?y)] ]
-                       => rewrite (Z.max_r 0 (x mod y))
-                         by Z.zero_bounds
-                     | [ |- context[Z.max 0 ((?x mod ?y) * (?z mod ?w))] ]
-                       => rewrite (Z.max_r 0 ((x mod y) * (z mod w)))
-                         by Z.zero_bounds
-                     | [ |- context[Z.max 0 ((?x mod ?y) * (FixedWordSizes.wordToZ ?z))] ]
-                       => rewrite (Z.max_r 0 ((x mod y) * (FixedWordSizes.wordToZ z)))
-                         by (Z.zero_bounds; apply FixedWordSizesEquality.wordToZ_range)
-                     | [ |- context[Z.max 0 ((FixedWordSizes.wordToZ ?z) * (?x mod ?y))] ]
-                       => rewrite (Z.max_r 0 ((FixedWordSizes.wordToZ z) * (x mod y)))
-                         by (Z.zero_bounds; apply FixedWordSizesEquality.wordToZ_range)
-                     | [ |- context[((?x * ?y) mod ?z)%Z] ]
-                       => lazymatch constr:((x * y)%Z) with
-                          | ((_ mod z) * (_ mod z))%Z => fail
-                          | _ => rewrite (Z.mul_mod x y z)
-                          end
-                     | [ |- (_ <> 0)%Z ] => apply Z.pow_nonzero; lia
-                     | [ |- interpf ?interp_op ?e = ?x ]
-                       => rewrite <- (FixedWordSizesEquality.ZToWord_wordToZ (interpf interp_op e)), <- FixedWordSizesEquality.eq_ZToWord
-                     | [ |- context[Z.max 0 (FixedWordSizes.wordToZ ?e)] ]
-                       => rewrite (Z.max_r 0 (FixedWordSizes.wordToZ e))
-                         by apply FixedWordSizesEquality.wordToZ_range
+                     | [ H : (2^Z.of_nat ?bw <= ?bw')%Z |- context[(2^?bw')%Z] ]
+                       => unique assert ((2^Z.of_nat (2^bw) <= 2^bw')%Z)
+                         by (rewrite Z.pow_Zpow; simpl @Z.of_nat; auto with zarith)
                      end
-                   | rewrite !FixedWordSizesEquality.wordToZ_ZToWord_mod_full
-                   | progress Z.rewrite_mod_small
-                   | rewrite Z.div_small by omega
-                   | rewrite <- FixedWordSizesEquality.eq_ZToWord ].
+                   | progress autorewrite with zsimplify_const in *
+                   | match goal with
+                     | [ H : (0 <= ?x < _)%Z |- context[Z.max 0 ?x] ]
+                       => rewrite (Z.max_r 0 x) in * by apply H
+                     | [ H : (0 <= ?x < _)%Z, H' : (0 <= ?y < _)%Z |- context[Z.max 0 (?x * ?y)] ]
+                       => rewrite (Z.max_r 0 (x * y)) in * by (apply Z.mul_nonneg_nonneg; first [ apply H | apply H' ])
+                     | [ H : (0 <= ?x < _)%Z, H' : (0 <= ?y < _)%Z |- context[Z.max 0 (?x + ?y)] ]
+                       => rewrite (Z.max_r 0 (x + y)) in * by (apply Z.add_nonneg_nonneg; first [ apply H | apply H' ])
+                     | [ H : ?x = 0%Z |- context[?x] ] => rewrite H
+                     | [ H : (?x mod ?y = 0)%Z |- context[((?x * _) mod ?y)%Z] ]
+                       => rewrite (Z.mul_mod_full x _ y)
+                     | [ H : (?x mod ?y = 0)%Z |- context[((_ * ?x) mod ?y)%Z] ]
+                       => rewrite (Z.mul_mod_full _ x y)
+                     | [ H : ?x = Z.pos _ |- context[?x] ] => rewrite H
+                     | [ H : (?x mod ?y = Z.pos _)%Z |- context[((?x * _) mod ?y)%Z] ]
+                       => rewrite (Z.mul_mod_full x _ y)
+                     | [ H : (?x mod ?y = Z.pos _)%Z |- context[((_ * ?x) mod ?y)%Z] ]
+                       => rewrite (Z.mul_mod_full _ x y)
+                     | [ |- context[(?x mod ?m)%Z] ]
+                       => rewrite (Z.mod_small x m) by Z.rewrite_mod_small_solver
+                     | [ |- context[(?x / ?m)%Z] ]
+                       => rewrite (Z.div_small x m) by Z.rewrite_mod_small_solver
+                     end
+                   | progress pull_Zmod ].
 Qed.
 
 Hint Rewrite @InterpSimplifyArith : reflective_interp.
