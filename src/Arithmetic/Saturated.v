@@ -734,15 +734,10 @@ Section API.
 
   Definition scmul_cps {n} (c : Z) (p : T n) {R} (f:T (S n)->R) :=
     Columns.mul_cps (n1:=1) (n3:=S n) (uweight bound) bound c p
-      (fun carry_result =>
-         Tuple.left_append_cps (fst carry_result) (snd carry_result)
       (* The carry that comes out of Columns.mul_cps will be 0, since
       (S n) limbs is enough to hold the result of the
-      multiplication. To make this extra limb disappear, we could
-      convert to and from associational, simply indicating that we
-      only need to have (S n) limbs when converting back, but we
-      don't, instead dropping it later. *)
-                               (fun v => drop_high_cps v f)).
+      multiplication, so we can safely discard it. *)
+      (fun carry_result =>f (snd carry_result)).
   Definition scmul {n} c p : T (S n) := @scmul_cps n c p _ id.
 
   Definition add_cps {n m pred_nm} (p : T n) (q : T m) {R} (f:T (S pred_nm)->R) :=
