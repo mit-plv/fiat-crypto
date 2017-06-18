@@ -29,12 +29,18 @@ Ltac refine_reflectively32_with opts := refine_reflectively_gen [32; 64] opts.
 Ltac refine_reflectively128_with_bool_with opts := refine_reflectively_gen [1; 128; 256] opts.
 Ltac refine_reflectively64_with_bool_with opts := refine_reflectively_gen [1; 64; 128] opts.
 Ltac refine_reflectively32_with_bool_with opts := refine_reflectively_gen [1; 32; 64] opts.
+Ltac refine_reflectively128_with_uint8_with opts := refine_reflectively_gen [8; 128; 256] opts.
+Ltac refine_reflectively64_with_uint8_with opts := refine_reflectively_gen [8; 64; 128] opts.
+Ltac refine_reflectively32_with_uint8_with opts := refine_reflectively_gen [8; 32; 64] opts.
 Ltac refine_reflectively128 := refine_reflectively128_with default_PipelineOptions.
 Ltac refine_reflectively64 := refine_reflectively64_with default_PipelineOptions.
 Ltac refine_reflectively32 := refine_reflectively32_with default_PipelineOptions.
 Ltac refine_reflectively128_with_bool := refine_reflectively128_with_bool_with default_PipelineOptions.
 Ltac refine_reflectively64_with_bool := refine_reflectively64_with_bool_with default_PipelineOptions.
 Ltac refine_reflectively32_with_bool := refine_reflectively32_with_bool_with default_PipelineOptions.
+Ltac refine_reflectively128_with_uint8 := refine_reflectively128_with_uint8_with default_PipelineOptions.
+Ltac refine_reflectively64_with_uint8 := refine_reflectively64_with_uint8_with default_PipelineOptions.
+Ltac refine_reflectively32_with_uint8 := refine_reflectively32_with_uint8_with default_PipelineOptions.
 
 (** Convenience notations for options *)
 Definition anf := {| Pipeline.Definition.anf := true |}.
@@ -42,5 +48,6 @@ Definition default := default_PipelineOptions.
 
 (** The default *)
 Ltac refine_reflectively_with_bool_with opts := refine_reflectively64_with_bool_with opts.
+Ltac refine_reflectively_with_uint8_with opts := refine_reflectively64_with_uint8_with opts.
 Ltac refine_reflectively_with opts := refine_reflectively64_with opts.
 Ltac refine_reflectively := refine_reflectively_with default.
