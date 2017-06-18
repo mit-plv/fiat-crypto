@@ -5,8 +5,8 @@ Require Import Coq.ZArith.BinInt.
 Require Import Coq.PArith.BinPos.
 Require Import Crypto.Util.LetIn.
 
-Definition wt (i:nat) : Z := Z.shiftl 1 (64*Z.of_nat i).
-Definition r := Eval compute in (2^64)%positive.
+Definition wt (i:nat) : Z := Z.shiftl 1 (128*Z.of_nat i).
+Definition r := Eval compute in (2^128)%positive.
 Definition sz := 2%nat.
 Definition m : positive := 2^256-2^224+2^192+2^96-1.
 Definition p256 :=
