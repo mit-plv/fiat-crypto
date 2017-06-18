@@ -387,30 +387,6 @@ Module Columns.
       rewrite (subst_append t), to_list_append, hd_append. reflexivity.
     Qed.
 
-    Lemma small_compact {n} x :
-      hd (n:=n) (snd (Columns.compact x)) < weight 1 / weight 0.
-    Proof.
-      match goal with
-        |- ?G => assert (G /\ fst (compact x) = fst (compact x)); [|tauto]
-      end. (* assert a dummy second statement so that fst (compact x) is in context *)
-      cbv [compact compact_cps compact_step compact_step_cps];
-        autorewrite with uncps push_id.
-      change (fun i s a => compact_digit_cps i (s :: a) id)
-      with (fun i s a => compact_digit i (s :: a)).
-      remember (fun i s a => compact_digit i (s :: a)) as f.
-
-      rewrite <-hd_to_list with (a:=0).
-
-      apply @mapi_with'_linvariant with (n:=S n) (start:=0) (f:=f) (inp:=x); intros; try tauto; (split; [|reflexivity]).
-      { let P := fresh "H" in
-        match goal with H : _ /\ _ |- _ => destruct H end.
-        destruct n0; simpl. subst f.
-        { rewrite compact_digit_mod.
-          apply Z.mod_pos_bound, Z.gt_lt, weight_divides. }
-        { rewrite hd_to_list in H1. assumption. } }
-      { simpl. apply Z.gt_lt, weight_divides. }
-    Qed.
-
     Definition cons_to_nth_cps {n} i (x:Z) (t:(list Z)^n)
                {T} (f:(list Z)^n->T) :=
       @on_tuple_cps _ _ nil (update_nth_cps i (cons x)) n n t _ f.
@@ -706,7 +682,7 @@ Section UniformWeight.
     cbv [uweight]. rewrite <-Z.pow_sub_r by (rewrite ?Nat2Z.inj_succ; omega).
     apply Z.lt_gt, Z.pow_pos_nonneg; rewrite ?Nat2Z.inj_succ; omega.
   Qed.
-
+    
 End UniformWeight.
 
 Section API.
@@ -716,7 +692,8 @@ Section API.
   (* lowest limb is less than its bound; this is required for [divmod]
   to simply separate the lowest limb from the rest and be equivalent
   to normal div/mod with [bound]. *)
-  Definition small {n} (p : T n) : Prop := List.hd 0 (to_list _ p) < bound.
+  Definition small {n} (p : T n) : Prop :=
+    forall x, In x (to_list _ p) -> 0 <= x < bound.
 
   Definition zero {n:nat} : T n := B.Positional.zeros n.
 
@@ -776,12 +753,51 @@ Section API.
 
   End CPSProofs.
   Hint Rewrite join0_id divmod_id drop_high_id scmul_id add_id : uncps.
-
+  
   Section Proofs.
 
     Definition eval {n} (p : T n) : Z :=
       B.Positional.eval (uweight bound) p.
 
+    Lemma In_to_list_left_tl n (p : Z^S n) x:
+      In x (to_list n (left_tl p)) -> In x (to_list (S n) p).
+    Admitted.
+
+    Lemma In_left_hd n (p : Z^S n):
+      In (left_hd p) (to_list _ p).
+    Admitted.
+    
+    Lemma eval_small n (p : T n) (Hsmall : small p) :
+      0 <= eval p < uweight bound n.
+    Proof.
+      cbv [small eval] in *; intros.
+      induction n; cbv [T uweight] in *; [destruct p|rewrite (subst_left_append p)];
+      repeat match goal with
+             | _ => progress autorewrite with push_basesystem_eval
+             | _ => rewrite Z.pow_0_r
+             | _ => specialize (IHn (left_tl p))
+             | _ => 
+               let H := fresh "H" in
+               match type of IHn with
+                 ?P -> _ => assert P as H by auto using In_to_list_left_tl;
+                              specialize (IHn H)
+               end
+             | |- context [?b ^ Z.of_nat (S ?n)] =>
+               replace (b ^ Z.of_nat (S n)) with (b ^ Z.of_nat n * b) by
+                   (rewrite Nat2Z.inj_succ, <-Z.add_1_r, Z.pow_add_r,
+                    Z.pow_1_r by (omega || auto using Nat2Z.is_nonneg);
+                    reflexivity)
+             | _ => omega
+             end.
+        
+        specialize (Hsmall _ (In_left_hd _ p)).
+        split; [Z.zero_bounds; omega |].
+        apply Z.lt_le_trans with (m:=bound^Z.of_nat n * (left_hd p+1)).
+        { rewrite Z.mul_add_distr_l.
+          apply Z.add_le_lt_mono; omega. }
+        { apply Z.mul_le_mono_nonneg; omega. }
+    Qed.
+          
     Lemma eval_zero n : eval (@zero n) = 0.
     Proof.
       cbv [eval zero].
@@ -848,7 +864,56 @@ Section API.
     Proof. apply eval_add; omega. Qed.
     Hint Rewrite eval_add_same eval_add_S1 eval_add_S2 : push_basesystem_eval.
 
-    Lemma small_add n m pred_nm a b : small (@add n m pred_nm a b).
+    Lemma to_list_left_append {n} (p:T n) x:
+      (to_list _ (left_append x p)) = to_list n p ++ x :: nil.
+    Admitted.
+
+    Local Definition compact {n} := Columns.compact (n:=n) (add_get_carry:=Z.add_get_carry_full) (div:=div) (modulo:=modulo) (uweight bound).
+    Local Definition compact_digit := Columns.compact_digit (add_get_carry:=Z.add_get_carry_full) (div:=div) (modulo:=modulo) (uweight bound).
+    Lemma small_compact {n} (p:(list Z)^n) : small (snd (compact p)).
+    Proof.
+      pose_uweight bound.
+      pose proof Z.add_get_carry_full_div.
+      pose proof Z.add_get_carry_full_mod.
+      pose proof div_correct. pose proof modulo_correct.
+      match goal with
+        |- ?G => assert (G /\ fst (compact p) = fst (compact p)); [|tauto]
+      end. (* assert a dummy second statement so that fst (compact x) is in context *)
+      cbv [compact Columns.compact Columns.compact_cps small
+                   Columns.compact_step Columns.compact_step_cps];
+        autorewrite with uncps push_id.
+      change (fun i s a => Columns.compact_digit_cps (uweight bound) i (s :: a) id)
+      with (fun i s a => compact_digit i (s :: a)).
+      remember (fun i s a => compact_digit i (s :: a)) as f.
+
+      apply @mapi_with'_linvariant with (n:=n) (f:=f) (inp:=p);
+        intros; [|simpl; tauto]. split; [|reflexivity].
+      let P := fresh "H" in
+      match goal with H : _ /\ _ |- _ => destruct H end.
+      destruct n0; subst f.
+      { cbv [compact_digit uweight to_list to_list' In].
+        rewrite Columns.compact_digit_mod by assumption.
+        rewrite Z.pow_0_r, Z.pow_1_r, Z.div_1_r. intros x ?.
+        match goal with
+          H : _ \/ False |- _ => destruct H; [|exfalso; assumption] end.
+        subst x. apply Z.mod_pos_bound, Z.gt_lt, bound_pos. }
+      { rewrite to_list_left_append.
+        let H := fresh "H" in
+        intros x H; apply in_app_or in H; destruct H;
+          [solve[auto]| cbv [In] in H; destruct H;
+                        [|exfalso; assumption] ].
+        subst x. cbv [compact_digit uweight].
+        rewrite Columns.compact_digit_mod by assumption.
+        rewrite !Nat2Z.inj_succ, <-Z.pow_sub_r by omega.
+        match goal with |- context [Z.succ ?a - ?a] =>
+                        replace (Z.succ a - a) with 1 by omega end.
+        rewrite Z.pow_1_r.
+        apply Z.mod_pos_bound, Z.gt_lt, bound_pos. }
+    Qed.
+
+    Lemma small_add n m pred_nm a b :
+      (uweight bound n + uweight bound m <= uweight bound pred_nm) ->
+      small a -> small b -> small (@add n m pred_nm a b).
     Proof.
       intros. pose_uweight bound.
       pose proof Z.add_get_carry_full_div.
@@ -856,15 +921,20 @@ Section API.
       pose proof div_correct. pose proof modulo_correct.
       cbv [small add_cps add Let_In]. repeat autounfold.
       autorewrite with uncps push_id.
-      destruct n, m, pred_nm; try (simpl; omega);
-        rewrite Columns.hd_to_list, hd_left_append;
-        (eapply Z.lt_le_trans;
-         [ apply Columns.small_compact; auto
-         | cbv [uweight]; simpl Z.of_nat;
-           autorewrite with zsimplify;
-           rewrite Z.pow_1_r; reflexivity ]).
+      rewrite to_list_left_append.
+      let H := fresh "H" in intros x H; apply in_app_or in H;
+                              destruct H as [H | H];
+                              [apply (small_compact _ _ H)
+                              |destruct H; [|tauto] ].
+      subst x.
+      rewrite Columns.compact_div by assumption.
+      repeat match goal with
+               H : small ?x |- _ => apply eval_small in H; cbv [eval] in H
+             end.
+      destruct pred_nm; autorewrite with push_basesystem_eval;
+       rewrite Z.div_small; omega.
     Qed.
-
+    
     Lemma eval_drop_high n v :
       small v -> eval (@drop_high n v) = eval v mod (uweight bound n).
     Admitted.

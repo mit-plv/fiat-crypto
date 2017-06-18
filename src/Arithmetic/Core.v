@@ -930,6 +930,7 @@ Module B.
        @Positional.eval_single
        @Positional.eval_unit
        @Positional.eval_to_associational
+       @Positional.eval_left_append
        @Associational.eval_carry
        @Associational.eval_carryterm
        @Associational.eval_reduce
