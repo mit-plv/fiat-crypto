@@ -951,6 +951,13 @@ Section API.
       rewrite Z.mod_small; auto.
     Qed.
 
+    Lemma small_drop_high n v : small v -> small (@drop_high n v).
+    Proof.
+      cbv [drop_high drop_high_cps].
+      rewrite Tuple.left_tl_cps_correct, push_id.
+      apply small_left_tl.
+    Qed. 
+
     Lemma eval_scmul n a v: eval (@scmul n a v) = a * eval v.
     Proof.
     Admitted.
