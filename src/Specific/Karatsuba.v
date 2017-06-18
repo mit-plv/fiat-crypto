@@ -220,7 +220,7 @@ Ltac basesystem_partial_evaluation_RHS :=
     (t1 (@id_with_alt) (@Let_In) (@runtime_and) (@runtime_shr) (@runtime_opp) (@runtime_add)
        (@runtime_mul));
    [ replace_with_vm_compute t1; clear t1 | reflexivity ].
-    Print id_tuple_with_alt.
+
   Definition goldilocks_mul_sig :
     {mul : (Z^sz -> Z^sz -> Z^sz)%type |
      forall a b : Z^sz,
