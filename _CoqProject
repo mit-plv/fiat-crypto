@@ -227,6 +227,7 @@ src/Specific/IntegrationTestLadderstep130Display.v
 src/Specific/IntegrationTestLadderstepDisplay.v
 src/Specific/IntegrationTestMontgomeryP256.v
 src/Specific/IntegrationTestMontgomeryP256Display.v
+src/Specific/IntegrationTestMontgomeryP256_128.v
 src/Specific/IntegrationTestMul.v
 src/Specific/IntegrationTestMulDisplay.v
 src/Specific/IntegrationTestSquare.v
@@ -236,6 +237,7 @@ src/Specific/IntegrationTestSubDisplay.v
 src/Specific/IntegrationTestTemporaryMiscCommon.v
 src/Specific/Karatsuba.v
 src/Specific/MontgomeryP256.v
+src/Specific/MontgomeryP256_128.v
 src/Specific/FancyMachine256/Barrett.v
 src/Specific/FancyMachine256/Core.v
 src/Specific/FancyMachine256/Montgomery.v
