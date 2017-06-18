@@ -188,6 +188,18 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma eq_ZToWord_gen : forall {sz} v1 v2, (Z.max 0 v1 mod 2^Z.of_nat sz = Z.max 0 v2 mod 2^Z.of_nat sz)%Z
+                                          <-> @ZToWord_gen sz v1 = @ZToWord_gen sz v2.
+Proof.
+  intros; split; intro H.
+  { rewrite <- (ZToWord_gen_wordToZ_gen (ZToWord_gen v1)), <- (ZToWord_gen_wordToZ_gen (ZToWord_gen v2)).
+    rewrite !wordToZ_gen_ZToWord_gen_mod_full.
+    congruence. }
+  { apply (f_equal wordToZ_gen) in H; revert H.
+    rewrite !wordToZ_gen_ZToWord_gen_mod_full.
+    trivial. }
+Qed.
+
 Lemma ZToWord_wordToZ : forall {sz} v, ZToWord (@wordToZ sz v) = v.
 Proof.
   unfold wordT, word_case in *.
@@ -260,6 +272,13 @@ Lemma wordToZ_ZToWord_mod_full : forall {sz} w, wordToZ (@ZToWord sz w) = ((Z.ma
 Proof.
   unfold wordToZ, ZToWord, word_case_dep.
   intros sz w; break_match; apply wordToZ_gen_ZToWord_gen_mod_full.
+Qed.
+
+Lemma eq_ZToWord : forall {sz} v1 v2, (Z.max 0 v1 mod 2^Z.of_nat (2^sz) = Z.max 0 v2 mod 2^Z.of_nat (2^sz))%Z
+                                      <-> @ZToWord sz v1 = @ZToWord sz v2.
+Proof.
+  unfold ZToWord, word_case_dep.
+  intros sz v1 v2; break_innermost_match; apply eq_ZToWord_gen.
 Qed.
 
 Local Ltac wordToZ_word_case_dep_t :=
