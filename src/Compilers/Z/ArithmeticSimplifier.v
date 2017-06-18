@@ -400,7 +400,7 @@ Section language.
          | AddWithGetCarry bw (TWord bw1 as T1) (TWord bw2 as T2) (TWord bw3 as T3) (TWord bwout as Tout) Tout2 as opc
            => fun args
               => let pass0
-                     := if ((bw1 =? 0) && (bw2 =? 0) && (bw3 =? 0) && (0 <? bwout) && (1 <? bw)%Z)%nat%bool
+                     := if ((2^Z.of_nat (2^bw1) + 2^Z.of_nat (2^bw2) + 2^Z.of_nat (2^bw3) - 3 <=? 2^Z.of_nat (2^bwout) - 1)%Z && (2^Z.of_nat (2^bw1) + 2^Z.of_nat (2^bw2) + 2^Z.of_nat (2^bw3) - 3 <=? 2^bw - 1)%Z)%nat%bool
                         then Some (Pair (LetIn args (fun '(a, b, c) => Op (Add _ _ _) (Pair (Op (Add _ _ Tout) (Pair (Var a) (Var b))) (Var c))))
                                         (Op (OpConst 0) TT))
                         else None
