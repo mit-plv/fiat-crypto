@@ -1,3 +1,5 @@
+.SUFFIXES:
+
 MOD_NAME := Crypto
 SRC_DIR  := src
 TIMED?=
@@ -13,7 +15,7 @@ INSTALLDEFAULTROOT := Crypto
 
 .PHONY: coq clean update-_CoqProject cleanall install \
 	install-coqprime clean-coqprime coqprime \
-	specific-display display \
+	specific-c specific-display display \
 	specific non-specific lite only-heavy printlite \
 	curves-proofs no-curves-proofs
 
@@ -92,6 +94,7 @@ only-heavy: $(HEAVY_VOFILES) coqprime
 curves-proofs: $(CURVES_PROOFS_VOFILES) coqprime
 no-curves-proofs: $(NO_CURVES_PROOFS_VOFILES) coqprime
 specific-display: $(SPECIFIC_DISPLAY_VO:.vo=.log) coqprime
+specific-c: $(SPECIFIC_DISPLAY_VO:Display.vo=.c) coqprime
 display: $(DISPLAY_VO:.vo=.log) coqprime
 
 printlite::
@@ -132,12 +135,20 @@ $(DISPLAY_NON_JAVA_VO:.vo=.log) : %Display.log : %.vo %Display.v src/Compilers/Z
 	$(SHOW)"COQC $*Display > $@"
 	$(HIDE)$(COQC) $(COQDEBUG) $(COQFLAGS) $*Display.v > $@.tmp && mv -f $@.tmp $@
 
+$(DISPLAY_NON_JAVA_VO:Display.vo=.c) : %.c : %Display.log extract-function.sh
+	./extract-function.sh $(patsubst %Display.log,%,$(notdir $<)) < $< > $@
+
+$(DISPLAY_NON_JAVA_VO:Display.vo=.h) : %.h : %Display.log extract-function-header.sh
+	./extract-function-header.sh $(patsubst %Display.log,%,$(notdir $<)) < $< > $@
+
 $(DISPLAY_JAVA_VO:.vo=.log) : %JavaDisplay.log : %.vo %JavaDisplay.v src/Compilers/Z/JavaNotations.vo src/Specific/IntegrationTestDisplayCommon.vo
 	$(SHOW)"COQC $*JavaDisplay > $@"
 	$(HIDE)$(COQC) $(COQDEBUG) $(COQFLAGS) $*JavaDisplay.v > $@.tmp && mv -f $@.tmp $@
 
-src/Specific/x25519_c64.c: src/Specific/x25519_c64.c.sh src/Specific/IntegrationTestLadderstepDisplay.log src/Specific/IntegrationTestMulDisplay.log src/Specific/IntegrationTestSquareDisplay.log
-	bash src/Specific/x25519_c64.c.sh > src/Specific/x25519_c64.c
+DISPLAY_X25519_C64_VO := $(filter src/Specific/X25519/C64/%,$(DISPLAY_NON_JAVA_VO))
+
+src/Specific/X25519/C64/measure: src/Specific/X25519/C64/compiler.sh measure.c $(DISPLAY_X25519_C64_VO:Display.vo=.c) $(DISPLAY_X25519_C64_VO:Display.vo=.h) src/Specific/X25519/C64/scalarmult.c
+	src/Specific/X25519/C64/compiler.sh -o src/Specific/X25519/C64/measure -I src/Specific/X25519/C64/ measure.c $(DISPLAY_X25519_C64_VO:Display.vo=.c) src/Specific/X25519/C64/scalarmult.c -D TIMINGS=2047 -D UUT=crypto_scalarmult_bench
 
 clean::
 	rm -f Makefile.coq
