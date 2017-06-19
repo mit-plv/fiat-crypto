@@ -36,7 +36,7 @@ Section BoundedField25p5.
   Definition mulmod_256 : { f:feBW -> feBW -> feBW
                           | forall A B,
                               BoundedWordToZ _ _ _ (f A B) =
-                              redc (r:=r)(R_numlimbs:=sz) p256 (BoundedWordToZ _ _ _ A) (BoundedWordToZ _ _ _ B) 1
+                              redc (r:=r)(R_numlimbs:=sz) p256 (BoundedWordToZ _ _ _ A) (BoundedWordToZ _ _ _ B) m'
                           }.
   Proof.
     (*Definition mulmod :
@@ -49,13 +49,13 @@ Section BoundedField25p5.
     end.
     intros a b.
     eexists_sig_etransitivity. all:cbv [phi].
-    rewrite <- (proj2_sig mulmod_256).
+    rewrite <- (proj2_sig mulmod_256').
     (*symmetry; rewrite <- (proj2_sig carry_sig); symmetry.
     set (carry_mulZ := fun a b => proj1_sig carry_sig (proj1_sig mul_sig a b)).
     change (proj1_sig carry_sig (proj1_sig mul_sig ?a ?b)) with (carry_mulZ a b).*)
-    set (mulmodZ := proj1_sig mulmod_256).
+    set (mulmodZ := proj1_sig mulmod_256').
     context_to_dlet_in_rhs mulmodZ; cbv [mulmodZ].
-    cbv beta iota delta [mulmod_256 proj1_sig Saturated.T lift2_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz].
+    cbv beta iota delta [mulmod_256' proj1_sig Saturated.T lift2_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz].
     reflexivity.
     sig_dlet_in_rhs_to_context.
     (*apply (fun f => proj2_sig_map (fun THIS_NAME_MUST_NOT_BE_UNDERSCORE_TO_WORK_AROUND_CONSTR_MATCHING_ANAOMLIES___BUT_NOTE_THAT_IF_THIS_NAME_IS_LOWERCASE_A___THEN_REIFICATION_STACK_OVERFLOWS___AND_I_HAVE_NO_IDEA_WHATS_GOING_ON p => f_equal f p)).*)

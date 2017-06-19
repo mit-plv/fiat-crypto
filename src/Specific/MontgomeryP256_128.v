@@ -1,9 +1,13 @@
+Require Import Coq.micromega.Lia.
 Require Import Crypto.Arithmetic.MontgomeryReduction.WordByWord.Definition.
+Require Import Crypto.Arithmetic.MontgomeryReduction.WordByWord.Proofs.
 Require Import Crypto.Arithmetic.Core. Import B.
 Require Import Crypto.Util.Sigma.Lift.
 Require Import Coq.ZArith.BinInt.
 Require Import Coq.PArith.BinPos.
 Require Import Crypto.Util.LetIn.
+Require Import Crypto.Util.ZUtil.ModInv.
+Require Import Crypto.Util.Tactics.DestructHead.
 
 Definition wt (i:nat) : Z := Z.shiftl 1 (128*Z.of_nat i).
 Definition r := Eval compute in (2^128)%positive.
@@ -12,15 +16,18 @@ Definition m : positive := 2^256-2^224+2^192+2^96-1.
 Definition p256 :=
   Eval vm_compute in
     ((Positional.encode (modulo:=modulo) (div:=div) (n:=sz) wt (Z.pos m))).
+Definition r' := Eval native_compute in Zpow_facts.Zpow_mod (Z.pos r) (Z.pos m - 2) (Z.pos m).
+Definition r'_correct := eq_refl : ((Z.pos r * r') mod (Z.pos m) = 1)%Z.
+Definition m' : Z := Eval vm_compute in Option.invert_Some (Z.modinv_fueled 10 (-Z.pos m) (Z.pos r)).
+Definition m'_correct := eq_refl : ((Z.pos m * m') mod (Z.pos r) = (-1) mod Z.pos r)%Z.
 
-Definition mulmod_256 : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
-                           | forall (A B : Tuple.tuple Z sz),
+Definition mulmod_256' : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
+                        | forall (A B : Tuple.tuple Z sz),
                                f A B =
-                               (redc (r:=r)(R_numlimbs:=sz) p256 A B 1)
+                               (redc (r:=r)(R_numlimbs:=sz) p256 A B m')
                             }.
 Proof.
-  eapply (lift2_sig (fun A B c => c = (redc (r:=r)(R_numlimbs:=sz) p256 A B 1)
-                           )); eexists.
+  eapply (lift2_sig (fun A B c => c = _)); eexists.
   cbv -[Definitions.Z.add_get_carry Definitions.Z.mul_split_at_bitwidth runtime_add runtime_mul Let_In].
   (*
   cbv [
@@ -89,3 +96,31 @@ Z.of_nat *)
    *)
   reflexivity.
 Defined.
+
+Definition mulmod_256 : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
+                        | forall (A B : Tuple.tuple Z sz),
+                            Saturated.small (Z.pos r) A -> Saturated.small (Z.pos r) B ->
+                            let eval := Saturated.eval (Z.pos r) in
+                            (0 <= eval (f A B) < Z.pos r^Z.of_nat sz
+                             /\ (eval (f A B) mod Z.pos m
+                                 = (eval A * eval B * r'^(Z.of_nat sz)) mod Z.pos m))%Z
+                            }.
+Proof.
+  exists (proj1_sig mulmod_256').
+  abstract (
+      intros; rewrite (proj2_sig mulmod_256');
+      split; [ apply redc_bound with (ri:=r') | apply redc_mod_N ];
+      try match goal with
+          | _ => assumption
+          | [ |- _ = _ :> Z ] => vm_compute; reflexivity
+          | _ => reflexivity
+          | [ |- Saturated.small (Z.pos r) p256 ]
+            => hnf; cbv [Tuple.to_list sz p256 r Tuple.to_list' List.In]; intros; destruct_head'_or;
+               subst; try lia
+          | [ |- Saturated.eval (Z.pos r) p256 <> 0%Z ]
+            => vm_compute; lia
+          end
+    ).
+Defined.
+
+Print Assumptions mulmod_256.

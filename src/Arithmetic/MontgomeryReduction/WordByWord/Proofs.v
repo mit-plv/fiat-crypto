@@ -39,13 +39,11 @@ Section WordByWordMontgomery.
   Context ri
           (r_big : r > 1)
           (small_A : small A)
-          (A_bound : 0 <= eval A < Z.pos r ^ Z.of_nat A_numlimbs)
           (ri_correct : r*ri mod (eval N) = 1 mod (eval N))
-          (N_bound : 0 < eval N < r^Z.of_nat R_numlimbs)
           (small_N : small N)
-          (B_bound' : 0 <= eval B < r^Z.of_nat R_numlimbs)
           (small_B : small B)
-          (k_correct : k * eval N mod r = -1).
+          (N_nonzero : eval N <> 0)
+          (k_correct : k * eval N mod r = (-1) mod r).
   Let R : positive := match (Z.pos r ^ Z.of_nat R_numlimbs)%Z with
                       | Z.pos R => R
                       | _ => 1%positive
@@ -60,12 +58,6 @@ Section WordByWordMontgomery.
     subst R; destruct (Z.pos r ^ Z.of_nat R_numlimbs) eqn:?; [ | reflexivity | ];
       lia.
   Qed.
-  Local Lemma Npos_correct: eval N = Z.pos Npos.
-  Proof. subst Npos; destruct (eval N); [ | reflexivity | ]; lia. Qed.
-  Local Lemma N_lt_R : eval N < R.
-  Proof. rewrite R_correct; apply N_bound. Qed.
-  Local Lemma B_bound : 0 <= eval B < R.
-  Proof. rewrite R_correct; apply B_bound'. Qed.
 
 
   (*****************************************************************************************)
@@ -100,7 +92,20 @@ Section WordByWordMontgomery.
       small (conditional_subtract v).
   (*****************************************************************************************)
 
-
+  Local Lemma A_bound : 0 <= eval A < Z.pos r ^ Z.of_nat A_numlimbs.
+  Proof. apply eval_small; auto; lia. Qed.
+  Local Lemma B_bound' : 0 <= eval B < r^Z.of_nat R_numlimbs.
+  Proof. apply eval_small; auto; lia. Qed.
+  Local Lemma N_bound' : 0 <= eval N < r^Z.of_nat R_numlimbs.
+  Proof. apply eval_small; auto; lia. Qed.
+  Local Lemma N_bound : 0 < eval N < r^Z.of_nat R_numlimbs.
+  Proof. pose proof N_bound'; lia. Qed.
+  Local Lemma Npos_correct: eval N = Z.pos Npos.
+  Proof. pose proof N_bound; subst Npos; destruct (eval N); [ | reflexivity | ]; lia. Qed.
+  Local Lemma N_lt_R : eval N < R.
+  Proof. rewrite R_correct; apply N_bound. Qed.
+  Local Lemma B_bound : 0 <= eval B < R.
+  Proof. rewrite R_correct; apply B_bound'. Qed.
   Local Lemma eval_drop_high : forall v, small v -> eval (drop_high v) = eval v mod (r * r^Z.of_nat R_numlimbs).
   Proof.
     intros; erewrite eval_drop_high by (eassumption || lia).

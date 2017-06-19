@@ -49,7 +49,7 @@ Section WordByWordMontgomery.
     (B : T)
     (B_bounds : 0 <= eval B < R)
     ri (ri_correct : r*ri mod (eval N) = 1 mod (eval N)).
-  Context (k : Z) (k_correct : k * eval N mod r = -1).
+  Context (k : Z) (k_correct : k * eval N mod r = (-1) mod r).
 
   Create HintDb push_numlimbs discriminated.
   Create HintDb push_eval discriminated.
@@ -200,7 +200,7 @@ Section WordByWordMontgomery.
         cbv [F.of_Z F.add F.opp F.one]; simpl.
         change (-(1)) with (-1) in *.
         apply path_sig_hprop; [ intro; exact HProp.allpath_hprop | ]; simpl.
-        rewrite (proj1 Hr), (proj2 Hr); reflexivity. }
+        rewrite (proj1 Hr), (proj2 Hr); Z.rewrite_mod_small; reflexivity. }
     Qed.
 
     Lemma S3_mod_N
