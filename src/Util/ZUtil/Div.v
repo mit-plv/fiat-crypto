@@ -109,4 +109,10 @@ Module Z.
 
   Lemma div_le_mono_pow_pos a b c e : a <= b -> a / Z.pos c ^ e <= b / Z.pos c ^ e.
   Proof. auto with zarith. Qed.
+
+  Lemma div_nonneg a b : 0 <= a -> 0 <= b -> 0 <= a / b.
+  Proof.
+    destruct (Z_zerop b); subst; rewrite ?Zdiv_0_r; [ reflexivity | ].
+    intros; apply Z.div_pos; omega.
+  Qed.
 End Z.
