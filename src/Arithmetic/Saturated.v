@@ -975,6 +975,13 @@ Section API.
       apply Z.mul_lt_mono_nonneg; omega.
     Qed.
 
+    Lemma small_scmul n a v : small (@scmul n a v).
+    Proof.
+      cbv [scmul scmul_cps eval] in *. repeat autounfold.
+      autorewrite with uncps push_id push_basesystem_eval.
+      apply small_compact.
+    Qed.
+
     (* TODO : move to tuple *)
     Lemma from_list_tl {A n} (ls : list A) H H':
       from_list n (List.tl ls) H = tl (from_list (S n) ls H').
@@ -990,6 +997,9 @@ Section API.
              | _ => progress (intros; cbv [divmod_cps divmod eval]; repeat autounfold)
              | _ => progress autorewrite with uncps push_id cancel_pair push_basesystem_eval
              end.
+      rewrite (subst_append p) at 2.
+      rewrite B.Positional.eval_step.
+      rewrite uweight_0.
     Admitted.
 
     Lemma eval_mod n p : small p -> snd (@divmod n p) = eval p mod bound.
