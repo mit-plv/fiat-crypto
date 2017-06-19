@@ -682,7 +682,7 @@ Section UniformWeight.
     cbv [uweight]. rewrite <-Z.pow_sub_r by (rewrite ?Nat2Z.inj_succ; omega).
     apply Z.lt_gt, Z.pow_pos_nonneg; rewrite ?Nat2Z.inj_succ; omega.
   Qed.
-    
+
 End UniformWeight.
 
 Section API.
@@ -753,7 +753,7 @@ Section API.
 
   End CPSProofs.
   Hint Rewrite join0_id divmod_id drop_high_id scmul_id add_id : uncps.
-  
+
   Section Proofs.
 
     Definition eval {n} (p : T n) : Z :=
@@ -766,7 +766,7 @@ Section API.
     Lemma In_left_hd n (p : Z^S n):
       In (left_hd p) (to_list _ p).
     Admitted.
-    
+
     Lemma eval_small n (p : T n) (Hsmall : small p) :
       0 <= eval p < uweight bound n.
     Proof.
@@ -776,7 +776,7 @@ Section API.
              | _ => progress autorewrite with push_basesystem_eval
              | _ => rewrite Z.pow_0_r
              | _ => specialize (IHn (left_tl p))
-             | _ => 
+             | _ =>
                let H := fresh "H" in
                match type of IHn with
                  ?P -> _ => assert P as H by auto using In_to_list_left_tl;
@@ -789,7 +789,7 @@ Section API.
                     reflexivity)
              | _ => omega
              end.
-        
+
         specialize (Hsmall _ (In_left_hd _ p)).
         split; [Z.zero_bounds; omega |].
         apply Z.lt_le_trans with (m:=bound^Z.of_nat n * (left_hd p+1)).
@@ -797,7 +797,7 @@ Section API.
           apply Z.add_le_lt_mono; omega. }
         { apply Z.mul_le_mono_nonneg; omega. }
     Qed.
-          
+
     Lemma eval_zero n : eval (@zero n) = 0.
     Proof.
       cbv [eval zero].
@@ -832,7 +832,7 @@ Section API.
       pose proof Z.add_get_carry_full_mod;
       pose proof Z.mul_split_div; pose proof Z.mul_split_mod;
       pose proof div_correct; pose proof modulo_correct.
-    
+
     Lemma eval_add_nz n m pred_nm p q :
       pred_nm <> 0%nat ->
       eval (@add n m pred_nm p q) = eval p + eval q.
@@ -973,7 +973,7 @@ Section API.
       cbv [drop_high drop_high_cps].
       rewrite Tuple.left_tl_cps_correct, push_id.
       apply small_left_tl.
-    Qed. 
+    Qed.
 
     Lemma eval_scmul n a v : small v -> 0 <= a < bound ->
       eval (@scmul n a v) = a * eval v.
