@@ -58,24 +58,18 @@ Section WordByWordMontgomery.
     subst R; destruct (Z.pos r ^ Z.of_nat R_numlimbs) eqn:?; [ | reflexivity | ];
       lia.
   Qed.
+  Local Lemma small_add : forall n a b, small a -> small b -> small (@add n a b).
+  Proof.
+    intros; apply Saturated.small_add; auto; lia.
+  Qed.
+  Local Lemma small_add' : forall n a b, small a -> small b -> small (@add' n a b).
+  Proof.
+    intros; apply Saturated.small_add; auto; lia.
+  Qed.
 
 
   (*****************************************************************************************)
   (** TODO(jadep) FIXME: Fill these in, replacing [Axiom] with [Local Notation] *)
-  Local Lemma small_add : forall n a b, small a -> small b -> small (@add n a b).
-  Proof.
-    intros; apply Saturated.small_add; auto; try lia.
-    cbv [uweight].
-    rewrite ?Znat.Nat2Z.inj_succ, ?Z.pow_succ_r by lia.
-    try nia.
-  Admitted.
-  Local Lemma small_add' : forall n a b, small a -> small b -> small (@add' n a b).
-  Proof.
-    intros; apply Saturated.small_add; auto; try lia.
-    (*cbv [uweight].
-    rewrite !Znat.Nat2Z.inj_succ, !Z.pow_succ_r by lia.
-    try nia.*)
-  Admitted.
   Local Notation conditional_subtract_cps := (@drop_high_cps R_numlimbs).
   (*Axiom conditional_subtract_cps : T (S R_numlimbs) -> forall {cpsT}, (T R_numlimbs -> cpsT) -> cpsT *)(* computes [arg - N] if [R <= arg], and drops high bit *)
   Local Notation conditional_subtract := conditional_subtract.
