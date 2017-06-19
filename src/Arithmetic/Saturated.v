@@ -879,6 +879,13 @@ Section API.
       (to_list _ (left_append x p)) = to_list n p ++ x :: nil.
     Admitted.
 
+    Lemma uweight_le_mono n m : (n <= m)%nat ->
+      uweight bound n <= uweight bound m.
+    Admitted.
+
+    Lemma uweight_succ n : uweight bound (S n) = bound * uweight bound n.
+    Admitted.
+
     Local Definition compact {n} := Columns.compact (n:=n) (add_get_carry:=Z.add_get_carry_full) (div:=div) (modulo:=modulo) (uweight bound).
     Local Definition compact_digit := Columns.compact_digit (add_get_carry:=Z.add_get_carry_full) (div:=div) (modulo:=modulo) (uweight bound).
     Lemma small_compact {n} (p:(list Z)^n) : small (snd (compact p)).
@@ -910,17 +917,15 @@ Section API.
         intros x H; apply in_app_or in H; destruct H;
           [solve[auto]| cbv [In] in H; destruct H;
                         [|exfalso; assumption] ].
-        subst x. cbv [compact_digit uweight].
+        subst x. cbv [compact_digit].
         rewrite Columns.compact_digit_mod by assumption.
-        rewrite !Nat2Z.inj_succ, <-Z.pow_sub_r by omega.
-        match goal with |- context [Z.succ ?a - ?a] =>
-                        replace (Z.succ a - a) with 1 by omega end.
-        rewrite Z.pow_1_r.
+        rewrite !uweight_succ, Z.div_mul by
+            (apply Z.neq_mul_0; split; auto; omega).
         apply Z.mod_pos_bound, Z.gt_lt, bound_pos. }
     Qed.
 
     Lemma small_add n m pred_nm a b :
-      (uweight bound n + uweight bound m <= uweight bound pred_nm) ->
+      (2 < bound) -> (max n m < pred_nm)%nat ->
       small a -> small b -> small (@add n m pred_nm a b).
     Proof.
       intros. pose_all.
@@ -937,7 +942,14 @@ Section API.
                H : small ?x |- _ => apply eval_small in H; cbv [eval] in H
              end.
       destruct pred_nm; autorewrite with push_basesystem_eval;
-       rewrite Z.div_small; omega.
+        rewrite Z.div_small; try split; try omega.
+      apply Z.le_lt_trans with (m:=uweight bound n + uweight bound m);
+          [omega|].
+      apply Z.le_lt_trans with (m:=uweight bound (max n m) + uweight bound (max n m)); auto using Z.add_le_mono, uweight_le_mono, Max.le_max_l, Max.le_max_r.
+      rewrite uweight_succ, Z.add_diag.
+      apply Z.lt_le_trans with (m:=bound * uweight bound (max n m));
+        [apply Z.mul_lt_mono_pos_r| apply Z.mul_le_mono_pos_l];
+        auto using Z.gt_lt. apply uweight_le_mono; omega.
     Qed.
 
     Lemma small_left_tl n (v:T (S n)) : small v -> small (left_tl v).
