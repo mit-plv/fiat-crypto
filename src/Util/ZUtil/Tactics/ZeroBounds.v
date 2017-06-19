@@ -1,5 +1,6 @@
 Require Import Coq.ZArith.ZArith Coq.omega.Omega.
 Require Import Crypto.Util.ZUtil.Tactics.PrimeBound.
+Require Import Crypto.Util.ZUtil.Div.
 Local Open Scope Z_scope.
 
 Module Z.
@@ -9,7 +10,7 @@ Module Z.
     | [ |- 0 <= _ + _] => apply Z.add_nonneg_nonneg
     | [ |- 0 <= _ - _] => apply Z.le_0_sub
     | [ |- 0 <= _ * _] => apply Z.mul_nonneg_nonneg
-    | [ |- 0 <= _ / _] => apply Z.div_pos
+    | [ |- 0 <= _ / _] => apply Z.div_nonneg
     | [ |- 0 <= _ ^ _ ] => apply Z.pow_nonneg
     | [ |- 0 <= Z.shiftr _ _] => apply Z.shiftr_nonneg
     | [ |- 0 <= _ mod _] => apply Z.mod_pos_bound
