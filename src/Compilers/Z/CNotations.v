@@ -40,15 +40,15 @@ Reserved Notation "T0 out ; T1 c_out = '_addcarryx_u64' ( c_in , a , b , & out )
 >> *)
 Reserved Notation "'addcarryx_u32' ( c , a , b )" (format "'addcarryx_u32' ( c ,  a ,  b )").
 Reserved Notation "'addcarryx_u64' ( c , a , b )" (format "'addcarryx_u64' ( c ,  a ,  b )").
-Reserved Notation "'addcarryx_u128' ( c , a , b )" (format "'addcarryx_u64' ( c ,  a ,  b )").
+Reserved Notation "'addcarryx_u128' ( c , a , b )" (format "'addcarryx_u128' ( c ,  a ,  b )").
 Reserved Notation "'addcarryx_u51' ( c , a , b )" (format "'addcarryx_u51' ( c ,  a ,  b )"). (* temporary for testing *)
 Reserved Notation "'subborrow_u32' ( c , a , b )" (format "'subborrow_u32' ( c ,  a ,  b )").
 Reserved Notation "'subborrow_u64' ( c , a , b )" (format "'subborrow_u64' ( c ,  a ,  b )").
-Reserved Notation "'subborrow_u128' ( c , a , b )" (format "'subborrow_u64' ( c ,  a ,  b )").
+Reserved Notation "'subborrow_u128' ( c , a , b )" (format "'subborrow_u128' ( c ,  a ,  b )").
 Reserved Notation "'subborrow_u51' ( c , a , b )" (format "'subborrow_u51' ( c ,  a ,  b )"). (* temporary for testing *)
 Reserved Notation "'mulx_u32' ( a , b )" (format "'mulx_u32' ( a ,  b )").
 Reserved Notation "'mulx_u64' ( a , b )" (format "'mulx_u64' ( a ,  b )").
-Reserved Notation "'mulx_u128' ( a , b )" (format "'mulx_u64' ( a ,  b )").
+Reserved Notation "'mulx_u128' ( a , b )" (format "'mulx_u128' ( a ,  b )").
 
 (* python:
 <<
