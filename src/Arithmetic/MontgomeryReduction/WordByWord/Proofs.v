@@ -21,6 +21,7 @@ Section WordByWordMontgomery.
   Local Notation scmul := (@scmul (Z.pos r)).
   Local Notation eval_zero := (@eval_zero (Z.pos r)).
   Local Notation small_zero := (@small_zero r (Zorder.Zgt_pos_0 _)).
+  Local Notation small_scmul := (fun n a v _ _ _ => @small_scmul r (Zorder.Zgt_pos_0 _) n a v).
   Local Notation eval_join0 := (@eval_zero (Z.pos r) (Zorder.Zgt_pos_0 _)).
   Local Notation eval_div := (@eval_div (Z.pos r) (Zorder.Zgt_pos_0 _)).
   Local Notation eval_mod := (@eval_mod (Z.pos r) (Zorder.Zgt_pos_0 _)).
@@ -87,8 +88,6 @@ Section WordByWordMontgomery.
   (*Axiom conditional_subtract_cps : T (S R_numlimbs) -> forall {cpsT}, (T R_numlimbs -> cpsT) -> cpsT *)(* computes [arg - N] if [R <= arg], and drops high bit *)
   Local Notation conditional_subtract := conditional_subtract.
   Axiom conditional_subtract_cps_id : forall v cpsT f, @conditional_subtract_cps v cpsT f = f (@conditional_subtract _ v).
-  Axiom small_scmul : forall (n : nat) (a : Z) (v : T n),
-      small v -> 0 <= a < Z.pos r -> 0 <= eval v < R -> small (scmul a v).
   Axiom eval_conditional_subtract
     : forall v : T (S R_numlimbs),
       small v ->
