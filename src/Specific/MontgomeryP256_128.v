@@ -16,7 +16,7 @@ Definition m : positive := 2^256-2^224+2^192+2^96-1.
 Definition p256 :=
   Eval vm_compute in
     ((Positional.encode (modulo:=modulo) (div:=div) (n:=sz) wt (Z.pos m))).
-Definition r' := Eval native_compute in Zpow_facts.Zpow_mod (Z.pos r) (Z.pos m - 2) (Z.pos m).
+Definition r' := Eval vm_compute in Zpow_facts.Zpow_mod (Z.pos r) (Z.pos m - 2) (Z.pos m).
 Definition r'_correct := eq_refl : ((Z.pos r * r') mod (Z.pos m) = 1)%Z.
 Definition m' : Z := Eval vm_compute in Option.invert_Some (Z.modinv_fueled 10 (-Z.pos m) (Z.pos r)).
 Definition m'_correct := eq_refl : ((Z.pos m * m') mod (Z.pos r) = (-1) mod Z.pos r)%Z.
@@ -144,17 +144,16 @@ Definition montgomery_to_F (v : Z) : F m
 Definition mulmod_256 : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
                         | forall (A : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) A)
                                  (B : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) B),
-                            Saturated.small (Z.pos r) (f A B)
-                            /\ (let eval := Saturated.eval (Z.pos r) in
-                                montgomery_to_F (eval (f A B))
-                                = (montgomery_to_F (eval A) * montgomery_to_F (eval B))%F) }.
+                            let eval := Saturated.eval (Z.pos r) in
+                            montgomery_to_F (eval (f A B))
+                            = (montgomery_to_F (eval A) * montgomery_to_F (eval B))%F }.
 Proof.
   exists (proj1_sig mulmod_256'').
   abstract (
       intros A Asm B Bsm;
       pose proof (proj2_sig mulmod_256'' A B Asm Bsm) as H;
       cbv zeta in *;
-      split; try solve [ destruct_head'_and; assumption ];
+      (*split; try solve [ destruct_head'_and; assumption ];*)
       rewrite ModularArithmeticTheorems.F.eq_of_Z_iff in H;
       unfold montgomery_to_F;
       destruct H as [H1 [H2 H3]];
