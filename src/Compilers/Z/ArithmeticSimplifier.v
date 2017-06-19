@@ -5,6 +5,7 @@ Require Import Crypto.Compilers.ExprInversion.
 Require Import Crypto.Compilers.Rewriter.
 Require Import Crypto.Compilers.Z.Syntax.
 Require Import Crypto.Compilers.Z.Syntax.Equality.
+Require Import Crypto.Util.ZUtil.Definitions.
 
 Section language.
   Context (convert_adc_to_sbb : bool).
@@ -239,6 +240,41 @@ Section language.
                    => e
                  | _
                    => Op opc args
+                 end
+         | MulSplit bitwidth (TWord bw1 as T1) (TWord bw2 as T2) (TWord bwout1 as Tout1) (TWord bwout2 as Tout2) as opc
+           => fun args
+              => let sz1 := (2^Z.of_nat (2^bw1))%Z in
+                 let sz2 := (2^Z.of_nat (2^bw2))%Z in
+                 let szout1 := (2^Z.of_nat (2^bwout1))%Z in
+                 let szout2 := (2^Z.of_nat (2^bwout2))%Z in
+                 match interp_as_expr_or_const args with
+                 | Some (const_of l, const_of r)
+                   => let '(a, b) := Z.mul_split_at_bitwidth bitwidth (Z.max 0 l mod sz1) (Z.max 0 r mod sz2) in
+                      Pair (Op (OpConst (a mod szout1)%Z) TT)
+                           (Op (OpConst (b mod szout2)%Z) TT)
+                 | Some (const_of v, gen_expr e)
+                   => let v' := (Z.max 0 v mod sz1)%Z in
+                      if (v' =? 0)%Z
+                      then Pair (Op (OpConst 0%Z) TT) (Op (OpConst 0%Z) TT)
+                      else if ((v' =? 1) && (2^Z.of_nat (2^bw2) <=? 2^bitwidth))%Z%bool
+                           then match base_type_eq_semidec_transparent T2 Tout1 with
+                                | Some pf => Pair (eq_rect _ (fun t => exprf (Tbase t)) e _ pf)
+                                                  (Op (OpConst 0%Z) TT)
+                                | None => Op opc args
+                                end
+                           else Op opc args
+                 | Some (gen_expr e, const_of v)
+                   => let v' := (Z.max 0 v mod sz2)%Z in
+                      if (v' =? 0)%Z
+                      then Pair (Op (OpConst 0%Z) TT) (Op (OpConst 0%Z) TT)
+                      else if ((v' =? 1) && (2^Z.of_nat (2^bw1) <=? 2^bitwidth))%Z%bool
+                           then match base_type_eq_semidec_transparent T1 Tout1 with
+                                | Some pf => Pair (eq_rect _ (fun t => exprf (Tbase t)) e _ pf)
+                                                  (Op (OpConst 0%Z) TT)
+                                | None => Op opc args
+                                end
+                           else Op opc args
+                 | _ => Op opc args
                  end
          | IdWithAlt (TWord _ as T1) _ (TWord _ as Tout) as opc
            => fun args
