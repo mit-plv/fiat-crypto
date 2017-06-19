@@ -1,6 +1,6 @@
 Require Coq.Logic.Eqdep_dec.
 Require Import Coq.Numbers.Natural.Peano.NPeano Coq.omega.Omega.
-Require Import Coq.micromega.Psatz.
+Require Import Coq.micromega.Lia.
 Import Nat.
 
 Scheme Equality for nat.
