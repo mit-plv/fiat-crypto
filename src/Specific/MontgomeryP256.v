@@ -22,10 +22,6 @@ Proof.
   eapply (lift2_sig (fun A B c => c = (redc (r:=r)(R_numlimbs:=sz) p256 A B 1)
                            )); eexists.
   cbv -[Definitions.Z.add_get_carry Definitions.Z.mul_split_at_bitwidth runtime_add runtime_mul Let_In].
-  (* TODO: is there a better way to do this?  Maybe make runtime_mul_split_at_bitwidth? *)
-  cbv [Definitions.Z.mul_split_at_bitwidth].
-  change Z.mul with runtime_mul; change Z.shiftr with runtime_shr; change Z.land with runtime_and.
-  cbv -[Definitions.Z.add_get_carry runtime_add runtime_mul runtime_and runtime_shr Let_In]. (* unfold Z.ones *)
   (*
   cbv [
       r wt sz p256
