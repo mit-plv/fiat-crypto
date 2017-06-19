@@ -6,27 +6,29 @@ Interp-η
  uint128_t x12, uint128_t x13 = mulx_u128(x5, x6);
  uint128_t x15, uint8_t x16 = addcarryx_u128(0x0, x10, x12);
  uint128_t x18, uint8_t _ = addcarryx_u128(0x0, x16, x13);
- uint128_t x21, uint128_t x22 = mulx_u128(x9, 0xffffffffffffffffffffffffL);
- uint128_t x24, uint128_t x25 = mulx_u128(x9, 0xffffffff000000010000000000000000L);
- uint128_t x27, uint8_t x28 = addcarryx_u128(0x0, x22, x24);
- uint128_t x30, uint8_t _ = addcarryx_u128(0x0, x28, x25);
- uint128_t _, uint8_t x34 = addcarryx_u128(0x0, x9, x21);
- uint128_t x36, uint8_t x37 = addcarryx_u128(x34, x15, x27);
- uint128_t x39, uint8_t x40 = addcarryx_u128(x37, x18, x30);
- uint128_t x42, uint128_t x43 = mulx_u128(x4, x7);
- uint128_t x45, uint128_t x46 = mulx_u128(x4, x6);
- uint128_t x48, uint8_t x49 = addcarryx_u128(0x0, x43, x45);
- uint128_t x51, uint8_t _ = addcarryx_u128(0x0, x49, x46);
- uint128_t x54, uint8_t x55 = addcarryx_u128(0x0, x36, x42);
- uint128_t x57, uint8_t x58 = addcarryx_u128(x55, x39, x48);
- uint128_t x60, uint8_t _ = addcarryx_u128(x58, x40, x51);
- uint128_t x63, uint128_t x64 = mulx_u128(x54, 0xffffffffffffffffffffffffL);
- uint128_t x66, uint128_t x67 = mulx_u128(x54, 0xffffffff000000010000000000000000L);
- uint128_t x69, uint8_t x70 = addcarryx_u128(0x0, x64, x66);
- uint128_t x72, uint8_t _ = addcarryx_u128(0x0, x70, x67);
- uint128_t _, uint8_t x76 = addcarryx_u128(0x0, x54, x63);
- uint128_t x78, uint8_t x79 = addcarryx_u128(x76, x57, x69);
- uint128_t x81, uint8_t _ = addcarryx_u128(x79, x60, x72);
- (Return x81, Return x78))
+ uint128_t x21, uint128_t _ = mulx_u128(x9, 0x1000000000000000000000001L);
+ uint128_t x24, uint128_t x25 = mulx_u128(x21, 0xffffffffffffffffffffffffL);
+ uint128_t x27, uint128_t x28 = mulx_u128(x21, 0xffffffff000000010000000000000000L);
+ uint128_t x30, uint8_t x31 = addcarryx_u128(0x0, x25, x27);
+ uint128_t x33, uint8_t _ = addcarryx_u128(0x0, x31, x28);
+ uint128_t _, uint8_t x37 = addcarryx_u128(0x0, x9, x24);
+ uint128_t x39, uint8_t x40 = addcarryx_u128(x37, x15, x30);
+ uint128_t x42, uint8_t x43 = addcarryx_u128(x40, x18, x33);
+ uint128_t x45, uint128_t x46 = mulx_u128(x4, x7);
+ uint128_t x48, uint128_t x49 = mulx_u128(x4, x6);
+ uint128_t x51, uint8_t x52 = addcarryx_u128(0x0, x46, x48);
+ uint128_t x54, uint8_t _ = addcarryx_u128(0x0, x52, x49);
+ uint128_t x57, uint8_t x58 = addcarryx_u128(0x0, x39, x45);
+ uint128_t x60, uint8_t x61 = addcarryx_u128(x58, x42, x51);
+ uint128_t x63, uint8_t _ = addcarryx_u128(x61, x43, x54);
+ uint128_t x66, uint128_t _ = mulx_u128(x57, 0x1000000000000000000000001L);
+ uint128_t x69, uint128_t x70 = mulx_u128(x66, 0xffffffffffffffffffffffffL);
+ uint128_t x72, uint128_t x73 = mulx_u128(x66, 0xffffffff000000010000000000000000L);
+ uint128_t x75, uint8_t x76 = addcarryx_u128(0x0, x70, x72);
+ uint128_t x78, uint8_t _ = addcarryx_u128(0x0, x76, x73);
+ uint128_t _, uint8_t x82 = addcarryx_u128(0x0, x57, x69);
+ uint128_t x84, uint8_t x85 = addcarryx_u128(x82, x60, x75);
+ uint128_t x87, uint8_t _ = addcarryx_u128(x85, x63, x78);
+ (Return x87, Return x84))
 (x, x0)%core
      : word128 * word128 → word128 * word128 → ReturnType (uint128_t * uint128_t)
