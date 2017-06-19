@@ -938,7 +938,7 @@ Section API.
       let H := fresh "H" in intros x H; apply in_app_or in H;
                               destruct H as [H | H];
                               [apply (small_compact _ _ H)
-                              |destruct H; [|tauto] ].
+                              |destruct H; [|exfalso; assumption] ].
       subst x.
       rewrite Columns.compact_div by assumption.
       repeat match goal with
