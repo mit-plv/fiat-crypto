@@ -98,7 +98,7 @@ Z.of_nat *)
 Defined.
 
 
-Definition mulmod_256 : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
+Definition mulmod_256'' : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
                         | forall (A B : Tuple.tuple Z sz),
                             Saturated.small (Z.pos r) A -> Saturated.small (Z.pos r) B ->
                             let eval := Saturated.eval (Z.pos r) in
@@ -123,6 +123,35 @@ Proof.
           | [ |- Saturated.eval (Z.pos r) p256 <> 0%Z ]
             => vm_compute; lia
           end
+    ).
+Defined.
+
+Import ModularArithmetic.
+
+(** TODO: MOVE ME *)
+Definition montgomery_to_F (v : Z) : F m
+  := (F.of_Z m v * F.of_Z m (r'^Z.of_nat sz)%Z)%F.
+
+Definition mulmod_256 : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
+                        | forall (A : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) A)
+                                 (B : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) B),
+                            Saturated.small (Z.pos r) (f A B)
+                            /\ (let eval := Saturated.eval (Z.pos r) in
+                                montgomery_to_F (eval (f A B))
+                                = (montgomery_to_F (eval A) * montgomery_to_F (eval B))%F) }.
+Proof.
+  exists (proj1_sig mulmod_256'').
+  abstract (
+      intros A Asm B Bsm;
+      pose proof (proj2_sig mulmod_256'' A B Asm Bsm) as H;
+      cbv zeta in *;
+      split; try solve [ destruct_head'_and; assumption ];
+      rewrite ModularArithmeticTheorems.F.eq_of_Z_iff in H;
+      unfold montgomery_to_F;
+      destruct H as [H1 [H2 H3]];
+      rewrite H3;
+      rewrite <- !ModularArithmeticTheorems.F.of_Z_mul;
+      f_equal; nia
     ).
 Defined.
 
