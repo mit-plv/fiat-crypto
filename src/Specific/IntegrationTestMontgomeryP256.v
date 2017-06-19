@@ -11,6 +11,7 @@ Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Util.Tuple Crypto.Util.Sigma Crypto.Util.Sigma.MapProjections Crypto.Util.Sigma.Lift Crypto.Util.Notations Crypto.Util.ZRange Crypto.Util.BoundedWord.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.MoveLetIn.
+Require Import Crypto.Util.Tactics.DestructHead.
 Import ListNotations.
 
 Require Import Crypto.Specific.IntegrationTestTemporaryMiscCommon.
@@ -30,35 +31,30 @@ Section BoundedField25p5.
   Let feW : Type := tuple (wordT lgbitwidth) sz.
   Let feBW : Type := BoundedWord sz bitwidth bounds.
   Let phi : feBW -> F m :=
-    fun x => B.Positional.Fdecode wt (BoundedWordToZ _ _ _ x).
+    fun x => montgomery_to_F (Saturated.eval (Z.pos r) (BoundedWordToZ _ _ _ x)).
+  Axiom small_is_bounded_by : forall sz r v, Crypto.Util.ZRange.is_bounded_by None (Tuple.repeat {| lower := 0 ; upper := r - 1 |} sz) v -> Saturated.small r v.
 
   (* TODO : change this to field once field isomorphism happens *)
-  Definition mulmod_256 : { f:feBW -> feBW -> feBW
-                          | forall A B,
-                              BoundedWordToZ _ _ _ (f A B) =
-                              redc (r:=r)(R_numlimbs:=sz) p256 (BoundedWordToZ _ _ _ A) (BoundedWordToZ _ _ _ B) m'
-                          }.
+  Definition mul
+    : { mul : feBW -> feBW -> feBW
+      | forall A B, phi (mul A B) = F.mul (phi A) (phi B) }.
   Proof.
-    (*Definition mulmod :
-    { mulmod : feBW -> feBW -> feBW
-    | forall a b, phi (mulmod a b) = F.mul (phi a) (phi b) }.
-  Proof.*)
     lazymatch goal with
     | [ |- { f | forall a b, ?phi (f a b) = @?rhs a b } ]
       => apply lift2_sig with (P:=fun a b f => phi f = rhs a b)
     end.
     intros a b.
     eexists_sig_etransitivity. all:cbv [phi].
-    rewrite <- (proj2_sig mulmod_256').
+    rewrite <- (proj2_sig mulmod_256) by (apply small_is_bounded_by; destruct_head' feBW; assumption).
     (*symmetry; rewrite <- (proj2_sig carry_sig); symmetry.
     set (carry_mulZ := fun a b => proj1_sig carry_sig (proj1_sig mul_sig a b)).
     change (proj1_sig carry_sig (proj1_sig mul_sig ?a ?b)) with (carry_mulZ a b).*)
-    set (mulmodZ := proj1_sig mulmod_256').
+    set (mulmodZ := proj1_sig mulmod_256).
     context_to_dlet_in_rhs mulmodZ; cbv [mulmodZ].
-    cbv beta iota delta [mulmod_256' proj1_sig Saturated.T lift2_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz].
+    cbv beta iota delta [mulmod_256 mulmod_256'' mulmod_256' proj1_sig Saturated.T lift2_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz].
     reflexivity.
     sig_dlet_in_rhs_to_context.
-    (*apply (fun f => proj2_sig_map (fun THIS_NAME_MUST_NOT_BE_UNDERSCORE_TO_WORK_AROUND_CONSTR_MATCHING_ANAOMLIES___BUT_NOTE_THAT_IF_THIS_NAME_IS_LOWERCASE_A___THEN_REIFICATION_STACK_OVERFLOWS___AND_I_HAVE_NO_IDEA_WHATS_GOING_ON p => f_equal f p)).*)
+    do 2 apply (fun f => proj2_sig_map (fun THIS_NAME_MUST_NOT_BE_UNDERSCORE_TO_WORK_AROUND_CONSTR_MATCHING_ANAOMLIES___BUT_NOTE_THAT_IF_THIS_NAME_IS_LOWERCASE_A___THEN_REIFICATION_STACK_OVERFLOWS___AND_I_HAVE_NO_IDEA_WHATS_GOING_ON p => f_equal f p)).
     (* jgross start here! *)
     Set Ltac Profiling.
     Time refine_reflectively_with_uint8_with default. (* Finished transaction in 212.693 secs (212.576u,0.184s) (successful) *)
@@ -108,3 +104,5 @@ Section BoundedField25p5.
   Time Defined. (* Finished transaction in 21.291 secs (21.231u,0.032s) (successful) *)
 
 Time End BoundedField25p5. (* Finished transaction in 14.666 secs (14.556u,0.111s) (successful) *)
+
+Print Assumptions mul.
