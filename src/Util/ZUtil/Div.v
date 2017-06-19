@@ -115,4 +115,5 @@ Module Z.
     destruct (Z_zerop b); subst; rewrite ?Zdiv_0_r; [ reflexivity | ].
     intros; apply Z.div_pos; omega.
   Qed.
+  Hint Resolve div_nonneg : zarith.
 End Z.
