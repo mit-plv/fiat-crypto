@@ -339,6 +339,7 @@ src/Util/ZUtil/Div.v
 src/Util/ZUtil/EquivModulo.v
 src/Util/ZUtil/Hints.v
 src/Util/ZUtil/Land.v
+src/Util/ZUtil/ModInv.v
 src/Util/ZUtil/Modulo.v
 src/Util/ZUtil/Morphisms.v
 src/Util/ZUtil/MulSplit.v
