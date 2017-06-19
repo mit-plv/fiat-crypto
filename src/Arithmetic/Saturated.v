@@ -1,3 +1,4 @@
+Require Import Coq.micromega.Lia.
 Require Import Coq.Init.Nat.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
@@ -9,10 +10,12 @@ Require Import Crypto.Util.LetIn Crypto.Util.CPSUtil.
 Require Import Crypto.Util.Tuple Crypto.Util.ListUtil.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Decidable Crypto.Util.ZUtil.
+Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.AddGetCarry.
 Require Import Crypto.Util.ZUtil.Zselect.
 Require Import Crypto.Util.ZUtil.MulSplit.
+Require Import Crypto.Util.Tactics.SpecializeBy.
 Local Notation "A ^ n" := (tuple A n) : type_scope.
 
 (***
@@ -925,7 +928,7 @@ Section API.
     Qed.
 
     Lemma small_add n m pred_nm a b :
-      (2 < bound) -> (max n m < pred_nm)%nat ->
+      (2 <= bound) -> (max n m <= pred_nm)%nat ->
       small a -> small b -> small (@add n m pred_nm a b).
     Proof.
       intros. pose_all.
@@ -941,15 +944,25 @@ Section API.
       repeat match goal with
                H : small ?x |- _ => apply eval_small in H; cbv [eval] in H
              end.
-      destruct pred_nm; autorewrite with push_basesystem_eval;
-        rewrite Z.div_small; try split; try omega.
-      apply Z.le_lt_trans with (m:=uweight bound n + uweight bound m);
+      destruct pred_nm as [|pred_pred_nm]; autorewrite with push_basesystem_eval;
+        repeat match goal with
+               | [ H : (max ?x ?y <= 0)%nat |- _ ]
+                 => assert (x = 0%nat) by omega *;
+                      assert (y = 0%nat) by omega *;
+                      clear H
+               | _ => progress subst
+               end.
+      { destruct bound; cbv -[Z.le Z.lt]; lia. }
+      split; [ solve [ unfold uweight in *; Z.zero_bounds ] | ].
+      apply Zdiv_lt_upper_bound; [ solve [ unfold uweight in *; Z.zero_bounds ] | ].
+      apply Z.lt_le_trans with (m:=uweight bound n + uweight bound m);
           [omega|].
-      apply Z.le_lt_trans with (m:=uweight bound (max n m) + uweight bound (max n m)); auto using Z.add_le_mono, uweight_le_mono, Max.le_max_l, Max.le_max_r.
-      rewrite uweight_succ, Z.add_diag.
-      apply Z.lt_le_trans with (m:=bound * uweight bound (max n m));
-        [apply Z.mul_lt_mono_pos_r| apply Z.mul_le_mono_pos_l];
-        auto using Z.gt_lt. apply uweight_le_mono; omega.
+      apply Z.le_trans with (m:=uweight bound (max n m) + uweight bound (max n m)); auto using Z.add_le_mono, uweight_le_mono, Max.le_max_l, Max.le_max_r.
+      rewrite Z.add_diag.
+      pose proof (uweight_le_mono (max n m) (S pred_pred_nm)).
+      specialize_by_assumption.
+      apply Z.mul_le_mono_nonneg; try omega.
+      apply Max.max_case_strong; omega.
     Qed.
 
     Lemma small_left_tl n (v:T (S n)) : small v -> small (left_tl v).
