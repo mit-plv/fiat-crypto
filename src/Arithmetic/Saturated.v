@@ -737,12 +737,12 @@ Section API.
       B.Positional.select_cps mask (left_hd p) q
         (fun qq => Columns.unbalanced_sub_cps (n3:=n) (uweight bound) p qq
         (* We can safely discard the carry, since our preconditions tell us
-           that, whether or not the subtraction happened, n limbs is 
+           that, whether or not the subtraction happened, n limbs is
            sufficient to store the result. *)
         (fun carry_result => f (snd carry_result))).
 
   Definition conditional_sub {n} mask p q := @conditional_sub_cps n mask p q _ id.
-    
+
   Hint Opaque join0 divmod drop_high scmul add conditional_sub : uncps.
 
   Section CPSProofs.
@@ -1048,7 +1048,7 @@ Section API.
              | _ => assert (p = 0) by omega; subst p; break_match; ring
              end.
     Qed.
-      
+
     Lemma small_conditional_sub n mask (p:T (S n)) (q:T n)
            (psmall : small p) (qsmall : small q)
           (Hmask : Tuple.map (Z.land mask) q = q):
@@ -1124,7 +1124,7 @@ Section API.
 
   End Proofs.
 End API.
-Hint Rewrite join0_id divmod_id drop_high_id scmul_id add_id : uncps.
+Hint Rewrite join0_id divmod_id drop_high_id scmul_id add_id conditional_sub_id : uncps.
 
 (*
 (* Just some pretty-printing *)
