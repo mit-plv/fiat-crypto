@@ -181,7 +181,7 @@ Section with_round_up_list.
     all:autorewrite with reflective_interp.
     (** Now handle word-size selection *)
     all:(eapply MapCastCorrect_eq; [ | eassumption | eassumption | assumption | .. ];
-         [ solve [ auto 60 with wf ] | reflexivity | ]).
+         [ solve_wf_side_condition | reflexivity | ]).
     (** Now handle all the transformations that come before the word-size selection *)
     all:repeat autorewrite with reflective_interp; reflexivity.
   Qed.
