@@ -20,7 +20,7 @@ Interp-η
  uint128_t x54, uint8_t _ = addcarryx_u128(0x0, x52, x49);
  uint128_t x57, uint8_t x58 = addcarryx_u128(0x0, x39, x45);
  uint128_t x60, uint8_t x61 = addcarryx_u128(x58, x42, x51);
- uint128_t x63, uint8_t _ = addcarryx_u128(x61, x43, x54);
+ uint128_t x63, uint8_t x64 = addcarryx_u128(x61, x43, x54);
  uint128_t x66, uint128_t _ = mulx_u128(x57, 0x1000000000000000000000001L);
  uint128_t x69, uint128_t x70 = mulx_u128(x66, 0xffffffffffffffffffffffffL);
  uint128_t x72, uint128_t x73 = mulx_u128(x66, 0xffffffff000000010000000000000000L);
@@ -28,7 +28,14 @@ Interp-η
  uint128_t x78, uint8_t _ = addcarryx_u128(0x0, x76, x73);
  uint128_t _, uint8_t x82 = addcarryx_u128(0x0, x57, x69);
  uint128_t x84, uint8_t x85 = addcarryx_u128(x82, x60, x75);
- uint128_t x87, uint8_t _ = addcarryx_u128(x85, x63, x78);
- (Return x87, Return x84))
+ uint128_t x87, uint8_t x88 = addcarryx_u128(x85, x63, x78);
+ uint8_t x89 = x88 + x64;
+ uint128_t x90 = (uint128_t) (x89 == 0 ? 0x0 : 0xffffffffffffffffffffffffffffffffL);
+ uint128_t x92, uint8_t x93 = subborrow_u128(0x0, x84, x90 & 0xffffffffffffffffffffffffL);
+ ℤ x94 = 0x0 -ℤ x93;
+ uint128_t x96, ℤ _ = Op (Syntax.SubWithGetBorrow 128 (Syntax.TWord 3) (Syntax.TWord 8) (Syntax.TWord 7) (Syntax.TWord 7) Syntax.TZ) (0x0, Const 340282366920938463463374607431768211456 * x89, x90 & 0xffffffff000000010000000000000000L);
+ uint128_t x99, uint8_t _ = addcarryx_u128(0x0, x87, x96);
+ uint128_t x102, ℤ _ = Op (Syntax.AddWithGetCarry 128 (Syntax.TWord 3) Syntax.TZ (Syntax.TWord 7) (Syntax.TWord 7) Syntax.TZ) (0x0, Return x94, Return x99);
+ (Return x102, Return x92))
 (x, x0)%core
      : word128 * word128 → word128 * word128 → ReturnType (uint128_t * uint128_t)

@@ -86,7 +86,7 @@ Interp-η
  uint64_t x256, uint8_t x257 = addcarryx_u64(x254, x219, x241);
  uint64_t x259, uint8_t x260 = addcarryx_u64(x257, x222, x244);
  uint64_t x262, uint8_t x263 = addcarryx_u64(x260, x225, x247);
- uint64_t x265, uint8_t _ = addcarryx_u64(x263, x227, x250);
+ uint64_t x265, uint8_t x266 = addcarryx_u64(x263, x227, x250);
  uint64_t x268, uint64_t x269 = mulx_u64(x253, 0xffffffffffffffffL);
  uint64_t x271, uint64_t x272 = mulx_u64(x253, 0xffffffff);
  uint64_t x274, uint64_t x275 = mulx_u64(x253, 0xffffffff00000001L);
@@ -98,7 +98,18 @@ Interp-η
  uint64_t x292, uint8_t x293 = addcarryx_u64(x290, x256, x277);
  uint64_t x295, uint8_t x296 = addcarryx_u64(x293, x259, x280);
  uint64_t x298, uint8_t x299 = addcarryx_u64(x296, x262, x283);
- uint64_t x301, uint8_t _ = addcarryx_u64(x299, x265, x286);
- (Return x301, Return x298, Return x295, Return x292))
+ uint64_t x301, uint8_t x302 = addcarryx_u64(x299, x265, x286);
+ uint8_t x303 = x302 + x266;
+ uint64_t x304 = (uint64_t) (x303 == 0 ? 0x0 : 0xffffffffffffffffL);
+ uint64_t x306, uint8_t x307 = subborrow_u64(0x0, x292, x304 & 0xffffffffffffffffL);
+ ℤ x308 = 0x0 -ℤ x307;
+ uint64_t x310, uint8_t x311 = subborrow_u64(0x0, x295, x304 & 0xffffffff);
+ uint64_t x313, ℤ x314 = Op (Syntax.AddWithGetCarry 64 (Syntax.TWord 3) Syntax.TZ (Syntax.TWord 6) (Syntax.TWord 6) Syntax.TZ) (0x0, Return x308, Return x310);
+ ℤ x315 = x314 -ℤ x311;
+ uint64_t x317, ℤ x318 = Op (Syntax.AddWithGetCarry 64 Syntax.TZ (Syntax.TWord 6) (Syntax.TWord 3) (Syntax.TWord 6) Syntax.TZ) (Return x315, Return x298, 0x0);
+ uint64_t x320, ℤ _ = Op (Syntax.SubWithGetBorrow 64 (Syntax.TWord 3) (Syntax.TWord 7) (Syntax.TWord 6) (Syntax.TWord 6) Syntax.TZ) (0x0, 0x10000000000000000L * x303, x304 & 0xffffffff00000001L);
+ uint64_t x323, uint8_t _ = addcarryx_u64(0x0, x301, x320);
+ uint64_t x326, ℤ _ = Op (Syntax.AddWithGetCarry 64 (Syntax.TWord 3) Syntax.TZ (Syntax.TWord 6) (Syntax.TWord 6) Syntax.TZ) (0x0, Return x318, Return x323);
+ (Return x326, Return x317, Return x313, Return x306))
 (x, x0)%core
      : word64 * word64 * word64 * word64 → word64 * word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t * uint64_t)
