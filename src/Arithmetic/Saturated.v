@@ -1052,7 +1052,7 @@ Section API.
     Lemma small_conditional_sub n mask (p:T (S n)) (q:T n)
            (psmall : small p) (qsmall : small q)
           (Hmask : Tuple.map (Z.land mask) q = q):
-      small p -> 0 <= eval p < eval q + (uweight bound n) ->
+      0 <= eval p < eval q + (uweight bound n) ->
       small (conditional_sub mask p q).
     Admitted.
 
