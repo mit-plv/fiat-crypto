@@ -43,6 +43,7 @@ Section WordByWordMontgomery.
           (small_N : small N)
           (small_B : small B)
           (N_nonzero : eval N <> 0)
+          (N_mask : Tuple.map (Z.land (Z.pos r - 1)) N = N)
           (k_correct : k * eval N mod r = (-1) mod r).
   Let R : positive := match (Z.pos r ^ Z.of_nat R_numlimbs)%Z with
                       | Z.pos R => R
@@ -67,24 +68,16 @@ Section WordByWordMontgomery.
     intros; apply Saturated.small_add; auto; lia.
   Qed.
 
-
-  (*****************************************************************************************)
-  (** TODO(jadep) FIXME: Fill these in, replacing [Axiom] with [Local Notation] *)
-  Local Notation conditional_subtract_cps := (@drop_high_cps R_numlimbs).
-  (*Axiom conditional_subtract_cps : T (S R_numlimbs) -> forall {cpsT}, (T R_numlimbs -> cpsT) -> cpsT *)(* computes [arg - N] if [R <= arg], and drops high bit *)
-  Local Notation conditional_subtract := conditional_subtract.
-  Axiom conditional_subtract_cps_id : forall v cpsT f, @conditional_subtract_cps v cpsT f = f (@conditional_subtract _ v).
-  Axiom eval_conditional_subtract
-    : forall v : T (S R_numlimbs),
-      small v ->
-      0 <= eval v < eval N + Z.pos R ->
-      eval (conditional_subtract v) = eval v + (if Z.pos R <=? eval v then - eval N else 0).
-  Axiom small_conditional_subtract
-    : forall v : T (S R_numlimbs),
-      small v ->
-      0 <= eval v < eval N + Z.pos R ->
-      small (conditional_subtract v).
-  (*****************************************************************************************)
+  Local Notation conditional_sub_cps := (fun V : T (S R_numlimbs) => @conditional_sub_cps (Z.pos r) _ (Z.pos r - 1) V N _).
+  Local Notation conditional_sub := (fun V : T (S R_numlimbs) => @conditional_sub (Z.pos r) _ (Z.pos r - 1) V N).
+  Local Notation eval_conditional_sub' := (fun V small_V V_bound => @eval_conditional_sub (Z.pos r) (Zorder.Zgt_pos_0 _) _ (Z.pos r - 1) V N small_V small_N N_mask V_bound).
+  Local Lemma eval_conditional_sub
+    : forall v, small v -> 0 <= eval v < eval N + R -> eval (conditional_sub v) = eval v + if R <=? eval v then -eval N else 0.
+  Proof. rewrite R_correct; exact eval_conditional_sub'. Qed.
+  Local Notation small_conditional_sub' := (fun V small_V V_bound => @small_conditional_sub (Z.pos r) (Zorder.Zgt_pos_0 _) _ (Z.pos r - 1) V N small_V small_N N_mask V_bound).
+  Local Lemma small_conditional_sub
+    : forall v : T (S R_numlimbs), small v -> 0 <= eval v < eval N + R -> small (conditional_sub v).
+  Proof. rewrite R_correct; exact small_conditional_sub'. Qed.
 
   Local Lemma A_bound : 0 <= eval A < Z.pos r ^ Z.of_nat A_numlimbs.
   Proof. apply eval_small; auto; lia. Qed.
@@ -121,13 +114,13 @@ Section WordByWordMontgomery.
   Local Notation redc := (@redc r R_numlimbs N A_numlimbs A B k).
 
   Definition redc_no_cps_bound : 0 <= eval redc_no_cps < R
-    := @redc_bound T (@eval) (@zero) (@divmod) r r_big R R_numlimbs R_correct (@small) eval_zero small_zero eval_div eval_mod small_div (@scmul) eval_scmul small_scmul (@add) eval_add small_add (@add') eval_add' small_add' drop_high eval_drop_high small_drop_high N Npos Npos_correct small_N N_lt_R conditional_subtract eval_conditional_subtract B B_bound small_B ri k A_numlimbs A small_A A_bound.
+    := @redc_bound T (@eval) (@zero) (@divmod) r r_big R R_numlimbs R_correct (@small) eval_zero small_zero eval_div eval_mod small_div (@scmul) eval_scmul small_scmul (@add) eval_add small_add (@add') eval_add' small_add' drop_high eval_drop_high small_drop_high N Npos Npos_correct small_N N_lt_R conditional_sub eval_conditional_sub B B_bound small_B ri k A_numlimbs A small_A A_bound.
   Definition redc_no_cps_mod_N
     : (eval redc_no_cps) mod (eval N) = (eval A * eval B * ri^(Z.of_nat A_numlimbs)) mod (eval N)
-    := @redc_mod_N T (@eval) (@zero) (@divmod) r r_big R R_numlimbs R_correct (@small) eval_zero small_zero eval_div eval_mod small_div (@scmul) eval_scmul small_scmul (@add) eval_add small_add (@add') eval_add' small_add' drop_high eval_drop_high small_drop_high N Npos Npos_correct small_N N_lt_R conditional_subtract eval_conditional_subtract B B_bound small_B ri ri_correct k k_correct A_numlimbs A small_A A_bound.
+    := @redc_mod_N T (@eval) (@zero) (@divmod) r r_big R R_numlimbs R_correct (@small) eval_zero small_zero eval_div eval_mod small_div (@scmul) eval_scmul small_scmul (@add) eval_add small_add (@add') eval_add' small_add' drop_high eval_drop_high small_drop_high N Npos Npos_correct small_N N_lt_R conditional_sub eval_conditional_sub B B_bound small_B ri ri_correct k k_correct A_numlimbs A small_A A_bound.
   Definition small_redc_no_cps
     : small redc_no_cps
-    := @small_redc T (@eval) (@zero) (@divmod) r r_big R R_numlimbs R_correct (@small) eval_zero small_zero eval_div eval_mod small_div (@scmul) eval_scmul small_scmul (@add) eval_add small_add (@add') eval_add' small_add' drop_high eval_drop_high small_drop_high N Npos Npos_correct small_N N_lt_R conditional_subtract small_conditional_subtract B B_bound small_B ri k A_numlimbs A small_A A_bound.
+    := @small_redc T (@eval) (@zero) (@divmod) r r_big R R_numlimbs R_correct (@small) eval_zero small_zero eval_div eval_mod small_div (@scmul) eval_scmul small_scmul (@add) eval_add small_add (@add') eval_add' small_add' drop_high eval_drop_high small_drop_high N Npos Npos_correct small_N N_lt_R conditional_sub small_conditional_sub B B_bound small_B ri k A_numlimbs A small_A A_bound.
 
   Lemma redc_body_cps_id pred_A_numlimbs (A' : T (S pred_A_numlimbs)) (S' : T (S R_numlimbs)) {cpsT} f
     : @redc_body_cps pred_A_numlimbs A' B k S' cpsT f = f (redc_body A' B k S').
@@ -158,7 +151,7 @@ Section WordByWordMontgomery.
   Proof.
     unfold redc, redc_cps.
     etransitivity; rewrite pre_redc_cps_id; [ | reflexivity ];
-      rewrite ?conditional_subtract_cps_id;
+      autorewrite with uncps;
       reflexivity.
   Qed.
 
@@ -193,7 +186,7 @@ Section WordByWordMontgomery.
   Proof.
     unfold redc, redc_no_cps, redc_cps, Abstract.Dependent.Definition.redc.
     rewrite pre_redc_cps_id, pre_redc_cps_id_no_cps.
-    rewrite conditional_subtract_cps_id; reflexivity.
+    autorewrite with uncps; reflexivity.
   Qed.
 
   Lemma redc_bound : 0 <= eval redc < R.

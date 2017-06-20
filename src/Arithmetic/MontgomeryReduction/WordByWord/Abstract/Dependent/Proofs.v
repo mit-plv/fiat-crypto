@@ -48,9 +48,9 @@ Section WordByWordMontgomery.
     (N : T R_numlimbs) (Npos : positive) (Npos_correct: eval N = Z.pos Npos)
     (small_N : small N)
     (N_lt_R : eval N < R)
-    {conditional_subtract : T (S R_numlimbs) -> T R_numlimbs} (* computes [arg - N] if [N <= arg], and drops high bit *)
-    {eval_conditional_subtract : forall v, small v -> 0 <= eval v < eval N + R -> eval (conditional_subtract v) = eval v + if R <=? eval v then -eval N else 0}
-    {small_conditional_subtract : forall v, small v -> 0 <= eval v < eval N + R -> small (conditional_subtract v)}
+    {conditional_sub : T (S R_numlimbs) -> T R_numlimbs} (* computes [arg - N] if [N <= arg], and drops high bit *)
+    {eval_conditional_sub : forall v, small v -> 0 <= eval v < eval N + R -> eval (conditional_sub v) = eval v + if R <=? eval v then -eval N else 0}
+    {small_conditional_sub : forall v, small v -> 0 <= eval v < eval N + R -> small (conditional_sub v)}
     (B : T R_numlimbs)
     (B_bounds : 0 <= eval B < R)
     (small_B : small B)
@@ -66,7 +66,7 @@ Section WordByWordMontgomery.
                  | apply small_drop_high
                  | apply small_zero
                  | apply small_scmul
-                 | apply small_conditional_subtract
+                 | apply small_conditional_sub
                  | apply Z_mod_lt
                  | rewrite Z.mul_split_mod
                  | progress destruct_head' and
@@ -82,7 +82,7 @@ Section WordByWordMontgomery.
        eval_add'
        eval_scmul
        eval_drop_high
-       eval_conditional_subtract
+       eval_conditional_sub
        using (repeat autounfold with word_by_word_montgomery; t_small)
     : push_eval.
 
@@ -239,7 +239,7 @@ Section WordByWordMontgomery.
   Local Notation redc_body := (@redc_body T (@divmod) r R_numlimbs scmul add add' drop_high N B k).
   Local Notation redc_loop := (@redc_loop T (@divmod) r R_numlimbs scmul add add' drop_high N B k).
   Local Notation pre_redc A := (@pre_redc T zero (@divmod) r R_numlimbs scmul add add' drop_high N _ A B k).
-  Local Notation redc A := (@redc T zero (@divmod) r R_numlimbs scmul add add' drop_high conditional_subtract N _ A B k).
+  Local Notation redc A := (@redc T zero (@divmod) r R_numlimbs scmul add add' drop_high conditional_sub N _ A B k).
 
   Section body.
     Context (pred_A_numlimbs : nat)
@@ -473,7 +473,7 @@ Section WordByWordMontgomery.
     pose proof (@small_pre_redc _ A small_A).
     pose proof (@pre_redc_bound _ A small_A).
     unfold redc.
-    rewrite eval_conditional_subtract by t_small.
+    rewrite eval_conditional_sub by t_small.
     break_innermost_match; Z.ltb_to_lt; omega.
   Qed.
 
@@ -485,7 +485,7 @@ Section WordByWordMontgomery.
     pose proof (@small_pre_redc _ A small_A).
     pose proof (@pre_redc_bound _ A small_A).
     unfold redc.
-    rewrite eval_conditional_subtract by t_small.
+    rewrite eval_conditional_sub by t_small.
     break_innermost_match; Z.ltb_to_lt; try omega.
   Qed.
 
@@ -497,6 +497,6 @@ Section WordByWordMontgomery.
     pose proof (@small_pre_redc _ A small_A).
     pose proof (@pre_redc_bound _ A small_A).
     unfold redc.
-    apply small_conditional_subtract; [ apply small_pre_redc | .. ]; auto; omega.
+    apply small_conditional_sub; [ apply small_pre_redc | .. ]; auto; omega.
   Qed.
 End WordByWordMontgomery.

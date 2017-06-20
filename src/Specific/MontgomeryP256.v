@@ -28,7 +28,7 @@ Definition mulmod_256' : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple
                             }.
 Proof.
   eapply (lift2_sig (fun A B c => c = _)); eexists.
-  cbv -[Definitions.Z.add_get_carry Definitions.Z.mul_split_at_bitwidth runtime_add runtime_mul Let_In].
+  cbv -[Definitions.Z.add_get_carry Definitions.Z.mul_split_at_bitwidth Definitions.Z.zselect runtime_add runtime_mul runtime_and runtime_opp Let_In].
   (*
   cbv [
       r wt sz p256

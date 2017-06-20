@@ -24,12 +24,8 @@ Section WordByWordMontgomery.
   Local Notation scmul := (@scmul (Z.pos r)).
   Local Notation add' := (fun n => @add (Z.pos r) (S n) n (S n)).
   Local Notation add := (fun n => @add (Z.pos r) n n n).
-  (*****************************************************************************************)
-  (** TODO(jadep) FIXME: Fill these in, replacing [Axiom] with [Local Notation] *)
-  Local Notation conditional_subtract_cps := (@drop_high_cps R_numlimbs).
-  (*Axiom conditional_subtract_cps : T (S R_numlimbs) -> forall {cpsT}, (T R_numlimbs -> cpsT) -> cpsT *)(* computes [arg - N] if [R <= arg], and drops high bit *)
-  Axiom conditional_subtract : T (S R_numlimbs) -> T R_numlimbs (* computes [arg - N] if [R <= arg], and drops high bit *).
-  (*****************************************************************************************)
+  Local Notation conditional_sub_cps := (fun V => @conditional_sub_cps (Z.pos r) _ (Z.pos r - 1) V N _).
+  Local Notation conditional_sub := (fun V => @conditional_sub (Z.pos r) _ (Z.pos r - 1) V N).
 
   Definition redc_body_no_cps (B : T R_numlimbs) (k : Z) {pred_A_numlimbs} (A_S : T (S pred_A_numlimbs) * T (S R_numlimbs))
     : T pred_A_numlimbs * T (S R_numlimbs)
@@ -40,7 +36,7 @@ Section WordByWordMontgomery.
   Definition pre_redc_no_cps {A_numlimbs} (A : T A_numlimbs) (B : T R_numlimbs) (k : Z) : T (S R_numlimbs)
     := @pre_redc T (@zero) (@divmod) r R_numlimbs (@scmul) add add' (@drop_high (S R_numlimbs)) N _ A B k.
   Definition redc_no_cps {A_numlimbs} (A : T A_numlimbs) (B : T R_numlimbs) (k : Z) : T R_numlimbs
-    := @redc T (@zero) (@divmod) r R_numlimbs (@scmul) add add' (@drop_high (S R_numlimbs)) conditional_subtract N _ A B k.
+    := @redc T (@zero) (@divmod) r R_numlimbs (@scmul) add add' (@drop_high (S R_numlimbs)) conditional_sub N _ A B k.
 
   Definition redc_body_cps {pred_A_numlimbs} (A : T (S pred_A_numlimbs)) (B : T R_numlimbs) (k : Z) (S' : T (S R_numlimbs))
              {cpsT} (rest : T pred_A_numlimbs * T (S R_numlimbs) -> cpsT)
@@ -65,7 +61,7 @@ Section WordByWordMontgomery.
       := redc_loop_cps A_numlimbs (fun '(A, S') => rest S') (A, zero).
 
     Definition redc_cps (rest : T R_numlimbs -> cpsT) : cpsT
-      := pre_redc_cps (fun v => conditional_subtract_cps v rest).
+      := pre_redc_cps (fun v => conditional_sub_cps v rest).
   End loop.
 
   Definition redc_body {pred_A_numlimbs} (A : T (S pred_A_numlimbs)) (B : T R_numlimbs) (k : Z) (S' : T (S R_numlimbs))
