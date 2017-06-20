@@ -136,7 +136,7 @@ $(DISPLAY_NON_JAVA_VO:.vo=.log) : %Display.log : %.vo %Display.v src/Compilers/Z
 	$(SHOW)"COQC $*Display > $@"
 	$(HIDE)$(COQC) $(COQDEBUG) $(COQFLAGS) $*Display.v > $@.tmp && mv -f $@.tmp $@
 
-c: $(DISPLAY_NON_JAVA_VO:Display.vo=.c)
+c: $(DISPLAY_NON_JAVA_VO:Display.vo=.c) $(DISPLAY_NON_JAVA_VO:Display.vo=.h)
 
 $(DISPLAY_NON_JAVA_VO:Display.vo=.c) : %.c : %Display.log extract-function.sh
 	./extract-function.sh $(patsubst %Display.log,%,$(notdir $<)) < $< > $@
