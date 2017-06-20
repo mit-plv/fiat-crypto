@@ -291,6 +291,7 @@ src/Util/ForLoop/Instances.v
 src/Util/ForLoop/InvariantFramework.v
 src/Util/ForLoop/Tests.v
 src/Util/ForLoop/Unrolling.v
+src/Util/ListUtil/FoldBool.v
 src/Util/Logic/ImplAnd.v
 src/Util/Sigma/Associativity.v
 src/Util/Sigma/Lift.v
