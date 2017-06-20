@@ -1,1 +1,2 @@
+156081	ashryn-ht-tb-ac-broadwell	2.78ghz	7.1.1	83ddc573
 174300	ashryn-noht-notb-ac-broadwell	2.50ghz	7.1.1	4dc08623
