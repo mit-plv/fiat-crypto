@@ -735,11 +735,12 @@ Section API.
       conditional argument; if it is 0, the subtraction will not
       happen, otherwise it will.*)
       B.Positional.select_cps mask (left_hd p) q
-        (fun qq => Columns.unbalanced_sub_cps (n3:=n) (uweight bound) p qq
-        (* We can safely discard the carry, since our preconditions tell us
-           that, whether or not the subtraction happened, n limbs is
-           sufficient to store the result. *)
-        (fun carry_result => f (snd carry_result))).
+        (fun qq => Columns.unbalanced_sub_cps (n3:=S n) (uweight bound) p qq
+        (* We can safely discard the carry and the highest limb, since
+           our preconditions tell us that, whether or not the
+           subtraction happened, n limbs is sufficient to store the
+           result. *)
+        (fun carry_result => drop_high_cps (snd carry_result) f)).
 
   Definition conditional_sub {n} mask p q := @conditional_sub_cps n mask p q _ id.
 
@@ -997,6 +998,26 @@ Section API.
       left_hd p = eval p / uweight bound n /\ eval (left_tl p) = eval p mod (uweight bound n).
     Admitted.
 
+    Lemma eval_drop_high n v :
+      small v -> eval (@drop_high n v) = eval v mod (uweight bound n).
+    Proof.
+      cbv [drop_high drop_high_cps eval].
+      rewrite Tuple.left_tl_cps_correct, push_id. (* TODO : for some reason autorewrite with uncps doesn't work here *)
+      intro H. apply small_left_tl in H.
+      rewrite (subst_left_append v) at 2.
+      autorewrite with push_basesystem_eval.
+      apply eval_small in H.
+      rewrite Z.mod_add_l' by (pose_uweight bound; auto).
+      rewrite Z.mod_small; auto.
+    Qed.
+
+    Lemma small_drop_high n v : small v -> small (@drop_high n v).
+    Proof.
+      cbv [drop_high drop_high_cps].
+      rewrite Tuple.left_tl_cps_correct, push_id.
+      apply small_left_tl.
+    Qed.
+
     Lemma small_highest_zero_iff {n} (p: T (S n)) (Hsmall : small p) :
       (left_hd p = 0 <-> eval p < uweight bound n).
     Proof.
@@ -1019,16 +1040,19 @@ Section API.
     Proof.
       cbv [conditional_sub conditional_sub_cps eval].
       intros. pose_all. repeat autounfold. apply eval_small in qsmall.
-      autorewrite with uncps push_id push_basesystem_eval.
       pose proof (small_highest_zero_iff p psmall).
-      break_match; cbv [eval] in *;
-        repeat  match goal with
-                | H : (_ <=? _) = true |- _ => apply Z.leb_le in H
-                | H : (_ <=? _) = false |- _ => apply Z.leb_gt in H
-                | H : 0 = 0 <-> ?P |- _ =>
-                  assert P by (apply H; reflexivity);  clear H
-                | _ => rewrite Z.mod_small; omega
-                end.
+      pose proof (uweight_lt_mono n (S n)).
+      repeat match goal with
+              | H : (_ <=? _) = true |- _ => apply Z.leb_le in H
+              | H : (_ <=? _) = false |- _ => apply Z.leb_gt in H
+              | H : 0 = 0 <-> ?P |- _ =>
+                assert P by (apply H; reflexivity);  clear H
+              | _ => progress (cbv [eval] in * ) 
+              | _ => rewrite eval_drop_high by apply small_compact
+              | _ => progress autorewrite with uncps push_id push_basesystem_eval
+              | _ => progress break_match; try omega
+              | _ => rewrite Z.mod_small; try rewrite Z.mod_small; omega
+              end.
     Qed.
 
     Lemma eval_conditional_sub n mask (p:T (S n)) (q:T n)
@@ -1056,25 +1080,6 @@ Section API.
       small (conditional_sub mask p q).
     Admitted.
 
-    Lemma eval_drop_high n v :
-      small v -> eval (@drop_high n v) = eval v mod (uweight bound n).
-    Proof.
-      cbv [drop_high drop_high_cps eval].
-      rewrite Tuple.left_tl_cps_correct, push_id. (* TODO : for some reason autorewrite with uncps doesn't work here *)
-      intro H. apply small_left_tl in H.
-      rewrite (subst_left_append v) at 2.
-      autorewrite with push_basesystem_eval.
-      apply eval_small in H.
-      rewrite Z.mod_add_l' by (pose_uweight bound; auto).
-      rewrite Z.mod_small; auto.
-    Qed.
-
-    Lemma small_drop_high n v : small v -> small (@drop_high n v).
-    Proof.
-      cbv [drop_high drop_high_cps].
-      rewrite Tuple.left_tl_cps_correct, push_id.
-      apply small_left_tl.
-    Qed.
 
     Lemma eval_scmul n a v : small v -> 0 <= a < bound ->
       eval (@scmul n a v) = a * eval v.
