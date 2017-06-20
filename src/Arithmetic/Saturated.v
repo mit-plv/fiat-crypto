@@ -491,7 +491,7 @@ Module Columns.
         (fun Q => from_associational_cps weight n3 (P++Q)
         (fun R => compact_cps (div:=div) (modulo:=modulo) (add_get_carry:=Z.add_get_carry_full) weight R f))).
 
-    Definition sub_cps {n} (p q : Z^n) {T} (f : (Z*Z^n)->T) :=
+    Definition unbalanced_sub_cps {n} (p q : Z^n) {T} (f : (Z*Z^n)->T) :=
       B.Positional.to_associational_cps weight p
         (fun P => B.Positional.negate_snd_cps weight q
         (fun nq => B.Positional.to_associational_cps weight nq
@@ -510,7 +510,7 @@ Module Columns.
 End Columns.
 Hint Unfold
      Columns.add_cps
-     Columns.sub_cps
+     Columns.unbalanced_sub_cps
      Columns.mul_cps.
 Hint Rewrite
      @Columns.compact_digit_id
@@ -579,9 +579,9 @@ Section Freeze.
 
     [freeze] has the following steps:
     (1) subtract modulus in a carrying loop (in our framework, this
-    consists of two steps; [Columns.sub_cps] combines the input p and
-    the modulus m such that the ith limb in the output is the list
-    [p[i];-m[i]]. We can then call [Columns.compact].)
+    consists of two steps; [Columns.unbalanced_sub_cps] combines the
+    input p and the modulus m such that the ith limb in the output is
+    the list [p[i];-m[i]]. We can then call [Columns.compact].)
     (2) look at the final carry, which should be either 0 or -1. If
     it's -1, then we add the modulus back in. Otherwise we add 0 for
     constant-timeness.
@@ -589,7 +589,7 @@ Section Freeze.
     the carry in step 3 was -1, so they cancel out.
    *)
   Definition freeze_cps {n} mask (m:Z^n) (p:Z^n) {T} (f : Z^n->T) :=
-    Columns.sub_cps weight p m
+    Columns.unbalanced_sub_cps weight p m
       (fun carry_p => conditional_add_cps mask (fst carry_p) (snd carry_p) m
       (fun carry_r => f (snd carry_r)))
   .
