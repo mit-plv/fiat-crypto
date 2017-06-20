@@ -514,7 +514,6 @@ End Equivalence.
 Arguments fieldwise' {A B n} _ _ _.
 Arguments fieldwise {A B n} _ _ _.
 
-Local Hint Extern 0 => solve [ solve_decidable_transparent ] : typeclass_instances.
 Global Instance dec_fieldwise' {A RA} {HA : DecidableRel RA} : forall {n}, DecidableRel (@fieldwise' A A n RA) | 10.
 Proof.
   induction n; simpl @fieldwise'.
@@ -653,7 +652,7 @@ Definition apply {R T} (n:nat) : function R T n -> tuple T n -> R :=
 
 Require Import Coq.Lists.SetoidList.
 
-Lemma fieldwise_to_list_iff : forall {T n} R (s t : tuple T n),
+Lemma fieldwise_to_list_iff : forall {T T' n} R (s : tuple T n) (t : tuple T' n),
     (fieldwise R s t <-> Forall2 R (to_list _ s) (to_list _ t)).
 Proof.
   induction n as [|n IHn]; intros R s t; split; intros.
@@ -957,6 +956,35 @@ Qed.
 Lemma to_list_repeat {A} (a:A) n : to_list _ (repeat a n) = List.repeat a n.
 Proof. induction n as [|n]; [reflexivity|destruct n; simpl in *; congruence]. Qed.
 
+
+Local Ltac fieldwise_t :=
+  repeat first [ progress simpl in *
+               | apply conj
+               | intro
+               | progress subst
+               | assumption
+               | solve [ auto ]
+               | match goal with
+                 | [ H : _ * _ |- _ ] => destruct H
+                 | [ H : _ /\ _ |- _ ] => destruct H
+                 | [ H : _ <-> _ |- _ ] => destruct H
+                 | [ H : False |- _ ] => exfalso; assumption
+                 | [ H : Forall2 _ (_::_) (_::_) |- _ ] => inversion H; clear H
+                 | [ |- Forall2 _ (_::_) (_::_) ] => constructor
+                 | [ H : _ \/ _ |- _ ] => destruct H
+                 | [ H : tuple' _ ?n, IH : forall x : tuple' _ ?n, _ |- _ ]
+                   => specialize (IH H)
+                 end ].
+Lemma fieldwise_In_to_list_repeat_l_iff {T T' n} R (s : tuple T n) (t : T')
+  : fieldwise R (repeat t n) s <-> (forall x, List.In x (to_list _ s) -> R t x).
+Proof.
+  rewrite fieldwise_to_list_iff; destruct n as [|n]; [ | induction n ]; fieldwise_t.
+Qed.
+Lemma fieldwise_In_to_list_repeat_r_iff {T T' n} R (s : tuple T n) (t : T')
+  : fieldwise R s (repeat t n) <-> (forall x, List.In x (to_list _ s) -> R x t).
+Proof.
+  rewrite fieldwise_to_list_iff; destruct n as [|n]; [ | induction n ]; fieldwise_t.
+Qed.
 
 Global Instance map'_Proper : forall {n A B}, Proper (pointwise_relation _ eq ==> eq ==> eq) (fun f => @map' A B f n) | 10.
 Proof.

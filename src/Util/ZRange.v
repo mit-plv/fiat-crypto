@@ -41,7 +41,19 @@ Section with_bitwidth.
 
   Definition is_bounded_by {n} : Tuple.tuple zrange n -> Tuple.tuple Z n -> Prop
     := Tuple.fieldwise is_bounded_by'.
+
+  Lemma is_bounded_by_repeat_In_iff {n} vs bound
+    : is_bounded_by (Tuple.repeat bound n) vs <-> (forall x, List.In x (Tuple.to_list _ vs) -> is_bounded_by' bound x).
+  Proof. apply fieldwise_In_to_list_repeat_l_iff. Qed.
 End with_bitwidth.
+
+Lemma is_bounded_by_None_repeat_In_iff {n} vs l u
+  : is_bounded_by None (Tuple.repeat {| lower := l ; upper := u |} n) vs
+    <-> (forall x, List.In x (Tuple.to_list _ vs) -> l <= x <= u).
+Proof.
+  rewrite is_bounded_by_repeat_In_iff; unfold is_bounded_by'; simpl.
+  split; intro H; intros; repeat split; apply H; assumption.
+Qed.
 
 Definition is_tighter_than_bool (x y : zrange) : bool
   := ((lower y <=? lower x) && (upper x <=? upper y))%bool%Z.
