@@ -32,7 +32,6 @@ Section BoundedField25p5.
   Let feBW : Type := BoundedWord sz bitwidth bounds.
   Let phi : feBW -> F m :=
     fun x => montgomery_to_F (Saturated.eval (Z.pos r) (BoundedWordToZ _ _ _ x)).
-  Axiom small_is_bounded_by : forall sz r v, Crypto.Util.ZRange.is_bounded_by None (Tuple.repeat {| lower := 0 ; upper := r - 1 |} sz) v -> Saturated.small r v.
 
   (* TODO : change this to field once field isomorphism happens *)
   Definition mul
@@ -45,7 +44,8 @@ Section BoundedField25p5.
     end.
     intros a b.
     eexists_sig_etransitivity. all:cbv [phi].
-    rewrite <- (proj2_sig mulmod_256) by (apply small_is_bounded_by; destruct_head' feBW; assumption).
+    rewrite <- (proj2_sig mulmod_256)
+      by (hnf; rewrite <- (is_bounded_by_None_repeat_In_iff_lt _ _ _); destruct_head' feBW; assumption).
     (*symmetry; rewrite <- (proj2_sig carry_sig); symmetry.
     set (carry_mulZ := fun a b => proj1_sig carry_sig (proj1_sig mul_sig a b)).
     change (proj1_sig carry_sig (proj1_sig mul_sig ?a ?b)) with (carry_mulZ a b).*)
