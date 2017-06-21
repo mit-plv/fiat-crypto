@@ -102,6 +102,10 @@ Definition PostWfPreBoundsPipeline
      let e := InlineConstAndOpp (Linearize (SimplifyArith true e)) in
      let e := if opts.(anf) then InlineConstAndOpp (ANormal e) else e in
      let e := InlineConstAndOpp (Linearize (SimplifyArith true e)) in
+     let e := InlineConstAndOpp (Linearize (SimplifyArith true e)) in
+     let e := InlineConstAndOpp (Linearize (SimplifyArith true e)) in
+     let e := InlineConstAndOpp (Linearize (SimplifyArith true e)) in
+     let e := InlineConstAndOpp (Linearize (SimplifyArith true e)) in
      (*let e := CSE false e in*)
      e.
 (** The definition [PostWfBoundsPipeline] is for the part of the
