@@ -1,224 +1,236 @@
 .intel_syntax noprefix
-# icc17 -m64 -O3 -madx -march=skylake -mtune=skylake -fomit-frame-pointer -fno-stack-protector-all -opt-report
-        push      r12                                           #11.1
-        push      r13                                           #11.1
-        push      r14                                           #11.1
-        push      r15                                           #11.1
-        push      rbx                                           #11.1
-        push      rbp                                           #11.1
-        mov       rbp, r8                                       #11.1
-        mov       QWORD PTR [-32+rsp], rdx                      #11.1[spill]
-        mov       rdx, rbp                                      #11.33
-        mov       QWORD PTR [-24+rsp], rsi                      #11.1[spill]
-        mov       r11, r9                                       #11.1
-        mov       r12, -1                                       #15.32
-        xor       esi, esi                                      #15.32
-        mov       r9, rcx                                       #11.1
-        mov       r8, QWORD PTR [72+rsp]                        #11.1
-        mulx      rbx, rax, QWORD PTR [64+rsp]                  #12.33
-        mov       QWORD PTR [-16+rsp], rdi                      #11.1[spill]
-        mulx      rdi, r10, r8                                  #11.33
-        adcx      r10, rbx                                      #15.32
-        mov       ebx, esi                                      #18.30
-        mulx      r14, rcx, QWORD PTR [56+rsp]                  #13.33
-        adcx      rax, r14                                      #16.32
-        mov       r14, 0xffffffff00000001                       #21.33
-        mulx      rbp, r13, r11                                 #14.33
-        mov       rdx, rdi                                      #19.33
-        adcx      rcx, rbp                                      #17.32
-        mov       ebp, esi                                      #17.32
-        mov       QWORD PTR [-40+rsp], r11                      #11.1[spill]
-        setb      bpl                                           #17.32
-        adox      ebx, esi                                      #18.30
-        adox      rbp, r13                                      #18.30
-        mulx      r15, r11, r12                                 #19.33
-        mov       rbx, 0x0ffffffff                              #20.33
-        clc                                                     #22.32
-        mulx      rbx, r12, rbx                                 #20.33
-        adcx      r11, rbx                                      #22.32
-        mov       ebx, 0                                        #23.32
-        mulx      r13, r14, r14                                 #21.33
-        mov       edx, esi                                      #25.30
-        adcx      r12, rbx                                      #23.32
-        adcx      r13, rbx                                      #24.32
-        mov       ebx, esi                                      #24.32
-        setb      bl                                            #24.32
-        adox      edx, esi                                      #25.30
-        mov       rdx, r9                                       #31.33
-        adox      rbx, r14                                      #25.30
-        mov       r14d, esi                                     #25.30
-        seto      r14b                                          #25.30
-        clc                                                     #26.30
-        adcx      rdi, r15                                      #26.30
-        mov       edi, esi                                      #35.32
-        adcx      r10, r11                                      #27.32
-        mulx      r14, r15, QWORD PTR [64+rsp]                  #32.33
-        adcx      rax, r12                                      #28.32
-        mulx      r12, r11, r8                                  #31.33
-        adcx      rcx, r13                                      #29.32
-        mulx      r13, r8, QWORD PTR [56+rsp]                   #33.33
-        adcx      rbp, rbx                                      #30.32
-        mov       ebx, esi                                      #30.32
-        mulx      rdx, r9, QWORD PTR [-40+rsp]                  #34.33[spill]
-        setb      bl                                            #30.32
-        adox      edi, esi                                      #35.32
-        adox      r11, r14                                      #35.32
-        mov       r14d, esi                                     #39.34
-        adox      r15, r13                                      #36.32
-        mov       r13d, esi                                     #37.32
-        adox      r8, rdx                                       #37.32
-        seto      r13b                                          #37.32
-        clc                                                     #38.30
-        adcx      r13, r9                                       #38.30
-        adox      r14d, esi                                     #39.34
-        mov       r9, 0x0ffffffff                               #45.35
-        mov       r14, 0xffffffff00000001                       #46.35
-        adox      r10, r12                                      #39.34
-        mov       rdx, r10                                      #44.35
-        adox      rax, r11                                      #40.34
-        mov       r11d, esi                                     #43.34
-        mulx      r12, rdi, r9                                  #45.35
-        adox      rcx, r15                                      #41.34
-        mulx      r14, r9, r14                                  #46.35
-        adox      rbp, r8                                       #42.34
-        mov       r8, -1                                        #44.35
-        adox      rbx, r13                                      #43.34
-        mulx      r15, r13, r8                                  #44.35
-        mov       r8d, 0                                        #48.34
-        seto      r11b                                          #43.34
-        clc                                                     #47.34
-        mov       rdx, QWORD PTR [-32+rsp]                      #57.35[spill]
-        adcx      r13, r12                                      #47.34
-        mov       r12d, esi                                     #49.34
-        adcx      rdi, r8                                       #48.34
-        adcx      r14, r8                                       #49.34
-        mov       r8d, esi                                      #50.31
-        setb      r12b                                          #49.34
-        adox      r8d, esi                                      #50.31
-        adox      r12, r9                                       #50.31
-        mov       r9d, esi                                      #50.31
-        seto      r9b                                           #50.31
-        clc                                                     #51.31
-        mulx      r9, r8, QWORD PTR [56+rsp]                    #59.35
-        adcx      r10, r15                                      #51.31
-        mov       r10d, esi                                     #55.34
-        adcx      rax, r13                                      #52.34
-        adcx      rcx, rdi                                      #53.34
-        mov       edi, esi                                      #61.34
-        adcx      rbp, r14                                      #54.34
-        mulx      r14, r13, QWORD PTR [72+rsp]                  #57.35
-        adcx      rbx, r12                                      #55.34
-        mulx      r15, r12, QWORD PTR [64+rsp]                  #58.35
-        setb      r10b                                          #55.34
-        adox      edi, esi                                      #61.34
-        mov       DWORD PTR [-8+rsp], r10d                      #55.34[spill]
-        mov       rdi, 0xffffffff00000001                       #72.35
-        adox      r13, r15                                      #61.34
-        mulx      rdx, r10, QWORD PTR [-40+rsp]                 #60.35[spill]
-        adox      r12, r9                                       #62.34
-        mov       r9d, esi                                      #63.34
-        adox      r8, rdx                                       #63.34
-        seto      r9b                                           #63.34
-        clc                                                     #64.31
-        adcx      r9, r10                                       #64.31
-        mov       r10d, esi                                     #65.34
-        adox      r10d, esi                                     #65.34
-        mov       r10d, DWORD PTR [-8+rsp]                      #69.34[spill]
-        adox      rax, r14                                      #65.34
-        mov       r14d, esi                                     #68.34
-        mov       rdx, rax                                      #70.35
-        adox      rcx, r13                                      #66.34
-        adox      rbp, r12                                      #67.34
-        adox      rbx, r8                                       #68.34
-        mov       r8, 0x0ffffffff                               #71.35
-        seto      r14b                                          #68.34
-        xor       r15d, r15d                                    #68.34
-        add       r10d, r11d                                    #69.34
-        mov       r11, -1                                       #69.34
-        cmp       esi, r14d                                     #69.34
-        mulx      r13, r12, r11                                 #70.35
-        adcx      r10, r9                                       #69.34
-        mulx      r9, r14, r8                                   #71.35
-        mulx      r8, rdi, rdi                                  #72.35
-        mov       edx, esi                                      #73.34
-        setb      r15b                                          #69.34
-        adox      edx, esi                                      #73.34
-        mov       rdx, QWORD PTR [-24+rsp]                      #83.35[spill]
-        adox      r12, r9                                       #73.34
-        mov       r9d, 0                                        #74.34
-        adox      r14, r9                                       #74.34
-        adox      r8, r9                                        #75.34
-        mov       r9d, esi                                      #75.34
-        seto      r9b                                           #75.34
-        clc                                                     #76.31
-        adcx      r9, rdi                                       #76.31
-        mov       edi, esi                                      #77.31
-        adox      edi, esi                                      #77.31
-        adox      rax, r13                                      #77.31
-        mulx      r13, rax, QWORD PTR [64+rsp]                  #84.35
-        adox      rcx, r12                                      #78.34
-        adox      rbp, r14                                      #79.34
-        mulx      r14, r12, QWORD PTR [72+rsp]                  #83.35
-        adox      rbx, r8                                       #80.34
-        adox      r10, r9                                       #81.34
-        mov       r9d, esi                                      #81.34
-        seto      r9b                                           #81.34
-        clc                                                     #87.34
-        adcx      r12, r13                                      #87.34
-        mulx      r8, r13, QWORD PTR [56+rsp]                   #85.35
-        adcx      rax, r8                                       #88.34
-        mulx      r8, rdi, QWORD PTR [-40+rsp]                  #86.35[spill]
-        mov       edx, esi                                      #90.31
-        adcx      r13, r8                                       #89.34
-        mov       r8d, esi                                      #89.34
-        setb      r8b                                           #89.34
-        adox      edx, esi                                      #90.31
-        adox      r8, rdi                                       #90.31
-        mov       edi, esi                                      #90.31
-        seto      dil                                           #90.31
-        clc                                                     #91.34
-        adcx      rcx, r14                                      #91.34
-        mov       rdx, rcx                                      #96.35
-        adcx      rbp, r12                                      #92.34
-        mov       r12, 0x0ffffffff                              #97.35
-        mulx      rdi, r12, r12                                 #97.35
-        adcx      rbx, rax                                      #93.34
-        mov       eax, esi                                      #94.34
-        adcx      r10, r13                                      #94.34
-        setb      al                                            #94.34
-        add       r9d, r15d                                     #95.31
-        cmp       esi, eax                                      #95.31
-        mov       rax, 0xffffffff00000001                       #98.35
-        adcx      r9, r8                                        #95.31
-        mulx      r8, r15, rax                                  #98.35
-        mov       eax, 0                                        #100.34
-        mulx      r14, r13, r11                                 #96.35
-        mov       r11d, esi                                     #99.34
-        adox      r11d, esi                                     #99.34
-        adox      r13, rdi                                      #99.34
-        mov       edi, esi                                      #101.34
-        adox      r12, rax                                      #100.34
-        adox      rax, r8                                       #101.34
-        seto      dil                                           #101.34
-        clc                                                     #102.31
-        adcx      rdi, r15                                      #102.31
-        mov       r15d, esi                                     #103.31
-        adox      r15d, esi                                     #103.31
-        adox      rcx, r14                                      #103.31
-        mov       rcx, QWORD PTR [-16+rsp]                      #108.1[spill]
-        adox      rbp, r13                                      #104.34
-        mov       QWORD PTR [24+rcx], rbp                       #111.1
-        adox      rbx, r12                                      #105.34
-        mov       QWORD PTR [16+rcx], rbx                       #110.1
-        adox      r10, rax                                      #106.34
-        mov       QWORD PTR [8+rcx], r10                        #109.1
-        adox      r9, rdi                                       #107.31
-        mov       QWORD PTR [rcx], r9                           #108.1
-        seto      sil                                           #107.31
-        pop       rbp                                           #112.97
-        pop       rbx                                           #112.97
-        pop       r15                                           #112.97
-        pop       r14                                           #112.97
-        pop       r13                                           #112.97
-        pop       r12                                           #112.97
-        ret                                                     #112.97
+#icc17 -m64 -O3 -madx -march=skylake -mtune=skylake -fomit-frame-pointer -fno-stack-protector-all -opt-report
+#IntegrationTestMontgomeryP256(unsigned long*, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long):
+        push      r12                                           #13.1
+        push      r13                                           #13.1
+        push      r14                                           #13.1
+        push      r15                                           #13.1
+        push      rbx                                           #13.1
+        push      rbp                                           #13.1
+        mov       rbx, r9                                       #13.1
+        mov       QWORD PTR [-32+rsp], rdx                      #13.1[spill]
+        mov       rdx, r8                                       #13.33
+        mov       QWORD PTR [-16+rsp], rdi                      #13.1[spill]
+        mov       r11, -1                                       #21.33
+        xor       edi, edi                                      #17.32
+        mov       r9, QWORD PTR [72+rsp]                        #13.1
+        mulx      rax, rbp, QWORD PTR [64+rsp]                  #14.33
+        mulx      r15, r10, r9                                  #13.33
+        adcx      r10, rax                                      #17.32
+        mov       rax, 0x0ffffffff                              #22.33
+        mov       QWORD PTR [-24+rsp], rsi                      #13.1[spill]
+        mulx      r14, rsi, QWORD PTR [56+rsp]                  #15.33
+        adcx      rbp, r14                                      #18.32
+        mulx      r8, r13, rbx                                  #16.33
+        mov       rdx, r15                                      #21.33
+        adcx      rsi, r8                                       #19.32
+        mov       QWORD PTR [-40+rsp], rbx                      #13.1[spill]
+        mov       ebx, 0                                        #19.32
+        mov       r8d, ebx                                      #20.30
+        setb      dil                                           #19.32
+        adox      r8d, ebx                                      #20.30
+        mov       r8d, ebx                                      #20.30
+        adox      rdi, r13                                      #20.30
+        mulx      r12, r11, r11                                 #21.33
+        seto      r8b                                           #20.30
+        clc                                                     #24.32
+        mulx      r8, r13, rax                                  #22.33
+        mov       rax, 0xffffffff00000001                       #23.33
+        adcx      r11, r8                                       #24.32
+        mov       r8d, 0                                        #25.32
+        mulx      r14, rax, rax                                 #23.33
+        mov       edx, ebx                                      #27.30
+        adcx      r13, r8                                       #25.32
+        adcx      r14, r8                                       #26.32
+        mov       r8d, ebx                                      #26.32
+        setb      r8b                                           #26.32
+        adox      edx, ebx                                      #27.30
+        mov       rdx, rcx                                      #33.33
+        adox      r8, rax                                       #27.30
+        mov       ecx, ebx                                      #37.32
+        clc                                                     #28.30
+        adcx      r15, r12                                      #28.30
+        mulx      r12, rax, r9                                  #33.33
+        adcx      r10, r11                                      #29.32
+        adcx      rbp, r13                                      #30.32
+        mulx      r13, r15, QWORD PTR [56+rsp]                  #35.33
+        adcx      rsi, r14                                      #31.32
+        mulx      r14, r9, QWORD PTR [64+rsp]                   #34.33
+        adcx      rdi, r8                                       #32.32
+        mov       r8d, ebx                                      #32.32
+        mulx      rdx, r11, QWORD PTR [-40+rsp]                 #36.33[spill]
+        setb      r8b                                           #32.32
+        adox      ecx, ebx                                      #37.32
+        mov       rcx, -1                                       #46.35
+        adox      rax, r14                                      #37.32
+        mov       r14d, ebx                                     #39.32
+        adox      r9, r13                                       #38.32
+        adox      r15, rdx                                      #39.32
+        seto      r14b                                          #39.32
+        clc                                                     #40.30
+        adcx      r14, r11                                      #40.30
+        mov       r11d, ebx                                     #41.34
+        adox      r11d, ebx                                     #41.34
+        mov       r11d, ebx                                     #45.34
+        adox      r10, r12                                      #41.34
+        mov       rdx, r10                                      #46.35
+        adox      rbp, rax                                      #42.34
+        mov       rax, 0x0ffffffff                              #47.35
+        mulx      r12, rax, rax                                 #47.35
+        adox      rsi, r9                                       #43.34
+        mov       r9, 0xffffffff00000001                        #48.35
+        adox      rdi, r15                                      #44.34
+        adox      r8, r14                                       #45.34
+        mulx      r14, r13, rcx                                 #46.35
+        seto      r11b                                          #45.34
+        clc                                                     #49.34
+        mulx      r15, rcx, r9                                  #48.35
+        mov       r9d, ebx                                      #52.31
+        adcx      r13, r12                                      #49.34
+        mov       r12d, 0                                       #50.34
+        mov       rdx, QWORD PTR [-32+rsp]                      #59.35[spill]
+        adcx      rax, r12                                      #50.34
+        adcx      r15, r12                                      #51.34
+        mov       r12d, ebx                                     #51.34
+        setb      r12b                                          #51.34
+        adox      r9d, ebx                                      #52.31
+        adox      r12, rcx                                      #52.31
+        clc                                                     #53.31
+        adcx      r10, r14                                      #53.31
+        mov       r10d, ebx                                     #57.34
+        adcx      rbp, r13                                      #54.34
+        mulx      r14, r13, QWORD PTR [72+rsp]                  #59.35
+        adcx      rsi, rax                                      #55.34
+        mulx      rax, r9, QWORD PTR [56+rsp]                   #61.35
+        adcx      rdi, r15                                      #56.34
+        mov       r15d, ebx                                     #63.34
+        adcx      r8, r12                                       #57.34
+        setb      r10b                                          #57.34
+        adox      r15d, ebx                                     #63.34
+        mov       DWORD PTR [-8+rsp], r10d                      #57.34[spill]
+        mulx      r10, r12, QWORD PTR [64+rsp]                  #60.35
+        adox      r13, r10                                      #63.34
+        mov       r10d, ebx                                     #67.34
+        mulx      rdx, rcx, QWORD PTR [-40+rsp]                 #62.35[spill]
+        adox      r12, rax                                      #64.34
+        mov       eax, ebx                                      #65.34
+        adox      r9, rdx                                       #65.34
+        seto      al                                            #65.34
+        clc                                                     #66.31
+        adcx      rax, rcx                                      #66.31
+        adox      r10d, ebx                                     #67.34
+        mov       ecx, DWORD PTR [-8+rsp]                       #71.34[spill]
+        adox      rbp, r14                                      #67.34
+        mov       r14d, ebx                                     #70.34
+        mov       rdx, rbp                                      #72.35
+        adox      rsi, r13                                      #68.34
+        adox      rdi, r12                                      #69.34
+        adox      r8, r9                                        #70.34
+        mov       r9, 0xffffffff00000001                        #74.35
+        mulx      r10, r9, r9                                   #74.35
+        seto      r14b                                          #70.34
+        xor       r15d, r15d                                    #70.34
+        add       ecx, r11d                                     #71.34
+        cmp       ebx, r14d                                     #71.34
+        mov       r11, 0x0ffffffff                              #73.35
+        mulx      r11, r14, r11                                 #73.35
+        adcx      rcx, rax                                      #71.34
+        mov       rax, -1                                       #72.35
+        mulx      r13, r12, rax                                 #72.35
+        mov       edx, ebx                                      #75.34
+        setb      r15b                                          #71.34
+        adox      edx, ebx                                      #75.34
+        mov       rdx, QWORD PTR [-24+rsp]                      #85.35[spill]
+        adox      r12, r11                                      #75.34
+        mov       r11d, 0                                       #76.34
+        adox      r14, r11                                      #76.34
+        adox      r10, r11                                      #77.34
+        mov       r11d, ebx                                     #77.34
+        seto      r11b                                          #77.34
+        clc                                                     #78.31
+        adcx      r11, r9                                       #78.31
+        mov       r9d, ebx                                      #79.31
+        adox      r9d, ebx                                      #79.31
+        adox      rbp, r13                                      #79.31
+        mulx      r13, r9, QWORD PTR [64+rsp]                   #86.35
+        adox      rsi, r12                                      #80.34
+        adox      rdi, r14                                      #81.34
+        adox      r8, r10                                       #82.34
+        mov       r10d, ebx                                     #83.34
+        adox      rcx, r11                                      #83.34
+        mulx      r11, rbp, QWORD PTR [72+rsp]                  #85.35
+        seto      r10b                                          #83.34
+        clc                                                     #89.34
+        adcx      rbp, r13                                      #89.34
+        mulx      r14, r13, QWORD PTR [56+rsp]                  #87.35
+        adcx      r9, r14                                       #90.34
+        mulx      r14, r12, QWORD PTR [-40+rsp]                 #88.35[spill]
+        mov       edx, ebx                                      #92.31
+        adcx      r13, r14                                      #91.34
+        mov       r14d, ebx                                     #91.34
+        setb      r14b                                          #91.34
+        adox      edx, ebx                                      #92.31
+        adox      r14, r12                                      #92.31
+        mov       r12d, ebx                                     #92.31
+        seto      r12b                                          #92.31
+        clc                                                     #93.34
+        adcx      rsi, r11                                      #93.34
+        mov       r11, 0x0ffffffff                              #99.35
+        mov       rdx, rsi                                      #98.35
+        adcx      rdi, rbp                                      #94.34
+        mov       ebp, ebx                                      #96.34
+        adcx      r8, r9                                        #95.34
+        mulx      r9, r11, r11                                  #99.35
+        adcx      rcx, r13                                      #96.34
+        mulx      r12, r13, rax                                 #98.35
+        setb      bpl                                           #96.34
+        add       r10d, r15d                                    #97.34
+        cmp       ebx, ebp                                      #97.34
+        mov       rbp, 0xffffffff00000001                       #100.35
+        mulx      rbp, r15, rbp                                 #100.35
+        mov       edx, ebx                                      #101.34
+        adcx      r10, r14                                      #97.34
+        mov       r14d, ebx                                     #97.34
+        setb      r14b                                          #97.34
+        adox      edx, ebx                                      #101.34
+        mov       edx, 0                                        #102.34
+        adox      r13, r9                                       #101.34
+        mov       r9d, ebx                                      #103.34
+        adox      r11, rdx                                      #102.34
+        adox      rbp, rdx                                      #103.34
+        seto      r9b                                           #103.34
+        clc                                                     #104.31
+        adcx      r9, r15                                       #104.31
+        mov       r15d, ebx                                     #105.31
+        adox      r15d, ebx                                     #105.31
+        adox      rsi, r12                                      #105.31
+        mov       esi, ebx                                      #109.34
+        adox      rdi, r13                                      #106.34
+        adox      r8, r11                                       #107.34
+        adox      rcx, rbp                                      #108.34
+        adox      r10, r9                                       #109.34
+        seto      sil                                           #109.34
+        xor       ebp, ebp                                      #109.34
+        add       esi, r14d                                     #110.26
+        mov       rsi, QWORD PTR [-16+rsp]                      #122.1[spill]
+        cmove     rax, rdx                                      #111.40
+        sub       rdi, rax                                      #113.34
+        mov       QWORD PTR [24+rsi], rdi                       #122.1
+        mov       edi, eax                                      #115.34
+        sbb       r8, rdi                                       #115.34
+        mov       QWORD PTR [16+rsi], r8                        #121.1
+        sbb       rcx, rdx                                      #116.34
+        mov       rdx, 0xffffffff00000001                       #118.31
+        mov       QWORD PTR [8+rsi], rcx                        #120.1
+        setb      bpl                                           #116.34
+        and       rdx, rax                                      #118.31
+        cmp       ebx, ebp                                      #118.31
+        sbb       r10, rdx                                      #118.31
+        mov       QWORD PTR [rsi], r10                          #119.1
+        pop       rbp                                           #123.106
+        pop       rbx                                           #123.106
+        pop       r15                                           #123.106
+        pop       r14                                           #123.106
+        pop       r13                                           #123.106
+        pop       r12                                           #123.106
+        ret                                                     #123.106
