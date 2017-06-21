@@ -57,7 +57,7 @@ Section BoundedField25p5.
     do 2 apply (fun f => proj2_sig_map (fun THIS_NAME_MUST_NOT_BE_UNDERSCORE_TO_WORK_AROUND_CONSTR_MATCHING_ANAOMLIES___BUT_NOTE_THAT_IF_THIS_NAME_IS_LOWERCASE_A___THEN_REIFICATION_STACK_OVERFLOWS___AND_I_HAVE_NO_IDEA_WHATS_GOING_ON p => f_equal f p)).
     (* jgross start here! *)
     Set Ltac Profiling.
-    Time refine_reflectively128_with_uint8_with default. (* Finished transaction in 212.693 secs (212.576u,0.184s) (successful) *)
+    Time refine_reflectively128_with_uint8_with anf. (* Finished transaction in 212.693 secs (212.576u,0.184s) (successful) *)
     Show Ltac Profile.
     (* total time:     19.632s
 
