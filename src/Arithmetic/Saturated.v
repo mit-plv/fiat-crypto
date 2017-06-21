@@ -906,14 +906,22 @@ Section API.
 
     Lemma uweight_le_mono n m : (n <= m)%nat ->
       uweight bound n <= uweight bound m.
-    Admitted.
+    Proof.
+      unfold uweight; intro; Z.peel_le; omega.
+    Qed.
 
-    Lemma uweight_lt_mono n m : (n < m)%nat ->
+    Lemma uweight_lt_mono (bound_gt_1 : bound > 1) n m : (n < m)%nat ->
       uweight bound n < uweight bound m.
-    Admitted.
+    Proof.
+      clear bound_pos.
+      unfold uweight; intro; apply Z.pow_lt_mono_r; omega.
+    Qed.
 
     Lemma uweight_succ n : uweight bound (S n) = bound * uweight bound n.
-    Admitted.
+    Proof.
+      unfold uweight.
+      rewrite Nat2Z.inj_succ, Z.pow_succ_r by auto using Nat2Z.is_nonneg; reflexivity.
+    Qed.
 
     Local Definition compact {n} := Columns.compact (n:=n) (add_get_carry:=Z.add_get_carry_full) (div:=div) (modulo:=modulo) (uweight bound).
     Local Definition compact_digit := Columns.compact_digit (add_get_carry:=Z.add_get_carry_full) (div:=div) (modulo:=modulo) (uweight bound).
@@ -1028,11 +1036,10 @@ Section API.
         by auto using uweight_nonzero.
       split; [|intros; left; omega].
       let H := fresh "H" in intro H; destruct H; [|omega].
-      pose proof (uweight_lt_mono n (S n) (Nat.lt_succ_diag_r _)).
       omega.
     Qed.
 
-    Lemma eval_conditional_sub_nz n mask (p:T (S n)) (q:T n)
+    Lemma eval_conditional_sub_nz (bound_gt_1 : bound > 1) n mask (p:T (S n)) (q:T n)
           (n_nonzero: (n <> 0)%nat) (psmall : small p) (qsmall : small q)
           (Hmask : Tuple.map (Z.land mask) q = q):
       0 <= eval p < eval q + (uweight bound n) ->
@@ -1041,21 +1048,21 @@ Section API.
       cbv [conditional_sub conditional_sub_cps eval].
       intros. pose_all. repeat autounfold. apply eval_small in qsmall.
       pose proof (small_highest_zero_iff p psmall).
-      pose proof (uweight_lt_mono n (S n)).
+      pose proof (uweight_lt_mono bound_gt_1 n (S n)).
       repeat match goal with
-              | H : (_ <=? _) = true |- _ => apply Z.leb_le in H
-              | H : (_ <=? _) = false |- _ => apply Z.leb_gt in H
-              | H : 0 = 0 <-> ?P |- _ =>
-                assert P by (apply H; reflexivity);  clear H
-              | _ => progress (cbv [eval] in * ) 
-              | _ => rewrite eval_drop_high by apply small_compact
-              | _ => progress autorewrite with uncps push_id push_basesystem_eval
-              | _ => progress break_match; try omega
-              | _ => rewrite Z.mod_small; try rewrite Z.mod_small; omega
-              end.
+               | H : (_ <=? _) = true |- _ => apply Z.leb_le in H
+               | H : (_ <=? _) = false |- _ => apply Z.leb_gt in H
+               | H : 0 = 0 <-> ?P |- _ =>
+                 assert P by (apply H; reflexivity);  clear H
+               | _ => progress (cbv [eval] in * )
+               | _ => rewrite eval_drop_high by apply small_compact
+               | _ => progress autorewrite with uncps push_id push_basesystem_eval
+               | _ => progress break_match; try omega
+               | _ => rewrite Z.mod_small; try rewrite Z.mod_small; omega
+               end.
     Qed.
 
-    Lemma eval_conditional_sub n mask (p:T (S n)) (q:T n)
+    Lemma eval_conditional_sub (bound_gt_1 : bound > 1) n mask (p:T (S n)) (q:T n)
            (psmall : small p) (qsmall : small q)
           (Hmask : Tuple.map (Z.land mask) q = q):
       0 <= eval p < eval q + (uweight bound n) ->
