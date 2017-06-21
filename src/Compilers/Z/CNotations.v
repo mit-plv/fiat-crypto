@@ -50,6 +50,18 @@ Reserved Notation "'mulx_u32' ( a , b )" (format "'mulx_u32' ( a ,  b )").
 Reserved Notation "'mulx_u64' ( a , b )" (format "'mulx_u64' ( a ,  b )").
 Reserved Notation "'mulx_u128' ( a , b )" (format "'mulx_u128' ( a ,  b )").
 
+Reserved Notation "'addcarryx_u32ℤ' ( c , a , b )" (format "'addcarryx_u32ℤ' ( c ,  a ,  b )").
+Reserved Notation "'addcarryx_u64ℤ' ( c , a , b )" (format "'addcarryx_u64ℤ' ( c ,  a ,  b )").
+Reserved Notation "'addcarryx_u128ℤ' ( c , a , b )" (format "'addcarryx_u128ℤ' ( c ,  a ,  b )").
+Reserved Notation "'addcarryx_u51ℤ' ( c , a , b )" (format "'addcarryx_u51ℤ' ( c ,  a ,  b )"). (* temporary for testing *)
+Reserved Notation "'subborrow_u32ℤ' ( c , a , b )" (format "'subborrow_u32ℤ' ( c ,  a ,  b )").
+Reserved Notation "'subborrow_u64ℤ' ( c , a , b )" (format "'subborrow_u64ℤ' ( c ,  a ,  b )").
+Reserved Notation "'subborrow_u128ℤ' ( c , a , b )" (format "'subborrow_u128ℤ' ( c ,  a ,  b )").
+Reserved Notation "'subborrow_u51ℤ' ( c , a , b )" (format "'subborrow_u51ℤ' ( c ,  a ,  b )"). (* temporary for testing *)
+Reserved Notation "'mulx_u32ℤ' ( a , b )" (format "'mulx_u32ℤ' ( a ,  b )").
+Reserved Notation "'mulx_u64ℤ' ( a , b )" (format "'mulx_u64ℤ' ( a ,  b )").
+Reserved Notation "'mulx_u128ℤ' ( a , b )" (format "'mulx_u128ℤ' ( a ,  b )").
+
 (* python:
 <<
 #!/usr/bin/env python
@@ -218,6 +230,30 @@ for opn, op in (('mulx', 'MulSplit'),):
                 b = ('b' if not v1 else '(Var b)')
                 print(('Notation "\'%s_u%d\' ( a , b )" := (Op (%s %d (TWord %d) (TWord %d) (TWord %d) (TWord %d)) (Pair %s %s)).') % (opn, wordsz, op, wordsz, lgwordsz, lgwordsz, lgwordsz, lgwordsz, a, b))
                 print(('(' + '*Notation "T0 out ; T1 c_out = \'_%s_u%d\' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (%s %d (TWord %d) (TWord %d) (TWord %d) (TWord %d)) (Pair %s %s)) (fun \'((out, c_out)%%core) => REST)).*' + ')') % (opn, wordsz, op, wordsz, lgwordsz, lgwordsz, lgwordsz, lgwordsz, a, b))
+for opn, op in (('addcarryx', 'AddWithGetCarry'), ('subborrow', 'SubWithGetBorrow')):
+    for wordsz in (32, 64, 128, 51):
+        lgwordsz = log2_up(wordsz)
+        for v0 in (False, True):
+            for v1 in (False, True):
+                for v2 in (False, True):
+                    c = ('c' if not v0 else '(Var c)')
+                    a = ('a' if not v1 else '(Var a)')
+                    b = ('b' if not v2 else '(Var b)')
+                    print(('Notation "\'%s_u%dℤ\' ( c , a , b )" := (Op (%s %d _ _ _ _ TZ) (Pair (Pair %s %s) %s)).') % (opn, wordsz, op, wordsz, c, a, b))
+                    print(('Notation "\'%s_u%dℤ\' ( c , a , b )" := (Op (%s %d _ _ _ TZ _) (Pair (Pair %s %s) %s)).') % (opn, wordsz, op, wordsz, c, a, b))
+                    print(('(' + '*Notation "T0 out ; T1 c_out = \'_%s_u%dℤ\' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (%s %d _ _ _ _ TZ) (Pair (Pair %s %s) %s)) (fun \'((out, c_out)%%core) => REST)).*' + ')') % (opn, wordsz, op, wordsz, c, a, b))
+                    print(('(' + '*Notation "T0 out ; T1 c_out = \'_%s_u%dℤ\' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (%s %d _ _ _ TZ _) (Pair (Pair %s %s) %s)) (fun \'((out, c_out)%%core) => REST)).*' + ')') % (opn, wordsz, op, wordsz, c, a, b))
+for opn, op in (('mulx', 'MulSplit'),):
+    for wordsz in (32, 64, 128, 51):
+        lgwordsz = log2_up(wordsz)
+        for v0 in (False, True):
+            for v1 in (False, True):
+                a = ('a' if not v0 else '(Var a)')
+                b = ('b' if not v1 else '(Var b)')
+                print(('Notation "\'%s_u%dℤ\' ( a , b )" := (Op (%s %d _ _ _ TZ) (Pair %s %s)).') % (opn, wordsz, op, wordsz, a, b))
+                print(('Notation "\'%s_u%dℤ\' ( a , b )" := (Op (%s %d _ _ TZ _) (Pair %s %s)).') % (opn, wordsz, op, wordsz, a, b))
+                print(('(' + '*Notation "T0 out ; T1 c_out = \'_%s_u%dℤ\' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (%s %d _ _ _ TZ) (Pair %s %s)) (fun \'((out, c_out)%%core) => REST)).*' + ')') % (opn, wordsz, op, wordsz, a, b))
+                print(('(' + '*Notation "T0 out ; T1 c_out = \'_%s_u%dℤ\' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (%s %d _ _ TZ _) (Pair %s %s)) (fun \'((out, c_out)%%core) => REST)).*' + ')') % (opn, wordsz, op, wordsz, a, b))
 print('Notation Return x := (Var x).')
 print('Notation C_like := (Expr base_type op _).')
 >> *)
@@ -2392,5 +2428,325 @@ Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6
 (*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
 Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))).
 (*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u32ℤ' ( c , a , b )" := (Op (AddWithGetCarry 32 _ _ _ _ TZ) (Pair (Pair c a) b)).
+Notation "'addcarryx_u32ℤ' ( c , a , b )" := (Op (AddWithGetCarry 32 _ _ _ TZ _) (Pair (Pair c a) b)).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 _ _ _ _ TZ) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 _ _ _ TZ _) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u32ℤ' ( c , a , b )" := (Op (AddWithGetCarry 32 _ _ _ _ TZ) (Pair (Pair c a) (Var b))).
+Notation "'addcarryx_u32ℤ' ( c , a , b )" := (Op (AddWithGetCarry 32 _ _ _ TZ _) (Pair (Pair c a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 _ _ _ _ TZ) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 _ _ _ TZ _) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u32ℤ' ( c , a , b )" := (Op (AddWithGetCarry 32 _ _ _ _ TZ) (Pair (Pair c (Var a)) b)).
+Notation "'addcarryx_u32ℤ' ( c , a , b )" := (Op (AddWithGetCarry 32 _ _ _ TZ _) (Pair (Pair c (Var a)) b)).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 _ _ _ _ TZ) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 _ _ _ TZ _) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u32ℤ' ( c , a , b )" := (Op (AddWithGetCarry 32 _ _ _ _ TZ) (Pair (Pair c (Var a)) (Var b))).
+Notation "'addcarryx_u32ℤ' ( c , a , b )" := (Op (AddWithGetCarry 32 _ _ _ TZ _) (Pair (Pair c (Var a)) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 _ _ _ _ TZ) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 _ _ _ TZ _) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u32ℤ' ( c , a , b )" := (Op (AddWithGetCarry 32 _ _ _ _ TZ) (Pair (Pair (Var c) a) b)).
+Notation "'addcarryx_u32ℤ' ( c , a , b )" := (Op (AddWithGetCarry 32 _ _ _ TZ _) (Pair (Pair (Var c) a) b)).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 _ _ _ _ TZ) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 _ _ _ TZ _) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u32ℤ' ( c , a , b )" := (Op (AddWithGetCarry 32 _ _ _ _ TZ) (Pair (Pair (Var c) a) (Var b))).
+Notation "'addcarryx_u32ℤ' ( c , a , b )" := (Op (AddWithGetCarry 32 _ _ _ TZ _) (Pair (Pair (Var c) a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 _ _ _ _ TZ) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 _ _ _ TZ _) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u32ℤ' ( c , a , b )" := (Op (AddWithGetCarry 32 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) b)).
+Notation "'addcarryx_u32ℤ' ( c , a , b )" := (Op (AddWithGetCarry 32 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) b)).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u32ℤ' ( c , a , b )" := (Op (AddWithGetCarry 32 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) (Var b))).
+Notation "'addcarryx_u32ℤ' ( c , a , b )" := (Op (AddWithGetCarry 32 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 32 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u64ℤ' ( c , a , b )" := (Op (AddWithGetCarry 64 _ _ _ _ TZ) (Pair (Pair c a) b)).
+Notation "'addcarryx_u64ℤ' ( c , a , b )" := (Op (AddWithGetCarry 64 _ _ _ TZ _) (Pair (Pair c a) b)).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 _ _ _ _ TZ) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 _ _ _ TZ _) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u64ℤ' ( c , a , b )" := (Op (AddWithGetCarry 64 _ _ _ _ TZ) (Pair (Pair c a) (Var b))).
+Notation "'addcarryx_u64ℤ' ( c , a , b )" := (Op (AddWithGetCarry 64 _ _ _ TZ _) (Pair (Pair c a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 _ _ _ _ TZ) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 _ _ _ TZ _) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u64ℤ' ( c , a , b )" := (Op (AddWithGetCarry 64 _ _ _ _ TZ) (Pair (Pair c (Var a)) b)).
+Notation "'addcarryx_u64ℤ' ( c , a , b )" := (Op (AddWithGetCarry 64 _ _ _ TZ _) (Pair (Pair c (Var a)) b)).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 _ _ _ _ TZ) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 _ _ _ TZ _) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u64ℤ' ( c , a , b )" := (Op (AddWithGetCarry 64 _ _ _ _ TZ) (Pair (Pair c (Var a)) (Var b))).
+Notation "'addcarryx_u64ℤ' ( c , a , b )" := (Op (AddWithGetCarry 64 _ _ _ TZ _) (Pair (Pair c (Var a)) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 _ _ _ _ TZ) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 _ _ _ TZ _) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u64ℤ' ( c , a , b )" := (Op (AddWithGetCarry 64 _ _ _ _ TZ) (Pair (Pair (Var c) a) b)).
+Notation "'addcarryx_u64ℤ' ( c , a , b )" := (Op (AddWithGetCarry 64 _ _ _ TZ _) (Pair (Pair (Var c) a) b)).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 _ _ _ _ TZ) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 _ _ _ TZ _) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u64ℤ' ( c , a , b )" := (Op (AddWithGetCarry 64 _ _ _ _ TZ) (Pair (Pair (Var c) a) (Var b))).
+Notation "'addcarryx_u64ℤ' ( c , a , b )" := (Op (AddWithGetCarry 64 _ _ _ TZ _) (Pair (Pair (Var c) a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 _ _ _ _ TZ) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 _ _ _ TZ _) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u64ℤ' ( c , a , b )" := (Op (AddWithGetCarry 64 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) b)).
+Notation "'addcarryx_u64ℤ' ( c , a , b )" := (Op (AddWithGetCarry 64 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) b)).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u64ℤ' ( c , a , b )" := (Op (AddWithGetCarry 64 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) (Var b))).
+Notation "'addcarryx_u64ℤ' ( c , a , b )" := (Op (AddWithGetCarry 64 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 64 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u128ℤ' ( c , a , b )" := (Op (AddWithGetCarry 128 _ _ _ _ TZ) (Pair (Pair c a) b)).
+Notation "'addcarryx_u128ℤ' ( c , a , b )" := (Op (AddWithGetCarry 128 _ _ _ TZ _) (Pair (Pair c a) b)).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 128 _ _ _ _ TZ) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 128 _ _ _ TZ _) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u128ℤ' ( c , a , b )" := (Op (AddWithGetCarry 128 _ _ _ _ TZ) (Pair (Pair c a) (Var b))).
+Notation "'addcarryx_u128ℤ' ( c , a , b )" := (Op (AddWithGetCarry 128 _ _ _ TZ _) (Pair (Pair c a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 128 _ _ _ _ TZ) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 128 _ _ _ TZ _) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u128ℤ' ( c , a , b )" := (Op (AddWithGetCarry 128 _ _ _ _ TZ) (Pair (Pair c (Var a)) b)).
+Notation "'addcarryx_u128ℤ' ( c , a , b )" := (Op (AddWithGetCarry 128 _ _ _ TZ _) (Pair (Pair c (Var a)) b)).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 128 _ _ _ _ TZ) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 128 _ _ _ TZ _) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u128ℤ' ( c , a , b )" := (Op (AddWithGetCarry 128 _ _ _ _ TZ) (Pair (Pair c (Var a)) (Var b))).
+Notation "'addcarryx_u128ℤ' ( c , a , b )" := (Op (AddWithGetCarry 128 _ _ _ TZ _) (Pair (Pair c (Var a)) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 128 _ _ _ _ TZ) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 128 _ _ _ TZ _) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u128ℤ' ( c , a , b )" := (Op (AddWithGetCarry 128 _ _ _ _ TZ) (Pair (Pair (Var c) a) b)).
+Notation "'addcarryx_u128ℤ' ( c , a , b )" := (Op (AddWithGetCarry 128 _ _ _ TZ _) (Pair (Pair (Var c) a) b)).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 128 _ _ _ _ TZ) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 128 _ _ _ TZ _) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u128ℤ' ( c , a , b )" := (Op (AddWithGetCarry 128 _ _ _ _ TZ) (Pair (Pair (Var c) a) (Var b))).
+Notation "'addcarryx_u128ℤ' ( c , a , b )" := (Op (AddWithGetCarry 128 _ _ _ TZ _) (Pair (Pair (Var c) a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 128 _ _ _ _ TZ) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 128 _ _ _ TZ _) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u128ℤ' ( c , a , b )" := (Op (AddWithGetCarry 128 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) b)).
+Notation "'addcarryx_u128ℤ' ( c , a , b )" := (Op (AddWithGetCarry 128 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) b)).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 128 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 128 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u128ℤ' ( c , a , b )" := (Op (AddWithGetCarry 128 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) (Var b))).
+Notation "'addcarryx_u128ℤ' ( c , a , b )" := (Op (AddWithGetCarry 128 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 128 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 128 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u51ℤ' ( c , a , b )" := (Op (AddWithGetCarry 51 _ _ _ _ TZ) (Pair (Pair c a) b)).
+Notation "'addcarryx_u51ℤ' ( c , a , b )" := (Op (AddWithGetCarry 51 _ _ _ TZ _) (Pair (Pair c a) b)).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 _ _ _ _ TZ) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 _ _ _ TZ _) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u51ℤ' ( c , a , b )" := (Op (AddWithGetCarry 51 _ _ _ _ TZ) (Pair (Pair c a) (Var b))).
+Notation "'addcarryx_u51ℤ' ( c , a , b )" := (Op (AddWithGetCarry 51 _ _ _ TZ _) (Pair (Pair c a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 _ _ _ _ TZ) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 _ _ _ TZ _) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u51ℤ' ( c , a , b )" := (Op (AddWithGetCarry 51 _ _ _ _ TZ) (Pair (Pair c (Var a)) b)).
+Notation "'addcarryx_u51ℤ' ( c , a , b )" := (Op (AddWithGetCarry 51 _ _ _ TZ _) (Pair (Pair c (Var a)) b)).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 _ _ _ _ TZ) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 _ _ _ TZ _) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u51ℤ' ( c , a , b )" := (Op (AddWithGetCarry 51 _ _ _ _ TZ) (Pair (Pair c (Var a)) (Var b))).
+Notation "'addcarryx_u51ℤ' ( c , a , b )" := (Op (AddWithGetCarry 51 _ _ _ TZ _) (Pair (Pair c (Var a)) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 _ _ _ _ TZ) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 _ _ _ TZ _) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u51ℤ' ( c , a , b )" := (Op (AddWithGetCarry 51 _ _ _ _ TZ) (Pair (Pair (Var c) a) b)).
+Notation "'addcarryx_u51ℤ' ( c , a , b )" := (Op (AddWithGetCarry 51 _ _ _ TZ _) (Pair (Pair (Var c) a) b)).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 _ _ _ _ TZ) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 _ _ _ TZ _) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u51ℤ' ( c , a , b )" := (Op (AddWithGetCarry 51 _ _ _ _ TZ) (Pair (Pair (Var c) a) (Var b))).
+Notation "'addcarryx_u51ℤ' ( c , a , b )" := (Op (AddWithGetCarry 51 _ _ _ TZ _) (Pair (Pair (Var c) a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 _ _ _ _ TZ) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 _ _ _ TZ _) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u51ℤ' ( c , a , b )" := (Op (AddWithGetCarry 51 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) b)).
+Notation "'addcarryx_u51ℤ' ( c , a , b )" := (Op (AddWithGetCarry 51 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) b)).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'addcarryx_u51ℤ' ( c , a , b )" := (Op (AddWithGetCarry 51 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) (Var b))).
+Notation "'addcarryx_u51ℤ' ( c , a , b )" := (Op (AddWithGetCarry 51 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u32ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 32 _ _ _ _ TZ) (Pair (Pair c a) b)).
+Notation "'subborrow_u32ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 32 _ _ _ TZ _) (Pair (Pair c a) b)).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 32 _ _ _ _ TZ) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 32 _ _ _ TZ _) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u32ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 32 _ _ _ _ TZ) (Pair (Pair c a) (Var b))).
+Notation "'subborrow_u32ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 32 _ _ _ TZ _) (Pair (Pair c a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 32 _ _ _ _ TZ) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 32 _ _ _ TZ _) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u32ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 32 _ _ _ _ TZ) (Pair (Pair c (Var a)) b)).
+Notation "'subborrow_u32ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 32 _ _ _ TZ _) (Pair (Pair c (Var a)) b)).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 32 _ _ _ _ TZ) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 32 _ _ _ TZ _) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u32ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 32 _ _ _ _ TZ) (Pair (Pair c (Var a)) (Var b))).
+Notation "'subborrow_u32ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 32 _ _ _ TZ _) (Pair (Pair c (Var a)) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 32 _ _ _ _ TZ) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 32 _ _ _ TZ _) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u32ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 32 _ _ _ _ TZ) (Pair (Pair (Var c) a) b)).
+Notation "'subborrow_u32ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 32 _ _ _ TZ _) (Pair (Pair (Var c) a) b)).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 32 _ _ _ _ TZ) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 32 _ _ _ TZ _) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u32ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 32 _ _ _ _ TZ) (Pair (Pair (Var c) a) (Var b))).
+Notation "'subborrow_u32ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 32 _ _ _ TZ _) (Pair (Pair (Var c) a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 32 _ _ _ _ TZ) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 32 _ _ _ TZ _) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u32ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 32 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) b)).
+Notation "'subborrow_u32ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 32 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) b)).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 32 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 32 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u32ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 32 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) (Var b))).
+Notation "'subborrow_u32ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 32 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 32 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u32ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 32 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u64ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 64 _ _ _ _ TZ) (Pair (Pair c a) b)).
+Notation "'subborrow_u64ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 64 _ _ _ TZ _) (Pair (Pair c a) b)).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 64 _ _ _ _ TZ) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 64 _ _ _ TZ _) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u64ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 64 _ _ _ _ TZ) (Pair (Pair c a) (Var b))).
+Notation "'subborrow_u64ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 64 _ _ _ TZ _) (Pair (Pair c a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 64 _ _ _ _ TZ) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 64 _ _ _ TZ _) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u64ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 64 _ _ _ _ TZ) (Pair (Pair c (Var a)) b)).
+Notation "'subborrow_u64ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 64 _ _ _ TZ _) (Pair (Pair c (Var a)) b)).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 64 _ _ _ _ TZ) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 64 _ _ _ TZ _) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u64ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 64 _ _ _ _ TZ) (Pair (Pair c (Var a)) (Var b))).
+Notation "'subborrow_u64ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 64 _ _ _ TZ _) (Pair (Pair c (Var a)) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 64 _ _ _ _ TZ) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 64 _ _ _ TZ _) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u64ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 64 _ _ _ _ TZ) (Pair (Pair (Var c) a) b)).
+Notation "'subborrow_u64ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 64 _ _ _ TZ _) (Pair (Pair (Var c) a) b)).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 64 _ _ _ _ TZ) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 64 _ _ _ TZ _) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u64ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 64 _ _ _ _ TZ) (Pair (Pair (Var c) a) (Var b))).
+Notation "'subborrow_u64ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 64 _ _ _ TZ _) (Pair (Pair (Var c) a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 64 _ _ _ _ TZ) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 64 _ _ _ TZ _) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u64ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 64 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) b)).
+Notation "'subborrow_u64ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 64 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) b)).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 64 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 64 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u64ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 64 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) (Var b))).
+Notation "'subborrow_u64ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 64 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 64 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u64ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 64 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u128ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 128 _ _ _ _ TZ) (Pair (Pair c a) b)).
+Notation "'subborrow_u128ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 128 _ _ _ TZ _) (Pair (Pair c a) b)).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 128 _ _ _ _ TZ) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 128 _ _ _ TZ _) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u128ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 128 _ _ _ _ TZ) (Pair (Pair c a) (Var b))).
+Notation "'subborrow_u128ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 128 _ _ _ TZ _) (Pair (Pair c a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 128 _ _ _ _ TZ) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 128 _ _ _ TZ _) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u128ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 128 _ _ _ _ TZ) (Pair (Pair c (Var a)) b)).
+Notation "'subborrow_u128ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 128 _ _ _ TZ _) (Pair (Pair c (Var a)) b)).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 128 _ _ _ _ TZ) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 128 _ _ _ TZ _) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u128ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 128 _ _ _ _ TZ) (Pair (Pair c (Var a)) (Var b))).
+Notation "'subborrow_u128ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 128 _ _ _ TZ _) (Pair (Pair c (Var a)) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 128 _ _ _ _ TZ) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 128 _ _ _ TZ _) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u128ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 128 _ _ _ _ TZ) (Pair (Pair (Var c) a) b)).
+Notation "'subborrow_u128ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 128 _ _ _ TZ _) (Pair (Pair (Var c) a) b)).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 128 _ _ _ _ TZ) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 128 _ _ _ TZ _) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u128ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 128 _ _ _ _ TZ) (Pair (Pair (Var c) a) (Var b))).
+Notation "'subborrow_u128ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 128 _ _ _ TZ _) (Pair (Pair (Var c) a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 128 _ _ _ _ TZ) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 128 _ _ _ TZ _) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u128ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 128 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) b)).
+Notation "'subborrow_u128ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 128 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) b)).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 128 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 128 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u128ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 128 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) (Var b))).
+Notation "'subborrow_u128ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 128 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 128 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 128 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u51ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 51 _ _ _ _ TZ) (Pair (Pair c a) b)).
+Notation "'subborrow_u51ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 51 _ _ _ TZ _) (Pair (Pair c a) b)).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 51 _ _ _ _ TZ) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 51 _ _ _ TZ _) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u51ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 51 _ _ _ _ TZ) (Pair (Pair c a) (Var b))).
+Notation "'subborrow_u51ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 51 _ _ _ TZ _) (Pair (Pair c a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 51 _ _ _ _ TZ) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 51 _ _ _ TZ _) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u51ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 51 _ _ _ _ TZ) (Pair (Pair c (Var a)) b)).
+Notation "'subborrow_u51ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 51 _ _ _ TZ _) (Pair (Pair c (Var a)) b)).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 51 _ _ _ _ TZ) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 51 _ _ _ TZ _) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u51ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 51 _ _ _ _ TZ) (Pair (Pair c (Var a)) (Var b))).
+Notation "'subborrow_u51ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 51 _ _ _ TZ _) (Pair (Pair c (Var a)) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 51 _ _ _ _ TZ) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 51 _ _ _ TZ _) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u51ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 51 _ _ _ _ TZ) (Pair (Pair (Var c) a) b)).
+Notation "'subborrow_u51ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 51 _ _ _ TZ _) (Pair (Pair (Var c) a) b)).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 51 _ _ _ _ TZ) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 51 _ _ _ TZ _) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u51ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 51 _ _ _ _ TZ) (Pair (Pair (Var c) a) (Var b))).
+Notation "'subborrow_u51ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 51 _ _ _ TZ _) (Pair (Pair (Var c) a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 51 _ _ _ _ TZ) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 51 _ _ _ TZ _) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u51ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 51 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) b)).
+Notation "'subborrow_u51ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 51 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) b)).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 51 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 51 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'subborrow_u51ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 51 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) (Var b))).
+Notation "'subborrow_u51ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 51 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_subborrow_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 51 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 51 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'mulx_u32ℤ' ( a , b )" := (Op (MulSplit 32 _ _ _ TZ) (Pair a b)).
+Notation "'mulx_u32ℤ' ( a , b )" := (Op (MulSplit 32 _ _ TZ _) (Pair a b)).
+(*Notation "T0 out ; T1 c_out = '_mulx_u32ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 _ _ _ TZ) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 _ _ TZ _) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'mulx_u32ℤ' ( a , b )" := (Op (MulSplit 32 _ _ _ TZ) (Pair a (Var b))).
+Notation "'mulx_u32ℤ' ( a , b )" := (Op (MulSplit 32 _ _ TZ _) (Pair a (Var b))).
+(*Notation "T0 out ; T1 c_out = '_mulx_u32ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 _ _ _ TZ) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 _ _ TZ _) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'mulx_u32ℤ' ( a , b )" := (Op (MulSplit 32 _ _ _ TZ) (Pair (Var a) b)).
+Notation "'mulx_u32ℤ' ( a , b )" := (Op (MulSplit 32 _ _ TZ _) (Pair (Var a) b)).
+(*Notation "T0 out ; T1 c_out = '_mulx_u32ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 _ _ _ TZ) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 _ _ TZ _) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'mulx_u32ℤ' ( a , b )" := (Op (MulSplit 32 _ _ _ TZ) (Pair (Var a) (Var b))).
+Notation "'mulx_u32ℤ' ( a , b )" := (Op (MulSplit 32 _ _ TZ _) (Pair (Var a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_mulx_u32ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 _ _ _ TZ) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u32ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 _ _ TZ _) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'mulx_u64ℤ' ( a , b )" := (Op (MulSplit 64 _ _ _ TZ) (Pair a b)).
+Notation "'mulx_u64ℤ' ( a , b )" := (Op (MulSplit 64 _ _ TZ _) (Pair a b)).
+(*Notation "T0 out ; T1 c_out = '_mulx_u64ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 _ _ _ TZ) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 _ _ TZ _) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'mulx_u64ℤ' ( a , b )" := (Op (MulSplit 64 _ _ _ TZ) (Pair a (Var b))).
+Notation "'mulx_u64ℤ' ( a , b )" := (Op (MulSplit 64 _ _ TZ _) (Pair a (Var b))).
+(*Notation "T0 out ; T1 c_out = '_mulx_u64ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 _ _ _ TZ) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 _ _ TZ _) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'mulx_u64ℤ' ( a , b )" := (Op (MulSplit 64 _ _ _ TZ) (Pair (Var a) b)).
+Notation "'mulx_u64ℤ' ( a , b )" := (Op (MulSplit 64 _ _ TZ _) (Pair (Var a) b)).
+(*Notation "T0 out ; T1 c_out = '_mulx_u64ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 _ _ _ TZ) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 _ _ TZ _) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'mulx_u64ℤ' ( a , b )" := (Op (MulSplit 64 _ _ _ TZ) (Pair (Var a) (Var b))).
+Notation "'mulx_u64ℤ' ( a , b )" := (Op (MulSplit 64 _ _ TZ _) (Pair (Var a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_mulx_u64ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 _ _ _ TZ) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u64ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 _ _ TZ _) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'mulx_u128ℤ' ( a , b )" := (Op (MulSplit 128 _ _ _ TZ) (Pair a b)).
+Notation "'mulx_u128ℤ' ( a , b )" := (Op (MulSplit 128 _ _ TZ _) (Pair a b)).
+(*Notation "T0 out ; T1 c_out = '_mulx_u128ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 _ _ _ TZ) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 _ _ TZ _) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'mulx_u128ℤ' ( a , b )" := (Op (MulSplit 128 _ _ _ TZ) (Pair a (Var b))).
+Notation "'mulx_u128ℤ' ( a , b )" := (Op (MulSplit 128 _ _ TZ _) (Pair a (Var b))).
+(*Notation "T0 out ; T1 c_out = '_mulx_u128ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 _ _ _ TZ) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 _ _ TZ _) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'mulx_u128ℤ' ( a , b )" := (Op (MulSplit 128 _ _ _ TZ) (Pair (Var a) b)).
+Notation "'mulx_u128ℤ' ( a , b )" := (Op (MulSplit 128 _ _ TZ _) (Pair (Var a) b)).
+(*Notation "T0 out ; T1 c_out = '_mulx_u128ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 _ _ _ TZ) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 _ _ TZ _) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'mulx_u128ℤ' ( a , b )" := (Op (MulSplit 128 _ _ _ TZ) (Pair (Var a) (Var b))).
+Notation "'mulx_u128ℤ' ( a , b )" := (Op (MulSplit 128 _ _ TZ _) (Pair (Var a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_mulx_u128ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 _ _ _ TZ) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u128ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 _ _ TZ _) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'mulx_u51ℤ' ( a , b )" := (Op (MulSplit 51 _ _ _ TZ) (Pair a b)).
+Notation "'mulx_u51ℤ' ( a , b )" := (Op (MulSplit 51 _ _ TZ _) (Pair a b)).
+(*Notation "T0 out ; T1 c_out = '_mulx_u51ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 _ _ _ TZ) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 _ _ TZ _) (Pair a b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'mulx_u51ℤ' ( a , b )" := (Op (MulSplit 51 _ _ _ TZ) (Pair a (Var b))).
+Notation "'mulx_u51ℤ' ( a , b )" := (Op (MulSplit 51 _ _ TZ _) (Pair a (Var b))).
+(*Notation "T0 out ; T1 c_out = '_mulx_u51ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 _ _ _ TZ) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 _ _ TZ _) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)).*)
+Notation "'mulx_u51ℤ' ( a , b )" := (Op (MulSplit 51 _ _ _ TZ) (Pair (Var a) b)).
+Notation "'mulx_u51ℤ' ( a , b )" := (Op (MulSplit 51 _ _ TZ _) (Pair (Var a) b)).
+(*Notation "T0 out ; T1 c_out = '_mulx_u51ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 _ _ _ TZ) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 _ _ TZ _) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)).*)
+Notation "'mulx_u51ℤ' ( a , b )" := (Op (MulSplit 51 _ _ _ TZ) (Pair (Var a) (Var b))).
+Notation "'mulx_u51ℤ' ( a , b )" := (Op (MulSplit 51 _ _ TZ _) (Pair (Var a) (Var b))).
+(*Notation "T0 out ; T1 c_out = '_mulx_u51ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 _ _ _ TZ) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
+(*Notation "T0 out ; T1 c_out = '_mulx_u51ℤ' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 _ _ TZ _) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)).*)
 Notation Return x := (Var x).
 Notation C_like := (Expr base_type op _).
