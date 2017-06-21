@@ -30,7 +30,7 @@ Section WordByWordMontgomery.
   Local Notation eval_add := (@eval_add_same (Z.pos r) (Zorder.Zgt_pos_0 _)).
   Local Notation eval_add' := (@eval_add_S1 (Z.pos r) (Zorder.Zgt_pos_0 _)).
   Local Notation drop_high := (@drop_high (S R_numlimbs)).
-  Local Notation small_drop_high := (@small_drop_high (Z.pos r) (Zorder.Zgt_pos_0 _) (S R_numlimbs)).
+  Local Notation small_drop_high := (@small_drop_high (Z.pos r) (S R_numlimbs)).
   Context (A_numlimbs : nat)
           (N : T R_numlimbs)
           (A : T A_numlimbs)

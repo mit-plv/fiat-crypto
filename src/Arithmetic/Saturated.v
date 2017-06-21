@@ -784,14 +784,6 @@ Section API.
     Definition eval {n} (p : T n) : Z :=
       B.Positional.eval (uweight bound) p.
 
-    Lemma In_to_list_left_tl n (p : Z^S n) x:
-      In x (to_list n (left_tl p)) -> In x (to_list (S n) p).
-    Admitted.
-
-    Lemma In_left_hd n (p : Z^S n):
-      In (left_hd p) (to_list _ p).
-    Admitted.
-
     Lemma eval_small n (p : T n) (Hsmall : small p) :
       0 <= eval p < uweight bound n.
     Proof.
@@ -804,7 +796,7 @@ Section API.
              | _ =>
                let H := fresh "H" in
                match type of IHn with
-                 ?P -> _ => assert P as H by auto using In_to_list_left_tl;
+                 ?P -> _ => assert P as H by auto using Tuple.In_to_list_left_tl;
                               specialize (IHn H)
                end
              | |- context [?b ^ Z.of_nat (S ?n)] =>
@@ -815,7 +807,7 @@ Section API.
              | _ => omega
              end.
 
-        specialize (Hsmall _ (In_left_hd _ p)).
+        specialize (Hsmall _ (Tuple.In_left_hd _ p)).
         split; [Z.zero_bounds; omega |].
         apply Z.lt_le_trans with (m:=bound^Z.of_nat n * (left_hd p+1)).
         { rewrite Z.mul_add_distr_l.
@@ -900,10 +892,6 @@ Section API.
     Proof. apply eval_add; omega. Qed.
     Hint Rewrite eval_add_same eval_add_S1 eval_add_S2 : push_basesystem_eval.
 
-    Lemma to_list_left_append {n} (p:T n) x:
-      (to_list _ (left_append x p)) = to_list n p ++ x :: nil.
-    Admitted.
-
     Lemma uweight_le_mono n m : (n <= m)%nat ->
       uweight bound n <= uweight bound m.
     Proof.
@@ -949,7 +937,7 @@ Section API.
         match goal with
           H : _ \/ False |- _ => destruct H; [|exfalso; assumption] end.
         subst x. apply Z.mod_pos_bound, Z.gt_lt, bound_pos. }
-      { rewrite to_list_left_append.
+      { rewrite Tuple.to_list_left_append.
         let H := fresh "H" in
         intros x H; apply in_app_or in H; destruct H;
           [solve[auto]| cbv [In] in H; destruct H;
@@ -968,7 +956,7 @@ Section API.
       intros. pose_all.
       cbv [small add_cps add Let_In]. repeat autounfold.
       autorewrite with uncps push_id.
-      rewrite to_list_left_append.
+      rewrite Tuple.to_list_left_append.
       let H := fresh "H" in intros x H; apply in_app_or in H;
                               destruct H as [H | H];
                               [apply (small_compact _ _ H)
@@ -1000,7 +988,7 @@ Section API.
     Qed.
 
     Lemma small_left_tl n (v:T (S n)) : small v -> small (left_tl v).
-    Proof. cbv [small]. auto using In_to_list_left_tl. Qed.
+    Proof. cbv [small]. auto using Tuple.In_to_list_left_tl. Qed.
 
     Lemma small_divmod n (p: T (S n)) (Hsmall : small p) :
       left_hd p = eval p / uweight bound n /\ eval (left_tl p) = eval p mod (uweight bound n).

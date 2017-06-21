@@ -317,7 +317,7 @@ Module Tuple.
     rewrite IHn. reflexivity.
   Qed.
 
-  Definition tl_cps {A n} : 
+  Definition tl_cps {A n} :
     tuple A (S n) -> forall {R}, (tuple A n -> R) -> R :=
   match
     n as n0 return (tuple A (S n0) -> forall R, (tuple A n0 -> R) -> R)
@@ -329,7 +329,7 @@ Module Tuple.
     @tl_cps A n xs R f = f (tl xs).
   Proof. destruct n; reflexivity. Qed.
 
-  Definition hd_cps {A n} : 
+  Definition hd_cps {A n} :
     tuple A (S n) -> forall {R}, (A -> R) -> R :=
   match
     n as n0 return (tuple A (S n0) -> forall R, (A -> R) -> R)
@@ -340,8 +340,8 @@ Module Tuple.
   Lemma hd_cps_correct A n xs R f :
     @hd_cps A n xs R f = f (hd xs).
   Proof. destruct n; reflexivity. Qed.
-  
-  Fixpoint left_tl_cps {A n} : 
+
+  Fixpoint left_tl_cps {A n} :
     tuple A (S n) -> forall {R}, (tuple A n -> R) -> R :=
   match
     n as n0 return (tuple A (S n0) -> forall R, (tuple A n0 -> R) -> R)
@@ -349,7 +349,7 @@ Module Tuple.
   | 0%nat => fun _ _ f => f tt
   | S n' =>
       fun xs _ f =>
-        tl_cps xs (fun xtl => hd_cps xs (fun xhd => 
+        tl_cps xs (fun xtl => hd_cps xs (fun xhd =>
           left_tl_cps xtl (fun r => f (append xhd r))))
   end.
   Lemma left_tl_cps_correct A n xs R f :
@@ -360,7 +360,7 @@ Module Tuple.
     rewrite IHn. reflexivity.
   Qed.
 
-  Fixpoint left_hd_cps {A n} : 
+  Fixpoint left_hd_cps {A n} :
     tuple A (S n) -> forall {R}, (A -> R) -> R :=
   match
     n as n0 return (tuple A (S n0) -> forall R, (A -> R) -> R)
@@ -377,6 +377,38 @@ Module Tuple.
     rewrite IHn. reflexivity.
   Qed.
 
+  Lemma In_left_hd {A} n (p : tuple A (S n))
+    : In (left_hd p) (to_list _ p).
+  Proof.
+    simpl in *.
+    induction n as [|n IHn].
+    { left; reflexivity. }
+    { destruct p; simpl in *; right; auto. }
+  Qed.
+
+  Lemma In_to_list_left_tl {A} n (p : tuple A (S n)) x
+    : In x (to_list n (left_tl p)) -> In x (to_list (S n) p).
+  Proof.
+    simpl in *.
+    remember (to_list n (left_tl p)) as ls eqn:H.
+    intro Hin; revert Hin H.
+    revert n p.
+    induction ls as [|l ls IHls], n.
+    { simpl; intros ? []. }
+    { simpl; intros ? []. }
+    { simpl; congruence. }
+    { simpl; intros [? p] [H0|H1] H; simpl in *;
+        setoid_rewrite to_list_append in H;
+        inversion H; clear H; subst; auto. }
+  Qed.
+
+  Lemma to_list_left_append {A} {n} (p:tuple A n) x
+    : (to_list _ (left_append x p)) = to_list n p ++ x :: nil.
+  Proof.
+    destruct n as [|n]; simpl in *; [ reflexivity | ].
+    induction n as [|n IHn]; simpl in *; [ reflexivity | ].
+    destruct p; simpl in *; rewrite IHn; simpl; reflexivity.
+  Qed.
 End Tuple.
 Hint Rewrite @Tuple.map_cps_correct @Tuple.left_append_cps_correct @Tuple.left_tl_cps_correct @Tuple.left_hd_cps_correct @Tuple.tl_cps_correct @Tuple.hd_cps_correct : uncps.
 Hint Rewrite @Tuple.mapi_with_cps_correct @Tuple.mapi_with'_cps_correct
