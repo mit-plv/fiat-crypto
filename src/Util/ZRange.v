@@ -55,6 +55,14 @@ Proof.
   split; intro H; intros; repeat split; apply H; assumption.
 Qed.
 
+Lemma is_bounded_by_None_repeat_In_iff_lt {n} vs l u
+  : is_bounded_by None (Tuple.repeat {| lower := l ; upper := u - 1 |} n) vs
+    <-> (forall x, List.In x (Tuple.to_list _ vs) -> l <= x < u).
+Proof.
+  rewrite is_bounded_by_None_repeat_In_iff.
+  split; intro H; (repeat let x := fresh in intro x; specialize (H x)); omega.
+Qed.
+
 Definition is_tighter_than_bool (x y : zrange) : bool
   := ((lower y <=? lower x) && (upper x <=? upper y))%bool%Z.
 
