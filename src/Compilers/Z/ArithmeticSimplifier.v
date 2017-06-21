@@ -419,16 +419,32 @@ Section language.
                                      | neg_expr y => Some y
                                      | gen_expr _ => None
                                      end in
-                           match y' with
-                           | Some y => LetIn (Op (SubWithGetBorrow bw TZ TZ TZ TZ TZ)
-                                                 (match c with
-                                                  | const_of c => Op (OpConst (-c)) TT
-                                                  | neg_expr c => c
-                                                  | gen_expr c => Op (Opp TZ TZ) c
-                                                  end,
-                                                  x, y)%expr)
-                                             (fun '(v, c) => (Var v, Op (Opp TZ TZ) (Var c))%expr)
-                           | None => Op opc args
+                           let c' := match c with
+                                     | const_of c => if (c <? 0)%Z
+                                                     then Some (Op (OpConst (-c)) TT)
+                                                     else None
+                                     | neg_expr c => Some c
+                                     | gen_expr _ => None
+                                     end in
+                           match c', y' with
+                           | _, Some y => LetIn (Op (SubWithGetBorrow bw TZ TZ TZ TZ TZ)
+                                                    (match c with
+                                                     | const_of c => Op (OpConst (-c)) TT
+                                                     | neg_expr c => c
+                                                     | gen_expr c => Op (Opp TZ TZ) c
+                                                     end,
+                                                     x, y)%expr)
+                                                (fun '(v, c) => (Var v, Op (Opp TZ TZ) (Var c))%expr)
+                           | Some c, _ => LetIn (Op (SubWithGetBorrow bw TZ TZ TZ TZ TZ)
+                                                    (c,
+                                                     x,
+                                                     match y with
+                                                     | const_of y => Op (OpConst (-y)) TT
+                                                     | neg_expr y => y
+                                                     | gen_expr y => Op (Opp TZ TZ) y
+                                                     end)%expr)
+                                                (fun '(v, c) => (Var v, Op (Opp TZ TZ) (Var c))%expr)
+                           | None, None => Op opc args
                            end
                       | _ => Op opc args
                       end
