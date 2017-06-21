@@ -3,6 +3,7 @@
 -arg "-compat 8.6"
 Bedrock/Nomega.v
 Bedrock/Word.v
+src/Demo.v
 src/Algebra/Field.v
 src/Algebra/Field_test.v
 src/Algebra/Group.v
@@ -276,6 +277,7 @@ src/Util/Option.v
 src/Util/PartiallyReifiedProp.v
 src/Util/PointedProp.v
 src/Util/Prod.v
+src/Util/QUtil.v
 src/Util/Relations.v
 src/Util/Sigma.v
 src/Util/Sum.v
@@ -287,6 +289,7 @@ src/Util/Unit.v
 src/Util/WordUtil.v
 src/Util/ZRange.v
 src/Util/ZUtil.v
+src/Util/Decidable/Bool2Prop.v
 src/Util/ForLoop/Instances.v
 src/Util/ForLoop/InvariantFramework.v
 src/Util/ForLoop/Tests.v

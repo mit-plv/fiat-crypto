@@ -19,6 +19,10 @@ Create HintDb simpl_firstn discriminated.
 Create HintDb simpl_skipn discriminated.
 Create HintDb simpl_fold_right discriminated.
 Create HintDb simpl_sum_firstn discriminated.
+Create HintDb push_map discriminated.
+Create HintDb push_flat_map discriminated.
+Create HintDb push_fold_right discriminated.
+Create HintDb push_partition discriminated.
 Create HintDb pull_nth_error discriminated.
 Create HintDb push_nth_error discriminated.
 Create HintDb pull_nth_default discriminated.
@@ -70,11 +74,45 @@ Module Export List.
     Variables (A : Type) (B : Type).
     Variable f : A -> B.
 
+    Lemma map_nil : forall A B (f : A -> B), map f nil = nil.
+    Proof. reflexivity. Qed.
     Lemma map_cons (x:A)(l:list A) : map f (x::l) = (f x) :: (map f l).
     Proof using Type.
       reflexivity.
     Qed.
   End Map.
+  Hint Rewrite @map_cons @map_nil : push_map.
+
+  Section FlatMap.
+    Lemma flat_map_nil {A B} (f:A->list B) : List.flat_map f (@nil A) = nil.
+    Proof. reflexivity. Qed.
+    Lemma flat_map_cons {A B} (f:A->list B) x xs :
+      (List.flat_map f (x::xs) = (f x++List.flat_map f xs))%list.
+    Proof. reflexivity. Qed.
+  End FlatMap.
+  Hint Rewrite @flat_map_cons @flat_map_nil : push_flat_map.
+
+  Section FoldRight.
+    Context {A B} (f:B->A->A).
+    Lemma fold_right_nil : forall {A B} (f:B->A->A) a,
+        List.fold_right f a nil = a.
+    Proof. reflexivity. Qed.
+    Lemma fold_right_cons : forall a b bs,
+      fold_right f a (b::bs) = f b (fold_right f a bs).
+    Proof. reflexivity. Qed.
+  End FoldRight.
+  Hint Rewrite @fold_right_nil @fold_right_cons : simpl_fold_right push_fold_right.
+
+  Section Partition.
+    Lemma partition_nil {A} (f:A->_) : partition f nil = (nil, nil).
+    Proof. reflexivity.                                         Qed.
+    Lemma partition_cons {A} (f:A->_) x xs : partition f (x::xs) =
+                                             if f x
+                                             then (x :: (fst (partition f xs)), (snd (partition f xs)))
+                                             else ((fst (partition f xs)), x :: (snd (partition f xs))).
+    Proof. cbv [partition]; break_match; reflexivity.           Qed.
+  End Partition.
+  Hint Rewrite @partition_nil @partition_cons : push_partition.
 
   Lemma in_seq len start n :
     In n (seq start len) <-> start <= n < start+len.
@@ -357,22 +395,6 @@ Proof.
   omega.
 Qed.
 
-Lemma map_nil : forall A B (f : A -> B), map f nil = nil.
-Proof. reflexivity. Qed.
-
-(* Note: this is a duplicate of a lemma that exists in 8.5, included for
-   8.4 support *)
-Lemma In_nth : forall {A} (x : A) d xs, In x xs ->
-  exists i, i < length xs /\ nth i xs d = x.
-Proof.
-  induction xs as [|?? IHxs]; intros;
-    match goal with H : In _ _ |- _ => simpl in H; destruct H end.
-  + subst. exists 0. simpl; split; auto || omega.
-  + destruct IHxs as [i [ ]]; auto.
-    exists (S i).
-    split; auto; simpl; try omega.
-Qed.
-
 Hint Rewrite @map_nth_default using omega : push_nth_default.
 
 Ltac nth_tac :=
@@ -480,21 +502,6 @@ Proof.
 Qed.
 
 Hint Rewrite @length_update_nth : distr_length.
-
-(** TODO: this is in the stdlib in 8.5; remove this when we move to 8.5-only *)
-Lemma nth_error_None : forall (A : Type) (l : list A) (n : nat), nth_error l n = None <-> length l <= n.
-Proof.
-  intros A l n.
-  destruct (le_lt_dec (length l) n) as [H|H];
-    split; intro H';
-      try omega;
-      try (apply nth_error_length_error in H; tauto);
-      try (apply nth_error_error_length in H'; omega).
-Qed.
-
-(** TODO: this is in the stdlib in 8.5; remove this when we move to 8.5-only *)
-Lemma nth_error_Some : forall (A : Type) (l : list A) (n : nat), nth_error l n <> None <-> n < length l.
-Proof. intros; rewrite nth_error_None; split; omega. Qed.
 
 Lemma nth_set_nth : forall m {T} (xs:list T) (n:nat) x,
   nth_error (set_nth m x xs) n =
@@ -742,6 +749,17 @@ Proof.
   induction xs, xs', ys, ys'; boring; omega.
 Qed.
 
+Lemma map_fst_combine {A B} (xs:list A) (ys:list B) : List.map fst (List.combine xs ys) = List.firstn (length ys) xs.
+Proof.
+  revert xs; induction ys; destruct xs; simpl; solve [ trivial | congruence ].
+Qed.
+
+Lemma map_snd_combine {A B} (xs:list A) (ys:list B) : List.map snd (List.combine xs ys) = List.firstn (length xs) ys.
+Proof.
+  revert xs; induction ys; destruct xs; simpl; solve [ trivial | congruence ].
+Qed.
+Hint Rewrite @map_fst_combine @map_snd_combine : push_map.
+
 Lemma skipn_nil : forall {A} n, skipn n nil = @nil A.
 Proof. destruct n; auto. Qed.
 
@@ -872,14 +890,6 @@ Proof.
 Qed.
 
 Hint Rewrite @skipn_length : distr_length.
-
-Lemma fold_right_cons : forall {A B} (f:B->A->A) a b bs,
-  fold_right f a (b::bs) = f b (fold_right f a bs).
-Proof.
-  reflexivity.
-Qed.
-
-Hint Rewrite @fold_right_cons : simpl_fold_right.
 
 Lemma length_cons : forall {T} (x:T) xs, length (x::xs) = S (length xs).
   reflexivity.
@@ -1456,6 +1466,14 @@ induction m; intros.
     omega.
 Qed.
 
+Lemma nth_default_seq_inbounds d s n i (H:(i < n)%nat) :
+  List.nth_default d (List.seq s n) i = (s+i)%nat.
+Proof.
+  progress cbv [List.nth_default].
+  rewrite nth_error_seq.
+  break_innermost_match; solve [ trivial | omega ].
+Qed.
+Hint Rewrite @nth_default_seq_inbounds using lia : push_nth_default.
 
 Lemma sum_firstn_prefix_le' : forall l n m, (forall x, In x l -> (0 <= x)%Z) ->
                                             (sum_firstn l n <= sum_firstn l (n + m))%Z.
