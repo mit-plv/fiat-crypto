@@ -70,7 +70,7 @@ Section WordByWordMontgomery.
 
   Local Notation conditional_sub_cps := (fun V : T (S R_numlimbs) => @conditional_sub_cps (Z.pos r) _ (Z.pos r - 1) V N _).
   Local Notation conditional_sub := (fun V : T (S R_numlimbs) => @conditional_sub (Z.pos r) _ (Z.pos r - 1) V N).
-  Local Notation eval_conditional_sub' := (fun V small_V V_bound => @eval_conditional_sub (Z.pos r) (Zorder.Zgt_pos_0 _) _ (Z.pos r - 1) V N small_V small_N N_mask V_bound).
+  Local Notation eval_conditional_sub' := (fun V small_V V_bound => @eval_conditional_sub (Z.pos r) (Zorder.Zgt_pos_0 _) r_big _ (Z.pos r - 1) V N small_V small_N N_mask V_bound).
   Local Lemma eval_conditional_sub
     : forall v, small v -> 0 <= eval v < eval N + R -> eval (conditional_sub v) = eval v + if R <=? eval v then -eval N else 0.
   Proof. rewrite R_correct; exact eval_conditional_sub'. Qed.
