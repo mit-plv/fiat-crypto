@@ -74,3 +74,7 @@ Ltac eexists_sig_etransitivity_for_rewrite_fun :=
     => let lem := open_constr:(@sig_eq_trans_rewrite_fun_exist1 A _ f _ b) in
        simple refine (lem _ _); cbv beta
   end.
+Definition sig_conj_by_impl2 {A} {P Q : A -> Prop} (H : forall a : A, Q a -> P a)
+           (H' : { a : A | Q a })
+  : { a : A | P a /\ Q a }
+  := let (a, p) := H' in exist _ a (conj (H a p) p).
