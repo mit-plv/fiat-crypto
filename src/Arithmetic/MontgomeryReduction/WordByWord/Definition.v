@@ -22,21 +22,24 @@ Section WordByWordMontgomery.
     (N : T R_numlimbs).
 
   Local Notation scmul := (@scmul (Z.pos r)).
-  Local Notation add' := (fun n => @add (Z.pos r) (S n) n (S n)).
-  Local Notation add := (fun n => @add (Z.pos r) n n n).
+  Local Notation addT' := (fun n => @Saturated.add (Z.pos r) (S n) n (S n)).
+  Local Notation addT := (fun n => @Saturated.add (Z.pos r) n n n).
   Local Notation conditional_sub_cps := (fun V => @conditional_sub_cps (Z.pos r) _ (Z.pos r - 1) V N _).
   Local Notation conditional_sub := (fun V => @conditional_sub (Z.pos r) _ (Z.pos r - 1) V N).
 
+  Axiom sub_then_maybe_add_cps : T R_numlimbs -> T R_numlimbs -> forall {cpsT}, (T R_numlimbs -> cpsT) -> cpsT. (* computes [a - b + if (a - b) <? 0 then N else 0] *)
+  Axiom sub_then_maybe_add : T R_numlimbs -> T R_numlimbs -> T R_numlimbs. (* computes [a - b + if (a - b) <? 0 then N else 0] *)
+
   Definition redc_body_no_cps (B : T R_numlimbs) (k : Z) {pred_A_numlimbs} (A_S : T (S pred_A_numlimbs) * T (S R_numlimbs))
     : T pred_A_numlimbs * T (S R_numlimbs)
-    := @redc_body T (@divmod) r R_numlimbs (@scmul) add add' (@drop_high (S R_numlimbs)) N B k _ A_S.
+    := @redc_body T (@divmod) r R_numlimbs (@scmul) addT addT' (@drop_high (S R_numlimbs)) N B k _ A_S.
   Definition redc_loop_no_cps (B : T R_numlimbs) (k : Z) (count : nat) (A_S : T count * T (S R_numlimbs))
     : T 0 * T (S R_numlimbs)
-    := @redc_loop T (@divmod) r R_numlimbs (@scmul) add add' (@drop_high (S R_numlimbs)) N B k count A_S.
+    := @redc_loop T (@divmod) r R_numlimbs (@scmul) addT addT' (@drop_high (S R_numlimbs)) N B k count A_S.
   Definition pre_redc_no_cps {A_numlimbs} (A : T A_numlimbs) (B : T R_numlimbs) (k : Z) : T (S R_numlimbs)
-    := @pre_redc T (@zero) (@divmod) r R_numlimbs (@scmul) add add' (@drop_high (S R_numlimbs)) N _ A B k.
+    := @pre_redc T (@zero) (@divmod) r R_numlimbs (@scmul) addT addT' (@drop_high (S R_numlimbs)) N _ A B k.
   Definition redc_no_cps {A_numlimbs} (A : T A_numlimbs) (B : T R_numlimbs) (k : Z) : T R_numlimbs
-    := @redc T (@zero) (@divmod) r R_numlimbs (@scmul) add add' (@drop_high (S R_numlimbs)) conditional_sub N _ A B k.
+    := @redc T (@zero) (@divmod) r R_numlimbs (@scmul) addT addT' (@drop_high (S R_numlimbs)) conditional_sub N _ A B k.
 
   Definition redc_body_cps {pred_A_numlimbs} (A : T (S pred_A_numlimbs)) (B : T R_numlimbs) (k : Z) (S' : T (S R_numlimbs))
              {cpsT} (rest : T pred_A_numlimbs * T (S R_numlimbs) -> cpsT)
@@ -73,6 +76,27 @@ Section WordByWordMontgomery.
     := pre_redc_cps A B k id.
   Definition redc {A_numlimbs} (A : T A_numlimbs) (B : T R_numlimbs) (k : Z) : T R_numlimbs
     := redc_cps A B k id.
+
+  Definition add_no_cps (A B : T R_numlimbs) : T R_numlimbs
+    := @add T R_numlimbs (@addT) (@conditional_sub) A B.
+  Definition sub_no_cps (A B : T R_numlimbs) : T R_numlimbs
+    := @sub T R_numlimbs (@sub_then_maybe_add) A B.
+  Definition opp_no_cps (A : T R_numlimbs) : T R_numlimbs
+    := @opp T (@zero) R_numlimbs (@sub_then_maybe_add) A.
+
+  Definition add_cps (A B : T R_numlimbs) {cpsT} (rest : T R_numlimbs -> cpsT) : cpsT
+    := @add_cps r _ _ R_numlimbs A B
+                _ (fun v => conditional_sub_cps v rest).
+  Definition add (A B : T R_numlimbs) : T R_numlimbs
+    := add_cps A B id.
+  Definition sub_cps (A B : T R_numlimbs) {cpsT} (rest : T R_numlimbs -> cpsT) : cpsT
+    := @sub_then_maybe_add_cps A B _ rest.
+  Definition sub (A B : T R_numlimbs) : T R_numlimbs
+    := sub_cps A B id.
+  Definition opp_cps (A : T R_numlimbs) {cpsT} (rest : T R_numlimbs -> cpsT) : cpsT
+    := sub_cps zero A rest.
+  Definition opp (A : T R_numlimbs) : T R_numlimbs
+    := opp_cps A id.
 End WordByWordMontgomery.
 
-Hint Opaque redc pre_redc redc_body redc_loop : uncps.
+Hint Opaque redc pre_redc redc_body redc_loop add sub opp : uncps.

@@ -157,4 +157,39 @@ Proof.
     ).
 Defined.
 
-Print Assumptions mulmod_256.
+
+Definition add : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
+                 | forall (A B : Tuple.tuple Z sz),
+                     f A B =
+                     (add (r:=r)(R_numlimbs:=sz) p256 A B)
+                 }.
+Proof.
+  eapply (lift2_sig (fun A B c => c = _)); eexists.
+  cbv -[Definitions.Z.add_get_carry Definitions.Z.mul_split_at_bitwidth Definitions.Z.zselect runtime_add runtime_mul runtime_and runtime_opp Let_In].
+  reflexivity.
+Defined.
+
+Definition sub : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
+                 | forall (A B : Tuple.tuple Z sz),
+                     f A B =
+                     (sub (*r:=r*)(R_numlimbs:=sz) (*p256*) A B)
+                 }.
+Proof.
+  eapply (lift2_sig (fun A B c => c = _)); eexists.
+  cbv -[Definitions.Z.add_get_carry Definitions.Z.mul_split_at_bitwidth Definitions.Z.zselect runtime_add runtime_mul runtime_and runtime_opp Let_In].
+  reflexivity.
+Defined.
+
+Definition opp : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz
+                 | forall (A : Tuple.tuple Z sz),
+                     f A =
+                     (opp (*r:=r*)(R_numlimbs:=sz) (*p256*) A)
+                 }.
+Proof.
+  eapply (lift1_sig (fun A c => c = _)); eexists.
+  cbv -[Definitions.Z.add_get_carry Definitions.Z.mul_split_at_bitwidth Definitions.Z.zselect runtime_add runtime_mul runtime_and runtime_opp Let_In].
+  reflexivity.
+Defined.
+
+Local Definition for_assumptions := (mulmod_256, add, sub, opp).
+Print Assumptions for_assumptions.

@@ -36,12 +36,12 @@ Section WordByWordMontgomery.
     {scmul : forall {n}, Z -> T n -> T (S n)} (* uses double-output multiply *)
     {eval_scmul: forall n a v, small v -> 0 <= a < r -> 0 <= eval v < R -> eval (@scmul n a v) = a * eval v}
     {small_scmul : forall n a v, small v -> 0 <= a < r -> 0 <= eval v < R -> small (@scmul n a v)}
-    {add : forall {n}, T n -> T n -> T (S n)} (* joins carry *)
-    {eval_add : forall n a b, eval (@add n a b) = eval a + eval b}
-    {small_add : forall n a b, small a -> small b -> small (@add n a b)}
-    {add' : forall {n}, T (S n) -> T n -> T (S (S n))} (* joins carry *)
-    {eval_add' : forall n a b, eval (@add' n a b) = eval a + eval b}
-    {small_add' : forall n a b, small a -> small b -> small (@add' n a b)}
+    {addT : forall {n}, T n -> T n -> T (S n)} (* joins carry *)
+    {eval_addT : forall n a b, eval (@addT n a b) = eval a + eval b}
+    {small_addT : forall n a b, small a -> small b -> small (@addT n a b)}
+    {addT' : forall {n}, T (S n) -> T n -> T (S (S n))} (* joins carry *)
+    {eval_addT' : forall n a b, eval (@addT' n a b) = eval a + eval b}
+    {small_addT' : forall n a b, small a -> small b -> small (@addT' n a b)}
     {drop_high : T (S (S R_numlimbs)) -> T (S R_numlimbs)} (* drops the highest limb *)
     {eval_drop_high : forall v, small v -> eval (drop_high v) = eval v mod (r * r^Z.of_nat R_numlimbs)}
     {small_drop_high : forall v, small v -> small (drop_high v)}
@@ -51,6 +51,9 @@ Section WordByWordMontgomery.
     {conditional_sub : T (S R_numlimbs) -> T R_numlimbs} (* computes [arg - N] if [N <= arg], and drops high bit *)
     {eval_conditional_sub : forall v, small v -> 0 <= eval v < eval N + R -> eval (conditional_sub v) = eval v + if eval N <=? eval v then -eval N else 0}
     {small_conditional_sub : forall v, small v -> 0 <= eval v < eval N + R -> small (conditional_sub v)}
+    {sub_then_maybe_add : T R_numlimbs -> T R_numlimbs -> T R_numlimbs} (* computes [a - b + if (a - b) <? 0 then N else 0] *)
+    {eval_sub_then_maybe_add : forall a b, small a -> small b -> 0 <= eval a < eval N -> 0 <= eval b < eval N -> eval (sub_then_maybe_add a b) = eval a - eval b + if eval a - eval b <? 0 then eval N else 0}
+    {small_sub_then_maybe_add : forall a b, small a -> small b -> 0 <= eval a < eval N -> 0 <= eval b < eval N -> small (sub_then_maybe_add a b)}
     (B : T R_numlimbs)
     (B_bounds : 0 <= eval B < R)
     (small_B : small B)
@@ -60,29 +63,33 @@ Section WordByWordMontgomery.
   Create HintDb push_eval discriminated.
   Local Ltac t_small :=
     repeat first [ assumption
-                 | apply small_add
-                 | apply small_add'
+                 | apply small_addT
+                 | apply small_addT'
                  | apply small_div
                  | apply small_drop_high
                  | apply small_zero
                  | apply small_scmul
                  | apply small_conditional_sub
+                 | apply small_sub_then_maybe_add
                  | apply Z_mod_lt
                  | rewrite Z.mul_split_mod
-                 | progress destruct_head' and
                  | solve [ auto with zarith ]
                  | lia
                  | progress autorewrite with push_eval
-                 | progress autounfold with word_by_word_montgomery ].
+                 | progress autounfold with word_by_word_montgomery
+                 | match goal with
+                   | [ H : and _ _ |- _ ] => destruct H
+                   end ].
   Hint Rewrite
        eval_zero
        eval_div
        eval_mod
-       eval_add
-       eval_add'
+       eval_addT
+       eval_addT'
        eval_scmul
        eval_drop_high
        eval_conditional_sub
+       eval_sub_then_maybe_add
        using (repeat autounfold with word_by_word_montgomery; t_small)
     : push_eval.
 
@@ -104,12 +111,12 @@ Section WordByWordMontgomery.
 
     Local Notation a := (@WordByWord.Abstract.Dependent.Definition.a T (@divmod) pred_A_numlimbs A).
     Local Notation A' := (@WordByWord.Abstract.Dependent.Definition.A' T (@divmod) pred_A_numlimbs A).
-    Local Notation S1 := (@WordByWord.Abstract.Dependent.Definition.S1 T (@divmod) R_numlimbs scmul add pred_A_numlimbs B A S).
-    Local Notation s := (@WordByWord.Abstract.Dependent.Definition.s T (@divmod) R_numlimbs scmul add pred_A_numlimbs B A S).
-    Local Notation q := (@WordByWord.Abstract.Dependent.Definition.q T (@divmod) r R_numlimbs scmul add pred_A_numlimbs B k A S).
-    Local Notation S2 := (@WordByWord.Abstract.Dependent.Definition.S2 T (@divmod) r R_numlimbs scmul add add' N pred_A_numlimbs B k A S).
-    Local Notation S3 := (@WordByWord.Abstract.Dependent.Definition.S3 T (@divmod) r R_numlimbs scmul add add' N pred_A_numlimbs B k A S).
-    Local Notation S4 := (@WordByWord.Abstract.Dependent.Definition.S4 T (@divmod) r R_numlimbs scmul add add' drop_high N pred_A_numlimbs B k A S).
+    Local Notation S1 := (@WordByWord.Abstract.Dependent.Definition.S1 T (@divmod) R_numlimbs scmul addT pred_A_numlimbs B A S).
+    Local Notation s := (@WordByWord.Abstract.Dependent.Definition.s T (@divmod) R_numlimbs scmul addT pred_A_numlimbs B A S).
+    Local Notation q := (@WordByWord.Abstract.Dependent.Definition.q T (@divmod) r R_numlimbs scmul addT pred_A_numlimbs B k A S).
+    Local Notation S2 := (@WordByWord.Abstract.Dependent.Definition.S2 T (@divmod) r R_numlimbs scmul addT addT' N pred_A_numlimbs B k A S).
+    Local Notation S3 := (@WordByWord.Abstract.Dependent.Definition.S3 T (@divmod) r R_numlimbs scmul addT addT' N pred_A_numlimbs B k A S).
+    Local Notation S4 := (@WordByWord.Abstract.Dependent.Definition.S4 T (@divmod) r R_numlimbs scmul addT addT' drop_high N pred_A_numlimbs B k A S).
 
     Lemma S3_bound
       : eval S < eval N + eval B
@@ -236,10 +243,10 @@ Section WordByWordMontgomery.
     Qed.
   End Iteration.
 
-  Local Notation redc_body := (@redc_body T (@divmod) r R_numlimbs scmul add add' drop_high N B k).
-  Local Notation redc_loop := (@redc_loop T (@divmod) r R_numlimbs scmul add add' drop_high N B k).
-  Local Notation pre_redc A := (@pre_redc T zero (@divmod) r R_numlimbs scmul add add' drop_high N _ A B k).
-  Local Notation redc A := (@redc T zero (@divmod) r R_numlimbs scmul add add' drop_high conditional_sub N _ A B k).
+  Local Notation redc_body := (@redc_body T (@divmod) r R_numlimbs scmul addT addT' drop_high N B k).
+  Local Notation redc_loop := (@redc_loop T (@divmod) r R_numlimbs scmul addT addT' drop_high N B k).
+  Local Notation pre_redc A := (@pre_redc T zero (@divmod) r R_numlimbs scmul addT addT' drop_high N _ A B k).
+  Local Notation redc A := (@redc T zero (@divmod) r R_numlimbs scmul addT addT' drop_high conditional_sub N _ A B k).
 
   Section body.
     Context (pred_A_numlimbs : nat)
@@ -510,4 +517,43 @@ Section WordByWordMontgomery.
     unfold redc.
     apply small_conditional_sub; [ apply small_pre_redc | .. ]; auto; omega.
   Qed.
+
+  Local Notation add := (@add T R_numlimbs addT conditional_sub).
+  Local Notation sub := (@sub T R_numlimbs sub_then_maybe_add).
+  Local Notation opp := (@opp T (@zero) R_numlimbs sub_then_maybe_add).
+
+  Section add_sub.
+    Context (Av Bv : T R_numlimbs)
+            (small_Av : small Av)
+            (small_Bv : small Bv)
+            (Av_bound : 0 <= eval Av < eval N)
+            (Bv_bound : 0 <= eval Bv < eval N).
+
+    Local Ltac do_clear :=
+      clear dependent B; clear dependent k; clear dependent ri; clear dependent Npos.
+
+    Lemma small_add : small (add Av Bv).
+    Proof. do_clear; unfold add; t_small. Qed.
+    Lemma small_sub : small (sub Av Bv).
+    Proof. do_clear; unfold sub; t_small. Qed.
+    Lemma small_opp : small (opp Av).
+    Proof. clear dependent Bv; do_clear; unfold opp, sub; t_small. Qed.
+
+    Lemma eval_add : eval (add Av Bv) = eval Av + eval Bv + if (eval N <=? eval Av + eval Bv) then -eval N else 0.
+    Proof. do_clear; unfold add; autorewrite with push_eval; reflexivity. Qed.
+    Lemma eval_sub : eval (sub Av Bv) = eval Av - eval Bv + if (eval Av - eval Bv <? 0) then eval N else 0.
+    Proof. do_clear; unfold sub; autorewrite with push_eval; reflexivity. Qed.
+    Lemma eval_opp : eval (opp Av) = (if (eval Av =? 0) then 0 else eval N) - eval Av.
+    Proof.
+      clear dependent Bv; do_clear; unfold opp, sub; autorewrite with push_eval.
+      break_innermost_match; Z.ltb_to_lt; lia.
+    Qed.
+
+    Lemma add_bound : 0 <= eval (add Av Bv) < eval N.
+    Proof. do_clear; generalize eval_add; break_innermost_match; Z.ltb_to_lt; lia. Qed.
+    Lemma sub_bound : 0 <= eval (sub Av Bv) < eval N.
+    Proof. do_clear; generalize eval_sub; break_innermost_match; Z.ltb_to_lt; lia. Qed.
+    Lemma opp_bound : 0 <= eval (opp Av) < eval N.
+    Proof. do_clear; generalize eval_opp; break_innermost_match; Z.ltb_to_lt; lia. Qed.
+  End add_sub.
 End WordByWordMontgomery.

@@ -16,8 +16,8 @@ Section WordByWordMontgomery.
           (R_numlimbs : nat).
   Local Notation small := (@small (Z.pos r)).
   Local Notation eval := (@eval (Z.pos r)).
-  Local Notation add' := (fun n => @add (Z.pos r) (S n) n (S n)).
-  Local Notation add := (fun n => @add (Z.pos r) n n n).
+  Local Notation addT' := (fun n => @Saturated.add (Z.pos r) (S n) n (S n)).
+  Local Notation addT := (fun n => @Saturated.add (Z.pos r) n n n).
   Local Notation scmul := (@scmul (Z.pos r)).
   Local Notation eval_zero := (@eval_zero (Z.pos r)).
   Local Notation small_zero := (@small_zero r (Zorder.Zgt_pos_0 _)).
@@ -27,8 +27,8 @@ Section WordByWordMontgomery.
   Local Notation eval_mod := (@eval_mod (Z.pos r) (Zorder.Zgt_pos_0 _)).
   Local Notation small_div := (@small_div (Z.pos r) (Zorder.Zgt_pos_0 _)).
   Local Notation eval_scmul := (fun n a v smallv abound vbound => @eval_scmul (Z.pos r) (Zorder.Zgt_pos_0 _) n a v smallv abound).
-  Local Notation eval_add := (@eval_add_same (Z.pos r) (Zorder.Zgt_pos_0 _)).
-  Local Notation eval_add' := (@eval_add_S1 (Z.pos r) (Zorder.Zgt_pos_0 _)).
+  Local Notation eval_addT := (@eval_add_same (Z.pos r) (Zorder.Zgt_pos_0 _)).
+  Local Notation eval_addT' := (@eval_add_S1 (Z.pos r) (Zorder.Zgt_pos_0 _)).
   Local Notation drop_high := (@drop_high (S R_numlimbs)).
   Local Notation small_drop_high := (@small_drop_high (Z.pos r) (S R_numlimbs)).
   Context (A_numlimbs : nat)
@@ -59,11 +59,11 @@ Section WordByWordMontgomery.
     subst R; destruct (Z.pos r ^ Z.of_nat R_numlimbs) eqn:?; [ | reflexivity | ];
       lia.
   Qed.
-  Local Lemma small_add : forall n a b, small a -> small b -> small (@add n a b).
+  Local Lemma small_addT : forall n a b, small a -> small b -> small (@addT n a b).
   Proof.
     intros; apply Saturated.small_add; auto; lia.
   Qed.
-  Local Lemma small_add' : forall n a b, small a -> small b -> small (@add' n a b).
+  Local Lemma small_addT' : forall n a b, small a -> small b -> small (@addT' n a b).
   Proof.
     intros; apply Saturated.small_add; auto; lia.
   Qed.
@@ -125,18 +125,16 @@ Section WordByWordMontgomery.
   Local Notation redc_cps := (@redc_cps r R_numlimbs N A_numlimbs A B k).
   Local Notation redc := (@redc r R_numlimbs N A_numlimbs A B k).
 
-
-
   Definition redc_no_cps_bound : 0 <= eval redc_no_cps < R
-    := @redc_bound T (@eval) (@zero) (@divmod) r r_big R R_numlimbs R_correct (@small) eval_zero small_zero eval_div eval_mod small_div (@scmul) eval_scmul small_scmul (@add) eval_add small_add (@add') eval_add' small_add' drop_high eval_drop_high small_drop_high N Npos Npos_correct small_N N_lt_R conditional_sub eval_conditional_sub B B_bound small_B ri k A_numlimbs A small_A A_bound.
+    := @redc_bound T (@eval) (@zero) (@divmod) r r_big R R_numlimbs R_correct (@small) eval_zero small_zero eval_div eval_mod small_div (@scmul) eval_scmul small_scmul (@addT) eval_addT small_addT (@addT') eval_addT' small_addT' drop_high eval_drop_high small_drop_high N Npos Npos_correct small_N N_lt_R conditional_sub eval_conditional_sub B B_bound small_B ri k A_numlimbs A small_A A_bound.
   Definition redc_no_cps_bound_N : eval B < eval N -> 0 <= eval redc_no_cps < eval N
-    := @redc_bound_N T (@eval) (@zero) (@divmod) r r_big R R_numlimbs R_correct (@small) eval_zero small_zero eval_div eval_mod small_div (@scmul) eval_scmul small_scmul (@add) eval_add small_add (@add') eval_add' small_add' drop_high eval_drop_high small_drop_high N Npos Npos_correct small_N N_lt_R conditional_sub eval_conditional_sub B B_bound small_B ri k A_numlimbs A small_A.
+    := @redc_bound_N T (@eval) (@zero) (@divmod) r r_big R R_numlimbs R_correct (@small) eval_zero small_zero eval_div eval_mod small_div (@scmul) eval_scmul small_scmul (@addT) eval_addT small_addT (@addT') eval_addT' small_addT' drop_high eval_drop_high small_drop_high N Npos Npos_correct small_N N_lt_R conditional_sub eval_conditional_sub B B_bound small_B ri k A_numlimbs A small_A.
   Definition redc_no_cps_mod_N
     : (eval redc_no_cps) mod (eval N) = (eval A * eval B * ri^(Z.of_nat A_numlimbs)) mod (eval N)
-    := @redc_mod_N T (@eval) (@zero) (@divmod) r r_big R R_numlimbs R_correct (@small) eval_zero small_zero eval_div eval_mod small_div (@scmul) eval_scmul small_scmul (@add) eval_add small_add (@add') eval_add' small_add' drop_high eval_drop_high small_drop_high N Npos Npos_correct small_N N_lt_R conditional_sub eval_conditional_sub B B_bound small_B ri ri_correct k k_correct A_numlimbs A small_A A_bound.
+    := @redc_mod_N T (@eval) (@zero) (@divmod) r r_big R R_numlimbs R_correct (@small) eval_zero small_zero eval_div eval_mod small_div (@scmul) eval_scmul small_scmul (@addT) eval_addT small_addT (@addT') eval_addT' small_addT' drop_high eval_drop_high small_drop_high N Npos Npos_correct small_N N_lt_R conditional_sub eval_conditional_sub B B_bound small_B ri ri_correct k k_correct A_numlimbs A small_A A_bound.
   Definition small_redc_no_cps
     : small redc_no_cps
-    := @small_redc T (@eval) (@zero) (@divmod) r r_big R R_numlimbs R_correct (@small) eval_zero small_zero eval_div eval_mod small_div (@scmul) eval_scmul small_scmul (@add) eval_add small_add (@add') eval_add' small_add' drop_high eval_drop_high small_drop_high N Npos Npos_correct small_N N_lt_R conditional_sub small_conditional_sub B B_bound small_B ri k A_numlimbs A small_A A_bound.
+    := @small_redc T (@eval) (@zero) (@divmod) r r_big R R_numlimbs R_correct (@small) eval_zero small_zero eval_div eval_mod small_div (@scmul) eval_scmul small_scmul (@addT) eval_addT small_addT (@addT') eval_addT' small_addT' drop_high eval_drop_high small_drop_high N Npos Npos_correct small_N N_lt_R conditional_sub small_conditional_sub B B_bound small_B ri k A_numlimbs A small_A A_bound.
 
   Lemma redc_body_cps_id pred_A_numlimbs (A' : T (S pred_A_numlimbs)) (S' : T (S R_numlimbs)) {cpsT} f
     : @redc_body_cps pred_A_numlimbs A' B k S' cpsT f = f (redc_body A' B k S').
@@ -215,6 +213,112 @@ Section WordByWordMontgomery.
   Lemma small_redc
     : small redc.
   Proof. rewrite redc_cps_id_no_cps; apply small_redc_no_cps. Qed.
+
+  Section add_sub.
+    Context (Av Bv : T R_numlimbs)
+            (small_Av : small Av)
+            (small_Bv : small Bv)
+            (Av_bound : 0 <= eval Av < eval N)
+            (Bv_bound : 0 <= eval Bv < eval N).
+    Local Notation add_no_cps := (@add_no_cps r R_numlimbs N Av Bv).
+    Local Notation add_cps := (@add_cps r R_numlimbs N Av Bv).
+    Local Notation add := (@add r R_numlimbs N Av Bv).
+    Local Notation sub_no_cps := (@sub_no_cps R_numlimbs Av Bv).
+    Local Notation sub_cps := (@sub_cps R_numlimbs Av Bv).
+    Local Notation sub := (@sub R_numlimbs Av Bv).
+    Local Notation opp_no_cps := (@opp_no_cps R_numlimbs Av).
+    Local Notation opp_cps := (@opp_cps R_numlimbs Av).
+    Local Notation opp := (@opp R_numlimbs Av).
+
+    Axiom eval_sub_then_maybe_add : forall a b : T R_numlimbs,
+        small a ->
+        small b ->
+        0 <= eval a < eval N ->
+        0 <= eval b < eval N ->
+        eval (sub_then_maybe_add a b) =
+        eval a - eval b +
+        (if eval a - eval b <? 0 then eval N else 0).
+    Axiom small_sub_then_maybe_add : forall a b : T R_numlimbs,
+        small a ->
+        small b ->
+        0 <= eval a < eval N ->
+        0 <= eval b < eval N ->
+        small (sub_then_maybe_add a b).
+    Axiom sub_then_maybe_add_cps_id : forall (Av Bv : T R_numlimbs) cpsT (f : _ -> cpsT), sub_then_maybe_add_cps Av Bv f = f (sub_then_maybe_add Av Bv).
+    Hint Rewrite sub_then_maybe_add_cps_id : uncps.
+
+    Definition add_no_cps_bound : 0 <= eval add_no_cps < eval N
+      := @add_bound T (@eval) r R R_numlimbs (@small) (@addT) (@eval_addT) (@small_addT) N N_lt_R (@conditional_sub) (@eval_conditional_sub) Av Bv small_Av small_Bv Av_bound Bv_bound.
+    Definition sub_no_cps_bound : 0 <= eval sub_no_cps < eval N
+      := @sub_bound T (@eval) r R R_numlimbs (@small) N (@sub_then_maybe_add _) (@eval_sub_then_maybe_add) Av Bv small_Av small_Bv Av_bound Bv_bound.
+    Definition opp_no_cps_bound : 0 <= eval opp_no_cps < eval N
+      := @opp_bound T (@eval) (@zero) r R R_numlimbs (@small) (@eval_zero) (@small_zero) N (@sub_then_maybe_add _) (@eval_sub_then_maybe_add) Av small_Av Av_bound.
+
+    Definition small_add_no_cps : small add_no_cps
+      := @small_add T (@eval) r R R_numlimbs (@small) (@addT) (@eval_addT) (@small_addT) N N_lt_R (@conditional_sub) (@small_conditional_sub) Av Bv small_Av small_Bv Av_bound Bv_bound.
+    Definition small_sub_no_cps : small sub_no_cps
+      := @small_sub T (@eval) R_numlimbs (@small) N (@sub_then_maybe_add _) (@small_sub_then_maybe_add) Av Bv small_Av small_Bv Av_bound Bv_bound.
+    Definition small_opp_no_cps : small opp_no_cps
+      := @small_opp T (@eval) (@zero) r R R_numlimbs (@small) (@eval_zero) (@small_zero) N (@sub_then_maybe_add _) (@small_sub_then_maybe_add) Av small_Av Av_bound.
+
+    Definition eval_add_no_cps : eval add_no_cps = eval Av + eval Bv + (if eval N <=? eval Av + eval Bv then - eval N else 0)
+      := @eval_add T (@eval) r R R_numlimbs (@small) (@addT) (@eval_addT) (@small_addT) N N_lt_R (@conditional_sub) (@eval_conditional_sub) Av Bv small_Av small_Bv Av_bound Bv_bound.
+    Definition eval_sub_no_cps : eval sub_no_cps = eval Av - eval Bv + (if eval Av - eval Bv <? 0 then eval N else 0)
+      := @eval_sub T (@eval) R_numlimbs (@small) N (@sub_then_maybe_add _) (@eval_sub_then_maybe_add) Av Bv small_Av small_Bv Av_bound Bv_bound.
+    Definition eval_opp_no_cps : eval opp_no_cps = (if eval Av =? 0 then 0 else eval N) - eval Av
+      := @eval_opp T (@eval) (@zero) r R R_numlimbs (@small) (@eval_zero) (@small_zero) N (@sub_then_maybe_add _) (@eval_sub_then_maybe_add) Av small_Av Av_bound.
+
+    Lemma add_cps_id_no_cps : add = add_no_cps.
+    Proof.
+      unfold add_no_cps, add, add_cps, Abstract.Dependent.Definition.add; autorewrite with uncps; reflexivity.
+    Qed.
+    Lemma sub_cps_id_no_cps : sub = sub_no_cps.
+    Proof.
+      unfold sub_no_cps, sub, sub_cps, Abstract.Dependent.Definition.sub; autorewrite with uncps; reflexivity.
+    Qed.
+    Lemma opp_cps_id_no_cps : opp = opp_no_cps.
+    Proof.
+      unfold opp, opp_cps, opp_no_cps, Abstract.Dependent.Definition.opp, sub_no_cps, sub, sub_cps, Abstract.Dependent.Definition.sub; autorewrite with uncps; reflexivity.
+    Qed.
+
+    Lemma add_cps_id {cpsT} f : @add_cps cpsT f = f add.
+    Proof. unfold add, add_cps; autorewrite with uncps; reflexivity. Qed.
+    Lemma sub_cps_id {cpsT} f : @sub_cps cpsT f = f sub.
+    Proof. unfold sub, sub_cps; autorewrite with uncps. reflexivity. Qed.
+    Lemma opp_cps_id {cpsT} f : @opp_cps cpsT f = f opp.
+    Proof. unfold opp, opp_cps, sub, sub_cps; autorewrite with uncps. reflexivity. Qed.
+
+    Local Ltac do_rewrite :=
+      first [ rewrite add_cps_id_no_cps
+            | rewrite sub_cps_id_no_cps
+            | rewrite opp_cps_id_no_cps ].
+    Local Ltac do_apply :=
+      first [ apply add_no_cps_bound
+            | apply sub_no_cps_bound
+            | apply opp_no_cps_bound
+            | apply small_add_no_cps
+            | apply small_sub_no_cps
+            | apply small_opp_no_cps
+            | apply eval_add_no_cps
+            | apply eval_sub_no_cps
+            | apply eval_opp_no_cps ].
+    Local Ltac t := do_rewrite; do_apply.
+
+    Lemma add_bound : 0 <= eval add < eval N. Proof. t. Qed.
+    Lemma sub_bound : 0 <= eval sub < eval N. Proof. t. Qed.
+    Lemma opp_bound : 0 <= eval opp < eval N. Proof. t. Qed.
+
+    Lemma small_add : small add. Proof. t. Qed.
+    Lemma small_sub : small sub. Proof. t. Qed.
+    Lemma small_opp : small opp. Proof. t. Qed.
+
+    Lemma eval_add : eval add = eval Av + eval Bv + (if eval N <=? eval Av + eval Bv then - eval N else 0).
+    Proof. t. Qed.
+    Lemma eval_sub : eval sub = eval Av - eval Bv + (if eval Av - eval Bv <? 0 then eval N else 0).
+    Proof. t. Qed.
+    Lemma eval_opp : eval opp = (if eval Av =? 0 then 0 else eval N) - eval Av.
+    Proof. t. Qed.
+  End add_sub.
 End WordByWordMontgomery.
 
-Hint Rewrite redc_body_cps_id redc_loop_cps_id pre_redc_cps_id redc_cps_id : uncps.
+Hint Rewrite redc_body_cps_id redc_loop_cps_id pre_redc_cps_id redc_cps_id add_cps_id sub_cps_id opp_cps_id : uncps.
