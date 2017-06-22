@@ -30,33 +30,66 @@ Section BoundedField25p5.
   Let feZ : Type := tuple Z sz.
   Let feW : Type := tuple (wordT lgbitwidth) sz.
   Let feBW : Type := BoundedWord sz bitwidth bounds.
+  Let eval : feBW -> Z :=
+    fun x => Saturated.eval (Z.pos r) (BoundedWordToZ _ _ _ x).
+  Let feBW_small : Type := { v : feBW | eval v < Saturated.eval (n:=sz) (Z.pos r) p256 }.
+  Let feBW_of_feBW_small : feBW_small -> feBW := @proj1_sig _ _.
+  Local Coercion feBW_of_feBW_small : feBW_small >-> feBW.
   Let phi : feBW -> F m :=
-    fun x => montgomery_to_F (Saturated.eval (Z.pos r) (BoundedWordToZ _ _ _ x)).
+    fun x => montgomery_to_F (eval x).
 
   (* TODO : change this to field once field isomorphism happens *)
   Definition mul
-    : { mul : feBW -> feBW -> feBW
+    : { mul : feBW_small -> feBW_small -> feBW_small
       | forall A B, phi (mul A B) = F.mul (phi A) (phi B) }.
   Proof.
     lazymatch goal with
-    | [ |- { f | forall a b, ?phi (f a b) = @?rhs a b } ]
-      => apply lift2_sig with (P:=fun a b f => phi f = rhs a b)
+    | [ |- { f | forall a b, ?phi (?proj (f a b)) = @?rhs a b } ]
+      => apply lift2_sig with (P:=fun a b f => phi (proj f) = rhs a b)
     end.
     intros a b.
-    eexists_sig_etransitivity. all:cbv [phi].
-    rewrite <- (proj2_sig mulmod_256)
-      by (hnf; rewrite <- (is_bounded_by_None_repeat_In_iff_lt _ _ _); destruct_head' feBW; assumption).
-    (*symmetry; rewrite <- (proj2_sig carry_sig); symmetry.
-    set (carry_mulZ := fun a b => proj1_sig carry_sig (proj1_sig mul_sig a b)).
-    change (proj1_sig carry_sig (proj1_sig mul_sig ?a ?b)) with (carry_mulZ a b).*)
+    cbv [feBW_of_feBW_small].
+    eexists_sig_etransitivity. all:cbv [phi eval].
+    rewrite <- (proj1 (proj2_sig mulmod_256))
+      by (hnf; rewrite <- (is_bounded_by_None_repeat_In_iff_lt _ _ _); destruct_head' feBW_small; destruct_head' feBW; try assumption).
+    reflexivity.
+    apply (fun f => proj2_sig_map (fun THIS_NAME_MUST_NOT_BE_UNDERSCORE_TO_WORK_AROUND_CONSTR_MATCHING_ANAOMLIES___BUT_NOTE_THAT_IF_THIS_NAME_IS_LOWERCASE_A___THEN_REIFICATION_STACK_OVERFLOWS___AND_I_HAVE_NO_IDEA_WHATS_GOING_ON p => f_equal f p)).
+    Associativity.sig_sig_assoc.
+    apply sig_conj_by_impl2.
+    { intros ? H; cbv [eval]; rewrite H; clear H.
+      apply (proj2 (proj2_sig mulmod_256)); destruct_head' feBW_small; try assumption;
+        hnf; rewrite <- (is_bounded_by_None_repeat_In_iff_lt _ _ _); destruct_head' feBW; assumption. }
+    eexists_sig_etransitivity.
     set (mulmodZ := proj1_sig mulmod_256).
     context_to_dlet_in_rhs mulmodZ; cbv [mulmodZ].
-    cbv beta iota delta [mulmod_256 mulmod_256'' mulmod_256' proj1_sig Saturated.T lift2_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz].
+    cbv beta iota delta [mulmod_256 mulmod_256'' mulmod_256' proj1_sig Saturated.T lift2_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr].
     reflexivity.
     sig_dlet_in_rhs_to_context.
-    do 2 apply (fun f => proj2_sig_map (fun THIS_NAME_MUST_NOT_BE_UNDERSCORE_TO_WORK_AROUND_CONSTR_MATCHING_ANAOMLIES___BUT_NOTE_THAT_IF_THIS_NAME_IS_LOWERCASE_A___THEN_REIFICATION_STACK_OVERFLOWS___AND_I_HAVE_NO_IDEA_WHATS_GOING_ON p => f_equal f p)).
+    apply (fun f => proj2_sig_map (fun THIS_NAME_MUST_NOT_BE_UNDERSCORE_TO_WORK_AROUND_CONSTR_MATCHING_ANAOMLIES___BUT_NOTE_THAT_IF_THIS_NAME_IS_LOWERCASE_A___THEN_REIFICATION_STACK_OVERFLOWS___AND_I_HAVE_NO_IDEA_WHATS_GOING_ON p => f_equal f p)).
+    do 2 match goal with
+         | [ H : feBW_small |- _ ] => destruct H as [? _]
+         end.
     (* jgross start here! *)
     Set Ltac Profiling.
+    (*     Set Ltac Profiling.
+    Print Ltac ReflectiveTactics.solve_side_conditions.
+    Ltac ReflectiveTactics.solve_side_conditions ::= idtac.
+    Time refine_reflectively128_with_uint8_with anf. (* Finished transaction in 212.693 secs (212.576u,0.184s) (successful) *)
+    { Time ReflectiveTactics.do_reify. }
+    { Time UnifyAbstractReflexivity.unify_abstract_vm_compute_rhs_reflexivity. }
+    { Time UnifyAbstractReflexivity.unify_abstract_vm_compute_rhs_reflexivity. }
+    { Time UnifyAbstractReflexivity.unify_abstract_vm_compute_rhs_reflexivity. }
+    { Require Import CNotations.
+      Time UnifyAbstractReflexivity.unify_abstract_vm_compute_rhs_reflexivity. }
+    { Time UnifyAbstractReflexivity.unify_abstract_vm_compute_rhs_reflexivity. }
+    { Time UnifyAbstractReflexivity.unify_abstract_rhs_reflexivity. }
+  { Time ReflectiveTactics.unify_abstract_renamify_rhs_reflexivity. }
+  { Time SubstLet.subst_let; clear; abstract vm_cast_no_check eq_refl. }
+  { Time SubstLet.subst_let; clear; vm_compute; reflexivity. }
+  { Time UnifyAbstractReflexivity.unify_abstract_compute_rhs_reflexivity. }
+  { Time ReflectiveTactics.unify_abstract_cbv_interp_rhs_reflexivity. }
+  { Time abstract ReflectiveTactics.handle_bounds_from_hyps. }
+  { Time ReflectiveTactics.handle_boundedness_side_condition. } *)
     Time refine_reflectively128_with_uint8_with anf. (* Finished transaction in 212.693 secs (212.576u,0.184s) (successful) *)
     Show Ltac Profile.
     (* total time:     19.632s
