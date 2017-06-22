@@ -103,7 +103,7 @@ Definition mulmod_256'' : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tupl
                             Saturated.small (Z.pos r) A -> Saturated.small (Z.pos r) B ->
                             let eval := Saturated.eval (Z.pos r) in
                             (Saturated.small (Z.pos r) (f A B)
-                             /\ 0 <= eval (f A B) < Z.pos r^Z.of_nat sz
+                             /\ (eval B < eval p256 -> 0 <= eval (f A B) < eval p256)
                              /\ (eval (f A B) mod Z.pos m
                                  = (eval A * eval B * r'^(Z.of_nat sz)) mod Z.pos m))%Z
                             }.
@@ -112,7 +112,7 @@ Proof.
   abstract (
       intros; rewrite (proj2_sig mulmod_256');
       split; [ | split ];
-      [ apply small_redc with (ri:=r') | apply redc_bound with (ri:=r') | apply redc_mod_N ];
+      [ apply small_redc with (ri:=r') | apply redc_bound_N with (ri:=r') | apply redc_mod_N ];
       try match goal with
           | _ => assumption
           | [ |- _ = _ :> Z ] => vm_compute; reflexivity
