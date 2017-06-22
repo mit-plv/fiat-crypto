@@ -362,11 +362,11 @@ Ltac split_BoundedWordToZ _ :=
             instantiate (1:=ltac:(destruct x)); destruct x ];
       (cbv beta iota) in
   let destruct_sig_or_pair v :=
-      progress repeat match v with
-                      | context[proj1_sig ?x] => destruct_sig x
-                      | context[fst ?x] => destruct_pair x
-                      | context[snd ?x] => destruct_pair x
-                      end in
+      match v with
+      | context[proj1_sig ?x] => destruct_sig x
+      | context[fst ?x] => destruct_pair x
+      | context[snd ?x] => destruct_pair x
+      end in
   repeat match goal with
          | [ |- context[Tuple.map ?f ?v] ]
            => check_is_map_wordToZ 0 "DEBUG" f; destruct_sig_or_pair v
