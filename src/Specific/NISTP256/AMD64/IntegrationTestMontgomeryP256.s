@@ -1,4 +1,8 @@
 .intel_syntax noprefix
+.section .text
+.globl IntegrationTestMontgomeryP256
+.type IntegrationTestMontgomeryP256, @function
+IntegrationTestMontgomeryP256:
 #icc17 -m64 -O3 -madx -march=skylake -mtune=skylake -fomit-frame-pointer -fno-stack-protector-all -opt-report
 #IntegrationTestMontgomeryP256(unsigned long*, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long, unsigned long):
         push      r12                                           #13.1

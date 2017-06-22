@@ -1,4 +1,4 @@
-Require Import Crypto.Specific.FancyMachine256.Core.
+Require Import Crypto.Specific.NISTP256.FancyMachine256.Core.
 Require Import Crypto.LegacyArithmetic.MontgomeryReduction.
 Require Import Crypto.Arithmetic.MontgomeryReduction.Proofs.
 

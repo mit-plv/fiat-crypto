@@ -6,7 +6,7 @@ Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Util.FixedWordSizes.
 Require Import Crypto.Arithmetic.MontgomeryReduction.WordByWord.Definition.
 Require Import Crypto.Arithmetic.Core. Import B.
-Require Import Crypto.Specific.MontgomeryP256.
+Require Import Crypto.Specific.NISTP256.AMD64.MontgomeryP256.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Util.Tuple Crypto.Util.Sigma Crypto.Util.Sigma.MapProjections Crypto.Util.Sigma.Lift Crypto.Util.Notations Crypto.Util.ZRange Crypto.Util.BoundedWord.
 Require Import Crypto.Util.Tactics.Head.
