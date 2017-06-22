@@ -49,7 +49,7 @@ Section WordByWordMontgomery.
     (small_N : small N)
     (N_lt_R : eval N < R)
     {conditional_sub : T (S R_numlimbs) -> T R_numlimbs} (* computes [arg - N] if [N <= arg], and drops high bit *)
-    {eval_conditional_sub : forall v, small v -> 0 <= eval v < eval N + R -> eval (conditional_sub v) = eval v + if R <=? eval v then -eval N else 0}
+    {eval_conditional_sub : forall v, small v -> 0 <= eval v < eval N + R -> eval (conditional_sub v) = eval v + if eval N <=? eval v then -eval N else 0}
     {small_conditional_sub : forall v, small v -> 0 <= eval v < eval N + R -> small (conditional_sub v)}
     (B : T R_numlimbs)
     (B_bounds : 0 <= eval B < R)
@@ -468,7 +468,18 @@ Section WordByWordMontgomery.
 
   Lemma redc_bound_tight A_numlimbs (A : T A_numlimbs)
         (small_A : small A)
-    : 0 <= eval (redc A) < eval N + eval B + if R <=? eval (pre_redc A) then -eval N else 0.
+    : 0 <= eval (redc A) < eval N + eval B + if eval N <=? eval (pre_redc A) then -eval N else 0.
+  Proof.
+    pose proof (@small_pre_redc _ A small_A).
+    pose proof (@pre_redc_bound _ A small_A).
+    unfold redc.
+    rewrite eval_conditional_sub by t_small.
+    break_innermost_match; Z.ltb_to_lt; omega.
+  Qed.
+
+  Lemma redc_bound_N A_numlimbs (A : T A_numlimbs)
+        (small_A : small A)
+    : eval B < eval N -> 0 <= eval (redc A) < eval N.
   Proof.
     pose proof (@small_pre_redc _ A small_A).
     pose proof (@pre_redc_bound _ A small_A).

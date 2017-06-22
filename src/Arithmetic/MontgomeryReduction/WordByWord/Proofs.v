@@ -70,9 +70,21 @@ Section WordByWordMontgomery.
 
   Local Notation conditional_sub_cps := (fun V : T (S R_numlimbs) => @conditional_sub_cps (Z.pos r) _ (Z.pos r - 1) V N _).
   Local Notation conditional_sub := (fun V : T (S R_numlimbs) => @conditional_sub (Z.pos r) _ (Z.pos r - 1) V N).
-  Local Notation eval_conditional_sub' := (fun V small_V V_bound => @eval_conditional_sub (Z.pos r) (Zorder.Zgt_pos_0 _) r_big _ (Z.pos r - 1) V N small_V small_N N_mask V_bound).
+  Axiom eval_conditional_sub_THIS_AXIOM_IS_ACTUALLY_CURRENTLY_FALSE_AND_IS_AWAITING_A_REPLACEMENT_IMPLEMENTATION_OF_CONDITIONAL_SUB_THAT_SUBTRACTS_BASED_ON_BEING_NOT_LESS_THAN_N_RATHER_THAN_ON_BEING_NOT_LESS_THAN_R
+    : forall bound : Z,
+      bound > 0 ->
+      bound > 1 ->
+      forall (n : nat) (mask : Z) (p : T (S n)) (q : T n),
+        Saturated.small bound p ->
+        Saturated.small bound q ->
+        Tuple.map (Z.land mask) q = q ->
+        0 <= Saturated.eval bound p < Saturated.eval bound q + uweight bound n ->
+        Saturated.eval bound (Saturated.conditional_sub bound mask p q) =
+        Saturated.eval bound p + (if Saturated.eval bound q <=? Saturated.eval bound p then - Saturated.eval bound q else 0).
+  Local Notation eval_conditional_sub' := (fun V small_V V_bound => @eval_conditional_sub_THIS_AXIOM_IS_ACTUALLY_CURRENTLY_FALSE_AND_IS_AWAITING_A_REPLACEMENT_IMPLEMENTATION_OF_CONDITIONAL_SUB_THAT_SUBTRACTS_BASED_ON_BEING_NOT_LESS_THAN_N_RATHER_THAN_ON_BEING_NOT_LESS_THAN_R (Z.pos r) (Zorder.Zgt_pos_0 _) r_big _ (Z.pos r - 1) V N small_V small_N N_mask V_bound).
+
   Local Lemma eval_conditional_sub
-    : forall v, small v -> 0 <= eval v < eval N + R -> eval (conditional_sub v) = eval v + if R <=? eval v then -eval N else 0.
+    : forall v, small v -> 0 <= eval v < eval N + R -> eval (conditional_sub v) = eval v + if eval N <=? eval v then -eval N else 0.
   Proof. rewrite R_correct; exact eval_conditional_sub'. Qed.
   Local Notation small_conditional_sub' := (fun V small_V V_bound => @small_conditional_sub (Z.pos r) (Zorder.Zgt_pos_0 _) _ (Z.pos r - 1) V N small_V small_N N_mask V_bound).
   Local Lemma small_conditional_sub
@@ -113,8 +125,12 @@ Section WordByWordMontgomery.
   Local Notation redc_cps := (@redc_cps r R_numlimbs N A_numlimbs A B k).
   Local Notation redc := (@redc r R_numlimbs N A_numlimbs A B k).
 
+
+
   Definition redc_no_cps_bound : 0 <= eval redc_no_cps < R
     := @redc_bound T (@eval) (@zero) (@divmod) r r_big R R_numlimbs R_correct (@small) eval_zero small_zero eval_div eval_mod small_div (@scmul) eval_scmul small_scmul (@add) eval_add small_add (@add') eval_add' small_add' drop_high eval_drop_high small_drop_high N Npos Npos_correct small_N N_lt_R conditional_sub eval_conditional_sub B B_bound small_B ri k A_numlimbs A small_A A_bound.
+  Definition redc_no_cps_bound_N : eval B < eval N -> 0 <= eval redc_no_cps < eval N
+    := @redc_bound_N T (@eval) (@zero) (@divmod) r r_big R R_numlimbs R_correct (@small) eval_zero small_zero eval_div eval_mod small_div (@scmul) eval_scmul small_scmul (@add) eval_add small_add (@add') eval_add' small_add' drop_high eval_drop_high small_drop_high N Npos Npos_correct small_N N_lt_R conditional_sub eval_conditional_sub B B_bound small_B ri k A_numlimbs A small_A.
   Definition redc_no_cps_mod_N
     : (eval redc_no_cps) mod (eval N) = (eval A * eval B * ri^(Z.of_nat A_numlimbs)) mod (eval N)
     := @redc_mod_N T (@eval) (@zero) (@divmod) r r_big R R_numlimbs R_correct (@small) eval_zero small_zero eval_div eval_mod small_div (@scmul) eval_scmul small_scmul (@add) eval_add small_add (@add') eval_add' small_add' drop_high eval_drop_high small_drop_high N Npos Npos_correct small_N N_lt_R conditional_sub eval_conditional_sub B B_bound small_B ri ri_correct k k_correct A_numlimbs A small_A A_bound.
@@ -191,6 +207,8 @@ Section WordByWordMontgomery.
 
   Lemma redc_bound : 0 <= eval redc < R.
   Proof. rewrite redc_cps_id_no_cps; apply redc_no_cps_bound. Qed.
+  Lemma redc_bound_N : eval B < eval N -> 0 <= eval redc < eval N.
+  Proof. rewrite redc_cps_id_no_cps; apply redc_no_cps_bound_N. Qed.
   Lemma redc_mod_N
     : (eval redc) mod (eval N) = (eval A * eval B * ri^(Z.of_nat A_numlimbs)) mod (eval N).
   Proof. rewrite redc_cps_id_no_cps; apply redc_no_cps_mod_N. Qed.
