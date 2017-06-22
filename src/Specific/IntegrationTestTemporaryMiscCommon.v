@@ -43,7 +43,7 @@ Ltac eexists_sig_etransitivity :=
   lazymatch goal with
   | [ |- { a : ?A | @?f a = ?b } ]
     => let lem := open_constr:(@sig_eq_trans_exist1 A _ f b _) in
-       simple refine (lem _ _)
+       simple refine (lem _ (_ : { a : A | _ }))
   end.
 Definition sig_R_trans_rewrite_fun_exist1 {B} (R : B -> B -> Prop) {HT : Transitive R}
 {A} (f : A -> B) (b : B) (f' : A -> B)

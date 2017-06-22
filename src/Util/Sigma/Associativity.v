@@ -7,9 +7,11 @@ Ltac sig_sig_assoc :=
   | [ |- { a : ?A | ?P } ]
     => let P'' := fresh a in
        let P' := fresh P'' in
+       let P' := fresh P' in
        let term := constr:(fun a : A => match P with
                                         | P' => ltac:(let v := (eval cbv [P'] in P') in
-                                                      lazymatch eval pattern (proj1_sig a) in v with
+                                                      let proj := lazymatch v with context[@proj1_sig ?A ?P a] => constr:(@proj1_sig A P a) end in
+                                                      lazymatch eval pattern proj in v with
                                                       | ?P _ => exact P
                                                       end)
                                         end) in
