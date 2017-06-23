@@ -180,6 +180,7 @@ src/Curves/Montgomery/XZProofs.v
 src/Curves/Weierstrass/Affine.v
 src/Curves/Weierstrass/AffineProofs.v
 src/Curves/Weierstrass/Projective.v
+src/Curves/Weierstrass/Jacobian/Precomputed.v
 src/LegacyArithmetic/ArchitectureToZLike.v
 src/LegacyArithmetic/ArchitectureToZLikeProofs.v
 src/LegacyArithmetic/BarretReduction.v
