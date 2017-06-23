@@ -127,5 +127,5 @@ Module Z.
 
   Lemma opp_mod_mod_push a n : NoZMod a -> (-a) mod n = (-(a mod n)) mod n.
   Proof. intros; apply opp_mod_mod; assumption. Qed.
-  Hint Rewrite opp_mod_mod using solve [ NoZMod ] : push_Zmod.
+  Hint Rewrite opp_mod_mod_push using solve [ NoZMod ] : push_Zmod.
 End Z.
