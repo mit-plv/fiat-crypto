@@ -1,0 +1,3 @@
+λ _ : word64 * word64 * word64 * word64,
+(opp_subproof0, opp_subproof1, opp_subproof2, opp_subproof3)%core
+     : word64 * word64 * word64 * word64 → word64 * word64 * word64 * word64

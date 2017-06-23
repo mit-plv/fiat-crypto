@@ -1,0 +1,3 @@
+λ _ _ : word128 * word128,
+(sub_subproof0, sub_subproof1)%core
+     : word128 * word128 → word128 * word128 → word128 * word128
