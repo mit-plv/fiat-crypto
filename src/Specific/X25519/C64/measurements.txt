@@ -1,3 +1,4 @@
 156081	ashryn-ht-tb-ac-broadwell	2.78ghz	7.1.1	83ddc573
 174300	ashryn-noht-notb-ac-broadwell	2.50ghz	7.1.1	4dc08623
+174316	ashryn-noht-notb-noac-broadwell	2.50ghz	7.1.1	fe5b5b3b
 187992	jgross-Leopard-WS-ht-tb-nops-haswell	3.70ghz	5.4.0	19a7001

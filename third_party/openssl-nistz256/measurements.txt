@@ -1,0 +1,1 @@
+564	ashryn-noht-notb-noac-broadwell	2.50ghz	7.1.1	fe5b5b3b
