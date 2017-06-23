@@ -7,7 +7,9 @@ Require Import Coq.ZArith.BinInt.
 Require Import Coq.PArith.BinPos.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.ZUtil.ModInv.
+Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.Tactics.BreakMatch.
 
 Definition wt (i:nat) : Z := Z.shiftl 1 (128*Z.of_nat i).
 Definition r := Eval compute in (2^128)%positive.
@@ -20,6 +22,7 @@ Definition r' := Eval vm_compute in Zpow_facts.Zpow_mod (Z.pos r) (Z.pos m - 2) 
 Definition r'_correct := eq_refl : ((Z.pos r * r') mod (Z.pos m) = 1)%Z.
 Definition m' : Z := Eval vm_compute in Option.invert_Some (Z.modinv_fueled 10 (-Z.pos m) (Z.pos r)).
 Definition m'_correct := eq_refl : ((Z.pos m * m') mod (Z.pos r) = (-1) mod Z.pos r)%Z.
+Definition m_p256 := eq_refl (Z.pos m) <: Z.pos m = Saturated.eval (n:=sz) (Z.pos r) p256.
 
 Definition mulmod_256' : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
                         | forall (A B : Tuple.tuple Z sz),
@@ -124,6 +127,40 @@ Proof.
           end
     ).
 Defined.
+
+Definition add' : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
+                 | forall (A B : Tuple.tuple Z sz),
+                     f A B =
+                     (add (r:=r)(R_numlimbs:=sz) p256 A B)
+                 }.
+Proof.
+  eapply (lift2_sig (fun A B c => c = _)); eexists.
+  cbv -[Definitions.Z.add_get_carry Definitions.Z.mul_split_at_bitwidth Definitions.Z.zselect runtime_add runtime_mul runtime_and runtime_opp Let_In].
+  reflexivity.
+Defined.
+
+Definition sub' : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
+                 | forall (A B : Tuple.tuple Z sz),
+                     f A B =
+                     (sub (*r:=r*)(R_numlimbs:=sz) (*p256*) A B)
+                 }.
+Proof.
+  eapply (lift2_sig (fun A B c => c = _)); eexists.
+  cbv -[Definitions.Z.add_get_carry Definitions.Z.mul_split_at_bitwidth Definitions.Z.zselect runtime_add runtime_mul runtime_and runtime_opp Let_In].
+  reflexivity.
+Defined.
+
+Definition opp' : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz
+                 | forall (A : Tuple.tuple Z sz),
+                     f A =
+                     (opp (*r:=r*)(R_numlimbs:=sz) (*p256*) A)
+                 }.
+Proof.
+  eapply (lift1_sig (fun A c => c = _)); eexists.
+  cbv -[Definitions.Z.add_get_carry Definitions.Z.mul_split_at_bitwidth Definitions.Z.zselect runtime_add runtime_mul runtime_and runtime_opp Let_In].
+  reflexivity.
+Defined.
+
 Import ModularArithmetic.
 
 (*Definition mulmod_256 : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
@@ -166,37 +203,90 @@ Proof.
     ).
 Defined.
 
+Local Ltac t_fin :=
+  [ > reflexivity
+  | repeat match goal with
+           | _ => assumption
+           | [ |- _ = _ :> Z ] => vm_compute; reflexivity
+           | _ => reflexivity
+           | [ |- Saturated.small (Z.pos r) p256 ]
+             => hnf; cbv [Tuple.to_list sz p256 r Tuple.to_list' List.In]; intros; destruct_head'_or;
+                subst; try lia
+           | [ |- Saturated.eval (Z.pos r) p256 <> 0%Z ]
+             => vm_compute; lia
+           | [ |- and _ _ ] => split
+           | [ |- (0 <= Saturated.eval (Z.pos r) _)%Z ] => apply Saturated.eval_small
+           end.. ].
+
 Definition add : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
-                 | forall (A B : Tuple.tuple Z sz),
-                     f A B =
-                     (add (r:=r)(R_numlimbs:=sz) p256 A B)
-                 }.
+                 | let eval := Saturated.eval (Z.pos r) in
+                   ((forall (A : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) A)
+                            (B : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) B),
+                        (eval A < eval p256
+                         -> eval B < eval p256
+                         -> montgomery_to_F (eval (f A B))
+                            = (montgomery_to_F (eval A) + montgomery_to_F (eval B))%F))
+                    /\ (forall (A : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) A)
+                               (B : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) B),
+                           (eval A < eval p256
+                            -> eval B < eval p256
+                            -> 0 <= eval (f A B) < eval p256)))%Z }.
 Proof.
-  eapply (lift2_sig (fun A B c => c = _)); eexists.
-  cbv -[Definitions.Z.add_get_carry Definitions.Z.mul_split_at_bitwidth Definitions.Z.zselect runtime_add runtime_mul runtime_and runtime_opp Let_In].
-  reflexivity.
+  exists (proj1_sig add').
+  abstract (
+      split; intros; rewrite (proj2_sig add');
+      unfold montgomery_to_F; rewrite <- ?ModularArithmeticTheorems.F.of_Z_mul, <- ?ModularArithmeticTheorems.F.of_Z_add;
+      rewrite <- ?Z.mul_add_distr_r;
+      [ rewrite <- ModularArithmeticTheorems.F.eq_of_Z_iff, m_p256; push_Zmod; rewrite eval_add_mod_N; pull_Zmod
+      | apply add_bound ];
+      t_fin
+    ).
 Defined.
 
 Definition sub : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
-                 | forall (A B : Tuple.tuple Z sz),
-                     f A B =
-                     (sub (*r:=r*)(R_numlimbs:=sz) (*p256*) A B)
-                 }.
+                 | let eval := Saturated.eval (Z.pos r) in
+                   ((forall (A : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) A)
+                            (B : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) B),
+                        (eval A < eval p256
+                         -> eval B < eval p256
+                         -> montgomery_to_F (eval (f A B))
+                            = (montgomery_to_F (eval A) - montgomery_to_F (eval B))%F))
+                    /\ (forall (A : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) A)
+                            (B : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) B),
+                        (eval A < eval p256
+                         -> eval B < eval p256
+                         -> 0 <= eval (f A B) < eval p256)))%Z }.
 Proof.
-  eapply (lift2_sig (fun A B c => c = _)); eexists.
-  cbv -[Definitions.Z.add_get_carry Definitions.Z.mul_split_at_bitwidth Definitions.Z.zselect runtime_add runtime_mul runtime_and runtime_opp Let_In].
-  reflexivity.
+  exists (proj1_sig sub').
+  abstract (
+      split; intros; rewrite (proj2_sig sub');
+      unfold montgomery_to_F; rewrite <- ?ModularArithmeticTheorems.F.of_Z_mul, <- ?ModularArithmeticTheorems.F.of_Z_sub;
+      rewrite <- ?Z.mul_sub_distr_r;
+      [ rewrite <- ModularArithmeticTheorems.F.eq_of_Z_iff, m_p256; push_Zmod; rewrite eval_sub_mod_N; pull_Zmod
+      | apply sub_bound ];
+      t_fin
+    ).
 Defined.
 
 Definition opp : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz
-                 | forall (A : Tuple.tuple Z sz),
-                     f A =
-                     (opp (*r:=r*)(R_numlimbs:=sz) (*p256*) A)
-                 }.
+                 | let eval := Saturated.eval (Z.pos r) in
+                   ((forall (A : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) A),
+                        (eval A < eval p256
+                         -> montgomery_to_F (eval (f A))
+                            = (F.opp (montgomery_to_F (eval A)))%F))
+                    /\ (forall (A : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) A),
+                           (eval A < eval p256
+                            -> 0 <= eval (f A) < eval p256)))%Z }.
 Proof.
-  eapply (lift1_sig (fun A c => c = _)); eexists.
-  cbv -[Definitions.Z.add_get_carry Definitions.Z.mul_split_at_bitwidth Definitions.Z.zselect runtime_add runtime_mul runtime_and runtime_opp Let_In].
-  reflexivity.
+  exists (proj1_sig opp').
+  abstract (
+      split; intros; rewrite (proj2_sig opp');
+      unfold montgomery_to_F; rewrite <- ?ModularArithmeticTheorems.F.of_Z_mul, <- ?F_of_Z_opp;
+      rewrite <- ?Z.mul_opp_l;
+      [ rewrite <- ModularArithmeticTheorems.F.eq_of_Z_iff, m_p256; push_Zmod; rewrite eval_opp_mod_N; pull_Zmod
+      | apply opp_bound ];
+      t_fin
+    ).
 Defined.
 
 Local Definition for_assumptions := (mulmod_256, add, sub, opp).

@@ -549,6 +549,21 @@ Section WordByWordMontgomery.
       break_innermost_match; Z.ltb_to_lt; lia.
     Qed.
 
+    Local Ltac t_mod_N :=
+      repeat first [ progress break_innermost_match
+                   | reflexivity
+                   | let H := fresh in intro H; rewrite H; clear H
+                   | progress autorewrite with zsimplify_const
+                   | rewrite Z.add_opp_r
+                   | progress (push_Zmod; pull_Zmod) ].
+
+    Lemma eval_add_mod_N : eval (add Av Bv) mod eval N = (eval Av + eval Bv) mod eval N.
+    Proof. generalize eval_add; clear. t_mod_N. Qed.
+    Lemma eval_sub_mod_N : eval (sub Av Bv) mod eval N = (eval Av - eval Bv) mod eval N.
+    Proof. generalize eval_sub; clear. t_mod_N. Qed.
+    Lemma eval_opp_mod_N : eval (opp Av) mod eval N = (-eval Av) mod eval N.
+    Proof. generalize eval_opp; clear; t_mod_N. Qed.
+
     Lemma add_bound : 0 <= eval (add Av Bv) < eval N.
     Proof. do_clear; generalize eval_add; break_innermost_match; Z.ltb_to_lt; lia. Qed.
     Lemma sub_bound : 0 <= eval (sub Av Bv) < eval N.

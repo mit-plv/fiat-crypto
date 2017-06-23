@@ -268,6 +268,13 @@ Section WordByWordMontgomery.
     Definition eval_opp_no_cps : eval opp_no_cps = (if eval Av =? 0 then 0 else eval N) - eval Av
       := @eval_opp T (@eval) (@zero) r R R_numlimbs (@small) (@eval_zero) (@small_zero) N (@sub_then_maybe_add _) (@eval_sub_then_maybe_add) Av small_Av Av_bound.
 
+    Definition eval_add_no_cps_mod_N : eval add_no_cps mod eval N = (eval Av + eval Bv) mod eval N
+      := @eval_add_mod_N T (@eval) r R R_numlimbs (@small) (@addT) (@eval_addT) (@small_addT) N N_lt_R (@conditional_sub) (@eval_conditional_sub) Av Bv small_Av small_Bv Av_bound Bv_bound.
+    Definition eval_sub_no_cps_mod_N : eval sub_no_cps mod eval N = (eval Av - eval Bv) mod eval N
+      := @eval_sub_mod_N T (@eval) R_numlimbs (@small) N (@sub_then_maybe_add _) (@eval_sub_then_maybe_add) Av Bv small_Av small_Bv Av_bound Bv_bound.
+    Definition eval_opp_no_cps_mod_N : eval opp_no_cps mod eval N = (-eval Av) mod eval N
+      := @eval_opp_mod_N T (@eval) (@zero) r R R_numlimbs (@small) (@eval_zero) (@small_zero) N (@sub_then_maybe_add _) (@eval_sub_then_maybe_add) Av small_Av Av_bound.
+
     Lemma add_cps_id_no_cps : add = add_no_cps.
     Proof.
       unfold add_no_cps, add, add_cps, Abstract.Dependent.Definition.add; autorewrite with uncps; reflexivity.
@@ -301,7 +308,10 @@ Section WordByWordMontgomery.
             | apply small_opp_no_cps
             | apply eval_add_no_cps
             | apply eval_sub_no_cps
-            | apply eval_opp_no_cps ].
+            | apply eval_opp_no_cps
+            | apply eval_add_no_cps_mod_N
+            | apply eval_sub_no_cps_mod_N
+            | apply eval_opp_no_cps_mod_N ].
     Local Ltac t := do_rewrite; do_apply.
 
     Lemma add_bound : 0 <= eval add < eval N. Proof. t. Qed.
@@ -318,7 +328,14 @@ Section WordByWordMontgomery.
     Proof. t. Qed.
     Lemma eval_opp : eval opp = (if eval Av =? 0 then 0 else eval N) - eval Av.
     Proof. t. Qed.
-  End add_sub.
+
+    Lemma eval_add_mod_N : eval add mod eval N = (eval Av + eval Bv) mod eval N.
+    Proof. t. Qed.
+    Lemma eval_sub_mod_N : eval sub mod eval N = (eval Av - eval Bv) mod eval N.
+    Proof. t. Qed.
+    Lemma eval_opp_mod_N : eval opp mod eval N = (-eval Av) mod eval N.
+    Proof. t. Qed.
+End add_sub.
 End WordByWordMontgomery.
 
 Hint Rewrite redc_body_cps_id redc_loop_cps_id pre_redc_cps_id redc_cps_id add_cps_id sub_cps_id opp_cps_id : uncps.
