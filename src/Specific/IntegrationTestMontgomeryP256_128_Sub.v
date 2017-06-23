@@ -38,8 +38,6 @@ Section BoundedField25p5.
   Let phi : feBW -> F m :=
     fun x => montgomery_to_F (eval x).
 
-  Axiom proof_admitted : False.
-
   (* TODO : change this to field once field isomorphism happens *)
   Definition sub
     : { sub : feBW_small -> feBW_small -> feBW_small
@@ -92,7 +90,7 @@ Section BoundedField25p5.
   { Time ReflectiveTactics.unify_abstract_cbv_interp_rhs_reflexivity. }
   { Time abstract ReflectiveTactics.handle_bounds_from_hyps. }
   { Time ReflectiveTactics.handle_boundedness_side_condition. } *)
-    Time repeat unshelve esplit; abstract case proof_admitted; refine_reflectively128_with_uint8_with anf. (* Finished transaction in 212.693 secs (212.576u,0.184s) (successful) *)
+    Time refine_reflectively128_with_uint8_with anf. (* Finished transaction in 212.693 secs (212.576u,0.184s) (successful) *)
     Show Ltac Profile.
     (* total time:     19.632s
 
