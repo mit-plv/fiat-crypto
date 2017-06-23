@@ -156,7 +156,13 @@ src/Specific/X25519/C64/measure: src/Specific/X25519/C64/compiler.sh measure.c $
 src/Specific/X25519/C64/measurements.txt: src/Specific/X25519/C64/measure capture.sh etc/machine.sh etc/freq.sh
 	./capture.sh src/Specific/X25519/C64
 
-bench: src/Specific/X25519/C64/measurements.txt
+third_party/openssl-nistz256/measure:  third_party/openssl-nistz256/compiler.sh third_party/openssl-nistz256/bench_madd.c third_party/openssl-nistz256/cpu_intel.c third_party/openssl-nistz256/ecp_nistz256-x86_64.s third_party/openssl-nistz256/nistz256.h
+	third_party/openssl-nistz256/compiler.sh -o third_party/openssl-nistz256/measure measure.c third_party/openssl-nistz256/bench_madd.c third_party/openssl-nistz256/cpu_intel.c third_party/openssl-nistz256/ecp_nistz256-x86_64.s src/Specific/X25519/C64/scalarmult.c -I third_party/openssl-nistz256 -D TIMINGS=2047 -D UUT=bench_madd
+
+third_party/openssl-nistz256/measurements.txt: third_party/openssl-nistz256/measure
+	./capture.sh third_party/openssl-nistz256
+
+bench: src/Specific/X25519/C64/measurements.txt third_party/openssl-nistz256/measurements.txt
 	head -999999 $?
 
 clean::
