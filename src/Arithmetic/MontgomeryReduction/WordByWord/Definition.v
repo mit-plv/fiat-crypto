@@ -27,8 +27,9 @@ Section WordByWordMontgomery.
   Local Notation conditional_sub_cps := (fun V => @conditional_sub_cps (Z.pos r) _ (Z.pos r - 1) V N _).
   Local Notation conditional_sub := (fun V => @conditional_sub (Z.pos r) _ (Z.pos r - 1) V N).
 
-  Axiom sub_then_maybe_add_cps : T R_numlimbs -> T R_numlimbs -> forall {cpsT}, (T R_numlimbs -> cpsT) -> cpsT. (* computes [a - b + if (a - b) <? 0 then N else 0] *)
-  Axiom sub_then_maybe_add : T R_numlimbs -> T R_numlimbs -> T R_numlimbs. (* computes [a - b + if (a - b) <? 0 then N else 0] *)
+  Local Notation sub_then_maybe_add_cps :=
+    (fun V1 V2 => @sub_then_maybe_add_cps (Z.pos r) R_numlimbs (Z.pos r - 1) V1 V2 N).
+  Local Notation sub_then_maybe_add := (fun V1 V2 => @sub_then_maybe_add (Z.pos r) R_numlimbs (Z.pos r - 1) V1 V2 N).
 
   Definition redc_body_no_cps (B : T R_numlimbs) (k : Z) {pred_A_numlimbs} (A_S : T (S pred_A_numlimbs) * T (S R_numlimbs))
     : T pred_A_numlimbs * T (S R_numlimbs)

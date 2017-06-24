@@ -223,14 +223,19 @@ Section WordByWordMontgomery.
     Local Notation add_no_cps := (@add_no_cps r R_numlimbs N Av Bv).
     Local Notation add_cps := (@add_cps r R_numlimbs N Av Bv).
     Local Notation add := (@add r R_numlimbs N Av Bv).
-    Local Notation sub_no_cps := (@sub_no_cps R_numlimbs Av Bv).
-    Local Notation sub_cps := (@sub_cps R_numlimbs Av Bv).
-    Local Notation sub := (@sub R_numlimbs Av Bv).
-    Local Notation opp_no_cps := (@opp_no_cps R_numlimbs Av).
-    Local Notation opp_cps := (@opp_cps R_numlimbs Av).
-    Local Notation opp := (@opp R_numlimbs Av).
+    Local Notation sub_no_cps := (@sub_no_cps r R_numlimbs N Av Bv).
+    Local Notation sub_cps := (@sub_cps r R_numlimbs N Av Bv).
+    Local Notation sub := (@sub r R_numlimbs N Av Bv).
+    Local Notation opp_no_cps := (@opp_no_cps r R_numlimbs N Av).
+    Local Notation opp_cps := (@opp_cps r R_numlimbs N Av).
+    Local Notation opp := (@opp r R_numlimbs N Av).
+    Local Notation sub_then_maybe_add_cps :=
+       (fun p q => @sub_then_maybe_add_cps (Z.pos r) R_numlimbs (Z.pos r - 1) p q N).
+    Local Notation sub_then_maybe_add :=
+      (fun p q => @sub_then_maybe_add (Z.pos r) R_numlimbs (Z.pos r - 1) p q N).
 
-    Axiom eval_sub_then_maybe_add : forall a b : T R_numlimbs,
+
+    Local Lemma eval_sub_then_maybe_add : forall a b : T R_numlimbs,
         small a ->
         small b ->
         0 <= eval a < eval N ->
@@ -238,42 +243,52 @@ Section WordByWordMontgomery.
         eval (sub_then_maybe_add a b) =
         eval a - eval b +
         (if eval a - eval b <? 0 then eval N else 0).
-    Axiom small_sub_then_maybe_add : forall a b : T R_numlimbs,
+    Proof.
+      intros; cbv beta; apply eval_sub_then_maybe_add; try assumption; nia.
+    Qed.
+      
+    Local Lemma small_sub_then_maybe_add : forall a b : T R_numlimbs,
         small a ->
         small b ->
         0 <= eval a < eval N ->
         0 <= eval b < eval N ->
         small (sub_then_maybe_add a b).
-    Axiom sub_then_maybe_add_cps_id : forall (Av Bv : T R_numlimbs) cpsT (f : _ -> cpsT), sub_then_maybe_add_cps Av Bv f = f (sub_then_maybe_add Av Bv).
+    Proof.
+      intros; cbv beta; apply small_sub_then_maybe_add; try assumption; nia.
+    Qed.
+    Local Lemma sub_then_maybe_add_cps_id : forall (Av Bv : T R_numlimbs) cpsT (f : _ -> cpsT), sub_then_maybe_add_cps Av Bv _ f = f (sub_then_maybe_add Av Bv).
+    Proof.
+      intros; cbv beta; apply sub_then_maybe_add_id; try assumption; nia.
+    Qed.
     Hint Rewrite sub_then_maybe_add_cps_id : uncps.
 
     Definition add_no_cps_bound : 0 <= eval add_no_cps < eval N
       := @add_bound T (@eval) r R R_numlimbs (@small) (@addT) (@eval_addT) (@small_addT) N N_lt_R (@conditional_sub) (@eval_conditional_sub) Av Bv small_Av small_Bv Av_bound Bv_bound.
     Definition sub_no_cps_bound : 0 <= eval sub_no_cps < eval N
-      := @sub_bound T (@eval) r R R_numlimbs (@small) N (@sub_then_maybe_add _) (@eval_sub_then_maybe_add) Av Bv small_Av small_Bv Av_bound Bv_bound.
+      := @sub_bound T (@eval) r R R_numlimbs (@small) N (@sub_then_maybe_add) (@eval_sub_then_maybe_add) Av Bv small_Av small_Bv Av_bound Bv_bound.
     Definition opp_no_cps_bound : 0 <= eval opp_no_cps < eval N
-      := @opp_bound T (@eval) (@zero) r R R_numlimbs (@small) (@eval_zero) (@small_zero) N (@sub_then_maybe_add _) (@eval_sub_then_maybe_add) Av small_Av Av_bound.
+      := @opp_bound T (@eval) (@zero) r R R_numlimbs (@small) (@eval_zero) (@small_zero) N (@sub_then_maybe_add) (@eval_sub_then_maybe_add) Av small_Av Av_bound.
 
     Definition small_add_no_cps : small add_no_cps
       := @small_add T (@eval) r R R_numlimbs (@small) (@addT) (@eval_addT) (@small_addT) N N_lt_R (@conditional_sub) (@small_conditional_sub) Av Bv small_Av small_Bv Av_bound Bv_bound.
     Definition small_sub_no_cps : small sub_no_cps
-      := @small_sub T (@eval) R_numlimbs (@small) N (@sub_then_maybe_add _) (@small_sub_then_maybe_add) Av Bv small_Av small_Bv Av_bound Bv_bound.
+      := @small_sub T (@eval) R_numlimbs (@small) N (@sub_then_maybe_add) (@small_sub_then_maybe_add) Av Bv small_Av small_Bv Av_bound Bv_bound.
     Definition small_opp_no_cps : small opp_no_cps
-      := @small_opp T (@eval) (@zero) r R R_numlimbs (@small) (@eval_zero) (@small_zero) N (@sub_then_maybe_add _) (@small_sub_then_maybe_add) Av small_Av Av_bound.
+      := @small_opp T (@eval) (@zero) r R R_numlimbs (@small) (@eval_zero) (@small_zero) N (@sub_then_maybe_add) (@small_sub_then_maybe_add) Av small_Av Av_bound.
 
     Definition eval_add_no_cps : eval add_no_cps = eval Av + eval Bv + (if eval N <=? eval Av + eval Bv then - eval N else 0)
       := @eval_add T (@eval) r R R_numlimbs (@small) (@addT) (@eval_addT) (@small_addT) N N_lt_R (@conditional_sub) (@eval_conditional_sub) Av Bv small_Av small_Bv Av_bound Bv_bound.
     Definition eval_sub_no_cps : eval sub_no_cps = eval Av - eval Bv + (if eval Av - eval Bv <? 0 then eval N else 0)
-      := @eval_sub T (@eval) R_numlimbs (@small) N (@sub_then_maybe_add _) (@eval_sub_then_maybe_add) Av Bv small_Av small_Bv Av_bound Bv_bound.
+      := @eval_sub T (@eval) R_numlimbs (@small) N (@sub_then_maybe_add) (@eval_sub_then_maybe_add) Av Bv small_Av small_Bv Av_bound Bv_bound.
     Definition eval_opp_no_cps : eval opp_no_cps = (if eval Av =? 0 then 0 else eval N) - eval Av
-      := @eval_opp T (@eval) (@zero) r R R_numlimbs (@small) (@eval_zero) (@small_zero) N (@sub_then_maybe_add _) (@eval_sub_then_maybe_add) Av small_Av Av_bound.
+      := @eval_opp T (@eval) (@zero) r R R_numlimbs (@small) (@eval_zero) (@small_zero) N (@sub_then_maybe_add ) (@eval_sub_then_maybe_add) Av small_Av Av_bound.
 
     Definition eval_add_no_cps_mod_N : eval add_no_cps mod eval N = (eval Av + eval Bv) mod eval N
       := @eval_add_mod_N T (@eval) r R R_numlimbs (@small) (@addT) (@eval_addT) (@small_addT) N N_lt_R (@conditional_sub) (@eval_conditional_sub) Av Bv small_Av small_Bv Av_bound Bv_bound.
     Definition eval_sub_no_cps_mod_N : eval sub_no_cps mod eval N = (eval Av - eval Bv) mod eval N
-      := @eval_sub_mod_N T (@eval) R_numlimbs (@small) N (@sub_then_maybe_add _) (@eval_sub_then_maybe_add) Av Bv small_Av small_Bv Av_bound Bv_bound.
+      := @eval_sub_mod_N T (@eval) R_numlimbs (@small) N (@sub_then_maybe_add) (@eval_sub_then_maybe_add) Av Bv small_Av small_Bv Av_bound Bv_bound.
     Definition eval_opp_no_cps_mod_N : eval opp_no_cps mod eval N = (-eval Av) mod eval N
-      := @eval_opp_mod_N T (@eval) (@zero) r R R_numlimbs (@small) (@eval_zero) (@small_zero) N (@sub_then_maybe_add _) (@eval_sub_then_maybe_add) Av small_Av Av_bound.
+      := @eval_opp_mod_N T (@eval) (@zero) r R R_numlimbs (@small) (@eval_zero) (@small_zero) N (@sub_then_maybe_add) (@eval_sub_then_maybe_add) Av small_Av Av_bound.
 
     Lemma add_cps_id_no_cps : add = add_no_cps.
     Proof.
