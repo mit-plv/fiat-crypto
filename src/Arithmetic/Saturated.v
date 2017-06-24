@@ -478,8 +478,16 @@ Module Columns.
         autorewrite with uncps push_id push_basesystem_eval in *.
         rewrite eval_cons_to_nth by omega. nsatz.
     Qed.
-
   End Columns.
+  Hint Rewrite
+      @Columns.compact_id
+      @Columns.from_associational_id
+  : uncps.
+  Hint Rewrite
+      @Columns.compact_mod
+      @Columns.compact_div
+      @Columns.eval_from_associational
+  using (assumption || omega): push_basesystem_eval.
 
   Section Wrappers.
     Context (weight : nat->Z).
@@ -507,28 +515,12 @@ Module Columns.
         (fun PQ => from_associational_cps weight n3 PQ
         (fun R => compact_cps (div:=div) (modulo:=modulo) (add_get_carry:=Z.add_get_carry_full) weight R f)))).
 
-    End Wrappers.
-End Columns.
-Hint Unfold
-     Columns.add_cps
-     Columns.unbalanced_sub_cps
-     Columns.mul_cps.
-Hint Rewrite
-     @Columns.compact_digit_id
-     @Columns.compact_step_id
-     @Columns.compact_id
-     @Columns.cons_to_nth_id
-     @Columns.from_associational_id
-  : uncps.
-Hint Rewrite
-     @Columns.compact_mod
-     @Columns.compact_div
-     @Columns.eval_cons_to_nth
-     @Columns.eval_from_associational
-     @Columns.eval_nils
-  using (assumption || omega): push_basesystem_eval.
+  End Wrappers.
+  Hint Unfold add_cps unbalanced_sub_cps mul_cps.
 
-Section Freeze.
+  (* These come after the wrapper definitions because they depend on
+     e.g. unbalanced_sub and add. *)
+  Section Conditionals.
     Context (weight : nat->Z)
             {weight_0 : weight 0%nat = 1}
             {weight_nonzero : forall i, weight i <> 0}
@@ -536,19 +528,19 @@ Section Freeze.
             {weight_multiples : forall i, weight (S i) mod weight i = 0}
             {weight_divides : forall i : nat, weight (S i) / weight i > 0}
     .
-
+    
     Definition conditional_add_cps {n} mask cond (p q : Z^n)
                {T} (f:_->T) :=
       B.Positional.select_cps mask cond q
-                 (fun qq => Columns.add_cps (n3:=n) weight p qq f).
+                 (fun qq => add_cps (n3:=n) weight p qq f).
     Definition conditional_add {n} mask cond p q :=
       @conditional_add_cps n mask cond p q _ id.
     Lemma conditional_add_id {n} mask cond p q T f:
       @conditional_add_cps n mask cond p q T f
       = f (conditional_add mask cond p q).
     Proof.
-      cbv [conditional_add_cps conditional_add]; autounfold.
-      autorewrite with uncps push_id; reflexivity.
+      cbv [conditional_add_cps conditional_add]; autounfold;
+        autorewrite with push_id uncps; reflexivity.
     Qed.
     Hint Opaque conditional_add : uncps.
     Hint Rewrite @conditional_add_id : uncps.
@@ -559,7 +551,7 @@ Section Freeze.
     = B.Positional.eval weight p + (if (dec (cond = 0)) then 0 else B.Positional.eval weight q) - weight n * (fst (conditional_add mask cond p q)).
   Proof.
     cbv [conditional_add_cps conditional_add];
-      repeat progress autounfold in *.
+      repeat progress autounfold in *. cbv [add_cps].
     pose proof Z.add_get_carry_full_mod.
     pose proof Z.add_get_carry_full_div.
     pose proof div_correct. pose proof modulo_correct.
@@ -572,6 +564,38 @@ Section Freeze.
   Qed.
   Hint Rewrite @eval_conditional_add using (omega || assumption)
     : push_basesystem_eval.
+  End Conditionals.
+  
+End Columns.
+Hint Unfold
+     Columns.add_cps
+     Columns.unbalanced_sub_cps
+     Columns.mul_cps.
+Hint Rewrite
+     @Columns.compact_digit_id
+     @Columns.compact_step_id
+     @Columns.compact_id
+     @Columns.cons_to_nth_id
+     @Columns.from_associational_id
+     @Columns.conditional_add_id
+  : uncps.
+Hint Rewrite
+     @Columns.compact_mod
+     @Columns.compact_div
+     @Columns.eval_cons_to_nth
+     @Columns.eval_from_associational
+     @Columns.eval_nils
+     @Columns.eval_conditional_add
+  using (assumption || omega): push_basesystem_eval.
+
+Section Freeze.
+    Context (weight : nat->Z)
+            {weight_0 : weight 0%nat = 1}
+            {weight_nonzero : forall i, weight i <> 0}
+            {weight_positive : forall i, weight i > 0}
+            {weight_multiples : forall i, weight (S i) mod weight i = 0}
+            {weight_divides : forall i : nat, weight (S i) / weight i > 0}
+    .
 
 
   (*
@@ -591,7 +615,7 @@ Section Freeze.
    *)
   Definition freeze_cps {n} mask (m:Z^n) (p:Z^n) {T} (f : Z^n->T) :=
     Columns.unbalanced_sub_cps weight p m
-      (fun carry_p => conditional_add_cps mask (fst carry_p) (snd carry_p) m
+      (fun carry_p => Columns.conditional_add_cps weight mask (fst carry_p) (snd carry_p) m
       (fun carry_r => f (snd carry_r)))
   .
 
@@ -645,7 +669,7 @@ Section Freeze.
              (B.Positional.eval weight (@freeze n mask m p))
              (B.Positional.eval weight p).
   Proof.
-    cbv [freeze_cps freeze conditional_add_cps].
+    cbv [freeze_cps freeze Columns.conditional_add_cps].
     repeat progress autounfold.
     pose proof Z.add_get_carry_full_mod.
     pose proof Z.add_get_carry_full_div.
@@ -727,9 +751,9 @@ Section API.
       f).
   Definition add {n m pred_nm} p q : T (S pred_nm) := @add_cps n m pred_nm p q _ id.
 
-  (* Subtract q if and only if p < bound^n. The correctness of this
+   (* Subtract q if and only if p < bound^n. The correctness of this
   lemma depends on the precondition that p < q + bound^n.  *)
-  Definition conditional_sub_cps {n} mask (p : Z^S n) (q : Z ^ n)
+  Definition conditional_sub_cps {n} (p : Z^S n) (q : Z ^ n)
              {T} (f:Z^n->T) :=
       (* we pass the highest digit of p into select_cps as the
       conditional argument; if it is 0, the subtraction will not
