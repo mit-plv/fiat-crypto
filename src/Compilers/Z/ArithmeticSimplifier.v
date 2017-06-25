@@ -448,6 +448,41 @@ Section language.
                                                 (fun '(v, c) => (Var v, Op (Opp TZ TZ) (Var c))%expr)
                            | None, None => Op opc args
                            end
+                      | Some (c, const_of x, y)
+                        => let y' := match y with
+                                     | const_of y => if (y <? 0)%Z
+                                                     then Some (Op (OpConst (-y)) TT)
+                                                     else None
+                                     | neg_expr y => Some y
+                                     | gen_expr _ => None
+                                     end in
+                           let c' := match c with
+                                     | const_of c => if (c <? 0)%Z
+                                                     then Some (Op (OpConst (-c)) TT)
+                                                     else None
+                                     | neg_expr c => Some c
+                                     | gen_expr _ => None
+                                     end in
+                           match c', y' with
+                           | _, Some y => LetIn (Op (SubWithGetBorrow bw TZ TZ TZ TZ TZ)
+                                                    (match c with
+                                                     | const_of c => Op (OpConst (-c)) TT
+                                                     | neg_expr c => c
+                                                     | gen_expr c => Op (Opp TZ TZ) c
+                                                     end,
+                                                     Op (OpConst x) TT, y)%expr)
+                                                (fun '(v, c) => (Var v, Op (Opp TZ TZ) (Var c))%expr)
+                           | Some c, _ => LetIn (Op (SubWithGetBorrow bw TZ TZ TZ TZ TZ)
+                                                    (c,
+                                                     Op (OpConst x) TT,
+                                                     match y with
+                                                     | const_of y => Op (OpConst (-y)) TT
+                                                     | neg_expr y => y
+                                                     | gen_expr y => Op (Opp TZ TZ) y
+                                                     end)%expr)
+                                                (fun '(v, c) => (Var v, Op (Opp TZ TZ) (Var c))%expr)
+                           | None, None => Op opc args
+                           end
                       | _ => Op opc args
                       end
                  else Op opc args
