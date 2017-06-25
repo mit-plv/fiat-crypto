@@ -62,7 +62,7 @@ Section BoundedField25p5.
     eexists_sig_etransitivity.
     set (oppZ := proj1_sig opp).
     context_to_dlet_in_rhs oppZ; cbv [oppZ].
-    cbv beta iota delta [opp opp' proj1_sig Saturated.T lift2_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr].
+    cbv beta iota delta [opp opp' proj1_sig Saturated.T lift1_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr].
     reflexivity.
     sig_dlet_in_rhs_to_context.
     apply (fun f => proj2_sig_map (fun THIS_NAME_MUST_NOT_BE_UNDERSCORE_TO_WORK_AROUND_CONSTR_MATCHING_ANAOMLIES___BUT_NOTE_THAT_IF_THIS_NAME_IS_LOWERCASE_A___THEN_REIFICATION_STACK_OVERFLOWS___AND_I_HAVE_NO_IDEA_WHATS_GOING_ON p => f_equal f p)).
