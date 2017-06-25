@@ -143,7 +143,7 @@ Defined.
 Definition sub' : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
                  | forall (A B : Tuple.tuple Z sz),
                      f A B =
-                     (sub (*r:=r*)(R_numlimbs:=sz) (*p256*) A B)
+                     (sub (r:=r) (R_numlimbs:=sz) p256 A B)
                  }.
 Proof.
   eapply (lift2_sig (fun A B c => c = _)); eexists.
@@ -154,7 +154,7 @@ Defined.
 Definition opp' : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz
                  | forall (A : Tuple.tuple Z sz),
                      f A =
-                     (opp (*r:=r*)(R_numlimbs:=sz) (*p256*) A)
+                     (opp (r:=r) (R_numlimbs:=sz) p256 A)
                  }.
 Proof.
   eapply (lift1_sig (fun A c => c = _)); eexists.

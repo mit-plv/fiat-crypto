@@ -53,7 +53,7 @@ Section WordByWordMontgomery.
     {small_conditional_sub : forall v, small v -> 0 <= eval v < eval N + R -> small (conditional_sub v)}
     {sub_then_maybe_add : T R_numlimbs -> T R_numlimbs -> T R_numlimbs} (* computes [a - b + if (a - b) <? 0 then N else 0] *)
     {eval_sub_then_maybe_add : forall a b, small a -> small b -> 0 <= eval a < eval N -> 0 <= eval b < eval N -> eval (sub_then_maybe_add a b) = eval a - eval b + if eval a - eval b <? 0 then eval N else 0}
-    {small_sub_then_maybe_add : forall a b, small a -> small b -> 0 <= eval a < eval N -> 0 <= eval b < eval N -> small (sub_then_maybe_add a b)}
+    {small_sub_then_maybe_add : forall a b, small (sub_then_maybe_add a b)}
     (B : T R_numlimbs)
     (B_bounds : 0 <= eval B < R)
     (small_B : small B)
