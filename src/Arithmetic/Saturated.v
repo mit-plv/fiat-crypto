@@ -719,22 +719,19 @@ Section API.
   Definition sub_then_maybe_add {n} mask (p q r : T n) :=
     sub_then_maybe_add_cps mask p q r id.
 
-   (* Subtract q if and only if p < bound^n. The correctness of this
-  lemma depends on the precondition that p < q + bound^n.  *)
-  Definition conditional_sub_cps {n} mask (p : Z^S n) (q : Z ^ n)
-             {T} (f:Z^n->T) :=
-      (* we pass the highest digit of p into select_cps as the
-      conditional argument; if it is 0, the subtraction will not
-      happen, otherwise it will.*)
-      B.Positional.select_cps mask (left_hd p) q
-        (fun qq => Columns.unbalanced_sub_cps (n3:=S n) (uweight bound) p qq
-        (* We can safely discard the carry and the highest limb, since
-           our preconditions tell us that, whether or not the
-           subtraction happened, n limbs is sufficient to store the
-           result. *)
-        (fun carry_result => drop_high_cps (snd carry_result) f)).
-
-  Definition conditional_sub {n} mask p q := @conditional_sub_cps n mask p q _ id.
+   (* Subtract q if and only if p >= q. We rely on the preconditions
+    that 0 <= p < 2*q and q < bound^n (this ensures the output is less
+    than bound^n). *)
+  Definition conditional_sub_cps {n} (p:Z^S n) (q:Z^n) R (f:Z^n->R) :=
+    Columns.unbalanced_sub_cps (n3:=S n) (uweight bound) p q
+      (* if carry is zero, we select the result of the subtraction,
+      otherwise the first input *)
+      (fun carry_result =>
+        Tuple.map2_cps (Z.zselect (fst carry_result)) (snd carry_result) p
+      (* in either case, since our result must be < q and therefore <
+      bound^n, we can drop the high digit *)
+      (fun r => drop_high_cps r f)).
+  Definition conditional_sub {n} p q := @conditional_sub_cps n p q _ id.
 
   Hint Opaque join0 divmod drop_high scmul add sub_then_maybe_add conditional_sub : uncps.
 
@@ -768,8 +765,8 @@ Section API.
       @sub_then_maybe_add_cps n mask p q r R f = f (sub_then_maybe_add mask p q r).
     Proof. cbv [sub_then_maybe_add_cps sub_then_maybe_add Let_In]. prove_id. Qed.
 
-    Lemma conditional_sub_id n mask p q R f :
-      @conditional_sub_cps n mask p q R f = f (conditional_sub mask p q).
+    Lemma conditional_sub_id n p q R f :
+      @conditional_sub_cps n p q R f = f (conditional_sub p q).
     Proof. cbv [conditional_sub_cps conditional_sub Let_In]. prove_id. Qed.
 
   End CPSProofs.
@@ -1071,6 +1068,7 @@ Section API.
      apply small_compact.
    Qed. 
 
+   (* TODO : remove if unneeded when all admits are proven 
     Lemma small_highest_zero_iff {n} (p: T (S n)) (Hsmall : small p) :
       (left_hd p = 0 <-> eval p < uweight bound n).
     Proof.
@@ -1083,35 +1081,45 @@ Section API.
       let H := fresh "H" in intro H; destruct H; [|omega].
       omega.
     Qed.
+    *)
 
-    Lemma eval_conditional_sub_nz (bound_gt_1 : bound > 1) n mask (p:T (S n)) (q:T n)
-          (n_nonzero: (n <> 0)%nat) (psmall : small p) (qsmall : small q)
-          (Hmask : Tuple.map (Z.land mask) q = q):
-      0 <= eval p < eval q + (uweight bound n) ->
-      eval (conditional_sub mask p q) = eval p + (if uweight bound n <=? eval p then - eval q else 0).
+    Lemma map2_zselect n cond x y :
+      Tuple.map2 (n:=n) (Z.zselect cond) x y = if dec (cond = 0) then x else y.
+    Admitted.
+
+    Lemma eval_conditional_sub_nz n (p:T (S n)) (q:T n)
+          (n_nonzero: (n <> 0)%nat) (psmall : small p) (qsmall : small q):
+      0 <= eval p < eval q + uweight bound n ->
+      eval (conditional_sub p q) = eval p + (if eval q <=? eval p then - eval q else 0).
     Proof.
-      cbv [conditional_sub conditional_sub_cps eval].
-      intros. pose_all. repeat autounfold. apply eval_small in qsmall.
-      pose proof (small_highest_zero_iff p psmall).
-      pose proof (uweight_lt_mono bound_gt_1 n (S n)).
-      repeat match goal with
+      cbv [conditional_sub conditional_sub_cps]. intros. pose_all.
+      repeat autounfold. apply eval_small in qsmall.
+      pose proof psmall; apply eval_small in psmall.
+      cbv [eval] in *. autorewrite with uncps push_id push_basesystem_eval.
+      rewrite map2_zselect.
+      let H := fresh "H" in let X := fresh "P" in
+      match goal with |- context [?x / ?y] => 
+                      pose proof (div_nonzero_neg_iff x y) end;
+        repeat match type of H with ?P -> _ =>
+                             assert P as X by omega; specialize (H X);
+                               clear X end.
+      
+      break_match;
+        repeat match goal with
+               | _ => progress cbv [eval]
                | H : (_ <=? _) = true |- _ => apply Z.leb_le in H
                | H : (_ <=? _) = false |- _ => apply Z.leb_gt in H
-               | H : 0 = 0 <-> ?P |- _ =>
-                 assert P by (apply H; reflexivity);  clear H
-               | _ => progress (cbv [eval] in * )
-               | _ => rewrite eval_drop_high by apply small_compact
+               | _ => rewrite eval_drop_high by auto using small_compact
                | _ => progress autorewrite with uncps push_id push_basesystem_eval
-               | _ => progress break_match; try omega
-               | _ => rewrite Z.mod_small; try rewrite Z.mod_small; omega
+               | _ => rewrite Z.mod_small by (rewrite ?Z.mod_small; omega)
+               | _ => omega
                end.
-    Qed.
+   Qed.
 
-    Lemma eval_conditional_sub (bound_gt_1 : bound > 1) n mask (p:T (S n)) (q:T n)
-           (psmall : small p) (qsmall : small q)
-          (Hmask : Tuple.map (Z.land mask) q = q):
-      0 <= eval p < eval q + (uweight bound n) ->
-      eval (conditional_sub mask p q) = eval p + (if uweight bound n <=? eval p then - eval q else 0).
+    Lemma eval_conditional_sub n (p:T (S n)) (q:T n)
+           (psmall : small p) (qsmall : small q) :
+      0 <= eval p < eval q + uweight bound n ->
+      eval (conditional_sub p q) = eval p + (if eval q <=? eval p then - eval q else 0).
     Proof.
       destruct n; [|solve[auto using eval_conditional_sub_nz]].
       repeat match goal with
@@ -1125,13 +1133,11 @@ Section API.
              end.
     Qed.
 
-    Lemma small_conditional_sub n mask (p:T (S n)) (q:T n)
-           (psmall : small p) (qsmall : small q)
-          (Hmask : Tuple.map (Z.land mask) q = q):
-      0 <= eval p < eval q + (uweight bound n) ->
-      small (conditional_sub mask p q).
+    Lemma small_conditional_sub n (p:T (S n)) (q:T n)
+           (psmall : small p) (qsmall : small q) :
+      0 <= eval p < eval q + uweight bound n ->
+      small (conditional_sub p q).
     Admitted.
-
 
     Lemma eval_scmul n a v : small v -> 0 <= a < bound ->
       eval (@scmul n a v) = a * eval v.

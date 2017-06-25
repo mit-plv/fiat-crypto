@@ -68,25 +68,14 @@ Section WordByWordMontgomery.
     intros; apply Saturated.small_add; auto; lia.
   Qed.
 
-  Local Notation conditional_sub_cps := (fun V : T (S R_numlimbs) => @conditional_sub_cps (Z.pos r) _ (Z.pos r - 1) V N _).
-  Local Notation conditional_sub := (fun V : T (S R_numlimbs) => @conditional_sub (Z.pos r) _ (Z.pos r - 1) V N).
-  Axiom eval_conditional_sub_THIS_AXIOM_IS_ACTUALLY_CURRENTLY_FALSE_AND_IS_AWAITING_A_REPLACEMENT_IMPLEMENTATION_OF_CONDITIONAL_SUB_THAT_SUBTRACTS_BASED_ON_BEING_NOT_LESS_THAN_N_RATHER_THAN_ON_BEING_NOT_LESS_THAN_R
-    : forall bound : Z,
-      bound > 0 ->
-      bound > 1 ->
-      forall (n : nat) (mask : Z) (p : T (S n)) (q : T n),
-        Saturated.small bound p ->
-        Saturated.small bound q ->
-        Tuple.map (Z.land mask) q = q ->
-        0 <= Saturated.eval bound p < Saturated.eval bound q + uweight bound n ->
-        Saturated.eval bound (Saturated.conditional_sub bound mask p q) =
-        Saturated.eval bound p + (if Saturated.eval bound q <=? Saturated.eval bound p then - Saturated.eval bound q else 0).
-  Local Notation eval_conditional_sub' := (fun V small_V V_bound => @eval_conditional_sub_THIS_AXIOM_IS_ACTUALLY_CURRENTLY_FALSE_AND_IS_AWAITING_A_REPLACEMENT_IMPLEMENTATION_OF_CONDITIONAL_SUB_THAT_SUBTRACTS_BASED_ON_BEING_NOT_LESS_THAN_N_RATHER_THAN_ON_BEING_NOT_LESS_THAN_R (Z.pos r) (Zorder.Zgt_pos_0 _) r_big _ (Z.pos r - 1) V N small_V small_N N_mask V_bound).
+  Local Notation conditional_sub_cps := (fun V : T (S R_numlimbs) => @conditional_sub_cps (Z.pos r) _ V N _).
+  Local Notation conditional_sub := (fun V : T (S R_numlimbs) => @conditional_sub (Z.pos r) _ V N).
+  Local Notation eval_conditional_sub' := (fun V small_V V_bound => @eval_conditional_sub (Z.pos r) (Zorder.Zgt_pos_0 _) _  V N small_V small_N V_bound).
 
   Local Lemma eval_conditional_sub
     : forall v, small v -> 0 <= eval v < eval N + R -> eval (conditional_sub v) = eval v + if eval N <=? eval v then -eval N else 0.
   Proof. rewrite R_correct; exact eval_conditional_sub'. Qed.
-  Local Notation small_conditional_sub' := (fun V small_V V_bound => @small_conditional_sub (Z.pos r) (Zorder.Zgt_pos_0 _) _ (Z.pos r - 1) V N small_V small_N N_mask V_bound).
+  Local Notation small_conditional_sub' := (fun V small_V V_bound => @small_conditional_sub (Z.pos r) (Zorder.Zgt_pos_0 _) _ V N small_V small_N V_bound).
   Local Lemma small_conditional_sub
     : forall v : T (S R_numlimbs), small v -> 0 <= eval v < eval N + R -> small (conditional_sub v).
   Proof. rewrite R_correct; exact small_conditional_sub'. Qed.

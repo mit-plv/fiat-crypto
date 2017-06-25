@@ -24,8 +24,8 @@ Section WordByWordMontgomery.
   Local Notation scmul := (@scmul (Z.pos r)).
   Local Notation addT' := (fun n => @Saturated.add (Z.pos r) (S n) n (S n)).
   Local Notation addT := (fun n => @Saturated.add (Z.pos r) n n n).
-  Local Notation conditional_sub_cps := (fun V => @conditional_sub_cps (Z.pos r) _ (Z.pos r - 1) V N _).
-  Local Notation conditional_sub := (fun V => @conditional_sub (Z.pos r) _ (Z.pos r - 1) V N).
+  Local Notation conditional_sub_cps := (fun V => @conditional_sub_cps (Z.pos r) _ V N _).
+  Local Notation conditional_sub := (fun V => @conditional_sub (Z.pos r) _ V N).
   Local Notation sub_then_maybe_add_cps :=
     (fun V1 V2 => @sub_then_maybe_add_cps (Z.pos r) R_numlimbs (Z.pos r - 1) V1 V2 N).
   Local Notation sub_then_maybe_add := (fun V1 V2 => @sub_then_maybe_add (Z.pos r) R_numlimbs (Z.pos r - 1) V1 V2 N).
