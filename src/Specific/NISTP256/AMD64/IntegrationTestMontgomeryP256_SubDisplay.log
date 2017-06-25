@@ -12,10 +12,10 @@ Interp-η
  uint64_t x33 = x28 & 0xffffffff;
  uint64_t x35, uint8_t x36 = addcarryx_u64(x32, x20, x33);
  uint64_t x38, uint8_t x39 = addcarryx_u64(x36, x23, 0x0);
- ℤ x40 = Op (Syntax.Opp (Syntax.TWord 3) Syntax.TZ) (Return x27);
- ℤ x41 = 0x10000000000000000L *ℤ x40;
- uint64_t x42 = x28 & 0xffffffff00000001L;
- uint64_t x44, ℤ _ = addcarryx_u64ℤ(x26, x41, x42);
+ uint64_t x40 = x28 & 0xffffffff00000001L;
+ uint128_t x41 = 0x10000000000000000L * x27;
+ ℤ x42 = Op (Syntax.Opp (Syntax.TWord 7) Syntax.TZ) (Return x41);
+ uint64_t x44, ℤ _ = addcarryx_u64ℤ(x26, x42, x40);
  uint64_t x47, uint8_t _ = addcarryx_u64(0x0, x39, x44);
  (Return x47, Return x38, Return x35, Return x31))
 (x, x0)%core
