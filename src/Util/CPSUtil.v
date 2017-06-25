@@ -269,6 +269,25 @@ Module Tuple.
     [|rewrite IHn, <-map_append,<-subst_append]; reflexivity.
   Qed. Hint Rewrite @map_cps_correct : uncps.
 
+  Fixpoint map2_cps {n A B C} (g:A->B->C) :
+    tuple A n -> tuple B n -> forall {T}, (tuple C n->T) -> T :=
+    match n with
+    | O => fun _ _ _ f => f tt
+    | S n' => fun xs ys T f =>
+                map2_cps g (tl xs) (tl ys) (fun zs => f (append (g (hd xs) (hd ys)) zs))
+    end.
+  
+  Lemma map2_append n A B C f xs ys x y :
+    @map2 (S n) A B C f (append x xs) (append y ys)
+    = append (f x y) (map2 f xs ys).
+  Admitted.
+  Lemma map2_cps_correct {n A B C} g xs ys : forall {T} f,
+      @map2_cps n A B C g xs ys T f = f (map2 g xs ys).
+  Proof.
+    induction n; simpl map2_cps; intros; try destruct xs, ys;
+    [|rewrite IHn, <-map2_append,<-!subst_append]; reflexivity.
+  Qed. Hint Rewrite @map2_cps_correct : uncps.
+
   Fixpoint mapi_with'_cps {T A B n} i
           (f: nat->T->A->forall {R}, (T*B->R)->R) (start:T)
   : Tuple.tuple' A n -> forall {R}, (T * tuple' B n -> R) -> R :=

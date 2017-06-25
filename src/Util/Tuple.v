@@ -791,6 +791,11 @@ Lemma map_append {A B n} (f:A->B) : forall (x:tuple A n) (a:A),
   map f (append a x) = append (f a) (map f x).
 Proof. destruct n; auto using map_append'. Qed.
 
+Lemma map2_append n A B C f xs ys x y :
+  @map2 (S n) A B C f (append x xs) (append y ys)
+  = append (f x y) (map2 f xs ys).
+Proof. destruct n; [reflexivity|]. apply map2_S'. Qed.
+
 Fixpoint nth_default {A m} (d:A) n : tuple A m -> A :=
   match m, n with
   | O, _ => fun _ => d
