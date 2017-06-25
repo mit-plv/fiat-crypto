@@ -148,7 +148,9 @@ Section language.
                            then Op (Opp _ _) e
                            else if (v =? -1)%Z
                                 then e
-                                else Op opc args
+                                else if (v >? 0)%Z
+                                     then Op (Opp _ _) (Op opc (Pair (Op (OpConst v) TT) e))
+                                     else Op opc args
                  | Some (gen_expr e1, neg_expr e2)
                  | Some (neg_expr e1, gen_expr e2)
                    => Op (Opp _ _) (Op (Mul _ _ TZ) (Pair e1 e2))
